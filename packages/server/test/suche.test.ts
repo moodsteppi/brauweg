@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createTestContext, createVerifiedAccount, seedInvite, type TestContext } from './helpers.js';
+import { einreichen } from '../src/memes.js';
 import { Vermittlung } from '../src/suche/vermittlung.js';
 import { isReadyToStart, tableRules, tableWithSeats } from '../src/tables/service.js';
 
@@ -221,6 +222,51 @@ test('Nach Ablauf entsteht genau EIN Tisch mit allen Suchenden, der Rest sind Bo
   assert.equal(isReadyToStart(table, seats), true, 'der Tisch startet ohne weiteres Warten');
 });
 
+/**
+ * Der Fehler vom 07.09.2026 in der Produktion: `faellig` nimmt die Runde
+ * sofort aus dem Fenster, der Tisch entsteht danach in einem Dutzend
+ * Datenbankschritten (dort gut eine Sekunde, laenger als der Abruftakt des
+ * Clients). Wer in dieser Luecke nachfragte, hoerte "sucht nicht, kein
+ * Tisch" — der Client meldete "Die Suche wurde beendet" und fragte nie
+ * wieder, sass aber laengst am neuen Tisch. Der Gegner spielte gegen einen
+ * leeren Sitz, und wer noch einmal suchte, bekam einen Bot.
+ *
+ * Nachgestellt ohne Zeitmessung: Annas Abruf baut den Tisch und wird NICHT
+ * abgewartet; Berts und Annas naechste Abrufe kommen mittendrin.
+ */
+test('Wer nachfragt, waehrend sein Tisch gerade entsteht, sucht noch — und bekommt danach diesen Tisch', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+
+  const anna = await s.konto('Anna');
+  const bert = await s.konto('Bert');
+  for (const konto of [anna, bert]) await s.vermittlung.betritt(SPIEL, konto);
+  // Bis kurz vor den Ablauf nachfragen — der letzte Abruf in `warte` baute
+  // sonst schon selbst den Tisch, und die Luecke waere nie zu sehen.
+  await warte(s, FENSTER_MS - 2_000, [anna, bert]);
+  s.vor(2_000);
+
+  // Das Fenster ist abgelaufen. Annas Abruf nimmt die Runde heraus und baut
+  // — bis zum ersten await der Datenbank laeuft das synchron, danach liegt
+  // der Bau in der Schwebe.
+  const annasBau = s.vermittlung.abruf(SPIEL, anna);
+  const bertMittendrin = await s.vermittlung.abruf(SPIEL, bert);
+  const annaMittendrin = await s.vermittlung.abruf(SPIEL, anna);
+  // Erst den Bau zu Ende kommen lassen, dann urteilen: Eine Probe, die
+  // mitten im Bau abbricht, laesst die Datenbank mit offener Arbeit zurueck
+  // und haengt beim Schliessen.
+  const annasStand = await annasBau;
+
+  assert.equal(bertMittendrin.sucht, true, 'Bert sucht aus seiner Sicht weiter — kein "Suche beendet"');
+  assert.equal(bertMittendrin.suchende, 2);
+  assert.equal(bertMittendrin.tischId, null);
+  assert.equal(annaMittendrin.sucht, true, 'auch Annas eigener naechster Takt bricht nichts ab');
+  assert.ok(annasStand.tischId, 'der Bau ist fertig, Anna kennt den Tisch');
+  const bertDanach = await s.vermittlung.abruf(SPIEL, bert);
+  assert.equal(bertDanach.tischId, annasStand.tischId, 'Bert landet am selben Tisch');
+  assert.deepEqual(s.angestupst, [annasStand.tischId], 'genau ein Tisch');
+});
+
 test('Acht Menschen starten sofort, ohne die 30 Sekunden abzusitzen', async (t) => {
   const s = await stand();
   t.after(() => s.close());
@@ -399,3 +445,106 @@ for (const [spiel, sitze] of [
     assert.equal(isReadyToStart(table, seats), true, 'die Bots fuellen auf, der Tisch startet');
   });
 }
+
+/**
+ * Mememory: die hochgeladenen Motive muessen auch aus der Schlange kommen.
+ *
+ * Der Fehler, den diese beiden Proben festhalten: Solange der
+ * Mememory-Bildschirm seinen Tisch selbst aufmachte, holte er
+ * `api.mememoryMotive()` und legte die freigegebenen Uploads als `zusatz` in
+ * die `config`. Seit dem 06.09.2026 baut die Schlange den Tisch, und
+ * `defaultConfig()` des Moduls kennt kein `zusatz` — ein Tisch aus dem
+ * Online-Match spielte deshalb immer nur mit den 88 Grundmotiven. Damit
+ * waren Vorschlagskasten, Freigabe und Sammlung nur noch am KI-Tisch
+ * wirksam, ohne dass irgendwo ein Fehler auffiel.
+ *
+ * Geprueft wird der Weg von der Datenbank bis in die `config` des gebauten
+ * Tisches, nicht der Haken fuer sich: Der Haken laesst sich nicht falsch
+ * genug schreiben, um hier gruen zu bleiben, wenn die Vermittlung ihn nicht
+ * ruft.
+ */
+const PNG_1X1 =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk' +
+  'YPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+/** Ein Suchender allein: nach dem Fenster steht sein Tisch. */
+async function alleinBisTisch(s: Stand, spiel: 'mememory', konto: string): Promise<string> {
+  await s.vermittlung.betritt(spiel, konto);
+  for (let offen = FENSTER_MS; offen > 0; offen -= 2_000) {
+    s.vor(2_000);
+    await s.vermittlung.abruf(spiel, konto);
+  }
+  const tischId = (await s.vermittlung.abruf(spiel, konto)).tischId;
+  assert.ok(tischId, 'nach dem Fenster steht der Tisch');
+  return tischId;
+}
+
+test('Mememory: der Tisch aus der Schlange traegt die freigegebenen Uploads als zusatz', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+
+  const anna = await s.konto('Anna');
+  // `direkt` heisst freigegeben — genau der Zustand, den die Aufsicht setzt.
+  const frei = await einreichen(s.ctx.db, {
+    accountId: anna,
+    bild: PNG_1X1,
+    direkt: true,
+    istStaff: true,
+  });
+  // Und einer, ueber den noch niemand entschieden hat. Er darf NICHT
+  // mitspielen: Sonst waere die Freigabe Zierrat, und zwar ausgerechnet auf
+  // dem Weg, den die meisten gehen.
+  const wartend = await einreichen(s.ctx.db, {
+    accountId: anna,
+    bild: PNG_1X1,
+    direkt: false,
+    istStaff: false,
+  });
+
+  const regeln = await tableRules(s.ctx.db, await alleinBisTisch(s, 'mememory', anna));
+  assert.deepEqual(regeln['zusatz'], [frei.kennung], 'nur das freigegebene Motiv');
+  assert.ok(!(regeln['zusatz'] as string[]).includes(wartend.kennung));
+});
+
+test('Mememory: ohne freigegebene Uploads bleibt die config die Vorgabe des Moduls', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+
+  const anna = await s.konto('Anna');
+  const regeln = await tableRules(s.ctx.db, await alleinBisTisch(s, 'mememory', anna));
+  // Kein leeres `zusatz`: Das waere dasselbe Spiel mit einem Feld mehr in
+  // der Datenbank — und ein Feld, das immer da ist, sagt nichts mehr aus.
+  assert.equal('zusatz' in regeln, false);
+  assert.equal(regeln['spalten'], 4);
+});
+
+test('Mememory: ein mitgeschicktes zusatz ueberstimmt die Freigabe nicht', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+
+  const anna = await s.konto('Anna');
+  const frei = await einreichen(s.ctx.db, {
+    accountId: anna,
+    bild: PNG_1X1,
+    direkt: true,
+    istStaff: true,
+  });
+
+  // Ein Client, der der Suche einen eigenen Motivtopf mitgibt. Der Haken
+  // ersetzt ihn: Welche Motive im Spiel sind, entscheidet die Aufsicht.
+  await s.vermittlung.betritt('mememory', anna, {
+    spalten: 4,
+    zeilen: 6,
+    merkzeitMs: 1100,
+    zusatz: ['hoch-aaaaaaaaaa'],
+  });
+  for (let offen = FENSTER_MS; offen > 0; offen -= 2_000) {
+    s.vor(2_000);
+    await s.vermittlung.abruf('mememory', anna);
+  }
+  const tischId = (await s.vermittlung.abruf('mememory', anna)).tischId;
+  assert.ok(tischId);
+
+  const regeln = await tableRules(s.ctx.db, tischId);
+  assert.deepEqual(regeln['zusatz'], [frei.kennung]);
+});

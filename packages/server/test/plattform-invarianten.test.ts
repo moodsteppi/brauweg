@@ -336,6 +336,14 @@ for (const spiel of spielbare) {
       spiel.advancePhase !== undefined,
       'phaseMs und advancePhase müssen beide da sein oder beide fehlen',
     );
+    /*
+     * `phaseKey` ohne Frist ist eine Angabe, die niemand liest — und, schlimmer,
+     * eine Zusage, die keine ist: Wer sie einbaut, glaubt danach, die Phase sei
+     * gedeckelt (siehe schedulePhase in runtime/party.ts).
+     */
+    if (spiel.phaseKey !== undefined) {
+      assert.ok(spiel.phaseMs !== undefined, 'phaseKey ohne phaseMs wird nie gelesen');
+    }
   });
 
   test(`${id}: Sitzzahlen und Rundenvorschläge passen zusammen`, () => {

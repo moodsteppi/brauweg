@@ -164,6 +164,43 @@ describe('Einheitenblatt', () => {
     expect(onSchliessen).toHaveBeenCalledTimes(3);
   });
 
+  it('macht aus den Marken Griffe zu ihrem Blatt — und ohne Haken bleibt Text', () => {
+    // Der Weg zur Marken-Auskunft fuehrt hier durch und nicht ueber die
+    // Zeichen an der Wabe: Die stehen auf `pointer-events: none`, damit sie
+    // den Finger nicht von der Wabe abfangen.
+    const onMarke = vi.fn();
+    const { unmount } = zeichne({ onMarke });
+    fireEvent.click(screen.getByRole('button', { name: 'Krieger nachschlagen' }));
+    expect(onMarke).toHaveBeenCalledWith('krieger');
+
+    unmount();
+    zeichne();
+    expect(screen.queryByRole('button', { name: /nachschlagen/ })).toBeNull();
+    // Der Name steht trotzdem da — ein Knopf, der nichts tut, waere schlimmer.
+    expect(screen.getByText('Krieger')).toBeInTheDocument();
+  });
+
+  it('ueberlaesst Escape dem Markenblatt, das darueber liegt', () => {
+    // Beide Blaetter horchen am Fenster. Ohne diesen Riegel staende man nach
+    // einem Escape im Markenblatt wieder vor dem Brett, statt zur Einheit
+    // zurueckzukommen.
+    const { onSchliessen } = zeichne({ onMarke: vi.fn(), escapeAus: true });
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onSchliessen).not.toHaveBeenCalled();
+  });
+
+  it('bietet in der Ladenvorschau den Kauf an, mit dem Preis am Knopf', () => {
+    const onKaufen = vi.fn();
+    zeichne({ onKaufen, kaempfer: { id: 'dorfwache', stufe: 1 }, verschiebenTitel: undefined });
+    const knopf = screen.getByRole('button', { name: /Kaufen/ });
+    expect(knopf).toHaveTextContent('1');
+    fireEvent.click(knopf);
+    expect(onKaufen).toHaveBeenCalledOnce();
+    // Was es im Laden nicht zu tun gibt, steht dort auch nicht.
+    expect(screen.queryByRole('button', { name: /Verkaufen/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ablegen' })).toBeNull();
+  });
+
   it('laesst einen Griff INS Blatt nicht als Tipp daneben gelten', () => {
     // Ohne das `stopPropagation` schluesse jeder Klick auf einen Wert das
     // Blatt wieder — man kaeme an die Knoepfe gar nicht heran.

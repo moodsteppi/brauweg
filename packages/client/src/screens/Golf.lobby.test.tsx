@@ -15,14 +15,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * hat keine. Die Rechnungen dahinter stehen in netz.test.ts.
  */
 
-const { createTable, joinTable, tables, leaveTable, me, startNow } = vi.hoisted(() => ({
-  createTable: vi.fn(),
-  joinTable: vi.fn(),
-  tables: vi.fn(),
-  leaveTable: vi.fn(),
-  me: vi.fn(),
-  startNow: vi.fn(),
-}));
+const { createTable, joinTable, tables, leaveTable, me, startNow, setSeatColor } = vi.hoisted(
+  () => ({
+    createTable: vi.fn(),
+    joinTable: vi.fn(),
+    tables: vi.fn(),
+    leaveTable: vi.fn(),
+    me: vi.fn(),
+    startNow: vi.fn(),
+    setSeatColor: vi.fn(),
+  }),
+);
 
 vi.mock('../api', () => ({
   api: { createTable, joinTable, tables, leaveTable, me },
@@ -47,6 +50,7 @@ function standOhneTisch(): unknown {
     sendTakt: () => {},
     reconnect: () => {},
     startNow,
+    setSeatColor,
   };
 }
 
@@ -56,10 +60,16 @@ interface Platz {
   accountId: string | null;
   isBot: boolean;
   avatarUrl: string | null;
+  farbe?: number | null;
 }
 
-function platz(seat: number, name: string | null, kennung: string | null): Platz {
-  return { seat, displayName: name, accountId: kennung, isBot: false, avatarUrl: null };
+function platz(
+  seat: number,
+  name: string | null,
+  kennung: string | null,
+  farbe: number | null = null,
+): Platz {
+  return { seat, displayName: name, accountId: kennung, isBot: false, avatarUrl: null, farbe };
 }
 
 function standMitTisch(sitze: Platz[]): unknown {
@@ -72,6 +82,7 @@ function standMitTisch(sitze: Platz[]): unknown {
     sendTakt: () => {},
     reconnect: () => {},
     startNow,
+    setSeatColor,
   };
 }
 
@@ -183,6 +194,7 @@ describe('Golf: Gruppe', () => {
     tables.mockReset().mockResolvedValue([]);
     leaveTable.mockReset().mockResolvedValue({ ok: true });
     startNow.mockReset();
+    setSeatColor.mockReset();
     localStorage.clear();
   });
 
@@ -216,5 +228,40 @@ describe('Golf: Gruppe', () => {
     expect(screen.queryByRole('button', { name: 'Starten' })).toBeNull();
     expect(screen.queryByRole('slider')).toBeNull();
     expect(screen.getByText(/Warten, bis Bea startet/)).toBeTruthy();
+  });
+
+  /*
+   * Die Farbwahl. Geprüft wird die Verdrahtung: dass NUR die eigene Zeile ein
+   * Knopf ist, und dass der Tipp die nächste FREIE Farbnummer schickt — nicht
+   * einfach die nächste, denn die trägt vielleicht schon jemand.
+   */
+  it('schaltet auf Tipp die eigene Farbe weiter und überspringt vergebene', async () => {
+    me.mockReset().mockResolvedValue({ id: 'konto-2', displayName: 'Anna' });
+    // Bea sitzt auf 0 und wünscht sich 2; Anna sitzt auf 1 und hat keinen
+    // Wunsch, trägt also die Farbe ihres Sitzes (1). Nächste freie: 3.
+    tischStand = standMitTisch([
+      platz(0, 'Bea', 'konto-1', 2),
+      platz(1, 'Anna', 'konto-2', null),
+    ]);
+    render(<Golf startTisch="tisch-1" onBack={() => {}} />);
+    await durchatmen();
+
+    const knopf = document.querySelector('[data-golf-farbe="1"]');
+    expect(knopf).toBeTruthy();
+    // Fremde Zeilen sind keine Knöpfe — sonst färbte ein Fehlgriff jemand
+    // anderen um.
+    expect(document.querySelector('[data-golf-farbe="0"]')).toBeNull();
+
+    fireEvent.click(knopf as Element);
+    expect(setSeatColor).toHaveBeenCalledWith(3);
+  });
+
+  it('lässt einen Zuschauer ohne Sitz nichts umfärben', async () => {
+    me.mockReset().mockResolvedValue({ id: 'konto-9', displayName: 'Gast' });
+    tischStand = standMitTisch([platz(0, 'Bea', 'konto-1'), platz(1, 'Anna', 'konto-2')]);
+    render(<Golf startTisch="tisch-1" onBack={() => {}} />);
+    await durchatmen();
+
+    expect(document.querySelectorAll('[data-golf-farbe]').length).toBe(0);
   });
 });

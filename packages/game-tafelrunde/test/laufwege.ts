@@ -48,8 +48,10 @@ export const ROLLEN: readonly Rolle[] = ['wache', 'meuchler', 'beistand', 'schue
  * mitgeaendert: Diese Datei misst, was gelaufen wird, und die Spalten dazu
  * (`schritte`, `sofortInReichweite`, `startAbstand`) sind unberuehrt. Wer die
  * Handlungen zaehlen will, braucht eine eigene Spalte und keine
- * umdefinierte — sonst heisst "Treffer" in zwei Tabellen zweierlei. Steht als
- * Karte auf dem Board.
+ * umdefinierte — sonst heisst "Treffer" in zwei Tabellen zweierlei. Die
+ * betroffene Zelle traegt seit dem 19.09.2026 ein ⚠ in der Rollen-Tabelle von
+ * docs/TAFELRUNDE-LAUFWEGE.md (Abschnitt 1), damit die Zahl nicht als
+ * "der Beistand kam nie zum Zug" gelesen wird.
  */
 export interface Einheitslauf {
   readonly wer: number;

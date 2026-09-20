@@ -36,6 +36,15 @@
  *      darunter (seit dem 07.09.2026). Dazu druckt es, wie breit der Tisch vom
  *      Schirm wirklich belegt — die Zahl, die diesen Umbau ausgeloest hat: Auf
  *      1366 Pixeln waren es 600, der Rest blieb leer.
+ *
+ * BEIDE PROBEN MUESSEN DEN AUFBAU DES TISCHES HABEN, sonst misst dieses
+ * Werkzeug einen Bildschirm, den es am Tisch nicht gibt. `/probe/kampf` hatte
+ * ihn bis zum 19.09.2026 nicht — drei lose Kinder in `.tr-tisch` statt der
+ * vier Baender —, und das fiel hier nicht auf: Pruefung 4 haengt an `.tr-fuss`
+ * und `.tr-mitte`, und wo es die nicht gibt, meldet sie nichts statt einen
+ * Fehler (`nebeneinander` bleibt null, die Spalte in der Ausgabe leer). Die
+ * Arena mass dort deshalb 262 statt 345 Pixel. Wer eine dritte Probe
+ * dazustellt, faengt bei ihren Baendern an.
  * Und es legt je Groesse ein Bild ab, damit man auch hinsieht.
  *
  * DIE GROESSEN sind die aus der Aufgabe vom 06.09.2026: zwei kleine

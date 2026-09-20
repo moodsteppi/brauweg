@@ -9,7 +9,7 @@
 
 import { randomInt } from 'node:crypto';
 
-import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { type BotLevel, DEFAULT_BOT_LEVEL, type GameId } from '@brauweg/game-api';
 
 import { requireClubMember } from '../clubs/service.js';
@@ -795,6 +795,76 @@ export async function setTableBotLevel(
   await touch(db, tableId);
 }
 
+/**
+ * Groesste Farbnummer, die ueber die Leitung darf.
+ *
+ * Grosszuegig wie beim Zeichenvorrat der Reaktionen: Welche Farben es gibt,
+ * entscheidet der Bildschirm; ein spaeterer, groesserer Vorrat soll keine
+ * Serveraenderung kosten. Eine Zahl kann kein Schimpfwort sein.
+ */
+export const MAX_SITZFARBE = 63;
+
+/**
+ * Farbwuensche eines Tisches — Konto-Kennung auf Farbnummer.
+ *
+ * Sie liegen wie die Bot-Stufe im `filters`-jsonb: eine Tischeinstellung,
+ * keine feste Verdrahtung im Server, und damit ohne Migration.
+ *
+ * **Am Konto und nicht am Sitzindex.** `schrumpfeAufBesetzte` nummeriert die
+ * Sitze beim Sofortstart um; ein Wunsch am Sitzindex haenge danach am
+ * falschen Menschen. Bots waehlen nicht.
+ */
+export function sitzfarbWuensche(filters: unknown): Record<string, number> {
+  const roh = (filters as { sitzfarben?: unknown } | null)?.sitzfarben;
+  if (roh === null || typeof roh !== 'object') return {};
+  const raus: Record<string, number> = {};
+  for (const [konto, wert] of Object.entries(roh as Record<string, unknown>)) {
+    if (typeof wert === 'number' && Number.isInteger(wert) && wert >= 0 && wert <= MAX_SITZFARBE) {
+      raus[konto] = wert;
+    }
+  }
+  return raus;
+}
+
+/**
+ * Farbwunsch des eigenen Sitzes setzen.
+ *
+ * Wie beim Bot-Setzen: nur wer selbst am Tisch sitzt, und nur solange noch
+ * keine Partie laeuft — waehrend der Partie faerbte sich sonst mitten im
+ * Schlag ein Ball um, und die Geraete rechnen ihre Baelle unabhaengig.
+ *
+ * KEINE Doppelpruefung gegen die anderen Sitze: Sie waere ein Wettlauf (zwei
+ * Tipps im selben Moment) und liesse den Verlierer ohne Rueckmeldung stehen.
+ * Doppelfrei macht es der Bildschirm aus der vollen Wunschliste — dieselbe
+ * reine Funktion auf jedem Geraet.
+ */
+export async function setSeatColor(
+  db: Db,
+  tableId: string,
+  farbe: number,
+  byAccountId: string,
+): Promise<void> {
+  if (!Number.isInteger(farbe) || farbe < 0 || farbe > MAX_SITZFARBE) {
+    throw badRequest('seatColorUnknown');
+  }
+  const { table, seats } = await tableWithSeats(db, tableId);
+  if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
+  if (!seats.some((seat) => seat.accountId === byAccountId)) throw forbidden('notSeated');
+
+  // Nur Wuensche von Leuten behalten, die noch sitzen: Sonst haelt ein
+  // Weggegangener seine Farbe fuer immer im Tisch fest.
+  const sitzend = new Set(seats.map((seat) => seat.accountId).filter((id): id is string => !!id));
+  const alt = sitzfarbWuensche(table.filters);
+  const sitzfarben: Record<string, number> = { [byAccountId]: farbe };
+  for (const [konto, wert] of Object.entries(alt)) {
+    if (konto !== byAccountId && sitzend.has(konto)) sitzfarben[konto] = wert;
+  }
+
+  const filters = { ...(table.filters as Record<string, unknown> | null), sitzfarben };
+  await db.update(s.gameTable).set({ filters }).where(eq(s.gameTable.id, tableId));
+  await touch(db, tableId);
+}
+
 /** Alle Plaetze besetzt, entweder durch Menschen oder durch gesetzte Bots. */
 export function isReadyToStart(
   table: { seats: number; filters: unknown },
@@ -817,7 +887,33 @@ export function isReadyToStart(
  * Training an.
  */
 export async function countsForRanking(db: Db, tableId: string): Promise<boolean> {
-  const { table } = await tableWithSeats(db, tableId);
+  const { table, seats } = await tableWithSeats(db, tableId);
+
+  /*
+   * Sitzt ein GAST am Tisch, zaehlt die Partie fuer niemanden.
+   *
+   * Nicht nur fuer den Gast selbst, und das ist der ganze Punkt: Ein
+   * Gastkonto entsteht mit einem Klick und ohne Mail. Wuerden nur seine
+   * eigenen Trophaeen wegfallen, waeren fuenf Gaeste am Tisch das billigste
+   * Futter, das sich denken laesst — absichtlich verlieren, und das echte
+   * Konto steigt. Die Rangliste haengt damit nicht mehr am Koennen, sondern
+   * an der Geduld beim Konten-Anlegen.
+   *
+   * Der Preis ist bekannt und in Kauf genommen: Wer sich an einen
+   * oeffentlichen Tisch setzt, an dem ein Gast sitzt, spielt eine Runde ohne
+   * Wertung. Damit das niemanden erst hinterher trifft, traegt jeder Sitz in
+   * der Tischnachricht ein `gast`-Merkmal (`seatInfo`), und die Bildschirme
+   * sagen es an, bevor gestartet wird.
+   */
+  const accountIds = seats.map((seat) => seat.accountId).filter((id): id is string => id !== null);
+  if (accountIds.length > 0) {
+    const [gast] = await db
+      .select({ id: s.account.id })
+      .from(s.account)
+      .where(and(inArray(s.account.id, accountIds), isNotNull(s.account.gastSeit)))
+      .limit(1);
+    if (gast) return false;
+  }
 
   const [rs] = await db
     .select({ config: s.ruleSet.config })

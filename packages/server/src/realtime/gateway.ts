@@ -23,7 +23,9 @@ import {
   isReadyToStart,
   schrumpfeAufBesetzte,
   setSeatBot,
+  setSeatColor,
   setTableBotLevel,
+  sitzfarbWuensche,
   tableBotLevel,
   tableWithSeats,
 } from '../tables/service.js';
@@ -154,7 +156,7 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     game: z.string().max(40).optional(),
     type: z.enum(['addBot', 'removeBot']),
     tableId: z.string().uuid(),
-    seat: z.number().int().min(0).max(7),
+    seat: z.number().int().min(0).max(11),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),
@@ -162,6 +164,18 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('setBotLevel'),
     tableId: z.string().uuid(),
     level: z.enum(['anfaenger', 'standard', 'experte', 'genie']),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.literal('setSeatColor'),
+    tableId: z.string().uuid(),
+    /*
+     * Platz in der Farbtabelle des Bildschirms, kein Farbwert. Die Obergrenze
+     * ist grosszuegig (siehe MAX_SITZFARBE): Ein groesserer Farbvorrat soll
+     * keine Serveraenderung kosten.
+     */
+    farbe: z.number().int().min(0).max(63),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),
@@ -298,6 +312,40 @@ export class Gateway {
       server,
       path: '/ws',
       maxPayload: 64 * 1024,
+      /**
+       * Nachrichten ueber einem Kilobyte werden komprimiert (RFC 7692,
+       * `permessage-deflate`). `ws` laesst das ab Werk aus, und deshalb ging
+       * bis zum 19.09.2026 jede Sicht als roher JSON-Text heraus.
+       *
+       * Der Anlass ist Tafelrunde: Seit jeder Spieler ALLE Kaempfe der Runde
+       * mit Protokoll bekommt (game-tafelrunde/src/sicht.ts), ist die groesste
+       * Sicht einer Partie zu acht 60 kB — gemessen mit
+       * `werkzeug/sichtgroesse.mjs` in jenem Paket. Komprimiert sind daraus
+       * 6,6 kB: Ein Ablaufprotokoll ist tausendfach dasselbe Dutzend
+       * Feldnamen, also fast reine Wiederholung. Ueber eine ganze Partie
+       * fallen so 69 kB je Spieler an statt 595 kB. Das ist der billigste
+       * Schnitt, den es fuer diese Frage gibt — billiger als jedes
+       * Nachliefern auf Anforderung, und er gilt fuer alle zwoelf Spiele.
+       *
+       * `threshold`, weil sich ein Zug von zweihundert Byte nicht lohnt: Der
+       * deflate-Rahmen kostet mehr, als er spart.
+       *
+       * Kein Kontextuebertrag (`…NoContextTakeover`), und das ist die
+       * Speicherbremse: Mit Uebertrag haelt ZLIB je Verbindung ein Fenster
+       * offen — bei vielen offenen Tischen sind das Hunderte Kilobyte, die
+       * niemand zurueckgibt. Ohne ihn wird jede Nachricht fuer sich gepackt;
+       * die oben genannten Zahlen sind genau so gemessen.
+       */
+      perMessageDeflate: {
+        threshold: 1024,
+        zlibDeflateOptions: { level: 6 },
+        serverNoContextTakeover: true,
+        clientNoContextTakeover: true,
+        // Wie viele Pack-/Entpackvorgaenge gleichzeitig in den Node-Threadpool
+        // duerfen. Ohne Grenze kann ein Schwung Tische ihn fuellen, und dann
+        // warten Dateizugriffe hinter Kompression.
+        concurrencyLimit: 10,
+      },
       /**
        * Bietet ein Client Unterprotokolle an, MUSS der Server eines davon
        * bestaetigen - sonst bricht der Browser die Verbindung ab. Bestaetigt
@@ -525,6 +573,9 @@ export class Gateway {
           break;
         case 'setBotLevel':
           await this.setBotLevel(connection, message.tableId, message.level);
+          break;
+        case 'setSeatColor':
+          await this.setSeatColor(connection, message.tableId, message.farbe);
           break;
         case 'startNow':
           await this.startNow(connection, message.tableId, message.rounds);
@@ -854,6 +905,20 @@ export class Gateway {
   }
 
   /**
+   * Farbwunsch des eigenen Sitzes setzen. Der Rundruf danach traegt ihn an
+   * alle im Wartebereich — jedes Geraet rechnet daraus dieselbe doppelfreie
+   * Farbverteilung.
+   */
+  private async setSeatColor(
+    connection: Connection,
+    tableId: string,
+    farbe: number,
+  ): Promise<void> {
+    await setSeatColor(this.db, tableId, farbe, connection.accountId);
+    await this.broadcast(tableId);
+  }
+
+  /**
    * Sofort losspielen, ohne die leeren Plaetze mit Bots zu fuellen: Der Tisch
    * schrumpft auf die Besetzten, danach startet der uebliche Rundruf die
    * Partie (nach dem Schrumpfen ist kein Platz mehr frei).
@@ -931,18 +996,21 @@ export class Gateway {
               id: s.account.id,
               displayName: s.account.displayName,
               hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
+              istGast: sql<boolean>`${s.account.gastSeit} is not null`,
             })
             .from(s.account)
             .where(inArray(s.account.id, accountIds))
         : [];
     const nameOf = new Map(names.map((row) => [row.id, row.displayName]));
     const avatarOf = new Map(names.map((row) => [row.id, row.hasAvatar]));
+    const gastOf = new Map(names.map((row) => [row.id, row.istGast]));
 
     const daten: TischDaten = {
       table,
       seatRows: seatRows.slice().sort((a, b) => a.seatIndex - b.seatIndex),
       nameOf,
       avatarOf,
+      gastOf,
     };
     this.tischDaten.set(tableId, daten);
     return daten;
@@ -966,21 +1034,29 @@ export class Gateway {
   ): Promise<void> {
     const daten = await this.ladeTischDaten(tableId);
     if (!daten) return;
-    const { table, seatRows, nameOf, avatarOf } = daten;
+    const { table, seatRows, nameOf, avatarOf, gastOf } = daten;
 
     const party = this.runtime.get(tableId);
+
+    // Farbwuensche haengen am Konto, nicht am Sitzindex — sie ueberleben so
+    // das Umnummerieren beim Sofortstart (siehe setSeatColor).
+    const farbwuensche = sitzfarbWuensche(table.filters);
 
     const seats = seatRows.map((row) => ({
       seat: row.seatIndex,
       displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
       accountId: row.accountId,
       isBot: row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
+      // Ein Bot ist kein Gast, ein leerer Platz auch nicht — nur ein Konto
+      // ohne Mail (siehe SeatInfo.gast im Protokoll).
+      gast: row.accountId ? (gastOf.get(row.accountId) ?? false) : false,
       // Nur eine kurze URL ueber die Leitung; die Bytes holt der Browser
       // einmal und behaelt sie im Cache.
       avatarUrl:
         row.accountId && avatarOf.get(row.accountId)
           ? `/api/avatars/${row.accountId}`
           : null,
+      farbe: row.accountId ? (farbwuensche[row.accountId] ?? null) : null,
     }));
 
     // Der Tisch selbst geht immer raus: Wer wartet, soll sehen, wer schon da
@@ -1077,6 +1153,8 @@ interface TischDaten {
   }[];
   readonly nameOf: ReadonlyMap<string, string>;
   readonly avatarOf: ReadonlyMap<string, boolean>;
+  /** Konto → ist Gast. Aus derselben Abfrage wie Name und Avatar. */
+  readonly gastOf: ReadonlyMap<string, boolean>;
 }
 
 function send(socket: WebSocket, message: ServerMessage): void {

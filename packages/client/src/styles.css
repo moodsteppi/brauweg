@@ -3001,6 +3001,8 @@ td {
 }
 
 .front-tab {
+  /* Traegt den Bereitschaftspunkt (siehe unten). */
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3013,6 +3015,27 @@ td {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 600;
+}
+
+/*
+  Der Punkt sitzt an der Ecke des SYMBOLS, nicht an der des Knopfes.
+
+  Die Leiste ist ein Raster mit 0,2rem Fuge; ein Punkt an der Knopfkante
+  haengt zur Haelfte im Nachbarreiter und sieht aus, als gehoere er dorthin.
+  Kleiner als an der Truhe ist er auch: Dort hat er einen 3,5rem-Knopf fuer
+  sich, hier teilt er sich einen Fuenftel der Bildschirmbreite mit Symbol
+  und Wort.
+*/
+.front-tab .hub-punkt {
+  top: 0.15rem;
+  right: auto;
+  left: 50%;
+  margin-left: 0.3rem;
+  /* Mit `box-sizing: border-box` zaehlt der 2px-Ring mit: unter 0,7rem
+     bleibt vom roten Kern weniger als die Fassung, und der Punkt sieht
+     grau aus statt rot. */
+  width: 0.7rem;
+  height: 0.7rem;
 }
 
 .front-tab-icon {
@@ -5999,6 +6022,19 @@ main.auth > .muted {
 .hub-themenspiel .muted {
   font-size: 0.76rem;
   color: #dbe3ec;
+}
+/* Zeichen und Sitzzahl als ein Stueck: inline-flex haelt das Zeichen auf der
+   Schriftmitte, statt es wie ein Bild auf die Grundlinie zu setzen — dort
+   haengt es sonst sichtbar zu tief neben der Zahl. */
+.hub-themenspiel-sitze {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28em;
+  vertical-align: -0.1em;
+}
+.hub-themenspiel-sitze .zeichen {
+  width: 1.05em;
+  height: 1.05em;
 }
 .hub-themenspiel .front-bald-tag {
   position: absolute;
@@ -17898,6 +17934,18 @@ span.hub-angebot-art.poker-jeton-stapel {
   gap: 5px;
   width: 100%;
 }
+/*
+ * Die Huelle um eine Ladenkarte — sie traegt den Griff zum Blatt.
+ *
+ * Es gibt sie, seit die Karte eine Auskunft bekommen hat: Die Karte IST eine
+ * Schaltflaeche, und ein Knopf in einem Knopf ist ungueltiges HTML. Also wird
+ * das Rasterfeld des Ladens die Huelle, und die Karte fuellt sie ganz aus —
+ * am Kauf-Tippziel aendert sich damit nichts.
+ */
+.tr-karte-huelle {
+  position: relative;
+  display: grid;
+}
 .tr-karte {
   position: relative;
   display: flex;
@@ -17912,6 +17960,11 @@ span.hub-angebot-art.poker-jeton-stapel {
   background: linear-gradient(180deg, #232f37, #182127);
   box-shadow: inset 0 0 0 1.5px var(--tr-kosten, var(--line));
   cursor: pointer;
+  /* Ein langer Druck auf die Karte schlaegt ihr Blatt auf (Ladenkarte.tsx).
+     Ohne diese beiden Zeilen legt das Handy dabei seine eigene Textauswahl
+     samt Freigabe-Menue ueber das Blatt, das gerade aufgegangen ist. */
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 .tr-karte:active:not(:disabled) { transform: scale(0.97); }
 /* Nicht kaufbar heisst nicht unsichtbar: Man soll sehen, worauf man spart —
@@ -17931,6 +17984,46 @@ span.hub-angebot-art.poker-jeton-stapel {
  * auf der Karte.
  */
 .tr-karte[data-teuer]:disabled { opacity: 0.45; filter: saturate(0.25); }
+/*
+ * Der Griff zum Blatt, in der linken oberen Ecke — gegenueber dem Preis.
+ *
+ * Klein und blass: Gekauft wird auf dieser Karte, nachgeschlagen nur
+ * gelegentlich, und zwei gleich laute Angebote auf 60 Pixel Breite waeren
+ * eins zu viel. Die Trefferflaeche ist trotzdem 32 px gross (`::after`), denn
+ * das Zeichen selbst misst 16 — auf einem Handy trifft man das sonst nicht.
+ * Sie reicht bewusst nicht weiter: Darunter liegt die Karte, und jeder Pixel
+ * mehr nimmt dem Kauf eine Ecke weg.
+ */
+.tr-karte-info {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  opacity: 0.75;
+  cursor: pointer;
+}
+.tr-karte-info svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.tr-karte-info::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+.tr-karte-info:hover,
+.tr-karte-info:focus-visible {
+  color: var(--text);
+  opacity: 1;
+}
 .tr-karte-leer {
   min-height: 84px;
   border-radius: 12px;
@@ -18309,13 +18402,20 @@ span.hub-angebot-art.poker-jeton-stapel {
  * daneben.
  *
  * WARUM JEDE REGEL `:has(> .tr-mitte)` DAVOR HAT. `.tr-tisch` traegt nicht nur
- * der Tisch: `/probe/kampf` benutzt dieselbe Klasse fuer den Rahmen und haengt
- * eigene Kinder hinein (Kopfzeile, Buehne, Fusstext). Ein blankes
- * `.tr-tisch { display: grid }` hat die am 07.09.2026 auf zwei Spalten
- * verteilt — die Buehne stand oben rechts und war 97 Pixel hoch. Die Bedingung
- * liest sich als das, was sie meint: Zum Raster wird ein Tisch, der aus diesen
- * Baendern gebaut ist. Wo es `:has()` nicht gibt, bleibt es bei der einen
- * Spalte von heute.
+ * der Tisch, sondern jede Seite, die seinen Rahmen will. `/probe/kampf` hat
+ * dort am 07.09.2026 drei lose Kinder hineingehaengt (Kopfzeile, Buehne,
+ * Fusstext); ein blankes `.tr-tisch { display: grid }` hat die auf zwei
+ * Spalten verteilt — die Buehne stand oben rechts und war 97 Pixel hoch. Die
+ * Bedingung liest sich als das, was sie meint: Zum Raster wird ein Tisch, der
+ * aus diesen Baendern gebaut ist. Wo es `:has()` nicht gibt, bleibt es bei der
+ * einen Spalte von heute.
+ *
+ * DIE BEDINGUNG IST DAMIT AUCH DIE ANSAGE AN JEDE PROBE: Wer die Kampfphase
+ * oder die Ruestkammer an diesem Rahmen MESSEN will, baut die vier Baender
+ * nach — sonst misst er einen Bildschirm, den es am Tisch nicht gibt. Beide
+ * Proben tun das inzwischen (`/probe/ruestkammer` seit dem 07.09.2026,
+ * `/probe/kampf` seit dem 19.09.2026, wo die Arena sonst 262 statt 348 Pixel
+ * breit gemessen wurde).
  */
 @media (min-width: 64rem) {
   .tr-tisch:has(> .tr-mitte) {
@@ -18675,6 +18775,27 @@ span.hub-angebot-art.poker-jeton-stapel {
 .gf-gruppenzeile[data-eigen] { background: rgba(111, 220, 140, 0.18); }
 .gf-gruppenzeile[data-leer] { opacity: 0.42; }
 .gf-gruppenname { flex: 1; font: 700 15px/1.2 system-ui; }
+/* Die eigene Zeile ist ein Knopf: ein Tipp schaltet die Ballfarbe weiter.
+   Er fuellt die ganze Zeile — bei 44 px Mindesthoehe trifft ihn auch ein
+   Daumen, und die Zeile sieht dabei aus wie die daneben. */
+.gf-farbwahl {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: -9px -12px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gf-farbwahl:disabled { cursor: default; opacity: 0.6; }
+.gf-farbwahl:not(:disabled):hover { background: rgba(255, 255, 255, 0.1); }
+.gf-farbwahl:focus-visible { outline: 2px solid #f2f2f2; outline-offset: -2px; }
 .gf-du {
   flex: none;
   padding: 3px 8px;
@@ -18813,6 +18934,31 @@ span.hub-angebot-art.poker-jeton-stapel {
 .gf-chip em { font: 800 10px/1.3 system-ui; font-style: normal; opacity: 0.8; }
 .gf-chip i { font: 700 9px/1 system-ui; font-style: normal; opacity: 0.7; }
 
+/* Die Punkteanzeige tritt zurueck, sobald sie ueber dem eigenen Ball, seiner
+   Flugkurve, dem Zielpfeil oder der Fahne liegt; wann das der Fall ist,
+   rechnet verdeckung.ts. Stark transparent statt ausgeblendet: Der
+   Zwischenstand bleibt an seinem Fleck, man kann ihn noch erahnen und sucht
+   ihn nach dem Schlag nicht neu.
+
+   Was NICHT blass wird, und warum:
+   - der Zurueck-Knopf. Er ist als einziges Stueck des HUD anklickbar
+     (`pointer-events: auto`), und ein Knopf, den man nicht sieht, aber
+     trifft, ist schlimmer als einer, der im Weg steht.
+   - Troedel- und Hinweiszeile. Eine Warnung, die verblasst, sobald sie
+     wichtig wird, ist keine. */
+.gf-bahnzeile,
+.gf-zeit,
+.gf-chips { transition: opacity 180ms ease-out; }
+.gf-hud[data-verdeckt] .gf-bahnzeile,
+.gf-hud[data-verdeckt] .gf-zeit,
+.gf-hud[data-verdeckt] .gf-chips { opacity: 0.14; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gf-bahnzeile,
+  .gf-zeit,
+  .gf-chips { transition: none; }
+}
+
 .gf-troedel {
   margin: 0;
   padding: 7px 12px;
@@ -18898,3 +19044,457 @@ span.hub-angebot-art.poker-jeton-stapel {
   aspect-ratio: 4 / 1;
   background: #101d16;
 }
+
+/* ==========================================================================
+ * Partykiste
+ *
+ * Ein Turnier aus sechs Partyminispielen. Das Aussehen folgt dem, was die
+ * Bildschirme tun: EINE Sache in der Mitte, darunter grosse Schaltflaechen,
+ * sonst nichts. Alle Masse sind fuers Handy gedacht und wachsen mit `clamp`
+ * mit — gespielt wird das im Stehen, mit einer Hand, im Halbdunkeln.
+ * ========================================================================== */
+
+.pk-seite {
+  min-height: 100dvh;
+  padding: max(14px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  background: radial-gradient(120% 90% at 50% 0%, #2a1f3d 0%, #151021 62%, #0f0b18 100%);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pk-zurueck {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 12px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+}
+.pk-zurueck.is-klein {
+  position: static;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  font-size: 17px;
+}
+
+/* -- Menue ---------------------------------------------------------------- */
+
+.pk-menue { position: relative; justify-content: center; }
+.pk-menue-mitte {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+.pk-titel {
+  margin: 0;
+  font: 800 clamp(30px, 9vw, 46px)/1.05 system-ui;
+  letter-spacing: 0.01em;
+}
+.pk-untertitel { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+
+.pk-spielliste {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+.pk-spielliste li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+}
+.pk-spielliste strong { font-size: 14px; }
+.pk-spielliste .muted { color: var(--muted); }
+
+.pk-botblock { display: flex; flex-direction: column; gap: 10px; }
+.pk-regler {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.pk-reglerzeile { display: flex; align-items: center; gap: 10px; margin: 0; }
+/* Global steht ein margin-bottom auf jedem Label — in einer Flexzeile schoebe
+   das die Beschriftung aus der Mitte (die Falle aus Mememory). */
+.pk-reglerzeile > span { margin: 0; }
+.pk-reglertitel { width: 68px; text-align: left; font-size: 13px; color: var(--muted); }
+.pk-reglerzeile input { flex: 1; }
+.pk-reglerwert { min-width: 92px; text-align: right; font-size: 13px; }
+
+.pk-stufen { display: flex; gap: 6px; }
+.pk-stufen button {
+  flex: 1;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.pk-stufen button[data-an] { background: var(--lila); color: #180f28; }
+
+.pk-gruppe {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.pk-gruppe li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-gruppe li[data-leer] { opacity: 0.45; }
+.pk-gruppe li[data-eigen] { box-shadow: inset 0 0 0 2px var(--lila); }
+.pk-gruppenname { flex: 1; font-weight: 600; }
+.pk-du {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--lila);
+  text-transform: uppercase;
+}
+.pk-warten { margin: 0; color: var(--muted); font-size: 13px; }
+.pk-fehler { margin: 0; color: var(--danger); font-size: 14px; }
+
+/* -- Schaltflaechen ------------------------------------------------------- */
+
+.pk-knopf {
+  padding: 15px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text);
+  font: 700 16px/1.2 system-ui;
+  cursor: pointer;
+  transition: transform 90ms ease, background 120ms ease;
+}
+.pk-knopf:active:not(:disabled) { transform: scale(0.97); }
+.pk-knopf:disabled { opacity: 0.5; cursor: default; }
+.pk-knopf.is-haupt { background: var(--lila); color: #180f28; }
+.pk-knopf.is-neben { background: rgba(255, 255, 255, 0.12); }
+.pk-knopf.is-gross { flex: 1; padding: 20px 14px; font-size: 18px; }
+.pk-knopf.is-gut { flex: 1; background: #2f6b4d; }
+.pk-knopf.is-weg { flex: 1; background: #6b3a34; }
+.pk-knopf[data-gewaehlt] { box-shadow: inset 0 0 0 3px var(--gold); }
+
+.pk-wahl { display: flex; gap: 10px; }
+.pk-wahl[data-weit] { flex-direction: column; }
+.pk-wahl > .pk-knopf { flex: 1; }
+
+.pk-knopf.is-antwort { text-align: left; background: rgba(255, 255, 255, 0.08); }
+.pk-knopf.is-antwort[data-richtig] { background: #2f6b4d; color: #eafff2; }
+.pk-knopf.is-antwort[data-daneben] { background: #6b3a34; color: #ffeceb; }
+
+.pk-leute {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 8px;
+}
+.pk-person {
+  padding: 14px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font: 700 15px/1.2 system-ui;
+  cursor: pointer;
+}
+.pk-person[data-gewaehlt] { background: var(--lila); color: #180f28; }
+.pk-person:disabled { opacity: 0.45; cursor: default; }
+
+/* -- Tisch ---------------------------------------------------------------- */
+
+.pk-tisch { align-items: stretch; }
+.pk-kopf { display: flex; align-items: center; gap: 10px; }
+.pk-rundenzahl {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 12px/1 system-ui;
+  color: var(--muted);
+}
+.pk-spielname { flex: 1; font-size: 16px; }
+.pk-tafelknopf {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.pk-tafelknopf[aria-pressed="true"] { background: var(--lila); color: #180f28; }
+.pk-ansage { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.pk-endtitel { margin: 6px 0 0; font: 800 26px/1.1 system-ui; text-align: center; }
+
+/* Die Buehne: was die Runde gerade ist, gross und allein. */
+.pk-buehne {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: clamp(150px, 30vh, 230px);
+  padding: 20px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  text-align: center;
+}
+.pk-buehne[data-ton="geheim"] {
+  background: linear-gradient(160deg, rgba(166, 120, 242, 0.24), rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 0 0 2px rgba(166, 120, 242, 0.5);
+}
+.pk-buehne[data-ton="gut"] { box-shadow: inset 0 0 0 2px #3f8f66; }
+.pk-buehne[data-ton="schlecht"] { box-shadow: inset 0 0 0 2px #a1524a; }
+.pk-buehne-oben {
+  margin: 0;
+  font: 700 12px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pk-buehne-gross { display: flex; align-items: center; justify-content: center; }
+.pk-buehne-unten { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.pk-buehne-unten [data-gut] { color: #8ee0a3; }
+
+/* Ein Wort, so gross wie der Platz es zulaesst — das ganze Imposter-Spiel. */
+.pk-wort { font: 800 clamp(30px, 11vw, 54px)/1.05 system-ui; letter-spacing: -0.01em; }
+.pk-wort.is-klein { font-size: clamp(22px, 7vw, 34px); }
+.pk-frage { font: 700 clamp(18px, 5.2vw, 26px)/1.3 system-ui; }
+.pk-busfrage { margin: 0; text-align: center; font: 700 16px/1 system-ui; }
+.pk-wartet { margin: 0; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* -- Listen und Tabellen -------------------------------------------------- */
+
+.pk-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.pk-liste.is-schmal { gap: 3px; }
+.pk-liste li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 14px;
+}
+.pk-liste li[data-gut] { background: rgba(63, 143, 102, 0.22); }
+.pk-liste .muted { color: var(--muted); font-size: 13px; text-align: right; }
+
+.pk-tabelle { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.pk-tabelle li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.pk-tabelle li[data-ich] { box-shadow: inset 0 0 0 2px var(--lila); }
+.pk-tabelle li[data-weg] { opacity: 0.45; }
+.pk-platz { width: 24px; font: 800 15px/1 system-ui; color: var(--gold); }
+.pk-tabellenname { flex: 1; font-weight: 600; }
+.pk-punkte { min-width: 34px; text-align: right; font: 800 18px/1 system-ui; }
+.pk-schluck { color: var(--gold); font: 700 13px/1 system-ui; }
+
+.pk-abrechnung { display: flex; flex-direction: column; gap: 10px; }
+.pk-ausbeute {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 0;
+  font: 700 16px/1 system-ui;
+}
+.pk-ausbeute [data-gut] { color: #8ee0a3; }
+
+/* -- Wer bin ich ---------------------------------------------------------- */
+
+.pk-stirnen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+.pk-stirn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-stirn[data-ich] { background: rgba(166, 120, 242, 0.18); }
+.pk-stirn[data-dran] { box-shadow: inset 0 0 0 2px var(--gold); }
+.pk-stirn[data-fertig="gut"] { background: rgba(63, 143, 102, 0.22); }
+.pk-stirn[data-fertig="weg"] { opacity: 0.5; }
+.pk-stirn-name { font: 700 15px/1.2 system-ui; }
+.pk-stirn-wer { font-size: 12px; color: var(--muted); }
+
+/* -- Wer wuerde eher ------------------------------------------------------ */
+
+.pk-balken { display: grid; gap: 6px; }
+.pk-balken-zeile { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.pk-balken-name {
+  width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pk-balken-spur {
+  flex: 1;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.pk-balken-fuellung { display: block; height: 100%; border-radius: 999px; background: var(--lila); }
+.pk-balken-zahl { width: 18px; text-align: right; font-weight: 700; }
+
+/* -- Bus fahren ----------------------------------------------------------- */
+
+.pk-kartenreihe { display: flex; gap: 10px; }
+.pk-karte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: clamp(52px, 17vw, 74px);
+  aspect-ratio: 5 / 7;
+  border-radius: 9px;
+  background: #f6f1e6;
+  color: #1a1a1a;
+  font-family: system-ui, sans-serif;
+}
+.pk-karte[data-rot] { color: #b3352c; }
+.pk-karte-rang { font: 800 clamp(20px, 6vw, 26px)/1 system-ui; }
+.pk-karte-farbe { font-size: clamp(16px, 5vw, 22px); line-height: 1; }
+/* Die verdeckte Karte ist ein Muster und kein leeres Feld: Ein Kasten ohne
+   Inhalt sieht auf dem Handy aus wie ein Bild, das nicht geladen hat. */
+.pk-karte.is-zu {
+  background: repeating-linear-gradient(45deg, #3a2c56 0 6px, #2a1f3d 6px 12px);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+
+/* -- Banner der Spielauswahl ---------------------------------------------- */
+
+/* Dasselbe Verhaeltnis wie die gemalten Banner (1200 x 300). Ohne feste Form
+   haette das SVG in der Kachel keine Hoehe. */
+.pk-banner { display: block; width: 100%; aspect-ratio: 4 / 1; background: #151021; }
+
+/* =========================================================================
+   Gast-Einstieg auf der Anmeldeseite (Auth.tsx)
+   -------------------------------------------------------------------------
+   Der dritte Weg "Ohne Konto spielen" bekommt bewusst keinen dritten
+   geschnitzten Holzknopf: Er soll auffindbar sein, aber nicht wie eine
+   gleichwertige Alternative zu Anmelden/Registrieren wirken - wer ihn
+   nimmt, verzichtet auf etwas (Rangliste, Wiederkehr), und das darf die
+   Gestaltung nicht verschweigen, indem sie ihn genauso praesentiert.
+   Deshalb ein schlichter, unterstrichener Textlink statt eines Knopfes aus
+   `.auth button`. Die Selektoren brauchen die zusaetzliche Elementstufe
+   `button`, weil `.auth button:active`/`:disabled` sonst wegen der
+   gleichen Klassenzahl, aber einer Elementstufe mehr, den Vorrang haetten.
+   ========================================================================= */
+.auth button.auth-gast-taste {
+  display: block;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.2rem 0;
+  border: none;
+  border-image: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 400;
+  text-decoration: underline;
+  text-align: center;
+}
+.auth button.auth-gast-taste:active {
+  transform: none;
+  color: var(--lila);
+}
+.auth button.auth-gast-taste:disabled {
+  filter: none;
+  opacity: 0.6;
+}
+
+/* -- Partykiste: Schaetzen und Entweder-oder ------------------------------ */
+
+/* Das Zahlenfeld so gross wie die Knoepfe daneben — auf dem Handy tippt man
+   es mit dem Daumen, und `inputMode=decimal` holt die Zifferntastatur. */
+.pk-zahl {
+  flex: 1;
+  min-width: 0;
+  padding: 15px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text);
+  font: 700 20px/1.2 system-ui;
+  text-align: center;
+}
+.pk-zahl::placeholder { color: var(--muted); font-weight: 600; }
+.pk-zaehler {
+  display: block;
+  margin-top: 4px;
+  font: 700 12px/1 system-ui;
+  color: var(--muted);
+}
+.pk-knopf.is-gross[data-richtig] { background: #2f6b4d; color: #eafff2; }
+
+/* -- Partykiste: Imposter-Karte und Redereihenfolge ----------------------- */
+
+.pk-karte-inhalt { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.pk-hinweis { font: 600 clamp(15px, 4.2vw, 19px)/1.3 system-ui; color: var(--text); opacity: 0.85; }
+.pk-reihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: reihe;
+}
+.pk-reihe li {
+  counter-increment: reihe;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  font: 600 13px/1 system-ui;
+}
+.pk-reihe li::before {
+  content: counter(reihe);
+  font-weight: 800;
+  color: var(--gold);
+}
+.pk-reihe li[data-ich] { box-shadow: inset 0 0 0 2px var(--lila); }

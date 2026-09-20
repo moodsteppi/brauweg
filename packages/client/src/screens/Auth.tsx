@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
 
-type Mode = 'login' | 'register' | 'verify' | 'reset';
+type Mode = 'login' | 'register' | 'verify' | 'reset' | 'gast';
 
 /**
  * Google Identity Services — das Skript kommt von accounts.google.com und
@@ -190,6 +190,13 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
   const submit = (event: React.FormEvent): void => {
     event.preventDefault();
     void run(async () => {
+      if (mode === 'gast') {
+        // Kein Passwort, keine Bestaetigung noetig - der Name allein reicht,
+        // um sofort am Tisch zu sitzen.
+        await api.gastLogin(displayName);
+        onSignedIn();
+        return;
+      }
       if (mode === 'login') {
         await api.login(email, password);
         onSignedIn();
@@ -264,6 +271,23 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
               Neuen Link anfordern
             </button>
           </>
+        ) : mode === 'gast' ? (
+          <label>
+            Anzeigename
+            <input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              minLength={2}
+              maxLength={30}
+              required
+            />
+            {/* Ein Satz, keine Warnliste: Wer ohne Konto spielt, hat es eilig,
+                nicht Lust auf einen Absatz Kleingedrucktes. */}
+            <span className="muted">
+              Ohne Mail und Passwort kommst du nach dem Abmelden nicht wieder an dieses
+              Konto, und Runden mit Gästen zählen nicht für die Rangliste.
+            </span>
+          </label>
         ) : (
           <>
             <label>
@@ -312,22 +336,51 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
 
         <div className="row">
           <button className="primary" type="submit" disabled={busy}>
-            {mode === 'register' ? 'Konto anlegen' : mode === 'verify' ? 'Bestätigen' : 'Anmelden'}
+            {mode === 'register'
+              ? 'Konto anlegen'
+              : mode === 'verify'
+                ? 'Bestätigen'
+                : mode === 'gast'
+                  ? 'Spielen'
+                  : 'Anmelden'}
           </button>
           <button
             type="button"
             onClick={() => {
               setError(null);
               setNote(null);
-              setMode(mode === 'register' ? 'login' : 'register');
+              // Vom Gast aus fuehrt der Rueckweg zur Anmeldung, nicht zur
+              // Registrierung - wer schon ein Konto hat, will es benutzen,
+              // nicht ein zweites anlegen.
+              setMode(mode === 'register' ? 'login' : mode === 'gast' ? 'login' : 'register');
             }}
           >
-            {mode === 'register' ? 'Ich habe schon ein Konto' : 'Konto anlegen'}
+            {mode === 'register'
+              ? 'Ich habe schon ein Konto'
+              : mode === 'gast'
+                ? 'Doch lieber anmelden'
+                : 'Konto anlegen'}
           </button>
         </div>
+        {/* Der dritte Weg steht als eigener Schritt neben Anmelden/Registrieren
+            - erst waehlen, wie, dann erst das Formular dazu ausfuellen. */}
+        {(mode === 'login' || mode === 'register') && (
+          <button
+            type="button"
+            className="auth-gast-taste"
+            onClick={() => {
+              setError(null);
+              setNote(null);
+              setMode('gast');
+            }}
+          >
+            Ohne Konto spielen
+          </button>
+        )}
         {/* Bleibt unsichtbar leer, solange der Server keine Client-ID nennt
-            oder Google nicht erreichbar ist. */}
-        {mode !== 'verify' && (
+            oder Google nicht erreichbar ist. Im Gast-Formular fehlt ohnehin
+            das Feld, an das sich ein Google-Konto haengen liesse. */}
+        {mode !== 'verify' && mode !== 'gast' && (
           <div className="auth-google" ref={googleZiel} aria-label="Mit Google anmelden" />
         )}
       </form>

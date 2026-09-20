@@ -17,12 +17,16 @@
  * braucht denselben Blick.
  *
  * DESHALB WIRD HIER NICHTS NACHGEBAUT. Es laufen `Hexbrett`, `Bankreihe`,
- * `Einheitenmarke`, `Ladenkarte`, `Mitspielerleiste` und `Phasenzeile` aus
- * `minispiele/tafelrunde/` — dieselben Bauteile, die `screens/Tafelrunde.tsx`
- * einhaengt, mit denselben Eigenschaften, im selben Rahmen (`.tr-seite`,
- * `.tr-tisch`, `.tr-oben`, `.tr-spielflaeche`, `.tr-bretter`, `.tr-fuss`).
- * Sie standen bis zum 06.09.2026 privat im Bildschirm; sie herauszuziehen war
- * die halbe Aufgabe.
+ * `Einheitenmarke`, `Ladenkarte`, `Mitspielerleiste`, `Phasenzeile`,
+ * `Statuszeile` und `Brettkopf` aus `minispiele/tafelrunde/` — dieselben
+ * Bauteile, die `screens/Tafelrunde.tsx` einhaengt, mit denselben
+ * Eigenschaften, im selben Rahmen (`.tr-seite`, `.tr-tisch`, `.tr-oben`,
+ * `.tr-spielflaeche`, `.tr-bretter`, `.tr-fuss`). Sie standen bis zum
+ * 06.09.2026 privat im Bildschirm; sie herauszuziehen war die halbe Aufgabe.
+ * Die beiden Kopfzeilen kamen als letzte nach (19.09.2026) — sie waren bis
+ * dahin hier von Hand aufgebaut, und beim Handy-Umbau am 06.09.2026 bekam
+ * nur der Tisch die neue Reihe: Die Probe zeigte einen Bildschirm, den es
+ * nicht gab.
  *
  * SEIT DEM 07.09.2026 BEANTWORTET SIE AUCH DIE HOEHENFRAGE: Passt die
  * Ruestkammer auf einen Bildschirm? Dafuer musste sie die echte Kopfleiste
@@ -72,23 +76,19 @@ import { useMemo, useState } from 'react';
 
 import { Bankreihe, Hexbrett } from '../../minispiele/tafelrunde/Brett';
 import { Einheitenblatt } from '../../minispiele/tafelrunde/Einheitenblatt';
+import { Brettkopf, Statuszeile } from '../../minispiele/tafelrunde/Kopfzeilen';
 import { Ladenkarte, kaufhindernis } from '../../minispiele/tafelrunde/Ladenkarte';
-import {
-  AugeZeichen,
-  Mitspielerleiste,
-  type Sitzzeile,
-} from '../../minispiele/tafelrunde/Mitspieler';
+import { Mitspielerleiste, type Sitzzeile } from '../../minispiele/tafelrunde/Mitspieler';
 import { Phasenzeile } from '../../minispiele/tafelrunde/Phasenzeile';
 import {
   type Synergie,
   type Synergiestand,
-  Fremdmarken,
   Markennamen,
-  Synergieleiste,
   markennamen,
   schwellenPruefer,
+  useMarkenblatt,
 } from '../../minispiele/tafelrunde/Synergien';
-import { GoldZeichen, LebenZeichen } from '../../minispiele/tafelrunde/Zeichen';
+import { GoldZeichen } from '../../minispiele/tafelrunde/Zeichen';
 import type { Einheit, Stufenwerte } from '../../minispiele/tafelrunde/sicht';
 import {
   type Kaempfer,
@@ -268,6 +268,13 @@ export function ProbeRuestkammer(): React.JSX.Element {
   const [blatt, setBlatt] = useState<Blattlage | null>(blattAusAdresse);
 
   /*
+   * Und welche LADENKARTE ihr Blatt offen hat — der Platz, aus demselben
+   * Grund wie oben der Ort. Die Karte selbst ist eine Schaltflaeche; der Griff
+   * dazu sitzt daneben (Ladenkarte.tsx).
+   */
+  const [ladenBlatt, setLadenBlatt] = useState<number | null>(null);
+
+  /*
    * Die Grenze, die auch der Bildschirm prueft — und die einzige, die er
    * selbst prueft (siehe Kopf von screens/Tafelrunde.tsx): Von der Bank auf
    * ein FREIES Brettfeld nur, solange `belegt` unter `feldplaetze` liegt.
@@ -332,10 +339,21 @@ export function ProbeRuestkammer(): React.JSX.Element {
     setLaden(SZENE.eigenes.laden);
     setGewaehlt(null);
     setBlatt(null);
+    setLadenBlatt(null);
   }
+
+  /** Was die offene Ladenkarte anbietet — die Werte der ersten Stufe. */
+  const ladenEinheit = ladenBlatt !== null ? KATALOG[laden[ladenBlatt] ?? ''] : undefined;
 
   const namen = markennamen(SZENE.synergieTabelle);
   const trifftSchwelle = schwellenPruefer(SZENE.eigenes.synergien, SZENE.synergieTabelle);
+  /* Derselbe Griff wie am Tisch: Beide Blaetter fuehren zum Blatt einer
+     Marke, und die Zaehler der Leiste bringen ihren eigenen mit. */
+  const markengriff = useMarkenblatt(
+    SZENE.eigenes.synergien,
+    SZENE.synergieTabelle,
+    KATALOG,
+  );
 
   return (
     /*
@@ -502,37 +520,65 @@ export function ProbeRuestkammer(): React.JSX.Element {
                   }
             }
             verschiebenTitel={blatt.ort.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
+            onMarke={markengriff.oeffne}
+            escapeAus={markengriff.offeneMarke !== null}
             onSchliessen={() => setBlatt(null)}
           />
         )}
 
-        {/* Leben, Rang, Feldplaetze und die Marken in EINER Zeile — Aufbau
-            und Klassen wie am Tisch (`.tr-statuszeile`, screens/Tafelrunde.tsx
-            und styles.css). Die Zahlen stehen fest: Die Probe spielt nicht.
+        {/* Das Blatt einer Ladenkarte — dasselbe Bauteil ohne Ort: Die Einheit
+            steht noch nirgends, angeboten wird der Kauf. Die Probe kauft
+            genauso wie der Knopf auf der Karte selbst. */}
+        {ladenBlatt !== null && ladenEinheit && (
+          <Einheitenblatt
+            einheit={ladenEinheit}
+            kaempfer={{ id: ladenEinheit.id, stufe: 1 }}
+            werte={SZENE.stufenwerte[ladenEinheit.id]?.[0]}
+            tabelle={SZENE.synergieTabelle}
+            maxStufe={SZENE.maxStufe}
+            erloes={undefined}
+            /* Wie der Klick auf die Karte selbst: Er raeumt den Platz ab und
+               kauft nichts — die Probe rechnet kein Gold (siehe `onKauf`
+               unten). */
+            onKaufen={
+              amZug && KAUFBAR.has(ladenBlatt)
+                ? () => {
+                    setLaden((l) =>
+                      l.map((eintrag, i) => (i === ladenBlatt ? null : eintrag)),
+                    );
+                    setLadenBlatt(null);
+                  }
+                : undefined
+            }
+            onMarke={markengriff.oeffne}
+            escapeAus={markengriff.offeneMarke !== null}
+            onSchliessen={() => setLadenBlatt(null)}
+          />
+        )}
 
-            Der Aufbau ist hier nachgeschrieben und nicht eingehaengt, weil er
-            im Bildschirm noch kein eigenes Bauteil ist. Wer ihn dort aendert,
-            aendert ihn hier mit — sonst zeigt ausgerechnet die Probe eine
-            Zeile, die es am Tisch nicht gibt. */}
-        <div className="tr-statuszeile">
-          <header className="tr-kopf">
-            <span className="tr-wert tr-wert-leben">
-              <LebenZeichen />
-              <strong>{SZENE.eigenes.leben}</strong>
-              <em>Leben</em>
-            </span>
-            <span className="tr-wert tr-wert-level">
-              <em>Rang</em>
-              <strong>{SZENE.eigenes.level}</strong>
-            </span>
-            <span className="tr-wert tr-wert-feld">
-              <strong>
-                {stellung.belegt}/{SZENE.eigenes.feldplaetze} Feld
-              </strong>
-            </span>
-          </header>
-          <Synergieleiste staende={SZENE.eigenes.synergien} tabelle={SZENE.synergieTabelle} />
-        </div>
+        {/* Das Blatt einer Marke liegt ueber beiden — wie am Tisch. */}
+        {markengriff.blatt}
+
+        {/* Leben, Rang, Feldplaetze und die Marken in EINER Zeile —
+            dasselbe Bauteil wie am Tisch (Kopfzeilen.tsx), seit dem
+            19.09.2026 eingehaengt statt nachgeschrieben. Vorher stand der
+            Aufbau hier ein zweites Mal, und beim Handy-Umbau am 06.09.2026
+            bekam ihn nur der Tisch: Die Probe zeigte eine Zeile, die es
+            nirgends gab.
+
+            Die Zahlen stehen fest — die Probe spielt nicht. Nur `belegt`
+            kommt aus der laufenden Aufstellung, sonst zaehlte sie eine
+            Einheit weiter mit, die man gerade heruntergenommen hat. */}
+        <Statuszeile
+          werte={{
+            leben: SZENE.eigenes.leben,
+            level: SZENE.eigenes.level,
+            belegt: stellung.belegt,
+            feldplaetze: SZENE.eigenes.feldplaetze,
+          }}
+          staende={SZENE.eigenes.synergien}
+          tabelle={SZENE.synergieTabelle}
+        />
 
         {/* Derselbe Kasten wie am Tisch (`.tr-mitte`, screens/Tafelrunde.tsx):
             Er haelt alles zwischen Statuszeile und Laden zusammen, damit das
@@ -565,20 +611,17 @@ export function ProbeRuestkammer(): React.JSX.Element {
                 eigene: Ob die Figuren einander wirklich ansehen, sieht man erst
                 hier. */}
               <section className="tr-brettteil tr-brettteil-fremd">
-                {/* Name und Marken nebeneinander, wie am Tisch
-                  (`.tr-brettkopf`) — samt dem Auge davor, das seit dem
-                  06.09.2026 sagt, wessen Brett man sich gerade ansieht. */}
-                <div className="tr-brettkopf">
-                  <h2 className="tr-bretttitel">
-                    <AugeZeichen />
-                    {nameVon(SZENE.gegner.sitz)}
-                  </h2>
-                  <Fremdmarken
-                    staende={SZENE.gegner.synergien}
-                    tabelle={SZENE.synergieTabelle}
-                    beschriftung={`Marken von ${nameVon(SZENE.gegner.sitz)}`}
-                  />
-                </div>
+                {/* Name und Marken nebeneinander — dasselbe Bauteil wie am
+                  Tisch (Kopfzeilen.tsx), samt dem Auge davor, das seit dem
+                  06.09.2026 sagt, wessen Brett man sich gerade ansieht. Der
+                  Gegner der Szene lebt; einen Ausgeschieden-Vermerk gibt es
+                  hier deshalb nicht. */}
+                <Brettkopf
+                  name={nameVon(SZENE.gegner.sitz)}
+                  ausRunde={SZENE.gegner.ausRunde}
+                  staende={SZENE.gegner.synergien}
+                  tabelle={SZENE.synergieTabelle}
+                />
                 <Hexbrett
                   reihen={SZENE.brettReihen}
                   spalten={SZENE.brettSpalten}
@@ -687,6 +730,9 @@ export function ProbeRuestkammer(): React.JSX.Element {
                   onKauf={() =>
                     setLaden((l) => l.map((eintrag, i) => (i === platz ? null : eintrag)))
                   }
+                  /* Der Griff zur Auskunft — echt wie alles hier: Er schlaegt
+                     dasselbe Einheitenblatt auf wie am Tisch. */
+                  onBlatt={angeboten ? () => setLadenBlatt(platz) : undefined}
                 />
               );
             })}

@@ -300,6 +300,147 @@ export async function login(
   return { token, accountId: acc.id };
 }
 
+// ---------------------------------------------------------------------------
+// Gastkonten
+// ---------------------------------------------------------------------------
+
+/**
+ * Wie oft ein belegter Anzeigename mit angehaengter Zahl neu versucht wird.
+ *
+ * Acht, weil der Zufallsbereich mit jedem Versuch waechst (siehe unten) und
+ * die Wahrscheinlichkeit, achtmal hintereinander danebenzugreifen, damit
+ * verschwindet. Eine Endlosschleife waere hier der falsche Mut: Sie haenge
+ * genau dann, wenn jemand absichtlich Namen blockiert.
+ */
+const GAST_NAME_VERSUCHE = 8;
+
+/** Erlaubte Laenge eines Gastnamens — dieselbe Spanne wie beim Registrieren. */
+export const GAST_NAME_MIN = 2;
+export const GAST_NAME_MAX = 30;
+
+/**
+ * Ein Gastkonto anlegen und sofort anmelden.
+ *
+ * Es ist ein ganz normales Konto: dieselbe Tabelle, dieselbe Sitzung,
+ * dieselben Spielstaende. Nur `email` und `passwordHash` bleiben leer —
+ * womit es auch keinen Weg zurueck gibt, wenn die Sitzung verloren geht. Das
+ * ist der Preis fuer "ohne Anmeldung", und der Client sagt es auch.
+ *
+ * KEINE Mitgliedschaft im Beta-Clan (anders als bei `register`): Ein Gast,
+ * der mit einem Klick entsteht, stuende sonst binnen einer Party zu Dutzenden
+ * in der Mitgliederliste, die echte Leute pflegen.
+ *
+ * KEIN Geburtstag: Der Client fragt danach nicht, also steht dort nichts.
+ * `assertValidBirthday` gilt weiter fuer jeden, der ein richtiges Konto
+ * anlegt — auch beim Sichern eines Gastkontos.
+ */
+export async function gastKonto(
+  deps: AuthDeps,
+  wunschname: string,
+): Promise<{ token: string; accountId: string; displayName: string }> {
+  const basis = wunschname.trim().slice(0, GAST_NAME_MAX);
+  if (basis.length < GAST_NAME_MIN) throw badRequest('displayNameTooShort');
+
+  for (let versuch = 0; versuch < GAST_NAME_VERSUCHE; versuch++) {
+    /*
+     * Beim ersten Versuch der Wunschname, danach mit angehaengter Zahl. Der
+     * Bereich waechst mit jedem Versuch (10, 100, 1000 …): Bei einem sehr
+     * beliebten Namen — "Max" auf einer Party — waere ein fester Bereich nach
+     * ein paar Gaesten dicht, und alle weiteren liefen in denselben Fehler.
+     */
+    const displayName =
+      versuch === 0
+        ? basis
+        : `${basis.slice(0, GAST_NAME_MAX - 1 - versuch)} ${
+            1 + Math.floor(Math.random() * 10 ** versuch)
+          }`;
+
+    try {
+      const [row] = await deps.db
+        .insert(s.account)
+        .values({ displayName, gastSeit: new Date() })
+        .returning({ id: s.account.id });
+
+      const token = await createSession(deps, row!.id);
+      return { token, accountId: row!.id, displayName };
+    } catch (err) {
+      if (constraintOf(err) === 'account_display_name_key') continue;
+      throw err;
+    }
+  }
+
+  throw conflict('displayNameTaken');
+}
+
+/**
+ * Ein Gastkonto sichern: Mail und Passwort nachtragen.
+ *
+ * Dieselbe Zeile, derselbe Spielstand — nur ist das Konto danach keins mehr,
+ * das mit der Sitzung verschwindet. `gastSeit` faellt auf NULL, und ab dem
+ * Moment zaehlen die Tische dieses Kontos wieder fuer die Rangliste.
+ *
+ * Die Bestaetigungsmail geht raus wie bei jeder Registrierung, und `login`
+ * verlangt sie auch — wer sich also spaeter neu anmelden will, muss den Link
+ * angeklickt haben. Die LAUFENDE Sitzung bleibt davon unberuehrt: Jemanden
+ * mitten in der Partie hinauszuwerfen, weil er gerade sein Konto gesichert
+ * hat, waere die Strafe fuer genau das Richtige.
+ */
+export async function gastSichern(
+  deps: AuthDeps,
+  accountId: string,
+  input: { email: string; password: string; birthday: string },
+): Promise<void> {
+  const email = normalizeEmail(input.email);
+  const birthday = assertValidBirthday(input.birthday);
+  const passwordHash = await hashPassword(input.password);
+
+  const [konto] = await deps.db
+    .select({ gastSeit: s.account.gastSeit, anonymizedAt: s.account.anonymizedAt })
+    .from(s.account)
+    .where(eq(s.account.id, accountId));
+
+  if (!konto || konto.anonymizedAt) throw unauthorized('credentialsInvalid');
+  // Kein Gast: Hier ist nichts zu sichern, und ein Passwortwechsel gehoert
+  // nicht hierher — der laeuft ueber den Reset-Weg mit Mailbestaetigung.
+  if (!konto.gastSeit) throw conflict('keinGastkonto');
+
+  try {
+    /*
+     * `isNull(email)` ist der Riegel gegen zwei gleichzeitige Versuche: Der
+     * zweite trifft keine Zeile mehr. Deshalb `returning` und die Pruefung
+     * darunter — ohne sie liefe der zweite Versuch lautlos ins Leere und der
+     * Client meldete Erfolg, waehrend die zweite Adresse nirgends steht.
+     */
+    const betroffen = await deps.db
+      .update(s.account)
+      .set({ email, passwordHash, birthday, gastSeit: null })
+      .where(and(eq(s.account.id, accountId), isNull(s.account.email)))
+      .returning({ id: s.account.id });
+    if (betroffen.length === 0) throw conflict('keinGastkonto');
+  } catch (err) {
+    if (constraintOf(err) === 'account_email_key') throw conflict('emailTaken');
+    throw err;
+  }
+
+  await ensureBetaClubMembership(deps.db, accountId);
+
+  // Wie bei der Registrierung: Der Versand darf das Konto nicht mehr
+  // umwerfen. Wer keine Mail bekommt, fordert sie neu an.
+  await sendVerification(deps, accountId, email).catch((err: unknown) => {
+    // eslint-disable-next-line no-console
+    console.error(`Bestaetigungsmail an ${email} fehlgeschlagen:`, err);
+  });
+}
+
+/** Ist dieses Konto ein Gast? Eine Zeile, aber an vier Stellen gebraucht. */
+export async function istGast(db: Db, accountId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ gastSeit: s.account.gastSeit })
+    .from(s.account)
+    .where(eq(s.account.id, accountId));
+  return row?.gastSeit != null;
+}
+
 export async function createSession(
   deps: AuthDeps,
   accountId: string,

@@ -341,6 +341,7 @@ win('server-registry', 'code', 'registry.ts — die einzige Stelle, die ein Spie
 const MODULES: readonly AnyGameModule[] = [
   doppelkopf, wizard, cambio, feldherr, skat,
   mememory, easypoker, filler, eiland, tafelrunde,
+  golf, partykiste,
 ];
 
 /** Spiele ohne Modul: sichtbar, nicht startbar, abstimmbar. */
@@ -507,18 +508,21 @@ Züge fanden keinen Regelfehler. <b>Genau deshalb</b> steht die Prüfung
 dauerhaft im Repo: damit das nächste Spiel sie beim ersten Lauf spürt und
 nicht im Betrieb.</p>`), '#b78cf7');
 
-win('game-liste', 'notes', 'Zehn Module, eine Schnittstelle', GX + 1080, -960, 420, 290, note(`
-<p>Stand 05.09.2026 — alle zehn spielbar:</p>
+win('game-liste', 'notes', 'Zwölf Module, eine Schnittstelle', GX + 1080, -960, 420, 290, note(`
+<p>Stand 18.09.2026 — alle zwölf spielbar:</p>
 <ul>
 <li><b>Doppelkopf</b> 4–5 · <b>Zauberer</b> 3–6 · <b>Skat</b> 3</li>
 <li><b>Cambio</b> 2–6 · <b>Easy Poker</b> 2–6 · <b>Mememory</b> 2–4</li>
 <li><b>Filler</b> 2 · <b>Eiland</b> 2 · <b>Feldherr</b> 2</li>
-<li><b>Tafelrunde</b> 2–8</li>
+<li><b>Tafelrunde</b> 2–8 · <b>Golf</b> 1–8 · <b>Partykiste</b> 4–12</li>
 </ul>
 <p>Dazu neun Vorschau-Spiele: in der Lobby sichtbar, nicht startbar,
 abstimmbar.</p>
-<p><b>Fünf der zehn sind keine Kartenspiele</b> (Feldherr, Mememory, Filler,
-Eiland, Tafelrunde) — die Schnittstelle trägt sie trotzdem.</p>`), '#b78cf7');
+<p><b>Sieben der zwölf sind keine Kartenspiele</b> — die Schnittstelle trägt
+sie trotzdem.</p>
+<p><b>Die Sitzgrenze der Plattform ist 12</b> (seit der Partykiste), nicht 8.
+<code>PLACEMENT_TROPHIES</code> musste im selben Zug mit: Es <i>wirft</i>
+ohne Eintrag für die Sitzzahl.</p>`), '#b78cf7');
 
 win('game-doko', 'notes', 'Doppelkopf', GX + 1080, -640, 420, 300, note(`
 <h3>packages/game-doppelkopf</h3>
@@ -586,6 +590,20 @@ nennt trotzdem einen Sitz.</p>
 vollständig — das Verschieben fehlt darin, und die Meta sagt es
 (<code>legalActionsUnvollstaendig: true</code>). Siehe Befunde.</p>`), '#b78cf7');
 
+win('game-partykiste', 'notes', 'Partykiste — sechs Minispiele, ein Turnier', GX + 2490, -630, 420, 340, note(`
+<h3>packages/game-partykiste</h3>
+<p><b>4–12 Sitze</b>, seit 18.09.2026 — erstes Spiel mit mehr als acht.
+Sechs Minispiele reihum als <b>ein</b> Turnier; sechs Module wären sechs
+Wartezimmer und sechs Ranglisten.</p>
+<p>Vier der sechs laufen <b>gleichzeitig</b> — wie Eiland nennt
+<code>currentActor</code> trotzdem einen Sitz. Was von selbst weitergeht,
+steht allein in <code>weiter()</code>.</p>
+<p><b>Sichtbarkeit IST das Spiel:</b> Das fremde Imposter-Wort und der eigene
+Name aus „Wer bin ich“ werden nicht ausgeblendet, sondern gar nicht erst
+verschickt — auch nicht an Zuschauer.</p>
+<p><b>Schlücke zählen nicht in die Rangliste.</b> Sonst spielte, wer den
+Trinkmodus ausschaltet, ein anderes Spiel.</p>`), '#b78cf7');
+
 win('game-klein', 'notes', 'Mememory · Filler · Easy Poker', GX + 2020, -280, 420, 240, note(`
 <p><b>Mememory</b> (2–4) — Memory-Duell auf 5×8 Meme-Bildern. Nutzt die
 Schnittstelle vollständig, sogar die Schaupause (das Zurückdrehen zweier
@@ -644,7 +662,7 @@ win('game-adapter', 'code', 'adapter.ts — die einzige Brücke je Spiel',
 frame('f-games', 'Spielmodule', 'Reine Logik · kein Netz, keine Uhr, kein Zufall außer dem Seed', '#b78cf7',
   ['api-module', 'api-vertrag', 'api-invarianten', 'game-adapter', 'game-liste',
    'game-doko', 'game-wizard', 'game-feldherr', 'game-skat', 'game-cambio',
-   'game-eiland', 'game-tafelrunde', 'game-klein', 'projekt-feldherr'], 'game');
+   'game-eiland', 'game-tafelrunde', 'game-partykiste', 'game-klein', 'projekt-feldherr'], 'game');
 
 /* =======================================================================
    4  Grundsätze
