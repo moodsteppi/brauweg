@@ -16,6 +16,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import type { AnyGameModule, BotLevel, GameId, PartyStanding } from '@brauweg/game-api';
+import { ZUGZEIT_HOECHST_MS } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
@@ -718,7 +719,7 @@ export class PartyRuntime {
     // wie der Timer darunter. Sonst haelt die Phasenfrist einen Botzug fuer
     // weiter entfernt, als er ist, und uebernimmt eine Runde, die der Bot noch
     // rechtzeitig zu Ende gebracht haette.
-    const bisZug = isBot ? this.botTakt(party) : this.opts.turnTimeoutMs;
+    const bisZug = isBot ? this.botTakt(party) : this.zugzeit(party);
 
     if (bisPhase !== null && bisPhase < bisZug) {
       party.timer = setTimeout(() => {
@@ -734,10 +735,24 @@ export class PartyRuntime {
       return;
     }
 
-    party.turnDeadline = Date.now() + this.opts.turnTimeoutMs;
+    party.turnDeadline = Date.now() + this.zugzeit(party);
     party.timer = setTimeout(() => {
       void this.onTimeout(party, actor);
-    }, this.opts.turnTimeoutMs);
+    }, this.zugzeit(party));
+  }
+
+  /**
+   * Zugzeit fuer einen Menschen an diesem Tisch.
+   *
+   * Ein Modul darf sie VERLAENGERN (`meta.zugzeitMs`, siehe game-api), nie
+   * kuerzen — sonst hebelte ein Modul den Test aus, der die Laufzeit auf eine
+   * kurze Zugzeit stellt. Gedeckelt, damit ein verlassener Tisch nicht eine
+   * Viertelstunde stehen bleibt.
+   */
+  private zugzeit(party: LiveParty): number {
+    const wunsch = party.module.meta.zugzeitMs;
+    if (wunsch === undefined || !Number.isFinite(wunsch)) return this.opts.turnTimeoutMs;
+    return Math.min(ZUGZEIT_HOECHST_MS, Math.max(this.opts.turnTimeoutMs, wunsch));
   }
 
   /**

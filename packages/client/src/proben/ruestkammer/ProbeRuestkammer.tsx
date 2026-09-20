@@ -17,12 +17,16 @@
  * braucht denselben Blick.
  *
  * DESHALB WIRD HIER NICHTS NACHGEBAUT. Es laufen `Hexbrett`, `Bankreihe`,
- * `Einheitenmarke`, `Ladenkarte`, `Mitspielerleiste` und `Phasenzeile` aus
- * `minispiele/tafelrunde/` — dieselben Bauteile, die `screens/Tafelrunde.tsx`
- * einhaengt, mit denselben Eigenschaften, im selben Rahmen (`.tr-seite`,
- * `.tr-tisch`, `.tr-oben`, `.tr-spielflaeche`, `.tr-bretter`, `.tr-fuss`).
- * Sie standen bis zum 06.09.2026 privat im Bildschirm; sie herauszuziehen war
- * die halbe Aufgabe.
+ * `Einheitenmarke`, `Ladenkarte`, `Mitspielerleiste`, `Phasenzeile`,
+ * `Statuszeile` und `Brettkopf` aus `minispiele/tafelrunde/` — dieselben
+ * Bauteile, die `screens/Tafelrunde.tsx` einhaengt, mit denselben
+ * Eigenschaften, im selben Rahmen (`.tr-seite`, `.tr-tisch`, `.tr-oben`,
+ * `.tr-spielflaeche`, `.tr-bretter`, `.tr-fuss`). Sie standen bis zum
+ * 06.09.2026 privat im Bildschirm; sie herauszuziehen war die halbe Aufgabe.
+ * Die beiden Kopfzeilen kamen als letzte nach (19.09.2026) — sie waren bis
+ * dahin hier von Hand aufgebaut, und beim Handy-Umbau am 06.09.2026 bekam
+ * nur der Tisch die neue Reihe: Die Probe zeigte einen Bildschirm, den es
+ * nicht gab.
  *
  * SEIT DEM 07.09.2026 BEANTWORTET SIE AUCH DIE HOEHENFRAGE: Passt die
  * Ruestkammer auf einen Bildschirm? Dafuer musste sie die echte Kopfleiste
@@ -55,6 +59,13 @@
  * — es haengt an Zeigererfassung und Zugschatten, also an Verdrahtung des
  * Bildschirms und nicht am Aussehen der Wabe.
  *
+ * ANSEHEN OHNE ANFASSEN geht seit dem 19.9.2026 ebenfalls wie am Tisch: Ein
+ * Tipp auf eine Einheit des Gegners oder — „am Zug" abgeschaltet — auf eine
+ * eigene schlaegt das Blatt ohne Knoepfe auf (`onNachsehen` in Brett.tsx).
+ * Weil eine Sichtprobe nicht klicken kann, laesst sich dieser Zustand auch
+ * ueber die Adresse herstellen: `?blatt=gegner/brett:4` oder `?bereit&blatt=
+ * bank:0` (`blattAusAdresse` unten). Sonst hat die Adresse keine Wirkung.
+ *
  * WARUM `?raw` UND `JSON.parse` STATT EINES JSON-IMPORTS: Der Client
  * uebersetzt ohne `resolveJsonModule`; das anzuschalten waere eine Aenderung
  * an der gemeinsamen tsconfig wegen einer Probe. Dieselbe Zeile aus demselben
@@ -65,23 +76,19 @@ import { useMemo, useState } from 'react';
 
 import { Bankreihe, Hexbrett } from '../../minispiele/tafelrunde/Brett';
 import { Einheitenblatt } from '../../minispiele/tafelrunde/Einheitenblatt';
+import { Brettkopf, Statuszeile } from '../../minispiele/tafelrunde/Kopfzeilen';
 import { Ladenkarte, kaufhindernis } from '../../minispiele/tafelrunde/Ladenkarte';
-import {
-  AugeZeichen,
-  Mitspielerleiste,
-  type Sitzzeile,
-} from '../../minispiele/tafelrunde/Mitspieler';
+import { Mitspielerleiste, type Sitzzeile } from '../../minispiele/tafelrunde/Mitspieler';
 import { Phasenzeile } from '../../minispiele/tafelrunde/Phasenzeile';
 import {
   type Synergie,
   type Synergiestand,
-  Fremdmarken,
   Markennamen,
-  Synergieleiste,
   markennamen,
   schwellenPruefer,
+  useMarkenblatt,
 } from '../../minispiele/tafelrunde/Synergien';
-import { GoldZeichen, LebenZeichen } from '../../minispiele/tafelrunde/Zeichen';
+import { GoldZeichen } from '../../minispiele/tafelrunde/Zeichen';
 import type { Einheit, Stufenwerte } from '../../minispiele/tafelrunde/sicht';
 import {
   type Kaempfer,
@@ -89,6 +96,7 @@ import {
   bestandVon,
   darfSchieben,
   fehlendeKopien,
+  ortLesen,
   rastermass,
   tippfolge,
 } from '../../minispiele/tafelrunde/zuege';
@@ -209,6 +217,26 @@ function nimmWeg(auf: Stand, ort: Ort): Stand {
   return { bank, brett };
 }
 
+/** Welche Einheit ihr Blatt offen hat — Sitz und Ort, wie am Tisch. */
+interface Blattlage {
+  /** null ist das eigene Brett, sonst der Sitz des Gegners. */
+  readonly sitz: number | null;
+  readonly ort: Ort;
+}
+
+/**
+ * Ein Blatt gleich beim Oeffnen, aus der Adresse: `?blatt=brett:4`,
+ * `?blatt=bank:0` oder `?blatt=gegner/brett:4`. Nur fuer die Sichtprobe, die
+ * nicht klicken kann; ohne den Parameter bleibt das Blatt zu.
+ */
+function blattAusAdresse(): Blattlage | null {
+  const wert = new URLSearchParams(window.location.search).get('blatt');
+  if (!wert) return null;
+  const fremd = wert.startsWith('gegner/');
+  const ort = ortLesen(fremd ? wert.slice('gegner/'.length) : wert);
+  return ort ? { sitz: fremd ? SZENE.gegner.sitz : null, ort } : null;
+}
+
 export function ProbeRuestkammer(): React.JSX.Element {
   const [auf, setAuf] = useState<Stand>(START);
   const [gewaehlt, setGewaehlt] = useState<Ort | null>(null);
@@ -219,7 +247,11 @@ export function ProbeRuestkammer(): React.JSX.Element {
    * laeuft: Einheiten sind nicht fassbar, Ziele sind gesperrt, Karten
    * ausgegraut.
    */
-  const [amZug, setAmZug] = useState(true);
+  const [amZug, setAmZug] = useState(
+    /* `?bereit` in der Adresse stellt den zweiten Zustand her, ohne dass
+       jemand die Werkbank bedienen muss — fuer die Sichtprobe. */
+    !new URLSearchParams(window.location.search).has('bereit'),
+  );
   /* Der Erklaertext ist zu, bis jemand ihn aufschlaegt: Er beschreibt die
      Probe und nicht die Ruestkammer — aufgeschlagen legt er sich ueber den
      Tisch, statt ihm Hoehe zu nehmen. */
@@ -230,9 +262,17 @@ export function ProbeRuestkammer(): React.JSX.Element {
   /*
    * Welche Einheit ihr Blatt aufgeschlagen hat — wie am Tisch der ORT und
    * nicht der Kaempfer: Was dort steht, aendert sich unter dem offenen Blatt,
-   * sobald man verschiebt (screens/Tafelrunde.tsx).
+   * sobald man verschiebt (screens/Tafelrunde.tsx). Mit Sitz, weil das Blatt
+   * seit dem 19.9.2026 auch am Brett des Gegners aufgeht — dann ohne Knoepfe.
    */
-  const [blattOrt, setBlattOrt] = useState<Ort | null>(null);
+  const [blatt, setBlatt] = useState<Blattlage | null>(blattAusAdresse);
+
+  /*
+   * Und welche LADENKARTE ihr Blatt offen hat — der Platz, aus demselben
+   * Grund wie oben der Ort. Die Karte selbst ist eine Schaltflaeche; der Griff
+   * dazu sitzt daneben (Ladenkarte.tsx).
+   */
+  const [ladenBlatt, setLadenBlatt] = useState<number | null>(null);
 
   /*
    * Die Grenze, die auch der Bildschirm prueft — und die einzige, die er
@@ -264,7 +304,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
     /* Wie am Tisch: Ein Tipp ohne Auswahl schlaegt das Blatt der Einheit auf;
        ausgewaehlt wird von dort aus. Stuende hier `setGewaehlt`, verhielte
        sich die Probe anders als der Bildschirm, den sie zeigen soll. */
-    if (folge.art === 'waehlen') setBlattOrt(folge.ort);
+    if (folge.art === 'waehlen') setBlatt({ sitz: null, ort: folge.ort });
     else if (folge.art === 'abwaehlen') setGewaehlt(null);
     else if (folge.art === 'schieben') {
       setAuf((a) => schiebe(a, folge.von, folge.nach));
@@ -272,15 +312,23 @@ export function ProbeRuestkammer(): React.JSX.Element {
     }
   }
 
-  /** Was auf `blattOrt` steht — frisch aus dem Stand, siehe dort. */
-  const blattKaempfer = blattOrt
-    ? ((blattOrt.bereich === 'bank' ? auf.bank : auf.brett)[blattOrt.platz] ?? null)
+  /** Was auf `blatt` steht — frisch aus dem Stand, siehe dort. Am fremden
+      Brett aus der Szene: Der Gegner bewegt sich in der Probe nicht. */
+  const blattKaempfer = blatt
+    ? blatt.sitz === null
+      ? ((blatt.ort.bereich === 'bank' ? auf.bank : auf.brett)[blatt.ort.platz] ?? null)
+      : blatt.ort.bereich === 'brett'
+        ? (SZENE.gegner.brett[blatt.ort.platz] ?? null)
+        : null
     : null;
   const blattEinheit = blattKaempfer ? KATALOG[blattKaempfer.id] : undefined;
   const blattWerte =
     blattKaempfer && blattEinheit
       ? SZENE.stufenwerte[blattEinheit.id]?.[blattKaempfer.stufe - 1]
       : undefined;
+  /* Nur lesen: am fremden Brett immer, am eigenen ohne „am Zug" — dieselbe
+     Bedingung wie `blattNurLesen` am Tisch. */
+  const blattNurLesen = blatt !== null && (blatt.sitz !== null || !amZug);
   /** Der erste freie Bankplatz — das Ziel von „Ablegen", wie am Tisch. */
   const freierBankplatz = Array.from({ length: SZENE.bankPlaetze }, (_, i) => i).find(
     (platz) => (auf.bank[platz] ?? null) === null,
@@ -290,11 +338,22 @@ export function ProbeRuestkammer(): React.JSX.Element {
     setAuf(START);
     setLaden(SZENE.eigenes.laden);
     setGewaehlt(null);
-    setBlattOrt(null);
+    setBlatt(null);
+    setLadenBlatt(null);
   }
+
+  /** Was die offene Ladenkarte anbietet — die Werte der ersten Stufe. */
+  const ladenEinheit = ladenBlatt !== null ? KATALOG[laden[ladenBlatt] ?? ''] : undefined;
 
   const namen = markennamen(SZENE.synergieTabelle);
   const trifftSchwelle = schwellenPruefer(SZENE.eigenes.synergien, SZENE.synergieTabelle);
+  /* Derselbe Griff wie am Tisch: Beide Blaetter fuehren zum Blatt einer
+     Marke, und die Zaehler der Leiste bringen ihren eigenen mit. */
+  const markengriff = useMarkenblatt(
+    SZENE.eigenes.synergien,
+    SZENE.synergieTabelle,
+    KATALOG,
+  );
 
   return (
     /*
@@ -422,7 +481,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
             Tisch. VERKAUFEN nimmt sie hier nur vom Feld und zaehlt kein Gold:
             Die Probe rechnet nichts (siehe Kopf), genau wie beim Klick auf
             eine Ladenkarte. „zuruecksetzen" holt beides zurueck. */}
-        {blattOrt && blattKaempfer && blattEinheit && (
+        {blatt && blattKaempfer && blattEinheit && (
           <Einheitenblatt
             einheit={blattEinheit}
             kaempfer={blattKaempfer}
@@ -430,59 +489,96 @@ export function ProbeRuestkammer(): React.JSX.Element {
             tabelle={SZENE.synergieTabelle}
             maxStufe={SZENE.maxStufe}
             erloes={blattWerte?.erloes}
-            onVerkaufen={() => {
-              setAuf((a) => nimmWeg(a, blattOrt));
-              setBlattOrt(null);
-            }}
+            /* Ohne Knoepfe, sobald nur gelesen wird — wie am Tisch. */
+            onVerkaufen={
+              blattNurLesen
+                ? undefined
+                : () => {
+                    setAuf((a) => nimmWeg(a, blatt.ort));
+                    setBlatt(null);
+                  }
+            }
             onAblegen={
-              blattOrt.bereich === 'brett' && freierBankplatz !== undefined
+              !blattNurLesen && blatt.ort.bereich === 'brett' && freierBankplatz !== undefined
                 ? () => {
                     setAuf((a) =>
-                      schiebe(a, blattOrt, {
+                      schiebe(a, blatt.ort, {
                         bereich: 'bank',
                         platz: freierBankplatz,
                       }),
                     );
-                    setBlattOrt(null);
+                    setBlatt(null);
                   }
                 : undefined
             }
-            onVerschieben={() => {
-              setGewaehlt(blattOrt);
-              setBlattOrt(null);
-            }}
-            verschiebenTitel={blattOrt.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
-            onSchliessen={() => setBlattOrt(null)}
+            onVerschieben={
+              blattNurLesen
+                ? undefined
+                : () => {
+                    setGewaehlt(blatt.ort);
+                    setBlatt(null);
+                  }
+            }
+            verschiebenTitel={blatt.ort.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
+            onMarke={markengriff.oeffne}
+            escapeAus={markengriff.offeneMarke !== null}
+            onSchliessen={() => setBlatt(null)}
           />
         )}
 
-        {/* Leben, Rang, Feldplaetze und die Marken in EINER Zeile — Aufbau
-            und Klassen wie am Tisch (`.tr-statuszeile`, screens/Tafelrunde.tsx
-            und styles.css). Die Zahlen stehen fest: Die Probe spielt nicht.
+        {/* Das Blatt einer Ladenkarte — dasselbe Bauteil ohne Ort: Die Einheit
+            steht noch nirgends, angeboten wird der Kauf. Die Probe kauft
+            genauso wie der Knopf auf der Karte selbst. */}
+        {ladenBlatt !== null && ladenEinheit && (
+          <Einheitenblatt
+            einheit={ladenEinheit}
+            kaempfer={{ id: ladenEinheit.id, stufe: 1 }}
+            werte={SZENE.stufenwerte[ladenEinheit.id]?.[0]}
+            tabelle={SZENE.synergieTabelle}
+            maxStufe={SZENE.maxStufe}
+            erloes={undefined}
+            /* Wie der Klick auf die Karte selbst: Er raeumt den Platz ab und
+               kauft nichts — die Probe rechnet kein Gold (siehe `onKauf`
+               unten). */
+            onKaufen={
+              amZug && KAUFBAR.has(ladenBlatt)
+                ? () => {
+                    setLaden((l) =>
+                      l.map((eintrag, i) => (i === ladenBlatt ? null : eintrag)),
+                    );
+                    setLadenBlatt(null);
+                  }
+                : undefined
+            }
+            onMarke={markengriff.oeffne}
+            escapeAus={markengriff.offeneMarke !== null}
+            onSchliessen={() => setLadenBlatt(null)}
+          />
+        )}
 
-            Der Aufbau ist hier nachgeschrieben und nicht eingehaengt, weil er
-            im Bildschirm noch kein eigenes Bauteil ist. Wer ihn dort aendert,
-            aendert ihn hier mit — sonst zeigt ausgerechnet die Probe eine
-            Zeile, die es am Tisch nicht gibt. */}
-        <div className="tr-statuszeile">
-          <header className="tr-kopf">
-            <span className="tr-wert tr-wert-leben">
-              <LebenZeichen />
-              <strong>{SZENE.eigenes.leben}</strong>
-              <em>Leben</em>
-            </span>
-            <span className="tr-wert tr-wert-level">
-              <em>Rang</em>
-              <strong>{SZENE.eigenes.level}</strong>
-            </span>
-            <span className="tr-wert tr-wert-feld">
-              <strong>
-                {stellung.belegt}/{SZENE.eigenes.feldplaetze} Feld
-              </strong>
-            </span>
-          </header>
-          <Synergieleiste staende={SZENE.eigenes.synergien} tabelle={SZENE.synergieTabelle} />
-        </div>
+        {/* Das Blatt einer Marke liegt ueber beiden — wie am Tisch. */}
+        {markengriff.blatt}
+
+        {/* Leben, Rang, Feldplaetze und die Marken in EINER Zeile —
+            dasselbe Bauteil wie am Tisch (Kopfzeilen.tsx), seit dem
+            19.09.2026 eingehaengt statt nachgeschrieben. Vorher stand der
+            Aufbau hier ein zweites Mal, und beim Handy-Umbau am 06.09.2026
+            bekam ihn nur der Tisch: Die Probe zeigte eine Zeile, die es
+            nirgends gab.
+
+            Die Zahlen stehen fest — die Probe spielt nicht. Nur `belegt`
+            kommt aus der laufenden Aufstellung, sonst zaehlte sie eine
+            Einheit weiter mit, die man gerade heruntergenommen hat. */}
+        <Statuszeile
+          werte={{
+            leben: SZENE.eigenes.leben,
+            level: SZENE.eigenes.level,
+            belegt: stellung.belegt,
+            feldplaetze: SZENE.eigenes.feldplaetze,
+          }}
+          staende={SZENE.eigenes.synergien}
+          tabelle={SZENE.synergieTabelle}
+        />
 
         {/* Derselbe Kasten wie am Tisch (`.tr-mitte`, screens/Tafelrunde.tsx):
             Er haelt alles zwischen Statuszeile und Laden zusammen, damit das
@@ -515,20 +611,17 @@ export function ProbeRuestkammer(): React.JSX.Element {
                 eigene: Ob die Figuren einander wirklich ansehen, sieht man erst
                 hier. */}
               <section className="tr-brettteil tr-brettteil-fremd">
-                {/* Name und Marken nebeneinander, wie am Tisch
-                  (`.tr-brettkopf`) — samt dem Auge davor, das seit dem
-                  06.09.2026 sagt, wessen Brett man sich gerade ansieht. */}
-                <div className="tr-brettkopf">
-                  <h2 className="tr-bretttitel">
-                    <AugeZeichen />
-                    {nameVon(SZENE.gegner.sitz)}
-                  </h2>
-                  <Fremdmarken
-                    staende={SZENE.gegner.synergien}
-                    tabelle={SZENE.synergieTabelle}
-                    beschriftung={`Marken von ${nameVon(SZENE.gegner.sitz)}`}
-                  />
-                </div>
+                {/* Name und Marken nebeneinander — dasselbe Bauteil wie am
+                  Tisch (Kopfzeilen.tsx), samt dem Auge davor, das seit dem
+                  06.09.2026 sagt, wessen Brett man sich gerade ansieht. Der
+                  Gegner der Szene lebt; einen Ausgeschieden-Vermerk gibt es
+                  hier deshalb nicht. */}
+                <Brettkopf
+                  name={nameVon(SZENE.gegner.sitz)}
+                  ausRunde={SZENE.gegner.ausRunde}
+                  staende={SZENE.gegner.synergien}
+                  tabelle={SZENE.synergieTabelle}
+                />
                 <Hexbrett
                   reihen={SZENE.brettReihen}
                   spalten={SZENE.brettSpalten}
@@ -536,6 +629,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
                   katalog={KATALOG}
                   gespiegelt
                   maxStufe={SZENE.maxStufe}
+                  onNachsehen={(ort) => setBlatt({ sitz: SZENE.gegner.sitz, ort })}
                 />
               </section>
 
@@ -552,6 +646,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
                   istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
                   onWaehlen={tippeOrt}
                   onLeeresZiel={tippeOrt}
+                  onNachsehen={(ort) => setBlatt({ sitz: null, ort })}
                   fehlendeKopien={fehlen}
                 />
               </section>
@@ -566,6 +661,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
               gewaehlt={gewaehlt}
               istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
               onWaehlen={tippeOrt}
+              onNachsehen={(ort) => setBlatt({ sitz: null, ort })}
               fehlendeKopien={fehlen}
             />
           </div>
@@ -634,6 +730,9 @@ export function ProbeRuestkammer(): React.JSX.Element {
                   onKauf={() =>
                     setLaden((l) => l.map((eintrag, i) => (i === platz ? null : eintrag)))
                   }
+                  /* Der Griff zur Auskunft — echt wie alles hier: Er schlaegt
+                     dasselbe Einheitenblatt auf wie am Tisch. */
+                  onBlatt={angeboten ? () => setLadenBlatt(platz) : undefined}
                 />
               );
             })}

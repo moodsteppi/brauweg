@@ -2516,7 +2516,7 @@ function Spielwahl({
                     {game.id === 'eiland' ? ' · Landnahme im Nebel' : ''}
                     {game.id === 'golf' ? ' · Minigolf in Echtzeit' : ''}
                     {game.id === 'tafelrunde' ? ' · Auto-Battler' : ''}
-                    {game.id === 'partykiste' ? ' · 6 Minispiele, ein Turnier' : ''}
+                    {game.id === 'partykiste' ? ' · 9 Minispiele, ein Turnier' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>

@@ -319,11 +319,29 @@ export interface TafelrundeSicht {
    * Ergebnis nicht vor seiner Zeit verraet, ist eine Frage des Anstands und
    * steht im Client, `ergebniszeile` in KampfAnzeige.tsx.)
    *
-   * WAS ES KOSTET, gemessen an einer Bot-Partie zu acht (Saat 7, die groesste
-   * Runde): die Sicht beim Eintritt in den Kampf 29,5 kB statt 69,1 kB. Das
-   * faellt genau einmal je Runde an — waehrend der Kampfphase kann niemand
-   * handeln, es gibt also nichts, was einen zweiten Rundruf ausloest. Ausserhalb
-   * der Kampfphase ist die Liste leer.
+   * WAS ES KOSTET, gemessen mit `werkzeug/sichtgroesse.mjs` an einer
+   * Bot-Partie zu acht (Saat 7): die groesste Sicht der Partie 60,0 kB statt
+   * 23,0 kB mit nur dem eigenen Kampf; ueber die ganze Partie 595 kB je
+   * Spieler statt 207 kB. Das faellt genau einmal je Runde an — waehrend der
+   * Kampfphase kann niemand handeln, es gibt also nichts, was einen zweiten
+   * Rundruf ausloest. Ausserhalb der Kampfphase ist die Liste leer.
+   *
+   * UND ES GEHT KOMPRIMIERT HERAUS, seit dem 19.09.2026 (`perMessageDeflate`
+   * in packages/server/src/realtime/gateway.ts). Damit sind es auf der
+   * Leitung 6,6 kB statt 60,0 kB in der Spitze und 69 kB statt 595 kB ueber
+   * die Partie — ein Protokoll ist tausendfach dasselbe Dutzend Feldnamen und
+   * schrumpft deshalb auf ein Neuntel. Das war die Antwort auf die Frage, ob
+   * das am Handy vertretbar ist: 6,6 kB einmal je Runde sind auch im
+   * Mobilfunk keine Sekunde, und die Kampfphase dauert laenger als das.
+   *
+   * DESHALB GIBT ES KEIN NACHLIEFERN AUF ANFORDERUNG. Es stand als billigerer
+   * Schnitt im Raum und braeuchte einen neuen Weg im Protokoll — die Sicht
+   * geht als Ganzes heraus. Gespart wuerde damit die Differenz zwischen
+   * `voll` und `eigen`, also 3,6 kB je Runde; dafuer zahlte jeder Blick auf
+   * einen fremden Kampf mit einer Rueckfrage und deren Laufzeit, und der
+   * Zuschauer, dessen Spiel schon aus ist, bekaeme seinen Kampf ueberhaupt
+   * erst nach einem Umweg. Wer die Zahlen neu erheben will, ruft das Werkzeug
+   * auf; wer den Schnitt neu bewertet, hat dort die drei Vergleichswerte.
    */
   readonly kaempfe: readonly Kampfpaarung[];
   /**

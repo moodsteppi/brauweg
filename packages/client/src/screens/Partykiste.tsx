@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { api, type Me } from '../api';
 import { MINISPIEL_ANSAGE, MINISPIEL_NAME, type PartyAktion, type PartykisteSicht } from '../minispiele/partykiste/sicht';
-import { Runde, namenFuer } from '../minispiele/partykiste/Runden';
+import { Runde, Wartet, namenFuer } from '../minispiele/partykiste/Runden';
 import type { BotLevel, SeatInfo } from '../protocol';
 import { useTable } from '../useTable';
 
@@ -131,9 +131,16 @@ export function Partykiste({
         setTischId(offen.id);
         return;
       }
+      /*
+       * Zwoelf Plaetze, die Obergrenze des Moduls — nicht acht. Der Tisch
+       * schrumpft beim Start ohnehin auf die Anwesenden (`startNow`), ein
+       * grosser Tisch kostet also nichts; ein zu kleiner sperrt die Leute
+       * neun bis zwoelf aus, obwohl das Spiel sie traegt. Die 8 stand hier,
+       * weil sie von Golf abgeschrieben war, wo acht wirklich das Ende ist.
+       */
       const { id } = await api.createTable({
         gameId: 'partykiste',
-        seats: 8,
+        seats: 12,
         rounds: runden,
         visibility: 'public',
       });
@@ -204,9 +211,8 @@ export function Partykiste({
         <div className="pk-menue-mitte">
           <h1 className="pk-titel">Partykiste</h1>
           <p className="pk-untertitel">
-            Sechs Minispiele, ein Turnier. Imposter, Allgemeinwissen, Wer bin ich, Ich
-            hab noch nie, Wer würde eher und Bus fahren — für 4 bis 12 Leute, die im
-            selben Raum sitzen. Wer verliert, trinkt; wer gewinnt, steht oben.
+            Neun Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum
+            sitzen. Wer verliert, trinkt; wer gewinnt, steht oben.
           </p>
           <ul className="pk-spielliste" aria-label="Enthaltene Minispiele">
             {(Object.keys(MINISPIEL_NAME) as (keyof typeof MINISPIEL_NAME)[]).map((id) => (
@@ -388,10 +394,11 @@ export function Partykiste({
 /**
  * Was diese Runde gebracht hat — und der Weiter-Knopf.
  *
- * Er ist eine Abkürzung, keine Pflicht: Tippen ihn alle Anwesenden, geht es
- * sofort weiter; tippt ihn niemand, läuft die Schaupause des Moduls ab. Genau
- * deshalb steht hier keine eigene Uhr — eine zweite Frist im Client liefe der
- * echten davon.
+ * Er ist Pflicht, keine Abkürzung: Es geht erst weiter, wenn JEDER Anwesende
+ * getippt hat. Bis zum 19.09.2026 lief daneben eine Schaupause von zwölf
+ * Sekunden — zu zwölft war sie vorbei, bevor die Hälfte gelesen hatte, wer
+ * trinkt. Wer wegbleibt, fällt nach der Zugzeit (fünf Minuten) an den Bot,
+ * der für ihn tippt. Keine eigene Uhr im Client — sie liefe der echten davon.
  */
 function Abrechnung({
   sicht,
@@ -443,6 +450,9 @@ function Abrechnung({
           {binFertig ? 'Warten auf die anderen …' : 'Weiter'}
         </button>
       </div>
+      {/* Es geht erst weiter, wenn ALLE getippt haben — keine Uhr mehr.
+          Die Zahl sagt, auf wen die Runde wartet. */}
+      {binFertig ? <Wartet sicht={sicht} /> : null}
     </div>
   );
 }
@@ -562,6 +572,13 @@ function Lobby({
             );
           })}
         </ul>
+
+        {sitze.some((platz) => platz.gast) ? (
+          /* Vor dem Start, nicht erst an der Abrechnung: Ein Tisch mit Gast
+             zaehlt fuer niemanden (countsForRanking) — wer das nicht will,
+             geht jetzt, nicht nach sechs Runden. */
+          <p className="pk-warten">Ein Gast spielt mit — diese Runde zählt nicht für die Rangliste.</p>
+        ) : null}
 
         {binHost ? (
           <>

@@ -39,6 +39,10 @@ import {
   resetPassword,
   sessionFromToken,
   verifyEmail,
+  GAST_NAME_MAX,
+  GAST_NAME_MIN,
+  gastKonto,
+  gastSichern,
 } from '../auth/service.js';
 import { pruefeGoogleToken } from '../auth/google.js';
 import { verifyPassword } from '../auth/secrets.js';
@@ -206,28 +210,27 @@ export interface AppDeps {
   readonly feedbackZielToken?: string | null;
 }
 
-const gameIdSchema = z.enum([
-  'doppelkopf',
-  'wizard',
-  'feldherr',
-  'mememory',
-  'easypoker',
-  'filler',
-  'eiland',
-  'tafelrunde',
-  'skat',
-  'schafkopf',
-  'romme',
-  'maumau',
-  'schwimmen',
-  'backgammon',
-  'bauernskat',
-  'werwolf',
-  'cambio',
-  'phase10',
-  'drecksau',
-  'golf',
-]);
+/**
+ * Zulaessige Spielkennungen an der HTTP-Grenze — aus der Registrierung
+ * abgeleitet, nicht abgeschrieben.
+ *
+ * Bis zum 18.09.2026 stand hier eine von Hand gepflegte Liste. Sie war die
+ * ZWEITE Stelle im Server, die konkrete Spiele kannte (registry.ts sagt von
+ * sich, die einzige zu sein), und genau das ist passiert, was bei zwei Listen
+ * passiert: Die Partykiste stand in der Registrierung, hier nicht — und in
+ * der Produktion antworteten `GET /api/tables` und `POST /api/tables` fuer
+ * das neue Spiel mit 400. Alle 1.536 Tests waren gruen, weil keiner die
+ * HTTP-Grenze fuer JEDES registrierte Spiel abklopft. Das tut jetzt
+ * `spielkennungen.test.ts`; die Ableitung hier macht den Fehler ohnehin
+ * unmoeglich.
+ *
+ * Auch die Vorschau-Spiele stehen drin: Man kann fuer sie abstimmen und ihre
+ * Tischliste abfragen (leer), nur starten geht nicht — das prueft
+ * `requireModule`, nicht dieses Schema.
+ */
+const SPIELKENNUNGEN = registry.all().map((meta) => meta.id);
+const gameIdSchema = z.enum(SPIELKENNUNGEN as [GameId, ...GameId[]]);
+export { gameIdSchema };
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -657,6 +660,46 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({ ok: true, accountId });
   });
 
+  /**
+   * Ohne Konto spielen: Gastkonto anlegen und sofort anmelden.
+   *
+   * Dieselbe Ratengrenze wie Anmelden und Registrieren — ein Gastkonto
+   * entsteht ohne Mail und ohne Bestaetigung, ist also der billigste Weg,
+   * die Kontotabelle zu fluten. 30 je Viertelstunde und Adresse reichen fuer
+   * eine Party, an der alle hinter demselben WLAN sitzen, und fuer sonst
+   * nichts.
+   */
+  app.post('/api/auth/gast', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
+    const { name } = z
+      .object({ name: z.string().min(GAST_NAME_MIN).max(GAST_NAME_MAX) })
+      .parse(request.body);
+    const { token, accountId, displayName } = await gastKonto(deps.auth, name);
+    setSession(reply, token);
+    // Wie beim Passwort-Login: Nur die iOS-Huelle bekommt das Token selbst.
+    if (request.headers.origin === APP_ORIGIN) {
+      return reply.send({ ok: true, accountId, displayName, token });
+    }
+    return reply.send({ ok: true, accountId, displayName });
+  });
+
+  /**
+   * Gastkonto sichern: Mail und Passwort nachtragen, dieselbe Zeile behalten.
+   * Braucht die laufende Gast-Sitzung — wer sie verloren hat, kann nichts
+   * mehr sichern, und genau davor warnt der Client beim Einstieg.
+   */
+  app.post('/api/auth/gast/sichern', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const body = z
+      .object({
+        email: z.string().email(),
+        password: z.string().min(12).max(200),
+        birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(request.body);
+    await gastSichern(deps.auth, accountId, body);
+    return reply.send({ ok: true });
+  });
+
   app.post('/api/auth/logout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const session = await sessionFromToken(deps.db, sessionToken(request));
     if (session) await logout(deps.db, session.sessionId);
@@ -695,6 +738,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         birthday: s.account.birthday,
         hasBirthdayOutfit: s.account.hasBirthdayOutfit,
         birthdayRewardYear: s.account.birthdayRewardYear,
+        gastSeit: s.account.gastSeit,
         // Nur, OB ein Bild vorliegt — die Bytes gehen nie mit /api/me raus,
         // sondern nur ueber die eigene URL, die der Browser zwischenspeichert.
         hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
@@ -740,7 +784,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       }),
     );
 
-    const { hasAvatar, birthdayRewardYear, isStaff, gems, figurBemalung, ...rest } = account;
+    const { hasAvatar, birthdayRewardYear, isStaff, gems, figurBemalung, gastSeit, ...rest } =
+      account;
     const birthday = account.birthday ?? null;
     // Rechte kommen aus einer einzigen Stelle (entitlements.ts). Der Client
     // rechnet nichts aus Ablaufdaten aus - er zeigt, was hier steht.
@@ -765,6 +810,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     ]);
     return reply.send({
       ...rest,
+      /**
+       * Gast: ohne Mail und Passwort hereingekommen. Der Client zeigt dann
+       * den Weg zum Sichern und weiss, dass die Tische dieses Kontos nicht
+       * fuer die Rangliste zaehlen. Als Ja/Nein und nicht als Zeitstempel —
+       * seit wann jemand Gast ist, geht niemanden im Browser etwas an.
+       */
+      gast: gastSeit != null,
       coins: stand.coins,
       gems: stand.gems,
       broJetons: stand.broJetons,

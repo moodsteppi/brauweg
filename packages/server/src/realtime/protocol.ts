@@ -202,6 +202,13 @@ export interface SeatInfo {
    */
   readonly accountId: string | null;
   readonly isBot: boolean;
+  /**
+   * Gastkonto (ohne Mail und Passwort). Steht am Sitz, damit jeder Bildschirm
+   * VOR dem Start sagen kann, dass diese Runde nicht fuer die Rangliste
+   * zaehlt — `countsForRanking` in tables/service.ts entscheidet das anhand
+   * genau dieses Merkmals, und niemand soll es erst an der Abrechnung merken.
+   */
+  readonly gast: boolean;
   /** Profilbild-URL oder null. Nur eine kurze URL, nie die Bytes. */
   readonly avatarUrl: string | null;
   /**

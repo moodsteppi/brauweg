@@ -172,4 +172,4 @@ export {
   synergienVon,
   zaehleMarken,
 } from './synergien.js';
-export { botZug } from './bot.js';
+export { type Platzstrafe, BOT_PLATZSTRAFE, botZug, stelleHeerAuf } from './bot.js';
