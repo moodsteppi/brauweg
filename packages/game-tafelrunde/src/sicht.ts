@@ -31,6 +31,7 @@ import {
   gesamtkosten,
   werteFuer,
 } from './katalog.js';
+import { STANDARD_REGLER, schrittdauer } from './kampf.js';
 import { type Synergie, type Synergiestand, SYNERGIEN, synergienVon } from './synergien.js';
 import { BRETT_FELDER, BRETT_REIHEN, BRETT_SPALTEN } from './brett.js';
 import type {
@@ -344,6 +345,40 @@ export interface TafelrundeSicht {
    */
   readonly kaempfe: readonly Kampfpaarung[];
   /**
+   * Der Zeitraffer der Simulation: um wie viel schneller alles ablaeuft als im
+   * Katalog gemessen (`Kampfregler.zeitraffer` in kampf.ts).
+   *
+   * ER GEHOERT IN DIE SICHT, WEIL DIE ANZEIGE IHN BRAUCHT. Sie spielt das
+   * Ablaufprotokoll in Echtzeit ab, die Bildraten der 3D-Bildfolgen sind aber
+   * die des MODELLS, also fuer einfaches Tempo (figuren3d.ts im Client). Wer
+   * sie unveraendert abspielt, bekommt Figuren, die zweimal je Sekunde treffen
+   * und dabei in Zeitlupe ausholen.
+   *
+   * Bis zum 18.09.2026 stand er als `KAMPF_TEMPO = 2` im Client
+   * (`minispiele/tafelrunde/bildfolge.ts`) — eine Abschrift, die weder ein
+   * Uebersetzungsfehler noch ein roter Test gefunden haette: Wer den Regler
+   * dreht, sieht Figuren zu langsam oder zu hektisch ausholen, waehrend die
+   * Treffer weiter im richtigen Takt fallen (CLAUDE.md, "was das Modul weiss,
+   * schreibt der Client nicht ab").
+   *
+   * Er steht in JEDER Sicht und nicht nur in der Kampfphase: Die Anzeige
+   * bekommt ihre Masse beim Aufbau, und der faellt mit dem Phasenwechsel
+   * zusammen.
+   */
+  readonly zeitraffer: number;
+  /**
+   * Wie lange eine Einheit von Feld zu Feld braucht, in Millisekunden
+   * (`schrittdauer` in kampf.ts).
+   *
+   * Aus demselben Grund hier wie der Zeitraffer, aber nicht aus ihm
+   * herzuleiten: Die Dauer wird auf ganze Takte AUFGERUNDET (bei Zeitraffer 2
+   * sind es 300 ms und nicht 250), und wer im Client durch den Raffer teilte,
+   * bekaeme eine andere Zahl als der Server. Die Anzeige laesst die Figur als
+   * CSS-Uebergang gleiten und muss sie ankommen lassen, bevor der naechste
+   * Schritt faellig ist — sonst schieben sich zwei Schritte uebereinander.
+   */
+  readonly schrittMs: number;
+  /**
    * ALLE Kaempfe der laufenden Runde als Ergebnis, ohne Protokoll — auch die,
    * denen dieser Empfaenger nicht zusieht (siehe `Paarungsergebnis`).
    *
@@ -438,6 +473,11 @@ function grundsicht(
     leftSeats: sitzeVon(partie).filter((s) => heerVon(partie, s).verlassen),
     kaempfe: partie.kaempfe,
     paarungen: partie.kaempfe.map(ergebnis),
+    // Aus dem Regler DIESES Tisches und nicht aus dem gebauten Standard: Ein
+    // Messstand rechnet mit einem eigenen (`regler` in partie.ts), und dann
+    // muessen die Figuren zu seinem Kampf laufen und nicht zu einem anderen.
+    zeitraffer: (partie.regler ?? STANDARD_REGLER).zeitraffer,
+    schrittMs: schrittdauer(partie.regler ?? STANDARD_REGLER),
     ...(seit === 0
       ? { katalog: KATALOG, synergieTabelle: SYNERGIEN, stufenwerte: STUFENWERTE }
       : {}),

@@ -4,7 +4,8 @@
  * HIER STEHT NICHTS ZUM KAMPF SELBST. Buehne und Arena bringen ihr Aussehen
  * mit (`Buehne.module.css`, `KampfAnzeige.module.css`) — genau das ist der
  * Sinn der Probe. Was hier liegt, ist das Drumherum, das es am Tisch nicht
- * gibt: Titel, Uhr, die zwei Knoepfe und der Erklaertext.
+ * gibt: Titel, Uhr, die Schalterzeile (zwei Knoepfe und die zwei Kaestchen
+ * fuer die Rueckfallstufen) und der Erklaertext.
  *
  * UND ES IST WENIG GEWORDEN — seit dem 19.09.2026 steht die Seite im Aufbau
  * des Tisches (`.tr-oben`, `.tr-statuszeile`, `.tr-mitte`, `.tr-fuss` aus
@@ -54,11 +55,16 @@
   text-align: center;
 }
 
+/* Knoepfe und Kaestchen in einer Zeile, am Handy umbrechend. `align-items`
+   wegen der Kaestchen: Ein 44 px hohes Label neben einem 44 px hohen Knopf
+   sitzt sonst nicht auf derselben Mitte. Breite und Polsterung kommen vom
+   Band `.tr-fuss` — siehe den Kopf dieser Datei. */
 .schalter {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.5rem 0.9rem;
 }
 
 /* 44 px hoch: Was man antippen soll, muss man auch am Handy treffen. */
@@ -77,6 +83,41 @@
 
 .knopf:hover {
   border-color: var(--accent);
+}
+
+/* Das ganze Label ist die Trefferflaeche und 44 px hoch — ein 13-px-Kaestchen
+   trifft am Handy niemand. */
+.kaestchen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.kaestchen:has(input:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.kaestchen input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  cursor: inherit;
+}
+
+/* Etwas dunkler als der Fusstext und darueber: Es erklaert die Kaestchen und
+   nicht die Szene. */
+.hinweis {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.45;
+  opacity: 0.85;
 }
 
 .fuss {

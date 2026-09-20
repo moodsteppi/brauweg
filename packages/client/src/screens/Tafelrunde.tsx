@@ -1753,6 +1753,11 @@ function Ruestkammer({
         brettReihen={sicht.brettReihen}
         arenaReihen={sicht.arenaReihen}
         brettSpalten={sicht.brettSpalten}
+        /* Der Takt des Kampfes kommt aus der Sicht und nicht aus dem Client:
+           Die Bildfolgen der Figuren muessen so schnell laufen wie der
+           gerechnete Kampf (kampf.ts, `Kampfregler`). */
+        zeitraffer={sicht.zeitraffer}
+        schrittMs={sicht.schrittMs}
         katalog={katalog}
         nameVon={(sitz) => spielername(zeile(sitz), sitz)}
         /* Die Figur holt sich die Arena selbst aus figuren.ts; hier kommt nur

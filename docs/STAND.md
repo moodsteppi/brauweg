@@ -165,6 +165,21 @@ nächsten roten Lauf nicht zum zweiten Mal gesucht werden soll.
 > Zahlen und die beiden gemessenen, aber **nicht** gemachten Eingriffe stehen
 > in der neunten Messung in `docs/spiele/auto-battler-konzept.md`.
 >
+> **Naturwesen ist seit dem 18.09.2026 keine Wackelzeile mehr.** Die Marke war
+> mit der Beistand-Wirkung auf ×0,52 gefallen — die unterste Zeile des
+> Katalogs, zwei Hundertstel über der Schranke ×0,5 der Probe. Ursache waren
+> nicht die Boni, sondern die Trägerliste: Zwei ihrer vier Träger waren die
+> beiden **letzten** Zeilen des Katalogs (Astschütze ×0,23, Moosheiler ×0,24,
+> beide 1 Gold), die Marke maß also die Armut ihrer Bretter. Die
+> **Bogenmeisterin** trägt jetzt neben Krieger auch Naturwesen — eine Zeile im
+> Katalog, kein Wert geändert —, und die Marke steht bei **×0,80** (zweite
+> Saatbasis ×0,81), die Spanne bei ×1,54 bis ×0,64. Der andere Weg, ein
+> stärkerer Bonus, ist gemessen und verworfen: Er kauft der Marke Bretter statt
+> Siege und kostet Kampfdauer (Zahlen, drei weitere Kandidaten und die Probe
+> auf beiden Saatbasen in der **zehnten Messung** des Konzepts). Neue unterste
+> Zeile ist **Meuchler** mit ×0,64 — mit deutlich mehr Luft, als Naturwesen
+> hatte.
+>
 > **Das Aufstellungsduell (19.09.2026):**
 > `packages/game-tafelrunde/werkzeug/aufstellungsduell.mjs` (Kern
 > `test/aufstellungsduell.ts`). Es beantwortet die Frage „spielt der neue Bot
@@ -214,6 +229,31 @@ nächsten roten Lauf nicht zum zweiten Mal gesucht werden soll.
 > und keine Gesamtzeit: Gemessen gegen Chromes „Slow 3G" braucht der Satz
 > über HTTP/1.1 **9,3 s**, eine Gesamtfrist von 10 s hätte dort auf einer
 > völlig gesunden Leitung zugeschlagen.
+>
+> **Das Spielpaket zählt im selben Balken mit** (seit dem 06.09.2026,
+> `paket.ts` und `Ladevorhang.tsx`). Der Grund ist die Beschwerde, mit der
+> das Ganze anfing: Robin sah den Ladebildschirm gar nicht. App.tsx
+> importierte alle vierzehn Schirme statisch, das Hauptpaket wog **1.952 kB**
+> (gzip 574 kB), und nichts davon konnte gezeichnet werden, bevor es
+> vollständig da war — zum Zeitpunkt des Wartens gab es den Vorhang noch
+> nicht. Jetzt hängt jeder Schirm an `React.lazy` (`App.pakete.test.ts` wacht
+> darüber), und der Rückfall von `<Suspense>` ist derselbe Ladebildschirm,
+> den der Schirm danach weiterbenutzt — deshalb liegt er als `Ladevorhang`
+> bewusst im Hauptpaket.
+>
+> **Nachgemessen am 18.09.2026** (`npm run build`, Größen wie Vite sie
+> meldet): Hauptpaket **452,7 kB** (gzip 126,2) plus **react 192,4 kB**
+> (gzip 60,3) — React steht getrennt, weil es einen Deploy überlebt, der
+> Plattformteil nicht. Wer Tafelrunde antippt, holt dafür **32,4 kB**
+> (gzip 10,1); mit allem, was nur an ihm hängt (Phasenzeile, Zeichen, Bühne,
+> `useTable`, deren CSS), sind es **105 kB** (gzip 34,3) und danach die
+> 47 kB Bilder. Gegen Chromes „Slow 3G" steht das erste Bild nach **5,3 s**,
+> mit Pinguin und Schriftzug nach **7,0 s**; über die Leitung gingen bis
+> dahin 242 kB. Die Vorher-Zeit ist NICHT gemessen — aus den damaligen
+> Größen gerechnet wären es 628 kB gewesen, also gut das Zweieinhalbfache.
+> Die 500-kB-Warnung von Vite bleibt: Sie gilt `react-three-fiber`
+> (896 kB), und das lädt nur, wer eine 3D-Figur oder eine Truhe zu sehen
+> bekommt.
 >
 > **Der Bildschirmaufbau folgt seit dem 05.09.2026 einem fertigen
 > Auto-Battler** (Vorlagen von Robin; nachgebaut wurde die ANORDNUNG, keine

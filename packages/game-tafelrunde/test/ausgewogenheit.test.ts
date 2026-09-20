@@ -39,8 +39,8 @@ import { KATALOG, MARKEN, SCHWELLEN } from '../src/index.js';
  *
  * Vierhundert und nicht achtzig: Eine Partie zu viert dauert seit dem kuerzeren
  * Lebensbalken 15 statt 27 Runden und kostet damit ein Vielfaches weniger. Bei
- * vierhundert traegt die schwaechste gezaehlte Marke 184 Antritte und die
- * naechste schon 272; bei achtzig waere die schwaechste unter vierzig und ihr
+ * vierhundert traegt die schwaechste gezaehlte Marke 105 Antritte und die
+ * naechste schon 317; bei achtzig waere die schwaechste unter vierzig und ihr
  * Standardfehler groesser als der Abstand, den die Probe messen soll. Mehr
  * waeren besser und gehoeren ins Werkzeug, nicht in einen Testlauf, den jemand
  * vor jedem Commit abwartet.
@@ -67,12 +67,12 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  *
  * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten — und seit dem
  * 06.09.2026 ist das NICHTS MEHR: Ueber 400 Partien zu viert zaehlen ALLE
- * SIEBEN Marken. Waechter 612, Krieger 583, Elementar 435, Meuchler 428,
- * Drache 323, Naturwesen 255, Untot 123. Die Mindestzahl unten verlangt sechs
- * und laesst der duennsten Zeile damit genau einen Ausfall Luft. WER DEN
- * KATALOG SO AENDERT, DASS ZWEI DIESER ZEILEN UNTER HUNDERT FALLEN, SIEHT HIER
- * "nur 5 Marken mit genug Antritten" und nicht den eigentlichen Befund; die
- * Zahl 123 (Untot) ist die knappste der Datei.
+ * SIEBEN Marken. Krieger 599, Waechter 594, Elementar 428, Meuchler 418,
+ * Naturwesen 376, Drache 317, Untot 105 (Stand 18.09.2026). Die Mindestzahl
+ * unten verlangt sechs und laesst der duennsten Zeile damit genau einen
+ * Ausfall Luft. WER DEN KATALOG SO AENDERT, DASS ZWEI DIESER ZEILEN UNTER
+ * HUNDERT FALLEN, SIEHT HIER "nur 5 Marken mit genug Antritten" und nicht den
+ * eigentlichen Befund; die Zahl 105 (Untot) ist die knappste der Datei.
  *
  * DIESE SIEBEN ZAHLEN VERALTEN VON SELBST, und zwar bei jeder Aenderung, die
  * beeinflusst, WAS der Bot am Ende auf dem Brett hat — Katalog, Bot-Bewertung,
@@ -101,10 +101,12 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * die Marke ueber die Zaehlschwelle. Alles drei steht ausfuehrlich im
  * Konzeptdokument.
  *
- * UNTOT IST DABEI IN DIE GEGENRICHTUNG GERUTSCHT (von 295 herunter) und ist
- * jetzt die knappste Zeile: Zwei seiner drei Traeger sind Nahkaempfer, und
- * der Bot kauft die seitdem seltener. Die Marke haelt die Schwelle noch, aber sie ist
- * die naechste, die faellt.
+ * UNTOT IST DABEI IN DIE GEGENRICHTUNG GERUTSCHT (von 295 ueber 123 auf 105)
+ * und ist die knappste Zeile: Zwei seiner drei Traeger sind Nahkaempfer, und
+ * der Bot kauft die seitdem seltener. Die letzten achtzehn Antritte hat die
+ * fuenfte Naturwesen-Traegerin gekostet (Bogenmeisterin, 18.09.2026) — sie
+ * wird oefter gekauft und verdraengt dabei anderes. Die Marke haelt die
+ * Schwelle noch, aber sie ist die naechste, die faellt.
  */
 const MINDEST_ANTRITTE = 100;
 
@@ -145,8 +147,9 @@ describe('Ausgewogenheit: Marken', () => {
    * wie der Durchschnitt, spielt nichts anderes mehr.
    *
    * In dieser Auswahl reicht der weiteste Ausschlag von x1,49 (Waechter) bis
-   * x0,74 (Drache) — nach beiden Seiten ist also Platz, aber weniger als ohne
-   * den Reichweitenfaktor im Bot (x1,34 bis x0,71 auf demselben Stand).
+   * x0,69 (Naturwesen und Meuchler) — nach beiden Seiten ist also Platz, aber
+   * weniger als ohne den Reichweitenfaktor im Bot (x1,34 bis x0,71 auf
+   * demselben Stand).
    *
    * DASS DIE SPANNE AUFGEGANGEN IST, hat einen benannten Grund und ist kein
    * Rueckschritt am Katalog: Die Bot-Bewertung kennt seit dem 06.09.2026 die
@@ -165,14 +168,20 @@ describe('Ausgewogenheit: Marken', () => {
    * 06.09.2026 — die Schranken x0,5 und x2 sind unveraendert, aber eine
    * Marke reisst sie erst, wenn sie es UM MEHR ALS DIE MESSUNGENAUIGKEIT tut.
    *
-   * Der Anlass war ein Fehlalarm, und er trifft immer dieselbe Zeile:
-   * Naturwesen ist die schwaechste gezaehlte Marke und steht dicht an der
-   * unteren Schranke (Board-Karte "Naturwesen ist mit x0,54 die neue
-   * Wackelzeile"). Bei 400 Partien traegt sie rund 280 Antritte, ihre Quote
-   * liegt bei 13 bis 15 %, und deren Standardfehler ist 2,0 Prozentpunkte —
-   * auf den Faktor umgerechnet plus/minus 0,07. Gemessen auf DERSELBEN
-   * Saatfamilie ergibt sie x0,48 (400 Partien), x0,51 (800), x0,52 (1.200),
-   * x0,50 (1.600) und x0,55 (3.000), und zwar VOR wie NACH der Umstellung des
+   * Der Anlass war ein Fehlalarm, und er traf damals die Zeile Naturwesen —
+   * die schwaechste gezaehlte Marke, dicht an der unteren Schranke
+   * (Board-Karte "Naturwesen ist mit x0,54 die neue Wackelzeile"). SIE IST ES
+   * SEIT DEM 18.09.2026 NICHT MEHR: Mit der Bogenmeisterin als fuenfter
+   * Traegerin steht die Marke bei x0,69 auf dieser Saatfamilie und bei x0,80
+   * ueber 5.000 Partien. DER VERGLEICH MIT DEM STANDARDFEHLER BLEIBT
+   * TROTZDEM, und zwar fuer die naechste Zeile, die an die Schranke rutscht:
+   * Was hier unten steht, ist keine Aussage ueber Naturwesen, sondern ueber
+   * die Genauigkeit dieser Probe. Die Zahlen des Anlassfalls, damit das
+   * nachvollziehbar bleibt: Bei 400 Partien trug Naturwesen rund 280
+   * Antritte, ihre Quote lag bei 13 bis 15 %, und deren Standardfehler ist
+   * 2,0 Prozentpunkte — auf den Faktor umgerechnet plus/minus 0,07. Gemessen
+   * auf DERSELBEN Saatfamilie ergab sie x0,48 (400 Partien), x0,51 (800),
+   * x0,52 (1.200), x0,50 (1.600) und x0,55 (3.000), und zwar VOR wie NACH der Umstellung des
    * Bots auf eine Wunschreihe je Rolle: Ihre Siegquote selbst bewegte sich
    * dabei von 15,0 auf 15,2 %. Was die Probe an diesem Tag gemeldet hat, war
    * also ihre eigene Streuung und kein Befund ueber den Katalog.

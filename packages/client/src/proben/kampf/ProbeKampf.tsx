@@ -13,7 +13,10 @@
  *  2. ANSEHEN, WAS MAN GEAENDERT HAT. Wer kuenftig an `KampfAnzeige.tsx`,
  *     `Buehne.tsx` oder deren Stylesheets arbeitet, prueft das Ergebnis
  *     hier — eine Partie bis Runde 10 zu spielen, nur um zu sehen, ob ein
- *     Lebensbalken richtig sitzt, kostet mehr als die Aenderung selbst.
+ *     Lebensbalken richtig sitzt, kostet mehr als die Aenderung selbst. Seit
+ *     dem 19.09.2026 gehoeren die beiden RUECKFALLSTUFEN dazu: zwei Kaestchen
+ *     lassen Blatt und Pixelfigur ausfallen, ohne dass jemand eine Datei
+ *     umbenennt (siehe `AUSFALL` weiter unten).
  *     Deshalb ist diese Seite kein Wegwerf-Entwurf wie `/probe/arena-2d`:
  *     Der vergleicht Entwuerfe und verschwindet mit der Entscheidung — sein
  *     Gegenstueck `/probe/arena-3d` ist am 06.09.2026 genau so verschwunden —,
@@ -76,12 +79,13 @@ import { useEffect, useState } from 'react';
 
 import { Buehne } from '../../minispiele/tafelrunde/Buehne';
 import { Phasenzeile } from '../../minispiele/tafelrunde/Phasenzeile';
-import { kostenFarbe } from '../../minispiele/tafelrunde/Zeichen';
+import { kostenFarbe, RollenZeichen } from '../../minispiele/tafelrunde/Zeichen';
 import {
   type Einheitenbild,
   type Kampfpaarung,
   KampfAnzeige,
 } from '../../minispiele/tafelrunde/KampfAnzeige';
+import type { Rolle } from '../../minispiele/tafelrunde/sicht';
 
 import rohszene from './kampf-szene.json?raw';
 import css from './ProbeKampf.module.css';
@@ -90,8 +94,13 @@ import css from './ProbeKampf.module.css';
  * Ein Katalogeintrag ist genau das, was die Anzeige braucht (`Einheitenbild`):
  * Kennung, Name, Kosten und die ROLLE — an der haengt seit dem 6.9.2026, welche
  * der fuenf Bildfolgen eine Figur spielt.
+ *
+ * Die Rolle steht hier enger als in `Einheitenbild` (dort eine Zeichenkette,
+ * weil sie das am Draht auch ist): Die Szene kommt aus dem Spielpaket, ihre
+ * fuenf Rollen sind die des Moduls — und nur so laesst sich das
+ * Strichzeichen der Rolle ohne einen zweiten Cast zeichnen.
  */
-type Katalogeintrag = Einheitenbild;
+type Katalogeintrag = Einheitenbild & { readonly rolle: Rolle };
 
 interface Markenstand {
   readonly marke: string;
@@ -107,6 +116,7 @@ interface Szene {
   readonly runde: number;
   readonly rundenGrenze: number;
   readonly zeitraffer: number;
+  readonly schrittMs: number;
   readonly ich: number;
   readonly brettReihen: number;
   readonly arenaReihen: number;
@@ -127,6 +137,58 @@ const BERICHT = SZENE.kampf.bericht;
 const KATALOG: Record<string, Katalogeintrag> = Object.fromEntries(
   SZENE.katalog.map((e) => [e.id, e]),
 );
+
+/**
+ * Die Marke, die eine Kennung oder eine Rolle absichtlich ins Leere laufen
+ * laesst — damit die Probe die Rueckfaelle ZEIGEN kann.
+ *
+ * WARUM ES DAS BRAUCHT: Die Arena hat drei Stufen — das 3D-Blatt der Rolle,
+ * darunter die Pixelfigur der Einheit, darunter das Strichzeichen der Rolle.
+ * Die zweite und dritte sieht man nur, wenn eine Datei wirklich fehlschlaegt.
+ * Wer ihre Groesse oder Stellung beurteilen wollte, musste bis zum 19.09.2026
+ * eine Datei umbenennen oder Code aendern; genau deshalb ist der Abstand von
+ * 34 zu 72 Pixeln monatelang niemandem aufgefallen.
+ *
+ * UND WARUM SO: Die Kampfanzeige bleibt unberuehrt. Sie holt sich die Pfade
+ * selbst — `blattPfad(rolle)` und `figurPfad(id)` —, und beide liefern bei
+ * einem unbekannten Wert null und fallen zurueck. Eine Rolle „wache#ausfall"
+ * geht also genau den Weg, den im Betrieb ein fehlendes Blatt geht. Ein
+ * Schalter, der stattdessen in die Anzeige hineinregierte, waere ein Weg, den
+ * es am Tisch nicht gibt — und dann prueft man den Schalter statt den
+ * Rueckfall.
+ */
+const AUSFALL = '#ausfall';
+
+/** Die echte Kennung zurueck — fuer den Blick in den Katalog oben. */
+function ohneAusfall(id: string): string {
+  return id.endsWith(AUSFALL) ? id.slice(0, -AUSFALL.length) : id;
+}
+
+/**
+ * Der Katalog, wie die Anzeige ihn bekommt: echt, oder um eine Stufe
+ * beschnitten.
+ *
+ * Der SCHLUESSEL bleibt immer die echte Kennung — die Anzeige schlaegt mit
+ * `f.einheitId` nach, und ein verbogener Schluessel liesse die Figur ganz
+ * verschwinden (die Anzeige zeigt dann ein „?") statt sie zurueckfallen zu
+ * lassen. Verbogen wird nur, was IM Eintrag steht.
+ */
+function katalogMit(
+  blaetterAus: boolean,
+  figurenAus: boolean,
+): Record<string, Einheitenbild> {
+  if (!blaetterAus && !figurenAus) return KATALOG;
+  return Object.fromEntries(
+    SZENE.katalog.map((e) => [
+      e.id,
+      {
+        ...e,
+        id: figurenAus ? e.id + AUSFALL : e.id,
+        rolle: blaetterAus ? e.rolle + AUSFALL : e.rolle,
+      },
+    ]),
+  );
+}
 
 /**
  * Wie lange nach dem letzten Ereignis die Uhr noch laeuft.
@@ -239,6 +301,16 @@ export function ProbeKampf(): React.JSX.Element {
    */
   const [erklaerung, setErklaerung] = useState(false);
 
+  /*
+   * Die zwei Kaestchen: ob die Blaetter und ob zusaetzlich die Pixelfiguren
+   * ausfallen (siehe `AUSFALL`). KEIN Teil des Neustart-Schluessels — ein
+   * Haken mitten im Kampf tauscht die Figuren an Ort und Stelle aus, und
+   * genau so will man die drei Stufen vergleichen: derselbe Augenblick,
+   * derselbe Platz, nur ein anderes Bild.
+   */
+  const [blaetterAus, setBlaetterAus] = useState(false);
+  const [figurenAus, setFigurenAus] = useState(false);
+
   return (
     /*
      * Dieselben zwei Klassen wie am Tisch (`screens/Tafelrunde.tsx`): Sie
@@ -321,17 +393,34 @@ export function ProbeKampf(): React.JSX.Element {
             brettReihen={SZENE.brettReihen}
             arenaReihen={SZENE.arenaReihen}
             brettSpalten={SZENE.brettSpalten}
-            katalog={KATALOG}
+            /*
+             * Der Takt des aufgezeichneten Kampfes. Am Tisch kommen beide Zahlen
+             * aus der Sicht (sicht.ts im Modul); hier stehen sie in der Szene,
+             * weil `kampf-erzeugen.mjs` sie beim Rechnen mitgeschrieben hat. So
+             * laufen die Figuren zu DIESEM Bericht und nicht zu dem Tempo, das
+             * gerade gebaut ist — die Szene ist eine Aufzeichnung.
+             */
+            zeitraffer={SZENE.zeitraffer}
+            schrittMs={SZENE.schrittMs}
+            katalog={katalogMit(blaetterAus, figurenAus)}
             nameVon={nameVon}
             /*
-             * Der Rueckfall, wenn eine Figur nicht laedt. Am Tisch ist das die
-             * Strichzeichnung der Rolle; ihre fuenf Pfade stehen in
-             * `screens/Tafelrunde.tsx` und werden hier NICHT abgeschrieben — es
-             * waere eine zweite Fassung, die beim ersten Umzeichnen auseinander
-             * laeuft. Zu allen 22 Einheiten gibt es eine Figur (figuren.ts), das
-             * Zeichen erscheint also nur, wenn eine Datei fehlschlaegt.
+             * Die dritte Stufe: das Strichzeichen der Rolle, wenn auch die
+             * Pixelfigur nicht laedt. DASSELBE Bauteil wie am Tisch
+             * (`RollenZeichen` aus Zeichen.tsx, dort seit dem 06.09.2026) und
+             * nicht abgeschrieben — sonst beurteilte man hier ein Zeichen, das
+             * es im Spiel so gar nicht gibt. Bis zum 19.09.2026 stand hier der
+             * erste Buchstabe des Namens, weil das Zeichen damals noch im
+             * Spielbildschirm sass und ein Import von dort den ganzen Tisch in
+             * dieses Buendel gezogen haette; der Grund gilt nicht mehr.
+             *
+             * Die ROLLE kommt aus dem echten Katalog und nicht aus dem
+             * uebergebenen Eintrag: Der traegt, solange das Kaestchen steht,
+             * die Ausfall-Marke.
              */
-            ersatzzeichen={(einheit) => <span aria-hidden="true">{einheit.name.slice(0, 1)}</span>}
+            ersatzzeichen={(einheit) => (
+              <RollenZeichen rolle={KATALOG[ohneAusfall(einheit.id)]!.rolle} />
+            )}
             /* Die Kostenfarbe kommt seit dem 06.09.2026 aus
                `minispiele/tafelrunde/Zeichen.tsx` und steht hier nicht mehr
                als Abschrift. Der Grund fuer die Abschrift war, dass ein Export
@@ -368,21 +457,60 @@ export function ProbeKampf(): React.JSX.Element {
           >
             {erklaerung ? 'Text zu' : 'Was ist das?'}
           </button>
+
+          <label className={css.kaestchen}>
+            <input
+              type="checkbox"
+              checked={blaetterAus}
+              onChange={(e) => setBlaetterAus(e.target.checked)}
+            />
+            Blätter ausfallen lassen
+          </label>
+
+          {/* Das zweite Kaestchen wirkt nur, solange das erste steht: Solange
+              das Blatt laedt, kommt die Pixelfigur gar nicht an die Reihe. Ein
+              Haken, der nichts tut, sieht aber aus wie ein Fehler der Probe —
+              deshalb ist es dann gesperrt und faellt beim Abhaken des ersten
+              mit. */}
+          <label className={css.kaestchen}>
+            <input
+              type="checkbox"
+              checked={figurenAus && blaetterAus}
+              disabled={!blaetterAus}
+              onChange={(e) => setFigurenAus(e.target.checked)}
+            />
+            Pixelfiguren auch
+          </label>
         </div>
         {erklaerung && (
-          <p className={css.fuss}>
-            Runde {SZENE.runde} einer Partie zu {SZENE.sitze.length} mit Bots (Saat „{SZENE.saat}",
-            Gangart {SZENE.gangart}): Du sitzt auf {nameVon(SZENE.kampf.a)} und trittst gegen{' '}
-            {nameVon(SZENE.kampf.b)} an — {BERICHT.start.length} Einheiten ({stufenSatz()}),
-            erreichte Markenschwellen {markenSatz(0)} gegen {markenSatz(1)}. Gerechnet mit
-            Zeitraffer x{SZENE.zeitraffer}, dem Tempo, das beurteilt werden soll:{' '}
-            {sekunden(BERICHT.dauerMs)}, {zaehle('bewegung')} Bewegungen, {zaehle('treffer')}{' '}
-            Treffer,{' '}
-            {/* Die Heilungen nur, wenn welche vorkommen: In einer Szene ohne
-                Beistand stuende sonst „0 Heilungen" als Rauschen in der Zeile. */}
-            {zaehle('heilung') > 0 ? `${zaehle('heilung')} Heilungen, ` : ''}
-            {zaehle('tod')} Tode, Ende durch {ENDGRUND[BERICHT.grund] ?? BERICHT.grund}.
-          </p>
+          <>
+            {/* Der Satz zu den Kaestchen steht MIT im zugeklappten Text und
+                nicht dauerhaft darunter: Seit dem 19.09.2026 ist der Fuss am
+                Handy das vierte Band unter der Arena, und jede Zeile, die
+                immer steht, nimmt der Arena genau die Hoehe weg, die hier
+                gemessen werden soll. Die beiden Beschriftungen sagen schon,
+                was die Haken tun; warum es sie gibt, liest, wer fragt. */}
+            <p className={css.hinweis}>
+              Drei Stufen, in dieser Reihenfolge: das 3D-Blatt der Rolle, darunter die Pixelfigur
+              der Einheit, darunter ihr Strichzeichen. Die Kästchen lassen die oberen Stufen
+              ausfallen — so, wie es eine fehlende Datei täte, und ohne Eingriff in die
+              Kampfanzeige. Mitten im Kampf umschaltbar: Die Figuren tauschen an Ort und Stelle,
+              Größe und Stellung lassen sich also unmittelbar vergleichen.
+            </p>
+            <p className={css.fuss}>
+              Runde {SZENE.runde} einer Partie zu {SZENE.sitze.length} mit Bots (Saat „
+              {SZENE.saat}", Gangart {SZENE.gangart}): Du sitzt auf {nameVon(SZENE.kampf.a)} und
+              trittst gegen {nameVon(SZENE.kampf.b)} an — {BERICHT.start.length} Einheiten (
+              {stufenSatz()}), erreichte Markenschwellen {markenSatz(0)} gegen {markenSatz(1)}.
+              Gerechnet mit Zeitraffer x{SZENE.zeitraffer}, dem Tempo, das beurteilt werden
+              soll: {sekunden(BERICHT.dauerMs)}, {zaehle('bewegung')} Bewegungen,{' '}
+              {zaehle('treffer')} Treffer,{' '}
+              {/* Die Heilungen nur, wenn welche vorkommen: In einer Szene ohne
+                  Beistand stuende sonst „0 Heilungen" als Rauschen in der Zeile. */}
+              {zaehle('heilung') > 0 ? `${zaehle('heilung')} Heilungen, ` : ''}
+              {zaehle('tod')} Tode, Ende durch {ENDGRUND[BERICHT.grund] ?? BERICHT.grund}.
+            </p>
+          </>
         )}
       </div>
     </main>

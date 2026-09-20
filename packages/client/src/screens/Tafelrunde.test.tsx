@@ -146,6 +146,10 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
     brettReihen: 2,
     arenaReihen: 4,
     brettSpalten: 5,
+    // Der Takt des Kampfes, wie die Sicht ihn liefert (sicht.ts im Modul):
+    // Zeitraffer x2, ein Schritt 300 ms.
+    zeitraffer: 2,
+    schrittMs: 300,
     verschmelzZahl: 3,
     maxStufe: 3,
     vorrat: { dorfwache: 28, astschuetze: 30 },
