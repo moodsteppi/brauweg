@@ -149,6 +149,32 @@ export interface LiveParty {
   paused: boolean;
   finished: boolean;
   /**
+   * Gesetzt, solange `finish` die Partie abrechnet: zwischen dem Setzen von
+   * `finished` und dem Eintrag der Buchungen in `awards`.
+   *
+   * Das Feld gibt es, weil `finished` zwei Aufgaben hatte, die verschiedene
+   * Zeitpunkte brauchen. Nach innen ist es der Riegel: Ab dem ersten Moment
+   * der Abrechnung darf keine Aktion, kein Timer und kein Bot den Zustand
+   * noch anfassen — deshalb wird es ganz am Anfang von `finish` gesetzt.
+   * Nach aussen ist es die Aussage "die Partie ist fertig, hier ist das
+   * Ergebnis" — und die stimmt erst, wenn die Trophaeen gebucht sind, denn
+   * die Partienachricht traegt sie aus `awards`.
+   *
+   * Dazwischen liegen ein gutes Dutzend Datenbankschreibungen. Ein Rundruf,
+   * der in diese Luecke faellt — und das tun sie: `emit` ist ein `void
+   * this.broadcast(...)`, und dessen erste Abfrage kann genau hier zurueck
+   * kommen —, schickte eine Sicht mit `finished: true` samt einer
+   * Partienachricht mit LEERER Trophaeenliste. Am Bildschirm ist das ein
+   * Partie-Ende ohne Wertung, das Sekundenbruchteile spaeter durch den
+   * richtigen Rundruf ersetzt wird; in der Pruefstrecke war es der
+   * Wackler "0 !== 4" in stats.test.ts (CI, 19./20.09.2026).
+   *
+   * `viewFor` meldet deshalb `finished` erst, wenn hier wieder false steht.
+   * Wichtig fuer `resume`: Dort ist der Wert false, eine laengst beendete und
+   * abgerechnete Partie meldet ihr Ende also sofort.
+   */
+  abrechnungLaeuft: boolean;
+  /**
    * Gebuchte Trophaeen nach Partie-Ende, je Sitz. Leer bei Tischen, die nicht
    * fuer die Rangliste zaehlen. Bleibt am Objekt, damit der Rundruf sie ans
    * Partie-Ende haengen kann - gewonnene Trophaeen, die niemand sieht, sind
@@ -390,6 +416,7 @@ export class PartyRuntime {
       offlineTimer: null,
       paused: false,
       finished: false,
+      abrechnungLaeuft: false,
       awards: [],
     };
 
@@ -466,6 +493,7 @@ export class PartyRuntime {
       offlineTimer: null,
       paused: table.pausedAt !== null,
       finished: module.isFinished(state),
+      abrechnungLaeuft: false,
       awards: [],
     };
 
@@ -543,7 +571,8 @@ export class PartyRuntime {
       phaseDeadline: party.phaseDeadline,
       botSeats: [...party.botControlled],
       leftSeats: [...party.leftSeats],
-      finished: party.finished,
+      // Erst gemeldet, wenn auch das Ergebnis steht - siehe abrechnungLaeuft.
+      finished: party.finished && !party.abrechnungLaeuft,
     };
   }
 
@@ -1076,6 +1105,9 @@ export class PartyRuntime {
   private async finish(party: LiveParty): Promise<void> {
     if (party.finished) return;
     party.finished = true;
+    // Nach aussen bleibt die Partie bis zum Rundruf am Ende dieser Methode
+    // ungemeldet; nach innen ist ab hier zu.
+    party.abrechnungLaeuft = true;
     if (party.timer) clearTimeout(party.timer);
     if (party.offlineTimer) clearTimeout(party.offlineTimer);
     party.timer = null;
@@ -1084,31 +1116,41 @@ export class PartyRuntime {
     party.phaseDeadline = null;
 
     const standings = party.module.standings(party.state);
-    await this.persist(party);
+    /*
+     * Was hier schiefgeht, darf die Partie nicht in der Abrechnung
+     * steckenlassen: Ohne das `finally` bliebe `abrechnungLaeuft` auf true,
+     * und der Tisch meldete sein Ende nie - ein haengender Bildschirm statt
+     * eines fehlenden Eintrags. Der Fehler geht trotzdem weiter nach oben.
+     */
+    try {
+      await this.persist(party);
 
-    if (party.module.meta.chipStackField) {
-      const rest: Record<string, number> = {};
-      for (const standing of standings) {
-        const accountId = party.seats.find((seat) => seat.index === standing.seat)?.accountId;
-        if (accountId) rest[accountId] = standing.points;
+      if (party.module.meta.chipStackField) {
+        const rest: Record<string, number> = {};
+        for (const standing of standings) {
+          const accountId = party.seats.find((seat) => seat.index === standing.seat)?.accountId;
+          if (accountId) rest[accountId] = standing.points;
+        }
+        await zahleAus(this.db, party.tableId, rest);
       }
-      await zahleAus(this.db, party.tableId, rest);
+
+      await this.db
+        .update(s.party)
+        .set({ status: 'finished', endedAt: new Date() })
+        .where(eq(s.party.id, party.partyId));
+
+      await this.db
+        .update(s.gameTable)
+        .set({ status: 'finished' })
+        .where(eq(s.gameTable.id, party.tableId));
+
+      await this.awardTrophies(party, standings);
+      await this.countStats(party, standings);
+      await this.recordWar(party, standings);
+      await this.countQuests(party, standings);
+    } finally {
+      party.abrechnungLaeuft = false;
     }
-
-    await this.db
-      .update(s.party)
-      .set({ status: 'finished', endedAt: new Date() })
-      .where(eq(s.party.id, party.partyId));
-
-    await this.db
-      .update(s.gameTable)
-      .set({ status: 'finished' })
-      .where(eq(s.gameTable.id, party.tableId));
-
-    await this.awardTrophies(party, standings);
-    await this.countStats(party, standings);
-    await this.recordWar(party, standings);
-    await this.countQuests(party, standings);
 
     // Die Partie bleibt nach dem Ende noch im Speicher. Wuerde sie hier
     // entfernt, ginge die Schlusssicht verloren: Der Rundruf holt sich den
