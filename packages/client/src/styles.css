@@ -17476,6 +17476,12 @@ span.hub-angebot-art.poker-jeton-stapel {
  */
 .tr-einheit[data-fassbar] { cursor: grab; touch-action: none; }
 .tr-einheit[data-fassbar]:active { cursor: grabbing; }
+/* Antippbar, aber nicht fassbar (seit dem 19.9.2026): Wer schon „Bereit"
+   gedrueckt hat oder das Brett des Gegners ansieht, kommt ans Blatt der
+   Einheit noch heran — nur greifen laesst sie sich nicht. Deshalb der
+   Zeigefinger und nicht die Hand, und KEIN `touch-action: none`: Hier wird
+   nichts gezogen, also darf der Finger die Seite darunter weiterrollen. */
+.tr-einheit[data-lesbar] { cursor: pointer; }
 
 /* Das Feld unter dem Finger ist auch dann zu sehen, wenn eine Einheit darauf
    steht — beim Tausch zweier Einheiten ist genau das der Fall.
