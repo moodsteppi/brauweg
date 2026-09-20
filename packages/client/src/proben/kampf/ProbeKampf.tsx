@@ -28,6 +28,42 @@
  * zweite Buehne neben der echten zeigte etwas, das es im Spiel nicht gibt,
  * und genau das soll die Probe nicht.
  *
+ * SEIT DEM 19.09.2026 STEHT DIE BUEHNE IM AUFBAU DES TISCHES, und das ist
+ * keine Kosmetik. Bis dahin hingen Kopfzeile, Buehne und Fusstext als drei
+ * gewoehnliche Kinder direkt in `.tr-tisch`. Seit dem 07.09.2026 ist der Tisch
+ * am breiten Schirm aber ein RASTER aus drei Spalten (styles.css, der Block ab
+ * 64rem): Statuszeile und Laden stehen links und rechts NEBEN der Mitte, und
+ * die Mitte bekommt die ganze Hoehe unter der Kopfleiste. Die Probe kannte
+ * diesen Aufbau nicht — das Raster greift ausdruecklich nur an einem Tisch mit
+ * `.tr-mitte` —, und damit mass `werkzeug/hoehenprobe.mjs` die Kampfphase an
+ * einem Bildschirm, den es am Tisch nicht gibt: 262 Pixel Arena statt der 348,
+ * die am Tisch auf 1366 x 768 stehen. Die Pruefung „Laden steht neben der
+ * Mitte" lief hier sogar ins Leere, weil es weder `.tr-mitte` noch `.tr-fuss`
+ * gab. Jetzt hat die Seite dieselben vier Baender wie der Tisch — Kopfleiste,
+ * Statuszeile, Mitte, Fuss —, in derselben Reihenfolge. Dasselbe hat
+ * `/probe/ruestkammer` am 07.09.2026 aus demselben Grund getan.
+ *
+ * WAS IN DEN BAENDERN STEHT, IST DAS, WAS DIE SZENE WEISS. Die Kopfleiste
+ * traegt die echte `Phasenzeile` (Runde und Phase kommen aus der Szene);
+ * Statuszeile und Fuss tragen die Angaben zur Aufzeichnung und die Bedienung
+ * der Probe. Was dem Tisch dort NICHT nachgestellt ist, sind die
+ * Mitspielerkacheln ueber der Phasenzeile: Sie brauchen Leben und Rang je
+ * Sitz, und die stehen nicht in `kampf-szene.json`. Sie liessen sich nur
+ * nachtragen, indem `kampf-erzeugen.mjs` noch einmal laeuft — und das geht
+ * derzeit nicht, die Saat findet ihre eigene Paarung nicht mehr (siehe dort,
+ * „AM 06.09.2026 ZUM ZWEITEN MAL NEU GESUCHT"; am 19.09.2026 bricht der Lauf
+ * mit „Kampf 3:2 gibt es in Runde 10 nicht (3:1)" ab). Erfunden wird hier
+ * nichts: Eine ausgedachte Lebenszahl waere genau die zweite Wahrheit, gegen
+ * die der Rest dieser Datei geschrieben ist. Wer die Szene neu erzeugen kann,
+ * haengt die Kacheln hier nach.
+ *
+ * WIE GROSS DER REST-UNTERSCHIED IST, steht als Zahl da und nicht als
+ * Einschaetzung: Auf 1366 x 768 misst die Arena auf dieser Seite 345 x 596
+ * Pixel (Kopfleiste 57), am Tisch sind es 348 (STAND.md, Messung vom
+ * 07.09.2026) — drei Pixel oder 0,9 %. Vorher waren es 262. Die weiteren
+ * Groessen: 318 x 552 (1280 x 720), 391 x 671 (1512 x 850), 333 x 576
+ * (390 x 844), 276 x 483 (360 x 740).
+ *
  * DER KAMPF kommt aus `kampf-szene.json`: Runde 10 einer echten Bot-Partie,
  * gerechnet vom Spielpaket selbst (`kampf-erzeugen.mjs`, dort steht auch,
  * warum es diese Saat ist). Feste Saat, also jedes Mal derselbe Kampf — sonst
@@ -42,6 +78,7 @@
 import { useEffect, useState } from 'react';
 
 import { Buehne } from '../../minispiele/tafelrunde/Buehne';
+import { Phasenzeile } from '../../minispiele/tafelrunde/Phasenzeile';
 import { kostenFarbe, RollenZeichen } from '../../minispiele/tafelrunde/Zeichen';
 import {
   type Einheitenbild,
@@ -255,6 +292,13 @@ export function ProbeKampf(): React.JSX.Element {
    * das von aussen in die Anzeige hineinredete, muesste sie dafuer umbauen.
    */
   const [durchgang, setDurchgang] = useState(0);
+  /*
+   * Der Erklaertext ist zugeklappt, bis jemand ihn aufschlaegt — wie in der
+   * Werkbank von `/probe/ruestkammer` und aus demselben Grund: Am Handy stehen
+   * die vier Baender untereinander, und fuenf Zeilen Beiwerk im Fuss nehmen
+   * der Arena genau die Hoehe weg, die hier gemessen werden soll.
+   */
+  const [erklaerung, setErklaerung] = useState(false);
 
   /*
    * Die zwei Kaestchen: ob die Blaetter und ob zusaetzlich die Pixelfiguren
@@ -273,113 +317,192 @@ export function ProbeKampf(): React.JSX.Element {
      * steht. Auf einer weissen Seite saehe dieselbe Anzeige anders aus, und
      * dann beurteilt man den Rahmen statt den Kampf.
      */
-    <main className={`tr-seite tr-tisch ${css.seite}`}>
-      <div className={css.kopf}>
-        <h1 className={css.titel}>Probe — die Kampfanzeige</h1>
-        <Uhr key={durchgang} dauerMs={BERICHT.dauerMs} />
+    <main className="tr-seite tr-tisch">
+      {/* ---- Band 1: die Kopfleiste ------------------------------------- */}
+      {/* `.tr-oben` und nicht eine eigene Klasse: Am breiten Schirm ist dieses
+          Band die erste Zeile des Rasters und steht ueber der Mitte, am Handy
+          klebt es beim Rollen oben fest. Beides gilt am Tisch genauso. */}
+      <div className="tr-oben">
+        <div className={`tr-oben-reihe ${css.kopf}`}>
+          <h1 className={css.titel}>Probe — die Kampfanzeige</h1>
+          <Uhr key={durchgang} dauerMs={BERICHT.dauerMs} />
+        </div>
+        {/*
+          Die echte Phasenzeile des Tisches, mit den Angaben aus der Szene.
+
+          `frist={null}`: Am Tisch laeuft hier die Schaupause
+          (`interludeDeadline`), die Probe hat keine — und eine ablaufende Zahl
+          in einer Aufzeichnung waere eine Behauptung. Ohne Frist zeigt die
+          Zeile in der Kampfphase weder Uhr noch Bereit-Stand
+          (Phasenzeile.tsx); `bereit` und `offen` stehen deshalb auf 0 und sind
+          keine geratene Zahl.
+        */}
+        <Phasenzeile runde={SZENE.runde} phase="kampf" frist={null} bereit={0} offen={0} />
       </div>
 
-      <Buehne key={durchgang} runde={SZENE.runde}>
-        <KampfAnzeige
-          kaempfe={[SZENE.kampf]}
-          /* Die Probe zeigt einen einzelnen Kampf: Es gibt keine anderen
-             Tische der Runde, also auch keine Ergebniszeilen darunter. */
-          paarungen={[]}
-          /*
-           * Aus dem Blick eines SPIELERS und nicht eines Zuschauers: Nur so
-           * steht die eigene Seite unten, heisst „Du" und bekommt am Ende
-           * „Gewonnen!" statt „Sitz 3 gewinnt".
-           */
-          ich={SZENE.ich}
-          brettReihen={SZENE.brettReihen}
-          arenaReihen={SZENE.arenaReihen}
-          brettSpalten={SZENE.brettSpalten}
-          katalog={katalogMit(blaetterAus, figurenAus)}
-          nameVon={nameVon}
-          /*
-           * Die dritte Stufe: das Strichzeichen der Rolle, wenn auch die
-           * Pixelfigur nicht laedt. DASSELBE Bauteil wie am Tisch
-           * (`RollenZeichen` aus Zeichen.tsx, dort seit dem 06.09.2026) und
-           * nicht abgeschrieben — sonst beurteilte man hier ein Zeichen, das
-           * es im Spiel so gar nicht gibt. Bis zum 19.09.2026 stand hier der
-           * erste Buchstabe des Namens, weil das Zeichen damals noch im
-           * Spielbildschirm sass und ein Import von dort den ganzen Tisch in
-           * dieses Buendel gezogen haette; der Grund gilt nicht mehr.
-           *
-           * Die ROLLE kommt aus dem echten Katalog und nicht aus dem
-           * uebergebenen Eintrag: Der traegt, solange das Kaestchen steht,
-           * die Ausfall-Marke.
-           */
-          ersatzzeichen={(einheit) => (
-            <RollenZeichen rolle={KATALOG[ohneAusfall(einheit.id)]!.rolle} />
-          )}
-          /* Die Kostenfarbe kommt seit dem 06.09.2026 aus
-             `minispiele/tafelrunde/Zeichen.tsx` und steht hier nicht mehr
-             als Abschrift. Der Grund fuer die Abschrift war, dass ein Export
-             aus `screens/Tafelrunde.tsx` den ganzen Spielschirm samt
-             Tischverbindung in dieses Stueck gezogen haette — mit der eigenen
-             Datei gilt er nicht mehr. */
-          farbeVon={(einheit) => kostenFarbe(einheit.kosten)}
-          /*
-           * Keine Frist: Die Probe faengt den Kampf immer von vorn an. Am
-           * Tisch springt die Anzeige damit in einen laufenden Kampf, wenn
-           * jemand mitten in der Schaupause wieder verbindet — hier gibt es
-           * nichts aufzuholen.
-           */
-          frist={null}
-        />
-      </Buehne>
-
-      <div className={css.schalter}>
-        <button type="button" className={css.knopf} onClick={() => setDurchgang((n) => n + 1)}>
-          nochmal
-        </button>
-
-        <label className={css.kaestchen}>
-          <input
-            type="checkbox"
-            checked={blaetterAus}
-            onChange={(e) => setBlaetterAus(e.target.checked)}
-          />
-          Blätter ausfallen lassen
-        </label>
-
-        {/* Das zweite Kaestchen wirkt nur, solange das erste steht: Solange
-            das Blatt laedt, kommt die Pixelfigur gar nicht an die Reihe. Ein
-            Haken, der nichts tut, sieht aber aus wie ein Fehler der Probe —
-            deshalb ist es dann gesperrt und faellt beim Abhaken des ersten
-            mit. */}
-        <label className={css.kaestchen}>
-          <input
-            type="checkbox"
-            checked={figurenAus && blaetterAus}
-            disabled={!blaetterAus}
-            onChange={(e) => setFigurenAus(e.target.checked)}
-          />
-          Pixelfiguren auch
-        </label>
+      {/* ---- Band 2: die Statuszeile ------------------------------------ */}
+      {/* Am Tisch stehen hier Leben, Rang und die Marken; die Probe hat davon
+          nur die Marken (`seiten` in der Szene) und setzt daneben, was sie
+          sonst ueber die Aufzeichnung weiss. Dass das Band ueberhaupt da ist,
+          entscheidet mit ueber die Messung: Ab 64rem ist es die LINKE Spalte
+          des Rasters, und nur weil beide Seitenspalten gleich breit sind,
+          liegt die Mitte in der Mitte des Schirms (styles.css,
+          `--tr-seitenspalte`). */}
+      <div className="tr-statuszeile">
+        <header className="tr-kopf">
+          {/* Die RUNDE steht hier absichtlich nicht: Sie steht schon in der
+              Phasenzeile darueber, und das ist das Bauteil des Tisches. Zwei
+              Stellen mit derselben Zahl waeren die eine zu viel, die beim
+              naechsten Umbau stehen bleibt. */}
+          <span className="tr-wert">
+            <em>bis Runde</em>
+            <strong>{SZENE.rundenGrenze}</strong>
+          </span>
+          <span className="tr-wert">
+            <em>Zeitraffer</em>
+            <strong>x{SZENE.zeitraffer}</strong>
+          </span>
+          <span className="tr-wert">
+            <strong>{sekunden(BERICHT.dauerMs)}</strong>
+          </span>
+        </header>
+        <p className={css.marken}>
+          {markenSatz(0)} gegen {markenSatz(1)}
+        </p>
       </div>
 
-      <p className={css.hinweis}>
-        Drei Stufen, in dieser Reihenfolge: das 3D-Blatt der Rolle, darunter die Pixelfigur der
-        Einheit, darunter ihr Strichzeichen. Die Kästchen lassen die oberen Stufen ausfallen — so,
-        wie es eine fehlende Datei täte, und ohne Eingriff in die Kampfanzeige. Mitten im Kampf
-        umschaltbar: Die Figuren tauschen an Ort und Stelle, Größe und Stellung lassen sich also
-        unmittelbar vergleichen.
-      </p>
+      {/* ---- Band 3: die Mitte ------------------------------------------ */}
+      {/* DERSELBE KASTEN WIE AM TISCH (`.tr-mitte`, screens/Tafelrunde.tsx).
+          Er ist der Grund fuer diesen ganzen Umbau: Erst in ihm bekommt die
+          Buehne die Hoehe, die sie am Tisch hat — und nur an einem Tisch mit
+          `.tr-mitte` greift das Raster ab 64rem ueberhaupt. */}
+      <div className="tr-mitte">
+        <Buehne key={durchgang} runde={SZENE.runde}>
+          <KampfAnzeige
+            kaempfe={[SZENE.kampf]}
+            /* Die Probe zeigt einen einzelnen Kampf: Es gibt keine anderen
+               Tische der Runde, also auch keine Ergebniszeilen darunter. */
+            paarungen={[]}
+            /*
+             * Aus dem Blick eines SPIELERS und nicht eines Zuschauers: Nur so
+             * steht die eigene Seite unten, heisst „Du" und bekommt am Ende
+             * „Gewonnen!" statt „Sitz 3 gewinnt".
+             */
+            ich={SZENE.ich}
+            brettReihen={SZENE.brettReihen}
+            arenaReihen={SZENE.arenaReihen}
+            brettSpalten={SZENE.brettSpalten}
+            katalog={katalogMit(blaetterAus, figurenAus)}
+            nameVon={nameVon}
+            /*
+             * Die dritte Stufe: das Strichzeichen der Rolle, wenn auch die
+             * Pixelfigur nicht laedt. DASSELBE Bauteil wie am Tisch
+             * (`RollenZeichen` aus Zeichen.tsx, dort seit dem 06.09.2026) und
+             * nicht abgeschrieben — sonst beurteilte man hier ein Zeichen, das
+             * es im Spiel so gar nicht gibt. Bis zum 19.09.2026 stand hier der
+             * erste Buchstabe des Namens, weil das Zeichen damals noch im
+             * Spielbildschirm sass und ein Import von dort den ganzen Tisch in
+             * dieses Buendel gezogen haette; der Grund gilt nicht mehr.
+             *
+             * Die ROLLE kommt aus dem echten Katalog und nicht aus dem
+             * uebergebenen Eintrag: Der traegt, solange das Kaestchen steht,
+             * die Ausfall-Marke.
+             */
+            ersatzzeichen={(einheit) => (
+              <RollenZeichen rolle={KATALOG[ohneAusfall(einheit.id)]!.rolle} />
+            )}
+            /* Die Kostenfarbe kommt seit dem 06.09.2026 aus
+               `minispiele/tafelrunde/Zeichen.tsx` und steht hier nicht mehr
+               als Abschrift. Der Grund fuer die Abschrift war, dass ein Export
+               aus `screens/Tafelrunde.tsx` den ganzen Spielschirm samt
+               Tischverbindung in dieses Stueck gezogen haette — mit der eigenen
+               Datei gilt er nicht mehr. */
+            farbeVon={(einheit) => kostenFarbe(einheit.kosten)}
+            /*
+             * Keine Frist: Die Probe faengt den Kampf immer von vorn an. Am
+             * Tisch springt die Anzeige damit in einen laufenden Kampf, wenn
+             * jemand mitten in der Schaupause wieder verbindet — hier gibt es
+             * nichts aufzuholen.
+             */
+            frist={null}
+          />
+        </Buehne>
+      </div>
 
-      <p className={css.fuss}>
-        Runde {SZENE.runde} einer Partie zu {SZENE.sitze.length} mit Bots (Saat „{SZENE.saat}",
-        Gangart {SZENE.gangart}): Du sitzt auf {nameVon(SZENE.kampf.a)} und trittst gegen{' '}
-        {nameVon(SZENE.kampf.b)} an — {BERICHT.start.length} Einheiten ({stufenSatz()}), erreichte
-        Markenschwellen {markenSatz(0)} gegen {markenSatz(1)}. Gerechnet mit Zeitraffer x
-        {SZENE.zeitraffer}, dem Tempo, das beurteilt werden soll: {sekunden(BERICHT.dauerMs)},{' '}
-        {zaehle('bewegung')} Bewegungen, {zaehle('treffer')} Treffer,{' '}
-        {/* Die Heilungen nur, wenn welche vorkommen: In einer Szene ohne
-            Beistand stuende sonst „0 Heilungen" als Rauschen in der Zeile. */}
-        {zaehle('heilung') > 0 ? `${zaehle('heilung')} Heilungen, ` : ''}
-        {zaehle('tod')} Tode, Ende durch {ENDGRUND[BERICHT.grund] ?? BERICHT.grund}.
-      </p>
+      {/* ---- Band 4: der Fuss ------------------------------------------- */}
+      {/* Am Tisch steht hier der Laden, in der Kampfphase nur der Satz, dass
+          er danach wieder aufgeht. Die Probe hat keinen Laden und setzt an
+          seine Stelle ihre Bedienung und den Erklaertext — ab 64rem ist das
+          die RECHTE Spalte des Rasters und kostet die Arena keine Hoehe. */}
+      <div className="tr-fuss">
+        <div className={css.schalter}>
+          <button type="button" className={css.knopf} onClick={() => setDurchgang((n) => n + 1)}>
+            nochmal
+          </button>
+          <button
+            type="button"
+            className={css.knopf}
+            aria-expanded={erklaerung}
+            onClick={() => setErklaerung((an) => !an)}
+          >
+            {erklaerung ? 'Text zu' : 'Was ist das?'}
+          </button>
+
+          <label className={css.kaestchen}>
+            <input
+              type="checkbox"
+              checked={blaetterAus}
+              onChange={(e) => setBlaetterAus(e.target.checked)}
+            />
+            Blätter ausfallen lassen
+          </label>
+
+          {/* Das zweite Kaestchen wirkt nur, solange das erste steht: Solange
+              das Blatt laedt, kommt die Pixelfigur gar nicht an die Reihe. Ein
+              Haken, der nichts tut, sieht aber aus wie ein Fehler der Probe —
+              deshalb ist es dann gesperrt und faellt beim Abhaken des ersten
+              mit. */}
+          <label className={css.kaestchen}>
+            <input
+              type="checkbox"
+              checked={figurenAus && blaetterAus}
+              disabled={!blaetterAus}
+              onChange={(e) => setFigurenAus(e.target.checked)}
+            />
+            Pixelfiguren auch
+          </label>
+        </div>
+        {erklaerung && (
+          <>
+            {/* Der Satz zu den Kaestchen steht MIT im zugeklappten Text und
+                nicht dauerhaft darunter: Seit dem 19.09.2026 ist der Fuss am
+                Handy das vierte Band unter der Arena, und jede Zeile, die
+                immer steht, nimmt der Arena genau die Hoehe weg, die hier
+                gemessen werden soll. Die beiden Beschriftungen sagen schon,
+                was die Haken tun; warum es sie gibt, liest, wer fragt. */}
+            <p className={css.hinweis}>
+              Drei Stufen, in dieser Reihenfolge: das 3D-Blatt der Rolle, darunter die Pixelfigur
+              der Einheit, darunter ihr Strichzeichen. Die Kästchen lassen die oberen Stufen
+              ausfallen — so, wie es eine fehlende Datei täte, und ohne Eingriff in die
+              Kampfanzeige. Mitten im Kampf umschaltbar: Die Figuren tauschen an Ort und Stelle,
+              Größe und Stellung lassen sich also unmittelbar vergleichen.
+            </p>
+            <p className={css.fuss}>
+              Runde {SZENE.runde} einer Partie zu {SZENE.sitze.length} mit Bots (Saat „
+              {SZENE.saat}", Gangart {SZENE.gangart}): Du sitzt auf {nameVon(SZENE.kampf.a)} und
+              trittst gegen {nameVon(SZENE.kampf.b)} an — {BERICHT.start.length} Einheiten (
+              {stufenSatz()}), erreichte Markenschwellen {markenSatz(0)} gegen {markenSatz(1)}.
+              Gerechnet mit Zeitraffer x{SZENE.zeitraffer}, dem Tempo, das beurteilt werden
+              soll: {sekunden(BERICHT.dauerMs)}, {zaehle('bewegung')} Bewegungen,{' '}
+              {zaehle('treffer')} Treffer,{' '}
+              {/* Die Heilungen nur, wenn welche vorkommen: In einer Szene ohne
+                  Beistand stuende sonst „0 Heilungen" als Rauschen in der Zeile. */}
+              {zaehle('heilung') > 0 ? `${zaehle('heilung')} Heilungen, ` : ''}
+              {zaehle('tod')} Tode, Ende durch {ENDGRUND[BERICHT.grund] ?? BERICHT.grund}.
+            </p>
+          </>
+        )}
+      </div>
     </main>
   );
 }

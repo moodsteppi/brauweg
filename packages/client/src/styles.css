@@ -17928,6 +17928,18 @@ span.hub-angebot-art.poker-jeton-stapel {
   gap: 5px;
   width: 100%;
 }
+/*
+ * Die Huelle um eine Ladenkarte — sie traegt den Griff zum Blatt.
+ *
+ * Es gibt sie, seit die Karte eine Auskunft bekommen hat: Die Karte IST eine
+ * Schaltflaeche, und ein Knopf in einem Knopf ist ungueltiges HTML. Also wird
+ * das Rasterfeld des Ladens die Huelle, und die Karte fuellt sie ganz aus —
+ * am Kauf-Tippziel aendert sich damit nichts.
+ */
+.tr-karte-huelle {
+  position: relative;
+  display: grid;
+}
 .tr-karte {
   position: relative;
   display: flex;
@@ -17942,6 +17954,11 @@ span.hub-angebot-art.poker-jeton-stapel {
   background: linear-gradient(180deg, #232f37, #182127);
   box-shadow: inset 0 0 0 1.5px var(--tr-kosten, var(--line));
   cursor: pointer;
+  /* Ein langer Druck auf die Karte schlaegt ihr Blatt auf (Ladenkarte.tsx).
+     Ohne diese beiden Zeilen legt das Handy dabei seine eigene Textauswahl
+     samt Freigabe-Menue ueber das Blatt, das gerade aufgegangen ist. */
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 .tr-karte:active:not(:disabled) { transform: scale(0.97); }
 /* Nicht kaufbar heisst nicht unsichtbar: Man soll sehen, worauf man spart —
@@ -17961,6 +17978,46 @@ span.hub-angebot-art.poker-jeton-stapel {
  * auf der Karte.
  */
 .tr-karte[data-teuer]:disabled { opacity: 0.45; filter: saturate(0.25); }
+/*
+ * Der Griff zum Blatt, in der linken oberen Ecke — gegenueber dem Preis.
+ *
+ * Klein und blass: Gekauft wird auf dieser Karte, nachgeschlagen nur
+ * gelegentlich, und zwei gleich laute Angebote auf 60 Pixel Breite waeren
+ * eins zu viel. Die Trefferflaeche ist trotzdem 32 px gross (`::after`), denn
+ * das Zeichen selbst misst 16 — auf einem Handy trifft man das sonst nicht.
+ * Sie reicht bewusst nicht weiter: Darunter liegt die Karte, und jeder Pixel
+ * mehr nimmt dem Kauf eine Ecke weg.
+ */
+.tr-karte-info {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  opacity: 0.75;
+  cursor: pointer;
+}
+.tr-karte-info svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.tr-karte-info::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+.tr-karte-info:hover,
+.tr-karte-info:focus-visible {
+  color: var(--text);
+  opacity: 1;
+}
 .tr-karte-leer {
   min-height: 84px;
   border-radius: 12px;
@@ -18339,13 +18396,20 @@ span.hub-angebot-art.poker-jeton-stapel {
  * daneben.
  *
  * WARUM JEDE REGEL `:has(> .tr-mitte)` DAVOR HAT. `.tr-tisch` traegt nicht nur
- * der Tisch: `/probe/kampf` benutzt dieselbe Klasse fuer den Rahmen und haengt
- * eigene Kinder hinein (Kopfzeile, Buehne, Fusstext). Ein blankes
- * `.tr-tisch { display: grid }` hat die am 07.09.2026 auf zwei Spalten
- * verteilt — die Buehne stand oben rechts und war 97 Pixel hoch. Die Bedingung
- * liest sich als das, was sie meint: Zum Raster wird ein Tisch, der aus diesen
- * Baendern gebaut ist. Wo es `:has()` nicht gibt, bleibt es bei der einen
- * Spalte von heute.
+ * der Tisch, sondern jede Seite, die seinen Rahmen will. `/probe/kampf` hat
+ * dort am 07.09.2026 drei lose Kinder hineingehaengt (Kopfzeile, Buehne,
+ * Fusstext); ein blankes `.tr-tisch { display: grid }` hat die auf zwei
+ * Spalten verteilt — die Buehne stand oben rechts und war 97 Pixel hoch. Die
+ * Bedingung liest sich als das, was sie meint: Zum Raster wird ein Tisch, der
+ * aus diesen Baendern gebaut ist. Wo es `:has()` nicht gibt, bleibt es bei der
+ * einen Spalte von heute.
+ *
+ * DIE BEDINGUNG IST DAMIT AUCH DIE ANSAGE AN JEDE PROBE: Wer die Kampfphase
+ * oder die Ruestkammer an diesem Rahmen MESSEN will, baut die vier Baender
+ * nach — sonst misst er einen Bildschirm, den es am Tisch nicht gibt. Beide
+ * Proben tun das inzwischen (`/probe/ruestkammer` seit dem 07.09.2026,
+ * `/probe/kampf` seit dem 19.09.2026, wo die Arena sonst 262 statt 348 Pixel
+ * breit gemessen wurde).
  */
 @media (min-width: 64rem) {
   .tr-tisch:has(> .tr-mitte) {

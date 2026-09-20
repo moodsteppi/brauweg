@@ -4,32 +4,28 @@
  * HIER STEHT NICHTS ZUM KAMPF SELBST. Buehne und Arena bringen ihr Aussehen
  * mit (`Buehne.module.css`, `KampfAnzeige.module.css`) — genau das ist der
  * Sinn der Probe. Was hier liegt, ist das Drumherum, das es am Tisch nicht
- * gibt: Kopfzeile, Uhr, die Schalterzeile („nochmal" und die zwei Kaestchen
- * fuer die Rueckfallstufen) und die Saetze darunter.
+ * gibt: Titel, Uhr, die Schalterzeile (zwei Knoepfe und die zwei Kaestchen
+ * fuer die Rueckfallstufen) und der Erklaertext.
  *
- * Der Grundton kommt von `.tr-seite`/`.tr-tisch` aus styles.css, die das
- * Element schon traegt. Die Klassen hier legen nur die Abstaende nach, die
- * dort der Tisch selbst setzt.
+ * UND ES IST WENIG GEWORDEN — seit dem 19.09.2026 steht die Seite im Aufbau
+ * des Tisches (`.tr-oben`, `.tr-statuszeile`, `.tr-mitte`, `.tr-fuss` aus
+ * styles.css), und die Baender bringen Breite, Polsterung und Abstaende
+ * selbst mit. Vorher setzte diese Datei sie nach; das war, solange die Probe
+ * drei lose Kinder in `.tr-tisch` haengte, richtig — und danach genau die
+ * zweite Wahrheit, gegen die die Probe gebaut ist. Eine Probe, die Klassen
+ * des Spiels ueberschreibt, zeigt etwas anderes als das Spiel.
  */
 
 /*
- * `.tr-seite` ist `position: fixed; inset: 0` und `.tr-tisch` rollt darin.
- * Genau das ist hier richtig: Der Kampf soll im selben Rahmen stehen wie am
- * Tisch, und Kopf, Knopf und Fusstext rollen mit, wenn der Schirm zu kurz
- * ist. Nur die Polsterung kommt dazu — am Tisch fuellen Kopfleiste und Laden
- * diesen Platz.
+ * Die Titelreihe in der Kopfleiste.
+ *
+ * Sie steht als `.tr-oben-reihe` im Baum und bekommt von dort Abstand und
+ * volle Breite; hier kommt nur dazu, dass die Uhr ans andere Ende rueckt und
+ * beide auf einer Grundlinie sitzen.
  */
-.seite {
-  padding: max(10px, env(safe-area-inset-top)) 8px max(12px, env(safe-area-inset-bottom));
-  gap: 10px;
-}
-
 .kopf {
-  width: min(96vw, 520px);
-  display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.6rem;
 }
 
 .titel {
@@ -45,6 +41,30 @@
   color: var(--muted);
   font-size: 0.8rem;
   white-space: nowrap;
+}
+
+/* Die erreichten Markenschwellen unter den Werten — dieselbe Stelle, an der
+   am Tisch die Synergieleiste steht. Als Satz und nicht als Chipreihe: Die
+   Szene bringt die Markentabelle nicht mit, aus der die Chips ihr Blatt
+   aufschlagen (Begruendung im Kopf von ProbeKampf.tsx). */
+.marken {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* Knoepfe und Kaestchen in einer Zeile, am Handy umbrechend. `align-items`
+   wegen der Kaestchen: Ein 44 px hohes Label neben einem 44 px hohen Knopf
+   sitzt sonst nicht auf derselben Mitte. Breite und Polsterung kommen vom
+   Band `.tr-fuss` — siehe den Kopf dieser Datei. */
+.schalter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.9rem;
 }
 
 /* 44 px hoch: Was man antippen soll, muss man auch am Handy treffen. */
@@ -63,17 +83,6 @@
 
 .knopf:hover {
   border-color: var(--accent);
-}
-
-/* Knopf und Kaestchen in einer Zeile, am Handy umbrechend. Zentriert, weil
-   die Buehne darueber es auch ist. */
-.schalter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem 0.9rem;
-  width: min(96vw, 520px);
 }
 
 /* Das ganze Label ist die Trefferflaeche und 44 px hoch — ein 13-px-Kaestchen
@@ -104,8 +113,7 @@
 /* Etwas dunkler als der Fusstext und darueber: Es erklaert die Kaestchen und
    nicht die Szene. */
 .hinweis {
-  width: min(96vw, 520px);
-  margin: -2px 0 0;
+  margin: 0;
   color: var(--muted);
   font-size: 0.66rem;
   line-height: 1.45;
@@ -113,7 +121,6 @@
 }
 
 .fuss {
-  width: min(96vw, 520px);
   margin: 0;
   color: var(--muted);
   font-size: 0.68rem;

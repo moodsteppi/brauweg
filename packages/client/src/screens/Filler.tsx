@@ -572,9 +572,16 @@ export function Filler({
         </button>
         <div className="fl-menue-mitte" data-wischbar="" {...wischen}>
           <h1 className="fl-titel">Filler</h1>
+          {/*
+            * Nur der Satz, der fuer ALLE vier Spielarten gilt. Der Nebel-Zusatz
+            * stand hier bis zum 19.09.2026 fest drin — aus der Zeit, als Nebel
+            * die einzige Spielart war — und widersprach zwei Fingerbreit
+            * darunter der Schalterbeschreibung ("Offenes Brett …"). Was pro
+            * Spielart gilt, sagt allein VARIANTE_TEXT; eine zweite Stelle
+            * daneben laeuft beim naechsten neuen Modus wieder auseinander.
+            */}
           <p className="fl-untertitel">
-            Färbe dein Gebiet um und schlucke, was daran grenzt. Nur: Du siehst
-            nur deine eigenen Felder und deren Nachbarn — der Rest liegt im Nebel.
+            Färbe dein Gebiet um und schlucke, was daran grenzt.
           </p>
           <div className="fl-probe" aria-hidden="true">
             {FARBEN.slice(0, farbzahlFuer(variante, vorgabe)).map((farbe, i) => (

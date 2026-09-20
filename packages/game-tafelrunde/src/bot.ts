@@ -725,34 +725,27 @@ function wunschreihe(k: Kaempfer, reihen: number): number {
  * `reihen` und `spalten` kommen aus der Sicht und nicht aus brett.ts: Die
  * beiden Zahlen stehen dort, damit niemand sie nachbaut — auch der Bot nicht.
  *
- * WARUM DER BOT NUR IN REIHE 0 UND IN DER HINTERSTEN REIHE STEHT. Gemessen am
- * 06.09.2026 ueber 26.395 aufgestellte Einheiten (300 Partien zu viert): die
- * beiden mittleren Reihen kein einziges Mal. Der Grund steht in dieser
- * Funktion, und er ist kein Zufall aus der Feldreihenfolge:
+ * BIS ZUM 06.09.2026 STAND DER BOT NUR IN REIHE 0 UND IN DER HINTERSTEN —
+ * ueber 26.395 aufgestellte Einheiten (300 Partien zu viert) die beiden
+ * mittleren Reihen kein einziges Mal. Der Grund lag nicht in der
+ * Feldreihenfolge, sondern in der Regel selbst: Sie kannte nur zwei
+ * Wunschreihen, und `REIHEN_GEWICHT` ueberstimmt jede Spaltenstrafe (siehe
+ * dort) — also ist JEDES freie Feld der Wunschreihe besser als das beste Feld
+ * jeder anderen, und `bestesFeld` nimmt es. Zu einer mittleren Reihe griff der
+ * Bot erst bei voller Wunschreihe, also ab fuenf Einheiten derselben Vorliebe.
  *
- *   1. Die drei Faelle kennen zusammen nur ZWEI Wunschreihen — `wache` und
- *      `meuchler` die vorderste, alle uebrigen die hinterste. Eine mittlere
- *      Reihe ist fuer keine Rolle das Ziel.
- *   2. `REIHEN_GEWICHT` ueberstimmt jede Spaltenstrafe (siehe dort). Also ist
- *      JEDES freie Feld der Wunschreihe besser als das beste Feld jeder
- *      anderen, und `bestesFeld` nimmt es.
- *   3. Zu einer mittleren Reihe greift `bestesFeld` deshalb erst, wenn die
- *      Wunschreihe voll ist: fuenf Einheiten derselben Vorliebe, wobei Wache
- *      und Meuchler sich dieselbe Reihe teilen. Neun Einheiten passen
- *      ueberhaupt nur bei Level 9 aufs Brett (`feldplaetze`) — der Fall ist
- *      moeglich, aber selten genug, dass er in der Messung nicht vorkam.
+ * Auf ZWEI Reihen war das vollstaendig; seit jede Haelfte VIER hat
+ * (`BRETT_REIHEN`), blieb die Tiefe ungenutzt. Deshalb hat seither jede Rolle
+ * ihre eigene `wunschreihe`.
  *
- * Auf ZWEI Reihen war die Regel damit vollstaendig: vorn und hinten waren
- * alles, was es gab. Seit dem 06.09.2026 hat jede Haelfte VIER Reihen
- * (`BRETT_REIHEN`), und dieselbe unveraenderte Regel laesst die beiden
- * mittleren leer. Das ist kein Fehler dieser Funktion, sondern ihre
- * Reichweite.
- *
- * Wer die Tiefe nutzen will, braucht je Rolle eine WUNSCHREIHE statt eines
- * Extrems — etwa Beistand und Magier eine Reihe vor den Schuetzen, damit die
- * Heilung (Reichweite 2) die Front erreicht. Das aendert jede Aufstellung und
- * damit jedes Kampfergebnis; es ist eine Messfrage und keine, die sich hier
- * durch Nachdenken entscheiden laesst.
+ * DASS DIE NEUE REGEL AUCH STAERKER SPIELT, IST GEMESSEN und war es beim Umbau
+ * noch nicht: 71,7 % Siege gegen die alte ueber 11.874 Kaempfe aus 2.000
+ * Heeren (19.09.2026, werkzeug/aufstellungsduell.mjs --heere 500 --saaten 3).
+ * Das Werkzeug stellt dasselbe Heer nach beiden Regeln auf und laesst sie
+ * gegeneinander antreten; die drei aelteren Messstaende koennen die Frage
+ * bauartbedingt nicht beantworten, weil dort jeder Bot dieselbe Regel
+ * benutzt. Wer hier oder an `wunschreihe` dreht, misst mit demselben Werkzeug
+ * nach — eine Schwelle dagegen steht in test/aufstellungsduell.test.ts.
  */
 function platzStrafe(k: Kaempfer, platz: number, reihen: number, spalten: number): number {
   const reihe = Math.floor(platz / spalten);
@@ -770,20 +763,41 @@ function platzStrafe(k: Kaempfer, platz: number, reihen: number, spalten: number
   return vorwaerts * zuWeitVorn + REIHEN_GEWICHT * zuWeitHinten + spaltenStrafe;
 }
 
+/**
+ * Eine Aufstellungsregel: Wie schlecht ist dieser Platz fuer diese Einheit?
+ *
+ * Der Typ steht hier, weil er sonst nirgends hingehoert — der Bot hat genau
+ * EINE solche Regel, naemlich `platzStrafe`. Ein Messwerkzeug hat gute
+ * Gruende, eine zweite danebenzustellen (test/aufstellungsduell.ts), und die
+ * Frage "spielt die neue Regel staerker als die alte?" laesst sich nur
+ * beantworten, wenn beide durch dieselbe Aufstellungsmaschine laufen. Sonst
+ * misst man nicht die Regel, sondern den Unterschied zweier Maschinen.
+ */
+export type Platzstrafe = (
+  k: Kaempfer,
+  platz: number,
+  reihen: number,
+  spalten: number,
+) => number;
+
+/** Die Regel, nach der DIESER Bot aufstellt — die Vorgabe ueberall unten. */
+export const BOT_PLATZSTRAFE: Platzstrafe = platzStrafe;
+
 /** Der beste freie Platz fuer diese Einheit; bei Gleichstand der kleinste. */
 function bestesFeld(
   k: Kaempfer,
   freie: readonly number[],
   reihen: number,
   spalten: number,
+  strafe: Platzstrafe,
 ): number {
   let bester = freie[0]!;
-  let beste = platzStrafe(k, bester, reihen, spalten);
+  let beste = strafe(k, bester, reihen, spalten);
   for (const platz of freie) {
-    const strafe = platzStrafe(k, platz, reihen, spalten);
-    if (strafe < beste) {
+    const wert = strafe(k, platz, reihen, spalten);
+    if (wert < beste) {
       bester = platz;
-      beste = strafe;
+      beste = wert;
     }
   }
   return bester;
@@ -792,6 +806,131 @@ function bestesFeld(
 interface Stelle {
   readonly platz: number;
   readonly k: Kaempfer;
+}
+
+/** Ein Handgriff am eigenen Brett: Platz `von` nach Platz `nach`. */
+interface Umzug {
+  readonly von: number;
+  readonly nach: number;
+}
+
+/**
+ * Der naechste Umstell-Handgriff, oder null, wenn nichts mehr besser wird.
+ *
+ * Zwei Faelle in dieser Reihenfolge: erst der Umzug auf ein freies Feld, dann
+ * der Tausch zweier stehender Einheiten. Beides bewegt nur, was schon steht —
+ * die Belegung bleibt.
+ *
+ * DIESE FUNKTION IST DIE STELLE, AN DER DER BOT ZUR RUHE KOMMT, und sie steht
+ * getrennt vom `stellungsZug`, weil sie zwei Aufrufer hat: Der Bot fragt sie
+ * einmal je Zug (das Spielprotokoll kennt nur EINEN Handgriff auf einmal),
+ * `stelleHeerAuf` fragt sie in der Schleife bis zum Stillstand. Eine zweite
+ * Fassung dieser Schleife waere eine zweite Wahrheit ueber die Aufstellung —
+ * und genau darueber soll das Messwerkzeug nichts erfinden.
+ *
+ * Jeder Handgriff senkt die Summe aller Platzstrafen ECHT. Bei endlich vielen
+ * Aufstellungen kann damit keine zweimal vorkommen: Die Schleife endet.
+ */
+function umstellSchritt(
+  stehen: readonly Stelle[],
+  freie: readonly number[],
+  reihen: number,
+  spalten: number,
+  strafe: Platzstrafe,
+): Umzug | null {
+  if (freie.length > 0) {
+    for (const { platz, k } of stehen) {
+      const jetzt = strafe(k, platz, reihen, spalten);
+      /*
+       * Auf das BESTE freie Feld und nicht auf das erstbeste bessere.
+       *
+       * Bis zum 06.09.2026 nahm diese Schleife das erste Feld aus `freie`, das
+       * ueberhaupt eine Verbesserung war. `freie` laeuft aufsteigend, also von
+       * Reihe 0 nach hinten — fuer eine Wache ist das gerade richtig, fuer
+       * Schuetze, Magier und Beistand aber genau verkehrt herum: Sie bekamen
+       * zuerst ein etwas besseres Feld in derselben Reihe, im naechsten Aufruf
+       * eine Reihe weiter, und so fort. Ein Umzug wurde so zu bis zu drei.
+       *
+       * Auf zwei Reihen fiel das kaum auf, auf vieren schon: Der fleissigste
+       * Sitz einer Runde kam damit auf 43 Handgriffe statt 23 und riss in
+       * 0,72 % der Runden die Rundenfrist von 45 s (spielzeit.test.ts). Mit dem
+       * besten Feld sind es 18 — weniger als die 23 von vorher, auf zwei Reihen
+       * 17 statt 23. Der Bot stellt dasselbe auf, nur in einem Zug statt in
+       * dreien.
+       */
+      const bestes = bestesFeld(k, freie, reihen, spalten, strafe);
+      if (strafe(k, bestes, reihen, spalten) < jetzt) return { von: platz, nach: bestes };
+    }
+  }
+
+  for (const eins of stehen) {
+    for (const zwei of stehen) {
+      if (zwei.platz <= eins.platz) continue;
+      const vorher =
+        strafe(eins.k, eins.platz, reihen, spalten) + strafe(zwei.k, zwei.platz, reihen, spalten);
+      const nachher =
+        strafe(eins.k, zwei.platz, reihen, spalten) + strafe(zwei.k, eins.platz, reihen, spalten);
+      if (nachher < vorher) return { von: eins.platz, nach: zwei.platz };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Wohin ein GANZES Heer nach dieser Regel zu stehen kommt — die Aufstellung
+ * als eine Rechnung statt als eine Folge von Spielzuegen.
+ *
+ * WOZU: Der Bot stellt im Spiel Einheit fuer Einheit auf, weil das Protokoll
+ * nur einen Handgriff je Zug kennt. Fuer die Frage "stellt Regel A staerker
+ * auf als Regel B?" braucht man aber beide Aufstellungen DESSELBEN Heeres
+ * nebeneinander, ohne Laden, ohne Gold, ohne Runden. Genau das ist diese
+ * Funktion — und sie benutzt dafuer dieselben zwei Bausteine wie
+ * `stellungsZug`: `bestesFeld` zum Hinstellen, `umstellSchritt` zum
+ * Nachbessern bis zum Stillstand.
+ *
+ * DAS ERGEBNIS IST DER RUHEPUNKT DES BOTS und nicht die bestmoegliche
+ * Aufstellung: Beide Bausteine sind gierig, und was sie liegen lassen, laesst
+ * der Bot am Tisch genauso liegen. Ein Messwerkzeug, das hier optimal
+ * aufstellte, maesse eine Regel, die niemand spielt.
+ *
+ * Die Reihenfolge der Einheiten ist die des Aufrufers und nicht `besteZugabe`:
+ * WELCHE Einheit aufs Brett kommt, ist eine Kauf- und Levelfrage; hier steht
+ * das Heer schon fest, und es geht nur noch ums WOHIN. Sie zaehlt trotzdem —
+ * bei gleichwertigen Plaetzen bekommt die fruehere den kleineren — und ist
+ * deshalb bewusst fest: dieselbe Liste, dieselbe Aufstellung (Grundsatz 1).
+ */
+export function stelleHeerAuf(
+  einheiten: readonly Kaempfer[],
+  reihen: number,
+  spalten: number,
+  strafe: Platzstrafe = BOT_PLATZSTRAFE,
+): (Kaempfer | null)[] {
+  const felder = reihen * spalten;
+  if (einheiten.length > felder) {
+    throw new Error(`${einheiten.length} Einheiten passen nicht auf ${felder} Felder`);
+  }
+  const brett: (Kaempfer | null)[] = new Array(felder).fill(null);
+  const freieVon = (b: readonly (Kaempfer | null)[]) =>
+    b.map((k, platz) => (k === null ? platz : -1)).filter((platz) => platz >= 0);
+
+  for (const k of einheiten) {
+    brett[bestesFeld(k, freieVon(brett), reihen, spalten, strafe)] = k;
+  }
+
+  for (;;) {
+    const stehen: Stelle[] = [];
+    brett.forEach((k, platz) => {
+      if (k !== null) stehen.push({ platz, k });
+    });
+    const umzug = umstellSchritt(stehen, freieVon(brett), reihen, spalten, strafe);
+    if (umzug === null) return brett;
+    // Ein Tausch: Auf einem freien Zielfeld steht `null`, und dann ist der
+    // Tausch derselbe Handgriff wie der Umzug — ein Fall statt zweier.
+    const dort = brett[umzug.nach] ?? null;
+    brett[umzug.nach] = brett[umzug.von] ?? null;
+    brett[umzug.von] = dort;
+  }
 }
 
 /**
@@ -897,7 +1036,10 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
     return {
       typ: 'verschieben',
       von: { bereich: 'bank', platz: beste.platz },
-      nach: { bereich: 'brett', platz: bestesFeld(beste.k, freie, reihen, spalten) },
+      nach: {
+        bereich: 'brett',
+        platz: bestesFeld(beste.k, freie, reihen, spalten, BOT_PLATZSTRAFE),
+      },
     };
   }
 
@@ -917,54 +1059,16 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
     };
   }
 
-  // c) Umstellen: erst der Umzug auf ein freies Feld, dann der Tausch zweier
-  //    Einheiten. Beides bewegt nur, was schon steht — die Belegung bleibt.
-  for (const { platz, k } of stehen) {
-    const jetzt = platzStrafe(k, platz, reihen, spalten);
-    if (freie.length === 0) break;
-    /*
-     * Auf das BESTE freie Feld und nicht auf das erstbeste bessere.
-     *
-     * Bis zum 06.09.2026 nahm diese Schleife das erste Feld aus `freie`, das
-     * ueberhaupt eine Verbesserung war. `freie` laeuft aufsteigend, also von
-     * Reihe 0 nach hinten — fuer eine Wache ist das gerade richtig, fuer
-     * Schuetze, Magier und Beistand aber genau verkehrt herum: Sie bekamen
-     * zuerst ein etwas besseres Feld in derselben Reihe, im naechsten Aufruf
-     * eine Reihe weiter, und so fort. Ein Umzug wurde so zu bis zu drei.
-     *
-     * Auf zwei Reihen fiel das kaum auf, auf vieren schon: Der fleissigste
-     * Sitz einer Runde kam damit auf 43 Handgriffe statt 23 und riss in
-     * 0,72 % der Runden die Rundenfrist von 45 s (spielzeit.test.ts). Mit dem
-     * besten Feld sind es 18 — weniger als die 23 von vorher, auf zwei Reihen
-     * 17 statt 23. Der Bot stellt dasselbe auf, nur in einem Zug statt in
-     * dreien.
-     */
-    const bestes = bestesFeld(k, freie, reihen, spalten);
-    if (platzStrafe(k, bestes, reihen, spalten) < jetzt) {
-      return {
-        typ: 'verschieben',
-        von: { bereich: 'brett', platz },
-        nach: { bereich: 'brett', platz: bestes },
-      };
-    }
-  }
-  for (const eins of stehen) {
-    for (const zwei of stehen) {
-      if (zwei.platz <= eins.platz) continue;
-      const vorher =
-        platzStrafe(eins.k, eins.platz, reihen, spalten) +
-        platzStrafe(zwei.k, zwei.platz, reihen, spalten);
-      const nachher =
-        platzStrafe(eins.k, zwei.platz, reihen, spalten) +
-        platzStrafe(zwei.k, eins.platz, reihen, spalten);
-      if (nachher < vorher) {
-        return {
-          typ: 'verschieben',
-          von: { bereich: 'brett', platz: eins.platz },
-          nach: { bereich: 'brett', platz: zwei.platz },
-        };
-      }
-    }
+  // c) Umstellen. Die Regel steht in `umstellSchritt` und nicht hier, weil
+  //    `stelleHeerAuf` sie ebenfalls braucht — einmal je Zug gegen in der
+  //    Schleife, aber nach derselben Regel.
+  const umzug = umstellSchritt(stehen, freie, reihen, spalten, BOT_PLATZSTRAFE);
+  if (umzug !== null) {
+    return {
+      typ: 'verschieben',
+      von: { bereich: 'brett', platz: umzug.von },
+      nach: { bereich: 'brett', platz: umzug.nach },
+    };
   }
 
   return null;

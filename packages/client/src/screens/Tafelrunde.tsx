@@ -32,6 +32,7 @@ import {
   Markennamen,
   markennamen,
   schwellenPruefer,
+  useMarkenblatt,
 } from '../minispiele/tafelrunde/Synergien';
 import {
   type Ort,
@@ -1267,6 +1268,16 @@ function Ruestkammer({
   const [blattOrt, setBlattOrt] = useState<Ort | null>(null);
 
   /**
+   * Welcher LADENPLATZ sein Blatt offen hat — der Platz und nicht die Einheit.
+   *
+   * Aus demselben Grund, aus dem oben ein Ort und kein Kaempfer steht: Unter
+   * dem offenen Blatt kann der Server den Platz raeumen (die Runde endet, ein
+   * anderes Geraet kauft nichts weg, aber die Phase wechselt), und dann ist
+   * „nichts" die richtige Antwort und nicht ein altes Abbild.
+   */
+  const [ladenBlatt, setLadenBlatt] = useState<number | null>(null);
+
+  /**
    * Eine abgesetzte Aktion sperrt die Bedienung, bis der Server geantwortet
    * hat (also bis die Revision steigt). Ohne diese Sperre setzt ein zweiter
    * Tipp im selben Moment einen zweiten Kauf ab, den der Server abweist — und
@@ -1300,6 +1311,9 @@ function Ruestkammer({
       // der aendert sich gleich. Ein stehenbleibendes Blatt zeigte nach dem
       // Verkaufen die Werte von jemandem, der nicht mehr da ist.
       setBlattOrt(null);
+      // Und die Ladenvorschau ebenso: Sie beschreibt ein Angebot auf einem
+      // Platz, und nach einem Kauf steht dort etwas anderes.
+      setLadenBlatt(null);
       onAktion(aktion);
     },
     [wartet, revision, onAktion],
@@ -1606,6 +1620,17 @@ function Ruestkammer({
     [eigeneSynergien, synergieTabelle],
   );
 
+  /**
+   * Der Griff zum Markenblatt fuer die beiden Blaetter — das einer Einheit auf
+   * Bank und Brett und das einer Ladenkarte.
+   *
+   * Mit den EIGENEN Staenden: Beide Blaetter beschreiben eine Einheit, die auf
+   * meinem Brett steht oder dort stehen soll, und die Frage dahinter ist
+   * „reicht das bei MIR fuer die naechste Stufe". Die Markenzeile des Gegners
+   * hat ihren eigenen Griff mit SEINEN Staenden (siehe `useMarkenblatt`).
+   */
+  const markengriff = useMarkenblatt(eigeneSynergien, synergieTabelle, katalog);
+
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
 
   /**
@@ -1852,6 +1877,19 @@ function Ruestkammer({
     blattKaempfer && blattEinheit
       ? stufenwerte[blattEinheit.id]?.[blattKaempfer.stufe - 1]
       : undefined;
+
+  /**
+   * Die Einheit, deren LADENKARTE ihr Blatt offen hat — ebenfalls frisch aus
+   * der Sicht. Ein Platz, den der Server geraeumt hat, hat kein Blatt mehr.
+   *
+   * Die Werte sind die der ersten Stufe (Feld 0): Gekauft wird immer ein
+   * einzelner Recke, und was drei davon mitbringen, steht auf dem Blatt der
+   * verschmolzenen Einheit — hier waere es eine Zahl, die man so nicht kaufen
+   * kann.
+   */
+  const ladenEinheit =
+    ladenBlatt !== null ? katalog[eigenes.laden[ladenBlatt] ?? ''] : undefined;
+  const ladenWerte = ladenEinheit ? stufenwerte[ladenEinheit.id]?.[0] : undefined;
 
   const gezogeneEinheit =
     zug?.zieht === true
@@ -2112,7 +2150,45 @@ function Ruestkammer({
               setBlattOrt(null);
             }}
             verschiebenTitel={blattOrt.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
+            /* Die Marken sind hier der Weg zu ihrem Blatt — an der Wabe selbst
+               bleiben die Zeichen stumm, sonst faengt der Griff darin den
+               Finger ab, mit dem man die Einheit verschieben will. */
+            onMarke={markengriff.oeffne}
+            escapeAus={markengriff.offeneMarke !== null}
             onSchliessen={() => setBlattOrt(null)}
+          />
+        )}
+
+        {/* ---- Das Blatt einer Ladenkarte --------------------------------- */}
+        {/*
+          Dasselbe Bauteil wie darueber, nur ohne Ort: Die Einheit steht noch
+          nirgends, also gibt es nichts zu verschieben, abzulegen oder zu
+          verkaufen — angeboten wird der Kauf. Ein eigenes Bauteil dafuer waere
+          eine zweite Fassung derselben Auskunft gewesen (siehe Kopf von
+          Einheitenblatt.tsx).
+        */}
+        {ladenBlatt !== null && ladenEinheit && (
+          <Einheitenblatt
+            einheit={ladenEinheit}
+            /* Gekauft wird immer die erste Stufe — dieselbe Zahl, mit der auch
+               `ladenWerte` aus der Tabelle liest. */
+            kaempfer={{ id: ladenEinheit.id, stufe: 1 }}
+            werte={ladenWerte}
+            tabelle={synergieTabelle}
+            maxStufe={sicht.maxStufe}
+            erloes={undefined}
+            /* Kaufen nur, wenn der Server es anbietet — derselbe Riegel wie am
+               Karten-Knopf darunter, und aus demselben Grund: Zwei Wege zum
+               selben Kauf, von denen der eine fragt und der andere nicht,
+               waeren zwei Antworten auf dieselbe Frage. */
+            onKaufen={
+              kaufbar.has(ladenBlatt) && darfHandeln
+                ? () => schicke({ typ: 'kaufen', platz: ladenBlatt })
+                : undefined
+            }
+            onMarke={markengriff.oeffne}
+            escapeAus={markengriff.offeneMarke !== null}
+            onSchliessen={() => setLadenBlatt(null)}
           />
         )}
 
@@ -2249,6 +2325,10 @@ function Ruestkammer({
                        woanders. */
                     grund={darfHandeln && !darfKaufen ? hindernis(angeboten) : null}
                     onKauf={() => schicke({ typ: 'kaufen', platz })}
+                    /* Der Griff zur Auskunft — er haengt am PLATZ und nicht an
+                       der Einheit: Wer liest, waehrend der Server den Laden
+                       neu setzt, soll sehen, was jetzt dort steht. */
+                    onBlatt={angeboten ? () => setLadenBlatt(platz) : undefined}
                   />
                 );
               })}
@@ -2340,6 +2420,14 @@ function Ruestkammer({
           So spielt man Tafelrunde
         </button>
       </div>
+
+      {/* ---- Das Blatt einer Marke -------------------------------------- */}
+      {/* Es gehoert keinem der beiden Blaetter, aus denen es aufgeht (Einheit,
+          Ladenkarte), sondern liegt ueber beiden — deshalb steht es hier und
+          nicht in einem von ihnen. Die Zaehler der Leiste und die Markenzeile
+          des Gegners bringen ihr eigenes mit, denn sie zeigen andere Staende
+          (siehe `useMarkenblatt`). */}
+      {markengriff.blatt}
 
       {/* ---- Die Meldung ueber ein Verschmelzen -------------------------- */}
       {verschmolzen && (
