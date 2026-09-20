@@ -98,7 +98,11 @@ gelten für jeden Zug: Bei Imposter redet erst die Runde, dann wird gestimmt.
 **Imposter seit dem 19.09.2026:** Der Imposter sieht **„IMPOSTER“ und einen
 Hinweis** (grobe Kategorie, `inhalte/imposter.ts`), kein Nachbarwort mehr. Die
 Runde bekommt eine **feste Redereihenfolge** (`reihenfolge`, je Runde
-gemischt), die auf jedem Schirm steht.
+gemischt), die auf jedem Schirm steht. Statt zu stimmen kann jeder **„Noch
+eine Runde reden"** verlangen (`nochmal`): Will das mehr als die Hälfte der
+Anwesenden, fallen alle Stimmen, die Reihenfolge rückt um einen Platz, und es
+wird neu geredet — höchstens dreimal (`MAX_REDERUNDEN`). Ohne Mehrheit zählt
+der Tipp als Enthaltung.
 
 ## Neue Inhalte ergänzen
 

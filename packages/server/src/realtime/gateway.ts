@@ -313,6 +313,40 @@ export class Gateway {
       path: '/ws',
       maxPayload: 64 * 1024,
       /**
+       * Nachrichten ueber einem Kilobyte werden komprimiert (RFC 7692,
+       * `permessage-deflate`). `ws` laesst das ab Werk aus, und deshalb ging
+       * bis zum 19.09.2026 jede Sicht als roher JSON-Text heraus.
+       *
+       * Der Anlass ist Tafelrunde: Seit jeder Spieler ALLE Kaempfe der Runde
+       * mit Protokoll bekommt (game-tafelrunde/src/sicht.ts), ist die groesste
+       * Sicht einer Partie zu acht 60 kB — gemessen mit
+       * `werkzeug/sichtgroesse.mjs` in jenem Paket. Komprimiert sind daraus
+       * 6,6 kB: Ein Ablaufprotokoll ist tausendfach dasselbe Dutzend
+       * Feldnamen, also fast reine Wiederholung. Ueber eine ganze Partie
+       * fallen so 69 kB je Spieler an statt 595 kB. Das ist der billigste
+       * Schnitt, den es fuer diese Frage gibt — billiger als jedes
+       * Nachliefern auf Anforderung, und er gilt fuer alle zwoelf Spiele.
+       *
+       * `threshold`, weil sich ein Zug von zweihundert Byte nicht lohnt: Der
+       * deflate-Rahmen kostet mehr, als er spart.
+       *
+       * Kein Kontextuebertrag (`…NoContextTakeover`), und das ist die
+       * Speicherbremse: Mit Uebertrag haelt ZLIB je Verbindung ein Fenster
+       * offen — bei vielen offenen Tischen sind das Hunderte Kilobyte, die
+       * niemand zurueckgibt. Ohne ihn wird jede Nachricht fuer sich gepackt;
+       * die oben genannten Zahlen sind genau so gemessen.
+       */
+      perMessageDeflate: {
+        threshold: 1024,
+        zlibDeflateOptions: { level: 6 },
+        serverNoContextTakeover: true,
+        clientNoContextTakeover: true,
+        // Wie viele Pack-/Entpackvorgaenge gleichzeitig in den Node-Threadpool
+        // duerfen. Ohne Grenze kann ein Schwung Tische ihn fuellen, und dann
+        // warten Dateizugriffe hinter Kompression.
+        concurrencyLimit: 10,
+      },
+      /**
        * Bietet ein Client Unterprotokolle an, MUSS der Server eines davon
        * bestaetigen - sonst bricht der Browser die Verbindung ab. Bestaetigt
        * wird nur die Marke, nie das Token dahinter: Es hat im

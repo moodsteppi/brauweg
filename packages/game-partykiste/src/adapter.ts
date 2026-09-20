@@ -44,6 +44,7 @@ import {
 import {
   BOT_TAKT_MS,
   DEFAULT_REGELN,
+  MAX_REDERUNDEN,
   MINISPIELE,
   RUNDEN_MAX,
   RUNDEN_MIN,
@@ -194,7 +195,10 @@ export const partykiste: GameModule<
     switch (runde.art) {
       case 'imposter':
         if (runde.phase === 'sehen') return [{ art: 'bereit' }];
-        return andere.map((ziel) => ({ art: 'stimme', ziel }) as const);
+        return [
+          ...andere.map((ziel) => ({ art: 'stimme', ziel }) as const),
+          ...(runde.redeRunde < MAX_REDERUNDEN ? [{ art: 'nochmal' } as const] : []),
+        ];
       case 'quiz':
         return runde.antworten.map((_, wahl) => ({ art: 'antwort', wahl }) as const);
       case 'niemals':

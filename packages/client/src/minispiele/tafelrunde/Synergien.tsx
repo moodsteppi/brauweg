@@ -33,6 +33,17 @@
  * gibt es kein Darauffahren, und auf dem Brett stand damit "4/5" und sonst
  * nichts. Wer nicht auswendig weiss, was die Marke tut, kann nicht danach
  * kaufen — und der Kauf ist die Entscheidung, um die es im Laden geht.
+ *
+ * WER ES AUFSCHLAEGT, steht seit dem 18.09.2026 nicht mehr nur hier: Neben den
+ * Zaehlern der Leiste fuehren zwei weitere Wege hin, beide ueber ein BLATT und
+ * keiner ueber die 11-px-Zeichen selbst (`useMarkenblatt`). An der Einheit auf
+ * Bank und Brett bleiben die Zeichen auf `pointer-events: none` — die ganze
+ * Wabe ist Greif- und Ablegeflaeche, ein Griff darin faenge den Finger ab —,
+ * dafuer sind die Marken im Einheitenblatt tippbar, das ein Tipp auf die Wabe
+ * ohnehin aufschlaegt. Und die Ladenkarte IST eine Schaltflaeche, in die kein
+ * zweiter Knopf hineindarf: Sie bekommt daneben einen eigenen Griff, der das
+ * Einheitenblatt der angebotenen Einheit aufschlaegt — von dort geht es
+ * denselben Weg weiter.
  * Zeichen und Farbe kommen fuer alle vier aus `MARKEN_ZEICHEN` und
  * `MARKEN_FARBE` — sonst haette die Leiste einen gruenen Punkt fuer eine
  * Marke, die an der Einheit blau ist, und niemand brauchte lange, um beides
@@ -259,6 +270,42 @@ export function schwellenPruefer(
   tabelle: readonly Synergie[],
 ): (marke: string) => boolean {
   return (marke) => trifftSchwelle(marke, staende, tabelle);
+}
+
+/**
+ * Der Stand einer Marke — auch dann, wenn sie noch auf keiner Wabe steht.
+ *
+ * Genau dieselbe Zusammensetzung wie in `trifftSchwelle` daneben: Das Modul
+ * schickt in `synergien` nur Marken mit mindestens einem Traeger, und die
+ * erste Schwelle einer noch gar nicht vertretenen Marke steht in der TABELLE
+ * der Sicht. Auch hier wird nichts gerechnet — anzahl 0, keine erreichte
+ * Schwelle, kein Bonus, und die naechste Schwelle ist die erste Stufe, die
+ * das Modul nennt.
+ *
+ * Es gibt diese Funktion, seit das Blatt nicht mehr nur an einem Zaehler der
+ * Leiste haengt: Im LADEN fragt man nach der Marke einer Einheit, die man erst
+ * noch kaufen will — und dort ist „0 auf dem Brett" die haeufigste und
+ * wichtigste Antwort. Ein Blatt, das dafuer gar nicht erst aufgeht, liesse
+ * genau die Frage offen, um die es beim Kauf geht.
+ */
+export function standFuer(
+  marke: string,
+  staende: readonly Synergiestand[],
+  tabelle: readonly Synergie[],
+): Synergiestand {
+  const vorhanden = staende.find((s) => s.marke === marke);
+  if (vorhanden) return vorhanden;
+  const synergie = tabelle.find((s) => s.marke === marke);
+  return {
+    marke,
+    // Ohne Tabelle bleibt die Kennung als Name stehen — sie ist immer noch
+    // besser als eine leere Ueberschrift.
+    name: synergie?.name ?? marke,
+    anzahl: 0,
+    schwelle: null,
+    naechsteSchwelle: synergie?.stufen[0]?.schwelle ?? null,
+    bonus: null,
+  };
 }
 
 /**
@@ -573,6 +620,63 @@ function Markenchip({
 }
 
 /**
+ * Der Griff zum Markenblatt — einmal fuer alle, die es aufschlagen duerfen.
+ *
+ * Bis zum 18.09.2026 hielt die Chipreihe diesen Zustand selbst, und das Blatt
+ * ging nur an einem ZAEHLER auf (eigene Leiste, Markenzeile des Gegners). Die
+ * kleinen Zeichen an einer Einheit und auf der Ladenkarte trugen weiter nur
+ * ein `title`, das am Handy nie erscheint — ausgerechnet im Laden, wo die
+ * Auskunft am meisten wert ist. Sie oeffnen es jetzt ueber diesen Haken; wo
+ * genau der haengt, steht in `Einheitenblatt.tsx` und `Ladenkarte.tsx`.
+ *
+ * WESSEN Staende das Blatt zeigt, entscheidet der AUFRUFER, und das ist der
+ * ganze Grund fuer einen Haken statt eines Kontexts ueber dem Tisch: Die
+ * Markenzeile des Gegners zeigt SEIN Brett. Ein Blatt, das immer die eigenen
+ * Zahlen naehme, machte aus „Ada hat vier Waechter" ein „du hast einen".
+ *
+ * Es gibt KEIN Aufraeumen mehr, wenn die Marke vom Brett verschwindet: Seit
+ * `standFuer` auch fuer eine Marke ohne Traeger einen Stand liefert, bleibt
+ * das Blatt einfach offen und zaehlt „0 auf dem Brett". Vorher blieb die
+ * offene Marke gesetzt, waehrend das Blatt unsichtbar war — und ging beim
+ * naechsten Kauf derselben Marke von selbst wieder auf.
+ */
+export interface Markengriff {
+  /** Schlaegt das Blatt dieser Marke auf. */
+  oeffne: (marke: string) => void;
+  /** Welche Marke offen ist — fuer `aria-expanded` und fuer die Escape-Taste. */
+  offeneMarke: string | null;
+  /** Das Blatt selbst; der Aufrufer stellt es dorthin, wo es liegen soll. */
+  blatt: React.JSX.Element | null;
+}
+
+export function useMarkenblatt(
+  staende: readonly Synergiestand[],
+  tabelle: readonly Synergie[],
+  katalog: Markenkatalog = OHNE_KATALOG,
+): Markengriff {
+  const [offeneMarke, setOffeneMarke] = useState<string | null>(null);
+  const oeffne = useCallback((marke: string) => setOffeneMarke(marke), []);
+  const schliesse = useCallback(() => setOffeneMarke(null), []);
+
+  /*
+   * Das Blatt zeigt IMMER den Stand aus der neuesten Sicht — offen gehalten
+   * wird nur die Marke, nicht ihre Zahlen. Wer waehrend des Lesens seinen
+   * dritten Krieger aufstellt, sieht die Stufe im Blatt umspringen.
+   */
+  const blatt =
+    offeneMarke === null ? null : (
+      <Markenblatt
+        stand={standFuer(offeneMarke, staende, tabelle)}
+        synergie={tabelle.find((s) => s.marke === offeneMarke)}
+        katalog={katalog}
+        onSchliessen={schliesse}
+      />
+    );
+
+  return { oeffne, offeneMarke, blatt };
+}
+
+/**
  * Eine Reihe Chips samt dem Blatt, das einer davon aufschlaegt.
  *
  * Beide Orte (eigene Leiste, fremde Zeile) bekommen dasselbe Verhalten aus
@@ -598,28 +702,9 @@ function Chipreihe({
   leerzeile?: React.ReactNode;
 }): React.JSX.Element {
   const nachMarke = useMemo(() => new Map(tabelle.map((s) => [s.marke, s])), [tabelle]);
-  const [offeneMarke, setOffeneMarke] = useState<string | null>(null);
-  const schliesse = useCallback(() => setOffeneMarke(null), []);
-
-  /*
-   * Das Blatt zeigt IMMER den Stand aus der neuesten Sicht — offen gehalten
-   * wird nur die Marke, nicht ihre Zahlen. Wer waehrend des Lesens seinen
-   * dritten Krieger aufstellt, sieht die Stufe im Blatt umspringen.
-   */
-  const offen = staende.find((s) => s.marke === offeneMarke) ?? null;
-
-  /*
-   * Verschwindet die Marke ganz vom Brett (verkauft, verschmolzen), gilt sie
-   * als geschlossen. Ohne dieses Aufraeumen kaeme das Blatt beim naechsten
-   * Kauf derselben Marke von selbst wieder — ein Fenster, das aufgeht, ohne
-   * dass jemand tippt. Kein Timer daran, deshalb ist die Liste in der
-   * Abhaengigkeit unbedenklich (CLAUDE.md).
-   */
-  useEffect(() => {
-    if (offeneMarke !== null && !staende.some((s) => s.marke === offeneMarke)) {
-      setOffeneMarke(null);
-    }
-  }, [staende, offeneMarke]);
+  /* Derselbe Haken, den auch Ladenkarte und Einheitenblatt benutzen — mit den
+     Staenden DIESER Reihe, also beim Gegner mit seinen. */
+  const { oeffne, offeneMarke, blatt } = useMarkenblatt(staende, tabelle, katalog);
 
   return (
     <>
@@ -631,19 +716,12 @@ function Chipreihe({
             stand={stand}
             synergie={nachMarke.get(stand.marke)}
             klasse={chipKlasse}
-            offen={offen?.marke === stand.marke}
-            onOeffnen={() => setOffeneMarke(stand.marke)}
+            offen={offeneMarke === stand.marke}
+            onOeffnen={() => oeffne(stand.marke)}
           />
         ))}
       </ul>
-      {offen && (
-        <Markenblatt
-          stand={offen}
-          synergie={nachMarke.get(offen.marke)}
-          katalog={katalog}
-          onSchliessen={schliesse}
-        />
-      )}
+      {blatt}
     </>
   );
 }

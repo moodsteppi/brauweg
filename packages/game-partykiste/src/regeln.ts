@@ -109,6 +109,15 @@ export const SCHLUCK_FAKTOR_MAX = 3;
  */
 export const SITZE = [4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
+/**
+ * Wie oft beim Imposter geredet werden darf, bevor abgestimmt werden MUSS.
+ *
+ * "Noch eine Runde reden" ist eine Mehrheitsentscheidung der Anwesenden. Ohne
+ * Deckel koennte der Imposter mit zwei Freunden den Abend verschleppen — und
+ * nach der dritten Runde hat jeder dreimal geredet, mehr sagt niemand Neues.
+ */
+export const MAX_REDERUNDEN = 3;
+
 /** Rundenzahl des Turniers: so viele Minispiele werden gespielt. */
 export const RUNDEN_MIN = 3;
 export const RUNDEN_MAX = 15;
@@ -144,6 +153,8 @@ export type PartykisteAktion =
   | { readonly art: 'bereit' }
   /** Verdacht (Imposter) bzw. Wahl eines Mitspielers ("Wer wuerde eher"). */
   | { readonly art: 'stimme'; readonly ziel: number }
+  /** Imposter: statt zu stimmen noch eine Rederunde verlangen. */
+  | { readonly art: 'nochmal' }
   /** Quiz: Stelle der gewaehlten Antwort, 0 bis 3. */
   | { readonly art: 'antwort'; readonly wahl: number }
   /** "Ich hab noch nie": ja = hab ich doch getan, also trinken. */
