@@ -21,7 +21,10 @@ export type PartyMinispiel =
   | 'werbinich'
   | 'niemals'
   | 'wereher'
-  | 'busfahrer';
+  | 'busfahrer'
+  | 'schaetzen'
+  | 'entweder'
+  | 'wahrheitpflicht';
 
 export type PartyPhase = 'sehen' | 'spiel' | 'ergebnis';
 
@@ -41,8 +44,16 @@ export interface PartyBusTipp {
 
 export interface ImposterSicht {
   art: 'imposter';
-  /** Das eigene Wort. Der Imposter bekommt ein anderes und merkt es nicht. */
+  /** Das Wort der Runde. Der Imposter bekommt keins — nur den Hinweis. */
   meinWort: string | null;
+  /** Nur beim Imposter gesetzt: die grobe Kategorie des Wortes. */
+  hinweis: string | null;
+  /** Feste Redereihenfolge, fuer alle gleich. */
+  reihenfolge: number[];
+  redeRunde: number;
+  /** Wer "noch eine Runde reden" verlangt hat. */
+  nochmal: number[];
+  nochmalMoeglich: boolean;
   binImposter: boolean;
   /** Wer schon abgestimmt hat — nicht, fuer wen. */
   abgestimmt: number[];
@@ -94,13 +105,45 @@ export interface BusSicht {
   letzter: PartyBusTipp | null;
 }
 
+export interface SchaetzSicht {
+  art: 'schaetzen';
+  frage: string;
+  einheit: string;
+  meine: number | null;
+  gewaehlt: number[];
+  antwort: number | null;
+  schaetzung: (number | null)[] | null;
+}
+
+export interface EntwederSicht {
+  art: 'entweder';
+  a: string;
+  b: string;
+  meine: number;
+  gewaehlt: number[];
+  seite: number[] | null;
+}
+
+export interface WahrheitPflichtSicht {
+  art: 'wahrheitpflicht';
+  amZug: number;
+  /** Je Sitz: 0 Wahrheit, 1 Pflicht, -1 noch nicht gewaehlt. */
+  gewaehlt: number[];
+  /** Aufgabentext je Sitz, leer bis zur Wahl — fuer alle sichtbar. */
+  text: string[];
+  erfolg: number[];
+}
+
 export type PartyMinispielSicht =
   | ImposterSicht
   | QuizSicht
   | WerBinIchSicht
   | NiemalsSicht
   | WerEherSicht
-  | BusSicht;
+  | BusSicht
+  | SchaetzSicht
+  | EntwederSicht
+  | WahrheitPflichtSicht;
 
 export interface PartyPlatzierung {
   sitz: number;
@@ -135,10 +178,15 @@ export interface PartykisteSicht {
 export type PartyAktion =
   | { art: 'bereit' }
   | { art: 'stimme'; ziel: number }
+  | { art: 'nochmal' }
   | { art: 'antwort'; wahl: number }
   | { art: 'gestehen'; ja: boolean }
   | { art: 'geraten'; erfolg: boolean }
-  | { art: 'tipp'; wahl: number };
+  | { art: 'tipp'; wahl: number }
+  | { art: 'schaetzung'; wert: number }
+  | { art: 'seite'; wahl: number }
+  | { art: 'wahl'; pflicht: boolean }
+  | { art: 'erledigt'; ja: boolean };
 
 // ---------------------------------------------------------------------------
 // Anzeigetexte — an einer Stelle, weil sie an drei Stellen gebraucht werden
@@ -151,6 +199,9 @@ export const MINISPIEL_NAME: Record<PartyMinispiel, string> = {
   niemals: 'Ich hab noch nie',
   wereher: 'Wer würde eher?',
   busfahrer: 'Bus fahren',
+  schaetzen: 'Schätzen',
+  entweder: 'Entweder – oder',
+  wahrheitpflicht: 'Wahrheit oder Pflicht',
 };
 
 export const MINISPIEL_ANSAGE: Record<PartyMinispiel, string> = {
@@ -160,6 +211,9 @@ export const MINISPIEL_ANSAGE: Record<PartyMinispiel, string> = {
   niemals: 'Wer es doch getan hat, trinkt. Ehrlich bleiben ist billiger.',
   wereher: 'Zeig auf einen. Jede Stimme ist ein Schluck.',
   busfahrer: 'Rot oder Schwarz, höher oder tiefer, innen oder außen.',
+  schaetzen: 'Eine Zahl. Wer am nächsten liegt, gewinnt — wer am weitesten weg ist, trinkt.',
+  entweder: 'A oder B. Die Minderheit trinkt, bei Gleichstand alle.',
+  wahrheitpflicht: 'Reihum: wählen, machen — oder kneifen und trinken.',
 };
 
 /** Die vier Kartenfarben als Zeichen. Rot zuerst, wie auf dem Blatt. */

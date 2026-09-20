@@ -38,7 +38,13 @@ export type MinispielId =
   /** "Wer wuerde eher ...?" — jede Stimme ein Schluck. */
   | 'wereher'
   /** Bus fahren: Farbe, hoeher/tiefer, innen/aussen. */
-  | 'busfahrer';
+  | 'busfahrer'
+  /** Schaetzen: eine Zahl, der Naechste gewinnt, der Weiteste trinkt. */
+  | 'schaetzen'
+  /** Entweder-oder: A oder B, die Minderheit trinkt. */
+  | 'entweder'
+  /** Wahrheit oder Pflicht: reihum, gemacht oder gekniffen. */
+  | 'wahrheitpflicht';
 
 export const MINISPIELE: readonly MinispielId[] = [
   'imposter',
@@ -47,6 +53,9 @@ export const MINISPIELE: readonly MinispielId[] = [
   'niemals',
   'wereher',
   'busfahrer',
+  'schaetzen',
+  'entweder',
+  'wahrheitpflicht',
 ];
 
 function istMinispiel(x: unknown): x is MinispielId {
@@ -100,17 +109,30 @@ export const SCHLUCK_FAKTOR_MAX = 3;
  */
 export const SITZE = [4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
+/**
+ * Wie oft beim Imposter geredet werden darf, bevor abgestimmt werden MUSS.
+ *
+ * "Noch eine Runde reden" ist eine Mehrheitsentscheidung der Anwesenden. Ohne
+ * Deckel koennte der Imposter mit zwei Freunden den Abend verschleppen — und
+ * nach der dritten Runde hat jeder dreimal geredet, mehr sagt niemand Neues.
+ */
+export const MAX_REDERUNDEN = 3;
+
 /** Rundenzahl des Turniers: so viele Minispiele werden gespielt. */
 export const RUNDEN_MIN = 3;
 export const RUNDEN_MAX = 15;
 export const RUNDEN_VORGABE = 6;
 
 /**
- * Wie lange das Ergebnisbild einer Runde stehen bleibt, bevor die Plattform
- * von selbst weitergeht. Lang genug zum Lesen UND zum Trinken; wer schneller
- * ist, tippt "Weiter" und ueberspringt den Rest.
+ * Zugzeit eines Menschen: fuenf Minuten statt der 60 Sekunden der Plattform.
+ *
+ * Der Zug findet hier im RAUM statt — erst redet die Runde, dann wird
+ * getippt. Am 19.09.2026 zu zwoelft liefen die 60 Sekunden mitten in der
+ * Imposter-Diskussion ab, und der Bot stimmte fuer Leute, die noch redeten.
+ * Fuenf Minuten sind lang genug fuer eine Rederunde zu zwoelft und kurz
+ * genug, dass ein verlassener Tisch nicht den Abend blockiert.
  */
-export const ERGEBNIS_MS = 12_000;
+export const ZUGZEIT_MS = 5 * 60_000;
 
 /**
  * Obergrenze fuer die Botpause der Plattform.
@@ -131,6 +153,8 @@ export type PartykisteAktion =
   | { readonly art: 'bereit' }
   /** Verdacht (Imposter) bzw. Wahl eines Mitspielers ("Wer wuerde eher"). */
   | { readonly art: 'stimme'; readonly ziel: number }
+  /** Imposter: statt zu stimmen noch eine Rederunde verlangen. */
+  | { readonly art: 'nochmal' }
   /** Quiz: Stelle der gewaehlten Antwort, 0 bis 3. */
   | { readonly art: 'antwort'; readonly wahl: number }
   /** "Ich hab noch nie": ja = hab ich doch getan, also trinken. */
@@ -138,7 +162,15 @@ export type PartykisteAktion =
   /** "Wer bin ich": selbst gemeldet, die Runde hat zugesehen. */
   | { readonly art: 'geraten'; readonly erfolg: boolean }
   /** Bus fahren: 0 oder 1 — Rot/Schwarz, hoeher/tiefer, innen/aussen. */
-  | { readonly art: 'tipp'; readonly wahl: number };
+  | { readonly art: 'tipp'; readonly wahl: number }
+  /** Schaetzen: die eigene Zahl. Nicht aufzaehlbar — `legalActions` bleibt leer. */
+  | { readonly art: 'schaetzung'; readonly wert: number }
+  /** Entweder-oder: 0 = A, 1 = B. */
+  | { readonly art: 'seite'; readonly wahl: number }
+  /** Wahrheit oder Pflicht, Schritt 1: was soll es sein? */
+  | { readonly art: 'wahl'; readonly pflicht: boolean }
+  /** Wahrheit oder Pflicht, Schritt 2: gemacht (true) oder gekniffen. */
+  | { readonly art: 'erledigt'; readonly ja: boolean };
 
 // ---------------------------------------------------------------------------
 // Punkte und Schluecke
@@ -165,6 +197,12 @@ export const PUNKTE = {
   busProTipp: 1,
   /** Trinkrunden: wer ohne Schluck durchkommt. Klein — man kann luegen. */
   sauber: 1,
+  /** Schaetzen: am naechsten dran. */
+  schaetzenBester: 3,
+  /** Entweder-oder: auf der Seite der Mehrheit. */
+  entwederMehrheit: 1,
+  /** Wahrheit oder Pflicht: durchgezogen. */
+  wahrheitpflichtGemacht: 2,
 } as const;
 
 export const SCHLUECKE = {
@@ -184,6 +222,12 @@ export const SCHLUECKE = {
   wereherJeStimme: 1,
   /** Bus fahren: je falschem Tipp. */
   busFalsch: 1,
+  /** Schaetzen: am weitesten daneben. */
+  schaetzenSchlechtester: 2,
+  /** Entweder-oder: in der Minderheit — oder alle bei Gleichstand. */
+  entwederMinderheit: 1,
+  /** Wahrheit oder Pflicht: gekniffen. */
+  wahrheitpflichtGekniffen: 2,
 } as const;
 
 // ---------------------------------------------------------------------------

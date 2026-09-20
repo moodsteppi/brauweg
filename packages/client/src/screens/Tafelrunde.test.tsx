@@ -688,6 +688,61 @@ describe('Das Blatt einer angetippten Einheit', () => {
   });
 });
 
+describe('Das Blatt einer Ladenkarte', () => {
+  /*
+   * Der Anlass (18.09.2026): Die Marken-Auskunft hing nur an den Zaehlern der
+   * Leiste. Auf der Ladenkarte trugen die Zeichen ein `title`, das am Handy
+   * nie erscheint — ausgerechnet dort, wo die Auskunft am meisten wert ist:
+   * Der Kauf ist die Entscheidung, um die es im Laden geht.
+   *
+   * Der Griff sitzt NEBEN der Karte, weil die Karte selbst eine Schaltflaeche
+   * ist; ein Knopf darin waere ungueltiges HTML und stuerbe den Kauf-Tipp.
+   */
+  it('schlaegt ueber den Griff das Blatt des Angebots auf', () => {
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Astschütze ansehen' }));
+    const blatt = screen.getByRole('dialog', { name: /Astschütze/ });
+    // Die Werte der ERSTEN Stufe — gekauft wird ein einzelner Recke.
+    expect(blatt).toHaveTextContent('480');
+    expect(blatt).not.toHaveTextContent('864');
+    expect(within(blatt).getByText('Naturwesen')).toBeInTheDocument();
+  });
+
+  it('fuehrt von dort zum Blatt einer Marke, die noch auf keiner Wabe steht', () => {
+    // „0 auf dem Brett" ist im Laden die haeufigste und wichtigste Antwort:
+    // Naturwesen fehlt in `synergien` ganz (das Modul schickt nur Marken mit
+    // mindestens einem Traeger). Die erste Schwelle kommt trotzdem nicht aus
+    // dem Client, sondern aus der Tabelle der Sicht.
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Astschütze ansehen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Naturwesen nachschlagen' }));
+    const marke = screen.getByRole('dialog', { name: 'Marke Naturwesen' });
+    expect(marke).toHaveTextContent('0 auf dem Brett');
+    expect(marke).toHaveTextContent('noch 2 bis 2');
+    // Und das Einheitenblatt liegt weiter darunter: Escape gehoert dem
+    // Markenblatt, sonst staende man mit einem Schlag wieder vor dem Brett.
+    expect(screen.getByRole('dialog', { name: /Astschütze/ })).toBeInTheDocument();
+  });
+
+  it('kauft aus dem Blatt heraus den Platz, an dem der Griff haengt', () => {
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Astschütze ansehen' }));
+    fireEvent.click(screen.getByRole('button', { name: /Kaufen/ }));
+    expect(gesendet).toHaveBeenCalledWith({ typ: 'kaufen', platz: 1 });
+  });
+
+  it('bietet den Kauf nicht an, wenn legalActions ihn nicht nennt', () => {
+    // Dieselbe Regel wie an der Karte: Was kaufbar ist, sagt der Server. Ein
+    // zweiter Weg zum Kauf, der nicht fragt, waere eine zweite Antwort auf
+    // dieselbe Frage — nachlesen darf man trotzdem.
+    stelle(sicht(), [{ typ: 'bereit' }]);
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Astschütze ansehen' }));
+    expect(screen.getByRole('dialog', { name: /Astschütze/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Kaufen/ })).toBeNull();
+  });
+});
+
 describe('Setzen per Antippen', () => {
   it('wählt eine Einheit auf der Bank und setzt sie auf ein Feld', () => {
     zeige();
@@ -1490,5 +1545,73 @@ describe('Zuschauer', () => {
     expect(screen.getByText(/Du schaust zu/)).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Laden' })).not.toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Reservebank' })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Das Blatt zum LESEN — seit dem 19.9.2026.
+ *
+ * Bis dahin hing das Blatt an `darfHandeln`: Wer „Bereit" gedrueckt hatte oder
+ * zusah, kam an keine Werte mehr, und am Brett des Gegners gab es ohnehin
+ * keinen Weg. Bewusst, weil zwei der drei Knoepfe dann tot waeren — und genau
+ * das wird hier mitgeprueft: Das Blatt geht auf, aber ohne einen einzigen
+ * Handlungsknopf. Die Werte kommen weiterhin aus `stufenwerte`, auch fuer den
+ * Recken des Gegners.
+ */
+describe('Das Blatt zum Lesen', () => {
+  const ASTSCHUETZE_BRETT = [
+    { id: 'astschuetze', stufe: 2 },
+    ...Array.from({ length: 9 }, () => null),
+  ];
+  const HANDLUNGSKNOPF = /Verkaufen|Aufstellen|Verschieben|Ablegen/;
+
+  it('geht nach „Bereit" noch auf — nur ohne Knoepfe', () => {
+    stelle(sicht({ eigenes: { bereit: true, darfHandeln: false } }), []);
+    zeige();
+    const bank = screen.getByRole('group', { name: 'Reservebank' });
+    const marke = within(bank).getByTitle(/Dorfwache/);
+    // Antippbar, aber nicht mehr fassbar: Es gibt nichts mehr zu ziehen.
+    expect(marke).not.toHaveAttribute('data-fassbar');
+    fireEvent.click(marke);
+    const blatt = screen.getByRole('dialog');
+    expect(blatt).toHaveTextContent('650');
+    expect(within(blatt).queryByRole('button', { name: HANDLUNGSKNOPF })).toBeNull();
+  });
+
+  it('geht am Brett des Gegners auf — mit den Werten SEINER Sternstufe', () => {
+    // Der Laden ist leer gestellt, damit die einzige Astschuetze-Schaltflaeche
+    // auf dem Schirm die auf dem fremden Brett ist.
+    stelle(
+      sicht({
+        eigenes: { laden: [null, null, null, null, null] },
+        gegner: [gegnerMitMarken({ brett: ASTSCHUETZE_BRETT })],
+      }),
+    );
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: /Astschütze/ }));
+    const blatt = screen.getByRole('dialog');
+    // Stufe 2: 864 aus `stufenwerte`, nicht die 480 des Katalogs.
+    expect(blatt).toHaveTextContent('864');
+    expect(blatt).not.toHaveTextContent('480');
+    expect(within(blatt).queryByRole('button', { name: HANDLUNGSKNOPF })).toBeNull();
+  });
+
+  it('steht auch dem Zuschauer offen', () => {
+    stelle(
+      sicht({
+        zuschauer: true,
+        ich: null,
+        eigenes: null,
+        gegner: [gegnerMitMarken({ brett: ASTSCHUETZE_BRETT })],
+      }),
+    );
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: /Astschütze/ }));
+    const blatt = screen.getByRole('dialog');
+    expect(blatt).toHaveTextContent('864');
+    expect(within(blatt).queryByRole('button', { name: HANDLUNGSKNOPF })).toBeNull();
+    // Und wieder zu, wie am Spielertisch.
+    fireEvent.click(within(blatt).getByRole('button', { name: 'Blatt schließen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

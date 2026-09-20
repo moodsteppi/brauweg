@@ -247,6 +247,26 @@ export const account = pgTable(
      */
     googleSub: text(),
     anonymizedAt: timestamp({ withTimezone: true }),
+    /**
+     * Gastkonto: mitspielen ohne Anmeldung. NULL heisst "kein Gast".
+     *
+     * Ein Gast hat ein ganz normales Konto, nur ohne `email` und ohne
+     * `passwordHash` — deshalb kommt er auch nie wieder hinein, wenn er die
+     * Sitzung verliert. Wer sein Konto spaeter sichert (Mail und Passwort
+     * nachtraegt), behaelt dieselbe Zeile samt allem, was er gespielt hat;
+     * `gastSeit` faellt dabei auf NULL zurueck.
+     *
+     * Ein Zeitstempel und kein Boolean, weil "seit wann" hier nichts extra
+     * kostet und ein Aufraeumen alter Gastkonten sonst gar nicht moeglich
+     * waere. Gelesen wird er ueberall als `is not null`.
+     *
+     * WICHTIG fuer alles, was zaehlt: Ein Tisch, an dem ein Gast sitzt,
+     * zaehlt NICHT fuer die Rangliste (`countsForRanking` in
+     * tables/service.ts). Gastkonten sind mit einem Klick beliebig oft zu
+     * haben — waeren sie wertungsfaehig, waere jede Bestenliste eine Frage
+     * der Geduld.
+     */
+    gastSeit: timestamp({ withTimezone: true }),
   },
   (t) => [
     uniqueIndex('account_email_key').on(t.email),

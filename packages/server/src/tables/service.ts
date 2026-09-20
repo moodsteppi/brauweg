@@ -9,7 +9,7 @@
 
 import { randomInt } from 'node:crypto';
 
-import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { type BotLevel, DEFAULT_BOT_LEVEL, type GameId } from '@brauweg/game-api';
 
 import { requireClubMember } from '../clubs/service.js';
@@ -887,7 +887,33 @@ export function isReadyToStart(
  * Training an.
  */
 export async function countsForRanking(db: Db, tableId: string): Promise<boolean> {
-  const { table } = await tableWithSeats(db, tableId);
+  const { table, seats } = await tableWithSeats(db, tableId);
+
+  /*
+   * Sitzt ein GAST am Tisch, zaehlt die Partie fuer niemanden.
+   *
+   * Nicht nur fuer den Gast selbst, und das ist der ganze Punkt: Ein
+   * Gastkonto entsteht mit einem Klick und ohne Mail. Wuerden nur seine
+   * eigenen Trophaeen wegfallen, waeren fuenf Gaeste am Tisch das billigste
+   * Futter, das sich denken laesst — absichtlich verlieren, und das echte
+   * Konto steigt. Die Rangliste haengt damit nicht mehr am Koennen, sondern
+   * an der Geduld beim Konten-Anlegen.
+   *
+   * Der Preis ist bekannt und in Kauf genommen: Wer sich an einen
+   * oeffentlichen Tisch setzt, an dem ein Gast sitzt, spielt eine Runde ohne
+   * Wertung. Damit das niemanden erst hinterher trifft, traegt jeder Sitz in
+   * der Tischnachricht ein `gast`-Merkmal (`seatInfo`), und die Bildschirme
+   * sagen es an, bevor gestartet wird.
+   */
+  const accountIds = seats.map((seat) => seat.accountId).filter((id): id is string => id !== null);
+  if (accountIds.length > 0) {
+    const [gast] = await db
+      .select({ id: s.account.id })
+      .from(s.account)
+      .where(and(inArray(s.account.id, accountIds), isNotNull(s.account.gastSeit)))
+      .limit(1);
+    if (gast) return false;
+  }
 
   const [rs] = await db
     .select({ config: s.ruleSet.config })

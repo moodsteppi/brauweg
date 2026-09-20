@@ -7,6 +7,7 @@ import { Bankreihe, Einheitenmarke, Hexbrett } from '../minispiele/tafelrunde/Br
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Einheitenblatt } from '../minispiele/tafelrunde/Einheitenblatt';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
+import { Brettkopf, Statuszeile } from '../minispiele/tafelrunde/Kopfzeilen';
 import { type Kaufhindernis, Ladenkarte, kaufhindernis } from '../minispiele/tafelrunde/Ladenkarte';
 import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
 import { AugeZeichen, Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
@@ -18,7 +19,7 @@ import {
 } from '../minispiele/tafelrunde/platzierung';
 import type { Einheit, Stufenwerte, TafelrundeSicht } from '../minispiele/tafelrunde/sicht';
 import { TISCH_PARAMETER, beitrittsLink } from '../minispiele/tafelrunde/tischlink';
-import { GoldZeichen, KOSTEN_FARBE, LebenZeichen, RollenZeichen } from '../minispiele/tafelrunde/Zeichen';
+import { GoldZeichen, KOSTEN_FARBE, RollenZeichen } from '../minispiele/tafelrunde/Zeichen';
 import {
   KampfAnzeige,
   type Kampfpaarung,
@@ -28,11 +29,10 @@ import {
 import {
   type Synergie,
   type Synergiestand,
-  Fremdmarken,
   Markennamen,
-  Synergieleiste,
   markennamen,
   schwellenPruefer,
+  useMarkenblatt,
 } from '../minispiele/tafelrunde/Synergien';
 import {
   type Ort,
@@ -1264,8 +1264,26 @@ function Ruestkammer({
    * bisher — Ziele leuchten, der naechste Tipp setzt ab. Ohne diesen Weg waere
    * Antippen—Ziel-antippen zu Ende, und das ist der einzige Bedienweg, der mit
    * einem Vorlesegeraet funktioniert (siehe `Einheitenmarke` in Brett.tsx).
+   *
+   * SEIT DEM 19.9.2026 STEHT DER SITZ DABEI: null ist das eigene Brett, sonst
+   * das des Gegners, dessen Brett gerade oben liegt. Denn das Blatt geht jetzt
+   * auch dort auf — und nach „Bereit", und als Zuschauer —, nur ohne Knoepfe
+   * (`blattNurLesen`). Der Sitz gehoert zum Ort aus demselben Grund, aus dem
+   * der Ort und nicht die Einheit gehalten wird: Tippt man oben einen anderen
+   * Mitspieler an, liegt an Platz 3 ploetzlich ein anderes Brett, und das
+   * Blatt zeigte still dessen Recken statt des angetippten.
    */
-  const [blattOrt, setBlattOrt] = useState<Ort | null>(null);
+  const [blatt, setBlatt] = useState<{ sitz: number | null; ort: Ort } | null>(null);
+
+  /**
+   * Welcher LADENPLATZ sein Blatt offen hat — der Platz und nicht die Einheit.
+   *
+   * Aus demselben Grund, aus dem oben ein Ort und kein Kaempfer steht: Unter
+   * dem offenen Blatt kann der Server den Platz raeumen (die Runde endet, ein
+   * anderes Geraet kauft nichts weg, aber die Phase wechselt), und dann ist
+   * „nichts" die richtige Antwort und nicht ein altes Abbild.
+   */
+  const [ladenBlatt, setLadenBlatt] = useState<number | null>(null);
 
   /**
    * Eine abgesetzte Aktion sperrt die Bedienung, bis der Server geantwortet
@@ -1300,7 +1318,10 @@ function Ruestkammer({
       // Und das Blatt zu: Es beschreibt eine Einheit an einem Ort, und genau
       // der aendert sich gleich. Ein stehenbleibendes Blatt zeigte nach dem
       // Verkaufen die Werte von jemandem, der nicht mehr da ist.
-      setBlattOrt(null);
+      setBlatt(null);
+      // Und die Ladenvorschau ebenso: Sie beschreibt ein Angebot auf einem
+      // Platz, und nach einem Kauf steht dort etwas anderes.
+      setLadenBlatt(null);
       onAktion(aktion);
     },
     [wartet, revision, onAktion],
@@ -1420,16 +1441,29 @@ function Ruestkammer({
        * `waehlen` heisst: Der Tipp gilt der Einheit selbst und keinem Ziel —
        * es ist ja noch nichts ausgewaehlt. Seit dem 6.9.2026 antwortet der
        * Bildschirm darauf mit ihrem Blatt statt mit einer stummen Auswahl
-       * (siehe `blattOrt` oben). Die Auswahl setzt danach das Blatt selbst,
+       * (siehe `blatt` oben). Die Auswahl setzt danach das Blatt selbst,
        * ueber seinen Verschieben-Knopf; die drei anderen Faelle sind
        * unveraendert, damit der Weg zum Ziel derselbe bleibt.
        */
-      if (folge.art === 'waehlen') setBlattOrt(folge.ort);
+      if (folge.art === 'waehlen') setBlatt({ sitz: null, ort: folge.ort });
       else if (folge.art === 'abwaehlen') setGewaehlt(null);
       else if (folge.art === 'schieben') schiebe(folge.von, folge.nach);
     },
     [darfHandeln, eigenes, gewaehlt, schiebe],
   );
+
+  /**
+   * Eine Einheit ansehen, ohne sie zu fassen — der Lesepfad (`onNachsehen` in
+   * Brett.tsx). `sitz` sagt, wessen Brett: null ist das eigene.
+   *
+   * OHNE Pruefung auf `darfHandeln`, und das ist der Sinn: `tippeOrt` oben
+   * bricht ohne Handlungsrecht ab, weil sein Blatt Knoepfe traegt. Dieser Weg
+   * fuehrt auch nach „Bereit", als Zuschauer und am Brett des Gegners noch zu
+   * den Werten — die Knoepfe bleiben dann weg (`blattNurLesen`).
+   */
+  const sieheNach = useCallback((sitz: number | null, ort: Ort): void => {
+    setBlatt({ sitz, ort });
+  }, []);
 
   /**
    * Ziehen mit dem Finger.
@@ -1607,6 +1641,17 @@ function Ruestkammer({
     [eigeneSynergien, synergieTabelle],
   );
 
+  /**
+   * Der Griff zum Markenblatt fuer die beiden Blaetter — das einer Einheit auf
+   * Bank und Brett und das einer Ladenkarte.
+   *
+   * Mit den EIGENEN Staenden: Beide Blaetter beschreiben eine Einheit, die auf
+   * meinem Brett steht oder dort stehen soll, und die Frage dahinter ist
+   * „reicht das bei MIR fuer die naechste Stufe". Die Markenzeile des Gegners
+   * hat ihren eigenen Griff mit SEINEN Staenden (siehe `useMarkenblatt`).
+   */
+  const markengriff = useMarkenblatt(eigeneSynergien, synergieTabelle, katalog);
+
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
 
   /**
@@ -1732,6 +1777,44 @@ function Ruestkammer({
    */
   const kampfLaeuft = kampfbild !== null;
 
+  /**
+   * Die Einheit, deren Blatt offen ist — frisch aus der Sicht geholt und
+   * nicht beim Antippen festgehalten: Unter dem offenen Blatt kann ein Zug
+   * des Servers den Platz raeumen (eine Runde endet, ein Kauf verschmilzt),
+   * und dann ist `null` die richtige Antwort und nicht ein altes Abbild.
+   *
+   * Sie steht VOR der Zuschauer-Weiche, weil der Zuschauer seit dem 19.9.2026
+   * dasselbe Blatt bekommt. Und sie haengt nicht mehr an `darfHandeln`: Das
+   * Blatt geht auch nach „Bereit" auf — nur die Knoepfe darin haengen noch
+   * daran (`blattNurLesen` unten).
+   */
+  const blattKaempfer = (() => {
+    if (!blatt) return null;
+    if (blatt.sitz === null) {
+      if (!eigenes) return null;
+      const reihe = blatt.ort.bereich === 'bank' ? eigenes.bank : eigenes.brett;
+      return reihe[blatt.ort.platz] ?? null;
+    }
+    /* Am fremden Brett zaehlt der Sitz mit (siehe `blatt` oben). Eine Bank
+       hat der Gegner in der Sicht nicht — sie ist nicht oeffentlich. */
+    if (!gegner || gegner.sitz !== blatt.sitz || blatt.ort.bereich !== 'brett') return null;
+    return gegner.brett[blatt.ort.platz] ?? null;
+  })();
+  const blattEinheit = blattKaempfer ? katalog[blattKaempfer.id] : undefined;
+  /* Die Werte GENAU dieser Sternstufe — die Tabelle zaehlt ab 1, das Feld ab
+     0. Fehlt sie (Tisch aus der Zeit davor), bleibt der Wertekasten weg. */
+  const blattWerte =
+    blattKaempfer && blattEinheit
+      ? stufenwerte[blattEinheit.id]?.[blattKaempfer.stufe - 1]
+      : undefined;
+  /**
+   * Nur Werte und Marken, keine Knoepfe: am fremden Brett immer, am eigenen,
+   * sobald man nicht handeln darf. Verkaufen und Ablegen waeren dann tote
+   * Knoepfe — genau der Grund, aus dem das Blatt bis zum 19.9.2026 in diesen
+   * Faellen gar nicht erst aufging.
+   */
+  const blattNurLesen = blatt !== null && (blatt.sitz !== null || !darfHandeln);
+
   if (!eigenes) {
     // Zuschauer: kein Laden, keine Bank, kein Gold (sicht.ts). Es bleibt das
     // Brett — und das ist oeffentlich.
@@ -1785,35 +1868,48 @@ function Ruestkammer({
               <div className="tr-spielflaeche" style={brettmass(sicht)}>
                 <div className="tr-bretter">
                   <section className="tr-brettteil">
-                    {/* Name und Marken in einer Zeile, wie am Spielertisch
-                      (`.tr-brettkopf`): Zwei Zeilen Beiwerk ueber einem Brett
-                      kosten am Handy 33 Pixel, nebeneinander 18. */}
-                    <div className="tr-brettkopf">
-                      <h2 className="tr-bretttitel">
-                        <AugeZeichen />
-                        {spielername(zeile(gegner.sitz), gegner.sitz)}
-                      </h2>
-                      {/* Die Marken des gezeigten Bretts. Ein Zuschauer bekommt das
-                        Feld `synergien` an jedem Sitz genau wie ein Spieler
-                        (sicht.ts) — bis heute stand hier nichts davon. */}
-                      <Fremdmarken
-                        staende={gegner.synergien ?? OHNE_SYNERGIEN}
-                        tabelle={synergieTabelle}
-                        katalog={katalog}
-                        beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
-                      />
-                    </div>
+                    {/* Name und Marken in einer Zeile, wie am Spielertisch —
+                      dasselbe Bauteil (Kopfzeilen.tsx). Die Marken des
+                      gezeigten Bretts gehoeren dazu: Ein Zuschauer bekommt das
+                      Feld `synergien` an jedem Sitz genau wie ein Spieler
+                      (sicht.ts). Ohne Ausgeschieden-Vermerk, wie bisher. */}
+                    <Brettkopf
+                      name={spielername(zeile(gegner.sitz), gegner.sitz)}
+                      staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                      tabelle={synergieTabelle}
+                      katalog={katalog}
+                    />
                     <Hexbrett
                       reihen={sicht.brettReihen}
                       spalten={sicht.brettSpalten}
                       felder={gegner.brett}
                       katalog={katalog}
                       maxStufe={sicht.maxStufe}
+                      /* Ansehen ja, anfassen nein — der Lesepfad. Ohne ihn
+                         sagte das Brett dem Zuschauer nichts ueber die Recken
+                         darauf. */
+                      onNachsehen={(ort) => sieheNach(gegner.sitz, ort)}
                     />
                   </section>
                 </div>
               </div>
             ))}
+          {/* Das Blatt ohne Knoepfe: Ein Zuschauer kann nichts tun, aber
+              alles ansehen. Dieselbe Bauart wie am Spielertisch unten, nur
+              ohne die drei Rueckrufe — das Blatt zeigt dann Werte und
+              Marken (Einheitenblatt.tsx). */}
+          {blatt && blattKaempfer && blattEinheit && (
+            <Einheitenblatt
+              einheit={blattEinheit}
+              kaempfer={blattKaempfer}
+              werte={blattWerte}
+              tabelle={synergieTabelle}
+              maxStufe={sicht.maxStufe}
+              erloes={blattWerte?.erloes}
+              verschiebenTitel="Verschieben"
+              onSchliessen={() => setBlatt(null)}
+            />
+          )}
         </div>
       </main>
     );
@@ -1842,24 +1938,21 @@ function Ruestkammer({
   const gewaehlteEinheit = gewaehlterKaempfer ? katalog[gewaehlterKaempfer.id] : undefined;
 
   /**
-   * Die Einheit, deren Blatt offen ist — frisch aus der Sicht geholt und
-   * nicht beim Antippen festgehalten: Unter dem offenen Blatt kann ein Zug
-   * des Servers den Platz raeumen (eine Runde endet, ein Kauf verschmilzt),
-   * und dann ist `null` die richtige Antwort und nicht ein altes Abbild.
+   * Die Einheit, deren LADENKARTE ihr Blatt offen hat — frisch aus der Sicht.
+   * Ein Platz, den der Server geraeumt hat, hat kein Blatt mehr.
+   *
+   * Anders als `blattKaempfer` (oben, vor der Zuschauer-Weiche) steht das hier
+   * unten: Einen Laden hat nur, wer selbst mitspielt.
+   *
+   * Die Werte sind die der ersten Stufe (Feld 0): Gekauft wird immer ein
+   * einzelner Recke, und was drei davon mitbringen, steht auf dem Blatt der
+   * verschmolzenen Einheit — hier waere es eine Zahl, die man so nicht kaufen
+   * kann.
    */
-  const blattKaempfer =
-    blattOrt && darfHandeln
-      ? blattOrt.bereich === 'bank'
-        ? (eigenes.bank[blattOrt.platz] ?? null)
-        : (eigenes.brett[blattOrt.platz] ?? null)
-      : null;
-  const blattEinheit = blattKaempfer ? katalog[blattKaempfer.id] : undefined;
-  /* Die Werte GENAU dieser Sternstufe — die Tabelle zaehlt ab 1, das Feld ab
-     0. Fehlt sie (Tisch aus der Zeit davor), bleibt der Wertekasten weg. */
-  const blattWerte =
-    blattKaempfer && blattEinheit
-      ? stufenwerte[blattEinheit.id]?.[blattKaempfer.stufe - 1]
-      : undefined;
+  const ladenEinheit =
+    ladenBlatt !== null ? katalog[eigenes.laden[ladenBlatt] ?? ''] : undefined;
+  const ladenWerte = ladenEinheit ? stufenwerte[ladenEinheit.id]?.[0] : undefined;
+
 
   const gezogeneEinheit =
     zug?.zieht === true
@@ -1913,49 +2006,16 @@ function Ruestkammer({
 
       {/* ---- Die Statuszeile: eigene Werte und Marken in EINER Reihe ----- */}
       {/*
-        Bis zum 06.09.2026 waren das zwei Baender untereinander: ein Kasten
-        mit zwei grossen Kacheln (Leben, Rang/Feld) und darunter die
-        Markenleiste. Auf Robins Handybild (440 x 956, IMG_1047) kosteten
-        fuenf kleine Angaben zusammen 88 Pixel — Platz, der dem Brett und dem
-        Laden fehlte. Nebeneinander in einer Reihe sind es 22.
-
-        Die Werte sehen jetzt aus wie die Markenchips daneben, weil sie
-        dasselbe sind: kurze Auskunft, kein Bedienfeld. Ihre Masse stehen in
-        styles.css (`.tr-wert`), die der Marken in Synergien.module.css — der
-        Chip des Nachbarn wird NICHT abgeschrieben, beide Bauteile behalten
-        ihr eigenes Stylesheet.
-
-        WAEHREND DES KAMPFES STEHEN NUR DIE MARKEN DA. Leben und Rang sind
-        dort entbehrlich: Das eigene Leben steht ohnehin auf der eigenen
-        Kachel in der Mitspielerleiste darueber, und Rang wie Feldplaetze kann
-        man im Kampf weder aendern noch brauchen. Die Marken bleiben, denn wer
-        zusieht, plant schon die naechste Runde.
+        Warum die Reihe so aussieht, steht bei ihrem Bauteil (Kopfzeilen.tsx)
+        — dort auch, warum im Kampf nur die Marken bleiben. Hier entscheidet
+        der Bildschirm nur das eine, was er weiss: ob gerade gekaempft wird.
       */}
-      <div className="tr-statuszeile">
-        {!kampfLaeuft && (
-          <header className="tr-kopf">
-            <span className="tr-wert tr-wert-leben">
-              <LebenZeichen />
-              <strong>{eigenes.leben}</strong>
-              <em>Leben</em>
-            </span>
-            <span className="tr-wert tr-wert-level">
-              <em>Rang</em>
-              <strong>{eigenes.level}</strong>
-            </span>
-            <span className="tr-wert tr-wert-feld">
-              <strong>
-                {eigenes.belegt}/{eigenes.feldplaetze} Feld
-              </strong>
-            </span>
-          </header>
-        )}
-        {/* Am Desktop haengt die Leiste seitlich statt hier — das entscheidet
-            allein Synergien.module.css, und weil sie sich dort selbst aus dem
-            Fluss nimmt (`position: fixed`), bleibt diese Reihe davon
-            unberuehrt. */}
-        <Synergieleiste staende={eigeneSynergien} tabelle={synergieTabelle} katalog={katalog} />
-      </div>
+      <Statuszeile
+        werte={kampfLaeuft ? null : eigenes}
+        staende={eigeneSynergien}
+        tabelle={synergieTabelle}
+        katalog={katalog}
+      />
 
       {/* ---- Die Mitte: Spielflaeche und Auswahlband -------------------- */}
       {/*
@@ -2013,28 +2073,13 @@ function Ruestkammer({
                     Haelfte, die ohnehin schon zurueckgenommen ist; ihm zwei
                     volle Zeilen zu geben und dem Laden darunter keinen Platz
                     waere die falsche Reihenfolge. */}
-                  <div className="tr-brettkopf">
-                    {/* Das Auge vor dem Namen — dasselbe Zeichen wie an der Kachel
-                      oben, die gerade leuchtet. Es beantwortet die Frage, die
-                      Robin gestellt hat („was passiert, wenn man oben einen
-                      antippt?"): Das hier ist das Brett, das du dir ansiehst. */}
-                    <h2 className="tr-bretttitel">
-                      <AugeZeichen />
-                      {spielername(zeile(gegner.sitz), gegner.sitz)}
-                      {gegner.ausRunde !== null ? ' · ausgeschieden' : ''}
-                    </h2>
-                    {/* Womit der Gegner antritt — dieselben Zeichen und Zaehler wie
-                      in der eigenen Leiste. Ohne sie muesste man seine Figuren
-                      einzeln abzaehlen, um zu sehen, dass er auf sechs Waechter
-                      zugeht. Die Zahlen kommen aus SEINER Sicht; abgezaehlt wird
-                      auch hier nichts. */}
-                    <Fremdmarken
-                      staende={gegner.synergien ?? OHNE_SYNERGIEN}
-                      tabelle={synergieTabelle}
-                      katalog={katalog}
-                      beschriftung={`Marken von ${spielername(zeile(gegner.sitz), gegner.sitz)}`}
-                    />
-                  </div>
+                  <Brettkopf
+                    name={spielername(zeile(gegner.sitz), gegner.sitz)}
+                    ausRunde={gegner.ausRunde}
+                    staende={gegner.synergien ?? OHNE_SYNERGIEN}
+                    tabelle={synergieTabelle}
+                    katalog={katalog}
+                  />
                   <Hexbrett
                     reihen={sicht.brettReihen}
                     spalten={sicht.brettSpalten}
@@ -2042,6 +2087,10 @@ function Ruestkammer({
                     katalog={katalog}
                     gespiegelt
                     maxStufe={sicht.maxStufe}
+                    /* Ansehen ja, anfassen nein: Ohne `eigen` gibt es hier
+                       kein Ziehen und kein Waehlen — aber das Blatt seiner
+                       Recken, und das ist der Grund, das Brett zu zeigen. */
+                    onNachsehen={(ort) => sieheNach(gegner.sitz, ort)}
                   />
                 </section>
               )}
@@ -2086,6 +2135,10 @@ function Ruestkammer({
                   onZeigerEnde={beiZeigerEnde}
                   onZeigerAbbruch={beiZeigerAbbruch}
                   onLeeresZiel={tippeOrt}
+                  /* Greift erst, wenn `aktiv` faellt — also nach „Bereit":
+                     Dann fuehrt kein Zeiger und kein `onWaehlen` mehr zur
+                     Einheit, das Blatt ohne Knoepfe aber schon. */
+                  onNachsehen={(ort) => sieheNach(null, ort)}
                 />
               </section>
             </div>
@@ -2125,6 +2178,7 @@ function Ruestkammer({
               onZeigerBewegung={beiZeigerBewegung}
               onZeigerEnde={beiZeigerEnde}
               onZeigerAbbruch={beiZeigerAbbruch}
+              onNachsehen={(ort) => sieheNach(null, ort)}
             />
           </div>
         )}
@@ -2137,7 +2191,7 @@ function Ruestkammer({
           oben rechts schliessen es; das steht im Bauteil, damit es sich wie das
           Markenblatt anfuehlt und nicht wie ein zweites Fenster.
         */}
-        {blattOrt && blattKaempfer && blattEinheit && (
+        {blatt && blattKaempfer && blattEinheit && (
           <Einheitenblatt
             einheit={blattEinheit}
             kaempfer={blattKaempfer}
@@ -2145,11 +2199,14 @@ function Ruestkammer({
             tabelle={synergieTabelle}
             maxStufe={sicht.maxStufe}
             erloes={blattWerte?.erloes}
+            /* Alle drei Knoepfe fallen weg, sobald das Blatt nur zum Lesen
+               offen ist (fremdes Brett, nach „Bereit") — ein Knopf, der nichts
+               tut, ist schlimmer als keiner. */
             /* Verkaufen nur, wenn der Server es anbietet — nicht, wenn der
                Bildschirm meint, es muesste gehen. */
             onVerkaufen={
-              verkaufbar.has(ortSchluessel(blattOrt))
-                ? () => schicke({ typ: 'verkaufen', ort: blattOrt })
+              !blattNurLesen && verkaufbar.has(ortSchluessel(blatt.ort))
+                ? () => schicke({ typ: 'verkaufen', ort: blatt.ort })
                 : undefined
             }
             /* Ablegen gibt es nur vom Brett und nur auf einen freien Platz.
@@ -2157,18 +2214,61 @@ function Ruestkammer({
                Zug mit dem Finger — samt dessen Pruefung mit den zwei Zahlen der
                Sicht (`zielbar`). Hier wird keine Regel nachgebaut. */
             onAblegen={
-              blattOrt.bereich === 'brett' && freierBankplatz !== null
-                ? () => schiebe(blattOrt, { bereich: 'bank', platz: freierBankplatz })
+              !blattNurLesen && blatt.ort.bereich === 'brett' && freierBankplatz !== null
+                ? () => schiebe(blatt.ort, { bereich: 'bank', platz: freierBankplatz })
                 : undefined
             }
             /* Und der Weg zurueck in den Antipp-Bedienweg: Blatt zu, Einheit
                bleibt gewaehlt, die Ziele leuchten. */
-            onVerschieben={() => {
-              setGewaehlt(blattOrt);
-              setBlattOrt(null);
-            }}
-            verschiebenTitel={blattOrt.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
-            onSchliessen={() => setBlattOrt(null)}
+            onVerschieben={
+              blattNurLesen
+                ? undefined
+                : () => {
+                    setGewaehlt(blatt.ort);
+                    setBlatt(null);
+                  }
+            }
+            verschiebenTitel={blatt.ort.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
+            /* Die Marken sind hier der Weg zu ihrem Blatt — an der Wabe selbst
+               bleiben die Zeichen stumm, sonst faengt der Griff darin den
+               Finger ab, mit dem man die Einheit verschieben will. Sie bleiben
+               auch im Nur-Lesen-Blatt: Nachschlagen ist kein Handeln. */
+            onMarke={markengriff.oeffne}
+            escapeAus={markengriff.offeneMarke !== null}
+            onSchliessen={() => setBlatt(null)}
+          />
+        )}
+
+        {/* ---- Das Blatt einer Ladenkarte --------------------------------- */}
+        {/*
+          Dasselbe Bauteil wie darueber, nur ohne Ort: Die Einheit steht noch
+          nirgends, also gibt es nichts zu verschieben, abzulegen oder zu
+          verkaufen — angeboten wird der Kauf. Ein eigenes Bauteil dafuer waere
+          eine zweite Fassung derselben Auskunft gewesen (siehe Kopf von
+          Einheitenblatt.tsx).
+        */}
+        {ladenBlatt !== null && ladenEinheit && (
+          <Einheitenblatt
+            einheit={ladenEinheit}
+            /* Gekauft wird immer die erste Stufe — dieselbe Zahl, mit der auch
+               `ladenWerte` aus der Tabelle liest. */
+            kaempfer={{ id: ladenEinheit.id, stufe: 1 }}
+            werte={ladenWerte}
+            tabelle={synergieTabelle}
+            maxStufe={sicht.maxStufe}
+            erloes={undefined}
+            /* Kaufen nur, wenn der Server es anbietet — derselbe Riegel wie am
+               Karten-Knopf darunter, und aus demselben Grund: Zwei Wege zum
+               selben Kauf, von denen der eine fragt und der andere nicht,
+               waeren zwei Antworten auf dieselbe Frage. */
+            onKaufen={
+              kaufbar.has(ladenBlatt) && darfHandeln
+                ? () => schicke({ typ: 'kaufen', platz: ladenBlatt })
+                : undefined
+            }
+            onMarke={markengriff.oeffne}
+            escapeAus={markengriff.offeneMarke !== null}
+            onSchliessen={() => setLadenBlatt(null)}
           />
         )}
 
@@ -2305,6 +2405,10 @@ function Ruestkammer({
                        woanders. */
                     grund={darfHandeln && !darfKaufen ? hindernis(angeboten) : null}
                     onKauf={() => schicke({ typ: 'kaufen', platz })}
+                    /* Der Griff zur Auskunft — er haengt am PLATZ und nicht an
+                       der Einheit: Wer liest, waehrend der Server den Laden
+                       neu setzt, soll sehen, was jetzt dort steht. */
+                    onBlatt={angeboten ? () => setLadenBlatt(platz) : undefined}
                   />
                 );
               })}
@@ -2396,6 +2500,14 @@ function Ruestkammer({
           So spielt man Tafelrunde
         </button>
       </div>
+
+      {/* ---- Das Blatt einer Marke -------------------------------------- */}
+      {/* Es gehoert keinem der beiden Blaetter, aus denen es aufgeht (Einheit,
+          Ladenkarte), sondern liegt ueber beiden — deshalb steht es hier und
+          nicht in einem von ihnen. Die Zaehler der Leiste und die Markenzeile
+          des Gegners bringen ihr eigenes mit, denn sie zeigen andere Staende
+          (siehe `useMarkenblatt`). */}
+      {markengriff.blatt}
 
       {/* ---- Die Meldung ueber ein Verschmelzen -------------------------- */}
       {verschmolzen && (

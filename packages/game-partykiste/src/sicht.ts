@@ -18,7 +18,7 @@
  *      Spieler; ein Zuschauer mit Imposter-Wissen waere der perfekte Komplize.
  */
 
-import type { MinispielId } from './regeln.js';
+import { MAX_REDERUNDEN, type MinispielId } from './regeln.js';
 import type {
   BusTipp,
   Karte,
@@ -33,12 +33,19 @@ import { amZug, platzierungen, type Platzierung } from './partie.js';
 
 export interface ImposterSicht {
   readonly art: 'imposter';
-  /** Das eigene Wort — beim Imposter das abweichende. Zuschauer: null. */
+  /** Das Wort der Runde. Imposter und Zuschauer: null. */
   readonly meinWort: string | null;
-  /**
-   * Weiss ich, dass ich der Imposter bin? Bewusst mitgeschickt statt vom
-   * Client erraten: Er kennt das Wort der anderen nicht und koennte es nicht.
-   */
+  /** Nur der Imposter hat einen: die grobe Kategorie des Wortes. */
+  readonly hinweis: string | null;
+  /** Wer wann redet — fuer alle gleich, damit niemand durcheinanderredet. */
+  readonly reihenfolge: readonly number[];
+  /** Die wievielte Rederunde laeuft. */
+  readonly redeRunde: number;
+  /** Wer in dieser Abstimmung "noch eine Runde reden" verlangt hat. */
+  readonly nochmal: readonly number[];
+  /** Darf noch eine Rederunde verlangt werden? Nein ab MAX_REDERUNDEN. */
+  readonly nochmalMoeglich: boolean;
+  /** Weiss ich, dass ich der Imposter bin? Seit dem 19.09.2026 ja: Er sieht es. */
   readonly binImposter: boolean;
   /** Wer schon abgestimmt hat — nicht, fuer wen. */
   readonly abgestimmt: readonly number[];
@@ -101,13 +108,51 @@ export interface BusSicht {
   readonly letzter: BusTipp | null;
 }
 
+export interface SchaetzSicht {
+  readonly art: 'schaetzen';
+  readonly frage: string;
+  readonly einheit: string;
+  /** Die eigene Schaetzung, null solange keine. */
+  readonly meine: number | null;
+  readonly gewaehlt: readonly number[];
+  /** Erst im Ergebnis: die Antwort und alle Schaetzungen. */
+  readonly antwort: number | null;
+  readonly schaetzung: readonly (number | null)[] | null;
+}
+
+export interface EntwederSicht {
+  readonly art: 'entweder';
+  readonly a: string;
+  readonly b: string;
+  readonly meine: number;
+  readonly gewaehlt: readonly number[];
+  /** Erst im Ergebnis — vorher saehe man, wohin die Mehrheit kippt. */
+  readonly seite: readonly number[] | null;
+}
+
+export interface WahrheitPflichtSicht {
+  readonly art: 'wahrheitpflicht';
+  readonly amZug: number;
+  /** Je Sitz: 0 Wahrheit, 1 Pflicht, -1 noch nicht gewaehlt. */
+  readonly gewaehlt: readonly number[];
+  /**
+   * Der Aufgabentext je Sitz — fuer ALLE sichtbar, sobald gewaehlt: Die Runde
+   * muss ja sehen, was verlangt war, um "gemacht" zu glauben.
+   */
+  readonly text: readonly string[];
+  readonly erfolg: readonly number[];
+}
+
 export type MinispielSicht =
   | ImposterSicht
   | QuizSicht
   | WerBinIchSicht
   | NiemalsSicht
   | WerEherSicht
-  | BusSicht;
+  | BusSicht
+  | SchaetzSicht
+  | EntwederSicht
+  | WahrheitPflichtSicht;
 
 // ---------------------------------------------------------------------------
 // Die ganze Sicht
@@ -152,7 +197,14 @@ function minispielSicht(partie: PartykistePartie, sitz: number): MinispielSicht 
       const binImposter = !zuschauer && sitz === runde.imposter;
       return {
         art: 'imposter',
-        meinWort: zuschauer ? null : binImposter ? runde.falsch : runde.wort,
+        /* Der Imposter bekommt KEIN Wort — er weiss, dass er es ist, und hat
+           nur den Hinweis. Beides steht in keiner anderen Sicht. */
+        meinWort: zuschauer || binImposter ? null : runde.wort,
+        hinweis: binImposter ? runde.hinweis : null,
+        reihenfolge: runde.reihenfolge,
+        redeRunde: runde.redeRunde,
+        nochmal: runde.nochmal,
+        nochmalMoeglich: runde.redeRunde < MAX_REDERUNDEN,
         binImposter,
         abgestimmt: runde.phase === 'spiel' ? runde.fertig : [],
         stimmen: auf ? runde.stimmen : null,
@@ -206,6 +258,33 @@ function minispielSicht(partie: PartykistePartie, sitz: number): MinispielSicht 
         offen: runde.offen,
         treffer: runde.treffer,
         letzter: runde.letzter,
+      };
+    case 'schaetzen':
+      return {
+        art: 'schaetzen',
+        frage: runde.frage,
+        einheit: runde.einheit,
+        meine: zuschauer ? null : (runde.schaetzung[sitz] ?? null),
+        gewaehlt: runde.fertig,
+        antwort: auf ? runde.antwort : null,
+        schaetzung: auf ? runde.schaetzung : null,
+      };
+    case 'entweder':
+      return {
+        art: 'entweder',
+        a: runde.a,
+        b: runde.b,
+        meine: zuschauer ? -1 : (runde.seite[sitz] ?? -1),
+        gewaehlt: runde.fertig,
+        seite: auf ? runde.seite : null,
+      };
+    case 'wahrheitpflicht':
+      return {
+        art: 'wahrheitpflicht',
+        amZug: runde.amZug,
+        gewaehlt: runde.gewaehlt,
+        text: runde.text,
+        erfolg: runde.erfolg,
       };
   }
 }

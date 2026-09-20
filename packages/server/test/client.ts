@@ -31,6 +31,19 @@ interface DokoView {
   readonly round: RoundView | null;
 }
 
+/**
+ * Schluessel der laufenden Vorbehaltsabfrage. Die Runde allein genuegt nicht:
+ * Ein Schmeissen gibt DIESELBE Runde neu (roundIndex bleibt, nur `attempt`
+ * waechst), und danach steht eine zweite, echte Vorbehaltsabfrage offen. Wer
+ * nur nach roundIndex sperrt, haelt sie fuer die schon beantwortete und
+ * schweigt — die Phase haengt dann bis zum Fristablauf und wird als "gesund"
+ * nachgetragen; geprueft hat der Client die Abfrage damit nicht mehr.
+ */
+function vorbehaltsSchluessel(view: unknown): string {
+  const v = view as { roundIndex?: number; attempt?: number };
+  return `${v.roundIndex ?? 0}:${v.attempt ?? 0}`;
+}
+
 export class TestClient {
   private socket!: WebSocket;
   private readonly seen: ServerMessage[] = [];
@@ -40,8 +53,8 @@ export class TestClient {
   /** Auf true setzen, damit der Client nicht mehr selbst zieht. */
   passive = false;
   private actedAt = -1;
-  /** Rundenpause, fuer die schon "Weiter" gesendet wurde (roundIndex). */
-  private vorbehaltFuer: number | null = null;
+  /** Vorbehaltsabfrage, die schon beantwortet ist (Runde und Anlauf). */
+  private vorbehaltFuer: string | null = null;
   private weiterFuer = -1;
 
   private constructor(
@@ -113,15 +126,15 @@ export class TestClient {
         (candidate as { kind?: unknown }).kind === null,
     );
     if (gesund) {
-      // Wie beim "Weiter": hoechstens EINMAL je Runde. Zwischen dem Senden und
+      // Wie beim "Weiter": hoechstens EINMAL je Abfrage. Zwischen dem Senden und
       // der naechsten Sicht koennen Sichten eintreffen, die noch vor der
       // eigenen Aktion gerechnet wurden - dort steht die Abfrage noch offen.
       // Ein zweites "gesund" waere seit dem 06.09.2026 kein Verstoss mehr
       // (die Engine nimmt dieselbe Erklaerung als wirkungslos an), aber ein
       // ungeduldiger Spieler tippt eben auch nicht viermal.
-      const runde = (view.view as { roundIndex?: number }).roundIndex ?? 0;
-      if (this.vorbehaltFuer === runde) return;
-      this.vorbehaltFuer = runde;
+      const phase = vorbehaltsSchluessel(view.view);
+      if (this.vorbehaltFuer === phase) return;
+      this.vorbehaltFuer = phase;
       this.send(gesund);
       return;
     }

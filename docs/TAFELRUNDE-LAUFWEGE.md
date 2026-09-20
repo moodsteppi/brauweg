@@ -102,9 +102,26 @@ Je Rolle:
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Wache | 98.532 | 100,0 % | 1 | 1 | 0,0 % | 3 |
 | Meuchler | 54.138 | 100,0 % | 2 | 1 | 0,0 % | 3 |
-| Beistand | 866 | 100,0 % | 3 | 2 | 0,0 % | 6 |
+| Beistand | 866 | 100,0 % | 3 | 2 ⚠ | 0,0 % | 6 |
 | **Schütze** | 15.428 | **100,0 %** | 2 | 2 | 0,0 % | 6 |
 | **Magier** | 15.992 | **100,0 %** | 2 | 2 | 0,0 % | 6 |
+
+⚠ **„bis 1. Treffer" ist beim Beistand ein Mindestwert und keine Aussage
+darüber, wann er zum ersten Mal gehandelt hat.** Gezählt werden nur
+`treffer`-Ereignisse (`schritteBisTreffer` und `hatGetroffen` in
+`test/laufwege.ts`). Seit dem 06.09.2026 heilt ein Beistand, statt zu
+schlagen, solange in seiner Reichweite ein Verwundeter steht
+(`HEILUNG_FAKTOR` in `kampf.ts`) — er kann also einen ganzen Kampf lang
+handeln, ohne ein einziges `treffer`-Ereignis zu erzeugen. Ein Beistand, der
+nur geheilt hat, fällt ganz aus dem Median (er zählt als „nie getroffen") und
+zieht ihn damit auf die schlagenden Beistände zusammen. Die anderen vier
+Rollen sind nicht betroffen, sie kämpfen ausschließlich durch Zuschlagen.
+
+Bewusst **nicht** umdefiniert: Die Spalten `läuft je einmal`, `Schritte,
+Median`, `sofort in RW` und `Startabstand` messen Bewegung und sind
+unberührt — das Dokument misst, was gelaufen wird. Wer die **Handlungen**
+zählen will (Treffer plus Heilungen), braucht eine eigene Spalte und keine
+umgewidmete, sonst hieße „Treffer" in zwei Tabellen zweierlei.
 
 Der eigentliche Befund der ganzen Untersuchung ist damit erledigt: Schütze und
 Magier liefen vorher in 0,10 % bzw. 0,06 % der Fälle, jetzt ausnahmslos. Ihr
@@ -497,8 +514,90 @@ vierte Reihe sich lohnen soll, muss sie etwas bieten — Reichweiten, die sie
 brauchen, oder einen Vorteil fürs Hintenstehen. Das ist eine Entscheidung
 über den Katalog und keine über den Bot; sie steht als Karte auf dem Board.
 
-**Ebenfalls offen: ob der neue Bot STÄRKER spielt.** Alle Zahlen oben sind an
-Tischen gemessen, an denen jeder Bot dieselbe Regel benutzt — sie zeigen, wie
-sich die Meta verschiebt, nicht, welche Aufstellung gewinnt. Die Antwort
-darauf wäre ein Duell Aufstellung gegen Aufstellung, dasselbe Heer einmal so
-und einmal so gestellt; ein Werkzeug dafür gibt es noch nicht.
+## 9. Spielt der neue Bot stärker? (19.09.2026)
+
+**Ja, deutlich: 71,7 %.** Diese Frage war beim Umbau offen geblieben, und sie
+konnte es nicht anders. Alle Zahlen in Abschnitt 8 sind an Tischen gemessen,
+an denen **jeder** Bot dieselbe Regel benutzt — so auch bei
+`werkzeug/ausgewogenheit.mjs`, `werkzeug/laufwege.mjs` und
+`werkzeug/gangarten.mjs`. Diese Messstände zeigen, wie sich die Meta
+verschiebt, nicht, welche Aufstellung gewinnt: Stehen beide Seiten nach
+derselben Regel, hebt sich der Regelunterschied heraus, ehe der erste Takt
+läuft. Eine Siegquote gegen sich selbst ist immer 50 %.
+
+### Das Werkzeug
+
+`packages/game-tafelrunde/werkzeug/aufstellungsduell.mjs` (Kern
+`test/aufstellungsduell.ts`). Es würfelt Heere, stellt **dasselbe Heer**
+zweimal auf — einmal nach der Regel von heute, einmal nach der davor — und
+lässt die beiden Aufstellungen gegeneinander antreten:
+
+```
+npm run build --workspace @brauweg/game-tafelrunde
+node packages/game-tafelrunde/werkzeug/aufstellungsduell.mjs --heere 500 --saaten 3
+```
+
+Schalter: `--heere`, `--saaten`, `--groessen`, `--saat`, `--stufe`,
+`--kosten`, dazu `--heilung` und `--zeitraffer` für Vergleichsläufe, und
+`--json`.
+
+Gebaut nach dem Muster der **Beistandsprobe** in `test/turnier.ts`, weil die
+Frage dieselbe Form hat („lohnt sich dieser eine Unterschied?"):
+
+- **Gegen das eigene Heer**, damit der Vergleich nur einen Unterschied hat —
+  die Aufstellung. Zwei verschiedene Heere mäßen den Einkauf mit.
+- **Beide Seiten antreten lassen.** Der Kampf ist bei getauschten
+  Aufstellungen nur so lange spiegelsymmetrisch, wie niemand läuft; gelaufen
+  wird seit der Arenalücke immer. Sonst hängt die Zahl am Erstzieher und an
+  den Laufwegen.
+- **Die alte Regel steht im Messwerkzeug nachgebildet** (`ALTE_PLATZSTRAFE`)
+  und nicht im Modul — eine abgelöste Regel gehört nicht in den
+  Auslieferungsstand, nur damit ein Werkzeug sie aufrufen kann. Sie soll
+  ausdrücklich **nicht** mitwandern, sondern den Stand vor dem Umbau
+  festhalten.
+- **Die Aufstellungs-Maschine ist dagegen nicht nachgebildet:** Beide Regeln
+  laufen durch `stelleHeerAuf` aus `bot.ts` (hinstellen, dann nachbessern bis
+  zum Stillstand — derselbe Ruhepunkt, den der Bot am Tisch erreicht). Nur so
+  misst das Duell die Regel und nicht den Unterschied zweier Maschinen.
+
+### Die Zahlen
+
+**11.874 Kämpfe aus 2.000 Heeren, Saatbasis `duell-v1`**
+(`--heere 500 --saaten 3`), Heere gleichverteilt aus dem ganzen Katalog
+gezogen, Sternstufe 1:
+
+| Einheiten im Heer | Heere | davon gleich gestellt | Kämpfe | Quote der neuen Regel |
+| --- | --- | --- | --- | --- |
+| 3 | 500 | 19 | 2.886 | **61,8 %** |
+| 5 | 500 | 1 | 2.994 | **62,7 %** |
+| 7 | 500 | 1 | 2.994 | **78,7 %** |
+| 9 | 500 | 0 | 3.000 | **83,1 %** |
+| **zusammen** | 2.000 | 21 | 11.874 | **71,7 %** |
+
+Je Rolle (ein Heer zählt für jede Rolle, die darin steht — die Zeilen
+summieren sich deshalb nicht): Wache 74,1 %, Meuchler 75,2 %, Schütze 72,9 %,
+Magier 73,3 %, Beistand 71,2 %.
+
+**Der Vorteil wächst mit der Heergröße**, und das ist die Zeile, die die Regel
+erklärt: Bei drei Einheiten ist fast jede Wunschreihe frei, die beiden Regeln
+unterscheiden sich kaum. Bei neun kämpfen die Einheiten um dieselben Felder —
+und die alte Regel, die nur zwei Reihen kennt, stapelt sie in die vorderste
+und die hinterste, während die neue die Tiefe benutzt. Genau der Fall, der
+sich im Spiel spät entscheidet.
+
+**Die Spalte „gleich" gehört gleichberechtigt daneben.** Sie zählt die Heere,
+bei denen beide Regeln dasselbe Feld wählten; die kämpfen gar nicht erst, denn
+ein Kampf gegen die eigene Aufstellung entscheidet nur der Erstzieher und
+zöge die Quote zur 50 % hin. Bei 21 von 2.000 Heeren war das so — der
+Unterschied ist also fast immer einer.
+
+**Was die Zahl nicht sagt:** ob das Spiel mit der neuen Regel besser ist.
+Kürzere Kämpfe, ausgewogenere Einheiten und mehr Bewegung stehen weiter in
+Abschnitt 8 und in `docs/spiele/auto-battler-konzept.md`. Die beiden Sorten
+Zahl gehören nebeneinander gelesen; wer nur eine liest, zieht den falschen
+Schluss.
+
+**Eine Schwelle hält den Befund fest:** `test/aufstellungsduell.test.ts` läuft
+bei jedem Testlauf mit und wird rot, wenn die Quote unter 55 % fällt. Sie soll
+den **Rückfall** abfangen und nicht jede Feinjustierung — wer an `wunschreihe`
+oder an den Gewichten dreht, misst mit dem Werkzeug oben nach.

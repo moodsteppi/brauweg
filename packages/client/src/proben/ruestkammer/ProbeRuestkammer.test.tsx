@@ -170,6 +170,23 @@ describe('ProbeRuestkammer', () => {
     }
   });
 
+  it('schlaegt am Brett des Gegners das Blatt ohne Knoepfe auf — wie am Tisch', () => {
+    // Der Lesepfad (19.9.2026): Der Gegner ist nicht fassbar, aber seine
+    // Recken erzaehlen, was sie koennen. Kein Verkaufen, kein Verschieben —
+    // die Probe darf sich hier nicht anders bedienen lassen als der Tisch.
+    const { container } = render(<ProbeRuestkammer />);
+    const fremd = container.querySelector('.tr-brettteil-fremd')!;
+    const [erster] = belegt(SZENE.gegner.brett);
+    const marke = fremd.querySelector(`.tr-einheit[title^="${KATALOG.get(erster!.id)!.name}"]`)!;
+    expect(marke).not.toHaveAttribute('data-fassbar');
+    fireEvent.click(marke);
+    const blatt = screen.getByRole('dialog');
+    expect(blatt).toHaveTextContent(KATALOG.get(erster!.id)!.name);
+    expect(
+      screen.queryByRole('button', { name: /Verkaufen|Aufstellen|Verschieben|Ablegen/ }),
+    ).toBeNull();
+  });
+
   it('stellt das Brett des Gegners auf den Kopf', () => {
     const { container } = render(<ProbeRuestkammer />);
     const [fremd] = container.querySelectorAll('.tr-brett');

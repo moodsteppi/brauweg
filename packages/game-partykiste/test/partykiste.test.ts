@@ -29,7 +29,6 @@ import {
   minispielFuer,
   partykiste,
   platzierungen,
-  schaupauseVorbei,
   sichtFuer,
   verarbeite,
   type MinispielId,
@@ -53,12 +52,10 @@ function spieleDurch(partie: PartykistePartie, grenze = 5000): { partie: Partyki
   while (!stand.fertig) {
     assert.ok(++zuege <= grenze, `kommt nach ${grenze} Zuegen nicht zum Ende`);
     const sitz = amZug(stand);
-    if (sitz === null) {
-      const vorher = stand;
-      stand = schaupauseVorbei(stand);
-      assert.notEqual(stand, vorher, 'Schaupause ohne Wirkung — der Tisch haengt');
-      continue;
-    }
+    /* Seit dem 19.09.2026 gibt es keine Schaupause mehr: Solange die Partie
+       laeuft, ist immer jemand am Zug — sonst haengt der Tisch. */
+    assert.notEqual(sitz, null, 'niemand am Zug, aber nicht fertig — der Tisch haengt');
+    if (sitz === null) break;
     stand = verarbeite(stand, sitz, partykiste.botAction(sichtFuer(stand, sitz), stand.botStufe));
   }
   return { partie: stand, zuege };
@@ -133,17 +130,19 @@ test('das Imposter-Wort steht in keiner fremden Sicht', () => {
 
     const binImposter: boolean = sitz === runde.imposter;
     assert.equal(sicht.daten.binImposter, binImposter, `Sitz ${sitz}`);
-    assert.equal(sicht.daten.meinWort, binImposter ? runde.falsch : runde.wort);
+    assert.equal(sicht.daten.meinWort, binImposter ? null : runde.wort, 'der Imposter hat kein Wort');
+    assert.equal(sicht.daten.hinweis, binImposter ? runde.hinweis : null, 'den Hinweis hat nur der Imposter');
+    assert.deepEqual([...sicht.daten.reihenfolge].sort(), [0, 1, 2, 3, 4, 5], 'die Reihenfolge nennt jeden einmal');
     /* Wer der Imposter ist, steht vor der Abrechnung nirgends in der Sicht. */
     assert.equal(sicht.daten.imposter, null);
     const roh = JSON.stringify(sicht);
-    assert.equal(roh.includes(binImposter ? runde.wort : runde.falsch), false, `Sitz ${sitz}: das fremde Wort reist mit`);
+    assert.equal(roh.includes(binImposter ? runde.wort : runde.hinweis), false, `Sitz ${sitz}: das fremde Geheimnis reist mit`);
   }
 
   /* Der Zuschauer bekommt gar kein Wort. */
   const zuschauer = sichtFuer(partie, -1);
   assert.equal(JSON.stringify(zuschauer).includes(runde.wort), false);
-  assert.equal(JSON.stringify(zuschauer).includes(runde.falsch), false);
+  assert.equal(JSON.stringify(zuschauer).includes(runde.hinweis), false);
 });
 
 test('bei "Wer bin ich" fehlt genau der eigene Name', () => {
@@ -248,6 +247,46 @@ test('der ungeschorene Imposter holt Punkte, die Runde trinkt', () => {
   }
 });
 
+test('"Noch eine Runde reden" braucht die Mehrheit, wirft die Stimmen weg und rueckt die Reihenfolge', () => {
+  const regeln = { ...DEFAULT_REGELN, minispiele: ['imposter'] as MinispielId[] };
+  let partie = neuePartie(4, 1, regeln);
+  for (let sitz = 0; sitz < 4; sitz++) partie = verarbeite(partie, sitz, { art: 'bereit' });
+  if (partie.runde.art !== 'imposter') return assert.fail('falsches Minispiel');
+  const reiheVorher = [...partie.runde.reihenfolge];
+
+  partie = verarbeite(partie, 0, { art: 'stimme', ziel: 1 });
+  partie = verarbeite(partie, 1, { art: 'nochmal' });
+  if (partie.runde.art !== 'imposter') return assert.fail('falsches Minispiel');
+  assert.equal(partie.runde.redeRunde, 1, 'einer von vier ist keine Mehrheit');
+  assert.equal(partie.runde.stimmen[0], 1, 'die Stimme bleibt stehen');
+
+  /* Zwei von vier sind nicht MEHR als die Haelfte — erst der dritte kippt es. */
+  partie = verarbeite(partie, 2, { art: 'nochmal' });
+  if (partie.runde.art !== 'imposter') return assert.fail('falsches Minispiel');
+  assert.equal(partie.runde.redeRunde, 1);
+  partie = verarbeite(partie, 3, { art: 'nochmal' });
+  if (partie.runde.art !== 'imposter') return assert.fail('falsches Minispiel');
+  assert.equal(partie.runde.redeRunde, 2, 'drei von vier: neue Rederunde');
+  assert.equal(partie.runde.phase, 'spiel', 'und noch nicht abgerechnet');
+  assert.deepEqual([...partie.runde.stimmen], [-1, -1, -1, -1], 'alle Stimmen fallen');
+  assert.deepEqual(partie.runde.fertig, [], 'jeder darf neu');
+  assert.deepEqual([...partie.runde.reihenfolge], [...reiheVorher.slice(1), reiheVorher[0]], 'die Reihenfolge rueckt');
+
+  /* Ohne Mehrheit zaehlt "nochmal" als Enthaltung, und die Runde wird abgerechnet. */
+  partie = verarbeite(partie, 0, { art: 'nochmal' });
+  for (const sitz of [1, 2, 3]) partie = verarbeite(partie, sitz, { art: 'stimme', ziel: (sitz + 1) % 4 || 1 });
+  assert.equal(partie.runde.phase, 'ergebnis');
+
+  /* Nach der dritten Rederunde ist Schluss. */
+  let dritte = neuePartie(4, 1, regeln);
+  for (let sitz = 0; sitz < 4; sitz++) dritte = verarbeite(dritte, sitz, { art: 'bereit' });
+  for (let runde = 0; runde < 2; runde++) for (const sitz of [0, 1, 2]) dritte = verarbeite(dritte, sitz, { art: 'nochmal' });
+  if (dritte.runde.art !== 'imposter') return assert.fail('falsches Minispiel');
+  assert.equal(dritte.runde.redeRunde, 3);
+  assert.throws(() => verarbeite(dritte, 0, { art: 'nochmal' }), /genug geredet/);
+  assert.equal(partykiste.legalActions(dritte, 0).some((a) => a.art === 'nochmal'), false);
+});
+
 test('der Haertegrad vervielfacht die Schluecke, nicht die Punkte', () => {
   const sanft = spieleDurch(neuePartie(6, 6, { ...DEFAULT_REGELN, schluckFaktor: 1 })).partie;
   const hart = spieleDurch(neuePartie(6, 6, { ...DEFAULT_REGELN, schluckFaktor: 3 })).partie;
@@ -297,11 +336,8 @@ test('ein Ausstieg bringt das Turnier nicht zum Stehen', () => {
       while (!partie.fertig && zuege < 3000) {
         if (zuege === wann) partie = ausstieg(partie, zuege % 5);
         const sitz = amZug(partie);
-        if (sitz === null) {
-          partie = schaupauseVorbei(partie);
-          zuege++;
-          continue;
-        }
+        assert.notEqual(sitz, null, `${spiel}: niemand am Zug, aber nicht fertig`);
+        if (sitz === null) break;
         partie = verarbeite(partie, sitz, partykiste.botAction(sichtFuer(partie, sitz)));
         zuege++;
       }
@@ -366,10 +402,8 @@ test('der Snapshot ueberlebt den Rundlauf', () => {
   let partie = neuePartie(6, 6);
   for (let i = 0; i < 20 && !partie.fertig; i++) {
     const sitz = amZug(partie);
-    if (sitz === null) {
-      partie = schaupauseVorbei(partie);
-      continue;
-    }
+    assert.notEqual(sitz, null, 'niemand am Zug, aber nicht fertig');
+    if (sitz === null) break;
     partie = verarbeite(partie, sitz, partykiste.botAction(sichtFuer(partie, sitz)));
     const wieder = partykiste.deserialize(partykiste.serialize(partie));
     assert.equal(JSON.stringify(partykiste.serialize(wieder)), JSON.stringify(partykiste.serialize(partie)));
@@ -381,12 +415,16 @@ test('legalActions nennt nur Aktionen, die act auch annimmt', () => {
   let zuege = 0;
   while (!partie.fertig && zuege++ < 2000) {
     const sitz = amZug(partie);
-    if (sitz === null) {
-      partie = schaupauseVorbei(partie);
+    assert.notEqual(sitz, null, 'niemand am Zug, aber nicht fertig');
+    if (sitz === null) break;
+    const erlaubt = partykiste.legalActions(partie, sitz);
+    if (erlaubt.length === 0) {
+      /* Falle 1 der Invarianten: Schaetzen kann seine Aktion nicht aufzaehlen
+         — der Bot muss trotzdem eine liefern, die `act` annimmt. */
+      assert.equal(partie.runde.art, 'schaetzen', `Sitz ${sitz} ist am Zug, darf aber nichts`);
+      partie = verarbeite(partie, sitz, partykiste.botAction(sichtFuer(partie, sitz)));
       continue;
     }
-    const erlaubt = partykiste.legalActions(partie, sitz);
-    assert.ok(erlaubt.length > 0, `Sitz ${sitz} ist am Zug, darf aber nichts`);
     for (const aktion of erlaubt) {
       assert.doesNotThrow(() => verarbeite(partie, sitz, aktion), `${JSON.stringify(aktion)}`);
     }
@@ -402,14 +440,12 @@ test('der Bot liefert immer eine Aktion, die in legalActions steht', () => {
     let zuege = 0;
     while (!partie.fertig && zuege++ < 2000) {
       const sitz = amZug(partie);
-      if (sitz === null) {
-        partie = schaupauseVorbei(partie);
-        continue;
-      }
+      assert.notEqual(sitz, null, 'niemand am Zug, aber nicht fertig');
+      if (sitz === null) break;
       const erlaubt = partykiste.legalActions(partie, sitz);
       const aktion = partykiste.botAction(sichtFuer(partie, sitz), 'genie');
       assert.ok(
-        erlaubt.some((e) => JSON.stringify(e) === JSON.stringify(aktion)),
+        erlaubt.length === 0 || erlaubt.some((e) => JSON.stringify(e) === JSON.stringify(aktion)),
         `${spiel}: Bot spielt ${JSON.stringify(aktion)}, erlaubt sind ${JSON.stringify(erlaubt)}`,
       );
       partie = verarbeite(partie, sitz, aktion);
@@ -438,13 +474,17 @@ test('ein starker Bot weiss im Quiz mehr als ein schwacher', () => {
   assert.ok(stark > schwach + 0.2, `Genie ${stark}, Anfaenger ${schwach} — die Stufe wirkt nicht`);
 });
 
-test('die Schaupause hat einen Weg heraus', () => {
+test('die Abrechnung wartet auf jeden Menschen und hat keine Uhr', () => {
   let partie = neuePartie(4, 2, { ...DEFAULT_REGELN, minispiele: ['niemals'] });
   for (let sitz = 0; sitz < 4; sitz++) partie = verarbeite(partie, sitz, { art: 'gestehen', ja: false });
   assert.equal(partie.runde.phase, 'ergebnis');
-  assert.notEqual(partykiste.interludeMs?.(partie), null);
-  const weiter = partykiste.advanceInterlude!(partie);
-  assert.equal(weiter.rundeNr, 1, 'die Pause geht nicht von selbst zu Ende');
+  assert.equal(partykiste.interludeMs, undefined, 'eine Schaupause ginge von selbst weiter — genau das soll nicht sein');
+  assert.equal(amZug(partie), 0, 'der erste Mensch, der noch nicht Weiter getippt hat, ist am Zug');
+  for (const sitz of [0, 1, 2]) partie = verarbeite(partie, sitz, { art: 'bereit' });
+  assert.equal(partie.rundeNr, 0, 'drei von vier reichen nicht');
+  assert.equal(amZug(partie), 3);
+  partie = verarbeite(partie, 3, { art: 'bereit' });
+  assert.equal(partie.rundeNr, 1, 'der letzte Tipp schaltet weiter');
 });
 
 test('tippen alle Anwesenden Weiter, endet die Pause sofort', () => {

@@ -51,6 +51,7 @@ export function Einheitenmarke({
   onZeigerEnde,
   onZeigerAbbruch,
   onWaehlen,
+  onNachsehen,
 }: {
   kaempfer: Kaempfer;
   katalog: Record<string, Einheit>;
@@ -86,19 +87,42 @@ export function Einheitenmarke({
    * ab (`tippfolge` in zuege.ts). Die Wabe zeichnet nur.
    */
   onWaehlen?: () => void;
+  /**
+   * Der zweite Weg zum Blatt: ansehen, ohne anzufassen.
+   *
+   * Er gilt nur, wenn die Einheit NICHT aktiv ist — wer schon „Bereit"
+   * gedrueckt hat, wer zusieht, und jeder am Brett des Gegners. Bis zum
+   * 19.9.2026 war eine solche Einheit gar nicht antippbar: `aktiv` schaltete
+   * alles ab, damit die beiden Knoepfe Verkaufen und Ablegen nicht tot im
+   * Blatt stuenden. Damit kam aber auch niemand mehr an ihre Werte, und
+   * ausgerechnet der Blick auf die Aufstellung des Gegners — der Grund, das
+   * fremde Brett ueberhaupt zu zeigen — sagte nichts ueber seine Recken.
+   *
+   * Der Aufrufer schlaegt darauf das Blatt ohne Knoepfe auf; das Blatt kann
+   * das von sich aus (Einheitenblatt.tsx, fehlen alle drei Rueckrufe). Ist die
+   * Einheit aktiv, greift dieser Weg NICHT — dort fuehrt schon `onWaehlen` zum
+   * Blatt, und zwei Wege zum selben Blatt liefen beim naechsten Umbau
+   * auseinander.
+   */
+  onNachsehen?: () => void;
 }): React.JSX.Element {
   const einheit = katalog[kaempfer.id];
   const farbe = kostenFarbe(einheit?.kosten);
   const greifbar = aktiv && onWaehlen !== undefined;
+  /* Nur ohne `aktiv`: Sonst haengen unten die Zeigerereignisse dran, und ein
+     Tipp liefe doppelt — einmal ueber `pointerup`, einmal ueber den Klick. */
+  const lesbar = !aktiv && onNachsehen !== undefined;
+  const antippbar = greifbar || lesbar;
   return (
     <div
       className="tr-einheit"
       data-frisch={frisch ? '' : undefined}
       data-still={versteckt ? '' : undefined}
       data-fassbar={aktiv ? '' : undefined}
+      data-lesbar={lesbar ? '' : undefined}
       style={{ '--tr-kosten': farbe } as React.CSSProperties}
-      role={greifbar ? 'button' : undefined}
-      tabIndex={greifbar ? 0 : undefined}
+      role={antippbar ? 'button' : undefined}
+      tabIndex={antippbar ? 0 : undefined}
       aria-label={
         einheit
           ? `${einheit.name}, ${ROLLE_NAME[einheit.rolle]}, Stufe ${kaempfer.stufe}`
@@ -120,15 +144,21 @@ export function Einheitenmarke({
           ? (e) => {
               if (e.detail === 0) onWaehlen?.();
             }
-          : undefined
+          : lesbar
+            ? /* Hier gilt JEDER Klick, auch der mit Finger oder Maus: Ohne
+                 `aktiv` gibt es keinen Zeigerweg, der ihn schon erledigt
+                 haette. */
+              () => onNachsehen?.()
+            : undefined
       }
       onKeyDown={
-        greifbar
+        antippbar
           ? (e) => {
               if (e.key !== 'Enter' && e.key !== ' ') return;
               // Sonst rollt die Leertaste den Bildschirm unter dem Brett weg.
               e.preventDefault();
-              onWaehlen?.();
+              if (greifbar) onWaehlen?.();
+              else onNachsehen?.();
             }
           : undefined
       }
@@ -207,6 +237,7 @@ export function Hexbrett({
   onZeigerEnde,
   onZeigerAbbruch,
   onLeeresZiel,
+  onNachsehen,
 }: {
   reihen: number;
   spalten: number;
@@ -221,6 +252,13 @@ export function Hexbrett({
   istZiel?: (ort: Ort) => boolean;
   /** Auswahl ueber Tastatur oder Vorlesegeraet, siehe Einheitenmarke. */
   onWaehlen?: (ort: Ort) => void;
+  /**
+   * Das Blatt einer Einheit aufschlagen, ohne sie zu fassen — der Lesepfad
+   * (siehe Einheitenmarke). Er haengt NICHT an `eigen` und nicht an `aktiv`,
+   * das ist sein Sinn: Er ist der eine Weg, der auch am Brett des Gegners
+   * und nach „Bereit" noch zu einer Einheit fuehrt.
+   */
+  onNachsehen?: (ort: Ort) => void;
   ziehtVon?: Ort | null;
   /** Schluessel des Feldes unter dem Finger — es zeigt an, wo abgelegt wird. */
   unterZeiger?: string | null;
@@ -292,6 +330,7 @@ export function Hexbrett({
                 onZeigerEnde={eigen && onZeigerEnde ? (e) => onZeigerEnde(ort, e) : undefined}
                 onZeigerAbbruch={eigen ? onZeigerAbbruch : undefined}
                 onWaehlen={eigen && onWaehlen ? () => onWaehlen(ort) : undefined}
+                onNachsehen={onNachsehen ? () => onNachsehen(ort) : undefined}
               />
             ) : (
               eigen && (
@@ -362,6 +401,7 @@ export function Bankreihe({
   onZeigerBewegung,
   onZeigerEnde,
   onZeigerAbbruch,
+  onNachsehen,
 }: {
   plaetze: number;
   bank: readonly (Kaempfer | null)[];
@@ -370,6 +410,8 @@ export function Bankreihe({
   gewaehlt?: Ort | null;
   istZiel?: (ort: Ort) => boolean;
   onWaehlen?: (ort: Ort) => void;
+  /** Der Lesepfad zum Blatt, wie beim Hexbrett — greift nur ohne `aktiv`. */
+  onNachsehen?: (ort: Ort) => void;
   ziehtVon?: Ort | null;
   unterZeiger?: string | null;
   fehlendeKopien?: (id: string, stufe?: number) => number;
@@ -423,6 +465,7 @@ export function Bankreihe({
                 onZeigerEnde={onZeigerEnde ? (e) => onZeigerEnde(ort, e) : undefined}
                 onZeigerAbbruch={onZeigerAbbruch}
                 onWaehlen={onWaehlen ? () => onWaehlen(ort) : undefined}
+                onNachsehen={onNachsehen ? () => onNachsehen(ort) : undefined}
               />
             ) : (
               /* Dieselbe echte Schaltflaeche wie das leere Brettfeld, und

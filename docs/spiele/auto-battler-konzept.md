@@ -1396,6 +1396,24 @@ durch, ohne Oberfläche, alles aus dem Seed. Drei Aufrufer benutzen ihn:
   (`--schraube polster=0`, mehrfach erlaubt); siehe den Nachtrag im gültigen
   Abschnitt.
 
+- **Das Werkzeug für die Aufstellung** `werkzeug/aufstellungsduell.mjs` (Kern
+  `test/aufstellungsduell.ts`, seit dem 19.09.2026) — es beantwortet die
+  Frage, die alle drei Werkzeuge oben bauartbedingt offen lassen: **spielt
+  eine geänderte Bot-Regel stärker?** Dort benutzt jeder Bot am Tisch
+  dieselbe Regel, der Unterschied hebt sich also heraus, ehe der erste Takt
+  läuft. Hier wird dasselbe Heer zweimal aufgestellt — nach Regel A und nach
+  Regel B — und die beiden Aufstellungen treten gegeneinander an, jede einmal
+  auf jeder Seite:
+
+  ```
+  node packages/game-tafelrunde/werkzeug/aufstellungsduell.mjs --heere 500 --saaten 3
+  ```
+
+  Gemessen am 19.09.2026: **71,7 %** für die Wunschreihe je Rolle
+  (06.09.2026) gegen die zwei Extreme davor, über 11.874 Kämpfe aus 2.000
+  Heeren. Herleitung, Tabelle je Heergröße und je Rolle in
+  `docs/TAFELRUNDE-LAUFWEGE.md`, Abschnitt 9.
+
 - **Die Probe** `test/ausgewogenheit.test.ts` — 400 Partien zu viert, rund
   anderthalb Sekunden, läuft bei jedem Testlauf mit. Sie hält nur fest, was
   wirklich kaputt wäre, und ist keine Abnahme des Katalogs.

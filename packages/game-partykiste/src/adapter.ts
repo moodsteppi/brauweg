@@ -3,7 +3,7 @@
  *
  * Einzige Stelle, an der Plattform und Spiel einander kennen. Zwei Dinge
  * weichen vom Kartenspiel-Normalfall ab, beide aus demselben Grund — in vier
- * der sechs Minispiele handeln ALLE gleichzeitig:
+ * der neun Minispiele handeln ALLE gleichzeitig:
  *
  *   1. `currentActor` nennt trotzdem immer einen Sitz, naemlich den naechsten,
  *      der noch nicht gehandelt hat. Ohne einen benannten Sitz griffen weder
@@ -33,24 +33,25 @@ import { snapshotCodec } from '@brauweg/game-api';
 
 import { botZug } from './bot.js';
 import {
+  OFFEN,
   ausstieg,
   amZug as amZugVon,
   erzeugePartie,
   platzierungen,
-  schaupauseVorbei,
   verarbeite,
   type PartykistePartie,
 } from './partie.js';
 import {
   BOT_TAKT_MS,
   DEFAULT_REGELN,
-  ERGEBNIS_MS,
+  MAX_REDERUNDEN,
   MINISPIELE,
   RUNDEN_MAX,
   RUNDEN_MIN,
   SCHLUCK_FAKTOR_MAX,
   SCHLUCK_FAKTOR_MIN,
   SITZE,
+  ZUGZEIT_MS,
   istMinispiel,
   type PartykisteAktion,
   type PartykisteRegeln,
@@ -75,6 +76,7 @@ const meta: GameMeta = {
    */
   xpBasisZaehltKarten: false,
   botTaktHoechstMs: BOT_TAKT_MS,
+  zugzeitMs: ZUGZEIT_MS,
 };
 
 function istRegelsatz(x: unknown): x is PartykisteRegeln {
@@ -193,7 +195,10 @@ export const partykiste: GameModule<
     switch (runde.art) {
       case 'imposter':
         if (runde.phase === 'sehen') return [{ art: 'bereit' }];
-        return andere.map((ziel) => ({ art: 'stimme', ziel }) as const);
+        return [
+          ...andere.map((ziel) => ({ art: 'stimme', ziel }) as const),
+          ...(runde.redeRunde < MAX_REDERUNDEN ? [{ art: 'nochmal' } as const] : []),
+        ];
       case 'quiz':
         return runde.antworten.map((_, wahl) => ({ art: 'antwort', wahl }) as const);
       case 'niemals':
@@ -213,16 +218,41 @@ export const partykiste: GameModule<
           { art: 'tipp', wahl: 0 },
           { art: 'tipp', wahl: 1 },
         ];
+      /*
+       * Leer, obwohl der Sitz handeln muss (Falle 1 der Invarianten): Eine
+       * Schaetzung ist irgendeine Zahl, die laesst sich nicht aufzaehlen. Der
+       * Client baut die Aktion aus dem Zahlenfeld, `act` prueft sie.
+       */
+      case 'schaetzen':
+        return [];
+      case 'entweder':
+        return [
+          { art: 'seite', wahl: 0 },
+          { art: 'seite', wahl: 1 },
+        ];
+      case 'wahrheitpflicht':
+        return runde.gewaehlt[sitz] === OFFEN
+          ? [
+              { art: 'wahl', pflicht: false },
+              { art: 'wahl', pflicht: true },
+            ]
+          : [
+              { art: 'erledigt', ja: true },
+              { art: 'erledigt', ja: false },
+            ];
     }
   },
 
   isFinished: (partie) => partie.fertig,
 
-  /** Die Ergebnisphase jeder Runde — Zeit zum Lesen und, je nach Modus, zum Trinken. */
-  interludeMs: (partie) =>
-    !partie.fertig && partie.runde.phase === 'ergebnis' ? ERGEBNIS_MS : null,
-
-  advanceInterlude: (partie) => schaupauseVorbei(partie),
+  /*
+   * KEINE Schaupause mehr (bis 19.09.2026 stand hier `interludeMs` mit zwoelf
+   * Sekunden). Die Abrechnung ist jetzt eine Phase wie jede andere: Der
+   * naechste Mensch, der noch nicht "Weiter" getippt hat, ist am Zug, und die
+   * Runde geht weiter, wenn der letzte durch ist. Wer weg ist, faellt nach
+   * der Zugzeit an den Bot, der fuer ihn tippt — mehr Sicherheitsnetz braucht
+   * es nicht.
+   */
 
   standings(partie): PartyStanding[] {
     const raus = new Set(partie.ausgestiegen);
