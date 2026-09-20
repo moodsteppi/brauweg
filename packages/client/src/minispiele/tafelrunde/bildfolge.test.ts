@@ -11,16 +11,16 @@ import {
 } from '../../figuren3d/figuren3d';
 import {
   type Bewegungsspur,
+  type Kampftakt,
   BLATT_PFADE,
   FIGURENKASTEN,
-  GLEITEN_MS,
-  KAMPF_TEMPO,
   RUECKFALLKASTEN,
-  SACKEN_MS,
   bildstand,
   blattPfad,
   blattVersatz,
+  gleitenMs,
   istRolle3D,
+  sackenMs,
   zellWeite,
 } from './bildfolge';
 import { rastermass } from './zuege';
@@ -32,12 +32,26 @@ import { rastermass } from './zuege';
  * hinschreiben, ohne einen ablaufen zu lassen.
  */
 
+/**
+ * Der Takt, den die Sicht am Tisch liefert: Zeitraffer x2, Schritt 300 ms.
+ *
+ * VON HAND GESETZT UND NICHT IMPORTIERT, weil der Client aus keinem Spielpaket
+ * importiert (CLAUDE.md) — geprueft wird hier die RECHNUNG und nicht der Wert.
+ * Dass das Modul wirklich diese beiden Zahlen ausliefert, haelt seine eigene
+ * Probe fest („Kampftakt in der Sicht" in
+ * packages/game-tafelrunde/test/sicht.test.ts), und der Vertrag haelt fest,
+ * dass sie ueberhaupt herauskommen (src/vertrag/tafelrunde.test.ts). Bis zum
+ * 18.09.2026 stand der Zeitraffer als `KAMPF_TEMPO` in bildfolge.ts selbst —
+ * genau das war der Fehler: eine Abschrift, die niemand rot faerbt.
+ */
+const TAKT: Kampftakt = { zeitraffer: 2, schrittMs: 300 };
+
 /** Eine Figur, der noch nichts widerfahren ist. */
 function spur(teil: Partial<Bewegungsspur> = {}): Bewegungsspur {
   return { id: 0, schlagAb: null, getroffenAb: null, zugAb: null, totAb: null, ...teil };
 }
 
-describe('SACKEN_MS', () => {
+describe('sackenMs', () => {
   /*
    * Das Stylesheet laesst eine Gefallene erst NACH dem Fall verblassen
    * (`--sacken` an `.figur`). Waere die Dauer dort als Zahl geschrieben,
@@ -46,7 +60,12 @@ describe('SACKEN_MS', () => {
    */
   it('faellt aus Bildzahl, Bildrate und Zeitraffer der Todesfolge', () => {
     const tod = folgeVon('tod');
-    expect(SACKEN_MS).toBe(Math.round((tod.bilder / (tod.bildrate * KAMPF_TEMPO)) * 1000));
+    expect(sackenMs(TAKT)).toBe(
+      Math.round((tod.bilder / (tod.bildrate * TAKT.zeitraffer)) * 1000),
+    );
+    // Und sie geht mit dem Raffer mit: Ein ungeraffter Kampf laesst die Figur
+    // doppelt so lange fallen, sonst verblasst sie mitten im Sturz.
+    expect(sackenMs({ ...TAKT, zeitraffer: 1 })).toBe(sackenMs(TAKT) * 2);
   });
 
   it('deckt die ganze Todesfolge ab, bis zum letzten Bild', () => {
@@ -60,8 +79,32 @@ describe('SACKEN_MS', () => {
      * Bild ist bei `(bilder - 1) / (bildrate * tempo)` erreicht.
      */
     const tod = folgeVon('tod');
-    const letztesBildAb = ((tod.bilder - 1) / (tod.bildrate * KAMPF_TEMPO)) * 1000;
-    expect(SACKEN_MS).toBeGreaterThan(letztesBildAb);
+    const letztesBildAb = ((tod.bilder - 1) / (tod.bildrate * TAKT.zeitraffer)) * 1000;
+    expect(sackenMs(TAKT)).toBeGreaterThan(letztesBildAb);
+  });
+});
+
+describe('gleitenMs', () => {
+  it('laesst die Figur ankommen, bevor der naechste Schritt faellig ist', () => {
+    /*
+     * Der Weg von Feld zu Feld ist ein CSS-Uebergang (`--gleiten`). Dauert er
+     * laenger als ein Schritt des Moduls, schieben sich zwei Schritte
+     * uebereinander — genau das war der Fall, als hier 380 ms standen, die an
+     * einem UNGERAFFTEN Schritt von 500 ms gemessen waren.
+     */
+    for (const schrittMs of [200, 300, 500]) {
+      const takt = { ...TAKT, schrittMs };
+      expect(gleitenMs(takt)).toBeGreaterThan(0);
+      expect(gleitenMs(takt)).toBeLessThan(schrittMs);
+    }
+  });
+
+  it('bleibt bei den 280 ms, die am Kampf der Probe abgenommen wurden', () => {
+    // Die Gegenprobe zur Umstellung vom 18.09.2026: Mit dem Takt, den das
+    // Modul heute liefert, muss dieselbe Zahl herauskommen wie vorher — sonst
+    // ist die Figur beim Herausloesen der Konstante schneller oder langsamer
+    // geworden, und niemand haette es gesehen.
+    expect(gleitenMs(TAKT)).toBe(280);
   });
 });
 
@@ -90,9 +133,9 @@ describe('bildstand — welche Bewegung', () => {
   it('steht in Schleife, wenn nichts geschieht', () => {
     const folge = folgeVon('stand');
     const dauer = (1000 / folge.bildrate) * folge.bilder;
-    expect(bildstand(spur(), 0)).toEqual({ bewegung: 'stand', bild: 0 });
+    expect(bildstand(spur(), 0, TAKT)).toEqual({ bewegung: 'stand', bild: 0 });
     // Nach einem vollen Durchlauf wieder von vorn — `schleife: true`.
-    expect(bildstand(spur(), dauer)).toEqual({ bewegung: 'stand', bild: 0 });
+    expect(bildstand(spur(), dauer, TAKT)).toEqual({ bewegung: 'stand', bild: 0 });
   });
 
   it('laesst die Figuren versetzt atmen', () => {
@@ -101,22 +144,22 @@ describe('bildstand — welche Bewegung', () => {
      * die Kennung und nicht der Zufall: Gewuerfelt waere er bei jedem
      * Zeichnen ein anderer.
      */
-    const bilder = [0, 1, 2, 3].map((id) => bildstand(spur({ id }), 0).bild);
+    const bilder = [0, 1, 2, 3].map((id) => bildstand(spur({ id }), 0, TAKT).bild);
     expect(new Set(bilder).size).toBe(4);
   });
 
   it('spielt die Schlagfolge vom Treffer an und kehrt danach in den Stand zurueck', () => {
     const folge = folgeVon('schlag');
-    const proBild = 1000 / (folge.bildrate * KAMPF_TEMPO);
+    const proBild = 1000 / (folge.bildrate * TAKT.zeitraffer);
     const s = spur({ schlagAb: 1000 });
-    expect(bildstand(s, 1000)).toEqual({ bewegung: 'schlag', bild: 0 });
-    expect(bildstand(s, 1000 + proBild * 3.5)).toEqual({ bewegung: 'schlag', bild: 3 });
-    expect(bildstand(s, 1000 + proBild * (folge.bilder - 0.5))).toEqual({
+    expect(bildstand(s, 1000, TAKT)).toEqual({ bewegung: 'schlag', bild: 0 });
+    expect(bildstand(s, 1000 + proBild * 3.5, TAKT)).toEqual({ bewegung: 'schlag', bild: 3 });
+    expect(bildstand(s, 1000 + proBild * (folge.bilder - 0.5), TAKT)).toEqual({
       bewegung: 'schlag',
       bild: folge.bilder - 1,
     });
     // Danach ist sie durch: kein Stehenbleiben auf dem letzten Bild.
-    expect(bildstand(s, 1000 + proBild * folge.bilder).bewegung).toBe('stand');
+    expect(bildstand(s, 1000 + proBild * folge.bilder, TAKT).bewegung).toBe('stand');
   });
 
   it('laesst die Schlagfolge auch beim schnellsten Angreifer durchlaufen', () => {
@@ -124,10 +167,11 @@ describe('bildstand — welche Bewegung', () => {
      * DIE ZAHL, AN DER DER ZEITRAFFER HAENGT. Im Kampf der Probe liegen die
      * zwei dichtesten Schlaege desselben Angreifers 500 ms auseinander. Bleibt
      * die Folge laenger als das, sieht man nie mehr als das Ausholen — genau
-     * deshalb steht KAMPF_TEMPO in bildfolge.ts.
+     * deshalb laufen die Folgen im Zeitraffer des Kampfes und nicht im Tempo
+     * des Modells.
      */
     const folge = folgeVon('schlag');
-    const dauerMs = (1000 / (folge.bildrate * KAMPF_TEMPO)) * folge.bilder;
+    const dauerMs = (1000 / (folge.bildrate * TAKT.zeitraffer)) * folge.bilder;
     expect(dauerMs).toBeLessThanOrEqual(500);
   });
 
@@ -140,10 +184,10 @@ describe('bildstand — welche Bewegung', () => {
      * ewig aus, ohne je zu treffen.
      */
     const s = spur({ schlagAb: 1000, getroffenAb: 1100 });
-    expect(bildstand(s, 1100).bewegung).toBe('getroffen');
-    const nachher = bildstand(s, 1300);
+    expect(bildstand(s, 1100, TAKT).bewegung).toBe('getroffen');
+    const nachher = bildstand(s, 1300, TAKT);
     expect(nachher.bewegung).toBe('schlag');
-    expect(nachher).toEqual(bildstand(spur({ schlagAb: 1000 }), 1300));
+    expect(nachher).toEqual(bildstand(spur({ schlagAb: 1000 }), 1300, TAKT));
   });
 
   it('laeuft, solange die Figur gleitet — auch mitten im Schlag', () => {
@@ -154,20 +198,20 @@ describe('bildstand — welche Bewegung', () => {
      * Wanderungen des ganzen Kampfes waeren nicht zu sehen.
      */
     const s = spur({ schlagAb: 1000, zugAb: 1100 });
-    expect(bildstand(s, 1100).bewegung).toBe('lauf');
-    expect(bildstand(s, 1100 + GLEITEN_MS - 1).bewegung).toBe('lauf');
+    expect(bildstand(s, 1100, TAKT).bewegung).toBe('lauf');
+    expect(bildstand(s, 1100 + gleitenMs(TAKT) - 1, TAKT).bewegung).toBe('lauf');
     // Angekommen: der Schlag darf seinen Rest zeigen, wenn er noch laeuft.
-    expect(bildstand(s, 1100 + GLEITEN_MS).bewegung).not.toBe('lauf');
+    expect(bildstand(s, 1100 + gleitenMs(TAKT), TAKT).bewegung).not.toBe('lauf');
   });
 
   it('bleibt beim Tod auf dem letzten Bild stehen', () => {
     const folge = folgeVon('tod');
     const s = spur({ schlagAb: 5000, getroffenAb: 5000, zugAb: 5000, totAb: 5000 });
-    expect(bildstand(s, 5000)).toEqual({ bewegung: 'tod', bild: 0 });
+    expect(bildstand(s, 5000, TAKT)).toEqual({ bewegung: 'tod', bild: 0 });
     // Der Tod schlaegt alles: Schlag, Zuckung und Lauf laufen noch, sind aber
     // keine Auskunft mehr ueber eine Gefallene.
-    expect(bildstand(s, 5100).bewegung).toBe('tod');
-    expect(bildstand(s, 60_000)).toEqual({ bewegung: 'tod', bild: folge.bilder - 1 });
+    expect(bildstand(s, 5100, TAKT).bewegung).toBe('tod');
+    expect(bildstand(s, 60_000, TAKT)).toEqual({ bewegung: 'tod', bild: folge.bilder - 1 });
   });
 });
 
@@ -178,14 +222,23 @@ describe('bildstand — weniger Bewegung', () => {
      * anderen ist das letzte Bild der weiteste Punkt der Bewegung — ein
      * Ausfallschritt als Dauerbild sieht aus, als haenge die Anzeige.
      */
-    expect(bildstand(spur({ schlagAb: 0 }), 100, true)).toEqual({ bewegung: 'schlag', bild: 0 });
-    expect(bildstand(spur({ getroffenAb: 0 }), 50, true)).toEqual({
+    expect(bildstand(spur({ schlagAb: 0 }), 100, TAKT, true)).toEqual({
+      bewegung: 'schlag',
+      bild: 0,
+    });
+    expect(bildstand(spur({ getroffenAb: 0 }), 50, TAKT, true)).toEqual({
       bewegung: 'getroffen',
       bild: 0,
     });
-    expect(bildstand(spur({ zugAb: 0 }), 100, true)).toEqual({ bewegung: 'lauf', bild: 0 });
-    expect(bildstand(spur({ id: 3 }), 700, true)).toEqual({ bewegung: 'stand', bild: 0 });
-    expect(bildstand(spur({ totAb: 0 }), 10, true)).toEqual({
+    expect(bildstand(spur({ zugAb: 0 }), 100, TAKT, true)).toEqual({
+      bewegung: 'lauf',
+      bild: 0,
+    });
+    expect(bildstand(spur({ id: 3 }), 700, TAKT, true)).toEqual({
+      bewegung: 'stand',
+      bild: 0,
+    });
+    expect(bildstand(spur({ totAb: 0 }), 10, TAKT, true)).toEqual({
       bewegung: 'tod',
       bild: folgeVon('tod').bilder - 1,
     });
@@ -194,7 +247,9 @@ describe('bildstand — weniger Bewegung', () => {
   it('waehlt dieselbe Bewegung wie mit Bewegung — nur ohne Wechsel', () => {
     const s = spur({ schlagAb: 1000, getroffenAb: 1100, zugAb: 1100, totAb: null });
     for (const zeitMs of [1000, 1050, 1150, 1300, 1600]) {
-      expect(bildstand(s, zeitMs, true).bewegung).toBe(bildstand(s, zeitMs).bewegung);
+      expect(bildstand(s, zeitMs, TAKT, true).bewegung).toBe(
+        bildstand(s, zeitMs, TAKT).bewegung,
+      );
     }
   });
 });

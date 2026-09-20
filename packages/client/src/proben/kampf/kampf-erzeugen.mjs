@@ -50,6 +50,7 @@ import {
   fuehreAus,
   lebendeSitze,
   loeseKampfAuf,
+  schrittdauer,
   sichtFuer,
   zaehleMarken,
 } from '../../../../game-tafelrunde/dist/src/index.js';
@@ -176,6 +177,13 @@ const szene = {
   runde: partie.runde,
   rundenGrenze: DEFAULT_REGELN.rundenGrenze,
   zeitraffer: ZEITRAFFER,
+  /*
+   * Die Schrittdauer dieses Reglers — am Tisch steht sie in der Sicht
+   * (`schrittMs`), und die Anzeige laesst die Figur genau so lange gleiten.
+   * Abgeleitet und nicht geschrieben: Das Modul rundet auf ganze Takte auf,
+   * `SCHRITT_MS / ZEITRAFFER` waere 250 statt 300.
+   */
+  schrittMs: schrittdauer(REGLER),
   ich: PAARUNG.a,
   brettReihen: BRETT_REIHEN,
   arenaReihen: ARENA_REIHEN,

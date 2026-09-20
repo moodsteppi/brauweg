@@ -116,6 +116,7 @@ interface Szene {
   readonly runde: number;
   readonly rundenGrenze: number;
   readonly zeitraffer: number;
+  readonly schrittMs: number;
   readonly ich: number;
   readonly brettReihen: number;
   readonly arenaReihen: number;
@@ -392,6 +393,15 @@ export function ProbeKampf(): React.JSX.Element {
             brettReihen={SZENE.brettReihen}
             arenaReihen={SZENE.arenaReihen}
             brettSpalten={SZENE.brettSpalten}
+            /*
+             * Der Takt des aufgezeichneten Kampfes. Am Tisch kommen beide Zahlen
+             * aus der Sicht (sicht.ts im Modul); hier stehen sie in der Szene,
+             * weil `kampf-erzeugen.mjs` sie beim Rechnen mitgeschrieben hat. So
+             * laufen die Figuren zu DIESEM Bericht und nicht zu dem Tempo, das
+             * gerade gebaut ist — die Szene ist eine Aufzeichnung.
+             */
+            zeitraffer={SZENE.zeitraffer}
+            schrittMs={SZENE.schrittMs}
             katalog={katalogMit(blaetterAus, figurenAus)}
             nameVon={nameVon}
             /*

@@ -86,6 +86,8 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
     brettReihen: 4,
     arenaReihen: 10,
     brettSpalten: 5,
+    zeitraffer: 2,
+    schrittMs: 300,
     verschmelzZahl: 3,
     maxStufe: 3,
     vorrat: { dorfwache: 28 },

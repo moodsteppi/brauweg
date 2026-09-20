@@ -59,13 +59,14 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import {
   type Bildstand,
+  type Kampftakt,
   FIGURENKASTEN,
-  GLEITEN_MS,
   RUECKFALLKASTEN,
-  SACKEN_MS,
   bildstand,
   blattPfad,
   blattVersatz,
+  gleitenMs,
+  sackenMs,
   zellWeite,
 } from './bildfolge';
 import { Figur3D } from './Figur3D';
@@ -601,6 +602,8 @@ export function KampfAnzeige<E extends Einheitenbild>({
   brettReihen,
   arenaReihen,
   brettSpalten,
+  zeitraffer,
+  schrittMs,
   katalog,
   nameVon,
   ersatzzeichen,
@@ -641,6 +644,23 @@ export function KampfAnzeige<E extends Einheitenbild>({
    */
   arenaReihen: number;
   brettSpalten: number;
+  /**
+   * Der Zeitraffer der Simulation, ebenfalls aus der Sicht (kampf.ts).
+   *
+   * Bis zum 18.09.2026 stand er als `KAMPF_TEMPO = 2` in bildfolge.ts und war
+   * eine Abschrift von `STANDARD_REGLER.zeitraffer`. Wer ihn im Modul dreht,
+   * bekommt dort weder einen Uebersetzungsfehler noch einen roten Test — nur
+   * Figuren, die zu langsam oder zu hektisch ausholen, waehrend die Treffer
+   * weiter im richtigen Takt fallen.
+   */
+  zeitraffer: number;
+  /**
+   * Wie lange ein Schritt von Feld zu Feld dauert (`schrittdauer` in
+   * kampf.ts), aus der Sicht — daraus wird `--gleiten`.
+   *
+   * Nicht aus dem Zeitraffer gerechnet: Das Modul rundet auf ganze Takte auf.
+   */
+  schrittMs: number;
   katalog: Record<string, E>;
   nameVon: (sitz: number) => string;
   /**
@@ -659,6 +679,10 @@ export function KampfAnzeige<E extends Einheitenbild>({
   const kampf = abzuspielen(kaempfe, zeigt);
   const bericht = kampf?.bericht ?? null;
   const andere = nebenkaempfe(paarungen, kampf);
+  /* Die beiden Zahlen des Moduls in einem Stueck — die Bildfolgen brauchen
+     beide zusammen (bildfolge.ts). Kein `useMemo`: Sie werden gelesen und nicht
+     verglichen. */
+  const takt: Kampftakt = { zeitraffer, schrittMs };
 
   /**
    * Weniger Bewegung: einmal beim Aufbau abgefragt und dann festgehalten.
@@ -772,7 +796,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
          steht hinter dem Zeichnen, damit er den frisch gesetzten Stand
          benutzt und nicht den vom letzten Bild. */
       for (const f of stand.figuren) {
-        const bild = bildstand(f, zeitMs, ruhig);
+        const bild = bildstand(f, zeitMs, takt, ruhig);
         zuletzt.current.set(f.id, bild);
         const el = blaetter.current.get(f.id);
         if (el) bildSchieben(el, bild);
@@ -786,7 +810,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
        */
       if (neu.ende && fertige === a.length) {
         if (stillAb === null) stillAb = zeitMs;
-        if (zeitMs - stillAb >= NACHSPIEL_MS) return;
+        if (zeitMs - stillAb >= nachspielMs(takt)) return;
       }
       uhr.naechstes(tick);
     };
@@ -797,6 +821,9 @@ export function KampfAnzeige<E extends Einheitenbild>({
     };
     // `frist` ist mit Absicht kein Ausloeser: Sie gilt fuer die ganze Phase,
     // und ein Neustart der Uhr mitten im Kampf waere genau der Fehler von oben.
+    // Fuer `takt` gilt dasselbe aus einem staerkeren Grund: Er gehoert dem
+    // TISCH und steht vom Aufmachen bis zum Ende fest (`regler` in partie.ts),
+    // aendert sich also waehrend eines Kampfes ohnehin nicht.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schluessel]);
 
@@ -921,13 +948,13 @@ export function KampfAnzeige<E extends Einheitenbild>({
                      weil die Lauffolge genau so lange laufen muss wie er —
                      zwei Zahlen liefen beim ersten Nachstellen auseinander,
                      und die Figur ruderte dann noch, wenn sie schon steht. */
-                  '--gleiten': `${GLEITEN_MS}ms`,
+                  '--gleiten': `${gleitenMs(takt)}ms`,
                   /* Wie lange der Fall dauert. Auch diese Zahl steht in
                      bildfolge.ts und nicht hier: Sie faellt aus Bildzahl und
                      Bildrate der Todesfolge, und das Verblassen soll erst
                      danach anfangen — sonst ist die Figur halb durchsichtig,
                      waehrend sie noch faellt. */
-                  '--sacken': `${SACKEN_MS}ms`,
+                  '--sacken': `${sackenMs(takt)}ms`,
                   /* Der Ausschnitt, durch den man die Figur sieht. Beide Masse
                      kommen aus bildfolge.ts, weil sie am gemessenen Ausschnitt
                      der Blaetter haengen und nicht am Geschmack — steht die
@@ -1010,7 +1037,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
                          */
                         bildSchieben(
                           el,
-                          zuletzt.current.get(f.id) ?? bildstand(f, anzeige.zeitMs, ruhig),
+                          zuletzt.current.get(f.id) ?? bildstand(f, anzeige.zeitMs, takt, ruhig),
                         );
                       }}
                       /* Zwei Rueckfaelle, in dieser Reihenfolge: Faellt das Blatt
@@ -1228,7 +1255,7 @@ const VERBLASSEN_MS = 420;
  * Wie lange der Takt nach dem Ende noch laeuft — nur fuer die Bildfolgen.
  *
  * Der Kampf ist vorbei, aber die letzte Todesfolge nicht: Sie faellt fast immer
- * kurz vor das Ende. `SACKEN_MS` ist die Dauer des Falls (aus figuren3d.ts
+ * kurz vor das Ende. `sackenMs` ist die Dauer des Falls (aus figuren3d.ts
  * gerechnet, seit dem 06.09.2026 fuer den ganzen Weg bis zum Liegen — vorher
  * war es nur das halbe Einsacken), `VERBLASSEN_MS` das Ausblenden danach.
  * Grosszuegig aufgerundet, weil ein Takt zu viel nichts kostet (es aendert
@@ -1237,9 +1264,13 @@ const VERBLASSEN_MS = 420;
  *
  * GERECHNET UND NICHT GESETZT: Hier standen fest 600 ms, und die waren an
  * sechs Bildern halber Todesfolge gemessen. Mit dem vollen Fall reichen sie
- * nicht mehr, und niemand haette es an einer Zahl gesehen.
+ * nicht mehr, und niemand haette es an einer Zahl gesehen. Seit dem
+ * 18.09.2026 haengt der Fall ausserdem am Zeitraffer des Tisches, und der
+ * kommt aus der Sicht — deshalb eine Funktion und keine Konstante mehr.
  */
-const NACHSPIEL_MS = SACKEN_MS + VERBLASSEN_MS + 100;
+function nachspielMs(takt: Kampftakt): number {
+  return sackenMs(takt) + VERBLASSEN_MS + 100;
+}
 
 interface Uhr {
   naechstes(tick: () => void): void;
