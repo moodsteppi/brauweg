@@ -11,7 +11,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 
-import { wizard } from '@brauweg/game-wizard';
+import { type PlayerView, type WizardView, wizard } from '@brauweg/game-wizard';
 
 import { AppError } from '../src/errors.js';
 import { registry } from '../src/games/registry.js';
@@ -175,6 +175,33 @@ test('Durchstich: zwei Clients beenden eine Sechser-Zauberpartie', async (t) => 
   assert.equal(summaries.length, 4);
 });
 
+/**
+ * Die erste eingetroffene Sicht auf die FRISCH AUSGETEILTE erste Runde — nicht
+ * die zuletzt eingetroffene.
+ *
+ * Kennzeichen ist Runde 1 vor der ersten gelegten Karte: In `trump` und
+ * `bidding` wird nur der Trumpf bestimmt und angesagt, gelegt wird erst in
+ * `playing` (siehe Phase in round.ts). Bis dahin haelt jeder sein volles
+ * Blatt — in Runde 1 genau eine Karte, und die Runde ist nach diesem einen
+ * Stich vorbei.
+ *
+ * Das Stillstellen des Tisches (botDelayMs, passiver Client) bleibt bestehen,
+ * die Messung haengt aber nicht mehr daran: Es ist eine ANNAHME, und traegt
+ * sie unter Last einmal nicht, ist `round` bei der Dreirundenpartie in der
+ * Rundenpause null. Derselbe Wackler wie beim Cambio-Sichttest am 05.09.2026.
+ */
+function austeilsicht(client: TestClient): PlayerView | null {
+  for (const nachricht of client.verlauf) {
+    if (nachricht.type !== 'view') continue;
+    const runde = (nachricht.view as WizardView).round;
+    if (!runde) continue;
+    if (runde.roundNumber !== 1) continue;
+    if (runde.phase !== 'trump' && runde.phase !== 'bidding') continue;
+    return runde;
+  }
+  return null;
+}
+
 test('Die Zuschauersicht eines Zaubertisches zeigt keine Hand', async (t) => {
   // Gleiche Vorsichtsmassnahme wie beim Cambio-Sichttest: Bots stillstellen
   // und der Client zieht nicht. Sonst spielt der Tisch waehrend des Messens
@@ -195,9 +222,8 @@ test('Die Zuschauersicht eines Zaubertisches zeigt keine Hand', async (t) => {
   const spieler = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId), 'Anna');
   spieler.passive = true;
   spieler.join(table.id, 1, 'wizard');
-  await spieler.waitFor(() => spieler.lastView !== null, 'Sicht des Spielers');
+  await spieler.waitFor(() => austeilsicht(spieler) !== null, 'Sicht auf die ausgeteilte Runde');
 
-  const runde = (spieler.lastView!.view as { round: { hand: unknown[] } | null }).round;
-  assert.ok(runde);
-  assert.ok(runde!.hand.length > 0, 'Der Spieler sieht seine eigene Hand');
+  const runde = austeilsicht(spieler)!;
+  assert.ok(runde.hand.length > 0, 'Der Spieler sieht seine eigene Hand');
 });
