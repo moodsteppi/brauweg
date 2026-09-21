@@ -350,8 +350,12 @@ export const KATALOG: readonly Einheit[] = [
    * BELEGT, BEVOR HIER ETWAS GEAENDERT WURDE. Drei Verdaechtige, einzeln
    * gemessen (Werkzeuge in werkzeug/, Wegwerf-Laeufe):
    *   - Bonus zu klein? Mit Elementar-Bonus NULL blieb die Siegquote bei
-   *     6,1 %. Der Bonus bewegt nur, wie oft der Bot die Marke waehlt, nicht
-   *     ob sie traegt.
+   *     6,1 %. Der Bonus bewegte damals nur, wie oft der Bot die Marke
+   *     waehlte, nicht ob sie trug. DAS GALT FUER DEN STAND VOR DIESER
+   *     ZEILE — mit dem Irrlicht in der Vorderreihe traegt er sehr wohl:
+   *     auf null gesetzt faellt Elementar heute von x0,80 auf x0,49
+   *     (21.09.2026, zwoelfte Messung, siehe synergien.ts). Der Satz ist
+   *     Geschichte und keine Regel.
    *   - Traeger zu schwach? Hebt man alle vier auf die Mitte ihrer Stufe,
    *     kommt Elementar auf x0,54 bis x0,60 — besser, aber weiter draussen.
    *   - Zusammensetzung? Gibt man der Marke EINEN zaehen Traeger fuer die
