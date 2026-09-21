@@ -16,12 +16,16 @@ funktionieren.
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
 Minuten live.
 
-**Prüfstand (gezählt am 7. September 2026 aus einem vollen Lauf, nicht aus
-der Erinnerung):**
-172 Doppelkopf-Tests, 124 Zauberer-Tests, 82 Cambio-Tests, 44 Skat-Tests,
-15 Feldherr-Tests, 71 Mememory-Tests, 65 Easy-Poker-Tests, 69 Filler-Tests,
-56 Eiland-Tests, 310 Tafelrunde-Tests, 20 Golf-Tests, **450 Servertests** —
-zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
+**Prüfstand: steht in der Zusammenfassung jedes CI-Laufs** (Job „Bauen und
+prüfen"), aufgeschlüsselt nach Paketen und gemessen an genau dem Commit, zu
+dem sie gehört. Bis zum 19.09.2026 stand die Zählung hier und wurde von jeder
+Aufgabe fortgeschrieben — an dem Tag kollidierten sechs Pull Requests in
+genau diesen Zeilen, keiner im Code (die Begründung steht in `CLAUDE.md` unter
+„Bauen und prüfen"). Örtlich: `npm test | node werkzeug/pruefstand.mjs`.
+`packages/server/test/stats.test.ts` („eine gewertete Partie bucht Trophäen")
+war in einem von zwei Läufen rot (`0 !== 4`) und allein wiederholt sofort
+grün — ein Wackler, der nichts mit der Kompression zu tun hat, aber beim
+nächsten roten Lauf nicht zum zweiten Mal gesucht werden soll.
 `tsc --noEmit` sauber.
 `npm test` und `npm run build` im Wurzelverzeichnis decken beides ab.
 
@@ -90,6 +94,29 @@ zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 > an einen anderen Tisch, und seine Freunde warten vor einem Tisch, den
 > niemand mehr startet.
 >
+> **Während der Tisch entsteht, „sucht" man noch** (seit dem 07.09.2026).
+> `faellig()` nimmt eine reife Runde sofort aus dem Fenster, der Tisch wird
+> danach in einem Dutzend Datenbankschritten gebaut — in der Produktion gut
+> eine Sekunde, länger als der Abruftakt des Clients. Wer in dieser Lücke
+> nachfragte, hörte „sucht nicht, kein Tisch", der Client meldete „Die Suche
+> wurde beendet" und fragte nie wieder, saß aber längst am neuen Tisch: Der
+> Gegner spielte gegen einen leeren Sitz, die Partie lief aus, und wer noch
+> einmal suchte, bekam einen Bot. Deshalb führt die Schlange die Konten einer
+> herausgenommenen Runde in `imBau`, bis `vermittelt`/`bauBeendet` sie
+> abräumen; `stand()` antwortet für sie `sucht: true, restMs: 0`. Die Probe
+> dazu wartet den Bau bewusst ab, bevor sie urteilt — bricht eine Probe
+> mitten im Tischbau ab, hängt PGlite beim Schließen.
+>
+> **`imBau` ist nach Spiel UND Konto geschlüsselt** (`kontoSchluessel`, seit
+> dem 09.09.2026), nicht nur nach Konto. Ein Konto kann mit zwei Reitern oder
+> zwei Geräten in zwei Spielen zugleich suchen — die Fenster sind je Spiel
+> getrennt, `betritt` räumt nur im eigenen Spiel auf. Reifte danach Spiel B,
+> überschrieb es den Bau-Eintrag von Spiel A (eine neue Suche in B löschte
+> ihn ebenso), und `bauBeendet` der einen Runde nahm den Eintrag der anderen
+> mit: Im Reiter von Spiel A hieß es wieder „sucht nicht". `vermittelt` und
+> `bauBeendet` bekommen deshalb das Spiel mit. `ergebnisse` hängt weiter am
+> Konto allein (Bestand). Probe ohne Datenbank: `test/schlange.test.ts`.
+>
 > Seit demselben Tag wertet Tafelrunde die **Bot-Stufe des Tisches** aus:
 > `gangartVon` in `adapter.ts` bildet die vier Plattformstufen auf die drei
 > Gangarten von `bot.ts` ab (`experte` und `genie` fallen beide auf `hart` —
@@ -138,6 +165,53 @@ zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 > Zahlen und die beiden gemessenen, aber **nicht** gemachten Eingriffe stehen
 > in der neunten Messung in `docs/spiele/auto-battler-konzept.md`.
 >
+> **Naturwesen ist seit dem 18.09.2026 keine Wackelzeile mehr.** Die Marke war
+> mit der Beistand-Wirkung auf ×0,52 gefallen — die unterste Zeile des
+> Katalogs, zwei Hundertstel über der Schranke ×0,5 der Probe. Ursache waren
+> nicht die Boni, sondern die Trägerliste: Zwei ihrer vier Träger waren die
+> beiden **letzten** Zeilen des Katalogs (Astschütze ×0,23, Moosheiler ×0,24,
+> beide 1 Gold), die Marke maß also die Armut ihrer Bretter. Die
+> **Bogenmeisterin** trägt jetzt neben Krieger auch Naturwesen — eine Zeile im
+> Katalog, kein Wert geändert —, und die Marke steht bei **×0,80** (zweite
+> Saatbasis ×0,81), die Spanne bei ×1,54 bis ×0,64. Der andere Weg, ein
+> stärkerer Bonus, ist gemessen und verworfen: Er kauft der Marke Bretter statt
+> Siege und kostet Kampfdauer (Zahlen, drei weitere Kandidaten und die Probe
+> auf beiden Saatbasen in der **zehnten Messung** des Konzepts). Neue unterste
+> Zeile ist **Meuchler** mit ×0,64 — mit deutlich mehr Luft, als Naturwesen
+> hatte.
+>
+> **Die Tauschprobe (21.09.2026):**
+> `packages/game-tafelrunde/werkzeug/tauschprobe.mjs` (Kern
+> `test/tauschprobe.ts`). Sie beantwortet als einziges der Werkzeuge „ist diese
+> Einheit zu stark". Die Spalte „Siegquote je Einheit auf dem letzten Brett"
+> tut es nachweislich nicht: Schwächt man die Lichtwahrerin, **steigt** ihre
+> Quote, weil der Bot sie seltener kauft und die verbleibenden Bretter die
+> reichen sind. Die Probe nimmt deshalb **echte Schlussbretter** und besetzt
+> einen Platz reihum mit jeder Einheit derselben Kostenstufe — gleiche Bretter,
+> gleiche Gegner, gleiche Saaten, gleiche Zahl Kämpfe. Damit steht die
+> Lichtwahrerin bei **×1,12** statt ×2,11, und **am Katalog ist nichts zu tun**;
+> die untersten Zeilen sind stattdessen Knochenspäher (×0,68) und Gassendieb
+> (×0,74). Die Normierung gegen Bretter gleicher Kostensumme
+> (`einheitenNormiert` in `test/messen.ts`) ist derselben Frage nachgegangen und
+> **löst sie nicht** (Lichtwahrerin dort ×2,20); sie bleibt als Hinweis und für
+> die Marken. Zahlen, Herleitung und die Gegenprobe auf einer zweiten Saatbasis
+> stehen in der **elften Messung** in `docs/spiele/auto-battler-konzept.md`.
+>
+> **Das Aufstellungsduell (19.09.2026):**
+> `packages/game-tafelrunde/werkzeug/aufstellungsduell.mjs` (Kern
+> `test/aufstellungsduell.ts`). Es beantwortet die Frage „spielt der neue Bot
+> stärker?", die `ausgewogenheit.mjs`, `laufwege.mjs` und `gangarten.mjs`
+> bauartbedingt offen lassen — dort benutzt **jeder** Bot am Tisch dieselbe
+> Regel, der Unterschied hebt sich heraus, ehe der erste Takt läuft. Hier wird
+> dasselbe Heer zweimal aufgestellt (Regel A gegen Regel B), beide Seiten
+> tauschen; gebaut nach dem Muster der Beistandsprobe. Gemessen: **71,7 %**
+> für die Wunschreihe je Rolle gegen die zwei Extreme davor, über 11.874
+> Kämpfe aus 2.000 Heeren — Herleitung in `docs/TAFELRUNDE-LAUFWEGE.md`,
+> Abschnitt 9. Beide Regeln laufen durch **`stelleHeerAuf` aus `bot.ts`**
+> (neu exportiert, samt `Platzstrafe` und `BOT_PLATZSTRAFE`): nachgebildet ist
+> nur die abgelöste Regel, nicht die Aufstellungs-Maschine — sonst misst man
+> den Unterschied zweier Maschinen statt den der Regeln.
+>
 > **Die Synergien** (Phase 3 des Konzepts) kamen am 04.09.2026 dazu:
 > `synergien.ts`. Je Marke zählt das eigene **Brett** (nicht die Bank), mit
 > Schwellen bei 2 / 4 / 6; Kopien zählen, eine Einheit mit zwei Marken
@@ -172,6 +246,31 @@ zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 > und keine Gesamtzeit: Gemessen gegen Chromes „Slow 3G" braucht der Satz
 > über HTTP/1.1 **9,3 s**, eine Gesamtfrist von 10 s hätte dort auf einer
 > völlig gesunden Leitung zugeschlagen.
+>
+> **Das Spielpaket zählt im selben Balken mit** (seit dem 06.09.2026,
+> `paket.ts` und `Ladevorhang.tsx`). Der Grund ist die Beschwerde, mit der
+> das Ganze anfing: Robin sah den Ladebildschirm gar nicht. App.tsx
+> importierte alle vierzehn Schirme statisch, das Hauptpaket wog **1.952 kB**
+> (gzip 574 kB), und nichts davon konnte gezeichnet werden, bevor es
+> vollständig da war — zum Zeitpunkt des Wartens gab es den Vorhang noch
+> nicht. Jetzt hängt jeder Schirm an `React.lazy` (`App.pakete.test.ts` wacht
+> darüber), und der Rückfall von `<Suspense>` ist derselbe Ladebildschirm,
+> den der Schirm danach weiterbenutzt — deshalb liegt er als `Ladevorhang`
+> bewusst im Hauptpaket.
+>
+> **Nachgemessen am 18.09.2026** (`npm run build`, Größen wie Vite sie
+> meldet): Hauptpaket **452,7 kB** (gzip 126,2) plus **react 192,4 kB**
+> (gzip 60,3) — React steht getrennt, weil es einen Deploy überlebt, der
+> Plattformteil nicht. Wer Tafelrunde antippt, holt dafür **32,4 kB**
+> (gzip 10,1); mit allem, was nur an ihm hängt (Phasenzeile, Zeichen, Bühne,
+> `useTable`, deren CSS), sind es **105 kB** (gzip 34,3) und danach die
+> 47 kB Bilder. Gegen Chromes „Slow 3G" steht das erste Bild nach **5,3 s**,
+> mit Pinguin und Schriftzug nach **7,0 s**; über die Leitung gingen bis
+> dahin 242 kB. Die Vorher-Zeit ist NICHT gemessen — aus den damaligen
+> Größen gerechnet wären es 628 kB gewesen, also gut das Zweieinhalbfache.
+> Die 500-kB-Warnung von Vite bleibt: Sie gilt `react-three-fiber`
+> (896 kB), und das lädt nur, wer eine 3D-Figur oder eine Truhe zu sehen
+> bekommt.
 >
 > **Der Bildschirmaufbau folgt seit dem 05.09.2026 einem fertigen
 > Auto-Battler** (Vorlagen von Robin; nachgebaut wurde die ANORDNUNG, keine
@@ -314,9 +413,27 @@ zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 >
 > - **Das Raster greift nur an einem Tisch mit `.tr-mitte`**
 >   (`.tr-tisch:has(> .tr-mitte)`). `.tr-tisch` trägt nämlich nicht nur der
->   Tisch: `/probe/kampf` benutzt dieselbe Klasse als Rahmen und hängt eigene
+>   Tisch: `/probe/kampf` benutzt dieselbe Klasse als Rahmen und hängte eigene
 >   Kinder hinein. Ein blankes `.tr-tisch { display: grid }` hat die auf zwei
 >   Spalten verteilt — die Bühne stand oben rechts und war 97 Pixel hoch.
+>   **Nachgezogen am 19.09.2026:** Die Bedingung war richtig, die Probe war
+>   es nicht. Sie stand damit außerhalb des Rasters und maß eine Arena, die
+>   es am Tisch nicht gibt (262 statt 348 Pixel auf 1366 × 768) — und die
+>   Prüfung „Laden steht neben der Mitte" lief dort ins Leere, weil die Seite
+>   weder `.tr-mitte` noch `.tr-fuss` hatte: ohne die beiden Kästen meldet
+>   sie nichts statt einen Fehler. Jetzt hat `/probe/kampf` dieselben vier
+>   Bänder wie der Tisch — `.tr-oben` (Titel, Uhr und die **echte**
+>   Phasenzeile), `.tr-statuszeile` (die Angaben zur Aufzeichnung),
+>   `.tr-mitte` (Bühne und Kampfanzeige), `.tr-fuss` (die Bedienung, der
+>   Erklärtext zugeklappt) —, und die Arena misst gemessene 345 × 596 auf
+>   1366 × 768; 318 × 552 bei 1280 × 720, 391 × 671 bei 1512 × 850,
+>   333 × 576 bei 390 × 844, 276 × 483 bei 360 × 740. Die drei Pixel Rest
+>   sind die **Mitspielerkacheln**, die der Probe weiter fehlen: Sie brauchen
+>   Leben und Rang je Sitz, und die stehen nicht in `kampf-szene.json`.
+>   Nachtragen ließe sich das nur, indem `kampf-erzeugen.mjs` noch einmal
+>   läuft — und das bricht derzeit mit „Kampf 3:2 gibt es in Runde 10 nicht
+>   (3:1)" ab, die Saat findet ihre eigene Paarung nicht mehr. Erfunden wird
+>   nichts.
 > - **`--tr-feld` kennt jetzt auch `100cqw`.** Solange der Tisch eine Spalte
 >   war, war die Breitengrenze in `vw` dasselbe wie die Breite des Kastens;
 >   mit dem Laden daneben ist sie es nicht mehr. Dieselbe Zeile aus demselben
@@ -333,6 +450,31 @@ zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 > die Höhe der Kopfleiste (`Synergien.module.css`). Diese Zahl ist weg: Die
 > Statuszeile mit ihr darin **ist** die linke Spalte, und das Modul dreht nur
 > noch die Liste hochkant.
+>
+> **Das Blatt einer Marke geht seit dem 18.09.2026 auch im Laden auf.** Es
+> hing bis dahin nur an den Zählern der Leiste und an der Markenzeile des
+> Gegners; die kleinen Zeichen an einer Einheit und auf der Ladenkarte trugen
+> weiter ein `title`, das am Handy nie erscheint. Der Weg führt jetzt über ein
+> **Blatt** und nicht über die 11-px-Zeichen: An der Einheit bleiben sie stumm
+> (`pointer-events: none`, sonst fängt der Griff darin den Finger von der Wabe
+> ab), dafür sind die Marken im Einheitenblatt tippbar. Die Ladenkarte ist
+> selbst eine Schaltfläche — sie bekommt daneben einen Griff in der linken
+> oberen Ecke (plus langen Druck auf die Karte), der dasselbe Einheitenblatt
+> für das **Angebot** aufschlägt, mit Werten, Marken und Kaufen-Knopf. Das
+> Markenblatt hängt dafür an einem gemeinsamen Haken (`useMarkenblatt`); wessen
+> Stände es zeigt, entscheidet der Aufrufer, damit die Zeile des Gegners weiter
+> seine zeigt. Neu daneben: `standFuer` — eine Marke ohne Träger fehlt in
+> `synergien` ganz, und im Laden ist „0 auf dem Brett" die häufigste Antwort.
+>
+> **Der Zuschauer bekommt dieses Blatt seit dem 21.09.2026 mit den Ständen
+> des Sitzes, dessen Brett er ansieht.** Das Blatt einer Einheit ging für ihn
+> seit dem Lesepfad (19.09.2026) auf, die Marken darin waren aber stumm: Der
+> gemeinsame Griff lief mit den eigenen Ständen, und die sind bei einem
+> Zuschauer leer — jedes Markenblatt hätte „0 auf dem Brett" gesagt, während
+> der Brettkopf daneben vier zählt. Jetzt zählt es dasselbe wie der Brettkopf
+> (`markengriff` in `screens/Tafelrunde.tsx`). Am Spielertisch bleibt es
+> bei den eigenen Ständen, auch am Brett des Gegners: Die Frage dort ist
+> „reicht das bei mir".
 >
 > **Erledigt:** Die Werte trugen die Partie zunächst nicht — zu acht lief
 > **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100
@@ -924,6 +1066,49 @@ zusammen 1478, dazu die Client-Tests (56 Dateien, 725 Tests), alle grün.
 
 Doppelkopf hat außerdem seit dem 10. August **keinen Dreiertisch mehr in der
 Lobby** (er war ohnehin vier mit Dauerbot); die Engine kann drei weiterhin.
+
+## Am 19. September: Die Sichten gehen komprimiert über die Leitung
+
+Nachgeprüft wurde, was das Zusehen bei **Tafelrunde** kostet: Seit dem
+06.09.2026 bekommt jeder Spieler **alle** Kämpfe der Runde mit vollem
+Ablaufprotokoll (`packages/game-tafelrunde/src/sicht.ts`), und die Frage war,
+ob das am Handy und im Mobilfunk vertretbar ist.
+
+**Gemessen** wird das ab jetzt mit
+`node packages/game-tafelrunde/werkzeug/sichtgroesse.mjs [--sitze 8]`. Es
+spielt eine Bot-Partie und legt drei Schnitte nebeneinander — die Sicht wie
+heute (`voll`), nur mit dem eigenen Kampf (`eigen`, der Stand vor dem
+06.09.2026) und ganz ohne Protokoll (`ohne`) —, jeden roh und gepackt.
+Bot-Partie zu acht, Saat 7:
+
+| | größte Sicht | ganze Partie je Spieler |
+|---|---|---|
+| voll | 60,0 kB roh / **6,6 kB gepackt** | 595 kB roh / **69 kB gepackt** |
+| eigen | 23,0 kB / 3,0 kB | 207 kB / 30 kB |
+| ohne | 6,8 kB / 1,2 kB | 77 kB / 15 kB |
+
+**Der billigste Schnitt war nicht in der Sicht, sondern im Gateway.** `ws`
+lässt `permessage-deflate` (RFC 7692) ab Werk aus, also ging bis zum
+19.09.2026 jede Sicht **jedes** Spiels als roher JSON-Text heraus. Jetzt wird
+alles über einem Kilobyte gepackt
+(`packages/server/src/realtime/gateway.ts`). Ein Ablaufprotokoll ist
+tausendfach dasselbe Dutzend Feldnamen und schrumpft deshalb auf ein Neuntel.
+6,6 kB einmal je Runde sind auch im Mobilfunk keine Sekunde, und die
+Kampfphase dauert länger als das.
+
+Eingestellt ist **kein Kontextübertrag** (`serverNoContextTakeover`), damit
+ZLIB nicht je offener Verbindung ein Fenster hält — bei vielen Tischen sind
+das sonst Hunderte Kilobyte, die niemand zurückgibt. Die Zahlen oben sind
+genau so gemessen, also je Nachricht für sich. Dass die Erweiterung wirklich
+ausgehandelt wird, hält `packages/server/test/ws-kompression.test.ts` fest:
+Fällt sie weg, steht die Verbindung weiter und die Sichten kommen an — sie
+sind nur wieder neunmal so groß, und das merkt niemand, der nicht misst.
+
+**Nachliefern auf Anforderung ist damit vom Tisch.** Es stand als billigerer
+Schnitt im Raum, bräuchte einen neuen Weg im Protokoll (die Sicht geht als
+Ganzes heraus) und spart nach der Kompression 3,6 kB je Runde — bezahlt mit
+einer Rückfrage samt Laufzeit bei jedem Blick auf einen fremden Kampf und mit
+einem Zuschauer, der seinen Kampf erst nach einem Umweg sieht.
 
 ## Am 11. August: Bot-Spielstärken (Doppelkopf)
 

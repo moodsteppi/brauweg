@@ -350,8 +350,12 @@ export const KATALOG: readonly Einheit[] = [
    * BELEGT, BEVOR HIER ETWAS GEAENDERT WURDE. Drei Verdaechtige, einzeln
    * gemessen (Werkzeuge in werkzeug/, Wegwerf-Laeufe):
    *   - Bonus zu klein? Mit Elementar-Bonus NULL blieb die Siegquote bei
-   *     6,1 %. Der Bonus bewegt nur, wie oft der Bot die Marke waehlt, nicht
-   *     ob sie traegt.
+   *     6,1 %. Der Bonus bewegte damals nur, wie oft der Bot die Marke
+   *     waehlte, nicht ob sie trug. DAS GALT FUER DEN STAND VOR DIESER
+   *     ZEILE — mit dem Irrlicht in der Vorderreihe traegt er sehr wohl:
+   *     auf null gesetzt faellt Elementar heute von x0,80 auf x0,49
+   *     (21.09.2026, zwoelfte Messung, siehe synergien.ts). Der Satz ist
+   *     Geschichte und keine Regel.
    *   - Traeger zu schwach? Hebt man alle vier auf die Mitte ihrer Stufe,
    *     kommt Elementar auf x0,54 bis x0,60 — besser, aber weiter draussen.
    *   - Zusammensetzung? Gibt man der Marke EINEN zaehen Traeger fuer die
@@ -433,12 +437,58 @@ export const KATALOG: readonly Einheit[] = [
     reichweite: 1,
     ruestung: 40,
   },
+  /**
+   * FUENFTE TRAEGERIN DER MARKE NATURWESEN (seit dem 18.09.2026), Werte
+   * unveraendert.
+   *
+   * Naturwesen war nach der Beistand-Wirkung die schwaechste Zeile des
+   * Katalogs (x0,57 ueber 1.500 Partien zu viert, x0,52 ueber 5.000) und
+   * stand damit an der unteren Schranke der Probe in
+   * test/ausgewogenheit.test.ts. Der Grund stand nicht in der Synergietabelle,
+   * sondern hier: Von vier Traegern waren ZWEI die beiden letzten Zeilen des
+   * ganzen Katalogs — Astschuetze (x0,22) und Moosheiler (x0,25), beide fuer
+   * ein Gold. Wer Naturwesen zu zweit haben wollte, kam praktisch immer ueber
+   * sie, und eine Ein-Gold-Einheit steht auf dem letzten Brett vor allem dann,
+   * wenn ihr Besitzer nicht aufgestiegen ist (der Preisgraben, siehe die
+   * neunte Messung im Konzept). Die Marke mass also nicht ihren Bonus, sondern
+   * die Armut ihrer Bretter.
+   *
+   * DER BONUS WAR ES NICHT, und das ist gemessen und nicht vermutet — derselbe
+   * Befund wie bei Elementar am 05.09.2026 (siehe Irrlicht): Hebt man die
+   * Naturwesen-Stufen von 15/25/40 auf 25/40/65, kommt die Marke gerade auf
+   * x0,62; auf dem Dreifachen (45/70/110) auf x0,87, aber dann steigen die an
+   * der Hoechstdauer abgebrochenen Kaempfe von 1,7 auf 3,4 %, die Spielzeit auf
+   * 6:15 — und Untot faellt auf 295 Antritte und damit unter die Zaehlschwelle
+   * der Probe. Ein Lebensbonus kauft der Marke vor allem Bretter, nicht Siege.
+   *
+   * WARUM DIE BOGENMEISTERIN. Vier Kandidaten wurden ueber je 1.500 Partien
+   * gegengemessen (Naturwesen vorher x0,57, hoechste Zeile x1,56):
+   *
+   *   Bogenmeisterin (2 Gold)   x0,84   Hoechstdauer 1,5 %   oberste x1,53
+   *   Runenpriester  (2 Gold)   x0,81   Hoechstdauer 2,1 %   oberste x1,55
+   *   Steinschleuderer (1 Gold) x0,90   Hoechstdauer 1,2 %   oberste x1,70
+   *   Grimmbart      (2 Gold)   x0,68   Hoechstdauer 1,8 %   oberste x1,50
+   *
+   * Der Steinschleuderer hebt die Marke am weitesten — und reisst dabei die
+   * Spanne oben auf (Waechter x1,70), weil er als dritte billige Einheit
+   * genau das verstaerkt, was hier das Problem war. Der Runenpriester ist ein
+   * zweiter Heiler, und Heilung verlaengert jeden Kampf doppelt (neunte
+   * Messung); Grimmbart laesst Naturwesen die unterste Zeile bleiben. Die
+   * Bogenmeisterin hebt die Marke aus der Wackelzone, ohne die Uhr oder die
+   * obere Kante zu bewegen.
+   *
+   * Sie passt auch ins Bild: Die Figur ist eine Elfe in Gruen
+   * (public/tafelrunde/bogenmeisterin.webp), und Naturwesen bekommt mit ihr
+   * einen Schuetzen, der etwas aushaelt — neben Astschuetze (Zentaur),
+   * Moosheiler, Hainwaechterin und Wurzelriese. Die Marke Krieger behaelt
+   * sie; ihre Zahl bewegt sich dadurch nicht (x1,47 auf x1,45).
+   */
   {
     id: 'bogenmeisterin',
     name: 'Bogenmeisterin',
     kosten: 2,
     rolle: 'schuetze',
-    marken: ['krieger'],
+    marken: ['krieger', 'naturwesen'],
     leben: 620,
     angriff: 62,
     tempo: 0.85,

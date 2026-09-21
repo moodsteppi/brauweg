@@ -151,8 +151,16 @@ const ZEILEN = [
    * Schraube, die ein Taktwechsel eigentlich sein soll — ein feinerer Takt
    * macht den Kampf nur ueber die Rundung kuerzer, ein Zeitraffer macht ihn
    * wirklich schneller.
+   *
+   * DIE WERTE UEBER x2 SIND AM 09.09.2026 DAZUGEKOMMEN, und zwar weil die
+   * Zeile "wie gebaut" seit dem 05.09.2026 selbst auf x2 steht: Die alte
+   * Auswahl (1,25 / 1,5 / 2) sagte damit nur noch, wie viel LAENGER eine
+   * Partie mit weniger Raffer waere. Wer heute kuerzen will, liest die
+   * Zeilen darunter — und sieht dort auch, dass der Kampfanteil dabei faellt,
+   * ohne dass die Vorbereitung mitkommt (Abschnitt 9 in
+   * docs/TAFELRUNDE-SPIELZEIT.md).
    */
-  ...[1.25, 1.5, 2].map((faktor) =>
+  ...[1.25, 1.5, 2, 2.5, 2.75, 3, 3.5].map((faktor) =>
     zeile('takt', 'Zeitraffer', `x${faktor}`, { regler: { zeitraffer: faktor } }),
   ),
 
@@ -407,6 +415,15 @@ for (const e of ergebnisse) {
     )}`,
     String(e.rundenMedian),
     sek(e.kampfMedianMs),
+    /* Der Anteil des Kampfes an der Spielzeit — die Zahl, auf die die Probe
+       "steckt seine Zeit vor allem in die Kaempfe" schaut. Sie steht hier,
+       weil man an ihr die zwei Sorten Schraube auseinanderhaelt: Eine, die
+       nur den Kampf kuerzt (Zeitraffer, Hoechstdauer), laesst den Anteil
+       fallen; eine, die RUNDEN streicht (Startleben, Schadensteiler), nimmt
+       die Vorbereitung mit und laesst ihn stehen. Ohne die Spalte steht die
+       Zerlegung nur fuer die Zeile "wie gebaut" da, und die Frage "bewegt
+       meine Schraube den Anteil?" braucht einen zweiten Lauf. */
+    p1(e.kampfMs / (e.vorbereitungMs + e.kampfMs + e.nachlaufMs)),
     /* Das neunte Zehntel des WARTENS je Runde, nicht der Phase: Die Aufgabe kam
        aus dem Schwanz, nicht aus dem Median. Gebildet als Summe JE (Runde,
        Sitz) und erst dann als Perzentil — siehe wartenGesamtP90Ms. */
@@ -425,6 +442,7 @@ tabelle(
     'zu heute',
     'Runden',
     'Kampf',
+    'Kampf%',
     'Warten P90',
     'Abbruch',
     'Sieger',
@@ -438,6 +456,8 @@ console.log('');
 console.log('  Spielzeit ist der MEDIAN ueber die Partien; "Runden" ebenfalls.');
 console.log('  "Kampf" ist der Median eines einzelnen Kampfes, "Abbruch" der Anteil');
 console.log('  der Kaempfe, die an HOECHSTDAUER_MS abgeschnitten wurden.');
+console.log('  "Kampf%" ist sein Anteil an der Spielzeit: Faellt er, ohne dass die');
+console.log('  Runden weniger werden, hat die Schraube die Vorbereitung stehen lassen.');
 console.log('  "Warten P90" ist das neunte Zehntel BEIDER Wartezeiten je Runde');
 console.log('  zusammen (Bots plus fremde Kaempfe plus Nachlauf) — die Zahl, um die');
 console.log('  es Robin ging. Sie steht als P90 da, weil der Median nichts zeigt.');

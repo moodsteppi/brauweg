@@ -77,6 +77,15 @@ export interface DokoView {
   /** Rundensicht der Engine. Bei Zuschauern ohne Hand. */
   readonly round: PlayerView | null;
   readonly roundIndex: number;
+  /**
+   * Anlauf innerhalb derselben Runde: Ein Schmeissen laesst dieselbe Runde neu
+   * geben, `roundIndex` bleibt dabei stehen und nur diese Zahl waechst. Wer
+   * eine Phase eindeutig benennen will (etwa um eine Vorbehaltsantwort nur
+   * einmal zu schicken), braucht beide Zahlen — sonst haelt er die zweite
+   * Vorbehaltsabfrage derselben Runde fuer die schon beantwortete und
+   * schweigt, bis die Frist ablaeuft.
+   */
+  readonly attempt: number;
   readonly totalRounds: number;
   readonly scores: Readonly<Record<number, number>>;
   /** Bock-Faktor der kommenden Runde, damit der Client ihn anzeigen kann. */
@@ -130,6 +139,7 @@ function wrap(party: PartyState, round: PlayerView | null, spectator: boolean): 
   return {
     round,
     roundIndex: party.roundIndex,
+    attempt: party.attempt,
     totalRounds: party.rs.rounds,
     scores: party.scores,
     nextMultiplier: upcomingMultiplier(party),

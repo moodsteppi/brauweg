@@ -135,6 +135,8 @@ const SICHT = {
   // Kleine Probearena ohne Luecke; am Tisch sind es 4 und 10 (arena.ts).
   arenaReihen: 4,
   brettSpalten: 5,
+  zeitraffer: 2,
+  schrittMs: 300,
   verschmelzZahl: 3,
   maxStufe: 3,
   vorrat: {},

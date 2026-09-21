@@ -1,10 +1,12 @@
 # Die Visual-Building-Tafel von Brauweg
 
 Die ARBEITSREGELN verpflichten jede Sitzung, **vor** der Arbeit die Tafel des
-Systems zu lesen und sie **danach** zu pflegen. Für Brauweg gab es bis zum
-5. September 2026 keine: `node tafel.mjs lesen brauweg` antwortete mit 404.
-Dieses Dokument sagt, wo sie jetzt liegt, wie man sie liest, pflegt und —
-einmalig — auf den Server bringt.
+Systems zu lesen und sie **danach** zu pflegen. Für Brauweg gab es lange
+keine: Die Quelle lag seit dem 5. September 2026 im Repo, auf dem Server
+stand sie bis zum **18. September 2026** nicht — `node tafel.mjs lesen
+brauweg` antwortete bis dahin mit 404, und jeder Auftrag lief ohne
+Systemwissen. Dieses Dokument sagt, wo sie liegt und wie man sie liest und
+pflegt.
 
 ---
 
@@ -91,18 +93,25 @@ Notizen landen in einem eigenen Bereich **„Änderungen aus Aufgaben"** —
 als Posteingang, nicht als fertige Einarbeitung. Sie an die richtige Stelle
 im Netz zu bringen, ist Handarbeit.
 
-## Der einmalige Handgriff: auf den Server bringen
+## Auf dem Server liegt sie seit dem 18.09.2026
 
-**Das kann keine Sitzung selbst.** Die Tafel-API kann lesen und anhängen,
-aber keine Tafel **anlegen**; `POST /boards` verlangt eine angemeldete
-Sitzung, und auf den Rechnern liegt nur der Worker-Token. Der Import ist
-deshalb ein Klick eines Menschen:
+Bis dahin stand hier, das könne keine Sitzung selbst: Die Tafel-API konnte
+lesen und anhängen, aber nicht anlegen, und der Import war ein Klick eines
+Menschen im brotool. **Das gilt nicht mehr.** Die ARBEITSREGELN kennen seit
+dem 17.09.2026 einen Anlege-Weg, den auch ein Rechner ohne Browser gehen
+kann:
 
-1. `brotool.broweg.de` → **Visual Building**
-2. **Tafel importieren** → `werkzeug/gamedesk/boards/brauweg-funktionsweise.gamedesk.json`
-3. Der Name kommt aus der Datei („Brauweg — Funktionsweise") — nicht ändern,
-   siehe oben.
-4. Gegenprobe: `node tafel.mjs lesen brauweg` muss Text liefern, nicht 404.
+```bash
+node tafel.mjs anlegen brauweg werkzeug/gamedesk/boards/brauweg-funktionsweise.gamedesk.json "Brauweg — Funktionsweise"
+```
+
+So ist sie entstanden (61 Kacheln, 45 Verknüpfungen). Der Name **muss**
+`brauweg` enthalten, und es darf **genau eine** Tafel dazu geben — der Server
+weist beides ab. Gegenprobe: `node tafel.mjs lesen brauweg` liefert Text,
+nicht 404.
+
+Der Weg über `brotool.broweg.de` → **Visual Building** → **Tafel
+importieren** funktioniert weiterhin und tut dasselbe.
 
 ### Danach gibt es zwei Stände, und das ist die eigentliche Falle
 

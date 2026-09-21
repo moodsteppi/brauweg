@@ -20,6 +20,7 @@ import {
 import { Vorschlagskasten } from '../minispiele/mememory/Vorschlagskasten';
 import type { ReaktionMessage } from '../protocol';
 import { PfeilLinks } from '../zeichen';
+import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 
 /**
@@ -46,22 +47,27 @@ import { useTable } from '../useTable';
  * React samt aller Bauteile in einen Test, der nur Typen vergleicht.
  */
 
-/**
- * Regelsatz, mit dem der KI-Tisch aufgemacht wird.
+/*
+ * HIER STAND BIS ZUM 07.09.2026 EIN REGELSATZ, wortgleich abgeschrieben von
+ * DEFAULT_REGELN aus packages/game-mememory/src/regeln.ts. Er ging als
+ * `config` an `createTable`, und weil der Server eine mitgeschickte `config`
+ * unveraendert als Regelsatz des Tisches festschreibt, UEBERSTIMMTE die
+ * Abschrift das Modul: Wer dort die Merkzeit oder die Brettgroesse umstellt,
+ * aendert am KI-Tisch nichts, und rot wird dabei auch nichts.
  *
- * Muss zu DEFAULT_REGELN in packages/game-mememory/src/regeln.ts passen —
- * dort steht auch, warum es vier Spalten sind und nicht fuenf. Bewusst
- * ausgeschrieben statt ueber `api.defaults()` geholt: Der Knopf soll nicht
- * auf eine zusaetzliche Antwort warten, bevor er den Tisch aufmacht.
+ * Weglassen geht hier nicht — der KI-Tisch legt `zusatz` (die freigegebenen
+ * Uploads) und `botStufen` obendrauf und braucht deshalb den Rest des
+ * Regelsatzes. Der kommt jetzt ueber `useSpielVorgabe('mememory')` vom
+ * Server, vorab geholt beim Aufbau des Bildschirms. Warum vorab und warum
+ * ohne Ersatzzahl: siehe src/spiel-vorgabe.ts.
  *
  * Nur noch hier und nicht mehr in der Mitspielersuche: Die baut ihren Tisch
  * seit dem 06.09.2026 serverseitig und nimmt dort `defaultConfig()` des
- * Moduls. Was dabei WEGFAELLT, ist `zusatz` — die hochgeladenen Motive kommen
- * an einem Tisch aus der Schlange nicht vor. Das steht als Karte auf dem
- * Issueboard und laesst sich hier nicht heilen: Der Client hat gar keine
- * Gelegenheit mehr, dem Tisch etwas mitzugeben.
+ * Moduls. `zusatz` — die freigegebenen Uploads — fiel dabei zunaechst weg;
+ * seit dem 07.09.2026 legt der Server sie beim Tischbau selbst dazu
+ * (`suche/anreicherung.ts`). Der Bildschirm holt sie also nur noch fuer
+ * SEINEN Tisch, den gegen die KI.
  */
-const REGELSATZ = { spalten: 4, zeilen: 6, merkzeitMs: 1100 };
 
 /**
  * Takt, in dem der Stand der Suche abgefragt wird.
@@ -395,6 +401,12 @@ export function Mememory({
       zeigeFlieger(nachricht.zeichen, eckeRef.current(nachricht.seat), nachricht.motiv),
     [zeigeFlieger],
   );
+
+  /*
+   * Der Regelsatz des Moduls, vorab beim Server geholt. Motive und
+   * Bot-Stufen legen sich darauf; abgeschrieben wird nichts mehr.
+   */
+  const { holen: holeVorgabe } = useSpielVorgabe('mememory');
 
   const tisch = useTable<MememorySicht>(
     tischId,
@@ -798,7 +810,7 @@ export function Mememory({
       const { id } = await api.createTable({
         gameId: 'mememory',
         config: {
-          ...REGELSATZ,
+          ...(await holeVorgabe()),
           ...(zusatz.length > 0 ? { zusatz } : {}),
           botStufen,
         },
@@ -814,7 +826,7 @@ export function Mememory({
     } finally {
       setSucht(false);
     }
-  }, []);
+  }, [holeVorgabe]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;

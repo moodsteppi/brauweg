@@ -193,6 +193,48 @@
   font: 600 11px/1.2 system-ui;
 }
 
+/*
+ * Die Marke als Griff zu ihrem Blatt.
+ *
+ * Sie sieht aus wie vorher — eine gepunktete Unterlinie und sonst nichts:
+ * Ein Knopf im Kasten waere ein zweites Bedienelement neben Verschieben,
+ * Ablegen und Verkaufen, und angeboten wird hier kein Zug, sondern eine
+ * Auskunft. Die Unterlinie ist trotzdem noetig — ohne sie sieht man dem Wort
+ * nicht an, dass es eins ist.
+ *
+ * Die Trefferflaeche waechst ueber den Text hinaus (8 px oben und unten):
+ * Die Zeile ist 13 px hoch, und zwei Marken stehen mit 8 px Abstand
+ * nebeneinander — waagerecht darf der Griff also nur um 3 px wachsen, sonst
+ * laege er ueber dem Nachbarn.
+ */
+.markenknopf {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.markenknopf::after {
+  content: '';
+  position: absolute;
+  inset: -8px -3px;
+}
+.markenknopf .markenname {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.markenknopf:hover .markenname,
+.markenknopf:focus-visible .markenname {
+  color: var(--text);
+}
+
 .zu {
   flex: 0 0 auto;
   width: 32px;

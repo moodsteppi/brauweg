@@ -1,8 +1,8 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, **elf Spiele laufen**: Doppelkopf, Zauberer, Skat,
-Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde und
-Golf.
+Kartenspiel-Plattform, **zwölf Spiele laufen**: Doppelkopf, Zauberer, Skat,
+Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde,
+Golf und Partykiste.
 Diese Datei ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln
 in `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
@@ -52,7 +52,18 @@ in der Sitzung anweist, gibt ihn frei — frag vorher einmal kurz zur Sicherheit
 nach (ein Prod-Deploy ist schwer rückholbar, siehe Regel 7), aber warte auf
 niemand anderen. Vor jedem Push `git pull --no-rebase origin staging` — an
 diesem Repo arbeiten mehrere Sitzungen gleichzeitig, auch Cursor. Merges sind
-der Normalfall, kein Fehler.
+der Normalfall, kein Fehler. Nach einem Release muss `main` wieder Vorfahre
+von `staging` sein (Rückfluss als echter Merge, kein Squash). Von Hand machen
+muss ihn in der Regel niemand mehr: `.github/workflows/rueckfluss.yml` legt
+nach jedem Push auf `main` den fertigen Rückfluss-PR nach `staging` an — es
+bleibt das Freigeben, **als Merge-Commit, nicht als Squash**. Das Netz
+darunter bleibt der Job „Rückfluss" in `.github/workflows/ci.yml`: Er wird bei
+jedem Push auf einen der beiden Zweige rot, solange `main` kein Vorfahre ist —
+am 06.09.2026 fiel es sonst erst Tage später am Release-Konflikt auf. Der
+Grund für die Automatik steht im Kopf von `rueckfluss.yml`: Solange der
+Rückfluss Arbeit war, wurde die Änderung stattdessen auf `staging`
+nachgetippt („Uebernahme von main <hash>"), und genau daraus entstanden die
+Konflikte.
 
 **2. Alles auf Deutsch.** Bezeichner, Kommentare, Commit-Nachrichten,
 Oberflächentexte. Kommentare erklären das **Warum**, nicht das Was — und
@@ -117,9 +128,38 @@ git diff --cached HEAD --diff-filter=D    # leer, wenn nichts weg soll
 
 ```bash
 npm run build     # im WURZELVERZEICHNIS, nie --workspace @brauweg/server
-npm test          # 1.478 Tests in den Paketen (450 im Server), dazu
-                  # 725 Client-Tests in 56 Dateien (vitest)
+npm test          # alle Pakete (node --test) und der Client (vitest)
+
+npm test | node werkzeug/pruefstand.mjs   # dieselbe Zählung wie in der CI
 ```
+
+**Erst committen, dann messen.** Der volle Lauf dauert auf einem
+Windows-Rechner rund eine Viertelstunde und baut den Client mit; wer Commit
+und Push dahinter legt, verliert die ganze Arbeit, wenn die Sitzung im Lauf
+endet. Am 09.09.2026 ist genau das zweimal hintereinander passiert — der Code
+war beide Male fertig und lag im Arbeitsverzeichnis, auf dem Aufgabenzweig
+stand trotzdem kein einziger Commit. Also: **zuerst die Änderung committen und
+pushen, dann den vollen Lauf.**
+
+**Die Zahlen trägt niemand mehr von Hand nach** — weder hier noch in
+`docs/STAND.md`. Bis zum 19.09.2026 lautete die Regel andersherum, und mit
+einem Worker ging das auf. An dem Tag liefen zehn gleichzeitig los: Sechs
+Pull Requests kollidierten, alle in denselben drei Zeilen, keiner im Code.
+Das ist kein Unglück, sondern die Regel selbst. Eine Zahl gilt nur für den
+Zweig, in dem sie gemessen wurde, also **müssen** sich zehn ehrliche Messungen
+widersprechen — und wer den Konflikt von Hand auflöst, trägt eine Zahl ein,
+die der nächste Merge wieder falsch macht.
+
+Gezählt wird trotzdem, nur woanders: Der CI-Job „Bauen und prüfen" wertet
+seinen eigenen Lauf aus und schreibt die Aufschlüsselung in die Zusammenfassung
+(`werkzeug/pruefstand.mjs`). Sie gehört damit zu genau einem Commit, statt in
+einer Datei auf den nächsten Merge zu warten. Örtlich liefert
+`npm test | node werkzeug/pruefstand.mjs` dieselbe Zeile.
+
+**Was in die Fertigmeldung gehört, bleibt:** was der eigene Lauf ergeben hat —
+und wenn er nicht mehr zustande kam, ausdrücklich, dass nicht gemessen wurde.
+Eine geratene Zahl ist schlimmer als gar keine: Am 09.09.2026 hat ein Lauf so
+„450 → 451" fortgezählt, gemessen waren es 468.
 
 **Der Build im Wurzelverzeichnis ist keine Bequemlichkeit.** Baut man nur den
 Server, ist die `.d.ts` von `@brauweg/game-api` der alte Stand, und `tsc`
@@ -163,7 +203,7 @@ nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
 Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
 Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
 Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
-Feld auch wirklich liefern). Gedeckt sind alle elf Spiele. Ein neues Spiel
+Feld auch wirklich liefern). Gedeckt sind alle zwoelf Spiele. Ein neues Spiel
 bekommt eine Datei nach demselben Muster — und beschreibt seine Sicht **nicht
 im Bildschirm**, sondern in `src/minispiele/<spiel>/sicht.ts`: Ein Vertrag,
 der aus einer `.tsx` importiert, zieht React in den Test.
@@ -235,7 +275,24 @@ Wirtschaftsmodell.
   kann `tsc` nicht lesen. Das sieht nach einem kaputten Zweig aus und ist
   keiner — am 05.09.2026 zweimal genau daran gesucht. `npm run build` im
   Wurzelverzeichnis genügt: npm läuft die Pakete alphabetisch ab, `game-api`
-  steht vor `game-tafelrunde` und beide vor `server`.
+  steht vor `game-tafelrunde` und beide vor `server`. Wann dieser Lauf
+  drankommt — nämlich nach Commit und Push —, steht oben unter „Bauen und
+  prüfen"; diese Stelle hier sagt nur, warum er nicht durch einen
+  Einzelpaket-Lauf zu ersetzen ist.
+- **Dieselbe Meldung, andere Ursache: `npm install` statt `npm run build`.**
+  Sagt `tsc` ein Spielpaket nicht ansprechen zu können, obwohl dessen
+  `packages/game-<spiel>/dist/src/index.d.ts` **existiert**, dann fehlt in
+  `node_modules/@brauweg/` der Symlink auf das Paket — npm verlinkt einen neu
+  hinzugekommenen Workspace erst beim nächsten `npm install`, und wer seit
+  dessen Einzug keins gelaufen hat, sieht wortgleich `TS2307: Cannot find
+  module '@brauweg/game-…'`. Bauen hilft dann nicht, egal wie oft. Erst
+  nachsehen (`ls node_modules/@brauweg/`), dann `npm install` im
+  Wurzelverzeichnis — `package-lock.json` bleibt unberührt; ändert npm dort
+  doch etwas (peer-Flags), gehört es nicht in den Commit. Getroffen hat es
+  `game-golf` (kam am 06.09.2026 dazu) am 07.09. auf zwei Rechnern und am
+  08.09. noch einmal auf einem dritten. **Warum ausgerechnet ein einzelner
+  Link fehlt, ist offen** — die Regel gilt darum für jedes frisch angelegte
+  Paket.
 - **Keine Prüfkopie unter `AppData/Local/Temp`.** Liegt der Arbeitsbaum dort,
   sammelt Vite eine fremde `vite.config.ts` aus dem Wurzelverzeichnis ein, und
   der Testlauf stirbt schon beim Laden der Konfiguration. Der Fehler zeigt dann

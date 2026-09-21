@@ -303,6 +303,65 @@ if (a.nieGesehen.length > 0) {
     `  NIE AUF EINEM BRETT: ${a.nieGesehen.map((id) => einheit(id).name).join(', ')}`,
   );
 }
+console.log('');
+console.log('  ACHTUNG, DIESE TABELLE BEANTWORTET NICHT "IST DIE EINHEIT ZU STARK".');
+console.log('  Eine Einheit steht auf reichen Brettern haeufiger, und reiche Bretter');
+console.log('  gewinnen; die Quote misst beides zusammen. Nachgewiesen an der');
+console.log('  Lichtwahrerin: Schwaecht man sie, STEIGT ihre Quote (neunte Messung).');
+console.log('  Die Antwort darauf steht in werkzeug/tauschprobe.mjs, nicht hier.');
+
+/*
+ * Die normierte Tabelle steht NEBEN der rohen und nicht an ihrer Stelle: Die
+ * rohe Quote bleibt die Auskunft darueber, wie ein Brett MIT dieser Einheit
+ * ausgeht — eine echte Frage, nur eben nicht die nach der Staerke. Wer nur
+ * eine der beiden liest, zieht den falschen Schluss.
+ */
+console.log('');
+console.log('SIEGQUOTE GEGEN BRETTER GLEICHER KOSTENSUMME (Index: Siege je erwartetem Sieg)');
+tabelle(
+  ['Einheit', 'Gold', 'Antritte', 'Siege', 'erwartet', 'Index'],
+  a.einheitenNormiert.map((z) => [
+    einheit(z.name).name,
+    String(einheit(z.name).kosten),
+    String(z.antritte),
+    String(z.siege),
+    z.erwartet.toFixed(1),
+    z.index === null || z.antritte < MINDEST ? 'zu duenn' : `x${z.index.toFixed(2)}`,
+  ]),
+);
+console.log('');
+console.log('MARKEN GEGEN BRETTER GLEICHER KOSTENSUMME');
+tabelle(
+  ['Marke', 'Antritte', 'Siege', 'erwartet', 'Index'],
+  a.markenNormiert.map((z) => [
+    synergie(z.name).name,
+    String(z.antritte),
+    String(z.siege),
+    z.erwartet.toFixed(1),
+    z.index === null || z.antritte < MINDEST ? 'zu duenn' : `x${z.index.toFixed(2)}`,
+  ]),
+);
+console.log('');
+console.log('  Erwartet wird nach dem Brettwert-Band des jeweiligen Antritts (Gold aller');
+console.log('  Einheiten auf dem Brett, Sternstufen eingerechnet). x1,00 heisst: genau so');
+console.log('  oft gewonnen wie gleich teure Bretter. Die Baender:');
+tabelle(
+  ['Band (Gold)', 'Antritte', 'Siege', 'Quote'],
+  a.brettwertBaender.map((b) => [
+    `${b.von} bis ${b.bis}`,
+    String(b.antritte),
+    String(b.siege),
+    p1(b.quote),
+  ]),
+);
+console.log('');
+console.log('  WAS AUCH DIESE SPALTE NICHT KANN, UND DAS IST GEMESSEN: die Auswahl des');
+console.log('  Bots herausrechnen. Die Lichtwahrerin steht hier bei x2,20 und damit hoeher');
+console.log('  als roh — auch innerhalb eines Bandes sind die Bretter MIT ihr die, deren');
+console.log('  Besitzer bis zu einer Drei-Gold-Einheit gekommen ist. Fuer die MARKEN ist');
+console.log('  die Spalte brauchbar, fuer eine einzelne Einheit nicht. Die Zahl ohne');
+console.log('  Auswahl liefert werkzeug/tauschprobe.mjs — dieselben Bretter, eine');
+console.log('  Einheit getauscht.');
 
 console.log('');
 console.log('SCHWELLEN — wie oft eine Marke bei einem Antritt welche Stufe hielt');

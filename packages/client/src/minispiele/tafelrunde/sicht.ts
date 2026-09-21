@@ -139,6 +139,23 @@ export interface TafelrundeSicht {
   gegner: FremdeSicht[];
   leftSeats: number[];
   /**
+   * Der Zeitraffer der Kampfsimulation (kampf.ts): um wie viel schneller alles
+   * ablaeuft als im Katalog gemessen.
+   *
+   * Die Arena spielt das Protokoll in Echtzeit ab, die Bildraten der
+   * 3D-Bildfolgen sind aber die des Modells (figuren3d.ts). Ohne diesen Faktor
+   * holen die Figuren in Zeitlupe aus, waehrend die Treffer im geraffeten Takt
+   * fallen — bis zum 18.09.2026 stand er als `KAMPF_TEMPO = 2` in
+   * bildfolge.ts und war eine Abschrift.
+   */
+  zeitraffer: number;
+  /**
+   * Wie lange ein Schritt von Feld zu Feld dauert, in Millisekunden
+   * (`schrittdauer` in kampf.ts). Nicht `500 / zeitraffer`: Das Modul rundet
+   * auf ganze Takte auf.
+   */
+  schrittMs: number;
+  /**
    * Die Kaempfe der laufenden Kampfphase mit vollem Ablaufprotokoll — ein
    * Spieler bekommt seinen eigenen, ein Zuschauer alle; ausserhalb der
    * Kampfphase leer (sicht.ts). Als wahlfrei gefuehrt, weil eine Sicht aus

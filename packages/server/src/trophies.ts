@@ -33,6 +33,15 @@ export const PLACEMENT_TROPHIES: Readonly<Record<number, readonly number[]>> = {
   // bleibt 6, Nullsumme bleibt, Mittelwerte bei Gleichstand bleiben ganzzahlig.
   7: [18, 12, 6, 0, -6, -12, -18],
   8: [21, 15, 9, 3, -3, -9, -15, -21],
+  // Neun bis zwoelf seit der Partykiste (18.09.2026), dem ersten Spiel mit
+  // mehr als acht Sitzen. Ohne Eintrag wirft awardForParty, und der Aufrufer
+  // faengt das zwar ab (awardTrophies) — eine Partie zu zwoelft brachte dann
+  // aber lautlos gar keine Trophaeen. Abstand bleibt 6, Nullsumme bleibt,
+  // Mittelwerte bei Gleichstand bleiben ganzzahlig.
+  9: [24, 18, 12, 6, 0, -6, -12, -18, -24],
+  10: [27, 21, 15, 9, 3, -3, -9, -15, -21, -27],
+  11: [30, 24, 18, 12, 6, 0, -6, -12, -18, -24, -30],
+  12: [33, 27, 21, 15, 9, 3, -3, -9, -15, -21, -27, -33],
 };
 
 export const LEAVE_PENALTY = -10;

@@ -14,6 +14,7 @@ import {
 } from '../minispiele/eiland/gesten';
 import { Ornamentbild } from '../minispiele/eiland/Ornament';
 import type { EilandSicht, EilandVariante } from '../minispiele/eiland/sicht';
+import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 
 /**
@@ -48,27 +49,20 @@ import { useTable } from '../useTable';
  */
 const SUCH_TAKT_MS = 1000;
 
-/**
- * Regelsatz, mit dem der KI-Tisch aufgemacht wird.
+/*
+ * HIER STAND BIS ZUM 07.09.2026 EIN REGELSATZ, wortgleich abgeschrieben von
+ * DEFAULT_REGELN aus packages/game-eiland/src/regeln.ts. Er ging als `config`
+ * an `createTable`, und weil der Server eine mitgeschickte `config`
+ * unveraendert als Regelsatz des Tisches festschreibt, UEBERSTIMMTE die
+ * Abschrift das Modul: Wer dort eine Zahl umstellt, aendert am KI-Tisch
+ * nichts, und rot wird dabei auch nichts.
  *
- * Muss zu DEFAULT_REGELN in packages/game-eiland/src/regeln.ts passen. Bewusst
- * ausgeschrieben statt ueber `api.defaults()` geholt: Der Knopf soll nicht auf
- * eine zusaetzliche Antwort warten, bevor er den Tisch aufmacht. Die Spielart
- * kommt beim Aufmachen dazu.
- *
- * Nur noch hier und nicht mehr in der Mitspielersuche: Die baut ihren Tisch
- * seit dem 06.09.2026 serverseitig und nimmt dort `defaultConfig()` des
- * Moduls.
+ * Weglassen geht hier nicht — anders als bei Tafelrunde legt Eiland die
+ * gewaehlte Spielart obendrauf und braucht deshalb den Rest des Regelsatzes.
+ * Der kommt jetzt ueber `useSpielVorgabe('eiland')` vom Server, vorab geholt
+ * beim Aufbau des Menues. Warum vorab und warum ohne Ersatzzahl: siehe
+ * src/spiel-vorgabe.ts.
  */
-const REGELSATZ = {
-  spalten: 10,
-  zeilen: 10,
-  seen: 2,
-  berge: 4,
-  ornamente: 4,
-  sichtweite: 3,
-  kontingentMax: 6,
-};
 
 /**
  * Wie lange die Auswahl gesperrt bleibt, wenn der Server auf einen
@@ -144,6 +138,12 @@ export function Eiland({
    * DEFAULT_REGELN umstellen), und beides ist keine Sache dieses Bildschirms.
    */
   const [variante, setVariante] = useState<EilandVariante>('klar');
+
+  /*
+   * Der Regelsatz des Moduls, vorab beim Server geholt. Die gewaehlte
+   * Spielart legt sich darauf; abgeschrieben wird nichts mehr.
+   */
+  const { holen: holeVorgabe } = useSpielVorgabe('eiland');
 
   const tisch = useTable<EilandSicht>(tischId, 'eiland');
   const sicht = tisch.view?.view ?? null;
@@ -262,7 +262,7 @@ export function Eiland({
     try {
       const { id } = await api.createTable({
         gameId: 'eiland',
-        config: { ...REGELSATZ, variante },
+        config: { ...(await holeVorgabe()), variante },
         seats: 2,
         rounds: 1,
         visibility: 'on_request',
@@ -274,7 +274,7 @@ export function Eiland({
     } finally {
       setSucht(false);
     }
-  }, [variante]);
+  }, [holeVorgabe, variante]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;

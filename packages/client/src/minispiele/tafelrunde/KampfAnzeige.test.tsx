@@ -9,11 +9,12 @@ import {
 } from '../../figuren3d/figuren3d';
 import {
   type Bildstand,
+  type Kampftakt,
   FIGURENKASTEN,
-  GLEITEN_MS,
   RUECKFALLKASTEN,
-  SACKEN_MS,
   blattPfad,
+  gleitenMs,
+  sackenMs,
 } from './bildfolge';
 import { FIGUREN, UNTERGRUND } from './figuren';
 import {
@@ -122,6 +123,13 @@ function gelesen(bild: HTMLElement): Bildstand {
   };
 }
 
+/**
+ * Der Takt, den die Sicht am Tisch liefert (sicht.ts im Modul): Zeitraffer x2,
+ * Schritt 300 ms. Er kommt seit dem 18.09.2026 als Eigenschaft herein und
+ * steht nicht mehr als `KAMPF_TEMPO` in bildfolge.ts.
+ */
+const TAKT: Kampftakt = { zeitraffer: 2, schrittMs: 300 };
+
 function zeige(
   kaempfe: Kampfpaarung[],
   ich: number | null,
@@ -155,6 +163,8 @@ function zeige(
       brettReihen={masse.brettReihen}
       arenaReihen={masse.arenaReihen}
       brettSpalten={5}
+      zeitraffer={TAKT.zeitraffer}
+      schrittMs={TAKT.schrittMs}
       katalog={KATALOG}
       nameVon={(sitz) => NAMEN[sitz] ?? `Sitz ${sitz + 1}`}
       ersatzzeichen={(e) => <span data-testid={`ersatz-${e.id}`} />}
@@ -579,8 +589,8 @@ describe('KampfAnzeige', () => {
        wie der Uebergang von Feld zu Feld. Bei 410 ms ist sie sicher angekommen
        und der erste Treffer (500 ms) noch nicht gefallen — danach zuckt sie,
        und das waere eine andere Auskunft. */
-    expect(GLEITEN_MS).toBeGreaterThan(260);
-    expect(GLEITEN_MS).toBeLessThan(410);
+    expect(gleitenMs(TAKT)).toBeGreaterThan(260);
+    expect(gleitenMs(TAKT)).toBeLessThan(410);
     lauf(150);
     expect(gezeigt().bewegung).toBe('stand');
   });
@@ -601,7 +611,7 @@ describe('KampfAnzeige', () => {
     // Angefangen, aber noch nicht durch: Der Kampf endet bei 1100, der Tod
     // faellt bei 1000, und die Folge braucht seit dem 06.09.2026 400 ms — den
     // ganzen Fall bis zum Liegen, vorher nur das halbe Einsacken.
-    expect(SACKEN_MS).toBe(400);
+    expect(sackenMs(TAKT)).toBe(400);
     expect(gezeigt().bewegung).toBe('tod');
     expect(gezeigt().bild).toBeLessThan(folgeVon('tod').bilder - 1);
     // Durchgelaufen und stehengeblieben — die Folge hat `schleife: false`.
@@ -928,6 +938,8 @@ describe('KampfAnzeige beim Zusehen', () => {
         brettReihen={2}
         arenaReihen={4}
         brettSpalten={5}
+        zeitraffer={TAKT.zeitraffer}
+        schrittMs={TAKT.schrittMs}
         katalog={KATALOG}
         nameVon={(sitz) => NAMEN[sitz] ?? `Sitz ${sitz + 1}`}
         ersatzzeichen={(e) => <span data-testid={`ersatz-${e.id}`} />}

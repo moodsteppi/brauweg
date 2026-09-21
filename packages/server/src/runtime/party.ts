@@ -16,6 +16,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import type { AnyGameModule, BotLevel, GameId, PartyStanding } from '@brauweg/game-api';
+import { ZUGZEIT_HOECHST_MS } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
@@ -132,11 +133,47 @@ export interface LiveParty {
    * dem alle gleichzeitig handeln, bei jedem Kauf auf den vollen Wert zurueck.
    */
   phaseDeadline: number | null;
+  /**
+   * Merkmal der Phase, zu der `phaseDeadline` gehoert (`phaseKey` des Moduls).
+   *
+   * Nur fuer Module, deren Phasen ohne Zwischenschritt aufeinanderfolgen: Dort
+   * gibt es kein null zwischen zwei Fristen, an dem eine neue Phase zu erkennen
+   * waere (Eiland — siehe `phaseKey` in game-api). Module ohne `phaseKey`
+   * lassen das Feld auf null; fuer sie bleibt das null von `phaseMs` das
+   * Merkmal.
+   */
+  phaseMarke: string | number | null;
   timer: NodeJS.Timeout | null;
   offlineTimer: NodeJS.Timeout | null;
   /** Gesetzt, solange der Clantisch pausiert ist. */
   paused: boolean;
   finished: boolean;
+  /**
+   * Gesetzt, solange `finish` die Partie abrechnet: zwischen dem Setzen von
+   * `finished` und dem Eintrag der Buchungen in `awards`.
+   *
+   * Das Feld gibt es, weil `finished` zwei Aufgaben hatte, die verschiedene
+   * Zeitpunkte brauchen. Nach innen ist es der Riegel: Ab dem ersten Moment
+   * der Abrechnung darf keine Aktion, kein Timer und kein Bot den Zustand
+   * noch anfassen — deshalb wird es ganz am Anfang von `finish` gesetzt.
+   * Nach aussen ist es die Aussage "die Partie ist fertig, hier ist das
+   * Ergebnis" — und die stimmt erst, wenn die Trophaeen gebucht sind, denn
+   * die Partienachricht traegt sie aus `awards`.
+   *
+   * Dazwischen liegen ein gutes Dutzend Datenbankschreibungen. Ein Rundruf,
+   * der in diese Luecke faellt — und das tun sie: `emit` ist ein `void
+   * this.broadcast(...)`, und dessen erste Abfrage kann genau hier zurueck
+   * kommen —, schickte eine Sicht mit `finished: true` samt einer
+   * Partienachricht mit LEERER Trophaeenliste. Am Bildschirm ist das ein
+   * Partie-Ende ohne Wertung, das Sekundenbruchteile spaeter durch den
+   * richtigen Rundruf ersetzt wird; in der Pruefstrecke war es der
+   * Wackler "0 !== 4" in stats.test.ts (CI, 19./20.09.2026).
+   *
+   * `viewFor` meldet deshalb `finished` erst, wenn hier wieder false steht.
+   * Wichtig fuer `resume`: Dort ist der Wert false, eine laengst beendete und
+   * abgerechnete Partie meldet ihr Ende also sofort.
+   */
+  abrechnungLaeuft: boolean;
   /**
    * Gebuchte Trophaeen nach Partie-Ende, je Sitz. Leer bei Tischen, die nicht
    * fuer die Rangliste zaehlen. Bleibt am Objekt, damit der Rundruf sie ans
@@ -374,10 +411,12 @@ export class PartyRuntime {
       turnDeadline: null,
       interludeDeadline: null,
       phaseDeadline: null,
+      phaseMarke: null,
       timer: null,
       offlineTimer: null,
       paused: false,
       finished: false,
+      abrechnungLaeuft: false,
       awards: [],
     };
 
@@ -449,10 +488,12 @@ export class PartyRuntime {
       turnDeadline: null,
       interludeDeadline: null,
       phaseDeadline: null,
+      phaseMarke: null,
       timer: null,
       offlineTimer: null,
       paused: table.pausedAt !== null,
       finished: module.isFinished(state),
+      abrechnungLaeuft: false,
       awards: [],
     };
 
@@ -530,7 +571,8 @@ export class PartyRuntime {
       phaseDeadline: party.phaseDeadline,
       botSeats: [...party.botControlled],
       leftSeats: [...party.leftSeats],
-      finished: party.finished,
+      // Erst gemeldet, wenn auch das Ergebnis steht - siehe abrechnungLaeuft.
+      finished: party.finished && !party.abrechnungLaeuft,
     };
   }
 
@@ -556,7 +598,32 @@ export class PartyRuntime {
    */
   async act(tableId: string, accountId: string, action: unknown): Promise<void> {
     const party = this.requireLive(tableId);
-    if (party.finished) throw conflict('partyFinished');
+    if (party.finished) {
+      /**
+       * Beendete Partie: erst das Modul fragen, dann urteilen.
+       *
+       * Die Rundenpause endet, sobald der letzte anwesende Mensch "Weiter"
+       * tippt oder die Frist ablaeuft — bei der letzten Runde endet damit die
+       * ganze Partie. Wer in genau diesem Moment tippt, findet den Tisch da,
+       * wo er ihn haben wollte, und die Engine nennt seinen Tipp deshalb
+       * wirkungslos statt falsch (weiter() in game-doppelkopf/src/party.ts).
+       * Nur kam sie nie dran: Diese Zeile hat vorher jede Aktion auf einer
+       * beendeten Partie abgewiesen, und der Durchstich (realtime.test.ts)
+       * war unter Last daran rot, obwohl beide Clients alles richtig gemacht
+       * hatten. Dasselbe Rennen wie bei der verspaeteten Vorbehaltsantwort
+       * (applyVorbehalt in game-doppelkopf/src/round.ts, 06.09.2026), nur
+       * eine Ebene hoeher.
+       *
+       * Das Ergebnis wird weggeworfen: Ein Spielmodul ist eine reine
+       * Logikbibliothek, der Probelauf kostet nichts und aendert nichts. Und
+       * er entscheidet ALLEIN ueber das Nichts — alles andere bleibt
+       * 'partyFinished'. Eine gespielte Karte auf einer abgerechneten Partie
+       * ist kein Rennen, sondern ein Fehler, und sie soll auch so heissen.
+       */
+      const sitz = this.seatOf(party, accountId);
+      if (sitz !== null && this.wirkungslos(party, sitz, action)) return;
+      throw conflict('partyFinished');
+    }
     if (party.paused) throw conflict('partyPaused');
 
     const seat = this.seatOf(party, accountId);
@@ -580,6 +647,22 @@ export class PartyRuntime {
     party.state = next;
 
     await this.afterAction(party);
+  }
+
+  /**
+   * Laesst die Aktion den Zustand unveraendert?
+   *
+   * Dieselbe Frage wie das `next === party.state` in `act` — hier nur fuer
+   * einen Zustand, auf dem gar nicht mehr gehandelt werden darf. Ein Wurf des
+   * Moduls heisst dabei "nicht wirkungslos": Der Aufrufer soll dann seine
+   * eigene, genauere Ablehnung melden.
+   */
+  private wirkungslos(party: LiveParty, seat: number, action: unknown): boolean {
+    try {
+      return party.module.act(party.state, seat, action) === party.state;
+    } catch {
+      return false;
+    }
   }
 
   private async afterAction(party: LiveParty): Promise<void> {
@@ -636,6 +719,7 @@ export class PartyRuntime {
       // Niemand am Zug heisst Schaupause, und die hat ihre eigene Frist. Zwei
       // Uhren nebeneinander waeren zwei Antworten auf dieselbe Frage.
       party.phaseDeadline = null;
+      party.phaseMarke = null;
       this.scheduleInterlude(party);
       return;
     }
@@ -664,7 +748,7 @@ export class PartyRuntime {
     // wie der Timer darunter. Sonst haelt die Phasenfrist einen Botzug fuer
     // weiter entfernt, als er ist, und uebernimmt eine Runde, die der Bot noch
     // rechtzeitig zu Ende gebracht haette.
-    const bisZug = isBot ? this.botTakt(party) : this.opts.turnTimeoutMs;
+    const bisZug = isBot ? this.botTakt(party) : this.zugzeit(party);
 
     if (bisPhase !== null && bisPhase < bisZug) {
       party.timer = setTimeout(() => {
@@ -680,30 +764,56 @@ export class PartyRuntime {
       return;
     }
 
-    party.turnDeadline = Date.now() + this.opts.turnTimeoutMs;
+    party.turnDeadline = Date.now() + this.zugzeit(party);
     party.timer = setTimeout(() => {
       void this.onTimeout(party, actor);
-    }, this.opts.turnTimeoutMs);
+    }, this.zugzeit(party));
+  }
+
+  /**
+   * Zugzeit fuer einen Menschen an diesem Tisch.
+   *
+   * Ein Modul darf sie VERLAENGERN (`meta.zugzeitMs`, siehe game-api), nie
+   * kuerzen — sonst hebelte ein Modul den Test aus, der die Laufzeit auf eine
+   * kurze Zugzeit stellt. Gedeckelt, damit ein verlassener Tisch nicht eine
+   * Viertelstunde stehen bleibt.
+   */
+  private zugzeit(party: LiveParty): number {
+    const wunsch = party.module.meta.zugzeitMs;
+    if (wunsch === undefined || !Number.isFinite(wunsch)) return this.opts.turnTimeoutMs;
+    return Math.min(ZUGZEIT_HOECHST_MS, Math.max(this.opts.turnTimeoutMs, wunsch));
   }
 
   /**
    * Frist der laufenden Phase (phaseMs des Moduls), obwohl jemand am Zug ist.
    *
-   * Sie wird nur EINMAL gestellt und danach nicht mehr angefasst — genau das
-   * unterscheidet sie von der Zugzeit, die bei jeder Aktion irgendeines Sitzes
-   * neu anlaeuft. Zurueckgesetzt wird sie, wenn das Modul keine Frist mehr
-   * nennt; bei Tafelrunde ist das die Kampfphase zwischen zwei Vorbereitungen
-   * (siehe phaseMs in game-api).
+   * Sie wird je Phase nur EINMAL gestellt und danach nicht mehr angefasst —
+   * genau das unterscheidet sie von der Zugzeit, die bei jeder Aktion
+   * irgendeines Sitzes neu anlaeuft.
+   *
+   * Woran eine neue Phase zu erkennen ist, haengt am Modul (siehe phaseMs und
+   * phaseKey in game-api):
+   *
+   *   - Tafelrunde nennt zwischen zwei Vorbereitungen keine Frist (Kampfphase).
+   *     Das null setzt die Frist zurueck, die naechste stellt sie neu.
+   *   - Eiland hat nichts dazwischen: Die letzte Abgabe loest die Aufloesung
+   *     aus und die naechste Runde in einem Schritt. Dort wechselt stattdessen
+   *     `phaseKey` (die Rundennummer) — ohne diesen Vergleich liefe die Frist
+   *     der ersten Runde bis zum Partieende weiter und jede spaetere Runde
+   *     endete sofort.
    */
   private schedulePhase(party: LiveParty): void {
     const ms = party.module.phaseMs?.(party.state) ?? null;
     if (ms === null) {
       party.phaseDeadline = null;
+      party.phaseMarke = null;
       return;
     }
-    if (party.phaseDeadline === null) {
+    const marke = party.module.phaseKey?.(party.state) ?? null;
+    if (party.phaseDeadline === null || (marke !== null && marke !== party.phaseMarke)) {
       party.phaseDeadline = Date.now() + Math.min(ms, this.opts.phaseMaxMs);
     }
+    party.phaseMarke = marke;
   }
 
   /**
@@ -722,6 +832,7 @@ export class PartyRuntime {
     // Zwischen Timerstellung und -ablauf kann die Phase schon vorbei sein.
     if (!advance || party.module.phaseMs?.(party.state) === null) return;
     party.phaseDeadline = null;
+    party.phaseMarke = null;
 
     /*
      * KEIN `botControlled`: Anders als beim Zug-Timeout spielt hier niemand
@@ -994,6 +1105,9 @@ export class PartyRuntime {
   private async finish(party: LiveParty): Promise<void> {
     if (party.finished) return;
     party.finished = true;
+    // Nach aussen bleibt die Partie bis zum Rundruf am Ende dieser Methode
+    // ungemeldet; nach innen ist ab hier zu.
+    party.abrechnungLaeuft = true;
     if (party.timer) clearTimeout(party.timer);
     if (party.offlineTimer) clearTimeout(party.offlineTimer);
     party.timer = null;
@@ -1002,31 +1116,41 @@ export class PartyRuntime {
     party.phaseDeadline = null;
 
     const standings = party.module.standings(party.state);
-    await this.persist(party);
+    /*
+     * Was hier schiefgeht, darf die Partie nicht in der Abrechnung
+     * steckenlassen: Ohne das `finally` bliebe `abrechnungLaeuft` auf true,
+     * und der Tisch meldete sein Ende nie - ein haengender Bildschirm statt
+     * eines fehlenden Eintrags. Der Fehler geht trotzdem weiter nach oben.
+     */
+    try {
+      await this.persist(party);
 
-    if (party.module.meta.chipStackField) {
-      const rest: Record<string, number> = {};
-      for (const standing of standings) {
-        const accountId = party.seats.find((seat) => seat.index === standing.seat)?.accountId;
-        if (accountId) rest[accountId] = standing.points;
+      if (party.module.meta.chipStackField) {
+        const rest: Record<string, number> = {};
+        for (const standing of standings) {
+          const accountId = party.seats.find((seat) => seat.index === standing.seat)?.accountId;
+          if (accountId) rest[accountId] = standing.points;
+        }
+        await zahleAus(this.db, party.tableId, rest);
       }
-      await zahleAus(this.db, party.tableId, rest);
+
+      await this.db
+        .update(s.party)
+        .set({ status: 'finished', endedAt: new Date() })
+        .where(eq(s.party.id, party.partyId));
+
+      await this.db
+        .update(s.gameTable)
+        .set({ status: 'finished' })
+        .where(eq(s.gameTable.id, party.tableId));
+
+      await this.awardTrophies(party, standings);
+      await this.countStats(party, standings);
+      await this.recordWar(party, standings);
+      await this.countQuests(party, standings);
+    } finally {
+      party.abrechnungLaeuft = false;
     }
-
-    await this.db
-      .update(s.party)
-      .set({ status: 'finished', endedAt: new Date() })
-      .where(eq(s.party.id, party.partyId));
-
-    await this.db
-      .update(s.gameTable)
-      .set({ status: 'finished' })
-      .where(eq(s.gameTable.id, party.tableId));
-
-    await this.awardTrophies(party, standings);
-    await this.countStats(party, standings);
-    await this.recordWar(party, standings);
-    await this.countQuests(party, standings);
 
     // Die Partie bleibt nach dem Ende noch im Speicher. Wuerde sie hier
     // entfernt, ginge die Schlusssicht verloren: Der Rundruf holt sich den

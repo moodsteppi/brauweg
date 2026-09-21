@@ -10,10 +10,41 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 
+import { type ServerMessage } from '../src/realtime/protocol.js';
 import { playerProfile } from '../src/social/service.js';
 import { schema } from './helpers.js';
 import { startHarness, tableWithFourHumans, tableWithTwoHumans } from './harness.js';
 import { TestClient } from './client.js';
+
+/**
+ * Die Partienachricht aus dem ABSCHLIESSENDEN Rundruf — die, welche die
+ * gebuchten Trophaeen traegt. Null, solange sie nicht da ist.
+ *
+ * Ein Rundruf schickt je Verbindung erst die Sicht und DANACH die
+ * Partienachricht (`sendState` in gateway.ts), also zwei getrennte
+ * WebSocket-Rahmen. Der Empfaenger verarbeitet sie in zwei Ereignissen, und
+ * dazwischen kann jeder Timer laufen — auch die 10-ms-Abfrage von `waitFor`.
+ * Wer auf `lastView.finished` wartet und dann `messages('party').at(-1)`
+ * liest, greift in genau diesem Spalt die VORIGE Partienachricht ab: die aus
+ * der letzten Rundenpause, mit leerer Trophaeenliste. Unter der Last des
+ * vollen Laufs trifft das regelmaessig — auf `staging` wie im Pull Request
+ * (CI, 19./20.09.2026, "0 !== 4"); oertlich kommen beide Rahmen fast immer im
+ * selben Durchlauf an, und der Test ist gruen.
+ *
+ * Gewartet wird deshalb auf die Nachricht selbst und nicht auf ein Merkmal,
+ * von dem sie nur meistens begleitet wird. Gesucht wird sie ueber den
+ * Verlauf: die erste Partienachricht ab der Sicht, die das Partie-Ende
+ * meldet. Ausdruecklich NICHT "die erste mit Trophaeen" — das waere die
+ * Zusicherung selbst, und ein Tisch, der gar nichts bucht, liefe dann in
+ * einen Zeitablauf statt in einen sprechenden Fehler.
+ */
+function schlussmeldung(client: TestClient): Extract<ServerMessage, { type: 'party' }> | null {
+  const verlauf = client.verlauf;
+  const ende = verlauf.findIndex((m) => m.type === 'view' && m.finished);
+  if (ende < 0) return null;
+  return (verlauf.slice(ende).find((m) => m.type === 'party') ??
+    null) as Extract<ServerMessage, { type: 'party' }> | null;
+}
 
 test('eine Partie mit Bots fuellt Profil und Rangliste', async (t) => {
   const h = await startHarness();
@@ -24,19 +55,20 @@ test('eine Partie mit Bots fuellt Profil und Rangliste', async (t) => {
   const b = await TestClient.connect(h.wsUrl, await h.cookieFor(bert.accountId));
   a.join(table.id);
   b.join(table.id);
-  await a.waitFor(() => a.lastView?.finished === true, 'Partie-Ende', 60_000);
+  await a.waitFor(() => schlussmeldung(a) !== null, 'Partie-Ende', 60_000);
+  const schluss = schlussmeldung(a)!;
 
   const profil = await playerProfile(h.ctx.db, anna.accountId, anna.accountId);
   assert.equal(profil.totals.parties, 1, 'die Partie zaehlt im Profil');
 
   // Genau einer der Sitze hat gewonnen; wins muss zur Platzierung passen.
-  const standings = a.messages('party').at(-1)!.standings as { place: number }[];
+  const standings = schluss.standings as { place: number }[];
   assert.ok(standings.filter((s) => s.place === 1).length >= 1);
 
   // Bots schliessen die Wertung nicht mehr aus: gebucht wird auf die beiden
   // Konten-Sitze. Nullsummig ist das nicht - die Botplaetze bekommen ihren
   // Anteil schlicht nicht gutgeschrieben.
-  const gemeldet = a.messages('party').at(-1)!.trophies!;
+  const gemeldet = schluss.trophies!;
   assert.equal(gemeldet.length, 2, 'je eine Buchung fuer Anna und Bert');
   const buchungen = await h.ctx.db.select().from(schema.trophyLedger);
   assert.equal(buchungen.length, 2);
@@ -57,13 +89,14 @@ test('eine gewertete Partie bucht Trophaeen und meldet sie am Partie-Ende', asyn
   for (const client of clients) client.join(table.id);
 
   await clients[0]!.waitFor(
-    () => clients[0]!.lastView?.finished === true,
+    () => schlussmeldung(clients[0]!) !== null,
     'Partie-Ende',
     120_000,
   );
+  const schluss = schlussmeldung(clients[0]!)!;
 
   // Die Partie-Nachricht traegt die Buchungen: vier Sitze, Summe null.
-  const gemeldet = clients[0]!.messages('party').at(-1)!.trophies!;
+  const gemeldet = schluss.trophies!;
   assert.equal(gemeldet.length, 4);
   assert.equal(
     gemeldet.reduce((sum, a) => sum + a.delta, 0),
@@ -77,8 +110,7 @@ test('eine gewertete Partie bucht Trophaeen und meldet sie am Partie-Ende', asyn
 
   // Und das Profil des Bestplatzierten zeigt beides: Wertung und Zaehler.
   const bester = gemeldet.reduce((a, b) => (b.delta > a.delta ? b : a));
-  const konto = clients[0]!.messages('party').at(-1)!.seats
-    .find((s) => s.seat === bester.seat)!.accountId!;
+  const konto = schluss.seats.find((s) => s.seat === bester.seat)!.accountId!;
   const profil = await playerProfile(h.ctx.db, konto, konto);
 
   assert.equal(profil.ranking.length, 1);

@@ -85,6 +85,14 @@ export interface TableConnection<V = GameView> {
   /** Spielstärke der Bots dieses Tisches setzen (gilt für alle Bots). */
   setBotLevel(level: BotLevel): void;
   /**
+   * Farbwunsch des eigenen Sitzes setzen (Golf: Tipp auf den eigenen Namen in
+   * der Lobby). Nur eine Zahl — welcher Farbton das ist, weiß der Server nie.
+   * Ohne Warteschlange: Wer beim Wiederverbinden noch dieselbe Farbe will,
+   * tippt noch einmal; der Wunsch von vorhin beschriebe womöglich einen Tisch,
+   * an dem inzwischen jemand anderes sitzt.
+   */
+  setSeatColor(farbe: number): void;
+  /**
    * Takt-Herzschlag eines Echtzeitspiels absetzen. Ohne Warteschlange: Ein
    * Puls, der erst nach dem Wiederverbinden ankaeme, beschriebe einen Stand,
    * den es nicht mehr gibt — der naechste ist ohnehin in 200 ms da.
@@ -614,6 +622,17 @@ export function useTable<V = GameView>(
     [tableId, gameId],
   );
 
+  const setSeatColor = useCallback(
+    (farbe: number) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      socket.send(
+        JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'setSeatColor', tableId, farbe }),
+      );
+    },
+    [tableId, gameId],
+  );
+
   const setBotLevel = useCallback(
     (level: BotLevel) => {
       const socket = socketRef.current;
@@ -639,6 +658,7 @@ export function useTable<V = GameView>(
     removeBot,
     startNow,
     setBotLevel,
+    setSeatColor,
     sendTakt,
     sendeReaktion,
     reconnect,

@@ -481,9 +481,13 @@ describe('Ein Zähler, angetippt', () => {
     expect(screen.getByText(/4 auf dem Brett/)).toBeInTheDocument();
   });
 
-  it('schließt von selbst, wenn die Marke ganz vom Brett verschwindet', () => {
-    // Sonst käme das Blatt beim nächsten Kauf derselben Marke von allein
-    // wieder — ein Fenster, das aufgeht, ohne dass jemand tippt.
+  it('bleibt offen und zählt 0, wenn die Marke ganz vom Brett verschwindet', () => {
+    // Bis zum 18.09.2026 schloss das Blatt hier von selbst — es musste, denn
+    // es holte seinen Stand aus `staende` und war ohne ihn unsichtbar, während
+    // die offene Marke gesetzt blieb: Beim nächsten Kauf derselben Marke ging
+    // es von allein wieder auf. Seit `standFuer` auch ohne Träger einen Stand
+    // liefert, bleibt es einfach stehen und sagt „0 auf dem Brett" — dieselbe
+    // Antwort, die es im Laden für eine noch gar nicht gekaufte Marke gibt.
     const { rerender } = render(
       <Synergieleiste staende={[stand({ anzahl: 1 })]} tabelle={TABELLE} katalog={KATALOG} />,
     );
@@ -491,12 +495,11 @@ describe('Ein Zähler, angetippt', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
     rerender(<Synergieleiste staende={[]} tabelle={TABELLE} katalog={KATALOG} />);
-    expect(screen.queryByRole('dialog')).toBeNull();
-
-    rerender(
-      <Synergieleiste staende={[stand({ anzahl: 1 })]} tabelle={TABELLE} katalog={KATALOG} />,
-    );
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Marke Krieger' })).toBeInTheDocument();
+    expect(screen.getByText(/0 auf dem Brett/)).toBeInTheDocument();
+    // Und die nächste Schwelle ist die erste Stufe AUS DER TABELLE, nicht eine
+    // Zahl aus dem Client.
+    expect(screen.getByText(/noch 2 bis 2/)).toBeInTheDocument();
   });
 });
 
