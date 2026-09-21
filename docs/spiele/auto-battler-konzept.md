@@ -196,6 +196,78 @@ und keine Probe reproduzierbar.
 
 ---
 
+## Gemessen: gehört in die Bot-Bewertung mehr Zähigkeit? (21.09.2026, dreizehnte Messung — kein Eingriff)
+
+**Die Frage** stammt von einer Board-Karte vom 05.09.2026 (Punkt 6 der
+siebten Messung): `staerke` in `bot.ts` multipliziert Aushalten mal
+Austeilen und behandle beides als austauschbar — „wer stirbt, teilt nicht mehr
+aus", Zähigkeit sei im Gruppenkampf mehr wert, als das Produkt hergibt. Zu
+prüfen sei ein höheres, etwa quadratisches Gewicht auf das Aushalten. Belegt
+war das mit dem Monokultur-Turnier vom 05.09.: Dorfwache 89,3 %, Irrlicht
+42,9 %, Astschütze 28,6 %.
+
+**Die Antwort ist nein, in beide Richtungen.** Nichts geändert; die Formel
+bleibt das Produkt. Neu ist nur, dass der Exponent als Schraube der Gangart
+(`zaehigkeit`, in allen dreien 1) über `werkzeug/gangarten.mjs --schraube
+zaehigkeit=…` nachmessbar ist — die Reichweiten-Schraube der achten Messung
+war ein Wegwerf-Umbau, und der Text unten verweist bis heute auf einen
+Schalter, den es nicht gibt.
+
+### Das Turnier von damals gibt es nicht mehr
+
+Der Befund der Karte kommt vom alten Brett (5 × 2 je Seite). Auf dem heutigen
+(5 × 4, zwei leere Reihen dazwischen, seit dem 06.09.) sagt dasselbe Turnier
+das Gegenteil: Drei Nahkämpfer laufen vier Reihen unter Beschuss, und die
+Fernkämpfer gewinnen die Monokultur.
+
+| Rolle | Siegquote im Turnier (3 Saaten, Stand 21.09.) |
+|---|---|
+| Schütze | 79,3 % |
+| Magier | 70,1 % |
+| Beistand | 42,1 % |
+| Meuchler | 37,2 % |
+| Wache | **25,8 %** |
+
+Funkenlehrling und Bogenmeisterin gewinnen alles, Irrlicht und Grimmbart
+nichts. Gegen **dieses** Turnier ist ein höheres Gewicht auf das Aushalten der
+falsche Weg: Von 50 Paaren je Kostenstufe (ohne Beistand, sechs Saaten) ordnet
+haelt^p × teiltAus mit Reichweitenfaktor bei p = 1 **7** anders als das
+Turnier, bei p = 1,5 15, bei p = 2 27, bei p = 3 31. Die gebaute Formel ist
+also schon der beste Vorhersager unter den geprüften.
+
+### Und im Spiel — die Zahl, die zählt
+
+Gemessen wie beim Reichweitenfaktor: Sitz 0 rechnet mit dem Exponenten, drei
+Gegner mit 1, alle `normal`; sechs Saatbasen zu je 400 Partien, gepaart (die
+Saat hängt nicht an der Schraube, alle Zeilen spielen dieselben Läden und
+Gegner). Eindeutige Siege von Sitz 0 aus 2.400:
+
+| Exponent auf das Aushalten | Siege von 2.400 |
+|---|---|
+| 0,5 | 296 |
+| 0,75 | 349 |
+| **1 (gebaut)** | **626** |
+| 1,25 | 643 |
+| 1,5 | 529 |
+| 2 | 385 |
+| 3 | 387 |
+
+**Das Produkt ist das Optimum, und kein flaches.** 1,25 liegt innerhalb eines
+Standardfehlers (rund 22 Siege) neben 1; alles andere fällt steil ab.
+Quadratisch kostet den Bot rund 40 % seiner Siege — er kauft dann
+Schildknappen und Grimmbarte, die im heutigen Kampf hinten stehen. Halbiert
+kostet es noch mehr, dann ist der Gassendieb die einzige Wahl.
+
+### Was das für den Gassendieb heißt
+
+Nichts. Dass er (×0,44) am zweithäufigsten gekauft wird, wurde dieser Karte
+zugeschrieben („staerke gibt ihm 279 gegen 214"). Bei 1,25 ändert sich daran
+nichts, und jeder Exponent darüber kostet mehr, als er dort bringt. Wer den
+Gassendieb abräumen will, misst am Katalog — mit der Tauschprobe der elften
+Messung —, nicht an der Formel.
+
+---
+
 ## Gemessen: tragen die Boni von Elementar und Drache? (21.09.2026, zwölfte Messung — kein Katalogeingriff)
 
 **Warum es eine zwölfte gibt.** Die Board-Karte, die sie ausgelöst hat, fragt,
@@ -1295,6 +1367,11 @@ durchschnittlich höchstens acht Minuten hält mit Abstand.
    dieser Messung: Ein zäher Körper in der Vorderreihe (×0,78) brachte mehr,
    als die Träger auf Stärkegleichstand zu heben (×0,54) — und die Wache war
    auch für Untot der Kandidat, der die Marke in die Mitte holte.
+   **GEMESSEN am 21.09.2026 und verworfen** — siehe die dreizehnte Messung
+   ganz oben. Auf dem tiefen Brett gewinnen die Fernkämpfer das Turnier, und
+   im Spiel kostet ein quadratisches Gewicht den Bot rund 40 % seiner Siege;
+   das Produkt ist das Optimum. Nachmessbar über `gangarten.mjs --schraube
+   zaehigkeit=…`.
 
 ### Nachtrag 06.09.2026: die Gangart `hart` hat ihre Tempo-Schrauben getauscht
 

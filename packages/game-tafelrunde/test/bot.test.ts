@@ -21,7 +21,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { type Schwierigkeit, botZug } from '../src/bot.js';
+import { GANGARTEN as GEBAUT, type Schwierigkeit, botZug } from '../src/bot.js';
 import {
   BRETT_FELDER,
   BRETT_REIHEN,
@@ -338,6 +338,20 @@ describe('Bot: kaufen', () => {
      * gekauft haette (siehe `staerke`).
      */
     assert.deepEqual(zug(p, 'hart'), { typ: 'kaufen', platz: 2 });
+
+    /*
+     * Dieselbe Lage, nur die Schraube `zaehigkeit` auf 2: Jetzt zaehlt das
+     * Aushalten doppelt, und der Schildknappe (1.207 Aushalten gegen 612 beim
+     * Gassendieb) wird zur Wahl. Die Probe belegt nicht, dass das richtig
+     * waere — gemessen ist es das nicht (siehe ZAEHIGKEIT in bot.ts) —,
+     * sondern dass `werkzeug/gangarten.mjs --schraube zaehigkeit=…` wirklich
+     * an der Bewertung dreht. Ohne sie waere ein Messlauf mit einer Schraube,
+     * die nichts tut, vom Kontrolllauf nicht zu unterscheiden.
+     */
+    assert.deepEqual(botZug(sichtFuer(p, 0), { ...GEBAUT.hart, zaehigkeit: 2 }), {
+      typ: 'kaufen',
+      platz: 1,
+    });
   });
 
   /**

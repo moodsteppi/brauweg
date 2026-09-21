@@ -136,7 +136,81 @@ export interface Gangart {
    * Nur der sanfte Gegner darf sie verpassen.
    */
   readonly nimmtVerschmelzungImmer: boolean;
+  /**
+   * Exponent auf das Aushalten in `staerke`: 1 ist das reine Produkt.
+   *
+   * Steht hier und nicht als Konstante, damit `werkzeug/gangarten.mjs
+   * --schraube zaehigkeit=…` einen Vorschlag gepaart messen kann, ohne diese
+   * Datei anzufassen — die Reichweiten-Schraube vom 06.09.2026 war ein
+   * Wegwerf-Umbau, und die Doku verweist bis heute auf einen Schalter, den es
+   * nicht mehr gibt. Alle drei Gangarten rechnen gleich; die Zahl und ihre
+   * Messung stehen bei `ZAEHIGKEIT_BEZUG`.
+   */
+  readonly zaehigkeit: number;
 }
+
+/**
+ * Exponent auf das Aushalten in `staerke` — 1 heisst: das reine Produkt aus
+ * Aushalten und Austeilen, so wie es seit dem 04.09.2026 gebaut ist.
+ *
+ * WARUM DIESE ZAHL UEBERHAUPT DA IST: Eine Board-Karte vom 05.09.2026 hielt
+ * das Produkt fuer zu schadenlastig — "wer stirbt, teilt nicht mehr aus,
+ * Zaehigkeit ist im Gruppenkampf mehr wert, als das Produkt hergibt" — und
+ * schlug ein hoeheres, etwa quadratisches Gewicht auf das Aushalten vor. Der
+ * Befund stammte vom Monokultur-Turnier auf dem alten Brett (5 x 2 je Seite),
+ * wo Dorfwache und Irrlicht die Schuetzen schlugen. Auf dem heutigen Brett
+ * (5 x 4 mit zwei leeren Reihen) ist es umgekehrt: Dort gewinnen die
+ * Fernkaempfer die Monokultur (Schuetze 79 %, Magier 70 %, Wache 26 %), weil
+ * drei Nahkaempfer vier Reihen unter Beschuss laufen. Die Karte beschreibt
+ * also einen Stand, den es nicht mehr gibt.
+ *
+ * GEMESSEN AM 21.09.2026, und zwar an beidem, woran eine Bewertung zu messen
+ * ist. Erstens an der VORHERSAGE: Wie viele Paare einer Kostenstufe ordnet
+ * haelt^p * teiltAus (mit Reichweitenfaktor bei voller Deckung) anders als das
+ * Turnier mit sechs Saaten, ohne Beistand? Bei p = 1 sind es 7 von 50, bei
+ * p = 1,5 15, bei p = 2 27, bei p = 3 31. Zweitens — und das ist die Zahl, die
+ * zaehlt — am SPIEL: Sitz 0 rechnet mit dem Exponenten, drei Gegner mit 1,
+ * alle `normal`; sechs Saatbasen zu je 400 Partien, gepaart wie bei
+ * `gangarten.mjs` (die Saat haengt nicht an der Schraube, alle Zeilen
+ * spielen dieselben Laeden und Gegner). Eindeutige Siege von Sitz 0 aus 2.400:
+ *
+ *     Exponent 0,5     296
+ *     Exponent 0,75    349
+ *     Exponent 1       626   <- gebaut
+ *     Exponent 1,25    643
+ *     Exponent 1,5     529
+ *     Exponent 2       385
+ *     Exponent 3       387
+ *
+ * DAS PRODUKT IST DAS OPTIMUM, und zwar kein flaches: 1,25 liegt innerhalb
+ * eines Standardfehlers (rund 22 Siege) neben 1, alles andere faellt in beide
+ * Richtungen steil ab. Quadratisch kostet den Bot rund 40 % seiner Siege — er
+ * kauft dann Schildknappen und Grimmbarte, die im heutigen Kampf hinten
+ * stehen. Halbiert kostet es noch mehr: Der Gassendieb wird dann zur einzigen
+ * Wahl. Die Karte war eine Vermutung ueber einen Stand von vor dem tiefen
+ * Brett; auf dem heutigen ist sie widerlegt.
+ *
+ * WAS DIE ZAHL NICHT LOEST: Dass der Gassendieb (x0,44 im Spiel) trotzdem am
+ * zweithaeufigsten gekauft wird, liegt nicht am Exponenten — bei 1,25 aendert
+ * sich daran nichts, und alles darueber kostet mehr, als es dort bringt. Wer
+ * ihn abraeumen will, misst am Katalog (docs/spiele/auto-battler-konzept.md,
+ * elfte Messung: `tauschprobe.mjs`), nicht an dieser Formel.
+ *
+ * NACHMESSEN ohne diese Datei anzufassen: `node packages/game-tafelrunde/
+ * werkzeug/gangarten.mjs --stark normal --schwach normal --schraube
+ * zaehigkeit=2` (je Saatbasis `--saat …`). Wer Brett, Arena oder Katalog
+ * anfasst, misst diese Zahl neu — sie ist so brettabhaengig wie
+ * `REICHWEITEN_GEWICHT`.
+ */
+const ZAEHIGKEIT = 1;
+
+/**
+ * Bezugswert, damit ein anderer Exponent die Skala nicht sprengt: Das
+ * Aushalten geht als haelt * (haelt / BEZUG)^(zaehigkeit - 1) ein, und bei
+ * 1.000 (eine Dorfwache haelt 1.083) bleiben die Staerken dreistellig, egal
+ * welcher Exponent gemessen wird. Bei Exponent 1 ist der Faktor genau 1.
+ */
+const ZAEHIGKEIT_BEZUG = 1000;
 
 /**
  * Die drei Gangarten.
@@ -276,6 +350,7 @@ export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     wuerfeltNeu: false,
     patzerQuote: 0.75,
     nimmtVerschmelzungImmer: false,
+    zaehigkeit: ZAEHIGKEIT,
   },
   normal: {
     polster: 4,
@@ -284,6 +359,7 @@ export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     wuerfeltNeu: true,
     patzerQuote: 0.15,
     nimmtVerschmelzungImmer: true,
+    zaehigkeit: ZAEHIGKEIT,
   },
   hart: {
     polster: 2,
@@ -292,6 +368,7 @@ export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     wuerfeltNeu: true,
     patzerQuote: 0,
     nimmtVerschmelzungImmer: true,
+    zaehigkeit: ZAEHIGKEIT,
   },
 };
 
@@ -453,6 +530,13 @@ function deckungIm(einheiten: readonly Kaempfer[]): number {
  * stuende dann vor jedem Angreifer, und der Bot baute ein Heer, das nichts
  * umbringt.
  *
+ * UND AUCH NICHT DAS PRODUKT MIT EINEM HOEHEREN GEWICHT AUF DAS AUSHALTEN.
+ * Das war der Vorschlag einer Board-Karte vom 05.09.2026 ("wer stirbt, teilt
+ * nicht mehr aus") und ist am 21.09.2026 gemessen: Quadratisch kostet den Bot
+ * rund 40 % seiner Siege, halbiert noch mehr. Die Zahlen und der Weg, sie
+ * nachzumessen, stehen bei `ZAEHIGKEIT`; der Exponent selbst kommt ueber die
+ * Gangart herein, damit der Messstand ihn verstellen kann.
+ *
  * Die Ruestung ist ein Faktor auf das Leben und keine Zugabe: Der Kampf
  * mindert jeden Treffer um ihren Prozentsatz (`schadenNach` in kampf.ts), 50
  * Ruestung verdoppeln also das, was eine Einheit aushaelt.
@@ -483,9 +567,11 @@ function staerke(
   k: Kaempfer,
   bonus: Wertebonus = KEIN_BONUS,
   deckung: number = KEINE_DECKUNG,
+  zaehigkeit: number = ZAEHIGKEIT,
 ): number {
   const w = werteFuer(k.id, k.stufe, bonus);
-  const haelt = (w.leben * 100) / Math.max(1, 100 - w.ruestung);
+  const haeltRoh = (w.leben * 100) / Math.max(1, 100 - w.ruestung);
+  const haelt = haeltRoh * Math.pow(haeltRoh / ZAEHIGKEIT_BEZUG, zaehigkeit - 1);
   const teiltAus = leistung(k.id, w.angriff) * w.tempo;
   const ausDerFerne = 1 + (w.reichweite - 1) * REICHWEITEN_GEWICHT * deckung;
   return Math.round((haelt * teiltAus * ausDerFerne) / STAERKE_TEILER);
@@ -560,11 +646,13 @@ function leistung(id: EinheitId, angriff: number): number {
  * hoechstens 18 Einheiten. Das ist etwas anderes als `simuliereKampf`, vor dem
  * der Kommentar oben warnt: Hier wird nichts iteriert, nur addiert.
  */
-function heerStaerke(einheiten: readonly Kaempfer[]): number {
+function heerStaerke(einheiten: readonly Kaempfer[], zaehigkeit: number = ZAEHIGKEIT): number {
   const zaehlung = zaehleMarken(einheiten);
   const deckung = deckungIm(einheiten);
   let summe = 0;
-  for (const k of einheiten) summe += staerke(k, bonusFuerEinheit(k.id, zaehlung), deckung);
+  for (const k of einheiten) {
+    summe += staerke(k, bonusFuerEinheit(k.id, zaehlung), deckung, zaehigkeit);
+  }
   return summe;
 }
 
@@ -938,11 +1026,15 @@ export function stelleHeerAuf(
  * weitesten links — die feste Reihenfolge ist dieselbe Zusage wie bei
  * `kandidaten`: dieselbe Lage, derselbe Zug (Grundsatz 1).
  */
-function besteZugabe(brett: readonly Kaempfer[], bank: readonly Stelle[]): Stelle {
+function besteZugabe(
+  brett: readonly Kaempfer[],
+  bank: readonly Stelle[],
+  zaehigkeit: number,
+): Stelle {
   let beste = bank[0]!;
-  let bester = heerStaerke([...brett, beste.k]);
+  let bester = heerStaerke([...brett, beste.k], zaehigkeit);
   for (const stelle of bank.slice(1)) {
-    const wert = heerStaerke([...brett, stelle.k]);
+    const wert = heerStaerke([...brett, stelle.k], zaehigkeit);
     if (wert > bester) {
       beste = stelle;
       bester = wert;
@@ -965,15 +1057,16 @@ function besterTausch(
   brett: readonly Kaempfer[],
   stehen: readonly Stelle[],
   bank: readonly Stelle[],
+  zaehigkeit: number,
 ): { readonly vonBank: number; readonly aufsBrett: number } | null {
-  let bester = heerStaerke(brett);
+  let bester = heerStaerke(brett, zaehigkeit);
   let gefunden: { vonBank: number; aufsBrett: number } | null = null;
 
   for (const vonBank of bank) {
     for (let i = 0; i < stehen.length; i += 1) {
       const danach = brett.slice();
       danach[i] = vonBank.k;
-      const wert = heerStaerke(danach);
+      const wert = heerStaerke(danach, zaehigkeit);
       if (wert > bester) {
         bester = wert;
         gefunden = { vonBank: vonBank.platz, aufsBrett: stehen[i]!.platz };
@@ -998,7 +1091,11 @@ function besterTausch(
  * der Bot zwei gleich gute Einheiten bis zum Zeitablauf hin und her, und die
  * Runde endete nie.
  */
-function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAktion | null {
+function stellungsZug(
+  sicht: TafelrundeSicht,
+  eigen: EigeneSicht,
+  gangart: Gangart,
+): TafelrundeAktion | null {
   const reihen = sicht.brettReihen;
   const spalten = sicht.brettSpalten;
 
@@ -1032,7 +1129,7 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
   //    aufstellt, kauft zwar auf Marken hin (siehe KAUFEN NACH WERT), stellt
   //    sie aber nie auf — und die Schwelle bleibt so leer wie vorher.
   if (eigen.belegt < eigen.feldplaetze && freie.length > 0 && bank.length > 0) {
-    const beste = besteZugabe(aufDemBrett, bank);
+    const beste = besteZugabe(aufDemBrett, bank, gangart.zaehigkeit);
     return {
       typ: 'verschieben',
       von: { bereich: 'bank', platz: beste.platz },
@@ -1050,7 +1147,7 @@ function stellungsZug(sicht: TafelrundeSicht, eigen: EigeneSicht): TafelrundeAkt
   //    staerkste gegen die schwaechste: Ein Tausch kann die Marke des
   //    Abgeloesten unter eine Schwelle druecken und damit trotz staerkerer
   //    Einzeleinheit ein schwaecheres Brett hinterlassen.
-  const tausch = besterTausch(aufDemBrett, stehen, bank);
+  const tausch = besterTausch(aufDemBrett, stehen, bank, gangart.zaehigkeit);
   if (tausch !== null) {
     return {
       typ: 'verschieben',
@@ -1122,9 +1219,13 @@ const PAAR_FAKTOR = 1.5;
  * Haus (siehe `kandidaten`), und der Aufstieg auf die naechste Sternstufe
  * ueberwiegt sie ohnehin deutlich.
  */
-function umfeldGewinn(eigene: readonly Kaempfer[], id: EinheitId): number {
+function umfeldGewinn(eigene: readonly Kaempfer[], id: EinheitId, zaehigkeit: number): number {
   const neu: Kaempfer = { id, stufe: 1 };
-  return heerStaerke([...eigene, neu]) - heerStaerke(eigene) - staerke(neu);
+  return (
+    heerStaerke([...eigene, neu], zaehigkeit) -
+    heerStaerke(eigene, zaehigkeit) -
+    staerke(neu, KEIN_BONUS, KEINE_DECKUNG, zaehigkeit)
+  );
 }
 
 interface Kandidat {
@@ -1154,7 +1255,12 @@ interface Kandidat {
  * der Faktor selbst — wer hier eine Deckung einsetzt, macht den Bot schlechter
  * als ganz ohne Reichweite.
  */
-function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number): Kandidat[] {
+function kandidaten(
+  sicht: TafelrundeSicht,
+  eigen: EigeneSicht,
+  polster: number,
+  zaehigkeit: number,
+): Kandidat[] {
   const eigene = eigeneEinheiten(eigen);
   const bankFrei = eigen.bank.includes(null);
   const noetig = sicht.verschmelzZahl - 1;
@@ -1184,10 +1290,10 @@ function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number)
      */
     if (!verschmilzt && eigen.gold - art.kosten < polster) return;
 
-    let wert = staerke({ id, stufe: 1 });
+    let wert = staerke({ id, stufe: 1 }, KEIN_BONUS, KEINE_DECKUNG, zaehigkeit);
     if (verschmilzt) wert *= VERSCHMELZ_FAKTOR;
     else if (kopien > 0) wert *= PAAR_FAKTOR;
-    wert += umfeldGewinn(eigene, id);
+    wert += umfeldGewinn(eigene, id, zaehigkeit);
 
     gefunden.push({ platz, id, verschmilzt, wert });
   });
@@ -1239,7 +1345,7 @@ function kaufZug(
   gangart: Gangart,
 ): TafelrundeAktion | null {
   const polster = sicht.runde >= POLSTER_AB_RUNDE ? gangart.polster : 0;
-  const moeglich = kandidaten(sicht, eigen, polster);
+  const moeglich = kandidaten(sicht, eigen, polster, gangart.zaehigkeit);
   if (moeglich.length === 0) return null;
 
   const bester = moeglich[0]!;
@@ -1431,7 +1537,7 @@ export function botZug(
 
   const gangart = typeof wahl === 'string' ? GANGARTEN[wahl] : wahl;
   return (
-    stellungsZug(sicht, eigen) ??
+    stellungsZug(sicht, eigen, gangart) ??
     aufstiegsZug(eigen, gangart) ??
     wuerfelZug(sicht, eigen, gangart) ??
     kaufZug(sicht, eigen, gangart) ?? { typ: 'bereit' }
