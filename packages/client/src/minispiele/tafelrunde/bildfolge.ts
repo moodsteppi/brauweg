@@ -414,8 +414,8 @@ const STANDLINIE = 0.836;
 export const FIGURENKASTEN = zellkasten(MASSSTAB_METER, STANDLINIE);
 
 /**
- * Hoehe und Bodenversatz eines Zellenausschnitts — DIE Rechnung, die sich alle
- * vier Orte teilen (Arena, Wabe, Bank, Ladenkarte).
+ * Hoehe und Bodenversatz eines Zellenausschnitts — DIE Rechnung hinter der
+ * Figurengroesse, geteilt von Arena, Wabe und Bank.
  *
  * Zwei Eingaben je Ort, und beide sind Entscheidungen: `zeigtMeter` sagt, wie
  * viele Weltmeter die Bezugshoehe abbildet (daraus folgt, wie gross die Figur
@@ -424,12 +424,12 @@ export const FIGURENKASTEN = zellkasten(MASSSTAB_METER, STANDLINIE);
  * Fusspunkt kommen aus figuren3d.ts.
  *
  * `bezug` ist die Hoehe, auf die sich beide Rueckgaben beziehen: 100 fuer ein
- * Prozentmass. Die Ladenkarte rechnet in Pixeln und geht deshalb einen eigenen
- * Weg (siehe `KARTENKASTEN`) — sie hat keine Bezugshoehe, die diese Funktion
- * kennen koennte, ohne die Hoehe des Kartenkopfs aus dem Stylesheet
- * abzuschreiben.
+ * Prozentmass. Der VIERTE Ort, die Ladenkarte, rechnet in Pixeln und geht
+ * deshalb einen eigenen Weg (siehe `KARTENKASTEN`) — er hat keine Bezugshoehe,
+ * die diese Funktion kennen koennte, ohne die Hoehe des Kartenkopfs aus dem
+ * Stylesheet abzuschreiben. Dieselben zwei Entscheidungen trifft er trotzdem.
  *
- * WARUM DAS EINE FUNKTION IST UND NICHT VIERMAL DIESELBEN ZWEI ZEILEN: Die
+ * WARUM DAS EINE FUNKTION IST UND NICHT DREIMAL DIESELBEN ZWEI ZEILEN: Die
  * Rechnung ist die Stelle, an der `FIGUREN3D_ZELLHOEHE_METER` eingeht. Steht
  * sie nur an einem der vier Orte, haengen die drei anderen weiter stumm am
  * gemessenen Ausschnitt — genau der Zustand, aus dem am 06.09.2026 drei
