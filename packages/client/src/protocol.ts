@@ -78,8 +78,13 @@ export const TAFELRUNDE_MODULE_VERSION = 1;
  * 1 seit dem 6. September 2026 — die erste Fassung. Golf ist wie Feldherr
  * Echtzeit im Gleichschritt (siehe SPEZIFIKATION-GOLF.md): Ueber die Leitung
  * gehen nur Schlaege, die eigentliche Ballphysik rechnet jedes Geraet selbst.
+ *
+ * 2 seit dem 06.09.2026 abends (Physik: Geistphase, gemeinsamer Abschlag),
+ * 3 seit dem 21.09.2026 (Bots: Sand und Eis, Portalpaare, Tempo ins Portal).
+ * Die Bots laufen auf jedem Geraet — mit verschiedenem Bot laufen zwei Geraete
+ * aus derselben Zugliste auseinander, genau wie bei der Physik.
  */
-export const GOLF_MODULE_VERSION = 2;
+export const GOLF_MODULE_VERSION = 3;
 
 /**
  * 1 seit dem 18. September 2026 — die erste Fassung. Die Partykiste ist das
