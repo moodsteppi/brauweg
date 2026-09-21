@@ -333,11 +333,22 @@ const STAERKE_TEILER = 100;
 /**
  * Wie stark die Zaehigkeit gegenueber dem Austeilen zaehlt.
  *
- * WARUM UEBERHAUPT EINE HOCHZAHL: Wer stirbt, teilt nicht mehr aus. Leben und
- * Schaden sind deshalb NICHT austauschbar — eine Einheit, die doppelt so lange
- * steht, schlaegt doppelt so oft UND nimmt dem Gegner die Zeit, in der er
- * seinerseits austeilt. Das reine Produkt `haelt * teiltAus` behandelt beides
- * als gleichwertig und unterschaetzt die Zaehigkeit damit systematisch.
+ * WARUM UEBERHAUPT EINE HOCHZAHL: Wer stirbt, teilt nicht mehr aus. Das reine
+ * Produkt `haelt * teiltAus` behandelt Leben und Schaden als austauschbar und
+ * unterschaetzt die Zaehigkeit damit — wer laenger steht, schlaegt nicht nur
+ * oefter, sondern bindet auch den Gegner, der auf ihn einschlaegt.
+ *
+ * UND GENAU HIER LIEGT DIE FALLE, DERETWEGEN DIESER ABSATZ SO KURZ BLEIBT:
+ * Denkt man das zu Ende ("beide Haelften des Vorteils zaehlen, also
+ * quadrieren"), landet man bei 2,00 — dem schlechtesten Wert im ganzen Feld,
+ * siehe unten. Das Argument ueberschaetzt sich, weil es nur den Anfang des
+ * Kampfes beschreibt. Zaehigkeit, die ueber das Ende des Kampfes hinausreicht,
+ * ist verschenkt — und wer zu wenig austeilt, kommt an die Hoechstdauer
+ * (`HOECHSTDAUER_MS` in kampf.ts). Dort gewinnt nicht der, dem mehr Leben
+ * geblieben ist, sondern der, der den ANDEREN naeher an den Tod gedrueckt hat
+ * (`entscheideNachZeit`); ein Heer aus Saecken verliert das Zeitpatt, das es
+ * selbst herbeigefuehrt hat. Wie weit der Vorteil traegt, ist deshalb keine
+ * Ueberlegung, sondern eine Messung — und sie faellt klein aus.
  *
  * DIE ZAHL IST GEMESSEN, nicht hergeleitet — der Betrag, um den die Zaehigkeit
  * ueberwiegt, folgt aus keiner Rechnung, die man aufschreiben koennte.
