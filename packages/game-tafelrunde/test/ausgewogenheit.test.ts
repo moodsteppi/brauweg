@@ -106,7 +106,13 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * der Bot kauft die seitdem seltener. Die letzten achtzehn Antritte hat die
  * fuenfte Naturwesen-Traegerin gekostet (Bogenmeisterin, 18.09.2026) — sie
  * wird oefter gekauft und verdraengt dabei anderes. Die Marke haelt die
- * Schwelle noch, aber sie ist die naechste, die faellt.
+ * Schwelle noch, aber sie ist die naechste, die faellt. Nachgemessen am
+ * 21.09.2026, ohne Aenderung am Katalog dazwischen: weiter 105 auf dieser
+ * Saat, ueber 5.000 Partien auf der Werkzeugsaat 1.355 Antritte bei x1,03 —
+ * die Marke ist also nicht schwach, sie wird nur selten gespielt. Faellt sie
+ * unter die Schwelle, nennt die Meldung der Probe sie beim Namen (siehe
+ * unten bei `zuDuenn`); ein dritter Traeger mit Reichweite waere der
+ * naheliegende Eingriff, ist aber eine Katalogentscheidung.
  */
 const MINDEST_ANTRITTE = 100;
 
@@ -200,7 +206,21 @@ describe('Ausgewogenheit: Marken', () => {
 
     // Ohne Zeilen gibt es nichts zu vergleichen — und eine Probe, die bei
     // leerer Tabelle gruen ist, prueft nichts.
-    assert.ok(gezaehlt.length >= 6, `nur ${gezaehlt.length} Marken mit genug Antritten`);
+    //
+    // Die Meldung nennt die Zeilen UNTER der Schwelle mit ihrer Zahl, nicht
+    // nur, wie viele darueber liegen: "nur 5 Marken" sagt nicht, welche
+    // gefallen ist, und der eigentliche Befund — meist ein Traeger, den der
+    // Bot seit einer Aenderung seltener kauft — stuende dann nirgends. Untot
+    // ist mit 105 Antritten die Zeile, bei der das als Erstes passiert
+    // (Board-Karte vom 06.09.2026, nachgemessen am 21.09.2026).
+    const zuDuenn = AUSWERTUNG.marken
+      .filter((z) => z.antritte < MINDEST_ANTRITTE)
+      .map((z) => `${z.name} (${z.antritte})`)
+      .join(', ');
+    assert.ok(
+      gezaehlt.length >= 6,
+      `nur ${gezaehlt.length} Marken mit genug Antritten — unter ${MINDEST_ANTRITTE}: ${zuDuenn}`,
+    );
     assert.ok(schnitt > 0, 'der Schnitt der Siegquoten ist null');
 
     for (const zeile of gezaehlt) {
