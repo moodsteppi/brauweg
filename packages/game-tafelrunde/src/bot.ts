@@ -511,10 +511,10 @@ const REICHWEITEN_GEWICHT = 0.25;
 const DECKKRAFT = 2;
 
 /** Kein Rueckhalt: Reichweite bringt der Einheit dann gar nichts. */
-const KEINE_DECKUNG = 0;
+export const KEINE_DECKUNG = 0;
 
 /** Voller Rueckhalt: Reichweite zaehlt mit `REICHWEITEN_GEWICHT` je Feld. */
-const VOLLE_DECKUNG = 1;
+export const VOLLE_DECKUNG = 1;
 
 /**
  * Wie gut die Vorderreihe dieses Heeres seine Fernkaempfer deckt — 0 bis 1.
@@ -589,14 +589,12 @@ function deckungIm(einheiten: readonly Kaempfer[]): number {
  * Rechnung des Moduls.
  *
  * WER DIESE ZAHL ZUM BALANCIEREN LIEST, MUSS DIE DECKUNG MITGEBEN — sonst
- * bekommt er eine Rangfolge, die der Kampfmessung WIDERSPRICHT. Gegen das
- * Monokultur-Turnier (`werkzeug/turnier.mjs`, je 9 Saaten ueber zwei
- * Saatbasen, Rangkorrelation nach Spearman ueber die drei Kostenstufen):
+ * bekommt er eine Rangfolge, die der Kampfmessung WIDERSPRICHT. Gemessen mit
+ * `werkzeug/bewertungsprobe.mjs` gegen das Monokultur-Turnier, Rangkorrelation
+ * nach Spearman ueber die drei Kostenstufen, drei Saatbasen:
  *
- *     staerke(k, KEIN_BONUS, VOLLE_DECKUNG)    +0,85
- *     staerke(k)  — also KEINE_DECKUNG         -0,13
- *     nur das Aushalten                        -0,45
- *     nur das Austeilen                        +0,45
+ *     staerke(k, KEIN_BONUS, VOLLE_DECKUNG)    +0,84  +0,82  +0,82
+ *     staerke(k)  — also KEINE_DECKUNG         -0,29  -0,27  -0,27
  *
  * Die ganze Vorhersagekraft steckt also im Reichweitenfaktor, und der ist in
  * der Vorgabe ABGESCHALTET. Fuer den Bot ist das richtig so und mit Absicht
@@ -604,6 +602,15 @@ function deckungIm(einheiten: readonly Kaempfer[]): number {
  * damit ihn `VERSCHMELZ_FAKTOR` nicht mitmultipliziert). Fuer einen Menschen,
  * der zwei Einheiten vergleicht, ist es eine Falle: `staerke({ id, stufe: 1 })`
  * sieht nach "wie stark ist die" aus und ist es nicht.
+ *
+ * DASS DIE ZWEITE ZAHL MIT `ZAEHIGKEIT_HOCHZAHL` GESUNKEN IST (von -0,13 auf
+ * -0,29), waehrend der Bot MEHR Partien gewinnt, ist kein Widerspruch und der
+ * Grund, warum hier zwei Werkzeuge stehen statt einem: Die Korrelation misst
+ * die blanke Zahl, `werkzeug/gangarten.mjs` misst die Entscheidung. Der Bot
+ * trifft sie nie mit `staerke` allein — Verschmelzung, Marken und
+ * `umfeldGewinn` stehen daneben, und die Deckung kommt ueber den letzten
+ * wieder herein. Wer die eine Zahl mit der anderen begruendet, begruendet
+ * nichts.
  *
  * DIE ROLLE SAGT HEUTE NICHTS MEHR VORAUS. Am 05.09.2026 war die Turnier-
  * Rangfolge fast monoton in ihr — wache/meuchler vor schuetze vor magier vor
@@ -626,7 +633,7 @@ function deckungIm(einheiten: readonly Kaempfer[]): number {
  * `heerStaerke` um mindestens einen ganzen Punkt hebt. Ein Faktor, der eine
  * Kommazahl stehen laesst, macht aus dem Schritt eine beliebig kleine Zahl.
  */
-function staerke(
+export function staerke(
   k: Kaempfer,
   bonus: Wertebonus = KEIN_BONUS,
   deckung: number = KEINE_DECKUNG,
