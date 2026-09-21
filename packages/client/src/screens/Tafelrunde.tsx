@@ -1641,17 +1641,6 @@ function Ruestkammer({
     [eigeneSynergien, synergieTabelle],
   );
 
-  /**
-   * Der Griff zum Markenblatt fuer die beiden Blaetter — das einer Einheit auf
-   * Bank und Brett und das einer Ladenkarte.
-   *
-   * Mit den EIGENEN Staenden: Beide Blaetter beschreiben eine Einheit, die auf
-   * meinem Brett steht oder dort stehen soll, und die Frage dahinter ist
-   * „reicht das bei MIR fuer die naechste Stufe". Die Markenzeile des Gegners
-   * hat ihren eigenen Griff mit SEINEN Staenden (siehe `useMarkenblatt`).
-   */
-  const markengriff = useMarkenblatt(eigeneSynergien, synergieTabelle, katalog);
-
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
 
   /**
@@ -1680,6 +1669,31 @@ function Ruestkammer({
   const lebendeGegner = sicht.gegner.filter((g) => g.ausRunde === null);
   const gegner =
     sicht.gegner.find((g) => g.sitz === gezeigterGegner) ?? lebendeGegner[0] ?? sicht.gegner[0];
+
+  /**
+   * Der Griff zum Markenblatt fuer die beiden Blaetter — das einer Einheit auf
+   * Bank und Brett und das einer Ladenkarte.
+   *
+   * Am Spielertisch mit den EIGENEN Staenden: Beide Blaetter beschreiben eine
+   * Einheit, die auf meinem Brett steht oder dort stehen soll, und die Frage
+   * dahinter ist „reicht das bei MIR fuer die naechste Stufe" — auch am Brett
+   * des Gegners. Die Markenzeile des Gegners hat ihren eigenen Griff mit
+   * SEINEN Staenden (siehe `useMarkenblatt`).
+   *
+   * Der ZUSCHAUER hat kein „bei mir": Er bekommt die Staende des Sitzes,
+   * dessen Brett er gerade ansieht — dieselben, die der Brettkopf darueber
+   * zaehlt. Bis zum 21.09.2026 lief der Griff auch fuer ihn mit den eigenen
+   * Staenden, und die sind bei ihm leer (`eigenes` ist null): Jedes
+   * Markenblatt haette „0 auf dem Brett" gesagt, waehrend der Brettkopf
+   * daneben vier zaehlt. Deshalb war der Weg im Zuschauer-Zweig bis dahin gar
+   * nicht verdrahtet. Der Griff steht hier unter `gegner`, weil er dessen
+   * Staende braucht.
+   */
+  const markengriff = useMarkenblatt(
+    eigenes ? eigeneSynergien : (gegner?.synergien ?? OHNE_SYNERGIEN),
+    synergieTabelle,
+    katalog,
+  );
 
   /*
    * DIE WAHL GILT BIS ZUM PHASENWECHSEL, dann faellt sie zurueck.
@@ -1912,10 +1926,18 @@ function Ruestkammer({
               maxStufe={sicht.maxStufe}
               erloes={blattWerte?.erloes}
               verschiebenTitel="Verschieben"
+              /* Die Marken fuehren auch hier zu ihrem Blatt — mit den Staenden
+                 des gezeigten Sitzes (siehe `markengriff`). Nachschlagen ist
+                 kein Handeln. */
+              onMarke={markengriff.oeffne}
+              escapeAus={markengriff.offeneMarke !== null}
               onSchliessen={() => setBlatt(null)}
             />
           )}
         </div>
+        {/* Das Blatt einer Marke liegt wie am Spielertisch UEBER dem
+            Einheitenblatt und ausserhalb der Mitte (siehe dort). */}
+        {markengriff.blatt}
       </main>
     );
   }

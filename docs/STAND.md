@@ -466,6 +466,16 @@ nächsten roten Lauf nicht zum zweiten Mal gesucht werden soll.
 > seine zeigt. Neu daneben: `standFuer` — eine Marke ohne Träger fehlt in
 > `synergien` ganz, und im Laden ist „0 auf dem Brett" die häufigste Antwort.
 >
+> **Der Zuschauer bekommt dieses Blatt seit dem 21.09.2026 mit den Ständen
+> des Sitzes, dessen Brett er ansieht.** Das Blatt einer Einheit ging für ihn
+> seit dem Lesepfad (19.09.2026) auf, die Marken darin waren aber stumm: Der
+> gemeinsame Griff lief mit den eigenen Ständen, und die sind bei einem
+> Zuschauer leer — jedes Markenblatt hätte „0 auf dem Brett" gesagt, während
+> der Brettkopf daneben vier zählt. Jetzt zählt es dasselbe wie der Brettkopf
+> (`markengriff` in `screens/Tafelrunde.tsx`). Am Spielertisch bleibt es
+> bei den eigenen Ständen, auch am Brett des Gegners: Die Frage dort ist
+> „reicht das bei mir".
+>
 > **Erledigt:** Die Werte trugen die Partie zunächst nicht — zu acht lief
 > **jede** Partie in die Rundengrenze von 30, statt sich auszuspielen (100
 > Startleben gegen rund 5 Punkte Schaden je Niederlage). Seit den 14
