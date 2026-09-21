@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { BANKKASTEN, WABENKASTEN } from './bildfolge';
 import { Bankreihe, Einheitenmarke, Hexbrett } from './Brett';
 import type { Einheit } from './sicht';
 
@@ -152,5 +153,40 @@ describe('Hexbrett und Bankreihe reichen den Lesepfad durch', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /Dorfwache/ }));
     expect(nachsehen).toHaveBeenCalledWith({ bereich: 'bank', platz: 0 });
+  });
+});
+
+describe('Die Masse der Figur kommen von der Figur', () => {
+  /*
+   * Wabe und Bankfach bemassen ihren Figurenausschnitt seit dem 22.09.2026
+   * nicht mehr mit festen Prozentzahlen im Stylesheet, sondern mit Variablen,
+   * die `EinheitenFigur` mitbringt (gerechnet in bildfolge.ts). Der Grund ist
+   * in bildfolge.test.ts ausgeschrieben; hier wird nur geprueft, dass sie
+   * wirklich ankommen — ohne sie hat die Figur gar keine Hoehe.
+   */
+  it('setzt Hoehe und Boden als Variablen an den Ausschnitt', () => {
+    const { container } = render(
+      <Einheitenmarke
+        kaempfer={WACHE}
+        katalog={KATALOG}
+        maxStufe={3}
+        fehlt={0}
+        aktiv={false}
+        onWaehlen={vi.fn()}
+      />,
+    );
+    const figur = container.querySelector('.tr-figur3d') as HTMLElement;
+    expect(figur.style.getPropertyValue('--tr-wabenkasten-hoehe')).toBe(
+      `${WABENKASTEN.hoehe}%`,
+    );
+    expect(figur.style.getPropertyValue('--tr-wabenkasten-boden')).toBe(
+      `${WABENKASTEN.boden}%`,
+    );
+    /* Beide Paare an jeder Figur, nicht das passende: Wo sie steht, entscheidet
+       ihre Klasse, und die Regel `.tr-bankplatz .tr-figur3d` greift sich davon
+       ihr eigenes. Verzweigte das Bauteil hier nach dem Ort, stuende die
+       Zuordnung Klasse -> Ort ein zweites Mal da. */
+    expect(figur.style.getPropertyValue('--tr-bankkasten-hoehe')).toBe(`${BANKKASTEN.hoehe}%`);
+    expect(figur.style.getPropertyValue('--tr-bankkasten-boden')).toBe(`${BANKKASTEN.boden}%`);
   });
 });
