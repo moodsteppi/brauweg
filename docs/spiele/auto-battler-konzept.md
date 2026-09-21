@@ -713,7 +713,13 @@ Dort steht Naturwesen bei ×0,69 (376 Antritte) und Meuchler ebenfalls bei
 105 Antritten** — sie hat achtzehn abgegeben, weil die Bogenmeisterin öfter
 gekauft wird, und ist die Zeile, die als nächste unter die Zählschwelle fällt.
 Die Probe verlangt sechs von sieben und hält das noch aus; wer den Katalog
-anfasst, sieht dort nach.
+anfasst, sieht dort nach. Nachgemessen am 21.09.2026 ohne Katalogänderung
+dazwischen: weiter 105 auf dieser Saat, über 5.000 Partien 1.355 Antritte bei
+×1,03 — die Marke ist nicht schwach, sie wird nur selten gespielt, weil zwei
+ihrer drei Träger Nahkämpfer sind. Fällt sie doch, sagt die Probe seitdem
+nicht mehr nur „nur 5 Marken mit genug Antritten", sondern nennt die Zeilen
+unter der Schwelle mit ihrer Zahl; der eigentliche Befund steht damit in der
+Meldung und muss nicht erst im Werkzeug gesucht werden.
 
 ---
 
