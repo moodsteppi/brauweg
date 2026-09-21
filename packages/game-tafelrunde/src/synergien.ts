@@ -160,6 +160,21 @@ export const SYNERGIEN: readonly Synergie[] = [
      * seine Traeger lange genug stehen, um ihn auszuspielen, und genau das
      * konnten sie nicht. Repariert wurde deshalb der Katalog (Irrlicht,
      * Funkenlehrling, Frostweberin, Sturmrufer), nicht diese Tabelle.
+     *
+     * HEUTE GILT DER SATZ DARUEBER NICHT MEHR, und zwar wegen der Reparatur,
+     * die er beschreibt (Nachtrag 21.09.2026, zwoelfte Messung). Seit das
+     * Irrlicht in der Vorderreihe steht, stehen die Traeger lange genug — und
+     * der Bonus traegt: Auf null gesetzt faellt Elementar von x0,80 auf x0,49
+     * (zweite Saatbasis x0,72 auf x0,37), auf 25/40/65 gehoben steigt es auf
+     * x1,13. Je 1.500 Partien zu viert, beide Saatbasen gleich.
+     *
+     * WER HIER ETWAS AENDERN WILL, SCHEITERT TROTZDEM WOANDERS: Die Indizes
+     * sind Verhaeltnisse zum Schnitt, und jede Anhebung nimmt es der
+     * untersten Zeile ab. Meuchler faellt dabei von x0,64 auf x0,59 (auf der
+     * Saatbasis der Probe sogar auf x0,45, wo test/ausgewogenheit.test.ts nur
+     * noch der zugestandene Standardfehler gruen haelt). Elementar reisst mit
+     * x0,77 keine Schranke; geaendert wurde deshalb nichts. Die vollstaendige
+     * Rechnung steht in docs/spiele/auto-battler-konzept.md.
      */
     stufen: [
       { schwelle: 2, bonus: bonus({ angriffProzent: 15 }) },
@@ -203,6 +218,14 @@ export const SYNERGIEN: readonly Synergie[] = [
      * Untot unter die Zaehlschwelle der Probe rutschte. Ein Lebensbonus macht
      * die Marke haeufiger, nicht besser. Repariert wurde deshalb der Katalog
      * (Bogenmeisterin als fuenfte Traegerin), nicht diese Tabelle.
+     *
+     * DAS GILT FUER EINEN LEBENSBONUS UND NICHT FUER JEDEN (Nachtrag
+     * 21.09.2026): Bei Elementar und Drache geht der Bonus auf Angriff und
+     * Tempo, und dort traegt er — dieselbe Anhebung hebt die Marke UND kuerzt
+     * die Uhr, statt sie zu verlaengern (siehe oben bei 'elementar'). Mehr
+     * Leben laesst beide Seiten laenger stehen, mehr Angriff beendet den
+     * Kampf frueher. Wer die naechste Marke ansieht, fragt zuerst, WORAUF
+     * ihr Bonus geht, und uebernimmt nicht die Antwort dieser Zeile.
      */
     stufen: [
       { schwelle: 2, bonus: bonus({ lebenProzent: 15 }) },
@@ -236,6 +259,25 @@ export const SYNERGIEN: readonly Synergie[] = [
      * derselben Drei-Gold-Einheit zu haben war. Gegen den Rest half deshalb
      * erst der zweite Traeger (Funkenlehrling, siehe katalog.ts). Die kleineren
      * Zahlen hier bleiben trotzdem: Zusammen ergeben sie x1,15.
+     *
+     * AUCH HIER TRAEGT DER BONUS HEUTE (Nachtrag 21.09.2026, zwoelfte
+     * Messung): auf null gesetzt faellt Drache von x0,77 auf x0,42 (zweite
+     * Saatbasis x0,69 auf x0,31). Der Satz oben gilt fuer den Stand VOR dem
+     * Funkenlehrling und ist keine Aussage ueber heute.
+     *
+     * VON DEN DREI STUFEN WIRKT PRAKTISCH NUR DIE ERSTE, und das ist der
+     * eigentliche Befund dieser Marke: Bei zwei Traegern verlangt die
+     * Schwelle 3 eine dritte Kopie — gehalten wurde sie in 759 von 168.385
+     * Antritten, die Schwelle 5 in keinem einzigen (5.000 Partien zu viert).
+     * Die erste Stufe allein anzuheben bringt entsprechend wenig (auf 15/8:
+     * x0,77 auf x0,80); was die Marke bewegt, ist ein dritter Traeger. Vier
+     * Kandidaten sind gemessen und stehen im Konzeptdokument — gebaut ist
+     * keiner, weil Drache mit x0,75 keine Schranke reisst und jede Anhebung
+     * der untersten Zeile (Meuchler) abgeht.
+     *
+     * UND WER HIER DREHT, DREHT AN ELEMENTAR MIT: Funkenlehrling und
+     * Drachenkind tragen beide Marken. Elementar auf 25/40/65 hebt Drache
+     * von x0,77 auf x1,17, ohne dass an diesen Zahlen etwas geaendert wurde.
      */
     stufen: [
       { schwelle: 2, bonus: bonus({ angriffProzent: 10, tempoProzent: 5 }) },
