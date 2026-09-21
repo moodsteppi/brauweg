@@ -180,6 +180,23 @@ nächsten roten Lauf nicht zum zweiten Mal gesucht werden soll.
 > Zeile ist **Meuchler** mit ×0,64 — mit deutlich mehr Luft, als Naturwesen
 > hatte.
 >
+> **Die Tauschprobe (21.09.2026):**
+> `packages/game-tafelrunde/werkzeug/tauschprobe.mjs` (Kern
+> `test/tauschprobe.ts`). Sie beantwortet als einziges der Werkzeuge „ist diese
+> Einheit zu stark". Die Spalte „Siegquote je Einheit auf dem letzten Brett"
+> tut es nachweislich nicht: Schwächt man die Lichtwahrerin, **steigt** ihre
+> Quote, weil der Bot sie seltener kauft und die verbleibenden Bretter die
+> reichen sind. Die Probe nimmt deshalb **echte Schlussbretter** und besetzt
+> einen Platz reihum mit jeder Einheit derselben Kostenstufe — gleiche Bretter,
+> gleiche Gegner, gleiche Saaten, gleiche Zahl Kämpfe. Damit steht die
+> Lichtwahrerin bei **×1,12** statt ×2,11, und **am Katalog ist nichts zu tun**;
+> die untersten Zeilen sind stattdessen Knochenspäher (×0,68) und Gassendieb
+> (×0,74). Die Normierung gegen Bretter gleicher Kostensumme
+> (`einheitenNormiert` in `test/messen.ts`) ist derselben Frage nachgegangen und
+> **löst sie nicht** (Lichtwahrerin dort ×2,20); sie bleibt als Hinweis und für
+> die Marken. Zahlen, Herleitung und die Gegenprobe auf einer zweiten Saatbasis
+> stehen in der **elften Messung** in `docs/spiele/auto-battler-konzept.md`.
+>
 > **Das Aufstellungsduell (19.09.2026):**
 > `packages/game-tafelrunde/werkzeug/aufstellungsduell.mjs` (Kern
 > `test/aufstellungsduell.ts`). Es beantwortet die Frage „spielt der neue Bot

@@ -55,6 +55,7 @@ import {
   darfHandeln,
   erstellePartie,
   fuehreAus,
+  gesamtkosten,
   kampfVon,
   kampfdauer,
   lebendeSitze,
@@ -622,6 +623,94 @@ export interface Quote {
   readonly quote: number | null;
 }
 
+/**
+ * WARUM ES NEBEN `Quote` NOCH EINE ZWEITE ZAHL GIBT.
+ *
+ * Die rohe Siegquote je Einheit beantwortet die Frage "ist diese Einheit zu
+ * stark" nachweislich NICHT. Der Gegenbeweis steht gemessen in der neunten
+ * Messung (docs/spiele/auto-battler-konzept.md): Senkt man den Angriff der
+ * Lichtwahrerin von 50 auf 44 bzw. 40, so SINKT ihre Siegquote nicht, sondern
+ * steigt (82,4 -> 82,8 -> 88,5 %). Der Bot kauft sie dann nur seltener, und
+ * wer sie trotzdem noch stehen hat, hat ein teures Brett — also eines, das
+ * ohnehin gewinnt. Gemessen wird so der WOHLSTAND des Bretts und nicht die
+ * Einheit darauf; ein Katalogeingriff, der nach dieser Spalte entschieden
+ * wird, geht in die falsche Richtung.
+ *
+ * Diese Zeile rechnet deshalb gegen Bretter GLEICHER KOSTENSUMME: Jeder
+ * Antritt bekommt die Siegquote seines Brettwert-Bandes als Erwartung, und
+ * verglichen wird, was die Einheit daraus gemacht hat.
+ *
+ *   index = siege / erwartet
+ *
+ * 1,00 heisst: genau so oft gewonnen, wie gleich teure Bretter gewinnen. Ueber
+ * 1 heisst: die Einheit traegt mehr bei, als ihr Brettwert erklaert — und nur
+ * DAS ist die Frage, um die es beim Balancing geht.
+ *
+ * WAS SIE NICHT KANN, UND DAS IST GEMESSEN: Sie bereinigt den Wohlstand,
+ * nicht die Auswahl des Bots. Auf die Lichtwahrerin angewendet bleibt sie bei
+ * x2,20 (5.000 Partien zu viert, elfte Messung) — die Auffaelligkeit loest
+ * sich also NICHT auf, obwohl der Brettwert herausgerechnet ist. Der Grund
+ * ist derselbe wie vorher, nur eine Stufe feiner: Auch innerhalb eines
+ * Bandes sind die Bretter MIT ihr die, deren Besitzer bis zu einer Drei-Gold-
+ * Einheit gekommen ist.
+ *
+ * DIESE SPALTE ENTSCHEIDET DESHALB KEINEN KATALOGEINGRIFF. Sie ist gut fuer
+ * die Marken (dort verschiebt sie Naturwesen von x0,80 auf x0,96 und zeigt,
+ * dass die Marke ihre Bretter nicht mehr nach unten zieht) und als Hinweis
+ * darauf, welche Zeile ihren Brettwert ueberhaupt rechtfertigt. Die Frage
+ * "ist diese Einheit zu stark" beantwortet allein `test/tauschprobe.ts` —
+ * dieselbe Einheit auf demselben Brett, gegen dieselben Gegner.
+ */
+export interface Normzeile {
+  readonly name: string;
+  readonly antritte: number;
+  readonly siege: number;
+  /** Summe der Bandquoten ueber alle Antritte — die Siege, die zu erwarten waren. */
+  readonly erwartet: number;
+  /** siege / erwartet, oder null ohne Erwartung. */
+  readonly index: number | null;
+}
+
+/**
+ * Ein Band gleich teurer Bretter — der Massstab, gegen den `Normzeile` rechnet.
+ *
+ * Die Grenzen sind nicht gesetzt, sondern aus dem Lauf selbst geschnitten:
+ * gleich viele Antritte je Band, soweit die Brettwerte sich teilen lassen.
+ * Feste Grenzen (etwa "je 5 Gold") waeren bequemer und traefen die Verteilung
+ * nicht — die meisten Schlussbretter liegen dicht beieinander, und ein Band,
+ * in dem fast alle stehen, normiert nichts.
+ */
+export interface Brettwertband {
+  /** Kleinster und groesster Brettwert des Bandes, beide einschliesslich. */
+  readonly von: number;
+  readonly bis: number;
+  readonly antritte: number;
+  readonly siege: number;
+  readonly quote: number;
+}
+
+/**
+ * Wie viele Baender geschnitten werden.
+ *
+ * Acht ist ein Kompromiss: Je mehr Baender, desto genauer die Erwartung — und
+ * desto duenner ihr Nenner. Bei 5.000 Partien zu viert stehen rund 20.000
+ * Antritte zur Verfuegung, ein Band traegt also rund 2.500 und damit eine
+ * Bandquote mit rund einem Prozentpunkt Standardfehler.
+ */
+export const BRETTWERT_BAENDER = 8;
+
+/**
+ * Was auf einem Brett steckt: die Goldsumme aller Einheiten darauf, Sternstufen
+ * eingerechnet.
+ *
+ * Ueber `gesamtkosten` und nicht ueber `einheit(id).kosten`: Eine Dorfwache
+ * auf Stufe 3 hat neun Karten verschlungen und ist kein Ein-Gold-Platz mehr.
+ * Wer das weglaesst, misst das aufgestiegene Brett als arm.
+ */
+export function brettwert(brett: readonly (Kaempfer | null)[]): number {
+  return brett.reduce((summe, k) => (k === null ? summe : summe + gesamtkosten(k.id, k.stufe)), 0);
+}
+
 export interface Auswertung {
   readonly partien: number;
   /** Partien mit eindeutigem Sieger — nur sie zaehlen bei den Siegquoten. */
@@ -711,6 +800,24 @@ export interface Auswertung {
   readonly marken: readonly Quote[];
   /** Siegquote je Einheit, nach Quote absteigend. */
   readonly einheiten: readonly Quote[];
+  /**
+   * Dieselben Einheiten gegen Bretter gleicher Kostensumme gerechnet, nach
+   * Index absteigend (`Normzeile`) — ein Hinweis, keine Entscheidung. Warum
+   * nicht, steht bei `Normzeile`.
+   */
+  readonly einheitenNormiert: readonly Normzeile[];
+  /**
+   * Dieselbe Rechnung je Marke.
+   *
+   * Sie steht hier, weil der Wohlstands-Effekt bei den Marken schon einmal
+   * eine Ursache verdeckt hat: Naturwesen stand in der neunten Messung bei
+   * x0,54, und die Ursache waren zwei Ein-Gold-Traeger — "die Marke mass
+   * nicht ihren Bonus, sondern die Armut ihrer Bretter" (zehnte Messung).
+   * Genau das trennt dieser Index ab.
+   */
+  readonly markenNormiert: readonly Normzeile[];
+  /** Die geschnittenen Baender samt ihrer Quote — der Massstab der Normierung. */
+  readonly brettwertBaender: readonly Brettwertband[];
   /** Einheiten, die in keiner einzigen Runde auf einem Brett standen. */
   readonly nieGesehen: readonly EinheitId[];
   /** Antritte insgesamt — der Nenner der Schwellen-Tabelle. */
@@ -770,6 +877,104 @@ function nachQuote(a: Quote, b: Quote): number {
   return b.quote - a.quote || b.antritte - a.antritte || a.name.localeCompare(b.name);
 }
 
+/** Ein Antritt, wie ihn die Normierung braucht: sein Brettwert und sein Ausgang. */
+interface Brettantritt {
+  readonly wert: number;
+  readonly gewonnen: boolean;
+  readonly einheiten: readonly EinheitId[];
+  readonly marken: readonly Marke[];
+}
+
+/**
+ * Die oberen Grenzen der Baender, aus den Werten selbst geschnitten.
+ *
+ * Gleich viele Antritte je Band, aber NIE ein Brettwert in zwei Baendern: Ein
+ * Schnitt mitten durch einen Wert haenge davon ab, in welcher Reihenfolge die
+ * Partien gelaufen sind, und waere damit das Gegenteil einer bestimmten
+ * Messung. Deshalb wird erst am naechsthoeheren Wert getrennt — die Baender
+ * sind dadurch nur ungefaehr gleich gross.
+ */
+function schneideBaender(werte: readonly number[], anzahl: number): number[] {
+  const sortiert = [...werte].sort((a, b) => a - b);
+  if (sortiert.length === 0) return [];
+  const grenzen: number[] = [];
+  let imBand = 0;
+  /*
+   * Die Zielgroesse wird nach JEDEM Schnitt neu aus dem Rest gerechnet und
+   * nicht einmal am Anfang: Ein haeufiger Brettwert schiebt das erste Band
+   * weit ueber seinen Anteil hinaus, und ein starr fortgeschriebenes Ziel
+   * legte danach ein Band mit 59 Antritten an — eine Bandquote, die nichts
+   * traegt.
+   */
+  for (const [i, wert] of sortiert.entries()) {
+    imBand++;
+    if (i === sortiert.length - 1) {
+      grenzen.push(wert);
+      break;
+    }
+    if (wert === sortiert[i + 1]) continue;
+    if (grenzen.length >= anzahl - 1) continue;
+    const verbleibend = sortiert.length - (i + 1);
+    const baenderRest = anzahl - grenzen.length;
+    if (imBand >= (imBand + verbleibend) / baenderRest) {
+      grenzen.push(wert);
+      imBand = 0;
+    }
+  }
+  return grenzen;
+}
+
+/** In welches Band ein Brettwert faellt. Das letzte Band faengt alles darueber. */
+function bandVon(grenzen: readonly number[], wert: number): number {
+  const stelle = grenzen.findIndex((g) => wert <= g);
+  return stelle < 0 ? Math.max(0, grenzen.length - 1) : stelle;
+}
+
+/**
+ * Die Normierung: was eine Zeile an Siegen zu erwarten hatte.
+ *
+ * Gerechnet wird je Antritt und nicht ueber den Brettwert im Mittel — zwei
+ * Bretter zu 5 und 25 Gold haben nicht die Erwartung eines 15-Gold-Bretts,
+ * und die Einheiten, um die es hier geht, stehen gerade nicht gleichmaessig
+ * verteilt.
+ */
+function normiere(
+  antritte: readonly Brettantritt[],
+  bandquote: readonly number[],
+  grenzen: readonly number[],
+  namen: readonly string[],
+  traegt: (a: Brettantritt, name: string) => boolean,
+): Normzeile[] {
+  return namen
+    .map((name) => {
+      let zaehler = 0;
+      let siege = 0;
+      let erwartet = 0;
+      for (const a of antritte) {
+        if (!traegt(a, name)) continue;
+        zaehler++;
+        if (a.gewonnen) siege++;
+        erwartet += bandquote[bandVon(grenzen, a.wert)] ?? 0;
+      }
+      return {
+        name,
+        antritte: zaehler,
+        siege,
+        erwartet,
+        index: erwartet > 0 ? siege / erwartet : null,
+      };
+    })
+    .sort(nachIndex);
+}
+
+/** Absteigend nach Index; Zeilen ohne Erwartung ans Ende, dann nach Namen. */
+function nachIndex(a: Normzeile, b: Normzeile): number {
+  if (a.index === null && b.index === null) return a.name.localeCompare(b.name);
+  if (a.index === null) return 1;
+  if (b.index === null) return -1;
+  return b.index - a.index || b.antritte - a.antritte || a.name.localeCompare(b.name);
+}
+
 export function werteAus(
   befunde: readonly Partiebefund[],
   zeitmodell: Zeitmodell = STANDARD_ZEITMODELL,
@@ -796,6 +1001,7 @@ export function werteAus(
   const botWarten: number[] = [];
   const wartenGesamt: number[] = [];
   const bilanzen: Zeitbilanz[] = [];
+  const brettantritte: Brettantritt[] = [];
 
   for (const b of befunde) {
     rundenListe.push(b.runden);
@@ -838,21 +1044,53 @@ export function werteAus(
       const sitz = Number(sitzText);
       const gewonnen = b.sieger === sitz;
       const zaehlung = zaehleMarken(brett);
+      const markenHier: Marke[] = [];
       for (const marke of MARKEN) {
         if (aktiveSchwelle(zaehlung[marke]) === null) continue;
         markenAntritte[marke] += 1;
         if (gewonnen) markenSiege[marke] += 1;
+        markenHier.push(marke);
       }
-      for (const id of new Set(brett.filter((k) => k !== null).map((k) => k!.id))) {
+      const einheitenHier = [...new Set(brett.filter((k) => k !== null).map((k) => k!.id))];
+      for (const id of einheitenHier) {
         einheitLetzte[id] += 1;
         if (gewonnen) einheitSiege[id] += 1;
       }
+      // Derselbe Antritt noch einmal, fuer die Normierung gegen Bretter
+      // gleicher Kostensumme. Er wird hier mitgeschrieben und nicht in einer
+      // zweiten Schleife geholt: Beide Zahlen muessen denselben Nenner haben,
+      // sonst widersprechen sich zwei Spalten derselben Tabelle.
+      brettantritte.push({
+        wert: brettwert(brett),
+        gewonnen,
+        einheiten: einheitenHier,
+        marken: markenHier,
+      });
     }
   }
 
   for (const s of SCHWELLEN) {
     schwellenGesamt[s] = MARKEN.reduce((summe, m) => summe + schwellen[m][s], 0);
   }
+
+  const grenzen = schneideBaender(
+    brettantritte.map((a) => a.wert),
+    BRETTWERT_BAENDER,
+  );
+  const baender: Brettwertband[] = grenzen.map((bis, i) => {
+    const drin = brettantritte.filter((a) => bandVon(grenzen, a.wert) === i);
+    const siege = drin.filter((a) => a.gewonnen).length;
+    return {
+      // Die Untergrenze des ersten Bandes ist der kleinste Brettwert des Laufs
+      // — ein leeres Brett (Wert 0) gibt es nur, wenn jemand nichts gekauft hat.
+      von: i === 0 ? Math.min(...brettantritte.map((a) => a.wert)) : grenzen[i - 1]! + 1,
+      bis,
+      antritte: drin.length,
+      siege,
+      quote: drin.length > 0 ? siege / drin.length : 0,
+    };
+  });
+  const bandquote = baender.map((b) => b.quote);
 
   return {
     partien: befunde.length,
@@ -888,6 +1126,17 @@ export function werteAus(
     einheiten: KATALOG.map((e) => quote(e.id, einheitLetzte[e.id], einheitSiege[e.id])).sort(
       nachQuote,
     ),
+    einheitenNormiert: normiere(
+      brettantritte,
+      bandquote,
+      grenzen,
+      KATALOG.map((e) => e.id),
+      (a, name) => a.einheiten.includes(name as EinheitId),
+    ),
+    markenNormiert: normiere(brettantritte, bandquote, grenzen, [...MARKEN], (a, name) =>
+      a.marken.includes(name as Marke),
+    ),
+    brettwertBaender: baender,
     nieGesehen: KATALOG.filter((e) => einheitGesamt[e.id] === 0).map((e) => e.id),
     antritte,
     schwellen,
