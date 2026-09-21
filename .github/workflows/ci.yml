@@ -12,11 +12,43 @@ name: CI
 # --test dist/...`, und ohne die dist-Ordner der Geschwister findet TypeScript
 # `@brauweg/game-api` nicht.
 
+# KONTINGENT-DIAET (20.09.2026). Robin: "die nicht die github actions
+# aufbrauchen so massig." Gemessen an der Abrechnung: 3119 Actions-Minuten im
+# September, 1119 ueber dem Freikontingent. In diesem Repo liefen seit dem
+# 14.09. 31 Laeufe aus Pull Requests UND 29 aus Pushes — fuer weitgehend
+# dieselben Commits zweimal.
+#
+# WARUM `push` NUR NOCH AUF `main`: Nach `staging` kommt nichts, was nicht
+# vorher als Pull Request gegen `staging` geprueft wurde — der Push-Lauf danach
+# prueft denselben Baum ein zweites Mal. Auf `main` bleibt er: Dort landet der
+# Release-Merge, und das ist die Stelle, an der von Hand zusammengefuehrt wird,
+# ohne dass je ein PR lief.
 on:
   pull_request:
     branches: [main, staging]
+    # NUR-DOKU-AENDERUNGEN BAUEN NICHTS (20.09.2026, Kontingent-Diaet).
+    #
+    # Der volle Lauf dauert hier acht Minuten: zwoelf Spielpakete bauen, dann
+    # 1503 Proben. Am 16.09.2026 hat eine Aenderung an CLAUDE.md und
+    # docs/STAND.md genau diese acht Minuten gekostet und dabei keine einzige
+    # Frage beantwortet, die ein Text aufwerfen koennte.
+    #
+    # Die Liste ist bewusst kurz und nennt nur, was NICHT gebaut wird. Eine
+    # Aenderung, die auch nur eine Datei ausserhalb beruehrt, laeuft
+    # vollstaendig — GitHub prueft das je Datei, nicht je PR.
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   push:
-    branches: [main, staging]
+    branches: [main]
+
+# EIN LAUF JE ZWEIG. Wer zweimal hintereinander schiebt, hatte bisher zwei volle
+# Laeufe; der erste war in dem Moment schon ueberholt. `cancel-in-progress`
+# beendet ihn — dieselbe Einstellung, die bro-server und brotool seit ihrer
+# ersten Diaet tragen.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   secret-scan:
@@ -279,6 +311,20 @@ jobs:
           exit 1
 
   build-test:
+
+    # KEINE VOLLE STRECKE FUER EINEN RUECKFLUSS (20.09.2026, Kontingent-Diaet).
+    #
+    # Ein Rueckfluss-PR bringt `main` zurueck nach `staging`, damit die Zweige
+    # nicht auseinanderlaufen. Sein Inhalt ist genau das, was als Release
+    # eben ueber `main` gegangen ist — auf dem Weg dorthin schon einmal
+    # vollstaendig geprueft. Ihn ein zweites Mal zu bauen kostet drei bis
+    # fuenf Minuten und beantwortet keine Frage, die offen waere.
+    #
+    # Der Zweigname ist die Bedingung, nicht der Titel: Titel tippt man,
+    # Zweignamen entstehen aus dem Ablauf (`rueckfluss-main-<zeit>`). Wer
+    # trotzdem pruefen will, benennt seinen Zweig anders — dann laeuft alles
+    # wie zuvor.
+    if: ${{ !startsWith(github.head_ref, 'rueckfluss-') }}
     name: Bauen und prüfen
     runs-on: ubuntu-latest
     steps:
@@ -296,5 +342,36 @@ jobs:
       - name: Bauen
         run: npm run build
 
+      # `shell: bash` ist hier kein Beiwerk. Nur damit läuft der Schritt mit
+      # `-o pipefail`; sonst wäre der Exit-Code der von `tee`, also immer 0,
+      # und ein roter Test käme als grüner Haken durch. Das ist die teuerste
+      # Art, eine Prüfstrecke kaputtzumachen: Sie sieht weiter aus wie eine.
       - name: Tests
-        run: npm test
+        shell: bash
+        run: npm test 2>&1 | tee pruefstand.log
+
+      # Die Zählung stand bis zum 19.09.2026 in `CLAUDE.md` und
+      # `docs/STAND.md`, und jede Aufgabe schrieb sie fort. An dem Tag liefen
+      # zehn Aufgaben gleichzeitig, und sechs Pull Requests kollidierten — alle
+      # in denselben drei Zeilen, keiner im Code. Das war kein Unfall: Jede
+      # Zahl gilt nur für den Zweig, in dem sie gemessen wurde.
+      #
+      # Gemessen wird deshalb weiter, eingetragen nicht mehr. Der Lauf, der
+      # ohnehin passiert, schreibt seine Zahlen in die Zusammenfassung — dort
+      # gehören sie zu genau einem Commit und niemand muss sie pflegen.
+      #
+      # `always()`, weil die Aufschlüsselung bei ROTEN Tests am meisten nützt:
+      # Dann steht dort, welches Paket. Fehlt das Protokoll, weil der Lauf
+      # vorher starb, endet der Schritt still — ein rotes Kreuz an dieser
+      # Stelle würde nur vom echten Fehler ablenken.
+      - name: Prüfstand in die Zusammenfassung
+        if: always()
+        shell: bash
+        run: |
+          [ -f pruefstand.log ] || { echo "Kein Testlauf — nichts zu zählen."; exit 0; }
+          # Auch ins Protokoll, nicht nur in die Zusammenfassung: Die
+          # Zusammenfassung sieht man nur im Browser, das Protokoll auch von
+          # der Kommandozeile (`gh run view --log`) — und wenn die Zählung
+          # selbst einmal falsch aussieht, will man sie neben der Ausgabe
+          # lesen, aus der sie stammt.
+          node werkzeug/pruefstand.mjs pruefstand.log | tee -a "$GITHUB_STEP_SUMMARY"

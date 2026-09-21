@@ -64,34 +64,68 @@ export const BLATT_PFADE: readonly string[] = ROLLEN_3D.map((r) => blattPfad(r))
 );
 
 // ---------------------------------------------------------------------------
-// Das Tempo
+// Der Takt des Kampfes
 // ---------------------------------------------------------------------------
 
 /**
- * Um wie viel schneller die Bildfolgen laufen als im Modell gemessen.
+ * Wie schnell der Kampf laeuft — AUS DER SICHT und nicht aus dieser Datei.
  *
- * ES IST DER ZEITRAFFER DES KAMPFES. `STANDARD_REGLER.zeitraffer` in
- * `packages/game-tafelrunde/src/kampf.ts` steht auf 2: Angriffstempo und
- * Schrittweite laufen doppelt so schnell wie die Werte im Katalog. Die
- * Bildraten in `figuren3d.ts` sind dagegen die des Modells, also fuer
- * einfaches Tempo. Wer sie unveraendert abspielt, bekommt Figuren, die
- * zweimal je Sekunde treffen und dabei in Zeitlupe ausholen.
- *
- * NACHGEMESSEN am aufgezeichneten Kampf der Probe (`proben/kampf/`, Runde 10,
- * 155 Treffer): Der kuerzeste Abstand zwischen zwei Schlaegen DESSELBEN
- * Angreifers ist 500 ms (44-mal), der Median 600 ms. Die Schlagfolge hat sechs
- * Bilder; bei der Modellrate 6 dauerte sie 1000 ms und man saehe nie mehr als
- * das Ausholen. Mit dem Faktor 2 sind es 500 ms — die Folge laeuft also auch
- * beim schnellsten Angreifer gerade durch, bevor der naechste Schlag faellt.
- *
- * Wer den Zeitraffer im Modul aendert, aendert diese Zahl mit. Sie steht
- * NICHT in der Sicht (der Client bekommt sie nicht), deshalb ist sie hier eine
- * Abschrift — wie der Rollentyp und die Ereignisformen auch.
- *
- * AUSGENOMMEN IST `stand`: Das Atmen im Stillstand haengt an keiner Zeit des
- * Protokolls. Verdoppelt saehe es nicht schneller aus, sondern nervoes.
+ * Beide Zahlen kommen vom Modul (`zeitraffer` und `schrittMs` in
+ * `packages/game-tafelrunde/src/sicht.ts`); die Anzeige reicht sie herein
+ * (KampfAnzeige.tsx). Bis zum 18.09.2026 stand der Zeitraffer hier als
+ * `KAMPF_TEMPO = 2` und war eine Abschrift von `STANDARD_REGLER.zeitraffer`:
+ * Wer ihn im Modul drehte, bekam weder einen Uebersetzungsfehler noch einen
+ * roten Test, sondern Figuren, die zu langsam oder zu hektisch ausholen,
+ * waehrend die Treffer weiter im richtigen Takt fallen (CLAUDE.md: was das
+ * Modul weiss, schreibt der Client nicht ab).
  */
-export const KAMPF_TEMPO = 2;
+export interface Kampftakt {
+  /**
+   * Um wie viel schneller die Bildfolgen laufen als im Modell gemessen.
+   *
+   * ES IST DER ZEITRAFFER DES KAMPFES: Angriffstempo und Schrittweite laufen
+   * um diesen Faktor schneller als die Werte im Katalog. Die Bildraten in
+   * `figuren3d.ts` sind dagegen die des Modells, also fuer einfaches Tempo.
+   * Wer sie unveraendert abspielt, bekommt Figuren, die zweimal je Sekunde
+   * treffen und dabei in Zeitlupe ausholen.
+   *
+   * NACHGEMESSEN am aufgezeichneten Kampf der Probe (`proben/kampf/`, Runde
+   * 10, 155 Treffer, Zeitraffer x2): Der kuerzeste Abstand zwischen zwei
+   * Schlaegen DESSELBEN Angreifers ist 500 ms (44-mal), der Median 600 ms.
+   * Die Schlagfolge hat sechs Bilder; bei der Modellrate 6 dauerte sie
+   * 1000 ms und man saehe nie mehr als das Ausholen. Mit dem Faktor 2 sind es
+   * 500 ms — die Folge laeuft also auch beim schnellsten Angreifer gerade
+   * durch, bevor der naechste Schlag faellt. (Die Probe darauf steht in
+   * bildfolge.test.ts und misst gegen den Raffer, den das Modul heute
+   * liefert.)
+   *
+   * AUSGENOMMEN IST `stand`: Das Atmen im Stillstand haengt an keiner Zeit des
+   * Protokolls. Verdoppelt saehe es nicht schneller aus, sondern nervoes.
+   */
+  readonly zeitraffer: number;
+  /**
+   * Wie lange eine Einheit im Modul von Feld zu Feld braucht, in
+   * Millisekunden (`schrittdauer` in kampf.ts).
+   *
+   * Eigene Zahl und nicht `500 / zeitraffer`: Das Modul rundet auf ganze Takte
+   * AUF (bei Zeitraffer 2 sind es 300 ms und nicht 250). Wer hier teilte, haette
+   * wieder eine zweite Wahrheit — nur eine, die knapp danebenliegt statt weit.
+   */
+  readonly schrittMs: number;
+}
+
+/**
+ * Was der Figur an Vorsprung bleibt: Sie soll ankommen, BEVOR der naechste
+ * Schritt faellig ist.
+ *
+ * FRUEHER STANDEN HIER 380 MS FEST, und die Begruendung dafuer stimmte nicht
+ * mehr: Sie waren an `SCHRITT_MS = 500` gemessen, dem Schritt bei EINFACHEM
+ * Tempo. Mit dem Zeitraffer x2 dauert ein Schritt 300 ms — der Uebergang war
+ * also laenger als der Schritt, und zwei Schritte hintereinander schoben sich
+ * uebereinander. Im Kampf der Probe steht der Beleg: Die ersten beiden Zuege
+ * derselben Figur liegen 300 ms auseinander.
+ */
+const GLEIT_PUFFER_MS = 20;
 
 /**
  * Wie lange die Figur von Feld zu Feld gleitet, in Millisekunden.
@@ -100,17 +134,10 @@ export const KAMPF_TEMPO = 2;
  * die Lauffolge muss genau so lange laufen wie er, sonst rudert die Figur
  * noch, wenn sie laengst steht. Damit es dafuer nicht zwei Zahlen gibt, setzt
  * die Komponente den Uebergang aus DIESEM Wert (`--gleiten`).
- *
- * FRUEHER STANDEN HIER 380 MS, und die Begruendung dafuer stimmte nicht mehr:
- * Sie waren an `SCHRITT_MS = 500` gemessen, dem Schritt bei EINFACHEM Tempo.
- * Mit dem Zeitraffer x2 dauert ein Schritt `schrittdauer()` = 300 ms (250
- * aufgerundet auf ganze Takte, kampf.ts) — der Uebergang war also laenger als
- * der Schritt, und zwei Schritte hintereinander schoben sich uebereinander.
- * Im Kampf der Probe steht der Beleg: Die ersten beiden Zuege derselben Figur
- * liegen 300 ms auseinander. 280 laesst sie ankommen, bevor der naechste
- * faellig ist.
  */
-export const GLEITEN_MS = 280;
+export function gleitenMs(takt: Kampftakt): number {
+  return Math.max(0, takt.schrittMs - GLEIT_PUFFER_MS);
+}
 
 /**
  * Wie lange der Fall einer Gefallenen dauert, in Millisekunden.
@@ -134,9 +161,10 @@ export const GLEITEN_MS = 280;
  * anfaengt. Mit `bilder - 1` faenge das Verblassen genau in dem Augenblick an,
  * in dem sie ankommt.
  */
-export const SACKEN_MS: number = Math.round(
-  (folgeVon('tod').bilder / (folgeVon('tod').bildrate * KAMPF_TEMPO)) * 1000,
-);
+export function sackenMs(takt: Kampftakt): number {
+  const tod = folgeVon('tod');
+  return Math.round((tod.bilder / (tod.bildrate * takt.zeitraffer)) * 1000);
+}
 
 // ---------------------------------------------------------------------------
 // Welche Bewegung, welches Bild
@@ -168,10 +196,10 @@ export interface Bildstand {
 }
 
 /** Bildnummer seit dem Beginn einer Folge, ohne Ruecksicht auf ihr Ende. */
-function bildNummer(bewegung: Bewegung3D, verstrichenMs: number): number {
+function bildNummer(bewegung: Bewegung3D, verstrichenMs: number, takt: Kampftakt): number {
   const folge = folgeVon(bewegung);
-  // Nur das Atmen laeuft im Modelltempo — Begruendung an KAMPF_TEMPO.
-  const tempo = bewegung === 'stand' ? 1 : KAMPF_TEMPO;
+  // Nur das Atmen laeuft im Modelltempo — Begruendung an `Kampftakt`.
+  const tempo = bewegung === 'stand' ? 1 : takt.zeitraffer;
   return Math.floor((verstrichenMs * folge.bildrate * tempo) / 1000);
 }
 
@@ -183,16 +211,26 @@ function bildNummer(bewegung: Bewegung3D, verstrichenMs: number): number {
  * laufende Schlagfolge nur unterbricht statt sie zurueckzusetzen: Sobald sie
  * vorbei ist, steht der Schlag da, wo er ohne sie auch stuende.
  */
-function einmalBild(bewegung: Bewegung3D, ab: number | null, zeitMs: number): number | null {
+function einmalBild(
+  bewegung: Bewegung3D,
+  ab: number | null,
+  zeitMs: number,
+  takt: Kampftakt,
+): number | null {
   if (ab === null || zeitMs < ab) return null;
-  const bild = bildNummer(bewegung, zeitMs - ab);
+  const bild = bildNummer(bewegung, zeitMs - ab, takt);
   return bild < folgeVon(bewegung).bilder ? bild : null;
 }
 
 /** Das Bild einer Schleife, mit Versatz in ganzen Bildern. */
-function schleifenBild(bewegung: Bewegung3D, verstrichenMs: number, versatz = 0): number {
+function schleifenBild(
+  bewegung: Bewegung3D,
+  verstrichenMs: number,
+  takt: Kampftakt,
+  versatz = 0,
+): number {
   const folge = folgeVon(bewegung);
-  const roh = bildNummer(bewegung, verstrichenMs) + versatz;
+  const roh = bildNummer(bewegung, verstrichenMs, takt) + versatz;
   return ((roh % folge.bilder) + folge.bilder) % folge.bilder;
 }
 
@@ -209,7 +247,7 @@ function schleifenBild(bewegung: Bewegung3D, verstrichenMs: number, versatz = 0)
  *     darunter weiter (siehe `einmalBild`). Andersherum saehe man an einer
  *     Figur, die dauernd austeilt, nie, dass sie selbst einsteckt — und
  *     genau daran liest man ab, wer gerade untergeht.
- *  3. **lauf** vor **schlag**, solange die Figur gleitet (`GLEITEN_MS`). Wer
+ *  3. **lauf** vor **schlag**, solange die Figur gleitet (`gleitenMs`). Wer
  *     laeuft, hat sein Ziel gerade verloren und geht zum naechsten; bliebe
  *     der Schlag oben, glitte die Figur ausholend ueber das Brett. Belegt an
  *     der Probe: Die Schattenklinge erschlaegt in Sekunde 10,5 ihr Ziel und
@@ -235,26 +273,34 @@ function schleifenBild(bewegung: Bewegung3D, verstrichenMs: number, versatz = 0)
  * Staub und Schadenszahl. Die Auskunft steckt dort im Lebensbalken und in der
  * gefallenen Figur — und die gefallene Figur ist genau das Bild, das bleibt.
  */
-export function bildstand(spur: Bewegungsspur, zeitMs: number, ruhig = false): Bildstand {
-  const roh = laufender(spur, zeitMs);
+export function bildstand(
+  spur: Bewegungsspur,
+  zeitMs: number,
+  takt: Kampftakt,
+  ruhig = false,
+): Bildstand {
+  const roh = laufender(spur, zeitMs, takt);
   if (!ruhig) return roh;
   const bild = roh.bewegung === 'tod' ? folgeVon('tod').bilder - 1 : 0;
   return { bewegung: roh.bewegung, bild };
 }
 
-function laufender(spur: Bewegungsspur, zeitMs: number): Bildstand {
+function laufender(spur: Bewegungsspur, zeitMs: number, takt: Kampftakt): Bildstand {
   if (spur.totAb !== null && zeitMs >= spur.totAb) {
     const letztes = folgeVon('tod').bilder - 1;
-    return { bewegung: 'tod', bild: Math.min(letztes, bildNummer('tod', zeitMs - spur.totAb)) };
+    return {
+      bewegung: 'tod',
+      bild: Math.min(letztes, bildNummer('tod', zeitMs - spur.totAb, takt)),
+    };
   }
-  const getroffen = einmalBild('getroffen', spur.getroffenAb, zeitMs);
+  const getroffen = einmalBild('getroffen', spur.getroffenAb, zeitMs, takt);
   if (getroffen !== null) return { bewegung: 'getroffen', bild: getroffen };
-  if (spur.zugAb !== null && zeitMs >= spur.zugAb && zeitMs - spur.zugAb < GLEITEN_MS) {
-    return { bewegung: 'lauf', bild: schleifenBild('lauf', zeitMs - spur.zugAb) };
+  if (spur.zugAb !== null && zeitMs >= spur.zugAb && zeitMs - spur.zugAb < gleitenMs(takt)) {
+    return { bewegung: 'lauf', bild: schleifenBild('lauf', zeitMs - spur.zugAb, takt) };
   }
-  const schlag = einmalBild('schlag', spur.schlagAb, zeitMs);
+  const schlag = einmalBild('schlag', spur.schlagAb, zeitMs, takt);
   if (schlag !== null) return { bewegung: 'schlag', bild: schlag };
-  return { bewegung: 'stand', bild: schleifenBild('stand', zeitMs, spur.id) };
+  return { bewegung: 'stand', bild: schleifenBild('stand', zeitMs, takt, spur.id) };
 }
 
 // ---------------------------------------------------------------------------

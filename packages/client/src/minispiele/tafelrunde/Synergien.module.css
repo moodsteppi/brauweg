@@ -145,8 +145,14 @@
   inset: 0;
   /* Ueber allem, was die Ruestkammer selbst stapelt (bis 20), aber UNTER dem
      Endbild (40): Faellt waehrend des Lesens die Partie fuer diesen Sitz aus,
-     gehoert das Schlussbild nach vorn und nicht eine Marken-Auskunft. */
-  z-index: 35;
+     gehoert das Schlussbild nach vorn und nicht eine Marken-Auskunft.
+
+     36 und nicht 35 seit dem 18.09.2026: Das Markenblatt geht jetzt auch AUS
+     dem Einheitenblatt heraus auf (35), und zwei gleiche Werte entschiede die
+     Reihenfolge im Baum — die beiden stehen aber an verschiedenen Stellen des
+     Bildschirms, und eine Auskunft, die hinter dem Blatt verschwindet, aus
+     dem man sie geholt hat, sieht wie ein toter Knopf aus. */
+  z-index: 36;
   display: flex;
   align-items: center;
   justify-content: center;

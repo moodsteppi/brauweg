@@ -196,7 +196,331 @@ und keine Probe reproduzierbar.
 
 ---
 
-## Gemessen: Ausgewogenheit (Stand 06.09.2026, neunte Messung — der gültige Stand)
+## Gemessen: das Messverfahren (21.09.2026, elfte Messung — kein Katalogeingriff)
+
+**Warum es eine elfte gibt, und warum sie keine Zeile am Katalog anfasst.** Die
+neunte Messung endete mit einem Befund, der nicht gegen den Katalog zu
+verrechnen war: Die Lichtwahrerin steht mit ×2,03 (jetzt ×2,11) an der Spitze
+der Spalte „Siegquote je Einheit auf dem letzten Brett", und **schwächt man
+sie, steigt diese Zahl** (82,4 → 82,8 → 88,5 % bei Angriff 50 → 44 → 40). Die
+Spalte beantwortet die Frage, für die sie gelesen wird, also nachweislich
+nicht. Geprüft wurde deshalb zuerst das Verfahren und nicht der Katalog.
+
+**Der Fehler ist keiner der Zahl, sondern des Nenners.** Wer auf einem Brett
+steht, steht dort, weil ein Bot ihn gekauft hat — und wer teuer ist, steht auf
+teuren Brettern. Die Bänder unten zeigen, wie hart das durchschlägt: Ein
+Schlussbrett unter 10 Gold gewinnt in 5.000 Partien **kein einziges Mal**, eines
+über 24 Gold in vier von fünf Fällen. Die rohe Quote misst also in erster Linie
+den Wohlstand des Bretts und erst danach die Einheit darauf.
+
+| Brettwert (Gold, Sternstufen eingerechnet) | Antritte | Siegquote |
+|---|---|---|
+| 7 bis 9 | 5.372 | 0,0 % |
+| 10 bis 12 | 4.744 | 10,4 % |
+| 13 bis 15 | 3.475 | 23,7 % |
+| 16 bis 18 | 3.145 | 47,9 % |
+| 19 bis 21 | 2.058 | 62,8 % |
+| 22 bis 24 | 887 | 69,9 % |
+| 25 bis 27 | 248 | 81,5 % |
+| 28 bis 33 | 71 | 84,5 % |
+
+(5.000 Partien zu viert, Saatbasis `ausgewogenheit-v1`. Die Bänder werden aus
+dem Lauf selbst geschnitten — gleich viele Antritte je Band, getrennt wird nur
+zwischen zwei verschiedenen Brettwerten.)
+
+### Kandidat 1: gegen Bretter gleicher Kostensumme normieren — gebaut, aber nicht die Antwort
+
+Gebaut ist er (`einheitenNormiert` und `markenNormiert` in `test/messen.ts`,
+zwei zusätzliche Tabellen in `werkzeug/ausgewogenheit.mjs`): Jeder Antritt
+bekommt die Siegquote seines Brettwert-Bandes als Erwartung, der Index ist
+`Siege / erwartete Siege`. ×1,00 heißt „so oft gewonnen wie gleich teure
+Bretter".
+
+**Für die Marken taugt er.** Naturwesen steht roh bei ×0,80 und normiert bei
+×0,96, Untot bei ×1,11 — die Marken unten im Feld messen also zu einem guten
+Teil die Armut ihrer Bretter, genau wie es die zehnte Messung für Naturwesen
+schon hergeleitet hat. Meuchler bleibt auch normiert unten (×0,65) und ist
+damit der einzige echte Ausreißer der Markenliste.
+
+**Für eine einzelne Einheit taugt er nicht, und das ist gemessen.** Die
+Lichtwahrerin steht normiert bei **×2,20** und damit *höher* als roh (×2,11).
+Der Grund ist der alte, eine Stufe feiner: Auch innerhalb eines Bandes sind die
+Bretter mit ihr die, deren Besitzer überhaupt bis zu einer Drei-Gold-Einheit
+gekommen ist. Die Spalte bleibt deshalb im Werkzeug — als Hinweis und für die
+Marken —, aber sie entscheidet keinen Katalogeingriff. Das steht so auch über
+`Normzeile` in `test/messen.ts`, damit es niemand ein zweites Mal herleiten muss.
+
+### Kandidat 2: die Tauschprobe — dieselben Bretter, eine Einheit getauscht
+
+`packages/game-tafelrunde/werkzeug/tauschprobe.mjs` (Kern `test/tauschprobe.ts`,
+Proben `test/tauschprobe.test.ts`). Sie nimmt **echte Schlussbretter** aus einem
+Botlauf, sucht darauf den ersten Platz einer Kostenstufe und besetzt ihn
+**reihum mit jeder Einheit dieser Stufe**. Gegner ist jeweils das Brett mit dem
+nächstliegenden Brettwert; gekämpft wird auf beiden Seiten, mit derselben Saat
+für alle Zeilen. Damit haben alle Einheiten einer Kostenstufe dieselben
+Bretter, dieselben Gegner, dieselben Saaten und **Ziffer für Ziffer dieselbe
+Zahl Kämpfe** — die Auswahl des Bots ist aus der Rechnung heraus.
+
+Zwei Entwurfsentscheidungen, beide gemessen und beide nötig:
+
+- **Der Gegner ist wohlstandsgleich.** Gegen ein beliebiges Brett aus dem Topf
+  gewinnen die Drei-Gold-Kontexte zu über 85 %, und ein Platz, der fast nie
+  entscheidet, trennt die Zeilen nicht mehr (Spanne ×0,96 bis ×1,06). Gegen den
+  nächstliegenden Brettwert steht der Kampf auf der Kippe und die Spanne geht
+  auf ×0,82 bis ×1,12.
+- **Die Saat nennt die eingesetzte Einheit nicht.** Sonst bekäme jede Zeile
+  einen anderen Erstzieher, und der Vergleich wäre keiner mehr.
+
+Dazu eine zweite Spalte, den **Saldo**: zugefügter minus erlittener
+Rundenschaden je Kampf. Er behält den Unterschied zwischen knapp und deutlich,
+den die Quote wegwirft, und ist die Größe, um die es im Spiel geht —
+ausgeschieden wird nach Leben, nicht nach Siegen.
+
+**1.000 Partien zu viert, bis zu 2.000 Bretter je Kostenstufe, 68.164 Kämpfe,
+7 Sekunden. Saatbasis `tausch-v1`, in Klammern die Gegenprobe auf `tausch-v2`:**
+
+| 1 Gold | Quote | Index | Saldo |
+|---|---|---|---|
+| Dorfwache | 56,9 % | ×1,37 (×1,35) | +0,43 |
+| Schildknappe | 54,9 % | ×1,32 (×1,29) | +0,26 |
+| Funkenlehrling | 41,7 % | ×1,01 (×1,02) | −0,57 |
+| Steinschleuderer | 39,8 % | ×0,96 (×0,96) | −0,66 |
+| Astschütze | 36,4 % | ×0,88 (×0,91) | −0,86 |
+| Moosheiler | 36,2 % | ×0,87 (×0,89) | −0,86 |
+| Irrlicht | 35,3 % | ×0,85 (×0,85) | −0,98 |
+| Gassendieb | 30,6 % | ×0,74 (×0,73) | −1,26 |
+
+| 2 Gold | Quote | Index | Saldo |
+|---|---|---|---|
+| Runenpriester | 49,0 % | ×1,28 (×1,22) | +0,05 |
+| Bogenmeisterin | 46,1 % | ×1,20 (×1,22) | −0,25 |
+| Frostweberin | 40,8 % | ×1,06 (×1,07) | −0,61 |
+| Hainwächterin | 39,7 % | ×1,04 (×1,05) | −0,73 |
+| Nachtpfeil | 39,2 % | ×1,02 (×1,02) | −0,72 |
+| Grimmbart | 34,4 % | ×0,90 (×0,92) | −1,08 |
+| Schattenklinge | 31,1 % | ×0,81 (×0,81) | −1,25 |
+| Knochenspäher | 26,1 % | ×0,68 (×0,68) | −1,58 |
+
+| 3 Gold | Quote | Index | Saldo |
+|---|---|---|---|
+| **Lichtwahrerin** | 65,1 % | **×1,12 (×1,10)** | +1,11 |
+| Wurzelriese | 61,6 % | ×1,06 (×1,06) | +0,63 |
+| Sturmrufer | 60,4 % | ×1,04 (×1,08) | +0,59 |
+| Drachenkind | 58,0 % | ×1,00 (×1,01) | +0,44 |
+| Klingentänzerin | 55,0 % | ×0,95 (×0,93) | +0,24 |
+| Grabfürstin | 47,8 % | ×0,82 (×0,82) | −0,20 |
+
+**Beide Basen zeigen dasselbe, es ist also kein Wurf.** Der Schnitt einer Stufe
+liegt nicht bei 50 % (41,5 / 38,3 / 58,0 %), und das ist kein Fehler: Bretter,
+die eine Ein-Gold-Einheit tragen, sind bei gleichem Goldwert schwächer als
+Bretter, die dasselbe Gold in wenige teure Einheiten gesteckt haben. Verglichen
+wird deshalb innerhalb der Stufe.
+
+### Die Probe aufs Exempel: reagiert das neue Verfahren auf eine Schwächung?
+
+Dieselben drei Stände wie in der neunten Messung, je 1.000 Partien und bis zu
+2.000 Bretter:
+
+| Angriff der Lichtwahrerin | rohe Siegquote (alt) | Tauschprobe Quote | Index | Saldo |
+|---|---|---|---|---|
+| **50 (gebaut)** | 85,8 % | 65,1 % | ×1,12 | +1,11 |
+| 44 | 86,3 % | 61,9 % | ×1,07 | +0,90 |
+| 40 | 88,1 % | 59,4 % | ×1,06 | +0,69 |
+
+**Das ist der ganze Punkt.** Die alte Spalte steigt, wenn man die Einheit
+schwächt; die Tauschprobe fällt — in Quote, Index und Saldo, und zwar monoton.
+Der Saldo fällt am deutlichsten (+1,11 → +0,69) und ist damit auch als die
+empfindlichere der beiden Zahlen bestätigt. Festgehalten ist die Eigenschaft in
+`test/tauschprobe.test.ts`: Eine Lichtwahrerin ohne Heilung (`heilungFaktor: 0`)
+muss auf demselben Platz schlechter abschneiden als eine mit.
+
+### Und was heißt das nun für die Lichtwahrerin?
+
+**Am Katalog ist nichts zu tun.** Sie ist mit ×1,12 die oberste Zeile ihrer
+Kostenstufe, aber der Abstand nach unten ist dort mit ×0,82 der **kleinste
+aller drei Stufen** — bei einem Gold reicht die Spanne von ×1,37 bis ×0,74, bei
+zwei Gold von ×1,28 bis ×0,68. Eine Einheit, die 12 % über dem Schnitt ihres
+Preises liegt, ist keine Auffälligkeit, sondern die obere Hälfte. Zum Vergleich
+die dritte Zahl, das Monokultur-Turnier (9 Saaten je Paarung): Dort steht sie
+mit 40,0 % auf Platz vier von sechs.
+
+**Die ×2,03 waren nie eine Aussage über ihre Stärke**, sondern über die
+Bretter, auf denen ein Bot sich eine Drei-Gold-Einheit leisten kann. Der
+Auswahleffekt, vor dem die achte Messung gewarnt hat, ist damit nicht mehr nur
+benannt, sondern herausgerechnet.
+
+**Die nächsten Fragen stellt die neue Tabelle selbst**, und sie sind andere als
+die alte gestellt hätte:
+
+1. **Knochenspäher ×0,68 und Gassendieb ×0,74** sind die untersten Zeilen ihrer
+   Stufen — beide Meuchler, und Meuchler ist auch die unterste Marke (roh
+   ×0,64, normiert ×0,65). Drei Messungen zeigen auf dieselbe Rolle; die
+   Ursache ist seit der neunten Messung benannt (die Nachbarordnung je Seite
+   kostet den Meuchler sein schnelles Ankommen).
+2. **Dorfwache ×1,37 und Schildknappe ×1,32** stehen weit über ihrer Stufe. Roh
+   fallen sie nicht auf (×0,98 und ×0,83) — genau der umgekehrte Fehler: Sie
+   stehen auf armen Brettern, weil sie billig sind.
+
+Beides gehört aufs Board und nicht in diese Messung: Hier ist das Verfahren
+geklärt, nicht der Katalog geändert.
+
+### Die drei Werkzeuge nebeneinander
+
+| Werkzeug | Frage, die es beantwortet | Was es nicht kann |
+|---|---|---|
+| `ausgewogenheit.mjs` | Wie geht eine Partie aus, in der diese Einheit/Marke vorkommt? Wie oft kommt sie vor? | „Ist sie zu stark" — der Nenner hängt am Einkauf des Bots |
+| `tauschprobe.mjs` | Ist sie ihren Platz wert, verglichen mit allem, was für dasselbe Gold darauf könnte? | Wie oft sie vorkommt, und ob der Preis stimmt |
+| `turnier.mjs` | Wie steht sie im reinen Kampf da, ohne Laden, Gold und Bot? | Alles über gemischte Bretter — drei Kopien baut niemand |
+
+Wer nur eines liest, zieht den falschen Schluss. Die Antritte aus dem ersten
+und der Index aus dem zweiten gehören in jede Begründung für einen
+Katalogeingriff.
+
+---
+
+## Gemessen: Ausgewogenheit (Stand 18.09.2026, zehnte Messung — der gültige Stand des Katalogs)
+
+**Warum es eine zehnte gibt.** Die neunte hinterließ eine Wackelzeile:
+**Naturwesen** fiel mit der Beistand-Wirkung von ×0,71 auf ×0,54 und nach der
+Nachbarordnung je Seite auf ×0,52 — die unterste Zeile des Katalogs, zwei
+Hundertstel über der Schranke ×0,5, die `test/ausgewogenheit.test.ts` zieht.
+Die Karte auf dem Board nannte zwei Wege: **ein fünfter Träger, der die Marke
+nicht nach unten zieht** (das Muster des Schildknappen für Untot), oder **ein
+stärkerer Naturwesen-Bonus**. Beide sind gemessen worden; gebaut ist der erste.
+
+Geändert ist **eine Zeile**: Die Bogenmeisterin (2 Gold, Schützin) trägt neben
+Krieger jetzt auch Naturwesen. Kein Wert, keine Kosten, keine Rolle.
+
+### Warum nicht der Bonus
+
+Dieselbe Frage wie bei Elementar am 05.09.2026 — und dieselbe Antwort. Der
+Naturwesen-Bonus (Leben 15/25/40) wurde angehoben und gemessen, je 1.500
+Partien zu viert auf der Saatbasis `ausgewogenheit-v1`:
+
+| Naturwesen-Bonus | Antritte | zum Schnitt | an der Höchstdauer | Spielzeit | Untot |
+|---|---|---|---|---|---|
+| **15/25/40 (gebaut)** | 977 | ×0,57 | 1,7 % | 5:50 | 422 |
+| 25/40/65 | 1.734 | ×0,62 | 2,1 % | 5:55 | 378 |
+| 45/70/110 | 2.590 | ×0,87 | **3,4 %** | **6:15** | **295** |
+
+**Ein Lebensbonus macht die Marke häufiger, nicht besser.** Fast das Doppelte
+an Bonus bringt fünf Hundertstel; erst das Dreifache holt sie aus der
+Wackelzone — und verdoppelt dabei die an der Höchstdauer abgebrochenen Kämpfe
+(dieselbe Falle wie bei Rüstung und Heilung: Leben verlängert jeden Kampf
+doppelt, weil beide Seiten länger stehen). Die letzte Spalte ist der zweite
+Grund: Untot verliert Anteile, weil der Bot statt seiner auf Naturwesen
+hinspielt, und fällt über 400 Partien unter die Zählschwelle der Probe.
+
+### Warum die Bogenmeisterin
+
+**Die Ursache lag nicht im Bonus, sondern in der Trägerliste.** Von vier
+Trägern waren zwei die beiden letzten Zeilen des ganzen Katalogs — Astschütze
+(×0,23) und Moosheiler (×0,24), beide für ein Gold. Wer Naturwesen zu zweit
+haben wollte, kam praktisch immer über sie, und eine Ein-Gold-Einheit steht auf
+dem letzten Brett vor allem dann, wenn ihr Besitzer nicht aufgestiegen ist
+(der Preisgraben, neunte Messung). Die Marke maß also nicht ihren Bonus,
+sondern die Armut ihrer Bretter.
+
+Vier Kandidaten, je 1.500 Partien zu viert, gleiche Saat — vorher steht
+Naturwesen bei ×0,57, die oberste Zeile bei ×1,56, die Höchstdauer bei 1,7 %:
+
+| fünfter Träger | Naturwesen | oberste Zeile | an der Höchstdauer | Untot |
+|---|---|---|---|---|
+| **Bogenmeisterin (2 Gold, Schützin)** | **×0,84** | ×1,53 | **1,5 %** | 401 |
+| Runenpriester (2 Gold, Beistand) | ×0,81 | ×1,55 | 2,1 % | 394 |
+| Steinschleuderer (1 Gold, Schütze) | ×0,90 | **×1,70** | 1,2 % | **272** |
+| Grimmbart (2 Gold, Wache) | ×0,68 | ×1,50 | 1,8 % | 405 |
+
+- Der **Steinschleuderer** hebt die Marke am weitesten und reißt dafür die
+  Spanne oben auf (Wächter ×1,70): Er ist die dritte billige Einheit und
+  verstärkt damit genau das, was hier das Problem war.
+- Der **Runenpriester** ist ein zweiter Heiler, und Heilung kostet Kampfdauer
+  (1,7 → 2,1 %) — bei der Marke mit der längsten Uhr der schlechteste Tausch.
+- **Grimmbart** lässt Naturwesen die unterste Zeile bleiben.
+- Die **Bogenmeisterin** hebt die Marke aus der Wackelzone, ohne die Uhr oder
+  die obere Kante zu bewegen. Sie passt auch ins Bild: Die Figur ist eine Elfe
+  in Grün, und die Marke bekommt mit ihr einen Schützen, der etwas aushält.
+
+### Was sich im Spiel geändert hat
+
+**5.000 Partien zu viert, Besetzung `normal`, `--mindest 150`**, dieselben
+Saaten vorher und nachher, beide Basen — es unterscheidet sie nur die eine
+Zeile im Katalog:
+
+| Marke | v1 vorher → nachher | v2 vorher → nachher |
+|---|---|---|
+| Wächter | ×1,57 → ×1,54 | ×1,59 → ×1,55 |
+| Krieger | ×1,52 → ×1,48 | ×1,55 → ×1,50 |
+| Untot | ×1,05 → ×1,03 | ×1,02 → ×0,98 |
+| **Naturwesen** | ×0,53 → **×0,80** | ×0,56 → **×0,81** |
+| Elementar | ×0,83 → ×0,77 | ×0,80 → ×0,75 |
+| Drache | ×0,81 → ×0,75 | ×0,77 → ×0,73 |
+| Meuchler | ×0,68 → ×0,64 | ×0,71 → ×0,67 |
+
+**Beide Basen zeigen dasselbe, es ist also kein Wurf.** Die Spanne reicht jetzt
+von ×1,54 bis ×0,64 statt von ×1,57 bis ×0,53: Sie ist an **beiden** Enden
+enger geworden, obwohl nur unten etwas angefasst wurde — die anderen Marken
+geben den Anteil ab, den Naturwesen dazugewinnt.
+
+**Die neue unterste Zeile ist Meuchler** (×0,64 / ×0,67) und steht damit rund
+ein Siebtel über der Schranke, wo Naturwesen ein Zwanzigstel darüber stand. Sie
+ist die nächste, die anzusehen ist; ihre Ursache ist schon benannt — die
+Nachbarordnung je Seite kostete sie ×0,79 → ×0,67, weil ihre ganze Rechnung am
+schnellen Ankommen hängt (Nachtrag der neunten Messung).
+
+Die Einheiten dahinter:
+
+| Einheit | Antritte vorher → nachher | zum Schnitt vorher → nachher |
+|---|---|---|
+| Bogenmeisterin | 1.589 → **2.525** | ×1,19 → ×1,16 |
+| Hainwächterin | 1.614 → 1.717 | ×1,07 → ×1,15 |
+| Astschütze | 5.282 → 5.675 | ×0,23 → ×0,25 |
+| Moosheiler | 1.214 → 1.168 | ×0,24 → ×0,24 |
+
+**Der Befund steckt wieder in den Antritten.** Die Bogenmeisterin wird
+anderthalbmal so oft gekauft, weil sie für zwei Marken zählt — und das ist der
+ganze Hebel: Naturwesen kommt auf 4.643 statt 3.487 Antritte, und die
+dazugekommenen Bretter sind die, auf denen jemand aufgestiegen ist. Ihre eigene
+Quote sinkt dabei leicht (×1,19 → ×1,16), weil sie jetzt auch auf ärmeren
+Brettern steht; die Hainwächterin steigt aus dem umgekehrten Grund.
+
+Die höchste Schwelle erreicht Naturwesen jetzt siebenmal statt dreimal in 5.000
+Partien — selten, aber nicht mehr ein Zufall.
+
+Und die Uhr:
+
+| | vorher | nachher |
+|---|---|---|
+| Spielzeit im Median | 5:49 | 5:48 |
+| einzelner Kampf im Median | 14,5 s | 14,5 s |
+| Kämpfe an der Höchstdauer abgebrochen | 1,8 % | **1,6 %** |
+| Runden im Median | 9 | 9 |
+
+**Die Uhr bewegt sich nicht**, und das ist der Unterschied zu beiden
+Bonus-Varianten: Eine zweite Marke auf einer vorhandenen Einheit verschiebt,
+**wer** gekauft wird, und nicht, wie lange jemand steht.
+
+### Auf der Saatbasis der Probe
+
+`test/ausgewogenheit.test.ts` misst 400 Partien auf `ausgewogenheit-probe`.
+Dort steht Naturwesen bei ×0,69 (376 Antritte) und Meuchler ebenfalls bei
+×0,69; alle sieben Marken zählen weiter. Die knappste Zeile ist **Untot mit
+105 Antritten** — sie hat achtzehn abgegeben, weil die Bogenmeisterin öfter
+gekauft wird, und ist die Zeile, die als nächste unter die Zählschwelle fällt.
+Die Probe verlangt sechs von sieben und hält das noch aus; wer den Katalog
+anfasst, sieht dort nach.
+
+---
+
+## Überholt: die neunte Messung (Stand 06.09.2026, Naturwesen noch mit vier Trägern)
+
+> Der gültige Stand steht darüber unter „Gemessen: Ausgewogenheit (zehnte
+> Messung)". **Überholt sind allein die Marken-Tabellen**: Naturwesen stand
+> hier bei ×0,52 und ist seit der Bogenmeisterin bei ×0,80. Alles über die
+> **Beistand-Wirkung** — der Heilfaktor 1,5, die Beistandsprobe, die zwei
+> gemessenen und verworfenen Eingriffe an Moosheiler und Lichtwahrerin —
+> beschreibt weiter den gebauten Stand und ist der Grund, warum es diesen
+> Abschnitt noch gibt.
 
 **Warum es eine neunte gibt, und wieder ohne eine Zeile am Katalog.** Geändert
 wurde die **Kampfregel**: Ein `beistand` heilt jetzt, statt zu schlagen
@@ -347,6 +671,13 @@ warnte („Nicht an den Quoten … sondern an den Antritten"): Ihre 75,8 % stand
 **vor** dieser Änderung genauso da, nur mit 66 Antritten unter der
 Zählschwelle. Ein Wertabschlag würde die Zahl wieder unsichtbar machen, nicht
 kleiner. Gehört auf das Board, nicht in den Katalog.
+
+> **Nachtrag 21.09.2026: erledigt, und zwar am Messverfahren.** Die Karte hat
+> zur **elften Messung** ganz oben geführt. Kurz: Die Spalte taugt für die
+> Frage nicht, gebaut ist stattdessen die **Tauschprobe** (dieselben Bretter,
+> eine Einheit getauscht), und dort steht die Lichtwahrerin bei ×1,12 — die
+> oberste Zeile ihrer Kostenstufe, mit dem kleinsten Abstand nach unten von
+> allen drei Stufen. **Am Katalog ist nichts zu tun.**
 
 ### Nachtrag 06.09.2026: jede Seite bricht den Gleichstand jetzt in ihrer eigenen Ordnung
 
@@ -1253,6 +1584,24 @@ durch, ohne Oberfläche, alles aus dem Seed. Drei Aufrufer benutzen ihn:
   06.09.2026 gilt dasselbe für die Schrauben der Gangart selbst
   (`--schraube polster=0`, mehrfach erlaubt); siehe den Nachtrag im gültigen
   Abschnitt.
+
+- **Das Werkzeug für die Aufstellung** `werkzeug/aufstellungsduell.mjs` (Kern
+  `test/aufstellungsduell.ts`, seit dem 19.09.2026) — es beantwortet die
+  Frage, die alle drei Werkzeuge oben bauartbedingt offen lassen: **spielt
+  eine geänderte Bot-Regel stärker?** Dort benutzt jeder Bot am Tisch
+  dieselbe Regel, der Unterschied hebt sich also heraus, ehe der erste Takt
+  läuft. Hier wird dasselbe Heer zweimal aufgestellt — nach Regel A und nach
+  Regel B — und die beiden Aufstellungen treten gegeneinander an, jede einmal
+  auf jeder Seite:
+
+  ```
+  node packages/game-tafelrunde/werkzeug/aufstellungsduell.mjs --heere 500 --saaten 3
+  ```
+
+  Gemessen am 19.09.2026: **71,7 %** für die Wunschreihe je Rolle
+  (06.09.2026) gegen die zwei Extreme davor, über 11.874 Kämpfe aus 2.000
+  Heeren. Herleitung, Tabelle je Heergröße und je Rolle in
+  `docs/TAFELRUNDE-LAUFWEGE.md`, Abschnitt 9.
 
 - **Die Probe** `test/ausgewogenheit.test.ts` — 400 Partien zu viert, rund
   anderthalb Sekunden, läuft bei jedem Testlauf mit. Sie hält nur fest, was

@@ -8,6 +8,8 @@ import {
   type EinheitId,
   type Heer,
   MAX_STUFE,
+  SCHRITT_MS,
+  STANDARD_REGLER,
   type Stufenwerte,
   type TafelrundePartie,
   KATALOG,
@@ -15,6 +17,7 @@ import {
   erstellePartie,
   fuehreAus,
   gesamtkosten,
+  schrittdauer,
   sichtFuer,
   werteFuer,
   zuschauerSicht,
@@ -270,5 +273,42 @@ describe('Masse in der Sicht', () => {
     assert.equal(s.brettReihen * s.brettSpalten, s.brettFelder);
     assert.equal(s.verschmelzZahl, VERSCHMELZ_ZAHL);
     assert.equal(s.maxStufe, MAX_STUFE);
+  });
+});
+
+describe('Kampftakt in der Sicht', () => {
+  /*
+   * DER ANLASS: Bis zum 18.09.2026 stand der Zeitraffer als `KAMPF_TEMPO = 2`
+   * im Client (`packages/client/src/minispiele/tafelrunde/bildfolge.ts`) und
+   * war eine Abschrift von `STANDARD_REGLER.zeitraffer`. Wer den Regler drehte,
+   * bekam weder einen Uebersetzungsfehler noch einen roten Test — nur Figuren,
+   * die zu langsam oder zu hektisch ausholen, waehrend die Treffer weiter im
+   * richtigen Takt fallen. Seitdem holt die Anzeige beides aus der Sicht, und
+   * diese Probe haelt es dort fest.
+   */
+  it('nennt Zeitraffer und Schrittdauer des gebauten Ablaufs', () => {
+    const s = sichtFuer(neu(), 0);
+    assert.equal(s.zeitraffer, STANDARD_REGLER.zeitraffer);
+    assert.equal(s.schrittMs, schrittdauer(STANDARD_REGLER));
+    // Auch der Zuschauer bekommt sie: Er sieht dieselbe Arena.
+    assert.equal(zuschauerSicht(neu()).zeitraffer, STANDARD_REGLER.zeitraffer);
+  });
+
+  it('nennt den Regler DIESES Tisches, nicht den gebauten Standard', () => {
+    /*
+     * Ein Messstand rechnet mit einem eigenen Regler (`regler` in partie.ts).
+     * Stuende hier der Standard, liefen seine Figuren zu einem anderen Kampf
+     * als dem, den er gerade abspielt.
+     *
+     * Die Schrittdauer ist ausdruecklich nicht `500 / zeitraffer`: Sie wird auf
+     * ganze Takte aufgerundet. Genau deshalb steht sie als eigene Zahl in der
+     * Sicht — wer im Client teilte, bekaeme 167 statt 200 Millisekunden.
+     */
+    const langsam = { ...STANDARD_REGLER, zeitraffer: 3 };
+    const p = erstellePartie(DEFAULT_REGELN, [0, 1], SAAT, langsam);
+    const s = sichtFuer(p, 0);
+    assert.equal(s.zeitraffer, 3);
+    assert.equal(s.schrittMs, schrittdauer(langsam));
+    assert.notEqual(s.schrittMs, Math.round(SCHRITT_MS / 3));
   });
 });

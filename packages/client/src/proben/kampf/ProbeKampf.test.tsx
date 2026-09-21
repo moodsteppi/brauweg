@@ -1,6 +1,9 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { blattPfad } from '../../minispiele/tafelrunde/bildfolge';
+import { figurPfad } from '../../minispiele/tafelrunde/KampfAnzeige';
+
 import rohszene from './kampf-szene.json?raw';
 import { ProbeKampf } from './ProbeKampf';
 
@@ -17,8 +20,10 @@ import { ProbeKampf } from './ProbeKampf';
  *      dem die Messung in `test/kampf.test.ts` vorbeigelaufen ist
  *      (docs/TAFELRUNDE-SPIELZEIT.md).
  *   2. DIE SEITE BEDIENT SICH. Der Kampf laeuft bis zum Schlussbild, und
- *      „nochmal" faengt ihn wirklich von vorn an. Der Knopf ist die einzige
- *      Bedienung der Seite.
+ *      „nochmal" faengt ihn wirklich von vorn an. Dazu die zwei Kaestchen,
+ *      die Blatt und Pixelfigur ausfallen lassen — sie sind der einzige Weg,
+ *      die beiden Rueckfallstufen ueberhaupt zu sehen, und wenn sie still
+ *      nichts mehr bewirken, faellt es sonst niemandem auf.
  *
  * Was die Kampfanzeige selbst tut, steht in ihrer eigenen Probe
  * (`minispiele/tafelrunde/KampfAnzeige.test.tsx`) und wird hier nicht noch
@@ -29,6 +34,7 @@ interface Szene {
   saat: string;
   runde: number;
   zeitraffer: number;
+  schrittMs: number;
   ich: number;
   kampf: {
     a: number;
@@ -43,7 +49,7 @@ interface Szene {
       grund: string;
     };
   };
-  katalog: { id: string; name: string }[];
+  katalog: { id: string; name: string; rolle: string }[];
 }
 
 const SZENE = JSON.parse(rohszene) as Szene;
@@ -95,6 +101,13 @@ describe('die Szene aus kampf-erzeugen.mjs', () => {
 
   it('laeuft mit dem Zeitraffer, der beurteilt werden soll', () => {
     expect(SZENE.zeitraffer).toBe(2);
+    /*
+     * Und die Szene traegt die Schrittdauer dieses Reglers mit: Die Anzeige
+     * bekommt sie am Tisch aus der Sicht (`schrittMs`), hier aus der
+     * Aufzeichnung. Ohne sie liefe die Probe mit einem anderen Takt als dem
+     * aufgezeichneten Kampf. Aufgerundet auf ganze Takte — 300 und nicht 250.
+     */
+    expect(SZENE.schrittMs).toBe(300);
     // Unter x2 liegt der Median bei 14,8 s (5.000 Partien zu viert, neunte
     // Messung in docs/spiele/auto-battler-konzept.md; bis zum 06.09.2026 stand
     // hier 18,3 s). Ein Kampf ausserhalb dieser Spanne ist kein Massstab fuer
@@ -142,6 +155,17 @@ describe('ProbeKampf', () => {
   const uhrstand = (): number =>
     Number.parseFloat(screen.getByText(/ s \/ .* s$/).textContent ?? '');
 
+  /**
+   * Die Rundenansage der Buehne — ueber ihren zweiten Satz gesucht.
+   *
+   * Nicht ueber „Runde 10": Seit die Probe die echte Phasenzeile des Tisches
+   * traegt (19.09.2026), steht diese Zeichenkette zweimal auf der Seite, und
+   * `getByText` findet dann zwei Treffer statt keinem — ein Test, der an
+   * einer Zahl haengt, die woanders herkommt.
+   */
+  const rundenansage = (): HTMLElement | null =>
+    screen.queryByText('Zum Kampf')?.parentElement ?? null;
+
   it('spielt den Kampf in der ECHTEN Kampfanzeige ab', () => {
     render(<ProbeKampf />);
     // Die Arena der Kampfanzeige, nicht ein Nachbau: Rolle und Beschriftung
@@ -155,7 +179,7 @@ describe('ProbeKampf', () => {
     }
 
     // Und die Buehne darum herum, mit der Rundenansage.
-    expect(screen.getByText(`Runde ${SZENE.runde}`)).toBeInTheDocument();
+    expect(rundenansage()).toHaveTextContent(`Runde ${SZENE.runde}`);
   });
 
   it('zeigt die verstrichene und die gesamte Zeit', () => {
@@ -188,14 +212,132 @@ describe('ProbeKampf', () => {
     expect(screen.queryByText('Gewonnen!')).not.toBeInTheDocument();
     expect(screen.getByText(`0.0 s / ${(BERICHT.dauerMs / 1000).toFixed(1)} s`)).toBeInTheDocument();
     // Auch die Buehne faengt von vorn an — die Ansage gehoert zum Kampfbeginn.
-    expect(screen.getByText(`Runde ${SZENE.runde}`)).toBeInTheDocument();
+    expect(rundenansage()).toHaveTextContent(`Runde ${SZENE.runde}`);
   });
 
-  it('nennt Saat, Rundenstand und Zeitraffer unter dem Kampf', () => {
+  /*
+   * Die drei Rueckfallstufen.
+   *
+   * Der erste Kaempfer der Szene steht stellvertretend fuer alle — was die
+   * Kaestchen tun, tun sie am ganzen Katalog. Gesucht wird ueber das `alt`,
+   * das Blatt und Pixelfigur sich teilen (beides der Name der Einheit);
+   * unterschieden wird am `src`, denn genau der ist die Stufe.
+   */
+  const ersterKaempfer = (): { name: string; rolle: string; id: string } => {
+    const eintrag = SZENE.katalog.find((e) => e.id === BERICHT.start[0]!.einheitId)!;
+    return { name: eintrag.name, rolle: eintrag.rolle, id: eintrag.id };
+  };
+
+  const quellen = (name: string): string[] =>
+    screen.getAllByAltText(name).map((el) => el.getAttribute('src') ?? '');
+
+  const haken = (beschriftung: string): HTMLInputElement =>
+    screen.getByRole('checkbox', { name: beschriftung }) as HTMLInputElement;
+
+  it('zeigt ohne Kaestchen das 3D-Blatt der Rolle', () => {
     render(<ProbeKampf />);
+    const { name, rolle } = ersterKaempfer();
+    expect(quellen(name)).toContain(blattPfad(rolle));
+  });
+
+  it('faellt mit "Blätter ausfallen lassen" auf die Pixelfigur zurueck', () => {
+    render(<ProbeKampf />);
+    const { name, rolle, id } = ersterKaempfer();
+
+    fireEvent.click(haken('Blätter ausfallen lassen'));
+
+    const src = quellen(name);
+    expect(src).toContain(figurPfad(id));
+    expect(src).not.toContain(blattPfad(rolle));
+  });
+
+  it('faellt mit beiden Kaestchen auf das Strichzeichen der Rolle zurueck', () => {
+    const { container } = render(<ProbeKampf />);
+    const { name, id } = ersterKaempfer();
+
+    fireEvent.click(haken('Blätter ausfallen lassen'));
+    fireEvent.click(haken('Pixelfiguren auch'));
+
+    // Kein Bild mehr zu dieser Einheit — nur noch gezeichnete Rollenzeichen.
+    expect(screen.queryAllByAltText(name)).toHaveLength(0);
+    // Und das nicht, weil es zu dieser Einheit ohnehin keine Figur gaebe.
+    expect(figurPfad(id)).not.toBeNull();
+    /*
+     * `RollenZeichen` aus Zeichen.tsx und nicht der erste Buchstabe des
+     * Namens: Dieselbe Klasse traegt das Zeichen am Tisch.
+     */
+    expect(container.querySelectorAll('svg.tr-rolle').length).toBeGreaterThan(0);
+  });
+
+  it('sperrt das zweite Kaestchen, solange die Blaetter laden', () => {
+    render(<ProbeKampf />);
+    // Ohne ausgefallenes Blatt kommt die Pixelfigur gar nicht an die Reihe —
+    // ein Haken, der nichts tut, saehe aus wie ein Fehler der Probe.
+    expect(haken('Pixelfiguren auch').disabled).toBe(true);
+
+    fireEvent.click(haken('Blätter ausfallen lassen'));
+    expect(haken('Pixelfiguren auch').disabled).toBe(false);
+  });
+
+  it('tauscht die Stufe mitten im Kampf, ohne ihn neu zu starten', () => {
+    render(<ProbeKampf />);
+    lauf(5_000);
+    const vorher = uhrstand();
+
+    fireEvent.click(haken('Blätter ausfallen lassen'));
+
+    // Die Uhr laeuft weiter, statt bei 0.0 wieder anzufangen: Nur so
+    // vergleicht man Groesse und Stellung im SELBEN Augenblick.
+    expect(uhrstand()).toBe(vorher);
+    expect(screen.getByRole('group', { name: 'Kampf' })).toBeInTheDocument();
+  });
+
+  it('nennt Saat, Rundenstand und Zeitraffer, wenn man den Text aufschlaegt', () => {
+    render(<ProbeKampf />);
+    // Zugeklappt, damit die fuenf Zeilen am Handy der Arena keine Hoehe
+    // wegnehmen — genau die wird auf dieser Seite gemessen.
+    expect(screen.queryByText(/Saat/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Was ist das?' }));
     const fuss = screen.getByText(/Saat/);
     expect(fuss).toHaveTextContent(SZENE.saat);
     expect(fuss).toHaveTextContent(`Runde ${SZENE.runde}`);
     expect(fuss).toHaveTextContent(`Zeitraffer x${SZENE.zeitraffer}`);
+  });
+
+  /*
+   * DER AUFBAU DES TISCHES, seit dem 19.09.2026 — und der Grund, warum dieser
+   * Test hier steht und nicht bei der Kampfanzeige: Er prueft keine Anzeige,
+   * sondern die Voraussetzung der MESSUNG. Ohne `.tr-mitte` greift das Raster
+   * ab 64rem gar nicht (`.tr-tisch:has(> .tr-mitte)` in styles.css), und ohne
+   * `.tr-fuss` laeuft die Pruefung „Laden steht neben der Mitte" in
+   * `werkzeug/hoehenprobe.mjs` ins Leere — beides still, also unbemerkt.
+   *
+   * Die HOEHEN misst das hier nicht: In jsdom ist jedes Element null Pixel
+   * gross (Begruendung im Kopf von hoehenprobe.mjs). Geprueft wird die
+   * Verdrahtung, so wie `screens/Tafelrunde.hoehe.test.tsx` es fuer den Tisch
+   * tut.
+   */
+  it('haengt die Buehne in dieselben vier Baender wie der Tisch', () => {
+    const { container } = render(<ProbeKampf />);
+    const tisch = container.querySelector('.tr-tisch')!;
+    expect(tisch).not.toBeNull();
+
+    // In dieser Reihenfolge — am Handy stehen sie untereinander, am breiten
+    // Schirm legt das Raster Band 2 und 4 neben Band 3.
+    const baender = [...tisch.children].map((el) => el.className);
+    expect(baender).toEqual(['tr-oben', 'tr-statuszeile', 'tr-mitte', 'tr-fuss']);
+
+    // Und die Buehne steht IN der Mitte: Nur dort bekommt sie die Hoehe, die
+    // sie am Tisch hat.
+    const mitte = tisch.querySelector(':scope > .tr-mitte')!;
+    expect(mitte.querySelector('[aria-label="Kampf"]')).not.toBeNull();
+  });
+
+  it('zeigt die echte Phasenzeile des Tisches', () => {
+    render(<ProbeKampf />);
+    // „Kampfphase" kommt aus `phasenName` in Phasenzeile.tsx und ist hier
+    // nicht abgeschrieben — dasselbe Wort steht am Tisch.
+    expect(screen.getByText('Kampfphase')).toBeInTheDocument();
   });
 });
