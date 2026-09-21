@@ -12,9 +12,12 @@ import {
 import {
   type Bewegungsspur,
   type Kampftakt,
+  BANKKASTEN,
   BLATT_PFADE,
   FIGURENKASTEN,
+  KARTENKASTEN,
   RUECKFALLKASTEN,
+  WABENKASTEN,
   bildstand,
   blattPfad,
   blattVersatz,
@@ -400,5 +403,75 @@ describe('RUECKFALLKASTEN', () => {
     // groesste — Anteile ihrer Zelle, am Alphakanal gemessen.
     expect(ersatz).toBeGreaterThan(zelle * 0.594);
     expect(ersatz).toBeLessThan(zelle * 0.875);
+  });
+});
+
+describe('WABENKASTEN, BANKKASTEN und KARTENKASTEN', () => {
+  /*
+   * Die drei Orte der RUESTKAMMER — Wabe, Bankfach, Ladenkarte. Sie zeigen
+   * dieselbe stehende Figur wie die Arena, und bis zum 22.09.2026 standen ihre
+   * sechs Zahlen fest in styles.css. Sie hingen dort genauso am gemessenen
+   * Ausschnitt der Blaetter wie die der Arena, sagten es aber nicht: Als die
+   * Todeszelle den gemeinsamen Ausschnitt am 06.09.2026 von 4,29 auf 3,76
+   * Meter verengte, musste jemand sie von Hand nachrechnen (82 % -> 71,8 %,
+   * 106 % -> 92,8 %, 58 px -> 51 px). Diese Proben halten die Rechnung fest,
+   * damit es kein zweites Mal Handarbeit wird.
+   */
+
+  it('haelt je Ort seinen Massstab, wenn der Ausschnitt sich aendert', () => {
+    // Dieselbe Probe wie beim FIGURENKASTEN, nur dreimal: Was eine Bezugshoehe
+    // an Weltmetern zeigt, ist die Entscheidung — wie viel Welt gerade in einer
+    // Zelle steckt, ist Messung und darf die Figurengroesse nicht verschieben.
+    expect(FIGUREN3D_ZELLHOEHE_METER / (WABENKASTEN.hoehe / 100)).toBeCloseTo(5.23, 2);
+    expect(FIGUREN3D_ZELLHOEHE_METER / (BANKKASTEN.hoehe / 100)).toBeCloseTo(4.05, 2);
+    // Die Ladenkarte rechnet in Pixeln; ihr Massstab sind deshalb Pixel je
+    // Weltmeter und nicht Meter je Bezugshoehe.
+    expect(KARTENKASTEN.hoehe / FIGUREN3D_ZELLHOEHE_METER).toBeCloseTo(13.56, 2);
+  });
+
+  it('laesst die Standlinie stehen, wo die Figur aufsetzen soll', () => {
+    // Unterkante des Ausschnitts plus der Weg von dort bis zum Fusspunkt: Da
+    // steht der Fuss. Auf der Wabe ist das 37,5 % ueber ihrem Grund (darunter
+    // liegen Name und Sterne), im Bankfach 21,35 % (dort steht nichts) und im
+    // Kartenkopf gut ein Pixel ueber dessen Unterkante.
+    const fuss = (kasten: { hoehe: number; boden: number }): number =>
+      kasten.boden + kasten.hoehe * (1 - FIGUREN3D_FUSSPUNKT.y);
+    expect(fuss(WABENKASTEN)).toBeCloseTo(37.5, 2);
+    expect(fuss(BANKKASTEN)).toBeCloseTo(21.35, 2);
+    expect(fuss(KARTENKASTEN)).toBeCloseTo(1.2, 2);
+  });
+
+  it('bleibt bei den Groessen, die am 06.09.2026 abgenommen wurden', () => {
+    /*
+     * Die Umstellung auf die Rechnung darf am Bildschirm nichts verschieben.
+     * Ein Zehntel Prozent einer Wabe oder eines Bankfachs ist weniger als ein
+     * zehntel Pixel, ein Zehntel Pixel auf der Karte genauso — die Grenze ist
+     * also so eng, dass sie jede sichtbare Abweichung faengt, und so weit, dass
+     * sie den gerundeten Zahlen von damals ihren Rest laesst.
+     */
+    expect(Math.abs(WABENKASTEN.hoehe - 71.8)).toBeLessThan(0.1);
+    expect(Math.abs(WABENKASTEN.boden - 23.1)).toBeLessThan(0.1);
+    expect(Math.abs(BANKKASTEN.hoehe - 92.8)).toBeLessThan(0.1);
+    expect(Math.abs(BANKKASTEN.boden - 2.8)).toBeLessThan(0.1);
+    expect(Math.abs(KARTENKASTEN.hoehe - 51)).toBeLessThan(0.1);
+    expect(Math.abs(KARTENKASTEN.boden - -9)).toBeLessThan(0.1);
+  });
+
+  it('kommt bei der Zelle von damals wieder auf die Zahlen von davor', () => {
+    /*
+     * Die Gegenprobe zur Handarbeit vom 06.09.2026: Mit dem ALTEN Ausschnitt
+     * (4,29 m je Zelle) muss dieselbe Rechnung die drei Hoehen ergeben, die
+     * vorher im Stylesheet standen. Stimmt das, ist die Figur beim Umstellen
+     * weder groesser noch kleiner geworden — und die Rechnung ist genau die,
+     * die damals von Hand gemacht wurde.
+     *
+     * Nur die HOEHEN: Die Bodenwerte sind damals nicht mitskaliert worden
+     * (18,6 % -> 23,1 % ist kein Faktor), die Standlinie hat sich also
+     * mitverschoben. Was heute gilt, steht in der Probe darueber.
+     */
+    const alteZelle = 4.29;
+    expect((alteZelle / 5.23) * 100).toBeCloseTo(82, 0);
+    expect((alteZelle / 4.05) * 100).toBeCloseTo(106, 0);
+    expect(alteZelle * 13.56).toBeCloseTo(58, 0);
   });
 });

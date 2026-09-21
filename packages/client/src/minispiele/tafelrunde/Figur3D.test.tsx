@@ -31,6 +31,27 @@ describe('Figur3D', () => {
     expect(screen.queryByTestId('ersatz')).not.toBeInTheDocument();
   });
 
+  it('reicht gerechnete Masse als Variablen an den Ausschnitt durch', () => {
+    /*
+     * Der Weg fuer alles, was die Klasse nicht hinschreiben kann, weil es
+     * gerechnet ist — in der Ruestkammer die Hoehe und der Boden des
+     * Ausschnitts (`RUESTKAMMER_MASSE` in Zeichen.tsx). Sie muessen am
+     * AUSSCHNITT stehen und nicht am Bild darin: Das Stylesheet bemisst den
+     * Ausschnitt, das Blatt richtet sich danach.
+     */
+    const { container } = render(
+      <Figur3D
+        name="Dorfwache"
+        blatt={blattPfad('wache')}
+        klasse="tr-figur3d"
+        masse={{ '--tr-wabenkasten-hoehe': '71.816%' } as React.CSSProperties}
+        ersatz={<span />}
+      />,
+    );
+    const ausschnitt = container.querySelector('.tr-figur3d') as HTMLElement;
+    expect(ausschnitt.style.getPropertyValue('--tr-wabenkasten-hoehe')).toBe('71.816%');
+  });
+
   it('nimmt den Rueckfall, wenn es zur Rolle gar kein Blatt gibt', () => {
     // Fuenf Blaetter fuer 22 Einheiten — kommt je eine sechste Rolle in den
     // Katalog, faellt sie hier auf den Rueckfall und nicht auf ein Loch.

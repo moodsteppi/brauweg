@@ -25,8 +25,9 @@
  * zusammen, nicht ueber den Inhalt) — mit einem Ja/Nein bliebe der Rueckfall
  * der ersten Einheit an der zweiten kleben, deren Blatt in Ordnung ist.
  *
- * DIE MASSE STEHEN NICHT HIER, sondern beim Aufrufer (`klasse`). Warum, steht
- * im Kopf von `Figur3D.module.css`.
+ * DIE MASSE STEHEN NICHT HIER, sondern beim Aufrufer — als Klasse (`klasse`)
+ * und, wo sie gerechnet sind, als CSS-Variablen daneben (`masse`). Warum sie
+ * nicht in dieses Bauteil gehoeren, steht im Kopf von `Figur3D.module.css`.
  */
 
 import { type ReactNode, useState } from 'react';
@@ -41,6 +42,7 @@ export function Figur3D({
   spiegeln,
   ersatz,
   klasse,
+  masse,
   gib,
 }: {
   /**
@@ -58,6 +60,17 @@ export function Figur3D({
   /** Wo die Figur steht und wie gross sie ist — je Ort eine eigene Klasse. */
   klasse?: string;
   /**
+   * Masse, die die Klasse nicht hinschreiben kann, weil sie gerechnet sind —
+   * in der Praxis die CSS-Variablen aus `bildfolge.ts` (`EinheitenFigur` in
+   * Zeichen.tsx setzt sie). Sie stehen am AUSSCHNITT und nicht weiter oben,
+   * damit jeder Ort sie mitbringt, an dem eine Figur steht — auch die Probe
+   * unter `proben/ruestkammer/`, die keinen Tafelrunde-Bildschirm um sich hat.
+   *
+   * Nicht fuer Rueckfaelle: Faellt das Blatt aus, steht hier nur `ersatz`, und
+   * der bemisst sich an seinen eigenen Klassen.
+   */
+  masse?: React.CSSProperties;
+  /**
    * Meldet das Bild an einen Takt, der es schieben will (nur die Arena).
    * Ohne diese Angabe steht die Figur still, und zwar auf Bild 0 der
    * Ruhefolge.
@@ -69,6 +82,7 @@ export function Figur3D({
   return (
     <span
       className={klasse ? `${stil.ausschnitt} ${klasse}` : stil.ausschnitt}
+      style={masse}
       data-spiegel={spiegeln ? '' : undefined}
     >
       <img
