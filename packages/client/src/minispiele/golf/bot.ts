@@ -14,9 +14,12 @@
  *      Kanten): die Kette Richtung Loch ablaufen und den LETZTEN Punkt nehmen,
  *      der noch frei in Sicht liegt. Das ergibt von selbst „um die Ecke
  *      spielen", ohne dass irgendwo eine Ecke im Code steht.
- *   2. **Wie fest?** Aus einer Tabelle, die einmal beim ersten Bedarf durch
- *      Probesimulation auf freiem Rasen entsteht. Sie ist eine reine Funktion
- *      der Physikkonstanten und darf deshalb im Modul liegen.
+ *   2. **Wie fest?** Auf einer Bahn ohne Sand und Eis aus einer Tabelle, die
+ *      einmal beim ersten Bedarf durch Probesimulation auf freiem Rasen
+ *      entsteht. Sie ist eine reine Funktion der Physikkonstanten und darf
+ *      deshalb im Modul liegen. Wo Sand oder Eis liegen, wird die Bahn des
+ *      Schlags stattdessen einzeln durchgerechnet (`kraftFuerStrecke`) — eine
+ *      Rasentabelle liegt dort um ein Vielfaches daneben.
  *   3. **Wie schlecht?** Richtungs- und Kraftstreuung je Stufe.
  *
  * Das Entfernungsfeld je Karte wird zwischengespeichert. Auch das ist kein
@@ -26,20 +29,27 @@
 import {
   type Karte,
   type Segment,
+  type Zone,
+  type ZoneEis,
+  type ZonePortal,
+  type ZoneSand,
   abstandQuadrat,
   istInZone,
   segment,
   segmenteVon,
   streckenAbstandQuadrat,
+  zonengruppen,
 } from './karte';
 import {
   BALL_R,
   type Botstufe,
   DT,
+  EIS_FAKTOR,
   KRAFT_MIN,
   type Partiezustand,
   REIBUNG_RASEN,
   ROLL,
+  SAND_FAKTOR,
   V_MAX,
   V_STOP,
 } from './physik';
@@ -69,6 +79,29 @@ const STREUUNG: Record<Botstufe, { winkel: number; kraft: number }> = {
  * Sichtlinienprüfung ist der teuerste Teil einer Entscheidung.
  */
 const MAX_KETTE = 50;
+
+/**
+ * Was ein Portal im Entfernungsfeld kostet, in Rasterschritten (4 E).
+ *
+ * Ein Portal ist für den Bot immer ein Schlagende — dahinter liegt der Ball
+ * woanders, der nächste Wegpunkt wäre durch die Wand gezielt. Ein einzelner
+ * Rasterschritt (0,5 E) wäre dafür viel zu billig: Ein Portalpaar ließe sich
+ * dann als Abkürzung um sich selbst herum nutzen (siehe `wegfeld`). Mehr als
+ * ein paar Einheiten Umweg spart so kein Portal, das keinen Umweg spart —
+ * und das ist genau die Grenze, ab der ein Bot es besser links liegen lässt.
+ */
+const PORTAL_SCHRITTE = 8;
+
+/**
+ * Mit welchem Tempo ein Ball in ein Portal rollen soll, in E/s.
+ *
+ * Er kommt mit genau diesem Tempo am Ausgang wieder heraus. Ein Ball, der
+ * am Portal AUSROLLT, liegt nach dem Sprung still im anderen Portal — und
+ * auf Sand (k23) kommt selbst ein mäßig schneller Ball keinen Radius weit.
+ * 5 E/s tragen ihn auf Sand rund einen Ballradius mehr als den Portalradius
+ * hinaus, auf Rasen etwa vier Einheiten.
+ */
+const PORTAL_TEMPO = 5;
 
 /* --------------------------------------------------------------------------
  * Kraft aus Distanz
@@ -136,6 +169,118 @@ export function maximaleRollweite(): number {
 }
 
 /* --------------------------------------------------------------------------
+ * Kraft über Sand und Eis
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Deckel der Bahnrechnung in Unterschritten (60 s Rollzeit).
+ *
+ * Auf Eis reibt es nur mit dem 0,12-fachen, ein schwacher Schlag rollt dort
+ * eine halbe Minute. Ohne Deckel liefe die Schleife bei `KRAFT_MIN` sehr
+ * lange, ohne dass die Antwort sich noch änderte.
+ */
+const BAHN_SCHRITTE = 6000;
+/** Halbierungsschritte der Kraftsuche: 0,95 / 2^12 ≈ 0,0002 Kraft. */
+const BAHN_SUCHE = 12;
+
+/**
+ * Wie weit rollt ein Schlag der Kraft `k` von (x,y) in Richtung (rx,ry)?
+ *
+ * Rechnet dieselben Zeilen wie `bewege` in `physik.ts`, liest die Reibung
+ * aber an JEDER Stelle der Bahn neu — das ist der ganze Unterschied zu
+ * `rollweite`. Bei `ziel` bricht sie ab: Weiter zu rechnen ändert an der
+ * Antwort „reicht der Schlag?" nichts mehr, kostet auf Eis aber Tausende
+ * Schritte. Liefert die Weite und das Tempo, mit dem der Ball `ziel`
+ * überquert hat (0, wenn er vorher liegen blieb).
+ *
+ * Wände, Bälle und Bumper bleiben außen vor. Der Bot zielt nur auf Punkte,
+ * die frei in Sicht liegen; was dahinter passiert, wäre geraten.
+ */
+function bahnweite(
+  untergrund: readonly (ZoneSand | ZoneEis)[],
+  x: number,
+  y: number,
+  rx: number,
+  ry: number,
+  k: number,
+  ziel: number,
+): { weite: number; tempo: number } {
+  let v = k * V_MAX;
+  let s = 0;
+  for (let i = 0; i < BAHN_SCHRITTE; i += 1) {
+    // Reibung an der Stelle, an der der Ball JETZT liegt — wie in `bewege`
+    // vor dem Schritt. Mehrere Untergründe übereinander: der letzte gewinnt.
+    let reib = 1;
+    const px = x + rx * s;
+    const py = y + ry * s;
+    for (let u = 0; u < untergrund.length; u += 1) {
+      if (istInZone(untergrund[u], px, py)) {
+        reib = untergrund[u].art === 'sand' ? SAND_FAKTOR : EIS_FAKTOR;
+      }
+    }
+    let neu = v * (1 - REIBUNG_RASEN * reib * DT) - ROLL * reib * DT;
+    if (neu < 0) neu = 0;
+    v = neu;
+    s += v * DT;
+    if (s > ziel) return { weite: s, tempo: v };
+    if (v < V_STOP) break;
+  }
+  return { weite: s, tempo: 0 };
+}
+
+/**
+ * Welche Kraft braucht es, um von (x,y) aus `d` Einheiten weit zu rollen —
+ * über den Untergrund, der auf dieser Linie tatsächlich liegt?
+ *
+ * Das ist die Antwort auf den Befund vom 07.09.2026: Bots spielten auf Sand
+ * mit der Kraft, die auf Rasen gereicht hätte, und blieben auf halbem Weg
+ * liegen. Der Unterschied ist kein Feinschliff — ein Schlag, der auf Rasen 6 E
+ * weit rollt, kommt auf Sand 1,4 E weit und auf Eis 50 E.
+ *
+ * Gesucht wird durch Halbierung statt über eine Tabelle: Die Weite hängt hier
+ * nicht nur an der Kraft, sondern auch daran, WO der Schlag anfängt und
+ * wohin er geht — eine Tabelle je Linie wäre teurer als die Suche. Monoton
+ * ist sie trotzdem (mehr Kraft heißt an jeder Stelle der Linie mehr Tempo),
+ * die Halbierung also eindeutig.
+ *
+ * `tempo` > 0 verlangt, dass der Ball bei `d` noch mindestens so schnell
+ * rollt, statt dort auszurollen — so schlägt der Bot in ein Portal, damit der
+ * Ball am Ausgang wieder herauskommt (`PORTAL_TEMPO`).
+ */
+export function kraftFuerStrecke(
+  karte: Karte,
+  x: number,
+  y: number,
+  rx: number,
+  ry: number,
+  d: number,
+  tempo = 0,
+): number {
+  const untergrund = zonengruppen(karte).untergrund;
+  // Bahn ganz ohne Sand und Eis: die Tabelle ist hier dasselbe Ergebnis,
+  // nur ohne die Simulation. Zwei Drittel der Bahnen gehen diesen Weg.
+  if (untergrund.length === 0 && tempo === 0) return kraftFuerDistanz(d);
+
+  const reicht = (k: number): boolean => {
+    const bahn = bahnweite(untergrund, x, y, rx, ry, k, d);
+    return bahn.weite >= d && bahn.tempo >= tempo;
+  };
+  if (reicht(KRAFT_MIN)) return KRAFT_MIN;
+  // Reicht auch volle Kraft nicht (tiefer Sand), ist volle Kraft die Antwort:
+  // Der Ball kommt so weit er kann und liegt danach näher am Ziel.
+  if (!reicht(1)) return 1;
+
+  let lo = KRAFT_MIN;
+  let hi = 1;
+  for (let i = 0; i < BAHN_SUCHE; i += 1) {
+    const m = (lo + hi) / 2;
+    if (reicht(m)) hi = m;
+    else lo = m;
+  }
+  return (lo + hi) / 2;
+}
+
+/* --------------------------------------------------------------------------
  * Sichtlinie
  * ----------------------------------------------------------------------- */
 
@@ -145,6 +290,13 @@ export function maximaleRollweite(): number {
  * Kreis-Raycast: Der Ball ist keine Nadel, sein Weg ist eine Kapsel vom Radius
  * `BALL_R`. Wasser zählt als Hindernis — es ist keine Wand, aber der Weg
  * hindurch kostet einen Strafschlag und ist damit keine Sichtlinie.
+ *
+ * Ein Portal zählt genauso, und zwar aus demselben Grund: Wer hineinrollt,
+ * kommt nicht an, sondern steht woanders. Ausgenommen ist allein das Portal,
+ * in das der Bot ABSICHTLICH spielt (`zielPortal`) — das ist der Fall, in dem
+ * die Wegkette am Portal endet. Ohne diese Unterscheidung spielte der Bot auf
+ * `k23-portal-in-die-sandkammer` seinen Ball aus der Kammer wieder hinaus,
+ * Schlag um Schlag, bis das Limit erreicht war.
  */
 export function sichtFrei(
   karte: Karte,
@@ -152,6 +304,7 @@ export function sichtFrei(
   ay: number,
   bx: number,
   by: number,
+  zielPortal: Zone | null = null,
 ): boolean {
   const strahl = segment(ax, ay, bx, by);
   const segmente = segmenteVon(karte);
@@ -170,19 +323,41 @@ export function sichtFrei(
   }
   for (let i = 0; i < karte.zonen.length; i += 1) {
     const zone = karte.zonen[i];
+    if (zone.art === 'portal') {
+      if (zone !== zielPortal && kreuztFlaeche(zone, strahl)) return false;
+      continue;
+    }
     if (zone.art !== 'wasser') continue;
     if (kreuztFlaeche(zone, strahl)) return false;
   }
   return true;
 }
 
-/** Schneidet die Strecke die Wasserfläche? Grob, aber auf der sicheren Seite. */
+/** Das Portal an dieser Stelle, oder `null`. */
+function portalAn(karte: Karte, x: number, y: number): Zone | null {
+  for (let i = 0; i < karte.zonen.length; i += 1) {
+    const zone = karte.zonen[i];
+    if (zone.art === 'portal' && istInZone(zone, x, y)) return zone;
+  }
+  return null;
+}
+
+/**
+ * Schneidet die Strecke die Fläche?
+ *
+ * OHNE Ballradius, anders als bei den Wänden — und das ist kein Versehen:
+ * Wasser und Portal lösen in `physik.ts` aus, wenn der MITTELPUNKT des Balls
+ * in der Zone liegt, eine Wand dagegen berührt ihn schon einen Radius früher.
+ * Mit Radius gerechnet sah ein Ball, der einen Radius vom Ufer entfernt zur
+ * Ruhe kam, überhaupt nichts mehr: Jede Linie von ihm aus lief näher am
+ * Wasser vorbei als erlaubt (k37, Sandbrücke).
+ */
 function kreuztFlaeche(
   zone: { x: number; y: number; w?: number; h?: number; r?: number },
   strahl: Segment,
 ): boolean {
   if (zone.r !== undefined) {
-    return abstandQuadrat(strahl, zone.x, zone.y) < (zone.r + BALL_R) * (zone.r + BALL_R);
+    return abstandQuadrat(strahl, zone.x, zone.y) < zone.r * zone.r;
   }
   const w = zone.w ?? 0;
   const h = zone.h ?? 0;
@@ -196,7 +371,9 @@ function kreuztFlaeche(
     segment(zone.x, zone.y + h, zone.x, zone.y),
   ];
   for (let i = 0; i < 4; i += 1) {
-    if (streckenAbstandQuadrat(kanten[i], strahl) < BALL_R * BALL_R) return true;
+    // Abstand genau null heißt „die beiden Strecken kreuzen sich" — so ist
+    // `streckenAbstandQuadrat` gebaut. Das ist hier die ganze Prüfung.
+    if (streckenAbstandQuadrat(kanten[i], strahl) <= 0) return true;
   }
   return false;
 }
@@ -264,10 +441,25 @@ function freieZelleBei(feld: Wegfeld, x: number, y: number): number {
  * Baut das Entfernungsfeld einer Karte (einmal je Karte).
  *
  * Die Suche läuft VOM LOCH aus rückwärts. Das spart je Entscheidung eine
- * eigene Suche — von jeder Zelle aus geht es danach einfach bergab. Portale
- * sind Einbahnkanten, deshalb werden sie hier umgedreht eingehängt: Wer beim
- * Ziel des Portals steht, ist von jeder Zelle IM Portal aus einen Schritt
- * entfernt.
+ * eigene Suche — von jeder Zelle aus geht es danach einfach bergab.
+ *
+ * Portale sind Einbahnkanten und werden umgedreht eingehängt: Sobald die
+ * Suche den AUSGANG eines Portals erreicht, ist jede Zelle IM Portal einen
+ * Schritt weiter entfernt. Eine Portalzelle trägt damit genau eine Bedeutung —
+ * „hier hinein, und du stehst woanders" — und nie die eines Bodens: Die
+ * Nachbarschaftssuche überspringt sie, und der Abstieg endet an ihr. Sonst
+ * rechnet das Feld einen Weg mitten durch ein Portal hindurch, den es in der
+ * Physik nicht gibt (k23: der Bot spielte seinen Ball aus der Sandkammer
+ * durch das Ausgangsportal wieder hinaus, Schlag um Schlag bis zum Limit).
+ *
+ * Was der Ausgang ist, hängt davon ab, wo das Ziel liegt. Auf freiem Boden:
+ * die Zielzelle selbst. In einem anderen Portal — so zielen alle Portalpaare,
+ * jedes in die Mitte des anderen —: die freien Zellen RINGS UM dieses Portal.
+ * Denn dort schützt `portalSperre` in der Physik den Ball, er rollt aus dem
+ * Portal hinaus, statt sofort zurückzuspringen. Nimmt man stattdessen die
+ * Zielzelle, wartet jedes Portal des Paars darauf, dass das andere zuerst
+ * eine Entfernung bekommt, und keines bekommt je eine: Auf k23 und k30 war so
+ * das Loch von keinem Abschlag aus erreichbar.
  */
 export function wegfeld(karte: Karte): Wegfeld {
   const fertig = feldSpeicher.get(karte);
@@ -322,57 +514,110 @@ export function wegfeld(karte: Karte): Wegfeld {
     feld.frei[i] = frei ? 1 : 0;
   }
 
-  // Portale eintragen, vorwärts und rückwärts.
-  const rueckwaerts = new Map<number, number[]>();
+  // Portale eintragen: je Portal seine Zellen (die Türen) und seine
+  // Ausgangszellen (siehe Kopf der Funktion). `ausgangVon` dreht das um —
+  // welche Portale werden fertig, sobald diese Zelle an der Reihe ist?
+  const portale: { zellen: number[]; zone: ZonePortal }[] = [];
   for (let zi = 0; zi < karte.zonen.length; zi += 1) {
     const zone = karte.zonen[zi];
     if (zone.art !== 'portal') continue;
     const ziel = zelleIndex(feld, zone.ziel.x, zone.ziel.y);
+    const zellen: number[] = [];
     for (let i = 0; i < anzahl; i += 1) {
       if (feld.frei[i] !== 1) continue;
       if (!istInZone(zone, zelleX(feld, i), zelleY(feld, i))) continue;
       feld.portalZu[i] = ziel;
-      const liste = rueckwaerts.get(ziel);
-      if (liste === undefined) rueckwaerts.set(ziel, [i]);
-      else liste.push(i);
+      zellen.push(i);
     }
+    portale.push({ zellen, zone });
   }
-
-  const start = freieZelleBei(feld, karte.loch[0], karte.loch[1]);
-  feld.lochZelle = start;
-  if (start >= 0) {
-    feld.entfernung[start] = 0;
-    const schlange = new Int32Array(anzahl);
-    schlange[0] = start;
-    let kopf = 0;
-    let ende = 1;
-    while (kopf < ende) {
-      const c = schlange[kopf];
-      kopf += 1;
-      const d = feld.entfernung[c] + 1;
-      const cx = c % spalten;
-      const cy = (c - cx) / spalten;
-      // Feste Reihenfolge der Nachbarn: rechts, unten, links, oben. Eine
-      // andere Reihenfolge gäbe andere (gleich lange) Wege — und damit
-      // andere Bot-Schläge auf zwei Geräten, wenn eines je umsortiert.
+  const ausgangVon = new Map<number, number[]>();
+  const merkeAusgang = (zelle: number, portal: number): void => {
+    const liste = ausgangVon.get(zelle);
+    if (liste === undefined) ausgangVon.set(zelle, [portal]);
+    else if (!liste.includes(portal)) liste.push(portal);
+  };
+  for (let p = 0; p < portale.length; p += 1) {
+    const zone = portale[p].zone;
+    const zielPortal = portalAn(karte, zone.ziel.x, zone.ziel.y);
+    if (zielPortal === null) {
+      merkeAusgang(zelleIndex(feld, zone.ziel.x, zone.ziel.y), p);
+      continue;
+    }
+    // Ziel in einem Portal: Ausgang sind die freien Bodenzellen rings um
+    // dessen Zellen — dorthin rollt der Ball unter der Sperre hinaus.
+    const q = portale.findIndex((eintrag) => eintrag.zone === zielPortal);
+    const zellen = q >= 0 ? portale[q].zellen : [];
+    for (let i = 0; i < zellen.length; i += 1) {
+      const cx = zellen[i] % spalten;
+      const cy = (zellen[i] - cx) / spalten;
       for (let k = 0; k < 4; k += 1) {
         const nx = cx + (k === 0 ? 1 : k === 2 ? -1 : 0);
         const ny = cy + (k === 1 ? 1 : k === 3 ? -1 : 0);
         if (nx < 0 || ny < 0 || nx >= spalten || ny >= zeilen) continue;
         const n = ny * spalten + nx;
-        if (feld.frei[n] !== 1 || feld.entfernung[n] !== -1) continue;
-        feld.entfernung[n] = d;
-        schlange[ende] = n;
-        ende += 1;
+        if (feld.frei[n] !== 1 || feld.portalZu[n] >= 0) continue;
+        merkeAusgang(n, p);
       }
-      const vorher = rueckwaerts.get(c);
-      if (vorher !== undefined) {
-        for (let k = 0; k < vorher.length; k += 1) {
-          const n = vorher[k];
-          if (feld.entfernung[n] !== -1) continue;
-          feld.entfernung[n] = d;
-          schlange[ende] = n;
-          ende += 1;
+    }
+  }
+  const portalFertig = new Uint8Array(portale.length);
+
+  const start = freieZelleBei(feld, karte.loch[0], karte.loch[1]);
+  feld.lochZelle = start;
+  if (start >= 0) {
+    /*
+     * Eimer je Entfernung statt einer Warteschlange: Ein Nachbarschritt
+     * kostet 1, ein Portal `PORTAL_SCHRITTE`. Mit einer gewöhnlichen
+     * Breitensuche kostete das Portal ebenfalls 1 — und dann war auf k23 der
+     * Rundweg durch BEIDE Portale (hinaus, drumherum, wieder hinein) genauso
+     * kurz wie der Weg um das Ausgangsportal herum. Der Abstieg nahm ihn, der
+     * Bot spielte aus der Sandkammer wieder hinaus. Weil jede Zelle ihre
+     * Entfernung beim ersten Besuch bekommt und die Eimer in aufsteigender
+     * Reihenfolge abgearbeitet werden, ist sie beim ersten Besuch schon die
+     * kleinste; nachgebessert wird nichts.
+     */
+    const eimer: number[][] = [];
+    const lege = (zelle: number, d: number): void => {
+      feld.entfernung[zelle] = d;
+      const liste = eimer[d];
+      if (liste === undefined) eimer[d] = [zelle];
+      else liste.push(zelle);
+    };
+    lege(start, 0);
+    for (let d = 0; d < eimer.length; d += 1) {
+      const liste = eimer[d];
+      if (liste === undefined) continue;
+      for (let i = 0; i < liste.length; i += 1) {
+        const c = liste[i];
+        const cx = c % spalten;
+        const cy = (c - cx) / spalten;
+        // Feste Reihenfolge der Nachbarn: rechts, unten, links, oben. Eine
+        // andere Reihenfolge gäbe andere (gleich lange) Wege — und damit
+        // andere Bot-Schläge auf zwei Geräten, wenn eines je umsortiert.
+        for (let k = 0; k < 4; k += 1) {
+          const nx = cx + (k === 0 ? 1 : k === 2 ? -1 : 0);
+          const ny = cy + (k === 1 ? 1 : k === 3 ? -1 : 0);
+          if (nx < 0 || ny < 0 || nx >= spalten || ny >= zeilen) continue;
+          const n = ny * spalten + nx;
+          if (feld.frei[n] !== 1 || feld.entfernung[n] !== -1) continue;
+          // Eine Portalzelle ist eine TÜR, kein Boden: Sie bekommt ihre
+          // Entfernung ausschließlich über den Ausgang ihres Portals unten.
+          if (feld.portalZu[n] >= 0) continue;
+          lege(n, d + 1);
+        }
+        // Die erste Ausgangszelle, die an die Reihe kommt, ist die nächste am
+        // Loch. Von jeder Zelle des Portals aus geht es von dort weiter.
+        const fertig = ausgangVon.get(c);
+        if (fertig === undefined) continue;
+        for (let k = 0; k < fertig.length; k += 1) {
+          const p = fertig[k];
+          if (portalFertig[p] === 1) continue;
+          portalFertig[p] = 1;
+          const zellen = portale[p].zellen;
+          for (let j = 0; j < zellen.length; j += 1) {
+            if (feld.entfernung[zellen[j]] === -1) lege(zellen[j], d + PORTAL_SCHRITTE);
+          }
         }
       }
     }
@@ -394,12 +639,18 @@ export function erreichbarVon(karte: Karte, x: number, y: number): boolean {
   return c >= 0 && feld.entfernung[c] >= 0;
 }
 
-/** Der nächste Schritt bergab, oder -1. */
+/**
+ * Der nächste Schritt bergab, oder -1.
+ *
+ * An einer Portalzelle endet der Weg: Dahinter liegt der Ball woanders, ein
+ * weiterer Wegpunkt wäre durch die Wand gezielt. Der Schritt IN eine
+ * Portalzelle ist dagegen ein gewöhnlicher Nachbarschritt — ihre Entfernung
+ * ist ja gerade „hinein, und du bist am Ausgang".
+ */
 function abstieg(feld: Wegfeld, c: number): number {
   const d = feld.entfernung[c];
   if (d <= 0) return -1;
-  const portal = feld.portalZu[c];
-  if (portal >= 0 && feld.entfernung[portal] === d - 1) return portal;
+  if (feld.portalZu[c] >= 0) return -1;
   const cx = c % feld.spalten;
   const cy = (c - cx) / feld.spalten;
   for (let k = 0; k < 4; k += 1) {
@@ -460,6 +711,7 @@ export function botEntscheidung(
   let zielX = lochX;
   let zielY = lochY;
   let aufsLoch = false;
+  let insPortal = false;
 
   if (zumLoch < 12 && sichtFrei(karte, b.x, b.y, lochX, lochY)) {
     aufsLoch = true;
@@ -477,11 +729,8 @@ export function botEntscheidung(
         if (n < 0) break;
         kette.push(n);
         c = n;
-        // Am Portal endet die Kette: Dahinter liegt der Ball woanders, ein
-        // weiterer Wegpunkt wäre durch die Wand gezielt.
-        if (feld.portalZu[c] >= 0 && feld.entfernung[feld.portalZu[c]] === feld.entfernung[c] - 1) {
-          break;
-        }
+        // Am Portal endet die Kette — `abstieg` liefert dort -1, der nächste
+        // Durchlauf bricht ab.
       }
       /*
        * Den letzten noch sichtbaren Kettenpunkt BINÄR suchen statt die Kette
@@ -493,18 +742,64 @@ export function botEntscheidung(
        * Messung die Spitze im 99. Perzentil, weil alle acht Bots im selben
        * Takt denken können.
        */
+      /*
+       * Endet die Kette an einem Portal, ist GENAU DIESES Portal das Ziel und
+       * damit kein Hindernis — jedes andere bleibt eines (siehe `sichtFrei`).
+       */
+      let zielPortal: Zone | null = null;
+      if (kette.length > 0) {
+        const letzte = kette[kette.length - 1];
+        if (feld.portalZu[letzte] >= 0) {
+          zielPortal = portalAn(karte, zelleX(feld, letzte), zelleY(feld, letzte));
+        }
+      }
       let lo = -1;
       let hi = kette.length - 1;
       while (lo < hi) {
         const m = (lo + hi + 1) >> 1;
         const px = zelleX(feld, kette[m]);
         const py = zelleY(feld, kette[m]);
-        if (sichtFrei(karte, b.x, b.y, px, py)) lo = m;
+        if (sichtFrei(karte, b.x, b.y, px, py, zielPortal)) lo = m;
         else hi = m - 1;
       }
       if (lo >= 0) {
         zielX = zelleX(feld, kette[lo]);
         zielY = zelleY(feld, kette[lo]);
+        gefunden = true;
+        // Der letzte sichtbare Punkt ist die Portalzelle selbst: Dann in die
+        // MITTE des Portals, nicht auf die Rastermitte am Rand der Scheibe —
+        // und mit Tempo, damit der Ball am Ausgang herausrollt (siehe
+        // `PORTAL_TEMPO`). Die Mitte liegt höchstens einen Portalradius neben
+        // der geprüften Zelle; ist sie doch verdeckt, bleibt die Zelle.
+        if (zielPortal !== null && lo === kette.length - 1) {
+          insPortal = true;
+          if (sichtFrei(karte, b.x, b.y, zielPortal.x, zielPortal.y, zielPortal)) {
+            zielX = zielPortal.x;
+            zielY = zielPortal.y;
+          }
+        }
+      } else if (kette.length > 0) {
+        /*
+         * Ein Weg, aber kein einziger Punkt davon in Sicht: Das passiert dem
+         * Ball an einer Wasserkante. Er liegt dort einen Ballradius vom Wasser
+         * entfernt, und damit läuft JEDE Linie von ihm aus näher am Wasser
+         * vorbei, als `sichtFrei` durchgehen lässt.
+         *
+         * Blind aufs Loch zu halten ist hier das Schlechteste, was er tun
+         * kann: Auf `k37-portalkarussell` liegt zwischen Sandbrücke und Loch
+         * der ganze Graben — der Bot hat sich so bis zum Schlaglimit ins
+         * Wasser gespielt. Also den Weg entlang, auch ungesehen; der erste
+         * Kettenpunkt, der weit genug weg liegt, um eine Richtung zu geben.
+         */
+        let i = 0;
+        while (
+          i < kette.length - 1 &&
+          betrag(zelleX(feld, kette[i]) - b.x, zelleY(feld, kette[i]) - b.y) < 1
+        ) {
+          i += 1;
+        }
+        zielX = zelleX(feld, kette[i]);
+        zielY = zelleY(feld, kette[i]);
         gefunden = true;
       }
       // Endet die Kette am Loch und liegt es frei, wird direkt eingelocht statt
@@ -541,7 +836,15 @@ export function botEntscheidung(
   // Aufs Loch ein Stück über das Ziel hinaus: Ein Schlag, der genau am Loch
   // ausrollt, bleibt in der Hälfte der Fälle einen Zentimeter davor liegen.
   const plan = aufsLoch ? d + 0.35 : d;
-  const kraftRein = kraftFuerDistanz(plan);
+  const kraftRein = kraftFuerStrecke(
+    karte,
+    b.x,
+    b.y,
+    richtung.x,
+    richtung.y,
+    plan,
+    insPortal ? PORTAL_TEMPO : 0,
+  );
 
   const streu = STREUUNG[z.botStufe];
   const w = ganzzahl(zufall, -streu.winkel, streu.winkel);

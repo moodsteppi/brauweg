@@ -107,8 +107,13 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    * geblieben — aber zwei Geräte mit verschiedener Physik rechnen aus
    * derselben Zugliste verschiedene Partien, und genau das hält die
    * Versionsgrenze des Gateways auseinander.
+   *
+   * 3 seit dem 21.09.2026: Bot-Änderung (Kraft über Sand und Eis, Portalpaare
+   * im Wegfeld, Schlag ins Portal mit Tempo). Die Bots rechnen auf jedem
+   * Gerät selbst — ein alter Bot und ein neuer spielen aus derselben Saat
+   * verschiedene Schläge, und die Partie läuft auseinander.
    */
-  protocolVersion: 2,
+  protocolVersion: 3,
 
   defaultConfig: () => DEFAULT_REGELN,
 

@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { erreichbarVon, kraftFuerDistanz, maximaleRollweite, sichtFrei, wegfeld } from './bot';
-import type { Karte } from './karte';
+import {
+  erreichbarVon,
+  kraftFuerDistanz,
+  kraftFuerStrecke,
+  maximaleRollweite,
+  sichtFrei,
+  wegfeld,
+} from './bot';
+import { type Karte, type Zone, istInZone } from './karte';
+import { KARTEN } from './karten/index';
 import { botLoestKarte } from './karten-pruefen';
 import { V_MAX } from './physik';
 
@@ -138,5 +146,104 @@ describe('Bot spielt', () => {
       return summe / 20;
     }
     expect(mittel('anfaenger')).toBeGreaterThan(mittel('genie'));
+  });
+});
+
+/* --------------------------------------------------------------------------
+ * Sand und Eis — der Befund vom 07.09.2026: Bots spielten auf Sand mit der
+ * Kraft, die auf Rasen gereicht haette.
+ * ----------------------------------------------------------------------- */
+
+/** Die freie Bahn, komplett mit einem Untergrund belegt. */
+function freiMit(zone: Zone): Karte {
+  return { ...FREI, id: `bot-frei-${zone.art}`, zonen: [zone] };
+}
+
+const SAND = freiMit({ art: 'sand', x: 0, y: 0, w: 12, h: 20 });
+const EIS = freiMit({ art: 'eis', x: 0, y: 0, w: 12, h: 20 });
+
+describe('Kraft ueber Sand und Eis', () => {
+  it('ist auf freiem Rasen dieselbe wie aus der Tabelle', () => {
+    for (const d of [1, 3, 6, 12]) {
+      expect(kraftFuerStrecke(FREI, 6, 17, 0, -1, d)).toBeCloseTo(kraftFuerDistanz(d), 6);
+    }
+  });
+
+  it('braucht auf Sand deutlich mehr und auf Eis deutlich weniger Kraft', () => {
+    const rasen = kraftFuerStrecke(FREI, 6, 17, 0, -1, 6);
+    const sand = kraftFuerStrecke(SAND, 6, 17, 0, -1, 6);
+    const eis = kraftFuerStrecke(EIS, 6, 17, 0, -1, 6);
+    // Vierfache Reibung gegen 0,12-fache — das sind keine Nuancen.
+    expect(sand).toBeGreaterThan(rasen * 1.5);
+    expect(eis).toBeLessThan(rasen * 0.7);
+  });
+
+  it('rechnet den Untergrund an der Stelle, nicht die Karte als Ganzes', () => {
+    // Sand nur am Ende der Bahn: Ein kurzer Schlag davor merkt nichts davon.
+    const spaeterSand = freiMit({ art: 'sand', x: 0, y: 0, w: 12, h: 6 });
+    expect(kraftFuerStrecke(spaeterSand, 6, 17, 0, -1, 4)).toBeCloseTo(kraftFuerDistanz(4), 4);
+    // Ein langer Schlag, der im Sand enden soll, braucht mehr.
+    expect(kraftFuerStrecke(spaeterSand, 6, 17, 0, -1, 13)).toBeGreaterThan(kraftFuerDistanz(13));
+  });
+
+  it('gibt bei unerreichbarer Weite volle Kraft und bei winziger die Mindestkraft', () => {
+    expect(kraftFuerStrecke(SAND, 6, 17, 0, -1, 1000)).toBe(1);
+    expect(kraftFuerStrecke(EIS, 6, 17, 0, -1, 0.01)).toBeGreaterThan(0);
+    expect(kraftFuerStrecke(EIS, 6, 17, 0, -1, 0.01)).toBeLessThan(0.1);
+  });
+
+  it('schlaegt mit Tempo-Vorgabe fester als zum Ausrollen', () => {
+    for (const karte of [FREI, SAND, EIS]) {
+      const ausrollen = kraftFuerStrecke(karte, 6, 17, 0, -1, 4);
+      const durch = kraftFuerStrecke(karte, 6, 17, 0, -1, 4, 5);
+      expect(durch).toBeGreaterThan(ausrollen);
+    }
+  });
+});
+
+/* --------------------------------------------------------------------------
+ * Portale — k23 hat ein Portalpaar, dessen Portale aufeinander zielen, und
+ * eine Sandkammer, die nur durch das Portal zu erreichen ist.
+ * ----------------------------------------------------------------------- */
+
+describe('Portale im Wegfeld', () => {
+  const k23 = KARTEN.find((k) => k.id === 'k23-portal-in-die-sandkammer');
+  if (k23 === undefined) throw new Error('k23 fehlt im Katalog');
+  const ausgang = k23.zonen.find((z) => z.art === 'portal' && z.y === 10);
+  if (ausgang === undefined) throw new Error('k23: Ausgangsportal fehlt');
+
+  it('erreicht die Sandkammer durch das Portalpaar von jedem Abschlag', () => {
+    // Beide Portale zielen in die Mitte des anderen. Wartet jedes darauf, dass
+    // das andere zuerst eine Entfernung bekommt, bekommt keines eine.
+    for (const [x, y] of k23.abschlaege) expect(erreichbarVon(k23, x, y)).toBe(true);
+  });
+
+  it('laeuft aus der Kammer nie als Boden durch das Ausgangsportal', () => {
+    // Jede freie Bodenzelle neben dem Ausgangsportal liegt naeher am Loch als
+    // das Portal selbst — der Abstieg fuehrt also nie hinein. Sonst spielt der
+    // Bot seinen Ball aus der Kammer wieder hinaus.
+    const feld = wegfeld(k23);
+    let geprueft = 0;
+    for (let i = 0; i < feld.entfernung.length; i += 1) {
+      if (feld.portalZu[i] < 0) continue;
+      const x = (i % feld.spalten) * 0.5 + 0.25;
+      const y = Math.floor(i / feld.spalten) * 0.5 + 0.25;
+      if (!istInZone(ausgang, x, y)) continue;
+      expect(feld.entfernung[i]).toBeGreaterThan(0);
+      for (const n of [i + 1, i - 1, i + feld.spalten, i - feld.spalten]) {
+        if (feld.frei[n] !== 1 || feld.portalZu[n] >= 0) continue;
+        expect(feld.entfernung[n]).toBeLessThan(feld.entfernung[i]);
+        geprueft += 1;
+      }
+    }
+    expect(geprueft).toBeGreaterThan(0);
+  });
+
+  it('spielt als Genie durch das Portal und locht in der Kammer ein', () => {
+    for (const saat of [1, 2, 3, 4, 5, 99, 20260921]) {
+      const r = botLoestKarte(k23, 'genie', saat);
+      expect(r.geloest).toBe(true);
+      expect(r.schlaege).toBeLessThanOrEqual(k23.par + 2);
+    }
   });
 });
