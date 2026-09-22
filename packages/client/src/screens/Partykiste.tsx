@@ -16,6 +16,8 @@ import {
 } from '../minispiele/partykiste/sicht';
 import { binReihumDran, useTischwache } from '../minispiele/partykiste/useTischwache';
 import { Abrechnung, Tabelle } from '../minispiele/partykiste/Wertung';
+import { Beitrittscode } from '../minispiele/partykiste/Beitrittscode';
+import { Einladung } from '../minispiele/partykiste/Einladung';
 import type { BotLevel, SeatInfo } from '../protocol';
 import { useTable } from '../useTable';
 
@@ -433,6 +435,7 @@ export function Partykiste({
               </div>
             ) : null}
           </div>
+          <Beitrittscode spiel="partykiste" onBeigetreten={setTischId} />
         </div>
       </main>
     );
@@ -563,6 +566,7 @@ function Lobby({
         </p>
         <LobbyRegelzeile />
         {!verbunden ? <p className="pk-fehler">Keine Verbindung — es wird neu aufgebaut …</p> : null}
+        <Einladung spiel="partykiste" />
 
         <ul className="pk-gruppe">
           {sitze.map((platz) => {

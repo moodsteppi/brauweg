@@ -132,8 +132,12 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    * (`bahnen`). Ein Client von davor zöge sie weiter selbst aus seinem
    * Katalog — heute noch dieselbe Folge, aber mit der ersten neuen Bahn
    * nicht mehr, und genau diese Stille soll die Grenze verhindern.
+   *
+   * 5 seit dem 22.09.2026 nachts: Bot-Änderung (Probeschläge über
+   * Beschleuniger, Drehkreuz, Strudel, Sprungfeld; Bumper als Hindernis,
+   * Drehkreuz im Wegfeld teurer) — derselbe Grund wie bei 3.
    */
-  protocolVersion: 4,
+  protocolVersion: 5,
 
   defaultConfig: () => DEFAULT_REGELN,
 

@@ -48,6 +48,41 @@ Bot-Schläge deterministisch zum selben Takt; über die Leitung geht dafür
 nichts. `currentActor` ist immer null, `legalActions` leer, `botAction` wird
 nie aufgerufen (liefert `nichts`, das `act` unverändert zurückgibt).
 
+**Was die Bots von den Zonen wissen (Stand 22.09.2026).** Sand und Eis
+rechnet `kraftFuerStrecke` Bahn für Bahn mit (seit #188), Wasser und Portale
+kennen Sichtlinie und Wegfeld. Die anderen fünf Arten hielt der Bot bis zum
+22.09. für Rasen. Jetzt gilt: Liegt ein **Beschleuniger, Drehkreuz, Strudel
+oder Sprungfeld** am geplanten Weg, probt der Bot — er rechnet den Schlag mit
+`schritt` auf einer Kopie mit nur seinem Ball bis zur Ruhe durch (drei
+Kraftstufen, dann zwei Richtungsversätze; ab „experte" abwärts je fünf
+gestreute Proben, der Anfänger probt nicht) und nimmt einen anderen als den
+geplanten Schlag nur, wenn die Probe ihn besser bewertet. Das Drehkreuz steht
+dabei in genau der Stellung dieses Takts; das ist das ganze Timing. Dazu
+versperrt ein **Bumper** Sichtlinie und Wegfeld wie eine runde Wand, und im
+Kreis eines Drehkreuzes kostet ein Rasterschritt 3 statt 1 (Dijkstra mit
+Eimern; der Anfänger behält das alte Feld). Den Anlass und die verworfenen
+Wege — eine Kraftrechnung in der Ebene (k04 1,00 → 2,75: die Suche fand die
+Kante, an der der Schub den Ball ganz durchträgt), der Bumper in der Probe,
+Sprungfelder als Wegfeld-Kanten — beschreibt der Kommentar an `PROBE_ARTEN`
+in `bot.ts`. Gemessen mit `werkzeug/golf-botprobe.ts` (20 Saaten, Schläge,
+vorher → nachher):
+
+| Stufe     | alle 40     | Beschl. (7) | Drehkreuz (7) | Strudel (7) | Sprung (5) | Bumper (8) |
+|-----------|-------------|-------------|---------------|-------------|------------|------------|
+| genie     | 2,44 → 2,28 | 2,07 → 1,94 | 3,59 → 3,09   | 2,64 → 2,39 | 2,52 → 2,38 | 1,76 → 1,76 |
+| experte   | 2,74 → 2,59 | 2,24 → 2,05 | 3,79 → 3,36   | 2,81 → 2,70 | 2,50 → 2,41 | 2,29 → 2,18 |
+| standard  | 3,26 → 3,08 | 2,85 → 2,68 | 4,30 → 3,76   | 3,43 → 3,31 | 2,94 → 2,84 | 2,90 → 2,71 |
+| anfaenger | 3,91 → 3,88 | 3,41 → 3,41 | 4,65 → 4,58   | 4,09 → 4,09 | 3,66 → 3,66 | 3,89 → 3,74 |
+
+Einlochquote Genie 99,4 → 100 %. Die großen Sprünge: k39 (Drehkreuzgasse)
+Genie 6,10 / 80 % → 2,85 / 100 %, k12 2,90 → 2,00, k08 2,30 → 1,20. Drei
+Zeilen stehen in der 20-Saaten-Messung einen Lauf schlechter (k15 Standard,
+k37 Experte, k32 Anfänger); über 100 bis 400 Saaten nachgemessen ist keine
+davon schlechter. Kosten einer Entscheidung auf den Zonenbahnen (Desktop,
+Node): Median 0,03 ms wie vorher, p90 bis 1,3 ms, p99 bis 3,3 ms statt
+0,1 bis 2,8 ms — auf dem Handy mehrfach. `--vergleich` der Botprobe zeigt je
+Bahn, was eine Änderung am Bot verschlechtert; das ist die Messlatte.
+
 **Abschlag und Geister:** Alle Bälle starten auf demselben Punkt und sind
 bis zu ihrem ersten Schlag Geister — sie stoßen nichts und werden nicht
 gestoßen. Nach jedem Zurücksetzen (Wasser, Flug in einen Block) gilt das
@@ -161,3 +196,35 @@ Aufbau zufällig aus allen sechzehn (`zieheFarben`).
   Erreichbarkeit per Wegfeld) und `botLoestKarte` (Genie-Bot schafft sie in
   ≤ Schlaglimit) laufen als Vitest über alle 40. Eine Bahn, die der Bot nicht
   schafft, wird umgebaut, nicht der Test gelockert.
+
+## Bahnwerkstatt (seit 22.09.2026)
+
+Robins Entscheidung vom 22.09.2026: „viel mehr Maps" kommen aus einem Editor
+fürs Team statt aus handgeschriebenen Objekten. Die Werkstatt ist eine eigene
+Seite neben der App wie der Schaukasten der Partykiste — `npm run dev:client`,
+dann <http://localhost:5173/bahnwerkstatt.html>. Quelle unter
+`packages/client/src/werkstatt/golf/`.
+
+- **Sie urteilt mit dem Spiel, nicht neben ihm.** Gezeichnet wird mit dem
+  `Zeichner`, angespielt mit `physik.ts` und dem Zielen aus `eingabe.ts`,
+  geprüft mit `pruefeKarte` und `botLoestKarte` — alles importiert, nichts
+  nachgebaut. Zusätzlich meldet sie, was nur die Katalogtests verlangen
+  (Genie-Bot in höchstens `par + 2`), damit eine Bahn nicht erst im Pull
+  Request rot wird.
+- **Jeder Handgriff erzeugt ein neues Kartenobjekt.** Segmente, Zonengruppen
+  und Wegfeld hängen je Objekt im Zwischenspeicher; wer eine Bahn an Ort und
+  Stelle ändert, prüft die alten Wände. Die Werkstatt leert beide Speicher vor
+  jeder Prüfung (`vergissSegmente`, `vergissWegfelder`), sonst wüchsen sie mit
+  jeder Mausbewegung.
+- **Ausgabe ist eine Datei je Bahn** (`karten/<kennung>.ts`, `export const
+  bahn`, mit `beschreibung`/`thema`/`autor`/`tags`), dazu — für eine neue
+  Kennung — die Zeile für `BAHNEN_KATALOG` im Modul. JSON zum Weitergeben gibt
+  es daneben, das nackte Objekt der alten Sammeldateien nur noch zum
+  Vergleichen.
+- **Eine vorhandene Bahn wird nicht umgebaut.** Trägt die Bahn die Kennung
+  einer Katalogbahn, rollt aber anders (Maße, Limits, Loch, Wände, Zonen,
+  Abschlag 0), warnt die Werkstatt, dass das laufende Partien bricht, und ist
+  nicht „katalogreif". Der Knopf daneben vergibt eine neue Kennung; die alte
+  Datei und ihre Katalogzeile gehören im selben Pull Request entfernt.
+- **Nicht im Betriebspaket.** `vite build` baut nur `index.html`; die
+  Begründung steht in `packages/client/bahnwerkstatt.html`.

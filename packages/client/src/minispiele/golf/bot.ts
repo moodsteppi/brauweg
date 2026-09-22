@@ -19,7 +19,11 @@
  *      entsteht. Sie ist eine reine Funktion der Physikkonstanten und darf
  *      deshalb im Modul liegen. Wo Sand oder Eis liegen, wird die Bahn des
  *      Schlags stattdessen einzeln durchgerechnet (`kraftFuerStrecke`) — eine
- *      Rasentabelle liegt dort um ein Vielfaches daneben.
+ *      Rasentabelle liegt dort um ein Vielfaches daneben. Liegt am Weg eine
+ *      Zone, die den Ball schiebt, zieht, wirft oder schlägt (Beschleuniger,
+ *      Strudel, Sprungfeld, Drehkreuz), probt der Bot seit dem 22.09.2026
+ *      ein paar Schläge mit der echten Physik und nimmt den besten
+ *      (`besterProbeschlag`, Begründung bei `PROBE_ARTEN`).
  *   3. **Wie schlecht?** Richtungs- und Kraftstreuung je Stufe.
  *
  * Das Entfernungsfeld je Karte wird zwischengespeichert. Auch das ist kein
@@ -42,9 +46,11 @@ import {
 } from './karte';
 import {
   BALL_R,
+  type Ball,
   type Botstufe,
   DT,
   EIS_FAKTOR,
+  type Ereignis,
   KRAFT_MIN,
   type Partiezustand,
   REIBUNG_RASEN,
@@ -52,6 +58,7 @@ import {
   SAND_FAKTOR,
   V_MAX,
   V_STOP,
+  schritt,
 } from './physik';
 import { betrag, bruch, dreheHundertstel, ganzzahl, normiere } from './zufall';
 
@@ -102,6 +109,17 @@ const PORTAL_SCHRITTE = 8;
  * hinaus, auf Rasen etwa vier Einheiten.
  */
 const PORTAL_TEMPO = 5;
+
+/**
+ * Was ein Rasterschritt im Kreis eines Drehkreuzes kostet (statt 1).
+ *
+ * Seit dem 22.09.2026. Vorher war der Kreis Boden wie jeder andere, und der
+ * Weg lief mitten durch die Nabe — auf k39 bei zwei Kreuzen, die eine 8 E
+ * breite Gasse bis auf je 2 E Rand ausfüllen. Gesperrt wird er nicht: Es gibt
+ * Bahnen, auf denen er der einzige Weg ist, und dann soll das Feld ihn
+ * finden. Teurer reicht, damit der Weg am Rand vorbeiführt, wo es den gibt.
+ */
+const DREH_SCHRITTE = 3;
 
 /* --------------------------------------------------------------------------
  * Kraft aus Distanz
@@ -327,6 +345,13 @@ export function sichtFrei(
       if (zone !== zielPortal && kreuztFlaeche(zone, strahl)) return false;
       continue;
     }
+    if (zone.art === 'bumper') {
+      // Ein Pilz ist eine runde Wand, die zurückschlägt — MIT Ballradius wie
+      // jede Wand (seit dem 22.09.2026; vorher sah der Bot durch ihn hindurch).
+      const grenzeBumper = zone.r + BALL_R;
+      if (abstandQuadrat(strahl, zone.x, zone.y) < grenzeBumper * grenzeBumper) return false;
+      continue;
+    }
     if (zone.art !== 'wasser') continue;
     if (kreuztFlaeche(zone, strahl)) return false;
   }
@@ -391,11 +416,18 @@ export interface Wegfeld {
   entfernung: Int32Array;
   /** Vorwärtskante eines Portals: Zielzelle, sonst -1. */
   portalZu: Int32Array;
+  /**
+   * Was der Schritt IN diese Zelle kostet: 1, im Kreis eines Drehkreuzes
+   * `DREH_SCHRITTE` (seit dem 22.09.2026, siehe dort).
+   */
+  kosten: Uint8Array;
   /** Zelle des Lochs. */
   lochZelle: number;
 }
 
 const feldSpeicher = new Map<Karte, Wegfeld>();
+/** Dasselbe ohne Drehkreuzkosten — das Feld des Anfängers, siehe `wegfeld`. */
+const feldSpeicherSchlicht = new Map<Karte, Wegfeld>();
 
 function zelleIndex(feld: Wegfeld, x: number, y: number): number {
   let cx = Math.floor(x / RASTER);
@@ -460,9 +492,18 @@ function freieZelleBei(feld: Wegfeld, x: number, y: number): number {
  * Zielzelle, wartet jedes Portal des Paars darauf, dass das andere zuerst
  * eine Entfernung bekommt, und keines bekommt je eine: Auf k23 und k30 war so
  * das Loch von keinem Abschlag aus erreichbar.
+ *
+ * `kundig = false` baut das Feld ohne Drehkreuzkosten (alle Schritte 1),
+ * wie es bis zum 22.09.2026 für alle galt. Das ist das Feld des Anfängers:
+ * Über 100 Saaten spielte er mit dem Umweg am Kreuz vorbei auf k37 um 0,16
+ * und auf k39 um 0,09 Schläge SCHLECHTER — mit ±12 Grad trifft er die 2 E
+ * schmale Randspur seltener, als er mitten durch das Kreuz kommt. Alle
+ * anderen Stufen gewannen dort (k39 Genie 4,97 → 2,94). Erreichbar ist in
+ * beiden Feldern genau dasselbe; Kosten sperren nichts.
  */
-export function wegfeld(karte: Karte): Wegfeld {
-  const fertig = feldSpeicher.get(karte);
+export function wegfeld(karte: Karte, kundig = true): Wegfeld {
+  const speicher = kundig ? feldSpeicher : feldSpeicherSchlicht;
+  const fertig = speicher.get(karte);
   if (fertig !== undefined) return fertig;
 
   const spalten = Math.ceil(karte.breite / RASTER);
@@ -474,6 +515,7 @@ export function wegfeld(karte: Karte): Wegfeld {
     frei: new Uint8Array(anzahl),
     entfernung: new Int32Array(anzahl).fill(-1),
     portalZu: new Int32Array(anzahl).fill(-1),
+    kosten: new Uint8Array(anzahl).fill(1),
     lochZelle: 0,
   };
 
@@ -504,6 +546,17 @@ export function wegfeld(karte: Karte): Wegfeld {
     if (frei) {
       for (let zi = 0; zi < karte.zonen.length; zi += 1) {
         const zone = karte.zonen[zi];
+        if (zone.art === 'bumper' && kundig) {
+          // Wie eine Wand: kein Mittelpunkt näher als ein Ballradius am Pilz.
+          const dx = x - zone.x;
+          const dy = y - zone.y;
+          const grenze = zone.r + BALL_R;
+          if (dx * dx + dy * dy < grenze * grenze) {
+            frei = false;
+            break;
+          }
+          continue;
+        }
         if (zone.art !== 'wasser') continue;
         if (istInZone(zone, x, y)) {
           frei = false;
@@ -512,6 +565,15 @@ export function wegfeld(karte: Karte): Wegfeld {
       }
     }
     feld.frei[i] = frei ? 1 : 0;
+    if (!frei) continue;
+    for (let zi = 0; zi < karte.zonen.length; zi += 1) {
+      const zone = karte.zonen[zi];
+      if (!kundig || zone.art !== 'drehkreuz') continue;
+      const r = zone.laenge / 2 + BALL_R;
+      const dx = x - zone.x;
+      const dy = y - zone.y;
+      if (dx * dx + dy * dy < r * r) feld.kosten[i] = DREH_SCHRITTE;
+    }
   }
 
   // Portale eintragen: je Portal seine Zellen (die Türen) und seine
@@ -576,6 +638,15 @@ export function wegfeld(karte: Karte): Wegfeld {
      * Entfernung beim ersten Besuch bekommt und die Eimer in aufsteigender
      * Reihenfolge abgearbeitet werden, ist sie beim ersten Besuch schon die
      * kleinste; nachgebessert wird nichts.
+     *
+     * Seit dem 22.09.2026 kostet auch ein gewöhnlicher Schritt nicht mehr
+     * überall 1 (Drehkreuz, siehe `DREH_SCHRITTE`). Dann stimmt „erster
+     * Besuch ist der kürzeste" nicht mehr: Eine Zelle hinter dem Drehkreuz
+     * wird zuerst QUER durch den Kreis erreicht und erst später, billiger,
+     * außen herum. Also darf `lege` nachbessern, und wer aus einem Eimer
+     * kommt, dessen Entfernung inzwischen kleiner ist, ist ein veralteter
+     * Eintrag und wird übersprungen — der gewöhnliche Dijkstra mit Eimern. Wo
+     * alle Schritte 1 kosten, kommt Zelle für Zelle dasselbe heraus wie vorher.
      */
     const eimer: number[][] = [];
     const lege = (zelle: number, d: number): void => {
@@ -590,6 +661,7 @@ export function wegfeld(karte: Karte): Wegfeld {
       if (liste === undefined) continue;
       for (let i = 0; i < liste.length; i += 1) {
         const c = liste[i];
+        if (feld.entfernung[c] !== d) continue;
         const cx = c % spalten;
         const cy = (c - cx) / spalten;
         // Feste Reihenfolge der Nachbarn: rechts, unten, links, oben. Eine
@@ -600,11 +672,13 @@ export function wegfeld(karte: Karte): Wegfeld {
           const ny = cy + (k === 1 ? 1 : k === 3 ? -1 : 0);
           if (nx < 0 || ny < 0 || nx >= spalten || ny >= zeilen) continue;
           const n = ny * spalten + nx;
-          if (feld.frei[n] !== 1 || feld.entfernung[n] !== -1) continue;
+          if (feld.frei[n] !== 1) continue;
+          const nd = d + feld.kosten[n];
+          if (feld.entfernung[n] !== -1 && feld.entfernung[n] <= nd) continue;
           // Eine Portalzelle ist eine TÜR, kein Boden: Sie bekommt ihre
           // Entfernung ausschließlich über den Ausgang ihres Portals unten.
           if (feld.portalZu[n] >= 0) continue;
-          lege(n, d + 1);
+          lege(n, nd);
         }
         // Die erste Ausgangszelle, die an die Reihe kommt, ist die nächste am
         // Loch. Von jeder Zelle des Portals aus geht es von dort weiter.
@@ -623,13 +697,14 @@ export function wegfeld(karte: Karte): Wegfeld {
     }
   }
 
-  feldSpeicher.set(karte, feld);
+  speicher.set(karte, feld);
   return feld;
 }
 
 /** Leert den Zwischenspeicher — nur für Messungen und Tests. */
 export function vergissWegfelder(): void {
   feldSpeicher.clear();
+  feldSpeicherSchlicht.clear();
 }
 
 /** Ist das Loch von diesem Punkt aus über das Raster überhaupt erreichbar? */
@@ -658,9 +733,292 @@ function abstieg(feld: Wegfeld, c: number): number {
     const ny = cy + (k === 1 ? 1 : k === 3 ? -1 : 0);
     if (nx < 0 || ny < 0 || nx >= feld.spalten || ny >= feld.zeilen) continue;
     const n = ny * feld.spalten + nx;
-    if (feld.frei[n] === 1 && feld.entfernung[n] === d - 1) return n;
+    if (feld.frei[n] === 1 && feld.entfernung[n] === d - feld.kosten[c]) return n;
   }
   return -1;
+}
+
+/* --------------------------------------------------------------------------
+ * Probeschlag
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Zonenarten, deren Wirkung der Bot durch Probeschläge erfährt statt durch
+ * eine eigene Rechnung.
+ *
+ * Seit dem 22.09.2026. Anlass war der Beschleuniger: Eine „genauere"
+ * Kraftrechnung in der Ebene (Reibung plus Schub, Bahn für Bahn wie in
+ * `bewege`) machte k04 von 1,00 auf 2,75 Schläge SCHLECHTER. Nachgemessen
+ * zählte sie den Schub nicht doppelt — die Frage war falsch gestellt. Die
+ * Halbierung suchte die kleinste Kraft, mit der der Ball die Strecke
+ * „erreicht", und auf einer Schubbahn springt die Weite: Bei 0,220 bleibt
+ * der Ball vor dem Beschleuniger liegen, bei 0,225 rutscht er hinein und wird
+ * ganz hindurchgetragen. Die Suche fand genau diese Kante. Der Ball kam mit
+ * 9 E/s am Loch vorbei, 2,4 E zu weit links (der Schub dreht die Bahn nach
+ * oben, die Messrichtung sieht das nicht), und schlug hinten an die Wand.
+ * Die alte Rasenrechnung traf dagegen mit 0,62 — nicht, weil sie richtig
+ * rechnete, sondern weil der Ball von der Rückwand ins Loch zurückfiel. So
+ * ist k04 gebaut, und so sind es die meisten Schubbahnen: Wand, Schub und
+ * Loch zusammen ergeben den Weg, und keine Rechnung ohne Wände sieht ihn.
+ *
+ * Die Physik, die das kann, gibt es schon: `schritt`. Ein Probeschlag rechnet
+ * den geplanten Schlag auf einer Kopie mit einem einzigen Ball bis zur Ruhe
+ * durch — mit Wänden, Schub, Pilzen, Strudeln, Sprüngen und dem Drehkreuz in
+ * GENAU der Stellung, die es in diesem Takt hat. Das ist kein Schummeln: Die
+ * Bahn liegt offen vor jedem Spieler, und der Bot sieht dieselbe Karte, nur
+ * eben rechnend. Andere Bälle bleiben außen vor wie beim Zielen auch.
+ *
+ * Aufgenommen wurde Art für Art, und nur, was gemessen keine Bahn schlechter
+ * machte (Botprobe, 20 Saaten, Zweifelsfälle über 100 bis 400 Saaten):
+ * Beschleuniger, Drehkreuz (die Probe sieht das Kreuz in der Stellung dieses
+ * Takts — das ist das Timing), Strudel (Falle und Auswurf ergeben sich aus
+ * der Ruhelage) und Sprungfeld. Der Bumper fehlt mit Absicht: Mit ihm in der
+ * Liste spielte der Genie k16 in 2,55 statt 2,10 Schlägen — ein Abprall hängt
+ * so empfindlich an der Richtung, dass die eine Probe des Genies einen
+ * Schlag wählt, den schon 0,8 Grad Streuung verderben. Für ihn gilt nur die
+ * Wand-Regel in `sichtFrei` und `wegfeld`. Ebenfalls gemessen und verworfen:
+ * Sprungfelder als gerichtete Kanten im Wegfeld (wie Portale). Mit der
+ * Portalkante (8 Schritte) nahm der Bot auf k19 den Sprung statt des Schubs,
+ * 2,60 → 4,55; mit 24 Schritten verlor er auf k38 beim Experten 0,25 gegen
+ * die Probe allein, und den Sprung über die Wasserzunge auf k26, für den die
+ * Kante gedacht war, nahm er in keiner Fassung.
+ */
+const PROBE_ARTEN: ReadonlySet<Zone['art']> = new Set<Zone['art']>(['beschleuniger', 'drehkreuz', 'strudel', 'sprungfeld']);
+
+/**
+ * Längster Probeschlag in Takten (8 s). Ein Ball, der dann noch rollt, wird
+ * dort bewertet, wo er gerade ist — auf den Bahnen, die Probeschläge
+ * brauchen, liegt er nach dieser Zeit in aller Regel längst still.
+ */
+const PROBE_TAKTE = 160;
+
+/**
+ * Was ein Strafschlag (Wasser) in der Bewertung kostet, in Rasterschritten.
+ * 20 Schritte sind 10 E — ungefähr das, was ein Schlag an Weg gutmacht.
+ */
+const STRAFE_SCHRITTE = 20;
+
+/** Aufschlag für eine Ruhelage ohne freien, nahen Blick aufs Loch (5 E), siehe `bewerteProbe`. */
+const SICHT_STRAFE = 10;
+
+/**
+ * Kraftstufen des ersten Durchgangs, als Vielfache der geplanten Kraft, und
+ * Richtungsversätze des zweiten, in Hundertstelgrad.
+ *
+ * Angefangen hat es mit fünf Kraftstufen (dazu 0,65 und 1,5) und vier
+ * Versätzen (dazu ±1,5 Grad). Über 100 Saaten auf allen sieben Schubbahnen
+ * und drei Stufen gab die schmale Auswahl Schlag für Schlag dasselbe Mittel
+ * oder ein besseres — bei knapp der halben Rechenzeit. Die Richtung ist
+ * dagegen nicht verzichtbar: Ohne sie fiel k22 beim Standard-Bot von 2,12
+ * wieder auf 2,54 zurück.
+ */
+const PROBE_KRAEFTE = [1, 0.8, 1.25];
+const PROBE_WINKEL = [400, -400];
+
+const KEINE_EREIGNISSE: readonly Ereignis[] = [];
+
+/**
+ * Liegt eine der `PROBE_ARTEN` so nah am geplanten Weg, dass sie den Schlag
+ * verändern kann?
+ *
+ * Nur dann lohnen Probeschläge — und nur dann ändern sie etwas: Auf allen
+ * anderen Schlägen bleibt der Bot Schlag für Schlag derselbe wie vorher. Der
+ * Weg reicht vier Einheiten über das Ziel hinaus, weil ein Schub oder ein
+ * Pilz dahinter den Ball noch zurückwerfen kann.
+ */
+function probeNoetig(karte: Karte, x: number, y: number, rx: number, ry: number, d: number): boolean {
+  const weit = d + 4;
+  const weg = segment(x, y, x + rx * weit, y + ry * weit);
+  const rand = BALL_R + 0.5;
+  for (let i = 0; i < karte.zonen.length; i += 1) {
+    const zone = karte.zonen[i];
+    if (!PROBE_ARTEN.has(zone.art)) continue;
+    if (zone.art === 'beschleuniger' || zone.art === 'sprungfeld') {
+      if (istInZone(zone, x, y)) return true;
+      const kanten: Segment[] = [
+        segment(zone.x, zone.y, zone.x + zone.w, zone.y),
+        segment(zone.x + zone.w, zone.y, zone.x + zone.w, zone.y + zone.h),
+        segment(zone.x + zone.w, zone.y + zone.h, zone.x, zone.y + zone.h),
+        segment(zone.x, zone.y + zone.h, zone.x, zone.y),
+      ];
+      for (let k = 0; k < 4; k += 1) {
+        if (streckenAbstandQuadrat(kanten[k], weg) < rand * rand) return true;
+      }
+      continue;
+    }
+    let r: number;
+    if (zone.art === 'drehkreuz') r = zone.laenge / 2;
+    else if (zone.art === 'bumper' || zone.art === 'strudel') r = zone.r;
+    else continue;
+    const grenze = r + rand;
+    if (abstandQuadrat(weg, zone.x, zone.y) < grenze * grenze) return true;
+  }
+  return false;
+}
+
+/**
+ * Rechnet einen Schlag mit der echten Physik durch, auf einer Kopie mit nur
+ * diesem einen Ball. Liefert, wo er liegen bleibt, ob er eingelocht hat und
+ * wie viele Schläge es gekostet hat (Wasser: zwei).
+ */
+function probeschlag(
+  z: Partiezustand,
+  sitz: number,
+  karte: Karte,
+  rx: number,
+  ry: number,
+  kraft: number,
+): { eingelocht: boolean; x: number; y: number; schlaege: number } {
+  const b = z.baelle[sitz];
+  const ball: Ball = { ...b };
+  // Von Hand statt über `neuePartie`: Die zöge die Bahnwahl neu und legte
+  // Zufallsströme an, die hier niemand braucht. Keine Bot-Sitze — sonst
+  // entschiede in der Probe ein Bot, der selbst wieder probt.
+  const probe: Partiezustand = {
+    takt: z.takt,
+    saat: z.saat,
+    sitze: 1,
+    botSitze: [],
+    botStufe: z.botStufe,
+    ausgestiegen: [],
+    ausstiegTakt: [-1],
+    loecher: 1,
+    reihenfolge: [0],
+    aktuell: { loch: 0, karte: 0, startTakt: z.aktuell.startTakt, endeTakt: -1, pauseBis: -1 },
+    baelle: [ball],
+    ergebnis: [],
+    fertig: false,
+    zufall: z.zufall,
+    botZufall: [0],
+    botWartet: [-1],
+    botDenkzeit: [0],
+    letzterSchlagTakt: [z.takt],
+    letzteEreignisse: [],
+  };
+  const karten = [karte];
+  schritt(probe, [{ takt: z.takt, sitz: 0, nr: 0, art: 'schlag', rx, ry, kraft }], karten);
+  for (let t = 1; t < PROBE_TAKTE; t += 1) {
+    if (probe.aktuell.endeTakt !== -1) break;
+    if (ball.ruht && ball.flugTakte === 0) break;
+    schritt(probe, KEINE_EREIGNISSE, karten);
+  }
+  return { eingelocht: ball.eingelocht, x: ball.x, y: ball.y, schlaege: ball.schlaege - b.schlaege };
+}
+
+/**
+ * Bewertung eines Probeschlags: Rasterschritte bis zum Loch, kleiner ist
+ * besser.
+ *
+ * Liegt das Loch von dort aus NICHT frei und nah, kommen `SICHT_STRAFE`
+ * Schritte dazu. Gemessen am 22.09.2026 auf k22: Ohne diesen Aufschlag nahm
+ * der Experte eine Ruhelage 2,6 E vom Loch, aber hinter dem Riegel, statt
+ * einer 3,2 E entfernten mit freier Linie — und brauchte von dort zwei
+ * Schläge statt einem. Das Raster misst den Weg, nicht, ob er mit einem
+ * Schlag zu gehen ist.
+ */
+function bewerteProbe(
+  karte: Karte,
+  feld: Wegfeld,
+  p: { eingelocht: boolean; x: number; y: number; schlaege: number },
+): number {
+  if (p.eingelocht) return -1;
+  const c = freieZelleBei(feld, p.x, p.y);
+  let weg = c >= 0 && feld.entfernung[c] >= 0 ? feld.entfernung[c] : 1_000_000;
+  const lx = karte.loch[0];
+  const ly = karte.loch[1];
+  if (betrag(lx - p.x, ly - p.y) >= 12 || !sichtFrei(karte, p.x, p.y, lx, ly)) weg += SICHT_STRAFE;
+  return weg + (p.schlaege - 1) * STRAFE_SCHRITTE;
+}
+
+/**
+ * Der beste unter wenigen Probeschlägen rund um den geplanten.
+ *
+ * Erst die Kraft (drei Stufen), dann bei der besten Kraft die Richtung (zwei
+ * Versätze) — fünf Kandidaten statt 3 × 3, und die Richtung lohnt sich erst,
+ * wenn die Kraft stimmt. Der geplante Schlag steht vorn und gewinnt jeden
+ * Gleichstand: Der Bot weicht nur ab, wenn die Probe etwas BESSERES zeigt.
+ *
+ * Ab „experte" abwärts wird jeder Kandidat fünfmal geprobt — auf der Linie,
+ * je um die halbe Winkelstreuung links und rechts, und mit der halben
+ * Kraftstreuung darüber und darunter — und das Mittel zählt (siehe
+ * `streuBreite`). Der Genie probt jeden Kandidaten einmal.
+ */
+function besterProbeschlag(
+  z: Partiezustand,
+  sitz: number,
+  karte: Karte,
+  rx: number,
+  ry: number,
+  kraft: number,
+): { rx: number; ry: number; kraft: number } {
+  const feld = wegfeld(karte);
+  const breit = streuBreite(z.botStufe);
+  const kraftBreit = STREUUNG[z.botStufe].kraft / 2;
+  const probeWert = (sx: number, sy: number, k: number): number => {
+    let kk = k;
+    if (kk < KRAFT_MIN) kk = KRAFT_MIN;
+    else if (kk > 1) kk = 1;
+    return bewerteProbe(karte, feld, probeschlag(z, sitz, karte, sx, sy, kk));
+  };
+  const wertVon = (sx: number, sy: number, k: number): number => {
+    const mitte = probeWert(sx, sy, k);
+    if (breit === 0) return mitte;
+    const links = dreheHundertstel(sx, sy, breit);
+    const rechts = dreheHundertstel(sx, sy, -breit);
+    return (
+      (mitte +
+        probeWert(links.x, links.y, k) +
+        probeWert(rechts.x, rechts.y, k) +
+        probeWert(sx, sy, k * (1 + kraftBreit)) +
+        probeWert(sx, sy, k * (1 - kraftBreit))) /
+      5
+    );
+  };
+  let bestRx = rx;
+  let bestRy = ry;
+  let bestK = kraft;
+  let bestWert = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < PROBE_KRAEFTE.length; i += 1) {
+    let k = kraft * PROBE_KRAEFTE[i];
+    if (k < KRAFT_MIN) k = KRAFT_MIN;
+    else if (k > 1) k = 1;
+    if (i > 0 && k === bestK) continue;
+    const wert = wertVon(rx, ry, k);
+    if (wert < bestWert) {
+      bestWert = wert;
+      bestK = k;
+    }
+    if (bestWert <= -1) break;
+  }
+  for (let i = 0; i < PROBE_WINKEL.length && bestWert > -1; i += 1) {
+    // Ein Versatz, der kleiner ist als die eigene Streuung, ist keiner.
+    if (PROBE_WINKEL[i] < breit && -PROBE_WINKEL[i] < breit) continue;
+    const r = dreheHundertstel(rx, ry, PROBE_WINKEL[i]);
+    const wert = wertVon(r.x, r.y, bestK);
+    if (wert < bestWert) {
+      bestWert = wert;
+      bestRx = r.x;
+      bestRy = r.y;
+    }
+  }
+  return { rx: bestRx, ry: bestRy, kraft: bestK };
+}
+
+/**
+ * Wie weit die Probe zur Seite schaut, in Hundertstelgrad: die halbe
+ * Winkelstreuung der Stufe, ab „experte" abwärts; 0 heißt „nur die Linie".
+ *
+ * Seit dem 22.09.2026, gemessen: Mit nur einer Probe genau auf der Linie
+ * wählten die schwächeren Stufen Schläge, die eine enge Stelle genau treffen —
+ * auf k29 den 1,6 E schmalen Schlauch — und mit ihrer Streuung fast nie. Mit
+ * drei Proben (nur die Richtung gestreut) blieb der Standard-Bot auf k04 über
+ * 100 Saaten 0,05 Schläge hinter dem Plan zurück, mit fünf (Kraft dazu) nicht
+ * mehr. Der Genie streut 0,8 Grad; für ihn ist die Linie die Wahrheit, und
+ * fünf Proben statt einer wären dort nur Kosten.
+ */
+function streuBreite(stufe: Botstufe): number {
+  const w = STREUUNG[stufe].winkel;
+  return w >= 250 ? w / 2 : 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -716,7 +1074,7 @@ export function botEntscheidung(
   if (zumLoch < 12 && sichtFrei(karte, b.x, b.y, lochX, lochY)) {
     aufsLoch = true;
   } else {
-    const feld = wegfeld(karte);
+    const feld = wegfeld(karte, z.botStufe !== 'anfaenger');
     const start = freieZelleBei(feld, b.x, b.y);
     let gefunden = false;
     if (start >= 0 && feld.entfernung[start] >= 0) {
@@ -846,11 +1204,31 @@ export function botEntscheidung(
     insPortal ? PORTAL_TEMPO : 0,
   );
 
+  // Liegt eine Zone am Weg, die der Plan nicht kennt, entscheiden
+  // Probeschläge (siehe `PROBE_ARTEN`). Die Streuung kommt danach — der Bot
+  // wählt den Schlag, den er meint, und verzieht ihn dann wie jeder andere.
+  let schlagRx = richtung.x;
+  let schlagRy = richtung.y;
+  let kraftPlan = kraftRein;
+  //
+  // Der Anfänger probt nicht. Gemessen am 22.09.2026 über 100 Saaten: Mit
+  // Probeschlägen spielte er auf k12, k22 und k34 um 0,06 bis 0,09 Schläge
+  // SCHLECHTER, während der Experte auf k12 von 2,61 auf 2,00 fiel. Bei ±12
+  // Grad und ±20 % Kraft trifft er die engere Linie, die die Probe findet,
+  // seltener als die grobe — und dass ein Anfänger die Zonen nicht liest,
+  // ist ohnehin, was man von ihm erwartet.
+  if (z.botStufe !== 'anfaenger' && probeNoetig(karte, b.x, b.y, richtung.x, richtung.y, plan)) {
+    const wahl = besterProbeschlag(z, sitz, karte, richtung.x, richtung.y, kraftRein);
+    schlagRx = wahl.rx;
+    schlagRy = wahl.ry;
+    kraftPlan = wahl.kraft;
+  }
+
   const streu = STREUUNG[z.botStufe];
   const w = ganzzahl(zufall, -streu.winkel, streu.winkel);
   const k = bruch(w.zustand, -streu.kraft, streu.kraft);
-  const gedreht = dreheHundertstel(richtung.x, richtung.y, w.wert);
-  let kraft = kraftRein * (1 + k.wert);
+  const gedreht = dreheHundertstel(schlagRx, schlagRy, w.wert);
+  let kraft = kraftPlan * (1 + k.wert);
   if (kraft < KRAFT_MIN) kraft = KRAFT_MIN;
   else if (kraft > 1) kraft = 1;
 
