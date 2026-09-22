@@ -196,3 +196,35 @@ Aufbau zufällig aus allen sechzehn (`zieheFarben`).
   Erreichbarkeit per Wegfeld) und `botLoestKarte` (Genie-Bot schafft sie in
   ≤ Schlaglimit) laufen als Vitest über alle 40. Eine Bahn, die der Bot nicht
   schafft, wird umgebaut, nicht der Test gelockert.
+
+## Bahnwerkstatt (seit 22.09.2026)
+
+Robins Entscheidung vom 22.09.2026: „viel mehr Maps" kommen aus einem Editor
+fürs Team statt aus handgeschriebenen Objekten. Die Werkstatt ist eine eigene
+Seite neben der App wie der Schaukasten der Partykiste — `npm run dev:client`,
+dann <http://localhost:5173/bahnwerkstatt.html>. Quelle unter
+`packages/client/src/werkstatt/golf/`.
+
+- **Sie urteilt mit dem Spiel, nicht neben ihm.** Gezeichnet wird mit dem
+  `Zeichner`, angespielt mit `physik.ts` und dem Zielen aus `eingabe.ts`,
+  geprüft mit `pruefeKarte` und `botLoestKarte` — alles importiert, nichts
+  nachgebaut. Zusätzlich meldet sie, was nur die Katalogtests verlangen
+  (Genie-Bot in höchstens `par + 2`), damit eine Bahn nicht erst im Pull
+  Request rot wird.
+- **Jeder Handgriff erzeugt ein neues Kartenobjekt.** Segmente, Zonengruppen
+  und Wegfeld hängen je Objekt im Zwischenspeicher; wer eine Bahn an Ort und
+  Stelle ändert, prüft die alten Wände. Die Werkstatt leert beide Speicher vor
+  jeder Prüfung (`vergissSegmente`, `vergissWegfelder`), sonst wüchsen sie mit
+  jeder Mausbewegung.
+- **Ausgabe ist eine Datei je Bahn** (`karten/<kennung>.ts`, `export const
+  bahn`, mit `beschreibung`/`thema`/`autor`/`tags`), dazu — für eine neue
+  Kennung — die Zeile für `BAHNEN_KATALOG` im Modul. JSON zum Weitergeben gibt
+  es daneben, das nackte Objekt der alten Sammeldateien nur noch zum
+  Vergleichen.
+- **Eine vorhandene Bahn wird nicht umgebaut.** Trägt die Bahn die Kennung
+  einer Katalogbahn, rollt aber anders (Maße, Limits, Loch, Wände, Zonen,
+  Abschlag 0), warnt die Werkstatt, dass das laufende Partien bricht, und ist
+  nicht „katalogreif". Der Knopf daneben vergibt eine neue Kennung; die alte
+  Datei und ihre Katalogzeile gehören im selben Pull Request entfernt.
+- **Nicht im Betriebspaket.** `vite build` baut nur `index.html`; die
+  Begründung steht in `packages/client/bahnwerkstatt.html`.
