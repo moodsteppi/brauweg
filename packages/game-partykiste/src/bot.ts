@@ -49,6 +49,23 @@ function ziele(sicht: PartykisteSicht): number[] {
   return liste;
 }
 
+/**
+ * Team-Abend: dieselben Ziele, aber nur aus dem ANDEREN Lager — solange es
+ * dort jemanden gibt. Bei "Wer wuerde eher" kostet jede Stimme den Getroffenen
+ * seinen Punkt fuers Sauberbleiben, beim Imposter hilft die Stimme auf einen
+ * Gegner in jedem Fall: Ist der Imposter im eigenen Lager, kommt er eher
+ * durch; ist er drueben, steigt die Trefferchance. Die Lager stehen in jeder
+ * Sicht, der Bot weiss also nichts, was ein Mensch nicht auch wuesste.
+ */
+function gegnerZiele(sicht: PartykisteSicht): number[] {
+  const alle = ziele(sicht);
+  const lager = sicht.lager;
+  if (!lager || sicht.sitz < 0) return alle;
+  const mein = lager[sicht.sitz];
+  const gegner = alle.filter((s) => lager[s] !== mein);
+  return gegner.length > 0 ? gegner : alle;
+}
+
 /** Ein Zufallsstrom, der nur von der Sicht abhaengt. */
 function strom(sicht: PartykisteSicht, zweck: string): () => number {
   return baueZufall(`${sicht.sitz}|${sicht.rundeNr}|${sicht.art}|${zweck}`);
@@ -90,6 +107,9 @@ function gewussteAntwort(frage: string, antworten: readonly string[]): number {
 }
 
 export function botZug(sicht: PartykisteSicht, stufe?: BotLevel): PartykisteAktion {
+  /* Team-Abend: Fuer einen Oeffner, der nicht da ist, bleiben die Lager, wie
+     sie sind — der Bot tauscht niemanden, er gibt den Abend frei. */
+  if (sicht.aufstellung) return { art: 'bereit' };
   /* Abrechnung: weitertippen, damit die Runde nicht auf einen Bot wartet. */
   if (sicht.phase === 'ergebnis') return { art: 'bereit' };
 
@@ -102,7 +122,7 @@ export function botZug(sicht: PartykisteSicht, stufe?: BotLevel): PartykisteAkti
        * Sicht. Auch der Imposter-Bot stimmt mit: Wer sich enthielte, waere
        * jede Runde an der Enthaltung zu erkennen.
        */
-      const moeglich = ziele(sicht);
+      const moeglich = gegnerZiele(sicht);
       if (moeglich.length === 0) return { art: 'bereit' };
       return { art: 'stimme', ziel: moeglich[ganzzahl(strom(sicht, 'verdacht'), moeglich.length)]! };
     }
@@ -129,7 +149,7 @@ export function botZug(sicht: PartykisteSicht, stufe?: BotLevel): PartykisteAkti
       return { art: 'gestehen', ja: strom(sicht, 'gestehen')() < 0.4 };
     }
     case 'wereher': {
-      const moeglich = ziele(sicht);
+      const moeglich = gegnerZiele(sicht);
       if (moeglich.length === 0) return { art: 'bereit' };
       return { art: 'stimme', ziel: moeglich[ganzzahl(strom(sicht, 'wereher'), moeglich.length)]! };
     }

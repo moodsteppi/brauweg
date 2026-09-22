@@ -56,10 +56,12 @@ import {
   ZUGZEIT_MS,
   istHaerte,
   istMinispiel,
+  istSpielmodus,
   type PartykisteAktion,
   type PartykisteRegeln,
 } from './regeln.js';
 import { sichtFuer, type PartykisteSicht } from './sicht.js';
+import { TISCHOEFFNER, wechselbareSitze } from './modi.js';
 
 const SNAPSHOT_VERSION = 1;
 
@@ -98,8 +100,13 @@ export const partykiste: GameModule<
    * Regel-Karte) und `regelKarte` in jeder Sicht. Ein Client der Fassung 1
    * kennt die neuen Runden nicht und zeigte dort nichts — lieber beim
    * Beitritt abweisen (client protocol.ts, PARTYKISTE_MODULE_VERSION).
+   *
+   * 3 seit dem 22.09.2026: die Spielmodi (modi.ts) — Aktion `lagerwechsel`,
+   * die Aufstellung vor Runde 1 und sechs neue Felder in der Sicht. Ein
+   * Client der Fassung 2 saehe im Team-Abend die erste Runde statt der
+   * Aufstellung, und jeder Tipp dort wuerde abgewiesen.
    */
-  protocolVersion: 2,
+  protocolVersion: 3,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -174,6 +181,26 @@ export const partykiste: GameModule<
           severity: 'error',
         });
       }
+      /*
+       * Der Modus (seit dem 22.09.2026) darf fehlen wie die beiden oben —
+       * fehlt = Turnier. Ein Themenabend OHNE Paket ist dagegen ein Fehler,
+       * den der Oeffner sehen soll: Er haette sonst ein Turnier bekommen,
+       * ohne es zu merken (createParty spielt ihn trotzdem, als Turnier).
+       */
+      const modus = roh['modus'];
+      if (modus !== undefined && !istSpielmodus(modus)) {
+        probleme.push({
+          path: 'modus',
+          messageKey: 'ruleset.partykiste.modus',
+          severity: 'error',
+        });
+      } else if (modus === 'themenabend' && !istPaket(paket)) {
+        probleme.push({
+          path: 'paket',
+          messageKey: 'ruleset.partykiste.themenOhnePaket',
+          severity: 'error',
+        });
+      }
     }
 
     if (!Number.isInteger(seats) || !(SITZE as readonly number[]).includes(seats)) {
@@ -201,6 +228,7 @@ export const partykiste: GameModule<
         /* Unsinn wird harmlos bzw. "alles" — nie derber als eingestellt. */
         inhaltsHaerte: istHaerte(regeln.inhaltsHaerte) ? regeln.inhaltsHaerte : INHALTS_HAERTE_VORGABE,
         paket: istPaket(regeln.paket) ? regeln.paket : null,
+        modus: istSpielmodus(regeln.modus) ? regeln.modus : 'turnier',
       },
       saat: options.seed,
       saatHex: options.seedHex,
@@ -228,6 +256,16 @@ export const partykiste: GameModule<
   legalActions: (partie, sitz): PartykisteAktion[] => {
     if (partie.fertig) return [];
     if (amZugVon(partie) !== sitz) return [];
+    /* Team-Abend, Aufstellung: fertig melden oder einen Sitz ins andere Lager. */
+    if (partie.aufstellung) {
+      if (sitz !== TISCHOEFFNER) return [];
+      return [
+        { art: 'bereit' },
+        ...wechselbareSitze(partie.lager ?? [], partie.ausgestiegen).map(
+          (ziel) => ({ art: 'lagerwechsel', sitz: ziel }) as const,
+        ),
+      ];
+    }
     const runde = partie.runde;
     if (runde.phase === 'ergebnis') return [{ art: 'bereit' }];
 

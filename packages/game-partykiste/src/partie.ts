@@ -77,6 +77,19 @@ import {
   type PartykisteRegeln,
 } from './regeln.js';
 import { baueZufall, ganzzahl, gemischt, rundenSaat } from './zufall.js';
+import {
+  TISCHOEFFNER,
+  gewollteInhaltsHaerte,
+  lagerPlaetze,
+  modusVon,
+  regelnDerRunde,
+  reihumFolge,
+  startLager,
+  stufenStapel,
+  themenMinispiele,
+  wechselbareSitze,
+  type RundenRegeln,
+} from './modi.js';
 
 // ---------------------------------------------------------------------------
 // Karten (nur Bus fahren)
@@ -310,6 +323,18 @@ export interface PartykistePartie {
    * 22.09.2026 es nicht haben.
    */
   readonly regelKarte?: AktiveRegel | null;
+  /**
+   * Team-Abend: je Sitz das Lager, 0 oder 1 — sonst null. Optional wie
+   * `inhaltsHaerteGewollt`: Snapshots von vor dem 22.09.2026 kennen es nicht.
+   */
+  readonly lager?: readonly number[] | null;
+  /**
+   * Team-Abend, vor der ersten Runde: Der Tischoeffner stellt die Lager auf,
+   * alle anderen warten. Solange das laeuft, ist er allein am Zug, und die
+   * erste Runde steht zwar schon da, wird aber mit dem Ende der Aufstellung
+   * neu gebaut — ihre Reihum-Folge haengt an den Lagern.
+   */
+  readonly aufstellung?: boolean;
 }
 
 export interface AufbauOptionen {
@@ -345,7 +370,16 @@ function lebende(sitze: number, ausgestiegen: readonly number[]): number[] {
   return liste;
 }
 
-function ersterLebender(sitze: number, ausgestiegen: readonly number[]): number {
+/**
+ * Der erste Anwesende — in Sitzreihenfolge oder, im Team-Abend, in der
+ * Folge der Lager (`reihumFolge`).
+ */
+function ersterLebender(sitze: number, ausgestiegen: readonly number[], folge?: readonly number[]): number {
+  if (folge) {
+    const raus = new Set(ausgestiegen);
+    const erster = folge.find((s) => !raus.has(s));
+    if (erster !== undefined) return erster;
+  }
   const liste = lebende(sitze, ausgestiegen);
   return liste.length > 0 ? liste[0]! : 0;
 }
@@ -387,12 +421,16 @@ function nummerDerArt(regeln: PartykisteRegeln, nr: number): number {
  */
 function stapel<T extends Inhalt>(
   katalog: readonly T[],
-  regeln: PartykisteRegeln,
+  regeln: RundenRegeln,
   saat: string,
   sitze: number,
   zweck: string,
   mindestens: number = MINDESTMENGE,
 ): { readonly stapel: readonly T[]; readonly rueckfall: InhaltsRueckfall | null } {
+  /* Eskalation: EIN Stapel auf die Decke, belegt Platz fuer Platz unter der
+     Stufe seiner Runde (modi.ts) — sonst kaeme derselbe Spruch je Stufe neu. */
+  const stufen = stufenStapel(katalog, regeln, saat, sitze, zweck, mindestens, (nr) => minispielFuer(regeln, nr));
+  if (stufen) return stufen;
   const auswahl: Auswahl<T> = waehlbareInhalte(katalog, regeln, sitze, mindestens);
   return {
     stapel: gemischt(auswahl.inhalte, baueZufall(rundenSaat(saat, 0, zweck))),
@@ -412,7 +450,7 @@ function an<T>(liste: readonly T[], stelle: number): T {
  * gehen.
  */
 function aufgabenStapel(
-  regeln: PartykisteRegeln,
+  regeln: RundenRegeln,
   saat: string,
   sitze: number,
   pflicht: boolean,
@@ -429,6 +467,27 @@ function aufgabenStapel(
 }
 
 /**
+ * Was `baueRunde` ausser Regelsatz und Saat wissen muss — beides optional,
+ * weil Tests und alte Aufrufer eine Runde auch ohne bauen.
+ */
+export interface RundenKontext {
+  /** Rundenzahl des Abends. Ohne sie steht die Eskalation auf Stufe 1. */
+  readonly runden?: number;
+  /** Reihum-Folge (Team-Abend). Ohne sie: Sitzreihenfolge. */
+  readonly folge?: readonly number[];
+}
+
+/** Der Kontext fuer Runde `nr` einer laufenden Partie. */
+function rundenKontext(partie: Pick<PartykistePartie, 'runden' | 'lager'>, nr: number): RundenKontext {
+  return { runden: partie.runden, folge: reihumFolge(partie.lager, nr) };
+}
+
+/** Die Reihum-Folge der laufenden Runde. */
+function folgeVon(partie: PartykistePartie): readonly number[] | undefined {
+  return reihumFolge(partie.lager, partie.rundeNr);
+}
+
+/**
  * Baut die Runde `nr`.
  *
  * Alles Zufaellige haengt allein an Saatkorn und Rundennummer, nicht am
@@ -436,12 +495,20 @@ function aufgabenStapel(
  * Server, auch wenn die Partie inzwischen anders gelaufen ist.
  */
 export function baueRunde(
-  regeln: PartykisteRegeln,
+  grundRegeln: PartykisteRegeln,
   saat: string,
   sitze: number,
   nr: number,
   ausgestiegen: readonly number[],
+  kontext: RundenKontext = {},
 ): Runde {
+  /*
+   * Der Regelsatz DIESER Runde: im Turnier derselbe wie immer, in der
+   * Eskalation mit der Stufe der Runde (modi.ts). Alles darunter liest nur
+   * noch `regeln` — auch ein Minispiel, das spaeter dazukommt, filtert damit
+   * von selbst nie derber, als die Runde darf.
+   */
+  const regeln = regelnDerRunde(grundRegeln, nr, kontext.runden);
   const art = minispielFuer(regeln, nr);
   const wievielte = nummerDerArt(regeln, nr);
   const basis = { fertig: [], punkte: nullen(sitze), schlucke: nullen(sitze) } as const;
@@ -520,7 +587,7 @@ export function baueRunde(
         phase: 'spiel',
         identitaeten: gezogen.map((i) => i.id),
         namen: gezogen.map((i) => i.name),
-        amZug: ersterLebender(sitze, ausgestiegen),
+        amZug: ersterLebender(sitze, ausgestiegen, kontext.folge),
         erfolg: offene(sitze),
         inhaltsRueckfall: namen.rueckfall,
       };
@@ -558,7 +625,7 @@ export function baueRunde(
         phase: 'spiel',
         stapel: gemischt(neuerStapel(), baueZufall(rundenSaat(saat, nr, 'bus'))),
         naechste: 0,
-        amZug: ersterLebender(sitze, ausgestiegen),
+        amZug: ersterLebender(sitze, ausgestiegen, kontext.folge),
         stufe: 0,
         offen: [],
         treffer: offene(sitze),
@@ -606,7 +673,7 @@ export function baueRunde(
         ...basis,
         art: 'wahrheitpflicht',
         phase: 'spiel',
-        amZug: ersterLebender(sitze, ausgestiegen),
+        amZug: ersterLebender(sitze, ausgestiegen, kontext.folge),
         gewaehlt: offene(sitze),
         aufgabeId: Array.from({ length: sitze }, () => ''),
         text: Array.from({ length: sitze }, () => ''),
@@ -688,7 +755,10 @@ export function baueRunde(
  */
 function zieheAufgabe(partie: PartykistePartie, sitz: number, pflicht: boolean): Aufgabe {
   const wievielte = nummerDerArt(partie.regeln, partie.rundeNr);
-  const { stapel: aufgaben } = aufgabenStapel(partie.regeln, partie.saat, partie.sitze, pflicht);
+  /* Der Regelsatz der RUNDE: In der Eskalation darf die Aufgabe nicht derber
+     sein als die Stufe, in der sie gezogen wird. */
+  const regeln = regelnDerRunde(partie.regeln, partie.rundeNr, partie.runden);
+  const { stapel: aufgaben } = aufgabenStapel(regeln, partie.saat, partie.sitze, pflicht);
   return an(aufgaben, wievielte * partie.sitze + sitz);
 }
 
@@ -713,16 +783,30 @@ export function wirksameInhaltsHaerte(
 export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
   const saat = o.saatHex && o.saatHex.length > 0 ? o.saatHex : String(o.saat);
   const grund = o.regeln.minispiele.length > 0 ? o.regeln : DEFAULT_REGELN;
-  const gewollt: Haerte =
+  const paket = grund.paket ?? null;
+  /* Ein Themenabend ohne Paket ist ein Turnier — validateConfig meldet ihn,
+     aber ein Tisch aus der Datenbank soll spielen, nicht werfen. */
+  const modus = modusVon(grund) === 'themenabend' && paket === null ? 'turnier' : modusVon(grund);
+  const gewollt: Haerte = gewollteInhaltsHaerte(
+    modus,
     grund.inhaltsHaerte === 1 || grund.inhaltsHaerte === 2 || grund.inhaltsHaerte === 3
       ? grund.inhaltsHaerte
-      : INHALTS_HAERTE_VORGABE;
+      : INHALTS_HAERTE_VORGABE,
+  );
+  /*
+   * Auch die Eskalation geht hier durch: Sie will am Ende "derb", aber mit
+   * Gast am Tisch steht danach "pikant" in `regeln.inhaltsHaerte`, und die
+   * Kurve steigt nie ueber diese Decke (`regelnDerRunde`).
+   */
   const wirksam = wirksameInhaltsHaerte(gewollt, o.gastSitze);
   const regeln: PartykisteRegeln = {
     ...grund,
     inhaltsHaerte: wirksam,
-    paket: grund.paket ?? null,
+    paket,
+    modus,
+    minispiele: modus === 'themenabend' && paket !== null ? themenMinispiele(paket, grund.minispiele) : grund.minispiele,
   };
+  const lager = modus === 'team' ? startLager(o.sitze) : null;
   return weiter({
     saat,
     sitze: o.sitze,
@@ -734,11 +818,13 @@ export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
     punkte: nullen(o.sitze),
     schlucke: nullen(o.sitze),
     rundeNr: 0,
-    runde: baueRunde(regeln, saat, o.sitze, 0, []),
+    runde: baueRunde(regeln, saat, o.sitze, 0, [], rundenKontext({ runden: o.runden, lager }, 0)),
     protokoll: [],
     fertig: false,
     inhaltsHaerteGewollt: wirksam < gewollt ? gewollt : null,
     regelKarte: null,
+    lager,
+    aufstellung: lager !== null,
   });
 }
 
@@ -774,6 +860,8 @@ function reihumGespielt(runde: Runde, sitz: number): boolean {
  */
 export function amZug(partie: PartykistePartie): number | null {
   if (partie.fertig) return null;
+  /* Team-Abend: Solange die Lager aufgestellt werden, ist nur der Oeffner dran. */
+  if (partie.aufstellung) return TISCHOEFFNER;
   const runde = partie.runde;
   if (runde.phase === 'ergebnis') {
     /*
@@ -821,10 +909,22 @@ function wartetNochJemand(partie: PartykistePartie): boolean {
   return lebende(partie.sitze, partie.ausgestiegen).some((s) => !bots.has(s) && !fertig.has(s));
 }
 
-/** Der naechste lebende Sitz nach `sitz`, der noch nicht gefahren ist. */
-function naechsterLebender(runde: Runde, sitze: number, ausgestiegen: readonly number[], sitz: number): number | null {
+/**
+ * Der naechste lebende Sitz nach `sitz`, der noch nicht gefahren ist — in
+ * Sitzreihenfolge oder in der Folge der Lager (`reihumFolge`). `sitz` -1
+ * heisst: von vorn.
+ */
+function naechsterLebender(
+  runde: Runde,
+  sitze: number,
+  ausgestiegen: readonly number[],
+  sitz: number,
+  folge?: readonly number[],
+): number | null {
   const raus = new Set(ausgestiegen);
-  for (let s = sitz + 1; s < sitze; s++) {
+  const reihe = folge ?? [...Array(sitze).keys()];
+  for (let i = reihe.indexOf(sitz) + 1; i < reihe.length; i++) {
+    const s = reihe[i]!;
     if (raus.has(s)) continue;
     if (!reihumGespielt(runde, s)) return s;
   }
@@ -856,7 +956,8 @@ function mitSchluck(faktor: number, wert: number): number {
 function werteAus(partie: PartykistePartie): PartykistePartie {
   const runde = partie.runde;
   const sitze = partie.sitze;
-  const faktor = partie.regeln.schluckFaktor;
+  /* In der Eskalation steigt die Haerte mit der Runde (modi.ts). */
+  const faktor = regelnDerRunde(partie.regeln, partie.rundeNr, partie.runden).schluckFaktor;
   const punkte = nullen(sitze);
   const schlucke = nullen(sitze);
   const dabei = lebende(sitze, partie.ausgestiegen);
@@ -1050,7 +1151,14 @@ function naechsteRunde(partie: PartykistePartie): PartykistePartie {
     ...partie,
     protokoll,
     rundeNr: naechste,
-    runde: baueRunde(partie.regeln, partie.saat, partie.sitze, naechste, partie.ausgestiegen),
+    runde: baueRunde(
+      partie.regeln,
+      partie.saat,
+      partie.sitze,
+      naechste,
+      partie.ausgestiegen,
+      rundenKontext(partie, naechste),
+    ),
   };
 }
 
@@ -1075,6 +1183,14 @@ export function weiter(partie: PartykistePartie): PartykistePartie {
   let stand = partie;
   for (let schritt = 0; schritt < 1000; schritt++) {
     if (stand.fertig) return stand;
+    if (stand.aufstellung) {
+      /* Kein Oeffner mehr da (ausgestiegen) oder ein Bot: Die Lager bleiben,
+         wie sie sind — niemand soll auf eine Aufstellung warten, die keiner
+         mehr macht. */
+      if (aufstellerDa(stand)) return stand;
+      stand = beendeAufstellung(stand);
+      continue;
+    }
     const runde = stand.runde;
 
     if (runde.phase === 'ergebnis') {
@@ -1107,7 +1223,7 @@ export function weiter(partie: PartykistePartie): PartykistePartie {
       const sitz = reihumSitz(runde);
       if (!stand.ausgestiegen.includes(sitz) && !reihumGespielt(runde, sitz)) return stand;
       /* Der Sitz am Zug ist weg oder schon durch: an den naechsten weiter. */
-      const naechster = naechsterLebender(runde, stand.sitze, stand.ausgestiegen, -1);
+      const naechster = naechsterLebender(runde, stand.sitze, stand.ausgestiegen, -1, folgeVon(stand));
       if (naechster === null) {
         stand = werteAus(stand);
         continue;
@@ -1137,6 +1253,40 @@ export function weiter(partie: PartykistePartie): PartykistePartie {
     stand = werteAus(stand);
   }
   throw new Error('partykiste: weiter() kommt nicht zur Ruhe');
+}
+
+function aufstellerDa(partie: PartykistePartie): boolean {
+  return !partie.ausgestiegen.includes(TISCHOEFFNER) && !partie.botSitze.includes(TISCHOEFFNER);
+}
+
+/**
+ * Schliesst die Aufstellung ab und baut die erste Runde NEU — mit der Folge
+ * der Lager, wie sie jetzt stehen. Verloren geht dabei nichts: Solange
+ * aufgestellt wurde, nahm die Runde keine Aktion an (`verarbeite`), und
+ * gezogen wird wie immer nur aus Saat und Rundennummer.
+ */
+function beendeAufstellung(partie: PartykistePartie): PartykistePartie {
+  return {
+    ...partie,
+    aufstellung: false,
+    runde: baueRunde(partie.regeln, partie.saat, partie.sitze, 0, partie.ausgestiegen, rundenKontext(partie, 0)),
+  };
+}
+
+/** Eine Aktion waehrend der Aufstellung: Lagerwechsel oder "fertig". */
+function stelleAuf(partie: PartykistePartie, sitz: number, aktion: PartykisteAktion): PartykistePartie {
+  if (sitz !== TISCHOEFFNER) verstoss('die Lager stellt der Tischoeffner auf');
+  if (aktion.art === 'bereit') return weiter(beendeAufstellung(partie));
+  if (aktion.art !== 'lagerwechsel') verstoss('erst werden die Lager aufgestellt');
+  const lager = partie.lager ?? [];
+  if (!Number.isInteger(aktion.sitz) || aktion.sitz < 0 || aktion.sitz >= lager.length) {
+    verstoss('diesen Sitz gibt es nicht');
+  }
+  if (!wechselbareSitze(lager, partie.ausgestiegen).includes(aktion.sitz)) {
+    verstoss('ein Lager braucht mindestens einen, der mitspielt');
+  }
+  const neu = lager.map((l, s) => (s === aktion.sitz ? 1 - l : l));
+  return weiter({ ...partie, lager: neu });
 }
 
 /** Setzt den Reihum-Zug auf einen anderen Sitz und raeumt dessen Tisch ab. */
@@ -1179,6 +1329,7 @@ export function verarbeite(
   if (typeof aktion !== 'object' || aktion === null) verstoss('keine Aktion');
   if (partie.fertig) return partie;
   if (partie.ausgestiegen.includes(sitz)) return partie;
+  if (partie.aufstellung) return stelleAuf(partie, sitz, aktion);
 
   const runde = partie.runde;
 
@@ -1275,7 +1426,7 @@ export function verarbeite(
       const erfolg = [...runde.erfolg];
       erfolg[sitz] = aktion.erfolg ? 1 : 0;
       const neue: WerBinIchRunde = { ...runde, erfolg };
-      const naechster = naechsterLebender(neue, partie.sitze, partie.ausgestiegen, sitz);
+      const naechster = naechsterLebender(neue, partie.sitze, partie.ausgestiegen, sitz, folgeVon(partie));
       return weiter({ ...partie, runde: { ...neue, amZug: naechster ?? sitz } });
     }
     case 'busfahrer': {
@@ -1321,7 +1472,7 @@ export function verarbeite(
       const erfolg = [...runde.erfolg];
       erfolg[sitz] = aktion.ja ? 1 : 0;
       const neue: WahrheitPflichtRunde = { ...runde, erfolg };
-      const naechster = naechsterLebender(neue, partie.sitze, partie.ausgestiegen, sitz);
+      const naechster = naechsterLebender(neue, partie.sitze, partie.ausgestiegen, sitz, folgeVon(partie));
       return weiter({ ...partie, runde: { ...neue, amZug: naechster ?? sitz } });
     }
     case 'kategorien':
@@ -1396,7 +1547,7 @@ function busTipp(
   const treffer = [...runde.treffer];
   treffer[sitz] = richtig ? 3 : runde.stufe;
   const zwischen: BusRunde = { ...runde, naechste, treffer, letzter, offen };
-  const naechsterSitz = naechsterLebender(zwischen, partie.sitze, partie.ausgestiegen, sitz);
+  const naechsterSitz = naechsterLebender(zwischen, partie.sitze, partie.ausgestiegen, sitz, folgeVon(partie));
   if (naechsterSitz === null) return { ...partie, runde: zwischen };
   return { ...partie, runde: { ...zwischen, amZug: naechsterSitz, stufe: 0, offen: [] } };
 }
@@ -1450,5 +1601,14 @@ export function platzierungen(partie: PartykistePartie): Platzierung[] {
     const platz = vorheriger && vorheriger.punkte === eintrag.punkte ? vorheriger.platz : i + 1;
     mitPlatz.push({ ...eintrag, platz });
   });
+  /*
+   * Team-Abend: Der Platz kommt aus dem Lager-Ergebnis, die Zeile bleibt je
+   * Person — warum, steht an `lagerPlaetze` (modi.ts). Die Punkte bleiben die
+   * eigenen; sie stehen in der Tabelle, entscheiden aber nicht mehr.
+   */
+  const lagerPlatz = lagerPlaetze(partie.lager, partie.punkte);
+  if (lagerPlatz) {
+    return mitPlatz.map((p) => ({ ...p, platz: lagerPlatz[p.sitz] ?? p.platz })).sort((a, b) => a.sitz - b.sitz);
+  }
   return mitPlatz.sort((a, b) => a.sitz - b.sitz);
 }

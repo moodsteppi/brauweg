@@ -194,6 +194,48 @@ export interface PartykisteSicht {
   daten: PartyMinispielSicht;
   /** Die geltende Regel-Karte oder null (seit 22.09.2026). */
   regelKarte: RegelKarteSicht | null;
+  /* Die Spielmodi (seit 22.09.2026) — Spiegel von packages/game-partykiste/src/modi.ts. */
+  modus: PartyModus;
+  /** Themenpaket des Tisches, null = alles. */
+  paket: PartyPaket | null;
+  /** Nur in der Eskalation: wo die Kurve in dieser Runde steht. */
+  eskalation: PartyEskalation | null;
+  /** Team-Abend: je Sitz das Lager, 0 oder 1. */
+  lager: number[] | null;
+  /** Team-Abend: die Tabelle je Lager. */
+  lagerTabelle: PartyLagerPlatzierung[] | null;
+  /** Team-Abend, solange der Tischoeffner die Lager aufstellt. */
+  aufstellung: PartyAufstellung | null;
+}
+
+/** Die Spielmodi. Schnellrunde und Marathon gibt es bewusst nicht. */
+export type PartyModus = 'turnier' | 'eskalation' | 'themenabend' | 'team';
+
+/** Die Themenpakete — Spiegel von `PAKETE` (inhalte/typen.ts). */
+export type PartyPaket = 'wg-abend' | 'jga' | 'weihnachten' | 'studenten' | 'arbeit';
+
+export interface PartyEskalation {
+  /** 1 bis 3: erstes, zweites, letztes Drittel des Abends. */
+  stufe: 1 | 2 | 3;
+  /** Inhaltsstufe dieser Runde — hoechstens die Decke des Tisches. */
+  inhaltsHaerte: 1 | 2 | 3;
+  schluckFaktor: number;
+  /** Wollte die Kurve derber, als ein Tisch mit Gast darf? */
+  gekappt: boolean;
+}
+
+export interface PartyLagerPlatzierung {
+  lager: number;
+  sitze: number[];
+  punkte: number;
+  schlucke: number;
+  platz: number;
+}
+
+export interface PartyAufstellung {
+  aufsteller: number;
+  /** Wen ICH gerade ins andere Lager setzen darf — leer, wenn ich nicht aufstelle. */
+  wechselbar: number[];
 }
 
 /** Aktionen, die der Bildschirm absetzt. */
@@ -209,7 +251,8 @@ export type PartyAktion =
   | { art: 'seite'; wahl: number }
   | { art: 'wahl'; pflicht: boolean }
   | { art: 'erledigt'; ja: boolean }
-  | OhneUhrAktion;
+  | OhneUhrAktion
+  | { art: 'lagerwechsel'; sitz: number };
 
 // ---------------------------------------------------------------------------
 // Anzeigetexte — an einer Stelle, weil sie an drei Stellen gebraucht werden
@@ -286,6 +329,14 @@ export interface PartyRegelsatz {
   minispiele: PartyMinispiel[];
   trinkmodus: boolean;
   schluckFaktor: number;
+  /*
+   * Seit dem 22.09.2026, alle drei optional: Ein Regelsatz von davor kennt
+   * sie nicht (fehlt = Turnier, alle Inhalte). In der Sicht stehen sie immer,
+   * `eskalation` sogar mit der Stufe der laufenden Runde.
+   */
+  modus?: PartyModus;
+  paket?: PartyPaket | null;
+  eskalation?: PartyEskalation | null;
 }
 
 /** Die Namen der Haertegrade, Stelle = `schluckFaktor` (1 bis 3). */
@@ -304,8 +355,22 @@ export function liesRegelsatz(config: Record<string, unknown>): PartyRegelsatz |
   const faktor = config['schluckFaktor'];
   if (!Array.isArray(liste) || typeof trinkmodus !== 'boolean' || typeof faktor !== 'number') return null;
   const minispiele = liste.filter((x): x is PartyMinispiel => typeof x === 'string' && x in MINISPIEL_NAME);
-  return { minispiele, trinkmodus, schluckFaktor: faktor };
+  /* Modus und Paket nur, wenn sie da und bekannt sind — ein Regelsatz ohne
+     sie ist ein Turnier, und das sagt die Regelzeile dann auch. */
+  const modus = config['modus'];
+  const paket = config['paket'];
+  return {
+    minispiele,
+    trinkmodus,
+    schluckFaktor: faktor,
+    ...(typeof modus === 'string' && (PARTY_MODI as readonly string[]).includes(modus) ? { modus: modus as PartyModus } : {}),
+    ...(typeof paket === 'string' && (PARTY_PAKETE as readonly string[]).includes(paket) ? { paket: paket as PartyPaket } : {}),
+  };
 }
+
+/** Alle Modi und Pakete, fuer `liesRegelsatz` und das Menue. */
+export const PARTY_MODI: readonly PartyModus[] = ['turnier', 'eskalation', 'themenabend', 'team'];
+export const PARTY_PAKETE: readonly PartyPaket[] = ['wg-abend', 'jga', 'weihnachten', 'studenten', 'arbeit'];
 
 /**
  * Wie der Zaehler heisst: "Schluck" im Trinkmodus, sonst "Strafpunkt".

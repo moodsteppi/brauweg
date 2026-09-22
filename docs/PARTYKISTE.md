@@ -52,6 +52,7 @@ Der Regelsatz (`PartykisteRegeln` in `src/regeln.ts`), geprüft von
 | `schluckFaktor` | 1–3 | 1 | Schlücke mal Faktor |
 | `inhaltsHaerte` | 1 harmlos, 2 pikant, 3 derb | 1 | Obergrenze der Textschärfe |
 | `paket` | `null` oder ein Paket aus `PAKETE` | `null` | Zielgruppe der Inhalte |
+| `modus` | `turnier`, `eskalation`, `themenabend`, `team` | `turnier` (fehlt = Turnier) | Spielmodus, siehe unten |
 
 Der **Härtegrad** (`schluckFaktor`, 1 bis 3) nimmt alle Schlücke einer Runde
 mal. Punkte bleiben unberührt: Die Rangliste darf nicht davon abhängen, wie
@@ -159,11 +160,71 @@ Sitz die andere Art wählt — dafür hängt die Stelle nicht an fremden Wahlen.
 Wiederholt wird erst, wenn ein Stapel aufgebraucht ist (zu zwölft: nach elf
 Runden „Wer bin ich“ bzw. fünf Runden W/P, alle derselben Art).
 
+## Spielmodi
+
+Seit dem 22.09.2026 (Robins Entscheidung): neben dem Turnier drei Modi —
+**nicht** Schnellrunde oder Marathon, die Rundenzahl stellt man ohnehin ein.
+Alles, was einen Modus ausmacht, steht in `src/modi.ts`; `partie.ts` hängt
+sich an wenigen Stellen ein (Rundenaufbau, Reihum-Folge, Aufstellung,
+Rangliste). Der Ablauf der Minispiele ist in jedem Modus derselbe — aus
+demselben Grund, aus dem der Trinkmodus kein zweiter Ablauf ist.
+
+**Eskalation.** Inhaltsstufe und `schluckFaktor` steigen über den Abend:
+erstes Drittel 1, zweites 2, letztes 3 (`eskalationsStufe`,
+`floor(nr * 3 / runden) + 1`). Die eingestellten Werte gelten dann nicht; die
+Kurve steht je Runde in `regelnDerRunde`, und jede Ziehung, jede Aufgabe und
+jede Abrechnung liest den Regelsatz der Runde, nicht den der Partie.
+**Die Gast-Kappung wird nicht umgangen**: Die Eskalation will am Ende „derb",
+geht aber wie jeder Tisch durch `wirksameInhaltsHaerte`; mit Gast steht in
+`regeln.inhaltsHaerte` „pikant", und die Kurve steigt nie über diese Decke
+— auch nicht in der letzten Runde. Die Härte der Gläser steigt trotzdem bis 3.
+Die Sicht sagt es (`eskalation.gekappt`), die Regelzeile auch.
+
+Damit sich über die Stufen nichts wiederholt, gibt es in der Eskalation EINEN
+Stapel je Katalog (gefiltert auf die Decke, gemischt wie im Turnier), und
+`belegeStufenweise` verteilt ihn auf alle Plätze des Abends: jeder Platz den
+ersten unbenutzten Inhalt **genau** seiner Stufe, sonst der nächst milderen.
+Eskalation heißt, dass die Stufe ausgeschöpft wird — ab Stufe 2 kommen die
+pikanten Sprüche, sofern es welche gibt. Wie viele Plätze eine Runde hat
+(„Wer bin ich“ und W/P: einer je Sitz), steht in `platzeJeRunde`; wer die
+Zählung in `baueRunde` ändert, ändert sie dort mit.
+
+**Themenabend.** Ein `paket` ist Pflicht (`validateConfig` meldet
+`ruleset.partykiste.themenOhnePaket`; ein Tisch aus der Datenbank ohne Paket
+spielt als Turnier). Das Paket bestimmt die Minispiele und ihre Reihenfolge
+(`THEMEN_MINISPIELE`, geschnitten mit dem, was der Tisch überhaupt spielen
+will) und die Inhalte über den Filter — reicht der Paketvorrat nicht, gibt
+der Filter weich nach wie bei jedem Paket-Tisch. Beim Arbeitsabend fehlen
+„Ich hab noch nie“ und W/P. Ein neues Minispiel spielt in keinem Themenabend
+mit, bis es dort eingeordnet ist.
+
+**Team-Abend.** Zwei Lager, zu Beginn abwechselnd nach Sitz (`startLager`).
+Vor der ersten Runde stellt der **Tischöffner** (Sitz 0) auf: Solange
+`partie.aufstellung` gilt, ist nur er am Zug, `lagerwechsel` setzt einen Sitz
+hinüber (nie den letzten Anwesenden eines Lagers — die erlaubten Sitze stehen
+in der Sicht als `aufstellung.wechselbar`), `bereit` gibt frei. Ist Sitz 0
+ein Bot oder gegangen, endet die Aufstellung von selbst. Die erste Runde wird
+danach neu gebaut, weil ihre Reihum-Folge an den Lagern hängt. In
+Reihum-Spielen wechseln die Lager (A, B, A, B …; welches anfängt, wechselt je
+Runde — `reihumFolge`). Punkte und Schlücke zählen fürs Lager
+(`lagerWertung`); entschieden wird der **Schnitt je Kopf**, damit das größere
+Lager nicht allein durch seine Größe gewinnt. Die Bots stimmen bei „Wer würde
+eher“ und beim Imposter für das andere Lager.
+
 ## Wertung
 
 Gewertet wird das **ganze Turnier**: `standings` liefert die aufaddierten
 Punkte, die Plattform rechnet daraus Trophäen (mehr Punkte = besserer Platz).
 Die Schlücke stehen daneben und zählen **nicht** mit.
+
+**Im Team-Abend** bleibt die Rangliste für die Trophäen eine je **Person**
+— die Plattform verteilt an Konten, und ein Lager ist keins. Der **Platz**
+aber kommt aus dem Lager-Ergebnis (`lagerPlaetze`): Wer im Siegerlager die
+wenigsten eigenen Punkte hat, steht trotzdem vorn, sonst schadete sich, wer
+seinem Lager hilft. Gezählt wird wie die Plattform zählt — das Siegerlager
+auf 1, das andere auf „Größe des Siegerlagers + 1“; mit „2“ verteilte
+`awardForParty` die Plätze falsch, und die Nullsumme wäre hin.
+`standings[i].points` bleiben die eigenen Punkte.
 
 Die reinen Trinkrunden („Ich hab noch nie“, „Wer würde eher“) geben bewusst
 nur einen Punkt. Bei „Ich hab noch nie“ kann man lügen und den Punkt

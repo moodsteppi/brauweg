@@ -106,8 +106,13 @@ export const GOLF_MODULE_VERSION = 5;
  * 2 seit dem 22.09.2026: Kategorien-Battle, Mehrheitsraten und Regel-Karte,
  * dazu `regelKarte` in jeder Sicht. Ein Client der Fassung 1 kennt die
  * neuen Runden nicht — die Weiche in Runden.tsx liefe ins Leere.
+ *
+ * 3 seit dem 22.09.2026: die Spielmodi — Aufstellung des Team-Abends
+ * (Aktion `lagerwechsel`), dazu `modus`, `paket`, `eskalation`, `lager`,
+ * `lagerTabelle`, `aufstellung` in der Sicht. Ein Client der Fassung 2
+ * zeigte im Team-Abend die erste Runde, die noch nichts annimmt.
  */
-export const PARTYKISTE_MODULE_VERSION = 2;
+export const PARTYKISTE_MODULE_VERSION = 3;
 
 /**
  * 1 seit dem 22. September 2026 — die erste Fassung. BroCooked ist wie Golf
