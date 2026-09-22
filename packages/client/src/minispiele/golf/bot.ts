@@ -42,9 +42,11 @@ import {
 } from './karte';
 import {
   BALL_R,
+  type Ball,
   type Botstufe,
   DT,
   EIS_FAKTOR,
+  type Ereignis,
   KRAFT_MIN,
   type Partiezustand,
   REIBUNG_RASEN,
@@ -52,6 +54,7 @@ import {
   SAND_FAKTOR,
   V_MAX,
   V_STOP,
+  schritt,
 } from './physik';
 import { betrag, bruch, dreheHundertstel, ganzzahl, normiere } from './zufall';
 
@@ -664,6 +667,274 @@ function abstieg(feld: Wegfeld, c: number): number {
 }
 
 /* --------------------------------------------------------------------------
+ * Probeschlag
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Zonenarten, deren Wirkung der Bot durch Probeschläge erfährt statt durch
+ * eine eigene Rechnung.
+ *
+ * Seit dem 22.09.2026. Anlass war der Beschleuniger: Eine „genauere"
+ * Kraftrechnung in der Ebene (Reibung plus Schub, Bahn für Bahn wie in
+ * `bewege`) machte k04 von 1,00 auf 2,75 Schläge SCHLECHTER. Nachgemessen
+ * zählte sie den Schub nicht doppelt — die Frage war falsch gestellt. Die
+ * Halbierung suchte die kleinste Kraft, mit der der Ball die Strecke
+ * „erreicht", und auf einer Schubbahn springt die Weite: Bei 0,220 bleibt
+ * der Ball vor dem Beschleuniger liegen, bei 0,225 rutscht er hinein und wird
+ * ganz hindurchgetragen. Die Suche fand genau diese Kante. Der Ball kam mit
+ * 9 E/s am Loch vorbei, 2,4 E zu weit links (der Schub dreht die Bahn nach
+ * oben, die Messrichtung sieht das nicht), und schlug hinten an die Wand.
+ * Die alte Rasenrechnung traf dagegen mit 0,62 — nicht, weil sie richtig
+ * rechnete, sondern weil der Ball von der Rückwand ins Loch zurückfiel. So
+ * ist k04 gebaut, und so sind es die meisten Schubbahnen: Wand, Schub und
+ * Loch zusammen ergeben den Weg, und keine Rechnung ohne Wände sieht ihn.
+ *
+ * Die Physik, die das kann, gibt es schon: `schritt`. Ein Probeschlag rechnet
+ * den geplanten Schlag auf einer Kopie mit einem einzigen Ball bis zur Ruhe
+ * durch — mit Wänden, Schub, Pilzen, Strudeln, Sprüngen und dem Drehkreuz in
+ * GENAU der Stellung, die es in diesem Takt hat. Das ist kein Schummeln: Die
+ * Bahn liegt offen vor jedem Spieler, und der Bot sieht dieselbe Karte, nur
+ * eben rechnend. Andere Bälle bleiben außen vor wie beim Zielen auch.
+ */
+const PROBE_ARTEN: ReadonlySet<Zone['art']> = new Set<Zone['art']>(['beschleuniger']);
+
+/**
+ * Längster Probeschlag in Takten (8 s). Ein Ball, der dann noch rollt, wird
+ * dort bewertet, wo er gerade ist — auf den Bahnen, die Probeschläge
+ * brauchen, liegt er nach dieser Zeit in aller Regel längst still.
+ */
+const PROBE_TAKTE = 160;
+
+/**
+ * Was ein Strafschlag (Wasser) in der Bewertung kostet, in Rasterschritten.
+ * 20 Schritte sind 10 E — ungefähr das, was ein Schlag an Weg gutmacht.
+ */
+const STRAFE_SCHRITTE = 20;
+
+/** Aufschlag für eine Ruhelage ohne freien, nahen Blick aufs Loch (5 E), siehe `bewerteProbe`. */
+const SICHT_STRAFE = 10;
+
+/**
+ * Kraftstufen des ersten Durchgangs, als Vielfache der geplanten Kraft, und
+ * Richtungsversätze des zweiten, in Hundertstelgrad.
+ *
+ * Angefangen hat es mit fünf Kraftstufen (dazu 0,65 und 1,5) und vier
+ * Versätzen (dazu ±1,5 Grad). Über 100 Saaten auf allen sieben Schubbahnen
+ * und drei Stufen gab die schmale Auswahl Schlag für Schlag dasselbe Mittel
+ * oder ein besseres — bei knapp der halben Rechenzeit. Die Richtung ist
+ * dagegen nicht verzichtbar: Ohne sie fiel k22 beim Standard-Bot von 2,12
+ * wieder auf 2,54 zurück.
+ */
+const PROBE_KRAEFTE = [1, 0.8, 1.25];
+const PROBE_WINKEL = [400, -400];
+
+const KEINE_EREIGNISSE: readonly Ereignis[] = [];
+
+/**
+ * Liegt eine der `PROBE_ARTEN` so nah am geplanten Weg, dass sie den Schlag
+ * verändern kann?
+ *
+ * Nur dann lohnen Probeschläge — und nur dann ändern sie etwas: Auf allen
+ * anderen Schlägen bleibt der Bot Schlag für Schlag derselbe wie vorher. Der
+ * Weg reicht vier Einheiten über das Ziel hinaus, weil ein Schub oder ein
+ * Pilz dahinter den Ball noch zurückwerfen kann.
+ */
+function probeNoetig(karte: Karte, x: number, y: number, rx: number, ry: number, d: number): boolean {
+  const weit = d + 4;
+  const weg = segment(x, y, x + rx * weit, y + ry * weit);
+  const rand = BALL_R + 0.5;
+  for (let i = 0; i < karte.zonen.length; i += 1) {
+    const zone = karte.zonen[i];
+    if (!PROBE_ARTEN.has(zone.art)) continue;
+    if (zone.art === 'beschleuniger' || zone.art === 'sprungfeld') {
+      if (istInZone(zone, x, y)) return true;
+      const kanten: Segment[] = [
+        segment(zone.x, zone.y, zone.x + zone.w, zone.y),
+        segment(zone.x + zone.w, zone.y, zone.x + zone.w, zone.y + zone.h),
+        segment(zone.x + zone.w, zone.y + zone.h, zone.x, zone.y + zone.h),
+        segment(zone.x, zone.y + zone.h, zone.x, zone.y),
+      ];
+      for (let k = 0; k < 4; k += 1) {
+        if (streckenAbstandQuadrat(kanten[k], weg) < rand * rand) return true;
+      }
+      continue;
+    }
+    let r: number;
+    if (zone.art === 'drehkreuz') r = zone.laenge / 2;
+    else if (zone.art === 'bumper' || zone.art === 'strudel') r = zone.r;
+    else continue;
+    const grenze = r + rand;
+    if (abstandQuadrat(weg, zone.x, zone.y) < grenze * grenze) return true;
+  }
+  return false;
+}
+
+/**
+ * Rechnet einen Schlag mit der echten Physik durch, auf einer Kopie mit nur
+ * diesem einen Ball. Liefert, wo er liegen bleibt, ob er eingelocht hat und
+ * wie viele Schläge es gekostet hat (Wasser: zwei).
+ */
+function probeschlag(
+  z: Partiezustand,
+  sitz: number,
+  karte: Karte,
+  rx: number,
+  ry: number,
+  kraft: number,
+): { eingelocht: boolean; x: number; y: number; schlaege: number } {
+  const b = z.baelle[sitz];
+  const ball: Ball = { ...b };
+  // Von Hand statt über `neuePartie`: Die zöge die Bahnwahl neu und legte
+  // Zufallsströme an, die hier niemand braucht. Keine Bot-Sitze — sonst
+  // entschiede in der Probe ein Bot, der selbst wieder probt.
+  const probe: Partiezustand = {
+    takt: z.takt,
+    saat: z.saat,
+    sitze: 1,
+    botSitze: [],
+    botStufe: z.botStufe,
+    ausgestiegen: [],
+    ausstiegTakt: [-1],
+    loecher: 1,
+    reihenfolge: [0],
+    aktuell: { loch: 0, karte: 0, startTakt: z.aktuell.startTakt, endeTakt: -1, pauseBis: -1 },
+    baelle: [ball],
+    ergebnis: [],
+    fertig: false,
+    zufall: z.zufall,
+    botZufall: [0],
+    botWartet: [-1],
+    botDenkzeit: [0],
+    letzterSchlagTakt: [z.takt],
+    letzteEreignisse: [],
+  };
+  const karten = [karte];
+  schritt(probe, [{ takt: z.takt, sitz: 0, nr: 0, art: 'schlag', rx, ry, kraft }], karten);
+  for (let t = 1; t < PROBE_TAKTE; t += 1) {
+    if (probe.aktuell.endeTakt !== -1) break;
+    if (ball.ruht && ball.flugTakte === 0) break;
+    schritt(probe, KEINE_EREIGNISSE, karten);
+  }
+  return { eingelocht: ball.eingelocht, x: ball.x, y: ball.y, schlaege: ball.schlaege - b.schlaege };
+}
+
+/**
+ * Bewertung eines Probeschlags: Rasterschritte bis zum Loch, kleiner ist
+ * besser.
+ *
+ * Liegt das Loch von dort aus NICHT frei und nah, kommen `SICHT_STRAFE`
+ * Schritte dazu. Gemessen am 22.09.2026 auf k22: Ohne diesen Aufschlag nahm
+ * der Experte eine Ruhelage 2,6 E vom Loch, aber hinter dem Riegel, statt
+ * einer 3,2 E entfernten mit freier Linie — und brauchte von dort zwei
+ * Schläge statt einem. Das Raster misst den Weg, nicht, ob er mit einem
+ * Schlag zu gehen ist.
+ */
+function bewerteProbe(
+  karte: Karte,
+  feld: Wegfeld,
+  p: { eingelocht: boolean; x: number; y: number; schlaege: number },
+): number {
+  if (p.eingelocht) return -1;
+  const c = freieZelleBei(feld, p.x, p.y);
+  let weg = c >= 0 && feld.entfernung[c] >= 0 ? feld.entfernung[c] : 1_000_000;
+  const lx = karte.loch[0];
+  const ly = karte.loch[1];
+  if (betrag(lx - p.x, ly - p.y) >= 12 || !sichtFrei(karte, p.x, p.y, lx, ly)) weg += SICHT_STRAFE;
+  return weg + (p.schlaege - 1) * STRAFE_SCHRITTE;
+}
+
+/**
+ * Der beste unter wenigen Probeschlägen rund um den geplanten.
+ *
+ * Erst die Kraft (drei Stufen), dann bei der besten Kraft die Richtung (zwei
+ * Versätze) — fünf Kandidaten statt 3 × 3, und die Richtung lohnt sich erst,
+ * wenn die Kraft stimmt. Der geplante Schlag steht vorn und gewinnt jeden
+ * Gleichstand: Der Bot weicht nur ab, wenn die Probe etwas BESSERES zeigt.
+ *
+ * Ab „experte" abwärts wird jeder Kandidat fünfmal geprobt — auf der Linie,
+ * je um die halbe Winkelstreuung links und rechts, und mit der halben
+ * Kraftstreuung darüber und darunter — und das Mittel zählt (siehe
+ * `streuBreite`). Der Genie probt jeden Kandidaten einmal.
+ */
+function besterProbeschlag(
+  z: Partiezustand,
+  sitz: number,
+  karte: Karte,
+  rx: number,
+  ry: number,
+  kraft: number,
+): { rx: number; ry: number; kraft: number } {
+  const feld = wegfeld(karte);
+  const breit = streuBreite(z.botStufe);
+  const kraftBreit = STREUUNG[z.botStufe].kraft / 2;
+  const probeWert = (sx: number, sy: number, k: number): number => {
+    let kk = k;
+    if (kk < KRAFT_MIN) kk = KRAFT_MIN;
+    else if (kk > 1) kk = 1;
+    return bewerteProbe(karte, feld, probeschlag(z, sitz, karte, sx, sy, kk));
+  };
+  const wertVon = (sx: number, sy: number, k: number): number => {
+    const mitte = probeWert(sx, sy, k);
+    if (breit === 0) return mitte;
+    const links = dreheHundertstel(sx, sy, breit);
+    const rechts = dreheHundertstel(sx, sy, -breit);
+    return (
+      (mitte +
+        probeWert(links.x, links.y, k) +
+        probeWert(rechts.x, rechts.y, k) +
+        probeWert(sx, sy, k * (1 + kraftBreit)) +
+        probeWert(sx, sy, k * (1 - kraftBreit))) /
+      5
+    );
+  };
+  let bestRx = rx;
+  let bestRy = ry;
+  let bestK = kraft;
+  let bestWert = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < PROBE_KRAEFTE.length; i += 1) {
+    let k = kraft * PROBE_KRAEFTE[i];
+    if (k < KRAFT_MIN) k = KRAFT_MIN;
+    else if (k > 1) k = 1;
+    if (i > 0 && k === bestK) continue;
+    const wert = wertVon(rx, ry, k);
+    if (wert < bestWert) {
+      bestWert = wert;
+      bestK = k;
+    }
+    if (bestWert <= -1) break;
+  }
+  for (let i = 0; i < PROBE_WINKEL.length && bestWert > -1; i += 1) {
+    // Ein Versatz, der kleiner ist als die eigene Streuung, ist keiner.
+    if (PROBE_WINKEL[i] < breit && -PROBE_WINKEL[i] < breit) continue;
+    const r = dreheHundertstel(rx, ry, PROBE_WINKEL[i]);
+    const wert = wertVon(r.x, r.y, bestK);
+    if (wert < bestWert) {
+      bestWert = wert;
+      bestRx = r.x;
+      bestRy = r.y;
+    }
+  }
+  return { rx: bestRx, ry: bestRy, kraft: bestK };
+}
+
+/**
+ * Wie weit die Probe zur Seite schaut, in Hundertstelgrad: die halbe
+ * Winkelstreuung der Stufe, ab „experte" abwärts; 0 heißt „nur die Linie".
+ *
+ * Seit dem 22.09.2026, gemessen: Mit nur einer Probe genau auf der Linie
+ * wählten die schwächeren Stufen Schläge, die eine enge Stelle genau treffen —
+ * auf k29 den 1,6 E schmalen Schlauch — und mit ihrer Streuung fast nie. Mit
+ * drei Proben (nur die Richtung gestreut) blieb der Standard-Bot auf k04 über
+ * 100 Saaten 0,05 Schläge hinter dem Plan zurück, mit fünf (Kraft dazu) nicht
+ * mehr. Der Genie streut 0,8 Grad; für ihn ist die Linie die Wahrheit, und
+ * fünf Proben statt einer wären dort nur Kosten.
+ */
+function streuBreite(stufe: Botstufe): number {
+  const w = STREUUNG[stufe].winkel;
+  return w >= 250 ? w / 2 : 0;
+}
+
+/* --------------------------------------------------------------------------
  * Entscheidung
  * ----------------------------------------------------------------------- */
 
@@ -846,11 +1117,31 @@ export function botEntscheidung(
     insPortal ? PORTAL_TEMPO : 0,
   );
 
+  // Liegt eine Zone am Weg, die der Plan nicht kennt, entscheiden
+  // Probeschläge (siehe `PROBE_ARTEN`). Die Streuung kommt danach — der Bot
+  // wählt den Schlag, den er meint, und verzieht ihn dann wie jeder andere.
+  let schlagRx = richtung.x;
+  let schlagRy = richtung.y;
+  let kraftPlan = kraftRein;
+  //
+  // Der Anfänger probt nicht. Gemessen am 22.09.2026 über 100 Saaten: Mit
+  // Probeschlägen spielte er auf k12, k22 und k34 um 0,06 bis 0,09 Schläge
+  // SCHLECHTER, während der Experte auf k12 von 2,61 auf 2,00 fiel. Bei ±12
+  // Grad und ±20 % Kraft trifft er die engere Linie, die die Probe findet,
+  // seltener als die grobe — und dass ein Anfänger die Zonen nicht liest,
+  // ist ohnehin, was man von ihm erwartet.
+  if (z.botStufe !== 'anfaenger' && probeNoetig(karte, b.x, b.y, richtung.x, richtung.y, plan)) {
+    const wahl = besterProbeschlag(z, sitz, karte, richtung.x, richtung.y, kraftRein);
+    schlagRx = wahl.rx;
+    schlagRy = wahl.ry;
+    kraftPlan = wahl.kraft;
+  }
+
   const streu = STREUUNG[z.botStufe];
   const w = ganzzahl(zufall, -streu.winkel, streu.winkel);
   const k = bruch(w.zustand, -streu.kraft, streu.kraft);
-  const gedreht = dreheHundertstel(richtung.x, richtung.y, w.wert);
-  let kraft = kraftRein * (1 + k.wert);
+  const gedreht = dreheHundertstel(schlagRx, schlagRy, w.wert);
+  let kraft = kraftPlan * (1 + k.wert);
   if (kraft < KRAFT_MIN) kraft = KRAFT_MIN;
   else if (kraft > 1) kraft = 1;
 

@@ -247,3 +247,46 @@ describe('Portale im Wegfeld', () => {
     }
   });
 });
+
+/* --------------------------------------------------------------------------
+ * Die fünf Zonenarten, die der Bot bis zum 22.09.2026 für Rasen hielt —
+ * Beschleuniger, Bumper, Strudel, Sprungfeld, Drehkreuz. Er rechnet sie
+ * nicht nach, er probt sie (`PROBE_ARTEN` in bot.ts). Jede Prüfung hier hält
+ * eine Bahn fest, auf der die Probe gemessen etwas gebracht hat, und die
+ * Grenze liegt unter dem, was der Bot VOR der Änderung schaffte.
+ * ----------------------------------------------------------------------- */
+
+function karteMit(id: string): Karte {
+  const karte = KARTEN.find((k) => k.id.startsWith(id));
+  if (karte === undefined) throw new Error(`${id} fehlt im Katalog`);
+  return karte;
+}
+
+/** Mittel der Schläge über zwanzig Saaten, ungelöste zählen wie in der Partie. */
+function mittelSchlaege(karte: Karte, stufe: 'genie' | 'experte' | 'standard'): number {
+  let summe = 0;
+  for (let saat = 1; saat <= 20; saat += 1) {
+    const r = botLoestKarte(karte, stufe, saat * 7919);
+    summe += r.geloest ? r.schlaege : karte.schlagLimit + 1;
+  }
+  return summe / 20;
+}
+
+describe('Beschleuniger', () => {
+  it('spielt k12 durch beide Schübe in zwei Schlägen (vorher 2,90)', () => {
+    // Der Genie probt die Kraft, statt sie für Rasen zu halten: Er findet den
+    // Schlag, den beide Beschleuniger zusammen bis vors Loch tragen.
+    expect(mittelSchlaege(karteMit('k12-'), 'genie')).toBeLessThanOrEqual(2);
+  });
+
+  it('bleibt auf k04 beim Ass — der Schlag über die Rückwand bleibt der geplante', () => {
+    // Der Befund, mit dem es anfing: Eine „genauere" Rechnung ohne Wände
+    // spielte hier 2,75 statt 1,00. Die Probe kennt die Rückwand und behält
+    // den Plan, weil keine Abweichung besser ist.
+    expect(mittelSchlaege(karteMit('k04-'), 'genie')).toBe(1);
+  });
+
+  it('nimmt auf k22 die Linie mit freiem Blick aufs Loch (Experte, vorher 2,55)', () => {
+    expect(mittelSchlaege(karteMit('k22-'), 'experte')).toBeLessThanOrEqual(2.1);
+  });
+});
