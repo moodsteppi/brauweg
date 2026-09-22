@@ -348,3 +348,9 @@ describe('Bumper', () => {
     expect(mittelSchlaege(pilz, 'genie')).toBeLessThanOrEqual(2);
   });
 });
+
+describe('Sprungfeld', () => {
+  it('trifft auf k38 den Sprung, der vors Loch trägt (vorher 2,00)', () => {
+    expect(mittelSchlaege(karteMit('k38-'), 'genie')).toBeLessThanOrEqual(1.3);
+  });
+});

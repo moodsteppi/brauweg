@@ -19,7 +19,11 @@
  *      entsteht. Sie ist eine reine Funktion der Physikkonstanten und darf
  *      deshalb im Modul liegen. Wo Sand oder Eis liegen, wird die Bahn des
  *      Schlags stattdessen einzeln durchgerechnet (`kraftFuerStrecke`) — eine
- *      Rasentabelle liegt dort um ein Vielfaches daneben.
+ *      Rasentabelle liegt dort um ein Vielfaches daneben. Liegt am Weg eine
+ *      Zone, die den Ball schiebt, zieht, wirft oder schlägt (Beschleuniger,
+ *      Strudel, Sprungfeld, Drehkreuz), probt der Bot seit dem 22.09.2026
+ *      ein paar Schläge mit der echten Physik und nimmt den besten
+ *      (`besterProbeschlag`, Begründung bei `PROBE_ARTEN`).
  *   3. **Wie schlecht?** Richtungs- und Kraftstreuung je Stufe.
  *
  * Das Entfernungsfeld je Karte wird zwischengespeichert. Auch das ist kein
@@ -763,8 +767,23 @@ function abstieg(feld: Wegfeld, c: number): number {
  * GENAU der Stellung, die es in diesem Takt hat. Das ist kein Schummeln: Die
  * Bahn liegt offen vor jedem Spieler, und der Bot sieht dieselbe Karte, nur
  * eben rechnend. Andere Bälle bleiben außen vor wie beim Zielen auch.
+ *
+ * Aufgenommen wurde Art für Art, und nur, was gemessen keine Bahn schlechter
+ * machte (Botprobe, 20 Saaten, Zweifelsfälle über 100 bis 400 Saaten):
+ * Beschleuniger, Drehkreuz (die Probe sieht das Kreuz in der Stellung dieses
+ * Takts — das ist das Timing), Strudel (Falle und Auswurf ergeben sich aus
+ * der Ruhelage) und Sprungfeld. Der Bumper fehlt mit Absicht: Mit ihm in der
+ * Liste spielte der Genie k16 in 2,55 statt 2,10 Schlägen — ein Abprall hängt
+ * so empfindlich an der Richtung, dass die eine Probe des Genies einen
+ * Schlag wählt, den schon 0,8 Grad Streuung verderben. Für ihn gilt nur die
+ * Wand-Regel in `sichtFrei` und `wegfeld`. Ebenfalls gemessen und verworfen:
+ * Sprungfelder als gerichtete Kanten im Wegfeld (wie Portale). Mit der
+ * Portalkante (8 Schritte) nahm der Bot auf k19 den Sprung statt des Schubs,
+ * 2,60 → 4,55; mit 24 Schritten verlor er auf k38 beim Experten 0,25 gegen
+ * die Probe allein, und den Sprung über die Wasserzunge auf k26, für den die
+ * Kante gedacht war, nahm er in keiner Fassung.
  */
-const PROBE_ARTEN: ReadonlySet<Zone['art']> = new Set<Zone['art']>(['beschleuniger', 'drehkreuz', 'strudel']);
+const PROBE_ARTEN: ReadonlySet<Zone['art']> = new Set<Zone['art']>(['beschleuniger', 'drehkreuz', 'strudel', 'sprungfeld']);
 
 /**
  * Längster Probeschlag in Takten (8 s). Ein Ball, der dann noch rollt, wird
