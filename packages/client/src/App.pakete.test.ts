@@ -27,6 +27,7 @@ const GAME_SELECT = readFileSync(resolve(process.cwd(), 'src/screens/GameSelect.
 
 /** Schirme, die erst auf Antippen ueber die Leitung gehen duerfen. */
 const NACHGELADEN = [
+  'BroCooked',
   'CambioTable',
   'EasyPoker',
   'Eiland',

@@ -42,6 +42,11 @@ const Filler = lazy(() => import('./screens/Filler').then((m) => ({ default: m.F
 /* Golf zieht seinen kompletten Spielkern nach (Physik, Bots, 40 Bahnen) —
    nichts davon braucht jemand, der Doppelkopf spielt. */
 const Golf = lazy(() => import('./screens/Golf').then((m) => ({ default: m.Golf })));
+/* BroCooked zieht Küche, Zeichner und Hilfskoch nach — nichts davon braucht,
+   wer Doppelkopf spielt. */
+const BroCooked = lazy(() =>
+  import('./screens/BroCooked').then((m) => ({ default: m.BroCooked })),
+);
 const Mememory = lazy(() => import('./screens/Mememory').then((m) => ({ default: m.Mememory })));
 const Partykiste = lazy(() =>
   import('./screens/Partykiste').then((m) => ({ default: m.Partykiste })),
@@ -88,6 +93,7 @@ type Screen =
    * Gruppe, nicht ein Regelsatz-Editor.
    */
   | { name: 'golf'; tisch?: string | null }
+  | { name: 'brocooked'; tisch?: string | null }
   /**
    * Partykiste ebenso: eigenes Hauptmenue, eigene Runde, die Minispiele auf
    * einem Bildschirm. Es ist kein Kartenspiel und braucht keine Kartenlobby —
@@ -389,6 +395,33 @@ export function App(): React.JSX.Element {
         />
       );
     }
+    /**
+     * BroCooked: hektische Küche für 1 bis 4 Köche. Wie Golf führen alle drei
+     * Wege — Spielauswahl, Lobby, Weiterspielen — auf denselben Bildschirm;
+     * allein und zu zweit läuft er sogar ganz ohne Tisch.
+     */
+    if (screen.name === 'brocooked') {
+      return (
+        <BroCooked
+          startTisch={screen.tisch ?? null}
+          onBack={() => {
+            setScreen({ name: 'games' });
+            void reload();
+          }}
+        />
+      );
+    }
+    if ((screen.name === 'table' || screen.name === 'lobby') && screen.gameId === 'brocooked') {
+      return (
+        <BroCooked
+          startTisch={screen.name === 'table' ? screen.tableId : null}
+          onBack={() => {
+            setScreen({ name: 'games' });
+            void reload();
+          }}
+        />
+      );
+    }
     if ((screen.name === 'table' || screen.name === 'lobby') && screen.gameId === 'golf') {
       return (
         <Golf
@@ -533,6 +566,7 @@ export function App(): React.JSX.Element {
           if (gameId === 'filler') return setScreen({ name: 'filler' });
           if (gameId === 'eiland') return setScreen({ name: 'eiland' });
           if (gameId === 'golf') return setScreen({ name: 'golf' });
+          if (gameId === 'brocooked') return setScreen({ name: 'brocooked' });
           if (gameId === 'partykiste') return setScreen({ name: 'partykiste' });
           if (gameId === 'tafelrunde') return setScreen({ name: 'tafelrunde' });
           return setScreen({ name: 'lobby', gameId });

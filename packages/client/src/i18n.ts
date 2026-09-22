@@ -38,6 +38,9 @@ const de: Record<string, string> = {
   // ist — eine Kiste, aus der der Abend zieht — und bindet sich absichtlich
   // an kein einzelnes Minispiel: Es kommen weitere dazu.
   'game.partykiste': 'Partykiste',
+  // Hektische Kueche fuer 1 bis 4 Koeche, miteinander statt gegeneinander.
+  // Der Name kommt vom Auftraggeber; die Oberflaeche bleibt sonst deutsch.
+  'game.brocooked': 'BroCooked',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -492,6 +495,13 @@ const de: Record<string, string> = {
   'golf.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'golf.sitzzahl': 'Golf spielt zwischen einem und acht Bällen.',
   'golf.loecher': 'Zwischen 2 und 15 Löchern je Match.',
+  // Meldungen des BroCooked-Regelsatzes.
+  'brocooked.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
+  'brocooked.kuechenLeer': 'Mindestens eine Küche muss dabei sein.',
+  'brocooked.kuecheUngueltig': 'Diese Küche gibt es nicht.',
+  'brocooked.rundeTakteUngueltig': 'Eine Schicht dauert zwischen 10 Sekunden und 10 Minuten.',
+  'brocooked.sitzzahl': 'In der Küche stehen einer bis vier Köche.',
+  'brocooked.runden': 'Zwischen einer und sechs Schichten je Partie.',
   // Meldungen des Partykisten-Regelsatzes.
   'partykiste.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'partykiste.minispieleLeer': 'Mindestens ein Minispiel muss dabei sein.',
