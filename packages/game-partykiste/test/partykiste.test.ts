@@ -651,11 +651,16 @@ test('der Filter wirft nie, auch nicht bei Unsinn im Regelsatz', () => {
 });
 
 test('mit Paket haelt die Runde fest, dass die Auswahl nachgeben musste', () => {
-  /* Am 22.09.2026 traegt noch kein Eintrag ein Paket — ein Paket-Tisch spielt
-     also Allgemeingut, und die Runde sagt das, statt es zu verschweigen. */
+  /* Ein harmloser JGA-Tisch findet unter den Quizfragen weniger als
+     MINDESTMENGE eigene (die JGA-Fragen sind meist pikant) — er spielt also
+     auch Allgemeingut, und die Runde sagt das, statt es zu verschweigen. Bis
+     zum Vorrat vom 22.09.2026 trug gar kein Eintrag ein Paket; gezaehlt wird
+     darum am Katalog. */
   const regeln: PartykisteRegeln = { ...DEFAULT_REGELN, minispiele: ['quiz'], paket: 'jga' };
   const runde = baueRunde(regeln, 'saat', 6, 0, []);
-  assert.deepEqual(runde.inhaltsRueckfall, { gewollt: 'paket', genutzt: 'paketUndAllgemein', passend: 0 });
+  const passend = QUIZ_FRAGEN.filter((f) => (f.haerte ?? 1) === 1 && f.paket?.includes('jga')).length;
+  assert.ok(passend < MINDESTMENGE, 'die Probe braucht ein Paket mit zu wenig harmlosen Quizfragen');
+  assert.deepEqual(runde.inhaltsRueckfall, { gewollt: 'paket', genutzt: 'paketUndAllgemein', passend });
   assert.equal(baueRunde(DEFAULT_REGELN, 'saat', 6, 0, []).inhaltsRueckfall, null);
 });
 

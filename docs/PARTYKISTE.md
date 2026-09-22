@@ -300,7 +300,7 @@ Stand 22.09.2026 — Einträge je Katalog, in Klammern der Altbestand:
 - Wer würde eher: 300 (108)
 - Ich hab noch nie: 300 (110)
 - Entweder – oder: 250 (100)
-- Allgemeinwissen: 140 (140)
+- Allgemeinwissen: 300 (140)
 - Schätzen: 80 (80)
 - Imposter: 120 (120)
 - Wer bin ich: 140 (140)
