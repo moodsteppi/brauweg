@@ -79,7 +79,46 @@ export const BAHNEN_KATALOG: readonly Bahneintrag[] = [
   { id: 'k38-sprungfeldkaskade', schwierigkeit: 5 },
   { id: 'k39-drehkreuzgasse', schwierigkeit: 5 },
   { id: 'k40-meisterzirkel', schwierigkeit: 5 },
+  { id: 'k41-rueckenwind', schwierigkeit: 1 },
+  { id: 'k42-die-strudelpfuetze', schwierigkeit: 1 },
+  { id: 'k43-der-erste-huepfer', schwierigkeit: 1 },
+  { id: 'k44-turbo-auf-dem-eis', schwierigkeit: 2 },
+  { id: 'k45-die-drehtuer', schwierigkeit: 2 },
+  { id: 'k46-portal-in-den-strudel', schwierigkeit: 2 },
+  { id: 'k47-sprung-ueber-den-bach', schwierigkeit: 2 },
+  { id: 'k48-kreiselallee', schwierigkeit: 2 },
+  { id: 'k49-zwei-drehtueren', schwierigkeit: 3 },
+  { id: 'k50-turbokurve', schwierigkeit: 3 },
+  { id: 'k51-strudelschleuder', schwierigkeit: 3 },
+  { id: 'k52-duenenhuepfer', schwierigkeit: 3 },
+  { id: 'k53-portal-im-wirbel', schwierigkeit: 3 },
+  { id: 'k54-die-schleuse', schwierigkeit: 4 },
+  { id: 'k55-der-seesprung', schwierigkeit: 4 },
+  { id: 'k56-eisstrudelkammer', schwierigkeit: 4 },
+  { id: 'k57-wirbelportal', schwierigkeit: 4 },
+  { id: 'k58-wirbelsturm', schwierigkeit: 5 },
+  { id: 'k59-eisturbine', schwierigkeit: 5 },
+  { id: 'k60-neunerlei', schwierigkeit: 5 },
 ];
+
+/**
+ * Der Katalog, wie ihn die Geraete bis zum 22.09.2026 kannten: k01 bis k40.
+ *
+ * Nur fuer eines da: Ein Schnappschuss von vor der Umstellung (ohne
+ * `bahnen`, siehe `deserialize` in adapter.ts) bekommt seine Folge
+ * nachgezogen, und die muss die sein, die seine Geraete damals selbst aus
+ * DIESEM Katalog gezogen haben. Mit dem vollen Katalog zoege dieselbe Saat
+ * seit k41 andere Bahnen — die Partie liefe nach dem Laden auf anderen
+ * Bahnen weiter als vorher. Neue Partien ziehen aus dem ganzen Katalog.
+ *
+ * Nach Nummer statt als zweite Liste: Die Zeilen bleiben so an einer Stelle.
+ * Wird eine der alten Bahnen je ersetzt (neue Kennung, alte Datei weg, siehe
+ * docs/GOLF-PLAN.md), fehlt sie hier — `bahnen.test.ts` zaehlt deshalb nach.
+ */
+export const KATALOG_BIS_K40: readonly Bahneintrag[] = BAHNEN_KATALOG.filter((b) => {
+  const treffer = /^k(\d+)-/.exec(b.id);
+  return treffer !== null && Number(treffer[1]) <= 40;
+});
 
 // ---------------------------------------------------------------------------
 // mulberry32 — dieselbe Rechnung wie in `zufall.ts` des Clients

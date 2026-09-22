@@ -5,6 +5,7 @@ import {
   BAHNEN_KATALOG,
   type Bahneintrag,
   golf,
+  KATALOG_BIS_K40,
   sollStufe,
   waehleBahnen,
 } from '../src/index.js';
@@ -30,6 +31,15 @@ test('Katalog: keine Kennung doppelt, jede mit Nummer vorn', () => {
 test('Katalog: nach Kennung geordnet — eine neue Bahn wird einsortiert, nicht irgendwo angehaengt', () => {
   const ids = BAHNEN_KATALOG.map((b) => b.id);
   assert.deepEqual(ids, [...ids].sort());
+});
+
+test('Der Katalog von vor k41 ist genau k01 bis k40, in derselben Reihenfolge', () => {
+  // Faellt eine der alten Bahnen je weg (umgebaut = neue Kennung), gehoert
+  // ihre Zeile fuer KATALOG_BIS_K40 zurueck — sonst ziehen alte
+  // Schnappschuesse beim Laden eine andere Folge (siehe bahnen.ts).
+  assert.equal(KATALOG_BIS_K40.length, 40);
+  assert.deepEqual(KATALOG_BIS_K40, BAHNEN_KATALOG.slice(0, 40));
+  assert.equal(KATALOG_BIS_K40[39]!.id, 'k40-meisterzirkel');
 });
 
 test('Katalog: jede Stufe 1..5 ist besetzt, sonst liefe die Rampe ins Leere', () => {
@@ -59,8 +69,10 @@ test('Bahnwahl ist deterministisch aus der Saat und haengt an ihr', () => {
  * die mulberry32-Abschrift in bahnen.ts ist nicht mehr dieselbe Rechnung.
  */
 test('Bahnwahl trifft genau die Folge, die die Geraete vor der Umstellung selbst gezogen haben', () => {
-  assert.deepEqual(waehleBahnen(4711, 2), ['k01-der-erste-schlag', 'k13-wasserinsel']);
-  assert.deepEqual(waehleBahnen(4711, 9), [
+  // Gegen den Katalog von damals (k01..k40) — mit k41..k60 zieht dieselbe
+  // Saat fuer NEUE Partien andere Bahnen, und das ist gewollt.
+  assert.deepEqual(waehleBahnen(4711, 2, KATALOG_BIS_K40), ['k01-der-erste-schlag', 'k13-wasserinsel']);
+  assert.deepEqual(waehleBahnen(4711, 9, KATALOG_BIS_K40), [
     'k01-der-erste-schlag',
     'k05-der-pilzwald',
     'k09-der-uferweg',
@@ -71,7 +83,7 @@ test('Bahnwahl trifft genau die Folge, die die Geraete vor der Umstellung selbst
     'k31-zwillingsstrom',
     'k39-drehkreuzgasse',
   ]);
-  assert.deepEqual(waehleBahnen(20260922, 5), [
+  assert.deepEqual(waehleBahnen(20260922, 5, KATALOG_BIS_K40), [
     'k08-der-strudelgarten',
     'k13-wasserinsel',
     'k24-drehkreuz-vorm-loch',
@@ -110,6 +122,46 @@ test('Rampe: ein kurzes Match beginnt leicht, ein langes steigt bis zur Spitze',
   assert.equal(sollStufe(8, 9), 5);
 });
 
+/**
+ * Die Rampe mit dem ECHTEN Katalog, nicht mit Attrappen: Seit k41..k60
+ * (22.09.2026) liegen 60 Bahnen darin, 11/15/15/12/7 je Stufe. Jede Stufe hat
+ * damit mindestens drei Bahnen, und mehr als drei je Stufe verlangt keine
+ * Lochzahl bis 15 — also trifft jedes Loch genau seine Sollstufe, und im
+ * Mittel ueber viele Saaten steigt die Schwierigkeit von Loch zu Loch. Wird
+ * der Katalog einmal schief (eine Stufe fast leer), faellt das hier auf und
+ * nicht erst am Tisch, wo ein Neun-Loch-Match dann dreimal Stufe 4 statt 5
+ * spielt.
+ */
+test('Rampe mit dem echten Katalog: jedes Loch trifft seine Sollstufe, die mittlere Schwierigkeit steigt', () => {
+  const stufe = new Map(BAHNEN_KATALOG.map((b) => [b.id, b.schwierigkeit]));
+  for (let s = 1; s <= 5; s += 1) {
+    assert.ok(BAHNEN_KATALOG.filter((b) => b.schwierigkeit === s).length >= 3, `Stufe ${s} hat weniger als drei Bahnen`);
+  }
+  const saaten = 200;
+  for (let loecher = 2; loecher <= 15; loecher += 1) {
+    const summe = new Array<number>(loecher).fill(0);
+    for (let saat = 1; saat <= saaten; saat += 1) {
+      const wahl = waehleBahnen(saat * 7919, loecher);
+      for (let i = 0; i < loecher; i += 1) {
+        const st = stufe.get(wahl[i]!)!;
+        assert.equal(st, sollStufe(i, loecher), `${loecher} Loecher, Loch ${i + 1}, Saat ${saat}`);
+        summe[i] = summe[i]! + st;
+      }
+    }
+    const mittel = summe.map((x) => x / saaten);
+    for (let i = 1; i < loecher; i += 1) {
+      assert.ok(mittel[i]! >= mittel[i - 1]!, `${loecher} Loecher: Loch ${i + 1} leichter als Loch ${i}`);
+    }
+    assert.ok(mittel[loecher - 1]! > mittel[0]!, `${loecher} Loecher: keine Steigung`);
+  }
+});
+
+test('Alle Bahnen kommen vor — die neuen ziehen nicht nur auf dem Papier', () => {
+  const gezogen = new Set<string>();
+  for (let saat = 1; saat <= 300; saat += 1) for (const id of waehleBahnen(saat, 15)) gezogen.add(id);
+  assert.deepEqual(BAHNEN_KATALOG.filter((b) => !gezogen.has(b.id)).map((b) => b.id), []);
+});
+
 test('Bahnwahl mit mehr Loechern als Bahnen wiederholt statt abzubrechen (nur Testaufbau)', () => {
   const katalog: Bahneintrag[] = [{ id: 'k01-allein', schwierigkeit: 1 }];
   assert.deepEqual(waehleBahnen(3, 2, katalog), ['k01-allein', 'k01-allein']);
@@ -143,6 +195,9 @@ test('Ein Schnappschuss von vor dem 22.09.2026 (ohne bahnen) laedt und bekommt d
   const roh = JSON.parse(JSON.stringify(golf.serialize(p))) as Record<string, unknown>;
   delete roh.bahnen;
   const wieder = golf.deserialize(roh);
-  assert.deepEqual(wieder.bahnen, waehleBahnen(4711, 9));
-  assert.deepEqual(wieder, p);
+  // Die Folge, die seine Geraete damals aus k01..k40 gezogen haben — nicht
+  // die, die eine neue Partie heute aus dem ganzen Katalog zieht.
+  assert.deepEqual(wieder.bahnen, waehleBahnen(4711, 9, KATALOG_BIS_K40));
+  assert.ok(wieder.bahnen.every((id) => KATALOG_BIS_K40.some((b) => b.id === id)));
+  assert.deepEqual({ ...wieder, bahnen: p.bahnen }, p);
 });

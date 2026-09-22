@@ -53,7 +53,8 @@ describe('neueBahn', () => {
   it('bildet Kennungen im Stil des Katalogs', () => {
     expect(kennungAus('Über die Brücke!', 41)).toBe('k41-ueber-die-bruecke');
     expect(kennungAus('', 7)).toBe('k07-neue-bahn');
-    expect(naechsteNummer(KARTEN)).toBe(41);
+    // Gegen die ersten vierzig, damit der Test nicht mit jeder neuen Katalogbahn umzieht.
+    expect(naechsteNummer(KARTEN.slice(0, 40))).toBe(41);
   });
 });
 

@@ -32,8 +32,8 @@ function gelesen(text: string): Werkstattbahn {
 }
 
 describe('Export → Import aller Katalogbahnen', () => {
-  it('der Katalog hat die erwarteten 40 Bahnen', () => {
-    expect(KARTEN).toHaveLength(40);
+  it('der Katalog hat mindestens die 40 Bahnen von vor der Werkstatt', () => {
+    expect(KARTEN.length).toBeGreaterThanOrEqual(40);
   });
 
   for (const karte of KARTEN) {

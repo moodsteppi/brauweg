@@ -33,7 +33,7 @@ import type {
 } from '@brauweg/game-api';
 import { snapshotCodec } from '@brauweg/game-api';
 
-import { waehleBahnen } from './bahnen.js';
+import { KATALOG_BIS_K40, waehleBahnen } from './bahnen.js';
 import { lobbyDaten, pruefeBahnwahl } from './bahnwahl.js';
 import {
   type GolfAusgang,
@@ -254,7 +254,8 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
   deserialize(raw: unknown): GolfPartie {
     const partie = codec.deserialize(raw) as GolfPartie & { bahnen?: readonly string[] };
     if (Array.isArray(partie.bahnen)) return partie;
-    return { ...partie, bahnen: waehleBahnen(partie.saat, partie.loecher) };
+    // Gegen den Katalog von damals, nicht den heutigen — siehe KATALOG_BIS_K40.
+    return { ...partie, bahnen: waehleBahnen(partie.saat, partie.loecher, KATALOG_BIS_K40) };
   },
 
   /**
