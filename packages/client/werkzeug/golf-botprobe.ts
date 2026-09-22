@@ -31,11 +31,28 @@
  * `--karten` grenzt auf einzelne Bahnen ein (Anfang der Kennung genuegt),
  * damit das Nachfahren einer Art nicht jedes Mal den ganzen Katalog kostet.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 
-import { KARTEN } from '../src/minispiele/golf/karten/index';
+import type { Karte } from '../src/minispiele/golf/karte';
 import { botLoestKarte } from '../src/minispiele/golf/karten-pruefen';
 import type { Botstufe } from '../src/minispiele/golf/physik';
+
+/*
+ * Der Katalog wird hier selbst eingesammelt, nicht aus `karten/index.ts`
+ * importiert. Seit #206 (22.09.2026) liegt jede Bahn in einer eigenen Datei,
+ * und `index.ts` sammelt sie per `import.meta.glob` ein — das kann nur Vite,
+ * unter `tsx` bricht der Import ab. Dasselbe Muster wie dort (`kNN-*.ts`
+ * ohne `*.test.ts`, sortiert nach Dateiname), also dieselbe Liste.
+ */
+const KARTEN_ORDNER = new URL('../src/minispiele/golf/karten/', import.meta.url);
+const KARTEN: Karte[] = [];
+const kartenDateien = readdirSync(KARTEN_ORDNER)
+  .filter((d) => /^k\d\d-.*\.ts$/.test(d) && !d.endsWith('.test.ts'))
+  .sort();
+for (const datei of kartenDateien) {
+  const modul = (await import(new URL(datei, KARTEN_ORDNER).href)) as { bahn?: Karte };
+  if (modul.bahn !== undefined) KARTEN.push(modul.bahn);
+}
 
 const args = process.argv.slice(2);
 function schalter(name: string, vorgabe: string): string {
