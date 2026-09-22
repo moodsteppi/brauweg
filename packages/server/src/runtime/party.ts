@@ -41,6 +41,7 @@ import { xpFuerPartie } from '../level.js';
 import { recordPartyResult } from '../clubs/war.js';
 import { fortschreiben } from '../quests.js';
 import { einsatzVon, zahleAus, zieheEinsatz } from '../brojetons.js';
+import { verbucheBestleistungen } from '../bestleistung.js';
 
 export interface RuntimeOptions {
   /** 60 Sekunden je Zug, serverseitig gemessen. */
@@ -1148,6 +1149,7 @@ export class PartyRuntime {
       await this.countStats(party, standings);
       await this.recordWar(party, standings);
       await this.countQuests(party, standings);
+      await this.recordBestleistungen(party, standings);
     } finally {
       party.abrechnungLaeuft = false;
     }
@@ -1211,6 +1213,43 @@ export class PartyRuntime {
     });
 
     await recordPartyResult(this.db, placements, menschen);
+  }
+
+  /**
+   * Bestleistung je Inhalt (Bahn, Kurs, Paket) eintragen — seit dem 22.09.2026.
+   *
+   * Spielunkundig: Was eingetragen wird, meldet das Modul selbst in
+   * `standings` oder `completedSegments` (Form und Regeln in
+   * src/bestleistung.ts). Liefert es nichts, passiert hier nichts. Ob der
+   * Tisch zaehlt, entscheidet dieselbe Regel wie bei den Trophaeen
+   * (`countsForRanking`), nicht eine zweite Fassung davon.
+   *
+   * Hier und nicht in tables/service.ts, weil das Partie-Ende hier
+   * verarbeitet wird und die Laufzeit die Sitz-Konto-Zuordnung sowie die
+   * Abschnitte des Moduls ohnehin in der Hand hat.
+   *
+   * Fehler werden protokolliert und verschluckt, aus dem Grund von
+   * `countQuests`: Eine verpasste Bestleistung ist ein Aergernis, ein am
+   * Partie-Ende haengender Tisch ein Ausfall. Deshalb auch der Platz ganz
+   * zuletzt.
+   */
+  private async recordBestleistungen(
+    party: LiveParty,
+    standings: readonly PartyStanding[],
+  ): Promise<void> {
+    try {
+      await verbucheBestleistungen(this.db, {
+        tableId: party.tableId,
+        gameId: party.gameId,
+        partyId: party.partyId,
+        seats: party.seats,
+        standings,
+        segments: party.module.completedSegments?.(party.state) ?? [],
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`Bestleistungen an Tisch ${party.tableId}:`, err);
+    }
   }
 
   /**
