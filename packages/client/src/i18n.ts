@@ -496,6 +496,22 @@ const de: Record<string, string> = {
   'golf.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'golf.sitzzahl': 'Golf spielt zwischen einem und acht Bällen.',
   'golf.loecher': 'Zwischen 2 und 15 Löchern je Match.',
+  // Par in der Anzeige (seit 22.09.2026, minispiele/golf/par.ts). Die
+  // Golfwörter bleiben englisch, wie auf jedem deutschen Platz: „Vogel"
+  // statt Birdie sagt niemand. „E" ist die Tafelschreibweise für even.
+  'golf.par.holeInOne': 'Hole-in-one',
+  'golf.par.condor': 'Condor',
+  'golf.par.albatros': 'Albatros',
+  'golf.par.eagle': 'Eagle',
+  'golf.par.birdie': 'Birdie',
+  'golf.par.par': 'Par',
+  'golf.par.bogey': 'Bogey',
+  'golf.par.doppelBogey': 'Doppel-Bogey',
+  'golf.par.tripleBogey': 'Triple-Bogey',
+  'golf.par.ohne': 'nicht eingelocht',
+  'golf.par.gleich': 'E',
+  'golf.par.summe': 'Summe',
+  'golf.par.spalte': 'zu Par',
   // Meldungen des BroCooked-Regelsatzes.
   'brocooked.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'brocooked.kuechenLeer': 'Mindestens eine Küche muss dabei sein.',
