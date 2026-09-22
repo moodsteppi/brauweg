@@ -198,6 +198,15 @@ export interface Partiezustand {
   baelle: Ball[];
   /** `[loch][sitz]` Schläge, gefüllt am Lochende. */
   ergebnis: number[][];
+  /**
+   * `[loch][sitz]` ob der Ball gefallen ist, gefüllt im selben Augenblick wie
+   * `ergebnis`. Seit dem 22.09.2026 für die Bestleistung je Bahn: Ein nicht
+   * eingelochtes Loch steht in `ergebnis` als Schlaglimit + 1 und darf nie
+   * als Bestleistung gelten. Reine Buchführung — die Simulation liest es nie,
+   * deshalb kein Sprung der Modulversion. Nicht in der Prüfsumme, die bleibt
+   * über die Schlagzahlen wie bisher.
+   */
+  eingelochtJeLoch: boolean[][];
   fertig: boolean;
   /** mulberry32-Zustand des gemeinsamen Stroms. */
   zufall: number;
@@ -271,6 +280,7 @@ export function neuePartie(opts: Partieoptionen): Partiezustand {
     aktuell: { loch: 0, karte: 0, startTakt: 0, endeTakt: -1, pauseBis: -1 },
     baelle: [],
     ergebnis: [],
+    eingelochtJeLoch: [],
     fertig: false,
     zufall: mulberry32(opts.saat),
     botZufall: [],
@@ -372,6 +382,10 @@ export function kopiere(z: Partiezustand): Partiezustand {
   }
   const ergebnis: number[][] = new Array<number[]>(z.ergebnis.length);
   for (let i = 0; i < z.ergebnis.length; i += 1) ergebnis[i] = [...z.ergebnis[i]];
+  const eingelochtJeLoch: boolean[][] = new Array<boolean[]>(z.eingelochtJeLoch.length);
+  for (let i = 0; i < z.eingelochtJeLoch.length; i += 1) {
+    eingelochtJeLoch[i] = [...z.eingelochtJeLoch[i]];
+  }
   return {
     takt: z.takt,
     saat: z.saat,
@@ -385,6 +399,7 @@ export function kopiere(z: Partiezustand): Partiezustand {
     aktuell: { ...z.aktuell },
     baelle,
     ergebnis,
+    eingelochtJeLoch,
     fertig: z.fertig,
     zufall: z.zufall,
     botZufall: [...z.botZufall],
@@ -1130,6 +1145,9 @@ function lochwechsel(z: Partiezustand, karten: readonly Karte[]): void {
     const reihe: number[] = new Array<number>(z.sitze);
     for (let s = 0; s < z.sitze; s += 1) reihe[s] = z.baelle[s].schlaege;
     z.ergebnis[z.aktuell.loch] = reihe;
+    const gefallen: boolean[] = new Array<boolean>(z.sitze);
+    for (let s = 0; s < z.sitze; s += 1) gefallen[s] = z.baelle[s].eingelocht;
+    z.eingelochtJeLoch[z.aktuell.loch] = gefallen;
     melde(z, { art: 'lochende', loch: z.aktuell.loch });
     return;
   }

@@ -39,6 +39,13 @@ export interface GolfMeldung {
    * laesst es weg.
    */
   readonly jeLoch?: readonly (readonly number[])[];
+  /**
+   * `[loch][sitz]` ob der Ball gefallen ist (seit dem 22.09.2026). Nur fuer
+   * die Bestleistung: Ein nicht eingelochtes Loch meldet keine. Nicht in
+   * `pruef`, deshalb nimmt bestleistung.ts ein Loch nur als eingelocht, wenn
+   * JEDE Meldung der Mehrheitsgruppe, die das Feld traegt, es so sagt.
+   */
+  readonly eingelocht?: readonly (readonly boolean[])[];
 }
 
 export interface GolfAusgang {
@@ -201,6 +208,25 @@ export function tafelAusMeldung(
   return tafel;
 }
 
+/**
+ * Wie `tafelAusMeldung`, fuer die Eingelocht-Kennzeichen `[loch][sitz]`:
+ * dieselbe Form oder `undefined`, nie ein Wurf.
+ */
+export function kennzeichenAusMeldung(
+  roh: unknown,
+  loecher: number,
+  sitze: number,
+): readonly (readonly boolean[])[] | undefined {
+  if (!Array.isArray(roh) || roh.length !== loecher) return undefined;
+  const tafel: boolean[][] = [];
+  for (const reihe of roh) {
+    if (!Array.isArray(reihe) || reihe.length !== sitze) return undefined;
+    if (!reihe.every((wert) => typeof wert === 'boolean')) return undefined;
+    tafel.push([...(reihe as boolean[])]);
+  }
+  return tafel;
+}
+
 /** Letzter Takt, den dieser Sitz schon belegt hat — Aktionen muessen aufsteigen. */
 function letzterTakt(partie: GolfPartie, sitz: number): number {
   let max = -1;
@@ -356,6 +382,7 @@ export function verarbeite(partie: GolfPartie, sitz: number, aktion: GolfAktion)
   if (partie.meldungen[sitz] !== undefined) return partie;
 
   const jeLoch = tafelAusMeldung(aktion.jeLoch, partie.loecher, partie.sitze);
+  const eingelocht = kennzeichenAusMeldung(aktion.eingelocht, partie.loecher, partie.sitze);
   const meldungen = {
     ...partie.meldungen,
     [sitz]: {
@@ -364,6 +391,7 @@ export function verarbeite(partie: GolfPartie, sitz: number, aktion: GolfAktion)
       // Nur wenn da und wohlgeformt — ohne das Feld sieht die Meldung aus
       // wie vor dem 22.09.2026, und alte Schnappschuesse bleiben gleich.
       ...(jeLoch === undefined ? {} : { jeLoch }),
+      ...(eingelocht === undefined ? {} : { eingelocht }),
     },
   };
   return pruefeAbschluss({ ...partie, meldungen });

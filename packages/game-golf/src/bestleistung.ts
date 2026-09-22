@@ -25,6 +25,10 @@
  *   3. Ihre Zeilensummen sind je Sitz genau die Schlaege des Ausgangs. Eine
  *      Bahnbestleistung, die nicht in die Summe eingeht, die den Platz
  *      bestimmt, gibt es nicht.
+ *   4. Das Loch ist eingelocht. Dafuer schickt jedes Geraet neben der Tafel
+ *      die Kennzeichen `eingelocht` `[loch][sitz]` mit — ein nicht
+ *      eingelochtes Loch steht in der Tafel als Schlaglimit + 1 und wird nie
+ *      gespeichert.
  *
  * Nur ein Modul ohne Uhr und Zufall: alles hier ist eine reine Funktion des
  * Partiezustands.
@@ -107,7 +111,47 @@ function summenPassen(tafel: readonly (readonly number[])[], schlaege: readonly 
 }
 
 /**
- * Die Tafel `[loch][sitz]`, die fuer die Bestleistung zaehlt — oder `null`.
+ * Welche Loecher als eingelocht gelten, `[loch][sitz]` — oder `null`, wenn
+ * keine Meldung der Gruppe es sagt.
+ *
+ * Die Kennzeichen stehen nicht in der Pruefsumme (die bleibt ueber die
+ * Schlagzahlen, wie alle Geraete sie seit jeher rechnen). Deshalb zaehlt ein
+ * Loch nur als eingelocht, wenn JEDE Meldung der Gruppe, die Kennzeichen
+ * traegt, es so sagt: Ein einzelnes Geraet kann damit eine Bestleistung nur
+ * wegnehmen, nie eine erfinden. Ehrliche Geraete rechnen aus derselben
+ * Zugliste dieselben Baelle und sagen ohnehin alle dasselbe.
+ */
+function eingelochtLaut(
+  gruppe: readonly GolfMeldung[],
+  loecher: number,
+  sitze: number,
+): boolean[][] | null {
+  let ergebnis: boolean[][] | null = null;
+  for (const m of gruppe) {
+    const k = m.eingelocht;
+    if (k === undefined || k.length !== loecher) continue;
+    if (ergebnis === null) {
+      ergebnis = Array.from({ length: loecher }, () => new Array<boolean>(sitze).fill(true));
+    }
+    for (let loch = 0; loch < loecher; loch += 1) {
+      for (let s = 0; s < sitze; s += 1) {
+        if (k[loch]?.[s] !== true) ergebnis[loch]![s] = false;
+      }
+    }
+  }
+  return ergebnis;
+}
+
+export interface Lochwerte {
+  /** `[loch][sitz]` Schlaege, genau die Tafel hinter Pruefsumme und Ausgang. */
+  readonly schlaege: readonly (readonly number[])[];
+  /** `[loch][sitz]` ob der Ball gefallen ist (siehe `eingelochtLaut`). */
+  readonly eingelocht: readonly (readonly boolean[])[];
+}
+
+/**
+ * Die Tafel `[loch][sitz]`, die fuer die Bestleistung zaehlt, mit ihren
+ * Eingelocht-Kennzeichen — oder `null`.
  *
  * Gesucht wird in der Mehrheitsgruppe, die auch den Ausgang gestellt hat
  * (`mehrheitsgruppe` in partie.ts, dieselbe Funktion, nicht nachgebaut),
@@ -115,20 +159,27 @@ function summenPassen(tafel: readonly (readonly number[])[], schlaege: readonly 
  * Gruppe und zu den Schlaegen des Ausgangs passt. Nicht nur der niedrigste
  * Sitz selbst — der koennte noch ein Geraet von vor dem 22.09.2026 sein,
  * das gar keine Tafel schickt, und dann bekaeme der ganze Tisch nichts.
+ *
+ * Ohne Kennzeichen ebenfalls `null`: Ein nicht eingelochtes Loch steht in der
+ * Tafel als Schlaglimit + 1 und laesst sich ohne Kennzeichen von einem echten
+ * Ergebnis nicht unterscheiden — der Server kennt das Schlaglimit nicht.
+ * Lieber gar keine Bestleistung als eine aus einem Strafwert.
  */
-export function waehleLochwerte(partie: GolfPartie): readonly (readonly number[])[] | null {
+export function waehleLochwerte(partie: GolfPartie): Lochwerte | null {
   const ausgang = partie.ausgang;
   if (ausgang === null || ausgang.strittig) return null;
   const gruppe = mehrheitsgruppe(partie.meldungen);
   if (gruppe === null) return null;
+  const eingelocht = eingelochtLaut(gruppe, partie.bahnen.length, partie.sitze);
+  if (eingelocht === null) return null;
   const nachSitz = [...gruppe].sort((a, b) => a.sitz - b.sitz);
   for (const m of nachSitz) {
-    const tafel = (m as GolfMeldung).jeLoch;
+    const tafel = m.jeLoch;
     if (tafel === undefined) continue;
     if (tafel.length !== partie.bahnen.length) continue;
     if (pruefsummeDerTafel(tafel) !== m.pruef) continue;
     if (!summenPassen(tafel, ausgang.schlaege)) continue;
-    return tafel;
+    return { schlaege: tafel, eingelocht };
   }
   return null;
 }
@@ -137,6 +188,9 @@ export function waehleLochwerte(partie: GolfPartie): readonly (readonly number[]
  * Die Meldungen je Sitz, Index = Sitz. Leere Listen fuer alle, die nichts
  * bekommen:
  *
+ *   - Nicht eingelochte Loecher: Sie stehen als Schlaglimit + 1 in der Tafel
+ *     und sind nie eine Bestleistung — auch nicht voruebergehend als erster
+ *     Rekord auf einer Bahn, die noch niemand gespielt hat.
  *   - Bot-Sitze: Sie haben kein Konto (der Server uebergaebe sie ohnehin),
  *     und eine Bahn, auf der ein Bot den Rekord haelt, waere keine Liste
  *     von Spielern.
@@ -151,8 +205,9 @@ export function waehleLochwerte(partie: GolfPartie): readonly (readonly number[]
 export function bestleistungenJeSitz(partie: GolfPartie): GolfBestleistung[][] {
   const jeSitz = Array.from({ length: partie.sitze }, (): GolfBestleistung[] => []);
   if (!zaehltFuerBestleistung(partie.regeln)) return jeSitz;
-  const tafel = waehleLochwerte(partie);
-  if (tafel === null) return jeSitz;
+  const werte = waehleLochwerte(partie);
+  if (werte === null) return jeSitz;
+  const tafel = werte.schlaege;
 
   const ohne = new Set<number>([...partie.botSitze, ...partie.ausstiege.map((a) => a.sitz)]);
   for (let s = 0; s < partie.sitze; s += 1) {
@@ -160,7 +215,7 @@ export function bestleistungenJeSitz(partie: GolfPartie): GolfBestleistung[][] {
     for (let loch = 0; loch < tafel.length; loch += 1) {
       const wert = tafel[loch]![s]!;
       const inhaltId = partie.bahnen[loch];
-      if (inhaltId === undefined || wert < 1) continue;
+      if (inhaltId === undefined || wert < 1 || !werte.eingelocht[loch]![s]) continue;
       jeSitz[s]!.push({ inhaltId, wert, richtung: 'tief' });
     }
   }

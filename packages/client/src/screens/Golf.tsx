@@ -412,6 +412,9 @@ export function Golf({
         // sie nur, wenn sie zu `pruef` und zum Ausgang passt
         // (packages/game-golf/src/bestleistung.ts).
         jeLoch: daten.ergebnis,
+        // Ob der Ball gefallen ist: Ein nicht eingelochtes Loch steht in der
+        // Tafel als Schlaglimit + 1 und darf nie Bestleistung werden.
+        eingelocht: zustand.eingelochtJeLoch.map((reihe) => [...(reihe ?? [])]),
       });
       return daten;
     },

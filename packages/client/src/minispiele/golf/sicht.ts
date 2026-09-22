@@ -47,6 +47,8 @@ export interface GolfMeldung {
    * sie nicht — er hat seine eigene Tafel aus der Physik.
    */
   jeLoch?: number[][];
+  /** `[loch][sitz]` ob der Ball gefallen ist — nicht eingelocht ist nie eine Bestleistung. */
+  eingelocht?: boolean[][];
 }
 
 /** Ausgang eines Matches, sobald genug Meldungen vorliegen. */

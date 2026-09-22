@@ -33,13 +33,14 @@ const TAFEL = [
 ];
 
 /** Eine beendete Golfpartie, in der beide Menschen dieselbe Tafel gemeldet haben. */
-function beendetePartie(): GolfPartie {
+function beendetePartie(eingelocht: boolean[][] = [[true, true, true], [true, true, true]]): GolfPartie {
   let p = golf.createParty({ config: golf.defaultConfig(), seats: 3, rounds: 2, seed: 99, botSeats: [2] });
   const meldung: GolfAktion = {
     art: 'ergebnis',
     schlaege: [5, 5, 6],
     pruef: pruefsummeDerTafel(TAFEL),
     jeLoch: TAFEL,
+    eingelocht,
   };
   p = golf.act(p, 0, meldung);
   p = golf.act(p, 1, meldung);
@@ -116,4 +117,35 @@ test('Golf mit einem Gast am Tisch traegt fuer niemanden ein', async (t) => {
   );
   assert.equal(n, 0);
   assert.equal((await c.db.select().from(s.bestleistung)).length, 0);
+});
+
+test('Golf: ein nicht eingelochtes Loch wird nie gespeichert, auch nicht als erster Rekord einer Bahn', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  const { accountId: anna } = await createVerifiedAccount(c, 'Anna');
+  const { accountId: bert } = await createVerifiedAccount(c, 'Bert');
+
+  const tisch = await createTable(c.db, { accountId: anna, gameId: 'golf', seats: 3, rounds: 2 });
+  await joinTable(c.db, tisch.id, bert);
+  // Bert hat Loch 2 nicht eingelocht; die Tabelle ist leer, jede Zahl waere Rekord.
+  const partie = beendetePartie([
+    [true, true, true],
+    [true, false, true],
+  ]);
+
+  const n = await verbucheBestleistungen(
+    c.db,
+    ende(tisch.id, partie, [
+      { index: 0, accountId: anna },
+      { index: 1, accountId: bert },
+      { index: 2, accountId: null },
+    ]),
+  );
+  assert.equal(n, 3, 'Anna zwei Bahnen, Bert nur die eingelochte');
+  const zeilen = await c.db.select().from(s.bestleistung);
+  assert.equal(
+    zeilen.filter((z) => z.accountId === bert && z.inhaltId === partie.bahnen[1]).length,
+    0,
+    'keine Zeile fuer das nicht eingelochte Loch',
+  );
 });

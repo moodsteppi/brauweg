@@ -107,11 +107,16 @@ Am Bildschirm steht nach jedem Loch „Bahnrekord: N (Name) · dein Bestes: M"
 Bahn und Partie, sobald das Loch beginnt. Ein eigener neuer Rekord leuchtet,
 aber nur wenn der Ball gefallen ist und kein Gast am Tisch sitzt.
 
-**Offen:** Ein nicht eingelochtes Loch zählt als Schlaglimit + 1 und geht so
-auch in die Bestleistung ein — der Server kennt das Schlaglimit nicht. Es ist
-nie besser als ein echtes Ergebnis, kann auf einer frischen Bahn aber für eine
-Weile als Rekord stehen. Und die Bestmarke auf der Kachel der Bahnauswahl fehlt,
-solange es die Bahnauswahl nicht gibt (Quelle dafür: `api.eigeneBestleistungen('golf')`).
+Ein nicht eingelochtes Loch steht in der Tafel als Schlaglimit + 1 und wird
+**nie** gespeichert: Neben `jeLoch` schickt jedes Gerät `eingelocht`
+`[loch][sitz]` mit (aus `Partiezustand.eingelochtJeLoch`). Die Kennzeichen
+stehen nicht in der Prüfsumme, deshalb gilt ein Loch nur als eingelocht, wenn
+jede Meldung der Mehrheitsgruppe mit Kennzeichen es so sagt — ein einzelnes
+Gerät kann eine Bestleistung wegnehmen, nicht erfinden. Ohne Kennzeichen gibt
+es keine Bestleistung.
+
+**Offen:** Die Bestmarke auf der Kachel der Bahnauswahl fehlt, solange es die
+Bahnauswahl nicht gibt (Quelle dafür: `api.eigeneBestleistungen('golf')`).
 
 **Offen:** Die Bahnwahl als Tisch-Eigenschaft (S1) und kaufbare Zusatzpakete
 (S3) berühren diesen Unterbau nicht. Beide liefern nur andere `inhaltId`. Ob

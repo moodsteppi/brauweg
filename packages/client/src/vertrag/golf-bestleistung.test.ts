@@ -40,10 +40,11 @@ describe('Vertrag Golf-Bestleistung', () => {
       schlaege: [9, 9],
       pruef: pruefsumme(tafel),
       jeLoch: tafel.map((reihe) => [...reihe]),
+      eingelocht: tafel.map((reihe) => reihe.map(() => true)),
     };
     let p = golf.createParty({ config: golf.defaultConfig(), seats: 2, rounds: 3, seed: 7 });
     p = golf.act(p, 0, meldung);
     p = golf.act(p, 1, meldung);
-    expect(waehleLochwerte(p)).toEqual(tafel);
+    expect(waehleLochwerte(p)?.schlaege).toEqual(tafel);
   });
 });

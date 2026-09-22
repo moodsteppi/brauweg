@@ -35,8 +35,18 @@ function summen(tafel: number[][], sitze: number): number[] {
 }
 
 /** Eine ehrliche Meldung, wie `meldeErgebnis` in screens/Golf.tsx sie baut. */
-function meldung(tafel: number[][], sitze: number): GolfAktion {
-  return { art: 'ergebnis', schlaege: summen(tafel, sitze), pruef: pruefsummeDerTafel(tafel), jeLoch: tafel };
+function meldung(tafel: number[][], sitze: number, eingelocht = alleGefallen(tafel)): GolfAktion {
+  return {
+    art: 'ergebnis',
+    schlaege: summen(tafel, sitze),
+    pruef: pruefsummeDerTafel(tafel),
+    jeLoch: tafel,
+    eingelocht,
+  };
+}
+
+function alleGefallen(tafel: number[][]): boolean[][] {
+  return tafel.map((reihe) => reihe.map(() => true));
 }
 
 // Loch 1: Anna 2, Bert 3 · Loch 2: 4 / 1 (Hole-in-one) · Loch 3: 3 / 5
@@ -108,12 +118,17 @@ test('Geraet ohne Tafel (Stand vor dem 22.09.2026): Platz wie immer, keine Bestl
 });
 
 test('der niedrigste Sitz ohne Tafel sperrt den Tisch nicht — der naechste der Gruppe liefert sie', () => {
-  const ohne: GolfAktion = { art: 'ergebnis', schlaege: summen(TAFEL, 2), pruef: pruefsummeDerTafel(TAFEL) };
+  const ohne: GolfAktion = {
+    art: 'ergebnis',
+    schlaege: summen(TAFEL, 2),
+    pruef: pruefsummeDerTafel(TAFEL),
+    eingelocht: alleGefallen(TAFEL),
+  };
   const p = gemeldet(start(), [
     [0, ohne],
     [1, meldung(TAFEL, 2)],
   ]);
-  assert.deepEqual(waehleLochwerte(p), TAFEL);
+  assert.deepEqual(waehleLochwerte(p)?.schlaege, TAFEL);
 });
 
 test('erfundene Tafel neben abgeschriebener Pruefsumme zaehlt nicht', () => {
@@ -129,6 +144,7 @@ test('erfundene Tafel neben abgeschriebener Pruefsumme zaehlt nicht', () => {
     schlaege: summen(TAFEL, 2),
     pruef: pruefsummeDerTafel(TAFEL),
     jeLoch: geschoent,
+    eingelocht: alleGefallen(TAFEL),
   };
   const nurFalsch = gemeldet(start(), [
     [0, falsch],
@@ -142,7 +158,7 @@ test('erfundene Tafel neben abgeschriebener Pruefsumme zaehlt nicht', () => {
     [0, falsch],
     [1, meldung(TAFEL, 2)],
   ]);
-  assert.deepEqual(waehleLochwerte(mitEhrlichem), TAFEL);
+  assert.deepEqual(waehleLochwerte(mitEhrlichem)?.schlaege, TAFEL);
 });
 
 test('eine Tafel, deren Summen nicht die Schlaege des Ausgangs sind, zaehlt nicht', () => {
@@ -153,6 +169,7 @@ test('eine Tafel, deren Summen nicht die Schlaege des Ausgangs sind, zaehlt nich
     schlaege: [8, 8],
     pruef: pruefsummeDerTafel(TAFEL),
     jeLoch: TAFEL,
+    eingelocht: alleGefallen(TAFEL),
   };
   const p = gemeldet(start(), [
     [0, schief],
@@ -179,7 +196,7 @@ test('die Minderheit meldet nicht mit, auch wenn ihre Tafel in sich stimmt', () 
     [2, meldung(mehrheit, 3)],
   ]);
   assert.deepEqual(p.ausgang?.schlaege, [9, 9, 6]);
-  assert.deepEqual(waehleLochwerte(p), mehrheit);
+  assert.deepEqual(waehleLochwerte(p)?.schlaege, mehrheit);
 });
 
 test('Bots und Ausgestiegene bekommen nichts, null Schlaege auch nicht', () => {
@@ -236,6 +253,75 @@ test('die Tafel uebersteht den Schnappschuss', () => {
   ]);
   const zurueck = golf.deserialize(golf.serialize(p));
   assert.deepEqual(golf.standings(zurueck), golf.standings(p));
+});
+
+test('nicht eingelocht: kein Loch mit Schlaglimit + 1 wird gemeldet', () => {
+  // Bert locht Loch 2 nicht ein — sein Geraet traegt dort Limit + 1 ein.
+  const tafel = [
+    [2, 3],
+    [4, 8],
+    [3, 5],
+  ];
+  const gefallen = [
+    [true, true],
+    [true, false],
+    [true, true],
+  ];
+  const p = gemeldet(start(), [
+    [0, meldung(tafel, 2, gefallen)],
+    [1, meldung(tafel, 2, gefallen)],
+  ]);
+  const jeSitz = bestleistungenJeSitz(p);
+  assert.deepEqual(
+    jeSitz[0]!.map((m) => m.wert),
+    [2, 4, 3],
+  );
+  assert.deepEqual(
+    jeSitz[1]!.map((m) => [m.inhaltId, m.wert]),
+    [
+      [p.bahnen[0], 3],
+      [p.bahnen[2], 5],
+    ],
+    'Loch 2 faellt weg',
+  );
+});
+
+test('ohne Eingelocht-Kennzeichen keine Bestleistung — ein Strafwert saehe aus wie ein Ergebnis', () => {
+  const ohneKennzeichen: GolfAktion = {
+    art: 'ergebnis',
+    schlaege: summen(TAFEL, 2),
+    pruef: pruefsummeDerTafel(TAFEL),
+    jeLoch: TAFEL,
+  };
+  const p = gemeldet(start(), [
+    [0, ohneKennzeichen],
+    [1, ohneKennzeichen],
+  ]);
+  assert.equal(p.ausgang?.strittig, false);
+  assert.equal(waehleLochwerte(p), null);
+});
+
+test('ein einzelnes Geraet kann eingelocht nicht erfinden, nur wegnehmen', () => {
+  const ehrlich = [
+    [true, true],
+    [true, false],
+    [true, true],
+  ];
+  const gelogen = [
+    [true, true],
+    [true, true],
+    [true, true],
+  ];
+  const tafel = [
+    [2, 3],
+    [4, 8],
+    [3, 5],
+  ];
+  const p = gemeldet(start(), [
+    [0, meldung(tafel, 2, gelogen)],
+    [1, meldung(tafel, 2, ehrlich)],
+  ]);
+  assert.deepEqual(waehleLochwerte(p)?.eingelocht, ehrlich);
 });
 
 test('Pruefsumme mit festen Zahlen — dieselbe Rechnung wie pruefsumme() im Client', () => {
