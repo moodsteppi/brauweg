@@ -5,6 +5,7 @@ import {
   kraftFuerDistanz,
   kraftFuerStrecke,
   maximaleRollweite,
+  RASTER,
   sichtFrei,
   wegfeld,
 } from './bot';
@@ -288,5 +289,30 @@ describe('Beschleuniger', () => {
 
   it('nimmt auf k22 die Linie mit freiem Blick aufs Loch (Experte, vorher 2,55)', () => {
     expect(mittelSchlaege(karteMit('k22-'), 'experte')).toBeLessThanOrEqual(2.1);
+  });
+});
+
+describe('Drehkreuz', () => {
+  const k39 = karteMit('k39-');
+
+  it('macht den Kreis im Wegfeld teurer, sperrt ihn aber nicht', () => {
+    const kundig = wegfeld(k39);
+    const schlicht = wegfeld(k39, false);
+    const nabe = Math.floor(26 / RASTER) * kundig.spalten + Math.floor(14 / RASTER);
+    expect(kundig.kosten[nabe]).toBeGreaterThan(1);
+    expect(schlicht.kosten[nabe]).toBe(1);
+    // Kosten sperren nichts: Erreichbar ist in beiden Feldern dasselbe.
+    for (let i = 0; i < kundig.entfernung.length; i += 1) {
+      expect(kundig.entfernung[i] >= 0).toBe(schlicht.entfernung[i] >= 0);
+    }
+  });
+
+  it('spielt die Drehkreuzgasse k39 an den Kreuzen vorbei (vorher 6,10 und 80 %)', () => {
+    // Die Probe sieht das Kreuz in genau der Stellung dieses Takts, das
+    // Wegfeld führt am Rand der Gasse entlang statt durch die Nabe.
+    for (let saat = 1; saat <= 20; saat += 1) {
+      expect(botLoestKarte(k39, 'genie', saat * 7919).geloest).toBe(true);
+    }
+    expect(mittelSchlaege(k39, 'genie')).toBeLessThanOrEqual(3.2);
   });
 });

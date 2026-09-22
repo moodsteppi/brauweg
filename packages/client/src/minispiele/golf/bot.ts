@@ -106,6 +106,17 @@ const PORTAL_SCHRITTE = 8;
  */
 const PORTAL_TEMPO = 5;
 
+/**
+ * Was ein Rasterschritt im Kreis eines Drehkreuzes kostet (statt 1).
+ *
+ * Seit dem 22.09.2026. Vorher war der Kreis Boden wie jeder andere, und der
+ * Weg lief mitten durch die Nabe — auf k39 bei zwei Kreuzen, die eine 8 E
+ * breite Gasse bis auf je 2 E Rand ausfüllen. Gesperrt wird er nicht: Es gibt
+ * Bahnen, auf denen er der einzige Weg ist, und dann soll das Feld ihn
+ * finden. Teurer reicht, damit der Weg am Rand vorbeiführt, wo es den gibt.
+ */
+const DREH_SCHRITTE = 3;
+
 /* --------------------------------------------------------------------------
  * Kraft aus Distanz
  * ----------------------------------------------------------------------- */
@@ -394,11 +405,18 @@ export interface Wegfeld {
   entfernung: Int32Array;
   /** Vorwärtskante eines Portals: Zielzelle, sonst -1. */
   portalZu: Int32Array;
+  /**
+   * Was der Schritt IN diese Zelle kostet: 1, im Kreis eines Drehkreuzes
+   * `DREH_SCHRITTE` (seit dem 22.09.2026, siehe dort).
+   */
+  kosten: Uint8Array;
   /** Zelle des Lochs. */
   lochZelle: number;
 }
 
 const feldSpeicher = new Map<Karte, Wegfeld>();
+/** Dasselbe ohne Drehkreuzkosten — das Feld des Anfängers, siehe `wegfeld`. */
+const feldSpeicherSchlicht = new Map<Karte, Wegfeld>();
 
 function zelleIndex(feld: Wegfeld, x: number, y: number): number {
   let cx = Math.floor(x / RASTER);
@@ -463,9 +481,18 @@ function freieZelleBei(feld: Wegfeld, x: number, y: number): number {
  * Zielzelle, wartet jedes Portal des Paars darauf, dass das andere zuerst
  * eine Entfernung bekommt, und keines bekommt je eine: Auf k23 und k30 war so
  * das Loch von keinem Abschlag aus erreichbar.
+ *
+ * `kundig = false` baut das Feld ohne Drehkreuzkosten (alle Schritte 1),
+ * wie es bis zum 22.09.2026 für alle galt. Das ist das Feld des Anfängers:
+ * Über 100 Saaten spielte er mit dem Umweg am Kreuz vorbei auf k37 um 0,16
+ * und auf k39 um 0,09 Schläge SCHLECHTER — mit ±12 Grad trifft er die 2 E
+ * schmale Randspur seltener, als er mitten durch das Kreuz kommt. Alle
+ * anderen Stufen gewannen dort (k39 Genie 4,97 → 2,94). Erreichbar ist in
+ * beiden Feldern genau dasselbe; Kosten sperren nichts.
  */
-export function wegfeld(karte: Karte): Wegfeld {
-  const fertig = feldSpeicher.get(karte);
+export function wegfeld(karte: Karte, kundig = true): Wegfeld {
+  const speicher = kundig ? feldSpeicher : feldSpeicherSchlicht;
+  const fertig = speicher.get(karte);
   if (fertig !== undefined) return fertig;
 
   const spalten = Math.ceil(karte.breite / RASTER);
@@ -477,6 +504,7 @@ export function wegfeld(karte: Karte): Wegfeld {
     frei: new Uint8Array(anzahl),
     entfernung: new Int32Array(anzahl).fill(-1),
     portalZu: new Int32Array(anzahl).fill(-1),
+    kosten: new Uint8Array(anzahl).fill(1),
     lochZelle: 0,
   };
 
@@ -515,6 +543,15 @@ export function wegfeld(karte: Karte): Wegfeld {
       }
     }
     feld.frei[i] = frei ? 1 : 0;
+    if (!frei) continue;
+    for (let zi = 0; zi < karte.zonen.length; zi += 1) {
+      const zone = karte.zonen[zi];
+      if (!kundig || zone.art !== 'drehkreuz') continue;
+      const r = zone.laenge / 2 + BALL_R;
+      const dx = x - zone.x;
+      const dy = y - zone.y;
+      if (dx * dx + dy * dy < r * r) feld.kosten[i] = DREH_SCHRITTE;
+    }
   }
 
   // Portale eintragen: je Portal seine Zellen (die Türen) und seine
@@ -579,6 +616,15 @@ export function wegfeld(karte: Karte): Wegfeld {
      * Entfernung beim ersten Besuch bekommt und die Eimer in aufsteigender
      * Reihenfolge abgearbeitet werden, ist sie beim ersten Besuch schon die
      * kleinste; nachgebessert wird nichts.
+     *
+     * Seit dem 22.09.2026 kostet auch ein gewöhnlicher Schritt nicht mehr
+     * überall 1 (Drehkreuz, siehe `DREH_SCHRITTE`). Dann stimmt „erster
+     * Besuch ist der kürzeste" nicht mehr: Eine Zelle hinter dem Drehkreuz
+     * wird zuerst QUER durch den Kreis erreicht und erst später, billiger,
+     * außen herum. Also darf `lege` nachbessern, und wer aus einem Eimer
+     * kommt, dessen Entfernung inzwischen kleiner ist, ist ein veralteter
+     * Eintrag und wird übersprungen — der gewöhnliche Dijkstra mit Eimern. Wo
+     * alle Schritte 1 kosten, kommt Zelle für Zelle dasselbe heraus wie vorher.
      */
     const eimer: number[][] = [];
     const lege = (zelle: number, d: number): void => {
@@ -593,6 +639,7 @@ export function wegfeld(karte: Karte): Wegfeld {
       if (liste === undefined) continue;
       for (let i = 0; i < liste.length; i += 1) {
         const c = liste[i];
+        if (feld.entfernung[c] !== d) continue;
         const cx = c % spalten;
         const cy = (c - cx) / spalten;
         // Feste Reihenfolge der Nachbarn: rechts, unten, links, oben. Eine
@@ -603,11 +650,13 @@ export function wegfeld(karte: Karte): Wegfeld {
           const ny = cy + (k === 1 ? 1 : k === 3 ? -1 : 0);
           if (nx < 0 || ny < 0 || nx >= spalten || ny >= zeilen) continue;
           const n = ny * spalten + nx;
-          if (feld.frei[n] !== 1 || feld.entfernung[n] !== -1) continue;
+          if (feld.frei[n] !== 1) continue;
+          const nd = d + feld.kosten[n];
+          if (feld.entfernung[n] !== -1 && feld.entfernung[n] <= nd) continue;
           // Eine Portalzelle ist eine TÜR, kein Boden: Sie bekommt ihre
           // Entfernung ausschließlich über den Ausgang ihres Portals unten.
           if (feld.portalZu[n] >= 0) continue;
-          lege(n, d + 1);
+          lege(n, nd);
         }
         // Die erste Ausgangszelle, die an die Reihe kommt, ist die nächste am
         // Loch. Von jeder Zelle des Portals aus geht es von dort weiter.
@@ -626,13 +675,14 @@ export function wegfeld(karte: Karte): Wegfeld {
     }
   }
 
-  feldSpeicher.set(karte, feld);
+  speicher.set(karte, feld);
   return feld;
 }
 
 /** Leert den Zwischenspeicher — nur für Messungen und Tests. */
 export function vergissWegfelder(): void {
   feldSpeicher.clear();
+  feldSpeicherSchlicht.clear();
 }
 
 /** Ist das Loch von diesem Punkt aus über das Raster überhaupt erreichbar? */
@@ -661,7 +711,7 @@ function abstieg(feld: Wegfeld, c: number): number {
     const ny = cy + (k === 1 ? 1 : k === 3 ? -1 : 0);
     if (nx < 0 || ny < 0 || nx >= feld.spalten || ny >= feld.zeilen) continue;
     const n = ny * feld.spalten + nx;
-    if (feld.frei[n] === 1 && feld.entfernung[n] === d - 1) return n;
+    if (feld.frei[n] === 1 && feld.entfernung[n] === d - feld.kosten[c]) return n;
   }
   return -1;
 }
@@ -696,7 +746,7 @@ function abstieg(feld: Wegfeld, c: number): number {
  * Bahn liegt offen vor jedem Spieler, und der Bot sieht dieselbe Karte, nur
  * eben rechnend. Andere Bälle bleiben außen vor wie beim Zielen auch.
  */
-const PROBE_ARTEN: ReadonlySet<Zone['art']> = new Set<Zone['art']>(['beschleuniger']);
+const PROBE_ARTEN: ReadonlySet<Zone['art']> = new Set<Zone['art']>(['beschleuniger', 'drehkreuz']);
 
 /**
  * Längster Probeschlag in Takten (8 s). Ein Ball, der dann noch rollt, wird
@@ -987,7 +1037,7 @@ export function botEntscheidung(
   if (zumLoch < 12 && sichtFrei(karte, b.x, b.y, lochX, lochY)) {
     aufsLoch = true;
   } else {
-    const feld = wegfeld(karte);
+    const feld = wegfeld(karte, z.botStufe !== 'anfaenger');
     const start = freieZelleBei(feld, b.x, b.y);
     let gefunden = false;
     if (start >= 0 && feld.entfernung[start] >= 0) {
