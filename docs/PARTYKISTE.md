@@ -297,7 +297,7 @@ Schätzen auch `stufe`; ein Test hält die Mischung grob bei 60 % harmlos,
 Stand 22.09.2026 — Einträge je Katalog, in Klammern der Altbestand:
 
 - Wahrheit oder Pflicht: 400 (120, davon 60/60)
-- Wer würde eher: 108 (108)
+- Wer würde eher: 300 (108)
 - Ich hab noch nie: 110 (110)
 - Entweder – oder: 100 (100)
 - Allgemeinwissen: 140 (140)
