@@ -590,12 +590,12 @@ nennt trotzdem einen Sitz.</p>
 vollständig — das Verschieben fehlt darin, und die Meta sagt es
 (<code>legalActionsUnvollstaendig: true</code>). Siehe Befunde.</p>`), '#b78cf7');
 
-win('game-partykiste', 'notes', 'Partykiste — sechs Minispiele, ein Turnier', GX + 2490, -630, 420, 340, note(`
+win('game-partykiste', 'notes', 'Partykiste — neun Minispiele, ein Turnier', GX + 2490, -630, 420, 340, note(`
 <h3>packages/game-partykiste</h3>
 <p><b>4–12 Sitze</b>, seit 18.09.2026 — erstes Spiel mit mehr als acht.
-Sechs Minispiele reihum als <b>ein</b> Turnier; sechs Module wären sechs
-Wartezimmer und sechs Ranglisten.</p>
-<p>Vier der sechs laufen <b>gleichzeitig</b> — wie Eiland nennt
+Seit PR #154 (19.09.2026) <b>neun</b> Minispiele reihum als <b>ein</b>
+Turnier; neun Module wären neun Wartezimmer und neun Ranglisten.</p>
+<p>Mehrere laufen <b>gleichzeitig</b> — wie Eiland nennt
 <code>currentActor</code> trotzdem einen Sitz. Was von selbst weitergeht,
 steht allein in <code>weiter()</code>.</p>
 <p><b>Sichtbarkeit IST das Spiel:</b> Das fremde Imposter-Wort und der eigene
@@ -603,6 +603,28 @@ Name aus „Wer bin ich“ werden nicht ausgeblendet, sondern gar nicht erst
 verschickt — auch nicht an Zuschauer.</p>
 <p><b>Schlücke zählen nicht in die Rangliste.</b> Sonst spielte, wer den
 Trinkmodus ausschaltet, ein anderes Spiel.</p>`), '#b78cf7');
+
+win('game-golf', 'notes', 'Golf — Echtzeit im Gleichschritt', GX + 2490, -280, 420, 400, note(`
+<h3>packages/game-golf · Physik in packages/client/src/minispiele/golf</h3>
+<p>1–8 Sitze, seit 06.09.2026. <b>Weg B wie Feldherr</b>: Der Server rechnet
+keine Physik, nur Saatkorn und Zugliste gehen über die Leitung. Jedes Gerät
+simuliert im Gleichschritt und <b>spult zurück</b>, wenn ein verspäteter
+Schlag eintrifft.</p>
+<p>Determinismus-Regel: nur <code>+ - * /</code> und <code>Math.sqrt</code>
+(<code>physik.ts</code>, Kopf). Bis zum ersten eigenen Schlag ist ein Ball
+ein <b>Geist</b> — stößt nichts, wird nicht gestoßen. Die
+<b>Trödel-Regel</b> schiebt Langsame weiter, statt den Tisch warten zu
+lassen.</p>
+<p>Das Ergebnis kommt über eine <b>Prüfsummen-Mehrheit</b>
+(<code>game-golf/partie.ts</code>): Stimmt die größte Gruppe gleicher
+Prüfsummen über die Hälfte der Meldungen, gilt sie — sonst strittig.</p>
+<p><b>40 Bahnen, vier Themen, neun Zonenarten.</b> Der Katalog ist
+<b>geordnet</b>: <code>waehleKarten</code> zieht Indizes aus der Saat, neue
+Bahnen nur anhängen. „Bahnen prüfen, nicht anschauen" — <code>pruefeKarte</code>
+und <code>botLoestKarte</code> laufen über alle 40. Jede Physikänderung ist
+ein Protokollbruch für laufende Partien (<code>docs/GOLF-PLAN.md:129–140</code>).</p>
+<p>Ein Zweig vom 22.09.2026 stellt die Bahnfolge auf eine id-Liste um — noch
+nicht auf <code>staging</code>.</p>`), '#b78cf7');
 
 win('game-klein', 'notes', 'Mememory · Filler · Easy Poker', GX + 2020, -280, 420, 240, note(`
 <p><b>Mememory</b> (2–4) — Memory-Duell auf 5×8 Meme-Bildern. Nutzt die
@@ -662,7 +684,8 @@ win('game-adapter', 'code', 'adapter.ts — die einzige Brücke je Spiel',
 frame('f-games', 'Spielmodule', 'Reine Logik · kein Netz, keine Uhr, kein Zufall außer dem Seed', '#b78cf7',
   ['api-module', 'api-vertrag', 'api-invarianten', 'game-adapter', 'game-liste',
    'game-doko', 'game-wizard', 'game-feldherr', 'game-skat', 'game-cambio',
-   'game-eiland', 'game-tafelrunde', 'game-partykiste', 'game-klein', 'projekt-feldherr'], 'game');
+   'game-eiland', 'game-tafelrunde', 'game-partykiste', 'game-golf', 'game-klein',
+   'projekt-feldherr'], 'game');
 
 /* =======================================================================
    4  Grundsätze
