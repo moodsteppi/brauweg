@@ -298,7 +298,7 @@ Stand 22.09.2026 — Einträge je Katalog, in Klammern der Altbestand:
 
 - Wahrheit oder Pflicht: 400 (120, davon 60/60)
 - Wer würde eher: 300 (108)
-- Ich hab noch nie: 110 (110)
+- Ich hab noch nie: 300 (110)
 - Entweder – oder: 100 (100)
 - Allgemeinwissen: 140 (140)
 - Schätzen: 80 (80)

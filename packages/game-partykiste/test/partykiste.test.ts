@@ -564,11 +564,16 @@ test('im Altbestand sind die Kiffer-Sprueche und nur sie pikant', () => {
 test('der Filter haelt die Haerte als Obergrenze', () => {
   const harmlos = waehlbareInhalte(NIEMALS_SPRUECHE, { inhaltsHaerte: 1, paket: null }, 6);
   assert.equal(harmlos.inhalte.some((i) => KIFFEN.has(i.id)), false, 'harmlos bringt Kiffer-Sprueche');
-  assert.equal(harmlos.inhalte.length, NIEMALS_SPRUECHE.length - 10);
+  /* Seit dem Vorrat vom 22.09.2026 tragen auch neue Sprueche Haerte 2 und 3;
+     gezaehlt wird darum am Katalog, nicht an den zehn Kiffer-Spruechen. */
+  const bis = (h: number) => NIEMALS_SPRUECHE.filter((i) => (i.haerte ?? 1) <= h).length;
+  assert.equal(harmlos.inhalte.length, bis(1));
+  assert.ok(harmlos.inhalte.every((i) => (i.haerte ?? 1) === 1));
   assert.equal(harmlos.rueckfall, null);
 
   const pikant = waehlbareInhalte(NIEMALS_SPRUECHE, { inhaltsHaerte: 2, paket: null }, 6);
-  assert.equal(pikant.inhalte.length, NIEMALS_SPRUECHE.length, 'pikant schliesst harmlos ein');
+  assert.equal(pikant.inhalte.length, bis(2), 'pikant schliesst harmlos ein');
+  assert.ok(pikant.inhalte.every((i) => (i.haerte ?? 1) <= 2), 'pikant bringt Derbes');
   const derb = waehlbareInhalte(NIEMALS_SPRUECHE, { inhaltsHaerte: 3, paket: null }, 6);
   assert.equal(derb.inhalte.length, NIEMALS_SPRUECHE.length);
 });
