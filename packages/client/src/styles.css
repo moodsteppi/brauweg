@@ -19047,6 +19047,69 @@ span.hub-angebot-art.poker-jeton-stapel {
   pointer-events: none;
 }
 
+/* -- Par in der Anzeige (minispiele/golf/ParAnzeige.tsx) ------------------ */
+
+/* Unter Par gruen, ueber Par gedaempft rot: dieselben Toene wie der eigene
+   Name in der Tafel und die Troedel-Mahnung, damit keine dritte Farbsprache
+   dazukommt. */
+.gpar-name { font: 700 12px/1 system-ui; color: #cfe3d1; white-space: nowrap; }
+.gpar-name[data-gpar='hio'],
+.gpar-name[data-gpar='unter'] { color: #8ee0a3; }
+.gpar-name[data-gpar='ueber'],
+.gpar-name[data-gpar='ohne'] { color: #f0a0a8; }
+
+/* Der Ruf beim Einlochen. Er faellt aus dem HUD-Fluss (absolute), damit
+   Troedel-Mahnung und Hinweis darunter nicht fuer anderthalb Sekunden
+   nach unten springen. */
+.gpar-ruf {
+  position: absolute;
+  top: calc(100% + 10px);
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.82);
+  font: 900 20px/1 system-ui;
+  color: #8ee0a3;
+  animation: gpar-auf 1600ms ease-out both;
+}
+.gpar-ruf[data-hio] { padding: 12px 24px; font-size: 34px; color: #f4b400; }
+@keyframes gpar-auf {
+  0% { opacity: 0; transform: scale(0.7); }
+  15% { opacity: 1; transform: scale(1.08); }
+  25% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Ohne Bewegung heisst ohne Skalieren und ohne Ausblenden: Der Ruf steht
+   einfach, bis ParRuf ihn nach 1,6 s wieder abnimmt. */
+@media (prefers-reduced-motion: reduce) {
+  .gpar-ruf { animation: none; }
+}
+
+/* Endtafel: Kopf ueber Summe und „zu Par". Die Breiten muessen zu
+   .gf-rangsumme und .gpar-zupar passen, sonst steht der Kopf daneben. */
+.gpar-kopf {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin: 0 0 4px;
+  padding: 0 12px;
+  font: 700 11px/1 system-ui;
+  color: #8fae94;
+}
+.gpar-kopf span { min-width: 28px; text-align: right; }
+.gpar-kopf span:last-child { width: 38px; }
+.gpar-zupar {
+  flex: none;
+  width: 38px;
+  text-align: right;
+  font: 800 14px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  color: #cfe3d1;
+}
+.gpar-zupar[data-gpar='unter'] { color: #8ee0a3; }
+.gpar-zupar[data-gpar='ueber'] { color: #f0a0a8; }
+
 /* -- Banner der Spielauswahl ---------------------------------------------- */
 
 /* Dasselbe Verhaeltnis wie die gemalten Banner (1200 x 300) und wie die

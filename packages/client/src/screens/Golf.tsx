@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type Me } from '../api';
+import { t } from '../i18n';
 import {
   MENUE_FARBEN,
   farbeAus,
@@ -12,6 +13,8 @@ import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
 import { KARTEN } from '../minispiele/golf/karten';
 import { Golfnetz } from '../minispiele/golf/netz';
+import { ParKopf, ParName, ParRuf, ZuPar } from '../minispiele/golf/ParAnzeige';
+import { parJeLoch, zuParSumme } from '../minispiele/golf/par';
 import {
   MAX_ZUG,
   PAUSE_TAKTE,
@@ -170,6 +173,8 @@ interface Abschlussdaten {
   ergebnis: number[][];
   gesamt: number[];
   platz: { sitz: number; schlaege: number; platz: number }[];
+  /** Par je gespieltem Loch — nur für die Anzeige „zu Par", nie für den Platz. */
+  par: number[];
 }
 
 export function Golf({
@@ -379,6 +384,7 @@ export function Golf({
         ergebnis: zustand.ergebnis.map((reihe) => [...(reihe ?? [])]),
         gesamt,
         platz: platzierungen(zustand),
+        par: parJeLoch(zustand.reihenfolge, KARTEN),
       };
       sendRef.current({ art: 'ergebnis', schlaege: gesamt, pruef: pruefsumme(zustand.ergebnis) });
       return daten;
@@ -1265,6 +1271,15 @@ function Partie({
           ))}
         </div>
 
+        {eigenerSitz >= 0 && (
+          <ParRuf
+            loch={hud.loch}
+            eingelocht={hud.eingelocht[eigenerSitz] ?? false}
+            schlaege={hud.schlaege[eigenerSitz] ?? 0}
+            par={hud.par}
+          />
+        )}
+
         {hud.binTroedler && hud.troedel > 0 && (
           <p className="gf-troedel" aria-live="polite">
             Alle warten auf dich: {hud.troedel}
@@ -1281,6 +1296,9 @@ function Partie({
               <tr>
                 <th />
                 <th>Loch</th>
+                <th>
+                  {t('golf.par.par')} {hud.par}
+                </th>
                 <th>Gesamt</th>
               </tr>
             </thead>
@@ -1292,6 +1310,14 @@ function Partie({
                     <span>{name(sitz)}</span>
                   </td>
                   <td>{schlaege}</td>
+                  <td>
+                    <ParName
+                      schlaege={schlaege}
+                      par={hud.par}
+                      eingelocht={hud.eingelocht[sitz] ?? false}
+                      fertig={hud.fertig[sitz] ?? false}
+                    />
+                  </td>
                   <td>{hud.gesamt[sitz]}</td>
                 </tr>
               ))}
@@ -1478,7 +1504,7 @@ function schreibeMarken(
  * Abschluss
  * ----------------------------------------------------------------------- */
 
-function Abschluss({
+export function Abschluss({
   daten,
   sicht,
   eigenerSitz,
@@ -1504,6 +1530,7 @@ function Abschluss({
     <main className="gf-seite gf-menue">
       <div className="gf-menue-mitte gf-breit">
         <h1 className="gf-titel">Ergebnis</h1>
+        <ParKopf />
         <ol className="gf-rangliste">
           {daten.platz.map((zeile) => (
             <li
@@ -1520,6 +1547,7 @@ function Abschluss({
                 ))}
               </span>
               <strong className="gf-rangsumme">{zeile.schlaege}</strong>
+              <ZuPar wert={zuParSumme(daten.ergebnis, daten.par, zeile.sitz)} />
             </li>
           ))}
         </ol>
