@@ -88,8 +88,13 @@ export const TAFELRUNDE_MODULE_VERSION = 1;
  * (`bahnen`), das Modul zieht sie einmal beim Start. Ein Client von davor
  * zoege sie weiter selbst aus seinem Katalog und liefe mit der ersten neuen
  * Bahn still auseinander.
+ *
+ * 5 seit dem 22.09.2026 nachts: Die Bots proben Beschleuniger, Drehkreuze,
+ * Strudel und Sprungfelder mit der echten Physik, Bumper versperren Sicht
+ * und Wegfeld. Ein alter und ein neuer Bot spielen aus derselben Saat
+ * verschiedene Schlaege.
  */
-export const GOLF_MODULE_VERSION = 4;
+export const GOLF_MODULE_VERSION = 5;
 
 /**
  * 1 seit dem 18. September 2026 — die erste Fassung. Die Partykiste ist das
