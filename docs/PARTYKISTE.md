@@ -1,6 +1,6 @@
 # Partykiste
 
-Ein Turnier aus neun Partyminispielen für **4 bis 12 Leute**, die im selben
+Ein Turnier aus zwölf Partyminispielen für **4 bis 12 Leute**, die im selben
 Raum sitzen. Geredet wird am Tisch, der Bildschirm nimmt nur die Entscheidung
 entgegen — deshalb braucht die Kiste, anders als Werwolf, keinen freien Text
 zwischen den Sitzen und ist heute schon spielbar.
@@ -22,7 +22,7 @@ Die Minispiele kommen reihum in der Reihenfolge, die im Regelsatz steht
 (`minispiele`). Bewusst berechnet und nicht gewürfelt — „dreimal Quiz
 hintereinander“ ist auf einer Party kein Zufall, sondern ein Fehler.
 
-## Die neun Minispiele
+## Die zwölf Minispiele
 
 | Minispiel | Ablauf | Punkte | Schlücke |
 | --- | --- | --- | --- |
@@ -35,6 +35,9 @@ hintereinander“ ist auf einer Party kein Zufall, sondern ein Fehler.
 | **Schätzen** | Eine Zahlenfrage, alle tippen eine Zahl. Wer nicht tippt, gilt als unendlich weit weg. | am nächsten dran +3 | am weitesten weg 2 |
 | **Entweder – oder** | A oder B, alle gleichzeitig. | Mehrheit +1 | Minderheit 1; Gleichstand: alle 1 |
 | **Wahrheit oder Pflicht** | Reihum: wählen, Aufgabe erscheint für alle, dann „Gemacht" oder „Gekniffen". | gemacht +2 | gekniffen 2 |
+| **Kategorien-Battle** | Reihum im Kreis laut etwas aus der Kategorie nennen, bis einer stockt. Stocken meldet man selbst; Doppeln oder Zögern benennt die Mehrheit per Einspruch. | nicht verloren +1 (leergespielt: alle) | Verlierer 2 |
+| **Mehrheitsraten** | Eine Frage, A oder B: jeder antwortet für sich **und** tippt, was die Mehrheit antwortet. | Mehrheit getroffen +2 | daneben 1; Gleichstand: alle 1 |
+| **Regel-Karte** | Eine Regel („keine Vornamen") gilt bis zum Ende der übernächsten Runde — während der anderen Minispiele. Verstoß per Selbstmeldung oder Mehrheit. | ohne Verstoß durch die Geltung +1 | je Verstoß 1 |
 
 ## Tischoptionen
 
@@ -44,7 +47,7 @@ Der Regelsatz (`PartykisteRegeln` in `src/regeln.ts`), geprüft von
 
 | Feld | Werte | Vorgabe | Wirkung |
 | --- | --- | --- | --- |
-| `minispiele` | Liste aus `MINISPIELE`, mindestens eins | alle neun | Reihenfolge im Turnier |
+| `minispiele` | Liste aus `MINISPIELE`, mindestens eins | alle zwölf | Reihenfolge im Turnier |
 | `trinkmodus` | an/aus | an | nur die Anzeige der Gläser |
 | `schluckFaktor` | 1–3 | 1 | Schlücke mal Faktor |
 | `inhaltsHaerte` | 1 harmlos, 2 pikant, 3 derb | 1 | Obergrenze der Textschärfe |
@@ -207,6 +210,44 @@ Minuten** hebt (`meta.zugzeitMs`, neu in game-api, nur verlängernd, gedeckelt
 bei zehn) — danach tippt der Bot für den, der weg ist. Dieselben fünf Minuten
 gelten für jeden Zug: Bei Imposter redet erst die Runde, dann wird gestimmt.
 
+**Die drei ohne Uhr** (seit dem 22.09.2026, Robins Entscheidung „5+ neue
+Minispiele"; Regeln in `src/ohne-uhr.ts`, Ansichten in
+`minispiele/partykiste/RundenOhneUhr.tsx`, Inhalte in
+`inhalte/kategorien.ts`, `mehrheit.ts`, `regelkarten.ts`):
+
+- **Kategorien-Battle läuft reihum, aber im Kreis.** Es ist nicht
+  `istReihum` (dort endet die Runde, wenn jeder einmal dran war), sondern hat
+  in `amZug`/`weiter` einen eigenen Zweig. Die Runde endet durch „Gestockt",
+  durch eine Mehrheit von Einsprüchen (gegen den, der dran ist, oder den, der
+  eben genannt hat) oder nach `KATEGORIEN_RUNDEN_UM_DEN_TISCH` (4) Runden um
+  den Tisch — dann ist die Kategorie leergespielt, alle bekommen den Punkt.
+  Wer anfängt, wird aus der Saat gezogen.
+- **Mehrheitsraten hat zwei Eingaben in einer Aktion** (`mehrheitstipp`:
+  `eigene` und `tipp`). Mit nur einem Tipp wäre es Entweder-oder: Wer die
+  Mehrheit tippt, bestimmt sie zugleich. Die Bots tippen auf die häufigere
+  Antwort der **Bots** — sie können deren Antwort ausrechnen, weil sie nur an
+  Sitz und Runde hängt (`eigeneMehrheitsAntwort` in `bot.ts`), nicht an
+  einem Blick in den Zustand.
+- **Regel-Karte ist der einzige Strukturbruch der Kiste:** `PartykistePartie.regelKarte`
+  lebt über das Rundenende hinaus (bis dahin lebte alles Rundenwissen in
+  `runde`). Begründung an `AktiveRegel`. Abgerechnet wird trotzdem nur in
+  `werteAus` der gerade laufenden Runde (`regelAbrechnen`): Verstöße werden
+  Schlücke dieser Runde, die letzte Runde der Regel gibt den Punkt für die
+  weiße Weste. Protokoll und Turnierstand bleiben so deckungsgleich (Test).
+  In einer Abrechnung, nach der keine mehr kommt, ist Melden gesperrt
+  (`meldenMoeglich`) — sonst verschwände der Verstoß still. Eine neue Karte
+  löst die alte ab.
+- **Mehrheit heißt: anwesende Menschen außer dem Beschuldigten.** Bots
+  hören nicht mit; zählten sie, bekäme ein Mensch unter Bots nie eine
+  Mehrheit. Die nötige Zahl steht in der Sicht (`noetig`), der Bildschirm
+  zählt nur ab.
+- **`einspruch` und `verstoss` stehen nicht in `legalActions`**: Beide
+  darf jeder Sitz jederzeit, nicht nur der am Zug — wie das Tippen in den
+  gleichzeitigen Spielen. `verstoss` wird in `verarbeite` vor allen
+  Phasenprüfungen behandelt, weil er in jeder Runde gilt.
+- Seit diesen dreien ist `protocolVersion` 2 (Client
+  `PARTYKISTE_MODULE_VERSION`): Ein alter Client kennt die neuen Runden nicht.
+
 **Imposter seit dem 19.09.2026:** Der Imposter sieht **„IMPOSTER“ und einen
 Hinweis** (grobe Kategorie, `inhalte/imposter.ts`), kein Nachbarwort mehr. Die
 Runde bekommt eine **feste Redereihenfolge** (`reihenfolge`, je Runde
@@ -226,6 +267,11 @@ Rundenprotokollen.
 Stand 19.09.2026: 140 Quizfragen, 120 Imposter-Wortpaare, 140 Identitäten,
 110 Sprüche für „Ich hab noch nie”, 108 für „Wer würde eher”, 80 Schätzfragen,
 100 Entweder-oder-Paare, 120 Aufgaben für Wahrheit oder Pflicht (60/60).
+Dazu seit dem 22.09.2026: 82 Kategorien (k001–k082), 72 Mehrheitsfragen
+(m001–m072), 49 Regel-Karten (r001–r049) — jeder Eintrag **mit** `haerte`
+und mindestens einem `paket`, alle drei Stufen belegt, je Paket mindestens
+zehn harmlose (`test/ohne-uhr.test.ts`). Regel-Karten sind Befehle an alle
+und tragen deshalb wie Wahrheit oder Pflicht gar kein Trinkwort.
 
 **Metadaten** (seit dem 22.09.2026, `src/inhalte/typen.ts`) — alle optional,
 ein Eintrag ohne Feld gilt als harmlos, allgemein, ab vier Sitzen:

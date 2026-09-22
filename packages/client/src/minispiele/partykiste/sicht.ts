@@ -12,6 +12,16 @@
  * schlicht nicht.
  */
 
+import type {
+  KategorienSicht,
+  MehrheitSicht,
+  OhneUhrAktion,
+  RegelKarteSicht,
+  RegelkartenSicht,
+} from './sicht-ohne-uhr';
+
+export type { KategorienSicht, MehrheitSicht, OhneUhrAktion, RegelKarteSicht, RegelkartenSicht } from './sicht-ohne-uhr';
+
 /** Spielstaerke der Bots — Spiegelbild von game-api BotLevel (protocol.ts). */
 export type PartyBotStufe = 'anfaenger' | 'standard' | 'experte' | 'genie';
 
@@ -24,7 +34,10 @@ export type PartyMinispiel =
   | 'busfahrer'
   | 'schaetzen'
   | 'entweder'
-  | 'wahrheitpflicht';
+  | 'wahrheitpflicht'
+  | 'kategorien'
+  | 'mehrheit'
+  | 'regelkarte';
 
 export type PartyPhase = 'sehen' | 'spiel' | 'ergebnis';
 
@@ -143,7 +156,10 @@ export type PartyMinispielSicht =
   | BusSicht
   | SchaetzSicht
   | EntwederSicht
-  | WahrheitPflichtSicht;
+  | WahrheitPflichtSicht
+  | KategorienSicht
+  | MehrheitSicht
+  | RegelkartenSicht;
 
 export interface PartyPlatzierung {
   sitz: number;
@@ -176,6 +192,8 @@ export interface PartykisteSicht {
   fertig: boolean;
   tabelle: PartyPlatzierung[];
   daten: PartyMinispielSicht;
+  /** Die geltende Regel-Karte oder null (seit 22.09.2026). */
+  regelKarte: RegelKarteSicht | null;
 }
 
 /** Aktionen, die der Bildschirm absetzt. */
@@ -190,7 +208,8 @@ export type PartyAktion =
   | { art: 'schaetzung'; wert: number }
   | { art: 'seite'; wahl: number }
   | { art: 'wahl'; pflicht: boolean }
-  | { art: 'erledigt'; ja: boolean };
+  | { art: 'erledigt'; ja: boolean }
+  | OhneUhrAktion;
 
 // ---------------------------------------------------------------------------
 // Anzeigetexte — an einer Stelle, weil sie an drei Stellen gebraucht werden
@@ -206,6 +225,9 @@ export const MINISPIEL_NAME: Record<PartyMinispiel, string> = {
   schaetzen: 'Schätzen',
   entweder: 'Entweder – oder',
   wahrheitpflicht: 'Wahrheit oder Pflicht',
+  kategorien: 'Kategorien-Battle',
+  mehrheit: 'Mehrheitsraten',
+  regelkarte: 'Regel-Karte',
 };
 
 export const MINISPIEL_ANSAGE: Record<PartyMinispiel, string> = {
@@ -218,6 +240,9 @@ export const MINISPIEL_ANSAGE: Record<PartyMinispiel, string> = {
   schaetzen: 'Eine Zahl. Wer am nächsten liegt, gewinnt — wer am weitesten weg ist, trinkt.',
   entweder: 'A oder B. Die Minderheit trinkt, bei Gleichstand alle.',
   wahrheitpflicht: 'Reihum: wählen, machen — oder kneifen und trinken.',
+  kategorien: 'Reihum laut etwas nennen. Wer stockt oder doppelt, trinkt.',
+  mehrheit: 'Selbst antworten — und tippen, was die Mehrheit sagt. Daneben heißt trinken.',
+  regelkarte: 'Eine Regel für die nächsten zwei Runden. Jeder Verstoß ist ein Schluck.',
 };
 
 /**
@@ -231,6 +256,9 @@ const MINISPIEL_ANSAGE_OHNE: Partial<Record<PartyMinispiel, string>> = {
   schaetzen: 'Eine Zahl. Wer am nächsten liegt, gewinnt — wer am weitesten weg ist, kassiert.',
   entweder: 'A oder B. Die Minderheit kassiert, bei Gleichstand alle.',
   wahrheitpflicht: 'Reihum: wählen, machen — oder kneifen und kassieren.',
+  kategorien: 'Reihum laut etwas nennen. Wer stockt oder doppelt, kassiert.',
+  mehrheit: 'Selbst antworten — und tippen, was die Mehrheit sagt. Daneben gibt einen Strafpunkt.',
+  regelkarte: 'Eine Regel für die nächsten zwei Runden. Jeder Verstoß ist ein Strafpunkt.',
 };
 
 /**

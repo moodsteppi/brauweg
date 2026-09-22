@@ -93,8 +93,13 @@ export const partykiste: GameModule<
   PartykisteRegeln
 > = {
   meta,
-  /** Erste Fassung — noch keine Protokollgeschichte. */
-  protocolVersion: 1,
+  /**
+   * 2 seit dem 22.09.2026: drei neue Minispiele (Kategorien, Mehrheitsraten,
+   * Regel-Karte) und `regelKarte` in jeder Sicht. Ein Client der Fassung 1
+   * kennt die neuen Runden nicht und zeigte dort nichts — lieber beim
+   * Beitritt abweisen (client protocol.ts, PARTYKISTE_MODULE_VERSION).
+   */
+  protocolVersion: 2,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -279,6 +284,22 @@ export const partykiste: GameModule<
               { art: 'erledigt', ja: true },
               { art: 'erledigt', ja: false },
             ];
+      /*
+       * Die drei ohne Uhr. Nicht hier stehen, mit Absicht, der Einspruch
+       * (Kategorien) und der Verstoss (Regel-Karte): Beide darf JEDER Sitz
+       * jederzeit, nicht nur der am Zug — genau wie das Tippen in den
+       * gleichzeitigen Minispielen, fuer das hier auch nur der naechste Offene
+       * seine Knoepfe bekommt. Der Bildschirm baut sie aus der Sicht
+       * (`regelKarte.meldenMoeglich`, `daten.letzter`).
+       */
+      case 'kategorien':
+        return [{ art: 'genannt' }, { art: 'gestockt' }];
+      case 'mehrheit':
+        return [0, 1].flatMap((eigene) =>
+          [0, 1].map((tipp) => ({ art: 'mehrheitstipp', eigene, tipp }) as const),
+        );
+      case 'regelkarte':
+        return [{ art: 'bereit' }];
     }
   },
 

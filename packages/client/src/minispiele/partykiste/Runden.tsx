@@ -35,6 +35,7 @@ import {
   type WerBinIchSicht,
   type WerEherSicht,
 } from './sicht';
+import { KategorienRunde, MehrheitRunde, RegelkartenRunde } from './RundenOhneUhr';
 
 export interface RundenProps {
   sicht: PartykisteSicht;
@@ -54,7 +55,7 @@ export function namenFuer(sitze: SeatInfo[], sitz: number): string {
 }
 
 /** Die Buehne: eine Karte, auf der das Wesentliche steht. */
-function Buehne({
+export function Buehne({
   oben,
   gross,
   unten,
@@ -75,7 +76,7 @@ function Buehne({
 }
 
 /** Eine Reihe grosser Schaltflaechen — die einzige Eingabe, die es hier gibt. */
-function Wahl({
+export function Wahl({
   weit,
   children,
 }: {
@@ -115,7 +116,7 @@ export function Karte({ karte, zu }: { karte?: PartyKarte; zu?: boolean }): Reac
 }
 
 /** Schaltflaechen mit den Namen der Mitspieler — zum Zeigen und Verdaechtigen. */
-function Leute({
+export function Leute({
   sicht,
   sitze,
   gewaehlt,
@@ -788,5 +789,13 @@ export function Runde(props: RundenProps): React.JSX.Element {
       return <EntwederRunde {...props} />;
     case 'wahrheitpflicht':
       return <WahrheitPflichtRunde {...props} />;
+    /* Die drei ohne Uhr (RundenOhneUhr.tsx). Mehrheitsraten merkt sich die
+       eigene Antwort im Zustand — der Schluessel wirft ihn je Runde weg. */
+    case 'kategorien':
+      return <KategorienRunde {...props} />;
+    case 'mehrheit':
+      return <MehrheitRunde key={props.sicht.rundeNr} {...props} />;
+    case 'regelkarte':
+      return <RegelkartenRunde {...props} />;
   }
 }

@@ -55,6 +55,30 @@ function strom(sicht: PartykisteSicht, zweck: string): () => number {
 }
 
 /**
+ * Kategorien-Battle: Wie wahrscheinlich ein Bot stockt. Mit jeder Runde um
+ * den Tisch wird es enger (die leichten Antworten sind weg), und die
+ * Spielstaerke streckt oder staucht das — ein Genie stockt halb so oft.
+ */
+function stockQuote(stufe: BotLevel | undefined, runde: number): number {
+  const staerke = stufe === 'anfaenger' ? 1.5 : stufe === 'experte' ? 0.7 : stufe === 'genie' ? 0.5 : 1;
+  return Math.min(0.6, (0.06 + 0.05 * runde) * staerke);
+}
+
+/**
+ * Mehrheitsraten: die eigene Antwort eines Bots auf Sitz `sitz`.
+ *
+ * Haengt NUR an Sitz und Runde — dieselbe Formel wie `strom` fuer genau
+ * diesen Sitz. Darin liegt der Kniff: Jeder Bot kann ausrechnen, was die
+ * anderen Bots antworten, ohne in den Zustand zu sehen. Er kennt ihre
+ * Sitze (`botSitze` steht in jeder Sicht) und ihre Denkweise (diese
+ * Funktion) — so wie man am Tisch weiss, wie der Kumpel tickt. Was die
+ * Menschen antworten, weiss er nicht.
+ */
+function eigeneMehrheitsAntwort(sitz: number, rundeNr: number): number {
+  return baueZufall(`${sitz}|${rundeNr}|mehrheit|eigene`)() < 0.5 ? 0 : 1;
+}
+
+/**
  * Die Antwort, die der Bot fuer richtig HAELT — oder -1, wenn die Frage nicht
  * im Katalog steht (kann nach einem Umbau der Kataloge vorkommen; dann raet
  * er, statt zu scheitern).
@@ -153,5 +177,41 @@ export function botZug(sicht: PartykisteSicht, stufe?: BotLevel): PartykisteAkti
       /* Vier von fuenf Bots ziehen durch. Der fuenfte kneift — Bots sind auch nur Menschen. */
       return { art: 'erledigt', ja: strom(sicht, 'wp-erledigt')() < 0.8 };
     }
+    case 'kategorien': {
+      /*
+       * Der Bot "nennt" etwas — laut sagen kann er nichts, also ist es eine
+       * Wette darauf, dass ihm etwas eingefallen waere. Je Nennung ein neuer
+       * Wurf (der Zaehler steht im Zweck), sonst stockte er in jeder Runde
+       * an derselben Stelle.
+       */
+      const daten = sicht.daten;
+      const anwesend = Math.max(1, sicht.sitze - sicht.ausgestiegen.length);
+      const umDenTisch = Math.floor(daten.nennungen / anwesend);
+      const stockt = strom(sicht, `kategorien-${daten.nennungen}`)() < stockQuote(stufe, umDenTisch);
+      return stockt ? { art: 'gestockt' } : { art: 'genannt' };
+    }
+    case 'mehrheit': {
+      /*
+       * Eigene Antwort: eine Muenze. Tipp: die haeufigere Antwort unter den
+       * anwesenden Bots, sich selbst eingeschlossen (siehe
+       * eigeneMehrheitsAntwort) — bei Gleichstand die eigene. An einem Tisch
+       * voller Bots liegt damit jeder richtig, an einem mit Menschen nur,
+       * wenn die Menschen nicht dagegen halten.
+       */
+      const eigene = eigeneMehrheitsAntwort(sicht.sitz, sicht.rundeNr);
+      const raus = new Set(sicht.ausgestiegen);
+      let a = 0;
+      let b = 0;
+      for (const bot of sicht.botSitze) {
+        if (raus.has(bot)) continue;
+        if (eigeneMehrheitsAntwort(bot, sicht.rundeNr) === 0) a++;
+        else b++;
+      }
+      const tipp = a > b ? 0 : b > a ? 1 : eigene;
+      return { art: 'mehrheitstipp', eigene, tipp };
+    }
+    case 'regelkarte':
+      /* Gelesen. Verstoesse meldet ein Bot nie — er hoert ja nicht, wer einen Vornamen sagt. */
+      return { art: 'bereit' };
   }
 }

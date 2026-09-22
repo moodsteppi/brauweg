@@ -102,8 +102,12 @@ export const GOLF_MODULE_VERSION = 5;
  * dem 19.09.2026), 4 bis 12 Sitze.
  * Steht ausgeschrieben da, damit die naechste Aenderung eine Zahl zum
  * Hochsetzen findet und nicht die stille 1 aus `moduleVersionFor`.
+ *
+ * 2 seit dem 22.09.2026: Kategorien-Battle, Mehrheitsraten und Regel-Karte,
+ * dazu `regelKarte` in jeder Sicht. Ein Client der Fassung 1 kennt die
+ * neuen Runden nicht — die Weiche in Runden.tsx liefe ins Leere.
  */
-export const PARTYKISTE_MODULE_VERSION = 1;
+export const PARTYKISTE_MODULE_VERSION = 2;
 
 /**
  * 1 seit dem 22. September 2026 — die erste Fassung. BroCooked ist wie Golf

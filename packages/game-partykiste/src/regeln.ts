@@ -46,7 +46,17 @@ export type MinispielId =
   /** Entweder-oder: A oder B, die Minderheit trinkt. */
   | 'entweder'
   /** Wahrheit oder Pflicht: reihum, gemacht oder gekniffen. */
-  | 'wahrheitpflicht';
+  | 'wahrheitpflicht'
+  /*
+   * Die drei ohne Uhr (seit dem 22.09.2026, Robins Entscheidung "5+ neue
+   * Minispiele"). Ablauf und Begruendung in `ohne-uhr.ts`.
+   */
+  /** Kategorien-Battle: reihum laut etwas nennen, wer stockt, verliert. */
+  | 'kategorien'
+  /** Mehrheitsraten: selbst antworten und tippen, was die Mehrheit sagt. */
+  | 'mehrheit'
+  /** Regel-Karte: eine Regel, die zwei weitere Runden lang gilt. */
+  | 'regelkarte';
 
 export const MINISPIELE: readonly MinispielId[] = [
   'imposter',
@@ -58,6 +68,9 @@ export const MINISPIELE: readonly MinispielId[] = [
   'schaetzen',
   'entweder',
   'wahrheitpflicht',
+  'kategorien',
+  'mehrheit',
+  'regelkarte',
 ];
 
 function istMinispiel(x: unknown): x is MinispielId {
@@ -185,6 +198,25 @@ export const ZUGZEIT_MS = 5 * 60_000;
  */
 export const BOT_TAKT_MS = 220;
 
+/**
+ * Kategorien-Battle: Nach so vielen Runden um den Tisch ist eine Kategorie
+ * leergespielt, und die Runde endet ohne Verlierer.
+ *
+ * Ohne Deckel liefe ein Tisch, an dem niemand stockt, ewig — und ein Tisch
+ * voller Bots tut genau das, wenn der Zufall es will. Vier Runden sind zu
+ * zwoelft 48 Nennungen; eine Kategorie, die das hergibt, hat die Runde
+ * verdient gewonnen.
+ */
+export const KATEGORIEN_RUNDEN_UM_DEN_TISCH = 4;
+
+/**
+ * Regel-Karte: Die gezogene Regel gilt bis zum Ende der Runde X + 2 (X ist
+ * die Runde der Karte). Zwei Runden, weil eine Regel erst dann Spass macht,
+ * wenn man sie beim NAECHSTEN Minispiel vergisst — und nach drei haette sie
+ * jeder im Blut.
+ */
+export const REGEL_KARTE_DAUER = 2;
+
 // ---------------------------------------------------------------------------
 // Aktionen
 // ---------------------------------------------------------------------------
@@ -211,7 +243,24 @@ export type PartykisteAktion =
   /** Wahrheit oder Pflicht, Schritt 1: was soll es sein? */
   | { readonly art: 'wahl'; readonly pflicht: boolean }
   /** Wahrheit oder Pflicht, Schritt 2: gemacht (true) oder gekniffen. */
-  | { readonly art: 'erledigt'; readonly ja: boolean };
+  | { readonly art: 'erledigt'; readonly ja: boolean }
+  /** Kategorien-Battle: Der Sitz am Zug hat laut etwas genannt. */
+  | { readonly art: 'genannt' }
+  /** Kategorien-Battle: Der Sitz am Zug stockt oder hat gedoppelt — selbst gemeldet. */
+  | { readonly art: 'gestockt' }
+  /**
+   * Kategorien-Battle: Einspruch gegen `ziel` — den Sitz am Zug oder den, der
+   * zuletzt genannt hat. Die Mehrheit der Menschen entscheidet.
+   */
+  | { readonly art: 'einspruch'; readonly ziel: number }
+  /** Mehrheitsraten: die eigene Antwort und der Tipp auf die Mehrheit, je 0 = A, 1 = B. */
+  | { readonly art: 'mehrheitstipp'; readonly eigene: number; readonly tipp: number }
+  /**
+   * Regel-Karte: ein Verstoss gegen die geltende Regel. `ziel` = der eigene
+   * Sitz ist eine Selbstmeldung, jeder andere eine Anklage (zaehlt erst mit
+   * der Mehrheit). Geht in JEDER Runde, solange die Regel gilt.
+   */
+  | { readonly art: 'verstoss'; readonly ziel: number };
 
 // ---------------------------------------------------------------------------
 // Punkte und Schluecke
@@ -244,6 +293,12 @@ export const PUNKTE = {
   entwederMehrheit: 1,
   /** Wahrheit oder Pflicht: durchgezogen. */
   wahrheitpflichtGemacht: 2,
+  /** Kategorien-Battle: nicht gestockt. Klein, wie bei den Trinkrunden. */
+  kategorienDurch: 1,
+  /** Mehrheitsraten: die Mehrheit richtig getippt — schwerer als nur zu waehlen. */
+  mehrheitRichtig: 2,
+  /** Regel-Karte: die ganze Geltung ohne Verstoss ueberstanden. */
+  regelSauber: 1,
 } as const;
 
 export const SCHLUECKE = {
@@ -269,6 +324,12 @@ export const SCHLUECKE = {
   entwederMinderheit: 1,
   /** Wahrheit oder Pflicht: gekniffen. */
   wahrheitpflichtGekniffen: 2,
+  /** Kategorien-Battle: gestockt, gedoppelt oder von der Mehrheit benannt. */
+  kategorienVerloren: 2,
+  /** Mehrheitsraten: daneben getippt — bei Gleichstand alle. */
+  mehrheitDaneben: 1,
+  /** Regel-Karte: je Verstoss. */
+  regelVerstoss: 1,
 } as const;
 
 // ---------------------------------------------------------------------------

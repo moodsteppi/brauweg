@@ -40,3 +40,8 @@ export { QUIZ_FRAGEN } from './inhalte/quiz.js';
 export { SCHAETZ_FRAGEN } from './inhalte/schaetzen.js';
 export { AUFGABEN } from './inhalte/wahrheitpflicht.js';
 export { WER_EHER_SPRUECHE } from './inhalte/wereher.js';
+/* Die drei ohne Uhr (22.09.2026): Kataloge, Inhaltsformen, Rundentypen. */
+export { KATEGORIEN, type Kategorie } from './inhalte/kategorien.js';
+export { MEHRHEITSFRAGEN, type Mehrheitsfrage } from './inhalte/mehrheit.js';
+export { REGELKARTEN, type Regelkarte } from './inhalte/regelkarten.js';
+export type { AktiveRegel, KategorienRunde, MehrheitRunde, RegelkartenRunde } from './ohne-uhr.js';

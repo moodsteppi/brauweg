@@ -5,6 +5,7 @@ import { PartyAuswahl, usePartyAuswahl } from '../minispiele/partykiste/Auswahl'
 import { Einstellungen, OffeneRunde, Regler, type Angebot } from '../minispiele/partykiste/Einstellungen';
 import { LobbyRegelzeile, RegelsatzKontext, Regelzeile } from '../minispiele/partykiste/Regelzeile';
 import { Runde } from '../minispiele/partykiste/Runden';
+import { AktiveRegel } from '../minispiele/partykiste/RundenOhneUhr';
 import {
   MINISPIEL_NAME,
   ansageFuer,
@@ -336,7 +337,7 @@ export function Partykiste({
         <div className="pk-menue-mitte">
           <h1 className="pk-titel">Partykiste</h1>
           <p className="pk-untertitel">
-            Neun Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum
+            Zwölf Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum
             sitzen. {trinkmodus ? 'Wer verliert, trinkt' : 'Wer verliert, sammelt Strafpunkte'}; wer
             gewinnt, steht oben.
           </p>
@@ -505,6 +506,8 @@ export function Partykiste({
       </header>
       {/* Die Sicht traegt den Regelsatz selbst — sie passt auf PartyRegelsatz. */}
       <Regelzeile regeln={sicht} />
+      {/* Die geltende Regel-Karte steht ueber JEDER Runde — gebrochen wird sie in den anderen. */}
+      <AktiveRegel sicht={sicht} sitze={sitze} sende={sende} />
 
       {!tisch.connected ? (
         <p className="pk-fehler">Keine Verbindung — es wird neu aufgebaut …</p>
