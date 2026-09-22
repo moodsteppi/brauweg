@@ -548,3 +548,66 @@ test('Mememory: ein mitgeschicktes zusatz ueberstimmt die Freigabe nicht', async
   const regeln = await tableRules(s.ctx.db, tischId);
   assert.deepEqual(regeln['zusatz'], [frei.kennung]);
 });
+
+/**
+ * Abbrechen, waehrend der eigene Tisch gerade entsteht (seit dem 22.09.2026).
+ *
+ * `faellig()` nimmt die Runde aus dem Fenster, dann laeuft `tischBauen` — in
+ * der Produktion gut eine Sekunde. Drueckt der Spieler in dieser Zeit
+ * Abbrechen, loescht die Schlange zwar seinen Bau-Eintrag, sein Sitz steht
+ * aber schon per `createTable`/`joinTable` in der Datenbank. Sein Client hat
+ * die Suche verlassen und fragt nie wieder nach: Der Stuhl blieb leer, und die
+ * Partie lief nach der Abwesenheitsfrist aus — dasselbe Symptom wie bei der
+ * Luecke von oben, nur ueber den Abbrechen-Knopf.
+ *
+ * Nachgestellt wie dort: Annas Abruf baut den Tisch und wird NICHT abgewartet;
+ * Berts Abbruch faellt mittendrin.
+ */
+test('Wer mitten im Tischbau abbricht, sitzt danach an keinem Tisch — der Mitspieler bekommt seinen', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+
+  const anna = await s.konto('Anna');
+  const bert = await s.konto('Bert');
+  for (const konto of [anna, bert]) await s.vermittlung.betritt(SPIEL, konto);
+  await warte(s, FENSTER_MS - 2_000, [anna, bert]);
+  s.vor(2_000);
+
+  // Annas Abruf nimmt die Runde heraus und baut; der Bau liegt ab dem ersten
+  // await der Datenbank in der Schwebe.
+  const annasBau = s.vermittlung.abruf(SPIEL, anna);
+  s.vermittlung.verlaesst(SPIEL, bert);
+  const annasStand = await annasBau;
+
+  assert.ok(annasStand.tischId, 'Anna bekommt ihren Tisch');
+  assert.deepEqual(await tischeVon(s, bert), [], 'Berts Sitz ist geraeumt — vorher blieb er leer stehen');
+  assert.deepEqual(await tischeVon(s, anna), [annasStand.tischId], 'Anna sitzt an genau ihrem Tisch');
+
+  const { table, seats } = await tableWithSeats(s.ctx.db, annasStand.tischId);
+  assert.equal(seats.filter((sitz) => sitz.accountId).length, 1, 'nur noch Anna');
+  assert.equal(isReadyToStart(table, seats), true, 'die Bots fuellen auf, der Tisch startet');
+
+  // Und Bert hoert, dass er nicht mehr sucht, statt an den Tisch geschickt zu
+  // werden, den er eben abgelehnt hat.
+  const bertsStand = await s.vermittlung.abruf(SPIEL, bert);
+  assert.equal(bertsStand.sucht, false);
+  assert.equal(bertsStand.tischId, null);
+});
+
+test('Bricht der einzige Suchende im Bau ab, bleibt kein Tisch zurueck und niemand wird angestupst', async (t) => {
+  const s = await stand();
+  t.after(() => s.close());
+
+  const anna = await s.konto('Anna');
+  await s.vermittlung.betritt(SPIEL, anna);
+  await warte(s, FENSTER_MS - 2_000, [anna]);
+  s.vor(2_000);
+
+  const annasBau = s.vermittlung.abruf(SPIEL, anna);
+  s.vermittlung.verlaesst(SPIEL, anna);
+  const annasStand = await annasBau;
+
+  assert.equal(annasStand.tischId, null, 'kein Tisch fuer die Abbrecherin');
+  assert.deepEqual(await tischeVon(s, anna), [], 'und kein Sitz, der auf sie wartet');
+  assert.deepEqual(s.angestupst, [], 'ein leerer Tisch braucht keinen Weckruf');
+});

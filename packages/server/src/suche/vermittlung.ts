@@ -21,6 +21,7 @@ import {
   MAX_ROUNDS,
   createTable,
   joinTable,
+  leaveLobby,
   leaveOtherWaitingTables,
 } from '../tables/service.js';
 import { type Anreicherung, STANDARD_ANREICHERUNG } from './anreicherung.js';
@@ -161,8 +162,18 @@ export class Vermittlung {
     for (const runde of this.schlange.faellig(zielSitze)) {
       try {
         const beteiligte = await this.tischBauen(runde.gameId, runde.accountIds, runde.config);
-        this.schlange.vermittelt(runde.gameId, beteiligte.accountIds, beteiligte.tischId);
-        this.runtime.notify(beteiligte.tischId);
+        const geblieben = await this.abspringerHerunter(
+          runde.gameId,
+          beteiligte.tischId,
+          beteiligte.accountIds,
+        );
+        // Haben ALLE waehrend des Baus abgebrochen, ist der Tisch schon
+        // verfallen (`leaveLobby` gibt den letzten leeren Tisch auf). Ihn
+        // anzustupsen waere ein Weckruf fuer niemanden.
+        if (geblieben.length > 0) {
+          this.schlange.vermittelt(runde.gameId, geblieben, beteiligte.tischId);
+          this.runtime.notify(beteiligte.tischId);
+        }
       } catch (fehler) {
         this.beiFehler(runde.gameId, fehler);
       } finally {
@@ -172,6 +183,46 @@ export class Vermittlung {
         this.schlange.bauBeendet(runde.gameId, runde.accountIds);
       }
     }
+  }
+
+  /**
+   * Wer waehrend des Tischbaus abgebrochen hat, kommt wieder herunter.
+   *
+   * `faellig` nimmt die Runde aus dem Fenster, dann laeuft `tischBauen` —
+   * in der Produktion gut eine Sekunde. Drueckt ein Spieler in dieser Zeit
+   * Abbrechen, kann die Schlange nur vermerken, dass er weg will
+   * (`imBauAbgesprungen`): Sein Sitz steht da schon in der Datenbank, und
+   * sie kennt keinen Tisch. Bliebe er sitzen, waere er ein leerer Stuhl, der
+   * nie wieder besetzt wird — sein Client hat die Suche verlassen und fragt
+   * nicht mehr nach —, und die Partie liefe nach der Abwesenheitsfrist aus.
+   * Genau das Symptom, gegen das `imBau` gebaut wurde, nur ueber den
+   * Abbrechen-Knopf.
+   *
+   * Zurueck kommen die Konten, die geblieben sind. Nur sie bekommen ein
+   * Ergebnis; der Abspringer soll von vorn anfangen, nicht an einen Tisch
+   * geschickt werden, den er eben abgelehnt hat.
+   */
+  private async abspringerHerunter(
+    gameId: GameId,
+    tischId: string,
+    accountIds: readonly string[],
+  ): Promise<string[]> {
+    const geblieben: string[] = [];
+    for (const accountId of accountIds) {
+      if (!this.schlange.imBauAbgesprungen(gameId, accountId)) {
+        geblieben.push(accountId);
+        continue;
+      }
+      try {
+        await leaveLobby(this.db, tischId, accountId);
+      } catch (fehler) {
+        // Einer, der nicht mehr herunterkommt (der Tisch laeuft schon),
+        // darf den Tisch der anderen nicht kippen — gemeldet wird es
+        // trotzdem, sonst verschwindet der alte Fehler wieder still.
+        this.beiFehler(gameId, fehler);
+      }
+    }
+    return geblieben;
   }
 
   private async tischBauen(
