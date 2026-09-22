@@ -15410,48 +15410,96 @@ span.hub-angebot-art.poker-jeton-stapel {
   }
 }
 
+/* == Auswahl-Kachel (hub.tsx: AuswahlRaster, AuswahlKachel, AuswahlFilter) ==
+   Seit dem 22.09.2026 DAS Muster fuer „waehle eines oder mehrere aus einer
+   Liste mit Bildern": Filler-Spielart, Golf-Bahn, Partykiste, Themenpakete.
+   Mobile-first, weil `.kachelraster` oben erst ab 60rem greift und am Handy
+   jede Liste zur Einzelspalte wurde. Zwei Spalten am Handy, drei ab 40rem,
+   ab 60rem so viele wie `--aw-min` zulaesst. `.is-fest` (Prop `spalten`)
+   haelt eine feste Zahl — fuer schmale Behaelter wie das Filler-Menue.
+   Farben ueber `--aw-*`, damit ein heller Bildschirm sie umstellt, ohne
+   die Regeln zu kopieren. */
+.aw-raster {
+  display: grid;
+  grid-template-columns: repeat(var(--aw-spalten, 2), minmax(0, 1fr));
+  gap: 0.5rem;
+  align-content: start;
+}
+@media (min-width: 40rem) {
+  .aw-raster:not(.is-fest) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 60rem) {
+  .aw-raster:not(.is-fest) { grid-template-columns: repeat(auto-fill, minmax(var(--aw-min, 14rem), 1fr)); }
+}
+.aw-kachel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.4rem 0.4rem 0.5rem;
+  border: 2px solid var(--aw-line, var(--line));
+  border-radius: 0.7rem;
+  background: var(--aw-panel, var(--panel));
+  color: var(--aw-text, var(--text));
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* Rahmen UND Innenring: Nur die Rahmenfarbe zu tauschen ist auf einem hellen
+   Grund zu leise, um es aus dem Augenwinkel zu sehen. */
+.aw-kachel.is-an { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.aw-kachel[aria-disabled] { opacity: 0.5; cursor: not-allowed; }
+.aw-kachel:focus-visible { outline: 3px solid var(--blau); outline-offset: 2px; }
+.aw-bild img { display: block; width: 100%; height: auto; border-radius: 0.45rem; }
+.aw-titel { font-weight: 800; font-size: 0.95rem; line-height: 1.2; }
+.aw-text { font-size: 0.75rem; line-height: 1.3; color: var(--aw-muted, var(--muted)); }
+.aw-badge {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  display: flex;
+  gap: 2px;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.aw-badge i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.3); }
+.aw-badge i.is-an { background: var(--gold); }
+.aw-leer { grid-column: 1 / -1; margin: 0; color: var(--aw-muted, var(--muted)); text-align: center; }
+.aw-filter { display: grid; gap: 0.4rem; margin-bottom: 0.5rem; }
+.aw-suche,
+.aw-chip {
+  border: 1.5px solid var(--aw-line, var(--line));
+  background: var(--aw-panel, var(--panel));
+  color: var(--aw-text, var(--text));
+  font: inherit;
+}
+.aw-suche { width: 100%; padding: 0.5rem 0.7rem; border-radius: 0.5rem; }
+.aw-chips { display: flex; gap: 0.3rem; overflow-x: auto; scrollbar-width: none; }
+.aw-chip { flex: 0 0 auto; padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+.aw-chip[aria-pressed='true'] { border-color: var(--accent); background: var(--accent); color: #fff; }
+@media (prefers-reduced-motion: no-preference) {
+  .aw-kachel { transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+  .aw-kachel:active:not([aria-disabled]) { transform: scale(0.97); }
+}
+
 /* -- Filler: Spielart, Bot-Knopf, Warteband (Nachtrag 31.08.) ------------- */
 
-/* Der Schalter zwischen Nebel und Normal. Zwei Knoepfe in einer Rinne, der
-   gewaehlte liegt als heller Reiter darin — dieselbe Form, die auf jedem
-   Handy "eins von zweien" bedeutet. */
-.fl-schalter {
-  width: 100%;
+/* Die Wahl der Spielart (seit 22.09.2026 das Auswahl-Raster). Filler ist hell,
+   das Raster bringt die dunklen Plattformfarben mit — hier umgestellt. */
+.fl-spielart {
   margin: 0 0 16px;
-  display: grid;
-  /* Vier Spielarten seit dem 6. September. Ausgeschrieben und nicht
-     auto-fit: Es sollen gleiche Viertel sein, nicht nach Inhalt bemessene
-     Streifen. */
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  padding: 4px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.09);
+  --aw-panel: #ffffff;
+  --aw-line: rgba(0, 0, 0, 0.1);
+  --aw-text: #2b2b2b;
+  --aw-muted: #7a7a7a;
 }
-.fl-schalter button {
-  padding: 11px 4px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: #6d6d6d;
-  font: 800 13px/1 system-ui;
-  cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
-}
-.fl-schalter button[data-an] {
-  background: #ffffff;
-  color: #2b2b2b;
-  box-shadow: 0 3px 8px -4px rgba(0, 0, 0, 0.55);
-}
-/* Der erklaerende Satz sitzt UNTER beiden Knoepfen und ueber die volle
-   Breite: Er gehoert zur Wahl, nicht zu einem der beiden Knoepfe. */
-.fl-schalter-text {
-  grid-column: 1 / -1;
-  padding: 2px 6px 4px;
-  color: #7a7a7a;
-  font: 600 12px/1.35 system-ui;
-  text-align: center;
-}
+.fl-spielart .aw-titel { text-align: center; font-size: 13px; }
+.fl-spielart-text { margin: 8px 0 0; padding: 0 6px; color: #7a7a7a; font: 600 12px/1.35 system-ui; }
 
 /* Der Block um Spielartschalter und Bot-Knopf.
    Er fasst zusammen, was zusammengehoert: Der Schalter wirkt seit dem
@@ -15470,10 +15518,6 @@ span.hub-angebot-art.poker-jeton-stapel {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-/* Im Block sitzt der Knopf direkt unter dem Schalter — dessen eigener
-   Abstand nach unten genuegt. */
-.fl-botblock .fl-schalter { margin-bottom: 10px; }
-
 .fl-botknopf {
   width: 100%;
   margin-top: 10px;
@@ -16494,20 +16538,15 @@ span.hub-angebot-art.poker-jeton-stapel {
 
 /* -- Vorschau im Menue ---------------------------------------------------- */
 
-.fl-vorschau {
-  margin: 22px auto 0;
-  width: min(72vw, 264px);
-}
 .fl-vorschau-brett {
   position: relative;
   display: grid;
   gap: 2px;
   /* Rand statt Innenabstand: Die Waende sitzen absolut in Prozent, und ein
      Innenabstand verschoebe sie gegenueber dem Raster. */
-  border: 4px solid #2a2a2a;
-  border-radius: 10px;
+  border: 3px solid #2a2a2a;
+  border-radius: 8px;
   background: #2a2a2a;
-  box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.8);
 }
 /* Eigene Klasse und nicht `> span`: Die Waende sind ebenfalls Kinder des
    Rasters, und eine Regel auf alle Kinder machte aus ihrem `absolute` ein
@@ -16524,13 +16563,6 @@ span.hub-angebot-art.poker-jeton-stapel {
 .fl-vorschau-brett .fl-wand { width: 5px; height: 5px; margin-left: -2.5px; margin-top: -2.5px; }
 .fl-vorschau-brett .fl-wand:not([data-quer]) { margin-top: 0; }
 .fl-vorschau-brett .fl-wand[data-quer] { margin-left: 0; }
-.fl-vorschau-text {
-  margin: 6px 0 0;
-  color: #8a8a8a;
-  font: 700 11px/1.3 system-ui;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
 .fl-wischhinweis {
   display: block;
   margin-top: 3px;
@@ -16561,13 +16593,9 @@ span.hub-angebot-art.poker-jeton-stapel {
   from { opacity: 0; transform: translateX(-28px); }
   to { opacity: 1; transform: none; }
 }
-.fl-vorschau[data-richtung='links'],
-.fl-schalter-text[data-richtung='links'] { animation: fl-einwisch-links 220ms ease-out; }
-.fl-vorschau[data-richtung='rechts'],
-.fl-schalter-text[data-richtung='rechts'] { animation: fl-einwisch-rechts 220ms ease-out; }
-@media (prefers-reduced-motion: reduce) {
-  .fl-vorschau[data-richtung],
-  .fl-schalter-text[data-richtung] { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .fl-spielart-text[data-richtung='links'] { animation: fl-einwisch-links 220ms ease-out; }
+  .fl-spielart-text[data-richtung='rechts'] { animation: fl-einwisch-rechts 220ms ease-out; }
 }
 
 

@@ -1,5 +1,8 @@
+import { useCallback, useId } from 'react';
+
 /**
- * Gemeinsame Hub-Bausteine (Szene, Banner, Statistik A).
+ * Gemeinsame Hub-Bausteine (Szene, Banner, Statistik A) — und seit dem
+ * 22.09.2026 die Auswahl-Kachel (ganz unten).
  * Liegen hier, damit Profil-Tab und Fremdprofil dieselbe Sprache sprechen.
  */
 
@@ -213,6 +216,303 @@ export function StatSpiel({
         <img src="/hub/pokal.png" alt="" aria-hidden="true" />
         {cups}
       </span>
+    </div>
+  );
+}
+
+/*
+ * ===========================================================================
+ * Auswahl-Kachel und Auswahl-Raster (22.09.2026, Robins Entscheidung S2)
+ *
+ * WOFUER: Eine Liste gleichartiger Dinge, aus der man eines oder mehrere
+ * waehlt und jedes an Bild oder Miniatur erkennt — die Spielart bei Filler,
+ * die Bahn bei Golf, das Minispiel in der Partykiste, ein Themenpaket. Bis
+ * hierher war dieselbe Kachelliste dreimal von Hand verdrahtet (GameSelect,
+ * Kleiderschrank, Filler-Schalter), jede mit eigenem Aktiv-Zustand und
+ * eigenem Raster; `.kachelraster` gab es nur ab 60rem, am Handy also nie.
+ *
+ * WOFUER NICHT: Fuer Regeln. Das Bauteil zeigt Werte und meldet eine Wahl;
+ * ob die Wahl erlaubt ist, was sie kostet und was daraus folgt, entscheidet
+ * der Aufrufer — und der fragt das Modul oder den Server (CLAUDE.md: „Der
+ * Client bildet keine Regel nach"). `deaktiviert` kommt deshalb als fertiger
+ * GRUND herein, nicht als Bedingung. Auch keinen eigenen Zustand: Das Raster
+ * ist gesteuert, `gewaehlt` kommt von aussen und geht ueber `onWahl` zurueck,
+ * damit die Wahl dort liegt, wo sie gebraucht wird (localStorage, `config`).
+ *
+ * BEDIENUNG: Buttons mit `aria-pressed`, nicht `role="option"` — die
+ * bestehenden Proben suchen `getByRole('button', { name })`, und ein Button
+ * bringt Enter und Leertaste von Haus aus mit. Pfeiltasten, Pos1 und Ende
+ * wandern im Raster. Der Name der Kachel ist NUR der Titel
+ * (`aria-labelledby`); Untertitel, Grund und Badge sind Beschreibung
+ * (`aria-describedby`). Deaktivierte Kacheln bleiben fokussierbar
+ * (`aria-disabled` statt `disabled`): Ein `disabled`-Knopf ist fuer Tastatur
+ * und Vorleser unsichtbar, und dann erfaehrt niemand den Grund.
+ *
+ * GESTALT: `.aw-*` in styles.css, mobile-first zweispaltig. Farben ueber
+ * `--aw-panel/--aw-line/--aw-text/--aw-muted` je Bildschirm umstellbar
+ * (Filler ist hell, der Hub dunkel); Vorgabe sind die Plattform-Tokens.
+ * ===========================================================================
+ */
+
+export type AuswahlEintrag = {
+  /** Eindeutig im Raster; geht so an `onWahl` zurueck. */
+  kennung: string;
+  titel: string;
+  untertitel?: string;
+  /** Bild-URL — ODER `vorschau`, wenn das Bild gezeichnet statt geladen wird. */
+  bild?: string;
+  /** Miniatur als Element: Die Golf-Bahn kommt vom echten Zeichner, nicht als Datei. */
+  vorschau?: React.ReactNode;
+  /** Der GRUND, warum nicht waehlbar — steht als Untertitel in der Kachel. Leer = waehlbar. */
+  deaktiviert?: string;
+  /** Eine Zahl 1–5 wird als Punktreihe gezeichnet (Schwierigkeit); alles andere steht, wie es ist. */
+  badge?: number | React.ReactNode;
+};
+
+/** Schwierigkeit als fuenf Punkte — gezaehlt, nicht gelesen: Vorleser bekommen „Stufe n von 5". */
+function AuswahlPunkte({ stufe, id }: { stufe: number; id: string }): React.JSX.Element {
+  const n = Math.max(0, Math.min(5, Math.round(stufe)));
+  return (
+    <span className="aw-badge" id={id} role="img" aria-label={`Stufe ${n} von 5`}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <i key={i} className={i < n ? 'is-an' : undefined} />
+      ))}
+    </span>
+  );
+}
+
+export function AuswahlKachel({
+  kennung,
+  titel,
+  untertitel,
+  bild,
+  vorschau,
+  deaktiviert,
+  badge,
+  gewaehlt,
+  onWahl,
+}: AuswahlEintrag & {
+  gewaehlt: boolean;
+  onWahl: (kennung: string) => void;
+}): React.JSX.Element {
+  const id = useId();
+  const titelId = `${id}-t`;
+  const textId = `${id}-x`;
+  const badgeId = `${id}-b`;
+  const gesperrt = typeof deaktiviert === 'string' && deaktiviert.length > 0;
+  // Der Grund verdraengt den Untertitel: Zwei Zeilen Kleingedrucktes machen
+  // die Kachel hoeher als ihre Nachbarn, und der Grund ist die Nachricht.
+  const text = gesperrt ? deaktiviert : untertitel;
+  const beschreibung = [text ? textId : null, badge !== undefined ? badgeId : null]
+    .filter(Boolean)
+    .join(' ');
+  return (
+    <button
+      type="button"
+      className={`aw-kachel${gewaehlt ? ' is-an' : ''}`}
+      data-kennung={kennung}
+      aria-pressed={gewaehlt}
+      aria-disabled={gesperrt || undefined}
+      aria-labelledby={titelId}
+      aria-describedby={beschreibung || undefined}
+      onClick={() => {
+        if (!gesperrt) onWahl(kennung);
+      }}
+    >
+      {vorschau !== undefined ? (
+        <span className="aw-vorschau" aria-hidden="true">
+          {vorschau}
+        </span>
+      ) : bild ? (
+        <span className="aw-bild">
+          <img src={bild} alt="" draggable={false} />
+        </span>
+      ) : null}
+      {badge !== undefined &&
+        (typeof badge === 'number' ? (
+          <AuswahlPunkte stufe={badge} id={badgeId} />
+        ) : (
+          <span className="aw-badge" id={badgeId}>
+            {badge}
+          </span>
+        ))}
+      <span className="aw-titel" id={titelId}>
+        {titel}
+      </span>
+      {text && (
+        <span className="aw-text" id={textId}>
+          {text}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** Pfeiltasten wandern im Raster; Zeilenumbruch ist Sache des CSS, deshalb links/rechts = vor/zurueck. */
+const AUSWAHL_TASTEN: Record<string, 1 | -1 | 'anfang' | 'ende'> = {
+  ArrowRight: 1,
+  ArrowDown: 1,
+  ArrowLeft: -1,
+  ArrowUp: -1,
+  Home: 'anfang',
+  End: 'ende',
+};
+
+export function AuswahlRaster({
+  eintraege,
+  gewaehlt,
+  mehrfach = false,
+  onWahl,
+  label,
+  spalten,
+  min,
+  className,
+  leer,
+}: {
+  eintraege: readonly AuswahlEintrag[];
+  /** Einfachauswahl: eine Kennung oder null. Mehrfachauswahl: die Liste. */
+  gewaehlt: string | null | readonly string[];
+  mehrfach?: boolean;
+  /**
+   * Die angetippte Kennung — und dazu die Auswahl, wie sie danach aussaehe
+   * (Einfach: `[kennung]`; Mehrfach: umgeschaltet). Der Aufrufer uebernimmt
+   * sie oder laesst es; das Raster merkt sich nichts.
+   */
+  onWahl: (kennung: string, auswahl: string[]) => void;
+  /** Wofuer die Gruppe steht — Vorleser sagen es vor der ersten Kachel. */
+  label: string;
+  /** Feste Spaltenzahl statt der Haltepunkte — fuer schmale Behaelter wie das Filler-Menue. */
+  spalten?: number;
+  /** Mindestbreite je Kachel ab 60rem (`--aw-min`), z. B. '18rem'. */
+  min?: string;
+  className?: string;
+  /** Was steht, wenn keine Kachel uebrig ist (nach einem Filter). */
+  leer?: React.ReactNode;
+}): React.JSX.Element {
+  const auswahl: readonly string[] =
+    gewaehlt === null ? [] : typeof gewaehlt === 'string' ? [gewaehlt] : gewaehlt;
+  const istGewaehlt = (kennung: string): boolean => auswahl.includes(kennung);
+
+  const waehle = (kennung: string): void => {
+    if (!mehrfach) {
+      onWahl(kennung, [kennung]);
+      return;
+    }
+    onWahl(
+      kennung,
+      istGewaehlt(kennung) ? auswahl.filter((k) => k !== kennung) : [...auswahl, kennung],
+    );
+  };
+
+  const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>): void => {
+    const schritt = AUSWAHL_TASTEN[e.key];
+    if (schritt === undefined) return;
+    const kacheln = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('.aw-kachel'));
+    const aktuell = kacheln.indexOf(document.activeElement as HTMLButtonElement);
+    if (aktuell < 0 || kacheln.length === 0) return;
+    e.preventDefault();
+    const ziel =
+      schritt === 'anfang'
+        ? 0
+        : schritt === 'ende'
+          ? kacheln.length - 1
+          : // Kein Umlauf: Am Rand bleibt es stehen, wie in einer Liste auch.
+            Math.max(0, Math.min(kacheln.length - 1, aktuell + schritt));
+    kacheln[ziel]?.focus();
+  }, []);
+
+  const stil = {
+    ...(spalten !== undefined ? { '--aw-spalten': String(spalten) } : {}),
+    ...(min !== undefined ? { '--aw-min': min } : {}),
+  } as React.CSSProperties;
+
+  return (
+    <div
+      className={`aw-raster${spalten !== undefined ? ' is-fest' : ''}${className ? ` ${className}` : ''}`}
+      role="group"
+      aria-label={label}
+      aria-multiselectable={mehrfach || undefined}
+      style={stil}
+      onKeyDown={onKeyDown}
+    >
+      {eintraege.map((eintrag) => (
+        <AuswahlKachel
+          key={eintrag.kennung}
+          {...eintrag}
+          gewaehlt={istGewaehlt(eintrag.kennung)}
+          onWahl={waehle}
+        />
+      ))}
+      {eintraege.length === 0 && leer !== undefined && <p className="aw-leer">{leer}</p>}
+    </div>
+  );
+}
+
+/**
+ * Passt ein Eintrag zum Suchtext? Jedes Wort muss in Titel oder Untertitel
+ * vorkommen, Gross- und Kleinschreibung zaehlt nicht. Reine Textsuche —
+ * wer nach Bahnlaenge oder Schwierigkeit filtern will, macht das vor dem
+ * Raster in seiner eigenen Liste, denn nur er kennt diese Felder.
+ */
+export function passtZurSuche(eintrag: AuswahlEintrag, suchtext: string): boolean {
+  const woerter = suchtext.trim().toLocaleLowerCase('de').split(/\s+/).filter(Boolean);
+  if (woerter.length === 0) return true;
+  const heuhaufen = `${eintrag.titel} ${eintrag.untertitel ?? ''}`.toLocaleLowerCase('de');
+  return woerter.every((w) => heuhaufen.includes(w));
+}
+
+/**
+ * Suchfeld und Chips ueber einem grossen Raster (ab etwa zwanzig Eintraegen).
+ *
+ * Vorbild ist die Filterleiste der Lobby, aber ohne deren Tischbegriffe: Die
+ * Chips sind hier nur Kennung und Text, was sie bedeuten, weiss der Aufrufer.
+ * Auch der Filter ist gesteuert — Suchtext und aktiver Chip kommen von
+ * aussen, damit der Bildschirm sie z. B. mit dem Raster zusammen zuruecksetzen
+ * kann.
+ */
+export function AuswahlFilter({
+  suchtext,
+  onSuchtext,
+  chips,
+  chip,
+  onChip,
+  platzhalter = 'Suchen…',
+  label = 'Auswahl durchsuchen',
+}: {
+  suchtext: string;
+  onSuchtext: (text: string) => void;
+  chips?: readonly { kennung: string; text: string }[];
+  /** Der aktive Chip oder null. Ein zweiter Tipp auf den aktiven meldet ihn erneut — abwaehlen entscheidet der Aufrufer. */
+  chip?: string | null;
+  onChip?: (kennung: string) => void;
+  platzhalter?: string;
+  label?: string;
+}): React.JSX.Element {
+  return (
+    <div className="aw-filter">
+      <input
+        className="aw-suche"
+        type="search"
+        value={suchtext}
+        placeholder={platzhalter}
+        aria-label={label}
+        onChange={(e) => onSuchtext(e.target.value)}
+      />
+      {chips && chips.length > 0 && (
+        <div className="aw-chips" role="group" aria-label="Filter">
+          {chips.map((c) => (
+            <button
+              key={c.kennung}
+              type="button"
+              className="aw-chip"
+              aria-pressed={chip === c.kennung}
+              onClick={() => onChip?.(c.kennung)}
+            >
+              {c.text}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
