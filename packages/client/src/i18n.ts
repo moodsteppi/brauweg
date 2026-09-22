@@ -512,6 +512,23 @@ const de: Record<string, string> = {
   'golf.par.gleich': 'E',
   'golf.par.summe': 'Summe',
   'golf.par.spalte': 'zu Par',
+  // Replay eines Lochs (22.09.2026, Robins Entscheidung: der eigene Lauf,
+  // keine Zuschauersicht). `t()` setzt nichts ein — Zahlen hängt die Ansicht
+  // hinten an, deshalb enden diese Texte ohne Platzhalter.
+  'golf.replay.knopf': 'Nochmal ansehen',
+  'golf.replay.titel': 'Nochmal ansehen',
+  'golf.replay.loch': 'Loch',
+  'golf.replay.schlag': 'Schlag',
+  'golf.replay.amAbschlag': 'Am Abschlag',
+  'golf.replay.eingelocht': 'Eingelocht',
+  'golf.replay.abspielen': 'Abspielen',
+  'golf.replay.pause': 'Anhalten',
+  'golf.replay.abschlag': 'Zurück an den Abschlag',
+  'golf.replay.tempo': 'Tempo 1× oder 2×',
+  'golf.replay.schliessen': 'Zurück',
+  'golf.replay.laeuftWeiter': 'Das Spiel läuft im Hintergrund weiter.',
+  'golf.replay.nichtDa': 'Dieses Loch lässt sich nicht nachrechnen.',
+  'golf.replay.loecher': 'Löcher nochmal ansehen',
   // Meldungen des BroCooked-Regelsatzes.
   'brocooked.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'brocooked.kuechenLeer': 'Mindestens eine Küche muss dabei sein.',
