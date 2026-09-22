@@ -11,6 +11,7 @@ import {
 import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
 import { KARTEN } from '../minispiele/golf/karten';
+import type { Karte } from '../minispiele/golf/karte';
 import { Golfnetz } from '../minispiele/golf/netz';
 import {
   MAX_ZUG,
@@ -23,6 +24,7 @@ import {
   troedelRest,
   type Partiezustand,
 } from '../minispiele/golf/physik';
+import { parName, relativeToParList } from '../minispiele/golf/zu-par';
 import type { GolfSicht } from '../minispiele/golf/sicht';
 import { anzeigeVerdeckt, kastenAus, type Kasten } from '../minispiele/golf/verdeckung';
 import { Zeichner, type Zielbild } from '../minispiele/golf/zeichnen';
@@ -169,6 +171,10 @@ interface Abschlussdaten {
   /** `[loch][sitz]` — Kopie, weil der Kernzustand lebt und weiterläuft. */
   ergebnis: number[][];
   gesamt: number[];
+  /** Par-Wert je Loch. */
+  parProLoch: number[];
+  /** Total strokes relative to par for each player. */
+  zuPar: number[];
   platz: { sitz: number; schlaege: number; platz: number }[];
 }
 
@@ -375,9 +381,16 @@ export function Golf({
   const meldeErgebnis = useCallback(
     (zustand: Partiezustand): Abschlussdaten => {
       const gesamt = gesamtschlaege(zustand);
+      const parProLoch = zustand.reihenfolge.map((karteIdx) => {
+        const k = KARTEN[karteIdx];
+        return k?.par ?? 0;
+      });
+      const zuPar = relativeToParList(parProLoch, zustand.ergebnis);
       const daten: Abschlussdaten = {
         ergebnis: zustand.ergebnis.map((reihe) => [...(reihe ?? [])]),
         gesamt,
+        parProLoch,
+        zuPar,
         platz: platzierungen(zustand),
       };
       sendRef.current({ art: 'ergebnis', schlaege: gesamt, pruef: pruefsumme(zustand.ergebnis) });
@@ -740,9 +753,13 @@ interface Hudstand {
   loecher: number;
   bahn: string;
   par: number;
+  /** Par-Wert je Loch über alle Bahnen (Länge = loecher). */
+  parProLoch: number[];
   restS: number;
   schlaege: number[];
   gesamt: number[];
+  /** Strokes relative to par for each player across completed holes. */
+  zuPar: number[];
   fertig: boolean[];
   dabei: boolean[];
   eingelocht: boolean[];
@@ -757,9 +774,11 @@ const HUD_LEER: Hudstand = {
   loecher: 0,
   bahn: '',
   par: 0,
+  parProLoch: [],
   restS: 0,
   schlaege: [],
   gesamt: [],
+  zuPar: [],
   fertig: [],
   dabei: [],
   eingelocht: [],
@@ -970,7 +989,7 @@ function Partie({
         return;
       }
 
-      const neu = baueHud(z, karte, sitzRef.current);
+      const neu = baueHud(z, karte, sitzRef.current, KARTEN);
       const schluessel = hudSchluessel(neu);
       if (schluessel !== hudKeyRef.current) {
         hudKeyRef.current = schluessel;
@@ -1282,6 +1301,7 @@ function Partie({
                 <th />
                 <th>Loch</th>
                 <th>Gesamt</th>
+                <th>zu Par</th>
               </tr>
             </thead>
             <tbody>
@@ -1293,6 +1313,7 @@ function Partie({
                   </td>
                   <td>{schlaege}</td>
                   <td>{hud.gesamt[sitz]}</td>
+                  <td>{hud.zuPar[sitz] ?? 0}</td>
                 </tr>
               ))}
             </tbody>
@@ -1351,6 +1372,7 @@ function baueHud(
   z: Partiezustand,
   karte: { name: string; par: number; zeitLimitS: number },
   eigenerSitz: number,
+  karten: readonly Karte[],
 ): Hudstand {
   const schlaege: number[] = [];
   const fertig: boolean[] = [];
@@ -1375,14 +1397,26 @@ function baueHud(
    */
   const abgeschlossen = gesamtschlaege(z);
   const gesamt = abgeschlossen.map((wert, s) => wert + (pause ? 0 : schlaege[s]));
+
+  // Build par values for all holes from reihenfolge
+  const parProLoch = z.reihenfolge.map((karteIdx) => {
+    const k = karten[karteIdx];
+    return k?.par ?? 0;
+  });
+
+  // Calculate strokes relative to par for each player
+  const zuPar = relativeToParList(parProLoch, z.ergebnis);
+
   return {
     loch: z.aktuell.loch,
     loecher: z.loecher,
     bahn: karte.name,
     par: karte.par,
+    parProLoch,
     restS: Math.max(0, Math.ceil(karte.zeitLimitS - verstrichen)),
     schlaege,
     gesamt,
+    zuPar,
     fertig,
     dabei,
     eingelocht,
@@ -1412,6 +1446,7 @@ function hudSchluessel(h: Hudstand): string {
     h.restS,
     h.schlaege.join(','),
     h.gesamt.join(','),
+    h.zuPar.join(','),
     h.fertig.join(','),
     h.dabei.join(','),
     h.eingelocht.join(','),
@@ -1515,11 +1550,24 @@ function Abschluss({
               <Golfball farbe={farben[zeile.sitz] ?? farbeAus(zeile.sitz)} groesse={26} />
               <span className="gf-rangname">{name(zeile.sitz)}</span>
               <span className="gf-rangloecher">
-                {daten.ergebnis.map((reihe, loch) => (
-                  <i key={loch}>{reihe[zeile.sitz] ?? '–'}</i>
-                ))}
+                {daten.ergebnis.map((reihe, loch) => {
+                  const schlaege = reihe[zeile.sitz];
+                  const par = daten.parProLoch[loch];
+                  const relative = schlaege !== undefined && par !== undefined ? schlaege - par : null;
+                  const name = relative !== null ? parName(relative) : '–';
+                  return (
+                    <i key={loch} title={name}>
+                      {schlaege ?? '–'}
+                    </i>
+                  );
+                })}
               </span>
-              <strong className="gf-rangsumme">{zeile.schlaege}</strong>
+              <strong className="gf-rangsumme">
+                {zeile.schlaege}
+                {daten.zuPar[zeile.sitz] !== undefined && (
+                  <small>{daten.zuPar[zeile.sitz] > 0 ? '+' : ''}{daten.zuPar[zeile.sitz]}</small>
+                )}
+              </strong>
             </li>
           ))}
         </ol>
