@@ -334,3 +334,17 @@ describe('Strudel', () => {
     }
   });
 });
+
+describe('Bumper', () => {
+  const pilz = freiMit({ art: 'bumper', x: 5, y: 9, r: 1.2 });
+
+  it('versperrt die Sichtlinie wie eine runde Wand', () => {
+    expect(sichtFrei(pilz, 5, 17, 5, 3)).toBe(false);
+    // Einen Ballradius plus Luft daneben ist der Weg frei.
+    expect(sichtFrei(pilz, 7, 17, 7, 3)).toBe(true);
+  });
+
+  it('spielt um einen Pilz auf der Linie herum statt hinein (vorher 3,00)', () => {
+    expect(mittelSchlaege(pilz, 'genie')).toBeLessThanOrEqual(2);
+  });
+});

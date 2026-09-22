@@ -341,6 +341,13 @@ export function sichtFrei(
       if (zone !== zielPortal && kreuztFlaeche(zone, strahl)) return false;
       continue;
     }
+    if (zone.art === 'bumper') {
+      // Ein Pilz ist eine runde Wand, die zurückschlägt — MIT Ballradius wie
+      // jede Wand (seit dem 22.09.2026; vorher sah der Bot durch ihn hindurch).
+      const grenzeBumper = zone.r + BALL_R;
+      if (abstandQuadrat(strahl, zone.x, zone.y) < grenzeBumper * grenzeBumper) return false;
+      continue;
+    }
     if (zone.art !== 'wasser') continue;
     if (kreuztFlaeche(zone, strahl)) return false;
   }
@@ -535,6 +542,17 @@ export function wegfeld(karte: Karte, kundig = true): Wegfeld {
     if (frei) {
       for (let zi = 0; zi < karte.zonen.length; zi += 1) {
         const zone = karte.zonen[zi];
+        if (zone.art === 'bumper' && kundig) {
+          // Wie eine Wand: kein Mittelpunkt näher als ein Ballradius am Pilz.
+          const dx = x - zone.x;
+          const dy = y - zone.y;
+          const grenze = zone.r + BALL_R;
+          if (dx * dx + dy * dy < grenze * grenze) {
+            frei = false;
+            break;
+          }
+          continue;
+        }
         if (zone.art !== 'wasser') continue;
         if (istInZone(zone, x, y)) {
           frei = false;
