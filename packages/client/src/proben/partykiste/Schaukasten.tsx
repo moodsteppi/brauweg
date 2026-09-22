@@ -25,9 +25,11 @@ import { PartykisteBanner } from '../../minispiele/partykiste/Banner';
 import { Einstellungen, OffeneRunde } from '../../minispiele/partykiste/Einstellungen';
 import { Regelzeile } from '../../minispiele/partykiste/Regelzeile';
 import { Runde } from '../../minispiele/partykiste/Runden';
+import { AktiveRegel } from '../../minispiele/partykiste/RundenOhneUhr';
 import { MINISPIEL_NAME, ansageFuer, type PartyMinispiel, type PartykisteSicht } from '../../minispiele/partykiste/sicht';
 import { Abrechnung, Tabelle } from '../../minispiele/partykiste/Wertung';
 import type { SeatInfo } from '../../protocol';
+import { bilderOhneUhr } from './bilder-ohne-uhr';
 
 const LEUTE = ['Robin', 'Jan', 'Tom', 'Emil', 'Niklas', 'Anni'];
 
@@ -67,6 +69,7 @@ function sicht(teil: Partial<PartykisteSicht> & Pick<PartykisteSicht, 'art' | 'd
       { sitz: 4, punkte: 2, schlucke: 6, platz: 6 },
       { sitz: 5, punkte: 6, schlucke: 2, platz: 4 },
     ],
+    regelKarte: null,
     ...teil,
   };
 }
@@ -512,6 +515,8 @@ const BILDER: { titel: string; text: string; sicht: PartykisteSicht; zusatz?: Zu
       daten: { art: 'entweder', a: 'Meer', b: 'Berge', meine: -1, gewaehlt: [1, 2], seite: null },
     }),
   },
+  /* Kategorien-Battle, Mehrheitsraten, Regel-Karte (22.09.2026). */
+  ...bilderOhneUhr(sicht),
 ];
 
 function Kasten({
@@ -543,6 +548,7 @@ function Kasten({
             </button>
           </header>
           <Regelzeile regeln={bild} />
+          <AktiveRegel sicht={bild} sitze={SITZE} sende={() => {}} />
           {zusatz === 'tabelle' ? (
             <Tabelle sicht={bild} sitze={SITZE} />
           ) : (

@@ -37,6 +37,26 @@ import { AUFGABEN } from './inhalte/wahrheitpflicht.js';
 import { NIEMALS_SPRUECHE } from './inhalte/niemals.js';
 import { QUIZ_FRAGEN } from './inhalte/quiz.js';
 import { WER_EHER_SPRUECHE } from './inhalte/wereher.js';
+import { KATEGORIEN } from './inhalte/kategorien.js';
+import { MEHRHEITSFRAGEN } from './inhalte/mehrheit.js';
+import { REGELKARTEN } from './inhalte/regelkarten.js';
+import {
+  kategorieVorbei,
+  kategorienStart,
+  kategorienZug,
+  meldeVerstoss,
+  mehrheitZug,
+  naechsterImKreis,
+  neueRegel,
+  regelAbrechnen,
+  regelBis,
+  werteKategorien,
+  werteMehrheit,
+  type AktiveRegel,
+  type KategorienRunde,
+  type MehrheitRunde,
+  type RegelkartenRunde,
+} from './ohne-uhr.js';
 import {
   MINDESTMENGE,
   waehlbareInhalte,
@@ -89,7 +109,7 @@ export type RundenPhase = 'sehen' | 'spiel' | 'ergebnis';
 /** -1 heisst ueberall "noch nicht" bzw. "gar nicht". */
 export const OFFEN = -1;
 
-interface RundenBasis {
+export interface RundenBasis {
   readonly phase: RundenPhase;
   /** Sitze, die in der laufenden Phase gehandelt haben. */
   readonly fertig: readonly number[];
@@ -235,7 +255,11 @@ export type Runde =
   | BusRunde
   | SchaetzRunde
   | EntwederRunde
-  | WahrheitPflichtRunde;
+  | WahrheitPflichtRunde
+  /* Die drei ohne Uhr — Typen und Regeln in ohne-uhr.ts. */
+  | KategorienRunde
+  | MehrheitRunde
+  | RegelkartenRunde;
 
 /** Was nach der Runde im Partieprotokoll landet (completedSegments). */
 export interface Rundenprotokoll {
@@ -274,6 +298,18 @@ export interface PartykistePartie {
    * Optional, weil Snapshots von vor dem 22.09.2026 das Feld nicht haben.
    */
   readonly inhaltsHaerteGewollt?: Haerte | null;
+  /**
+   * Die Regel-Karte, die gerade gilt — oder null.
+   *
+   * Das einzige Feld der Partie, das Rundenwissen ueber das Rundenende
+   * hinaus traegt; alles andere lebt in `runde` und stirbt mit ihr. Das ist
+   * ein Strukturbruch mit Absicht: Eine Regel-Karte wird in den FOLGENDEN
+   * Runden gebrochen, waehrend dort ein ganz anderes Minispiel laeuft. Warum
+   * es keinen Weg ueber die Runde oder das Protokoll gibt, steht an
+   * `AktiveRegel` (ohne-uhr.ts). Optional, weil Snapshots von vor dem
+   * 22.09.2026 es nicht haben.
+   */
+  readonly regelKarte?: AktiveRegel | null;
 }
 
 export interface AufbauOptionen {
@@ -578,6 +614,56 @@ export function baueRunde(
         inhaltsRueckfall: rueckfall,
       };
     }
+    case 'kategorien': {
+      const kategorien = stapel(KATEGORIEN, regeln, saat, sitze, 'kategorien');
+      const kategorie = an(kategorien.stapel, wievielte);
+      const anwesend = lebende(sitze, ausgestiegen);
+      /* Wer anfaengt, wird gezogen: Finge immer Sitz 0 an, haette er in jeder
+         Kategorie die leichteste Nennung. */
+      const start =
+        anwesend.length > 0
+          ? anwesend[ganzzahl(baueZufall(rundenSaat(saat, nr, 'kategorien-start')), anwesend.length)]!
+          : 0;
+      return {
+        ...basis,
+        art: 'kategorien',
+        phase: 'spiel',
+        kategorieId: kategorie.id,
+        kategorie: kategorie.text,
+        ...kategorienStart(sitze, anwesend, start),
+        inhaltsRueckfall: kategorien.rueckfall,
+      };
+    }
+    case 'mehrheit': {
+      const fragen = stapel(MEHRHEITSFRAGEN, regeln, saat, sitze, 'mehrheit');
+      const frage = an(fragen.stapel, wievielte);
+      return {
+        ...basis,
+        art: 'mehrheit',
+        phase: 'spiel',
+        frageId: frage.id,
+        frage: frage.frage,
+        a: frage.a,
+        b: frage.b,
+        eigene: offene(sitze),
+        tipp: offene(sitze),
+        mehrheit: OFFEN,
+        inhaltsRueckfall: fragen.rueckfall,
+      };
+    }
+    case 'regelkarte': {
+      const karten = stapel(REGELKARTEN, regeln, saat, sitze, 'regelkarte');
+      const karte = an(karten.stapel, wievielte);
+      return {
+        ...basis,
+        art: 'regelkarte',
+        phase: 'spiel',
+        karteId: karte.id,
+        text: karte.text,
+        bis: regelBis(nr),
+        inhaltsRueckfall: karten.rueckfall,
+      };
+    }
   }
 }
 
@@ -652,6 +738,7 @@ export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
     protokoll: [],
     fertig: false,
     inhaltsHaerteGewollt: wirksam < gewollt ? gewollt : null,
+    regelKarte: null,
   });
 }
 
@@ -704,6 +791,10 @@ export function amZug(partie: PartykistePartie): number | null {
       if (!bots.has(sitz) && !fertig.has(sitz)) return sitz;
     }
     return null;
+  }
+  if (runde.art === 'kategorien') {
+    /* Reihum im Kreis, bis einer stockt — nicht istReihum (ohne-uhr.ts). */
+    return kategorieVorbei(partie, runde) || partie.ausgestiegen.includes(runde.amZug) ? null : runde.amZug;
   }
   if (istReihum(runde.art)) {
     const sitz = reihumSitz(runde);
@@ -906,10 +997,36 @@ function werteAus(partie: PartykistePartie): PartykistePartie {
       neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
       break;
     }
+    case 'kategorien': {
+      werteKategorien(runde, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
+    case 'mehrheit': {
+      const mehrheit = werteMehrheit(runde, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke, mehrheit };
+      break;
+    }
+    case 'regelkarte': {
+      /* Die Karte selbst bringt nichts ein — gespielt wird sie in den naechsten Runden. */
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
   }
+
+  /*
+   * Die geltende Regel-Karte rechnet in JEDER Runde mit ab, und zwar NACH dem
+   * Minispiel: Die Faelle oben setzen ihre Werte mit "=", die Regel legt
+   * dazu. `punkte` und `schlucke` sind dieselben Felder wie in `neueRunde`,
+   * also steht der Verstoss auch in der Abrechnung dieser Runde. Eine neue
+   * Karte loest die alte ab (die alte endet hier und wird fertig abgerechnet).
+   */
+  const nachRegel = regelAbrechnen(partie, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+  const regelKarte = runde.art === 'regelkarte' ? neueRegel(partie, runde) : nachRegel;
 
   return {
     ...partie,
+    regelKarte,
     runde: neueRunde,
     punkte: partie.punkte.map((p, s) => p + (punkte[s] ?? 0)),
     schlucke: partie.schlucke.map((p, s) => p + (schlucke[s] ?? 0)),
@@ -965,6 +1082,20 @@ export function weiter(partie: PartykistePartie): PartykistePartie {
          alle Anwesenden weitergetippt haben. */
       if (wartetNochJemand(stand)) return stand;
       stand = naechsteRunde(stand);
+      continue;
+    }
+
+    if (runde.art === 'kategorien') {
+      if (kategorieVorbei(stand, runde)) {
+        stand = werteAus(stand);
+        continue;
+      }
+      if (!stand.ausgestiegen.includes(runde.amZug)) return stand;
+      /* Wer dran war, ist weg: im Kreis weiter, die Nennungen bleiben. */
+      stand = {
+        ...stand,
+        runde: { ...runde, amZug: naechsterImKreis(stand.sitze, stand.ausgestiegen, runde.amZug) },
+      };
       continue;
     }
 
@@ -1050,6 +1181,13 @@ export function verarbeite(
   if (partie.ausgestiegen.includes(sitz)) return partie;
 
   const runde = partie.runde;
+
+  /*
+   * Ein Verstoss gegen die Regel-Karte geht in JEDER Runde und jeder Phase —
+   * die Regel gilt ja gerade waehrend der anderen Minispiele. Deshalb steht
+   * er vor allen Phasenpruefungen (ohne-uhr.ts, meldeVerstoss).
+   */
+  if (aktion.art === 'verstoss') return nachOhneUhr(partie, meldeVerstoss(partie, sitz, aktion.ziel));
 
   /* Ergebnisphase: nur "Weiter", und nur einmal. */
   if (runde.phase === 'ergebnis') {
@@ -1186,7 +1324,26 @@ export function verarbeite(
       const naechster = naechsterLebender(neue, partie.sitze, partie.ausgestiegen, sitz);
       return weiter({ ...partie, runde: { ...neue, amZug: naechster ?? sitz } });
     }
+    case 'kategorien':
+      return nachOhneUhr(partie, kategorienZug(partie, runde, sitz, aktion));
+    case 'mehrheit':
+      return nachOhneUhr(partie, mehrheitZug(partie, runde, sitz, aktion));
+    case 'regelkarte': {
+      if (aktion.art !== 'bereit') verstoss('erst die Regel lesen');
+      if (runde.fertig.includes(sitz)) return partie;
+      return weiter({ ...partie, runde: { ...runde, fertig: [...runde.fertig, sitz] } });
+    }
   }
+}
+
+/**
+ * Das Ergebnis eines Zugs aus ohne-uhr.ts: Zeichenkette = Regelverstoss,
+ * dasselbe Objekt = wirkungslos (kein `weiter`, damit die Laufzeit keinen
+ * Rundruf verschickt), sonst weiterschieben.
+ */
+function nachOhneUhr(partie: PartykistePartie, ergebnis: PartykistePartie | string): PartykistePartie {
+  if (typeof ergebnis === 'string') verstoss(ergebnis);
+  return ergebnis === partie ? partie : weiter(ergebnis);
 }
 
 function pruefeZiel(partie: PartykistePartie, sitz: number, ziel: number): void {

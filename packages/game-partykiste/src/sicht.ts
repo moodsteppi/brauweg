@@ -26,6 +26,7 @@ import type {
   RundenPhase,
 } from './partie.js';
 import { amZug, platzierungen, type Platzierung } from './partie.js';
+import { meldenMoeglich, noetigJeSitz } from './ohne-uhr.js';
 
 // ---------------------------------------------------------------------------
 // Die Daten des laufenden Minispiels
@@ -143,6 +144,69 @@ export interface WahrheitPflichtSicht {
   readonly erfolg: readonly number[];
 }
 
+/**
+ * Kategorien-Battle. Nichts daran ist geheim — genannt wird laut, und wer
+ * Einspruch erhebt, tut es vor allen.
+ */
+export interface KategorienSicht {
+  readonly art: 'kategorien';
+  readonly kategorie: string;
+  readonly amZug: number;
+  readonly nennungen: number;
+  /** Ab so vielen Nennungen ist die Kategorie leergespielt. */
+  readonly grenze: number;
+  /** Wer zuletzt genannt hat — gegen ihn geht noch Einspruch. -1 = noch keiner. */
+  readonly letzter: number;
+  /** Je Sitz: gegen wen er Einspruch erhebt, -1 = niemanden. */
+  readonly einspruch: readonly number[];
+  /** Je Sitz: wie viele Einsprueche es braucht, um ihn zu benennen (0 = geht nicht). */
+  readonly noetig: readonly number[];
+  readonly verlierer: number;
+  readonly wie: 'selbst' | 'mehrheit' | null;
+}
+
+export interface MehrheitSicht {
+  readonly art: 'mehrheit';
+  readonly frage: string;
+  readonly a: string;
+  readonly b: string;
+  /** Die eigene Antwort und der eigene Tipp, -1 solange nicht abgegeben. */
+  readonly meine: number;
+  readonly meinTipp: number;
+  /** Wer schon abgegeben hat — nicht, was. */
+  readonly gewaehlt: readonly number[];
+  /** Erst im Ergebnis — vorher wuesste man, wohin die Mehrheit kippt. */
+  readonly eigene: readonly number[] | null;
+  readonly tipp: readonly number[] | null;
+  /** Erst im Ergebnis: 0 A, 1 B, -1 Gleichstand. */
+  readonly mehrheit: number | null;
+}
+
+export interface RegelkartenSicht {
+  readonly art: 'regelkarte';
+  readonly text: string;
+  /** Bis zum Ende welcher Runde (0-basiert) die Regel gelten wird, aufs Turnierende gekappt. */
+  readonly bis: number;
+}
+
+/**
+ * Die Regel-Karte, die gerade gilt — in JEDER Sicht, auch waehrend ganz
+ * anderer Minispiele, weil sie genau dort gebrochen wird.
+ */
+export interface RegelKarteSicht {
+  readonly text: string;
+  readonly ab: number;
+  readonly bis: number;
+  /** Je Sitz: Verstoesse, seit die Regel gilt. Am Tisch ohnehin laut. */
+  readonly verstoesse: readonly number[];
+  /** Je Sitz: wen er gerade anklagt, -1 = niemanden. */
+  readonly anklage: readonly number[];
+  /** Je Sitz: wie viele Anklagen es braucht (0 = geht nicht, kein Mensch da, der abstimmen koennte). */
+  readonly noetig: readonly number[];
+  /** Darf jetzt gemeldet werden? Nein in einer Abrechnung, nach der keine mehr kommt. */
+  readonly meldenMoeglich: boolean;
+}
+
 export type MinispielSicht =
   | ImposterSicht
   | QuizSicht
@@ -152,7 +216,10 @@ export type MinispielSicht =
   | BusSicht
   | SchaetzSicht
   | EntwederSicht
-  | WahrheitPflichtSicht;
+  | WahrheitPflichtSicht
+  | KategorienSicht
+  | MehrheitSicht
+  | RegelkartenSicht;
 
 // ---------------------------------------------------------------------------
 // Die ganze Sicht
@@ -193,6 +260,8 @@ export interface PartykisteSicht {
   readonly fertig: boolean;
   readonly tabelle: readonly Platzierung[];
   readonly daten: MinispielSicht;
+  /** Die geltende Regel-Karte oder null — seit dem 22.09.2026. */
+  readonly regelKarte: RegelKarteSicht | null;
 }
 
 function imErgebnis(partie: PartykistePartie): boolean {
@@ -298,7 +367,53 @@ function minispielSicht(partie: PartykistePartie, sitz: number): MinispielSicht 
         text: runde.text,
         erfolg: runde.erfolg,
       };
+    case 'kategorien':
+      return {
+        art: 'kategorien',
+        kategorie: runde.kategorie,
+        amZug: runde.amZug,
+        nennungen: runde.nennungen,
+        grenze: runde.grenze,
+        letzter: runde.letzter,
+        einspruch: runde.einspruch,
+        noetig: noetigJeSitz(partie),
+        verlierer: runde.verlierer,
+        wie: runde.wie,
+      };
+    case 'mehrheit':
+      return {
+        art: 'mehrheit',
+        frage: runde.frage,
+        a: runde.a,
+        b: runde.b,
+        meine: zuschauer ? -1 : (runde.eigene[sitz] ?? -1),
+        meinTipp: zuschauer ? -1 : (runde.tipp[sitz] ?? -1),
+        gewaehlt: runde.fertig,
+        eigene: auf ? runde.eigene : null,
+        tipp: auf ? runde.tipp : null,
+        mehrheit: auf ? runde.mehrheit : null,
+      };
+    case 'regelkarte':
+      return {
+        art: 'regelkarte',
+        text: runde.text,
+        bis: Math.min(runde.bis, partie.runden - 1),
+      };
   }
+}
+
+function regelKarteSicht(partie: PartykistePartie): RegelKarteSicht | null {
+  const regel = partie.regelKarte;
+  if (!regel) return null;
+  return {
+    text: regel.text,
+    ab: regel.ab,
+    bis: regel.bis,
+    verstoesse: regel.verstoesse,
+    anklage: regel.anklage,
+    noetig: noetigJeSitz(partie),
+    meldenMoeglich: meldenMoeglich(partie),
+  };
 }
 
 /**
@@ -328,5 +443,6 @@ export function sichtFuer(partie: PartykistePartie, sitz: number): PartykisteSic
     fertig: partie.fertig,
     tabelle: platzierungen(partie),
     daten: minispielSicht(partie, sitz),
+    regelKarte: regelKarteSicht(partie),
   };
 }

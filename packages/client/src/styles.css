@@ -19673,3 +19673,30 @@ span.hub-angebot-art.poker-jeton-stapel {
   color: var(--gold);
 }
 .pk-reihe li[data-ich] { box-shadow: inset 0 0 0 2px var(--lila); }
+
+/* -- Partykiste: Kategorien, Mehrheitsraten, Regel-Karte (pk-ou-*) -------- */
+
+/* Einspruch beim Kategorien-Battle: zwei schmale Knoepfe nebeneinander,
+   bewusst leiser als "Genannt"/"Gestockt" — wer dran ist, soll zuerst seine
+   eigenen Knoepfe sehen. */
+.pk-ou-einspruch { display: flex; flex-wrap: wrap; gap: 8px; }
+.pk-ou-einspruch .pk-knopf { flex: 1 1 140px; }
+
+/* Die Leiste der geltenden Regel. Gold statt Lila: Sie ist kein Teil der
+   laufenden Runde, sondern steht quer darueber — und muss auffallen, gerade
+   wenn man in ein anderes Minispiel vertieft ist. */
+.pk-ou-regel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(240, 190, 80, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(240, 190, 80, 0.45);
+}
+.pk-ou-regel-kopf { display: flex; justify-content: space-between; align-items: center; margin: 0; font: 600 12px/1 system-ui; }
+.pk-ou-regel-marke { color: var(--gold); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.pk-ou-regel-text { margin: 0; font: 700 clamp(14px, 4vw, 17px)/1.3 system-ui; }
+.pk-ou-regel-ertappt,
+.pk-ou-regel-hinweis { margin: 0; font: 600 12px/1.3 system-ui; }
+.pk-ou-regel .pk-knopf { padding: 10px 12px; font-size: 14px; }

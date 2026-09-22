@@ -785,6 +785,12 @@ function kennungen(runde: Runde): Array<[string, string]> {
       return runde.aufgabeId.filter((id) => id !== '').map((id) => ['aufgaben', id]);
     case 'busfahrer':
       return [];
+    case 'kategorien':
+      return [['kategorien', runde.kategorieId]];
+    case 'mehrheit':
+      return [['mehrheit', runde.frageId]];
+    case 'regelkarte':
+      return [['regelkarten', runde.karteId]];
   }
 }
 
@@ -820,7 +826,7 @@ test('ueber eine ganze Partie kommt keine Kennung zweimal — auch zu zwoelft in
   for (const saat of [1, 2, 3, 4711]) {
     const partie = erzeugePartie({ regeln: DEFAULT_REGELN, saat, sitze: 12, runden: 15, gastSitze: [] });
     const gesehen = gezeigteKennungen(partie);
-    /* Neun Minispiele reihum in fuenfzehn Runden: Wer bin ich (Stelle 3)
+    /* Zwoelf Minispiele reihum in fuenfzehn Runden: Wer bin ich (Stelle 3)
        kommt zweimal, Wahrheit oder Pflicht (Stelle 9) einmal. */
     assert.equal(gesehen.get('identitaeten')?.length, 24, 'zweimal Wer bin ich zu zwoelft');
     assert.equal(gesehen.get('aufgaben')?.length, 12, 'einmal Wahrheit oder Pflicht zu zwoelft');
