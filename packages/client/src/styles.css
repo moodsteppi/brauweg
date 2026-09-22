@@ -19424,6 +19424,75 @@ span.hub-angebot-art.poker-jeton-stapel {
    haette das SVG in der Kachel keine Hoehe. */
 .pk-banner { display: block; width: 100%; aspect-ratio: 4 / 1; background: #151021; }
 
+/* -- Einstellungen, Regelzeile, offene Runde (22.09.2026) ----------------- */
+
+/* Die Einstellungen gelten fuer beide Wege und stehen deshalb offen im Menue,
+   nicht im aufklappbaren Bot-Block. Mobile-first: eine Spalte, volle Breite. */
+.pk-einstellungen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-einstellungen-titel {
+  margin: 0;
+  font: 800 12px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pk-einstellungen-hinweis { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+/* Eine Zeile Chips, die umbricht statt zu scrollen — am Handy stehen sie
+   dann zweizeilig, und niemand muss seitwaerts wischen, um die Haerte zu lesen. */
+.pk-regelzeile {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+}
+.pk-regelchip {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 12px/1 system-ui;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* Alkoholfrei faellt auf: Wer beitritt, soll es sehen, ohne zu lesen. */
+.pk-regelchip[data-alkoholfrei] { background: rgba(63, 143, 102, 0.28); color: #bff0cf; }
+/* Im Spielkopf links buendig und kleiner — dort ist sie Auskunft, keine Wahl. */
+.pk-tisch > .pk-regelzeile { justify-content: flex-start; }
+
+.pk-angebot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  background: rgba(166, 120, 242, 0.14);
+  box-shadow: inset 0 0 0 2px rgba(166, 120, 242, 0.45);
+}
+.pk-angebot-titel { margin: 0; font: 800 16px/1.2 system-ui; }
+.pk-textknopf {
+  align-self: center;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: 600 13px/1 system-ui;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (min-width: 600px) {
+  .pk-regelchip { font-size: 13px; }
+}
+
 /* =========================================================================
    Gast-Einstieg auf der Anmeldeseite (Auth.tsx)
    -------------------------------------------------------------------------

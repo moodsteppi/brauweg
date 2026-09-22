@@ -22,8 +22,11 @@ import { createRoot } from 'react-dom/client';
 
 import '../../styles.css';
 import { PartykisteBanner } from '../../minispiele/partykiste/Banner';
+import { Einstellungen, OffeneRunde } from '../../minispiele/partykiste/Einstellungen';
+import { Regelzeile } from '../../minispiele/partykiste/Regelzeile';
 import { Runde } from '../../minispiele/partykiste/Runden';
-import type { PartykisteSicht } from '../../minispiele/partykiste/sicht';
+import { MINISPIEL_NAME, ansageFuer, type PartyMinispiel, type PartykisteSicht } from '../../minispiele/partykiste/sicht';
+import { Abrechnung, Tabelle } from '../../minispiele/partykiste/Wertung';
 import type { SeatInfo } from '../../protocol';
 
 const LEUTE = ['Robin', 'Jan', 'Tom', 'Emil', 'Niklas', 'Anni'];
@@ -45,6 +48,8 @@ function sicht(teil: Partial<PartykisteSicht> & Pick<PartykisteSicht, 'art' | 'd
     runden: 6,
     phase: 'spiel',
     trinkmodus: true,
+    schluckFaktor: 1,
+    minispiele: Object.keys(MINISPIEL_NAME) as PartyMinispiel[],
     botSitze: [4, 5],
     ausgestiegen: [],
     punkte: [7, 9, 4, 11, 2, 6],
@@ -66,7 +71,14 @@ function sicht(teil: Partial<PartykisteSicht> & Pick<PartykisteSicht, 'art' | 'd
   };
 }
 
-const BILDER: { titel: string; text: string; sicht: PartykisteSicht }[] = [
+/**
+ * Was unter der Runde steht. Die Abrechnung und die Tabelle stehen seit dem
+ * 22.09.2026 im Schaukasten — genau dort aendert der Trinkmodus etwas, und
+ * bis dahin lagen beide nur im Bildschirm, wo sie niemand ohne vier Leute sah.
+ */
+type Zusatz = 'abrechnung' | 'tabelle';
+
+const BILDER: { titel: string; text: string; sicht: PartykisteSicht; zusatz?: Zusatz }[] = [
   {
     titel: 'Imposter — dein Wort',
     text: 'Ein Wort, sonst nichts — und die Redereihenfolge. Einer am Tisch hat statt des Wortes nur einen Hinweis.',
@@ -428,16 +440,90 @@ const BILDER: { titel: string; text: string; sicht: PartykisteSicht }[] = [
       },
     }),
   },
+  {
+    titel: 'Bus fahren — daneben, alkoholfrei',
+    text: 'Derselbe Fehlgriff ohne Trinkmodus: ein Strafpunkt statt eines Schlucks. Die Regelzeile oben sagt es auch.',
+    sicht: sicht({
+      art: 'busfahrer',
+      phase: 'spiel',
+      amZug: 1,
+      trinkmodus: false,
+      daten: {
+        art: 'busfahrer',
+        amZug: 1,
+        stufe: 0,
+        offen: [],
+        treffer: [2, -1, 1, 0, -1, -1],
+        letzter: { sitz: 0, stufe: 2, wahl: 0, karte: { rang: 14, farbe: 3 }, richtig: false },
+      },
+    }),
+  },
+  {
+    titel: 'Allgemeinwissen — Abrechnung, Trinkmodus',
+    text: 'Unter der Auflösung: was die Runde gebracht hat. Schlücke als Wort und Zahl, kein Glas mehr.',
+    zusatz: 'abrechnung',
+    sicht: sicht({
+      art: 'quiz',
+      phase: 'ergebnis',
+      schluckFaktor: 2,
+      rundenPunkte: [0, 2, 2, 0, 2, 0],
+      rundenSchlucke: [2, 0, 0, 2, 0, 2],
+      gehandelt: [],
+      daten: {
+        art: 'quiz',
+        frage: 'Welcher Fluss fließt durch Wien?',
+        antworten: ['Donau', 'Rhein', 'Elbe', 'Weichsel'],
+        meineWahl: 2,
+        richtig: 0,
+        wahl: [2, 0, 0, 3, 0, 1],
+      },
+    }),
+  },
+  {
+    titel: 'Allgemeinwissen — Abrechnung, alkoholfrei',
+    text: 'Dieselbe Runde ohne Trinkmodus: gezählt wird genauso, nur heißt es Strafpunkte. Auch die Ansage oben redet nicht mehr vom Trinken.',
+    zusatz: 'abrechnung',
+    sicht: sicht({
+      art: 'quiz',
+      phase: 'ergebnis',
+      trinkmodus: false,
+      rundenPunkte: [0, 2, 2, 0, 2, 0],
+      rundenSchlucke: [1, 0, 0, 1, 0, 1],
+      gehandelt: [],
+      daten: {
+        art: 'quiz',
+        frage: 'Welcher Fluss fließt durch Wien?',
+        antworten: ['Donau', 'Rhein', 'Elbe', 'Weichsel'],
+        meineWahl: 2,
+        richtig: 0,
+        wahl: [2, 0, 0, 3, 0, 1],
+      },
+    }),
+  },
+  {
+    titel: 'Stand — alkoholfrei',
+    text: 'Die Turniertabelle ohne Trinkmodus. Punkte entscheiden, die Strafpunkte stehen daneben.',
+    zusatz: 'tabelle',
+    sicht: sicht({
+      art: 'entweder',
+      phase: 'spiel',
+      trinkmodus: false,
+      schluckFaktor: 3,
+      daten: { art: 'entweder', a: 'Meer', b: 'Berge', meine: -1, gewaehlt: [1, 2], seite: null },
+    }),
+  },
 ];
 
 function Kasten({
   titel,
   text,
   sicht: bild,
+  zusatz,
 }: {
   titel: string;
   text: string;
   sicht: PartykisteSicht;
+  zusatz?: Zusatz;
 }): React.JSX.Element {
   return (
     <figure className="sk-kasten">
@@ -456,7 +542,43 @@ function Kasten({
               Stand
             </button>
           </header>
-          <Runde sicht={bild} sitze={SITZE} sende={() => {}} />
+          <Regelzeile regeln={bild} />
+          {zusatz === 'tabelle' ? (
+            <Tabelle sicht={bild} sitze={SITZE} />
+          ) : (
+            <>
+              <p className="pk-ansage">{ansageFuer(bild.art, bild.trinkmodus)}</p>
+              <Runde sicht={bild} sitze={SITZE} sende={() => {}} />
+              {zusatz === 'abrechnung' ? (
+                <Abrechnung sicht={bild} sitze={SITZE} binFertig={false} sende={() => {}} />
+              ) : null}
+            </>
+          )}
+        </main>
+      </div>
+    </figure>
+  );
+}
+
+/** Ein Menue-Baustein ohne Tischkopf — im selben Handyrahmen. */
+function MenueKasten({
+  titel,
+  text,
+  children,
+}: {
+  titel: string;
+  text: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <figure className="sk-kasten">
+      <figcaption>
+        <strong>{titel}</strong>
+        <span>{text}</span>
+      </figcaption>
+      <div className="sk-rahmen">
+        <main className="pk-seite pk-menue">
+          <div className="pk-menue-mitte">{children}</div>
         </main>
       </div>
     </figure>
@@ -501,6 +623,44 @@ function Schaukasten(): React.JSX.Element {
               <PartykisteBanner />
             </div>
           </figure>
+          <MenueKasten
+            titel="Menü — Einstellungen, Trinkspiel"
+            text="Runden, Härte und Trinkmodus stehen offen im Menü und gelten online wie gegen Bots."
+          >
+            <Einstellungen runden={6} haerte={2} trinkmodus onRunden={() => {}} onHaerte={() => {}} onTrinkmodus={() => {}} />
+          </MenueKasten>
+          <MenueKasten
+            titel="Menü — Einstellungen, alkoholfrei"
+            text="Ausgeschaltet heißt der Zähler Strafpunkte; der Hinweis sagt, dass die Turnierpunkte gleich bleiben."
+          >
+            <Einstellungen runden={8} haerte={1} trinkmodus={false} onRunden={() => {}} onHaerte={() => {}} onTrinkmodus={() => {}} />
+          </MenueKasten>
+          <MenueKasten
+            titel="Online — offene Runde gefunden"
+            text="Erst ansehen, dann beitreten: Dort gilt der Regelsatz des Öffners, nicht die eigenen Einstellungen."
+          >
+            <OffeneRunde
+              angebot={{
+                id: 'probe',
+                host: 'Robin',
+                runden: 10,
+                regeln: { minispiele: Object.keys(MINISPIEL_NAME) as PartyMinispiel[], trinkmodus: false, schluckFaktor: 2 },
+              }}
+              laedt={false}
+              onBeitreten={() => {}}
+              onEigene={() => {}}
+              onAbbrechen={() => {}}
+            />
+          </MenueKasten>
+          <MenueKasten
+            titel="Wartesaal — Regelzeile"
+            text="Dieselbe Zeile steht im Wartesaal (vom Server gelesen) und im Spielkopf (aus der Sicht)."
+          >
+            <Regelzeile
+              regeln={{ minispiele: ['imposter', 'quiz', 'niemals', 'wereher', 'entweder'], trinkmodus: true, schluckFaktor: 3 }}
+              runden={6}
+            />
+          </MenueKasten>
         </>
       ) : null}
       {BILDER.slice(von, bis).map((bild) => (

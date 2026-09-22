@@ -51,6 +51,8 @@ const FELDER = [
   'art',
   'phase',
   'trinkmodus',
+  'schluckFaktor',
+  'minispiele',
   'botSitze',
   'ausgestiegen',
   'punkte',

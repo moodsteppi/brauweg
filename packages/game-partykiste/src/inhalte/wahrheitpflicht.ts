@@ -2,9 +2,13 @@
  * Aufgaben für "Wahrheit oder Pflicht".
  *
  * Wahrheit (a001–a060) sind Fragen, Pflicht (a061–a120) sind Aufgaben, die
- * sofort am Tisch machbar sind — kein Zubehör außer Handy und Getränk. Wer
- * die Aufgabe nicht macht, trinkt. Neue Einträge hängen hinten an, Kennungen
- * ändern sich nie.
+ * sofort am Tisch machbar sind — kein Zubehör außer dem Handy. Wer kneift,
+ * bekommt den Schluck (oder Strafpunkt) aus der WERTUNG, nie aus dem Text:
+ * Seit dem 22.09.2026 befiehlt keine Aufgabe mehr das Trinken, weil derselbe
+ * Text auch bei ausgeschaltetem Trinkmodus auf der Bühne steht — sieben
+ * Aufgaben fingen mit „Trink einen Schluck und …" an, und das las dann auch,
+ * wer bewusst ohne Alkohol spielte. `test/inhalte.test.ts` hält das fest.
+ * Neue Einträge hängen hinten an, Kennungen ändern sich nie.
  */
 
 import type { Aufgabe } from './typen.js';
@@ -79,7 +83,7 @@ export const AUFGABEN: readonly Aufgabe[] = [
   { id: 'a067', art: 'pflicht', text: 'Sag einen Zungenbrecher dreimal schnell hintereinander auf.' },
   { id: 'a068', art: 'pflicht', text: 'Lies eine Nachricht deiner Wahl aus deinem Chat laut vor.' },
   { id: 'a069', art: 'pflicht', text: 'Imitiere ein Tier deiner Wahl, bis jemand errät welches.' },
-  { id: 'a070', art: 'pflicht', text: 'Trink einen Schluck und erzähl danach einen Witz.' },
+  { id: 'a070', art: 'pflicht', text: 'Erzähl einen Witz — und wenn niemand lacht, sofort noch einen.' },
   { id: 'a071', art: 'pflicht', text: 'Mach der Person rechts von dir drei echte Komplimente.' },
   { id: 'a072', art: 'pflicht', text: 'Singe "Happy Birthday" für eine Person, die heute keinen Geburtstag hat.' },
   { id: 'a073', art: 'pflicht', text: 'Erfinde spontan einen Werbespot für dein Getränk.' },
@@ -89,10 +93,10 @@ export const AUFGABEN: readonly Aufgabe[] = [
   { id: 'a077', art: 'pflicht', text: 'Mach eine Roboter-Imitation, während du deinen Namen sagst.' },
   { id: 'a078', art: 'pflicht', text: 'Zeig der Runde das letzte harmlose Foto in deiner Galerie.' },
   { id: 'a079', art: 'pflicht', text: 'Erzähl einen Witz, über den alle mindestens einmal lachen müssen.' },
-  { id: 'a080', art: 'pflicht', text: 'Trink einen Schluck und mach dabei die traurigste Grimasse deines Lebens.' },
+  { id: 'a080', art: 'pflicht', text: 'Mach die traurigste Grimasse deines Lebens und halte sie zehn Sekunden.' },
   { id: 'a081', art: 'pflicht', text: 'Halte 20 Sekunden lang Blickkontakt mit deinem Nachbarn, ohne zu lachen.' },
   { id: 'a082', art: 'pflicht', text: 'Sing die erste Werbejingle, die dir einfällt.' },
-  { id: 'a083', art: 'pflicht', text: 'Mach einen Trinkspruch für die ganze Runde.' },
+  { id: 'a083', art: 'pflicht', text: 'Halte eine 20-Sekunden-Lobrede auf die Person gegenüber.' },
   { id: 'a084', art: 'pflicht', text: 'Spiele 20 Sekunden lang Luftgitarre, so episch wie möglich.' },
   { id: 'a085', art: 'pflicht', text: 'Erfinde einen Spitznamen für jede Person am Tisch.' },
   { id: 'a086', art: 'pflicht', text: 'Sprich die nächsten zwei Sätze wie eine Nachrichtensprecherin oder ein Nachrichtensprecher.' },
@@ -100,34 +104,34 @@ export const AUFGABEN: readonly Aufgabe[] = [
   { id: 'a088', art: 'pflicht', text: 'Tanze eine Bewegung aus deinem Lieblingsmusikvideo nach.' },
   { id: 'a089', art: 'pflicht', text: 'Sing den Refrain deines Lieblingssongs rückwärts — so gut es geht.' },
   { id: 'a090', art: 'pflicht', text: 'Mach 30 Sekunden Stand-up über deinen heutigen Tag.' },
-  { id: 'a091', art: 'pflicht', text: 'Trink einen Schluck und erzähl die Geschichte hinter deinem Spitznamen.' },
+  { id: 'a091', art: 'pflicht', text: 'Erzähl die Geschichte hinter deinem Spitznamen — oder erfinde auf der Stelle einen samt Geschichte.' },
   { id: 'a092', art: 'pflicht', text: 'Sag einen Zungenbrecher mit dem Akzent deiner Wahl.' },
   { id: 'a093', art: 'pflicht', text: 'Zeig deinen besten Siegertanz.' },
   { id: 'a094', art: 'pflicht', text: 'Erzähl 20 Sekunden lang eine Geschichte, in der jedes zweite Wort mit "S" beginnt.' },
   { id: 'a095', art: 'pflicht', text: 'Mach der ganzen Runde ein Kompliment, ohne dabei ein Wort zu sagen.' },
   { id: 'a096', art: 'pflicht', text: 'Sing dein Lieblingslied als Opernarie.' },
   { id: 'a097', art: 'pflicht', text: 'Mach 20 Sekunden lang ein todernstes Nachrichtensprecher-Gesicht.' },
-  { id: 'a098', art: 'pflicht', text: 'Trink einen Schluck und mach danach ein Model-Posing für die Runde.' },
+  { id: 'a098', art: 'pflicht', text: 'Mach ein Model-Posing für die Runde — drei Posen, jede mit eigenem Namen.' },
   { id: 'a099', art: 'pflicht', text: 'Sprich eine ganze Runde lang nur im Flüsterton.' },
   { id: 'a100', art: 'pflicht', text: 'Erfinde einen Toast auf den heutigen Abend und trag ihn vor.' },
   { id: 'a101', art: 'pflicht', text: 'Mach die peinlichste Tanzbewegung, die dir spontan einfällt.' },
   { id: 'a102', art: 'pflicht', text: 'Lies die letzte harmlose Notiz aus deiner Notizen-App vor.' },
   { id: 'a103', art: 'pflicht', text: 'Sing dein Lieblingslied so, als wärst du ein Roboter.' },
   { id: 'a104', art: 'pflicht', text: 'Mach 30 Sekunden Kompliment-Battle mit deinem Nachbarn.' },
-  { id: 'a105', art: 'pflicht', text: 'Trink einen Schluck und imitiere danach deinen Sitznachbarn.' },
+  { id: 'a105', art: 'pflicht', text: 'Imitiere deinen Sitznachbarn, bis die Runde errät, wen du meinst.' },
   { id: 'a106', art: 'pflicht', text: 'Zähl von zehn rückwärts — mit geschlossenen Augen und einem Bein in der Luft.' },
   { id: 'a107', art: 'pflicht', text: 'Erfinde spontan einen eigenen Zungenbrecher und sag ihn dreimal auf.' },
   { id: 'a108', art: 'pflicht', text: 'Mach 20 Sekunden lang die Stimme eines kleinen Kindes.' },
   { id: 'a109', art: 'pflicht', text: 'Tanze einen Tanz, den du dir gerade erfindest, und gib ihm einen Namen.' },
   { id: 'a110', art: 'pflicht', text: 'Sing den Refrain deines Lieblingslieds als Schlaflied.' },
   { id: 'a111', art: 'pflicht', text: 'Mach mit der ganzen Runde einen High-Five-Marathon — jeder einmal.' },
-  { id: 'a112', art: 'pflicht', text: 'Trink einen Schluck und sag danach dein Sternzeichen mit Theaterstimme auf.' },
+  { id: 'a112', art: 'pflicht', text: 'Sag dein Sternzeichen mit großer Theaterstimme auf — samt einer erfundenen Vorhersage für den Abend.' },
   { id: 'a113', art: 'pflicht', text: 'Erfinde ein Motto für den heutigen Abend und ruf es einmal laut.' },
   { id: 'a114', art: 'pflicht', text: 'Mach 20 Sekunden lang eine Live-Reportage über das, was gerade am Tisch passiert.' },
   { id: 'a115', art: 'pflicht', text: 'Sing den Refrain deines Lieblingslieds im Flüsterton.' },
   { id: 'a116', art: 'pflicht', text: 'Zeig deinen besten Verlierer-Gesichtsausdruck.' },
   { id: 'a117', art: 'pflicht', text: 'Mach einen kurzen Toast auf die Person links von dir.' },
   { id: 'a118', art: 'pflicht', text: 'Sprich die nächsten drei Sätze nur in Filmzitaten deiner Wahl.' },
-  { id: 'a119', art: 'pflicht', text: 'Trink einen Schluck und mach danach dein bestes Tier-Geräusch.' },
+  { id: 'a119', art: 'pflicht', text: 'Mach drei verschiedene Tier-Geräusche hintereinander, ohne zu lachen.' },
   { id: 'a120', art: 'pflicht', text: 'Sing ein Lied, das genau zu deiner Stimmung gerade passt.' },
 ];

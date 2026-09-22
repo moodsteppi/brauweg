@@ -21,6 +21,7 @@ import {
   FARBZEICHEN,
   istRoteKarte,
   rangName,
+  zaehlerWort,
   type BusSicht,
   type EntwederSicht,
   type ImposterSicht,
@@ -521,7 +522,7 @@ function BusRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
             <span data-gut={daten.letzter.richtig ? '' : undefined}>
               {namenFuer(sitze, daten.letzter.sitz)}:{' '}
               {BUS_WAHL[daten.letzter.stufe]?.[daten.letzter.wahl] ?? '?'} —{' '}
-              {daten.letzter.richtig ? 'richtig' : 'daneben, ein Schluck'}
+              {daten.letzter.richtig ? 'richtig' : `daneben, ein ${zaehlerWort(sicht.trinkmodus, 1)}`}
             </span>
           ) : (
             <span>Drei richtige Tipps, dann ist der Nächste dran.</span>

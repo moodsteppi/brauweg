@@ -40,9 +40,23 @@ Der **Härtegrad** (`schluckFaktor`, 1 bis 3) nimmt alle Schlücke einer Runde
 mal. Punkte bleiben unberührt: Die Rangliste darf nicht davon abhängen, wie
 hart der Abend eingestellt ist.
 
-Der **Trinkmodus** (`trinkmodus`) blendet Gläser und Schluckzahlen aus; der
-Ablauf ändert sich nicht. Ein zweiter Ablauf für „ohne Alkohol“ wäre ein
-zweites Regelwerk, das nie jemand testet.
+Der **Trinkmodus** (`trinkmodus`) ändert den Ablauf nicht. Ein zweiter Ablauf
+für „ohne Alkohol“ wäre ein zweites Regelwerk, das nie jemand testet. Gezählt
+wird in beiden Modi; ausgeschaltet heißt der Zähler **Strafpunkte** statt
+Schlücke, und die Ansagen reden nicht vom Trinken (`ansageFuer` im Client).
+Ein 🍺 gibt es seit dem 22.09.2026 nirgends mehr, und **kein Inhaltstext
+befiehlt das Trinken** — der Schluck kommt aus der Wertung, nicht aus dem
+Text (`test/inhalte.test.ts` hält das über alle Kataloge fest).
+
+**Einstellen** lassen sich Runden, Härte und Trinkmodus im Menü, für beide
+Wege: Der Tischöffner stellt ein, auch online (`config` beim Anlegen). Wer
+„Online spielen“ drückt und eine offene Runde findet, sieht deren Regelsatz
+**vor** dem Beitritt und kann stattdessen eine eigene aufmachen. Der Regelsatz
+(`trinkmodus`, `schluckFaktor`, `minispiele`) fährt in jeder Sicht mit und
+steht als Regelzeile im Spielkopf; im Wartesaal kommt er von
+`/tables/:id/rules`. Solange das Turnier läuft, hält der Bildschirm eine
+Wake-Lock-Sperre, und reihum vibriert das Handy, wenn man dran ist
+(`useTischwache`).
 
 ## Wertung
 
