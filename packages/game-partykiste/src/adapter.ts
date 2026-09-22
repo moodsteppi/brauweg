@@ -41,9 +41,11 @@ import {
   verarbeite,
   type PartykistePartie,
 } from './partie.js';
+import { istPaket } from './inhalte/typen.js';
 import {
   BOT_TAKT_MS,
   DEFAULT_REGELN,
+  INHALTS_HAERTE_VORGABE,
   MAX_REDERUNDEN,
   MINISPIELE,
   RUNDEN_MAX,
@@ -52,6 +54,7 @@ import {
   SCHLUCK_FAKTOR_MIN,
   SITZE,
   ZUGZEIT_MS,
+  istHaerte,
   istMinispiel,
   type PartykisteAktion,
   type PartykisteRegeln,
@@ -138,6 +141,34 @@ export const partykiste: GameModule<
           severity: 'error',
         });
       }
+      /*
+       * Beide seit dem 22.09.2026 — und beide duerfen FEHLEN. Jeder Tisch,
+       * der davor angelegt wurde, und der Bildschirm von heute (er schickt
+       * nur minispiele, trinkmodus, schluckFaktor) kennen sie nicht; wer sie
+       * hier verlangte, braeche jeden "Gegen Bots"-Tisch. Fehlt = Vorgabe:
+       * harmlos, alle Inhalte. Nur ein Wert, der DA ist und nicht passt, ist
+       * ein Problem.
+       *
+       * Ob "derb" am Tisch wirklich gilt, entscheidet diese Pruefung nicht:
+       * Hier steht noch nicht fest, wer sich setzt. Die Gast-Kappung macht
+       * `erzeugePartie` beim Start.
+       */
+      const inhaltsHaerte = roh['inhaltsHaerte'];
+      if (inhaltsHaerte !== undefined && !istHaerte(inhaltsHaerte)) {
+        probleme.push({
+          path: 'inhaltsHaerte',
+          messageKey: 'ruleset.partykiste.inhaltsHaerte',
+          severity: 'error',
+        });
+      }
+      const paket = roh['paket'];
+      if (paket !== undefined && paket !== null && !istPaket(paket)) {
+        probleme.push({
+          path: 'paket',
+          messageKey: 'ruleset.partykiste.paket',
+          severity: 'error',
+        });
+      }
     }
 
     if (!Number.isInteger(seats) || !(SITZE as readonly number[]).includes(seats)) {
@@ -162,6 +193,9 @@ export const partykiste: GameModule<
           typeof regeln.schluckFaktor === 'number' && Number.isFinite(regeln.schluckFaktor)
             ? Math.min(SCHLUCK_FAKTOR_MAX, Math.max(SCHLUCK_FAKTOR_MIN, Math.round(regeln.schluckFaktor)))
             : DEFAULT_REGELN.schluckFaktor,
+        /* Unsinn wird harmlos bzw. "alles" — nie derber als eingestellt. */
+        inhaltsHaerte: istHaerte(regeln.inhaltsHaerte) ? regeln.inhaltsHaerte : INHALTS_HAERTE_VORGABE,
+        paket: istPaket(regeln.paket) ? regeln.paket : null,
       },
       saat: options.seed,
       saatHex: options.seedHex,
@@ -169,6 +203,11 @@ export const partykiste: GameModule<
       runden: options.rounds,
       botSitze: options.botSeats,
       botStufe: options.botLevel,
+      /*
+       * Durchgereicht, wie es kommt — auch `undefined`. Eine Laufzeit, die
+       * nicht sagt, wer Gast ist, bekommt damit kein "derb" (erzeugePartie).
+       */
+      gastSitze: options.gastSeats,
     });
   },
 

@@ -16,6 +16,8 @@
 
 import type { BotLevel } from '@brauweg/game-api';
 
+import type { Haerte, Paket } from './inhalte/typen.js';
+
 // ---------------------------------------------------------------------------
 // Minispiele
 // ---------------------------------------------------------------------------
@@ -88,16 +90,55 @@ export interface PartykisteRegeln {
    * 1 = gemuetlich, 2 = normal, 3 = kurzer Abend.
    */
   readonly schluckFaktor: number;
+  /**
+   * Textschaerfe der Inhalte: 1 harmlos, 2 pikant, 3 derb. Eine OBERGRENZE —
+   * ein derber Tisch bekommt auch harmlose Sprueche, ein harmloser nie derbe.
+   *
+   * Heisst absichtlich nicht einfach "Haerte": `schluckFaktor` steht im
+   * Bildschirm schon als „Härte" und meint die Schluckzahl. Zwei Regler
+   * mit derselben Beschriftung nebeneinander — einer fuer Glaeser, einer fuer
+   * Texte — stellt niemand richtig ein, und die Beschwerde kaeme erst nach
+   * dem ersten derben Spruch am Firmenabend. Der Bildschirm nennt diesen
+   * hier deshalb NICHT „Härte" (Entscheidung vom 22.09.2026: harmlos /
+   * pikant / derb).
+   *
+   * Stufe 3 gibt es nur an Tischen ohne Gast: Ein Gastkonto entsteht ohne
+   * Mail und ohne Altersangabe, und "derb" ist nichts fuer Leute, von denen
+   * niemand weiss, wie alt sie sind. Die Kappung macht `erzeugePartie`, weil
+   * erst beim Start feststeht, wer sitzt.
+   */
+  readonly inhaltsHaerte: Haerte;
+  /**
+   * Themenpaket als Zielgruppe — null heisst: alles. Ein gesetztes Paket
+   * bevorzugt seine Inhalte, laesst Allgemeingut zu und blendet aus, was
+   * nur fuer ANDERE Pakete gedacht ist (Stufen in `inhalte/filter.ts`).
+   */
+  readonly paket: Paket | null;
 }
 
 export const DEFAULT_REGELN: PartykisteRegeln = {
   minispiele: MINISPIELE,
   trinkmodus: true,
   schluckFaktor: 1,
+  inhaltsHaerte: 1,
+  paket: null,
 };
 
 export const SCHLUCK_FAKTOR_MIN = 1;
 export const SCHLUCK_FAKTOR_MAX = 3;
+
+export const INHALTS_HAERTE_MIN: Haerte = 1;
+export const INHALTS_HAERTE_MAX: Haerte = 3;
+export const INHALTS_HAERTE_VORGABE: Haerte = 1;
+/**
+ * Hoechste Textschaerfe, sobald ein Gast am Tisch sitzt. Zwei, nicht eins:
+ * "pikant" ist Kneipenniveau, fuer das niemand einen Ausweis braucht.
+ */
+export const INHALTS_HAERTE_GAST_MAX: Haerte = 2;
+
+export function istHaerte(x: unknown): x is Haerte {
+  return x === 1 || x === 2 || x === 3;
+}
 
 /**
  * Zulaessige Sitzzahlen: 4 bis 12.

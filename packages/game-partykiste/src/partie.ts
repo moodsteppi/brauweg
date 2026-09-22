@@ -38,7 +38,16 @@ import { NIEMALS_SPRUECHE } from './inhalte/niemals.js';
 import { QUIZ_FRAGEN } from './inhalte/quiz.js';
 import { WER_EHER_SPRUECHE } from './inhalte/wereher.js';
 import {
+  MINDESTMENGE,
+  waehlbareInhalte,
+  type Auswahl,
+  type InhaltsRueckfall,
+} from './inhalte/filter.js';
+import type { Aufgabe, Haerte, Inhalt } from './inhalte/typen.js';
+import {
   DEFAULT_REGELN,
+  INHALTS_HAERTE_GAST_MAX,
+  INHALTS_HAERTE_VORGABE,
   MAX_REDERUNDEN,
   MINISPIELE,
   PUNKTE,
@@ -87,6 +96,16 @@ interface RundenBasis {
   /** Punkte und Schluecke DIESER Runde, gefuellt beim Uebergang auf 'ergebnis'. */
   readonly punkte: readonly number[];
   readonly schlucke: readonly number[];
+  /**
+   * Musste die Inhaltsauswahl dieser Runde nachgeben (zu wenig passende
+   * Inhalte fuer Paket oder Sitzzahl), steht hier, wie weit — sonst null.
+   *
+   * Seit dem 22.09.2026. Die Sicht zeigt es noch nicht an (sie gehoert einer
+   * anderen Aenderung); der Bildschirm soll es spaeter sagen koennen, statt
+   * dass der Tisch sich wundert, warum im Paket "jga" Weihnachtsfragen
+   * kommen. Optional, weil Snapshots von davor das Feld nicht haben.
+   */
+  readonly inhaltsRueckfall?: InhaltsRueckfall | null;
 }
 
 export interface ImposterRunde extends RundenBasis {
@@ -246,6 +265,15 @@ export interface PartykistePartie {
   readonly runde: Runde;
   readonly protokoll: readonly Rundenprotokoll[];
   readonly fertig: boolean;
+  /**
+   * Die Inhaltsstufe, die der Tisch eingestellt HAT, wenn `regeln` sie wegen
+   * eines Gasts kappen musste — sonst null. `regeln.inhaltsHaerte` ist
+   * immer die wirksame Stufe; hier steht nur, dass es einmal mehr war, damit
+   * der Bildschirm "derb gibt es erst ohne Gast" sagen kann.
+   *
+   * Optional, weil Snapshots von vor dem 22.09.2026 das Feld nicht haben.
+   */
+  readonly inhaltsHaerteGewollt?: Haerte | null;
 }
 
 export interface AufbauOptionen {
@@ -256,6 +284,14 @@ export interface AufbauOptionen {
   readonly runden: number;
   readonly botSitze?: readonly number[];
   readonly botStufe?: BotLevel;
+  /**
+   * Sitze mit Gastkonto. FEHLT das Feld, weiss der Aufrufer es nicht — und
+   * dann gilt die strenge Seite: kein "derb". Eine leere Liste heisst
+   * dagegen ausdruecklich "kein Gast". Der Unterschied ist Absicht: Ein
+   * Aufrufer, der die Auskunft vergisst, soll einen zahmeren Abend bekommen,
+   * nicht einen derberen.
+   */
+  readonly gastSitze?: readonly number[];
 }
 
 function nullen(n: number): number[] {
@@ -298,6 +334,65 @@ function nummerDerArt(regeln: PartykisteRegeln, nr: number): number {
 }
 
 /**
+ * Der Stapel eines Katalogs fuer die ganze Partie: gefiltert, dann EINMAL
+ * gemischt mit `rundenSaat(saat, 0, zweck)`.
+ *
+ * Die Runde 0 in der Saat ist Absicht und das ganze Geheimnis des
+ * Wiederholungsschutzes: Jede Runde derselben Art zieht aus DEMSELBEN
+ * gemischten Stapel, nur an der naechsten Stelle (`wievielte`). Mischte jede
+ * Runde neu, koennte dieselbe Frage zweimal oben liegen — genau das war bei
+ * "Wer bin ich" bis zum 22.09.2026 der Fall.
+ *
+ * Gefiltert wird VOR dem Mischen, und die Auswahl steht in
+ * Katalogreihenfolge (filter.ts). Regeln und Sitzzahl aendern sich waehrend
+ * einer Partie nicht, also ist der Stapel in jeder Runde derselbe — auch
+ * nach einem Ausstieg, weil `sitze` die Tischgroesse ist und nicht die Zahl
+ * der Anwesenden.
+ */
+function stapel<T extends Inhalt>(
+  katalog: readonly T[],
+  regeln: PartykisteRegeln,
+  saat: string,
+  sitze: number,
+  zweck: string,
+  mindestens: number = MINDESTMENGE,
+): { readonly stapel: readonly T[]; readonly rueckfall: InhaltsRueckfall | null } {
+  const auswahl: Auswahl<T> = waehlbareInhalte(katalog, regeln, sitze, mindestens);
+  return {
+    stapel: gemischt(auswahl.inhalte, baueZufall(rundenSaat(saat, 0, zweck))),
+    rueckfall: auswahl.rueckfall,
+  };
+}
+
+/** Die Stelle `stelle` eines Stapels, am Ende von vorn. */
+function an<T>(liste: readonly T[], stelle: number): T {
+  return liste[stelle % liste.length]!;
+}
+
+/**
+ * Die beiden Stapel von Wahrheit oder Pflicht — je Art einer, weil die Wahl
+ * erst am Zug faellt. Mindestens so gross wie der Tisch: Sonst bekaemen zwei
+ * Sitze in derselben Runde dieselbe Aufgabe, und genau das soll nicht mehr
+ * gehen.
+ */
+function aufgabenStapel(
+  regeln: PartykisteRegeln,
+  saat: string,
+  sitze: number,
+  pflicht: boolean,
+): { readonly stapel: readonly Aufgabe[]; readonly rueckfall: InhaltsRueckfall | null } {
+  const art = pflicht ? 'pflicht' : 'wahrheit';
+  return stapel(
+    AUFGABEN.filter((a) => a.art === art),
+    regeln,
+    saat,
+    sitze,
+    `wp-${pflicht ? 'p' : 'w'}`,
+    Math.max(MINDESTMENGE, sitze),
+  );
+}
+
+/**
  * Baut die Runde `nr`.
  *
  * Alles Zufaellige haengt allein an Saatkorn und Rundennummer, nicht am
@@ -317,9 +412,8 @@ export function baueRunde(
 
   switch (art) {
     case 'imposter': {
-      const wort = gemischt(IMPOSTER_WOERTER, baueZufall(rundenSaat(saat, 0, 'imposter')))[
-        wievielte % IMPOSTER_WOERTER.length
-      ]!;
+      const woerter = stapel(IMPOSTER_WOERTER, regeln, saat, sitze, 'imposter');
+      const wort = an(woerter.stapel, wievielte);
       /*
        * Der Imposter wird unter den ANWESENDEN gezogen. Ein ausgestiegener
        * Imposter waere eine Runde ohne Taeter: Niemand redet falsch, alle
@@ -348,12 +442,12 @@ export function baueRunde(
         nochmal: [],
         stimmen: offene(sitze),
         ertappt: false,
+        inhaltsRueckfall: woerter.rueckfall,
       };
     }
     case 'quiz': {
-      const frage = gemischt(QUIZ_FRAGEN, baueZufall(rundenSaat(saat, 0, 'quiz')))[
-        wievielte % QUIZ_FRAGEN.length
-      ]!;
+      const fragen = stapel(QUIZ_FRAGEN, regeln, saat, sitze, 'quiz');
+      const frage = an(fragen.stapel, wievielte);
       /*
        * Die Antworten werden noch einmal gemischt. Sonst stuende die richtige
        * ueber alle Tische hinweg an derselben Stelle wie im Katalog — und wer
@@ -370,13 +464,20 @@ export function baueRunde(
         antworten: stellen.map((i) => frage.antworten[i]!),
         richtig: stellen.indexOf(frage.richtig),
         wahl: offene(sitze),
+        inhaltsRueckfall: fragen.rueckfall,
       };
     }
     case 'werbinich': {
-      const gezogen = gemischt(IDENTITAETEN, baueZufall(rundenSaat(saat, nr, 'werbinich'))).slice(
-        0,
-        sitze,
-      );
+      /*
+       * Bis zum 22.09.2026 mischte jede Runde neu (`rundenSaat(saat, nr, …)`)
+       * und nahm die ersten `sitze` Namen — zwei Runden "Wer bin ich" konnten
+       * so denselben Namen bringen, und wer ihn schon einmal erraten hatte,
+       * kannte ihn. Jetzt ein Stapel fuer die ganze Partie, und jede Runde
+       * nimmt die naechsten `sitze` Karten. Mindestens so viele Namen wie
+       * Sitze, sonst saessen zwei Leute in derselben Runde unter demselben.
+       */
+      const namen = stapel(IDENTITAETEN, regeln, saat, sitze, 'werbinich', Math.max(MINDESTMENGE, sitze));
+      const gezogen = Array.from({ length: sitze }, (_, s) => an(namen.stapel, wievielte * sitze + s));
       return {
         ...basis,
         art: 'werbinich',
@@ -385,12 +486,12 @@ export function baueRunde(
         namen: gezogen.map((i) => i.name),
         amZug: ersterLebender(sitze, ausgestiegen),
         erfolg: offene(sitze),
+        inhaltsRueckfall: namen.rueckfall,
       };
     }
     case 'niemals': {
-      const spruch = gemischt(NIEMALS_SPRUECHE, baueZufall(rundenSaat(saat, 0, 'niemals')))[
-        wievielte % NIEMALS_SPRUECHE.length
-      ]!;
+      const sprueche = stapel(NIEMALS_SPRUECHE, regeln, saat, sitze, 'niemals');
+      const spruch = an(sprueche.stapel, wievielte);
       return {
         ...basis,
         art: 'niemals',
@@ -398,12 +499,12 @@ export function baueRunde(
         spruchId: spruch.id,
         text: spruch.text,
         gestanden: offene(sitze),
+        inhaltsRueckfall: sprueche.rueckfall,
       };
     }
     case 'wereher': {
-      const spruch = gemischt(WER_EHER_SPRUECHE, baueZufall(rundenSaat(saat, 0, 'wereher')))[
-        wievielte % WER_EHER_SPRUECHE.length
-      ]!;
+      const sprueche = stapel(WER_EHER_SPRUECHE, regeln, saat, sitze, 'wereher');
+      const spruch = an(sprueche.stapel, wievielte);
       return {
         ...basis,
         art: 'wereher',
@@ -411,6 +512,7 @@ export function baueRunde(
         spruchId: spruch.id,
         text: spruch.text,
         stimmen: offene(sitze),
+        inhaltsRueckfall: sprueche.rueckfall,
       };
     }
     case 'busfahrer': {
@@ -425,12 +527,13 @@ export function baueRunde(
         offen: [],
         treffer: offene(sitze),
         letzter: null,
+        /* Karten sind kein Inhalt mit Haerte oder Paket. */
+        inhaltsRueckfall: null,
       };
     }
     case 'schaetzen': {
-      const frage = gemischt(SCHAETZ_FRAGEN, baueZufall(rundenSaat(saat, 0, 'schaetzen')))[
-        wievielte % SCHAETZ_FRAGEN.length
-      ]!;
+      const fragen = stapel(SCHAETZ_FRAGEN, regeln, saat, sitze, 'schaetzen');
+      const frage = an(fragen.stapel, wievielte);
       return {
         ...basis,
         art: 'schaetzen',
@@ -440,12 +543,12 @@ export function baueRunde(
         antwort: frage.antwort,
         einheit: frage.einheit,
         schaetzung: Array.from({ length: sitze }, () => null),
+        inhaltsRueckfall: fragen.rueckfall,
       };
     }
     case 'entweder': {
-      const paar = gemischt(ENTWEDER_ODER, baueZufall(rundenSaat(saat, 0, 'entweder')))[
-        wievielte % ENTWEDER_ODER.length
-      ]!;
+      const paare = stapel(ENTWEDER_ODER, regeln, saat, sitze, 'entweder');
+      const paar = an(paare.stapel, wievielte);
       return {
         ...basis,
         art: 'entweder',
@@ -454,9 +557,15 @@ export function baueRunde(
         a: paar.a,
         b: paar.b,
         seite: offene(sitze),
+        inhaltsRueckfall: paare.rueckfall,
       };
     }
     case 'wahrheitpflicht': {
+      /* Gezogen wird erst bei der Wahl (zieheAufgabe); hier nur, ob die
+         Auswahl dafuer nachgeben muss — sie haengt nicht an der Wahl. */
+      const rueckfall =
+        aufgabenStapel(regeln, saat, sitze, false).rueckfall ??
+        aufgabenStapel(regeln, saat, sitze, true).rueckfall;
       return {
         ...basis,
         art: 'wahrheitpflicht',
@@ -466,6 +575,7 @@ export function baueRunde(
         aufgabeId: Array.from({ length: sitze }, () => ''),
         text: Array.from({ length: sitze }, () => ''),
         erfolg: offene(sitze),
+        inhaltsRueckfall: rueckfall,
       };
     }
   }
@@ -479,16 +589,54 @@ export function baueRunde(
  * Pflicht. Waere die Aufgabe schon beim Rundenaufbau festgelegt, staende sie
  * im Snapshot, bevor jemand gewaehlt hat — und der Zustand wuesste etwas,
  * das der Sitz noch nicht wissen darf.
+ *
+ * Bis zum 22.09.2026 zog jeder Sitz einen eigenen Zufallsindex, und zwei
+ * Sitze konnten dieselbe Aufgabe bekommen — am Tisch sieht jeder jede
+ * Aufgabe, der zweite kennt sie dann schon. Jetzt hat jede Art EINEN Stapel
+ * fuer die Partie, und jeder Sitz hat darin seinen festen Platz: Runde
+ * `wievielte` der Art, Sitz `sitz` → Stelle `wievielte * sitze + sitz`.
+ * Verschiedene (Runde, Sitz) ergeben verschiedene Stellen, also nie zweimal
+ * dieselbe Aufgabe, solange der Stapel reicht. Dass ein Platz verfaellt,
+ * wenn der Sitz die andere Art waehlt, ist der Preis dafuer, dass die Stelle
+ * nicht von fremden Wahlen abhaengt (und damit nicht verraet, was sie waren).
  */
-function zieheAufgabe(saat: string, nr: number, sitz: number, pflicht: boolean) {
-  const passende = AUFGABEN.filter((a) => a.art === (pflicht ? 'pflicht' : 'wahrheit'));
-  const zufall = baueZufall(rundenSaat(saat, nr, `wp-${sitz}-${pflicht ? 'p' : 'w'}`));
-  return passende[ganzzahl(zufall, passende.length)]!;
+function zieheAufgabe(partie: PartykistePartie, sitz: number, pflicht: boolean): Aufgabe {
+  const wievielte = nummerDerArt(partie.regeln, partie.rundeNr);
+  const { stapel: aufgaben } = aufgabenStapel(partie.regeln, partie.saat, partie.sitze, pflicht);
+  return an(aufgaben, wievielte * partie.sitze + sitz);
+}
+
+/**
+ * Die wirksame Inhaltsstufe: eingestellt, aber mit Gast am Tisch hoechstens
+ * INHALTS_HAERTE_GAST_MAX.
+ *
+ * Hier und nicht in `validateConfig`: Der Regelsatz wird beim Anlegen des
+ * Tisches geprueft und eingefroren, der Gast setzt sich oft erst danach
+ * dazu. Erst beim Start steht fest, wer sitzt — und `erzeugePartie` ist
+ * die einzige Stelle, die das erfaehrt. `gastSitze` fehlt = unbekannt =
+ * streng (siehe AufbauOptionen).
+ */
+export function wirksameInhaltsHaerte(
+  eingestellt: Haerte,
+  gastSitze: readonly number[] | undefined,
+): Haerte {
+  const mitGast = gastSitze === undefined || gastSitze.length > 0;
+  return mitGast && eingestellt > INHALTS_HAERTE_GAST_MAX ? INHALTS_HAERTE_GAST_MAX : eingestellt;
 }
 
 export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
   const saat = o.saatHex && o.saatHex.length > 0 ? o.saatHex : String(o.saat);
-  const regeln = o.regeln.minispiele.length > 0 ? o.regeln : DEFAULT_REGELN;
+  const grund = o.regeln.minispiele.length > 0 ? o.regeln : DEFAULT_REGELN;
+  const gewollt: Haerte =
+    grund.inhaltsHaerte === 1 || grund.inhaltsHaerte === 2 || grund.inhaltsHaerte === 3
+      ? grund.inhaltsHaerte
+      : INHALTS_HAERTE_VORGABE;
+  const wirksam = wirksameInhaltsHaerte(gewollt, o.gastSitze);
+  const regeln: PartykisteRegeln = {
+    ...grund,
+    inhaltsHaerte: wirksam,
+    paket: grund.paket ?? null,
+  };
   return weiter({
     saat,
     sitze: o.sitze,
@@ -503,6 +651,7 @@ export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
     runde: baueRunde(regeln, saat, o.sitze, 0, []),
     protokoll: [],
     fertig: false,
+    inhaltsHaerteGewollt: wirksam < gewollt ? gewollt : null,
   });
 }
 
@@ -1020,7 +1169,7 @@ export function verarbeite(
       if (runde.gewaehlt[sitz] === OFFEN) {
         if (aktion.art !== 'wahl') verstoss('erst Wahrheit oder Pflicht waehlen');
         if (typeof aktion.pflicht !== 'boolean') verstoss('Wahrheit oder Pflicht');
-        const aufgabe = zieheAufgabe(partie.saat, partie.rundeNr, sitz, aktion.pflicht);
+        const aufgabe = zieheAufgabe(partie, sitz, aktion.pflicht);
         const gewaehlt = [...runde.gewaehlt];
         const aufgabeId = [...runde.aufgabeId];
         const text = [...runde.text];
