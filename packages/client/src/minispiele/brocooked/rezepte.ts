@@ -93,6 +93,51 @@ export const REZEPTE: readonly Rezept[] = [
   },
 ];
 
+/**
+ * Die deutschen Namen der Zutaten — für Tickets, Rezeptkarte und für das,
+ * was ein Screenreader vorliest. Die Kennungen selbst bleiben klein und ohne
+ * Umlaut, weil sie auch in Gittern und Dateinamen stehen.
+ */
+export const ZUTAT_NAMEN: Readonly<Record<Zutat, string>> = {
+  tomate: 'Tomate',
+  zwiebel: 'Zwiebel',
+  salat: 'Salat',
+  fleisch: 'Fleisch',
+  fisch: 'Fisch',
+  reis: 'Reis',
+  teig: 'Teig',
+  kaese: 'Käse',
+  kartoffel: 'Kartoffel',
+};
+
+/** Wie ein Zustand heißt, wenn man ihn vorliest. */
+export const ZUSTAND_NAMEN: Readonly<Record<Zustand, string>> = {
+  roh: 'roh',
+  geschnitten: 'geschnitten',
+  gart: 'gart gerade',
+  gar: 'gegart',
+  verkohlt: 'verkohlt',
+};
+
+export const STATION_NAMEN: Readonly<Record<Garstation, string>> = {
+  topf: 'Topf',
+  pfanne: 'Pfanne',
+  fritteuse: 'Fritteuse',
+};
+
+/**
+ * Wo gegart wird, als ganze Wendung.
+ *
+ * Nicht `'im ' + name` zusammengesetzt: Daraus wurde „im Pfanne" und „im
+ * Fritteuse". Wer eine Sprache aus Bausteinen setzt, baut irgendwann einen
+ * falschen Artikel ein — also steht die Wendung ganz da.
+ */
+export const STATION_WO: Readonly<Record<Garstation, string>> = {
+  topf: 'im Topf',
+  pfanne: 'in der Pfanne',
+  fritteuse: 'in der Fritteuse',
+};
+
 export function rezept(id: string): Rezept {
   const r = REZEPTE.find((x) => x.id === id);
   if (!r) throw new Error(`Unbekanntes Rezept: ${id}`);
@@ -106,6 +151,18 @@ export function rezept(id: string): Rezept {
  */
 export function sollZustand(r: Rezept, zutat: Zutat): Zustand {
   return r.garen.includes(zutat) ? 'gar' : 'geschnitten';
+}
+
+/**
+ * Was ein Rezept verlangt, Stück für Stück — in der Reihenfolge, in der es
+ * im Rezept steht.
+ *
+ * Genau diese Liste steht auf dem Ticket. Vorher stand dort nur der Name:
+ * „Burger" sagt niemandem, dass er Teig, gebratenes Fleisch und Salat
+ * braucht, und wer das Spiel zum ersten Mal öffnet, läuft raten.
+ */
+export function stuecke(r: Rezept): TellerStueck[] {
+  return r.braucht.map((zutat) => ({ zutat, zustand: sollZustand(r, zutat) }));
 }
 
 /** Ein Stück auf dem Teller: die Zutat UND wie sie zubereitet ist. */
