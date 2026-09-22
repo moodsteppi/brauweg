@@ -122,27 +122,49 @@
   inset: auto 0 0 0;
   display: flex;
   justify-content: space-between;
-  padding: 12px;
+  /* Wenig Luft zum Rand: Der Daumen soll den Knopf treffen, nicht den Rahmen. */
+  padding: 10px 12px 14px;
   pointer-events: none;
 }
 
+/*
+ * Eine Hand: links der Stick, rechts die Knöpfe — IMMER in dieser
+ * Reihenfolge, auch beim zweiten Koch.
+ *
+ * Die erste Fassung spiegelte die rechte Hälfte (der zweite Koch hatte die
+ * Knöpfe links). Das las sich am Reißbrett hübsch symmetrisch und war am
+ * Gerät falsch: Wer zu zweit spielt, schaut auf dieselbe Steuerung wie
+ * allein, und niemand rechnet damit, dass sie sich spiegelt.
+ */
 .hand {
   display: flex;
-  gap: 10px;
+  gap: 14px;
   align-items: flex-end;
   pointer-events: auto;
 }
 
+/*
+ * Kocht nur einer an diesem Gerät, geht die Hand über die GANZE Breite:
+ * Stick an den linken Rand, Knöpfe an den rechten. So liegt jeder Daumen da,
+ * wo er das Gerät ohnehin hält — dazwischen bleibt die Küche frei.
+ *
+ * Zu zweit geht das nicht: Dann teilen sich beide den unteren Rand, und jede
+ * Hand bleibt als Block beieinander.
+ */
+.hand.breit {
+  flex: 1 1 auto;
+  justify-content: space-between;
+}
+
 .hand.rechts {
-  flex-direction: row-reverse;
   margin-left: auto;
 }
 
 .stick {
   display: grid;
   place-items: center;
-  width: 92px;
-  height: 92px;
+  width: 104px;
+  height: 104px;
   border: 2px solid var(--line);
   border-radius: 50%;
   background: rgba(10, 14, 17, 0.45);
@@ -151,27 +173,41 @@
   touch-action: none;
 }
 
+/*
+ * Die zwei Knöpfe stehen versetzt nebeneinander wie an einem Gamepad:
+ * „Nehmen" tiefer und näher am Daumen, „Arbeiten" darüber. Übereinander
+ * gestapelt lag der obere zu weit oben für den Daumen, der ohnehin schon
+ * den halben Bildschirm hält.
+ */
 .knoepfe {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  align-items: flex-end;
 }
 
 .knopf {
-  min-width: 84px;
-  /* 44 px ist die kleinste Fläche, die ein Daumen zuverlässig trifft. */
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  /* Rund und 76 px groß: 44 px ist die kleinste Fläche, die ein Daumen
+     sicher trifft, und in der Hektik zielt niemand genau. */
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  border: 2px solid var(--line);
+  border-radius: 50%;
   background: rgba(10, 14, 17, 0.72);
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.1;
   touch-action: none;
 }
 
+/* Der zweite Knopf sitzt eine halbe Höhe höher — die Daumenhaltung ist schräg. */
+.knopf.hoch {
+  margin-bottom: 34px;
+}
+
 .knopf:active {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: var(--text);
 }
 
 /* --- Menü, Lobby, Abschluss --------------------------------------------- */
@@ -183,6 +219,23 @@
   max-width: 560px;
   margin: 0 auto;
   padding: 16px;
+}
+
+/*
+ * Die Küche bekommt den ganzen Bildschirm, nicht die Menüspalte.
+ *
+ * Die erste Fassung benutzte `.seite` auch hier — mit ihren 560 px
+ * Höchstbreite. Auf einem Rechner stand die Küche dann als Briefmarke in der
+ * Mitte, und man sah die Station, vor der man steht, kaum noch.
+ */
+.spiel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 8px;
 }
 
 .seite h1 {

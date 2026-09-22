@@ -228,7 +228,14 @@ function Kuechenbild({ lies, takte, sende, eigeneSitze, eigenerSitz, onEnde }: K
         }
       }
       setAnzeige((alt) => (alt === stand ? alt : stand));
-      if (stand.fertig && !endeGemeldetRef.current) {
+      /*
+       * Läuft wieder eine Partie, ist das gemeldete Ende Vergangenheit. Ohne
+       * dieses Zurücksetzen bliebe die Merkstelle nach der ersten Schicht auf
+       * „gemeldet" stehen — und die zweite endete ohne Ergebnisbild, weil das
+       * Bauteil beim Neustart dasselbe bleibt.
+       */
+      if (!stand.fertig) endeGemeldetRef.current = false;
+      else if (!endeGemeldetRef.current) {
         endeGemeldetRef.current = true;
         onEnde(stand);
       }
@@ -280,7 +287,12 @@ function Kuechenbild({ lies, takte, sende, eigeneSitze, eigenerSitz, onEnde }: K
 
       <div className={stil.steuerung}>
         {eigeneSitze.map((sitz, i) => (
-          <div key={sitz} className={`${stil.hand} ${i === 0 ? stil.links : stil.rechts}`}>
+          <div
+            key={sitz}
+            className={`${stil.hand} ${eigeneSitze.length === 1 ? stil.breit : ''} ${
+              i === 0 ? stil.links : stil.rechts
+            }`}
+          >
             <div
               className={stil.stick}
               style={{ borderColor: sitzfarbe(sitz) }}
@@ -325,7 +337,7 @@ function Kuechenbild({ lies, takte, sende, eigeneSitze, eigenerSitz, onEnde }: K
               </button>
               <button
                 type="button"
-                className={stil.knopf}
+                className={`${stil.knopf} ${stil.hoch}`}
                 onPointerDown={() => setzeKnopf(sitz, 'werken', true)}
                 onPointerUp={() => setzeKnopf(sitz, 'werken', false)}
                 onPointerCancel={() => setzeKnopf(sitz, 'werken', false)}
@@ -380,6 +392,15 @@ export function BroCooked({
       setLokalSitze(koeche === 1 ? [0] : [0, 1]);
       setAbschluss(null);
       setModus({ art: 'lokal', koeche });
+      /*
+       * Die Uhr muss mit zurück auf null.
+       *
+       * Ohne diese Zeile rechnet `lokalTakte` die neue Partie gegen den
+       * Nullpunkt der ALTEN: Beim „Noch einmal" stand der Zeiger dann schon
+       * Minuten weiter, der Motor holte in zwei Bildern die ganze Schicht auf
+       * — und das Ergebnisbild kam zurück, bevor man den Finger gehoben hatte.
+       */
+      lokalUhr.current = 0;
     },
     [runden],
   );
@@ -650,7 +671,7 @@ export function BroCooked({
 
   const lokal = modus.art === 'lokal';
   return (
-    <div className={stil.seite}>
+    <div className={stil.spiel}>
       <button type="button" className={`ghost ${stil.zurueck}`} onClick={verlassen}>
         Küche verlassen
       </button>
