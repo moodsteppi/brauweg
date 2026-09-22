@@ -7,6 +7,7 @@ import { sitzfarbe } from '../minispiele/brocooked/farben';
 import { KUECHEN, kuechenplan } from '../minispiele/brocooked/kuechen';
 import { BroCookedNetz } from '../minispiele/brocooked/netz';
 import { rezept } from '../minispiele/brocooked/rezepte';
+import { Rezeptkarte, Rezeptzeile } from '../minispiele/brocooked/Rezeptzeile';
 import type { BroCookedSicht } from '../minispiele/brocooked/sicht';
 import { RUHE, aenderungen, losgelassen, type Knopfstand, type Sendung } from '../minispiele/brocooked/steuerung';
 import { kameraFuer, zeichne } from '../minispiele/brocooked/zeichnen';
@@ -253,6 +254,9 @@ function Kuechenbild({ lies, takte, sende, eigeneSitze, eigenerSitz, onEnde }: K
               return (
                 <li key={t.id} className={stil.ticket}>
                   <span className={stil.ticketName}>{r.name}</span>
+                  {/* Was das Gericht verlangt, steht auf dem Ticket — sonst
+                      muss man es auswendig können. */}
+                  <Rezeptzeile rezeptId={t.rezept} klein />
                   <span className={stil.ticketBalken}>
                     <span style={{ width: `${Math.round(rest * 100)}%` }} />
                   </span>
@@ -550,6 +554,29 @@ export function BroCooked({
             </li>
           ))}
         </ul>
+
+        {/*
+          * Die Rezeptkarte: was in welcher Küche bestellt wird und was dafür
+          * nötig ist. Sie steht im Menü und nicht in einem Hilfefenster —
+          * wer mitten in der Schicht nachschlagen muss, hat schon verloren.
+          */}
+        <details className={stil.rezeptblock}>
+          <summary>Rezepte</summary>
+          {KUECHEN.map((k) => (
+            <div key={k.id} className={stil.rezeptkueche}>
+              <h2>{k.name}</h2>
+              <ul className={stil.rezepte}>
+                {k.rezepte.map((id) => (
+                  <Rezeptkarte key={id} rezeptId={id} />
+                ))}
+              </ul>
+            </div>
+          ))}
+          <p className={stil.hinweis}>
+            Eine Marke mit Schnitt muss geschnitten werden, eine runde Marke gegart. Roh kommt
+            nichts auf den Teller.
+          </p>
+        </details>
 
         <p className={stil.hinweis}>
           Am Rechner: WASD und Leertaste/E für den ersten Koch, Pfeiltasten und Enter/Null für den

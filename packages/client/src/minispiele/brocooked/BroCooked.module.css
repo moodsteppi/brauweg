@@ -241,6 +241,36 @@
   background: var(--panel);
 }
 
+/* --- Rezeptkarte im Menü ------------------------------------------------ */
+
+.rezeptblock {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 8px 12px;
+}
+
+.rezeptblock > summary {
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.rezeptkueche h2 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.rezepte {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .fehler {
   color: var(--danger, #e06c6c);
 }
