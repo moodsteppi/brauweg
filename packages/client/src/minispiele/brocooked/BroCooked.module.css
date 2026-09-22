@@ -115,6 +115,43 @@
   font-variant-numeric: tabular-nums;
 }
 
+.rezepteKnopf {
+  align-self: flex-start;
+  min-height: 34px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(10, 14, 17, 0.72);
+  color: var(--text);
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+/*
+ * Die Rezepttafel liegt ÜBER der Küche, nicht daneben: Auf einem Handy gibt
+ * es kein Daneben. Sie deckt nur den oberen Teil ab und lässt die Steuerung
+ * frei — wer nachschlägt, soll nebenbei weiterlaufen können.
+ */
+.rezepttafel {
+  position: absolute;
+  top: 56px;
+  right: 8px;
+  left: 8px;
+  z-index: 2;
+  max-height: 60%;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(10, 14, 17, 0.92);
+}
+
+.rezepttafel h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
 /* --- Steuerung ---------------------------------------------------------- */
 
 .steuerung {

@@ -120,6 +120,32 @@ function Kuechenbild({ lies, takte, sende, eigeneSitze, eigenerSitz, onEnde }: K
   const standRef = useRef<Knopfstand[]>(eigeneSitze.map(() => RUHE));
   const endeGemeldetRef = useRef(false);
   const [anzeige, setAnzeige] = useState<Lauf | null>(null);
+  /*
+   * Die Rezepte der laufenden Küche, nachschlagbar MITTEN IM SPIEL.
+   *
+   * Im Menü standen sie schon; das half nur niemandem, der gerade mit einem
+   * Teller in der Hand vor dem Topf steht und nicht mehr weiß, ob der Reis
+   * gegart gehört. Die Tafel liegt deshalb über der Küche und lässt sich mit
+   * einem Griff öffnen und schließen — angehalten wird nichts, hier kocht
+   * eine ganze Mannschaft mit.
+   */
+  const [rezepteOffen, setRezepteOffen] = useState(false);
+  /*
+   * Merkzettel für die Anzeige.
+   *
+   * DAS IST DER GRUND, WARUM ER EXISTIERT: Der Motor gibt bei jedem Bild
+   * DASSELBE Lauf-Objekt zurück (`stand()` liefert absichtlich keine Kopie,
+   * sonst kostete jedes Bild eine). React vergleicht Zustände über die
+   * Gleichheit des Objekts — und sah deshalb nie eine Änderung. Die Küche
+   * lief, der Koch ging, die Uhr in der Kopfzeile stand bei 120 Sekunden,
+   * und die Tickets erschienen NIE. Wer das Spiel öffnete, dachte, es starte
+   * nicht.
+   *
+   * Darum wird hier von Hand verglichen, und zwar nur das, was man sieht:
+   * Sekunde, Punkte, Kombo, Runde und die Tickets samt grob gerundetem
+   * Balken. So gibt es ein paar Neuzeichnungen je Sekunde statt sechzig.
+   */
+  const gezeigtRef = useRef('');
 
   /*
    * Die Knopfstände liegen in einem Ref und nicht im State: Sie ändern sich
@@ -227,7 +253,13 @@ function Kuechenbild({ lies, takte, sende, eigeneSitze, eigenerSitz, onEnde }: K
           zeichne(ctx, stand.kueche, sicht, eigenerSitz, dunkel);
         }
       }
-      setAnzeige((alt) => (alt === stand ? alt : stand));
+      const merkmal = anzeigeMerkmal(stand);
+      if (merkmal !== gezeigtRef.current) {
+        gezeigtRef.current = merkmal;
+        // Eine flache Kopie: Der Inhalt ist derselbe, die Kennung eine neue —
+        // genau das braucht React, um neu zu zeichnen.
+        setAnzeige({ ...stand });
+      }
       /*
        * Läuft wieder eine Partie, ist das gemeldete Ende Vergangenheit. Ohne
        * dieses Zurücksetzen bliebe die Merkstelle nach der ersten Schicht auf
@@ -282,6 +314,28 @@ function Kuechenbild({ lies, takte, sende, eigeneSitze, eigenerSitz, onEnde }: K
             <strong>{stand.punkte + stand.kueche.punkte}</strong>
             <span>{stand.kueche.kombo >= 3 ? `Kombo ×${stand.kueche.kombo >= 5 ? '1,5' : '1,25'}` : 'Punkte'}</span>
           </div>
+          <button
+            type="button"
+            className={stil.rezepteKnopf}
+            aria-expanded={rezepteOffen}
+            onClick={() => setRezepteOffen((offen) => !offen)}
+          >
+            {rezepteOffen ? 'Zu' : 'Rezepte'}
+          </button>
+        </div>
+      )}
+
+      {stand !== null && rezepteOffen && (
+        <div className={stil.rezepttafel}>
+          <h2>Was hier bestellt wird</h2>
+          <ul className={stil.rezepte}>
+            {stand.kueche.rezepte.map((id) => (
+              <Rezeptkarte key={id} rezeptId={id} />
+            ))}
+          </ul>
+          <p className={stil.hinweis}>
+            Marke mit Schnitt: schneiden. Runde Marke: garen. Roh kommt nichts auf den Teller.
+          </p>
         </div>
       )}
 
@@ -685,6 +739,23 @@ export function BroCooked({
       />
     </div>
   );
+}
+
+/**
+ * Was die Kopfzeile zeigt, als Zeichenkette.
+ *
+ * Alles, was sich für das Auge ändert, steht darin; alles andere nicht. Der
+ * Ticketbalken wird auf Zwanzigstel gerundet, sonst gäbe es bei jedem Takt
+ * eine neue Zeichenkette und damit doch wieder sechzig Neuzeichnungen je
+ * Sekunde.
+ */
+function anzeigeMerkmal(l: Lauf): string {
+  const k = l.kueche;
+  const sekunden = Math.ceil(Math.max(0, k.endTakt - k.takt) / 20);
+  const tickets = k.tickets
+    .map((t) => `${t.id}:${Math.round(((k.takt - t.seitTakt) / t.frist) * 20)}`)
+    .join(',');
+  return `${sekunden}|${l.punkte + k.punkte}|${k.kombo}|${l.runde}|${l.pause ? 1 : 0}|${l.fertig ? 1 : 0}|${tickets}`;
 }
 
 /**
