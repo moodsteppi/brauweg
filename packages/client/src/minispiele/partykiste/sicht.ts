@@ -160,7 +160,11 @@ export interface PartykisteSicht {
   runden: number;
   art: PartyMinispiel;
   phase: PartyPhase;
+  /* Der Regelsatz des Tisches (seit 22.09.2026 vollstaendig, nicht nur der
+     Trinkmodus) — die `Regelzeile` liest ihn direkt aus der Sicht. */
   trinkmodus: boolean;
+  schluckFaktor: number;
+  minispiele: PartyMinispiel[];
   botSitze: number[];
   ausgestiegen: number[];
   punkte: number[];
@@ -215,6 +219,78 @@ export const MINISPIEL_ANSAGE: Record<PartyMinispiel, string> = {
   entweder: 'A oder B. Die Minderheit trinkt, bei Gleichstand alle.',
   wahrheitpflicht: 'Reihum: wählen, machen — oder kneifen und trinken.',
 };
+
+/**
+ * Dieselben Ansagen ohne Alkohol. Nur die Saetze, die vom Trinken reden, sind
+ * anders — der Ablauf ist derselbe, und das soll man den Texten ansehen.
+ */
+const MINISPIEL_ANSAGE_OHNE: Partial<Record<PartyMinispiel, string>> = {
+  quiz: 'Eine Frage, vier Antworten. Falsch gibt einen Strafpunkt.',
+  niemals: 'Wer es doch getan hat, kassiert einen Strafpunkt. Ehrlich bleiben ist billiger.',
+  wereher: 'Zeig auf einen. Jede Stimme ist ein Strafpunkt.',
+  schaetzen: 'Eine Zahl. Wer am nächsten liegt, gewinnt — wer am weitesten weg ist, kassiert.',
+  entweder: 'A oder B. Die Minderheit kassiert, bei Gleichstand alle.',
+  wahrheitpflicht: 'Reihum: wählen, machen — oder kneifen und kassieren.',
+};
+
+/**
+ * Die Ansage eines Minispiels, passend zum Trinkmodus des Tisches.
+ *
+ * Bis zum 22.09.2026 stand bei ausgeschaltetem Trinkmodus trotzdem "Falsch
+ * heißt trinken" ueber der Frage — der Schalter blendete nur das Glas aus,
+ * nicht die Worte.
+ */
+export function ansageFuer(art: PartyMinispiel, trinkmodus: boolean): string {
+  return (trinkmodus ? undefined : MINISPIEL_ANSAGE_OHNE[art]) ?? MINISPIEL_ANSAGE[art];
+}
+
+// ---------------------------------------------------------------------------
+// Der Regelsatz — wie er im Menue eingestellt und am Tisch angezeigt wird
+// ---------------------------------------------------------------------------
+
+/**
+ * Spiegelbild von `PartykisteRegeln` (regeln.ts). Die Sicht traegt dieselben
+ * drei Felder, deshalb passt eine `PartykisteSicht` ueberall hin, wo ein
+ * `PartyRegelsatz` verlangt ist — die Regelzeile im Spiel liest ihn direkt
+ * aus der Sicht, die im Wartesaal aus `/tables/:id/rules`.
+ */
+export interface PartyRegelsatz {
+  minispiele: PartyMinispiel[];
+  trinkmodus: boolean;
+  schluckFaktor: number;
+}
+
+/** Die Namen der Haertegrade, Stelle = `schluckFaktor` (1 bis 3). */
+export const HAERTE_NAME = ['', 'gemütlich', 'normal', 'kurzer Abend'] as const;
+
+/**
+ * Den festgeschriebenen Regelsatz eines Tisches aus der Serverantwort lesen.
+ *
+ * Kein Nachbau von `validateConfig`: Der Server hat den Regelsatz schon
+ * geprueft, bevor er ihn festschrieb. Hier wird nur die Form gelesen — und was
+ * nicht passt, ist ein `null`, keine Anzeige mit erfundenen Werten.
+ */
+export function liesRegelsatz(config: Record<string, unknown>): PartyRegelsatz | null {
+  const liste = config['minispiele'];
+  const trinkmodus = config['trinkmodus'];
+  const faktor = config['schluckFaktor'];
+  if (!Array.isArray(liste) || typeof trinkmodus !== 'boolean' || typeof faktor !== 'number') return null;
+  const minispiele = liste.filter((x): x is PartyMinispiel => typeof x === 'string' && x in MINISPIEL_NAME);
+  return { minispiele, trinkmodus, schluckFaktor: faktor };
+}
+
+/**
+ * Wie der Zaehler heisst: "Schluck" im Trinkmodus, sonst "Strafpunkt".
+ *
+ * Gezaehlt wird in beiden Faellen dasselbe (regeln.ts: Aus ist kein anderer
+ * Ablauf), nur das Wort ist anders. Robins Entscheidung vom 22.09.2026: Das
+ * Wort und die Zahl bleiben, das Glas-Emoji geht — es stand an drei Stellen
+ * und war die einzige Ausgabe, die der Schalter bis dahin veraenderte.
+ */
+export function zaehlerWort(trinkmodus: boolean, zahl: number): string {
+  if (trinkmodus) return zahl === 1 ? 'Schluck' : 'Schlücke';
+  return zahl === 1 ? 'Strafpunkt' : 'Strafpunkte';
+}
 
 /** Die vier Kartenfarben als Zeichen. Rot zuerst, wie auf dem Blatt. */
 export const FARBZEICHEN = ['♥', '♦', '♠', '♣'] as const;
