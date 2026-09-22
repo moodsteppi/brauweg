@@ -16,6 +16,8 @@ import { KARTEN } from '../minispiele/golf/karten';
 import { Golfnetz } from '../minispiele/golf/netz';
 import { ParKopf, ParName, ParRuf, ZuPar } from '../minispiele/golf/ParAnzeige';
 import { parJeLoch, zuParSumme } from '../minispiele/golf/par';
+import { GolfReplay } from '../minispiele/golf/ReplayAnsicht';
+import { eingabeAusKern, type ReplayEingabe } from '../minispiele/golf/replay';
 import {
   MAX_ZUG,
   PAUSE_TAKTE,
@@ -196,6 +198,8 @@ export function Golf({
   const [ich, setIch] = useState<Me | null>(null);
   const [abschluss, setAbschluss] = useState<Abschlussdaten | null>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
+  /** Offenes Replay: welches Loch, und die beim Knopfdruck eingefrorene Eingabe. */
+  const [replay, setReplay] = useState<{ loch: number; eingabe: ReplayEingabe } | null>(null);
   /*
    * Die Baelle im Menue: acht Stueck wie eh und je, aber aus dem ganzen
    * Vorrat von sechzehn gezogen. Einmal je Aufbau und nicht je Bild — sonst
@@ -263,6 +267,7 @@ export function Golf({
     netzRef.current = null;
     setAbschluss(null);
     setHinweis(null);
+    setReplay(null);
   }, [tischId]);
 
   /* Wer ich bin, entscheidet in der Lobby über den Startknopf. */
@@ -393,6 +398,28 @@ export function Golf({
     [],
   );
 
+  /**
+   * Replay eines Lochs öffnen (22.09.2026). Die Ereignisse werden JETZT aus
+   * dem Kern kopiert (`eingabeAusKern`) — der Kern lebt weiter, und ein
+   * später Schlag soll nicht mitten ins laufende Replay rutschen.
+   */
+  const oeffneReplay = (loch: number): void => {
+    if (sicht === null) return;
+    const eingabe = eingabeAusKern(sicht, netzRef.current?.kern ?? null);
+    if (eingabe !== null) setReplay({ loch, eingabe });
+  };
+  const replayAnsicht =
+    replay === null ? null : (
+      <GolfReplay
+        eingabe={replay.eingabe}
+        loch={replay.loch}
+        eigenerSitz={eigenerSitz}
+        farben={farben}
+        laeuftWeiter={abschluss === null}
+        onSchliessen={() => setReplay(null)}
+      />
+    );
+
   /* ---------------------------------------------------------------- */
   /* Menü                                                              */
   /* ---------------------------------------------------------------- */
@@ -501,14 +528,18 @@ export function Golf({
 
   if (abschluss !== null) {
     return (
-      <Abschluss
-        daten={abschluss}
-        sicht={sicht}
-        eigenerSitz={eigenerSitz}
-        sitze={tischSitze}
-        farben={farben}
-        onZurueck={verlasseUndZurueck}
-      />
+      <>
+        <Abschluss
+          daten={abschluss}
+          sicht={sicht}
+          eigenerSitz={eigenerSitz}
+          sitze={tischSitze}
+          farben={farben}
+          onZurueck={verlasseUndZurueck}
+          onReplay={sicht !== null && netzRef.current?.kern ? oeffneReplay : undefined}
+        />
+        {replayAnsicht}
+      </>
     );
   }
 
@@ -583,16 +614,20 @@ export function Golf({
   }
 
   return (
-    <Partie
-      netz={holeNetz()}
-      sicht={sicht}
-      eigenerSitz={eigenerSitz}
-      sitze={tischSitze}
-      farben={farben}
-      hinweis={hinweis}
-      onFertig={(zustand) => setAbschluss(meldeErgebnis(zustand))}
-      onZurueck={verlasseUndZurueck}
-    />
+    <>
+      <Partie
+        netz={holeNetz()}
+        sicht={sicht}
+        eigenerSitz={eigenerSitz}
+        sitze={tischSitze}
+        farben={farben}
+        hinweis={hinweis}
+        onFertig={(zustand) => setAbschluss(meldeErgebnis(zustand))}
+        onZurueck={verlasseUndZurueck}
+        onReplay={oeffneReplay}
+      />
+      {replayAnsicht}
+    </>
   );
 }
 
@@ -846,6 +881,7 @@ function Partie({
   hinweis,
   onFertig,
   onZurueck,
+  onReplay,
 }: {
   netz: Golfnetz;
   sicht: GolfSicht;
@@ -856,6 +892,8 @@ function Partie({
   hinweis: string | null;
   onFertig: (zustand: Partiezustand) => void;
   onZurueck: () => void;
+  /** Replay eines abgeschlossenen Lochs öffnen. */
+  onReplay?: (loch: number) => void;
 }): React.JSX.Element {
   const leinwandRef = useRef<HTMLCanvasElement | null>(null);
   const zeichnerRef = useRef<Zeichner | null>(null);
@@ -1354,6 +1392,11 @@ function Partie({
               ? 'Gleich das Ergebnis …'
               : `Loch ${hud.loch + 2} beginnt … ${hud.pauseRest}`}
           </p>
+          {onReplay && (
+            <button className="grp-pauseknopf" type="button" onClick={() => onReplay(hud.loch)}>
+              {t('golf.replay.knopf')}
+            </button>
+          )}
         </div>
       )}
 
@@ -1537,6 +1580,7 @@ export function Abschluss({
   sitze,
   farben,
   onZurueck,
+  onReplay,
 }: {
   daten: Abschlussdaten;
   sicht: GolfSicht | null;
@@ -1545,6 +1589,8 @@ export function Abschluss({
   /** Ballfarbe je Sitz, schon doppelfrei (siehe farbenDerSitze). */
   farben: readonly string[];
   onZurueck: () => void;
+  /** Replay eines Lochs öffnen; fehlt, wenn es nichts nachzurechnen gibt. */
+  onReplay?: (loch: number) => void;
 }): React.JSX.Element {
   const ausgang = sicht?.ausgang ?? null;
   const name = (sitz: number): string => {
@@ -1585,6 +1631,22 @@ export function Abschluss({
             zählt als strittig, alle stehen auf Platz 1.
           </p>
         ) : null}
+        {onReplay && daten.ergebnis.length > 0 && (
+          <nav className="grp-loecher" aria-label={t('golf.replay.loecher')}>
+            <h2>{t('golf.replay.loecher')}</h2>
+            {daten.ergebnis.map((_reihe, loch) => (
+              <button
+                key={loch}
+                className="grp-lochknopf"
+                type="button"
+                onClick={() => onReplay(loch)}
+                aria-label={`${t('golf.replay.knopf')}: ${t('golf.replay.loch')} ${loch + 1}`}
+              >
+                {loch + 1}
+              </button>
+            ))}
+          </nav>
+        )}
         <button className="gf-knopf gf-knopf-haupt" type="button" onClick={onZurueck}>
           Zurück ins Menü
         </button>
