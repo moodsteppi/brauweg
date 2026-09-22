@@ -35,6 +35,7 @@ import { snapshotCodec } from '@brauweg/game-api';
 
 import { waehleBahnen } from './bahnen.js';
 import { lobbyDaten, pruefeBahnwahl } from './bahnwahl.js';
+import { bestleistungenJeSitz } from './bestleistung.js';
 import {
   type GolfAusgang,
   type GolfAusstieg,
@@ -200,11 +201,15 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
   standings(partie): PartyStanding[] {
     const abgeschlossen = partie.ausgang !== null && !partie.ausgang.strittig;
     const ausgestiegen = new Set(partie.ausstiege.map((a) => a.sitz));
+    // Die Bestleistung je Bahn (bestleistung.ts) — nur wo es eine gibt, damit
+    // der Endstand ohne sie genauso aussieht wie vor dem 22.09.2026.
+    const bestleistungen = bestleistungenJeSitz(partie);
     return platzierungen(partie.ausgang, partie.sitze).map((p) => ({
       seat: p.sitz,
       points: abgeschlossen ? Math.max(0, partie.loecher * 12 - p.schlaege) : 0,
       place: p.platz,
       left: ausgestiegen.has(p.sitz),
+      ...(bestleistungen[p.sitz]?.length ? { bestleistungen: bestleistungen[p.sitz] } : {}),
     }));
   },
 

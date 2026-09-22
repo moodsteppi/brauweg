@@ -540,6 +540,13 @@ const de: Record<string, string> = {
   'ruleset.golf.bahnenUngueltig': 'Die Auswahl enthält eine unbekannte oder doppelte Bahn.',
   'ruleset.golf.bahnenAnzahl': 'Eine eigene Auswahl hat 2 bis 15 Bahnen.',
   'ruleset.golf.varianteUngueltig': 'Der Name der Spielart ist zu lang.',
+  // Bahnrekord im Zwischenstand (seit 22.09.2026, minispiele/golf/Bahnrekord.tsx).
+  'golf.rekord.bahn': 'Bahnrekord',
+  'golf.rekord.eigenes': 'dein Bestes',
+  'golf.rekord.keiner': 'noch keiner',
+  'golf.rekord.du': 'du',
+  'golf.rekord.neuBahn': 'Neuer Bahnrekord!',
+  'golf.rekord.neuEigen': 'Neues persönliches Bestes!',
   // Meldungen des BroCooked-Regelsatzes.
   'brocooked.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'brocooked.kuechenLeer': 'Mindestens eine Küche muss dabei sein.',

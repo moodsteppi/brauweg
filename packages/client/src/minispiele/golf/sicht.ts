@@ -41,6 +41,12 @@ export interface GolfAusstieg {
 export interface GolfMeldung {
   schlaege: number[];
   pruef: string;
+  /**
+   * Die Tafel `[loch][sitz]` hinter `pruef`, seit dem 22.09.2026 fuer die
+   * Bestleistung je Bahn. Fehlt bei Geraeten von davor. Der Bildschirm liest
+   * sie nicht — er hat seine eigene Tafel aus der Physik.
+   */
+  jeLoch?: number[][];
 }
 
 /** Ausgang eines Matches, sobald genug Meldungen vorliegen. */

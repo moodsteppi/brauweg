@@ -30,6 +30,7 @@ import { ParKopf, ParName, ParRuf, ZuPar } from '../minispiele/golf/ParAnzeige';
 import { zuParSumme } from '../minispiele/golf/par';
 import { GolfReplay } from '../minispiele/golf/ReplayAnsicht';
 import { eingabeAusKern, type ReplayEingabe } from '../minispiele/golf/replay';
+import { Bahnrekord, useBahnrekord } from '../minispiele/golf/Bahnrekord';
 import {
   MAX_ZUG,
   PAUSE_TAKTE,
@@ -407,6 +408,10 @@ export function Golf({
         art: 'ergebnis',
         schlaege: daten.gesamt,
         pruef: pruefsumme(zustand.ergebnis),
+        // Die Tafel selbst, fuer die Bestleistung je Bahn. Das Modul nimmt
+        // sie nur, wenn sie zu `pruef` und zum Ausgang passt
+        // (packages/game-golf/src/bestleistung.ts).
+        jeLoch: daten.ergebnis,
       });
       return daten;
     },
@@ -977,6 +982,8 @@ function Partie({
   /** Bis wann die Anzeige mindestens blass bleibt (siehe HUD_HALT_MS). */
   const haltBisRef = useRef(0);
   const [hud, setHud] = useState<Hudstand>(HUD_LEER);
+  /* Bahnrekord fuer den Zwischenstand, je Bahn einmal geholt (Bahnrekord.tsx). */
+  const bahnrekord = useBahnrekord(sicht.bahnen[hud.loch] ?? null);
   const hudKeyRef = useRef('');
   const fertigRef = useRef(false);
   const onFertigRef = useRef(onFertig);
@@ -1446,6 +1453,11 @@ function Partie({
               ))}
             </tbody>
           </table>
+          <Bahnrekord
+            stand={bahnrekord}
+            schlaege={hud.eingelocht[eigenerSitz] ? (hud.schlaege[eigenerSitz] ?? null) : null}
+            zaehlt={!sitze.some((s) => s.gast === true)}
+          />
           <p className="gf-pausezeit">
             {hud.loch + 1 >= hud.loecher
               ? 'Gleich das Ergebnis …'

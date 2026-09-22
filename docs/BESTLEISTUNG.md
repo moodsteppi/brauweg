@@ -1,9 +1,9 @@
 # Bestleistung je Inhalt
 
 Seit dem 22.09.2026. Anlass: Robins Entscheidung G6, zuerst eine Bestenliste
-je Golf-Bahn. Gebaut ist nur der spielunkundige Unterbau, der jede Kennung
-nimmt. Die Golf-Seite (welche Bahnkennungen es gibt, wer sie meldet) läuft
-als eigene Arbeit.
+je Golf-Bahn. Der Unterbau ist spielunkundig und nimmt jede Kennung. Die
+Golf-Seite (welche Bahnkennungen es gibt, wer sie meldet) steht unter
+„Golf: Bestleistung je Bahn".
 
 ## Was die Tabelle ist
 
@@ -54,7 +54,8 @@ Beide Routen verlangen eine Anmeldung und laufen unter `LIMIT_ALLGEMEIN` wie
 die Ranglisten. Eine ungültige Inhaltskennung gibt 400 mit
 `error.inhaltUngueltig`, ein unbekanntes Spiel 400 mit `error.invalidInput`.
 Die Client-Aufrufe sind `api.bestenliste()` und `api.eigeneBestleistungen()`
-in `packages/client/src/api.ts`. Eine Oberfläche dazu gibt es noch nicht.
+in `packages/client/src/api.ts`. Die erste Oberfläche ist der Bahnrekord im
+Golf-Zwischenstand (siehe unten).
 
 ## Was ein Spiel liefern muss
 
@@ -81,6 +82,36 @@ keine Bestleistung. Die Form ist in `bestleistung.ts` als Typ
 (`Bestleistungsmeldung`) definiert und **noch nicht** in `game-api`. Welle 2
 kann sie dorthin ziehen, dann wird das Feld an `PartyStanding` ein
 ordentliches optionales Feld statt eines strukturell gelesenen.
+
+## Golf: Bestleistung je Bahn
+
+Seit dem 22.09.2026 meldet Golf je Sitz und Loch `{ inhaltId: <Bahnkennung>,
+wert: Schläge, richtung: 'tief' }` im Endstand
+(`packages/game-golf/src/bestleistung.ts`). Die Schlagzahl je Loch kannte der
+Server vorher nicht — die Physik läuft auf den Geräten, gemeldet wurden nur
+Summen und eine Prüfsumme über die Tafel `[loch][sitz]`. Seitdem schickt jedes
+Gerät die Tafel als `jeLoch` an der Ergebnismeldung mit. Sie zählt nur, wenn
+sie aus der Mehrheitsgruppe stammt, die auch den Platz entschieden hat, ihre
+im Modul nachgerechnete Prüfsumme die der Gruppe ist und ihre Zeilensummen die
+Schläge des Ausgangs sind. Strittig heißt: keine Bestleistung. Bots und
+Ausgestiegene bekommen keine (für Letztere trägt das Gerät ab dem Ausstieg
+Strafwerte ein, und welches Loch das war, weiß der Server nicht).
+
+Gast und `training` entscheidet weiter `countsForRanking`, nicht das Modul.
+Der Haken für den künftigen Fun-Modus ist `zaehltFuerBestleistung` im Modul:
+Mit Wetter und Ereignissen ist es nicht mehr dieselbe Bahn, und die Liste
+gehörte sonst dem mit dem besten Wetter.
+
+Am Bildschirm steht nach jedem Loch „Bahnrekord: N (Name) · dein Bestes: M"
+(`minispiele/golf/Bahnrekord.tsx`), geholt über `api.bestenliste` einmal je
+Bahn und Partie, sobald das Loch beginnt. Ein eigener neuer Rekord leuchtet,
+aber nur wenn der Ball gefallen ist und kein Gast am Tisch sitzt.
+
+**Offen:** Ein nicht eingelochtes Loch zählt als Schlaglimit + 1 und geht so
+auch in die Bestleistung ein — der Server kennt das Schlaglimit nicht. Es ist
+nie besser als ein echtes Ergebnis, kann auf einer frischen Bahn aber für eine
+Weile als Rekord stehen. Und die Bestmarke auf der Kachel der Bahnauswahl fehlt,
+solange es die Bahnauswahl nicht gibt (Quelle dafür: `api.eigeneBestleistungen('golf')`).
 
 **Offen:** Die Bahnwahl als Tisch-Eigenschaft (S1) und kaufbare Zusatzpakete
 (S3) berühren diesen Unterbau nicht. Beide liefern nur andere `inhaltId`. Ob
