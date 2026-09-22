@@ -225,6 +225,19 @@ export interface GameMeta {
    */
   readonly chipStackField?: string;
   /**
+   * Der Regelsatz darf sich in der Lobby noch aendern (seit dem 22.09.2026,
+   * zuerst fuer die Bahnauswahl von Golf). Fehlt das Feld, gilt nein: Der
+   * Regelsatz steht ab dem Anlegen des Tisches fest, wie bisher.
+   *
+   * Opt-in und nicht fuer alle, weil ein Regelsatz mehr sein kann als
+   * Spielregeln — beim Poker haengt am Chip-Feld der Einsatz, den die
+   * Plattform beim Beitritt schon geprueft hat. Wer das Feld setzt, sagt zu,
+   * dass jeder gueltige Regelsatz fuer die schon Sitzenden zumutbar ist.
+   * Aendern darf nur, wer auf Sitz 0 sitzt, und nur solange der Tisch
+   * wartet (`setzeTischregeln` im Server).
+   */
+  readonly regelnInDerLobby?: boolean;
+  /**
    * Obergrenze fuer die Pause der Plattform zwischen zwei Botzuegen.
    *
    * Die Plattform wartet zwischen zwei Botzuegen `botDelayMs` (0,8 s), damit
@@ -380,6 +393,18 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    * Unsinn abweisen, nicht nur widerspruechliche Einstellungen.
    */
   validateConfig(config: unknown, seats: number, rounds: number): ConfigProblem[];
+
+  /**
+   * Daten, die ein Bildschirm VOR der Partie braucht, um den Regelsatz
+   * einstellen zu lassen — bei Golf die Kurse und die Themen je Bahn. Der
+   * Server reicht sie unbesehen als `lobby` in `GET /api/games/:id/defaults`
+   * durch. Es gibt sie, damit der Client solche Listen nicht abschreibt
+   * (CLAUDE.md: „Was das Modul weiss, schreibt der Client nicht ab"); vor der
+   * Partie gibt es noch keine Sicht, in die sie gehoeren koennten.
+   *
+   * Optional; muss JSON-tauglich sein.
+   */
+  lobbyDaten?(): unknown;
 
   // -- Ablauf ---------------------------------------------------------------
 

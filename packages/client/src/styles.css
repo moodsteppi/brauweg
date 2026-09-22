@@ -19235,6 +19235,54 @@ span.hub-angebot-art.poker-jeton-stapel {
   background: #101d16;
 }
 
+/* -- Bahnauswahl (minispiele/golf/Bahnauswahl.tsx, 22.09.2026) ------------ */
+
+/* Das Auswahl-Raster bringt die Plattformfarben mit; hier auf das Gruen der
+   Golfseiten gestellt, wie Filler es auf Weiss stellt. */
+.gf-bw {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  --aw-panel: rgba(0, 0, 0, 0.28);
+  --aw-line: rgba(255, 255, 255, 0.12);
+  --aw-text: #e8f0e6;
+  --aw-muted: #a9c4ad;
+}
+.gf-bw-titel { margin: 0; font: 800 15px/1.2 system-ui; }
+.gf-bw-hinweis { margin: 0; color: #a9c4ad; font: 600 12px/1.4 system-ui; }
+.gf-bw-hinweis strong { color: #e8f0e6; }
+.gf-bw-zeilentitel { color: #a9c4ad; font: 700 11px/1 system-ui; text-transform: uppercase; letter-spacing: 0.04em; }
+.gf-bw-filter { display: flex; flex-direction: column; gap: 6px; }
+.gf-bw .aw-chips { flex-wrap: wrap; }
+/* Quadratisch und mit fester Form: Ein <canvas> ohne Hoehe ist null Pixel
+   hoch, und der Zeichner misst clientWidth/clientHeight. */
+.gf-bw-miniatur {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 0.45rem;
+  background: #101d16;
+}
+.gf-bw-folgekopf { display: flex; align-items: center; justify-content: space-between; font: 700 12px/1 system-ui; }
+.gf-bw-leeren {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #cadfca;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.gf-bw-folge {
+  margin: 0;
+  padding-left: 1.4em;
+  color: #cadfca;
+  font: 600 12px/1.5 system-ui;
+  columns: 2;
+}
+.gf-bw-anzeige { margin-bottom: 12px; }
+
 /* ==========================================================================
  * Partykiste
  *

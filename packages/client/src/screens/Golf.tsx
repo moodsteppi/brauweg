@@ -13,6 +13,17 @@ import { abschlussdaten, type Abschlussdaten } from '../minispiele/golf/abschlus
 import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
 import { loeseBahnen } from '../minispiele/golf/karte';
+import { Bahnauswahl, BahnauswahlAnzeige } from '../minispiele/golf/Bahnauswahl';
+import {
+  festeLochzahl,
+  gemerkteWahl,
+  merkeWahl,
+  regelnAusWahl,
+  traegtWahl,
+  wahlUnfertig,
+  type Bahnwahl,
+} from '../minispiele/golf/bahnwahl';
+import { useGolfLobby, useTischBahnwahl } from '../minispiele/golf/useBahnwahl';
 import { KARTEN } from '../minispiele/golf/karten';
 import { Golfnetz } from '../minispiele/golf/netz';
 import { ParKopf, ParName, ParRuf, ZuPar } from '../minispiele/golf/ParAnzeige';
@@ -184,6 +195,9 @@ export function Golf({
   const [bots, setBots] = useState(() => gemerkt(SCHLUESSEL_BOTS, 3, 1, 7));
   const [loecher, setLoecher] = useState(() => gemerkt(SCHLUESSEL_LOECHER, 9, 2, 15));
   const [stufe, setStufe] = useState<BotLevel>(gemerkteStufe);
+  /* Bahnauswahl (seit 22.09.2026): Kurse und Themen vom Modul; die Wahl für den Bot-Tisch hier. */
+  const lobby = useGolfLobby();
+  const [botWahl, setBotWahl] = useState<Bahnwahl>(gemerkteWahl);
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ich, setIch] = useState<Me | null>(null);
@@ -244,6 +258,13 @@ export function Golf({
 
   const tisch = useTable<GolfSicht>(tischId, 'golf', beiTakt, beiSicht, beiAbweisung);
   sendRef.current = tisch.send;
+  /* Die Bahnauswahl der Gruppe: Regelsatz des Tisches, eingestellt von Sitz 0. */
+  const tischWahl = useTischBahnwahl({
+    tischId,
+    regelstand: tisch.table?.regelstand,
+    setRules: tisch.setRules,
+    daten: lobby.daten,
+  });
   sendTaktRef.current = tisch.sendTakt;
   neuVerbindenRef.current = tisch.reconnect;
 
@@ -332,10 +353,13 @@ export function Golf({
       const { id } = await api.createTable({
         gameId: 'golf',
         seats: 1 + bots,
-        rounds: loecher,
+        // Kurs und Einzelauswahl legen die Lochzahl fest, sonst gilt der Regler.
+        rounds: festeLochzahl(botWahl, lobby.daten) ?? loecher,
         visibility: 'on_request',
         fillWithBots: true,
         botLevel: stufe,
+        // Nur mit einer Wahl ein Regelsatz — sonst der des Moduls (siehe spieleOnline).
+        ...(traegtWahl(botWahl) ? { config: regelnAusWahl(botWahl, lobby.vorgabe, lobby.daten) } : {}),
       });
       setTischId(id);
     } catch {
@@ -343,7 +367,7 @@ export function Golf({
     } finally {
       setLaedt(false);
     }
-  }, [bots, loecher, stufe]);
+  }, [bots, loecher, stufe, botWahl, lobby]);
 
   const verlasse = useCallback((): void => {
     const id = tischId;
@@ -464,16 +488,18 @@ export function Golf({
                     merke(SCHLUESSEL_BOTS, w);
                   }}
                 />
-                <Regler
-                  titel="Löcher"
-                  wert={loecher}
-                  min={2}
-                  max={15}
-                  onWahl={(w) => {
-                    setLoecher(w);
-                    merke(SCHLUESSEL_LOECHER, w);
-                  }}
-                />
+                {festeLochzahl(botWahl, lobby.daten) === null && (
+                  <Regler
+                    titel="Löcher"
+                    wert={loecher}
+                    min={2}
+                    max={15}
+                    onWahl={(w) => {
+                      setLoecher(w);
+                      merke(SCHLUESSEL_LOECHER, w);
+                    }}
+                  />
+                )}
                 <div className="gf-stufen" role="group" aria-label="Spielstärke der Bots">
                   {STUFEN.map((s) => (
                     <button
@@ -490,12 +516,21 @@ export function Golf({
                     </button>
                   ))}
                 </div>
+                <Bahnauswahl
+                  daten={lobby.daten}
+                  wahl={botWahl}
+                  onWahl={(w) => {
+                    setBotWahl(w);
+                    merkeWahl(w);
+                  }}
+                  karten={KARTEN}
+                />
                 <button
                   className="gf-knopf gf-knopf-haupt"
                   type="button"
                   data-golf-los=""
                   onClick={() => void spieleGegenBots()}
-                  disabled={laedt}
+                  disabled={laedt || wahlUnfertig(botWahl) !== null}
                 >
                   Los
                 </button>
@@ -552,8 +587,18 @@ export function Golf({
           setLoecher(w);
           merke(SCHLUESSEL_LOECHER, w);
         }}
-        onStart={() => tisch.startNow(loecher)}
+        onStart={() => {
+          // Eine noch wartende Wahl zuerst — der Server arbeitet der Reihe nach.
+          tischWahl.bereitZumStart();
+          tisch.startNow(festeLochzahl(tischWahl.wahl, lobby.daten) ?? loecher);
+        }}
         onZurueck={verlasse}
+        loecherFest={festeLochzahl(tischWahl.wahl, lobby.daten)}
+        startSperre={wahlUnfertig(tischWahl.wahl)}
+        bahnwahl={
+          <Bahnauswahl daten={lobby.daten} wahl={tischWahl.wahl} onWahl={tischWahl.setzeWahl} karten={KARTEN} />
+        }
+        bahnanzeige={<BahnauswahlAnzeige daten={lobby.daten} wahl={tischWahl.wahl} karten={KARTEN} />}
       />
     );
   }
@@ -677,6 +722,10 @@ function Lobby({
   onLoecher,
   onStart,
   onZurueck,
+  loecherFest = null,
+  startSperre = null,
+  bahnwahl,
+  bahnanzeige,
 }: {
   sitze: readonly SeatInfo[];
   plaetze: number;
@@ -690,6 +739,14 @@ function Lobby({
   onLoecher: (wert: number) => void;
   onStart: () => void;
   onZurueck: () => void;
+  /** Lochzahl, die Kurs oder Einzelauswahl festlegen — dann kein Regler. */
+  loecherFest?: number | null;
+  /** Grund, warum noch nicht gestartet werden kann (unfertige Einzelauswahl). */
+  startSperre?: string | null;
+  /** Die Bahnauswahl für Sitz 0 … */
+  bahnwahl?: React.ReactNode;
+  /** … und was alle anderen davon sehen. */
+  bahnanzeige?: React.ReactNode;
 }): React.JSX.Element {
   const anwesend = sitze.filter((s) => s.accountId !== null || s.isBot);
   const host = sitze[0] ?? null;
@@ -760,18 +817,28 @@ function Lobby({
 
         {binHost ? (
           <div className="gf-regler">
-            <Regler titel="Löcher" wert={loecher} min={2} max={15} onWahl={onLoecher} />
+            {bahnwahl}
+            {loecherFest === null ? (
+              <Regler titel="Löcher" wert={loecher} min={2} max={15} onWahl={onLoecher} />
+            ) : (
+              <p className="gf-bw-hinweis" data-golf-loecher-fest={loecherFest}>
+                {loecherFest} Löcher
+              </p>
+            )}
             <button
               className="gf-knopf gf-knopf-haupt"
               type="button"
               data-golf-start=""
               onClick={onStart}
-              disabled={!verbunden}
+              disabled={!verbunden || startSperre !== null}
+              title={startSperre ?? undefined}
             >
               Starten
             </button>
           </div>
         ) : (
+          <>
+          {bahnanzeige}
           <p className="gf-warten" aria-live="polite">
             <span>
               Warten, bis {host?.displayName ?? 'der Erste'} startet
@@ -782,6 +849,7 @@ function Lobby({
               <i />
             </span>
           </p>
+          </>
         )}
       </div>
     </main>

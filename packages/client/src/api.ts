@@ -419,6 +419,14 @@ export interface GameDefaults {
   protocolVersion: number;
   seatCounts: number[];
   rounds: Record<string, number[]>;
+  /**
+   * Was das Modul dem Bildschirm VOR der Partie mitgibt (Golf: Kurse und
+   * Themen der Bahnauswahl), unbesehen durchgereicht — seit dem 22.09.2026.
+   * Der Bildschirm prüft die Form selbst; ältere Server schicken nichts.
+   */
+  lobby?: unknown;
+  /** Ob Sitz 0 den Regelsatz in der Lobby noch ändern darf (`setRules`). */
+  regelnInDerLobby?: boolean;
 }
 
 export interface PlayerRef {

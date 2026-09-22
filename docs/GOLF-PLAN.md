@@ -159,6 +159,33 @@ auf jedem Gerät gleich, weil jedes dieselben Wünsche in derselben
 Sitzreihenfolge sieht. Das Menü zeigt weiterhin acht Bälle, zieht sie aber je
 Aufbau zufällig aus allen sechzehn (`zieheFarben`).
 
+**Bahnauswahl (seit 22.09.2026).** Robins Entscheidung: benannte Kurse UND
+Filter nach Schwierigkeit/Thema UND freie Einzelauswahl. Die Wahl ist eine
+Tisch-Eigenschaft und steht im Regelsatz — `GolfRegeln` trägt höchstens
+eines von `kurs`, `filter {schwierigkeit, thema}`, `bahnen`, dazu `variante`
+für die Tischliste. Die Folge zieht weiter allein das Modul
+(`waehleBahnen` mit dem Regelsatz): ein Kurs spielt seine Liste, eine
+Einzelauswahl ihre Reihenfolge, ein Filter die gewohnte Ziehung mit Rampe über
+die passenden Stufen — reichen die Treffer nicht, wird mit ähnlich schweren
+aufgefüllt, passt keine, wird aus allen gezogen. Ohne Wahl ist die Rechnung
+Wort für Wort die alte. Kurse (sieben, 6–9 Bahnen) und die Themen je Bahn
+(= Zonenarten) stehen in `packages/game-golf/src/kurse.ts`; der Vertrag
+`vertrag/golf-kurse.test.ts` rechnet die Themen aus den Geometrien nach.
+**Eine neue Bahn braucht deshalb eine dritte Zeile:** ihre Themen in
+`BAHN_THEMEN`.
+
+Weil ein Online-Tisch VOR der Wahl entsteht, darf Sitz 0 den Regelsatz eines
+wartenden Tisches ersetzen (`setRules` → `setzeTischregeln`), nur bei
+Modulen mit `meta.regelnInDerLobby`. Die Tischnachricht trägt den
+`regelstand`; ändert er sich, holen alle den Regelsatz neu und sehen die
+Wahl. Kurse und Themen bekommt der Bildschirm über `lobbyDaten` des Moduls
+(`/api/games/golf/defaults` → `lobby`), statt sie abzuschreiben — nur der
+Name der Wahl (`varianteFuer`) steht doppelt, weil die Lobby ihn in den
+Regelsatz schreibt. Eine wartende Wahl geht vor dem Start raus
+(`bereitZumStart`); die Nachrichten einer Verbindung arbeitet der Server der
+Reihe nach ab. Die Sicht ist unverändert, deshalb keine neue
+Protokollversion.
+
 ## Woran man sich stößt
 
 - **`zustand()` und `vorher()` des Gleichschritts sind lebende Objekte.** Der

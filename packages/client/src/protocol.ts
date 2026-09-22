@@ -556,6 +556,12 @@ export interface TableMessage {
   paused: boolean;
   /** Eingestellte Bot-Spielstärke (derzeit nur beim Doppelkopf ausgewertet). */
   botLevel: BotLevel;
+  /**
+   * Kennung und Version des Regelsatzes (seit dem 22.09.2026). Ändert Sitz 0
+   * ihn in der Lobby (`setRules`), ändert sich dieser Wert, und der
+   * Bildschirm holt den Regelsatz neu. Fehlt bei älteren Servern.
+   */
+  regelstand?: string;
 }
 
 export interface PartyMessage {

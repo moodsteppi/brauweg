@@ -25,6 +25,9 @@
  * geordnet (`bahnen.test.ts` verlangt das).
  */
 
+import { BAHN_THEMEN, kursMitKennung, type GolfThema } from './kurse.js';
+import type { GolfFilter, GolfRegeln } from './regeln.js';
+
 export interface Bahneintrag {
   /** Kennung, z. B. `k01-der-erste-schlag` — dieselbe wie `Karte.id` im Client. */
   readonly id: string;
@@ -127,9 +130,13 @@ function ganzzahl(zustand: number, von: number, bis: number): { wert: number; zu
  * aber immer leicht sein, und die Spitze soll erst kommen, wenn das Match
  * lang genug ist, sie zu verdienen.
  */
-export function sollStufe(i: number, loecher: number): number {
-  const hoechste = loecher < 5 ? loecher : 5;
-  return 1 + Math.floor((i * hoechste) / loecher);
+export function sollStufe(i: number, loecher: number, von = 1, bis = 5): number {
+  // Mit den Vorgaben 1..5 ist das Wort fuer Wort die Rechnung von vor dem
+  // 22.09.2026 — alte Schnappschuesse ziehen damit dieselbe Folge. `von`/`bis`
+  // schieben die Rampe nur in die Stufen, die ein Filter uebrig laesst.
+  const spanne = bis - von + 1;
+  const hoechste = loecher < spanne ? loecher : spanne;
+  return von + Math.floor((i * hoechste) / loecher);
 }
 
 /**
@@ -147,12 +154,32 @@ export function sollStufe(i: number, loecher: number): number {
  *
  * Mehr Loecher als Bahnen kann nur ein Testaufbau erzeugen; dann wird der
  * Topf von vorn wiederholt, statt abzubrechen.
+ *
+ * **Bahnauswahl (seit dem 22.09.2026).** `regeln` ist der Regelsatz des
+ * Tisches (siehe `GolfRegeln`):
+ *
+ *   - `kurs` oder `bahnen`: genau diese Folge. Kennungen, die der Katalog
+ *     nicht kennt, fallen heraus; bleibt keine uebrig, wird gezogen wie ohne
+ *     Wahl. Passt die Lochzahl nicht zur Liste (die Lobby stellt sie gleich,
+ *     ein fremder Client vielleicht nicht), siehe `strecke`.
+ *   - `filter`: dieselbe Ziehung, aber Bahnen ausserhalb des Filters kommen
+ *     nur zum Zug, wenn die passenden aufgebraucht sind (Aufschlag im
+ *     Abstand), und die Rampe laeuft ueber die Stufen der passenden. Passt
+ *     gar keine, wird gezogen wie ohne Filter — eine leere Folge gibt es nie.
+ *
+ * Ohne Wahl ist die Rechnung unveraendert; `bahnen.test.ts` haelt das mit
+ * den festen Folgen von vor der Umstellung fest.
  */
 export function waehleBahnen(
   saat: number,
   loecher: number,
   katalog: readonly Bahneintrag[] = BAHNEN_KATALOG,
+  regeln?: GolfRegeln,
 ): string[] {
+  const liste = festeFolge(regeln, katalog);
+  if (liste.length > 0) return strecke(liste, loecher);
+  const passt = filterAus(regeln, katalog);
+
   const topf: number[] = [];
   for (let i = 0; i < katalog.length; i += 1) topf.push(i);
   let z = mulberry32(saat ^ 0x5f356495);
@@ -167,14 +194,17 @@ export function waehleBahnen(
   const gewaehlt: number[] = [];
   const benutzt = new Set<number>();
   for (let i = 0; i < loecher; i += 1) {
-    const soll = sollStufe(i, loecher);
+    const soll = sollStufe(i, loecher, passt?.von, passt?.bis);
     let beste = -1;
     let besterAbstand = Number.POSITIVE_INFINITY;
     for (const index of topf) {
       if (benutzt.has(index)) continue;
       const stufe = katalog[index]!.schwierigkeit;
       // Leichter ist bei gleichem Abstand besser als schwerer: +0,5 Strafe nach oben.
-      const abstand = stufe <= soll ? soll - stufe : stufe - soll + 0.5;
+      // Ausserhalb des Filters +100: nur, wenn keine passende mehr frei ist.
+      const abstand =
+        (stufe <= soll ? soll - stufe : stufe - soll + 0.5) +
+        (passt === null || passt.indizes.has(index) ? 0 : AUFSCHLAG_AUSSERHALB);
       if (abstand < besterAbstand) {
         besterAbstand = abstand;
         beste = index;
@@ -196,4 +226,77 @@ export function waehleBahnen(
     return sa !== sb ? sa - sb : a - b;
   });
   return gewaehlt.map((index) => katalog[index]!.id);
+}
+
+// ---------------------------------------------------------------------------
+// Bahnauswahl des Tisches
+// ---------------------------------------------------------------------------
+
+/** Abstandsaufschlag fuer Bahnen ausserhalb des Filters — groesser als jeder Stufenabstand. */
+const AUFSCHLAG_AUSSERHALB = 100;
+
+/** Die feste Folge aus Kurs oder Einzelauswahl, bereinigt um Unbekannte; leer = keine. */
+function festeFolge(regeln: GolfRegeln | undefined, katalog: readonly Bahneintrag[]): string[] {
+  if (typeof regeln !== 'object' || regeln === null) return [];
+  let roh: readonly unknown[] = [];
+  if (regeln.kurs !== undefined) roh = kursMitKennung(regeln.kurs)?.bahnen ?? [];
+  else if (Array.isArray(regeln.bahnen)) roh = regeln.bahnen;
+  const bekannt = new Set(katalog.map((b) => b.id));
+  return roh.filter((id): id is string => typeof id === 'string' && bekannt.has(id));
+}
+
+/**
+ * Eine feste Liste auf `loecher` Loecher bringen.
+ *
+ * Gleich lang: unveraendert. Kuerzer gewuenscht: gleichmaessig ausgeduennt,
+ * erste und letzte Bahn bleiben — ein gekuerzter Kurs behaelt Einstieg und
+ * Finale, statt nach der Haelfte aufzuhoeren. Laenger gewuenscht: die Liste
+ * von vorn wiederholt (nur ueber einen Client erreichbar, der die Lochzahl
+ * nicht angleicht). Nur `+ - * /` und `Math.floor`: Das Ergebnis steht im
+ * Zustand, aber auch der Server soll nicht anders runden als ein Test.
+ */
+function strecke(liste: readonly string[], loecher: number): string[] {
+  const n = liste.length;
+  if (loecher <= 0) return [];
+  if (loecher >= n) return Array.from({ length: loecher }, (_, i) => liste[i % n]!);
+  if (loecher === 1) return [liste[0]!];
+  return Array.from({ length: loecher }, (_, i) => liste[Math.floor((i * (n - 1)) / (loecher - 1) + 0.5)]!);
+}
+
+interface Filtertreffer {
+  readonly indizes: ReadonlySet<number>;
+  /** Leichteste und schwerste passende Stufe — Grenzen der Rampe. */
+  readonly von: number;
+  readonly bis: number;
+}
+
+/** Welche Katalogplaetze der Filter zulaesst; null = kein Filter oder keiner passt. */
+function filterAus(regeln: GolfRegeln | undefined, katalog: readonly Bahneintrag[]): Filtertreffer | null {
+  if (typeof regeln !== 'object' || regeln === null) return null;
+  const filter = regeln.filter;
+  if (typeof filter !== 'object' || filter === null) return null;
+  const stufen = Array.isArray(filter.schwierigkeit) ? filter.schwierigkeit : [];
+  const thema = typeof filter.thema === 'string' ? filter.thema : null;
+  if (stufen.length === 0 && thema === null) return null;
+  const indizes = new Set<number>();
+  let von = 6;
+  let bis = 0;
+  for (let i = 0; i < katalog.length; i += 1) {
+    const b = katalog[i]!;
+    if (stufen.length > 0 && !stufen.includes(b.schwierigkeit)) continue;
+    if (thema !== null && !(BAHN_THEMEN[b.id] ?? []).includes(thema as GolfThema)) continue;
+    indizes.add(i);
+    if (b.schwierigkeit < von) von = b.schwierigkeit;
+    if (b.schwierigkeit > bis) bis = b.schwierigkeit;
+  }
+  return indizes.size === 0 ? null : { indizes, von, bis };
+}
+
+/**
+ * Wie viele Bahnen ein Filter zulaesst — fuer die Warnung in `validateConfig`
+ * (ein Filter ohne Treffer ist erlaubt, zieht aber aus allen Bahnen).
+ */
+export function passendeBahnen(filter: GolfFilter, katalog: readonly Bahneintrag[] = BAHNEN_KATALOG): string[] {
+  const treffer = filterAus({ filter }, katalog);
+  return treffer === null ? [] : [...treffer.indizes].sort((a, b) => a - b).map((i) => katalog[i]!.id);
 }

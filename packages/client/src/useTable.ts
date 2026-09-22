@@ -93,6 +93,13 @@ export interface TableConnection<V = GameView> {
    */
   setSeatColor(farbe: number): void;
   /**
+   * Den Regelsatz des wartenden Tisches ersetzen — nur Sitz 0, nur Spiele,
+   * die es erlauben (Golf: Bahnauswahl, seit dem 22.09.2026). Der GANZE
+   * Regelsatz, kein Unterschied. Ohne Warteschlange, aus demselben Grund wie
+   * die Farbe: Nach dem Wiederverbinden sitzt vielleicht ein anderer auf 0.
+   */
+  setRules(config: Record<string, unknown>): void;
+  /**
    * Takt-Herzschlag eines Echtzeitspiels absetzen. Ohne Warteschlange: Ein
    * Puls, der erst nach dem Wiederverbinden ankaeme, beschriebe einen Stand,
    * den es nicht mehr gibt — der naechste ist ohnehin in 200 ms da.
@@ -633,6 +640,17 @@ export function useTable<V = GameView>(
     [tableId, gameId],
   );
 
+  const setRules = useCallback(
+    (config: Record<string, unknown>) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      socket.send(
+        JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'setRules', tableId, config }),
+      );
+    },
+    [tableId, gameId],
+  );
+
   const setBotLevel = useCallback(
     (level: BotLevel) => {
       const socket = socketRef.current;
@@ -659,6 +677,7 @@ export function useTable<V = GameView>(
     startNow,
     setBotLevel,
     setSeatColor,
+    setRules,
     sendTakt,
     sendeReaktion,
     reconnect,

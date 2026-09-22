@@ -12,15 +12,44 @@
  */
 
 /**
- * Golf kennt keine Regeloptionen ausser der Lochzahl — die steht in `rounds`
- * des Tisches, nicht im Regelsatz. `GolfRegeln` bleibt deshalb leer, ist aber
- * ausdruecklich ein Objekt und kein `undefined`: `validateConfig` muss einen
- * kaputten Regelsatz (Zahl, Zeichenkette, `null`) von einem echten
- * unterscheiden koennen, und ein leeres Objekt ist dafuer die einzige Form,
- * die beides erlaubt.
+ * Filter fuer die gezogene Bahnfolge. Beide Felder optional; beide gesetzt
+ * heisst UND. Die Rampe von leicht nach schwer bleibt, sie laeuft nur ueber
+ * die Stufen, die der Filter uebrig laesst.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface GolfRegeln {}
+export interface GolfFilter {
+  /** Erlaubte Stufen, z. B. `[3, 4, 5]`. Leer oder fehlend: alle. */
+  readonly schwierigkeit?: readonly number[];
+  /** Eine Zonenart aus `THEMEN` (kurse.ts). Fehlend: jedes Thema. */
+  readonly thema?: string;
+}
+
+/**
+ * Der Regelsatz von Golf. Die Lochzahl steht weiter in `rounds` des Tisches,
+ * nicht hier.
+ *
+ * Bis zum 22.09.2026 war er leer. Seitdem traegt er die BAHNAUSWAHL — eine
+ * Tisch-Eigenschaft, alle spielen dieselbe Folge. Hoechstens eines der drei
+ * Felder `kurs`, `filter`, `bahnen` ist gesetzt (`validateConfig` weist zwei
+ * zugleich ab); keines heisst wie vorher: die Saat zieht aus allen Bahnen.
+ * Was aus der Wahl wird, rechnet allein `waehleBahnen` (bahnen.ts).
+ *
+ * Er bleibt ausdruecklich ein Objekt und kein `undefined`: `validateConfig`
+ * muss einen kaputten Regelsatz (Zahl, Zeichenkette, `null`) von einem echten
+ * unterscheiden koennen.
+ */
+export interface GolfRegeln {
+  /** Kennung eines Kurses aus `KURSE` (kurse.ts). */
+  readonly kurs?: string;
+  readonly filter?: GolfFilter;
+  /** Freie Einzelauswahl: Kennungen in Spielfolge. */
+  readonly bahnen?: readonly string[];
+  /**
+   * Die Spielart fuer die Tischliste (`varianteVon` im Server reicht sie
+   * durch): der Kursname, „Eigene Auswahl" oder eine Beschreibung des
+   * Filters, siehe `varianteFuer`. Nur Anzeige — die Bahnwahl liest es nie.
+   */
+  readonly variante?: string;
+}
 
 export const DEFAULT_REGELN: GolfRegeln = {};
 
