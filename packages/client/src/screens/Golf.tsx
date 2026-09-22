@@ -853,6 +853,7 @@ function Partie({
   const zielbildRef = useRef<Zielbild | null>(null);
   const uebersichtRef = useRef(false);
   const [uebersicht, setUebersicht] = useState(false);
+  const [geradeSinked, setGeradeSinked] = useState<Set<number>>(new Set());
   /*
    * Die Punkteanzeige und ihre gemessenen Kästen. Gemessen wird beim
    * Nachziehen des HUD und bei jeder Fenstergröße, NICHT je Bild: Ein
@@ -868,6 +869,7 @@ function Partie({
   const haltBisRef = useRef(0);
   const [hud, setHud] = useState<Hudstand>(HUD_LEER);
   const hudKeyRef = useRef('');
+  const letzteEingelocht = useRef<boolean[]>([]);
   const fertigRef = useRef(false);
   const onFertigRef = useRef(onFertig);
   onFertigRef.current = onFertig;
@@ -935,6 +937,24 @@ function Partie({
       window.removeEventListener('orientationchange', beiGroesse);
     };
   }, [messeAnzeige]);
+
+  /* Detect when balls are sunk for name flash animation */
+  useEffect(() => {
+    const neu = new Set<number>();
+    for (let s = 0; s < hud.eingelocht.length; s += 1) {
+      const damals = letzteEingelocht.current[s] ?? false;
+      const jetzt = hud.eingelocht[s] ?? false;
+      if (jetzt && !damals) {
+        neu.add(s);
+      }
+    }
+    letzteEingelocht.current = [...hud.eingelocht];
+    if (neu.size > 0) {
+      setGeradeSinked(neu);
+      const timer = setTimeout(() => setGeradeSinked(new Set()), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [hud.eingelocht]);
 
   /* -------------------------------------------------------------- */
   /* Bildschleife                                                    */
@@ -1265,23 +1285,33 @@ function Partie({
         </div>
 
         <div className="gf-chips" ref={chipsRef}>
-          {hud.schlaege.map((schlaege, sitz) => (
-            <span
-              key={sitz}
-              className="gf-chip"
-              data-eigen={sitz === eigenerSitz ? '' : undefined}
-              data-weg={hud.dabei[sitz] ? undefined : ''}
-              style={{ background: farben[sitz] ?? farbeAus(sitz) }}
-              title={name(sitz)}
-            >
-              <strong>{schlaege}</strong>
-              <em>
-                {hud.eingelocht[sitz] ? '✓' : hud.fertig[sitz] ? '–' : ''}
-                {hud.gesamt[sitz]}
-              </em>
-              <i>{name(sitz).slice(0, 3)}</i>
-            </span>
-          ))}
+          {hud.schlaege.map((schlaege, sitz) => {
+            const justSinked = geradeSinked.has(sitz);
+            const lochPar = hud.parProLoch[hud.loch];
+            const relative = lochPar !== undefined ? schlaege - lochPar : null;
+            const parRelativeName = relative !== null ? parName(relative) : null;
+            return (
+              <span
+                key={sitz}
+                className="gf-chip"
+                data-eigen={sitz === eigenerSitz ? '' : undefined}
+                data-weg={hud.dabei[sitz] ? undefined : ''}
+                data-gerade-sinked={justSinked ? '' : undefined}
+                style={{ background: farben[sitz] ?? farbeAus(sitz) }}
+                title={name(sitz)}
+              >
+                <strong>{schlaege}</strong>
+                <em>
+                  {hud.eingelocht[sitz] ? '✓' : hud.fertig[sitz] ? '–' : ''}
+                  {hud.gesamt[sitz]}
+                </em>
+                <i>{name(sitz).slice(0, 3)}</i>
+                {justSinked && parRelativeName && (
+                  <span className="gf-chip-flash">{parRelativeName}</span>
+                )}
+              </span>
+            );
+          })}
         </div>
 
         {hud.binTroedler && hud.troedel > 0 && (
