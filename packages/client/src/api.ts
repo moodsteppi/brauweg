@@ -818,6 +818,18 @@ export const api = {
     request<TischVorschau>(`/tables/code/${encodeURIComponent(code)}`),
   beitretenPerCode: (code: string) =>
     post<{ tableId: string }>(`/tables/code/${encodeURIComponent(code)}/join`),
+  /**
+   * Ein Tisch mit seinem Beitrittscode — fuer die Einladung im Wartesaal.
+   *
+   * Seit dem 22.09.2026. Die Route gab es schon (`GET /api/tables/:tableId`,
+   * sie schickt die ganze Tischzeile); gefehlt hat nur der Aufruf. Nur die
+   * drei Felder, die die Einladung liest — der Rest der Zeile ist Server-
+   * Innenleben und soll hier nicht als Vertrag erscheinen.
+   */
+  tischMitCode: (id: string) =>
+    request<{
+      table: { id: string; gameId: string; status: string; joinCode: string | null };
+    }>(`/tables/${encodeURIComponent(id)}`),
   leaveTable: (id: string) => post<{ ok: true }>(`/tables/${id}/leave`),
   pauseTable: (id: string) => post<{ ok: true }>(`/tables/${id}/pause`),
   resumeTable: (id: string) => post<{ ok: true }>(`/tables/${id}/resume`),

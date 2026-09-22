@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 
-import { api, type Me } from './api';
+import { ApiError, api, type Me } from './api';
+import { t } from './i18n';
 import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { deckForGame, deckMitRuecken } from './decks';
@@ -9,6 +10,11 @@ import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
 import { Ladevorhang } from './minispiele/tafelrunde/Ladevorhang';
 import { TISCH_PARAMETER } from './minispiele/tafelrunde/tischlink';
+import {
+  fehlschlagMerken,
+  vorgemerkterCode,
+  vormerkungLoeschen,
+} from './minispiele/partykiste/einladungslink';
 
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
 
@@ -149,6 +155,20 @@ export function App(): React.JSX.Element {
       ? { name: 'tafelrunde' }
       : { name: 'games' },
   );
+  /**
+   * `/beitritt/K7X9MQ` setzt einen an den Tisch hinter dem Code (seit dem
+   * 22.09.2026, Einladung am Partykiste-Tisch).
+   *
+   * Anders als `/?tisch=` bei Tafelrunde tritt dieser Link SELBST bei — so
+   * hat Robin es entschieden: Er wird am selben Tisch vom Gastgeber
+   * weitergegeben, meist als QR-Code ueber den Tisch, und wer ihn scannt,
+   * will genau dorthin. Ein zweiter Tipp auf „Beitreten" waere dort nur eine
+   * Huerde, und wer doch nicht will, steht im Wartesaal wieder auf.
+   *
+   * Wer noch nicht angemeldet ist, meldet sich erst an (oder spielt als Gast);
+   * der Code wartet solange im Tab-Speicher (siehe einladungslink.ts).
+   */
+  const [einladung, setEinladung] = useState<string | null>(() => vorgemerkterCode());
 
   const reload = async (): Promise<void> => {
     setMe(await api.me().catch(() => null));
@@ -158,6 +178,49 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     void reload();
   }, []);
+
+  /**
+   * Die Einladung einloesen, sobald jemand angemeldet ist.
+   *
+   * Erst ansehen, dann beitreten: Die Vorschau nennt das Spiel, und nur damit
+   * landet man im richtigen Schirm — der Beitritt selbst antwortet nur mit der
+   * Tischkennung. Beide Routen gab es schon; neu ist nur, dass sie hier von
+   * selbst laufen.
+   *
+   * Scheitert es (Partie laeuft schon, Tisch voll, Code vertippt), geht es in
+   * die Partykiste mit dem Code in der Eingabe und dem Grund darunter — nicht
+   * stumm auf die Startseite, wo niemand erfaehrt, warum der Link nichts tat.
+   * Die Partykiste, weil nur sie solche Links verteilt.
+   *
+   * Am Konto als Kennung, nicht an `me`: `reload()` ersetzt das Objekt nach
+   * jeder Partie, und der Effekt liefe dann erneut los. Unter `StrictMode`
+   * laeuft er im Entwicklungsbetrieb trotzdem zweimal; das ist harmlos, weil
+   * `joinTable` im Server einen schon Sitzenden unveraendert zurueckgibt.
+   */
+  const kontoId = me?.id ?? null;
+  useEffect(() => {
+    if (!kontoId || !einladung) return;
+    let lebt = true;
+    void (async () => {
+      try {
+        const vorschau = await api.tischPerCode(einladung);
+        const { tableId } = await api.beitretenPerCode(einladung);
+        if (lebt) setScreen({ name: 'table', gameId: vorschau.gameId, tableId });
+      } catch (err) {
+        if (!lebt) return;
+        fehlschlagMerken(einladung, err instanceof ApiError ? err.messageKey : 'error.internal');
+        setScreen({ name: 'partykiste' });
+      } finally {
+        if (lebt) {
+          vormerkungLoeschen();
+          setEinladung(null);
+        }
+      }
+    })();
+    return () => {
+      lebt = false;
+    };
+  }, [kontoId, einladung]);
 
   /**
    * Musik laeuft, solange jemand angemeldet ist.
@@ -174,7 +237,25 @@ export function App(): React.JSX.Element {
 
   if (loading) return <AppLaedt />;
 
-  if (!me) return <Auth onSignedIn={() => void reload()} />;
+  if (!me) {
+    return (
+      <>
+        {/* Die Anmeldung selbst bleibt unberuehrt (sie gehoert zum
+            Sofort-Paket); der Hinweis liegt nur darueber, damit niemand
+            glaubt, der Link habe ins Leere gefuehrt. */}
+        {einladung ? (
+          <p className="einladung-vorgemerkt" role="status">
+            {t('einladung.vorgemerkt')} <strong>{einladung}</strong>
+          </p>
+        ) : null}
+        <Auth onSignedIn={() => void reload()} />
+      </>
+    );
+  }
+
+  /* Zwischen Anmeldung und Tisch: kurz warten statt die Startseite zu zeigen,
+     die gleich wieder verschwindet. */
+  if (einladung) return <AppLaedt text={t('einladung.laeuft')} />;
 
   /**
    * Aussehen eines Spiels. Der Server liefert alle bekannten Spiele mit;
