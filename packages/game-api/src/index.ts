@@ -151,7 +151,17 @@ export type GameId =
    * wird nur die Entscheidung; genau deshalb braucht es, anders als Werwolf,
    * keinen freien Text zwischen den Sitzen.
    */
-  | 'partykiste';
+  | 'partykiste'
+  /**
+   * BroCooked ist wie Golf Echtzeit im Gleichschritt (Weg B), aber das erste
+   * MITEINANDER der Plattform: Eine hektische Kueche fuer 1 bis 4 Koeche, in
+   * der alle zusammen EINE Punktzahl erkochen. Der Server rechnet keine
+   * Kueche — er verwahrt Saatkorn, Regelsatz, Bot-Sitze, die Eingabeliste und
+   * die Ergebnismeldungen (docs/SPEZIFIKATION-BROCOOKED.md). `currentActor`
+   * ist deshalb immer null, `legalActions` leer, und `standings` setzt alle
+   * auf Platz 1: Wer hier eine Rangfolge einzieht, baut ein anderes Spiel.
+   */
+  | 'brocooked';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby

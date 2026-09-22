@@ -1,8 +1,8 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, **zwölf Spiele laufen**: Doppelkopf, Zauberer, Skat,
+Kartenspiel-Plattform, **dreizehn Spiele laufen**: Doppelkopf, Zauberer, Skat,
 Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde,
-Golf und Partykiste.
+Golf, Partykiste und BroCooked.
 Diese Datei ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln
 in `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
@@ -26,7 +26,13 @@ darf, entscheidet allein `amZug` in `packages/game-eiland/src/partie.ts`: jeder,
 dessen Zettel noch offen ist. Auch dort ist `legalActions` leer, und aus dem
 Skat-Grund: Eine Aktion ist eine MENGE von Feldern, die sich nicht aufzählen
 lässt — der Bildschirm stellt sie selbst zusammen und schickt sie als einen
-Zettel. **Tafelrunde** (Auto-Battler, seit dem 4.9.2026) macht es wie Eiland —
+Zettel. **BroCooked** (hektische Küche, seit dem 22.09.2026) geht denselben Weg wie
+Golf — Eingaben über die Leitung, Küche auf den Geräten
+(`docs/SPEZIFIKATION-BROCOOKED.md`) —, ist aber das erste **Miteinander**:
+Es gibt EINE Punktzahl, und `standings` setzt alle auf Platz 1. Wer dort eine
+Rangfolge einzieht, baut ein anderes Spiel. Allein und zu zweit läuft es
+sogar ganz ohne Tisch, weil der Server je Verbindung nur einen Sitz kennt.
+**Tafelrunde** (Auto-Battler, seit dem 4.9.2026) macht es wie Eiland —
 alle rüsten gleichzeitig, `currentActor` nennt trotzdem einen Sitz — hat aber
 noch einen eigenen Dreh: `legalActions` ist dort weder leer noch vollständig.
 Kaufen, Würfeln, Aufsteigen und Verkaufen stehen drin, das Verschieben nicht
@@ -203,7 +209,7 @@ nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
 Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
 Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
 Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
-Feld auch wirklich liefern). Gedeckt sind alle zwoelf Spiele. Ein neues Spiel
+Feld auch wirklich liefern). Gedeckt sind alle dreizehn Spiele. Ein neues Spiel
 bekommt eine Datei nach demselben Muster — und beschreibt seine Sicht **nicht
 im Bildschirm**, sondern in `src/minispiele/<spiel>/sicht.ts`: Ein Vertrag,
 der aus einer `.tsx` importiert, zieht React in den Test.

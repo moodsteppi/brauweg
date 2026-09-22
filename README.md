@@ -30,6 +30,11 @@ packages/
   game-mememory/       @brauweg/game-mememory   Memory-Duell, kein Kartenspiel
   game-filler/         @brauweg/game-filler     Flächenduell zu zweit
   game-feldherr/       @brauweg/game-feldherr   Echtzeitduell, ohne Zugfolge
+  game-golf/           @brauweg/game-golf       Minigolf, Echtzeit im Gleichschritt
+  game-tafelrunde/     @brauweg/game-tafelrunde Auto-Battler
+  game-eiland/         @brauweg/game-eiland     Landnahme, beide ziehen gleichzeitig
+  game-partykiste/     @brauweg/game-partykiste Partyminispiele als Turnier
+  game-brocooked/      @brauweg/game-brocooked  Küche in Echtzeit, MITEINANDER
   server/              @brauweg/server          Konten, Tische, WebSocket
   client/              @brauweg/client          React-PWA
 docs/
@@ -37,6 +42,7 @@ docs/
   STAND.md             Übergabezettel: offene Punkte, was schon schiefging
   doppelkopf-spec.md   Fachliche Spezifikation des Doppelkopf-Regelwerks
   wizard-spec.md · cambio-spec.md · FELDHERR-PLAN.md · MEMEMORY-PLAN.md
+  GOLF-PLAN.md · SPEZIFIKATION-BROCOOKED.md
   APPSTORE.md          Die iOS-App
 ```
 

@@ -61,6 +61,7 @@ import {
   Tafel,
   spielBanner,
 } from '../hub';
+import { BroCookedBanner } from '../minispiele/brocooked/Banner';
 import { EilandBanner } from '../minispiele/eiland/Banner';
 import { FillerBanner } from '../minispiele/filler/Banner';
 import { GolfBanner } from '../minispiele/golf/Banner';
@@ -2491,6 +2492,13 @@ function Spielwahl({
                        fiele `spielBanner` auf "kommt bald" zurueck — genau das
                        Bild, das sagt, man koenne es noch nicht spielen. */
                     <PartykisteBanner />
+                  ) : game.id === 'brocooked' ? (
+                    /* BroCooked kocht sich im Banner selbst — mit dem echten
+                       Kern: Kueche, Hilfskoch und Zeichner liegen im Client.
+                       Auch hier gibt es noch kein gemaltes Bild; ohne eigenes
+                       fiele `spielBanner` auf "kommt bald" zurueck, und bei
+                       "weniger Bewegung" steht die Kueche einfach still. */
+                    <BroCookedBanner />
                   ) : (
                     <img src={spielBanner(game.id)} alt="" draggable={false} />
                   )}
@@ -2515,6 +2523,7 @@ function Spielwahl({
                     {game.id === 'filler' ? ' · Flächen im Nebel' : ''}
                     {game.id === 'eiland' ? ' · Landnahme im Nebel' : ''}
                     {game.id === 'golf' ? ' · Minigolf in Echtzeit' : ''}
+                    {game.id === 'brocooked' ? ' · Küche in Echtzeit' : ''}
                     {game.id === 'tafelrunde' ? ' · Auto-Battler' : ''}
                     {game.id === 'partykiste' ? ' · 9 Minispiele, ein Turnier' : ''}
                   </span>

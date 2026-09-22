@@ -95,6 +95,16 @@ export const GOLF_MODULE_VERSION = 3;
  */
 export const PARTYKISTE_MODULE_VERSION = 1;
 
+/**
+ * 1 seit dem 22. September 2026 — die erste Fassung. BroCooked ist wie Golf
+ * Echtzeit im Gleichschritt: Ueber die Leitung gehen nur Eingaben, die Kueche
+ * rechnet jedes Geraet selbst (docs/SPEZIFIKATION-BROCOOKED.md). Wer die
+ * Kuechenrechnung aendert, setzt diese Zahl hoch — zwei Geraete mit
+ * verschiedener Kueche rechnen aus derselben Eingabeliste verschiedene
+ * Partien, und genau das haelt die Versionsgrenze des Gateways auseinander.
+ */
+export const BROCOOKED_MODULE_VERSION = 1;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
@@ -106,6 +116,7 @@ const MODULE_VERSIONS: Record<string, number> = {
   tafelrunde: TAFELRUNDE_MODULE_VERSION,
   golf: GOLF_MODULE_VERSION,
   partykiste: PARTYKISTE_MODULE_VERSION,
+  brocooked: BROCOOKED_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */

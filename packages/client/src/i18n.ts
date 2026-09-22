@@ -38,6 +38,9 @@ const de: Record<string, string> = {
   // ist — eine Kiste, aus der der Abend zieht — und bindet sich absichtlich
   // an kein einzelnes Minispiel: Es kommen weitere dazu.
   'game.partykiste': 'Partykiste',
+  // Hektische Kueche fuer 1 bis 4 Koeche, miteinander statt gegeneinander.
+  // Der Name kommt vom Auftraggeber; die Oberflaeche bleibt sonst deutsch.
+  'game.brocooked': 'BroCooked',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
