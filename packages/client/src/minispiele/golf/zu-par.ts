@@ -18,9 +18,12 @@ export function parName(relativ: number): string {
   }
 }
 
-/** Total strokes relative to par for each player across completed holes. */
+/** Total strokes relative to par for each player across completed holes.
+ *
+ * Infers player count from the first hole's results (all holes should have same width).
+ */
 export function relativeToParList(parValues: readonly number[], results: number[][]): number[] {
-  const sitze = parValues.length;
+  const sitze = results[0]?.length ?? 0;
   const zuPar = new Array<number>(sitze).fill(0);
 
   for (let loch = 0; loch < results.length; loch += 1) {

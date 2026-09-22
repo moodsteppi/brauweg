@@ -48,12 +48,11 @@ describe('relativeToParList', () => {
   });
 
   it('handle partial hole results', () => {
-    // Only 1 hole completed (hole 0), 2 players, course has more holes
+    // Only 1 hole completed (hole 0), 2 players
     const result = relativeToParList([3, 4, 4], [[4, 5]]);
     // Hole 0, par 3: [4, 5]
     // Player 0: 4-3 = 1
     // Player 1: 5-3 = 2
-    // Player 2: no strokes yet = 0
-    expect(result).toEqual([1, 2, 0]);
+    expect(result).toEqual([1, 2]);
   });
 });
