@@ -332,6 +332,17 @@ export interface CreatePartyOptions<TConfig> {
    * die daraus schon beim Aufbau etwas ableiten muessen.
    */
   readonly botLevel?: BotLevel;
+  /**
+   * Plaetze, auf denen ein GASTKONTO sitzt (Konto ohne Mail und ohne
+   * Altersangabe, `account.gastSeit`).
+   *
+   * Seit dem 22.09.2026 fuer die Partykiste: Ihre Inhaltsstufe "derb" gibt
+   * es nur an Tischen ohne Gast, und wer sitzt, steht erst beim Start fest —
+   * also hier, nicht in der eingefrorenen `config`. Fehlt das Feld, sitzt
+   * kein Gast am Tisch oder die Laufzeit weiss es nicht; ein Modul, das die
+   * Auskunft braucht, muss dann die strengere Seite waehlen.
+   */
+  readonly gastSeats?: readonly number[];
 }
 
 // ---------------------------------------------------------------------------

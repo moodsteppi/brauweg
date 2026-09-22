@@ -14,7 +14,7 @@
  */
 
 import { randomBytes, randomInt } from 'node:crypto';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { AnyGameModule, BotLevel, GameId, PartyStanding } from '@brauweg/game-api';
 import { ZUGZEIT_HOECHST_MS } from '@brauweg/game-api';
 
@@ -342,6 +342,29 @@ export class PartyRuntime {
     const seed = randomInt(2 ** 31);
     const seedHex = randomBytes(16).toString('hex');
 
+    /*
+     * Welche Plaetze ein GASTKONTO haben, erfaehrt das Modul beim Aufbau.
+     * Dieselbe Abfrage wie in `countsForRanking`, nur je Sitz statt ja/nein:
+     * Die Partykiste kappt damit ihre Inhaltsstufe (kein "derb" fuer Leute
+     * ohne Altersangabe, siehe docs/PARTYKISTE.md). Hier und nicht in der
+     * `config`, weil die beim Anlegen eingefroren wird und der Gast oft erst
+     * danach dazukommt.
+     */
+    const kontoIds = seats
+      .map((seat) => seat.accountId)
+      .filter((id): id is string => id !== null);
+    const gastKonten =
+      kontoIds.length > 0
+        ? await this.db
+            .select({ id: s.account.id })
+            .from(s.account)
+            .where(and(inArray(s.account.id, kontoIds), isNotNull(s.account.gastSeit)))
+        : [];
+    const gastIds = new Set(gastKonten.map((konto) => konto.id));
+    const gastSeats = seats
+      .filter((seat) => seat.accountId !== null && gastIds.has(seat.accountId))
+      .map((seat) => seat.seatIndex);
+
     const state = module.createParty({
       config: rs.config,
       seats: table.seats,
@@ -358,6 +381,7 @@ export class PartyRuntime {
        */
       botSeats: seats.filter((seat) => !seat.accountId).map((seat) => seat.seatIndex),
       botLevel: tableBotLevel(table.filters),
+      gastSeats,
     });
 
     const [party] = await this.db

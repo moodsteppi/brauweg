@@ -527,6 +527,8 @@ const de: Record<string, string> = {
   'partykiste.schluckFaktor': 'Der Härtegrad liegt zwischen 1 und 3.',
   'partykiste.sitzzahl': 'Die Partykiste spielt zu viert bis zu zwölft.',
   'partykiste.rundenzahl': 'Zwischen 3 und 15 Minispielen je Turnier.',
+  'ruleset.partykiste.inhaltsHaerte': 'Die Inhalte sind harmlos (1), pikant (2) oder derb (3).',
+  'ruleset.partykiste.paket': 'Dieses Themenpaket gibt es nicht.',
   'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
   'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
   'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',
