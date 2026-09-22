@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, type Me } from '../api';
+import { PartyAuswahl, usePartyAuswahl } from '../minispiele/partykiste/Auswahl';
 import { Einstellungen, OffeneRunde, Regler, type Angebot } from '../minispiele/partykiste/Einstellungen';
 import { LobbyRegelzeile, RegelsatzKontext, Regelzeile } from '../minispiele/partykiste/Regelzeile';
 import { Runde } from '../minispiele/partykiste/Runden';
@@ -114,6 +115,8 @@ export function Partykiste({
   const [stufe, setStufe] = useState<BotLevel>(gemerkteStufe);
   const [angebot, setAngebot] = useState<Angebot | null>(null);
   const [tischRegeln, setTischRegeln] = useState<PartyRegelsatz | null>(null);
+  /* Minispiele, Inhalte, Themenpaket, Modus — minispiele/partykiste/Auswahl.tsx. */
+  const auswahl = usePartyAuswahl(ich?.gast === true);
 
   const tisch = useTable<PartykisteSicht>(tischId, 'partykiste');
   const sicht = tisch.view?.view ?? null;
@@ -133,12 +136,9 @@ export function Partykiste({
   /*
    * Der Regelsatz, wie ihn dieses Menue einstellt — fuer beide Wege.
    *
-   * Die Minispielliste ist die einzige Stelle, die NICHT einstellbar ist,
-   * und damit eine Abschrift aus dem Modul. Sie laeuft trotzdem nicht davon:
-   * `MINISPIEL_NAME` ist ein Record ueber `PartyMinispiel`, und der Vertrag
-   * (src/vertrag/partykiste.test.ts) bricht den Bau, sobald das Modul ein
-   * Minispiel kennt, das hier fehlt. Ein halber Regelsatz ginge nicht — der
-   * Server prueft ihn vollstaendig gegen `validateConfig`.
+   * Die Minispielliste hier ist nur noch Grundlage: Seit dem 22.09.2026
+   * ersetzt `auswahl.regelsatz` sie durch die Wahl im Menue bzw. die
+   * Vorgabe des Moduls (minispiele/partykiste/wahl.ts, `regelsatzAus`).
    */
   const regelsatz = useMemo<PartyRegelsatz>(
     () => ({
@@ -224,7 +224,7 @@ export function Partykiste({
         seats: 12,
         rounds: runden,
         visibility: 'public',
-        config: regelsatz,
+        config: await auswahl.regelsatz(regelsatz),
       });
       setTischId(id);
     } catch {
@@ -232,7 +232,7 @@ export function Partykiste({
     } finally {
       setLaedt(false);
     }
-  }, [runden, regelsatz]);
+  }, [runden, regelsatz, auswahl.regelsatz]);
 
   /**
    * Online spielen: eine offene Runde suchen — und ZEIGEN, bevor man sitzt.
@@ -302,7 +302,7 @@ export function Partykiste({
         botLevel: stufe,
         /* Derselbe Regelsatz wie online — bis zum 22.09.2026 stand hier fest
            `trinkmodus: true`, weil es keinen Schalter gab. */
-        config: regelsatz,
+        config: await auswahl.regelsatz(regelsatz),
       });
       setTischId(id);
     } catch {
@@ -310,7 +310,7 @@ export function Partykiste({
     } finally {
       setLaedt(false);
     }
-  }, [bots, runden, stufe, regelsatz]);
+  }, [bots, runden, stufe, regelsatz, auswahl.regelsatz]);
 
   const verlasseUndZurueck = useCallback((): void => {
     const id = tischId;
@@ -338,15 +338,6 @@ export function Partykiste({
             sitzen. {trinkmodus ? 'Wer verliert, trinkt' : 'Wer verliert, sammelt Strafpunkte'}; wer
             gewinnt, steht oben.
           </p>
-          <ul className="pk-spielliste" aria-label="Enthaltene Minispiele">
-            {(Object.keys(MINISPIEL_NAME) as PartyMinispiel[]).map((id) => (
-              <li key={id}>
-                <strong>{MINISPIEL_NAME[id]}</strong>
-                <span className="muted">{ansageFuer(id, trinkmodus)}</span>
-              </li>
-            ))}
-          </ul>
-
           <Einstellungen
             runden={runden}
             haerte={haerte}
@@ -363,6 +354,13 @@ export function Partykiste({
               setTrinkmodus(an);
               merke(SCHLUESSEL_TRINKMODUS, an ? '1' : '0');
             }}
+          />
+          <PartyAuswahl
+            vorgabe={auswahl.vorgabe}
+            wahl={auswahl.wahl}
+            gast={auswahl.gast}
+            trinkmodus={trinkmodus}
+            onWahl={auswahl.setWahl}
           />
 
           {fehler ? <p className="pk-fehler">{fehler}</p> : null}

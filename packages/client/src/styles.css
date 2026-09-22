@@ -19673,3 +19673,64 @@ span.hub-angebot-art.poker-jeton-stapel {
   color: var(--gold);
 }
 .pk-reihe li[data-ich] { box-shadow: inset 0 0 0 2px var(--lila); }
+
+/* -- Partykiste: Auswahl im Menue (22.09.2026) ----------------------------- */
+
+/* Minispiele, Inhalte, Themenpaket, Modus — die Kacheln sind `.aw-*` aus
+   hub.tsx, hier nur auf den dunklen Kistengrund umgestellt und mit Lila als
+   Wahlfarbe wie die Stufenknoepfe darueber. Eigenes Praefix `pk-aw-`, weil
+   an den uebrigen `pk-`-Regeln parallel gearbeitet wird. */
+.pk-aw {
+  --aw-panel: rgba(255, 255, 255, 0.05);
+  --aw-line: rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-aw .aw-kachel.is-an { border-color: var(--lila); box-shadow: 0 0 0 2px var(--lila); }
+.pk-aw-block { display: flex; flex-direction: column; gap: 8px; }
+.pk-aw-kopf { display: flex; align-items: baseline; gap: 8px; }
+.pk-aw-titel { margin: 0; font: 800 15px/1.2 system-ui; }
+.pk-aw-zahl { color: var(--muted); font-size: 12px; }
+.pk-aw-kopf .pk-textknopf { margin-left: auto; }
+.pk-aw-hinweis { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.pk-aw-zeichen { display: block; font-size: 26px; line-height: 1.1; }
+.pk-aw-platz { min-width: 1.4em; text-align: center; }
+.pk-aw .aw-kachel.is-an .aw-badge { background: var(--lila); color: #180f28; }
+/* Die Reihenfolge als schmale Liste — Pfeile statt Ziehen, weil Ziehen am
+   Handy mit dem Scrollen der Seite kaempft. */
+.pk-aw-folge {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pk-aw-folge;
+  display: grid;
+  gap: 4px;
+}
+.pk-aw-folge li {
+  counter-increment: pk-aw-folge;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+}
+.pk-aw-folge li::before { content: counter(pk-aw-folge) '.'; min-width: 1.6em; color: var(--muted); font-weight: 700; }
+.pk-aw-folgename { flex: 1; min-width: 0; }
+.pk-aw-folge button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+}
+.pk-aw-folge button:disabled { opacity: 0.3; cursor: default; }

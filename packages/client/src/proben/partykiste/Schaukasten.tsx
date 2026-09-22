@@ -21,6 +21,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import '../../styles.css';
+import { PartyAuswahl } from '../../minispiele/partykiste/Auswahl';
 import { PartykisteBanner } from '../../minispiele/partykiste/Banner';
 import { Einstellungen, OffeneRunde } from '../../minispiele/partykiste/Einstellungen';
 import { Regelzeile } from '../../minispiele/partykiste/Regelzeile';
@@ -634,6 +635,30 @@ function Schaukasten(): React.JSX.Element {
             text="Ausgeschaltet heißt der Zähler Strafpunkte; der Hinweis sagt, dass die Turnierpunkte gleich bleiben."
           >
             <Einstellungen runden={8} haerte={1} trinkmodus={false} onRunden={() => {}} onHaerte={() => {}} onTrinkmodus={() => {}} />
+          </MenueKasten>
+          <MenueKasten
+            titel="Menü — Auswahl"
+            text="Minispiele mit Platz in der Reihenfolge, Inhaltsstufe und Themenpaket. Ohne Modus: Das Modul kennt noch keinen."
+          >
+            <PartyAuswahl
+              vorgabe={{ minispiele: Object.keys(MINISPIEL_NAME), inhaltsHaerte: 1, paket: null }}
+              wahl={{ minispiele: ['quiz', 'imposter', 'entweder', 'wahrheitpflicht'], inhaltsHaerte: 2, paket: 'jga', modus: null }}
+              gast={false}
+              trinkmodus
+              onWahl={() => {}}
+            />
+          </MenueKasten>
+          <MenueKasten
+            titel="Menü — Auswahl als Gast, Modus bekannt"
+            text="„derb“ gesperrt mit Grund; die Modus-Kacheln erscheinen erst, wenn defaultConfig() ein Feld modus hat."
+          >
+            <PartyAuswahl
+              vorgabe={{ minispiele: Object.keys(MINISPIEL_NAME), inhaltsHaerte: 1, paket: null, modus: 'turnier' }}
+              wahl={{ minispiele: null, inhaltsHaerte: null, paket: null, modus: 'themenabend' }}
+              gast
+              trinkmodus={false}
+              onWahl={() => {}}
+            />
           </MenueKasten>
           <MenueKasten
             titel="Online — offene Runde gefunden"
