@@ -259,10 +259,40 @@ der Tipp als Enthaltung.
 
 ## Neue Inhalte ergänzen
 
-Die Kataloge unter `src/inhalte/` sind reine Daten: Fragen, Wortpaare, Namen,
-Sprüche. Neue Einträge kommen **hinten** dazu und bekommen die nächste freie
-Kennung; bestehende Kennungen ändern sich nie — sie stehen in abgelegten
-Rundenprotokollen.
+Die Kataloge sind reine Daten: Fragen, Wortpaare, Namen, Sprüche. Seit dem
+22.09.2026 (Entscheidung P4, Datenbank später) steht jeder als **JSON-Datei**
+unter `src/inhalte/daten/<katalog>.json`; die gleichnamige `.ts` daneben lädt
+und prüft sie nur. Neue Einträge kommen **hinten** dazu und bekommen die
+nächste freie Kennung; bestehende Kennungen ändern sich nie — sie stehen in
+abgelegten Rundenprotokollen, und die Ziehung hängt an der Reihenfolge.
+
+Jede Datei hat einen Kopf (`katalog`, `grenze`, `pflege`, `inhalt`) und
+darunter `eintraege`, ein Eintrag je Zeile. **`grenze` ist Pflicht** und sagt,
+was kein Eintrag darf: Stufe 3 („derb“) heißt pikant-erwachsen — nie
+herabwürdigend, nie über reale benannte Personen, nie über Minderjährige, nie
+Gewalt; kein Text fordert zum Trinken auf.
+
+**Das Schema** (`src/inhalte/schema.ts`, eigener Prüfer, kein zod — das Paket
+hat keine Laufzeitabhängigkeit außer game-api) läuft an drei Stellen: beim
+Import jedes Katalogs (wirft), im Build (`werkzeug/inhalte-pruefen.mjs` nach
+`tsc`, nennt alle Fehler auf einmal und bricht ab) und im Test
+(`test/inhalte-json.test.ts`). Es verlangt über die Form hinaus:
+
+- Kennungen **lückenlos in Katalogreihenfolge** (`q001`, `q002`, …) — wer
+  umsortiert, löscht oder eine Nummer auslässt, fällt im Build auf.
+- **Keine Dubletten**, normalisiert (Groß/klein, Satzzeichen, Leerraum egal;
+  bei Entweder-oder auch das vertauschte Paar, bei Wahrheit/Pflicht über
+  beide Arten).
+- **Keine unbekannten Felder** — so sieht ein Tippfehler im Feldnamen aus.
+- Beim Imposter darf der Hinweis das Wort nicht wörtlich enthalten.
+
+**Der Altbestand** — die 918 Einträge vom 22.09.2026 — liegt als die
+ursprünglichen TS-Dateien unter `test/altbestand/`, und ein Test vergleicht
+jeden davon Feld für Feld mit seiner Stelle im JSON. Wer einen alten Eintrag
+bewusst korrigiert, korrigiert ihn dort mit. Neue Einträge (alles jenseits
+des Altbestands) brauchen `haerte` und mindestens ein `paket`, Quiz und
+Schätzen auch `stufe`; ein Test hält die Mischung grob bei 60 % harmlos,
+30 % pikant, 10 % derb.
 
 Stand 19.09.2026: 140 Quizfragen, 120 Imposter-Wortpaare, 140 Identitäten,
 110 Sprüche für „Ich hab noch nie”, 108 für „Wer würde eher”, 80 Schätzfragen,
@@ -283,8 +313,8 @@ ein Eintrag ohne Feld gilt als harmlos, allgemein, ab vier Sitzen:
 | `minSitze` | Zahl | immer |
 | `stufe` | 1–3, nur Quiz und Schätzen | ohne Angabe (filtert noch nichts) |
 
-```ts
-{ id: 'n111', haerte: 2, paket: ['wg-abend', 'studenten'], text: 'Ich hab noch nie …' },
+```json
+{ "id": "n111", "haerte": 2, "paket": ["wg-abend", "studenten"], "text": "Ich hab noch nie …" }
 ```
 
 - **Im Zweifel die höhere Härte.** Ein harmloser Tisch darf nie einen

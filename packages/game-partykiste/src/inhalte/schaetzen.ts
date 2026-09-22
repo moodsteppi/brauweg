@@ -3,91 +3,17 @@
  *
  * Alle tippen gleichzeitig eine Zahl, wer am nächsten liegt, gewinnt. Deshalb
  * hat jede Frage eine eindeutige, stabile Zahlantwort, die sich nicht
- * jährlich ändert. Neue Fragen werden hinten angehängt, mit der nächsten
- * freien Kennung ('sNNN'); bestehende Kennungen ändern sich nie.
+ * jährlich ändert.
+ *
+ * Die Eintraege stehen seit dem 22.09.2026 in `daten/schaetzen.json` (Entscheidung
+ * P4: Inhalte als JSON mit Schema, Datenbank spaeter). Diese Datei laedt und
+ * prueft sie nur — geprueft von `schema.ts`, beim Import, im Build und im
+ * Test. Neue Eintraege hinten in der JSON-Datei, mit der naechsten freien
+ * Kennung; nie umsortieren, Kennungen aendern sich nie.
  */
 
+import roh from './daten/schaetzen.json' with { type: 'json' };
+import { ladeKatalog } from './schema.js';
 import type { SchaetzFrage } from './typen.js';
 
-export const SCHAETZ_FRAGEN: readonly SchaetzFrage[] = [
-  { id: 's001', frage: 'Wie hoch ist der Eiffelturm (mit Antenne)?', antwort: 330, einheit: 'Meter' },
-  { id: 's002', frage: 'Wie hoch ist die Freiheitsstatue (Sockelboden bis Fackelspitze)?', antwort: 93, einheit: 'Meter' },
-  { id: 's003', frage: 'Wie hoch ist der Burj Khalifa in Dubai?', antwort: 828, einheit: 'Meter' },
-  { id: 's004', frage: 'Wie hoch ist der Mount Everest?', antwort: 8849, einheit: 'Meter' },
-  { id: 's005', frage: 'Wie lang ist der Nil, der längste Fluss der Welt?', antwort: 6650, einheit: 'Kilometer' },
-  { id: 's006', frage: 'Wie lang ist der Amazonas?', antwort: 6400, einheit: 'Kilometer' },
-  { id: 's007', frage: 'Wie viele Knochen hat ein erwachsener Mensch?', antwort: 206, einheit: 'Stück' },
-  { id: 's008', frage: 'Wie viele Knochen hat ein neugeborenes Baby?', antwort: 300, einheit: 'Stück' },
-  { id: 's009', frage: 'Wie viele bleibende Zähne hat ein erwachsener Mensch?', antwort: 32, einheit: 'Stück' },
-  { id: 's010', frage: 'Wie viele Milchzähne hat ein Kind?', antwort: 20, einheit: 'Stück' },
-  { id: 's011', frage: 'Wie viele Rippen hat ein erwachsener Mensch?', antwort: 24, einheit: 'Stück' },
-  { id: 's012', frage: 'Wie viele Tasten hat ein klassisches Klavier?', antwort: 88, einheit: 'Stück' },
-  { id: 's013', frage: 'In welchem Jahr betrat der Mensch zum ersten Mal den Mond?', antwort: 1969, einheit: 'Jahr' },
-  { id: 's014', frage: 'In welchem Jahr fiel die Berliner Mauer?', antwort: 1989, einheit: 'Jahr' },
-  { id: 's015', frage: 'In welchem Jahr erreichte Kolumbus Amerika?', antwort: 1492, einheit: 'Jahr' },
-  { id: 's016', frage: 'In welchem Jahr erfand Gutenberg den Buchdruck mit beweglichen Lettern?', antwort: 1450, einheit: 'Jahr' },
-  { id: 's017', frage: 'In welchem Jahr begann die Französische Revolution?', antwort: 1789, einheit: 'Jahr' },
-  { id: 's018', frage: 'In welchem Jahr endete der Zweite Weltkrieg?', antwort: 1945, einheit: 'Jahr' },
-  { id: 's019', frage: 'In welchem Jahr begann der Erste Weltkrieg?', antwort: 1914, einheit: 'Jahr' },
-  { id: 's020', frage: 'In welchem Jahr wurde Deutschland wiedervereinigt?', antwort: 1990, einheit: 'Jahr' },
-  { id: 's021', frage: 'In welchem Jahr wurde die UNO gegründet?', antwort: 1945, einheit: 'Jahr' },
-  { id: 's022', frage: 'In welchem Jahr zerfiel die Sowjetunion?', antwort: 1991, einheit: 'Jahr' },
-  { id: 's023', frage: 'In welchem Jahr fand die erste Fußball-Weltmeisterschaft statt?', antwort: 1930, einheit: 'Jahr' },
-  { id: 's024', frage: 'In welchem Jahr gelang den Brüdern Wright der erste Motorflug?', antwort: 1903, einheit: 'Jahr' },
-  { id: 's025', frage: 'In welchem Jahr sank die Titanic?', antwort: 1912, einheit: 'Jahr' },
-  { id: 's026', frage: 'Wie viele Minuten dauert der Film "Titanic" (1997)?', antwort: 194, einheit: 'Minuten' },
-  { id: 's027', frage: 'Wie viele Minuten dauert "Der Herr der Ringe: Die Rückkehr des Königs"?', antwort: 201, einheit: 'Minuten' },
-  { id: 's028', frage: 'Wie viele Minuten dauert die reguläre Spielzeit eines Fußballspiels?', antwort: 90, einheit: 'Minuten' },
-  { id: 's029', frage: 'Wie viele Einwohner hat Deutschland, grob gerundet?', antwort: 84, einheit: 'Millionen' },
-  { id: 's030', frage: 'Wie viele Menschen leben ungefähr auf der Erde?', antwort: 8, einheit: 'Milliarden' },
-  { id: 's031', frage: 'Wie viele Einwohner hat Berlin, grob gerundet?', antwort: 3.8, einheit: 'Millionen' },
-  { id: 's032', frage: 'Wie hoch ist der Kölner Dom?', antwort: 157, einheit: 'Meter' },
-  { id: 's033', frage: 'Wie hoch ist die Cheops-Pyramide heute noch?', antwort: 139, einheit: 'Meter' },
-  { id: 's034', frage: 'Wie lang ist die Donau, der zweitlängste Fluss Europas?', antwort: 2850, einheit: 'Kilometer' },
-  { id: 's035', frage: 'Wie hoch ist der Mont Blanc, der höchste Berg der Alpen?', antwort: 4810, einheit: 'Meter' },
-  { id: 's036', frage: 'Wie tief ist der Marianengraben an seiner tiefsten Stelle?', antwort: 11000, einheit: 'Meter' },
-  { id: 's037', frage: 'Wie viele Bundesländer hat Deutschland?', antwort: 16, einheit: 'Stück' },
-  { id: 's038', frage: 'Wie viele Planeten hat unser Sonnensystem?', antwort: 8, einheit: 'Stück' },
-  { id: 's039', frage: 'Wie viele Saiten hat eine Geige?', antwort: 4, einheit: 'Stück' },
-  { id: 's040', frage: 'Wie viele Spieler stehen bei Basketball gleichzeitig auf dem Feld (pro Team)?', antwort: 5, einheit: 'Stück' },
-  { id: 's041', frage: 'Wie viele Spieler stehen bei Volleyball gleichzeitig auf dem Feld (pro Team)?', antwort: 6, einheit: 'Stück' },
-  { id: 's042', frage: 'Wie viele Löcher hat eine Golfrunde?', antwort: 18, einheit: 'Stück' },
-  { id: 's043', frage: 'Wie viele Farben hat der Regenbogen klassischerweise?', antwort: 7, einheit: 'Stück' },
-  { id: 's044', frage: 'Wie viele Buchstaben hat das deutsche Alphabet inklusive Umlauten und ß?', antwort: 30, einheit: 'Stück' },
-  { id: 's045', frage: 'Wie viele Kammern hat ein menschliches Herz?', antwort: 4, einheit: 'Stück' },
-  { id: 's046', frage: 'Wie viele Chromosomenpaare hat ein Mensch?', antwort: 23, einheit: 'Stück' },
-  { id: 's047', frage: 'Wie viel wiegt ein ausgewachsener Blauwal ungefähr?', antwort: 130, einheit: 'Tonnen' },
-  { id: 's048', frage: 'Wie viel wiegt das Gehirn eines erwachsenen Menschen ungefähr?', antwort: 1400, einheit: 'Gramm' },
-  { id: 's049', frage: 'Wie viel wiegt ein Standard-Basketball ungefähr?', antwort: 600, einheit: 'Gramm' },
-  { id: 's050', frage: 'Wie viele Zähne hat ein ausgewachsener Hund?', antwort: 42, einheit: 'Stück' },
-  { id: 's051', frage: 'Wie lang ist ein Marathon?', antwort: 42, einheit: 'Kilometer' },
-  { id: 's052', frage: 'Wie hoch sind die Niagarafälle (Horseshoe Falls)?', antwort: 51, einheit: 'Meter' },
-  { id: 's053', frage: 'Wie lang ist der Panamakanal?', antwort: 82, einheit: 'Kilometer' },
-  { id: 's054', frage: 'Wie lang ist der Suezkanal?', antwort: 193, einheit: 'Kilometer' },
-  { id: 's055', frage: 'In welchem Jahr ließ sich Alexander Graham Bell das Telefon patentieren?', antwort: 1876, einheit: 'Jahr' },
-  { id: 's056', frage: 'In welchem Jahr schlug Tim Berners-Lee das World Wide Web vor?', antwort: 1989, einheit: 'Jahr' },
-  { id: 's057', frage: 'Wie hoch ist das Matterhorn?', antwort: 4478, einheit: 'Meter' },
-  { id: 's058', frage: 'Wie hoch ist der Kilimandscharo, der höchste Berg Afrikas?', antwort: 5895, einheit: 'Meter' },
-  { id: 's059', frage: 'Wie breit ist der Ärmelkanal an seiner kürzesten Stelle (Dover-Calais)?', antwort: 34, einheit: 'Kilometer' },
-  { id: 's060', frage: 'Wie viele Stockwerke hat das Empire State Building?', antwort: 102, einheit: 'Stück' },
-  { id: 's061', frage: 'Wie hoch ist das Empire State Building mit Antenne?', antwort: 443, einheit: 'Meter' },
-  { id: 's062', frage: 'In welchem Jahr meldete Carl Benz sein Patent für das erste Automobil an?', antwort: 1886, einheit: 'Jahr' },
-  { id: 's063', frage: 'In welchem Jahr erschien der erste Harry-Potter-Band?', antwort: 1997, einheit: 'Jahr' },
-  { id: 's064', frage: 'Wie viele Minuten dauert der Film "Avatar" (2009)?', antwort: 162, einheit: 'Minuten' },
-  { id: 's065', frage: 'Wie viele Symphonien hat Beethoven komponiert?', antwort: 9, einheit: 'Stück' },
-  { id: 's066', frage: 'Wie viele Herzen hat ein Krake?', antwort: 3, einheit: 'Stück' },
-  { id: 's067', frage: 'Wie hoch ist der Berliner Fernsehturm am Alexanderplatz?', antwort: 368, einheit: 'Meter' },
-  { id: 's068', frage: 'Wie hoch ist der CN Tower in Toronto?', antwort: 553, einheit: 'Meter' },
-  { id: 's069', frage: 'Wie lang ist der Eurotunnel unter dem Ärmelkanal?', antwort: 50, einheit: 'Kilometer' },
-  { id: 's070', frage: 'Wie viele Zeitzonen hat Russland?', antwort: 11, einheit: 'Stück' },
-  { id: 's071', frage: 'Wie viele Zeitzonen haben die USA (inklusive Alaska und Hawaii)?', antwort: 6, einheit: 'Stück' },
-  { id: 's072', frage: 'Wie viele Sterne zeigt die Flagge der USA?', antwort: 50, einheit: 'Stück' },
-  { id: 's073', frage: 'Wie viele Streifen zeigt die Flagge der USA?', antwort: 13, einheit: 'Stück' },
-  { id: 's074', frage: 'Wie viele Ringe zeigt die Olympische Flagge?', antwort: 5, einheit: 'Stück' },
-  { id: 's075', frage: 'Wie viele Figuren hat jeder Spieler beim Schach zu Beginn?', antwort: 16, einheit: 'Stück' },
-  { id: 's076', frage: 'Wie viele Felder hat ein Schachbrett?', antwort: 64, einheit: 'Stück' },
-  { id: 's077', frage: 'Wie viele Karten hat ein Skatblatt?', antwort: 32, einheit: 'Stück' },
-  { id: 's078', frage: 'Wie viele Karten hat ein Standard-Pokerblatt ohne Joker?', antwort: 52, einheit: 'Stück' },
-  { id: 's079', frage: 'Wie viele Spieler braucht man für Doppelkopf?', antwort: 4, einheit: 'Stück' },
-  { id: 's080', frage: 'Wie viele Buchstaben hat das griechische Alphabet?', antwort: 24, einheit: 'Stück' },
-];
+export const SCHAETZ_FRAGEN: readonly SchaetzFrage[] = ladeKatalog<SchaetzFrage>('schaetzen', roh);
