@@ -151,6 +151,7 @@ const de: Record<string, string> = {
   'error.protocolVersionUnsupported': 'Bitte lade die Seite neu.',
   'error.actionRejected': 'Dieser Zug ist nicht möglich.',
   'error.invalidInput': 'Bitte prüfe deine Eingaben.',
+  'error.inhaltUngueltig': 'Diese Bestenliste gibt es so nicht.',
   'error.invalidRequest': 'Diese Anfrage konnte der Server nicht verarbeiten.',
   'error.tooManyRequests': 'Zu viele Anfragen. Warte einen Moment.',
   'error.tooManyMessages': 'Zu viele Anfragen. Lade die Seite neu.',

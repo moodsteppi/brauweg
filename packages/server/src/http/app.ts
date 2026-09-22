@@ -106,6 +106,7 @@ import {
   warState,
 } from '../clubs/war.js';
 import { overallRanking, rankingForGame } from '../rankings/service.js';
+import { bestenlisteFuer, eigeneBestleistungen, istInhaltId } from '../bestleistung.js';
 import { lies, nimmAuf, uebersicht } from '../diagnose.js';
 import {
   GURT_MAX,
@@ -1950,6 +1951,44 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       })
       .parse(request.query);
     return reply.send(await overallRanking(deps.db, query.limit, query.offset));
+  });
+
+  // -------------------------------------------------------------------------
+  // Bestleistungen je Inhalt (Bahn, Kurs, Paket) — seit dem 22.09.2026
+  // -------------------------------------------------------------------------
+
+  /**
+   * Eine eigene Pruefung fuer die Inhaltskennung statt nur eines Zod-Fehlers:
+   * `invalidInput` sagte dem Bildschirm nur "irgendetwas stimmt nicht", und
+   * eine falsch zusammengesetzte Bahnkennung ist genau der Fehler, den man beim
+   * Einbau im Client sucht. Das Muster ist dasselbe wie im Schreibweg
+   * (`istInhaltId`), damit keine Zeile entsteht, die hier nicht abrufbar ist.
+   */
+  const inhaltIdSchema = z.string().refine(istInhaltId);
+
+  /** Die besten zwanzig fuer einen Inhalt plus der eigene Platz. */
+  app.get(
+    '/api/games/:gameId/bestleistungen/:inhaltId',
+    { config: { rateLimit: LIMIT_ALLGEMEIN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const params = z
+        .object({ gameId: gameIdSchema, inhaltId: z.string() })
+        .parse(request.params);
+      if (!inhaltIdSchema.safeParse(params.inhaltId).success) {
+        throw badRequest('inhaltUngueltig');
+      }
+      return reply.send(
+        await bestenlisteFuer(deps.db, params.gameId, params.inhaltId, accountId),
+      );
+    },
+  );
+
+  /** Alle eigenen Bestleistungen eines Spiels, juengste zuerst. */
+  app.get('/api/me/bestleistungen/:gameId', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    return reply.send(await eigeneBestleistungen(deps.db, accountId, gameId));
   });
 
   // -------------------------------------------------------------------------

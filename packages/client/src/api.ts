@@ -192,6 +192,43 @@ export interface RankingEntry {
   highestCheckpoint: number;
 }
 
+/**
+ * Bestleistung je Inhalt (Bahn, Kurs, Paket) — seit dem 22.09.2026.
+ *
+ * `richtung` kommt mit, weil der Client sonst raten muesste, ob 27 gut oder
+ * schlecht ist: Bei Golf gewinnt die kleinste Zahl, anderswo die groesste.
+ * Die Reihenfolge der Liste ist fertig vom Server; hier wird nichts sortiert.
+ * Zeitpunkte kommen als ISO-Zeichenkette ueber die Leitung.
+ */
+export type BestleistungRichtung = 'hoch' | 'tief';
+
+export interface BestenlisteEintrag {
+  rang: number;
+  accountId: string;
+  displayName: string;
+  wert: number;
+  richtung: BestleistungRichtung;
+  erzieltAm: string;
+  du: boolean;
+}
+
+export interface Bestenliste {
+  gameId: string;
+  inhaltId: string;
+  eintraege: BestenlisteEintrag[];
+  /** Null, solange man fuer diesen Inhalt nichts eingetragen hat. */
+  eigene: { rang: number; wert: number; richtung: BestleistungRichtung; erzieltAm: string } | null;
+  anzahl: number;
+}
+
+export interface EigeneBestleistung {
+  inhaltId: string;
+  wert: number;
+  richtung: BestleistungRichtung;
+  partyId: string | null;
+  erzieltAm: string;
+}
+
 // ---------------------------------------------------------------------------
 // Waehrungen, Truhen, Tagesaufgaben, Kosmetik
 // ---------------------------------------------------------------------------
@@ -790,6 +827,13 @@ export const api = {
 
   ranking: (gameId: string) => request<RankingEntry[]>(`/rankings/${gameId}`),
   overallRanking: () => request<RankingEntry[]>('/rankings'),
+  /** Top 20 fuer einen Inhalt (bei Golf: eine Bahn) plus der eigene Platz. */
+  bestenliste: (gameId: string, inhaltId: string) =>
+    request<Bestenliste>(
+      `/games/${encodeURIComponent(gameId)}/bestleistungen/${encodeURIComponent(inhaltId)}`,
+    ),
+  eigeneBestleistungen: (gameId: string) =>
+    request<EigeneBestleistung[]>(`/me/bestleistungen/${encodeURIComponent(gameId)}`),
 
   profile: (accountId: string) => request<PlayerProfile>(`/players/${accountId}`),
   searchPlayers: (q: string) => request<PlayerRef[]>(`/players?q=${encodeURIComponent(q)}`),

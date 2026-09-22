@@ -1934,7 +1934,7 @@
   {
    "id": "win_bw_11",
    "type": "notes",
-   "title": "PostgreSQL — 36 Tabellen",
+   "title": "PostgreSQL — 37 Tabellen",
    "x": 140,
    "y": 260,
    "w": 440,
@@ -1943,7 +1943,7 @@
    "accent": "#4fd1c5",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>db/schema.ts (Drizzle)</h3>\n<p><b>Konto:</b> account, session, auth_token, account_game_stat,\naccount_game_theme, account_cosmetic, account_avatar</p>\n<p><b>Tisch und Partie:</b> game_table, table_seat, party, party_snapshot,\nround_summary, rule_set, trophy_ledger, pairing_log, chip_lock</p>\n<p><b>Verein:</b> club, club_member, club_join_request, club_message,\nclub_war, club_war_score</p>\n<p><b>Fortschritt:</b> chest_claim, quest_progress, runner_day, runner_best,\nstat_counter, purchase</p>\n<p><b>Sozial:</b> friendship, block, report, game_vote, invite_code</p>\n<p><b>Spielnah, aber kein Regelwissen</b> — Inhalt und Mitschnitte, kein\nSpielzustand: mememory_motiv, mememory_sammlung, feldherr_diagnose (die\nZeilen verfallen nach zwei Wochen)</p>\n<p>Ohne installierte Datenbank: <code>DATABASE_URL=pglite</code> startet\nPostgreSQL als WebAssembly im selben Prozess. In Produktion gesperrt.</p>",
+    "html": "\n<h3>db/schema.ts (Drizzle)</h3>\n<p><b>Konto:</b> account, session, auth_token, account_game_stat,\naccount_game_theme, account_cosmetic, account_avatar</p>\n<p><b>Tisch und Partie:</b> game_table, table_seat, party, party_snapshot,\nround_summary, rule_set, trophy_ledger, pairing_log, chip_lock</p>\n<p><b>Verein:</b> club, club_member, club_join_request, club_message,\nclub_war, club_war_score</p>\n<p><b>Fortschritt:</b> chest_claim, quest_progress, runner_day, runner_best,\nstat_counter, purchase, bestleistung (je Inhalt, docs/BESTLEISTUNG.md)</p>\n<p><b>Sozial:</b> friendship, block, report, game_vote, invite_code</p>\n<p><b>Spielnah, aber kein Regelwissen</b> — Inhalt und Mitschnitte, kein\nSpielzustand: mememory_motiv, mememory_sammlung, feldherr_diagnose (die\nZeilen verfallen nach zwei Wochen)</p>\n<p>Ohne installierte Datenbank: <code>DATABASE_URL=pglite</code> startet\nPostgreSQL als WebAssembly im selben Prozess. In Produktion gesperrt.</p>",
     "fontSize": 13
    }
   },

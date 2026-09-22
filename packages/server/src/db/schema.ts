@@ -23,6 +23,7 @@ import { relations, sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  check,
   date,
   foreignKey,
   index,
@@ -943,6 +944,48 @@ export const roundSummary = pgTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.partyId, t.roundIndex] })],
+);
+
+/** Wohin eine Bestleistung zeigt: `tief` = die kleinste Zahl gewinnt (Golf). */
+export type BestleistungRichtung = 'hoch' | 'tief';
+
+/**
+ * Bestleistung je Inhalt (seit dem 22.09.2026, zuerst fuer die Golf-Bahnen).
+ *
+ * Eine Zeile je Konto, Spiel und Inhaltskennung, ueberschrieben nur von einer
+ * besseren Zahl — dasselbe Muster wie runner_best. NICHT in account_game_stat:
+ * Dort haengt der Schluessel am Spiel, und die Zeile traegt Trophaeen, die
+ * aus der Platzierung entstehen und regelunabhaengig sind (trophy_ledger
+ * unten). Eine Bestleistung dagegen ist eine Spielzahl fuer genau ein Stueck
+ * des Spiels, und 27 Schlaege auf einer Bahn sagen nichts ueber eine andere.
+ *
+ * `inhaltId` vergibt das Modul; der Server kennt die Bedeutung nicht und
+ * nimmt jede Kennung (Bahn, Kurs, Paket — CLAUDE.md, "Der Server kennt kein
+ * einzelnes Kartenspiel"). `richtung` steht am Datensatz, weil Punkte nichts
+ * ueber die Rangfolge sagen (plattform-invarianten.test.ts, Falle 3) und der
+ * Server die Antwort nicht je Spiel wissen darf: Das Modul sagt sie bei jeder
+ * Meldung mit, Schreib- und Leseweg richten sich danach (src/bestleistung.ts).
+ */
+export const bestleistung = pgTable(
+  'bestleistung',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    gameId: gameId(),
+    inhaltId: text().notNull(),
+    wert: integer().notNull(),
+    richtung: text().$type<BestleistungRichtung>().notNull(),
+    /** Herkunftsnachweis, keine Abhaengigkeit: ueberlebt das Aufraeumen alter Partien. */
+    partyId: uuid().references(() => party.id, { onDelete: 'set null' }),
+    erzieltAm: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.accountId, t.gameId, t.inhaltId] }),
+    /** Fuer die Liste je Inhalt: ein Spiel, ein Inhalt, sortiert nach Wert. */
+    index('bestleistung_liste_idx').on(t.gameId, t.inhaltId, t.wert),
+    check('bestleistung_richtung_check', sql`${t.richtung} in ('hoch', 'tief')`),
+  ],
 );
 
 // ---------------------------------------------------------------------------
