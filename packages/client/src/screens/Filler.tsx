@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type Suchstand } from '../api';
+import { AuswahlRaster } from '../hub';
 import { FARBEN, GRAUTOENE, farbeVon } from '../minispiele/filler/farben';
 import type { FillerSicht, Variante } from '../minispiele/filler/sicht';
 import { useSpielVorgabe, zahlAus } from '../spiel-vorgabe';
@@ -56,12 +57,46 @@ import { useTable } from '../useTable';
  */
 const SUCH_TAKT_MS = 1000;
 
-const VARIANTE_NAME: Record<Variante, string> = {
-  nebel: 'Nebel',
-  klar: 'Normal',
-  build: 'Build',
-  extreme: 'Extreme',
-};
+/**
+ * Die vier Spielarten — EINE Quelle fuer Reihenfolge, Name und Beschreibung.
+ *
+ * Bis zum 22.09.2026 stand die Liste viermal in dieser Datei (Schalter,
+ * Wischfolge, Typwaechter, zwei Woerterbuecher). Eine fuenfte Spielart haette
+ * an vier Stellen nachgetragen werden muessen, und die vergessene waere im
+ * Schalter unsichtbar geblieben, obwohl sie sich wischen liesse. Alles
+ * andere hier leitet ab; die Typpruefung darunter meldet, wenn `Variante`
+ * aus sicht.ts eine Spielart kennt, die hier fehlt.
+ */
+const SPIELARTEN = [
+  { kennung: 'nebel', name: 'Nebel', text: 'Du siehst nur dein Gebiet und dessen Rand.' },
+  { kennung: 'klar', name: 'Normal', text: 'Das ganze Brett liegt offen — wie im Original.' },
+  {
+    kennung: 'build',
+    name: 'Build',
+    text: 'Offenes Brett, dazu zehn Mauern je Spieler — eine je Zug, färben darfst du danach trotzdem.',
+  },
+  {
+    kennung: 'extreme',
+    name: 'Extreme',
+    text: 'Build mit sieben Farben und drei Sternfeldern: Ein Stern bringt zwei Punkte und eine Mauer extra.',
+  },
+] as const satisfies readonly { kennung: Variante; name: string; text: string }[];
+// Fehlt eine Spielart in der Liste, ist dieser Typ nicht `never` und die Zeile uebersetzt nicht.
+const _alleSpielartenErfasst: Exclude<Variante, (typeof SPIELARTEN)[number]['kennung']> extends never
+  ? true
+  : never = true;
+void _alleSpielartenErfasst;
+
+/** Die Reihenfolge der Spielarten — dieselbe wie im Raster, fuers Wischen. */
+const SPIELART_FOLGE: readonly Variante[] = SPIELARTEN.map((s) => s.kennung);
+const VARIANTE_NAME = Object.fromEntries(SPIELARTEN.map((s) => [s.kennung, s.name])) as Record<
+  Variante,
+  string
+>;
+const VARIANTE_TEXT = Object.fromEntries(SPIELARTEN.map((s) => [s.kennung, s.text])) as Record<
+  Variante,
+  string
+>;
 
 /** Spielarten mit Mauern. Muss zu mitBarrieren in regeln.ts passen. */
 function mitMauern(v: Variante): boolean {
@@ -94,13 +129,6 @@ function farbzahlFuer(v: Variante, vorgabe: Record<string, unknown> | null): num
   return farbenFuer(v).farben ?? zahlAus(vorgabe, 'farben', FARBEN.length - 1);
 }
 
-const VARIANTE_TEXT: Record<Variante, string> = {
-  nebel: 'Du siehst nur dein Gebiet und dessen Rand.',
-  klar: 'Das ganze Brett liegt offen — wie im Original.',
-  build: 'Offenes Brett, dazu zehn Mauern je Spieler — eine je Zug, färben darfst du danach trotzdem.',
-  extreme: 'Build mit sieben Farben und drei Sternfeldern: Ein Stern bringt zwei Punkte und eine Mauer extra.',
-};
-
 /**
  * Die zuletzt gewaehlte Spielart ueberlebt das Schliessen.
  *
@@ -111,7 +139,7 @@ const VARIANTE_TEXT: Record<Variante, string> = {
 const VARIANTE_SCHLUESSEL = 'filler.variante';
 
 function istVariante(wert: unknown): wert is Variante {
-  return wert === 'nebel' || wert === 'klar' || wert === 'build' || wert === 'extreme';
+  return SPIELART_FOLGE.includes(wert as Variante);
 }
 
 function gelesenevariante(): Variante {
@@ -123,9 +151,6 @@ function gelesenevariante(): Variante {
     return 'nebel';
   }
 }
-
-/** Die Reihenfolge der Spielarten — dieselbe wie im Schalter, fuers Wischen. */
-const SPIELARTEN: readonly Variante[] = ['nebel', 'klar', 'build', 'extreme'];
 
 type Wischrichtung = 'links' | 'rechts';
 
@@ -270,7 +295,7 @@ export function Filler({
   const [variante, setVariante] = useState<Variante>(gelesenevariante);
   /**
    * Aus welcher Richtung die neue Spielart hereinkommt — fuer die kurze
-   * Bewegung von Beschreibung und Vorschau. Null beim ersten Aufbau: Da soll
+   * Bewegung der Beschreibung unter dem Raster. Null beim ersten Aufbau: Da soll
    * nichts fahren.
    */
   const [wischRichtung, setWischRichtung] = useState<Wischrichtung | null>(null);
@@ -281,14 +306,14 @@ export function Filler({
   const waehleVariante = useCallback((ziel: Variante): void => {
     const alt = varianteRef.current;
     if (ziel === alt) return;
-    setWischRichtung(SPIELARTEN.indexOf(ziel) > SPIELARTEN.indexOf(alt) ? 'links' : 'rechts');
+    setWischRichtung(SPIELART_FOLGE.indexOf(ziel) > SPIELART_FOLGE.indexOf(alt) ? 'links' : 'rechts');
     merkeVariante(ziel);
     setVariante(ziel);
   }, []);
   const wischen = useWischen((richtung) => {
-    const nr = SPIELARTEN.indexOf(variante);
+    const nr = SPIELART_FOLGE.indexOf(variante);
     // Kein Umlauf: Am Rand bleibt es stehen, wie eine Rollflaeche auch.
-    const ziel = SPIELARTEN[richtung === 'links' ? nr + 1 : nr - 1];
+    const ziel = SPIELART_FOLGE[richtung === 'links' ? nr + 1 : nr - 1];
     if (ziel) waehleVariante(ziel);
   });
 
@@ -595,7 +620,12 @@ export function Filler({
             * stand er beim Bot-Knopf, als die Schlange die Spielart noch nicht
             * kannte.
             */}
-          <Spielartschalter wert={variante} onWahl={waehleVariante} richtung={wischRichtung} />
+          <Spielartwahl
+            wert={variante}
+            onWahl={waehleVariante}
+            richtung={wischRichtung}
+            vorgabe={vorgabe}
+          />
           <button
             className="fl-suchen"
             type="button"
@@ -622,7 +652,6 @@ export function Filler({
           </button>
           {fehler && <p className="fl-fehler">{fehler}</p>}
           <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
-          <Vorschau variante={variante} richtung={wischRichtung} vorgabe={vorgabe} />
         </div>
         {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
       </main>
@@ -1130,42 +1159,56 @@ function Warteband({
 }
 
 /**
- * Der Schalter zwischen den beiden Spielarten.
+ * Die Wahl der Spielart: vier Kacheln, jede mit ihrem eigenen Vorschaubrett.
  *
- * Zwei Knoepfe und kein Kippschalter: Ein Kippschalter sagt nur, dass etwas an
- * oder aus ist, und "Nebel aus" ist kein Name fuer eine Spielart. So stehen
- * beide da und man liest, wofuer man sich entscheidet.
+ * Bis zum 22.09.2026 standen hier vier Textknoepfe in einer Rinne und EIN
+ * grosses Vorschaubrett weiter unten im Menue, das nur die gewaehlte Spielart
+ * zeigte. Man sah den Unterschied also erst nach dem Tippen. Jetzt liegen alle
+ * vier Bretter nebeneinander — der erste Filler-Nutzer des gemeinsamen
+ * Auswahl-Bauteils (hub.tsx), und Vorbild fuer Golf und Partykiste.
+ *
+ * Zwei Spalten fest und nicht die Haltepunkte des Rasters: Das Menue ist nie
+ * breiter als 420px, und vier Kacheln in drei Spalten liessen eine allein
+ * stehen.
  */
-function Spielartschalter({
+function Spielartwahl({
   wert,
   onWahl,
   richtung,
+  vorgabe,
 }: {
   wert: Variante;
-  /** Merkt sich die Wahl selbst (merkeVariante) — der Schalter nicht. */
+  /** Merkt sich die Wahl selbst (merkeVariante) — das Raster nicht. */
   onWahl: (v: Variante) => void;
   /** Woher die Beschreibung hereinfaehrt; null = ohne Bewegung. */
   richtung?: Wischrichtung | null;
+  /** Regelsatz des Moduls, sobald er da ist — fuer die Farbzahl der Bretter. */
+  vorgabe: Record<string, unknown> | null;
 }): React.JSX.Element {
-  const waehle = (v: Variante): void => onWahl(v);
   return (
-    <div className="fl-schalter" role="group" aria-label="Spielart">
-      {(['nebel', 'klar', 'build', 'extreme'] as const).map((v) => (
-        <button
-          key={v}
-          type="button"
-          data-an={wert === v ? '' : undefined}
-          aria-pressed={wert === v}
-          onClick={() => waehle(v)}
-        >
-          {VARIANTE_NAME[v]}
-        </button>
-      ))}
-      {/* `key` erzwingt ein neues Element je Spielart: So laeuft die
+    <div className="fl-spielart">
+      <AuswahlRaster
+        label="Spielart"
+        spalten={2}
+        gewaehlt={wert}
+        eintraege={SPIELARTEN.map((s) => ({
+          kennung: s.kennung,
+          titel: s.name,
+          vorschau: <Vorschaubrett variante={s.kennung} vorgabe={vorgabe} />,
+        }))}
+        onWahl={(kennung) => {
+          if (istVariante(kennung)) onWahl(kennung);
+        }}
+      />
+      {/* Die Beschreibung bleibt EINE Zeile unter dem Raster und steht nicht in
+          jeder Kachel: vier lange Saetze machten die Kacheln ungleich hoch.
+          `key` erzwingt ein neues Element je Spielart: So laeuft die
           Einwisch-Bewegung bei jedem Wechsel neu, nicht nur beim ersten. */}
-      <span className="fl-schalter-text" key={wert} data-richtung={richtung ?? undefined}>
+      <p className="fl-spielart-text" key={wert} data-richtung={richtung ?? undefined}>
         {VARIANTE_TEXT[wert]}
-      </span>
+        {/* Nur am Finger sichtbar (styles.css): Mit der Maus wischt niemand. */}
+        <span className="fl-wischhinweis">← wischen zum Wechseln →</span>
+      </p>
     </div>
   );
 }
@@ -1291,7 +1334,7 @@ function Mauericon(): React.JSX.Element {
 }
 
 /**
- * Die Vorschau im Menue: ein kleines Brett, das die gewaehlte Spielart zeigt.
+ * Die Vorschau im Menue: ein kleines Brett je Spielart, im Slot ihrer Kachel.
  *
  * Kein Screenshot und keine Simulation, sondern ein festes Muster, das je
  * Spielart anders gezeichnet wird — Nebel grau bis auf den eigenen Rand,
@@ -1334,13 +1377,11 @@ const VORSCHAU_WAENDE_EXTREME: [number, number][] = [
   [13, 14],
 ];
 
-function Vorschau({
+function Vorschaubrett({
   variante,
-  richtung,
   vorgabe,
 }: {
   variante: Variante;
-  richtung?: Wischrichtung | null;
   /** Regelsatz des Moduls, sobald er da ist — fuer die Farbzahl. */
   vorgabe: Record<string, unknown> | null;
 }): React.JSX.Element {
@@ -1360,18 +1401,14 @@ function Vorschau({
   }
   const breite = 100 / VORSCHAU_SPALTEN;
   const hoehe = 100 / VORSCHAU_ZEILEN;
+  // Kein aria-hidden hier: Das setzt der Kachel-Slot, und der Name der
+  // Kachel ist ihr Titel — ein Brett aus 40 Feldern gibt nichts vorzulesen.
   return (
     <div
-      className="fl-vorschau"
-      aria-hidden="true"
+      className="fl-vorschau-brett"
       data-variante={variante}
-      data-richtung={richtung ?? undefined}
-      key={variante}
+      style={{ gridTemplateColumns: `repeat(${VORSCHAU_SPALTEN}, 1fr)` }}
     >
-      <div
-        className="fl-vorschau-brett"
-        style={{ gridTemplateColumns: `repeat(${VORSCHAU_SPALTEN}, 1fr)` }}
-      >
         {Array.from({ length: VORSCHAU_SPALTEN * VORSCHAU_ZEILEN }, (_, platz) => {
           const eigen = VORSCHAU_EIGEN.has(platz);
           const fremd = VORSCHAU_FREMD.has(platz);
@@ -1403,12 +1440,6 @@ function Vorschau({
               : { left: `${links * breite + breite}%`, top: `${oben * hoehe}%`, height: `${hoehe}%` };
             return <span key={`${a}:${b}`} className="fl-wand" data-quer={quer ? '' : undefined} style={stil} />;
           })}
-      </div>
-      <p className="fl-vorschau-text">
-        Vorschau: {VARIANTE_NAME[variante]}
-        {/* Nur am Finger sichtbar (styles.css): Mit der Maus wischt niemand. */}
-        <span className="fl-wischhinweis">← wischen zum Wechseln →</span>
-      </p>
     </div>
   );
 }
