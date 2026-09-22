@@ -122,7 +122,8 @@
   inset: auto 0 0 0;
   display: flex;
   justify-content: space-between;
-  padding: 12px;
+  /* Wenig Luft zum Rand: Der Daumen soll den Knopf treffen, nicht den Rahmen. */
+  padding: 10px 12px 14px;
   pointer-events: none;
 }
 
@@ -140,6 +141,19 @@
   gap: 14px;
   align-items: flex-end;
   pointer-events: auto;
+}
+
+/*
+ * Kocht nur einer an diesem Gerät, geht die Hand über die GANZE Breite:
+ * Stick an den linken Rand, Knöpfe an den rechten. So liegt jeder Daumen da,
+ * wo er das Gerät ohnehin hält — dazwischen bleibt die Küche frei.
+ *
+ * Zu zweit geht das nicht: Dann teilen sich beide den unteren Rand, und jede
+ * Hand bleibt als Block beieinander.
+ */
+.hand.breit {
+  flex: 1 1 auto;
+  justify-content: space-between;
 }
 
 .hand.rechts {
