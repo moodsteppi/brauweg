@@ -34,6 +34,10 @@ const NACHGELADEN = [
   'FeldherrTisch',
   'Filler',
   'Mememory',
+  // Seit dem 22.09.2026 in der Liste: Ab da liest App.tsx beim Start den
+  // Einladungslink der Partykiste — genau die Art Zeile, die einen Schirm
+  // unbemerkt ins Hauptpaket zurueckholt.
+  'Partykiste',
   'Profile',
   'Runner',
   'SkatTable',
@@ -78,6 +82,16 @@ describe('Paketaufteilung von App.tsx', () => {
    */
   it('holt den Tischlink aus dem eigenen kleinen Modul, nicht aus dem Schirm', () => {
     expect(APP).toContain("from './minispiele/tafelrunde/tischlink'");
+  });
+
+  /*
+   * Dasselbe fuer `/beitritt/<CODE>` (22.09.2026): App.tsx liest den Code vor
+   * dem ersten Bild. Kaeme er aus `Einladung.tsx`, zoege er den QR-Kodierer
+   * mit ins Hauptpaket, kaeme er aus dem Schirm, gleich die ganze Partykiste.
+   */
+  it('holt den Einladungslink aus dem eigenen kleinen Modul, nicht aus Einladung oder Schirm', () => {
+    expect(APP).toContain("from './minispiele/partykiste/einladungslink';");
+    expect(APP).not.toMatch(/from '\.\/minispiele\/partykiste\/(Einladung|Beitrittscode|qr)'/);
   });
 
   /*
