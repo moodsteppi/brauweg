@@ -16,6 +16,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { ALTE_KENNUNGEN } from './altbestand/index.js';
+
 import {
   DEFAULT_REGELN,
   MINISPIELE,
@@ -547,9 +549,13 @@ test('jeder Katalog traegt die strengste Einstellung — genug harmlose Eintraeg
   }
 });
 
-test('die Kiffer-Sprueche und nur sie sind pikant', () => {
+test('im Altbestand sind die Kiffer-Sprueche und nur sie pikant', () => {
+  /* Nur der Altbestand vom 22.09.2026: Neue Eintraege tragen ihre Haerte
+     selbst (inhalte-json.test.ts verlangt sie), die alten ausser den
+     Kiffer-Spruechen gar keine. */
   for (const katalog of Object.values(KATALOGE)) {
     for (const i of katalog) {
+      if (!ALTE_KENNUNGEN.has(i.id)) continue;
       assert.equal(i.haerte ?? 1, KIFFEN.has(i.id) ? 2 : 1, `${i.id} hat die falsche Haerte`);
     }
   }

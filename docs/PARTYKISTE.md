@@ -294,11 +294,21 @@ des Altbestands) brauchen `haerte` und mindestens ein `paket`, Quiz und
 Schätzen auch `stufe`; ein Test hält die Mischung grob bei 60 % harmlos,
 30 % pikant, 10 % derb.
 
-Stand 19.09.2026: 140 Quizfragen, 120 Imposter-Wortpaare, 140 Identitäten,
-110 Sprüche für „Ich hab noch nie”, 108 für „Wer würde eher”, 80 Schätzfragen,
-100 Entweder-oder-Paare, 120 Aufgaben für Wahrheit oder Pflicht (60/60).
-Dazu seit dem 22.09.2026: 82 Kategorien (k001–k082), 72 Mehrheitsfragen
-(m001–m072), 49 Regel-Karten (r001–r049) — jeder Eintrag **mit** `haerte`
+Stand 22.09.2026 — Einträge je Katalog, in Klammern der Altbestand:
+
+- Wahrheit oder Pflicht: 400 (120, davon 60/60)
+- Wer würde eher: 108 (108)
+- Ich hab noch nie: 110 (110)
+- Entweder – oder: 100 (100)
+- Allgemeinwissen: 140 (140)
+- Schätzen: 80 (80)
+- Imposter: 120 (120)
+- Wer bin ich: 140 (140)
+
+Dazu seit dem 22.09.2026 die drei Kataloge ohne Uhr (#213, noch als
+TS-Quelltext unter `src/inhalte/`, nicht Teil der JSON-Umstellung):
+82 Kategorien (k001–k082), 72 Mehrheitsfragen (m001–m072), 49 Regel-Karten
+(r001–r049) — jeder Eintrag **mit** `haerte`
 und mindestens einem `paket`, alle drei Stufen belegt, je Paket mindestens
 zehn harmlose (`test/ohne-uhr.test.ts`). Regel-Karten sind Befehle an alle
 und tragen deshalb wie Wahrheit oder Pflicht gar kein Trinkwort.
