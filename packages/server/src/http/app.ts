@@ -1488,6 +1488,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       rounds: Object.fromEntries(
         seatCounts.map((seats) => [seats, module.meta.suggestedRounds(seats)]),
       ),
+      /*
+       * Seit dem 22.09.2026: Daten, mit denen ein Bildschirm den Regelsatz vor
+       * der Partie einstellen laesst (Golf: Kurse und Themen), und ob er das
+       * in der Lobby noch darf. Unbesehen aus dem Modul, siehe game-api.
+       */
+      lobby: module.lobbyDaten?.() ?? null,
+      regelnInDerLobby: module.meta.regelnInDerLobby === true,
     });
   });
 

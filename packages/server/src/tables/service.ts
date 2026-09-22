@@ -865,6 +865,84 @@ export async function setSeatColor(
   await touch(db, tableId);
 }
 
+/**
+ * Groesste Laenge eines Regelsatzes, der ueber die Leitung neu gesetzt wird,
+ * als JSON. Ein echter Regelsatz liegt weit darunter (Golf mit fuenfzehn
+ * Bahnen: rund 600 Zeichen); die Grenze haelt nur Muell aus der Datenbank.
+ */
+export const MAX_REGELSATZ_ZEICHEN = 8000;
+
+/**
+ * Den Regelsatz eines wartenden Tisches ersetzen (seit dem 22.09.2026, fuer
+ * die Bahnauswahl von Golf).
+ *
+ * Bis dahin stand der Regelsatz ab `createTable` fest. Golf braucht die Wahl
+ * aber NACH dem Beitritt der anderen: Wer „Online spielen" tippt, landet in
+ * einer offenen Gruppe, und erst dort stellt Sitz 0 Kurs, Filter oder Bahnen
+ * ein — fuer alle, die schon sitzen.
+ *
+ * Nur fuer Module mit `meta.regelnInDerLobby` (siehe game-api: am Regelsatz
+ * kann mehr haengen als Spielregeln, beim Poker der Einsatz). Nur wer auf
+ * Sitz 0 sitzt — dieselbe Regel, nach der die Lobby den Startknopf zeigt;
+ * zwei Leute, die einander die Wahl wegstellen, waeren schlimmer als einer,
+ * der sie trifft. Nur solange gewartet wird: Beim Start nimmt die Partie den
+ * Regelsatz mit und aendert ihn nie wieder.
+ *
+ * Regelsatzversionen sind unveraenderlich (`saveRuleSet`): Es entsteht eine
+ * neue Version, und der Tisch zeigt auf sie. Gehoert die Familie dem Setzenden,
+ * waechst sie um eine Version, sonst beginnt er eine eigene.
+ *
+ * `training` bleibt, wie es war: Es entscheidet ueber die Rangliste
+ * (`countsForRanking`), und das stellt man nicht in einer Lobby um.
+ */
+export async function setzeTischregeln(
+  db: Db,
+  tableId: string,
+  config: unknown,
+  byAccountId: string,
+): Promise<void> {
+  const { table, seats } = await tableWithSeats(db, tableId);
+  const module = requireModule(table.gameId);
+  if (module.meta.regelnInDerLobby !== true) throw badRequest('regelnNichtAenderbar');
+  if (table.status !== 'waiting') throw conflict('tableAlreadyStarted');
+  if (!seats.some((seat) => seat.accountId === byAccountId)) throw forbidden('notSeated');
+  const sitzNull = seats.find((seat) => seat.seatIndex === 0);
+  if (sitzNull?.accountId !== byAccountId) throw forbidden('nurErsterSitz');
+
+  if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+    throw badRequest('ruleSetInvalid');
+  }
+  if (JSON.stringify(config).length > MAX_REGELSATZ_ZEICHEN) throw badRequest('ruleSetInvalid');
+
+  const alt = await tableRules(db, tableId);
+  const neu: Record<string, unknown> = { ...(config as Record<string, unknown>) };
+  if ('training' in alt) neu.training = alt.training;
+  else delete neu.training;
+
+  const [familie] = await db
+    .select({ owner: s.ruleSet.ownerAccountId, name: s.ruleSet.name })
+    .from(s.ruleSet)
+    .where(and(eq(s.ruleSet.id, table.ruleSetId), eq(s.ruleSet.version, table.ruleSetVersion)));
+
+  // Prueft den Regelsatz gegen Sitz- und Rundenzahl des Tisches (validateConfig).
+  const ruleSet = await saveRuleSet(db, {
+    accountId: byAccountId,
+    gameId: table.gameId,
+    name: familie?.name ?? 'Tischregeln',
+    config: neu,
+    seats: table.seats,
+    rounds: table.maxRounds,
+    ...(familie?.owner === byAccountId ? { ruleSetId: table.ruleSetId } : {}),
+    clubId: table.clubId,
+  });
+
+  await db
+    .update(s.gameTable)
+    .set({ ruleSetId: ruleSet.id, ruleSetVersion: ruleSet.version })
+    .where(and(eq(s.gameTable.id, tableId), eq(s.gameTable.status, 'waiting')));
+  await touch(db, tableId);
+}
+
 /** Alle Plaetze besetzt, entweder durch Menschen oder durch gesetzte Bots. */
 export function isReadyToStart(
   table: { seats: number; filters: unknown },

@@ -34,6 +34,7 @@ import type {
 import { snapshotCodec } from '@brauweg/game-api';
 
 import { waehleBahnen } from './bahnen.js';
+import { lobbyDaten, pruefeBahnwahl } from './bahnwahl.js';
 import {
   type GolfAusgang,
   type GolfAusstieg,
@@ -107,6 +108,12 @@ const meta: GameMeta = {
    * des Tages soll nicht mit jeder Golfrunde mitwachsen.
    */
   xpBasisZaehltKarten: false,
+  /**
+   * Die Bahnauswahl stellt Sitz 0 in der Lobby ein, nachdem die anderen schon
+   * beigetreten sind (seit dem 22.09.2026). Golf kennt keine Chips und keinen
+   * Einsatz — jeder gueltige Regelsatz ist fuer alle Sitzenden zumutbar.
+   */
+  regelnInDerLobby: true,
 };
 
 function istRegelsatz(x: unknown): x is GolfRegeln {
@@ -152,8 +159,13 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
     if (!Number.isInteger(rounds) || rounds < LOECHER_MIN || rounds > LOECHER_MAX) {
       probleme.push({ path: 'rounds', messageKey: 'golf.loecher', severity: 'error' });
     }
+    // Die Bahnauswahl (Kurs, Filter, Einzelauswahl) — siehe bahnwahl.ts.
+    probleme.push(...pruefeBahnwahl(config));
     return probleme;
   },
+
+  /** Kurse und Themen fuer die Lobby, bevor es eine Sicht gibt (siehe bahnwahl.ts). */
+  lobbyDaten,
 
   createParty(options: CreatePartyOptions<GolfRegeln>): GolfPartie {
     return erzeugePartie({

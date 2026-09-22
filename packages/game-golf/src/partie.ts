@@ -12,7 +12,7 @@ import type { BotLevel } from '@brauweg/game-api';
 
 import { DEFAULT_BOT_LEVEL } from '@brauweg/game-api';
 
-import { waehleBahnen } from './bahnen.js';
+import { BAHNEN_KATALOG, waehleBahnen } from './bahnen.js';
 import type { GolfAktion, GolfRegeln, Zug } from './regeln.js';
 
 export class RegelverstossError extends Error {}
@@ -81,8 +81,9 @@ export function erzeugePartie(opts: ErzeugePartieOptionen): GolfPartie {
     sitze: opts.sitze,
     loecher: opts.loecher,
     // Aus der NORMIERTEN Saat — dieselbe, die in der Sicht steht und aus der
-    // die Geraete bis zum 22.09.2026 selbst gezogen haben.
-    bahnen: waehleBahnen(saat, opts.loecher),
+    // die Geraete bis zum 22.09.2026 selbst gezogen haben. Mit dem Regelsatz,
+    // weil er seit demselben Tag die Bahnauswahl des Tisches traegt.
+    bahnen: waehleBahnen(saat, opts.loecher, BAHNEN_KATALOG, opts.regeln),
     botSitze: opts.botSitze ? [...opts.botSitze] : [],
     botStufe: opts.botStufe ?? DEFAULT_BOT_LEVEL,
     zuege: [],
