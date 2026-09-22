@@ -746,7 +746,7 @@ function abstieg(feld: Wegfeld, c: number): number {
  * Bahn liegt offen vor jedem Spieler, und der Bot sieht dieselbe Karte, nur
  * eben rechnend. Andere Bälle bleiben außen vor wie beim Zielen auch.
  */
-const PROBE_ARTEN: ReadonlySet<Zone['art']> = new Set<Zone['art']>(['beschleuniger', 'drehkreuz']);
+const PROBE_ARTEN: ReadonlySet<Zone['art']> = new Set<Zone['art']>(['beschleuniger', 'drehkreuz', 'strudel']);
 
 /**
  * Längster Probeschlag in Takten (8 s). Ein Ball, der dann noch rollt, wird

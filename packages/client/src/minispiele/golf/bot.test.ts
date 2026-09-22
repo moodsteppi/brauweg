@@ -316,3 +316,21 @@ describe('Drehkreuz', () => {
     expect(mittelSchlaege(k39, 'genie')).toBeLessThanOrEqual(3.2);
   });
 });
+
+describe('Strudel', () => {
+  it('nutzt auf k08 den Auswurf vors Loch (vorher 2,30 und 95 %)', () => {
+    expect(mittelSchlaege(karteMit('k08-'), 'genie')).toBeLessThanOrEqual(1.3);
+  });
+
+  it('spielt an einer Falle auf der Linie vorbei, statt hineinzurollen', () => {
+    // Kunstbahn: ein Strudel ohne Auswurf knapp neben der geraden Linie vom
+    // Abschlag zum Loch. Ohne Probe zog er jeden Schlag des Genies zur Seite
+    // (2,00 in allen zwanzig Läufen), der Standard-Bot blieb zweimal ganz
+    // darin hängen.
+    const falle = freiMit({ art: 'strudel', x: 5.2, y: 8, r: 2, staerke: 15 });
+    expect(mittelSchlaege(falle, 'genie')).toBe(1);
+    for (let saat = 1; saat <= 20; saat += 1) {
+      expect(botLoestKarte(falle, 'standard', saat * 7919).geloest).toBe(true);
+    }
+  });
+});
