@@ -11,4 +11,5 @@
 
 export * from './regeln.js';
 export * from './partie.js';
+export * from './bahnen.js';
 export { golf, type GolfView } from './adapter.js';

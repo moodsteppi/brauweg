@@ -33,6 +33,7 @@ import type {
 } from '@brauweg/game-api';
 import { snapshotCodec } from '@brauweg/game-api';
 
+import { waehleBahnen } from './bahnen.js';
 import {
   type GolfAusgang,
   type GolfAusstieg,
@@ -56,12 +57,26 @@ import {
   type Zug,
 } from './regeln.js';
 
+/*
+ * Bleibt 1, obwohl `GolfPartie` am 22.09.2026 das Feld `bahnen` bekam: Ein
+ * Schnappschuss von davor laedt weiter und bekommt die Folge in `deserialize`
+ * nachgezogen — aus derselben Saat mit derselben Rechnung, die seine Geraete
+ * damals selbst angestellt haben. Eine hoehere Nummer hiesse dagegen, dass
+ * jeder beim Deploy laufende Tisch beim Laden wirft.
+ */
 const SNAPSHOT_VERSION = 1;
+const codec = snapshotCodec<GolfPartie>(SNAPSHOT_VERSION);
 
 export interface GolfView {
   readonly saat: number;
   readonly sitze: number;
   readonly loecher: number;
+  /**
+   * Die Bahnen der Partie als Kennungen, eine je Loch in Spielfolge (seit
+   * dem 22.09.2026). Der Client loest sie gegen seine Geometrien auf; kennt
+   * er eine nicht, ist er zu alt und meldet das.
+   */
+  readonly bahnen: readonly string[];
   readonly botSitze: readonly number[];
   /**
    * Schlaege beider... aller Sitze, aeltester zuerst. Wie bei Feldherr nicht
@@ -112,8 +127,13 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    * im Wegfeld, Schlag ins Portal mit Tempo). Die Bots rechnen auf jedem
    * Gerät selbst — ein alter Bot und ein neuer spielen aus derselben Saat
    * verschiedene Schläge, und die Partie läuft auseinander.
+   *
+   * 4 seit dem 22.09.2026: Die Sicht trägt die Bahnfolge als Kennungen
+   * (`bahnen`). Ein Client von davor zöge sie weiter selbst aus seinem
+   * Katalog — heute noch dieselbe Folge, aber mit der ersten neuen Bahn
+   * nicht mehr, und genau diese Stille soll die Grenze verhindern.
    */
-  protocolVersion: 3,
+  protocolVersion: 4,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -185,6 +205,7 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
       saat: partie.saat,
       sitze: partie.sitze,
       loecher: partie.loecher,
+      bahnen: partie.bahnen,
       botSitze: partie.botSitze,
       zuege: ab === 0 ? partie.zuege : partie.zuege.slice(ab),
       abIndex: ab,
@@ -211,7 +232,14 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    */
   botAction: (): GolfAktion => ({ art: 'nichts' }),
 
-  ...snapshotCodec<GolfPartie>(SNAPSHOT_VERSION),
+  serialize: codec.serialize,
+
+  /** Füllt `bahnen` bei Schnappschüssen von vor dem 22.09.2026 nach (siehe SNAPSHOT_VERSION). */
+  deserialize(raw: unknown): GolfPartie {
+    const partie = codec.deserialize(raw) as GolfPartie & { bahnen?: readonly string[] };
+    if (Array.isArray(partie.bahnen)) return partie;
+    return { ...partie, bahnen: waehleBahnen(partie.saat, partie.loecher) };
+  },
 
   /**
    * 15 Punkte je gespieltem Loch, fuer jeden Sitz gleich — auch bei

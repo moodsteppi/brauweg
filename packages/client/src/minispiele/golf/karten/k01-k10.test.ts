@@ -12,7 +12,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { botLoestKarte, pruefeKarte } from '../karten-pruefen';
-import { KARTEN_K01_K10 } from './k01-k10';
+import { KARTEN, bahnenImBereich } from './index';
+
+/** Seit dem 22.09.2026 eine Datei je Bahn — der Bereich wird über die Nummer gebildet. */
+const KARTEN_K01_K10 = bahnenImBereich(1, 10);
 
 describe('KARTEN_K01_K10', () => {
   it('enthaelt genau zehn Karten mit den Kennungen k01..k10', () => {
@@ -57,7 +60,7 @@ describe('KARTEN_K01_K10', () => {
   for (const karte of KARTEN_K01_K10) {
     describe(karte.id, () => {
       it('besteht die Geometrie- und Erreichbarkeitspruefung', () => {
-        expect(pruefeKarte(karte, KARTEN_K01_K10)).toEqual([]);
+        expect(pruefeKarte(karte, KARTEN)).toEqual([]);
       });
 
       it('wird vom Bot "genie" innerhalb von Schlaglimit und Par+2 geloest', () => {

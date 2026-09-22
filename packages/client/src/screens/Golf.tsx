@@ -11,6 +11,7 @@ import {
 } from '../minispiele/golf/farben';
 import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
+import { loeseBahnen } from '../minispiele/golf/karte';
 import { KARTEN } from '../minispiele/golf/karten';
 import { Golfnetz } from '../minispiele/golf/netz';
 import { ParKopf, ParName, ParRuf, ZuPar } from '../minispiele/golf/ParAnzeige';
@@ -556,6 +557,31 @@ export function Golf({
     );
   }
 
+  /*
+   * Seit dem 22.09.2026 nennt der Server die Bahnen per Kennung. Kennt dieser
+   * Stand eine davon nicht, ist er älter als der Server — ein Neuladen holt
+   * die neue Fassung. Hier und nicht erst im Kern, damit statt einer leeren
+   * Bühne ein Satz dasteht, der sagt, was zu tun ist.
+   */
+  const fehlendeBahnen = loeseBahnen(sicht.bahnen ?? [], KARTEN).unbekannt;
+  if (fehlendeBahnen.length > 0) {
+    return (
+      <main className="gf-seite gf-menue">
+        <button className="gf-zurueck" type="button" onClick={verlasseUndZurueck} aria-label="Zurück">
+          ←
+        </button>
+        <div className="gf-menue-mitte">
+          <h1 className="gf-titel">Neue Bahnen</h1>
+          <p className="gf-untertitel" data-golf-bahnen-fehlen="">
+            Diese Partie spielt {fehlendeBahnen.length === 1 ? 'eine Bahn' : `${fehlendeBahnen.length} Bahnen`},
+            die diese Fassung noch nicht kennt. Bitte die Seite neu laden — der
+            Tisch bleibt bestehen.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <Partie
       netz={holeNetz()}
@@ -967,7 +993,7 @@ function Partie({
       if (gs.takt < ziel) gs.rechneBis(ziel);
 
       const z = gs.zustand();
-      const karte = KARTEN[z.aktuell.karte];
+      const karte = netz.karten[z.aktuell.karte];
       if (karte === undefined) return;
 
       if (z.fertig && !fertigRef.current) {
@@ -998,7 +1024,7 @@ function Partie({
       if (typeof document !== 'undefined' && document.hidden) return;
 
       const z = gs.zustand();
-      const karte = KARTEN[z.aktuell.karte];
+      const karte = netz.karten[z.aktuell.karte];
       if (karte === undefined) return;
 
       const jetzt = performance.now();
@@ -1105,7 +1131,7 @@ function Partie({
       return;
     }
     const z = gs.zustand();
-    vorschau(z, sitzRef.current, wunsch.rx, wunsch.ry, wunsch.kraft, KARTEN, bahnRef.current);
+    vorschau(z, sitzRef.current, wunsch.rx, wunsch.ry, wunsch.kraft, netz.karten, bahnRef.current);
     zielbildRef.current = {
       x: zs.ballX,
       y: zs.ballY,

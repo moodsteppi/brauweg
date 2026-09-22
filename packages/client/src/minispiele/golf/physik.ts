@@ -41,7 +41,6 @@ import {
   betrag,
   drehe,
   fnv1a,
-  ganzzahl,
   mulberry32,
   normiere,
   stromFuerSitz,
@@ -193,7 +192,7 @@ export interface Partiezustand {
   /** Je Sitz der Takt des Ausstiegs, sonst -1. */
   ausstiegTakt: number[];
   loecher: number;
-  /** Kartenindex je Loch, aus der Saat gezogen. */
+  /** Kartenindex je Loch in die Bahnliste der Partie (siehe `bahnfolge`). */
   reihenfolge: number[];
   aktuell: Lochstand;
   baelle: Ball[];
@@ -221,100 +220,33 @@ export interface Partieoptionen {
   loecher: number;
   botStufe?: Botstufe;
   /**
-   * Die Kartenliste der Partie — daraus zieht die Saat die Bahnen. Eine Zahl
-   * heißt „so viele Karten, Schwierigkeit unbekannt"; dann wird nur nach Index
-   * sortiert. Gebraucht wird die Zahl-Form, wenn ein Aufrufer die Reihenfolge
-   * berechnen will, ohne die Karten schon geladen zu haben.
+   * Die Bahnen DIESER Partie in Spielfolge (seit dem 22.09.2026 — vorher der
+   * ganze Katalog, aus dem die Saat zog). Eine Zahl heißt „so viele Karten,
+   * Geometrie noch nicht da"; gebraucht in Tests, die nur Ergebnisse rechnen.
    */
   karten?: readonly Karte[] | number;
 }
 
 /* --------------------------------------------------------------------------
- * Kartenwahl
+ * Bahnfolge
  * ----------------------------------------------------------------------- */
 
 /**
- * Sollstufe des `i`-ten Lochs bei `loecher` Löchern: eine Rampe von leicht
- * nach schwer. Zwei Löcher spielen Stufe 1 und 2, fünf Löcher alle fünf
- * Stufen, neun Löcher je zwei davon (und einmal die 5), fünfzehn je drei.
+ * Kartenindex je Loch: Loch `i` spielt `karten[i % anzahl]`.
  *
- * Warum eine Rampe und nicht nur „sortiert": Ein Zwei-Loch-Match zog vorher
- * zwei beliebige der 40 Bahnen — auch zwei Meisterbahnen. Der Einstieg soll
- * aber immer leicht sein, und die Spitze soll erst kommen, wenn das Match
- * lang genug ist, sie zu verdienen.
+ * Bis zum 22.09.2026 stand hier `waehleKarten`, das die Folge aus der Saat
+ * gegen den GANZEN Katalog dieses Geräts zog — mit Rampe und Mischung. Das
+ * macht seitdem das Modul einmal beim Start (`waehleBahnen` in
+ * packages/game-golf/src/bahnen.ts) und schickt die Kennungen in der Sicht;
+ * `Golfnetz` löst sie in Geometrie auf und reicht dem Kern genau die Bahnen
+ * der Partie in Spielfolge. Hier bleibt deshalb nur der Zeiger. Der Rest
+ * bei weniger Karten als Löchern ist nur für Testaufbauten mit einer Bahn da.
  */
-export function sollStufe(i: number, loecher: number): number {
-  const hoechste = loecher < 5 ? loecher : 5;
-  return 1 + Math.floor((i * hoechste) / loecher);
-}
-
-/**
- * Zieht `loecher` VERSCHIEDENE Bahnen aus der Saat: für jedes Loch eine Bahn
- * seiner Sollstufe (siehe `sollStufe`), aus einem gemischten Topf; ist die
- * Stufe erschöpft, die nächstliegende (lieber leichter als schwerer). Die
- * Reihenfolge ist damit aufsteigend nach Schwierigkeit.
- *
- * Eigener Zufallsstrom (Saat verodert mit einer Konstanten): Die Bahnwahl darf
- * den Strom der Partie nicht verschieben, sonst hinge der Versatz am Abschlag
- * an der Anzahl der Löcher.
- */
-export function waehleKarten(
-  saat: number,
-  loecher: number,
-  karten: readonly Karte[] | number,
-): number[] {
-  const anzahl = typeof karten === 'number' ? karten : karten.length;
-  const liste = typeof karten === 'number' ? null : karten;
-  const topf: number[] = [];
-  for (let i = 0; i < anzahl; i += 1) topf.push(i);
-  let z = mulberry32(saat ^ 0x5f356495);
-  for (let i = topf.length - 1; i > 0; i -= 1) {
-    const g = ganzzahl(z, 0, i);
-    z = g.zustand;
-    const merk = topf[i];
-    topf[i] = topf[g.wert];
-    topf[g.wert] = merk;
-  }
-  const gewaehlt: number[] = [];
-  if (liste === null) {
-    // Ohne Kartenliste (Tests mit nackten Zahlen) gibt es keine Stufen: Dann
-    // einfach die ersten aus dem gemischten Topf. Mehr Löcher als Karten
-    // kann nur ein Testaufbau erzeugen; dann wird von vorn genommen.
-    for (let i = 0; i < loecher && topf.length > 0; i += 1) gewaehlt.push(topf[i % topf.length]);
-    return gewaehlt;
-  }
-  const benutzt = new Set<number>();
-  for (let i = 0; i < loecher; i += 1) {
-    const soll = sollStufe(i, loecher);
-    let beste = -1;
-    let besterAbstand = Number.POSITIVE_INFINITY;
-    for (const index of topf) {
-      if (benutzt.has(index)) continue;
-      const stufe = liste[index].schwierigkeit;
-      // Leichter ist bei gleichem Abstand besser als schwerer: +0,5 Strafe nach oben.
-      const abstand = stufe <= soll ? soll - stufe : stufe - soll + 0.5;
-      if (abstand < besterAbstand) {
-        besterAbstand = abstand;
-        beste = index;
-        if (abstand === 0) break;
-      }
-    }
-    if (beste === -1) {
-      // Mehr Löcher als Karten — nur im Testaufbau; von vorn nehmen.
-      if (topf.length === 0) break;
-      beste = topf[i % topf.length];
-    }
-    benutzt.add(beste);
-    gewaehlt.push(beste);
-  }
-  gewaehlt.sort((a, b) => {
-    const sa = liste[a].schwierigkeit;
-    const sb = liste[b].schwierigkeit;
-    // Gleichstand über den Index brechen: Ein unvollständiger Vergleich macht
-    // `sort` von der Ausgangsreihenfolge abhängig und damit unzuverlässig.
-    return sa !== sb ? sa - sb : a - b;
-  });
-  return gewaehlt;
+export function bahnfolge(loecher: number, anzahl: number): number[] {
+  const folge: number[] = [];
+  if (anzahl <= 0) return folge;
+  for (let i = 0; i < loecher; i += 1) folge.push(i % anzahl);
+  return folge;
 }
 
 /* --------------------------------------------------------------------------
@@ -332,7 +264,10 @@ export function neuePartie(opts: Partieoptionen): Partiezustand {
     ausgestiegen: [],
     ausstiegTakt: new Array<number>(sitze).fill(-1),
     loecher: opts.loecher,
-    reihenfolge: waehleKarten(opts.saat, opts.loecher, opts.karten ?? opts.loecher),
+    reihenfolge: bahnfolge(
+      opts.loecher,
+      typeof opts.karten === "number" ? opts.karten : (opts.karten?.length ?? opts.loecher),
+    ),
     aktuell: { loch: 0, karte: 0, startTakt: 0, endeTakt: -1, pauseBis: -1 },
     baelle: [],
     ergebnis: [],

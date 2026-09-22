@@ -9,8 +9,8 @@
  * Golf ist wie Feldherr Echtzeit im Gleichschritt: Ueber die Leitung gehen
  * nur Schlaege (`GolfZug`), niemals ein Spielzustand. Die eigentliche Bahn,
  * die Baelle und die Loecher kennt diese Sicht nicht — das rechnet der Client
- * selbst aus Saatkorn und Zugliste (siehe SPEZIFIKATION-GOLF.md Abschnitt 2
- * und 3). `botStufe` ist die vom Tisch gewuenschte Bot-Spielstaerke, siehe
+ * selbst aus Saatkorn, Bahnkennungen und Zugliste (siehe SPEZIFIKATION-GOLF.md
+ * Abschnitt 2 und 3). `botStufe` ist die vom Tisch gewuenschte Bot-Spielstaerke, siehe
  * `BotLevel` in protocol.ts.
  */
 
@@ -54,6 +54,12 @@ export interface GolfSicht {
   saat: number;
   sitze: number;
   loecher: number;
+  /**
+   * Die Bahnen der Partie als Kennungen, eine je Loch in Spielfolge — seit
+   * dem 22.09.2026 vom Modul gezogen statt auf jedem Geraet. Aufgeloest wird
+   * gegen `karten/` (`loeseBahnen`); fehlt eine, ist dieser Stand zu alt.
+   */
+  bahnen: string[];
   botSitze: number[];
   /** Schlaege aller Sitze, aeltester zuerst — ab `abIndex` nur der Zuwachs. */
   zuege: (GolfZug & { sitz: number })[];

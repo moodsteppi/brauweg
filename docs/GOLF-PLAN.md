@@ -32,7 +32,7 @@ Laufnummer) neu anwenden, bis zur Gegenwart neu rechnen. Der Zustand sind acht
 Bälle, ein Schnappschuss wiegt 2,3 kB, ein Rücksprung um 200 Takte kostet
 2 ms (gemessen, `golf-bench` im Sitzungs-Scratchpad). Der Motor dafür ist
 `packages/client/src/minispiele/golf/gleichschritt.ts`; die Physik liegt in
-`physik.ts`, die Bots in `bot.ts`, die Bahnen unter `karten/`.
+`physik.ts`, die Bots in `bot.ts`, die Bahnen unter `karten/` (eine Datei je Bahn, die Folge einer Partie zieht das Modul — siehe unten).
 
 **Determinismus in JavaScript** ist die Bedingung für alles: In der Simulation
 gibt es nur `+ - * /` und `Math.sqrt` (IEEE-genau). `Math.sin`, `cos`, `atan2`,
@@ -129,14 +129,34 @@ Aufbau zufällig aus allen sechzehn (`zieheFarben`).
 - **`zustand()` und `vorher()` des Gleichschritts sind lebende Objekte.** Der
   Zeichner interpoliert zwischen beiden; wer eines verändert, verändert die
   Simulation und damit das Ergebnis aller anderen Geräte.
-- **Der Kartenkatalog ist geordnet.** `waehleKarten` zieht Indizes aus der
-  Saat; wer eine Bahn in der Mitte einfügt oder umsortiert, lässt laufende
-  Partien auf verschiedenen Geräten verschiedene Bahnen spielen. Neue Bahnen
-  hinten anhängen, und die Auswahl ändert sich für neue Partien trotzdem.
+- **Die Bahnfolge zieht das Modul, nicht das Gerät (seit 22.09.2026).** Bis
+  dahin zog `waehleKarten` im Client Indizes aus der Saat gegen den eigenen
+  Katalog — jede neue Bahn musste hinten angehängt werden, und jede Änderung
+  am Katalog war ein Protokollbruch. Jetzt zieht `waehleBahnen`
+  (`packages/game-golf/src/bahnen.ts`) die Folge EINMAL in `erzeugePartie`,
+  mit derselben Rampe und derselben Rechnung wie vorher (über 6.006
+  Saat/Lochzahl-Paare verglichen: gleich), und die Sicht liefert sie als
+  Kennungen (`bahnen`). Der Client löst sie gegen `karten/` auf; kennt er
+  eine nicht, ist er zu alt und zeigt „Neue Bahnen — bitte neu laden", statt
+  eine andere Partie zu rechnen. Ein Schnappschuss ohne `bahnen` (von davor)
+  bekommt die Folge beim Laden nachgezogen.
+- **Eine neue Bahn ist eine Datei und eine Zeile, kein Protokollbruch:**
+  eine Datei `karten/kNN-name.ts` mit `export const bahn` (eingesammelt per
+  `import.meta.glob`, kein Index zu pflegen) und eine Zeile Kennung +
+  Schwierigkeit in `BAHNEN_KATALOG` des Moduls, an ihrer Nummer einsortiert.
+  `vertrag/golf-bahnen.test.ts` wird rot, wenn eine Hälfte fehlt. Zwei Pull
+  Requests mit je einer neuen Bahn berühren im Client verschiedene Dateien und
+  im Modul verschiedene Zeilen. Neue Partien können die neue Bahn ziehen, die
+  Folge anderer Saaten verschiebt sich dadurch — laufende Partien nicht, ihre
+  Folge steht im Zustand. Erst wenn sich die Bahnwahl selbst (Rampe,
+  Mischung) ändern soll, ist das eine Frage für alte Schnappschüsse.
 - **Jede Physikänderung ist ein Protokollbruch** für laufende Partien: Zwei
   Geräte mit verschiedener Physik rechnen aus derselben Zugliste verschiedene
-  Ergebnisse. Deshalb `GOLF_MODULE_VERSION` erhöhen, wenn sich `physik.ts`,
-  `bot.ts` oder eine Bahn ändert, die in laufenden Partien liegen könnte.
+  Ergebnisse. Deshalb `GOLF_MODULE_VERSION` erhöhen, wenn sich `physik.ts`
+  oder `bot.ts` ändert — oder die GEOMETRIE einer vorhandenen Bahn: Zwei
+  Stände mit derselben Kennung und verschiedener Wand rechnen verschiedene
+  Partien. Eine Bahn umbauen heißt deshalb besser: neue Kennung, alte Datei
+  weg.
 - **Bahnen prüfen, nicht anschauen:** `pruefeKarte` (Form, Abstände,
   Erreichbarkeit per Wegfeld) und `botLoestKarte` (Genie-Bot schafft sie in
   ≤ Schlaglimit) laufen als Vitest über alle 40. Eine Bahn, die der Bot nicht

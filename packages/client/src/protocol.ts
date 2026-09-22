@@ -83,8 +83,13 @@ export const TAFELRUNDE_MODULE_VERSION = 1;
  * 3 seit dem 21.09.2026 (Bots: Sand und Eis, Portalpaare, Tempo ins Portal).
  * Die Bots laufen auf jedem Geraet — mit verschiedenem Bot laufen zwei Geraete
  * aus derselben Zugliste auseinander, genau wie bei der Physik.
+ *
+ * 4 seit dem 22.09.2026: Die Sicht traegt die Bahnfolge als Kennungen
+ * (`bahnen`), das Modul zieht sie einmal beim Start. Ein Client von davor
+ * zoege sie weiter selbst aus seinem Katalog und liefe mit der ersten neuen
+ * Bahn still auseinander.
  */
-export const GOLF_MODULE_VERSION = 3;
+export const GOLF_MODULE_VERSION = 4;
 
 /**
  * 1 seit dem 18. September 2026 — die erste Fassung. Die Partykiste ist das
