@@ -325,7 +325,7 @@ function Kuechenbild({ lies, takte, sende, eigeneSitze, eigenerSitz, onEnde }: K
               </button>
               <button
                 type="button"
-                className={stil.knopf}
+                className={`${stil.knopf} ${stil.hoch}`}
                 onPointerDown={() => setzeKnopf(sitz, 'werken', true)}
                 onPointerUp={() => setzeKnopf(sitz, 'werken', false)}
                 onPointerCancel={() => setzeKnopf(sitz, 'werken', false)}
@@ -650,7 +650,7 @@ export function BroCooked({
 
   const lokal = modus.art === 'lokal';
   return (
-    <div className={stil.seite}>
+    <div className={stil.spiel}>
       <button type="button" className={`ghost ${stil.zurueck}`} onClick={verlassen}>
         Küche verlassen
       </button>
