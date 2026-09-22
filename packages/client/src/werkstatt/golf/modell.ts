@@ -52,22 +52,14 @@ export const ZONENARTEN: readonly Zonenart[] = [
 ];
 
 /**
- * Freie Angaben zur Bahn, die heute noch NICHT am Typ `Karte` stehen.
+ * Die Bahn der Werkstatt ist die Bahn des Spiels.
  *
- * `feature/golf-bahnen-als-daten` (parallel, am 22.09.2026 noch nicht auf
- * staging) ergänzt genau diese vier Felder optional an `Karte`. Die Werkstatt
- * führt sie schon mit, damit eine Bahn, die heute gebaut wird, sie nicht
- * nachgetragen bekommen muss. Sobald der Zweig gemerged ist, ist dieser Typ
- * eine Teilmenge von `Karte` und die Schnittmenge unten ist schlicht `Karte`.
+ * Bis zum Rebase auf #206 (22.09.2026) stand hier eine Schnittmenge mit den
+ * freien Angaben (Beschreibung, Thema, Autor, Tags), weil `Karte` sie noch
+ * nicht kannte. Seit #206 hat `Karte` sie selbst; der Name bleibt, damit man
+ * in der Werkstatt sieht, wo eine Bahn in Arbeit gemeint ist.
  */
-export interface Bahnangaben {
-  beschreibung?: string;
-  thema?: string;
-  autor?: string;
-  tags?: string[];
-}
-
-export type Werkstattbahn = Karte & Bahnangaben;
+export type Werkstattbahn = Karte;
 
 /** Was angewählt sein kann. Indizes zeigen in die Listen der Bahn. */
 export type Auswahl =

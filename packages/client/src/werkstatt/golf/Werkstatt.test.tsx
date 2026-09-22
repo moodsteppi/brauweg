@@ -46,10 +46,34 @@ describe('Werkstatt', () => {
     const quelltext = document.querySelector<HTMLTextAreaElement>('.bw-quelltext');
     expect(quelltext?.value).toContain("id: 'k37-portalkarussell'");
     expect(quelltext?.value).not.toContain('Beschreibung fehlt');
+    // Vorgabe seit #206: eine Datei je Bahn; die Kennung steht schon im Modulkatalog.
+    expect(quelltext?.value).toContain('export const bahn: Karte = {');
+    expect(screen.getByText(/keine neue Zeile/)).toBeInTheDocument();
     // Katalogbahn: der Doppeltest der Kennung zählt sie nicht gegen sich selbst.
     expect(screen.getByText('pruefeKarte: keine Befunde')).toBeInTheDocument();
     const abgelegt = JSON.parse(localStorage.getItem(SPEICHER_SCHLUESSEL) ?? '{}') as { herkunft?: string };
     expect(abgelegt.herkunft).toBe('k37-portalkarussell');
+  });
+
+  it('warnt, wenn eine vorhandene Bahn umgebaut wird, und vergibt auf Wunsch eine neue Kennung', () => {
+    render(<Werkstatt />);
+    fireEvent.change(screen.getByLabelText('Katalogbahn'), { target: { value: 'k02-der-sandkasten' } });
+    fireEvent.click(screen.getByText('Aus dem Katalog laden'));
+    const breite = screen.getByLabelText('Breite');
+    fireEvent.focus(breite);
+    fireEvent.change(breite, { target: { value: '15' } });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.getByRole('alert').textContent).toMatch(/k02-der-sandkasten geändert \(breite\)/);
+    expect(screen.getByText('⚠ bricht laufende Partien')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Als neue Bahn mit neuer Kennung'));
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByDisplayValue('k41-der-sandkasten')).toBeInTheDocument();
+    expect(screen.getByText(/{ id: 'k41-der-sandkasten', schwierigkeit: 1 },/)).toBeInTheDocument();
   });
 
   it('zeigt Befunde, wenn eine Angabe aus dem Rahmen fällt', () => {

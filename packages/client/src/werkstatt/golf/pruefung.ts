@@ -33,6 +33,66 @@ export interface Pruefergebnis {
    * Werte, die die Physik zwar annimmt, aber anders meint.
    */
   hinweise: string[];
+  /**
+   * Gesetzt, wenn die Bahn die Kennung einer VORHANDENEN Katalogbahn trägt,
+   * aber anders rollt als sie — dann bricht sie laufende Partien (siehe
+   * `geometrieBruch`). Eine solche Bahn ist nie katalogreif.
+   */
+  bruch: Geometriebruch | null;
+}
+
+export interface Geometriebruch {
+  /** Kennung der Katalogbahn, deren Geometrie sich geändert hat. */
+  id: string;
+  /** Welche Felder anders sind — für die Meldung. */
+  felder: string[];
+}
+
+/**
+ * Die Felder, die die Simulation liest (physik.ts, bot.ts, karte.ts). Von den
+ * Abschlägen nur der erste: Alle Bälle starten dort (`starteLoch`), die
+ * weiteren sind Doku. `par`, `name`, `dekor` und die freien Angaben
+ * ändern das Bild, nicht den Lauf einer Partie.
+ */
+const GEOMETRIE = ['breite', 'hoehe', 'schlagLimit', 'zeitLimitS', 'loch', 'waende', 'zonen'] as const;
+
+/** Tiefer Vergleich ohne Rücksicht auf die Schlüsselfolge — die Werkstatt ordnet beim Verschieben um. */
+function gleich(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const ka = Object.keys(a).filter((k) => (a as Record<string, unknown>)[k] !== undefined);
+  const kb = Object.keys(b).filter((k) => (b as Record<string, unknown>)[k] !== undefined);
+  if (ka.length !== kb.length) return false;
+  return ka.every((k) => gleich((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
+}
+
+/**
+ * Hat die Bahn die Kennung einer Katalogbahn, rollt aber anders?
+ *
+ * Seit #206 (22.09.2026) steht in jeder laufenden Partie die Bahnfolge als
+ * KENNUNGEN im Zustand, und jedes Gerät löst sie gegen seinen eigenen Katalog
+ * auf. Zwei Stände mit derselben Kennung und verschiedener Wand rechnen aus
+ * derselben Schlagliste verschiedene Partien — das Ergebnis wird strittig,
+ * ohne dass irgendwo ein Fehler steht (docs/GOLF-PLAN.md, „Jede
+ * Physikänderung ist ein Protokollbruch"). Deshalb gilt: Eine vorhandene Bahn
+ * wird nicht umgebaut, sondern als neue Bahn mit neuer Kennung angelegt und
+ * die alte Datei entfernt.
+ */
+export function geometrieBruch(bahn: Karte, katalog: readonly Karte[]): Geometriebruch | null {
+  const alt = katalog.find((k) => k.id === bahn.id);
+  if (alt === undefined) return null;
+  const felder: string[] = GEOMETRIE.filter((f) => !gleich(bahn[f], alt[f]));
+  if (!gleich(bahn.abschlaege[0], alt.abschlaege[0])) felder.push('Abschlag 0');
+  return felder.length === 0 ? null : { id: bahn.id, felder };
+}
+
+/** Die Warnung, wie sie im Panel steht. */
+export function bruchZeile(b: Geometriebruch): string {
+  return (
+    `Geometrie der vorhandenen Bahn ${b.id} geändert (${b.felder.join(', ')}): Das bricht laufende Partien, ` +
+    'weil jedes Gerät die Kennung gegen seinen eigenen Katalog auflöst. Neue Kennung vergeben statt die Bahn zu ändern.'
+  );
 }
 
 /**
@@ -76,7 +136,16 @@ export function pruefe(bahn: Karte, katalog: readonly Karte[], herkunft: string 
       );
     }
   }
-  return { befunde, bot, hinweise };
+  const bruch = geometrieBruch(bahn, katalog);
+  // Schwierigkeit steht doppelt, hier und in `BAHNEN_KATALOG` des Moduls; der
+  // Vertrag `vertrag/golf-bahnen.test.ts` verlangt, dass beide gleich sind.
+  const alt = katalog.find((k) => k.id === bahn.id);
+  if (alt !== undefined && alt.schwierigkeit !== bahn.schwierigkeit) {
+    hinweise.push(
+      `Schwierigkeit ${alt.schwierigkeit} → ${bahn.schwierigkeit}: auch in BAHNEN_KATALOG (packages/game-golf/src/bahnen.ts) ändern`,
+    );
+  }
+  return { befunde, bot, hinweise, bruch };
 }
 
 /** Die Zeile für den Bot, so wie sie im Panel steht. */
@@ -90,6 +159,7 @@ export function botZeile(bahn: Karte, bot: Botbefund | null): string {
 /** Besteht die Bahn alles, was der Katalog verlangt? */
 export function katalogreif(bahn: Karte, e: Pruefergebnis): boolean {
   return (
+    e.bruch === null &&
     e.befunde.length === 0 &&
     e.bot !== null &&
     e.bot.geloest &&

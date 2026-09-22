@@ -83,7 +83,7 @@ import {
   wechsleForm,
   zieheGriff,
 } from './modell';
-import { type Pruefergebnis, botZeile, katalogreif, pruefe } from './pruefung';
+import { type Pruefergebnis, botZeile, bruchZeile, katalogreif, pruefe } from './pruefung';
 
 /* --------------------------------------------------------------------------
  * Konstanten
@@ -360,7 +360,7 @@ export function Werkstatt(): React.JSX.Element {
   const [auswahl, setAuswahl] = useState<Auswahl | null>(null);
   const [modus, setModus] = useState<'bauen' | 'probe'>('bauen');
   const [pruefung, setPruefung] = useState<Pruefergebnis | null>(null);
-  const [form, setForm] = useState<Quelltextform>('eintrag');
+  const [form, setForm] = useState<Quelltextform>('datei');
   const [einfuegen, setEinfuegen] = useState('');
   const [meldung, setMeldung] = useState<string | null>(null);
   const [katalogWahl, setKatalogWahl] = useState<string>(KARTEN[0]?.id ?? '');
@@ -475,6 +475,7 @@ export function Werkstatt(): React.JSX.Element {
           befunde: [{ text: `Prüfung gescheitert: ${e instanceof Error ? e.message : String(e)}`, ziele: [] }],
           bot: null,
           hinweise: [],
+          bruch: null,
         });
       }
     }, PRUEF_VERZUG_MS);
@@ -1024,7 +1025,13 @@ export function Werkstatt(): React.JSX.Element {
           {herkunft !== null ? <em> (aus dem Katalog: {herkunft})</em> : null}
         </span>
         <span className="bw-kopf-status" data-gut={reif ? '' : undefined}>
-          {pruefung === null ? 'prüft …' : reif ? '✓ katalogreif' : `${pruefung.befunde.length} Befund(e)`}
+          {pruefung === null
+            ? 'prüft …'
+            : reif
+              ? '✓ katalogreif'
+              : pruefung.bruch !== null
+                ? '⚠ bricht laufende Partien'
+                : `${pruefung.befunde.length} Befund(e)`}
         </span>
         <div className="bw-kopf-knoepfe">
           <button type="button" onClick={rueckgaengig} title="Strg+Z">
@@ -1136,6 +1143,22 @@ export function Werkstatt(): React.JSX.Element {
             <p className="bw-leise">prüft …</p>
           ) : (
             <>
+              {pruefung.bruch !== null ? (
+                <div className="bw-bruch" role="alert">
+                  <p>{bruchZeile(pruefung.bruch)}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = kennungAus(bahnRef.current.name, naechsteNummer([...KARTEN, bahnRef.current]));
+                      setzeBahn({ ...bahnRef.current, id });
+                      setHerkunft(null);
+                      setMeldung(`Neue Kennung ${id}. Die alte Datei im selben Pull Request entfernen (und ihre Zeile in BAHNEN_KATALOG).`);
+                    }}
+                  >
+                    Als neue Bahn mit neuer Kennung
+                  </button>
+                </div>
+              ) : null}
               {pruefung.befunde.length === 0 ? (
                 <p className="bw-gut">pruefeKarte: keine Befunde</p>
               ) : (
@@ -1240,8 +1263,8 @@ export function Werkstatt(): React.JSX.Element {
           </div>
           <h3>Angaben</h3>
           <p className="bw-leise">
-            Für den Katalog von <code>feature/golf-bahnen-als-daten</code>. Im Format „Eintrag" wird die Beschreibung
-            zum Kommentar über der Bahn, der Rest fällt weg.
+            Stehen als Felder an der Bahn (seit #206). Die Beschreibung steht zusätzlich als Kommentar über ihr — so
+            wie bei allen 40 Katalogbahnen.
           </p>
           <div className="bw-gitter">
             <Textfeld
@@ -1274,23 +1297,28 @@ export function Werkstatt(): React.JSX.Element {
             <label className="bw-feld">
               <span>Form</span>
               <select value={form} onChange={(e) => setForm(e.target.value as Quelltextform)}>
-                <option value="eintrag">Katalogeintrag (heute: karten/kNN-kMM.ts)</option>
-                <option value="datei">Eigene Datei (bahnen-als-daten)</option>
+                <option value="datei">Eine Datei je Bahn (karten/kennung.ts)</option>
+                <option value="eintrag">Nur das Objekt, ohne Angaben (alte Sammeldateien)</option>
               </select>
             </label>
           </div>
           {form === 'datei' ? (
             <p className="bw-leise">
-              Datei <code>{dateiname(bahn)}</code>, dazu in <code>packages/game-golf/src/bahnen.ts</code> an ihrer Nummer:
-              <br />
-              <code>{katalogZeile(bahn).trim()}</code>
-              <br />
-              Das Format gibt es erst, wenn <code>feature/golf-bahnen-als-daten</code> auf staging ist.
+              Als Datei <code>{dateiname(bahn)}</code> anlegen (wird per <code>import.meta.glob</code> eingesammelt).
+              {KARTEN.some((k) => k.id === bahn.id) ? (
+                <> Die Kennung steht schon in <code>BAHNEN_KATALOG</code> — keine neue Zeile.</>
+              ) : (
+                <>
+                  {' '}
+                  Dazu in <code>packages/game-golf/src/bahnen.ts</code>, an ihrer Nummer einsortiert:
+                  <br />
+                  <code>{katalogZeile(bahn).trim()}</code>
+                </>
+              )}
             </p>
           ) : (
             <p className="bw-leise">
-              Ans Ende der Liste in <code>karten/k31-k40.ts</code> (oder einer neuen Sammeldatei) — hinten anhängen,
-              nie mittendrin: Die Reihenfolge ist dort noch Teil des Determinismus.
+              Nur zum Vergleichen mit alten Kopien — der Katalog nimmt seit #206 eine Datei je Bahn.
             </p>
           )}
           <textarea className="bw-quelltext" readOnly value={quelltext} rows={10} spellCheck={false} />
@@ -1345,7 +1373,7 @@ export function Werkstatt(): React.JSX.Element {
             className="bw-quelltext"
             rows={5}
             value={einfuegen}
-            placeholder="Quelltext (Katalogeintrag oder Datei) oder JSON einfügen"
+            placeholder="Quelltext (Katalogdatei oder Objekt) oder JSON einfügen"
             spellCheck={false}
             onChange={(e) => setEinfuegen(e.target.value)}
           />

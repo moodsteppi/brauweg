@@ -432,3 +432,20 @@ code {
     display: none;
   }
 }
+
+/* Die Warnung vor dem Geometriebruch (seit 22.09.2026, nach #206) steht über
+   allen Befunden: Sie ist der eine Fehler, den weder pruefeKarte noch der Bot
+   finden — die Bahn ist ja spielbar, nur nicht dieselbe wie auf den anderen
+   Geräten. */
+.bw-bruch {
+  padding: 8px 10px;
+  margin: 0 0 8px;
+  border-left: 3px solid var(--gold);
+  border-radius: 0 6px 6px 0;
+  background: rgba(226, 182, 79, 0.14);
+  color: #f3dc9f;
+}
+
+.bw-bruch p {
+  margin: 0 0 6px;
+}

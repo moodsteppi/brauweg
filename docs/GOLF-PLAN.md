@@ -181,11 +181,15 @@ dann <http://localhost:5173/bahnwerkstatt.html>. Quelle unter
   Stelle ändert, prüft die alten Wände. Die Werkstatt leert beide Speicher vor
   jeder Prüfung (`vergissSegmente`, `vergissWegfelder`), sonst wüchsen sie mit
   jeder Mausbewegung.
-- **Ausgabe ist Quelltext für den Katalog** (und JSON zum Weitergeben). Heute
-  als Eintrag für die Sammeldateien — hinten anhängen, die Reihenfolge ist dort
-  noch Teil des Determinismus —, die Beschreibung wird zum Kommentar darüber.
-  Für `feature/golf-bahnen-als-daten` gibt es schon die Form „eine Datei je
-  Bahn" samt Zeile für den Modulkatalog und den freien Angaben
-  (`beschreibung`, `thema`, `autor`, `tags`).
+- **Ausgabe ist eine Datei je Bahn** (`karten/<kennung>.ts`, `export const
+  bahn`, mit `beschreibung`/`thema`/`autor`/`tags`), dazu — für eine neue
+  Kennung — die Zeile für `BAHNEN_KATALOG` im Modul. JSON zum Weitergeben gibt
+  es daneben, das nackte Objekt der alten Sammeldateien nur noch zum
+  Vergleichen.
+- **Eine vorhandene Bahn wird nicht umgebaut.** Trägt die Bahn die Kennung
+  einer Katalogbahn, rollt aber anders (Maße, Limits, Loch, Wände, Zonen,
+  Abschlag 0), warnt die Werkstatt, dass das laufende Partien bricht, und ist
+  nicht „katalogreif". Der Knopf daneben vergibt eine neue Kennung; die alte
+  Datei und ihre Katalogzeile gehören im selben Pull Request entfernt.
 - **Nicht im Betriebspaket.** `vite build` baut nur `index.html`; die
   Begründung steht in `packages/client/bahnwerkstatt.html`.

@@ -8,21 +8,23 @@
  * dieselbe Einrückung), damit der Diff nur die Bahn zeigt und nicht die
  * Handschrift des Werkzeugs.
  *
- * Zwei Formen, weil gerade zwei Kataloge nebeneinander leben:
+ * Zwei Formen:
  *
- *   - `eintrag`: ein Objekt für die Sammeldateien `karten/kNN-kMM.ts`, wie sie
- *     am 22.09.2026 auf staging liegen. Die freien Angaben (Beschreibung,
- *     Thema, Autor, Tags) kennt der Typ `Karte` dort noch nicht; die
- *     Beschreibung wird deshalb zum Kommentar über dem Eintrag — genau dort
- *     steht sie bei allen 40 Bahnen —, der Rest fällt weg.
- *   - `datei`: eine eigene Datei je Bahn mit `export const bahn`, im Format
- *     von `feature/golf-bahnen-als-daten` (parallel, noch nicht gemerged). Dort
- *     stehen die Angaben als Felder, und dazu gehört eine Zeile im
- *     Modulkatalog, die gleich mit ausgegeben wird.
+ *   - `datei` (Vorgabe): eine eigene Datei je Bahn mit `export const bahn`,
+ *     so, wie der Katalog seit #206 (22.09.2026) gebaut ist — `karten/` sammelt
+ *     sie per `import.meta.glob` ein. Die freien Angaben (Beschreibung, Thema,
+ *     Autor, Tags) stehen als Felder darin, die Beschreibung zusätzlich als
+ *     Kommentar darüber, wo sie bei allen 40 Bahnen steht. Dazu gehört eine
+ *     Zeile in `BAHNEN_KATALOG` des Moduls, die gleich mit ausgegeben wird —
+ *     ohne sie zieht das Modul die Bahn nie, und der Vertrag
+ *     `vertrag/golf-bahnen.test.ts` wird rot.
+ *   - `eintrag`: nur Kommentar und Objekt, ohne Angaben — die Form der
+ *     Sammeldateien `karten/kNN-kMM.ts` von vor #206. Sie bleibt, weil noch
+ *     Kopien davon in Tickets und Chats liegen und man sie so vergleichen kann.
  *
  * Eingelesen wird beides (und JSON) mit demselben kleinen Leser — damit sich
- * auch ein Eintrag aus dem Katalog von Hand hereinkopieren lässt, mit
- * Kommentaren, einfachen Anführungszeichen und Komma am Ende.
+ * auch eine Katalogdatei von Hand hereinkopieren lässt, mit Kommentaren,
+ * einfachen Anführungszeichen und Komma am Ende.
  */
 
 import type { Karte, Wand, Zone } from '../../minispiele/golf/karte';
@@ -161,8 +163,9 @@ const OHNE_BESCHREIBUNG =
 /**
  * Die Bahn als Quelltext zum Einfügen.
  *
- * `eintrag` endet mit `},` und ist um zwei Stellen eingerückt — so, wie die
- * Einträge in `KARTEN_K31_K40` stehen; `datei` ist eine vollständige Datei.
+ * `datei` ist eine vollständige Datei für `karten/<kennung>.ts`; `eintrag`
+ * endet mit `},` und ist um zwei Stellen eingerückt, wie die Einträge der
+ * Sammeldateien von vor #206 standen.
  */
 export function alsQuelltext(bahn: Werkstattbahn, form: Quelltextform): string {
   const text = bahn.beschreibung !== undefined && bahn.beschreibung.trim() !== '' ? bahn.beschreibung : OHNE_BESCHREIBUNG;
@@ -178,7 +181,7 @@ export function alsQuelltext(bahn: Werkstattbahn, form: Quelltextform): string {
   ].join('\n');
 }
 
-/** Die Zeile für `BAHNEN_KATALOG` im Modul (nur Format `datei`). */
+/** Die Zeile für `BAHNEN_KATALOG` in `packages/game-golf/src/bahnen.ts`, an ihrer Nummer einsortiert. */
 export function katalogZeile(bahn: Karte): string {
   return `  { id: ${zeichenkette(bahn.id)}, schwierigkeit: ${bahn.schwierigkeit} },`;
 }
@@ -370,7 +373,11 @@ export function leseLiteral(text: string): { wert: unknown; kommentar: string | 
 
 /** Der Inhalt eines Doc-Kommentars ohne Sternchen, Absätze als Leerzeile. */
 function kommentarText(roh: string): string {
-  const zeilen = roh.split(/\r?\n/).map((z) => z.replace(/^\s*\*? ?/, '').trimEnd());
+  const zeilen = roh
+    .split(/\r?\n/)
+    .map((z) => z.replace(/^\s*\*? ?/, '').trimEnd())
+    // Zierlinien (`-----`) sind Rahmen, kein Text.
+    .map((z) => (/^[-=*\s]+$/.test(z) ? '' : z));
   const absaetze: string[] = [];
   let absatz: string[] = [];
   for (const z of zeilen) {
@@ -391,7 +398,7 @@ function kommentarText(roh: string): string {
  * Bahn lädt, um sie umzubauen, soll ihn mitbekommen, sonst schreibt die
  * Ausgabe den Platzhalter „Beschreibung fehlt" über eine Bahn, die längst
  * eine hat. Gesucht wird der Doc-Kommentar direkt vor dem Objekt mit dieser
- * Kennung — in den Sammeldateien wie im Format „eine Datei je Bahn".
+ * Kennung — in den Einzeldateien seit #206 wie in alten Sammeldateien.
  */
 export function beschreibungAusQuelle(quellen: readonly string[], id: string): string | null {
   const marke = new RegExp(`\\bid:\\s*['"]${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`);
@@ -406,9 +413,10 @@ export function beschreibungAusQuelle(quellen: readonly string[], id: string): s
     const davor = text.slice(0, kopf.index).trimEnd();
     let inhalt = '';
     if (davor.endsWith('*/')) {
-      const anfang = davor.lastIndexOf('/**');
+      // `/**` wie in k01–k10, `/*` mit Zierlinien wie in k11–k30.
+      const anfang = davor.lastIndexOf('/*');
       if (anfang < 0) return null;
-      inhalt = kommentarText(davor.slice(anfang + 3, davor.length - 2));
+      inhalt = kommentarText(davor.slice(anfang + 2, davor.length - 2).replace(/^\*/, ''));
     } else {
       // k31–k40 schreiben ihre Idee als Zeilenkommentare über den Eintrag.
       const zeilen = davor.split('\n');
