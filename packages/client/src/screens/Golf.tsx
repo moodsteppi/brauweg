@@ -9,13 +9,14 @@ import {
   naechsteFarbe,
   zieheFarben,
 } from '../minispiele/golf/farben';
+import { abschlussdaten, type Abschlussdaten } from '../minispiele/golf/abschluss';
 import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
 import { loeseBahnen } from '../minispiele/golf/karte';
 import { KARTEN } from '../minispiele/golf/karten';
 import { Golfnetz } from '../minispiele/golf/netz';
 import { ParKopf, ParName, ParRuf, ZuPar } from '../minispiele/golf/ParAnzeige';
-import { parJeLoch, zuParSumme } from '../minispiele/golf/par';
+import { zuParSumme } from '../minispiele/golf/par';
 import { GolfReplay } from '../minispiele/golf/ReplayAnsicht';
 import { eingabeAusKern, type ReplayEingabe } from '../minispiele/golf/replay';
 import {
@@ -23,7 +24,6 @@ import {
   PAUSE_TAKTE,
   TAKT_MS,
   gesamtschlaege,
-  platzierungen,
   pruefsumme,
   schlagErlaubt,
   troedelRest,
@@ -170,15 +170,6 @@ function farbenDerSitze(sitze: readonly SeatInfo[], plaetze: number): number[] {
 /* --------------------------------------------------------------------------
  * Der Bildschirm
  * ----------------------------------------------------------------------- */
-
-interface Abschlussdaten {
-  /** `[loch][sitz]` — Kopie, weil der Kernzustand lebt und weiterläuft. */
-  ergebnis: number[][];
-  gesamt: number[];
-  platz: { sitz: number; schlaege: number; platz: number }[];
-  /** Par je gespieltem Loch — nur für die Anzeige „zu Par", nie für den Platz. */
-  par: number[];
-}
 
 export function Golf({
   startTisch,
@@ -385,14 +376,14 @@ export function Golf({
    */
   const meldeErgebnis = useCallback(
     (zustand: Partiezustand): Abschlussdaten => {
-      const gesamt = gesamtschlaege(zustand);
-      const daten: Abschlussdaten = {
-        ergebnis: zustand.ergebnis.map((reihe) => [...(reihe ?? [])]),
-        gesamt,
-        platz: platzierungen(zustand),
-        par: parJeLoch(zustand.reihenfolge, KARTEN),
-      };
-      sendRef.current({ art: 'ergebnis', schlaege: gesamt, pruef: pruefsumme(zustand.ergebnis) });
+      // Par gegen die Bahnen DER PARTIE, nicht gegen den Katalog: Seit #206
+      // zeigt `reihenfolge` in `netz.karten` (siehe abschluss.ts).
+      const daten = abschlussdaten(zustand, netzRef.current?.karten ?? []);
+      sendRef.current({
+        art: 'ergebnis',
+        schlaege: daten.gesamt,
+        pruef: pruefsumme(zustand.ergebnis),
+      });
       return daten;
     },
     [],

@@ -15,9 +15,11 @@
  * `platzierungen`, und diese Datei liefert nur Namen und Schreibweisen.
  *
  * **Woher das Par je gespieltem Loch kommt.** Aus `reihenfolge` im
- * Partiezustand (Kartenindex je Loch, auf jedem Gerät aus der Saat gezogen)
- * und der Kartenliste, die der Bildschirm ohnehin hält. Über die Leitung geht
- * dafür nichts, an Sicht, Protokoll und Physik ändert sich nichts.
+ * Partiezustand und den Bahnen, in die sie zeigt. Seit #206 (Bahnen als
+ * Daten) sind das die Bahnen DER PARTIE (`Golfnetz.karten`), nicht der
+ * Katalog — gegen den Katalog gelesen zeigte die Endtafel das Par der ersten
+ * Katalogbahnen (behoben 22.09.2026, siehe abschluss.ts). Über die Leitung
+ * geht dafür nichts, an Sicht, Protokoll und Physik ändert sich nichts.
  *
  * Rein und ohne React, damit die Prüfung ohne Leinwand auskommt.
  */
