@@ -303,7 +303,7 @@ Stand 22.09.2026 — Einträge je Katalog, in Klammern der Altbestand:
 - Allgemeinwissen: 300 (140)
 - Schätzen: 200 (80)
 - Imposter: 250 (120)
-- Wer bin ich: 140 (140)
+- Wer bin ich: 250 (140)
 
 Dazu seit dem 22.09.2026 die drei Kataloge ohne Uhr (#213, noch als
 TS-Quelltext unter `src/inhalte/`, nicht Teil der JSON-Umstellung):
