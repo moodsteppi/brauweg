@@ -2595,7 +2595,7 @@ function Spielwahl({
 }
 
 /**
- * Freunde-Tab.
+ * Freundesliste im Profil-Tab.
  *
  * Anfragen stehen zuoberst, weil sie eine Antwort verlangen. Die Suche
  * arbeitet erst ab zwei Zeichen und auf Knopfdruck - niemand soll beim
