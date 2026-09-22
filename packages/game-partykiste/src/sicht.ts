@@ -166,7 +166,19 @@ export interface PartykisteSicht {
   readonly runden: number;
   readonly art: MinispielId;
   readonly phase: RundenPhase;
+  /**
+   * Der Regelsatz des Tisches, wie er festgeschrieben ist — in JEDER Sicht.
+   *
+   * Bis zum 22.09.2026 fuhr nur `trinkmodus` mit, und der auch nur, damit der
+   * Bildschirm das Glas ausblenden konnte. Haerte und Minispielliste sah am
+   * Tisch niemand; wer online einem Tisch beitrat, spielte mit Regeln, die er
+   * erst an der ersten Abrechnung erriet. Die drei Felder sind kein Geheimnis
+   * (der Server gibt sie ohnehin ueber `/tables/:id/rules` heraus), deshalb
+   * stehen sie auch in der Zuschauersicht.
+   */
   readonly trinkmodus: boolean;
+  readonly schluckFaktor: number;
+  readonly minispiele: readonly MinispielId[];
   readonly botSitze: readonly number[];
   readonly ausgestiegen: readonly number[];
   /** Turnierstand ueber alle bisherigen Runden. */
@@ -303,6 +315,8 @@ export function sichtFuer(partie: PartykistePartie, sitz: number): PartykisteSic
     art: runde.art,
     phase: runde.phase,
     trinkmodus: partie.regeln.trinkmodus,
+    schluckFaktor: partie.regeln.schluckFaktor,
+    minispiele: partie.regeln.minispiele,
     botSitze: partie.botSitze,
     ausgestiegen: partie.ausgestiegen,
     punkte: partie.punkte,
