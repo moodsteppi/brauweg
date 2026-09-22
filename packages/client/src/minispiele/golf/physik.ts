@@ -205,8 +205,12 @@ export interface Partiezustand {
    * als Bestleistung gelten. Reine Buchführung — die Simulation liest es nie,
    * deshalb kein Sprung der Modulversion. Nicht in der Prüfsumme, die bleibt
    * über die Schlagzahlen wie bisher.
+   *
+   * Optional, weil der Probeschlag der Bots (`probeschlag` in bot.ts) einen
+   * Zustand von Hand baut und kein Ergebnis braucht. `neuePartie` legt es
+   * immer an; fehlt es, meldet das Gerät eben keine Bestleistung.
    */
-  eingelochtJeLoch: boolean[][];
+  eingelochtJeLoch?: boolean[][];
   fertig: boolean;
   /** mulberry32-Zustand des gemeinsamen Stroms. */
   zufall: number;
@@ -382,10 +386,7 @@ export function kopiere(z: Partiezustand): Partiezustand {
   }
   const ergebnis: number[][] = new Array<number[]>(z.ergebnis.length);
   for (let i = 0; i < z.ergebnis.length; i += 1) ergebnis[i] = [...z.ergebnis[i]];
-  const eingelochtJeLoch: boolean[][] = new Array<boolean[]>(z.eingelochtJeLoch.length);
-  for (let i = 0; i < z.eingelochtJeLoch.length; i += 1) {
-    eingelochtJeLoch[i] = [...z.eingelochtJeLoch[i]];
-  }
+  const eingelochtJeLoch = z.eingelochtJeLoch?.map((reihe) => [...reihe]);
   return {
     takt: z.takt,
     saat: z.saat,
@@ -399,7 +400,7 @@ export function kopiere(z: Partiezustand): Partiezustand {
     aktuell: { ...z.aktuell },
     baelle,
     ergebnis,
-    eingelochtJeLoch,
+    ...(eingelochtJeLoch === undefined ? {} : { eingelochtJeLoch }),
     fertig: z.fertig,
     zufall: z.zufall,
     botZufall: [...z.botZufall],
@@ -1147,7 +1148,7 @@ function lochwechsel(z: Partiezustand, karten: readonly Karte[]): void {
     z.ergebnis[z.aktuell.loch] = reihe;
     const gefallen: boolean[] = new Array<boolean>(z.sitze);
     for (let s = 0; s < z.sitze; s += 1) gefallen[s] = z.baelle[s].eingelocht;
-    z.eingelochtJeLoch[z.aktuell.loch] = gefallen;
+    if (z.eingelochtJeLoch !== undefined) z.eingelochtJeLoch[z.aktuell.loch] = gefallen;
     melde(z, { art: 'lochende', loch: z.aktuell.loch });
     return;
   }

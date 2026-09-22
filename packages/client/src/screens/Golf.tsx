@@ -414,7 +414,7 @@ export function Golf({
         jeLoch: daten.ergebnis,
         // Ob der Ball gefallen ist: Ein nicht eingelochtes Loch steht in der
         // Tafel als Schlaglimit + 1 und darf nie Bestleistung werden.
-        eingelocht: zustand.eingelochtJeLoch.map((reihe) => [...(reihe ?? [])]),
+        eingelocht: (zustand.eingelochtJeLoch ?? []).map((reihe) => [...(reihe ?? [])]),
       });
       return daten;
     },

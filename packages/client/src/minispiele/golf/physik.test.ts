@@ -529,7 +529,7 @@ describe('Ausstieg', () => {
     expect(z.baelle[1].dabei).toBe(true);
     expect(z.ergebnis[0]).toEqual([1, karte.schlagLimit + 1]);
     // Seit 22.09.2026: Wer fiel, steht daneben — Limit + 1 ist nie eine Bestleistung.
-    expect(z.eingelochtJeLoch[0]).toEqual([true, false]);
+    expect(z.eingelochtJeLoch?.[0]).toEqual([true, false]);
 
     // Weiter bis ins zweite Loch.
     laufe(z, PAUSE_TAKTE + 20, karte);
