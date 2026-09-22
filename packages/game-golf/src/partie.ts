@@ -12,6 +12,7 @@ import type { BotLevel } from '@brauweg/game-api';
 
 import { DEFAULT_BOT_LEVEL } from '@brauweg/game-api';
 
+import { waehleBahnen } from './bahnen.js';
 import type { GolfAktion, GolfRegeln, Zug } from './regeln.js';
 
 export class RegelverstossError extends Error {}
@@ -38,6 +39,14 @@ export interface GolfPartie {
   readonly saat: number;
   readonly sitze: number;
   readonly loecher: number;
+  /**
+   * Die Bahnen der Partie als Kennungen, ein Eintrag je Loch in Spielfolge.
+   * Seit dem 22.09.2026 hier EINMAL beim Start gezogen (`waehleBahnen`) statt
+   * auf jedem Geraet gegen dessen eigenen Katalog — so kann eine neue Bahn
+   * dazukommen, ohne dass zwei Geraete aus derselben Saat Verschiedenes
+   * spielen. Siehe bahnen.ts.
+   */
+  readonly bahnen: readonly string[];
   readonly botSitze: readonly number[];
   /**
    * Gewuenschte Bot-Spielstaerke des Tisches. Steht hier und nicht nur in
@@ -62,14 +71,18 @@ export interface ErzeugePartieOptionen {
 }
 
 export function erzeugePartie(opts: ErzeugePartieOptionen): GolfPartie {
+  // >>> 0 erzwingt eine vorzeichenlose Ganzzahl; || 1 faengt die 0 ab, denn
+  // mulberry32 (Client) mit Saat 0 liefert eine gueltige, aber unbrauchbar
+  // eintoenige Folge.
+  const saat = opts.saat >>> 0 || 1;
   return {
     regeln: opts.regeln,
-    // >>> 0 erzwingt eine vorzeichenlose Ganzzahl; || 1 faengt die 0 ab, denn
-    // mulberry32 (Client) mit Saat 0 liefert eine gueltige, aber unbrauchbar
-    // eintoenige Folge.
-    saat: opts.saat >>> 0 || 1,
+    saat,
     sitze: opts.sitze,
     loecher: opts.loecher,
+    // Aus der NORMIERTEN Saat — dieselbe, die in der Sicht steht und aus der
+    // die Geraete bis zum 22.09.2026 selbst gezogen haben.
+    bahnen: waehleBahnen(saat, opts.loecher),
     botSitze: opts.botSitze ? [...opts.botSitze] : [],
     botStufe: opts.botStufe ?? DEFAULT_BOT_LEVEL,
     zuege: [],

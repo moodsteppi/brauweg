@@ -19,7 +19,7 @@
  */
 
 import { Gleichschritt } from './gleichschritt';
-import type { Karte } from './karte';
+import { type Karte, loeseBahnen } from './karte';
 import { TAKT_MS, VORLAUF_TAKTE, type Botstufe, type Ereignis } from './physik';
 import type { GolfSicht, GolfZug } from './sicht';
 
@@ -46,7 +46,10 @@ export interface NetzUmgebung {
   neuVerbinden(): void;
   /** Wanduhr in Millisekunden; im Betrieb `performance.now`. */
   jetzt(): number;
-  /** Die Bahnen der Partie. Leer heißt: Es lässt sich nicht spielen. */
+  /**
+   * Der Bahnkatalog dieses Stands. Welche davon die Partie spielt, sagt die
+   * Sicht (`bahnen`, Kennungen); leer heißt: Es lässt sich nicht spielen.
+   */
   karten: readonly Karte[];
   /** Ein Hinweis für den Spieler (Text, keine Kennung). Optional. */
   melde?(text: string): void;
@@ -57,6 +60,7 @@ interface Partiekopf {
   saat: number;
   sitze: number;
   loecher: number;
+  bahnen: string[];
   botSitze: number[];
   botStufe: Botstufe;
 }
@@ -97,6 +101,15 @@ export class Golfnetz {
    * wie `aufStrittig` bei Feldherr.
    */
   private heilung = false;
+  /** Die Bahnen der laufenden Partie in Spielfolge, aufgelöst aus `kopf.bahnen`. */
+  private partieKarten: readonly Karte[] = [];
+  /**
+   * Kennungen aus der Sicht, die dieser Stand nicht kennt. Nicht leer heißt:
+   * Der Client ist älter als der Server (seit dem 22.09.2026 kommen Bahnen per
+   * Kennung, siehe sicht.ts) — es gibt dann keinen Kern, statt mit einer
+   * anderen Bahn eine andere Partie zu rechnen als alle anderen.
+   */
+  private fehlend: string[] = [];
 
   constructor(umgebung: NetzUmgebung) {
     this.umg = umgebung;
@@ -105,6 +118,16 @@ export class Golfnetz {
   /** Der Kern, oder null solange keine Sicht da war (bzw. keine Bahnen). */
   get kern(): Gleichschritt | null {
     return this.gs;
+  }
+
+  /** Die Bahnen dieser Partie in Spielfolge — `zustand().aktuell.karte` zeigt hier hinein. */
+  get karten(): readonly Karte[] {
+    return this.partieKarten;
+  }
+
+  /** Kennungen, die dieser Stand nicht kennt; leer im Normalfall. */
+  get unbekannteBahnen(): readonly string[] {
+    return this.fehlend;
   }
 
   /** Der Takt, in dem dieses Gerät gerade steht. */
@@ -171,6 +194,9 @@ export class Golfnetz {
       saat: sicht.saat,
       sitze: sicht.sitze,
       loecher: sicht.loecher,
+      // `?? []`: Eine Sicht ohne das Feld kommt nur von einem Server vor dem
+      // 22.09.2026, den die Versionsgrenze eigentlich abhält — dann eben kein Kern.
+      bahnen: [...(sicht.bahnen ?? [])],
       botSitze: [...sicht.botSitze],
       botStufe: sicht.botStufe,
     };
@@ -313,16 +339,31 @@ export class Golfnetz {
    */
   private baueKern(): void {
     const kopf = this.kopf;
-    if (kopf === null || this.umg.karten.length === 0) {
+    if (kopf === null || this.umg.karten.length === 0 || kopf.bahnen.length === 0) {
       this.gs = null;
       return;
     }
+    const aufgeloest = loeseBahnen(kopf.bahnen, this.umg.karten);
+    if (aufgeloest.karten === null) {
+      // Nur beim ersten Mal melden: Jede weitere Sicht landet wieder hier.
+      if (this.fehlend.length === 0) {
+        this.umg.melde?.(
+          `Diese Fassung kennt ${aufgeloest.unbekannt.length === 1 ? 'eine Bahn' : 'mehrere Bahnen'} der Partie nicht — bitte die Seite neu laden.`,
+        );
+      }
+      this.fehlend = aufgeloest.unbekannt;
+      this.partieKarten = [];
+      this.gs = null;
+      return;
+    }
+    this.fehlend = [];
+    this.partieKarten = aufgeloest.karten;
     this.gs = new Gleichschritt({
       saat: kopf.saat,
       sitze: kopf.sitze,
       botSitze: kopf.botSitze,
       loecher: kopf.loecher,
-      karten: this.umg.karten,
+      karten: aufgeloest.karten,
       botStufe: kopf.botStufe,
     });
     this.gereicht = 0;

@@ -169,7 +169,53 @@ export interface Karte {
   loch: [number, number];
   waende: Wand[];
   zonen: Zone[];
+  /** Die Optik der Bahn (Boden, Rand). Bestimmt das Bild, nicht die Physik. */
   dekor?: 'wiese' | 'wueste' | 'eis' | 'nacht';
+  /*
+   * Freie Metadaten, seit dem 22.09.2026 — für den Map-Editor und die
+   * Bahnauswahl (Kurse, Filter, Einzelauswahl), die auf der Aufteilung in
+   * eine Datei je Bahn aufbauen. Alle optional, damit die 40 vorhandenen
+   * Bahnen ohne Nachtrag gültig bleiben. Deutsch, keine Übersetzungsschlüssel:
+   * Bahnen sind Inhalt, keine Oberfläche.
+   */
+  /** Ein, zwei Sätze für die Auswahl — was die Bahn verlangt, worauf man achtet. */
+  beschreibung?: string;
+  /** Thema als Wort für Filter und Kurse („Wasser", „Portale", „Einstieg"); neben `dekor`, nicht statt. */
+  thema?: string;
+  autor?: string;
+  /** Freie Schlagworte für die Filterung, z. B. `['eis', 'bumper', 'kurz']`. */
+  tags?: string[];
+}
+
+/** Ergebnis von `loeseBahnen`: alle Bahnen oder die, die fehlen — nie eine halbe Liste. */
+export type Bahnaufloesung =
+  | { karten: Karte[]; unbekannt: [] }
+  | { karten: null; unbekannt: string[] };
+
+/**
+ * Die Kennungen einer Partie (`GolfSicht.bahnen`) in Geometrie auflösen.
+ *
+ * Seit dem 22.09.2026 zieht das Modul die Bahnfolge und schickt Kennungen.
+ * Kennt dieser Stand eine davon nicht, ist er älter als der Server — dann
+ * kommt die Liste der fehlenden zurück und KEINE Karten: Mit einer anderen
+ * Bahn weiterzurechnen hieße, still eine andere Partie zu spielen als alle
+ * anderen am Tisch.
+ */
+export function loeseBahnen(
+  kennungen: readonly string[],
+  katalog: readonly Karte[],
+): Bahnaufloesung {
+  const nachId = new Map<string, Karte>();
+  for (const karte of katalog) nachId.set(karte.id, karte);
+  const karten: Karte[] = [];
+  const unbekannt: string[] = [];
+  for (const id of kennungen) {
+    const karte = nachId.get(id);
+    if (karte === undefined) unbekannt.push(id);
+    else karten.push(karte);
+  }
+  if (unbekannt.length > 0) return { karten: null, unbekannt };
+  return { karten, unbekannt: [] };
 }
 
 /* --------------------------------------------------------------------------

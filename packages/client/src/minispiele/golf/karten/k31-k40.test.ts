@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { botLoestKarte, pruefeKarte } from '../karten-pruefen';
-import { KARTEN_K31_K40 } from './k31-k40';
+import { KARTEN, bahnenImBereich } from './index';
+
+/** Seit dem 22.09.2026 eine Datei je Bahn — der Bereich wird über die Nummer gebildet. */
+const KARTEN_K31_K40 = bahnenImBereich(31, 40);
 
 /**
  * Die Meisterbahnen (k31–k40): Geometrie und Bot-Probe je Karte.
@@ -57,7 +60,7 @@ describe('Meisterbahnen k31-k40', () => {
   for (const karte of KARTEN_K31_K40) {
     describe(karte.id, () => {
       it('besteht die Geometrieprüfung', () => {
-        expect(pruefeKarte(karte, KARTEN_K31_K40)).toEqual([]);
+        expect(pruefeKarte(karte, KARTEN)).toEqual([]);
       });
 
       it('wird vom Bot "genie" in ≤ schlagLimit und ≤ par + 2 Schlaegen geloest', () => {

@@ -59,6 +59,7 @@ const FELDER = [
   'saat',
   'sitze',
   'loecher',
+  'bahnen',
   'botSitze',
   'zuege',
   'abIndex',
