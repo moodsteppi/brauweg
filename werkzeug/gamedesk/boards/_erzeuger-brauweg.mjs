@@ -726,7 +726,7 @@ frame('f-rules', 'Grundsätze', 'Was die Trennung trägt', '#ef6b6b',
    5  Daten
    ===================================================================== */
 
-win('db-schema', 'notes', 'PostgreSQL — 36 Tabellen', SX + 320, 260, 440, 430, note(`
+win('db-schema', 'notes', 'PostgreSQL — 37 Tabellen', SX + 320, 260, 440, 430, note(`
 <h3>db/schema.ts (Drizzle)</h3>
 <p><b>Konto:</b> account, session, auth_token, account_game_stat,
 account_game_theme, account_cosmetic, account_avatar</p>
@@ -735,7 +735,7 @@ round_summary, rule_set, trophy_ledger, pairing_log, chip_lock</p>
 <p><b>Verein:</b> club, club_member, club_join_request, club_message,
 club_war, club_war_score</p>
 <p><b>Fortschritt:</b> chest_claim, quest_progress, runner_day, runner_best,
-stat_counter, purchase</p>
+stat_counter, purchase, bestleistung (je Inhalt, docs/BESTLEISTUNG.md)</p>
 <p><b>Sozial:</b> friendship, block, report, game_vote, invite_code</p>
 <p><b>Spielnah, aber kein Regelwissen</b> — Inhalt und Mitschnitte, kein
 Spielzustand: mememory_motiv, mememory_sammlung, feldherr_diagnose (die
