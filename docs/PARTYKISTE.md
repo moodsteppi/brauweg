@@ -104,9 +104,25 @@ Pakete: `wg-abend`, `jga`, `weihnachten`, `studenten`, `arbeit`. Am
 22.09.2026 trägt noch kein Inhalt ein Paket — ein Paket-Tisch spielt also
 Allgemeingut, und jede Runde hält das fest (siehe unten).
 
-**Der Bildschirm kennt beide Felder noch nicht** (Stand 22.09.2026): Er
-schickt nur `minispiele`, `trinkmodus` und `schluckFaktor`. Deshalb dürfen
-`inhaltsHaerte` und `paket` im Regelsatz fehlen — fehlt heißt Vorgabe.
+**Auswahl im Menü** (seit dem 22.09.2026, `minispiele/partykiste/Auswahl.tsx`,
+Logik in `wahl.ts`): Minispiele (mehrere, mindestens drei, in eigener
+Reihenfolge — so kommen die Runden dran), Inhaltsstufe „harmlos / pikant /
+derb“ unter der Überschrift **„Inhalte“** (nicht „Härte“, siehe oben),
+Themenpaket („alles“ = `paket: null`) und — erst, wenn `defaultConfig()`
+ein Feld `modus` hat — der Modus. Gemerkt in `localStorage`, gilt für
+Bot- und Online-Tische. Der Regelsatz entsteht als **Vorgabe des Moduls**
+(`useSpielVorgabe('partykiste')`), darauf Trinkmodus und Schluckfaktor,
+darauf die Auswahl (`regelsatzAus`); was niemand gewählt hat, kommt aus
+der Vorgabe. Die Minispielliste der Kacheln ist deshalb `MINISPIELE` des
+Moduls, keine Abschrift — ein neues Minispiel steht ohne Änderung im Menü.
+Wer alle in Modulreihenfolge wählt, dem wird nichts gemerkt, damit ein
+neues Minispiel später von selbst dazukommt. Für einen Gast (`me.gast`) ist
+„derb“ gesperrt („nur mit Konto“); die Kappung beim Start bleibt trotzdem
+die eigentliche Sperre. Paketnamen, Modusnamen und „gleichzeitig/reihum“
+sind Spiegelbilder, die `vertrag/partykiste-auswahl.test.ts` gegen
+`PAKETE`, `istReihum` und `validateConfig` hält. `inhaltsHaerte` und
+`paket` dürfen im Regelsatz weiterhin fehlen — ältere Tische kennen sie
+nicht. In der Regelzeile stehen beide noch nicht: Die Sicht trägt sie nicht.
 
 ### Wie die Inhalte ausgewählt werden
 
