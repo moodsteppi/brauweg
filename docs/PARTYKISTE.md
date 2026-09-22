@@ -103,9 +103,14 @@ ernst meint, braucht ein Feld am Konto — das ist eine Plattformfrage, keine
 der Kiste.
 
 **Themenpaket** (`paket`, Entscheidung P3): eine Zielgruppe, kein Motto.
-Pakete: `wg-abend`, `jga`, `weihnachten`, `studenten`, `arbeit`. Am
-22.09.2026 trägt noch kein Inhalt ein Paket — ein Paket-Tisch spielt also
-Allgemeingut, und jede Runde hält das fest (siehe unten).
+Pakete: `wg-abend`, `jga`, `weihnachten`, `studenten`, `arbeit`. Seit dem
+Vorrat vom 22.09.2026 trägt jeder neue Eintrag mindestens ein Paket, der
+Altbestand keins. **Folge:** Findet ein Paket-Tisch mindestens
+`MINDESTMENGE` eigene Einträge, spielt er NUR diese — der Altbestand kommt
+dort nicht mehr vor. Darunter mischt der Filter Allgemeingut dazu, und die
+Runde hält das fest (siehe unten). Dünn ist heute „jga" bei „harmlos"
+(5 bis 8 je Katalog, die JGA-Einträge sind meist pikant) und „weihnachten"
+bei Wahrheit (9): Solche Tische spielen mit Rückfall.
 
 **Auswahl im Menü** (seit dem 22.09.2026, `minispiele/partykiste/Auswahl.tsx`,
 Logik in `wahl.ts`): Minispiele (mehrere, mindestens drei, in eigener
@@ -341,7 +346,8 @@ ein Eintrag ohne Feld gilt als harmlos, allgemein, ab vier Sitzen:
 
 Die Sätze zum Kiffen (n101–n110, w101–w108, zusammen 18) sind seit dem
 22.09.2026 **pikant** (`haerte: 2`) und damit an einem Tisch mit der Vorgabe
-„harmlos“ nicht mehr dabei. Sonst trägt kein Eintrag eine Härte.
+„harmlos“ nicht mehr dabei. Sonst trägt im Altbestand kein Eintrag eine
+Härte; die neuen Einträge tragen alle eine.
 
 ## Ein weiteres Minispiel einbauen
 
