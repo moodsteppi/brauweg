@@ -1221,3 +1221,32 @@ export const api = {
   cancelWar: (clubId: string, warId: string) =>
     request<{ ok: true }>(`/clubs/${clubId}/war/${warId}`, { method: 'DELETE' }),
 };
+
+// ---------------------------------------------------------------------------
+// Push-Mitteilungen (docs/PUSH.md) — nur die App ruft das auf.
+// ---------------------------------------------------------------------------
+
+/** Kennungen wie im Server (push/kennungen.ts). Nie umbenennen. */
+export type PushAnlass = 'dran' | 'start' | 'einladung';
+
+export interface PushEinstellungen {
+  anlaesse: Record<PushAnlass, boolean>;
+  /** Wie viele Geraete dieses Kontos gerade Mitteilungen bekommen koennen. */
+  geraete: number;
+}
+
+export const pushApi = {
+  geraetAnmelden: (plattform: 'ios' | 'android', token: string) =>
+    post<{ ok: true }>('/push/geraet', { plattform, token }),
+  geraetAbmelden: (token: string) =>
+    request<{ ok: true; entfernt: boolean }>('/push/geraet', {
+      method: 'DELETE',
+      body: JSON.stringify({ token }),
+    }),
+  einstellungen: () => request<PushEinstellungen>('/push/einstellungen'),
+  setzeEinstellungen: (aenderung: Partial<Record<PushAnlass, boolean>>) =>
+    request<PushEinstellungen>('/push/einstellungen', {
+      method: 'PUT',
+      body: JSON.stringify(aenderung),
+    }),
+};

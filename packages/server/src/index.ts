@@ -23,6 +23,9 @@ import { Vermittlung } from './suche/vermittlung.js';
 import { applyStaffEmails } from './staff.js';
 import { aufraeumen } from './diagnose.js';
 import { expireStaleTables } from './tables/service.js';
+import { PushAnlaesse } from './push/anlaesse.js';
+import { leseAbgeschaltet } from './push/kennungen.js';
+import { waehlePushVersand } from './push/versand.js';
 
 const HOUR = 3600_000;
 
@@ -121,10 +124,27 @@ async function main(): Promise<void> {
       console.error(`Mitspielersuche ${gameId}: kein Tisch zustande gekommen`, fehler),
   });
 
+  /*
+   * Push-Mitteilungen (docs/PUSH.md). EINE Startzeile: welcher Sender je
+   * Plattform laeuft und welche Anlaesse server-weit aus sind — nie ein Wert.
+   * Ohne APNS_* bzw. FCM_SERVICE_ACCOUNT schreibt der Server nur ins Log.
+   */
+  const { versand: pushVersand, zeile: pushZeile } = waehlePushVersand();
+  const pushAus = leseAbgeschaltet(process.env.PUSH_AUS);
+  // eslint-disable-next-line no-console
+  console.info(
+    pushZeile +
+      (pushAus.aus.length > 0 ? `; Anlaesse aus: ${pushAus.aus.join(', ')}` : '') +
+      (pushAus.unbekannt.length > 0 ? `; PUSH_AUS unbekannt: ${pushAus.unbekannt.join(', ')}` : ''),
+  );
+  const push = new PushAnlaesse({ db, versand: pushVersand, aus: pushAus.aus });
+  push.beobachte(runtime);
+
   const app = await buildApp({
     db,
     runtime,
     vermittlung,
+    push,
     auth: {
       db,
       mailer,
@@ -150,7 +170,7 @@ async function main(): Promise<void> {
   });
 
   await app.listen({ port: config.port, host: '0.0.0.0' });
-  new Gateway(app.server, db, runtime, {
+  const gateway = new Gateway(app.server, db, runtime, {
     /**
      * In der Entwicklung keine Herkunftspruefung (leer = aus, wie in den
      * Tests): Zum Testen des Netzspiels sitzen zwei Konten im selben Browser,
@@ -161,7 +181,9 @@ async function main(): Promise<void> {
       config.env === 'development' ? [] : [config.publicUrl, ...APP_ORIGINS],
     appOrigins: APP_ORIGINS,
     appInhalt,
+    push,
   });
+  push.setzeVordergrund((accountId) => gateway.imVordergrund(accountId));
 
   // Tische ohne Aktivitaet verfallen nach 24 Stunden; Feldherr-Mitschnitte
   // nach zwei Wochen (docs/FELDHERR-DIAGNOSE.md). Beides im selben Takt: Es
@@ -175,6 +197,7 @@ async function main(): Promise<void> {
   const stop = async (): Promise<void> => {
     clearInterval(sweeper);
     runtime.shutdown();
+    pushVersand.schliessen();
     await app.close();
     await connection.close();
     process.exit(0);

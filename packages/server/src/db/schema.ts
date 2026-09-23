@@ -1023,6 +1023,53 @@ export const bestleistung = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Push-Mitteilungen (0030, docs/PUSH.md)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ein Geraet, das Mitteilungen bekommen darf.
+ *
+ * Das Token gehoert dem Geraet, nicht dem Konto — deshalb eindeutig ueber
+ * alle Konten: Meldet sich auf demselben Telefon jemand anderes an, zieht die
+ * Zeile um, statt dass zwei Konten dasselbe Geraet beschicken. `sitzungId`
+ * haengt an der Anmeldung, aus der das Token kam; beim Abmelden verschwinden
+ * genau diese Zeilen (auth/service.ts). `aktiv` faellt, wenn APNs oder FCM
+ * das Token fuer ungueltig erklaeren.
+ */
+export const geraetPush = pgTable(
+  'geraet_push',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    sitzungId: uuid().references(() => session.id, { onDelete: 'set null' }),
+    plattform: text().$type<'ios' | 'android'>().notNull(),
+    token: text().notNull(),
+    erstellt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    zuletztGesehen: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    aktiv: boolean().notNull().default(true),
+  },
+  (t) => [
+    uniqueIndex('geraet_push_token_key').on(t.token),
+    index('geraet_push_konto_idx').on(t.accountId),
+    check('geraet_push_plattform_check', sql`${t.plattform} in ('ios', 'android')`),
+  ],
+);
+
+/**
+ * Welche Anlaesse ein Konto NICHT will. Ausschlussliste, damit ein neuer
+ * Anlass ohne Migration fuer alle an ist (Kennungen: push/anlaesse.ts).
+ */
+export const pushEinstellung = pgTable('push_einstellung', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  aus: text().array().notNull().default(sql`'{}'::text[]`),
+  geaendert: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
 // Trophaeen
 // ---------------------------------------------------------------------------
 

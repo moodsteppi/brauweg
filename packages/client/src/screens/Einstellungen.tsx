@@ -7,6 +7,7 @@ import {
   spiele,
   type Einstellungen,
 } from '../klang';
+import { inApp } from '../laufzeit';
 
 /**
  * Anmeldearten (Apple, Google) — nachgeladen: Dieses Blatt haengt am
@@ -14,6 +15,14 @@ import {
  */
 const Anmeldearten = lazy(() =>
   import('../anmeldung/Anmeldearten').then((m) => ({ default: m.Anmeldearten })),
+);
+
+/**
+ * Mitteilungen (Push) — nur in der App und nachgeladen. Auf der Webseite gibt
+ * es keine Mitteilungen, also auch den Abschnitt nicht (docs/PUSH.md).
+ */
+const Mitteilungen = lazy(() =>
+  import('../push/Mitteilungen').then((m) => ({ default: m.Mitteilungen })),
 );
 
 /**
@@ -77,6 +86,12 @@ export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.
           drängeln uns nicht davor. Dafür schaltet am iPhone der
           Klingelschalter auch uns stumm.
         </p>
+
+        {inApp && (
+          <Suspense fallback={null}>
+            <Mitteilungen />
+          </Suspense>
+        )}
 
         <Suspense fallback={null}>
           <Anmeldearten />

@@ -500,8 +500,9 @@ dort öffnen Einladungen im Browser, und das ist gewollt.
 ### 4.10 Push — vorbereitet, standardmäßig aus
 
 Push braucht ein **Firebase-Projekt**, und das gibt es noch nicht (anlegen
-entscheidet Robin; der Server-Teil ist ein eigener Auftrag). Bis dahin baut
-die App **ohne** Firebase und ohne `POST_NOTIFICATIONS`.
+entscheidet Robin). Bis dahin baut die App **ohne** Firebase und ohne
+`POST_NOTIFICATIONS`. Server und Client sind fertig und ebenfalls aus, bis
+Schlüssel da sind — Variablen, Anlässe und Prüfweg stehen in `docs/PUSH.md`.
 
 - **Schalter:** `-Ppush=an` beim Gradle-Bau. Dann kommt
   `firebase-messaging` dazu, und statt `app/src/pushAus` wird
@@ -585,11 +586,10 @@ die App **ohne** Firebase und ohne `POST_NOTIFICATIONS`.
   Gerät sehen sie erst auf Toms Mac — Reihenfolge und Stolpersteine in 7.4/7.5.
   Das in früheren Fassungen genannte Repo `Brauweg-spiel-ios` hat es nie
   gegeben (Robin, 23.09.2026).
-- **Push („du bist dran")** nicht gebaut: braucht APNs-Schlüssel aus Toms
-  Konto bzw. ein Firebase-Projekt, und am Server eine Tabelle für
-  Geräte-Token. Kommt nach dem ersten Release. *Stand 23.09.2026:* Die
-  Android-Seite ist vorbereitet und aus (4.10); der Client horcht noch nicht
-  auf `brauweg:push-token`.
+- **Push („du bist dran")** gebaut und aus (`docs/PUSH.md`): Server
+  (Tabelle `geraet_push`, APNs/FCM-Sender, drei Anlässe), Client, Android-Seite
+  (4.10) und die iOS-Seite der Brücke in `apps/ios` sind fertig. Es fehlen der
+  APNs-Schlüssel aus Toms Konto und ein Firebase-Projekt.
 - **Zurück-Taste in den Spielen mit eigenem Menü** (Partykiste, Golf, …):
   Dort blättert sie nicht, die App geht in den Hintergrund. Soll sie im
   Schirm zurückblättern, hängt sich der Schirm selbst mit
