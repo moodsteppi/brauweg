@@ -22,7 +22,11 @@ import {
 import { DEFAULT_REGELN, mitBarrieren, mitSternen } from '../src/regeln.js';
 import { sichtFuer, zuschauerSicht } from '../src/sicht.js';
 
-const EXTREME = { ...DEFAULT_REGELN, variante: 'extreme', farben: 7, barrieren: 10 } as const;
+/*
+ * Ohne `farben`, wie der Bildschirm den Tisch aufmacht: Die Sieben muss aus
+ * der Spielart kommen, nicht aus dem mitgeschickten Regelsatz.
+ */
+const EXTREME = { ...DEFAULT_REGELN, variante: 'extreme', barrieren: 10 } as const;
 const SAAT = 'c0ffee1234567890abcdef0123456789';
 
 function abstand(a: number, b: number, spalten: number): number {
@@ -76,8 +80,10 @@ describe('Extreme: Aufbau', () => {
       assert.deepEqual([...partie.sterne], []);
     }
     // Die Sterne werden NACH Brett und Grautoenen gezogen — beides muss also
-    // mit dem Build-Brett derselben Saat uebereinstimmen.
-    const build = erstellePartie({ ...EXTREME, variante: 'build' }, [0, 1], SAAT);
+    // mit dem Build-Brett derselben Saat uebereinstimmen. Mit ausdruecklich
+    // sieben Farben: Build allein hat seit dem 23.09.2026 seine eigenen sechs,
+    // und ein Brett aus sechs Farben ist ein anderes.
+    const build = erstellePartie({ ...EXTREME, variante: 'build', farben: 7 }, [0, 1], SAAT);
     const extreme = erstellePartie(EXTREME, [0, 1], SAAT);
     assert.deepEqual([...extreme.feld], [...build.feld]);
     assert.deepEqual([...extreme.grau], [...build.grau]);

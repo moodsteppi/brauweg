@@ -249,10 +249,13 @@ describe('Filler: Mitspieler suchen', () => {
     });
   });
 
-  it('setzt in Extreme sieben Farben, sonst die des Moduls', async () => {
-    // Die Sieben ist die einzige Zahl, die der Bildschirm noch selbst setzt —
-    // das Modul kennt nur EINE Farbzahl fuer alle Spielarten. Ueberall sonst
-    // gilt seine Vorgabe, auch wenn sie sich aendert.
+  it('Extreme schickt keine eigene Farbzahl, die setzt das Modul', async () => {
+    // Bis zum 23.09.2026 setzte der Bildschirm in Extreme selbst `farben: 7`,
+    // weil das Modul nur EINE Farbzahl fuer alle Spielarten kannte. Seitdem
+    // kommt die Farbzahl je Spielart aus dem Modul (`farbzahlAus`), und der
+    // Bildschirm schreibt keine Sieben mehr in den Regelsatz. Diese Probe
+    // haelt fest, dass er es auch nicht heimlich wieder tut: Die Vorgabe des
+    // Servers geht bei Extreme genauso ungekuerzt mit wie bei Nebel darueber.
     createTable.mockResolvedValue({ id: 'tisch-11', joinCode: null });
     render(<Filler onBack={() => {}} />);
     await durchatmen();
@@ -261,7 +264,8 @@ describe('Filler: Mitspieler suchen', () => {
     await durchatmen();
 
     expect(createTable.mock.calls[0]?.[0]).toMatchObject({
-      config: { farben: 7, variante: 'extreme' },
+      config: { ...VORGABE, variante: 'extreme' },
     });
+    expect(createTable.mock.calls[0]?.[0].config.farben).toBe(VORGABE.farben);
   });
 });
