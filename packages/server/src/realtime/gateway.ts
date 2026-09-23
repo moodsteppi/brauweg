@@ -25,6 +25,7 @@ import {
   setSeatBot,
   setSeatColor,
   setTableBotLevel,
+  setzeTischregeln,
   sitzfarbWuensche,
   tableBotLevel,
   tableWithSeats,
@@ -176,6 +177,17 @@ const clientMessageSchema = z.discriminatedUnion('type', [
      * keine Serveraenderung kosten.
      */
     farbe: z.number().int().min(0).max(63),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    type: z.literal('setRules'),
+    tableId: z.string().uuid(),
+    /*
+     * Der ganze neue Regelsatz, nicht ein Unterschied: Was er bedeutet, prueft
+     * das Modul (`validateConfig` in `setzeTischregeln`), nicht dieses Schema.
+     */
+    config: z.record(z.string(), z.unknown()),
   }),
   z.object({
     v: z.literal(ENVELOPE_VERSION),
@@ -580,6 +592,9 @@ export class Gateway {
         case 'startNow':
           await this.startNow(connection, message.tableId, message.rounds);
           break;
+        case 'setRules':
+          await this.setRules(connection, message.tableId, message.config);
+          break;
         default:
           send(connection.socket, errorMessage('unknownMessageType'));
       }
@@ -919,6 +934,20 @@ export class Gateway {
   }
 
   /**
+   * Regelsatz des wartenden Tisches ersetzen (Golf: Bahnauswahl in der Lobby).
+   * Der Rundruf danach traegt den neuen `regelstand` an alle im Wartebereich;
+   * wer ihn noch nicht kennt, holt den Regelsatz ueber `/api/tables/:id/rules`.
+   */
+  private async setRules(
+    connection: Connection,
+    tableId: string,
+    config: Record<string, unknown>,
+  ): Promise<void> {
+    await setzeTischregeln(this.db, tableId, config, connection.accountId);
+    await this.broadcast(tableId);
+  }
+
+  /**
    * Sofort losspielen, ohne die leeren Plaetze mit Bots zu fuellen: Der Tisch
    * schrumpft auf die Besetzten, danach startet der uebliche Rundruf die
    * Partie (nach dem Schrumpfen ist kein Platz mehr frei).
@@ -1073,6 +1102,7 @@ export class Gateway {
       visibility: table.visibility,
       paused: table.pausedAt !== null || (party?.paused ?? false),
       botLevel: tableBotLevel(table.filters),
+      regelstand: `${table.ruleSetId}:${table.ruleSetVersion}`,
     };
 
     /**

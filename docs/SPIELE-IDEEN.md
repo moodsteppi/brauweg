@@ -13,6 +13,27 @@ nicht als Angebot.
 
 ---
 
+## Stand 22.09.2026
+
+Diese Liste stammt vom 27.08.2026 und kennt drei Spiele nicht, die seitdem
+gebaut wurden — alle drei über `GameModule` wie jedes andere Modul, ohne
+Plattformänderung:
+
+- **Golf** (Minigolf in Echtzeit für 1–8, seit 06.09.2026,
+  `docs/GOLF-PLAN.md`)
+- **Partykiste** (Party-Minispiele-Turnier für 4–12, seit 18.09.2026,
+  `docs/PARTYKISTE.md`)
+- **BroCooked** (Kochspiel in Echtzeit für 1–4, seit 22.09.2026,
+  `docs/SPEZIFIKATION-BROCOOKED.md`)
+
+Dazu eine Korrektur: Die Tabelle unter „Passt nicht zur Plattform" führt
+**Auto-Battler** weiter als Idee, die nicht passt — obwohl **Tafelrunde**
+seit dem 04.09.2026 genau das ist. Die Einordnung dort ist überholt; die
+Begründung dafür steht jetzt als Nachtrag beim Tabelleneintrag, die alte
+Aufwandsschätzung bleibt unangetastet stehen.
+
+---
+
 ## Merkliste
 
 Ausdrücklich vorgemerkt:
@@ -144,7 +165,7 @@ Doppelkopf.
 
 | Idee | Aufwand | Warum |
 | --- | --- | --- |
-| **Auto-Battler (Merge Tactics)** | 2,5–4 + Dauerkosten | Nicht zugbasiert: `currentActor` gäbe dauernd `null`, `legalActions` müsste jede Einheit auf jedem Feld aufzählen, „Frist abgelaufen, Bot übernimmt" greift nicht. Nichts von der Oberfläche ist wiederverwendbar. Der teuerste Teil hört nie auf: Einheiten, Balancing, Saisons. `docs/plattform-plan.md` schließt es ausdrücklich aus. |
+| **Auto-Battler (Merge Tactics)** | 2,5–4 + Dauerkosten | Nicht zugbasiert: `currentActor` gäbe dauernd `null`, `legalActions` müsste jede Einheit auf jedem Feld aufzählen, „Frist abgelaufen, Bot übernimmt" greift nicht. Nichts von der Oberfläche ist wiederverwendbar. Der teuerste Teil hört nie auf: Einheiten, Balancing, Saisons. `docs/plattform-plan.md` schließt es ausdrücklich aus. **Nachtrag 22.09.2026: überholt** — **Tafelrunde** (seit 04.09.2026) ist ein Auto-Battler, aber nicht über den hier befürchteten Weg. `currentActor` ist dort nicht dauernd `null`, sondern nennt wie bei Eiland trotzdem einen Sitz, obwohl alle gleichzeitig rüsten; `legalActions` ist nicht vollständig aufgezählt, sondern die Meta sagt es offen (`legalActionsUnvollstaendig: true`). Die Aufwandszahl oben ist eine Schätzung von vor dem Bau und bleibt unverändert stehen — was Tafelrunde tatsächlich gekostet hat, trägt seit dem 19.09.2026 niemand mehr von Hand in eine Datei ein (siehe Regel 7 in `CLAUDE.md`, dort für Testzahlen begründet, hier sinngemäß). |
 | **Match-3, Idle, Echtzeit-Duelle** | — | Dasselbe Argument. Eigene Produkte, nicht Module. |
 
 ---

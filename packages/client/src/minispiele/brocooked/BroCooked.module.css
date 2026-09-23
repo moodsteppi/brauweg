@@ -1,0 +1,343 @@
+/*
+ * Aussehen von BroCooked (screens/BroCooked.tsx).
+ *
+ * Eigenes Modul wie bei Tafelrunde, damit die Klassennamen nirgends sonst
+ * greifen — die große `styles.css` hat 19 500 Zeilen, und ein neues Spiel
+ * muss sie nicht anfassen.
+ *
+ * Zwei Maße tragen das Ganze:
+ *
+ *   - **`dvh` statt `vh`.** Auf dem Handy schrumpft die sichtbare Höhe,
+ *     sobald die Adressleiste einfährt; mit `vh` läge die Steuerung dann
+ *     unter dem Rand, und der Daumen träfe die Adressleiste statt den Knopf.
+ *   - **Die Steuerung liegt ÜBER der Leinwand, nicht darunter.** Die Küche
+ *     ist das Bild; Stick und Knöpfe schweben in den unteren Ecken, dort wo
+ *     die Daumen ohnehin liegen. Am Rechner stören sie nicht, weil dort
+ *     Tastatur reicht — sie bleiben trotzdem stehen, denn ein Laptop mit
+ *     Berührungsbildschirm ist keine Seltenheit.
+ */
+
+.flaeche {
+  position: relative;
+  width: 100%;
+  height: min(78dvh, 720px);
+  min-height: 360px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--panel);
+  /* Beim Laufen soll die Seite nicht mitziehen. */
+  touch-action: none;
+  user-select: none;
+}
+
+.leinwand {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* --- Kopfzeile: Bestellungen, Zeit, Punkte ------------------------------ */
+
+.kopf {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  left: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.tickets {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ticket {
+  min-width: 92px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(10, 14, 17, 0.72);
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.ticketName {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ticketBalken {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.ticketBalken > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--gold, #e0b352);
+  /* Der Balken läuft gleichmäßig leer; ohne Übergang zuckt er im Takt. */
+  transition: width 120ms linear;
+}
+
+.zeit,
+.punkte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(10, 14, 17, 0.72);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.zeit strong,
+.punkte strong {
+  font-size: 18px;
+  line-height: 1.1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Steuerung ---------------------------------------------------------- */
+
+.steuerung {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: space-between;
+  /* Wenig Luft zum Rand: Der Daumen soll den Knopf treffen, nicht den Rahmen. */
+  padding: 10px 12px 14px;
+  pointer-events: none;
+}
+
+/*
+ * Eine Hand: links der Stick, rechts die Knöpfe — IMMER in dieser
+ * Reihenfolge, auch beim zweiten Koch.
+ *
+ * Die erste Fassung spiegelte die rechte Hälfte (der zweite Koch hatte die
+ * Knöpfe links). Das las sich am Reißbrett hübsch symmetrisch und war am
+ * Gerät falsch: Wer zu zweit spielt, schaut auf dieselbe Steuerung wie
+ * allein, und niemand rechnet damit, dass sie sich spiegelt.
+ */
+.hand {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+/*
+ * Kocht nur einer an diesem Gerät, geht die Hand über die GANZE Breite:
+ * Stick an den linken Rand, Knöpfe an den rechten. So liegt jeder Daumen da,
+ * wo er das Gerät ohnehin hält — dazwischen bleibt die Küche frei.
+ *
+ * Zu zweit geht das nicht: Dann teilen sich beide den unteren Rand, und jede
+ * Hand bleibt als Block beieinander.
+ */
+.hand.breit {
+  flex: 1 1 auto;
+  justify-content: space-between;
+}
+
+.hand.rechts {
+  margin-left: auto;
+}
+
+.stick {
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: rgba(10, 14, 17, 0.45);
+  font-size: 11px;
+  color: var(--muted);
+  touch-action: none;
+}
+
+/*
+ * Die zwei Knöpfe stehen versetzt nebeneinander wie an einem Gamepad:
+ * „Nehmen" tiefer und näher am Daumen, „Arbeiten" darüber. Übereinander
+ * gestapelt lag der obere zu weit oben für den Daumen, der ohnehin schon
+ * den halben Bildschirm hält.
+ */
+.knoepfe {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.knopf {
+  /* Rund und 76 px groß: 44 px ist die kleinste Fläche, die ein Daumen
+     sicher trifft, und in der Hektik zielt niemand genau. */
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: rgba(10, 14, 17, 0.72);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.1;
+  touch-action: none;
+}
+
+/* Der zweite Knopf sitzt eine halbe Höhe höher — die Daumenhaltung ist schräg. */
+.knopf.hoch {
+  margin-bottom: 34px;
+}
+
+.knopf:active {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: var(--text);
+}
+
+/* --- Menü, Lobby, Abschluss --------------------------------------------- */
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/*
+ * Die Küche bekommt den ganzen Bildschirm, nicht die Menüspalte.
+ *
+ * Die erste Fassung benutzte `.seite` auch hier — mit ihren 560 px
+ * Höchstbreite. Auf einem Rechner stand die Küche dann als Briefmarke in der
+ * Mitte, und man sah die Station, vor der man steht, kaum noch.
+ */
+.spiel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 8px;
+}
+
+.seite h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.seite p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.wahl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wahl button {
+  flex: 1 1 180px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 15px;
+}
+
+.wahl button:disabled {
+  opacity: 0.6;
+}
+
+.regler {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.kuechen {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kuechen li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+/* --- Rezeptkarte im Menü ------------------------------------------------ */
+
+.rezeptblock {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 8px 12px;
+}
+
+.rezeptblock > summary {
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.rezeptkueche h2 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.rezepte {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fehler {
+  color: var(--danger, #e06c6c);
+}
+
+.hinweis {
+  font-size: 13px;
+}
+
+.zurueck {
+  margin-bottom: 8px;
+}
+
+.endpunkte {
+  font-size: 32px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}

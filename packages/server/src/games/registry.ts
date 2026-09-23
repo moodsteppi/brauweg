@@ -17,6 +17,7 @@ import type {
   GameMeta,
   GameRegistry,
 } from '@brauweg/game-api';
+import { brocooked } from '@brauweg/game-brocooked';
 import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
 import { easypoker } from '@brauweg/game-easypoker';
@@ -44,6 +45,7 @@ const MODULES: readonly AnyGameModule[] = [
   tafelrunde as unknown as AnyGameModule,
   golf as unknown as AnyGameModule,
   partykiste as unknown as AnyGameModule,
+  brocooked as unknown as AnyGameModule,
 ];
 
 /**

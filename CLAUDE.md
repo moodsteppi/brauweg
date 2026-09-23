@@ -1,8 +1,8 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, **zwölf Spiele laufen**: Doppelkopf, Zauberer, Skat,
+Kartenspiel-Plattform, **dreizehn Spiele laufen**: Doppelkopf, Zauberer, Skat,
 Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde,
-Golf und Partykiste.
+Golf, Partykiste und BroCooked.
 Diese Datei ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln
 in `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
@@ -26,7 +26,13 @@ darf, entscheidet allein `amZug` in `packages/game-eiland/src/partie.ts`: jeder,
 dessen Zettel noch offen ist. Auch dort ist `legalActions` leer, und aus dem
 Skat-Grund: Eine Aktion ist eine MENGE von Feldern, die sich nicht aufzählen
 lässt — der Bildschirm stellt sie selbst zusammen und schickt sie als einen
-Zettel. **Tafelrunde** (Auto-Battler, seit dem 4.9.2026) macht es wie Eiland —
+Zettel. **BroCooked** (hektische Küche, seit dem 22.09.2026) geht denselben Weg wie
+Golf — Eingaben über die Leitung, Küche auf den Geräten
+(`docs/SPEZIFIKATION-BROCOOKED.md`) —, ist aber das erste **Miteinander**:
+Es gibt EINE Punktzahl, und `standings` setzt alle auf Platz 1. Wer dort eine
+Rangfolge einzieht, baut ein anderes Spiel. Allein und zu zweit läuft es
+sogar ganz ohne Tisch, weil der Server je Verbindung nur einen Sitz kennt.
+**Tafelrunde** (Auto-Battler, seit dem 4.9.2026) macht es wie Eiland —
 alle rüsten gleichzeitig, `currentActor` nennt trotzdem einen Sitz — hat aber
 noch einen eigenen Dreh: `legalActions` ist dort weder leer noch vollständig.
 Kaufen, Würfeln, Aufsteigen und Verkaufen stehen drin, das Verschieben nicht
@@ -173,8 +179,27 @@ steht im Kopf des Skripts — getestet wird aus `dist/test/*.js`, und eine
 kompilierte Testdatei ohne `.ts` bleibt sonst liegen und färbt den Lauf rot,
 obwohl die Quelle sauber ist.
 
-`gh` ist **nicht** installiert, das Remote läuft über SSH — Pull Requests
-gehen aus einer Sitzung heraus nicht. Gemerged wird direkt.
+**Ob `gh` geht, hängt am Rechner — erst fragen, dann entscheiden.** Bis zum
+07.09.2026 stand hier als Tatsache des Repos, `gh` sei nicht installiert und
+das Remote laufe über SSH. Beides stammt aus der Mac-Zeit dieser Datei — Regel 4
+sagt oben „Auf diesem Mac ist kein WebP-Werkzeug installiert" — und gilt
+nicht überall: Auf dem Mood-XPS liegt `gh` 2.97.0, angemeldet als
+`moodsteppi`, das Remote ist HTTPS, und `gh pr view`, `gh pr checks` sowie
+`gh pr comment` laufen anstandslos. Also nicht raten, sondern nachsehen:
+
+```bash
+gh auth status && git remote -v     # geht es hier — und über welches Protokoll?
+```
+
+Meldet das ein angemeldetes Konto, gehen Pull Requests aus der Sitzung heraus:
+lesen, prüfen, kommentieren, anlegen. Fehlt `gh` oder ist es nicht angemeldet,
+geht davon nichts — **und das ist kein Freibrief zum Durchmergen.** Wer dann
+was darf, hängt daran, wer arbeitet: Ein Mensch am eigenen Rechner führt selbst
+nach `staging` zusammen (`ARBEITSREGELN.md`, Regel 1). Ein Worker im
+Orchestrator **nicht** — er pusht seinen `aufgabe/…`-Zweig und hört dort auf,
+ob mit `gh` oder ohne. Genau diese Verwechslung hat die alte Zeile angerichtet:
+Ein Prüfauftrag zu PR #125 nahm sie ernst, versuchte den PR gar nicht erst zu
+öffnen und fiel auf „gemerged wird direkt" zurück.
 
 ---
 
@@ -203,7 +228,7 @@ nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
 Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
 Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
 Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
-Feld auch wirklich liefern). Gedeckt sind alle zwoelf Spiele. Ein neues Spiel
+Feld auch wirklich liefern). Gedeckt sind alle dreizehn Spiele. Ein neues Spiel
 bekommt eine Datei nach demselben Muster — und beschreibt seine Sicht **nicht
 im Bildschirm**, sondern in `src/minispiele/<spiel>/sicht.ts`: Ein Vertrag,
 der aus einer `.tsx` importiert, zieht React in den Test.

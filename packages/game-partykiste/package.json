@@ -8,7 +8,7 @@
     "test": "test"
   },
   "scripts": {
-    "build": "node ../../werkzeug/dist-raeumen.mjs && tsc",
+    "build": "node ../../werkzeug/dist-raeumen.mjs && tsc && node werkzeug/inhalte-pruefen.mjs",
     "test": "npm run build && node --test \"dist/test/**/*.test.js\""
   },
   "keywords": [],

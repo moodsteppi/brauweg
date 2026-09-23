@@ -198,6 +198,8 @@ export interface RegalWare {
   /** Beide Preise — der Kaeufer waehlt, wie bei der Kosmetik. */
   readonly preis: Preis;
   readonly besessen: boolean;
+  /** Nur bei Zusatzpaketen: Spiel und Regelsatzfeld, damit die Auswahl des Spiels die Kachel sperren kann. */
+  readonly inhalt?: { readonly spiel: string; readonly feld: string };
 }
 
 export interface ShopAnsicht {
@@ -250,6 +252,7 @@ export async function shopFuer(db: Db, accountId: string): Promise<ShopAnsicht> 
       seltenheit: ware.seltenheit,
       preis: ware.preis,
       besessen: eigeneWare.has(ware.id),
+      ...(ware.inhalt ? { inhalt: ware.inhalt } : {}),
     })),
     truhen: KAUFTRUHEN,
     kurs: MUENZEN_JE_EDELSTEIN,

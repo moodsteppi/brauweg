@@ -23,7 +23,9 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import type { Db } from './db/types.js';
 import * as s from './db/schema.js';
-import { notFound } from './errors.js';
+import { entitlementsFor } from './entitlements.js';
+import { forbidden, notFound } from './errors.js';
+import { BEZAHLPAKETE, bezahlpaketeIm, inhaltspaketId, type Inhaltspaket } from './inhaltspakete.js';
 import { type Preis, type Seltenheit } from './kosmetik.js';
 import { inEdelsteine, inMuenzen } from './waehrung.js';
 
@@ -36,7 +38,17 @@ import { inEdelsteine, inMuenzen } from './waehrung.js';
  * Blaetter schon jetzt brauchbar, obwohl von ihnen erst die Rueckseite gemalt
  * ist.
  */
-export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen' | 'klang' | 'musik';
+export type WareArt =
+  | 'szene'
+  | 'blatt'
+  | 'ruecken'
+  | 'emote'
+  | 'wappen'
+  | 'klang'
+  | 'musik'
+  // Spielinhalt statt Aussehen: ein Golf-Kurs, ein Partykiste-Themenpaket
+  // (seit 22.09.2026, siehe inhaltspakete.ts).
+  | 'inhaltspaket';
 
 export interface Ware {
   /** Kennung MIT Praefix, so wie sie in `account_cosmetic` steht. */
@@ -52,6 +64,12 @@ export interface Ware {
    * beim naechsten Kursschritt auseinanderlaufen.
    */
   readonly preis: Preis;
+  /**
+   * Nur bei `inhaltspaket`: welches Spiel, welches Regelsatzfeld. Der Wert
+   * steht in `wert`. Der Client braucht es, um die Kachel in der Auswahl
+   * des Spiels zu sperren — ohne die Kennung zerlegen zu muessen.
+   */
+  readonly inhalt?: { readonly spiel: string; readonly feld: string };
 }
 
 /**
@@ -103,6 +121,17 @@ const wappen = ware('wappen', 'wappen');
  */
 const klang = ware('klang', 'klang');
 const musik = ware('musik', 'musik');
+
+/**
+ * Zusatzpakete. Die Liste selbst steht in `inhaltspakete.ts` — dort, wo
+ * auch steht, welches Regelsatzfeld sie tragen; hier werden sie nur zu Ware.
+ * Derselbe Bauer wie oben, damit Kennung und Edelsteinpreis nach derselben
+ * Regel entstehen (`golf-kurs-profi`, aufgerundet nach Kurs).
+ */
+function inhaltsware(paket: Inhaltspaket): Ware {
+  const grund = ware('inhaltspaket', paket.praefix)(paket.wert, paket.muenzen, paket.seltenheit);
+  return { ...grund, inhalt: { spiel: paket.spiel, feld: paket.feld } };
+}
 
 /**
  * Der Katalog.
@@ -230,11 +259,24 @@ export const WAREN: readonly Ware[] = [
   musik('wiese', 300),
   musik('traeume', 350, 'selten'),
   musik('dorf', 400, 'selten'),
+
+  // --- Zusatzpakete (Golf-Kurse, Partykiste-Themen) -------------------------
+  // Nur die kostenpflichtigen: Was frei ist, steht gar nicht im Katalog und
+  // muss es auch nicht — ein Kurs ist kein Besitz, den man einstellt, sondern
+  // ein Feld im Regelsatz des Tisches.
+  ...BEZAHLPAKETE.map(inhaltsware),
 ];
 
 const NACH_ID = new Map(WAREN.map((ware) => [ware.id, ware]));
-/** Nach Art und Wert, fuer die Pruefung beim Einstellen. */
-const NACH_WERT = new Map(WAREN.map((ware) => [`${ware.art}:${ware.wert}`, ware]));
+/**
+ * Nach Art und Wert, fuer die Pruefung beim Einstellen. Ohne Zusatzpakete:
+ * Deren Wert ist nur je Spiel eindeutig (ein Golf-Kurs und ein Partypaket
+ * duerften gleich heissen), und eingestellt werden sie nicht, sondern am
+ * Tisch verlangt (`verlangeInhaltspakete`).
+ */
+const NACH_WERT = new Map(
+  WAREN.filter((ware) => ware.art !== 'inhaltspaket').map((ware) => [`${ware.art}:${ware.wert}`, ware]),
+);
 
 /**
  * Kostenlos heisst: in BEIDEN Waehrungen null. Ein Stueck mit
@@ -314,4 +356,52 @@ export async function darfBenutzen(
       ),
     );
   return Boolean(zeile);
+}
+
+/**
+ * Wer einen Tisch mit einem Zusatzpaket aufmacht, muss es besitzen.
+ *
+ * Gefragt beim Anlegen (`createTable`) und beim Umstellen in der Lobby
+ * (`setzeTischregeln`), mit `vorher` = dem bisherigen Regelsatz des Tisches:
+ * Verlangt wird nur, was NEU dazukommt. Steht der Kurs schon am Tisch, hat
+ * ihn jemand bezahlt, und wer danach nur die Lochzahl verstellt, schaltet
+ * nichts frei.
+ *
+ * **Ein Tisch, ein Kaeufer.** Die Mitspieler brauchen das Paket nicht —
+ * deshalb fragt `joinTable` hier gar nicht erst. Sonst waere das Paket am
+ * Tisch nutzlos: Ein JGA-Paket, das nur spielt, wenn alle zehn Gaeste es
+ * gekauft haben, spielt nie, und ein Profi-Kurs, fuer den man erst drei
+ * Freunde zum Kaufen ueberreden muss, wird nicht gekauft. Gekauft wird das
+ * Recht, den Abend damit AUFZUMACHEN — wie ein Brettspiel, das einer
+ * mitbringt.
+ *
+ * Kein Datenbankzugriff, solange der Regelsatz nichts Kostenpflichtiges
+ * traegt: Fast jeder Tisch geht hier also ohne Umweg durch.
+ */
+export async function verlangeInhaltspakete(
+  db: Db,
+  accountId: string,
+  spiel: string,
+  config: unknown,
+  vorher?: unknown,
+): Promise<void> {
+  const schonDa = new Set(bezahlpaketeIm(spiel, vorher).map(inhaltspaketId));
+  const noetig = bezahlpaketeIm(spiel, config)
+    .map(inhaltspaketId)
+    .filter((id) => !schonDa.has(id));
+  if (noetig.length === 0) return;
+
+  const [konto] = await db
+    .select({ premiumUntil: s.account.premiumUntil, isStaff: s.account.isStaff })
+    .from(s.account)
+    .where(eq(s.account.id, accountId));
+  if (!konto) throw notFound('accountUnknown');
+  if (entitlementsFor(konto).ownsEverything) return;
+
+  const gekauft = await db
+    .select({ itemId: s.accountCosmetic.itemId })
+    .from(s.accountCosmetic)
+    .where(and(eq(s.accountCosmetic.accountId, accountId), inArray(s.accountCosmetic.itemId, noetig)));
+  const eigen = new Set(gekauft.map((z) => z.itemId));
+  if (noetig.some((id) => !eigen.has(id))) throw forbidden('inhaltspaketFehlt');
 }

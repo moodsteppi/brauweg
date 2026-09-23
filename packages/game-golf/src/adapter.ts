@@ -33,6 +33,10 @@ import type {
 } from '@brauweg/game-api';
 import { snapshotCodec } from '@brauweg/game-api';
 
+import { KATALOG_BIS_K40, waehleBahnen } from './bahnen.js';
+import { lobbyDaten, pruefeBahnwahl } from './bahnwahl.js';
+import { bestleistungenJeSitz } from './bestleistung.js';
+import { type GolfModus, modusVon, pruefeModus } from './modus.js';
 import {
   type GolfAusgang,
   type GolfAusstieg,
@@ -56,12 +60,26 @@ import {
   type Zug,
 } from './regeln.js';
 
+/*
+ * Bleibt 1, obwohl `GolfPartie` am 22.09.2026 das Feld `bahnen` bekam: Ein
+ * Schnappschuss von davor laedt weiter und bekommt die Folge in `deserialize`
+ * nachgezogen — aus derselben Saat mit derselben Rechnung, die seine Geraete
+ * damals selbst angestellt haben. Eine hoehere Nummer hiesse dagegen, dass
+ * jeder beim Deploy laufende Tisch beim Laden wirft.
+ */
 const SNAPSHOT_VERSION = 1;
+const codec = snapshotCodec<GolfPartie>(SNAPSHOT_VERSION);
 
 export interface GolfView {
   readonly saat: number;
   readonly sitze: number;
   readonly loecher: number;
+  /**
+   * Die Bahnen der Partie als Kennungen, eine je Loch in Spielfolge (seit
+   * dem 22.09.2026). Der Client loest sie gegen seine Geometrien auf; kennt
+   * er eine nicht, ist er zu alt und meldet das.
+   */
+  readonly bahnen: readonly string[];
   readonly botSitze: readonly number[];
   /**
    * Schlaege beider... aller Sitze, aeltester zuerst. Wie bei Feldherr nicht
@@ -76,6 +94,11 @@ export interface GolfView {
   readonly taktMs: number;
   readonly vorlauf: number;
   readonly botStufe: BotLevel;
+  /**
+   * Klassisch oder Fun (seit dem 22.09.2026, siehe modus.ts). Die Geräte
+   * ziehen daraus, zusammen mit `saat`, den Modifikator jedes Lochs selbst.
+   */
+  readonly modus: GolfModus;
 }
 
 const meta: GameMeta = {
@@ -92,6 +115,12 @@ const meta: GameMeta = {
    * des Tages soll nicht mit jeder Golfrunde mitwachsen.
    */
   xpBasisZaehltKarten: false,
+  /**
+   * Die Bahnauswahl stellt Sitz 0 in der Lobby ein, nachdem die anderen schon
+   * beigetreten sind (seit dem 22.09.2026). Golf kennt keine Chips und keinen
+   * Einsatz — jeder gueltige Regelsatz ist fuer alle Sitzenden zumutbar.
+   */
+  regelnInDerLobby: true,
 };
 
 function istRegelsatz(x: unknown): x is GolfRegeln {
@@ -107,8 +136,38 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    * geblieben — aber zwei Geräte mit verschiedener Physik rechnen aus
    * derselben Zugliste verschiedene Partien, und genau das hält die
    * Versionsgrenze des Gateways auseinander.
+   *
+   * 3 seit dem 21.09.2026: Bot-Änderung (Kraft über Sand und Eis, Portalpaare
+   * im Wegfeld, Schlag ins Portal mit Tempo). Die Bots rechnen auf jedem
+   * Gerät selbst — ein alter Bot und ein neuer spielen aus derselben Saat
+   * verschiedene Schläge, und die Partie läuft auseinander.
+   *
+   * 4 seit dem 22.09.2026: Die Sicht trägt die Bahnfolge als Kennungen
+   * (`bahnen`). Ein Client von davor zöge sie weiter selbst aus seinem
+   * Katalog — heute noch dieselbe Folge, aber mit der ersten neuen Bahn
+   * nicht mehr, und genau diese Stille soll die Grenze verhindern.
+   *
+   * 5 seit dem 22.09.2026 nachts: Bot-Änderung (Probeschläge über
+   * Beschleuniger, Drehkreuz, Strudel, Sprungfeld; Bumper als Hindernis,
+   * Drehkreuz im Wegfeld teurer) — derselbe Grund wie bei 3.
+   *
+   * 6 seit dem 23.09.2026: Fun-Modus (Roulette je Loch, modus.ts). Die Sicht
+   * trägt `modus`, Physik und Bots lesen die Werte des Lochs. Ein Client von
+   * davor spielte einen Fun-Tisch klassisch — eine andere Partie aus
+   * derselben Zugliste.
+   *
+   * 7 seit dem 23.09.2026: Physikänderung am Strudel (hält keinen Ball mehr
+   * fest, siehe `bewege` in physik.ts) — derselbe Grund wie bei 3.
+   *
+   * 8 seit dem 23.09.2026: Power-ups im Fun-Modus. Die Sicht bleibt gleich,
+   * aber Physik und Bots rechnen ein Fun-Loch mit Feldern — ein Client von
+   * davor spielte es ohne.
+   *
+   * 9 seit dem 23.09.2026: Störschläge im Fun-Modus. Ein Zug kann jetzt
+   * `art: 'ausloesen'` tragen (regeln.ts) — ein Client von davor rechnete
+   * ihn als Schlag, und die Felder eines Fun-Lochs kommen aus sieben Arten.
    */
-  protocolVersion: 2,
+  protocolVersion: 9,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -123,8 +182,15 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
     if (!Number.isInteger(rounds) || rounds < LOECHER_MIN || rounds > LOECHER_MAX) {
       probleme.push({ path: 'rounds', messageKey: 'golf.loecher', severity: 'error' });
     }
+    // Die Bahnauswahl (Kurs, Filter, Einzelauswahl) — siehe bahnwahl.ts.
+    probleme.push(...pruefeBahnwahl(config));
+    // Klassisch oder Fun — siehe modus.ts.
+    probleme.push(...pruefeModus(config));
     return probleme;
   },
+
+  /** Kurse und Themen fuer die Lobby, bevor es eine Sicht gibt (siehe bahnwahl.ts). */
+  lobbyDaten,
 
   createParty(options: CreatePartyOptions<GolfRegeln>): GolfPartie {
     return erzeugePartie({
@@ -159,11 +225,15 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
   standings(partie): PartyStanding[] {
     const abgeschlossen = partie.ausgang !== null && !partie.ausgang.strittig;
     const ausgestiegen = new Set(partie.ausstiege.map((a) => a.sitz));
+    // Die Bestleistung je Bahn (bestleistung.ts) — nur wo es eine gibt, damit
+    // der Endstand ohne sie genauso aussieht wie vor dem 22.09.2026.
+    const bestleistungen = bestleistungenJeSitz(partie);
     return platzierungen(partie.ausgang, partie.sitze).map((p) => ({
       seat: p.sitz,
       points: abgeschlossen ? Math.max(0, partie.loecher * 12 - p.schlaege) : 0,
       place: p.platz,
       left: ausgestiegen.has(p.sitz),
+      ...(bestleistungen[p.sitz]?.length ? { bestleistungen: bestleistungen[p.sitz] } : {}),
     }));
   },
 
@@ -180,6 +250,7 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
       saat: partie.saat,
       sitze: partie.sitze,
       loecher: partie.loecher,
+      bahnen: partie.bahnen,
       botSitze: partie.botSitze,
       zuege: ab === 0 ? partie.zuege : partie.zuege.slice(ab),
       abIndex: ab,
@@ -189,6 +260,7 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
       taktMs: TAKT_MS,
       vorlauf: VORLAUF_TAKTE,
       botStufe: partie.botStufe,
+      modus: modusVon(partie.regeln),
     };
   },
 
@@ -206,7 +278,15 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    */
   botAction: (): GolfAktion => ({ art: 'nichts' }),
 
-  ...snapshotCodec<GolfPartie>(SNAPSHOT_VERSION),
+  serialize: codec.serialize,
+
+  /** Füllt `bahnen` bei Schnappschüssen von vor dem 22.09.2026 nach (siehe SNAPSHOT_VERSION). */
+  deserialize(raw: unknown): GolfPartie {
+    const partie = codec.deserialize(raw) as GolfPartie & { bahnen?: readonly string[] };
+    if (Array.isArray(partie.bahnen)) return partie;
+    // Gegen den Katalog von damals, nicht den heutigen — siehe KATALOG_BIS_K40.
+    return { ...partie, bahnen: waehleBahnen(partie.saat, partie.loecher, KATALOG_BIS_K40) };
+  },
 
   /**
    * 15 Punkte je gespieltem Loch, fuer jeden Sitz gleich — auch bei

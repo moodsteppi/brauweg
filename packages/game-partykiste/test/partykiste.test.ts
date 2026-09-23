@@ -16,6 +16,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { ALTE_KENNUNGEN } from './altbestand/index.js';
+
 import {
   DEFAULT_REGELN,
   MINISPIELE,
@@ -34,6 +36,29 @@ import {
   type MinispielId,
   type PartykisteAktion,
   type PartykistePartie,
+  AUFGABEN,
+  ENTWEDER_ODER,
+  IDENTITAETEN,
+  IMPOSTER_WOERTER,
+  MINDESTMENGE,
+  NIEMALS_SPRUECHE,
+  PAKETE,
+  QUIZ_FRAGEN,
+  SCHAETZ_FRAGEN,
+  WER_EHER_SPRUECHE,
+  KATEGORIEN,
+  KOENIGSBECHER_KARTEN,
+  MEHRHEITSFRAGEN,
+  REGELKARTEN,
+  ZEHN_SEKUNDEN,
+  ersatzMinispiel,
+  hatVorrat,
+  spielbaresMinispiel,
+  waehlbareInhalte,
+  wirksameInhaltsHaerte,
+  type Inhalt,
+  type PartykisteRegeln,
+  type Runde,
 } from '../src/index.js';
 
 function neuePartie(
@@ -494,4 +519,469 @@ test('tippen alle Anwesenden Weiter, endet die Pause sofort', () => {
   /* Sitz 3 ist ein Bot und tippt nie — auf ihn wird nicht gewartet. */
   for (const sitz of [0, 1, 2]) partie = verarbeite(partie, sitz, { art: 'bereit' });
   assert.equal(partie.rundeNr, 1, 'die Runde wartet auf einen Bot, der nie tippt');
+});
+
+// ---------------------------------------------------------------------------
+// Inhalte: Metadaten, Filter, Haerte (seit dem 22.09.2026)
+// ---------------------------------------------------------------------------
+
+const KATALOGE: Readonly<Record<string, readonly Inhalt[]>> = {
+  quiz: QUIZ_FRAGEN,
+  imposter: IMPOSTER_WOERTER,
+  identitaeten: IDENTITAETEN,
+  niemals: NIEMALS_SPRUECHE,
+  wereher: WER_EHER_SPRUECHE,
+  schaetzen: SCHAETZ_FRAGEN,
+  entweder: ENTWEDER_ODER,
+  wahrheit: AUFGABEN.filter((a) => a.art === 'wahrheit'),
+  pflicht: AUFGABEN.filter((a) => a.art === 'pflicht'),
+  /* Seit dem 23.09.2026 auch die Kataloge aus #213 und #218 — Kategorien
+     ziehen Battle und Bombe, Regel-Karten Regel-Karte und Koenigsbecher. */
+  kategorien: KATEGORIEN,
+  mehrheit: MEHRHEITSFRAGEN,
+  regelkarten: REGELKARTEN,
+  zehnsekunden: ZEHN_SEKUNDEN,
+  koenigsbecher: KOENIGSBECHER_KARTEN,
+};
+
+/** Kiffen ist "pikant" — die einzigen Eintraege mit Haerte am 22.09.2026. */
+const KIFFEN = new Set([
+  ...Array.from({ length: 10 }, (_, i) => `n${101 + i}`),
+  ...Array.from({ length: 8 }, (_, i) => `w${101 + i}`),
+]);
+
+test('jeder Katalog traegt die strengste Einstellung — genug harmlose Eintraege, keine doppelte Kennung', () => {
+  /* Der Filter lockert die Haerte nie. Haette ein Katalog weniger als
+     MINDESTMENGE harmlose Eintraege, spielte ein harmloser Tisch dort mit
+     einem Stummel und wiederholte sich. */
+  for (const [name, katalog] of Object.entries(KATALOGE)) {
+    const harmlos = katalog.filter((i) => (i.haerte ?? 1) === 1);
+    assert.ok(harmlos.length >= Math.max(MINDESTMENGE, 12), `${name}: nur ${harmlos.length} harmlose Eintraege`);
+    assert.equal(new Set(katalog.map((i) => i.id)).size, katalog.length, `${name}: doppelte Kennung`);
+    for (const i of katalog) {
+      if (i.paket) for (const p of i.paket) assert.ok((PAKETE as readonly string[]).includes(p), `${i.id}: Paket ${p}`);
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Die Haerte wird nie gelockert — auch nicht als letzter Ausweg (23.09.2026)
+// ---------------------------------------------------------------------------
+
+/** Ein Katalog mit nur drei harmlosen, aber zwanzig derben Eintraegen. */
+const DUENN: Inhalt[] = [
+  ...Array.from({ length: 20 }, (_, i) => ({ id: `d${i}`, haerte: 3 as const })),
+  { id: 'h0' },
+  { id: 'h1', paket: ['jga' as const] },
+  { id: 'h2', minSitze: 12 },
+];
+
+test('zu wenig Harmloses: der Filter nimmt nur das Harmlose, nie das Derbe', () => {
+  for (const paket of [null, 'jga', 'arbeit'] as const) {
+    const auswahl = waehlbareInhalte(DUENN, { inhaltsHaerte: 1, paket }, 6);
+    assert.deepEqual(
+      auswahl.inhalte.map((i) => i.id),
+      ['h0', 'h1', 'h2'],
+      `Paket ${paket}: die Auswahl ist nicht genau das Harmlose`,
+    );
+    assert.equal(auswahl.rueckfall?.genutzt, 'ohneMinSitze', 'der letzte Halt ist die Haerte, nicht der volle Katalog');
+  }
+  /* Pikant darf das Harmlose mitnehmen, das Derbe nie. */
+  assert.equal(waehlbareInhalte(DUENN, { inhaltsHaerte: 2, paket: null }, 6).inhalte.length, 3);
+  /* Gar nichts Erlaubtes: leer — nicht der volle Katalog. */
+  const nurDerb = DUENN.filter((i) => i.haerte === 3);
+  assert.deepEqual(waehlbareInhalte(nurDerb, { inhaltsHaerte: 2, paket: 'jga' }, 6).inhalte, []);
+});
+
+test('ohne erlaubten Vorrat spielt ein anderes Minispiel — deterministisch, und nie haengt der Tisch', () => {
+  const liste: MinispielId[] = ['quiz', 'niemals', 'imposter'];
+  const ohneNiemals = (art: MinispielId): boolean => art !== 'niemals';
+  assert.equal(ersatzMinispiel(liste, 0, ohneNiemals), 'quiz', 'ein spielbares Minispiel wird nicht ersetzt');
+  assert.equal(ersatzMinispiel(liste, 1, ohneNiemals), 'imposter', 'der Ersatz ist das naechste der Liste');
+  assert.equal(ersatzMinispiel(liste, 4, ohneNiemals), 'imposter', 'dieselbe Runde ergibt denselben Ersatz');
+  assert.equal(ersatzMinispiel(liste, 1, () => false), 'busfahrer', 'zur Not Bus fahren, das keinen Inhalt braucht');
+  /* Mit den echten Katalogen kommt der Ersatz heute nie vor — jedes
+     Minispiel hat Harmloses, also spielt jede Runde, was geplant ist. */
+  for (const art of MINISPIELE) assert.equal(hatVorrat(art, 1), true, `${art} hat nichts Harmloses`);
+  for (let nr = 0; nr < MINISPIELE.length; nr++) {
+    assert.equal(spielbaresMinispiel(DEFAULT_REGELN, nr), minispielFuer(DEFAULT_REGELN, nr));
+  }
+});
+
+test('im Altbestand sind die Kiffer-Sprueche und nur sie pikant', () => {
+  /* Nur der Altbestand vom 22.09.2026: Neue Eintraege tragen ihre Haerte
+     selbst (inhalte-json.test.ts verlangt sie), die alten ausser den
+     Kiffer-Spruechen gar keine. */
+  for (const katalog of Object.values(KATALOGE)) {
+    for (const i of katalog) {
+      if (!ALTE_KENNUNGEN.has(i.id)) continue;
+      assert.equal(i.haerte ?? 1, KIFFEN.has(i.id) ? 2 : 1, `${i.id} hat die falsche Haerte`);
+    }
+  }
+});
+
+test('der Filter haelt die Haerte als Obergrenze', () => {
+  const harmlos = waehlbareInhalte(NIEMALS_SPRUECHE, { inhaltsHaerte: 1, paket: null }, 6);
+  assert.equal(harmlos.inhalte.some((i) => KIFFEN.has(i.id)), false, 'harmlos bringt Kiffer-Sprueche');
+  /* Seit dem Vorrat vom 22.09.2026 tragen auch neue Sprueche Haerte 2 und 3;
+     gezaehlt wird darum am Katalog, nicht an den zehn Kiffer-Spruechen. */
+  const bis = (h: number) => NIEMALS_SPRUECHE.filter((i) => (i.haerte ?? 1) <= h).length;
+  assert.equal(harmlos.inhalte.length, bis(1));
+  assert.ok(harmlos.inhalte.every((i) => (i.haerte ?? 1) === 1));
+  assert.equal(harmlos.rueckfall, null);
+
+  const pikant = waehlbareInhalte(NIEMALS_SPRUECHE, { inhaltsHaerte: 2, paket: null }, 6);
+  assert.equal(pikant.inhalte.length, bis(2), 'pikant schliesst harmlos ein');
+  assert.ok(pikant.inhalte.every((i) => (i.haerte ?? 1) <= 2), 'pikant bringt Derbes');
+  const derb = waehlbareInhalte(NIEMALS_SPRUECHE, { inhaltsHaerte: 3, paket: null }, 6);
+  assert.equal(derb.inhalte.length, NIEMALS_SPRUECHE.length);
+});
+
+test('der Filter behaelt die Katalogreihenfolge', () => {
+  const auswahl = waehlbareInhalte(NIEMALS_SPRUECHE, { inhaltsHaerte: 1, paket: null }, 6);
+  const stellen = auswahl.inhalte.map((i) => NIEMALS_SPRUECHE.indexOf(i));
+  assert.deepEqual(stellen, [...stellen].sort((a, b) => a - b), 'die Auswahl ist umsortiert');
+});
+
+/** Ein Spielzeugkatalog, an dem sich Paket und Sitzgrenze messen lassen. */
+function spielzeug(): Inhalt[] {
+  const liste: Inhalt[] = [];
+  for (let i = 0; i < 12; i++) liste.push({ id: `jga${i}`, paket: ['jga'] });
+  for (let i = 0; i < 4; i++) liste.push({ id: `weih${i}`, paket: ['weihnachten'] });
+  for (let i = 0; i < 12; i++) liste.push({ id: `allg${i}` });
+  for (let i = 0; i < 12; i++) liste.push({ id: `gross${i}`, minSitze: 8 });
+  for (let i = 0; i < 12; i++) liste.push({ id: `derb${i}`, haerte: 3, paket: ['jga'] });
+  return liste;
+}
+
+test('ein Paket nimmt seine eigenen Inhalte und faellt erst bei Mangel zurueck', () => {
+  const katalog = spielzeug();
+  const jga = waehlbareInhalte(katalog, { inhaltsHaerte: 1, paket: 'jga' }, 6);
+  assert.deepEqual(jga.inhalte.map((i) => i.id), Array.from({ length: 12 }, (_, i) => `jga${i}`));
+  assert.equal(jga.rueckfall, null, 'zwoelf passende reichen');
+
+  /* Vier Weihnachtseintraege sind zu wenig: dazu kommt Allgemeingut — aber
+     nichts, was fuer den JGA gedacht war. */
+  const weih = waehlbareInhalte(katalog, { inhaltsHaerte: 1, paket: 'weihnachten' }, 6);
+  assert.deepEqual(weih.rueckfall, { gewollt: 'paket', genutzt: 'paketUndAllgemein', passend: 4 });
+  assert.equal(weih.inhalte.some((i) => i.id.startsWith('jga')), false, 'fremdes Paket rutscht durch');
+  assert.ok(weih.inhalte.some((i) => i.id === 'weih0') && weih.inhalte.some((i) => i.id === 'allg0'));
+
+  /* Mit einem hoeheren Ziel reicht auch das nicht: dann faellt das Paket ganz. */
+  const viel = waehlbareInhalte(katalog, { inhaltsHaerte: 1, paket: 'weihnachten' }, 6, 20);
+  assert.equal(viel.rueckfall?.genutzt, 'ohnePaket');
+  assert.ok(viel.inhalte.some((i) => i.id.startsWith('jga')));
+});
+
+test('minSitze blendet aus, was fuer den Tisch zu gross ist', () => {
+  const katalog = spielzeug();
+  const klein = waehlbareInhalte(katalog, { inhaltsHaerte: 1, paket: null }, 6);
+  assert.equal(klein.inhalte.some((i) => i.id.startsWith('gross')), false);
+  const gross = waehlbareInhalte(katalog, { inhaltsHaerte: 1, paket: null }, 8);
+  assert.ok(gross.inhalte.some((i) => i.id.startsWith('gross')));
+
+  /* Nur Eintraege ab acht Sitzen: an einem Sechsertisch faellt die Grenze
+     lieber, als dass die Runde leer bleibt. */
+  const nurGross = katalog.filter((i) => i.id.startsWith('gross'));
+  const rueck = waehlbareInhalte(nurGross, { inhaltsHaerte: 1, paket: null }, 6);
+  assert.equal(rueck.inhalte.length, 12);
+  assert.deepEqual(rueck.rueckfall, { gewollt: 'ohnePaket', genutzt: 'ohneMinSitze', passend: 0 });
+});
+
+test('der Rueckfall lockert nie die Haerte, solange Harmloses da ist', () => {
+  /* JGA-Paket auf harmlos: die zwoelf derben JGA-Eintraege bleiben draussen,
+     obwohl sie genau zum Paket passen. */
+  const katalog = spielzeug();
+  const auswahl = waehlbareInhalte(katalog, { inhaltsHaerte: 1, paket: 'jga' }, 6, 30);
+  assert.equal(auswahl.inhalte.some((i) => i.id.startsWith('derb')), false);
+  assert.ok(auswahl.inhalte.length > 0);
+});
+
+test('der Filter wirft nie, auch nicht bei Unsinn im Regelsatz', () => {
+  const unsinn: unknown[] = [{}, { inhaltsHaerte: 99 }, { inhaltsHaerte: '3' }, { paket: 42 }, { paket: 'gibtsnicht' }];
+  for (const regeln of unsinn) {
+    for (const sitze of [Number.NaN, -1, 0, 6, 99]) {
+      const auswahl = waehlbareInhalte(NIEMALS_SPRUECHE, regeln as never, sitze, Number.NaN);
+      assert.ok(auswahl.inhalte.length > 0, `${JSON.stringify(regeln)} bei ${sitze} Sitzen ist leer`);
+      assert.equal(auswahl.inhalte.some((i) => KIFFEN.has(i.id)), false, 'Unsinn wird derber statt harmlos');
+    }
+  }
+  assert.deepEqual(waehlbareInhalte([], { inhaltsHaerte: 1, paket: null }, 6).inhalte, []);
+});
+
+test('mit Paket haelt die Runde fest, dass die Auswahl nachgeben musste', () => {
+  /* Ein harmloser JGA-Tisch findet unter den Quizfragen weniger als
+     MINDESTMENGE eigene (die JGA-Fragen sind meist pikant) — er spielt also
+     auch Allgemeingut, und die Runde sagt das, statt es zu verschweigen. Bis
+     zum Vorrat vom 22.09.2026 trug gar kein Eintrag ein Paket; gezaehlt wird
+     darum am Katalog. */
+  const regeln: PartykisteRegeln = { ...DEFAULT_REGELN, minispiele: ['quiz'], paket: 'jga' };
+  const runde = baueRunde(regeln, 'saat', 6, 0, []);
+  const passend = QUIZ_FRAGEN.filter((f) => (f.haerte ?? 1) === 1 && f.paket?.includes('jga')).length;
+  assert.ok(passend < MINDESTMENGE, 'die Probe braucht ein Paket mit zu wenig harmlosen Quizfragen');
+  assert.deepEqual(runde.inhaltsRueckfall, { gewollt: 'paket', genutzt: 'paketUndAllgemein', passend });
+  assert.equal(baueRunde(DEFAULT_REGELN, 'saat', 6, 0, []).inhaltsRueckfall, null);
+});
+
+test('eine harmlose Partie bringt nie einen pikanten Spruch', () => {
+  for (const spiel of ['niemals', 'wereher'] as MinispielId[]) {
+    for (let saat = 0; saat < 12; saat++) {
+      const regeln = { ...DEFAULT_REGELN, minispiele: [spiel] };
+      for (let nr = 0; nr < 15; nr++) {
+        const runde = baueRunde(regeln, `s${saat}`, 6, nr, []);
+        const id = runde.art === 'niemals' || runde.art === 'wereher' ? runde.spruchId : '';
+        assert.equal(KIFFEN.has(id), false, `${spiel}, Saat ${saat}, Runde ${nr}: ${id}`);
+      }
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Regelsatz: inhaltsHaerte und paket
+// ---------------------------------------------------------------------------
+
+test('inhaltsHaerte und paket duerfen fehlen — alte Tische und der heutige Bildschirm schicken sie nicht', () => {
+  const alt = { minispiele: [...MINISPIELE], trinkmodus: true, schluckFaktor: 2 };
+  assert.deepEqual(partykiste.validateConfig(alt, 6, 6), []);
+  for (const inhaltsHaerte of [1, 2, 3]) {
+    for (const paket of [null, ...PAKETE]) {
+      assert.deepEqual(partykiste.validateConfig({ ...DEFAULT_REGELN, inhaltsHaerte, paket }, 6, 6), []);
+    }
+  }
+  const partie = partykiste.createParty({ config: alt as never, seats: 6, rounds: 3, seed: 1, gastSeats: [] });
+  assert.equal(partie.regeln.inhaltsHaerte, 1);
+  assert.equal(partie.regeln.paket, null);
+});
+
+test('Unsinn in inhaltsHaerte und paket wird gemeldet, nie geworfen', () => {
+  const haerteUnsinn: unknown[] = [0, 4, -1, 1.5, '2', null, true, [], {}, Number.NaN, 999_999];
+  for (const inhaltsHaerte of haerteUnsinn) {
+    let probleme: ReturnType<typeof partykiste.validateConfig> = [];
+    assert.doesNotThrow(() => {
+      probleme = partykiste.validateConfig({ ...DEFAULT_REGELN, inhaltsHaerte }, 6, 6);
+    });
+    assert.ok(
+      probleme.some((p) => p.path === 'inhaltsHaerte' && p.messageKey === 'ruleset.partykiste.inhaltsHaerte'),
+      `inhaltsHaerte ${JSON.stringify(inhaltsHaerte)} ging durch`,
+    );
+  }
+  const paketUnsinn: unknown[] = ['gibtsnicht', '', 42, true, [], ['jga'], {}];
+  for (const paket of paketUnsinn) {
+    let probleme: ReturnType<typeof partykiste.validateConfig> = [];
+    assert.doesNotThrow(() => {
+      probleme = partykiste.validateConfig({ ...DEFAULT_REGELN, paket }, 6, 6);
+    });
+    assert.ok(
+      probleme.some((p) => p.path === 'paket' && p.messageKey === 'ruleset.partykiste.paket'),
+      `paket ${JSON.stringify(paket)} ging durch`,
+    );
+  }
+  /* Ein kaputter Wert aus der Datenbank spielt trotzdem — harmlos, alles. */
+  const partie = partykiste.createParty({
+    config: { ...DEFAULT_REGELN, inhaltsHaerte: 'derb', paket: 42 } as never,
+    seats: 6,
+    rounds: 3,
+    seed: 3,
+    gastSeats: [],
+  });
+  assert.equal(partie.regeln.inhaltsHaerte, 1);
+  assert.equal(partie.regeln.paket, null);
+  assert.equal(spieleDurch(partie).partie.fertig, true);
+});
+
+// ---------------------------------------------------------------------------
+// Derb nur ohne Gast
+// ---------------------------------------------------------------------------
+
+test('sitzt ein Gast am Tisch, kappt die Partie "derb" auf "pikant"', () => {
+  const derb = { ...DEFAULT_REGELN, inhaltsHaerte: 3 as const };
+  const mitGast = partykiste.createParty({ config: derb, seats: 6, rounds: 3, seed: 5, gastSeats: [2] });
+  assert.equal(mitGast.regeln.inhaltsHaerte, 2, 'derb trotz Gast');
+  assert.equal(mitGast.inhaltsHaerteGewollt, 3, 'die Kappung steht nicht in der Partie');
+
+  const ohneGast = partykiste.createParty({ config: derb, seats: 6, rounds: 3, seed: 5, gastSeats: [] });
+  assert.equal(ohneGast.regeln.inhaltsHaerte, 3);
+  assert.equal(ohneGast.inhaltsHaerteGewollt, null);
+
+  /* Sagt die Laufzeit nicht, wer Gast ist, gilt die strenge Seite. */
+  const unbekannt = partykiste.createParty({ config: derb, seats: 6, rounds: 3, seed: 5 });
+  assert.equal(unbekannt.regeln.inhaltsHaerte, 2);
+
+  /* Pikant und harmlos bleiben, wie sie sind — gekappt wird nur nach unten. */
+  const pikant = partykiste.createParty({
+    config: { ...DEFAULT_REGELN, inhaltsHaerte: 2 },
+    seats: 6,
+    rounds: 3,
+    seed: 5,
+    gastSeats: [0, 1],
+  });
+  assert.equal(pikant.regeln.inhaltsHaerte, 2);
+  assert.equal(pikant.inhaltsHaerteGewollt, null);
+  assert.equal(wirksameInhaltsHaerte(1, [0]), 1);
+  assert.equal(wirksameInhaltsHaerte(3, [0]), 2);
+  assert.equal(wirksameInhaltsHaerte(3, []), 3);
+});
+
+test('die Kappung ueberlebt den Snapshot — ein neu geladener Tisch wird nicht derber', () => {
+  const partie = partykiste.createParty({
+    config: { ...DEFAULT_REGELN, inhaltsHaerte: 3 },
+    seats: 6,
+    rounds: 3,
+    seed: 5,
+    gastSeats: [4],
+  });
+  const wieder = partykiste.deserialize(partykiste.serialize(partie));
+  assert.equal(wieder.regeln.inhaltsHaerte, 2);
+  assert.equal(wieder.inhaltsHaerteGewollt, 3);
+});
+
+// ---------------------------------------------------------------------------
+// Wiederholungsschutz
+// ---------------------------------------------------------------------------
+
+/** Alle Kennungen, die eine Runde zeigt — je Katalog. */
+function kennungen(runde: Runde): Array<[string, string]> {
+  switch (runde.art) {
+    case 'imposter':
+      return [['imposter', runde.wortId]];
+    case 'quiz':
+      return [['quiz', runde.frageId]];
+    case 'werbinich':
+      return runde.identitaeten.map((id) => ['identitaeten', id]);
+    case 'niemals':
+      return [['niemals', runde.spruchId]];
+    case 'wereher':
+      return [['wereher', runde.spruchId]];
+    case 'schaetzen':
+      return [['schaetzen', runde.frageId]];
+    case 'entweder':
+      return [['entweder', runde.paarId]];
+    case 'wahrheitpflicht':
+      return runde.aufgabeId.filter((id) => id !== '').map((id) => ['aufgaben', id]);
+    case 'busfahrer':
+      return [];
+    case 'kategorien':
+      return [['kategorien', runde.kategorieId]];
+    case 'mehrheit':
+      return [['mehrheit', runde.frageId]];
+    case 'regelkarte':
+      return [['regelkarten', runde.karteId]];
+    /* Die Bombe zieht Kategorien aus einem EIGENEN Stapel (partie.ts, Zweck 'bombe'). */
+    case 'bombe':
+      return [['bombe', runde.kategorieId]];
+    case 'zehnsekunden':
+      return [['zehnsekunden', runde.aufgabeId]];
+    case 'koenigsbecher':
+      return runde.regelVorrat.map((r) => ['koenigsbecher-regeln', r.karteId]);
+  }
+}
+
+/** Spielt eine Partie mit Bots durch und sammelt jede gezeigte Kennung einmal je Runde. */
+function gezeigteKennungen(partie: PartykistePartie): Map<string, string[]> {
+  const gesehen = new Map<string, string[]>();
+  const abgerechnet = new Set<number>();
+  let stand = partie;
+  for (let zug = 0; zug < 20_000 && !stand.fertig; zug++) {
+    if (stand.runde.phase === 'ergebnis' && !abgerechnet.has(stand.rundeNr)) {
+      abgerechnet.add(stand.rundeNr);
+      for (const [katalog, id] of kennungen(stand.runde)) {
+        gesehen.set(katalog, [...(gesehen.get(katalog) ?? []), id]);
+      }
+    }
+    const sitz = amZug(stand);
+    if (sitz === null) break;
+    stand = verarbeite(stand, sitz, partykiste.botAction(sichtFuer(stand, sitz), stand.botStufe));
+  }
+  assert.equal(stand.fertig, true, 'die Partie kommt nicht zu Ende');
+  assert.equal(abgerechnet.size, stand.runden, 'nicht jede Runde wurde abgerechnet');
+  return gesehen;
+}
+
+function keineDoppelten(gesehen: Map<string, string[]>, wo: string): void {
+  for (const [katalog, ids] of gesehen) {
+    const doppelt = ids.filter((id, i) => ids.indexOf(id) !== i);
+    assert.deepEqual(doppelt, [], `${wo}: ${katalog} zeigt ${doppelt.join(', ')} mehrmals`);
+  }
+}
+
+test('ueber eine ganze Partie kommt keine Kennung zweimal — auch zu zwoelft in fuenfzehn Runden', () => {
+  for (const saat of [1, 2, 3, 4711]) {
+    const partie = erzeugePartie({ regeln: DEFAULT_REGELN, saat, sitze: 12, runden: 15, gastSitze: [] });
+    const gesehen = gezeigteKennungen(partie);
+    /* Alle Minispiele reihum in fuenfzehn Runden. Wie oft Wer bin ich und
+       Wahrheit oder Pflicht drankommen, haengt an der Laenge der Liste — seit
+       dem 23.09.2026 sind es fuenfzehn, also jedes einmal. Gezaehlt statt
+       hingeschrieben, damit das naechste Minispiel diese Zeile nicht bricht. */
+    const wieOft = (art: MinispielId): number =>
+      Array.from({ length: 15 }, (_, nr) => minispielFuer(DEFAULT_REGELN, nr)).filter((a) => a === art).length;
+    assert.equal(gesehen.get('identitaeten')?.length, 12 * wieOft('werbinich'), 'Wer bin ich zu zwoelft');
+    assert.equal(gesehen.get('aufgaben')?.length, 12 * wieOft('wahrheitpflicht'), 'Wahrheit oder Pflicht zu zwoelft');
+    keineDoppelten(gesehen, `Saat ${saat}`);
+  }
+  /* Und eine Reihe, in der beide Wiederholungsfehler mehrfach drankaemen. */
+  const gemischt = { ...DEFAULT_REGELN, minispiele: ['werbinich', 'wahrheitpflicht', 'quiz'] as MinispielId[] };
+  const gesehen = gezeigteKennungen(erzeugePartie({ regeln: gemischt, saat: 5, sitze: 12, runden: 15, gastSitze: [] }));
+  assert.equal(gesehen.get('identitaeten')?.length, 60);
+  assert.equal(gesehen.get('aufgaben')?.length, 60);
+  keineDoppelten(gesehen, 'gemischte Reihe');
+});
+
+test('"Wer bin ich" allein: fuenfzehn Runden ohne doppelten Namen', () => {
+  /* 9 Sitze x 15 Runden = 135 Namen aus 140 — knapp, und genau deshalb die Probe. */
+  const regeln = { ...DEFAULT_REGELN, minispiele: ['werbinich'] as MinispielId[] };
+  const gesehen = gezeigteKennungen(erzeugePartie({ regeln, saat: 7, sitze: 9, runden: 15, gastSitze: [] }));
+  assert.equal(gesehen.get('identitaeten')?.length, 135);
+  keineDoppelten(gesehen, 'Wer bin ich');
+});
+
+test('"Wahrheit oder Pflicht" allein: zwei Sitze bekommen nie dieselbe Aufgabe', () => {
+  /* 12 Sitze x 5 Runden = 60 Plaetze je Art — so viele Aufgaben hat jede Art. */
+  const regeln = { ...DEFAULT_REGELN, minispiele: ['wahrheitpflicht'] as MinispielId[] };
+  for (const saat of [1, 2, 3]) {
+    const gesehen = gezeigteKennungen(erzeugePartie({ regeln, saat, sitze: 12, runden: 5, gastSitze: [] }));
+    assert.equal(gesehen.get('aufgaben')?.length, 60);
+    keineDoppelten(gesehen, `W/P, Saat ${saat}`);
+  }
+});
+
+test('in einer einzelnen Runde "Wer bin ich" traegt jeder Sitz einen anderen Namen', () => {
+  const regeln = { ...DEFAULT_REGELN, minispiele: ['werbinich'] as MinispielId[] };
+  for (let nr = 0; nr < 30; nr++) {
+    const runde = baueRunde(regeln, 'saat', 12, nr, []);
+    if (runde.art !== 'werbinich') return assert.fail('falsches Minispiel');
+    assert.equal(new Set(runde.identitaeten).size, 12, `Runde ${nr}: zwei Sitze, ein Name`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Determinismus mit Filter
+// ---------------------------------------------------------------------------
+
+test('gleiche Saat, gleiche Regeln — dieselbe Ziehung, auch mit Filter', () => {
+  const varianten: PartykisteRegeln[] = [
+    DEFAULT_REGELN,
+    { ...DEFAULT_REGELN, inhaltsHaerte: 2 },
+    { ...DEFAULT_REGELN, inhaltsHaerte: 3, paket: 'jga' },
+  ];
+  for (const regeln of varianten) {
+    const a = gezeigteKennungen(erzeugePartie({ regeln, saat: 99, sitze: 8, runden: 15, gastSitze: [] }));
+    const b = gezeigteKennungen(erzeugePartie({ regeln, saat: 99, sitze: 8, runden: 15, gastSitze: [] }));
+    assert.deepEqual([...a.entries()], [...b.entries()], `${JSON.stringify(regeln)}: zweite Ziehung weicht ab`);
+  }
+  /* Und eine andere Saat zieht wirklich anders — sonst prueft der Test nichts. */
+  const x = gezeigteKennungen(erzeugePartie({ regeln: DEFAULT_REGELN, saat: 1, sitze: 8, runden: 15, gastSitze: [] }));
+  const y = gezeigteKennungen(erzeugePartie({ regeln: DEFAULT_REGELN, saat: 2, sitze: 8, runden: 15, gastSitze: [] }));
+  assert.notDeepEqual([...x.entries()], [...y.entries()]);
+});
+
+test('ein Snapshot mitten in Wahrheit oder Pflicht zieht dieselbe Aufgabe wie der Server', () => {
+  const regeln = { ...DEFAULT_REGELN, minispiele: ['wahrheitpflicht'] as MinispielId[] };
+  const partie = erzeugePartie({ regeln, saat: 13, sitze: 6, runden: 3, gastSitze: [] });
+  const kopie = partykiste.deserialize(partykiste.serialize(partie));
+  const sitz = amZug(partie)!;
+  const a = verarbeite(partie, sitz, { art: 'wahl', pflicht: true });
+  const b = verarbeite(kopie, sitz, { art: 'wahl', pflicht: true });
+  if (a.runde.art !== 'wahrheitpflicht' || b.runde.art !== 'wahrheitpflicht') return assert.fail('falsches Minispiel');
+  assert.notEqual(a.runde.aufgabeId[sitz], '');
+  assert.equal(a.runde.aufgabeId[sitz], b.runde.aufgabeId[sitz]);
 });

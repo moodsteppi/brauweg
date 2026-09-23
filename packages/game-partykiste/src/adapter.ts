@@ -14,11 +14,15 @@
  *      tippt, kuerzt sie ab — sind alle Anwesenden durch, geht es sofort
  *      weiter, ohne dass die Frist ablaeuft.
  *
- * Eine Phasenfrist (`phaseMs`) gibt es NICHT. Sie waere die naheliegende
- * Antwort auf "was, wenn einer nie antwortet", ist es aber nicht: Genau dafuer
- * gibt es die Zugzeit der Plattform, und die greift hier, weil `currentActor`
- * immer einen Sitz nennt. Zwei Fristen nebeneinander laesst die Laufzeit
- * ohnehin nicht zu.
+ * Eine Phasenfrist (`phaseMs`) gibt es seit dem 23.09.2026 — aber NICHT als
+ * Antwort auf "was, wenn einer nie antwortet". Dafuer bleibt die Zugzeit der
+ * Plattform, und die greift, weil `currentActor` immer einen Sitz nennt. Die
+ * Frist gilt nur in den drei Phasen, die ohne Uhr kein Spiel waeren: die
+ * tickende Bombe, die zehn Sekunden des Sprechers, das „Hand hoch" nach einer
+ * Sieben im Koenigsbecher (zeitdruck.ts). Sie ist immer kuerzer als die
+ * Zugzeit, und die Laufzeit stellt fuer beide EINEN Timer, den frueheren.
+ * Gemessen wird auf dem Server; der Client zeigt die Frist hoechstens an —
+ * die Restzeit der Bombe nicht einmal das (`phaseHidden`).
  */
 
 import type {
@@ -40,10 +44,21 @@ import {
   platzierungen,
   verarbeite,
   type PartykistePartie,
+  weiter,
 } from './partie.js';
+import {
+  fristAbgelaufen,
+  istZeitdruck,
+  zeitdruckAktionen,
+  zeitdruckPhaseKey,
+  zeitdruckPhaseMs,
+  zeitdruckPhaseVerdeckt,
+} from './zeitdruck.js';
+import { istPaket } from './inhalte/typen.js';
 import {
   BOT_TAKT_MS,
   DEFAULT_REGELN,
+  INHALTS_HAERTE_VORGABE,
   MAX_REDERUNDEN,
   MINISPIELE,
   RUNDEN_MAX,
@@ -52,11 +67,14 @@ import {
   SCHLUCK_FAKTOR_MIN,
   SITZE,
   ZUGZEIT_MS,
+  istHaerte,
   istMinispiel,
+  istSpielmodus,
   type PartykisteAktion,
   type PartykisteRegeln,
 } from './regeln.js';
 import { sichtFuer, type PartykisteSicht } from './sicht.js';
+import { TISCHOEFFNER, wechselbareSitze } from './modi.js';
 
 const SNAPSHOT_VERSION = 1;
 
@@ -90,8 +108,21 @@ export const partykiste: GameModule<
   PartykisteRegeln
 > = {
   meta,
-  /** Erste Fassung — noch keine Protokollgeschichte. */
-  protocolVersion: 1,
+  /**
+   * 2 seit dem 22.09.2026: drei neue Minispiele (Kategorien, Mehrheitsraten,
+   * Regel-Karte) und `regelKarte` in jeder Sicht. Ein Client der Fassung 1
+   * kennt die neuen Runden nicht und zeigte dort nichts — lieber beim
+   * Beitritt abweisen (client protocol.ts, PARTYKISTE_MODULE_VERSION).
+   *
+   * 3 seit dem 22.09.2026: die Spielmodi (modi.ts) — Aktion `lagerwechsel`,
+   * die Aufstellung vor Runde 1 und sechs neue Felder in der Sicht. Ein
+   * Client der Fassung 2 saehe im Team-Abend die erste Runde statt der
+   * Aufstellung, und jeder Tipp dort wuerde abgewiesen.
+   *
+   * 4 seit dem 23.09.2026: die drei mit Uhr (Bombe, 10 Sekunden,
+   * Koenigsbecher) und ihre Aktionen — aus demselben Grund wie bei 2.
+   */
+  protocolVersion: 4,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -138,6 +169,54 @@ export const partykiste: GameModule<
           severity: 'error',
         });
       }
+      /*
+       * Beide seit dem 22.09.2026 — und beide duerfen FEHLEN. Jeder Tisch,
+       * der davor angelegt wurde, und der Bildschirm von heute (er schickt
+       * nur minispiele, trinkmodus, schluckFaktor) kennen sie nicht; wer sie
+       * hier verlangte, braeche jeden "Gegen Bots"-Tisch. Fehlt = Vorgabe:
+       * harmlos, alle Inhalte. Nur ein Wert, der DA ist und nicht passt, ist
+       * ein Problem.
+       *
+       * Ob "derb" am Tisch wirklich gilt, entscheidet diese Pruefung nicht:
+       * Hier steht noch nicht fest, wer sich setzt. Die Gast-Kappung macht
+       * `erzeugePartie` beim Start.
+       */
+      const inhaltsHaerte = roh['inhaltsHaerte'];
+      if (inhaltsHaerte !== undefined && !istHaerte(inhaltsHaerte)) {
+        probleme.push({
+          path: 'inhaltsHaerte',
+          messageKey: 'ruleset.partykiste.inhaltsHaerte',
+          severity: 'error',
+        });
+      }
+      const paket = roh['paket'];
+      if (paket !== undefined && paket !== null && !istPaket(paket)) {
+        probleme.push({
+          path: 'paket',
+          messageKey: 'ruleset.partykiste.paket',
+          severity: 'error',
+        });
+      }
+      /*
+       * Der Modus (seit dem 22.09.2026) darf fehlen wie die beiden oben —
+       * fehlt = Turnier. Ein Themenabend OHNE Paket ist dagegen ein Fehler,
+       * den der Oeffner sehen soll: Er haette sonst ein Turnier bekommen,
+       * ohne es zu merken (createParty spielt ihn trotzdem, als Turnier).
+       */
+      const modus = roh['modus'];
+      if (modus !== undefined && !istSpielmodus(modus)) {
+        probleme.push({
+          path: 'modus',
+          messageKey: 'ruleset.partykiste.modus',
+          severity: 'error',
+        });
+      } else if (modus === 'themenabend' && !istPaket(paket)) {
+        probleme.push({
+          path: 'paket',
+          messageKey: 'ruleset.partykiste.themenOhnePaket',
+          severity: 'error',
+        });
+      }
     }
 
     if (!Number.isInteger(seats) || !(SITZE as readonly number[]).includes(seats)) {
@@ -162,6 +241,10 @@ export const partykiste: GameModule<
           typeof regeln.schluckFaktor === 'number' && Number.isFinite(regeln.schluckFaktor)
             ? Math.min(SCHLUCK_FAKTOR_MAX, Math.max(SCHLUCK_FAKTOR_MIN, Math.round(regeln.schluckFaktor)))
             : DEFAULT_REGELN.schluckFaktor,
+        /* Unsinn wird harmlos bzw. "alles" — nie derber als eingestellt. */
+        inhaltsHaerte: istHaerte(regeln.inhaltsHaerte) ? regeln.inhaltsHaerte : INHALTS_HAERTE_VORGABE,
+        paket: istPaket(regeln.paket) ? regeln.paket : null,
+        modus: istSpielmodus(regeln.modus) ? regeln.modus : 'turnier',
       },
       saat: options.seed,
       saatHex: options.seedHex,
@@ -169,6 +252,11 @@ export const partykiste: GameModule<
       runden: options.rounds,
       botSitze: options.botSeats,
       botStufe: options.botLevel,
+      /*
+       * Durchgereicht, wie es kommt — auch `undefined`. Eine Laufzeit, die
+       * nicht sagt, wer Gast ist, bekommt damit kein "derb" (erzeugePartie).
+       */
+      gastSitze: options.gastSeats,
     });
   },
 
@@ -184,6 +272,16 @@ export const partykiste: GameModule<
   legalActions: (partie, sitz): PartykisteAktion[] => {
     if (partie.fertig) return [];
     if (amZugVon(partie) !== sitz) return [];
+    /* Team-Abend, Aufstellung: fertig melden oder einen Sitz ins andere Lager. */
+    if (partie.aufstellung) {
+      if (sitz !== TISCHOEFFNER) return [];
+      return [
+        { art: 'bereit' },
+        ...wechselbareSitze(partie.lager ?? [], partie.ausgestiegen).map(
+          (ziel) => ({ art: 'lagerwechsel', sitz: ziel }) as const,
+        ),
+      ];
+    }
     const runde = partie.runde;
     if (runde.phase === 'ergebnis') return [{ art: 'bereit' }];
 
@@ -240,6 +338,28 @@ export const partykiste: GameModule<
               { art: 'erledigt', ja: true },
               { art: 'erledigt', ja: false },
             ];
+      /*
+       * Die drei ohne Uhr. Nicht hier stehen, mit Absicht, der Einspruch
+       * (Kategorien) und der Verstoss (Regel-Karte): Beide darf JEDER Sitz
+       * jederzeit, nicht nur der am Zug — genau wie das Tippen in den
+       * gleichzeitigen Minispielen, fuer das hier auch nur der naechste Offene
+       * seine Knoepfe bekommt. Der Bildschirm baut sie aus der Sicht
+       * (`regelKarte.meldenMoeglich`, `daten.letzter`).
+       */
+      case 'kategorien':
+        return [{ art: 'genannt' }, { art: 'gestockt' }];
+      case 'mehrheit':
+        return [0, 1].flatMap((eigene) =>
+          [0, 1].map((tipp) => ({ art: 'mehrheitstipp', eigene, tipp }) as const),
+        );
+      case 'regelkarte':
+        return [{ art: 'bereit' }];
+      /* Die drei mit Uhr (zeitdruck.ts). „Hand hoch" darf jeder, Knoepfe
+         bekommt wie ueberall nur der naechste Offene. */
+      case 'bombe':
+      case 'zehnsekunden':
+      case 'koenigsbecher':
+        return istZeitdruck(runde) ? zeitdruckAktionen(partie, runde, sitz) : [];
     }
   },
 
@@ -253,6 +373,21 @@ export const partykiste: GameModule<
    * der Zugzeit an den Bot, der fuer ihn tippt — mehr Sicherheitsnetz braucht
    * es nicht.
    */
+
+  /*
+   * Die Uhr der drei Zeitdruck-Minispiele (zeitdruck.ts). Das Modul nennt nur
+   * die Dauer; gemessen wird auf dem Server, und nach Ablauf schaltet
+   * `advancePhase` weiter, ohne dass ein Geraet etwas schickt. `phaseKey`
+   * trennt zwei Sieben hintereinander; `phaseHidden` haelt die Restzeit der
+   * Bombe vom Draht fern.
+   */
+  phaseMs: (partie) => zeitdruckPhaseMs(partie),
+  phaseKey: (partie) => zeitdruckPhaseKey(partie),
+  phaseHidden: (partie) => zeitdruckPhaseVerdeckt(partie),
+  advancePhase: (partie) => {
+    const nach = fristAbgelaufen(partie);
+    return nach === partie ? partie : weiter(nach);
+  },
 
   standings(partie): PartyStanding[] {
     const raus = new Set(partie.ausgestiegen);

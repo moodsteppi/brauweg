@@ -151,7 +151,17 @@ export type GameId =
    * wird nur die Entscheidung; genau deshalb braucht es, anders als Werwolf,
    * keinen freien Text zwischen den Sitzen.
    */
-  | 'partykiste';
+  | 'partykiste'
+  /**
+   * BroCooked ist wie Golf Echtzeit im Gleichschritt (Weg B), aber das erste
+   * MITEINANDER der Plattform: Eine hektische Kueche fuer 1 bis 4 Koeche, in
+   * der alle zusammen EINE Punktzahl erkochen. Der Server rechnet keine
+   * Kueche — er verwahrt Saatkorn, Regelsatz, Bot-Sitze, die Eingabeliste und
+   * die Ergebnismeldungen (docs/SPEZIFIKATION-BROCOOKED.md). `currentActor`
+   * ist deshalb immer null, `legalActions` leer, und `standings` setzt alle
+   * auf Platz 1: Wer hier eine Rangfolge einzieht, baut ein anderes Spiel.
+   */
+  | 'brocooked';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby
@@ -214,6 +224,19 @@ export interface GameMeta {
    * (Grundsatz 4: der Regelsatz enthaelt keinen Geldbeutel).
    */
   readonly chipStackField?: string;
+  /**
+   * Der Regelsatz darf sich in der Lobby noch aendern (seit dem 22.09.2026,
+   * zuerst fuer die Bahnauswahl von Golf). Fehlt das Feld, gilt nein: Der
+   * Regelsatz steht ab dem Anlegen des Tisches fest, wie bisher.
+   *
+   * Opt-in und nicht fuer alle, weil ein Regelsatz mehr sein kann als
+   * Spielregeln — beim Poker haengt am Chip-Feld der Einsatz, den die
+   * Plattform beim Beitritt schon geprueft hat. Wer das Feld setzt, sagt zu,
+   * dass jeder gueltige Regelsatz fuer die schon Sitzenden zumutbar ist.
+   * Aendern darf nur, wer auf Sitz 0 sitzt, und nur solange der Tisch
+   * wartet (`setzeTischregeln` im Server).
+   */
+  readonly regelnInDerLobby?: boolean;
   /**
    * Obergrenze fuer die Pause der Plattform zwischen zwei Botzuegen.
    *
@@ -322,6 +345,17 @@ export interface CreatePartyOptions<TConfig> {
    * die daraus schon beim Aufbau etwas ableiten muessen.
    */
   readonly botLevel?: BotLevel;
+  /**
+   * Plaetze, auf denen ein GASTKONTO sitzt (Konto ohne Mail und ohne
+   * Altersangabe, `account.gastSeit`).
+   *
+   * Seit dem 22.09.2026 fuer die Partykiste: Ihre Inhaltsstufe "derb" gibt
+   * es nur an Tischen ohne Gast, und wer sitzt, steht erst beim Start fest —
+   * also hier, nicht in der eingefrorenen `config`. Fehlt das Feld, sitzt
+   * kein Gast am Tisch oder die Laufzeit weiss es nicht; ein Modul, das die
+   * Auskunft braucht, muss dann die strengere Seite waehlen.
+   */
+  readonly gastSeats?: readonly number[];
 }
 
 // ---------------------------------------------------------------------------
@@ -359,6 +393,18 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    * Unsinn abweisen, nicht nur widerspruechliche Einstellungen.
    */
   validateConfig(config: unknown, seats: number, rounds: number): ConfigProblem[];
+
+  /**
+   * Daten, die ein Bildschirm VOR der Partie braucht, um den Regelsatz
+   * einstellen zu lassen — bei Golf die Kurse und die Themen je Bahn. Der
+   * Server reicht sie unbesehen als `lobby` in `GET /api/games/:id/defaults`
+   * durch. Es gibt sie, damit der Client solche Listen nicht abschreibt
+   * (CLAUDE.md: „Was das Modul weiss, schreibt der Client nicht ab"); vor der
+   * Partie gibt es noch keine Sicht, in die sie gehoeren koennten.
+   *
+   * Optional; muss JSON-tauglich sein.
+   */
+  lobbyDaten?(): unknown;
 
   // -- Ablauf ---------------------------------------------------------------
 
@@ -447,6 +493,22 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    * Fristen ohnehin durch ein null getrennt sind, laesst es weg.
    */
   phaseKey?(party: TParty): string | number | null;
+
+  /**
+   * Bleibt die Frist der laufenden Phase auf dem Server? true heisst: Die
+   * Plattform misst sie wie jede andere, schickt `phaseDeadline` aber als null
+   * an alle Geraete — Spieler wie Zuschauer.
+   *
+   * Seit dem 23.09.2026 fuer die Bombe der Partykiste: Dort IST die Restzeit
+   * das Spiel. Wer sie kennt, gibt kurz vor Schluss nicht mehr weiter, und die
+   * Sicht allein hilft nicht, weil die Frist neben ihr ueber die Leitung geht
+   * (`viewFor` in runtime/party.ts). Ein Modul, das sie verdecken will, muss
+   * es deshalb hier sagen, nicht in `viewFor`.
+   *
+   * Optional und nur zusammen mit `phaseMs` sinnvoll. Fehlt es, geht die
+   * Frist mit — der Normalfall, denn meist SOLL man sie sehen (Tafelrunde).
+   */
+  phaseHidden?(party: TParty): boolean;
 
   /** Beendet die laufende Phase nach Ablauf der Frist. */
   advancePhase?(party: TParty): TParty;

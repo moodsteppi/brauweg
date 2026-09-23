@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type Me } from '../api';
+import { t } from '../i18n';
+import { tischFehler, useInhaltsSperren } from '../inhaltspakete';
 import {
   MENUE_FARBEN,
   farbeAus,
@@ -8,19 +10,47 @@ import {
   naechsteFarbe,
   zieheFarben,
 } from '../minispiele/golf/farben';
+import { abschlussdaten, type Abschlussdaten } from '../minispiele/golf/abschluss';
 import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
+import { type Karte, loeseBahnen } from '../minispiele/golf/karte';
+import { Bahnauswahl, BahnauswahlAnzeige } from '../minispiele/golf/Bahnauswahl';
+import { FunAnsage, ModusAnzeige, ModusWahl, gemerkterModus, regelnMitModus } from '../minispiele/golf/FunAnsage';
+import { PowerupAnzeige } from '../minispiele/golf/PowerupAnzeige';
+import {
+  StoerschlagKnopf,
+  loeseBeimLoslassen,
+  stoerZielbild,
+  stoerZustand,
+  useStoerZielen,
+} from '../minispiele/golf/StoerschlagKnopf';
+import type { Golfmodus } from '../minispiele/golf/modifikator';
+import {
+  festeLochzahl,
+  gemerkteWahl,
+  merkeWahl,
+  regelnAusWahl,
+  traegtWahl,
+  wahlUnfertig,
+  type Bahnwahl,
+} from '../minispiele/golf/bahnwahl';
+import { useGolfLobby, useTischBahnwahl } from '../minispiele/golf/useBahnwahl';
 import { KARTEN } from '../minispiele/golf/karten';
 import { Golfnetz } from '../minispiele/golf/netz';
+import { ParKopf, ParName, ParRuf, ZuPar } from '../minispiele/golf/ParAnzeige';
+import { zuParSumme } from '../minispiele/golf/par';
+import { GolfReplay } from '../minispiele/golf/ReplayAnsicht';
+import { eingabeAusKern, type ReplayEingabe } from '../minispiele/golf/replay';
+import { Bahnrekord, useBahnrekord } from '../minispiele/golf/Bahnrekord';
 import {
   MAX_ZUG,
   PAUSE_TAKTE,
   TAKT_MS,
   gesamtschlaege,
-  platzierungen,
   pruefsumme,
   schlagErlaubt,
   troedelRest,
+  zeitlimitS,
   type Partiezustand,
 } from '../minispiele/golf/physik';
 import type { GolfSicht } from '../minispiele/golf/sicht';
@@ -57,6 +87,7 @@ import { useTable } from '../useTable';
 const SCHLUESSEL_LOECHER = 'golf.loecher';
 const SCHLUESSEL_BOTS = 'golf.bots';
 const SCHLUESSEL_STUFE = 'golf.botstufe';
+const SCHLUESSEL_MODUS = 'golf.modus';
 
 /** Aus dem Browser lesen. Gesperrte Seitendaten sind kein Fehler, nur leer. */
 function gemerkt(schluessel: string, vorgabe: number, min: number, max: number): number {
@@ -165,13 +196,6 @@ function farbenDerSitze(sitze: readonly SeatInfo[], plaetze: number): number[] {
  * Der Bildschirm
  * ----------------------------------------------------------------------- */
 
-interface Abschlussdaten {
-  /** `[loch][sitz]` — Kopie, weil der Kernzustand lebt und weiterläuft. */
-  ergebnis: number[][];
-  gesamt: number[];
-  platz: { sitz: number; schlaege: number; platz: number }[];
-}
-
 export function Golf({
   startTisch,
   onBack,
@@ -185,11 +209,21 @@ export function Golf({
   const [bots, setBots] = useState(() => gemerkt(SCHLUESSEL_BOTS, 3, 1, 7));
   const [loecher, setLoecher] = useState(() => gemerkt(SCHLUESSEL_LOECHER, 9, 2, 15));
   const [stufe, setStufe] = useState<BotLevel>(gemerkteStufe);
+  // Klassisch oder Fun für den Bot-Tisch (seit 23.09.2026, FunAnsage.tsx).
+  const [modus, setModus] = useState<Golfmodus>(() => gemerkterModus(SCHLUESSEL_MODUS));
+  /* Bahnauswahl (seit 22.09.2026): Kurse und Themen vom Modul; die Wahl für den Bot-Tisch hier. */
+  const lobby = useGolfLobby();
+  /* Zusatzpakete (22.09.2026): Kurse, die dem Konto nicht gehoeren, sind in der Auswahl gesperrt. */
+  const sperre = useInhaltsSperren('golf');
+  const kursSperre = (kurs: string): string | undefined => sperre('kurs', kurs);
+  const [botWahl, setBotWahl] = useState<Bahnwahl>(gemerkteWahl);
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ich, setIch] = useState<Me | null>(null);
   const [abschluss, setAbschluss] = useState<Abschlussdaten | null>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
+  /** Offenes Replay: welches Loch, und die beim Knopfdruck eingefrorene Eingabe. */
+  const [replay, setReplay] = useState<{ loch: number; eingabe: ReplayEingabe } | null>(null);
   /*
    * Die Baelle im Menue: acht Stueck wie eh und je, aber aus dem ganzen
    * Vorrat von sechzehn gezogen. Einmal je Aufbau und nicht je Bild — sonst
@@ -243,6 +277,13 @@ export function Golf({
 
   const tisch = useTable<GolfSicht>(tischId, 'golf', beiTakt, beiSicht, beiAbweisung);
   sendRef.current = tisch.send;
+  /* Die Bahnauswahl der Gruppe: Regelsatz des Tisches, eingestellt von Sitz 0. */
+  const tischWahl = useTischBahnwahl({
+    tischId,
+    regelstand: tisch.table?.regelstand,
+    setRules: tisch.setRules,
+    daten: lobby.daten,
+  });
   sendTaktRef.current = tisch.sendTakt;
   neuVerbindenRef.current = tisch.reconnect;
 
@@ -257,6 +298,7 @@ export function Golf({
     netzRef.current = null;
     setAbschluss(null);
     setHinweis(null);
+    setReplay(null);
   }, [tischId]);
 
   /* Wer ich bin, entscheidet in der Lobby über den Startknopf. */
@@ -330,18 +372,28 @@ export function Golf({
       const { id } = await api.createTable({
         gameId: 'golf',
         seats: 1 + bots,
-        rounds: loecher,
+        // Kurs und Einzelauswahl legen die Lochzahl fest, sonst gilt der Regler.
+        rounds: festeLochzahl(botWahl, lobby.daten) ?? loecher,
         visibility: 'on_request',
         fillWithBots: true,
         botLevel: stufe,
+        // Nur mit einer Wahl ein Regelsatz — sonst der des Moduls (siehe
+        // spieleOnline). Der Fun-Modus ist auch eine Wahl (FunAnsage.tsx).
+        ...(() => {
+          const config = regelnMitModus(
+            traegtWahl(botWahl) ? regelnAusWahl(botWahl, lobby.vorgabe, lobby.daten) : null,
+            modus,
+          );
+          return config === undefined ? {} : { config };
+        })(),
       });
       setTischId(id);
-    } catch {
-      setFehler('Der Platz ließ sich nicht aufmachen. Noch einmal versuchen?');
+    } catch (e) {
+      setFehler(tischFehler(e, 'Der Platz ließ sich nicht aufmachen. Noch einmal versuchen?'));
     } finally {
       setLaedt(false);
     }
-  }, [bots, loecher, stufe]);
+  }, [bots, loecher, stufe, botWahl, lobby, modus]);
 
   const verlasse = useCallback((): void => {
     const id = tischId;
@@ -374,17 +426,47 @@ export function Golf({
    */
   const meldeErgebnis = useCallback(
     (zustand: Partiezustand): Abschlussdaten => {
-      const gesamt = gesamtschlaege(zustand);
-      const daten: Abschlussdaten = {
-        ergebnis: zustand.ergebnis.map((reihe) => [...(reihe ?? [])]),
-        gesamt,
-        platz: platzierungen(zustand),
-      };
-      sendRef.current({ art: 'ergebnis', schlaege: gesamt, pruef: pruefsumme(zustand.ergebnis) });
+      // Par gegen die Bahnen DER PARTIE, nicht gegen den Katalog: Seit #206
+      // zeigt `reihenfolge` in `netz.karten` (siehe abschluss.ts).
+      const daten = abschlussdaten(zustand, netzRef.current?.karten ?? []);
+      sendRef.current({
+        art: 'ergebnis',
+        schlaege: daten.gesamt,
+        pruef: pruefsumme(zustand.ergebnis),
+        // Die Tafel selbst, fuer die Bestleistung je Bahn. Das Modul nimmt
+        // sie nur, wenn sie zu `pruef` und zum Ausgang passt
+        // (packages/game-golf/src/bestleistung.ts).
+        jeLoch: daten.ergebnis,
+        // Ob der Ball gefallen ist: Ein nicht eingelochtes Loch steht in der
+        // Tafel als Schlaglimit + 1 und darf nie Bestleistung werden.
+        eingelocht: (zustand.eingelochtJeLoch ?? []).map((reihe) => [...(reihe ?? [])]),
+      });
       return daten;
     },
     [],
   );
+
+  /**
+   * Replay eines Lochs öffnen (22.09.2026). Die Ereignisse werden JETZT aus
+   * dem Kern kopiert (`eingabeAusKern`) — der Kern lebt weiter, und ein
+   * später Schlag soll nicht mitten ins laufende Replay rutschen.
+   */
+  const oeffneReplay = (loch: number): void => {
+    if (sicht === null) return;
+    const eingabe = eingabeAusKern(sicht, netzRef.current?.kern ?? null);
+    if (eingabe !== null) setReplay({ loch, eingabe });
+  };
+  const replayAnsicht =
+    replay === null ? null : (
+      <GolfReplay
+        eingabe={replay.eingabe}
+        loch={replay.loch}
+        eigenerSitz={eigenerSitz}
+        farben={farben}
+        laeuftWeiter={abschluss === null}
+        onSchliessen={() => setReplay(null)}
+      />
+    );
 
   /* ---------------------------------------------------------------- */
   /* Menü                                                              */
@@ -439,16 +521,18 @@ export function Golf({
                     merke(SCHLUESSEL_BOTS, w);
                   }}
                 />
-                <Regler
-                  titel="Löcher"
-                  wert={loecher}
-                  min={2}
-                  max={15}
-                  onWahl={(w) => {
-                    setLoecher(w);
-                    merke(SCHLUESSEL_LOECHER, w);
-                  }}
-                />
+                {festeLochzahl(botWahl, lobby.daten) === null && (
+                  <Regler
+                    titel="Löcher"
+                    wert={loecher}
+                    min={2}
+                    max={15}
+                    onWahl={(w) => {
+                      setLoecher(w);
+                      merke(SCHLUESSEL_LOECHER, w);
+                    }}
+                  />
+                )}
                 <div className="gf-stufen" role="group" aria-label="Spielstärke der Bots">
                   {STUFEN.map((s) => (
                     <button
@@ -465,12 +549,29 @@ export function Golf({
                     </button>
                   ))}
                 </div>
+                <ModusWahl
+                  modus={modus}
+                  onWahl={(m) => {
+                    setModus(m);
+                    merke(SCHLUESSEL_MODUS, m);
+                  }}
+                />
+                <Bahnauswahl
+                  daten={lobby.daten}
+                  wahl={botWahl}
+                  onWahl={(w) => {
+                    setBotWahl(w);
+                    merkeWahl(w);
+                  }}
+                  karten={KARTEN}
+                  kursSperre={kursSperre}
+                />
                 <button
                   className="gf-knopf gf-knopf-haupt"
                   type="button"
                   data-golf-los=""
                   onClick={() => void spieleGegenBots()}
-                  disabled={laedt}
+                  disabled={laedt || wahlUnfertig(botWahl) !== null}
                 >
                   Los
                 </button>
@@ -494,14 +595,18 @@ export function Golf({
 
   if (abschluss !== null) {
     return (
-      <Abschluss
-        daten={abschluss}
-        sicht={sicht}
-        eigenerSitz={eigenerSitz}
-        sitze={tischSitze}
-        farben={farben}
-        onZurueck={verlasseUndZurueck}
-      />
+      <>
+        <Abschluss
+          daten={abschluss}
+          sicht={sicht}
+          eigenerSitz={eigenerSitz}
+          sitze={tischSitze}
+          farben={farben}
+          onZurueck={verlasseUndZurueck}
+          onReplay={sicht !== null && netzRef.current?.kern ? oeffneReplay : undefined}
+        />
+        {replayAnsicht}
+      </>
     );
   }
 
@@ -523,8 +628,27 @@ export function Golf({
           setLoecher(w);
           merke(SCHLUESSEL_LOECHER, w);
         }}
-        onStart={() => tisch.startNow(loecher)}
+        onStart={() => {
+          // Eine noch wartende Wahl zuerst — der Server arbeitet der Reihe nach.
+          tischWahl.bereitZumStart();
+          tisch.startNow(festeLochzahl(tischWahl.wahl, lobby.daten) ?? loecher);
+        }}
         onZurueck={verlasse}
+        loecherFest={festeLochzahl(tischWahl.wahl, lobby.daten)}
+        startSperre={wahlUnfertig(tischWahl.wahl)}
+        bahnwahl={
+          <>
+            {/* Die Spielart der Gruppe (seit 23.09.2026) — Sitz 0 wählt, alle sehen sie. */}
+            <ModusWahl modus={tischWahl.modus} onWahl={tischWahl.setzeModus} />
+            <Bahnauswahl daten={lobby.daten} wahl={tischWahl.wahl} onWahl={tischWahl.setzeWahl} karten={KARTEN} kursSperre={kursSperre} />
+          </>
+        }
+        bahnanzeige={
+          <>
+            <ModusAnzeige modus={tischWahl.modus} />
+            <BahnauswahlAnzeige daten={lobby.daten} wahl={tischWahl.wahl} karten={KARTEN} />
+          </>
+        }
       />
     );
   }
@@ -550,17 +674,46 @@ export function Golf({
     );
   }
 
+  /*
+   * Seit dem 22.09.2026 nennt der Server die Bahnen per Kennung. Kennt dieser
+   * Stand eine davon nicht, ist er älter als der Server — ein Neuladen holt
+   * die neue Fassung. Hier und nicht erst im Kern, damit statt einer leeren
+   * Bühne ein Satz dasteht, der sagt, was zu tun ist.
+   */
+  const fehlendeBahnen = loeseBahnen(sicht.bahnen ?? [], KARTEN).unbekannt;
+  if (fehlendeBahnen.length > 0) {
+    return (
+      <main className="gf-seite gf-menue">
+        <button className="gf-zurueck" type="button" onClick={verlasseUndZurueck} aria-label="Zurück">
+          ←
+        </button>
+        <div className="gf-menue-mitte">
+          <h1 className="gf-titel">Neue Bahnen</h1>
+          <p className="gf-untertitel" data-golf-bahnen-fehlen="">
+            Diese Partie spielt {fehlendeBahnen.length === 1 ? 'eine Bahn' : `${fehlendeBahnen.length} Bahnen`},
+            die diese Fassung noch nicht kennt. Bitte die Seite neu laden — der
+            Tisch bleibt bestehen.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <Partie
-      netz={holeNetz()}
-      sicht={sicht}
-      eigenerSitz={eigenerSitz}
-      sitze={tischSitze}
-      farben={farben}
-      hinweis={hinweis}
-      onFertig={(zustand) => setAbschluss(meldeErgebnis(zustand))}
-      onZurueck={verlasseUndZurueck}
-    />
+    <>
+      <Partie
+        netz={holeNetz()}
+        sicht={sicht}
+        eigenerSitz={eigenerSitz}
+        sitze={tischSitze}
+        farben={farben}
+        hinweis={hinweis}
+        onFertig={(zustand) => setAbschluss(meldeErgebnis(zustand))}
+        onZurueck={verlasseUndZurueck}
+        onReplay={oeffneReplay}
+      />
+      {replayAnsicht}
+    </>
   );
 }
 
@@ -619,6 +772,10 @@ function Lobby({
   onLoecher,
   onStart,
   onZurueck,
+  loecherFest = null,
+  startSperre = null,
+  bahnwahl,
+  bahnanzeige,
 }: {
   sitze: readonly SeatInfo[];
   plaetze: number;
@@ -632,6 +789,14 @@ function Lobby({
   onLoecher: (wert: number) => void;
   onStart: () => void;
   onZurueck: () => void;
+  /** Lochzahl, die Kurs oder Einzelauswahl festlegen — dann kein Regler. */
+  loecherFest?: number | null;
+  /** Grund, warum noch nicht gestartet werden kann (unfertige Einzelauswahl). */
+  startSperre?: string | null;
+  /** Die Bahnauswahl für Sitz 0 … */
+  bahnwahl?: React.ReactNode;
+  /** … und was alle anderen davon sehen. */
+  bahnanzeige?: React.ReactNode;
 }): React.JSX.Element {
   const anwesend = sitze.filter((s) => s.accountId !== null || s.isBot);
   const host = sitze[0] ?? null;
@@ -702,18 +867,28 @@ function Lobby({
 
         {binHost ? (
           <div className="gf-regler">
-            <Regler titel="Löcher" wert={loecher} min={2} max={15} onWahl={onLoecher} />
+            {bahnwahl}
+            {loecherFest === null ? (
+              <Regler titel="Löcher" wert={loecher} min={2} max={15} onWahl={onLoecher} />
+            ) : (
+              <p className="gf-bw-hinweis" data-golf-loecher-fest={loecherFest}>
+                {loecherFest} Löcher
+              </p>
+            )}
             <button
               className="gf-knopf gf-knopf-haupt"
               type="button"
               data-golf-start=""
               onClick={onStart}
-              disabled={!verbunden}
+              disabled={!verbunden || startSperre !== null}
+              title={startSperre ?? undefined}
             >
               Starten
             </button>
           </div>
         ) : (
+          <>
+          {bahnanzeige}
           <p className="gf-warten" aria-live="polite">
             <span>
               Warten, bis {host?.displayName ?? 'der Erste'} startet
@@ -724,6 +899,7 @@ function Lobby({
               <i />
             </span>
           </p>
+          </>
         )}
       </div>
     </main>
@@ -750,6 +926,11 @@ interface Hudstand {
   pauseRest: number;
   troedel: number;
   binTroedler: boolean;
+  /** Power-up des eigenen Balls (Fun-Modus): gehalten und gerade wirkend, '' für keins. */
+  halt: string;
+  wirkung: string;
+  /** Störschlag des eigenen Balls (StoerschlagKnopf.tsx): '' oder `art:frei`/`art:Grund`. */
+  stoer: string;
 }
 
 const HUD_LEER: Hudstand = {
@@ -767,6 +948,9 @@ const HUD_LEER: Hudstand = {
   pauseRest: 0,
   troedel: 0,
   binTroedler: false,
+  halt: '',
+  wirkung: '',
+  stoer: '',
 };
 
 /*
@@ -814,6 +998,7 @@ function Partie({
   hinweis,
   onFertig,
   onZurueck,
+  onReplay,
 }: {
   netz: Golfnetz;
   sicht: GolfSicht;
@@ -824,6 +1009,8 @@ function Partie({
   hinweis: string | null;
   onFertig: (zustand: Partiezustand) => void;
   onZurueck: () => void;
+  /** Replay eines abgeschlossenen Lochs öffnen. */
+  onReplay?: (loch: number) => void;
 }): React.JSX.Element {
   const leinwandRef = useRef<HTMLCanvasElement | null>(null);
   const zeichnerRef = useRef<Zeichner | null>(null);
@@ -832,6 +1019,8 @@ function Partie({
   /** Wiederverwendeter Puffer der Bahnvorschau — im Bildpfad wird nichts angelegt. */
   const bahnRef = useRef<number[]>([]);
   const zielbildRef = useRef<Zielbild | null>(null);
+  // Fun-Modus: zielt das nächste Ziehen einen Störschlag (StoerschlagKnopf.tsx)?
+  const stoerZielen = useStoerZielen();
   const uebersichtRef = useRef(false);
   const [uebersicht, setUebersicht] = useState(false);
   /*
@@ -848,6 +1037,8 @@ function Partie({
   /** Bis wann die Anzeige mindestens blass bleibt (siehe HUD_HALT_MS). */
   const haltBisRef = useRef(0);
   const [hud, setHud] = useState<Hudstand>(HUD_LEER);
+  /* Bahnrekord fuer den Zwischenstand, je Bahn einmal geholt (Bahnrekord.tsx). */
+  const bahnrekord = useBahnrekord(sicht.bahnen[hud.loch] ?? null);
   const hudKeyRef = useRef('');
   const fertigRef = useRef(false);
   const onFertigRef = useRef(onFertig);
@@ -961,7 +1152,7 @@ function Partie({
       if (gs.takt < ziel) gs.rechneBis(ziel);
 
       const z = gs.zustand();
-      const karte = KARTEN[z.aktuell.karte];
+      const karte = netz.karten[z.aktuell.karte];
       if (karte === undefined) return;
 
       if (z.fertig && !fertigRef.current) {
@@ -992,7 +1183,7 @@ function Partie({
       if (typeof document !== 'undefined' && document.hidden) return;
 
       const z = gs.zustand();
-      const karte = KARTEN[z.aktuell.karte];
+      const karte = netz.karten[z.aktuell.karte];
       if (karte === undefined) return;
 
       const jetzt = performance.now();
@@ -1099,7 +1290,12 @@ function Partie({
       return;
     }
     const z = gs.zustand();
-    vorschau(z, sitzRef.current, wunsch.rx, wunsch.ry, wunsch.kraft, KARTEN, bahnRef.current);
+    // Fun-Modus: Beim Zielen eines Störschlags rollt nichts — Zielmarke statt Vorschau.
+    if (stoerZielen.aktivRef.current) {
+      zielbildRef.current = stoerZielbild(z, sitzRef.current, netz.karten[z.aktuell.karte], zs.ballX, zs.ballY, wunsch);
+      return;
+    }
+    vorschau(z, sitzRef.current, wunsch.rx, wunsch.ry, wunsch.kraft, netz.karten, bahnRef.current);
     zielbildRef.current = {
       x: zs.ballX,
       y: zs.ballY,
@@ -1108,7 +1304,7 @@ function Partie({
       kraft: wunsch.kraft,
       bahn: bahnRef.current,
     };
-  }, [netz]);
+  }, [netz, stoerZielen.aktivRef]);
 
   const beiZeigerAb = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>): void => {
@@ -1202,9 +1398,11 @@ function Partie({
       // Unter der Mindestkraft ist es ein Abbruch und kein Schlag — genau
       // dafür ist die Schwelle da.
       if (wunsch === null) return;
+      // Fun-Modus: aufs Zielen eines Störschlags gestellt? Dann statt des Schlags auslösen.
+      if (loeseBeimLoslassen(stoerZielen, netz, sitzRef.current, wunsch)) return;
       netz.schlage(sitzRef.current, wunsch.rx, wunsch.ry, wunsch.kraft);
     },
-    [netz],
+    [netz, stoerZielen],
   );
 
   const beiZeigerWeg = useCallback((e: React.PointerEvent<HTMLCanvasElement>): void => {
@@ -1265,6 +1463,19 @@ function Partie({
           ))}
         </div>
 
+        {eigenerSitz >= 0 && (
+          <ParRuf
+            loch={hud.loch}
+            eingelocht={hud.eingelocht[eigenerSitz] ?? false}
+            schlaege={hud.schlaege[eigenerSitz] ?? 0}
+            par={hud.par}
+          />
+        )}
+
+        <FunAnsage modus={sicht.modus} saat={sicht.saat} loch={hud.loch} loecher={hud.loecher} pause={hud.pause} />
+        <PowerupAnzeige halt={hud.halt} wirkung={hud.wirkung} />
+        <StoerschlagKnopf zustand={hud.stoer} zielen={stoerZielen} netz={netz} sitz={eigenerSitz} />
+
         {hud.binTroedler && hud.troedel > 0 && (
           <p className="gf-troedel" aria-live="polite">
             Alle warten auf dich: {hud.troedel}
@@ -1281,6 +1492,9 @@ function Partie({
               <tr>
                 <th />
                 <th>Loch</th>
+                <th>
+                  {t('golf.par.par')} {hud.par}
+                </th>
                 <th>Gesamt</th>
               </tr>
             </thead>
@@ -1292,16 +1506,34 @@ function Partie({
                     <span>{name(sitz)}</span>
                   </td>
                   <td>{schlaege}</td>
+                  <td>
+                    <ParName
+                      schlaege={schlaege}
+                      par={hud.par}
+                      eingelocht={hud.eingelocht[sitz] ?? false}
+                      fertig={hud.fertig[sitz] ?? false}
+                    />
+                  </td>
                   <td>{hud.gesamt[sitz]}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <Bahnrekord
+            stand={bahnrekord}
+            schlaege={hud.eingelocht[eigenerSitz] ? (hud.schlaege[eigenerSitz] ?? null) : null}
+            zaehlt={!sitze.some((s) => s.gast === true)}
+          />
           <p className="gf-pausezeit">
             {hud.loch + 1 >= hud.loecher
               ? 'Gleich das Ergebnis …'
               : `Loch ${hud.loch + 2} beginnt … ${hud.pauseRest}`}
           </p>
+          {onReplay && (
+            <button className="grp-pauseknopf" type="button" onClick={() => onReplay(hud.loch)}>
+              {t('golf.replay.knopf')}
+            </button>
+          )}
         </div>
       )}
 
@@ -1349,7 +1581,7 @@ function Kartenzeichen(): React.JSX.Element {
 
 function baueHud(
   z: Partiezustand,
-  karte: { name: string; par: number; zeitLimitS: number },
+  karte: { name: string; par: number; zeitLimitS: number; wind?: Karte['wind'] },
   eigenerSitz: number,
 ): Hudstand {
   const schlaege: number[] = [];
@@ -1380,7 +1612,8 @@ function baueHud(
     loecher: z.loecher,
     bahn: karte.name,
     par: karte.par,
-    restS: Math.max(0, Math.ceil(karte.zeitLimitS - verstrichen)),
+    // In der Zeitlupe (Fun-Modus) ist das Limit doppelt so lang — dieselbe Zahl wie in der Physik.
+    restS: Math.max(0, Math.ceil(zeitlimitS(z, karte) - verstrichen)),
     schlaege,
     gesamt,
     fertig,
@@ -1392,6 +1625,9 @@ function baueHud(
       : Math.ceil((PAUSE_TAKTE * TAKT_MS) / 1000),
     troedel: troedel === null ? 0 : Math.ceil((troedel.rest * TAKT_MS) / 1000),
     binTroedler: troedel !== null && troedel.sitz === eigenerSitz,
+    halt: z.baelle[eigenerSitz]?.halt ?? '',
+    wirkung: z.baelle[eigenerSitz]?.wirkung ?? '',
+    stoer: stoerZustand(z, eigenerSitz),
   };
 }
 
@@ -1419,6 +1655,9 @@ function hudSchluessel(h: Hudstand): string {
     h.pauseRest,
     h.troedel,
     h.binTroedler ? 1 : 0,
+    h.halt,
+    h.wirkung,
+    h.stoer,
   ].join('|');
 }
 
@@ -1478,13 +1717,14 @@ function schreibeMarken(
  * Abschluss
  * ----------------------------------------------------------------------- */
 
-function Abschluss({
+export function Abschluss({
   daten,
   sicht,
   eigenerSitz,
   sitze,
   farben,
   onZurueck,
+  onReplay,
 }: {
   daten: Abschlussdaten;
   sicht: GolfSicht | null;
@@ -1493,6 +1733,8 @@ function Abschluss({
   /** Ballfarbe je Sitz, schon doppelfrei (siehe farbenDerSitze). */
   farben: readonly string[];
   onZurueck: () => void;
+  /** Replay eines Lochs öffnen; fehlt, wenn es nichts nachzurechnen gibt. */
+  onReplay?: (loch: number) => void;
 }): React.JSX.Element {
   const ausgang = sicht?.ausgang ?? null;
   const name = (sitz: number): string => {
@@ -1504,6 +1746,7 @@ function Abschluss({
     <main className="gf-seite gf-menue">
       <div className="gf-menue-mitte gf-breit">
         <h1 className="gf-titel">Ergebnis</h1>
+        <ParKopf />
         <ol className="gf-rangliste">
           {daten.platz.map((zeile) => (
             <li
@@ -1520,6 +1763,7 @@ function Abschluss({
                 ))}
               </span>
               <strong className="gf-rangsumme">{zeile.schlaege}</strong>
+              <ZuPar wert={zuParSumme(daten.ergebnis, daten.par, zeile.sitz)} />
             </li>
           ))}
         </ol>
@@ -1531,6 +1775,22 @@ function Abschluss({
             zählt als strittig, alle stehen auf Platz 1.
           </p>
         ) : null}
+        {onReplay && daten.ergebnis.length > 0 && (
+          <nav className="grp-loecher" aria-label={t('golf.replay.loecher')}>
+            <h2>{t('golf.replay.loecher')}</h2>
+            {daten.ergebnis.map((_reihe, loch) => (
+              <button
+                key={loch}
+                className="grp-lochknopf"
+                type="button"
+                onClick={() => onReplay(loch)}
+                aria-label={`${t('golf.replay.knopf')}: ${t('golf.replay.loch')} ${loch + 1}`}
+              >
+                {loch + 1}
+              </button>
+            ))}
+          </nav>
+        )}
         <button className="gf-knopf gf-knopf-haupt" type="button" onClick={onZurueck}>
           Zurück ins Menü
         </button>

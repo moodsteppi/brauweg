@@ -411,17 +411,43 @@ const STANDLINIE = 0.836;
  * an der Groesse etwas geaendert haette. Und zwar genau die 260 %, die am
  * selben Tag an einem Bild abgenommen worden waren.
  */
-export const FIGURENKASTEN = {
-  /** Hoehe des Ausschnitts, in Prozent der Koerperhoehe. */
-  hoehe: runde((FIGUREN3D_ZELLHOEHE_METER / MASSSTAB_METER) * 100),
-  /** Unterkante gegen die des Koerpers, in Prozent — negativ heisst tiefer. */
-  boden: runde(
-    (1 -
-      STANDLINIE -
-      (FIGUREN3D_ZELLHOEHE_METER / MASSSTAB_METER) * (1 - FIGUREN3D_FUSSPUNKT.y)) *
-      100,
-  ),
-} as const;
+export const FIGURENKASTEN = zellkasten(MASSSTAB_METER, STANDLINIE);
+
+/**
+ * Hoehe und Bodenversatz eines Zellenausschnitts — DIE Rechnung hinter der
+ * Figurengroesse, geteilt von Arena, Wabe und Bank.
+ *
+ * Zwei Eingaben je Ort, und beide sind Entscheidungen: `zeigtMeter` sagt, wie
+ * viele Weltmeter die Bezugshoehe abbildet (daraus folgt, wie gross die Figur
+ * wird), `standlinie` sagt, wo in der Bezugshoehe die Figur aufsetzt, als
+ * Anteil von OBEN. Alles andere ist Messung — die Zellhoehe in Metern und der
+ * Fusspunkt kommen aus figuren3d.ts.
+ *
+ * `bezug` ist die Hoehe, auf die sich beide Rueckgaben beziehen: 100 fuer ein
+ * Prozentmass. Der VIERTE Ort, die Ladenkarte, rechnet in Pixeln und geht
+ * deshalb einen eigenen Weg (siehe `KARTENKASTEN`) — er hat keine Bezugshoehe,
+ * die diese Funktion kennen koennte, ohne die Hoehe des Kartenkopfs aus dem
+ * Stylesheet abzuschreiben. Dieselben zwei Entscheidungen trifft er trotzdem.
+ *
+ * WARUM DAS EINE FUNKTION IST UND NICHT DREIMAL DIESELBEN ZWEI ZEILEN: Die
+ * Rechnung ist die Stelle, an der `FIGUREN3D_ZELLHOEHE_METER` eingeht. Steht
+ * sie nur an einem der vier Orte, haengen die drei anderen weiter stumm am
+ * gemessenen Ausschnitt — genau der Zustand, aus dem am 06.09.2026 drei
+ * Handumrechnungen wurden.
+ */
+function zellkasten(
+  zeigtMeter: number,
+  standlinie: number,
+  bezug = 100,
+): { readonly hoehe: number; readonly boden: number } {
+  const hoehe = (FIGUREN3D_ZELLHOEHE_METER / zeigtMeter) * bezug;
+  return {
+    /** Hoehe des Ausschnitts, im Mass von `bezug`. */
+    hoehe: runde(hoehe),
+    /** Unterkante gegen die der Bezugshoehe — negativ heisst tiefer. */
+    boden: runde((1 - standlinie) * bezug - hoehe * (1 - FIGUREN3D_FUSSPUNKT.y)),
+  } as const;
+}
 
 /**
  * Wie viele Weltmeter die HOEHE einer 32er-Pixelkachel zeigt — der Massstab
@@ -479,6 +505,128 @@ export const RUECKFALLKASTEN = {
   hoehe: runde((PIXELKACHEL_METER / MASSSTAB_METER) * 100),
   /** Unterkante gegen die des Koerpers, in Prozent — hier die Standlinie. */
   boden: runde((1 - STANDLINIE) * 100),
+} as const;
+
+// ---------------------------------------------------------------------------
+// Wie gross der Ausschnitt in der RUESTKAMMER ist
+//
+// Drei weitere Orte zeigen dieselbe Figur stehend: die Wabe auf dem Brett, das
+// Fach auf der Bank und der Kopf der Ladenkarte (`EinheitenFigur` in
+// Zeichen.tsx). Bis zum 22.09.2026 standen ihre vier Prozent- und zwei
+// Pixelzahlen fest im Stylesheet — sie hingen genauso am gemessenen Ausschnitt
+// wie die der Arena, sagten es aber nicht. Als die Todeszeile am 06.09.2026
+// ihre eigene, breitere Zelle bekam und der gemeinsame Ausschnitt von 4,29 auf
+// 3,76 Meter enger wurde, musste jemand sie von Hand umrechnen (82 % → 71,8 %,
+// 106 % → 92,8 %, 58 px → 51 px). Wer das vergisst, laesst die ganze
+// Ruestkammer um 14 % wachsen, ohne dass irgendwo eine Groesse geaendert wurde
+// und ohne dass ein Test rot wird.
+//
+// JE ORT ZWEI ENTSCHEIDUNGEN — ein Massstab und eine Standlinie —, und je Ort
+// eine andere BEZUGSHOEHE, weil die drei Plaetze nichts miteinander teilen:
+// die Wabe ihre eigene Hoehe, das Bankfach seine, der Kartenkopf seine festen
+// Pixel. Genau deshalb konnte in der Arena `FIGURENKASTEN` alles allein
+// erledigen und hier nicht.
+// ---------------------------------------------------------------------------
+
+/**
+ * Wie viele Weltmeter die HOEHE EINER WABE abbildet.
+ *
+ * Gross gegen die 1,65 Meter der Arena, und das ist kein Widerspruch: Dort
+ * bezieht sich der Massstab auf den Koerper (74 x 62 % der Karte), hier auf die
+ * ganze Wabe — und unter der Figur muessen noch Name und Sterne Platz haben.
+ *
+ * Abgenommen ist die Groesse vom 06.09.2026 (71,8 % Wabenhoehe); 3,756 / 0,718
+ * sind die 5,23 Meter, die dieselbe Aussage machen, ohne den Ausschnitt zu
+ * kennen. Wer die Figuren auf dem Brett groesser will, aendert DIESE Zahl:
+ * kleiner heisst groessere Figuren.
+ */
+const WABE_METER = 5.23;
+
+/**
+ * Wo die Figur auf der Wabe aufsetzt, als Anteil der Wabenhoehe von OBEN.
+ *
+ * 62,5 % heisst: Der Fuss steht auf 37,5 % der Wabe, und die Figur reicht von
+ * dort bis knapp unter deren Oberkante — ueberall dort ist das Sechseck noch
+ * breit genug. Darunter bleibt Platz fuer Namen und Sterne.
+ *
+ * SIE MUSS IN DIE WABE PASSEN, anders als in der Arena: Dort ist die Figur ein
+ * Geschwister der Wabe und darf ueber sie hinausragen, hier ist sie ihr KIND,
+ * und `clip-path` beschneidet auch den Inhalt. Was ueber das Sechseck
+ * hinausreicht, waere kein Ueberstand, sondern ein abgeschnittener Kopf.
+ */
+const WABE_STANDLINIE = 0.625;
+
+/**
+ * Wie viele Weltmeter die HOEHE EINES BANKFACHS abbildet.
+ *
+ * Weniger als bei der Wabe, die Figur steht also groesser da: Auf der Bank ist
+ * der Platz ein Rechteck und kein Sechseck, und weil kein Name darunter steht,
+ * darf sie die volle Hoehe nehmen. `overflow: hidden` am Fach schneidet nur
+ * die leeren Raender der Zelle ab.
+ *
+ * NACHGEMESSEN am 06.09.2026 ueber alle fuenf Blaetter (Alphakanal, Zelle
+ * 0/0): Der hoechste Punkt liegt 3,1 % unter der Zellenoberkante, und das ist
+ * das Geweih des Druiden. Bei diesem Massstab bleibt es im Fach.
+ */
+const BANK_METER = 4.05;
+
+/**
+ * Wo die Figur im Bankfach aufsetzt, als Anteil der Fachhoehe von OBEN.
+ *
+ * Tiefer als auf der Wabe (Fuss auf 21,35 % statt auf 37,5 %), weil kein Name
+ * und keine Sterne darunter stehen — der Platz gehoert ganz der Figur.
+ */
+const BANK_STANDLINIE = 0.7865;
+
+export const WABENKASTEN = zellkasten(WABE_METER, WABE_STANDLINIE);
+export const BANKKASTEN = zellkasten(BANK_METER, BANK_STANDLINIE);
+
+/**
+ * Wie viele Pixel ein Weltmeter auf der LADENKARTE misst.
+ *
+ * DIE KARTE RECHNET IN PIXELN und nicht in Prozent: Sie ist eine Spalte von
+ * fuenf und auf einem 360er-Handy keine 70 px breit; ein Prozentmass waere dort
+ * ein Punkt und am Desktop ein Plakat.
+ *
+ * Deshalb steht hier auch kein Massstab in Metern je Bezugshoehe wie bei Wabe
+ * und Bank, sondern sein Kehrwert in Pixeln je Meter — die Karte hat keine
+ * Bezugshoehe, die diese Datei kennt. Die Hoehe des Kartenkopfs (`.tr-karte-kopf`)
+ * steht im Stylesheet, und sie hier abzuschreiben waere wieder eine zweite
+ * Wahrheit; mit Pixeln je Meter braucht es sie gar nicht.
+ *
+ * 13,56 px/m ergeben rund 51 px Zelle und darin rund 34 px Figur — etwas mehr
+ * als die 32 px des Pixelbilds, das hier bis zum 06.09.2026 stand.
+ */
+const KARTE_PIXEL_JE_METER = 13.56;
+
+/**
+ * Wo die Figur im Kartenkopf aufsetzt, in Pixeln UEBER dessen Unterkante.
+ *
+ * In Pixeln und nicht als Anteil, aus demselben Grund wie der Massstab: Der
+ * Kartenkopf hat eine feste Hoehe, die nicht in dieser Datei steht.
+ *
+ * 1,2 px heisst praktisch: auf der Unterkante. Dass die grossen Huete (Magier)
+ * oben ein, zwei Pixel in die Polsterung ragen, ist Absicht — die Karte
+ * schneidet nicht ab.
+ */
+const KARTE_STANDLINIE_PX = 1.2;
+
+/**
+ * Hoehe und Bodenversatz der Figur auf der Ladenkarte, in PIXELN.
+ *
+ * Eigene Ableitung statt `zellkasten`, weil in der Rechnung keine Bezugshoehe
+ * vorkommt: Die Zellhoehe folgt unmittelbar aus Weltmetern mal Pixeln je Meter,
+ * und der Boden aus der Standlinie minus dem Stueck Zelle, das unter dem
+ * Fusspunkt liegt. Dieselben zwei Aussagen wie ueberall, nur ohne Prozent.
+ */
+export const KARTENKASTEN = {
+  /** Hoehe des Ausschnitts, in Pixeln. */
+  hoehe: runde(FIGUREN3D_ZELLHOEHE_METER * KARTE_PIXEL_JE_METER),
+  /** Unterkante gegen die des Kartenkopfs, in Pixeln — negativ heisst tiefer. */
+  boden: runde(
+    KARTE_STANDLINIE_PX -
+      FIGUREN3D_ZELLHOEHE_METER * KARTE_PIXEL_JE_METER * (1 - FIGUREN3D_FUSSPUNKT.y),
+  ),
 } as const;
 
 function runde(wert: number): number {

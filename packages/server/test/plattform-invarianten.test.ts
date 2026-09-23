@@ -344,6 +344,10 @@ for (const spiel of spielbare) {
     if (spiel.phaseKey !== undefined) {
       assert.ok(spiel.phaseMs !== undefined, 'phaseKey ohne phaseMs wird nie gelesen');
     }
+    /* Dasselbe fuer das Verdecken (seit 23.09.2026): ohne Frist nichts zu verdecken. */
+    if (spiel.phaseHidden !== undefined) {
+      assert.ok(spiel.phaseMs !== undefined, 'phaseHidden ohne phaseMs verdeckt nichts');
+    }
   });
 
   test(`${id}: Sitzzahlen und Rundenvorschläge passen zusammen`, () => {

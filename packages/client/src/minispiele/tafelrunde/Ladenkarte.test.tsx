@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { KARTENKASTEN } from './bildfolge';
 import { Ladenkarte, kaufhindernis } from './Ladenkarte';
 import type { Einheit } from './sicht';
 
@@ -123,5 +124,25 @@ describe('kaufhindernis', () => {
     expect(kaufhindernis(5, false, DORFWACHE)).toBeNull();
     // Kein Angebot, kein Hindernis.
     expect(kaufhindernis(0, true, undefined)).toBeNull();
+  });
+});
+
+describe('Die Masse der Figur kommen von der Figur', () => {
+  it('setzt Hoehe und Boden des Kartenkopfs als Variablen in Pixeln', () => {
+    /*
+     * Die Karte rechnet in Pixeln und nicht in Prozent — sie ist eine Spalte
+     * von fuenf und auf einem 360er-Handy keine 70 px breit. Die beiden Zahlen
+     * standen bis zum 22.09.2026 fest im Stylesheet und hingen dort stumm am
+     * gemessenen Ausschnitt der Blaetter; heute rechnet `KARTENKASTEN` sie
+     * (bildfolge.ts), und `EinheitenFigur` bringt sie mit.
+     */
+    const { container } = zeichne();
+    const figur = container.querySelector('.tr-figur3d-karte') as HTMLElement;
+    expect(figur.style.getPropertyValue('--tr-kartenkasten-hoehe')).toBe(
+      `${KARTENKASTEN.hoehe}px`,
+    );
+    expect(figur.style.getPropertyValue('--tr-kartenkasten-boden')).toBe(
+      `${KARTENKASTEN.boden}px`,
+    );
   });
 });

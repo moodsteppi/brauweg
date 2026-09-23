@@ -14,12 +14,12 @@ import {
   type Partiezustand,
   TROEDEL_TAKTE,
   V_MAX,
+  bahnfolge,
   neuePartie,
   platzierungen,
   pruefsumme,
   schritt,
   starteLoch,
-  waehleKarten,
 } from './physik';
 import { betrag } from './zufall';
 
@@ -414,8 +414,8 @@ describe('Zonen', () => {
       id: 'z-strudel',
       zonen: [{ art: 'strudel', x: 6, y: 9, r: 2.5, staerke: 22 }],
     });
-    // Der Strudel dreht (tangential mal 0,6), der Ball darf also nicht mehr
-    // gerade fliegen.
+    // Der Strudel dreht (Drall quer zur Fahrt, 0,6 je Einheit Zug), der Ball
+    // darf also nicht mehr gerade fliegen.
     const z = starte(karte);
     lege(z.baelle[0], 6, 13);
     laufe(z, 60, karte, [schlag(0, 0, 1, 0, -1, 0.28)]);
@@ -528,6 +528,8 @@ describe('Ausstieg', () => {
     // Im laufenden Loch liegt der Ball noch als Hindernis.
     expect(z.baelle[1].dabei).toBe(true);
     expect(z.ergebnis[0]).toEqual([1, karte.schlagLimit + 1]);
+    // Seit 22.09.2026: Wer fiel, steht daneben — Limit + 1 ist nie eine Bestleistung.
+    expect(z.eingelochtJeLoch?.[0]).toEqual([true, false]);
 
     // Weiter bis ins zweite Loch.
     laufe(z, PAUSE_TAKTE + 20, karte);
@@ -578,49 +580,29 @@ describe('Lochwechsel', () => {
 
 /* ========================================================================== */
 
-describe('Kartenwahl', () => {
-  const vorrat: Karte[] = [];
-  for (let i = 0; i < 40; i += 1) {
-    vorrat.push(
-      karteMit({
-        id: `k${i}`,
-        // 1,2,3,4,5 der Reihe nach — so ist die Sortierung nachpruefbar.
-        schwierigkeit: ((i % 5) + 1) as 1 | 2 | 3 | 4 | 5,
-      }),
-    );
-  }
-
-  it('waehlt verschiedene Bahnen und sortiert nach Schwierigkeit', () => {
-    for (const saat of [1, 2, 99, 20260906]) {
-      const wahl = waehleKarten(saat, 9, vorrat);
-      expect(wahl).toHaveLength(9);
-      expect(new Set(wahl).size).toBe(9);
-      for (let i = 1; i < wahl.length; i += 1) {
-        expect(vorrat[wahl[i]].schwierigkeit).toBeGreaterThanOrEqual(
-          vorrat[wahl[i - 1]].schwierigkeit,
-        );
-      }
-    }
+describe('Bahnfolge', () => {
+  /*
+   * Die Auswahl mit Rampe und Mischung liegt seit dem 22.09.2026 im Modul
+   * (packages/game-golf/test/bahnen.test.ts). Hier bleibt nur der Zeiger in
+   * die fertige Bahnliste der Partie.
+   */
+  it('zeigt Loch i auf die i-te Bahn der Partie', () => {
+    expect(bahnfolge(5, 5)).toEqual([0, 1, 2, 3, 4]);
   });
 
-  it('laesst ein kurzes Match leicht beginnen und ein langes bis zur Spitze steigen', () => {
-    // 40 Attrappen: acht je Stufe, wie im echten Katalog ungefaehr.
-    const katalog: Karte[] = [];
-    for (let i = 0; i < 40; i += 1) {
-      katalog.push(karteMit({ id: `s${i}`, schwierigkeit: (1 + (i % 5)) as 1 | 2 | 3 | 4 | 5 }));
-    }
-    const zwei = waehleKarten(11, 2, katalog).map((i) => katalog[i].schwierigkeit);
-    expect(zwei).toEqual([1, 2]);
-    const neun = waehleKarten(11, 9, katalog).map((i) => katalog[i].schwierigkeit);
-    expect(neun).toEqual([1, 1, 2, 2, 3, 3, 4, 4, 5]);
-    const fuenfzehn = waehleKarten(11, 15, katalog).map((i) => katalog[i].schwierigkeit);
-    expect(fuenfzehn).toEqual([1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5]);
-    expect(new Set(waehleKarten(11, 15, katalog)).size).toBe(15);
+  it('wiederholt bei weniger Bahnen als Loechern (nur Testaufbau) und bleibt leer ohne Bahn', () => {
+    expect(bahnfolge(3, 1)).toEqual([0, 0, 0]);
+    expect(bahnfolge(2, 0)).toEqual([]);
   });
 
-  it('ist reproduzierbar und haengt an der Saat', () => {
-    expect(waehleKarten(5, 6, vorrat)).toEqual(waehleKarten(5, 6, vorrat));
-    expect(waehleKarten(5, 6, vorrat)).not.toEqual(waehleKarten(6, 6, vorrat));
+  it('spielt die Bahnen in der gereichten Reihenfolge', () => {
+    const a = karteMit({ id: 'a', par: 2 });
+    const b = karteMit({ id: 'b', par: 3 });
+    const z = neuePartie({ saat: 9, sitze: 1, botSitze: [], loecher: 2, karten: [b, a] });
+    starteLoch(z, 0, 0, [b, a]);
+    expect(z.aktuell.karte).toBe(0);
+    starteLoch(z, 1, 100, [b, a]);
+    expect(z.aktuell.karte).toBe(1);
   });
 });
 

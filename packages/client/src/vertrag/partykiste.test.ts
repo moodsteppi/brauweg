@@ -51,6 +51,8 @@ const FELDER = [
   'art',
   'phase',
   'trinkmodus',
+  'schluckFaktor',
+  'minispiele',
   'botSitze',
   'ausgestiegen',
   'punkte',
@@ -62,6 +64,13 @@ const FELDER = [
   'fertig',
   'tabelle',
   'daten',
+  'regelKarte',
+  'modus',
+  'paket',
+  'eskalation',
+  'lager',
+  'lagerTabelle',
+  'aufstellung',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof PartykisteSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof PartykisteSicht>>;

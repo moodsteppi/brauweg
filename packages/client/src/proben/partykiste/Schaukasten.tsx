@@ -21,10 +21,18 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import '../../styles.css';
+import { PartyAuswahl } from '../../minispiele/partykiste/Auswahl';
 import { PartykisteBanner } from '../../minispiele/partykiste/Banner';
+import { Einstellungen, OffeneRunde } from '../../minispiele/partykiste/Einstellungen';
+import { Regelzeile } from '../../minispiele/partykiste/Regelzeile';
 import { Runde } from '../../minispiele/partykiste/Runden';
-import type { PartykisteSicht } from '../../minispiele/partykiste/sicht';
+import { AktiveRegel } from '../../minispiele/partykiste/RundenOhneUhr';
+import { MINISPIEL_NAME, ansageFuer, type PartyMinispiel, type PartykisteSicht } from '../../minispiele/partykiste/sicht';
+import { Abrechnung, Tabelle } from '../../minispiele/partykiste/Wertung';
+import { AufstellungSeite } from '../../minispiele/partykiste/Lager';
 import type { SeatInfo } from '../../protocol';
+import { bilderOhneUhr } from './bilder-ohne-uhr';
+import { bilderZeitdruck } from './bilder-zeitdruck';
 
 const LEUTE = ['Robin', 'Jan', 'Tom', 'Emil', 'Niklas', 'Anni'];
 
@@ -45,6 +53,8 @@ function sicht(teil: Partial<PartykisteSicht> & Pick<PartykisteSicht, 'art' | 'd
     runden: 6,
     phase: 'spiel',
     trinkmodus: true,
+    schluckFaktor: 1,
+    minispiele: Object.keys(MINISPIEL_NAME) as PartyMinispiel[],
     botSitze: [4, 5],
     ausgestiegen: [],
     punkte: [7, 9, 4, 11, 2, 6],
@@ -62,11 +72,25 @@ function sicht(teil: Partial<PartykisteSicht> & Pick<PartykisteSicht, 'art' | 'd
       { sitz: 4, punkte: 2, schlucke: 6, platz: 6 },
       { sitz: 5, punkte: 6, schlucke: 2, platz: 4 },
     ],
+    regelKarte: null,
+    modus: 'turnier',
+    paket: null,
+    eskalation: null,
+    lager: null,
+    lagerTabelle: null,
+    aufstellung: null,
     ...teil,
   };
 }
 
-const BILDER: { titel: string; text: string; sicht: PartykisteSicht }[] = [
+/**
+ * Was unter der Runde steht. Die Abrechnung und die Tabelle stehen seit dem
+ * 22.09.2026 im Schaukasten — genau dort aendert der Trinkmodus etwas, und
+ * bis dahin lagen beide nur im Bildschirm, wo sie niemand ohne vier Leute sah.
+ */
+type Zusatz = 'abrechnung' | 'tabelle';
+
+const BILDER: { titel: string; text: string; sicht: PartykisteSicht; zusatz?: Zusatz }[] = [
   {
     titel: 'Imposter — dein Wort',
     text: 'Ein Wort, sonst nichts — und die Redereihenfolge. Einer am Tisch hat statt des Wortes nur einen Hinweis.',
@@ -428,16 +452,189 @@ const BILDER: { titel: string; text: string; sicht: PartykisteSicht }[] = [
       },
     }),
   },
+  {
+    titel: 'Bus fahren — daneben, alkoholfrei',
+    text: 'Derselbe Fehlgriff ohne Trinkmodus: ein Strafpunkt statt eines Schlucks. Die Regelzeile oben sagt es auch.',
+    sicht: sicht({
+      art: 'busfahrer',
+      phase: 'spiel',
+      amZug: 1,
+      trinkmodus: false,
+      daten: {
+        art: 'busfahrer',
+        amZug: 1,
+        stufe: 0,
+        offen: [],
+        treffer: [2, -1, 1, 0, -1, -1],
+        letzter: { sitz: 0, stufe: 2, wahl: 0, karte: { rang: 14, farbe: 3 }, richtig: false },
+      },
+    }),
+  },
+  {
+    titel: 'Allgemeinwissen — Abrechnung, Trinkmodus',
+    text: 'Unter der Auflösung: was die Runde gebracht hat. Schlücke als Wort und Zahl, kein Glas mehr.',
+    zusatz: 'abrechnung',
+    sicht: sicht({
+      art: 'quiz',
+      phase: 'ergebnis',
+      schluckFaktor: 2,
+      rundenPunkte: [0, 2, 2, 0, 2, 0],
+      rundenSchlucke: [2, 0, 0, 2, 0, 2],
+      gehandelt: [],
+      daten: {
+        art: 'quiz',
+        frage: 'Welcher Fluss fließt durch Wien?',
+        antworten: ['Donau', 'Rhein', 'Elbe', 'Weichsel'],
+        meineWahl: 2,
+        richtig: 0,
+        wahl: [2, 0, 0, 3, 0, 1],
+      },
+    }),
+  },
+  {
+    titel: 'Allgemeinwissen — Abrechnung, alkoholfrei',
+    text: 'Dieselbe Runde ohne Trinkmodus: gezählt wird genauso, nur heißt es Strafpunkte. Auch die Ansage oben redet nicht mehr vom Trinken.',
+    zusatz: 'abrechnung',
+    sicht: sicht({
+      art: 'quiz',
+      phase: 'ergebnis',
+      trinkmodus: false,
+      rundenPunkte: [0, 2, 2, 0, 2, 0],
+      rundenSchlucke: [1, 0, 0, 1, 0, 1],
+      gehandelt: [],
+      daten: {
+        art: 'quiz',
+        frage: 'Welcher Fluss fließt durch Wien?',
+        antworten: ['Donau', 'Rhein', 'Elbe', 'Weichsel'],
+        meineWahl: 2,
+        richtig: 0,
+        wahl: [2, 0, 0, 3, 0, 1],
+      },
+    }),
+  },
+  {
+    titel: 'Stand — alkoholfrei',
+    text: 'Die Turniertabelle ohne Trinkmodus. Punkte entscheiden, die Strafpunkte stehen daneben.',
+    zusatz: 'tabelle',
+    sicht: sicht({
+      art: 'entweder',
+      phase: 'spiel',
+      trinkmodus: false,
+      schluckFaktor: 3,
+      daten: { art: 'entweder', a: 'Meer', b: 'Berge', meine: -1, gewaehlt: [1, 2], seite: null },
+    }),
+  },
+  /* Kategorien-Battle, Mehrheitsraten, Regel-Karte (22.09.2026). */
+  ...bilderOhneUhr(sicht),
+  ...bilderZeitdruck(sicht),
+  /* -- Spielmodi (22.09.2026) ------------------------------------------- */
+  {
+    titel: 'Ich hab noch nie — Eskalation, Stufe 2',
+    text: 'Das zweite Drittel: pikante Sprüche und doppelte Härte. Die Regelzeile sagt, wo die Kurve steht.',
+    sicht: sicht({
+      art: 'niemals',
+      modus: 'eskalation',
+      eskalation: { stufe: 2, inhaltsHaerte: 2, schluckFaktor: 2, gekappt: false },
+      daten: { art: 'niemals', text: 'Ich hab noch nie auf einer Party gekifft.', meine: -1, gewaehlt: [1, 3], gestanden: null },
+    }),
+  },
+  {
+    titel: 'Entweder – oder — Eskalation, letzte Runde mit Gast',
+    text: 'Stufe 3, aber ein Gast sitzt am Tisch: Die Härte steigt, die Texte bleiben pikant — und die Zeile sagt warum.',
+    sicht: sicht({
+      art: 'entweder',
+      rundeNr: 5,
+      modus: 'eskalation',
+      eskalation: { stufe: 3, inhaltsHaerte: 2, schluckFaktor: 3, gekappt: true },
+      daten: { art: 'entweder', a: 'Nie wieder Kaffee', b: 'Nie wieder Bier', meine: -1, gewaehlt: [2], seite: null },
+    }),
+  },
+  {
+    titel: 'Wahrheit oder Pflicht — Themenabend JGA',
+    text: 'Das Paket bestimmt die Minispiele (neun von zwölf) und die Inhalte; die Zeile nennt das Thema.',
+    sicht: sicht({
+      art: 'wahrheitpflicht',
+      modus: 'themenabend',
+      paket: 'jga',
+      minispiele: ['wahrheitpflicht', 'niemals', 'regelkarte', 'wereher', 'imposter', 'werbinich', 'mehrheit', 'entweder', 'busfahrer'],
+      amZug: 0,
+      daten: {
+        art: 'wahrheitpflicht',
+        amZug: 0,
+        gewaehlt: [-1, -1, -1, -1, -1, -1],
+        text: ['', '', '', '', '', ''],
+        erfolg: [-1, -1, -1, -1, -1, -1],
+      },
+    }),
+  },
+  {
+    titel: 'Stand — Team-Abend',
+    text: 'Oben die Lager, darunter jede Person mit ihrem Lager. Der Platz ist der des Lagers — für die Trophäen zählt, wie das Lager abschneidet.',
+    zusatz: 'tabelle',
+    sicht: sicht({
+      art: 'quiz',
+      modus: 'team',
+      lager: [0, 1, 0, 1, 0, 1],
+      lagerTabelle: [
+        { lager: 0, sitze: [0, 2, 4], punkte: 13, schlucke: 14, platz: 2 },
+        { lager: 1, sitze: [1, 3, 5], punkte: 26, schlucke: 3, platz: 1 },
+      ],
+      tabelle: [
+        { sitz: 0, punkte: 7, schlucke: 3, platz: 4 },
+        { sitz: 1, punkte: 9, schlucke: 1, platz: 1 },
+        { sitz: 2, punkte: 4, schlucke: 5, platz: 4 },
+        { sitz: 3, punkte: 11, schlucke: 0, platz: 1 },
+        { sitz: 4, punkte: 2, schlucke: 6, platz: 4 },
+        { sitz: 5, punkte: 6, schlucke: 2, platz: 1 },
+      ],
+      daten: { art: 'quiz', frage: 'Wie viele Beine hat eine Spinne?', antworten: ['6', '8', '10', '12'], meineWahl: -1, richtig: null, wahl: null },
+    }),
+  },
+  {
+    titel: 'Stand — Team-Abend, ungleiche Lager',
+    text: 'Vier gegen zwei, weil der Öffner getauscht hat: Es entscheidet der Schnitt je Kopf, nicht die Summe.',
+    zusatz: 'tabelle',
+    sicht: sicht({
+      art: 'quiz',
+      modus: 'team',
+      lager: [0, 0, 0, 0, 1, 1],
+      lagerTabelle: [
+        { lager: 0, sitze: [0, 1, 2, 3], punkte: 31, schlucke: 9, platz: 1 },
+        { lager: 1, sitze: [4, 5], punkte: 8, schlucke: 8, platz: 2 },
+      ],
+      tabelle: [
+        { sitz: 0, punkte: 7, schlucke: 3, platz: 1 },
+        { sitz: 1, punkte: 9, schlucke: 1, platz: 1 },
+        { sitz: 2, punkte: 4, schlucke: 5, platz: 1 },
+        { sitz: 3, punkte: 11, schlucke: 0, platz: 1 },
+        { sitz: 4, punkte: 2, schlucke: 6, platz: 5 },
+        { sitz: 5, punkte: 6, schlucke: 2, platz: 5 },
+      ],
+      daten: { art: 'quiz', frage: 'Wie viele Beine hat eine Spinne?', antworten: ['6', '8', '10', '12'], meineWahl: -1, richtig: null, wahl: null },
+    }),
+  },
 ];
+
+/** Die Aufstellung des Team-Abends — einmal als Oeffner, einmal als Wartender. */
+const AUFSTELLUNG = sicht({
+  art: 'quiz',
+  rundeNr: 0,
+  modus: 'team',
+  lager: [0, 1, 0, 0, 0, 1],
+  aufstellung: { aufsteller: 0, wechselbar: [0, 1, 2, 3, 4, 5] },
+  daten: { art: 'quiz', frage: '', antworten: [], meineWahl: -1, richtig: null, wahl: null },
+});
 
 function Kasten({
   titel,
   text,
   sicht: bild,
+  zusatz,
 }: {
   titel: string;
   text: string;
   sicht: PartykisteSicht;
+  zusatz?: Zusatz;
 }): React.JSX.Element {
   return (
     <figure className="sk-kasten">
@@ -456,7 +653,44 @@ function Kasten({
               Stand
             </button>
           </header>
-          <Runde sicht={bild} sitze={SITZE} sende={() => {}} />
+          <Regelzeile regeln={bild} />
+          <AktiveRegel sicht={bild} sitze={SITZE} sende={() => {}} />
+          {zusatz === 'tabelle' ? (
+            <Tabelle sicht={bild} sitze={SITZE} />
+          ) : (
+            <>
+              <p className="pk-ansage">{ansageFuer(bild.art, bild.trinkmodus)}</p>
+              <Runde sicht={bild} sitze={SITZE} sende={() => {}} />
+              {zusatz === 'abrechnung' ? (
+                <Abrechnung sicht={bild} sitze={SITZE} binFertig={false} sende={() => {}} />
+              ) : null}
+            </>
+          )}
+        </main>
+      </div>
+    </figure>
+  );
+}
+
+/** Ein Menue-Baustein ohne Tischkopf — im selben Handyrahmen. */
+function MenueKasten({
+  titel,
+  text,
+  children,
+}: {
+  titel: string;
+  text: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <figure className="sk-kasten">
+      <figcaption>
+        <strong>{titel}</strong>
+        <span>{text}</span>
+      </figcaption>
+      <div className="sk-rahmen">
+        <main className="pk-seite pk-menue">
+          <div className="pk-menue-mitte">{children}</div>
         </main>
       </div>
     </figure>
@@ -501,6 +735,102 @@ function Schaukasten(): React.JSX.Element {
               <PartykisteBanner />
             </div>
           </figure>
+          <MenueKasten
+            titel="Menü — Einstellungen, Trinkspiel"
+            text="Runden, Härte und Trinkmodus stehen offen im Menü und gelten online wie gegen Bots."
+          >
+            <Einstellungen runden={6} haerte={2} trinkmodus onRunden={() => {}} onHaerte={() => {}} onTrinkmodus={() => {}} />
+          </MenueKasten>
+          <MenueKasten
+            titel="Menü — Einstellungen, alkoholfrei"
+            text="Ausgeschaltet heißt der Zähler Strafpunkte; der Hinweis sagt, dass die Turnierpunkte gleich bleiben."
+          >
+            <Einstellungen runden={8} haerte={1} trinkmodus={false} onRunden={() => {}} onHaerte={() => {}} onTrinkmodus={() => {}} />
+          </MenueKasten>
+          <MenueKasten
+            titel="Menü — Auswahl"
+            text="Minispiele mit Platz in der Reihenfolge, Inhaltsstufe und Themenpaket. Ohne Modus: Das Modul kennt noch keinen."
+          >
+            <PartyAuswahl
+              vorgabe={{ minispiele: Object.keys(MINISPIEL_NAME), inhaltsHaerte: 1, paket: null }}
+              wahl={{ minispiele: ['quiz', 'imposter', 'entweder', 'wahrheitpflicht'], inhaltsHaerte: 2, paket: 'jga', modus: null }}
+              gast={false}
+              trinkmodus
+              onWahl={() => {}}
+            />
+          </MenueKasten>
+          <MenueKasten
+            titel="Menü — Auswahl als Gast, Modus bekannt"
+            text="„derb“ gesperrt mit Grund; die Modus-Kacheln erscheinen erst, wenn defaultConfig() ein Feld modus hat."
+          >
+            <PartyAuswahl
+              vorgabe={{ minispiele: Object.keys(MINISPIEL_NAME), inhaltsHaerte: 1, paket: null, modus: 'turnier' }}
+              wahl={{ minispiele: null, inhaltsHaerte: null, paket: null, modus: 'themenabend' }}
+              gast
+              trinkmodus={false}
+              onWahl={() => {}}
+            />
+          </MenueKasten>
+          <MenueKasten
+            titel="Online — offene Runde gefunden"
+            text="Erst ansehen, dann beitreten: Dort gilt der Regelsatz des Öffners, nicht die eigenen Einstellungen."
+          >
+            <OffeneRunde
+              angebot={{
+                id: 'probe',
+                host: 'Robin',
+                runden: 10,
+                regeln: { minispiele: Object.keys(MINISPIEL_NAME) as PartyMinispiel[], trinkmodus: false, schluckFaktor: 2 },
+              }}
+              laedt={false}
+              onBeitreten={() => {}}
+              onEigene={() => {}}
+              onAbbrechen={() => {}}
+            />
+          </MenueKasten>
+          <figure className="sk-kasten">
+            <figcaption>
+              <strong>Team-Abend — Lager aufstellen</strong>
+              <span>
+                Vor der ersten Runde: abwechselnd nach Sitz vorbelegt, der Öffner tippt Namen hinüber. Hier hat er
+                Emil ins Lager A geholt.
+              </span>
+            </figcaption>
+            <div className="sk-rahmen">
+              <AufstellungSeite sicht={AUFSTELLUNG} sitze={SITZE} sende={() => {}} />
+            </div>
+          </figure>
+          <figure className="sk-kasten">
+            <figcaption>
+              <strong>Team-Abend — die anderen warten</strong>
+              <span>Dieselben Spalten ohne Knöpfe, solange der Öffner aufstellt.</span>
+            </figcaption>
+            <div className="sk-rahmen">
+              <AufstellungSeite
+                sicht={{ ...AUFSTELLUNG, sitz: 2, aufstellung: { aufsteller: 0, wechselbar: [] } }}
+                sitze={SITZE}
+                sende={() => {}}
+              />
+            </div>
+          </figure>
+          <MenueKasten
+            titel="Wartesaal — Regelzeile, Eskalation"
+            text="Vor der ersten Runde steht nur fest, dass die Härte steigt; im Spiel nennt die Zeile die Stufe."
+          >
+            <Regelzeile
+              regeln={{ minispiele: Object.keys(MINISPIEL_NAME) as PartyMinispiel[], trinkmodus: true, schluckFaktor: 1, modus: 'eskalation' }}
+              runden={9}
+            />
+          </MenueKasten>
+          <MenueKasten
+            titel="Wartesaal — Regelzeile"
+            text="Dieselbe Zeile steht im Wartesaal (vom Server gelesen) und im Spielkopf (aus der Sicht)."
+          >
+            <Regelzeile
+              regeln={{ minispiele: ['imposter', 'quiz', 'niemals', 'wereher', 'entweder'], trinkmodus: true, schluckFaktor: 3 }}
+              runden={6}
+            />
+          </MenueKasten>
         </>
       ) : null}
       {BILDER.slice(von, bis).map((bild) => (

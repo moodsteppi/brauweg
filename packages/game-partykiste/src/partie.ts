@@ -37,8 +37,57 @@ import { AUFGABEN } from './inhalte/wahrheitpflicht.js';
 import { NIEMALS_SPRUECHE } from './inhalte/niemals.js';
 import { QUIZ_FRAGEN } from './inhalte/quiz.js';
 import { WER_EHER_SPRUECHE } from './inhalte/wereher.js';
+import { KATEGORIEN } from './inhalte/kategorien.js';
+import { MEHRHEITSFRAGEN } from './inhalte/mehrheit.js';
+import { REGELKARTEN } from './inhalte/regelkarten.js';
+import { ZEHN_SEKUNDEN } from './inhalte/zehnsekunden.js';
+import {
+  kategorieVorbei,
+  kategorienStart,
+  kategorienZug,
+  meldeVerstoss,
+  mehrheitZug,
+  naechsterImKreis,
+  neueRegel,
+  regelAbrechnen,
+  regelBis,
+  werteKategorien,
+  werteMehrheit,
+  type AktiveRegel,
+  type KategorienRunde,
+  type MehrheitRunde,
+  type RegelkartenRunde,
+} from './ohne-uhr.js';
+import {
+  bombeZug,
+  istZeitdruck,
+  koenigsbecherStart,
+  koenigsbecherZug,
+  werteBombe,
+  werteKoenigsbecher,
+  werteZehn,
+  zehnSprecher,
+  zehnStart,
+  zehnZug,
+  zeitdruckAmZug,
+  zeitdruckSchritt,
+  zuendzeit,
+  type BombeRunde,
+  type KoenigsbecherRunde,
+  type ZehnSekundenRunde,
+} from './zeitdruck.js';
+import {
+  MINDESTMENGE,
+  hatErlaubtenVorrat,
+  waehlbareInhalte,
+  type Auswahl,
+  type InhaltsRueckfall,
+} from './inhalte/filter.js';
+import type { Aufgabe, Haerte, Inhalt } from './inhalte/typen.js';
 import {
   DEFAULT_REGELN,
+  INHALTS_HAERTE_GAST_MAX,
+  INHALTS_HAERTE_VORGABE,
   MAX_REDERUNDEN,
   MINISPIELE,
   PUNKTE,
@@ -48,9 +97,22 @@ import {
   type PartykisteRegeln,
 } from './regeln.js';
 import { baueZufall, ganzzahl, gemischt, rundenSaat } from './zufall.js';
+import {
+  TISCHOEFFNER,
+  gewollteInhaltsHaerte,
+  lagerPlaetze,
+  modusVon,
+  regelnDerRunde,
+  reihumFolge,
+  startLager,
+  stufenStapel,
+  themenMinispiele,
+  wechselbareSitze,
+  type RundenRegeln,
+} from './modi.js';
 
 // ---------------------------------------------------------------------------
-// Karten (nur Bus fahren)
+// Karten (Bus fahren und Koenigsbecher)
 // ---------------------------------------------------------------------------
 
 /** rang 2..14 (11-14 = Bube, Dame, Koenig, Ass), farbe 0..3 (0 und 1 sind rot). */
@@ -63,7 +125,8 @@ export function istRot(karte: Karte): boolean {
   return karte.farbe < 2;
 }
 
-function neuerStapel(): Karte[] {
+/** Das 52er-Blatt, ungemischt. Bus fahren und Koenigsbecher mischen es je Runde aus der Saat. */
+export function neuerStapel(): Karte[] {
   const karten: Karte[] = [];
   for (let farbe = 0; farbe < 4; farbe++) {
     for (let rang = 2; rang <= 14; rang++) karten.push({ rang, farbe });
@@ -80,13 +143,23 @@ export type RundenPhase = 'sehen' | 'spiel' | 'ergebnis';
 /** -1 heisst ueberall "noch nicht" bzw. "gar nicht". */
 export const OFFEN = -1;
 
-interface RundenBasis {
+export interface RundenBasis {
   readonly phase: RundenPhase;
   /** Sitze, die in der laufenden Phase gehandelt haben. */
   readonly fertig: readonly number[];
   /** Punkte und Schluecke DIESER Runde, gefuellt beim Uebergang auf 'ergebnis'. */
   readonly punkte: readonly number[];
   readonly schlucke: readonly number[];
+  /**
+   * Musste die Inhaltsauswahl dieser Runde nachgeben (zu wenig passende
+   * Inhalte fuer Paket oder Sitzzahl), steht hier, wie weit — sonst null.
+   *
+   * Seit dem 22.09.2026. Die Sicht zeigt es noch nicht an (sie gehoert einer
+   * anderen Aenderung); der Bildschirm soll es spaeter sagen koennen, statt
+   * dass der Tisch sich wundert, warum im Paket "jga" Weihnachtsfragen
+   * kommen. Optional, weil Snapshots von davor das Feld nicht haben.
+   */
+  readonly inhaltsRueckfall?: InhaltsRueckfall | null;
 }
 
 export interface ImposterRunde extends RundenBasis {
@@ -216,7 +289,15 @@ export type Runde =
   | BusRunde
   | SchaetzRunde
   | EntwederRunde
-  | WahrheitPflichtRunde;
+  | WahrheitPflichtRunde
+  /* Die drei ohne Uhr — Typen und Regeln in ohne-uhr.ts. */
+  | KategorienRunde
+  | MehrheitRunde
+  | RegelkartenRunde
+  /* Die drei mit Uhr — Typen und Regeln in zeitdruck.ts. */
+  | BombeRunde
+  | ZehnSekundenRunde
+  | KoenigsbecherRunde;
 
 /** Was nach der Runde im Partieprotokoll landet (completedSegments). */
 export interface Rundenprotokoll {
@@ -246,6 +327,39 @@ export interface PartykistePartie {
   readonly runde: Runde;
   readonly protokoll: readonly Rundenprotokoll[];
   readonly fertig: boolean;
+  /**
+   * Die Inhaltsstufe, die der Tisch eingestellt HAT, wenn `regeln` sie wegen
+   * eines Gasts kappen musste — sonst null. `regeln.inhaltsHaerte` ist
+   * immer die wirksame Stufe; hier steht nur, dass es einmal mehr war, damit
+   * der Bildschirm "derb gibt es erst ohne Gast" sagen kann.
+   *
+   * Optional, weil Snapshots von vor dem 22.09.2026 das Feld nicht haben.
+   */
+  readonly inhaltsHaerteGewollt?: Haerte | null;
+  /**
+   * Die Regel-Karte, die gerade gilt — oder null.
+   *
+   * Das einzige Feld der Partie, das Rundenwissen ueber das Rundenende
+   * hinaus traegt; alles andere lebt in `runde` und stirbt mit ihr. Das ist
+   * ein Strukturbruch mit Absicht: Eine Regel-Karte wird in den FOLGENDEN
+   * Runden gebrochen, waehrend dort ein ganz anderes Minispiel laeuft. Warum
+   * es keinen Weg ueber die Runde oder das Protokoll gibt, steht an
+   * `AktiveRegel` (ohne-uhr.ts). Optional, weil Snapshots von vor dem
+   * 22.09.2026 es nicht haben.
+   */
+  readonly regelKarte?: AktiveRegel | null;
+  /**
+   * Team-Abend: je Sitz das Lager, 0 oder 1 — sonst null. Optional wie
+   * `inhaltsHaerteGewollt`: Snapshots von vor dem 22.09.2026 kennen es nicht.
+   */
+  readonly lager?: readonly number[] | null;
+  /**
+   * Team-Abend, vor der ersten Runde: Der Tischoeffner stellt die Lager auf,
+   * alle anderen warten. Solange das laeuft, ist er allein am Zug, und die
+   * erste Runde steht zwar schon da, wird aber mit dem Ende der Aufstellung
+   * neu gebaut — ihre Reihum-Folge haengt an den Lagern.
+   */
+  readonly aufstellung?: boolean;
 }
 
 export interface AufbauOptionen {
@@ -256,6 +370,14 @@ export interface AufbauOptionen {
   readonly runden: number;
   readonly botSitze?: readonly number[];
   readonly botStufe?: BotLevel;
+  /**
+   * Sitze mit Gastkonto. FEHLT das Feld, weiss der Aufrufer es nicht — und
+   * dann gilt die strenge Seite: kein "derb". Eine leere Liste heisst
+   * dagegen ausdruecklich "kein Gast". Der Unterschied ist Absicht: Ein
+   * Aufrufer, der die Auskunft vergisst, soll einen zahmeren Abend bekommen,
+   * nicht einen derberen.
+   */
+  readonly gastSitze?: readonly number[];
 }
 
 function nullen(n: number): number[] {
@@ -273,7 +395,16 @@ function lebende(sitze: number, ausgestiegen: readonly number[]): number[] {
   return liste;
 }
 
-function ersterLebender(sitze: number, ausgestiegen: readonly number[]): number {
+/**
+ * Der erste Anwesende — in Sitzreihenfolge oder, im Team-Abend, in der
+ * Folge der Lager (`reihumFolge`).
+ */
+function ersterLebender(sitze: number, ausgestiegen: readonly number[], folge?: readonly number[]): number {
+  if (folge) {
+    const raus = new Set(ausgestiegen);
+    const erster = folge.find((s) => !raus.has(s));
+    if (erster !== undefined) return erster;
+  }
   const liste = lebende(sitze, ausgestiegen);
   return liste.length > 0 ? liste[0]! : 0;
 }
@@ -289,12 +420,163 @@ export function minispielFuer(regeln: PartykisteRegeln, nr: number): MinispielId
   return liste[nr % liste.length]!;
 }
 
+/**
+ * Die Kataloge, aus denen ein Minispiel zieht. Jeder muss unter der Haerte
+ * der Runde mindestens einen Eintrag haben, sonst kann die Runde nicht
+ * spielen (W/P: beide Arten, gewaehlt wird ja erst am Zug). Ein Record ueber
+ * `MinispielId`, damit ein neues Minispiel hier nicht vergessen wird — der
+ * Bau bricht sonst. Bus fahren zieht nur Spielkarten, es kann immer.
+ */
+const VORRAT: Readonly<Record<MinispielId, readonly (readonly Inhalt[])[]>> = {
+  imposter: [IMPOSTER_WOERTER],
+  quiz: [QUIZ_FRAGEN],
+  werbinich: [IDENTITAETEN],
+  niemals: [NIEMALS_SPRUECHE],
+  wereher: [WER_EHER_SPRUECHE],
+  busfahrer: [],
+  schaetzen: [SCHAETZ_FRAGEN],
+  entweder: [ENTWEDER_ODER],
+  wahrheitpflicht: [AUFGABEN.filter((a) => a.art === 'wahrheit'), AUFGABEN.filter((a) => a.art === 'pflicht')],
+  kategorien: [KATEGORIEN],
+  mehrheit: [MEHRHEITSFRAGEN],
+  regelkarte: [REGELKARTEN],
+  bombe: [KATEGORIEN],
+  zehnsekunden: [ZEHN_SEKUNDEN],
+  koenigsbecher: [REGELKARTEN],
+};
+
+/** Kann dieses Minispiel unter dieser Haerte spielen? */
+export function hatVorrat(art: MinispielId, haerte: Haerte): boolean {
+  return (VORRAT[art] ?? []).every((katalog) => hatErlaubtenVorrat(katalog, haerte));
+}
+
+/**
+ * Das Minispiel, das in Runde `nr` WIRKLICH spielt: das geplante, oder — hat
+ * es keinen erlaubten Inhalt — das naechste der Liste, das einen hat; zur
+ * Not Bus fahren, das keinen Inhalt braucht. Rein und deterministisch: haengt
+ * nur an Liste, Rundennummer und `spielbar`.
+ *
+ * Seit dem 23.09.2026. Vorher griff der Filter in diesem Fall zum vollen
+ * Katalog, also zu Derbem am harmlosen Tisch. Mit den heutigen Katalogen
+ * kommt der Ersatz nie vor (jeder traegt genug Harmloses, Test "jeder
+ * Katalog traegt die strengste Einstellung"); er ist das Netz fuer den
+ * Katalog von morgen.
+ */
+export function ersatzMinispiel(
+  liste: readonly MinispielId[],
+  nr: number,
+  spielbar: (art: MinispielId) => boolean,
+): MinispielId {
+  const reihe = liste.length > 0 ? liste : MINISPIELE;
+  for (let i = 0; i < reihe.length; i++) {
+    const art = reihe[(nr + i) % reihe.length]!;
+    if (spielbar(art)) return art;
+  }
+  return 'busfahrer';
+}
+
+/** `ersatzMinispiel` mit den echten Katalogen und der Haerte dieses Regelsatzes. */
+export function spielbaresMinispiel(regeln: PartykisteRegeln, nr: number): MinispielId {
+  const haerte: Haerte =
+    regeln.inhaltsHaerte === 1 || regeln.inhaltsHaerte === 2 || regeln.inhaltsHaerte === 3 ? regeln.inhaltsHaerte : 1;
+  return ersatzMinispiel(regeln.minispiele, nr, (art) => hatVorrat(art, haerte));
+}
+
 /** Die wievielte Runde ihrer Art ist Runde `nr`? Waehlt den Inhalt aus. */
 function nummerDerArt(regeln: PartykisteRegeln, nr: number): number {
   const art = minispielFuer(regeln, nr);
   let zahl = 0;
   for (let i = 0; i < nr; i++) if (minispielFuer(regeln, i) === art) zahl++;
   return zahl;
+}
+
+/**
+ * Der Stapel eines Katalogs fuer die ganze Partie: gefiltert, dann EINMAL
+ * gemischt mit `rundenSaat(saat, 0, zweck)`.
+ *
+ * Die Runde 0 in der Saat ist Absicht und das ganze Geheimnis des
+ * Wiederholungsschutzes: Jede Runde derselben Art zieht aus DEMSELBEN
+ * gemischten Stapel, nur an der naechsten Stelle (`wievielte`). Mischte jede
+ * Runde neu, koennte dieselbe Frage zweimal oben liegen — genau das war bei
+ * "Wer bin ich" bis zum 22.09.2026 der Fall.
+ *
+ * Gefiltert wird VOR dem Mischen, und die Auswahl steht in
+ * Katalogreihenfolge (filter.ts). Regeln und Sitzzahl aendern sich waehrend
+ * einer Partie nicht, also ist der Stapel in jeder Runde derselbe — auch
+ * nach einem Ausstieg, weil `sitze` die Tischgroesse ist und nicht die Zahl
+ * der Anwesenden.
+ */
+function stapel<T extends Inhalt>(
+  katalog: readonly T[],
+  regeln: RundenRegeln,
+  saat: string,
+  sitze: number,
+  zweck: string,
+  mindestens: number = MINDESTMENGE,
+): { readonly stapel: readonly T[]; readonly rueckfall: InhaltsRueckfall | null } {
+  /* Eskalation: EIN Stapel auf die Decke, belegt Platz fuer Platz unter der
+     Stufe seiner Runde (modi.ts) — sonst kaeme derselbe Spruch je Stufe neu. */
+  const stufen = stufenStapel(katalog, regeln, saat, sitze, zweck, mindestens, (nr) => minispielFuer(regeln, nr));
+  if (stufen) return stufen;
+  const auswahl: Auswahl<T> = waehlbareInhalte(katalog, regeln, sitze, mindestens);
+  return {
+    stapel: gemischt(auswahl.inhalte, baueZufall(rundenSaat(saat, 0, zweck))),
+    rueckfall: auswahl.rueckfall,
+  };
+}
+
+/** Die Stelle `stelle` eines Stapels, am Ende von vorn. */
+function an<T>(liste: readonly T[], stelle: number): T {
+  return liste[stelle % liste.length]!;
+}
+
+/**
+ * Die beiden Stapel von Wahrheit oder Pflicht — je Art einer, weil die Wahl
+ * erst am Zug faellt. Mindestens so gross wie der Tisch: Sonst bekaemen zwei
+ * Sitze in derselben Runde dieselbe Aufgabe, und genau das soll nicht mehr
+ * gehen.
+ */
+function aufgabenStapel(
+  regeln: RundenRegeln,
+  saat: string,
+  sitze: number,
+  pflicht: boolean,
+): { readonly stapel: readonly Aufgabe[]; readonly rueckfall: InhaltsRueckfall | null } {
+  const art = pflicht ? 'pflicht' : 'wahrheit';
+  return stapel(
+    AUFGABEN.filter((a) => a.art === art),
+    regeln,
+    saat,
+    sitze,
+    `wp-${pflicht ? 'p' : 'w'}`,
+    Math.max(MINDESTMENGE, sitze),
+  );
+}
+
+/**
+ * Was `baueRunde` ausser Regelsatz und Saat wissen muss — beides optional,
+ * weil Tests und alte Aufrufer eine Runde auch ohne bauen.
+ */
+export interface RundenKontext {
+  /** Rundenzahl des Abends. Ohne sie steht die Eskalation auf Stufe 1. */
+  readonly runden?: number;
+  /** Reihum-Folge (Team-Abend). Ohne sie: Sitzreihenfolge. */
+  readonly folge?: readonly number[];
+  /**
+   * Die Botsitze (seit dem 23.09.2026, nur fuer „10 Sekunden"): Dort spricht
+   * ein MENSCH, und wer das ist, haengt daran, wer Bot ist. Ohne sie: keiner.
+   */
+  readonly botSitze?: readonly number[];
+}
+
+/** Der Kontext fuer Runde `nr` einer laufenden Partie. */
+function rundenKontext(partie: Pick<PartykistePartie, 'runden' | 'lager' | 'botSitze'>, nr: number): RundenKontext {
+  return { runden: partie.runden, folge: reihumFolge(partie.lager, nr), botSitze: partie.botSitze };
+}
+
+/** Die Reihum-Folge der laufenden Runde. */
+function folgeVon(partie: PartykistePartie): readonly number[] | undefined {
+  return reihumFolge(partie.lager, partie.rundeNr);
 }
 
 /**
@@ -305,21 +587,39 @@ function nummerDerArt(regeln: PartykisteRegeln, nr: number): number {
  * Server, auch wenn die Partie inzwischen anders gelaufen ist.
  */
 export function baueRunde(
-  regeln: PartykisteRegeln,
+  grundRegeln: PartykisteRegeln,
   saat: string,
   sitze: number,
   nr: number,
   ausgestiegen: readonly number[],
+  kontext: RundenKontext = {},
 ): Runde {
-  const art = minispielFuer(regeln, nr);
+  /*
+   * Der Regelsatz DIESER Runde: im Turnier derselbe wie immer, in der
+   * Eskalation mit der Stufe der Runde (modi.ts). Alles darunter liest nur
+   * noch `regeln` — auch ein Minispiel, das spaeter dazukommt, filtert damit
+   * von selbst nie derber, als die Runde darf.
+   */
+  const rundenRegeln = regelnDerRunde(grundRegeln, nr, kontext.runden);
+  /*
+   * Hat das geplante Minispiel unter der Haerte dieser Runde KEINEN
+   * erlaubten Inhalt, spielt ein anderes (`spielbaresMinispiel`) — der
+   * Filter lockert die Haerte nie, auch nicht als letzter Ausweg, und eine
+   * Runde ohne Inhalt haenge den Tisch auf. Die Ersatzrunde verliert den
+   * Eskalationskontext: Dessen Stufenbelegung gehoert dem geplanten
+   * Minispiel, und ihre Plaetze koennten zu einer spaeteren, derberen Stufe
+   * gehoeren. Ohne ihn filtert der Ersatz schlicht auf die Stufe der Runde.
+   */
+  const art = spielbaresMinispiel(rundenRegeln, nr);
+  const regeln: RundenRegeln =
+    art === minispielFuer(rundenRegeln, nr) ? rundenRegeln : { ...rundenRegeln, eskalation: undefined };
   const wievielte = nummerDerArt(regeln, nr);
   const basis = { fertig: [], punkte: nullen(sitze), schlucke: nullen(sitze) } as const;
 
   switch (art) {
     case 'imposter': {
-      const wort = gemischt(IMPOSTER_WOERTER, baueZufall(rundenSaat(saat, 0, 'imposter')))[
-        wievielte % IMPOSTER_WOERTER.length
-      ]!;
+      const woerter = stapel(IMPOSTER_WOERTER, regeln, saat, sitze, 'imposter');
+      const wort = an(woerter.stapel, wievielte);
       /*
        * Der Imposter wird unter den ANWESENDEN gezogen. Ein ausgestiegener
        * Imposter waere eine Runde ohne Taeter: Niemand redet falsch, alle
@@ -348,12 +648,12 @@ export function baueRunde(
         nochmal: [],
         stimmen: offene(sitze),
         ertappt: false,
+        inhaltsRueckfall: woerter.rueckfall,
       };
     }
     case 'quiz': {
-      const frage = gemischt(QUIZ_FRAGEN, baueZufall(rundenSaat(saat, 0, 'quiz')))[
-        wievielte % QUIZ_FRAGEN.length
-      ]!;
+      const fragen = stapel(QUIZ_FRAGEN, regeln, saat, sitze, 'quiz');
+      const frage = an(fragen.stapel, wievielte);
       /*
        * Die Antworten werden noch einmal gemischt. Sonst stuende die richtige
        * ueber alle Tische hinweg an derselben Stelle wie im Katalog — und wer
@@ -370,27 +670,34 @@ export function baueRunde(
         antworten: stellen.map((i) => frage.antworten[i]!),
         richtig: stellen.indexOf(frage.richtig),
         wahl: offene(sitze),
+        inhaltsRueckfall: fragen.rueckfall,
       };
     }
     case 'werbinich': {
-      const gezogen = gemischt(IDENTITAETEN, baueZufall(rundenSaat(saat, nr, 'werbinich'))).slice(
-        0,
-        sitze,
-      );
+      /*
+       * Bis zum 22.09.2026 mischte jede Runde neu (`rundenSaat(saat, nr, …)`)
+       * und nahm die ersten `sitze` Namen — zwei Runden "Wer bin ich" konnten
+       * so denselben Namen bringen, und wer ihn schon einmal erraten hatte,
+       * kannte ihn. Jetzt ein Stapel fuer die ganze Partie, und jede Runde
+       * nimmt die naechsten `sitze` Karten. Mindestens so viele Namen wie
+       * Sitze, sonst saessen zwei Leute in derselben Runde unter demselben.
+       */
+      const namen = stapel(IDENTITAETEN, regeln, saat, sitze, 'werbinich', Math.max(MINDESTMENGE, sitze));
+      const gezogen = Array.from({ length: sitze }, (_, s) => an(namen.stapel, wievielte * sitze + s));
       return {
         ...basis,
         art: 'werbinich',
         phase: 'spiel',
         identitaeten: gezogen.map((i) => i.id),
         namen: gezogen.map((i) => i.name),
-        amZug: ersterLebender(sitze, ausgestiegen),
+        amZug: ersterLebender(sitze, ausgestiegen, kontext.folge),
         erfolg: offene(sitze),
+        inhaltsRueckfall: namen.rueckfall,
       };
     }
     case 'niemals': {
-      const spruch = gemischt(NIEMALS_SPRUECHE, baueZufall(rundenSaat(saat, 0, 'niemals')))[
-        wievielte % NIEMALS_SPRUECHE.length
-      ]!;
+      const sprueche = stapel(NIEMALS_SPRUECHE, regeln, saat, sitze, 'niemals');
+      const spruch = an(sprueche.stapel, wievielte);
       return {
         ...basis,
         art: 'niemals',
@@ -398,12 +705,12 @@ export function baueRunde(
         spruchId: spruch.id,
         text: spruch.text,
         gestanden: offene(sitze),
+        inhaltsRueckfall: sprueche.rueckfall,
       };
     }
     case 'wereher': {
-      const spruch = gemischt(WER_EHER_SPRUECHE, baueZufall(rundenSaat(saat, 0, 'wereher')))[
-        wievielte % WER_EHER_SPRUECHE.length
-      ]!;
+      const sprueche = stapel(WER_EHER_SPRUECHE, regeln, saat, sitze, 'wereher');
+      const spruch = an(sprueche.stapel, wievielte);
       return {
         ...basis,
         art: 'wereher',
@@ -411,6 +718,7 @@ export function baueRunde(
         spruchId: spruch.id,
         text: spruch.text,
         stimmen: offene(sitze),
+        inhaltsRueckfall: sprueche.rueckfall,
       };
     }
     case 'busfahrer': {
@@ -420,17 +728,18 @@ export function baueRunde(
         phase: 'spiel',
         stapel: gemischt(neuerStapel(), baueZufall(rundenSaat(saat, nr, 'bus'))),
         naechste: 0,
-        amZug: ersterLebender(sitze, ausgestiegen),
+        amZug: ersterLebender(sitze, ausgestiegen, kontext.folge),
         stufe: 0,
         offen: [],
         treffer: offene(sitze),
         letzter: null,
+        /* Karten sind kein Inhalt mit Haerte oder Paket. */
+        inhaltsRueckfall: null,
       };
     }
     case 'schaetzen': {
-      const frage = gemischt(SCHAETZ_FRAGEN, baueZufall(rundenSaat(saat, 0, 'schaetzen')))[
-        wievielte % SCHAETZ_FRAGEN.length
-      ]!;
+      const fragen = stapel(SCHAETZ_FRAGEN, regeln, saat, sitze, 'schaetzen');
+      const frage = an(fragen.stapel, wievielte);
       return {
         ...basis,
         art: 'schaetzen',
@@ -440,12 +749,12 @@ export function baueRunde(
         antwort: frage.antwort,
         einheit: frage.einheit,
         schaetzung: Array.from({ length: sitze }, () => null),
+        inhaltsRueckfall: fragen.rueckfall,
       };
     }
     case 'entweder': {
-      const paar = gemischt(ENTWEDER_ODER, baueZufall(rundenSaat(saat, 0, 'entweder')))[
-        wievielte % ENTWEDER_ODER.length
-      ]!;
+      const paare = stapel(ENTWEDER_ODER, regeln, saat, sitze, 'entweder');
+      const paar = an(paare.stapel, wievielte);
       return {
         ...basis,
         art: 'entweder',
@@ -454,18 +763,148 @@ export function baueRunde(
         a: paar.a,
         b: paar.b,
         seite: offene(sitze),
+        inhaltsRueckfall: paare.rueckfall,
       };
     }
     case 'wahrheitpflicht': {
+      /* Gezogen wird erst bei der Wahl (zieheAufgabe); hier nur, ob die
+         Auswahl dafuer nachgeben muss — sie haengt nicht an der Wahl. */
+      const rueckfall =
+        aufgabenStapel(regeln, saat, sitze, false).rueckfall ??
+        aufgabenStapel(regeln, saat, sitze, true).rueckfall;
       return {
         ...basis,
         art: 'wahrheitpflicht',
         phase: 'spiel',
-        amZug: ersterLebender(sitze, ausgestiegen),
+        amZug: ersterLebender(sitze, ausgestiegen, kontext.folge),
         gewaehlt: offene(sitze),
         aufgabeId: Array.from({ length: sitze }, () => ''),
         text: Array.from({ length: sitze }, () => ''),
         erfolg: offene(sitze),
+        inhaltsRueckfall: rueckfall,
+      };
+    }
+    case 'kategorien': {
+      const kategorien = stapel(KATEGORIEN, regeln, saat, sitze, 'kategorien');
+      const kategorie = an(kategorien.stapel, wievielte);
+      const anwesend = lebende(sitze, ausgestiegen);
+      /* Wer anfaengt, wird gezogen: Finge immer Sitz 0 an, haette er in jeder
+         Kategorie die leichteste Nennung. */
+      const start =
+        anwesend.length > 0
+          ? anwesend[ganzzahl(baueZufall(rundenSaat(saat, nr, 'kategorien-start')), anwesend.length)]!
+          : 0;
+      return {
+        ...basis,
+        art: 'kategorien',
+        phase: 'spiel',
+        kategorieId: kategorie.id,
+        kategorie: kategorie.text,
+        ...kategorienStart(sitze, anwesend, start),
+        inhaltsRueckfall: kategorien.rueckfall,
+      };
+    }
+    case 'mehrheit': {
+      const fragen = stapel(MEHRHEITSFRAGEN, regeln, saat, sitze, 'mehrheit');
+      const frage = an(fragen.stapel, wievielte);
+      return {
+        ...basis,
+        art: 'mehrheit',
+        phase: 'spiel',
+        frageId: frage.id,
+        frage: frage.frage,
+        a: frage.a,
+        b: frage.b,
+        eigene: offene(sitze),
+        tipp: offene(sitze),
+        mehrheit: OFFEN,
+        inhaltsRueckfall: fragen.rueckfall,
+      };
+    }
+    case 'regelkarte': {
+      const karten = stapel(REGELKARTEN, regeln, saat, sitze, 'regelkarte');
+      const karte = an(karten.stapel, wievielte);
+      return {
+        ...basis,
+        art: 'regelkarte',
+        phase: 'spiel',
+        karteId: karte.id,
+        text: karte.text,
+        bis: regelBis(nr),
+        inhaltsRueckfall: karten.rueckfall,
+      };
+    }
+    case 'bombe': {
+      /*
+       * Die Kategorien des Battles, aber ein eigener Stapel (Zweck 'bombe'):
+       * Die Eskalation belegt jeden Stapel Platz fuer Platz fuer GENAU ein
+       * Minispiel (modi.ts, zweckArt) — ein geteilter Stapel gaebe dort
+       * Kategorien doppelt aus.
+       */
+      const kategorien = stapel(KATEGORIEN, regeln, saat, sitze, 'bombe');
+      const kategorie = an(kategorien.stapel, wievielte);
+      const anwesend = lebende(sitze, ausgestiegen);
+      const start =
+        anwesend.length > 0
+          ? anwesend[ganzzahl(baueZufall(rundenSaat(saat, nr, 'bombe-start')), anwesend.length)]!
+          : 0;
+      return {
+        ...basis,
+        art: 'bombe',
+        phase: 'spiel',
+        kategorieId: kategorie.id,
+        kategorie: kategorie.text,
+        amZug: start,
+        weitergaben: 0,
+        zuendMs: zuendzeit(baueZufall(rundenSaat(saat, nr, 'bombe-zuender'))()),
+        verlierer: OFFEN,
+        inhaltsRueckfall: kategorien.rueckfall,
+      };
+    }
+    case 'zehnsekunden': {
+      const aufgaben = stapel(ZEHN_SEKUNDEN, regeln, saat, sitze, 'zehnsekunden');
+      const aufgabe = an(aufgaben.stapel, wievielte);
+      /* Der Versatz einmal je Partie, dann reihum: Keiner spricht zweimal, bevor alle dran waren. */
+      const versatz = ganzzahl(baueZufall(rundenSaat(saat, 0, 'zehn-sprecher')), Math.max(1, sitze));
+      return {
+        ...basis,
+        art: 'zehnsekunden',
+        phase: 'spiel',
+        aufgabeId: aufgabe.id,
+        aufgabe: aufgabe.text,
+        sprecher: zehnSprecher(sitze, ausgestiegen, kontext.botSitze ?? [], versatz, wievielte),
+        ...zehnStart(sitze),
+        inhaltsRueckfall: aufgaben.rueckfall,
+      };
+    }
+    case 'koenigsbecher': {
+      /*
+       * Was ein Bube bringen kann: die naechsten vier Regel-Karten aus einem
+       * eigenen Stapel (vier Buben im Blatt). Schon hier gezogen, weil nur
+       * hier der gefilterte Stapel zur Hand ist — und weil es so an Saat und
+       * Runde haengt, nicht am Verlauf.
+       */
+      const regelkarten = stapel(REGELKARTEN, regeln, saat, sitze, 'koenigsbecher-regel');
+      const vorrat = Array.from({ length: 4 }, (_, i) => an(regelkarten.stapel, wievielte * 4 + i)).map((k) => ({
+        karteId: k.id,
+        text: k.text,
+      }));
+      const anwesend = lebende(sitze, ausgestiegen);
+      const start =
+        anwesend.length > 0
+          ? anwesend[ganzzahl(baueZufall(rundenSaat(saat, nr, 'koenigsbecher-start')), anwesend.length)]!
+          : 0;
+      return {
+        ...basis,
+        art: 'koenigsbecher',
+        phase: 'spiel',
+        ...koenigsbecherStart(
+          sitze,
+          gemischt(neuerStapel(), baueZufall(rundenSaat(saat, nr, 'koenigsbecher'))),
+          start,
+          vorrat,
+        ),
+        inhaltsRueckfall: regelkarten.rueckfall,
       };
     }
   }
@@ -479,16 +918,71 @@ export function baueRunde(
  * Pflicht. Waere die Aufgabe schon beim Rundenaufbau festgelegt, staende sie
  * im Snapshot, bevor jemand gewaehlt hat — und der Zustand wuesste etwas,
  * das der Sitz noch nicht wissen darf.
+ *
+ * Bis zum 22.09.2026 zog jeder Sitz einen eigenen Zufallsindex, und zwei
+ * Sitze konnten dieselbe Aufgabe bekommen — am Tisch sieht jeder jede
+ * Aufgabe, der zweite kennt sie dann schon. Jetzt hat jede Art EINEN Stapel
+ * fuer die Partie, und jeder Sitz hat darin seinen festen Platz: Runde
+ * `wievielte` der Art, Sitz `sitz` → Stelle `wievielte * sitze + sitz`.
+ * Verschiedene (Runde, Sitz) ergeben verschiedene Stellen, also nie zweimal
+ * dieselbe Aufgabe, solange der Stapel reicht. Dass ein Platz verfaellt,
+ * wenn der Sitz die andere Art waehlt, ist der Preis dafuer, dass die Stelle
+ * nicht von fremden Wahlen abhaengt (und damit nicht verraet, was sie waren).
  */
-function zieheAufgabe(saat: string, nr: number, sitz: number, pflicht: boolean) {
-  const passende = AUFGABEN.filter((a) => a.art === (pflicht ? 'pflicht' : 'wahrheit'));
-  const zufall = baueZufall(rundenSaat(saat, nr, `wp-${sitz}-${pflicht ? 'p' : 'w'}`));
-  return passende[ganzzahl(zufall, passende.length)]!;
+function zieheAufgabe(partie: PartykistePartie, sitz: number, pflicht: boolean): Aufgabe {
+  const wievielte = nummerDerArt(partie.regeln, partie.rundeNr);
+  /* Der Regelsatz der RUNDE: In der Eskalation darf die Aufgabe nicht derber
+     sein als die Stufe, in der sie gezogen wird. */
+  const regeln = regelnDerRunde(partie.regeln, partie.rundeNr, partie.runden);
+  const { stapel: aufgaben } = aufgabenStapel(regeln, partie.saat, partie.sitze, pflicht);
+  return an(aufgaben, wievielte * partie.sitze + sitz);
+}
+
+/**
+ * Die wirksame Inhaltsstufe: eingestellt, aber mit Gast am Tisch hoechstens
+ * INHALTS_HAERTE_GAST_MAX.
+ *
+ * Hier und nicht in `validateConfig`: Der Regelsatz wird beim Anlegen des
+ * Tisches geprueft und eingefroren, der Gast setzt sich oft erst danach
+ * dazu. Erst beim Start steht fest, wer sitzt — und `erzeugePartie` ist
+ * die einzige Stelle, die das erfaehrt. `gastSitze` fehlt = unbekannt =
+ * streng (siehe AufbauOptionen).
+ */
+export function wirksameInhaltsHaerte(
+  eingestellt: Haerte,
+  gastSitze: readonly number[] | undefined,
+): Haerte {
+  const mitGast = gastSitze === undefined || gastSitze.length > 0;
+  return mitGast && eingestellt > INHALTS_HAERTE_GAST_MAX ? INHALTS_HAERTE_GAST_MAX : eingestellt;
 }
 
 export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
   const saat = o.saatHex && o.saatHex.length > 0 ? o.saatHex : String(o.saat);
-  const regeln = o.regeln.minispiele.length > 0 ? o.regeln : DEFAULT_REGELN;
+  const grund = o.regeln.minispiele.length > 0 ? o.regeln : DEFAULT_REGELN;
+  const paket = grund.paket ?? null;
+  /* Ein Themenabend ohne Paket ist ein Turnier — validateConfig meldet ihn,
+     aber ein Tisch aus der Datenbank soll spielen, nicht werfen. */
+  const modus = modusVon(grund) === 'themenabend' && paket === null ? 'turnier' : modusVon(grund);
+  const gewollt: Haerte = gewollteInhaltsHaerte(
+    modus,
+    grund.inhaltsHaerte === 1 || grund.inhaltsHaerte === 2 || grund.inhaltsHaerte === 3
+      ? grund.inhaltsHaerte
+      : INHALTS_HAERTE_VORGABE,
+  );
+  /*
+   * Auch die Eskalation geht hier durch: Sie will am Ende "derb", aber mit
+   * Gast am Tisch steht danach "pikant" in `regeln.inhaltsHaerte`, und die
+   * Kurve steigt nie ueber diese Decke (`regelnDerRunde`).
+   */
+  const wirksam = wirksameInhaltsHaerte(gewollt, o.gastSitze);
+  const regeln: PartykisteRegeln = {
+    ...grund,
+    inhaltsHaerte: wirksam,
+    paket,
+    modus,
+    minispiele: modus === 'themenabend' && paket !== null ? themenMinispiele(paket, grund.minispiele) : grund.minispiele,
+  };
+  const lager = modus === 'team' ? startLager(o.sitze) : null;
   return weiter({
     saat,
     sitze: o.sitze,
@@ -500,9 +994,13 @@ export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
     punkte: nullen(o.sitze),
     schlucke: nullen(o.sitze),
     rundeNr: 0,
-    runde: baueRunde(regeln, saat, o.sitze, 0, []),
+    runde: baueRunde(regeln, saat, o.sitze, 0, [], rundenKontext({ runden: o.runden, lager, botSitze: o.botSitze ?? [] }, 0)),
     protokoll: [],
     fertig: false,
+    inhaltsHaerteGewollt: wirksam < gewollt ? gewollt : null,
+    regelKarte: null,
+    lager,
+    aufstellung: lager !== null,
   });
 }
 
@@ -513,6 +1011,24 @@ export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
 /** Handelt dieses Minispiel reihum statt gleichzeitig? */
 export function istReihum(art: MinispielId): boolean {
   return art === 'werbinich' || art === 'busfahrer' || art === 'wahrheitpflicht';
+}
+
+/**
+ * Wie ein Minispiel fuer die Leute am Tisch ablaeuft — das Wort auf der
+ * Kachel im Menue (Client `MINISPIEL_ABLAUF`, Vertrag
+ * `partykiste-auswahl.test.ts`).
+ *
+ * NICHT dasselbe wie `istReihum`: Das sagt, ob die Runde endet, wenn jeder
+ * einmal dran war. Kategorien-Battle, Bombe und Koenigsbecher laufen reihum
+ * IM KREIS und haben dafuer eigene Zweige in `amZug`/`weiter` — fuer den
+ * Tisch sind sie trotzdem „reihum". Bis zum 23.09.2026 hielt der Vertrag die
+ * Kachel gegen `istReihum`, und das Kategorien-Battle haette dort
+ * „gleichzeitig" heissen muessen.
+ */
+export function ablaufVon(art: MinispielId): 'gleichzeitig' | 'reihum' {
+  return istReihum(art) || art === 'kategorien' || art === 'bombe' || art === 'koenigsbecher'
+    ? 'reihum'
+    : 'gleichzeitig';
 }
 
 /** Der Sitz, der bei einem Reihum-Minispiel gerade faehrt. */
@@ -538,6 +1054,8 @@ function reihumGespielt(runde: Runde, sitz: number): boolean {
  */
 export function amZug(partie: PartykistePartie): number | null {
   if (partie.fertig) return null;
+  /* Team-Abend: Solange die Lager aufgestellt werden, ist nur der Oeffner dran. */
+  if (partie.aufstellung) return TISCHOEFFNER;
   const runde = partie.runde;
   if (runde.phase === 'ergebnis') {
     /*
@@ -556,6 +1074,12 @@ export function amZug(partie: PartykistePartie): number | null {
     }
     return null;
   }
+  if (runde.art === 'kategorien') {
+    /* Reihum im Kreis, bis einer stockt — nicht istReihum (ohne-uhr.ts). */
+    return kategorieVorbei(partie, runde) || partie.ausgestiegen.includes(runde.amZug) ? null : runde.amZug;
+  }
+  /* Die drei mit Uhr haben je einen eigenen Ablauf (zeitdruck.ts). */
+  if (istZeitdruck(runde)) return zeitdruckAmZug(partie, runde);
   if (istReihum(runde.art)) {
     const sitz = reihumSitz(runde);
     return partie.ausgestiegen.includes(sitz) || reihumGespielt(runde, sitz) ? null : sitz;
@@ -581,10 +1105,22 @@ function wartetNochJemand(partie: PartykistePartie): boolean {
   return lebende(partie.sitze, partie.ausgestiegen).some((s) => !bots.has(s) && !fertig.has(s));
 }
 
-/** Der naechste lebende Sitz nach `sitz`, der noch nicht gefahren ist. */
-function naechsterLebender(runde: Runde, sitze: number, ausgestiegen: readonly number[], sitz: number): number | null {
+/**
+ * Der naechste lebende Sitz nach `sitz`, der noch nicht gefahren ist — in
+ * Sitzreihenfolge oder in der Folge der Lager (`reihumFolge`). `sitz` -1
+ * heisst: von vorn.
+ */
+function naechsterLebender(
+  runde: Runde,
+  sitze: number,
+  ausgestiegen: readonly number[],
+  sitz: number,
+  folge?: readonly number[],
+): number | null {
   const raus = new Set(ausgestiegen);
-  for (let s = sitz + 1; s < sitze; s++) {
+  const reihe = folge ?? [...Array(sitze).keys()];
+  for (let i = reihe.indexOf(sitz) + 1; i < reihe.length; i++) {
+    const s = reihe[i]!;
     if (raus.has(s)) continue;
     if (!reihumGespielt(runde, s)) return s;
   }
@@ -602,7 +1138,8 @@ function reihumDurch(partie: PartykistePartie): boolean {
 // Auswertung einer Runde
 // ---------------------------------------------------------------------------
 
-function mitSchluck(faktor: number, wert: number): number {
+/** Schluecke mal Haertegrad (1 bis 3) — die eine Stelle, an der das gerechnet wird. */
+export function mitSchluck(faktor: number, wert: number): number {
   return wert * Math.min(3, Math.max(1, Math.round(faktor)));
 }
 
@@ -616,7 +1153,8 @@ function mitSchluck(faktor: number, wert: number): number {
 function werteAus(partie: PartykistePartie): PartykistePartie {
   const runde = partie.runde;
   const sitze = partie.sitze;
-  const faktor = partie.regeln.schluckFaktor;
+  /* In der Eskalation steigt die Haerte mit der Runde (modi.ts). */
+  const faktor = regelnDerRunde(partie.regeln, partie.rundeNr, partie.runden).schluckFaktor;
   const punkte = nullen(sitze);
   const schlucke = nullen(sitze);
   const dabei = lebende(sitze, partie.ausgestiegen);
@@ -757,10 +1295,69 @@ function werteAus(partie: PartykistePartie): PartykistePartie {
       neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
       break;
     }
+    case 'kategorien': {
+      werteKategorien(runde, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
+    case 'mehrheit': {
+      const mehrheit = werteMehrheit(runde, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke, mehrheit };
+      break;
+    }
+    case 'regelkarte': {
+      /* Die Karte selbst bringt nichts ein — gespielt wird sie in den naechsten Runden. */
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
+    case 'bombe': {
+      werteBombe(runde, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
+    case 'zehnsekunden': {
+      const geschafft = werteZehn(partie, runde, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke, geschafft };
+      break;
+    }
+    case 'koenigsbecher': {
+      werteKoenigsbecher(runde, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
   }
+
+  /*
+   * Die geltende Regel-Karte rechnet in JEDER Runde mit ab, und zwar NACH dem
+   * Minispiel: Die Faelle oben setzen ihre Werte mit "=", die Regel legt
+   * dazu. `punkte` und `schlucke` sind dieselben Felder wie in `neueRunde`,
+   * also steht der Verstoss auch in der Abrechnung dieser Runde. Eine neue
+   * Karte loest die alte ab (die alte endet hier und wird fertig abgerechnet).
+   */
+  /*
+   * Ein Bube im Koenigsbecher bringt ebenfalls eine neue Karte — sie loest die
+   * alte genauso ab wie eine Regelkarten-Runde (`abgeloest`), sonst verloere
+   * die alte ihren Punkt fuer die weisse Weste.
+   */
+  const bubenRegel = runde.art === 'koenigsbecher' ? runde.neueRegel : null;
+  const nachRegel = regelAbrechnen(
+    partie,
+    dabei,
+    (w) => mitSchluck(faktor, w),
+    punkte,
+    schlucke,
+    runde.art === 'regelkarte' || bubenRegel !== null,
+  );
+  const regelKarte =
+    runde.art === 'regelkarte'
+      ? neueRegel(partie, runde)
+      : bubenRegel
+        ? neueRegel(partie, { ...bubenRegel, bis: regelBis(partie.rundeNr) })
+        : nachRegel;
 
   return {
     ...partie,
+    regelKarte,
     runde: neueRunde,
     punkte: partie.punkte.map((p, s) => p + (punkte[s] ?? 0)),
     schlucke: partie.schlucke.map((p, s) => p + (schlucke[s] ?? 0)),
@@ -784,7 +1381,14 @@ function naechsteRunde(partie: PartykistePartie): PartykistePartie {
     ...partie,
     protokoll,
     rundeNr: naechste,
-    runde: baueRunde(partie.regeln, partie.saat, partie.sitze, naechste, partie.ausgestiegen),
+    runde: baueRunde(
+      partie.regeln,
+      partie.saat,
+      partie.sitze,
+      naechste,
+      partie.ausgestiegen,
+      rundenKontext(partie, naechste),
+    ),
   };
 }
 
@@ -809,6 +1413,14 @@ export function weiter(partie: PartykistePartie): PartykistePartie {
   let stand = partie;
   for (let schritt = 0; schritt < 1000; schritt++) {
     if (stand.fertig) return stand;
+    if (stand.aufstellung) {
+      /* Kein Oeffner mehr da (ausgestiegen) oder ein Bot: Die Lager bleiben,
+         wie sie sind — niemand soll auf eine Aufstellung warten, die keiner
+         mehr macht. */
+      if (aufstellerDa(stand)) return stand;
+      stand = beendeAufstellung(stand);
+      continue;
+    }
     const runde = stand.runde;
 
     if (runde.phase === 'ergebnis') {
@@ -816,6 +1428,27 @@ export function weiter(partie: PartykistePartie): PartykistePartie {
          alle Anwesenden weitergetippt haben. */
       if (wartetNochJemand(stand)) return stand;
       stand = naechsteRunde(stand);
+      continue;
+    }
+
+    if (istZeitdruck(runde)) {
+      const schritt = zeitdruckSchritt(stand, runde);
+      if (schritt === 'ruhe') return stand;
+      stand = schritt === 'werten' ? werteAus(stand) : schritt;
+      continue;
+    }
+
+    if (runde.art === 'kategorien') {
+      if (kategorieVorbei(stand, runde)) {
+        stand = werteAus(stand);
+        continue;
+      }
+      if (!stand.ausgestiegen.includes(runde.amZug)) return stand;
+      /* Wer dran war, ist weg: im Kreis weiter, die Nennungen bleiben. */
+      stand = {
+        ...stand,
+        runde: { ...runde, amZug: naechsterImKreis(stand.sitze, stand.ausgestiegen, runde.amZug) },
+      };
       continue;
     }
 
@@ -827,7 +1460,7 @@ export function weiter(partie: PartykistePartie): PartykistePartie {
       const sitz = reihumSitz(runde);
       if (!stand.ausgestiegen.includes(sitz) && !reihumGespielt(runde, sitz)) return stand;
       /* Der Sitz am Zug ist weg oder schon durch: an den naechsten weiter. */
-      const naechster = naechsterLebender(runde, stand.sitze, stand.ausgestiegen, -1);
+      const naechster = naechsterLebender(runde, stand.sitze, stand.ausgestiegen, -1, folgeVon(stand));
       if (naechster === null) {
         stand = werteAus(stand);
         continue;
@@ -857,6 +1490,40 @@ export function weiter(partie: PartykistePartie): PartykistePartie {
     stand = werteAus(stand);
   }
   throw new Error('partykiste: weiter() kommt nicht zur Ruhe');
+}
+
+function aufstellerDa(partie: PartykistePartie): boolean {
+  return !partie.ausgestiegen.includes(TISCHOEFFNER) && !partie.botSitze.includes(TISCHOEFFNER);
+}
+
+/**
+ * Schliesst die Aufstellung ab und baut die erste Runde NEU — mit der Folge
+ * der Lager, wie sie jetzt stehen. Verloren geht dabei nichts: Solange
+ * aufgestellt wurde, nahm die Runde keine Aktion an (`verarbeite`), und
+ * gezogen wird wie immer nur aus Saat und Rundennummer.
+ */
+function beendeAufstellung(partie: PartykistePartie): PartykistePartie {
+  return {
+    ...partie,
+    aufstellung: false,
+    runde: baueRunde(partie.regeln, partie.saat, partie.sitze, 0, partie.ausgestiegen, rundenKontext(partie, 0)),
+  };
+}
+
+/** Eine Aktion waehrend der Aufstellung: Lagerwechsel oder "fertig". */
+function stelleAuf(partie: PartykistePartie, sitz: number, aktion: PartykisteAktion): PartykistePartie {
+  if (sitz !== TISCHOEFFNER) verstoss('die Lager stellt der Tischoeffner auf');
+  if (aktion.art === 'bereit') return weiter(beendeAufstellung(partie));
+  if (aktion.art !== 'lagerwechsel') verstoss('erst werden die Lager aufgestellt');
+  const lager = partie.lager ?? [];
+  if (!Number.isInteger(aktion.sitz) || aktion.sitz < 0 || aktion.sitz >= lager.length) {
+    verstoss('diesen Sitz gibt es nicht');
+  }
+  if (!wechselbareSitze(lager, partie.ausgestiegen).includes(aktion.sitz)) {
+    verstoss('ein Lager braucht mindestens einen, der mitspielt');
+  }
+  const neu = lager.map((l, s) => (s === aktion.sitz ? 1 - l : l));
+  return weiter({ ...partie, lager: neu });
 }
 
 /** Setzt den Reihum-Zug auf einen anderen Sitz und raeumt dessen Tisch ab. */
@@ -899,8 +1566,16 @@ export function verarbeite(
   if (typeof aktion !== 'object' || aktion === null) verstoss('keine Aktion');
   if (partie.fertig) return partie;
   if (partie.ausgestiegen.includes(sitz)) return partie;
+  if (partie.aufstellung) return stelleAuf(partie, sitz, aktion);
 
   const runde = partie.runde;
+
+  /*
+   * Ein Verstoss gegen die Regel-Karte geht in JEDER Runde und jeder Phase —
+   * die Regel gilt ja gerade waehrend der anderen Minispiele. Deshalb steht
+   * er vor allen Phasenpruefungen (ohne-uhr.ts, meldeVerstoss).
+   */
+  if (aktion.art === 'verstoss') return nachOhneUhr(partie, meldeVerstoss(partie, sitz, aktion.ziel));
 
   /* Ergebnisphase: nur "Weiter", und nur einmal. */
   if (runde.phase === 'ergebnis') {
@@ -988,7 +1663,7 @@ export function verarbeite(
       const erfolg = [...runde.erfolg];
       erfolg[sitz] = aktion.erfolg ? 1 : 0;
       const neue: WerBinIchRunde = { ...runde, erfolg };
-      const naechster = naechsterLebender(neue, partie.sitze, partie.ausgestiegen, sitz);
+      const naechster = naechsterLebender(neue, partie.sitze, partie.ausgestiegen, sitz, folgeVon(partie));
       return weiter({ ...partie, runde: { ...neue, amZug: naechster ?? sitz } });
     }
     case 'busfahrer': {
@@ -1020,7 +1695,7 @@ export function verarbeite(
       if (runde.gewaehlt[sitz] === OFFEN) {
         if (aktion.art !== 'wahl') verstoss('erst Wahrheit oder Pflicht waehlen');
         if (typeof aktion.pflicht !== 'boolean') verstoss('Wahrheit oder Pflicht');
-        const aufgabe = zieheAufgabe(partie.saat, partie.rundeNr, sitz, aktion.pflicht);
+        const aufgabe = zieheAufgabe(partie, sitz, aktion.pflicht);
         const gewaehlt = [...runde.gewaehlt];
         const aufgabeId = [...runde.aufgabeId];
         const text = [...runde.text];
@@ -1034,10 +1709,36 @@ export function verarbeite(
       const erfolg = [...runde.erfolg];
       erfolg[sitz] = aktion.ja ? 1 : 0;
       const neue: WahrheitPflichtRunde = { ...runde, erfolg };
-      const naechster = naechsterLebender(neue, partie.sitze, partie.ausgestiegen, sitz);
+      const naechster = naechsterLebender(neue, partie.sitze, partie.ausgestiegen, sitz, folgeVon(partie));
       return weiter({ ...partie, runde: { ...neue, amZug: naechster ?? sitz } });
     }
+    case 'kategorien':
+      return nachOhneUhr(partie, kategorienZug(partie, runde, sitz, aktion));
+    case 'mehrheit':
+      return nachOhneUhr(partie, mehrheitZug(partie, runde, sitz, aktion));
+    case 'regelkarte': {
+      if (aktion.art !== 'bereit') verstoss('erst die Regel lesen');
+      if (runde.fertig.includes(sitz)) return partie;
+      return weiter({ ...partie, runde: { ...runde, fertig: [...runde.fertig, sitz] } });
+    }
+    /* Die drei mit Uhr (zeitdruck.ts) — derselbe Vertrag wie die drei ohne. */
+    case 'bombe':
+      return nachOhneUhr(partie, bombeZug(partie, runde, sitz, aktion));
+    case 'zehnsekunden':
+      return nachOhneUhr(partie, zehnZug(partie, runde, sitz, aktion));
+    case 'koenigsbecher':
+      return nachOhneUhr(partie, koenigsbecherZug(partie, runde, sitz, aktion));
   }
+}
+
+/**
+ * Das Ergebnis eines Zugs aus ohne-uhr.ts: Zeichenkette = Regelverstoss,
+ * dasselbe Objekt = wirkungslos (kein `weiter`, damit die Laufzeit keinen
+ * Rundruf verschickt), sonst weiterschieben.
+ */
+function nachOhneUhr(partie: PartykistePartie, ergebnis: PartykistePartie | string): PartykistePartie {
+  if (typeof ergebnis === 'string') verstoss(ergebnis);
+  return ergebnis === partie ? partie : weiter(ergebnis);
 }
 
 function pruefeZiel(partie: PartykistePartie, sitz: number, ziel: number): void {
@@ -1090,7 +1791,7 @@ function busTipp(
   const treffer = [...runde.treffer];
   treffer[sitz] = richtig ? 3 : runde.stufe;
   const zwischen: BusRunde = { ...runde, naechste, treffer, letzter, offen };
-  const naechsterSitz = naechsterLebender(zwischen, partie.sitze, partie.ausgestiegen, sitz);
+  const naechsterSitz = naechsterLebender(zwischen, partie.sitze, partie.ausgestiegen, sitz, folgeVon(partie));
   if (naechsterSitz === null) return { ...partie, runde: zwischen };
   return { ...partie, runde: { ...zwischen, amZug: naechsterSitz, stufe: 0, offen: [] } };
 }
@@ -1144,5 +1845,14 @@ export function platzierungen(partie: PartykistePartie): Platzierung[] {
     const platz = vorheriger && vorheriger.punkte === eintrag.punkte ? vorheriger.platz : i + 1;
     mitPlatz.push({ ...eintrag, platz });
   });
+  /*
+   * Team-Abend: Der Platz kommt aus dem Lager-Ergebnis, die Zeile bleibt je
+   * Person — warum, steht an `lagerPlaetze` (modi.ts). Die Punkte bleiben die
+   * eigenen; sie stehen in der Tabelle, entscheiden aber nicht mehr.
+   */
+  const lagerPlatz = lagerPlaetze(partie.lager, partie.punkte);
+  if (lagerPlatz) {
+    return mitPlatz.map((p) => ({ ...p, platz: lagerPlatz[p.sitz] ?? p.platz })).sort((a, b) => a.sitz - b.sitz);
+  }
   return mitPlatz.sort((a, b) => a.sitz - b.sitz);
 }

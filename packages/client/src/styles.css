@@ -15410,48 +15410,96 @@ span.hub-angebot-art.poker-jeton-stapel {
   }
 }
 
+/* == Auswahl-Kachel (hub.tsx: AuswahlRaster, AuswahlKachel, AuswahlFilter) ==
+   Seit dem 22.09.2026 DAS Muster fuer „waehle eines oder mehrere aus einer
+   Liste mit Bildern": Filler-Spielart, Golf-Bahn, Partykiste, Themenpakete.
+   Mobile-first, weil `.kachelraster` oben erst ab 60rem greift und am Handy
+   jede Liste zur Einzelspalte wurde. Zwei Spalten am Handy, drei ab 40rem,
+   ab 60rem so viele wie `--aw-min` zulaesst. `.is-fest` (Prop `spalten`)
+   haelt eine feste Zahl — fuer schmale Behaelter wie das Filler-Menue.
+   Farben ueber `--aw-*`, damit ein heller Bildschirm sie umstellt, ohne
+   die Regeln zu kopieren. */
+.aw-raster {
+  display: grid;
+  grid-template-columns: repeat(var(--aw-spalten, 2), minmax(0, 1fr));
+  gap: 0.5rem;
+  align-content: start;
+}
+@media (min-width: 40rem) {
+  .aw-raster:not(.is-fest) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 60rem) {
+  .aw-raster:not(.is-fest) { grid-template-columns: repeat(auto-fill, minmax(var(--aw-min, 14rem), 1fr)); }
+}
+.aw-kachel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.4rem 0.4rem 0.5rem;
+  border: 2px solid var(--aw-line, var(--line));
+  border-radius: 0.7rem;
+  background: var(--aw-panel, var(--panel));
+  color: var(--aw-text, var(--text));
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* Rahmen UND Innenring: Nur die Rahmenfarbe zu tauschen ist auf einem hellen
+   Grund zu leise, um es aus dem Augenwinkel zu sehen. */
+.aw-kachel.is-an { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.aw-kachel[aria-disabled] { opacity: 0.5; cursor: not-allowed; }
+.aw-kachel:focus-visible { outline: 3px solid var(--blau); outline-offset: 2px; }
+.aw-bild img { display: block; width: 100%; height: auto; border-radius: 0.45rem; }
+.aw-titel { font-weight: 800; font-size: 0.95rem; line-height: 1.2; }
+.aw-text { font-size: 0.75rem; line-height: 1.3; color: var(--aw-muted, var(--muted)); }
+.aw-badge {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  display: flex;
+  gap: 2px;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.aw-badge i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.3); }
+.aw-badge i.is-an { background: var(--gold); }
+.aw-leer { grid-column: 1 / -1; margin: 0; color: var(--aw-muted, var(--muted)); text-align: center; }
+.aw-filter { display: grid; gap: 0.4rem; margin-bottom: 0.5rem; }
+.aw-suche,
+.aw-chip {
+  border: 1.5px solid var(--aw-line, var(--line));
+  background: var(--aw-panel, var(--panel));
+  color: var(--aw-text, var(--text));
+  font: inherit;
+}
+.aw-suche { width: 100%; padding: 0.5rem 0.7rem; border-radius: 0.5rem; }
+.aw-chips { display: flex; gap: 0.3rem; overflow-x: auto; scrollbar-width: none; }
+.aw-chip { flex: 0 0 auto; padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+.aw-chip[aria-pressed='true'] { border-color: var(--accent); background: var(--accent); color: #fff; }
+@media (prefers-reduced-motion: no-preference) {
+  .aw-kachel { transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+  .aw-kachel:active:not([aria-disabled]) { transform: scale(0.97); }
+}
+
 /* -- Filler: Spielart, Bot-Knopf, Warteband (Nachtrag 31.08.) ------------- */
 
-/* Der Schalter zwischen Nebel und Normal. Zwei Knoepfe in einer Rinne, der
-   gewaehlte liegt als heller Reiter darin — dieselbe Form, die auf jedem
-   Handy "eins von zweien" bedeutet. */
-.fl-schalter {
-  width: 100%;
+/* Die Wahl der Spielart (seit 22.09.2026 das Auswahl-Raster). Filler ist hell,
+   das Raster bringt die dunklen Plattformfarben mit — hier umgestellt. */
+.fl-spielart {
   margin: 0 0 16px;
-  display: grid;
-  /* Vier Spielarten seit dem 6. September. Ausgeschrieben und nicht
-     auto-fit: Es sollen gleiche Viertel sein, nicht nach Inhalt bemessene
-     Streifen. */
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  padding: 4px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.09);
+  --aw-panel: #ffffff;
+  --aw-line: rgba(0, 0, 0, 0.1);
+  --aw-text: #2b2b2b;
+  --aw-muted: #7a7a7a;
 }
-.fl-schalter button {
-  padding: 11px 4px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: #6d6d6d;
-  font: 800 13px/1 system-ui;
-  cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
-}
-.fl-schalter button[data-an] {
-  background: #ffffff;
-  color: #2b2b2b;
-  box-shadow: 0 3px 8px -4px rgba(0, 0, 0, 0.55);
-}
-/* Der erklaerende Satz sitzt UNTER beiden Knoepfen und ueber die volle
-   Breite: Er gehoert zur Wahl, nicht zu einem der beiden Knoepfe. */
-.fl-schalter-text {
-  grid-column: 1 / -1;
-  padding: 2px 6px 4px;
-  color: #7a7a7a;
-  font: 600 12px/1.35 system-ui;
-  text-align: center;
-}
+.fl-spielart .aw-titel { text-align: center; font-size: 13px; }
+.fl-spielart-text { margin: 8px 0 0; padding: 0 6px; color: #7a7a7a; font: 600 12px/1.35 system-ui; }
 
 /* Der Block um Spielartschalter und Bot-Knopf.
    Er fasst zusammen, was zusammengehoert: Der Schalter wirkt seit dem
@@ -15470,10 +15518,6 @@ span.hub-angebot-art.poker-jeton-stapel {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-/* Im Block sitzt der Knopf direkt unter dem Schalter — dessen eigener
-   Abstand nach unten genuegt. */
-.fl-botblock .fl-schalter { margin-bottom: 10px; }
-
 .fl-botknopf {
   width: 100%;
   margin-top: 10px;
@@ -16494,20 +16538,15 @@ span.hub-angebot-art.poker-jeton-stapel {
 
 /* -- Vorschau im Menue ---------------------------------------------------- */
 
-.fl-vorschau {
-  margin: 22px auto 0;
-  width: min(72vw, 264px);
-}
 .fl-vorschau-brett {
   position: relative;
   display: grid;
   gap: 2px;
   /* Rand statt Innenabstand: Die Waende sitzen absolut in Prozent, und ein
      Innenabstand verschoebe sie gegenueber dem Raster. */
-  border: 4px solid #2a2a2a;
-  border-radius: 10px;
+  border: 3px solid #2a2a2a;
+  border-radius: 8px;
   background: #2a2a2a;
-  box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.8);
 }
 /* Eigene Klasse und nicht `> span`: Die Waende sind ebenfalls Kinder des
    Rasters, und eine Regel auf alle Kinder machte aus ihrem `absolute` ein
@@ -16524,13 +16563,6 @@ span.hub-angebot-art.poker-jeton-stapel {
 .fl-vorschau-brett .fl-wand { width: 5px; height: 5px; margin-left: -2.5px; margin-top: -2.5px; }
 .fl-vorschau-brett .fl-wand:not([data-quer]) { margin-top: 0; }
 .fl-vorschau-brett .fl-wand[data-quer] { margin-left: 0; }
-.fl-vorschau-text {
-  margin: 6px 0 0;
-  color: #8a8a8a;
-  font: 700 11px/1.3 system-ui;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
 .fl-wischhinweis {
   display: block;
   margin-top: 3px;
@@ -16561,13 +16593,9 @@ span.hub-angebot-art.poker-jeton-stapel {
   from { opacity: 0; transform: translateX(-28px); }
   to { opacity: 1; transform: none; }
 }
-.fl-vorschau[data-richtung='links'],
-.fl-schalter-text[data-richtung='links'] { animation: fl-einwisch-links 220ms ease-out; }
-.fl-vorschau[data-richtung='rechts'],
-.fl-schalter-text[data-richtung='rechts'] { animation: fl-einwisch-rechts 220ms ease-out; }
-@media (prefers-reduced-motion: reduce) {
-  .fl-vorschau[data-richtung],
-  .fl-schalter-text[data-richtung] { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .fl-spielart-text[data-richtung='links'] { animation: fl-einwisch-links 220ms ease-out; }
+  .fl-spielart-text[data-richtung='rechts'] { animation: fl-einwisch-rechts 220ms ease-out; }
 }
 
 
@@ -17529,30 +17557,35 @@ span.hub-angebot-art.poker-jeton-stapel {
  * und `clip-path` beschneidet auch den Inhalt. Was ueber das Sechseck
  * hinausreicht, waere kein Ueberstand, sondern ein abgeschnittener Kopf.
  *
- * DIE ZAHLEN, und woher sie kommen: Eine stehende Figur setzt bei 80 % der
- * Zellhoehe von oben auf (FIGUREN3D_FUSSPUNKT). Bei einer Zelle von 71,8 %
- * Wabenhoehe, deren Unterkante 23,1 % ueber dem Wabenfuss liegt, steht die
- * Figur also mit den Fuessen auf 37 % der Wabe und reicht bis rund 93 % —
- * ueberall dort ist das Sechseck noch breit genug. Darunter bleibt Platz fuer
- * Namen und Sterne.
+ * DIE ZAHLEN STEHEN NICHT MEHR HIER, seit dem 22.09.2026: Sie kommen als
+ * Variablen von der Figur selbst (`RUESTKAMMER_MASSE` in Zeichen.tsx,
+ * gerechnet als `WABENKASTEN` in bildfolge.ts). Der Grund ist, dass sie am
+ * gemessenen Ausschnitt der Blaetter haengen, und das sah man ihnen nicht an:
+ * Wie gross die Figur wird, ist die Zellhoehe geteilt durch die Weltmeter, die
+ * in einer Zelle stecken (FIGUREN3D_ZELLHOEHE_METER). Als die Todeszeile am
+ * 06.09.2026 ihre eigene, breitere Zelle bekam, wurde der gemeinsame
+ * Ausschnitt von 4,29 auf 3,76 Meter enger — hier standen 82 % und 18,6 %, und
+ * dieselben Zahlen haetten jede Figur der Ruestkammer um 14 % wachsen und
+ * hoeher stehen lassen, ohne dass jemand an der Groesse etwas geaendert haette.
+ * Umgerechnet hat es damals jemand von Hand; heute rechnet es sich selbst, und
+ * zwar mit derselben Funktion wie in der Arena.
  *
- * SIE HAENGEN AM GEMESSENEN AUSSCHNITT DER BLAETTER, und das sieht man ihnen
- * nicht an: Wie gross die Figur wird, ist die Zellhoehe geteilt durch die
- * Weltmeter, die in einer Zelle stecken (FIGUREN3D_ZELLHOEHE_METER). Als die
- * Todeszeile am 06.09.2026 ihre eigene, breitere Zelle bekam, wurde der
- * gemeinsame Ausschnitt von 4,29 auf 3,76 Meter enger — hier standen bis dahin
- * 82 % und 18,6 %, und dieselben Zahlen haetten jede Figur der Ruestkammer um
- * 14 % wachsen und hoeher stehen lassen, ohne dass jemand an der Groesse etwas
- * geaendert haette. Wer die Blaetter neu rendert, rechnet diese vier Zahlen
- * (hier und am Bankplatz) mit dem Verhaeltnis der beiden Ausschnitte um. In
- * der Arena erledigt das `FIGURENKASTEN` in bildfolge.ts von selbst; hier ist
- * es Handarbeit, weil eine Wabe kein Prozentmass mit der Karte teilt.
+ * WAS SIE AUSSAGEN: Eine stehende Figur setzt bei 80 % der Zellhoehe von oben
+ * auf (FIGUREN3D_FUSSPUNKT); entschieden sind hier die Wabenhoehe in Weltmetern
+ * und die Standlinie (Fuss auf 37,5 % der Wabe). Die Figur reicht damit bis
+ * knapp unter die Wabenoberkante — ueberall dort ist das Sechseck noch breit
+ * genug —, und darunter bleibt Platz fuer Namen und Sterne.
+ *
+ * OHNE RUECKFALLWERT IN `var()`, mit Absicht: Ein Rueckfall waere wieder eine
+ * feste Zahl an genau der Stelle, an der keine mehr stehen soll — er wuerde
+ * beim naechsten Satz Blaetter still falsch und saehe dabei richtig aus. Fehlt
+ * die Variable, hat die Figur keine Hoehe und ist weg; das faellt auf.
  */
 .tr-figur3d {
   position: absolute;
   left: 50%;
-  bottom: 23.1%;
-  height: 71.8%;
+  bottom: var(--tr-wabenkasten-boden);
+  height: var(--tr-wabenkasten-hoehe);
   /* `translate` und nicht `transform`: Das Spiegeln steht in `scale`
      (Figur3D.module.css), das Schweben in `transform` — drei Dinge, drei
      Eigenschaften. In EINEM `transform` schloesse jedes das andere aus. */
@@ -17567,10 +17600,17 @@ span.hub-angebot-art.poker-jeton-stapel {
  * NACHGEMESSEN am 06.09.2026 ueber alle fuenf Blaetter (Alphakanal, Zelle
  * 0/0): Der hoechste Punkt liegt 3,1 % unter der Zellenoberkante, und das ist
  * das GEWEIH DES DRUIDEN — nicht mehr der Spitzhut des Magiers (9,4 %), wie es
- * hier vorher stand. Mit 92,8 % Zellhoehe ueber einer Unterkante von 2,8 %
- * steht der Scheitel damit bei 92,8 % des Fachs.
+ * hier vorher stand.
+ *
+ * Auch diese beiden Zahlen kommen seit dem 22.09.2026 von der Figur
+ * (`BANKKASTEN`); entschieden sind die Fachhoehe in Weltmetern und die
+ * Standlinie. Warum nicht mehr im Stylesheet und warum ohne Rueckfallwert,
+ * steht bei `.tr-figur3d`.
  */
-.tr-bankplatz .tr-figur3d { bottom: 2.8%; height: 92.8%; }
+.tr-bankplatz .tr-figur3d {
+  bottom: var(--tr-bankkasten-boden);
+  height: var(--tr-bankkasten-hoehe);
+}
 
 /*
  * Das Schweben im Stand. Dieselbe Art Bewegung wie beim Pinguin auf der
@@ -18055,23 +18095,26 @@ span.hub-angebot-art.poker-jeton-stapel {
  * und auf einem 360er-Handy keine 70 px breit; ein Prozentmass waere dort ein
  * Punkt und am Desktop ein Plakat.
  *
- * 51 px Zelle ergeben rund 34 px Figur — etwas mehr als die 32 px des
+ * Rund 51 px Zelle ergeben rund 34 px Figur — etwas mehr als die 32 px des
  * Pixelbilds, das hier vorher stand. Der Fuss liegt bei 20 % der Zellhoehe
- * ueber deren Unterkante (FIGUREN3D_FUSSPUNKT), also bei −9 px + 10 px = 1 px
- * ueber dem unteren Rand des Kopfes. Die KARTE bleibt dabei eine Karte: Ihr
- * Rahmen ist richtig, weggenommen wurde nur die Platte unter der Figur.
+ * ueber deren Unterkante (FIGUREN3D_FUSSPUNKT), also gut 1 px ueber dem unteren
+ * Rand des Kopfes. Die KARTE bleibt dabei eine Karte: Ihr Rahmen ist richtig,
+ * weggenommen wurde nur die Platte unter der Figur.
  *
- * WER DIE BLAETTER NEU RENDERT, rechnet auch diese beiden Zahlen um: Wie gross
- * die Figur wird, haengt am gemessenen Ausschnitt (FIGUREN3D_ZELLHOEHE_METER),
- * nicht an der Zellhoehe allein. Hier standen bis zum 06.09.2026 58 px und
- * −12 px — mit dem engeren Ausschnitt der eigenen Todeszelle waere die Figur
- * davon um 14 % gewachsen. Die lange Fassung steht bei `.tr-figur3d`.
+ * Und auch hier stehen die beiden Zahlen seit dem 22.09.2026 nicht mehr im
+ * Stylesheet, sondern kommen von der Figur (`KARTENKASTEN`) — bis zum
+ * 06.09.2026 waren es 58 px und −12 px, und mit dem engeren Ausschnitt der
+ * eigenen Todeszelle waere die Figur davon um 14 % gewachsen. Entschieden sind
+ * hier Pixel je Weltmeter und eine Standlinie in Pixeln und nicht ein
+ * Prozentmass: Die Karte hat keine Bezugshoehe, die bildfolge.ts kennen
+ * koennte, ohne die Hoehe von `.tr-karte-kopf` abzuschreiben. Die lange Fassung
+ * steht bei `.tr-figur3d`.
  */
 .tr-figur3d-karte {
   position: absolute;
   left: 50%;
-  bottom: -9px;
-  height: 51px;
+  bottom: var(--tr-kartenkasten-boden);
+  height: var(--tr-kartenkasten-hoehe);
   translate: -50% 0;
 }
 /* Die Figur auf der Ladenkarte. Feste Pixel und nicht Prozent: Die Karte ist
@@ -19002,6 +19045,90 @@ span.hub-angebot-art.poker-jeton-stapel {
 .gf-tafel tr[data-eigen] td { color: #8ee0a3; font-weight: 800; }
 .gf-pausezeit { margin: 10px 0 0; color: #a9c4ad; font: 700 13px/1 system-ui; }
 
+/* Replay eines Lochs (22.09.2026). Der Knopf in der Pausentafel fängt als
+   einziges dort Zeiger ab — die Tafel selbst bleibt durchlässig (siehe oben). */
+.grp-pauseknopf {
+  pointer-events: auto;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #2f6b45;
+  color: #eaf7ee;
+  font: 800 13px/1 system-ui;
+  cursor: pointer;
+}
+.grp-loecher { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 4px 0 14px; }
+.grp-loecher h2 { flex-basis: 100%; margin: 0 0 2px; color: #a9c4ad; font: 700 12px/1.2 system-ui; }
+.grp-lochknopf {
+  min-width: 40px;
+  padding: 8px 10px;
+  border: 1px solid rgba(143, 174, 148, 0.45);
+  border-radius: 10px;
+  background: rgba(10, 24, 16, 0.6);
+  color: #eaf7ee;
+  font: 800 13px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+/* Die Ansicht liegt ÜBER der Partie, die dahinter weiterrechnet. */
+.grp-seite { position: fixed; inset: 0; z-index: 40; background: #141c17; color: #eaf7ee; }
+.grp-leinwand { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.grp-kopf {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 14px;
+  background: rgba(10, 24, 16, 0.78);
+}
+.grp-zu { position: static; }
+.grp-titel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 13px/1.2 system-ui; }
+.grp-schlag { font: 800 15px/1 system-ui; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.grp-hinweis {
+  position: absolute;
+  top: calc(max(10px, env(safe-area-inset-top)) + 58px);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.78);
+  color: #ffd9a0;
+  font: 700 12px/1 system-ui;
+  white-space: nowrap;
+}
+.grp-leiste {
+  position: absolute;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(92vw, 360px);
+  padding: 10px 12px 12px;
+  border-radius: 18px;
+  background: rgba(10, 24, 16, 0.85);
+}
+.grp-balken { display: block; height: 4px; margin-bottom: 10px; border-radius: 2px; background: rgba(143, 174, 148, 0.3); overflow: hidden; }
+.grp-balken > span { display: block; height: 100%; background: #8ee0a3; transform: scaleX(0); transform-origin: left; }
+.grp-knoepfe { display: flex; justify-content: center; gap: 12px; }
+.grp-knopf {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: #24402f;
+  color: #eaf7ee;
+  font: 800 16px/1 system-ui;
+  cursor: pointer;
+}
+.grp-knopf[aria-pressed='true'] { background: #2f6b45; }
+.grp-knopf-haupt { width: 64px; background: #2f6b45; }
+.grp-leer { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(88vw, 340px); text-align: center; }
+
 .gf-uebersicht {
   position: absolute;
   z-index: 5;
@@ -19032,6 +19159,80 @@ span.hub-angebot-art.poker-jeton-stapel {
   pointer-events: none;
 }
 
+/* -- Par in der Anzeige (minispiele/golf/ParAnzeige.tsx) ------------------ */
+
+/* Unter Par gruen, ueber Par gedaempft rot: dieselben Toene wie der eigene
+   Name in der Tafel und die Troedel-Mahnung, damit keine dritte Farbsprache
+   dazukommt. */
+.gpar-name { font: 700 12px/1 system-ui; color: #cfe3d1; white-space: nowrap; }
+.gpar-name[data-gpar='hio'],
+.gpar-name[data-gpar='unter'] { color: #8ee0a3; }
+.gpar-name[data-gpar='ueber'],
+.gpar-name[data-gpar='ohne'] { color: #f0a0a8; }
+
+/* Der Ruf beim Einlochen. Er faellt aus dem HUD-Fluss (absolute), damit
+   Troedel-Mahnung und Hinweis darunter nicht fuer anderthalb Sekunden
+   nach unten springen. */
+.gpar-ruf {
+  position: absolute;
+  top: calc(100% + 10px);
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.82);
+  font: 900 20px/1 system-ui;
+  color: #8ee0a3;
+  animation: gpar-auf 1600ms ease-out both;
+}
+.gpar-ruf[data-hio] { padding: 12px 24px; font-size: 34px; color: #f4b400; }
+@keyframes gpar-auf {
+  0% { opacity: 0; transform: scale(0.7); }
+  15% { opacity: 1; transform: scale(1.08); }
+  25% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Ohne Bewegung heisst ohne Skalieren und ohne Ausblenden: Der Ruf steht
+   einfach, bis ParRuf ihn nach 1,6 s wieder abnimmt. */
+@media (prefers-reduced-motion: reduce) {
+  .gpar-ruf { animation: none; }
+}
+
+/* Endtafel: Kopf ueber Summe und „zu Par". Die Breiten muessen zu
+   .gf-rangsumme und .gpar-zupar passen, sonst steht der Kopf daneben. */
+.gpar-kopf {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin: 0 0 4px;
+  padding: 0 12px;
+  font: 700 11px/1 system-ui;
+  color: #8fae94;
+}
+.gpar-kopf span { min-width: 28px; text-align: right; }
+.gpar-kopf span:last-child { width: 38px; }
+.gpar-zupar {
+  flex: none;
+  width: 38px;
+  text-align: right;
+  font: 800 14px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  color: #cfe3d1;
+}
+.gpar-zupar[data-gpar='unter'] { color: #8ee0a3; }
+.gpar-zupar[data-gpar='ueber'] { color: #f0a0a8; }
+
+/* -- Bahnrekord im Zwischenstand (minispiele/golf/Bahnrekord.tsx) --------- */
+
+/* Eine Zeile unter der Tafel, gedaempft wie die Kopfzeile der Tafel; nur
+   ein neuer Rekord bekommt Farbe — Gold wie der Hole-in-one-Ruf, weil es
+   dieselbe Sorte Nachricht ist: Das war besonders. */
+.grek { margin: 10px 0 0; }
+.grek-zeile { margin: 0; color: #a9c4ad; font: 600 12px/1.35 system-ui; }
+.grek-zeile strong { color: #e8f0e6; font-weight: 800; font-variant-numeric: tabular-nums; }
+.grek-neu { margin: 6px 0 0; font: 900 15px/1.2 system-ui; color: #8ee0a3; }
+.grek-neu[data-grek-art='bahn'] { color: #f4b400; }
+
 /* -- Banner der Spielauswahl ---------------------------------------------- */
 
 /* Dasselbe Verhaeltnis wie die gemalten Banner (1200 x 300) und wie die
@@ -19043,6 +19244,163 @@ span.hub-angebot-art.poker-jeton-stapel {
   width: 100%;
   aspect-ratio: 4 / 1;
   background: #101d16;
+}
+
+/* -- Bahnauswahl (minispiele/golf/Bahnauswahl.tsx, 22.09.2026) ------------ */
+
+/* Das Auswahl-Raster bringt die Plattformfarben mit; hier auf das Gruen der
+   Golfseiten gestellt, wie Filler es auf Weiss stellt. */
+.gf-bw {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  --aw-panel: rgba(0, 0, 0, 0.28);
+  --aw-line: rgba(255, 255, 255, 0.12);
+  --aw-text: #e8f0e6;
+  --aw-muted: #a9c4ad;
+}
+.gf-bw-titel { margin: 0; font: 800 15px/1.2 system-ui; }
+.gf-bw-hinweis { margin: 0; color: #a9c4ad; font: 600 12px/1.4 system-ui; }
+.gf-bw-hinweis strong { color: #e8f0e6; }
+.gf-bw-zeilentitel { color: #a9c4ad; font: 700 11px/1 system-ui; text-transform: uppercase; letter-spacing: 0.04em; }
+.gf-bw-filter { display: flex; flex-direction: column; gap: 6px; }
+.gf-bw .aw-chips { flex-wrap: wrap; }
+/* Quadratisch und mit fester Form: Ein <canvas> ohne Hoehe ist null Pixel
+   hoch, und der Zeichner misst clientWidth/clientHeight. */
+.gf-bw-miniatur {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 0.45rem;
+  background: #101d16;
+}
+.gf-bw-folgekopf { display: flex; align-items: center; justify-content: space-between; font: 700 12px/1 system-ui; }
+.gf-bw-leeren {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #cadfca;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.gf-bw-folge {
+  margin: 0;
+  padding-left: 1.4em;
+  color: #cadfca;
+  font: 600 12px/1.5 system-ui;
+  columns: 2;
+}
+.gf-bw-anzeige { margin-bottom: 12px; }
+
+/* Golf Fun-Modus (seit 23.09.2026, minispiele/golf/FunAnsage.tsx): die Wahl
+   im Bot-Menü, das Schild im HUD, die Roulette-Ansage am Lochbeginn und der
+   Blick aufs nächste Loch in der Pause. `fixed`, weil .gf-hud keine Höhe
+   hat, an der sich eine Mitte messen ließe. Die Ansage liegt über der Bahn, aber
+   nimmt keinen Tipp weg — gezielt wird auch während sie steht. */
+.gf-fun-wahl { display: flex; flex-direction: column; gap: 4px; }
+.gf-fun-wahl small { color: #a9c4ad; font: 600 12px/1.35 system-ui; }
+.gf-fun-schild {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px auto 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.78);
+  color: #e8f0e6;
+  font: 700 12px/1 system-ui;
+  pointer-events: none;
+}
+.gf-fun-schild em { font-style: normal; color: #a9c4ad; }
+.gf-fun-pfeil { display: inline-block; color: #8ee0a3; font-size: 14px; line-height: 1; }
+.gf-fun-ansage {
+  position: fixed;
+  z-index: 6;
+  top: 38vh;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(80vw, 320px);
+  padding: 14px 18px 16px;
+  border-radius: 20px;
+  background: rgba(10, 24, 16, 0.9);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.9);
+  color: #e8f0e6;
+  text-align: center;
+  pointer-events: none;
+  animation: gf-fun-auf 220ms ease-out;
+}
+.gf-fun-ansage small { display: block; color: #a9c4ad; font: 700 11px/1 system-ui; letter-spacing: 0.08em; text-transform: uppercase; }
+.gf-fun-ansage .gf-fun-zeichen { display: block; margin: 6px 0 2px; font-size: clamp(40px, 12vw, 56px); line-height: 1.1; }
+.gf-fun-ansage strong { display: block; font: 800 clamp(20px, 6vw, 26px)/1.15 system-ui; }
+.gf-fun-ansage p { margin: 8px 0 0; color: #cfe0cf; font: 600 13px/1.35 system-ui; }
+.gf-fun-ansage[data-dreht] .gf-fun-zeichen { filter: blur(0.5px); opacity: 0.85; }
+.gf-fun-naechstes {
+  position: fixed;
+  z-index: 6;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.9);
+  color: #e8f0e6;
+  font: 600 13px/1.2 system-ui;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@keyframes gf-fun-auf {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gf-fun-ansage { animation: none; }
+}
+/* Power-ups im Fun-Modus (PowerupAnzeige.tsx, seit 23.09.2026) */
+.gf-pu { align-self: center; display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 4px auto 0; pointer-events: none; }
+.gf-pu-schild {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(20, 28, 23, 0.82); color: #f3f7ef;
+  font: 700 13px/1.2 system-ui;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 14px rgba(255, 209, 102, 0.35);
+  animation: gf-pu-auf 360ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.gf-pu-schild em { font-style: normal; font-weight: 600; color: #a9c4ad; }
+.gf-pu-schild[data-golf-pu-wirkt] { box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.6), 0 0 18px rgba(255, 209, 102, 0.55); }
+@keyframes gf-pu-auf {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gf-pu-schild { animation: none; }
+}
+/* Störschläge im Fun-Modus (StoerschlagKnopf.tsx, seit 23.09.2026) — unten rechts, wo der Daumen ist */
+.gf-stoer {
+  position: fixed; z-index: 6;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(64px, calc(env(safe-area-inset-bottom) + 52px));
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  max-width: min(70vw, 260px);
+  pointer-events: none;
+}
+.gf-stoer-knopf {
+  pointer-events: auto;
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 48px; padding: 8px 16px; border-radius: 999px; border: 0;
+  background: rgba(40, 22, 14, 0.9); color: #fff3e6;
+  font: 800 15px/1.1 system-ui;
+  box-shadow: 0 0 0 2px rgba(255, 138, 76, 0.75), 0 0 18px rgba(255, 138, 76, 0.45);
+  cursor: pointer;
+}
+.gf-stoer-knopf[data-aktiv] { background: #ff8a4c; color: #1c1008; }
+.gf-stoer-knopf:disabled { opacity: 0.5; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2); cursor: default; }
+.gf-stoer em {
+  font: 600 12px/1.25 system-ui; font-style: normal; text-align: right;
+  padding: 3px 8px; border-radius: 8px; background: rgba(10, 24, 16, 0.8); color: #e8f0e6;
 }
 
 /* ==========================================================================
@@ -19409,6 +19767,75 @@ span.hub-angebot-art.poker-jeton-stapel {
    haette das SVG in der Kachel keine Hoehe. */
 .pk-banner { display: block; width: 100%; aspect-ratio: 4 / 1; background: #151021; }
 
+/* -- Einstellungen, Regelzeile, offene Runde (22.09.2026) ----------------- */
+
+/* Die Einstellungen gelten fuer beide Wege und stehen deshalb offen im Menue,
+   nicht im aufklappbaren Bot-Block. Mobile-first: eine Spalte, volle Breite. */
+.pk-einstellungen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-einstellungen-titel {
+  margin: 0;
+  font: 800 12px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pk-einstellungen-hinweis { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+/* Eine Zeile Chips, die umbricht statt zu scrollen — am Handy stehen sie
+   dann zweizeilig, und niemand muss seitwaerts wischen, um die Haerte zu lesen. */
+.pk-regelzeile {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+}
+.pk-regelchip {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 12px/1 system-ui;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* Alkoholfrei faellt auf: Wer beitritt, soll es sehen, ohne zu lesen. */
+.pk-regelchip[data-alkoholfrei] { background: rgba(63, 143, 102, 0.28); color: #bff0cf; }
+/* Im Spielkopf links buendig und kleiner — dort ist sie Auskunft, keine Wahl. */
+.pk-tisch > .pk-regelzeile { justify-content: flex-start; }
+
+.pk-angebot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  background: rgba(166, 120, 242, 0.14);
+  box-shadow: inset 0 0 0 2px rgba(166, 120, 242, 0.45);
+}
+.pk-angebot-titel { margin: 0; font: 800 16px/1.2 system-ui; }
+.pk-textknopf {
+  align-self: center;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: 600 13px/1 system-ui;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (min-width: 600px) {
+  .pk-regelchip { font-size: 13px; }
+}
+
 /* =========================================================================
    Gast-Einstieg auf der Anmeldeseite (Auth.tsx)
    -------------------------------------------------------------------------
@@ -19498,3 +19925,301 @@ span.hub-angebot-art.poker-jeton-stapel {
   color: var(--gold);
 }
 .pk-reihe li[data-ich] { box-shadow: inset 0 0 0 2px var(--lila); }
+
+/* -- Partykiste: Kategorien, Mehrheitsraten, Regel-Karte (pk-ou-*) -------- */
+
+/* Einspruch beim Kategorien-Battle: zwei schmale Knoepfe nebeneinander,
+   bewusst leiser als "Genannt"/"Gestockt" — wer dran ist, soll zuerst seine
+   eigenen Knoepfe sehen. */
+.pk-ou-einspruch { display: flex; flex-wrap: wrap; gap: 8px; }
+.pk-ou-einspruch .pk-knopf { flex: 1 1 140px; }
+
+/* Die Leiste der geltenden Regel. Gold statt Lila: Sie ist kein Teil der
+   laufenden Runde, sondern steht quer darueber — und muss auffallen, gerade
+   wenn man in ein anderes Minispiel vertieft ist. */
+.pk-ou-regel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(240, 190, 80, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(240, 190, 80, 0.45);
+}
+.pk-ou-regel-kopf { display: flex; justify-content: space-between; align-items: center; margin: 0; font: 600 12px/1 system-ui; }
+.pk-ou-regel-marke { color: var(--gold); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.pk-ou-regel-text { margin: 0; font: 700 clamp(14px, 4vw, 17px)/1.3 system-ui; }
+.pk-ou-regel-ertappt,
+.pk-ou-regel-hinweis { margin: 0; font: 600 12px/1.3 system-ui; }
+.pk-ou-regel .pk-knopf { padding: 10px 12px; font-size: 14px; }
+
+/* -- Partykiste: Bombe, 10 Sekunden, Koenigsbecher (pk-zd-*) --------------- */
+
+/* Die Bombe tickt GLEICHMAESSIG. Schneller werden darf sie nicht: Das waere
+   eine Auskunft ueber die Restzeit, und die hat der Bildschirm gar nicht
+   (phaseHidden) — ein Ticken, das schneller wird, waere geraten und damit
+   eine Luege. */
+.pk-zd-bombe {
+  display: block;
+  font-size: clamp(48px, 16vw, 72px);
+  line-height: 1;
+  animation: pk-zd-ticken 1s steps(2, jump-none) infinite;
+}
+.pk-zd-bombe[data-hoch] { animation: pk-zd-knall 0.5s ease-out 1; }
+@keyframes pk-zd-ticken {
+  from { transform: scale(1) rotate(-4deg); }
+  to { transform: scale(1.08) rotate(4deg); }
+}
+@keyframes pk-zd-knall {
+  from { transform: scale(0.6); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}
+.pk-zd-weiter { min-height: 72px; font-size: 20px; }
+
+/* Die Restzeit der zehn Sekunden — die Frist des Servers, nur angezeigt. */
+.pk-zd-restzeit {
+  display: block;
+  font: 800 clamp(44px, 14vw, 64px)/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.pk-zd-restzeit[data-knapp] { color: #ff6b6b; }
+
+/* Koenigsbecher: die gezogene Karte mit ihrer Regel darunter. */
+.pk-zd-karte { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pk-zd-kartentitel { font: 800 clamp(16px, 5vw, 20px)/1.2 system-ui; }
+.pk-zd-kartentext { font: 600 14px/1.35 system-ui; text-align: center; max-width: 28ch; }
+.pk-zd-hand { min-height: 80px; font-size: 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-zd-bombe,
+  .pk-zd-bombe[data-hoch] { animation: none; }
+}
+
+/* ==========================================================================
+ * Einladung an den Tisch (22.09.2026): Code, Link teilen, QR-Code — und die
+ * Eingabe dazu. Eigene Praefixe `.einladung-*` / `.beitrittscode-*` statt
+ * `.pk-*`, weil beide Bausteine in weitere Lobbys wandern sollen und der
+ * pk-Block gerade in einem anderen Zweig umgebaut wird.
+ *
+ * Mobile-first und gross: Der Code wird im Halbdunkel am Tisch vorgelesen und
+ * abgetippt, oft mit einem Glas in der anderen Hand. Tippflaechen mindestens
+ * 52 px hoch, der Code in Tabellenziffern und weit gesperrt, damit 2 und Z,
+ * 5 und S nicht verschwimmen (0/O/1/I/L vergibt der Server gar nicht erst).
+ * ======================================================================== */
+
+.einladung {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(166, 120, 242, 0.35);
+  text-align: center;
+}
+.einladung-titel { margin: 0; font: 800 17px/1.2 system-ui; }
+.einladung-code {
+  margin: 0;
+  font: 800 clamp(34px, 11vw, 46px)/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.24em;
+  /* Die Sperrung haengt hinter dem letzten Zeichen an; ohne Ausgleich steht
+     der Code sichtbar links von der Mitte. */
+  margin-right: -0.24em;
+  color: var(--gold);
+  user-select: all;
+}
+/* Weisser Grund, schwarze Felder, feste Groesse: Der Code muss auch mit einer
+   schwachen Handykamera von der anderen Tischseite lesbar sein. */
+.einladung-qr {
+  display: block;
+  width: min(62vw, 240px);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 10px;
+}
+.einladung-teilen,
+.beitrittscode-knopf {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--lila);
+  color: #180f28;
+  font: 700 17px/1.2 system-ui;
+  cursor: pointer;
+  transition: transform 90ms ease;
+}
+.einladung-teilen:active,
+.beitrittscode-knopf:active:not(:disabled) { transform: scale(0.97); }
+.beitrittscode-knopf:disabled { opacity: 0.5; cursor: default; }
+.einladung-hinweis { margin: 0; color: #8ee0a3; font-size: 14px; }
+.einladung-link {
+  margin: 0;
+  max-width: 100%;
+  color: var(--muted);
+  font: 500 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.einladung-unter { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+/* Hinweis ueber der Anmeldung: `.auth` liegt fest ueber dem ganzen Schirm,
+   also liegt der Hinweis fest darueber. */
+.einladung-vorgemerkt {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 20;
+  width: min(92vw, 420px);
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  transform: translateX(-50%);
+  background: rgba(24, 15, 40, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(166, 120, 242, 0.6);
+  color: var(--text);
+  font: 500 14px/1.4 system-ui;
+  text-align: center;
+}
+.einladung-vorgemerkt strong { color: var(--gold); letter-spacing: 0.12em; }
+
+.beitrittscode {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 0 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.beitrittscode-titel { margin: 0; font: 700 15px/1.2 system-ui; text-align: center; }
+.beitrittscode-feld {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  font: 800 30px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.22em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.beitrittscode-feld::placeholder { color: var(--muted); opacity: 0.5; }
+.beitrittscode-vorschau { margin: 0; color: var(--muted); font-size: 14px; text-align: center; }
+.beitrittscode-fehler { margin: 0; color: var(--danger); font-size: 14px; text-align: center; }
+
+/* -- Partykiste: Auswahl im Menue (22.09.2026) ----------------------------- */
+
+/* Minispiele, Inhalte, Themenpaket, Modus — die Kacheln sind `.aw-*` aus
+   hub.tsx, hier nur auf den dunklen Kistengrund umgestellt und mit Lila als
+   Wahlfarbe wie die Stufenknoepfe darueber. Eigenes Praefix `pk-aw-`, weil
+   an den uebrigen `pk-`-Regeln parallel gearbeitet wird. */
+.pk-aw {
+  --aw-panel: rgba(255, 255, 255, 0.05);
+  --aw-line: rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-aw .aw-kachel.is-an { border-color: var(--lila); box-shadow: 0 0 0 2px var(--lila); }
+.pk-aw-block { display: flex; flex-direction: column; gap: 8px; }
+.pk-aw-kopf { display: flex; align-items: baseline; gap: 8px; }
+.pk-aw-titel { margin: 0; font: 800 15px/1.2 system-ui; }
+.pk-aw-zahl { color: var(--muted); font-size: 12px; }
+.pk-aw-kopf .pk-textknopf { margin-left: auto; }
+.pk-aw-hinweis { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.pk-aw-zeichen { display: block; font-size: 26px; line-height: 1.1; }
+.pk-aw-platz { min-width: 1.4em; text-align: center; }
+.pk-aw .aw-kachel.is-an .aw-badge { background: var(--lila); color: #180f28; }
+/* Die Reihenfolge als schmale Liste — Pfeile statt Ziehen, weil Ziehen am
+   Handy mit dem Scrollen der Seite kaempft. */
+.pk-aw-folge {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pk-aw-folge;
+  display: grid;
+  gap: 4px;
+}
+.pk-aw-folge li {
+  counter-increment: pk-aw-folge;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+}
+.pk-aw-folge li::before { content: counter(pk-aw-folge) '.'; min-width: 1.6em; color: var(--muted); font-weight: 700; }
+.pk-aw-folgename { flex: 1; min-width: 0; }
+.pk-aw-folge button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+}
+.pk-aw-folge button:disabled { opacity: 0.3; cursor: default; }
+
+/* -- Partykiste: Spielmodi (Team-Abend, Eskalation) ----------------------- */
+
+.pk-regelhinweis {
+  flex-basis: 100%;
+  color: var(--muted);
+  font: 600 12px/1.35 system-ui;
+}
+.pk-lagerspalten {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pk-lagerspalte {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.pk-lagerspalte[data-lager='0'] { box-shadow: inset 0 3px 0 var(--lila); }
+.pk-lagerspalte[data-lager='1'] { box-shadow: inset 0 3px 0 var(--gold); }
+.pk-lagerspalte ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pk-lagerspalte li[data-weg] { opacity: 0.45; }
+.pk-lagerspalte li[data-ich] .pk-person { box-shadow: inset 0 0 0 2px var(--lila); }
+.pk-lagerspalte .pk-person { width: 100%; }
+.pk-person.is-still { display: block; cursor: default; text-align: center; }
+.pk-lagertitel { margin: 0; font: 800 14px/1.2 system-ui; text-align: center; }
+.pk-lagertafel { display: grid; gap: 6px; margin-bottom: 12px; }
+.pk-lagertabelle li[data-lager='0'] { border-left: 4px solid var(--lila); }
+.pk-lagertabelle li[data-lager='1'] { border-left: 4px solid var(--gold); }
+.pk-lagerleute {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font: 600 12px/1.3 system-ui;
+}
+.pk-lagerzeichen {
+  min-width: 22px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font: 800 11px/1 system-ui;
+  text-align: center;
+  color: #180f28;
+  background: var(--lila);
+}
+.pk-lagerzeichen[data-lager='1'] { background: var(--gold); }

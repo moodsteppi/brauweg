@@ -192,6 +192,43 @@ export interface RankingEntry {
   highestCheckpoint: number;
 }
 
+/**
+ * Bestleistung je Inhalt (Bahn, Kurs, Paket) — seit dem 22.09.2026.
+ *
+ * `richtung` kommt mit, weil der Client sonst raten muesste, ob 27 gut oder
+ * schlecht ist: Bei Golf gewinnt die kleinste Zahl, anderswo die groesste.
+ * Die Reihenfolge der Liste ist fertig vom Server; hier wird nichts sortiert.
+ * Zeitpunkte kommen als ISO-Zeichenkette ueber die Leitung.
+ */
+export type BestleistungRichtung = 'hoch' | 'tief';
+
+export interface BestenlisteEintrag {
+  rang: number;
+  accountId: string;
+  displayName: string;
+  wert: number;
+  richtung: BestleistungRichtung;
+  erzieltAm: string;
+  du: boolean;
+}
+
+export interface Bestenliste {
+  gameId: string;
+  inhaltId: string;
+  eintraege: BestenlisteEintrag[];
+  /** Null, solange man fuer diesen Inhalt nichts eingetragen hat. */
+  eigene: { rang: number; wert: number; richtung: BestleistungRichtung; erzieltAm: string } | null;
+  anzahl: number;
+}
+
+export interface EigeneBestleistung {
+  inhaltId: string;
+  wert: number;
+  richtung: BestleistungRichtung;
+  partyId: string | null;
+  erzieltAm: string;
+}
+
 // ---------------------------------------------------------------------------
 // Waehrungen, Truhen, Tagesaufgaben, Kosmetik
 // ---------------------------------------------------------------------------
@@ -300,7 +337,7 @@ export interface Kauftruhe {
  * `wert` ist die Kennung ohne Praefix — so heisst sie in den Themen-
  * Einstellungen. `id` traegt das Praefix und ist die Kennung fuer den Kauf.
  */
-export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen' | 'klang' | 'musik';
+export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen' | 'klang' | 'musik' | 'inhaltspaket';
 
 export interface RegalWare {
   id: string;
@@ -311,6 +348,12 @@ export interface RegalWare {
   /** Beide Preise — der Käufer wählt, wie bei der Kosmetik. */
   preis: Preis;
   besessen: boolean;
+  /**
+   * Nur bei `inhaltspaket` (Golf-Kurs, Partykiste-Themenpaket): Spiel und
+   * Regelsatzfeld. Der Wert steht in `wert` — so sperrt die Auswahl des
+   * Spiels genau diese Kachel, ohne die Kennung zu zerlegen.
+   */
+  inhalt?: { spiel: string; feld: string };
 }
 
 export interface Shop {
@@ -382,6 +425,14 @@ export interface GameDefaults {
   protocolVersion: number;
   seatCounts: number[];
   rounds: Record<string, number[]>;
+  /**
+   * Was das Modul dem Bildschirm VOR der Partie mitgibt (Golf: Kurse und
+   * Themen der Bahnauswahl), unbesehen durchgereicht — seit dem 22.09.2026.
+   * Der Bildschirm prüft die Form selbst; ältere Server schicken nichts.
+   */
+  lobby?: unknown;
+  /** Ob Sitz 0 den Regelsatz in der Lobby noch ändern darf (`setRules`). */
+  regelnInDerLobby?: boolean;
 }
 
 export interface PlayerRef {
@@ -781,6 +832,18 @@ export const api = {
     request<TischVorschau>(`/tables/code/${encodeURIComponent(code)}`),
   beitretenPerCode: (code: string) =>
     post<{ tableId: string }>(`/tables/code/${encodeURIComponent(code)}/join`),
+  /**
+   * Ein Tisch mit seinem Beitrittscode — fuer die Einladung im Wartesaal.
+   *
+   * Seit dem 22.09.2026. Die Route gab es schon (`GET /api/tables/:tableId`,
+   * sie schickt die ganze Tischzeile); gefehlt hat nur der Aufruf. Nur die
+   * drei Felder, die die Einladung liest — der Rest der Zeile ist Server-
+   * Innenleben und soll hier nicht als Vertrag erscheinen.
+   */
+  tischMitCode: (id: string) =>
+    request<{
+      table: { id: string; gameId: string; status: string; joinCode: string | null };
+    }>(`/tables/${encodeURIComponent(id)}`),
   leaveTable: (id: string) => post<{ ok: true }>(`/tables/${id}/leave`),
   pauseTable: (id: string) => post<{ ok: true }>(`/tables/${id}/pause`),
   resumeTable: (id: string) => post<{ ok: true }>(`/tables/${id}/resume`),
@@ -790,6 +853,13 @@ export const api = {
 
   ranking: (gameId: string) => request<RankingEntry[]>(`/rankings/${gameId}`),
   overallRanking: () => request<RankingEntry[]>('/rankings'),
+  /** Top 20 fuer einen Inhalt (bei Golf: eine Bahn) plus der eigene Platz. */
+  bestenliste: (gameId: string, inhaltId: string) =>
+    request<Bestenliste>(
+      `/games/${encodeURIComponent(gameId)}/bestleistungen/${encodeURIComponent(inhaltId)}`,
+    ),
+  eigeneBestleistungen: (gameId: string) =>
+    request<EigeneBestleistung[]>(`/me/bestleistungen/${encodeURIComponent(gameId)}`),
 
   profile: (accountId: string) => request<PlayerProfile>(`/players/${accountId}`),
   searchPlayers: (q: string) => request<PlayerRef[]>(`/players?q=${encodeURIComponent(q)}`),

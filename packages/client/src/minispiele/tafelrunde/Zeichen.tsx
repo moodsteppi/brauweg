@@ -14,7 +14,7 @@
  * ist.
  */
 
-import { blattPfad } from './bildfolge';
+import { BANKKASTEN, KARTENKASTEN, WABENKASTEN, blattPfad } from './bildfolge';
 import { Figur3D } from './Figur3D';
 import { Figurbild } from './KampfAnzeige';
 import type { Einheit, Rolle } from './sicht';
@@ -70,6 +70,39 @@ export function RollenZeichen({ rolle }: { rolle: Rolle }): React.JSX.Element {
 }
 
 /**
+ * Hoehe und Bodenversatz der stehenden Figur an ihren drei Orten, als
+ * CSS-Variablen.
+ *
+ * WARUM SIE HIER STEHEN UND NICHT IM STYLESHEET: Alle sechs Zahlen sind aus dem
+ * gemessenen Ausschnitt der Blaetter gerechnet (`FIGUREN3D_ZELLHOEHE_METER`,
+ * Rechnung in bildfolge.ts). Als feste Prozent- und Pixelzahlen in styles.css
+ * sahen sie aus wie Geschmack, hingen aber am Ausschnitt: Wer die Blaetter neu
+ * rendert, laesst damit stillschweigend jede Figur der Ruestkammer wachsen oder
+ * schrumpfen. Am 06.09.2026 einmal passiert und von Hand nachgerechnet — genau
+ * das soll es nicht mehr geben. Die Arena macht es seitdem so (`FIGURENKASTEN`,
+ * gesetzt von KampfAnzeige.tsx); die Ruestkammer zog am 22.09.2026 nach.
+ *
+ * ALLE SECHS AN JEDER FIGUR, nicht das passende Paar: Dieses Bauteil entscheidet
+ * nicht, wo es steht — das tut die `klasse` seines Aufrufers, und jede der drei
+ * Regeln in styles.css greift sich daraus ihr eigenes Paar. Hier nach dem Ort zu
+ * verzweigen hiesse, die Zuordnung Klasse → Ort ein zweites Mal hinzuschreiben,
+ * diesmal in TypeScript.
+ *
+ * Ein festes Objekt und keins je Aufruf: Es haengt an nichts, was sich waehrend
+ * einer Partie aendert, und ein neues Objekt je Zeichnen waere an bis zu
+ * dreissig Figuren eine neue `style`-Angabe je Serverfunk.
+ */
+const RUESTKAMMER_MASSE = {
+  '--tr-wabenkasten-hoehe': `${WABENKASTEN.hoehe}%`,
+  '--tr-wabenkasten-boden': `${WABENKASTEN.boden}%`,
+  '--tr-bankkasten-hoehe': `${BANKKASTEN.hoehe}%`,
+  '--tr-bankkasten-boden': `${BANKKASTEN.boden}%`,
+  /* Die Ladenkarte rechnet in Pixeln — warum, steht bei `KARTENKASTEN`. */
+  '--tr-kartenkasten-hoehe': `${KARTENKASTEN.hoehe}px`,
+  '--tr-kartenkasten-boden': `${KARTENKASTEN.boden}px`,
+} as React.CSSProperties;
+
+/**
  * Die Figur einer Einheit — dieselbe wie in der Arena, nur stehend.
  *
  * DREI STUFEN, in dieser Reihenfolge: das vorgerenderte 3D-Blatt ihrer ROLLE
@@ -86,6 +119,12 @@ export function RollenZeichen({ rolle }: { rolle: Rolle }): React.JSX.Element {
  *
  * Kein Bildwechsel: Es ist immer Bild 0 der Ruhefolge. Wer aufstellt, soll
  * nicht von zappelnden Figuren abgelenkt werden — bewegt wird nur im Kampf.
+ *
+ * SIE BRINGT IHRE MASSE MIT (`RUESTKAMMER_MASSE`). Wie gross der Ausschnitt
+ * wird, haengt am gemessenen Ausschnitt der Blaetter, und der steht in
+ * figuren3d.ts — nicht im Stylesheet. Warum die Rechnung hier als Variablen an
+ * die Figur geht statt als feste Prozentzahl in styles.css, steht bei
+ * `RUESTKAMMER_MASSE`.
  */
 export function EinheitenFigur({
   einheit,
@@ -102,6 +141,7 @@ export function EinheitenFigur({
       name={einheit.name}
       blatt={blattPfad(einheit.rolle)}
       klasse={klasse}
+      masse={RUESTKAMMER_MASSE}
       spiegeln={spiegeln}
       ersatz={
         <Figurbild

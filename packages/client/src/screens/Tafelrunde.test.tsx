@@ -1618,4 +1618,43 @@ describe('Das Blatt zum Lesen', () => {
     fireEvent.click(within(blatt).getByRole('button', { name: 'Blatt schließen' }));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+
+  it('fuehrt den Zuschauer zum Blatt einer Marke — mit den Staenden des gezeigten Sitzes', () => {
+    // Der Anlass (21.09.2026): Ein Zuschauer hat keine eigenen Staende, und
+    // der gemeinsame Griff lief fuer ihn mit einer leeren Liste — deshalb war
+    // der Weg in seinem Zweig gar nicht verdrahtet. Jetzt zaehlt das Blatt,
+    // was der Brettkopf ueber dem Brett auch zaehlt: die Marken DIESES Sitzes.
+    stelle(
+      sicht({
+        zuschauer: true,
+        ich: null,
+        eigenes: null,
+        gegner: [
+          gegnerMitMarken({
+            brett: [{ id: 'dorfwache', stufe: 1 }, ...Array.from({ length: 9 }, () => null)],
+            synergien: [
+              {
+                marke: 'krieger',
+                name: 'Krieger',
+                anzahl: 3,
+                schwelle: 2,
+                naechsteSchwelle: 4,
+                bonus: { lebenProzent: 0, angriffProzent: 0, tempoProzent: 0, ruestung: 10 },
+              },
+            ],
+          }),
+        ],
+      }),
+    );
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: /Dorfwache/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Krieger nachschlagen' }));
+    const marke = screen.getByRole('dialog', { name: 'Marke Krieger' });
+    expect(marke).toHaveTextContent('3 auf dem Brett');
+    expect(marke).toHaveTextContent('noch 1 bis 4');
+    // Und nicht die leeren Staende eines Sitzes, den der Zuschauer nicht hat.
+    expect(marke).not.toHaveTextContent('0 auf dem Brett');
+    // Escape gehoert dem Markenblatt; das Einheitenblatt bleibt darunter.
+    expect(screen.getByRole('dialog', { name: /Dorfwache/ })).toBeInTheDocument();
+  });
 });

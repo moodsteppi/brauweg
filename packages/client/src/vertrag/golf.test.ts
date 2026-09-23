@@ -59,6 +59,7 @@ const FELDER = [
   'saat',
   'sitze',
   'loecher',
+  'bahnen',
   'botSitze',
   'zuege',
   'abIndex',
@@ -68,6 +69,7 @@ const FELDER = [
   'taktMs',
   'vorlauf',
   'botStufe',
+  'modus',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof GolfSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof GolfSicht>>;

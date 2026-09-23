@@ -1,6 +1,6 @@
 # Partykiste
 
-Ein Turnier aus neun Partyminispielen für **4 bis 12 Leute**, die im selben
+Ein Turnier aus fünfzehn Partyminispielen für **4 bis 12 Leute**, die im selben
 Raum sitzen. Geredet wird am Tisch, der Bildschirm nimmt nur die Entscheidung
 entgegen — deshalb braucht die Kiste, anders als Werwolf, keinen freien Text
 zwischen den Sitzen und ist heute schon spielbar.
@@ -22,7 +22,7 @@ Die Minispiele kommen reihum in der Reihenfolge, die im Regelsatz steht
 (`minispiele`). Bewusst berechnet und nicht gewürfelt — „dreimal Quiz
 hintereinander“ ist auf einer Party kein Zufall, sondern ein Fehler.
 
-## Die neun Minispiele
+## Die fünfzehn Minispiele
 
 | Minispiel | Ablauf | Punkte | Schlücke |
 | --- | --- | --- | --- |
@@ -35,20 +35,218 @@ hintereinander“ ist auf einer Party kein Zufall, sondern ein Fehler.
 | **Schätzen** | Eine Zahlenfrage, alle tippen eine Zahl. Wer nicht tippt, gilt als unendlich weit weg. | am nächsten dran +3 | am weitesten weg 2 |
 | **Entweder – oder** | A oder B, alle gleichzeitig. | Mehrheit +1 | Minderheit 1; Gleichstand: alle 1 |
 | **Wahrheit oder Pflicht** | Reihum: wählen, Aufgabe erscheint für alle, dann „Gemacht" oder „Gekniffen". | gemacht +2 | gekniffen 2 |
+| **Kategorien-Battle** | Reihum im Kreis laut etwas aus der Kategorie nennen, bis einer stockt. Stocken meldet man selbst; Doppeln oder Zögern benennt die Mehrheit per Einspruch. | nicht verloren +1 (leergespielt: alle) | Verlierer 2 |
+| **Mehrheitsraten** | Eine Frage, A oder B: jeder antwortet für sich **und** tippt, was die Mehrheit antwortet. | Mehrheit getroffen +2 | daneben 1; Gleichstand: alle 1 |
+| **Regel-Karte** | Eine Regel („keine Vornamen") gilt bis zum Ende der übernächsten Runde — während der anderen Minispiele. Verstoß per Selbstmeldung oder Mehrheit. | ohne Verstoß durch die Geltung +1 | je Verstoß 1 |
+| **Bombe** | Reihum laut etwas aus einer Kategorie nennen und weitergeben. Sie geht nach einer verdeckten Zeit (8–25 s, aus der Saat) hoch — die Uhr läuft auf dem Server. | nicht gehalten +1 | wer sie hält 2 |
+| **10 Sekunden** | Einer nennt drei Dinge („Nenne drei: Automarken") in zehn Sekunden auf der Uhr des Servers, danach urteilen die anderen Menschen. Gleichstand geht an den Sprecher. | geschafft +2 | nicht geschafft 2 |
+| **Königsbecher** | Reihum zwei Karten je Kopf aus dem 52er-Blatt, jede Karte ist eine Regel (2 du wählst, 3 du selbst, 7 Hand hoch, Bube neue Regel-Karte, König füllt den Becher …). | ohne Schluck +1, Neun +1 | je Treffer 1, letzter König den Becher |
+
+## Tischoptionen
+
+Der Regelsatz (`PartykisteRegeln` in `src/regeln.ts`), geprüft von
+`validateConfig` in `src/adapter.ts` — die Prüfung meldet Unsinn als
+`ConfigProblem` und wirft nie:
+
+| Feld | Werte | Vorgabe | Wirkung |
+| --- | --- | --- | --- |
+| `minispiele` | Liste aus `MINISPIELE`, mindestens eins | alle fünfzehn | Reihenfolge im Turnier |
+| `trinkmodus` | an/aus | an | nur die Anzeige der Gläser |
+| `schluckFaktor` | 1–3 | 1 | Schlücke mal Faktor |
+| `inhaltsHaerte` | 1 harmlos, 2 pikant, 3 derb | 1 | Obergrenze der Textschärfe |
+| `paket` | `null` oder ein Paket aus `PAKETE` | `null` | Zielgruppe der Inhalte |
+| `modus` | `turnier`, `eskalation`, `themenabend`, `team` | `turnier` (fehlt = Turnier) | Spielmodus, siehe unten |
 
 Der **Härtegrad** (`schluckFaktor`, 1 bis 3) nimmt alle Schlücke einer Runde
 mal. Punkte bleiben unberührt: Die Rangliste darf nicht davon abhängen, wie
 hart der Abend eingestellt ist.
 
-Der **Trinkmodus** (`trinkmodus`) blendet Gläser und Schluckzahlen aus; der
-Ablauf ändert sich nicht. Ein zweiter Ablauf für „ohne Alkohol“ wäre ein
-zweites Regelwerk, das nie jemand testet.
+Der **Trinkmodus** (`trinkmodus`) ändert den Ablauf nicht. Ein zweiter Ablauf
+für „ohne Alkohol“ wäre ein zweites Regelwerk, das nie jemand testet. Gezählt
+wird in beiden Modi; ausgeschaltet heißt der Zähler **Strafpunkte** statt
+Schlücke, und die Ansagen reden nicht vom Trinken (`ansageFuer` im Client).
+Ein 🍺 gibt es seit dem 22.09.2026 nirgends mehr, und **kein Inhaltstext
+befiehlt das Trinken** — der Schluck kommt aus der Wertung, nicht aus dem
+Text (`test/inhalte.test.ts` hält das über alle Kataloge fest).
+
+**Einstellen** lassen sich Runden, Härte und Trinkmodus im Menü, für beide
+Wege: Der Tischöffner stellt ein, auch online (`config` beim Anlegen). Wer
+„Online spielen“ drückt und eine offene Runde findet, sieht deren Regelsatz
+**vor** dem Beitritt und kann stattdessen eine eigene aufmachen. Der Regelsatz
+(`trinkmodus`, `schluckFaktor`, `minispiele`) fährt in jeder Sicht mit und
+steht als Regelzeile im Spielkopf; im Wartesaal kommt er von
+`/tables/:id/rules`. Solange das Turnier läuft, hält der Bildschirm eine
+Wake-Lock-Sperre, und reihum vibriert das Handy, wenn man dran ist
+(`useTischwache`).
+
+**Inhaltsstufe** (`inhaltsHaerte`, seit dem 22.09.2026, Entscheidung P1):
+wie scharf die Texte sein dürfen — eine Obergrenze, ein derber Tisch bekommt
+auch harmlose Sprüche. Sie heißt absichtlich **nicht** „Härte“: Der Regler
+`schluckFaktor` steht im Bildschirm schon als „Härte“, und zwei Regler mit
+demselben Namen — einer für Gläser, einer für Texte — stellt niemand richtig
+ein. Im Bildschirm heißt die Stufe „harmlos / pikant / derb“.
+
+**„Derb“ nur ohne Gast.** Ein Gastkonto entsteht mit einem Klick, ohne Mail
+und ohne Altersangabe. Sitzt ein Gast am Tisch, kappt `erzeugePartie` die
+Stufe auf „pikant“ (`INHALTS_HAERTE_GAST_MAX`). Das geschieht beim Start und
+nicht in `validateConfig`, weil der Regelsatz beim Anlegen eingefroren wird
+und der Gast sich oft erst danach setzt. Woher das Modul es weiß:
+`CreatePartyOptions.gastSeats` (neu in game-api), gefüllt in
+`packages/server/src/runtime/party.ts` mit derselben `gastSeit`-Abfrage wie
+`countsForRanking`. Fehlt das Feld, nimmt das Modul die strenge Seite (kein
+„derb“). Die eingestellte Stufe steht dann in `partie.inhaltsHaerteGewollt`,
+damit der Bildschirm es sagen kann; `partie.regeln.inhaltsHaerte` ist immer
+die wirksame. Zu laufenden Tischen setzt sich niemand mehr dazu
+(`joinTable` verlangt `waiting`), die Kappung beim Start deckt also den
+ganzen Abend.
+
+**Offene Lücke:** „Verifiziert“ heißt hier nur „kein Gast“. Ein normales
+Konto hat Mail und Passwort, aber die Mail ist nicht bestätigt, und eine
+**Altersangabe gibt es nirgends** in der Datenbank. Wer „derb nur ab 18“
+ernst meint, braucht ein Feld am Konto — das ist eine Plattformfrage, keine
+der Kiste.
+
+**Themenpaket** (`paket`, Entscheidung P3): eine Zielgruppe, kein Motto.
+Pakete: `wg-abend`, `jga`, `weihnachten`, `studenten`, `arbeit`. Seit dem
+Vorrat vom 22.09.2026 trägt jeder neue Eintrag mindestens ein Paket, der
+Altbestand keins. **Folge:** Findet ein Paket-Tisch mindestens
+`MINDESTMENGE` eigene Einträge, spielt er NUR diese — der Altbestand kommt
+dort nicht mehr vor. Darunter mischt der Filter Allgemeingut dazu, und die
+Runde hält das fest (siehe unten). Dünn ist heute „jga" bei „harmlos"
+(5 bis 8 je Katalog, die JGA-Einträge sind meist pikant) und „weihnachten"
+bei Wahrheit (9): Solche Tische spielen mit Rückfall.
+
+**Auswahl im Menü** (seit dem 22.09.2026, `minispiele/partykiste/Auswahl.tsx`,
+Logik in `wahl.ts`): Minispiele (mehrere, mindestens drei, in eigener
+Reihenfolge — so kommen die Runden dran), Inhaltsstufe „harmlos / pikant /
+derb“ unter der Überschrift **„Inhalte“** (nicht „Härte“, siehe oben),
+Themenpaket („alles“ = `paket: null`) und — erst, wenn `defaultConfig()`
+ein Feld `modus` hat — der Modus. Gemerkt in `localStorage`, gilt für
+Bot- und Online-Tische. Der Regelsatz entsteht als **Vorgabe des Moduls**
+(`useSpielVorgabe('partykiste')`), darauf Trinkmodus und Schluckfaktor,
+darauf die Auswahl (`regelsatzAus`); was niemand gewählt hat, kommt aus
+der Vorgabe. Die Minispielliste der Kacheln ist deshalb `MINISPIELE` des
+Moduls, keine Abschrift — ein neues Minispiel steht ohne Änderung im Menü.
+Wer alle in Modulreihenfolge wählt, dem wird nichts gemerkt, damit ein
+neues Minispiel später von selbst dazukommt. Für einen Gast (`me.gast`) ist
+„derb“ gesperrt („nur mit Konto“); die Kappung beim Start bleibt trotzdem
+die eigentliche Sperre. Paketnamen, Modusnamen und „gleichzeitig/reihum“
+sind Spiegelbilder, die `vertrag/partykiste-auswahl.test.ts` gegen
+`PAKETE`, `istReihum` und `validateConfig` hält. `inhaltsHaerte` und
+`paket` dürfen im Regelsatz weiterhin fehlen — ältere Tische kennen sie
+nicht. In der Regelzeile stehen beide noch nicht: Die Sicht trägt sie nicht.
+
+### Wie die Inhalte ausgewählt werden
+
+Jede Ziehung geht durch **einen** Filter, `waehlbareInhalte` in
+`src/inhalte/filter.ts`. Er lässt die Katalogreihenfolge stehen (gemischt
+wird erst danach, mit dem Saatkorn — sonst zöge dieselbe Saat andere Fragen,
+sobald irgendwo ein Eintrag ein Paket bekommt) und gibt stufenweise nach,
+wenn weniger als `MINDESTMENGE` (10) Inhalte passen:
+
+1. `paket` — nur Inhalte des Pakets
+2. `paketUndAllgemein` — dazu Inhalte ohne Paket, aber nichts aus fremden Paketen
+3. `ohnePaket` — Paket egal
+4. `ohneMinSitze` — auch die Sitzgrenze fällt. **Letzter Halt**: Hier gilt
+   nur noch die Härte.
+
+Bis zum 23.09.2026 gab es als fünfte Stufe `vollerKatalog`, den ganzen
+Katalog ohne Härte. Im Betrieb kam sie nie vor, aber ein Katalog mit zu wenig
+Harmlosem hätte einem harmlosen Tisch still Derbes gegeben. Jetzt gilt:
+Reicht der erlaubte Vorrat nicht, wird **innerhalb der erlaubten Stufen
+wiederholt**, deterministisch und erst nach einem vollen Durchlauf des
+gemischten Stapels (`an()`). Gibt es gar keinen erlaubten Eintrag, spielt in
+dieser Runde **ein anderes Minispiel**, und zwar das nächste der Liste mit
+erlaubtem Vorrat, zur Not Bus fahren (`spielbaresMinispiel`, Kataloge je
+Minispiel in `VORRAT`). Die Engine hängt nie. Mit den heutigen Katalogen
+kommt der Ersatz nicht vor: Jeder Katalog, auch die aus #213 und #218, hat
+mindestens zwölf harmlose Einträge (Test). In der Eskalation legt
+`stufenStapel` außerdem die Auswahl jeder milderen Stufe in den Stapel. Ein
+Paket-Topf, der auf der Decke nur Derbes hergibt, ließ sonst das erste
+Drittel ohne harmlosen Eintrag.
+
+**Die Härte wird nie gelockert.** Gab die Auswahl nach, steht das in der
+Runde als `inhaltsRueckfall` (`{ gewollt, genutzt, passend }`), sonst `null`.
+Die Sicht reicht es noch nicht weiter — das ist Sache der Bildschirmarbeit.
+
+**Wiederholungsschutz** (Entscheidung P8: große Kataloge, kein Gedächtnis
+über Abende): Jeder Katalog wird je Partie **einmal** gemischt
+(`rundenSaat(saat, 0, zweck)`), und die n-te Runde seiner Art nimmt die
+n-te Stelle. Bis zum 22.09.2026 hielten sich zwei Spiele nicht daran: „Wer
+bin ich“ mischte je Runde neu (derselbe Name konnte zweimal kommen), und bei
+„Wahrheit oder Pflicht“ zog jeder Sitz einen eigenen Zufallsindex (zwei Sitze
+konnten dieselbe Aufgabe bekommen). Jetzt nimmt „Wer bin ich“ je Runde die
+nächsten `sitze` Namen, und bei W/P hat jeder Sitz in jeder Art einen festen
+Platz im Stapel (`wievielte * sitze + sitz`). Ein Platz verfällt, wenn der
+Sitz die andere Art wählt — dafür hängt die Stelle nicht an fremden Wahlen.
+Wiederholt wird erst, wenn ein Stapel aufgebraucht ist (zu zwölft: nach elf
+Runden „Wer bin ich“ bzw. fünf Runden W/P, alle derselben Art).
+
+## Spielmodi
+
+Seit dem 22.09.2026 (Robins Entscheidung): neben dem Turnier drei Modi —
+**nicht** Schnellrunde oder Marathon, die Rundenzahl stellt man ohnehin ein.
+Alles, was einen Modus ausmacht, steht in `src/modi.ts`; `partie.ts` hängt
+sich an wenigen Stellen ein (Rundenaufbau, Reihum-Folge, Aufstellung,
+Rangliste). Der Ablauf der Minispiele ist in jedem Modus derselbe — aus
+demselben Grund, aus dem der Trinkmodus kein zweiter Ablauf ist.
+
+**Eskalation.** Inhaltsstufe und `schluckFaktor` steigen über den Abend:
+erstes Drittel 1, zweites 2, letztes 3 (`eskalationsStufe`,
+`floor(nr * 3 / runden) + 1`). Die eingestellten Werte gelten dann nicht; die
+Kurve steht je Runde in `regelnDerRunde`, und jede Ziehung, jede Aufgabe und
+jede Abrechnung liest den Regelsatz der Runde, nicht den der Partie.
+**Die Gast-Kappung wird nicht umgangen**: Die Eskalation will am Ende „derb",
+geht aber wie jeder Tisch durch `wirksameInhaltsHaerte`; mit Gast steht in
+`regeln.inhaltsHaerte` „pikant", und die Kurve steigt nie über diese Decke
+— auch nicht in der letzten Runde. Die Härte der Gläser steigt trotzdem bis 3.
+Die Sicht sagt es (`eskalation.gekappt`), die Regelzeile auch.
+
+Damit sich über die Stufen nichts wiederholt, gibt es in der Eskalation EINEN
+Stapel je Katalog (gefiltert auf die Decke, gemischt wie im Turnier), und
+`belegeStufenweise` verteilt ihn auf alle Plätze des Abends: jeder Platz den
+ersten unbenutzten Inhalt **genau** seiner Stufe, sonst der nächst milderen.
+Eskalation heißt, dass die Stufe ausgeschöpft wird — ab Stufe 2 kommen die
+pikanten Sprüche, sofern es welche gibt. Wie viele Plätze eine Runde hat
+(„Wer bin ich“ und W/P: einer je Sitz), steht in `platzeJeRunde`; wer die
+Zählung in `baueRunde` ändert, ändert sie dort mit.
+
+**Themenabend.** Ein `paket` ist Pflicht (`validateConfig` meldet
+`ruleset.partykiste.themenOhnePaket`; ein Tisch aus der Datenbank ohne Paket
+spielt als Turnier). Das Paket bestimmt die Minispiele und ihre Reihenfolge
+(`THEMEN_MINISPIELE`, geschnitten mit dem, was der Tisch überhaupt spielen
+will) und die Inhalte über den Filter — reicht der Paketvorrat nicht, gibt
+der Filter weich nach wie bei jedem Paket-Tisch. Beim Arbeitsabend fehlen
+„Ich hab noch nie“ und W/P. Ein neues Minispiel spielt in keinem Themenabend
+mit, bis es dort eingeordnet ist.
+
+**Team-Abend.** Zwei Lager, zu Beginn abwechselnd nach Sitz (`startLager`).
+Vor der ersten Runde stellt der **Tischöffner** (Sitz 0) auf: Solange
+`partie.aufstellung` gilt, ist nur er am Zug, `lagerwechsel` setzt einen Sitz
+hinüber (nie den letzten Anwesenden eines Lagers — die erlaubten Sitze stehen
+in der Sicht als `aufstellung.wechselbar`), `bereit` gibt frei. Ist Sitz 0
+ein Bot oder gegangen, endet die Aufstellung von selbst. Die erste Runde wird
+danach neu gebaut, weil ihre Reihum-Folge an den Lagern hängt. In
+Reihum-Spielen wechseln die Lager (A, B, A, B …; welches anfängt, wechselt je
+Runde — `reihumFolge`). Punkte und Schlücke zählen fürs Lager
+(`lagerWertung`); entschieden wird der **Schnitt je Kopf**, damit das größere
+Lager nicht allein durch seine Größe gewinnt. Die Bots stimmen bei „Wer würde
+eher“ und beim Imposter für das andere Lager.
 
 ## Wertung
 
 Gewertet wird das **ganze Turnier**: `standings` liefert die aufaddierten
 Punkte, die Plattform rechnet daraus Trophäen (mehr Punkte = besserer Platz).
 Die Schlücke stehen daneben und zählen **nicht** mit.
+
+**Im Team-Abend** bleibt die Rangliste für die Trophäen eine je **Person**
+— die Plattform verteilt an Konten, und ein Lager ist keins. Der **Platz**
+aber kommt aus dem Lager-Ergebnis (`lagerPlaetze`): Wer im Siegerlager die
+wenigsten eigenen Punkte hat, steht trotzdem vorn, sonst schadete sich, wer
+seinem Lager hilft. Gezählt wird wie die Plattform zählt — das Siegerlager
+auf 1, das andere auf „Größe des Siegerlagers + 1“; mit „2“ verteilte
+`awardForParty` die Plätze falsch, und die Nullsumme wäre hin.
+`standings[i].points` bleiben die eigenen Punkte.
 
 Die reinen Trinkrunden („Ich hab noch nie“, „Wer würde eher“) geben bewusst
 nur einen Punkt. Bei „Ich hab noch nie“ kann man lügen und den Punkt
@@ -95,6 +293,92 @@ Minuten** hebt (`meta.zugzeitMs`, neu in game-api, nur verlängernd, gedeckelt
 bei zehn) — danach tippt der Bot für den, der weg ist. Dieselben fünf Minuten
 gelten für jeden Zug: Bei Imposter redet erst die Runde, dann wird gestimmt.
 
+**Die drei ohne Uhr** (seit dem 22.09.2026, Robins Entscheidung „5+ neue
+Minispiele"; Regeln in `src/ohne-uhr.ts`, Ansichten in
+`minispiele/partykiste/RundenOhneUhr.tsx`, Inhalte in
+`inhalte/kategorien.ts`, `mehrheit.ts`, `regelkarten.ts`):
+
+- **Kategorien-Battle läuft reihum, aber im Kreis.** Es ist nicht
+  `istReihum` (dort endet die Runde, wenn jeder einmal dran war), sondern hat
+  in `amZug`/`weiter` einen eigenen Zweig. Die Runde endet durch „Gestockt",
+  durch eine Mehrheit von Einsprüchen (gegen den, der dran ist, oder den, der
+  eben genannt hat) oder nach `KATEGORIEN_RUNDEN_UM_DEN_TISCH` (4) Runden um
+  den Tisch — dann ist die Kategorie leergespielt, alle bekommen den Punkt.
+  Wer anfängt, wird aus der Saat gezogen.
+- **Mehrheitsraten hat zwei Eingaben in einer Aktion** (`mehrheitstipp`:
+  `eigene` und `tipp`). Mit nur einem Tipp wäre es Entweder-oder: Wer die
+  Mehrheit tippt, bestimmt sie zugleich. Die Bots tippen auf die häufigere
+  Antwort der **Bots** — sie können deren Antwort ausrechnen, weil sie nur an
+  Sitz und Runde hängt (`eigeneMehrheitsAntwort` in `bot.ts`), nicht an
+  einem Blick in den Zustand.
+- **Regel-Karte ist der einzige Strukturbruch der Kiste:** `PartykistePartie.regelKarte`
+  lebt über das Rundenende hinaus (bis dahin lebte alles Rundenwissen in
+  `runde`). Begründung an `AktiveRegel`. Abgerechnet wird trotzdem nur in
+  `werteAus` der gerade laufenden Runde (`regelAbrechnen`): Verstöße werden
+  Schlücke dieser Runde, die letzte Runde der Regel gibt den Punkt für die
+  weiße Weste. Protokoll und Turnierstand bleiben so deckungsgleich (Test).
+  In einer Abrechnung, nach der keine mehr kommt, ist Melden gesperrt
+  (`meldenMoeglich`) — sonst verschwände der Verstoß still. Eine neue Karte
+  löst die alte ab.
+- **Mehrheit heißt: anwesende Menschen außer dem Beschuldigten.** Bots
+  hören nicht mit; zählten sie, bekäme ein Mensch unter Bots nie eine
+  Mehrheit. Die nötige Zahl steht in der Sicht (`noetig`), der Bildschirm
+  zählt nur ab.
+- **`einspruch` und `verstoss` stehen nicht in `legalActions`**: Beide
+  darf jeder Sitz jederzeit, nicht nur der am Zug — wie das Tippen in den
+  gleichzeitigen Spielen. `verstoss` wird in `verarbeite` vor allen
+  Phasenprüfungen behandelt, weil er in jeder Runde gilt.
+- Seit diesen dreien ist `protocolVersion` 2 (Client
+  `PARTYKISTE_MODULE_VERSION`): Ein alter Client kennt die neuen Runden nicht.
+
+**Die drei mit Uhr** (seit dem 23.09.2026, Robins Entscheidung vom
+22.09.2026; Regeln in `src/zeitdruck.ts`, Ansichten in
+`minispiele/partykiste/RundenZeitdruck.tsx`, Inhalte in
+`inhalte/zehnsekunden.ts` und `koenigsbecher.ts`, die Bombe zieht aus den
+Kategorien):
+
+- **Die Uhr lebt auf dem Server.** Das Modul bleibt uhrlos wie jedes Modul:
+  Es nennt nur die Dauer (`phaseMs`), die Plattform misst sie und ruft nach
+  Ablauf `advancePhase` — der Tisch schaltet weiter, ohne dass ein Gerät
+  etwas schickt (`packages/server/test/partykiste-uhr.test.ts`). Eine Uhr im
+  Client wäre die zweite Fassung derselben Regel (Runden.tsx): Zwei Handys
+  zählen nie gleich. Die Frist gilt nur in den drei Phasen, die ohne Uhr kein
+  Spiel wären — die tickende Bombe, das Sprechen bei „10 Sekunden", das
+  „Hand hoch" nach einer Sieben (5 s). Sie ist immer kürzer als die Zugzeit
+  und bei `PHASE_HOECHST_MS` (30 s) gedeckelt, nimmt also niemandem Zugzeit
+  weg; die Laufzeit stellt für beide einen Timer, den früheren. `phaseKey`
+  trennt zwei Siebenen hintereinander, die Bombe behält ihres über alle
+  Weitergaben (die Frist steht ab dem ersten Ticken fest).
+- **Die Restzeit der Bombe geht nie über die Leitung.** Die Zündzeit steht
+  in keiner Sicht, auch nicht im Ergebnis, und die Plattform schickt die
+  Frist als `phaseDeadline: null` (`phaseHidden`, neu in game-api). Der
+  Bildschirm zeigt nur, dass sie tickt — gleichmäßig, denn schneller werdendes
+  Ticken wäre eine Auskunft, die er nicht hat.
+- **Reißleine ohne Uhr:** Nach `BOMBE_WEITERGABEN_HOECHST` (200) Weitergaben
+  geht die Bombe auch ohne Uhr hoch. Am echten Tisch kommt die Uhr immer
+  zuerst (Bots geben im 220-ms-Takt weiter, in 25 s gut 110-mal); ohne die
+  Reißleine hinge jede Bot-Partie, die niemand mit einer Uhr treibt — die
+  Invarianten, der Vertrag, der Schaukasten.
+- **„10 Sekunden" spricht ein Mensch** (reihum über die Runden, Versatz aus
+  der Saat), die Aufgabe kommt erst mit seinem „Los" — vorher sieht sie
+  niemand, sonst hätte er Bedenkzeit, die keine Uhr misst. Es urteilen die
+  anwesenden Menschen außer ihm (Bots hören nicht), gibt es keinen, er selbst.
+  Nur an einem Tisch ganz ohne Menschen spricht ein Bot. Die Urteile sind bis
+  zur Abrechnung verdeckt.
+- **Königsbecher:** Die Kartentexte sagen „kassiert", nie „trinkt" — ob das
+  ein Schluck oder ein Strafpunkt ist, sagt die Wertung. „Du wählst" nimmt die
+  vorhandene Aktion `stimme`. Bei „Hand hoch" sind **Bots zuerst** am Zug
+  (sonst warteten sie auf den Menschen, der dann nie der Letzte wäre); tippen
+  alle, kassiert der Letzte sofort, sonst nach 5 s jeder, der nicht getippt
+  hat. Der **Bube** bringt eine Regel-Karte, die nach der Runde gilt und die
+  alte ablöst wie eine Regelkarten-Runde (`regelAbrechnen(…, abgeloest)`);
+  die vier möglichen Karten zieht `baueRunde` vorab aus einem eigenen Stapel.
+  Wer den letzten König der Runde zieht, bekommt den Becher (je König 1).
+- Bombe und Königsbecher laufen wie das Kategorien-Battle **im Kreis in
+  Sitzreihenfolge**, auch im Team-Abend. Die Kachel im Menü nennt sie
+  trotzdem „reihum" — dafür gibt es `ablaufVon` neben `istReihum`.
+- Seit diesen dreien ist `protocolVersion` 4 (3 kam mit den Spielmodi).
+
 **Imposter seit dem 19.09.2026:** Der Imposter sieht **„IMPOSTER“ und einen
 Hinweis** (grobe Kategorie, `inhalte/imposter.ts`), kein Nachbarwort mehr. Die
 Runde bekommt eine **feste Redereihenfolge** (`reihenfolge`, je Runde
@@ -106,23 +390,99 @@ der Tipp als Enthaltung.
 
 ## Neue Inhalte ergänzen
 
-Die Kataloge unter `src/inhalte/` sind reine Daten: Fragen, Wortpaare, Namen,
-Sprüche. Neue Einträge kommen **hinten** dazu und bekommen die nächste freie
-Kennung; bestehende Kennungen ändern sich nie — sie stehen in abgelegten
-Rundenprotokollen.
+Die Kataloge sind reine Daten: Fragen, Wortpaare, Namen, Sprüche. Seit dem
+22.09.2026 (Entscheidung P4, Datenbank später) steht jeder als **JSON-Datei**
+unter `src/inhalte/daten/<katalog>.json`; die gleichnamige `.ts` daneben lädt
+und prüft sie nur. Neue Einträge kommen **hinten** dazu und bekommen die
+nächste freie Kennung; bestehende Kennungen ändern sich nie — sie stehen in
+abgelegten Rundenprotokollen, und die Ziehung hängt an der Reihenfolge.
 
-Stand 19.09.2026: 140 Quizfragen, 120 Imposter-Wortpaare, 140 Identitäten,
-110 Sprüche für „Ich hab noch nie”, 108 für „Wer würde eher”, 80 Schätzfragen,
-100 Entweder-oder-Paare, 120 Aufgaben für Wahrheit oder Pflicht (60/60).
+Jede Datei hat einen Kopf (`katalog`, `grenze`, `pflege`, `inhalt`) und
+darunter `eintraege`, ein Eintrag je Zeile. **`grenze` ist Pflicht** und sagt,
+was kein Eintrag darf: Stufe 3 („derb“) heißt pikant-erwachsen — nie
+herabwürdigend, nie über reale benannte Personen, nie über Minderjährige, nie
+Gewalt; kein Text fordert zum Trinken auf.
 
-Die Sätze zum Kiffen (n101–n110, w101–w108) liegen im normalen Vorrat, es
-gibt keinen Schalter, der sie ausblendet.
+**Das Schema** (`src/inhalte/schema.ts`, eigener Prüfer, kein zod — das Paket
+hat keine Laufzeitabhängigkeit außer game-api) läuft an drei Stellen: beim
+Import jedes Katalogs (wirft), im Build (`werkzeug/inhalte-pruefen.mjs` nach
+`tsc`, nennt alle Fehler auf einmal und bricht ab) und im Test
+(`test/inhalte-json.test.ts`). Es verlangt über die Form hinaus:
+
+- Kennungen **lückenlos in Katalogreihenfolge** (`q001`, `q002`, …) — wer
+  umsortiert, löscht oder eine Nummer auslässt, fällt im Build auf.
+- **Keine Dubletten**, normalisiert (Groß/klein, Satzzeichen, Leerraum egal;
+  bei Entweder-oder auch das vertauschte Paar, bei Wahrheit/Pflicht über
+  beide Arten).
+- **Keine unbekannten Felder** — so sieht ein Tippfehler im Feldnamen aus.
+- Beim Imposter darf der Hinweis das Wort nicht wörtlich enthalten.
+
+**Der Altbestand** — die 918 Einträge vom 22.09.2026 — liegt als die
+ursprünglichen TS-Dateien unter `test/altbestand/`, und ein Test vergleicht
+jeden davon Feld für Feld mit seiner Stelle im JSON. Wer einen alten Eintrag
+bewusst korrigiert, korrigiert ihn dort mit. Neue Einträge (alles jenseits
+des Altbestands) brauchen `haerte` und mindestens ein `paket`, Quiz und
+Schätzen auch `stufe`; ein Test hält die Mischung grob bei 60 % harmlos,
+30 % pikant, 10 % derb.
+
+Stand 22.09.2026 — Einträge je Katalog, in Klammern der Altbestand:
+
+- Wahrheit oder Pflicht: 400 (120, davon 60/60)
+- Wer würde eher: 300 (108)
+- Ich hab noch nie: 300 (110)
+- Entweder – oder: 250 (100)
+- Allgemeinwissen: 300 (140)
+- Schätzen: 200 (80)
+- Imposter: 250 (120)
+- Wer bin ich: 250 (140)
+
+Dazu seit dem 22.09.2026 die drei Kataloge ohne Uhr (#213, noch als
+TS-Quelltext unter `src/inhalte/`, nicht Teil der JSON-Umstellung):
+82 Kategorien (k001–k082), 72 Mehrheitsfragen (m001–m072), 49 Regel-Karten
+(r001–r049) — jeder Eintrag **mit** `haerte`
+und mindestens einem `paket`, alle drei Stufen belegt, je Paket mindestens
+zehn harmlose (`test/ohne-uhr.test.ts`). Regel-Karten sind Befehle an alle
+und tragen deshalb wie Wahrheit oder Pflicht gar kein Trinkwort.
+
+**Metadaten** (seit dem 22.09.2026, `src/inhalte/typen.ts`) — alle optional,
+ein Eintrag ohne Feld gilt als harmlos, allgemein, ab vier Sitzen:
+
+| Feld | Werte | fehlt = |
+| --- | --- | --- |
+| `haerte` | 1 harmlos, 2 pikant, 3 derb | 1 |
+| `paket` | Liste aus `PAKETE` (`wg-abend`, `jga`, `weihnachten`, `studenten`, `arbeit`) | Allgemeingut, spielt in jedem Paket mit |
+| `minSitze` | Zahl | immer |
+| `stufe` | 1–3, nur Quiz und Schätzen | ohne Angabe (filtert noch nichts) |
+
+```json
+{ "id": "n111", "haerte": 2, "paket": ["wg-abend", "studenten"], "text": "Ich hab noch nie …" }
+```
+
+- **Im Zweifel die höhere Härte.** Ein harmloser Tisch darf nie einen
+  pikanten Spruch sehen; umgekehrt fehlt nur ein Spruch.
+- **Ein neues Paket** kommt hinten an `PAKETE` dazu, nie umbenennen — die
+  Kennung steht in abgelegten Regelsätzen. Ein Paket braucht je Katalog, in
+  dem es gespielt werden soll, mindestens `MINDESTMENGE` (10) Einträge,
+  sonst mischt der Filter Allgemeingut dazu.
+- **Jeder Katalog muss mindestens zwölf harmlose Einträge behalten** (so
+  viele Sitze hat ein voller Tisch, und die Härte lockert der Filter nie).
+  Der Test `jeder Katalog traegt die strengste Einstellung` prüft das.
+- `minSitze` nur, wenn der Text wirklich eine große Runde braucht („Wer von
+  euch acht …“).
+
+Die Sätze zum Kiffen (n101–n110, w101–w108, zusammen 18) sind seit dem
+22.09.2026 **pikant** (`haerte: 2`) und damit an einem Tisch mit der Vorgabe
+„harmlos“ nicht mehr dabei. Sonst trägt im Altbestand kein Eintrag eine
+Härte; die neuen Einträge tragen alle eine.
 
 ## Ein weiteres Minispiel einbauen
 
 1. `MinispielId` in `src/regeln.ts` erweitern, Kennung in `MINISPIELE`.
 2. Rundentyp in `src/partie.ts` ergänzen (`Runde`-Union, `baueRunde`,
-   `werteAus`) und, falls es reihum läuft, in `istReihum`.
+   `werteAus`) und, falls es reihum läuft, in `istReihum` — läuft es im
+   Kreis (Kategorien, Bombe, Königsbecher), nur in `ablaufVon`.
+   Braucht es eine Uhr: `phaseMs`/`advancePhase` im Adapter, nie im Client
+   (siehe „Die drei mit Uhr").
 3. Sicht in `src/sicht.ts` — und dabei zuerst entscheiden, was **nicht**
    mitfährt.
 4. Bot in `src/bot.ts`, Ansicht in
@@ -130,6 +490,11 @@ gibt keinen Schalter, der sie ausblendet.
    Sicht in dessen `sicht.ts`.
 5. Punkte und Schlücke in `PUNKTE`/`SCHLUECKE` eintragen — sie stehen
    absichtlich an einer Stelle, damit man das Turnier dort austariert.
+6. In `src/modi.ts` den Stapel-Zweck in `zweckArt` (und die Plätze je Runde
+   in `platzeJeRunde`) — sonst wiederholt die Eskalation Inhalte über die
+   Stufen — und das Minispiel in die passenden `THEMEN_MINISPIELE`, mitten in
+   die Liste. Im Client `MINISPIEL_NAME`/`MINISPIEL_ANSAGE` in `sicht.ts`,
+   `MINISPIEL_ABLAUF`/`MINISPIEL_ZEICHEN` in `wahl.ts`.
 
 Der Vertrag (`packages/client/src/vertrag/partykiste.test.ts`) bricht den
 Client-Bau, wenn Sicht und Beschreibung auseinanderlaufen. Der Schaukasten

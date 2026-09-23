@@ -11,16 +11,52 @@
  * Client (`packages/client/src/minispiele/golf/physik.ts`).
  */
 
+import type { GolfModus } from './modus.js';
+
 /**
- * Golf kennt keine Regeloptionen ausser der Lochzahl — die steht in `rounds`
- * des Tisches, nicht im Regelsatz. `GolfRegeln` bleibt deshalb leer, ist aber
- * ausdruecklich ein Objekt und kein `undefined`: `validateConfig` muss einen
- * kaputten Regelsatz (Zahl, Zeichenkette, `null`) von einem echten
- * unterscheiden koennen, und ein leeres Objekt ist dafuer die einzige Form,
- * die beides erlaubt.
+ * Filter fuer die gezogene Bahnfolge. Beide Felder optional; beide gesetzt
+ * heisst UND. Die Rampe von leicht nach schwer bleibt, sie laeuft nur ueber
+ * die Stufen, die der Filter uebrig laesst.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface GolfRegeln {}
+export interface GolfFilter {
+  /** Erlaubte Stufen, z. B. `[3, 4, 5]`. Leer oder fehlend: alle. */
+  readonly schwierigkeit?: readonly number[];
+  /** Eine Zonenart aus `THEMEN` (kurse.ts). Fehlend: jedes Thema. */
+  readonly thema?: string;
+}
+
+/**
+ * Der Regelsatz von Golf. Die Lochzahl steht weiter in `rounds` des Tisches,
+ * nicht hier.
+ *
+ * Bis zum 22.09.2026 war er leer. Seitdem traegt er die BAHNAUSWAHL — eine
+ * Tisch-Eigenschaft, alle spielen dieselbe Folge. Hoechstens eines der drei
+ * Felder `kurs`, `filter`, `bahnen` ist gesetzt (`validateConfig` weist zwei
+ * zugleich ab); keines heisst wie vorher: die Saat zieht aus allen Bahnen.
+ * Was aus der Wahl wird, rechnet allein `waehleBahnen` (bahnen.ts).
+ *
+ * Er bleibt ausdruecklich ein Objekt und kein `undefined`: `validateConfig`
+ * muss einen kaputten Regelsatz (Zahl, Zeichenkette, `null`) von einem echten
+ * unterscheiden koennen.
+ */
+export interface GolfRegeln {
+  /** Kennung eines Kurses aus `KURSE` (kurse.ts). */
+  readonly kurs?: string;
+  readonly filter?: GolfFilter;
+  /** Freie Einzelauswahl: Kennungen in Spielfolge. */
+  readonly bahnen?: readonly string[];
+  /**
+   * Die Spielart fuer die Tischliste (`varianteVon` im Server reicht sie
+   * durch): der Kursname, „Eigene Auswahl" oder eine Beschreibung des
+   * Filters, siehe `varianteFuer`. Nur Anzeige — die Bahnwahl liest es nie.
+   */
+  readonly variante?: string;
+  /**
+   * Klassisch oder Fun (seit dem 22.09.2026, siehe modus.ts). Fehlt es, ist
+   * der Tisch klassisch — so bleiben alle Tische von davor, was sie waren.
+   */
+  readonly modus?: GolfModus;
+}
 
 export const DEFAULT_REGELN: GolfRegeln = {};
 
@@ -81,7 +117,23 @@ export interface Zug {
   readonly rx: number;
   readonly ry: number;
   readonly kraft: number;
+  /**
+   * Fehlt: ein Schlag — so sieht jeder Zug von vor dem 23.09.2026 aus, und so
+   * bleibt jeder Schlag auch danach Byte für Byte, was er war.
+   *
+   * `'ausloesen'`: Der Sitz löst statt eines Schlags seinen gehaltenen
+   * Störschlag aus (Fun-Modus, Teil 3/3; im Client stoerschlag.ts). Gezielt
+   * wird genauso — Richtung und Kraft legen die Zielstelle fest —, und ob er
+   * überhaupt einen hält, weiß wie beim Schlag nur der Spielkern auf den
+   * Geräten. Der Server prüft die Form und dass der Tisch im Fun-Modus spielt.
+   */
+  readonly art?: ZugArt;
 }
+
+/** Die Zugtypen neben dem Schlag (siehe `Zug.art`). */
+export type ZugArt = 'ausloesen';
+
+export const ZUG_ARTEN: readonly ZugArt[] = ['ausloesen'];
 
 export type GolfAktion =
   | { readonly art: 'zug'; readonly zug: Zug }
@@ -92,7 +144,25 @@ export type GolfAktion =
    * Server rechnet ihn nicht nach (er kennt die Loecher nicht), sondern
    * vergleicht nur, ob mehrere Geraete auf denselben Wert kommen.
    */
-  | { readonly art: 'ergebnis'; readonly schlaege: readonly number[]; readonly pruef: string }
+  | {
+      readonly art: 'ergebnis';
+      readonly schlaege: readonly number[];
+      readonly pruef: string;
+      /**
+       * Seit dem 22.09.2026: die Tafel `[loch][sitz]` selbst, aus der `pruef`
+       * gerechnet ist. Optional, damit ein Geraet von davor weiter melden
+       * kann; der Server nimmt sie nur fuer die Bestleistung je Bahn und nur,
+       * wenn sie zu Pruefsumme und Ausgang passt (bestleistung.ts).
+       */
+      readonly jeLoch?: readonly (readonly number[])[];
+      /**
+       * Seit dem 22.09.2026: `[loch][sitz]` ob der Ball gefallen ist. Ein nicht
+       * eingelochtes Loch steht in `jeLoch` als Schlaglimit + 1 und ist nie
+       * eine Bestleistung. Getrennt von `jeLoch`, damit die Pruefsumme ueber
+       * die Schlagzahlen bleibt, wie sie ist.
+       */
+      readonly eingelocht?: readonly (readonly boolean[])[];
+    }
   /** Sitz gibt auf / verlaesst den Tisch. */
   | { readonly art: 'aufgabe' }
   /**

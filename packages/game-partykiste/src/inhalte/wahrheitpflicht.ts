@@ -1,133 +1,22 @@
 /**
  * Aufgaben für "Wahrheit oder Pflicht".
  *
- * Wahrheit (a001–a060) sind Fragen, Pflicht (a061–a120) sind Aufgaben, die
- * sofort am Tisch machbar sind — kein Zubehör außer Handy und Getränk. Wer
- * die Aufgabe nicht macht, trinkt. Neue Einträge hängen hinten an, Kennungen
- * ändern sich nie.
+ * Wahrheit sind Fragen, Pflicht sind Aufgaben, die sofort am Tisch machbar
+ * sind — kein Zubehör außer dem Handy. a001–a060 sind Wahrheit, a061–a120
+ * Pflicht; ab a121 wechseln die Arten. Wer kneift, bekommt den Schluck (oder
+ * Strafpunkt) aus der WERTUNG, nie aus dem Text: Seit dem 22.09.2026 befiehlt
+ * keine Aufgabe mehr das Trinken, weil derselbe Text auch bei ausgeschaltetem
+ * Trinkmodus auf der Bühne steht. `test/inhalte.test.ts` hält das fest.
+ *
+ * Die Eintraege stehen seit dem 22.09.2026 in `daten/wahrheitpflicht.json` (Entscheidung
+ * P4: Inhalte als JSON mit Schema, Datenbank spaeter). Diese Datei laedt und
+ * prueft sie nur — geprueft von `schema.ts`, beim Import, im Build und im
+ * Test. Neue Eintraege hinten in der JSON-Datei, mit der naechsten freien
+ * Kennung; nie umsortieren, Kennungen aendern sich nie.
  */
 
+import roh from './daten/wahrheitpflicht.json' with { type: 'json' };
+import { ladeKatalog } from './schema.js';
 import type { Aufgabe } from './typen.js';
 
-export const AUFGABEN: readonly Aufgabe[] = [
-  { id: 'a001', art: 'wahrheit', text: 'Was war dein peinlichster Moment auf einer Party?' },
-  { id: 'a002', art: 'wahrheit', text: 'Welche Notlüge hast du zuletzt jemandem erzählt?' },
-  { id: 'a003', art: 'wahrheit', text: 'Was ist die dümmste Ausrede, die du je benutzt hast?' },
-  { id: 'a004', art: 'wahrheit', text: 'Welches Lied hörst du heimlich, wenn niemand zuschaut?' },
-  { id: 'a005', art: 'wahrheit', text: 'Was war dein peinlichstes Outfit aller Zeiten?' },
-  { id: 'a006', art: 'wahrheit', text: 'Welche App checkst du am häufigsten, wenn dir langweilig ist?' },
-  { id: 'a007', art: 'wahrheit', text: 'Was hast du als Kind kaputt gemacht und nie zugegeben?' },
-  { id: 'a008', art: 'wahrheit', text: 'Welchen Fun Fact über dich kennt fast niemand hier?' },
-  { id: 'a009', art: 'wahrheit', text: 'Was ist das Peinlichste, das in deinem Suchverlauf steht?' },
-  { id: 'a010', art: 'wahrheit', text: 'Welches Wort sprichst du garantiert falsch aus?' },
-  { id: 'a011', art: 'wahrheit', text: 'Was war die schlechteste Ausrede für eine Verspätung, die du je gebracht hast?' },
-  { id: 'a012', art: 'wahrheit', text: 'Welchen Trend hast du mitgemacht, den du heute bereust?' },
-  { id: 'a013', art: 'wahrheit', text: 'Was ist dein Guilty Pleasure beim Essen?' },
-  { id: 'a014', art: 'wahrheit', text: 'Welches Missgeschick ist dir schon in der Öffentlichkeit passiert?' },
-  { id: 'a015', art: 'wahrheit', text: 'Was ist die peinlichste Autokorrektur, die dir passiert ist?' },
-  { id: 'a016', art: 'wahrheit', text: 'Welche Serie schaust du, ohne es jemandem zu erzählen?' },
-  { id: 'a017', art: 'wahrheit', text: 'Was war dein schlechtester erster Eindruck bei jemandem?' },
-  { id: 'a018', art: 'wahrheit', text: 'Welches Talent hast du, das niemand von dir erwartet?' },
-  { id: 'a019', art: 'wahrheit', text: 'Was hast du zuletzt aus Faulheit nicht gemacht, obwohl du solltest?' },
-  { id: 'a020', art: 'wahrheit', text: 'Welche Notlüge hast du deinen Eltern mal erzählt?' },
-  { id: 'a021', art: 'wahrheit', text: 'Was war der peinlichste Moment in einem Urlaub?' },
-  { id: 'a022', art: 'wahrheit', text: 'Welches Wort benutzt du viel zu oft?' },
-  { id: 'a023', art: 'wahrheit', text: 'Was ist die verrückteste Ausrede, warum du zu spät zur Arbeit kamst?' },
-  { id: 'a024', art: 'wahrheit', text: 'Welchen Kindheitshelden fandest du am coolsten?' },
-  { id: 'a025', art: 'wahrheit', text: 'Was war dein peinlichster Sturz oder Ausrutscher?' },
-  { id: 'a026', art: 'wahrheit', text: 'Welche Angewohnheit von dir nervt andere am meisten?' },
-  { id: 'a027', art: 'wahrheit', text: 'Was ist das Merkwürdigste, das du je gegoogelt hast?' },
-  { id: 'a028', art: 'wahrheit', text: 'Welches Gerücht über dich stimmt tatsächlich?' },
-  { id: 'a029', art: 'wahrheit', text: 'Was war das schlechteste Geschenk, das du je gemacht hast?' },
-  { id: 'a030', art: 'wahrheit', text: 'Welche Ausrede benutzt du, um Nachrichten nicht zu beantworten?' },
-  { id: 'a031', art: 'wahrheit', text: 'Was hast du zuletzt heimlich vor dem Spiegel geübt?' },
-  { id: 'a032', art: 'wahrheit', text: 'Welches Essen isst du heimlich mitten in der Nacht?' },
-  { id: 'a033', art: 'wahrheit', text: 'Was war die peinlichste Nachricht, die an den falschen Empfänger ging?' },
-  { id: 'a034', art: 'wahrheit', text: 'Welchen Film magst du, den du niemandem zugibst?' },
-  { id: 'a035', art: 'wahrheit', text: 'Was war dein größter Fail bei einem Vorstellungsgespräch oder in der Schule?' },
-  { id: 'a036', art: 'wahrheit', text: 'Welche Marotte hast du beim Essen?' },
-  { id: 'a037', art: 'wahrheit', text: 'Was ist das Kindischste, das du heute noch tust?' },
-  { id: 'a038', art: 'wahrheit', text: 'Welchen Satz sagst du viel zu oft im Alltag?' },
-  { id: 'a039', art: 'wahrheit', text: 'Was war dein peinlichster Moment beim Tanzen?' },
-  { id: 'a040', art: 'wahrheit', text: 'Welche Serie hast du an einem einzigen Tag komplett durchgeschaut?' },
-  { id: 'a041', art: 'wahrheit', text: 'Was hast du als Teenager für total cool gehalten?' },
-  { id: 'a042', art: 'wahrheit', text: 'Welches Missverständnis hat dir richtig Ärger eingebracht?' },
-  { id: 'a043', art: 'wahrheit', text: 'Was ist dein am längsten gehütetes kleines Geheimnis?' },
-  { id: 'a044', art: 'wahrheit', text: 'Welche Ausrede hast du benutzt, um ein Treffen abzusagen?' },
-  { id: 'a045', art: 'wahrheit', text: 'Was war das Peinlichste, das dir vor Publikum passiert ist?' },
-  { id: 'a046', art: 'wahrheit', text: 'Welchen Spitznamen hattest du früher und wolltest ihn loswerden?' },
-  { id: 'a047', art: 'wahrheit', text: 'Was ist deine seltsamste Marotte vor dem Schlafen?' },
-  { id: 'a048', art: 'wahrheit', text: 'Welche Notlüge hast du deinem Chef schon erzählt?' },
-  { id: 'a049', art: 'wahrheit', text: 'Was war dein größter Schreck-Moment, der am Ende harmlos war?' },
-  { id: 'a050', art: 'wahrheit', text: 'Welches Lied singst du unter der Dusche am liebsten?' },
-  { id: 'a051', art: 'wahrheit', text: 'Was ist das Peinlichste, das dir in einem Bewerbungsgespräch passiert ist?' },
-  { id: 'a052', art: 'wahrheit', text: 'Welchen falschen Fakt hast du jahrelang für wahr gehalten?' },
-  { id: 'a053', art: 'wahrheit', text: 'Was war deine schlimmste Frisur-Entscheidung?' },
-  { id: 'a054', art: 'wahrheit', text: 'Welches Wort verwechselst du ständig mit einem anderen?' },
-  { id: 'a055', art: 'wahrheit', text: 'Was hast du schon mal aus Versehen laut gesagt statt nur gedacht?' },
-  { id: 'a056', art: 'wahrheit', text: 'Welchen Serienmarathon bereust du im Nachhinein?' },
-  { id: 'a057', art: 'wahrheit', text: 'Was ist deine unpopulärste Meinung über Essen?' },
-  { id: 'a058', art: 'wahrheit', text: 'Welchen Moment aus der Schulzeit würdest du am liebsten löschen?' },
-  { id: 'a059', art: 'wahrheit', text: 'Was war dein peinlichster Moment mit Bus, Bahn oder Auto?' },
-  { id: 'a060', art: 'wahrheit', text: 'Welche Ausrede fällt dir spontan ein, wenn du zu spät zu dieser Runde kämst?' },
-  { id: 'a061', art: 'pflicht', text: 'Sing den Refrain deines Lieblingssongs — laut.' },
-  { id: 'a062', art: 'pflicht', text: 'Mach 30 Sekunden lang ein Kompliment-Feuerwerk für deinen Nachbarn.' },
-  { id: 'a063', art: 'pflicht', text: 'Sprich die nächsten drei Sätze mit einem Akzent deiner Wahl.' },
-  { id: 'a064', art: 'pflicht', text: 'Mach ein Selfie mit deinem Nachbarn und zeig es der Runde.' },
-  { id: 'a065', art: 'pflicht', text: 'Versuch einen Handstand — oder wenigstens den Ansatz davon.' },
-  { id: 'a066', art: 'pflicht', text: 'Tanze 20 Sekunden lang, ganz ohne Musik.' },
-  { id: 'a067', art: 'pflicht', text: 'Sag einen Zungenbrecher dreimal schnell hintereinander auf.' },
-  { id: 'a068', art: 'pflicht', text: 'Lies eine Nachricht deiner Wahl aus deinem Chat laut vor.' },
-  { id: 'a069', art: 'pflicht', text: 'Imitiere ein Tier deiner Wahl, bis jemand errät welches.' },
-  { id: 'a070', art: 'pflicht', text: 'Trink einen Schluck und erzähl danach einen Witz.' },
-  { id: 'a071', art: 'pflicht', text: 'Mach der Person rechts von dir drei echte Komplimente.' },
-  { id: 'a072', art: 'pflicht', text: 'Singe "Happy Birthday" für eine Person, die heute keinen Geburtstag hat.' },
-  { id: 'a073', art: 'pflicht', text: 'Erfinde spontan einen Werbespot für dein Getränk.' },
-  { id: 'a074', art: 'pflicht', text: 'Mach 30 Sekunden lang Nachrichtensprecher-Stimme, egal was du sagst.' },
-  { id: 'a075', art: 'pflicht', text: 'Tanze wie jemand, der noch nie im Leben getanzt hat.' },
-  { id: 'a076', art: 'pflicht', text: 'Sprich für die nächste Minute nur in Reimen.' },
-  { id: 'a077', art: 'pflicht', text: 'Mach eine Roboter-Imitation, während du deinen Namen sagst.' },
-  { id: 'a078', art: 'pflicht', text: 'Zeig der Runde das letzte harmlose Foto in deiner Galerie.' },
-  { id: 'a079', art: 'pflicht', text: 'Erzähl einen Witz, über den alle mindestens einmal lachen müssen.' },
-  { id: 'a080', art: 'pflicht', text: 'Trink einen Schluck und mach dabei die traurigste Grimasse deines Lebens.' },
-  { id: 'a081', art: 'pflicht', text: 'Halte 20 Sekunden lang Blickkontakt mit deinem Nachbarn, ohne zu lachen.' },
-  { id: 'a082', art: 'pflicht', text: 'Sing die erste Werbejingle, die dir einfällt.' },
-  { id: 'a083', art: 'pflicht', text: 'Mach einen Trinkspruch für die ganze Runde.' },
-  { id: 'a084', art: 'pflicht', text: 'Spiele 20 Sekunden lang Luftgitarre, so episch wie möglich.' },
-  { id: 'a085', art: 'pflicht', text: 'Erfinde einen Spitznamen für jede Person am Tisch.' },
-  { id: 'a086', art: 'pflicht', text: 'Sprich die nächsten zwei Sätze wie eine Nachrichtensprecherin oder ein Nachrichtensprecher.' },
-  { id: 'a087', art: 'pflicht', text: 'Mach ein Gruppen-Selfie mit der ganzen Runde in einer lustigen Pose.' },
-  { id: 'a088', art: 'pflicht', text: 'Tanze eine Bewegung aus deinem Lieblingsmusikvideo nach.' },
-  { id: 'a089', art: 'pflicht', text: 'Sing den Refrain deines Lieblingssongs rückwärts — so gut es geht.' },
-  { id: 'a090', art: 'pflicht', text: 'Mach 30 Sekunden Stand-up über deinen heutigen Tag.' },
-  { id: 'a091', art: 'pflicht', text: 'Trink einen Schluck und erzähl die Geschichte hinter deinem Spitznamen.' },
-  { id: 'a092', art: 'pflicht', text: 'Sag einen Zungenbrecher mit dem Akzent deiner Wahl.' },
-  { id: 'a093', art: 'pflicht', text: 'Zeig deinen besten Siegertanz.' },
-  { id: 'a094', art: 'pflicht', text: 'Erzähl 20 Sekunden lang eine Geschichte, in der jedes zweite Wort mit "S" beginnt.' },
-  { id: 'a095', art: 'pflicht', text: 'Mach der ganzen Runde ein Kompliment, ohne dabei ein Wort zu sagen.' },
-  { id: 'a096', art: 'pflicht', text: 'Sing dein Lieblingslied als Opernarie.' },
-  { id: 'a097', art: 'pflicht', text: 'Mach 20 Sekunden lang ein todernstes Nachrichtensprecher-Gesicht.' },
-  { id: 'a098', art: 'pflicht', text: 'Trink einen Schluck und mach danach ein Model-Posing für die Runde.' },
-  { id: 'a099', art: 'pflicht', text: 'Sprich eine ganze Runde lang nur im Flüsterton.' },
-  { id: 'a100', art: 'pflicht', text: 'Erfinde einen Toast auf den heutigen Abend und trag ihn vor.' },
-  { id: 'a101', art: 'pflicht', text: 'Mach die peinlichste Tanzbewegung, die dir spontan einfällt.' },
-  { id: 'a102', art: 'pflicht', text: 'Lies die letzte harmlose Notiz aus deiner Notizen-App vor.' },
-  { id: 'a103', art: 'pflicht', text: 'Sing dein Lieblingslied so, als wärst du ein Roboter.' },
-  { id: 'a104', art: 'pflicht', text: 'Mach 30 Sekunden Kompliment-Battle mit deinem Nachbarn.' },
-  { id: 'a105', art: 'pflicht', text: 'Trink einen Schluck und imitiere danach deinen Sitznachbarn.' },
-  { id: 'a106', art: 'pflicht', text: 'Zähl von zehn rückwärts — mit geschlossenen Augen und einem Bein in der Luft.' },
-  { id: 'a107', art: 'pflicht', text: 'Erfinde spontan einen eigenen Zungenbrecher und sag ihn dreimal auf.' },
-  { id: 'a108', art: 'pflicht', text: 'Mach 20 Sekunden lang die Stimme eines kleinen Kindes.' },
-  { id: 'a109', art: 'pflicht', text: 'Tanze einen Tanz, den du dir gerade erfindest, und gib ihm einen Namen.' },
-  { id: 'a110', art: 'pflicht', text: 'Sing den Refrain deines Lieblingslieds als Schlaflied.' },
-  { id: 'a111', art: 'pflicht', text: 'Mach mit der ganzen Runde einen High-Five-Marathon — jeder einmal.' },
-  { id: 'a112', art: 'pflicht', text: 'Trink einen Schluck und sag danach dein Sternzeichen mit Theaterstimme auf.' },
-  { id: 'a113', art: 'pflicht', text: 'Erfinde ein Motto für den heutigen Abend und ruf es einmal laut.' },
-  { id: 'a114', art: 'pflicht', text: 'Mach 20 Sekunden lang eine Live-Reportage über das, was gerade am Tisch passiert.' },
-  { id: 'a115', art: 'pflicht', text: 'Sing den Refrain deines Lieblingslieds im Flüsterton.' },
-  { id: 'a116', art: 'pflicht', text: 'Zeig deinen besten Verlierer-Gesichtsausdruck.' },
-  { id: 'a117', art: 'pflicht', text: 'Mach einen kurzen Toast auf die Person links von dir.' },
-  { id: 'a118', art: 'pflicht', text: 'Sprich die nächsten drei Sätze nur in Filmzitaten deiner Wahl.' },
-  { id: 'a119', art: 'pflicht', text: 'Trink einen Schluck und mach danach dein bestes Tier-Geräusch.' },
-  { id: 'a120', art: 'pflicht', text: 'Sing ein Lied, das genau zu deiner Stimmung gerade passt.' },
-];
+export const AUFGABEN: readonly Aufgabe[] = ladeKatalog<Aufgabe>('wahrheitpflicht', roh);
