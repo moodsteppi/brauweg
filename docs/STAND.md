@@ -1245,9 +1245,14 @@ an einer einzigen Stelle: `src/entitlements.ts`.
 Vor dem Mergen immer `git fetch` — auf den Zweigen landen auch Commits aus
 Cursor.
 
-**`gh` ist nicht installiert**, und das Remote läuft über SSH. Pull
-Requests lassen sich deshalb aus der Sitzung heraus nicht anlegen; gemerged
-wird mit `git merge --ff-only`.
+**Ob `gh` geht, hängt am Rechner.** Bis zum 07.09.2026 stand hier, `gh` sei
+nicht installiert und das Remote laufe über SSH — beides gilt nicht überall
+(auf dem Mood-XPS liegt `gh` 2.97.0, angemeldet, Remote über HTTPS). Erst
+`gh auth status && git remote -v` fragen, dann entscheiden: Meldet das ein
+angemeldetes Konto, gehen Pull Requests aus der Sitzung heraus. Sonst nicht —
+zusammengeführt wird trotzdem nicht am Menschen vorbei, und ein Worker im
+Orchestrator merged ohnehin nie. Einzelheiten in `CLAUDE.md` unter „Bauen und
+prüfen".
 
 **Fragen vorab bündeln**, dann bis fertig durchbauen — nicht mittendrin
 nachfragen.
