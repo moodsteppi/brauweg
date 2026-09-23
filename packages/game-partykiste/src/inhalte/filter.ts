@@ -46,12 +46,21 @@ export type InhaltsRegeln = Partial<Pick<PartykisteRegeln, 'inhaltsHaerte' | 'pa
  *                      was fuer ein ANDERES Paket gedacht ist)
  *   ohnePaket          das Paket wird ignoriert
  *   ohneMinSitze       auch die Sitzgrenze faellt — lieber ein Spruch, der
- *                      auf mehr Leute zielt, als eine Runde ohne Spruch
- *   vollerKatalog      letzter Halt: nichts passte, auch die Haerte nicht.
- *                      Darf im Betrieb nicht vorkommen — ein Test haelt
- *                      jeden Katalog auf mindestens MINDESTMENGE harmlose
- *                      Eintraege, damit die strengste Einstellung immer
- *                      spielt.
+ *                      auf mehr Leute zielt, als eine Runde ohne Spruch.
+ *                      DAS IST DER LETZTE HALT: Hier gilt nur noch die Haerte.
+ *   vollerKatalog      GIBT ES NICHT MEHR (seit dem 23.09.2026). Bis dahin
+ *                      nahm diese Stufe den ganzen Katalog, wenn auch
+ *                      `ohneMinSitze` zu wenig hergab — also auch Derbes
+ *                      fuer einen harmlosen Tisch, gegen Regel 2 oben. Im
+ *                      Betrieb kam das nie vor (jeder Katalog traegt genug
+ *                      Harmloses, ein Test haelt es fest), aber ein Katalog
+ *                      mit zu wenig Harmlosem haette es still ausgeloest.
+ *                      Jetzt wird statt dessen innerhalb der erlaubten Stufen
+ *                      wiederholt (`an()` in partie.ts laeuft den gemischten
+ *                      Stapel erst ganz durch), und ohne einen einzigen
+ *                      erlaubten Eintrag ersetzt `baueRunde` das Minispiel
+ *                      (`spielbaresMinispiel`). Die Kennung bleibt im Typ,
+ *                      weil sie in Snapshots von davor stehen kann.
  */
 export type AuswahlStufe = 'paket' | 'paketUndAllgemein' | 'ohnePaket' | 'ohneMinSitze' | 'vollerKatalog';
 
@@ -117,9 +126,19 @@ function stufeAnwenden<T extends Inhalt>(
       return katalog.filter((i) => passtHaerte(i, haerte) && passtSitze(i, sitze));
     case 'ohneMinSitze':
       return katalog.filter((i) => passtHaerte(i, haerte));
+    /* Nie mehr angesteuert (siehe AuswahlStufe) — und selbst dann nie ueber die Haerte. */
     case 'vollerKatalog':
-      return [...katalog];
+      return katalog.filter((i) => passtHaerte(i, haerte));
   }
+}
+
+/**
+ * Hat der Katalog ueberhaupt einen Eintrag bis zu dieser Haerte? Dasselbe
+ * Mass wie die letzte Stufe von `waehlbareInhalte`: Ist das nein, ist die
+ * Auswahl leer, egal mit welchem Paket und welcher Sitzzahl.
+ */
+export function hatErlaubtenVorrat(katalog: readonly Inhalt[], haerte: Haerte): boolean {
+  return katalog.some((i) => passtHaerte(i, haerte));
 }
 
 /**
@@ -129,9 +148,12 @@ function stufeAnwenden<T extends Inhalt>(
  *
  * Die Stufen werden von streng nach weich durchprobiert; genommen wird die
  * erste, die `mindestens` erreicht. Bleibt selbst die weichste darunter,
- * wird sie trotzdem genommen (kurz ist besser als leer), und nur ein leerer
- * Katalog ergibt eine leere Auswahl — darauf muss der Aufrufer nicht mehr
- * pruefen, die Tests halten jeden Katalog gross genug.
+ * wird sie trotzdem genommen (kurz ist besser als leer — der Aufrufer
+ * wiederholt dann innerhalb dessen, was die Haerte erlaubt). Die Haerte
+ * lockert keine Stufe, auch nicht die letzte: Hat der Katalog unter der
+ * Grenze gar nichts, ist die Auswahl LEER, und der Aufrufer muss damit
+ * umgehen (`baueRunde` ersetzt dann das Minispiel, siehe
+ * `spielbaresMinispiel`).
  *
  * Wirft nie. Ein Regelsatz mit Unsinn in `inhaltsHaerte` gilt als harmlos,
  * einer mit Unsinn in `paket` als "alles" — dieselbe Nachsicht wie in
@@ -151,9 +173,10 @@ export function waehlbareInhalte<T extends Inhalt>(
   const grenze = Number.isFinite(sitze) ? sitze : 0;
   const ziel = Math.max(1, Math.floor(Number.isFinite(mindestens) ? mindestens : MINDESTMENGE));
 
+  /* Ohne 'vollerKatalog': Die letzte Stufe filtert noch auf die Haerte (siehe AuswahlStufe). */
   const stufen: AuswahlStufe[] = paket
-    ? ['paket', 'paketUndAllgemein', 'ohnePaket', 'ohneMinSitze', 'vollerKatalog']
-    : ['ohnePaket', 'ohneMinSitze', 'vollerKatalog'];
+    ? ['paket', 'paketUndAllgemein', 'ohnePaket', 'ohneMinSitze']
+    : ['ohnePaket', 'ohneMinSitze'];
 
   const gewollt = stufen[0]!;
   let passend = -1;

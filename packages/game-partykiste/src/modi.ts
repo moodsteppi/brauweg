@@ -134,15 +134,27 @@ export function belegeStufenweise<T extends Inhalt>(stapel: readonly T[], grenze
       stelle = sucheStufe(frei, grenze);
     }
     /*
-     * Nichts bis zur Grenze im ganzen Stapel: kommt nicht vor, weil der
-     * Stapel aus `waehlbareInhalte` stammt und jeder Katalog genug Harmloses
-     * traegt (Test "jeder Katalog traegt die strengste Einstellung"). Dann
-     * lieber irgendein Inhalt als eine Runde ohne.
+     * Nichts bis zur Grenze im ganzen Stapel: Dann hat der KATALOG nichts bis
+     * zur Grenze (`stufenStapel` legt jede erlaubte Stufe in den Stapel), und
+     * `baueRunde` spielt in dieser Runde ein anderes Minispiel
+     * (`spielbaresMinispiel`) — dieser Platz wird nie gezogen. Belegt wird er
+     * trotzdem, damit die Stellen der uebrigen Plaetze stimmen, und zwar mit
+     * dem mildesten Eintrag: Bis zum 23.09.2026 stand hier "irgendeiner",
+     * und das war der erste — womoeglich ein derber.
      */
-    if (stelle < 0) stelle = 0;
+    if (stelle < 0) stelle = mildeste(stapel, frei);
     belegt.push(frei.splice(stelle, 1)[0]!);
   }
   return belegt;
+}
+
+/** Die Stelle des mildesten Eintrags in `frei` (nach dem Auffuellen aus `stapel` nie leer). */
+function mildeste<T extends Inhalt>(_stapel: readonly T[], frei: readonly T[]): number {
+  let beste = 0;
+  frei.forEach((inhalt, i) => {
+    if (haerteVon(inhalt) < haerteVon(frei[beste]!)) beste = i;
+  });
+  return beste;
 }
 
 function sucheStufe<T extends Inhalt>(frei: readonly T[], grenze: Haerte): number {
@@ -169,6 +181,15 @@ function sucheStufe<T extends Inhalt>(frei: readonly T[], grenze: Haerte): numbe
  * Gefiltert wird auf die DECKE (nicht auf die Stufe der Runde), gemischt mit
  * derselben Saat wie im Turnier (`rundenSaat(saat, 0, zweck)`), und erst die
  * Belegung haelt jede Runde unter ihrer Stufe.
+ *
+ * Dazu kommt seit dem 23.09.2026 die Auswahl JEDER milderen Stufe, hinten
+ * angehaengt: Die Auswahl auf der Decke kann in der Paketstufe stehen
+ * bleiben (zehn derbe JGA-Sprueche reichen ihr) und dabei keinen einzigen
+ * harmlosen Eintrag enthalten. Dann faende die Belegung fuer das erste
+ * Drittel nichts und griffe daneben. Mit den milderen Auswahlen liegt fuer
+ * jede Stufe, die der Katalog ueberhaupt hergibt, ein erlaubter Eintrag im
+ * Stapel — mit ihrem eigenen weichen Rueckfall, nie mit einer lockereren
+ * Haerte.
  */
 export function stufenStapel<T extends Inhalt>(
   katalog: readonly T[],
@@ -193,6 +214,15 @@ export function stufenStapel<T extends Inhalt>(
   if (grenzen.length === 0) return null;
   const auswahl = waehlbareInhalte(katalog, { inhaltsHaerte: eskalation.decke, paket: regeln.paket }, sitze, mindestens);
   const gemischterStapel = gemischt(auswahl.inhalte, baueZufall(rundenSaat(saat, 0, zweck)));
+  const drin = new Set(gemischterStapel.map((i) => i.id));
+  for (let stufe = eskalation.decke - 1; stufe >= 1; stufe--) {
+    const milder = waehlbareInhalte(katalog, { inhaltsHaerte: stufe as Haerte, paket: regeln.paket }, sitze, mindestens);
+    for (const inhalt of gemischt(milder.inhalte, baueZufall(rundenSaat(saat, stufe, `${zweck}-milder`)))) {
+      if (drin.has(inhalt.id)) continue;
+      drin.add(inhalt.id);
+      gemischterStapel.push(inhalt);
+    }
+  }
   return { stapel: belegeStufenweise(gemischterStapel, grenzen), rueckfall: auswahl.rueckfall };
 }
 

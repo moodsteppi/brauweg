@@ -78,6 +78,7 @@ import {
 } from './zeitdruck.js';
 import {
   MINDESTMENGE,
+  hatErlaubtenVorrat,
   waehlbareInhalte,
   type Auswahl,
   type InhaltsRueckfall,
@@ -419,6 +420,68 @@ export function minispielFuer(regeln: PartykisteRegeln, nr: number): MinispielId
   return liste[nr % liste.length]!;
 }
 
+/**
+ * Die Kataloge, aus denen ein Minispiel zieht. Jeder muss unter der Haerte
+ * der Runde mindestens einen Eintrag haben, sonst kann die Runde nicht
+ * spielen (W/P: beide Arten, gewaehlt wird ja erst am Zug). Ein Record ueber
+ * `MinispielId`, damit ein neues Minispiel hier nicht vergessen wird — der
+ * Bau bricht sonst. Bus fahren zieht nur Spielkarten, es kann immer.
+ */
+const VORRAT: Readonly<Record<MinispielId, readonly (readonly Inhalt[])[]>> = {
+  imposter: [IMPOSTER_WOERTER],
+  quiz: [QUIZ_FRAGEN],
+  werbinich: [IDENTITAETEN],
+  niemals: [NIEMALS_SPRUECHE],
+  wereher: [WER_EHER_SPRUECHE],
+  busfahrer: [],
+  schaetzen: [SCHAETZ_FRAGEN],
+  entweder: [ENTWEDER_ODER],
+  wahrheitpflicht: [AUFGABEN.filter((a) => a.art === 'wahrheit'), AUFGABEN.filter((a) => a.art === 'pflicht')],
+  kategorien: [KATEGORIEN],
+  mehrheit: [MEHRHEITSFRAGEN],
+  regelkarte: [REGELKARTEN],
+  bombe: [KATEGORIEN],
+  zehnsekunden: [ZEHN_SEKUNDEN],
+  koenigsbecher: [REGELKARTEN],
+};
+
+/** Kann dieses Minispiel unter dieser Haerte spielen? */
+export function hatVorrat(art: MinispielId, haerte: Haerte): boolean {
+  return (VORRAT[art] ?? []).every((katalog) => hatErlaubtenVorrat(katalog, haerte));
+}
+
+/**
+ * Das Minispiel, das in Runde `nr` WIRKLICH spielt: das geplante, oder — hat
+ * es keinen erlaubten Inhalt — das naechste der Liste, das einen hat; zur
+ * Not Bus fahren, das keinen Inhalt braucht. Rein und deterministisch: haengt
+ * nur an Liste, Rundennummer und `spielbar`.
+ *
+ * Seit dem 23.09.2026. Vorher griff der Filter in diesem Fall zum vollen
+ * Katalog, also zu Derbem am harmlosen Tisch. Mit den heutigen Katalogen
+ * kommt der Ersatz nie vor (jeder traegt genug Harmloses, Test "jeder
+ * Katalog traegt die strengste Einstellung"); er ist das Netz fuer den
+ * Katalog von morgen.
+ */
+export function ersatzMinispiel(
+  liste: readonly MinispielId[],
+  nr: number,
+  spielbar: (art: MinispielId) => boolean,
+): MinispielId {
+  const reihe = liste.length > 0 ? liste : MINISPIELE;
+  for (let i = 0; i < reihe.length; i++) {
+    const art = reihe[(nr + i) % reihe.length]!;
+    if (spielbar(art)) return art;
+  }
+  return 'busfahrer';
+}
+
+/** `ersatzMinispiel` mit den echten Katalogen und der Haerte dieses Regelsatzes. */
+export function spielbaresMinispiel(regeln: PartykisteRegeln, nr: number): MinispielId {
+  const haerte: Haerte =
+    regeln.inhaltsHaerte === 1 || regeln.inhaltsHaerte === 2 || regeln.inhaltsHaerte === 3 ? regeln.inhaltsHaerte : 1;
+  return ersatzMinispiel(regeln.minispiele, nr, (art) => hatVorrat(art, haerte));
+}
+
 /** Die wievielte Runde ihrer Art ist Runde `nr`? Waehlt den Inhalt aus. */
 function nummerDerArt(regeln: PartykisteRegeln, nr: number): number {
   const art = minispielFuer(regeln, nr);
@@ -537,8 +600,19 @@ export function baueRunde(
    * noch `regeln` — auch ein Minispiel, das spaeter dazukommt, filtert damit
    * von selbst nie derber, als die Runde darf.
    */
-  const regeln = regelnDerRunde(grundRegeln, nr, kontext.runden);
-  const art = minispielFuer(regeln, nr);
+  const rundenRegeln = regelnDerRunde(grundRegeln, nr, kontext.runden);
+  /*
+   * Hat das geplante Minispiel unter der Haerte dieser Runde KEINEN
+   * erlaubten Inhalt, spielt ein anderes (`spielbaresMinispiel`) — der
+   * Filter lockert die Haerte nie, auch nicht als letzter Ausweg, und eine
+   * Runde ohne Inhalt haenge den Tisch auf. Die Ersatzrunde verliert den
+   * Eskalationskontext: Dessen Stufenbelegung gehoert dem geplanten
+   * Minispiel, und ihre Plaetze koennten zu einer spaeteren, derberen Stufe
+   * gehoeren. Ohne ihn filtert der Ersatz schlicht auf die Stufe der Runde.
+   */
+  const art = spielbaresMinispiel(rundenRegeln, nr);
+  const regeln: RundenRegeln =
+    art === minispielFuer(rundenRegeln, nr) ? rundenRegeln : { ...rundenRegeln, eskalation: undefined };
   const wievielte = nummerDerArt(regeln, nr);
   const basis = { fertig: [], punkte: nullen(sitze), schlucke: nullen(sitze) } as const;
 
