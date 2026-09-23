@@ -70,12 +70,8 @@ const MODELLE: Readonly<Record<string, Sitz>> = {
 /** Die Kennungen, für die es ein Modell gibt — in fester Reihenfolge. */
 const MODELLIERT = Object.keys(MODELLE);
 
-// Vorladen nur im Browser — fetch() in Node kennt relative Adressen nicht und
-// schmeißt eine unbehandelte Rejection weg, die dann dem falschen Test anhängt.
-if (typeof window !== 'undefined') {
-  useGLTF.preload(PINGUIN);
-  for (const kennung of MODELLIERT) useGLTF.preload(MODELLE[kennung].datei);
-}
+useGLTF.preload(PINGUIN);
+for (const kennung of MODELLIERT) useGLTF.preload(MODELLE[kennung].datei);
 
 export interface Avatar3DProps {
   /**

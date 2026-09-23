@@ -1,4 +1,28 @@
 import '@testing-library/jest-dom/vitest';
+import { vi } from 'vitest';
+
+/*
+ * useGLTF.preload() schlägt in vitest fehl: three liest `/3d/…glb` mit
+ * fetch, und jsdom-Node kennt relative Adressen nicht. Die unbehandelte
+ * Rejection wird dann dem gerade laufenden Test zugeordnet — auch wenn dieser
+ * mit 3D nichts zu tun hat. Das verkuppelt die Tests untereinander.
+ *
+ * Gefixt durch: preload auf eine No-Op abbilden. Der Bildschirm lädt sein
+ * Modell beim Rendern, nicht beim Modulimport — keine Verzögerung, keine
+ * Fehler.
+ */
+vi.mock('@react-three/drei', async () => {
+  const echt = await vi.importActual<typeof import('@react-three/drei')>(
+    '@react-three/drei',
+  );
+  return {
+    ...echt,
+    useGLTF: {
+      ...echt.useGLTF,
+      preload: () => {}, // No-op in Tests
+    },
+  };
+});
 
 /*
  * jsdom kennt keinen ResizeObserver. Der Trophaeenpfad legt beim Aufbau einen

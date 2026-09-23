@@ -15,7 +15,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * steht vor welcher, und was steht ueber dem Stufenbalken.
  *
  * Der Punkt am Profil-Reiter steht in `GameSelect.tabpunkt.test.tsx` und
- * nicht hier — das ist eine einfache Aufteilung, nicht wegen eines Fehlers.
+ * nicht hier: Dieser Bildschirm laedt sein Profilstueck nach, und dessen
+ * 3D-Vorladen scheitert unter jsdom (siehe `zeigeProfil`) — der Fehlschlag
+ * faellt dann dem naechsten Testfall in derselben Datei zur Last.
  */
 
 vi.mock('../api', async () => {
@@ -56,6 +58,15 @@ function profilReiter(): HTMLElement {
  * Aufbau, und ohne dieses Abwarten kommen ihre Antworten erst NACH dem Test
  * an — React meldet das als "not wrapped in act", und die Warnung steht dann
  * zwischen den Ergebnissen jedes kuenftigen Bildschirmtests.
+ *
+ * Getippt wird dagegen OHNE vorheriges Leerlaufen, und das ist keine
+ * Schlamperei: Wartet man erst den Aufbau ab und tippt dann, faellt das
+ * nachgeladene Profilstueck mitten in den Test — und mit ihm der
+ * Vorlade-Fehlschlag von `Avatar3D` (three liest `/3d/…glb` mit `fetch`, und
+ * jsdom nimmt keine Adresse ohne Wurzel). Der Fehler landet dann an einem
+ * fremden Testfall, der mit 3D nichts zu tun hat. Das Leerlaufen danach
+ * stellt sicher, dass der Fehler (falls er doch kommt) hier zugerechnet wird,
+ * nicht beim naechsten Test.
  */
 async function zeigeProfil(me: Me): Promise<void> {
   render(
@@ -72,6 +83,7 @@ async function zeigeProfil(me: Me): Promise<void> {
     />,
   );
   fireEvent.click(profilReiter());
+  await act(async () => {});
 }
 
 /** Die Ueberschriften aller Holztafeln, von oben nach unten. */
