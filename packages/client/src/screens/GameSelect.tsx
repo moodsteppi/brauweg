@@ -28,7 +28,7 @@ import {
   type Waehrung,
   type Shop as ShopDaten,
 } from '../api';
-import { inApp } from '../laufzeit';
+import { inApp, serverAdresse } from '../laufzeit';
 import {
   DECKS,
   RUECKEN,
@@ -414,7 +414,7 @@ export function GameSelect({
             Stand blockiert (scriptSrc 'self', ohne 'wasm-unsafe-eval'). Der
             gemalte Pinguin laedt nichts nach und kann nicht scheitern. */}
           {me.avatarUrl ? (
-            <img className="front-avatar" src={me.avatarUrl} alt="" draggable={false} />
+            <img className="front-avatar" src={serverAdresse(me.avatarUrl)} alt="" draggable={false} />
           ) : (
             <Pinguin getragen={me.avatar} groesse={2.6} className="front-avatar" />
           )}
@@ -1011,6 +1011,7 @@ function ProfilTab({
       {loeschenOffen && (
         <KontoLoeschenBlatt
           name={me.displayName}
+          weg={me.loeschenPer ?? 'passwort'}
           onClose={() => setLoeschenOffen(false)}
           onDeleted={onDeleted}
         />
@@ -1029,26 +1030,56 @@ function ProfilTab({
  *
  * Das Passwort wird erneut verlangt, weil die Sitzung dreissig Tage haelt:
  * Sonst genuegte ein kurz aus der Hand gelegtes Handy.
+ *
+ * Konten ohne Passwort (seit dem 23.09.2026, Apple 5.1.1(v)): Wer nur ueber
+ * Google oder Apple hereinkam, fordert einen Code an die eigene Adresse an;
+ * ein Gast tippt LÖSCHEN. Welcher Weg gilt, sagt der Server (`loeschenPer`).
  */
-function KontoLoeschenBlatt({
+export function KontoLoeschenBlatt({
   name,
+  weg,
   onClose,
   onDeleted,
 }: {
   name: string;
+  weg: 'passwort' | 'code' | 'bestaetigung';
   onClose: () => void;
   onDeleted: () => void;
 }): React.JSX.Element {
+  /** Passwort, Code oder das Wort — je nach `weg` genau eins davon. */
   const [passwort, setPasswort] = useState('');
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  /** Nur beim Code: ob er angefordert ist, und was der Server dazu sagte. */
+  const [codeHinweis, setCodeHinweis] = useState<string | null>(null);
+
+  const codeAnfordern = (): void => {
+    if (busy) return;
+    setBusy(true);
+    setFehler(null);
+    void api
+      .loeschcodeAnfordern()
+      .then((antwort) =>
+        setCodeHinweis(
+          antwort.versandt
+            ? 'Der Code ist unterwegs. Er gilt 15 Minuten.'
+            : 'Eben kam schon ein Code — er gilt weiter. Einen neuen gibt es in einer Minute.',
+        ),
+      )
+      .catch((err: unknown) =>
+        setFehler(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.'),
+      )
+      .finally(() => setBusy(false));
+  };
 
   const loeschen = (event: React.FormEvent): void => {
     event.preventDefault();
     if (busy) return;
     setBusy(true);
     setFehler(null);
-    void api.deleteMe(passwort).then(onDeleted, (err: unknown) => {
+    const nachweis =
+      weg === 'code' ? { code: passwort } : weg === 'bestaetigung' ? { bestaetigung: passwort } : passwort;
+    void api.deleteMe(nachweis).then(onDeleted, (err: unknown) => {
       // Der allgemeine Schluessel nennt E-Mail und Passwort. Hier wurde nur
       // ein Passwort eingegeben - also auch nur davon sprechen.
       setFehler(
@@ -1083,16 +1114,50 @@ function KontoLoeschenBlatt({
           Verlassen.
         </p>
 
-        <label>
-          Passwort von {name}
-          <input
-            type="password"
-            value={passwort}
-            onChange={(event) => setPasswort(event.target.value)}
-            autoFocus
-            required
-          />
-        </label>
+        {weg === 'passwort' ? (
+          <label>
+            Passwort von {name}
+            <input
+              type="password"
+              value={passwort}
+              onChange={(event) => setPasswort(event.target.value)}
+              autoFocus
+              required
+            />
+          </label>
+        ) : weg === 'code' ? (
+          <>
+            <p className="muted">
+              Dein Konto hat kein Passwort. Zur Bestätigung schicken wir dir einen Code an deine
+              E-Mail-Adresse.
+            </p>
+            <button type="button" className="hub-knopf hub-knopf--a" onClick={codeAnfordern} disabled={busy}>
+              {codeHinweis ? 'Neuen Code schicken' : 'Code schicken'}
+            </button>
+            {codeHinweis && <p className="muted" role="status">{codeHinweis}</p>}
+            <label>
+              Code aus der Mail
+              <input
+                value={passwort}
+                onChange={(event) => setPasswort(event.target.value)}
+                autoComplete="one-time-code"
+                autoCapitalize="characters"
+                required
+              />
+            </label>
+          </>
+        ) : (
+          <label>
+            Tippe LÖSCHEN ein, um zu bestätigen
+            <input
+              value={passwort}
+              onChange={(event) => setPasswort(event.target.value)}
+              autoFocus
+              autoCapitalize="characters"
+              required
+            />
+          </label>
+        )}
 
         {fehler && <p className="error">{fehler}</p>}
 
@@ -2571,13 +2636,18 @@ function Spielwahl({
                     </span>
                   </button>
                   <span className="front-bald-tag">Bald</span>
-                  <button
-                    className="spielwahl-stimme"
-                    disabled={voted.has(game.id)}
-                    onClick={() => onVote(game.id)}
-                  >
-                    {voted.has(game.id) ? 'Abgestimmt' : 'Dafür stimmen'} · {game.votes}
-                  </button>
+                  {/* Ohne Stimme, was es schon gibt und hier nur noch nicht
+                      freigegeben ist (App-Schalter) — der Server nimmt fuer
+                      solche Spiele keine an. */}
+                  {game.abstimmbar !== false && (
+                    <button
+                      className="spielwahl-stimme"
+                      disabled={voted.has(game.id)}
+                      onClick={() => onVote(game.id)}
+                    >
+                      {voted.has(game.id) ? 'Abgestimmt' : 'Dafür stimmen'} · {game.votes}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -3329,7 +3399,25 @@ function ProfilBild({
     }
   };
 
-  const src = me.avatarUrl ? `${me.avatarUrl}?v=${ver}` : null;
+  const src = me.avatarUrl ? `${serverAdresse(me.avatarUrl)}?v=${ver}` : null;
+
+  /*
+   * In der App nur anzeigen, nicht hochladen — bis es eine Moderation gibt.
+   * Ein eigenes Foto ist Nutzerinhalt, den alle am Tisch sehen, und Apple
+   * verlangt dafuer (1.2) eine Pruefung, die es noch nicht gibt. Wer auf der
+   * Webseite ein Bild gesetzt hat, sieht es hier trotzdem.
+   */
+  if (inApp) {
+    return (
+      <span className="hub-profilbild">
+        {src ? (
+          <img src={src} alt="Profilbild" draggable={false} />
+        ) : (
+          <Pinguin getragen={me.avatar} groesse={3.2} titel="Profilbild" />
+        )}
+      </span>
+    );
+  }
 
   return (
     <label className={`hub-profilbild${busy ? ' is-busy' : ''}`} title="Profilbild ändern">

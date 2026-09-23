@@ -103,6 +103,8 @@ export const clubWarStatus = pgEnum('club_war_status', [
 export const authTokenPurpose = pgEnum('auth_token_purpose', [
   'email_verify',
   'password_reset',
+  /** Loeschcode fuer Konten ohne Passwort (0029, auth/loeschen.ts). */
+  'account_delete',
 ]);
 
 export const purchaseProvider = pgEnum('purchase_provider', [

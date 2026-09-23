@@ -20339,3 +20339,28 @@ span.hub-angebot-art.poker-jeton-stapel {
   padding: 0.35rem 0;
 }
 .anbieter-arten-zeile .muted { display: block; font-size: 0.8rem; overflow-wrap: anywhere; }
+
+/* ==========================================================================
+   Melden und Blockieren (melden/MeldenBlatt.tsx, seit dem 23.09.2026)
+   ========================================================================== */
+.melden-knopf {
+  margin-top: 0.9rem;
+  background: none;
+  border: none;
+  border-image: none;
+  box-shadow: none;
+  color: inherit;
+  opacity: 0.75;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.melden-leiste { margin-top: 0.6rem; text-align: center; }
+.melden-liste { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; }
+.melden-liste button { font-size: 0.85rem; }
+.melden-blatt { text-align: left; }
+.melden-gruende { border: none; margin: 0.8rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
+.melden-gruende legend { font-weight: 700; margin-bottom: 0.3rem; }
+.melden-gruende label { display: flex; gap: 0.5rem; align-items: center; }
+.melden-gruende textarea { width: 100%; min-height: 4rem; margin-top: 0.3rem; }
+.melden-gruende label:has(textarea) { display: block; }

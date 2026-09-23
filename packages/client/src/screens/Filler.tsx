@@ -6,6 +6,7 @@ import { FARBEN, GRAUTOENE, farbeVon } from '../minispiele/filler/farben';
 import type { FillerSicht, Variante } from '../minispiele/filler/sicht';
 import { useSpielVorgabe, zahlAus } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
+import { serverAdresse } from '../laufzeit';
 
 /**
  * Filler — Flaechenduell zu zweit, im Nebel.
@@ -1241,7 +1242,7 @@ function Spielerstand({
         {/* Kein <img> auf eine Datei, die es nicht gibt: Ohne Bild steht der
             Anfangsbuchstabe da. Ein weisser Kasten saehe nach Fehler aus. */}
         {zeile?.avatarUrl ? (
-          <img src={zeile.avatarUrl} alt="" draggable={false} />
+          <img src={serverAdresse(zeile.avatarUrl)} alt="" draggable={false} />
         ) : (
           <strong>{(name[0] ?? '?').toUpperCase()}</strong>
         )}

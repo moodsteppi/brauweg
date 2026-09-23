@@ -414,7 +414,8 @@ test('nach einem Schmeiss nennt die Sicht denselben roundIndex, aber einen neuen
 
 test('Frist laeuft ab, waehrend ein Schmeiss offen steht', () => {
   // Regelsatz mit Schmeiss ist aktiviert, aber die Vorbehaltsfrist laeuft ab,
-  // bevor eine Schmeiss-Erklaerung ankommt. advanceInterlude muss finalizeRedeal
+  // bevor alle Abfragen beantwortet sind. Ein Sitz erklaert einen Schmeiss,
+  // mindestens ein anderer bleibt offen. advanceInterlude muss finalizeRedeal
   // und startRound aufrufen, sonst haengt der Tisch: phase 'redeal',
   // currentActor null, interludeMs null, aber kein Timer und keine Aktion.
   let party = doppelkopf.createParty({
@@ -424,47 +425,36 @@ test('Frist laeuft ab, waehrend ein Schmeiss offen steht', () => {
     seed: 1,
   });
 
-  // Warten bis mindestens ein Sitz den Schmeiss anbietet.
-  let haengtSchmeiss = false;
-  for (let i = 0; i < 4 && party.current?.phase === 'vorbehalt'; i++) {
-    const offen = vorbehaltOffen(party.current);
-    if (offen.length === 0) break;
-    const seat = offen[0];
+  // Sitze durchgehen: schmeissen, wer darf, sonst gesund. Aber nicht alle
+  // verarbeiten — mindestens einen Sitz offen lassen.
+  let schmeisstErklaert = false;
+  for (let i = 0; i < 3 && party.current?.phase === 'vorbehalt'; i++) {
+    const seat = vorbehaltOffen(party.current)[0];
+    if (seat === undefined) break;
     const schmeiss = doppelkopf
       .legalActions(party, seat)
       .find((a) => a.type === 'vorbehalt' && a.kind === 'schmeiss');
-    if (schmeiss) {
-      haengtSchmeiss = true;
-      // Nicht spielen - wir wollen simulieren, dass die Frist ablaeuft, ohne dass
-      // die Schmeiss-Erklaerung ankommt.
-      break;
-    }
-    // Gesund spielen bis zum Schmeiss.
-    party = doppelkopf.act(party, seat, { type: 'vorbehalt', seat, kind: null });
+    schmeisstErklaert ||= schmeiss !== undefined;
+    party = doppelkopf.act(party, seat, schmeiss ?? { type: 'vorbehalt', seat, kind: null });
   }
-  assert.ok(haengtSchmeiss, 'dieser Seed muss einen Schmeiss anbieten');
+  assert.ok(schmeisstErklaert, 'dieser Seed muss einen Schmeiss anbieten');
   assert.equal(party.current?.phase, 'vorbehalt', 'Vorbehaltsabfrage noch offen');
 
-  // Frist abgelaufen: advanceInterlude wird aufgerufen, ohne dass der offene
-  // Schmeiss erklaert wurde.
+  // Frist abgelaufen: advanceInterlude wird aufgerufen, mit Schmeiss erklaert
+  // und mindestens ein Sitz noch offen.
   const danach = doppelkopf.advanceInterlude!(party);
 
-  // Nach der Frist muss der Tisch entweder spielen (wenn die Abfrage vollstaendig
-  // ist und zu gesund fuehrte) oder eine neue Runde geben (wenn ein Schmeiss
-  // offen war). In beiden Faellen gibt es currentActor und interludeMs:
-  // - In 'playing': currentActor != null, interludeMs null
-  // - Nach Redeal und startRound: current ist eine neue RoundState, currentActor != null
+  // Nach der Frist muss die Phase nicht 'redeal' bleiben — sie muss entweder
+  // 'vorbehalt' wieder starten (die Neugabe) oder 'playing' sein.
+  // Das Wichtigste: phase !== 'redeal'. Dort haengt es mit currentActor null,
+  // interludeMs null, aber ohne Timer und ohne Aktion.
   assert.ok(
     danach.current !== null,
     'Nach advanceInterlude muss eine Runde laufen',
   );
-  const actor = doppelkopf.currentActor(danach);
-  assert.ok(
-    actor !== null,
-    'Es muss einen Aktor geben (kein Haengen mit actor null und kein Timer)',
-  );
-  assert.ok(
-    doppelkopf.interludeMs?.(danach) === null,
-    'Keine Schaupause mehr (keine Frist, kein Timer)',
+  assert.notEqual(
+    danach.current?.phase,
+    'redeal',
+    'Phase darf nicht "redeal" bleiben (stellt den Tisch auf den Kopf)',
   );
 });

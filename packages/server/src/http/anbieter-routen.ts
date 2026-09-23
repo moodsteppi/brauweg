@@ -46,7 +46,8 @@ export interface AnbieterRoutenDeps {
   /** Nur fuer Tests: eigene Schluessel statt Googles und Apples JWKS. */
   readonly schluessel?: { readonly google?: Schluesselquelle; readonly apple?: Schluesselquelle };
   readonly nonces?: NonceSpeicher;
-  readonly appOrigin: string;
+  /** Kommt die Anfrage aus der App (iOS oder Android)? Siehe APP_ORIGINS in app.ts. */
+  readonly istApp: (origin: string | undefined) => boolean;
   readonly setSession: (reply: FastifyReply, token: string) => void;
   readonly requireAccount: (request: FastifyRequest) => Promise<string>;
   readonly limitAuth: Grenze;
@@ -112,7 +113,7 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
     { token, accountId, neu }: { token: string; accountId: string; neu: boolean },
   ) => {
     deps.setSession(reply, token);
-    if (request.headers.origin === deps.appOrigin) {
+    if (deps.istApp(request.headers.origin)) {
       return reply.send({ ok: true, accountId, neu, token });
     }
     return reply.send({ ok: true, accountId, neu });
