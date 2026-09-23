@@ -19378,6 +19378,30 @@ span.hub-angebot-art.poker-jeton-stapel {
 @media (prefers-reduced-motion: reduce) {
   .gf-pu-schild { animation: none; }
 }
+/* Störschläge im Fun-Modus (StoerschlagKnopf.tsx, seit 23.09.2026) — unten rechts, wo der Daumen ist */
+.gf-stoer {
+  position: fixed; z-index: 6;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(64px, calc(env(safe-area-inset-bottom) + 52px));
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  max-width: min(70vw, 260px);
+  pointer-events: none;
+}
+.gf-stoer-knopf {
+  pointer-events: auto;
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 48px; padding: 8px 16px; border-radius: 999px; border: 0;
+  background: rgba(40, 22, 14, 0.9); color: #fff3e6;
+  font: 800 15px/1.1 system-ui;
+  box-shadow: 0 0 0 2px rgba(255, 138, 76, 0.75), 0 0 18px rgba(255, 138, 76, 0.45);
+  cursor: pointer;
+}
+.gf-stoer-knopf[data-aktiv] { background: #ff8a4c; color: #1c1008; }
+.gf-stoer-knopf:disabled { opacity: 0.5; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2); cursor: default; }
+.gf-stoer em {
+  font: 600 12px/1.25 system-ui; font-style: normal; text-align: right;
+  padding: 3px 8px; border-radius: 8px; background: rgba(10, 24, 16, 0.8); color: #e8f0e6;
+}
 
 /* ==========================================================================
  * Partykiste

@@ -1,5 +1,5 @@
 import { t } from '../../i18n';
-import { POWERUPS, type Powerupart } from './powerup';
+import { EINSATZ, POWERUPS, type Powerupart } from './powerup';
 
 /**
  * Das gehaltene Power-up im HUD (Fun-Modus, Teil 2/3, seit dem 23.09.2026).
@@ -21,6 +21,10 @@ export const PU_ZEICHEN: Readonly<Record<Powerupart, string>> = {
   magnet: '🧲',
   geist: '👻',
   schild: '🛡️',
+  // Störschläge (Teil 3/3): ausgelöst über StoerschlagKnopf.tsx.
+  bombe: '💣',
+  klebefeld: '🟫',
+  tausch: '🔁',
 };
 
 /** Liest eine Art aus dem HUD-Stand (dort als Zeichenkette, damit er vergleichbar bleibt). */
@@ -45,7 +49,7 @@ export function PowerupAnzeige({ halt, wirkung }: { halt: string; wirkung: strin
         <p className="gf-pu-schild" data-golf-pu={h} key={`h-${h}`} title={t(`golf.fun.pu.${h}Text`)}>
           <span aria-hidden="true">{PU_ZEICHEN[h]}</span>
           <strong>{t(`golf.fun.pu.${h}`)}</strong>
-          <em>{t(h === 'schild' ? 'golf.fun.pu.bereit' : 'golf.fun.pu.naechster')}</em>
+          <em>{t(h === 'schild' ? 'golf.fun.pu.bereit' : EINSATZ[h] === 'ausloesen' ? 'golf.fun.pu.ausloesen' : 'golf.fun.pu.naechster')}</em>
         </p>
       )}
     </div>

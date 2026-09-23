@@ -68,6 +68,7 @@ import {
   turboWerte,
 } from './physik';
 import { TURBO_FAKTOR, feldWeg, felderVon } from './powerup';
+import { darfStoerAufnehmen, istStoerart } from './stoerschlag';
 import { betrag, bruch, dreheHundertstel, ganzzahl, normiere } from './zufall';
 
 /** Kantenlänge einer Rasterzelle der Wegfindung. */
@@ -1165,6 +1166,16 @@ function probeschlag(
       mod: z.aktuell.mod,
       // Und dieselben Felder: Was schon eingesammelt ist, liegt auch in der Probe nicht.
       felderWeg: z.aktuell.felderWeg,
+      // Ein liegender Klebefleck bremst auch in der Probe (Störschläge,
+      // stoerschlag.ts). Der Probeball ist Sitz 0 — sein „befreit“-Bit wandert mit.
+      ...(z.aktuell.klebe == null
+        ? {}
+        : {
+            klebe: {
+              ...z.aktuell.klebe,
+              befreit: (z.aktuell.klebe.befreit >> sitz) & 1,
+            },
+          }),
     },
     baelle: [ball],
     ergebnis: [],
@@ -1359,6 +1370,7 @@ const UMWEG_QUER = 2.5;
  */
 function umwegUeberFeld(
   z: Partiezustand,
+  sitz: number,
   karte: Karte,
   b: Ball,
   zx: number,
@@ -1378,6 +1390,9 @@ function umwegUeberFeld(
   let beste: { x: number; y: number } | null = null;
   for (let i = 0; i < felder.length; i += 1) {
     if (feldWeg(z.aktuell.felderWeg, i)) continue;
+    // Ein Störfeld, das er nicht aufnehmen darf (er führt, oder er hatte
+    // seinen schon), wäre ein Umweg für nichts (stoerschlag.ts).
+    if (istStoerart(felder[i].powerup) && !darfStoerAufnehmen(z, sitz)) continue;
     const fx = felder[i].x - b.x;
     const fy = felder[i].y - b.y;
     const df = betrag(fx, fy);
@@ -1578,7 +1593,7 @@ export function botEntscheidung(
     zielY = lochY;
   } else if (!insPortal && halt === null) {
     // Ein Feld am Weg nimmt er mit — nur mit leerer Hand, sonst tauschte er.
-    const umweg = umwegUeberFeld(z, karte, b, zielX, zielY, ballR);
+    const umweg = umwegUeberFeld(z, sitz, karte, b, zielX, zielY, ballR);
     if (umweg !== null) {
       zielX = umweg.x;
       zielY = umweg.y;

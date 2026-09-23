@@ -107,8 +107,13 @@ export const TAFELRUNDE_MODULE_VERSION = 1;
  * Schild). Felder je Loch aus Saat und Bahn, Einsammeln und Wirkung in der
  * Physik, Bots planen damit. Ein Client von davor rechnete ein Fun-Loch
  * ohne Felder — eine andere Partie aus derselben Zugliste.
+ *
+ * 9 seit dem 23.09.2026: Störschläge im Fun-Modus (Bombe, Klebefeld,
+ * Tausch). Die Zugliste kennt einen zweiten Zugtyp (`art: 'ausloesen'`),
+ * die Felder eines Fun-Lochs werden aus sieben statt vier Arten gezogen, und
+ * die Bots lösen aus. Ein Client von davor läse einen Auslöse-Zug als Schlag.
  */
-export const GOLF_MODULE_VERSION = 8;
+export const GOLF_MODULE_VERSION = 9;
 
 /**
  * 1 seit dem 18. September 2026 — die erste Fassung. Die Partykiste ist das
