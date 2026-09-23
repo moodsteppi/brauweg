@@ -31,27 +31,37 @@ Wichtig zu wissen:
 
 ## Die App: eigene Hülle, kein Capacitor
 
-**Entschieden am 04.08.2026.** Das Repository **`Brauweg-spiel-ios`** (Xcode,
-SwiftUI) enthält eine schlanke Hülle um einen `WKWebView`. Sie liefert den
-gebauten Client aus dem App-Paket aus und sagt ihm, wo der Server steht —
-mehr nicht. Es gibt **keine zweite Oberfläche in Swift**, sonst gäbe es zwei
-Wahrheiten und jede Änderung am Spiel müsste zweimal gebaut werden.
+**Entschieden am 04.08.2026, gebaut am 23.09.2026.** Die Hülle liegt in
+**`apps/ios` dieses Repos** (Swift, UIKit, keine Fremdbibliotheken; das
+Xcode-Projekt entsteht per XcodeGen aus `apps/ios/project.yml`). Sie ist
+eine schlanke Hülle um einen `WKWebView`: Sie liefert den gebauten Client aus
+dem App-Paket aus und sagt ihm, wo der Server steht — mehr nicht. Es gibt
+**keine zweite Oberfläche in Swift**, sonst gäbe es zwei Wahrheiten und jede
+Änderung am Spiel müsste zweimal gebaut werden.
+
+**Berichtigung (Robin, 23.09.2026):** Frühere Fassungen dieser Datei
+beschrieben ein eigenes Repository `Brauweg-spiel-ios` mit fertiger Hülle,
+die „im Simulator läuft". **Dieses Repository hat es nie gegeben**; alles,
+was hier bis dahin über seinen Aufbau stand, war Plan, nicht Stand. Wie die
+Hülle wirklich gebaut ist und wie der erste Build auf dem Mac geht, steht in
+`docs/APP-RELEASE.md`, Abschnitt 7.
 
 Der Plan sah Capacitor vor. Dagegen sprach nichts Grundsätzliches, aber
 dreierlei Praktisches: Capacitor legt sein eigenes Xcode-Projekt an (das
 vorhandene wäre überflüssig geworden), es braucht CocoaPods, und alles, was
 die App wirklich vom Web unterscheidet — Push über APNs und der In-App-Kauf —
-ist nativ einfacher als durch ein Plugin hindurch. Die Hülle ist knapp
-400 Zeilen Swift.
+ist nativ einfacher als durch ein Plugin hindurch.
 
 ### Aufbau
 
+Die wichtigsten Dateien unter `apps/ios` (vollständig in `APP-RELEASE.md` 7.1):
+
 | Datei | Aufgabe |
 | --- | --- |
-| `Huelle.swift` | Schema, Serveradresse, was dem Client eingespritzt wird |
-| `PaketSchema.swift` | Liefert `web/` aus dem App-Paket unter `brauweg://app` |
-| `WebAnsicht.swift` | Der WebView, Navigation, Impressum-Blatt |
-| `scripts/web-uebernehmen.sh` | Baut den Client und legt ihn nach `web/` |
+| `Brauweg/Huelle.swift` | Schema, Serveradresse, Einladungslinks, was dem Client eingespritzt wird |
+| `Brauweg/PaketSchema.swift` | Liefert `web/` aus dem App-Paket unter `brauweg://app` |
+| `Brauweg/HauptController.swift` | Der WebView, Navigation, Dialoge, Safari-Blatt für Impressum und Datenschutz |
+| `werkzeug/web-einbauen.sh` | Build-Phase: legt den gebauten Client nach `web/` ins App-Paket |
 
 **Eigenes Schema, nicht `file://`.** Unter `file://` ist jede Datei eine
 eigene Herkunft; `localStorage`, `fetch` und der WebSocket fänden nicht statt.
@@ -91,16 +101,17 @@ Cookie, `location.host`.
 ### Bauen
 
 Der Client baut auf jedem Rechner, nur das iOS-Paket braucht macOS.
-CocoaPods wird **nicht** gebraucht.
+CocoaPods wird **nicht** gebraucht, XcodeGen schon (`brew install xcodegen`).
 
 ```bash
-cd Brauweg-spiel-ios && ./scripts/web-uebernehmen.sh
+npm ci && npm run build --workspace @brauweg/client
+cd apps/ios && xcodegen generate && open Brauweg.xcodeproj
 ```
 
-Das Skript baut `@brauweg/client` und legt `dist/` nach `web/` neben das
-Xcode-Projekt. Danach in Xcode bauen und starten. **Ohne einen Lauf des
-Skripts zeigt die App den Hinweis, dass der Client fehlt** — sie bleibt nicht
-weiß.
+Die Build-Phase „Client ins Paket" legt `packages/client/dist` nach `web/`
+ins App-Paket. Danach in Xcode bauen und starten. **Fehlt der gebaute
+Client, zeigt ein Debug-Bau den Hinweis, dass er fehlt** — die App bleibt
+nicht weiß; ein Release-Bau bricht ab.
 
 Nicht mit ins Paket gehen `start/` (Startbilder nur für die
 Safari-Fassung), `hub-entwuerfe/`, `appicon.png` und `icon-1024.png`:
@@ -122,10 +133,14 @@ Sorte Frage, die beim Deploy schon einen halben Tag gekostet hat (siehe
 | Deployment-Ziel | iOS 16.0 |
 | Geräte | nur iPhone |
 | Ausrichtung | nur hochkant (wie das Web-Manifest) |
-| Serveradresse | Build-Setting `BRAUWEG_API_BASE` — Debug `http://127.0.0.1:3000`, Release `https://www.brauweg-spielen.de` |
+| Serveradresse | Build-Einstellung `BRAUWEG_API_BASE` — Debug `https://staging.brauweg-spielen.de`, Release `https://www.brauweg-spielen.de` |
+| Push | Build-Einstellung `BRAUWEG_PUSH`, Vorgabe `NO` (nur vorbereitet) |
 
-Die Serveradresse steht **nicht** in Swift, sondern als Build-Setting je
-Konfiguration. Sie landet über die Info.plist in `Huelle.apiBasis`.
+Die Serveradresse steht **nicht** in Swift, sondern als Build-Einstellung je
+Konfiguration (`apps/ios/project.yml`, örtlich überschreibbar in
+`Konfiguration/Lokal.xcconfig`). Sie landet über die Info.plist in
+`Huelle.apiBasis`. Debug spricht mit Staging wie die Test-APK unter Android:
+Wer aus Xcode startet, soll nicht aus Versehen Produktionsdaten anlegen.
 
 `NSAllowsLocalNetworking` steht in der Info.plist, damit der
 Entwicklungsserver über Klartext erreichbar ist. Das erlaubt Klartext
@@ -142,7 +157,7 @@ davon unberührt.
 | --- | --- |
 | ~~**Konto löschen**~~ | ✅ Profil-Tab ganz unten, mit Passwortabfrage. Gelöscht wird als Anonymisierung. Seit dem 23.09.2026 auch für Konten ohne Passwort: Code per Mail (nur Google/Apple) bzw. das Wort LÖSCHEN (Gast) — vorher konnten die sich gar nicht löschen. |
 | ~~**Shop**~~ | ✅ **Im App-Paket ausgeblendet.** Shop-Tab und die Plus-Knöpfe an Münzen und VIP erscheinen nur im Browser (`zeigeKaufbares` in `GameSelect.tsx`). Angebote mit Paketangabe, die nichts verkaufen, gelten als unfertige App — und sobald sie etwas verkaufen, müssen sie über Apples Bezahlweg laufen. |
-| ~~**Rahmen**~~ | ✅ Eigene Hülle, siehe oben. |
+| **Rahmen** | Eigene Hülle in `apps/ios`, siehe oben — **geschrieben, noch nie übersetzt** (erster Build: `APP-RELEASE.md` 7.4). |
 | **Datenschutzerklärung** | Seite steht unter `/rechtliches/datenschutz.html`, in der App als Blatt mit „Fertig" erreichbar. **Offen: die rot markierten Lücken ausfüllen** — Name, Anschrift, Support-Adresse, Datenbankanbieter, Aufbewahrungsdauer der Protokolle. |
 | **Impressum** | Dasselbe unter `/rechtliches/impressum.html`, **dieselben Lücken.** Mit Platzhaltern erfüllt es die Pflicht nicht und ist abmahnfähig. |
 | **Support-Adresse** | Pflichtfeld in App Store Connect — dieselbe Adresse gehört in beide Rechtstexte. |
@@ -222,12 +237,12 @@ Testen. Zum Laden untereinander genügt ein Build und ein App-Eintrag.
 1. **Programm beitreten:** developer.apple.com → Account → *Individual*
    einschreiben (99 $). Nach Freischaltung erscheint das persönliche Team in
    Xcode.
-2. **Signierung in Xcode:** Ziel `Brauweg-spiel-ios` → *Signing & Capabilities*
-   → „Automatically manage signing", Team wählen, Bundle-ID `de.brauweg.app`
-   bestätigen.
-3. **Client ins Paket:** `cd Brauweg-spiel-ios && ./scripts/web-uebernehmen.sh`
-   (siehe oben). **Release**-Konfiguration nehmen — dann zeigt die App auf den
-   Produktionsserver, nicht auf `127.0.0.1`.
+2. **Signierung:** Team-ID in `apps/ios/Konfiguration/Lokal.xcconfig`
+   (Vorlage daneben) — automatische Signierung, Bundle-ID `de.brauweg.app`
+   stehen schon in `project.yml`.
+3. **Client ins Paket:** `npm run build --workspace @brauweg/client`, dann
+   `cd apps/ios && xcodegen generate` (siehe oben). **Release**-Konfiguration
+   nehmen — dann zeigt die App auf den Produktionsserver, nicht auf Staging.
 4. **Archiv bauen:** in Xcode als Ziel „Any iOS Device (arm64)" wählen,
    *Product → Archive*.
 5. **Hochladen:** im Organizer *Distribute App → TestFlight & App Store →
@@ -253,7 +268,7 @@ Testen. Zum Laden untereinander genügt ein Build und ein App-Eintrag.
 - **Build-Ablauf:** TestFlight-Builds verfallen nach **90 Tagen**; einfach neu
   hochladen.
 - **Serveradresse:** Release zeigt auf `www.brauweg-spielen.de` (Produktion).
-  Wer gegen `staging` testen will, braucht eine eigene Konfiguration mit
+  Gegen `staging` spricht ein Debug-Bau; für einen Release-Bau gegen Staging
   `BRAUWEG_API_BASE = https://staging.brauweg-spielen.de`.
 
 ---
@@ -263,7 +278,9 @@ Testen. Zum Laden untereinander genügt ein Build und ein App-Eintrag.
 1. ✅ Homescreen-Fassung
 2. ✅ Konto löschen
 3. ✅ Shop im App-Paket ausgeblendet
-4. ✅ Native Hülle, Token-Anmeldung, läuft im Simulator
+4. ✅ Token-Anmeldung (Server und Client); native Hülle **geschrieben**
+   (`apps/ios`, 23.09.2026), **noch nie übersetzt** — erster Build auf Toms
+   Mac nach `APP-RELEASE.md` 7.4
 5. Datenschutz, Impressum, Support-Adresse ausfüllen
 6. Demokonto anlegen und Prüfhinweise schreiben
 7. TestFlight für die drei Geräte

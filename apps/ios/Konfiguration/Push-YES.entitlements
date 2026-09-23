@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Berechtigungen MIT Push (BRAUWEG_PUSH = YES), sonst wie Push-NO.entitlements.
+  aps-environment steht auf development; beim Export fuer TestFlight und den
+  Store setzt Xcode es selbst auf production.
+-->
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>development</string>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:www.brauweg-spielen.de</string>
+		<string>applinks:staging.brauweg-spielen.de</string>
+	</array>
+</dict>
+</plist>
