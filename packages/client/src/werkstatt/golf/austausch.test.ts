@@ -40,7 +40,11 @@ describe('Export → Import aller Katalogbahnen', () => {
     describe(karte.id, () => {
       it('Katalogeintrag hin und zurück', () => {
         const text = alsQuelltext(karte, 'eintrag');
-        expect(gelesen(text)).toEqual(karte);
+        // Die Form der alten Sammeldateien kennt Thema, Autor und Schlagworte
+        // nicht (die Beschreibung reist als Kommentar mit) — seit k41..k60
+        // tragen Katalogbahnen sie, also ohne sie vergleichen.
+        const { thema: _thema, autor: _autor, tags: _tags, ...ohneAngaben } = karte;
+        expect(gelesen(text)).toEqual(ohneAngaben);
         // Und derselbe Text beim zweiten Mal: Die Ausgabe hängt nur an der
         // Bahn, nicht an ihrem Weg in die Werkstatt.
         expect(alsQuelltext(gelesen(text), 'eintrag')).toBe(text);
