@@ -924,6 +924,13 @@ Die Hälften schieben sich also eher aneinander vorbei, der Anmarsch dauert
 länger. Davon leben Wächter und Krieger, dagegen verliert der Meuchler, dessen
 ganze Rechnung am schnellen Ankommen hängt.
 
+**Nachgeprüft am 23.09.2026: Die Erklärung mit dem Ankommen trägt nicht.** Die
+Verschiebung selbst ist echt. Aber wer dem Meuchler das Ankommen erleichtert
+(halbe oder gar keine Schrittpause, eine Sekunde Startvorsprung), drückt ihn
+weiter, auf ×0,55–0,63. Was ihn hebt, ist Leben (+25 % ergibt ×1,00–1,06) oder
+die Zielwahl „Fernkämpfer" (×0,81–0,88). Zahlen und die offene Entscheidung
+stehen in `docs/TAFELRUNDE-MEUCHLER-ANKOMMEN.md`.
+
 **Die Schranke der Probe (×0,5 bis ×2) hält**, aber die Spanne geht auf beiden
 Seiten leicht auf: ×0,52 bis ×1,59 statt ×0,54 bis ×1,54. **Naturwesen bleibt
 die Wackelzeile** und steht jetzt zwei Hundertstel näher am Boden. Die Uhr
