@@ -925,7 +925,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
           const anteil = f.hoechstesLeben > 0 ? (f.leben / f.hoechstesLeben) * 100 : 0;
           return (
             <div
-              key={f.id}
+              key={`${f.seite}:${f.id}`}
               className={stil.figur}
               data-seite={f.seite === unten ? 'unten' : 'oben'}
               data-tot={f.tot ? '' : undefined}
