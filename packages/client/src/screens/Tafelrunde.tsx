@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, api, type Suchstand, type TableRow, type TischVorschau } from '../api';
 import { t } from '../i18n';
 import type { BotLevel } from '../protocol';
-import { Bankreihe, Einheitenmarke, Hexbrett } from '../minispiele/tafelrunde/Brett';
+import { Bankreihe, Hexbrett, Zugschatten } from '../minispiele/tafelrunde/Brett';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Einheitenblatt } from '../minispiele/tafelrunde/Einheitenblatt';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
@@ -40,12 +40,12 @@ import {
   darfSchieben,
   fehlendeKopien,
   neuVerschmolzen,
-  ortLesen,
   ortSchluessel,
   rastermass,
   tippfolge,
 } from '../minispiele/tafelrunde/zuege';
 import { useVorladen } from '../minispiele/tafelrunde/vorladen';
+import { useZiehen } from '../minispiele/tafelrunde/ziehen';
 import { useTable } from '../useTable';
 
 /**
@@ -1147,25 +1147,6 @@ interface SitzZeile {
 }
 
 /**
- * Der Ablegeplatz unter einem Bildschirmpunkt — als Schluessel, oder null.
- *
- * Die Trefferpruefung laeuft ueber `document.elementFromPoint`, weil das Ziel
- * unter dem FINGER liegt und nicht unter dem Ereignis (das gehoert wegen der
- * Zeigererfassung immer noch der gezogenen Einheit). Beide Aufrufer — die
- * Vorschau waehrend des Ziehens und das Ablegen am Ende — gehen durch diese
- * eine Funktion: Was leuchtet, ist damit garantiert dasselbe Feld, auf dem
- * die Einheit gleich landet.
- *
- * `elementFromPoint` gibt es in jsdom nicht. Ohne die Pruefung waere jeder
- * Test, der zieht, ein Absturz statt einer Aussage.
- */
-function zielUnter(x: number, y: number): string | null {
-  if (typeof document.elementFromPoint !== 'function') return null;
-  const unten = document.elementFromPoint(x, y);
-  return (unten?.closest('[data-ziel]') as HTMLElement | null)?.dataset.ziel ?? null;
-}
-
-/**
  * Was die Spielflaeche von der Geometrie des Bretts wissen muss: sein
  * Seitenverhaeltnis.
  *
@@ -1375,35 +1356,6 @@ function Ruestkammer({
   // Ziehen und Antippen
   // -------------------------------------------------------------------------
 
-  /** Was gerade am Finger haengt, samt Bildschirmkoordinate fuer den Schatten. */
-  const [zug, setZug] = useState<{ von: Ort; x: number; y: number; zieht: boolean } | null>(null);
-  const startPunkt = useRef<{ x: number; y: number } | null>(null);
-  /*
-   * Ob gerade wirklich gezogen wird — dieselbe Auskunft wie `zug.zieht`, nur
-   * synchron lesbar. Der Bewegungs-Behandler hat keine Abhaengigkeiten (er
-   * soll bei jedem Zeigerereignis derselbe bleiben) und sieht den Zustand
-   * deshalb nicht. Ohne diese Merkzelle bliebe die Vorschau auf dem letzten
-   * Feld stehen, sobald der Finger in die Naehe seines Ausgangspunkts
-   * zurueckkehrt: Dort ist die Strecke wieder kurz, `weit` also falsch.
-   */
-  const zieht = useRef(false);
-
-  /**
-   * Welches Feld gerade UNTER dem Finger liegt — als Schluessel, nicht als Ort.
-   *
-   * Ohne diese Anzeige laesst man eine Einheit blind los: Der Schatten haengt
-   * am Finger und verdeckt genau die Wabe, auf die man zielt. Gesucht wird
-   * mit demselben Griff wie beim Ablegen (`elementFromPoint` auf
-   * `[data-ziel]`), damit Vorschau und Ergebnis nicht auseinanderlaufen
-   * koennen: Was hier leuchtet, ist buchstaeblich dasselbe Element, das
-   * `beiZeigerEnde` gleich findet.
-   *
-   * Als Zeichenkette gehalten und nur bei WECHSEL gesetzt: Ein neuer Ort bei
-   * jedem Zeigerereignis waere ein neues Objekt und damit ein Neuzeichnen des
-   * ganzen Bretts sechzigmal je Sekunde.
-   */
-  const [ueberZiel, setUeberZiel] = useState<string | null>(null);
-
   const darfHandeln = eigenes?.darfHandeln === true && !wartet;
 
   /**
@@ -1466,84 +1418,18 @@ function Ruestkammer({
   }, []);
 
   /**
-   * Ziehen mit dem Finger.
-   *
-   * Pointer-Ereignisse und NICHT die HTML5-Zieh-Schnittstelle: `dragstart`
-   * gibt es auf iOS und Android schlicht nicht, ein Brett, das nur mit der
-   * Maus zu bedienen ist, waere am Handy unbenutzbar — und die App wird am
-   * Handy gespielt. Die Trefferpruefung laeuft ueber
-   * `document.elementFromPoint`, weil das Ziel unter dem Finger liegt und
-   * nicht unter dem Ereignis.
+   * Ziehen mit dem Finger — die Verdrahtung steht seit dem 23.09.2026 in
+   * minispiele/tafelrunde/ziehen.ts, damit `/probe/ruestkammer` dieselbe
+   * benutzt. Ein Tipp ohne Bewegung geht dort in `tippeOrt`, ein Ablegen in
+   * `schiebe` — beide Wege enden also in denselben Pruefungen wie das
+   * Antippen.
    */
-  const beiZeigerStart = useCallback(
-    (ort: Ort, ereignis: React.PointerEvent): void => {
-      if (!darfHandeln) return;
-      startPunkt.current = { x: ereignis.clientX, y: ereignis.clientY };
-      zieht.current = false;
-      setZug({ von: ort, x: ereignis.clientX, y: ereignis.clientY, zieht: false });
-      // Ohne Zeigererfassung verliert das Element die Bewegung, sobald der
-      // Finger es verlaesst — und das tut er sofort.
-      (ereignis.currentTarget as HTMLElement).setPointerCapture?.(ereignis.pointerId);
-    },
-    [darfHandeln],
-  );
-
-  const beiZeigerBewegung = useCallback((ereignis: React.PointerEvent): void => {
-    const start = startPunkt.current;
-    if (!start) return;
-    const weit =
-      Math.abs(ereignis.clientX - start.x) > 8 || Math.abs(ereignis.clientY - start.y) > 8;
-    if (weit) zieht.current = true;
-    setZug((alt) =>
-      alt ? { ...alt, x: ereignis.clientX, y: ereignis.clientY, zieht: alt.zieht || weit } : alt,
-    );
-    if (zieht.current) setUeberZiel(zielUnter(ereignis.clientX, ereignis.clientY));
-  }, []);
-
-  /**
-   * Der Browser hat das Ziehen abgebrochen — ein Anruf, eine Geste des
-   * Betriebssystems, ein zweiter Finger. Ohne diesen Aufraeumer bliebe der
-   * Schatten am Bildschirm kleben und die Einheit blass an ihrem Platz.
-   */
-  const beiZeigerAbbruch = useCallback((): void => {
-    startPunkt.current = null;
-    zieht.current = false;
-    setZug(null);
-    setUeberZiel(null);
-  }, []);
-
-  const beiZeigerEnde = useCallback(
-    (ort: Ort, ereignis: React.PointerEvent): void => {
-      const gezogen = zug?.zieht === true;
-      startPunkt.current = null;
-      zieht.current = false;
-      setZug(null);
-      setUeberZiel(null);
-      if (!gezogen) {
-        // Ein Tipp, keine Bewegung: Auswahl statt Ziehen.
-        tippeOrt(ort);
-        return;
-      }
-      const ziel = ortLesen(zielUnter(ereignis.clientX, ereignis.clientY));
-      if (ziel) schiebe(ort, ziel);
-    },
-    [zug?.zieht, tippeOrt, schiebe],
-  );
-
-  /**
-   * Das Feld unter dem Finger — aber nur, wenn die gezogene Einheit dort auch
-   * landen DARF.
-   *
-   * Die Vorschau soll nicht mehr versprechen, als das Ablegen einloest: Ueber
-   * einem vollen Brett leuchtet nichts, und genau das ist die Auskunft.
-   * Geprueft wird mit derselben Funktion wie beim Ablegen (`zielbar`), also
-   * mit den zwei Zahlen aus der Sicht — hier wird keine Regel nachgebaut.
-   */
-  const ablegeZiel = useMemo(() => {
-    if (zug?.zieht !== true || ueberZiel === null) return null;
-    const ort = ortLesen(ueberZiel);
-    return ort && zielbar(zug.von, ort) ? ueberZiel : null;
-  }, [zug?.zieht, zug?.von, ueberZiel, zielbar]);
+  const { zug, ziehtVon, ablegeZiel, zeiger } = useZiehen({
+    darf: darfHandeln,
+    zielbar,
+    tippe: tippeOrt,
+    schiebe,
+  });
 
   // -------------------------------------------------------------------------
   // Ableitungen aus legalActions
@@ -1982,7 +1868,7 @@ function Ruestkammer({
 
 
   const gezogeneEinheit =
-    zug?.zieht === true
+    zug !== null
       ? zug.von.bereich === 'bank'
         ? eigenes.bank[zug.von.platz]
         : eigenes.brett[zug.von.platz]
@@ -2149,7 +2035,7 @@ function Ruestkammer({
                    erklaert. */
                   istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
                   onWaehlen={tippeOrt}
-                  ziehtVon={zug?.zieht ? zug.von : null}
+                  ziehtVon={ziehtVon}
                   /* Wo die Einheit landet, wenn der Finger jetzt loslaesst. Nur
                    waehrend eines Zuges gesetzt — sonst leuchtete das Brett
                    unter jedem Mauszeiger. */
@@ -2157,10 +2043,7 @@ function Ruestkammer({
                   fehlendeKopien={fehlen}
                   frischVerschmolzen={verschmolzen}
                   aktiv={darfHandeln}
-                  onZeigerStart={beiZeigerStart}
-                  onZeigerBewegung={beiZeigerBewegung}
-                  onZeigerEnde={beiZeigerEnde}
-                  onZeigerAbbruch={beiZeigerAbbruch}
+                  {...zeiger}
                   onLeeresZiel={tippeOrt}
                   /* Greift erst, wenn `aktiv` faellt — also nach „Bereit":
                      Dann fuehrt kein Zeiger und kein `onWaehlen` mehr zur
@@ -2196,15 +2079,12 @@ function Ruestkammer({
               gewaehlt={gewaehlt}
               istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
               onWaehlen={tippeOrt}
-              ziehtVon={zug?.zieht ? zug.von : null}
+              ziehtVon={ziehtVon}
               unterZeiger={ablegeZiel}
               fehlendeKopien={fehlen}
               frischVerschmolzen={verschmolzen}
               aktiv={darfHandeln}
-              onZeigerStart={beiZeigerStart}
-              onZeigerBewegung={beiZeigerBewegung}
-              onZeigerEnde={beiZeigerEnde}
-              onZeigerAbbruch={beiZeigerAbbruch}
+              {...zeiger}
               onNachsehen={(ort) => sieheNach(null, ort)}
             />
           </div>
@@ -2547,20 +2427,14 @@ function Ruestkammer({
       )}
 
       {/* ---- Was am Finger haengt --------------------------------------- */}
-      {zug?.zieht && gezogeneEinheit && (
-        <div
-          className="tr-schatten"
-          style={{ left: zug.x, top: zug.y }}
-          aria-hidden="true"
-        >
-          <Einheitenmarke
-            kaempfer={gezogeneEinheit}
-            katalog={katalog}
-            maxStufe={sicht.maxStufe}
-            fehlt={0}
-            aktiv={false}
-          />
-        </div>
+      {zug && gezogeneEinheit && (
+        <Zugschatten
+          kaempfer={gezogeneEinheit}
+          katalog={katalog}
+          maxStufe={sicht.maxStufe}
+          x={zug.x}
+          y={zug.y}
+        />
       )}
 
       {/* ---- Endbild ---------------------------------------------------- */}
