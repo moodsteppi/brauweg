@@ -67,12 +67,13 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  *
  * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten — und seit dem
  * 06.09.2026 ist das NICHTS MEHR: Ueber 400 Partien zu viert zaehlen ALLE
- * SIEBEN Marken. Krieger 599, Waechter 594, Elementar 428, Meuchler 418,
- * Naturwesen 376, Drache 317, Untot 105 (Stand 18.09.2026). Die Mindestzahl
+ * SIEBEN Marken. Waechter 605, Krieger 603, Elementar 430, Meuchler 398,
+ * Naturwesen 360, Drache 318, Untot 110 (Stand 23.09.2026, nachgemessen nach
+ * der Meuchler-Bewertung des Bots aus #249). Die Mindestzahl
  * unten verlangt sechs und laesst der duennsten Zeile damit genau einen
  * Ausfall Luft. WER DEN KATALOG SO AENDERT, DASS ZWEI DIESER ZEILEN UNTER
  * HUNDERT FALLEN, SIEHT HIER "nur 5 Marken mit genug Antritten" und nicht den
- * eigentlichen Befund; die Zahl 105 (Untot) ist die knappste der Datei.
+ * eigentlichen Befund; die Zahl 110 (Untot) ist die knappste der Datei.
  *
  * DIESE SIEBEN ZAHLEN VERALTEN VON SELBST, und zwar bei jeder Aenderung, die
  * beeinflusst, WAS der Bot am Ende auf dem Brett hat — Katalog, Bot-Bewertung,
