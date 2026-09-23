@@ -63,8 +63,10 @@ function profilReiter(): HTMLElement {
  * Schlamperei: Wartet man erst den Aufbau ab und tippt dann, faellt das
  * nachgeladene Profilstueck mitten in den Test — und mit ihm der
  * Vorlade-Fehlschlag von `Avatar3D` (three liest `/3d/…glb` mit `fetch`, und
- * Node nimmt keine Adresse ohne Wurzel). Der Fehler landet dann an einem
- * fremden Testfall, der mit 3D nichts zu tun hat.
+ * jsdom nimmt keine Adresse ohne Wurzel). Der Fehler landet dann an einem
+ * fremden Testfall, der mit 3D nichts zu tun hat. Das Leerlaufen danach
+ * stellt sicher, dass der Fehler (falls er doch kommt) hier zugerechnet wird,
+ * nicht beim naechsten Test.
  */
 async function zeigeProfil(me: Me): Promise<void> {
   render(
