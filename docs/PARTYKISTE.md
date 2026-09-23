@@ -147,9 +147,23 @@ wenn weniger als `MINDESTMENGE` (10) Inhalte passen:
 1. `paket` — nur Inhalte des Pakets
 2. `paketUndAllgemein` — dazu Inhalte ohne Paket, aber nichts aus fremden Paketen
 3. `ohnePaket` — Paket egal
-4. `ohneMinSitze` — auch die Sitzgrenze fällt
-5. `vollerKatalog` — letzter Halt; kommt nicht vor, solange jeder Katalog
-   genug harmlose Einträge hat (ein Test hält das fest)
+4. `ohneMinSitze` — auch die Sitzgrenze fällt. **Letzter Halt**: Hier gilt
+   nur noch die Härte.
+
+Bis zum 23.09.2026 gab es als fünfte Stufe `vollerKatalog`, den ganzen
+Katalog ohne Härte. Im Betrieb kam sie nie vor, aber ein Katalog mit zu wenig
+Harmlosem hätte einem harmlosen Tisch still Derbes gegeben. Jetzt gilt:
+Reicht der erlaubte Vorrat nicht, wird **innerhalb der erlaubten Stufen
+wiederholt**, deterministisch und erst nach einem vollen Durchlauf des
+gemischten Stapels (`an()`). Gibt es gar keinen erlaubten Eintrag, spielt in
+dieser Runde **ein anderes Minispiel**, und zwar das nächste der Liste mit
+erlaubtem Vorrat, zur Not Bus fahren (`spielbaresMinispiel`, Kataloge je
+Minispiel in `VORRAT`). Die Engine hängt nie. Mit den heutigen Katalogen
+kommt der Ersatz nicht vor: Jeder Katalog, auch die aus #213 und #218, hat
+mindestens zwölf harmlose Einträge (Test). In der Eskalation legt
+`stufenStapel` außerdem die Auswahl jeder milderen Stufe in den Stapel. Ein
+Paket-Topf, der auf der Decke nur Derbes hergibt, ließ sonst das erste
+Drittel ohne harmlosen Eintrag.
 
 **Die Härte wird nie gelockert.** Gab die Auswahl nach, steht das in der
 Runde als `inhaltsRueckfall` (`{ gewollt, genutzt, passend }`), sonst `null`.
