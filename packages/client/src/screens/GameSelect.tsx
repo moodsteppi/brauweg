@@ -2571,13 +2571,18 @@ function Spielwahl({
                     </span>
                   </button>
                   <span className="front-bald-tag">Bald</span>
-                  <button
-                    className="spielwahl-stimme"
-                    disabled={voted.has(game.id)}
-                    onClick={() => onVote(game.id)}
-                  >
-                    {voted.has(game.id) ? 'Abgestimmt' : 'Dafür stimmen'} · {game.votes}
-                  </button>
+                  {/* Ohne Stimme, was es schon gibt und hier nur noch nicht
+                      freigegeben ist (App-Schalter) — der Server nimmt fuer
+                      solche Spiele keine an. */}
+                  {game.abstimmbar !== false && (
+                    <button
+                      className="spielwahl-stimme"
+                      disabled={voted.has(game.id)}
+                      onClick={() => onVote(game.id)}
+                    >
+                      {voted.has(game.id) ? 'Abgestimmt' : 'Dafür stimmen'} · {game.votes}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

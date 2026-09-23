@@ -68,6 +68,13 @@ export interface GameSummary {
   availability: 'playable' | 'preview';
   seatCounts: number[];
   votes: number;
+  /**
+   * Nur Vorschau-Spiele ohne Modul sind abstimmbar. Ein Spiel, das es gibt
+   * und das hier nur noch nicht freigegeben ist (App-Schalter, siehe
+   * `FREIGABE` im Server), steht als „Bald" da, aber ohne Stimme. Fehlt das
+   * Feld (aelterer Server), gilt es wie bisher als abstimmbar.
+   */
+  abstimmbar?: boolean;
 }
 
 /** Stand der Mitspielersuche. Spiegelt `Suchstand` aus dem Server. */

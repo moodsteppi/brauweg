@@ -66,7 +66,14 @@ import { offeneTruhen, truheKaufen, truheOeffnen, truhenFuer } from '../truhen.j
 import { aufgabeAbholen, aufgabenFuer, offeneBelohnungen } from '../quests.js';
 import { runnerCashout, runnerLauf, runnerRangliste, runnerTagesstand } from '../runner.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
-import { isPlayable, registry, requireModule } from '../games/registry.js';
+import {
+  isPlayable,
+  registry,
+  requireModule,
+  requireSpielbar,
+  spieleFuer,
+  type Plattform,
+} from '../games/registry.js';
 import {
   acceptFriendship,
   listFriendships,
@@ -176,6 +183,25 @@ export const SESSION_COOKIE = 'brauweg_session';
  * das kein Skript je zu sehen bekommt.
  */
 export const APP_ORIGIN = 'brauweg://app';
+
+/** Kommt diese Herkunft aus der App? */
+export function istAppHerkunft(origin: string | undefined): boolean {
+  return origin === APP_ORIGIN;
+}
+
+/**
+ * Webseite oder App — fuer die Freigabe je Spiel (`FREIGABE` in
+ * games/registry.ts).
+ *
+ * Hier genuegt die Herkunft, obwohl eine Kopfzeile von einem eigenen
+ * Programm aus beliebig zu setzen ist: Die Freigabe ist eine
+ * Produktentscheidung, kein Schutz. Wer sich mit einem Werkzeug als App
+ * ausgibt, sieht die App-Auswahl — und wer sich als Webseite ausgibt, die
+ * der Webseite, die ohnehin jeder oeffnen kann.
+ */
+export function plattformVon(request: FastifyRequest): Plattform {
+  return istAppHerkunft(request.headers.origin) ? 'app' : 'web';
+}
 
 export interface AppDeps {
   readonly db: Db;
@@ -1452,20 +1478,23 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // Spielauswahl
   // -------------------------------------------------------------------------
 
-  app.get('/api/games', async (_request, reply) => {
+  app.get('/api/games', async (request, reply) => {
     const votes = await deps.db
       .select({ gameId: s.gameVote.gameId, count: sql<number>`count(*)::int` })
       .from(s.gameVote)
       .groupBy(s.gameVote.gameId);
     const countOf = new Map(votes.map((row) => [row.gameId, row.count]));
 
+    // Je Plattform: In der App kann ein Spiel `bald` oder ganz weg sein,
+    // obwohl es auf der Webseite laeuft (siehe FREIGABE in registry.ts).
     return reply.send(
-      registry.all().map((meta) => ({
+      spieleFuer(plattformVon(request)).map(({ meta, availability, abstimmbar }) => ({
         id: meta.id,
         nameKey: meta.nameKey,
-        availability: meta.availability,
+        availability,
         seatCounts: meta.seatCounts,
         votes: countOf.get(meta.id) ?? 0,
+        abstimmbar,
       })),
     );
   });
@@ -1781,6 +1810,23 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // Lobby und Tische
   // -------------------------------------------------------------------------
 
+  /**
+   * Beitritt nur zu einem Spiel, das auf dieser Plattform freigegeben ist.
+   *
+   * Wer schon sitzt, darf immer zurueck: `joinTable` gibt ihm seinen Platz
+   * unveraendert, und eine laufende Partie soll nicht daran sterben, dass
+   * das Spiel inzwischen auf `bald` steht.
+   */
+  const pruefeBeitritt = async (
+    request: FastifyRequest,
+    tableId: string,
+    accountId: string,
+  ): Promise<void> => {
+    const { table, seats } = await tableWithSeats(deps.db, tableId);
+    if (seats.some((seat) => seat.accountId === accountId)) return;
+    requireSpielbar(table.gameId, plattformVon(request));
+  };
+
   app.get('/api/tables', async (request, reply) => {
     const accountId = await requireAccount(request);
     const query = z
@@ -1790,6 +1836,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         rounds: z.coerce.number().int().optional(),
       })
       .parse(request.query);
+    requireSpielbar(query.game, plattformVon(request));
 
     const clubs = await clubsFor(deps.db, accountId);
     return reply.send(
@@ -1805,6 +1852,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/tables', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const body = createTableSchema.parse(request.body);
+    requireSpielbar(body.gameId, plattformVon(request));
     // Clantisch ohne clubId: den ersten (und in der Beta einzigen) Clan nehmen.
     let clubId = body.clubId;
     if (body.visibility === 'club_only' && !clubId) {
@@ -1827,10 +1875,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * ohnehin auf einer anderen Segmentzahl.
    */
   app.get('/api/tables/code/:code', async (request, reply) => {
-    await requireAccount(request);
+    const accountId = await requireAccount(request);
     const { code } = z.object({ code: z.string().min(1).max(24) }).parse(request.params);
     const table = await tischPerCode(deps.db, code);
     const { seats } = await tableWithSeats(deps.db, table.id);
+    // Wer schon sitzt, kommt immer an seinen Platz zurueck — auch wenn das
+    // Spiel hier inzwischen nicht mehr freigegeben ist. Neu dazu nicht.
+    if (!seats.some((seat) => seat.accountId === accountId)) {
+      requireSpielbar(table.gameId, plattformVon(request));
+    }
     const gastgeber = seats.find((seat) => seat.accountId)?.accountId ?? null;
     const [konto] = gastgeber
       ? await deps.db
@@ -1856,6 +1909,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       const accountId = await requireAccount(request);
       const { code } = z.object({ code: z.string().min(1).max(24) }).parse(request.params);
       const table = await tischPerCode(deps.db, code);
+      await pruefeBeitritt(request, table.id, accountId);
       await joinTable(deps.db, table.id, accountId);
       deps.vermittlung?.verlaesstAlle(accountId);
       deps.runtime.notify(table.id);
@@ -1908,6 +1962,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/tables/:tableId/join', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    await pruefeBeitritt(request, tableId, accountId);
     await joinTable(deps.db, tableId, accountId);
     // Wer sich an einen Tisch setzt, steht nicht mehr in der Schnellsuche.
     deps.vermittlung?.verlaesstAlle(accountId);
@@ -1959,6 +2014,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/suche/:gameId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    requireSpielbar(gameId, plattformVon(request));
     // Optionaler Regelsatz (Spielart); ohne Rumpf gilt die Vorgabe des Moduls.
     const { config } = z
       .object({ config: z.unknown().optional() })
