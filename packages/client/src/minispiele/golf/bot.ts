@@ -737,9 +737,12 @@ export function wegfeld(karte: Karte, kundig = true, ballR: number = BALL_R): We
      * ihren Kanten entfernt, wenn der Ball klein genug ist — beim Miniball
      * (0,2 E) schon in jeder 1 E dicken Wand, deren Rasterpunkte 0,25 E von
      * der Kante liegen. Das Feld führte dann quer durch die Wand, und der Bot
-     * spielte Schlag um Schlag gegen sie (k15, k24, k36: 0 % im Fun-Modus).
-     * Nur für andere Radien: Beim klassischen Ball bliebe sonst nicht jede
-     * Entscheidung dieselbe (klassisch-gold.test.ts).
+     * spielte Schlag um Schlag gegen sie (k15, k24, k36: 0 % im Fun-Modus,
+     * gemessen am 23.09.2026). Seitdem plant der Miniball zwar mit dem
+     * klassischen Radius (`planRadius`), die Prüfung bleibt aber für jeden
+     * anderen Radius stehen, den `wegfeld` bekommt. Nur für andere Radien:
+     * Beim klassischen Ball bliebe sonst nicht jede Entscheidung dieselbe
+     * (klassisch-gold.test.ts).
      */
     if (frei && ballR !== BALL_R && inWand(karte, x, y)) frei = false;
     if (frei) {
@@ -993,6 +996,21 @@ const PROBE_ARTEN: ReadonlySet<Zone['art']> = new Set<Zone['art']>(['beschleunig
 const PROBE_TAKTE = 160;
 
 /**
+ * Mit welchem Radius der Bot Sichtlinien und Wegfeld rechnet: mit dem des
+ * Balls, aber nie kleiner als dem klassischen.
+ *
+ * Seit dem 23.09.2026, gemessen (Botprobe, 20 Saaten): Mit dem echten
+ * Miniball-Radius (0,2 E) zielte der Bot auf Linien knapp an Wänden und
+ * Drehkreuzen entlang, die ihm jede Streuung verdarb — k39 Genie 2,40 → 3,90,
+ * k18 4,00 → 5,35, im Mittel 0,08 Schläge schlechter, als hätte er den
+ * Miniball gar nicht bemerkt. Für den Riesenball gilt der echte Radius:
+ * Dort wäre der kleinere eine Linie, die es nicht gibt.
+ */
+function planRadius(p: Readonly<Physikwerte>): number {
+  return p.ballR > BALL_R ? p.ballR : BALL_R;
+}
+
+/**
  * `PROBE_TAKTE` für diese Physikwerte: dieselben acht Sekunden Rollzeit. In
  * der Zeitlupe rollt ein Ball doppelt so viele Takte, die Probe also auch —
  * sonst bewertete sie ihn mitten im Lauf.
@@ -1180,7 +1198,7 @@ function besterProbeschlag(
   ry: number,
   kraft: number,
 ): { rx: number; ry: number; kraft: number } {
-  const ballR = physikwerte(z.aktuell.mod, karte).ballR;
+  const ballR = planRadius(physikwerte(z.aktuell.mod, karte));
   const feld = wegfeld(karte, true, ballR);
   const breit = streuBreite(z.botStufe);
   const kraftBreit = STREUUNG[z.botStufe].kraft / 2;
@@ -1298,7 +1316,7 @@ export function botEntscheidung(
   // Die Physik DIESES Lochs — im klassischen Modus `KLASSISCHE_WERTE`, und dann
   // ist jede Zeile unten dieselbe wie vor dem Fun-Modus.
   const p = physikwerte(z.aktuell.mod, karte);
-  const ballR = p.ballR;
+  const ballR = planRadius(p);
 
   let zielX = lochX;
   let zielY = lochY;

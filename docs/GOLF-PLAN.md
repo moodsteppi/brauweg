@@ -277,3 +277,49 @@ dann <http://localhost:5173/bahnwerkstatt.html>. Quelle unter
   Datei und ihre Katalogzeile gehören im selben Pull Request entfernt.
 - **Nicht im Betriebspaket.** `vite build` baut nur `index.html`; die
   Begründung steht in `packages/client/bahnwerkstatt.html`.
+
+## Fun-Modus (seit 23.09.2026)
+
+Robins Entscheidung vom 22.09.2026: neben dem fairen klassischen Golf ein
+Fun-Modus als eigene Regeloption (`GolfRegeln.modus: 'klassisch' | 'fun'`,
+`packages/game-golf/src/modus.ts`) — mit Wind, Wetter und Roulette je Loch
+(Teil 1), Power-ups (Teil 2) und Störschlägen (Teil 3). Ausdrücklich nicht:
+verrückte Bälle und wandernde Wände.
+
+- **Das Modul kennt nur den Namen.** Die Sicht trägt `modus`; welcher
+  Modifikator an welchem Loch gilt, zieht jedes Gerät selbst, rein aus Saat
+  und Lochindex (`modifikatorenFuerLoch` in `minispiele/golf/modifikator.ts`)
+  — eine gemischte Trommel je sieben Löcher, nie zweimal derselbe
+  hintereinander. Kein Zustand, damit das Replay und ein neu ladendes Gerät
+  auf dasselbe kommen. Die Reihenfolge von `ROULETTE` ist Determinismus.
+- **Wo ein Loch seine Modifikatoren trägt:** `Partiezustand.aktuell.mod`
+  (`Lochmodifikatoren`, unveränderlich, von `kopiere` flach mitgenommen).
+  Teil 2 hängt seine Felder dort an; was sich IM Loch ändert, gehört an den
+  Ball und in `kopiere`.
+- **Physik und Bots lesen `physikwerte(mod, karte)`**, nicht mehr die
+  Konstanten. Im klassischen Modus kommt `KLASSISCHE_WERTE` selbst zurück —
+  dieselben Zahlen in derselben Rechnung; `klassisch-gold.test.ts` hasht vier
+  klassische Partien Takt für Takt als rohe Gleitkommabytes gegen Sollwerte,
+  die vor dem Umbau gemessen wurden. Die Bots erkennen den klassischen Satz
+  am Zeiger und nehmen dann den alten Weg über die Rasentabelle.
+- **Die sieben Modifikatoren und ihre Fallen:** Wind (Karten-Feld
+  `wind?: {rx, ry, staerke}`, schiebt nur rollende Bälle und nie stärker als
+  0,95 × Rollreibung — sonst käme ein Ball nie zur Ruhe), Regen (Reibung
+  × 0,5), Riesenball (Radius × 1,5), Miniball (Radius × 0,625 mit doppelt so
+  vielen Unterschritten, sonst tunnelt er), Gummiwände (Abprall × 1,4, aber
+  der Betrag wird gedeckelt: über 1 schaukelte sich ein Ball zwischen zwei
+  nahen Wänden auf), Zeitlupe (halber Zeitschritt, Flug/Portalsperre/
+  Zeitlimit doppelt), Schwerelos (Reibung × 0,25, Flug × 1,5; ein Sprungfeld
+  wirft nur vorwärts und mit einem Viertel Mindesttempo — sonst 0 % auf k07
+  und k38).
+- **Bots:** `kraftFuerStrecke` rechnet mit den Physikwerten, im Wind hält
+  `zielImWind` quer vor. Sichtlinie und Wegfeld rechnen mit dem Radius des
+  Balls, aber nie kleiner als dem klassischen (`planRadius`: mit 0,2 E zielte
+  der Bot auf Linien, die ihm jede Streuung verdarb). Das Wegfeld gibt es je
+  Radius; für andere Radien sperrt es zusätzlich Rasterpunkte IN Wänden.
+  Gemessen mit `golf-botprobe.ts --modifikator alle --kosten`.
+- **Noch offen:** Die Wahl steht im Menü „Gegen Bots" (`ModusWahl` in
+  `FunAnsage.tsx`); in der Gruppe (online, `setRules` von Sitz 0) fehlt der
+  Schalter. `replay.ts` rechnet Fun-Löcher noch klassisch nach (es reicht
+  `modus` nicht an `neuePartie`). Die Bestleistung je Bahn soll im Fun-Modus
+  nicht zählen — Haken: `zaehltFuerBestleistung` in modus.ts.
