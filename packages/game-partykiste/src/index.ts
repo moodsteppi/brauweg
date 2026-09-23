@@ -10,6 +10,7 @@
 export * from './regeln.js';
 export * from './partie.js';
 export * from './sicht.js';
+export * from './modi.js';
 export { botZug } from './bot.js';
 export { partykiste } from './adapter.js';
 export type {

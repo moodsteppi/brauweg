@@ -31,6 +31,9 @@ import type { PartykisteSicht } from './sicht';
  */
 export function binReihumDran(sicht: PartykisteSicht | null): boolean {
   if (!sicht || sicht.fertig || sicht.sitz < 0 || sicht.phase !== 'spiel') return false;
+  /* Team-Abend: Waehrend der Aufstellung steht die erste Runde nur bereit —
+     wer dort "dran" waere, ist es noch nicht, und summte sonst umsonst. */
+  if (sicht.aufstellung) return false;
   const daten = sicht.daten as { amZug?: unknown };
   return typeof daten.amZug === 'number' && daten.amZug === sicht.sitz;
 }

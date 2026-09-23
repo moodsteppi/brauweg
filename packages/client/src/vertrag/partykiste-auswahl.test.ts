@@ -1,4 +1,12 @@
-import { MINISPIELE, PAKETE, istReihum, minispielFuer, partykiste, type PartykisteRegeln } from '@brauweg/game-partykiste';
+import {
+  MINISPIELE,
+  PAKETE,
+  SPIELMODI,
+  istReihum,
+  minispielFuer,
+  partykiste,
+  type PartykisteRegeln,
+} from '@brauweg/game-partykiste';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -65,13 +73,15 @@ describe('Vertrag Partykiste-Auswahl', () => {
   });
 
   /*
-   * Die Modi baut eine parallele Karte in Regel und Engine. Bis sie gemergt
-   * ist, fehlt `modus` in der Vorgabe, und die Auswahl zeigt keine Modus-
-   * Kacheln — dann gibt es hier nichts zu pruefen. Danach haelt dieser Test
-   * die Kennungen der Kacheln gegen `validateConfig`, ohne dass ihn jemand
-   * anfassen muss.
+   * Bis zur Modi-Karte (#211) fehlte `modus` in der Vorgabe, und dieser Test
+   * lief als `skipIf` leer. Jetzt kennt das Modul den Modus, und der Test
+   * laeuft immer: Verschwaende `modus` wieder aus `defaultConfig()`, stuenden
+   * im Menue keine Modus-Kacheln mehr — das soll rot werden, nicht still
+   * uebersprungen.
    */
-  it.skipIf(typeof vorgabe['modus'] !== 'string')('jeder Modus der Kacheln ist einer, den das Modul annimmt', () => {
+  it('jeder Modus der Kacheln ist einer, den das Modul annimmt — und das Modul kennt genau diese', () => {
+    expect(vorgabe['modus']).toBe('turnier');
+    expect(MODI.map((m) => m.kennung)).toEqual([...SPIELMODI]);
     for (const m of MODI) {
       const wahl = { ...KEINE_WAHL, modus: m.kennung, paket: 'wg-abend' };
       expect({ modus: m.kennung, probleme: probleme(regelsatzAus(vorgabe, BASIS, wahl, false)) }).toEqual({

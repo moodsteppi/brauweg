@@ -12,6 +12,8 @@
  */
 
 import type { SeatInfo } from '../../protocol';
+import { LagerTabelle } from './Lager';
+import { lagerKurz } from './modi';
 import { Wartet, namenFuer } from './Runden';
 import { zaehlerWort, type PartyAktion, type PartykisteSicht } from './sicht';
 
@@ -81,25 +83,39 @@ export function Abrechnung({
   );
 }
 
-/** Der Turnierstand. Punkte entscheiden, der Zaehler steht nur daneben. */
+/**
+ * Der Turnierstand. Punkte entscheiden, der Zaehler steht nur daneben.
+ *
+ * Im Team-Abend steht die Lager-Tabelle darueber, und der Platz je Person
+ * ist der ihres Lagers (so kommt er aus der Sicht) — die eigenen Punkte
+ * stehen trotzdem da, sie sind ja der Beitrag zum Lager.
+ */
 export function Tabelle({ sicht, sitze }: { sicht: PartykisteSicht; sitze: SeatInfo[] }): React.JSX.Element {
   const reihen = [...sicht.tabelle].sort((a, b) => a.platz - b.platz || a.sitz - b.sitz);
   return (
-    <ol className="pk-tabelle">
-      {reihen.map((zeile) => (
-        <li
-          key={zeile.sitz}
-          data-ich={zeile.sitz === sicht.sitz ? '' : undefined}
-          data-weg={sicht.ausgestiegen.includes(zeile.sitz) ? '' : undefined}
-        >
-          <span className="pk-platz">{zeile.platz}</span>
-          <span className="pk-tabellenname">{namenFuer(sitze, zeile.sitz)}</span>
-          <span className="pk-schluck">
-            {zeile.schlucke} {zaehlerWort(sicht.trinkmodus, zeile.schlucke)}
-          </span>
-          <strong className="pk-punkte">{zeile.punkte}</strong>
-        </li>
-      ))}
-    </ol>
+    <>
+      <LagerTabelle sicht={sicht} sitze={sitze} />
+      <ol className="pk-tabelle">
+        {reihen.map((zeile) => (
+          <li
+            key={zeile.sitz}
+            data-ich={zeile.sitz === sicht.sitz ? '' : undefined}
+            data-weg={sicht.ausgestiegen.includes(zeile.sitz) ? '' : undefined}
+          >
+            <span className="pk-platz">{zeile.platz}</span>
+            <span className="pk-tabellenname">{namenFuer(sitze, zeile.sitz)}</span>
+            {sicht.lager ? (
+              <span className="pk-lagerzeichen" data-lager={sicht.lager[zeile.sitz]}>
+                {lagerKurz(sicht.lager[zeile.sitz] ?? 0)}
+              </span>
+            ) : null}
+            <span className="pk-schluck">
+              {zeile.schlucke} {zaehlerWort(sicht.trinkmodus, zeile.schlucke)}
+            </span>
+            <strong className="pk-punkte">{zeile.punkte}</strong>
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }

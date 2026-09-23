@@ -27,6 +27,44 @@ import type {
 } from './partie.js';
 import { amZug, platzierungen, type Platzierung } from './partie.js';
 import { meldenMoeglich, noetigJeSitz } from './ohne-uhr.js';
+import type { Haerte, Paket } from './inhalte/typen.js';
+import {
+  TISCHOEFFNER,
+  eskalationsStufe,
+  lagerWertung,
+  modusVon,
+  regelnDerRunde,
+  wechselbareSitze,
+  type LagerPlatzierung,
+} from './modi.js';
+import type { Spielmodus } from './regeln.js';
+
+/** Eskalation: wo die Kurve in der laufenden Runde steht. */
+export interface EskalationsSicht {
+  /** Stufe der Kurve, 1 bis 3 — erstes, zweites, letztes Drittel. */
+  readonly stufe: Haerte;
+  /** Die Inhaltsstufe dieser Runde: die Stufe, hoechstens die Decke des Tisches. */
+  readonly inhaltsHaerte: Haerte;
+  /** Die Haerte (Schluckfaktor) dieser Runde — steigt mit der Stufe. */
+  readonly schluckFaktor: number;
+  /**
+   * Wollte die Kurve derber, als der Tisch darf? Dann sitzt ein Gast, und der
+   * Bildschirm sagt "derb erst ohne Gast" statt still weniger zu zeigen.
+   */
+  readonly gekappt: boolean;
+}
+
+/** Team-Abend vor der ersten Runde. */
+export interface AufstellungsSicht {
+  /** Wer aufstellt — der Tischoeffner. */
+  readonly aufsteller: number;
+  /**
+   * Die Sitze, die DIESER Sitz gerade ins andere Lager setzen darf — leer fuer
+   * alle ausser dem Aufsteller. Steht in der Sicht, damit der Bildschirm die
+   * Regel "kein Lager ohne Anwesenden" nicht nachbauen muss.
+   */
+  readonly wechselbar: readonly number[];
+}
 
 // ---------------------------------------------------------------------------
 // Die Daten des laufenden Minispiels
@@ -262,6 +300,21 @@ export interface PartykisteSicht {
   readonly daten: MinispielSicht;
   /** Die geltende Regel-Karte oder null — seit dem 22.09.2026. */
   readonly regelKarte: RegelKarteSicht | null;
+  /*
+   * Der Spielmodus (seit dem 22.09.2026) — kein Geheimnis, er steht auch im
+   * Regelsatz des Tisches. Die Regelzeile zeigt ihn.
+   */
+  readonly modus: Spielmodus;
+  /** Das Themenpaket des Tisches, null = alles. Beim Themenabend das Thema. */
+  readonly paket: Paket | null;
+  /** Nur in der Eskalation, sonst null. */
+  readonly eskalation: EskalationsSicht | null;
+  /** Team-Abend: je Sitz das Lager (0/1), sonst null. */
+  readonly lager: readonly number[] | null;
+  /** Team-Abend: die Tabelle je Lager — die Endtafel. Sonst null. */
+  readonly lagerTabelle: readonly LagerPlatzierung[] | null;
+  /** Team-Abend, solange die Lager aufgestellt werden; sonst null. */
+  readonly aufstellung: AufstellungsSicht | null;
 }
 
 function imErgebnis(partie: PartykistePartie): boolean {
@@ -444,5 +497,28 @@ export function sichtFuer(partie: PartykistePartie, sitz: number): PartykisteSic
     tabelle: platzierungen(partie),
     daten: minispielSicht(partie, sitz),
     regelKarte: regelKarteSicht(partie),
+    modus: modusVon(partie.regeln),
+    paket: partie.regeln.paket ?? null,
+    eskalation: eskalationsSicht(partie),
+    lager: partie.lager ?? null,
+    lagerTabelle: partie.lager ? lagerWertung(partie.lager, partie.punkte, partie.schlucke) : null,
+    aufstellung: partie.aufstellung
+      ? {
+          aufsteller: TISCHOEFFNER,
+          wechselbar: sitz === TISCHOEFFNER ? wechselbareSitze(partie.lager ?? [], partie.ausgestiegen) : [],
+        }
+      : null,
+  };
+}
+
+function eskalationsSicht(partie: PartykistePartie): EskalationsSicht | null {
+  const regeln = regelnDerRunde(partie.regeln, partie.rundeNr, partie.runden);
+  if (!regeln.eskalation) return null;
+  const stufe = eskalationsStufe(partie.rundeNr, partie.runden);
+  return {
+    stufe,
+    inhaltsHaerte: regeln.inhaltsHaerte,
+    schluckFaktor: regeln.schluckFaktor,
+    gekappt: regeln.inhaltsHaerte < stufe,
   };
 }

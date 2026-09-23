@@ -584,6 +584,10 @@ const de: Record<string, string> = {
   'einladung.besetzt': 'Plätze besetzt',
   'einladung.anderesSpiel': 'Dieser Code gehört zu einem Tisch für',
   'einladung.fehlgeschlagen': 'Beitreten fehlgeschlagen.',
+
+  // Spielmodi der Partykiste (22.09.2026).
+  'ruleset.partykiste.modus': 'Diesen Spielmodus gibt es nicht.',
+  'ruleset.partykiste.themenOhnePaket': 'Ein Themenabend braucht ein Themenpaket.',
   'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
   'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
   'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',

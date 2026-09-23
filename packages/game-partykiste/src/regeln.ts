@@ -127,6 +127,38 @@ export interface PartykisteRegeln {
    * nur fuer ANDERE Pakete gedacht ist (Stufen in `inhalte/filter.ts`).
    */
   readonly paket: Paket | null;
+  /**
+   * Wie der Abend gespielt wird (seit dem 22.09.2026, Robins Entscheidung):
+   * das klassische Turnier oder einer der drei Modi aus `modi.ts`.
+   *
+   * Optional, und das ist dieselbe Nachsicht wie bei `inhaltsHaerte` und
+   * `paket`: Jeder Tisch von davor, jeder Snapshot und der Bildschirm, der
+   * die Moduswahl noch nicht kennt, schicken das Feld nicht. Fehlt = Turnier.
+   * Gelesen wird es deshalb nie direkt, sondern ueber `modusVon`.
+   */
+  readonly modus?: Spielmodus;
+}
+
+/**
+ * Die Spielmodi. Neue kommen hinten dazu, Kennungen aendern sich nie — sie
+ * stehen in abgelegten Regelsaetzen. Schnellrunde und Marathon sind bewusst
+ * NICHT dabei (Entscheidung vom 22.09.2026): Die Rundenzahl stellt man
+ * ohnehin ein, ein Modus dafuer waere ein zweiter Regler fuer dieselbe Zahl.
+ */
+export type Spielmodus =
+  /** Jeder fuer sich, Inhaltsstufe und Haerte fest — wie bis zum 22.09.2026. */
+  | 'turnier'
+  /** Inhaltsstufe und Haerte steigen ueber die Runden, in drei Dritteln. */
+  | 'eskalation'
+  /** Ein Themenpaket bestimmt Inhalte UND Minispiele. */
+  | 'themenabend'
+  /** Zwei Lager, die Punkte zaehlen fuers Lager. */
+  | 'team';
+
+export const SPIELMODI: readonly Spielmodus[] = ['turnier', 'eskalation', 'themenabend', 'team'];
+
+export function istSpielmodus(x: unknown): x is Spielmodus {
+  return typeof x === 'string' && (SPIELMODI as readonly string[]).includes(x);
 }
 
 export const DEFAULT_REGELN: PartykisteRegeln = {
@@ -135,6 +167,7 @@ export const DEFAULT_REGELN: PartykisteRegeln = {
   schluckFaktor: 1,
   inhaltsHaerte: 1,
   paket: null,
+  modus: 'turnier',
 };
 
 export const SCHLUCK_FAKTOR_MIN = 1;
@@ -260,7 +293,12 @@ export type PartykisteAktion =
    * Sitz ist eine Selbstmeldung, jeder andere eine Anklage (zaehlt erst mit
    * der Mehrheit). Geht in JEDER Runde, solange die Regel gilt.
    */
-  | { readonly art: 'verstoss'; readonly ziel: number };
+  | { readonly art: 'verstoss'; readonly ziel: number }
+  /**
+   * Team-Abend, vor der ersten Runde: Der Tischoeffner setzt einen Sitz ins
+   * andere Lager. Nur waehrend der Aufstellung (`partie.aufstellung`).
+   */
+  | { readonly art: 'lagerwechsel'; readonly sitz: number };
 
 // ---------------------------------------------------------------------------
 // Punkte und Schluecke

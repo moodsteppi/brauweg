@@ -103,10 +103,10 @@ export const PAKET_NAME: Record<string, string> = {
 export const PAKET_ALLES = 'alles';
 
 /**
- * Die Spielmodi. Das Modul kennt sie erst, wenn die Modi-Karte gemergt ist;
- * bis dahin steht im Menue NICHTS davon (siehe `modusBekannt`). Die Kennungen
- * sind die der Karte „Spielmodi Eskalation, Themenabend und Team-Abend“; der
- * Vertrag prueft sie gegen `validateConfig`, sobald das Modul `modus` hat.
+ * Die Spielmodi — seit #211 kennt das Modul sie (`SPIELMODI`, `modi.ts`), und
+ * `defaultConfig()` traegt `modus: 'turnier'`, also stehen die Kacheln im
+ * Menue (`modusBekannt`). Der Vertrag (vertrag/partykiste-auswahl.test.ts)
+ * haelt diese Liste gegen `SPIELMODI` und `validateConfig`.
  */
 export const MODI = [
   { kennung: 'turnier', titel: 'Turnier', text: 'Jeder für sich, die Tabelle entscheidet.' },
