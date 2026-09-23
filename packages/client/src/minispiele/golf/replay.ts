@@ -38,6 +38,7 @@ import {
   bahnfolge as zeigerJeLoch,
   starteLoch,
 } from './physik';
+import { type Golfmodus, modusAus } from './modifikator';
 import type { GolfSicht } from './sicht';
 
 /* --------------------------------------------------------------------------
@@ -53,6 +54,12 @@ export interface ReplayEingabe {
   botStufe: Botstufe;
   /** Kennungen der Bahnen in Spielfolge, wie die Sicht sie liefert (`GolfSicht.bahnen`). */
   bahnen: readonly string[];
+  /**
+   * Spielart des Tisches (`GolfSicht.modus`, seit dem 23.09.2026). Ohne sie
+   * rechnete das Replay ein Fun-Loch klassisch nach — ohne Roulette und ohne
+   * Felder, also eine andere Partie. Fehlt sie, ist es klassisch.
+   */
+  modus?: Golfmodus;
   /**
    * Alle Ereignisse der Partie (Schläge UND Ausstiege), in beliebiger
    * Reihenfolge. Ausstiege stehen hier schon mit ihrem Takt — die Rechnung
@@ -121,7 +128,7 @@ export function bahnfolge(
  * mitten ins laufende Replay.
  */
 export function eingabeAusKern(
-  kopf: Pick<GolfSicht, 'saat' | 'sitze' | 'loecher' | 'botSitze' | 'botStufe' | 'bahnen'>,
+  kopf: Pick<GolfSicht, 'saat' | 'sitze' | 'loecher' | 'botSitze' | 'botStufe' | 'bahnen' | 'modus'>,
   kern: Gleichschritt | null,
 ): ReplayEingabe | null {
   if (kern === null) return null;
@@ -132,6 +139,7 @@ export function eingabeAusKern(
     botSitze: [...kopf.botSitze],
     botStufe: kopf.botStufe,
     bahnen: [...(kopf.bahnen ?? [])],
+    modus: modusAus(kopf.modus),
     ereignisse: kern.alleEreignisse().map((e) => ({ ...e })),
   };
 }
@@ -273,6 +281,8 @@ export function nimmLochAuf(
     loecher: eingabe.loecher,
     botStufe: eingabe.botStufe,
     karten: folge.karten,
+    // Der Modifikator je Loch kommt dann rein aus Saat und Lochindex, wie im Spiel.
+    modus: eingabe.modus,
   });
   z.reihenfolge = [...folge.reihenfolge];
   starteLoch(z, 0, 0, folge.karten);

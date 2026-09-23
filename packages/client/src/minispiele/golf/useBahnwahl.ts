@@ -18,6 +18,7 @@ import {
   wahlAusRegeln,
   wahlUnfertig,
 } from './bahnwahl';
+import { type Golfmodus, modusAus } from './modifikator';
 
 export interface Lobbystand {
   /** Kurse und Themen vom Modul; `null`, solange sie fehlen — dann gibt es nur Zufall. */
@@ -94,6 +95,10 @@ export function useTischBahnwahl({
   wahl: Bahnwahl;
   setzeWahl: (wahl: Bahnwahl) => void;
   bereitZumStart: () => void;
+  /** Die Spielart im Regelsatz des Tisches (seit dem 23.09.2026, Fun-Modus). */
+  modus: Golfmodus;
+  /** Sitz 0 stellt die Spielart ein — sofort, ohne Sendeverzug: ein Tipp, eine Wahl. */
+  setzeModus: (modus: Golfmodus) => void;
 } {
   const [regeln, setRegeln] = useState<Record<string, unknown> | null>(null);
   const [lokal, setLokal] = useState<Bahnwahl | null>(null);
@@ -162,6 +167,25 @@ export function useTischBahnwahl({
     [sende],
   );
 
+  /*
+   * Die Spielart geht über denselben Regelsatz wie die Bahnwahl, aber als
+   * eigenes Feld: `regelnAusWahl` behält fremde Felder (`...rest`), eine
+   * spätere Bahnwahl nimmt `modus` also mit. Damit das auch gilt, bevor der
+   * Server nachgezogen hat, schreibt der Tipp den Regelsatz hier gleich mit —
+   * sonst ginge eine Bahnwahl kurz danach mit dem alten Regelsatz raus und
+   * nähme den Fun-Modus wieder weg. Klassisch heißt: Feld weg, wie ein
+   * Regelsatz von davor.
+   */
+  const setzeModus = useCallback((modus: Golfmodus): void => {
+    const bisher = regelnRef.current ?? {};
+    if (modusAus(bisher.modus) === modus && regelnRef.current !== null) return;
+    const { modus: _alt, ...rest } = bisher;
+    const neu: Record<string, unknown> = modus === 'fun' ? { ...rest, modus: 'fun' } : rest;
+    regelnRef.current = neu;
+    setRegeln(neu);
+    setRulesRef.current?.(neu);
+  }, []);
+
   const bereitZumStart = useCallback((): void => {
     if (uhr.current !== null) window.clearTimeout(uhr.current);
     uhr.current = null;
@@ -170,5 +194,11 @@ export function useTischBahnwahl({
     if (w !== null) sende(w);
   }, [sende]);
 
-  return { wahl: lokal ?? wahlAusRegeln(regeln), setzeWahl, bereitZumStart };
+  return {
+    wahl: lokal ?? wahlAusRegeln(regeln),
+    setzeWahl,
+    bereitZumStart,
+    modus: modusAus(regeln?.modus),
+    setzeModus,
+  };
 }

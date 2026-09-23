@@ -15,7 +15,7 @@ import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
 import { type Karte, loeseBahnen } from '../minispiele/golf/karte';
 import { Bahnauswahl, BahnauswahlAnzeige } from '../minispiele/golf/Bahnauswahl';
-import { FunAnsage, ModusWahl, gemerkterModus, regelnMitModus } from '../minispiele/golf/FunAnsage';
+import { FunAnsage, ModusAnzeige, ModusWahl, gemerkterModus, regelnMitModus } from '../minispiele/golf/FunAnsage';
 import type { Golfmodus } from '../minispiele/golf/modifikator';
 import {
   festeLochzahl,
@@ -629,9 +629,18 @@ export function Golf({
         loecherFest={festeLochzahl(tischWahl.wahl, lobby.daten)}
         startSperre={wahlUnfertig(tischWahl.wahl)}
         bahnwahl={
-          <Bahnauswahl daten={lobby.daten} wahl={tischWahl.wahl} onWahl={tischWahl.setzeWahl} karten={KARTEN} kursSperre={kursSperre} />
+          <>
+            {/* Die Spielart der Gruppe (seit 23.09.2026) — Sitz 0 wählt, alle sehen sie. */}
+            <ModusWahl modus={tischWahl.modus} onWahl={tischWahl.setzeModus} />
+            <Bahnauswahl daten={lobby.daten} wahl={tischWahl.wahl} onWahl={tischWahl.setzeWahl} karten={KARTEN} kursSperre={kursSperre} />
+          </>
         }
-        bahnanzeige={<BahnauswahlAnzeige daten={lobby.daten} wahl={tischWahl.wahl} karten={KARTEN} />}
+        bahnanzeige={
+          <>
+            <ModusAnzeige modus={tischWahl.modus} />
+            <BahnauswahlAnzeige daten={lobby.daten} wahl={tischWahl.wahl} karten={KARTEN} />
+          </>
+        }
       />
     );
   }
