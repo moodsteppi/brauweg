@@ -51,9 +51,12 @@ object Huelle {
      * Android-WebView nicht kennt — Teilen und Wach-Halten — ueber
      * [Bruecke]. Wo der WebView sie doch kennt, bleibt seine eigene.
      */
-    fun vorspann(): String = listOf(
+    fun vorspann(push: Boolean = BuildConfig.PUSH): String = listOf(
         "<script>",
-        "window.BRAUWEG_APP = { apiBase: ${jsText(apiBasis)} };",
+        // plattform und push: Der Client soll fragen koennen, ob es hier
+        // Push gibt, statt es am User-Agent zu raten. push ist false, solange
+        // der Schalter aus ist (app/build.gradle.kts).
+        "window.BRAUWEG_APP = { apiBase: ${jsText(apiBasis)}, plattform: 'android', push: $push };",
         "(function () {",
         "  var b = window.BrauwegNativ;",
         "  if (!b) return;",
@@ -71,6 +74,48 @@ object Huelle {
         "</script>",
     ).joinToString("\n")
 
+    /*
+     * Die Ereignisse zwischen Huelle und Client. Die NAMEN sind eine
+     * Absprache mit dem Client und mit der iOS-Huelle (apps/ios), die sie
+     * uebernimmt — umbenennen heisst: an allen drei Stellen zugleich.
+     */
+
+    /** Ein Push-Token ist da: `detail = {plattform: 'android', token}`. */
+    const val PUSH_EREIGNIS = "brauweg:push-token"
+
+    /**
+     * Die Zurueck-Taste wurde gedrueckt. `cancelable`: Ruft der Client
+     * `preventDefault()`, hat er selbst zurueckgeblaettert (zuruecktaste.ts).
+     */
+    const val ZURUECK_EREIGNIS = "brauweg:zurueck"
+
+    /**
+     * Meldet dem Client ein Push-Token.
+     *
+     * Zweimal, weil niemand weiss, wer zuerst da ist: als Ereignis fuer den,
+     * der schon horcht, und als `window.BRAUWEG_APP.pushToken` fuer den, der
+     * erst spaeter hinsieht. Das Token kommt von Firebase irgendwann nach
+     * dem Start — oft bevor React seine Effekte angehaengt hat.
+     */
+    fun pushTokenSkript(token: String): String =
+        "(function () {" +
+            " var d = { plattform: 'android', token: ${jsText(token)} };" +
+            " if (window.BRAUWEG_APP) window.BRAUWEG_APP.pushToken = d;" +
+            " window.dispatchEvent(new CustomEvent('$PUSH_EREIGNIS', { detail: d }));" +
+            " })();"
+
+    /**
+     * Fragt den Client, ob er die Zurueck-Taste selbst verarbeitet. Das
+     * Ergebnis des Skripts ist `true`, wenn er `preventDefault()` rief.
+     */
+    val ZURUECK_SKRIPT: String =
+        "(function () {" +
+            " var e = new CustomEvent('$ZURUECK_EREIGNIS', { cancelable: true });" +
+            " window.dispatchEvent(e);" +
+            " return e.defaultPrevented;" +
+            " })();"
+
     private fun jsText(s: String): String =
-        "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+        "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("\n", "\\n").replace("\r", "\\r") + "\""
 }

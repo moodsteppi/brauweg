@@ -18,6 +18,7 @@ import {
 
 import { leseKontoLink, type KontoLinkZiel } from './kontolink';
 import { istSpielbar } from './spielfreigabe';
+import { useZuruecktaste } from './zuruecktaste';
 
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
 /** Landeseiten der Mail-Links und die Mail-Diagnose (seit dem 23.09.2026). */
@@ -133,6 +134,9 @@ type Screen =
    * aufgebaut; der Server schickt ohnehin immer die volle Sicht.
    */
   | { name: 'profil'; accountId: string; vorher: Screen };
+
+/** Spiele, deren `lobby` die gewoehnliche Kartenlobby ist (siehe useZuruecktaste unten). */
+const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio']);
 
 /**
  * Der Lade-Zustand des Clients.
@@ -274,6 +278,32 @@ export function App(): React.JSX.Element {
     musikAn(me !== null);
     return () => musikAn(false);
   }, [me !== null]);
+
+  /**
+   * Die Zurueck-Taste der Android-App (zuruecktaste.ts). Nur die zwei
+   * Schritte, deren Ziel hier feststeht: aus einem Profil dorthin, wo es
+   * geoeffnet wurde, und aus der Kartenlobby in die Spielauswahl — genau
+   * das, was die Zurueck-Knoepfe dieser Schirme tun. Am Tisch und in den
+   * Spielen mit eigenem Menue blaettert die Taste nicht: Dort weiss nur der
+   * Schirm selbst, was „zurueck" heisst (die Partykiste steht auch im
+   * Wartesaal noch auf `lobby`), und die App geht in den Hintergrund, statt
+   * die Partie zu verlassen. Darum eine Liste der Spiele MIT Kartenlobby
+   * statt einer ohne: Ein neues Spiel faellt so auf „nicht blaettern"
+   * zurueck, nicht auf „aus dem Spiel werfen".
+   */
+  useZuruecktaste(() => {
+    if (!me) return false;
+    if (screen.name === 'profil') {
+      setScreen(screen.vorher);
+      return true;
+    }
+    if (screen.name === 'lobby' && MIT_KARTENLOBBY.has(screen.gameId)) {
+      setScreen({ name: 'games' });
+      void reload();
+      return true;
+    }
+    return false;
+  });
 
   if (loading) return <AppLaedt />;
 

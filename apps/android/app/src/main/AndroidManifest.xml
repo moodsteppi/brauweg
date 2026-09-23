@@ -5,6 +5,11 @@
     <!-- navigator.vibrate am Tisch ("du bist dran", Poker-Regler). Ohne die
          Erlaubnis schweigt der WebView stumm. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Ob ueberhaupt ein Netz da ist: fuer die Meldung ohne Netz
+         (MainActivity) und damit navigator.onLine im WebView stimmt — ohne
+         die Erlaubnis meldet der WebView nie offline. Eine Normal-Erlaubnis,
+         der Nutzer wird nicht gefragt. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!--
       allowBackup=false: Im App-Speicher liegt das Sitzungstoken
