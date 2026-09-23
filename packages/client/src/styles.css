@@ -5619,14 +5619,6 @@ main.auth > .muted {
   border-radius: 0;
   padding: 0.4rem 0.6rem 0.7rem;
 }
-/* Der Google-Knopf: Google zeichnet ihn selbst, hier nur die Buehne. Leer
-   (keine Client-ID, Google blockiert) faellt er auf Hoehe null zusammen. */
-.auth-google {
-  display: flex;
-  justify-content: center;
-  margin-top: 0.6rem;
-}
-.auth-google:empty { margin-top: 0; }
 .auth .panel label {
   display: block;
   margin: 0.5rem 0 0;
@@ -20223,3 +20215,127 @@ span.hub-angebot-art.poker-jeton-stapel {
   background: var(--lila);
 }
 .pk-lagerzeichen[data-lager='1'] { background: var(--gold); }
+
+/* -- Konto: Mail-Links, Passwort vergessen, Gast sichern (23.09.2026) ------ */
+
+/* Wie der Gast-Knopf darunter: ein Textlink, kein dritter grosser Knopf. */
+.auth button.auth-vergessen {
+  display: block;
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.2rem 0;
+  border: none;
+  border-image: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 400;
+  text-decoration: underline;
+  text-align: center;
+}
+.auth button.auth-vergessen:active {
+  transform: none;
+  color: var(--lila);
+}
+
+.kontolink .panel + .panel { margin-top: 0.75rem; }
+.kontolink .panel h2 { margin: 0 0 0.6rem; font-size: 1.15rem; }
+
+.kontolink-probe { max-width: 34rem; }
+.kontolink-felder { margin: 0.5rem 0 1rem; }
+.kontolink-felder > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 40%) 1fr;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.kontolink-felder dt { color: var(--muted); }
+.kontolink-felder dd { margin: 0; word-break: break-word; }
+
+/* Schmal und ueber der Spielauswahl, nicht darin: Die Auswahl gehoert
+   anderen, und ein Gast soll die Leiste sehen, ohne dass sie das Spiel
+   verdeckt. */
+.gastsichern-leiste {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 1rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.gastsichern-leiste > button {
+  padding: 0.25rem 0.8rem;
+  font-size: 0.9rem;
+}
+.kontosichern form label { display: block; margin-bottom: 0.7rem; }
+.kontosichern form input { display: block; width: 100%; margin-top: 0.25rem; }
+
+/* ---------------------------------------------------------------------------
+   Anmeldung mit Apple und Google (anmeldung/AnbieterKnoepfe.tsx)
+
+   Beide Knoepfe gleich breit (280 px, im Code) und gleich hoch (40 px — so
+   hoch zeichnet Google seinen "large"-Knopf), damit keiner als Nebenweg
+   aussieht. Googles Knopf zeichnet Googles Bibliothek; hier steht nur die
+   Buehne. Apples Knopf folgt den Human Interface Guidelines: schwarz, weisse
+   Schrift und weisses Logo, Logo links, keine eigene Farbe, keine Schatten.
+   --------------------------------------------------------------------------- */
+.anbieter-knoepfe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+/* `hidden` allein reicht nicht: display:flex oben schlaegt das Attribut. */
+.anbieter-knoepfe[hidden] { display: none; }
+/* Geburtsdatum bei der Erstanmeldung — sieht aus wie das Feld im Formular. */
+.anbieter-nachfrage { margin-top: 0.75rem; }
+.anbieter-nachfrage p { margin: 0 0 0.4rem; }
+.anbieter-google {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+}
+.anbieter-google[aria-disabled='true'] { opacity: 0.6; pointer-events: none; }
+.anbieter-apple {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  margin: 0;
+  border: 1px solid #000;
+  border-radius: 4px;
+  background: #000;
+  color: #fff;
+  font: 500 15px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  /* Geerbte Knopf-Platten der Seite (border-image) gehoeren nicht auf einen
+     Markenknopf. */
+  border-image: none;
+  box-shadow: none;
+}
+.anbieter-apple:disabled { opacity: 0.6; cursor: default; }
+.anbieter-apple:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.anbieter-apple-logo { width: 16px; height: 16px; flex: none; margin-top: -2px; }
+
+/* Einstellungen: Abschnitt "Anmeldung" (anmeldung/Anmeldearten.tsx) */
+.anbieter-arten { margin-top: 1rem; }
+.anbieter-arten h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.anbieter-arten-zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+}
+.anbieter-arten-zeile .muted { display: block; font-size: 0.8rem; overflow-wrap: anywhere; }

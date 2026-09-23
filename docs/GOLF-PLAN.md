@@ -390,3 +390,20 @@ verrückte Bälle und wandernde Wände.
   `Lochstand.bombe`/`klebe` (die flache Kopie von `kopiere` teilt sie).
   Bots lösen gegen den Führenden aus, wenn es trifft (`botStoerschlag`,
   ohne Zufall und ohne Probe); gemessen mit `werkzeug/golf-stoerprobe.ts`.
+- **Die Bot-Seite der Störschläge (seit 23.09.2026, Version 10):**
+  `bot-stoer.ts`. Wer zurückliegt, holt ein Störfeld auch mit einem kleinen
+  Umweg (`umwegZuStoerfeld` in bot.ts: seitlich bis 4 E plus 0,75 mal die
+  Strecke, Endpunkt bis 16 Rasterschritte schlechter), solange ein Führender
+  noch spielt. Die Bombe fliegt zwischen den Führenden und das Loch (stößt
+  ihn zurück, der eigene Ball bleibt draußen), das Klebefeld auf seine
+  nächste Linie (Loch und fremde Linien bleiben frei), der Tausch zählt den
+  Weg im Wegfeld statt der Luftlinie. Rollt der Führende noch, wartet der Bot
+  bis zu 5 s (`botWartetAufStoer`, hängt nur an `botWartet`/`botDenkzeit`).
+  Gezielt wird nur auf Führende: Mit Treffern auf andere lag der Abstand
+  Erster–Letzter in allen vier Stufen etwas höher (je im Rauschen, 500
+  Saaten). **Grenze der Messung:** Jeder Umweg kostet den, der ohnehin
+  zurückliegt, und das arbeitet gegen das Gummiband; weiter gefasste Umwege
+  lösten mehr aus, der Abstand lag dann aber ebenfalls in allen Stufen höher. Die Zahlen stehen
+  im Pull Request und im Kopf von `umwegZuStoerfeld`. `golf-stoerprobe.ts`
+  misst dafür zusätzlich eine Fassung „nur Umweg" (eingesammelte Störschläge
+  verfallen sofort) und den Standardfehler des Abstands.

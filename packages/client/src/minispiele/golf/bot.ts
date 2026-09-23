@@ -67,8 +67,8 @@ import {
   schritt,
   turboWerte,
 } from './physik';
-import { TURBO_FAKTOR, feldWeg, felderVon } from './powerup';
-import { darfStoerAufnehmen, istStoerart } from './stoerschlag';
+import { EINSATZ, TURBO_FAKTOR, feldWeg, felderVon } from './powerup';
+import { darfStoerAufnehmen, fuehrt, istStoerart } from './stoerschlag';
 import { betrag, bruch, dreheHundertstel, ganzzahl, normiere } from './zufall';
 
 /** Kantenlänge einer Rasterzelle der Wegfindung. */
@@ -1041,7 +1041,7 @@ const PROBE_TAKTE = 160;
  * Miniball gar nicht bemerkt. Für den Riesenball gilt der echte Radius:
  * Dort wäre der kleinere eine Linie, die es nicht gibt.
  */
-function planRadius(p: Readonly<Physikwerte>): number {
+export function planRadius(p: Readonly<Physikwerte>): number {
   return p.ballR > BALL_R ? p.ballR : BALL_R;
 }
 
@@ -1368,7 +1368,7 @@ const UMWEG_QUER = 2.5;
  * Power-up bringt einen ganzen zurück. Liefert den neuen Zielpunkt oder
  * `null`.
  */
-function umwegUeberFeld(
+export function umwegUeberFeld(
   z: Partiezustand,
   sitz: number,
   karte: Karte,
@@ -1409,6 +1409,162 @@ function umwegUeberFeld(
     beste = { x: ex, y: ey };
   }
   return beste;
+}
+
+/*
+ * Der Umweg zu einem STÖRFELD (Fun-Modus, seit dem 23.09.2026, Version 10).
+ *
+ * Anlass (#222, golf-stoerprobe.ts): Bots lösten etwa in jedem 15. bis 30.
+ * Loch einen Störschlag aus. Je Loch lag gut ein Störfeld, eingesammelt
+ * wurden 10–22 % davon, weil der Bot nur mitnahm, was genau auf seiner Linie
+ * lag (`umwegUeberFeld`). Wer ein Störfeld aufnehmen darf, liegt aber zurück —
+ * und für genau den sind die Störschläge gebaut (Gummiband, stoerschlag.ts).
+ * Ihm ist ein Feld einen kleinen Umweg wert:
+ *
+ *   - seitlich bis `STOER_QUER` plus `STOER_WINKEL` mal die Strecke bis zum
+ *     Feld neben der geplanten Linie, statt fest `UMWEG_QUER`,
+ *   - auch HINTER dem geplanten Ziel, solange der Schlag es noch sicher
+ *     erreicht (vier Fünftel der Rollweite, wie `GEIST_ANTEIL`),
+ *   - der Endpunkt im Wegfeld bis `STOER_SCHRITTE` weiter vom Loch statt
+ *     `UMWEG_SCHRITTE`. Geprüft wird ein Schlag so lang wie geplant und,
+ *     wenn der verdeckt ist oder zu viel kostet, einer, der einen Schritt
+ *     hinter dem Feld endet,
+ *   - auch mit Turbo, Magnet oder Geist in der Hand: Die wirken mit genau
+ *     diesem Schlag und sind danach aus dem Halt (`wendeSchlagAn`) — frei,
+ *     wenn der Ball über das Feld rollt. Nicht mit einem Schild (es würde
+ *     ersetzt) und nicht mit einem Störschlag (er hat ja schon einen),
+ *   - nur, solange ein Führender das Loch noch spielt: Die Bots zielen nur
+ *     auf Führende (bot-stoer.ts), danach wäre der Umweg für nichts.
+ *
+ * Gewöhnliche Felder behandelt weiter `umwegUeberFeld`, Zeile für Zeile wie
+ * vorher. Die Zahlen sind gemessen (golf-stoerprobe.ts, 500 Saaten je Stufe):
+ * Jeder Umweg kostet den, der ohnehin zurückliegt, und das macht den Abstand
+ * zwischen Erstem und Letztem GRÖSSER — genau gegen das Gummiband. Weiter
+ * gefasst (24 Schritte, 45 Grad, dazu lange Putts über ein Feld) fielen mehr
+ * Störschläge, aber der Abstand lag in allen vier Stufen höher. Mit diesen
+ * Zahlen kosten die Umwege keine Stufe mehr als 0,01 Schläge je Ball und Loch
+ * (Spalte „nur Umweg").
+ */
+const STOER_QUER = 4;
+const STOER_WINKEL = 0.75;
+const STOER_SCHRITTE = 16;
+
+/** Spielt noch ein Führender (außer diesem Sitz) dieses Loch? */
+export function fuehrerImSpiel(z: Partiezustand, sitz: number): boolean {
+  for (let s = 0; s < z.baelle.length; s += 1) {
+    if (s === sitz || !fuehrt(z, s)) continue;
+    const t = z.baelle[s];
+    if (t.dabei && !t.eingelocht && t.fertigTakt === -1) return true;
+  }
+  return false;
+}
+
+/** Wie `umwegUeberFeld`, nur für Störfelder und großzügiger — siehe oben. Exportiert für die Tests. */
+export function umwegZuStoerfeld(
+  z: Partiezustand,
+  sitz: number,
+  karte: Karte,
+  b: Ball,
+  zx: number,
+  zy: number,
+  ballR: number,
+): { x: number; y: number } | null {
+  const felder = felderVon(z.aktuell.mod);
+  if (felder.length === 0) return null;
+  if (b.halt !== null && EINSATZ[b.halt] !== 'schlag') return null;
+  if (!darfStoerAufnehmen(z, sitz) || !fuehrerImSpiel(z, sitz)) return null;
+  const dx = zx - b.x;
+  const dy = zy - b.y;
+  const d = betrag(dx, dy);
+  if (d < 1) return null;
+  const feld = wegfeld(karte, z.botStufe !== 'anfaenger', ballR);
+  const zielZelle = freieZelleBei(feld, zx, zy);
+  if (zielZelle < 0 || feld.entfernung[zielZelle] < 0) return null;
+  const weitest = maximaleRollweite() * GEIST_ANTEIL;
+  let bestWeg = feld.entfernung[zielZelle] + STOER_SCHRITTE;
+  let beste: { x: number; y: number } | null = null;
+  for (let i = 0; i < felder.length; i += 1) {
+    if (feldWeg(z.aktuell.felderWeg, i) || !istStoerart(felder[i].powerup)) continue;
+    const fx = felder[i].x - b.x;
+    const fy = felder[i].y - b.y;
+    const df = betrag(fx, fy);
+    if (df < 0.5 || df + 1 > weitest) continue;
+    // Vor dem Ball, nicht seitlich hinter ihm.
+    const laengs = (fx * dx + fy * dy) / d;
+    if (laengs < 0.5) continue;
+    const quer = (fx * dy - fy * dx) / d;
+    const querGrenze = STOER_QUER + laengs * STOER_WINKEL;
+    if (quer > querGrenze || quer < -querGrenze) continue;
+    const r = normiere(fx, fy);
+    // Erst so lang wie geplant (mindestens einen Schritt über das Feld
+    // hinaus, sonst bliebe der Ball am Rand davor liegen), dann kurz dahinter.
+    const kurz = df + 1;
+    const voll = kurz > d ? kurz : d;
+    for (let v = 0; v < 2; v += 1) {
+      const lang = v === 0 ? voll : kurz;
+      if (v === 1 && kurz >= voll) break;
+      const ex = b.x + r.x * lang;
+      const ey = b.y + r.y * lang;
+      if (ex < 0 || ey < 0 || ex > karte.breite || ey > karte.hoehe) continue;
+      if (!sichtFrei(karte, b.x, b.y, ex, ey, null, ballR)) continue;
+      const c = freieZelleBei(feld, ex, ey);
+      if (c < 0 || feld.entfernung[c] < 0 || feld.entfernung[c] > bestWeg) continue;
+      bestWeg = feld.entfernung[c];
+      beste = { x: ex, y: ey };
+      break;
+    }
+  }
+  return beste;
+}
+
+/*
+ * Für die Störschläge der Bots (bot-stoer.ts): Wege und Weiten, die der Bot
+ * ohnehin rechnet, hier nach außen gereicht statt ein zweites Mal gebaut.
+ */
+
+/** Weg von (x,y) zum Loch in E über das Wegfeld, oder -1, wenn es keinen gibt. */
+export function wegZumLoch(karte: Karte, kundig: boolean, ballR: number, x: number, y: number): number {
+  const feld = wegfeld(karte, kundig, ballR);
+  const c = freieZelleBei(feld, x, y);
+  if (c < 0 || feld.entfernung[c] < 0) return -1;
+  return feld.entfernung[c] * RASTER;
+}
+
+/**
+ * Der Punkt `schritte` Rasterschritte weiter auf dem Weg zum Loch — endet der
+ * Weg früher (am Loch, an einem Portal), sein letzter Punkt. `null`, wenn es
+ * von hier keinen Weg gibt oder schon kein Schritt mehr geht.
+ */
+export function wegVoraus(
+  karte: Karte,
+  kundig: boolean,
+  ballR: number,
+  x: number,
+  y: number,
+  schritte: number,
+): { x: number; y: number } | null {
+  const feld = wegfeld(karte, kundig, ballR);
+  let c = freieZelleBei(feld, x, y);
+  if (c < 0 || feld.entfernung[c] < 0) return null;
+  let n = 0;
+  for (; n < schritte; n += 1) {
+    const weiter = abstieg(feld, c);
+    if (weiter < 0) break;
+    c = weiter;
+  }
+  if (n === 0) return null;
+  return { x: zelleX(feld, c), y: zelleY(feld, c) };
+}
+
+/** Wie weit ein Ball mit Anfangstempo `v` (E/s) auf freiem Rasen rollt — aus derselben Tabelle wie `kraftFuerDistanz`. */
+export function weiteBeiTempo(v: number): number {
+  const t = tabelle();
+  let k = (v / V_MAX) * TABELLE_STUFEN;
+  if (k <= 0) return 0;
+  if (k >= TABELLE_STUFEN) return t[TABELLE_STUFEN];
+  const lo = Math.floor(k);
+  k -= lo;
+  return t[lo] + (t[lo + 1] - t[lo]) * k;
 }
 
 /* --------------------------------------------------------------------------
@@ -1591,9 +1747,12 @@ export function botEntscheidung(
   if (aufsLoch) {
     zielX = lochX;
     zielY = lochY;
-  } else if (!insPortal && halt === null) {
-    // Ein Feld am Weg nimmt er mit — nur mit leerer Hand, sonst tauschte er.
-    const umweg = umwegUeberFeld(z, sitz, karte, b, zielX, zielY, ballR);
+  } else if (!insPortal) {
+    // Wer zurückliegt, holt ein Störfeld auch mit einem kleinen Umweg
+    // (`umwegZuStoerfeld`). Sonst nimmt er ein Feld am Weg mit — nur mit
+    // leerer Hand, sonst tauschte er.
+    let umweg = umwegZuStoerfeld(z, sitz, karte, b, zielX, zielY, ballR);
+    if (umweg === null && halt === null) umweg = umwegUeberFeld(z, sitz, karte, b, zielX, zielY, ballR);
     if (umweg !== null) {
       zielX = umweg.x;
       zielY = umweg.y;

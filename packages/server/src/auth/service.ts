@@ -31,6 +31,58 @@ export interface AuthDeps {
   readonly mailer: Mailer;
   readonly publicUrl: string;
   readonly sessionTtlDays: number;
+  /**
+   * Muss die Adresse vor der ersten Anmeldung bestaetigt sein? Fehlt der
+   * Wert, gilt ja. Der Start setzt ihn auf nein, wenn in der Produktion kein
+   * Versanddienst haengt (siehe index.ts): Ein Link, der nie ankommt, darf
+   * niemanden aussperren.
+   */
+  readonly bestaetigungPflicht?: boolean;
+}
+
+/** Siehe `AuthDeps.bestaetigungPflicht`. */
+export function bestaetigungNoetig(deps: AuthDeps): boolean {
+  return deps.bestaetigungPflicht !== false;
+}
+
+/** Was nach Registrieren oder Sichern ueber den Versand feststeht. */
+export interface VersandAuskunft {
+  /** Hat der Versanddienst die Mail angenommen? Beim Log-Mailer nie. */
+  readonly mailVersandt: boolean;
+  /** Muss der Link angeklickt werden, bevor man sich anmelden kann? */
+  readonly bestaetigungNoetig: boolean;
+}
+
+/** Nur die Domain — ganze Adressen gehoeren nicht ins Betriebslog. */
+function nurDomain(email: string): string {
+  const at = email.lastIndexOf('@');
+  return at < 0 ? '(ohne Domain)' : `@${email.slice(at + 1)}`;
+}
+
+/**
+ * Versand versuchen und das Ergebnis melden, statt es zu verschlucken.
+ *
+ * Die Fehlerzeile traegt die Marke "MAILFEHLER" wie die des Mailers selbst,
+ * damit eine Suche im Log beide findet — die des Mailers nennt Resends
+ * Grund, diese hier, WELCHE Mail es war.
+ */
+async function versuche(
+  deps: AuthDeps,
+  wozu: string,
+  email: string,
+  senden: () => Promise<void>,
+): Promise<boolean> {
+  try {
+    await senden();
+    return deps.mailer.art === 'resend';
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `MAILFEHLER ${wozu} an ${nurDomain(email)} nicht verschickt:`,
+      err instanceof Error ? err.message : err,
+    );
+    return false;
+  }
 }
 
 export interface RegisterInput {
@@ -81,7 +133,7 @@ function constraintOf(err: unknown): string | null {
 export async function register(
   deps: AuthDeps,
   input: RegisterInput,
-): Promise<{ accountId: string }> {
+): Promise<{ accountId: string } & VersandAuskunft> {
   const { db } = deps;
   const email = normalizeEmail(input.email);
   const displayName = input.displayName.trim();
@@ -144,12 +196,16 @@ export async function register(
   // durchgeworfen, saehe die Person einen Fehler, haette keinen Link, und beim
   // zweiten Versuch hiesse es "Adresse schon vergeben": eine Sackgasse, aus der
   // sie ohne fremde Hilfe nicht herauskommt.
-  await sendVerification(deps, accountId, email).catch((err: unknown) => {
-    // eslint-disable-next-line no-console
-    console.error(`Bestaetigungsmail an ${email} fehlgeschlagen:`, err);
-  });
+  //
+  // Verschluckt wird er aber nicht mehr: Das Ergebnis geht an den Client, der
+  // dann ehrlich sagt, dass keine Mail unterwegs ist, und den neuen Link
+  // anbietet. Die Registrierung verraet damit nichts, was sie nicht ohnehin
+  // verraet — "Adresse schon vergeben" kennt sie seit jeher.
+  const mailVersandt = await versuche(deps, 'Bestaetigungsmail', email, () =>
+    sendVerification(deps, accountId, email),
+  );
 
-  return { accountId };
+  return { accountId, mailVersandt, bestaetigungNoetig: bestaetigungNoetig(deps) };
 }
 
 /**
@@ -199,7 +255,12 @@ export async function requestVerification(
       ),
     );
 
-  await sendVerification(deps, acc.id, acc.email!);
+  // Ein Versandfehler wird laut geloggt, aber nicht an den Aufrufer gereicht:
+  // Ein 500 NUR fuer bekannte Adressen machte das Formular wieder zum
+  // Verzeichnis. Wer nichts bekommt, sieht es in der Mail-Diagnose.
+  await versuche(deps, 'Bestaetigungsmail (erneut)', acc.email!, () =>
+    sendVerification(deps, acc.id, acc.email!),
+  );
 }
 
 async function sendVerification(
@@ -294,7 +355,7 @@ export async function login(
   // laesst sich abfragen, welche Adressen registriert sind.
   const ok = await verifyPassword(acc?.passwordHash ?? null, password);
   if (!acc || !ok || acc.anonymizedAt) throw unauthorized('credentialsInvalid');
-  if (!acc.emailVerifiedAt) throw forbidden('emailNotVerified');
+  if (!acc.emailVerifiedAt && bestaetigungNoetig(deps)) throw forbidden('emailNotVerified');
 
   const token = await createSession(deps, acc.id);
   return { token, accountId: acc.id };
@@ -389,7 +450,7 @@ export async function gastSichern(
   deps: AuthDeps,
   accountId: string,
   input: { email: string; password: string; birthday: string },
-): Promise<void> {
+): Promise<VersandAuskunft> {
   const email = normalizeEmail(input.email);
   const birthday = assertValidBirthday(input.birthday);
   const passwordHash = await hashPassword(input.password);
@@ -425,11 +486,12 @@ export async function gastSichern(
   await ensureBetaClubMembership(deps.db, accountId);
 
   // Wie bei der Registrierung: Der Versand darf das Konto nicht mehr
-  // umwerfen. Wer keine Mail bekommt, fordert sie neu an.
-  await sendVerification(deps, accountId, email).catch((err: unknown) => {
-    // eslint-disable-next-line no-console
-    console.error(`Bestaetigungsmail an ${email} fehlgeschlagen:`, err);
-  });
+  // umwerfen. Wer keine Mail bekommt, fordert sie neu an — und erfaehrt es,
+  // statt auf eine Mail zu warten, die nie hinausging.
+  const mailVersandt = await versuche(deps, 'Bestaetigungsmail (Gast gesichert)', email, () =>
+    sendVerification(deps, accountId, email),
+  );
+  return { mailVersandt, bestaetigungNoetig: bestaetigungNoetig(deps) };
 }
 
 /** Ist dieses Konto ein Gast? Eine Zeile, aber an vier Stellen gebraucht. */
@@ -540,16 +602,29 @@ export async function requestPasswordReset(
     );
 
   const token = newToken();
-  await deps.db.insert(s.authToken).values({
-    accountId: acc.id,
-    purpose: 'password_reset',
-    tokenHash: hashToken(token),
-    expiresAt: hoursFromNow(RESET_TTL_HOURS),
-  });
+  const [zeile] = await deps.db
+    .insert(s.authToken)
+    .values({
+      accountId: acc.id,
+      purpose: 'password_reset',
+      tokenHash: hashToken(token),
+      expiresAt: hoursFromNow(RESET_TTL_HOURS),
+    })
+    .returning({ id: s.authToken.id });
 
   const link = `${deps.publicUrl}/reset?token=${token}`;
+  const versandt = await versuche(deps, 'Passwort-Mail', acc.email!, () => sendeResetMail(deps, acc.email!, link));
+  // Wie beim Bestaetigungslink: Ein Token, dessen Mail nie hinausging, loest
+  // sonst die Sperrfrist aus und blockiert genau den zweiten Versuch. Beim
+  // Log-Mailer bleibt es — dort IST das Log der Zustellweg.
+  if (!versandt && deps.mailer.art === 'resend') {
+    await deps.db.delete(s.authToken).where(eq(s.authToken.id, zeile!.id));
+  }
+}
+
+async function sendeResetMail(deps: AuthDeps, email: string, link: string): Promise<void> {
   await deps.mailer.send({
-    to: acc.email!,
+    to: email,
     subject: 'Brauweg: Passwort zuruecksetzen',
     text:
       `Neues Passwort setzen: ${link}\n\n` +
@@ -566,11 +641,16 @@ export async function requestPasswordReset(
   });
 }
 
+/**
+ * Neues Passwort setzen. Gibt die Konto-Kennung zurueck, damit die Route
+ * gleich eine frische Sitzung anlegen kann — wer den Link aus seinem
+ * Postfach hat, hat bewiesen, wem die Adresse gehoert.
+ */
 export async function resetPassword(
   db: Db,
   token: string,
   password: string,
-): Promise<void> {
+): Promise<string> {
   const [row] = await db
     .select()
     .from(s.authToken)
@@ -590,6 +670,14 @@ export async function resetPassword(
     .update(s.account)
     .set({ passwordHash: await hashPassword(password) })
     .where(eq(s.account.id, row.accountId));
+  // Der Link kam per Mail an diese Adresse: Damit ist sie so gut bestaetigt
+  // wie mit dem Bestaetigungslink. Ohne diese Zeile stuende, wer seinen
+  // Bestaetigungslink verloren und stattdessen das Passwort zurueckgesetzt
+  // hat, nach dem Reset wieder vor "Bestaetige zuerst deine Adresse".
+  await db
+    .update(s.account)
+    .set({ emailVerifiedAt: new Date() })
+    .where(and(eq(s.account.id, row.accountId), isNull(s.account.emailVerifiedAt)));
 
   // Ein zurueckgesetztes Passwort beendet alle offenen Sitzungen. Sonst bleibt
   // ein Angreifer, der das Passwort erraten hatte, weiter angemeldet.
@@ -597,118 +685,7 @@ export async function resetPassword(
     .update(s.session)
     .set({ revokedAt: new Date() })
     .where(and(eq(s.session.accountId, row.accountId), isNull(s.session.revokedAt)));
-}
-
-// ---------------------------------------------------------------------------
-// Anmeldung mit Google
-// ---------------------------------------------------------------------------
-
-/** Was aus einem geprueften Google-ID-Token gebraucht wird. */
-export interface GoogleProfil {
-  /** Googles stabile Nutzerkennung — die E-Mail kann wechseln, `sub` nie. */
-  readonly sub: string;
-  readonly email: string;
-  readonly emailVerified: boolean;
-  readonly name: string | null;
-}
-
-/**
- * Anmeldung oder Erstanmeldung ueber Google.
- *
- * Reihenfolge der Zuordnung:
- * 1. Konto mit dieser Google-Kennung — der Normalfall nach dem ersten Mal.
- * 2. Konto mit derselben (von Google bestaetigten) E-Mail — wird verknuepft.
- *    Das ist sicher, weil Google den Besitz der Adresse belegt; ohne diese
- *    Stufe haetten Passwort-Nutzer ploetzlich zwei Konten.
- * 3. Sonst ein neues Konto, ohne Passwort und ohne Bestaetigungsmail — die
- *    Adresse hat Google schon bestaetigt.
- */
-export async function loginMitGoogle(
-  deps: AuthDeps,
-  profil: GoogleProfil,
-): Promise<{ token: string; accountId: string }> {
-  // Ohne bestaetigte Adresse keine Zuordnung: Sonst koennte jemand ein
-  // Google-Konto mit fremder, unbestaetigter Adresse anlegen und damit deren
-  // Brauweg-Konto uebernehmen.
-  if (!profil.emailVerified) throw forbidden('emailNotVerified');
-  const email = normalizeEmail(profil.email);
-
-  const [perSub] = await deps.db
-    .select()
-    .from(s.account)
-    .where(eq(s.account.googleSub, profil.sub));
-  if (perSub && !perSub.anonymizedAt) {
-    const token = await createSession(deps, perSub.id);
-    return { token, accountId: perSub.id };
-  }
-
-  const [perMail] = await deps.db
-    .select()
-    .from(s.account)
-    .where(eq(s.account.email, email));
-  if (perMail && !perMail.anonymizedAt) {
-    await deps.db
-      .update(s.account)
-      .set({
-        googleSub: profil.sub,
-        // Wer per Google kommt, hat die Adresse belegt — ein noch offener
-        // Bestaetigungslink wird damit gegenstandslos.
-        emailVerifiedAt: perMail.emailVerifiedAt ?? new Date(),
-      })
-      .where(eq(s.account.id, perMail.id));
-    const token = await createSession(deps, perMail.id);
-    return { token, accountId: perMail.id };
-  }
-
-  const accountId = await legeGoogleKontoAn(deps.db, profil, email);
-  await ensureBetaClubMembership(deps.db, accountId);
-  const token = await createSession(deps, accountId);
-  return { token, accountId };
-}
-
-/**
- * Neues Konto aus einem Google-Profil.
- *
- * Der Anzeigename kommt aus dem Google-Namen und muss eindeutig sein; bei
- * einer Kollision wird eine kurze Zahl angehaengt statt zu scheitern — die
- * Person kann ihn spaeter im Profil aendern. Kein Passwort: `verifyPassword`
- * lehnt bei `passwordHash null` jede Eingabe ab, das Konto ist also nicht
- * ueber das Formular uebernehmbar. Ein Passwort laesst sich jederzeit ueber
- * "Passwort vergessen" setzen.
- */
-async function legeGoogleKontoAn(
-  db: Db,
-  profil: GoogleProfil,
-  email: string,
-): Promise<string> {
-  const basis =
-    (profil.name?.trim() || email.split('@')[0] || 'Spieler')
-      .slice(0, 26)
-      .trim() || 'Spieler';
-
-  for (let versuch = 0; versuch < 6; versuch++) {
-    const displayName =
-      versuch === 0 ? basis : `${basis}-${Math.floor(Math.random() * 9000) + 1000}`;
-    try {
-      const [row] = await db
-        .insert(s.account)
-        .values({
-          email,
-          passwordHash: null,
-          displayName,
-          birthday: null,
-          emailVerifiedAt: new Date(),
-          googleSub: profil.sub,
-        })
-        .returning({ id: s.account.id });
-      return row!.id;
-    } catch (err) {
-      if (constraintOf(err) === 'account_display_name_key') continue;
-      if (constraintOf(err) === 'account_email_key') throw conflict('emailTaken');
-      throw err;
-    }
-  }
-  throw conflict('displayNameTaken');
+  return row.accountId;
 }
 
 // ---------------------------------------------------------------------------
@@ -731,12 +708,16 @@ export async function anonymizeAccount(db: Db, accountId: string): Promise<void>
       email: null,
       passwordHash: null,
       emailVerifiedAt: null,
-      googleSub: null,
       displayName: `geloescht-${accountId.slice(0, 8)}`,
       birthday: null,
       anonymizedAt: now,
     })
     .where(eq(s.account.id, accountId));
+
+  // Die Bindungen an Google und Apple gehoeren zum Personenbezug — und ohne
+  // diese Zeile fuehrte dieselbe Apple-ID beim naechsten Klick zurueck in
+  // das geloeschte Konto.
+  await db.delete(s.accountIdentity).where(eq(s.accountIdentity.accountId, accountId));
 
   await db
     .update(s.session)

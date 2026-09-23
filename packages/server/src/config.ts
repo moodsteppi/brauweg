@@ -45,6 +45,24 @@ export interface Config {
    */
   readonly googleClientId: string | null;
   /**
+   * "Mit Apple anmelden": die Services ID aus dem Apple-Entwicklerkonto
+   * (APPLE_CLIENT_ID). Ohne sie gibt es den Knopf nicht.
+   */
+  readonly appleClientId: string | null;
+  /**
+   * Bei Apple eingetragene Return-URL (APPLE_REDIRECT_URI). Ohne Angabe
+   * `${PUBLIC_URL}/api/auth/apple/rueckweg` — Apple verlangt sie auch im
+   * Popup-Modus und schickt die Antwort an ihre Herkunft, sie muss also zur
+   * Adresse passen, unter der die Seite laeuft.
+   */
+  readonly appleRedirectUri: string | null;
+  /**
+   * Inhalt von apple-developer-domain-association.txt
+   * (APPLE_DOMAIN_ASSOCIATION) — nur, falls Apple den Domain-Nachweis
+   * verlangt. Ausgeliefert unter /.well-known/.
+   */
+  readonly appleDomainVerknuepfung: string | null;
+  /**
    * Ziel-URL fuer das Feedback-Widget (nur Staging, siehe FeedbackWidget.tsx
    * im Client): `https://server.broweg.de/rueckmeldung`, der Eingang des
    * Broweg-Issueboards. Fehlt sie, meldet der Feedback-Endpunkt einen Fehler
@@ -67,7 +85,9 @@ function required(name: string, fallbackInDev?: string): string {
 
 export function loadConfig(): Config {
   const env = (process.env.NODE_ENV ?? 'development') as Config['env'];
-  const publicUrl = required('PUBLIC_URL', 'http://localhost:5173');
+  // Ohne Schraegstrich am Ende: Die Mail-Links haengen `/verify` an, und
+  // `https://…de//verify` ist eine andere Adresse.
+  const publicUrl = required('PUBLIC_URL', 'http://localhost:5173').trim().replace(/\/+$/, '');
 
   const stage = ((): Config['stage'] => {
     const gesetzt = process.env.STAGE;
@@ -85,8 +105,13 @@ export function loadConfig(): Config {
     publicUrl,
     cookieSecure: publicUrl.startsWith('https://'),
     sessionTtlDays: Number(process.env.SESSION_TTL_DAYS ?? 30),
+    // Roh durchgereicht: Ob leer, fehlend oder gesetzt, entscheidet und
+    // BENENNT `waehleMailer` (mail/index.ts). Ein leerer Wert sah beim Start
+    // bis zum 23.09.2026 aus wie eine fehlende Variable.
     resendApiKey: process.env.RESEND_API_KEY ?? null,
-    mailFrom: process.env.MAIL_FROM ?? 'Brauweg <noreply@brauweg-spielen.de>',
+    // Leer zaehlt wie nicht gesetzt: Ein leerer Absender ginge sonst als
+    // `from: ""` an Resend und scheiterte erst beim ersten Versand.
+    mailFrom: process.env.MAIL_FROM?.trim() || 'Brauweg <noreply@brauweg-spielen.de>',
     staffEmails: parseStaffEmails(process.env.STAFF_EMAILS),
     // Ein zu kurzer Schluessel ist schlimmer als keiner: Er sieht nach
     // Schutz aus und ist in Minuten durchprobiert. Dann lieber zu.
@@ -95,6 +120,11 @@ export function loadConfig(): Config {
         ? (process.env.DIAGNOSE_SCHLUESSEL as string)
         : null,
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? null,
+    appleClientId: process.env.APPLE_CLIENT_ID || null,
+    appleRedirectUri:
+      process.env.APPLE_REDIRECT_URI ||
+      (process.env.APPLE_CLIENT_ID ? `${publicUrl.replace(/\/+$/, '')}/api/auth/apple/rueckweg` : null),
+    appleDomainVerknuepfung: process.env.APPLE_DOMAIN_ASSOCIATION || null,
     feedbackZielUrl: process.env.FEEDBACK_ZIEL_URL ?? null,
     feedbackZielToken: process.env.FEEDBACK_ZIEL_TOKEN ?? null,
   };

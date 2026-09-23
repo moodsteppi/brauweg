@@ -558,6 +558,35 @@ export interface WarContributor {
   games: number;
 }
 
+/** `resend` stellt zu, `log` schreibt nur ins Betriebslog (kein Versanddienst). */
+export type MailVersand = 'resend' | 'log';
+
+export interface Versandauskunft {
+  /** Hat der Versanddienst die Mail angenommen? */
+  mailVersandt: boolean;
+  /** Muss der Link angeklickt werden, bevor die Anmeldung geht? */
+  bestaetigungNoetig: boolean;
+  mailVersand: MailVersand;
+}
+
+/** Antwort der Mail-Diagnose — Spiegel von `MailProbe` in server/src/mail/probe.ts. */
+export interface MailProbe {
+  mailer: MailVersand;
+  absenderDomain: string | null;
+  domainStatus: string;
+  versandt: boolean;
+  fehler: string | null;
+  diagnose: string;
+  linkBasis: string;
+  letzterFehler: {
+    zeit: string;
+    status: number | null;
+    name: string | null;
+    text: string;
+    empfaengerDomain: string;
+  } | null;
+}
+
 export interface WarView {
   id: string;
   status: 'suche' | 'angefragt' | 'laeuft' | 'beendet' | 'abgesagt';
@@ -576,28 +605,98 @@ export interface WarState {
   darfFuehren: boolean;
 }
 
+/** Antwort der Anbieter-Anmeldung: Sitzung — oder erst noch das Geburtsdatum. */
+export type AnbieterAnmeldung =
+  | { ok: true; neu: boolean; token?: string }
+  | { geburtstagNoetig: true; schein: string };
+
 export const api = {
   register: (body: {
     email: string;
     password: string;
     displayName: string;
     birthday: string;
-  }) => post<{ ok: true }>('/auth/register', body),
+  }) =>
+    /*
+     * Seit dem 23.09.2026 mit Auskunft ueber den Versand. `angemeldet` heisst:
+     * Der Server verlangt keine Bestaetigung, weil kein Versanddienst haengt
+     * — dann gibt es auch nichts abzuwarten.
+     */
+    post<
+      { ok: true; angemeldet: boolean; token?: string } & Omit<Versandauskunft, 'bestaetigungNoetig'>
+    >('/auth/register', body).then((antwort) => {
+      if (antwort.token) setSessionToken(antwort.token);
+      return antwort;
+    }),
 
   /** Ob "Mit Google anmelden" auf dieser Ausgabe eingerichtet ist. */
   googleConfig: () => request<{ clientId: string | null }>('/auth/google/config'),
-  /** Anmeldung mit dem ID-Token aus dem Google-Knopf. Cookie wie beim Login. */
+  /** Ob "Mit Apple anmelden" eingerichtet ist — samt der bei Apple eingetragenen Return-URL. */
+  appleConfig: () =>
+    request<{ clientId: string | null; redirectUri: string | null }>('/auth/apple/config'),
+  /**
+   * Einmal-Nonce fuer den naechsten Anbieter-Dialog. Der Anbieter schreibt sie
+   * ins Token, der Server loest sie genau einmal ein — ein abgefangenes Token
+   * oeffnet so kein zweites Mal etwas.
+   */
+  anbieterNonce: () => post<{ nonce: string }>('/auth/nonce'),
+  /**
+   * Anmeldung mit dem ID-Token aus dem Google-Knopf. Cookie wie beim Login.
+   * Entstuende ein NEUES Konto, kommt statt der Sitzung ein Schein zurueck:
+   * erst das Geburtsdatum, dann `anbieterAbschliessen`.
+   */
   googleLogin: async (credential: string) => {
-    const antwort = await post<{ ok: true; token?: string }>('/auth/google', {
-      credential,
+    const antwort = await post<AnbieterAnmeldung>('/auth/google', { credential });
+    if ('token' in antwort && antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+  /**
+   * Anmeldung mit dem ID-Token aus Apples Popup. Der Vorname kommt nur beim
+   * allerersten Mal mit — dann wird er Vorschlag fuer den Anzeigenamen.
+   */
+  appleLogin: async (idToken: string, vorname?: string) => {
+    const antwort = await post<AnbieterAnmeldung>('/auth/apple', {
+      idToken,
+      ...(vorname ? { vorname } : {}),
     });
+    if ('token' in antwort && antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+  /** Zweiter Schritt einer Erstanmeldung: Geburtsdatum zum Schein. */
+  anbieterAbschliessen: async (schein: string, birthday: string) => {
+    const antwort = await post<{ ok: true; neu: boolean; token?: string }>(
+      '/auth/anbieter/abschliessen',
+      { schein, birthday },
+    );
     if (antwort.token) setSessionToken(antwort.token);
     return antwort;
   },
+  /** Wie man in dieses Konto kommt: Passwort ja/nein, verknuepfte Anbieter. */
+  anmeldearten: () =>
+    request<{
+      passwort: boolean;
+      email: string | null;
+      gast: boolean;
+      anbieter: { anbieter: 'google' | 'apple'; email: string | null; seit: string }[];
+    }>('/me/anmeldung'),
+  /** Anbieter an das angemeldete Konto haengen — fuer einen Gast zugleich das Sichern. */
+  verknuepfeGoogle: (credential: string, birthday?: string) =>
+    post<{ ok: true; gesichert: boolean }>('/me/anmeldung/google', {
+      credential,
+      ...(birthday ? { birthday } : {}),
+    }),
+  verknuepfeApple: (idToken: string, birthday?: string) =>
+    post<{ ok: true; gesichert: boolean }>('/me/anmeldung/apple', {
+      idToken,
+      ...(birthday ? { birthday } : {}),
+    }),
+  /** Trennen. Die letzte Anmeldeart lehnt der Server ab. */
+  trenneAnbieter: (anbieter: 'google' | 'apple') =>
+    request<{ ok: true }>(`/me/anmeldung/${anbieter}`, { method: 'DELETE' }),
 
   verify: (token: string) => post<{ ok: true }>('/auth/verify', { token }),
   resendVerification: (email: string) =>
-    post<{ ok: true }>('/auth/verification/resend', { email }),
+    post<{ ok: true; mailVersand?: MailVersand }>('/auth/verification/resend', { email }),
   /**
    * Anmelden. Der Browser bekommt sein Cookie, die App zusaetzlich das
    * Token im Rumpf — sie hat keinen anderen Weg, ihre Sitzung zu halten.
@@ -634,7 +733,19 @@ export const api = {
    * bestehende Gast-Sitzung — dafuer sorgt der Server, nicht dieser Aufruf.
    */
   gastSichern: (email: string, password: string, birthday: string) =>
-    post<{ ok: true }>('/auth/gast/sichern', { email, password, birthday }),
+    post<{ ok: true } & Versandauskunft>('/auth/gast/sichern', { email, password, birthday }),
+
+  /** Antwortet immer gleich, ob es die Adresse gibt oder nicht. */
+  passwortVergessen: (email: string) =>
+    post<{ ok: true; mailVersand: MailVersand }>('/auth/reset-request', { email }),
+  /** Neues Passwort mit dem Token aus der Mail. Danach ist man angemeldet. */
+  passwortNeu: async (token: string, password: string) => {
+    const antwort = await post<{ ok: true; token?: string }>('/auth/reset', { token, password });
+    if (antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+  /** Mail-Diagnose, nur fuer Testkonten (docs/MAIL.md). */
+  mailProbe: () => post<MailProbe>('/staff/mail-probe'),
 
   /**
    * Abmelden. Das Token faellt hier auch dann, wenn der Server nicht

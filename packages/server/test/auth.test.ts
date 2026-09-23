@@ -5,7 +5,6 @@ import { eq } from 'drizzle-orm';
 import {
   anonymizeAccount,
   login,
-  loginMitGoogle,
   logout,
   register,
   requestPasswordReset,
@@ -107,75 +106,6 @@ test('ein falscher Code bleibt trotz offener Registrierung ein Fehler', async (t
         birthday: '1990-06-15',
       }),
     (err: AppError) => err.code === 'inviteCodeInvalid',
-  );
-});
-
-test('Google-Anmeldung legt ein Konto an und findet es wieder', async (t) => {
-  const ctx = await createTestContext();
-  t.after(() => ctx.close());
-
-  const profil = {
-    sub: 'google-123',
-    email: 'gustav@example.org',
-    emailVerified: true,
-    name: 'Gustav',
-  };
-  const erste = await loginMitGoogle(ctx.auth, profil);
-  assert.ok(erste.token.length > 20);
-
-  const [konto] = await ctx.db
-    .select()
-    .from(schema.account)
-    .where(eq(schema.account.id, erste.accountId));
-  assert.equal(konto!.googleSub, 'google-123');
-  assert.equal(konto!.passwordHash, null);
-  assert.ok(konto!.emailVerifiedAt, 'Google-Konten gelten als bestaetigt');
-
-  // Zweite Anmeldung: dasselbe Konto, kein Duplikat.
-  const zweite = await loginMitGoogle(ctx.auth, profil);
-  assert.equal(zweite.accountId, erste.accountId);
-
-  // Ohne Passwort ist das Formular kein Einstieg.
-  await assert.rejects(
-    () => login(ctx.auth, 'gustav@example.org', 'irgendwas-langes-123'),
-    (err: AppError) => err.code === 'credentialsInvalid',
-  );
-});
-
-test('Google verknuepft sich mit einem bestehenden Passwort-Konto', async (t) => {
-  const ctx = await ctxWithInvite();
-  t.after(() => ctx.close());
-
-  const { accountId, email } = await createVerifiedAccount(ctx, 'Anna');
-
-  const { accountId: perGoogle } = await loginMitGoogle(ctx.auth, {
-    sub: 'google-anna',
-    email,
-    emailVerified: true,
-    name: 'Anna G',
-  });
-  assert.equal(perGoogle, accountId);
-
-  const [nachher] = await ctx.db
-    .select()
-    .from(schema.account)
-    .where(eq(schema.account.id, accountId));
-  assert.equal(nachher!.googleSub, 'google-anna');
-});
-
-test('Google ohne bestaetigte Adresse wird abgewiesen', async (t) => {
-  const ctx = await createTestContext();
-  t.after(() => ctx.close());
-
-  await assert.rejects(
-    () =>
-      loginMitGoogle(ctx.auth, {
-        sub: 'google-999',
-        email: 'fremd@example.org',
-        emailVerified: false,
-        name: null,
-      }),
-    (err: AppError) => err.code === 'emailNotVerified',
   );
 });
 
@@ -483,24 +413,63 @@ test('die Anmeldung verraet ueber die Dauer nicht, ob es das Konto gibt', async 
   // Ohne Blindvergleich kehrte die Pruefung bei unbekannter Adresse sofort
   // zurueck, waehrend ein echtes Konto Argon2 kostet - der Unterschied war
   // ueber das Netz messbar.
+  //
+  // Bis zum 23.09.2026 mass dieser Test `anna@example.com`, das Konto heisst
+  // aber `anna@example.org` (createVerifiedAccount). Er verglich also zwei
+  // UNBEKANNTE Adressen und haette das Leck nie gesehen. Und er mass je Weg
+  // einmal: Unter der Last des vollen Laufs kippte er mit 49,7 gegen
+  // 295,7 ms, obwohl beide Wege dieselbe Arbeit machten.
   const ctx = await ctxWithInvite();
   t.after(() => ctx.close());
-  await createVerifiedAccount(ctx, 'Anna');
+  const { email: bekannteAdresse } = await createVerifiedAccount(ctx, 'Anna');
+  const unbekannteAdresse = 'gibtesnicht@example.org';
+
+  // Die Vorbedingung, an der der alte Test still vorbeilief: Die eine
+  // Adresse hat ein Konto, die andere nicht — und beide scheitern gleich.
+  const [konto] = await ctx.db
+    .select()
+    .from(schema.account)
+    .where(eq(schema.account.email, bekannteAdresse));
+  assert.ok(konto?.passwordHash, 'die bekannte Adresse muss ein Konto mit Passwort haben');
+  const [keins] = await ctx.db
+    .select()
+    .from(schema.account)
+    .where(eq(schema.account.email, unbekannteAdresse));
+  assert.equal(keins, undefined, 'die unbekannte Adresse darf kein Konto haben');
 
   const messen = async (email: string): Promise<number> => {
     const start = process.hrtime.bigint();
-    await login(ctx.auth, email, 'falsches-passwort-123').catch(() => undefined);
+    await assert.rejects(
+      () => login(ctx.auth, email, 'falsches-passwort-123'),
+      (err: AppError) => err.code === 'credentialsInvalid',
+    );
     return Number(process.hrtime.bigint() - start) / 1e6;
   };
+  const median = (werte: number[]): number => {
+    const sortiert = [...werte].sort((a, b) => a - b);
+    return sortiert[Math.floor(sortiert.length / 2)]!;
+  };
 
-  // Aufwaermen, damit der erste Argon2-Lauf die Messung nicht verzerrt.
-  await messen('anna@example.com');
-  const bekannt = await messen('anna@example.com');
-  const unbekannt = await messen('gibtesnicht@example.com');
+  // Beide Wege aufwaermen: Der erste Argon2-Lauf ist langsamer, und der
+  // Blindvergleich legt beim ersten Aufruf erst seinen Hash an.
+  await messen(bekannteAdresse);
+  await messen(unbekannteAdresse);
 
-  // Beide Wege muessen rechnen. Ein Faktor 5 waere ein klares Leck.
-  assert.ok(
-    unbekannt > bekannt / 5,
-    `unbekannt ${unbekannt.toFixed(1)}ms darf nicht viel schneller sein als bekannt ${bekannt.toFixed(1)}ms`,
-  );
+  // Abwechselnd messen und den Median nehmen: Ein Lastspitze trifft dann
+  // beide Reihen, und ein einzelner Ausreisser zaehlt nicht.
+  const bekannt: number[] = [];
+  const unbekannt: number[] = [];
+  for (let i = 0; i < 7; i++) {
+    bekannt.push(await messen(bekannteAdresse));
+    unbekannt.push(await messen(unbekannteAdresse));
+  }
+  const mb = median(bekannt);
+  const mu = median(unbekannt);
+
+  // Das Leck, das hier fehlen muss, ist gross: ohne Blindvergleich eine
+  // Datenbankabfrage (~1 ms) gegen Argon2 (~50–300 ms), weit ueber Faktor 10.
+  // Faktor 4 in beide Richtungen faengt es sicher und haelt Last aus.
+  const text = `Median bekannt ${mb.toFixed(1)} ms, unbekannt ${mu.toFixed(1)} ms`;
+  assert.ok(mu > mb / 4, `unbekannte Adresse zu schnell — ${text}`);
+  assert.ok(mb > mu / 4, `bekannte Adresse zu schnell — ${text}`);
 });

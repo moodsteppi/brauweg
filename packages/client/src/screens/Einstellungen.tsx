@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { Suspense, lazy, useSyncExternalStore } from 'react';
 
 import {
   abonniere,
@@ -9,7 +9,15 @@ import {
 } from '../klang';
 
 /**
- * Einstellungen — wie laut, und sonst nichts.
+ * Anmeldearten (Apple, Google) — nachgeladen: Dieses Blatt haengt am
+ * Startbildschirm und damit im Sofort-Paket, der Abschnitt nicht.
+ */
+const Anmeldearten = lazy(() =>
+  import('../anmeldung/Anmeldearten').then((m) => ({ default: m.Anmeldearten })),
+);
+
+/**
+ * Einstellungen — wie laut, und womit man sich anmeldet.
  *
  * Ein eigenes Blatt statt eines weiteren Abschnitts im Profil: Der Profil-Tab
  * ist schon lang (Pinguin, Geburtstag, Statistik, Freunde), und Einstellungen
@@ -69,6 +77,10 @@ export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.
           drängeln uns nicht davor. Dafür schaltet am iPhone der
           Klingelschalter auch uns stumm.
         </p>
+
+        <Suspense fallback={null}>
+          <Anmeldearten />
+        </Suspense>
 
         <div className="hub-knopfreihe hub-knopfreihe--a">
           <button className="hub-knopf hub-knopf--a" onClick={onClose}>
