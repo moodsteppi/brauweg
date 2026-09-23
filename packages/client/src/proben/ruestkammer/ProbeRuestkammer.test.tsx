@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import rohszene from './ruestkammer-szene.json?raw';
 import { ProbeRuestkammer } from './ProbeRuestkammer';
@@ -23,7 +23,9 @@ import { ProbeRuestkammer } from './ProbeRuestkammer';
  *      nachgestellt.
  *   3. DIE SEITE BEDIENT SICH. Antippen schlaegt das Blatt der Einheit auf,
  *      „Aufstellen" darin waehlt sie, der Tipp aufs Ziel verschiebt sie,
- *      „am Zug" aus sperrt alles, „zuruecksetzen" stellt her.
+ *      „am Zug" aus sperrt alles, „zuruecksetzen" stellt her. Und seit dem
+ *      23.09.2026 laesst sie sich ZIEHEN, ueber denselben Haken wie der
+ *      Tisch (`useZiehen`) — samt `?zug=` fuer die Sichtprobe.
  *
  * Was Brett, Bank und Karte selbst tun, steht in den Proben des Bildschirms
  * (`screens/Tafelrunde.test.tsx`) und wird hier nicht noch einmal geprueft.
@@ -324,5 +326,66 @@ describe('ProbeRuestkammer', () => {
     expect(fuss).toHaveTextContent(SZENE.saat);
     expect(fuss).toHaveTextContent(`Runde ${SZENE.runde}`);
     expect(fuss).toHaveTextContent(`Sitz ${SZENE.ich + 1}`);
+  });
+});
+
+describe('Ziehen auf der Probe', () => {
+  afterEach(() => {
+    delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    window.history.replaceState(null, '', '/');
+  });
+
+  /* Der Bankplatz, auf den gezogen wird: Das Feld der Szene ist voll
+     (`feldplaetze` erreicht), ein anderer Bankplatz ist dagegen immer ein
+     erlaubtes Ziel — siehe `darfSchieben`. */
+  const von = E.bank.findIndex((k) => k !== null);
+  const frei = E.bank.findIndex((k) => k === null);
+
+  it('zeigt waehrend des Zuges Schatten, stillen Herkunftsplatz und Ziel — und legt ab', () => {
+    const { container } = render(<ProbeRuestkammer />);
+    const platz = (i: number): HTMLElement =>
+      container.querySelector<HTMLElement>(`.tr-bankplatz:nth-child(${i + 1})`)!;
+    const marke = platz(von).querySelector<HTMLElement>('.tr-einheit')!;
+    // jsdom rechnet kein Layout; getroffen wird, was hier steht (wie am Tisch).
+    (document as unknown as { elementFromPoint: unknown }).elementFromPoint = () => platz(frei);
+
+    fireEvent.pointerDown(marke, { clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(marke, { clientX: 90, clientY: 40 });
+
+    // Die drei Zustaende, die es bis zum 23.09.2026 nur in einer Partie gab.
+    expect(container.querySelector('.tr-schatten')).not.toBeNull();
+    expect(platz(von).querySelector('[data-still]')).not.toBeNull();
+    expect(platz(frei)).toHaveAttribute('data-unterzeiger');
+
+    fireEvent.pointerUp(marke, { clientX: 90, clientY: 40 });
+    expect(container.querySelector('.tr-schatten')).toBeNull();
+    expect(platz(frei).querySelector('.tr-einheit-name')?.textContent).toBe(
+      KATALOG.get(E.bank[von]!.id)!.name,
+    );
+  });
+
+  it('bleibt ein Tipp, wenn der Finger sich nicht bewegt', () => {
+    const { container } = render(<ProbeRuestkammer />);
+    const marke = container.querySelector<HTMLElement>(
+      `.tr-bankplatz:nth-child(${von + 1}) .tr-einheit`,
+    )!;
+    fireEvent.pointerDown(marke, { clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(marke, { clientX: 12, clientY: 11 });
+    expect(container.querySelector('.tr-schatten')).toBeNull();
+    expect(screen.getByRole('dialog')).toHaveTextContent(KATALOG.get(E.bank[von]!.id)!.name);
+  });
+
+  it('stellt mit ?zug= einen angehaltenen Zug her — fuer die Sichtprobe', async () => {
+    window.history.replaceState(null, '', `/probe/ruestkammer?zug=bank:${von}>bank:${frei}`);
+    const { container } = render(<ProbeRuestkammer />);
+    const ziel = container.querySelector<HTMLElement>(`.tr-bankplatz:nth-child(${frei + 1})`)!;
+    (document as unknown as { elementFromPoint: unknown }).elementFromPoint = () => ziel;
+
+    await waitFor(() => expect(container.querySelector('.tr-schatten')).not.toBeNull());
+    expect(ziel).toHaveAttribute('data-unterzeiger');
+
+    // Ihn beendet kein Finger — „zuruecksetzen" muss es tun.
+    fireEvent.click(screen.getByRole('button', { name: 'zurücksetzen' }));
+    expect(container.querySelector('.tr-schatten')).toBeNull();
   });
 });

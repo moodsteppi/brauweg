@@ -55,16 +55,25 @@
  * benutzt. Dass ein Tipp seit dem 6.9.2026 zuerst das Blatt der Einheit
  * aufschlaegt, steht ebenso am Tisch (screens/Tafelrunde.tsx) — eine Probe,
  * die sich anders bedienen liesse als der Bildschirm, waere die Frage wert,
- * welche der beiden man gerade beurteilt. Das ZIEHEN mit dem Finger fehlt
- * — es haengt an Zeigererfassung und Zugschatten, also an Verdrahtung des
- * Bildschirms und nicht am Aussehen der Wabe.
+ * welche der beiden man gerade beurteilt.
+ *
+ * ZIEHEN MIT DEM FINGER geht seit dem 23.09.2026 ebenfalls, ueber denselben
+ * Haken wie am Tisch (`useZiehen` in minispiele/tafelrunde/ziehen.ts). Bis
+ * dahin hing die Zeigerverdrahtung im Bildschirm, und drei Zustaende gab es
+ * nur in einer Partie: die stillgestellte Einheit am Herkunftsplatz
+ * (`data-still`), das Feld unter dem Finger (`data-unterzeiger`) und den
+ * Zugschatten (`.tr-schatten`). Weil eine Sichtprobe nicht ziehen kann,
+ * stellt `?zug=bank:0>brett:4` einen angehaltenen Zug her — von wo, und
+ * worueber der Finger gerade steht (`zugAusAdresse` unten). Ohne Ziel
+ * (`?zug=bank:0`) haengt der Schatten ein Stueck ueber seiner Herkunft.
  *
  * ANSEHEN OHNE ANFASSEN geht seit dem 19.9.2026 ebenfalls wie am Tisch: Ein
  * Tipp auf eine Einheit des Gegners oder — „am Zug" abgeschaltet — auf eine
  * eigene schlaegt das Blatt ohne Knoepfe auf (`onNachsehen` in Brett.tsx).
  * Weil eine Sichtprobe nicht klicken kann, laesst sich dieser Zustand auch
  * ueber die Adresse herstellen: `?blatt=gegner/brett:4` oder `?bereit&blatt=
- * bank:0` (`blattAusAdresse` unten). Sonst hat die Adresse keine Wirkung.
+ * bank:0` (`blattAusAdresse` unten). Sonst hat die Adresse ausser `?zug=`
+ * (siehe oben) keine Wirkung.
  *
  * WARUM `?raw` UND `JSON.parse` STATT EINES JSON-IMPORTS: Der Client
  * uebersetzt ohne `resolveJsonModule`; das anzuschalten waere eine Aenderung
@@ -72,9 +81,9 @@
  * Grund wie in `../kampf/ProbeKampf.tsx`.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { Bankreihe, Hexbrett } from '../../minispiele/tafelrunde/Brett';
+import { Bankreihe, Hexbrett, Zugschatten } from '../../minispiele/tafelrunde/Brett';
 import { Einheitenblatt } from '../../minispiele/tafelrunde/Einheitenblatt';
 import { Brettkopf, Statuszeile } from '../../minispiele/tafelrunde/Kopfzeilen';
 import { Ladenkarte, kaufhindernis } from '../../minispiele/tafelrunde/Ladenkarte';
@@ -97,9 +106,11 @@ import {
   darfSchieben,
   fehlendeKopien,
   ortLesen,
+  ortSchluessel,
   rastermass,
   tippfolge,
 } from '../../minispiele/tafelrunde/zuege';
+import { useZiehen } from '../../minispiele/tafelrunde/ziehen';
 
 import rohszene from './ruestkammer-szene.json?raw';
 import css from './ProbeRuestkammer.module.css';
@@ -237,6 +248,28 @@ function blattAusAdresse(): Blattlage | null {
   return ort ? { sitz: fremd ? SZENE.gegner.sitz : null, ort } : null;
 }
 
+/**
+ * Ein angehaltener Zug gleich beim Oeffnen, aus der Adresse:
+ * `?zug=bank:0>brett:4` — die Einheit von Bankplatz 0, der Finger ueber
+ * Feld 4 — oder `?zug=bank:0` ohne Ziel. Nur fuer die Sichtprobe, die nicht
+ * ziehen kann; ohne den Parameter faengt ein Zug erst mit dem Finger an.
+ */
+function zugAusAdresse(): { von: Ort; nach: Ort | null } | null {
+  const wert = new URLSearchParams(window.location.search).get('zug');
+  if (!wert) return null;
+  const [vonText, nachText] = wert.split('>');
+  const von = ortLesen(vonText);
+  return von ? { von, nach: ortLesen(nachText) } : null;
+}
+
+/** Die Mitte des Platzes `ort` am Bildschirm — dort, wo `data-ziel` ihn nennt. */
+function mitteVon(ort: Ort): { x: number; y: number } | null {
+  const platz = document.querySelector(`[data-ziel="${ortSchluessel(ort)}"]`);
+  if (!platz) return null;
+  const rahmen = platz.getBoundingClientRect();
+  return { x: rahmen.left + rahmen.width / 2, y: rahmen.top + rahmen.height / 2 };
+}
+
 export function ProbeRuestkammer(): React.JSX.Element {
   const [auf, setAuf] = useState<Stand>(START);
   const [gewaehlt, setGewaehlt] = useState<Ort | null>(null);
@@ -306,11 +339,45 @@ export function ProbeRuestkammer(): React.JSX.Element {
        sich die Probe anders als der Bildschirm, den sie zeigen soll. */
     if (folge.art === 'waehlen') setBlatt({ sitz: null, ort: folge.ort });
     else if (folge.art === 'abwaehlen') setGewaehlt(null);
-    else if (folge.art === 'schieben') {
-      setAuf((a) => schiebe(a, folge.von, folge.nach));
-      setGewaehlt(null);
-    }
+    else if (folge.art === 'schieben') setze(folge.von, folge.nach);
   }
+
+  /** Ablegen — vom Antippen und vom Ziehen, mit derselben Grenze wie am Tisch. */
+  function setze(von: Ort, nach: Ort): void {
+    if (!amZug || !zielbar(von, nach)) return;
+    setAuf((a) => schiebe(a, von, nach));
+    setGewaehlt(null);
+  }
+
+  /*
+   * DIESELBE Zeigerverdrahtung wie am Tisch — nicht nachgebaut, sondern
+   * eingehaengt. Ein Tipp ohne Bewegung laeuft darin in `tippeOrt`, ein
+   * Ablegen in `setze`.
+   */
+  const { zug, ziehtVon, ablegeZiel, zeiger, vorfuehren } = useZiehen({
+    darf: amZug,
+    zielbar,
+    tippe: tippeOrt,
+    schiebe: setze,
+  });
+
+  /*
+   * `?zug=` erst nach dem Aufbau: Die Lage des Schattens ist eine
+   * Bildschirmkoordinate, und die gibt es erst, wenn die Waben stehen. Ohne
+   * Ziel haengt er 80 Pixel ueber seiner Herkunft — dort verdeckt er nichts,
+   * was man ansehen will.
+   */
+  useEffect(() => {
+    const vorgabe = zugAusAdresse();
+    if (!vorgabe) return;
+    const bild = window.requestAnimationFrame(() => {
+      const ziel = vorgabe.nach ? mitteVon(vorgabe.nach) : null;
+      const herkunft = mitteVon(vorgabe.von);
+      const punkt = ziel ?? (herkunft ? { x: herkunft.x, y: herkunft.y - 80 } : null);
+      if (punkt) vorfuehren(vorgabe.von, punkt.x, punkt.y);
+    });
+    return () => window.cancelAnimationFrame(bild);
+  }, [vorfuehren]);
 
   /** Was auf `blatt` steht — frisch aus dem Stand, siehe dort. Am fremden
       Brett aus der Szene: Der Gegner bewegt sich in der Probe nicht. */
@@ -334,8 +401,15 @@ export function ProbeRuestkammer(): React.JSX.Element {
     (platz) => (auf.bank[platz] ?? null) === null,
   );
 
+  /** Was am Finger haengt — frisch aus dem Stand, wie `blattKaempfer`. */
+  const gezogen = zug
+    ? ((zug.von.bereich === 'bank' ? auf.bank : auf.brett)[zug.von.platz] ?? null)
+    : null;
+
   function zuruecksetzen(): void {
     setAuf(START);
+    // Auch einen angehaltenen Zug (`?zug=`): Ihn beendet sonst kein Finger.
+    zeiger.onZeigerAbbruch();
     setLaden(SZENE.eigenes.laden);
     setGewaehlt(null);
     setBlatt(null);
@@ -462,8 +536,8 @@ export function ProbeRuestkammer(): React.JSX.Element {
             Runde {SZENE.runde} von {SZENE.rundenGrenze} einer Partie zu {SZENE.sitze.length} mit
             Bots (Saat „{SZENE.saat}", Gangart {SZENE.gangart}), angehalten nach{' '}
             {SZENE.zuegeGespielt} Zügen von {nameVon(SZENE.ich)}. Ein Tipp auf eine Einheit schlägt
-            ihr Blatt auf; „Aufstellen" darin wählt sie, und der nächste Tipp setzt sie ab — Ziehen
-            mit dem Finger gehört zum Tisch und nicht zur Wabe. Verkaufen nimmt sie hier nur vom
+            ihr Blatt auf; „Aufstellen" darin wählt sie, und der nächste Tipp setzt sie ab — oder man
+            zieht sie mit dem Finger, genau wie am Tisch. Verkaufen nimmt sie hier nur vom
             Feld und zählt kein Gold, so wie ein Klick auf eine Karte sie nicht kauft, sondern nur
             ihren Platz abräumt: So sieht man den leeren Rahmen. Würfeln, Aufsteigen und Bereit tun
             nichts — das sind Regeln, und die bringt die Probe absichtlich nicht mit. „zurücksetzen"
@@ -648,6 +722,9 @@ export function ProbeRuestkammer(): React.JSX.Element {
                   onLeeresZiel={tippeOrt}
                   onNachsehen={(ort) => setBlatt({ sitz: null, ort })}
                   fehlendeKopien={fehlen}
+                  ziehtVon={ziehtVon}
+                  unterZeiger={ablegeZiel}
+                  {...zeiger}
                 />
               </section>
             </div>
@@ -663,6 +740,9 @@ export function ProbeRuestkammer(): React.JSX.Element {
               onWaehlen={tippeOrt}
               onNachsehen={(ort) => setBlatt({ sitz: null, ort })}
               fehlendeKopien={fehlen}
+              ziehtVon={ziehtVon}
+              unterZeiger={ablegeZiel}
+              {...zeiger}
             />
           </div>
         </div>
@@ -761,6 +841,17 @@ export function ProbeRuestkammer(): React.JSX.Element {
             </button>
           </div>
         </div>
+
+        {/* Was am Finger haengt — dasselbe Bauteil wie am Tisch. */}
+        {zug && gezogen && (
+          <Zugschatten
+            kaempfer={gezogen}
+            katalog={KATALOG}
+            maxStufe={SZENE.maxStufe}
+            x={zug.x}
+            y={zug.y}
+          />
+        )}
       </Markennamen.Provider>
     </main>
   );

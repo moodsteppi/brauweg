@@ -200,6 +200,39 @@ export function Einheitenmarke({
   );
 }
 
+/**
+ * Was am Finger haengt — der Zugschatten.
+ *
+ * Steht hier und nicht im Bildschirm, damit die Probe ihn einhaengen kann:
+ * Bis zum 23.09.2026 war `.tr-schatten` nur in einer Partie zu sehen. Die
+ * Lage kommt aus `useZiehen` (ziehen.ts); das Aussehen steht in styles.css.
+ */
+export function Zugschatten({
+  kaempfer,
+  katalog,
+  maxStufe,
+  x,
+  y,
+}: {
+  kaempfer: Kaempfer;
+  katalog: Record<string, Einheit>;
+  maxStufe: number;
+  x: number;
+  y: number;
+}): React.JSX.Element {
+  return (
+    <div className="tr-schatten" style={{ left: x, top: y }} aria-hidden="true">
+      <Einheitenmarke
+        kaempfer={kaempfer}
+        katalog={katalog}
+        maxStufe={maxStufe}
+        fehlt={0}
+        aktiv={false}
+      />
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Das Hexbrett
 // ---------------------------------------------------------------------------
