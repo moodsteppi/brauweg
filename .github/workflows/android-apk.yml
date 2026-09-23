@@ -174,7 +174,7 @@ jobs:
             grep -ho 'uses-permission[^>]*android:name="[^"]*"' "$manifest" | sed 's/.*android:name=//' | sort -u
             echo '```'
             echo "**targetSdk / minSdk:** $(grep -ho 'android:targetSdkVersion="[0-9]*"' "$manifest" | head -1) $(grep -ho 'android:minSdkVersion="[0-9]*"' "$manifest" | head -1)"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
           if [ "$SIGNIEREN" = "ja" ]; then
             # Der Fingerabdruck des UPLOAD-Schluessels. Er ist nicht geheim —
             # und er ist NICHT der, der nach ANDROID_SHA256 gehoert: Dorthin

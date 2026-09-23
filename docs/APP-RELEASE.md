@@ -476,7 +476,8 @@ dort öffnen Einladungen im Browser, und das ist gewollt.
 - **Berechtigungen**: `INTERNET`, `VIBRATE` (Haptik am Tisch),
   `ACCESS_NETWORK_STATE` (Meldung ohne Netz, `navigator.onLine`). Alle drei
   sind Normal-Berechtigungen ohne Rückfrage. Mit Push kämen
-  `POST_NOTIFICATIONS` und die von Firebase dazu — nur mit Schalter (4.10).
+  `POST_NOTIFICATIONS`, `WAKE_LOCK` und `com.google.android.c2dm.permission.RECEIVE`
+  dazu (alle drei aus der Firebase-Bibliothek, gemessen im CI-Lauf 3) — nur mit Schalter (4.10).
   Dazu kommt aus androidx eine app-eigene Signatur-Berechtigung
   (`…DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`); die sieht kein Nutzer.
 - **Zurück-Taste**: Der Client blättert nicht über den Verlauf des WebViews
