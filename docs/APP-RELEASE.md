@@ -244,6 +244,12 @@ cd apps/android && ./gradlew assembleDebug        # app/build/outputs/apk/debug/
 Auf den Windows-Rechnern der Werkstatt gibt es beides nicht (23.09.2026); dort
 wurde **nichts** installiert.
 
+Derselbe Lauf baut seit dem 23.09.2026 auch das **App-Bundle für Play**
+(signiert, sobald der Upload-Schlüssel als Secret hinterlegt ist — 4.6).
+Ohne die Secrets steht oben im Lauf die Warnung **„Release-Signatur fehlt"**;
+das ist dann kein Fehler, sondern der Hinweis, dass nur die Test-APK
+brauchbar ist.
+
 ### 4.2 Play Console
 
 1. **Konto:** play.google.com/console, privates Konto, **25 $ einmalig**,
@@ -262,6 +268,9 @@ wurde **nichts** installiert.
    Signing verwaltet den eigentlichen App-Schlüssel; geht der
    Upload-Schlüssel verloren, lässt er sich über den Support zurücksetzen —
    der App-Schlüssel nicht.
+   Genaueres (woher `keytool`, welches Passwort wohin, zwei Kopien, ab in
+   die Secrets) steht in **4.6** — das ist der übliche Weg. Die Punkte 4 und
+   5 hier sind nur für einen Rechner mit JDK und SDK.
 4. `apps/android/keystore.properties` (lokal, ignoriert):
    ```properties
    storeFile=/pfad/zu/brauweg-upload.jks
@@ -275,11 +284,17 @@ wurde **nichts** installiert.
    cd apps/android && ./gradlew bundleRelease -PversionCode=<höher als zuletzt>
    # → app/build/outputs/bundle/release/app-release.aab
    ```
+   Achtung: Die CI zählt `versionCode` mit ihrer Laufnummer (4.8). Wer
+   lokal baut und hochlädt, springt ihr voraus — dann lehnt Play den
+   nächsten CI-Upload ab, bis die Laufnummer aufgeholt hat. Hochgeladen wird
+   darum **nur aus der CI**.
 6. **Fingerabdruck für App Links:** Play Console → *Test und Release →
    App-Integrität → App-Signatur* → SHA-256 des **App-Signaturschlüssels**
    kopieren und in Railway `ANDROID_SHA256=<Wert>` setzen (mehrere mit Komma,
    z. B. zusätzlich der Upload-Schlüssel). Dann liefert der Server
-   `/.well-known/assetlinks.json` aus.
+   `/.well-known/assetlinks.json` aus. **Nicht** der Fingerabdruck, den der
+   CI-Lauf in seiner Zusammenfassung zeigt — das ist der Upload-Schlüssel,
+   und die App auf den Handys der Tester trägt Googles Signatur (4.7).
 
 ### 4.3 Geschlossener Test: 12 Tester, 14 Tage
 
@@ -291,7 +306,53 @@ wurde **nichts** installiert.
 3. Parallel geht der **interne Test** (bis 100, ohne Prüfung) — der schnellste
    Weg für uns selbst.
 
+**Der ganze Weg in der Reihenfolge, in der er gegangen wird** (Stand der
+Play-Regeln: September 2026 — vor dem Anlegen in der Console gegenlesen,
+Google ändert die Zahlen):
+
+1. **Konto** (4.2 Punkt 1). Zur Identitätsprüfung gehört bei neuen privaten
+   Konten auch der Nachweis eines echten Android-Geräts über die
+   Play-Console-App und eine bestätigte Telefonnummer. Die Prüfung dauert
+   Tage — deshalb zuerst.
+2. **App anlegen** (4.2 Punkt 2). Play App Signing ist für neue Apps
+   eingeschaltet und bleibt es (4.7).
+3. **Upload-Schlüssel erzeugen und als Secrets hinterlegen** (4.6).
+4. **Erstes AAB bauen:** GitHub → Actions → „Android-APK" → *Run workflow*
+   auf dem Zweig, der in den Store soll (in der Regel `main`). Unter dem
+   Lauf liegt dann `brauweg-play-<Version>-<Lauf>` mit `app-release.aab`.
+5. **Pflichtangaben der Console** (*Dashboard → App einrichten*):
+   Datenschutzerklärung, App-Zugriff (Demo-Konto wie bei Apple, 3.4),
+   Anzeigen („nein"), Inhaltsbewertung (IARC), Zielgruppe (18+),
+   Data Safety, Store-Eintrag. Die Texte und Antworten stehen in
+   **`docs/store/`** (eigener Auftrag „Store-Unterlagen"); die Kurzfassung
+   hier in 4.4 und 4.5. Ohne diese Punkte lässt sich kein geschlossener Test
+   an die Tester ausrollen.
+6. **Geschlossenen Test anlegen:** *Testen und veröffentlichen → Testen →
+   Geschlossener Test → Track erstellen* (oder den vorhandenen „Alpha"),
+   Länder wählen (mindestens Deutschland), **Tester**: am einfachsten eine
+   **Google-Gruppe** (`groups.google.com`, z. B. `brauweg-tester@googlegroups.com`
+   — neue Tester kommen dann ohne Console dazu) oder eine Mail-Liste mit
+   den Google-Konto-Adressen. Release anlegen, das AAB aus Schritt 4
+   hochladen, Versionshinweis schreiben, zur Prüfung senden. Die erste
+   Prüfung dauert Stunden bis einige Tage.
+7. **12 Tester einladen:** den **Opt-in-Link** des Tracks
+   (*Tester → Link kopieren*) an alle schicken. Jeder muss mit seinem
+   Google-Konto auf „Tester werden" tippen und die App **aus Play**
+   installieren (die Debug-APK aus 4.1 zählt nicht). Lieber 15 als 12: Wer
+   in den 14 Tagen austritt, fällt aus der Zählung.
+8. **14 Tage** am Stück mindestens 12 angemeldete Tester. Updates in der
+   Zeit sind erwünscht (Google fragt danach, ob getestet und nachgebessert
+   wurde) — jeder neue CI-Lauf ist ein höherer `versionCode`.
+9. **Produktionszugang beantragen:** *Dashboard → Zugriff auf die Produktion
+   beantragen*. Google fragt nach dem Test (wie Tester gefunden wurden,
+   welches Feedback, was geändert wurde) — ehrliche Stichpunkte reichen.
+   Die Antwort kommt nach etwa einer Woche. Erst dann gibt es den Track
+   *Produktion*.
+
 ### 4.4 Data-Safety-Formular
+
+Die ausführliche Fassung zum Abtippen liegt in `docs/store/` (Auftrag
+„Store-Unterlagen"); gilt dort etwas anderes als hier, gilt `docs/store/`.
 
 Gleiche Wahrheit wie bei Apple (Abschnitt 3.4): erhoben werden E-Mail,
 Anzeigename, Geburtsdatum, Nutzer-ID, Spielverlauf, Nutzerinhalte
@@ -304,10 +365,166 @@ gibt es noch nicht, siehe Offene Punkte). Keine Sicherung des App-Speichers
 
 ### 4.5 IARC-Fragebogen (Inhaltsbewertung)
 
+Auch hier: die ausführliche Fassung in `docs/store/`.
+
 Dieselben Antworten wie bei Apple: Alkoholbezüge (Trinkspiel) **ja**,
 Drogenbezüge **ja** (Kiffer-Sprüche), derbe Sprache **ja**, simuliertes
 Glücksspiel **ja**, Nutzerinteraktion **ja** (Mehrspieler, Namen), Käufe
 **nein**, Echtgeld **nein**. Ergebnis voraussichtlich USK 16/18 bzw. PEGI 16/18.
+
+### 4.6 Upload-Schlüssel erzeugen und in die CI legen (Robin, einmal)
+
+Den Schlüssel erzeugt **ein Mensch** auf seinem eigenen Rechner — nicht die
+CI, nicht eine Claude-Sitzung. Er darf nie in einem Chat, einem Commit,
+einem PR-Text oder einem Log stehen.
+
+**1. `keytool` besorgen.** Es gehört zum JDK. Ohne etwas zu installieren:
+das Temurin-JDK 21 als **ZIP** (adoptium.net → „Other platforms" → Windows
+x64, *JDK*, `.zip`) entpacken und `bin\keytool.exe` direkt aufrufen. Mit
+Android Studio liegt es schon unter
+`C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe`.
+
+**2. Schlüssel erzeugen** (in einem Ordner außerhalb jedes Repos):
+
+```bash
+keytool -genkeypair -v -keystore brauweg-upload.jks -storetype PKCS12 \
+  -alias brauweg -keyalg RSA -keysize 4096 -validity 10000
+```
+
+`keytool` fragt nach einem Passwort und nach Name/Organisation (frei, z. B.
+„Brauweg"). **Bei PKCS12 ist das Schlüssel-Passwort dasselbe wie das des
+Schlüsselbunds** — `keytool` fragt kein zweites ab. Passwort ohne
+Backslash (`\`) wählen: Die CI schreibt es in eine Properties-Datei, und dort
+ist `\` ein Fluchtzeichen.
+
+**3. Sicher aufbewahren — zwei Kopien.** Die `.jks`-Datei und das Passwort
+in den Passwortmanager (Datei als Anhang), eine **zweite Kopie offline**
+(USB-Stick im Schrank). Wer den Upload-Schlüssel verliert, kann bei Google
+einen neuen beantragen (4.7) — aber das dauert Tage, und bis dahin geht kein
+Update raus.
+
+**4. Als GitHub-Secrets hinterlegen** (Git Bash, im Ordner mit der Datei;
+`gh` fragt die Werte verdeckt ab und schreibt sie nirgends hin):
+
+```bash
+base64 -w0 brauweg-upload.jks | gh secret set ANDROID_UPLOAD_KEYSTORE_BASE64 --repo moodsteppi/brauweg
+gh secret set ANDROID_UPLOAD_KEYSTORE_PASSWORT --repo moodsteppi/brauweg   # Passwort eintippen
+gh secret set ANDROID_UPLOAD_KEY_ALIAS         --repo moodsteppi/brauweg   # brauweg
+gh secret set ANDROID_UPLOAD_KEY_PASSWORT      --repo moodsteppi/brauweg   # dasselbe Passwort
+```
+
+Oder im Browser: Repo → *Settings → Secrets and variables → Actions → New
+repository secret* (für die Base64-Fassung dann
+`[Convert]::ToBase64String([IO.File]::ReadAllBytes("brauweg-upload.jks"))`
+in PowerShell). **Alle vier oder keins** — mit nur einigen bricht der Lauf
+ab, statt halb zu signieren.
+
+**5. Prüfen:** Workflow einmal laufen lassen. Die Warnung „Release-Signatur
+fehlt" ist weg, in der Zusammenfassung steht „Signiert mit dem
+Upload-Schlüssel — SHA-256 …", und unter dem Lauf liegt
+`brauweg-play-<Version>-<Lauf>`.
+
+Was der Workflow mit den Secrets tut: Er legt den Schlüssel für die Dauer
+des Laufs unter `$RUNNER_TEMP` ab, schreibt `apps/android/keystore.properties`
+(dieselbe Datei wie beim lokalen Bau, 4.2 Punkt 4), baut `bundleRelease` und
+löscht beides am Ende wieder — auch wenn der Bau scheitert.
+
+### 4.7 Zwei Schlüssel: Upload-Schlüssel und App-Signaturschlüssel
+
+Play App Signing ist für neue Apps Pflicht, und das ist gut so:
+
+| | Upload-Schlüssel | App-Signaturschlüssel |
+| --- | --- | --- |
+| Wer hat ihn | wir (4.6) | nur Google |
+| Wofür | beweist Google, dass ein Upload von uns kommt | damit signiert Google die APKs, die auf den Handys landen |
+| Verloren? | neuer über *App-Integrität → Upload-Schlüssel zurücksetzen* | kann nicht verloren gehen |
+| Fingerabdruck steht | in der Zusammenfassung des CI-Laufs und in der Console | nur in der Console |
+
+Beim **ersten Upload** fragt die Console, wie die App signiert werden soll:
+**„Von Google generierten Schlüssel verwenden"** (Vorgabe) wählen. Danach
+steht unter *Testen und veröffentlichen → Einrichtung → App-Integrität →
+App-Signatur* beides.
+
+**Für App Links (`ANDROID_SHA256` in Railway) zählt der
+App-Signaturschlüssel.** Android prüft den Einladungslink gegen die Signatur
+der installierten App — und die ist Googles. Mit dem Upload-Schlüssel allein
+öffnen die Links weiter im Browser, ohne Fehlermeldung. Der Upload-Schlüssel
+gehört nur dann zusätzlich hinein (Komma), wenn eine selbst signierte
+Release-APK außerhalb von Play verteilt wird — das tun wir nicht. Die
+Debug-APK aus 4.1 bekommt nie App Links (anderer Paketname, Debug-Schlüssel);
+dort öffnen Einladungen im Browser, und das ist gewollt.
+
+### 4.8 Versionen
+
+- **`versionName`** (steht im Store, „1.0.0"): `apps/android/VERSION`, eine
+  Zeile. Vor einem Release von Hand hochsetzen, im selben PR wie die
+  Änderung.
+- **`versionCode`** (die Zahl, die Play für jeden Upload höher verlangt): die
+  **Laufnummer** des Workflows „Android-APK". Sie wächst mit jedem Lauf von
+  selbst. *Re-run* behält die Nummer — für einen neuen Upload einen **neuen**
+  Lauf starten. Test-APK und AAB desselben Laufs tragen dieselbe Nummer.
+
+### 4.9 Was die Hülle für Play mitbringt (geprüft am 23.09.2026)
+
+- **Ziel-API 36** (Android 16). Play verlangt seit dem 31.08.2026 für neue
+  Apps und Updates mindestens 36 (developer.android.com → „Target API level
+  requirements"). `compileSdk` ebenso 36, `minSdk` 26 (Android 8).
+- **`android:exported`**: nur die `MainActivity` ist exportiert, und muss es
+  sein (Startsymbol, App Links). Sonst gibt es keine eigenen Dienste,
+  Empfänger oder Provider. Die CI zeigt die Berechtigungen des Release-Baus
+  in ihrer Zusammenfassung.
+- **Berechtigungen**: `INTERNET`, `VIBRATE` (Haptik am Tisch),
+  `ACCESS_NETWORK_STATE` (Meldung ohne Netz, `navigator.onLine`). Alle drei
+  sind Normal-Berechtigungen ohne Rückfrage. Mit Push kämen
+  `POST_NOTIFICATIONS` und die von Firebase dazu — nur mit Schalter (4.10).
+  Dazu kommt aus androidx eine app-eigene Signatur-Berechtigung
+  (`…DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`); die sieht kein Nutzer.
+- **Zurück-Taste**: Der Client blättert nicht über den Verlauf des WebViews
+  (seine Schirme sind Zustand in `App.tsx`). Die Hülle feuert deshalb erst
+  `brauweg:zurueck` (`packages/client/src/zuruecktaste.ts`); heute blättert
+  der Client damit aus einem Profil zurück und aus der Kartenlobby
+  (Doppelkopf, Skat, Zauberer, Cambio) in die Spielauswahl. Sonst der
+  WebView-Verlauf, und zuletzt geht die App **in den Hintergrund, statt sich
+  zu beenden** — am Tisch und in der Partykiste bricht die Taste also nie
+  eine Partie ab.
+- **Ohne Netz**: ein natives blaues Schild „Keine Verbindung" statt eines
+  Anmeldeschirms (der erste Abruf wäre gescheitert, und der Client hielte
+  sich für abgemeldet). Startete die App ohne Netz, lädt sie neu, sobald es
+  wieder da ist; geht das Netz mitten im Spiel weg, bleibt alles stehen, und
+  der Client verbindet sich selbst neu. Kurze Aussetzer (unter 2 s) zeigen
+  kein Schild.
+- **Keine Käufe, kein Google-Login** in der App — beides serverseitig bzw. im
+  Client (Abschnitt 2), kein eigener Code in der Hülle.
+
+### 4.10 Push — vorbereitet, standardmäßig aus
+
+Push braucht ein **Firebase-Projekt**, und das gibt es noch nicht (anlegen
+entscheidet Robin; der Server-Teil ist ein eigener Auftrag). Bis dahin baut
+die App **ohne** Firebase und ohne `POST_NOTIFICATIONS`.
+
+- **Schalter:** `-Ppush=an` beim Gradle-Bau. Dann kommt
+  `firebase-messaging` dazu, und statt `app/src/pushAus` wird
+  `app/src/pushAn` übersetzt. Die CI übersetzt die Fassung mit Push bei
+  jedem Lauf mit (ohne Werte, ohne sie zu bauen), damit der Schalter nicht
+  verrottet.
+- **Werte des Projekts** (Firebase Console → Projekteinstellungen → Android-App
+  `de.brauweg.app`): `firebaseAppId`, `firebaseApiKey`,
+  `firebaseProjektId`, `firebaseSenderId` — als Gradle-Eigenschaften oder in
+  `apps/android/firebase.properties` (ignoriert). Eine
+  `google-services.json` braucht es nicht; die Hülle meldet Firebase selbst
+  an. Für die CI wären das vier weitere Secrets und eine Zeile im Workflow
+  — noch nicht verdrahtet.
+- **Absprache mit dem Client** (dieselben Namen übernimmt die iOS-Hülle):
+  - `window.BRAUWEG_APP.push` — `true`, wenn diese App Push kann.
+  - `BrauwegNativ.pushErlauben()` — der Client bittet um Benachrichtigungen,
+    wenn der Nutzer es einschaltet. Erst dann fragt Android 13+ nach.
+  - Ereignis **`brauweg:push-token`** am `window`, `detail =
+    {plattform: 'android', token}` — nach jedem Laden der Seite und bei
+    jedem neuen Token. Dasselbe liegt als `window.BRAUWEG_APP.pushToken`
+    für den, der erst später hinsieht.
+- **Data Safety** ändert sich mit Push: Das Token ist eine Geräte-Kennung
+  („Geräte- oder andere IDs", App-Funktion, nicht geteilt). Vor dem ersten
+  Build mit Push das Formular nachziehen.
 
 ---
 
@@ -323,6 +540,9 @@ Glücksspiel **ja**, Nutzerinteraktion **ja** (Mehrspieler, Namen), Käufe
 - Konto löschen auch ohne Passwort.
 - Android-Hülle `apps/android` mit App Links, Teilen, Wach-Halten, Symbolen
   (Platzhalter); Test-APK per Actions.
+- Android releasefertig für den geschlossenen Test: signiertes AAB aus der
+  CI (sobald die Secrets stehen), `versionCode` automatisch, Ziel-API 36,
+  Zurück-Taste, Meldung ohne Netz, Push vorbereitet und aus (4.6–4.10).
 - Server liefert `apple-app-site-association` und `assetlinks.json`, sobald
   die Variablen gesetzt sind.
 - iOS-Bauskript für den Mac ohne Kabel.
@@ -340,6 +560,11 @@ Glücksspiel **ja**, Nutzerinteraktion **ja** (Mehrspieler, Namen), Käufe
 - Demo-Konto für die Prüfer anlegen.
 - Play-Konto (25 $), Upload-Schlüssel erzeugen und verwahren, 12 Tester
   zusammentrommeln.
+- Die vier Secrets `ANDROID_UPLOAD_*` setzen (4.6), dann den ersten
+  signierten Lauf starten und das AAB hochladen (4.3).
+- Nach dem ersten Upload: SHA-256 des **App-Signaturschlüssels** aus der
+  Console nach `ANDROID_SHA256` (4.7).
+- Entscheiden, ob und wann es ein Firebase-Projekt für Push gibt (4.10).
 - Railway: `APPLE_TEAM_ID`, `ANDROID_SHA256` setzen.
 - Entscheiden, wann das nächste Spiel mit einer Zeile in die App wechselt.
 
@@ -352,7 +577,13 @@ Glücksspiel **ja**, Nutzerinteraktion **ja** (Mehrspieler, Namen), Käufe
   Code.
 - **Push („du bist dran")** nicht gebaut: braucht APNs-Schlüssel aus Toms
   Konto bzw. ein Firebase-Projekt, und am Server eine Tabelle für
-  Geräte-Token. Kommt nach dem ersten Release.
+  Geräte-Token. Kommt nach dem ersten Release. *Stand 23.09.2026:* Die
+  Android-Seite ist vorbereitet und aus (4.10); der Client horcht noch nicht
+  auf `brauweg:push-token`.
+- **Zurück-Taste in den Spielen mit eigenem Menü** (Partykiste, Golf, …):
+  Dort blättert sie nicht, die App geht in den Hintergrund. Soll sie im
+  Schirm zurückblättern, hängt sich der Schirm selbst mit
+  `useZuruecktaste` an (`packages/client/src/zuruecktaste.ts`).
 - **Android nur in der CI gebaut**; auf einem echten Gerät noch nicht
   gestartet. Der erste Test sollte prüfen: Anmeldung, WebSocket am Tisch,
   Einladungslink aus WhatsApp, Teilen, Bildschirm bleibt an.
