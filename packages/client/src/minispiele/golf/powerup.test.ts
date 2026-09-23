@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { botEntscheidung, sichtFrei } from './bot';
 import { Gleichschritt } from './gleichschritt';
-import { type Karte, abstandZuWaenden, istInZone } from './karte';
+import { type Karte, type ZoneStrudel, abstandZuWaenden, istInZone } from './karte';
 import { KARTEN } from './karten';
 import { type Lochmodifikatoren, OHNE_MODIFIKATOR } from './modifikator';
 import {
@@ -298,6 +298,67 @@ describe('Wirkung je Art', () => {
     z.baelle[0].halt = 'schild';
     bisRuhe(z, FREI, [schlag(0, 0, 0, -1, 0.3)]);
     expect(z.baelle[0].halt).toBe('schild');
+  });
+});
+
+describe('Power-ups und Strudel (seit #219)', () => {
+  /*
+   * Seit #219 zieht ein Strudel nach `STRUDEL_SOG_TAKTE` nur noch ohne
+   * Energiezufuhr ein, und jeder Ball zählt `strudelTakte`. Die Power-ups
+   * rechnen mit eigenen Unterschritten (Turbo) oder ohne Wände (Geist) und
+   * ziehen selbst (Magnet) — geprüft wird, dass keiner davon einen Ball im
+   * Strudel festhält und dass alles zur Ruhe kommt.
+   */
+  const FALLE: ZoneStrudel = { art: 'strudel', x: 6, y: 30, r: 2, staerke: 20 };
+
+  function laeuftAus(z: Partiezustand, karte: Karte, e: Ereignis[], max = 1200): number {
+    let takte = 0;
+    for (; takte < max; takte += 1) {
+      schritt(z, e.filter((x) => x.takt === z.takt), [karte]);
+      if (takte > 2 && z.baelle.every((b) => b.ruht && b.flugTakte === 0)) break;
+    }
+    return takte;
+  }
+
+  it('Turbo in einen Strudel: gefangen oder durch, und er kommt zur Ruhe', () => {
+    const karte = karteMit({ zonen: [FALLE] });
+    for (const kraft of [0.3, 0.6, 1]) {
+      for (const rx of [0, 0.05, 0.08]) {
+        const z = starte(karte, mitFeldern());
+        z.baelle[0].halt = 'turbo';
+        const takte = laeuftAus(z, karte, [schlag(0, 0, rx, -Math.sqrt(1 - rx * rx), kraft)]);
+        expect(takte, `Kraft ${kraft}, rx ${rx}`).toBeLessThan(1200);
+        expect(z.baelle[0].wirkung).toBe(null);
+        expect(z.baelle[0].strudelTakte).toBe(0);
+      }
+    }
+  });
+
+  it('Geisterball durch den Strudelrand und eine Wand dahinter: kommt zur Ruhe, liegt frei', () => {
+    const karte = karteMit({ zonen: [FALLE], waende: [{ x: 0, y: 26, w: 12, h: 1.5 }] });
+    for (const rx of [0.02, 0.06, 0.09]) {
+      const z = starte(karte, mitFeldern());
+      z.baelle[0].halt = 'geist';
+      const takte = laeuftAus(z, karte, [schlag(0, 0, rx, -Math.sqrt(1 - rx * rx), 0.8)]);
+      const b = z.baelle[0];
+      expect(takte, `rx ${rx}`).toBeLessThan(1200);
+      expect(b.wirkung).toBe(null);
+      expect(punktInWand(karte, b.x, b.y)).toBe(false);
+    }
+  });
+
+  it('Magnet neben einem Strudel: kein Tauziehen, der Ball liegt oder fällt', () => {
+    // Loch 3 E neben dem Strudel — der Magnet reicht 5 E weit, also bis in den Strudel.
+    const karte = karteMit({ loch: [9.5, 30], zonen: [FALLE] });
+    for (const kraft of [0.4, 0.55, 0.7]) {
+      for (const rx of [0.03, 0.1, 0.15]) {
+        const z = starte(karte, mitFeldern());
+        z.baelle[0].halt = 'magnet';
+        const takte = laeuftAus(z, karte, [schlag(0, 0, rx, -Math.sqrt(1 - rx * rx), kraft)]);
+        expect(takte, `Kraft ${kraft}, rx ${rx}`).toBeLessThan(1200);
+        expect(z.baelle[0].ruht).toBe(true);
+      }
+    }
   });
 });
 
