@@ -59,14 +59,14 @@
  * verbraucht — abgewehrt heißt nicht zurückgegeben.
  *
  * **Determinismus** wie überall in Golf (docs/GOLF-PLAN.md): nur `+ - * /` und
- * `Math.sqrt`, kein Zufall. Bots entscheiden hier ohne Zufallsstrom.
+ * `Math.sqrt`, kein Zufall. Die Bots (bot-stoer.ts) entscheiden ohne Zufallsstrom.
  */
 
 import type { Karte } from './karte';
-import type { Ball, Botstufe, Effektereignis, Partiezustand } from './physik';
+import type { Ball, Effektereignis, Partiezustand } from './physik';
 import { KRAFT_MIN, meldeEffekt, schlagErlaubt } from './physik';
 import { type Powerupart, EINSATZ, verbraucheSchild } from './powerup';
-import { betrag, normiere } from './zufall';
+import { normiere } from './zufall';
 
 /** Die drei Störschläge — dieselben Namen, die in `POWERUPS` hinten stehen. */
 export type Stoerart = 'bombe' | 'klebefeld' | 'tausch';
@@ -98,7 +98,7 @@ export const BOMBE_R = 3;
  * nicht so weit, dass jeder Ball an der Rückwand landet.
  */
 export const BOMBE_V = 14;
-const BOMBE_RAND_ANTEIL = 0.4;
+export const BOMBE_RAND_ANTEIL = 0.4;
 
 /** Klebefeld: Radius in E. */
 export const KLEBE_R = 1.6;
@@ -407,72 +407,9 @@ export function raeumeStoerungen(z: Partiezustand): void {
   if (klebe != null && z.takt + 1 >= klebe.bis) z.aktuell.klebe = null;
 }
 
-/* --------------------------------------------------------------------------
- * Bots
- * ----------------------------------------------------------------------- */
-
-/** Ein Tausch lohnt erst, wenn der Führende so viel näher am Loch liegt, in E. */
-const TAUSCH_VORSPRUNG = 2;
-/** So weit hält der Bot den eigenen Ball aus Bombe und Klebefleck heraus, in E. */
-const EIGEN_ABSTAND = 0.5;
-
-/**
- * Der Störschlag eines Bots — oder `null`, dann schlägt er wie sonst.
- *
- * Bots lösen gegen den Führenden aus, wenn sie zurückliegen (Karte); dass sie
- * zurückliegen, prüft schon `ausloesenErlaubt` (wer führt, darf nicht). Ziel
- * ist der Führende, dessen Ball `stoerbar` ist und kein Schild trägt — auf
- * ein Schild zu feuern, hieße, den Störschlag für nichts herzugeben.
- *
- *   - Tausch, wenn der Führende mindestens `TAUSCH_VORSPRUNG` näher am Loch liegt.
- *   - Bombe auf seinen Ball, wenn er in Reichweite ist und der eigene nicht
- *     mit im Umkreis liegt.
- *   - Klebefleck auf seinen LIEGENDEN Ball: Der nächste Schlag von dort
- *     rollt durch Sand. Auch hier bleibt der eigene Ball draußen.
- *
- * Ohne Zufall und ohne Probe: ein paar Abstände, keine Physik — die Kosten
- * je Entscheidung stehen im Pull Request (golf-stoerprobe.ts).
+/*
+ * Die Bot-Seite — wann ein Bot auslöst, wohin er zielt und wann er dafür
+ * einen Augenblick wartet — steht seit dem 23.09.2026 (Version 10) in
+ * bot-stoer.ts. Hier bleiben die Regeln, die für Menschen und Bots gleich
+ * gelten.
  */
-export function botStoerschlag(
-  z: Partiezustand,
-  sitz: number,
-  karte: Karte,
-): { rx: number; ry: number; kraft: number } | null {
-  if (!ausloesenErlaubt(z, sitz)) return null;
-  const b = z.baelle[sitz];
-  const art = b.halt as Stoerart;
-  const lochX = karte.loch[0];
-  const lochY = karte.loch[1];
-  if (art === 'tausch') {
-    const ziel = tauschZiel(z, sitz);
-    if (ziel < 0) return null;
-    const t = z.baelle[ziel];
-    if (t.halt === 'schild') return null;
-    const eigen = betrag(lochX - b.x, lochY - b.y);
-    const fremd = betrag(lochX - t.x, lochY - t.y);
-    if (eigen - fremd < TAUSCH_VORSPRUNG) return null;
-    // Richtung und Kraft sind beim Tausch ohne Bedeutung, aber ein Zug braucht sie.
-    return { rx: 0, ry: -1, kraft: 1 };
-  }
-  const radius = art === 'bombe' ? BOMBE_R : KLEBE_R;
-  const maske = z.aktuell.fuehrend ?? 0;
-  for (let s = 0; s < z.baelle.length; s += 1) {
-    if (s === sitz || (maske & (1 << s)) === 0) continue;
-    const t = z.baelle[s];
-    if (!stoerbar(t) || t.halt === 'schild') continue;
-    if (art === 'klebefeld' && !t.ruht) continue;
-    const dx = t.x - b.x;
-    const dy = t.y - b.y;
-    const d = betrag(dx, dy);
-    if (d > STOER_REICHWEITE || d < radius + EIGEN_ABSTAND) continue;
-    const r = normiere(dx, dy);
-    let kraft = d / STOER_REICHWEITE;
-    if (kraft < KRAFT_MIN) kraft = KRAFT_MIN;
-    else if (kraft > 1) kraft = 1;
-    return { rx: r.x, ry: r.y, kraft };
-  }
-  return null;
-}
-
-/** Nur für die Probe: welche Bot-Stufen Störschläge auslösen (alle). */
-export const STOER_STUFEN: readonly Botstufe[] = ['anfaenger', 'standard', 'experte', 'genie'];
