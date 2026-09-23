@@ -12,9 +12,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  AUFGABEN,
   DEFAULT_REGELN,
+  ENTWEDER_ODER,
+  IDENTITAETEN,
+  IMPOSTER_WOERTER,
+  KATEGORIEN,
+  MEHRHEITSFRAGEN,
   MINISPIELE,
   NIEMALS_SPRUECHE,
+  QUIZ_FRAGEN,
+  REGELKARTEN,
+  SCHAETZ_FRAGEN,
+  WER_EHER_SPRUECHE,
+  ZEHN_SEKUNDEN,
   PAKETE,
   SCHLUECKE,
   SITZE,
@@ -136,6 +147,89 @@ test('Eskalation: die Texte werden schaerfer — und kein harmloser Abend faengt
       if (stufe >= 2) assert.equal(haerte, Math.min(stufe, hoechste), `Saat ${saat}, Runde ${nr}: Stufe ${stufe}, Haerte ${haerte}`);
     }
   }
+});
+
+/** Die echten Kataloge, nach dem Namen, den `kennungen` vergibt. */
+const KATALOGE: Record<string, readonly Inhalt[]> = {
+  imposter: IMPOSTER_WOERTER,
+  quiz: QUIZ_FRAGEN,
+  identitaeten: IDENTITAETEN,
+  niemals: NIEMALS_SPRUECHE,
+  wereher: WER_EHER_SPRUECHE,
+  schaetzen: SCHAETZ_FRAGEN,
+  entweder: ENTWEDER_ODER,
+  aufgaben: AUFGABEN,
+  kategorien: KATEGORIEN,
+  mehrheit: MEHRHEITSFRAGEN,
+  regelkarte: REGELKARTEN,
+  bombe: KATEGORIEN,
+  zehnsekunden: ZEHN_SEKUNDEN,
+  'koenigsbecher-regeln': REGELKARTEN,
+};
+
+test('kein Rueckfall geht in der Haerte nach oben — jedes Paket, jeder Katalog, Turnier wie Eskalation', () => {
+  /*
+   * Die Frage hinter dem roten Lauf vom 23.09.2026: Seit #214 tragen die
+   * Eintraege Pakete, und duenne Paket-Toepfe ('jga', 'weihnachten') fallen
+   * im Filter auf Allgemeingut zurueck. Zieht dieser Rueckfall je etwas
+   * Derberes, als die Runde darf? Geprueft am echten Katalog, ueber alle
+   * Minispiele und fuenfzehn Runden — ein harmloser Abend beginnt nie pikant.
+   */
+  for (const paket of [null, ...PAKETE]) {
+    for (const saat of [1, 2]) {
+      const faelle: { name: string; regeln: PartykisteRegeln; gast: number[]; grenze: (nr: number) => number }[] = [
+        { name: 'Turnier harmlos', regeln: { ...DEFAULT_REGELN, paket }, gast: [], grenze: () => 1 },
+        { name: 'Turnier pikant', regeln: { ...DEFAULT_REGELN, inhaltsHaerte: 2, paket }, gast: [], grenze: () => 2 },
+        { name: 'Eskalation', regeln: { ...ESKALATION, paket }, gast: [], grenze: (nr) => eskalationsStufe(nr, 15) },
+        {
+          name: 'Eskalation mit Gast',
+          regeln: { ...ESKALATION, paket },
+          gast: [3],
+          grenze: (nr) => Math.min(2, eskalationsStufe(nr, 15)),
+        },
+      ];
+      for (const fall of faelle) {
+        const runden = abgerechnet(erzeugePartie({ regeln: fall.regeln, saat, sitze: 8, runden: 15, gastSitze: fall.gast }));
+        for (const [nr, { runde }] of runden) {
+          for (const [katalog, id] of kennungen(runde)) {
+            const eintrag = KATALOGE[katalog]?.find((i) => i.id === id);
+            assert.ok(eintrag, `${katalog}: ${id} steht in keinem Katalog`);
+            assert.ok(
+              haerteVon(eintrag) <= fall.grenze(nr),
+              `${fall.name}, Paket ${paket}, Saat ${saat}, Runde ${nr}: ${katalog} ${id} hat Haerte ${haerteVon(eintrag)}`,
+            );
+          }
+        }
+      }
+    }
+  }
+});
+
+test('Eskalation: ein Paket-Topf nur aus Derbem laesst das erste Drittel trotzdem harmlos', () => {
+  /*
+   * Die Luecke in `stufenStapel` bis zum 23.09.2026: Die Auswahl auf der
+   * Decke blieb in der Paketstufe stehen, wenn das Paket genug DERBE
+   * Eintraege hatte — und enthielt dann keinen harmlosen. Die Belegung fand
+   * fuer Stufe 1 nichts und nahm den ersten Eintrag des Stapels.
+   */
+  const katalog: Spruch[] = [
+    ...Array.from({ length: 12 }, (_, i) => ({ id: `jga${i}`, text: `derb ${i}`, haerte: 3 as const, paket: ['jga' as const] })),
+    ...Array.from({ length: 12 }, (_, i) => ({ id: `h${i}`, text: `harmlos ${i}` })),
+  ];
+  const partie = erzeugePartie({
+    regeln: { ...ESKALATION, minispiele: ['niemals'], paket: 'jga' },
+    saat: 3,
+    sitze: 6,
+    runden: 6,
+    gastSitze: [],
+  });
+  const ergebnis = stufenStapel(katalog, regelnDerRunde(partie.regeln, 0, 6), 'saat', 6, 'niemals', 10, () => 'niemals');
+  assert.ok(ergebnis, 'die Eskalation nimmt nicht den Stufenweg');
+  assert.deepEqual(
+    ergebnis.stapel.map((i) => haerteVon(i)),
+    [1, 1, 1, 1, 3, 3],
+    'erstes und zweites Drittel harmlos (pikant gibt es nicht), das letzte derb',
+  );
 });
 
 test('Eskalation: ueber den ganzen Abend kommt keine Kennung zweimal', () => {
@@ -572,6 +666,12 @@ function kennungen(runde: Runde): Array<[string, string]> {
       return [['entweder', runde.paarId]];
     case 'wahrheitpflicht':
       return runde.aufgabeId.filter((id) => id !== '').map((id) => ['aufgaben', id]);
+    case 'kategorien':
+      return [['kategorien', runde.kategorieId]];
+    case 'mehrheit':
+      return [['mehrheit', runde.frageId]];
+    case 'regelkarte':
+      return [['regelkarte', runde.karteId]];
     /* Die drei mit Uhr (23.09.2026) — die Bombe mit eigenem Kategorien-Stapel. */
     case 'bombe':
       return [['bombe', runde.kategorieId]];

@@ -46,6 +46,14 @@ import {
   QUIZ_FRAGEN,
   SCHAETZ_FRAGEN,
   WER_EHER_SPRUECHE,
+  KATEGORIEN,
+  KOENIGSBECHER_KARTEN,
+  MEHRHEITSFRAGEN,
+  REGELKARTEN,
+  ZEHN_SEKUNDEN,
+  ersatzMinispiel,
+  hatVorrat,
+  spielbaresMinispiel,
   waehlbareInhalte,
   wirksameInhaltsHaerte,
   type Inhalt,
@@ -527,6 +535,13 @@ const KATALOGE: Readonly<Record<string, readonly Inhalt[]>> = {
   entweder: ENTWEDER_ODER,
   wahrheit: AUFGABEN.filter((a) => a.art === 'wahrheit'),
   pflicht: AUFGABEN.filter((a) => a.art === 'pflicht'),
+  /* Seit dem 23.09.2026 auch die Kataloge aus #213 und #218 — Kategorien
+     ziehen Battle und Bombe, Regel-Karten Regel-Karte und Koenigsbecher. */
+  kategorien: KATEGORIEN,
+  mehrheit: MEHRHEITSFRAGEN,
+  regelkarten: REGELKARTEN,
+  zehnsekunden: ZEHN_SEKUNDEN,
+  koenigsbecher: KOENIGSBECHER_KARTEN,
 };
 
 /** Kiffen ist "pikant" — die einzigen Eintraege mit Haerte am 22.09.2026. */
@@ -546,6 +561,50 @@ test('jeder Katalog traegt die strengste Einstellung — genug harmlose Eintraeg
     for (const i of katalog) {
       if (i.paket) for (const p of i.paket) assert.ok((PAKETE as readonly string[]).includes(p), `${i.id}: Paket ${p}`);
     }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Die Haerte wird nie gelockert — auch nicht als letzter Ausweg (23.09.2026)
+// ---------------------------------------------------------------------------
+
+/** Ein Katalog mit nur drei harmlosen, aber zwanzig derben Eintraegen. */
+const DUENN: Inhalt[] = [
+  ...Array.from({ length: 20 }, (_, i) => ({ id: `d${i}`, haerte: 3 as const })),
+  { id: 'h0' },
+  { id: 'h1', paket: ['jga' as const] },
+  { id: 'h2', minSitze: 12 },
+];
+
+test('zu wenig Harmloses: der Filter nimmt nur das Harmlose, nie das Derbe', () => {
+  for (const paket of [null, 'jga', 'arbeit'] as const) {
+    const auswahl = waehlbareInhalte(DUENN, { inhaltsHaerte: 1, paket }, 6);
+    assert.deepEqual(
+      auswahl.inhalte.map((i) => i.id),
+      ['h0', 'h1', 'h2'],
+      `Paket ${paket}: die Auswahl ist nicht genau das Harmlose`,
+    );
+    assert.equal(auswahl.rueckfall?.genutzt, 'ohneMinSitze', 'der letzte Halt ist die Haerte, nicht der volle Katalog');
+  }
+  /* Pikant darf das Harmlose mitnehmen, das Derbe nie. */
+  assert.equal(waehlbareInhalte(DUENN, { inhaltsHaerte: 2, paket: null }, 6).inhalte.length, 3);
+  /* Gar nichts Erlaubtes: leer — nicht der volle Katalog. */
+  const nurDerb = DUENN.filter((i) => i.haerte === 3);
+  assert.deepEqual(waehlbareInhalte(nurDerb, { inhaltsHaerte: 2, paket: 'jga' }, 6).inhalte, []);
+});
+
+test('ohne erlaubten Vorrat spielt ein anderes Minispiel — deterministisch, und nie haengt der Tisch', () => {
+  const liste: MinispielId[] = ['quiz', 'niemals', 'imposter'];
+  const ohneNiemals = (art: MinispielId): boolean => art !== 'niemals';
+  assert.equal(ersatzMinispiel(liste, 0, ohneNiemals), 'quiz', 'ein spielbares Minispiel wird nicht ersetzt');
+  assert.equal(ersatzMinispiel(liste, 1, ohneNiemals), 'imposter', 'der Ersatz ist das naechste der Liste');
+  assert.equal(ersatzMinispiel(liste, 4, ohneNiemals), 'imposter', 'dieselbe Runde ergibt denselben Ersatz');
+  assert.equal(ersatzMinispiel(liste, 1, () => false), 'busfahrer', 'zur Not Bus fahren, das keinen Inhalt braucht');
+  /* Mit den echten Katalogen kommt der Ersatz heute nie vor — jedes
+     Minispiel hat Harmloses, also spielt jede Runde, was geplant ist. */
+  for (const art of MINISPIELE) assert.equal(hatVorrat(art, 1), true, `${art} hat nichts Harmloses`);
+  for (let nr = 0; nr < MINISPIELE.length; nr++) {
+    assert.equal(spielbaresMinispiel(DEFAULT_REGELN, nr), minispielFuer(DEFAULT_REGELN, nr));
   }
 });
 
