@@ -10,9 +10,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const bestenliste = vi.fn();
-vi.mock('../../api', () => ({ api: { bestenliste: (...a: unknown[]) => bestenliste(...a) } }));
+const eigeneBestleistungen = vi.fn();
+vi.mock('../../api', () => ({
+  api: {
+    bestenliste: (...a: unknown[]) => bestenliste(...a),
+    eigeneBestleistungen: (...a: unknown[]) => eigeneBestleistungen(...a),
+  },
+}));
 
-import { Bahnrekord, useBahnrekord } from './Bahnrekord';
+import { Bahnrekord, useBahnrekord, useBestmarken } from './Bahnrekord';
 
 beforeEach(() => {
   bestenliste.mockReset();
@@ -113,5 +119,30 @@ describe('useBahnrekord', () => {
     expect(result.current).toBeNull();
     freigeben();
     await waitFor(() => expect(result.current).toEqual({ rekord: null, eigenes: null }));
+  });
+});
+
+describe('useBestmarken', () => {
+  it('fragt erst, wenn die Einzelauswahl offen ist, und dann genau einmal', async () => {
+    eigeneBestleistungen.mockReset();
+    eigeneBestleistungen.mockResolvedValue([{ inhaltId: 'k01', wert: 3, richtung: 'tief', partyId: null, erzieltAm: '' }]);
+    const { result, rerender } = renderHook(({ an }: { an: boolean }) => useBestmarken(an), {
+      initialProps: { an: false },
+    });
+    expect(eigeneBestleistungen).not.toHaveBeenCalled();
+    rerender({ an: true });
+    await waitFor(() => expect(result.current.get('k01')).toBe(3));
+    rerender({ an: false });
+    rerender({ an: true });
+    expect(eigeneBestleistungen).toHaveBeenCalledTimes(1);
+    expect(eigeneBestleistungen).toHaveBeenCalledWith('golf');
+  });
+
+  it('ohne Antwort bleiben die Kacheln einfach ohne Marke', async () => {
+    eigeneBestleistungen.mockReset();
+    eigeneBestleistungen.mockRejectedValue(new Error('404'));
+    const { result } = renderHook(() => useBestmarken(true));
+    await waitFor(() => expect(eigeneBestleistungen).toHaveBeenCalledTimes(1));
+    expect(result.current.size).toBe(0);
   });
 });

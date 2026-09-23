@@ -49,8 +49,9 @@ export interface GolfBestleistung {
  * DER HAKEN FUER DEN FUN-MODUS. Zaehlt eine Partie mit diesem Regelsatz fuer
  * die Bestenliste je Bahn?
  *
- * Heute immer ja: Golf kennt nur den klassischen Modus (`GolfRegeln` ist
- * leer). Kommt der Fun-Modus mit Wetter, Wind und Zufallsereignissen, gibt
+ * Heute immer ja: Golf kennt nur den klassischen Modus. Die Felder, die
+ * `GolfRegeln` seit der Bahnauswahl (#212) traegt, waehlen nur, WELCHE Bahnen
+ * gespielt werden — jede davon bleibt dieselbe Bahn. Kommt der Fun-Modus mit Wetter, Wind und Zufallsereignissen, gibt
  * diese Funktion fuer ihn `false` zurueck — und zwar hier, im Modul, nicht am
  * Bildschirm und nicht im Server. Der Grund: Eine Bestenliste vergleicht
  * Schlagzahlen auf DERSELBEN Bahn. Mit Rueckenwind oder einem Glueckstreffer

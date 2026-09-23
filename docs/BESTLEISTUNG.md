@@ -115,8 +115,10 @@ jede Meldung der Mehrheitsgruppe mit Kennzeichen es so sagt — ein einzelnes
 Gerät kann eine Bestleistung wegnehmen, nicht erfinden. Ohne Kennzeichen gibt
 es keine Bestleistung.
 
-**Offen:** Die Bestmarke auf der Kachel der Bahnauswahl fehlt, solange es die
-Bahnauswahl nicht gibt (Quelle dafür: `api.eigeneBestleistungen('golf')`).
+In der Einzelauswahl der Bahnauswahl steht die eigene Bestmarke im
+Untertitel der Kachel („… · dein Bestes: 3"; die Plakette bleibt die
+Schwierigkeit), aus EINEM Aufruf `api.eigeneBestleistungen('golf')`, sobald die
+Einzelauswahl offen ist (`useBestmarken` in `Bahnrekord.tsx`).
 
 **Offen:** Die Bahnwahl als Tisch-Eigenschaft (S1) und kaufbare Zusatzpakete
 (S3) berühren diesen Unterbau nicht. Beide liefern nur andere `inhaltId`. Ob

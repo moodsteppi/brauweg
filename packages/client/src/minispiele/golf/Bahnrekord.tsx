@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { api } from '../../api';
 import { t } from '../../i18n';
-import { Bahnrekordspeicher, neuigkeit, type Bahnrekordstand } from './rekord';
+import { Bahnrekordspeicher, bestmarkenJeBahn, neuigkeit, type Bahnrekordstand } from './rekord';
 
 /**
  * Bahnrekord im Zwischenstand von Golf: „Bahnrekord: 3 (Anna) · dein
@@ -85,4 +85,38 @@ export function Bahnrekord({
       ) : null}
     </div>
   );
+}
+
+const KEINE_MARKEN: ReadonlyMap<string, number> = new Map();
+
+/**
+ * Die eigenen Bestmarken je Bahn fuer die Einzelauswahl der Bahnauswahl,
+ * einmal geholt, sobald `an` wahr wird (die Einzelauswahl offen ist) — nicht
+ * je Kachel und nicht bei jedem Tippen in die Suche.
+ *
+ * Scheitert der Abruf (Server alt, kein Netz), bleiben die Kacheln ohne
+ * Marke; die Auswahl selbst haengt nicht daran.
+ */
+export function useBestmarken(an: boolean): ReadonlyMap<string, number> {
+  const [marken, setMarken] = useState<ReadonlyMap<string, number> | null>(null);
+  const geholt = marken !== null;
+
+  useEffect(() => {
+    if (!an || geholt) return;
+    let lebt = true;
+    // Ueber ein Versprechen gestartet, damit auch ein sofort werfender Aufruf
+    // hier endet und nicht im Effekt.
+    void Promise.resolve()
+      .then(() => api.eigeneBestleistungen('golf'))
+      .then(bestmarkenJeBahn)
+      .catch(() => KEINE_MARKEN)
+      .then((m) => {
+        if (lebt) setMarken(m);
+      });
+    return () => {
+      lebt = false;
+    };
+  }, [an, geholt]);
+
+  return marken ?? KEINE_MARKEN;
 }

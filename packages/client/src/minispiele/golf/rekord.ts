@@ -1,4 +1,4 @@
-import type { Bestenliste } from '../../api';
+import type { Bestenliste, EigeneBestleistung } from '../../api';
 
 /**
  * Bahnrekord und eigenes Bestes je Golf-Bahn — die Rechnung hinter der Zeile
@@ -105,4 +105,18 @@ export class Bahnrekordspeicher {
     this.anfragen.set(bahnId, anfrage);
     return anfrage;
   }
+}
+
+/**
+ * Die eigenen Bestmarken je Bahn, fuer die Kacheln der Einzelauswahl in der
+ * Bahnauswahl. Aus `api.eigeneBestleistungen('golf')` — EIN Aufruf fuer alle
+ * Bahnen statt einer Liste je Kachel. Nur `tief` zaehlt: Golf meldet nichts
+ * anderes, und eine Zeile mit fremder Richtung waere keine Schlagzahl.
+ */
+export function bestmarkenJeBahn(
+  eigene: readonly EigeneBestleistung[],
+): ReadonlyMap<string, number> {
+  const marken = new Map<string, number>();
+  for (const e of eigene) if (e.richtung === 'tief') marken.set(e.inhaltId, e.wert);
+  return marken;
 }

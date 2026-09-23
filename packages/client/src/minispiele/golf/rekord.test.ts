@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Bestenliste } from '../../api';
-import { Bahnrekordspeicher, neuigkeit, standAus, type Bahnrekordstand } from './rekord';
+import { Bahnrekordspeicher, bestmarkenJeBahn, neuigkeit, standAus, type Bahnrekordstand } from './rekord';
 
 /*
  * Bahnrekord je Golf-Bahn (seit 22.09.2026): was die Zeile im Zwischenstand
@@ -94,5 +94,19 @@ describe('Bahnrekordspeicher', () => {
     expect(await speicher.hole('k01')).toBeNull();
     expect(lade).toHaveBeenCalledTimes(1);
     expect(speicher.vorhanden('k01')).toBeNull();
+  });
+});
+
+describe('bestmarkenJeBahn', () => {
+  it('je Bahn die eigene Zahl, nur Richtung tief', () => {
+    const marken = bestmarkenJeBahn([
+      { inhaltId: 'k01', wert: 3, richtung: 'tief', partyId: null, erzieltAm: '' },
+      { inhaltId: 'k07', wert: 5, richtung: 'tief', partyId: 'p', erzieltAm: '' },
+      { inhaltId: 'k09', wert: 900, richtung: 'hoch', partyId: null, erzieltAm: '' },
+    ]);
+    expect([...marken]).toEqual([
+      ['k01', 3],
+      ['k07', 5],
+    ]);
   });
 });
