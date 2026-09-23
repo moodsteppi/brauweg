@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * Eigene Datei und kein Anhang an `Profil.test.tsx`: Sobald ein Testfall den
  * Profil-Tab OEFFNET, laedt der Bildschirm sein Profilstueck nach, und
  * dessen 3D-Vorladen scheitert unter jsdom (three liest `/3d/…glb` mit
- * `fetch`, jsdom nimmt keine Adresse ohne Wurzel). Der Fehlschlag trifft dann
+ * `fetch`, Node nimmt keine Adresse ohne Wurzel). Der Fehlschlag trifft dann
  * den naechsten Testfall derselben Datei. Hier wird nichts geoeffnet — es
  * geht um die Leiste, nicht um den Inhalt dahinter.
  */
