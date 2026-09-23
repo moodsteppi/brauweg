@@ -381,6 +381,22 @@ export function segmenteVon(karte: Karte): Segment[] {
   return segmente;
 }
 
+const randSpeicher = new Map<Karte, Segment[]>();
+
+/**
+ * Nur die Segmente des Rahmens — für den Geisterball (Fun-Modus, powerup.ts),
+ * der durch jede Wand geht, aber nicht von der Bahn. Einmal je Karte wie
+ * `segmenteVon`, geleert mit `vergissSegmente`.
+ */
+export function randSegmenteVon(karte: Karte): Segment[] {
+  const fertig = randSpeicher.get(karte);
+  if (fertig !== undefined) return fertig;
+  const segmente: Segment[] = [];
+  for (const wand of randWaende(karte)) rechteckSegmente(wand.x, wand.y, wand.w, wand.h, segmente);
+  randSpeicher.set(karte, segmente);
+  return segmente;
+}
+
 /* --------------------------------------------------------------------------
  * Zonen nach Wirkung sortiert
  * ----------------------------------------------------------------------- */
@@ -438,6 +454,7 @@ export function zonengruppen(karte: Karte): Zonengruppen {
 /** Leert die Zwischenspeicher — nur für Messungen und Tests. */
 export function vergissSegmente(): void {
   segmentSpeicher.clear();
+  randSpeicher.clear();
   gruppenSpeicher.clear();
 }
 

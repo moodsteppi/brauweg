@@ -328,8 +328,38 @@ verrückte Bälle und wandernde Wände.
   der Bot auf Linien, die ihm jede Streuung verdarb). Das Wegfeld gibt es je
   Radius; für andere Radien sperrt es zusätzlich Rasterpunkte IN Wänden.
   Gemessen mit `golf-botprobe.ts --modifikator alle --kosten`.
-- **Noch offen:** Die Wahl steht im Menü „Gegen Bots" (`ModusWahl` in
-  `FunAnsage.tsx`); in der Gruppe (online, `setRules` von Sitz 0) fehlt der
-  Schalter. `replay.ts` rechnet Fun-Löcher noch klassisch nach (es reicht
-  `modus` nicht an `neuePartie`). Eine Bestleistung je Bahn gibt es im Fun-Modus
-  nicht (`zaehltFuerBestleistung` in bestleistung.ts fragt `modusVon`).
+- **Wahl:** im Menü „Gegen Bots" und in der Gruppe (`ModusWahl` in
+  `FunAnsage.tsx`; online über `setRules` von Sitz 0 im selben Regelsatz wie
+  die Bahnwahl, alle anderen sehen `ModusAnzeige`). Das Replay rechnet
+  Fun-Löcher mit ihrem Modifikator nach (`ReplayEingabe.modus`). Eine
+  Bestleistung je Bahn gibt es im Fun-Modus nicht (`zaehltFuerBestleistung`
+  in bestleistung.ts fragt `modusVon`).
+- **Power-ups (Teil 2, seit 23.09.2026, Version 8):** Turbo (Anfangstempo
+  × 1,6), Magnet (im letzten Drittel der Rollstrecke zieht das Loch im
+  Umkreis von 5 E), Geisterball (durch Wände und Drehkreuze, nicht durch
+  Wasser, nicht aus dem Rahmen), Schild (der nächste Stoß eines fremden
+  Balls gegen den LIEGENDEN Träger prallt ab). Quelle `powerup.ts`. Je
+  Fun-Loch 2–4 Felder, jede Art höchstens einmal, rein aus Saat, Loch und
+  Bahn (`powerupsFuerLoch`, auf den Rasterpunkten des Wegfelds mit Abstand
+  zu Wand, Loch, Abschlag und jeder Zone außer Sand und Eis). Sie hängen an
+  `Lochmodifikatoren.powerups` und stehen **nicht** in `Karte.zonen` — die
+  Bahnen, die Werkstatt und die Bahnprüfung kennen keine zehnte Zonenart.
+  Was sich im Loch ändert, reist mit `kopiere`: `Lochstand.felderWeg`
+  (Bitmaske der eingesammelten Felder), `Ball.halt` (eins zur Zeit, ein
+  neues ersetzt das alte), `Ball.wirkung` (der laufende Schlag) und
+  `Ball.schlagTempo`. Einsammeln ist Physik, der Server weiß nichts davon.
+- **Die Halte-Mechanik** (`EINSATZ` je Art): `'schlag'` wirkt mit dem
+  nächsten eigenen Schlag von selbst (`wendeSchlagAn` macht aus `halt` die
+  `wirkung`), `'passiv'` wartet auf einen Auslöser (Schild), `'ausloesen'`
+  ist der Anschluss für Teil 3: Störschläge, die ein Spieler STATT eines
+  Schlags auslöst — neue Art hinten an `POWERUPS`, eigenes Ereignis in
+  physik.ts, Schild über `verbraucheSchild`.
+- **Fallen der Power-ups:** Der Turbo-Ball rechnet in halben Unterschritten
+  (`turboWerte`), sonst tunnelt er mit 0,45 E je Schritt durch Wände. Der
+  Magnet macht den Ball nicht `getrieben` — hinter einer Wand bliebe er sonst
+  nie liegen. Ein Geisterball, der IN einer Wand ausrollt, geht den Weg zur
+  Stelle vor dem Schlag zurück, bis er frei liegt. Bots planen mit dem, was
+  sie halten (Turbo: Kraft mit 1,6-facher Höchstkraft und weiterem Blick
+  entlang der Kette; Geist: gerade aufs verbaute Loch, wenn nur Wände
+  dazwischen liegen) und nehmen ein Feld mit, das nah an ihrem Weg liegt
+  (`umwegUeberFeld`). Gemessen mit `werkzeug/golf-powerupprobe.ts`.

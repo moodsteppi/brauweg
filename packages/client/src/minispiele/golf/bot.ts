@@ -65,7 +65,9 @@ import {
   WIND_ANTEIL,
   physikwerte,
   schritt,
+  turboWerte,
 } from './physik';
+import { TURBO_FAKTOR, feldWeg, felderVon } from './powerup';
 import { betrag, bruch, dreheHundertstel, ganzzahl, normiere } from './zufall';
 
 /** Kantenlänge einer Rasterzelle der Wegfindung. */
@@ -92,6 +94,13 @@ const STREUUNG: Record<Botstufe, { winkel: number; kraft: number }> = {
  * Sichtlinienprüfung ist der teuerste Teil einer Entscheidung.
  */
 const MAX_KETTE = 50;
+/**
+ * Dasselbe mit Turbo in der Hand (Fun-Modus): Der Ball rollt dann gut
+ * anderthalbmal so weit, also darf der Bot auch so weit schauen — das ist der
+ * ganze Unterschied zwischen „Turbo auf langen Bahnen" und einem Turbo, der
+ * nur die Kraft kleiner macht.
+ */
+const MAX_KETTE_TURBO = 80;
 
 /**
  * Was ein Portal im Entfernungsfeld kostet, in Rasterschritten (4 E).
@@ -133,6 +142,16 @@ const DREH_SCHRITTE = 3;
 
 const TABELLE_STUFEN = 200;
 let weiteTabelle: number[] | null = null;
+/**
+ * Dieselbe Tabelle für einen Schlag mit Turbo (Fun-Modus): 1,6-fache
+ * Höchstkraft, halber Zeitschritt wie der Turbo-Ball in der Physik
+ * (`turboWerte`). Ohne sie ginge jeder Turbo-Schlag auf Rasen den Weg über
+ * die Halbierungssuche. Teuer bleibt ein Turbo-Schlag trotzdem, dort, wo
+ * geprobt wird: Die Probe rechnet den Turbo-Ball mit doppelt so vielen
+ * Unterschritten und länger rollend (golf-powerupprobe.ts: p99 8,7 statt
+ * 4,7 ms beim Experten, nur in dem einen Schlag mit Turbo).
+ */
+let turboTabelle: number[] | null = null;
 
 /**
  * Rollweite eines Schlags der Kraft `k` auf freiem Rasen.
@@ -141,24 +160,29 @@ let weiteTabelle: number[] | null = null;
  * zwischen Plan und Wirklichkeit soll aus der Bahn kommen, nicht aus zwei
  * verschiedenen Reibungsformeln.
  */
-function rollweite(k: number): number {
-  let v = k * V_MAX;
+function rollweite(k: number, vmax: number = V_MAX, dt: number = DT): number {
+  let v = k * vmax;
   let s = 0;
-  for (let i = 0; i < 5000; i += 1) {
-    let neu = v * (1 - REIBUNG_RASEN * DT) - ROLL * DT;
+  const schritte = dt === DT ? 5000 : Math.ceil((5000 * DT) / dt);
+  for (let i = 0; i < schritte; i += 1) {
+    let neu = v * (1 - REIBUNG_RASEN * dt) - ROLL * dt;
     if (neu < 0) neu = 0;
     v = neu;
-    s += v * DT;
+    s += v * dt;
     if (v < V_STOP) break;
   }
   return s;
 }
 
-function tabelle(): number[] {
-  if (weiteTabelle !== null) return weiteTabelle;
+function tabelle(turbo = false): number[] {
+  if (!turbo && weiteTabelle !== null) return weiteTabelle;
+  if (turbo && turboTabelle !== null) return turboTabelle;
   const t: number[] = new Array<number>(TABELLE_STUFEN + 1);
-  for (let i = 0; i <= TABELLE_STUFEN; i += 1) t[i] = rollweite(i / TABELLE_STUFEN);
-  weiteTabelle = t;
+  for (let i = 0; i <= TABELLE_STUFEN; i += 1) {
+    t[i] = turbo ? rollweite(i / TABELLE_STUFEN, V_MAX * TURBO_FAKTOR, DT / 2) : rollweite(i / TABELLE_STUFEN);
+  }
+  if (turbo) turboTabelle = t;
+  else weiteTabelle = t;
   return t;
 }
 
@@ -168,8 +192,8 @@ function tabelle(): number[] {
  * Zwischen zwei Tabellenstufen wird linear gemittelt; die Tabelle steigt
  * streng, die Suche ist also eindeutig.
  */
-export function kraftFuerDistanz(d: number): number {
-  const t = tabelle();
+export function kraftFuerDistanz(d: number, turbo = false): number {
+  const t = tabelle(turbo);
   if (d <= t[0]) return KRAFT_MIN;
   if (d >= t[TABELLE_STUFEN]) return 1;
   let lo = 0;
@@ -229,8 +253,9 @@ function bahnweite(
   k: number,
   ziel: number,
   p: Readonly<Physikwerte> = KLASSISCHE_WERTE,
+  vmax: number = V_MAX,
 ): { weite: number; tempo: number } {
-  let v = k * V_MAX;
+  let v = k * vmax;
   let s = 0;
   const schritte = bahnSchritte(p);
   for (let i = 0; i < schritte; i += 1) {
@@ -296,16 +321,22 @@ export function kraftFuerStrecke(
   d: number,
   tempo = 0,
   p: Readonly<Physikwerte> = KLASSISCHE_WERTE,
+  vmax: number = V_MAX,
 ): number {
   const untergrund = zonengruppen(karte).untergrund;
-  if (p.windStaerke > 0) return kraftImWind(untergrund, p, x, y, rx, ry, rx, ry, d, tempo);
+  if (p.windStaerke > 0) return kraftImWind(untergrund, p, x, y, rx, ry, rx, ry, d, tempo, vmax);
   // Bahn ganz ohne Sand und Eis: die Tabelle ist hier dasselbe Ergebnis,
   // nur ohne die Simulation. Zwei Drittel der Bahnen gehen diesen Weg —
-  // aber nur im klassischen Modus, die Tabelle kennt nur Rasen.
-  if (untergrund.length === 0 && tempo === 0 && p === KLASSISCHE_WERTE) return kraftFuerDistanz(d);
+  // aber nur im klassischen Modus, die Tabelle kennt nur Rasen (und nur
+  // die gewöhnliche Höchstkraft, nicht den Turbo).
+  if (untergrund.length === 0 && tempo === 0 && p === KLASSISCHE_WERTE && vmax === V_MAX) return kraftFuerDistanz(d);
+  // Dasselbe mit Turbo auf klassischem Rasen: die Turbo-Tabelle.
+  if (untergrund.length === 0 && tempo === 0 && p === turboWerte(KLASSISCHE_WERTE) && vmax === V_MAX * TURBO_FAKTOR) {
+    return kraftFuerDistanz(d, true);
+  }
 
   const reicht = (k: number): boolean => {
-    const bahn = bahnweite(untergrund, x, y, rx, ry, k, d, p);
+    const bahn = bahnweite(untergrund, x, y, rx, ry, k, d, p, vmax);
     return bahn.weite >= d && bahn.tempo >= tempo;
   };
   return sucheKraft(reicht);
@@ -354,9 +385,10 @@ function ebenenbahn(
   rx: number,
   ry: number,
   ziel: number,
+  vmax: number = V_MAX,
 ): { weite: number; tempo: number; quer: number } {
-  let vx = ax * k * V_MAX;
-  let vy = ay * k * V_MAX;
+  let vx = ax * k * vmax;
+  let vy = ay * k * vmax;
   let px = x;
   let py = y;
   let s = 0;
@@ -407,9 +439,10 @@ function kraftImWind(
   ry: number,
   d: number,
   tempo: number,
+  vmax: number = V_MAX,
 ): number {
   return sucheKraft((k) => {
-    const bahn = ebenenbahn(untergrund, p, x, y, ax, ay, k, rx, ry, d);
+    const bahn = ebenenbahn(untergrund, p, x, y, ax, ay, k, rx, ry, d, vmax);
     return bahn.weite >= d && bahn.tempo >= tempo;
   });
 }
@@ -436,20 +469,21 @@ export function zielImWind(
   ry: number,
   d: number,
   tempo = 0,
+  vmax: number = V_MAX,
 ): Botschlag {
   const untergrund = zonengruppen(karte).untergrund;
   let ax = rx;
   let ay = ry;
-  let k = kraftImWind(untergrund, p, x, y, ax, ay, rx, ry, d, tempo);
+  let k = kraftImWind(untergrund, p, x, y, ax, ay, rx, ry, d, tempo, vmax);
   let vorhalt = 0;
   for (let runde = 0; runde < WIND_RUNDEN; runde += 1) {
-    const bahn = ebenenbahn(untergrund, p, x, y, ax, ay, k, rx, ry, d);
+    const bahn = ebenenbahn(untergrund, p, x, y, ax, ay, k, rx, ry, d, vmax);
     if (bahn.quer < 0.03 && bahn.quer > -0.03) break;
     vorhalt -= bahn.quer;
     const r = normiere(rx * d - ry * vorhalt, ry * d + rx * vorhalt);
     ax = r.x;
     ay = r.y;
-    k = kraftImWind(untergrund, p, x, y, ax, ay, rx, ry, d, tempo);
+    k = kraftImWind(untergrund, p, x, y, ax, ay, rx, ry, d, tempo, vmax);
   }
   return { rx: ax, ry: ay, kraft: k };
 }
@@ -1129,6 +1163,8 @@ function probeschlag(
       pauseBis: -1,
       // Dieselben Modifikatoren wie im Loch selbst — die Probe soll im Wind proben.
       mod: z.aktuell.mod,
+      // Und dieselben Felder: Was schon eingesammelt ist, liegt auch in der Probe nicht.
+      felderWeg: z.aktuell.felderWeg,
     },
     baelle: [ball],
     ergebnis: [],
@@ -1270,6 +1306,97 @@ function streuBreite(stufe: Botstufe): number {
 }
 
 /* --------------------------------------------------------------------------
+ * Power-ups (Fun-Modus, seit dem 23.09.2026)
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Kommt ein GEISTERBALL von (ax,ay) nach (bx,by)? Wände zählen nicht, er geht
+ * durch sie — Wasser, Portale und Pilze bleiben, was sie sind (siehe
+ * `sichtFrei`). Der Rahmen kann nicht im Weg sein: Beide Punkte liegen auf
+ * der Bahn.
+ */
+function geistLinieFrei(karte: Karte, ax: number, ay: number, bx: number, by: number, ballR: number): boolean {
+  const strahl = segment(ax, ay, bx, by);
+  for (let i = 0; i < karte.zonen.length; i += 1) {
+    const zone = karte.zonen[i];
+    if (zone.art === 'wasser' || zone.art === 'portal') {
+      if (kreuztFlaeche(zone, strahl)) return false;
+    } else if (zone.art === 'bumper') {
+      const grenze = zone.r + ballR;
+      if (abstandQuadrat(strahl, zone.x, zone.y) < grenze * grenze) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Wie weit der Bot einen Geisterball höchstens aufs Loch schickt: vier
+ * Fünftel der größten Rollweite — weiter reicht ein Schlag nur mit voller
+ * Kraft, und die trifft keinen Punkt mehr genau.
+ */
+const GEIST_ANTEIL = 0.8;
+
+/**
+ * Wie viel schlechter (in Rasterschritten) das Ziel eines Umwegs über ein Feld
+ * sein darf. Sechs, nicht zwei: Das Wegfeld geht nur in vier Richtungen, zwei
+ * Einheiten seitlich neben dem alten Ziel kosten dort schon vier Schritte,
+ * auch wenn der Weg zum Loch in Wahrheit kaum länger ist.
+ */
+const UMWEG_SCHRITTE = 6;
+/** Wie weit ein Feld höchstens neben der geplanten Linie liegt, in E. */
+const UMWEG_QUER = 2.5;
+
+/**
+ * Liegt ein freies Feld so nah am geplanten Weg, dass der Bot es mitnimmt?
+ *
+ * „Auf dem Weg" heißt hier: Der Bot schlägt statt auf (zx,zy) so weit wie
+ * geplant, aber genau durch die Mitte des Feldes — und nimmt das nur, wenn
+ * der neue Endpunkt frei in Sicht liegt und im Wegfeld höchstens
+ * `UMWEG_SCHRITTE` weiter vom Loch als der alte. Ein Feld hinter dem Ziel
+ * oder quer über die Bahn holt er nicht: Das kostet einen Schlag, und kein
+ * Power-up bringt einen ganzen zurück. Liefert den neuen Zielpunkt oder
+ * `null`.
+ */
+function umwegUeberFeld(
+  z: Partiezustand,
+  karte: Karte,
+  b: Ball,
+  zx: number,
+  zy: number,
+  ballR: number,
+): { x: number; y: number } | null {
+  const felder = felderVon(z.aktuell.mod);
+  if (felder.length === 0) return null;
+  const dx = zx - b.x;
+  const dy = zy - b.y;
+  const d = betrag(dx, dy);
+  if (d < 1) return null;
+  const feld = wegfeld(karte, z.botStufe !== 'anfaenger', ballR);
+  const zielZelle = freieZelleBei(feld, zx, zy);
+  if (zielZelle < 0 || feld.entfernung[zielZelle] < 0) return null;
+  let bestWeg = feld.entfernung[zielZelle] + UMWEG_SCHRITTE;
+  let beste: { x: number; y: number } | null = null;
+  for (let i = 0; i < felder.length; i += 1) {
+    if (feldWeg(z.aktuell.felderWeg, i)) continue;
+    const fx = felder[i].x - b.x;
+    const fy = felder[i].y - b.y;
+    const df = betrag(fx, fy);
+    if (df < 0.5 || df > d - 0.5) continue;
+    const quer = (fx * dy - fy * dx) / d;
+    if (quer > UMWEG_QUER || quer < -UMWEG_QUER) continue;
+    const r = normiere(fx, fy);
+    const ex = b.x + r.x * d;
+    const ey = b.y + r.y * d;
+    if (!sichtFrei(karte, b.x, b.y, ex, ey, null, ballR)) continue;
+    const c = freieZelleBei(feld, ex, ey);
+    if (c < 0 || feld.entfernung[c] < 0 || feld.entfernung[c] > bestWeg) continue;
+    bestWeg = feld.entfernung[c];
+    beste = { x: ex, y: ey };
+  }
+  return beste;
+}
+
+/* --------------------------------------------------------------------------
  * Entscheidung
  * ----------------------------------------------------------------------- */
 
@@ -1317,6 +1444,18 @@ export function botEntscheidung(
   // ist jede Zeile unten dieselbe wie vor dem Fun-Modus.
   const p = physikwerte(z.aktuell.mod, karte);
   const ballR = planRadius(p);
+  /*
+   * Was der Ball hält, wirkt mit genau diesem Schlag (Fun-Modus, powerup.ts),
+   * also plant der Bot damit: mit Turbo die größere Höchstkraft und den
+   * halben Zeitschritt, mit dem die Physik den Turbo-Ball rechnet, dazu der
+   * weitere Blick die Kette entlang; mit dem Geisterball gerade durch die
+   * Wand, wenn das Loch verbaut ist. Magnet und Schild ändern nichts am
+   * Plan — der Magnet hilft von selbst, das Schild wartet.
+   */
+  const halt = b.halt;
+  const turbo = halt === 'turbo';
+  const pPlan = turbo ? turboWerte(p) : p;
+  const vmax = turbo ? V_MAX * TURBO_FAKTOR : V_MAX;
 
   let zielX = lochX;
   let zielY = lochY;
@@ -1324,6 +1463,12 @@ export function botEntscheidung(
   let insPortal = false;
 
   if (zumLoch < 12 && sichtFrei(karte, b.x, b.y, lochX, lochY, null, ballR)) {
+    aufsLoch = true;
+  } else if (
+    halt === 'geist' &&
+    zumLoch < maximaleRollweite() * GEIST_ANTEIL &&
+    geistLinieFrei(karte, b.x, b.y, lochX, lochY, ballR)
+  ) {
     aufsLoch = true;
   } else {
     const feld = wegfeld(karte, z.botStufe !== 'anfaenger', ballR);
@@ -1334,7 +1479,10 @@ export function botEntscheidung(
       // Entfernungsfeld kostet vier Feldzugriffe.
       const kette: number[] = [];
       let c = start;
-      for (let i = 0; i < MAX_KETTE; i += 1) {
+      // Der Anfänger schaut auch mit Turbo nicht weiter: Mit ±12 Grad trifft er
+      // den fernen Kettenpunkt seltener, als er gewinnt (Probe, 20 Saaten).
+      const kettenLaenge = turbo && z.botStufe !== 'anfaenger' ? MAX_KETTE_TURBO : MAX_KETTE;
+      for (let i = 0; i < kettenLaenge; i += 1) {
         const n = abstieg(feld, c);
         if (n < 0) break;
         kette.push(n);
@@ -1428,6 +1576,13 @@ export function botEntscheidung(
   if (aufsLoch) {
     zielX = lochX;
     zielY = lochY;
+  } else if (!insPortal && halt === null) {
+    // Ein Feld am Weg nimmt er mit — nur mit leerer Hand, sonst tauschte er.
+    const umweg = umwegUeberFeld(z, karte, b, zielX, zielY, ballR);
+    if (umweg !== null) {
+      zielX = umweg.x;
+      zielY = umweg.y;
+    }
   }
 
   let dx = zielX - b.x;
@@ -1454,12 +1609,12 @@ export function botEntscheidung(
     // Im Wind hält der Bot quer vor und rechnet die Kraft mit Rücken- oder
     // Gegenwind (Fun-Modus, siehe `zielImWind`). Ohne das trüge der Wind
     // jeden Putt um eine halbe Einheit am Loch vorbei.
-    const imWind = zielImWind(karte, p, b.x, b.y, richtung.x, richtung.y, plan, tempo);
+    const imWind = zielImWind(karte, pPlan, b.x, b.y, richtung.x, richtung.y, plan, tempo, vmax);
     schlagRx = imWind.rx;
     schlagRy = imWind.ry;
     kraftRein = imWind.kraft;
   } else {
-    kraftRein = kraftFuerStrecke(karte, b.x, b.y, richtung.x, richtung.y, plan, tempo, p);
+    kraftRein = kraftFuerStrecke(karte, b.x, b.y, richtung.x, richtung.y, plan, tempo, pPlan, vmax);
   }
 
   // Liegt eine Zone am Weg, die der Plan nicht kennt, entscheiden

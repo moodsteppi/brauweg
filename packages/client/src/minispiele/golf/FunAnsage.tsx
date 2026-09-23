@@ -193,6 +193,19 @@ export function ModusWahl({
 }
 
 /**
+ * Was die anderen in der Gruppe von der Spielart sehen, die Sitz 0 gewählt
+ * hat (seit dem 23.09.2026) — nur im Fun-Modus, klassisch ist der Normalfall.
+ */
+export function ModusAnzeige({ modus }: { modus: Golfmodus }): React.JSX.Element | null {
+  if (modus !== 'fun') return null;
+  return (
+    <p className="gf-bw-hinweis" data-golf-modus-anzeige={modus}>
+      <strong>{t('golf.fun.fun')}</strong> — {t('golf.fun.funText')}
+    </p>
+  );
+}
+
+/**
  * Der Regelsatz mit Spielart: `basis` ist, was die Bahnauswahl liefert
  * (oder `null`, wenn sie nichts gewählt hat). Klassisch ohne Bahnwahl bleibt
  * `undefined` — dann nimmt der Server den Regelsatz des Moduls, wie bisher.

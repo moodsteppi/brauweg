@@ -102,8 +102,13 @@ export const TAFELRUNDE_MODULE_VERSION = 1;
  * 7 seit dem 23.09.2026: Strudel halten keinen Ball mehr auf einer Dauerbahn
  * fest (Drall lenkt nur, Energiebilanz im Trichter, Rasenreibung im
  * Strudel, Auswurf legt den Ball ab). Dieselbe Zugliste rollt anders.
+ *
+ * 8 seit dem 23.09.2026: Power-ups im Fun-Modus (Turbo, Magnet, Geist,
+ * Schild). Felder je Loch aus Saat und Bahn, Einsammeln und Wirkung in der
+ * Physik, Bots planen damit. Ein Client von davor rechnete ein Fun-Loch
+ * ohne Felder — eine andere Partie aus derselben Zugliste.
  */
-export const GOLF_MODULE_VERSION = 7;
+export const GOLF_MODULE_VERSION = 8;
 
 /**
  * 1 seit dem 18. September 2026 — die erste Fassung. Die Partykiste ist das

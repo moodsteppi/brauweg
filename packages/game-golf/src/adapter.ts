@@ -158,8 +158,12 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    *
    * 7 seit dem 23.09.2026: Physikänderung am Strudel (hält keinen Ball mehr
    * fest, siehe `bewege` in physik.ts) — derselbe Grund wie bei 3.
+   *
+   * 8 seit dem 23.09.2026: Power-ups im Fun-Modus. Die Sicht bleibt gleich,
+   * aber Physik und Bots rechnen ein Fun-Loch mit Feldern — ein Client von
+   * davor spielte es ohne.
    */
-  protocolVersion: 7,
+  protocolVersion: 8,
 
   defaultConfig: () => DEFAULT_REGELN,
 
