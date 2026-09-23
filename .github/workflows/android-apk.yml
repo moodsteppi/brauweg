@@ -16,6 +16,9 @@ name: Android-APK
 # Signiert ist sie mit dem Debug-Schluessel des Laeufers — fuers Verteilen an
 # Tester reicht das, fuer Play nicht (dafuer docs/APP-RELEASE.md).
 on:
+  # VORUEBERGEHEND: einmaliger Probelauf auf dem Auftragszweig, wird vor dem Merge entfernt.
+  push:
+    branches: [feature/app-bereit-machen]
   workflow_dispatch:
     inputs:
       api_base:
