@@ -142,6 +142,16 @@ const DREH_SCHRITTE = 3;
 
 const TABELLE_STUFEN = 200;
 let weiteTabelle: number[] | null = null;
+/**
+ * Dieselbe Tabelle für einen Schlag mit Turbo (Fun-Modus): 1,6-fache
+ * Höchstkraft, halber Zeitschritt wie der Turbo-Ball in der Physik
+ * (`turboWerte`). Ohne sie ginge jeder Turbo-Schlag auf Rasen den Weg über
+ * die Halbierungssuche. Teuer bleibt ein Turbo-Schlag trotzdem, dort, wo
+ * geprobt wird: Die Probe rechnet den Turbo-Ball mit doppelt so vielen
+ * Unterschritten und länger rollend (golf-powerupprobe.ts: p99 8,7 statt
+ * 4,7 ms beim Experten, nur in dem einen Schlag mit Turbo).
+ */
+let turboTabelle: number[] | null = null;
 
 /**
  * Rollweite eines Schlags der Kraft `k` auf freiem Rasen.
@@ -150,24 +160,29 @@ let weiteTabelle: number[] | null = null;
  * zwischen Plan und Wirklichkeit soll aus der Bahn kommen, nicht aus zwei
  * verschiedenen Reibungsformeln.
  */
-function rollweite(k: number): number {
-  let v = k * V_MAX;
+function rollweite(k: number, vmax: number = V_MAX, dt: number = DT): number {
+  let v = k * vmax;
   let s = 0;
-  for (let i = 0; i < 5000; i += 1) {
-    let neu = v * (1 - REIBUNG_RASEN * DT) - ROLL * DT;
+  const schritte = dt === DT ? 5000 : Math.ceil((5000 * DT) / dt);
+  for (let i = 0; i < schritte; i += 1) {
+    let neu = v * (1 - REIBUNG_RASEN * dt) - ROLL * dt;
     if (neu < 0) neu = 0;
     v = neu;
-    s += v * DT;
+    s += v * dt;
     if (v < V_STOP) break;
   }
   return s;
 }
 
-function tabelle(): number[] {
-  if (weiteTabelle !== null) return weiteTabelle;
+function tabelle(turbo = false): number[] {
+  if (!turbo && weiteTabelle !== null) return weiteTabelle;
+  if (turbo && turboTabelle !== null) return turboTabelle;
   const t: number[] = new Array<number>(TABELLE_STUFEN + 1);
-  for (let i = 0; i <= TABELLE_STUFEN; i += 1) t[i] = rollweite(i / TABELLE_STUFEN);
-  weiteTabelle = t;
+  for (let i = 0; i <= TABELLE_STUFEN; i += 1) {
+    t[i] = turbo ? rollweite(i / TABELLE_STUFEN, V_MAX * TURBO_FAKTOR, DT / 2) : rollweite(i / TABELLE_STUFEN);
+  }
+  if (turbo) turboTabelle = t;
+  else weiteTabelle = t;
   return t;
 }
 
@@ -177,8 +192,8 @@ function tabelle(): number[] {
  * Zwischen zwei Tabellenstufen wird linear gemittelt; die Tabelle steigt
  * streng, die Suche ist also eindeutig.
  */
-export function kraftFuerDistanz(d: number): number {
-  const t = tabelle();
+export function kraftFuerDistanz(d: number, turbo = false): number {
+  const t = tabelle(turbo);
   if (d <= t[0]) return KRAFT_MIN;
   if (d >= t[TABELLE_STUFEN]) return 1;
   let lo = 0;
@@ -315,6 +330,10 @@ export function kraftFuerStrecke(
   // aber nur im klassischen Modus, die Tabelle kennt nur Rasen (und nur
   // die gewöhnliche Höchstkraft, nicht den Turbo).
   if (untergrund.length === 0 && tempo === 0 && p === KLASSISCHE_WERTE && vmax === V_MAX) return kraftFuerDistanz(d);
+  // Dasselbe mit Turbo auf klassischem Rasen: die Turbo-Tabelle.
+  if (untergrund.length === 0 && tempo === 0 && p === turboWerte(KLASSISCHE_WERTE) && vmax === V_MAX * TURBO_FAKTOR) {
+    return kraftFuerDistanz(d, true);
+  }
 
   const reicht = (k: number): boolean => {
     const bahn = bahnweite(untergrund, x, y, rx, ry, k, d, p, vmax);
@@ -1460,7 +1479,9 @@ export function botEntscheidung(
       // Entfernungsfeld kostet vier Feldzugriffe.
       const kette: number[] = [];
       let c = start;
-      const kettenLaenge = turbo ? MAX_KETTE_TURBO : MAX_KETTE;
+      // Der Anfänger schaut auch mit Turbo nicht weiter: Mit ±12 Grad trifft er
+      // den fernen Kettenpunkt seltener, als er gewinnt (Probe, 20 Saaten).
+      const kettenLaenge = turbo && z.botStufe !== 'anfaenger' ? MAX_KETTE_TURBO : MAX_KETTE;
       for (let i = 0; i < kettenLaenge; i += 1) {
         const n = abstieg(feld, c);
         if (n < 0) break;
