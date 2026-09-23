@@ -321,5 +321,5 @@ verrückte Bälle und wandernde Wände.
 - **Noch offen:** Die Wahl steht im Menü „Gegen Bots" (`ModusWahl` in
   `FunAnsage.tsx`); in der Gruppe (online, `setRules` von Sitz 0) fehlt der
   Schalter. `replay.ts` rechnet Fun-Löcher noch klassisch nach (es reicht
-  `modus` nicht an `neuePartie`). Die Bestleistung je Bahn soll im Fun-Modus
-  nicht zählen — Haken: `zaehltFuerBestleistung` in modus.ts.
+  `modus` nicht an `neuePartie`). Eine Bestleistung je Bahn gibt es im Fun-Modus
+  nicht (`zaehltFuerBestleistung` in bestleistung.ts fragt `modusVon`).
