@@ -20,12 +20,19 @@ import { useEffect, useState } from 'react';
 
 import { api, type RegalWare } from './api';
 import { t } from './i18n';
+import { inApp } from './laufzeit';
 
 /** Wo im Shop die Pakete stehen — derselbe Titel wie das Regal in GameSelect. */
 export const SHOP_RUBRIK = 'Spielpakete';
 
-/** Der Grund an der gesperrten Kachel: Preis und wohin. Kurz — er ersetzt den Untertitel. */
-export function sperrgrund(ware: Pick<RegalWare, 'preis'>): string {
+/**
+ * Der Grund an der gesperrten Kachel: Preis und wohin. Kurz — er ersetzt den Untertitel.
+ *
+ * In der App gibt es keinen Shop, und ein Verweis auf einen Kaufweg ausserhalb
+ * der App verstoesst gegen Apple 3.1.1. Dort steht nur, dass es gesperrt ist.
+ */
+export function sperrgrund(ware: Pick<RegalWare, 'preis'>, app: boolean = inApp): string {
+  if (app) return 'Nicht freigeschaltet';
   return `${ware.preis.coins} Münzen · Im Shop ansehen: „${SHOP_RUBRIK}“`;
 }
 

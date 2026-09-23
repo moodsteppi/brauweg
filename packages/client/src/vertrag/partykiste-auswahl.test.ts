@@ -17,6 +17,7 @@ import {
   regelsatzAus,
   type PartyWahl,
 } from '../minispiele/partykiste/wahl';
+import { MINISPIEL_NAME } from '../minispiele/partykiste/sicht';
 
 /*
  * Vertrag zwischen der Auswahl im Menue der Partykiste und dem Modul.
@@ -36,6 +37,10 @@ function probleme(config: Record<string, unknown>): string[] {
 }
 
 describe('Vertrag Partykiste-Auswahl', () => {
+  it('jedes Minispiel des Moduls hat einen Namen, und nur diese (das Menue zaehlt daraus)', () => {
+    expect(Object.keys(MINISPIEL_NAME).sort()).toEqual([...MINISPIELE].sort());
+  });
+
   it('die Minispiele der Auswahl sind die des Moduls, in seiner Reihenfolge', () => {
     expect(regelsatzAus(vorgabe, BASIS, KEINE_WAHL, false)['minispiele']).toEqual([...MINISPIELE]);
   });

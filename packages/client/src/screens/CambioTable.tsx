@@ -184,7 +184,7 @@ export function CambioTable({
         <button className="doko-icon" onClick={onLeave} aria-label="Zurück">
           ‹
         </button>
-        <div className="doko-titel">
+        <div className="doko-top-mid">
           <strong>
             Runde {view.view.roundIndex + 1} / {view.view.totalRounds}
           </strong>

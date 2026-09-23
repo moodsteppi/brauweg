@@ -342,7 +342,7 @@ export function Partykiste({
         <div className="pk-menue-mitte">
           <h1 className="pk-titel">Partykiste</h1>
           <p className="pk-untertitel">
-            Zwölf Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum
+            {Object.keys(MINISPIEL_NAME).length} Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum
             sitzen. {trinkmodus ? 'Wer verliert, trinkt' : 'Wer verliert, sammelt Strafpunkte'}; wer
             gewinnt, steht oben.
           </p>
