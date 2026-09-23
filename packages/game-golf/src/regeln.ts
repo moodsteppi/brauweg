@@ -121,7 +121,25 @@ export type GolfAktion =
    * Server rechnet ihn nicht nach (er kennt die Loecher nicht), sondern
    * vergleicht nur, ob mehrere Geraete auf denselben Wert kommen.
    */
-  | { readonly art: 'ergebnis'; readonly schlaege: readonly number[]; readonly pruef: string }
+  | {
+      readonly art: 'ergebnis';
+      readonly schlaege: readonly number[];
+      readonly pruef: string;
+      /**
+       * Seit dem 22.09.2026: die Tafel `[loch][sitz]` selbst, aus der `pruef`
+       * gerechnet ist. Optional, damit ein Geraet von davor weiter melden
+       * kann; der Server nimmt sie nur fuer die Bestleistung je Bahn und nur,
+       * wenn sie zu Pruefsumme und Ausgang passt (bestleistung.ts).
+       */
+      readonly jeLoch?: readonly (readonly number[])[];
+      /**
+       * Seit dem 22.09.2026: `[loch][sitz]` ob der Ball gefallen ist. Ein nicht
+       * eingelochtes Loch steht in `jeLoch` als Schlaglimit + 1 und ist nie
+       * eine Bestleistung. Getrennt von `jeLoch`, damit die Pruefsumme ueber
+       * die Schlagzahlen bleibt, wie sie ist.
+       */
+      readonly eingelocht?: readonly (readonly boolean[])[];
+    }
   /** Sitz gibt auf / verlaesst den Tisch. */
   | { readonly art: 'aufgabe' }
   /**

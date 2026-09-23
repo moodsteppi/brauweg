@@ -19222,6 +19222,17 @@ span.hub-angebot-art.poker-jeton-stapel {
 .gpar-zupar[data-gpar='unter'] { color: #8ee0a3; }
 .gpar-zupar[data-gpar='ueber'] { color: #f0a0a8; }
 
+/* -- Bahnrekord im Zwischenstand (minispiele/golf/Bahnrekord.tsx) --------- */
+
+/* Eine Zeile unter der Tafel, gedaempft wie die Kopfzeile der Tafel; nur
+   ein neuer Rekord bekommt Farbe — Gold wie der Hole-in-one-Ruf, weil es
+   dieselbe Sorte Nachricht ist: Das war besonders. */
+.grek { margin: 10px 0 0; }
+.grek-zeile { margin: 0; color: #a9c4ad; font: 600 12px/1.35 system-ui; }
+.grek-zeile strong { color: #e8f0e6; font-weight: 800; font-variant-numeric: tabular-nums; }
+.grek-neu { margin: 6px 0 0; font: 900 15px/1.2 system-ui; color: #8ee0a3; }
+.grek-neu[data-grek-art='bahn'] { color: #f4b400; }
+
 /* -- Banner der Spielauswahl ---------------------------------------------- */
 
 /* Dasselbe Verhaeltnis wie die gemalten Banner (1200 x 300) und wie die
