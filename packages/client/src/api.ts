@@ -558,6 +558,35 @@ export interface WarContributor {
   games: number;
 }
 
+/** `resend` stellt zu, `log` schreibt nur ins Betriebslog (kein Versanddienst). */
+export type MailVersand = 'resend' | 'log';
+
+export interface Versandauskunft {
+  /** Hat der Versanddienst die Mail angenommen? */
+  mailVersandt: boolean;
+  /** Muss der Link angeklickt werden, bevor die Anmeldung geht? */
+  bestaetigungNoetig: boolean;
+  mailVersand: MailVersand;
+}
+
+/** Antwort der Mail-Diagnose — Spiegel von `MailProbe` in server/src/mail/probe.ts. */
+export interface MailProbe {
+  mailer: MailVersand;
+  absenderDomain: string | null;
+  domainStatus: string;
+  versandt: boolean;
+  fehler: string | null;
+  diagnose: string;
+  linkBasis: string;
+  letzterFehler: {
+    zeit: string;
+    status: number | null;
+    name: string | null;
+    text: string;
+    empfaengerDomain: string;
+  } | null;
+}
+
 export interface WarView {
   id: string;
   status: 'suche' | 'angefragt' | 'laeuft' | 'beendet' | 'abgesagt';
@@ -582,7 +611,18 @@ export const api = {
     password: string;
     displayName: string;
     birthday: string;
-  }) => post<{ ok: true }>('/auth/register', body),
+  }) =>
+    /*
+     * Seit dem 23.09.2026 mit Auskunft ueber den Versand. `angemeldet` heisst:
+     * Der Server verlangt keine Bestaetigung, weil kein Versanddienst haengt
+     * — dann gibt es auch nichts abzuwarten.
+     */
+    post<
+      { ok: true; angemeldet: boolean; token?: string } & Omit<Versandauskunft, 'bestaetigungNoetig'>
+    >('/auth/register', body).then((antwort) => {
+      if (antwort.token) setSessionToken(antwort.token);
+      return antwort;
+    }),
 
   /** Ob "Mit Google anmelden" auf dieser Ausgabe eingerichtet ist. */
   googleConfig: () => request<{ clientId: string | null }>('/auth/google/config'),
@@ -597,7 +637,7 @@ export const api = {
 
   verify: (token: string) => post<{ ok: true }>('/auth/verify', { token }),
   resendVerification: (email: string) =>
-    post<{ ok: true }>('/auth/verification/resend', { email }),
+    post<{ ok: true; mailVersand?: MailVersand }>('/auth/verification/resend', { email }),
   /**
    * Anmelden. Der Browser bekommt sein Cookie, die App zusaetzlich das
    * Token im Rumpf — sie hat keinen anderen Weg, ihre Sitzung zu halten.
@@ -634,7 +674,19 @@ export const api = {
    * bestehende Gast-Sitzung — dafuer sorgt der Server, nicht dieser Aufruf.
    */
   gastSichern: (email: string, password: string, birthday: string) =>
-    post<{ ok: true }>('/auth/gast/sichern', { email, password, birthday }),
+    post<{ ok: true } & Versandauskunft>('/auth/gast/sichern', { email, password, birthday }),
+
+  /** Antwortet immer gleich, ob es die Adresse gibt oder nicht. */
+  passwortVergessen: (email: string) =>
+    post<{ ok: true; mailVersand: MailVersand }>('/auth/reset-request', { email }),
+  /** Neues Passwort mit dem Token aus der Mail. Danach ist man angemeldet. */
+  passwortNeu: async (token: string, password: string) => {
+    const antwort = await post<{ ok: true; token?: string }>('/auth/reset', { token, password });
+    if (antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+  /** Mail-Diagnose, nur fuer Testkonten (docs/MAIL.md). */
+  mailProbe: () => post<MailProbe>('/staff/mail-probe'),
 
   /**
    * Abmelden. Das Token faellt hier auch dann, wenn der Server nicht
