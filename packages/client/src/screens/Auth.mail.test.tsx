@@ -7,16 +7,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * auch dann da, wenn keine hinausging.
  */
 
-const { register, passwortVergessen, googleConfig, verify } = vi.hoisted(() => ({
+const { register, passwortVergessen, googleConfig, appleConfig, verify } = vi.hoisted(() => ({
   register: vi.fn(),
   passwortVergessen: vi.fn(),
   googleConfig: vi.fn(),
+  // Seit den Apple-Knoepfen fragt der Schirm beide Anbieter; ohne diesen
+  // Ersatz liefe die Frage ins Leere ("appleConfig is not a function").
+  appleConfig: vi.fn(() => Promise.resolve({ clientId: null, redirectUri: null })),
   verify: vi.fn(),
 }));
 
 vi.mock('../api', () => ({
   ApiError: class ApiError extends Error {},
-  api: { register, passwortVergessen, googleConfig, verify },
+  api: { register, passwortVergessen, googleConfig, appleConfig, verify },
 }));
 
 import { Auth } from './Auth';
