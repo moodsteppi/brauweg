@@ -81,7 +81,7 @@
  * Grund wie in `../kampf/ProbeKampf.tsx`.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 
 import { Bankreihe, Hexbrett, Zugschatten } from '../../minispiele/tafelrunde/Brett';
 import { Einheitenblatt } from '../../minispiele/tafelrunde/Einheitenblatt';
@@ -366,17 +366,19 @@ export function ProbeRuestkammer(): React.JSX.Element {
    * Bildschirmkoordinate, und die gibt es erst, wenn die Waben stehen. Ohne
    * Ziel haengt er 80 Pixel ueber seiner Herkunft — dort verdeckt er nichts,
    * was man ansehen will.
+   *
+   * Als Layout-Effekt und nicht hinter `requestAnimationFrame`: Der Zug soll
+   * schon im ERSTEN gemalten Bild stehen. Mit dem Umweg fotografierte ein
+   * kopfloser Edge die Seite, bevor der Schatten da war — genau der Blick,
+   * fuer den es `?zug=` gibt.
    */
-  useEffect(() => {
+  useLayoutEffect(() => {
     const vorgabe = zugAusAdresse();
     if (!vorgabe) return;
-    const bild = window.requestAnimationFrame(() => {
-      const ziel = vorgabe.nach ? mitteVon(vorgabe.nach) : null;
-      const herkunft = mitteVon(vorgabe.von);
-      const punkt = ziel ?? (herkunft ? { x: herkunft.x, y: herkunft.y - 80 } : null);
-      if (punkt) vorfuehren(vorgabe.von, punkt.x, punkt.y);
-    });
-    return () => window.cancelAnimationFrame(bild);
+    const ziel = vorgabe.nach ? mitteVon(vorgabe.nach) : null;
+    const herkunft = mitteVon(vorgabe.von);
+    const punkt = ziel ?? (herkunft ? { x: herkunft.x, y: herkunft.y - 80 } : null);
+    if (punkt) vorfuehren(vorgabe.von, punkt.x, punkt.y);
   }, [vorfuehren]);
 
   /** Was auf `blatt` steht — frisch aus dem Stand, siehe dort. Am fremden

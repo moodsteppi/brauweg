@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import rohszene from './ruestkammer-szene.json?raw';
@@ -375,14 +375,16 @@ describe('Ziehen auf der Probe', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent(KATALOG.get(E.bank[von]!.id)!.name);
   });
 
-  it('stellt mit ?zug= einen angehaltenen Zug her — fuer die Sichtprobe', async () => {
+  it('stellt mit ?zug= einen angehaltenen Zug her — fuer die Sichtprobe', () => {
     window.history.replaceState(null, '', `/probe/ruestkammer?zug=bank:${von}>bank:${frei}`);
+    // Vor dem Aufbau: Der Zug entsteht schon im ersten Bild (Layout-Effekt).
+    const zielplatz = (): Element | null =>
+      document.querySelector(`.tr-bankplatz:nth-child(${frei + 1})`);
+    (document as unknown as { elementFromPoint: unknown }).elementFromPoint = zielplatz;
     const { container } = render(<ProbeRuestkammer />);
-    const ziel = container.querySelector<HTMLElement>(`.tr-bankplatz:nth-child(${frei + 1})`)!;
-    (document as unknown as { elementFromPoint: unknown }).elementFromPoint = () => ziel;
 
-    await waitFor(() => expect(container.querySelector('.tr-schatten')).not.toBeNull());
-    expect(ziel).toHaveAttribute('data-unterzeiger');
+    expect(container.querySelector('.tr-schatten')).not.toBeNull();
+    expect(zielplatz()).toHaveAttribute('data-unterzeiger');
 
     // Ihn beendet kein Finger — „zuruecksetzen" muss es tun.
     fireEvent.click(screen.getByRole('button', { name: 'zurücksetzen' }));
