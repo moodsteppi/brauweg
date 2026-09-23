@@ -85,6 +85,7 @@ export function PartyAuswahl({
   gast,
   trinkmodus,
   onWahl,
+  paketSperre,
 }: {
   vorgabe: Record<string, unknown> | null;
   wahl: PartyWahl;
@@ -92,6 +93,12 @@ export function PartyAuswahl({
   /** Fuer die Kurzregel: Die Ansagen reden ohne Trinkmodus nicht vom Trinken. */
   trinkmodus: boolean;
   onWahl: (neu: PartyWahl) => void;
+  /**
+   * Warum ein Themenpaket gesperrt ist (Zusatzpaket, das nicht gehoert) —
+   * oder `undefined`. Kommt fertig vom Bildschirm (`useInhaltsSperren`),
+   * entschieden hat es der Server.
+   */
+  paketSperre?: (paket: string) => string | undefined;
 }): React.JSX.Element {
   const stufe = wirksameInhaltsHaerte(vorgabe, wahl, gast);
   const paket = wirksamesPaket(vorgabe, wahl);
@@ -145,7 +152,11 @@ export function PartyAuswahl({
           spalten={3}
           eintraege={[
             { kennung: PAKET_ALLES, titel: 'alles', untertitel: 'Ohne Thema' },
-            ...Object.entries(PAKET_NAME).map(([kennung, titel]) => ({ kennung, titel })),
+            ...Object.entries(PAKET_NAME).map(([kennung, titel]) => ({
+              kennung,
+              titel,
+              deaktiviert: paketSperre?.(kennung),
+            })),
           ]}
           gewaehlt={paket}
           onWahl={(kennung) => onWahl({ ...wahl, paket: kennung })}
@@ -153,6 +164,11 @@ export function PartyAuswahl({
         <p className="pk-aw-hinweis">
           Hat ein Paket zu wenig eigene Inhalte, mischt die Kiste allgemeine dazu.
         </p>
+        {paketSperre !== undefined && Object.keys(PAKET_NAME).some((k) => paketSperre(k) !== undefined) ? (
+          <p className="pk-aw-hinweis" data-pk-paketsperre="">
+            Gesperrte Pakete braucht nur, wer die Runde aufmacht — alle anderen spielen mit.
+          </p>
+        ) : null}
       </div>
     </section>
   );

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, type Me } from '../api';
+import { tischFehler, useInhaltsSperren } from '../inhaltspakete';
 import { PartyAuswahl, usePartyAuswahl } from '../minispiele/partykiste/Auswahl';
 import { Einstellungen, OffeneRunde, Regler, type Angebot } from '../minispiele/partykiste/Einstellungen';
 import { AufstellungSeite } from '../minispiele/partykiste/Lager';
@@ -121,6 +122,8 @@ export function Partykiste({
   const [tischRegeln, setTischRegeln] = useState<PartyRegelsatz | null>(null);
   /* Minispiele, Inhalte, Themenpaket, Modus — minispiele/partykiste/Auswahl.tsx. */
   const auswahl = usePartyAuswahl(ich?.gast === true);
+  /* Zusatzpakete (22.09.2026): Themenpakete, die dem Konto nicht gehoeren, sind gesperrt. */
+  const sperre = useInhaltsSperren('partykiste');
 
   const tisch = useTable<PartykisteSicht>(tischId, 'partykiste');
   const sicht = tisch.view?.view ?? null;
@@ -231,8 +234,8 @@ export function Partykiste({
         config: await auswahl.regelsatz(regelsatz),
       });
       setTischId(id);
-    } catch {
-      setFehler('Die Runde ließ sich nicht öffnen. Noch einmal versuchen?');
+    } catch (e) {
+      setFehler(tischFehler(e, 'Die Runde ließ sich nicht öffnen. Noch einmal versuchen?'));
     } finally {
       setLaedt(false);
     }
@@ -309,8 +312,8 @@ export function Partykiste({
         config: await auswahl.regelsatz(regelsatz),
       });
       setTischId(id);
-    } catch {
-      setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
+    } catch (e) {
+      setFehler(tischFehler(e, 'Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?'));
     } finally {
       setLaedt(false);
     }
@@ -365,6 +368,7 @@ export function Partykiste({
             gast={auswahl.gast}
             trinkmodus={trinkmodus}
             onWahl={auswahl.setWahl}
+            paketSperre={(paket) => sperre('paket', paket)}
           />
 
           {fehler ? <p className="pk-fehler">{fehler}</p> : null}
