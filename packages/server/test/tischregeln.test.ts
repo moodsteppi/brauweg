@@ -127,6 +127,9 @@ test('training bleibt, wie es beim Anlegen war — die Lobby stellt keine Rangli
 
 test('jeder Kurs des Moduls laesst sich als Regelsatz setzen', async (t) => {
   const { ctx, anna, tisch } = await golfgruppe(t);
+  // Anna als Testkonto besitzt alles: Hier geht es darum, dass das Modul jeden
+  // Kurs annimmt. Dass Bezahlkurse Besitz verlangen, steht in inhaltspakete.test.ts.
+  await ctx.db.update(schema.account).set({ isStaff: true }).where(eq(schema.account.id, anna.accountId));
   for (const kurs of KURSE) {
     await setzeTischregeln(ctx.db, tisch.id, { kurs: kurs.kennung, variante: kurs.name }, anna.accountId);
     assert.equal((await tableRules(ctx.db, tisch.id)).kurs, kurs.kennung);
