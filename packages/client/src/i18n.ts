@@ -193,6 +193,9 @@ const de: Record<string, string> = {
   'error.itemWrongSlot': 'Das gehört an eine andere Stelle.',
   'error.packUnknown': 'Dieses Angebot gibt es nicht.',
   'error.packNotForSale': 'Das ist noch nicht zu kaufen.',
+  // Zusatzpakete (22.09.2026, server/src/inhaltspakete.ts): Wer den Tisch
+  // aufmacht, braucht das Paket — wer mitspielt, nicht.
+  'error.inhaltspaketFehlt': 'Dieses Spielpaket gehört dir noch nicht. Du findest es im Shop unter „Spielpakete“ — mitspielen können alle ohne Kauf.',
 
   // --- Waehrungen ---------------------------------------------------------
   'waehrung.coins': 'Münzen',
@@ -288,6 +291,12 @@ const de: Record<string, string> = {
   'shop.edelsteine-gross': 'Kiste Edelsteine',
   'shop.vip-pass': 'VIP-Pass',
   'shop.season-pass': 'Season Pass',
+  // --- Spielpakete: Namen der Ware (inhaltspakete.ts). Der Kursname selbst
+  // kommt in der Golf-Lobby vom Modul; hier steht er nur fuer das Regal.
+  'golf-kurs.flipperhalle': 'Golf-Kurs Flipperhalle',
+  'golf-kurs.profi': 'Golf-Kurs Profi',
+  'party-paket.weihnachten': 'Partykiste: Weihnachten',
+  'party-paket.jga': 'Partykiste: JGA',
 
   'deck.text': 'Text',
   'deck.text.hint': 'Farbe und Wert als Zeichen. Lädt nichts nach und bleibt auf dem Handy am kompaktesten.',

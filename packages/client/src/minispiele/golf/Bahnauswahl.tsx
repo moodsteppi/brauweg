@@ -156,12 +156,19 @@ export function Bahnauswahl({
   wahl,
   onWahl,
   karten,
+  kursSperre,
 }: {
   /** `null`: Der Server liefert keine Lobbydaten — dann steht hier nichts, und es gilt Zufall. */
   daten: Lobbydaten | null;
   wahl: Bahnwahl;
   onWahl: (wahl: Bahnwahl) => void;
   karten: readonly Karte[];
+  /**
+   * Warum ein Kurs gesperrt ist (Zusatzpaket, das nicht gehoert) — oder
+   * `undefined`. Kommt fertig vom Bildschirm (`useInhaltsSperren`); was
+   * kostet, entscheidet der Server, nicht dieses Bauteil.
+   */
+  kursSperre?: (kurs: string) => string | undefined;
 }): React.JSX.Element | null {
   const [suche, setSuche] = useState('');
   const [themaChip, setThemaChip] = useState<string | null>(null);
@@ -208,12 +215,17 @@ export function Bahnauswahl({
                 untertitel: `${kurs.bahnen.length} Löcher · ${kurs.beschreibung}`,
                 badge: Math.max(0, ...bahnen.map((b) => b?.schwierigkeit ?? 0)),
                 vorschau: finale ? <Bahnminiatur karte={finale} /> : undefined,
-                deaktiviert: fehlt ? 'Neue Bahnen — bitte neu laden' : undefined,
+                deaktiviert: fehlt ? 'Neue Bahnen — bitte neu laden' : kursSperre?.(kurs.kennung),
               };
             })}
             gewaehlt={wahl.kurs}
             onWahl={(kennung) => onWahl({ art: 'kurs', kurs: kennung })}
           />
+          {kursSperre !== undefined && daten.kurse.some((k) => kursSperre(k.kennung) !== undefined) && (
+            <p className="gf-bw-hinweis" data-golf-kurssperre="">
+              Gesperrte Kurse braucht nur, wer den Tisch aufmacht — alle anderen spielen mit.
+            </p>
+          )}
           <Folge ids={daten.kurse.find((k) => k.kennung === wahl.kurs)?.bahnen ?? []} karten={nachId} />
         </>
       )}

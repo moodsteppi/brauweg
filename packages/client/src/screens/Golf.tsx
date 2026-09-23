@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type Me } from '../api';
 import { t } from '../i18n';
+import { tischFehler, useInhaltsSperren } from '../inhaltspakete';
 import {
   MENUE_FARBEN,
   farbeAus,
@@ -197,6 +198,9 @@ export function Golf({
   const [stufe, setStufe] = useState<BotLevel>(gemerkteStufe);
   /* Bahnauswahl (seit 22.09.2026): Kurse und Themen vom Modul; die Wahl für den Bot-Tisch hier. */
   const lobby = useGolfLobby();
+  /* Zusatzpakete (22.09.2026): Kurse, die dem Konto nicht gehoeren, sind in der Auswahl gesperrt. */
+  const sperre = useInhaltsSperren('golf');
+  const kursSperre = (kurs: string): string | undefined => sperre('kurs', kurs);
   const [botWahl, setBotWahl] = useState<Bahnwahl>(gemerkteWahl);
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -362,8 +366,8 @@ export function Golf({
         ...(traegtWahl(botWahl) ? { config: regelnAusWahl(botWahl, lobby.vorgabe, lobby.daten) } : {}),
       });
       setTischId(id);
-    } catch {
-      setFehler('Der Platz ließ sich nicht aufmachen. Noch einmal versuchen?');
+    } catch (e) {
+      setFehler(tischFehler(e, 'Der Platz ließ sich nicht aufmachen. Noch einmal versuchen?'));
     } finally {
       setLaedt(false);
     }
@@ -524,6 +528,7 @@ export function Golf({
                     merkeWahl(w);
                   }}
                   karten={KARTEN}
+                  kursSperre={kursSperre}
                 />
                 <button
                   className="gf-knopf gf-knopf-haupt"
@@ -596,7 +601,7 @@ export function Golf({
         loecherFest={festeLochzahl(tischWahl.wahl, lobby.daten)}
         startSperre={wahlUnfertig(tischWahl.wahl)}
         bahnwahl={
-          <Bahnauswahl daten={lobby.daten} wahl={tischWahl.wahl} onWahl={tischWahl.setzeWahl} karten={KARTEN} />
+          <Bahnauswahl daten={lobby.daten} wahl={tischWahl.wahl} onWahl={tischWahl.setzeWahl} karten={KARTEN} kursSperre={kursSperre} />
         }
         bahnanzeige={<BahnauswahlAnzeige daten={lobby.daten} wahl={tischWahl.wahl} karten={KARTEN} />}
       />

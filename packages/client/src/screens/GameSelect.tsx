@@ -69,7 +69,7 @@ import { PartykisteBanner } from '../minispiele/partykiste/Banner';
 import { TafelrundeBanner } from '../minispiele/tafelrunde/Banner';
 import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
-import { Kreuz, Note, Spieler } from '../zeichen';
+import { Kreuz, Note, Spieler, Wuerfel } from '../zeichen';
 import { sitzSpanne } from '../sitzspanne';
 import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
@@ -98,6 +98,7 @@ const Avatarwerkstatt = lazy(() =>
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
+import { SHOP_RUBRIK } from '../inhaltspakete';
 import { Trophaeenpfad } from './Pfad';
 
 /**
@@ -1680,6 +1681,22 @@ function Shop({
         onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
 
+      {/* Spielpakete (22.09.2026, Robins Entscheidung S3): die erste Ware mit
+          Spielinhalt — Golf-Kurse und Partykiste-Themen. Gebraucht werden sie
+          nur von dem, der den Tisch aufmacht; wer mitspielt, braucht nichts.
+          Der Titel ist derselbe, auf den die gesperrte Kachel in der Auswahl
+          verweist (SHOP_RUBRIK in inhaltspakete.ts). */}
+      <WareRegal
+        titel={SHOP_RUBRIK}
+        zusatz="Neue Kurse und Themen"
+        waren={ware('inhaltspaket')}
+        bild={() => null}
+        glyph="wuerfel"
+        name={(w) => t(w.nameKey)}
+        kauft={kauft}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
+      />
+
       <Tafel titel="Pässe" zusatz="Kommt bald">
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.paesse ?? []).map((paket) => (
@@ -1750,7 +1767,7 @@ function WareRegal({
    * zentriert nach Vorschubbreite, nicht nach Tinte (siehe src/zeichen.tsx).
    * Jetzt ist es ein Name und dahinter eine Zeichnung, die mittig sitzt.
    */
-  glyph?: 'note' | 'noten';
+  glyph?: 'note' | 'noten' | 'wuerfel';
   name: (w: RegalWare) => string;
   /** Kennung, die gerade gekauft wird — der Knopf sperrt sich so lange. */
   kauft: string | null;
@@ -1777,7 +1794,13 @@ function WareRegal({
               <img src={bild(w) ?? undefined} alt="" draggable={false} />
             ) : (
               <span className="shop-ware-glyph" aria-hidden="true">
-                {glyph === 'note' || glyph === 'noten' ? <Note doppelt={glyph === 'noten'} /> : '?'}
+                {glyph === 'note' || glyph === 'noten' ? (
+                  <Note doppelt={glyph === 'noten'} />
+                ) : glyph === 'wuerfel' ? (
+                  <Wuerfel />
+                ) : (
+                  '?'
+                )}
               </span>
             )}
             <span className="shop-ware-name">{name(w)}</span>
