@@ -39,6 +39,7 @@ import {
   type ZoneSand,
   abstandQuadrat,
   istInZone,
+  istRechteck,
   segment,
   segmenteVon,
   streckenAbstandQuadrat,
@@ -51,13 +52,18 @@ import {
   DT,
   EIS_FAKTOR,
   type Ereignis,
+  KLASSISCHE_WERTE,
   KRAFT_MIN,
   type Partiezustand,
+  type Physikwerte,
   REIBUNG_RASEN,
   ROLL,
   SAND_FAKTOR,
+  UNTERSCHRITTE,
   V_MAX,
   V_STOP,
+  WIND_ANTEIL,
+  physikwerte,
   schritt,
 } from './physik';
 import { betrag, bruch, dreheHundertstel, ganzzahl, normiere } from './zufall';
@@ -222,28 +228,38 @@ function bahnweite(
   ry: number,
   k: number,
   ziel: number,
+  p: Readonly<Physikwerte> = KLASSISCHE_WERTE,
 ): { weite: number; tempo: number } {
   let v = k * V_MAX;
   let s = 0;
-  for (let i = 0; i < BAHN_SCHRITTE; i += 1) {
+  const schritte = bahnSchritte(p);
+  for (let i = 0; i < schritte; i += 1) {
     // Reibung an der Stelle, an der der Ball JETZT liegt — wie in `bewege`
     // vor dem Schritt. Mehrere Untergründe übereinander: der letzte gewinnt.
-    let reib = 1;
+    let reib = p.reibung;
     const px = x + rx * s;
     const py = y + ry * s;
     for (let u = 0; u < untergrund.length; u += 1) {
       if (istInZone(untergrund[u], px, py)) {
-        reib = untergrund[u].art === 'sand' ? SAND_FAKTOR : EIS_FAKTOR;
+        reib = (untergrund[u].art === 'sand' ? SAND_FAKTOR : EIS_FAKTOR) * p.reibung;
       }
     }
-    let neu = v * (1 - REIBUNG_RASEN * reib * DT) - ROLL * reib * DT;
+    let neu = v * (1 - REIBUNG_RASEN * reib * p.dt) - ROLL * reib * p.dt;
     if (neu < 0) neu = 0;
     v = neu;
-    s += v * DT;
+    s += v * p.dt;
     if (s > ziel) return { weite: s, tempo: v };
     if (v < V_STOP) break;
   }
   return { weite: s, tempo: 0 };
+}
+
+/**
+ * Deckel der Bahnrechnung für diese Physikwerte: dieselben 60 s Rollzeit,
+ * in der Zeitlupe und beim Miniball also doppelt so viele Unterschritte.
+ */
+function bahnSchritte(p: Readonly<Physikwerte>): number {
+  return p.dt === DT ? BAHN_SCHRITTE : Math.ceil((BAHN_SCHRITTE * DT) / p.dt);
 }
 
 /**
@@ -264,6 +280,12 @@ function bahnweite(
  * `tempo` > 0 verlangt, dass der Ball bei `d` noch mindestens so schnell
  * rollt, statt dort auszurollen — so schlägt der Bot in ein Portal, damit der
  * Ball am Ausgang wieder herauskommt (`PORTAL_TEMPO`).
+ *
+ * `p` sind die Physikwerte des Lochs (seit dem 22.09.2026, Fun-Modus): Regen
+ * und Schwerelos ändern die Reibung, die Zeitlupe den Zeitschritt, der Wind
+ * schiebt. Ohne sie spielte der Bot im Fun-Modus mit der Kraft des Rasens —
+ * blind, wie bis zum 07.09.2026 auf Sand. Im klassischen Modus ist `p`
+ * `KLASSISCHE_WERTE`, und die Rechnung ist Zeile für Zeile die alte.
  */
 export function kraftFuerStrecke(
   karte: Karte,
@@ -273,16 +295,24 @@ export function kraftFuerStrecke(
   ry: number,
   d: number,
   tempo = 0,
+  p: Readonly<Physikwerte> = KLASSISCHE_WERTE,
 ): number {
   const untergrund = zonengruppen(karte).untergrund;
+  if (p.windStaerke > 0) return kraftImWind(untergrund, p, x, y, rx, ry, rx, ry, d, tempo);
   // Bahn ganz ohne Sand und Eis: die Tabelle ist hier dasselbe Ergebnis,
-  // nur ohne die Simulation. Zwei Drittel der Bahnen gehen diesen Weg.
-  if (untergrund.length === 0 && tempo === 0) return kraftFuerDistanz(d);
+  // nur ohne die Simulation. Zwei Drittel der Bahnen gehen diesen Weg —
+  // aber nur im klassischen Modus, die Tabelle kennt nur Rasen.
+  if (untergrund.length === 0 && tempo === 0 && p === KLASSISCHE_WERTE) return kraftFuerDistanz(d);
 
   const reicht = (k: number): boolean => {
-    const bahn = bahnweite(untergrund, x, y, rx, ry, k, d);
+    const bahn = bahnweite(untergrund, x, y, rx, ry, k, d, p);
     return bahn.weite >= d && bahn.tempo >= tempo;
   };
+  return sucheKraft(reicht);
+}
+
+/** Die Halbierung von `kraftFuerStrecke`, für beide Rechnungen dieselbe. */
+function sucheKraft(reicht: (k: number) => boolean): number {
   if (reicht(KRAFT_MIN)) return KRAFT_MIN;
   // Reicht auch volle Kraft nicht (tiefer Sand), ist volle Kraft die Antwort:
   // Der Ball kommt so weit er kann und liegt danach näher am Ziel.
@@ -296,6 +326,132 @@ export function kraftFuerStrecke(
     else lo = m;
   }
   return (lo + hi) / 2;
+}
+
+/* --------------------------------------------------------------------------
+ * Wind
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Ein Schlag in Richtung (ax,ay) über freie Fläche, MIT Wind — gemessen
+ * entlang der Linie (rx,ry) zum Ziel.
+ *
+ * Wie `bahnweite`, nur in der Ebene: Der Wind schiebt den Ball auch quer zur
+ * Linie, und genau diese Ablage (`quer`, in Richtung (-ry, rx) positiv) muss
+ * der Bot vorhalten. Dieselben Zeilen wie `bewege` in physik.ts, samt Deckel
+ * der Windstärke; Wände, Zonen und Bälle bleiben außen vor wie dort.
+ * `weite` ist der Weg ENTLANG der Linie, bis er `ziel` überschreitet oder
+ * der Ball liegt.
+ */
+function ebenenbahn(
+  untergrund: readonly (ZoneSand | ZoneEis)[],
+  p: Readonly<Physikwerte>,
+  x: number,
+  y: number,
+  ax: number,
+  ay: number,
+  k: number,
+  rx: number,
+  ry: number,
+  ziel: number,
+): { weite: number; tempo: number; quer: number } {
+  let vx = ax * k * V_MAX;
+  let vy = ay * k * V_MAX;
+  let px = x;
+  let py = y;
+  let s = 0;
+  const schritte = bahnSchritte(p);
+  for (let i = 0; i < schritte; i += 1) {
+    let reib = p.reibung;
+    for (let u = 0; u < untergrund.length; u += 1) {
+      if (istInZone(untergrund[u], px, py)) {
+        reib = (untergrund[u].art === 'sand' ? SAND_FAKTOR : EIS_FAKTOR) * p.reibung;
+      }
+    }
+    const v = betrag(vx, vy);
+    let wx = 0;
+    let wy = 0;
+    if (v > 0) {
+      let staerke = p.windStaerke;
+      const deckel = WIND_ANTEIL * ROLL * reib;
+      if (staerke > deckel) staerke = deckel;
+      wx = p.windRx * staerke;
+      wy = p.windRy * staerke;
+      let neu = v * (1 - REIBUNG_RASEN * reib * p.dt) - ROLL * reib * p.dt;
+      if (neu < 0) neu = 0;
+      const f = neu / v;
+      vx *= f;
+      vy *= f;
+    }
+    vx += wx * p.dt;
+    vy += wy * p.dt;
+    px += vx * p.dt;
+    py += vy * p.dt;
+    s = (px - x) * rx + (py - y) * ry;
+    const tempo = betrag(vx, vy);
+    if (s > ziel) return { weite: s, tempo, quer: (px - x) * -ry + (py - y) * rx };
+    if (tempo < V_STOP) break;
+  }
+  return { weite: s, tempo: 0, quer: (px - x) * -ry + (py - y) * rx };
+}
+
+/** Die Kraft für einen Schlag in Richtung (ax,ay), der ENTLANG (rx,ry) `d` weit kommt. */
+function kraftImWind(
+  untergrund: readonly (ZoneSand | ZoneEis)[],
+  p: Readonly<Physikwerte>,
+  x: number,
+  y: number,
+  ax: number,
+  ay: number,
+  rx: number,
+  ry: number,
+  d: number,
+  tempo: number,
+): number {
+  return sucheKraft((k) => {
+    const bahn = ebenenbahn(untergrund, p, x, y, ax, ay, k, rx, ry, d);
+    return bahn.weite >= d && bahn.tempo >= tempo;
+  });
+}
+
+/**
+ * Wie oft der Bot seinen Zielpunkt gegen den Wind versetzt. Die Ablage
+ * hängt fast linear am Versatz — nach zwei Runden liegt sie auf freier
+ * Fläche unter einem Zehntel Ballradius.
+ */
+const WIND_RUNDEN = 2;
+
+/**
+ * Richtung und Kraft, mit denen ein Schlag im Wind bei (x,y) + d·(rx,ry)
+ * ankommt: Der Bot hält quer vor, um genau die Ablage, die der Wind auf
+ * dieser Strecke anrichtet, und rechnet die Kraft für die neue Richtung neu
+ * (Rückenwind trägt, Gegenwind bremst).
+ */
+export function zielImWind(
+  karte: Karte,
+  p: Readonly<Physikwerte>,
+  x: number,
+  y: number,
+  rx: number,
+  ry: number,
+  d: number,
+  tempo = 0,
+): Botschlag {
+  const untergrund = zonengruppen(karte).untergrund;
+  let ax = rx;
+  let ay = ry;
+  let k = kraftImWind(untergrund, p, x, y, ax, ay, rx, ry, d, tempo);
+  let vorhalt = 0;
+  for (let runde = 0; runde < WIND_RUNDEN; runde += 1) {
+    const bahn = ebenenbahn(untergrund, p, x, y, ax, ay, k, rx, ry, d);
+    if (bahn.quer < 0.03 && bahn.quer > -0.03) break;
+    vorhalt -= bahn.quer;
+    const r = normiere(rx * d - ry * vorhalt, ry * d + rx * vorhalt);
+    ax = r.x;
+    ay = r.y;
+    k = kraftImWind(untergrund, p, x, y, ax, ay, rx, ry, d, tempo);
+  }
+  return { rx: ax, ry: ay, kraft: k };
 }
 
 /* --------------------------------------------------------------------------
@@ -323,17 +479,18 @@ export function sichtFrei(
   bx: number,
   by: number,
   zielPortal: Zone | null = null,
+  ballR: number = BALL_R,
 ): boolean {
   const strahl = segment(ax, ay, bx, by);
   const segmente = segmenteVon(karte);
-  const grenze = BALL_R * BALL_R;
+  const grenze = ballR * ballR;
   for (let i = 0; i < segmente.length; i += 1) {
     const seg = segmente[i];
     if (
-      seg.minX - BALL_R > strahl.maxX ||
-      seg.maxX + BALL_R < strahl.minX ||
-      seg.minY - BALL_R > strahl.maxY ||
-      seg.maxY + BALL_R < strahl.minY
+      seg.minX - ballR > strahl.maxX ||
+      seg.maxX + ballR < strahl.minX ||
+      seg.minY - ballR > strahl.maxY ||
+      seg.maxY + ballR < strahl.minY
     ) {
       continue;
     }
@@ -348,7 +505,7 @@ export function sichtFrei(
     if (zone.art === 'bumper') {
       // Ein Pilz ist eine runde Wand, die zurückschlägt — MIT Ballradius wie
       // jede Wand (seit dem 22.09.2026; vorher sah der Bot durch ihn hindurch).
-      const grenzeBumper = zone.r + BALL_R;
+      const grenzeBumper = zone.r + ballR;
       if (abstandQuadrat(strahl, zone.x, zone.y) < grenzeBumper * grenzeBumper) return false;
       continue;
     }
@@ -428,6 +585,33 @@ export interface Wegfeld {
 const feldSpeicher = new Map<Karte, Wegfeld>();
 /** Dasselbe ohne Drehkreuzkosten — das Feld des Anfängers, siehe `wegfeld`. */
 const feldSpeicherSchlicht = new Map<Karte, Wegfeld>();
+/** Felder für andere Ballradien (Fun-Modus), je Radius und Kundigkeit. */
+const feldSpeicherRadius = new Map<string, Map<Karte, Wegfeld>>();
+
+/** Liegt der Punkt innerhalb einer Wand der Karte (Rahmen ausgenommen — der liegt außerhalb)? */
+function inWand(karte: Karte, x: number, y: number): boolean {
+  for (let i = 0; i < karte.waende.length; i += 1) {
+    const w = karte.waende[i];
+    if (istRechteck(w)) {
+      if (x >= w.x && x <= w.x + w.w && y >= w.y && y <= w.y + w.h) return true;
+      continue;
+    }
+    const halb = w.dicke / 2;
+    if (abstandQuadrat(segment(w.ax, w.ay, w.bx, w.by), x, y) <= halb * halb) return true;
+  }
+  return false;
+}
+
+function speicherFuer(kundig: boolean, ballR: number): Map<Karte, Wegfeld> {
+  if (ballR === BALL_R) return kundig ? feldSpeicher : feldSpeicherSchlicht;
+  const schluessel = `${kundig ? 'k' : 's'}${ballR}`;
+  let speicher = feldSpeicherRadius.get(schluessel);
+  if (speicher === undefined) {
+    speicher = new Map<Karte, Wegfeld>();
+    feldSpeicherRadius.set(schluessel, speicher);
+  }
+  return speicher;
+}
 
 function zelleIndex(feld: Wegfeld, x: number, y: number): number {
   let cx = Math.floor(x / RASTER);
@@ -500,9 +684,14 @@ function freieZelleBei(feld: Wegfeld, x: number, y: number): number {
  * schmale Randspur seltener, als er mitten durch das Kreuz kommt. Alle
  * anderen Stufen gewannen dort (k39 Genie 4,97 → 2,94). Erreichbar ist in
  * beiden Feldern genau dasselbe; Kosten sperren nichts.
+ *
+ * `ballR` ist der Ballradius des Lochs (seit dem 22.09.2026: Riesen- und
+ * Miniball im Fun-Modus). Ein anderer Radius ist ein anderes Feld — ein
+ * großer Ball passt durch weniger Lücken —, also ein eigener Speicher je
+ * Radius. Der klassische Radius bleibt in den alten beiden.
  */
-export function wegfeld(karte: Karte, kundig = true): Wegfeld {
-  const speicher = kundig ? feldSpeicher : feldSpeicherSchlicht;
+export function wegfeld(karte: Karte, kundig = true, ballR: number = BALL_R): Wegfeld {
+  const speicher = speicherFuer(kundig, ballR);
   const fertig = speicher.get(karte);
   if (fertig !== undefined) return fertig;
 
@@ -520,7 +709,7 @@ export function wegfeld(karte: Karte, kundig = true): Wegfeld {
   };
 
   const segmente = segmenteVon(karte);
-  const grenzeQ = BALL_R * BALL_R;
+  const grenzeQ = ballR * ballR;
   for (let i = 0; i < anzahl; i += 1) {
     const x = zelleX(feld, i);
     const y = zelleY(feld, i);
@@ -531,10 +720,10 @@ export function wegfeld(karte: Karte, kundig = true): Wegfeld {
       // Hüllenabfrage: liegt der Punkt weiter als ein Ballradius außerhalb der
       // Hülle, kann die Strecke ihn unmöglich berühren.
       if (
-        x < seg.minX - BALL_R ||
-        x > seg.maxX + BALL_R ||
-        y < seg.minY - BALL_R ||
-        y > seg.maxY + BALL_R
+        x < seg.minX - ballR ||
+        x > seg.maxX + ballR ||
+        y < seg.minY - ballR ||
+        y > seg.maxY + ballR
       ) {
         continue;
       }
@@ -543,6 +732,16 @@ export function wegfeld(karte: Karte, kundig = true): Wegfeld {
         break;
       }
     }
+    /*
+     * Ein Mittelpunkt MITTEN in einer Wand ist weiter als ein Ballradius von
+     * ihren Kanten entfernt, wenn der Ball klein genug ist — beim Miniball
+     * (0,2 E) schon in jeder 1 E dicken Wand, deren Rasterpunkte 0,25 E von
+     * der Kante liegen. Das Feld führte dann quer durch die Wand, und der Bot
+     * spielte Schlag um Schlag gegen sie (k15, k24, k36: 0 % im Fun-Modus).
+     * Nur für andere Radien: Beim klassischen Ball bliebe sonst nicht jede
+     * Entscheidung dieselbe (klassisch-gold.test.ts).
+     */
+    if (frei && ballR !== BALL_R && inWand(karte, x, y)) frei = false;
     if (frei) {
       for (let zi = 0; zi < karte.zonen.length; zi += 1) {
         const zone = karte.zonen[zi];
@@ -550,7 +749,7 @@ export function wegfeld(karte: Karte, kundig = true): Wegfeld {
           // Wie eine Wand: kein Mittelpunkt näher als ein Ballradius am Pilz.
           const dx = x - zone.x;
           const dy = y - zone.y;
-          const grenze = zone.r + BALL_R;
+          const grenze = zone.r + ballR;
           if (dx * dx + dy * dy < grenze * grenze) {
             frei = false;
             break;
@@ -569,7 +768,7 @@ export function wegfeld(karte: Karte, kundig = true): Wegfeld {
     for (let zi = 0; zi < karte.zonen.length; zi += 1) {
       const zone = karte.zonen[zi];
       if (!kundig || zone.art !== 'drehkreuz') continue;
-      const r = zone.laenge / 2 + BALL_R;
+      const r = zone.laenge / 2 + ballR;
       const dx = x - zone.x;
       const dy = y - zone.y;
       if (dx * dx + dy * dy < r * r) feld.kosten[i] = DREH_SCHRITTE;
@@ -705,6 +904,7 @@ export function wegfeld(karte: Karte, kundig = true): Wegfeld {
 export function vergissWegfelder(): void {
   feldSpeicher.clear();
   feldSpeicherSchlicht.clear();
+  feldSpeicherRadius.clear();
 }
 
 /** Ist das Loch von diesem Punkt aus über das Raster überhaupt erreichbar? */
@@ -793,6 +993,16 @@ const PROBE_ARTEN: ReadonlySet<Zone['art']> = new Set<Zone['art']>(['beschleunig
 const PROBE_TAKTE = 160;
 
 /**
+ * `PROBE_TAKTE` für diese Physikwerte: dieselben acht Sekunden Rollzeit. In
+ * der Zeitlupe rollt ein Ball doppelt so viele Takte, die Probe also auch —
+ * sonst bewertete sie ihn mitten im Lauf.
+ */
+function probeTakte(p: Readonly<Physikwerte>): number {
+  if (p === KLASSISCHE_WERTE) return PROBE_TAKTE;
+  return Math.ceil((PROBE_TAKTE * UNTERSCHRITTE * DT) / (p.unterschritte * p.dt));
+}
+
+/**
  * Was ein Strafschlag (Wasser) in der Bewertung kostet, in Rasterschritten.
  * 20 Schritte sind 10 E — ungefähr das, was ein Schlag an Weg gutmacht.
  */
@@ -826,10 +1036,18 @@ const KEINE_EREIGNISSE: readonly Ereignis[] = [];
  * Weg reicht vier Einheiten über das Ziel hinaus, weil ein Schub oder ein
  * Pilz dahinter den Ball noch zurückwerfen kann.
  */
-function probeNoetig(karte: Karte, x: number, y: number, rx: number, ry: number, d: number): boolean {
+function probeNoetig(
+  karte: Karte,
+  x: number,
+  y: number,
+  rx: number,
+  ry: number,
+  d: number,
+  ballR: number = BALL_R,
+): boolean {
   const weit = d + 4;
   const weg = segment(x, y, x + rx * weit, y + ry * weit);
-  const rand = BALL_R + 0.5;
+  const rand = ballR + 0.5;
   for (let i = 0; i < karte.zonen.length; i += 1) {
     const zone = karte.zonen[i];
     if (!PROBE_ARTEN.has(zone.art)) continue;
@@ -877,6 +1095,7 @@ function probeschlag(
   const probe: Partiezustand = {
     takt: z.takt,
     saat: z.saat,
+    modus: z.modus,
     sitze: 1,
     botSitze: [],
     botStufe: z.botStufe,
@@ -884,7 +1103,15 @@ function probeschlag(
     ausstiegTakt: [-1],
     loecher: 1,
     reihenfolge: [0],
-    aktuell: { loch: 0, karte: 0, startTakt: z.aktuell.startTakt, endeTakt: -1, pauseBis: -1 },
+    aktuell: {
+      loch: 0,
+      karte: 0,
+      startTakt: z.aktuell.startTakt,
+      endeTakt: -1,
+      pauseBis: -1,
+      // Dieselben Modifikatoren wie im Loch selbst — die Probe soll im Wind proben.
+      mod: z.aktuell.mod,
+    },
     baelle: [ball],
     ergebnis: [],
     fertig: false,
@@ -897,7 +1124,8 @@ function probeschlag(
   };
   const karten = [karte];
   schritt(probe, [{ takt: z.takt, sitz: 0, nr: 0, art: 'schlag', rx, ry, kraft }], karten);
-  for (let t = 1; t < PROBE_TAKTE; t += 1) {
+  const takte = probeTakte(physikwerte(z.aktuell.mod, karte));
+  for (let t = 1; t < takte; t += 1) {
     if (probe.aktuell.endeTakt !== -1) break;
     if (ball.ruht && ball.flugTakte === 0) break;
     schritt(probe, KEINE_EREIGNISSE, karten);
@@ -920,13 +1148,14 @@ function bewerteProbe(
   karte: Karte,
   feld: Wegfeld,
   p: { eingelocht: boolean; x: number; y: number; schlaege: number },
+  ballR: number = BALL_R,
 ): number {
   if (p.eingelocht) return -1;
   const c = freieZelleBei(feld, p.x, p.y);
   let weg = c >= 0 && feld.entfernung[c] >= 0 ? feld.entfernung[c] : 1_000_000;
   const lx = karte.loch[0];
   const ly = karte.loch[1];
-  if (betrag(lx - p.x, ly - p.y) >= 12 || !sichtFrei(karte, p.x, p.y, lx, ly)) weg += SICHT_STRAFE;
+  if (betrag(lx - p.x, ly - p.y) >= 12 || !sichtFrei(karte, p.x, p.y, lx, ly, null, ballR)) weg += SICHT_STRAFE;
   return weg + (p.schlaege - 1) * STRAFE_SCHRITTE;
 }
 
@@ -951,14 +1180,15 @@ function besterProbeschlag(
   ry: number,
   kraft: number,
 ): { rx: number; ry: number; kraft: number } {
-  const feld = wegfeld(karte);
+  const ballR = physikwerte(z.aktuell.mod, karte).ballR;
+  const feld = wegfeld(karte, true, ballR);
   const breit = streuBreite(z.botStufe);
   const kraftBreit = STREUUNG[z.botStufe].kraft / 2;
   const probeWert = (sx: number, sy: number, k: number): number => {
     let kk = k;
     if (kk < KRAFT_MIN) kk = KRAFT_MIN;
     else if (kk > 1) kk = 1;
-    return bewerteProbe(karte, feld, probeschlag(z, sitz, karte, sx, sy, kk));
+    return bewerteProbe(karte, feld, probeschlag(z, sitz, karte, sx, sy, kk), ballR);
   };
   const wertVon = (sx: number, sy: number, k: number): number => {
     const mitte = probeWert(sx, sy, k);
@@ -1065,16 +1295,20 @@ export function botEntscheidung(
   const lochX = karte.loch[0];
   const lochY = karte.loch[1];
   const zumLoch = betrag(lochX - b.x, lochY - b.y);
+  // Die Physik DIESES Lochs — im klassischen Modus `KLASSISCHE_WERTE`, und dann
+  // ist jede Zeile unten dieselbe wie vor dem Fun-Modus.
+  const p = physikwerte(z.aktuell.mod, karte);
+  const ballR = p.ballR;
 
   let zielX = lochX;
   let zielY = lochY;
   let aufsLoch = false;
   let insPortal = false;
 
-  if (zumLoch < 12 && sichtFrei(karte, b.x, b.y, lochX, lochY)) {
+  if (zumLoch < 12 && sichtFrei(karte, b.x, b.y, lochX, lochY, null, ballR)) {
     aufsLoch = true;
   } else {
-    const feld = wegfeld(karte, z.botStufe !== 'anfaenger');
+    const feld = wegfeld(karte, z.botStufe !== 'anfaenger', ballR);
     const start = freieZelleBei(feld, b.x, b.y);
     let gefunden = false;
     if (start >= 0 && feld.entfernung[start] >= 0) {
@@ -1117,7 +1351,7 @@ export function botEntscheidung(
         const m = (lo + hi + 1) >> 1;
         const px = zelleX(feld, kette[m]);
         const py = zelleY(feld, kette[m]);
-        if (sichtFrei(karte, b.x, b.y, px, py, zielPortal)) lo = m;
+        if (sichtFrei(karte, b.x, b.y, px, py, zielPortal, ballR)) lo = m;
         else hi = m - 1;
       }
       if (lo >= 0) {
@@ -1131,7 +1365,7 @@ export function botEntscheidung(
         // der geprüften Zelle; ist sie doch verdeckt, bleibt die Zelle.
         if (zielPortal !== null && lo === kette.length - 1) {
           insPortal = true;
-          if (sichtFrei(karte, b.x, b.y, zielPortal.x, zielPortal.y, zielPortal)) {
+          if (sichtFrei(karte, b.x, b.y, zielPortal.x, zielPortal.y, zielPortal, ballR)) {
             zielX = zielPortal.x;
             zielY = zielPortal.y;
           }
@@ -1162,7 +1396,7 @@ export function botEntscheidung(
       }
       // Endet die Kette am Loch und liegt es frei, wird direkt eingelocht statt
       // auf die Rastermitte daneben zu spielen.
-      if (gefunden && betrag(zielX - lochX, zielY - lochY) < 1 && sichtFrei(karte, b.x, b.y, lochX, lochY)) {
+      if (gefunden && betrag(zielX - lochX, zielY - lochY) < 1 && sichtFrei(karte, b.x, b.y, lochX, lochY, null, ballR)) {
         aufsLoch = true;
       }
     }
@@ -1194,21 +1428,25 @@ export function botEntscheidung(
   // Aufs Loch ein Stück über das Ziel hinaus: Ein Schlag, der genau am Loch
   // ausrollt, bleibt in der Hälfte der Fälle einen Zentimeter davor liegen.
   const plan = aufsLoch ? d + 0.35 : d;
-  const kraftRein = kraftFuerStrecke(
-    karte,
-    b.x,
-    b.y,
-    richtung.x,
-    richtung.y,
-    plan,
-    insPortal ? PORTAL_TEMPO : 0,
-  );
+  const tempo = insPortal ? PORTAL_TEMPO : 0;
+  let schlagRx = richtung.x;
+  let schlagRy = richtung.y;
+  let kraftRein: number;
+  if (p.windStaerke > 0) {
+    // Im Wind hält der Bot quer vor und rechnet die Kraft mit Rücken- oder
+    // Gegenwind (Fun-Modus, siehe `zielImWind`). Ohne das trüge der Wind
+    // jeden Putt um eine halbe Einheit am Loch vorbei.
+    const imWind = zielImWind(karte, p, b.x, b.y, richtung.x, richtung.y, plan, tempo);
+    schlagRx = imWind.rx;
+    schlagRy = imWind.ry;
+    kraftRein = imWind.kraft;
+  } else {
+    kraftRein = kraftFuerStrecke(karte, b.x, b.y, richtung.x, richtung.y, plan, tempo, p);
+  }
 
   // Liegt eine Zone am Weg, die der Plan nicht kennt, entscheiden
   // Probeschläge (siehe `PROBE_ARTEN`). Die Streuung kommt danach — der Bot
   // wählt den Schlag, den er meint, und verzieht ihn dann wie jeder andere.
-  let schlagRx = richtung.x;
-  let schlagRy = richtung.y;
   let kraftPlan = kraftRein;
   //
   // Der Anfänger probt nicht. Gemessen am 22.09.2026 über 100 Saaten: Mit
@@ -1217,8 +1455,8 @@ export function botEntscheidung(
   // Grad und ±20 % Kraft trifft er die engere Linie, die die Probe findet,
   // seltener als die grobe — und dass ein Anfänger die Zonen nicht liest,
   // ist ohnehin, was man von ihm erwartet.
-  if (z.botStufe !== 'anfaenger' && probeNoetig(karte, b.x, b.y, richtung.x, richtung.y, plan)) {
-    const wahl = besterProbeschlag(z, sitz, karte, richtung.x, richtung.y, kraftRein);
+  if (z.botStufe !== 'anfaenger' && probeNoetig(karte, b.x, b.y, richtung.x, richtung.y, plan, ballR)) {
+    const wahl = besterProbeschlag(z, sitz, karte, schlagRx, schlagRy, kraftRein);
     schlagRx = wahl.rx;
     schlagRy = wahl.ry;
     kraftPlan = wahl.kraft;

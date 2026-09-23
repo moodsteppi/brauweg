@@ -26,7 +26,15 @@ import {
   istKreis,
   istRechteck,
 } from './karte';
-import { type Botstufe, type Partiezustand, neuePartie, schritt, starteLoch } from './physik';
+import { type Lochmodifikatoren, OHNE_MODIFIKATOR } from './modifikator';
+import {
+  type Botstufe,
+  type Partiezustand,
+  neuePartie,
+  physikwerte,
+  schritt,
+  starteLoch,
+} from './physik';
 
 /** Kleinster Abstand eines Abschlags zu einer Wand. */
 export const ABSCHLAG_WANDABSTAND = 1.2;
@@ -204,11 +212,16 @@ export function pruefeKarten(karten: readonly Karte[]): { id: string; fehler: st
  * Ein Sitz, keine Gegner, keine Netzereignisse — nur der Kern. Das Saatkorn
  * ist fest, damit die Prüfung bei jedem Lauf dieselbe Antwort gibt; eine
  * Prüfung, die manchmal grün und manchmal rot ist, prüft nichts.
+ *
+ * `mod` setzt einen Fun-Modifikator fest auf das Loch (seit dem 22.09.2026,
+ * `golf-botprobe.ts --modifikator`) — so misst man, wie der Bot mit genau
+ * diesem spielt, statt mit dem, den die Saat gerade zieht.
  */
 export function botLoestKarte(
   karte: Karte,
   stufe: Botstufe = 'genie',
   saat = 0x9017f,
+  mod: Lochmodifikatoren = OHNE_MODIFIKATOR,
 ): { geloest: boolean; schlaege: number; takte: number } {
   const z: Partiezustand = neuePartie({
     saat,
@@ -219,8 +232,11 @@ export function botLoestKarte(
     karten: [karte],
   });
   starteLoch(z, 0, 0, [karte]);
+  z.aktuell.mod = mod;
   const leer: never[] = [];
-  while (z.takt < PROBE_TAKTE && z.aktuell.endeTakt === -1) {
+  // In der Zeitlupe ist das Zeitlimit doppelt so lang, der Deckel also auch.
+  const deckel = PROBE_TAKTE * physikwerte(mod, karte).zeitlimit;
+  while (z.takt < deckel && z.aktuell.endeTakt === -1) {
     schritt(z, leer, [karte]);
   }
   const ball = z.baelle[0];
