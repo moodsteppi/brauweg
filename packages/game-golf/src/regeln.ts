@@ -117,7 +117,23 @@ export interface Zug {
   readonly rx: number;
   readonly ry: number;
   readonly kraft: number;
+  /**
+   * Fehlt: ein Schlag — so sieht jeder Zug von vor dem 23.09.2026 aus, und so
+   * bleibt jeder Schlag auch danach Byte für Byte, was er war.
+   *
+   * `'ausloesen'`: Der Sitz löst statt eines Schlags seinen gehaltenen
+   * Störschlag aus (Fun-Modus, Teil 3/3; im Client stoerschlag.ts). Gezielt
+   * wird genauso — Richtung und Kraft legen die Zielstelle fest —, und ob er
+   * überhaupt einen hält, weiß wie beim Schlag nur der Spielkern auf den
+   * Geräten. Der Server prüft die Form und dass der Tisch im Fun-Modus spielt.
+   */
+  readonly art?: ZugArt;
 }
+
+/** Die Zugtypen neben dem Schlag (siehe `Zug.art`). */
+export type ZugArt = 'ausloesen';
+
+export const ZUG_ARTEN: readonly ZugArt[] = ['ausloesen'];
 
 export type GolfAktion =
   | { readonly art: 'zug'; readonly zug: Zug }

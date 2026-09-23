@@ -162,8 +162,12 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    * 8 seit dem 23.09.2026: Power-ups im Fun-Modus. Die Sicht bleibt gleich,
    * aber Physik und Bots rechnen ein Fun-Loch mit Feldern — ein Client von
    * davor spielte es ohne.
+   *
+   * 9 seit dem 23.09.2026: Störschläge im Fun-Modus. Ein Zug kann jetzt
+   * `art: 'ausloesen'` tragen (regeln.ts) — ein Client von davor rechnete
+   * ihn als Schlag, und die Felder eines Fun-Lochs kommen aus sieben Arten.
    */
-  protocolVersion: 8,
+  protocolVersion: 9,
 
   defaultConfig: () => DEFAULT_REGELN,
 

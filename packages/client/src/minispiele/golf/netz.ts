@@ -245,7 +245,8 @@ export class Golfnetz {
         if (z.takt > this.letzterTakt[z.sitz]) this.letzterTakt[z.sitz] = z.takt;
       }
       gs.fuegeHinzu({
-        art: 'schlag',
+        // Ein Zug ohne `art` ist ein Schlag; `'ausloesen'` ein Störschlag (stoerschlag.ts).
+        art: z.art === 'ausloesen' ? 'ausloesen' : 'schlag',
         takt: z.takt,
         sitz: z.sitz,
         nr: z.nr,
@@ -281,6 +282,20 @@ export class Golfnetz {
    * ist genau die Sorte Wert, die zwei Browser unterschiedlich runden.
    */
   schlage(sitz: number, rx: number, ry: number, kraft: number): boolean {
+    return this.setzeZug(sitz, rx, ry, kraft, 'schlag');
+  }
+
+  /**
+   * Den gehaltenen Störschlag auslösen (Fun-Modus, stoerschlag.ts) — ein Zug
+   * wie ein Schlag, mit derselben Rundung, demselben Vorlauf und derselben
+   * Laufnummernfolge, nur mit `art: 'ausloesen'`. Ob der Kern ihn annimmt,
+   * entscheidet `ausloesenErlaubt` zum Takt des Zugs, auf jedem Gerät gleich.
+   */
+  loeseAus(sitz: number, rx: number, ry: number, kraft: number): boolean {
+    return this.setzeZug(sitz, rx, ry, kraft, 'ausloesen');
+  }
+
+  private setzeZug(sitz: number, rx: number, ry: number, kraft: number, art: 'schlag' | 'ausloesen'): boolean {
     const gs = this.gs;
     if (gs === null || sitz < 0) return false;
     const grx = Math.round(rx * 10000) / 10000;
@@ -304,9 +319,11 @@ export class Golfnetz {
     this.naechsteNr[sitz] = nr + 1;
     this.letzterTakt[sitz] = takt;
 
-    const ereignis: Ereignis = { art: 'schlag', takt, sitz, nr, rx: grx, ry: gry, kraft: k };
+    const ereignis: Ereignis = { art, takt, sitz, nr, rx: grx, ry: gry, kraft: k };
     gs.fuegeHinzu(ereignis);
-    this.umg.sende({ art: 'zug', zug: { takt, nr, rx: grx, ry: gry, kraft: k } });
+    // Ein Schlag geht ohne `art` raus, wie vor dem 23.09.2026 — Byte für Byte.
+    const zug = art === 'schlag' ? { takt, nr, rx: grx, ry: gry, kraft: k } : { takt, nr, rx: grx, ry: gry, kraft: k, art };
+    this.umg.sende({ art: 'zug', zug });
     return true;
   }
 

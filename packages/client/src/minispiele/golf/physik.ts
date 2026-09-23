@@ -66,6 +66,19 @@ import {
   verbraucheSchild,
 } from './powerup';
 import {
+  type Bombe,
+  type Klebefeld,
+  type Stoerart,
+  botStoerschlag,
+  darfStoerAufnehmen,
+  fuehrendeSitze,
+  istStoerart,
+  klebeReibung,
+  raeumeStoerungen,
+  wendeAusloesenAn,
+  zuendeBombe,
+} from './stoerschlag';
+import {
   betrag,
   drehe,
   fnv1a,
@@ -225,6 +238,20 @@ export interface Lochstand {
    * Loch ändert; eine Zahl, weil `kopiere` `aktuell` nur flach mitnimmt.
    */
   felderWeg: number;
+  /*
+   * Störschläge (Fun-Modus, Teil 3/3, stoerschlag.ts). Optional, weil die
+   * Probe der Bots und Tests einen Lochstand von Hand bauen; fehlt ein Feld,
+   * ist es 0 bzw. `null`. Zahlen oder unveränderliche Objekte, weil `kopiere`
+   * `aktuell` nur flach mitnimmt.
+   */
+  /** Wer in diesem Loch führt (Bitmaske) — fest ab `starteLoch`, siehe `fuehrendeSitze`. */
+  fuehrend?: number;
+  /** Wer seinen Störschlag in diesem Loch schon ausgelöst hat (Bitmaske). */
+  stoerGenutzt?: number;
+  /** Eine abgelegte Bombe, die im nächsten Takt zündet. */
+  bombe?: Bombe | null;
+  /** Ein liegender Klebefleck. */
+  klebe?: Klebefeld | null;
 }
 
 /** Deko für Bild und Ton — NICHT Teil des Determinismus. */
@@ -238,6 +265,10 @@ export type Effektereignis =
   | { art: 'sprung'; sitz: number; x: number; y: number }
   | { art: 'powerup'; sitz: number; x: number; y: number; powerup: Powerupart }
   | { art: 'schild'; sitz: number; x: number; y: number }
+  /** Ein Störschlag wurde ausgelöst: Bombe abgelegt oder Klebefleck gesetzt. */
+  | { art: 'stoerschlag'; sitz: number; stoer: Stoerart; x: number; y: number }
+  | { art: 'bombe'; sitz: number; x: number; y: number }
+  | { art: 'tausch'; sitz: number; anderer: number; x: number; y: number; zielX: number; zielY: number }
   | { art: 'lochstart'; loch: number }
   | { art: 'lochende'; loch: number };
 
@@ -248,6 +279,20 @@ export type Ereignis =
       /** Laufende Nummer je Sitz; entscheidet die kanonische Reihenfolge. */
       nr: number;
       art: 'schlag';
+      rx: number;
+      ry: number;
+      kraft: number;
+    }
+  /**
+   * Einen gehaltenen Störschlag auslösen statt zu schlagen (Fun-Modus,
+   * stoerschlag.ts) — gezielt wie ein Schlag, Zielstelle `kraft` weit vor
+   * dem Ball. Steht als Zug in der Zugliste (`Zug.art === 'ausloesen'`).
+   */
+  | {
+      takt: number;
+      sitz: number;
+      nr: number;
+      art: 'ausloesen';
       rx: number;
       ry: number;
       kraft: number;
@@ -401,6 +446,11 @@ export function starteLoch(
     // Im Fun-Modus dazu die Power-up-Felder aus Saat, Loch und Bahn (powerup.ts).
     mod: z.modus === 'fun' ? mitPowerups(mod, karte, z.saat, loch) : mod,
     felderWeg: 0,
+    // Störschläge (stoerschlag.ts): wer führt, steht erst mit den Bällen fest.
+    fuehrend: 0,
+    stoerGenutzt: 0,
+    bombe: null,
+    klebe: null,
   };
   z.baelle = [];
   for (let s = 0; s < z.sitze; s += 1) {
@@ -442,6 +492,8 @@ export function starteLoch(
     z.botDenkzeit[s] = 0;
     z.letzterSchlagTakt[s] = startTakt;
   }
+  // Das Gummiband der Störschläge: über die abgeschlossenen Löcher, fest fürs ganze Loch.
+  if (z.modus === 'fun') z.aktuell.fuehrend = fuehrendeSitze(z);
   if (z.letzteEreignisse.length < EREIGNIS_DECKEL) z.letzteEreignisse.push({ art: 'lochstart', loch });
 }
 
@@ -786,6 +838,15 @@ function botsEntscheiden(z: Partiezustand, karte: Karte): void {
       z.botZufall[sitz] = d.zufall;
     }
     if (z.takt - z.botWartet[sitz] < z.botDenkzeit[sitz]) continue;
+    // Fun-Modus: Wer zurückliegt und einen Störschlag hält, löst ihn gegen
+    // den Führenden aus, wenn es sich lohnt (stoerschlag.ts) — statt zu schlagen.
+    if (istStoerart(z.baelle[sitz].halt)) {
+      const st = botStoerschlag(z, sitz, karte);
+      if (st !== null) {
+        wendeAusloesenAn(z, sitz, st.rx, st.ry, st.kraft, karte);
+        continue;
+      }
+    }
     const e = botEntscheidung(z, sitz, karte, z.botZufall[sitz]);
     z.botZufall[sitz] = e.zufall;
     if (e.schlag !== null) wendeSchlagAn(z, sitz, e.schlag.rx, e.schlag.ry, e.schlag.kraft);
@@ -842,6 +903,11 @@ function drehkreuzTeile(z: Partiezustand, kreuze: readonly ZoneDrehkreuz[]): Dre
 
 function melde(z: Partiezustand, e: Effektereignis): void {
   if (z.letzteEreignisse.length < EREIGNIS_DECKEL) z.letzteEreignisse.push(e);
+}
+
+/** `melde` für stoerschlag.ts — dieselbe Deckelung. */
+export function meldeEffekt(z: Partiezustand, e: Effektereignis): void {
+  melde(z, e);
 }
 
 /**
@@ -1083,6 +1149,9 @@ function sammleEin(z: Partiezustand, sitz: number, b: Ball, felder: readonly Zon
     const dx = b.x - f.x;
     const dy = b.y - f.y;
     if (dx * dx + dy * dy > f.r * f.r) continue;
+    // Ein Störfeld nimmt nur, wer zurückliegt und seinen noch nicht hatte
+    // (stoerschlag.ts) — sonst bleibt es für die anderen liegen.
+    if (istStoerart(f.powerup) && !darfStoerAufnehmen(z, sitz)) continue;
     z.aktuell.felderWeg |= 1 << i;
     b.halt = f.powerup;
     melde(z, { art: 'powerup', sitz, x: f.x, y: f.y, powerup: f.powerup });
@@ -1211,6 +1280,8 @@ function bewege(
     // einer Endlosregel enden.
     if (istInZone(zone, b.x, b.y)) reib = (zone.art === 'sand' ? SAND_FAKTOR : EIS_FAKTOR) * p.reibung;
   }
+  // Fun-Modus: ein Klebefleck (Störschlag) klebt wie Sand. Klassisch liegt nie einer.
+  if (z.aktuell.klebe != null) reib = klebeReibung(z, sitz, b, reib, p.reibung);
   const treiber = gruppen.beschleuniger;
   for (let i = 0; i < treiber.length; i += 1) {
     const zone = treiber[i];
@@ -1644,10 +1715,14 @@ export function schritt(
   // Im klassischen Modus `KLASSISCHE_WERTE` selbst — dieselben Zahlen wie die Konstanten.
   const p = physikwerte(z.aktuell.mod, karte);
 
+  // Fun-Modus: Eine im Vortakt abgelegte Bombe zündet vor allen Ereignissen.
+  if (z.aktuell.bombe != null) zuendeBombe(z);
+
   for (let i = 0; i < ereignisse.length; i += 1) {
     const e = ereignisse[i];
     if (e.takt !== z.takt) continue;
     if (e.art === 'ausstieg') wendeAusstiegAn(z, e.sitz, karte);
+    else if (e.art === 'ausloesen') wendeAusloesenAn(z, e.sitz, e.rx, e.ry, e.kraft, karte);
     else wendeSchlagAn(z, e.sitz, e.rx, e.ry, e.kraft);
   }
 
@@ -1727,6 +1802,7 @@ export function schritt(
     }
   }
 
+  if (z.aktuell.klebe != null) raeumeStoerungen(z);
   regelnPruefen(z, karte, p);
   lochwechsel(z, karten);
   z.takt += 1;

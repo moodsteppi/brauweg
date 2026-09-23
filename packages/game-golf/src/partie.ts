@@ -13,7 +13,8 @@ import type { BotLevel } from '@brauweg/game-api';
 import { DEFAULT_BOT_LEVEL } from '@brauweg/game-api';
 
 import { BAHNEN_KATALOG, waehleBahnen } from './bahnen.js';
-import type { GolfAktion, GolfRegeln, Zug } from './regeln.js';
+import { modusVon } from './modus.js';
+import { type GolfAktion, type GolfRegeln, type Zug, ZUG_ARTEN } from './regeln.js';
 
 export class RegelverstossError extends Error {}
 
@@ -149,6 +150,12 @@ function pruefeZugForm(zug: unknown): asserts zug is Zug {
   }
   if (!istEndlicheZahl(z.kraft) || z.kraft <= 0 || z.kraft > 1) {
     throw new RegelverstossError('kraftUngueltig');
+  }
+  // Fehlt `art`, ist es ein Schlag. Sonst nur ein bekannter Zugtyp — ein
+  // unbekannter liefe auf jedem Geraet anders (ein alter Kern nähme ihn als
+  // Schlag), und `null` oder eine Zahl ist schlicht kaputt.
+  if (z.art !== undefined && !(ZUG_ARTEN as readonly unknown[]).includes(z.art)) {
+    throw new RegelverstossError('zugArtUnbekannt');
   }
 }
 
@@ -360,6 +367,13 @@ export function verarbeite(partie: GolfPartie, sitz: number, aktion: GolfAktion)
     const zug = aktion.zug;
     if (zug.takt <= letzterTakt(partie, sitz)) {
       throw new RegelverstossError('taktNichtAufsteigend');
+    }
+    // Stoerschlaege gibt es nur im Fun-Modus. Klassisch haelt niemand einen,
+    // der Kern verwuerfe den Zug ohnehin — aber er stuende dann fuer immer in
+    // der Zugliste eines fairen Tisches, und das ist Unsinn, den der Server
+    // schon an der Tuer abweist.
+    if (zug.art === 'ausloesen' && modusVon(partie.regeln) !== 'fun') {
+      throw new RegelverstossError('ausloesenNurImFunModus');
     }
     return { ...partie, zuege: [...partie.zuege, { ...zug, sitz }] };
   }

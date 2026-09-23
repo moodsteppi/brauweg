@@ -29,6 +29,11 @@ export interface GolfZug {
   rx: number;
   ry: number;
   kraft: number;
+  /**
+   * Fehlt: ein Schlag. `'ausloesen'`: statt eines Schlags den gehaltenen
+   * Störschlag auslösen (Fun-Modus, seit dem 23.09.2026, stoerschlag.ts).
+   */
+  art?: 'ausloesen';
 }
 
 /** Wer den Tisch verlassen hat, und ab welchem Zug (Index in `zuege`). */

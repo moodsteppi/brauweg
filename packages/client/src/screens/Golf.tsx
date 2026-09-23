@@ -17,6 +17,13 @@ import { type Karte, loeseBahnen } from '../minispiele/golf/karte';
 import { Bahnauswahl, BahnauswahlAnzeige } from '../minispiele/golf/Bahnauswahl';
 import { FunAnsage, ModusAnzeige, ModusWahl, gemerkterModus, regelnMitModus } from '../minispiele/golf/FunAnsage';
 import { PowerupAnzeige } from '../minispiele/golf/PowerupAnzeige';
+import {
+  StoerschlagKnopf,
+  loeseBeimLoslassen,
+  stoerZielbild,
+  stoerZustand,
+  useStoerZielen,
+} from '../minispiele/golf/StoerschlagKnopf';
 import type { Golfmodus } from '../minispiele/golf/modifikator';
 import {
   festeLochzahl,
@@ -922,6 +929,8 @@ interface Hudstand {
   /** Power-up des eigenen Balls (Fun-Modus): gehalten und gerade wirkend, '' für keins. */
   halt: string;
   wirkung: string;
+  /** Störschlag des eigenen Balls (StoerschlagKnopf.tsx): '' oder `art:frei`/`art:Grund`. */
+  stoer: string;
 }
 
 const HUD_LEER: Hudstand = {
@@ -941,6 +950,7 @@ const HUD_LEER: Hudstand = {
   binTroedler: false,
   halt: '',
   wirkung: '',
+  stoer: '',
 };
 
 /*
@@ -1009,6 +1019,8 @@ function Partie({
   /** Wiederverwendeter Puffer der Bahnvorschau — im Bildpfad wird nichts angelegt. */
   const bahnRef = useRef<number[]>([]);
   const zielbildRef = useRef<Zielbild | null>(null);
+  // Fun-Modus: zielt das nächste Ziehen einen Störschlag (StoerschlagKnopf.tsx)?
+  const stoerZielen = useStoerZielen();
   const uebersichtRef = useRef(false);
   const [uebersicht, setUebersicht] = useState(false);
   /*
@@ -1278,6 +1290,11 @@ function Partie({
       return;
     }
     const z = gs.zustand();
+    // Fun-Modus: Beim Zielen eines Störschlags rollt nichts — Zielmarke statt Vorschau.
+    if (stoerZielen.aktivRef.current) {
+      zielbildRef.current = stoerZielbild(z, sitzRef.current, netz.karten[z.aktuell.karte], zs.ballX, zs.ballY, wunsch);
+      return;
+    }
     vorschau(z, sitzRef.current, wunsch.rx, wunsch.ry, wunsch.kraft, netz.karten, bahnRef.current);
     zielbildRef.current = {
       x: zs.ballX,
@@ -1287,7 +1304,7 @@ function Partie({
       kraft: wunsch.kraft,
       bahn: bahnRef.current,
     };
-  }, [netz]);
+  }, [netz, stoerZielen.aktivRef]);
 
   const beiZeigerAb = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>): void => {
@@ -1381,9 +1398,11 @@ function Partie({
       // Unter der Mindestkraft ist es ein Abbruch und kein Schlag — genau
       // dafür ist die Schwelle da.
       if (wunsch === null) return;
+      // Fun-Modus: aufs Zielen eines Störschlags gestellt? Dann statt des Schlags auslösen.
+      if (loeseBeimLoslassen(stoerZielen, netz, sitzRef.current, wunsch)) return;
       netz.schlage(sitzRef.current, wunsch.rx, wunsch.ry, wunsch.kraft);
     },
-    [netz],
+    [netz, stoerZielen],
   );
 
   const beiZeigerWeg = useCallback((e: React.PointerEvent<HTMLCanvasElement>): void => {
@@ -1455,6 +1474,7 @@ function Partie({
 
         <FunAnsage modus={sicht.modus} saat={sicht.saat} loch={hud.loch} loecher={hud.loecher} pause={hud.pause} />
         <PowerupAnzeige halt={hud.halt} wirkung={hud.wirkung} />
+        <StoerschlagKnopf zustand={hud.stoer} zielen={stoerZielen} netz={netz} sitz={eigenerSitz} />
 
         {hud.binTroedler && hud.troedel > 0 && (
           <p className="gf-troedel" aria-live="polite">
@@ -1607,6 +1627,7 @@ function baueHud(
     binTroedler: troedel !== null && troedel.sitz === eigenerSitz,
     halt: z.baelle[eigenerSitz]?.halt ?? '',
     wirkung: z.baelle[eigenerSitz]?.wirkung ?? '',
+    stoer: stoerZustand(z, eigenerSitz),
   };
 }
 
@@ -1636,6 +1657,7 @@ function hudSchluessel(h: Hudstand): string {
     h.binTroedler ? 1 : 0,
     h.halt,
     h.wirkung,
+    h.stoer,
   ].join('|');
 }
 

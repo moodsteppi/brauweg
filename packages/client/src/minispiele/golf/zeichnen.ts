@@ -40,6 +40,7 @@ import type {
 } from './karte';
 import { RAND_DICKE, istKreis, istRechteck } from './karte';
 import { type Powerupart, feldWeg, felderVon } from './powerup';
+import { STOER_FARBE, type Stoerziel, malStoerZeichen, zeichneStoerZiel, zeichneStoerungen } from './stoerschlag-bild';
 import {
   BALL_R,
   ballRadius,
@@ -138,6 +139,8 @@ export interface Zielbild {
   kraft: number;
   /** Vorschau als x,y-Paare; leer heißt: keine zeichnen. */
   bahn: readonly number[];
+  /** Beim Auslösen eines Störschlags: wo er wirkt (stoerschlag-bild.ts). */
+  stoer?: Stoerziel;
 }
 
 export interface Bildauftrag {
@@ -189,6 +192,8 @@ const PU_FARBE: Readonly<Record<Powerupart, string>> = {
   magnet: '#ff5d6c',
   geist: '#d9c8ff',
   schild: '#5ce1e6',
+  // Die Störschläge (Teil 3/3) — Farben in stoerschlag-bild.ts.
+  ...STOER_FARBE,
 };
 
 /* --------------------------------------------------------------------------
@@ -359,6 +364,14 @@ export class Zeichner {
         for (let k = 0; k < 10; k += 1) this.funke(e.x, e.y, PU_FARBE[e.powerup], 380, 4.5);
       } else if (e.art === 'schild' && !this.ruhig) {
         this.ringstoss(e.x, e.y, PU_FARBE.schild, 380);
+      } else if (e.art === 'bombe') {
+        this.ringstoss(e.x, e.y, STOER_FARBE.bombe, 520);
+        if (!this.ruhig) for (let k = 0; k < 18; k += 1) this.funke(e.x, e.y, STOER_FARBE.bombe, 520, 9);
+      } else if (e.art === 'tausch') {
+        this.ringstoss(e.x, e.y, STOER_FARBE.tausch, 450);
+        this.ringstoss(e.zielX, e.zielY, STOER_FARBE.tausch, 450);
+      } else if (e.art === 'stoerschlag' && !this.ruhig) {
+        this.ringstoss(e.x, e.y, STOER_FARBE[e.stoer], 380);
       }
     }
   }
@@ -408,6 +421,7 @@ export class Zeichner {
 
     this.zeichneBewegteZonen(ctx, a);
     this.zeichnePowerups(ctx, a);
+    zeichneStoerungen(ctx, a.zustand, a.uhrMs, this.ruhig);
     this.zeichneBaelle(ctx, a);
     this.zeichnePartikel(ctx);
     this.zeichneFahne(ctx, a);
@@ -1028,6 +1042,8 @@ export class Zeichner {
       ctx.arc(-0.22, -0.2, 0.12, 0, Math.PI * 2);
       ctx.arc(0.22, -0.2, 0.12, 0, Math.PI * 2);
       ctx.fill();
+    } else if (malStoerZeichen(ctx, art)) {
+      // Bombe, Klebefeld, Tausch — gemalt in stoerschlag-bild.ts.
     } else {
       // Schild
       ctx.moveTo(0, -0.9);
@@ -1275,6 +1291,8 @@ export class Zeichner {
       ctx.lineTo(bx - px * 0.2, by - py * 0.2);
       ctx.stroke();
     }
+    // Beim Auslösen eines Störschlags: wo er wirkt.
+    if (ziel.stoer !== undefined) zeichneStoerZiel(ctx, ziel.stoer);
   }
 
   /** Die Prozentzahl am Pfeil — im Bildschirmraum, damit sie lesbar bleibt. */

@@ -28,12 +28,12 @@
  *   - `'passiv'` — liegt bereit, bis etwas sie auslöst (Schild: der nächste
  *     Stoß eines fremden Balls, `schildHaelt` in physik.ts). Ein eigener
  *     Schlag verbraucht es nicht.
- *   - `'ausloesen'` — für Teil 3 (Störschläge): Arten, die der Spieler
- *     STATT eines Schlags auslöst. Heute gibt es keine; `wendeSchlagAn` lässt
- *     sie im Halt liegen. Teil 3 hängt die Art an `POWERUPS` HINTEN an, gibt
- *     ihr hier `'ausloesen'` und ein eigenes Ereignis in physik.ts, das sie
- *     aus `halt` nimmt — und trifft ein Störschlag einen Ball mit Schild,
- *     fragt er `verbraucheSchild`.
+ *   - `'ausloesen'` — Teil 3 (Störschläge, stoerschlag.ts): Bombe, Klebefeld
+ *     und Tausch, die der Spieler STATT eines Schlags auslöst. `wendeSchlagAn`
+ *     lässt sie im Halt liegen; das Ereignis `'ausloesen'` in physik.ts nimmt
+ *     sie heraus (`wendeAusloesenAn`), und trifft ein Störschlag einen Ball
+ *     mit Schild, fragt er `verbraucheSchild`. Aufnehmen darf sie nur, wer
+ *     zurückliegt und seinen Störschlag im Loch noch nicht hatte.
  *
  * **Determinismus** wie überall in Golf (docs/GOLF-PLAN.md): nur `+ - * /`
  * und `Math.sqrt`, Zufall aus mulberry32. Die Reihenfolge von `POWERUPS` ist
@@ -55,10 +55,20 @@ import type { Lochmodifikatoren } from './modifikator';
 import { ganzzahl, mulberry32 } from './zufall';
 
 /** Was auf der Bahn liegen kann. */
-export type Powerupart = 'turbo' | 'magnet' | 'geist' | 'schild';
+export type Powerupart = 'turbo' | 'magnet' | 'geist' | 'schild' | 'bombe' | 'klebefeld' | 'tausch';
 
 /** Alle Arten. Reihenfolge ist Determinismus — siehe Dateikopf. */
-export const POWERUPS: readonly Powerupart[] = ['turbo', 'magnet', 'geist', 'schild'];
+export const POWERUPS: readonly Powerupart[] = [
+  'turbo',
+  'magnet',
+  'geist',
+  'schild',
+  // Teil 3/3 (seit dem 23.09.2026, Version 9): die Störschläge, hinten angehängt.
+  // Sie verschieben die Ziehung jedes Fun-Lochs — deshalb die neue Version.
+  'bombe',
+  'klebefeld',
+  'tausch',
+];
 
 /** Wann ein gehaltenes Power-up wirkt — siehe „Halte-Mechanik" im Dateikopf. */
 export type Einsatz = 'schlag' | 'passiv' | 'ausloesen';
@@ -68,6 +78,10 @@ export const EINSATZ: Readonly<Record<Powerupart, Einsatz>> = Object.freeze({
   magnet: 'schlag',
   geist: 'schlag',
   schild: 'passiv',
+  // Störschläge (stoerschlag.ts): statt eines Schlags ausgelöst, gegen andere.
+  bombe: 'ausloesen',
+  klebefeld: 'ausloesen',
+  tausch: 'ausloesen',
 });
 
 /** Ein Feld auf der Bahn — gezeichnet wie eine Zone, gesammelt in der Physik. */
