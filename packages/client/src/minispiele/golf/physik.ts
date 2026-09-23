@@ -30,6 +30,7 @@ import {
   type Segment,
   type ZoneBumper,
   type ZoneDrehkreuz,
+  type ZoneStrudel,
   type Zonengruppen,
   abstandQuadrat,
   istInZone,
@@ -108,6 +109,19 @@ export const PORTAL_SPERRE = 20;
 export const FLUG_TAKTE = 12;
 /** Mindesttempo im Flug. */
 export const FLUG_VMIN = 14;
+/** Drall eines Strudels: Querbeschleunigung je Einheit Zug zur Mitte. */
+export const STRUDEL_DRALL = 0.6;
+/**
+ * Nach so vielen Takten eines Laufs im Strudel (5 s) zieht er den Ball ein,
+ * siehe `bewege`. Über der längsten Zeit, die ein Ball in einem Strudel
+ * brauchte, der ihn nicht festhielt (88 Takte, r 2 / Stärke 30, gemessen am
+ * 23.09.2026 über 960 Anläufe je Strudel auf k41–k60) — bis dahin rollt jeder
+ * Ball, der nicht festhing, genau wie vorher.
+ */
+export const STRUDEL_SOG_TAKTE = 100;
+/** Gefangen wird ein Ball so nah an der Mitte und langsamer als das. */
+export const STRUDEL_FANG_R = 0.25;
+export const STRUDEL_FANG_V = 3;
 
 /** Eigene Schläge werden zwei Takte in die Zukunft gemeldet (100 ms). */
 export const VORLAUF_TAKTE = 2;
@@ -139,6 +153,13 @@ export interface Ball {
   letzteRuheX: number;
   letzteRuheY: number;
   portalSperre: number;
+  /**
+   * Takte, die der Ball in diesem Lauf (seit er zuletzt lag) im Kreis
+   * irgendeines Strudels verbracht hat; 0, sobald er ruht. Ab
+   * `STRUDEL_SOG_TAKTE` zieht ihn jeder Strudel ein (`bewege`). Seit
+   * Modulversion 7.
+   */
+  strudelTakte: number;
   flugTakte: number;
   flugRx: number;
   flugRy: number;
@@ -370,6 +391,7 @@ export function starteLoch(
       letzteRuheX: x,
       letzteRuheY: y,
       portalSperre: 0,
+      strudelTakte: 0,
       flugTakte: 0,
       flugRx: 0,
       flugRy: 0,
@@ -410,6 +432,7 @@ export function kopiere(z: Partiezustand): Partiezustand {
       letzteRuheX: b.letzteRuheX,
       letzteRuheY: b.letzteRuheY,
       portalSperre: b.portalSperre,
+      strudelTakte: b.strudelTakte,
       flugTakte: b.flugTakte,
       flugRx: b.flugRx,
       flugRy: b.flugRy,
@@ -909,6 +932,41 @@ function bumperKontakte(
   }
 }
 
+/**
+ * Höhe im Trichter aller Strudel an einem Punkt (je Masse, E²/s²).
+ *
+ * Der Zug `staerke · (1 − d/r)` zur Mitte ist das Gefälle von
+ * `staerke · (d − d²/(2r))`; außerhalb des Rands bleibt die Höhe auf dem
+ * Randwert `staerke · r/2` stehen, damit sie beim Überqueren nicht springt.
+ */
+function strudelHoehe(strudel: readonly ZoneStrudel[], x: number, y: number): number {
+  let h = 0;
+  for (let i = 0; i < strudel.length; i += 1) {
+    const zone = strudel[i];
+    const dx = x - zone.x;
+    const dy = y - zone.y;
+    const dq = dx * dx + dy * dy;
+    if (dq >= zone.r * zone.r) {
+      h += (zone.staerke * zone.r) / 2;
+    } else {
+      const d = Math.sqrt(dq);
+      h += zone.staerke * (d - dq / (2 * zone.r));
+    }
+  }
+  return h;
+}
+
+/** Liegt der Punkt im Kreis irgendeines Strudels? */
+function imStrudelkreis(strudel: readonly ZoneStrudel[], x: number, y: number): boolean {
+  for (let i = 0; i < strudel.length; i += 1) {
+    const zone = strudel[i];
+    const dx = x - zone.x;
+    const dy = y - zone.y;
+    if (dx * dx + dy * dy < zone.r * zone.r) return true;
+  }
+  return false;
+}
+
 /** Reibung, Zonenkräfte und Bewegung eines Balls für einen Unterschritt. */
 function bewege(
   z: Partiezustand,
@@ -947,8 +1005,57 @@ function bewege(
       getrieben = true;
     }
   }
+  /*
+   * Strudel: Zug zur Mitte plus Drall, eine Kraft quer zum Radius. Der
+   * Drall schiebt einen kreisenden Ball in jedem Umlauf vorwärts, leistet
+   * also Arbeit — das macht einen starken Strudel zur Schleuder. Bei einem
+   * schwachen gibt es aber einen Kreis, auf dem diese Arbeit die Reibung
+   * genau aufwiegt und der Zug zur Mitte genau die Fliehkraft: Bis Version 6
+   * blieb der Ball dort für immer (gemessen am 23.09.2026, r 1,5 / Stärke 12:
+   * d 0,85, v 2,11, Drall +6,57 gegen Reibung −6,57 E²/s³, über 500 Takte
+   * unverändert). Ein getriebener Ball ruht nie, sein Spieler durfte bis zum
+   * Zeitlimit nicht schlagen.
+   *
+   * Deshalb gilt der Drall nur `STRUDEL_SOG_TAKTE` lang. War ein Ball in
+   * diesem Lauf länger in Strudeln, zieht ihn jeder ein (`sog`):
+   *   - Der Drall lenkt nur noch, quer zur GESCHWINDIGKEIT, und schiebt
+   *     nicht mehr. Arbeit leistet allein der Zug zur Mitte, ein Gefälle mit
+   *     der Höhe `strudelHoehe`. Damit das auch im Takt-Raster gilt, kommt
+   *     das Tempo nach dem Schritt aus der Energiebilanz: Tempo² / 2 nach der
+   *     Reibung minus gewonnene Höhe. Ohne diese Buchführung pumpte das Raster
+   *     aus Lenken und Ziehen auf Eis selbst Energie hinein (Dauerbahn d 0,61,
+   *     v 1,9 auf k56 aus #215). So kann die Summe aus Tempo und Höhe nur
+   *     fallen: Der Ball sinkt zur Mitte und wird gefangen.
+   *   - Er rollt dort mindestens so schwer wie auf Rasen, auch auf Eis; sonst
+   *     verliert er ein Achtel der Energie je Sekunde und dreht bis zu 24 s.
+   *     Gemeint ist Rasen ohne Modifikator (Faktor 1, nicht `p.reibung`):
+   *     Mit `p.reibung` als Boden brauchte k20 bei Schwerelos 299 Takte,
+   *     bei Regen 236.
+   *   - Am Rand, wo der Zug schwächer ist als die doppelte Rollreibung,
+   *     darf er ruhen, wenn er fast steht. Dort kroch ein Ball mit 0,001 E/s
+   *     zur Mitte, eine Minute lang (k08, kleiner Strudel); mit der einfachen
+   *     Rollreibung als Grenze kroch er auf einem weiten, schwachen Strudel
+   *     noch 15 s (r 4 / Stärke 3 auf Eis).
+   * Wer den Strudel vorher verlässt oder gefangen wird, merkt davon nichts:
+   * Bis zur Schwelle rechnet der Strudel Zeile für Zeile wie in Version 6.
+   * Die Zeit im Sog ist begrenzt, weil dort nichts mehr Energie zuführt; auf
+   * den Bahnen dauerte sie gemessen höchstens 23 Takte (strudel.test.ts).
+   *
+   * Ein ruhender Ball wird nicht gezogen: So bleibt ein ausgeworfener Ball
+   * an seinem `ziel` liegen, auch wenn das im eigenen Strudel liegt (k08).
+   */
+  // Die Schwelle gilt in Ballzeit, nicht in Takten: In Zeitlupe (halber
+  // Zeitschritt) rollt ein Ball in 100 Takten nur 2,5 s — eine Schleuder, die
+  // sonst 88 Takte braucht, würde sonst mitten im Wurf eingezogen. Klassisch
+  // ist der Faktor genau 1 (0,05 / 0,05), die Schwelle also genau 100.
+  const sog = b.strudelTakte >= STRUDEL_SOG_TAKTE * ((DT * UNTERSCHRITTE) / (p.dt * p.unterschritte));
+  let sx = 0;
+  let sy = 0;
+  let drall = 0;
+  let imSog = false;
   const strudel = gruppen.strudel;
   for (let i = 0; i < strudel.length; i += 1) {
+    if (b.ruht) break;
     const zone = strudel[i];
     const dx = zone.x - b.x;
     const dy = zone.y - b.y;
@@ -958,11 +1065,20 @@ function bewege(
     const nx = d < 1e-9 ? 0 : dx / d;
     const ny = d < 1e-9 ? 0 : dy / d;
     const staerke = zone.staerke * (1 - d / zone.r);
-    // Radial zur Mitte plus tangential — sonst fällt der Ball geradlinig
-    // hinein und der Strudel sieht aus wie ein Magnet.
-    ax += nx * staerke - ny * staerke * 0.6;
-    ay += ny * staerke + nx * staerke * 0.6;
-    getrieben = true;
+    if (!sog) {
+      // Radial zur Mitte plus tangential — sonst fällt der Ball geradlinig
+      // hinein und der Strudel sieht aus wie ein Magnet.
+      ax += nx * staerke - ny * staerke * STRUDEL_DRALL;
+      ay += ny * staerke + nx * staerke * STRUDEL_DRALL;
+      getrieben = true;
+      continue;
+    }
+    sx += nx * staerke;
+    sy += ny * staerke;
+    drall += staerke * STRUDEL_DRALL;
+    imSog = true;
+    if (reib < 1) reib = 1;
+    if (staerke > 2 * ROLL * reib) getrieben = true;
   }
 
   const v = betrag(b.vx, b.vy);
@@ -988,8 +1104,35 @@ function bewege(
   }
   b.vx += ax * p.dt;
   b.vy += ay * p.dt;
-  b.x += b.vx * p.dt;
-  b.y += b.vy * p.dt;
+  if (!imSog) {
+    b.x += b.vx * p.dt;
+    b.y += b.vy * p.dt;
+  } else {
+    // Energie vor dem Zug: nach Reibung und Beschleuniger, auf alter Höhe.
+    const vorherQ = b.vx * b.vx + b.vy * b.vy;
+    const hoeheVorher = strudelHoehe(strudel, b.x, b.y);
+    b.vx += sx * p.dt;
+    b.vy += sy * p.dt;
+    // Quer zur Fahrt lenken, im Drehsinn des Dralls.
+    let w = betrag(b.vx, b.vy);
+    if (w > 0 && drall > 0) {
+      const lx = b.vx + (b.vy / w) * drall * p.dt;
+      const ly = b.vy - (b.vx / w) * drall * p.dt;
+      b.vx = lx;
+      b.vy = ly;
+      w = betrag(lx, ly);
+    }
+    b.x += b.vx * p.dt;
+    b.y += b.vy * p.dt;
+    // Die Richtung bleibt, der Betrag kommt aus der Energiebilanz.
+    let sollQ = vorherQ - 2 * (strudelHoehe(strudel, b.x, b.y) - hoeheVorher);
+    if (sollQ < 0) sollQ = 0;
+    if (w > 0) {
+      const f = Math.sqrt(sollQ) / w;
+      b.vx *= f;
+      b.vy *= f;
+    }
+  }
 
   const nachher = betrag(b.vx, b.vy);
   if (nachher < V_STOP && !getrieben) {
@@ -1068,12 +1211,18 @@ function zonenAmOrt(
     const dx = b.x - zone.x;
     const dy = b.y - zone.y;
     const dq = dx * dx + dy * dy;
-    if (dq > 0.0625 || betrag(b.vx, b.vy) >= 3) continue; // 0,25 E, quadriert
+    if (dq > STRUDEL_FANG_R * STRUDEL_FANG_R || betrag(b.vx, b.vy) >= STRUDEL_FANG_V) continue;
     if (zone.ziel !== undefined) {
       melde(z, { art: 'portal', sitz, x: b.x, y: b.y, zielX: zone.ziel.x, zielY: zone.ziel.y });
       b.x = zone.ziel.x;
       b.y = zone.ziel.y;
       b.portalSperre = p.portalSperre;
+      // Der Auswurf legt den Ball ab, statt ihn mit dem Resttempo weiterrollen
+      // zu lassen: Liegt `ziel` im eigenen Strudel (k08), zöge der ihn sonst
+      // sofort zurück zur Mitte, fing ihn wieder, warf ihn wieder aus — ohne Ende.
+      b.vx = 0;
+      b.vy = 0;
+      b.ruht = true;
     } else {
       b.x = zone.x;
       b.y = zone.y;
@@ -1323,6 +1472,14 @@ export function schritt(
   for (let s = 0; s < baelle.length; s += 1) {
     const b = baelle[s];
     if (b.portalSperre > 0) b.portalSperre -= 1;
+    // Gezählt wird über den ganzen Lauf, nicht am Stück: Ein Ball, der
+    // hinausrollt, von einer Wand zurückprallt und wieder hineinfällt, soll
+    // die Uhr nicht jedes Mal neu stellen. Zurück auf null erst, wenn er liegt.
+    if (b.ruht || b.eingelocht) {
+      b.strudelTakte = 0;
+    } else if (b.flugTakte === 0 && imStrudelkreis(gruppen.strudel, b.x, b.y)) {
+      b.strudelTakte += 1;
+    }
     if (b.flugTakte > 0) {
       b.flugTakte -= 1;
       if (b.flugTakte === 0) lande(b, segmente, p.ballR);

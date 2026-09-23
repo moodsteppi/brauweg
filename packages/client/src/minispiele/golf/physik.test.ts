@@ -414,8 +414,8 @@ describe('Zonen', () => {
       id: 'z-strudel',
       zonen: [{ art: 'strudel', x: 6, y: 9, r: 2.5, staerke: 22 }],
     });
-    // Der Strudel dreht (tangential mal 0,6), der Ball darf also nicht mehr
-    // gerade fliegen.
+    // Der Strudel dreht (Drall quer zur Fahrt, 0,6 je Einheit Zug), der Ball
+    // darf also nicht mehr gerade fliegen.
     const z = starte(karte);
     lege(z.baelle[0], 6, 13);
     laufe(z, 60, karte, [schlag(0, 0, 1, 0, -1, 0.28)]);
