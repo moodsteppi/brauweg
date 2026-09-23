@@ -240,13 +240,12 @@ export const account = pgTable(
     mememoryZufall: boolean().notNull().default(false),
     /** Kalenderjahr, in dem die Geburtstagsbelohnung zuletzt eingesammelt wurde. */
     birthdayRewardYear: integer(),
-    /**
-     * Google-Kennung (`sub` aus dem ID-Token). Stabil, waehrend die E-Mail
-     * beim selben Google-Konto wechseln kann — deshalb haengt die Verknuepfung
-     * an dieser Spalte und nicht an der Adresse. null: nie mit Google
-     * angemeldet.
+    /*
+     * `google_sub` steht noch in der Datenbank, aber nicht mehr hier: Seit
+     * 0028 haengen Google und Apple an `account_identity`. Die Spalte ist
+     * leer und bleibt nur, damit ein zurueckgerollter Deploy nicht an einer
+     * fehlenden Spalte scheitert.
      */
-    googleSub: text(),
     anonymizedAt: timestamp({ withTimezone: true }),
     /**
      * Gastkonto: mitspielen ohne Anmeldung. NULL heisst "kein Gast".
@@ -272,7 +271,40 @@ export const account = pgTable(
   (t) => [
     uniqueIndex('account_email_key').on(t.email),
     uniqueIndex('account_display_name_key').on(t.displayName),
-    uniqueIndex('account_google_sub_key').on(t.googleSub),
+  ],
+);
+
+/**
+ * Anmeldung ueber einen fremden Anbieter (Google, Apple): wer dort wer ist.
+ *
+ * Gebunden wird ueber `subject` (das `sub` des ID-Tokens) und NIE ueber die
+ * Mail: Die kann beim Anbieter wechseln, und bei Apple ist sie oft eine
+ * Weiterleitungsadresse, die nichts ueber die Person sagt. `email` ist nur die
+ * zuletzt gemeldete Adresse, fuer die Anzeige in den Einstellungen.
+ *
+ * Ein Konto hat je Anbieter hoechstens eine Bindung, aber beliebig viele
+ * Anbieter. Ob die letzte Anmeldeart getrennt werden darf, entscheidet
+ * `auth/anbieter.ts`, nicht die Datenbank.
+ *
+ * Kontoloeschung anonymisiert und loescht dabei diese Zeilen
+ * (`anonymizeAccount`) — sonst fuehrte dieselbe Apple-ID wieder ins
+ * geloeschte Konto.
+ */
+export const accountIdentity = pgTable(
+  'account_identity',
+  {
+    provider: text().$type<'google' | 'apple'>().notNull(),
+    subject: text().notNull(),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    email: text(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ name: 'account_identity_pkey', columns: [t.provider, t.subject] }),
+    uniqueIndex('account_identity_konto_anbieter_key').on(t.accountId, t.provider),
+    check('account_identity_provider_check', sql`${t.provider} in ('google', 'apple')`),
   ],
 );
 

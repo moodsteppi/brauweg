@@ -612,6 +612,11 @@ export interface WarState {
   darfFuehren: boolean;
 }
 
+/** Antwort der Anbieter-Anmeldung: Sitzung — oder erst noch das Geburtsdatum. */
+export type AnbieterAnmeldung =
+  | { ok: true; neu: boolean; token?: string }
+  | { geburtstagNoetig: true; schein: string };
+
 export const api = {
   register: (body: {
     email: string;
@@ -633,14 +638,68 @@ export const api = {
 
   /** Ob "Mit Google anmelden" auf dieser Ausgabe eingerichtet ist. */
   googleConfig: () => request<{ clientId: string | null }>('/auth/google/config'),
-  /** Anmeldung mit dem ID-Token aus dem Google-Knopf. Cookie wie beim Login. */
+  /** Ob "Mit Apple anmelden" eingerichtet ist — samt der bei Apple eingetragenen Return-URL. */
+  appleConfig: () =>
+    request<{ clientId: string | null; redirectUri: string | null }>('/auth/apple/config'),
+  /**
+   * Einmal-Nonce fuer den naechsten Anbieter-Dialog. Der Anbieter schreibt sie
+   * ins Token, der Server loest sie genau einmal ein — ein abgefangenes Token
+   * oeffnet so kein zweites Mal etwas.
+   */
+  anbieterNonce: () => post<{ nonce: string }>('/auth/nonce'),
+  /**
+   * Anmeldung mit dem ID-Token aus dem Google-Knopf. Cookie wie beim Login.
+   * Entstuende ein NEUES Konto, kommt statt der Sitzung ein Schein zurueck:
+   * erst das Geburtsdatum, dann `anbieterAbschliessen`.
+   */
   googleLogin: async (credential: string) => {
-    const antwort = await post<{ ok: true; token?: string }>('/auth/google', {
-      credential,
+    const antwort = await post<AnbieterAnmeldung>('/auth/google', { credential });
+    if ('token' in antwort && antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+  /**
+   * Anmeldung mit dem ID-Token aus Apples Popup. Der Vorname kommt nur beim
+   * allerersten Mal mit — dann wird er Vorschlag fuer den Anzeigenamen.
+   */
+  appleLogin: async (idToken: string, vorname?: string) => {
+    const antwort = await post<AnbieterAnmeldung>('/auth/apple', {
+      idToken,
+      ...(vorname ? { vorname } : {}),
     });
+    if ('token' in antwort && antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+  /** Zweiter Schritt einer Erstanmeldung: Geburtsdatum zum Schein. */
+  anbieterAbschliessen: async (schein: string, birthday: string) => {
+    const antwort = await post<{ ok: true; neu: boolean; token?: string }>(
+      '/auth/anbieter/abschliessen',
+      { schein, birthday },
+    );
     if (antwort.token) setSessionToken(antwort.token);
     return antwort;
   },
+  /** Wie man in dieses Konto kommt: Passwort ja/nein, verknuepfte Anbieter. */
+  anmeldearten: () =>
+    request<{
+      passwort: boolean;
+      email: string | null;
+      gast: boolean;
+      anbieter: { anbieter: 'google' | 'apple'; email: string | null; seit: string }[];
+    }>('/me/anmeldung'),
+  /** Anbieter an das angemeldete Konto haengen — fuer einen Gast zugleich das Sichern. */
+  verknuepfeGoogle: (credential: string, birthday?: string) =>
+    post<{ ok: true; gesichert: boolean }>('/me/anmeldung/google', {
+      credential,
+      ...(birthday ? { birthday } : {}),
+    }),
+  verknuepfeApple: (idToken: string, birthday?: string) =>
+    post<{ ok: true; gesichert: boolean }>('/me/anmeldung/apple', {
+      idToken,
+      ...(birthday ? { birthday } : {}),
+    }),
+  /** Trennen. Die letzte Anmeldeart lehnt der Server ab. */
+  trenneAnbieter: (anbieter: 'google' | 'apple') =>
+    request<{ ok: true }>(`/me/anmeldung/${anbieter}`, { method: 'DELETE' }),
 
   verify: (token: string) => post<{ ok: true }>('/auth/verify', { token }),
   resendVerification: (email: string) =>

@@ -1,63 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { AnbieterKnoepfe } from '../anmeldung/AnbieterKnoepfe';
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
 import { inApp } from '../laufzeit';
 
 type Mode = 'login' | 'register' | 'verify' | 'reset' | 'gast';
-
-/**
- * Google Identity Services — das Skript kommt von accounts.google.com und
- * haengt sein Objekt an window. Nur die zwei benutzten Aufrufe sind getippt.
- */
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize(config: {
-            client_id: string;
-            callback: (antwort: { credential: string }) => void;
-          }): void;
-          renderButton(
-            ziel: HTMLElement,
-            optionen: {
-              theme?: string;
-              size?: string;
-              text?: string;
-              width?: number;
-              locale?: string;
-            },
-          ): void;
-        };
-      };
-    };
-  }
-}
-
-const GSI_SKRIPT = 'https://accounts.google.com/gsi/client';
-
-/**
- * Laedt das GIS-Skript genau einmal. Erst wenn der Server eine Client-ID
- * nennt — ohne Google-Anmeldung laedt die Seite nichts von Google.
- */
-function ladeGsiSkript(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.google?.accounts?.id) return resolve();
-    const vorhanden = document.querySelector<HTMLScriptElement>(`script[src="${GSI_SKRIPT}"]`);
-    if (vorhanden) {
-      vorhanden.addEventListener('load', () => resolve());
-      vorhanden.addEventListener('error', () => reject(new Error('gsi')));
-      return;
-    }
-    const skript = document.createElement('script');
-    skript.src = GSI_SKRIPT;
-    skript.async = true;
-    skript.onload = () => resolve();
-    skript.onerror = () => reject(new Error('gsi'));
-    document.head.appendChild(skript);
-  });
-}
 
 /**
  * Holt das Token aus dem, was jemand einfuegt.
@@ -86,52 +34,6 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
   /** Fehlerschluessel des Servers, um gezielt einen Ausweg anzubieten. */
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const googleZiel = useRef<HTMLDivElement | null>(null);
-
-  /**
-   * Google-Knopf, wenn der Server eine Client-ID nennt.
-   *
-   * Der Knopf wird von der Google-Bibliothek in das leere div gezeichnet —
-   * ein selbstgebauter Knopf verstiesse gegen deren Markenrichtlinien und
-   * muesste den Einwilligungsdialog trotzdem ueber dieselbe Bibliothek
-   * oeffnen. Scheitert irgendetwas (kein Netz zu Google, Werbeblocker),
-   * bleibt das div leer und die Passwort-Anmeldung steht unveraendert da.
-   */
-  useEffect(() => {
-    let lebt = true;
-    void (async () => {
-      try {
-        const { clientId } = await api.googleConfig();
-        if (!clientId || !lebt) return;
-        await ladeGsiSkript();
-        if (!lebt || !googleZiel.current || !window.google) return;
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: ({ credential }) => {
-            void run(async () => {
-              await api.googleLogin(credential);
-              onSignedIn();
-            });
-          },
-        });
-        window.google.accounts.id.renderButton(googleZiel.current, {
-          theme: 'outline',
-          size: 'large',
-          text: 'continue_with',
-          width: 280,
-          locale: 'de',
-        });
-      } catch {
-        /* Ohne Google-Knopf geht die Anmeldung normal weiter. */
-      }
-    })();
-    return () => {
-      lebt = false;
-    };
-    // Genau einmal beim Laden; run/onSignedIn sind stabil genug dafuer.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const run = async (action: () => Promise<void>): Promise<void> => {
     setBusy(true);
     setError(null);
@@ -427,11 +329,20 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
             Ohne Konto spielen
           </button>
         )}
-        {/* Bleibt unsichtbar leer, solange der Server keine Client-ID nennt
-            oder Google nicht erreichbar ist. Im Gast-Formular fehlt ohnehin
-            das Feld, an das sich ein Google-Konto haengen liesse. */}
+        {/* Apple und Google — jeder Knopf nur, wenn der Server fuer seinen
+            Anbieter eine Client-ID nennt, und erst dann laedt die Seite
+            ueberhaupt etwas von dort. Im Gast-Formular nicht: Ein Gast, der
+            sich mit Apple anmeldet, hat ein Konto und ist keiner mehr — das
+            Sichern eines laufenden Gastkontos steht in den Einstellungen. */}
         {mode !== 'verify' && mode !== 'gast' && (
-          <div className="auth-google" ref={googleZiel} aria-label="Mit Google anmelden" />
+          <AnbieterKnoepfe
+            zweck="anmelden"
+            gesperrt={busy}
+            onErfolg={() => onSignedIn()}
+            // Ueber `run`, damit die Meldung am selben Platz und in derselben
+            // Form erscheint wie jede andere Anmeldemeldung.
+            onFehler={(fehler) => void run(() => Promise.reject(fehler))}
+          />
         )}
       </form>
 

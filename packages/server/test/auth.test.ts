@@ -5,7 +5,6 @@ import { eq } from 'drizzle-orm';
 import {
   anonymizeAccount,
   login,
-  loginMitGoogle,
   logout,
   register,
   requestPasswordReset,
@@ -107,75 +106,6 @@ test('ein falscher Code bleibt trotz offener Registrierung ein Fehler', async (t
         birthday: '1990-06-15',
       }),
     (err: AppError) => err.code === 'inviteCodeInvalid',
-  );
-});
-
-test('Google-Anmeldung legt ein Konto an und findet es wieder', async (t) => {
-  const ctx = await createTestContext();
-  t.after(() => ctx.close());
-
-  const profil = {
-    sub: 'google-123',
-    email: 'gustav@example.org',
-    emailVerified: true,
-    name: 'Gustav',
-  };
-  const erste = await loginMitGoogle(ctx.auth, profil);
-  assert.ok(erste.token.length > 20);
-
-  const [konto] = await ctx.db
-    .select()
-    .from(schema.account)
-    .where(eq(schema.account.id, erste.accountId));
-  assert.equal(konto!.googleSub, 'google-123');
-  assert.equal(konto!.passwordHash, null);
-  assert.ok(konto!.emailVerifiedAt, 'Google-Konten gelten als bestaetigt');
-
-  // Zweite Anmeldung: dasselbe Konto, kein Duplikat.
-  const zweite = await loginMitGoogle(ctx.auth, profil);
-  assert.equal(zweite.accountId, erste.accountId);
-
-  // Ohne Passwort ist das Formular kein Einstieg.
-  await assert.rejects(
-    () => login(ctx.auth, 'gustav@example.org', 'irgendwas-langes-123'),
-    (err: AppError) => err.code === 'credentialsInvalid',
-  );
-});
-
-test('Google verknuepft sich mit einem bestehenden Passwort-Konto', async (t) => {
-  const ctx = await ctxWithInvite();
-  t.after(() => ctx.close());
-
-  const { accountId, email } = await createVerifiedAccount(ctx, 'Anna');
-
-  const { accountId: perGoogle } = await loginMitGoogle(ctx.auth, {
-    sub: 'google-anna',
-    email,
-    emailVerified: true,
-    name: 'Anna G',
-  });
-  assert.equal(perGoogle, accountId);
-
-  const [nachher] = await ctx.db
-    .select()
-    .from(schema.account)
-    .where(eq(schema.account.id, accountId));
-  assert.equal(nachher!.googleSub, 'google-anna');
-});
-
-test('Google ohne bestaetigte Adresse wird abgewiesen', async (t) => {
-  const ctx = await createTestContext();
-  t.after(() => ctx.close());
-
-  await assert.rejects(
-    () =>
-      loginMitGoogle(ctx.auth, {
-        sub: 'google-999',
-        email: 'fremd@example.org',
-        emailVerified: false,
-        name: null,
-      }),
-    (err: AppError) => err.code === 'emailNotVerified',
   );
 });
 

@@ -137,6 +137,9 @@ async function main(): Promise<void> {
     diagnoseSchluessel: config.diagnoseSchluessel,
     googleClientId: config.googleClientId,
     appInhalt,
+    appleClientId: config.appleClientId,
+    appleRedirectUri: config.appleRedirectUri,
+    appleDomainVerknuepfung: config.appleDomainVerknuepfung,
     feedbackZielUrl: config.feedbackZielUrl,
     feedbackZielToken: config.feedbackZielToken,
     // In der Entwicklung liefert Vite den Client aus, dann gibt es hier nichts
