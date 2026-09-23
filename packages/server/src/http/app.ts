@@ -31,7 +31,6 @@ import {
   type AuthDeps,
   anonymizeAccount,
   login,
-  loginMitGoogle,
   logout,
   register,
   requestPasswordReset,
@@ -48,7 +47,9 @@ import {
 // Mail-Diagnose (23.09.2026) kamen parallel zu anderen Anmeldewegen dazu.
 import { createSession } from '../auth/service.js';
 import { mailProbe } from '../mail/probe.js';
-import { pruefeGoogleToken } from '../auth/google.js';
+import type { Schluesselquelle } from '../auth/idtoken.js';
+import type { NonceSpeicher } from '../auth/nonce.js';
+import { anbieterRouten } from './anbieter-routen.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
   berlinToday,
@@ -209,6 +210,21 @@ export interface AppDeps {
    * sie, gibt es den Knopf nicht — der Rest der Anmeldung laeuft unveraendert.
    */
   readonly googleClientId?: string | null;
+  /**
+   * "Mit Apple anmelden": Services ID (APPLE_CLIENT_ID) und die bei Apple
+   * eingetragene Return-URL. Fehlt eins davon, gibt es den Knopf nicht.
+   */
+  readonly appleClientId?: string | null;
+  readonly appleRedirectUri?: string | null;
+  /** Inhalt der Apple-Domain-Nachweisdatei (APPLE_DOMAIN_ASSOCIATION), falls verlangt. */
+  readonly appleDomainVerknuepfung?: string | null;
+  /** Nur Tests: eigene Schluessel statt Googles und Apples JWKS. */
+  readonly anbieterSchluessel?: {
+    readonly google?: Schluesselquelle;
+    readonly apple?: Schluesselquelle;
+  };
+  /** Nur Tests: ein Nonce-Speicher, in den der Test selbst hineinsieht. */
+  readonly anbieterNonces?: NonceSpeicher;
   /** Ziel-URL des bro-server-Endpunkts fuers Feedback-Widget, siehe config.ts. */
   readonly feedbackZielUrl?: string | null;
   /** Bearer-Schluessel fuer obige URL. */
@@ -341,16 +357,31 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       directives: {
         defaultSrc: ["'self'"],
         /**
-         * accounts.google.com ist fuer "Mit Google anmelden" (GIS-Knopf):
-         * Das Skript kommt von dort, der Knopf selbst ist ein iframe
-         * derselben Herkunft, und die Bibliothek funkt dorthin. Ohne die
-         * drei Eintraege laedt der Knopf auf Produktion nicht — auf dem
-         * Entwicklungsserver faellt das nie auf, Vite setzt keine
-         * Richtlinie (dieselbe Falle wie beim Runner-Worker).
+         * Anmeldung mit Google und Apple — so eng, wie die Anbieter es zulassen.
+         *
+         * Google (GIS-Knopf): Das Skript kommt von /gsi/client, der Knopf ist
+         * ein iframe unter /gsi/, seine Schrift liegt unter /gsi/style, und
+         * die Bibliothek funkt nach /gsi/. Genau diese Pfade nennt Googles
+         * Einrichtungsanleitung; bis zum 23.09.2026 stand hier die ganze
+         * Herkunft accounts.google.com.
+         *
+         * Apple: nur das SDK-Skript. Im Popup-Modus oeffnet es ein eigenes
+         * Fenster auf appleid.apple.com (ein Fenster ist keine Frage der
+         * Richtlinie) und bekommt die Antwort per postMessage — kein iframe,
+         * kein fetch. appleid.apple.com steht deshalb bewusst NIRGENDS hier;
+         * wer auf den Umleitungsmodus umstellt, braucht es auch dann nicht,
+         * weil eine Seitennavigation keine CSP-Frage ist.
+         *
+         * Auf dem Entwicklungsserver faellt ein fehlender Eintrag nie auf,
+         * Vite setzt keine Richtlinie (dieselbe Falle wie beim Runner-Worker).
          */
-        scriptSrc: ["'self'", 'https://accounts.google.com'],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
-        frameSrc: ['https://accounts.google.com'],
+        scriptSrc: [
+          "'self'",
+          'https://accounts.google.com/gsi/client',
+          'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/',
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com/gsi/style'],
+        frameSrc: ['https://accounts.google.com/gsi/'],
         /**
          * `blob:` ist fuer die 3D-Figur noetig, und der Fehler war teuer zu
          * finden: Die Texturen stecken als JPEG **im** GLB. Der Lader von
@@ -379,7 +410,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
          * Entwicklungsserver faellt das nie auf: Dort liefert Vite aus, und
          * Vite setzt gar keine Inhaltsrichtlinie.
          */
-        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:', 'https://accounts.google.com'],
+        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:', 'https://accounts.google.com/gsi/'],
         /**
          * DER Fehler, der Feldherr auf Produktion strittig gemacht hat —
          * und der in keiner Testfassung auftrat.
@@ -414,6 +445,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // Die Seite laeuft ausschliesslich ueber HTTPS.
     hsts: { maxAge: 31_536_000, includeSubDomains: true },
     crossOriginEmbedderPolicy: false,
+    /**
+     * Die Anbieter-Dialoge sind Popups, und beide melden ihr Ergebnis per
+     * postMessage an das oeffnende Fenster zurueck. Helmets Vorgabe
+     * `same-origin` kappt genau diese Verbindung: Das Popup verliert
+     * `window.opener`, der Dialog bleibt leer oder schliesst sich ohne
+     * Ergebnis. `same-origin-allow-popups` behaelt die Trennung gegen
+     * fremde Fenster, die UNS oeffnen, und laesst nur unsere eigenen Popups
+     * zurueckfunken — so verlangen es Google und Apple.
+     */
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    /**
+     * Helmets Vorgabe `no-referrer` laesst Googles Knopf-iframe nicht
+     * erkennen, von welcher Seite er geladen wird — er meldet dann "origin
+     * not allowed", obwohl der Ursprung eingetragen ist. Google empfiehlt
+     * `strict-origin-when-cross-origin`: Fremde Herkuenfte sehen nur den
+     * Ursprung (https://www.brauweg-spielen.de), nie Pfad oder Suchteil —
+     * ein Einladungscode in der Adresse bleibt also hier.
+     */
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   });
 
   /**
@@ -661,27 +711,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({ ok: true, accountId });
   });
 
-  /**
-   * Ob "Mit Google anmelden" moeglich ist, entscheidet allein der Server —
-   * der Client fragt hier VOR der Anmeldung nach. Bewusst ein eigener kleiner
-   * Endpunkt statt einer Build-Variablen: Die Client-ID haengt an der
-   * Umgebung, nicht am gebauten Buendel.
-   */
-  app.get('/api/auth/google/config', async (_request, reply) => {
-    return reply.send({ clientId: deps.googleClientId ?? null });
-  });
-
-  app.post('/api/auth/google', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
-    if (!deps.googleClientId) throw badRequest('googleLoginDisabled');
-    const { credential } = z.object({ credential: z.string().min(1) }).parse(request.body);
-    const profil = await pruefeGoogleToken(credential, deps.googleClientId);
-    const { token, accountId } = await loginMitGoogle(deps.auth, profil);
-    setSession(reply, token);
-    // Wie beim Passwort-Login: Nur die iOS-Huelle bekommt das Token selbst.
-    if (request.headers.origin === APP_ORIGIN) {
-      return reply.send({ ok: true, accountId, token });
-    }
-    return reply.send({ ok: true, accountId });
+  // Mit Google und mit Apple anmelden, verknuepfen, trennen — siehe dort.
+  anbieterRouten(app, {
+    db: deps.db,
+    auth: deps.auth,
+    googleClientId: deps.googleClientId ?? null,
+    appleClientId: deps.appleClientId ?? null,
+    appleRedirectUri: deps.appleRedirectUri ?? null,
+    appleDomainVerknuepfung: deps.appleDomainVerknuepfung ?? null,
+    schluessel: deps.anbieterSchluessel,
+    nonces: deps.anbieterNonces,
+    appOrigin: APP_ORIGIN,
+    setSession,
+    requireAccount,
+    limitAuth: LIMIT_AUTH,
+    limitSchreiben: LIMIT_SCHREIBEN,
   });
 
   /**

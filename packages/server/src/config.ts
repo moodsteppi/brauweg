@@ -45,6 +45,24 @@ export interface Config {
    */
   readonly googleClientId: string | null;
   /**
+   * "Mit Apple anmelden": die Services ID aus dem Apple-Entwicklerkonto
+   * (APPLE_CLIENT_ID). Ohne sie gibt es den Knopf nicht.
+   */
+  readonly appleClientId: string | null;
+  /**
+   * Bei Apple eingetragene Return-URL (APPLE_REDIRECT_URI). Ohne Angabe
+   * `${PUBLIC_URL}/api/auth/apple/rueckweg` — Apple verlangt sie auch im
+   * Popup-Modus und schickt die Antwort an ihre Herkunft, sie muss also zur
+   * Adresse passen, unter der die Seite laeuft.
+   */
+  readonly appleRedirectUri: string | null;
+  /**
+   * Inhalt von apple-developer-domain-association.txt
+   * (APPLE_DOMAIN_ASSOCIATION) — nur, falls Apple den Domain-Nachweis
+   * verlangt. Ausgeliefert unter /.well-known/.
+   */
+  readonly appleDomainVerknuepfung: string | null;
+  /**
    * Ziel-URL fuer das Feedback-Widget (nur Staging, siehe FeedbackWidget.tsx
    * im Client): `https://server.broweg.de/rueckmeldung`, der Eingang des
    * Broweg-Issueboards. Fehlt sie, meldet der Feedback-Endpunkt einen Fehler
@@ -102,6 +120,11 @@ export function loadConfig(): Config {
         ? (process.env.DIAGNOSE_SCHLUESSEL as string)
         : null,
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? null,
+    appleClientId: process.env.APPLE_CLIENT_ID || null,
+    appleRedirectUri:
+      process.env.APPLE_REDIRECT_URI ||
+      (process.env.APPLE_CLIENT_ID ? `${publicUrl.replace(/\/+$/, '')}/api/auth/apple/rueckweg` : null),
+    appleDomainVerknuepfung: process.env.APPLE_DOMAIN_ASSOCIATION || null,
     feedbackZielUrl: process.env.FEEDBACK_ZIEL_URL ?? null,
     feedbackZielToken: process.env.FEEDBACK_ZIEL_TOKEN ?? null,
   };
