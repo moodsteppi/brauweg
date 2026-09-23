@@ -4,6 +4,7 @@ import { ApiError, api, type Me } from './api';
 import { t } from './i18n';
 import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
+import { inApp } from './laufzeit';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
@@ -69,6 +70,14 @@ const Partykiste = lazy(() =>
   import('./screens/Partykiste').then((m) => ({ default: m.Partykiste })),
 );
 const Profile = lazy(() => import('./screens/Profile').then((m) => ({ default: m.Profile })));
+/**
+ * Push-Mitteilungen (docs/PUSH.md): meldet das Geraetetoken und fragt beim
+ * ersten Tisch einmal nach. Nur in der App — auf der Webseite wird die Datei
+ * nie geladen.
+ */
+const PushBegleiter = lazy(() =>
+  import('./push/PushBegleiter').then((m) => ({ default: m.PushBegleiter })),
+);
 const SkatTable = lazy(() =>
   import('./screens/SkatTable').then((m) => ({ default: m.SkatTable })),
 );
@@ -790,5 +799,16 @@ export function App(): React.JSX.Element {
     );
   };
 
-  return <Suspense fallback={<AppLaedt />}>{bildschirm()}</Suspense>;
+  return (
+    <>
+      <Suspense fallback={<AppLaedt />}>{bildschirm()}</Suspense>
+      {/* Eigene Grenze: Waehrend der Begleiter nachlaedt, soll der Bildschirm
+          nicht auf den Ladevorhang zurueckfallen. */}
+      {inApp && (
+        <Suspense fallback={null}>
+          <PushBegleiter kontoId={me.id} />
+        </Suspense>
+      )}
+    </>
+  );
 }

@@ -1,0 +1,116 @@
+# Die iOS-Huelle als XcodeGen-Spezifikation.
+#
+# Das Xcode-Projekt wird auf dem Mac erzeugt, nicht eingecheckt:
+#
+#   brew install xcodegen                # einmalig
+#   cd apps/ios && xcodegen generate     # erzeugt Brauweg.xcodeproj
+#
+# Warum XcodeGen statt einer eingecheckten .xcodeproj: Die pbxproj-Datei ist
+# ein maschinelles Format voller Kennungen, das bei jedem Merge kollidiert und
+# sich auf Windows (wo der Code geschrieben wird) weder erzeugen noch pruefen
+# laesst. Diese Datei dagegen liest jeder, und packages/server/test/app-ios.test.ts
+# prueft die Pflichtwerte auf jedem Rechner.
+#
+# Aufbau und erster Build: docs/APP-RELEASE.md, Abschnitt „iOS-Huelle".
+
+name: Brauweg
+
+options:
+  developmentLanguage: de
+  createIntermediateGroups: true
+  # Die Szene „Brauweg" mit Test-Ziel entsteht am Ziel selbst (scheme: unten).
+  generateEmptyDirectories: false
+
+# Projekt-Einstellungen. Was hier steht, darf Konfiguration/Lokal.xcconfig
+# ueberschreiben (Team-ID, anderer Server, Push an); was am Ziel steht, nicht.
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    # Die echte Buildnummer setzt werkzeug/app/ios-testflight.sh.
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    # Push-Mitteilungen: nur vorbereitet, Vorgabe AUS (Mitteilungen.swift).
+    # Waehlt die Berechtigungsdatei (CODE_SIGN_ENTITLEMENTS) und landet ueber
+    # die Info.plist in Huelle.pushEingeschaltet.
+    BRAUWEG_PUSH: "NO"
+  configs:
+    # Debug spricht mit Staging, wie die Test-APK unter Android: Wer aus Xcode
+    # startet, soll nicht aus Versehen Produktionsdaten anlegen.
+    Debug:
+      BRAUWEG_API_BASE: https://staging.brauweg-spielen.de
+      BRAUWEG_ANZEIGENAME: Brauweg Test
+    Release:
+      BRAUWEG_API_BASE: https://www.brauweg-spielen.de
+      BRAUWEG_ANZEIGENAME: Brauweg
+
+targets:
+  Brauweg:
+    type: application
+    platform: iOS
+    # iOS 16: Der Client wird mit Vite 7 gebaut, dessen Vorgabeziel
+    # („baseline-widely-available") Safari 16 ist — aelteres WebKit versteht
+    # Teile des ausgelieferten JavaScripts nicht. iOS 16 laeuft ab dem
+    # iPhone 8, deckt also praktisch alle Geraete im Umlauf ab. Alles, was die
+    # Huelle braucht (WKURLSchemeHandler, UILaunchScreen, Szenen,
+    # SFSafariViewController), gibt es laenger.
+    deploymentTarget: "16.0"
+    sources:
+      - path: Brauweg
+      - path: Ressourcen
+        # Assets.xcassets (App-Symbol: PLATZHALTER aus dem Web-Symbol
+        # packages/client/public/icon-1024.png, mit eingezeichneter Rundung;
+        # eine Bestellung nach CLAUDE.md Regel 5 steht aus) und das Privacy
+        # Manifest. Ausdruecklich Ressourcen: Eine unbekannte Endung wie
+        # .xcprivacy darf nicht davon abhaengen, was XcodeGen raet.
+        buildPhase: resources
+      - path: Konfiguration
+        # Info.plist, Berechtigungen, xcconfig — sichtbar im Projekt, aber
+        # in keiner Build-Phase (sie wirken ueber die Einstellungen unten).
+        buildPhase: none
+    configFiles:
+      Debug: Konfiguration/Lokal-einbinden.xcconfig
+      Release: Konfiguration/Lokal-einbinden.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.brauweg.app
+        PRODUCT_NAME: Brauweg
+        INFOPLIST_FILE: Konfiguration/Info.plist
+        GENERATE_INFOPLIST_FILE: "NO"
+        # Nur iPhone. Auf dem iPad laeuft die App im Kompatibilitaetsmodus.
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: "NO"
+        # Team-ID steht NICHT hier (Toms Konto): Lokal.xcconfig bzw.
+        # DEVELOPMENT_TEAM=… vom Bauskript.
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Konfiguration/Push-$(BRAUWEG_PUSH).entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Die Build-Phase unten liest ausserhalb des Projekts
+        # (packages/client/dist) und schreibt ins Paket; in der Sandbox fuer
+        # Skripte (Vorgabe seit Xcode 15) scheiterte sie daran.
+        ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+    postBuildScripts:
+      - name: Client ins Paket
+        script: /bin/sh "$SRCROOT/werkzeug/web-einbauen.sh"
+        # Jedes Mal: Ob sich in packages/client/dist etwas geaendert hat,
+        # weiss Xcode nicht.
+        basedOnDependencyAnalysis: false
+        showEnvVars: false
+    scheme:
+      testTargets:
+        - BrauwegTests
+      gatherCoverageData: false
+
+  BrauwegTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: BrauwegTests
+    dependencies:
+      - target: Brauweg
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.brauweg.app.tests
+        GENERATE_INFOPLIST_FILE: "YES"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic

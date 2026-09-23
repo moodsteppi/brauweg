@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="index, follow" />
+    <title>Konto löschen — Brauweg</title>
+    <link rel="icon" href="/icon-192.png" />
+    <!--
+      Die Seite, die Google Play als „Web-Link zur Kontolöschung" verlangt:
+      erreichbar ohne App, nennt App und Entwickler wie im Store-Eintrag, sagt,
+      wie man löscht und was gelöscht wird und was bleibt. Ausgeliefert auch
+      unter /konto-loeschen (packages/server/src/http/app.ts). Inhalt geprüft
+      am Code: DELETE /api/me und anonymizeAccount (auth/service.ts),
+      releaseClubMemberships (clubs/service.ts). Stand 23.09.2026.
+      Die rot markierten Lücken sind dieselben wie in der Datenschutzerklärung.
+    -->
+    <style>
+      :root {
+        --bg: #12181c;
+        --panel: #1b2429;
+        --line: #2c383f;
+        --text: #e8eef1;
+        --muted: #8fa3ad;
+        --accent: #4a9c78;
+        --danger: #c2564c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 2rem 1rem 4rem;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      main { max-width: 42rem; margin: 0 auto; }
+      h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+      h2 { font-size: 1.05rem; margin: 2rem 0 0.5rem; }
+      a { color: var(--accent); }
+      .zurueck { display: inline-block; margin-bottom: 1.5rem; color: var(--muted); }
+      ol, ul { padding-left: 1.2rem; }
+      li { margin: 0.3rem 0; }
+      .knopf {
+        display: inline-block;
+        margin: 0.5rem 0 0;
+        padding: 0.7rem 1.2rem;
+        border-radius: 0.6rem;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .kasten {
+        margin: 1.2rem 0;
+        padding: 0.9rem 1rem;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 0.6rem;
+      }
+      .luecke {
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        border: 1px dashed var(--danger);
+        border-radius: 0.3rem;
+        color: var(--danger);
+        font-size: 0.85rem;
+        letter-spacing: 0.03em;
+      }
+      footer { margin-top: 3rem; color: var(--muted); font-size: 0.85rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="zurueck" href="/">← Zurück zu Brauweg</a>
+      <h1>Konto löschen</h1>
+      <p style="color: var(--muted); margin-top: 0">
+        Für die App <strong>Brauweg</strong> (App Store, Google Play) und die Webseite
+        www.brauweg-spielen.de — beides ist dasselbe Konto. Anbieter:
+        <span class="luecke">NAME WIE IM STORE-EINTRAG</span>
+      </p>
+
+      <p>
+        Du kannst dein Konto jederzeit selbst löschen. Die Löschung wirkt sofort und lässt
+        sich nicht rückgängig machen.
+      </p>
+
+      <h2>In der App</h2>
+      <ol>
+        <li>Unten auf <strong>Profil</strong> tippen.</li>
+        <li>Ganz nach unten scrollen und <strong>Konto löschen</strong> wählen.</li>
+        <li>
+          Bestätigen: mit deinem Passwort. Hast du kein Passwort, weil du dich mit Google
+          oder Apple angemeldet hast, schicken wir dir einen Code per Mail. Als Gast tippst
+          du das Wort <strong>LÖSCHEN</strong>.
+        </li>
+      </ol>
+
+      <h2>Ohne App, im Browser</h2>
+      <ol>
+        <li>www.brauweg-spielen.de öffnen und anmelden — mit denselben Zugangsdaten wie in der App.</li>
+        <li>Unten auf <strong>Profil</strong>, ganz nach unten, <strong>Konto löschen</strong>.</li>
+      </ol>
+      <p><a class="knopf" href="/">Zur Anmeldung</a></p>
+      <p style="color: var(--muted)">
+        Passwort vergessen? Auf der Anmeldeseite unter „Passwort vergessen?" bekommst du einen
+        Link zum Zurücksetzen.
+      </p>
+
+      <div class="kasten">
+        <strong>Kein Zugang mehr zu deinem Konto?</strong> Schreib an
+        <span class="luecke">SUPPORT-ADRESSE</span> — von der Mailadresse, mit der du dich
+        angemeldet hast, oder mit deinem Anzeigenamen. Wir löschen das Konto dann für dich,
+        spätestens innerhalb eines Monats (Art. 12 Abs. 3 DSGVO). Ein Gastkonto ohne Mail
+        lässt sich nur auf dem Gerät löschen, auf dem es angelegt wurde — wir können nicht
+        nachweisen, dass es deins ist.
+      </div>
+
+      <h2>Was gelöscht wird</h2>
+      <ul>
+        <li>E-Mail-Adresse und Passwort</li>
+        <li>Anzeigename (ersetzt durch „geloescht-" und eine Zufallskennung)</li>
+        <li>Geburtsdatum</li>
+        <li>Profilbild und die Bemalung deiner Spielfigur</li>
+        <li>Verknüpfte Anmeldungen über Google und Apple</li>
+        <li>Alle Anmeldesitzungen — du bist auf allen Geräten abgemeldet</li>
+        <li>Clan-Mitgliedschaft und offene Beitrittsanfragen; führst du einen Clan, rückt das älteste Mitglied nach</li>
+      </ul>
+
+      <h2>Was ohne Personenbezug bleibt</h2>
+      <p>
+        Gespielte Partien, Ergebnisse, Trophäen und Statistiken bleiben am anonymisierten
+        Konto stehen. Sie gehören auch zu den Partien deiner Mitspieler — würden sie
+        verschwinden, fehlten deren Spielverläufe. Nach der Löschung führt nichts davon
+        mehr zu dir. Ebenso stehen bleiben Freundschaften, Blockierungen und Meldungen, die
+        an dem Konto hängen, und Clan-Nachrichten, die du auf der Webseite geschrieben hast
+        — dann mit dem Namen „geloescht-…". Spielwährung und freigeschaltete Gegenstände
+        verfallen.
+      </p>
+      <p>
+        Server-Protokolle (IP-Adresse, Zeitpunkt, aufgerufene Adresse) werden unabhängig
+        davon nach <span class="luecke">ANZAHL TAGE</span> Tagen gelöscht.
+      </p>
+
+      <p>
+        Mehr dazu in der <a href="/rechtliches/datenschutz.html">Datenschutzerklärung</a>.
+      </p>
+
+      <footer>
+        <a href="/rechtliches/impressum.html">Impressum</a> ·
+        <a href="/rechtliches/datenschutz.html">Datenschutz</a> ·
+        <a href="/">Brauweg</a>
+      </footer>
+    </main>
+  </body>
+</html>
