@@ -111,8 +111,11 @@ export const GOLF_MODULE_VERSION = 5;
  * (Aktion `lagerwechsel`), dazu `modus`, `paket`, `eskalation`, `lager`,
  * `lagerTabelle`, `aufstellung` in der Sicht. Ein Client der Fassung 2
  * zeigte im Team-Abend die erste Runde, die noch nichts annimmt.
+ *
+ * 4 seit dem 23.09.2026: Bombe, 10 Sekunden und Koenigsbecher mit ihren
+ * Aktionen. Ein Client der Fassung 3 kennt die Runden nicht.
  */
-export const PARTYKISTE_MODULE_VERSION = 3;
+export const PARTYKISTE_MODULE_VERSION = 4;
 
 /**
  * 1 seit dem 22. September 2026 — die erste Fassung. BroCooked ist wie Golf

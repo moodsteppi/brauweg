@@ -1,6 +1,6 @@
 # Partykiste
 
-Ein Turnier aus zwölf Partyminispielen für **4 bis 12 Leute**, die im selben
+Ein Turnier aus fünfzehn Partyminispielen für **4 bis 12 Leute**, die im selben
 Raum sitzen. Geredet wird am Tisch, der Bildschirm nimmt nur die Entscheidung
 entgegen — deshalb braucht die Kiste, anders als Werwolf, keinen freien Text
 zwischen den Sitzen und ist heute schon spielbar.
@@ -22,7 +22,7 @@ Die Minispiele kommen reihum in der Reihenfolge, die im Regelsatz steht
 (`minispiele`). Bewusst berechnet und nicht gewürfelt — „dreimal Quiz
 hintereinander“ ist auf einer Party kein Zufall, sondern ein Fehler.
 
-## Die zwölf Minispiele
+## Die fünfzehn Minispiele
 
 | Minispiel | Ablauf | Punkte | Schlücke |
 | --- | --- | --- | --- |
@@ -38,6 +38,9 @@ hintereinander“ ist auf einer Party kein Zufall, sondern ein Fehler.
 | **Kategorien-Battle** | Reihum im Kreis laut etwas aus der Kategorie nennen, bis einer stockt. Stocken meldet man selbst; Doppeln oder Zögern benennt die Mehrheit per Einspruch. | nicht verloren +1 (leergespielt: alle) | Verlierer 2 |
 | **Mehrheitsraten** | Eine Frage, A oder B: jeder antwortet für sich **und** tippt, was die Mehrheit antwortet. | Mehrheit getroffen +2 | daneben 1; Gleichstand: alle 1 |
 | **Regel-Karte** | Eine Regel („keine Vornamen") gilt bis zum Ende der übernächsten Runde — während der anderen Minispiele. Verstoß per Selbstmeldung oder Mehrheit. | ohne Verstoß durch die Geltung +1 | je Verstoß 1 |
+| **Bombe** | Reihum laut etwas aus einer Kategorie nennen und weitergeben. Sie geht nach einer verdeckten Zeit (8–25 s, aus der Saat) hoch — die Uhr läuft auf dem Server. | nicht gehalten +1 | wer sie hält 2 |
+| **10 Sekunden** | Einer nennt drei Dinge („Nenne drei: Automarken") in zehn Sekunden auf der Uhr des Servers, danach urteilen die anderen Menschen. Gleichstand geht an den Sprecher. | geschafft +2 | nicht geschafft 2 |
+| **Königsbecher** | Reihum zwei Karten je Kopf aus dem 52er-Blatt, jede Karte ist eine Regel (2 du wählst, 3 du selbst, 7 Hand hoch, Bube neue Regel-Karte, König füllt den Becher …). | ohne Schluck +1, Neun +1 | je Treffer 1, letzter König den Becher |
 
 ## Tischoptionen
 
@@ -47,7 +50,7 @@ Der Regelsatz (`PartykisteRegeln` in `src/regeln.ts`), geprüft von
 
 | Feld | Werte | Vorgabe | Wirkung |
 | --- | --- | --- | --- |
-| `minispiele` | Liste aus `MINISPIELE`, mindestens eins | alle zwölf | Reihenfolge im Turnier |
+| `minispiele` | Liste aus `MINISPIELE`, mindestens eins | alle fünfzehn | Reihenfolge im Turnier |
 | `trinkmodus` | an/aus | an | nur die Anzeige der Gläser |
 | `schluckFaktor` | 1–3 | 1 | Schlücke mal Faktor |
 | `inhaltsHaerte` | 1 harmlos, 2 pikant, 3 derb | 1 | Obergrenze der Textschärfe |
@@ -314,6 +317,54 @@ Minispiele"; Regeln in `src/ohne-uhr.ts`, Ansichten in
 - Seit diesen dreien ist `protocolVersion` 2 (Client
   `PARTYKISTE_MODULE_VERSION`): Ein alter Client kennt die neuen Runden nicht.
 
+**Die drei mit Uhr** (seit dem 23.09.2026, Robins Entscheidung vom
+22.09.2026; Regeln in `src/zeitdruck.ts`, Ansichten in
+`minispiele/partykiste/RundenZeitdruck.tsx`, Inhalte in
+`inhalte/zehnsekunden.ts` und `koenigsbecher.ts`, die Bombe zieht aus den
+Kategorien):
+
+- **Die Uhr lebt auf dem Server.** Das Modul bleibt uhrlos wie jedes Modul:
+  Es nennt nur die Dauer (`phaseMs`), die Plattform misst sie und ruft nach
+  Ablauf `advancePhase` — der Tisch schaltet weiter, ohne dass ein Gerät
+  etwas schickt (`packages/server/test/partykiste-uhr.test.ts`). Eine Uhr im
+  Client wäre die zweite Fassung derselben Regel (Runden.tsx): Zwei Handys
+  zählen nie gleich. Die Frist gilt nur in den drei Phasen, die ohne Uhr kein
+  Spiel wären — die tickende Bombe, das Sprechen bei „10 Sekunden", das
+  „Hand hoch" nach einer Sieben (5 s). Sie ist immer kürzer als die Zugzeit
+  und bei `PHASE_HOECHST_MS` (30 s) gedeckelt, nimmt also niemandem Zugzeit
+  weg; die Laufzeit stellt für beide einen Timer, den früheren. `phaseKey`
+  trennt zwei Siebenen hintereinander, die Bombe behält ihres über alle
+  Weitergaben (die Frist steht ab dem ersten Ticken fest).
+- **Die Restzeit der Bombe geht nie über die Leitung.** Die Zündzeit steht
+  in keiner Sicht, auch nicht im Ergebnis, und die Plattform schickt die
+  Frist als `phaseDeadline: null` (`phaseHidden`, neu in game-api). Der
+  Bildschirm zeigt nur, dass sie tickt — gleichmäßig, denn schneller werdendes
+  Ticken wäre eine Auskunft, die er nicht hat.
+- **Reißleine ohne Uhr:** Nach `BOMBE_WEITERGABEN_HOECHST` (200) Weitergaben
+  geht die Bombe auch ohne Uhr hoch. Am echten Tisch kommt die Uhr immer
+  zuerst (Bots geben im 220-ms-Takt weiter, in 25 s gut 110-mal); ohne die
+  Reißleine hinge jede Bot-Partie, die niemand mit einer Uhr treibt — die
+  Invarianten, der Vertrag, der Schaukasten.
+- **„10 Sekunden" spricht ein Mensch** (reihum über die Runden, Versatz aus
+  der Saat), die Aufgabe kommt erst mit seinem „Los" — vorher sieht sie
+  niemand, sonst hätte er Bedenkzeit, die keine Uhr misst. Es urteilen die
+  anwesenden Menschen außer ihm (Bots hören nicht), gibt es keinen, er selbst.
+  Nur an einem Tisch ganz ohne Menschen spricht ein Bot. Die Urteile sind bis
+  zur Abrechnung verdeckt.
+- **Königsbecher:** Die Kartentexte sagen „kassiert", nie „trinkt" — ob das
+  ein Schluck oder ein Strafpunkt ist, sagt die Wertung. „Du wählst" nimmt die
+  vorhandene Aktion `stimme`. Bei „Hand hoch" sind **Bots zuerst** am Zug
+  (sonst warteten sie auf den Menschen, der dann nie der Letzte wäre); tippen
+  alle, kassiert der Letzte sofort, sonst nach 5 s jeder, der nicht getippt
+  hat. Der **Bube** bringt eine Regel-Karte, die nach der Runde gilt und die
+  alte ablöst wie eine Regelkarten-Runde (`regelAbrechnen(…, abgeloest)`);
+  die vier möglichen Karten zieht `baueRunde` vorab aus einem eigenen Stapel.
+  Wer den letzten König der Runde zieht, bekommt den Becher (je König 1).
+- Bombe und Königsbecher laufen wie das Kategorien-Battle **im Kreis in
+  Sitzreihenfolge**, auch im Team-Abend. Die Kachel im Menü nennt sie
+  trotzdem „reihum" — dafür gibt es `ablaufVon` neben `istReihum`.
+- Seit diesen dreien ist `protocolVersion` 4 (3 kam mit den Spielmodi).
+
 **Imposter seit dem 19.09.2026:** Der Imposter sieht **„IMPOSTER“ und einen
 Hinweis** (grobe Kategorie, `inhalte/imposter.ts`), kein Nachbarwort mehr. Die
 Runde bekommt eine **feste Redereihenfolge** (`reihenfolge`, je Runde
@@ -414,7 +465,10 @@ Härte; die neuen Einträge tragen alle eine.
 
 1. `MinispielId` in `src/regeln.ts` erweitern, Kennung in `MINISPIELE`.
 2. Rundentyp in `src/partie.ts` ergänzen (`Runde`-Union, `baueRunde`,
-   `werteAus`) und, falls es reihum läuft, in `istReihum`.
+   `werteAus`) und, falls es reihum läuft, in `istReihum` — läuft es im
+   Kreis (Kategorien, Bombe, Königsbecher), nur in `ablaufVon`.
+   Braucht es eine Uhr: `phaseMs`/`advancePhase` im Adapter, nie im Client
+   (siehe „Die drei mit Uhr").
 3. Sicht in `src/sicht.ts` — und dabei zuerst entscheiden, was **nicht**
    mitfährt.
 4. Bot in `src/bot.ts`, Ansicht in
@@ -422,6 +476,11 @@ Härte; die neuen Einträge tragen alle eine.
    Sicht in dessen `sicht.ts`.
 5. Punkte und Schlücke in `PUNKTE`/`SCHLUECKE` eintragen — sie stehen
    absichtlich an einer Stelle, damit man das Turnier dort austariert.
+6. In `src/modi.ts` den Stapel-Zweck in `zweckArt` (und die Plätze je Runde
+   in `platzeJeRunde`) — sonst wiederholt die Eskalation Inhalte über die
+   Stufen — und das Minispiel in die passenden `THEMEN_MINISPIELE`, mitten in
+   die Liste. Im Client `MINISPIEL_NAME`/`MINISPIEL_ANSAGE` in `sicht.ts`,
+   `MINISPIEL_ABLAUF`/`MINISPIEL_ZEICHEN` in `wahl.ts`.
 
 Der Vertrag (`packages/client/src/vertrag/partykiste.test.ts`) bricht den
 Client-Bau, wenn Sicht und Beschreibung auseinanderlaufen. Der Schaukasten
