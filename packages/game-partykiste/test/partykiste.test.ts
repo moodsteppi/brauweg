@@ -16,6 +16,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { ALTE_KENNUNGEN } from './altbestand/index.js';
+
 import {
   DEFAULT_REGELN,
   MINISPIELE,
@@ -547,9 +549,13 @@ test('jeder Katalog traegt die strengste Einstellung — genug harmlose Eintraeg
   }
 });
 
-test('die Kiffer-Sprueche und nur sie sind pikant', () => {
+test('im Altbestand sind die Kiffer-Sprueche und nur sie pikant', () => {
+  /* Nur der Altbestand vom 22.09.2026: Neue Eintraege tragen ihre Haerte
+     selbst (inhalte-json.test.ts verlangt sie), die alten ausser den
+     Kiffer-Spruechen gar keine. */
   for (const katalog of Object.values(KATALOGE)) {
     for (const i of katalog) {
+      if (!ALTE_KENNUNGEN.has(i.id)) continue;
       assert.equal(i.haerte ?? 1, KIFFEN.has(i.id) ? 2 : 1, `${i.id} hat die falsche Haerte`);
     }
   }
@@ -558,11 +564,16 @@ test('die Kiffer-Sprueche und nur sie sind pikant', () => {
 test('der Filter haelt die Haerte als Obergrenze', () => {
   const harmlos = waehlbareInhalte(NIEMALS_SPRUECHE, { inhaltsHaerte: 1, paket: null }, 6);
   assert.equal(harmlos.inhalte.some((i) => KIFFEN.has(i.id)), false, 'harmlos bringt Kiffer-Sprueche');
-  assert.equal(harmlos.inhalte.length, NIEMALS_SPRUECHE.length - 10);
+  /* Seit dem Vorrat vom 22.09.2026 tragen auch neue Sprueche Haerte 2 und 3;
+     gezaehlt wird darum am Katalog, nicht an den zehn Kiffer-Spruechen. */
+  const bis = (h: number) => NIEMALS_SPRUECHE.filter((i) => (i.haerte ?? 1) <= h).length;
+  assert.equal(harmlos.inhalte.length, bis(1));
+  assert.ok(harmlos.inhalte.every((i) => (i.haerte ?? 1) === 1));
   assert.equal(harmlos.rueckfall, null);
 
   const pikant = waehlbareInhalte(NIEMALS_SPRUECHE, { inhaltsHaerte: 2, paket: null }, 6);
-  assert.equal(pikant.inhalte.length, NIEMALS_SPRUECHE.length, 'pikant schliesst harmlos ein');
+  assert.equal(pikant.inhalte.length, bis(2), 'pikant schliesst harmlos ein');
+  assert.ok(pikant.inhalte.every((i) => (i.haerte ?? 1) <= 2), 'pikant bringt Derbes');
   const derb = waehlbareInhalte(NIEMALS_SPRUECHE, { inhaltsHaerte: 3, paket: null }, 6);
   assert.equal(derb.inhalte.length, NIEMALS_SPRUECHE.length);
 });
@@ -640,11 +651,16 @@ test('der Filter wirft nie, auch nicht bei Unsinn im Regelsatz', () => {
 });
 
 test('mit Paket haelt die Runde fest, dass die Auswahl nachgeben musste', () => {
-  /* Am 22.09.2026 traegt noch kein Eintrag ein Paket — ein Paket-Tisch spielt
-     also Allgemeingut, und die Runde sagt das, statt es zu verschweigen. */
+  /* Ein harmloser JGA-Tisch findet unter den Quizfragen weniger als
+     MINDESTMENGE eigene (die JGA-Fragen sind meist pikant) — er spielt also
+     auch Allgemeingut, und die Runde sagt das, statt es zu verschweigen. Bis
+     zum Vorrat vom 22.09.2026 trug gar kein Eintrag ein Paket; gezaehlt wird
+     darum am Katalog. */
   const regeln: PartykisteRegeln = { ...DEFAULT_REGELN, minispiele: ['quiz'], paket: 'jga' };
   const runde = baueRunde(regeln, 'saat', 6, 0, []);
-  assert.deepEqual(runde.inhaltsRueckfall, { gewollt: 'paket', genutzt: 'paketUndAllgemein', passend: 0 });
+  const passend = QUIZ_FRAGEN.filter((f) => (f.haerte ?? 1) === 1 && f.paket?.includes('jga')).length;
+  assert.ok(passend < MINDESTMENGE, 'die Probe braucht ein Paket mit zu wenig harmlosen Quizfragen');
+  assert.deepEqual(runde.inhaltsRueckfall, { gewollt: 'paket', genutzt: 'paketUndAllgemein', passend });
   assert.equal(baueRunde(DEFAULT_REGELN, 'saat', 6, 0, []).inhaltsRueckfall, null);
 });
 

@@ -83,7 +83,7 @@ test('die Kiffer-Sprueche sind vollstaendig da und sagen nichts vom Trinken', ()
   assert.deepEqual(treffer, []);
 });
 
-test('die Kennungen der Aufgaben sind lueckenlos a001–a120 und eindeutig', () => {
+test('die Kennungen der Aufgaben sind lueckenlos ab a001 und eindeutig, a001–a120 wie am 22.09.2026', () => {
   /*
    * Die sieben Texte vom 22.09.2026 wurden UMGESCHRIEBEN, nicht ersetzt: Eine
    * neue Kennung fuer einen alten Platz zeigte in abgelegten Rundenprotokollen
@@ -93,8 +93,9 @@ test('die Kennungen der Aufgaben sind lueckenlos a001–a120 und eindeutig', () 
   const ids = AUFGABEN.map((a) => a.id);
   assert.deepEqual(
     ids,
-    Array.from({ length: 120 }, (_, i) => `a${String(i + 1).padStart(3, '0')}`),
+    Array.from({ length: AUFGABEN.length }, (_, i) => `a${String(i + 1).padStart(3, '0')}`),
   );
-  assert.equal(AUFGABEN.filter((a) => a.art === 'wahrheit').length, 60);
-  assert.equal(AUFGABEN.filter((a) => a.art === 'pflicht').length, 60);
+  const alt = AUFGABEN.slice(0, 120);
+  assert.equal(alt.filter((a) => a.art === 'wahrheit').length, 60);
+  assert.equal(alt.filter((a) => a.art === 'pflicht').length, 60);
 });

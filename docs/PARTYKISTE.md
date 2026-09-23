@@ -103,9 +103,14 @@ ernst meint, braucht ein Feld am Konto — das ist eine Plattformfrage, keine
 der Kiste.
 
 **Themenpaket** (`paket`, Entscheidung P3): eine Zielgruppe, kein Motto.
-Pakete: `wg-abend`, `jga`, `weihnachten`, `studenten`, `arbeit`. Am
-22.09.2026 trägt noch kein Inhalt ein Paket — ein Paket-Tisch spielt also
-Allgemeingut, und jede Runde hält das fest (siehe unten).
+Pakete: `wg-abend`, `jga`, `weihnachten`, `studenten`, `arbeit`. Seit dem
+Vorrat vom 22.09.2026 trägt jeder neue Eintrag mindestens ein Paket, der
+Altbestand keins. **Folge:** Findet ein Paket-Tisch mindestens
+`MINDESTMENGE` eigene Einträge, spielt er NUR diese — der Altbestand kommt
+dort nicht mehr vor. Darunter mischt der Filter Allgemeingut dazu, und die
+Runde hält das fest (siehe unten). Dünn ist heute „jga" bei „harmlos"
+(5 bis 8 je Katalog, die JGA-Einträge sind meist pikant) und „weihnachten"
+bei Wahrheit (9): Solche Tische spielen mit Rückfall.
 
 **Auswahl im Menü** (seit dem 22.09.2026, `minispiele/partykiste/Auswahl.tsx`,
 Logik in `wahl.ts`): Minispiele (mehrere, mindestens drei, in eigener
@@ -259,16 +264,56 @@ der Tipp als Enthaltung.
 
 ## Neue Inhalte ergänzen
 
-Die Kataloge unter `src/inhalte/` sind reine Daten: Fragen, Wortpaare, Namen,
-Sprüche. Neue Einträge kommen **hinten** dazu und bekommen die nächste freie
-Kennung; bestehende Kennungen ändern sich nie — sie stehen in abgelegten
-Rundenprotokollen.
+Die Kataloge sind reine Daten: Fragen, Wortpaare, Namen, Sprüche. Seit dem
+22.09.2026 (Entscheidung P4, Datenbank später) steht jeder als **JSON-Datei**
+unter `src/inhalte/daten/<katalog>.json`; die gleichnamige `.ts` daneben lädt
+und prüft sie nur. Neue Einträge kommen **hinten** dazu und bekommen die
+nächste freie Kennung; bestehende Kennungen ändern sich nie — sie stehen in
+abgelegten Rundenprotokollen, und die Ziehung hängt an der Reihenfolge.
 
-Stand 19.09.2026: 140 Quizfragen, 120 Imposter-Wortpaare, 140 Identitäten,
-110 Sprüche für „Ich hab noch nie”, 108 für „Wer würde eher”, 80 Schätzfragen,
-100 Entweder-oder-Paare, 120 Aufgaben für Wahrheit oder Pflicht (60/60).
-Dazu seit dem 22.09.2026: 82 Kategorien (k001–k082), 72 Mehrheitsfragen
-(m001–m072), 49 Regel-Karten (r001–r049) — jeder Eintrag **mit** `haerte`
+Jede Datei hat einen Kopf (`katalog`, `grenze`, `pflege`, `inhalt`) und
+darunter `eintraege`, ein Eintrag je Zeile. **`grenze` ist Pflicht** und sagt,
+was kein Eintrag darf: Stufe 3 („derb“) heißt pikant-erwachsen — nie
+herabwürdigend, nie über reale benannte Personen, nie über Minderjährige, nie
+Gewalt; kein Text fordert zum Trinken auf.
+
+**Das Schema** (`src/inhalte/schema.ts`, eigener Prüfer, kein zod — das Paket
+hat keine Laufzeitabhängigkeit außer game-api) läuft an drei Stellen: beim
+Import jedes Katalogs (wirft), im Build (`werkzeug/inhalte-pruefen.mjs` nach
+`tsc`, nennt alle Fehler auf einmal und bricht ab) und im Test
+(`test/inhalte-json.test.ts`). Es verlangt über die Form hinaus:
+
+- Kennungen **lückenlos in Katalogreihenfolge** (`q001`, `q002`, …) — wer
+  umsortiert, löscht oder eine Nummer auslässt, fällt im Build auf.
+- **Keine Dubletten**, normalisiert (Groß/klein, Satzzeichen, Leerraum egal;
+  bei Entweder-oder auch das vertauschte Paar, bei Wahrheit/Pflicht über
+  beide Arten).
+- **Keine unbekannten Felder** — so sieht ein Tippfehler im Feldnamen aus.
+- Beim Imposter darf der Hinweis das Wort nicht wörtlich enthalten.
+
+**Der Altbestand** — die 918 Einträge vom 22.09.2026 — liegt als die
+ursprünglichen TS-Dateien unter `test/altbestand/`, und ein Test vergleicht
+jeden davon Feld für Feld mit seiner Stelle im JSON. Wer einen alten Eintrag
+bewusst korrigiert, korrigiert ihn dort mit. Neue Einträge (alles jenseits
+des Altbestands) brauchen `haerte` und mindestens ein `paket`, Quiz und
+Schätzen auch `stufe`; ein Test hält die Mischung grob bei 60 % harmlos,
+30 % pikant, 10 % derb.
+
+Stand 22.09.2026 — Einträge je Katalog, in Klammern der Altbestand:
+
+- Wahrheit oder Pflicht: 400 (120, davon 60/60)
+- Wer würde eher: 300 (108)
+- Ich hab noch nie: 300 (110)
+- Entweder – oder: 250 (100)
+- Allgemeinwissen: 300 (140)
+- Schätzen: 200 (80)
+- Imposter: 250 (120)
+- Wer bin ich: 250 (140)
+
+Dazu seit dem 22.09.2026 die drei Kataloge ohne Uhr (#213, noch als
+TS-Quelltext unter `src/inhalte/`, nicht Teil der JSON-Umstellung):
+82 Kategorien (k001–k082), 72 Mehrheitsfragen (m001–m072), 49 Regel-Karten
+(r001–r049) — jeder Eintrag **mit** `haerte`
 und mindestens einem `paket`, alle drei Stufen belegt, je Paket mindestens
 zehn harmlose (`test/ohne-uhr.test.ts`). Regel-Karten sind Befehle an alle
 und tragen deshalb wie Wahrheit oder Pflicht gar kein Trinkwort.
@@ -283,8 +328,8 @@ ein Eintrag ohne Feld gilt als harmlos, allgemein, ab vier Sitzen:
 | `minSitze` | Zahl | immer |
 | `stufe` | 1–3, nur Quiz und Schätzen | ohne Angabe (filtert noch nichts) |
 
-```ts
-{ id: 'n111', haerte: 2, paket: ['wg-abend', 'studenten'], text: 'Ich hab noch nie …' },
+```json
+{ "id": "n111", "haerte": 2, "paket": ["wg-abend", "studenten"], "text": "Ich hab noch nie …" }
 ```
 
 - **Im Zweifel die höhere Härte.** Ein harmloser Tisch darf nie einen
@@ -301,7 +346,8 @@ ein Eintrag ohne Feld gilt als harmlos, allgemein, ab vier Sitzen:
 
 Die Sätze zum Kiffen (n101–n110, w101–w108, zusammen 18) sind seit dem
 22.09.2026 **pikant** (`haerte: 2`) und damit an einem Tisch mit der Vorgabe
-„harmlos“ nicht mehr dabei. Sonst trägt kein Eintrag eine Härte.
+„harmlos“ nicht mehr dabei. Sonst trägt im Altbestand kein Eintrag eine
+Härte; die neuen Einträge tragen alle eine.
 
 ## Ein weiteres Minispiel einbauen
 
