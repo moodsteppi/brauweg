@@ -67,11 +67,15 @@ import { aufgabeAbholen, aufgabenFuer, offeneBelohnungen } from '../quests.js';
 import { runnerCashout, runnerLauf, runnerRangliste, runnerTagesstand } from '../runner.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import {
+  APP_INHALT_WIE_WEB,
+  type AppInhalt,
+  appRegeln,
   isPlayable,
   registry,
   requireModule,
   requireSpielbar,
   spieleFuer,
+  taugtFuerApp,
   type Plattform,
 } from '../games/registry.js';
 import {
@@ -235,6 +239,12 @@ export interface AppDeps {
    */
   readonly stage?: 'production' | 'staging' | 'development';
   /**
+   * Rueckweg fuer die App (`AppInhalt` in games/registry.ts): Partykiste
+   * ohne Trinkmodus bzw. mit gedeckelter Textschaerfe, nur fuer Anfragen aus
+   * der App. Fehlt es, sieht die App dasselbe wie die Webseite.
+   */
+  readonly appInhalt?: AppInhalt;
+  /**
    * Schluessel fuer den Abruf der Feldherr-Mitschnitte, aus
    * `DIAGNOSE_SCHLUESSEL`. Fehlt er, geht der Abruf ausschliesslich ueber
    * ein angemeldetes Testkonto — was der uebliche Weg ist. Der Schluessel
@@ -369,6 +379,7 @@ const BODY_LIMIT = 128 * 1024;
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({ logger: false, bodyLimit: BODY_LIMIT });
+  const appInhalt = deps.appInhalt ?? APP_INHALT_WIE_WEB;
   await app.register(cookie);
 
   // Sicherheits-Kopfzeilen. Ohne frame-ancestors laesst sich die Seite in
@@ -1838,6 +1849,24 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const { table, seats } = await tableWithSeats(deps.db, tableId);
     if (seats.some((seat) => seat.accountId === accountId)) return;
     requireSpielbar(table.gameId, plattformVon(request));
+    await pruefeAppTisch(request, table.gameId, tableId);
+  };
+
+  /**
+   * Ist der Rueckweg fuer die App eingeschaltet (`appInhalt`), kommt aus der
+   * App niemand an einen Tisch, dessen Regeln ueber die Grenze gehen — sonst
+   * saesse er an einem auf der Webseite angelegten Tisch doch vor den
+   * Schlucken.
+   */
+  const pruefeAppTisch = async (
+    request: FastifyRequest,
+    gameId: GameId,
+    tableId: string,
+  ): Promise<void> => {
+    if (plattformVon(request) !== 'app' || appInhalt === APP_INHALT_WIE_WEB) return;
+    if (!taugtFuerApp(gameId, await tableRules(deps.db, tableId), appInhalt)) {
+      throw conflict('tischNichtInDerApp');
+    }
   };
 
   app.get('/api/tables', async (request, reply) => {
@@ -1866,6 +1895,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const accountId = await requireAccount(request);
     const body = createTableSchema.parse(request.body);
     requireSpielbar(body.gameId, plattformVon(request));
+    if (plattformVon(request) === 'app') {
+      body.config = appRegeln(body.gameId, body.config, appInhalt);
+    }
     // Clantisch ohne clubId: den ersten (und in der Beta einzigen) Clan nehmen.
     let clubId = body.clubId;
     if (body.visibility === 'club_only' && !clubId) {
@@ -1896,6 +1928,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // Spiel hier inzwischen nicht mehr freigegeben ist. Neu dazu nicht.
     if (!seats.some((seat) => seat.accountId === accountId)) {
       requireSpielbar(table.gameId, plattformVon(request));
+      await pruefeAppTisch(request, table.gameId, table.id);
     }
     const gastgeber = seats.find((seat) => seat.accountId)?.accountId ?? null;
     const [konto] = gastgeber

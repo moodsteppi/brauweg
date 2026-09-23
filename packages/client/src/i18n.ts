@@ -159,6 +159,7 @@ const de: Record<string, string> = {
   'error.tooManyMessages': 'Zu viele Anfragen. Lade die Seite neu.',
   'error.tooManyConnections': 'Zu viele offene Verbindungen. Schließe andere Fenster.',
   'error.gameNotPlayable': 'Dieses Spiel gibt es noch nicht.',
+  'error.tischNichtInDerApp': 'An diesen Tisch kommst du in der App nicht.',
   'error.matchmakingUnavailable': 'Die Mitspielersuche ist gerade nicht verfügbar.',
   'error.avatarInvalid': 'Das ist kein Bild, das wir speichern können.',
   'error.avatarUnknown': 'Dieses Profilbild gibt es nicht.',

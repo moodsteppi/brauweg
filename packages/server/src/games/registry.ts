@@ -226,3 +226,92 @@ export function spieleFuer(
     ];
   });
 }
+
+// ---------------------------------------------------------------------------
+// Rueckweg fuer die App: Partykiste ohne Trinkmodus, ohne neuen Build
+// ---------------------------------------------------------------------------
+
+/**
+ * Wie zahm Inhalte in der App sein muessen.
+ *
+ * Robin hat am 23.09.2026 entschieden: Die Partykiste laeuft in der App wie
+ * auf der Webseite, MIT Trinkmodus — das Risiko bei Apple (Richtlinie 1.4.3,
+ * "Foerderung uebermaessigen Alkoholkonsums") kennt er. Lehnt Apple deshalb
+ * ab, soll die Antwort ein Deploy sein und kein neuer Build samt neuer
+ * Pruefung. Dafuer steht dieser Schalter bereit, VORGABE AUS (App = Web):
+ *
+ * - `APP_PARTYKISTE_TRINKMODUS=aus` — Tische, die aus der App angelegt oder
+ *   umgestellt werden, zaehlen Strafpunkte statt Schlucke. Das Modul kennt
+ *   das schon (`trinkmodus: false`: kein Glas, kein Schluck-Text, derselbe
+ *   Ablauf).
+ * - `APP_PARTYKISTE_HAERTE_MAX=2` bzw. `=1` — Obergrenze der Textschaerfe.
+ *   `2` ist pikant; `1` (harmlos) nimmt auch alle 16 Kiffer-Eintraege
+ *   heraus, denn die stehen alle auf pikant (niemals n101–n110,
+ *   wereher w101–w108). Ein eigener Filter NUR fuer diese Eintraege
+ *   braeuchte eine Marke am Inhalt und eine Aenderung im Modul — das ist
+ *   hier bewusst nicht geschehen (docs/APP-RELEASE.md, offene Punkte).
+ *
+ * Und in die andere Richtung: An einen Tisch, der diese Grenzen
+ * ueberschreitet (auf der Webseite angelegt, mit Trinkmodus), kommt aus der
+ * App niemand dazu. Sonst saesse der App-Nutzer doch wieder vor den
+ * Schlucken.
+ */
+export interface AppInhalt {
+  readonly trinkmodusAus: boolean;
+  readonly haerteMax: 1 | 2 | 3;
+}
+
+/** Vorgabe: Die App sieht dasselbe wie die Webseite. */
+export const APP_INHALT_WIE_WEB: AppInhalt = { trinkmodusAus: false, haerteMax: 3 };
+
+export function appInhaltAusUmgebung(env: NodeJS.ProcessEnv = process.env): AppInhalt {
+  const haerte = Number(env.APP_PARTYKISTE_HAERTE_MAX);
+  return {
+    trinkmodusAus: (env.APP_PARTYKISTE_TRINKMODUS ?? '').trim().toLowerCase() === 'aus',
+    haerteMax: haerte === 1 || haerte === 2 ? haerte : 3,
+  };
+}
+
+type Regelsatz = Record<string, unknown>;
+
+/**
+ * Je Spiel: was an einem Regelsatz fuer die App gezaehmt wird. Steht hier,
+ * weil diese Datei die einzige im Server ist, die konkrete Spiele kennt —
+ * die Feldnamen sind die aus `PartykisteRegeln` (game-partykiste/regeln.ts).
+ */
+const APP_ZAEHMUNG: Readonly<Partial<Record<GameId, (r: Regelsatz, s: AppInhalt) => Regelsatz>>> = {
+  partykiste: (r, s) => {
+    const neu: Regelsatz = { ...r };
+    if (s.trinkmodusAus) neu.trinkmodus = false;
+    // Fehlt die Stufe (Tische von vor dem 22.09.2026), gilt im Modul die
+    // Vorgabe 1 — die liegt unter jeder Grenze.
+    if (typeof r.inhaltsHaerte === 'number' && r.inhaltsHaerte > s.haerteMax) {
+      neu.inhaltsHaerte = s.haerteMax;
+    }
+    return neu;
+  },
+};
+
+const istRegelsatz = (x: unknown): x is Regelsatz =>
+  typeof x === 'object' && x !== null && !Array.isArray(x);
+
+/**
+ * Der Regelsatz, mit dem ein Tisch aus der App angelegt oder umgestellt
+ * wird. Ohne Schalter oder fuer ein anderes Spiel: unveraendert, auch ein
+ * fehlender Regelsatz bleibt fehlend (dann gilt die Vorgabe des Moduls).
+ */
+export function appRegeln(gameId: GameId, config: unknown, s: AppInhalt): unknown {
+  const zaehmung = APP_ZAEHMUNG[gameId];
+  if (!zaehmung || (!s.trinkmodusAus && s.haerteMax === 3)) return config;
+  const basis = istRegelsatz(config)
+    ? config
+    : (requireModule(gameId).defaultConfig() as Regelsatz);
+  return zaehmung(basis, s);
+}
+
+/** Darf ein App-Nutzer an einen Tisch mit diesem Regelsatz? */
+export function taugtFuerApp(gameId: GameId, config: unknown, s: AppInhalt): boolean {
+  if (!istRegelsatz(config)) return true;
+  const gezaehmt = appRegeln(gameId, config, s);
+  return JSON.stringify(gezaehmt) === JSON.stringify(config);
+}
