@@ -180,7 +180,7 @@ gehören also in den Text oben, nicht in die Tabelle.
    Beide Knöpfe müssen unter dem Anmeldeformular stehen.
 3. Mit Apple anmelden → Popup → „E-Mail-Adresse verbergen“ wählen → es
    folgt die Frage nach dem Geburtstag (dieselbe Altersgrenze wie beim
-   Registrieren; unter 16 kommt die Absage, und es entsteht kein Konto) →
+   Registrieren; unter 18 kommt die Absage, und es entsteht kein Konto) →
    man landet eingeloggt im Hub; das Konto heißt wie der Vorname.
 4. Abmelden, noch einmal mit Apple → dasselbe Konto.
 5. Einstellungen → Abschnitt „Anmeldung“ → „Weiter mit Google“ →

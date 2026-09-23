@@ -20,10 +20,10 @@ Alle drei liegen in Dateien, die dieser Zweig bewusst nicht anfasst
 
 | # | Punkt | Wer | Status |
 | --- | --- | --- | --- |
-| A1 | **Der erste Skat-Tisch lässt sich nicht anlegen.** Ohne gemerkte Einstellung schickt die Lobby 4 Sitze, Skat kennt nur 3 → „Diese Spielerzahl gibt es bei diesem Spiel nicht". Ursache `packages/client/src/screens/Lobby.tsx:137–141`: Fällt `merken` weg, bleibt `seats` beim Anfangswert 4, auch wenn `d.seatCounts` ihn nicht enthält. Vorschlag: `: d.seatCounts.includes(seats) ? seats : d.seatCounts[0]`. Genau daran bricht ein Prüfer ab (Apple 2.1). Trifft auch die Webseite. | Aufsicht (Worker) | offen |
-| A2 | **Themenpakete zeigen in der App einen Weg zum Shop, den es dort nicht gibt.** Partykiste-Menü: „JGA · 800 Münzen · Im Shop ansehen: „Spielpakete"" (`sperrgrund` in `packages/client/src/inhaltspakete.ts:28`). Der Shop ist in der App aus; ein Verweis auf einen Kaufweg außerhalb der App ist Apple 3.1.1. Vorschlag: In der App (`inApp`) nur „gesperrt" ohne Shop-Hinweis — oder die gesperrten Pakete in der App ausblenden. | Aufsicht, Wortlaut Robin | offen |
-| A3 | **Veraltete Minispielzahl.** Kachel „9 Minispiele" (`GameSelect.tsx:2616`), Menü „Zwölf Minispiele" (`screens/Partykiste.tsx:345`); das Modul hat 15 (`MINISPIELE`). Steht in Screenshot 01 und 06. Danach Screenshots neu erzeugen. | Aufsicht | offen |
-| A4 | Skat-Kopfzeile „Gabe 1 / 3Du bist am Reizen" — Leerzeichen fehlt (`SkatTable.tsx:287`). Schönheitsfehler, sichtbar in Screenshot 03. | Aufsicht | offen |
+| A1 | **Der erste Skat-Tisch lässt sich nicht anlegen.** Ohne gemerkte Einstellung schickt die Lobby 4 Sitze, Skat kennt nur 3 → „Diese Spielerzahl gibt es bei diesem Spiel nicht". Ursache `packages/client/src/screens/Lobby.tsx:137–141`: Fällt `merken` weg, bleibt `seats` beim Anfangswert 4, auch wenn `d.seatCounts` ihn nicht enthält. Vorschlag: `: d.seatCounts.includes(seats) ? seats : d.seatCounts[0]`. Genau daran bricht ein Prüfer ab (Apple 2.1). Trifft auch die Webseite. | Aufsicht (Worker) | behoben in #242 |
+| A2 | **Themenpakete zeigen in der App einen Weg zum Shop, den es dort nicht gibt.** Partykiste-Menü: „JGA · 800 Münzen · Im Shop ansehen: „Spielpakete"" (`sperrgrund` in `packages/client/src/inhaltspakete.ts:28`). Der Shop ist in der App aus; ein Verweis auf einen Kaufweg außerhalb der App ist Apple 3.1.1. Vorschlag: In der App (`inApp`) nur „gesperrt" ohne Shop-Hinweis — oder die gesperrten Pakete in der App ausblenden. | Aufsicht, Wortlaut Robin | behoben in #242 (Wortlaut „Nicht freigeschaltet", Robin kann ihn ändern) |
+| A3 | **Veraltete Minispielzahl.** Kachel „9 Minispiele" (`GameSelect.tsx:2616`), Menü „Zwölf Minispiele" (`screens/Partykiste.tsx:345`); das Modul hat 15 (`MINISPIELE`). Steht in Screenshot 01 und 06. Danach Screenshots neu erzeugen. | Aufsicht | behoben in #242 |
+| A4 | Skat-Kopfzeile „Gabe 1 / 3Du bist am Reizen" — Leerzeichen fehlt (`SkatTable.tsx:287`). Schönheitsfehler, sichtbar in Screenshot 03. | Aufsicht | behoben in #242 |
 
 ## B. In diesem Zweig erledigt
 
@@ -38,14 +38,14 @@ Alle drei liegen in Dateien, die dieser Zweig bewusst nicht anfasst
 
 | # | Frage | Wer | Status |
 | --- | --- | --- | --- |
-| C1 | **Mindestalter 16 oder 18?** Konten gehen ab 16 (`MIN_AGE`, `birthday.ts:10`), die Freigabe ist 18+ (Apple) und die Play-Zielgruppe „18+". Mit Trinkmodus ist „ab 18" die ehrliche Linie; dann `MIN_AGE = 18` und die Datenschutzerklärung anpassen. | Robin | entscheiden |
-| C2 | **Pro-Subway steht in der App** unter „Alleine" in der Spielauswahl und ist spielbar (kein Spielmodul, deshalb nicht in `FREIGABE`). Die Store-Texte erwähnen ihn nicht. Drinlassen (schadet der Prüfung nicht) oder in der App ausblenden? | Robin | entscheiden |
-| C3 | Screenshot 04 (alkoholfrei) oder 07 (Trinkspiel)? Vorschlag 04. | Robin | entscheiden |
-| C4 | „Trinkspiel" als Suchwort? Vorschlag nein (TEXTE.md, „Warum"). | Robin | entscheiden |
-| C5 | **Was die Löschung noch mitnehmen soll:** Freundschaften, Blockierungen, Meldungen und Clan-Nachrichten bleiben heute am anonymisierten Konto. Die Lösch-Seite sagt das ehrlich. Mitlöschen wäre sauberer (DSGVO Art. 17) — außer Meldungen, die als Nachweis bleiben dürfen. | Robin | entscheiden |
-| C6 | **Verfügbarkeit:** nur Deutschland, Österreich, Schweiz (die App ist nur deutsch)? Vorschlag ja. Außerhalb der EU kommen weitere Altersnachweis-Pflichten dazu (US-Bundesstaaten). | Robin, Tom | entscheiden |
-| C7 | **EU-Händlerstatus (Digital Services Act).** Apple und Google fragen bei Vertrieb in der EU, ob der Anbieter „Händler" ist. Ja heißt: Name, Anschrift, Telefon und Mail stehen öffentlich im Store — bei Toms Individualkonto also **Toms Privatanschrift**. Ohne Einnahmen spricht viel für „kein Händler"; vor dem Ankreuzen rechtlich klären. | Tom (Apple), Kontoinhaber (Play) | entscheiden |
-| C8 | **Wer bearbeitet Meldungen, und wie schnell?** Apple fragt nach einem Menschen, der reagiert (1.2). Ohne Zusage die 24-Stunden-Zeile in PRUEFHINWEISE.md streichen. | Robin | entscheiden |
+| C1 | **Mindestalter:** 18. `MIN_AGE = 18` für jedes neue Konto (Registrierung, Google, Apple, Gast verknüpfen), Datenschutzerklärung Abschnitt 7 und die Geburtstagsfelder sagen 18. **Bestandskonten zwischen 16 und 18 bleiben**; ob sie gesperrt werden, ist offen (Robin). | Robin | entschieden 23.09.2026 |
+| C2 | **Pro-Subway in der App:** als „Bald"-Kachel wie die nicht freigegebenen Spiele; der Server weist Läufe aus der App ab (`runnerNurImWeb`). Auf der Webseite unverändert. | Robin | entschieden 23.09.2026 |
+| C3 | Screenshot 04 (alkoholfrei) bleibt, 07 wird nicht hochgeladen. | Robin | entschieden 23.09.2026 |
+| C4 | „Trinkspiel" als Suchwort: **ja**, ersetzt `Kneipe` in den Apple-Schlüsselwörtern (TEXTE.md). Das Risiko nach Apple 1.4.3 kennt Robin. | Robin | entschieden 23.09.2026 |
+| C5 | **Löschung nimmt alles mit:** Freundschaften, Blockierungen (beide Richtungen), eigene Clan-Nachrichten und Beitrittsanfragen (`anonymizeAccount`). Meldungen gegen das Konto bleiben für die Moderation. Die Lösch-Seite sagt es so. | Robin | entschieden 23.09.2026 |
+| C6 | **Verfügbarkeit:** nur Deutschland, Österreich, Schweiz. | Robin | entschieden 23.09.2026 |
+| C7 | **EU-Händlerstatus (Digital Services Act).** Apple und Google fragen bei Vertrieb in der EU, ob der Anbieter „Händler" ist. Ja heißt: Name, Anschrift, Telefon und Mail stehen öffentlich im Store. **Der Einwand „Toms Privatanschrift wird öffentlich" entfällt:** Sie ist dieselbe wie die des Büros (Robin, 23.09.2026). Was er ankreuzt, entscheidet Tom beim Anlegen des Eintrags. | Tom (Apple), Kontoinhaber (Play) | offen: Tom kreuzt an |
+| C8 | **Meldungen bearbeitet Tom**, Inhaber des Developer-Kontos, binnen 24 Stunden. Die 24-Stunden-Zeile in PRUEFHINWEISE.md bleibt. | Robin | entschieden 23.09.2026 |
 
 ## D. Robin
 
@@ -77,7 +77,7 @@ Alle drei liegen in Dateien, die dieser Zweig bewusst nicht anfasst
 
 | # | Punkt | Status |
 | --- | --- | --- |
-| F1 | A1–A4 als Worker-Aufgaben vergeben | offen |
+| F1 | A1–A4 als Worker-Aufgaben vergeben | erledigt: die Aufsicht hat A1–A4 selbst gebaut (#242) |
 | F2 | Nach A3 die Screenshots neu erzeugen (`SCREENSHOTS.md`) | offen |
 | F3 | Kommt Push („Push Server-Seite"): Geräte-Token in DATENSCHUTZ-ANGABEN.md und in der Datenschutzerklärung nachtragen; Apple- und Play-Formular neu | offen |
 | F4 | Wechselt ein weiteres Spiel in der App auf `spielbar`: ALTERSFREIGABE.md neu (Poker = simuliertes Glücksspiel), TEXTE.md, Screenshots | offen, sobald es passiert |

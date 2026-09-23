@@ -2481,7 +2481,7 @@ function RanglisteBlatt({
  * `Tafel`, `.hub-themenspiel` und `spielBanner()`. Wer den Themen-Tab
  * umgestaltet, gestaltet diesen Bildschirm mit — genau das soll so sein.
  */
-function Spielwahl({
+export function Spielwahl({
   games,
   voted,
   onVote,
@@ -2519,6 +2519,22 @@ function Spielwahl({
       <div className="spielwahl-rolle">
         <Tafel titel="Alleine" zusatz="Minispiel">
           <div className="hub-themenwahl kachelraster">
+            {/* In der App kommt Pro-Subway erst spaeter (Robin, 23.09.2026):
+                dieselbe "Bald"-Kachel wie die noch nicht freigegebenen Spiele,
+                ohne Stimme. Der Server nimmt Laeufe aus der App ohnehin nicht an. */}
+            {inApp ? (
+              <div className="hub-themenspiel is-bald">
+                <button className="spielwahl-flaeche" onClick={() => onBald(t('modus.prosubway'))}>
+                  <span className="hub-themenspiel-bild" aria-hidden="true">
+                    <img src={spielBanner('prosubway')} alt="" draggable={false} />
+                  </span>
+                  <span className="hub-themenspiel-text">
+                    <strong>{t('modus.prosubway')}</strong>
+                  </span>
+                </button>
+                <span className="front-bald-tag">Bald</span>
+              </div>
+            ) : (
             <button
               type="button"
               className="hub-themenspiel"
@@ -2533,6 +2549,7 @@ function Spielwahl({
               </span>
               <span className="spielwahl-spielen">Spielen</span>
             </button>
+            )}
           </div>
         </Tafel>
 

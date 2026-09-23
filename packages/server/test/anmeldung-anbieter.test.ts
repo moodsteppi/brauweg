@@ -599,7 +599,7 @@ test('ein neues Konto entsteht erst mit Geburtsdatum', async (t) => {
   await abgewiesen(schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, ERWACHSEN), 'anmeldescheinUngueltig');
 });
 
-test('unter 16: dieselbe Absage wie beim Registrieren, und nichts bleibt zurueck', async (t) => {
+test('unter 18: dieselbe Absage wie beim Registrieren, und nichts bleibt zurueck', async (t) => {
   const ctx = await createTestContext();
   t.after(() => ctx.close());
   const scheine = new Anmeldescheine();
@@ -617,7 +617,7 @@ test('unter 16: dieselbe Absage wie beim Registrieren, und nichts bleibt zurueck
 
   const erst = await anmeldenMitAnbieter(ctx.auth, profil({ email: 'jung2@example.org' }), scheine);
   assert.ok('schein' in erst);
-  await abgewiesen(schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, geborenVor(15)), 'birthdayTooYoung');
+  await abgewiesen(schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, geborenVor(17)), 'birthdayTooYoung');
   // Verworfen: Ein zweiter Versuch mit einem aelteren Datum geht nicht durch.
   await abgewiesen(schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, ERWACHSEN), 'anmeldescheinUngueltig');
 
@@ -626,10 +626,10 @@ test('unter 16: dieselbe Absage wie beim Registrieren, und nichts bleibt zurueck
   const konten = await ctx.db.select().from(s.account).where(eq(s.account.email, 'jung2@example.org'));
   assert.equal(konten.length, 0, 'kein Konto');
 
-  // Genau 16 geht.
-  const zweiter = await anmeldenMitAnbieter(ctx.auth, profil({ sub: 'g-16', email: 'sechzehn@example.org' }), scheine);
+  // Genau 18 geht.
+  const zweiter = await anmeldenMitAnbieter(ctx.auth, profil({ sub: 'g-18', email: 'achtzehn@example.org' }), scheine);
   assert.ok('schein' in zweiter);
-  await schliesseAnmeldungAb(ctx.auth, scheine, zweiter.schein, geborenVor(16));
+  await schliesseAnmeldungAb(ctx.auth, scheine, zweiter.schein, geborenVor(18));
 });
 
 test('ein Tippfehler im Datum laesst den Schein liegen', async (t) => {
@@ -657,14 +657,14 @@ test('ein vorhandenes Konto wird nicht nach dem Alter gefragt', async (t) => {
   assert.ok(!('schein' in perBindung), 'schon verknuepft: sofort drin');
 });
 
-test('ein Gast sichert nur mit Geburtsdatum, und nicht unter 16', async (t) => {
+test('ein Gast sichert nur mit Geburtsdatum, und nicht unter 18', async (t) => {
   const ctx = await createTestContext();
   t.after(() => ctx.close());
   const gast = await gastKonto(ctx.auth, 'Laufkunde');
   const p = profil({ anbieter: 'apple', sub: 'a-gast', email: 'lauf@example.org' });
 
   await abgewiesen(verknuepfeAnbieter(ctx.db, gast.accountId, p), 'geburtstagFehlt');
-  await abgewiesen(verknuepfeAnbieter(ctx.db, gast.accountId, p, geborenVor(15)), 'birthdayTooYoung');
+  await abgewiesen(verknuepfeAnbieter(ctx.db, gast.accountId, p, geborenVor(17)), 'birthdayTooYoung');
   assert.equal((await bindungen(ctx.db, gast.accountId)).length, 0);
   const [konto] = await ctx.db.select().from(s.account).where(eq(s.account.id, gast.accountId));
   assert.notEqual(konto!.gastSeit, null, 'bleibt Gast');

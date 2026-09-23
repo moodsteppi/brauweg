@@ -9,7 +9,7 @@ import {
 } from '../src/birthday.js';
 import type { AppError } from '../src/errors.js';
 
-test('Geburtstag: Mindestalter 16', () => {
+test('Geburtstag: Mindestalter 18', () => {
   assert.equal(assertValidBirthday('1990-06-15'), '1990-06-15');
   assert.throws(
     () => assertValidBirthday('2015-01-01'),
@@ -18,6 +18,20 @@ test('Geburtstag: Mindestalter 16', () => {
   assert.throws(
     () => assertValidBirthday('nicht-ein-datum'),
     (err: AppError) => err.code === 'birthdayInvalid',
+  );
+});
+
+test('Geburtstag: die Grenze liegt am 18. Geburtstag (Berlin)', () => {
+  const heute = new Date('2026-09-23T12:00:00+02:00');
+  assert.equal(assertValidBirthday('2008-09-23', heute), '2008-09-23');
+  assert.throws(
+    () => assertValidBirthday('2008-09-24', heute),
+    (err: AppError) => err.code === 'birthdayTooYoung',
+  );
+  // 17 reicht nicht mehr (bis zum 23.09.2026 war 16 die Grenze).
+  assert.throws(
+    () => assertValidBirthday('2009-01-01', heute),
+    (err: AppError) => err.code === 'birthdayTooYoung',
   );
 });
 

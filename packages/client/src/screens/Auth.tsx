@@ -178,7 +178,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
                 required
                 max={new Date().toISOString().slice(0, 10)}
               />
-              <span className="muted">Mindestens 16 Jahre. Für Countdown und Belohnung.</span>
+              <span className="muted">Mindestens 18 Jahre. Für Countdown und Belohnung.</span>
             </label>
           </>
         )}

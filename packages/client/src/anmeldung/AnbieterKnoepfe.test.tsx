@@ -212,7 +212,7 @@ describe('AnbieterKnoepfe', () => {
 
     expect(onErfolg).not.toHaveBeenCalled();
     const feld = screen.getByLabelText(/^Geburtstag/);
-    expect(screen.getByText(/Mindestens 16 Jahre/)).toBeInTheDocument();
+    expect(screen.getByText(/Mindestens 18 Jahre/)).toBeInTheDocument();
     fireEvent.change(feld, { target: { value: '1990-06-15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Konto anlegen' }));
     await leerlaufen();
@@ -222,7 +222,7 @@ describe('AnbieterKnoepfe', () => {
     expect(screen.queryByRole('group', { name: 'Geburtsdatum nachtragen' })).toBeNull();
   });
 
-  it('unter 16: Absage, und zurueck zu den Knoepfen', async () => {
+  it('unter 18: Absage, und zurueck zu den Knoepfen', async () => {
     googleConfig.mockResolvedValue({ clientId: null });
     appleConfig.mockResolvedValue({ clientId: 'de.brauweg-spielen.web', redirectUri: 'https://x/r' });
     appleSdk({ authorization: { id_token: 'id-token-jung', code: 'c' } });

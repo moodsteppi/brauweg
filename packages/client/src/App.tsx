@@ -776,7 +776,8 @@ export function App(): React.JSX.Element {
           return setScreen({ name: 'lobby', gameId });
         }}
         onSolo={(modusId) => {
-          if (modusId === 'prosubway') setScreen({ name: 'prosubway' });
+          // In der App kommt Pro-Subway erst spaeter (GameSelect zeigt "Bald").
+          if (modusId === 'prosubway' && !inApp) setScreen({ name: 'prosubway' });
         }}
         onResume={(gameId, tableId) => setScreen({ name: 'table', gameId, tableId })}
         onShowProfile={zeigeProfil}

@@ -347,7 +347,7 @@ function GeburtstagNachfrage({
           max={new Date().toISOString().slice(0, 10)}
           required
         />
-        <span className="muted">Mindestens 16 Jahre. Für Countdown und Belohnung.</span>
+        <span className="muted">Mindestens 18 Jahre. Für Countdown und Belohnung.</span>
       </label>
       <div className="row">
         <button type="button" className="primary" onClick={() => void absenden()} disabled={!datum || busy}>

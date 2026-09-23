@@ -33,7 +33,7 @@ Sprachen: **Deutsch** ist die Hauptsprache, **Englisch** die zweite
 | Preis | kostenlos, keine In-App-Käufe |
 | Copyright (Apple) | `2026 <NAME WIE IM KONTO>` — Toms Name, solange das Konto Individual ist |
 | Altersfreigabe | siehe `ALTERSFREIGABE.md` (erwartet: Apple 18+, IARC USK 16 / PEGI 16) |
-| Verfügbarkeit (Vorschlag) | Deutschland, Österreich, Schweiz — die Texte der App sind nur deutsch, siehe CHECKLISTE |
+| Verfügbarkeit | Deutschland, Österreich, Schweiz (Robin, 23.09.2026) — die Texte der App sind nur deutsch |
 
 ---
 
@@ -56,7 +56,7 @@ Doppelkopf und Skat mit Freunden oder gegen Bots – und für den Spieleabend di
 
 <!-- feld: apple.de.schluesselwoerter max=100 bytes -->
 ```text
-Kartenspiel,Partyspiel,Stiche,Reizen,Quiz,Freunde,Bots,Mehrspieler,Spieleabend,Kneipe,Imposter
+Kartenspiel,Partyspiel,Stiche,Reizen,Quiz,Freunde,Bots,Mehrspieler,Spieleabend,Trinkspiel,Imposter
 ```
 
 <!-- feld: apple.de.beschreibung max=4000 -->
@@ -288,23 +288,23 @@ Brauweg requires an internet connection.
   Wörter aus dem Namen ohnehin — deshalb stehen sie **nicht** noch einmal
   in den Schlüsselwörtern (Apple: keine Wiederholung von App-Name und
   Firmenname).
-- **Kein „Trinkspiel" in Schlüsselwörtern, Name oder Werbetext.** Der
-  Trinkmodus steht ehrlich in der Beschreibung, dazu der Alkoholfrei-Schalter
-  und der Hinweis „für Erwachsene". Als Suchwort zöge es die Aufmerksamkeit
-  genau auf Apples Richtlinie 1.4.3 (Anstiftung zu übermäßigem
-  Alkoholkonsum). Will Robin es trotzdem als Suchwort: `Trinkspiel` ersetzt
-  `Kneipe` (passt in die 100 Bytes).
+- **„Trinkspiel" als Suchwort, nicht in Name oder Werbetext** (Robin,
+  23.09.2026). Es ersetzt `Kneipe` und passt in die 100 Bytes. Der Vorschlag
+  war nein: Als Suchwort lenkt es die Aufmerksamkeit auf Apples Richtlinie
+  1.4.3 (Anstiftung zu übermäßigem Alkoholkonsum). Robin kennt das Risiko.
+  Wird die App deswegen abgelehnt, ist das Suchwort der erste Rückweg: Es
+  lässt sich ohne neuen Build ändern. Der Trinkmodus steht ehrlich in der
+  Beschreibung, dazu der Alkoholfrei-Schalter und der Hinweis „für Erwachsene".
 - **Keine Marken Dritter.** Nicht „Wizard", nicht „Kosmos", keine
   Fernsehsendung. Die Minispielnamen („Wer bin ich?", „Ich hab noch nie",
   „Königsbecher") sind Gattungsnamen von Partyspielen, keine Marken.
   „Imposter" ebenfalls — bewusst **nicht** „Among Us".
 - **„15 Minispiele".** So viele liefert das Modul (`MINISPIELE` in
-  `packages/game-partykiste/src/regeln.ts`). Die Kachel in der Spielauswahl
-  sagt heute „9 Minispiele" und der Menütext „Zwölf Minispiele" — beides
-  veraltet, siehe CHECKLISTE.
+  `packages/game-partykiste/src/regeln.ts`). Seit #242 zählt der Menütext
+  selbst, und die Kachel nennt keine Zahl mehr.
 - **„derb nur mit Konto am Tisch".** So kappt der Server
   (`INHALTS_HAERTE_GAST_MAX`, `docs/PARTYKISTE.md`). „Ab 18 geprüft" wäre
-  falsch: Ein Konto bestätigt nur ein selbst angegebenes Geburtsdatum ab 16
+  falsch: Ein Konto bestätigt nur ein selbst angegebenes Geburtsdatum ab 18
   (`MIN_AGE` in `packages/server/src/birthday.ts`), ein Gast gar keins.
 - **„Die App ist auf Deutsch"** steht in der englischen Beschreibung, weil
   der Client nur deutsche Texte hat — ein englischer Käufer soll das vorher

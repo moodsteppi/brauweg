@@ -29,7 +29,7 @@ Grundsätze, die für beide Formulare gelten:
 | E-Mail-Adresse | Konten mit Mail (nicht Gäste) | `account.email`, `packages/server/src/db/schema.ts:132`; Registrierung `packages/server/src/http/app.ts:330–340` | für ein Konto ja, Gäste nein |
 | Passwort (nur argon2id-Prüfwert) | Konten mit Mail | `account.passwordHash`, `schema.ts:134` | wie Mail |
 | Anzeigename | alle, auch Gäste | `account.displayName`, `schema.ts:136`; Gast: `app.ts:831–842` | ja |
-| Geburtsdatum | Konten mit Mail (Pflicht, ab 16) | `account.birthday`, `schema.ts:228`; `assertValidBirthday`, `packages/server/src/birthday.ts:10,46` | Konto ja, Gast nein |
+| Geburtsdatum | Konten mit Mail (Pflicht, ab 18) | `account.birthday`, `schema.ts:228`; `assertValidBirthday`, `packages/server/src/birthday.ts:11,47` | Konto ja, Gast nein |
 | Konto-ID | alle | `account.id`, `schema.ts:130` | ja |
 | Bindung an Google/Apple | nur Webseite (in der App aus, `AnbieterKnoepfe.tsx:83`) | `account_identity`, `schema.ts:295` | — |
 | Sitzungen (nur Hash, **keine IP, kein Gerät**) | alle | `session`, `schema.ts:346–364` | ja |
@@ -137,13 +137,13 @@ Mail, Passwort, Bestätigung, Geburtsdatum weg; Anzeigename wird
 `geloescht-<8 Zeichen>`; **Profilbild und Figurbemalung weg (neu mit diesem
 Zweig — vorher blieben sie stehen, und `/api/avatars/:id` lieferte das Foto
 eines gelöschten Kontos weiter aus)**; Google/Apple-Bindungen gelöscht; alle
-Sitzungen widerrufen; Clan verlassen (`releaseClubMemberships`).
+Sitzungen widerrufen; Clan verlassen (`releaseClubMemberships`); seit dem
+23.09.2026 (Robin, CHECKLISTE C5) auch Freundschaften, Blockierungen in beide
+Richtungen, eigene Clan-Nachrichten und Beitrittsanfragen.
 
 **Was bleibt** (ohne Personenbezug, an der anonymisierten Zeile): Partien,
-Statistik, Trophäen, Währung; **außerdem** Freundschaften, Blockierungen,
-Meldungen und auf der Webseite geschriebene Clan-Nachrichten. Die letzten
-vier stehen so auf der Löschseite — ob sie mitgelöscht werden sollen, ist
-eine offene Entscheidung (CHECKLISTE).
+Statistik, Trophäen, Währung; **außerdem** Meldungen gegen das Konto, für die
+Moderation. So steht es auch auf der Löschseite.
 
 ---
 
@@ -171,8 +171,8 @@ fällt auf, was vor der Einreichung nachgezogen werden sollte:
    Mitspieler). Blockierst du jemanden, speichern wir das Paar."
 5. **Cookies/App:** In der App gibt es kein Cookie, sondern ein
    Sitzungstoken im Gerätespeicher der App. Ein Satz dazu in Abschnitt 3.
-6. **Mindestalter:** „ab 16 Jahren" widerspricht der Store-Freigabe 18+
-   (siehe `ALTERSFREIGABE.md`, Entscheidung in der CHECKLISTE).
+6. **Mindestalter:** erledigt (23.09.2026) — Abschnitt 7 und die Tabelle in
+   Abschnitt 2 sagen „18 Jahre", passend zu `MIN_AGE = 18`.
 7. **Anmeldung mit Google/Apple** (nur Webseite) fehlt als Empfänger/Weg —
    gehört in Abschnitt 2 und 4, sobald die Webseite es anbietet.
 8. **Push** — erst, wenn es gebaut ist: Geräte-Token, Apple (APNs) bzw.

@@ -7,7 +7,8 @@
 
 import { badRequest } from './errors.js';
 
-const MIN_AGE = 16;
+/** Seit 23.09.2026 18 statt 16: Die App ist wegen des Trinkmodus ab 18 freigegeben (Robin). */
+const MIN_AGE = 18;
 const ISO_TAG = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface Ymd {
