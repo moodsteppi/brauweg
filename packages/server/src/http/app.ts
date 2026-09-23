@@ -51,6 +51,7 @@ import { mailProbe } from '../mail/probe.js';
 import type { Schluesselquelle } from '../auth/idtoken.js';
 import type { NonceSpeicher } from '../auth/nonce.js';
 import { anbieterRouten } from './anbieter-routen.js';
+import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
   berlinToday,
@@ -775,6 +776,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     setSession,
     requireAccount,
     limitAuth: LIMIT_AUTH,
+    limitSchreiben: LIMIT_SCHREIBEN,
+  });
+
+  // Blockieren und Melden (Apple 1.2) — siehe dort.
+  meldenRouten(app, {
+    db: deps.db,
+    auth: deps.auth,
+    requireAccount,
     limitSchreiben: LIMIT_SCHREIBEN,
   });
 
@@ -1565,7 +1574,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.get('/api/players/:accountId', async (request, reply) => {
     const viewerId = await requireAccount(request);
     const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
-    return reply.send(await playerProfile(deps.db, viewerId, accountId));
+    return reply.send({
+      ...(await playerProfile(deps.db, viewerId, accountId)),
+      // Hat der Betrachter diesen Spieler blockiert? (melden-routen.ts)
+      blockiert: await hatBlockiert(deps.db, viewerId, accountId),
+    });
   });
 
   app.get('/api/friends', async (request, reply) => {
@@ -1576,6 +1589,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/friends/:accountId/request', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const meId = await requireAccount(request);
     const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
+    // Wer blockiert ist oder blockiert hat, stellt keine Anfrage.
+    if (await blockiertZwischen(deps.db, meId, accountId)) throw forbidden('blockiert');
     return reply.send(await requestFriendship(deps.db, meId, accountId));
   });
 

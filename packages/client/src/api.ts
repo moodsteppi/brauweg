@@ -455,12 +455,17 @@ export interface PlayerRef {
 
 export type Relationship = 'self' | 'friends' | 'incoming' | 'outgoing' | 'none';
 
+/** Gruende einer Meldung — muessen zu MELDEGRUENDE im Server passen. */
+export type Meldegrund = 'beleidigung' | 'betrug' | 'unangemessen' | 'spam' | 'anderes';
+
 export interface PlayerProfile {
   id: string;
   displayName: string;
   /** Jahr-Monat, mehr gibt ein fremdes Konto nicht preis. */
   memberSince: string;
   relationship: Relationship;
+  /** Hat man diesen Spieler selbst blockiert? Fehlt bei aelteren Servern. */
+  blockiert?: boolean;
   ranking: {
     gameId: string;
     trophies: number;
@@ -999,6 +1004,13 @@ export const api = {
   profile: (accountId: string) => request<PlayerProfile>(`/players/${accountId}`),
   searchPlayers: (q: string) => request<PlayerRef[]>(`/players?q=${encodeURIComponent(q)}`),
   friends: () => request<FriendLists>('/friends'),
+  /** Blockieren und Melden (melden/MeldenBlatt.tsx, Server melden-routen.ts). */
+  blockieren: (accountId: string) => post<{ ok: true; blockiert: true }>(`/players/${accountId}/block`),
+  entblocken: (accountId: string) =>
+    request<{ ok: true; blockiert: false }>(`/players/${accountId}/block`, { method: 'DELETE' }),
+  melden: (accountId: string, grund: Meldegrund, text?: string) =>
+    post<{ ok: true }>(`/players/${accountId}/report`, { grund, ...(text ? { text } : {}) }),
+
   requestFriend: (accountId: string) =>
     post<{ status: 'pending' | 'accepted' }>(`/friends/${accountId}/request`),
   acceptFriend: (accountId: string) => post<{ ok: true }>(`/friends/${accountId}/accept`),

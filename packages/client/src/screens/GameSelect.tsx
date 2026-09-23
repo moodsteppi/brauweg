@@ -3401,6 +3401,24 @@ function ProfilBild({
 
   const src = me.avatarUrl ? `${serverAdresse(me.avatarUrl)}?v=${ver}` : null;
 
+  /*
+   * In der App nur anzeigen, nicht hochladen — bis es eine Moderation gibt.
+   * Ein eigenes Foto ist Nutzerinhalt, den alle am Tisch sehen, und Apple
+   * verlangt dafuer (1.2) eine Pruefung, die es noch nicht gibt. Wer auf der
+   * Webseite ein Bild gesetzt hat, sieht es hier trotzdem.
+   */
+  if (inApp) {
+    return (
+      <span className="hub-profilbild">
+        {src ? (
+          <img src={src} alt="Profilbild" draggable={false} />
+        ) : (
+          <Pinguin getragen={me.avatar} groesse={3.2} titel="Profilbild" />
+        )}
+      </span>
+    );
+  }
+
   return (
     <label className={`hub-profilbild${busy ? ' is-busy' : ''}`} title="Profilbild ändern">
       {src ? (
