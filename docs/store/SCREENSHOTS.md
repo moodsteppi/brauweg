@@ -7,8 +7,9 @@ mit Vogelnamen**, alle Mitspieler sind **Bots** — keine echten
 Personendaten im Bild.
 
 **Die Bilder liegen nicht im Repository** (1–3 MB je Stück). Letzter Lauf:
-23.09.2026 18:40 gegen staging mit #242 und #243 nach `C:Browegpruefrauweg-wtapp-store-laufscreenshots`
-(Mood XPS), 14 Bilder, alle ohne Fehler. Der vorige Lauf liegt daneben in `screenshots-alt`.
+23.09.2026 18:40 gegen staging mit #242 und #243 nach
+`C:\Broweg\pruef\brauweg-wt\app-store-lauf\screenshots\` (Mood XPS), 14 Bilder,
+alle ohne Fehler. Der vorige Lauf liegt daneben in `screenshots-alt\`.
 
 ```bash
 cd werkzeug/store
