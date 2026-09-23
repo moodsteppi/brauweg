@@ -32,6 +32,7 @@
  */
 
 import type { Wind } from './karte';
+import type { ZonePowerup } from './powerup';
 import { drehe, ganzzahl, mulberry32 } from './zufall';
 
 /** Die Spielart eines Tisches — Spiegel von `GolfModus` im Modul (modus.ts). */
@@ -72,6 +73,13 @@ export interface Lochmodifikatoren {
   readonly roulette: Rouletteart | null;
   /** Wind dieses Lochs (nur beim Roulette „wind"). Geht einem Bahnwind vor. */
   readonly wind: Readonly<Wind> | null;
+  /**
+   * Die Power-up-Felder dieses Lochs (Teil 2/3, seit dem 23.09.2026) —
+   * gezogen in `starteLoch` aus Saat, Lochindex und Bahn (`mitPowerups` in
+   * powerup.ts). Fehlt im klassischen Modus. Welche schon eingesammelt sind,
+   * steht NICHT hier (unveränderlich!), sondern in `Lochstand.felderWeg`.
+   */
+  readonly powerups?: readonly ZonePowerup[];
 }
 
 /** Der klassische Modus: nichts ist anders. */

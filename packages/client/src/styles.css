@@ -19359,6 +19359,25 @@ span.hub-angebot-art.poker-jeton-stapel {
 @media (prefers-reduced-motion: reduce) {
   .gf-fun-ansage { animation: none; }
 }
+/* Power-ups im Fun-Modus (PowerupAnzeige.tsx, seit 23.09.2026) */
+.gf-pu { align-self: center; display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 4px auto 0; pointer-events: none; }
+.gf-pu-schild {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(20, 28, 23, 0.82); color: #f3f7ef;
+  font: 700 13px/1.2 system-ui;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 14px rgba(255, 209, 102, 0.35);
+  animation: gf-pu-auf 360ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.gf-pu-schild em { font-style: normal; font-weight: 600; color: #a9c4ad; }
+.gf-pu-schild[data-golf-pu-wirkt] { box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.6), 0 0 18px rgba(255, 209, 102, 0.55); }
+@keyframes gf-pu-auf {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gf-pu-schild { animation: none; }
+}
 
 /* ==========================================================================
  * Partykiste

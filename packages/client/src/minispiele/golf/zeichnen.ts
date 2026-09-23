@@ -39,6 +39,7 @@ import type {
   ZoneStrudel,
 } from './karte';
 import { RAND_DICKE, istKreis, istRechteck } from './karte';
+import { type Powerupart, feldWeg, felderVon } from './powerup';
 import {
   BALL_R,
   ballRadius,
@@ -178,6 +179,18 @@ interface Partikel {
 /** Mehr als das wird nicht gezeichnet — gegen Lawinen bei Dauerkontakt. */
 const PARTIKEL_MAX = 220;
 
+/**
+ * Leuchtfarbe je Power-up (Fun-Modus) — dieselbe Zuordnung wie die Zeichen
+ * im HUD (PowerupAnzeige.tsx): Turbo orange, Magnet rot, Geist hell-lila,
+ * Schild türkis.
+ */
+const PU_FARBE: Readonly<Record<Powerupart, string>> = {
+  turbo: '#ffb13d',
+  magnet: '#ff5d6c',
+  geist: '#d9c8ff',
+  schild: '#5ce1e6',
+};
+
 /* --------------------------------------------------------------------------
  * Der Zeichner
  * ----------------------------------------------------------------------- */
@@ -208,6 +221,13 @@ export class Zeichner {
 
   private readonly partikel: Partikel[] = [];
   private letzteUhr = 0;
+  /**
+   * `prefers-reduced-motion`: Die Power-up-Felder pulsieren dann nicht, und
+   * das Einsammeln wirft keine Funken — das Feld verschwindet, das HUD zeigt
+   * es an. Einmal beim Aufbau gelesen; Deko, kein Spielzustand.
+   */
+  private readonly ruhig =
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 
   /* Bildmaße und Abbildung Welt → Bildschirm, je Bild gesetzt. */
   private breitePx = 1;
@@ -334,6 +354,11 @@ export class Zeichner {
         this.ringstoss(e.zielX, e.zielY, '#c9a7ff', 400);
       } else if (e.art === 'sprung') {
         for (let k = 0; k < 6; k += 1) this.funke(e.x, e.y, '#ffffff', 300, 4);
+      } else if (e.art === 'powerup' && !this.ruhig) {
+        this.ringstoss(e.x, e.y, PU_FARBE[e.powerup], 420);
+        for (let k = 0; k < 10; k += 1) this.funke(e.x, e.y, PU_FARBE[e.powerup], 380, 4.5);
+      } else if (e.art === 'schild' && !this.ruhig) {
+        this.ringstoss(e.x, e.y, PU_FARBE.schild, 380);
       }
     }
   }
@@ -382,6 +407,7 @@ export class Zeichner {
     }
 
     this.zeichneBewegteZonen(ctx, a);
+    this.zeichnePowerups(ctx, a);
     this.zeichneBaelle(ctx, a);
     this.zeichnePartikel(ctx);
     this.zeichneFahne(ctx, a);
@@ -916,6 +942,106 @@ export class Zeichner {
     }
   }
 
+  /**
+   * Die Power-up-Felder des Lochs (Fun-Modus): ein leuchtender Kreis mit
+   * Zeichen, solange niemand es eingesammelt hat. Aus dem LAUFENDEN Zustand —
+   * was weg ist, steht in `felderWeg`; ein Rückspulen, das ein Feld wieder
+   * hinlegt, malt es also auch wieder hin.
+   */
+  private zeichnePowerups(ctx: CanvasRenderingContext2D, a: Bildauftrag): void {
+    const felder = felderVon(a.zustand.aktuell.mod);
+    if (felder.length === 0) return;
+    const t = a.uhrMs / 1000;
+    for (let i = 0; i < felder.length; i += 1) {
+      if (feldWeg(a.zustand.aktuell.felderWeg, i)) continue;
+      const f = felder[i];
+      const farbe = PU_FARBE[f.powerup];
+      const puls = this.ruhig ? 0.5 : 0.5 + 0.5 * Math.sin(t * 3 + i * 1.7);
+      const glanz = ctx.createRadialGradient(f.x, f.y, f.r * 0.2, f.x, f.y, f.r * (1.5 + 0.25 * puls));
+      glanz.addColorStop(0, farbe);
+      glanz.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.globalAlpha = 0.45 + 0.25 * puls;
+      ctx.fillStyle = glanz;
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, f.r * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(20, 28, 23, 0.72)';
+      ctx.strokeStyle = farbe;
+      ctx.lineWidth = 0.08;
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, f.r * 0.82, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      this.malPowerupZeichen(ctx, f.powerup, f.x, f.y, f.r * 0.5, farbe);
+    }
+  }
+
+  /** Das Zeichen eines Power-ups als Linien — Schrift skaliert im Weltmaß nicht verlässlich. */
+  private malPowerupZeichen(
+    ctx: CanvasRenderingContext2D,
+    art: Powerupart,
+    x: number,
+    y: number,
+    r: number,
+    farbe: string,
+  ): void {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(r, r);
+    ctx.strokeStyle = farbe;
+    ctx.fillStyle = farbe;
+    ctx.lineWidth = 0.22;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    if (art === 'turbo') {
+      // Blitz
+      ctx.moveTo(0.25, -1);
+      ctx.lineTo(-0.45, 0.1);
+      ctx.lineTo(0.1, 0.1);
+      ctx.lineTo(-0.25, 1);
+      ctx.lineTo(0.5, -0.2);
+      ctx.lineTo(-0.05, -0.2);
+      ctx.closePath();
+      ctx.fill();
+    } else if (art === 'magnet') {
+      // Hufeisen
+      ctx.arc(0, 0, 0.6, 0, Math.PI);
+      ctx.moveTo(-0.6, 0);
+      ctx.lineTo(-0.6, -0.8);
+      ctx.moveTo(0.6, 0);
+      ctx.lineTo(0.6, -0.8);
+      ctx.stroke();
+    } else if (art === 'geist') {
+      // Geist: Kopf, gewellter Saum, zwei Augen
+      ctx.arc(0, -0.2, 0.6, Math.PI, 0);
+      ctx.lineTo(0.6, 0.8);
+      ctx.lineTo(0.3, 0.55);
+      ctx.lineTo(0, 0.8);
+      ctx.lineTo(-0.3, 0.55);
+      ctx.lineTo(-0.6, 0.8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(20, 28, 23, 0.9)';
+      ctx.beginPath();
+      ctx.arc(-0.22, -0.2, 0.12, 0, Math.PI * 2);
+      ctx.arc(0.22, -0.2, 0.12, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Schild
+      ctx.moveTo(0, -0.9);
+      ctx.lineTo(0.7, -0.6);
+      ctx.lineTo(0.6, 0.2);
+      ctx.lineTo(0, 0.95);
+      ctx.lineTo(-0.6, 0.2);
+      ctx.lineTo(-0.7, -0.6);
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   private zeichneBaelle(ctx: CanvasRenderingContext2D, a: Bildauftrag): void {
     const z = a.zustand;
     const v = a.vorher;
@@ -974,8 +1100,18 @@ export class Zeichner {
       }
 
       const bild = this.ballbild(s);
+      // Fun-Modus: Der Geisterball ist halb durchsichtig, solange er wirkt.
+      if (b.wirkung === 'geist') ctx.globalAlpha = 0.45;
       if (bild !== null) ctx.drawImage(bild, x - r, y - r, r * 2, r * 2);
       ctx.globalAlpha = 1;
+      // Ein Ball mit Schild trägt einen türkisen Ring, ein Turbo-Ball einen orangen.
+      if (b.halt === 'schild' || b.wirkung === 'turbo' || b.wirkung === 'magnet') {
+        ctx.strokeStyle = PU_FARBE[b.halt === 'schild' ? 'schild' : (b.wirkung as Powerupart)];
+        ctx.lineWidth = 0.07;
+        ctx.beginPath();
+        ctx.arc(x, y, r + 0.2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
 
       if (s === a.eigenerSitz) {
         ctx.strokeStyle = '#ffffff';

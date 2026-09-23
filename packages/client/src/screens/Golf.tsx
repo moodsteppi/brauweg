@@ -16,6 +16,7 @@ import { Kamera } from '../minispiele/golf/kamera';
 import { type Karte, loeseBahnen } from '../minispiele/golf/karte';
 import { Bahnauswahl, BahnauswahlAnzeige } from '../minispiele/golf/Bahnauswahl';
 import { FunAnsage, ModusAnzeige, ModusWahl, gemerkterModus, regelnMitModus } from '../minispiele/golf/FunAnsage';
+import { PowerupAnzeige } from '../minispiele/golf/PowerupAnzeige';
 import type { Golfmodus } from '../minispiele/golf/modifikator';
 import {
   festeLochzahl,
@@ -918,6 +919,9 @@ interface Hudstand {
   pauseRest: number;
   troedel: number;
   binTroedler: boolean;
+  /** Power-up des eigenen Balls (Fun-Modus): gehalten und gerade wirkend, '' für keins. */
+  halt: string;
+  wirkung: string;
 }
 
 const HUD_LEER: Hudstand = {
@@ -935,6 +939,8 @@ const HUD_LEER: Hudstand = {
   pauseRest: 0,
   troedel: 0,
   binTroedler: false,
+  halt: '',
+  wirkung: '',
 };
 
 /*
@@ -1448,6 +1454,7 @@ function Partie({
         )}
 
         <FunAnsage modus={sicht.modus} saat={sicht.saat} loch={hud.loch} loecher={hud.loecher} pause={hud.pause} />
+        <PowerupAnzeige halt={hud.halt} wirkung={hud.wirkung} />
 
         {hud.binTroedler && hud.troedel > 0 && (
           <p className="gf-troedel" aria-live="polite">
@@ -1598,6 +1605,8 @@ function baueHud(
       : Math.ceil((PAUSE_TAKTE * TAKT_MS) / 1000),
     troedel: troedel === null ? 0 : Math.ceil((troedel.rest * TAKT_MS) / 1000),
     binTroedler: troedel !== null && troedel.sitz === eigenerSitz,
+    halt: z.baelle[eigenerSitz]?.halt ?? '',
+    wirkung: z.baelle[eigenerSitz]?.wirkung ?? '',
   };
 }
 
@@ -1625,6 +1634,8 @@ function hudSchluessel(h: Hudstand): string {
     h.pauseRest,
     h.troedel,
     h.binTroedler ? 1 : 0,
+    h.halt,
+    h.wirkung,
   ].join('|');
 }
 

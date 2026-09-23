@@ -34,6 +34,7 @@ import {
   type Zonengruppen,
   abstandQuadrat,
   istInZone,
+  randSegmenteVon,
   segment,
   segmenteVon,
   zonengruppen,
@@ -51,6 +52,19 @@ import {
   ZEITLUPE_FAKTOR,
   modifikatorenFuerLoch,
 } from './modifikator';
+import {
+  EINSATZ,
+  MAGNET_DRITTEL,
+  MAGNET_R,
+  MAGNET_STAERKE,
+  type Powerupart,
+  TURBO_FAKTOR,
+  type ZonePowerup,
+  felderVon,
+  mitPowerups,
+  punktInWand,
+  verbraucheSchild,
+} from './powerup';
 import {
   betrag,
   drehe,
@@ -175,6 +189,17 @@ export interface Ball {
    * er eingelocht.
    */
   dabei: boolean;
+  /**
+   * Das Power-up, das dieser Ball hält (Fun-Modus, seit dem 23.09.2026) —
+   * höchstens eines, ein neues ersetzt das alte. Wann es wirkt, sagt
+   * `EINSATZ` in powerup.ts: mit dem nächsten eigenen Schlag, oder (Schild)
+   * beim nächsten Stoß. Klassisch immer `null`.
+   */
+  halt: Powerupart | null;
+  /** Was im laufenden Schlag wirkt (Turbo, Magnet, Geist); `null`, sobald der Ball liegt. */
+  wirkung: Powerupart | null;
+  /** Anfangstempo des letzten Schlags — der Magnet zieht erst im letzten Drittel. */
+  schlagTempo: number;
 }
 
 export interface Lochstand {
@@ -194,6 +219,12 @@ export interface Lochstand {
    * Physik und Bots lesen es über `physikwerte`, nicht direkt.
    */
   mod: Lochmodifikatoren;
+  /**
+   * Welche Power-up-Felder aus `mod.powerups` schon eingesammelt sind, als
+   * Bitmaske (Feld i = Bit i). Hier und nicht an `mod`, weil sich das IM
+   * Loch ändert; eine Zahl, weil `kopiere` `aktuell` nur flach mitnimmt.
+   */
+  felderWeg: number;
 }
 
 /** Deko für Bild und Ton — NICHT Teil des Determinismus. */
@@ -205,6 +236,8 @@ export type Effektereignis =
   | { art: 'portal'; sitz: number; x: number; y: number; zielX: number; zielY: number }
   | { art: 'bumper'; sitz: number; x: number; y: number }
   | { art: 'sprung'; sitz: number; x: number; y: number }
+  | { art: 'powerup'; sitz: number; x: number; y: number; powerup: Powerupart }
+  | { art: 'schild'; sitz: number; x: number; y: number }
   | { art: 'lochstart'; loch: number }
   | { art: 'lochende'; loch: number };
 
@@ -327,7 +360,7 @@ export function neuePartie(opts: Partieoptionen): Partiezustand {
       opts.loecher,
       typeof opts.karten === "number" ? opts.karten : (opts.karten?.length ?? opts.loecher),
     ),
-    aktuell: { loch: 0, karte: 0, startTakt: 0, endeTakt: -1, pauseBis: -1, mod: OHNE_MODIFIKATOR },
+    aktuell: { loch: 0, karte: 0, startTakt: 0, endeTakt: -1, pauseBis: -1, mod: OHNE_MODIFIKATOR, felderWeg: 0 },
     baelle: [],
     ergebnis: [],
     eingelochtJeLoch: [],
@@ -357,6 +390,7 @@ export function starteLoch(
 ): void {
   const kartenIndex = z.reihenfolge[loch];
   const karte = karten[kartenIndex];
+  const mod = modifikatorenFuerLoch(z.modus, z.saat, loch);
   z.aktuell = {
     loch,
     karte: kartenIndex,
@@ -364,7 +398,9 @@ export function starteLoch(
     endeTakt: -1,
     pauseBis: -1,
     // Aus Saat und Lochindex, nie aus dem Zufallsstrom — siehe modifikator.ts.
-    mod: modifikatorenFuerLoch(z.modus, z.saat, loch),
+    // Im Fun-Modus dazu die Power-up-Felder aus Saat, Loch und Bahn (powerup.ts).
+    mod: z.modus === 'fun' ? mitPowerups(mod, karte, z.saat, loch) : mod,
+    felderWeg: 0,
   };
   z.baelle = [];
   for (let s = 0; s < z.sitze; s += 1) {
@@ -397,6 +433,10 @@ export function starteLoch(
       flugRy: 0,
       fertigTakt: weg ? startTakt : -1,
       dabei: !weg,
+      // Was einer hält, verfällt mit dem Loch.
+      halt: null,
+      wirkung: null,
+      schlagTempo: 0,
     });
     z.botWartet[s] = -1;
     z.botDenkzeit[s] = 0;
@@ -438,6 +478,9 @@ export function kopiere(z: Partiezustand): Partiezustand {
       flugRy: b.flugRy,
       fertigTakt: b.fertigTakt,
       dabei: b.dabei,
+      halt: b.halt,
+      wirkung: b.wirkung,
+      schlagTempo: b.schlagTempo,
     };
   }
   const ergebnis: number[][] = new Array<number[]>(z.ergebnis.length);
@@ -596,6 +639,28 @@ export function physikwerte(mod: Lochmodifikatoren, karte: Pick<Karte, 'wind'>):
   return Object.freeze(p);
 }
 
+const turboSpeicher = new WeakMap<Readonly<Physikwerte>, Readonly<Physikwerte>>();
+
+/**
+ * Die Werte, mit denen ein Ball unter Turbo rechnet: halber Zeitschritt,
+ * doppelt so viele Unterschritte (Fun-Modus, powerup.ts).
+ *
+ * Mit 1,6-facher Höchstkraft legt ein Ball in einem Unterschritt 0,45 E
+ * zurück — mehr als sein Radius, und dann steht seine Mitte nach einem
+ * Schritt schon HINTER der Kante einer Wand und wird hindurchgeschoben statt
+ * zurück. Halbiert sind es 0,22 E. Nur der Turbo-Ball rechnet so, alle
+ * anderen Bälle im selben Takt bleiben bei ihren Werten. Zwischengespeichert
+ * je Satz (kein Spielzustand: eine reine Funktion von `p`), damit der Bot
+ * die Kraft mit genau diesen Werten plant.
+ */
+export function turboWerte(p: Readonly<Physikwerte>): Readonly<Physikwerte> {
+  const fertig = turboSpeicher.get(p);
+  if (fertig !== undefined) return fertig;
+  const t: Readonly<Physikwerte> = Object.freeze({ ...p, dt: p.dt / 2, unterschritte: p.unterschritte * 2 });
+  turboSpeicher.set(p, t);
+  return t;
+}
+
 /** Radius der Bälle im laufenden Loch — für Zeichner und Anzeige. */
 export function ballRadius(z: Partiezustand, karte: Karte): number {
   return physikwerte(z.aktuell.mod, karte).ballR;
@@ -656,7 +721,19 @@ function wendeSchlagAn(z: Partiezustand, sitz: number, rx: number, ry: number, k
   // eine Einheit lang. Ohne das Nachnormieren wäre die Schlagstärke von der
   // Rundung abhängig.
   const r = normiere(rx, ry);
-  const v0 = k * V_MAX;
+  let v0 = k * V_MAX;
+  /*
+   * Fun-Modus: Ein gehaltenes Power-up, das mit dem Schlag wirkt, wird jetzt
+   * zur Wirkung dieses Schlags (siehe `EINSATZ` in powerup.ts). Schild und
+   * die Auslöse-Arten von Teil 3 bleiben im Halt liegen.
+   */
+  b.wirkung = null;
+  if (b.halt !== null && EINSATZ[b.halt] === 'schlag') {
+    b.wirkung = b.halt;
+    b.halt = null;
+    if (b.wirkung === 'turbo') v0 *= TURBO_FAKTOR;
+  }
+  b.schlagTempo = v0;
   b.letzteRuheX = b.x;
   b.letzteRuheY = b.y;
   b.vx = r.x * v0;
@@ -729,6 +806,9 @@ interface Drehteil {
   /** Winkelgeschwindigkeit in rad/s, für die Mitnahme beim Abprall. */
   omega: number;
 }
+
+/** Keine Drehkreuze — der Geisterball geht durch sie hindurch wie durch Wände. */
+const KEINE_DREHTEILE: readonly Drehteil[] = [];
 
 /**
  * Baut die Segmente aller Drehkreuze für DIESEN Takt.
@@ -965,6 +1045,141 @@ function imStrudelkreis(strudel: readonly ZoneStrudel[], x: number, y: number): 
     if (dx * dx + dy * dy < zone.r * zone.r) return true;
   }
   return false;
+}
+
+/**
+ * Magnet (Fun-Modus): Im letzten Drittel der Rollstrecke zieht das Loch einen
+ * rollenden Ball an — vor `bewege`, damit Reibung und Bewegung ihn im selben
+ * Unterschritt mitnehmen.
+ *
+ * Er macht den Ball NICHT `getrieben` (anders als der Strudel): Unter
+ * `V_STOP` bleibt er liegen, auch hinter einer Wand, gegen die ihn der Zug
+ * drückt. Sonst läge ein Ball dort nie still, und wer nicht liegt, darf nicht
+ * schlagen.
+ */
+function magnetZug(b: Ball, karte: Karte, p: Readonly<Physikwerte>): void {
+  if (b.flugTakte > 0 || b.ruht) return;
+  const v = betrag(b.vx, b.vy);
+  if (v <= 0 || v > b.schlagTempo * MAGNET_DRITTEL) return;
+  const dx = karte.loch[0] - b.x;
+  const dy = karte.loch[1] - b.y;
+  const dq = dx * dx + dy * dy;
+  if (dq >= MAGNET_R * MAGNET_R || dq < 1e-12) return;
+  const d = Math.sqrt(dq);
+  b.vx += (dx / d) * MAGNET_STAERKE * p.dt;
+  b.vy += (dy / d) * MAGNET_STAERKE * p.dt;
+}
+
+/**
+ * Einsammeln (Fun-Modus): Liegt die Ballmitte in einem noch freien Feld,
+ * hält der Ball dessen Power-up — ein neues ersetzt das alte —, und das Feld
+ * ist für alle weg. Im Flug wird nichts eingesammelt.
+ */
+function sammleEin(z: Partiezustand, sitz: number, b: Ball, felder: readonly ZonePowerup[]): void {
+  if (b.flugTakte > 0) return;
+  for (let i = 0; i < felder.length; i += 1) {
+    if ((z.aktuell.felderWeg & (1 << i)) !== 0) continue;
+    const f = felder[i];
+    const dx = b.x - f.x;
+    const dy = b.y - f.y;
+    if (dx * dx + dy * dy > f.r * f.r) continue;
+    z.aktuell.felderWeg |= 1 << i;
+    b.halt = f.powerup;
+    melde(z, { art: 'powerup', sitz, x: f.x, y: f.y, powerup: f.powerup });
+  }
+}
+
+/** Liegt ein Ball mit Radius `ballR` hier frei — keine Wand berührt, nicht in einer? */
+function liegtFrei(karte: Karte, segmente: readonly Segment[], x: number, y: number, ballR: number): boolean {
+  const grenze = ballR * ballR;
+  for (let s = 0; s < segmente.length; s += 1) {
+    if (abstandQuadrat(segmente[s], x, y) < grenze) return false;
+  }
+  return !punktInWand(karte, x, y);
+}
+
+/**
+ * Das Ende einer Wirkung, sobald der Ball liegt (oder fertig ist).
+ *
+ * Der Geisterball kann dabei IN einer Wand liegen bleiben. Dann geht er den
+ * Weg zurück, den er gekommen ist — in Zehntelschritten auf die Stelle vor
+ * dem Schlag zu, bis er frei liegt. Die ist frei (dort lag er), der Weg
+ * endet also immer; auf ihr selbst ist er wieder Geist wie nach dem Wasser,
+ * weil dort inzwischen ein anderer liegen kann.
+ */
+function beendeWirkung(b: Ball, karte: Karte, segmente: readonly Segment[], ballR: number): void {
+  const war = b.wirkung;
+  b.wirkung = null;
+  if (war !== 'geist' || b.eingelocht || liegtFrei(karte, segmente, b.x, b.y, ballR)) return;
+  const dx = b.letzteRuheX - b.x;
+  const dy = b.letzteRuheY - b.y;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  const schritte = Math.ceil(d / 0.1);
+  for (let i = 1; i < schritte; i += 1) {
+    const t = (i * 0.1) / d;
+    const px = b.x + dx * t;
+    const py = b.y + dy * t;
+    if (liegtFrei(karte, segmente, px, py, ballR)) {
+      b.x = px;
+      b.y = py;
+      return;
+    }
+  }
+  b.x = b.letzteRuheX;
+  b.y = b.letzteRuheY;
+  b.geschlagen = false;
+}
+
+/**
+ * Schild (Fun-Modus): Stößt ein fremder Ball einen LIEGENDEN Ball mit
+ * Schild, prallt er ab wie von einem festen Pfosten, und der liegende rührt
+ * sich nicht. Das Schild ist damit verbraucht. Rollt der Schildträger selbst
+ * in einen anderen, ist es kein Stoß gegen ihn — dann gilt der gewöhnliche.
+ *
+ * `ueberlapp` ist, wie weit die beiden ineinanderstecken; der Stoßende
+ * wird ganz hinausgeschoben, der Träger gar nicht.
+ */
+function schildHaelt(
+  z: Partiezustand,
+  i: number,
+  j: number,
+  nx: number,
+  ny: number,
+  ueberlapp: number,
+): boolean {
+  const a = z.baelle[i];
+  const b = z.baelle[j];
+  let traeger: Ball;
+  let anderer: Ball;
+  let sitz: number;
+  // Normale vom Träger zum Stoßenden.
+  let mx: number;
+  let my: number;
+  if (a.halt === 'schild' && a.ruht) {
+    traeger = a;
+    anderer = b;
+    sitz = i;
+    mx = nx;
+    my = ny;
+  } else if (b.halt === 'schild' && b.ruht) {
+    traeger = b;
+    anderer = a;
+    sitz = j;
+    mx = -nx;
+    my = -ny;
+  } else {
+    return false;
+  }
+  const vn = anderer.vx * mx + anderer.vy * my;
+  if (vn >= 0) return false;
+  if (!verbraucheSchild(traeger)) return false;
+  anderer.x += mx * ueberlapp;
+  anderer.y += my * ueberlapp;
+  anderer.vx -= (1 + RESTITUTION_BALL) * vn * mx;
+  anderer.vy -= (1 + RESTITUTION_BALL) * vn * my;
+  anderer.ruht = false;
+  melde(z, { art: 'schild', sitz, x: traeger.x, y: traeger.y });
+  return true;
 }
 
 /** Reibung, Zonenkräfte und Bewegung eines Balls für einen Unterschritt. */
@@ -1279,6 +1494,12 @@ function ballKontakte(z: Partiezustand, wach: boolean[], ballR: number): void {
       const d = Math.sqrt(dq);
       const nx = d < 1e-9 ? 1 : dx / d;
       const ny = d < 1e-9 ? 0 : dy / d;
+      // Fun-Modus: ein Schild fängt den Stoß ab. Klassisch hält niemand eines.
+      if ((a.halt !== null || b.halt !== null) && schildHaelt(z, i, j, nx, ny, grenze - d)) {
+        wach[i] = true;
+        wach[j] = true;
+        continue;
+      }
       const halb = (grenze - d) / 2;
       a.x -= nx * halb;
       a.y -= ny * halb;
@@ -1445,19 +1666,35 @@ export function schritt(
    * knapp die Hälfte der Physikzeit.
    */
   const wach: boolean[] = new Array<boolean>(baelle.length).fill(true);
+  // Fun-Modus: die Power-up-Felder des Lochs; klassisch leer.
+  const felder = felderVon(z.aktuell.mod);
   for (let u = 0; u < p.unterschritte; u += 1) {
     for (let s = 0; s < baelle.length; s += 1) {
       const b = baelle[s];
       if (!b.dabei || b.eingelocht) continue;
-      const vorherX = b.x;
-      const vorherY = b.y;
-      bewege(z, s, b, gruppen, p);
-      if (!wach[s] && b.x === vorherX && b.y === vorherY) continue;
-      wach[s] = false;
-      zonenAmOrt(z, s, b, gruppen, p);
-      if (b.flugTakte === 0) {
-        wandKontakte(z, s, b, segmente, dreh, p);
-        bumperKontakte(z, s, b, gruppen.bumper, p.ballR);
+      /*
+       * Power-ups (Fun-Modus, powerup.ts): Turbo rechnet in zwei halben
+       * Unterschritten (`turboWerte`), der Geisterball prallt nur am Rahmen
+       * ab und geht durch Drehkreuze, der Magnet zieht vor der Bewegung.
+       * Ohne Wirkung ist es genau ein Durchgang mit `p`, wie immer.
+       */
+      const wirkung = b.wirkung;
+      const pb = wirkung === 'turbo' ? turboWerte(p) : p;
+      const teile = wirkung === 'turbo' ? 2 : 1;
+      for (let h = 0; h < teile; h += 1) {
+        const vorherX = b.x;
+        const vorherY = b.y;
+        if (wirkung === 'magnet') magnetZug(b, karte, pb);
+        bewege(z, s, b, gruppen, pb);
+        if (!wach[s] && b.x === vorherX && b.y === vorherY) break;
+        wach[s] = false;
+        zonenAmOrt(z, s, b, gruppen, pb);
+        if (b.flugTakte === 0) {
+          if (wirkung === 'geist') wandKontakte(z, s, b, randSegmenteVon(karte), KEINE_DREHTEILE, pb);
+          else wandKontakte(z, s, b, segmente, dreh, pb);
+          bumperKontakte(z, s, b, gruppen.bumper, pb.ballR);
+        }
+        if (felder.length > 0) sammleEin(z, s, b, felder);
       }
     }
     ballKontakte(z, wach, p.ballR);
@@ -1483,6 +1720,10 @@ export function schritt(
     if (b.flugTakte > 0) {
       b.flugTakte -= 1;
       if (b.flugTakte === 0) lande(b, segmente, p.ballR);
+    }
+    // Eine Wirkung endet, sobald der Ball liegt (Fun-Modus).
+    if (b.wirkung !== null && (b.eingelocht || b.fertigTakt !== -1 || (b.ruht && b.flugTakte === 0))) {
+      beendeWirkung(b, karte, segmente, p.ballR);
     }
   }
 
