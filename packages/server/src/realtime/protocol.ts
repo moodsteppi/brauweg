@@ -157,6 +157,17 @@ export type ClientMessage =
       readonly zeichen: number;
       /** Statt des Emojis ein gesammeltes Motiv. Siehe ReaktionMessage. */
       readonly motiv?: string;
+    }
+  | {
+      readonly v: number;
+      readonly game?: GameId;
+      /**
+       * Die App ist vom Bildschirm verschwunden. Nur die App schickt das
+       * (useTable.ts); danach darf der Server Push-Mitteilungen schicken.
+       * Zurueck im Vordergrund ist, wer das naechste `join` schickt.
+       */
+      readonly type: 'hintergrund';
+      readonly tableId?: string;
     };
 
 // ---------------------------------------------------------------------------
