@@ -79,6 +79,24 @@ export type ZoneBeschleuniger = Rechteckflaeche & {
   staerke: number;
 };
 
+/**
+ * Wind über der ganzen Bahn — ein flächiger Beschleuniger (seit dem
+ * 22.09.2026, Fun-Modus; siehe modifikator.ts).
+ *
+ * Anders als der Beschleuniger schiebt er nur einen ROLLENDEN Ball, und nie
+ * stärker als die Rollreibung an dieser Stelle (siehe `bewege` in
+ * physik.ts). Beides aus demselben Grund: Ein Ball, den der Wind in Ruhe
+ * weiterschiebt oder über der Reibung hält, kommt nie zur Ruhe — und wer
+ * nicht liegt, darf nicht schlagen.
+ */
+export interface Wind {
+  /** Richtung als Einheitsvektor — aus den Winkeltabellen, nie aus `Math.sin`. */
+  rx: number;
+  ry: number;
+  /** Beschleunigung in E/s², unter `ROLL` (0,9); typisch 0,4 bis 0,85. */
+  staerke: number;
+}
+
 /** Reibung mal 4. */
 export type ZoneSand = Flaeche & { art: 'sand' };
 /** Reibung mal 0,12 — der Ball läuft fast ewig. */
@@ -171,6 +189,12 @@ export interface Karte {
   zonen: Zone[];
   /** Die Optik der Bahn (Boden, Rand). Bestimmt das Bild, nicht die Physik. */
   dekor?: 'wiese' | 'wueste' | 'eis' | 'nacht';
+  /**
+   * Fester Wind der Bahn (seit dem 22.09.2026). Keine der 40 Bahnen hat
+   * einen; im Fun-Modus bringt das Roulette ihn je Loch mit und geht vor.
+   * Physik und Bots lesen ihn nur über `physikwerte` (physik.ts).
+   */
+  wind?: Wind;
   /*
    * Freie Metadaten, seit dem 22.09.2026 — für den Map-Editor und die
    * Bahnauswahl (Kurse, Filter, Einzelauswahl), die auf der Aufteilung in

@@ -29,8 +29,10 @@ import { Runde } from '../../minispiele/partykiste/Runden';
 import { AktiveRegel } from '../../minispiele/partykiste/RundenOhneUhr';
 import { MINISPIEL_NAME, ansageFuer, type PartyMinispiel, type PartykisteSicht } from '../../minispiele/partykiste/sicht';
 import { Abrechnung, Tabelle } from '../../minispiele/partykiste/Wertung';
+import { AufstellungSeite } from '../../minispiele/partykiste/Lager';
 import type { SeatInfo } from '../../protocol';
 import { bilderOhneUhr } from './bilder-ohne-uhr';
+import { bilderZeitdruck } from './bilder-zeitdruck';
 
 const LEUTE = ['Robin', 'Jan', 'Tom', 'Emil', 'Niklas', 'Anni'];
 
@@ -71,6 +73,12 @@ function sicht(teil: Partial<PartykisteSicht> & Pick<PartykisteSicht, 'art' | 'd
       { sitz: 5, punkte: 6, schlucke: 2, platz: 4 },
     ],
     regelKarte: null,
+    modus: 'turnier',
+    paket: null,
+    eskalation: null,
+    lager: null,
+    lagerTabelle: null,
+    aufstellung: null,
     ...teil,
   };
 }
@@ -518,7 +526,104 @@ const BILDER: { titel: string; text: string; sicht: PartykisteSicht; zusatz?: Zu
   },
   /* Kategorien-Battle, Mehrheitsraten, Regel-Karte (22.09.2026). */
   ...bilderOhneUhr(sicht),
+  ...bilderZeitdruck(sicht),
+  /* -- Spielmodi (22.09.2026) ------------------------------------------- */
+  {
+    titel: 'Ich hab noch nie — Eskalation, Stufe 2',
+    text: 'Das zweite Drittel: pikante Sprüche und doppelte Härte. Die Regelzeile sagt, wo die Kurve steht.',
+    sicht: sicht({
+      art: 'niemals',
+      modus: 'eskalation',
+      eskalation: { stufe: 2, inhaltsHaerte: 2, schluckFaktor: 2, gekappt: false },
+      daten: { art: 'niemals', text: 'Ich hab noch nie auf einer Party gekifft.', meine: -1, gewaehlt: [1, 3], gestanden: null },
+    }),
+  },
+  {
+    titel: 'Entweder – oder — Eskalation, letzte Runde mit Gast',
+    text: 'Stufe 3, aber ein Gast sitzt am Tisch: Die Härte steigt, die Texte bleiben pikant — und die Zeile sagt warum.',
+    sicht: sicht({
+      art: 'entweder',
+      rundeNr: 5,
+      modus: 'eskalation',
+      eskalation: { stufe: 3, inhaltsHaerte: 2, schluckFaktor: 3, gekappt: true },
+      daten: { art: 'entweder', a: 'Nie wieder Kaffee', b: 'Nie wieder Bier', meine: -1, gewaehlt: [2], seite: null },
+    }),
+  },
+  {
+    titel: 'Wahrheit oder Pflicht — Themenabend JGA',
+    text: 'Das Paket bestimmt die Minispiele (neun von zwölf) und die Inhalte; die Zeile nennt das Thema.',
+    sicht: sicht({
+      art: 'wahrheitpflicht',
+      modus: 'themenabend',
+      paket: 'jga',
+      minispiele: ['wahrheitpflicht', 'niemals', 'regelkarte', 'wereher', 'imposter', 'werbinich', 'mehrheit', 'entweder', 'busfahrer'],
+      amZug: 0,
+      daten: {
+        art: 'wahrheitpflicht',
+        amZug: 0,
+        gewaehlt: [-1, -1, -1, -1, -1, -1],
+        text: ['', '', '', '', '', ''],
+        erfolg: [-1, -1, -1, -1, -1, -1],
+      },
+    }),
+  },
+  {
+    titel: 'Stand — Team-Abend',
+    text: 'Oben die Lager, darunter jede Person mit ihrem Lager. Der Platz ist der des Lagers — für die Trophäen zählt, wie das Lager abschneidet.',
+    zusatz: 'tabelle',
+    sicht: sicht({
+      art: 'quiz',
+      modus: 'team',
+      lager: [0, 1, 0, 1, 0, 1],
+      lagerTabelle: [
+        { lager: 0, sitze: [0, 2, 4], punkte: 13, schlucke: 14, platz: 2 },
+        { lager: 1, sitze: [1, 3, 5], punkte: 26, schlucke: 3, platz: 1 },
+      ],
+      tabelle: [
+        { sitz: 0, punkte: 7, schlucke: 3, platz: 4 },
+        { sitz: 1, punkte: 9, schlucke: 1, platz: 1 },
+        { sitz: 2, punkte: 4, schlucke: 5, platz: 4 },
+        { sitz: 3, punkte: 11, schlucke: 0, platz: 1 },
+        { sitz: 4, punkte: 2, schlucke: 6, platz: 4 },
+        { sitz: 5, punkte: 6, schlucke: 2, platz: 1 },
+      ],
+      daten: { art: 'quiz', frage: 'Wie viele Beine hat eine Spinne?', antworten: ['6', '8', '10', '12'], meineWahl: -1, richtig: null, wahl: null },
+    }),
+  },
+  {
+    titel: 'Stand — Team-Abend, ungleiche Lager',
+    text: 'Vier gegen zwei, weil der Öffner getauscht hat: Es entscheidet der Schnitt je Kopf, nicht die Summe.',
+    zusatz: 'tabelle',
+    sicht: sicht({
+      art: 'quiz',
+      modus: 'team',
+      lager: [0, 0, 0, 0, 1, 1],
+      lagerTabelle: [
+        { lager: 0, sitze: [0, 1, 2, 3], punkte: 31, schlucke: 9, platz: 1 },
+        { lager: 1, sitze: [4, 5], punkte: 8, schlucke: 8, platz: 2 },
+      ],
+      tabelle: [
+        { sitz: 0, punkte: 7, schlucke: 3, platz: 1 },
+        { sitz: 1, punkte: 9, schlucke: 1, platz: 1 },
+        { sitz: 2, punkte: 4, schlucke: 5, platz: 1 },
+        { sitz: 3, punkte: 11, schlucke: 0, platz: 1 },
+        { sitz: 4, punkte: 2, schlucke: 6, platz: 5 },
+        { sitz: 5, punkte: 6, schlucke: 2, platz: 5 },
+      ],
+      daten: { art: 'quiz', frage: 'Wie viele Beine hat eine Spinne?', antworten: ['6', '8', '10', '12'], meineWahl: -1, richtig: null, wahl: null },
+    }),
+  },
 ];
+
+/** Die Aufstellung des Team-Abends — einmal als Oeffner, einmal als Wartender. */
+const AUFSTELLUNG = sicht({
+  art: 'quiz',
+  rundeNr: 0,
+  modus: 'team',
+  lager: [0, 1, 0, 0, 0, 1],
+  aufstellung: { aufsteller: 0, wechselbar: [0, 1, 2, 3, 4, 5] },
+  daten: { art: 'quiz', frage: '', antworten: [], meineWahl: -1, richtig: null, wahl: null },
+});
 
 function Kasten({
   titel,
@@ -681,6 +786,40 @@ function Schaukasten(): React.JSX.Element {
               onBeitreten={() => {}}
               onEigene={() => {}}
               onAbbrechen={() => {}}
+            />
+          </MenueKasten>
+          <figure className="sk-kasten">
+            <figcaption>
+              <strong>Team-Abend — Lager aufstellen</strong>
+              <span>
+                Vor der ersten Runde: abwechselnd nach Sitz vorbelegt, der Öffner tippt Namen hinüber. Hier hat er
+                Emil ins Lager A geholt.
+              </span>
+            </figcaption>
+            <div className="sk-rahmen">
+              <AufstellungSeite sicht={AUFSTELLUNG} sitze={SITZE} sende={() => {}} />
+            </div>
+          </figure>
+          <figure className="sk-kasten">
+            <figcaption>
+              <strong>Team-Abend — die anderen warten</strong>
+              <span>Dieselben Spalten ohne Knöpfe, solange der Öffner aufstellt.</span>
+            </figcaption>
+            <div className="sk-rahmen">
+              <AufstellungSeite
+                sicht={{ ...AUFSTELLUNG, sitz: 2, aufstellung: { aufsteller: 0, wechselbar: [] } }}
+                sitze={SITZE}
+                sende={() => {}}
+              />
+            </div>
+          </figure>
+          <MenueKasten
+            titel="Wartesaal — Regelzeile, Eskalation"
+            text="Vor der ersten Runde steht nur fest, dass die Härte steigt; im Spiel nennt die Zeile die Stufe."
+          >
+            <Regelzeile
+              regeln={{ minispiele: Object.keys(MINISPIEL_NAME) as PartyMinispiel[], trinkmodus: true, schluckFaktor: 1, modus: 'eskalation' }}
+              runden={9}
             />
           </MenueKasten>
           <MenueKasten

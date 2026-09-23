@@ -41,6 +41,14 @@ export interface GolfAusstieg {
 export interface GolfMeldung {
   schlaege: number[];
   pruef: string;
+  /**
+   * Die Tafel `[loch][sitz]` hinter `pruef`, seit dem 22.09.2026 fuer die
+   * Bestleistung je Bahn. Fehlt bei Geraeten von davor. Der Bildschirm liest
+   * sie nicht — er hat seine eigene Tafel aus der Physik.
+   */
+  jeLoch?: number[][];
+  /** `[loch][sitz]` ob der Ball gefallen ist — nicht eingelocht ist nie eine Bestleistung. */
+  eingelocht?: boolean[][];
 }
 
 /** Ausgang eines Matches, sobald genug Meldungen vorliegen. */
@@ -71,4 +79,12 @@ export interface GolfSicht {
   taktMs: number;
   vorlauf: number;
   botStufe: GolfBotStufe;
+  /**
+   * Klassisch oder Fun (seit dem 23.09.2026). Im Fun-Modus zieht jedes Gerät
+   * je Loch selbst einen Modifikator aus `saat` und Lochindex
+   * (modifikator.ts) — über die Leitung geht dafür nichts. Optional nur für
+   * Testsichten und Server von davor: Fehlt es, ist der Tisch klassisch
+   * (`modusAus` in netz.ts); das Modul liefert es immer.
+   */
+  modus?: 'klassisch' | 'fun';
 }

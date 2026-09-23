@@ -248,10 +248,18 @@ test('Filter nach Thema: nur Bahnen mit dem Thema, solange es genug gibt', () =>
 });
 
 test('Filter mit zu wenig Treffern: aufgefuellt mit den naechstliegenden, alle Treffer dabei', () => {
-  const sprung = passendeBahnen({ thema: 'sprungfeld' });
-  assert.ok(sprung.length < 9, 'Voraussetzung des Tests: weniger als neun Sprungfeld-Bahnen');
-  const folge = waehleBahnen(99, 9, BAHNEN_KATALOG, { filter: { thema: 'sprungfeld' } });
-  for (const id of sprung) assert.ok(folge.includes(id), `${id} fehlt`);
+  // Das seltenste Thema, und drei Loecher mehr, als es Bahnen hat. Bis k40
+  // war das fest „Sprungfeld, neun Loecher"; mit k41..k60 (22.09.2026) hat
+  // jedes Thema mindestens zehn Bahnen, und eine feste Zahl zoege mit jeder
+  // neuen Bahn um.
+  const seltenstes = [...THEMEN]
+    .map((t) => ({ thema: t.kennung, bahnen: passendeBahnen({ thema: t.kennung }) }))
+    .sort((a, b) => a.bahnen.length - b.bahnen.length)[0]!;
+  const loecher = seltenstes.bahnen.length + 3;
+  assert.ok(loecher <= LOECHER_MAX, `Voraussetzung des Tests: ein Thema mit hoechstens ${LOECHER_MAX - 3} Bahnen`);
+  const folge = waehleBahnen(99, loecher, BAHNEN_KATALOG, { filter: { thema: seltenstes.thema } });
+  assert.equal(folge.length, loecher);
+  for (const id of seltenstes.bahnen) assert.ok(folge.includes(id), `${id} fehlt`);
   const stufen = folge.map((id) => stufeVon.get(id)!);
   assert.deepEqual(stufen, [...stufen].sort((a, b) => a - b));
 });

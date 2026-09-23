@@ -494,6 +494,22 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    */
   phaseKey?(party: TParty): string | number | null;
 
+  /**
+   * Bleibt die Frist der laufenden Phase auf dem Server? true heisst: Die
+   * Plattform misst sie wie jede andere, schickt `phaseDeadline` aber als null
+   * an alle Geraete — Spieler wie Zuschauer.
+   *
+   * Seit dem 23.09.2026 fuer die Bombe der Partykiste: Dort IST die Restzeit
+   * das Spiel. Wer sie kennt, gibt kurz vor Schluss nicht mehr weiter, und die
+   * Sicht allein hilft nicht, weil die Frist neben ihr ueber die Leitung geht
+   * (`viewFor` in runtime/party.ts). Ein Modul, das sie verdecken will, muss
+   * es deshalb hier sagen, nicht in `viewFor`.
+   *
+   * Optional und nur zusammen mit `phaseMs` sinnvoll. Fehlt es, geht die
+   * Frist mit — der Normalfall, denn meist SOLL man sie sehen (Tafelrunde).
+   */
+  phaseHidden?(party: TParty): boolean;
+
   /** Beendet die laufende Phase nach Ablauf der Frist. */
   advancePhase?(party: TParty): TParty;
 

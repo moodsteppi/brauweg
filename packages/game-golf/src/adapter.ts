@@ -33,8 +33,10 @@ import type {
 } from '@brauweg/game-api';
 import { snapshotCodec } from '@brauweg/game-api';
 
-import { waehleBahnen } from './bahnen.js';
+import { KATALOG_BIS_K40, waehleBahnen } from './bahnen.js';
 import { lobbyDaten, pruefeBahnwahl } from './bahnwahl.js';
+import { bestleistungenJeSitz } from './bestleistung.js';
+import { type GolfModus, modusVon, pruefeModus } from './modus.js';
 import {
   type GolfAusgang,
   type GolfAusstieg,
@@ -92,6 +94,11 @@ export interface GolfView {
   readonly taktMs: number;
   readonly vorlauf: number;
   readonly botStufe: BotLevel;
+  /**
+   * Klassisch oder Fun (seit dem 22.09.2026, siehe modus.ts). Die Geräte
+   * ziehen daraus, zusammen mit `saat`, den Modifikator jedes Lochs selbst.
+   */
+  readonly modus: GolfModus;
 }
 
 const meta: GameMeta = {
@@ -143,8 +150,13 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    * 5 seit dem 22.09.2026 nachts: Bot-Änderung (Probeschläge über
    * Beschleuniger, Drehkreuz, Strudel, Sprungfeld; Bumper als Hindernis,
    * Drehkreuz im Wegfeld teurer) — derselbe Grund wie bei 3.
+   *
+   * 6 seit dem 23.09.2026: Fun-Modus (Roulette je Loch, modus.ts). Die Sicht
+   * trägt `modus`, Physik und Bots lesen die Werte des Lochs. Ein Client von
+   * davor spielte einen Fun-Tisch klassisch — eine andere Partie aus
+   * derselben Zugliste.
    */
-  protocolVersion: 5,
+  protocolVersion: 6,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -161,6 +173,8 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
     }
     // Die Bahnauswahl (Kurs, Filter, Einzelauswahl) — siehe bahnwahl.ts.
     probleme.push(...pruefeBahnwahl(config));
+    // Klassisch oder Fun — siehe modus.ts.
+    probleme.push(...pruefeModus(config));
     return probleme;
   },
 
@@ -200,11 +214,15 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
   standings(partie): PartyStanding[] {
     const abgeschlossen = partie.ausgang !== null && !partie.ausgang.strittig;
     const ausgestiegen = new Set(partie.ausstiege.map((a) => a.sitz));
+    // Die Bestleistung je Bahn (bestleistung.ts) — nur wo es eine gibt, damit
+    // der Endstand ohne sie genauso aussieht wie vor dem 22.09.2026.
+    const bestleistungen = bestleistungenJeSitz(partie);
     return platzierungen(partie.ausgang, partie.sitze).map((p) => ({
       seat: p.sitz,
       points: abgeschlossen ? Math.max(0, partie.loecher * 12 - p.schlaege) : 0,
       place: p.platz,
       left: ausgestiegen.has(p.sitz),
+      ...(bestleistungen[p.sitz]?.length ? { bestleistungen: bestleistungen[p.sitz] } : {}),
     }));
   },
 
@@ -231,6 +249,7 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
       taktMs: TAKT_MS,
       vorlauf: VORLAUF_TAKTE,
       botStufe: partie.botStufe,
+      modus: modusVon(partie.regeln),
     };
   },
 
@@ -254,7 +273,8 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
   deserialize(raw: unknown): GolfPartie {
     const partie = codec.deserialize(raw) as GolfPartie & { bahnen?: readonly string[] };
     if (Array.isArray(partie.bahnen)) return partie;
-    return { ...partie, bahnen: waehleBahnen(partie.saat, partie.loecher) };
+    // Gegen den Katalog von damals, nicht den heutigen — siehe KATALOG_BIS_K40.
+    return { ...partie, bahnen: waehleBahnen(partie.saat, partie.loecher, KATALOG_BIS_K40) };
   },
 
   /**

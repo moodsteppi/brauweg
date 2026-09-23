@@ -19222,6 +19222,17 @@ span.hub-angebot-art.poker-jeton-stapel {
 .gpar-zupar[data-gpar='unter'] { color: #8ee0a3; }
 .gpar-zupar[data-gpar='ueber'] { color: #f0a0a8; }
 
+/* -- Bahnrekord im Zwischenstand (minispiele/golf/Bahnrekord.tsx) --------- */
+
+/* Eine Zeile unter der Tafel, gedaempft wie die Kopfzeile der Tafel; nur
+   ein neuer Rekord bekommt Farbe — Gold wie der Hole-in-one-Ruf, weil es
+   dieselbe Sorte Nachricht ist: Das war besonders. */
+.grek { margin: 10px 0 0; }
+.grek-zeile { margin: 0; color: #a9c4ad; font: 600 12px/1.35 system-ui; }
+.grek-zeile strong { color: #e8f0e6; font-weight: 800; font-variant-numeric: tabular-nums; }
+.grek-neu { margin: 6px 0 0; font: 900 15px/1.2 system-ui; color: #8ee0a3; }
+.grek-neu[data-grek-art='bahn'] { color: #f4b400; }
+
 /* -- Banner der Spielauswahl ---------------------------------------------- */
 
 /* Dasselbe Verhaeltnis wie die gemalten Banner (1200 x 300) und wie die
@@ -19282,6 +19293,72 @@ span.hub-angebot-art.poker-jeton-stapel {
   columns: 2;
 }
 .gf-bw-anzeige { margin-bottom: 12px; }
+
+/* Golf Fun-Modus (seit 23.09.2026, minispiele/golf/FunAnsage.tsx): die Wahl
+   im Bot-Menü, das Schild im HUD, die Roulette-Ansage am Lochbeginn und der
+   Blick aufs nächste Loch in der Pause. `fixed`, weil .gf-hud keine Höhe
+   hat, an der sich eine Mitte messen ließe. Die Ansage liegt über der Bahn, aber
+   nimmt keinen Tipp weg — gezielt wird auch während sie steht. */
+.gf-fun-wahl { display: flex; flex-direction: column; gap: 4px; }
+.gf-fun-wahl small { color: #a9c4ad; font: 600 12px/1.35 system-ui; }
+.gf-fun-schild {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px auto 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.78);
+  color: #e8f0e6;
+  font: 700 12px/1 system-ui;
+  pointer-events: none;
+}
+.gf-fun-schild em { font-style: normal; color: #a9c4ad; }
+.gf-fun-pfeil { display: inline-block; color: #8ee0a3; font-size: 14px; line-height: 1; }
+.gf-fun-ansage {
+  position: fixed;
+  z-index: 6;
+  top: 38vh;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(80vw, 320px);
+  padding: 14px 18px 16px;
+  border-radius: 20px;
+  background: rgba(10, 24, 16, 0.9);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.9);
+  color: #e8f0e6;
+  text-align: center;
+  pointer-events: none;
+  animation: gf-fun-auf 220ms ease-out;
+}
+.gf-fun-ansage small { display: block; color: #a9c4ad; font: 700 11px/1 system-ui; letter-spacing: 0.08em; text-transform: uppercase; }
+.gf-fun-ansage .gf-fun-zeichen { display: block; margin: 6px 0 2px; font-size: clamp(40px, 12vw, 56px); line-height: 1.1; }
+.gf-fun-ansage strong { display: block; font: 800 clamp(20px, 6vw, 26px)/1.15 system-ui; }
+.gf-fun-ansage p { margin: 8px 0 0; color: #cfe0cf; font: 600 13px/1.35 system-ui; }
+.gf-fun-ansage[data-dreht] .gf-fun-zeichen { filter: blur(0.5px); opacity: 0.85; }
+.gf-fun-naechstes {
+  position: fixed;
+  z-index: 6;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.9);
+  color: #e8f0e6;
+  font: 600 13px/1.2 system-ui;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@keyframes gf-fun-auf {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gf-fun-ansage { animation: none; }
+}
 
 /* ==========================================================================
  * Partykiste
@@ -19833,6 +19910,49 @@ span.hub-angebot-art.poker-jeton-stapel {
 .pk-ou-regel-hinweis { margin: 0; font: 600 12px/1.3 system-ui; }
 .pk-ou-regel .pk-knopf { padding: 10px 12px; font-size: 14px; }
 
+/* -- Partykiste: Bombe, 10 Sekunden, Koenigsbecher (pk-zd-*) --------------- */
+
+/* Die Bombe tickt GLEICHMAESSIG. Schneller werden darf sie nicht: Das waere
+   eine Auskunft ueber die Restzeit, und die hat der Bildschirm gar nicht
+   (phaseHidden) — ein Ticken, das schneller wird, waere geraten und damit
+   eine Luege. */
+.pk-zd-bombe {
+  display: block;
+  font-size: clamp(48px, 16vw, 72px);
+  line-height: 1;
+  animation: pk-zd-ticken 1s steps(2, jump-none) infinite;
+}
+.pk-zd-bombe[data-hoch] { animation: pk-zd-knall 0.5s ease-out 1; }
+@keyframes pk-zd-ticken {
+  from { transform: scale(1) rotate(-4deg); }
+  to { transform: scale(1.08) rotate(4deg); }
+}
+@keyframes pk-zd-knall {
+  from { transform: scale(0.6); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}
+.pk-zd-weiter { min-height: 72px; font-size: 20px; }
+
+/* Die Restzeit der zehn Sekunden — die Frist des Servers, nur angezeigt. */
+.pk-zd-restzeit {
+  display: block;
+  font: 800 clamp(44px, 14vw, 64px)/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.pk-zd-restzeit[data-knapp] { color: #ff6b6b; }
+
+/* Koenigsbecher: die gezogene Karte mit ihrer Regel darunter. */
+.pk-zd-karte { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pk-zd-kartentitel { font: 800 clamp(16px, 5vw, 20px)/1.2 system-ui; }
+.pk-zd-kartentext { font: 600 14px/1.35 system-ui; text-align: center; max-width: 28ch; }
+.pk-zd-hand { min-height: 80px; font-size: 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-zd-bombe,
+  .pk-zd-bombe[data-hoch] { animation: none; }
+}
+
 /* ==========================================================================
  * Einladung an den Tisch (22.09.2026): Code, Link teilen, QR-Code — und die
  * Eingabe dazu. Eigene Praefixe `.einladung-*` / `.beitrittscode-*` statt
@@ -20012,3 +20132,51 @@ span.hub-angebot-art.poker-jeton-stapel {
   cursor: pointer;
 }
 .pk-aw-folge button:disabled { opacity: 0.3; cursor: default; }
+
+/* -- Partykiste: Spielmodi (Team-Abend, Eskalation) ----------------------- */
+
+.pk-regelhinweis {
+  flex-basis: 100%;
+  color: var(--muted);
+  font: 600 12px/1.35 system-ui;
+}
+.pk-lagerspalten {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pk-lagerspalte {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.pk-lagerspalte[data-lager='0'] { box-shadow: inset 0 3px 0 var(--lila); }
+.pk-lagerspalte[data-lager='1'] { box-shadow: inset 0 3px 0 var(--gold); }
+.pk-lagerspalte ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pk-lagerspalte li[data-weg] { opacity: 0.45; }
+.pk-lagerspalte li[data-ich] .pk-person { box-shadow: inset 0 0 0 2px var(--lila); }
+.pk-lagerspalte .pk-person { width: 100%; }
+.pk-person.is-still { display: block; cursor: default; text-align: center; }
+.pk-lagertitel { margin: 0; font: 800 14px/1.2 system-ui; text-align: center; }
+.pk-lagertafel { display: grid; gap: 6px; margin-bottom: 12px; }
+.pk-lagertabelle li[data-lager='0'] { border-left: 4px solid var(--lila); }
+.pk-lagertabelle li[data-lager='1'] { border-left: 4px solid var(--gold); }
+.pk-lagerleute {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font: 600 12px/1.3 system-ui;
+}
+.pk-lagerzeichen {
+  min-width: 22px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font: 800 11px/1 system-ui;
+  text-align: center;
+  color: #180f28;
+  background: var(--lila);
+}
+.pk-lagerzeichen[data-lager='1'] { background: var(--gold); }

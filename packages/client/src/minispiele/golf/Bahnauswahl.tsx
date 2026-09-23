@@ -17,6 +17,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { AuswahlFilter, AuswahlRaster, type AuswahlEintrag, passtZurSuche } from '../../hub';
+import { t } from '../../i18n';
+import { useBestmarken } from './Bahnrekord';
 import {
   EIGENE_MAX,
   type Bahnwahl,
@@ -130,6 +132,11 @@ const MODI: readonly { art: Modus; text: string }[] = [
 const STUFEN = [1, 2, 3, 4, 5] as const;
 
 /** Die Themen einer Bahn als Wörter, z. B. „Sand, Eis". */
+/** „… · dein Bestes: 3" hinter den Untertitel, wenn es eine eigene Bestmarke gibt. */
+function mitBestmarke(text: string, marke: number | undefined): string {
+  return marke === undefined ? text : `${text} · ${t('golf.rekord.eigenes')}: ${marke}`;
+}
+
 function themenText(id: string, daten: Lobbydaten): string {
   const namen = (daten.bahnThemen[id] ?? [])
     .map((k) => daten.themen.find((t) => t.kennung === k)?.name)
@@ -172,6 +179,8 @@ export function Bahnauswahl({
 }): React.JSX.Element | null {
   const [suche, setSuche] = useState('');
   const [themaChip, setThemaChip] = useState<string | null>(null);
+  // Eigene Bestmarke je Bahn auf der Kachel (Bahnrekord.tsx), nur in der Einzelauswahl.
+  const bestmarken = useBestmarken(wahl.art === 'eigene');
   if (daten === null) return null;
 
   const nachId = new Map(karten.map((k) => [k.id, k]));
@@ -268,7 +277,10 @@ export function Bahnauswahl({
                 return {
                   kennung: karte.id,
                   titel: karte.name,
-                  untertitel: platz >= 0 ? `Loch ${platz + 1}` : themenText(karte.id, daten),
+                  untertitel: mitBestmarke(
+                    platz >= 0 ? `Loch ${platz + 1}` : themenText(karte.id, daten),
+                    bestmarken.get(karte.id),
+                  ),
                   badge: karte.schwierigkeit,
                   vorschau: <Bahnminiatur karte={karte} />,
                   deaktiviert:

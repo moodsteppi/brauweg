@@ -93,8 +93,13 @@ export const TAFELRUNDE_MODULE_VERSION = 1;
  * Strudel und Sprungfelder mit der echten Physik, Bumper versperren Sicht
  * und Wegfeld. Ein alter und ein neuer Bot spielen aus derselben Saat
  * verschiedene Schlaege.
+ *
+ * 6 seit dem 23.09.2026: Fun-Modus. Die Sicht traegt `modus`, und im
+ * Fun-Modus zieht jedes Geraet je Loch einen Modifikator (Wind, Regen,
+ * Riesenball …), den Physik und Bots mitrechnen. Ein Client von davor
+ * spielte einen Fun-Tisch klassisch.
  */
-export const GOLF_MODULE_VERSION = 5;
+export const GOLF_MODULE_VERSION = 6;
 
 /**
  * 1 seit dem 18. September 2026 — die erste Fassung. Die Partykiste ist das
@@ -106,8 +111,16 @@ export const GOLF_MODULE_VERSION = 5;
  * 2 seit dem 22.09.2026: Kategorien-Battle, Mehrheitsraten und Regel-Karte,
  * dazu `regelKarte` in jeder Sicht. Ein Client der Fassung 1 kennt die
  * neuen Runden nicht — die Weiche in Runden.tsx liefe ins Leere.
+ *
+ * 3 seit dem 22.09.2026: die Spielmodi — Aufstellung des Team-Abends
+ * (Aktion `lagerwechsel`), dazu `modus`, `paket`, `eskalation`, `lager`,
+ * `lagerTabelle`, `aufstellung` in der Sicht. Ein Client der Fassung 2
+ * zeigte im Team-Abend die erste Runde, die noch nichts annimmt.
+ *
+ * 4 seit dem 23.09.2026: Bombe, 10 Sekunden und Koenigsbecher mit ihren
+ * Aktionen. Ein Client der Fassung 3 kennt die Runden nicht.
  */
-export const PARTYKISTE_MODULE_VERSION = 2;
+export const PARTYKISTE_MODULE_VERSION = 4;
 
 /**
  * 1 seit dem 22. September 2026 — die erste Fassung. BroCooked ist wie Golf

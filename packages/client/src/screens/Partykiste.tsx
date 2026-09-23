@@ -4,6 +4,7 @@ import { api, type Me } from '../api';
 import { tischFehler, useInhaltsSperren } from '../inhaltspakete';
 import { PartyAuswahl, usePartyAuswahl } from '../minispiele/partykiste/Auswahl';
 import { Einstellungen, OffeneRunde, Regler, type Angebot } from '../minispiele/partykiste/Einstellungen';
+import { AufstellungSeite } from '../minispiele/partykiste/Lager';
 import { LobbyRegelzeile, RegelsatzKontext, Regelzeile } from '../minispiele/partykiste/Regelzeile';
 import { Runde } from '../minispiele/partykiste/Runden';
 import { AktiveRegel } from '../minispiele/partykiste/RundenOhneUhr';
@@ -487,6 +488,9 @@ export function Partykiste({
     );
   }
 
+  /* Team-Abend: Vor der ersten Runde stellt der Tischoeffner die Lager auf (Lager.tsx). */
+  if (sicht.aufstellung) return <AufstellungSeite sicht={sicht} sitze={sitze} sende={sende} onVerlassen={verlasseUndZurueck} />;
+
   const binFertig = sicht.gehandelt.includes(sicht.sitz);
 
   return (
@@ -522,7 +526,7 @@ export function Partykiste({
       ) : (
         <>
           <p className="pk-ansage">{ansageFuer(sicht.art, sicht.trinkmodus)}</p>
-          <Runde sicht={sicht} sitze={sitze} sende={sende} />
+          <Runde sicht={sicht} sitze={sitze} sende={sende} frist={tisch.view?.phaseDeadline ?? null} />
           {sicht.phase === 'ergebnis' ? (
             <Abrechnung sicht={sicht} sitze={sitze} binFertig={binFertig} sende={sende} />
           ) : null}

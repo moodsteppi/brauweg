@@ -32,8 +32,10 @@ import { MINISPIEL_NAME, type PartyMinispiel } from './sicht';
 /**
  * Wie ein Minispiel ablaeuft: alle zugleich oder einer nach dem anderen.
  *
- * Spiegelbild von `istReihum` in packages/game-partykiste/src/partie.ts,
- * geprueft im Vertrag. `Partial`, weil parallel neue Minispiele entstehen:
+ * Spiegelbild von `ablaufVon` in packages/game-partykiste/src/partie.ts,
+ * geprueft im Vertrag. Bis zum 23.09.2026 stand hier `istReihum` — das sagt
+ * aber, ob eine Runde endet, wenn jeder einmal dran war, und haette das
+ * Kategorien-Battle (reihum im Kreis) „gleichzeitig" genannt. `Partial`, weil parallel neue Minispiele entstehen:
  * Fehlt eines hier, zeigt die Kachel den Ablauf eben nicht an — ein fehlender
  * Eintrag darf den Bau nicht brechen, ein FALSCHER faellt im Vertrag auf.
  */
@@ -47,6 +49,12 @@ export const MINISPIEL_ABLAUF: Partial<Record<PartyMinispiel, 'gleichzeitig' | '
   schaetzen: 'gleichzeitig',
   entweder: 'gleichzeitig',
   wahrheitpflicht: 'reihum',
+  kategorien: 'reihum',
+  mehrheit: 'gleichzeitig',
+  regelkarte: 'gleichzeitig',
+  bombe: 'reihum',
+  zehnsekunden: 'gleichzeitig',
+  koenigsbecher: 'reihum',
 };
 
 /**
@@ -64,6 +72,12 @@ export const MINISPIEL_ZEICHEN: Partial<Record<PartyMinispiel, string>> = {
   schaetzen: '🎯',
   entweder: '⚖️',
   wahrheitpflicht: '🎲',
+  kategorien: '🗂️',
+  mehrheit: '👥',
+  regelkarte: '📜',
+  bombe: '💣',
+  zehnsekunden: '⏱️',
+  koenigsbecher: '👑',
 };
 
 /** Name eines Minispiels — auch fuer eines, das der Client noch nicht beschreibt. */
@@ -103,10 +117,10 @@ export const PAKET_NAME: Record<string, string> = {
 export const PAKET_ALLES = 'alles';
 
 /**
- * Die Spielmodi. Das Modul kennt sie erst, wenn die Modi-Karte gemergt ist;
- * bis dahin steht im Menue NICHTS davon (siehe `modusBekannt`). Die Kennungen
- * sind die der Karte „Spielmodi Eskalation, Themenabend und Team-Abend“; der
- * Vertrag prueft sie gegen `validateConfig`, sobald das Modul `modus` hat.
+ * Die Spielmodi — seit #211 kennt das Modul sie (`SPIELMODI`, `modi.ts`), und
+ * `defaultConfig()` traegt `modus: 'turnier'`, also stehen die Kacheln im
+ * Menue (`modusBekannt`). Der Vertrag (vertrag/partykiste-auswahl.test.ts)
+ * haelt diese Liste gegen `SPIELMODI` und `validateConfig`.
  */
 export const MODI = [
   { kennung: 'turnier', titel: 'Turnier', text: 'Jeder für sich, die Tabelle entscheidet.' },

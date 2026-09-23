@@ -10,7 +10,7 @@ Minigolf aus der Vogelperspektive. Jeder hat einen Ball in seiner Farbe, alle
 schlagen gleichzeitig auf derselben Bahn, Bälle stoßen sich gegenseitig weg.
 Gezielt wird, indem man auf den eigenen Ball drückt und zieht; der Ball fliegt
 entgegen der Zugrichtung. Ein Match hat 2–15 Löcher (Regler in der Lobby),
-gespielt wird auf 40 Bahnen in fünf Schwierigkeitsstufen mit neun Arten von
+gespielt wird auf 60 Bahnen in fünf Schwierigkeitsstufen mit neun Arten von
 Effektflächen (Beschleuniger, Sand, Eis, Wasser, Portal, Bumper, Strudel,
 Sprungfeld, Drehkreuz). Wer am Ende die wenigsten Schläge hat, gewinnt.
 
@@ -221,8 +221,30 @@ Protokollversion.
   weg.
 - **Bahnen prüfen, nicht anschauen:** `pruefeKarte` (Form, Abstände,
   Erreichbarkeit per Wegfeld) und `botLoestKarte` (Genie-Bot schafft sie in
-  ≤ Schlaglimit) laufen als Vitest über alle 40. Eine Bahn, die der Bot nicht
+  ≤ Schlaglimit) laufen als Vitest über alle. Eine Bahn, die der Bot nicht
   schafft, wird umgebaut, nicht der Test gelockert.
+- **Ein Strudel kann einen Ball für immer festhalten (gefunden am 22.09.2026
+  beim Bau von k41–k60).** Der tangentiale Anteil der Strudelkraft trägt den
+  Ball bei vielen Kombinationen aus Radius und Stärke auf eine Kreisbahn, die
+  weder zerfällt noch in den Fang (0,25 E, unter 3 E/s) führt — und ein
+  gezogener Ball `ruht` nie, sein Spieler darf also bis zum Zeitlimit nicht
+  schlagen. Auf freiem Rasen, 960 Anläufe je Strudel: r 1,5 bis Stärke 15 und
+  r 2 bis Stärke 20 halten viele Anläufe länger als eine Minute fest;
+  r 1/15, r 1,2/20, r 1,5/25, r 2/30 und r 2,5/40 keinen. Auf Eis
+  entkommt der Ball immer. Aus demselben Grund fängt ein Strudel mit `ziel`
+  (Auswurf) fast nie — als Abkürzung taugt er nicht, als Ablenkung schon.
+  Betroffen sind auch vorhandene Bahnen (k20, k25, k34, k38 und der
+  Auswurf auf k08); die Physik zu ändern wäre ein Protokollbruch. Die neuen
+  Bahnen nehmen nur haltlose Strudel, `karten/k51-k60.test.ts` prüft das.
+- **Wer Bahnen hinzufügt, verschiebt die Folge neuer Partien — aber nicht die
+  alter Schnappschüsse.** Ein Schnappschuss von vor dem 22.09.2026 hat kein
+  `bahnen` und bekommt die Folge beim Laden nachgezogen, und zwar gegen
+  `KATALOG_BIS_K40` (bahnen.ts), den Katalog, den seine Geräte damals
+  kannten. Mit dem ganzen Katalog zöge dieselbe Saat seit k41 andere Bahnen.
+  Die festen Folgen in `bahnen.test.ts` rechnen deshalb gegen diese Liste.
+  Die Rampe prüft derselbe Test mit dem echten Katalog: Solange jede Stufe
+  mindestens drei Bahnen hat, trifft bei jeder Lochzahl bis 15 jedes Loch
+  genau seine Sollstufe.
 
 ## Bahnwerkstatt (seit 22.09.2026)
 
@@ -255,3 +277,49 @@ dann <http://localhost:5173/bahnwerkstatt.html>. Quelle unter
   Datei und ihre Katalogzeile gehören im selben Pull Request entfernt.
 - **Nicht im Betriebspaket.** `vite build` baut nur `index.html`; die
   Begründung steht in `packages/client/bahnwerkstatt.html`.
+
+## Fun-Modus (seit 23.09.2026)
+
+Robins Entscheidung vom 22.09.2026: neben dem fairen klassischen Golf ein
+Fun-Modus als eigene Regeloption (`GolfRegeln.modus: 'klassisch' | 'fun'`,
+`packages/game-golf/src/modus.ts`) — mit Wind, Wetter und Roulette je Loch
+(Teil 1), Power-ups (Teil 2) und Störschlägen (Teil 3). Ausdrücklich nicht:
+verrückte Bälle und wandernde Wände.
+
+- **Das Modul kennt nur den Namen.** Die Sicht trägt `modus`; welcher
+  Modifikator an welchem Loch gilt, zieht jedes Gerät selbst, rein aus Saat
+  und Lochindex (`modifikatorenFuerLoch` in `minispiele/golf/modifikator.ts`)
+  — eine gemischte Trommel je sieben Löcher, nie zweimal derselbe
+  hintereinander. Kein Zustand, damit das Replay und ein neu ladendes Gerät
+  auf dasselbe kommen. Die Reihenfolge von `ROULETTE` ist Determinismus.
+- **Wo ein Loch seine Modifikatoren trägt:** `Partiezustand.aktuell.mod`
+  (`Lochmodifikatoren`, unveränderlich, von `kopiere` flach mitgenommen).
+  Teil 2 hängt seine Felder dort an; was sich IM Loch ändert, gehört an den
+  Ball und in `kopiere`.
+- **Physik und Bots lesen `physikwerte(mod, karte)`**, nicht mehr die
+  Konstanten. Im klassischen Modus kommt `KLASSISCHE_WERTE` selbst zurück —
+  dieselben Zahlen in derselben Rechnung; `klassisch-gold.test.ts` hasht vier
+  klassische Partien Takt für Takt als rohe Gleitkommabytes gegen Sollwerte,
+  die vor dem Umbau gemessen wurden. Die Bots erkennen den klassischen Satz
+  am Zeiger und nehmen dann den alten Weg über die Rasentabelle.
+- **Die sieben Modifikatoren und ihre Fallen:** Wind (Karten-Feld
+  `wind?: {rx, ry, staerke}`, schiebt nur rollende Bälle und nie stärker als
+  0,95 × Rollreibung — sonst käme ein Ball nie zur Ruhe), Regen (Reibung
+  × 0,5), Riesenball (Radius × 1,5), Miniball (Radius × 0,625 mit doppelt so
+  vielen Unterschritten, sonst tunnelt er), Gummiwände (Abprall × 1,4, aber
+  der Betrag wird gedeckelt: über 1 schaukelte sich ein Ball zwischen zwei
+  nahen Wänden auf), Zeitlupe (halber Zeitschritt, Flug/Portalsperre/
+  Zeitlimit doppelt), Schwerelos (Reibung × 0,25, Flug × 1,5; ein Sprungfeld
+  wirft nur vorwärts und mit einem Viertel Mindesttempo — sonst 0 % auf k07
+  und k38).
+- **Bots:** `kraftFuerStrecke` rechnet mit den Physikwerten, im Wind hält
+  `zielImWind` quer vor. Sichtlinie und Wegfeld rechnen mit dem Radius des
+  Balls, aber nie kleiner als dem klassischen (`planRadius`: mit 0,2 E zielte
+  der Bot auf Linien, die ihm jede Streuung verdarb). Das Wegfeld gibt es je
+  Radius; für andere Radien sperrt es zusätzlich Rasterpunkte IN Wänden.
+  Gemessen mit `golf-botprobe.ts --modifikator alle --kosten`.
+- **Noch offen:** Die Wahl steht im Menü „Gegen Bots" (`ModusWahl` in
+  `FunAnsage.tsx`); in der Gruppe (online, `setRules` von Sitz 0) fehlt der
+  Schalter. `replay.ts` rechnet Fun-Löcher noch klassisch nach (es reicht
+  `modus` nicht an `neuePartie`). Eine Bestleistung je Bahn gibt es im Fun-Modus
+  nicht (`zaehltFuerBestleistung` in bestleistung.ts fragt `modusVon`).
