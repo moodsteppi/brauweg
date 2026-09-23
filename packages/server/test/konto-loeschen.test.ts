@@ -80,14 +80,14 @@ test('mit Passwort bleibt es beim Passwort', async (t) => {
   assert.equal(me.json().loeschPasswort, undefined, 'Hilfsfelder gehen nicht hinaus');
 
   const ohne = await s.app.inject({ method: 'DELETE', url: '/api/me', headers: kopf, payload: {} });
-  assert.equal(ohne.statusCode, 401);
+  assert.equal(ohne.statusCode, 400, 'ohne Passwort bleibt es eine kaputte Anfrage');
   const wort = await s.app.inject({
     method: 'DELETE',
     url: '/api/me',
     headers: kopf,
     payload: { bestaetigung: 'LÖSCHEN' },
   });
-  assert.equal(wort.statusCode, 401, 'das Wort ersetzt kein Passwort');
+  assert.equal(wort.statusCode, 400, 'das Wort ersetzt kein Passwort');
   const mit = await s.app.inject({
     method: 'DELETE',
     url: '/api/me',

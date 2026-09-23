@@ -1560,6 +1560,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!acc) throw unauthorized('credentialsInvalid');
     const weg = loeschWeg(acc);
     if (weg === 'passwort') {
+      // Ohne Passwort im Rumpf ist es eine kaputte Anfrage (400), wie vor dem
+      // 23.09.2026, als Zod das Feld noch verlangte — kein falsches Passwort.
+      if (!nachweis.password) throw badRequest('invalidRequest');
       // Derselbe Schluessel wie bei der Anmeldung: Wer das Passwort nicht
       // kennt, erfaehrt hier nichts, was er nicht schon wusste.
       if (!(await verifyPassword(acc.passwordHash, nachweis.password ?? ''))) {
