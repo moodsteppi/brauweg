@@ -38,6 +38,19 @@ import {
   zonengruppen,
 } from './karte';
 import {
+  GUMMI_FAKTOR,
+  type Golfmodus,
+  type Lochmodifikatoren,
+  MINI_FAKTOR,
+  OHNE_MODIFIKATOR,
+  REGEN_REIBUNG,
+  RIESEN_FAKTOR,
+  SCHWERELOS_FLUG,
+  SCHWERELOS_REIBUNG,
+  ZEITLUPE_FAKTOR,
+  modifikatorenFuerLoch,
+} from './modifikator';
+import {
   betrag,
   drehe,
   fnv1a,
@@ -153,6 +166,13 @@ export interface Lochstand {
   endeTakt: number;
   /** Takt, in dem das nächste Loch beginnt; -1 solange das Loch läuft. */
   pauseBis: number;
+  /**
+   * Was an diesem Loch anders ist (seit dem 22.09.2026, Fun-Modus) — gezogen
+   * in `starteLoch`, im klassischen Modus `OHNE_MODIFIKATOR`. Unveränderlich
+   * und deshalb in `kopiere` nur flach mitgenommen (siehe modifikator.ts).
+   * Physik und Bots lesen es über `physikwerte`, nicht direkt.
+   */
+  mod: Lochmodifikatoren;
 }
 
 /** Deko für Bild und Ton — NICHT Teil des Determinismus. */
@@ -184,6 +204,8 @@ export interface Partiezustand {
   /** Der Takt, der als NÄCHSTES gerechnet wird. */
   takt: number;
   saat: number;
+  /** Klassisch oder Fun — entscheidet in `starteLoch`, was `aktuell.mod` bekommt. */
+  modus: Golfmodus;
   sitze: number;
   botSitze: number[];
   botStufe: Botstufe;
@@ -238,6 +260,8 @@ export interface Partieoptionen {
    * Geometrie noch nicht da"; gebraucht in Tests, die nur Ergebnisse rechnen.
    */
   karten?: readonly Karte[] | number;
+  /** Spielart des Tisches (`GolfSicht.modus`); ohne Angabe klassisch. */
+  modus?: Golfmodus;
 }
 
 /* --------------------------------------------------------------------------
@@ -271,6 +295,7 @@ export function neuePartie(opts: Partieoptionen): Partiezustand {
   const z: Partiezustand = {
     takt: 0,
     saat: opts.saat,
+    modus: opts.modus ?? 'klassisch',
     sitze,
     botSitze: [...opts.botSitze].sort((a, b) => a - b),
     botStufe: opts.botStufe ?? 'standard',
@@ -281,7 +306,7 @@ export function neuePartie(opts: Partieoptionen): Partiezustand {
       opts.loecher,
       typeof opts.karten === "number" ? opts.karten : (opts.karten?.length ?? opts.loecher),
     ),
-    aktuell: { loch: 0, karte: 0, startTakt: 0, endeTakt: -1, pauseBis: -1 },
+    aktuell: { loch: 0, karte: 0, startTakt: 0, endeTakt: -1, pauseBis: -1, mod: OHNE_MODIFIKATOR },
     baelle: [],
     ergebnis: [],
     eingelochtJeLoch: [],
@@ -311,7 +336,15 @@ export function starteLoch(
 ): void {
   const kartenIndex = z.reihenfolge[loch];
   const karte = karten[kartenIndex];
-  z.aktuell = { loch, karte: kartenIndex, startTakt, endeTakt: -1, pauseBis: -1 };
+  z.aktuell = {
+    loch,
+    karte: kartenIndex,
+    startTakt,
+    endeTakt: -1,
+    pauseBis: -1,
+    // Aus Saat und Lochindex, nie aus dem Zufallsstrom — siehe modifikator.ts.
+    mod: modifikatorenFuerLoch(z.modus, z.saat, loch),
+  };
   z.baelle = [];
   for (let s = 0; s < z.sitze; s += 1) {
     /*
@@ -390,6 +423,7 @@ export function kopiere(z: Partiezustand): Partiezustand {
   return {
     takt: z.takt,
     saat: z.saat,
+    modus: z.modus,
     sitze: z.sitze,
     botSitze: [...z.botSitze],
     botStufe: z.botStufe,
@@ -409,6 +443,144 @@ export function kopiere(z: Partiezustand): Partiezustand {
     letzterSchlagTakt: [...z.letzterSchlagTakt],
     letzteEreignisse: [],
   };
+}
+
+/* --------------------------------------------------------------------------
+ * Physikwerte eines Lochs
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Die Zahlen, mit denen ein Loch gerechnet wird — aus Bahn und Modifikatoren.
+ *
+ * Seit dem 22.09.2026 (Fun-Modus). Vorher las die Physik ihre Konstanten
+ * direkt; jetzt liest sie diese Werte, und im klassischen Modus sind es
+ * GENAU die Konstanten, in genau derselben Rechnung (`KLASSISCHE_WERTE`,
+ * geprüft in `klassisch-gold.test.ts`). Multiplizieren mit 1 und Addieren
+ * einer nie genommenen Verzweigung ändern in IEEE-754 keine Stelle.
+ */
+export interface Physikwerte {
+  ballR: number;
+  /** Faktor auf jede Reibung — Rasen, Sand und Eis. */
+  reibung: number;
+  /** Restitution der Wände und Drehkreuze; über 1 nur mit Betragsdeckel. */
+  prallWand: number;
+  /** Zeitschritt eines Unterschritts in Sekunden. */
+  dt: number;
+  unterschritte: number;
+  /** Wind als Richtung und Stärke; `windStaerke` 0 heißt: kein Wind. */
+  windRx: number;
+  windRy: number;
+  windStaerke: number;
+  /** Flugdauer eines Sprungfelds in Takten. */
+  flugTakte: number;
+  /** Mindesttempo, mit dem ein Sprungfeld wirft. */
+  flugVmin: number;
+  /** Sperre nach einem Portal in Takten. */
+  portalSperre: number;
+  /** Faktor auf das Zeitlimit der Bahn. */
+  zeitlimit: number;
+  /**
+   * Ein Sprungfeld wirft nur einen Ball, der in seine Richtung rollt.
+   *
+   * Nur schwerelos: Dort kommt ein Ball, der hinter dem Sprung an die Wand
+   * prallt, mit Fahrt zurück aufs Feld, wird wieder hinübergeworfen (jeder
+   * Sprung gibt mindestens `FLUG_VMIN`) — und pendelt so bis zum Zeitlimit.
+   * Gemessen auf k07 und k38: 0 % Einlochquote für jeden Bot. Klassisch
+   * bleibt es aus; dort rollt kein Ball so weit zurück.
+   */
+  sprungNurVorwaerts: boolean;
+}
+
+/** Der klassische Satz — ein einziges Objekt, damit die Bots ihn am Zeiger erkennen. */
+export const KLASSISCHE_WERTE: Readonly<Physikwerte> = Object.freeze({
+  ballR: BALL_R,
+  reibung: 1,
+  prallWand: RESTITUTION_WAND,
+  dt: DT,
+  unterschritte: UNTERSCHRITTE,
+  windRx: 0,
+  windRy: 0,
+  windStaerke: 0,
+  flugTakte: FLUG_TAKTE,
+  flugVmin: FLUG_VMIN,
+  portalSperre: PORTAL_SPERRE,
+  zeitlimit: 1,
+  sprungNurVorwaerts: false,
+});
+
+/**
+ * Wind höchstens so stark wie dieser Anteil der Rollreibung an der Stelle.
+ * Darüber hielte er einen rollenden Ball auf ewig in Fahrt (siehe `Wind`
+ * in karte.ts); auf Eis weht er deshalb kaum.
+ */
+export const WIND_ANTEIL = 0.95;
+
+/**
+ * Die Physikwerte für ein Loch mit diesen Modifikatoren auf dieser Bahn.
+ *
+ * Ohne Modifikator und ohne Bahnwind kommt `KLASSISCHE_WERTE` selbst zurück
+ * (nicht eine gleiche Kopie): Die Bots nehmen dann den alten, schnellen Weg
+ * über die Rasentabelle, und der hängt am Zeigervergleich.
+ */
+export function physikwerte(mod: Lochmodifikatoren, karte: Pick<Karte, 'wind'>): Readonly<Physikwerte> {
+  const wind = mod.wind ?? karte.wind ?? null;
+  if (mod.roulette === null && wind === null) return KLASSISCHE_WERTE;
+  const p: Physikwerte = { ...KLASSISCHE_WERTE };
+  if (wind !== null) {
+    p.windRx = wind.rx;
+    p.windRy = wind.ry;
+    p.windStaerke = wind.staerke > 0 ? wind.staerke : 0;
+  }
+  switch (mod.roulette) {
+    case 'regen':
+      p.reibung = REGEN_REIBUNG;
+      break;
+    case 'schwerelos':
+      p.reibung = SCHWERELOS_REIBUNG;
+      p.flugTakte = Math.round(FLUG_TAKTE * SCHWERELOS_FLUG);
+      p.sprungNurVorwaerts = true;
+      // Ohne Reibung rollt ein Ball, den der Sprung mit 14 E/s absetzt, gut
+      // 50 Einheiten weit — auf k07 und k38 flog jeder Schlag übers Loch bis
+      // an die Rückwand und rollte zurück (0 % für jeden Bot). Mit einem
+      // Viertel davon bleibt ein Sprung zu dosieren.
+      p.flugVmin = FLUG_VMIN * SCHWERELOS_REIBUNG;
+      break;
+    case 'riesenball':
+      p.ballR = BALL_R * RIESEN_FAKTOR;
+      break;
+    case 'miniball':
+      // Doppelt so viele, halb so lange Unterschritte — sonst tunnelt der
+      // kleine Ball durch Wände (siehe MINI_FAKTOR).
+      p.ballR = BALL_R * MINI_FAKTOR;
+      p.unterschritte = UNTERSCHRITTE * 2;
+      p.dt = DT / 2;
+      break;
+    case 'gummiwaende':
+      p.prallWand = RESTITUTION_WAND * GUMMI_FAKTOR;
+      break;
+    case 'zeitlupe':
+      // Die Bälle laufen mit halber Zeit; was in Takten zählt (Flug, Sperre,
+      // Zeitlimit), wird entsprechend länger. Das Drehkreuz dreht weiter im
+      // Takt — seine Winkel müssen ganze Grad bleiben (zufall.ts).
+      p.dt = DT * ZEITLUPE_FAKTOR;
+      p.flugTakte = Math.round(FLUG_TAKTE / ZEITLUPE_FAKTOR);
+      p.portalSperre = Math.round(PORTAL_SPERRE / ZEITLUPE_FAKTOR);
+      p.zeitlimit = 1 / ZEITLUPE_FAKTOR;
+      break;
+    default:
+      break;
+  }
+  return Object.freeze(p);
+}
+
+/** Radius der Bälle im laufenden Loch — für Zeichner und Anzeige. */
+export function ballRadius(z: Partiezustand, karte: Karte): number {
+  return physikwerte(z.aktuell.mod, karte).ballR;
+}
+
+/** Zeitlimit des laufenden Lochs in Sekunden — in der Zeitlupe doppelt so lang. */
+export function zeitlimitS(z: Partiezustand, karte: Pick<Karte, 'zeitLimitS' | 'wind'>): number {
+  return karte.zeitLimitS * physikwerte(z.aktuell.mod, karte).zeitlimit;
 }
 
 /* --------------------------------------------------------------------------
@@ -585,6 +757,7 @@ function pralleAbWand(
   restitution: number,
   wandVx: number,
   wandVy: number,
+  ballR: number,
 ): boolean {
   let t = 0;
   if (seg.laengeQ > 0) {
@@ -597,7 +770,7 @@ function pralleAbWand(
   const dx = b.x - px;
   const dy = b.y - py;
   const dq = dx * dx + dy * dy;
-  if (dq >= BALL_R * BALL_R) return false;
+  if (dq >= ballR * ballR) return false;
   let d = Math.sqrt(dq);
   let nx: number;
   let ny: number;
@@ -612,12 +785,25 @@ function pralleAbWand(
     nx = dx / d;
     ny = dy / d;
   }
-  b.x += nx * (BALL_R - d);
-  b.y += ny * (BALL_R - d);
+  b.x += nx * (ballR - d);
+  b.y += ny * (ballR - d);
   const vn = b.vx * nx + b.vy * ny;
   if (vn < 0) {
+    // Nur Gummiwände (Fun-Modus) federn über 1 — dort merkt sich der Stoß
+    // den Betrag davor. Der klassische Weg rechnet hier keine Zeile mehr.
+    const vorherQ = restitution > 1 ? b.vx * b.vx + b.vy * b.vy : 0;
     b.vx -= (1 + restitution) * vn * nx;
     b.vy -= (1 + restitution) * vn * ny;
+    if (restitution > 1) {
+      // Steiler ab, aber nicht schneller: Sonst schaukelt sich ein Ball
+      // zwischen zwei nahen Wänden auf und kommt nie zur Ruhe (GUMMI_FAKTOR).
+      const nachherQ = b.vx * b.vx + b.vy * b.vy;
+      if (nachherQ > vorherQ) {
+        const f = Math.sqrt(vorherQ / nachherQ);
+        b.vx *= f;
+        b.vy *= f;
+      }
+    }
     b.ruht = false;
     melde(z, { art: 'wandtreffer', sitz, x: px, y: py, staerke: -vn });
   }
@@ -638,7 +824,9 @@ function wandKontakte(
   b: Ball,
   segmente: readonly Segment[],
   dreh: readonly Drehteil[],
+  p: Readonly<Physikwerte>,
 ): void {
+  const r = p.ballR;
   for (let iter = 0; iter < MAX_KONTAKTE; iter += 1) {
     let getroffen = false;
     for (let s = 0; s < segmente.length; s += 1) {
@@ -646,30 +834,30 @@ function wandKontakte(
       // Grobe Hüllenabfrage zuerst: Sie spart in der Regel 95 % der teuren
       // Abstandsrechnungen, und die Abstandsrechnung läuft 3200-mal je Sekunde.
       if (
-        b.x + BALL_R < seg.minX ||
-        b.x - BALL_R > seg.maxX ||
-        b.y + BALL_R < seg.minY ||
-        b.y - BALL_R > seg.maxY
+        b.x + r < seg.minX ||
+        b.x - r > seg.maxX ||
+        b.y + r < seg.minY ||
+        b.y - r > seg.maxY
       ) {
         continue;
       }
-      if (pralleAbWand(z, sitz, b, seg, RESTITUTION_WAND, 0, 0)) getroffen = true;
+      if (pralleAbWand(z, sitz, b, seg, p.prallWand, 0, 0, r)) getroffen = true;
     }
     for (let s = 0; s < dreh.length; s += 1) {
       const teil = dreh[s];
       const seg = teil.seg;
       if (
-        b.x + BALL_R < seg.minX ||
-        b.x - BALL_R > seg.maxX ||
-        b.y + BALL_R < seg.minY ||
-        b.y - BALL_R > seg.maxY
+        b.x + r < seg.minX ||
+        b.x - r > seg.maxX ||
+        b.y + r < seg.minY ||
+        b.y - r > seg.maxY
       ) {
         continue;
       }
       // Geschwindigkeit des Wandpunkts: omega senkrecht auf den Hebelarm.
       const armX = b.x - teil.cx;
       const armY = b.y - teil.cy;
-      if (pralleAbWand(z, sitz, b, seg, RESTITUTION_WAND, -teil.omega * armY, teil.omega * armX)) {
+      if (pralleAbWand(z, sitz, b, seg, p.prallWand, -teil.omega * armY, teil.omega * armX, r)) {
         getroffen = true;
       }
     }
@@ -677,12 +865,18 @@ function wandKontakte(
   }
 }
 
-function bumperKontakte(z: Partiezustand, sitz: number, b: Ball, bumper: readonly ZoneBumper[]): void {
+function bumperKontakte(
+  z: Partiezustand,
+  sitz: number,
+  b: Ball,
+  bumper: readonly ZoneBumper[],
+  ballR: number,
+): void {
   for (let i = 0; i < bumper.length; i += 1) {
     const zone = bumper[i];
     const dx = b.x - zone.x;
     const dy = b.y - zone.y;
-    const grenze = zone.r + BALL_R;
+    const grenze = zone.r + ballR;
     const dq = dx * dx + dy * dy;
     if (dq >= grenze * grenze) continue;
     const d = Math.sqrt(dq);
@@ -716,17 +910,23 @@ function bumperKontakte(z: Partiezustand, sitz: number, b: Ball, bumper: readonl
 }
 
 /** Reibung, Zonenkräfte und Bewegung eines Balls für einen Unterschritt. */
-function bewege(z: Partiezustand, sitz: number, b: Ball, gruppen: Zonengruppen): void {
+function bewege(
+  z: Partiezustand,
+  sitz: number,
+  b: Ball,
+  gruppen: Zonengruppen,
+  p: Readonly<Physikwerte>,
+): void {
   if (b.flugTakte > 0) {
     // Im Flug zählt nichts: keine Reibung, keine Wände, keine Zonen, keine
     // Bälle. Das Sprungfeld soll über ein Hindernis tragen, und alles andere
     // wäre eine Fallunterscheidung mehr im heißesten Pfad.
-    b.x += b.vx * DT;
-    b.y += b.vy * DT;
+    b.x += b.vx * p.dt;
+    b.y += b.vy * p.dt;
     return;
   }
 
-  let reib = 1;
+  let reib = p.reibung;
   let ax = 0;
   let ay = 0;
   let getrieben = false;
@@ -736,7 +936,7 @@ function bewege(z: Partiezustand, sitz: number, b: Ball, gruppen: Zonengruppen):
     // Mehrere Untergründe übereinander: der letzte in der Kartenliste gewinnt.
     // Die Karten legen sie nicht übereinander, aber ein Zufall soll nicht in
     // einer Endlosregel enden.
-    if (istInZone(zone, b.x, b.y)) reib = zone.art === 'sand' ? SAND_FAKTOR : EIS_FAKTOR;
+    if (istInZone(zone, b.x, b.y)) reib = (zone.art === 'sand' ? SAND_FAKTOR : EIS_FAKTOR) * p.reibung;
   }
   const treiber = gruppen.beschleuniger;
   for (let i = 0; i < treiber.length; i += 1) {
@@ -766,17 +966,30 @@ function bewege(z: Partiezustand, sitz: number, b: Ball, gruppen: Zonengruppen):
   }
 
   const v = betrag(b.vx, b.vy);
+  /*
+   * Wind (Fun-Modus oder Bahnwind): nur auf einen rollenden Ball, und nie
+   * stärker als ein Anteil der Rollreibung hier — sonst käme der Ball nie
+   * zur Ruhe (siehe `Wind` in karte.ts). Er macht den Ball deshalb auch
+   * nicht `getrieben`: Unter `V_STOP` bleibt er liegen wie sonst.
+   */
+  if (p.windStaerke > 0 && v > 0) {
+    let staerke = p.windStaerke;
+    const deckel = WIND_ANTEIL * ROLL * reib;
+    if (staerke > deckel) staerke = deckel;
+    ax += p.windRx * staerke;
+    ay += p.windRy * staerke;
+  }
   if (v > 0) {
-    let neu = v * (1 - REIBUNG_RASEN * reib * DT) - ROLL * reib * DT;
+    let neu = v * (1 - REIBUNG_RASEN * reib * p.dt) - ROLL * reib * p.dt;
     if (neu < 0) neu = 0;
     const faktor = neu / v;
     b.vx *= faktor;
     b.vy *= faktor;
   }
-  b.vx += ax * DT;
-  b.vy += ay * DT;
-  b.x += b.vx * DT;
-  b.y += b.vy * DT;
+  b.vx += ax * p.dt;
+  b.vy += ay * p.dt;
+  b.x += b.vx * p.dt;
+  b.y += b.vy * p.dt;
 
   const nachher = betrag(b.vx, b.vy);
   if (nachher < V_STOP && !getrieben) {
@@ -795,7 +1008,13 @@ function bewege(z: Partiezustand, sitz: number, b: Ball, gruppen: Zonengruppen):
  * Wer gleichzeitig im Wasser und auf einem Sprungfeld landet, ist nass — das
  * ist die Regel, die ein Spieler erwartet.
  */
-function zonenAmOrt(z: Partiezustand, sitz: number, b: Ball, gruppen: Zonengruppen): void {
+function zonenAmOrt(
+  z: Partiezustand,
+  sitz: number,
+  b: Ball,
+  gruppen: Zonengruppen,
+  p: Readonly<Physikwerte>,
+): void {
   if (b.flugTakte > 0) return;
   const wasser = gruppen.wasser;
   for (let i = 0; i < wasser.length; i += 1) {
@@ -821,7 +1040,7 @@ function zonenAmOrt(z: Partiezustand, sitz: number, b: Ball, gruppen: Zonengrupp
       melde(z, { art: 'portal', sitz, x: b.x, y: b.y, zielX: zone.ziel.x, zielY: zone.ziel.y });
       b.x = zone.ziel.x;
       b.y = zone.ziel.y;
-      b.portalSperre = PORTAL_SPERRE;
+      b.portalSperre = p.portalSperre;
       return;
     }
   }
@@ -830,9 +1049,11 @@ function zonenAmOrt(z: Partiezustand, sitz: number, b: Ball, gruppen: Zonengrupp
     const zone = sprung[i];
     if (!istInZone(zone, b.x, b.y)) continue;
     const r = normiere(zone.rx, zone.ry);
+    // Schwerelos: nur, wer in Sprungrichtung rollt, springt (siehe Physikwerte).
+    if (p.sprungNurVorwaerts && b.vx * r.x + b.vy * r.y <= 0) continue;
     let tempo = betrag(b.vx, b.vy);
-    if (tempo < FLUG_VMIN) tempo = FLUG_VMIN;
-    b.flugTakte = FLUG_TAKTE;
+    if (tempo < p.flugVmin) tempo = p.flugVmin;
+    b.flugTakte = p.flugTakte;
     b.flugRx = r.x;
     b.flugRy = r.y;
     b.vx = r.x * tempo;
@@ -852,7 +1073,7 @@ function zonenAmOrt(z: Partiezustand, sitz: number, b: Ball, gruppen: Zonengrupp
       melde(z, { art: 'portal', sitz, x: b.x, y: b.y, zielX: zone.ziel.x, zielY: zone.ziel.y });
       b.x = zone.ziel.x;
       b.y = zone.ziel.y;
-      b.portalSperre = PORTAL_SPERRE;
+      b.portalSperre = p.portalSperre;
     } else {
       b.x = zone.x;
       b.y = zone.y;
@@ -889,7 +1110,7 @@ function locheinwurf(z: Partiezustand, sitz: number, b: Ball, karte: Karte): voi
  * anderer verschoben hat, muss im nächsten Unterschritt wieder gegen die Wände
  * geprüft werden, auch wenn er sich von selbst nicht bewegt.
  */
-function ballKontakte(z: Partiezustand, wach: boolean[]): void {
+function ballKontakte(z: Partiezustand, wach: boolean[], ballR: number): void {
   const baelle = z.baelle;
   for (let i = 0; i < baelle.length; i += 1) {
     const a = baelle[i];
@@ -904,7 +1125,7 @@ function ballKontakte(z: Partiezustand, wach: boolean[]): void {
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const dq = dx * dx + dy * dy;
-      const grenze = BALL_R + BALL_R;
+      const grenze = ballR + ballR;
       if (dq >= grenze * grenze) continue;
       const d = Math.sqrt(dq);
       const nx = d < 1e-9 ? 1 : dx / d;
@@ -938,13 +1159,13 @@ function ballKontakte(z: Partiezustand, wach: boolean[]): void {
  * zurückgeschoben, bis er frei liegt. Ohne das bliebe er in der Wand stecken
  * und würde vom Abpralllöser in eine zufällige Richtung ausgespuckt.
  */
-function lande(b: Ball, segmente: readonly Segment[]): void {
+function lande(b: Ball, segmente: readonly Segment[], ballR: number): void {
   for (let schritt = 0; schritt <= 60; schritt += 1) {
     const px = b.x - b.flugRx * (schritt * 0.1);
     const py = b.y - b.flugRy * (schritt * 0.1);
     let frei = true;
     for (let s = 0; s < segmente.length; s += 1) {
-      if (abstandQuadrat(segmente[s], px, py) < BALL_R * BALL_R) {
+      if (abstandQuadrat(segmente[s], px, py) < ballR * ballR) {
         frei = false;
         break;
       }
@@ -1050,6 +1271,8 @@ export function schritt(
   const karte = karten[z.aktuell.karte];
   const segmente = segmenteVon(karte);
   const gruppen = zonengruppen(karte);
+  // Im klassischen Modus `KLASSISCHE_WERTE` selbst — dieselben Zahlen wie die Konstanten.
+  const p = physikwerte(z.aktuell.mod, karte);
 
   for (let i = 0; i < ereignisse.length; i += 1) {
     const e = ereignisse[i];
@@ -1073,22 +1296,22 @@ export function schritt(
    * knapp die Hälfte der Physikzeit.
    */
   const wach: boolean[] = new Array<boolean>(baelle.length).fill(true);
-  for (let u = 0; u < UNTERSCHRITTE; u += 1) {
+  for (let u = 0; u < p.unterschritte; u += 1) {
     for (let s = 0; s < baelle.length; s += 1) {
       const b = baelle[s];
       if (!b.dabei || b.eingelocht) continue;
       const vorherX = b.x;
       const vorherY = b.y;
-      bewege(z, s, b, gruppen);
+      bewege(z, s, b, gruppen, p);
       if (!wach[s] && b.x === vorherX && b.y === vorherY) continue;
       wach[s] = false;
-      zonenAmOrt(z, s, b, gruppen);
+      zonenAmOrt(z, s, b, gruppen, p);
       if (b.flugTakte === 0) {
-        wandKontakte(z, s, b, segmente, dreh);
-        bumperKontakte(z, s, b, gruppen.bumper);
+        wandKontakte(z, s, b, segmente, dreh, p);
+        bumperKontakte(z, s, b, gruppen.bumper, p.ballR);
       }
     }
-    ballKontakte(z, wach);
+    ballKontakte(z, wach, p.ballR);
     for (let s = 0; s < baelle.length; s += 1) {
       const b = baelle[s];
       if (!b.dabei || b.eingelocht) continue;
@@ -1102,18 +1325,18 @@ export function schritt(
     if (b.portalSperre > 0) b.portalSperre -= 1;
     if (b.flugTakte > 0) {
       b.flugTakte -= 1;
-      if (b.flugTakte === 0) lande(b, segmente);
+      if (b.flugTakte === 0) lande(b, segmente, p.ballR);
     }
   }
 
-  regelnPruefen(z, karte);
+  regelnPruefen(z, karte, p);
   lochwechsel(z, karten);
   z.takt += 1;
 }
 
-function regelnPruefen(z: Partiezustand, karte: Karte): void {
+function regelnPruefen(z: Partiezustand, karte: Karte, p: Readonly<Physikwerte>): void {
   if (z.aktuell.endeTakt !== -1) return;
-  const zeitAus = z.takt - z.aktuell.startTakt >= karte.zeitLimitS * (1000 / TAKT_MS);
+  const zeitAus = z.takt - z.aktuell.startTakt >= karte.zeitLimitS * (1000 / TAKT_MS) * p.zeitlimit;
   for (let s = 0; s < z.baelle.length; s += 1) {
     const b = z.baelle[s];
     if (!b.dabei || b.fertigTakt !== -1) continue;

@@ -79,4 +79,12 @@ export interface GolfSicht {
   taktMs: number;
   vorlauf: number;
   botStufe: GolfBotStufe;
+  /**
+   * Klassisch oder Fun (seit dem 23.09.2026). Im Fun-Modus zieht jedes Gerät
+   * je Loch selbst einen Modifikator aus `saat` und Lochindex
+   * (modifikator.ts) — über die Leitung geht dafür nichts. Optional nur für
+   * Testsichten und Server von davor: Fehlt es, ist der Tisch klassisch
+   * (`modusAus` in netz.ts); das Modul liefert es immer.
+   */
+  modus?: 'klassisch' | 'fun';
 }

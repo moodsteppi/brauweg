@@ -11,6 +11,8 @@
  * Client (`packages/client/src/minispiele/golf/physik.ts`).
  */
 
+import type { GolfModus } from './modus.js';
+
 /**
  * Filter fuer die gezogene Bahnfolge. Beide Felder optional; beide gesetzt
  * heisst UND. Die Rampe von leicht nach schwer bleibt, sie laeuft nur ueber
@@ -49,6 +51,11 @@ export interface GolfRegeln {
    * Filters, siehe `varianteFuer`. Nur Anzeige — die Bahnwahl liest es nie.
    */
   readonly variante?: string;
+  /**
+   * Klassisch oder Fun (seit dem 22.09.2026, siehe modus.ts). Fehlt es, ist
+   * der Tisch klassisch — so bleiben alle Tische von davor, was sie waren.
+   */
+  readonly modus?: GolfModus;
 }
 
 export const DEFAULT_REGELN: GolfRegeln = {};

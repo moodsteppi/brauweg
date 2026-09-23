@@ -20,6 +20,7 @@
 
 import { Gleichschritt } from './gleichschritt';
 import { type Karte, loeseBahnen } from './karte';
+import { type Golfmodus, modusAus } from './modifikator';
 import { TAKT_MS, VORLAUF_TAKTE, type Botstufe, type Ereignis } from './physik';
 import type { GolfSicht, GolfZug } from './sicht';
 
@@ -63,6 +64,8 @@ interface Partiekopf {
   bahnen: string[];
   botSitze: number[];
   botStufe: Botstufe;
+  /** Klassisch oder Fun — seit dem 23.09.2026, siehe modifikator.ts. */
+  modus: Golfmodus;
 }
 
 export class Golfnetz {
@@ -199,6 +202,8 @@ export class Golfnetz {
       bahnen: [...(sicht.bahnen ?? [])],
       botSitze: [...sicht.botSitze],
       botStufe: sicht.botStufe,
+      // Fehlt nur bei einem Server von vor dem 23.09.2026 — dann klassisch.
+      modus: modusAus(sicht.modus),
     };
     while (this.naechsteNr.length < sicht.sitze) this.naechsteNr.push(0);
     while (this.letzterTakt.length < sicht.sitze) this.letzterTakt.push(-1);
@@ -365,6 +370,7 @@ export class Golfnetz {
       loecher: kopf.loecher,
       karten: aufgeloest.karten,
       botStufe: kopf.botStufe,
+      modus: kopf.modus,
     });
     this.gereicht = 0;
     this.ausstiege = 0;

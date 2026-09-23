@@ -12,8 +12,10 @@ import {
 import { abschlussdaten, type Abschlussdaten } from '../minispiele/golf/abschluss';
 import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
-import { loeseBahnen } from '../minispiele/golf/karte';
+import { type Karte, loeseBahnen } from '../minispiele/golf/karte';
 import { Bahnauswahl, BahnauswahlAnzeige } from '../minispiele/golf/Bahnauswahl';
+import { FunAnsage, ModusWahl, gemerkterModus, regelnMitModus } from '../minispiele/golf/FunAnsage';
+import type { Golfmodus } from '../minispiele/golf/modifikator';
 import {
   festeLochzahl,
   gemerkteWahl,
@@ -39,6 +41,7 @@ import {
   pruefsumme,
   schlagErlaubt,
   troedelRest,
+  zeitlimitS,
   type Partiezustand,
 } from '../minispiele/golf/physik';
 import type { GolfSicht } from '../minispiele/golf/sicht';
@@ -75,6 +78,7 @@ import { useTable } from '../useTable';
 const SCHLUESSEL_LOECHER = 'golf.loecher';
 const SCHLUESSEL_BOTS = 'golf.bots';
 const SCHLUESSEL_STUFE = 'golf.botstufe';
+const SCHLUESSEL_MODUS = 'golf.modus';
 
 /** Aus dem Browser lesen. Gesperrte Seitendaten sind kein Fehler, nur leer. */
 function gemerkt(schluessel: string, vorgabe: number, min: number, max: number): number {
@@ -196,6 +200,8 @@ export function Golf({
   const [bots, setBots] = useState(() => gemerkt(SCHLUESSEL_BOTS, 3, 1, 7));
   const [loecher, setLoecher] = useState(() => gemerkt(SCHLUESSEL_LOECHER, 9, 2, 15));
   const [stufe, setStufe] = useState<BotLevel>(gemerkteStufe);
+  // Klassisch oder Fun für den Bot-Tisch (seit 23.09.2026, FunAnsage.tsx).
+  const [modus, setModus] = useState<Golfmodus>(() => gemerkterModus(SCHLUESSEL_MODUS));
   /* Bahnauswahl (seit 22.09.2026): Kurse und Themen vom Modul; die Wahl für den Bot-Tisch hier. */
   const lobby = useGolfLobby();
   const [botWahl, setBotWahl] = useState<Bahnwahl>(gemerkteWahl);
@@ -359,8 +365,15 @@ export function Golf({
         visibility: 'on_request',
         fillWithBots: true,
         botLevel: stufe,
-        // Nur mit einer Wahl ein Regelsatz — sonst der des Moduls (siehe spieleOnline).
-        ...(traegtWahl(botWahl) ? { config: regelnAusWahl(botWahl, lobby.vorgabe, lobby.daten) } : {}),
+        // Nur mit einer Wahl ein Regelsatz — sonst der des Moduls (siehe
+        // spieleOnline). Der Fun-Modus ist auch eine Wahl (FunAnsage.tsx).
+        ...(() => {
+          const config = regelnMitModus(
+            traegtWahl(botWahl) ? regelnAusWahl(botWahl, lobby.vorgabe, lobby.daten) : null,
+            modus,
+          );
+          return config === undefined ? {} : { config };
+        })(),
       });
       setTischId(id);
     } catch {
@@ -368,7 +381,7 @@ export function Golf({
     } finally {
       setLaedt(false);
     }
-  }, [bots, loecher, stufe, botWahl, lobby]);
+  }, [bots, loecher, stufe, botWahl, lobby, modus]);
 
   const verlasse = useCallback((): void => {
     const id = tischId;
@@ -524,6 +537,13 @@ export function Golf({
                     </button>
                   ))}
                 </div>
+                <ModusWahl
+                  modus={modus}
+                  onWahl={(m) => {
+                    setModus(m);
+                    merke(SCHLUESSEL_MODUS, m);
+                  }}
+                />
                 <Bahnauswahl
                   daten={lobby.daten}
                   wahl={botWahl}
@@ -1413,6 +1433,8 @@ function Partie({
           />
         )}
 
+        <FunAnsage modus={sicht.modus} saat={sicht.saat} loch={hud.loch} loecher={hud.loecher} pause={hud.pause} />
+
         {hud.binTroedler && hud.troedel > 0 && (
           <p className="gf-troedel" aria-live="polite">
             Alle warten auf dich: {hud.troedel}
@@ -1518,7 +1540,7 @@ function Kartenzeichen(): React.JSX.Element {
 
 function baueHud(
   z: Partiezustand,
-  karte: { name: string; par: number; zeitLimitS: number },
+  karte: { name: string; par: number; zeitLimitS: number; wind?: Karte['wind'] },
   eigenerSitz: number,
 ): Hudstand {
   const schlaege: number[] = [];
@@ -1549,7 +1571,8 @@ function baueHud(
     loecher: z.loecher,
     bahn: karte.name,
     par: karte.par,
-    restS: Math.max(0, Math.ceil(karte.zeitLimitS - verstrichen)),
+    // In der Zeitlupe (Fun-Modus) ist das Limit doppelt so lang — dieselbe Zahl wie in der Physik.
+    restS: Math.max(0, Math.ceil(zeitlimitS(z, karte) - verstrichen)),
     schlaege,
     gesamt,
     fertig,

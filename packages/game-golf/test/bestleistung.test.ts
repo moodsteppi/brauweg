@@ -89,6 +89,26 @@ test('meldet je Sitz und Loch die Schlagzahl unter der Bahnkennung, Richtung tie
 test('nur im klassischen Modus — der Haken fuer den Fun-Modus sagt heute fuer den Standard ja', () => {
   assert.equal(zaehltFuerBestleistung(DEFAULT_REGELN), true);
   assert.equal(zaehltFuerBestleistung(golf.defaultConfig()), true);
+  assert.equal(zaehltFuerBestleistung({ modus: 'klassisch' }), true);
+  assert.equal(zaehltFuerBestleistung({ modus: 'fun' }), false);
+});
+
+test('Fun-Modus: dieselbe ehrliche Meldung, Platz wie immer, aber keine Bestleistung', () => {
+  const p = gemeldet(
+    golf.createParty({ config: { modus: 'fun' }, seats: 2, rounds: 3, seed: 4711 }),
+    [
+      [0, meldung(TAFEL, 2)],
+      [1, meldung(TAFEL, 2)],
+    ],
+  );
+  assert.equal(p.ausgang?.strittig, false);
+  assert.ok(waehleLochwerte(p) !== null);
+  const stand = golf.standings(p);
+  assert.deepEqual(
+    stand.map((s) => s.place),
+    golf.standings(gemeldet(start(), [[0, meldung(TAFEL, 2)], [1, meldung(TAFEL, 2)]])).map((s) => s.place),
+  );
+  assert.ok(stand.every((s) => !('bestleistungen' in s)));
 });
 
 test('strittiger Ausgang: kein Platz, also auch keine Bestleistung', () => {
