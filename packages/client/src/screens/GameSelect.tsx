@@ -898,7 +898,11 @@ function ProfilTab({
             icon="/hub/icon-aufgaben.webp"
             name="Aufgaben"
             gold
-            punkt={me.bereit.truhen + me.bereit.aufgaben > 0}
+            punkt={
+              me.bereit.truhen + me.bereit.aufgaben > 0
+                ? `${me.bereit.truhen + me.bereit.aufgaben} bereit`
+                : null
+            }
             onClick={onAufgaben}
           />
         </div>
@@ -1901,19 +1905,25 @@ function ProfilKachel({
   icon,
   name,
   gold = false,
-  punkt = false,
+  punkt = null,
   onClick,
 }: {
   icon: string;
   name: string;
   gold?: boolean;
-  /** Roter Punkt: dahinter ist etwas zu holen. Nie eine Zahl — siehe DESIGN.md. */
-  punkt?: boolean;
+  /**
+   * Roter Punkt: dahinter ist etwas zu holen. Nie eine SICHTBARE Zahl — siehe
+   * DESIGN.md. Der Text ist, was ein Vorlesegeraet daraus macht, und landet im
+   * Namen der Kachel (Bauform wie am Reiter). Ohne ihn hiess die Kachel auch
+   * mit zwei Truhen darin nur "Aufgaben".
+   */
+  punkt?: string | null;
   onClick: () => void;
 }): React.JSX.Element {
   return (
     <button
       className={`profil-kachel${gold ? ' is-gold' : ''}`}
+      aria-label={mitPunkt(name, punkt)}
       onClick={() => {
         spiele('tipp');
         onClick();
@@ -1921,9 +1931,22 @@ function ProfilKachel({
     >
       <img src={icon} alt="" aria-hidden="true" draggable={false} />
       <span>{name}</span>
-      {punkt && <span className="hub-punkt hub-punkt--klein" aria-hidden="true" />}
+      {punkt !== null && <span className="hub-punkt hub-punkt--klein" aria-hidden="true" />}
     </button>
   );
+}
+
+/**
+ * Name eines Knopfes, an dem ein Bereitschaftspunkt haengen kann.
+ *
+ * Der Vorlesetext gehoert in den Namen des KNOPFES, nicht an den Punkt: Ein
+ * aria-label am Punkt zaehlt nicht mit, sobald der Knopf selbst eins traegt
+ * (so war die Truhe bis zum 23.09.2026 stumm), und ohne eins klebt der Name
+ * aus dem Inhalt ohne Trennung zusammen (der Reiter hiess
+ * "ProfilGeschenk liegt bereit"). Das Komma ist die Pause beim Vorlesen.
+ */
+function mitPunkt(name: string, punkt: string | null): string {
+  return punkt === null ? name : `${name}, ${punkt}`;
 }
 
 /**
@@ -1985,6 +2008,7 @@ function TabButton({
     <button
       className={`front-tab front-tab--${farbe}${haupt ? ' front-tab--haupt' : ''}${active ? ' is-active' : ''}`}
       aria-current={active ? 'page' : undefined}
+      aria-label={mitPunkt(label, punkt)}
       // Der Klang haengt an der Leiste und nicht an jedem einzelnen Knopf im
       // Haus: Das hier ist die Bewegung, die man hundertmal am Abend macht.
       // Wer jeden Knopf verklanglicht, baut eine Klapperkiste.
@@ -1995,7 +2019,7 @@ function TabButton({
     >
       <img className="front-tab-icon" src={iconSrc} alt="" draggable={false} />
       <span>{label}</span>
-      {punkt !== null && <span className="hub-punkt" aria-label={punkt} />}
+      {punkt !== null && <span className="hub-punkt" aria-hidden="true" />}
     </button>
   );
 }
@@ -2106,11 +2130,11 @@ function Spielen({
           <button
             type="button"
             className="hub-truhe"
-            aria-label="Tagesaufgaben und Truhen"
+            aria-label={mitPunkt('Tagesaufgaben und Truhen', bereit > 0 ? `${bereit} bereit` : null)}
             onClick={onAufgaben}
           >
             <img src="/hub/truhe.png" alt="" draggable={false} />
-            {bereit > 0 && <span className="hub-punkt" aria-label={`${bereit} bereit`} />}
+            {bereit > 0 && <span className="hub-punkt" aria-hidden="true" />}
           </button>
         </aside>
 
