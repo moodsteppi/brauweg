@@ -2613,7 +2613,7 @@ function Spielwahl({
                     {game.id === 'golf' ? ' · Minigolf in Echtzeit' : ''}
                     {game.id === 'brocooked' ? ' · Küche in Echtzeit' : ''}
                     {game.id === 'tafelrunde' ? ' · Auto-Battler' : ''}
-                    {game.id === 'partykiste' ? ' · 9 Minispiele, ein Turnier' : ''}
+                    {game.id === 'partykiste' ? ' · Minispiele, ein Turnier' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>

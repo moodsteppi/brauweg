@@ -134,10 +134,14 @@ export function Lobby({
       // stehen Schmeissen und die Sonderpunkte schon auf aus.
       setConfig(config);
 
+      // Ohne gemerkte Wahl bleibt der Anfangswert (4) nur stehen, wenn das
+      // Spiel ihn kennt. Skat hat 3 Sitze; sonst scheitert der erste Tisch.
       const seatWahl =
         merken?.seats !== undefined && d.seatCounts.includes(merken.seats)
           ? merken.seats
-          : seats;
+          : d.seatCounts.includes(seats)
+            ? seats
+            : d.seatCounts[0];
       setSeats(seatWahl);
       const runden = d.rounds[String(seatWahl)] ?? [];
       const rundenWahl =
