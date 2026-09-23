@@ -340,4 +340,20 @@ describe('ProbeKampf', () => {
     // nicht abgeschrieben — dasselbe Wort steht am Tisch.
     expect(screen.getByText('Kampfphase')).toBeInTheDocument();
   });
+
+  it('erzeugt keine React-Warnung für doppelte Schlüssel', () => {
+    const errors: string[] = [];
+    const spyError = vi.spyOn(console, 'error').mockImplementation((msg: unknown) => {
+      if (typeof msg === 'string') {
+        errors.push(msg);
+      }
+    });
+
+    render(<ProbeKampf />);
+    lauf(BERICHT.dauerMs + 1_000);
+
+    spyError.mockRestore();
+    const sameKeyErrors = errors.filter((e) => e.includes('same key'));
+    expect(sameKeyErrors).toHaveLength(0);
+  });
 });
