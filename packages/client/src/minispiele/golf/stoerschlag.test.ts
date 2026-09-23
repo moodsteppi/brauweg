@@ -14,6 +14,7 @@ import {
   schritt,
   starteLoch,
 } from './physik';
+import { botStoerschlag } from './bot-stoer';
 import { POWERUP_R, POWERUPS, type Powerupart, type ZonePowerup, feldWeg, powerupsFuerLoch } from './powerup';
 import {
   BOMBE_R,
@@ -21,7 +22,6 @@ import {
   STOER_REICHWEITE,
   STOERARTEN,
   ausloesenErlaubt,
-  botStoerschlag,
   fuehrendeSitze,
   sperrgrund,
 } from './stoerschlag';
@@ -426,10 +426,13 @@ describe('Bots', () => {
     z.baelle[0].halt = 'bombe';
     const wahl = botStoerschlag(z, 0, FREI);
     expect(wahl).not.toBeNull();
-    // Die Zielstelle ist der Ball des Führenden.
+    // Die Zielstelle liegt knapp VOR dem Führenden, zwischen ihm und dem Loch
+    // (seit Version 10, bot-stoer.ts): Von dort stößt die Bombe ihn zurück.
     expect(wahl!.rx).toBeCloseTo(0, 9);
     expect(wahl!.ry).toBeCloseTo(-1, 9);
-    expect(wahl!.kraft * STOER_REICHWEITE).toBeCloseTo(8, 9);
+    const weit = wahl!.kraft * STOER_REICHWEITE;
+    expect(weit).toBeGreaterThan(8);
+    expect(weit - 8).toBeLessThan(BOMBE_R);
 
     z.aktuell.fuehrend = 0b01;
     expect(botStoerschlag(z, 0, FREI)).toBeNull();
@@ -440,7 +443,12 @@ describe('Bots', () => {
     lege(z, 0, 15, 40);
     lege(z, 1, 15, 38);
     z.baelle[0].halt = 'bombe';
-    expect(botStoerschlag(z, 0, FREI), 'zu nah: die Bombe träfe ihn selbst').toBeNull();
+    // Liegt der Führende nah, fliegt die Bombe weiter vor ihn — der eigene
+    // Ball bleibt draußen (bis Version 9 fiel sie hier ganz aus).
+    const wahl = botStoerschlag(z, 0, FREI);
+    expect(wahl).not.toBeNull();
+    expect(wahl!.kraft * STOER_REICHWEITE, 'der eigene Ball bleibt außerhalb').toBeGreaterThanOrEqual(BOMBE_R);
+    expect(wahl!.kraft * STOER_REICHWEITE - 2, 'der Führende liegt im Umkreis').toBeLessThan(BOMBE_R);
     lege(z, 1, 15, 30);
     z.baelle[1].halt = 'schild';
     expect(botStoerschlag(z, 0, FREI)).toBeNull();
@@ -482,7 +490,10 @@ describe('Bots', () => {
       return { pruef: pruefsumme(gs.zustand().ergebnis), stoer, zeichen: zeichen.join(',') };
     }
     let gesamt = 0;
-    for (const saat of [11, 12, 13]) {
+    // Saaten, in denen Störschläge fallen. Seit Version 10 (bot-stoer.ts)
+    // zielen und sammeln die Bots anders; in 11–13 fällt seitdem keiner mehr,
+    // in 15–17 fallen welche.
+    for (const saat of [15, 16, 17]) {
       const a = spiele(saat);
       expect(spiele(saat)).toEqual(a);
       gesamt += a.stoer;

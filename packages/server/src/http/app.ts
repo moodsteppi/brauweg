@@ -31,7 +31,6 @@ import {
   type AuthDeps,
   anonymizeAccount,
   login,
-  loginMitGoogle,
   logout,
   register,
   requestPasswordReset,
@@ -44,7 +43,13 @@ import {
   gastKonto,
   gastSichern,
 } from '../auth/service.js';
-import { pruefeGoogleToken } from '../auth/google.js';
+// Eigene Zeile statt in der Liste darueber: Bestaetigung, Reset und
+// Mail-Diagnose (23.09.2026) kamen parallel zu anderen Anmeldewegen dazu.
+import { createSession } from '../auth/service.js';
+import { mailProbe } from '../mail/probe.js';
+import type { Schluesselquelle } from '../auth/idtoken.js';
+import type { NonceSpeicher } from '../auth/nonce.js';
+import { anbieterRouten } from './anbieter-routen.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
   berlinToday,
@@ -205,6 +210,21 @@ export interface AppDeps {
    * sie, gibt es den Knopf nicht — der Rest der Anmeldung laeuft unveraendert.
    */
   readonly googleClientId?: string | null;
+  /**
+   * "Mit Apple anmelden": Services ID (APPLE_CLIENT_ID) und die bei Apple
+   * eingetragene Return-URL. Fehlt eins davon, gibt es den Knopf nicht.
+   */
+  readonly appleClientId?: string | null;
+  readonly appleRedirectUri?: string | null;
+  /** Inhalt der Apple-Domain-Nachweisdatei (APPLE_DOMAIN_ASSOCIATION), falls verlangt. */
+  readonly appleDomainVerknuepfung?: string | null;
+  /** Nur Tests: eigene Schluessel statt Googles und Apples JWKS. */
+  readonly anbieterSchluessel?: {
+    readonly google?: Schluesselquelle;
+    readonly apple?: Schluesselquelle;
+  };
+  /** Nur Tests: ein Nonce-Speicher, in den der Test selbst hineinsieht. */
+  readonly anbieterNonces?: NonceSpeicher;
   /** Ziel-URL des bro-server-Endpunkts fuers Feedback-Widget, siehe config.ts. */
   readonly feedbackZielUrl?: string | null;
   /** Bearer-Schluessel fuer obige URL. */
@@ -337,16 +357,31 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       directives: {
         defaultSrc: ["'self'"],
         /**
-         * accounts.google.com ist fuer "Mit Google anmelden" (GIS-Knopf):
-         * Das Skript kommt von dort, der Knopf selbst ist ein iframe
-         * derselben Herkunft, und die Bibliothek funkt dorthin. Ohne die
-         * drei Eintraege laedt der Knopf auf Produktion nicht — auf dem
-         * Entwicklungsserver faellt das nie auf, Vite setzt keine
-         * Richtlinie (dieselbe Falle wie beim Runner-Worker).
+         * Anmeldung mit Google und Apple — so eng, wie die Anbieter es zulassen.
+         *
+         * Google (GIS-Knopf): Das Skript kommt von /gsi/client, der Knopf ist
+         * ein iframe unter /gsi/, seine Schrift liegt unter /gsi/style, und
+         * die Bibliothek funkt nach /gsi/. Genau diese Pfade nennt Googles
+         * Einrichtungsanleitung; bis zum 23.09.2026 stand hier die ganze
+         * Herkunft accounts.google.com.
+         *
+         * Apple: nur das SDK-Skript. Im Popup-Modus oeffnet es ein eigenes
+         * Fenster auf appleid.apple.com (ein Fenster ist keine Frage der
+         * Richtlinie) und bekommt die Antwort per postMessage — kein iframe,
+         * kein fetch. appleid.apple.com steht deshalb bewusst NIRGENDS hier;
+         * wer auf den Umleitungsmodus umstellt, braucht es auch dann nicht,
+         * weil eine Seitennavigation keine CSP-Frage ist.
+         *
+         * Auf dem Entwicklungsserver faellt ein fehlender Eintrag nie auf,
+         * Vite setzt keine Richtlinie (dieselbe Falle wie beim Runner-Worker).
          */
-        scriptSrc: ["'self'", 'https://accounts.google.com'],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
-        frameSrc: ['https://accounts.google.com'],
+        scriptSrc: [
+          "'self'",
+          'https://accounts.google.com/gsi/client',
+          'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/',
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com/gsi/style'],
+        frameSrc: ['https://accounts.google.com/gsi/'],
         /**
          * `blob:` ist fuer die 3D-Figur noetig, und der Fehler war teuer zu
          * finden: Die Texturen stecken als JPEG **im** GLB. Der Lader von
@@ -375,7 +410,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
          * Entwicklungsserver faellt das nie auf: Dort liefert Vite aus, und
          * Vite setzt gar keine Inhaltsrichtlinie.
          */
-        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:', 'https://accounts.google.com'],
+        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:', 'https://accounts.google.com/gsi/'],
         /**
          * DER Fehler, der Feldherr auf Produktion strittig gemacht hat —
          * und der in keiner Testfassung auftrat.
@@ -410,6 +445,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // Die Seite laeuft ausschliesslich ueber HTTPS.
     hsts: { maxAge: 31_536_000, includeSubDomains: true },
     crossOriginEmbedderPolicy: false,
+    /**
+     * Die Anbieter-Dialoge sind Popups, und beide melden ihr Ergebnis per
+     * postMessage an das oeffnende Fenster zurueck. Helmets Vorgabe
+     * `same-origin` kappt genau diese Verbindung: Das Popup verliert
+     * `window.opener`, der Dialog bleibt leer oder schliesst sich ohne
+     * Ergebnis. `same-origin-allow-popups` behaelt die Trennung gegen
+     * fremde Fenster, die UNS oeffnen, und laesst nur unsere eigenen Popups
+     * zurueckfunken — so verlangen es Google und Apple.
+     */
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    /**
+     * Helmets Vorgabe `no-referrer` laesst Googles Knopf-iframe nicht
+     * erkennen, von welcher Seite er geladen wird — er meldet dann "origin
+     * not allowed", obwohl der Ursprung eingetragen ist. Google empfiehlt
+     * `strict-origin-when-cross-origin`: Fremde Herkuenfte sehen nur den
+     * Ursprung (https://www.brauweg-spielen.de), nie Pfad oder Suchteil —
+     * ein Einladungscode in der Adresse bleibt also hier.
+     */
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   });
 
   /**
@@ -606,9 +660,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.post('/api/auth/register', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const body = registerSchema.parse(request.body);
-    await register(deps.auth, body);
-    // Bewusst ohne Sitzung: Erst bestaetigen, dann anmelden.
-    return reply.status(201).send({ ok: true });
+    const { accountId, mailVersandt, bestaetigungNoetig } = await register(deps.auth, body);
+    const mailVersand = deps.auth.mailer.art;
+    if (bestaetigungNoetig) {
+      // Ohne Sitzung: Erst bestaetigen, dann anmelden. `mailVersandt` sagt dem
+      // Client, ob er "Mail ist unterwegs" schreiben darf oder den neuen Link
+      // anbieten muss.
+      return reply.status(201).send({ ok: true, angemeldet: false, mailVersandt, mailVersand });
+    }
+    // Keine Bestaetigung verlangt (kein Versanddienst, siehe index.ts): dann
+    // auch nicht so tun, als muesse man auf eine Mail warten — gleich anmelden.
+    const token = await createSession(deps.auth, accountId);
+    setSession(reply, token);
+    return reply.status(201).send({
+      ok: true,
+      angemeldet: true,
+      mailVersandt,
+      mailVersand,
+      ...(request.headers.origin === APP_ORIGIN ? { token } : {}),
+    });
   });
 
   app.post('/api/auth/verify', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
@@ -621,7 +691,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/auth/verification/resend', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const { email } = z.object({ email: z.string().email() }).parse(request.body);
     await requestVerification(deps.auth, email);
-    return reply.send({ ok: true });
+    // `mailVersand` gilt fuer den ganzen Server, nicht fuer diese Adresse —
+    // er verraet also nichts ueber Konten, sagt dem Client aber, ob er
+    // "Mail ist unterwegs" schreiben darf.
+    return reply.send({ ok: true, mailVersand: deps.auth.mailer.art });
   });
 
   app.post('/api/auth/login', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
@@ -638,27 +711,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({ ok: true, accountId });
   });
 
-  /**
-   * Ob "Mit Google anmelden" moeglich ist, entscheidet allein der Server —
-   * der Client fragt hier VOR der Anmeldung nach. Bewusst ein eigener kleiner
-   * Endpunkt statt einer Build-Variablen: Die Client-ID haengt an der
-   * Umgebung, nicht am gebauten Buendel.
-   */
-  app.get('/api/auth/google/config', async (_request, reply) => {
-    return reply.send({ clientId: deps.googleClientId ?? null });
-  });
-
-  app.post('/api/auth/google', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
-    if (!deps.googleClientId) throw badRequest('googleLoginDisabled');
-    const { credential } = z.object({ credential: z.string().min(1) }).parse(request.body);
-    const profil = await pruefeGoogleToken(credential, deps.googleClientId);
-    const { token, accountId } = await loginMitGoogle(deps.auth, profil);
-    setSession(reply, token);
-    // Wie beim Passwort-Login: Nur die iOS-Huelle bekommt das Token selbst.
-    if (request.headers.origin === APP_ORIGIN) {
-      return reply.send({ ok: true, accountId, token });
-    }
-    return reply.send({ ok: true, accountId });
+  // Mit Google und mit Apple anmelden, verknuepfen, trennen — siehe dort.
+  anbieterRouten(app, {
+    db: deps.db,
+    auth: deps.auth,
+    googleClientId: deps.googleClientId ?? null,
+    appleClientId: deps.appleClientId ?? null,
+    appleRedirectUri: deps.appleRedirectUri ?? null,
+    appleDomainVerknuepfung: deps.appleDomainVerknuepfung ?? null,
+    schluessel: deps.anbieterSchluessel,
+    nonces: deps.anbieterNonces,
+    appOrigin: APP_ORIGIN,
+    setSession,
+    requireAccount,
+    limitAuth: LIMIT_AUTH,
+    limitSchreiben: LIMIT_SCHREIBEN,
   });
 
   /**
@@ -697,8 +764,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       })
       .parse(request.body);
-    await gastSichern(deps.auth, accountId, body);
-    return reply.send({ ok: true });
+    const versand = await gastSichern(deps.auth, accountId, body);
+    return reply.send({ ok: true, ...versand, mailVersand: deps.auth.mailer.art });
   });
 
   app.post('/api/auth/logout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
@@ -712,16 +779,45 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const { email } = z.object({ email: z.string().email() }).parse(request.body);
     await requestPasswordReset(deps.auth, email);
     // Immer dieselbe Antwort, damit sich registrierte Adressen nicht abfragen
-    // lassen.
-    return reply.send({ ok: true });
+    // lassen. `mailVersand` ist serverweit, siehe verification/resend.
+    return reply.send({ ok: true, mailVersand: deps.auth.mailer.art });
   });
 
   app.post('/api/auth/reset', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const body = z
       .object({ token: z.string(), password: z.string().min(12).max(200) })
       .parse(request.body);
-    await resetPassword(deps.db, body.token, body.password);
-    return reply.send({ ok: true });
+    const accountId = await resetPassword(deps.db, body.token, body.password);
+    // Gleich angemeldet: Der Reset hat eben alle Sitzungen beendet, und wer
+    // den Link aus dem Postfach hat, muesste das neue Passwort sonst sofort
+    // ein zweites Mal eintippen.
+    const token = await createSession(deps.auth, accountId);
+    setSession(reply, token);
+    return reply.send({
+      ok: true,
+      accountId,
+      ...(request.headers.origin === APP_ORIGIN ? { token } : {}),
+    });
+  });
+
+  /**
+   * Mail-Diagnose: Warum kommt die Bestaetigungsmail nicht an?
+   *
+   * NUR fuer Testkonten (STAFF_EMAILS, bestaetigt) — bewusst ohne den Weg
+   * ueber DIAGNOSE_SCHLUESSEL wie bei `requireAufsicht`: Die Probe schickt
+   * eine Testmail an die Adresse des angemeldeten Kontos, und ohne Konto
+   * gaebe es keine. Die Antwort nennt Mailer, Absender-Domain, Resends
+   * Domain-Status und ob die Testmail angenommen wurde — nie den Schluessel.
+   * Ablauf und Deutung: docs/MAIL.md.
+   */
+  app.post('/api/staff/mail-probe', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const [konto] = await deps.db
+      .select({ isStaff: s.account.isStaff, email: s.account.email })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    if (!konto?.isStaff || !konto.email) throw forbidden('nurAufsicht');
+    return reply.send(await mailProbe(deps.auth.mailer, deps.auth.publicUrl, konto.email));
   });
 
   app.get('/api/me', async (request, reply) => {

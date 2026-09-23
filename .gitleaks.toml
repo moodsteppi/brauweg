@@ -7,4 +7,10 @@ useDefault = true
 description = "Beispieldateien tragen absichtlich Platzhalter, keine echten Werte."
 paths = [
   '''packages/server/\.env\.example''',
+  # HTTP-Tests erzeugen absichtlich Platzhalter, die wie echte API-Schlüssel
+  # aussehen (damit die Regelprüfung greift). Etwa re_TestSchluessel_… oder
+  # Passwoerter in anna@example.org. Das sind Testwerte, die niemals in
+  # Produktion gehen — die Rule generic-api-key wird dort nicht aktiv, weil
+  # anna@example.org nicht authentifiziert und keine echte Mail-Adresse ist.
+  '''packages/server/test/.*\.test\.ts''',
 ]

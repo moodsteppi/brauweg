@@ -166,8 +166,12 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    * 9 seit dem 23.09.2026: Störschläge im Fun-Modus. Ein Zug kann jetzt
    * `art: 'ausloesen'` tragen (regeln.ts) — ein Client von davor rechnete
    * ihn als Schlag, und die Felder eines Fun-Lochs kommen aus sieben Arten.
+   *
+   * 10 seit dem 23.09.2026: Bot-Änderung (Störschläge: Umweg zu Störfeldern,
+   * Bombe und Klebefeld gezielter, Warten auf einen rollenden Führenden,
+   * bot-stoer.ts im Client) — derselbe Grund wie bei 3.
    */
-  protocolVersion: 9,
+  protocolVersion: 10,
 
   defaultConfig: () => DEFAULT_REGELN,
 

@@ -79,6 +79,6 @@ test('der Schnappschuss behält den Zugtyp', () => {
   assert.equal(zurueck.zuege[0]!.art, 'ausloesen');
 });
 
-test('Version 9: Ein Client von davor läse einen Auslöse-Zug als Schlag', () => {
-  assert.equal(golf.protocolVersion, 9);
+test('ab Version 9: Ein Client von davor läse einen Auslöse-Zug als Schlag', () => {
+  assert.ok(golf.protocolVersion >= 9);
 });
