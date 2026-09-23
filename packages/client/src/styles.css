@@ -20291,6 +20291,11 @@ span.hub-angebot-art.poker-jeton-stapel {
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
+/* `hidden` allein reicht nicht: display:flex oben schlaegt das Attribut. */
+.anbieter-knoepfe[hidden] { display: none; }
+/* Geburtsdatum bei der Erstanmeldung — sieht aus wie das Feld im Formular. */
+.anbieter-nachfrage { margin-top: 0.75rem; }
+.anbieter-nachfrage p { margin: 0 0 0.4rem; }
 .anbieter-google {
   display: flex;
   justify-content: center;

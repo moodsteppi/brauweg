@@ -16,9 +16,11 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
 import {
+  Anmeldescheine,
   anmeldeartenVon,
   anmeldenMitAnbieter,
   istAnbieter,
+  schliesseAnmeldungAb,
   trenneAnbieter,
   verknuepfeAnbieter,
   type AnbieterProfil,
@@ -59,8 +61,15 @@ export interface AnbieterRoutenDeps {
  */
 const LIMIT_NONCE = { max: 120, timeWindow: '15 minutes' };
 
+/** Nur ein Gast muss es beim Verknuepfen mitschicken; alle anderen haben es schon. */
+const GEBURTSTAG = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .optional();
+
 export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): void {
   const nonces = deps.nonces ?? new NonceSpeicher();
+  const scheine = new Anmeldescheine();
 
   const googleProfil = async (credential: string): Promise<AnbieterProfil> => {
     if (!deps.googleClientId) throw badRequest('googleLoginDisabled');
@@ -90,7 +99,18 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
     reply: FastifyReply,
     profil: AnbieterProfil,
   ) => {
-    const { token, accountId, neu } = await anmeldenMitAnbieter(deps.auth, profil);
+    const ergebnis = await anmeldenMitAnbieter(deps.auth, profil, scheine);
+    // Neues Konto: noch keine Sitzung, erst das Geburtsdatum (anbieter.ts,
+    // Regel 5). Der Client fragt es und kommt mit dem Schein wieder.
+    if ('schein' in ergebnis) return reply.send(ergebnis);
+    return sitzung(request, reply, ergebnis);
+  };
+
+  const sitzung = (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    { token, accountId, neu }: { token: string; accountId: string; neu: boolean },
+  ) => {
     deps.setSession(reply, token);
     if (request.headers.origin === deps.appOrigin) {
       return reply.send({ ok: true, accountId, neu, token });
@@ -152,6 +172,25 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
   });
 
   /**
+   * Erstanmeldung abschliessen: Geburtsdatum zum Schein. Dieselbe Pruefung
+   * wie `/api/auth/register`; unter 16 dieselbe Absage, und der Schein ist weg.
+   */
+  app.post(
+    '/api/auth/anbieter/abschliessen',
+    { config: { rateLimit: deps.limitAuth } },
+    async (request, reply) => {
+      const body = z
+        .object({
+          schein: z.string().min(1).max(100),
+          birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        })
+        .parse(request.body);
+      const ergebnis = await schliesseAnmeldungAb(deps.auth, scheine, body.schein, body.birthday);
+      return sitzung(request, reply, ergebnis);
+    },
+  );
+
+  /**
    * Return-URL fuer Apple. Im Popup-Modus kommt hier niemand an; sollte Apple
    * doch einmal hierher weiterleiten (Popup blockiert und vom Browser in einen
    * Tab verwandelt), landet die Person auf der Startseite statt vor einer
@@ -189,10 +228,15 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
     { config: { rateLimit: deps.limitAuth } },
     async (request, reply) => {
       const accountId = await deps.requireAccount(request);
-      const { credential } = z
-        .object({ credential: z.string().min(1).max(8192) })
+      const { credential, birthday } = z
+        .object({ credential: z.string().min(1).max(8192), birthday: GEBURTSTAG })
         .parse(request.body);
-      const ergebnis = await verknuepfeAnbieter(deps.db, accountId, await googleProfil(credential));
+      const ergebnis = await verknuepfeAnbieter(
+        deps.db,
+        accountId,
+        await googleProfil(credential),
+        birthday,
+      );
       return reply.send({ ok: true, ...ergebnis });
     },
   );
@@ -202,8 +246,15 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
     { config: { rateLimit: deps.limitAuth } },
     async (request, reply) => {
       const accountId = await deps.requireAccount(request);
-      const { idToken } = z.object({ idToken: z.string().min(1).max(8192) }).parse(request.body);
-      const ergebnis = await verknuepfeAnbieter(deps.db, accountId, await appleProfil(idToken, null));
+      const { idToken, birthday } = z
+        .object({ idToken: z.string().min(1).max(8192), birthday: GEBURTSTAG })
+        .parse(request.body);
+      const ergebnis = await verknuepfeAnbieter(
+        deps.db,
+        accountId,
+        await appleProfil(idToken, null),
+        birthday,
+      );
       return reply.send({ ok: true, ...ergebnis });
     },
   );

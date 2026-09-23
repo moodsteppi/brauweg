@@ -65,6 +65,12 @@ Unterprotokoll `brauweg-token`.
   unbestätigter Adresse, fallen dessen Passwort und Sitzungen weg — es könnte
   von einem Voranmelder stammen (`auth/anbieter.ts`).
 - Die letzte Anmeldeart lässt sich nicht trennen.
+- Ein **neues** Konto über einen Anbieter entsteht erst mit Geburtsdatum,
+  geprüft mit `assertValidBirthday` wie bei der Registrierung. Bis dahin liegt
+  nur ein Schein im Speicher; unter 16 wird er verworfen, es bleibt weder
+  Konto noch Bindung. Ein Gast, der per Anbieter sichert, gibt es ebenso an.
+  Test: *„unter 16: dieselbe Absage wie beim Registrieren, und nichts bleibt
+  zurueck“*.
 - Tests: `test/anmeldung-anbieter.test.ts`. Einrichtung:
   `docs/ANMELDUNG-ANBIETER.md`.
 

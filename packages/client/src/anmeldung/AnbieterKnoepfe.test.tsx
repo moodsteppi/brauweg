@@ -20,6 +20,7 @@ const googleConfig = vi.fn();
 const appleConfig = vi.fn();
 const anbieterNonce = vi.fn();
 const appleLogin = vi.fn();
+const anbieterAbschliessen = vi.fn();
 
 vi.mock('../api', async () => {
   const echt = await vi.importActual<typeof import('../api')>('../api');
@@ -31,6 +32,7 @@ vi.mock('../api', async () => {
       appleConfig: () => appleConfig(),
       anbieterNonce: () => anbieterNonce(),
       appleLogin: (idToken: string, vorname?: string) => appleLogin(idToken, vorname),
+      anbieterAbschliessen: (schein: string, birthday: string) => anbieterAbschliessen(schein, birthday),
     },
   };
 });
@@ -42,6 +44,7 @@ vi.mock('./anbieter', async () => {
   return { ...echt, ladeApple: () => ladeApple(), ladeGoogle: () => ladeGoogle() };
 });
 
+import { ApiError } from '../api';
 import { vergissAnbieterConfig } from './anbieter';
 import { AnbieterKnoepfe } from './AnbieterKnoepfe';
 
@@ -187,5 +190,59 @@ describe('AnbieterKnoepfe', () => {
 
     expect(onFehler).not.toHaveBeenCalled();
     expect(appleLogin).not.toHaveBeenCalled();
+  });
+
+  /*
+   * Neues Konto ueber Apple: Erst das Geburtsdatum — dieselbe Frage wie beim
+   * Registrieren —, und angemeldet ist man erst danach.
+   */
+  it('ein neues Konto fragt erst nach dem Geburtsdatum', async () => {
+    googleConfig.mockResolvedValue({ clientId: null });
+    appleConfig.mockResolvedValue({ clientId: 'de.brauweg-spielen.web', redirectUri: 'https://x/r' });
+    appleSdk({ authorization: { id_token: 'id-token-neu', code: 'c' } });
+    appleLogin.mockResolvedValue({ geburtstagNoetig: true, schein: 'schein-1' });
+    anbieterAbschliessen.mockResolvedValue({ ok: true, neu: true });
+    const onErfolg = vi.fn();
+
+    render(<AnbieterKnoepfe zweck="anmelden" onErfolg={onErfolg} onFehler={() => {}} />);
+    const knopf = await screen.findByRole('button', { name: 'Mit Apple anmelden' });
+    await waitFor(() => expect(knopf).not.toBeDisabled());
+    fireEvent.click(knopf);
+    await leerlaufen();
+
+    expect(onErfolg).not.toHaveBeenCalled();
+    const feld = screen.getByLabelText(/^Geburtstag/);
+    expect(screen.getByText(/Mindestens 16 Jahre/)).toBeInTheDocument();
+    fireEvent.change(feld, { target: { value: '1990-06-15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Konto anlegen' }));
+    await leerlaufen();
+
+    expect(anbieterAbschliessen).toHaveBeenCalledWith('schein-1', '1990-06-15');
+    expect(onErfolg).toHaveBeenCalledWith({ anbieter: 'apple', neu: true });
+    expect(screen.queryByRole('group', { name: 'Geburtsdatum nachtragen' })).toBeNull();
+  });
+
+  it('unter 16: Absage, und zurueck zu den Knoepfen', async () => {
+    googleConfig.mockResolvedValue({ clientId: null });
+    appleConfig.mockResolvedValue({ clientId: 'de.brauweg-spielen.web', redirectUri: 'https://x/r' });
+    appleSdk({ authorization: { id_token: 'id-token-jung', code: 'c' } });
+    appleLogin.mockResolvedValue({ geburtstagNoetig: true, schein: 'schein-2' });
+    anbieterAbschliessen.mockRejectedValue(new ApiError('birthdayTooYoung', 'error.birthdayTooYoung', 400));
+    const onErfolg = vi.fn();
+    const onFehler = vi.fn();
+
+    render(<AnbieterKnoepfe zweck="anmelden" onErfolg={onErfolg} onFehler={onFehler} />);
+    const knopf = await screen.findByRole('button', { name: 'Mit Apple anmelden' });
+    await waitFor(() => expect(knopf).not.toBeDisabled());
+    fireEvent.click(knopf);
+    await leerlaufen();
+    fireEvent.change(screen.getByLabelText(/^Geburtstag/), { target: { value: '2015-01-01' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Konto anlegen' }));
+    await leerlaufen();
+
+    expect(onErfolg).not.toHaveBeenCalled();
+    expect((onFehler.mock.calls[0]![0] as ApiError).code).toBe('birthdayTooYoung');
+    expect(screen.queryByRole('group', { name: 'Geburtsdatum nachtragen' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Mit Apple anmelden' })).toBeVisible();
   });
 });

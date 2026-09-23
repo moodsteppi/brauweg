@@ -178,14 +178,16 @@ gehören also in den Text oben, nicht in die Tabelle.
 1. Variablen setzen, Deploy abwarten.
 2. `https://staging.brauweg-spielen.de` in einem privaten Fenster öffnen:
    Beide Knöpfe müssen unter dem Anmeldeformular stehen.
-3. Mit Apple anmelden → Popup → „E-Mail-Adresse verbergen“ wählen → man
-   landet eingeloggt im Hub; das Konto heißt wie der Vorname.
+3. Mit Apple anmelden → Popup → „E-Mail-Adresse verbergen“ wählen → es
+   folgt die Frage nach dem Geburtstag (dieselbe Altersgrenze wie beim
+   Registrieren; unter 16 kommt die Absage, und es entsteht kein Konto) →
+   man landet eingeloggt im Hub; das Konto heißt wie der Vorname.
 4. Abmelden, noch einmal mit Apple → dasselbe Konto.
 5. Einstellungen → Abschnitt „Anmeldung“ → „Weiter mit Google“ →
    Google ist verknüpft; Apple lässt sich jetzt trennen, Google danach nicht
    mehr („letzte Anmeldeart“).
-6. Als Gast spielen → Einstellungen → mit Apple oder Google verknüpfen →
-   „Dein Konto ist gesichert“.
+6. Als Gast spielen → Einstellungen → Geburtstag eintragen → mit Apple oder
+   Google verknüpfen → „Dein Konto ist gesichert“.
 
 Bleibt ein Knopf weg oder das Popup leer: Browserkonsole ansehen. Eine
 Meldung „Refused to load … Content Security Policy“ heißt, die Richtlinie in
@@ -207,8 +209,6 @@ passt nicht zur Adresse im Browser.
 - **Kein Widerruf bei Apple beim Trennen oder Löschen.** Dafür bräuchte es
   den .p8-Schlüssel (siehe 2b). Wer Brauweg ganz aus seiner Apple-ID lösen
   will, tut das unter appleid.apple.com → „Mit Apple anmelden“.
-- **Kein Geburtsdatum bei Anbieter-Konten** — wie bisher schon bei Google.
-  Die Altersgrenze aus der Registrierung (16) wird damit nicht abgefragt.
 
 ## Wie es im Code zusammenhängt
 

@@ -22,14 +22,20 @@
  *    jemandem stammen, der die Adresse vorab registriert hat, um spaeter
  *    mitzulesen. Passwort weg, alle Sitzungen weg; ein neues geht ueber
  *    "Passwort vergessen".
+ * 5. **Ein neues Konto entsteht erst mit Geburtsdatum** — dieselbe
+ *    Altersgrenze wie bei der Registrierung, sonst waere der Anbieter-Knopf
+ *    der Weg um sie herum. Dasselbe gilt fuer einen Gast, der sichert.
  */
 
 import { and, eq, isNull } from 'drizzle-orm';
 
+import { randomBytes } from 'node:crypto';
+
+import { assertValidBirthday } from '../birthday.js';
 import { ensureBetaClubMembership } from '../clubs/service.js';
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
-import { conflict, forbidden, notFound, unauthorized } from '../errors.js';
+import { AppError, badRequest, conflict, forbidden, notFound, unauthorized } from '../errors.js';
 import { createSession, type AuthDeps } from './service.js';
 
 export const ANBIETER = ['google', 'apple'] as const;
@@ -86,10 +92,68 @@ async function bindungVon(db: Db, anbieter: Anbieter, sub: string) {
  * steht, hat keine. Ein Gast sichert sein Konto ueber `verknuepfeAnbieter`
  * aus den Einstellungen — mit der Sitzung als Beleg, dass es seins ist.
  */
+export type AnmeldeErgebnis =
+  | { readonly token: string; readonly accountId: string; readonly neu: boolean }
+  /** Es entstuende ein neues Konto — erst das Geburtsdatum, siehe `Anmeldescheine`. */
+  | { readonly geburtstagNoetig: true; readonly schein: string };
+
+/**
+ * Wie oben — aber ein NEUES Konto entsteht hier noch nicht.
+ *
+ * Die Registrierung verlangt ein Geburtsdatum und weist unter 16 ab
+ * (`assertValidBirthday`). Ueber einen Anbieter an ihr vorbei ein Konto zu
+ * bekommen, hiesse, die Altersgrenze mit einem Klick zu umgehen. Also wird
+ * der gepruefte Anbieter-Ausweis als Schein zurueckgelegt, der Client fragt
+ * das Geburtsdatum, und erst `schliesseAnmeldungAb` legt das Konto an — mit
+ * derselben Pruefung und derselben Spalte wie die Registrierung.
+ *
+ * Ein vorhandenes Konto (schon verknuepft oder ueber die bestaetigte Mail
+ * gefunden) hat sein Alter schon und wird nicht gefragt.
+ */
 export async function anmeldenMitAnbieter(
   deps: AuthDeps,
   profil: AnbieterProfil,
+  scheine: Anmeldescheine,
+): Promise<AnmeldeErgebnis> {
+  return anmelden(deps, profil, { scheine });
+}
+
+/**
+ * Zweiter Schritt einer Erstanmeldung: das Geburtsdatum.
+ *
+ * Unter 16 fliegt der Schein weg — dieselbe Absage wie bei der Registrierung
+ * (`birthdayTooYoung`), und es bleibt nichts zurueck, weder Konto noch
+ * Bindung. Ein unlesbares Datum laesst ihn liegen: Das ist ein Tippfehler,
+ * kein Alter, und dafuer soll niemand noch einmal durch den Anbieter-Dialog.
+ */
+export async function schliesseAnmeldungAb(
+  deps: AuthDeps,
+  scheine: Anmeldescheine,
+  schein: string,
+  birthday: string,
 ): Promise<{ token: string; accountId: string; neu: boolean }> {
+  const profil = scheine.ansehen(schein);
+  if (!profil) throw badRequest('anmeldescheinUngueltig');
+  let geburtstag: string;
+  try {
+    geburtstag = assertValidBirthday(birthday);
+  } catch (err) {
+    if (err instanceof AppError && err.code === 'birthdayTooYoung') scheine.verwerfen(schein);
+    throw err;
+  }
+  // Einloesen nach der Pruefung, aber vor dem Anlegen: Zwei Klicks auf
+  // "Konto anlegen" duerfen nicht zwei Konten machen.
+  if (!scheine.einloesen(schein)) throw badRequest('anmeldescheinUngueltig');
+  const ergebnis = await anmelden(deps, profil, { geburtstag });
+  if ('schein' in ergebnis) throw badRequest('anmeldescheinUngueltig');
+  return ergebnis;
+}
+
+async function anmelden(
+  deps: AuthDeps,
+  profil: AnbieterProfil,
+  weiter: { scheine: Anmeldescheine } | { geburtstag: string },
+): Promise<AnmeldeErgebnis> {
   const { db } = deps;
 
   // 1. Schon verknuepft: der Normalfall ab dem zweiten Mal.
@@ -180,10 +244,13 @@ export async function anmeldenMitAnbieter(
     return { token, accountId: perMail.id, neu: false };
   }
 
-  // 3. Neues Konto.
+  // 3. Neues Konto — erst mit Geburtsdatum.
+  if (!('geburtstag' in weiter)) {
+    return { geburtstagNoetig: true, schein: weiter.scheine.ausstellen(profil) };
+  }
   let accountId: string;
   try {
-    accountId = await legeKontoAn(db, profil, email);
+    accountId = await legeKontoAn(db, profil, email, weiter.geburtstag);
   } catch (err) {
     // Zwei Klicks gleichzeitig beim allerersten Mal: Der erste hat die
     // Bindung angelegt, der zweite landet hier und nimmt dessen Konto.
@@ -233,7 +300,12 @@ export function namensvorschlag(profil: AnbieterProfil, email: string): string {
  * das Formular zu uebernehmen. Ein Passwort laesst sich jederzeit ueber
  * "Passwort vergessen" setzen.
  */
-async function legeKontoAn(db: Db, profil: AnbieterProfil, email: string): Promise<string> {
+async function legeKontoAn(
+  db: Db,
+  profil: AnbieterProfil,
+  email: string,
+  birthday: string,
+): Promise<string> {
   const basis = namensvorschlag(profil, email);
   for (let versuch = 0; versuch < 6; versuch++) {
     const displayName =
@@ -246,7 +318,7 @@ async function legeKontoAn(db: Db, profil: AnbieterProfil, email: string): Promi
             email,
             passwordHash: null,
             displayName,
-            birthday: null,
+            birthday,
             emailVerifiedAt: new Date(),
           })
           .returning({ id: s.account.id });
@@ -265,6 +337,64 @@ async function legeKontoAn(db: Db, profil: AnbieterProfil, email: string): Promi
     }
   }
   throw conflict('displayNameTaken');
+}
+
+/**
+ * Zurueckgelegte Erstanmeldungen, bis das Geburtsdatum kommt.
+ *
+ * Im Speicher wie die Nonces (nonce.ts) und aus demselben Grund: ein Prozess,
+ * und ein verlorener Schein kostet einen zweiten Klick. Er traegt das schon
+ * GEPRUEFTE Profil — das ID-Token ist dann verbraucht (Nonce) und liesse sich
+ * nicht noch einmal vorzeigen. Der Schein selbst ist ein Zufallswert, den nur
+ * der Client kennt, der die Anmeldung begonnen hat, und verfaellt nach
+ * fuenfzehn Minuten.
+ */
+export class Anmeldescheine {
+  private readonly offen = new Map<string, { profil: AnbieterProfil; bis: number }>();
+  private readonly gueltigMs: number;
+  private readonly hoechstens: number;
+  private readonly jetzt: () => number;
+
+  constructor(optionen: { gueltigMs?: number; hoechstens?: number; jetzt?: () => number } = {}) {
+    this.gueltigMs = optionen.gueltigMs ?? 15 * 60_000;
+    // Ausgestellt wird nur nach einem echten, gueltigen ID-Token — die Grenze
+    // ist ein Riegel gegen Ueberlauf, keiner gegen gewoehnlichen Betrieb.
+    this.hoechstens = optionen.hoechstens ?? 5_000;
+    this.jetzt = optionen.jetzt ?? Date.now;
+  }
+
+  ausstellen(profil: AnbieterProfil): string {
+    const jetzt = this.jetzt();
+    // Einfuegereihenfolge = Alter: vorn die abgelaufenen und bei voller Liste
+    // die aeltesten.
+    for (const [schein, eintrag] of this.offen) {
+      if (eintrag.bis > jetzt && this.offen.size < this.hoechstens) break;
+      this.offen.delete(schein);
+    }
+    const schein = randomBytes(24).toString('base64url');
+    this.offen.set(schein, { profil, bis: jetzt + this.gueltigMs });
+    return schein;
+  }
+
+  ansehen(schein: string): AnbieterProfil | null {
+    const eintrag = this.offen.get(schein);
+    if (!eintrag) return null;
+    if (eintrag.bis <= this.jetzt()) {
+      this.offen.delete(schein);
+      return null;
+    }
+    return eintrag.profil;
+  }
+
+  einloesen(schein: string): boolean {
+    const da = this.ansehen(schein) !== null;
+    this.offen.delete(schein);
+    return da;
+  }
+
+  verwerfen(schein: string): void {
+    this.offen.delete(schein);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -289,6 +419,8 @@ export async function verknuepfeAnbieter(
   db: Db,
   accountId: string,
   profil: AnbieterProfil,
+  /** Nur fuer einen Gast gebraucht: Er hat keins, und Sichern ist fuer ihn Registrieren. */
+  birthday?: string | null,
 ): Promise<{ gesichert: boolean }> {
   const [konto] = await db
     .select({
@@ -319,6 +451,11 @@ export async function verknuepfeAnbieter(
 
   const sichern = konto.gastSeit !== null;
   if (sichern && (!profil.email || !profil.emailVerified)) throw forbidden('emailNotVerified');
+  // Wie `gastSichern` mit Passwort: Aus dem Gast wird ein richtiges Konto,
+  // also gilt dieselbe Altersgrenze wie beim Registrieren. Ein Gast hat
+  // bisher kein Alter angegeben (gastKonto fragt nicht danach).
+  if (sichern && !birthday) throw badRequest('geburtstagFehlt');
+  const geburtstag = sichern ? assertValidBirthday(birthday!) : null;
 
   try {
     await db.transaction(async (tx) => {
@@ -332,6 +469,7 @@ export async function verknuepfeAnbieter(
           .set({
             email: normalizeEmail(profil.email!),
             emailVerifiedAt: new Date(),
+            birthday: geburtstag,
             gastSeit: null,
           })
           .where(and(eq(s.account.id, accountId), isNull(s.account.email)))

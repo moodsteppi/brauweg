@@ -138,6 +138,8 @@ const de: Record<string, string> = {
   'error.anbieterSchonVerknuepft': 'Mit diesem Konto ist schon ein anderes Konto dieses Anbieters verknüpft.',
   'error.anbieterFremdVerknuepft': 'Dieses Anbieter-Konto gehört schon zu einem anderen Brauweg-Konto.',
   'error.anbieterNichtVerknuepft': 'Dieser Anbieter ist nicht verknüpft.',
+  'error.anmeldescheinUngueltig': 'Die Anmeldung ist abgelaufen. Bitte melde dich noch einmal an.',
+  'error.geburtstagFehlt': 'Bitte gib dein Geburtsdatum an.',
   'error.letzteAnmeldeart': 'Das ist deine letzte Anmeldeart. Verknüpfe erst eine andere oder setze ein Passwort.',
   'error.nurAufsicht': 'Das darf nur die Aufsicht.',
   'error.snapshotMissing': 'Der Spielstand ließ sich nicht laden.',

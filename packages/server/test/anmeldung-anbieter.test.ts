@@ -23,8 +23,10 @@ import { fileURLToPath } from 'node:url';
 import { eq, sql } from 'drizzle-orm';
 
 import {
+  Anmeldescheine,
   anmeldeartenVon,
   anmeldenMitAnbieter,
+  schliesseAnmeldungAb,
   namensvorschlag,
   trenneAnbieter,
   verknuepfeAnbieter,
@@ -314,6 +316,29 @@ function profil(mehr: Partial<AnbieterProfil> = {}): AnbieterProfil {
   };
 }
 
+const ERWACHSEN = '1990-06-15';
+
+/** Ein Datum, an dem man heute genau so alt ist. */
+function geborenVor(jahre: number): string {
+  const d = new Date();
+  return `${d.getFullYear() - jahre}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Anmelden wie der Client: Entstuende ein neues Konto, kommt erst ein Schein,
+ * und mit dem Geburtsdatum dazu das Konto.
+ */
+async function anmelden(
+  ctx: Awaited<ReturnType<typeof createTestContext>>,
+  p: AnbieterProfil,
+  geburtstag = ERWACHSEN,
+) {
+  const scheine = new Anmeldescheine();
+  const erst = await anmeldenMitAnbieter(ctx.auth, p, scheine);
+  if (!('schein' in erst)) return erst;
+  return schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, geburtstag);
+}
+
 async function bindungen(db: Awaited<ReturnType<typeof createTestContext>>['db'], accountId: string) {
   return db.select().from(s.accountIdentity).where(eq(s.accountIdentity.accountId, accountId));
 }
@@ -322,7 +347,7 @@ test('Erstanmeldung legt Konto und Bindung an, die zweite findet es wieder', asy
   const ctx = await createTestContext();
   t.after(() => ctx.close());
 
-  const erste = await anmeldenMitAnbieter(ctx.auth, profil());
+  const erste = await anmelden(ctx, profil());
   assert.equal(erste.neu, true);
   const [konto] = await ctx.db.select().from(s.account).where(eq(s.account.id, erste.accountId));
   assert.equal(konto!.passwordHash, null);
@@ -332,7 +357,7 @@ test('Erstanmeldung legt Konto und Bindung an, die zweite findet es wieder', asy
   assert.equal(bindung!.provider, 'google');
   assert.equal(bindung!.subject, 'google-123');
 
-  const zweite = await anmeldenMitAnbieter(ctx.auth, profil());
+  const zweite = await anmelden(ctx, profil());
   assert.equal(zweite.accountId, erste.accountId);
   assert.equal(zweite.neu, false);
 
@@ -344,9 +369,9 @@ test('die Bindung haengt an sub, nicht an der Mail', async (t) => {
   const ctx = await createTestContext();
   t.after(() => ctx.close());
 
-  const erste = await anmeldenMitAnbieter(ctx.auth, profil({ anbieter: 'apple', sub: 'a-1' }));
-  const nachUmzug = await anmeldenMitAnbieter(
-    ctx.auth,
+  const erste = await anmelden(ctx, profil({ anbieter: 'apple', sub: 'a-1' }));
+  const nachUmzug = await anmelden(
+    ctx,
     profil({ anbieter: 'apple', sub: 'a-1', email: 'neue@example.org' }),
   );
   assert.equal(nachUmzug.accountId, erste.accountId, 'neue Adresse beim Anbieter, dasselbe Konto');
@@ -361,7 +386,7 @@ test('bestaetigte Mail verknuepft mit dem vorhandenen Passwort-Konto', async (t)
 
   const { accountId, email } = await createVerifiedAccount(ctx, 'Anna');
   for (const anbieter of ['google', 'apple'] as const) {
-    const ergebnis = await anmeldenMitAnbieter(ctx.auth, profil({ anbieter, sub: `${anbieter}-anna`, email }));
+    const ergebnis = await anmelden(ctx, profil({ anbieter, sub: `${anbieter}-anna`, email }));
     assert.equal(ergebnis.accountId, accountId, anbieter);
   }
   assert.equal((await bindungen(ctx.db, accountId)).length, 2, 'ein Konto, zwei Anbieter');
@@ -376,11 +401,11 @@ test('unbestaetigte Mail beim Anbieter: weder Verknuepfung noch neues Konto', as
 
   const { email } = await createVerifiedAccount(ctx, 'Anna');
   await abgewiesen(
-    anmeldenMitAnbieter(ctx.auth, profil({ sub: 'fremd', email, emailVerified: false })),
+    anmelden(ctx, profil({ sub: 'fremd', email, emailVerified: false })),
     'emailNotVerified',
   );
   await abgewiesen(
-    anmeldenMitAnbieter(ctx.auth, profil({ sub: 'neu', email: 'x@example.org', emailVerified: false })),
+    anmelden(ctx, profil({ sub: 'neu', email: 'x@example.org', emailVerified: false })),
     'emailNotVerified',
   );
   const [zahl] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(s.accountIdentity);
@@ -395,7 +420,7 @@ test('eine Apple-Weiterleitungsadresse verknuepft nie automatisch', async (t) =>
   const relay = 'x7k2@privaterelay.appleid.com';
   const { accountId } = await createVerifiedAccount(ctx, 'Anna', relay);
   await abgewiesen(
-    anmeldenMitAnbieter(ctx.auth, profil({ anbieter: 'apple', sub: 'a-anna', email: relay, relay: true })),
+    anmelden(ctx, profil({ anbieter: 'apple', sub: 'a-anna', email: relay, relay: true })),
     'anbieterMailVergeben',
   );
   assert.equal((await bindungen(ctx.db, accountId)).length, 0);
@@ -403,7 +428,7 @@ test('eine Apple-Weiterleitungsadresse verknuepft nie automatisch', async (t) =>
   // Angemeldet und in den Einstellungen verknuepft geht es — die Sitzung belegt,
   // wem das Konto gehoert.
   await verknuepfeAnbieter(ctx.db, accountId, profil({ anbieter: 'apple', sub: 'a-anna', email: relay, relay: true }));
-  const danach = await anmeldenMitAnbieter(ctx.auth, profil({ anbieter: 'apple', sub: 'a-anna', email: relay, relay: true }));
+  const danach = await anmelden(ctx, profil({ anbieter: 'apple', sub: 'a-anna', email: relay, relay: true }));
   assert.equal(danach.accountId, accountId);
 });
 
@@ -413,7 +438,7 @@ test('eine neue Weiterleitungsadresse ergibt ein Konto, aber keinen Zufallsnamen
 
   const p = profil({ anbieter: 'apple', sub: 'a-2', email: 'x7k2abc@privaterelay.appleid.com', relay: true, name: null });
   assert.equal(namensvorschlag(p, p.email!), 'Spieler');
-  const { accountId } = await anmeldenMitAnbieter(ctx.auth, p);
+  const { accountId } = await anmelden(ctx, p);
   const [konto] = await ctx.db.select().from(s.account).where(eq(s.account.id, accountId));
   assert.equal(konto!.displayName, 'Spieler');
   assert.equal(konto!.email, 'x7k2abc@privaterelay.appleid.com', 'gueltig und bestaetigt');
@@ -434,7 +459,7 @@ test('wer vorab mit fremder Adresse registriert hat, verliert Passwort und Sitzu
   const [vorab] = await ctx.db.select().from(s.account).where(eq(s.account.email, 'gustav@example.org'));
   const alteSitzung = await createSession(ctx.auth, vorab!.id);
 
-  const { accountId } = await anmeldenMitAnbieter(ctx.auth, profil());
+  const { accountId } = await anmelden(ctx, profil());
   assert.equal(accountId, vorab!.id);
   const [danach] = await ctx.db.select().from(s.account).where(eq(s.account.id, accountId));
   assert.equal(danach!.passwordHash, null, 'das Passwort stammt nicht vom Postfachinhaber');
@@ -448,15 +473,16 @@ test('ein Gast sichert sein Konto mit einem Anbieter — dieselbe Zeile', async 
   t.after(() => ctx.close());
 
   const gast = await gastKonto(ctx.auth, 'Laufkunde');
-  const ergebnis = await verknuepfeAnbieter(ctx.db, gast.accountId, profil({ anbieter: 'apple', sub: 'a-gast', email: 'lauf@example.org' }));
+  const ergebnis = await verknuepfeAnbieter(ctx.db, gast.accountId, profil({ anbieter: 'apple', sub: 'a-gast', email: 'lauf@example.org' }), ERWACHSEN);
   assert.equal(ergebnis.gesichert, true);
 
   const [konto] = await ctx.db.select().from(s.account).where(eq(s.account.id, gast.accountId));
   assert.equal(konto!.gastSeit, null, 'kein Gast mehr');
   assert.equal(konto!.email, 'lauf@example.org');
   assert.ok(konto!.emailVerifiedAt);
+  assert.equal(konto!.birthday, ERWACHSEN, 'dieselbe Spalte wie beim Registrieren');
 
-  const wieder = await anmeldenMitAnbieter(ctx.auth, profil({ anbieter: 'apple', sub: 'a-gast', email: 'lauf@example.org' }));
+  const wieder = await anmelden(ctx, profil({ anbieter: 'apple', sub: 'a-gast', email: 'lauf@example.org' }));
   assert.equal(wieder.accountId, gast.accountId, 'nach dem Abmelden kommt er wieder hinein');
 });
 
@@ -467,7 +493,7 @@ test('ein Gast mit einer schon vergebenen Adresse wird nicht gesichert', async (
 
   const { email } = await createVerifiedAccount(ctx, 'Anna');
   const gast = await gastKonto(ctx.auth, 'Laufkunde');
-  await abgewiesen(verknuepfeAnbieter(ctx.db, gast.accountId, profil({ sub: 'g-anna', email })), 'emailTaken');
+  await abgewiesen(verknuepfeAnbieter(ctx.db, gast.accountId, profil({ sub: 'g-anna', email }), ERWACHSEN), 'emailTaken');
   assert.equal((await bindungen(ctx.db, gast.accountId)).length, 0, 'auch keine halbe Bindung');
 });
 
@@ -490,7 +516,7 @@ test('die letzte Anmeldeart laesst sich nicht trennen', async (t) => {
   await seedInvite(ctx.db);
   t.after(() => ctx.close());
 
-  const { accountId } = await anmeldenMitAnbieter(ctx.auth, profil());
+  const { accountId } = await anmelden(ctx, profil());
   await verknuepfeAnbieter(ctx.db, accountId, profil({ anbieter: 'apple', sub: 'a-1' }));
 
   await trenneAnbieter(ctx.db, accountId, 'google');
@@ -512,11 +538,11 @@ test('Kontoloeschung nimmt die Bindungen mit', async (t) => {
   const ctx = await createTestContext();
   t.after(() => ctx.close());
 
-  const erste = await anmeldenMitAnbieter(ctx.auth, profil({ anbieter: 'apple', sub: 'a-weg' }));
+  const erste = await anmelden(ctx, profil({ anbieter: 'apple', sub: 'a-weg' }));
   await anonymizeAccount(ctx.db, erste.accountId);
   assert.equal((await bindungen(ctx.db, erste.accountId)).length, 0);
 
-  const danach = await anmeldenMitAnbieter(ctx.auth, profil({ anbieter: 'apple', sub: 'a-weg' }));
+  const danach = await anmelden(ctx, profil({ anbieter: 'apple', sub: 'a-weg' }));
   assert.notEqual(danach.accountId, erste.accountId, 'dieselbe Apple-ID fuehrt nicht ins geloeschte Konto');
   assert.equal(danach.neu, true);
 });
@@ -549,8 +575,103 @@ test('Migration 0028 uebernimmt alte Google-Bindungen und leert die Spalte', asy
   const rest = await ctx.db.execute(sql`select google_sub from account where id = ${alt!.id}`);
   assert.equal((rest.rows[0] as { google_sub: string | null }).google_sub, null);
 
-  const perGoogle = await anmeldenMitAnbieter(ctx.auth, profil({ sub: 'google-alt', email: 'woanders@example.org' }));
+  const perGoogle = await anmelden(ctx, profil({ sub: 'google-alt', email: 'woanders@example.org' }));
   assert.equal(perGoogle.accountId, alt!.id, 'die alte Bindung traegt weiter');
+});
+
+test('ein neues Konto entsteht erst mit Geburtsdatum', async (t) => {
+  const ctx = await createTestContext();
+  t.after(() => ctx.close());
+  const scheine = new Anmeldescheine();
+
+  const erst = await anmeldenMitAnbieter(ctx.auth, profil(), scheine);
+  assert.ok('schein' in erst && erst.geburtstagNoetig, 'erst ein Schein, keine Sitzung');
+  const [vorher] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(s.account);
+  assert.equal(vorher!.n, 0, 'noch kein Konto');
+
+  const fertig = await schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, ERWACHSEN);
+  assert.equal(fertig.neu, true);
+  const [konto] = await ctx.db.select().from(s.account).where(eq(s.account.id, fertig.accountId));
+  assert.equal(konto!.birthday, ERWACHSEN);
+  assert.ok(await sessionFromToken(ctx.db, fertig.token));
+
+  // Einmal: Derselbe Schein legt kein zweites Konto an.
+  await abgewiesen(schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, ERWACHSEN), 'anmeldescheinUngueltig');
+});
+
+test('unter 16: dieselbe Absage wie beim Registrieren, und nichts bleibt zurueck', async (t) => {
+  const ctx = await createTestContext();
+  t.after(() => ctx.close());
+  const scheine = new Anmeldescheine();
+
+  // Dieselbe Pruefung wie die Registrierung: dort genauso abgewiesen.
+  await abgewiesen(
+    register(ctx.auth, {
+      email: 'jung@example.org',
+      password: 'geheim-genug-1234',
+      displayName: 'Jung',
+      birthday: geborenVor(15),
+    }),
+    'birthdayTooYoung',
+  );
+
+  const erst = await anmeldenMitAnbieter(ctx.auth, profil({ email: 'jung2@example.org' }), scheine);
+  assert.ok('schein' in erst);
+  await abgewiesen(schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, geborenVor(15)), 'birthdayTooYoung');
+  // Verworfen: Ein zweiter Versuch mit einem aelteren Datum geht nicht durch.
+  await abgewiesen(schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, ERWACHSEN), 'anmeldescheinUngueltig');
+
+  const [zahl] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(s.accountIdentity);
+  assert.equal(zahl!.n, 0, 'keine Bindung');
+  const konten = await ctx.db.select().from(s.account).where(eq(s.account.email, 'jung2@example.org'));
+  assert.equal(konten.length, 0, 'kein Konto');
+
+  // Genau 16 geht.
+  const zweiter = await anmeldenMitAnbieter(ctx.auth, profil({ sub: 'g-16', email: 'sechzehn@example.org' }), scheine);
+  assert.ok('schein' in zweiter);
+  await schliesseAnmeldungAb(ctx.auth, scheine, zweiter.schein, geborenVor(16));
+});
+
+test('ein Tippfehler im Datum laesst den Schein liegen', async (t) => {
+  const ctx = await createTestContext();
+  t.after(() => ctx.close());
+  const scheine = new Anmeldescheine();
+  const erst = await anmeldenMitAnbieter(ctx.auth, profil(), scheine);
+  assert.ok('schein' in erst);
+  await abgewiesen(schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, '1850-01-01'), 'birthdayInvalid');
+  const fertig = await schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, ERWACHSEN);
+  assert.equal(fertig.neu, true);
+});
+
+test('ein vorhandenes Konto wird nicht nach dem Alter gefragt', async (t) => {
+  const ctx = await createTestContext();
+  await seedInvite(ctx.db);
+  t.after(() => ctx.close());
+  const scheine = new Anmeldescheine();
+
+  const { accountId, email } = await createVerifiedAccount(ctx, 'Anna');
+  const perMail = await anmeldenMitAnbieter(ctx.auth, profil({ sub: 'g-anna', email }), scheine);
+  assert.ok(!('schein' in perMail), 'per bestaetigter Mail gefunden: sofort drin');
+  assert.equal(perMail.accountId, accountId);
+  const perBindung = await anmeldenMitAnbieter(ctx.auth, profil({ sub: 'g-anna', email }), scheine);
+  assert.ok(!('schein' in perBindung), 'schon verknuepft: sofort drin');
+});
+
+test('ein Gast sichert nur mit Geburtsdatum, und nicht unter 16', async (t) => {
+  const ctx = await createTestContext();
+  t.after(() => ctx.close());
+  const gast = await gastKonto(ctx.auth, 'Laufkunde');
+  const p = profil({ anbieter: 'apple', sub: 'a-gast', email: 'lauf@example.org' });
+
+  await abgewiesen(verknuepfeAnbieter(ctx.db, gast.accountId, p), 'geburtstagFehlt');
+  await abgewiesen(verknuepfeAnbieter(ctx.db, gast.accountId, p, geborenVor(15)), 'birthdayTooYoung');
+  assert.equal((await bindungen(ctx.db, gast.accountId)).length, 0);
+  const [konto] = await ctx.db.select().from(s.account).where(eq(s.account.id, gast.accountId));
+  assert.notEqual(konto!.gastSeit, null, 'bleibt Gast');
+
+  // Wer schon ein richtiges Konto hat, wird nicht gefragt.
+  const { accountId } = await anmelden(ctx, profil({ sub: 'g-x', email: 'x@example.org' }));
+  await verknuepfeAnbieter(ctx.db, accountId, profil({ anbieter: 'apple', sub: 'a-x' }));
 });
 
 // ---------------------------------------------------------------------------
@@ -627,9 +748,32 @@ test('mit Client-ID: Konfiguration, Anmeldung per Cookie, Wiederholung abgewiese
     payload: { idToken: token, vorname: 'Anna' },
   });
   assert.equal(erste.statusCode, 200, erste.body);
-  assert.equal(erste.json().neu, true);
-  assert.equal(erste.json().token, undefined, 'der Browser bekommt nur das Cookie');
-  const cookie = erste.cookies.find((c) => c.name === SESSION_COOKIE);
+  assert.equal(erste.json().geburtstagNoetig, true, 'neues Konto: erst das Geburtsdatum');
+  assert.equal(erste.cookies.length, 0, 'und noch keine Sitzung');
+
+  const zuJung = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/anbieter/abschliessen',
+    payload: { schein: erste.json().schein, birthday: geborenVor(15) },
+  });
+  assert.equal(zuJung.statusCode, 400);
+  assert.equal(zuJung.json().code, 'birthdayTooYoung');
+
+  // Der Schein ist weg — also noch einmal durch den Dialog, jetzt erwachsen.
+  const zweiterVersuch = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/apple',
+    payload: { idToken: jwt(appleRumpf(await a.nonce())), vorname: 'Anna' },
+  });
+  const abschluss = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/anbieter/abschliessen',
+    payload: { schein: zweiterVersuch.json().schein, birthday: ERWACHSEN },
+  });
+  assert.equal(abschluss.statusCode, 200, abschluss.body);
+  assert.equal(abschluss.json().neu, true);
+  assert.equal(abschluss.json().token, undefined, 'der Browser bekommt nur das Cookie');
+  const cookie = abschluss.cookies.find((c) => c.name === SESSION_COOKIE);
   assert.ok(cookie, 'Sitzungscookie gesetzt');
 
   const wiederholt = await a.server.inject({ method: 'POST', url: '/api/auth/apple', payload: { idToken: token } });

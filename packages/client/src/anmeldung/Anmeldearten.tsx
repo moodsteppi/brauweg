@@ -31,6 +31,7 @@ export function Anmeldearten(): React.JSX.Element | null {
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [geburtstag, setGeburtstag] = useState('');
 
   const laden = useCallback(async () => {
     const [arten, config] = await Promise.all([api.anmeldearten(), ladeAnbieterConfig()]);
@@ -88,10 +89,25 @@ export function Anmeldearten(): React.JSX.Element | null {
       <h3>Anmeldung</h3>
 
       {stand.gast ? (
-        <p className="muted">
-          Du spielst als Gast. Verknüpfe Apple oder Google, dann kommst du auch nach dem
-          Abmelden wieder an dieses Konto.
-        </p>
+        <>
+          <p className="muted">
+            Du spielst als Gast. Verknüpfe Apple oder Google, dann kommst du auch nach dem
+            Abmelden wieder an dieses Konto.
+          </p>
+          {/* Aus dem Gast wird ein richtiges Konto — dieselbe Altersgrenze wie
+              beim Registrieren. Erst fragen, dann den Anbieter-Dialog: Die
+              Antwort des Anbieters laesst sich nur einmal einloesen. */}
+          <label>
+            Geburtstag
+            <input
+              type="date"
+              value={geburtstag}
+              onChange={(e) => setGeburtstag(e.target.value)}
+              max={new Date().toISOString().slice(0, 10)}
+            />
+            <span className="muted">Mindestens 16 Jahre. Für Countdown und Belohnung.</span>
+          </label>
+        </>
       ) : (
         <div className="anbieter-arten-zeile">
           <div>
@@ -128,7 +144,8 @@ export function Anmeldearten(): React.JSX.Element | null {
         <AnbieterKnoepfe
           zweck="verknuepfen"
           nur={offen}
-          gesperrt={busy}
+          gesperrt={busy || (stand.gast && !geburtstag)}
+          geburtstag={stand.gast ? geburtstag : undefined}
           onErfolg={verknuepft}
           onFehler={zeigeFehler}
         />

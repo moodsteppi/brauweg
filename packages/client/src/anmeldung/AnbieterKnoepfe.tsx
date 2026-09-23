@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { api } from '../api';
+import { ApiError, api } from '../api';
 import { inApp } from '../laufzeit';
 import { ladeAnbieterConfig, ladeApple, ladeGoogle, type Anbieter, type AnbieterConfig } from './anbieter';
 
@@ -46,6 +46,7 @@ export function AnbieterKnoepfe({
   zweck,
   nur,
   gesperrt = false,
+  geburtstag,
   onErfolg,
   onFehler,
 }: {
@@ -53,6 +54,11 @@ export function AnbieterKnoepfe({
   /** Nur diese Anbieter zeigen — in den Einstellungen die noch nicht verknuepften. */
   nur?: readonly Anbieter[];
   gesperrt?: boolean;
+  /**
+   * Nur beim Verknuepfen durch einen Gast: Sein Konto wird dabei ein
+   * richtiges, und dafuer gilt die Altersgrenze der Registrierung.
+   */
+  geburtstag?: string;
   onErfolg: (ergebnis: AnbieterErgebnis) => void;
   /** Ein Fehler des Servers oder der Verbindung. Abbrechen im Popup ist keiner. */
   onFehler: (fehler: unknown) => void;
@@ -65,8 +71,10 @@ export function AnbieterKnoepfe({
   // Die Rueckrufe aendern sich mit jedem Rendern des Elternteils. Die
   // Anbieter-Bibliotheken halten aber die Funktion fest, die sie beim
   // Einrichten bekommen haben — also ueber einen Verweis immer die aktuelle.
-  const rueckruf = useRef({ onErfolg, onFehler });
-  rueckruf.current = { onErfolg, onFehler };
+  const rueckruf = useRef({ onErfolg, onFehler, geburtstag });
+  rueckruf.current = { onErfolg, onFehler, geburtstag };
+  /** Erstanmeldung: Der Server will erst das Geburtsdatum (auth/anbieter.ts, Regel 5). */
+  const [nachfrage, setNachfrage] = useState<{ anbieter: Anbieter; schein: string } | null>(null);
 
   const zeigeGoogle = Boolean(config?.google) && (!nur || nur.includes('google'));
   const zeigeApple = Boolean(config?.apple) && (!nur || nur.includes('apple'));
@@ -109,9 +117,16 @@ export function AnbieterKnoepfe({
               try {
                 if (zweck === 'anmelden') {
                   const antwort = await api.googleLogin(credential);
+                  if ('schein' in antwort) {
+                    setNachfrage({ anbieter: 'google', schein: antwort.schein });
+                    return;
+                  }
                   rueckruf.current.onErfolg({ anbieter: 'google', neu: antwort.neu });
                 } else {
-                  const antwort = await api.verknuepfeGoogle(credential);
+                  const antwort = await api.verknuepfeGoogle(
+                    credential,
+                    rueckruf.current.geburtstag,
+                  );
                   rueckruf.current.onErfolg({ anbieter: 'google', gesichert: antwort.gesichert });
                 }
               } catch (fehler) {
@@ -203,9 +218,13 @@ export function AnbieterKnoepfe({
         const idToken = antwort.authorization.id_token;
         if (zweck === 'anmelden') {
           const ergebnis = await api.appleLogin(idToken, antwort.user?.name?.firstName);
+          if ('schein' in ergebnis) {
+            setNachfrage({ anbieter: 'apple', schein: ergebnis.schein });
+            return;
+          }
           rueckruf.current.onErfolg({ anbieter: 'apple', neu: ergebnis.neu });
         } else {
-          const ergebnis = await api.verknuepfeApple(idToken);
+          const ergebnis = await api.verknuepfeApple(idToken, rueckruf.current.geburtstag);
           rueckruf.current.onErfolg({ anbieter: 'apple', gesichert: ergebnis.gesichert });
         }
       } catch (fehler) {
@@ -221,7 +240,22 @@ export function AnbieterKnoepfe({
   if (!zeigeGoogle && !zeigeApple) return null;
 
   return (
-    <div className="anbieter-knoepfe">
+    <>
+      {nachfrage && (
+        <GeburtstagNachfrage
+          anbieter={nachfrage.anbieter}
+          schein={nachfrage.schein}
+          onErfolg={(ergebnis) => {
+            setNachfrage(null);
+            rueckruf.current.onErfolg(ergebnis);
+          }}
+          onVerworfen={() => setNachfrage(null)}
+          onFehler={(fehler) => rueckruf.current.onFehler(fehler)}
+        />
+      )}
+      {/* Waehrend der Nachfrage nur versteckt, nicht abgebaut: Googles Knopf
+          ist in dieses div gezeichnet und kaeme sonst nicht wieder. */}
+      <div className="anbieter-knoepfe" hidden={nachfrage !== null}>
       {zeigeApple && (
         <button
           type="button"
@@ -245,9 +279,90 @@ export function AnbieterKnoepfe({
           aria-disabled={laeuft || gesperrt}
         />
       )}
+      </div>
+    </>
+  );
+}
+
+/**
+ * Erstanmeldung ueber einen Anbieter: das Geburtsdatum, bevor es das Konto gibt.
+ *
+ * Dieselbe Frage und derselbe Hinweis wie im Registrierungsformular — die
+ * Pruefung macht der Server mit derselben Funktion. Unter 16 verwirft er die
+ * Anmeldung; dann geht es zurueck zu den Knoepfen, und die Absage steht, wo
+ * jede andere Anmeldemeldung steht.
+ *
+ * Kein eigenes `<form>`: Die Knoepfe stehen auf dem Auth-Bildschirm INNERHALB
+ * des Anmeldeformulars, ein Formular darin waere ungueltig. Deshalb faengt die
+ * Eingabe ihr Enter selbst ab — sonst schickte es das Passwortformular
+ * darunter ab.
+ */
+function GeburtstagNachfrage({
+  anbieter,
+  schein,
+  onErfolg,
+  onVerworfen,
+  onFehler,
+}: {
+  anbieter: Anbieter;
+  schein: string;
+  onErfolg: (ergebnis: AnbieterErgebnis) => void;
+  onVerworfen: () => void;
+  onFehler: (fehler: unknown) => void;
+}): React.JSX.Element {
+  const [datum, setDatum] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const absenden = async (): Promise<void> => {
+    if (!datum || busy) return;
+    setBusy(true);
+    try {
+      const antwort = await api.anbieterAbschliessen(schein, datum);
+      onErfolg({ anbieter, neu: antwort.neu });
+    } catch (fehler) {
+      // Zu jung oder abgelaufen: Der Server hat den Schein verworfen, hier
+      // gibt es nichts mehr abzuschliessen. Ein Tippfehler dagegen bleibt stehen.
+      if (fehler instanceof ApiError && VERWORFEN.has(fehler.code)) onVerworfen();
+      onFehler(fehler);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="anbieter-nachfrage" role="group" aria-label="Geburtsdatum nachtragen">
+      <p>Fast geschafft — noch eine Frage, dann legen wir dein Konto an.</p>
+      <label>
+        Geburtstag
+        <input
+          type="date"
+          value={datum}
+          onChange={(e) => setDatum(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              void absenden();
+            }
+          }}
+          max={new Date().toISOString().slice(0, 10)}
+          required
+        />
+        <span className="muted">Mindestens 16 Jahre. Für Countdown und Belohnung.</span>
+      </label>
+      <div className="row">
+        <button type="button" className="primary" onClick={() => void absenden()} disabled={!datum || busy}>
+          Konto anlegen
+        </button>
+        <button type="button" onClick={onVerworfen} disabled={busy}>
+          Abbrechen
+        </button>
+      </div>
     </div>
   );
 }
+
+/** Fehler, nach denen der Server den Schein nicht mehr kennt. */
+const VERWORFEN = new Set(['birthdayTooYoung', 'anmeldescheinUngueltig']);
 
 /**
  * Die Apple-Glyphe als Pfad (dieselbe Form, die Simple Icons fuehrt, im
