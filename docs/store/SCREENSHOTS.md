@@ -7,8 +7,9 @@ mit Vogelnamen**, alle Mitspieler sind **Bots** — keine echten
 Personendaten im Bild.
 
 **Die Bilder liegen nicht im Repository** (1–3 MB je Stück). Letzter Lauf:
-23.09.2026 nach `C:\Broweg\pruef\brauweg-wt\app-store-lauf\screenshots\`
-(Mood XPS), 14 Bilder, alle ohne Fehler.
+23.09.2026 18:40 gegen staging mit #242 und #243 nach
+`C:\Broweg\pruef\brauweg-wt\app-store-lauf\screenshots\` (Mood XPS), 14 Bilder,
+alle ohne Fehler. Der vorige Lauf liegt daneben in `screenshots-alt\`.
 
 ```bash
 cd werkzeug/store
@@ -44,7 +45,7 @@ Apple nimmt 1–10 Bilder je Größe, Play 2–8.
 | `03-skat-reizen` | „Du bist am Reizen", Knöpfe „18 sagen", „Rechner", „Weg" | |
 | `04-partykiste-runde` | Allgemeinwissen, **alkoholfrei**, eine Frage mit vier Antworten | Fragen mit Marken Dritter (Simpsons u. a.) verwirft das Skript und zieht neu. |
 | `05-einladung-qr` | Wartesaal: Code groß, QR-Code, „Link teilen", `https://www.brauweg-spielen.de/beitritt/<CODE>` | Der Code ist echt auf staging und verfällt; auf der Produktion führt er ins Leere. |
-| `06-partykiste-einstellungen` | Menü: Trinkspiel / Alkoholfrei, Runden, Härte, Modi | Zeigt den Schalter — gut für die Prüfung. Der Kopftext sagt „Zwölf Minispiele" (CHECKLISTE A3). |
+| `06-partykiste-einstellungen` | Menü: Trinkspiel / Alkoholfrei, Runden, Härte, Modi | Zeigt den Schalter — gut für die Prüfung. |
 | `07-partykiste-trinkspiel` | wie 04, aber im Trinkspiel-Modus | **Nicht hochladen.** Robin hat am 23.09.2026 die alkoholfreie 04 gewählt. |
 
 **Vorschlag für den Store:** 01, 02, 03, 04, 05, 06 — sechs Bilder, auf beiden
