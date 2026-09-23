@@ -398,6 +398,49 @@ describe('Kampf — Bewegung und Reichweite', () => {
     const vorn = bericht.start.find((k) => k.platz === nachArena(platzNummer(0, 2), 1))!;
     assert.equal(erster.ziel, vorn.id, 'der vordere steht naeher');
   });
+
+  it('laesst einen Meuchler unter meuchlerZielwahl den Schuetzen statt der naeheren Wache angreifen', () => {
+    /*
+     * Die Wache steht der Klingentaenzerin genau gegenueber (Abstand 3), der
+     * Schuetze eine Reihe dahinter am Rand (Abstand 4). Im Standard nimmt sie
+     * die Wache — mit dem Vergleichsschalter geht sie an ihr vorbei auf den
+     * Schuetzen. Beide Haelften gehoeren in eine Probe: Kippt nur die zweite,
+     * waere nicht die Zielwahl gemessen, sondern die Aufstellung.
+     *
+     * DER SCHUETZE STEHT SEITLICH UND NICHT HINTER DER WACHE. Steht er direkt
+     * dahinter, versperrt die Wache den einzigen strikt naeheren Weg
+     * (`schrittZiel`), die Klingentaenzerin ist eingekeilt und schlaegt
+     * ersatzweise die Wache — richtig so, aber dann prueft die Probe den
+     * Ersatzhieb und nicht die Zielwahl.
+     */
+    const angreifer = stelleAuf([['klingentaenzerin', 1, 2, 0]]);
+    const opfer = stelleAuf([
+      ['schildknappe', 1, 2, 0],
+      ['astschuetze', 1, 4, 1],
+    ]);
+    const ersterHieb = (bericht: Kampfbericht): number | undefined => {
+      const e = bericht.ereignisse.find((x) => x.art === 'treffer' && x.wer === 0);
+      return e && e.art === 'treffer' ? e.ziel : undefined;
+    };
+    const idAuf = (bericht: Kampfbericht, spalte: number, reihe: number): number =>
+      bericht.start.find((k) => k.platz === nachArena(platzNummer(reihe, spalte), 1))!.id;
+
+    const standard = simuliereKampf([angreifer, opfer], 'meuchlerziel');
+    const von = standard.start[0]!.platz;
+    const platzVon = (id: number) => standard.start.find((k) => k.id === id)!.platz;
+    assert.ok(
+      arenaAbstand(von, platzVon(idAuf(standard, 2, 0))) <
+        arenaAbstand(von, platzVon(idAuf(standard, 4, 1))),
+      'die Wache muss die Naehere sein, sonst prueft die Probe nichts',
+    );
+    assert.equal(ersterHieb(standard), idAuf(standard, 2, 0), 'im Standard die naehere Wache');
+
+    const an = simuliereKampf([angreifer, opfer], 'meuchlerziel', {
+      ...STANDARD_REGLER,
+      meuchlerZielwahl: 'fernkaempfer',
+    });
+    assert.equal(ersterHieb(an), idAuf(an, 4, 1), 'mit dem Schalter der Schuetze');
+  });
 });
 
 describe('Kampf — Schaden', () => {

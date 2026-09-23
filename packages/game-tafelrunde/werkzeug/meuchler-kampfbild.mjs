@@ -14,6 +14,9 @@
  *     --saat meuchler-kampfbild-v1   Saatbasis. Andere Basis = unabhaengige Stichprobe.
  *     --einheiten a,b,...     Welche Einheiten ausgewertet werden (Vorgabe unten).
  *     --stufe 1               Nur Auftritte dieser Sternstufe (Vorgabe: alle).
+ *     --meuchlerziel naechster   naechster | fernkaempfer — `meuchlerZielwahl`
+ *                             im Kampfregler, ein Vergleichsschalter
+ *                             (docs/TAFELRUNDE-MEUCHLER-ZIELWAHL-PROBE.md).
  *     --json                  Statt der Tabellen die rohe Auswertung als JSON.
  *
  * WARUM DIE PROTOKOLLE UND KEIN NACHGEBAUTER KAMPF: Jeder Kampfbericht traegt
@@ -124,6 +127,14 @@ if (!Number.isInteger(SITZZAHL) || SITZZAHL < 2 || SITZZAHL > 8) {
   process.exit(1);
 }
 for (const id of EINHEITEN) einheit(id); // wirft bei einem Tippfehler
+const REGLER = {
+  ...STANDARD_REGLER,
+  meuchlerZielwahl: schalter('meuchlerziel', STANDARD_REGLER.meuchlerZielwahl),
+};
+if (!['naechster', 'fernkaempfer'].includes(REGLER.meuchlerZielwahl)) {
+  console.error('--meuchlerziel kennt nur naechster und fernkaempfer');
+  process.exit(1);
+}
 
 const SITZE = ACHT_SITZE.slice(0, SITZZAHL);
 const MAX_SCHLEIFEN = 400;
@@ -229,7 +240,7 @@ function werteBerichtAus(bericht) {
 const beginn = Date.now();
 let kaempfe = 0;
 for (let i = 0; i < PARTIEN; i++) {
-  let p = erstellePartie(DEFAULT_REGELN, SITZE, `${SAAT_BASIS}-${i}`, STANDARD_REGLER);
+  let p = erstellePartie(DEFAULT_REGELN, SITZE, `${SAAT_BASIS}-${i}`, REGLER);
   for (let schleife = 0; schleife < MAX_SCHLEIFEN && !p.fertig; schleife++) {
     for (const sitz of lebendeSitze(p)) {
       for (let z = 0; z < MAX_ZUEGE_JE_SITZ && darfHandeln(p, sitz); z++) {
@@ -355,6 +366,10 @@ console.log(
   `${PARTIEN} Partien zu ${SITZZAHL}, ${kaempfe} Kaempfe, Besetzung ${BESETZUNG}, ` +
     `Saatbasis "${SAAT_BASIS}", ${NUR_STUFE === null ? "alle Stufen" : "nur Stufe " + NUR_STUFE}, ${(rechenzeit / 1000).toFixed(1)} s`,
 );
+// Wie in ausgewogenheit.mjs: Ein abweichender Stand sagt es in der Kopfzeile.
+if (REGLER.meuchlerZielwahl !== STANDARD_REGLER.meuchlerZielwahl) {
+  console.log(`ABWEICHENDER STAND: Meuchler-Zielwahl ${REGLER.meuchlerZielwahl}`);
+}
 console.log('');
 
 const name = (b) => `${b.id} (${b.rolle}, ${b.kosten})`;
