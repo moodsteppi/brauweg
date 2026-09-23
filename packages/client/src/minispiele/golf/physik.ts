@@ -25,6 +25,7 @@
  */
 
 import { botEntscheidung, zieheDenkzeit } from './bot';
+import { botStoerschlag, botWartetAufStoer } from './bot-stoer';
 import {
   type Karte,
   type Segment,
@@ -69,7 +70,6 @@ import {
   type Bombe,
   type Klebefeld,
   type Stoerart,
-  botStoerschlag,
   darfStoerAufnehmen,
   fuehrendeSitze,
   istStoerart,
@@ -846,6 +846,9 @@ function botsEntscheiden(z: Partiezustand, karte: Karte): void {
         wendeAusloesenAn(z, sitz, st.rx, st.ry, st.kraft, karte);
         continue;
       }
+      // Rollt der Führende noch, wartet er ein paar Takte, statt zu schlagen
+      // (bot-stoer.ts) — `botWartet` bleibt stehen, im nächsten Takt fragt er neu.
+      if (botWartetAufStoer(z, sitz, karte)) continue;
     }
     const e = botEntscheidung(z, sitz, karte, z.botZufall[sitz]);
     z.botZufall[sitz] = e.zufall;

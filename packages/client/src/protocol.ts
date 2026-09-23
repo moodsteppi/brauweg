@@ -112,8 +112,12 @@ export const TAFELRUNDE_MODULE_VERSION = 1;
  * Tausch). Die Zugliste kennt einen zweiten Zugtyp (`art: 'ausloesen'`),
  * die Felder eines Fun-Lochs werden aus sieben statt vier Arten gezogen, und
  * die Bots lösen aus. Ein Client von davor läse einen Auslöse-Zug als Schlag.
+ *
+ * 10 seit dem 23.09.2026: Die Bots holen Störfelder auch mit einem kleinen
+ * Umweg, zielen Bombe und Klebefeld anders und warten auf einen rollenden
+ * Führenden (bot-stoer.ts). Dieselbe Zugliste spielt am Bot-Tisch anders.
  */
-export const GOLF_MODULE_VERSION = 9;
+export const GOLF_MODULE_VERSION = 10;
 
 /**
  * 1 seit dem 18. September 2026 — die erste Fassung. Die Partykiste ist das
