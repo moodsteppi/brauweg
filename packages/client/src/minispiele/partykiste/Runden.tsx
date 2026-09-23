@@ -36,11 +36,18 @@ import {
   type WerEherSicht,
 } from './sicht';
 import { KategorienRunde, MehrheitRunde, RegelkartenRunde } from './RundenOhneUhr';
+import { BombeRunde, KoenigsbecherRunde, ZehnSekundenRunde } from './RundenZeitdruck';
 
 export interface RundenProps {
   sicht: PartykisteSicht;
   sitze: SeatInfo[];
   sende: (aktion: PartyAktion) => void;
+  /**
+   * Die Phasenfrist, die der SERVER mitschickt (`phaseDeadline`), oder null —
+   * nur zum Anzeigen (10 Sekunden, RundenZeitdruck.tsx). Geschaltet wird auf
+   * dem Server; bei der Bombe schickt er sie absichtlich nicht.
+   */
+  frist?: number | null;
 }
 
 /* --------------------------------------------------------------------------
@@ -797,5 +804,12 @@ export function Runde(props: RundenProps): React.JSX.Element {
       return <MehrheitRunde key={props.sicht.rundeNr} {...props} />;
     case 'regelkarte':
       return <RegelkartenRunde {...props} />;
+    /* Die drei mit Uhr (RundenZeitdruck.tsx) — die Uhr selbst laeuft auf dem Server. */
+    case 'bombe':
+      return <BombeRunde {...props} />;
+    case 'zehnsekunden':
+      return <ZehnSekundenRunde {...props} />;
+    case 'koenigsbecher':
+      return <KoenigsbecherRunde {...props} />;
   }
 }

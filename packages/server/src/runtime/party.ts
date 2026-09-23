@@ -593,7 +593,9 @@ export class PartyRuntime {
       currentActor: party.module.currentActor(party.state),
       turnDeadline: party.turnDeadline,
       interludeDeadline: party.interludeDeadline,
-      phaseDeadline: party.phaseDeadline,
+      // Gemessen wird sie trotzdem — nur ihre Restzeit bleibt hier, wenn das
+      // Modul es verlangt (Bombe der Partykiste, `phaseHidden` in game-api).
+      phaseDeadline: party.module.phaseHidden?.(party.state) === true ? null : party.phaseDeadline,
       botSeats: [...party.botControlled],
       leftSeats: [...party.leftSeats],
       // Erst gemeldet, wenn auch das Ergebnis steht - siehe abrechnungLaeuft.

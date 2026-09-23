@@ -807,6 +807,13 @@ function kennungen(runde: Runde): Array<[string, string]> {
       return [['mehrheit', runde.frageId]];
     case 'regelkarte':
       return [['regelkarten', runde.karteId]];
+    /* Die Bombe zieht Kategorien aus einem EIGENEN Stapel (partie.ts, Zweck 'bombe'). */
+    case 'bombe':
+      return [['bombe', runde.kategorieId]];
+    case 'zehnsekunden':
+      return [['zehnsekunden', runde.aufgabeId]];
+    case 'koenigsbecher':
+      return runde.regelVorrat.map((r) => ['koenigsbecher-regeln', r.karteId]);
   }
 }
 
@@ -842,10 +849,14 @@ test('ueber eine ganze Partie kommt keine Kennung zweimal — auch zu zwoelft in
   for (const saat of [1, 2, 3, 4711]) {
     const partie = erzeugePartie({ regeln: DEFAULT_REGELN, saat, sitze: 12, runden: 15, gastSitze: [] });
     const gesehen = gezeigteKennungen(partie);
-    /* Zwoelf Minispiele reihum in fuenfzehn Runden: Wer bin ich (Stelle 3)
-       kommt zweimal, Wahrheit oder Pflicht (Stelle 9) einmal. */
-    assert.equal(gesehen.get('identitaeten')?.length, 24, 'zweimal Wer bin ich zu zwoelft');
-    assert.equal(gesehen.get('aufgaben')?.length, 12, 'einmal Wahrheit oder Pflicht zu zwoelft');
+    /* Alle Minispiele reihum in fuenfzehn Runden. Wie oft Wer bin ich und
+       Wahrheit oder Pflicht drankommen, haengt an der Laenge der Liste — seit
+       dem 23.09.2026 sind es fuenfzehn, also jedes einmal. Gezaehlt statt
+       hingeschrieben, damit das naechste Minispiel diese Zeile nicht bricht. */
+    const wieOft = (art: MinispielId): number =>
+      Array.from({ length: 15 }, (_, nr) => minispielFuer(DEFAULT_REGELN, nr)).filter((a) => a === art).length;
+    assert.equal(gesehen.get('identitaeten')?.length, 12 * wieOft('werbinich'), 'Wer bin ich zu zwoelft');
+    assert.equal(gesehen.get('aufgaben')?.length, 12 * wieOft('wahrheitpflicht'), 'Wahrheit oder Pflicht zu zwoelft');
     keineDoppelten(gesehen, `Saat ${saat}`);
   }
   /* Und eine Reihe, in der beide Wiederholungsfehler mehrfach drankaemen. */

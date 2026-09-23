@@ -233,5 +233,48 @@ export function botZug(sicht: PartykisteSicht, stufe?: BotLevel): PartykisteAkti
     case 'regelkarte':
       /* Gelesen. Verstoesse meldet ein Bot nie — er hoert ja nicht, wer einen Vornamen sagt. */
       return { art: 'bereit' };
+    /*
+     * Die drei mit Uhr. Der Bot spielt mit, aber er hat keine Uhr und keinen
+     * Mund: Er gibt die Bombe im Takt der Plattform weiter (ohne etwas zu
+     * sagen — Bots hoert ohnehin niemand), tippt bei „Hand hoch" sofort, und
+     * die Zeit misst allein der Server.
+     */
+    case 'bombe':
+      return { art: 'weitergeben' };
+    case 'zehnsekunden': {
+      const daten = sicht.daten;
+      if (daten.schritt === 'bereit') return { art: 'bereit' };
+      if (daten.schritt === 'sprechen') return { art: 'fertig' };
+      /*
+       * Urteilen muss ein Bot nur ueber sich selbst — an einem Tisch ohne
+       * Menschen (zehnRichter in zeitdruck.ts). Dann ist es eine Wette, ob
+       * ihm drei eingefallen waeren, und die Spielstaerke zaehlt.
+       */
+      return { art: 'urteil', geschafft: strom(sicht, 'zehn')() < zehnQuote(stufe) };
+    }
+    case 'koenigsbecher': {
+      const daten = sicht.daten;
+      if (daten.hand !== null) return { art: 'hochzeigen' };
+      if (daten.wahlOffen) {
+        const moeglich = ziele(sicht);
+        if (moeglich.length === 0) return { art: 'ziehen' };
+        return { art: 'stimme', ziel: moeglich[ganzzahl(strom(sicht, `kb-${daten.restKarten}`), moeglich.length)]! };
+      }
+      return { art: 'ziehen' };
+    }
+  }
+}
+
+/** 10 Sekunden: wie oft ein Bot sich selbst „geschafft" gibt. */
+function zehnQuote(stufe: BotLevel | undefined): number {
+  switch (stufe) {
+    case 'anfaenger':
+      return 0.45;
+    case 'experte':
+      return 0.75;
+    case 'genie':
+      return 0.9;
+    default:
+      return 0.6;
   }
 }

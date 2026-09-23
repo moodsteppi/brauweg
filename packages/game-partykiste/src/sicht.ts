@@ -25,7 +25,7 @@ import type {
   PartykistePartie,
   RundenPhase,
 } from './partie.js';
-import { amZug, platzierungen, type Platzierung } from './partie.js';
+import { amZug, mitSchluck, platzierungen, type Platzierung } from './partie.js';
 import { meldenMoeglich, noetigJeSitz } from './ohne-uhr.js';
 import type { Haerte, Paket } from './inhalte/typen.js';
 import {
@@ -65,6 +65,14 @@ export interface AufstellungsSicht {
    */
   readonly wechselbar: readonly number[];
 }
+import {
+  zeitdruckSicht,
+  type BombeSicht,
+  type KoenigsbecherSicht,
+  type ZehnSekundenSicht,
+} from './zeitdruck.js';
+
+export type { BombeSicht, KoenigsbecherSicht, ZehnSekundenSicht } from './zeitdruck.js';
 
 // ---------------------------------------------------------------------------
 // Die Daten des laufenden Minispiels
@@ -257,7 +265,11 @@ export type MinispielSicht =
   | WahrheitPflichtSicht
   | KategorienSicht
   | MehrheitSicht
-  | RegelkartenSicht;
+  | RegelkartenSicht
+  /* Die drei mit Uhr — beschrieben in zeitdruck.ts. */
+  | BombeSicht
+  | ZehnSekundenSicht
+  | KoenigsbecherSicht;
 
 // ---------------------------------------------------------------------------
 // Die ganze Sicht
@@ -452,6 +464,14 @@ function minispielSicht(partie: PartykistePartie, sitz: number): MinispielSicht 
         text: runde.text,
         bis: Math.min(runde.bis, partie.runden - 1),
       };
+    /*
+     * Die drei mit Uhr. Was dort NICHT mitfaehrt: die Zuendzeit der Bombe und
+     * die Aufgabe von „10 Sekunden", bevor der Sprecher „Los" tippt.
+     */
+    case 'bombe':
+    case 'zehnsekunden':
+    case 'koenigsbecher':
+      return zeitdruckSicht(partie, runde, sitz, (w) => mitSchluck(partie.regeln.schluckFaktor, w));
   }
 }
 

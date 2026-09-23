@@ -32,8 +32,10 @@ import { MINISPIEL_NAME, type PartyMinispiel } from './sicht';
 /**
  * Wie ein Minispiel ablaeuft: alle zugleich oder einer nach dem anderen.
  *
- * Spiegelbild von `istReihum` in packages/game-partykiste/src/partie.ts,
- * geprueft im Vertrag. `Partial`, weil parallel neue Minispiele entstehen:
+ * Spiegelbild von `ablaufVon` in packages/game-partykiste/src/partie.ts,
+ * geprueft im Vertrag. Bis zum 23.09.2026 stand hier `istReihum` — das sagt
+ * aber, ob eine Runde endet, wenn jeder einmal dran war, und haette das
+ * Kategorien-Battle (reihum im Kreis) „gleichzeitig" genannt. `Partial`, weil parallel neue Minispiele entstehen:
  * Fehlt eines hier, zeigt die Kachel den Ablauf eben nicht an — ein fehlender
  * Eintrag darf den Bau nicht brechen, ein FALSCHER faellt im Vertrag auf.
  */
@@ -47,6 +49,12 @@ export const MINISPIEL_ABLAUF: Partial<Record<PartyMinispiel, 'gleichzeitig' | '
   schaetzen: 'gleichzeitig',
   entweder: 'gleichzeitig',
   wahrheitpflicht: 'reihum',
+  kategorien: 'reihum',
+  mehrheit: 'gleichzeitig',
+  regelkarte: 'gleichzeitig',
+  bombe: 'reihum',
+  zehnsekunden: 'gleichzeitig',
+  koenigsbecher: 'reihum',
 };
 
 /**
@@ -64,6 +72,12 @@ export const MINISPIEL_ZEICHEN: Partial<Record<PartyMinispiel, string>> = {
   schaetzen: '🎯',
   entweder: '⚖️',
   wahrheitpflicht: '🎲',
+  kategorien: '🗂️',
+  mehrheit: '👥',
+  regelkarte: '📜',
+  bombe: '💣',
+  zehnsekunden: '⏱️',
+  koenigsbecher: '👑',
 };
 
 /** Name eines Minispiels — auch fuer eines, das der Client noch nicht beschreibt. */

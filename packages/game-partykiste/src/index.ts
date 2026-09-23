@@ -46,3 +46,13 @@ export { KATEGORIEN, type Kategorie } from './inhalte/kategorien.js';
 export { MEHRHEITSFRAGEN, type Mehrheitsfrage } from './inhalte/mehrheit.js';
 export { REGELKARTEN, type Regelkarte } from './inhalte/regelkarten.js';
 export type { AktiveRegel, KategorienRunde, MehrheitRunde, RegelkartenRunde } from './ohne-uhr.js';
+/* Die drei mit Uhr (23.09.2026): Kataloge, Rundentypen. Die Uhr selbst haengt am Adapter. */
+export { ZEHN_SEKUNDEN, type ZehnSekundenAufgabe } from './inhalte/zehnsekunden.js';
+export {
+  KOENIGSBECHER_KARTEN,
+  koenigsbecherKarte,
+  type KartenFolge,
+  type Koenigsbecherkarte,
+} from './inhalte/koenigsbecher.js';
+export { zuendzeit } from './zeitdruck.js';
+export type { BombeRunde, GezogeneKarte, KoenigsbecherRunde, ZehnSekundenRunde } from './zeitdruck.js';
