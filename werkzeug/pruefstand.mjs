@@ -20,13 +20,28 @@
  *   npm test | node werkzeug/pruefstand.mjs        # oertlich
  *   node werkzeug/pruefstand.mjs lauf.log          # aus einer Datei
  *
- * Gelesen werden zwei Ausgabeformate, weil das Repo zwei Testlaeufer hat:
- * `node --test` in den Paketen (TAP: „# pass 82") und vitest im Client
- * („Tests  797 passed"). Wer ein Paket hinzufuegt, muss hier nichts aendern —
- * unbekannte Pakete stehen am Ende der Zeile, statt zu verschwinden.
+ * Gelesen werden die Ausgaben beider Testlaeufer des Repos: `node --test` in
+ * den Paketen und vitest im Client („Tests  797 passed"). `node --test`
+ * schreibt seinen Nachspann in ZWEI Formen — TAP („# pass 82") und Spec
+ * („ℹ pass 82"). Welche kommt, haengt an der Node-Fassung und daran, ob ein
+ * Terminal dranhaengt: Node 22 schreibt in eine Pipe TAP, Node 24 auch dorthin
+ * Spec. Bis zum 23.09.2026 kannte dieses Werkzeug nur TAP; unter Node 24 aus
+ * einer Datei gelesen zaehlte es jedes Paket als 0 und meldete trotzdem
+ * „Alle gruen". Im Nachtlauf 22./23.09. hat das praktisch jeder Agent
+ * getroffen und mit `sed 's/^ℹ /# /'` umschifft.
+ *
+ * Deshalb scheitert das Werkzeug jetzt laut, wenn es nichts zaehlt: Ein Paket,
+ * dessen `test` lief und von dem keine Zahl kam, macht den Bericht rot und
+ * den Exit-Code 1. Eine Zaehlung, die „gruen" sagt, ohne gezaehlt zu haben,
+ * ist gefaehrlicher als gar keine. Geprueft wird das mit einer echten
+ * Node-24-Ausgabe in `werkzeug/pruefstand.test.mjs` (`npm run test:werkzeug`).
+ *
+ * Wer ein Paket hinzufuegt, muss hier nichts aendern — unbekannte Pakete
+ * stehen am Ende der Zeile, statt zu verschwinden.
  */
 
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 /** Reihenfolge und Beschriftung wie bisher in docs/STAND.md. */
 const BEKANNT = [
@@ -42,6 +57,7 @@ const BEKANNT = [
   ["game-tafelrunde", "Tafelrunde"],
   ["game-golf", "Golf"],
   ["game-partykiste", "Partykiste"],
+  ["game-brocooked", "BroCooked"],
 ];
 
 // Farbcodes fallen weg — als echte Steuerzeichen (vitest an einem Terminal)
@@ -66,7 +82,7 @@ export function auswerten(ausgabe) {
   let aktuell = null;
 
   const nimm = (name) => {
-    if (!pakete.has(name)) pakete.set(name, { tests: 0, fehler: 0, dateien: null });
+    if (!pakete.has(name)) pakete.set(name, { tests: 0, fehler: 0, dateien: null, gezaehlt: false });
     return pakete.get(name);
   };
 
@@ -81,15 +97,20 @@ export function auswerten(ausgabe) {
     }
     if (!aktuell) continue;
 
-    // node --test, TAP-Nachspann.
-    const tapPass = zeile.match(/^#\s+pass\s+(\d+)\s*$/);
-    if (tapPass) {
-      nimm(aktuell).tests += Number(tapPass[1]);
+    // node --test, Nachspann als TAP („# pass 82") oder Spec („ℹ pass 82").
+    // Nur am Zeilenanfang: Eingerueckt waere es die Ausgabe eines Tests.
+    const nodePass = zeile.match(/^(?:#|ℹ)\s+pass\s+(\d+)\s*$/u);
+    if (nodePass) {
+      const stand = nimm(aktuell);
+      stand.tests += Number(nodePass[1]);
+      stand.gezaehlt = true;
       continue;
     }
-    const tapFail = zeile.match(/^#\s+fail\s+(\d+)\s*$/);
-    if (tapFail) {
-      nimm(aktuell).fehler += Number(tapFail[1]);
+    const nodeFail = zeile.match(/^(?:#|ℹ)\s+fail\s+(\d+)\s*$/u);
+    if (nodeFail) {
+      const stand = nimm(aktuell);
+      stand.fehler += Number(nodeFail[1]);
+      stand.gezaehlt = true;
       continue;
     }
 
@@ -101,6 +122,7 @@ export function auswerten(ausgabe) {
       const gescheitert = vitestTests[1].match(/(\d+)\s+failed/);
       if (bestanden) nimm(aktuell).tests += Number(bestanden[1]);
       if (gescheitert) nimm(aktuell).fehler += Number(gescheitert[1]);
+      if (bestanden || gescheitert) nimm(aktuell).gezaehlt = true;
       continue;
     }
     const vitestDateien = zeile.match(/^\s*Test Files\s+.*?(\d+)\s+passed/);
@@ -110,6 +132,22 @@ export function auswerten(ausgabe) {
   }
 
   return pakete;
+}
+
+/**
+ * Pakete, deren `test` lief, ohne dass eine Zahl kam — oder die 0 Tests
+ * gemeldet haben. Beides heisst: Hier wurde nichts geprueft, und „gruen"
+ * waere gelogen. Genau so sah der Fehler vom 23.09.2026 aus.
+ */
+export function ungezaehlt(pakete) {
+  return [...pakete]
+    .filter(([, s]) => !s.gezaehlt || s.tests + s.fehler === 0)
+    .map(([paket]) => paket);
+}
+
+/** Taugt die Zaehlung als Ergebnis? Sonst endet das Programm mit 1. */
+export function gueltig(pakete) {
+  return pakete.size > 0 && ungezaehlt(pakete).length === 0;
 }
 
 export function bericht(pakete) {
@@ -137,8 +175,8 @@ export function bericht(pakete) {
   const fehler = [...pakete].filter(([, s]) => s.fehler > 0);
 
   const zeilen = ["## Prüfstand", ""];
-  if (teile.length === 0) {
-    zeilen.push("Keine Zählung in der Ausgabe gefunden — lief `npm test` überhaupt?");
+  if (pakete.size === 0) {
+    zeilen.push("🔴 Keine Zählung in der Ausgabe gefunden — lief `npm test` überhaupt?");
     return zeilen.join("\n");
   }
 
@@ -149,10 +187,19 @@ export function bericht(pakete) {
   }
   zeilen.push(`${satz}.`);
 
+  const leer = ungezaehlt(pakete);
+  if (leer.length > 0) {
+    zeilen.push("");
+    zeilen.push(
+      `🔴 Nichts gezählt: ${leer.join(", ")} — der Test lief, aber aus der Ausgabe kam ` +
+        "keine Zahl über 0. Entweder hat das Paket keinen einzigen Test, oder der " +
+        "Testläufer schreibt ein Format, das dieses Werkzeug nicht kennt. Grün ist das nicht.",
+    );
+  }
   if (fehler.length > 0) {
     zeilen.push("");
     zeilen.push(`🔴 Rot: ${fehler.map(([p, s]) => `${p} (${s.fehler})`).join(", ")}`);
-  } else {
+  } else if (leer.length === 0) {
     zeilen.push("");
     zeilen.push("Alle grün.");
   }
@@ -167,4 +214,13 @@ export function bericht(pakete) {
   return zeilen.join("\n");
 }
 
-console.log(bericht(auswerten(lies())));
+// Nur als Programm lesen und melden — der Test importiert die Funktionen und
+// soll dabei nicht auf die Standardeingabe warten. Rote Tests setzen den
+// Exit-Code bewusst NICHT: Das meldet der Testlauf selbst, und in der CI
+// steht dieser Schritt hinter `always()`. Eine leere Zaehlung dagegen meldet
+// sonst niemand.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const pakete = auswerten(lies());
+  console.log(bericht(pakete));
+  if (!gueltig(pakete)) process.exitCode = 1;
+}
