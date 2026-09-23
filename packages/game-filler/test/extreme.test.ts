@@ -80,8 +80,10 @@ describe('Extreme: Aufbau', () => {
       assert.deepEqual([...partie.sterne], []);
     }
     // Die Sterne werden NACH Brett und Grautoenen gezogen — beides muss also
-    // mit dem Build-Brett derselben Saat uebereinstimmen.
-    const build = erstellePartie({ ...EXTREME, variante: 'build' }, [0, 1], SAAT);
+    // mit dem Build-Brett derselben Saat uebereinstimmen. Mit ausdruecklich
+    // sieben Farben: Build allein hat seit dem 23.09.2026 seine eigenen sechs,
+    // und ein Brett aus sechs Farben ist ein anderes.
+    const build = erstellePartie({ ...EXTREME, variante: 'build', farben: 7 }, [0, 1], SAAT);
     const extreme = erstellePartie(EXTREME, [0, 1], SAAT);
     assert.deepEqual([...extreme.feld], [...build.feld]);
     assert.deepEqual([...extreme.grau], [...build.grau]);
