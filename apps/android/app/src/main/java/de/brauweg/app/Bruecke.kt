@@ -7,8 +7,9 @@ import android.webkit.JavascriptInterface
 import org.json.JSONObject
 
 /**
- * Die beiden Handgriffe, die der Client nativ braucht (siehe
- * [Huelle.vorspann]): Teilen und den Bildschirm anlassen.
+ * Die Handgriffe, die der Client nativ braucht (siehe
+ * [Huelle.vorspann]): Teilen, den Bildschirm anlassen und — nur mit
+ * eingeschaltetem Push — um Erlaubnis fuer Benachrichtigungen bitten.
  *
  * Bewusst nur das. Alles, was die Oberflaeche ausmacht, bleibt im Client —
  * eine zweite Oberflaeche in Kotlin waere eine zweite Wahrheit.
@@ -16,7 +17,10 @@ import org.json.JSONObject
  * Nur die eigene Seite sieht diese Schnittstelle: Fremde Adressen oeffnet
  * [MainActivity] im Browser, nie im WebView.
  */
-class Bruecke(private val activity: Activity) {
+class Bruecke(
+    private val activity: Activity,
+    private val pushErlaubnis: () -> Unit,
+) {
 
     /** `navigator.share({title, text, url})` — der Teilen-Dialog des Systems. */
     @JavascriptInterface
@@ -47,5 +51,19 @@ class Bruecke(private val activity: Activity) {
             if (an) activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             else activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
+    }
+
+    /**
+     * `BrauwegNativ.pushErlauben()` — der Client bittet um Benachrichtigungen,
+     * etwa wenn jemand „Sag mir, wenn ich dran bin" einschaltet. Erst dann
+     * fragt Android 13+ den Nutzer; beim Start ungefragt zu fragen, lehnen
+     * die meisten ab, und ein zweites Mal fragt das System nicht mehr.
+     *
+     * Danach (und ohne Frage unter Android 12) kommt das Token als Ereignis
+     * `brauweg:push-token`. Mit ausgeschaltetem Push tut der Aufruf nichts.
+     */
+    @JavascriptInterface
+    fun pushErlauben() {
+        activity.runOnUiThread { pushErlaubnis() }
     }
 }
