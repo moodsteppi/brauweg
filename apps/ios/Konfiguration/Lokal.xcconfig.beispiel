@@ -1,0 +1,13 @@
+// Vorlage fuer Konfiguration/Lokal.xcconfig — kopieren, ausfuellen, NICHT
+// einchecken (steht in apps/ios/.gitignore). Gilt fuer Bauen aus Xcode.
+
+// developer.apple.com → Account → Membership details → Team ID (10 Zeichen)
+DEVELOPMENT_TEAM =
+
+// Anderer Server, z. B. der Entwicklungsserver im Simulator. Achtung: In
+// xcconfig beginnt // einen Kommentar, deshalb $() zwischen den Schraegstrichen.
+// BRAUWEG_API_BASE = http:/$()/127.0.0.1:3000
+// BRAUWEG_API_BASE = https:/$()/staging.brauweg-spielen.de
+
+// Push-Mitteilungen einschalten (erst, wenn die Server-Seite steht).
+// BRAUWEG_PUSH = YES

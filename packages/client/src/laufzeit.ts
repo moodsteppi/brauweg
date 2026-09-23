@@ -23,6 +23,15 @@ declare global {
     BRAUWEG_APP?: {
       /** Basisadresse des Servers, z.B. https://www.brauweg-spielen.de */
       apiBase: string;
+      /** Welche Huelle (seit der Android-Huelle; aeltere iOS-Builds lassen es weg). */
+      plattform?: 'android' | 'ios';
+      /** Kann diese Huelle Push? Nur dann lohnt `BrauwegNativ.pushErlauben()`. */
+      push?: boolean;
+      /**
+       * Das letzte Push-Token — fuer den, der erst nach dem Ereignis
+       * `brauweg:push-token` hinsieht (apps/android, Huelle.pushTokenSkript).
+       */
+      pushToken?: { plattform: 'android' | 'ios'; token: string };
     };
   }
 }

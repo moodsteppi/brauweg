@@ -67,9 +67,9 @@ Unterprotokoll `brauweg-token`.
 - Die letzte Anmeldeart lässt sich nicht trennen.
 - Ein **neues** Konto über einen Anbieter entsteht erst mit Geburtsdatum,
   geprüft mit `assertValidBirthday` wie bei der Registrierung. Bis dahin liegt
-  nur ein Schein im Speicher; unter 16 wird er verworfen, es bleibt weder
+  nur ein Schein im Speicher; unter 18 (bis 23.09.2026: 16) wird er verworfen, es bleibt weder
   Konto noch Bindung. Ein Gast, der per Anbieter sichert, gibt es ebenso an.
-  Test: *„unter 16: dieselbe Absage wie beim Registrieren, und nichts bleibt
+  Test: *„unter 18: dieselbe Absage wie beim Registrieren, und nichts bleibt
   zurueck“*.
 - Tests: `test/anmeldung-anbieter.test.ts`. Einrichtung:
   `docs/ANMELDUNG-ANBIETER.md`.

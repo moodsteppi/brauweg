@@ -53,6 +53,8 @@ import type { NonceSpeicher } from '../auth/nonce.js';
 import { anbieterRouten } from './anbieter-routen.js';
 import { type AppVerknuepfung, appVerknuepfungRouten } from './app-verknuepfung.js';
 import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
+import { pushRouten } from './push-routen.js';
+import type { PushAnlaesse } from '../push/anlaesse.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
   berlinToday,
@@ -303,6 +305,11 @@ export interface AppDeps {
   readonly feedbackZielUrl?: string | null;
   /** Bearer-Schluessel fuer obige URL. */
   readonly feedbackZielToken?: string | null;
+  /**
+   * Push-Mitteilungen (docs/PUSH.md). Fehlt es, gibt es die Routen trotzdem
+   * — nur der Anlass "Einladung angenommen" entfaellt.
+   */
+  readonly push?: PushAnlaesse;
 }
 
 /**
@@ -819,6 +826,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitSchreiben: LIMIT_SCHREIBEN,
   });
 
+  pushRouten(app, {
+    db: deps.db,
+    requireSitzung: async (request) => {
+      const sitzung = await sessionFromToken(deps.db, sessionToken(request));
+      if (!sitzung) throw unauthorized();
+      return sitzung;
+    },
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
   /**
    * Ohne Konto spielen: Gastkonto anlegen und sofort anmelden.
    *
@@ -1182,6 +1200,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // Pro-Subway (Solo-Runner)
   // -------------------------------------------------------------------------
 
+  /**
+   * In der App kommt Pro-Subway erst spaeter (Robin, 23.09.2026). Die Kachel
+   * steht dort auf "Bald"; hier wird jeder Lauf abgewiesen, der doch ankommt,
+   * mit demselben Fehler wie ein nicht freigegebenes Spiel.
+   */
+  const runnerNurImWeb = (request: FastifyRequest): void => {
+    if (plattformVon(request) === 'app') throw notFound('gameNotPlayable');
+  };
+
   /** Wie viele Hub-Muenzen heute noch aus dem Runner kommen koennen. */
   app.get('/api/runner/today', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
@@ -1194,6 +1221,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    */
   app.post('/api/runner/cashout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
+    runnerNurImWeb(request);
     const body = z
       .object({
         coins: z.number().int().min(0).max(500),
@@ -1210,6 +1238,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    */
   app.post('/api/runner/lauf', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
+    runnerNurImWeb(request);
     const body = z
       .object({
         muenzen: z.number().int().min(0).max(500),
@@ -2105,6 +2134,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       await joinTable(deps.db, table.id, accountId);
       deps.vermittlung?.verlaesstAlle(accountId);
       deps.runtime.notify(table.id);
+      // Der Code ist die Einladung: Wer ihn einloest, hat sie angenommen.
+      deps.push?.einladungAngenommen(table.id, accountId);
       return reply.send({ tableId: table.id });
     },
   );
@@ -2833,6 +2864,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         reply.header('cache-control', 'no-cache');
       }
     });
+
+    // Die Loesch-Anleitung, die Google Play als Web-Link verlangt — unter einer
+    // Adresse, die man auch vorlesen kann. Die Datei liegt neben den
+    // Rechtstexten (client/public/rechtliches/konto-loeschen.html); ohne diese
+    // Route bekaeme /konto-loeschen die index.html der App.
+    app.get('/konto-loeschen', async (_request, reply) =>
+      reply.header('cache-control', 'no-cache').sendFile('rechtliches/konto-loeschen.html'),
+    );
 
     app.setNotFoundHandler((request, reply) => {
       const path = request.url.split('?')[0] ?? '';

@@ -20364,3 +20364,13 @@ span.hub-angebot-art.poker-jeton-stapel {
 .melden-gruende label { display: flex; gap: 0.5rem; align-items: center; }
 .melden-gruende textarea { width: 100%; min-height: 4rem; margin-top: 0.3rem; }
 .melden-gruende label:has(textarea) { display: block; }
+
+/* ==========================================================================
+   Push-Mitteilungen (push/Mitteilungen.tsx, push/PushBegleiter.tsx) — nur App
+   ========================================================================== */
+.push-mitteilungen { margin-top: 1rem; }
+.push-mitteilungen h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.push-mitteilungen .push-erlauben { width: 100%; margin-top: 0.5rem; font-size: 0.85rem; }
+.push-frage .doko-sheet-card p { margin: 0 0 0.6rem; line-height: 1.4; }
+.push-frage .hub-knopfreihe { margin-top: 0.8rem; }
+.push-frage .hub-knopf { font-size: 0.85rem; padding: 0.6rem 0.4rem; }

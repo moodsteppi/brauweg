@@ -124,6 +124,13 @@ interface Connection {
    * rechnen. Siehe die Kette in `accept`.
    */
   kette: Promise<void>;
+  /**
+   * Sieht der Spieler gerade hin? Wahr ab dem Verbinden und nach jedem
+   * `join`, falsch nach `hintergrund` — das schickt nur die App, wenn sie
+   * vom Bildschirm verschwindet. Danach richten sich die Push-Mitteilungen
+   * (`imVordergrund`, push/anlaesse.ts).
+   */
+  vordergrund: boolean;
 }
 
 /** Hoechstens so viele offene Verbindungen je Konto. */
@@ -255,6 +262,18 @@ const clientMessageSchema = z.discriminatedUnion('type', [
      */
     zuege: z.number().int().min(0).max(10_000_000).optional(),
   }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    /*
+     * Die App ist vom Bildschirm verschwunden (visibilitychange). Kein Tisch
+     * noetig: Die Aussage gilt fuer die Verbindung. Zurueck in den
+     * Vordergrund meldet das `join`, das der Client beim Zurueckkommen
+     * ohnehin schickt (useTable.ts, `resync`).
+     */
+    type: z.literal('hintergrund'),
+    tableId: z.string().uuid().optional(),
+  }),
 ]);
 
 /** Liest das Sitzungs-Cookie aus dem Handshake. */
@@ -317,6 +336,13 @@ export interface GatewayOptions {
    * gezaehmt. Vorgabe: App = Web.
    */
   readonly appInhalt?: AppInhalt;
+  /**
+   * Push-Mitteilungen (push/anlaesse.ts): Der Gateway meldet, wenn eine
+   * Partie anlaeuft — nur er startet sie (`ensureStarted`).
+   */
+  readonly push?: {
+    partieGestartet(laufzeit: Pick<PartyRuntime, 'get'>, tableId: string): void;
+  };
 }
 
 export class Gateway {
@@ -327,6 +353,7 @@ export class Gateway {
   private readonly lookupSession: (token: string | undefined) => Promise<SessionInfo | null>;
   private readonly appOrigins: readonly string[];
   private readonly appInhalt: AppInhalt;
+  private readonly push: GatewayOptions['push'];
 
   constructor(
     server: Server,
@@ -337,6 +364,7 @@ export class Gateway {
     this.cookieName = options.cookieName ?? 'brauweg_session';
     this.appOrigins = options.appOrigins ?? [];
     this.appInhalt = options.appInhalt ?? APP_INHALT_WIE_WEB;
+    this.push = options.push;
     this.lookupSession =
       options.lookupSession ?? ((token) => sessionFromToken(this.db, token));
     // maxPayload: ohne Grenze nimmt ws bis 100 MiB je Nachricht an - ein
@@ -405,6 +433,22 @@ export class Gateway {
     this.runtime.onUpdate((tableId, nurSicht) => {
       void this.broadcast(tableId, nurSicht);
     });
+  }
+
+  /**
+   * Hat dieses Konto gerade eine Tischverbindung, die hinsieht?
+   *
+   * Grundlage fuer "keine Mitteilung, wenn man ohnehin in der App ist"
+   * (push/anlaesse.ts). Eine offene Webseite zaehlt mit: Sie meldet nie
+   * `hintergrund`, und wer am Rechner am Tisch sitzt, braucht auf dem
+   * Telefon keinen Stups. Ohne jede Verbindung — App geschlossen, Telefon
+   * gesperrt und die Leitung gekappt — ist die Antwort nein.
+   */
+  imVordergrund(accountId: string): boolean {
+    for (const connection of this.connections) {
+      if (connection.accountId === accountId && connection.vordergrund) return true;
+    }
+    return false;
   }
 
   async close(): Promise<void> {
@@ -507,6 +551,7 @@ export class Gateway {
         moduleVersion: 1,
         kette: Promise.resolve(),
         ausApp,
+        vordergrund: true,
       };
       this.connections.add(accepted);
       connection = accepted;
@@ -618,6 +663,9 @@ export class Gateway {
         case 'setRules':
           await this.setRules(connection, message.tableId, message.config);
           break;
+        case 'hintergrund':
+          connection.vordergrund = false;
+          break;
         default:
           send(connection.socket, errorMessage('unknownMessageType'));
       }
@@ -689,6 +737,8 @@ export class Gateway {
     connection.sichtStand = null;
     /* Was dieser Client versteht, sagt er hier — und nur hier. */
     connection.moduleVersion = message.moduleVersion;
+    /* Wer (wieder) beitritt, sieht hin — siehe `hintergrund`. */
+    connection.vordergrund = true;
     let room = this.byTable.get(message.tableId);
     if (!room) {
       room = new Set();
@@ -723,6 +773,7 @@ export class Gateway {
     if (!isReadyToStart(table, seats)) return;
 
     await this.runtime.start(tableId);
+    this.push?.partieGestartet(this.runtime, tableId);
   }
 
   private leave(connection: Connection): void {

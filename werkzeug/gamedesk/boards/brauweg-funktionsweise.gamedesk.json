@@ -2007,7 +2007,7 @@
    "accent": "#e8b45c",
    "collapsed": false,
    "state": {
-    "html": "\n<p>Eigenes Repository <code>Brauweg-spiel-ios</code>: eine Hülle um einen\n<code>WKWebView</code>, die <b>genau diesen Client</b> aus dem App-Paket\nausliefert. Keine zweite Oberfläche.</p>\n<p>Damit ist sie eine zweite Herkunft (<code>brauweg://app</code>). Cookies\ngehen dorthin nicht — sie trägt ihr Sitzungstoken selbst: per\n<code>Authorization</code>-Kopf und am WebSocket als Unterprotokoll.</p>",
+    "html": "\n<p><code>apps/ios</code> (Swift, XcodeGen; ein Repo <code>Brauweg-spiel-ios</code>\ngab es nie): eine Hülle um einen <code>WKWebView</code>, die <b>genau diesen\nClient</b> aus dem App-Paket ausliefert. Keine zweite Oberfläche.</p>\n<p>Damit ist sie eine zweite Herkunft (<code>brauweg://app</code>). Cookies\ngehen dorthin nicht — sie trägt ihr Sitzungstoken selbst: per\n<code>Authorization</code>-Kopf und am WebSocket als Unterprotokoll.</p>",
     "fontSize": 13
    }
   },
