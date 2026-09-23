@@ -2,11 +2,11 @@
 # iOS-App bauen und zu TestFlight hochladen — ohne dass jemand am Mac sitzt.
 #
 # Fuer Toms MacBook als Orchestrator-Worker (Auftrag vom 23.09.2026). Gebaut
-# wird die Swift-Huelle aus dem Repository `Brauweg-spiel-ios` (docs/APPSTORE.md);
-# dieses Skript liegt im brauweg-Repo, weil das iOS-Repo von hier aus nicht
-# erreichbar ist. Es bringt den Client selbst ins Paket, statt sich auf
-# `scripts/web-uebernehmen.sh` der Huelle zu verlassen — so steht beides in
-# EINEM Lauf auf demselben Commit.
+# wird die Swift-Huelle in apps/ios dieses Repos (seit dem 23.09.2026; das in
+# frueheren Fassungen genannte Repo `Brauweg-spiel-ios` hat es nie gegeben).
+# Das Xcode-Projekt entsteht bei jedem Lauf frisch aus apps/ios/project.yml
+# (XcodeGen), der Client wird im selben Lauf gebaut — so steht beides auf
+# demselben Commit.
 #
 #   werkzeug/app/ios-testflight.sh             bauen, exportieren, hochladen
 #   werkzeug/app/ios-testflight.sh --trocken   bauen und exportieren, KEIN Upload
@@ -23,35 +23,36 @@ TROCKEN=0
 HIER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WURZEL="$(cd "$HIER/../.." && pwd)"
 LOKAL="$HIER/ios-lokal.env"
+IOS="$WURZEL/apps/ios"
 
 sag() { printf '\n==> %s\n' "$*"; }
 stirb() { printf '\nFEHLER: %s\n' "$*" >&2; exit 1; }
 
 [[ "$(uname)" == "Darwin" ]] || stirb "Nur auf macOS (xcodebuild)."
 command -v xcodebuild >/dev/null || stirb "xcodebuild fehlt — Xcode installieren und einmal starten."
+command -v xcodegen >/dev/null || stirb "xcodegen fehlt — brew install xcodegen"
+command -v npm >/dev/null || stirb "npm fehlt — Node 22 installieren (brew install node@22)."
 [[ -f "$LOKAL" ]] || stirb "$LOKAL fehlt. Vorlage: $HIER/ios-lokal.env.beispiel"
+[[ -f "$IOS/project.yml" ]] || stirb "$IOS/project.yml fehlt — falscher Zweig?"
 
 # shellcheck disable=SC1090
 source "$LOKAL"
 : "${TEAM_ID:?TEAM_ID fehlt in ios-lokal.env}"
 : "${ASC_KEY_ID:?ASC_KEY_ID fehlt in ios-lokal.env}"
 : "${ASC_ISSUER_ID:?ASC_ISSUER_ID fehlt in ios-lokal.env}"
-IOS_REPO="${IOS_REPO:-$WURZEL/../Brauweg-spiel-ios}"
-SCHEME="${SCHEME:-Brauweg-spiel-ios}"
+SCHEME="${SCHEME:-Brauweg}"
 KONFIGURATION="${KONFIGURATION:-Release}"
 SCHLUESSEL="$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 
-[[ -d "$IOS_REPO" ]] || stirb "iOS-Repo nicht gefunden: $IOS_REPO (IOS_REPO in ios-lokal.env setzen)."
 # Nur pruefen, OB der Schluessel da ist. Nie lesen.
 [[ -f "$SCHLUESSEL" ]] || stirb "API-Schluessel fehlt: $SCHLUESSEL"
 
-# Projekt oder Arbeitsbereich — die Huelle braucht kein CocoaPods, also meist
-# ein .xcodeproj. Liegt ein .xcworkspace daneben, gilt der.
-if ls "$IOS_REPO"/*.xcworkspace >/dev/null 2>&1; then
-  QUELLE=(-workspace "$(ls -d "$IOS_REPO"/*.xcworkspace | head -1)")
-else
-  QUELLE=(-project "$(ls -d "$IOS_REPO"/*.xcodeproj | head -1)")
-fi
+# Wahlweise: anderer Server (API_BASE) und Push an (PUSH=YES) — beide in
+# ios-lokal.env. Ohne Angabe gilt, was apps/ios/project.yml fuer die
+# Konfiguration sagt (Release: Produktion, Push aus).
+EXTRA=()
+[[ -n "${API_BASE:-}" ]] && EXTRA+=("BRAUWEG_API_BASE=$API_BASE")
+[[ -n "${PUSH:-}" ]] && EXTRA+=("BRAUWEG_PUSH=$PUSH")
 
 # Alles, was der Bau erzeugt, bleibt im Arbeitsraum — nicht in ~/Library.
 BAU="$HIER/ios-bau"
@@ -72,19 +73,16 @@ cd "$WURZEL"
 npm ci
 npm run build --workspace @brauweg/client
 
-sag "Client ins Paket der Huelle"
-WEB="$IOS_REPO/web"
-rm -rf "$WEB"
-cp -R "$WURZEL/packages/client/dist" "$WEB"
-# Dieselbe Liste wie bei Android (apps/android/werkzeug/web-uebernehmen.mjs):
-# Safari-Startbilder und Entwuerfe braucht die App nicht.
-rm -rf "$WEB/start" "$WEB/hub-entwuerfe" "$WEB/icon-1024.png" "$WEB/appicon.png"
-printf '{ "commit": "%s", "gebaut": "%s", "build": "%s" }\n' \
-  "$(git -C "$WURZEL" rev-parse --short HEAD)" "$(date -u +%FT%TZ)" "$BUILDNUMMER" > "$WEB/stand.json"
+# Das Projekt ist ein Erzeugnis (apps/ios/.gitignore) und entsteht darum jedes
+# Mal neu — ein altes Brauweg.xcodeproj von Hand geaendert zu haben, soll
+# keinen Unterschied machen. Den eben gebauten Client legt die Build-Phase
+# „Client ins Paket" (apps/ios/werkzeug/web-einbauen.sh) ins App-Paket.
+sag "Xcode-Projekt aus apps/ios/project.yml"
+(cd "$IOS" && xcodegen generate --spec project.yml)
 
 sag "Archiv ($SCHEME, $KONFIGURATION, Build $BUILDNUMMER)"
 xcodebuild archive \
-  "${QUELLE[@]}" \
+  -project "$IOS/Brauweg.xcodeproj" \
   -scheme "$SCHEME" \
   -configuration "$KONFIGURATION" \
   -destination 'generic/platform=iOS' \
@@ -96,7 +94,8 @@ xcodebuild archive \
   -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
   DEVELOPMENT_TEAM="$TEAM_ID" \
   CODE_SIGN_STYLE=Automatic \
-  CURRENT_PROJECT_VERSION="$BUILDNUMMER"
+  CURRENT_PROJECT_VERSION="$BUILDNUMMER" \
+  ${EXTRA[@]+"${EXTRA[@]}"}
 
 # ExportOptions: die eingecheckte Vorlage plus Team-ID — die steht nur lokal.
 OPTIONEN="$BAU/ExportOptions.plist"

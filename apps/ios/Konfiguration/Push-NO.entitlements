@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Berechtigungen der App OHNE Push (Vorgabe, BRAUWEG_PUSH = NO). Welche Datei
+  gilt, waehlt CODE_SIGN_ENTITLEMENTS in project.yml ueber genau diese
+  Einstellung; Push-YES.entitlements ist dieselbe Datei plus aps-environment.
+  Ohne Push steht auch im Signierprofil keine Push-Faehigkeit — nichts, was
+  die Pruefung hinterfragen koennte.
+
+  Associated Domains: Einladungslinks /beitritt/* oeffnen die App (Universal
+  Links). Beide Hosts, damit auch eine auf Staging gestellte Fassung ihre
+  Links bekommt. Pruefen tut iOS das gegen
+  /.well-known/apple-app-site-association (packages/server/src/http/app-verknuepfung.ts).
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:www.brauweg-spielen.de</string>
+		<string>applinks:staging.brauweg-spielen.de</string>
+	</array>
+</dict>
+</plist>

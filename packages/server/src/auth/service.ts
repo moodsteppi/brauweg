@@ -715,6 +715,11 @@ export async function anonymizeAccount(db: Db, accountId: string): Promise<void>
       emailVerifiedAt: null,
       displayName: `geloescht-${accountId.slice(0, 8)}`,
       birthday: null,
+      // Profilbild und Figurbemalung sind Personenbezug wie der Name: Bis zum
+      // 23.09.2026 blieben sie stehen, und /api/avatars/:id lieferte das Foto
+      // eines geloeschten Kontos weiter an jeden aus.
+      avatar: null,
+      figurBemalung: null,
       anonymizedAt: now,
     })
     .where(eq(s.account.id, accountId));

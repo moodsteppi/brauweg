@@ -798,9 +798,9 @@ Start <code>node packages/server/dist/src/index.js</code>, Health-Check auf
 <code>/api/health</code>.</p>`), '#e8b45c');
 
 win('ops-ios', 'notes', 'iOS-App — die eine Ausnahme', GX, 600, 460, 250, note(`
-<p>Eigenes Repository <code>Brauweg-spiel-ios</code>: eine Hülle um einen
-<code>WKWebView</code>, die <b>genau diesen Client</b> aus dem App-Paket
-ausliefert. Keine zweite Oberfläche.</p>
+<p><code>apps/ios</code> (Swift, XcodeGen; ein Repo <code>Brauweg-spiel-ios</code>
+gab es nie): eine Hülle um einen <code>WKWebView</code>, die <b>genau diesen
+Client</b> aus dem App-Paket ausliefert. Keine zweite Oberfläche.</p>
 <p>Damit ist sie eine zweite Herkunft (<code>brauweg://app</code>). Cookies
 gehen dorthin nicht — sie trägt ihr Sitzungstoken selbst: per
 <code>Authorization</code>-Kopf und am WebSocket als Unterprotokoll.</p>`), '#e8b45c');
