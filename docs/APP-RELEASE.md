@@ -6,8 +6,9 @@ Android sofort in den geschlossenen Test** (neue private Play-Konten brauchen
 12 Tester über 14 Tage, bevor sie veröffentlichen dürfen). Das Apple-Konto
 (Individual) gehört **Tom**; gebaut wird iOS auf Toms MacBook.
 
-Diese Datei ist die Schritt-für-Schritt-Anleitung. Den Aufbau der iOS-Hülle
-und die Token-Anmeldung beschreibt `docs/APPSTORE.md`.
+Diese Datei ist die Schritt-für-Schritt-Anleitung. Wie die iOS-Hülle gebaut
+ist und wie der erste Build auf dem Mac geht, steht in **Abschnitt 7**; die
+Token-Anmeldung beschreibt `docs/APPSTORE.md`.
 
 ---
 
@@ -15,9 +16,9 @@ und die Token-Anmeldung beschreibt `docs/APPSTORE.md`.
 
 | | iOS | Android |
 | --- | --- | --- |
-| Hülle | Swift, eigenes Repo `Brauweg-spiel-ios` (seit 04.08.2026) | Kotlin, `apps/android` in diesem Repo (seit 23.09.2026) |
+| Hülle | Swift, `apps/ios` in diesem Repo (seit 23.09.2026, Projekt per XcodeGen) | Kotlin, `apps/android` in diesem Repo (seit 23.09.2026) |
 | Client | gebündelt unter `brauweg://app` | gebündelt unter `https://appassets.androidplatform.net` |
-| Server | Build-Setting `BRAUWEG_API_BASE` | Debug: Staging, Release: Produktion (`-PapiBase=…` überschreibt) |
+| Server | Debug: Staging, Release: Produktion (Build-Einstellung `BRAUWEG_API_BASE` überschreibt) | Debug: Staging, Release: Produktion (`-PapiBase=…` überschreibt) |
 | Anmeldung | Token statt Cookie | dasselbe |
 | Bundle-ID / Paket | `de.brauweg.app` | `de.brauweg.app` (Debug: `de.brauweg.app.debug`) |
 
@@ -115,26 +116,22 @@ LÖSCHEN (`auth/loeschen.ts`).
 ### 3.1 Einmalig
 
 1. **Xcode** (aktuelle Version aus dem App Store) installieren, einmal starten.
-2. `Brauweg-spiel-ios` und `brauweg` nebeneinander klonen
-   (z. B. `~/Broweg/brauweg` und `~/Broweg/Brauweg-spiel-ios`).
-3. In Xcode: Ziel `Brauweg-spiel-ios` → *Signing & Capabilities* →
-   „Automatically manage signing", **Team** = Toms persönliches Team,
-   **Bundle-ID** `de.brauweg.app`.
-4. **In der Hülle nachziehen** (von hier aus nicht erreichbar, deshalb nur
-   beschrieben — siehe 6. Offene Punkte):
-   - Capability **Associated Domains** mit `applinks:www.brauweg-spielen.de`.
-   - In `WebAnsicht.swift`: Universal Link (`scene(_:continue:)` bzw.
-     `onOpenURL`) → Pfad `/beitritt/<CODE>` als `brauweg://app/beitritt/<CODE>`
-     laden. Der Client liest den Code beim Start selbst.
-   - Prüfen, dass `navigator.share` und `navigator.vibrate` im WKWebView
-     ankommen; sonst eine Brücke wie in `apps/android/.../Bruecke.kt`.
-   - `ITSAppUsesNonExemptEncryption = false` steht schon in der Info.plist.
+2. **Werkzeuge:** `brew install xcodegen node@22` (Homebrew). Nur `brauweg`
+   klonen — die Hülle liegt darin (`apps/ios`); ein zweites Repo gibt es nicht.
+3. **Team-ID** einmal in `apps/ios/Konfiguration/Lokal.xcconfig` eintragen
+   (Vorlage `Lokal.xcconfig.beispiel`, nie einchecken). Nicht in Xcode unter
+   *Signing & Capabilities*: Das Projekt entsteht bei jedem
+   `xcodegen generate` neu, und dort Eingestelltes wäre danach weg.
+4. **Erster Build und Start im Simulator und auf dem iPhone:** Schritt für
+   Schritt in **7.4**.
 5. **App-Eintrag** in App Store Connect anlegen: *Apps → + → Neue App*,
    Plattform iOS, Name „Brauweg", Sprache Deutsch, Bundle-ID `de.brauweg.app`,
    SKU frei (`brauweg-ios`).
 6. **API-Schlüssel für den Bau ohne Kabel:** App Store Connect → *Users and
    Access → Integrations → App Store Connect API → Team Keys* → Schlüssel mit
-   Rolle **App Manager** anlegen, `.p8` **einmalig** herunterladen nach
+   Rolle **Admin** anlegen (App Manager nur mit Zugriff auf *Certificates,
+   Identifiers & Profiles* und die Cloud-Signierung — sonst scheitert
+   `-exportArchive`), `.p8` **einmalig** herunterladen nach
    `~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8` (Rechte `chmod 600`).
    Key-ID und Issuer-ID in `werkzeug/app/ios-lokal.env` (Vorlage
    `ios-lokal.env.beispiel`, **nie einchecken**), dazu die **Team-ID**
@@ -152,14 +149,17 @@ werkzeug/app/ios-testflight.sh --trocken   # bauen + exportieren, kein Upload
 werkzeug/app/ios-testflight.sh             # dasselbe mit Upload
 ```
 
-Das Skript macht `npm ci`, baut den Client, legt ihn nach `web/` in die Hülle,
-dann `xcodebuild archive` und `-exportArchive` (Methode
+Das Skript macht `npm ci`, baut den Client, erzeugt das Xcode-Projekt aus
+`apps/ios/project.yml` (`xcodegen generate` — fehlt XcodeGen, sagt es
+`brew install xcodegen`), dann `xcodebuild archive` (die Build-Phase „Client
+ins Paket" legt den eben gebauten Client nach `web/`) und `-exportArchive` (Methode
 `app-store-connect`, Ziel `upload`, automatische Signierung) mit dem
 API-Schlüssel. Alles Gebaute bleibt unter `werkzeug/app/ios-bau/`. Die
 Buildnummer ist Commit-Zahl plus Zeitstempel. So kann die Aufsicht den Bau
 als Worker-Aufgabe auf Toms MacBook auslösen, ohne dass jemand davorsitzt.
 
 Von Hand geht es wie in `APPSTORE.md` (Product → Archive → Distribute).
+Anderer Server oder Push an: `API_BASE=…` bzw. `PUSH=YES` in `ios-lokal.env`.
 
 ### 3.3 TestFlight — intern
 
@@ -547,12 +547,18 @@ die App **ohne** Firebase und ohne `POST_NOTIFICATIONS`.
 - Server liefert `apple-app-site-association` und `assetlinks.json`, sobald
   die Variablen gesetzt sind.
 - iOS-Bauskript für den Mac ohne Kabel.
+- iOS-Hülle `apps/ios` (XcodeGen, Swift, keine Fremdbibliotheken) mit
+  Universal Links, Teilen, Haptik, Wach-Halten, Zurück-Wischen, Safari-Blatt
+  für Rechtstexte, Meldung ohne Netz, Privacy Manifest, Push vorbereitet und
+  aus (Abschnitt 7). **Geschrieben, aber noch nie übersetzt** — auf den
+  Windows-Rechnern gibt es kein Xcode.
 
 ### Tom
 
-- Xcode, Signierung, App-Eintrag, API-Schlüssel, `ios-lokal.env` (3.1).
-- In der Swift-Hülle: Associated Domains + Universal-Link-Weiterleitung,
-  Teilen/Haptik prüfen (3.1 Punkt 4).
+- Xcode, XcodeGen, `Lokal.xcconfig`, App-Eintrag, API-Schlüssel,
+  `ios-lokal.env` (3.1).
+- Erster Build nach 7.4: Tests, Simulator, iPhone — und die Liste in 7.5
+  abhaken.
 - Erster TestFlight-Build, interne Tester einladen (3.3).
 
 ### Robin
@@ -573,9 +579,12 @@ die App **ohne** Firebase und ohne `POST_NOTIFICATIONS`.
 
 ## 6. Offene Punkte
 
-- **Swift-Hülle nicht erreichbar.** `Brauweg-spiel-ios` ist von diesem Konto
-  aus nicht zu sehen; alles unter 3.1 Punkt 4 ist deshalb Anleitung, nicht
-  Code.
+- **iOS-Hülle noch nie übersetzt.** `apps/ios` ist auf Windows geschrieben
+  (23.09.2026); geprüft ist dort nur, was in Textdateien steht
+  (`packages/server/test/app-ios.test.ts`). Swift-Compiler, XCTests und das
+  Gerät sehen sie erst auf Toms Mac — Reihenfolge und Stolpersteine in 7.4/7.5.
+  Das in früheren Fassungen genannte Repo `Brauweg-spiel-ios` hat es nie
+  gegeben (Robin, 23.09.2026).
 - **Push („du bist dran")** nicht gebaut: braucht APNs-Schlüssel aus Toms
   Konto bzw. ein Firebase-Projekt, und am Server eine Tabelle für
   Geräte-Token. Kommt nach dem ersten Release. *Stand 23.09.2026:* Die
@@ -598,3 +607,180 @@ die App **ohne** Firebase und ohne `POST_NOTIFICATIONS`.
   eingezeichneter Rundung). Eine Bestellung nach `CLAUDE.md` Regel 5 steht aus.
 - **Lösch-Seite fürs Web** (Play verlangt eine URL, unter der man die
   Löschung auch ohne App anstoßen kann).
+
+---
+
+## 7. iOS-Hülle: so ist sie gebaut
+
+Stand 23.09.2026, `apps/ios`. Robins Entscheidung vom selben Tag: eine
+eigene Swift-Hülle **in diesem Repo**, keine Fremdbibliotheken, nur
+Apple-Standard-APIs. Vorbild ist die Android-Hülle — dieselben Regeln,
+dieselben Namen an der Naht zum Client.
+
+### 7.1 Aufbau
+
+| Datei (unter `apps/ios`) | Aufgabe |
+| --- | --- |
+| `project.yml` | XcodeGen-Spezifikation: App `Brauweg` und `BrauwegTests`, Bundle-ID `de.brauweg.app`, iOS 16, nur iPhone, Build-Phase „Client ins Paket". Das `.xcodeproj` entsteht mit `xcodegen generate` und steht in `.gitignore`. |
+| `Brauweg/Huelle.swift` | Schema, Serveradresse, Einladungslinks, was dem Client eingespritzt wird (wie `Huelle.kt`) |
+| `Brauweg/PaketSchema.swift` | `WKURLSchemeHandler`: liefert `web/` aus dem App-Paket unter `brauweg://app` aus (wie `PaketLader.kt`) |
+| `Brauweg/HauptController.swift` | Der WKWebView: Navigation, `alert`/`confirm`/`prompt`, Safari-Blatt, Teilen, Zurück-Wischen, Meldung ohne Netz |
+| `Brauweg/Wegweiser.swift` | Welche Adresse wohin darf — nie eine fremde Seite im WebView |
+| `Brauweg/Bruecke.swift`, `Haptik.swift` | Die Brücke `window.BrauwegNativ` |
+| `Brauweg/Mitteilungen.swift` | Push — vorbereitet, aus |
+| `Brauweg/Fehlerschirm.swift` | „Keine Verbindung" und die Probe gegen `/api/health` |
+| `Brauweg/AppDelegat.swift`, `SzenenDelegat.swift` | Einstieg, Fenster, Universal Links |
+| `Konfiguration/` | `Info.plist`, Berechtigungen `Push-NO`/`Push-YES.entitlements`, `Lokal.xcconfig` (Team-ID, ignoriert) |
+| `Ressourcen/` | App-Symbol (**Platzhalter** aus `icon-1024.png`, mit eingezeichneter Rundung), Startfarbe, `PrivacyInfo.xcprivacy` |
+| `werkzeug/web-einbauen.sh` | Build-Phase: `packages/client/dist` → `Brauweg.app/web` (ohne Safari-Startbilder), dazu `stand.json` |
+| `werkzeug/pruefen.sh` | XCTests im ersten verfügbaren iPhone-Simulator |
+| `BrauwegTests/` | XCTests der reinen Teile: Pfadauflösung, Universal Links, Wegweiser, Haptik, Teilen |
+
+**iOS 16 als Mindestversion:** Vite 7 baut den Client für Safari 16
+(Vorgabeziel „baseline-widely-available"); älteres WebKit versteht Teile des
+ausgelieferten JavaScripts nicht. iOS 16 läuft ab dem iPhone 8. Alles, was die
+Hülle selbst braucht, gibt es länger.
+
+Auf Windows prüft `packages/server/test/app-ios.test.ts` die Pflichtwerte
+(Bundle-ID, nur iPhone, hochkant, Associated Domains, Privacy Manifest, keine
+Berechtigungstexte, Symbol ohne Alphakanal) und die Namen an der Naht zu
+Server und Client. Übersetzt wird erst auf dem Mac.
+
+### 7.2 Herkunft, Anmeldung, WebSocket
+
+- **`brauweg://app` über einen `WKURLSchemeHandler`.** WebKit gibt einem
+  Schema mit eigenem Handler eine echte Herkunft (unter Android wäre sie
+  `null`). Darunter liegen `localStorage` und `sessionStorage` im
+  Standard-Datenspeicher und überleben Neustarts — dort liegt das
+  Sitzungstoken (`laufzeit.ts`).
+- **`fetch`** an den Server trägt `Origin: brauweg://app`; der Server gibt
+  genau dieser Herkunft CORS und beim Anmelden das Token (`APP_ORIGINS`,
+  `credentials: false`). **Cookies spielen keine Rolle:** Für WebKit wäre das
+  Sitzungs-Cookie ein Drittanbieter-Cookie, der Client schickt
+  `credentials: 'omit'` und `Authorization: Bearer …`.
+- **WebSocket** `wss://…/ws`: dieselbe Herkunft (der Gateway lässt
+  `APP_ORIGINS` zu), das Token als Unterprotokoll hinter `brauweg-token`.
+- **SPA-Rückfall:** Jeder Pfad ohne Dateiendung ist die `index.html`
+  (`/beitritt/K7X9MQ`), eine fehlende Datei ehrlich 404.
+- **ATS:** nur HTTPS; Klartext allein zu lokalen Adressen
+  (`NSAllowsLocalNetworking`, für einen Entwicklungsserver im Simulator).
+- **Welcher Server:** Debug Staging, Release Produktion
+  (`BRAUWEG_API_BASE` in `project.yml`); umstellen in `Lokal.xcconfig` bzw.
+  `API_BASE` in `ios-lokal.env`.
+
+Dass WebKit genau `Origin: brauweg://app` schickt, ist das bekannte Verhalten
+eigener Schemata (Capacitor fährt mit `capacitor://localhost` denselben Weg),
+**hier aber noch nicht beobachtet** — das ist der erste Blick in 7.4.
+
+### 7.3 Die Brücke — dieselben Namen wie Android
+
+| Client | iOS | Android |
+| --- | --- | --- |
+| `window.BRAUWEG_APP` | `{apiBase, plattform: 'ios', push, pushToken?}` | `{…, plattform: 'android', …}` |
+| `navigator.share` | `UIActivityViewController` (Text und Link getrennt) | Teilen-Auswahl |
+| `navigator.vibrate` | Taptic Engine: je Einschaltphase ein Anschlag (`Haptik.swift`) | Vibration |
+| `navigator.wakeLock` | `isIdleTimerDisabled`, bis die letzte Sperre frei ist | `FLAG_KEEP_SCREEN_ON` |
+| `BrauwegNativ.pushErlauben()` | fragt nach der Erlaubnis, registriert bei APNs | Firebase |
+| Ereignis `brauweg:push-token` | `{plattform: 'ios', token}` (hex) | `{plattform: 'android', token}` |
+| Ereignis `brauweg:zurueck` | Wischen vom linken Rand | Zurück-Taste |
+
+- Unter iOS werden `share`, `vibrate` und `wakeLock` **immer** ersetzt, nicht
+  nur, wo sie fehlen: `vibrate` kennt WebKit nicht, und ob `share` und
+  `wakeLock` unter einem eigenen Schema tragen, hängt an der iOS-Version.
+- **Bildschirm an:** nur, solange der Client eine Sperre hält — heute
+  fordert allein die Partykiste eine an (`useTischwache`). Andere Tische
+  lassen den Schirm ausgehen; das wäre eine Zeile im jeweiligen Schirm,
+  nicht in der Hülle. Nach jedem Neuladen wird zurückgesetzt.
+- **Zurück-Wischen:** iPhone-Nutzer gehen in jeder App mit dem Wischen vom
+  linken Rand eine Ebene zurück — das ist das Gegenstück zur Taste. Blättert
+  der Client nicht (am Tisch, Partykiste), passiert **nichts**: Eine iOS-App
+  schickt sich nie selbst in den Hintergrund. Die Geste nimmt dem Spiel
+  keine Berührung weg (`cancelsTouchesInView = false`); den Verlauf des
+  WebViews gibt es bewusst nicht, die Schirme sind Zustand in `App.tsx`.
+- **Links:** Einladungen `/beitritt/<CODE>` des eingestellten Servers laden
+  in der App (Universal Links für `www` und `staging`); eine Staging-Einladung
+  in der Produktions-App öffnet das Safari-Blatt. Impressum und Datenschutz
+  (`/rechtliches/…`) kommen im Safari-Blatt vom Server — mit „Fertig", und
+  der Schirm darunter bleibt stehen. Alles Fremde ins Safari-Blatt,
+  `mailto:`/`tel:` ans System.
+- **Ohne Netz:** Probe gegen `/api/health` (10 s). Scheitert sie, liegt ein
+  natives blaues Schild „Keine Verbindung" mit „Erneut versuchen" über dem
+  Client; kommt das Netz zurück oder die App nach vorn, wird von selbst neu
+  geprüft und der Client frisch geladen. Geht das Netz mitten im Spiel weg,
+  verbindet sich der Client selbst neu.
+- **Push:** Build-Einstellung `BRAUWEG_PUSH`, Vorgabe `NO`. Mit `YES` gilt
+  `Push-YES.entitlements` (`aps-environment`), `BRAUWEG_APP.push` wird
+  `true`, und die Erlaubnis wird erst auf `pushErlauben()` hin erfragt.
+  Braucht einen APNs-Schlüssel aus Toms Konto und die Server-Seite (eigener
+  Auftrag); dann im Privacy Manifest und in App Store Connect die
+  Geräte-Kennung nachtragen.
+
+### 7.4 Der erste Build auf dem Mac
+
+Einmal von Hand, damit jeder Stolperstein gesehen wird, bevor ein Worker
+das Skript fährt.
+
+1. **Stand holen und den Client bauen:**
+   ```bash
+   cd ~/Broweg/brauweg && git pull
+   npm ci && npm run build --workspace @brauweg/client
+   ```
+2. **Werkzeug:** `brew install xcodegen` (einmal).
+3. **Team-ID:** `cp apps/ios/Konfiguration/Lokal.xcconfig.beispiel
+   apps/ios/Konfiguration/Lokal.xcconfig`, `DEVELOPMENT_TEAM = …` eintragen.
+   In Xcode unter *Settings → Accounts* muss Toms Apple-ID angemeldet sein.
+4. **Tests:** `apps/ios/werkzeug/pruefen.sh` — XCTests im Simulator, ohne
+   Signierung. Rot heißt: zuerst hier reparieren.
+5. **Simulator:** `cd apps/ios && xcodegen generate && open Brauweg.xcodeproj`,
+   Scheme **Brauweg**, ein iPhone-Simulator, *Run* (Debug → Staging).
+   Dann mit Safari → *Entwickler* → Simulator → Brauweg den Web-Inspektor
+   öffnen und prüfen:
+   - Netzwerk: Anfragen an `staging.brauweg-spielen.de` tragen
+     `Origin: brauweg://app`, `/ws` steht auf 101. Konsole ohne Fehler.
+   - Als Gast anmelden, Doppelkopf-Tisch mit Bots, ein paar Karten spielen.
+   - App beenden, neu starten: noch angemeldet (localStorage).
+   - Impressum im Safari-Blatt; im Profil vom linken Rand wischen → zurück.
+   - Netz am Mac aus, App neu starten → „Keine Verbindung"; Netz an →
+     verschwindet von selbst.
+6. **iPhone per Kabel:** Gerät wählen, *Run* (am iPhone einmal den
+   Entwicklermodus einschalten). Zusätzlich: Partykiste-Einladung teilen
+   (WhatsApp zeigt den Link mit Vorschau), Haptik, wenn man dran ist,
+   Bildschirm bleibt an.
+7. **Universal Link:** erst, wenn in Railway (Staging) `APPLE_TEAM_ID`
+   gesetzt ist und `https://staging.brauweg-spielen.de/.well-known/apple-app-site-association`
+   antwortet. App neu installieren (iOS holt die Datei beim Installieren,
+   über Apples CDN — das kann dauern), dann einen Link
+   `https://staging.brauweg-spielen.de/beitritt/<CODE>` in Notizen antippen.
+8. **TestFlight:** `werkzeug/app/ios-testflight.sh --trocken`, dann ohne
+   `--trocken` (3.2).
+
+### 7.5 Was als Erstes schiefgehen könnte
+
+Die Hülle ist geschrieben, nie übersetzt. Am wahrscheinlichsten, in dieser
+Reihenfolge:
+
+- **Übersetzungsfehler.** Kleinigkeiten in Swift, die ohne Compiler
+  durchrutschen, dazu Warnungen zur Nebenläufigkeit mit Xcode 26
+  (`SWIFT_VERSION` steht bewusst auf 5; kein `async`, keine Actors). Beheben,
+  nicht auf Swift 6 umstellen.
+- **Signierung:** „requires a development team" → `Lokal.xcconfig` fehlt.
+  „Provisioning profile doesn't include the Associated Domains capability" →
+  einmal aus Xcode mit angemeldeter Apple-ID bauen, dann legt die automatische
+  Signierung die Fähigkeit an der App-ID an; mit dem API-Schlüssel nur bei
+  passender Rolle (3.1 Punkt 6).
+- **Weißer Schirm statt Client:** im Web-Inspektor nachsehen. „Im App-Paket
+  liegt kein Client" → Schritt 1 fehlt (ein Release-Bau bricht dann
+  absichtlich ab). Ein Modul-Skript mit falschem Typ oder ein CORS-Fehler auf
+  eigene Dateien → `PaketSchema.swift`.
+- **Anmeldung scheitert, 401 oder CORS am Server:** die Herkunft ist nicht
+  `brauweg://app` — dann stimmt 7.2 nicht, und Server (`APP_ORIGINS`) und
+  Hülle müssen neu verabredet werden.
+- **Build-Phase „Client ins Paket" meldet „Operation not permitted":** Die
+  Skript-Sandbox ist trotz `ENABLE_USER_SCRIPT_SANDBOXING = NO` an —
+  XcodeGen-Fassung prüfen (`xcodegen --version`, mindestens 2.38).
+- **Universal Link öffnet Safari statt der App:** Datei auf dem Server fehlt
+  (404, solange `APPLE_TEAM_ID` nicht gesetzt ist), oder die App wurde vor
+  dem Setzen installiert.
+- **Upload abgelehnt wegen des Symbols:** Das Platzhalter-Symbol ist RGB ohne
+  Alphakanal (geprüft), wirkt wegen der eingezeichneten Rundung aber doppelt
+  gerundet. Für den Store ein bestelltes Symbol.

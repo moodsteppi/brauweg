@@ -1,0 +1,13 @@
+// Bindet Lokal.xcconfig ein, WENN es sie gibt (das Fragezeichen macht die
+// Einbindung freiwillig — ohne die Datei baut das Projekt genauso).
+//
+// Warum ueberhaupt: Was man in Xcode unter „Signing & Capabilities" waehlt,
+// steht im erzeugten Projekt und ist beim naechsten `xcodegen generate` weg.
+// Die Team-ID gehoert aber nicht ins Repo (Toms Konto). Also steht sie in
+// Lokal.xcconfig (in .gitignore; Vorlage Lokal.xcconfig.beispiel), und diese
+// Datei holt sie herein. Das Bauskript werkzeug/app/ios-testflight.sh braucht
+// das nicht: Es gibt DEVELOPMENT_TEAM aus ios-lokal.env direkt an xcodebuild.
+//
+// Rangfolge: Diese Datei haengt am Ziel und schlaegt damit die
+// Projekt-Einstellungen aus project.yml (BRAUWEG_API_BASE, BRAUWEG_PUSH).
+#include? "Lokal.xcconfig"

@@ -2375,10 +2375,13 @@ Wechsel, Rand-Gummiband, Guard in der Spielauswahl.
 
 ## iOS
 
-**Die App steht und läuft im Simulator.** Eigenes Repository
-`Brauweg-spiel-ios` neben diesem: eine SwiftUI-Hülle um einen `WKWebView`,
-die den gebauten Client aus dem App-Paket ausliefert. **Kein Capacitor** —
-die Begründung und alle Einzelheiten stehen in `docs/APPSTORE.md`.
+**Berichtigt am 23.09.2026:** Hier stand, die App stehe in einem eigenen
+Repository `Brauweg-spiel-ios` und laufe im Simulator. Das Repository gab es
+nie (Robin). Seit dem 23.09.2026 liegt die Hülle in **`apps/ios` dieses
+Repos** — Swift, ein `WKWebView`, der den gebauten Client aus dem App-Paket
+ausliefert, das Xcode-Projekt per XcodeGen. **Geschrieben, noch nie
+übersetzt**; der erste Build auf Toms Mac steht in `docs/APP-RELEASE.md`,
+Abschnitt 7. **Kein Capacitor** — die Begründung steht in `docs/APPSTORE.md`.
 
 Der eine Eingriff hier im Repository ist die **Anmeldung**: Für den Server ist
 die App eine fremde Herkunft und bekommt kein Cookie. Sie trägt ihr Token
@@ -2394,9 +2397,10 @@ fällt ohne `window.BRAUWEG_APP` auf das bisherige Verhalten zurück.
 `GameSelect.tsx`) — im Browser bleibt er sichtbar, dort gilt weiter die Regel
 aus `DESIGN.md`.
 
-**Vor jedem Bauen der App einmal `./scripts/web-uebernehmen.sh` im
-iOS-Repository laufen lassen.** Ohne das liegt kein Client im Paket; die App
-sagt das dann im Klartext, statt weiß zu bleiben.
+**Vor jedem Bauen der App einmal `npm run build --workspace @brauweg/client`
+laufen lassen**; die Build-Phase „Client ins Paket" (`apps/ios/werkzeug/web-einbauen.sh`)
+legt ihn dann ins App-Paket. Ohne das zeigt ein Debug-Bau den Hinweis im
+Klartext, statt weiß zu bleiben, und ein Release-Bau bricht ab.
 
 **Prüfstand jetzt: 118 Engine-Tests, 125 Servertests** (acht neue für die
 Token-Anmeldung, `test/app-huelle.test.ts`).

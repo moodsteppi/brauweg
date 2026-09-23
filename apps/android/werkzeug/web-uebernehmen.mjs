@@ -1,6 +1,6 @@
 // Baut den Web-Client und legt ihn als App-Inhalt nach app/src/main/assets/web.
 //
-// Das Gegenstueck zu scripts/web-uebernehmen.sh der iOS-Huelle. Gebaut wird
+// Das Gegenstueck zu apps/ios/werkzeug/web-einbauen.sh der iOS-Huelle. Gebaut wird
 // der GEWOEHNLICHE Client, kein eigener App-Build: Die Huelle sagt ihm zur
 // Laufzeit, wo der Server steht (window.BRAUWEG_APP, siehe Huelle.kt). So
 // laeuft in der App Zeichen fuer Zeichen derselbe Client wie auf der Webseite.
