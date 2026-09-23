@@ -356,11 +356,18 @@ jobs:
       - name: Bauen
         run: npm run build
 
+      # Das Zählwerkzeug selbst zuerst: Zählt es falsch, ist die
+      # Zusammenfassung unten wertlos — am 23.09.2026 meldete es unter Node 24
+      # jedes Paket mit 0 Tests und trotzdem „Alle grün".
+      - name: Prüfstand-Werkzeug prüfen
+        run: npm run test:werkzeug
+
       # `shell: bash` ist hier kein Beiwerk. Nur damit läuft der Schritt mit
       # `-o pipefail`; sonst wäre der Exit-Code der von `tee`, also immer 0,
       # und ein roter Test käme als grüner Haken durch. Das ist die teuerste
       # Art, eine Prüfstrecke kaputtzumachen: Sie sieht weiter aus wie eine.
       - name: Tests
+        id: tests
         shell: bash
         run: npm test 2>&1 | tee pruefstand.log
 
@@ -388,4 +395,11 @@ jobs:
           # der Kommandozeile (`gh run view --log`) — und wenn die Zählung
           # selbst einmal falsch aussieht, will man sie neben der Ausgabe
           # lesen, aus der sie stammt.
-          node werkzeug/pruefstand.mjs pruefstand.log | tee -a "$GITHUB_STEP_SUMMARY"
+          #
+          # Zählt das Werkzeug nichts, endet es mit 1 — „grün" ohne Zählung
+          # ist genau der Fehler vom 23.09.2026. Rot wird der Schritt dafür
+          # aber nur, wenn die Tests selbst durchliefen: Starb der Lauf
+          # vorher, fehlt die Zählung zwangsläufig, und das zweite rote Kreuz
+          # lenkte nur vom ersten ab.
+          node werkzeug/pruefstand.mjs pruefstand.log | tee -a "$GITHUB_STEP_SUMMARY" \
+            || [ "${{ steps.tests.outcome }}" != "success" ]
