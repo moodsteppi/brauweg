@@ -46,6 +46,7 @@ import {
 // Eigene Zeile statt in der Liste darueber: Bestaetigung, Reset und
 // Mail-Diagnose (23.09.2026) kamen parallel zu anderen Anmeldewegen dazu.
 import { createSession } from '../auth/service.js';
+import { loeschCodeEinloesen, loeschCodeSenden, loeschWeg, wortBestaetigt } from '../auth/loeschen.js';
 import { mailProbe } from '../mail/probe.js';
 import type { Schluesselquelle } from '../auth/idtoken.js';
 import type { NonceSpeicher } from '../auth/nonce.js';
@@ -885,6 +886,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         hasBirthdayOutfit: s.account.hasBirthdayOutfit,
         birthdayRewardYear: s.account.birthdayRewardYear,
         gastSeit: s.account.gastSeit,
+        // Nur fuer `loeschenPer` — weder Hash noch Adresse gehen hinaus.
+        loeschPasswort: sql<boolean>`${s.account.passwordHash} is not null`,
+        loeschMail: sql<boolean>`${s.account.email} is not null`,
         // Nur, OB ein Bild vorliegt — die Bytes gehen nie mit /api/me raus,
         // sondern nur ueber die eigene URL, die der Browser zwischenspeichert.
         hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
@@ -930,8 +934,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       }),
     );
 
-    const { hasAvatar, birthdayRewardYear, isStaff, gems, figurBemalung, gastSeit, ...rest } =
-      account;
+    const {
+      hasAvatar,
+      birthdayRewardYear,
+      isStaff,
+      gems,
+      figurBemalung,
+      gastSeit,
+      loeschPasswort,
+      loeschMail,
+      ...rest
+    } = account;
     const birthday = account.birthday ?? null;
     // Rechte kommen aus einer einzigen Stelle (entitlements.ts). Der Client
     // rechnet nichts aus Ablaufdaten aus - er zeigt, was hier steht.
@@ -963,6 +976,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
        * seit wann jemand Gast ist, geht niemanden im Browser etwas an.
        */
       gast: gastSeit != null,
+      /** Womit die Kontoloeschung bestaetigt wird (auth/loeschen.ts). */
+      loeschenPer: loeschWeg({
+        passwordHash: loeschPasswort ? 'ja' : null,
+        email: loeschMail ? 'ja' : null,
+      }),
       coins: stand.coins,
       gems: stand.gems,
       broJetons: stand.broJetons,
@@ -1465,19 +1483,53 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * Das Passwort wird erneut verlangt. Der Schritt ist unumkehrbar, und die
    * Sitzung haelt dreissig Tage: Ohne diese Frage genuegt ein kurz aus der
    * Hand gelegtes Handy, um ein fremdes Konto endgueltig zu loeschen.
+   *
+   * Konten OHNE Passwort (nur Google/Apple, Gaeste) konnten sich damit bis zum
+   * 23.09.2026 gar nicht loeschen — ein sicherer Ablehnungsgrund bei Apple
+   * (5.1.1(v)). Sie weisen sich jetzt mit einem Code per Mail bzw. dem Wort
+   * LÖSCHEN aus; welcher Weg gilt, sagt `loeschenPer` in /api/me
+   * (auth/loeschen.ts).
    */
-  app.delete('/api/me', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+  /** Loeschcode fuer ein Konto ohne Passwort anfordern (auth/loeschen.ts). */
+  app.post('/api/me/loeschcode', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const accountId = await requireAccount(request);
-    const { password } = z.object({ password: z.string().min(1) }).parse(request.body);
-
     const [acc] = await deps.db
-      .select({ passwordHash: s.account.passwordHash })
+      .select({ passwordHash: s.account.passwordHash, email: s.account.email })
       .from(s.account)
       .where(eq(s.account.id, accountId));
-    // Derselbe Schluessel wie bei der Anmeldung: Wer das Passwort nicht kennt,
-    // erfaehrt hier nichts, was er nicht schon wusste.
-    if (!acc || !(await verifyPassword(acc.passwordHash, password))) {
-      throw unauthorized('credentialsInvalid');
+    if (!acc || loeschWeg(acc) !== 'code') throw badRequest('loeschcodeUnnoetig');
+    const versandt = await loeschCodeSenden(deps.auth, accountId);
+    return reply.send({ ok: true, versandt, mailVersand: deps.auth.mailer.art });
+  });
+
+  app.delete('/api/me', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const nachweis = z
+      .object({
+        password: z.string().min(1).optional(),
+        code: z.string().max(40).optional(),
+        bestaetigung: z.string().max(40).optional(),
+      })
+      .parse(request.body ?? {});
+
+    const [acc] = await deps.db
+      .select({ passwordHash: s.account.passwordHash, email: s.account.email })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    if (!acc) throw unauthorized('credentialsInvalid');
+    const weg = loeschWeg(acc);
+    if (weg === 'passwort') {
+      // Derselbe Schluessel wie bei der Anmeldung: Wer das Passwort nicht
+      // kennt, erfaehrt hier nichts, was er nicht schon wusste.
+      if (!(await verifyPassword(acc.passwordHash, nachweis.password ?? ''))) {
+        throw unauthorized('credentialsInvalid');
+      }
+    } else if (weg === 'code') {
+      if (!(await loeschCodeEinloesen(deps.db, accountId, nachweis.code))) {
+        throw unauthorized('loeschcodeFalsch');
+      }
+    } else if (!wortBestaetigt(nachweis.bestaetigung)) {
+      throw badRequest('loeschBestaetigungFehlt');
     }
 
     // Waehrend laufender Partie gilt die Loeschung als Verlassen.

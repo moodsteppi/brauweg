@@ -120,6 +120,12 @@ export interface Me {
    */
   gast: boolean;
   /**
+   * Womit die Kontoloeschung bestaetigt wird: Passwort, Code per Mail (Konto
+   * nur ueber Google/Apple) oder beim Gast das Wort LÖSCHEN. Fehlt es (aelterer
+   * Server), gilt das Passwort wie bisher.
+   */
+  loeschenPer?: 'passwort' | 'code' | 'bestaetigung';
+  /**
    * Bemalung der 3D-Figur. `null` heißt: nie bemalt, es gilt die
    * Standardoptik. Der Server hat sie schon geprüft.
    */
@@ -881,16 +887,27 @@ export const api = {
 
   claimBirthdayReward: () => post<{ ok: true; item: string }>('/me/birthday-reward'),
   /** Unumkehrbar. Das Passwort schuetzt vor dem offen liegengelassenen Geraet. */
-  deleteMe: async (password: string) => {
+  /**
+   * Konto loeschen. Der Nachweis haengt am Konto (`Me.loeschenPer`): das
+   * Passwort, der Code aus der Mail oder beim Gast das Wort LÖSCHEN. Ein
+   * blosser Text ist das Passwort — so rufen es die bisherigen Stellen auf.
+   */
+  deleteMe: async (
+    nachweis: string | { password?: string; code?: string; bestaetigung?: string },
+  ) => {
     const antwort = await request<{ ok: true }>('/me', {
       method: 'DELETE',
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(typeof nachweis === 'string' ? { password: nachweis } : nachweis),
     });
     // Die Loeschung hat die Sitzung schon widerrufen. Bliebe das Token
     // liegen, liefe jeder Start in ein 401 statt auf die Anmeldung.
     setSessionToken(null);
     return antwort;
   },
+
+  /** Loeschcode an die Adresse eines Kontos ohne Passwort. */
+  loeschcodeAnfordern: () =>
+    post<{ ok: true; versandt: boolean; mailVersand: 'resend' | 'log' }>('/me/loeschcode'),
 
   games: () => request<GameSummary[]>('/games'),
   vote: (gameId: string) => post<{ ok: true }>(`/games/${gameId}/vote`),

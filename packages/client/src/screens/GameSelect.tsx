@@ -1011,6 +1011,7 @@ function ProfilTab({
       {loeschenOffen && (
         <KontoLoeschenBlatt
           name={me.displayName}
+          weg={me.loeschenPer ?? 'passwort'}
           onClose={() => setLoeschenOffen(false)}
           onDeleted={onDeleted}
         />
@@ -1029,26 +1030,56 @@ function ProfilTab({
  *
  * Das Passwort wird erneut verlangt, weil die Sitzung dreissig Tage haelt:
  * Sonst genuegte ein kurz aus der Hand gelegtes Handy.
+ *
+ * Konten ohne Passwort (seit dem 23.09.2026, Apple 5.1.1(v)): Wer nur ueber
+ * Google oder Apple hereinkam, fordert einen Code an die eigene Adresse an;
+ * ein Gast tippt LÖSCHEN. Welcher Weg gilt, sagt der Server (`loeschenPer`).
  */
-function KontoLoeschenBlatt({
+export function KontoLoeschenBlatt({
   name,
+  weg,
   onClose,
   onDeleted,
 }: {
   name: string;
+  weg: 'passwort' | 'code' | 'bestaetigung';
   onClose: () => void;
   onDeleted: () => void;
 }): React.JSX.Element {
+  /** Passwort, Code oder das Wort — je nach `weg` genau eins davon. */
   const [passwort, setPasswort] = useState('');
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  /** Nur beim Code: ob er angefordert ist, und was der Server dazu sagte. */
+  const [codeHinweis, setCodeHinweis] = useState<string | null>(null);
+
+  const codeAnfordern = (): void => {
+    if (busy) return;
+    setBusy(true);
+    setFehler(null);
+    void api
+      .loeschcodeAnfordern()
+      .then((antwort) =>
+        setCodeHinweis(
+          antwort.versandt
+            ? 'Der Code ist unterwegs. Er gilt 15 Minuten.'
+            : 'Eben kam schon ein Code — er gilt weiter. Einen neuen gibt es in einer Minute.',
+        ),
+      )
+      .catch((err: unknown) =>
+        setFehler(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.'),
+      )
+      .finally(() => setBusy(false));
+  };
 
   const loeschen = (event: React.FormEvent): void => {
     event.preventDefault();
     if (busy) return;
     setBusy(true);
     setFehler(null);
-    void api.deleteMe(passwort).then(onDeleted, (err: unknown) => {
+    const nachweis =
+      weg === 'code' ? { code: passwort } : weg === 'bestaetigung' ? { bestaetigung: passwort } : passwort;
+    void api.deleteMe(nachweis).then(onDeleted, (err: unknown) => {
       // Der allgemeine Schluessel nennt E-Mail und Passwort. Hier wurde nur
       // ein Passwort eingegeben - also auch nur davon sprechen.
       setFehler(
@@ -1083,16 +1114,50 @@ function KontoLoeschenBlatt({
           Verlassen.
         </p>
 
-        <label>
-          Passwort von {name}
-          <input
-            type="password"
-            value={passwort}
-            onChange={(event) => setPasswort(event.target.value)}
-            autoFocus
-            required
-          />
-        </label>
+        {weg === 'passwort' ? (
+          <label>
+            Passwort von {name}
+            <input
+              type="password"
+              value={passwort}
+              onChange={(event) => setPasswort(event.target.value)}
+              autoFocus
+              required
+            />
+          </label>
+        ) : weg === 'code' ? (
+          <>
+            <p className="muted">
+              Dein Konto hat kein Passwort. Zur Bestätigung schicken wir dir einen Code an deine
+              E-Mail-Adresse.
+            </p>
+            <button type="button" className="hub-knopf hub-knopf--a" onClick={codeAnfordern} disabled={busy}>
+              {codeHinweis ? 'Neuen Code schicken' : 'Code schicken'}
+            </button>
+            {codeHinweis && <p className="muted" role="status">{codeHinweis}</p>}
+            <label>
+              Code aus der Mail
+              <input
+                value={passwort}
+                onChange={(event) => setPasswort(event.target.value)}
+                autoComplete="one-time-code"
+                autoCapitalize="characters"
+                required
+              />
+            </label>
+          </>
+        ) : (
+          <label>
+            Tippe LÖSCHEN ein, um zu bestätigen
+            <input
+              value={passwort}
+              onChange={(event) => setPasswort(event.target.value)}
+              autoFocus
+              autoCapitalize="characters"
+              required
+            />
+          </label>
+        )}
 
         {fehler && <p className="error">{fehler}</p>}
 
