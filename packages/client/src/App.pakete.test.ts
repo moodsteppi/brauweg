@@ -32,6 +32,10 @@ const NACHGELADEN = [
   'EasyPoker',
   'Eiland',
   'FeldherrTisch',
+  // Seit dem 23.09.2026: Landeseiten der Mail-Links und das Blatt zum
+  // Sichern eines Gastkontos. App.tsx liest den Pfad beim Start.
+  'KontoLink',
+  'KontoSichern',
   'Filler',
   'Mememory',
   // Seit dem 22.09.2026 in der Liste: Ab da liest App.tsx beim Start den
@@ -89,6 +93,10 @@ describe('Paketaufteilung von App.tsx', () => {
    * dem ersten Bild. Kaeme er aus `Einladung.tsx`, zoege er den QR-Kodierer
    * mit ins Hauptpaket, kaeme er aus dem Schirm, gleich die ganze Partykiste.
    */
+  it('liest die Mail-Links aus dem eigenen kleinen Modul, nicht aus dem Schirm', () => {
+    expect(APP).toContain("from './kontolink';");
+  });
+
   it('holt den Einladungslink aus dem eigenen kleinen Modul, nicht aus Einladung oder Schirm', () => {
     expect(APP).toContain("from './minispiele/partykiste/einladungslink';");
     expect(APP).not.toMatch(/from '\.\/minispiele\/partykiste\/(Einladung|Beitrittscode|qr)'/);

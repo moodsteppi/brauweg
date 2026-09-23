@@ -16,7 +16,16 @@ import {
   vormerkungLoeschen,
 } from './minispiele/partykiste/einladungslink';
 
+import { leseKontoLink, type KontoLinkZiel } from './kontolink';
+
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
+/** Landeseiten der Mail-Links und die Mail-Diagnose (seit dem 23.09.2026). */
+const KontoLink = lazy(() =>
+  import('./screens/KontoLink').then((m) => ({ default: m.KontoLink })),
+);
+const KontoSichern = lazy(() =>
+  import('./screens/KontoSichern').then((m) => ({ default: m.KontoSichern })),
+);
 
 /**
  * Die Spielschirme kommen einzeln nach.
@@ -169,6 +178,13 @@ export function App(): React.JSX.Element {
    * der Code wartet solange im Tab-Speicher (siehe einladungslink.ts).
    */
   const [einladung, setEinladung] = useState<string | null>(() => vorgemerkterCode());
+  /**
+   * `/verify`, `/reset` und `/aufsicht/mail` (siehe kontolink.ts) — gelesen
+   * vor dem ersten Bild und unabhaengig von der Anmeldung: Der Gast, der
+   * eben sein Konto gesichert hat, oeffnet den Bestaetigungslink angemeldet.
+   */
+  const [kontoLink, setKontoLink] = useState<KontoLinkZiel | null>(() => leseKontoLink());
+  const [sichernOffen, setSichernOffen] = useState(false);
 
   const reload = async (): Promise<void> => {
     setMe(await api.me().catch(() => null));
@@ -236,6 +252,23 @@ export function App(): React.JSX.Element {
   }, [me !== null]);
 
   if (loading) return <AppLaedt />;
+
+  // Die Diagnose braucht ein angemeldetes Testkonto; ohne Anmeldung geht es
+  // erst durch den Anmeldeschirm, und die Adresse wartet solange.
+  if (kontoLink && (me || kontoLink.art !== 'mailprobe')) {
+    return (
+      <Suspense fallback={<AppLaedt />}>
+        <KontoLink
+          ziel={kontoLink}
+          angemeldet={me !== null}
+          onFertig={() => {
+            setKontoLink(null);
+            void reload();
+          }}
+        />
+      </Suspense>
+    );
+  }
 
   if (!me) {
     return (
@@ -634,7 +667,34 @@ export function App(): React.JSX.Element {
       );
     }
 
+    /*
+     * Gaeste bekommen ueber der Spielauswahl eine schmale Leiste zum Sichern.
+     * Hier und nicht in GameSelect: Die Route gab es seit dem Gastkonto, nur
+     * keinen Weg dorthin — und das Blatt kommt erst beim Antippen nach.
+     */
+    const gastLeiste = me.gast ? (
+      <div className="gastsichern-leiste" role="note">
+        <span>Du spielst als Gast.</span>
+        <button type="button" onClick={() => setSichernOffen(true)}>
+          Konto sichern
+        </button>
+        {sichernOffen && (
+          <Suspense fallback={null}>
+            <KontoSichern
+              onClose={() => setSichernOffen(false)}
+              onGesichert={() => {
+                setSichernOffen(false);
+                void reload();
+              }}
+            />
+          </Suspense>
+        )}
+      </div>
+    ) : null;
+
     return (
+      <>
+      {gastLeiste}
       <GameSelect
         me={me}
         // Feldherr und Mememory haben keine Kartenlobby: Tisch erstellen und
@@ -672,6 +732,7 @@ export function App(): React.JSX.Element {
         // das Cookie geraeumt - ein Abmelden danach liefe in ein 401.
         onDeleted={() => setMe(null)}
       />
+      </>
     );
   };
 

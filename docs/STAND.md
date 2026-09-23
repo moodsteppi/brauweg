@@ -2411,7 +2411,11 @@ Token-Anmeldung, `test/app-huelle.test.ts`).
    unten, kleiner Textknopf unter „Abmelden", dann ein Blatt mit Warnung
    und Passwortabfrage. Das Passwort ist Absicht: Die Sitzung hält dreißig
    Tage, ohne die Frage genügte ein kurz aus der Hand gelegtes Handy.
-2. ~~Versanddienst für E-Mail~~ — **erledigt, läuft.** Resend über die
+2. Versanddienst für E-Mail — **eingerichtet, aber in der Produktion
+   vermutlich nicht aktiv** (23.09.2026: Bestätigungsmails kamen nicht an,
+   Robin holte die Codes aus dem Log; der Wert von `RESEND_API_KEY` ist dort
+   wohl leer). Klärt die Startzeile bzw. die Diagnose, Schritte in
+   `docs/MAIL.md`. Resend über die
    verifizierte Domain `brauweg-spielen.de`, DKIM und SPF als TXT bei
    Strato, der MX für den Return-Path auf der eigens angelegten Subdomain
    `send`.
@@ -2426,9 +2430,12 @@ Token-Anmeldung, `test/app-huelle.test.ts`).
    selbst, sobald der MX propagiert war.
 
    **Merke fürs nächste Mal:** Steht im Log `=== MAIL an …`, läuft der
-   Server ohne Versanddienst — das ist der `ConsoleMailer`. Fehlt
-   `RESEND_API_KEY`, schreibt der Start außerdem eine Zeile mit `ACHTUNG`.
-   Diese beiden Suchen beantworten die Frage in einer Sekunde.
+   Server ohne Versanddienst — das ist der `ConsoleMailer`. Seit dem
+   23.09.2026 sagt die Startzeile `Mailversand: …`, welcher Mailer läuft und
+   warum („gesetzt, aber leer" war der Fall in der Produktion — die alte
+   Warnung sagte dort „fehlt"), jeder Resend-Fehlschlag steht als
+   `MAILFEHLER` im Log, und Testkonten haben die Mail-Diagnose unter
+   `/aufsicht/mail`. Alles in `docs/MAIL.md`.
 3. **Rechtstexte: Gerüst steht, Angaben fehlen.** `/rechtliches/impressum.html`
    und `/rechtliches/datenschutz.html` sind angelegt und aus Anmeldung und
    Profil verlinkt. Die offenen Stellen sind **rot umrandet** — Name,

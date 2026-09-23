@@ -151,9 +151,11 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
 
   const resend = (): void =>
     void run(async () => {
-      await api.resendVerification(email);
+      const antwort = await api.resendVerification(email);
       setNote(
-        'Falls es die Adresse gibt und sie noch nicht bestätigt ist, ist eine neue E-Mail unterwegs.',
+        antwort.mailVersand === 'log'
+          ? 'Der Mailversand ist gerade nicht eingerichtet — es geht keine Mail hinaus. Melde dich bitte bei uns.'
+          : 'Falls es die Adresse gibt und sie noch nicht bestätigt ist, ist eine neue E-Mail unterwegs.',
       );
     });
 
@@ -203,11 +205,32 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         return;
       }
       if (mode === 'register') {
-        await api.register({ email, password, displayName, birthday });
+        const antwort = await api.register({ email, password, displayName, birthday });
+        // Kein Versanddienst: Der Server verlangt dann keine Bestaetigung und
+        // meldet gleich an. Auf eine Mail zu warten, die nie kommt, waere die
+        // Sackgasse, in der Robin am 23.09.2026 stand.
+        if (antwort.angemeldet) {
+          onSignedIn();
+          return;
+        }
+        // "Ist unterwegs" nur, wenn der Versanddienst die Mail angenommen hat.
         setNote(
-          'Wir haben dir eine E-Mail geschickt. Bestätige die Adresse, dann kannst du dich anmelden.',
+          antwort.mailVersandt
+            ? 'Wir haben dir eine E-Mail geschickt. Bestätige die Adresse, dann kannst du dich anmelden. Sieh auch im Spam nach.'
+            : 'Dein Konto ist angelegt, aber die Bestätigungsmail ging nicht hinaus. Fordere unten einen neuen Link an.',
         );
         setMode('verify');
+        return;
+      }
+      if (mode === 'reset') {
+        const antwort = await api.passwortVergessen(email);
+        // Dieselbe Antwort fuer jede Adresse — sonst waere das Formular ein
+        // Verzeichnis registrierter Konten.
+        setNote(
+          antwort.mailVersand === 'log'
+            ? 'Der Mailversand ist gerade nicht eingerichtet — es geht keine Mail hinaus. Melde dich bitte bei uns.'
+            : 'Falls es ein Konto mit dieser Adresse gibt, ist ein Link zum neuen Passwort unterwegs. Er gilt zwei Stunden.',
+        );
         return;
       }
       if (mode === 'verify') {
@@ -299,19 +322,24 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
                 required
               />
             </label>
-            <label>
-              Passwort
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                minLength={mode === 'register' ? 12 : 1}
-                required
-              />
-              {mode === 'register' && (
-                <span className="muted">Mindestens zwölf Zeichen.</span>
-              )}
-            </label>
+            {mode !== 'reset' && (
+              <label>
+                Passwort
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={mode === 'register' ? 12 : 1}
+                  required
+                />
+                {mode === 'register' && (
+                  <span className="muted">Mindestens zwölf Zeichen.</span>
+                )}
+              </label>
+            )}
+            {mode === 'reset' && (
+              <span className="muted">Wir schicken dir einen Link, mit dem du ein neues Passwort setzt.</span>
+            )}
           </>
         )}
 
@@ -342,7 +370,9 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
                 ? 'Bestätigen'
                 : mode === 'gast'
                   ? 'Spielen'
-                  : 'Anmelden'}
+                  : mode === 'reset'
+                    ? 'Link schicken'
+                    : 'Anmelden'}
           </button>
           <button
             type="button"
@@ -352,16 +382,35 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
               // Vom Gast aus fuehrt der Rueckweg zur Anmeldung, nicht zur
               // Registrierung - wer schon ein Konto hat, will es benutzen,
               // nicht ein zweites anlegen.
-              setMode(mode === 'register' ? 'login' : mode === 'gast' ? 'login' : 'register');
+              setMode(
+                mode === 'register' || mode === 'gast' || mode === 'reset' ? 'login' : 'register',
+              );
             }}
           >
             {mode === 'register'
               ? 'Ich habe schon ein Konto'
               : mode === 'gast'
                 ? 'Doch lieber anmelden'
-                : 'Konto anlegen'}
+                : mode === 'reset'
+                  ? 'Zurück zur Anmeldung'
+                  : 'Konto anlegen'}
           </button>
         </div>
+        {/* Direkt unter dem Anmelden-Knopf: Dort merkt man, dass das Passwort
+            nicht mehr stimmt. */}
+        {mode === 'login' && (
+          <button
+            type="button"
+            className="auth-vergessen"
+            onClick={() => {
+              setError(null);
+              setNote(null);
+              setMode('reset');
+            }}
+          >
+            Passwort vergessen?
+          </button>
+        )}
         {/* Der dritte Weg steht als eigener Schritt neben Anmelden/Registrieren
             - erst waehlen, wie, dann erst das Formular dazu ausfuellen. */}
         {(mode === 'login' || mode === 'register') && (
