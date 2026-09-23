@@ -2854,6 +2854,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       }
     });
 
+    // Die Loesch-Anleitung, die Google Play als Web-Link verlangt — unter einer
+    // Adresse, die man auch vorlesen kann. Die Datei liegt neben den
+    // Rechtstexten (client/public/rechtliches/konto-loeschen.html); ohne diese
+    // Route bekaeme /konto-loeschen die index.html der App.
+    app.get('/konto-loeschen', async (_request, reply) =>
+      reply.header('cache-control', 'no-cache').sendFile('rechtliches/konto-loeschen.html'),
+    );
+
     app.setNotFoundHandler((request, reply) => {
       const path = request.url.split('?')[0] ?? '';
 

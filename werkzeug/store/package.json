@@ -1,0 +1,13 @@
+{
+  "name": "brauweg-store-werkzeug",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Store-Screenshots gegen staging - bewusst kein Workspace, damit Playwright nicht in npm ci der Pakete landet",
+  "scripts": {
+    "screenshots": "node screenshots.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
+}
