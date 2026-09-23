@@ -93,10 +93,30 @@ Repository [`moodsteppi/brauweg-art`](https://github.com/moodsteppi/brauweg-art)
 `packages/client/art/` steht in `.gitignore`. Ausgeliefert wird
 ausschließlich WebP unter `packages/client/public/`. **Beim Einbauen einer
 Lieferung zuerst die Dateigröße ansehen** — eine Spielkarte liegt bei 80 kB,
-nicht bei 1,7 MB. Genau das ist zweimal live gegangen. Auf diesem Mac ist
-kein WebP-Werkzeug installiert; gewandelt wird mit
+nicht bei 1,7 MB. Genau das ist zweimal live gegangen. Gewandelt wird mit
 `node ~/bildwerkzeug/wandeln.mjs <quelle> <ziel> [karten|szene|wappen]` —
 der ganze Ablauf steht in `docs/JETZT-AUSFUEHREN.md`.
+
+**Ob das Werkzeug da ist, hängt am Rechner — erst nachsehen:**
+
+```bash
+ls ~/bildwerkzeug/wandeln.mjs ~/bildwerkzeug/node_modules/sharp ~/klangwerkzeug/wandeln.mjs
+```
+
+Bis zum 23.09.2026 stand hier „Auf diesem Mac ist kein WebP-Werkzeug
+installiert", als gelte das für jeden — dieselbe Mac-Zeit-Falle wie die
+`gh`-Zeile weiter unten. Eingerichtet ist `~/bildwerkzeug` nur auf dem Mac;
+auf dem Mood-XPS (Windows) fehlen beide Ordner, ebenso `cwebp` und `ffmpeg`.
+**Fehlt das Bildwerkzeug:** Die Vorlage liegt im Archivrepo als
+`brauweg-art/wandeln.mjs`, die Einrichtung (`sharp` in `~/bildwerkzeug`)
+steht in `docs/JETZT-AUSFUEHREN.md` unter „Einmalige Einrichtung" — auf
+Windows in Git Bash aufrufen, weil das Skript `sharp` über `$HOME` sucht.
+**Fehlt das Klangwerkzeug** (ebenso `naht-heilen.mjs` und `vergolden.mjs`):
+Davon gibt es keine Vorlage in einem Repo, es liegt nur auf dem Mac. Dann
+nicht mit eigenen Zahlen nachbauen — die Profile sind die Norm, an der die
+Dateigrößen hängen —, sondern melden bzw. als Worker mit `===BRAUCHT BRO===`
+fragen. Ein selbst ausgedachtes Wandelskript ist genau der stille
+Konventionsbruch, vor dem `docs/MEMEMORY-TICKETS.md` (T-01) warnt.
 
 **Für Klänge gilt dasselbe** mit `node ~/klangwerkzeug/wandeln.mjs <quelle>
 <ziel.mp3> [sfx|musik]`. MP3, nicht Ogg — Safari spielt kein Ogg, und dort
@@ -182,7 +202,7 @@ obwohl die Quelle sauber ist.
 **Ob `gh` geht, hängt am Rechner — erst fragen, dann entscheiden.** Bis zum
 07.09.2026 stand hier als Tatsache des Repos, `gh` sei nicht installiert und
 das Remote laufe über SSH. Beides stammt aus der Mac-Zeit dieser Datei — Regel 4
-sagt oben „Auf diesem Mac ist kein WebP-Werkzeug installiert" — und gilt
+sagte bis zum 23.09.2026 „Auf diesem Mac ist kein WebP-Werkzeug installiert" — und gilt
 nicht überall: Auf dem Mood-XPS liegt `gh` 2.97.0, angemeldet als
 `moodsteppi`, das Remote ist HTTPS, und `gh pr view`, `gh pr checks` sowie
 `gh pr comment` laufen anstandslos. Also nicht raten, sondern nachsehen:
@@ -277,7 +297,8 @@ Wirtschaftsmodell.
 - **Kachelbare Texturen vor dem Einbau auf Nähte messen.** Kantenabstand
   gegen Innenvarianz; über Faktor 3 sieht man die Linie, über 8 ist sie ein
   Balken. Von zwölf gelieferten Runner-Kacheln hatten drei echte Nähte
-  (Schneefeld: Faktor 25). Heilen mit `~/bildwerkzeug/naht-heilen.mjs`.
+  (Schneefeld: Faktor 25). Heilen mit `~/bildwerkzeug/naht-heilen.mjs` (liegt nur auf dem Mac, siehe
+  Regel 4).
 - **In `<Canvas>` nichts laden, was anhalten kann, ohne es zu prüfen.**
   `useTexture` löste im Runner nie auf, obwohl alle Dateien mit 200 kamen —
   die äußere Suspense hängte die ganze Leinwand ab, Dauerladetext. Für
