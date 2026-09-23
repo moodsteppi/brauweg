@@ -1,0 +1,64 @@
+name: Android-APK
+
+# Eine Test-APK der Android-Huelle (apps/android), zum Herunterladen.
+#
+# NUR VON HAND (Actions → Android-APK → "Run workflow"). Kontingent-Diaet vom
+# 20.09.2026: Ein Android-Bau kostet einige Minuten, und gebraucht wird die APK
+# nur, wenn jemand sie wirklich aufs Handy laden will — nicht bei jedem PR.
+#
+# Warum ueberhaupt in der CI: Auf den Windows-Rechnern der Werkstatt gibt es
+# weder JDK noch Android-SDK (Stand 23.09.2026), und niemand soll dafuer
+# systemweit etwas installieren muessen. Der Linux-Laeufer von GitHub bringt
+# das SDK mit.
+#
+# Die APK ist ein DEBUG-Bau: Sie spricht mit Staging (app/build.gradle.kts),
+# heisst "Brauweg Test" und laesst sich neben der Store-Fassung installieren.
+# Signiert ist sie mit dem Debug-Schluessel des Laeufers — fuers Verteilen an
+# Tester reicht das, fuer Play nicht (dafuer docs/APP-RELEASE.md).
+on:
+  workflow_dispatch:
+    inputs:
+      api_base:
+        description: "Serveradresse (leer = Staging)"
+        required: false
+        default: ""
+
+jobs:
+  apk:
+    name: Debug-APK bauen
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Abhaengigkeiten
+        run: npm ci
+
+      - name: Client ins App-Paket
+        run: node apps/android/werkzeug/web-uebernehmen.mjs
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: APK bauen und die Huelle pruefen
+        working-directory: apps/android
+        env:
+          API_BASE: ${{ inputs.api_base }}
+        run: |
+          chmod +x gradlew
+          extra=""
+          if [ -n "$API_BASE" ]; then extra="-PapiBase=$API_BASE"; fi
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug -PversionCode=${{ github.run_number }} $extra
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brauweg-test-${{ github.run_number }}
+          path: apps/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14

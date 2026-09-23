@@ -51,6 +51,7 @@ import { mailProbe } from '../mail/probe.js';
 import type { Schluesselquelle } from '../auth/idtoken.js';
 import type { NonceSpeicher } from '../auth/nonce.js';
 import { anbieterRouten } from './anbieter-routen.js';
+import { type AppVerknuepfung, appVerknuepfungRouten } from './app-verknuepfung.js';
 import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
@@ -203,9 +204,27 @@ export const APP_ORIGIN = 'brauweg://app';
  */
 const BILD_FUER_ALLE = 'cross-origin';
 
+/**
+ * Herkunft der Android-Huelle (apps/android).
+ *
+ * Nicht `brauweg://app` wie unter iOS, und das ist kein Versehen: Der
+ * Android-WebView kennt keine eigenen Schemata als richtige Herkunft. Eine
+ * Seite unter `brauweg://…` bekaeme dort die Herkunft `null` — ohne
+ * localStorage, und jeder Abruf ginge mit `Origin: null` hinaus, was jede
+ * beliebige Sandbox-Seite genauso schicken kann. Google sieht fuer gebuendelte
+ * Inhalte deshalb `WebViewAssetLoader` unter genau dieser Adresse vor. Sie
+ * gehoert Google und liefert nie eine Webseite aus; faelschen kann sie also
+ * keine Seite im Browser — dieselbe Eigenschaft, derentwegen der Server das
+ * Token an `brauweg://app` herausgibt.
+ */
+export const APP_ORIGIN_ANDROID = 'https://appassets.androidplatform.net';
+
+/** Alle Herkuenfte der App: iOS und Android. */
+export const APP_ORIGINS: readonly string[] = [APP_ORIGIN, APP_ORIGIN_ANDROID];
+
 /** Kommt diese Herkunft aus der App? */
 export function istAppHerkunft(origin: string | undefined): boolean {
-  return origin === APP_ORIGIN;
+  return origin !== undefined && APP_ORIGINS.includes(origin);
 }
 
 /**
@@ -247,6 +266,11 @@ export interface AppDeps {
    * der App. Fehlt es, sieht die App dasselbe wie die Webseite.
    */
   readonly appInhalt?: AppInhalt;
+  /**
+   * Universal Links und App Links fuer `/beitritt/*` (app-verknuepfung.ts).
+   * Fehlt es, liefert der Server beide Dateien nicht aus.
+   */
+  readonly appVerknuepfung?: AppVerknuepfung;
   /**
    * Schluessel fuer den Abruf der Feldherr-Mitschnitte, aus
    * `DIAGNOSE_SCHLUESSEL`. Fehlt er, geht der Abruf ausschliesslich ueber
@@ -526,7 +550,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * Herkunftsgrenze erlaubt, oeffnet CSRF - genau das soll nicht passieren.
    */
   await app.register(cors, {
-    origin: [APP_ORIGIN],
+    origin: [...APP_ORIGINS],
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['content-type', 'authorization'],
     credentials: false,
@@ -728,7 +752,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       angemeldet: true,
       mailVersandt,
       mailVersand,
-      ...(request.headers.origin === APP_ORIGIN ? { token } : {}),
+      ...(istAppHerkunft(request.headers.origin) ? { token } : {}),
     });
   });
 
@@ -756,7 +780,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     setSession(reply, token);
     // Nur die App bekommt das Token in die Hand, und nur, weil ihre Herkunft
     // sich nicht faelschen laesst. Siehe APP_ORIGIN.
-    if (request.headers.origin === APP_ORIGIN) {
+    if (istAppHerkunft(request.headers.origin)) {
       return reply.send({ ok: true, accountId, token });
     }
     return reply.send({ ok: true, accountId });
@@ -772,11 +796,19 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     appleDomainVerknuepfung: deps.appleDomainVerknuepfung ?? null,
     schluessel: deps.anbieterSchluessel,
     nonces: deps.anbieterNonces,
-    appOrigin: APP_ORIGIN,
+    istApp: istAppHerkunft,
     setSession,
     requireAccount,
     limitAuth: LIMIT_AUTH,
     limitSchreiben: LIMIT_SCHREIBEN,
+  });
+
+  // Einladungslinks direkt in der App oeffnen (iOS und Android) — siehe dort.
+  appVerknuepfungRouten(app, deps.appVerknuepfung ?? {
+    appleTeamId: null,
+    bundleId: 'de.brauweg.app',
+    androidPaket: 'de.brauweg.app',
+    androidFingerabdruecke: [],
   });
 
   // Blockieren und Melden (Apple 1.2) — siehe dort.
@@ -803,7 +835,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const { token, accountId, displayName } = await gastKonto(deps.auth, name);
     setSession(reply, token);
     // Wie beim Passwort-Login: Nur die iOS-Huelle bekommt das Token selbst.
-    if (request.headers.origin === APP_ORIGIN) {
+    if (istAppHerkunft(request.headers.origin)) {
       return reply.send({ ok: true, accountId, displayName, token });
     }
     return reply.send({ ok: true, accountId, displayName });
@@ -855,7 +887,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({
       ok: true,
       accountId,
-      ...(request.headers.origin === APP_ORIGIN ? { token } : {}),
+      ...(istAppHerkunft(request.headers.origin) ? { token } : {}),
     });
   });
 

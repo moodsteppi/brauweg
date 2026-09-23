@@ -14,8 +14,9 @@ import { loadConfig } from './config.js';
 import { connect } from './db/connect.js';
 import * as s from './db/schema.js';
 import { waehleMailer } from './mail/index.js';
-import { APP_ORIGIN, buildApp } from './http/app.js';
+import { APP_ORIGINS, buildApp } from './http/app.js';
 import { appInhaltAusUmgebung } from './games/registry.js';
+import { appVerknuepfungAusUmgebung } from './http/app-verknuepfung.js';
 import { Gateway } from './realtime/gateway.js';
 import { PartyRuntime } from './runtime/party.js';
 import { Vermittlung } from './suche/vermittlung.js';
@@ -137,6 +138,7 @@ async function main(): Promise<void> {
     diagnoseSchluessel: config.diagnoseSchluessel,
     googleClientId: config.googleClientId,
     appInhalt,
+    appVerknuepfung: appVerknuepfungAusUmgebung(),
     appleClientId: config.appleClientId,
     appleRedirectUri: config.appleRedirectUri,
     appleDomainVerknuepfung: config.appleDomainVerknuepfung,
@@ -156,8 +158,8 @@ async function main(): Promise<void> {
      * fester Liste kaeme der zweite nie an den Tisch.
      */
     allowedOrigins:
-      config.env === 'development' ? [] : [config.publicUrl, APP_ORIGIN],
-    appOrigins: [APP_ORIGIN],
+      config.env === 'development' ? [] : [config.publicUrl, ...APP_ORIGINS],
+    appOrigins: APP_ORIGINS,
     appInhalt,
   });
 
