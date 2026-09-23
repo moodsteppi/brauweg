@@ -102,11 +102,13 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * die Marke ueber die Zaehlschwelle. Alles drei steht ausfuehrlich im
  * Konzeptdokument.
  *
- * UNTOT IST DABEI IN DIE GEGENRICHTUNG GERUTSCHT (von 295 ueber 123 auf 105)
- * und ist die knappste Zeile: Zwei seiner drei Traeger sind Nahkaempfer, und
- * der Bot kauft die seitdem seltener. Die letzten achtzehn Antritte hat die
- * fuenfte Naturwesen-Traegerin gekostet (Bogenmeisterin, 18.09.2026) — sie
- * wird oefter gekauft und verdraengt dabei anderes. Die Marke haelt die
+ * UNTOT IST DABEI IN DIE GEGENRICHTUNG GERUTSCHT (von 295 ueber 123 auf 105,
+ * seit #249 wieder 110) und ist die knappste Zeile: Zwei seiner drei Traeger
+ * sind Nahkaempfer, und der Bot kauft die seitdem seltener. Achtzehn Antritte
+ * hat die fuenfte Naturwesen-Traegerin gekostet (Bogenmeisterin, 18.09.2026) —
+ * sie wird oefter gekauft und verdraengt dabei anderes; fuenf kamen mit dem
+ * Anmarsch-Abzug in der Bot-Bewertung aus #249 zurueck (bot.ts). Nach
+ * #250 bis #253 unveraendert 110 (nachgemessen 23.09.2026). Die Marke haelt die
  * Schwelle noch, aber sie ist die naechste, die faellt.
  */
 const MINDEST_ANTRITTE = 100;
