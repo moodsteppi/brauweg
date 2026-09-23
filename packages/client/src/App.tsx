@@ -17,6 +17,7 @@ import {
 } from './minispiele/partykiste/einladungslink';
 
 import { leseKontoLink, type KontoLinkZiel } from './kontolink';
+import { istSpielbar } from './spielfreigabe';
 
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
 /** Landeseiten der Mail-Links und die Mail-Diagnose (seit dem 23.09.2026). */
@@ -185,6 +186,8 @@ export function App(): React.JSX.Element {
    */
   const [kontoLink, setKontoLink] = useState<KontoLinkZiel | null>(() => leseKontoLink());
   const [sichernOffen, setSichernOffen] = useState(false);
+  /** Kam der Start ueber den Tafelrunde-Link `/?tisch=`? Nur dann wird nachgefragt. */
+  const [tischLinkPruefen] = useState(() => screen.name === 'tafelrunde');
 
   const reload = async (): Promise<void> => {
     setMe(await api.me().catch(() => null));
@@ -214,6 +217,24 @@ export function App(): React.JSX.Element {
    * `joinTable` im Server einen schon Sitzenden unveraendert zurueckgibt.
    */
   const kontoId = me?.id ?? null;
+
+  /**
+   * Der Tafelrunde-Link fuehrt am Server vorbei in den Schirm. Ist Tafelrunde
+   * hier nicht freigegeben (App-Schalter, siehe spielfreigabe.ts), geht es
+   * stattdessen auf die Startseite — sonst stuende man vor einem Beitritt,
+   * den der Server ablehnt.
+   */
+  useEffect(() => {
+    if (!kontoId || !tischLinkPruefen) return;
+    let lebt = true;
+    void istSpielbar('tafelrunde').then((ja) => {
+      if (lebt && !ja) setScreen((jetzt) => (jetzt.name === 'tafelrunde' ? { name: 'games' } : jetzt));
+    });
+    return () => {
+      lebt = false;
+    };
+  }, [kontoId, tischLinkPruefen]);
+
   useEffect(() => {
     if (!kontoId || !einladung) return;
     let lebt = true;
@@ -225,7 +246,10 @@ export function App(): React.JSX.Element {
       } catch (err) {
         if (!lebt) return;
         fehlschlagMerken(einladung, err instanceof ApiError ? err.messageKey : 'error.internal');
-        setScreen({ name: 'partykiste' });
+        // Die Code-Eingabe steht in der Partykiste. Ist die hier nicht
+        // freigegeben (App-Schalter), bleibt nur die Startseite.
+        const partykiste = await istSpielbar('partykiste');
+        if (lebt) setScreen(partykiste ? { name: 'partykiste' } : { name: 'games' });
       } finally {
         if (lebt) {
           vormerkungLoeschen();

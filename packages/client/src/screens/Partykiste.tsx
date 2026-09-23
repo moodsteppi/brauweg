@@ -21,6 +21,7 @@ import { binReihumDran, useTischwache } from '../minispiele/partykiste/useTischw
 import { Abrechnung, Tabelle } from '../minispiele/partykiste/Wertung';
 import { Beitrittscode } from '../minispiele/partykiste/Beitrittscode';
 import { Einladung } from '../minispiele/partykiste/Einladung';
+import { MitspielerMelden } from '../melden/MeldenBlatt';
 import type { BotLevel, SeatInfo } from '../protocol';
 import { useTable } from '../useTable';
 
@@ -598,6 +599,8 @@ function Lobby({
             );
           })}
         </ul>
+        {/* Melden und Blockieren (Apple 1.2): Hier gibt es keine Profil-Links. */}
+        <MitspielerMelden sitze={sitze} ich={meineKennung} />
 
         {sitze.some((platz) => platz.gast) ? (
           /* Vor dem Start, nicht erst an der Abrechnung: Ein Tisch mit Gast

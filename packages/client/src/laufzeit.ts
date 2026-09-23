@@ -36,6 +36,24 @@ export const inApp = huelle !== undefined;
 export const apiBase = (huelle?.apiBase ?? '').replace(/\/+$/, '');
 
 /**
+ * Eine Adresse, die der Server liefert (`avatarUrl: '/api/avatars/…'`), als
+ * Bildquelle.
+ *
+ * Der Server schreibt seine Adressen ohne Herkunft, weil der Browser sie
+ * auf derselben aufloest. In der App zeigte `/api/…` ins App-Paket — dort
+ * liegt kein Profilbild, und statt des Gesichts stand ein leerer Kasten.
+ * Im Browser ist `apiBase` leer, die Adresse bleibt also Zeichen fuer
+ * Zeichen dieselbe. Adressen ausserhalb von `/api/` (Pinguine, Karten)
+ * liegen im Paket und bleiben, wie sie sind.
+ */
+export function serverAdresse(pfad: string): string;
+export function serverAdresse(pfad: string | null | undefined): string | null;
+export function serverAdresse(pfad: string | null | undefined): string | null {
+  if (!pfad) return pfad ?? null;
+  return apiBase && pfad.startsWith('/api/') ? `${apiBase}${pfad}` : pfad;
+}
+
+/**
  * Marke, hinter der das Token als Unterprotokoll mitgeht. Muss zu
  * `TOKEN_PROTOKOLL` im Server passen.
  */

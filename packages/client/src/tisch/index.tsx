@@ -33,6 +33,7 @@ import type {
 } from '../protocol';
 import { regelBild } from '../regelbilder';
 import { useCountdown } from '../useTable';
+import { serverAdresse } from '../laufzeit';
 
 export const TURN_SECONDS = 60;
 
@@ -113,7 +114,7 @@ export function Avatar({
       style={ring ? { background: ring } : undefined}
     >
       {avatarUrl ? (
-        <img className="doko-avatar-img" src={avatarUrl} alt={name} draggable={false} />
+        <img className="doko-avatar-img" src={serverAdresse(avatarUrl)} alt={name} draggable={false} />
       ) : (
         /* Ohne eigenes Bild sitzt der Pinguin am Tisch - er ist unser
            Maskottchen, und Buchstabenkreise wirken wie ein Formular. Je Sitz

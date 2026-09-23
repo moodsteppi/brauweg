@@ -14,6 +14,7 @@ import {
 import { HubBanner, HubSzene } from '../hub';
 import { ClanChat } from './ClanChat';
 import { ClanKrieg } from './ClanKrieg';
+import { inApp, serverAdresse } from '../laufzeit';
 
 /**
  * Clan-Tab (Plan 9.3).
@@ -71,7 +72,7 @@ function istLeitung(rolle: string | null | undefined): boolean {
  * nicht viermal dasselbe Bild zeigen.
  */
 function bildFuer(m: { accountId: string; hasAvatar: boolean }, i: number): string {
-  return m.hasAvatar ? `/api/avatars/${m.accountId}` : `/hub/pinguin-${(i % 4) + 1}.png`;
+  return m.hasAvatar ? serverAdresse(`/api/avatars/${m.accountId}`) : `/hub/pinguin-${(i % 4) + 1}.png`;
 }
 
 /**
@@ -276,7 +277,7 @@ function Halle({
   const darfVerwalten = istLeitung(detail?.myRole);
   const offen = detail?.requests.length ?? 0;
 
-  if (voll === 'chat' && detail) {
+  if (voll === 'chat' && detail && !inApp) {
     return (
       <ClanChat
         clubId={detail.id}
@@ -329,7 +330,12 @@ function Halle({
         bleiben der Leitung vorbehalten.
       */}
       <div className="clan-icons">
-        <IconKnopf icon="chat" label="Chat" onClick={() => setVoll('chat')} />
+        {/* Kein Chat in der App, bis es eine Moderation gibt: Apple verlangt
+            fuer freien Text zwischen Fremden (1.2) Filter, Melden und eine
+            Reaktion binnen kurzer Zeit. Melden und Blockieren gibt es jetzt,
+            einen Filter und jemanden, der die Meldungen abarbeitet, noch
+            nicht. Auf der Webseite bleibt der Chat. */}
+        {!inApp && <IconKnopf icon="chat" label="Chat" onClick={() => setVoll('chat')} />}
         <IconKnopf icon="truhe" label="Truhe" bald onClick={() => onBald('Clantruhe')} />
         <IconKnopf icon="krieg" label="Krieg" onClick={() => setVoll('krieg')} />
         {/* Anfragen sind Bewerberdaten - die sieht nur die Leitung. */}

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnbieterKnoepfe } from '../anmeldung/AnbieterKnoepfe';
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
+import { inApp } from '../laufzeit';
 
 type Mode = 'login' | 'register' | 'verify' | 'reset' | 'gast';
 
@@ -361,13 +362,20 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
  * nur im angemeldeten Zustand findet, erfuellt die Pflicht nicht.
  */
 export function Rechtliches(): React.JSX.Element {
+  /*
+   * In der App im selben Fenster: Ein WebView oeffnet `target="_blank"` nur,
+   * wenn die Huelle dafuer ein neues Fenster anlegt — sonst tut der Tipp gar
+   * nichts, und genau diese Links sieht der Pruefer bei Apple als Erstes. Die
+   * Seiten liegen im App-Paket und fuehren mit „Zurück zu Brauweg" zurueck.
+   */
+  const neuesFenster = inApp ? {} : { target: '_blank', rel: 'noreferrer' };
   return (
     <p className="rechtliches">
-      <a href="/rechtliches/impressum.html" target="_blank" rel="noreferrer">
+      <a href="/rechtliches/impressum.html" {...neuesFenster}>
         Impressum
       </a>
       <span aria-hidden="true"> · </span>
-      <a href="/rechtliches/datenschutz.html" target="_blank" rel="noreferrer">
+      <a href="/rechtliches/datenschutz.html" {...neuesFenster}>
         Datenschutz
       </a>
     </p>

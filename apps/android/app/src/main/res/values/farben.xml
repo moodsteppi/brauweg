@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dieselbe Farbe wie theme-color in packages/client/index.html. -->
+    <color name="brauweg_blau">#1A3F7A</color>
+</resources>

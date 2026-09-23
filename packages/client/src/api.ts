@@ -68,6 +68,13 @@ export interface GameSummary {
   availability: 'playable' | 'preview';
   seatCounts: number[];
   votes: number;
+  /**
+   * Nur Vorschau-Spiele ohne Modul sind abstimmbar. Ein Spiel, das es gibt
+   * und das hier nur noch nicht freigegeben ist (App-Schalter, siehe
+   * `FREIGABE` im Server), steht als „Bald" da, aber ohne Stimme. Fehlt das
+   * Feld (aelterer Server), gilt es wie bisher als abstimmbar.
+   */
+  abstimmbar?: boolean;
 }
 
 /** Stand der Mitspielersuche. Spiegelt `Suchstand` aus dem Server. */
@@ -112,6 +119,12 @@ export interface Me {
    * Rangliste — beides muss die Oberflaeche daran erkennen koennen.
    */
   gast: boolean;
+  /**
+   * Womit die Kontoloeschung bestaetigt wird: Passwort, Code per Mail (Konto
+   * nur ueber Google/Apple) oder beim Gast das Wort LÖSCHEN. Fehlt es (aelterer
+   * Server), gilt das Passwort wie bisher.
+   */
+  loeschenPer?: 'passwort' | 'code' | 'bestaetigung';
   /**
    * Bemalung der 3D-Figur. `null` heißt: nie bemalt, es gilt die
    * Standardoptik. Der Server hat sie schon geprüft.
@@ -442,12 +455,17 @@ export interface PlayerRef {
 
 export type Relationship = 'self' | 'friends' | 'incoming' | 'outgoing' | 'none';
 
+/** Gruende einer Meldung — muessen zu MELDEGRUENDE im Server passen. */
+export type Meldegrund = 'beleidigung' | 'betrug' | 'unangemessen' | 'spam' | 'anderes';
+
 export interface PlayerProfile {
   id: string;
   displayName: string;
   /** Jahr-Monat, mehr gibt ein fremdes Konto nicht preis. */
   memberSince: string;
   relationship: Relationship;
+  /** Hat man diesen Spieler selbst blockiert? Fehlt bei aelteren Servern. */
+  blockiert?: boolean;
   ranking: {
     gameId: string;
     trophies: number;
@@ -874,16 +892,27 @@ export const api = {
 
   claimBirthdayReward: () => post<{ ok: true; item: string }>('/me/birthday-reward'),
   /** Unumkehrbar. Das Passwort schuetzt vor dem offen liegengelassenen Geraet. */
-  deleteMe: async (password: string) => {
+  /**
+   * Konto loeschen. Der Nachweis haengt am Konto (`Me.loeschenPer`): das
+   * Passwort, der Code aus der Mail oder beim Gast das Wort LÖSCHEN. Ein
+   * blosser Text ist das Passwort — so rufen es die bisherigen Stellen auf.
+   */
+  deleteMe: async (
+    nachweis: string | { password?: string; code?: string; bestaetigung?: string },
+  ) => {
     const antwort = await request<{ ok: true }>('/me', {
       method: 'DELETE',
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(typeof nachweis === 'string' ? { password: nachweis } : nachweis),
     });
     // Die Loeschung hat die Sitzung schon widerrufen. Bliebe das Token
     // liegen, liefe jeder Start in ein 401 statt auf die Anmeldung.
     setSessionToken(null);
     return antwort;
   },
+
+  /** Loeschcode an die Adresse eines Kontos ohne Passwort. */
+  loeschcodeAnfordern: () =>
+    post<{ ok: true; versandt: boolean; mailVersand: 'resend' | 'log' }>('/me/loeschcode'),
 
   games: () => request<GameSummary[]>('/games'),
   vote: (gameId: string) => post<{ ok: true }>(`/games/${gameId}/vote`),
@@ -975,6 +1004,13 @@ export const api = {
   profile: (accountId: string) => request<PlayerProfile>(`/players/${accountId}`),
   searchPlayers: (q: string) => request<PlayerRef[]>(`/players?q=${encodeURIComponent(q)}`),
   friends: () => request<FriendLists>('/friends'),
+  /** Blockieren und Melden (melden/MeldenBlatt.tsx, Server melden-routen.ts). */
+  blockieren: (accountId: string) => post<{ ok: true; blockiert: true }>(`/players/${accountId}/block`),
+  entblocken: (accountId: string) =>
+    request<{ ok: true; blockiert: false }>(`/players/${accountId}/block`, { method: 'DELETE' }),
+  melden: (accountId: string, grund: Meldegrund, text?: string) =>
+    post<{ ok: true }>(`/players/${accountId}/report`, { grund, ...(text ? { text } : {}) }),
+
   requestFriend: (accountId: string) =>
     post<{ status: 'pending' | 'accepted' }>(`/friends/${accountId}/request`),
   acceptFriend: (accountId: string) => post<{ ok: true }>(`/friends/${accountId}/accept`),

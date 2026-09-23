@@ -30,7 +30,12 @@ import {
   tableBotLevel,
   tableWithSeats,
 } from '../tables/service.js';
-import { requireModule } from '../games/registry.js';
+import {
+  APP_INHALT_WIE_WEB,
+  type AppInhalt,
+  appRegeln,
+  requireModule,
+} from '../games/registry.js';
 import { requireClubMember } from '../clubs/service.js';
 import {
   ENVELOPE_VERSION,
@@ -66,6 +71,8 @@ const MOTIV_AB_MODULVERSION = 3;
 interface Connection {
   readonly socket: WebSocket;
   readonly accountId: string;
+  /** Kam der Handshake aus der App? Siehe `GatewayOptions.appOrigins`. */
+  readonly ausApp: boolean;
   tableId: string | null;
   /** Beginn des laufenden Ratenfensters. */
   fensterStart: number;
@@ -299,6 +306,17 @@ export interface GatewayOptions {
    * der eingehende Nachrichten verloren gingen.
    */
   readonly lookupSession?: (token: string | undefined) => Promise<SessionInfo | null>;
+  /**
+   * Herkuenfte der App (`APP_ORIGINS` in http/app.ts). Nur damit weiss der
+   * Gateway, welche Verbindung aus der App kommt — fuer `appInhalt`.
+   */
+  readonly appOrigins?: readonly string[];
+  /**
+   * Rueckweg fuer die App (`AppInhalt` in games/registry.ts): Stellt jemand
+   * aus der App die Regeln eines wartenden Tisches um, wird der Regelsatz
+   * gezaehmt. Vorgabe: App = Web.
+   */
+  readonly appInhalt?: AppInhalt;
 }
 
 export class Gateway {
@@ -307,6 +325,8 @@ export class Gateway {
   private readonly byTable = new Map<string, Set<Connection>>();
   private readonly cookieName: string;
   private readonly lookupSession: (token: string | undefined) => Promise<SessionInfo | null>;
+  private readonly appOrigins: readonly string[];
+  private readonly appInhalt: AppInhalt;
 
   constructor(
     server: Server,
@@ -315,6 +335,8 @@ export class Gateway {
     options: GatewayOptions = {},
   ) {
     this.cookieName = options.cookieName ?? 'brauweg_session';
+    this.appOrigins = options.appOrigins ?? [];
+    this.appInhalt = options.appInhalt ?? APP_INHALT_WIE_WEB;
     this.lookupSession =
       options.lookupSession ?? ((token) => sessionFromToken(this.db, token));
     // maxPayload: ohne Grenze nimmt ws bis 100 MiB je Nachricht an - ein
@@ -378,7 +400,7 @@ export class Gateway {
       const token =
         cookieValue(request.headers.cookie, this.cookieName) ??
         protokollToken(request.headers['sec-websocket-protocol']);
-      this.accept(socket, token);
+      this.accept(socket, token, herkunft !== undefined && this.appOrigins.includes(herkunft));
     });
     this.runtime.onUpdate((tableId, nurSicht) => {
       void this.broadcast(tableId, nurSicht);
@@ -404,7 +426,7 @@ export class Gateway {
    * Nachrichten aus der Luecke werden gepuffert und in Reihenfolge
    * nachgeholt, sobald die Sitzung steht.
    */
-  private accept(socket: WebSocket, sessionToken?: string): void {
+  private accept(socket: WebSocket, sessionToken?: string, ausApp = false): void {
     const queued: string[] = [];
     let connection: Connection | null = null;
     let rejected = false;
@@ -484,6 +506,7 @@ export class Gateway {
         /* Bis zum `join` gilt die vorsichtigste Annahme: alles vollstaendig. */
         moduleVersion: 1,
         kette: Promise.resolve(),
+        ausApp,
       };
       this.connections.add(accepted);
       connection = accepted;
@@ -943,7 +966,10 @@ export class Gateway {
     tableId: string,
     config: Record<string, unknown>,
   ): Promise<void> {
-    await setzeTischregeln(this.db, tableId, config, connection.accountId);
+    const regeln = connection.ausApp
+      ? appRegeln((await tableWithSeats(this.db, tableId)).table.gameId, config, this.appInhalt)
+      : config;
+    await setzeTischregeln(this.db, tableId, regeln, connection.accountId);
     await this.broadcast(tableId);
   }
 

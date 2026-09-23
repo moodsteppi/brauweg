@@ -5,6 +5,7 @@ import { Ladekreis } from '../Ladekreis';
 import { ApiError, api, type PlayerProfile, type Relationship } from '../api';
 import { HubBanner, HubSzene, StatHero, StatKachel, StatSpiel } from '../hub';
 import { t } from '../i18n';
+import { MeldenBlatt } from '../melden/MeldenBlatt';
 
 /**
  * Spielerprofil (Entwurf A — knallig, Pokal-Hero).
@@ -30,6 +31,7 @@ export function Profile({
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [meldenOffen, setMeldenOffen] = useState(false);
 
   const load = (): void => {
     setError(null);
@@ -143,6 +145,23 @@ export function Profile({
           onAccept={() => act(() => api.acceptFriend(profile.id))}
           onRemove={() => act(() => api.removeFriend(profile.id))}
         />
+
+        {/* Melden und Blockieren (Apple 1.2). Am Tisch fuehrt der Tipp auf
+            einen Namen hierher — das ist der Weg „am Tisch". */}
+        {profile.relationship !== 'self' && (
+          <button type="button" className="melden-knopf" onClick={() => setMeldenOffen(true)}>
+            {profile.blockiert ? 'Blockiert · Melden oder aufheben' : 'Melden oder blockieren'}
+          </button>
+        )}
+        {meldenOffen && (
+          <MeldenBlatt
+            accountId={profile.id}
+            name={profile.displayName}
+            blockiert={profile.blockiert ?? false}
+            onBlockiert={() => load()}
+            onClose={() => setMeldenOffen(false)}
+          />
+        )}
       </HubSzene>
     </ProfilRahmen>
   );

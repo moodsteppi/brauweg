@@ -3,6 +3,11 @@
 Der Client ist eine Web-App. Für den Store braucht sie einen nativen Rahmen.
 Diese Datei hält fest, wie der aussieht, was fertig ist und was fehlt.
 
+**Die Schritt-für-Schritt-Anleitung für den ersten Release (iOS und Android,
+ohne Käufe) steht seit dem 23.09.2026 in `docs/APP-RELEASE.md`** — dort auch
+die Spiel-Freigabe je Plattform, die Android-Hülle (`apps/android`) und das
+Bauskript für Toms Mac.
+
 ## Heute schon möglich: Homescreen
 
 Ohne Mac, ohne Apple-Konto, auf jedem iPhone:
@@ -99,8 +104,10 @@ weiß.
 
 Nicht mit ins Paket gehen `start/` (Startbilder nur für die
 Safari-Fassung), `hub-entwuerfe/`, `appicon.png` und `icon-1024.png`:
-zusammen gut 5 MB, die sonst jedes Gerät mitschleppt. Das Paket liegt damit
-bei etwa 9,4 MB.
+zusammen gut 5 MB, die sonst jedes Gerät mitschleppt. Das Paket lag damit im
+August bei etwa 9,4 MB — **am 23.09.2026 gemessen sind es rund 54 MB**
+(Karten 25 MB, Hub 13 MB, 3D 9 MB, Klang 6 MB), seitdem sind Spiele, Kartenblätter und
+Klänge dazugekommen.
 
 `web/stand.json` hält Commit und Bauzeit fest. Das beantwortet die Frage
 „läuft im Paket wirklich der neue Client?", ohne raten zu müssen — genau die
@@ -133,7 +140,7 @@ davon unberührt.
 
 | Punkt | Stand |
 | --- | --- |
-| ~~**Konto löschen**~~ | ✅ Profil-Tab ganz unten, mit Passwortabfrage. Gelöscht wird als Anonymisierung. |
+| ~~**Konto löschen**~~ | ✅ Profil-Tab ganz unten, mit Passwortabfrage. Gelöscht wird als Anonymisierung. Seit dem 23.09.2026 auch für Konten ohne Passwort: Code per Mail (nur Google/Apple) bzw. das Wort LÖSCHEN (Gast) — vorher konnten die sich gar nicht löschen. |
 | ~~**Shop**~~ | ✅ **Im App-Paket ausgeblendet.** Shop-Tab und die Plus-Knöpfe an Münzen und VIP erscheinen nur im Browser (`zeigeKaufbares` in `GameSelect.tsx`). Angebote mit Paketangabe, die nichts verkaufen, gelten als unfertige App — und sobald sie etwas verkaufen, müssen sie über Apples Bezahlweg laufen. |
 | ~~**Rahmen**~~ | ✅ Eigene Hülle, siehe oben. |
 | **Datenschutzerklärung** | Seite steht unter `/rechtliches/datenschutz.html`, in der App als Blatt mit „Fertig" erreichbar. **Offen: die rot markierten Lücken ausfüllen** — Name, Anschrift, Support-Adresse, Datenbankanbieter, Aufbewahrungsdauer der Protokolle. |
@@ -261,7 +268,8 @@ Testen. Zum Laden untereinander genügt ein Build und ein App-Eintrag.
 6. Demokonto anlegen und Prüfhinweise schreiben
 7. TestFlight für die drei Geräte
 8. Einreichung App Store
-9. Später: Play Store (baut auch auf Windows, deutlich einfacher)
+9. Play Store: Hülle steht seit dem 23.09.2026 (`apps/android`), Test-APK per
+   GitHub Actions — Ablauf in `docs/APP-RELEASE.md`
 
 Schritt 7 (TestFlight) geht **vor** den Schritten 5 und 6 los, sobald ein
 privater Account eingeschrieben ist — internes Testen braucht die Rechtstexte
