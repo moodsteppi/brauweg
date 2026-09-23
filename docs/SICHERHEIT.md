@@ -52,6 +52,22 @@ Unterprotokoll `brauweg-token`.
   Herkunft bekommt keine Freigabe"*, *„ein erfundenes Token oeffnet nichts"*
   (`test/app-huelle.test.ts`).
 
+## Anmeldung über Google und Apple
+
+- ID-Token werden **selbst** geprüft: RS256 gegen die JWKS des Anbieters,
+  `iss`, `aud` = eigene Client-ID, `exp` (`auth/idtoken.ts`). Kein anderes
+  Verfahren wird angenommen (`none`, HS256).
+- **Einmal-Nonce** vom Server (`auth/nonce.ts`): Ein abgefangenes Token
+  öffnet höchstens einmal etwas.
+- Gebunden wird über `sub` (`account_identity`), nie über die Mail. Über die
+  Mail verknüpft wird nur bei bestätigter Adresse, **nie** über eine
+  Apple-Weiterleitungsadresse. Kommt jemand so an ein Konto mit
+  unbestätigter Adresse, fallen dessen Passwort und Sitzungen weg — es könnte
+  von einem Voranmelder stammen (`auth/anbieter.ts`).
+- Die letzte Anmeldeart lässt sich nicht trennen.
+- Tests: `test/anmeldung-anbieter.test.ts`. Einrichtung:
+  `docs/ANMELDUNG-ANBIETER.md`.
+
 ## Berechtigung
 
 Jede Route und **jede WebSocket-Nachricht** prüft, ob der Handelnde darf:
@@ -96,8 +112,15 @@ Jede Route und **jede WebSocket-Nachricht** prüft, ob der Handelnde darf:
 ## Kopfzeilen
 
 `@fastify/helmet` mit CSP (`frame-ancestors 'none'`, `script-src 'self'`),
-HSTS, `nosniff`, `Referrer-Policy`. Neue externe Quellen (Schriften, CDNs)
-brauchen eine CSP-Änderung — das ist Absicht: Der Client lädt nichts nach.
+HSTS, `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
+`Cross-Origin-Opener-Policy: same-origin-allow-popups`. Neue externe Quellen
+(Schriften, CDNs) brauchen eine CSP-Änderung — das ist Absicht. Die einzigen
+Ausnahmen sind die Anmeldeskripte von Google (`/gsi/…`) und Apple, beide nur
+auf ihren Pfad freigegeben und nur geladen, wenn die Umgebung eine Client-ID
+nennt. Die beiden gelockerten Kopfzeilen brauchen deren Popups: Mit
+`no-referrer` erkennt Googles Knopf die Seite nicht, mit COOP `same-origin`
+verliert das Popup sein `window.opener` (Test: *„die Kopfzeilen lassen die
+Anbieter-Popups zu, und nur diese“*).
 
 ## Vor jedem Deploy
 

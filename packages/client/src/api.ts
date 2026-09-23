@@ -626,14 +626,51 @@ export const api = {
 
   /** Ob "Mit Google anmelden" auf dieser Ausgabe eingerichtet ist. */
   googleConfig: () => request<{ clientId: string | null }>('/auth/google/config'),
+  /** Ob "Mit Apple anmelden" eingerichtet ist — samt der bei Apple eingetragenen Return-URL. */
+  appleConfig: () =>
+    request<{ clientId: string | null; redirectUri: string | null }>('/auth/apple/config'),
+  /**
+   * Einmal-Nonce fuer den naechsten Anbieter-Dialog. Der Anbieter schreibt sie
+   * ins Token, der Server loest sie genau einmal ein — ein abgefangenes Token
+   * oeffnet so kein zweites Mal etwas.
+   */
+  anbieterNonce: () => post<{ nonce: string }>('/auth/nonce'),
   /** Anmeldung mit dem ID-Token aus dem Google-Knopf. Cookie wie beim Login. */
   googleLogin: async (credential: string) => {
-    const antwort = await post<{ ok: true; token?: string }>('/auth/google', {
+    const antwort = await post<{ ok: true; neu: boolean; token?: string }>('/auth/google', {
       credential,
     });
     if (antwort.token) setSessionToken(antwort.token);
     return antwort;
   },
+  /**
+   * Anmeldung mit dem ID-Token aus Apples Popup. Der Vorname kommt nur beim
+   * allerersten Mal mit — dann wird er Vorschlag fuer den Anzeigenamen.
+   */
+  appleLogin: async (idToken: string, vorname?: string) => {
+    const antwort = await post<{ ok: true; neu: boolean; token?: string }>('/auth/apple', {
+      idToken,
+      ...(vorname ? { vorname } : {}),
+    });
+    if (antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+  /** Wie man in dieses Konto kommt: Passwort ja/nein, verknuepfte Anbieter. */
+  anmeldearten: () =>
+    request<{
+      passwort: boolean;
+      email: string | null;
+      gast: boolean;
+      anbieter: { anbieter: 'google' | 'apple'; email: string | null; seit: string }[];
+    }>('/me/anmeldung'),
+  /** Anbieter an das angemeldete Konto haengen — fuer einen Gast zugleich das Sichern. */
+  verknuepfeGoogle: (credential: string) =>
+    post<{ ok: true; gesichert: boolean }>('/me/anmeldung/google', { credential }),
+  verknuepfeApple: (idToken: string) =>
+    post<{ ok: true; gesichert: boolean }>('/me/anmeldung/apple', { idToken }),
+  /** Trennen. Die letzte Anmeldeart lehnt der Server ab. */
+  trenneAnbieter: (anbieter: 'google' | 'apple') =>
+    request<{ ok: true }>(`/me/anmeldung/${anbieter}`, { method: 'DELETE' }),
 
   verify: (token: string) => post<{ ok: true }>('/auth/verify', { token }),
   resendVerification: (email: string) =>

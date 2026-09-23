@@ -689,118 +689,6 @@ export async function resetPassword(
 }
 
 // ---------------------------------------------------------------------------
-// Anmeldung mit Google
-// ---------------------------------------------------------------------------
-
-/** Was aus einem geprueften Google-ID-Token gebraucht wird. */
-export interface GoogleProfil {
-  /** Googles stabile Nutzerkennung — die E-Mail kann wechseln, `sub` nie. */
-  readonly sub: string;
-  readonly email: string;
-  readonly emailVerified: boolean;
-  readonly name: string | null;
-}
-
-/**
- * Anmeldung oder Erstanmeldung ueber Google.
- *
- * Reihenfolge der Zuordnung:
- * 1. Konto mit dieser Google-Kennung — der Normalfall nach dem ersten Mal.
- * 2. Konto mit derselben (von Google bestaetigten) E-Mail — wird verknuepft.
- *    Das ist sicher, weil Google den Besitz der Adresse belegt; ohne diese
- *    Stufe haetten Passwort-Nutzer ploetzlich zwei Konten.
- * 3. Sonst ein neues Konto, ohne Passwort und ohne Bestaetigungsmail — die
- *    Adresse hat Google schon bestaetigt.
- */
-export async function loginMitGoogle(
-  deps: AuthDeps,
-  profil: GoogleProfil,
-): Promise<{ token: string; accountId: string }> {
-  // Ohne bestaetigte Adresse keine Zuordnung: Sonst koennte jemand ein
-  // Google-Konto mit fremder, unbestaetigter Adresse anlegen und damit deren
-  // Brauweg-Konto uebernehmen.
-  if (!profil.emailVerified) throw forbidden('emailNotVerified');
-  const email = normalizeEmail(profil.email);
-
-  const [perSub] = await deps.db
-    .select()
-    .from(s.account)
-    .where(eq(s.account.googleSub, profil.sub));
-  if (perSub && !perSub.anonymizedAt) {
-    const token = await createSession(deps, perSub.id);
-    return { token, accountId: perSub.id };
-  }
-
-  const [perMail] = await deps.db
-    .select()
-    .from(s.account)
-    .where(eq(s.account.email, email));
-  if (perMail && !perMail.anonymizedAt) {
-    await deps.db
-      .update(s.account)
-      .set({
-        googleSub: profil.sub,
-        // Wer per Google kommt, hat die Adresse belegt — ein noch offener
-        // Bestaetigungslink wird damit gegenstandslos.
-        emailVerifiedAt: perMail.emailVerifiedAt ?? new Date(),
-      })
-      .where(eq(s.account.id, perMail.id));
-    const token = await createSession(deps, perMail.id);
-    return { token, accountId: perMail.id };
-  }
-
-  const accountId = await legeGoogleKontoAn(deps.db, profil, email);
-  await ensureBetaClubMembership(deps.db, accountId);
-  const token = await createSession(deps, accountId);
-  return { token, accountId };
-}
-
-/**
- * Neues Konto aus einem Google-Profil.
- *
- * Der Anzeigename kommt aus dem Google-Namen und muss eindeutig sein; bei
- * einer Kollision wird eine kurze Zahl angehaengt statt zu scheitern — die
- * Person kann ihn spaeter im Profil aendern. Kein Passwort: `verifyPassword`
- * lehnt bei `passwordHash null` jede Eingabe ab, das Konto ist also nicht
- * ueber das Formular uebernehmbar. Ein Passwort laesst sich jederzeit ueber
- * "Passwort vergessen" setzen.
- */
-async function legeGoogleKontoAn(
-  db: Db,
-  profil: GoogleProfil,
-  email: string,
-): Promise<string> {
-  const basis =
-    (profil.name?.trim() || email.split('@')[0] || 'Spieler')
-      .slice(0, 26)
-      .trim() || 'Spieler';
-
-  for (let versuch = 0; versuch < 6; versuch++) {
-    const displayName =
-      versuch === 0 ? basis : `${basis}-${Math.floor(Math.random() * 9000) + 1000}`;
-    try {
-      const [row] = await db
-        .insert(s.account)
-        .values({
-          email,
-          passwordHash: null,
-          displayName,
-          birthday: null,
-          emailVerifiedAt: new Date(),
-          googleSub: profil.sub,
-        })
-        .returning({ id: s.account.id });
-      return row!.id;
-    } catch (err) {
-      if (constraintOf(err) === 'account_display_name_key') continue;
-      if (constraintOf(err) === 'account_email_key') throw conflict('emailTaken');
-      throw err;
-    }
-  }
-  throw conflict('displayNameTaken');
-}
-
-// ---------------------------------------------------------------------------
 // Kontoloeschung
 // ---------------------------------------------------------------------------
 
@@ -820,12 +708,16 @@ export async function anonymizeAccount(db: Db, accountId: string): Promise<void>
       email: null,
       passwordHash: null,
       emailVerifiedAt: null,
-      googleSub: null,
       displayName: `geloescht-${accountId.slice(0, 8)}`,
       birthday: null,
       anonymizedAt: now,
     })
     .where(eq(s.account.id, accountId));
+
+  // Die Bindungen an Google und Apple gehoeren zum Personenbezug — und ohne
+  // diese Zeile fuehrte dieselbe Apple-ID beim naechsten Klick zurueck in
+  // das geloeschte Konto.
+  await db.delete(s.accountIdentity).where(eq(s.accountIdentity.accountId, accountId));
 
   await db
     .update(s.session)

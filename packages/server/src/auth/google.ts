@@ -1,11 +1,10 @@
 /**
- * Pruefung eines Google-ID-Tokens.
+ * Pruefung eines Google-ID-Tokens ("Mit Google anmelden", GIS-Knopf).
  *
- * Geprueft wird ueber Googles tokeninfo-Endpunkt statt einer eigenen
- * JWT-Bibliothek: Google prueft dort Signatur und Ablauf selbst, und der
- * Server braucht dafuer keine neue Abhaengigkeit und keinen
- * Schluessel-Zwischenspeicher. Der Preis ist ein Netzaufruf je Anmeldung —
- * bei einer Handlung, die pro Sitzung einmal vorkommt, ist das egal.
+ * Geprueft wird die Signatur gegen Googles veroeffentlichte Schluessel
+ * (idtoken.ts), dazu Aussteller, Zielgruppe, Ablauf und die Nonce. Bis zum
+ * 23.09.2026 lief das ueber den tokeninfo-Endpunkt — Google nennt den selbst
+ * ein Werkzeug zur Fehlersuche, und er pruefte keine Nonce.
  *
  * Was NICHT reicht: dem Client zu glauben. Das Token kommt vom Geraet und
  * koennte fuer eine beliebige andere App ausgestellt sein — deshalb ist die
@@ -13,47 +12,58 @@
  */
 
 import { unauthorized } from '../errors.js';
-import type { GoogleProfil } from './service.js';
+import type { AnbieterProfil } from './anbieter.js';
+import { IdTokenFehler, pruefeIdToken, schluesselVonAdresse, wahr, type Schluesselquelle } from './idtoken.js';
+import type { NonceSpeicher } from './nonce.js';
 
-const TOKENINFO_URL = 'https://oauth2.googleapis.com/tokeninfo';
+export const GOOGLE_JWKS = 'https://www.googleapis.com/oauth2/v3/certs';
+/** Google stellt mit und ohne Schema aus — beides steht so in der Doku. */
+export const GOOGLE_AUSSTELLER = ['https://accounts.google.com', 'accounts.google.com'] as const;
 
-interface TokenInfo {
-  readonly aud?: string;
-  readonly iss?: string;
-  readonly sub?: string;
-  readonly email?: string;
-  /** tokeninfo liefert Booleans als Zeichenketten. */
-  readonly email_verified?: string;
-  readonly name?: string;
+let standardQuelle: Schluesselquelle | null = null;
+/** Ein Zwischenspeicher je Prozess, erst beim ersten Gebrauch angelegt. */
+export function googleSchluessel(): Schluesselquelle {
+  standardQuelle ??= schluesselVonAdresse(GOOGLE_JWKS);
+  return standardQuelle;
 }
 
 export async function pruefeGoogleToken(
   credential: string,
-  clientId: string,
-): Promise<GoogleProfil> {
-  let info: TokenInfo;
+  optionen: {
+    clientId: string;
+    nonces: NonceSpeicher;
+    quelle?: Schluesselquelle;
+    jetzt?: () => number;
+  },
+): Promise<AnbieterProfil> {
+  let angaben: Record<string, unknown>;
   try {
-    const antwort = await fetch(
-      `${TOKENINFO_URL}?id_token=${encodeURIComponent(credential)}`,
-    );
-    if (!antwort.ok) throw new Error(`tokeninfo ${antwort.status}`);
-    info = (await antwort.json()) as TokenInfo;
-  } catch {
-    // Abgelaufen, manipuliert oder Google nicht erreichbar — fuer den
-    // Anmeldenden ist das alles dasselbe: nicht angemeldet.
-    throw unauthorized('credentialsInvalid');
+    angaben = await pruefeIdToken(credential, {
+      quelle: optionen.quelle ?? googleSchluessel(),
+      aussteller: GOOGLE_AUSSTELLER,
+      zielgruppe: optionen.clientId,
+      jetzt: optionen.jetzt,
+    });
+  } catch (fehler) {
+    // Abgelaufen, manipuliert, fremde App — fuer den Anmeldenden ist das alles
+    // dasselbe: nicht angemeldet. Der Grund steht nur im Fehlerobjekt.
+    if (fehler instanceof IdTokenFehler) throw unauthorized('credentialsInvalid');
+    throw fehler;
   }
+  // Erst NACH der Signatur: Sonst liessen sich mit erfundenen Tokens fremde
+  // Nonces verbrennen.
+  if (!optionen.nonces.einloesen(angaben.nonce)) throw unauthorized('nonceUngueltig');
 
-  if (info.aud !== clientId) throw unauthorized('credentialsInvalid');
-  if (info.iss !== 'https://accounts.google.com' && info.iss !== 'accounts.google.com') {
-    throw unauthorized('credentialsInvalid');
-  }
-  if (!info.sub || !info.email) throw unauthorized('credentialsInvalid');
-
+  const email = typeof angaben.email === 'string' ? angaben.email : null;
+  const vorname = typeof angaben.given_name === 'string' ? angaben.given_name : null;
+  const name = typeof angaben.name === 'string' ? angaben.name : null;
   return {
-    sub: info.sub,
-    email: info.email,
-    emailVerified: info.email_verified === 'true',
-    name: info.name?.trim() || null,
+    anbieter: 'google',
+    sub: angaben.sub as string,
+    email,
+    emailVerified: email !== null && wahr(angaben.email_verified),
+    // Google vergibt keine Weiterleitungsadressen.
+    relay: false,
+    name: vorname?.trim() || name?.trim() || null,
   };
 }

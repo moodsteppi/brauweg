@@ -5619,14 +5619,6 @@ main.auth > .muted {
   border-radius: 0;
   padding: 0.4rem 0.6rem 0.7rem;
 }
-/* Der Google-Knopf: Google zeichnet ihn selbst, hier nur die Buehne. Leer
-   (keine Client-ID, Google blockiert) faellt er auf Hoehe null zusammen. */
-.auth-google {
-  display: flex;
-  justify-content: center;
-  margin-top: 0.6rem;
-}
-.auth-google:empty { margin-top: 0; }
 .auth .panel label {
   display: block;
   margin: 0.5rem 0 0;
@@ -20282,3 +20274,63 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .kontosichern form label { display: block; margin-bottom: 0.7rem; }
 .kontosichern form input { display: block; width: 100%; margin-top: 0.25rem; }
+
+/* ---------------------------------------------------------------------------
+   Anmeldung mit Apple und Google (anmeldung/AnbieterKnoepfe.tsx)
+
+   Beide Knoepfe gleich breit (280 px, im Code) und gleich hoch (40 px — so
+   hoch zeichnet Google seinen "large"-Knopf), damit keiner als Nebenweg
+   aussieht. Googles Knopf zeichnet Googles Bibliothek; hier steht nur die
+   Buehne. Apples Knopf folgt den Human Interface Guidelines: schwarz, weisse
+   Schrift und weisses Logo, Logo links, keine eigene Farbe, keine Schatten.
+   --------------------------------------------------------------------------- */
+.anbieter-knoepfe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.anbieter-google {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+}
+.anbieter-google[aria-disabled='true'] { opacity: 0.6; pointer-events: none; }
+.anbieter-apple {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  margin: 0;
+  border: 1px solid #000;
+  border-radius: 4px;
+  background: #000;
+  color: #fff;
+  font: 500 15px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  /* Geerbte Knopf-Platten der Seite (border-image) gehoeren nicht auf einen
+     Markenknopf. */
+  border-image: none;
+  box-shadow: none;
+}
+.anbieter-apple:disabled { opacity: 0.6; cursor: default; }
+.anbieter-apple:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.anbieter-apple-logo { width: 16px; height: 16px; flex: none; margin-top: -2px; }
+
+/* Einstellungen: Abschnitt "Anmeldung" (anmeldung/Anmeldearten.tsx) */
+.anbieter-arten { margin-top: 1rem; }
+.anbieter-arten h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.anbieter-arten-zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+}
+.anbieter-arten-zeile .muted { display: block; font-size: 0.8rem; overflow-wrap: anywhere; }
