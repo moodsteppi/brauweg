@@ -45,7 +45,7 @@ Apple nimmt 1–10 Bilder je Größe, Play 2–8.
 | `04-partykiste-runde` | Allgemeinwissen, **alkoholfrei**, eine Frage mit vier Antworten | Fragen mit Marken Dritter (Simpsons u. a.) verwirft das Skript und zieht neu. |
 | `05-einladung-qr` | Wartesaal: Code groß, QR-Code, „Link teilen", `https://www.brauweg-spielen.de/beitritt/<CODE>` | Der Code ist echt auf staging und verfällt; auf der Produktion führt er ins Leere. |
 | `06-partykiste-einstellungen` | Menü: Trinkspiel / Alkoholfrei, Runden, Härte, Modi | Zeigt den Schalter — gut für die Prüfung. Der Kopftext sagt „Zwölf Minispiele" (CHECKLISTE A3). |
-| `07-partykiste-trinkspiel` | wie 04, aber im Trinkspiel-Modus | **Ersatz für 04, nicht zusätzlich.** Robin entscheidet; die alkoholfreie Fassung ist in der Prüfung die ruhigere. |
+| `07-partykiste-trinkspiel` | wie 04, aber im Trinkspiel-Modus | **Nicht hochladen.** Robin hat am 23.09.2026 die alkoholfreie 04 gewählt. |
 
 **Vorschlag für den Store:** 01, 02, 03, 04, 05, 06 — sechs Bilder, auf beiden
 Stores dieselben. Ohne Beschriftung (keine eingebrannten Texte, CLAUDE.md

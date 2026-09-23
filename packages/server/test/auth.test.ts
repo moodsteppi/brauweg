@@ -363,6 +363,55 @@ test('Kontoloeschung anonymisiert, statt Zeilen zu entfernen', async (t) => {
   assert.equal(await sessionFromToken(ctx.db, token), null);
 });
 
+test('Kontoloeschung nimmt Freundschaften, Blockierungen und Clan-Nachrichten mit', async (t) => {
+  // Robin, 23.09.2026: „alles dazu". Was andere Konten betrifft, bleibt
+  // stehen — Bens Freundschaft mit Cora und Bens Nachricht.
+  const ctx = await ctxWithInvite();
+  t.after(() => ctx.close());
+  const anna = (await createVerifiedAccount(ctx, 'Anna')).accountId;
+  const ben = (await createVerifiedAccount(ctx, 'Ben')).accountId;
+  const cora = (await createVerifiedAccount(ctx, 'Cora')).accountId;
+  const [mitglied] = await ctx.db
+    .select({ clubId: schema.clubMember.clubId })
+    .from(schema.clubMember)
+    .where(eq(schema.clubMember.accountId, anna));
+  assert.ok(mitglied, 'Beta-Clan');
+  const [anderer] = await ctx.db
+    .insert(schema.club)
+    .values({ name: 'Zweiter Clan', adminAccountId: ben })
+    .returning({ id: schema.club.id });
+
+  await ctx.db.insert(schema.friendship).values([
+    { accountA: anna, accountB: ben, status: 'accepted' },
+    { accountA: cora, accountB: anna },
+    { accountA: ben, accountB: cora, status: 'accepted' },
+  ]);
+  await ctx.db.insert(schema.block).values([
+    { accountId: anna, blockedAccountId: cora },
+    { accountId: cora, blockedAccountId: anna },
+  ]);
+  await ctx.db.insert(schema.clubMessage).values([
+    { clubId: mitglied.clubId, accountId: anna, body: 'Hallo von Anna' },
+    { clubId: mitglied.clubId, accountId: ben, body: 'Hallo von Ben' },
+  ]);
+  await ctx.db.insert(schema.clubJoinRequest).values({ clubId: anderer!.id, accountId: anna });
+
+  await anonymizeAccount(ctx.db, anna);
+
+  const freunde = await ctx.db.select().from(schema.friendship);
+  assert.deepEqual(
+    freunde.map((f) => [f.accountA, f.accountB]),
+    [[ben, cora]],
+  );
+  assert.equal((await ctx.db.select().from(schema.block)).length, 0);
+  const nachrichten = await ctx.db.select().from(schema.clubMessage);
+  assert.deepEqual(
+    nachrichten.filter((n) => n.kind === 'text').map((n) => n.body),
+    ['Hallo von Ben'],
+  );
+  assert.equal((await ctx.db.select().from(schema.clubJoinRequest)).length, 0);
+});
+
 test('eine gescheiterte Registrierung verbraucht keine Einladung', async (t) => {
   // Frueher zaehlte jeder Fehlversuch eine Nutzung hoch. Wer den Beta-Code
   // kannte, konnte damit in Sekunden alle Nutzungen verbrennen und die

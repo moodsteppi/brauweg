@@ -100,7 +100,7 @@ export type AnmeldeErgebnis =
 /**
  * Wie oben — aber ein NEUES Konto entsteht hier noch nicht.
  *
- * Die Registrierung verlangt ein Geburtsdatum und weist unter 16 ab
+ * Die Registrierung verlangt ein Geburtsdatum und weist unter 18 ab
  * (`assertValidBirthday`). Ueber einen Anbieter an ihr vorbei ein Konto zu
  * bekommen, hiesse, die Altersgrenze mit einem Klick zu umgehen. Also wird
  * der gepruefte Anbieter-Ausweis als Schein zurueckgelegt, der Client fragt

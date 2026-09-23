@@ -174,7 +174,7 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
 
   /**
    * Erstanmeldung abschliessen: Geburtsdatum zum Schein. Dieselbe Pruefung
-   * wie `/api/auth/register`; unter 16 dieselbe Absage, und der Schein ist weg.
+   * wie `/api/auth/register`; unter 18 dieselbe Absage, und der Schein ist weg.
    */
   app.post(
     '/api/auth/anbieter/abschliessen',

@@ -41,7 +41,7 @@ Apples Zuordnung für die Fragen, die hier zählen:
 | Frage | Antwort | Warum |
 | --- | --- | --- |
 | Parental Controls | **Nein** | Es gibt keine Elternfunktion. |
-| Age Assurance | **Nein** | Das Geburtsdatum ist eine Selbstangabe (Pflicht ab 16, `MIN_AGE` in `packages/server/src/birthday.ts:10`), Gäste geben keins an. Das ist keine Altersprüfung im Sinne der Frage. |
+| Age Assurance | **Nein** | Das Geburtsdatum ist eine Selbstangabe (Pflicht ab 18, `MIN_AGE` in `packages/server/src/birthday.ts:11`), Gäste geben keins an. Das ist keine Altersprüfung im Sinne der Frage. |
 
 ### Capabilities
 
@@ -152,8 +152,7 @@ Antwort und der Grund. Quellen:
 ### Zielgruppe bei Play (App-Inhalte → Zielgruppe)
 
 **Nur „18 und älter"** ankreuzen. Dann greifen die Familienrichtlinien nicht,
-und es passt zu Apple 18+. **Widerspruch, den Robin entscheiden muss:** Die
-App lässt Konten ab **16** zu (`MIN_AGE = 16`), die Datenschutzerklärung sagt
-„ab 16 Jahren". Entweder `MIN_AGE` auf 18 (eine Zeile, aber Bestandskonten
-zwischen 16 und 18 bleiben) oder bei Play zusätzlich „16–17" ankreuzen. Mit
-Trinkmodus in einer 18+-App ist „ab 18" die ehrliche Linie. Siehe CHECKLISTE.
+und es passt zu Apple 18+. Seit dem 23.09.2026 (Robin) lässt die App auch
+Konten erst ab **18** zu (`MIN_AGE = 18`), und die Datenschutzerklärung sagt
+„ab 18 Jahren". Bestandskonten zwischen 16 und 18 bleiben bestehen; ob sie
+gesperrt werden, ist offen (CHECKLISTE C1).

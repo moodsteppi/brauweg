@@ -599,7 +599,7 @@ test('ein neues Konto entsteht erst mit Geburtsdatum', async (t) => {
   await abgewiesen(schliesseAnmeldungAb(ctx.auth, scheine, erst.schein, ERWACHSEN), 'anmeldescheinUngueltig');
 });
 
-test('unter 16: dieselbe Absage wie beim Registrieren, und nichts bleibt zurueck', async (t) => {
+test('unter 18: dieselbe Absage wie beim Registrieren, und nichts bleibt zurueck', async (t) => {
   const ctx = await createTestContext();
   t.after(() => ctx.close());
   const scheine = new Anmeldescheine();
@@ -657,7 +657,7 @@ test('ein vorhandenes Konto wird nicht nach dem Alter gefragt', async (t) => {
   assert.ok(!('schein' in perBindung), 'schon verknuepft: sofort drin');
 });
 
-test('ein Gast sichert nur mit Geburtsdatum, und nicht unter 16', async (t) => {
+test('ein Gast sichert nur mit Geburtsdatum, und nicht unter 18', async (t) => {
   const ctx = await createTestContext();
   t.after(() => ctx.close());
   const gast = await gastKonto(ctx.auth, 'Laufkunde');

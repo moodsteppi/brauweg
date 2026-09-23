@@ -5,7 +5,7 @@
  * Einladungscode. Vor der ersten Anmeldung steht die E-Mail-Bestaetigung.
  */
 
-import { and, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, or, sql } from 'drizzle-orm';
 
 import { assertValidBirthday } from '../birthday.js';
 import { ensureBetaClubMembership } from '../clubs/service.js';
@@ -728,6 +728,20 @@ export async function anonymizeAccount(db: Db, accountId: string): Promise<void>
   // diese Zeile fuehrte dieselbe Apple-ID beim naechsten Klick zurueck in
   // das geloeschte Konto.
   await db.delete(s.accountIdentity).where(eq(s.accountIdentity.accountId, accountId));
+
+  // Beziehungen und Geschriebenes (Robin, 23.09.2026: „alles dazu"). Auch hier
+  // greift die Kaskade nicht, die Kontozeile bleibt ja stehen. Blockierungen
+  // gehen in beide Richtungen weg: Das geloeschte Konto kann sich nicht mehr
+  // anmelden, niemand braucht mehr Schutz davor. Meldungen gegen das Konto
+  // bleiben fuer die Moderation stehen (Tom, binnen 24 Stunden).
+  await db
+    .delete(s.friendship)
+    .where(or(eq(s.friendship.accountA, accountId), eq(s.friendship.accountB, accountId)));
+  await db
+    .delete(s.block)
+    .where(or(eq(s.block.accountId, accountId), eq(s.block.blockedAccountId, accountId)));
+  await db.delete(s.clubMessage).where(eq(s.clubMessage.accountId, accountId));
+  await db.delete(s.clubJoinRequest).where(eq(s.clubJoinRequest.accountId, accountId));
 
   // Push-Tokens und -Einstellungen: Ein Geraetetoken ist eine Zustelladresse
   // und gehoert zum Personenbezug. Die Kaskade am Fremdschluessel greift

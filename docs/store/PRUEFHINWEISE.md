@@ -35,7 +35,7 @@ Passwortmanager und in den Store-Formularen.
 | Anmeldung erforderlich | Ja (oder „Ohne Konto spielen", siehe unten) |
 | Benutzername | `<PRUEFKONTO-ADRESSE>` |
 | Passwort | `<AUS DEM PASSWORTMANAGER>` |
-| Kontakt (Apple) | Vorname, Name, Telefon, Mail von **Tom** (Kontoinhaber) oder Robin |
+| Kontakt (Apple) | Vorname, Name, Telefon, Mail von **Tom** (Kontoinhaber) |
 
 ---
 
@@ -68,9 +68,10 @@ VIRTUAL CURRENCY
 Coins and gems are in-game currency without real-money value. They are earned by playing (daily quests, chests) and cannot be bought in the app.
 ```
 
-Die Zeile **„reviewed within 24 hours"** steht nur dann drin, wenn es jemanden
-gibt, der das zusagt (CHECKLISTE, Moderation). Sonst ersatzlos streichen —
-eine falsche Zusage ist schlimmer als keine.
+Die Zeile **„reviewed within 24 hours"** bleibt: Tom, Inhaber des
+Developer-Kontos, bearbeitet die Meldungen binnen 24 Stunden (Robin,
+23.09.2026, CHECKLISTE C8). Fällt das weg, die Zeile streichen — eine falsche
+Zusage ist schlimmer als keine.
 
 ---
 
