@@ -351,9 +351,8 @@ verrückte Bälle und wandernde Wände.
 - **Die Halte-Mechanik** (`EINSATZ` je Art): `'schlag'` wirkt mit dem
   nächsten eigenen Schlag von selbst (`wendeSchlagAn` macht aus `halt` die
   `wirkung`), `'passiv'` wartet auf einen Auslöser (Schild), `'ausloesen'`
-  ist der Anschluss für Teil 3: Störschläge, die ein Spieler STATT eines
-  Schlags auslöst — neue Art hinten an `POWERUPS`, eigenes Ereignis in
-  physik.ts, Schild über `verbraucheSchild`.
+  sind die Störschläge aus Teil 3, die ein Spieler STATT eines Schlags
+  auslöst (siehe unten).
 - **Fallen der Power-ups:** Der Turbo-Ball rechnet in halben Unterschritten
   (`turboWerte`), sonst tunnelt er mit 0,45 E je Schritt durch Wände. Der
   Magnet macht den Ball nicht `getrieben` — hinter einer Wand bliebe er sonst
@@ -363,3 +362,31 @@ verrückte Bälle und wandernde Wände.
   entlang der Kette; Geist: gerade aufs verbaute Loch, wenn nur Wände
   dazwischen liegen) und nehmen ein Feld mit, das nah an ihrem Weg liegt
   (`umwegUeberFeld`). Gemessen mit `werkzeug/golf-powerupprobe.ts`.
+- **Störschläge (Teil 3, seit 23.09.2026, Version 9):** Bombe (im Takt nach
+  dem Auslösen stößt sie alle Bälle im Umkreis 3 E weg, innen 14 E/s, am
+  Rand 40 %), Klebefeld (8 s ein Sandfleck, Reibung × 4, Radius 1,6 E),
+  Tausch (der eigene Ball und der des Führenden tauschen ihre Ruhelagen).
+  Quelle `stoerschlag.ts`. Sie hängen hinten an `POWERUPS` (`EINSATZ`
+  `'ausloesen'`), liegen also in denselben Feldern, und werden STATT eines
+  Schlags ausgelöst — **als Zug**: `Zug.art === 'ausloesen'` im Modul
+  (`regeln.ts`; ohne `art` ist ein Zug wie immer ein Schlag), Ereignis
+  `'ausloesen'` im Kern, gezielt wie ein Schlag (Zielstelle
+  `kraft · 16 E` vor dem Ball). So rechnen alle Geräte, das Rückspulen und
+  das Replay dieselbe Störung. Das Modul weist einen unbekannten Zugtyp ab
+  (`zugArtUnbekannt`) und einen Auslöse-Zug an einem klassischen Tisch
+  (`ausloesenNurImFunModus`). Im HUD: `StoerschlagKnopf.tsx` (Tipp,
+  dann zielen; Tausch sofort).
+- **Die Fairness-Grenzen der Störschläge:** kein Störschlag auf einen
+  fertigen Ball (eingelocht, Limit, ausgestiegen) und keiner auf einen Geist
+  (am Abschlag lägen alle auf einem Punkt); höchstens einer je Spieler und
+  Loch (`Lochstand.stoerGenutzt`) — wer seinen hatte, rollt über weitere
+  Störfelder hinweg; wer führt, nimmt keine auf und löst keine aus
+  (Gummiband). **Wer führt, steht fürs Loch fest** (`Lochstand.fuehrend`,
+  in `starteLoch` aus den abgeschlossenen Löchern; Gleichstand führt
+  gemeinsam) — im ersten Loch führen deshalb alle, und es fällt kein
+  Störschlag. Das Schild wehrt jeden Störschlag einmal ab
+  (`verbraucheSchild`), der Störschlag ist dann trotzdem verbraucht.
+  Bombe und Klebefleck liegen als unveränderliche Objekte in
+  `Lochstand.bombe`/`klebe` (die flache Kopie von `kopiere` teilt sie).
+  Bots lösen gegen den Führenden aus, wenn es trifft (`botStoerschlag`,
+  ohne Zufall und ohne Probe); gemessen mit `werkzeug/golf-stoerprobe.ts`.

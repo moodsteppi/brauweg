@@ -186,6 +186,25 @@ describe('Störschlag über die Leitung', () => {
     expect(arten).toEqual(['schlag', 'ausloesen']);
   });
 
+  it('loeseAus schickt den Zug mit art, schlage wie immer ohne', () => {
+    const gesendet: unknown[] = [];
+    const netz = new Golfnetz({
+      sende: (x) => gesendet.push(x),
+      sendeTakt: () => {},
+      neuVerbinden: () => {},
+      jetzt: () => 0,
+      karten: KATALOG,
+    });
+    netz.nimmSicht(sicht(lage.saat, []));
+    expect(netz.schlage(0, 0.6, -0.8, 0.5)).toBe(true);
+    expect(netz.loeseAus(0, 0.6, -0.8, 0.5)).toBe(true);
+    expect(gesendet).toEqual([
+      { art: 'zug', zug: { takt: VORLAUF_TAKTE, nr: 0, rx: 0.6, ry: -0.8, kraft: 0.5 } },
+      { art: 'zug', zug: { takt: VORLAUF_TAKTE + 1, nr: 1, rx: 0.6, ry: -0.8, kraft: 0.5, art: 'ausloesen' } },
+    ]);
+    expect(netz.kern!.alleEreignisse().map((e) => e.art)).toEqual(['schlag', 'ausloesen']);
+  });
+
   it('zwei Geräte rechnen denselben Störschlag — auch wenn er bei einem zu spät ankommt', () => {
     const a = geraet();
     a.nimmSicht(sicht(lage.saat, zuege));
