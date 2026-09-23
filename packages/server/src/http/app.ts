@@ -44,6 +44,10 @@ import {
   gastKonto,
   gastSichern,
 } from '../auth/service.js';
+// Eigene Zeile statt in der Liste darueber: Bestaetigung, Reset und
+// Mail-Diagnose (23.09.2026) kamen parallel zu anderen Anmeldewegen dazu.
+import { createSession } from '../auth/service.js';
+import { mailProbe } from '../mail/probe.js';
 import { pruefeGoogleToken } from '../auth/google.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
@@ -606,9 +610,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.post('/api/auth/register', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const body = registerSchema.parse(request.body);
-    await register(deps.auth, body);
-    // Bewusst ohne Sitzung: Erst bestaetigen, dann anmelden.
-    return reply.status(201).send({ ok: true });
+    const { accountId, mailVersandt, bestaetigungNoetig } = await register(deps.auth, body);
+    const mailVersand = deps.auth.mailer.art;
+    if (bestaetigungNoetig) {
+      // Ohne Sitzung: Erst bestaetigen, dann anmelden. `mailVersandt` sagt dem
+      // Client, ob er "Mail ist unterwegs" schreiben darf oder den neuen Link
+      // anbieten muss.
+      return reply.status(201).send({ ok: true, angemeldet: false, mailVersandt, mailVersand });
+    }
+    // Keine Bestaetigung verlangt (kein Versanddienst, siehe index.ts): dann
+    // auch nicht so tun, als muesse man auf eine Mail warten — gleich anmelden.
+    const token = await createSession(deps.auth, accountId);
+    setSession(reply, token);
+    return reply.status(201).send({
+      ok: true,
+      angemeldet: true,
+      mailVersandt,
+      mailVersand,
+      ...(request.headers.origin === APP_ORIGIN ? { token } : {}),
+    });
   });
 
   app.post('/api/auth/verify', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
@@ -621,7 +641,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/auth/verification/resend', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const { email } = z.object({ email: z.string().email() }).parse(request.body);
     await requestVerification(deps.auth, email);
-    return reply.send({ ok: true });
+    // `mailVersand` gilt fuer den ganzen Server, nicht fuer diese Adresse —
+    // er verraet also nichts ueber Konten, sagt dem Client aber, ob er
+    // "Mail ist unterwegs" schreiben darf.
+    return reply.send({ ok: true, mailVersand: deps.auth.mailer.art });
   });
 
   app.post('/api/auth/login', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
@@ -697,8 +720,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       })
       .parse(request.body);
-    await gastSichern(deps.auth, accountId, body);
-    return reply.send({ ok: true });
+    const versand = await gastSichern(deps.auth, accountId, body);
+    return reply.send({ ok: true, ...versand, mailVersand: deps.auth.mailer.art });
   });
 
   app.post('/api/auth/logout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
@@ -712,16 +735,45 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const { email } = z.object({ email: z.string().email() }).parse(request.body);
     await requestPasswordReset(deps.auth, email);
     // Immer dieselbe Antwort, damit sich registrierte Adressen nicht abfragen
-    // lassen.
-    return reply.send({ ok: true });
+    // lassen. `mailVersand` ist serverweit, siehe verification/resend.
+    return reply.send({ ok: true, mailVersand: deps.auth.mailer.art });
   });
 
   app.post('/api/auth/reset', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const body = z
       .object({ token: z.string(), password: z.string().min(12).max(200) })
       .parse(request.body);
-    await resetPassword(deps.db, body.token, body.password);
-    return reply.send({ ok: true });
+    const accountId = await resetPassword(deps.db, body.token, body.password);
+    // Gleich angemeldet: Der Reset hat eben alle Sitzungen beendet, und wer
+    // den Link aus dem Postfach hat, muesste das neue Passwort sonst sofort
+    // ein zweites Mal eintippen.
+    const token = await createSession(deps.auth, accountId);
+    setSession(reply, token);
+    return reply.send({
+      ok: true,
+      accountId,
+      ...(request.headers.origin === APP_ORIGIN ? { token } : {}),
+    });
+  });
+
+  /**
+   * Mail-Diagnose: Warum kommt die Bestaetigungsmail nicht an?
+   *
+   * NUR fuer Testkonten (STAFF_EMAILS, bestaetigt) — bewusst ohne den Weg
+   * ueber DIAGNOSE_SCHLUESSEL wie bei `requireAufsicht`: Die Probe schickt
+   * eine Testmail an die Adresse des angemeldeten Kontos, und ohne Konto
+   * gaebe es keine. Die Antwort nennt Mailer, Absender-Domain, Resends
+   * Domain-Status und ob die Testmail angenommen wurde — nie den Schluessel.
+   * Ablauf und Deutung: docs/MAIL.md.
+   */
+  app.post('/api/staff/mail-probe', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const [konto] = await deps.db
+      .select({ isStaff: s.account.isStaff, email: s.account.email })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    if (!konto?.isStaff || !konto.email) throw forbidden('nurAufsicht');
+    return reply.send(await mailProbe(deps.auth.mailer, deps.auth.publicUrl, konto.email));
   });
 
   app.get('/api/me', async (request, reply) => {

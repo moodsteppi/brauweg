@@ -67,7 +67,9 @@ function required(name: string, fallbackInDev?: string): string {
 
 export function loadConfig(): Config {
   const env = (process.env.NODE_ENV ?? 'development') as Config['env'];
-  const publicUrl = required('PUBLIC_URL', 'http://localhost:5173');
+  // Ohne Schraegstrich am Ende: Die Mail-Links haengen `/verify` an, und
+  // `https://…de//verify` ist eine andere Adresse.
+  const publicUrl = required('PUBLIC_URL', 'http://localhost:5173').trim().replace(/\/+$/, '');
 
   const stage = ((): Config['stage'] => {
     const gesetzt = process.env.STAGE;
@@ -85,8 +87,13 @@ export function loadConfig(): Config {
     publicUrl,
     cookieSecure: publicUrl.startsWith('https://'),
     sessionTtlDays: Number(process.env.SESSION_TTL_DAYS ?? 30),
+    // Roh durchgereicht: Ob leer, fehlend oder gesetzt, entscheidet und
+    // BENENNT `waehleMailer` (mail/index.ts). Ein leerer Wert sah beim Start
+    // bis zum 23.09.2026 aus wie eine fehlende Variable.
     resendApiKey: process.env.RESEND_API_KEY ?? null,
-    mailFrom: process.env.MAIL_FROM ?? 'Brauweg <noreply@brauweg-spielen.de>',
+    // Leer zaehlt wie nicht gesetzt: Ein leerer Absender ginge sonst als
+    // `from: ""` an Resend und scheiterte erst beim ersten Versand.
+    mailFrom: process.env.MAIL_FROM?.trim() || 'Brauweg <noreply@brauweg-spielen.de>',
     staffEmails: parseStaffEmails(process.env.STAFF_EMAILS),
     // Ein zu kurzer Schluessel ist schlimmer als keiner: Er sieht nach
     // Schutz aus und ist in Minuten durchprobiert. Dann lieber zu.

@@ -13,7 +13,7 @@ import { dirname, resolve } from 'node:path';
 import { loadConfig } from './config.js';
 import { connect } from './db/connect.js';
 import * as s from './db/schema.js';
-import { createMailer } from './mail/index.js';
+import { waehleMailer } from './mail/index.js';
 import { APP_ORIGIN, buildApp } from './http/app.js';
 import { Gateway } from './realtime/gateway.js';
 import { PartyRuntime } from './runtime/party.js';
@@ -81,15 +81,27 @@ async function main(): Promise<void> {
     );
   }
 
-  const mailer = createMailer(config.resendApiKey, config.mailFrom);
-  if (!config.resendApiKey) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      'ACHTUNG: RESEND_API_KEY fehlt. Bestaetigungs- und Passwortmails werden ' +
-        'NICHT versendet, sondern nur hier ins Log geschrieben (Suche: "MAIL"). ' +
-        'Fuer die Beta muss ein Versanddienst eingerichtet sein.',
-    );
-  }
+  // EINE Zeile: welcher Mailer laeuft und warum — "gesetzt/leer/fehlt",
+  // nie der Wert. Die alte Warnung sagte bei leerem Wert "fehlt", und im
+  // Railway-Dashboard stand die Variable doch da (docs/MAIL.md).
+  const { mailer, zeile: mailerZeile } = waehleMailer(
+    config.resendApiKey,
+    config.mailFrom,
+    config.publicUrl,
+  );
+  // eslint-disable-next-line no-console
+  (mailer.art === 'resend' ? console.info : console.warn)(mailerZeile);
+  /**
+   * Bestaetigung nur verlangen, wenn eine Mail sie auch ueberbringen kann.
+   *
+   * Ohne Versanddienst kommt in der Produktion kein Link an; eine Pflicht
+   * darauf sperrt jeden Neuen aus, und nur wer ins Betriebslog sieht, kommt
+   * noch hinein. Lokal bleibt die Pflicht: Dort steht das Log im eigenen
+   * Terminal, und der Ablauf soll so geprueft werden, wie er mit Resend
+   * laeuft. Das Testkonto-Merkmal haengt weiter an einer BESTAETIGTEN
+   * Adresse (staff.ts) — die Lockerung oeffnet dort nichts.
+   */
+  const bestaetigungPflicht = mailer.art === 'resend' || config.env !== 'production';
   const runtime = new PartyRuntime(db);
   const vermittlung = new Vermittlung(db, runtime, {
     beiFehler: (gameId, fehler) =>
@@ -106,6 +118,7 @@ async function main(): Promise<void> {
       mailer,
       publicUrl: config.publicUrl,
       sessionTtlDays: config.sessionTtlDays,
+      bestaetigungPflicht,
     },
     cookieSecure: config.cookieSecure,
     sessionTtlDays: config.sessionTtlDays,
