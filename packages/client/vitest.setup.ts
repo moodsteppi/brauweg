@@ -15,12 +15,16 @@ vi.mock('@react-three/drei', async () => {
   const echt = await vi.importActual<typeof import('@react-three/drei')>(
     '@react-three/drei',
   );
+  // useGLTF muss eine Funktion sein und gleichzeitig die preload-Methode haben.
+  // Spread einer Funktion in {} kopiert nur Eigenschaften, nicht Aufrufbarkeit.
+  const preloadFrei = Object.assign(
+    (...args: Parameters<typeof echt.useGLTF>) => echt.useGLTF(...args),
+    echt.useGLTF,
+    { preload: () => {} },
+  );
   return {
     ...echt,
-    useGLTF: {
-      ...echt.useGLTF,
-      preload: () => {}, // No-op in Tests
-    },
+    useGLTF: preloadFrei,
   };
 });
 
