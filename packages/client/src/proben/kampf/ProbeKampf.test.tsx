@@ -340,4 +340,21 @@ describe('ProbeKampf', () => {
     // nicht abgeschrieben — dasselbe Wort steht am Tisch.
     expect(screen.getByText('Kampfphase')).toBeInTheDocument();
   });
+
+  it('wirft keine React-Warnung bei doppelten Keys während des Kampfablaufs', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<ProbeKampf />);
+    lauf(BERICHT.dauerMs + 1_000);
+
+    // Sammelt alle Fehler, die gemeldet wurden
+    const errors = errorSpy.mock.calls
+      .map((call) => call[0])
+      .join('\n');
+
+    // Prüft, dass keine React-Warnung zu doppelten Keys auftritt
+    expect(errors).not.toContain('Encountered two children with the same key');
+
+    errorSpy.mockRestore();
+  });
 });

@@ -925,7 +925,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
           const anteil = f.hoechstesLeben > 0 ? (f.leben / f.hoechstesLeben) * 100 : 0;
           return (
             <div
-              key={`${f.seite}:${f.id}`}
+              key={f.id}
               className={stil.figur}
               data-seite={f.seite === unten ? 'unten' : 'oben'}
               data-tot={f.tot ? '' : undefined}
@@ -997,7 +997,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
                     Ausschlag-Animation jedes Mal von vorn an, statt beim
                     zweiten Schlag stumm zu bleiben. */}
                 <div
-                  key={f.schlaege}
+                  key={`k${f.schlaege}`}
                   className={stil.koerper}
                   data-schlaegt={f.schlaege > 0 ? '' : undefined}
                 >
@@ -1068,7 +1068,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
                     an `f.schlaege` haengt) seinen eigenen Ausschlag
                     ungestoert zu Ende bringt. */}
                 {f.treffer > 0 && (
-                  <span key={f.treffer} className={stil.treffer} aria-hidden="true">
+                  <span key={`t${f.treffer}`} className={stil.treffer} aria-hidden="true">
                     <i className={stil.blitz} />
                     <i className={stil.einschlag} />
                   </span>
