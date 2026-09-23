@@ -106,12 +106,36 @@ describe('Punkt am Profil-Reiter', () => {
     // damit bliebe das Geschenk fuer blinde Spieler weiter unauffindbar.
     await zeigeStart(konto({ birthdayToday: true, birthdayRewardClaimable: true }));
 
-    expect(profilReiter()).toHaveAccessibleName(/Geschenk liegt bereit/);
+    expect(profilReiter()).toHaveAccessibleName('Profil, Geschenk liegt bereit');
   });
 
   it('haengt den Punkt an genau einen Reiter', async () => {
     await zeigeStart(konto({ birthdayToday: true, birthdayRewardClaimable: true }));
 
     expect(document.querySelectorAll('.front-tabs .hub-punkt')).toHaveLength(1);
+  });
+});
+
+/*
+ * Dieselbe Frage an der Truhe auf dem Startschirm. Dort stand bis zum
+ * 23.09.2026 ein aria-label am Knopf — und das ersetzt den Text der Kinder,
+ * also auch den Vorlesetext des Punkts. Sichtbar fiel nichts aus.
+ */
+describe('Punkt an der Truhe', () => {
+  function truhe(): HTMLElement {
+    return screen.getByRole('button', { name: /^Tagesaufgaben und Truhen/ });
+  }
+
+  it('nennt im Namen des Knopfes, wie viel bereitliegt', async () => {
+    await zeigeStart(konto({ bereit: { truhen: 1, aufgaben: 2 } }));
+
+    expect(truhe()).toHaveAccessibleName('Tagesaufgaben und Truhen, 3 bereit');
+  });
+
+  it('heisst ohne Punkt nur nach dem, was dahinter liegt', async () => {
+    await zeigeStart(konto({ bereit: { truhen: 0, aufgaben: 0 } }));
+
+    expect(truhe()).toHaveAccessibleName('Tagesaufgaben und Truhen');
+    expect(truhe().querySelector('.hub-punkt')).toBeNull();
   });
 });

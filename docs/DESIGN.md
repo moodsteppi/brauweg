@@ -169,9 +169,16 @@ Vorhandenes wiederverwenden statt neu erfinden:
   und am Profil-Reiter der Tab-Leiste (dort für die Geburtstagsbelohnung, die
   es nur einen Tag im Jahr gibt). Am Reiter ist er kleiner und rückt an die
   Ecke des Symbols: In einem Raster mit 0,2-rem-Fuge hängt ein Punkt an der
-  Knopfkante zur Hälfte im Nachbarreiter. Und er trägt dort einen
-  Vorlesetext: Er zeigt auf etwas, das man sonst gar nicht findet, und ohne
-  Text wäre der Hinweis nur für Sehende da.
+  Knopfkante zur Hälfte im Nachbarreiter.
+  **Er trägt überall einen Vorlesetext, und der gehört in den Namen des
+  Knopfes:** Er zeigt auf etwas, das man sonst gar nicht findet, und ohne Text
+  wäre der Hinweis nur für Sehende da. Bauform: Der Punkt selbst ist
+  `aria-hidden`, der Knopf bekommt über `mitPunkt()` in `GameSelect.tsx`
+  den Namen „Aufgaben, 2 bereit“. Nicht als `aria-label` am Punkt: Trägt der
+  Knopf selbst eins, zählt das des Kindes nicht mit (so war die Truhe bis zum
+  23.09.2026 stumm), und ohne eins klebt der Name ohne Trennung zusammen
+  („ProfilGeschenk liegt bereit“). Hier darf die Zahl stehen —
+  „nie eine Zahl“ gilt für das Auge, nicht fürs Ohr.
 
 ## Bilder und Icons
 
