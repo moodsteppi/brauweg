@@ -1200,6 +1200,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // Pro-Subway (Solo-Runner)
   // -------------------------------------------------------------------------
 
+  /**
+   * In der App kommt Pro-Subway erst spaeter (Robin, 23.09.2026). Die Kachel
+   * steht dort auf "Bald"; hier wird jeder Lauf abgewiesen, der doch ankommt,
+   * mit demselben Fehler wie ein nicht freigegebenes Spiel.
+   */
+  const runnerNurImWeb = (request: FastifyRequest): void => {
+    if (plattformVon(request) === 'app') throw notFound('gameNotPlayable');
+  };
+
   /** Wie viele Hub-Muenzen heute noch aus dem Runner kommen koennen. */
   app.get('/api/runner/today', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
@@ -1212,6 +1221,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    */
   app.post('/api/runner/cashout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
+    runnerNurImWeb(request);
     const body = z
       .object({
         coins: z.number().int().min(0).max(500),
@@ -1228,6 +1238,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    */
   app.post('/api/runner/lauf', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
+    runnerNurImWeb(request);
     const body = z
       .object({
         muenzen: z.number().int().min(0).max(500),

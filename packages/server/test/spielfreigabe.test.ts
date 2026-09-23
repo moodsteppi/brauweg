@@ -300,3 +300,19 @@ test('wer schon sitzt, kommt auch in der App an seinen Platz zurueck', async (t)
   assert.equal(zurueck.statusCode, 200);
   assert.equal(vorschau.statusCode, 200);
 });
+
+test('Pro-Subway: in der App kein Lauf und keine Auszahlung, auf der Webseite wie bisher', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const lauf = { muenzen: 5, punkte: 120, meter: 90 };
+
+  for (const url of ['/api/runner/lauf', '/api/runner/cashout']) {
+    const payload = url.endsWith('lauf') ? lauf : { coins: 5 };
+    const app = await s.app.inject({ method: 'POST', url, headers: s.anna('app'), payload });
+    assert.equal(app.statusCode, 404, `${url} aus der App`);
+    assert.equal(app.json().code, 'gameNotPlayable');
+  }
+
+  const web = await s.app.inject({ method: 'POST', url: '/api/runner/lauf', headers: s.anna('web'), payload: lauf });
+  assert.equal(web.statusCode, 200);
+});

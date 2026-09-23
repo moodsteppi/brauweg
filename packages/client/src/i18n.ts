@@ -179,7 +179,7 @@ const de: Record<string, string> = {
   'error.avatarInvalid': 'Das ist kein Bild, das wir speichern können.',
   'error.avatarUnknown': 'Dieses Profilbild gibt es nicht.',
   'error.birthdayInvalid': 'Bitte gib ein gültiges Geburtsdatum ein.',
-  'error.birthdayTooYoung': 'Du musst mindestens 16 Jahre alt sein.',
+  'error.birthdayTooYoung': 'Du musst mindestens 18 Jahre alt sein.',
   'error.birthdayMissing': 'Für die Belohnung fehlt noch dein Geburtstag.',
   'error.birthdayNotToday': 'Die Belohnung kannst du nur an deinem Geburtstag holen.',
   'error.birthdayAlreadyClaimed': 'Die Belohnung für dieses Jahr hast du schon.',
