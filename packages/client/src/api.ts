@@ -337,7 +337,7 @@ export interface Kauftruhe {
  * `wert` ist die Kennung ohne Praefix — so heisst sie in den Themen-
  * Einstellungen. `id` traegt das Praefix und ist die Kennung fuer den Kauf.
  */
-export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen' | 'klang' | 'musik';
+export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen' | 'klang' | 'musik' | 'inhaltspaket';
 
 export interface RegalWare {
   id: string;
@@ -348,6 +348,12 @@ export interface RegalWare {
   /** Beide Preise — der Käufer wählt, wie bei der Kosmetik. */
   preis: Preis;
   besessen: boolean;
+  /**
+   * Nur bei `inhaltspaket` (Golf-Kurs, Partykiste-Themenpaket): Spiel und
+   * Regelsatzfeld. Der Wert steht in `wert` — so sperrt die Auswahl des
+   * Spiels genau diese Kachel, ohne die Kennung zu zerlegen.
+   */
+  inhalt?: { spiel: string; feld: string };
 }
 
 export interface Shop {

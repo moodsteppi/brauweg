@@ -18,6 +18,7 @@ import * as s from '../db/schema.js';
 import { RuleSetInvalidError, badRequest, conflict, forbidden, notFound } from '../errors.js';
 import { requireModule } from '../games/registry.js';
 import { einsatzVon, stakesVon, verlangen } from '../brojetons.js';
+import { verlangeInhaltspakete } from '../tischware.js';
 
 /**
  * Oeffentliche und private Tische muessen in einer Sitzung durchlaufen, daher
@@ -249,6 +250,10 @@ export async function createTable(db: Db, input: CreateTableInput) {
   if (input.rounds % rotation !== 0) throw badRequest('roundsNotMultipleOfRotation');
   if (input.rounds < rotation) throw badRequest('roundsTooFew');
   if (input.rounds > MAX_ROUNDS[visibility]) throw badRequest('roundsTooMany');
+
+  // Ein Zusatzpaket (Golf-Kurs, Partypaket) muss dem Anlegenden gehoeren —
+  // vor dem Speichern, damit eine Absage keinen Regelsatz hinterlaesst.
+  await verlangeInhaltspakete(db, input.accountId, input.gameId, config);
 
   const ruleSet = await saveRuleSet(db, {
     accountId: input.accountId,
@@ -918,6 +923,8 @@ export async function setzeTischregeln(
   const neu: Record<string, unknown> = { ...(config as Record<string, unknown>) };
   if ('training' in alt) neu.training = alt.training;
   else delete neu.training;
+  // Nur was NEU dazukommt, muss dem Umstellenden gehoeren (tischware.ts).
+  await verlangeInhaltspakete(db, byAccountId, table.gameId, neu, alt);
 
   const [familie] = await db
     .select({ owner: s.ruleSet.ownerAccountId, name: s.ruleSet.name })
