@@ -67,7 +67,7 @@ Alle drei liegen in Dateien, die dieser Zweig bewusst nicht anfasst
 | E2 | Texte DE und EN (TEXTE.md), Kategorie Spiele → Karten + Gelegenheitsspiele, Support- und Datenschutz-URL | offen |
 | E3 | Altersfreigabe nach ALTERSFREIGABE.md → Ergebnis 18+ prüfen und hier eintragen | offen |
 | E4 | App-Datenschutz nach DATENSCHUTZ-ANGABEN.md | offen |
-| E5 | Screenshots 6,9" hochladen (von Robin/Aufsicht nach A3 neu erzeugt) | offen |
+| E5 | Screenshots 6,9" hochladen (neu erzeugt am 23.09.2026, Motive 01–06; 07 nicht hochladen) | offen |
 | E6 | Prüfhinweise und Prüfkonto (PRUEFHINWEISE.md), Kontaktangaben | offen |
 | E7 | Inhaltsrechte („Enthält die App Inhalte Dritter?"): **Ja, mit Rechten** — gemeinfreies Kartenblatt, lizenzierte Klänge (`CREDITS.md`, `docs/KLANG.md`) | offen |
 | E8 | Verschlüsselungsfrage entfällt (`ITSAppUsesNonExemptEncryption = false`, `docs/APPSTORE.md`) | erledigt (steht in der Info.plist, laut `docs/APPSTORE.md`) |
@@ -78,7 +78,7 @@ Alle drei liegen in Dateien, die dieser Zweig bewusst nicht anfasst
 | # | Punkt | Status |
 | --- | --- | --- |
 | F1 | A1–A4 als Worker-Aufgaben vergeben | erledigt: die Aufsicht hat A1–A4 selbst gebaut (#242) |
-| F2 | Nach A3 die Screenshots neu erzeugen (`SCREENSHOTS.md`) | offen |
+| F2 | Nach A3 die Screenshots neu erzeugen (`SCREENSHOTS.md`) | erledigt 23.09.2026 18:40: alle 14 Bilder gegen staging mit #242/#243 neu, ohne Fehler |
 | F3 | Kommt Push („Push Server-Seite"): Geräte-Token in DATENSCHUTZ-ANGABEN.md und in der Datenschutzerklärung nachtragen; Apple- und Play-Formular neu | offen |
 | F4 | Wechselt ein weiteres Spiel in der App auf `spielbar`: ALTERSFREIGABE.md neu (Poker = simuliertes Glücksspiel), TEXTE.md, Screenshots | offen, sobald es passiert |
 | F5 | Nach der Einreichung: tatsächliche Stufen (Apple, USK/PEGI) hier und in ALTERSFREIGABE.md eintragen | offen |
