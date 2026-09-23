@@ -69,6 +69,13 @@ describe('Sperren aus dem Shop', () => {
     expect(grund).toContain(SHOP_RUBRIK);
   });
 
+  it('in der App nennt der Grund weder Preis noch Shop (Apple 3.1.1)', () => {
+    const grund = sperrgrund({ preis: { coins: 1200, gems: 80 } }, true);
+    expect(grund).toBe('Nicht freigeschaltet');
+    expect(grund).not.toContain('Shop');
+    expect(grund).not.toContain('Münzen');
+  });
+
   it('eine fehlende Paketabsage bekommt den Text aus dem Wörterbuch, alles andere den alten Satz', () => {
     const absage = { code: 'inhaltspaketFehlt', messageKey: 'error.inhaltspaketFehlt', status: 403 };
     expect(tischFehler(absage, 'sonst')).toBe(t('error.inhaltspaketFehlt'));
