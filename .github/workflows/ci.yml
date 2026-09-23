@@ -178,11 +178,25 @@ jobs:
             exit 1
           fi
 
+          # Bei einem Pull Request scannen wir NUR die Commits dieses PR, nicht
+          # die ganze Historie. Wer einen Zweig aus einem älteren Commit abzweigt,
+          # kriegt sonst alle Funde aus den dazwischenliegenden Commits aufs
+          # Dach, auch wenn der PR selbst sauber ist.
+          # Bei Push (auf main) bleibt der Scan uneingeschränkt.
+          log_opts=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Bereich: von der Verzweigung bis zum PR-Kopf
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+            log_opts="--log-opts=${base}..${head}"
+          fi
+
           # --exit-code 2 trennt den Fund vom Werkzeugfehler: Ohne das Flag
           # meldet gitleaks BEIDES als 1 (nachgemessen an 8.18.4 am 06.09.2026:
           # 0 sauber, 1 Fund, 1 auch bei unlesbarer Quelle).
           gitleaks detect --source . --redact --no-banner --verbose \
-            --report-path gitleaks-bericht.json --exit-code 2
+            --report-path gitleaks-bericht.json --exit-code 2 \
+            $log_opts
           code=$?
 
           if [ "$code" -eq 0 ]; then
