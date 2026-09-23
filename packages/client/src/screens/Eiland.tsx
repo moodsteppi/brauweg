@@ -16,6 +16,7 @@ import { Ornamentbild } from '../minispiele/eiland/Ornament';
 import type { EilandSicht, EilandVariante } from '../minispiele/eiland/sicht';
 import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
+import { serverAdresse } from '../laufzeit';
 
 /**
  * Eiland — Landnahme zu zweit, gleichzeitig gezogen.
@@ -1198,7 +1199,7 @@ function Spielerstand({
         {/* Kein <img> auf eine Datei, die es nicht gibt: Ohne Bild steht der
             Anfangsbuchstabe da. Ein weisser Kasten saehe nach Fehler aus. */}
         {zeile?.avatarUrl ? (
-          <img src={zeile.avatarUrl} alt="" draggable={false} />
+          <img src={serverAdresse(zeile.avatarUrl)} alt="" draggable={false} />
         ) : (
           <strong>{(name[0] ?? '?').toUpperCase()}</strong>
         )}

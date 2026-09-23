@@ -184,6 +184,18 @@ export const SESSION_COOKIE = 'brauweg_session';
  */
 export const APP_ORIGIN = 'brauweg://app';
 
+/**
+ * Profilbilder, Meme-Motive und ihre Toene darf auch die App laden.
+ *
+ * Helmet setzt auf jede Antwort `Cross-Origin-Resource-Policy: same-origin`.
+ * Im Browser merkt das niemand, der Client liegt auf derselben Herkunft. Die
+ * App aber laedt `<img src="https://www.brauweg-spielen.de/api/avatars/…">`
+ * aus `brauweg://app` — und WebKit verwirft das Bild dann stumm, obwohl es
+ * mit 200 ankommt. Die Dateien sind ohnehin oeffentlich (ohne Anmeldung
+ * abrufbar), die Freigabe verraet also nichts.
+ */
+const BILD_FUER_ALLE = 'cross-origin';
+
 /** Kommt diese Herkunft aus der App? */
 export function istAppHerkunft(origin: string | undefined): boolean {
   return origin === APP_ORIGIN;
@@ -1250,6 +1262,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply
       .header('content-type', match[1]!)
       .header('cache-control', 'public, max-age=120')
+      .header('cross-origin-resource-policy', BILD_FUER_ALLE)
       .send(Buffer.from(match[2]!, 'base64'));
   });
 
@@ -2260,6 +2273,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       return reply
         .header('etag', marke)
         .header('cache-control', 'public, max-age=30, must-revalidate')
+        .header('cross-origin-resource-policy', BILD_FUER_ALLE)
         .status(304)
         .send();
     }
@@ -2267,6 +2281,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .header('content-type', typ)
       .header('etag', marke)
       .header('cache-control', 'public, max-age=30, must-revalidate')
+      .header('cross-origin-resource-policy', BILD_FUER_ALLE)
       .send(bytes);
   });
 
@@ -2294,6 +2309,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         return reply
           .header('etag', marke)
           .header('cache-control', 'public, max-age=30, must-revalidate')
+          .header('cross-origin-resource-policy', BILD_FUER_ALLE)
           .status(304)
           .send();
       }
@@ -2301,6 +2317,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .header('content-type', typ)
         .header('etag', marke)
         .header('cache-control', 'public, max-age=30, must-revalidate')
+        .header('cross-origin-resource-policy', BILD_FUER_ALLE)
         .send(bytes);
     },
   );

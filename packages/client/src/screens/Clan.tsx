@@ -14,6 +14,7 @@ import {
 import { HubBanner, HubSzene } from '../hub';
 import { ClanChat } from './ClanChat';
 import { ClanKrieg } from './ClanKrieg';
+import { serverAdresse } from '../laufzeit';
 
 /**
  * Clan-Tab (Plan 9.3).
@@ -71,7 +72,7 @@ function istLeitung(rolle: string | null | undefined): boolean {
  * nicht viermal dasselbe Bild zeigen.
  */
 function bildFuer(m: { accountId: string; hasAvatar: boolean }, i: number): string {
-  return m.hasAvatar ? `/api/avatars/${m.accountId}` : `/hub/pinguin-${(i % 4) + 1}.png`;
+  return m.hasAvatar ? serverAdresse(`/api/avatars/${m.accountId}`) : `/hub/pinguin-${(i % 4) + 1}.png`;
 }
 
 /**

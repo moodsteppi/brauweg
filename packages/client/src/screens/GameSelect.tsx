@@ -28,7 +28,7 @@ import {
   type Waehrung,
   type Shop as ShopDaten,
 } from '../api';
-import { inApp } from '../laufzeit';
+import { inApp, serverAdresse } from '../laufzeit';
 import {
   DECKS,
   RUECKEN,
@@ -414,7 +414,7 @@ export function GameSelect({
             Stand blockiert (scriptSrc 'self', ohne 'wasm-unsafe-eval'). Der
             gemalte Pinguin laedt nichts nach und kann nicht scheitern. */}
           {me.avatarUrl ? (
-            <img className="front-avatar" src={me.avatarUrl} alt="" draggable={false} />
+            <img className="front-avatar" src={serverAdresse(me.avatarUrl)} alt="" draggable={false} />
           ) : (
             <Pinguin getragen={me.avatar} groesse={2.6} className="front-avatar" />
           )}
@@ -3334,7 +3334,7 @@ function ProfilBild({
     }
   };
 
-  const src = me.avatarUrl ? `${me.avatarUrl}?v=${ver}` : null;
+  const src = me.avatarUrl ? `${serverAdresse(me.avatarUrl)}?v=${ver}` : null;
 
   return (
     <label className={`hub-profilbild${busy ? ' is-busy' : ''}`} title="Profilbild ändern">
