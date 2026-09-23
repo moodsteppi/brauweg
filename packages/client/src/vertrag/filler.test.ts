@@ -1,6 +1,14 @@
-import { DEFAULT_REGELN, type FillerSicht as ModulSicht, filler } from '@brauweg/game-filler';
+import {
+  DEFAULT_REGELN,
+  FARBEN_HOECHSTENS,
+  type FillerSicht as ModulSicht,
+  VARIANTEN,
+  farbzahl,
+  filler,
+} from '@brauweg/game-filler';
 import { describe, expect, it } from 'vitest';
 
+import { FARBEN, farbzahlAus } from '../minispiele/filler/farben';
 import type { FillerSicht } from '../minispiele/filler/sicht';
 import {
   type Beweglich,
@@ -95,5 +103,28 @@ describe('Vertrag Filler', () => {
     // der Bildschirm kein einziges Ziel an und die Spielart `build` ist tot.
     expect(gesehen.oben.has('barrierenMoeglich')).toBe(true);
     expect(gesehen.oben.has('barrierenUebrig')).toBe(true);
+  });
+});
+
+/*
+ * Die Palette gegen die Farbzahl des Moduls.
+ *
+ * FARBEN steht im Client, die Zahl der Farben je Spielart im Modul. Laufen
+ * beide auseinander, wird nichts rot: `farbeVon` zeichnet eine fehlende Farbe
+ * still als Rot, und die Farbtupfer im Menue zeigen zu wenige. Deshalb hier.
+ */
+describe('Vertrag Filler: Farben', () => {
+  it('hat fuer jede Farbzahl, die das Modul zulaesst, eine Farbe', () => {
+    expect(FARBEN.length).toBeGreaterThanOrEqual(FARBEN_HOECHSTENS);
+  });
+
+  it('liest je Spielart dieselbe Farbzahl aus der Vorgabe, mit der das Modul den Tisch baut', () => {
+    for (const variante of VARIANTEN) {
+      const config = { ...DEFAULT_REGELN, variante };
+      expect(farbzahlAus(config as unknown as Record<string, unknown>, variante)).toBe(
+        farbzahl(config),
+      );
+      expect(farbzahl(config)).toBeLessThanOrEqual(FARBEN.length);
+    }
   });
 });

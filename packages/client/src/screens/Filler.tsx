@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type Suchstand } from '../api';
 import { AuswahlRaster } from '../hub';
-import { FARBEN, GRAUTOENE, farbeVon } from '../minispiele/filler/farben';
+import { FARBEN, GRAUTOENE, farbeVon, farbzahlAus } from '../minispiele/filler/farben';
 import type { FillerSicht, Variante } from '../minispiele/filler/sicht';
-import { useSpielVorgabe, zahlAus } from '../spiel-vorgabe';
+import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { serverAdresse } from '../laufzeit';
 
@@ -104,31 +104,13 @@ function mitMauern(v: Variante): boolean {
   return v === 'build' || v === 'extreme';
 }
 
-/**
- * Was der Bildschirm an der Farbzahl UEBERSTIMMT: sieben in Extreme.
- *
- * Ueberall sonst ein leeres Objekt und nicht die Sechs — die kennt das Modul,
- * und sie soll sich dort aendern duerfen, ohne dass hier jemand nachzieht.
- * Die Sieben dagegen ist eine Eigenheit dieser einen Spielart, die die
- * Vorgabe des Moduls gar nicht ausdruecken kann: Sie fuehrt EINE Farbzahl
- * fuer alle Spielarten. Ein Tisch, der einmal mit sieben aufgemacht wurde,
- * behaelt sie.
+/*
+ * HIER STAND BIS ZUM 23.09.2026 `farbenFuer`: Der Bildschirm setzte in Extreme
+ * selbst `farben: 7` in den Regelsatz, weil die Vorgabe des Moduls nur EINE
+ * Farbzahl fuer alle Spielarten kannte. Jetzt leitet das Modul sie aus der
+ * Spielart ab (`farbzahl` in packages/game-filler/src/regeln.ts), und hier
+ * wird sie nur noch gelesen (`farbzahlAus`).
  */
-function farbenFuer(v: Variante): { farben?: number } {
-  return v === 'extreme' ? { farben: 7 } : {};
-}
-
-/**
- * Dieselbe Zahl als Zahl — fuer die Farbtupfer und das Vorschaubrett im
- * Menue.
- *
- * `FARBEN.length - 1` ist der Notnagel, solange die Antwort des Servers noch
- * unterwegs ist: sechs von sieben Tupfern, also alles ausser dem Orange, das
- * nur Extreme kennt. Sobald die Vorgabe da ist, gilt sie.
- */
-function farbzahlFuer(v: Variante, vorgabe: Record<string, unknown> | null): number {
-  return farbenFuer(v).farben ?? zahlAus(vorgabe, 'farben', FARBEN.length - 1);
-}
 
 /**
  * Die zuletzt gewaehlte Spielart ueberlebt das Schliessen.
@@ -356,7 +338,6 @@ export function Filler({
     try {
       const stand = await api.sucheStarten('filler', {
         ...(await holeVorgabe()),
-        ...farbenFuer(variante),
         variante,
       });
       if (stand.tischId) setTischId(stand.tischId);
@@ -448,7 +429,7 @@ export function Filler({
     try {
       const { id } = await api.createTable({
         gameId: 'filler',
-        config: { ...(await holeVorgabe()), ...farbenFuer(variante), variante },
+        config: { ...(await holeVorgabe()), variante },
         seats: 2,
         rounds: 1,
         visibility: 'on_request',
@@ -610,7 +591,7 @@ export function Filler({
             Färbe dein Gebiet um und schlucke, was daran grenzt.
           </p>
           <div className="fl-probe" aria-hidden="true">
-            {FARBEN.slice(0, farbzahlFuer(variante, vorgabe)).map((farbe, i) => (
+            {FARBEN.slice(0, farbzahlAus(vorgabe, variante)).map((farbe, i) => (
               <span key={i} style={{ background: farbe }} />
             ))}
           </div>
@@ -1386,7 +1367,7 @@ function Vorschaubrett({
   /** Regelsatz des Moduls, sobald er da ist — fuer die Farbzahl. */
   vorgabe: Record<string, unknown> | null;
 }): React.JSX.Element {
-  const farbzahl = farbzahlFuer(variante, vorgabe);
+  const farbzahl = farbzahlAus(vorgabe, variante);
   const nebel = variante === 'nebel';
   const mauern = variante === 'build' || variante === 'extreme';
   const sterne = variante === 'extreme' ? new Set(VORSCHAU_STERNE) : new Set<number>();

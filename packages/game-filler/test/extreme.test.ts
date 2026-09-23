@@ -22,7 +22,11 @@ import {
 import { DEFAULT_REGELN, mitBarrieren, mitSternen } from '../src/regeln.js';
 import { sichtFuer, zuschauerSicht } from '../src/sicht.js';
 
-const EXTREME = { ...DEFAULT_REGELN, variante: 'extreme', farben: 7, barrieren: 10 } as const;
+/*
+ * Ohne `farben`, wie der Bildschirm den Tisch aufmacht: Die Sieben muss aus
+ * der Spielart kommen, nicht aus dem mitgeschickten Regelsatz.
+ */
+const EXTREME = { ...DEFAULT_REGELN, variante: 'extreme', barrieren: 10 } as const;
 const SAAT = 'c0ffee1234567890abcdef0123456789';
 
 function abstand(a: number, b: number, spalten: number): number {

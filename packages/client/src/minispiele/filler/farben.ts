@@ -6,10 +6,17 @@
  * Skript neu laufen. Dieselbe Bauart wie minispiele/eiland/farben.ts.
  */
 
+import type { Variante } from './sicht';
+
 /**
  * Die sechs Farben des Vorbilds, in dieser REIHENFOLGE — plus eine siebte
  * (Orange), die nur die Spielart Extreme benutzt. Die anderen Spielarten
  * zaehlen bis sechs und sehen sie nie.
+ *
+ * Wie viele Farben es je Spielart gibt, entscheidet das Modul
+ * (FARBEN_JE_SPIELART in packages/game-filler/src/regeln.ts). Ein Eintrag
+ * weniger hier, und src/vertrag/filler.test.ts wird rot — sonst zeichnete
+ * `farbeVon` die fehlende Farbe still als Rot.
  *
  * Die Reihenfolge ist Protokoll: Ueber die Leitung geht nur die Nummer. Wer
  * hier etwas einschiebt, faerbt jede laufende Partie um — und zwar auf beiden
@@ -40,4 +47,30 @@ export const GRAUTOENE = ['#949494', '#a3a3a3', '#b2b2b2', '#c0c0c0', '#cbcbcb']
 
 export function farbeVon(nr: number): string {
   return FARBEN[nr] ?? FARBEN[0];
+}
+
+/**
+ * Wie viele Farben eine Spielart hat — gelesen aus der Vorgabe des Moduls,
+ * fuer die Farbtupfer und das Vorschaubrett im Menue.
+ *
+ * BIS ZUM 23.09.2026 stand die Sieben fuer Extreme hier im Client und ging
+ * mit jedem neuen Tisch als `farben` an den Server — sie ueberstimmte das
+ * Modul, und niemand haette es gemerkt, wenn dort die Zahl anders
+ * geschnitten wuerde. Jetzt traegt die Vorgabe `farbenJeSpielart`, und der
+ * Bildschirm schickt gar keine Farbzahl mehr mit. Eine ausdrueckliche
+ * `farben` in der Vorgabe gilt zuerst, wie im Modul (`farbzahl`).
+ *
+ * Die Sechs ist der Notnagel, solange die Antwort des Servers noch unterwegs
+ * ist: die Farben des Vorbilds, also alles ausser dem Orange. Ob die Palette
+ * fuer die Zahlen des Moduls reicht, prueft src/vertrag/filler.test.ts.
+ */
+export function farbzahlAus(vorgabe: Record<string, unknown> | null, variante: Variante): number {
+  const fest = vorgabe?.['farben'];
+  if (typeof fest === 'number') return fest;
+  const tabelle = vorgabe?.['farbenJeSpielart'];
+  const wert =
+    typeof tabelle === 'object' && tabelle !== null
+      ? (tabelle as Record<string, unknown>)[variante]
+      : undefined;
+  return typeof wert === 'number' ? wert : FARBEN.length - 1;
 }

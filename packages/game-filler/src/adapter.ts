@@ -32,6 +32,7 @@ import {
   DEFAULT_REGELN,
   type FillerRegeln,
   SEAT_COUNTS,
+  farbzahl,
   pruefeRegeln,
   rotationSize,
   suggestedRounds,
@@ -103,7 +104,7 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
      * waere der Zug keine Entscheidung mehr, sondern eine Pflicht — und bei
      * genau einer verbleibenden Farbe zoege die Partie sich selbst zu Ende.
      */
-    if (regeln.farben - seats < 2) {
+    if (farbzahl(regeln) - seats < 2) {
       probleme.push({ path: 'farben', messageKey: 'ruleset.zuWenigFarben', severity: 'error' });
     }
     return probleme;

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   type FillerAktion,
   DEFAULT_REGELN,
+  FARBEN_JE_SPIELART,
   GRAUTOENE,
   LEERZUEGE_MAX,
   erlaubteZuege,
@@ -92,7 +93,7 @@ describe('Zuege', () => {
   it('sperrt die Farben beider Sitze', () => {
     const partie = neu();
     const farben = farbzuege(erlaubteZuege(partie, 0));
-    assert.equal(farben.length, DEFAULT_REGELN.farben - 2);
+    assert.equal(farben.length, FARBEN_JE_SPIELART.nebel - 2);
     assert.ok(!farben.includes(partie.farbe[0]!));
     assert.ok(!farben.includes(partie.farbe[1]!));
   });
