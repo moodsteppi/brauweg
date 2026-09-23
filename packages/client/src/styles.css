@@ -19294,6 +19294,72 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .gf-bw-anzeige { margin-bottom: 12px; }
 
+/* Golf Fun-Modus (seit 23.09.2026, minispiele/golf/FunAnsage.tsx): die Wahl
+   im Bot-Menü, das Schild im HUD, die Roulette-Ansage am Lochbeginn und der
+   Blick aufs nächste Loch in der Pause. `fixed`, weil .gf-hud keine Höhe
+   hat, an der sich eine Mitte messen ließe. Die Ansage liegt über der Bahn, aber
+   nimmt keinen Tipp weg — gezielt wird auch während sie steht. */
+.gf-fun-wahl { display: flex; flex-direction: column; gap: 4px; }
+.gf-fun-wahl small { color: #a9c4ad; font: 600 12px/1.35 system-ui; }
+.gf-fun-schild {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px auto 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.78);
+  color: #e8f0e6;
+  font: 700 12px/1 system-ui;
+  pointer-events: none;
+}
+.gf-fun-schild em { font-style: normal; color: #a9c4ad; }
+.gf-fun-pfeil { display: inline-block; color: #8ee0a3; font-size: 14px; line-height: 1; }
+.gf-fun-ansage {
+  position: fixed;
+  z-index: 6;
+  top: 38vh;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(80vw, 320px);
+  padding: 14px 18px 16px;
+  border-radius: 20px;
+  background: rgba(10, 24, 16, 0.9);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.9);
+  color: #e8f0e6;
+  text-align: center;
+  pointer-events: none;
+  animation: gf-fun-auf 220ms ease-out;
+}
+.gf-fun-ansage small { display: block; color: #a9c4ad; font: 700 11px/1 system-ui; letter-spacing: 0.08em; text-transform: uppercase; }
+.gf-fun-ansage .gf-fun-zeichen { display: block; margin: 6px 0 2px; font-size: clamp(40px, 12vw, 56px); line-height: 1.1; }
+.gf-fun-ansage strong { display: block; font: 800 clamp(20px, 6vw, 26px)/1.15 system-ui; }
+.gf-fun-ansage p { margin: 8px 0 0; color: #cfe0cf; font: 600 13px/1.35 system-ui; }
+.gf-fun-ansage[data-dreht] .gf-fun-zeichen { filter: blur(0.5px); opacity: 0.85; }
+.gf-fun-naechstes {
+  position: fixed;
+  z-index: 6;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.9);
+  color: #e8f0e6;
+  font: 600 13px/1.2 system-ui;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@keyframes gf-fun-auf {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gf-fun-ansage { animation: none; }
+}
+
 /* ==========================================================================
  * Partykiste
  *

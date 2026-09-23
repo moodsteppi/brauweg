@@ -41,6 +41,7 @@ import type {
 import { RAND_DICKE, istKreis, istRechteck } from './karte';
 import {
   BALL_R,
+  ballRadius,
   IMMUN_TAKTE,
   LOCH_R,
   MAX_ZUG,
@@ -931,6 +932,8 @@ export class Zeichner {
       a.anteil > 0 &&
       a.anteil < 1.2;
     const eigenGross = a.uebersicht ? 1.6 : 1;
+    // Riesen- und Miniball (Fun-Modus) malen sich in ihrer echten Größe.
+    const ballR = ballRadius(z, a.karte);
 
     for (let s = 0; s < z.baelle.length; s += 1) {
       const b = z.baelle[s];
@@ -949,7 +952,7 @@ export class Zeichner {
         }
       }
       const flug = b.flugTakte > 0;
-      const r = BALL_R * eigenGross * (flug ? 1.45 : 1);
+      const r = ballR * eigenGross * (flug ? 1.45 : 1);
       const schattenAb = flug ? 0.55 : 0.16;
 
       ctx.fillStyle = flug ? 'rgba(0, 0, 0, 0.28)' : 'rgba(0, 0, 0, 0.38)';
