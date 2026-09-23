@@ -155,8 +155,11 @@ export const golf: GameModule<GolfPartie, GolfAktion, GolfView, GolfRegeln> = {
    * trägt `modus`, Physik und Bots lesen die Werte des Lochs. Ein Client von
    * davor spielte einen Fun-Tisch klassisch — eine andere Partie aus
    * derselben Zugliste.
+   *
+   * 7 seit dem 23.09.2026: Physikänderung am Strudel (hält keinen Ball mehr
+   * fest, siehe `bewege` in physik.ts) — derselbe Grund wie bei 3.
    */
-  protocolVersion: 6,
+  protocolVersion: 7,
 
   defaultConfig: () => DEFAULT_REGELN,
 

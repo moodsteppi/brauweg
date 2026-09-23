@@ -223,19 +223,29 @@ Protokollversion.
   Erreichbarkeit per Wegfeld) und `botLoestKarte` (Genie-Bot schafft sie in
   ≤ Schlaglimit) laufen als Vitest über alle. Eine Bahn, die der Bot nicht
   schafft, wird umgebaut, nicht der Test gelockert.
-- **Ein Strudel kann einen Ball für immer festhalten (gefunden am 22.09.2026
-  beim Bau von k41–k60).** Der tangentiale Anteil der Strudelkraft trägt den
-  Ball bei vielen Kombinationen aus Radius und Stärke auf eine Kreisbahn, die
-  weder zerfällt noch in den Fang (0,25 E, unter 3 E/s) führt — und ein
-  gezogener Ball `ruht` nie, sein Spieler darf also bis zum Zeitlimit nicht
-  schlagen. Auf freiem Rasen, 960 Anläufe je Strudel: r 1,5 bis Stärke 15 und
-  r 2 bis Stärke 20 halten viele Anläufe länger als eine Minute fest;
-  r 1/15, r 1,2/20, r 1,5/25, r 2/30 und r 2,5/40 keinen. Auf Eis
-  entkommt der Ball immer. Aus demselben Grund fängt ein Strudel mit `ziel`
-  (Auswurf) fast nie — als Abkürzung taugt er nicht, als Ablenkung schon.
-  Betroffen sind auch vorhandene Bahnen (k20, k25, k34, k38 und der
-  Auswurf auf k08); die Physik zu ändern wäre ein Protokollbruch. Die neuen
-  Bahnen nehmen nur haltlose Strudel, `karten/k51-k60.test.ts` prüft das.
+- **Ein Strudel schiebt nur fünf Sekunden (seit 23.09.2026, Version 7).**
+  Der Drall eines Strudels ist eine Kraft quer zum Radius und leistet am
+  kreisenden Ball Arbeit. Bei schwachen Strudeln (r 1,5 bis Stärke 15, r 2
+  bis Stärke 20) gab es einen Kreis, auf dem sie die Reibung genau aufwog:
+  Der Ball drehte dort für immer, ruhte nie, und sein Spieler durfte bis zum
+  Zeitlimit nicht schlagen — live auf k08 (Auswurf), k20, k25, k28, k34,
+  k38 (gefunden am 22.09.2026 beim Bau von k41–k60).
+  Gemessen, nicht vermutet: r 1,5 / Stärke 12 hält d 0,85 und v 2,11 über
+  500 Takte, Drall +6,57 gegen Reibung −6,57 E²/s³. Seitdem zählt jeder Ball
+  `strudelTakte` (Takte in Strudeln seit er zuletzt lag); ab
+  `STRUDEL_SOG_TAKTE` = 100 lenkt der Drall nur noch, das Tempo kommt aus der
+  Energiebilanz im Trichter, der Ball rollt dort wie auf Rasen und sinkt zur
+  Mitte. Bis zur Schwelle rechnet der Strudel wie vorher — jeder Ball, der
+  nicht festhing, rollt Takt für Takt gleich, auch die Schleudern auf k41–k60
+  (längster Lauf dort 88 Takte). Ein Auswurf legt den Ball am `ziel` ab, statt
+  ihn weiterrollen zu lassen. `strudel.test.ts` läuft jeden Strudel des
+  Katalogs bis zu 560-mal an und verlangt: höchstens 200 Takte rollend im
+  Strudel, und er fängt. Wer eine Bahn baut, die dort rot wird, baut den Strudel um.
+  Starke Strudel (r 1,5 / Stärke 25, r 2 / Stärke 30) werfen einen Ball
+  weiterhin eher hinaus, als dass sie ihn fangen — das ist ihr Charakter,
+  nicht der Fehler; `karten/k51-k60.test.ts` hält fest, dass die Strudel
+  der neuen Bahnen keinen Ball kreisen lassen. Die Messwerkzeuge liegen in
+  `golf-strudel-lauf/` im Prüfordner.
 - **Wer Bahnen hinzufügt, verschiebt die Folge neuer Partien — aber nicht die
   alter Schnappschüsse.** Ein Schnappschuss von vor dem 22.09.2026 hat kein
   `bahnen` und bekommt die Folge beim Laden nachgezogen, und zwar gegen
