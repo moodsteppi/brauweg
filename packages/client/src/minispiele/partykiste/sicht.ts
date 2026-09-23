@@ -22,6 +22,17 @@ import type {
 
 export type { KategorienSicht, MehrheitSicht, OhneUhrAktion, RegelKarteSicht, RegelkartenSicht } from './sicht-ohne-uhr';
 
+import type { BombeSicht, KoenigsbecherSicht, ZehnSekundenSicht, ZeitdruckAktion } from './sicht-zeitdruck';
+
+export type {
+  BombeSicht,
+  KoenigsbecherSicht,
+  PartyGezogeneKarte,
+  PartyKartenFolge,
+  ZehnSekundenSicht,
+  ZeitdruckAktion,
+} from './sicht-zeitdruck';
+
 /** Spielstaerke der Bots — Spiegelbild von game-api BotLevel (protocol.ts). */
 export type PartyBotStufe = 'anfaenger' | 'standard' | 'experte' | 'genie';
 
@@ -37,7 +48,10 @@ export type PartyMinispiel =
   | 'wahrheitpflicht'
   | 'kategorien'
   | 'mehrheit'
-  | 'regelkarte';
+  | 'regelkarte'
+  | 'bombe'
+  | 'zehnsekunden'
+  | 'koenigsbecher';
 
 export type PartyPhase = 'sehen' | 'spiel' | 'ergebnis';
 
@@ -159,7 +173,10 @@ export type PartyMinispielSicht =
   | WahrheitPflichtSicht
   | KategorienSicht
   | MehrheitSicht
-  | RegelkartenSicht;
+  | RegelkartenSicht
+  | BombeSicht
+  | ZehnSekundenSicht
+  | KoenigsbecherSicht;
 
 export interface PartyPlatzierung {
   sitz: number;
@@ -252,7 +269,8 @@ export type PartyAktion =
   | { art: 'wahl'; pflicht: boolean }
   | { art: 'erledigt'; ja: boolean }
   | OhneUhrAktion
-  | { art: 'lagerwechsel'; sitz: number };
+  | { art: 'lagerwechsel'; sitz: number }
+  | ZeitdruckAktion;
 
 // ---------------------------------------------------------------------------
 // Anzeigetexte — an einer Stelle, weil sie an drei Stellen gebraucht werden
@@ -271,6 +289,9 @@ export const MINISPIEL_NAME: Record<PartyMinispiel, string> = {
   kategorien: 'Kategorien-Battle',
   mehrheit: 'Mehrheitsraten',
   regelkarte: 'Regel-Karte',
+  bombe: 'Bombe',
+  zehnsekunden: '10 Sekunden',
+  koenigsbecher: 'Königsbecher',
 };
 
 export const MINISPIEL_ANSAGE: Record<PartyMinispiel, string> = {
@@ -286,6 +307,9 @@ export const MINISPIEL_ANSAGE: Record<PartyMinispiel, string> = {
   kategorien: 'Reihum laut etwas nennen. Wer stockt oder doppelt, trinkt.',
   mehrheit: 'Selbst antworten — und tippen, was die Mehrheit sagt. Daneben heißt trinken.',
   regelkarte: 'Eine Regel für die nächsten zwei Runden. Jeder Verstoß ist ein Schluck.',
+  bombe: 'Nenn etwas und gib weiter. Sie tickt — wer sie hält, wenn sie hochgeht, trinkt.',
+  zehnsekunden: 'Drei Dinge in zehn Sekunden. Die Runde urteilt — nicht geschafft heißt trinken.',
+  koenigsbecher: 'Reihum eine Karte ziehen, jede Karte ist eine Regel. Wen sie trifft, der trinkt.',
 };
 
 /**
@@ -302,6 +326,9 @@ const MINISPIEL_ANSAGE_OHNE: Partial<Record<PartyMinispiel, string>> = {
   kategorien: 'Reihum laut etwas nennen. Wer stockt oder doppelt, kassiert.',
   mehrheit: 'Selbst antworten — und tippen, was die Mehrheit sagt. Daneben gibt einen Strafpunkt.',
   regelkarte: 'Eine Regel für die nächsten zwei Runden. Jeder Verstoß ist ein Strafpunkt.',
+  bombe: 'Nenn etwas und gib weiter. Sie tickt — wer sie hält, wenn sie hochgeht, kassiert.',
+  zehnsekunden: 'Drei Dinge in zehn Sekunden. Die Runde urteilt — nicht geschafft gibt Strafpunkte.',
+  koenigsbecher: 'Reihum eine Karte ziehen, jede Karte ist eine Regel. Wen sie trifft, der kassiert.',
 };
 
 /**

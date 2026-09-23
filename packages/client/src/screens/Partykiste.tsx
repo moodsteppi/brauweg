@@ -522,7 +522,7 @@ export function Partykiste({
       ) : (
         <>
           <p className="pk-ansage">{ansageFuer(sicht.art, sicht.trinkmodus)}</p>
-          <Runde sicht={sicht} sitze={sitze} sende={sende} />
+          <Runde sicht={sicht} sitze={sitze} sende={sende} frist={tisch.view?.phaseDeadline ?? null} />
           {sicht.phase === 'ergebnis' ? (
             <Abrechnung sicht={sicht} sitze={sitze} binFertig={binFertig} sende={sende} />
           ) : null}

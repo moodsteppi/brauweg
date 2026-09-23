@@ -128,9 +128,12 @@ test('Eskalation: die Texte werden schaerfer — und kein harmloser Abend faengt
       const haerte = haerteVon(NIEMALS_SPRUECHE.find((s) => s.id === runde.spruchId)!);
       const stufe = eskalationsStufe(nr, 6);
       assert.ok(haerte <= stufe, `Saat ${saat}, Runde ${nr}: Haerte ${haerte} in Stufe ${stufe}`);
-      /* Die Stufe wird ausgeschoepft: Es gibt pikante Sprueche, also kommt
-         ab Stufe 2 einer — sonst stuende die Kurve nur im Regelsatz. */
-      if (stufe >= 2) assert.equal(haerte, 2, `Saat ${saat}, Runde ${nr}: Stufe ${stufe}, aber harmlos`);
+      /* Die Stufe wird ausgeschoepft: Gibt es Sprueche dieser Stufe, kommt
+         einer — sonst stuende die Kurve nur im Regelsatz. Bis #214 hatte
+         „Ich hab noch nie" nichts Derbes, und hier stand fest „2"; seit dem
+         Katalog als JSON (23.09.2026) gibt es Derbes, und Stufe 3 nimmt es. */
+      const hoechste = Math.max(...NIEMALS_SPRUECHE.map((s) => haerteVon(s)));
+      if (stufe >= 2) assert.equal(haerte, Math.min(stufe, hoechste), `Saat ${saat}, Runde ${nr}: Stufe ${stufe}, Haerte ${haerte}`);
     }
   }
 });
@@ -140,6 +143,7 @@ test('Eskalation: ueber den ganzen Abend kommt keine Kennung zweimal', () => {
     [...MINISPIELE],
     ['niemals', 'wereher'],
     ['werbinich', 'wahrheitpflicht', 'quiz'],
+    ['bombe', 'zehnsekunden', 'koenigsbecher'],
   ];
   for (const minispiele of varianten) {
     for (const saat of [1, 2, 3]) {
@@ -568,6 +572,13 @@ function kennungen(runde: Runde): Array<[string, string]> {
       return [['entweder', runde.paarId]];
     case 'wahrheitpflicht':
       return runde.aufgabeId.filter((id) => id !== '').map((id) => ['aufgaben', id]);
+    /* Die drei mit Uhr (23.09.2026) — die Bombe mit eigenem Kategorien-Stapel. */
+    case 'bombe':
+      return [['bombe', runde.kategorieId]];
+    case 'zehnsekunden':
+      return [['zehnsekunden', runde.aufgabeId]];
+    case 'koenigsbecher':
+      return runde.regelVorrat.map((r) => ['koenigsbecher-regeln', r.karteId]);
     default:
       return [];
   }

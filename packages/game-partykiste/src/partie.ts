@@ -40,6 +40,7 @@ import { WER_EHER_SPRUECHE } from './inhalte/wereher.js';
 import { KATEGORIEN } from './inhalte/kategorien.js';
 import { MEHRHEITSFRAGEN } from './inhalte/mehrheit.js';
 import { REGELKARTEN } from './inhalte/regelkarten.js';
+import { ZEHN_SEKUNDEN } from './inhalte/zehnsekunden.js';
 import {
   kategorieVorbei,
   kategorienStart,
@@ -57,6 +58,24 @@ import {
   type MehrheitRunde,
   type RegelkartenRunde,
 } from './ohne-uhr.js';
+import {
+  bombeZug,
+  istZeitdruck,
+  koenigsbecherStart,
+  koenigsbecherZug,
+  werteBombe,
+  werteKoenigsbecher,
+  werteZehn,
+  zehnSprecher,
+  zehnStart,
+  zehnZug,
+  zeitdruckAmZug,
+  zeitdruckSchritt,
+  zuendzeit,
+  type BombeRunde,
+  type KoenigsbecherRunde,
+  type ZehnSekundenRunde,
+} from './zeitdruck.js';
 import {
   MINDESTMENGE,
   waehlbareInhalte,
@@ -92,7 +111,7 @@ import {
 } from './modi.js';
 
 // ---------------------------------------------------------------------------
-// Karten (nur Bus fahren)
+// Karten (Bus fahren und Koenigsbecher)
 // ---------------------------------------------------------------------------
 
 /** rang 2..14 (11-14 = Bube, Dame, Koenig, Ass), farbe 0..3 (0 und 1 sind rot). */
@@ -105,7 +124,8 @@ export function istRot(karte: Karte): boolean {
   return karte.farbe < 2;
 }
 
-function neuerStapel(): Karte[] {
+/** Das 52er-Blatt, ungemischt. Bus fahren und Koenigsbecher mischen es je Runde aus der Saat. */
+export function neuerStapel(): Karte[] {
   const karten: Karte[] = [];
   for (let farbe = 0; farbe < 4; farbe++) {
     for (let rang = 2; rang <= 14; rang++) karten.push({ rang, farbe });
@@ -272,7 +292,11 @@ export type Runde =
   /* Die drei ohne Uhr — Typen und Regeln in ohne-uhr.ts. */
   | KategorienRunde
   | MehrheitRunde
-  | RegelkartenRunde;
+  | RegelkartenRunde
+  /* Die drei mit Uhr — Typen und Regeln in zeitdruck.ts. */
+  | BombeRunde
+  | ZehnSekundenRunde
+  | KoenigsbecherRunde;
 
 /** Was nach der Runde im Partieprotokoll landet (completedSegments). */
 export interface Rundenprotokoll {
@@ -475,11 +499,16 @@ export interface RundenKontext {
   readonly runden?: number;
   /** Reihum-Folge (Team-Abend). Ohne sie: Sitzreihenfolge. */
   readonly folge?: readonly number[];
+  /**
+   * Die Botsitze (seit dem 23.09.2026, nur fuer „10 Sekunden"): Dort spricht
+   * ein MENSCH, und wer das ist, haengt daran, wer Bot ist. Ohne sie: keiner.
+   */
+  readonly botSitze?: readonly number[];
 }
 
 /** Der Kontext fuer Runde `nr` einer laufenden Partie. */
-function rundenKontext(partie: Pick<PartykistePartie, 'runden' | 'lager'>, nr: number): RundenKontext {
-  return { runden: partie.runden, folge: reihumFolge(partie.lager, nr) };
+function rundenKontext(partie: Pick<PartykistePartie, 'runden' | 'lager' | 'botSitze'>, nr: number): RundenKontext {
+  return { runden: partie.runden, folge: reihumFolge(partie.lager, nr), botSitze: partie.botSitze };
 }
 
 /** Die Reihum-Folge der laufenden Runde. */
@@ -731,6 +760,79 @@ export function baueRunde(
         inhaltsRueckfall: karten.rueckfall,
       };
     }
+    case 'bombe': {
+      /*
+       * Die Kategorien des Battles, aber ein eigener Stapel (Zweck 'bombe'):
+       * Die Eskalation belegt jeden Stapel Platz fuer Platz fuer GENAU ein
+       * Minispiel (modi.ts, zweckArt) — ein geteilter Stapel gaebe dort
+       * Kategorien doppelt aus.
+       */
+      const kategorien = stapel(KATEGORIEN, regeln, saat, sitze, 'bombe');
+      const kategorie = an(kategorien.stapel, wievielte);
+      const anwesend = lebende(sitze, ausgestiegen);
+      const start =
+        anwesend.length > 0
+          ? anwesend[ganzzahl(baueZufall(rundenSaat(saat, nr, 'bombe-start')), anwesend.length)]!
+          : 0;
+      return {
+        ...basis,
+        art: 'bombe',
+        phase: 'spiel',
+        kategorieId: kategorie.id,
+        kategorie: kategorie.text,
+        amZug: start,
+        weitergaben: 0,
+        zuendMs: zuendzeit(baueZufall(rundenSaat(saat, nr, 'bombe-zuender'))()),
+        verlierer: OFFEN,
+        inhaltsRueckfall: kategorien.rueckfall,
+      };
+    }
+    case 'zehnsekunden': {
+      const aufgaben = stapel(ZEHN_SEKUNDEN, regeln, saat, sitze, 'zehnsekunden');
+      const aufgabe = an(aufgaben.stapel, wievielte);
+      /* Der Versatz einmal je Partie, dann reihum: Keiner spricht zweimal, bevor alle dran waren. */
+      const versatz = ganzzahl(baueZufall(rundenSaat(saat, 0, 'zehn-sprecher')), Math.max(1, sitze));
+      return {
+        ...basis,
+        art: 'zehnsekunden',
+        phase: 'spiel',
+        aufgabeId: aufgabe.id,
+        aufgabe: aufgabe.text,
+        sprecher: zehnSprecher(sitze, ausgestiegen, kontext.botSitze ?? [], versatz, wievielte),
+        ...zehnStart(sitze),
+        inhaltsRueckfall: aufgaben.rueckfall,
+      };
+    }
+    case 'koenigsbecher': {
+      /*
+       * Was ein Bube bringen kann: die naechsten vier Regel-Karten aus einem
+       * eigenen Stapel (vier Buben im Blatt). Schon hier gezogen, weil nur
+       * hier der gefilterte Stapel zur Hand ist — und weil es so an Saat und
+       * Runde haengt, nicht am Verlauf.
+       */
+      const regelkarten = stapel(REGELKARTEN, regeln, saat, sitze, 'koenigsbecher-regel');
+      const vorrat = Array.from({ length: 4 }, (_, i) => an(regelkarten.stapel, wievielte * 4 + i)).map((k) => ({
+        karteId: k.id,
+        text: k.text,
+      }));
+      const anwesend = lebende(sitze, ausgestiegen);
+      const start =
+        anwesend.length > 0
+          ? anwesend[ganzzahl(baueZufall(rundenSaat(saat, nr, 'koenigsbecher-start')), anwesend.length)]!
+          : 0;
+      return {
+        ...basis,
+        art: 'koenigsbecher',
+        phase: 'spiel',
+        ...koenigsbecherStart(
+          sitze,
+          gemischt(neuerStapel(), baueZufall(rundenSaat(saat, nr, 'koenigsbecher'))),
+          start,
+          vorrat,
+        ),
+        inhaltsRueckfall: regelkarten.rueckfall,
+      };
+    }
   }
 }
 
@@ -818,7 +920,7 @@ export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
     punkte: nullen(o.sitze),
     schlucke: nullen(o.sitze),
     rundeNr: 0,
-    runde: baueRunde(regeln, saat, o.sitze, 0, [], rundenKontext({ runden: o.runden, lager }, 0)),
+    runde: baueRunde(regeln, saat, o.sitze, 0, [], rundenKontext({ runden: o.runden, lager, botSitze: o.botSitze ?? [] }, 0)),
     protokoll: [],
     fertig: false,
     inhaltsHaerteGewollt: wirksam < gewollt ? gewollt : null,
@@ -835,6 +937,24 @@ export function erzeugePartie(o: AufbauOptionen): PartykistePartie {
 /** Handelt dieses Minispiel reihum statt gleichzeitig? */
 export function istReihum(art: MinispielId): boolean {
   return art === 'werbinich' || art === 'busfahrer' || art === 'wahrheitpflicht';
+}
+
+/**
+ * Wie ein Minispiel fuer die Leute am Tisch ablaeuft — das Wort auf der
+ * Kachel im Menue (Client `MINISPIEL_ABLAUF`, Vertrag
+ * `partykiste-auswahl.test.ts`).
+ *
+ * NICHT dasselbe wie `istReihum`: Das sagt, ob die Runde endet, wenn jeder
+ * einmal dran war. Kategorien-Battle, Bombe und Koenigsbecher laufen reihum
+ * IM KREIS und haben dafuer eigene Zweige in `amZug`/`weiter` — fuer den
+ * Tisch sind sie trotzdem „reihum". Bis zum 23.09.2026 hielt der Vertrag die
+ * Kachel gegen `istReihum`, und das Kategorien-Battle haette dort
+ * „gleichzeitig" heissen muessen.
+ */
+export function ablaufVon(art: MinispielId): 'gleichzeitig' | 'reihum' {
+  return istReihum(art) || art === 'kategorien' || art === 'bombe' || art === 'koenigsbecher'
+    ? 'reihum'
+    : 'gleichzeitig';
 }
 
 /** Der Sitz, der bei einem Reihum-Minispiel gerade faehrt. */
@@ -884,6 +1004,8 @@ export function amZug(partie: PartykistePartie): number | null {
     /* Reihum im Kreis, bis einer stockt — nicht istReihum (ohne-uhr.ts). */
     return kategorieVorbei(partie, runde) || partie.ausgestiegen.includes(runde.amZug) ? null : runde.amZug;
   }
+  /* Die drei mit Uhr haben je einen eigenen Ablauf (zeitdruck.ts). */
+  if (istZeitdruck(runde)) return zeitdruckAmZug(partie, runde);
   if (istReihum(runde.art)) {
     const sitz = reihumSitz(runde);
     return partie.ausgestiegen.includes(sitz) || reihumGespielt(runde, sitz) ? null : sitz;
@@ -942,7 +1064,8 @@ function reihumDurch(partie: PartykistePartie): boolean {
 // Auswertung einer Runde
 // ---------------------------------------------------------------------------
 
-function mitSchluck(faktor: number, wert: number): number {
+/** Schluecke mal Haertegrad (1 bis 3) — die eine Stelle, an der das gerechnet wird. */
+export function mitSchluck(faktor: number, wert: number): number {
   return wert * Math.min(3, Math.max(1, Math.round(faktor)));
 }
 
@@ -1113,6 +1236,21 @@ function werteAus(partie: PartykistePartie): PartykistePartie {
       neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
       break;
     }
+    case 'bombe': {
+      werteBombe(runde, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
+    case 'zehnsekunden': {
+      const geschafft = werteZehn(partie, runde, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke, geschafft };
+      break;
+    }
+    case 'koenigsbecher': {
+      werteKoenigsbecher(runde, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
+      neueRunde = { ...runde, phase: 'ergebnis', fertig: [], punkte, schlucke };
+      break;
+    }
   }
 
   /*
@@ -1122,8 +1260,26 @@ function werteAus(partie: PartykistePartie): PartykistePartie {
    * also steht der Verstoss auch in der Abrechnung dieser Runde. Eine neue
    * Karte loest die alte ab (die alte endet hier und wird fertig abgerechnet).
    */
-  const nachRegel = regelAbrechnen(partie, dabei, (w) => mitSchluck(faktor, w), punkte, schlucke);
-  const regelKarte = runde.art === 'regelkarte' ? neueRegel(partie, runde) : nachRegel;
+  /*
+   * Ein Bube im Koenigsbecher bringt ebenfalls eine neue Karte — sie loest die
+   * alte genauso ab wie eine Regelkarten-Runde (`abgeloest`), sonst verloere
+   * die alte ihren Punkt fuer die weisse Weste.
+   */
+  const bubenRegel = runde.art === 'koenigsbecher' ? runde.neueRegel : null;
+  const nachRegel = regelAbrechnen(
+    partie,
+    dabei,
+    (w) => mitSchluck(faktor, w),
+    punkte,
+    schlucke,
+    runde.art === 'regelkarte' || bubenRegel !== null,
+  );
+  const regelKarte =
+    runde.art === 'regelkarte'
+      ? neueRegel(partie, runde)
+      : bubenRegel
+        ? neueRegel(partie, { ...bubenRegel, bis: regelBis(partie.rundeNr) })
+        : nachRegel;
 
   return {
     ...partie,
@@ -1198,6 +1354,13 @@ export function weiter(partie: PartykistePartie): PartykistePartie {
          alle Anwesenden weitergetippt haben. */
       if (wartetNochJemand(stand)) return stand;
       stand = naechsteRunde(stand);
+      continue;
+    }
+
+    if (istZeitdruck(runde)) {
+      const schritt = zeitdruckSchritt(stand, runde);
+      if (schritt === 'ruhe') return stand;
+      stand = schritt === 'werten' ? werteAus(stand) : schritt;
       continue;
     }
 
@@ -1484,6 +1647,13 @@ export function verarbeite(
       if (runde.fertig.includes(sitz)) return partie;
       return weiter({ ...partie, runde: { ...runde, fertig: [...runde.fertig, sitz] } });
     }
+    /* Die drei mit Uhr (zeitdruck.ts) — derselbe Vertrag wie die drei ohne. */
+    case 'bombe':
+      return nachOhneUhr(partie, bombeZug(partie, runde, sitz, aktion));
+    case 'zehnsekunden':
+      return nachOhneUhr(partie, zehnZug(partie, runde, sitz, aktion));
+    case 'koenigsbecher':
+      return nachOhneUhr(partie, koenigsbecherZug(partie, runde, sitz, aktion));
   }
 }
 

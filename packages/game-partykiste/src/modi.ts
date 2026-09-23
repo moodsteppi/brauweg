@@ -213,6 +213,13 @@ function zweckArt(zweck: string): MinispielId | null {
     case 'wp-w':
     case 'wp-p':
       return 'wahrheitpflicht';
+    /* Die drei mit Uhr (zeitdruck.ts): Die Bombe zieht Kategorien aus einem
+       eigenen Stapel, der Koenigsbecher Regel-Karten fuer seine Buben. */
+    case 'bombe':
+    case 'zehnsekunden':
+      return zweck;
+    case 'koenigsbecher-regel':
+      return 'koenigsbecher';
     default:
       return null;
   }
@@ -224,6 +231,8 @@ function zweckArt(zweck: string): MinispielId | null {
  * sie hier mit; der Test "Eskalation: keine Kennung zweimal" faellt sonst.
  */
 function platzeJeRunde(art: MinispielId, sitze: number): number {
+  /* Koenigsbecher: vier Regel-Karten je Runde, eine je Bube (baueRunde). */
+  if (art === 'koenigsbecher') return 4;
   return art === 'werbinich' || art === 'wahrheitpflicht' ? sitze : 1;
 }
 
@@ -247,11 +256,18 @@ function platzeJeRunde(art: MinispielId, sitze: number): number {
  * einordnet.
  */
 export const THEMEN_MINISPIELE: Readonly<Record<Paket, readonly MinispielId[]>> = {
-  'wg-abend': ['niemals', 'wereher', 'imposter', 'regelkarte', 'entweder', 'busfahrer', 'mehrheit', 'wahrheitpflicht', 'schaetzen'],
-  jga: ['wahrheitpflicht', 'niemals', 'regelkarte', 'wereher', 'imposter', 'werbinich', 'mehrheit', 'entweder', 'busfahrer'],
-  weihnachten: ['quiz', 'werbinich', 'kategorien', 'schaetzen', 'imposter', 'mehrheit', 'entweder', 'wereher'],
-  studenten: ['busfahrer', 'niemals', 'quiz', 'regelkarte', 'wereher', 'kategorien', 'imposter', 'entweder', 'wahrheitpflicht'],
-  arbeit: ['quiz', 'kategorien', 'schaetzen', 'imposter', 'mehrheit', 'entweder', 'werbinich', 'wereher'],
+  /*
+   * Die drei mit Uhr (23.09.2026) eingeordnet: Die Bombe und „10 Sekunden"
+   * gehen ueberall (sie fragen nichts ab, was man vor Kollegen oder Oma nicht
+   * sagen koennte), der Koenigsbecher ist eine Trinkrunde und gehoert zu
+   * WG, JGA und Studenten. Mitten in die Liste und nicht ans Ende — bei sechs
+   * Runden kaeme sonst keines davon je dran.
+   */
+  'wg-abend': ['niemals', 'wereher', 'imposter', 'bombe', 'regelkarte', 'entweder', 'koenigsbecher', 'busfahrer', 'mehrheit', 'zehnsekunden', 'wahrheitpflicht', 'schaetzen'],
+  jga: ['wahrheitpflicht', 'niemals', 'bombe', 'regelkarte', 'wereher', 'koenigsbecher', 'imposter', 'werbinich', 'zehnsekunden', 'mehrheit', 'entweder', 'busfahrer'],
+  weihnachten: ['quiz', 'werbinich', 'kategorien', 'zehnsekunden', 'schaetzen', 'imposter', 'bombe', 'mehrheit', 'entweder', 'wereher'],
+  studenten: ['busfahrer', 'niemals', 'koenigsbecher', 'quiz', 'regelkarte', 'bombe', 'wereher', 'kategorien', 'imposter', 'zehnsekunden', 'entweder', 'wahrheitpflicht'],
+  arbeit: ['quiz', 'kategorien', 'zehnsekunden', 'schaetzen', 'imposter', 'bombe', 'mehrheit', 'entweder', 'werbinich', 'wereher'],
 };
 
 /**

@@ -423,6 +423,12 @@ export function regelAbrechnen(
   schluck: (wert: number) => number,
   punkte: number[],
   schlucke: number[],
+  /*
+   * Kommt in dieser Runde eine neue Karte, die die alte abloest? Seit dem
+   * 23.09.2026 nicht mehr nur bei der Regel-Karte selbst: Auch ein Bube im
+   * Koenigsbecher bringt eine (zeitdruck.ts). Die Vorgabe ist der alte Fall.
+   */
+  abgeloest: boolean = partie.runde.art === 'regelkarte',
 ): AktiveRegel | null {
   const regel = partie.regelKarte;
   if (!regel) return null;
@@ -430,8 +436,7 @@ export function regelAbrechnen(
     const offen = regel.offen[s] ?? 0;
     if (offen > 0) schlucke[s] = (schlucke[s] ?? 0) + schluck(offen * SCHLUECKE.regelVerstoss);
   }
-  const endet =
-    partie.rundeNr >= regel.bis || partie.rundeNr >= partie.runden - 1 || partie.runde.art === 'regelkarte';
+  const endet = partie.rundeNr >= regel.bis || partie.rundeNr >= partie.runden - 1 || abgeloest;
   if (endet) {
     for (const s of dabei) {
       if ((regel.verstoesse[s] ?? 0) === 0) punkte[s] = (punkte[s] ?? 0) + PUNKTE.regelSauber;
@@ -441,8 +446,15 @@ export function regelAbrechnen(
   return { ...regel, offen: nullen(partie.sitze) };
 }
 
-/** Die Regel einer eben gelesenen Karte — gilt ab jetzt, gekappt aufs Turnierende. */
-export function neueRegel(partie: PartykistePartie, runde: RegelkartenRunde): AktiveRegel {
+/**
+ * Die Regel einer eben gelesenen Karte — gilt ab jetzt, gekappt aufs
+ * Turnierende. Nimmt nur Kennung, Text und `bis`, damit auch der Bube im
+ * Koenigsbecher eine Karte bringen kann, ohne eine Regelkarten-Runde zu sein.
+ */
+export function neueRegel(
+  partie: PartykistePartie,
+  runde: Pick<RegelkartenRunde, 'karteId' | 'text' | 'bis'>,
+): AktiveRegel {
   return {
     karteId: runde.karteId,
     text: runde.text,

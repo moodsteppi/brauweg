@@ -2,7 +2,7 @@ import {
   MINISPIELE,
   PAKETE,
   SPIELMODI,
-  istReihum,
+  ablaufVon,
   minispielFuer,
   partykiste,
   type PartykisteRegeln,
@@ -44,10 +44,12 @@ describe('Vertrag Partykiste-Auswahl', () => {
     expect(Object.keys(PAKET_NAME)).toEqual([...PAKETE]);
   });
 
-  it('der Ablauf auf der Kachel stimmt mit istReihum ueberein', () => {
+  /* Gegen `ablaufVon`, nicht `istReihum`: Kategorien, Bombe und Koenigsbecher
+     laufen reihum im Kreis, ohne dass `istReihum` sie kennt (partie.ts). */
+  it('der Ablauf auf der Kachel stimmt mit ablaufVon ueberein', () => {
     const falsch = MINISPIELE.filter((id) => {
       const ablauf = MINISPIEL_ABLAUF[id];
-      return ablauf !== undefined && ablauf !== (istReihum(id) ? 'reihum' : 'gleichzeitig');
+      return ablauf !== undefined && ablauf !== ablaufVon(id);
     });
     expect(falsch).toEqual([]);
   });

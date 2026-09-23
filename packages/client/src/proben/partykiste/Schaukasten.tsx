@@ -32,6 +32,7 @@ import { Abrechnung, Tabelle } from '../../minispiele/partykiste/Wertung';
 import { AufstellungSeite } from '../../minispiele/partykiste/Lager';
 import type { SeatInfo } from '../../protocol';
 import { bilderOhneUhr } from './bilder-ohne-uhr';
+import { bilderZeitdruck } from './bilder-zeitdruck';
 
 const LEUTE = ['Robin', 'Jan', 'Tom', 'Emil', 'Niklas', 'Anni'];
 
@@ -525,6 +526,7 @@ const BILDER: { titel: string; text: string; sicht: PartykisteSicht; zusatz?: Zu
   },
   /* Kategorien-Battle, Mehrheitsraten, Regel-Karte (22.09.2026). */
   ...bilderOhneUhr(sicht),
+  ...bilderZeitdruck(sicht),
   /* -- Spielmodi (22.09.2026) ------------------------------------------- */
   {
     titel: 'Ich hab noch nie — Eskalation, Stufe 2',

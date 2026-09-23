@@ -19910,6 +19910,49 @@ span.hub-angebot-art.poker-jeton-stapel {
 .pk-ou-regel-hinweis { margin: 0; font: 600 12px/1.3 system-ui; }
 .pk-ou-regel .pk-knopf { padding: 10px 12px; font-size: 14px; }
 
+/* -- Partykiste: Bombe, 10 Sekunden, Koenigsbecher (pk-zd-*) --------------- */
+
+/* Die Bombe tickt GLEICHMAESSIG. Schneller werden darf sie nicht: Das waere
+   eine Auskunft ueber die Restzeit, und die hat der Bildschirm gar nicht
+   (phaseHidden) — ein Ticken, das schneller wird, waere geraten und damit
+   eine Luege. */
+.pk-zd-bombe {
+  display: block;
+  font-size: clamp(48px, 16vw, 72px);
+  line-height: 1;
+  animation: pk-zd-ticken 1s steps(2, jump-none) infinite;
+}
+.pk-zd-bombe[data-hoch] { animation: pk-zd-knall 0.5s ease-out 1; }
+@keyframes pk-zd-ticken {
+  from { transform: scale(1) rotate(-4deg); }
+  to { transform: scale(1.08) rotate(4deg); }
+}
+@keyframes pk-zd-knall {
+  from { transform: scale(0.6); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}
+.pk-zd-weiter { min-height: 72px; font-size: 20px; }
+
+/* Die Restzeit der zehn Sekunden — die Frist des Servers, nur angezeigt. */
+.pk-zd-restzeit {
+  display: block;
+  font: 800 clamp(44px, 14vw, 64px)/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.pk-zd-restzeit[data-knapp] { color: #ff6b6b; }
+
+/* Koenigsbecher: die gezogene Karte mit ihrer Regel darunter. */
+.pk-zd-karte { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pk-zd-kartentitel { font: 800 clamp(16px, 5vw, 20px)/1.2 system-ui; }
+.pk-zd-kartentext { font: 600 14px/1.35 system-ui; text-align: center; max-width: 28ch; }
+.pk-zd-hand { min-height: 80px; font-size: 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-zd-bombe,
+  .pk-zd-bombe[data-hoch] { animation: none; }
+}
+
 /* ==========================================================================
  * Einladung an den Tisch (22.09.2026): Code, Link teilen, QR-Code — und die
  * Eingabe dazu. Eigene Praefixe `.einladung-*` / `.beitrittscode-*` statt
