@@ -93,8 +93,13 @@ export const TAFELRUNDE_MODULE_VERSION = 1;
  * Strudel und Sprungfelder mit der echten Physik, Bumper versperren Sicht
  * und Wegfeld. Ein alter und ein neuer Bot spielen aus derselben Saat
  * verschiedene Schlaege.
+ *
+ * 6 seit dem 23.09.2026: Fun-Modus. Die Sicht traegt `modus`, und im
+ * Fun-Modus zieht jedes Geraet je Loch einen Modifikator (Wind, Regen,
+ * Riesenball …), den Physik und Bots mitrechnen. Ein Client von davor
+ * spielte einen Fun-Tisch klassisch.
  */
-export const GOLF_MODULE_VERSION = 5;
+export const GOLF_MODULE_VERSION = 6;
 
 /**
  * 1 seit dem 18. September 2026 — die erste Fassung. Die Partykiste ist das

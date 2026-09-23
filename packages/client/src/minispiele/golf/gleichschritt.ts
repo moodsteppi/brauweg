@@ -16,6 +16,7 @@
  */
 
 import type { Karte } from './karte';
+import type { Golfmodus } from './modifikator';
 import {
   type Botstufe,
   type Ereignis,
@@ -44,6 +45,8 @@ export interface GleichschrittOptionen {
   loecher: number;
   karten: readonly Karte[];
   botStufe?: Botstufe;
+  /** Klassisch oder Fun (`GolfSicht.modus`); ohne Angabe klassisch. */
+  modus?: Golfmodus;
 }
 
 export class Gleichschritt {
@@ -72,6 +75,7 @@ export class Gleichschritt {
       botSitze: opts.botSitze,
       loecher: opts.loecher,
       botStufe: opts.botStufe,
+      modus: opts.modus,
       karten: opts.karten,
     });
     starteLoch(this.z, 0, 0, opts.karten);

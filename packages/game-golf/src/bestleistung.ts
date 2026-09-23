@@ -36,6 +36,7 @@
 
 import type { GolfMeldung, GolfPartie } from './partie.js';
 import { mehrheitsgruppe } from './partie.js';
+import { modusVon } from './modus.js';
 import type { GolfRegeln } from './regeln.js';
 
 /** Die Form, die `packages/server/src/bestleistung.ts` erwartet (`Bestleistungsmeldung`). */
@@ -49,10 +50,10 @@ export interface GolfBestleistung {
  * DER HAKEN FUER DEN FUN-MODUS. Zaehlt eine Partie mit diesem Regelsatz fuer
  * die Bestenliste je Bahn?
  *
- * Heute immer ja: Golf kennt nur den klassischen Modus. Die Felder, die
- * `GolfRegeln` seit der Bahnauswahl (#212) traegt, waehlen nur, WELCHE Bahnen
- * gespielt werden — jede davon bleibt dieselbe Bahn. Kommt der Fun-Modus mit Wetter, Wind und Zufallsereignissen, gibt
- * diese Funktion fuer ihn `false` zurueck — und zwar hier, im Modul, nicht am
+ * Klassisch ja, im Fun-Modus (seit dem 23.09.2026, `modus.ts`) nein. Die
+ * Felder der Bahnauswahl (#212) waehlen nur, WELCHE Bahnen gespielt werden —
+ * jede davon bleibt dieselbe Bahn. Der Fun-Modus mit Wind, Wetter und
+ * Roulette je Loch gibt hier `false` zurueck — und zwar hier, im Modul, nicht am
  * Bildschirm und nicht im Server. Der Grund: Eine Bestenliste vergleicht
  * Schlagzahlen auf DERSELBEN Bahn. Mit Rueckenwind oder einem Glueckstreffer
  * aus dem Ereigniswurf ist es nicht mehr dieselbe Bahn, und die Liste
@@ -64,8 +65,8 @@ export interface GolfBestleistung {
  * entscheidet `countsForRanking` im Server fuer alle Spiele gleich, und die
  * Regel wird dort aufgerufen, nicht hier abgeschrieben.
  */
-export function zaehltFuerBestleistung(_regeln: GolfRegeln): boolean {
-  return true;
+export function zaehltFuerBestleistung(regeln: GolfRegeln): boolean {
+  return modusVon(regeln) === 'klassisch';
 }
 
 // ---------------------------------------------------------------------------

@@ -473,6 +473,8 @@ export interface Physikwerte {
   windStaerke: number;
   /** Flugdauer eines Sprungfelds in Takten. */
   flugTakte: number;
+  /** Mindesttempo, mit dem ein Sprungfeld wirft. */
+  flugVmin: number;
   /** Sperre nach einem Portal in Takten. */
   portalSperre: number;
   /** Faktor auf das Zeitlimit der Bahn. */
@@ -500,6 +502,7 @@ export const KLASSISCHE_WERTE: Readonly<Physikwerte> = Object.freeze({
   windRy: 0,
   windStaerke: 0,
   flugTakte: FLUG_TAKTE,
+  flugVmin: FLUG_VMIN,
   portalSperre: PORTAL_SPERRE,
   zeitlimit: 1,
   sprungNurVorwaerts: false,
@@ -519,7 +522,7 @@ export const WIND_ANTEIL = 0.95;
  * (nicht eine gleiche Kopie): Die Bots nehmen dann den alten, schnellen Weg
  * über die Rasentabelle, und der hängt am Zeigervergleich.
  */
-export function physikwerte(mod: Lochmodifikatoren, karte: Karte): Readonly<Physikwerte> {
+export function physikwerte(mod: Lochmodifikatoren, karte: Pick<Karte, 'wind'>): Readonly<Physikwerte> {
   const wind = mod.wind ?? karte.wind ?? null;
   if (mod.roulette === null && wind === null) return KLASSISCHE_WERTE;
   const p: Physikwerte = { ...KLASSISCHE_WERTE };
@@ -536,6 +539,11 @@ export function physikwerte(mod: Lochmodifikatoren, karte: Karte): Readonly<Phys
       p.reibung = SCHWERELOS_REIBUNG;
       p.flugTakte = Math.round(FLUG_TAKTE * SCHWERELOS_FLUG);
       p.sprungNurVorwaerts = true;
+      // Ohne Reibung rollt ein Ball, den der Sprung mit 14 E/s absetzt, gut
+      // 50 Einheiten weit — auf k07 und k38 flog jeder Schlag übers Loch bis
+      // an die Rückwand und rollte zurück (0 % für jeden Bot). Mit einem
+      // Viertel davon bleibt ein Sprung zu dosieren.
+      p.flugVmin = FLUG_VMIN * SCHWERELOS_REIBUNG;
       break;
     case 'riesenball':
       p.ballR = BALL_R * RIESEN_FAKTOR;
@@ -571,7 +579,7 @@ export function ballRadius(z: Partiezustand, karte: Karte): number {
 }
 
 /** Zeitlimit des laufenden Lochs in Sekunden — in der Zeitlupe doppelt so lang. */
-export function zeitlimitS(z: Partiezustand, karte: Karte): number {
+export function zeitlimitS(z: Partiezustand, karte: Pick<Karte, 'zeitLimitS' | 'wind'>): number {
   return karte.zeitLimitS * physikwerte(z.aktuell.mod, karte).zeitlimit;
 }
 
@@ -1044,7 +1052,7 @@ function zonenAmOrt(
     // Schwerelos: nur, wer in Sprungrichtung rollt, springt (siehe Physikwerte).
     if (p.sprungNurVorwaerts && b.vx * r.x + b.vy * r.y <= 0) continue;
     let tempo = betrag(b.vx, b.vy);
-    if (tempo < FLUG_VMIN) tempo = FLUG_VMIN;
+    if (tempo < p.flugVmin) tempo = p.flugVmin;
     b.flugTakte = p.flugTakte;
     b.flugRx = r.x;
     b.flugRy = r.y;
