@@ -82,6 +82,10 @@ final class HuelleTests: XCTestCase {
         XCTAssertTrue(push.contains("'brauweg:push-token'"))
         XCTAssertTrue(push.contains("plattform: 'ios', token: \"ab01\""))
         XCTAssertTrue(push.contains("window.BRAUWEG_APP.pushToken = d"))
+        // Abgelehnt oder nicht da: null, nicht die Zeichenkette "nil" (docs/PUSH.md).
+        XCTAssertTrue(Huelle.pushSkript(token: nil).contains("plattform: 'ios', token: null"))
+        // Der Rueckfall-Name, den der Client kennt (push/bruecke.ts).
+        XCTAssertEqual(Bruecke.pushName, "pushErlauben")
         XCTAssertTrue(Huelle.zurueckSkript.contains("'brauweg:zurueck', { cancelable: true }"))
         XCTAssertTrue(Huelle.zurueckSkript.contains("return e.defaultPrevented"))
         XCTAssertEqual(Mitteilungen.hex(Data([0x00, 0xAB, 0x0F])), "00ab0f")

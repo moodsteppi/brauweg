@@ -22,5 +22,6 @@ final class AppDelegat: UIResponder, UIApplicationDelegate {
         // Ohne Push-Faehigkeit im Profil oder im Simulator ohne Konto: Dann gibt
         // es eben keine Mitteilungen, die App laeuft weiter.
         NSLog("Brauweg: Push-Registrierung fehlgeschlagen: %@", error.localizedDescription)
+        Mitteilungen.shared.gescheitert()
     }
 }

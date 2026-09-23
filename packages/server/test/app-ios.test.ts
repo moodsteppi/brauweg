@@ -207,6 +207,10 @@ test('die Huelle spricht dieselbe Sprache wie Server und Client', () => {
     assert.ok(huelle.includes(name), name);
   }
   assert.ok(huelle.includes('window.BRAUWEG_APP.pushToken = d'));
+  // docs/PUSH.md: der Rueckfall `webkit.messageHandlers.pushErlauben`, und `token: null` fuer „nicht da".
+  assert.ok(lies('Brauweg', 'Bruecke.swift').includes('static let pushName = "pushErlauben"'));
+  assert.match(lies('Brauweg', 'HauptController.swift'), /add\(bruecke, name: Bruecke\.pushName\)/);
+  assert.ok(huelle.includes('token.map(jsText) ?? "null"'));
   assert.ok(huelle.includes('static let pushEreignis = "brauweg:push-token"'));
   assert.ok(huelle.includes('static let zurueckEreignis = "brauweg:zurueck"'));
 });

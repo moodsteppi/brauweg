@@ -58,6 +58,11 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
         konfiguration.userContentController.addUserScript(skript)
         let bruecke = Bruecke(controller: self)
         konfiguration.userContentController.add(bruecke, name: Bruecke.name)
+        // Der Rueckfall aus docs/PUSH.md: `webkit.messageHandlers.pushErlauben`.
+        // Nur mit Push — dann sieht der Client an seinem Fehlen, dass es keins gibt.
+        if Huelle.pushEingeschaltet {
+            konfiguration.userContentController.add(bruecke, name: Bruecke.pushName)
+        }
         self.bruecke = bruecke
 
         let ansicht = WKWebView(frame: view.bounds, configuration: konfiguration)
@@ -286,7 +291,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         // Ein Token, das vor dem Laden kam, geht nach jedem Laden noch einmal hin.
-        if let token = Mitteilungen.shared.token { pushTokenMelden(token) }
+        if Mitteilungen.shared.gemeldet { pushTokenMelden(Mitteilungen.shared.token) }
     }
 
     /// WebKit hat den Inhaltsprozess beendet (Speicherdruck im Hintergrund).
@@ -347,7 +352,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
 
     // MARK: - Push
 
-    private func pushTokenMelden(_ token: String) {
+    private func pushTokenMelden(_ token: String?) {
         guard isViewLoaded else { return }
         ansicht.evaluateJavaScript(Huelle.pushSkript(token: token), completionHandler: nil)
     }

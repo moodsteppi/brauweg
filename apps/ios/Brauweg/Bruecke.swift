@@ -47,6 +47,11 @@ final class Bruecke: NSObject, WKScriptMessageHandler {
     /// `window.webkit.messageHandlers.brauweg`
     static let name = "brauweg"
 
+    /// `window.webkit.messageHandlers.pushErlauben` — der zweite Weg zu
+    /// `pushErlauben`, den der Client laut docs/PUSH.md kennt
+    /// (packages/client/src/push/bruecke.ts). Nur mit eingeschaltetem Push angemeldet.
+    static let pushName = "pushErlauben"
+
     /// Schwach: Der WebView haelt die Bruecke (ueber seinen
     /// WKUserContentController), der Controller haelt den WebView.
     private weak var controller: HauptController?
@@ -63,6 +68,10 @@ final class Bruecke: NSObject, WKScriptMessageHandler {
         guard message.frameInfo.isMainFrame,
               herkunft.protocol == Huelle.schema,
               herkunft.host == Huelle.host else { return }
+        if message.name == Bruecke.pushName {
+            Mitteilungen.shared.erlauben()
+            return
+        }
         guard let rumpf = message.body as? [String: Any], let art = rumpf["art"] as? String else { return }
         let daten = rumpf["daten"]
         switch art {

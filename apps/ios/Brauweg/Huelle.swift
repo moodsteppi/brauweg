@@ -168,10 +168,11 @@ enum Huelle {
     /// Meldet dem Client das Push-Token — zweimal, weil niemand weiss, wer
     /// zuerst da ist: als Ereignis fuer den, der schon horcht, und als
     /// `window.BRAUWEG_APP.pushToken` fuer den, der erst spaeter hinsieht.
-    static func pushSkript(token: String) -> String {
+    /// `token: nil` wird `null`: abgelehnt oder nicht da (docs/PUSH.md).
+    static func pushSkript(token: String?) -> String {
         [
             "(function () {",
-            "  var d = { plattform: 'ios', token: \(jsText(token)) };",
+            "  var d = { plattform: 'ios', token: \(token.map(jsText) ?? "null") };",
             "  if (window.BRAUWEG_APP) window.BRAUWEG_APP.pushToken = d;",
             "  window.dispatchEvent(new CustomEvent('\(pushEreignis)', { detail: d }));",
             "})();",

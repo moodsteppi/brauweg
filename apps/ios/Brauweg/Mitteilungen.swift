@@ -16,26 +16,48 @@ import UserNotifications
 /// schon erteilt, holt die App beim Start ein frisches Token. Jedes Token
 /// geht als Ereignis `brauweg:push-token` mit `{plattform: 'ios', token}` an
 /// den Client (Huelle.pushSkript), der es dem Server meldet.
+///
+/// Vertrag: docs/PUSH.md, Abschnitt 3 (PR #239). `token: null` heisst
+/// „abgelehnt oder nicht da" — auch das bekommt der Client zu hoeren, damit
+/// er nicht auf ein Token wartet, das nie kommt.
+///
+/// Mitteilungen, waehrend die App vorne ist, zeigt iOS ohne
+/// `UNUserNotificationCenterDelegate` gar nicht an — gewollt (PUSH.md: kein
+/// Banner ueber der App).
+///
+/// APNs-Umgebung: `aps-environment` steht in Push-YES.entitlements auf
+/// `development`. Ein Bau aus Xcode (Debug, Entwicklerprofil) bekommt damit
+/// ein Sandbox-Token; beim Export fuer TestFlight und den Store setzt Xcode
+/// es selbst auf `production`. Fest `production` in die Datei zu schreiben,
+/// liesse schon das Archiv scheitern, weil es mit dem Entwicklerprofil
+/// signiert wird. Der Server muss dazu passen (`APNS_UMGEBUNG`).
 final class Mitteilungen {
 
     static let shared = Mitteilungen()
 
-    /// Das zuletzt erhaltene Token (hex), oder nil.
+    /// Ist dem Client schon etwas zu melden — ein Token oder ein Nein?
+    private(set) var gemeldet = false
+    /// Das zuletzt erhaltene Token (hex), oder nil (abgelehnt, fehlgeschlagen).
     private(set) var token: String?
 
-    /// Wer das Token an den Client weiterreicht (HauptController).
-    var beiToken: ((String) -> Void)?
+    /// Wer das Token an den Client weiterreicht (HauptController). nil = kein Token.
+    var beiToken: ((String?) -> Void)?
 
     private init() {}
 
-    /// Beim Start: nur, wenn eingeschaltet UND schon erlaubt — dann das Token auffrischen.
+    /// Beim Start: nur, wenn eingeschaltet. Schon erlaubt → frisches Token
+    /// holen, ohne zu fragen; abgelehnt → das dem Client sagen.
     func beimStart() {
         guard Huelle.pushEingeschaltet else { return }
         UNUserNotificationCenter.current().getNotificationSettings { einstellungen in
-            let erlaubt = einstellungen.authorizationStatus == .authorized
-                || einstellungen.authorizationStatus == .provisional
-            guard erlaubt else { return }
-            DispatchQueue.main.async { UIApplication.shared.registerForRemoteNotifications() }
+            switch einstellungen.authorizationStatus {
+            case .authorized, .provisional, .ephemeral:
+                DispatchQueue.main.async { UIApplication.shared.registerForRemoteNotifications() }
+            case .denied:
+                DispatchQueue.main.async { self.melden(nil) }
+            default:
+                break
+            }
         }
     }
 
@@ -43,16 +65,31 @@ final class Mitteilungen {
     func erlauben() {
         guard Huelle.pushEingeschaltet else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { erlaubt, _ in
-            guard erlaubt else { return }
-            DispatchQueue.main.async { UIApplication.shared.registerForRemoteNotifications() }
+            DispatchQueue.main.async {
+                if erlaubt {
+                    UIApplication.shared.registerForRemoteNotifications()
+                } else {
+                    self.melden(nil)
+                }
+            }
         }
     }
 
     /// Aus dem AppDelegat.
     func erhalten(_ geraeteToken: Data) {
-        let hex = Mitteilungen.hex(geraeteToken)
-        token = hex
-        beiToken?(hex)
+        melden(Mitteilungen.hex(geraeteToken))
+    }
+
+    /// Aus dem AppDelegat: Registrierung gescheitert (kein Push im Profil,
+    /// Simulator ohne Konto).
+    func gescheitert() {
+        melden(nil)
+    }
+
+    private func melden(_ neu: String?) {
+        gemeldet = true
+        token = neu
+        beiToken?(neu)
     }
 
     static func hex(_ daten: Data) -> String {

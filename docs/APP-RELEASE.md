@@ -680,8 +680,8 @@ eigener Schemata (Capacitor fährt mit `capacitor://localhost` denselben Weg),
 | `navigator.share` | `UIActivityViewController` (Text und Link getrennt) | Teilen-Auswahl |
 | `navigator.vibrate` | Taptic Engine: je Einschaltphase ein Anschlag (`Haptik.swift`) | Vibration |
 | `navigator.wakeLock` | `isIdleTimerDisabled`, bis die letzte Sperre frei ist | `FLAG_KEEP_SCREEN_ON` |
-| `BrauwegNativ.pushErlauben()` | fragt nach der Erlaubnis, registriert bei APNs | Firebase |
-| Ereignis `brauweg:push-token` | `{plattform: 'ios', token}` (hex) | `{plattform: 'android', token}` |
+| `BrauwegNativ.pushErlauben()` (Rückfall `webkit.messageHandlers.pushErlauben`) | fragt nach der Erlaubnis, registriert bei APNs | Firebase |
+| Ereignis `brauweg:push-token` | `{plattform: 'ios', token}` (hex, `null` = nicht da) | `{plattform: 'android', token}` |
 | Ereignis `brauweg:zurueck` | Wischen vom linken Rand | Zurück-Taste |
 
 - Unter iOS werden `share`, `vibrate` und `wakeLock` **immer** ersetzt, nicht
@@ -708,12 +708,23 @@ eigener Schemata (Capacitor fährt mit `capacitor://localhost` denselben Weg),
   Client; kommt das Netz zurück oder die App nach vorn, wird von selbst neu
   geprüft und der Client frisch geladen. Geht das Netz mitten im Spiel weg,
   verbindet sich der Client selbst neu.
-- **Push:** Build-Einstellung `BRAUWEG_PUSH`, Vorgabe `NO`. Mit `YES` gilt
-  `Push-YES.entitlements` (`aps-environment`), `BRAUWEG_APP.push` wird
-  `true`, und die Erlaubnis wird erst auf `pushErlauben()` hin erfragt.
-  Braucht einen APNs-Schlüssel aus Toms Konto und die Server-Seite (eigener
-  Auftrag); dann im Privacy Manifest und in App Store Connect die
-  Geräte-Kennung nachtragen.
+- **Push** (Vertrag: `docs/PUSH.md`, Abschnitt 3): Build-Einstellung
+  `BRAUWEG_PUSH`, Vorgabe `NO` — dann ist `BRAUWEG_APP.push` `false`, und der
+  Client fragt nie. Mit `YES` gilt `Push-YES.entitlements`
+  (`aps-environment`), `push` wird `true`, und zusätzlich zu
+  `BrauwegNativ.pushErlauben()` hängt der Rückfall
+  `webkit.messageHandlers.pushErlauben` an. Die Systemabfrage kommt erst auf
+  diesen Aufruf hin; danach — und nach jedem Laden, ohne neu zu fragen —
+  steht `BRAUWEG_APP.pushToken = {plattform: 'ios', token}` (hex) und feuert
+  `brauweg:push-token`; `token: null` heißt abgelehnt oder nicht da.
+  Vorne liegende App: kein Banner (kein `UNUserNotificationCenterDelegate`).
+  **APNs-Umgebung:** Ein Bau aus Xcode bekommt ein Sandbox-Token, TestFlight
+  und Store ein Produktions-Token — `aps-environment` steht auf
+  `development`, und der Export setzt es selbst auf `production`. Fest
+  `production` ließe schon das Archiv scheitern (es wird mit dem
+  Entwicklerprofil signiert). Der Server muss dazu passen (`APNS_UMGEBUNG`).
+  Vor dem ersten Bau mit Push im Privacy Manifest und in App Store Connect
+  die Geräte-Kennung nachtragen.
 
 ### 7.4 Der erste Build auf dem Mac
 
@@ -742,6 +753,10 @@ das Skript fährt.
    - Impressum im Safari-Blatt; im Profil vom linken Rand wischen → zurück.
    - Netz am Mac aus, App neu starten → „Keine Verbindung"; Netz an →
      verschwindet von selbst.
+   - In der Konsole des Inspektors
+     `document.addEventListener('visibilitychange', () => console.log(document.visibilityState))`
+     eingeben, App in den Hintergrund und zurück: `hidden`, dann `visible`.
+     Daran hängt das `hintergrund` des Clients für Push (`docs/PUSH.md`).
 6. **iPhone per Kabel:** Gerät wählen, *Run* (am iPhone einmal den
    Entwicklermodus einschalten). Zusätzlich: Partykiste-Einladung teilen
    (WhatsApp zeigt den Link mit Vorschau), Haptik, wenn man dran ist,
