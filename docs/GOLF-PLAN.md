@@ -10,7 +10,7 @@ Minigolf aus der Vogelperspektive. Jeder hat einen Ball in seiner Farbe, alle
 schlagen gleichzeitig auf derselben Bahn, Bälle stoßen sich gegenseitig weg.
 Gezielt wird, indem man auf den eigenen Ball drückt und zieht; der Ball fliegt
 entgegen der Zugrichtung. Ein Match hat 2–15 Löcher (Regler in der Lobby),
-gespielt wird auf 40 Bahnen in fünf Schwierigkeitsstufen mit neun Arten von
+gespielt wird auf 60 Bahnen in fünf Schwierigkeitsstufen mit neun Arten von
 Effektflächen (Beschleuniger, Sand, Eis, Wasser, Portal, Bumper, Strudel,
 Sprungfeld, Drehkreuz). Wer am Ende die wenigsten Schläge hat, gewinnt.
 
@@ -221,8 +221,30 @@ Protokollversion.
   weg.
 - **Bahnen prüfen, nicht anschauen:** `pruefeKarte` (Form, Abstände,
   Erreichbarkeit per Wegfeld) und `botLoestKarte` (Genie-Bot schafft sie in
-  ≤ Schlaglimit) laufen als Vitest über alle 40. Eine Bahn, die der Bot nicht
+  ≤ Schlaglimit) laufen als Vitest über alle. Eine Bahn, die der Bot nicht
   schafft, wird umgebaut, nicht der Test gelockert.
+- **Ein Strudel kann einen Ball für immer festhalten (gefunden am 22.09.2026
+  beim Bau von k41–k60).** Der tangentiale Anteil der Strudelkraft trägt den
+  Ball bei vielen Kombinationen aus Radius und Stärke auf eine Kreisbahn, die
+  weder zerfällt noch in den Fang (0,25 E, unter 3 E/s) führt — und ein
+  gezogener Ball `ruht` nie, sein Spieler darf also bis zum Zeitlimit nicht
+  schlagen. Auf freiem Rasen, 960 Anläufe je Strudel: r 1,5 bis Stärke 15 und
+  r 2 bis Stärke 20 halten viele Anläufe länger als eine Minute fest;
+  r 1/15, r 1,2/20, r 1,5/25, r 2/30 und r 2,5/40 keinen. Auf Eis
+  entkommt der Ball immer. Aus demselben Grund fängt ein Strudel mit `ziel`
+  (Auswurf) fast nie — als Abkürzung taugt er nicht, als Ablenkung schon.
+  Betroffen sind auch vorhandene Bahnen (k20, k25, k34, k38 und der
+  Auswurf auf k08); die Physik zu ändern wäre ein Protokollbruch. Die neuen
+  Bahnen nehmen nur haltlose Strudel, `karten/k51-k60.test.ts` prüft das.
+- **Wer Bahnen hinzufügt, verschiebt die Folge neuer Partien — aber nicht die
+  alter Schnappschüsse.** Ein Schnappschuss von vor dem 22.09.2026 hat kein
+  `bahnen` und bekommt die Folge beim Laden nachgezogen, und zwar gegen
+  `KATALOG_BIS_K40` (bahnen.ts), den Katalog, den seine Geräte damals
+  kannten. Mit dem ganzen Katalog zöge dieselbe Saat seit k41 andere Bahnen.
+  Die festen Folgen in `bahnen.test.ts` rechnen deshalb gegen diese Liste.
+  Die Rampe prüft derselbe Test mit dem echten Katalog: Solange jede Stufe
+  mindestens drei Bahnen hat, trifft bei jeder Lochzahl bis 15 jedes Loch
+  genau seine Sollstufe.
 
 ## Bahnwerkstatt (seit 22.09.2026)
 

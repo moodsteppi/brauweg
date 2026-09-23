@@ -10,7 +10,9 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { KARTEN } from '../../minispiele/golf/karten';
 import { SPEICHER_SCHLUESSEL } from './austausch';
+import { naechsteNummer } from './modell';
 import { Werkstatt } from './Werkstatt';
 
 describe('Werkstatt', () => {
@@ -72,8 +74,10 @@ describe('Werkstatt', () => {
       vi.advanceTimersByTime(1000);
     });
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getByDisplayValue('k41-der-sandkasten')).toBeInTheDocument();
-    expect(screen.getByText(/{ id: 'k41-der-sandkasten', schwierigkeit: 1 },/)).toBeInTheDocument();
+    // Die neue Nummer steht hinter dem Katalog — mit jeder Katalogbahn eine weiter.
+    const neu = `k${naechsteNummer(KARTEN)}-der-sandkasten`;
+    expect(screen.getByDisplayValue(neu)).toBeInTheDocument();
+    expect(screen.getByText(`{ id: '${neu}', schwierigkeit: 1 },`, { exact: false })).toBeInTheDocument();
   });
 
   it('zeigt Befunde, wenn eine Angabe aus dem Rahmen fällt', () => {
