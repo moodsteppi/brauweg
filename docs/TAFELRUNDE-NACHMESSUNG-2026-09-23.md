@@ -201,3 +201,94 @@ Ist-Stand: `staerke` in `packages/game-tafelrunde/src/bot.ts:482`.
 
 Was das Turnier nicht sagt: ob der Bot damit schlechte **Bretter** baut. Drei
 Kopien derselben Einheit baut niemand (Kopf von `werkzeug/turnier.mjs`).
+
+---
+
+## Nachmessung nach #249 — Meuchler und Untot, als der Bot den Anmarsch abzieht
+
+Stand: 23.09.2026, abends. **Wieder nur gemessen, nichts umgebaut.** Gemessen
+auf `origin/staging` = `9e14a85` („Tafelrunde: staerke ohne Deckung setzt die
+drei Meuchler am hoechsten an — und sie gewinnen im Turnier am seltensten
+(#249)"), Node 24.16.0, Windows, gebaut wie oben. Zwischen `c007ec1` und
+`9e14a85` hat sich an Tafelrunde nur `staerke` geändert (`src/bot.ts`: Abzug
+für den Anmarsch eines Nahkämpfers ohne Deckung) — Katalog, Kampf und
+Schwellen sind dieselben. Was sich unten bewegt, bewegt sich also, weil der
+Bot anders **kauft**.
+
+Dieselben drei Befehle wie oben:
+
+```bash
+node packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs --partien 5000 --sitze 4 --mindest 150 --saat ausgewogenheit-v1
+node packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs --partien 5000 --sitze 4 --mindest 150 --saat ausgewogenheit-v2
+node packages/game-tafelrunde/werkzeug/ausgewogenheit.mjs --partien 400 --sitze 4 --saat ausgewogenheit-probe --mindest 100
+```
+
+Rechenzeit 118 s je 5.000er-Lauf, 4 s für die Probe.
+
+### 5.000 Partien, v1 — alt `c007ec1` / neu `9e14a85`
+
+| Marke | Antritte alt | Antritte neu | zum Schnitt alt | zum Schnitt neu | gleiche Kostensumme alt | gleiche Kostensumme neu |
+|---|---|---|---|---|---|---|
+| Wächter | 7.419 | 7.534 | x1,54 | x1,57 | x1,55 | x1,53 |
+| Krieger | 7.490 | 7.542 | x1,48 | x1,50 | x1,49 | x1,47 |
+| Untot | 1.355 | 1.357 | x1,03 | x0,98 | x1,11 | x1,06 |
+| Naturwesen | 4.643 | 4.730 | x0,80 | x0,81 | x0,96 | x0,97 |
+| Elementar | 5.385 | 5.415 | x0,77 | x0,77 | x0,82 | x0,83 |
+| Drache | 3.970 | 3.969 | x0,75 | x0,75 | x0,89 | x0,89 |
+| **Meuchler** | 5.202 | 5.061 | **x0,64** | **x0,63** | **x0,65** | **x0,64** |
+
+Schnitt der gezählten Zeilen: 28,6 % → 28,3 %.
+
+### 5.000 Partien, v2 — alt `c007ec1` / neu `9e14a85`
+
+| Marke | Antritte alt | Antritte neu | zum Schnitt alt | zum Schnitt neu | gleiche Kostensumme alt | gleiche Kostensumme neu |
+|---|---|---|---|---|---|---|
+| Wächter | 7.343 | 7.440 | x1,55 | x1,57 | x1,54 | x1,53 |
+| Krieger | 7.496 | 7.595 | x1,50 | x1,51 | x1,50 | x1,49 |
+| Untot | 1.269 | 1.329 | x0,98 | x1,01 | x1,06 | x1,10 |
+| Naturwesen | 4.579 | 4.682 | x0,81 | x0,79 | x0,96 | x0,96 |
+| Elementar | 5.406 | 5.455 | x0,75 | x0,75 | x0,81 | x0,80 |
+| Drache | 3.971 | 4.005 | x0,73 | x0,72 | x0,87 | x0,87 |
+| **Meuchler** | 5.268 | 5.099 | **x0,67** | **x0,64** | **x0,68** | **x0,66** |
+
+Schnitt der gezählten Zeilen: 28,4 % → 28,6 %.
+
+### 400er-Probe (`ausgewogenheit-probe`) — alt `c007ec1` / neu `9e14a85`
+
+| Marke | Antritte alt | Antritte neu | Quote alt | Quote neu | zum Schnitt alt | zum Schnitt neu | gleiche Kostensumme neu |
+|---|---|---|---|---|---|---|---|
+| Wächter | 594 | 605 | 43,6 % | 42,8 % | x1,49 | x1,48 | x1,50 |
+| Krieger | 599 | 603 | 41,2 % | 41,6 % | x1,41 | x1,44 | x1,46 |
+| **Untot** | **105** | **110** | 34,3 % | 31,8 % | x1,17 | x1,10 | x1,21 |
+| Drache | 317 | 318 | 23,3 % | 23,0 % | x0,80 | x0,79 | x0,95 |
+| Elementar | 428 | 430 | 22,4 % | 22,6 % | x0,77 | x0,78 | x0,85 |
+| Naturwesen | 376 | 360 | 20,2 % | 21,9 % | x0,69 | x0,76 | x0,90 |
+| **Meuchler** | 418 | 398 | 20,1 % | 18,6 % | x0,69 | **x0,64** | x0,66 |
+
+Schnitt der gezählten Zeilen: 29,3 % → 28,9 %. Die Spalte „gleiche
+Kostensumme" stand in der ersten Messung der Probe nicht mit drin.
+
+### Urteile
+
+**c3b764a9 (Meuchler) — weiter wahr, leicht verschlechtert.** #249 hat die
+Meuchler-Bewertung des Bots gesenkt, und der Bot kauft sie messbar seltener
+(v1 −141, v2 −169, Probe −20 Antritte). Besser gewinnen die Bretter mit
+Meuchlern dadurch nicht: Die Marke bleibt auf allen drei Läufen die unterste
+Zeile, roh wie gegen gleich teure Bretter, und fällt dabei um 0,01 (v1) bis
+0,05 (Probe) — v2 von x0,67 auf x0,64. Die Karte nennt x0,67; das ist jetzt
+auf keiner Saatbasis mehr der Wert, sondern x0,63–x0,64. Die Ursache sitzt
+also nicht (allein) darin, **wie oft** der Bot Meuchler kauft, sondern darin,
+was sie auf dem Brett ausrichten.
+
+**f9e6adad (Untot) — weiter wahr, minimal entspannt.** Untot bleibt mit
+110 Antritten die dünnste Zeile der Probe, jetzt zehn statt fünf über der
+Zählschwelle 100 (`MINDEST_ANTRITTE`). Auf 5.000 Partien praktisch unverändert
+(v1 +2, v2 +60). Die fünf Antritte mehr sind Rauschen in der Größenordnung,
+kein Befund, der die Karte erledigt.
+
+Nebenbefund: Die sieben Zahlen im Kommentar
+`packages/game-tafelrunde/test/ausgewogenheit.test.ts:69–71` („Stand
+18.09.2026", Untot 105) stimmen seit #249 nicht mehr — gemessen sind jetzt
+Krieger 603, Wächter 605, Elementar 430, Meuchler 398, Naturwesen 360,
+Drache 318, Untot 110. Der Kommentar sagt selbst, dass er veraltet; nicht
+angefasst.
