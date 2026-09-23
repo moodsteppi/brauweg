@@ -1,33 +1,49 @@
 name: Android-APK
 
-# Eine Test-APK der Android-Huelle (apps/android), zum Herunterladen.
+# Die Android-Huelle (apps/android) bauen: immer eine Test-APK zum
+# Herunterladen, und — sobald der Upload-Schluessel als Secret hinterlegt ist
+# — das signierte App-Bundle (AAB) fuer Google Play.
 #
 # NUR VON HAND (Actions → Android-APK → "Run workflow"). Kontingent-Diaet vom
-# 20.09.2026: Ein Android-Bau kostet einige Minuten, und gebraucht wird die APK
-# nur, wenn jemand sie wirklich aufs Handy laden will — nicht bei jedem PR.
+# 20.09.2026: Ein Android-Bau kostet einige Minuten, und gebraucht wird er
+# nur, wenn jemand die APK wirklich aufs Handy laden oder ein Bundle zu Play
+# hochladen will — nicht bei jedem PR.
 #
 # Warum ueberhaupt in der CI: Auf den Windows-Rechnern der Werkstatt gibt es
 # weder JDK noch Android-SDK (Stand 23.09.2026), und niemand soll dafuer
 # systemweit etwas installieren muessen. Der Linux-Laeufer von GitHub bringt
 # das SDK mit.
 #
-# Die APK ist ein DEBUG-Bau: Sie spricht mit Staging (app/build.gradle.kts),
+# DIE APK ist ein DEBUG-Bau: Sie spricht mit Staging (app/build.gradle.kts),
 # heisst "Brauweg Test" und laesst sich neben der Store-Fassung installieren.
 # Signiert ist sie mit dem Debug-Schluessel des Laeufers — fuers Verteilen an
-# Tester reicht das, fuer Play nicht (dafuer docs/APP-RELEASE.md).
+# Tester reicht das, fuer Play nicht.
+#
+# DAS AAB ist der Release-Bau: Produktion, "Brauweg", signiert mit dem
+# UPLOAD-Schluessel aus den Secrets. Google prueft beim Hochladen nur diesen
+# Schluessel und signiert die App dann selbst mit dem App-Signaturschluessel,
+# den nur Google hat (Play App Signing). Ohne die Secrets entsteht ein
+# unsignierter Pruefbau, der nur zeigt, dass der Release-Bau durchgeht — er
+# wird NICHT hochgeladen, und der Lauf sagt deutlich, dass die Signatur fehlt.
+# Anleitung: docs/APP-RELEASE.md, Abschnitt 4.
+#
+# versionCode = Laufnummer dieses Workflows. Sie waechst mit jedem Lauf, und
+# Play verlangt fuer jeden Upload eine hoehere Nummer. "Re-run" behaelt die
+# Nummer — fuer einen neuen Upload also einen NEUEN Lauf starten.
+# versionName steht in apps/android/VERSION.
 on:
   workflow_dispatch:
     inputs:
       api_base:
-        description: "Serveradresse (leer = Staging)"
+        description: "Serveradresse der TEST-APK (leer = Staging). Das AAB spricht immer mit Produktion."
         required: false
         default: ""
 
 jobs:
-  apk:
-    name: Debug-APK bauen
+  android:
+    name: APK und AAB bauen
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -46,19 +62,145 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+          cache: gradle
+          cache-dependency-path: |
+            apps/android/*.gradle.kts
+            apps/android/app/build.gradle.kts
+            apps/android/gradle/wrapper/gradle-wrapper.properties
 
-      - name: APK bauen und die Huelle pruefen
+      - name: Version
+        id: version
+        run: |
+          name=$(tr -d '\r\n ' < apps/android/VERSION)
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "### Brauweg Android $name (versionCode ${{ github.run_number }})" >> "$GITHUB_STEP_SUMMARY"
+
+      # Der Push-Schalter ist aus und bleibt es, bis es ein Firebase-Projekt
+      # gibt. Damit er bis dahin nicht verrottet, wird die Fassung MIT Push
+      # hier jedes Mal mit uebersetzt — ohne Firebase-Werte, also ohne dass
+      # je ein Token geholt wuerde. Gebaut und hochgeladen wird sie nicht.
+      - name: Push-Schalter uebersetzt noch
+        working-directory: apps/android
+        run: |
+          chmod +x gradlew
+          ./gradlew compileDebugKotlin processDebugManifest -Ppush=an
+          manifest=$(find app/build/intermediates -path '*merged_manifest*debug*' -name AndroidManifest.xml | head -1)
+          if [ -z "$manifest" ]; then echo "::error::Kein zusammengefuehrtes Manifest gefunden."; exit 1; fi
+          echo "Berechtigungen MIT Push ($manifest):"
+          grep -ho 'uses-permission[^>]*android:name="[^"]*"' "$manifest" | sort -u
+
+      - name: Test-APK bauen und die Huelle pruefen
         working-directory: apps/android
         env:
           API_BASE: ${{ inputs.api_base }}
         run: |
-          chmod +x gradlew
           extra=""
           if [ -n "$API_BASE" ]; then extra="-PapiBase=$API_BASE"; fi
-          ./gradlew --no-daemon testDebugUnitTest assembleDebug -PversionCode=${{ github.run_number }} $extra
+          ./gradlew testDebugUnitTest assembleDebug -PversionCode=${{ steps.version.outputs.code }} $extra
 
       - uses: actions/upload-artifact@v4
         with:
           name: brauweg-test-${{ github.run_number }}
           path: apps/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
+
+      # Alle vier oder keins. Secrets lassen sich in `if:` nicht abfragen,
+      # darum hier in der Shell. Werte gehen nie ins Protokoll: GitHub
+      # schwaerzt sie ohnehin, und hier wird nur gezaehlt, nicht gezeigt.
+      - name: Upload-Schluessel da?
+        id: schluessel
+        env:
+          KS: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          KS_PW: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORT }}
+          ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORT }}
+        run: |
+          da=0
+          for v in "$KS" "$KS_PW" "$ALIAS" "$KEY_PW"; do [ -n "$v" ] && da=$((da + 1)); done
+          if [ "$da" -eq 4 ]; then
+            echo "signieren=ja" >> "$GITHUB_OUTPUT"
+          elif [ "$da" -eq 0 ]; then
+            echo "signieren=nein" >> "$GITHUB_OUTPUT"
+            msg="Release-Signatur fehlt: Die Secrets ANDROID_UPLOAD_KEYSTORE_BASE64, ANDROID_UPLOAD_KEYSTORE_PASSWORT, ANDROID_UPLOAD_KEY_ALIAS und ANDROID_UPLOAD_KEY_PASSWORT sind nicht gesetzt. Gebaut wird nur ein UNSIGNIERTER Pruefbau des AAB, der nicht hochgeladen wird. Anleitung: docs/APP-RELEASE.md, Abschnitt 4.6."
+            echo "::warning title=Release-Signatur fehlt::$msg"
+            {
+              echo ""
+              echo "> [!WARNING]"
+              echo "> **Release-Signatur fehlt.** $msg"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error title=Upload-Schluessel unvollstaendig::Nur $da von 4 Secrets ANDROID_UPLOAD_* sind gesetzt. Alle vier oder keins (docs/APP-RELEASE.md, 4.6)."
+            exit 1
+          fi
+
+      - name: Upload-Schluessel auslegen
+        if: steps.schluessel.outputs.signieren == 'ja'
+        working-directory: apps/android
+        env:
+          KS: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          KS_PW: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORT }}
+          ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORT }}
+        run: |
+          umask 077
+          printf '%s' "$KS" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/upload.jks"
+            echo "storePassword=$KS_PW"
+            echo "keyAlias=$ALIAS"
+            echo "keyPassword=$KEY_PW"
+          } > keystore.properties
+
+      # Ohne -PapiBase: Das Bundle geht zu Play und spricht mit Produktion,
+      # was auch immer oben fuer die Test-APK eingetragen wurde.
+      - name: App-Bundle bauen (bundleRelease)
+        working-directory: apps/android
+        run: ./gradlew bundleRelease -PversionCode=${{ steps.version.outputs.code }}
+
+      - name: Signatur und Berechtigungen ansehen
+        working-directory: apps/android
+        env:
+          SIGNIEREN: ${{ steps.schluessel.outputs.signieren }}
+        run: |
+          aab=app/build/outputs/bundle/release/app-release.aab
+          ls -l "$aab"
+          manifest=$(find app/build/intermediates -path '*merged_manifest*release*' -name AndroidManifest.xml | head -1)
+          if [ -z "$manifest" ]; then echo "::error::Kein zusammengefuehrtes Manifest gefunden."; exit 1; fi
+          {
+            echo ""
+            echo "**Berechtigungen im Release-Bau:**"
+            echo '```'
+            grep -ho 'uses-permission[^>]*android:name="[^"]*"' "$manifest" | sed 's/.*android:name=//' | sort -u
+            echo '```'
+            echo "**targetSdk / minSdk:** $(grep -ho 'android:targetSdkVersion="[0-9]*"' "$manifest" | head -1) $(grep -ho 'android:minSdkVersion="[0-9]*"' "$manifest" | head -1)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$SIGNIEREN" = "ja" ]; then
+            # Der Fingerabdruck des UPLOAD-Schluessels. Er ist nicht geheim —
+            # und er ist NICHT der, der nach ANDROID_SHA256 gehoert: Dorthin
+            # kommt der des App-Signaturschluessels aus der Play Console.
+            sha=$(keytool -printcert -jarfile "$aab" | grep -m1 'SHA256:' | sed 's/.*SHA256: *//')
+            if [ -z "$sha" ]; then echo "::error::Das AAB ist nicht signiert."; exit 1; fi
+            {
+              echo ""
+              echo "**Signiert mit dem Upload-Schluessel** — SHA-256 \`$sha\`"
+              echo ""
+              echo "Das ist NICHT der Wert fuer \`ANDROID_SHA256\` (App Links): Dorthin gehoert der SHA-256 des App-Signaturschluessels aus der Play Console (docs/APP-RELEASE.md, 4.7)."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Unsignierter Pruefbau — wird nicht hochgeladen."
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: steps.schluessel.outputs.signieren == 'ja'
+        with:
+          name: brauweg-play-${{ steps.version.outputs.name }}-${{ github.run_number }}
+          path: apps/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      # Der Laeufer ist ohnehin weg, sobald der Lauf endet. Trotzdem: Der
+      # Schluessel liegt keine Sekunde laenger als noetig auf der Platte.
+      - name: Upload-Schluessel wegraeumen
+        if: always()
+        working-directory: apps/android
+        run: rm -f keystore.properties "$RUNNER_TEMP/upload.jks"
