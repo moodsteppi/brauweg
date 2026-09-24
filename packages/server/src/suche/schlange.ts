@@ -102,7 +102,8 @@ function schluessel(gameId: GameId, config: unknown): string {
 }
 
 /**
- * Schluessel der Karte `imBau`: Spiel UND Konto (seit dem 09.09.2026).
+ * Schluessel der Karten `imBau` und `ergebnisse`: Spiel UND Konto (seit dem
+ * 09.09.2026, `ergebnisse` seit dem 24.09.2026).
  *
  * Ein Konto kann in zwei Fenstern fuer zwei verschiedene Spiele zugleich
  * stehen — zwei Reiter oder zwei Geraete am selben Konto; die Fenster sind
@@ -113,8 +114,9 @@ function schluessel(gameId: GameId, config: unknown): string {
  * A hiess es wieder "sucht nicht" — genau die Antwort, gegen die `imBau`
  * gebaut ist, nur im Randfall.
  *
- * `ergebnisse` haengt weiter am Konto allein — Bestand seit der ersten
- * Fassung der Schlange und bewusst nicht mit umgestellt.
+ * `ergebnisse` hing bis zum 24.09.2026 weiter am Konto allein: Wer in Spiel
+ * A vermittelt wurde und binnen `ERGEBNIS_FRIST_MS` fuer Spiel B nachfragte,
+ * bekam die tischId des A-Tisches — der B-Reiter ging an den falschen Tisch.
  */
 function kontoSchluessel(gameId: GameId, accountId: string): string {
   return `${gameId}#${accountId}`;
@@ -148,8 +150,16 @@ export class Suchschlange {
 
   /** Schluessel: `schluessel(gameId, config)`. */
   private readonly fenster = new Map<string, Fenster>();
-  /** Fertig vermittelt: Konto -> Tisch, bis der Spieler es abgeholt hat. */
-  private readonly ergebnisse = new Map<string, { tischId: string; seit: number }>();
+  /**
+   * Fertig vermittelt: Spiel+Konto -> Tisch, bis der Spieler es abgeholt hat.
+   *
+   * Schluessel: `kontoSchluessel`; das Konto steht auch im Wert, damit
+   * `verlaesstUeberall` es ohne Spiel wiederfindet (wie bei `imBau`).
+   */
+  private readonly ergebnisse = new Map<
+    string,
+    { accountId: string; tischId: string; seit: number }
+  >();
   /**
    * Konten, deren Runde gerade zu einem Tisch wird (seit dem 07.09.2026).
    *
@@ -164,9 +174,8 @@ export class Suchschlange {
    * Abwesenheitsfrist aus, und wer noch einmal suchte, bekam einen Bot.
    * Solange ein Konto hier steht, lautet die Antwort deshalb "sucht noch".
    *
-   * Schluessel: `kontoSchluessel` — je Spiel ein Eintrag, anders als bei
-   * `ergebnisse`; das Konto steht auch im Wert, damit `verlaesstUeberall`
-   * es ohne Spiel wiederfindet.
+   * Schluessel: `kontoSchluessel` — je Spiel ein Eintrag; das Konto steht
+   * auch im Wert, damit `verlaesstUeberall` es ohne Spiel wiederfindet.
    */
   private readonly imBau = new Map<
     string,
@@ -208,8 +217,10 @@ export class Suchschlange {
   betritt(gameId: GameId, accountId: string, config: unknown = null): void {
     const jetzt = this.jetzt();
     // Ein altes Ergebnis waere sonst die Antwort auf die NEUE Suche und
-    // schickte den Spieler an den Tisch von vorhin.
-    this.ergebnisse.delete(accountId);
+    // schickte den Spieler an den Tisch von vorhin. Nur fuer DIESES Spiel,
+    // wie beim Bau-Eintrag: Das Ergebnis eines anderen Spiels holt dort der
+    // andere Reiter ab, und diese Suche kann es nie mehr beantworten.
+    this.ergebnisse.delete(kontoSchluessel(gameId, accountId));
     // Den Bau-Eintrag nur fuer DIESES Spiel: Was das Konto in einem anderen
     // Spiel gerade gebaut bekommt, geht diese Suche nichts an — dort steht es
     // in einem eigenen Fenster, und der andere Reiter fragt weiter nach.
@@ -291,9 +302,12 @@ export class Suchschlange {
       if (!fenster.suchende.delete(accountId)) continue;
       if (fenster.suchende.size === 0) this.fenster.delete(schluessel);
     }
-    // Auch ein schon vermitteltes Ergebnis: Es wuerde den Spieler beim
-    // naechsten Abruf an den Tisch von vorhin schicken.
-    this.ergebnisse.delete(accountId);
+    // Auch jedes schon vermittelte Ergebnis: Es wuerde den Spieler beim
+    // naechsten Abruf an den Tisch von vorhin schicken. Nach Spiel+Konto
+    // geschluesselt, also ueber die Werte.
+    for (const [schluessel, ergebnis] of this.ergebnisse) {
+      if (ergebnis.accountId === accountId) this.ergebnisse.delete(schluessel);
+    }
     // Und jeder Bau-Eintrag, in welchem Spiel auch immer — die Karte ist nach
     // Spiel+Konto geschluesselt, also ueber die Werte. Auch das ist ein
     // Absprung: Wer sich an einen anderen Tisch setzt, darf keinen Sitz im
@@ -327,7 +341,7 @@ export class Suchschlange {
   }
 
   stand(gameId: GameId, accountId: string): Suchstand {
-    const ergebnis = this.ergebnisse.get(accountId);
+    const ergebnis = this.ergebnisse.get(kontoSchluessel(gameId, accountId));
     if (ergebnis) {
       return { sucht: false, suchende: 0, restMs: 0, tischId: ergebnis.tischId };
     }
@@ -396,8 +410,8 @@ export class Suchschlange {
     }
 
     // Aufgelaufene, nie abgeholte Ergebnisse vergessen.
-    for (const [accountId, ergebnis] of this.ergebnisse) {
-      if (jetzt - ergebnis.seit > ERGEBNIS_FRIST_MS) this.ergebnisse.delete(accountId);
+    for (const [schluessel, ergebnis] of this.ergebnisse) {
+      if (jetzt - ergebnis.seit > ERGEBNIS_FRIST_MS) this.ergebnisse.delete(schluessel);
     }
     for (const [schluessel, bau] of this.imBau) {
       if (jetzt - bau.seit > BAU_FRIST_MS) this.imBau.delete(schluessel);
@@ -415,13 +429,14 @@ export class Suchschlange {
   /**
    * Der Tisch steht: Der naechste Abruf dieser Konten nennt ihn.
    *
-   * Das Spiel braucht nur der Bau-Eintrag; das Ergebnis haengt am Konto.
+   * Bau-Eintrag und Ergebnis haengen beide an Spiel+Konto.
    */
   vermittelt(gameId: GameId, accountIds: readonly string[], tischId: string): void {
     const jetzt = this.jetzt();
     for (const accountId of accountIds) {
-      this.imBau.delete(kontoSchluessel(gameId, accountId));
-      this.ergebnisse.set(accountId, { tischId, seit: jetzt });
+      const schluessel = kontoSchluessel(gameId, accountId);
+      this.imBau.delete(schluessel);
+      this.ergebnisse.set(schluessel, { accountId, tischId, seit: jetzt });
     }
   }
 
