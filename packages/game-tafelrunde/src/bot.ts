@@ -424,13 +424,32 @@ const DECKKRAFT = 2;
  * `staerke` ueber alle 22 Einheiten: -0,21
  * (docs/TAFELRUNDE-NACHMESSUNG-2026-09-23.md, Abschnitt 2303677b).
  *
- * GEMESSEN UND NICHT EINGEPASST: Im selben Turnier kommt der erste Hieb eines
- * Meuchlers nach 1,7 bis 2,9 s Kampfzeit, der eines Fernkaempfers nach rund
- * 0,5 s. Der Unterschied von im Schnitt 1,9 s sind beim Zeitraffer 2 knapp
- * vier Sekunden auf der Uhr des Katalogs. Wachen brauchen noch laenger (3,4
- * bis 6,8 s), die Zahl ist fuer sie also eher zu klein als zu gross. Weil der
- * Zeitraffer Schritt und Angriff gleich beschleunigt, haengt die Vier nicht
- * an ihm.
+ * GEMESSEN UND NICHT EINGEPASST — ABER IM TURNIER, NICHT IN DER PARTIE: Im
+ * Monokultur-Turnier kommt der erste Hieb eines Meuchlers nach 1,7 bis 2,9 s
+ * Kampfzeit, der eines Fernkaempfers nach rund 0,5 s. Der Unterschied von im
+ * Schnitt 1,9 s sind beim Zeitraffer 2 knapp vier Sekunden auf der Uhr des
+ * Katalogs (Wachen dort 3,4 bis 6,8 s). Weil der Zeitraffer Schritt und
+ * Angriff gleich beschleunigt, haengt die Vier nicht an ihm. Eingepasst ist
+ * sie auch nicht: Die Rangkorrelation der Probe steigt ueber die Vier hinaus
+ * weiter (0 -> -0,21, 2 -> 0,16, 4 -> 0,40, 6 -> 0,58).
+ *
+ * IN ECHTEN PARTIEN GIBT ES DIESEN ANMARSCH KAUM: Dort schlaegt ein Meuchler
+ * nach 0,4 s zu (Median), Wache und Schuetze nach 0,1 s, und kein einziger
+ * stirbt vor seinem ersten Hieb (docs/TAFELRUNDE-MEUCHLER-KAMPFBILD.md,
+ * werkzeug/meuchler-kampfbild.mjs). Die Vier bewertet also eine Schwaeche,
+ * die es nur zwischen drei Kopien derselben Einheit gibt. Dass sie trotzdem
+ * bleibt, ist nachgemessen (24.09.2026, dieselbe Datei, Abschnitt
+ * "Nachmessung ANMARSCH_SEKUNDEN"): Mit 0, 1, 2 oder 4 aendert sich weder die
+ * Marke Meuchler (x0,63 bis x0,67 auf beiden Saaten, im Rauschen) noch die
+ * Spielstaerke — ein Sitz mit 0, 1 oder 2 gegen drei mit 4 gewinnt 1.212 bis
+ * 1.220 von 4.800 Partien, erwartet 1.200 bei einem Standardfehler von 30;
+ * umgekehrt einer mit 4 gegen drei mit 0 oder 1: 1.174 und 1.183. Die Richtung
+ * spraeche leicht fuer weniger, der Abstand ist keine Aussage. Am Brett ist
+ * die Zahl stumm, in
+ * der Probe (test/anmarsch.test.ts) haelt sie als einzige die Rangfolge
+ * richtig herum. Wer sie senkt, verliert die Probe und gewinnt nichts.
+ * Was den Meuchler in der Partie wirklich zurueckhaelt, ist die Zielwahl,
+ * nicht der Weg (Kampfbild, letzter Abschnitt).
  *
  * WARUM DER ABZUG GERADE DIE MEUCHLER TRIFFT, obwohl jede Einheit mit
  * Reichweite 1 laeuft: Der Anmarsch kostet eine feste Menge Leben
