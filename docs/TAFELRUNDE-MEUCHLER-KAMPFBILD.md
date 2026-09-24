@@ -137,7 +137,7 @@ dem Schützen seiner Stufe.
    Schritte statt gut einem. **Kein einziger** Meuchler stirbt, bevor er
    zuschlägt (0,0 % in beiden Saaten). Nur Knochenspäher und Klingentänzerin
    bleiben in 2–4 % der Kämpfe ganz ohne Hieb (P90 bei 13–14 s: eingekeilt).
-   Die 1,7–2,9 s aus dem Kopf von `ANMARSCH_SEKUNDEN` (`src/bot.ts:427`)
+   Die 1,7–2,9 s aus dem Kopf von `ANMARSCH_SEKUNDEN` (`src/bot.ts`)
    stammen aus dem Monokultur-Turnier und gelten auf echten Brettern nicht.
 2. **Wenn er steht, schlägt er — am meisten von allen.** Schaden je Sekunde:
    Gassendieb 90, Schattenklinge 100, gegen 42/48 der Wachen und 70/88 der
@@ -197,6 +197,72 @@ nur noch mehr Schaden auf dieselbe Wache.
   Teil dieses Auftrags.
 - Wie viel „Hiebe auf Fernkämpfer" genug wäre. Die Spalte zeigt nur, dass
   Meuchler sich darin nicht von Wachen unterscheiden.
-- Ob `ANMARSCH_SEKUNDEN = 4` im Bot falsch ist. Der Wert bewertet Einheiten
+- Ob `ANMARSCH_SEKUNDEN = 4` im Bot falsch ist (seit 24.09.2026 nachgemessen:
+  nein, siehe letzter Abschnitt). Der Wert bewertet Einheiten
   **ohne Deckung**, und die Turnierzahlen, aus denen er stammt, sind richtig
   gemessen — nur nicht auf echten Brettern. Siehe Punkt 1.
+
+## Nachmessung ANMARSCH_SEKUNDEN (24.09.2026)
+
+Die letzte offene Frage oben: Soll `ANMARSCH_SEKUNDEN` (`src/bot.ts`) bei 4
+bleiben, wenn der Anmarsch, den die Zahl bewertet, in der Partie kaum
+vorkommt? **Ja — sie ändert am Spiel nichts Messbares, und sie ist die
+einzige der geprüften Zahlen, die die Probe in `test/anmarsch.test.ts` hält.**
+Geändert wurde nur der Kommentar über ihr.
+
+Gemessen auf `d55e6dd` (= `origin/staging`), Node 24, Windows. Je Variante
+eine Kopie von `dist/` und `werkzeug/` mit der geänderten Zahl in
+`dist/src/bot.js`; `src/` blieb unberührt.
+
+### Marke Meuchler (`ausgewogenheit.mjs --partien 5000 --sitze 4 --mindest 150`)
+
+| ANMARSCH_SEKUNDEN | Antritte v1 | roh v1 | roh v2 | gl. Kosten v1 | gl. Kosten v2 |
+|---|---|---|---|---|---|
+| 0 (= vor #249) | 5.202 | x0,64 | x0,67 | x0,65 | x0,68 |
+| 1 | 5.152 | x0,64 | x0,67 | x0,65 | x0,68 |
+| 2 | 5.173 | x0,63 | x0,64 | x0,64 | x0,66 |
+| **4 (Stand)** | 5.061 | x0,63 | x0,64 | x0,64 | x0,66 |
+
+Die Zeile 0 ergibt Zahl für Zahl den Stand `c007ec1` aus
+`TAFELRUNDE-NACHMESSUNG-2026-09-23.md` — der Umbau ist also genau diese eine
+Zahl. Wächter und Krieger bewegen sich um höchstens 0,03, Untot (die
+dünnste Zeile, rund 1.300 Antritte) zwischen x0,95 und x1,03 ohne Richtung.
+
+### Spielstärke (Sitzduell, 4 Sitze, Besetzung `normal`)
+
+Ein Sitz mit Variante X, drei mit B, der X-Sitz geht reihum. Je Zeile zwei
+Saatbasen à 2.400 Partien. Erwartet sind 1.200 Siege, Standardfehler rund 30.
+Wegwerf-Skript über `erstellePartie`/`fuehreAus`/`botZug` aus zwei gebauten
+Kopien, wie im Kommentar zu `ANMARSCH_SEKUNDEN` beim ersten Duell — kein
+Werkzeug im Repo.
+
+| X gegen 3 × B | Siege von 4.800 |
+|---|---|
+| 4 gegen 4 (Kontrolle) | 1.200 |
+| 0 gegen 4 | 1.220 |
+| 1 gegen 4 | 1.216 |
+| 2 gegen 4 | 1.212 |
+| 4 gegen 0 | 1.174 |
+| 4 gegen 1 | 1.183 |
+
+Die Richtung spräche leicht für eine kleinere Zahl, der Abstand liegt aber
+bei einem Standardfehler.
+
+### Die Probe (`test/anmarsch.test.ts`, Rangkorrelation zum Turnier)
+
+| ANMARSCH_SEKUNDEN | 0 | 1 | 2 | 3 | **4** | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| Spearman nackt | −0,21 | 0,01 | 0,16 | 0,26 | **0,40** | 0,50 | 0,58 |
+
+Mit 2 oder weniger fällt die Probe (Schwelle 0,2), mit 0 zusätzlich die drei
+„Meuchler vor Wache"-Proben. Dass die Korrelation über 4 hinaus weiter steigt,
+zeigt: Die 4 ist aus der Turnierzeit gemessen und nicht auf die Probe
+eingepasst.
+
+### Urteil
+
+Die Zahl wirkt nur bei `KEINE_DECKUNG` voll, also dort, wo `kandidaten` eine
+Einheit ohne ihr Heer bewertet. Genau das misst das Turnier, und dort stimmt
+sie. In der Partie zählt, welche Einheit das Heer am Ende hält, und dafür ist
+sie stumm. Senken hieße: Probe verloren, am Brett nichts gewonnen. Der Hebel
+für die Marke bleibt die Zielwahl (Abschnitt oben).
