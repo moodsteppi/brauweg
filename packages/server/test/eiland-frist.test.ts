@@ -125,21 +125,42 @@ test('nach Ablauf wird aufgeloest, und die naechste Runde bekommt eine frische F
   const { anna, bert, table } = await tischZuZweit(h);
   const { a, b } = await stillAmTisch(h, table.id, anna.accountId, bert.accountId);
 
-  const ersteFrist = a.lastView!.phaseDeadline!;
-  await a.waitFor(
-    () => (a.lastView!.view as { runde: number }).runde >= 2,
-    'zweite Runde nach Ablauf der Frist',
-  );
+  /*
+   * Beide Fristen kommen aus dem VERLAUF, nicht aus `lastView`: Bei 200 ms
+   * Frist ist die erste Runde unter Last schon vorbei, bevor der Test nach
+   * `stillAmTisch` die Sicht abliest. Dann war `ersteFrist` bereits die der
+   * zweiten Runde, das Warten auf `runde >= 2` sofort erfuellt, und der Test
+   * verglich dieselbe Frist mit sich selbst (24.09.2026: "1790247694696 gegen
+   * 1790247694696"; mit 300 ms Verzoegerung vor dem Ablesen fuenfmal von
+   * fuenf nachgestellt). Verglichen werden deshalb die ersten beiden Runden,
+   * die der Client ueberhaupt gesehen hat — gleich, wann der Test hinsieht.
+   */
+  const fristJeRunde = (): [number, number | null][] => {
+    const fristen = new Map<number, number | null>();
+    for (const nachricht of a.verlauf) {
+      // Die Schlusssicht zaehlt die Runde noch hoch, traegt aber keine Frist.
+      if (nachricht.type !== 'view' || nachricht.finished) continue;
+      const { runde } = nachricht.view as { runde: number };
+      if (!fristen.has(runde)) fristen.set(runde, nachricht.phaseDeadline);
+    }
+    return [...fristen];
+  };
+  await a.waitFor(() => fristJeRunde().length >= 2, 'naechste Runde nach Ablauf der Frist');
 
-  const zweiteFrist = a.lastView!.phaseDeadline;
+  const [[ersteRunde, ersteFrist], [zweiteRunde, zweiteFrist]] = fristJeRunde() as [
+    [number, number | null],
+    [number, number | null],
+  ];
+  assert.equal(zweiteRunde, ersteRunde + 1, 'zwischen den beiden Sichten fehlt eine Runde');
+  assert.ok(ersteFrist !== null, `Runde ${ersteRunde} ohne Frist`);
   assert.ok(
     zweiteFrist !== null && zweiteFrist > ersteFrist,
     `die zweite Runde erbte die Frist der ersten (${zweiteFrist} gegen ${ersteFrist})`,
   );
 
-  // Und weiter als bis zur dritten Runde kommt ein toter Tisch nicht: Zwei
-  // Runden ohne Feldwechsel beenden die Partie (LEERRUNDEN_MAX in partie.ts).
-  await a.waitFor(() => a.lastView!.finished, 'Partieende nach zwei Leerrunden');
+  // Und endlos laeuft ein toter Tisch nicht: LEERRUNDEN_MAX Runden ohne
+  // Feldwechsel beenden die Partie (partie.ts).
+  await a.waitFor(() => a.lastView!.finished, 'Partieende nach den Leerrunden');
   assert.equal(a.lastView!.phaseDeadline, null, 'am Partieende laeuft noch eine Frist');
 
   a.close();
