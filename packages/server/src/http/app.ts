@@ -813,7 +813,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // Einladungslinks direkt in der App oeffnen (iOS und Android) — siehe dort.
   appVerknuepfungRouten(app, deps.appVerknuepfung ?? {
     appleTeamId: null,
-    bundleId: 'de.brauweg.app',
+    bundleId: 'de.broweg.brauweg-spielen',
     androidPaket: 'de.brauweg.app',
     androidFingerabdruecke: [],
   });
