@@ -166,3 +166,62 @@ test('nach Ablauf wird aufgeloest, und die naechste Runde bekommt eine frische F
   a.close();
   b.close();
 });
+
+test('geben beide ab, bekommt die naechste Runde im selben Schritt eine frische Frist', async (t) => {
+  /*
+   * Die Probe davor deckt den phaseKey-Vergleich NICHT: Bei Fristablauf setzt
+   * `advancePhase` phaseDeadline auf null, bevor die neue Runde entsteht, und
+   * die Frist wird ohnehin neu gestellt. Ohne diesen Vergleich waere sie
+   * trotzdem gruen geblieben (Mutationsprobe am 24.09.2026). Allein zaehlt er
+   * dort, wo die LETZTE ABGABE die Runde aufloest: Dann laeuft keine Frist ab,
+   * phaseDeadline steht noch, und nur die neue Rundennummer verraet die neue
+   * Phase. Die Frist ist deshalb lang genug, dass sie hier nie ablaeuft.
+   */
+  const h = await startHarness({ phaseMaxMs: 60_000, botDelayMs: 60_000 });
+  t.after(() => h.close());
+
+  const { anna, bert, table } = await tischZuZweit(h);
+  const { a, b } = await stillAmTisch(h, table.id, anna.accountId, bert.accountId);
+
+  const abgeben = (client: TestClient) => {
+    const feld = (client.lastView!.view as { waehlbar: number[] }).waehlbar[0]!;
+    client.raw({
+      v: ENVELOPE_VERSION,
+      game: 'eiland',
+      type: 'action',
+      tableId: table.id,
+      action: { typ: 'plan', felder: [feld] },
+    });
+  };
+  // Aus dem Verlauf, aus demselben Grund wie in der Probe davor.
+  const fristJeRunde = (): [number, number | null][] => {
+    const fristen = new Map<number, number | null>();
+    for (const nachricht of a.verlauf) {
+      if (nachricht.type !== 'view' || nachricht.finished) continue;
+      const { runde } = nachricht.view as { runde: number };
+      if (!fristen.has(runde)) fristen.set(runde, nachricht.phaseDeadline);
+    }
+    return [...fristen];
+  };
+
+  const revision = a.lastView!.revision;
+  abgeben(a);
+  await a.waitFor(() => a.lastView!.revision > revision, 'Sicht nach Annas Abgabe');
+  await b.waitFor(() => b.lastView!.revision > revision, 'Sicht nach Annas Abgabe bei Bert');
+  abgeben(b);
+  await a.waitFor(() => fristJeRunde().length >= 2, 'naechste Runde nach beiden Abgaben');
+
+  const [[ersteRunde, ersteFrist], [zweiteRunde, zweiteFrist]] = fristJeRunde() as [
+    [number, number | null],
+    [number, number | null],
+  ];
+  assert.equal(zweiteRunde, ersteRunde + 1, 'zwischen den beiden Sichten fehlt eine Runde');
+  assert.ok(ersteFrist !== null, `Runde ${ersteRunde} ohne Frist`);
+  assert.ok(
+    zweiteFrist !== null && zweiteFrist > ersteFrist,
+    `die zweite Runde erbte die Frist der ersten (${zweiteFrist} gegen ${ersteFrist})`,
+  );
+
+  a.close();
+  b.close();
+});
