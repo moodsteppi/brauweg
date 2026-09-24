@@ -161,7 +161,14 @@ export type GameId =
    * ist deshalb immer null, `legalActions` leer, und `standings` setzt alle
    * auf Platz 1: Wer hier eine Rangfolge einzieht, baut ein anderes Spiel.
    */
-  | 'brocooked';
+  | 'brocooked'
+  /**
+   * BroChess: klassisches Schach zu zweit. Anders als die Duelle davor haelt
+   * es sich an JEDE Annahme der Schnittstelle — feste Zugfolge, und
+   * `legalActions` zaehlt jeden legalen Zug einzeln auf, auch jede
+   * Umwandlung. Der Bildschirm hebt daraus die Zielfelder hervor.
+   */
+  | 'brochess';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby
