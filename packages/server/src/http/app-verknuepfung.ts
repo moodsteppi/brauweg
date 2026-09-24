@@ -14,7 +14,7 @@
  * Pruefen bis zur naechsten Installation.
  *
  *   APPLE_TEAM_ID     zehn Zeichen, developer.apple.com → Membership
- *   APP_BUNDLE_ID     Vorgabe de.brauweg.app
+ *   APP_BUNDLE_ID     Vorgabe de.broweg.brauweg-spielen (iOS; de.brauweg.app liess sich bei Apple nicht registrieren, 24.09.2026)
  *   ANDROID_PAKET     Vorgabe de.brauweg.app
  *   ANDROID_SHA256    Fingerabdruecke, durch Komma getrennt (Play Console →
  *                     App-Integritaet → App-Signatur; dazu der des eigenen
@@ -42,7 +42,7 @@ export function appVerknuepfungAusUmgebung(env: NodeJS.ProcessEnv = process.env)
   const team = (env.APPLE_TEAM_ID ?? '').trim().toUpperCase();
   return {
     appleTeamId: TEAM_ID.test(team) ? team : null,
-    bundleId: (env.APP_BUNDLE_ID ?? '').trim() || 'de.brauweg.app',
+    bundleId: (env.APP_BUNDLE_ID ?? '').trim() || 'de.broweg.brauweg-spielen',
     androidPaket: (env.ANDROID_PAKET ?? '').trim() || 'de.brauweg.app',
     androidFingerabdruecke: (env.ANDROID_SHA256 ?? '')
       .split(',')

@@ -72,7 +72,7 @@ targets:
       Release: Konfiguration/Lokal-einbinden.xcconfig
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: de.brauweg.app
+        PRODUCT_BUNDLE_IDENTIFIER: de.broweg.brauweg-spielen
         PRODUCT_NAME: Brauweg
         INFOPLIST_FILE: Konfiguration/Info.plist
         GENERATE_INFOPLIST_FILE: "NO"
@@ -110,7 +110,7 @@ targets:
       - target: Brauweg
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: de.brauweg.app.tests
+        PRODUCT_BUNDLE_IDENTIFIER: de.broweg.brauweg-spielen.tests
         GENERATE_INFOPLIST_FILE: "YES"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic

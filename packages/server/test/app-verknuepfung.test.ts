@@ -56,7 +56,7 @@ test('mit Team-ID und Fingerabdruck: genau der Einladungspfad, fuer genau dieses
   assert.match(String(apple.headers['content-type']), /^application\/json/);
   assert.deepEqual(apple.json(), {
     applinks: {
-      details: [{ appIDs: ['ABCDE12345.de.brauweg.app'], components: [{ '/': '/beitritt/*' }] }],
+      details: [{ appIDs: ['ABCDE12345.de.broweg.brauweg-spielen'], components: [{ '/': '/beitritt/*' }] }],
     },
   });
 
