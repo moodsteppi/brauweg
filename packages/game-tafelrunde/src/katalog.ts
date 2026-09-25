@@ -387,13 +387,42 @@ export const KATALOG: readonly Einheit[] = [
     reichweite: 1,
     ruestung: 35,
   },
+  /**
+   * LEBEN AM 25.09.2026 ANGEHOBEN (vorher 520), ebenso Schattenklinge und
+   * Knochenspaeher. Die drei standen in der Tauschprobe jeweils in der letzten
+   * Zeile ihrer Kostenstufe (x0,74 / x0,81 / x0,68), die Marke Meuchler bei
+   * x0,63.
+   *
+   * WARUM LEBEN UND NICHT TEMPO ODER MARKENBONUS. Meuchler teilen schon am
+   * meisten Schaden je Sekunde aus, fallen aber nach 6 bis 8 s, weil sie mit
+   * Schuetzenleben in der Front stehen (docs/TAFELRUNDE-MEUCHLER-KAMPFBILD.md).
+   * Alle drei Wege sind gemessen, je mit Tauschprobe und Ausgewogenheit auf
+   * zwei Saatbasen (docs/TAFELRUNDE-MEUCHLER-WERTE.md):
+   *
+   *   - Schnelleres Ankommen (halbe Schrittpause) drueckt die Marke auf
+   *     x0,55. Wer frueher ankommt, steht frueher allein vorn.
+   *   - Doppeltes Markentempo oder ein Lebensbonus auf der Marke heben vor
+   *     allem den Nachtpfeil (Tauschprobe x1,03 auf x1,30 bzw. x1,35), einen
+   *     Schuetzen. Der Knochenspaeher traegt die Marke Untot und faellt dabei
+   *     auf x0,63 bzw. x0,59.
+   *   - Mehr Leben auf genau diesen drei Einheiten holt jede aus der letzten
+   *     Zeile ihrer Stufe.
+   *
+   * WARUM GESTAFFELT. +25 % fuer alle drei setzt die Schattenklinge mit x1,15
+   * an die Spitze ihrer Stufe; +12,5 % fuer alle drei laesst den
+   * Knochenspaeher bei x0,73 unten. Gebaut ist deshalb +12,5 % fuer
+   * Gassendieb und Schattenklinge und +36 % fuer den Knochenspaeher, der keinen
+   * Meuchlerbonus bekommt. Tauschprobe danach x0,92 / x0,92 / x0,89, Marke
+   * Meuchler x0,86. Die Klingentaenzerin bleibt, sie steht mit x0,95 in der
+   * Mitte ihrer Stufe.
+   */
   {
     id: 'gassendieb',
     name: 'Gassendieb',
     kosten: 1,
     rolle: 'meuchler',
     marken: ['meuchler'],
-    leben: 520,
+    leben: 585,
     angriff: 48,
     tempo: 0.95,
     reichweite: 1,
@@ -532,25 +561,32 @@ export const KATALOG: readonly Einheit[] = [
     reichweite: 3,
     ruestung: 20,
   },
+  /** Leben am 25.09.2026 angehoben (vorher 660) — warum: siehe Gassendieb. */
   {
     id: 'schattenklinge',
     name: 'Schattenklinge',
     kosten: 2,
     rolle: 'meuchler',
     marken: ['meuchler'],
-    leben: 660,
+    leben: 745,
     angriff: 68,
     tempo: 1,
     reichweite: 1,
     ruestung: 15,
   },
+  /**
+   * Leben am 25.09.2026 angehoben (vorher 700) — warum: siehe Gassendieb.
+   * Staerker als die beiden anderen, weil der Meuchlerbonus ihn nicht
+   * erreicht: Mit 875 (+25 %) blieb er in der Tauschprobe bei x0,81 die
+   * letzte Zeile seiner Stufe, mit 950 steht er bei x0,89 vor Grimmbart.
+   */
   {
     id: 'knochenspaeher',
     name: 'Knochenspäher',
     kosten: 2,
     rolle: 'meuchler',
     marken: ['untot'],
-    leben: 700,
+    leben: 950,
     angriff: 60,
     tempo: 0.9,
     reichweite: 1,

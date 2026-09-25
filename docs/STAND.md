@@ -178,7 +178,10 @@ nächsten roten Lauf nicht zum zweiten Mal gesucht werden soll.
 > Siege und kostet Kampfdauer (Zahlen, drei weitere Kandidaten und die Probe
 > auf beiden Saatbasen in der **zehnten Messung** des Konzepts). Neue unterste
 > Zeile ist **Meuchler** mit ×0,64 — mit deutlich mehr Luft, als Naturwesen
-> hatte.
+> hatte. **Seit dem 25.09.2026 mit mehr Leben** (Gassendieb 585,
+> Schattenklinge 745, Knochenspäher 950): Marke ×0,86, in der Tauschprobe
+> keiner mehr in der letzten Zeile seiner Stufe. Tempo und Markenbonus sind
+> gemessen und verworfen (`docs/TAFELRUNDE-MEUCHLER-WERTE.md`).
 >
 > **Die Tauschprobe (21.09.2026):**
 > `packages/game-tafelrunde/werkzeug/tauschprobe.mjs` (Kern
