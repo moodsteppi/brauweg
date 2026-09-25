@@ -1,0 +1,258 @@
+/*
+ * Aussehen von BroChess (Brett.tsx, screens/BroChessTable.tsx).
+ *
+ * Eigenes Modul wie bei BroCooked, damit die Klassennamen nirgends sonst
+ * greifen und die grosse `styles.css` unberuehrt bleibt.
+ *
+ * Das Brett ist quadratisch und so gross, wie Breite UND Hoehe erlauben —
+ * `min(…vw, …dvh)`. Nur nach der Breite zu gehen, schiebt es am Laptop unter
+ * den Rand; `dvh` statt `vh`, weil die Adressleiste am Handy die Hoehe
+ * wechselt.
+ */
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 100dvh;
+  padding: 0.8rem;
+  box-sizing: border-box;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  width: min(94vw, 72dvh, 640px);
+}
+
+.kopf h1 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.zurueck {
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.spieler {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(94vw, 72dvh, 640px);
+  padding: 0.35rem 0.6rem;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--panel);
+  font-size: 0.95rem;
+}
+
+.spielerDran {
+  outline: 2px solid var(--accent);
+}
+
+.status {
+  width: min(94vw, 72dvh, 640px);
+  min-height: 1.4em;
+  text-align: center;
+  font-weight: 600;
+}
+
+.statusSchach {
+  color: var(--danger);
+}
+
+.statusEnde {
+  color: var(--gold);
+}
+
+/* --- Das Brett ----------------------------------------------------------- */
+
+.brett {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: min(94vw, 72dvh, 640px);
+  aspect-ratio: 1;
+  border: 3px solid #3b2a1a;
+  border-radius: 6px;
+  overflow: hidden;
+  user-select: none;
+}
+
+.feld {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  /* Die Felder sind Knoepfe; ohne diese Zeilen erben sie Rand und runde
+     Ecken des allgemeinen `button`-Stils, und zwischen den Feldern stehen
+     dunkle Zwickel. */
+  border: 0;
+  border-radius: 0;
+  min-width: 0;
+  min-height: 0;
+  font: inherit;
+  /* Die Figur ist ein Schriftzeichen; so skaliert sie mit dem Feld. */
+  font-size: min(9.4vw, 7.2dvh, 64px);
+  line-height: 1;
+  cursor: default;
+}
+
+.hell {
+  background: #eed9b5;
+}
+
+.dunkel {
+  background: #b58863;
+}
+
+.klickbar {
+  cursor: pointer;
+}
+
+.gewaehlt {
+  box-shadow: inset 0 0 0 4px var(--accent);
+}
+
+/* Der letzte Zug bleibt sichtbar — sonst sieht man nach dem Wegschauen nicht,
+   was der Gegner gezogen hat. */
+.zuletzt {
+  background-image: linear-gradient(rgba(226, 182, 79, 0.45), rgba(226, 182, 79, 0.45));
+}
+
+.koenigImSchach {
+  background-image: radial-gradient(circle, rgba(194, 86, 76, 0.95) 0%, rgba(194, 86, 76, 0) 72%);
+}
+
+/* Leeres Zielfeld: Punkt. Zielfeld mit Figur (Schlagen): Ring. */
+.ziel::after {
+  content: '';
+  position: absolute;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: rgba(20, 60, 40, 0.45);
+  pointer-events: none;
+}
+
+.zielSchlag::after {
+  content: '';
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  border: 5px solid rgba(20, 60, 40, 0.5);
+  pointer-events: none;
+}
+
+.figur {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.figurWeiss {
+  color: #fdfbf6;
+  text-shadow:
+    0 0 1px #000,
+    0 0 1px #000,
+    0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.figurSchwarz {
+  color: #1d1a17;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+.koordinate {
+  position: absolute;
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.koordinateLinie {
+  right: 3px;
+  bottom: 2px;
+}
+
+.koordinateZeile {
+  left: 3px;
+  top: 2px;
+}
+
+.hell .koordinate {
+  color: #b58863;
+}
+
+.dunkel .koordinate {
+  color: #eed9b5;
+}
+
+/* --- Umwandlung ---------------------------------------------------------- */
+
+.umwandlung {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: rgba(18, 24, 28, 0.78);
+  color: var(--text);
+}
+
+.umwandlungWahl {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.umwandlungWahl button {
+  width: min(16vw, 12dvh, 96px);
+  aspect-ratio: 1;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #eed9b5;
+  font-size: min(11vw, 8dvh, 70px);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.umwandlungAbbruch {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.35rem 0.9rem;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.aktion {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.6rem 1.4rem;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fehler {
+  color: var(--danger);
+}

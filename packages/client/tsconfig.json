@@ -36,6 +36,7 @@
     "baseUrl": ".",
     "paths": {
       "@brauweg/game-api": ["../game-api/src/index.ts"],
+      "@brauweg/game-brochess": ["../game-brochess/src/index.ts"],
       "@brauweg/game-brocooked": ["../game-brocooked/src/index.ts"],
       "@brauweg/game-cambio": ["../game-cambio/src/index.ts"],
       "@brauweg/game-doppelkopf": ["../game-doppelkopf/src/index.ts"],

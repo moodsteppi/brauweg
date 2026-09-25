@@ -20,6 +20,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@brauweg/game-brochess": "*",
     "@brauweg/game-brocooked": "*",
     "@brauweg/game-cambio": "*",
     "@brauweg/game-doppelkopf": "*",

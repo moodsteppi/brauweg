@@ -150,6 +150,12 @@ export const PARTYKISTE_MODULE_VERSION = 4;
  */
 export const BROCOOKED_MODULE_VERSION = 1;
 
+/**
+ * 1 seit dem 25. September 2026 — die erste Fassung. Klassisches Schach zu
+ * zweit; die Zuege kommen vollstaendig als `legalActions`.
+ */
+export const BROCHESS_MODULE_VERSION = 1;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
@@ -162,6 +168,7 @@ const MODULE_VERSIONS: Record<string, number> = {
   golf: GOLF_MODULE_VERSION,
   partykiste: PARTYKISTE_MODULE_VERSION,
   brocooked: BROCOOKED_MODULE_VERSION,
+  brochess: BROCHESS_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */

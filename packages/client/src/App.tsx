@@ -43,6 +43,9 @@ const KontoSichern = lazy(() =>
 const Tafelrunde = lazy(() =>
   import('./screens/Tafelrunde').then((m) => ({ default: m.Tafelrunde })),
 );
+const BroChessTable = lazy(() =>
+  import('./screens/BroChessTable').then((m) => ({ default: m.BroChessTable })),
+);
 const CambioTable = lazy(() =>
   import('./screens/CambioTable').then((m) => ({ default: m.CambioTable })),
 );
@@ -145,7 +148,7 @@ type Screen =
   | { name: 'profil'; accountId: string; vorher: Screen };
 
 /** Spiele, deren `lobby` die gewoehnliche Kartenlobby ist (siehe useZuruecktaste unten). */
-const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio']);
+const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess']);
 
 /**
  * Der Lade-Zustand des Clients.
@@ -683,6 +686,9 @@ export function App(): React.JSX.Element {
       const TISCHE: Record<string, typeof Table> = {
         wizard: WizardTable as unknown as typeof Table,
         cambio: CambioTable as unknown as typeof Table,
+        // Schach braucht weder Blatt noch Szene; die Props, die es nicht
+        // kennt, laufen ins Leere.
+        brochess: BroChessTable as unknown as typeof Table,
         skat: SkatTable as unknown as typeof Table,
       };
       const Spieltisch = TISCHE[screen.gameId] ?? Table;
