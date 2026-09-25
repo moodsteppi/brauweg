@@ -194,8 +194,9 @@ export const KATALOG: readonly Einheit[] = [
    * verliert jeder Schuetze gegen jede Wache. Aufgeschluesselt nach der Rolle,
    * die vorher auf dem Platz stand, liegt sie aber ueberall vorn, auch auf
    * Meuchlerplaetzen und auf Brettern, die schon eine zweite Wache haben
-   * (x1,35 bis x1,52). Das Irrlicht ist ebenfalls eine Wache und steht dort
-   * bei x0,60 bis x0,83. Es liegt an den Werten und nicht an der Rolle.
+   * (x1,35 bis x1,52). Das Irrlicht ist ebenfalls eine Wache und steht auf
+   * denselben Brettern mit zweiter Wache bei x0,60, auf Meuchlerplaetzen bei
+   * x0,92. Es liegt an den Werten und nicht an der Rolle.
    *
    * WARUM NICHT AUCH DER SCHILDKNAPPE (x1,33). Er ist der Traeger, der Untot
    * messbar haelt (siehe dort). Jede gemessene Schwaechung, die ihn in der

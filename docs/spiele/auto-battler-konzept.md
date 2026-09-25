@@ -573,6 +573,13 @@ die alte gestellt hätte:
 2. **Dorfwache ×1,37 und Schildknappe ×1,32** stehen weit über ihrer Stufe. Roh
    fallen sie nicht auf (×0,98 und ×0,83) — genau der umgekehrte Fehler: Sie
    stehen auf armen Brettern, weil sie billig sind.
+   **Nachtrag 25.09.2026:** Die Probe misst hier keinen Fehler. Auch nach
+   dem Platz aufgeschlüsselt liegen beide vorn. Gebaut ist die Dorfwache mit
+   550 statt 650 Leben: Tauschprobe ×1,12, Wächter und Krieger fallen von
+   ×1,28/×1,27 auf ×1,11/×1,10, Untot steigt in der Probe von 122 auf 175
+   Antritte. Der Schildknappe bleibt bei ×1,34, weil jede Schwächung, die ihn
+   bewegt, Untot unter die Zählschwelle fallen lässt. Alle Zahlen:
+   `docs/TAFELRUNDE-WACHEN-WERTE.md`.
 
 Beides gehört aufs Board und nicht in diese Messung: Hier ist das Verfahren
 geklärt, nicht der Katalog geändert.
