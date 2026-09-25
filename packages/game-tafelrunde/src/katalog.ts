@@ -198,13 +198,10 @@ export const KATALOG: readonly Einheit[] = [
    * denselben Brettern mit zweiter Wache bei x0,60, auf Meuchlerplaetzen bei
    * x0,92. Es liegt an den Werten und nicht an der Rolle.
    *
-   * WARUM NICHT AUCH DER SCHILDKNAPPE (x1,33). Er ist der Traeger, der Untot
-   * messbar haelt (siehe dort). Jede gemessene Schwaechung, die ihn in der
-   * Probe bewegt (630 oder 665 Leben, mit oder ohne Dorfwache), laesst den
-   * Bot ihn so viel seltener kaufen, dass Untot in test/ausgewogenheit.test.ts
-   * unter hundert Antritte faellt (51 bis 99). 680 haelt die Marke, bewegt
-   * seinen Index aber nicht (x1,33). Er bleibt deshalb die oberste Zeile
-   * seiner Stufe, bis Untot einen weiteren Traeger hat.
+   * WARUM NICHT AUCH DER SCHILDKNAPPE (x1,33). Solange er der einzige billige
+   * Untot-Traeger war, liess jede Schwaechung die Marke in der Probe unter
+   * hundert Antritte fallen. Das Irrlicht traegt sie seitdem mit, und daran
+   * scheitert es nicht mehr; was ihn noch haelt, steht beim Knappen.
    */
   {
     id: 'dorfwache',
@@ -219,6 +216,24 @@ export const KATALOG: readonly Einheit[] = [
     ruestung: 40,
   },
   /**
+   * STEHT ALLEIN OBEN IN SEINER STUFE (25.09.2026): Tauschprobe x1,39 /
+   * x1,37, die naechste Zeile x1,08. Lange ging es nicht anders, weil er der
+   * einzige billige Untot-Traeger war: Jede Schwaechung (630 oder 665 Leben,
+   * Ruestung, Angriff) liess den Bot ihn so viel seltener kaufen, dass Untot
+   * in test/ausgewogenheit.test.ts unter hundert Antritte fiel (51 bis 99).
+   * Seit das Irrlicht die Marke mittraegt (siehe dort), haelt sie auch mit
+   * einem schwaecheren Knappen rund 350 Antritte. Gemessen waere 570 Leben die
+   * Zahl (x1,12 / x1,13, gleichauf mit Dorfwache und Irrlicht).
+   *
+   * WARUM ER TROTZDEM NOCH 700 HAT: Jede Schwaechung, die ihn bewegt, kuerzt
+   * die Kaempfe so weit, dass in test/spielzeit.test.ts die Vorbereitung den
+   * Kampf ueberholt ("steckt seine Zeit vor allem in die Kaempfe"). Die Probe
+   * stand nach der Dorfwache ohnehin auf der Kante (Kampf 149 s gegen 148 s
+   * Vorbereitung), mit 570 sind es 139 gegen 146 s. Die Probe verlangt fuer
+   * diesen Fall ausdruecklich eine Neumessung von
+   * docs/TAFELRUNDE-SPIELZEIT.md, Abschnitt 4 — das entscheidet ein Mensch,
+   * nicht eine Katalogzeile. Alle Zahlen: docs/TAFELRUNDE-WACHEN-WERTE.md.
+   *
    * DRITTER TRAEGER DER MARKE UNTOT, dafuer Ruestung 42 statt 45
    * (beides am 05.09.2026).
    *
@@ -398,13 +413,41 @@ export const KATALOG: readonly Einheit[] = [
    * ist ein Licht, das schwer zu treffen ist. Naturwesen ist weggefallen —
    * ein Flammengeist gehoert nicht in den Wald, und Naturwesen hat mit
    * Hainwaechterin und Wurzelriese seine Vorderreihe laengst.
+   *
+   * VIERTER TRAEGER DER MARKE UNTOT (seit dem 25.09.2026), Werte
+   * unveraendert. Anlass war der Schildknappe: Er stand in der Tauschprobe
+   * allein oben in seiner Stufe, liess sich aber nicht schwaechen, weil
+   * Untot als billigen Traeger nur ihn hatte (siehe dort). Zwoelf Einheiten
+   * mit nur einer Marke wurden als vierter Traeger gegengemessen, je in der
+   * 400er-Probe mit dem Knappen auf 630, die aussichtsreichen dazu ueber
+   * 5.000 Partien. Das Irrlicht kann als einziges beides: Untot haelt die
+   * Zaehlschwelle mit Abstand (Probe 372 statt 70 Antritte), und die Marke
+   * bleibt nahe der Mitte (x1,09). Gassendieb und Steinschleuderer tragen sie
+   * auch, reissen aber Meuchler bzw. Waechter nach oben (x1,26 und x1,46);
+   * die Zwei- und Drei-Gold-Kandidaten ziehen Untot selbst auf x1,16 bis
+   * x1,38, und mit Grimmbart steht die Marke in der Probe auf der Kante
+   * (100 Antritte).
+   *
+   * Es ist zugleich der Traeger nach dem Muster des Knappen: eine billige
+   * Wache, die "zaeh und unerbittlich" eine Front gibt. Und es passt: Ein
+   * Irrlicht ist in der Sage die Seele eines Toten, die Wanderer ins Moor
+   * lockt. Die Figur bleibt die Kugel (Rueckfall) bzw. das Ritterblatt der
+   * Rolle Wache; wer das Blatt je Gestalt baut, bekommt es hier mit
+   * (docs/ASSETS-TAFELRUNDE-UNTOT.md).
+   *
+   * Gebaut, mit dem Knappen auf 700: Untot x0,94 -> x1,08 ueber 5.000
+   * Partien, in der Probe 175 -> 451 Antritte; die rohe Markenspanne wird
+   * enger (x1,11–0,77 -> x1,09–0,74). Sein eigener Index steigt von x0,98 auf
+   * x1,07 (Tauschprobe v1), Elementar bleibt in der Mitte (x1,07 -> x1,03).
+   * Der Knappe steigt dabei mit (x1,34 -> x1,39), weil er oefter neben einem
+   * zweiten Untoten steht.
    */
   {
     id: 'irrlicht',
     name: 'Irrlicht',
     kosten: 1,
     rolle: 'wache',
-    marken: ['elementar'],
+    marken: ['elementar', 'untot'],
     leben: 560,
     angriff: 34,
     tempo: 0.7,

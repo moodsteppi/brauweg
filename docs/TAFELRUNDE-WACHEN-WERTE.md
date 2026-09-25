@@ -175,10 +175,126 @@ Partie (v1):
 - Wie der Schildknappe herunterkommt, ohne Untot zu verlieren. Der
   naheliegende Weg ist ein weiterer Untot-Träger nach dem Muster des Knappen
   selbst (die Marke nicht nur über eine Einheit erreichbar machen). Danach
-  kann man den Knappen schwächen. Das ist eine eigene Aufgabe.
+  kann man den Knappen schwächen. Das ist eine eigene Aufgabe. (Gemessen im
+  zweiten Schritt unten: Irrlicht, dann Knappe 570.)
 - Ob der Bot mit den neuen Werten besser spielt. Er kauft weniger
   Dorfwachen, weil `staerke` Leben zählt. Ein Sitzduell alter gegen neuer
   Stand ist nicht gelaufen.
 - Acht Sitze. Gemessen ist nur zu viert, wie auf der Karte.
 - Die Anzeige: Sie liest die Werte aus der Sicht und schreibt keine ab
   (`packages/client` ist nicht angefasst).
+
+---
+
+# Zweiter Schritt: ein vierter Untot-Träger, dann der Knappe
+
+Stand: 25.09.2026, gemessen auf `81df008` (#269, Dorfwache 550 schon drin),
+dieselben Werkzeuge, Schalter und Saatbasen wie oben, dasselbe
+Vorschaltskript. **Gebaut ist nur der erste Teil:** Das Irrlicht trägt
+zusätzlich die Marke Untot (Elementar + Untot), Werte unverändert. Der
+Schildknappe hat weiter 700 Leben — warum, steht unter „Der Knappe" unten.
+Für den Bau ist abgeglichen, dass `src/` dieselben Tabellen liefert wie das
+Vorschaltskript (Probe, Tauschprobe v1).
+
+## Welcher Träger
+
+Kandidaten waren alle zwölf Einheiten mit nur einer Marke (Einheiten mit zwei
+Marken bekommen keine dritte, `katalog.test.ts`). Zuerst die 400er-Probe,
+jeweils ohne und mit dem Knappen auf 630 — der Wert, bei dem Untot vorher auf
+70 Antritte fiel. Untot mit Faktor und Antritten, dazu die Spanne:
+
+| Vierter Träger | Knappe 700: Untot | Spanne | Knappe 630: Untot | Spanne |
+|---|---|---|---|---|
+| (keiner) | x1,00 (175) | x1,17 – 0,80 | **zu dünn (70)** | x1,47 – 0,76 |
+| Astschütze | x1,07 (675) | x1,60 – 0,68 | x0,81 (578) | x1,59 – 0,81 |
+| Steinschleuderer | x1,11 (462) | x1,56 – 0,63 | x0,92 (340) | x1,59 – 0,62 |
+| **Irrlicht** | **x0,96 (451)** | **x1,15 – 0,72** | x1,21 (372) | x1,33 – 0,76 |
+| Gassendieb | x1,12 (1.037) | x1,31 – 0,52 | x0,98 (985) | x1,25 – 0,61 |
+| Moosheiler | x0,93 (372) | x1,27 – 0,86 | x0,51 (270) | x1,31 – 0,51 |
+| Grimmbart | x1,02 (210) | x1,10 – 0,78 | x1,07 (100) | x1,28 – 0,70 |
+| Nachtpfeil | x1,24 (265) | x1,24 – 0,61 | x1,34 (171) | x1,34 – 0,63 |
+| Frostweberin | x1,30 (258) | x1,30 – 0,74 | x1,32 (170) | x1,32 – 0,64 |
+| Schattenklinge | x1,27 (280) | x1,27 – 0,76 | x1,26 (196) | x1,32 – 0,70 |
+| Runenpriester | x1,15 (232) | x1,21 – 0,78 | x1,31 (108) | x1,35 – 0,65 |
+| Sturmrufer | x1,23 (214) | x1,23 – 0,77 | x1,24 (114) | x1,24 – 0,66 |
+| Lichtwahrerin | x1,12 (190) | x1,18 – 0,78 | zu dünn (84) | x1,39 – 0,69 |
+
+Die aussichtsreichen über 5.000 Partien (`ausgewogenheit-v1`), Marken roh:
+
+| Variante | Spanne | Untot (Antritte) | auffällig |
+|---|---|---|---|
+| Basis (#269) | x1,11 – 0,77 | x0,94 (2.019) | |
+| nur Knappe 630 | x1,17 – 0,72 | x0,87 (899) | |
+| **Irrlicht** | **x1,09 – 0,74** | **x1,08 (5.346)** | |
+| Irrlicht, Knappe 630 | x1,21 – 0,72 | x1,09 (4.364) | Wächter x1,21 |
+| Gassendieb | x1,26 – 0,63 | x1,09 (13.180) | Meuchler x1,26, Höchstdauer 1,6 % |
+| Gassendieb, Knappe 630 | x1,22 – 0,57 | x0,96 (12.185) | Naturwesen x0,57 |
+| Schattenklinge | x1,28 – 0,67 | x1,28 (3.593) | Untot oben |
+| Schattenklinge, Knappe 630 | x1,32 – 0,62 | x1,32 (2.489) | Untot oben |
+| Grimmbart, Knappe 630 | x1,12 – 0,69 | x1,01 (1.193) | Probe auf der Kante (100) |
+| Steinschleuderer, Knappe 630 | x1,46 – 0,70 | x0,90 (4.428) | Wächter x1,46 |
+| Runenpriester, Knappe 630 | x1,18 – 0,66 | x1,16 (1.395) | |
+| Nachtpfeil, Knappe 630 | x1,26 – 0,65 | x1,26 (2.000) | Untot oben |
+| Frostweberin, Knappe 630 | x1,29 – 0,66 | x1,29 (1.950) | Untot oben |
+| Sturmrufer, Knappe 630 | x1,38 – 0,65 | x1,38 (1.436) | Untot oben |
+
+**Das Irrlicht ist der einzige Kandidat, der beides kann:** Untot hält die
+Zählschwelle mit Abstand, und die Marke bleibt in der Mitte, ohne eine andere
+Zeile mitzureißen. Die billigen Nicht-Wachen (Astschütze, Steinschleuderer)
+reißen Wächter nach oben, der Gassendieb Meuchler und die Uhr, die Zwei- und
+Drei-Gold-Kandidaten ziehen Untot selbst an die Spitze, Grimmbart lässt die
+Probe auf der Kante. Das ist das Muster des Knappen: eine billige Wache, die
+der Marke eine Front gibt. Dazu passt das Bild — ein Irrlicht ist in der Sage
+die Seele eines Toten.
+
+Gebaut, beide Saatbasen:
+
+| | Basis v1 / v2 | Irrlicht v1 / v2 |
+|---|---|---|
+| Spanne roh | x1,11 – 0,77 / x1,12 – 0,76 | x1,09 – 0,74 / x1,08 – 0,78 |
+| Untot roh (Antritte v1) | x0,94 / x0,93 (2.019) | x1,08 / x1,07 (5.346) |
+| Elementar roh | x1,07 / x1,12 | x1,03 / x1,03 |
+| Untot gegen gleich teure Bretter | 1,07 / 1,06 | 1,16 / 1,15 |
+| vorzeitig einseitig (v1) | 32,8 % | 31,8 % |
+| Spielzeit / Kampf im Median (v1) | 5:05 / 11,6 s | 5:05 / 11,8 s |
+| an der Höchstdauer (v1) | 0,4 % | 0,4 % |
+| Probe: Spanne, Untot | x1,17 – 0,80, 175 | x1,15 – 0,72, **451** |
+
+Tauschprobe, 1 Gold (v1 / v2): Irrlicht 0,98 / 0,99 → 1,07 / 1,04. Der
+Knappe steigt mit, 1,34 / 1,38 → **1,39 / 1,37**, weil er öfter neben einem
+zweiten Untoten steht. Bei 2 und 3 Gold ändert sich die Reihenfolge nicht
+wesentlich (Grabfürstin 0,73 → 0,80).
+
+## Der Knappe
+
+Mit dem Irrlicht als viertem Träger, Tauschprobe 1 Gold (v1 / v2) und Untot
+in der Probe:
+
+| Knappe | Knappe | zweite Zeile | Untot Probe | Knappe auf letzten Brettern (v1) | Kampfanteil `spielzeit-probe` |
+|---|---|---|---|---|---|
+| 700 (gebaut) | 1,39 / 1,37 | 1,08 / 1,06 | 451 | 3.713 | 48,9 % (153 s / 145 s) |
+| 665 | 1,29 / – | 1,10 / – | – | – | – |
+| 630 | 1,22 / – | 1,10 / – | 372 | 1.507 | 46,8 % |
+| 600 | 1,20 / 1,20 | 1,11 / 1,12 | 367 | 1.075 | 46,1 % |
+| 585 | 1,15 / 1,13 | 1,11 / 1,11 | – | 966 | – |
+| **570** | **1,12 / 1,13** | 1,11 / 1,13 | **349** | 902 | **46,4 % (139 s / 146 s)** |
+| 550 | 1,06 / 1,05 | 1,15 / 1,14 | 351 | – | – |
+| 630, Rüstung 38 | 1,16 / – | 1,11 / – | 360 | – | – |
+
+(Zum Vergleich ohne Irrlicht: Knappe 630 → Untot in der Probe 70, Kampfanteil
+44,9 %; Dorfwache zurück auf 650 → 54,1 %.)
+
+Mit 570 steht er gleichauf mit Dorfwache und Irrlicht, Untot bleibt bei 349
+Antritten in der Probe (über 5.000 Partien 4.104 / 4.173, x1,13 / x1,13), die
+rohe Spanne liegt bei x1,24 – 0,71 / x1,23 – 0,72 (Wächter oben, gegen gleich
+teure Bretter 1,19 / 1,15). `test/ausgewogenheit.test.ts` bleibt grün.
+
+**Gebaut ist er trotzdem nicht.** Jede Schwächung, die seinen Index bewegt,
+lässt in `test/spielzeit.test.ts` die Probe „steckt seine Zeit vor allem in
+die Kaempfe" reißen: Die Vorbereitung (geschätzt) überholt den Kampf. Die
+Probe stand schon nach der Dorfwache auf der Kante (149 s Kampf gegen 148 s
+Vorbereitung; vor #269 waren es 54 %), und die Meldung verlangt ausdrücklich,
+Abschnitt 4 von `docs/TAFELRUNDE-SPIELZEIT.md` neu zu messen. Das ist keine
+Katalogentscheidung, sondern eine über die Zeitempfehlung — sie gehört einem
+Menschen. Mit 570 dauert die Partie im Median 4:48 statt 5:05, der einzelne
+Kampf 11,2 statt 11,8 s, an der Höchstdauer enden 0,1 %.
