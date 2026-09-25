@@ -25,6 +25,11 @@
  * Reparatur. Der Beistand war der einzige, dessen Rolle ohne Wirkung
  * bedeutungslos war — er teilte am wenigsten aus UND hielt am wenigsten aus.
  *
+ * Seit dem 23.09.2026 gibt es dafuer einen VERGLEICHSSCHALTER, keine Regel:
+ * `meuchlerZielwahl` im Kampfregler laesst einen Meuchler Fernkaempfer
+ * suchen, damit man die neue Regel messen kann, bevor jemand sie beschliesst.
+ * Im Standard steht er aus, und dann gilt der Absatz oben unveraendert.
+ *
  * NOCH NICHT DABEI: Faehigkeiten und Mana. Ein eigener Auftrag; er greift an
  * derselben Stelle in die Zugschleife ein, an der jetzt die Heilung steht
  * (dort kaeme das Wirken einer Faehigkeit vor dem Angriff, mit Mana aus
@@ -379,6 +384,28 @@ export interface Kampfregler {
    * Tabelle beantwortet keine Frage.
    */
   readonly heilungFaktor: number;
+  /**
+   * Wen ein Meuchler angreift, siehe `waehleZiel`.
+   *
+   * `'naechster'` ist der gebaute Stand: Ein Meuchler nimmt wie jeder den
+   * naechstgelegenen Gegner, und das ist fast immer die gepanzerte vordere
+   * Reihe (docs/TAFELRUNDE-MEUCHLER-KAMPFBILD.md). `'fernkaempfer'` laesst ihn
+   * unter den lebenden Gegnern zuerst einen Fernkaempfer suchen
+   * (`FERNKAEMPFER_ROLLEN`) und nur, wenn keiner mehr steht, den Naechsten.
+   *
+   * EIN VERGLEICHSSCHALTER UND KEINE REGEL. Ein Meuchler mit eigener Zielwahl
+   * ist genau die "neue Regel", die der Kopf dieser Datei ausschliesst; ob
+   * sie kommt, entscheidet ein Mensch nach der Messung
+   * (docs/TAFELRUNDE-MEUCHLER-ZIELWAHL-PROBE.md). Der Standard bleibt darum
+   * `'naechster'`, und mit ihm laeuft jeder Kampf Ereignis fuer Ereignis wie
+   * vor dem Schalter.
+   *
+   * ACHTUNG, WIE BEI `heilungFaktor`: Der Bot kennt den Schalter nicht und
+   * kauft und stellt Meuchler auf, als griffen sie den Naechsten an. Eine
+   * Messung mit `'fernkaempfer'` zeigt also, was die Zielwahl bei
+   * UNVERAENDERTEM Bot ausrichtet — nicht, was ein Bot daraus machen koennte.
+   */
+  readonly meuchlerZielwahl: 'naechster' | 'fernkaempfer';
 }
 
 /**
@@ -415,6 +442,7 @@ export const STANDARD_REGLER: Kampfregler = {
   schadenStufenTeiler: SCHADEN_STUFEN_TEILER,
   zeitraffer: 2,
   heilungFaktor: HEILUNG_FAKTOR,
+  meuchlerZielwahl: 'naechster',
 };
 
 // ---------------------------------------------------------------------------
@@ -750,13 +778,21 @@ function vergibRaenge(streiter: Streiter[], erstZieher: Seite): Streiter[] {
  * muss es geben, sonst haengt das Ziel an der Reihenfolge, in der die Liste
  * gerade durchlaufen wird — und die aendert sich, sobald jemand die
  * Streiterliste umbaut. Der Rang ist die Ordnung, die ohnehin schon feststeht.
+ *
+ * `kommtInFrage` engt die Auswahl ein (nur fuer `waehleZiel`); ohne sie ist
+ * es der Naechste schlechthin.
  */
-function sucheZiel(wer: Streiter, alle: readonly Streiter[]): Streiter | null {
+function sucheZiel(
+  wer: Streiter,
+  alle: readonly Streiter[],
+  kommtInFrage: (anderer: Streiter) => boolean = () => true,
+): Streiter | null {
   const feindSeite = gegenseite(wer.seite);
   let bestes: Streiter | null = null;
   let besterAbstand = Infinity;
   for (const anderer of alle) {
     if (anderer.seite !== feindSeite || anderer.leben <= 0) continue;
+    if (!kommtInFrage(anderer)) continue;
     const d = arenaAbstand(wer.platz, anderer.platz);
     if (
       d < besterAbstand ||
@@ -767,6 +803,37 @@ function sucheZiel(wer: Streiter, alle: readonly Streiter[]): Streiter | null {
     }
   }
   return bestes;
+}
+
+/**
+ * Die Rollen, die ein Meuchler mit `meuchlerZielwahl: 'fernkaempfer'` sucht.
+ *
+ * AM KATALOG BELEGT: Schuetzen und Magier haben Reichweite 3 oder 4, jeder
+ * Beistand 2, jede Wache und jeder Meuchler 1 (katalog.ts, Stand 23.09.2026).
+ * Die drei Rollen sind also genau die Einheiten mit Reichweite ueber 1 — und
+ * damit dieselbe Menge, die werkzeug/meuchler-kampfbild.mjs als "Fern" zaehlt
+ * (`reichweite > 1`). Gefragt wird trotzdem die Rolle und nicht die Zahl:
+ * Die Zielwahl soll eine Rolle treffen, und ein kuenftiger Wachturm mit
+ * Reichweite 2 waere darum noch lange kein Ziel fuer einen Meuchler.
+ */
+const FERNKAEMPFER_ROLLEN: ReadonlySet<Rolle> = new Set<Rolle>(['schuetze', 'magier', 'beistand']);
+
+/**
+ * Wen `wer` in diesem Takt angreift oder ansteuert.
+ *
+ * Fuer alle ausser einem Meuchler unter `'fernkaempfer'` ist das `sucheZiel`
+ * ohne Einschraenkung — also im Standard fuer ausnahmslos jeden. Unter dem
+ * Schalter sucht ein Meuchler zuerst den naechsten Fernkaempfer, mit derselben
+ * Gleichstandsregel (Abstand, dann Rang) und damit ebenso wiederholbar; steht
+ * keiner mehr, faellt er auf den Naechsten zurueck. Null gibt es nur, wenn die
+ * Gegenseite ausgeloescht ist — daran haengt der Abbruch in der Zugschleife.
+ */
+function waehleZiel(wer: Streiter, alle: readonly Streiter[], regler: Kampfregler): Streiter | null {
+  if (wer.rolle === 'meuchler' && regler.meuchlerZielwahl === 'fernkaempfer') {
+    const fern = sucheZiel(wer, alle, (anderer) => FERNKAEMPFER_ROLLEN.has(anderer.rolle));
+    if (fern) return fern;
+  }
+  return sucheZiel(wer, alle);
 }
 
 /**
@@ -953,6 +1020,27 @@ export function simuliereKampf(
   let jetzt = 0;
   let grund: Endgrund = 'ausgeloescht';
 
+  // Ein Hieb mit allem, was dazugehoert. Eine Funktion, weil ihn seit
+  // `meuchlerZielwahl` zwei Stellen austeilen — zwei Abschriften liefen beim
+  // ersten geaenderten Ereignisfeld auseinander.
+  const schlage = (wer: Streiter, ziel: Streiter): void => {
+    const schaden = schadenNach(wer.werte.angriff, ziel.werte.ruestung);
+    ziel.leben = Math.max(0, ziel.leben - schaden);
+    wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo, regler);
+    ereignisse.push({
+      art: 'treffer',
+      zeitMs: jetzt,
+      wer: wer.id,
+      ziel: ziel.id,
+      schaden,
+      lebenDanach: ziel.leben,
+    });
+    if (ziel.leben === 0) {
+      belegt.delete(ziel.platz);
+      ereignisse.push({ art: 'tod', zeitMs: jetzt, wer: ziel.id });
+    }
+  };
+
   for (;;) {
     // Erst pruefen, dann handeln: Ein bereits entschiedener Kampf soll nicht
     // noch einen Takt lang Ereignisse erzeugen, in denen Ueberlebende auf
@@ -969,11 +1057,13 @@ export function simuliereKampf(
     for (const wer of reihenfolge) {
       if (wer.leben <= 0) continue; // im selben Takt schon gefallen
 
-      const ziel = sucheZiel(wer, alle);
+      const ziel = waehleZiel(wer, alle, regler);
       if (!ziel) break; // Gegenseite ausgeloescht — der Rest des Taktes entfaellt
 
       /*
-       * DIE EINZIGE STELLE, AN DER DIE ROLLE ZAEHLT: Ein Beistand heilt,
+       * IM GEBAUTEN STAND DIE EINZIGE STELLE, AN DER DIE ROLLE ZAEHLT (der
+       * Vergleichsschalter `meuchlerZielwahl` liest sie noch in `waehleZiel`,
+       * steht aber im Standard aus): Ein Beistand heilt,
        * solange es in seiner Reichweite einen Verwundeten gibt — auch dann,
        * wenn er selbst gerade einen Gegner treffen koennte. Heilen GEHT VOR
        * schlagen, sonst waere die Wirkung auf die Faelle beschraenkt, in denen
@@ -1019,27 +1109,39 @@ export function simuliereKampf(
 
       if (arenaAbstand(wer.platz, ziel.platz) <= wer.werte.reichweite) {
         if (jetzt < wer.angriffFreiAb) continue;
-        const schaden = schadenNach(wer.werte.angriff, ziel.werte.ruestung);
-        ziel.leben = Math.max(0, ziel.leben - schaden);
-        wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo, regler);
-        ereignisse.push({
-          art: 'treffer',
-          zeitMs: jetzt,
-          wer: wer.id,
-          ziel: ziel.id,
-          schaden,
-          lebenDanach: ziel.leben,
-        });
-        if (ziel.leben === 0) {
-          belegt.delete(ziel.platz);
-          ereignisse.push({ art: 'tod', zeitMs: jetzt, wer: ziel.id });
-        }
+        schlage(wer, ziel);
         continue;
       }
 
+      /*
+       * Der Schritt geht auf DAS GEWAEHLTE Ziel und nicht auf den Naechsten —
+       * das ist der ganze Sinn von `waehleZiel`: Ein Meuchler, der einen
+       * Schuetzen sucht, aber auf den naechsten Gegner zulaeuft, landet an der
+       * Front und steht dort, ohne zuzuschlagen. `schrittZiel` nimmt dafuer
+       * nichts Neues, es bekommt nur einen anderen Zielplatz.
+       */
       if (jetzt < wer.schrittFreiAb) continue;
       const nach = schrittZiel(wer, ziel.platz, belegt);
-      if (nach === null) continue; // eingekeilt: stehen bleiben statt im Kreis zu laufen
+      if (nach === null) {
+        /*
+         * Eingekeilt: stehen bleiben statt im Kreis zu laufen (`schrittZiel`
+         * geht nur STRIKT naeher). Wer dabei aber einen ANDEREN Gegner in
+         * Reichweite hat, schlaegt den — sonst stuende ein Meuchler, dessen
+         * Weg zum Schuetzen die gegnerische Wache versperrt, neben genau
+         * dieser Wache und taete bis zur Hoechstdauer nichts, waehrend sie
+         * auf ihn einhaut.
+         *
+         * IM STANDARD GREIFT DAS NIE: Dort ist `ziel` schon der Naechste, und
+         * ist der ausser Reichweite, ist es jeder andere auch. Darum bleibt
+         * der gebaute Kampf Ereignis fuer Ereignis derselbe.
+         */
+        if (jetzt < wer.angriffFreiAb) continue;
+        const nah = sucheZiel(wer, alle);
+        if (nah && nah !== ziel && arenaAbstand(wer.platz, nah.platz) <= wer.werte.reichweite) {
+          schlage(wer, nah);
+        }
+        continue;
+      }
       const von = wer.platz;
       belegt.delete(von);
       belegt.set(nach, wer.id);

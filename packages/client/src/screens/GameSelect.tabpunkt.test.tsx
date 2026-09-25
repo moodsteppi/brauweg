@@ -106,7 +106,7 @@ describe('Punkt am Profil-Reiter', () => {
     // damit bliebe das Geschenk fuer blinde Spieler weiter unauffindbar.
     await zeigeStart(konto({ birthdayToday: true, birthdayRewardClaimable: true }));
 
-    expect(profilReiter()).toHaveAccessibleName(/Geschenk liegt bereit/);
+    expect(profilReiter()).toHaveAccessibleName('Profil, Geschenk liegt bereit');
   });
 
   it('haengt den Punkt an genau einen Reiter', async () => {

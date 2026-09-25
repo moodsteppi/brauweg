@@ -19,7 +19,7 @@ Server liest sie beim Start und sagt in **einer** Zeile, was läuft — nie eine
 Wert:
 
 ```
-Push-Mitteilungen: iOS ueber APNs (production, de.brauweg.app); Android ueber FCM (Projekt brauweg-12345)
+Push-Mitteilungen: iOS ueber APNs (production, de.broweg.brauweg-spielen); Android ueber FCM (Projekt brauweg-12345)
 Push-Mitteilungen: iOS nur Log (fehlt: APNS_KEY); Android nur Log (FCM_SERVICE_ACCOUNT nicht gesetzt)
 ```
 
@@ -30,7 +30,7 @@ Push-Mitteilungen: iOS nur Log (fehlt: APNS_KEY); Android nur Log (FCM_SERVICE_A
 | `APNS_KEY_ID` | developer.apple.com → *Certificates, Identifiers & Profiles* → **Keys** → „+" → Haken bei **Apple Push Notifications service (APNs)** → *Continue* → *Register*. Die **Key ID** (10 Zeichen) steht danach in der Liste. | `ABC123DEFG` |
 | `APNS_KEY` | Beim selben Schritt **einmalig** „Download": `AuthKey_<KEY_ID>.p8`. Der **ganze Inhalt** der Datei, mit `-----BEGIN PRIVATE KEY-----`. Zeilenumbrüche sind egal: echte, wörtliche `\n` oder die ganze Datei als Base64 — der Server nimmt alle drei. | *(geheim)* |
 | `APNS_TEAM_ID` | developer.apple.com → *Membership* → **Team ID**. Dieselbe wie `APPLE_TEAM_ID` (APP-RELEASE.md 3.1). | `9XYZ8ABC7D` |
-| `APNS_BUNDLE_ID` | Die Bundle-ID der App. | `de.brauweg.app` |
+| `APNS_BUNDLE_ID` | Die Bundle-ID der App. | `de.broweg.brauweg-spielen` |
 | `APNS_UMGEBUNG` | `production` (Vorgabe) für TestFlight und App Store; `sandbox` nur für Builds, die Xcode per Kabel aufs Telefon spielt. | `production` |
 
 Ein Schlüssel gilt für alle Apps des Teams und läuft nicht ab. Apple lässt

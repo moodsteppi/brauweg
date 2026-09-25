@@ -178,7 +178,13 @@ nächsten roten Lauf nicht zum zweiten Mal gesucht werden soll.
 > Siege und kostet Kampfdauer (Zahlen, drei weitere Kandidaten und die Probe
 > auf beiden Saatbasen in der **zehnten Messung** des Konzepts). Neue unterste
 > Zeile ist **Meuchler** mit ×0,64 — mit deutlich mehr Luft, als Naturwesen
-> hatte.
+> hatte. **Seit dem 25.09.2026 mit mehr Leben** (Gassendieb 585,
+> Schattenklinge 745, Knochenspäher 950): Marke ×0,86, in der Tauschprobe
+> keiner mehr in der letzten Zeile seiner Stufe. Tempo und Markenbonus sind
+> gemessen und verworfen (`docs/TAFELRUNDE-MEUCHLER-WERTE.md`). **Dorfwache
+> seit dem 25.09.2026 mit 550 statt 650 Leben** (Tauschprobe ×1,38 → ×1,12,
+> rohe Markenspanne ×1,28–0,80 → ×1,11–0,77). Der Schildknappe (×1,34) bleibt,
+> bis Untot einen weiteren Träger hat (`docs/TAFELRUNDE-WACHEN-WERTE.md`).
 >
 > **Die Tauschprobe (21.09.2026):**
 > `packages/game-tafelrunde/werkzeug/tauschprobe.mjs` (Kern

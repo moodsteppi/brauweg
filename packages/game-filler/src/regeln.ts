@@ -14,14 +14,29 @@ export interface FillerRegeln {
   readonly spalten: number;
   readonly zeilen: number;
   /**
-   * Wie viele Farben es gibt. Sechs wie im Vorbild.
+   * Wie viele Farben es gibt. Sechs wie im Vorbild, sieben in Extreme.
    *
    * Unter vier waere das Spiel kaputt: Bei zwei Sitzen sind zwei Farben immer
    * gesperrt (die eigene und die des Gegners), es blieben also nur zwei zur
    * Wahl — und ein Brett ohne gleichfarbige Nachbarn liesse sich mit drei
    * Farben zwar noch bauen, aber nicht mehr sinnvoll spielen.
+   *
+   * Im mitgeschickten Regelsatz DARF die Zahl fehlen, dann gilt die der
+   * Spielart (siehe `farbzahl`). Seit dem 23.09.2026 ist das der Normalfall:
+   * Die Vorgabe traegt keine mehr, weil EINE Zahl fuer alle Spielarten die
+   * siebte Farbe von Extreme nicht ausdruecken konnte — der Bildschirm
+   * ueberschrieb sie deshalb selbst, und diese Spielregel im Client machte
+   * niemand rot. In der PARTIE steht sie immer (`FillerRegelnFest`).
    */
-  readonly farben: number;
+  readonly farben?: number;
+  /**
+   * Die Farbzahl je Spielart; gilt, wo `farben` fehlt.
+   *
+   * Steht in der Vorgabe, damit der Bildschirm sie schon VOR dem ersten Tisch
+   * kennt (Farbtupfer und Vorschaubrett im Menue) und nicht abschreiben muss.
+   * Fehlt auch sie, gilt `FARBEN_JE_SPIELART`.
+   */
+  readonly farbenJeSpielart?: Readonly<Record<FillerVariante, number>>;
   /**
    * Spielart: mit Nebel oder offen.
    *
@@ -48,6 +63,11 @@ export interface FillerRegeln {
    * Tisch, der sie einmal gesetzt hat, sie behaelt.
    */
   readonly barrieren: number;
+}
+
+/** Der Regelsatz, wie er in der Partie steht: mit fester Farbzahl. */
+export interface FillerRegelnFest extends FillerRegeln {
+  readonly farben: number;
 }
 
 /**
@@ -77,8 +97,8 @@ export function mitBarrieren(variante: FillerVariante): boolean {
  * `extreme` (seit dem 06.09.2026) ist Build plus drei Sterne: Felder mit
  * normaler Farbe, aber einem weissen Stern darauf. Wer eines schluckt,
  * bekommt dafuer zwei Punkte statt einem und eine Mauer dazu. Gespielt wird
- * mit sieben Farben statt sechs — die Zahl steht im Regelsatz des Tisches,
- * nicht hier; hier steht nur, ob es Sterne gibt.
+ * mit sieben Farben statt sechs — die Zahl steht in `FARBEN_JE_SPIELART`,
+ * hier steht nur, ob es Sterne gibt.
  */
 export function mitSternen(variante: FillerVariante): boolean {
   return variante === 'extreme';
@@ -89,7 +109,48 @@ export function istVariante(wert: unknown): wert is FillerVariante {
 }
 
 /**
- * 8 x 7 = 56 Felder, sechs Farben.
+ * Wie viele Farben der Bildschirm hoechstens zeichnen kann.
+ *
+ * Nicht Geschmack, sondern die Palette: FARBEN in
+ * packages/client/src/minispiele/filler/farben.ts hat sieben Eintraege, und
+ * eine achte Farbnummer zeichnete `farbeVon` still als Rot — zwei Farben
+ * saehen gleich aus. Bis zum 23.09.2026 liess `pruefeRegeln` acht zu. Der
+ * Vertrag des Clients (src/vertrag/filler.test.ts) wird rot, sobald Palette
+ * und diese Zahl auseinanderlaufen.
+ */
+export const FARBEN_HOECHSTENS = 7;
+
+/**
+ * Die Farbzahl je Spielart.
+ *
+ * Sechs wie im Vorbild; Extreme spielt mit einer siebten (Orange).
+ * `satisfies` statt einer Typangabe am Namen: Kommt eine Spielart dazu, bricht
+ * der Bau hier, statt dass sie stumm keine Zahl hat.
+ */
+export const FARBEN_JE_SPIELART = {
+  nebel: 6,
+  klar: 6,
+  build: 6,
+  extreme: 7,
+} as const satisfies Record<FillerVariante, number>;
+
+/**
+ * Die Farbzahl eines Regelsatzes — an EINER Stelle, damit Pruefung, Aufbau
+ * und Bildschirmvorgabe dieselbe Zahl sehen.
+ *
+ * Eine ausdrueckliche `farben` gewinnt: Jeder Tisch von vor dem 23.09.2026
+ * traegt sie, und ein Tisch behaelt, womit er aufgemacht wurde.
+ */
+export function farbzahl(
+  regeln: Pick<FillerRegeln, 'farben' | 'farbenJeSpielart' | 'variante'>,
+): number {
+  if (typeof regeln.farben === 'number') return regeln.farben;
+  const variante = istVariante(regeln.variante) ? regeln.variante : 'nebel';
+  return regeln.farbenJeSpielart?.[variante] ?? FARBEN_JE_SPIELART[variante];
+}
+
+/**
+ * 8 x 7 = 56 Felder, die Farbzahl je Spielart.
  *
  * Genau das Brett aus dem Vorbild. Die SPALTENZAHL ist dabei die Groesse, die
  * am Handy zaehlt: Acht Spalten auf 360 px Breite sind 40 px je Feld, und
@@ -99,7 +160,11 @@ export function istVariante(wert: unknown): wert is FillerVariante {
 export const DEFAULT_REGELN: FillerRegeln = {
   spalten: 8,
   zeilen: 7,
-  farben: 6,
+  /*
+   * Keine `farben`: Der Bildschirm legt nur die Spielart obendrauf, und eine
+   * Zahl hier gaelte fuer jede — Extreme haette dann sechs Farben.
+   */
+  farbenJeSpielart: FARBEN_JE_SPIELART,
   /*
    * Der Nebel ist die Vorgabe, nicht die Ausnahme. Er ist der Grund, warum es
    * dieses Modul ueberhaupt gibt; wer das Vorbild will, schaltet um.
@@ -151,7 +216,7 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
   const gegeben = config as Record<string, unknown>;
   const probleme: RegelProblem[] = [];
 
-  for (const feld of ['spalten', 'zeilen', 'farben'] as const) {
+  for (const feld of ['spalten', 'zeilen'] as const) {
     const wert = gegeben[feld];
     if (wert === undefined) {
       probleme.push({ path: feld, messageKey: 'ruleset.fieldMissing', severity: 'error' });
@@ -161,9 +226,44 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
       probleme.push({ path: feld, messageKey: 'ruleset.fieldWrongType', severity: 'error' });
     }
   }
+  /*
+   * `farben` darf fehlen (dann gilt die Spielart), `farbenJeSpielart` auch.
+   * Steht eines da, muss es eine ganze Zahl sein — sonst rechnete `farbzahl`
+   * mit Unsinn.
+   */
+  const farbenGegeben = gegeben['farben'];
+  if (farbenGegeben !== undefined && farbenGegeben !== null) {
+    if (typeof farbenGegeben !== 'number' || !Number.isInteger(farbenGegeben)) {
+      probleme.push({ path: 'farben', messageKey: 'ruleset.fieldWrongType', severity: 'error' });
+    }
+  }
+  const jeSpielart = gegeben['farbenJeSpielart'];
+  if (jeSpielart !== undefined && jeSpielart !== null) {
+    if (typeof jeSpielart !== 'object') {
+      probleme.push({
+        path: 'farbenJeSpielart',
+        messageKey: 'ruleset.fieldWrongType',
+        severity: 'error',
+      });
+    } else {
+      for (const v of VARIANTEN) {
+        const wert = (jeSpielart as Record<string, unknown>)[v];
+        if (wert === undefined) continue;
+        const kaputt = typeof wert !== 'number' || !Number.isInteger(wert);
+        if (kaputt || (wert as number) < 4 || (wert as number) > FARBEN_HOECHSTENS) {
+          probleme.push({
+            path: `farbenJeSpielart.${v}`,
+            messageKey: kaputt ? 'ruleset.fieldWrongType' : 'ruleset.farbzahlAusserhalb',
+            severity: 'error',
+          });
+        }
+      }
+    }
+  }
   if (probleme.length > 0) return probleme;
 
-  const { spalten, zeilen, farben } = gegeben as unknown as FillerRegeln;
+  const { spalten, zeilen } = gegeben as unknown as FillerRegeln;
+  const farben = farbzahl(gegeben as unknown as FillerRegeln);
 
   if (spalten < 4 || spalten > 12) {
     probleme.push({ path: 'spalten', messageKey: 'ruleset.spaltenAusserhalb', severity: 'error' });
@@ -172,7 +272,7 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
     probleme.push({ path: 'zeilen', messageKey: 'ruleset.zeilenAusserhalb', severity: 'error' });
   }
   // Vier Farben sind die Untergrenze, nicht der Geschmack: siehe oben.
-  if (farben < 4 || farben > 8) {
+  if (farben < 4 || farben > FARBEN_HOECHSTENS) {
     probleme.push({ path: 'farben', messageKey: 'ruleset.farbzahlAusserhalb', severity: 'error' });
   }
 

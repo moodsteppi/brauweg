@@ -69,7 +69,7 @@ function ohneKommentare(xml: string): string {
 
 test('project.yml: Bundle-ID, iOS 16, nur iPhone, keine Team-ID im Repo', () => {
   const yml = lies('project.yml');
-  assert.deepEqual(werte(yml, 'PRODUCT_BUNDLE_IDENTIFIER'), ['de.brauweg.app', 'de.brauweg.app.tests']);
+  assert.deepEqual(werte(yml, 'PRODUCT_BUNDLE_IDENTIFIER'), ['de.broweg.brauweg-spielen', 'de.broweg.brauweg-spielen.tests']);
   const ziele = werte(yml, 'deploymentTarget');
   assert.ok(ziele.length >= 1 && ziele.every((z) => z === '16.0'), `deploymentTarget: ${ziele.join(', ')}`);
   const familien = werte(yml, 'TARGETED_DEVICE_FAMILY');

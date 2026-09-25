@@ -20,7 +20,7 @@ Token-Anmeldung beschreibt `docs/APPSTORE.md`.
 | Client | gebündelt unter `brauweg://app` | gebündelt unter `https://appassets.androidplatform.net` |
 | Server | Debug: Staging, Release: Produktion (Build-Einstellung `BRAUWEG_API_BASE` überschreibt) | Debug: Staging, Release: Produktion (`-PapiBase=…` überschreibt) |
 | Anmeldung | Token statt Cookie | dasselbe |
-| Bundle-ID / Paket | `de.brauweg.app` | `de.brauweg.app` (Debug: `de.brauweg.app.debug`) |
+| Bundle-ID / Paket | `de.broweg.brauweg-spielen` (`de.brauweg.app` ließ sich bei Apple nicht registrieren, 24.09.2026) | `de.brauweg.app` (Debug: `de.brauweg.app.debug`) |
 
 **Kein Capacitor.** Am 23.09.2026 kurz begonnen und verworfen: Es wäre eine
 zweite, konkurrierende iOS-Hülle neben der beschlossenen Swift-Hülle gewesen.
@@ -125,7 +125,7 @@ LÖSCHEN (`auth/loeschen.ts`).
 4. **Erster Build und Start im Simulator und auf dem iPhone:** Schritt für
    Schritt in **7.4**.
 5. **App-Eintrag** in App Store Connect anlegen: *Apps → + → Neue App*,
-   Plattform iOS, Name „Brauweg", Sprache Deutsch, Bundle-ID `de.brauweg.app`,
+   Plattform iOS, Name „Brauweg", Sprache Deutsch, Bundle-ID `de.broweg.brauweg-spielen`,
    SKU frei (`brauweg-ios`).
 6. **API-Schlüssel für den Bau ohne Kabel:** App Store Connect → *Users and
    Access → Integrations → App Store Connect API → Team Keys* → Schlüssel mit
@@ -621,7 +621,7 @@ dieselben Namen an der Naht zum Client.
 
 | Datei (unter `apps/ios`) | Aufgabe |
 | --- | --- |
-| `project.yml` | XcodeGen-Spezifikation: App `Brauweg` und `BrauwegTests`, Bundle-ID `de.brauweg.app`, iOS 16, nur iPhone, Build-Phase „Client ins Paket". Das `.xcodeproj` entsteht mit `xcodegen generate` und steht in `.gitignore`. |
+| `project.yml` | XcodeGen-Spezifikation: App `Brauweg` und `BrauwegTests`, Bundle-ID `de.broweg.brauweg-spielen`, iOS 16, nur iPhone, Build-Phase „Client ins Paket". Das `.xcodeproj` entsteht mit `xcodegen generate` und steht in `.gitignore`. |
 | `Brauweg/Huelle.swift` | Schema, Serveradresse, Einladungslinks, was dem Client eingespritzt wird (wie `Huelle.kt`) |
 | `Brauweg/PaketSchema.swift` | `WKURLSchemeHandler`: liefert `web/` aus dem App-Paket unter `brauweg://app` aus (wie `PaketLader.kt`) |
 | `Brauweg/HauptController.swift` | Der WKWebView: Navigation, `alert`/`confirm`/`prompt`, Safari-Blatt, Teilen, Zurück-Wischen, Meldung ohne Netz |

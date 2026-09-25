@@ -17,6 +17,7 @@ import type {
   GameMeta,
   GameRegistry,
 } from '@brauweg/game-api';
+import { brochess } from '@brauweg/game-brochess';
 import { brocooked } from '@brauweg/game-brocooked';
 import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
@@ -46,6 +47,7 @@ const MODULES: readonly AnyGameModule[] = [
   golf as unknown as AnyGameModule,
   partykiste as unknown as AnyGameModule,
   brocooked as unknown as AnyGameModule,
+  brochess as unknown as AnyGameModule,
 ];
 
 /**
@@ -170,6 +172,10 @@ export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
   tafelrunde: { web: 'spielbar', app: 'bald' },
   golf: { web: 'spielbar', app: 'bald' },
   brocooked: { web: 'spielbar', app: 'bald' },
+  /* Seit dem 25.09.2026 im Code. Auch auf der Webseite erst „Bald", bis
+     es jemand gespielt hat (Robin, 26.09.2026, vor dem Release). Danach
+     web: spielbar; in die App erst, wenn es auf der Webseite getaugt hat. */
+  brochess: { web: 'bald', app: 'bald' },
   /* Vorschau-Spiel mit Moderationsbedarf (freier Text zwischen Sitzen, siehe
      PREVIEW) — in der App gar nicht erst ankuendigen. */
   werwolf: { web: 'bald', app: 'aus' },

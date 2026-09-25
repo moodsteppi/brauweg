@@ -129,7 +129,7 @@ Sorte Frage, die beim Deploy schon einen halben Tag gekostet hat (siehe
 
 | Einstellung | Wert |
 | --- | --- |
-| Bundle-ID | `de.brauweg.app` |
+| Bundle-ID | `de.broweg.brauweg-spielen` (iOS; Android bleibt `de.brauweg.app`) |
 | Deployment-Ziel | iOS 16.0 |
 | Geräte | nur iPhone |
 | Ausrichtung | nur hochkant (wie das Web-Manifest) |
@@ -209,7 +209,7 @@ Entschieden im Gespräch am 5. August 2026.
   Nutzerdaten auf unserem Server liegen, nicht bei Apple**. Ein Accountwechsel
   verliert kein Level, keine Trophäe. Wir laden später denselben Code in den
   neuen Account.
-  - **Ein Haken: die Bundle-ID** (`de.brauweg.app`) ist weltweit eindeutig und
+  - **Ein Haken: die Bundle-ID** (`de.broweg.brauweg-spielen`) ist weltweit eindeutig und
     an einen Account gebunden. Für den neuen Account entweder im alten Account
     freigeben (App-Eintrag löschen — bei einer nie veröffentlichten App ein
     Zwei-Klick-Ding) **oder** eine neue ID nehmen. Beides ist folgenlos, solange
@@ -238,7 +238,7 @@ Testen. Zum Laden untereinander genügt ein Build und ein App-Eintrag.
    einschreiben (99 $). Nach Freischaltung erscheint das persönliche Team in
    Xcode.
 2. **Signierung:** Team-ID in `apps/ios/Konfiguration/Lokal.xcconfig`
-   (Vorlage daneben) — automatische Signierung, Bundle-ID `de.brauweg.app`
+   (Vorlage daneben) — automatische Signierung, Bundle-ID `de.broweg.brauweg-spielen`
    stehen schon in `project.yml`.
 3. **Client ins Paket:** `npm run build --workspace @brauweg/client`, dann
    `cd apps/ios && xcodegen generate` (siehe oben). **Release**-Konfiguration

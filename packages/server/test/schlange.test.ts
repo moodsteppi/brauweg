@@ -234,3 +234,46 @@ test('Vom Tisch her (verlaesstUeberall) ist der Absprung in jedem Spiel vermerkt
   assert.equal(schlange.imBauAbgesprungen('filler', 'anna'), true);
   assert.equal(schlange.imBauAbgesprungen('eiland', 'anna'), true);
 });
+
+test('Ergebnis in Spiel A erscheint nicht in stand() fuer Spiel B', () => {
+  const { schlange, vor } = aufbau();
+  schlange.betritt('filler', 'anna');
+  vor(FENSTER_MS);
+  schlange.faellig(NIE_VOLL);
+  schlange.vermittelt('filler', ['anna'], 'tisch-filler');
+
+  // Der zweite Reiter fragt fuer Eiland nach, ohne dort je gesucht zu haben.
+  assert.deepEqual(
+    schlange.stand('eiland', 'anna'),
+    NIEMAND,
+    'vorher stand hier tischId "tisch-filler" — der Eiland-Reiter ging an den Filler-Tisch',
+  );
+  assert.equal(schlange.stand('filler', 'anna').tischId, 'tisch-filler');
+
+  // Auch mitten in einer eigenen Eiland-Suche: Die Antwort ist das Fenster.
+  schlange.betritt('eiland', 'anna');
+  const eiland = schlange.stand('eiland', 'anna');
+  assert.equal(eiland.tischId, null);
+  assert.equal(eiland.sucht, true);
+});
+
+test('Eine neue Suche in Spiel B laesst das Ergebnis von Spiel A liegen, eine in Spiel A raeumt es', () => {
+  const { schlange, vor } = aufbau();
+  schlange.betritt('filler', 'anna');
+  vor(FENSTER_MS);
+  schlange.faellig(NIE_VOLL);
+  schlange.vermittelt('filler', ['anna'], 'tisch-filler');
+
+  schlange.betritt('eiland', 'anna');
+  assert.equal(
+    schlange.stand('filler', 'anna').tischId,
+    'tisch-filler',
+    'der Filler-Reiter holt seinen Tisch trotzdem ab',
+  );
+
+  // Dieselbe Suche noch einmal: Das alte Ergebnis waere sonst die Antwort
+  // auf die neue Suche.
+  schlange.betritt('filler', 'anna');
+  assert.equal(schlange.stand('filler', 'anna').tischId, null);
+  assert.equal(schlange.stand('filler', 'anna').sucht, true);
+});

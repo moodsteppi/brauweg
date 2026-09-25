@@ -56,10 +56,15 @@ import type { Kaempfer, TafelrundeAktion } from './partie.js';
 import type { EigeneSicht, TafelrundeSicht } from './sicht.js';
 import {
   type EinheitId,
+  type Kosten,
   type Marke,
+  type Stufe,
   type Wertebonus,
   KEIN_BONUS,
+  KOSTENSTUFEN,
+  STUFEN_FAKTOR,
   einheit,
+  einheitenMitKosten,
   werteFuer,
 } from './katalog.js';
 import { HEILUNG_FAKTOR } from './kampf.js';
@@ -399,11 +404,110 @@ const REICHWEITEN_GEWICHT = 0.25;
  */
 const DECKKRAFT = 2;
 
+/**
+ * Wie lange ein Nahkaempfer im Kampf laeuft, bevor er zum ersten Mal
+ * zuschlaegt — in Sekunden auf der Uhr des Katalogs (`tempo` ist "Angriffe je
+ * Sekunde" auf dieser Uhr, der Kampf laeuft um `zeitraffer` schneller).
+ *
+ * WARUM ES DIESE ZAHL GIBT: `staerke` rechnete bis zum 23.09.2026 so, als
+ * teile jede Einheit ab der ersten Sekunde aus. Im Kampf tut das nur, wer
+ * sein Ziel schon in Reichweite hat — alle anderen laufen erst
+ * (`simuliereKampf` in kampf.ts: geschlagen wird nur bei
+ * `arenaAbstand <= reichweite`, sonst kommt `schrittZiel`), und waehrend sie
+ * laufen, schlaegt der Gegner auf sie ein. Ohne Deckung (`KEINE_DECKUNG`, so
+ * bewertet der Bot jeden Kauf) bekam ein Schuetze fuer seine Reichweite
+ * nichts und ein Nahkaempfer fuer den Anmarsch keinen Abzug. Die Meuchler,
+ * die den hoechsten Schaden je Sekunde ihrer Stufe mit Reichweite 1
+ * verbinden, standen deshalb bei x1,25 bis x1,36 ihrer Stufe und damit ganz
+ * oben — im Monokultur-Turnier (werkzeug/turnier.mjs) gewinnen sie 14 bis
+ * 60 %, Mittelfeld oder darunter. Rangkorrelation Turnierquote gegen
+ * `staerke` ueber alle 22 Einheiten: -0,21
+ * (docs/TAFELRUNDE-NACHMESSUNG-2026-09-23.md, Abschnitt 2303677b).
+ *
+ * GEMESSEN UND NICHT EINGEPASST — ABER IM TURNIER, NICHT IN DER PARTIE: Im
+ * Monokultur-Turnier kommt der erste Hieb eines Meuchlers nach 1,7 bis 2,9 s
+ * Kampfzeit, der eines Fernkaempfers nach rund 0,5 s. Der Unterschied von im
+ * Schnitt 1,9 s sind beim Zeitraffer 2 knapp vier Sekunden auf der Uhr des
+ * Katalogs (Wachen dort 3,4 bis 6,8 s). Weil der Zeitraffer Schritt und
+ * Angriff gleich beschleunigt, haengt die Vier nicht an ihm. Eingepasst ist
+ * sie auch nicht: Die Rangkorrelation der Probe steigt ueber die Vier hinaus
+ * weiter (0 -> -0,21, 2 -> 0,16, 4 -> 0,40, 6 -> 0,58).
+ *
+ * IN ECHTEN PARTIEN GIBT ES DIESEN ANMARSCH KAUM: Dort schlaegt ein Meuchler
+ * nach 0,4 s zu (Median), Wache und Schuetze nach 0,1 s, und kein einziger
+ * stirbt vor seinem ersten Hieb (docs/TAFELRUNDE-MEUCHLER-KAMPFBILD.md,
+ * werkzeug/meuchler-kampfbild.mjs). Die Vier bewertet also eine Schwaeche,
+ * die es nur zwischen drei Kopien derselben Einheit gibt. Dass sie trotzdem
+ * bleibt, ist nachgemessen (24.09.2026, dieselbe Datei, Abschnitt
+ * "Nachmessung ANMARSCH_SEKUNDEN"): Mit 0, 1, 2 oder 4 aendert sich weder die
+ * Marke Meuchler (x0,63 bis x0,67 auf beiden Saaten, im Rauschen) noch die
+ * Spielstaerke — ein Sitz mit 0, 1 oder 2 gegen drei mit 4 gewinnt 1.212 bis
+ * 1.220 von 4.800 Partien, erwartet 1.200 bei einem Standardfehler von 30;
+ * umgekehrt einer mit 4 gegen drei mit 0 oder 1: 1.174 und 1.183. Die Richtung
+ * spraeche leicht fuer weniger, der Abstand ist keine Aussage. Am Brett ist
+ * die Zahl stumm, in
+ * der Probe (test/anmarsch.test.ts) haelt sie als einzige die Rangfolge
+ * richtig herum. Wer sie senkt, verliert die Probe und gewinnt nichts.
+ * Was den Meuchler in der Partie wirklich zurueckhaelt, ist die Zielwahl,
+ * nicht der Weg (Kampfbild, letzter Abschnitt).
+ *
+ * WARUM DER ABZUG GERADE DIE MEUCHLER TRIFFT, obwohl jede Einheit mit
+ * Reichweite 1 laeuft: Der Anmarsch kostet eine feste Menge Leben
+ * (`bezugsSchaden` mal Laufzeit), und die wiegt schwer, wo wenig Leben ist.
+ * Eine Wache verliert auf dem Weg einen kleinen Teil ihrer Standzeit, ein
+ * Meuchler mit halb so viel Leben den doppelten Anteil — und zwar genau von
+ * der Zeit, in der er seinen hohen Schaden austeilen sollte. Im Produkt aus
+ * `haelt` und `teiltAus` ist das derselbe Abzug, ob man ihn vom Leben nimmt
+ * oder vom Austeilen: Genommen wird er vom Leben, weil er dort eine feste
+ * Groesse ist.
+ *
+ * NUR SO WEIT, WIE DIE DECKUNG FEHLT (`VOLLE_DECKUNG - deckung`), und das ist
+ * gemessen, nicht geschont: Mit Deckung bekommt der Fernkaempfer seine
+ * Reichweite schon als Aufschlag (`ausDerFerne`), und der misst denselben
+ * Vorsprung von der anderen Seite. Beides zugleich zaehlt ihn doppelt, und
+ * der Bot kauft dann zu wenige Wachen (9.979 -> 7.923 aufgestellte in 300
+ * Partien, werkzeug/laufwege.mjs). Im Duell ein Sitz mit Doppelabzug gegen
+ * drei vom Stand davor: 217 Siege in 3 x 400 Partien zu viert, erwartet 300.
+ * Mit der Kopplung an die Deckung: 285, also im Rauschen; die umgekehrte
+ * Besetzung 307. (Ein Wegwerf-Duell, zwei gebaute Staende mit denselben
+ * Saaten ueber `botZug` — kein Werkzeug im Repo.) Bei `KEINE_DECKUNG` — so
+ * bewertet `kandidaten` jede Einheit einzeln — zaehlt der Abzug voll.
+ *
+ * Ein Heer GANZ OHNE Fernkaempfer hat volle Deckung (`deckungIm`) und zahlt
+ * deshalb nichts. Das ist dieselbe Rechnung und kein Loch: In diesem Heer
+ * bekommt niemand einen Reichweiten-Aufschlag, gegen den der Anmarsch
+ * aufzuwiegen waere.
+ */
+const ANMARSCH_SEKUNDEN = 4;
+
+/**
+ * Was ein Gegner derselben Preisklasse im Schnitt je Sekunde austeilt — roh,
+ * vor der Ruestung, so wie `haelt` in `staerke` auch gerechnet ist.
+ *
+ * Aus dem Katalog gerechnet und nicht als Zahl hingeschrieben: Wer eine
+ * Einheit nachjustiert, verschiebt den Bezug mit, statt dass hier eine zweite
+ * Wahrheit ueber dieselben Werte liegen bleibt. Mit der Sternstufe waechst er
+ * wie Leben und Angriff (`STUFEN_FAKTOR`): Wer auf Stufe 2 steht, trifft auf
+ * Gegner, die auch gewachsen sind, und der Anteil, den der Anmarsch kostet,
+ * bleibt derselbe.
+ */
+const BEZUGS_SCHADEN: ReadonlyMap<Kosten, number> = new Map(
+  KOSTENSTUFEN.map((kosten) => {
+    const alle = einheitenMitKosten(kosten);
+    const summe = alle.reduce((s, e) => s + e.angriff * e.tempo, 0);
+    return [kosten, alle.length === 0 ? 0 : summe / alle.length] as const;
+  }),
+);
+
+function bezugsSchaden(id: EinheitId, stufe: Stufe): number {
+  return (BEZUGS_SCHADEN.get(einheit(id).kosten) ?? 0) * STUFEN_FAKTOR[stufe];
+}
+
 /** Kein Rueckhalt: Reichweite bringt der Einheit dann gar nichts. */
 const KEINE_DECKUNG = 0;
 
 /** Voller Rueckhalt: Reichweite zaehlt mit `REICHWEITEN_GEWICHT` je Feld. */
-const VOLLE_DECKUNG = 1;
+export const VOLLE_DECKUNG = 1;
 
 /**
  * Wie gut die Vorderreihe dieses Heeres seine Fernkaempfer deckt — 0 bis 1.
@@ -465,6 +569,12 @@ function deckungIm(einheiten: readonly Kaempfer[]): number {
  * `KEINE_DECKUNG`: Wer eine Einheit ohne ihr Heer bewertet, weiss nichts ueber
  * ihren Rueckhalt und soll ihr keinen andichten.
  *
+ * DIE KEHRSEITE DER REICHWEITE springt dort ein, wo die Reichweite nichts
+ * zaehlt: Wer Reichweite 1 hat, muss erst hin und steht dabei unter Beschuss
+ * (`ANMARSCH_SEKUNDEN`). Beides zusammen ist EIN Unterschied zwischen Nah und
+ * Fern, und er wird genau einmal gezaehlt — mit Deckung als Aufschlag fuer
+ * den Fernkaempfer, ohne Deckung als Abzug beim Nahkaempfer.
+ *
  * Den Kampf wirklich durchrechnen zu lassen waere verlockend und falsch: Der
  * Bot entscheidet mehrmals je Runde, und `simuliereKampf` ist die teuerste
  * Rechnung des Moduls.
@@ -478,14 +588,22 @@ function deckungIm(einheiten: readonly Kaempfer[]): number {
  * dass die Zugschleife endet (Dateikopf), haengt daran, dass jeder Tausch
  * `heerStaerke` um mindestens einen ganzen Punkt hebt. Ein Faktor, der eine
  * Kommazahl stehen laesst, macht aus dem Schritt eine beliebig kleine Zahl.
+ *
+ * Exportiert nur fuer test/anmarsch.test.ts — ueber index.ts geht die
+ * Funktion nicht hinaus, sie ist Sache des Bots und keine des Moduls.
  */
-function staerke(
+export function staerke(
   k: Kaempfer,
   bonus: Wertebonus = KEIN_BONUS,
   deckung: number = KEINE_DECKUNG,
 ): number {
   const w = werteFuer(k.id, k.stufe, bonus);
-  const haelt = (w.leben * 100) / Math.max(1, 100 - w.ruestung);
+  // Was der Anmarsch an Leben kostet, steht fuer das Austeilen nicht mehr zur
+  // Verfuegung — aber nur so weit, wie `ausDerFerne` den Unterschied zwischen
+  // Nah und Fern nicht schon traegt. Warum und wie viel: `ANMARSCH_SEKUNDEN`.
+  const offen = VOLLE_DECKUNG - deckung;
+  const anmarsch = w.reichweite <= 1 ? ANMARSCH_SEKUNDEN * bezugsSchaden(k.id, k.stufe) * offen : 0;
+  const haelt = Math.max(0, (w.leben * 100) / Math.max(1, 100 - w.ruestung) - anmarsch);
   const teiltAus = leistung(k.id, w.angriff) * w.tempo;
   const ausDerFerne = 1 + (w.reichweite - 1) * REICHWEITEN_GEWICHT * deckung;
   return Math.round((haelt * teiltAus * ausDerFerne) / STAERKE_TEILER);

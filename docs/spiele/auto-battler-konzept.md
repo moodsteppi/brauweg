@@ -397,7 +397,9 @@ behaupten.
    Messung deutlicher als vorher: Jeder Eingriff an Elementar oder Drache
    verschlechtert sie. Ihre Ursache ist seit der neunten Messung benannt (die
    Nachbarordnung je Seite kostet den Meuchler sein schnelles Ankommen) und
-   nicht mit einem Bonus zu beheben.
+   nicht mit einem Bonus zu beheben. (Nachtrag 25.09.2026: Das mit dem Bonus
+   stimmt, die Ursache nicht. Behoben über das Leben der Einheiten, siehe
+   `docs/TAFELRUNDE-MEUCHLER-WERTE.md`.)
 
 ---
 
@@ -562,9 +564,22 @@ die alte gestellt hätte:
    ×0,64, normiert ×0,65). Drei Messungen zeigen auf dieselbe Rolle; die
    Ursache ist seit der neunten Messung benannt (die Nachbarordnung je Seite
    kostet den Meuchler sein schnelles Ankommen).
+   **Nachtrag 25.09.2026:** Diese Ursache trägt nicht. Schnelleres Ankommen
+   drückt die Marke auf ×0,55 und ändert die Tauschprobe nicht. Gebaut ist
+   stattdessen mehr Leben: Gassendieb 585, Schattenklinge 745, Knochenspäher
+   950. Tauschprobe danach ×0,92 / ×0,92 / ×0,89, keiner mehr in der letzten
+   Zeile seiner Stufe, Marke ×0,86. Tempo und Markenbonus sind mitgemessen
+   und verworfen. Alle Zahlen: `docs/TAFELRUNDE-MEUCHLER-WERTE.md`.
 2. **Dorfwache ×1,37 und Schildknappe ×1,32** stehen weit über ihrer Stufe. Roh
    fallen sie nicht auf (×0,98 und ×0,83) — genau der umgekehrte Fehler: Sie
    stehen auf armen Brettern, weil sie billig sind.
+   **Nachtrag 25.09.2026:** Die Probe misst hier keinen Fehler. Auch nach
+   dem Platz aufgeschlüsselt liegen beide vorn. Gebaut ist die Dorfwache mit
+   550 statt 650 Leben: Tauschprobe ×1,12, Wächter und Krieger fallen von
+   ×1,28/×1,27 auf ×1,11/×1,10, Untot steigt in der Probe von 122 auf 175
+   Antritte. Der Schildknappe bleibt bei ×1,34, weil jede Schwächung, die ihn
+   bewegt, Untot unter die Zählschwelle fallen lässt. Alle Zahlen:
+   `docs/TAFELRUNDE-WACHEN-WERTE.md`.
 
 Beides gehört aufs Board und nicht in diese Messung: Hier ist das Verfahren
 geklärt, nicht der Katalog geändert.
@@ -923,6 +938,13 @@ eigenen Brett ausweicht — und damit in entgegengesetzte absolute Richtungen.
 Die Hälften schieben sich also eher aneinander vorbei, der Anmarsch dauert
 länger. Davon leben Wächter und Krieger, dagegen verliert der Meuchler, dessen
 ganze Rechnung am schnellen Ankommen hängt.
+
+**Nachgeprüft am 23.09.2026: Die Erklärung mit dem Ankommen trägt nicht.** Die
+Verschiebung selbst ist echt. Aber wer dem Meuchler das Ankommen erleichtert
+(halbe oder gar keine Schrittpause, eine Sekunde Startvorsprung), drückt ihn
+weiter, auf ×0,55–0,63. Was ihn hebt, ist Leben (+25 % ergibt ×1,00–1,06) oder
+die Zielwahl „Fernkämpfer" (×0,81–0,88). Zahlen und die offene Entscheidung
+stehen in `docs/TAFELRUNDE-MEUCHLER-ANKOMMEN.md`.
 
 **Die Schranke der Probe (×0,5 bis ×2) hält**, aber die Spanne geht auf beiden
 Seiten leicht auf: ×0,52 bis ×1,59 statt ×0,54 bis ×1,54. **Naturwesen bleibt

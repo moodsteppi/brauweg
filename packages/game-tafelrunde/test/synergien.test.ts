@@ -268,7 +268,9 @@ describe('In der Sicht', () => {
         // (siehe katalog.ts) — allein, also unter der ersten Schwelle.
         // Naturwesen stand hier bis zur Elementar-Reparatur desselben Tages
         // ebenfalls: Das Irrlicht hat die Marke abgegeben, als es die
-        // Vorderreihe von Elementar wurde.
+        // Vorderreihe von Elementar wurde. Untot traegt es seit dem
+        // 25.09.2026 (vierter Traeger, siehe katalog.ts), ebenfalls allein.
+        ['untot', 1, null],
         ['drache', 1, null],
       ],
     );

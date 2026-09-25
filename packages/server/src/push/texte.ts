@@ -30,6 +30,7 @@ export const SPIELNAMEN: Readonly<Record<string, string>> = {
   golf: 'Golf',
   partykiste: 'Partykiste',
   brocooked: 'BroCooked',
+  brochess: 'BroChess',
 };
 
 export function spielname(gameId: string): string {

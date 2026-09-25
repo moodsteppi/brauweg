@@ -39,6 +39,7 @@ import { defineConfig } from 'vitest/config';
 // selbst importieren sie, also braucht auch der Vertrag sie aus der Quelle.
 const pakete = [
   'api',
+  'brochess',
   'brocooked',
   'cambio',
   'doppelkopf',
