@@ -45,12 +45,21 @@ export interface AnbieterErgebnis {
 export function AnbieterKnoepfe({
   zweck,
   nur,
+  form = 'breit',
   gesperrt = false,
   geburtstag,
   onErfolg,
   onFehler,
 }: {
   zweck: 'anmelden' | 'verknuepfen';
+  /**
+   * `breit`: die beiden Knoepfe untereinander, mit Text (Einstellungen).
+   * `kacheln`: zwei Kacheln nebeneinander, nur mit Zeichen — die Anmeldeseite
+   * nach dem Entwurf „Nachtblau & Gold" (26.09.2026). Googles Knopf liegt dort
+   * unsichtbar ueber der Kachel mit dem G: Der Klick landet in Googles eigenem
+   * Knopf und oeffnet Googles Dialog, nur das Aussehen kommt vom Entwurf.
+   */
+  form?: 'breit' | 'kacheln';
   /** Nur diese Anbieter zeigen — in den Einstellungen die noch nicht verknuepften. */
   nur?: readonly Anbieter[];
   gesperrt?: boolean;
@@ -147,7 +156,9 @@ export function AnbieterKnoepfe({
           shape: 'rectangular',
           logo_alignment: 'left',
           text: zweck === 'anmelden' ? 'signin_with' : 'continue_with',
-          width: BREITE,
+          // Als Kachel spannt ihn das CSS ueber die ganze Flaeche; die
+          // groesste Breite, die GIS zeichnet, laesst dafuer am wenigsten aus.
+          width: form === 'kacheln' ? 400 : BREITE,
           locale: 'de',
         });
       } catch {
@@ -161,7 +172,7 @@ export function AnbieterKnoepfe({
       lebt = false;
       window.clearInterval(erneuern);
     };
-  }, [config?.google?.clientId, zeigeGoogle, zweck]);
+  }, [config?.google?.clientId, zeigeGoogle, zweck, form]);
 
   // --- Apple ----------------------------------------------------------------
   const appleEinrichten = useRef<(() => Promise<void>) | null>(null);
@@ -255,6 +266,38 @@ export function AnbieterKnoepfe({
       )}
       {/* Waehrend der Nachfrage nur versteckt, nicht abgebaut: Googles Knopf
           ist in dieses div gezeichnet und kaeme sonst nicht wieder. */}
+      {form === 'kacheln' ? (
+        <div className="anbieter-kacheln" hidden={nachfrage !== null}>
+          {zeigeGoogle && (
+            <div className="anbieter-kachel anbieter-kachel-google" aria-disabled={laeuft || gesperrt}>
+              <svg className="anbieter-kachel-zeichen" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                {GOOGLE_G.map(([d, farbe]) => (
+                  <path key={farbe} d={d} fill={farbe} />
+                ))}
+              </svg>
+              <div
+                className="anbieter-kachel-google-knopf"
+                ref={googleZiel}
+                data-anbieter="google"
+                aria-label={zweck === 'anmelden' ? 'Mit Google anmelden' : 'Weiter mit Google'}
+              />
+            </div>
+          )}
+          {zeigeApple && (
+            <button
+              type="button"
+              className="anbieter-kachel anbieter-kachel-apple"
+              onClick={mitApple}
+              disabled={!appleBereit || laeuft || gesperrt}
+              aria-label={zweck === 'anmelden' ? 'Mit Apple anmelden' : 'Weiter mit Apple'}
+            >
+              <svg className="anbieter-kachel-zeichen" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d={APPLE_LOGO} fill="currentColor" />
+              </svg>
+            </button>
+          )}
+        </div>
+      ) : (
       <div className="anbieter-knoepfe" hidden={nachfrage !== null}>
       {zeigeApple && (
         <button
@@ -280,6 +323,7 @@ export function AnbieterKnoepfe({
         />
       )}
       </div>
+      )}
     </>
   );
 }
@@ -373,5 +417,16 @@ const VERWORFEN = new Set(['birthdayTooYoung', 'anmeldescheinUngueltig']);
  * (developer.apple.com/design/resources, "Sign in with Apple") einsetzen will,
  * tauscht nur diese Zeichenkette und den viewBox-Rahmen oben.
  */
+/**
+ * Das vierfarbige G fuer die Google-Kachel — Googles Zeichen in seinen
+ * Markenfarben, unveraendert (Branding-Richtlinien fuer „Sign in with Google").
+ */
+const GOOGLE_G: ReadonlyArray<readonly [string, string]> = [
+  ['M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.87h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.33 2.98-7.34z', '#4285F4'],
+  ['M12 22c2.7 0 4.97-.9 6.62-2.43l-3.24-2.5c-.9.6-2.04.95-3.38.95-2.6 0-4.8-1.76-5.59-4.12H3.07v2.59A10 10 0 0 0 12 22z', '#34A853'],
+  ['M6.41 13.9a6.01 6.01 0 0 1 0-3.8V7.51H3.07a10 10 0 0 0 0 8.98z', '#FBBC05'],
+  ['M12 5.98c1.47 0 2.79.5 3.83 1.5l2.87-2.87A9.62 9.62 0 0 0 12 2 10 10 0 0 0 3.07 7.51l3.34 2.59C7.2 7.74 9.4 5.98 12 5.98z', '#EA4335'],
+];
+
 const APPLE_LOGO =
   'M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701';
