@@ -182,13 +182,37 @@ export type EinheitId =
  */
 export const KATALOG: readonly Einheit[] = [
   // --- 1 Gold: Grundwerte rund 550 Leben / 40 Angriff ---------------------
+  /**
+   * LEBEN AM 25.09.2026 GESENKT (vorher 650). In der Tauschprobe stand sie
+   * bei x1,38, der groesste Abstand nach oben im ganzen Katalog, und mit ihr
+   * standen ihre beiden Marken an der Spitze (Waechter x1,28, Krieger x1,27,
+   * alle anderen unter x1,0). Mit 550 steht sie bei x1,12, immer noch in der
+   * oberen Haelfte ihrer Stufe, und die rohe Markenspanne schrumpft von
+   * x1,28–0,80 auf x1,11–0,77. Alle Zahlen: docs/TAFELRUNDE-WACHEN-WERTE.md.
+   *
+   * KEIN MESSFEHLER DER PROBE. Der Tauschplatz ist oft der vorderste, und dort
+   * verliert jeder Schuetze gegen jede Wache. Aufgeschluesselt nach der Rolle,
+   * die vorher auf dem Platz stand, liegt sie aber ueberall vorn, auch auf
+   * Meuchlerplaetzen und auf Brettern, die schon eine zweite Wache haben
+   * (x1,35 bis x1,52). Das Irrlicht ist ebenfalls eine Wache und steht auf
+   * denselben Brettern mit zweiter Wache bei x0,60, auf Meuchlerplaetzen bei
+   * x0,92. Es liegt an den Werten und nicht an der Rolle.
+   *
+   * WARUM NICHT AUCH DER SCHILDKNAPPE (x1,33). Er ist der Traeger, der Untot
+   * messbar haelt (siehe dort). Jede gemessene Schwaechung, die ihn in der
+   * Probe bewegt (630 oder 665 Leben, mit oder ohne Dorfwache), laesst den
+   * Bot ihn so viel seltener kaufen, dass Untot in test/ausgewogenheit.test.ts
+   * unter hundert Antritte faellt (51 bis 99). 680 haelt die Marke, bewegt
+   * seinen Index aber nicht (x1,33). Er bleibt deshalb die oberste Zeile
+   * seiner Stufe, bis Untot einen weiteren Traeger hat.
+   */
   {
     id: 'dorfwache',
     name: 'Dorfwache',
     kosten: 1,
     rolle: 'wache',
     marken: ['krieger', 'waechter'],
-    leben: 650,
+    leben: 550,
     angriff: 30,
     tempo: 0.65,
     reichweite: 1,

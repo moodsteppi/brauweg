@@ -67,13 +67,13 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  *
  * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten — und seit dem
  * 06.09.2026 ist das NICHTS MEHR: Ueber 400 Partien zu viert zaehlen ALLE
- * SIEBEN Marken. Meuchler 565, Krieger 535, Waechter 522, Elementar 400,
- * Drache 297, Naturwesen 290, Untot 122 (Stand 25.09.2026, nachgemessen nach
- * dem Meuchler-Leben, katalog.ts beim Gassendieb). Die Mindestzahl
+ * SIEBEN Marken. Meuchler 615, Elementar 582, Drache 420, Naturwesen 329,
+ * Waechter 277, Krieger 224, Untot 175 (Stand 25.09.2026, nachgemessen nach
+ * dem Leben der Dorfwache, katalog.ts dort). Die Mindestzahl
  * unten verlangt sechs und laesst der duennsten Zeile damit genau einen
  * Ausfall Luft. WER DEN KATALOG SO AENDERT, DASS ZWEI DIESER ZEILEN UNTER
  * HUNDERT FALLEN, SIEHT HIER "nur 5 Marken mit genug Antritten" und nicht den
- * eigentlichen Befund; die Zahl 122 (Untot) ist die knappste der Datei.
+ * eigentlichen Befund; die Zahl 175 (Untot) ist die knappste der Datei.
  *
  * DIESE SIEBEN ZAHLEN VERALTEN VON SELBST, und zwar bei jeder Aenderung, die
  * beeinflusst, WAS der Bot am Ende auf dem Brett hat — Katalog, Bot-Bewertung,
@@ -114,6 +114,11 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * Marke haelt die Schwelle, bleibt aber die naechste, die faellt. Vorsicht bei
  * jedem Lebensbonus fuer Meuchler auf der MARKE statt auf den Einheiten: Der
  * erreicht den Knochenspaeher nicht, und Untot fiel dabei auf 78 Antritte.
+ * Ebenfalls am 25.09.2026 von 122 auf 175: Die Dorfwache hat Leben verloren,
+ * und der Bot nimmt an ihrer Stelle oefter den Schildknappen. UMGEKEHRT
+ * GILT DASSELBE: Jede gemessene Schwaechung des Schildknappen, die seinen
+ * Index bewegt, laesst Untot hier auf 51 bis 99 fallen
+ * (docs/TAFELRUNDE-WACHEN-WERTE.md).
  */
 const MINDEST_ANTRITTE = 100;
 
