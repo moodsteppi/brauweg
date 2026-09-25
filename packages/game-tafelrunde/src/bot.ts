@@ -106,6 +106,14 @@ export interface Gangart {
    */
   readonly polster: number;
   /**
+   * Mit welcher Hochzahl die Zaehigkeit in `staerke` eingeht — je Gangart,
+   * damit `gangarten.mjs --schraube zaehigkeitsHochzahl=…` einen Sitz anders
+   * rechnen lassen kann als seine Gegner. Ohne das Feld ginge der Aufruf
+   * nicht, und ohne gepaarte Messung ist die Frage nicht zu beantworten (siehe
+   * `ZAEHIGKEIT_HOCHZAHL`). Fehlt es, gilt die Konstante.
+   */
+  readonly zaehigkeitsHochzahl?: number;
+  /**
    * Was nach einem Aufstieg uebrig bleiben soll, um das neue Feld zu fuellen.
    *
    * Die schaerfste Schraube im Feld: zwischen 0 und 5 liegt bei `hart` der
@@ -1720,7 +1728,7 @@ export function botZug(
   if (!eigen) return { typ: 'bereit' };
 
   const gangart = typeof wahl === 'string' ? GANGARTEN[wahl] : wahl;
-  HOCHZAHL_JETZT = (gangart as { zaehigkeitsHochzahl?: number }).zaehigkeitsHochzahl ?? ZAEHIGKEIT_HOCHZAHL;
+  HOCHZAHL_JETZT = gangart.zaehigkeitsHochzahl ?? ZAEHIGKEIT_HOCHZAHL;
   return (
     stellungsZug(sicht, eigen) ??
     aufstiegsZug(eigen, gangart) ??
