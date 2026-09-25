@@ -4,8 +4,15 @@ import { AnbieterKnoepfe } from '../anmeldung/AnbieterKnoepfe';
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
 import { inApp } from '../laufzeit';
+import '@fontsource-variable/nunito';
+import './anmeldung.css';
 
-type Mode = 'login' | 'register' | 'verify' | 'reset' | 'gast';
+/**
+ * `wahl` ist die Eingangsseite (Entwurf „Nachtblau & Gold", 26.09.2026):
+ * erst entscheiden, wie, dann das Formular dazu. Die uebrigen sind die
+ * Formulare dahinter.
+ */
+type Mode = 'wahl' | 'login' | 'register' | 'verify' | 'reset' | 'gast';
 
 /**
  * Holt das Token aus dem, was jemand einfuegt.
@@ -21,7 +28,7 @@ function extractToken(input: string): string {
 }
 
 export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Element {
-  const [mode, setMode] = useState<Mode>('login');
+  const [mode, setMode] = useState<Mode>('wahl');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -147,17 +154,76 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
     });
   };
 
-  return (
-    <main className="auth">
-      {/* Der Schriftzug ist gemalt und liegt schon vor - eine <h1> mit
-          Systemschrift daneben waere der Bruch, den man hier zuerst sieht.
-          Die Ueberschrift bleibt als unsichtbarer Text fuer Vorlesegeraete. */}
-      <h1 className="auth-marke">
-        <img src="/hub/logo.png" alt="Brauweg" draggable={false} />
-      </h1>
-      <p className="auth-spruch">Spielt nach euren Regeln.</p>
+  const wechsle = (ziel: Mode): void => {
+    setError(null);
+    setNote(null);
+    setMode(ziel);
+  };
 
-      <form className="panel" onSubmit={submit}>
+  if (mode === 'wahl') {
+    return (
+      <main className="anmeldung anmeldung-wahl">
+        {/* Der Schriftzug ist gemalt; die Ueberschrift bleibt als Text fuer
+            Vorlesegeraete. */}
+        <h1 className="anm-marke">
+          <img src="/hub/logo.png" alt="Brauweg" draggable={false} />
+        </h1>
+        <img className="anm-held" src="/hub/pinguin.png" alt="" draggable={false} />
+        <p className="anm-spruch">
+          Karten, Party und mehr.
+          <br />
+          Mit Freunden oder gegen Bots.
+        </p>
+        <div className="anm-knoepfe">
+          {note && <p className="anm-hinweis">{note}</p>}
+          {error && <p className="anm-fehler">{error}</p>}
+          <button type="button" className="anm-haupt" onClick={() => wechsle('login')} disabled={busy}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="3" y="5" width="18" height="14" rx="3" />
+              <path d="M4 7l8 6 8-6" />
+            </svg>
+            Mit E-Mail weiter
+          </button>
+          {/* Nur, wenn der Server Client-IDs nennt, und nie in der App
+              (siehe AnbieterKnoepfe). Fehlen beide, faellt die Reihe weg. */}
+          <AnbieterKnoepfe
+            zweck="anmelden"
+            form="kacheln"
+            gesperrt={busy}
+            onErfolg={() => onSignedIn()}
+            onFehler={(fehler) => void run(() => Promise.reject(fehler))}
+          />
+          <button type="button" className="anm-gast" onClick={() => wechsle('gast')}>
+            Ohne Konto spielen
+          </button>
+          <Rechtliches />
+        </div>
+      </main>
+    );
+  }
+
+  const titel =
+    mode === 'register'
+      ? 'Konto anlegen'
+      : mode === 'verify'
+        ? 'Adresse bestätigen'
+        : mode === 'gast'
+          ? 'Ohne Konto spielen'
+          : mode === 'reset'
+            ? 'Passwort vergessen'
+            : 'Anmelden';
+
+  return (
+    <main className="anmeldung anmeldung-formular">
+      <header className="anm-kopf">
+        <button type="button" className="anm-zurueck" onClick={() => wechsle('wahl')} aria-label="Zurück">
+          ‹
+        </button>
+        <img className="anm-marke-klein" src="/hub/logo.png" alt="Brauweg" draggable={false} />
+      </header>
+      <h2 className="anm-titel">{titel}</h2>
+
+      <form className="anm-formular" onSubmit={submit}>
         {mode === 'register' && (
           <>
             <label>
@@ -314,41 +380,10 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
             Passwort vergessen?
           </button>
         )}
-        {/* Der dritte Weg steht als eigener Schritt neben Anmelden/Registrieren
-            - erst waehlen, wie, dann erst das Formular dazu ausfuellen. */}
-        {(mode === 'login' || mode === 'register') && (
-          <button
-            type="button"
-            className="auth-gast-taste"
-            onClick={() => {
-              setError(null);
-              setNote(null);
-              setMode('gast');
-            }}
-          >
-            Ohne Konto spielen
-          </button>
-        )}
-        {/* Apple und Google — jeder Knopf nur, wenn der Server fuer seinen
-            Anbieter eine Client-ID nennt, und erst dann laedt die Seite
-            ueberhaupt etwas von dort. Im Gast-Formular nicht: Ein Gast, der
-            sich mit Apple anmeldet, hat ein Konto und ist keiner mehr — das
-            Sichern eines laufenden Gastkontos steht in den Einstellungen. */}
-        {mode !== 'verify' && mode !== 'gast' && (
-          <AnbieterKnoepfe
-            zweck="anmelden"
-            gesperrt={busy}
-            onErfolg={() => onSignedIn()}
-            // Ueber `run`, damit die Meldung am selben Platz und in derselben
-            // Form erscheint wie jede andere Anmeldemeldung.
-            onFehler={(fehler) => void run(() => Promise.reject(fehler))}
-          />
-        )}
       </form>
 
       {/* Impressum und Datenschutz muessen erreichbar sein, ohne dass man ein
-          Konto hat - sonst haette gerade der sie nicht, der vor der
-          Registrierung wissen will, wem er seine Adresse gibt. */}
+          Konto hat. */}
       <Rechtliches />
     </main>
   );

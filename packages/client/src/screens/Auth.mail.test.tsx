@@ -30,7 +30,13 @@ beforeEach(() => {
   googleConfig.mockReset().mockResolvedValue({ clientId: null });
 });
 
+/** Seit 26.09.2026 beginnt die Anmeldung mit der Wahl-Seite; das Formular liegt dahinter. */
+function zumFormular(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Mit E-Mail weiter' }));
+}
+
 function registrierenAusfuellen(): void {
+  zumFormular();
   fireEvent.click(screen.getByRole('button', { name: 'Konto anlegen' }));
   fireEvent.change(screen.getByLabelText('Anzeigename'), { target: { value: 'Anna' } });
   fireEvent.change(screen.getByLabelText(/Geburtstag/), { target: { value: '1990-06-15' } });
@@ -43,6 +49,7 @@ describe('Passwort vergessen', () => {
   it('fragt nur nach der Adresse und antwortet neutral', async () => {
     passwortVergessen.mockResolvedValue({ ok: true, mailVersand: 'resend' });
     render(<Auth onSignedIn={() => {}} />);
+    zumFormular();
 
     fireEvent.click(screen.getByRole('button', { name: 'Passwort vergessen?' }));
     expect(screen.queryByLabelText(/Passwort/)).toBeNull();
@@ -58,6 +65,7 @@ describe('Passwort vergessen', () => {
   it('sagt ehrlich, wenn kein Mailversand eingerichtet ist', async () => {
     passwortVergessen.mockResolvedValue({ ok: true, mailVersand: 'log' });
     render(<Auth onSignedIn={() => {}} />);
+    zumFormular();
     fireEvent.click(screen.getByRole('button', { name: 'Passwort vergessen?' }));
     fireEvent.change(screen.getByLabelText('E-Mail'), { target: { value: 'anna@example.org' } });
     fireEvent.click(screen.getByRole('button', { name: 'Link schicken' }));

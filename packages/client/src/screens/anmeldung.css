@@ -1,0 +1,339 @@
+/* ==========================================================================
+   Anmeldung im Stil „Nachtblau & Gold" (Vorschlag 2 vom 26.09.2026; Robin:
+   „die Anmeldungsseite von Vorschlag 2 ist perfekt, exakt so").
+
+   Eigene Wurzel `.anmeldung` statt `.auth`: `.auth` traegt weiter den
+   Link-Bildschirm aus der Mail (KontoLink.tsx) im Holz-Stil, und die beiden
+   sollen sich nicht gegenseitig ueberschreiben. Die Werte stammen aus dem
+   Entwurf (redesign/erzeugen.mjs, Richtung 2): Grund #0e1a3d, Flaeche
+   #182a5c, Linie #26397a, leise #9fb0de, Gold #f5c02e / Verlauf ffd75a→e9a91a.
+   ========================================================================== */
+
+.anmeldung {
+  --anm-grund: #0e1a3d;
+  --anm-flaeche: #182a5c;
+  --anm-linie: #26397a;
+  --anm-tinte: #f3f5ff;
+  --anm-leise: #9fb0de;
+  --anm-gold: #f5c02e;
+  --anm-schrift: 'Nunito Variable', 'Nunito', system-ui, sans-serif;
+
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding:
+    max(1rem, env(safe-area-inset-top))
+    max(1.5rem, env(safe-area-inset-right))
+    max(1.25rem, env(safe-area-inset-bottom))
+    max(1.5rem, env(safe-area-inset-left));
+  background: var(--anm-grund);
+  color: var(--anm-tinte);
+  font-family: var(--anm-schrift);
+}
+
+/* Eine Spalte in Telefonbreite, auch am grossen Bildschirm. */
+.anmeldung > * {
+  width: 100%;
+  max-width: 21.5rem;
+}
+
+/* --- Wahl-Seite ----------------------------------------------------------- */
+
+.anm-marke {
+  margin: 1.9rem 0 0;
+  display: flex;
+  justify-content: center;
+}
+.anm-marke img {
+  display: block;
+  width: min(64vw, 15.6rem);
+  height: auto;
+}
+
+.anm-held {
+  display: block;
+  width: min(60vw, 14.4rem);
+  height: auto;
+  margin: 0.6rem auto 0;
+  filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.35));
+}
+
+.anm-spruch {
+  margin: 0.6rem 0 0;
+  text-align: center;
+  font-size: 1.06rem;
+  line-height: 1.45;
+  color: var(--anm-leise);
+}
+
+.anm-knoepfe {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.anm-haupt,
+.anmeldung .anm-formular button.primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  height: 3.4rem;
+  border: 0;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #ffd75a, #e9a91a);
+  color: #2a1a00;
+  font: 700 1.06rem/1 var(--anm-schrift);
+  cursor: pointer;
+}
+.anm-haupt svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.anm-haupt:active,
+.anmeldung .anm-formular button.primary:active {
+  transform: translateY(1px);
+  filter: brightness(0.95);
+}
+.anm-haupt:disabled,
+.anmeldung .anm-formular button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.anm-haupt:focus-visible,
+.anm-gast:focus-visible,
+.anm-zurueck:focus-visible,
+.anmeldung .anm-formular button:focus-visible,
+.anbieter-kachel:focus-within {
+  outline: 3px solid var(--anm-gold);
+  outline-offset: 2px;
+}
+
+.anm-gast {
+  border: 0;
+  background: none;
+  padding: 0.4rem;
+  color: var(--anm-gold);
+  font: 700 0.94rem var(--anm-schrift);
+  cursor: pointer;
+}
+
+.anm-hinweis,
+.anm-fehler {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--anm-leise);
+}
+.anm-fehler {
+  color: #ffb4a8;
+}
+
+/* Die beiden Anbieter als Kacheln nebeneinander (AnbieterKnoepfe form="kacheln"). */
+.anbieter-kacheln {
+  display: flex;
+  gap: 0.75rem;
+}
+.anbieter-kacheln[hidden] {
+  display: none;
+}
+.anbieter-kachel {
+  position: relative;
+  flex: 1;
+  height: 3.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  border: 1.5px solid var(--anm-linie);
+  background: var(--anm-flaeche);
+  color: #fff;
+  overflow: hidden;
+}
+.anbieter-kachel-zeichen {
+  width: 1.65rem;
+  height: 1.65rem;
+  pointer-events: none;
+}
+.anbieter-kachel-apple {
+  background: #111;
+  border-color: #111;
+  cursor: pointer;
+}
+.anbieter-kachel-apple:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.anbieter-kachel-google[aria-disabled='true'] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+/* Googles eigener Knopf, unsichtbar ueber der ganzen Kachel: Der Klick geht
+   in Googles Bibliothek. Auch bei opacity 0 nimmt der Rahmen Klicks an. */
+.anbieter-kachel-google-knopf {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+.anbieter-kachel-google-knopf > div,
+.anbieter-kachel-google-knopf iframe {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  transform: scale(1, 1.4);
+  transform-origin: 50% 50%;
+}
+
+/* Rechtliches klein unter allem, wie die Zeile im Entwurf. */
+.anmeldung .rechtliches {
+  margin: 0.2rem 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--anm-leise);
+}
+.anmeldung .rechtliches a {
+  color: var(--anm-leise);
+  text-decoration: underline;
+}
+
+/* --- Die Formulare dahinter ---------------------------------------------- */
+
+.anm-kopf {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+.anm-zurueck {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--anm-linie);
+  background: var(--anm-flaeche);
+  color: var(--anm-tinte);
+  font: 700 1.5rem/1 var(--anm-schrift);
+  cursor: pointer;
+}
+.anm-marke-klein {
+  height: 2.6rem;
+  width: auto;
+}
+.anm-titel {
+  margin: 1.4rem 0 0.8rem;
+  font: 800 1.6rem/1.15 var(--anm-schrift);
+}
+
+.anm-formular {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.anm-formular label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--anm-leise);
+}
+.anm-formular label .muted {
+  font-weight: 400;
+  font-size: 0.78rem;
+}
+.anm-formular input {
+  height: 3.1rem;
+  padding: 0 0.9rem;
+  border-radius: 0.85rem;
+  border: 1.5px solid var(--anm-linie);
+  background: var(--anm-flaeche);
+  color: var(--anm-tinte);
+  font: 600 1rem var(--anm-schrift);
+  color-scheme: dark;
+}
+.anm-formular input:focus-visible {
+  outline: none;
+  border-color: var(--anm-gold);
+}
+.anm-formular > .muted,
+.anm-formular .error {
+  margin: 0.6rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--anm-leise);
+}
+.anm-formular .error {
+  color: #ffb4a8;
+}
+.anm-formular .row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+.anmeldung .anm-formular button {
+  font-family: var(--anm-schrift);
+  width: 100%;
+  max-width: none;
+  align-self: stretch;
+}
+.anmeldung .anm-formular button:not(.primary) {
+  height: 3rem;
+  border-radius: 1rem;
+  border: 1.5px solid var(--anm-linie);
+  background: var(--anm-flaeche);
+  color: var(--anm-tinte);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.anmeldung .anm-formular button.auth-vergessen {
+  height: auto;
+  border: 0;
+  background: none;
+  padding: 0.5rem;
+  color: var(--anm-gold);
+}
+.anmeldung-formular .rechtliches {
+  margin-top: auto;
+  padding-top: 1.5rem;
+}
+
+/* Die Geburtstags-Nachfrage nach der ersten Anbieter-Anmeldung. */
+.anmeldung .anbieter-nachfrage {
+  padding: 0.9rem;
+  border-radius: 1rem;
+  background: var(--anm-flaeche);
+  border: 1.5px solid var(--anm-linie);
+}
+.anmeldung .anbieter-nachfrage input {
+  width: 100%;
+  height: 3rem;
+  margin-top: 0.4rem;
+  padding: 0 0.8rem;
+  border-radius: 0.8rem;
+  border: 1.5px solid var(--anm-linie);
+  background: var(--anm-grund);
+  color: var(--anm-tinte);
+  color-scheme: dark;
+  font: 600 1rem var(--anm-schrift);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anm-haupt:active,
+  .anmeldung .anm-formular button.primary:active {
+    transform: none;
+  }
+}
