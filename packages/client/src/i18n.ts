@@ -41,6 +41,9 @@ const de: Record<string, string> = {
   // Hektische Kueche fuer 1 bis 4 Koeche, miteinander statt gegeneinander.
   // Der Name kommt vom Auftraggeber; die Oberflaeche bleibt sonst deutsch.
   'game.brocooked': 'BroCooked',
+  // Klassisches Schach zu zweit. Der Name kommt wie bei BroCooked vom
+  // Auftraggeber.
+  'game.brochess': 'BroChess',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',

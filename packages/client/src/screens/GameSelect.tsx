@@ -61,6 +61,7 @@ import {
   Tafel,
   spielBanner,
 } from '../hub';
+import { BroChessBanner } from '../minispiele/brochess/Banner';
 import { BroCookedBanner } from '../minispiele/brocooked/Banner';
 import { EilandBanner } from '../minispiele/eiland/Banner';
 import { FillerBanner } from '../minispiele/filler/Banner';
@@ -2628,6 +2629,10 @@ export function Spielwahl({
                        fiele `spielBanner` auf "kommt bald" zurueck, und bei
                        "weniger Bewegung" steht die Kueche einfach still. */
                     <BroCookedBanner />
+                  ) : game.id === 'brochess' ? (
+                    /* BroChess: ein gezeichnetes Brett, aus demselben Grund
+                       wie bei der Partykiste. */
+                    <BroChessBanner />
                   ) : (
                     <img src={spielBanner(game.id)} alt="" draggable={false} />
                   )}
@@ -2655,6 +2660,7 @@ export function Spielwahl({
                     {game.id === 'brocooked' ? ' · Küche in Echtzeit' : ''}
                     {game.id === 'tafelrunde' ? ' · Auto-Battler' : ''}
                     {game.id === 'partykiste' ? ' · Minispiele, ein Turnier' : ''}
+                    {game.id === 'brochess' ? ' · Schach' : ''}
                   </span>
                 </span>
                 <span className="spielwahl-spielen">Spielen</span>

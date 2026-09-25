@@ -60,6 +60,9 @@ function isDevFlag(name: string): boolean {
  *   Brett, Bank und Laden mit einem aufgezeichneten Vorbereitungsstand. Auch
  *   sie bleibt, und aus demselben Grund (siehe Kopf von
  *   `proben/ruestkammer/ProbeRuestkammer.tsx`).
+ * - /probe/brochess — das echte Schachbrett mit festen Stellungen (Grund-
+ *   stellung, Schach, Umwandlung, Matt, Patt), ohne Server. Bleibt, damit
+ *   man das Brett ansehen kann, ohne zwei Konten an einen Tisch zu setzen.
  *
  * `/probe/arena-3d` (Probe B, dieselbe Szene live mit Three.js) gab es bis zum
  * 06.09.2026. Robin hat am 05.09.2026 gegen sie entschieden: Die Figuren sollen
@@ -77,6 +80,7 @@ function istProbe(name: string): boolean {
 const probeArena2d = istProbe('arena-2d');
 const probeKampf = istProbe('kampf');
 const probeRuestkammer = istProbe('ruestkammer');
+const probeBroChess = istProbe('brochess');
 
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
@@ -149,12 +153,20 @@ const ProbeRuestkammer = lazy(() =>
   })),
 );
 
+/* `lazy` wie die anderen Proben: Das Brett gehoert nicht in das Stueck, das
+   jeder Spieler beim Anmelden laedt. */
+const ProbeBroChess = lazy(() =>
+  import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
+);
+
 const werkzeug = probeArena2d ? (
   <Arena2D />
 ) : probeKampf ? (
   <ProbeKampf />
 ) : probeRuestkammer ? (
   <ProbeRuestkammer />
+) : probeBroChess ? (
+  <ProbeBroChess />
 ) : devAvatar ? (
   <AvatarAligner />
 ) : devChest ? (

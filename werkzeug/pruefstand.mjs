@@ -58,6 +58,7 @@ const BEKANNT = [
   ["game-golf", "Golf"],
   ["game-partykiste", "Partykiste"],
   ["game-brocooked", "BroCooked"],
+  ["game-brochess", "BroChess"],
 ];
 
 // Farbcodes fallen weg — als echte Steuerzeichen (vitest an einem Terminal)
