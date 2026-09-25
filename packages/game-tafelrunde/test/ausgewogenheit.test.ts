@@ -67,13 +67,13 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  *
  * Was dadurch UNGEPRUEFT bleibt, ist ausdruecklich festgehalten — und seit dem
  * 06.09.2026 ist das NICHTS MEHR: Ueber 400 Partien zu viert zaehlen ALLE
- * SIEBEN Marken. Waechter 605, Krieger 603, Elementar 430, Meuchler 398,
- * Naturwesen 360, Drache 318, Untot 110 (Stand 23.09.2026, nachgemessen nach
- * der Meuchler-Bewertung des Bots aus #249). Die Mindestzahl
+ * SIEBEN Marken. Meuchler 565, Krieger 535, Waechter 522, Elementar 400,
+ * Drache 297, Naturwesen 290, Untot 122 (Stand 25.09.2026, nachgemessen nach
+ * dem Meuchler-Leben, katalog.ts beim Gassendieb). Die Mindestzahl
  * unten verlangt sechs und laesst der duennsten Zeile damit genau einen
  * Ausfall Luft. WER DEN KATALOG SO AENDERT, DASS ZWEI DIESER ZEILEN UNTER
  * HUNDERT FALLEN, SIEHT HIER "nur 5 Marken mit genug Antritten" und nicht den
- * eigentlichen Befund; die Zahl 110 (Untot) ist die knappste der Datei.
+ * eigentlichen Befund; die Zahl 122 (Untot) ist die knappste der Datei.
  *
  * DIESE SIEBEN ZAHLEN VERALTEN VON SELBST, und zwar bei jeder Aenderung, die
  * beeinflusst, WAS der Bot am Ende auf dem Brett hat — Katalog, Bot-Bewertung,
@@ -108,8 +108,12 @@ const SAAT_BASIS = 'ausgewogenheit-probe';
  * hat die fuenfte Naturwesen-Traegerin gekostet (Bogenmeisterin, 18.09.2026) —
  * sie wird oefter gekauft und verdraengt dabei anderes; fuenf kamen mit dem
  * Anmarsch-Abzug in der Bot-Bewertung aus #249 zurueck (bot.ts). Nach
- * #250 bis #253 unveraendert 110 (nachgemessen 23.09.2026). Die Marke haelt die
- * Schwelle noch, aber sie ist die naechste, die faellt.
+ * #250 bis #253 unveraendert 110 (nachgemessen 23.09.2026). Seit dem
+ * 25.09.2026 sind es 122: Der Knochenspaeher traegt Untot und hat mehr Leben
+ * bekommen (katalog.ts), der Bot kauft ihn seitdem gut doppelt so oft. Die
+ * Marke haelt die Schwelle, bleibt aber die naechste, die faellt. Vorsicht bei
+ * jedem Lebensbonus fuer Meuchler auf der MARKE statt auf den Einheiten: Der
+ * erreicht den Knochenspaeher nicht, und Untot fiel dabei auf 78 Antritte.
  */
 const MINDEST_ANTRITTE = 100;
 
@@ -149,10 +153,9 @@ describe('Ausgewogenheit: Marken', () => {
    * sondern DIE Wahl: Wer eine Aufstellung findet, die doppelt so oft gewinnt
    * wie der Durchschnitt, spielt nichts anderes mehr.
    *
-   * In dieser Auswahl reicht der weiteste Ausschlag von x1,49 (Waechter) bis
-   * x0,69 (Naturwesen und Meuchler) — nach beiden Seiten ist also Platz, aber
-   * weniger als ohne den Reichweitenfaktor im Bot (x1,34 bis x0,71 auf
-   * demselben Stand).
+   * In dieser Auswahl reicht der weiteste Ausschlag von x1,31 (Krieger) bis
+   * x0,80 (Naturwesen), Stand 25.09.2026 nach dem Meuchler-Leben. Vorher
+   * reichte er von x1,48 (Waechter) bis x0,64 (Meuchler).
    *
    * DASS DIE SPANNE AUFGEGANGEN IST, hat einen benannten Grund und ist kein
    * Rueckschritt am Katalog: Die Bot-Bewertung kennt seit dem 06.09.2026 die

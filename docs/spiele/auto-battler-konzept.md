@@ -397,7 +397,9 @@ behaupten.
    Messung deutlicher als vorher: Jeder Eingriff an Elementar oder Drache
    verschlechtert sie. Ihre Ursache ist seit der neunten Messung benannt (die
    Nachbarordnung je Seite kostet den Meuchler sein schnelles Ankommen) und
-   nicht mit einem Bonus zu beheben.
+   nicht mit einem Bonus zu beheben. (Nachtrag 25.09.2026: Das mit dem Bonus
+   stimmt, die Ursache nicht. Behoben über das Leben der Einheiten, siehe
+   `docs/TAFELRUNDE-MEUCHLER-WERTE.md`.)
 
 ---
 
@@ -562,6 +564,12 @@ die alte gestellt hätte:
    ×0,64, normiert ×0,65). Drei Messungen zeigen auf dieselbe Rolle; die
    Ursache ist seit der neunten Messung benannt (die Nachbarordnung je Seite
    kostet den Meuchler sein schnelles Ankommen).
+   **Nachtrag 25.09.2026:** Diese Ursache trägt nicht. Schnelleres Ankommen
+   drückt die Marke auf ×0,55 und ändert die Tauschprobe nicht. Gebaut ist
+   stattdessen mehr Leben: Gassendieb 585, Schattenklinge 745, Knochenspäher
+   950. Tauschprobe danach ×0,92 / ×0,92 / ×0,89, keiner mehr in der letzten
+   Zeile seiner Stufe, Marke ×0,86. Tempo und Markenbonus sind mitgemessen
+   und verworfen. Alle Zahlen: `docs/TAFELRUNDE-MEUCHLER-WERTE.md`.
 2. **Dorfwache ×1,37 und Schildknappe ×1,32** stehen weit über ihrer Stufe. Roh
    fallen sie nicht auf (×0,98 und ×0,83) — genau der umgekehrte Fehler: Sie
    stehen auf armen Brettern, weil sie billig sind.
