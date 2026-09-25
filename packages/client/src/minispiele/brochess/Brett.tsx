@@ -16,14 +16,15 @@ import type { BroChessSicht, BroChessZug, Farbe, Umwandlung } from './sicht';
 
 /** Figur in FEN-Schreibweise → Schriftzeichen. Die gefuellte Form fuer beide
  *  Farben: Die hohle ist auf dunklen Feldern kaum zu erkennen, die Farbe
- *  kommt aus dem Stil. */
+ *  kommt aus dem Stil. Das angehaengte U+FE0E verlangt die Textform — der
+ *  Bauer (U+265F) hat eine Emoji-Form, und die liesse sich nicht einfaerben. */
 const ZEICHEN: Record<string, string> = {
-  k: '♚',
-  q: '♛',
-  r: '♜',
-  b: '♝',
-  n: '♞',
-  p: '♟',
+  k: '♚\uFE0E',
+  q: '♛\uFE0E',
+  r: '♜\uFE0E',
+  b: '♝\uFE0E',
+  n: '♞\uFE0E',
+  p: '♟\uFE0E',
 };
 
 const FIGURNAME: Record<string, string> = {
