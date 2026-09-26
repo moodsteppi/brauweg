@@ -33,6 +33,7 @@ import {
 import { Pinguin, StueckBild } from '../pinguin';
 import { EdelsteinIcon, Tafel } from '../hub';
 import { t } from '../i18n';
+import { HbBlatt, Schliessen } from './HbBlatt';
 
 /** Betrag mit Einheit, Einzahl beachtet: „1 Münze", „8 Edelsteine". */
 function betragText(betrag: number, waehrung: Waehrung): string {
@@ -59,7 +60,10 @@ export function Kleiderschrank({
   onClose,
   onGetragen,
   onGuthaben,
+  neu = false,
 }: {
+  /** Neues Hub: Vollbild in Nachtblau & Gold, dieselben Käufe und Rückfragen. */
+  neu?: boolean;
   /** Was gerade sitzt — kommt aus /api/me, damit es nur eine Wahrheit gibt. */
   getragen: Getragen;
   onClose: () => void;
@@ -167,6 +171,156 @@ export function Kleiderschrank({
   /** Der Pinguin zeigt Getragenes, ueberschrieben von der Anprobe. */
   const gezeigt: Getragen = { ...getragen, ...probe };
   const belegt = getragen[slot] !== undefined;
+
+  if (neu) {
+    return (
+      <div className="hb-voll hb-schrank" role="dialog" aria-modal="true" aria-label="Kleiderschrank">
+        <header className="hb-voll-kopf">
+          <Schliessen onClick={onClose} />
+          <div className="hb-voll-titel">
+            <h1>Kleiderschrank</h1>
+            <span>Dein Pinguin · für alle Spiele</span>
+          </div>
+        </header>
+
+        {/* Die Bühne bleibt stehen, nur die Liste darunter rollt (Begründung
+            in der alten Fassung unten). */}
+        <div className="hb-schrank-buehne">
+          <Pinguin getragen={gezeigt} groesse={10} titel="Dein Pinguin" />
+          {Object.keys(probe).length > 0 && <span className="hb-schrank-probe">Anprobe</span>}
+        </div>
+
+        <nav className="hb-chips" aria-label="Plätze">
+          {SLOTS.map((s) => (
+            <button
+              type="button"
+              key={s}
+              className={`hb-chip${s === slot ? ' is-an' : ''}${getragen[s] ? ' is-belegt' : ''}`}
+              aria-pressed={s === slot}
+              onClick={() => {
+                setSlot(s);
+                setProbe({});
+              }}
+            >
+              {t(`slot.${s}`)}
+            </button>
+          ))}
+        </nav>
+
+        <div className="hb-voll-rolle">
+          {fehler && <p className="hb-fehler">{fehler}</p>}
+          {!shop && !fehler && <p className="hb-laden">Wird geladen…</p>}
+          {regal && (
+            <section className="hb-blk">
+              <h2 className="hb-ab">
+                {t(`slot.${slot}`)}
+                {belegt ? (
+                  <button type="button" className="hb-ab-mehr" onClick={ausziehen} disabled={laeuft !== null}>
+                    Ausziehen
+                  </button>
+                ) : (
+                  <span className="hb-ab-zusatz">Nichts an</span>
+                )}
+              </h2>
+              <div className="hb-raster is-drei">
+                {regal.stuecke.map((stueck) => {
+                  const sitzt = getragen[slot] === stueck.id;
+                  return (
+                    <button
+                      type="button"
+                      key={stueck.id}
+                      className={`hb-stueck is-${stueck.seltenheit}${sitzt ? ' is-aktiv' : ''}${stueck.besessen ? '' : ' is-fremd'}`}
+                      aria-pressed={sitzt}
+                      disabled={laeuft !== null}
+                      onClick={() => {
+                        if (stueck.besessen) {
+                          anziehen(stueck);
+                          return;
+                        }
+                        // Anprobieren darf man immer; kaufen braucht ein Ja.
+                        setProbe({ [slot]: stueck.id });
+                        if (!stueck.geschenk) setKaufen(stueck);
+                      }}
+                    >
+                      <StueckBild itemId={stueck.id} slot={slot} />
+                      <strong>{t(stueck.nameKey)}</strong>
+                      <small>{stueck.besessen ? (sitzt ? 'trägst du' : 'gehört dir') : stueck.geschenk ? 'Geschenk' : `${stueck.preis.coins.toLocaleString('de-DE')} Münzen`}</small>
+                      {sitzt && (
+                        <span className="hb-ding-ok" aria-hidden="true">
+                          ✓
+                        </span>
+                      )}
+                      {!stueck.besessen && !stueck.geschenk && (
+                        <span className="hb-stueck-schloss" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" className="hb-ic" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="5" y="11" width="14" height="9" rx="2" />
+                            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                          </svg>
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+        </div>
+
+        {kaufen && (
+          <HbBlatt titel={t(kaufen.nameKey)} label="Kauf bestätigen" onClose={() => setKaufen(null)} klasse="is-klein">
+            <form
+              className="hb-kauf-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                // Die Eingabetaste kauft in Münzen — siehe die alte Fassung.
+                jetztKaufen(kaufen, 'coins');
+              }}
+            >
+              <div className="hb-mitte">
+                <StueckBild itemId={kaufen.id} slot={kaufen.slot} groesse={7} />
+                <p className="hb-text">
+                  {t(`seltenheit.${kaufen.seltenheit}`)} · {t(`slot.${kaufen.slot}`)}
+                </p>
+              </div>
+              {/* Gold ist der eine Hauptknopf: die Münzen, die kein echtes Geld
+                  gekostet haben (dieselbe Überlegung wie bei der Eingabetaste). */}
+              <p className="hb-klein hb-ohne-rand hb-mitte-text">Womit bezahlen?</p>
+              <div className="hb-knopfreihe">
+                <button type="submit" className="hb-kn is-gold is-haupt" disabled={laeuft !== null}>
+                  {kauftMit === 'coins' ? (
+                    'Kauft…'
+                  ) : (
+                    <>
+                      <img className="hb-kn-bild" src="/hub/symbol-muenze.webp" alt="" draggable={false} />
+                      {betragText(kaufen.preis.coins, 'coins')}
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="hb-kn is-zweit is-haupt"
+                  disabled={laeuft !== null}
+                  onClick={() => jetztKaufen(kaufen, 'gems')}
+                >
+                  {kauftMit === 'gems' ? (
+                    'Kauft…'
+                  ) : (
+                    <>
+                      <img className="hb-kn-bild" src="/hub/symbol-edelstein.webp" alt="" draggable={false} />
+                      {betragText(kaufen.preis.gems, 'gems')}
+                    </>
+                  )}
+                </button>
+              </div>
+              <button type="button" className="hb-leise-knopf" onClick={() => setKaufen(null)}>
+                Später
+              </button>
+            </form>
+          </HbBlatt>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="pfad-voll kleiderschrank">

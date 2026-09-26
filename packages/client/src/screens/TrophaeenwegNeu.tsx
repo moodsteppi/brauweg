@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { CHECKPOINT_MUENZEN, STATIONEN, zwischenCheckpoints, type Station } from '../trophaeenweg';
+import { CHECKPOINT_MUENZEN, STATIONEN, zwischenCheckpoints } from '../trophaeenweg';
+import { truhenBild } from '../truhenbild';
 import { sicherAb } from './StartNeu';
 
 /**
@@ -10,14 +11,6 @@ import { sicherAb } from './StartNeu';
  * Als Modal über allem, mit Schließen-Knopf und Escape (Apple: ein Vollbild
  * verdeckt die Reiterleiste, braucht dann aber einen klaren Ausgang).
  */
-
-/** Bis ein eigenes Bild bestellt ist: Bronze zeigt die Holztruhe, Diamant die offene Goldtruhe. */
-const TRUHE_BILD: Record<NonNullable<Station['truhe']>['grad'], string> = {
-  bronze: '/hub/truhe-holz.webp',
-  silber: '/hub/truhe-silber.webp',
-  gold: '/hub/truhe-gold.webp',
-  diamant: '/hub/truhe-gold-offen.webp',
-};
 
 /** Höhe eines Bioms auf dem Bildschirm; sechs davon füllen ein iPhone. */
 const BAND = 118;
@@ -128,7 +121,7 @@ export function TrophaeenwegNeu({
               </span>
               {s.truhe && (
                 <div className="hb-st-lohn">
-                  <img src={TRUHE_BILD[s.truhe.grad]} alt="" />
+                  <img src={truhenBild(s.truhe.grad)} alt="" />
                   <span>
                     <b>{s.truhe.name}</b>
                     <small>{s.gegenstand}</small>

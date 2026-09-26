@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, api, type Aufgabe, type Aufgaben, type Fund, type Truhe, type Truhen } from '../api';
 import { t } from '../i18n';
+import { truhenBild } from '../truhenbild';
 import { FundBlatt } from './Aufgaben';
 
 /**
@@ -12,15 +13,6 @@ import { FundBlatt } from './Aufgaben';
  * (Apple: ein Blatt zugleich, Griff, schließen per Wisch, Hintergrund, Escape
  * und Knopf).
  */
-
-const TRUHE_BILD: Record<Truhe['grad'], string> = {
-  holz: '/hub/truhe-holz.webp',
-  // Bis ein eigenes Bild bestellt ist
-  bronze: '/hub/truhe-holz.webp',
-  silber: '/hub/truhe-silber.webp',
-  gold: '/hub/truhe-gold.webp',
-  diamant: '/hub/truhe-gold-offen.webp',
-};
 
 const GRAD_NAME: Record<Truhe['grad'], string> = {
   holz: 'Holz',
@@ -232,7 +224,7 @@ export function HeuteNeu({
                       onClick={() => oeffnen(tr)}
                       aria-label={`${titel}, ${GRAD_NAME[tr.grad]}, ${tr.von} bis ${tr.bis} Münzen${offen ? ', öffnen' : tr.geholt ? ', schon geholt' : ''}`}
                     >
-                      <img src={TRUHE_BILD[tr.grad]} alt="" />
+                      <img src={truhenBild(tr.grad)} alt="" />
                       <strong>{titel}</strong>
                       <small>
                         {!tr.offen && !tr.geholt && tr.fehltStufen !== null
