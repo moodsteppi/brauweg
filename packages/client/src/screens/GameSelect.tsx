@@ -101,6 +101,16 @@ import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
 import { SHOP_RUBRIK } from '../inhaltspakete';
 import { Trophaeenpfad } from './Pfad';
+import { hubNeu } from '../hubNeu';
+import { StartNeu } from './StartNeu';
+import { NeuerRahmen } from './HubRahmen';
+import { SpieleNeu } from './SpieleNeu';
+import { TrophaeenwegNeu } from './TrophaeenwegNeu';
+import { HeuteNeu } from './HeuteNeu';
+import { SammlungNeu } from './SammlungNeu';
+import '@fontsource/lilita-one';
+import '@fontsource-variable/nunito';
+import './hub-neu.css';
 
 /**
  * Startbildschirm im Stil eines Handyspiels: unten die Tab-Leiste mit
@@ -111,7 +121,8 @@ import { Trophaeenpfad } from './Pfad';
  * Massstab - im breiten Browser bleibt die Flaeche auf Handybreite begrenzt.
  */
 
-type Tab = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil';
+/** `spiele` gibt es nur im neuen Hub (dort ist die Spielauswahl ein Reiter). */
+export type Tab = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil' | 'spiele';
 
 /**
  * Im App-Store-Paket bleibt alles Kaufbare draussen.
@@ -138,6 +149,10 @@ export function GameSelect({
   onShowProfile,
   onSignOut,
   onDeleted,
+  anfangsTab,
+  anfangsSpiel,
+  anfangsWeg,
+  anfangsHeute,
 }: {
   me: Me;
   onPick: (gameId: string) => void;
@@ -153,8 +168,17 @@ export function GameSelect({
   onSignOut: () => void;
   /** Nach der Kontoloeschung: zurueck zur Anmeldung. */
   onDeleted: () => void;
+  /** Nur für die Probe `?dev=hub`: mit welchem Reiter und welcher Spielseite sie öffnet. */
+  anfangsTab?: Tab;
+  anfangsSpiel?: string;
+  anfangsWeg?: boolean;
+  anfangsHeute?: boolean;
 }): React.JSX.Element {
-  const [tab, setTab] = useState<Tab>('spielen');
+  const [tab, setTab] = useState<Tab>(anfangsTab ?? 'spielen');
+  /** Neues Hub: das Spiel, dessen Spielseite im Reiter „Spiele" offen ist. */
+  const [spielseite, setSpielseite] = useState<string | null>(anfangsSpiel ?? null);
+  /** Neues Hub: der Trophäenweg als Vollbild. */
+  const [wegOffen, setWegOffen] = useState(anfangsWeg ?? false);
   /** Name des angetippten Noch-nicht-Bereichs, fuer das "Kommt bald"-Blatt. */
   const [bald, setBald] = useState<string | null>(null);
   const [ranglisteOffen, setRanglisteOffen] = useState(false);
@@ -166,7 +190,7 @@ export function GameSelect({
    * fuenf Plaetze mit "Spielen" mittig und groesser — ein sechster nimmt die
    * Mitte weg, und damit die einzige Stelle, die man ohne Hinsehen trifft.
    */
-  const [aufgabenOffen, setAufgabenOffen] = useState(false);
+  const [aufgabenOffen, setAufgabenOffen] = useState(anfangsHeute ?? false);
   const [schrankOffen, setSchrankOffen] = useState(false);
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
   const [werkstattOffen, setWerkstattOffen] = useState(false);
@@ -212,13 +236,12 @@ export function GameSelect({
    * Fingerbewegung, sonst ruckelt es); React rendert nur bei Zugbeginn (um die
    * Nachbarn zu haengen) und beim Einrasten.
    */
-  const tabFolge: Tab[] = [
-    ...(zeigeKaufbares ? (['shop'] as const) : []),
-    'clan',
-    'spielen',
-    'blatt',
-    'profil',
-  ];
+  // Neues Hub: Shop · Spiele · Start · Sammlung · Clan, Start mittig. In der
+  // App fehlt der Shop (siehe zeigeKaufbares); dort steht das Profil an seiner
+  // Stelle, damit Start in der Mitte bleibt.
+  const tabFolge: Tab[] = hubNeu
+    ? [zeigeKaufbares ? 'shop' : 'profil', 'spiele', 'spielen', 'blatt', 'clan']
+    : [...(zeigeKaufbares ? (['shop'] as const) : []), 'clan', 'spielen', 'blatt', 'profil'];
   const [ziehen, setZiehen] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
   const geste = useRef<{
@@ -341,11 +364,12 @@ export function GameSelect({
     switch (tt) {
       case 'shop':
         return zeigeKaufbares ? (
-          <Shop coins={me.coins} gems={me.gems} onBald={setBald} onGuthaben={onAvatarChange} />
+          <Shop neu={hubNeu} coins={me.coins} gems={me.gems} onBald={setBald} onGuthaben={onAvatarChange} />
         ) : null;
       case 'clan':
         return (
           <Clan
+            neu={hubNeu}
             clanId={me.clubs[0]?.id ?? null}
             meId={me.id}
             onBald={setBald}
@@ -353,7 +377,40 @@ export function GameSelect({
             onMeChange={onAvatarChange}
           />
         );
+      case 'spiele':
+        return (
+          <SpieleNeu
+            me={me}
+            offen={spielseite}
+            onOeffne={setSpielseite}
+            onPick={onPick}
+            onSolo={onSolo}
+            onBald={setBald}
+            onSammlung={() => setTab('blatt')}
+          />
+        );
       case 'spielen':
+        if (hubNeu) {
+          return (
+            <StartNeu
+              me={me}
+              trophies={trophies}
+              activeTable={me.activeTable}
+              bereit={me.bereit.truhen + me.bereit.aufgaben}
+              onResume={onResume}
+              onPick={(gameId) => {
+                setSpielseite(gameId);
+                setTab('spiele');
+              }}
+              onAlleSpiele={() => {
+                setSpielseite(null);
+                setTab('spiele');
+              }}
+              onHeute={() => setAufgabenOffen(true)}
+              onWeg={() => setWegOffen(true)}
+            />
+          );
+        }
         return (
           <Spielen
             trophies={trophies}
@@ -370,6 +427,37 @@ export function GameSelect({
           />
         );
       case 'blatt':
+        if (hubNeu) {
+          return (
+            <SammlungNeu
+              me={me}
+              onThemeChange={onThemeChange}
+              onGekauft={onAvatarChange}
+              onSchrank={() => setSchrankOffen(true)}
+              onWerkstatt={() => {
+                spiele('blatt-auf');
+                setWerkstattOffen(true);
+              }}
+              details={(gameId, zurueck) => {
+                const thema = me.themes[gameId] ?? { cardDeck: 'text', tableScene: 'stube', cardBack: 'standard' };
+                return (
+                  <DeckPicker
+                    gameId={gameId}
+                    spielName={t(`game.${gameId}`)}
+                    onSpielWechseln={zurueck}
+                    current={thema.cardDeck}
+                    onChange={(cardDeck) => onThemeChange(gameId, { cardDeck })}
+                    szene={thema.tableScene}
+                    onSzeneChange={(tableScene) => onThemeChange(gameId, { tableScene })}
+                    ruecken={thema.cardBack}
+                    onRueckenChange={(cardBack) => onThemeChange(gameId, { cardBack })}
+                    onGekauft={onAvatarChange}
+                  />
+                );
+              }}
+            />
+          );
+        }
         return <ThemenTab me={me} onThemeChange={onThemeChange} onGekauft={onAvatarChange} />;
       case 'profil':
         return (
@@ -396,6 +484,84 @@ export function GameSelect({
         );
     }
   };
+
+  // Blätter und Vollbilder, die über beiden Rahmen gleich liegen.
+  const overlays = (
+    <>
+      {hubNeu && wegOffen && <TrophaeenwegNeu trophies={trophies} onClose={() => setWegOffen(false)} />}
+        {stufenOffen && <Stufenleiter onClose={() => setStufenOffen(false)} />}
+        {aufgabenOffen &&
+          (hubNeu ? (
+            <HeuteNeu
+              onClose={() => setAufgabenOffen(false)}
+              onGuthaben={onAvatarChange}
+              onRangliste={() => {
+                // Ein Blatt zugleich: Heute schließt, die Rangliste öffnet.
+                setAufgabenOffen(false);
+                setRanglisteOffen(true);
+              }}
+            />
+          ) : (
+            <Aufgabenblatt onClose={() => setAufgabenOffen(false)} onGuthaben={onAvatarChange} />
+          ))}
+        {schrankOffen && (
+          <Kleiderschrank
+            getragen={me.avatar}
+            onClose={() => setSchrankOffen(false)}
+            onGetragen={onAvatarChange}
+            onGuthaben={onAvatarChange}
+          />
+        )}
+        {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
+        {werkstattOffen && (
+          // Der Rueckfall traegt dieselbe Blatthuelle wie die Werkstatt selbst:
+          // Der Tipp verdunkelt sofort den Hintergrund, statt bis zum
+          // nachgeladenen Stueck so auszusehen, als sei nichts passiert.
+          <Suspense
+            fallback={
+              <div className="doko-sheet doko-sheet--mitte">
+                <Ladekreis text="Werkstatt wird geladen…" />
+              </div>
+            }
+          >
+            <Avatarwerkstatt
+              bemalung={me.figur ?? null}
+              getragen={me.avatar}
+              onClose={() => setWerkstattOffen(false)}
+              // Neu laden, damit die Figur im Profil sofort so aussieht wie
+              // gerade gespeichert.
+              onGespeichert={() => onAvatarChange()}
+            />
+          </Suspense>
+        )}
+        {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
+        {ranglisteOffen && (
+          <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
+        )}
+      </>
+  );
+
+  if (hubNeu) {
+    return (
+      <NeuerRahmen
+        me={me}
+        tab={tab}
+        tabFolge={tabFolge}
+        online={online}
+        trophies={trophies}
+        kaufbar={zeigeKaufbares}
+        onTab={setTab}
+        fenster={fenster}
+        trackRef={trackRef}
+        renderTab={renderTab}
+        onZiehStart={onZiehStart}
+        onZiehen={onZiehen}
+        onZiehEnde={onZiehEnde}
+      >
+        {overlays}
+      </NeuerRahmen>
+    );
+  }
 
   return (
     <div className="front front--hub">
@@ -591,44 +757,7 @@ export function GameSelect({
         />
       </nav>
 
-      {stufenOffen && <Stufenleiter onClose={() => setStufenOffen(false)} />}
-      {aufgabenOffen && (
-        <Aufgabenblatt onClose={() => setAufgabenOffen(false)} onGuthaben={onAvatarChange} />
-      )}
-      {schrankOffen && (
-        <Kleiderschrank
-          getragen={me.avatar}
-          onClose={() => setSchrankOffen(false)}
-          onGetragen={onAvatarChange}
-          onGuthaben={onAvatarChange}
-        />
-      )}
-      {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
-      {werkstattOffen && (
-        // Der Rueckfall traegt dieselbe Blatthuelle wie die Werkstatt selbst:
-        // Der Tipp verdunkelt sofort den Hintergrund, statt bis zum
-        // nachgeladenen Stueck so auszusehen, als sei nichts passiert.
-        <Suspense
-          fallback={
-            <div className="doko-sheet doko-sheet--mitte">
-              <Ladekreis text="Werkstatt wird geladen…" />
-            </div>
-          }
-        >
-          <Avatarwerkstatt
-            bemalung={me.figur ?? null}
-            getragen={me.avatar}
-            onClose={() => setWerkstattOffen(false)}
-            // Neu laden, damit die Figur im Profil sofort so aussieht wie
-            // gerade gespeichert.
-            onGespeichert={() => onAvatarChange()}
-          />
-        </Suspense>
-      )}
-      {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
-      {ranglisteOffen && (
-        <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
-      )}
+      {overlays}
     </div>
   );
 }
@@ -1491,7 +1620,10 @@ function Shop({
   gems,
   onBald,
   onGuthaben,
+  neu = false,
 }: {
+  /** Neues Hub: derselbe Inhalt im neuen Rahmen. */
+  neu?: boolean;
   /**
    * Der Guthabenstand — nur als Ausloeser zum Neuladen, nicht zur Anzeige.
    * Bewusst die zwei Zahlen statt des ganzen Kontos: Der Shop liest sonst
@@ -1611,8 +1743,38 @@ function Shop({
   };
 
   return (
-    <HubSzene bg="/hub/bg-shop.webp" className="front-shop front-shop--b">
-      <HubBanner />
+    <ShopRahmen neu={neu} coins={coins} gems={gems}>
+      {/* Neues Hub: oben ein Tisch, den man noch nicht hat — jeden Tag ein
+          anderer. Gekauft wird über dieselbe Rückfrage wie jede Ware. */}
+      {neu &&
+        (() => {
+          const angebote = ware('szene').filter((w) => !w.besessen && w.preis.coins > 0);
+          if (angebote.length === 0) return null;
+          const tag = Math.floor(Date.now() / 86_400_000);
+          const w = angebote[tag % angebote.length]!;
+          const name = SZENEN.find((sz) => sz.id === w.wert)?.name ?? w.wert;
+          return (
+            <button
+              type="button"
+              className="hb-held hb-empfohlen"
+              style={{ backgroundImage: `url(${szeneBild(w.wert)})` }}
+              disabled={kauft !== null}
+              onClick={() => setFrage({ art: 'ware', ware: w, name, bild: szeneBild(w.wert) })}
+            >
+              <span className="hb-held-unten hb-held-zeile">
+                <span>
+                  <span className="hb-label">Empfohlen · Tisch</span>
+                  <strong className="hb-held-titel">{name}</strong>
+                  <span>für alle Kartenspiele</span>
+                </span>
+                <span className="hb-kn is-gold">
+                  <img src="/hub/symbol-muenze.webp" alt="" />
+                  {w.preis.coins.toLocaleString('de-DE')}
+                </span>
+              </span>
+            </button>
+          );
+        })()}
 
       {fehler && <p className="error">{fehler}</p>}
 
@@ -1691,12 +1853,40 @@ function Shop({
       </Tafel>
 
       {/*
-        Drei Regale, drei Sorten. Szenerien stehen bewusst NICHT hier: Sie
+        Im alten Hub stehen Szenerien und Blaetter bewusst NICHT hier: Sie
         wollen in Tischgroesse gesehen werden, mit Karten darauf — das kann
-        nur die Themenauswahl, und dort wird auch gekauft. Ein zweiter
-        Kaufweg fuer dieselbe Ware waere eine Stelle mehr, die auseinander
-        laufen kann.
+        nur die Themenauswahl. Im neuen Hub hat Robin am 26.09.2026 anders
+        entschieden: Sie stehen zusaetzlich hier. Gekauft wird trotzdem ueber
+        denselben Aufruf (buyItem), also laeuft nichts auseinander.
       */}
+      {/* Kartenblätter und Tische: seit dem 26.09.2026 auch hier (Robin), nicht
+          mehr nur in der Themenauswahl. Dort bleibt die große Vorschau. */}
+      {neu && (
+        <>
+          <WareRegal
+            titel="Kartenblätter"
+            zusatz="Für Doppelkopf, Skat und Zauberer"
+            waren={ware('blatt').filter((w) => w.preis.coins > 0)}
+            bild={(w) => {
+              const deck = deckById(w.wert);
+              return cardImage(deck, { suit: 'H', rank: 'Q' }) ?? deckBack(deck);
+            }}
+            name={(w) => t(`deck.${w.wert}`)}
+            kauft={kauft}
+            onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
+          />
+          <WareRegal
+            titel="Tische"
+            zusatz="Für alle Kartenspiele"
+            waren={ware('szene').filter((w) => w.preis.coins > 0)}
+            bild={(w) => szeneBild(w.wert)}
+            name={(w) => SZENEN.find((sz) => sz.id === w.wert)?.name ?? w.wert}
+            kauft={kauft}
+            onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
+          />
+        </>
+      )}
+
       <WareRegal
         titel="Zurufe"
         zusatz="Gelten an jedem Tisch"
@@ -1795,7 +1985,7 @@ function Shop({
       {/* Derselbe Fund-Moment wie im Aufgaben-Vollbild. Eine gekaufte Truhe, die
           nur den Muenzstand aendert, ist eine Zahl ohne Erklaerung. */}
       {fund && <FundBlatt fund={fund} onClose={() => setFund(null)} />}
-    </HubSzene>
+    </ShopRahmen>
   );
 }
 
@@ -3489,3 +3679,48 @@ function ProfilBild({
   );
 }
 
+
+
+/**
+ * Rahmen des Shops: im alten Hub die gemalte Szene mit Logo-Schild, im neuen
+ * Überschrift und Guthaben. Der Inhalt (Tafeln, Kaufrückfrage, Fundblatt) ist
+ * in beiden derselbe — so geht kein Kaufweg verloren.
+ */
+function ShopRahmen({
+  neu,
+  coins,
+  gems,
+  children,
+}: {
+  neu: boolean;
+  coins: number;
+  gems: number;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  if (!neu) {
+    return (
+      <HubSzene bg="/hub/bg-shop.webp" className="front-shop front-shop--b">
+        <HubBanner />
+        {children}
+      </HubSzene>
+    );
+  }
+  return (
+    <div className="hb-shop">
+      <header className="hb-kopfzeile">
+        <h1 className="hb-titel">Shop</h1>
+        <span className="hb-geld">
+          <span className="hb-pill" aria-label={`${coins} Münzen`}>
+            <img src="/hub/symbol-muenze.webp" alt="" />
+            {coins.toLocaleString('de-DE')}
+          </span>
+          <span className="hb-pill" aria-label={`${gems} Edelsteine`}>
+            <img src="/hub/symbol-edelstein.webp" alt="" />
+            {gems.toLocaleString('de-DE')}
+          </span>
+        </span>
+      </header>
+      <div className="hb-shop-rolle">{children}</div>
+    </div>
+  );
+}

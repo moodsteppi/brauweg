@@ -1,0 +1,1973 @@
+/*
+ * Das neue Hub, „Nachtblau & Gold" (Entwurf Fassung 4, 26.09.2026).
+ *
+ * Alle Werte stammen 1:1 aus dem Bauplan (system4.css und hub-fassung4.mjs im
+ * Entwurfsordner). Wer hier etwas ändert, ändert den Entwurf — deshalb nicht
+ * „ungefähr" nachjustieren, sondern beide gleich halten.
+ *
+ * Wurzel ist `.hb`; nichts hier wirkt außerhalb davon. Farben nur über die
+ * Variablen unten (DESIGN.md: keine Hex-Werte mitten im Code).
+ */
+.hb {
+  --hb-grund: #0e1a3d;
+  --hb-grund-tief: #07132f;
+  --hb-nacht: #050b1d;
+  --hb-karte: #182b5c;
+  --hb-karte-hoch: #22397a;
+  --hb-kontur: #35518c;
+  --hb-tinte: #f3f5ff;
+  --hb-leise: #a3b3dd;
+  --hb-gold: #f5c02e;
+  --hb-gold-hell: #ffd75a;
+  --hb-gold-tief: #e9a91a;
+  --hb-gruen: #48d56b;
+  --hb-gesperrt: #7382a6;
+  /* Abstimmen: weiß darauf 5,2:1 (vorher #4f8cff: 2,96:1) */
+  --hb-stimme: #2b66d9;
+  --hb-rot: #d94b55;
+  --hb-badge: #dc2626;
+  --hb-anz: 'Lilita One', system-ui, sans-serif;
+  --hb-txt: 'Nunito Variable', 'Nunito', system-ui, sans-serif;
+
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 30rem;
+  margin: 0 auto;
+  overflow: hidden;
+  background: radial-gradient(120% 55% at 50% 0%, #1b2f6e 0%, var(--hb-grund) 58%);
+  color: var(--hb-tinte);
+  font-family: var(--hb-txt);
+  -webkit-tap-highlight-color: transparent;
+}
+.hb *,
+.hb *::before,
+.hb *::after {
+  box-sizing: border-box;
+}
+.hb button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: inherit;
+}
+.hb button:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.hb :focus-visible {
+  outline: 3px solid var(--hb-gold-hell);
+  outline-offset: 2px;
+}
+
+/* ---------- Kopf ---------- */
+.hb .hb-kopf {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* --hb-probe-oben/-unten: nur die Probe ?dev=hub setzt sie, um ein iPhone
+     (47 / 34 pt Safe Area) im Browser nachzustellen. */
+  padding: calc(max(env(safe-area-inset-top, 0px), var(--hb-probe-oben, 0px))) 16px 6px;
+}
+.hb .hb-spieler {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+.hb .hb-ava {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--hb-karte-hoch);
+  border: 2px solid var(--hb-gold);
+  object-fit: cover;
+  overflow: hidden;
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.hb .hb-wer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 70px;
+}
+.hb .hb-wer strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+.hb .hb-wer > span {
+  font-size: 12px;
+  color: var(--hb-leise);
+  font-weight: 700;
+}
+.hb .hb-balken {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+.hb .hb-balken > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--hb-gold-hell), var(--hb-gold-tief));
+}
+.hb .hb-balken.is-xp {
+  height: 5px;
+  width: 70px;
+}
+.hb .hb-geld {
+  margin-left: auto;
+  display: flex;
+  gap: 5px;
+}
+.hb .hb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 8px 0 4px;
+  border-radius: 16px;
+  background: rgba(7, 19, 47, 0.65);
+  border: 1px solid var(--hb-kontur);
+  font: 800 13px var(--hb-txt);
+  font-variant-numeric: tabular-nums;
+}
+.hb .hb-pill img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+.hb .hb-pill.is-pk {
+  color: var(--hb-gold);
+}
+.hb .hb-online {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 8px;
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-punkt {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hb-gruen);
+  box-shadow: 0 0 0 3px rgba(72, 213, 107, 0.25);
+}
+
+/* ---------- Inhalt ---------- */
+.hb .hb-inhalt {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.hb .hb-start {
+  height: 100%;
+  overflow: hidden;
+  /* Unten Luft für den erhöhten Start-Knopf der Reiterleiste */
+  padding: 4px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hb .hb-blk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hb .hb-label {
+  font: 800 11px var(--hb-txt);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hb-gold);
+}
+.hb .hb-ab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 400 20px/1 var(--hb-anz);
+}
+.hb .hb-ab-mehr {
+  display: inline-flex;
+  align-items: center;
+  font: 800 13px var(--hb-txt);
+  color: var(--hb-gold);
+  /* 44 pt Tippfläche, ohne dass die Überschrift höher wird */
+  min-height: 44px;
+  margin: -12px 0 -12px auto;
+  padding: 0 0 0 12px;
+}
+.hb .hb-pk {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 800 13px var(--hb-txt);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+.hb .hb-pk img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+}
+.hb .hb-ic {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+.hb .hb-pf {
+  margin-left: auto;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--hb-leise);
+}
+
+/* Held: Bild bis an die Kante, unten ein dunkler Verlauf, darauf der Text */
+.hb .hb-held {
+  position: relative;
+  display: block;
+  width: 100%;
+  border-radius: 22px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  flex: none;
+  box-shadow:
+    0 0 0 2px rgba(245, 192, 46, 0.55),
+    0 10px 24px rgba(0, 0, 0, 0.35);
+}
+.hb .hb-held::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    0deg,
+    rgba(7, 19, 47, 0.96) 0,
+    rgba(7, 19, 47, 0.75) 34%,
+    rgba(7, 19, 47, 0) 62%
+  );
+}
+.hb .hb-held-unten {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Start: Trophäenweg */
+.hb .hb-weg {
+  height: 222px;
+}
+.hb .hb-weg::after {
+  /* Der Textblock reicht bis 58 % der Höhe; bis dahin mindestens 0,85
+     Deckkraft, sonst hat die goldene Oberzeile über Schnee nur 3,5:1. */
+  background: linear-gradient(
+    0deg,
+    rgba(7, 19, 47, 0.97) 0,
+    rgba(7, 19, 47, 0.88) 58%,
+    rgba(7, 19, 47, 0.3) 76%,
+    rgba(7, 19, 47, 0) 88%
+  );
+}
+.hb .hb-weg .hb-label {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.hb .hb-weg-marke {
+  position: absolute;
+  right: 18px;
+  top: 14px;
+  width: 70px;
+  z-index: 2;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+.hb .hb-weg-biom {
+  font: 400 30px/1 var(--hb-anz);
+}
+.hb .hb-weg-zeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--hb-leise);
+}
+.hb .hb-weg-zeile .hb-pk {
+  font-size: 15px;
+}
+.hb .hb-weg-sicher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-gruen);
+}
+.hb .hb-weg-sicher .hb-ic {
+  width: 16px;
+  height: 16px;
+}
+
+/* Start: Weiterspielen */
+.hb .hb-weiter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 76px;
+  padding: 10px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, var(--hb-karte-hoch), var(--hb-karte));
+  border: 1px solid var(--hb-kontur);
+  flex: none;
+}
+.hb .hb-weiter-bild {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  flex: none;
+}
+.hb .hb-weiter-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+.hb .hb-weiter-text strong {
+  font-size: 17px;
+  font-weight: 800;
+}
+.hb .hb-weiter-text > span:last-child {
+  font-size: 13px;
+  color: var(--hb-leise);
+}
+.hb .hb-weiter-los {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+  font: 800 28px/42px var(--hb-txt);
+  text-align: center;
+  box-shadow: inset 0 -3px 0 rgba(120, 70, 0, 0.35);
+  flex: none;
+}
+
+/* Start: Spielkarten (112 pt breit, zweieinhalb sichtbar) */
+.hb .hb-reihe {
+  display: flex;
+  gap: 8px;
+  flex: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -16px;
+  padding: 0 16px;
+}
+.hb .hb-reihe::-webkit-scrollbar {
+  display: none;
+}
+.hb .hb-sk {
+  flex: none;
+  width: 112px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  display: flex;
+  flex-direction: column;
+}
+.hb .hb-sk-bild {
+  display: block;
+  height: 98px;
+  background-size: cover;
+  background-position: center;
+}
+.hb .hb-sk strong {
+  padding: 8px 10px 0;
+  font: 400 16px var(--hb-anz);
+}
+.hb .hb-sk .hb-pk {
+  padding: 3px 10px 10px;
+}
+.hb .hb-leer {
+  width: 100%;
+  min-height: 96px;
+  border-radius: 16px;
+  border: 1.5px dashed var(--hb-kontur);
+  color: var(--hb-leise);
+  font: 700 14px var(--hb-txt);
+  text-align: center;
+  padding: 12px;
+}
+
+/* Start: Knopf „Heute" (Aufgaben und Truhen liegen als Blatt dahinter) */
+.hb .hb-heute {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  flex: none;
+  margin-top: auto;
+}
+.hb .hb-heute img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+.hb .hb-heute-text {
+  display: flex;
+  flex-direction: column;
+}
+.hb .hb-heute-text strong {
+  font: 400 18px/1.1 var(--hb-anz);
+}
+.hb .hb-heute-text span {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-heute-bereit {
+  margin-left: auto;
+  font: 800 12px var(--hb-txt);
+  color: var(--hb-grund);
+  background: var(--hb-gold);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.hb .hb-heute-bereit + .hb-pf {
+  margin-left: 6px;
+}
+
+/* ---------- Reiterleiste: Shop · Spiele · Start · Sammlung · Clan ---------- */
+.hb .hb-tabs {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: end;
+  height: calc(56px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
+  padding: 4px 6px max(8px, env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px));
+  background: rgba(5, 11, 29, 0.94);
+  border-top: 1px solid var(--hb-kontur);
+}
+.hb .hb-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-tab .hb-ic {
+  width: 24px;
+  height: 24px;
+}
+/* Aktiv nicht nur über die Farbe: Kachel dahinter und gefülltes Symbol */
+.hb .hb-tab.is-an {
+  color: var(--hb-gold);
+  background: rgba(245, 192, 46, 0.12);
+}
+.hb .hb-tab.is-an .hb-ic {
+  fill: currentColor;
+  fill-opacity: 0.28;
+}
+.hb .hb-tab.is-haupt.is-an {
+  background: none;
+}
+/* Start mittig und größer (DESIGN.md: dort trifft der Daumen ohne Hinsehen) */
+.hb .hb-tab.is-haupt {
+  margin-top: -12px;
+}
+.hb .hb-tab.is-haupt .hb-tab-rund {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hb-karte);
+  border: 2px solid var(--hb-kontur);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+}
+.hb .hb-tab.is-haupt.is-an .hb-tab-rund {
+  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  border-color: transparent;
+  color: var(--hb-grund);
+  box-shadow:
+    inset 0 -4px 0 rgba(120, 70, 0, 0.35),
+    0 4px 0 rgba(0, 0, 0, 0.3);
+}
+.hb .hb-tab.is-haupt .hb-ic {
+  width: 28px;
+  height: 28px;
+}
+.hb .hb-tab-punkt {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 20px);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--hb-badge);
+  box-shadow: 0 0 0 2px var(--hb-nacht);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Zieh-Pager: dieselbe Mechanik wie im alten Hub (front-track), eigene Seiten */
+.hb .hb-track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+.hb .hb-seite {
+  flex: 0 0 100%;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.hb .hb-seite:has(> .hb-start) {
+  overflow: hidden;
+}
+
+/* ---------- Gemeinsame Bausteine der Unterseiten ---------- */
+.hb .hb-laden {
+  padding: 24px 16px;
+  color: var(--hb-leise);
+  font: 700 14px var(--hb-txt);
+}
+.hb .hb-kopfzeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 16px 12px;
+  flex: none;
+}
+.hb .hb-titel {
+  margin: 0;
+  font: 400 34px/1.05 var(--hb-anz);
+}
+.hb .hb-klein {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-klein b {
+  color: var(--hb-tinte);
+}
+.hb .hb-ab-zusatz {
+  margin-left: auto;
+  font: 800 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-ab .hb-ic {
+  width: 24px;
+  height: 24px;
+  color: var(--hb-gold);
+}
+.hb .hb-kn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  font: 800 15px var(--hb-txt);
+  white-space: nowrap;
+  flex: none;
+}
+.hb .hb-kn.is-gold {
+  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  color: var(--hb-grund);
+  box-shadow:
+    inset 0 -4px 0 rgba(120, 70, 0, 0.35),
+    0 4px 0 rgba(0, 0, 0, 0.3);
+}
+.hb .hb-kn.is-stimme {
+  background: var(--hb-stimme);
+  color: #fff;
+  min-width: 96px;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+}
+.hb .hb-kn.is-stimme:disabled {
+  background: var(--hb-karte-hoch);
+  color: var(--hb-leise);
+  box-shadow: none;
+}
+.hb .hb-kn.is-haupt {
+  height: 52px;
+  font-size: 18px;
+  border-radius: 16px;
+}
+.hb .hb-kn.is-breit {
+  width: 100%;
+}
+.hb .hb-rund {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 19, 47, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  flex: none;
+}
+.hb .hb-liste {
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  overflow: hidden;
+}
+.hb .hb-liste-leer {
+  padding: 14px;
+  margin: 0;
+}
+/* Bald ist lila (DESIGN.md: Lila = kommt bald) */
+.hb .hb-bald-marke {
+  flex: none;
+  font: 800 12px var(--hb-txt);
+  color: #1c0d3a;
+  background: #b894ff;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+/* ---------- Spiele (Hub) ---------- */
+.hb .hb-spiele {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.hb .hb-chips {
+  display: flex;
+  gap: 8px;
+  padding: 4px 16px 12px;
+  flex: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.hb .hb-chips::-webkit-scrollbar {
+  display: none;
+}
+.hb .hb-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  font: 700 14px var(--hb-txt);
+  white-space: nowrap;
+  flex: none;
+}
+/* 36 pt sichtbar, 44 pt Tippflaeche */
+.hb .hb-chip::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+.hb .hb-chip.is-an {
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+  border-color: transparent;
+}
+.hb .hb-spiele-rolle {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.hb .hb-sk small {
+  padding: 3px 10px 10px;
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-party {
+  height: 150px;
+}
+.hb .hb-party::after,
+.hb .hb-quer::after {
+  /* Unter dem ganzen Textblock mindestens 0,85 Deckkraft (Apple-Pruefung) */
+  background: linear-gradient(90deg, rgba(7, 19, 47, 0.92) 0, rgba(7, 19, 47, 0.86) 48%, rgba(7, 19, 47, 0.25) 78%, rgba(7, 19, 47, 0.05));
+}
+.hb .hb-quer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.hb .hb-held-zeile {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hb .hb-held-zeile > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.hb .hb-held-titel {
+  font: 400 26px/1 var(--hb-anz);
+}
+.hb .hb-held-zeile > span:first-child > span {
+  font-size: 13px;
+  max-width: 200px;
+}
+.hb .hb-quer {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+  height: 92px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  flex: none;
+}
+.hb .hb-quer > * {
+  position: relative;
+  z-index: 1;
+}
+.hb .hb-quer-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.hb .hb-quer-text strong {
+  font: 400 20px var(--hb-anz);
+}
+.hb .hb-quer-text span {
+  font-size: 13px;
+}
+.hb .hb-quer .hb-kn {
+  min-width: 64px;
+}
+.hb .hb-bald {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 84px;
+  padding-right: 12px;
+  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
+}
+.hb .hb-bald:last-child {
+  border-bottom: 0;
+}
+.hb .hb-bald-flaeche {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  min-height: 84px;
+}
+.hb .hb-bald-bild {
+  width: 84px;
+  height: 84px;
+  flex: none;
+  background-size: cover;
+  background-position: center;
+  filter: grayscale(0.35);
+}
+.hb .hb-bald-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-align: left;
+}
+.hb .hb-bald-text strong {
+  font: 400 18px var(--hb-anz);
+}
+.hb .hb-bald-text small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* ---------- Spielseite ---------- */
+.hb .hb-spielseite {
+  height: 100%;
+  overflow-y: auto;
+}
+.hb .hb-sp-kopf {
+  position: relative;
+  height: 196px;
+  background-size: cover;
+  background-position: center 35%;
+}
+.hb .hb-sp-kopf::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 19, 47, 0.6) 0, rgba(7, 19, 47, 0) 34%, var(--hb-grund) 98%);
+}
+.hb .hb-sp-kopf .hb-rund {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 2;
+}
+.hb .hb-sp-inhalt {
+  position: relative;
+  z-index: 2;
+  margin-top: -40px;
+  padding: 0 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hb .hb-sp-titel h1 {
+  margin: 0;
+  font: 400 30px/1 var(--hb-anz);
+}
+.hb .hb-sp-titel span {
+  font-size: 13px;
+  color: var(--hb-leise);
+}
+.hb .hb-sp-status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid rgba(245, 192, 46, 0.45);
+}
+.hb .hb-sp-zahl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hb .hb-sp-pokal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 400 34px/1 var(--hb-anz);
+  color: var(--hb-gold);
+}
+.hb .hb-sp-pokal img {
+  width: 38px;
+}
+.hb .hb-sp-zahl .hb-klein {
+  text-align: right;
+}
+.hb .hb-sp-anteil {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hb .hb-sp-werte {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.hb .hb-sp-werte span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(7, 19, 47, 0.45);
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-sp-werte b {
+  font: 400 19px var(--hb-anz);
+  color: var(--hb-tinte);
+}
+.hb .hb-mein {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.hb .hb-mn {
+  position: relative;
+  height: 104px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+.hb .hb-mn-bild {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+.hb .hb-mn.is-blatt .hb-mn-bild {
+  background-size: 52px auto;
+  background-repeat: no-repeat;
+  background-position: right 14px top 10px;
+  background-color: #1d3470;
+}
+.hb .hb-mn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(7, 19, 47, 0.92) 0, rgba(7, 19, 47, 0.86) 36%, rgba(7, 19, 47, 0) 64%);
+}
+.hb .hb-mn-text {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.hb .hb-mn-text small {
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-mn-text strong {
+  font-size: 15px;
+}
+.hb .hb-rl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
+}
+.hb .hb-rl:last-child {
+  border: 0;
+}
+.hb .hb-rl.is-du {
+  background: rgba(245, 192, 46, 0.1);
+}
+.hb .hb-rl-rang {
+  width: 30px;
+  font: 400 17px var(--hb-anz);
+  color: var(--hb-leise);
+}
+.hb .hb-rl strong {
+  flex: 1;
+  font-size: 15px;
+}
+
+/* Reiter ohne Kopf: Abstand zur Statusleiste selbst, die Spielseite läuft mit dem Banner darunter */
+.hb {
+  --hb-oben: max(env(safe-area-inset-top, 0px), var(--hb-probe-oben, 0px));
+}
+.hb.is-ohne-kopf .hb-inhalt {
+  padding-top: var(--hb-oben);
+}
+/* Die Spielseite läuft mit dem Banner bis unter die Statusleiste */
+.hb.is-ohne-kopf .hb-inhalt:has(.hb-spielseite) {
+  padding-top: 0;
+}
+.hb .hb-sp-kopf .hb-rund {
+  top: calc(var(--hb-oben) + 8px);
+}
+
+/* ---------- Trophäenweg (Vollbild, Layout von ChatGPT) ---------- */
+.hb .hb-voll {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: #0a1734;
+  overflow: hidden;
+}
+.hb .hb-voll-kopf {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  padding: calc(var(--hb-oben) + 4px) 16px 8px;
+  background: linear-gradient(180deg, #0a1734 72%, rgba(10, 23, 52, 0));
+}
+.hb .hb-voll-titel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.hb .hb-voll-titel h1 {
+  margin: 0;
+  font: 400 22px/1.1 var(--hb-anz);
+}
+.hb .hb-voll-titel span {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-pill.is-gross {
+  height: 40px;
+  font-size: 16px;
+  padding: 0 12px 0 6px;
+}
+.hb .hb-pill.is-gross img {
+  width: 26px;
+  height: 26px;
+}
+.hb .hb-weg-karte {
+  position: relative;
+  flex: none;
+  margin-top: -8px;
+}
+.hb .hb-weg-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background-size: cover;
+  background-position: center;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+}
+.hb .hb-weg-nebel {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(7, 19, 47, 0.45), rgba(7, 19, 47, 0) 30%, rgba(7, 19, 47, 0) 70%, rgba(7, 19, 47, 0.45));
+  pointer-events: none;
+}
+/* Checkpoints zwischen den Stationen: Punkt auf dem Weg, Schild rechts daneben */
+.hb .hb-cp {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+}
+.hb .hb-cp i {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #dfe6ff;
+  border: 2px solid var(--hb-gesperrt);
+}
+.hb .hb-cp.is-ok i {
+  background: var(--hb-gold);
+  border-color: #fff;
+}
+.hb .hb-cp small {
+  position: absolute;
+  /* Rechts vom Pinguin (72 pt breit), damit er kein Schild verdeckt */
+  left: 40px;
+  white-space: nowrap;
+  font: 800 12px var(--hb-txt);
+  background: rgba(7, 19, 47, 0.88);
+  border: 1px solid var(--hb-kontur);
+  padding: 1px 8px;
+  border-radius: 8px;
+}
+.hb .hb-cp.is-ok small {
+  color: var(--hb-gold);
+}
+/* Station: Schild links, Punkt auf dem Weg, Belohnung rechts */
+.hb .hb-station {
+  position: absolute;
+  left: 50%;
+  z-index: 3;
+  width: 0;
+  transform: translateY(-50%);
+}
+.hb .hb-st-punkt {
+  position: absolute;
+  left: -20px;
+  top: -20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+.hb .hb-station.is-ok .hb-st-punkt {
+  background: var(--hb-gruen);
+  color: #004d26;
+}
+.hb .hb-station.is-zu .hb-st-punkt {
+  background: var(--hb-gesperrt);
+  color: #fff;
+}
+.hb .hb-st-schild {
+  position: absolute;
+  right: 30px;
+  top: -27px;
+  width: 146px;
+  height: 54px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: rgba(7, 19, 47, 0.9);
+  border: 1px solid var(--hb-kontur);
+}
+.hb .hb-station.is-ok .hb-st-schild {
+  border-color: rgba(72, 213, 107, 0.6);
+}
+.hb .hb-st-schild strong {
+  font: 400 17px/1.1 var(--hb-anz);
+}
+.hb .hb-st-lohn {
+  position: absolute;
+  left: 30px;
+  top: -27px;
+  width: 150px;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 14px;
+  background: rgba(40, 28, 6, 0.9);
+  border: 1px solid rgba(245, 192, 46, 0.6);
+}
+.hb .hb-st-lohn img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex: none;
+}
+.hb .hb-st-lohn > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.hb .hb-st-lohn b {
+  font: 800 13px var(--hb-txt);
+  color: var(--hb-gold);
+}
+.hb .hb-st-lohn small {
+  font: 700 11px/1.2 var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.hb .hb-st-lohn em {
+  position: absolute;
+  top: -10px;
+  right: 8px;
+  font: 800 11px var(--hb-txt);
+  font-style: normal;
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+  padding: 1px 7px;
+  border-radius: 7px;
+}
+.hb .hb-st-lohn em.is-ok {
+  background: var(--hb-gruen);
+  color: #004d26;
+}
+/* Die eigene Stelle: Pinguin auf goldenem Podest, Zahl daneben */
+.hb .hb-ich {
+  position: absolute;
+  left: 50%;
+  z-index: 4;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.hb .hb-ich > img {
+  width: 72px;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+.hb .hb-ich-podest {
+  width: 52px;
+  height: 16px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: radial-gradient(var(--hb-gold-hell), var(--hb-gold-tief));
+  box-shadow: 0 0 22px 6px rgba(245, 192, 46, 0.55);
+}
+.hb .hb-ich-zahl {
+  position: absolute;
+  right: 84px;
+  top: 18px;
+  width: max-content;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: rgba(7, 19, 47, 0.92);
+  border: 1px solid var(--hb-gold);
+  padding: 5px 10px;
+  border-radius: 12px;
+}
+.hb .hb-ich-zahl small {
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-tinte);
+}
+
+/* ---------- Blatt „Heute" (von unten, Apple: Griff, Wisch, Hintergrund, Knopf) ---------- */
+.hb .hb-blatt-grund {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  background: rgba(5, 11, 29, 0.6);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.hb .hb-blatt {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100% - var(--hb-oben) - 12px);
+  background: var(--hb-grund);
+  border-radius: 22px 22px 0 0;
+  border-top: 1px solid var(--hb-kontur);
+  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease-out;
+}
+.hb .hb-blatt-griff {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  touch-action: none;
+}
+.hb .hb-blatt-griff span {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--hb-leise);
+  opacity: 0.7;
+}
+.hb .hb-blatt-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 8px;
+  flex: none;
+}
+.hb .hb-blatt-rolle {
+  overflow-y: auto;
+  padding: 4px 16px calc(24px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hb .hb-blatt-rolle .hb-blk > .hb-klein {
+  margin: 0;
+}
+.hb .hb-fehler {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(217, 75, 85, 0.18);
+  border: 1px solid var(--hb-rot);
+  font: 700 14px var(--hb-txt);
+}
+/* Tagesaufgaben */
+.hb .hb-auf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
+}
+.hb .hb-auf:last-child {
+  border-bottom: 0;
+}
+.hb .hb-auf.is-geholt {
+  opacity: 0.6;
+}
+.hb .hb-auf-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.hb .hb-auf-text strong {
+  font-size: 15px;
+}
+.hb .hb-auf-stand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hb .hb-auf-stand .hb-balken {
+  flex: 1;
+  height: 6px;
+}
+.hb .hb-auf-stand small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+  min-width: 44px;
+  text-align: right;
+}
+.hb .hb-auf-lohn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 64px;
+  font: 800 14px var(--hb-txt);
+  color: var(--hb-gold);
+}
+.hb .hb-auf.is-geholt .hb-auf-lohn {
+  color: var(--hb-leise);
+}
+.hb .hb-auf-lohn img,
+.hb .hb-abholen img {
+  width: 18px;
+  height: 18px;
+}
+.hb .hb-abholen {
+  min-width: 72px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+/* Truhen: die ganze Karte ist der Knopf (Apple: kein Tippziel unter 44 pt) */
+.hb .hb-truhen {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.hb .hb-tr {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-height: 128px;
+  padding: 8px 4px;
+  border-radius: 16px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  text-align: center;
+}
+.hb .hb-tr img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+.hb .hb-tr strong {
+  font-size: 12px;
+}
+.hb .hb-tr small {
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-tr.is-offen {
+  border: 2px solid var(--hb-gold);
+  box-shadow: 0 0 14px rgba(245, 192, 46, 0.35);
+}
+.hb .hb-tr.is-zu img {
+  filter: grayscale(0.7) brightness(0.6);
+}
+.hb .hb-tr-knopf {
+  margin-top: auto;
+  font: 800 12px var(--hb-txt);
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+  border-radius: 8px;
+  padding: 3px 8px;
+}
+.hb .hb-tr-ok {
+  margin-top: auto;
+  font: 800 12px var(--hb-txt);
+  color: var(--hb-gruen);
+}
+.hb .hb-tr-zu {
+  margin-top: auto;
+  color: var(--hb-leise);
+}
+.hb .hb-tr-zu .hb-ic {
+  width: 16px;
+  height: 16px;
+}
+/* Zeile mit Pfeil (Rangliste) */
+.hb .hb-zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  text-align: left;
+}
+.hb .hb-zeile > .hb-ic {
+  color: var(--hb-gold);
+}
+.hb .hb-zeile > span:not(.hb-pf) {
+  display: flex;
+  flex-direction: column;
+}
+.hb .hb-zeile strong {
+  font-size: 15px;
+}
+.hb .hb-zeile small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* ---------- Sammlung ---------- */
+.hb .hb-pinguin-held {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 164px;
+  padding: 10px 12px 10px 0;
+  background: linear-gradient(135deg, #2c4bb8, #172a66);
+  flex: none;
+}
+.hb .hb-pinguin-held::after {
+  display: none;
+}
+.hb .hb-ph-figur {
+  width: 128px;
+  flex: none;
+  display: flex;
+  justify-content: center;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4));
+}
+.hb .hb-ph-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.hb .hb-ph-text > strong {
+  font: 400 20px/1 var(--hb-anz);
+}
+.hb .hb-plaetze {
+  display: grid;
+  grid-template-columns: repeat(6, 32px);
+  gap: 4px;
+}
+/* 32 pt sichtbar; alle sechs führen in den Kleiderschrank (reine Anzeige mit Ziel) */
+.hb .hb-platz {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(7, 19, 47, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hb .hb-platz img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.hb .hb-platz .hb-ic {
+  width: 18px;
+  height: 18px;
+  color: var(--hb-leise);
+}
+/* Belegter Platz: gold (was er trägt, sagt der Vorlesename) */
+.hb .hb-platz.is-an {
+  border-color: var(--hb-gold);
+  background: rgba(245, 192, 46, 0.14);
+}
+.hb .hb-platz.is-an .hb-ic {
+  color: var(--hb-gold-hell);
+}
+.hb .hb-ph-text .hb-kn {
+  align-self: flex-start;
+}
+.hb .hb-ding {
+  flex: none;
+  width: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.hb .hb-ding strong {
+  font-size: 13px;
+}
+.hb .hb-ding small {
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-ding-bild {
+  position: relative;
+  height: 112px;
+  border-radius: 14px;
+  background-size: cover;
+  background-position: center;
+  background-color: #1d3470;
+  border: 1px solid var(--hb-kontur);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hb .hb-ding-bild.is-blatt {
+  background-size: 62px auto;
+  background-repeat: no-repeat;
+}
+.hb .hb-ding.is-aktiv .hb-ding-bild {
+  border: 2px solid var(--hb-gold);
+}
+.hb .hb-ding.is-zu .hb-ding-bild {
+  filter: brightness(0.45);
+}
+.hb .hb-ding-ok {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+  font: 800 13px/22px var(--hb-txt);
+  text-align: center;
+}
+.hb .hb-ding-ok.is-gruen {
+  background: var(--hb-gruen);
+  color: #004d26;
+}
+.hb .hb-ding-schloss .hb-ic {
+  width: 36px;
+  height: 36px;
+  color: #fff;
+}
+.hb .hb-ding-mehr .hb-ding-bild {
+  background: transparent;
+  border-style: dashed;
+  color: var(--hb-gold);
+}
+.hb .hb-ding-mehr .hb-ic {
+  width: 30px;
+  height: 30px;
+}
+/* Die bisherige Auswahl (Details) bekommt im neuen Rahmen die volle Höhe */
+.hb .hb-seite > .front-blatt {
+  height: 100%;
+}
+
+/* ---------- Clan ---------- */
+.hb .hb-clan {
+  height: 100%;
+  overflow-y: auto;
+}
+.hb.is-ohne-kopf .hb-inhalt:has(.hb-clan) {
+  padding-top: 0;
+}
+.hb .hb-clan-held {
+  position: relative;
+  min-height: 300px;
+  padding: calc(var(--hb-oben) + 32px) 16px 12px;
+  background-size: cover;
+  background-position: center 30%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+}
+.hb .hb-clan-held::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 19, 47, 0.6), rgba(14, 26, 61, 0.55) 50%, var(--hb-grund));
+}
+.hb .hb-clan-held > * {
+  position: relative;
+}
+.hb .hb-clan-knoepfe {
+  position: absolute;
+  top: calc(var(--hb-oben) + 8px);
+  right: 16px;
+  display: flex;
+  gap: 12px;
+  z-index: 3;
+}
+.hb .hb-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--hb-badge);
+  font: 800 11px/18px var(--hb-txt);
+  text-align: center;
+  padding: 0 4px;
+}
+.hb .hb-wappen {
+  width: 72px;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
+}
+.hb .hb-clan-held h1 {
+  margin: 0;
+  font: 400 24px var(--hb-anz);
+}
+.hb .hb-clan-held > small {
+  font-size: 13px;
+  color: var(--hb-leise);
+  font-style: italic;
+}
+.hb .hb-kz {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+}
+.hb .hb-kz span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(24, 43, 92, 0.92);
+  border: 1px solid var(--hb-kontur);
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-kz b {
+  font: 400 17px var(--hb-anz);
+  color: var(--hb-tinte);
+}
+.hb .hb-clan-inhalt {
+  padding: 0 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.hb .hb-krieg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #1f3a8a, #142a66 55%, #4a1b2c);
+  border: 1px solid rgba(245, 192, 46, 0.45);
+  text-align: left;
+}
+.hb .hb-kr-kopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.hb .hb-kr-kopf strong {
+  font: 400 18px var(--hb-anz);
+}
+.hb .hb-kr-kopf small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-kr-vs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hb .hb-kr-seite {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hb .hb-kr-seite img {
+  width: 46px;
+}
+.hb .hb-kr-seite b {
+  font: 400 26px var(--hb-anz);
+  color: var(--hb-gold);
+}
+.hb .hb-kr-seite small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-kr-seite.is-gegner {
+  flex-direction: row-reverse;
+}
+.hb .hb-kr-seite.is-gegner b {
+  color: #ff8a92;
+}
+.hb .hb-vs {
+  font: 400 24px var(--hb-anz);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+.hb .hb-kr-balken {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--hb-rot);
+  overflow: hidden;
+}
+.hb .hb-kr-balken span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--hb-gold), var(--hb-eigen, #245fd7));
+}
+.hb .hb-kr-regel {
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-kr-leer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font: 700 14px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-zeile-bild {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.hb .hb-zeile .hb-bald-marke {
+  margin-left: auto;
+}
+.hb .hb-mg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
+  text-align: left;
+}
+.hb .hb-mg:last-child {
+  border-bottom: 0;
+}
+.hb .hb-mg.is-du {
+  background: rgba(245, 192, 46, 0.1);
+}
+.hb .hb-mg > img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--hb-karte-hoch);
+  object-fit: cover;
+}
+.hb .hb-mg-name {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.hb .hb-mg-name strong {
+  font-size: 15px;
+}
+.hb .hb-mg-name small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-gold);
+}
+.hb .hb-mg .hb-pk {
+  font-size: 14px;
+}
+.hb .hb-leise-knopf {
+  align-self: center;
+  min-height: 44px;
+  padding: 0 16px;
+  font: 700 14px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* ---------- Shop: dieselben Tafeln und Kaufwege, im neuen Stil ---------- */
+.hb .hb-shop {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.hb .hb-shop .hb-geld {
+  display: flex;
+  gap: 6px;
+}
+.hb .hb-shop-rolle {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+/* Tafel: keine Holzkiste mehr, sondern Überschrift + Inhalt (wie jeder Abschnitt im Hub) */
+.hb .hb-shop .hub-tafel {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+.hb .hb-shop .hub-tafel-kopf {
+  background: none;
+  border: 0;
+  padding: 0 0 10px;
+  align-items: center;
+}
+.hb .hb-shop .hub-tafel-kopf h2 {
+  font: 400 20px/1 var(--hb-anz);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--hb-tinte);
+  text-shadow: none;
+}
+.hb .hb-shop .hub-tafel-zusatz {
+  font: 800 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-shop .hub-tafel-inhalt {
+  padding: 0;
+}
+.hb .hb-shop .hub-reihe--drei,
+.hb .hb-shop .shop-ware {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+/* Ware: dunkle Karte, Bild, Name, Preis als Goldkontur (Apple-Prüfung, Regel 7) */
+.hb .hb-shop .hub-angebot,
+.hb .hb-shop .shop-ware-stueck {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 132px;
+  padding: 10px 6px 8px;
+  border-radius: 16px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  box-shadow: none;
+  color: var(--hb-tinte);
+  text-align: center;
+}
+.hb .hb-shop .hub-angebot > .hub-angebot-art,
+.hb .hb-shop .hub-angebot > img:first-child,
+.hb .hb-shop .shop-ware-stueck > img:first-child {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+}
+.hb .hb-shop .hub-angebot strong {
+  font: 800 13px/1.2 var(--hb-txt);
+}
+.hb .hb-shop .shop-paket-inhalt,
+.hb .hb-shop .shop-ware-name {
+  font: 700 12px/1.2 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-shop .hub-preis,
+.hb .hb-shop .shop-ware-preis {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 32px;
+  width: 100%;
+  border-radius: 10px;
+  border: 1.5px solid var(--hb-gold);
+  font: 800 14px var(--hb-txt);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+.hb .hb-shop .shop-preis-muenze,
+.hb .hb-shop .shop-preis-stein {
+  width: 18px;
+  height: 18px;
+}
+.hb .hb-shop .shop-bonus {
+  top: -8px;
+  left: -4px;
+  font: 800 11px var(--hb-txt);
+  background: var(--hb-gruen);
+  color: #004d26;
+}
+.hb .hb-shop .front-bald-tag {
+  font: 800 11px var(--hb-txt);
+  color: #1c0d3a;
+  background: #b894ff;
+}
+.hb .hb-shop .shop-hinweis,
+.hb .hb-shop .hub-tafel .muted {
+  margin: 8px 0 0;
+  padding: 0;
+  font: 700 12px/1.45 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-shop .error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(217, 75, 85, 0.18);
+  border: 1px solid var(--hb-rot);
+  color: var(--hb-tinte);
+  font: 700 14px var(--hb-txt);
+}
+/* Wie im Entwurf: Truhen zuerst, dann Münzen und BroJetons */
+.hb .hb-shop-rolle > .error {
+  order: -2;
+}
+.hb .hb-shop-rolle > .hub-tafel:has(.shop-truhe) {
+  order: -1;
+}
+.hb .hb-shop-rolle > .hb-empfohlen {
+  order: -2;
+  height: 150px;
+  background-position: center 20%;
+}
+.hb .hb-empfohlen .hb-kn img {
+  width: 20px;
+  height: 20px;
+}
