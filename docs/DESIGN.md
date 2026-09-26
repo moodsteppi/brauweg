@@ -127,11 +127,11 @@ Hub ist Gold der Hauptknopf — siehe „Das neue Hub“ weiter unten.
 
 Robin hat am 26.09.2026 entschieden, das Hub vor dem App-Start neu zu
 gestalten: im Stil der Anmeldung (#272), aufgeräumt wie Apple, mit dem
-Spielgefühl von Clash Royale. Es kommt **hinter einem Schalter** Seite für
-Seite (`src/hubNeu.ts`: `?hub=neu` merkt sich die Wahl, `?hub=alt` nimmt sie
-zurück). Solange der Schalter aus ist, gilt für das alte Hub alles oben
-Stehende. Für das neue Hub gilt dieser Abschnitt, und wo er dem Rest
-widerspricht, gewinnt er.
+Spielgefühl von Clash Royale. **Seit dem 26.09.2026 abends ist das neue Hub
+der Standard** (Robin). Das alte bleibt über einen Schalter erreichbar, bis
+es entfernt wird (`src/hubNeu.ts`: `?hub=alt` merkt sich die Wahl, `?hub=neu`
+nimmt sie zurück); für das alte gilt alles oben Stehende. Für das neue Hub
+gilt dieser Abschnitt, und wo er dem Rest widerspricht, gewinnt er.
 
 **Wo es steht:** `screens/hub-neu.css` (Wurzel `.hb`, nichts wirkt nach
 draußen), Rahmen `HubRahmen.tsx`, Seiten `StartNeu`, `SpieleNeu`,
