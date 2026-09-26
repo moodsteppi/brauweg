@@ -12,6 +12,7 @@ import { MehrSeite } from '../minispiele/mememory/MehrSeite';
 import type { MememorySicht } from '../minispiele/mememory/sicht';
 import { SammlungSeite } from '../minispiele/mememory/SammlungSeite';
 import {
+  STUFEN,
   Stufenregler,
   botLevelAus,
   stufenName,
@@ -22,6 +23,10 @@ import type { ReaktionMessage } from '../protocol';
 import { PfeilLinks } from '../zeichen';
 import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
+import { hubNeu } from '../hubNeu';
+import { SpielAbschnitt, SpielRahmen } from './SpielEinstieg';
+import './spiel-einstieg-mini.css';
+import { AKZENT } from '../minispiele/mememory/akzent';
 
 /**
  * Mememory — Memory-Duell zu zweit.
@@ -1193,7 +1198,8 @@ export function Mememory({
    */
   const einstellungsKnopf = (
     <button
-      className="mm-zahnrad"
+      // Im neuen Hub der runde Knopf des Kopfes (44 pt), dasselbe Zahnrad darin.
+      className={hubNeu ? 'hb-rund mm-zahnrad-neu' : 'mm-zahnrad'}
       type="button"
       onClick={() => setEinstellungenOffen(true)}
       aria-label="Einstellungen öffnen"
@@ -1237,6 +1243,7 @@ export function Mememory({
   if (!tischId && kiOffen) {
     return (
       <KiMatch
+        neu={hubNeu}
         laeuft={sucht}
         fehler={fehler}
         onStart={(stufen) => void starteKi(stufen)}
@@ -1248,9 +1255,48 @@ export function Mememory({
     );
   }
 
+  /** Im neuen Hub unter dem Knopf im Fuss — dieselbe Zahl wie im alten Menue. */
+  const spielerZeile = <p className="hb-klein">{aktiv ?? '…'} Spieler gerade in Mememory</p>;
+
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
     const gefunden = suchstand.suchende;
+    if (hubNeu) {
+      return (
+        <SpielRahmen
+          gameId="mememory"
+          titel="Mitspieler suchen"
+          unter="Mememory · Online Match"
+          akzent={AKZENT}
+          onBack={brichSucheAb}
+          zurueckText="Suche abbrechen"
+          fuss={
+            <>
+              <button type="button" className="hb-kn is-blau is-breit" onClick={brichSucheAb}>
+                Abbrechen
+              </button>
+              {spielerZeile}
+            </>
+          }
+        >
+          <div className="spe-warten">
+            <p className="spe-countdown" aria-live="polite">
+              {sekunden}
+            </p>
+            <p className="spe-text">
+              {gefunden === 1
+                ? 'Noch niemand sonst — bleibt es dabei, wird mit Bots aufgefüllt.'
+                : `${gefunden} Spieler gefunden`}
+            </p>
+            <div className="spe-lauf" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        </SpielRahmen>
+      );
+    }
     return (
       <main className="mm-menue">
         <button className="mm-zurueck" type="button" onClick={brichSucheAb}>
@@ -1293,6 +1339,7 @@ export function Mememory({
           * alles Weitere dazukommen, ohne dass der Rand voller Knoepfe wird.
           */}
         <Heim
+          neu={hubNeu}
           sammlung={
             <SammlungSeite
               grund={katalog.grund}
@@ -1303,6 +1350,76 @@ export function Mememory({
           }
           mehr={<MehrSeite wartende={warten} onKasten={() => setKastenOffen(true)} />}
           menue={
+            hubNeu ? (geheZu) => (
+              /*
+               * Neues Hub: Die mittlere Seite des Heims ist ein Spieleinstieg.
+               * Streifen, Leiste unten und Zahnrad bleiben; nur `.spe` fuellt
+               * hier seine Seite statt das Fenster (spiel-einstieg-mini.css).
+               */
+              <SpielRahmen
+                gameId="mememory"
+                titel="Mememory"
+                unter="Zwei Bilder, ein Paar, zwei bis vier Spieler."
+                akzent={AKZENT}
+                onBack={onBack}
+                zurueckText="Zurück zur Spielseite"
+                rechts={einstellungsKnopf}
+                fuss={
+                  <>
+                    <button
+                      type="button"
+                      className="hb-kn is-gold is-haupt is-breit"
+                      onClick={() => void starteSuche()}
+                      disabled={sucht}
+                    >
+                      <span>Online Match suchen…</span>
+                      {/* Die Zahl in Klammern daneben, wie im alten Menue. */}
+                      <em className="spe-kn-zahl">({aktiv ?? '…'})</em>
+                    </button>
+                    {spielerZeile}
+                  </>
+                }
+              >
+                {fehler && <p className="hb-fehler">{fehler}</p>}
+                <SpielAbschnitt titel="Gegen die KI">
+                  <p className="hb-klein">Bis zu drei Gegner, jeder mit eigener Spielstärke.</p>
+                  <button
+                    type="button"
+                    className="hb-kn is-blau is-breit"
+                    onClick={() => {
+                      setFehler(null);
+                      setKiOffen(true);
+                    }}
+                    disabled={sucht}
+                  >
+                    Gegen die KI spielen
+                  </button>
+                </SpielAbschnitt>
+                {/* Dieselben Seiten wie ueber die Leiste unten, nur mit Namen. */}
+                <SpielAbschnitt titel="Mehr von Mememory">
+                  <div className="hb-liste">
+                    <button type="button" className="spe-zeile" onClick={() => geheZu('sammlung')}>
+                      <span>
+                        <strong>Sammlung</strong>
+                        <small>Deine Memes und der Gurt</small>
+                      </span>
+                      <span className="hb-pf" aria-hidden="true">
+                        ›
+                      </span>
+                    </button>
+                    <button type="button" className="spe-zeile" onClick={() => geheZu('mehr')}>
+                      <span>
+                        <strong>Mehr</strong>
+                        <small>Vorschlagskasten und Freunde</small>
+                      </span>
+                      <span className="hb-pf" aria-hidden="true">
+                        ›
+                      </span>
+                    </button>
+                  </div>
+                </SpielAbschnitt>
+              </SpielRahmen>
+            ) : (
             <div className="mm-menue">
               {/* Der Zurueck-Knopf sitzt bewusst nicht ganz oben: Auf iPhones
                   mit Notch liegt die obere Ecke unter der Statusleiste. */}
@@ -1351,6 +1468,7 @@ export function Mememory({
                 {fehler && <p className="mm-fehler">{fehler}</p>}
               </div>
             </div>
+            )
           }
         />
 
@@ -1361,7 +1479,7 @@ export function Mememory({
           <Vorschlagskasten istAufsicht={istAufsicht} onFertig={() => setKastenOffen(false)} />
         )}
         {einstellungenOffen && (
-          <Einstellungsfenster onFertig={() => setEinstellungenOffen(false)} />
+          <Einstellungsfenster neu={hubNeu} onFertig={() => setEinstellungenOffen(false)} />
         )}
       </>
     );
@@ -1377,6 +1495,67 @@ export function Mememory({
     const freiePlaetze = (tisch.table?.seats ?? []).filter(
       (platz) => !platz.accountId && !platz.isBot,
     );
+    /** Auffuellen wie unten im alten Wartebereich: erst die Stufe, dann die Bots. */
+    const fuelleAuf = (): void => {
+      tisch.setBotLevel(botLevelAus(fuellStufe));
+      for (const platz of freiePlaetze) tisch.addBot(platz.seat);
+    };
+    const kannFuellen = freiePlaetze.length > 0 && (tisch.table?.seats.length ?? 2) > 2;
+    if (hubNeu) {
+      return (
+        <SpielRahmen
+          gameId="mememory"
+          titel="Tisch wird aufgebaut"
+          unter="Mememory"
+          akzent={AKZENT}
+          onBack={brichAb}
+          zurueckText="Abbrechen"
+          fuss={
+            <>
+              {/* Auffuellen ist hier das, was los geht — deshalb gold. Ohne
+                  freie Plaetze bleibt nur das Abbrechen. */}
+              {kannFuellen && (
+                <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={fuelleAuf}>
+                  Mit Bots auffüllen ({freiePlaetze.length})
+                </button>
+              )}
+              <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
+                Abbrechen
+              </button>
+              {spielerZeile}
+            </>
+          }
+        >
+          <div className="spe-warten">
+            <p className="spe-text">
+              {tisch.status === 'open'
+                ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
+                : 'Verbindung wird aufgebaut…'}
+            </p>
+            <div className="spe-lauf" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+          {kannFuellen && (
+            <SpielAbschnitt titel="Spielstärke der Bots">
+              <div className="mm-gegner">
+                <Stufenregler
+                  wert={fuellStufe}
+                  onWert={(stufe) => {
+                    setFuellStufe(stufe);
+                    tisch.setBotLevel(botLevelAus(stufe));
+                  }}
+                  beschriftung="Spielstärke der Bots"
+                />
+                <p className="mm-stufensatz">{STUFEN.find((eintrag) => eintrag.stufe === fuellStufe)?.satz}</p>
+              </div>
+            </SpielAbschnitt>
+          )}
+        </SpielRahmen>
+      );
+    }
     return (
       <main className="mm-menue">
         <button className="mm-zurueck" type="button" onClick={brichAb}>
