@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 
 /*
@@ -55,3 +56,13 @@ if (typeof (globalThis as { localStorage?: Storage }).localStorage?.clear !== 'f
     });
   }
 }
+
+/*
+ * Seit dem 26.09.2026 ist das neue Hub der Standard (`src/hubNeu.ts`). Die
+ * vorhandenen Bildschirmtests beschreiben das alte Hub, das über `?hub=alt`
+ * erreichbar bleibt, bis es entfernt wird. Sie laufen deshalb weiter gegen das
+ * alte; die Tests des neuen Hubs stellen den Schalter selbst um
+ * (`vi.mock('../hubNeu', () => ({ hubNeu: true }))`). Fällt das alte Hub weg,
+ * fällt diese Zeile mit.
+ */
+vi.mock('./src/hubNeu', () => ({ hubNeu: false, liesSchalter: () => false }));
