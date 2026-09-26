@@ -23,7 +23,7 @@ import { createPortal } from 'react-dom';
  * Ohne Hub-Wurzel (Tests einzelner Teile) bleibt es, wo es steht.
  */
 export function ImHub({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const wurzel = typeof document === 'undefined' ? null : document.querySelector('.hb');
+  const wurzel = typeof document === 'undefined' ? null : document.querySelector('.hb, .spe');
   return wurzel ? createPortal(children, wurzel) : <>{children}</>;
 }
 

@@ -249,6 +249,19 @@ Start, die anderen Reiter haben ihre Überschrift.
   (Clantisch, Einladen), steht nicht auf der Seite. Neue Funktionen kommen als
   eigener Schritt, nicht als Knopf ohne Dahinter.
 
+### Spieleinstieg (Lobbys und Menüs hinter „Zum Spiel“)
+
+Seit dem 26.09.2026 (Robin: „die Spiele an das Design anpassen“) steht auch,
+was hinter „Zum Spiel“ kommt, im neuen System — die Spieltische selbst nicht.
+Baukasten: `screens/SpielEinstieg.tsx` (`SpielRahmen`, `SpielAbschnitt`,
+`SpielWahl`) und `spiel-einstieg.css`, Wurzel `.spe`. Die Bausteine des Hubs
+(`hb-kn`, `hb-chip`, `hb-liste`, `hb-ab`, `HbBlatt` …) gelten unter `.spe`
+genauso. Aufbau: oben das **Spielbanner als Kopf** mit Zurück-Knopf, Titel und
+einer Zeile; darunter Abschnitte; unten fest der **goldene Hauptknopf** (Tisch
+erstellen, Online spielen …). Jedes Spiel behält seine Farbe über
+`--spe-akzent` (Auswahlrahmen, Glanz im Kopf), der Hauptknopf bleibt gold. Nur
+im neuen Hub; mit `?hub=alt` bleibt der alte Einstieg.
+
 ## Bausteine
 
 Vorhandenes wiederverwenden statt neu erfinden:
