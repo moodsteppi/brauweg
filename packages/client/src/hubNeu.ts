@@ -1,30 +1,29 @@
 /**
- * Schalter für das neue Hub („Nachtblau & Gold", Entwurf vom 26.09.2026).
+ * Schalter zwischen neuem Hub („Nachtblau & Gold", Entwurf vom 26.09.2026)
+ * und altem Hub.
  *
- * Das neue Hub kommt Seite für Seite nach staging, das alte bleibt so lange
- * der Standard. Wer es sehen will, öffnet die Seite einmal mit `?hub=neu`;
- * die Wahl bleibt im Browser gespeichert, `?hub=alt` nimmt sie zurück.
- *
- * Ein Schalter und nicht ein langer Zweig: So geht jede Seite einzeln durch
- * die Prüfung, und die Produktion zeigt nie ein halb umgebautes Hub. Sind alle
- * Seiten fertig, wird der Standard umgelegt und das alte Hub entfernt.
+ * Seit dem 26.09.2026 abends ist das **neue Hub der Standard** (Robin: „auch das
+ * neue Hub schon auf staging haben, das Go"). Das alte bleibt so lange
+ * erreichbar, bis alle Seiten fertig sind und es entfernt wird: einmal
+ * `?hub=alt` öffnen, die Wahl bleibt im Browser gespeichert; `?hub=neu` nimmt
+ * sie zurück.
  */
 const SCHLUESSEL = 'brauweg.hub';
 
 /** Exportiert für den Test; die App liest einmal beim Laden (`hubNeu`). */
 export function liesSchalter(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') return true;
   try {
     const suche = new URLSearchParams(window.location.search);
     // Die Probe `?dev=hub` zeigt immer das neue Hub.
     if (import.meta.env.DEV && suche.get('dev') === 'hub') return true;
     const wunsch = suche.get('hub');
-    if (wunsch === 'neu') window.localStorage.setItem(SCHLUESSEL, 'neu');
-    if (wunsch === 'alt') window.localStorage.removeItem(SCHLUESSEL);
-    return window.localStorage.getItem(SCHLUESSEL) === 'neu';
+    if (wunsch === 'alt') window.localStorage.setItem(SCHLUESSEL, 'alt');
+    if (wunsch === 'neu') window.localStorage.removeItem(SCHLUESSEL);
+    return window.localStorage.getItem(SCHLUESSEL) !== 'alt';
   } catch {
-    // Ohne Speicher (privates Fenster, gesperrt): das alte Hub.
-    return false;
+    // Ohne Speicher (privates Fenster, gesperrt): der Standard.
+    return true;
   }
 }
 
