@@ -106,14 +106,6 @@ export interface Gangart {
    */
   readonly polster: number;
   /**
-   * Mit welcher Hochzahl die Zaehigkeit in `staerke` eingeht — je Gangart,
-   * damit `gangarten.mjs --schraube zaehigkeitsHochzahl=…` einen Sitz anders
-   * rechnen lassen kann als seine Gegner. Ohne das Feld ginge der Aufruf
-   * nicht, und ohne gepaarte Messung ist die Frage nicht zu beantworten (siehe
-   * `ZAEHIGKEIT_HOCHZAHL`). Fehlt es, gilt die Konstante.
-   */
-  readonly zaehigkeitsHochzahl?: number;
-  /**
    * Was nach einem Aufstieg uebrig bleiben soll, um das neue Feld zu fuellen.
    *
    * Die schaerfste Schraube im Feld: zwischen 0 und 5 liegt bei `hart` der
@@ -299,7 +291,6 @@ export interface Gangart {
  */
 export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
   sanft: {
-    zaehigkeitsHochzahl: 1.0,
     polster: 8,
     aufstiegsReserve: 6,
     nurBeiVollemBrett: true,
@@ -308,7 +299,6 @@ export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     nimmtVerschmelzungImmer: false,
   },
   normal: {
-    zaehigkeitsHochzahl: 1.0,
     polster: 4,
     aufstiegsReserve: 3,
     nurBeiVollemBrett: true,
@@ -317,7 +307,6 @@ export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     nimmtVerschmelzungImmer: true,
   },
   hart: {
-    zaehigkeitsHochzahl: 1.0,
     polster: 2,
     aufstiegsReserve: 0,
     nurBeiVollemBrett: true,
@@ -422,7 +411,6 @@ const STAERKE_TEILER = 100;
  * Stichproben.
  */
 const ZAEHIGKEIT_HOCHZAHL = 1.2;
-let HOCHZAHL_JETZT = ZAEHIGKEIT_HOCHZAHL;
 
 /**
  * Der Drehpunkt der Hochzahl — und eine Zahl OHNE Wirkung auf das Spiel.
@@ -783,7 +771,7 @@ export function staerke(
   // Die Hochzahl erst NACH dem Anmarsch: Was auf dem Weg verloren geht, ist
   // keine Zaehigkeit mehr, die im Kampf ueberproportional zaehlen koennte.
   const steht = Math.max(0, (w.leben * 100) / Math.max(1, 100 - w.ruestung) - anmarsch);
-  const haelt = ZAEHIGKEIT_BEZUG * (steht / ZAEHIGKEIT_BEZUG) ** HOCHZAHL_JETZT;
+  const haelt = ZAEHIGKEIT_BEZUG * (steht / ZAEHIGKEIT_BEZUG) ** ZAEHIGKEIT_HOCHZAHL;
   const teiltAus = leistung(k.id, w.angriff) * w.tempo;
   const ausDerFerne = 1 + (w.reichweite - 1) * REICHWEITEN_GEWICHT * deckung;
   return Math.round((haelt * teiltAus * ausDerFerne) / STAERKE_TEILER);
@@ -1728,7 +1716,6 @@ export function botZug(
   if (!eigen) return { typ: 'bereit' };
 
   const gangart = typeof wahl === 'string' ? GANGARTEN[wahl] : wahl;
-  HOCHZAHL_JETZT = gangart.zaehigkeitsHochzahl ?? ZAEHIGKEIT_HOCHZAHL;
   return (
     stellungsZug(sicht, eigen) ??
     aufstiegsZug(eigen, gangart) ??
