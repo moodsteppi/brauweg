@@ -156,6 +156,35 @@
   border: 1px solid var(--hb-kontur);
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
 }
+/* Knopf mit Unterzeile („Sofort spielen" / „gegen den Computer · 2 Plätze"):
+   zwei Zeilen statt einer, die Höhe bleibt bei 52 bzw. 44 pt Mindestmaß. */
+.spe .hb-kn.spe-kn-unter {
+  flex-direction: column;
+  gap: 1px;
+  height: auto;
+  min-height: 52px;
+  padding-block: 6px;
+  line-height: 1.1;
+  white-space: normal;
+  text-align: center;
+}
+.spe .hb-kn.spe-kn-unter:not(.is-haupt) {
+  min-height: 44px;
+}
+.spe .hb-kn.spe-kn-unter small {
+  font: 700 12px/1.2 var(--hb-txt);
+  opacity: 0.8;
+}
+/* Freier Platz in einer Sitzliste (Wartebereich, Gruppe) */
+.spe .spe-zeile.is-leer {
+  opacity: 0.55;
+}
+/* Ein Absatz Erklärung unter dem Kopf (Minispiel-Menüs) */
+.spe .spe-text {
+  margin: 0;
+  font: 600 15px/1.45 var(--hb-txt);
+  color: var(--hb-leise);
+}
 .spe .spe-leer {
   margin: 0;
   padding: 18px 14px;

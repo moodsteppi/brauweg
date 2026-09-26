@@ -58,6 +58,12 @@ import { anzeigeVerdeckt, kastenAus, type Kasten } from '../minispiele/golf/verd
 import { Zeichner, type Zielbild } from '../minispiele/golf/zeichnen';
 import type { BotLevel, SeatInfo, TaktMessage, ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
+import { hubNeu } from '../hubNeu';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+import './golf-einstieg.css';
+
+/** Farbe von Golf im neuen Hub: das Grün der Bahn im Banner. */
+const AKZENT = '#6fd65a';
 
 /**
  * Golf — Minigolf aus der Vogelperspektive, 1 bis 8 Spieler gleichzeitig.
@@ -472,6 +478,142 @@ export function Golf({
   /* Menü                                                              */
   /* ---------------------------------------------------------------- */
 
+  if (!tischId && hubNeu) {
+    /*
+     * Neues Hub (Spieleinstieg-Baukasten, 26.09.2026): dieselben Zustände und
+     * Aufrufe wie im alten Menü. „Gegen Bots" klappt hier nichts auf, sondern
+     * öffnet eine eigene Ansicht wie „Tisch erstellen" in der Kartenlobby —
+     * Regler, Stärke, Spielart und Bahnen passen nicht unter einen Knopf.
+     */
+    const lochzahl = festeLochzahl(botWahl, lobby.daten);
+    if (botsOffen) {
+      return (
+        <SpielRahmen
+          gameId="golf"
+          titel="Gegen Bots"
+          unter={`${bots} ${bots === 1 ? 'Bot' : 'Bots'} · ${lochzahl ?? loecher} Löcher`}
+          akzent={AKZENT}
+          onBack={() => setBotsOffen(false)}
+          zurueckText="Zurück zum Golfmenü"
+          fuss={
+            <button
+              className="hb-kn is-gold is-haupt is-breit"
+              type="button"
+              data-golf-los=""
+              onClick={() => void spieleGegenBots()}
+              disabled={laedt || wahlUnfertig(botWahl) !== null}
+            >
+              Los
+            </button>
+          }
+        >
+          {fehler && <p className="hb-fehler">{fehler}</p>}
+          <SpielAbschnitt titel="Platz">
+            <div className="hb-liste gf-neu-regler">
+              <Regler
+                titel="Bots"
+                wert={bots}
+                min={1}
+                max={7}
+                onWahl={(w) => {
+                  setBots(w);
+                  merke(SCHLUESSEL_BOTS, w);
+                }}
+              />
+              {lochzahl === null && (
+                <Regler
+                  titel="Löcher"
+                  wert={loecher}
+                  min={2}
+                  max={15}
+                  onWahl={(w) => {
+                    setLoecher(w);
+                    merke(SCHLUESSEL_LOECHER, w);
+                  }}
+                />
+              )}
+            </div>
+          </SpielAbschnitt>
+          <SpielAbschnitt titel="Spielstärke">
+            <SpielWahl
+              name="Spielstärke der Bots"
+              werte={STUFEN.map((s) => ({ wert: s, text: STUFE_NAME[s] }))}
+              wert={stufe}
+              onWahl={(s) => {
+                setStufe(s);
+                merke(SCHLUESSEL_STUFE, s);
+              }}
+            />
+          </SpielAbschnitt>
+          <SpielAbschnitt titel="Spielart">
+            <ModusWahl
+              modus={modus}
+              onWahl={(m) => {
+                setModus(m);
+                merke(SCHLUESSEL_MODUS, m);
+              }}
+            />
+          </SpielAbschnitt>
+          <Bahnauswahl
+            daten={lobby.daten}
+            wahl={botWahl}
+            onWahl={(w) => {
+              setBotWahl(w);
+              merkeWahl(w);
+            }}
+            karten={KARTEN}
+            kursSperre={kursSperre}
+          />
+        </SpielRahmen>
+      );
+    }
+    return (
+      <SpielRahmen
+        gameId="golf"
+        titel="Golf"
+        unter="1–8 Spieler · alle gleichzeitig"
+        akzent={AKZENT}
+        onBack={onBack}
+        fuss={
+          <>
+            <button
+              className="hb-kn is-gold is-haupt is-breit"
+              type="button"
+              data-golf-online=""
+              onClick={() => void spieleOnline()}
+              disabled={laedt}
+            >
+              Online spielen
+            </button>
+            <button
+              className="hb-kn is-blau is-breit"
+              type="button"
+              data-golf-bots=""
+              onClick={() => setBotsOffen(true)}
+            >
+              Gegen Bots
+            </button>
+          </>
+        }
+      >
+        <p className="spe-text">
+          Minigolf von oben, alle gleichzeitig auf derselben Bahn. Zieh deinen Ball zurück wie
+          einen Flitzebogen, lass los — und wer nach allen Löchern die wenigsten Schläge hat,
+          gewinnt.
+        </p>
+        <div className="gf-probe" aria-hidden="true">
+          {menueFarben.map((farbe, i) => (
+            <Golfball key={i} farbe={farbe} groesse={34} />
+          ))}
+        </div>
+        {KARTEN.length === 0 && (
+          <p className="hb-fehler">Es sind noch keine Bahnen eingebaut — spielen lässt sich noch nicht.</p>
+        )}
+        {fehler && <p className="hb-fehler">{fehler}</p>}
+      </SpielRahmen>
+    );
+  }
+
   if (!tischId) {
     return (
       <main className="gf-seite gf-menue">
@@ -639,7 +781,13 @@ export function Golf({
         bahnwahl={
           <>
             {/* Die Spielart der Gruppe (seit 23.09.2026) — Sitz 0 wählt, alle sehen sie. */}
-            <ModusWahl modus={tischWahl.modus} onWahl={tischWahl.setzeModus} />
+            {hubNeu ? (
+              <SpielAbschnitt titel="Spielart">
+                <ModusWahl modus={tischWahl.modus} onWahl={tischWahl.setzeModus} />
+              </SpielAbschnitt>
+            ) : (
+              <ModusWahl modus={tischWahl.modus} onWahl={tischWahl.setzeModus} />
+            )}
             <Bahnauswahl daten={lobby.daten} wahl={tischWahl.wahl} onWahl={tischWahl.setzeWahl} karten={KARTEN} kursSperre={kursSperre} />
           </>
         }
@@ -657,6 +805,16 @@ export function Golf({
   /* Partie                                                            */
   /* ---------------------------------------------------------------- */
 
+  if (KARTEN.length === 0 && hubNeu) {
+    return (
+      <SpielRahmen gameId="golf" titel="Bahnen fehlen" akzent={AKZENT} onBack={verlasseUndZurueck}>
+        <p className="spe-text">
+          Dieser Stand bringt noch keine Bahnen mit. Ohne sie lässt sich die Partie nicht rechnen —
+          der Tisch bleibt bestehen.
+        </p>
+      </SpielRahmen>
+    );
+  }
   if (KARTEN.length === 0) {
     return (
       <main className="gf-seite gf-menue">
@@ -681,6 +839,16 @@ export function Golf({
    * Bühne ein Satz dasteht, der sagt, was zu tun ist.
    */
   const fehlendeBahnen = loeseBahnen(sicht.bahnen ?? [], KARTEN).unbekannt;
+  if (fehlendeBahnen.length > 0 && hubNeu) {
+    return (
+      <SpielRahmen gameId="golf" titel="Neue Bahnen" akzent={AKZENT} onBack={verlasseUndZurueck}>
+        <p className="spe-text" data-golf-bahnen-fehlen="">
+          Diese Partie spielt {fehlendeBahnen.length === 1 ? 'eine Bahn' : `${fehlendeBahnen.length} Bahnen`},
+          die diese Fassung noch nicht kennt. Bitte die Seite neu laden — der Tisch bleibt bestehen.
+        </p>
+      </SpielRahmen>
+    );
+  }
   if (fehlendeBahnen.length > 0) {
     return (
       <main className="gf-seite gf-menue">
@@ -807,6 +975,110 @@ function Lobby({
    */
   const binHost = host !== null && meineKennung !== null && host.accountId === meineKennung;
 
+  /** Die Zeilen der Gruppe — gleich in beiden Fassungen, nur die Hülle wechselt. */
+  const zeilen = sitze.map((platz) => {
+    const eigen = meineKennung !== null && platz.accountId === meineKennung;
+    const leer = platz.accountId === null && !platz.isBot;
+    const name = leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'));
+    const ball = <Golfball farbe={leer ? '#5b6b5f' : (farben[platz.seat] ?? '#5b6b5f')} groesse={26} />;
+    return (
+      <li
+        key={platz.seat}
+        className="gf-gruppenzeile"
+        data-golf-sitz={platz.seat}
+        data-leer={leer ? '' : undefined}
+        data-eigen={eigen ? '' : undefined}
+      >
+        {/*
+          Nur die eigene Zeile ist ein Knopf. Ein <button> und kein
+          onClick auf dem <li>: Sonst erreicht die Farbwahl niemanden,
+          der mit der Tastatur oder einem Vorleseprogramm spielt — und
+          ein anklickbares Listenelement sagt nirgends, dass es eines
+          ist.
+        */}
+        {eigen && !leer ? (
+          <button
+            className="gf-farbwahl"
+            type="button"
+            data-golf-farbe={platz.seat}
+            onClick={() => onFarbe(platz.seat)}
+            disabled={!verbunden}
+            title="Farbe wechseln"
+          >
+            {ball}
+            <span className="gf-gruppenname">{name}</span>
+            <em className="gf-du">du</em>
+          </button>
+        ) : (
+          <>
+            {ball}
+            <span className="gf-gruppenname">{name}</span>
+            {eigen && <em className="gf-du">du</em>}
+          </>
+        )}
+      </li>
+    );
+  });
+
+  // Neues Hub: die Gruppe im Spieleinstieg-Rahmen, Startknopf unten fest.
+  if (hubNeu) {
+    return (
+      <SpielRahmen
+        gameId="golf"
+        titel="Gruppe"
+        unter={`${anwesend.length}/${plaetze} in der Gruppe`}
+        akzent={AKZENT}
+        onBack={onZurueck}
+        fuss={
+          binHost ? (
+            <button
+              className="hb-kn is-gold is-haupt is-breit"
+              type="button"
+              data-golf-start=""
+              onClick={onStart}
+              disabled={!verbunden || startSperre !== null}
+              title={startSperre ?? undefined}
+            >
+              Starten
+            </button>
+          ) : (
+            <p className="gf-warten" aria-live="polite">
+              <span>Warten, bis {host?.displayName ?? 'der Erste'} startet</span>
+              <span className="gf-lauf" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+            </p>
+          )
+        }
+      >
+        {!verbunden && <p className="hb-fehler">Keine Verbindung — es wird neu aufgebaut …</p>}
+        <SpielAbschnitt titel="Spieler">
+          <ul className="hb-liste gf-neu-gruppe">{zeilen}</ul>
+        </SpielAbschnitt>
+        {binHost ? (
+          <>
+            {bahnwahl}
+            <section className="hb-blk">
+              {loecherFest === null ? (
+                <div className="hb-liste gf-neu-regler">
+                  <Regler titel="Löcher" wert={loecher} min={2} max={15} onWahl={onLoecher} />
+                </div>
+              ) : (
+                <p className="gf-bw-hinweis" data-golf-loecher-fest={loecherFest}>
+                  {loecherFest} Löcher
+                </p>
+              )}
+            </section>
+          </>
+        ) : (
+          bahnanzeige
+        )}
+      </SpielRahmen>
+    );
+  }
+
   return (
     <main className="gf-seite gf-menue">
       <button className="gf-zurueck" type="button" onClick={onZurueck} aria-label="Zurück">
@@ -820,49 +1092,7 @@ function Lobby({
         {!verbunden && <p className="gf-fehler">Keine Verbindung — es wird neu aufgebaut …</p>}
 
         <ul className="gf-gruppe">
-          {sitze.map((platz) => {
-            const eigen = meineKennung !== null && platz.accountId === meineKennung;
-            const leer = platz.accountId === null && !platz.isBot;
-            const name = leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'));
-            const ball = <Golfball farbe={leer ? '#5b6b5f' : (farben[platz.seat] ?? '#5b6b5f')} groesse={26} />;
-            return (
-              <li
-                key={platz.seat}
-                className="gf-gruppenzeile"
-                data-golf-sitz={platz.seat}
-                data-leer={leer ? '' : undefined}
-                data-eigen={eigen ? '' : undefined}
-              >
-                {/*
-                  Nur die eigene Zeile ist ein Knopf. Ein <button> und kein
-                  onClick auf dem <li>: Sonst erreicht die Farbwahl niemanden,
-                  der mit der Tastatur oder einem Vorleseprogramm spielt — und
-                  ein anklickbares Listenelement sagt nirgends, dass es eines
-                  ist.
-                */}
-                {eigen && !leer ? (
-                  <button
-                    className="gf-farbwahl"
-                    type="button"
-                    data-golf-farbe={platz.seat}
-                    onClick={() => onFarbe(platz.seat)}
-                    disabled={!verbunden}
-                    title="Farbe wechseln"
-                  >
-                    {ball}
-                    <span className="gf-gruppenname">{name}</span>
-                    <em className="gf-du">du</em>
-                  </button>
-                ) : (
-                  <>
-                    {ball}
-                    <span className="gf-gruppenname">{name}</span>
-                    {eigen && <em className="gf-du">du</em>}
-                  </>
-                )}
-              </li>
-            );
-          })}
+          {zeilen}
         </ul>
 
         {binHost ? (
@@ -1742,55 +1972,89 @@ export function Abschluss({
     return zeile?.displayName ?? (zeile?.isBot ? 'Bot' : `Spieler ${sitz + 1}`);
   };
 
+  const rangliste = (
+    <ol className="gf-rangliste">
+      {daten.platz.map((zeile) => (
+        <li
+          key={zeile.sitz}
+          data-sieger={zeile.platz === 1 ? '' : undefined}
+          data-eigen={zeile.sitz === eigenerSitz ? '' : undefined}
+        >
+          <span className="gf-rangplatz">{zeile.platz}</span>
+          <Golfball farbe={farben[zeile.sitz] ?? farbeAus(zeile.sitz)} groesse={26} />
+          <span className="gf-rangname">{name(zeile.sitz)}</span>
+          <span className="gf-rangloecher">
+            {daten.ergebnis.map((reihe, loch) => (
+              <i key={loch}>{reihe[zeile.sitz] ?? '–'}</i>
+            ))}
+          </span>
+          <strong className="gf-rangsumme">{zeile.schlaege}</strong>
+          <ZuPar wert={zuParSumme(daten.ergebnis, daten.par, zeile.sitz)} />
+        </li>
+      ))}
+    </ol>
+  );
+  const bestaetigung =
+    ausgang === null ? (
+      <p className="gf-untertitel gf-klein">Ergebnis wird bestätigt …</p>
+    ) : ausgang.strittig ? (
+      <p className="gf-fehler">
+        Die Geräte sind auf verschiedene Ergebnisse gekommen — die Partie
+        zählt als strittig, alle stehen auf Platz 1.
+      </p>
+    ) : null;
+  const replayKnoepfe =
+    onReplay && daten.ergebnis.length > 0 ? (
+      <nav className="grp-loecher" aria-label={t('golf.replay.loecher')}>
+        <h2>{t('golf.replay.loecher')}</h2>
+        {daten.ergebnis.map((_reihe, loch) => (
+          <button
+            key={loch}
+            className="grp-lochknopf"
+            type="button"
+            onClick={() => onReplay(loch)}
+            aria-label={`${t('golf.replay.knopf')}: ${t('golf.replay.loch')} ${loch + 1}`}
+          >
+            {loch + 1}
+          </button>
+        ))}
+      </nav>
+    ) : null;
+
+  // Neues Hub: Ergebnis im Spieleinstieg-Rahmen, derselbe Inhalt.
+  if (hubNeu) {
+    return (
+      <SpielRahmen
+        gameId="golf"
+        titel="Ergebnis"
+        unter={`Golf · ${daten.ergebnis.length} ${daten.ergebnis.length === 1 ? 'Loch' : 'Löcher'}`}
+        akzent={AKZENT}
+        onBack={onZurueck}
+        zurueckText="Zurück ins Menü"
+        fuss={
+          <button className="hb-kn is-gold is-haupt is-breit" type="button" onClick={onZurueck}>
+            Zurück ins Menü
+          </button>
+        }
+      >
+        <div className="gf-neu-ergebnis">
+          <ParKopf />
+          {rangliste}
+          {bestaetigung}
+        </div>
+        {replayKnoepfe}
+      </SpielRahmen>
+    );
+  }
+
   return (
     <main className="gf-seite gf-menue">
       <div className="gf-menue-mitte gf-breit">
         <h1 className="gf-titel">Ergebnis</h1>
         <ParKopf />
-        <ol className="gf-rangliste">
-          {daten.platz.map((zeile) => (
-            <li
-              key={zeile.sitz}
-              data-sieger={zeile.platz === 1 ? '' : undefined}
-              data-eigen={zeile.sitz === eigenerSitz ? '' : undefined}
-            >
-              <span className="gf-rangplatz">{zeile.platz}</span>
-              <Golfball farbe={farben[zeile.sitz] ?? farbeAus(zeile.sitz)} groesse={26} />
-              <span className="gf-rangname">{name(zeile.sitz)}</span>
-              <span className="gf-rangloecher">
-                {daten.ergebnis.map((reihe, loch) => (
-                  <i key={loch}>{reihe[zeile.sitz] ?? '–'}</i>
-                ))}
-              </span>
-              <strong className="gf-rangsumme">{zeile.schlaege}</strong>
-              <ZuPar wert={zuParSumme(daten.ergebnis, daten.par, zeile.sitz)} />
-            </li>
-          ))}
-        </ol>
-        {ausgang === null ? (
-          <p className="gf-untertitel gf-klein">Ergebnis wird bestätigt …</p>
-        ) : ausgang.strittig ? (
-          <p className="gf-fehler">
-            Die Geräte sind auf verschiedene Ergebnisse gekommen — die Partie
-            zählt als strittig, alle stehen auf Platz 1.
-          </p>
-        ) : null}
-        {onReplay && daten.ergebnis.length > 0 && (
-          <nav className="grp-loecher" aria-label={t('golf.replay.loecher')}>
-            <h2>{t('golf.replay.loecher')}</h2>
-            {daten.ergebnis.map((_reihe, loch) => (
-              <button
-                key={loch}
-                className="grp-lochknopf"
-                type="button"
-                onClick={() => onReplay(loch)}
-                aria-label={`${t('golf.replay.knopf')}: ${t('golf.replay.loch')} ${loch + 1}`}
-              >
-                {loch + 1}
-              </button>
-            ))}
-          </nav>
-        )}
+        {rangliste}
+        {bestaetigung}
+        {replayKnoepfe}
         <button className="gf-knopf gf-knopf-haupt" type="button" onClick={onZurueck}>
           Zurück ins Menü
         </button>
