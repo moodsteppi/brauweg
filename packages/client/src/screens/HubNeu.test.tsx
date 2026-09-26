@@ -184,6 +184,18 @@ describe('Neues Hub', () => {
     expect(within(reiter()).getByRole('button', { name: /^Start/ })).toHaveAttribute('aria-current', 'page');
   });
 
+  it('wechselt beim waagerechten Wischen über den Inhalt nicht den Reiter', async () => {
+    // Robin, 26.09.2026: Spielreihen rollen selbst waagerecht; ein Wisch darin
+    // sprang vorher auf den Nachbarreiter.
+    await zeige();
+    const inhalt = document.querySelector('.hb-inhalt')!;
+    fireEvent.touchStart(inhalt, { touches: [{ clientX: 300, clientY: 400 }] });
+    fireEvent.touchMove(inhalt, { touches: [{ clientX: 60, clientY: 405 }] });
+    fireEvent.touchEnd(inhalt);
+    await act(async () => {});
+    expect(within(reiter()).getByRole('button', { name: /^Start/ })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('zeigt am Start-Reiter, dass unter „Heute" etwas bereitliegt', async () => {
     await zeige();
     expect(within(reiter()).getByRole('button', { name: 'Start, 2 bereit' })).toBeInTheDocument();

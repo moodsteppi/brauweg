@@ -94,7 +94,8 @@ Hub ist Gold der Hauptknopf — siehe „Das neue Hub“ weiter unten.
   Edelsteine am Ende Geld kosten; und nach einem Truhenkauf zeigt das Fundblatt,
   was drin war — eine gekaufte Truhe, die nur den Münzstand ändert, wäre eine
   Zahl ohne Erklärung.
-- **Zwischen den Tabs wird auch gewischt**, nicht nur über die Leiste
+- **Zwischen den Tabs wird auch gewischt** (nur im alten Hub; im neuen seit
+  26.09.2026 nicht mehr, siehe „Das neue Hub“), nicht nur über die Leiste
   getippt: ein deutlich waagerechter Wisch auf dem Inhalt geht einen Tab
   weiter, in derselben Reihenfolge wie die Leiste. Nur klar horizontale
   Wische zählen (senkrechtes Rollen bleibt Rollen), und in einer
@@ -136,10 +137,29 @@ gilt dieser Abschnitt, und wo er dem Rest widerspricht, gewinnt er.
 **Wo es steht:** `screens/hub-neu.css` (Wurzel `.hb`, nichts wirkt nach
 draußen), Rahmen `HubRahmen.tsx`, Seiten `StartNeu`, `SpieleNeu`,
 `TrophaeenwegNeu`, `HeuteNeu`, `SammlungNeu`, `HalleNeu` (in `Clan.tsx`) und
-`ShopRahmen` (in `GameSelect.tsx`). Probe mit Beispielkonto nur im Dev-Server:
-`/?dev=hub&iphone`, dazu `&tab=spiele|blatt|clan|shop`, `&spiel=doppelkopf`,
-`&weg`, `&heute`. Der Entwurf, an dem gemessen wird, liegt außerhalb des Repos
-(Entwurfsordner „redesign-2026-09", Fassung 4).
+`ShopRahmen` (in `GameSelect.tsx`). Die übrigen Ansichten tragen ein `neu`
+an derselben Komponente statt einer Kopie (seit 26.09.2026): Profil
+(`ProfilTab`), „Alles ›" der Sammlung (`DeckPicker`, `TischVorschau`),
+Clan ohne Clan (`Suche`, `Gruenden`, `ClanFelder`), `ClanKrieg`,
+`Kleiderschrank`, `Stufenleiter` und die Blätter `KaufFrage`,
+`RanglisteBlatt`, `BaldBlatt` sowie die Clan-Blätter. So bleiben Aufrufe und
+Rückfragen an einer Stelle, nur das Aussehen verzweigt.
+
+**Blätter** baut `HbBlatt` (`screens/HbBlatt.tsx`): Griff, Wisch, Hintergrund,
+Schließen-Knopf, Escape (nur das oberste Blatt schließt). Es hängt sich per
+`ImHub` an die Wurzel `.hb` — die Seitenschiene des Pagers trägt immer ein
+`transform` und würde `position: fixed` sonst auf die Seite beschränken, die
+Reiterleiste bliebe darunter antippbar. **Truhenbilder** kommen aus
+`truhenBild()` (`src/truhenbild.ts`), eine Zeile je Grad, für Shop, „Heute"
+und Trophäenweg.
+
+Probe mit Beispielkonto nur im Dev-Server: `/?dev=hub&iphone`, dazu
+`&tab=spiele|blatt|clan|shop|profil`, `&spiel=doppelkopf`, `&weg`, `&heute`,
+`&ohneclan` (Clansuche), `&krieg=laeuft|suche|angefragt|keiner|anfrage` und
+`&tipp=Text|Text` (tippt nacheinander auf Knöpfe mit diesem Namen — für
+Bildschirmfotos von Blättern und Unterseiten). Der Entwurf, an dem gemessen
+wird, liegt außerhalb des Repos (Entwurfsordner „redesign-2026-09",
+Fassung 4).
 
 ### Farben (Variablen in `.hb`)
 
@@ -185,6 +205,10 @@ unter 11.
   Inset.
 
 ### Reiter
+
+**Kein Wischen zwischen den Reitern** (Robin, 26.09.2026): Spielreihen,
+Filter und Sammlung rollen im neuen Hub waagerecht, ein Wisch darin darf nie
+den Reiter wechseln. Gewechselt wird nur über die Leiste.
 
 **Shop · Spiele · Start · Sammlung · Clan**, Start mittig und größer (Robin,
 26.09.2026). Es bleiben fünf Plätze. In der App ohne Shop steht dort das

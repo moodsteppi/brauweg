@@ -2081,3 +2081,1031 @@
   width: 20px;
   height: 20px;
 }
+
+/* =========================================================================
+   Die restlichen Ansichten (26.09.2026): Blätter, Profil, Details der
+   Sammlung, Clan ohne Clan, Clankrieg, Kleiderschrank, Stufen.
+   Dieselben Variablen und Maße wie oben — keine zweite Formensprache.
+   ========================================================================= */
+
+/* ---------- Bausteine ---------- */
+/* Karte: dunkle Fläche mit Kontur, wie Liste und Truhenkachel */
+.hb .hb-karte {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+.hb .hb-text {
+  margin: 0;
+  font: 600 15px/1.45 var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.hb .hb-ohne-rand {
+  margin: 0;
+}
+.hb .hb-mitte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.hb .hb-mitte-text {
+  text-align: center;
+}
+/* Zweitknopf: dunkel mit Kontur. Gefüllt in Gold ist nur der Hauptknopf. */
+.hb .hb-kn.is-zweit {
+  background: var(--hb-karte-hoch);
+  border: 1px solid var(--hb-kontur);
+  color: var(--hb-tinte);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+}
+/* Goldkontur: wie die Preise im Regal — wertvoll, aber nicht der Hauptknopf */
+.hb .hb-kn.is-kontur {
+  border: 1.5px solid var(--hb-gold);
+  color: var(--hb-gold);
+  background: rgba(245, 192, 46, 0.08);
+}
+/* Rot = Vorsicht (Konto löschen, Rauswerfen) */
+.hb .hb-kn.is-gefahr {
+  border: 1.5px solid var(--hb-rot);
+  color: #ffb3b9;
+  background: rgba(217, 75, 85, 0.12);
+}
+/* Klein im Aussehen, 44 pt Tippfläche bleiben (Apple HIG) */
+.hb .hb-kn.is-klein {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  position: relative;
+}
+.hb .hb-kn.is-klein::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+.hb .hb-kn:disabled {
+  opacity: 0.55;
+}
+.hb .hb-kn:not(:disabled):active {
+  transform: translateY(2px);
+}
+.hb .hb-kn-bild {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+.hb .hb-knopfreihe {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.hb .hb-knopfreihe > .hb-kn {
+  width: 100%;
+  min-width: 0;
+}
+/* Eingabe: mindestens 16 px Schrift, sonst zoomt Safari beim Antippen hinein */
+.hb .hb-feld {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--hb-grund-tief);
+  border: 1px solid var(--hb-kontur);
+  color: var(--hb-tinte);
+  font: 600 16px var(--hb-txt);
+  outline: none;
+}
+.hb .hb-feld::placeholder {
+  color: var(--hb-leise);
+}
+.hb .hb-feld:focus {
+  border-color: var(--hb-gold);
+}
+.hb .hb-feld:disabled {
+  opacity: 0.7;
+}
+.hb .hb-feld.is-suche {
+  padding-left: 42px;
+  background: var(--hb-grund-tief) no-repeat 14px center / 18px
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3b3dd' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E");
+}
+.hb .hb-suchzeile {
+  display: flex;
+  gap: 8px;
+}
+.hb .hb-suchzeile .hb-kn {
+  height: 48px;
+}
+.hb .hb-chips.is-innen {
+  padding: 0;
+  flex-wrap: wrap;
+}
+.hb .hb-chips--blatt {
+  margin: 0 -16px;
+  padding: 0 16px 4px;
+}
+.hb .hb-chip.is-belegt:not(.is-an) {
+  border-color: var(--hb-gold);
+}
+.hb .hb-chip:disabled {
+  opacity: 0.7;
+}
+
+/* Zeilen einer Liste: Namen, Wappen, kleine Knöpfe */
+.hb .hb-mg-name small.is-leise {
+  color: var(--hb-leise);
+}
+.hb .hb-mg-knopf {
+  align-self: stretch;
+  justify-content: center;
+  min-height: 56px;
+  text-align: left;
+}
+.hb .hb-mg-knopf .hb-pk {
+  font-size: 12px;
+}
+.hb .hb-mg-knoepfe {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+.hb .hb-mg > img.hb-mg-wappen,
+.hb .hb-mg > img.hb-mg-symbol {
+  border-radius: 0;
+  background: none;
+  object-fit: contain;
+}
+.hb .hb-mg > img.hb-mg-wappen {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+.hb .hb-mg > img.hb-mg-symbol {
+  width: 32px;
+  height: 32px;
+}
+.hb .hb-mg > img.hb-mg-spiel {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+.hb .hb-mg .hb-pf {
+  flex: none;
+}
+.hb .hb-mg .hb-bald-marke {
+  margin-left: auto;
+}
+.hb .hb-liste > .hb-liste-leer {
+  margin: 0;
+}
+.hb ol.hb-liste,
+.hb ul.hb-liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hb .hb-rl-name {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  font: 700 15px var(--hb-txt);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hb .hb-leise-knopf:disabled {
+  opacity: 0.55;
+}
+
+/* Kopfzeile mit Zurück-Knopf (Unterseiten im selben Reiter) */
+.hb .hb-kopfzeile.is-zurueck {
+  justify-content: flex-start;
+}
+.hb .hb-kopf-titel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.hb .hb-kopf-titel .hb-titel {
+  font-size: 30px;
+}
+.hb .hb-kopf-titel small {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+/* Hauptknopf, der unten mitläuft, solange die Liste darüber rollt */
+.hb .hb-fuss-haftend {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0 4px;
+  background: linear-gradient(0deg, var(--hb-grund) 70%, rgba(14, 26, 61, 0));
+}
+
+/* ---------- Blätter (HbBlatt) ---------- */
+.hb .hb-blatt-titel {
+  font-size: 30px;
+  overflow-wrap: anywhere;
+  padding-right: 12px;
+}
+.hb .hb-blatt.is-klein .hb-blatt-rolle {
+  gap: 14px;
+}
+.hb .hb-bald-zeichen {
+  font-size: 56px;
+  line-height: 1;
+}
+.hb .hb-kauf-bild {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45));
+}
+/* Tische und Blätter sind Bilder mit Fläche, keine freigestellten Dinge */
+.hb .hb-kauf-bild.is-ware {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid var(--hb-kontur);
+  filter: none;
+}
+.hb .hb-kauf-preis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  font: 400 20px var(--hb-anz);
+  color: var(--hb-gold);
+}
+.hb .hb-kauf-preis img {
+  width: 26px;
+  height: 26px;
+}
+.hb .hb-kauf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- Profil ---------- */
+.hb .hb-profil {
+  min-height: 100%;
+}
+.hb .hb-profil-inhalt {
+  padding: 0 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.hb .hb-profilkopf {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+/* Das Profilbild behält Upload und Stift, nur Form und Farbe sind neu */
+.hb .hub-profilbild {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid var(--hb-gold);
+  box-shadow: none;
+  background: var(--hb-karte-hoch);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.hb .hub-profilbild-stift {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 12px;
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+}
+.hb .hb-profilkopf-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hb .hb-profilkopf-text strong {
+  font: 400 22px/1.1 var(--hb-anz);
+  overflow-wrap: anywhere;
+}
+.hb .hb-profilkopf-text small {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-stufe {
+  flex: none;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 8px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  color: var(--hb-grund);
+  font: 400 22px var(--hb-anz);
+}
+.hb .hb-stufenbalken {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 10px;
+  width: 100%;
+  text-align: left;
+}
+.hb .hb-stufenbalken-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.hb .hb-stufenbalken-kopf strong {
+  font: 400 20px var(--hb-anz);
+}
+.hb .hb-stufenbalken-kopf small,
+.hb .hb-stufenbalken-zahl {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-stufenbalken > * {
+  grid-column: 1;
+}
+.hb .hb-stufenbalken > .hb-pf {
+  grid-column: 2;
+  grid-row: 1 / 4;
+}
+.hb .hb-geburtstag {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.hb .hb-geburtstag.is-heute {
+  border: 2px solid var(--hb-gold);
+  box-shadow: 0 0 14px rgba(245, 192, 46, 0.35);
+}
+.hb .hb-geburtstag > img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  flex: none;
+}
+.hb .hb-geburtstag-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.hb .hb-geburtstag-text strong {
+  font: 400 17px var(--hb-anz);
+}
+.hb .hb-geburtstag-text small {
+  font: 700 13px/1.35 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-geburtstag-text .hb-kn {
+  align-self: flex-start;
+}
+.hb .hb-figur {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 208px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #2c4bb8, #172a66);
+  border: 1px solid var(--hb-kontur);
+  touch-action: manipulation;
+}
+.hb .hb-figur canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+.hb .hb-figur > .pinguin {
+  display: block;
+  margin: 16px auto 0;
+}
+.hb .hb-figur-stift {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+}
+.hb .hb-einstiege {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.hb .hb-einstieg {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 96px;
+  padding: 10px 4px;
+  border-radius: 16px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  font: 800 13px var(--hb-txt);
+  text-align: center;
+}
+.hb .hb-einstieg img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+}
+.hb .hb-einstieg .hb-tab-punkt {
+  top: 8px;
+  right: 8px;
+}
+.hb .hb-trophaeen {
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+.hb .hb-trophaeen-zahl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 400 34px/1 var(--hb-anz);
+  color: var(--hb-gold);
+}
+.hb .hb-trophaeen-zahl img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.hb .hb-sp-werte.is-vier {
+  grid-template-columns: repeat(4, 1fr);
+  width: 100%;
+  margin-top: 8px;
+}
+.hb .rechtliches {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .rechtliches a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 6px;
+  color: var(--hb-leise);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Vollbilder (Kleiderschrank, Stufen) ---------- */
+.hb .hb-voll-rolle {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 16px calc(24px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hb .hb-schrank-buehne {
+  position: relative;
+  flex: none;
+  display: flex;
+  justify-content: center;
+  margin: 0 16px 12px;
+  padding: 8px 0 4px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #2c4bb8, #172a66);
+  border: 1px solid var(--hb-kontur);
+}
+.hb .hb-schrank-probe {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font: 800 12px var(--hb-txt);
+  color: #1c0d3a;
+  background: #b894ff;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.hb .hb-schrank .hb-chips {
+  padding-bottom: 8px;
+}
+.hb .hb-raster {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.hb .hb-raster.is-drei {
+  grid-template-columns: repeat(3, 1fr);
+}
+.hb .hb-stueck {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 128px;
+  padding: 10px 6px 8px;
+  border-radius: 16px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  text-align: center;
+}
+.hb .hb-stueck strong {
+  font: 800 13px/1.2 var(--hb-txt);
+}
+.hb .hb-stueck small {
+  margin-top: auto;
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-stueck.is-aktiv {
+  border: 2px solid var(--hb-gold);
+}
+.hb .hb-stueck.is-fremd small {
+  color: var(--hb-gold);
+}
+.hb .hb-stueck-schloss {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: var(--hb-leise);
+}
+.hb .hb-stueck-schloss .hb-ic {
+  width: 16px;
+  height: 16px;
+}
+.hb .hb-stufe-zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
+}
+.hb .hb-stufe-zeile:last-child {
+  border-bottom: 0;
+}
+.hb .hb-stufe-zeile.is-hier {
+  background: rgba(245, 192, 46, 0.1);
+}
+.hb .hb-stufe-marke {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 16px var(--hb-anz);
+  background: var(--hb-karte-hoch);
+  color: var(--hb-leise);
+  border: 2px solid var(--hb-kontur);
+}
+.hb .hb-stufe-zeile.is-an .hb-stufe-marke {
+  background: var(--hb-gruen);
+  border-color: #fff;
+  color: #004d26;
+}
+.hb .hb-stufe-zeile.is-hier .hb-stufe-marke {
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+}
+.hb .hb-stufe-hier {
+  flex: none;
+  font: 800 12px var(--hb-txt);
+  color: var(--hb-grund);
+  background: var(--hb-gold);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+/* ---------- Sammlung: „Alles ›" (Blatt, Rückseite, Tisch) ---------- */
+.hb .hb-wahl {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.hb .hb-wahl strong {
+  font-size: 14px;
+}
+.hb .hb-wahl small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-wahl.is-zu small {
+  color: var(--hb-gold);
+}
+.hb .hb-wahl-bild {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 112px;
+  margin-bottom: 4px;
+  border-radius: 14px;
+  background-color: #1d3470;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--hb-kontur);
+  overflow: hidden;
+}
+.hb .hb-wahl.is-aktiv .hb-wahl-bild {
+  border: 2px solid var(--hb-gold);
+}
+.hb .hb-wahl.is-zu .hb-wahl-karten {
+  filter: brightness(0.55);
+}
+.hb .hb-wahl-karten {
+  display: flex;
+}
+.hb .hb-wahl-karten > * + * {
+  margin-left: -14px;
+}
+.hb .hb-wahl-karten .card-img,
+.hb .hb-wahl-karten .card {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 67px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  font-size: 15px;
+}
+.hb .hb-wahl-karten.is-tisch .card-img,
+.hb .hb-wahl-karten.is-tisch .card {
+  width: 38px;
+  height: 55px;
+}
+.hb .hb-wahl .hb-ding-schloss {
+  position: absolute;
+}
+.hb .hb-ding-bild.is-ruecken {
+  background-size: 60px auto;
+  background-repeat: no-repeat;
+}
+
+/* Große Vorschau über den ganzen Bildschirm */
+.hb .hb-vorschau {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--hb-nacht);
+  overflow: hidden;
+}
+.hb .hb-vorschau-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Unter dem Text mindestens 0,85 Deckkraft (DESIGN.md: Text auf Bildern) */
+.hb .hb-vorschau-kopf {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(var(--hb-oben) + 8px) 16px 12px;
+  background: rgba(7, 19, 47, 0.88);
+  border-bottom: 1px solid var(--hb-kontur);
+}
+.hb .hb-vorschau-titel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.hb .hb-vorschau-titel strong {
+  font: 400 20px/1.1 var(--hb-anz);
+}
+.hb .hb-vorschau-tisch {
+  position: relative;
+  flex: 1;
+  z-index: 1;
+}
+.hb .hb-vorschau-tisch .hub-vorschau-gegner {
+  top: 16px;
+}
+.hb .hb-vorschau-tisch .hub-vorschau-stich {
+  top: 44%;
+}
+.hb .hb-vorschau-tisch .hub-vorschau-hand {
+  bottom: 12px;
+}
+.hb .hb-vorschau-fuss {
+  position: relative;
+  z-index: 2;
+  padding: 12px 16px max(12px, env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px));
+  background: rgba(7, 19, 47, 0.88);
+  border-top: 1px solid var(--hb-kontur);
+}
+
+/* ---------- Clan ohne Clan: Suche und Gründen ---------- */
+.hb .hb-clan-held.is-kurz {
+  min-height: 0;
+  padding-bottom: 20px;
+}
+.hb .hb-clan-held.is-kurz > h1 {
+  font-size: 30px;
+}
+.hb .hb-clan-held.is-kurz > small {
+  font-style: normal;
+  max-width: 280px;
+}
+.hb .hb-clan-zurueck {
+  position: absolute;
+  top: calc(var(--hb-oben) + 8px);
+  left: 16px;
+  z-index: 3;
+}
+.hb .hb-felder {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hb .hb-feldzeile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.hb .hb-feldzeile > span,
+.hb .hb-feldzeile > legend {
+  padding: 0;
+  font: 800 11px var(--hb-txt);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hb-gold);
+}
+.hb .hb-feldzeile > legend {
+  margin-bottom: 6px;
+}
+.hb .hb-feldzeile > small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-wappenraster {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.hb .hb-wappenknopf {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+.hb .hb-wappenknopf img {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+}
+.hb .hb-wappenknopf.is-an {
+  border: 2px solid var(--hb-gold);
+  background: rgba(245, 192, 46, 0.14);
+}
+.hb .hb-wappenknopf.is-zu img {
+  filter: grayscale(0.7) brightness(0.5);
+}
+.hb .hb-wappen-schloss {
+  position: absolute;
+  color: #fff;
+}
+.hb .hb-wappen-schloss .hb-ic {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Clankrieg (Vollbild im Reiter) ---------- */
+.hb .hb-krieg.is-gross {
+  gap: 12px;
+  padding: 16px;
+}
+/* Groß steht jede Seite als Spalte: Wappen, Zahl, Name. In einer Zeile
+   schob der Name das gegnerische Wappen über den Rand. */
+.hb .hb-krieg.is-gross .hb-kr-seite,
+.hb .hb-krieg.is-gross .hb-kr-seite.is-gegner {
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.hb .hb-krieg.is-gross .hb-kr-seite img {
+  width: 56px;
+}
+.hb .hb-krieg.is-gross .hb-kr-seite b {
+  font-size: 30px;
+}
+.hb .hb-krieg.is-gross .hb-kr-seite small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hb .hb-kr-punkte {
+  font: 400 20px var(--hb-anz);
+  color: var(--hb-gold);
+}
+.hb .hb-warten {
+  align-items: center;
+  text-align: center;
+}
+.hb .hb-warten-punkt {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--hb-gold);
+  box-shadow: 0 0 0 6px rgba(245, 192, 46, 0.2);
+  animation: hb-pochen 2s ease-in-out infinite;
+}
+@keyframes hb-pochen {
+  50% {
+    box-shadow: 0 0 0 12px rgba(245, 192, 46, 0);
+  }
+}
+.hb .hb-kr-anfrage {
+  border: 2px solid var(--hb-gold);
+}
+.hb .hb-kr-anfrage-kopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hb .hb-kr-anfrage-kopf img {
+  width: 48px;
+}
+.hb .hb-kr-anfrage-kopf > span {
+  display: flex;
+  flex-direction: column;
+}
+.hb .hb-kr-anfrage-kopf strong {
+  font: 400 18px var(--hb-anz);
+}
+.hb .hb-kr-anfrage-kopf small {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-kr-start {
+  align-items: center;
+  text-align: center;
+}
+.hb .hb-kr-start > img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+.hb .hb-regelliste {
+  margin: 0;
+  padding: 14px 14px 14px 32px;
+  gap: 8px;
+  font: 600 14px/1.45 var(--hb-txt);
+}
+.hb .hb-regelliste b {
+  color: var(--hb-gold);
+}
+.hb .hb-kr-letzter {
+  margin: 0;
+  font: 600 15px var(--hb-txt);
+  display: block;
+}
+.hb .hb-kr-letzter.is-wir strong {
+  color: var(--hb-gruen);
+}
+.hb .hb-kr-letzter.is-gegner strong {
+  color: #ff8a92;
+}
+
+/* ---------- Ältere Blätter, die im neuen Hub aufgehen ----------
+   Einstellungen und Konto löschen sind noch die Blätter des alten Hubs
+   (doko-sheet). Nur diese beiden: Klanghalle und Werkstatt tragen dieselbe
+   Hülle, aber einen eigenen Aufbau, den ein fremder Rand zerlegen würde. Hier bekommen sie nur Farbe und Schrift des neuen, ihr
+   Aufbau und ihre Rückfragen bleiben. */
+.hb .doko-sheet:has(> :is(.einstellungen, .hub-loeschen)) {
+  /* An der Hub-Wurzel (ImHub) und absolut: So deckt das Blatt genau das Hub
+     ab, auch wenn es auf dem Rechner schmaler steht als das Fenster. */
+  position: absolute;
+  background: rgba(5, 11, 29, 0.6);
+  padding: 0;
+}
+.hb .doko-sheet > .doko-sheet-card:is(.einstellungen, .hub-loeschen) {
+  max-height: calc(100% - var(--hb-oben) - 12px);
+  padding: 18px 16px calc(20px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
+  background: var(--hb-grund);
+  border: 0;
+  border-top: 1px solid var(--hb-kontur);
+  border-image: none;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.4);
+  color: var(--hb-tinte);
+  font: 600 15px/1.45 var(--hb-txt);
+}
+.hb :is(.einstellungen, .hub-loeschen) h2 {
+  margin: 0 0 10px;
+  font: 400 30px/1.05 var(--hb-anz);
+  color: var(--hb-tinte);
+}
+.hb :is(.einstellungen, .hub-loeschen) .muted {
+  color: var(--hb-leise);
+}
+.hb :is(.einstellungen, .hub-loeschen) label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font: 800 13px var(--hb-txt);
+}
+.hb :is(.einstellungen, .hub-loeschen) input:not([type='range']) {
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--hb-grund-tief);
+  border: 1px solid var(--hb-kontur);
+  color: var(--hb-tinte);
+  font: 600 16px var(--hb-txt);
+}
+.hb :is(.einstellungen, .hub-loeschen) .hub-knopfreihe {
+  gap: 10px;
+  margin-top: 12px;
+}
+.hb :is(.einstellungen, .hub-loeschen) .hub-knopf {
+  flex-direction: row;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--hb-kontur);
+  border-image: none;
+  border-radius: 14px;
+  background: var(--hb-karte-hoch);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+  color: var(--hb-tinte);
+  font: 800 15px var(--hb-txt);
+}
+.hb :is(.einstellungen, .hub-loeschen) .hub-knopf--a-gold {
+  border: 0;
+  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  color: var(--hb-grund);
+}
+.hb :is(.einstellungen, .hub-loeschen) .hub-knopf--a-raus {
+  border: 1.5px solid var(--hb-rot);
+  background: rgba(217, 75, 85, 0.12);
+  color: #ffb3b9;
+}
+.hb :is(.einstellungen, .hub-loeschen) .error {
+  color: #ffb3b9;
+}
+
+/* Die Truhenöffnung (Fundblatt): Grund und Schrift des neuen Hubs */
+.hb .truhe-oeffnung {
+  position: absolute;
+  background: radial-gradient(circle at 50% 42%, rgba(27, 47, 110, 0.6), rgba(5, 11, 29, 0.95));
+}
+.hb .truhe-belohnung strong {
+  font: 400 34px var(--hb-anz);
+  color: var(--hb-gold);
+}
+.hb .truhe-hinweis {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}

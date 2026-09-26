@@ -64,9 +64,6 @@ export function NeuerRahmen<T extends Reiter>({
   fenster,
   trackRef,
   renderTab,
-  onZiehStart,
-  onZiehen,
-  onZiehEnde,
   children,
 }: {
   me: Me;
@@ -80,9 +77,6 @@ export function NeuerRahmen<T extends Reiter>({
   fenster: T[];
   trackRef: RefObject<HTMLDivElement | null>;
   renderTab: (tab: T) => React.JSX.Element | null;
-  onZiehStart: (e: React.TouchEvent) => void;
-  onZiehen: (e: React.TouchEvent) => void;
-  onZiehEnde: () => void;
   children: React.ReactNode;
 }): React.JSX.Element {
   const zumShop = kaufbar ? () => onTab('shop' as T) : undefined;
@@ -139,7 +133,11 @@ export function NeuerRahmen<T extends Reiter>({
         </div>
       )}
 
-      <div className="hb-inhalt" onTouchStart={onZiehStart} onTouchMove={onZiehen} onTouchEnd={onZiehEnde} onTouchCancel={onZiehEnde}>
+      {/* Kein Wischen zwischen den Reitern (Robin, 26.09.2026): Im neuen Hub
+          rollen Spielreihen und Filter selbst waagerecht, und ein Wisch darin
+          sprang auf den Nachbarreiter, statt die Reihe weiterzuschieben.
+          Gewechselt wird über die Leiste unten — so hält es auch Apple. */}
+      <div className="hb-inhalt">
         <div className="front-track hb-track" ref={trackRef}>
           {fenster.map((tt) => (
             <div className="hb-seite" key={tt}>

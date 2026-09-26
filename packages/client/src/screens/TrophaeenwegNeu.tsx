@@ -3,6 +3,7 @@ import { ApiError, api, type Weg, type WegFund, type WegStufe } from '../api';
 import { t } from '../i18n';
 import { holbar, stationenMit, type Station } from '../trophaeenweg';
 import { FundBlatt } from './Aufgaben';
+import { truhenBild } from '../truhenbild';
 import { sicherAb } from './StartNeu';
 
 /**
@@ -19,13 +20,6 @@ import { sicherAb } from './StartNeu';
  * „Heute".
  */
 
-/** Bis ein eigenes Bild bestellt ist: Bronze zeigt die Holztruhe, Diamant die offene Goldtruhe. */
-const TRUHE_BILD: Record<NonNullable<Station['truhe']>['grad'], string> = {
-  bronze: '/hub/truhe-holz.webp',
-  silber: '/hub/truhe-silber.webp',
-  gold: '/hub/truhe-gold.webp',
-  diamant: '/hub/truhe-gold-offen.webp',
-};
 
 /** Höhe eines Bioms auf dem Bildschirm; sechs davon füllen ein iPhone. */
 const BAND = 118;
@@ -163,7 +157,7 @@ export function TrophaeenwegNeu({
             onClick={() => holen(weiterHolbar[0]!)}
             aria-label={`Silbertruhe bei ${weiterHolbar[0].schwelle} Trophäen holen${weiterHolbar.length > 1 ? `, ${weiterHolbar.length - 1} weitere bereit` : ''}`}
           >
-            <img src={TRUHE_BILD.silber} alt="" />
+            <img src={truhenBild('silber')} alt="" />
             <span>
               Holen · {weiterHolbar[0].schwelle.toLocaleString('de-DE')}
               {weiterHolbar.length > 1 && <small>+{weiterHolbar.length - 1} weitere</small>}
@@ -175,7 +169,7 @@ export function TrophaeenwegNeu({
           stand >= 1000 &&
           weiterNaechste && (
             <span className="hb-weg-weiter">
-              <img src={TRUHE_BILD.silber} alt="" />
+              <img src={truhenBild('silber')} alt="" />
               <span>
                 Alle 250 eine Silbertruhe
                 <small>nächste bei {weiterNaechste.schwelle.toLocaleString('de-DE')}</small>
@@ -224,7 +218,7 @@ export function TrophaeenwegNeu({
           const bereit = holbar(s.stufe);
           const lohnText = s.truhe && (
             <>
-              <img src={TRUHE_BILD[s.truhe.grad]} alt="" />
+              <img src={truhenBild(s.truhe.grad)} alt="" />
               <span>
                 <b>{t(`truhe.${s.truhe.grad}`)}</b>
                 {s.gegenstand && <small>{t(`weg.${s.gegenstand}`)}</small>}

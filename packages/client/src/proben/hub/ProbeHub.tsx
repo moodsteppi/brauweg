@@ -1,4 +1,4 @@
-import { api, SLOTS, type Kauftruhe, type Slot, type WegGrad, type WegStufe } from '../../api';
+import { api, SLOTS, WAPPEN, type Kauftruhe, type Slot, type WarView, type WegGrad, type WegStufe } from '../../api';
 import { GameSelect, type Tab } from '../../screens/GameSelect';
 import { probeKonto } from '../../screens/probe-konto';
 
@@ -160,6 +160,10 @@ api.shop = async () => ({
       id: `party-paket-${wert}`, art: 'inhaltspaket' as const, wert, nameKey: `paket.${wert}`, seltenheit: 'selten', preis: preis(coins), besessen: false,
       inhalt: { spiel: 'partykiste', feld: 'paket' },
     })),
+    // Die ersten sechs Wappen hat jeder, die übrigen gibt es im Shop.
+    ...WAPPEN.map((wert, i) => ({
+      id: `wappen-${wert}`, art: 'wappen' as const, wert, nameKey: `wappen.${wert}`, seltenheit: 'gewoehnlich', preis: preis(i < 6 ? 0 : 300), besessen: i < 6 || wert === 'wappen-12',
+    })),
   ],
 });
 
@@ -187,21 +191,126 @@ api.club = async () => ({
   requests: [MITGLIED('r1', 'Stieglitz', 'member', 310), MITGLIED('r2', 'Dohle', 'member', 245)],
   defaultRuleSetId: null,
 });
-api.clubWar = async () => ({
-  aktuell: {
-    id: 'krieg',
-    status: 'laeuft' as const,
-    wir: { clubId: 'probe-clan', name: 'Die Stichhaltigen', crest: 'wappen-12', score: 31 },
-    gegner: { clubId: 'gegner', name: 'Die Asse', crest: 'wappen-7', score: 24 },
-    wirHabenGefordert: true,
-    endsAt: new Date(Date.now() + 31 * 3600000).toISOString(),
-    ergebnis: null,
-    beitraege: [],
-  },
-  offeneAnfragen: [],
-  letzter: null,
-  darfFuehren: true,
+/*
+ * Kriegsstand je nach `&krieg=`: laeuft (Standard), suche, angefragt, keiner,
+ * anfrage (ein anderer Clan fordert heraus) — die vier Zustände aus
+ * ClanKrieg.tsx plus die offene Herausforderung.
+ */
+const PROBE = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search);
+const WIR = { clubId: 'probe-clan', name: 'Die Stichhaltigen', crest: 'wappen-12', score: 31 };
+const ASSE = { clubId: 'gegner', name: 'Die Asse', crest: 'wappen-7', score: 24 };
+const KRIEG = (status: 'laeuft' | 'suche' | 'angefragt' | 'beendet', mehr: Partial<WarView> = {}) => ({
+  id: `krieg-${status}`,
+  status,
+  wir: WIR,
+  gegner: status === 'suche' ? null : ASSE,
+  wirHabenGefordert: true,
+  endsAt: status === 'laeuft' ? new Date(Date.now() + 31 * 3600000).toISOString() : null,
+  ergebnis: null,
+  beitraege: [],
+  ...mehr,
 });
+api.clubWar = async () => {
+  const art = PROBE.get('krieg') ?? 'laeuft';
+  const letzter = KRIEG('beendet', { ergebnis: 'wir', wir: { ...WIR, score: 44 }, gegner: { ...ASSE, name: 'Kartenhaie', score: 29 } });
+  return {
+    aktuell:
+      art === 'laeuft'
+        ? KRIEG('laeuft', {
+            beitraege: [
+              { accountId: 'a1', displayName: 'Eisvogel', points: 12, games: 5 },
+              { accountId: 'a2', displayName: 'Kiebitz', points: 10, games: 4 },
+              { accountId: 'a3', displayName: 'Zaunkönig', points: 9, games: 6 },
+            ],
+          })
+        : art === 'suche' || art === 'angefragt'
+          ? KRIEG(art)
+          : null,
+    offeneAnfragen: art === 'anfrage' ? [KRIEG('angefragt', { id: 'anfrage-1', wirHabenGefordert: false })] : [],
+    letzter: art === 'laeuft' ? null : letzter,
+    darfFuehren: true,
+  };
+};
+
+/* Clansuche für `&ohneclan`: vier Clans, bei einem liegt schon eine Anfrage. */
+const CLAN = (id: string, name: string, crest: string, joinMode: 'open' | 'on_request', minTrophies: number, members: number, trophies: number) => ({
+  id, name, crest, motto: null, joinMode, minTrophies, members, maxMembers: 50, trophies,
+});
+api.clubs = async (suche?: string) => {
+  const alle = [
+    CLAN('c1', 'Die Asse', 'wappen-7', 'open', 0, 23, 9120),
+    CLAN('c2', 'Kartenhaie', 'wappen-3', 'on_request', 400, 41, 15230),
+    CLAN('c3', 'Stammtisch Nord', 'wappen-15', 'on_request', 0, 8, 2210),
+    CLAN('c4', 'Trumpf & Treue', 'wappen-5', 'open', 150, 17, 5480),
+  ];
+  return {
+    clubs: suche ? alle.filter((c) => c.name.toLowerCase().includes(suche.toLowerCase())) : alle,
+    pending: ['c2'],
+  };
+};
+
+/* Gesamt-Rangliste für das Blatt aus „Heute" (ohne Anmeldung liefert der Server keine). */
+api.overallRanking = async () =>
+  (
+    [
+      ['x1', 'Kiebitz', 2130],
+      ['x2', 'Zaunkönig', 1980],
+      ['x3', 'Rotkehlchen', 1544],
+      ['a1', 'Eisvogel', 773],
+    ] as const
+  ).map(([accountId, displayName, trophies], i) => ({
+    rank: i === 3 ? 64 : i + 1,
+    accountId,
+    displayName,
+    trophies,
+    parties: 1,
+    wins: 1,
+    highestCheckpoint: 0,
+  }));
+
+/* Freunde und Stufen fürs Profil — ohne Anmeldung liefert der Server beides nicht. */
+const SPIELER = (id: string, displayName: string) => ({ id, displayName });
+api.friends = async () => ({
+  friends: [SPIELER('f1', 'Kiebitz'), SPIELER('f2', 'Zaunkönig'), SPIELER('f3', 'Rotkehlchen')],
+  incoming: [SPIELER('f4', 'Stieglitz')],
+  outgoing: [SPIELER('f5', 'Dohle')],
+});
+api.levels = async () => ({
+  stufe: 12,
+  xp: 1720,
+  imLevel: 180,
+  fuerLevel: 260,
+  leiter: Array.from({ length: 20 }, (_, i) => {
+    const stufe = i + 1;
+    const ab = Math.round(20 * i * i + 40 * i);
+    return { stufe, ab, kosten: Math.round(40 * i + 60), erreicht: stufe <= 12, aktuell: stufe === 12 };
+  }),
+});
+
+/*
+ * `&tipp=Text|Text…`: tippt nacheinander auf Knöpfe, deren Name den Text
+ * enthält — damit ein Bildschirmfoto auch Blätter und Unterseiten zeigt, an
+ * die man sonst nur mit dem Finger kommt (Edge headless kann nicht tippen).
+ */
+function tippeNacheinander(ziele: string[]): void {
+  let schritt = 0;
+  const weiter = (): void => {
+    const ziel = ziele[schritt];
+    if (ziel === undefined) return;
+    const knopf = [...document.querySelectorAll<HTMLElement>('button, [role="tab"]')].find((b) =>
+      `${b.getAttribute('aria-label') ?? ''} ${b.textContent ?? ''}`.includes(ziel),
+    );
+    if (knopf) {
+      knopf.click();
+      schritt++;
+    }
+    window.setTimeout(weiter, 700);
+  };
+  window.setTimeout(weiter, 1200);
+}
+if (typeof window !== 'undefined' && PROBE.get('tipp')) {
+  tippeNacheinander(PROBE.get('tipp')!.split('|'));
+}
 
 export function ProbeHub(): React.JSX.Element {
   const me = probeKonto({
@@ -218,7 +327,8 @@ export function ProbeHub(): React.JSX.Element {
       { gameId: 'wizard', trophies: 54, parties: 22, wins: 6 },
       { gameId: 'golf', trophies: 23, parties: 9, wins: 2 },
     ],
-    clubs: [{ id: 'probe-clan', name: 'Die Stichhaltigen' }],
+    // `&ohneclan`: die Clansuche statt der Halle.
+    clubs: PROBE.has('ohneclan') ? [] : [{ id: 'probe-clan', name: 'Die Stichhaltigen' }],
     themes: { doppelkopf: { cardDeck: 'klassisch', tableScene: 'stube', cardBack: '' } },
     activeTable: {
       tableId: 'probe-tisch',
