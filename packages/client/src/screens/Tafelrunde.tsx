@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError, api, type Suchstand, type TableRow, type TischVorschau } from '../api';
+import { hubNeu } from '../hubNeu';
 import { t } from '../i18n';
 import type { BotLevel } from '../protocol';
+import {
+  AufbauNeu,
+  BeitretenNeu,
+  ErstellenNeu,
+  MenueNeu,
+  SucheNeu,
+  WartesaalNeu,
+} from '../minispiele/tafelrunde/EinstiegNeu';
 import { Bankreihe, Hexbrett, Zugschatten } from '../minispiele/tafelrunde/Brett';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Einheitenblatt } from '../minispiele/tafelrunde/Einheitenblatt';
@@ -579,6 +588,8 @@ export function Tafelrunde({
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
     const gefunden = suchstand.suchende;
+    // Neues Hub: dieselben Zustände im Spieleinstieg-Baukasten (je Ansicht hier eine Weiche).
+    if (hubNeu) return <SucheNeu sekunden={sekunden} gefunden={gefunden} aktiv={aktiv} onAbbrechen={brichSucheAb} />;
     return (
       <main className="tr-seite tr-menue">
         <button className="tr-zurueck" type="button" onClick={brichSucheAb}>
@@ -612,6 +623,26 @@ export function Tafelrunde({
   // -------------------------------------------------------------------------
 
   if (!tischId && menue === 'erstellen') {
+    if (hubNeu) {
+      return (
+        <ErstellenNeu
+          sitzWahl={SITZ_WAHL}
+          sitze={sitze}
+          oeffentlich={oeffentlich}
+          botsFuellen={botsFuellen}
+          botStufe={botStufe}
+          botStufen={BOT_STUFEN}
+          startet={startet}
+          fehler={fehler}
+          onSitze={setSitze}
+          onOeffentlich={setOeffentlich}
+          onBotsFuellen={setBotsFuellen}
+          onBotStufe={setBotStufe}
+          onErstellen={() => void erstelleTisch()}
+          onZurueck={() => setMenue('start')}
+        />
+      );
+    }
     return (
       <main className="tr-seite tr-menue">
         <button className="tr-zurueck" type="button" onClick={() => setMenue('start')}>
@@ -720,6 +751,22 @@ export function Tafelrunde({
   // -------------------------------------------------------------------------
 
   if (!tischId && menue === 'beitreten') {
+    if (hubNeu) {
+      return (
+        <BeitretenNeu
+          code={code}
+          codeFertig={codeFertig}
+          vorschau={vorschau}
+          offeneTische={offeneTische}
+          startet={startet}
+          fehler={fehler}
+          onCode={setCode}
+          onPerCode={() => void treteBeiPerCode()}
+          onTisch={(id) => void treteBeiTisch(id)}
+          onZurueck={() => setMenue('start')}
+        />
+      );
+    }
     return (
       <main className="tr-seite tr-menue">
         <button className="tr-zurueck" type="button" onClick={() => setMenue('start')}>
@@ -791,6 +838,27 @@ export function Tafelrunde({
   // -------------------------------------------------------------------------
 
   if (!tischId) {
+    if (hubNeu) {
+      return (
+        <MenueNeu
+          aktiv={aktiv}
+          startet={startet}
+          fehler={fehler}
+          regeln={<RegelText />}
+          onBack={onBack}
+          onSuche={() => void starteSuche()}
+          onErstellen={() => {
+            setFehler(null);
+            setMenue('erstellen');
+          }}
+          onBeitreten={() => {
+            setFehler(null);
+            setMenue('beitreten');
+          }}
+          onBots={() => void starteBots()}
+        />
+      );
+    }
     return (
       <main className="tr-seite tr-menue">
         <button className="tr-zurueck" type="button" onClick={onBack} aria-label="Zurück">
@@ -873,36 +941,48 @@ export function Tafelrunde({
   // -------------------------------------------------------------------------
 
   if (!sicht && wartesaal) {
-    return (
-      <Wartesaal
-        wartesaal={wartesaal}
-        sitze={tisch.table?.seats ?? []}
-        botStufe={tisch.table?.botLevel ?? botStufe}
-        onBotStufe={(stufe) => {
-          setBotStufe(stufe);
-          tisch.setBotLevel(stufe);
-        }}
-        onBotsFuellen={(an) => setWartesaal({ ...wartesaal, botsFuellen: an })}
-        onStart={() => {
-          if (wartesaal.botsFuellen) {
-            // Jeden freien Platz mit einem Bot besetzen. Mit dem letzten faellt
-            // `isReadyToStart` im Server auf wahr und die Partie geht los —
-            // derselbe Weg wie im Doppelkopf-Wartebereich.
-            for (const platz of tisch.table?.seats ?? []) {
-              if (!platz.accountId && !platz.isBot) tisch.addBot(platz.seat);
-            }
-          } else {
-            // Ohne Bots: Der Tisch schrumpft serverseitig auf die Besetzten.
-            tisch.startNow();
+    const saal = {
+      wartesaal,
+      sitze: tisch.table?.seats ?? [],
+      botStufe: tisch.table?.botLevel ?? botStufe,
+      onBotStufe: (stufe: BotLevel) => {
+        setBotStufe(stufe);
+        tisch.setBotLevel(stufe);
+      },
+      onBotsFuellen: (an: boolean) => setWartesaal({ ...wartesaal, botsFuellen: an }),
+      onStart: () => {
+        if (wartesaal.botsFuellen) {
+          // Jeden freien Platz mit einem Bot besetzen. Mit dem letzten faellt
+          // `isReadyToStart` im Server auf wahr und die Partie geht los —
+          // derselbe Weg wie im Doppelkopf-Wartebereich.
+          for (const platz of tisch.table?.seats ?? []) {
+            if (!platz.accountId && !platz.isBot) tisch.addBot(platz.seat);
           }
-        }}
-        onAbbrechen={brichAb}
-      />
-    );
+        } else {
+          // Ohne Bots: Der Tisch schrumpft serverseitig auf die Besetzten.
+          tisch.startNow();
+        }
+      },
+      onAbbrechen: brichAb,
+    };
+    return hubNeu ? <WartesaalNeu {...saal} botStufen={BOT_STUFEN} /> : <Wartesaal {...saal} />;
   }
 
   if (!sicht) {
     const besetzt = (tisch.table?.seats ?? []).filter((platz) => platz.accountId).length;
+    if (hubNeu) {
+      return (
+        <AufbauNeu
+          text={
+            tisch.status === 'open'
+              ? `${besetzt} von ${tisch.table?.seats.length ?? SITZE} Plätzen besetzt`
+              : 'Verbindung wird aufgebaut…'
+          }
+          aktiv={aktiv}
+          onAbbrechen={brichAb}
+        />
+      );
+    }
     return (
       <main className="tr-seite tr-menue">
         <button className="tr-zurueck" type="button" onClick={brichAb}>
@@ -2677,6 +2757,19 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         ✕
       </button>
       <h2>So spielt man Tafelrunde</h2>
+      <RegelText />
+    </div>
+  );
+}
+
+/**
+ * Der Text des Regelblatts, ohne Rahmen — das neue Hub zeigt ihn in einem
+ * `HbBlatt` (EinstiegNeu.tsx). Eine Stelle, damit beide Blätter nicht
+ * auseinanderlaufen.
+ */
+function RegelText(): React.JSX.Element {
+  return (
+    <>
       <h3>Regeln</h3>
       <ol>
         <li>
@@ -2715,6 +2808,6 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
       </ol>
       <h3>Ziel</h3>
       <p>Als Letzter am Tisch stehen bleiben.</p>
-    </div>
+    </>
   );
 }
