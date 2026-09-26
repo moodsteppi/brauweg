@@ -1235,24 +1235,28 @@
   background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
   box-shadow: 0 2px 0 rgba(120, 70, 0, 0.5);
 }
-/* Checkpoint zum Holen: Punkt und Schild sind ein Knopf. Das Schild ist nur
-   22 pt hoch, die Trefferfläche darum herum 44 pt (::after). Zwei holbare
-   Nachbarn überlappen sich darin — harmlos, beide geben dasselbe. */
+/* Checkpoint zum Holen: Punkt und Schild sind EIN Knopf, 44 pt hoch.
+   Das Schild steht hier im Fluss statt absolut daneben — der Knopf muss es
+   umschließen: Der Druckabbruch (druckabbruch.ts) misst den Rand des Knopfes,
+   und ein Tipp auf ein Schild, das 80 px über diesen Rand hinausragt, galt
+   als weggezogener Finger und wurde verschluckt. Der Punkt bleibt auf dem
+   Weg: 44 pt breite Zone um ihn, um deren halbe Breite verschoben.
+   Zwei holbare Nachbarn überlappen sich — harmlos, beide geben dasselbe. */
 .hb .hb-cp.is-holbar {
-  min-width: 44px;
+  transform: translate(-22px, -50%);
   min-height: 44px;
-  justify-content: center;
+  padding-right: 4px;
+}
+.hb .hb-cp.is-holbar i {
+  flex: none;
+  margin: 0 14px;
 }
 .hb .hb-cp.is-holbar small {
-  left: 32px;
+  position: static;
+  margin-left: -4px;
   background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
   border-color: transparent;
   color: var(--hb-grund);
-}
-.hb .hb-cp.is-holbar small::after {
-  content: '';
-  position: absolute;
-  inset: -11px -4px;
 }
 .hb .hb-cp.is-geholt small {
   color: var(--hb-gruen);
