@@ -208,8 +208,15 @@ Start, die anderen Reiter haben ihre Überschrift.
 - **Trophäenweg:** alle Stationen auf einem Bildschirm, links die Station,
   rechts die Belohnung, dazwischen die Checkpoints. Belohnungen je Station sind
   beschlossen (Robin, 26.09.2026: Truhe plus fester Gegenstand, 25 Münzen je
-  Checkpoint), stehen in `src/trophaeenweg.ts` und sind **noch nicht im
-  Server** — bis dahin nur Anzeige.
+  Checkpoint, über 1.000 alle 250 eine Silbertruhe) und **kommen vom Server**
+  (`/api/weg`, Katalog in `server/src/trophaeenweg-katalog.ts`); der Client
+  kennt nur Name und Bild der Biome (`src/trophaeenweg.ts`). Gezählt wird die
+  Summe der Trophäen über alle Spiele. Abgeholt wird von Hand: Erreichtes
+  trägt „Holen" (an der Station ist die ganze Belohnungskarte der Knopf, am
+  Checkpoint das Schild mit 44 pt Treffer), die Truhe geht im Fundblatt auf,
+  danach steht dort „Erhalten". Liegt etwas bereit, trägt die Karte auf dem
+  Start eine goldene Pille („2 Belohnungen"), und der Punkt am Start-Reiter
+  zählt es mit (`me.bereit.weg`).
 - **Sammlung** nach Spielen getrennt, nur der Pinguin gilt für alle.
 - **Kartenblätter und Tische gibt es auch im Shop** (Robin, 26.09.2026), nicht
   mehr nur in der Themenauswahl. Die große Vorschau in Tischgröße bleibt in der

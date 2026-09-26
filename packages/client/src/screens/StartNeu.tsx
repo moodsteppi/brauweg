@@ -34,6 +34,7 @@ export function StartNeu({
   trophies,
   activeTable,
   bereit,
+  wegBereit,
   onResume,
   onPick,
   onAlleSpiele,
@@ -45,6 +46,8 @@ export function StartNeu({
   activeTable: ActiveTable | null;
   /** Truhen und Aufgaben, die abgeholt werden können. */
   bereit: number;
+  /** Belohnungen des Trophäenwegs, die abgeholt werden können (`me.bereit.weg`). */
+  wegBereit: number;
   onResume: (gameId: string, tableId: string) => void;
   onPick: (gameId: string) => void;
   onAlleSpiele: () => void;
@@ -69,9 +72,18 @@ export function StartNeu({
         className="hb-held hb-weg"
         style={{ backgroundImage: `url(${wegBild(stufe.datei)})` }}
         onClick={onWeg}
-        aria-label={`Trophäenweg öffnen. Du bist in ${stufe.name} mit ${trophies} Trophäen.`}
+        aria-label={`Trophäenweg öffnen. Du bist in ${stufe.name} mit ${trophies} Trophäen.${
+          wegBereit > 0 ? ` ${belohnungen(wegBereit)} bereit.` : ''
+        }`}
       >
         <img className="hb-weg-marke" src="/hub/pinguin-marke.webp" alt="" />
+        {wegBereit > 0 && (
+          // Nur fürs Auge; der Vorlesetext steht im Namen des Knopfes
+          // (DESIGN.md, Bereitschaftspunkt: nicht als aria-label am Kind).
+          <span className="hb-weg-bereit" aria-hidden="true">
+            {belohnungen(wegBereit)}
+          </span>
+        )}
         <span className="hb-held-unten">
           <span className="hb-label">Dein Trophäenweg · alle Spiele</span>
           <strong className="hb-weg-biom">{stufe.name}</strong>
@@ -175,6 +187,11 @@ export function StartNeu({
 
     </div>
   );
+}
+
+/** „1 Belohnung", „2 Belohnungen". */
+function belohnungen(anzahl: number): string {
+  return `${anzahl} ${anzahl === 1 ? 'Belohnung' : 'Belohnungen'}`;
 }
 
 export function Haken(): React.JSX.Element {

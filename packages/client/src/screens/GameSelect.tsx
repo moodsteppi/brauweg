@@ -397,6 +397,7 @@ export function GameSelect({
               trophies={trophies}
               activeTable={me.activeTable}
               bereit={me.bereit.truhen + me.bereit.aufgaben}
+              wegBereit={me.bereit.weg ?? 0}
               onResume={onResume}
               onPick={(gameId) => {
                 setSpielseite(gameId);
@@ -488,7 +489,9 @@ export function GameSelect({
   // Blätter und Vollbilder, die über beiden Rahmen gleich liegen.
   const overlays = (
     <>
-      {hubNeu && wegOffen && <TrophaeenwegNeu trophies={trophies} onClose={() => setWegOffen(false)} />}
+      {hubNeu && wegOffen && (
+        <TrophaeenwegNeu trophies={trophies} onClose={() => setWegOffen(false)} onGuthaben={onAvatarChange} />
+      )}
         {stufenOffen && <Stufenleiter onClose={() => setStufenOffen(false)} />}
         {aufgabenOffen &&
           (hubNeu ? (
