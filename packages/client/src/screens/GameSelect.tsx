@@ -2665,7 +2665,7 @@ function Spielen({
             machte beide klein - dabei ist oben ueber der Karte Platz, und
             eine Startseite darf ihren Namen deutlich zeigen. */}
         <header className="hub-logo" aria-label="Brauweg">
-          <img className="hub-logo-mark" src="/hub/logo.png" alt="Brauweg" draggable={false} />
+          <img className="hub-logo-mark" src="/hub/logo.webp" alt="Brauweg" draggable={false} />
         </header>
 
         <aside className="hub-seite hub-seite--links">
@@ -2846,7 +2846,7 @@ function Anleitung({
         {/* Held-Bild. Platzhalter ist der Logo-Verlauf; die Bestellung liefert
             /hub/anleitung-held.webp, das dann als <img> hier steht. */}
         <div className="anleitung-held" aria-hidden="true">
-          <img className="anleitung-held-logo" src="/hub/logo.png" alt="" draggable={false} />
+          <img className="anleitung-held-logo" src="/hub/logo.webp" alt="" draggable={false} />
         </div>
 
         <p className="anleitung-lauf">

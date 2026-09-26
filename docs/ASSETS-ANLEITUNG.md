@@ -84,7 +84,7 @@ Ablage: `packages/client/public/hub/`. In `GameSelect.tsx`, Komponente
 Datei wäre ein weißer Kasten, CLAUDE.md):
 
 - Held: den Platzhalter
-  `<img className="anleitung-held-logo" src="/hub/logo.png" …>`
+  `<img className="anleitung-held-logo" src="/hub/logo.webp" …>`
   ersetzen durch
   `<img className="anleitung-held-voll" src="/hub/anleitung-held.webp" …>`
   (die CSS-Klasse `.anleitung-held-voll` liegt bereit und zieht das Bild

@@ -20,7 +20,7 @@ import './startbildschirm.css';
 /** Was der Start gleich braucht; alles davon zählt in die Prozentzahl. */
 const BILDER = [
   '/hub/ladebild.webp',
-  '/hub/logo.png',
+  '/hub/logo.webp',
   '/hub/symbol-pokal.webp',
   '/hub/symbol-muenze.webp',
   '/hub/symbol-edelstein.webp',
@@ -107,7 +107,7 @@ export function Startbildschirm({
     return (
       <main className="start-logo" aria-label="Brauweg wird gestartet">
         <span className="start-logo-schein" aria-hidden="true" />
-        <img className={`start-logo-bild${wenigerBewegung ? '' : ' is-springt'}`} src="/hub/logo.png" alt="Brauweg" draggable={false} />
+        <img className={`start-logo-bild${wenigerBewegung ? '' : ' is-springt'}`} src="/hub/logo.webp" alt="Brauweg" draggable={false} />
       </main>
     );
   }
@@ -115,7 +115,7 @@ export function Startbildschirm({
   return (
     <main className={`start-laden${phase === 'weg' ? ' is-weg' : ''}`} aria-busy={phase !== 'weg'}>
       <img className="start-laden-bild" src="/hub/ladebild.webp" alt="" draggable={false} />
-      <img className="start-laden-logo" src="/hub/logo.png" alt="Brauweg" draggable={false} />
+      <img className="start-laden-logo" src="/hub/logo.webp" alt="Brauweg" draggable={false} />
       <div className="start-laden-leiste" role="progressbar" aria-label="Brauweg lädt" aria-valuemin={0} aria-valuemax={100} aria-valuenow={anzeige}>
         <span className="start-laden-fuellung" style={{ width: `${anzeige}%` }} />
         <strong>{anzeige} %</strong>
