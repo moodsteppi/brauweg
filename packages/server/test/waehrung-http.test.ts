@@ -102,7 +102,7 @@ test('/api/me bringt beide Waehrungen, das Getragene und die Bereitschaft mit', 
     // Nichts an: ein leeres Objekt, nicht null - der Client greift darauf zu.
     assert.deepEqual(me.avatar, {});
     // Die Tagestruhe steht bereit, Aufgaben noch nicht.
-    assert.deepEqual(me.bereit, { truhen: 1, aufgaben: 0 });
+    assert.deepEqual(me.bereit, { truhen: 1, aufgaben: 0, weg: 0 });
   } finally {
     await abbauen(a);
   }
@@ -125,7 +125,7 @@ test('/api/me zaehlt, was bereitliegt', async () => {
     });
 
     const me = (await a.app.inject({ method: 'GET', url: '/api/me', cookies: a.cookie })).json();
-    assert.deepEqual(me.bereit, { truhen: 4, aufgaben: 3 });
+    assert.deepEqual(me.bereit, { truhen: 4, aufgaben: 3, weg: 0 });
 
     // Nach dem Abholen einer Belohnung sinkt der Zaehler.
     await a.app.inject({
@@ -134,7 +134,7 @@ test('/api/me zaehlt, was bereitliegt', async () => {
       cookies: a.cookie,
     });
     const danach = (await a.app.inject({ method: 'GET', url: '/api/me', cookies: a.cookie })).json();
-    assert.deepEqual(danach.bereit, { truhen: 4, aufgaben: 2 });
+    assert.deepEqual(danach.bereit, { truhen: 4, aufgaben: 2, weg: 0 });
     assert.equal(danach.coins, 5);
   } finally {
     await abbauen(a);

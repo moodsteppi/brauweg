@@ -473,6 +473,38 @@ export const chestClaim = pgTable(
 );
 
 /**
+ * Abgeholte Belohnungen des Trophaeenwegs (0031, `src/trophaeenweg.ts`).
+ *
+ * Eine Zeile je Konto und Schwelle, und der Primaerschluessel IST die Sperre
+ * gegen das zweite Abholen — wie bei `chest_claim`. Eine eigene Tabelle und
+ * nicht `chest_claim`, weil dort zwei Dinge nicht hineinpassen: Ein
+ * Checkpoint gibt feste Muenzen und hat keinen Truhengrad (`grade` ist dort
+ * Pflicht), und eine Station gibt Truhe UND Gegenstand in einem Zug — beides
+ * gehoert an dieselbe Zeile, sonst koennte ein halb abgeholter Stand
+ * entstehen, den keine der beiden Tabellen erklaert.
+ *
+ * `coins` ist, was gutgeschrieben wurde (bei einer Truhe der Wurf, der nur
+ * einmal faellt — Begruendung in `truhen.ts`). `item_id` ist der Gegenstand,
+ * der mitkam, auch wenn er schon im Besitz war: Die Zeile sagt, was die Stufe
+ * gab, nicht, was neu war.
+ */
+export const wegAbholung = pgTable(
+  'weg_abholung',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    schwelle: integer().notNull(),
+    /** Truhengrad; null bei Checkpoints mit festen Muenzen. */
+    grade: chestGrade(),
+    coins: integer().notNull(),
+    itemId: text(),
+    abgeholtAm: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.schwelle] })],
+);
+
+/**
  * Fortschritt der Tagesaufgaben.
  *
  * Je Konto, Aufgabe und Kalendertag. Der Tag steht als Spalte und nicht als

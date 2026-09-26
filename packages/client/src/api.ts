@@ -150,7 +150,17 @@ export interface Me {
    * Nur die Zahlen — die Listen stehen an `/chests` und `/quests`. Sie treiben
    * den Punkt an der Truhe auf dem Startbildschirm.
    */
-  bereit: { truhen: number; aufgaben: number };
+  bereit: {
+    truhen: number;
+    aufgaben: number;
+    /**
+     * Abholbare Stufen des Trophäenwegs. Eigene Zahl, weil sie nicht unter
+     * „Heute" liegen, sondern auf dem Weg. Optional, weil die App ihren
+     * Client mitbringt und dabei an einen Server geraten kann, der das Feld
+     * noch nicht kennt — dann gilt 0.
+     */
+    weg?: number;
+  };
   /**
    * Stufe und Fortschritt, fertig gerechnet vom Server.
    *
@@ -296,6 +306,48 @@ export interface Aufgaben {
   aufgaben: Aufgabe[];
   /** Summe der fertigen, noch nicht abgeholten Belohnungen. */
   offeneBelohnung: number;
+}
+
+/** Die Truhengrade, die der Trophäenweg vergibt — Holz gibt es dort nicht. */
+export type WegGrad = Exclude<Grad, 'holz'>;
+
+/**
+ * Eine Stufe des Trophäenwegs, wie `/api/weg` sie liefert
+ * (`server/src/trophaeenweg.ts`). Was es wo gibt, sagt allein der Server.
+ */
+export interface WegStufe {
+  schwelle: number;
+  /** Station (Truhe + Gegenstand), Checkpoint (feste Münzen), weiter (über 1.000). */
+  art: 'station' | 'checkpoint' | 'weiter';
+  truhe: { grad: WegGrad; von: number; bis: number } | null;
+  /** Feste Münzen am Checkpoint, sonst null. */
+  muenzen: number | null;
+  /** Kennung des Gegenstands (`account_cosmetic`), sonst null. Name: `weg.<kennung>` in i18n. */
+  gegenstand: string | null;
+  erreicht: boolean;
+  geholt: boolean;
+  /** Was gutgeschrieben wurde — erst gesetzt, wenn `geholt`. */
+  coins: number | null;
+}
+
+export interface Weg {
+  /** Summe der Trophäen über alle Spiele, am Server gezählt. */
+  trophaeen: number;
+  stufen: WegStufe[];
+  /** Wie viele Stufen jetzt abgeholt werden können. */
+  bereit: number;
+}
+
+export interface WegFund {
+  schwelle: number;
+  /** Grad der Truhe; null bei festen Münzen (Checkpoint). */
+  grad: WegGrad | null;
+  coins: number;
+  gegenstand: string | null;
+  /** Nein, wenn der Gegenstand schon im Besitz war. */
+  gegenstandNeu: boolean;
+  /** Münzstand danach. */
+  stand: number;
 }
 
 export type Seltenheit = 'gewoehnlich' | 'selten' | 'episch' | 'legendaer';
@@ -815,6 +867,13 @@ export const api = {
   quests: () => request<Aufgaben>('/quests'),
   claimQuest: (questId: string) =>
     post<{ betrag: number; waehrung: Waehrung; stand: number }>(`/quests/${questId}/claim`),
+
+  // --- Trophäenweg ----------------------------------------------------------
+
+  /** Alle Stufen bis zur nächsten über 1.000, mit Zustand. */
+  weg: () => request<Weg>('/weg'),
+  /** Eine Stufe abholen. Gewürfelt wird am Server, genau einmal. */
+  wegHolen: (schwelle: number) => post<WegFund>(`/weg/${schwelle}/holen`),
 
   // --- Pro-Subway -----------------------------------------------------------
 
