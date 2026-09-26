@@ -566,9 +566,6 @@ export function GameSelect({
         fenster={fenster}
         trackRef={trackRef}
         renderTab={renderTab}
-        onZiehStart={onZiehStart}
-        onZiehen={onZiehen}
-        onZiehEnde={onZiehEnde}
       >
         {overlays}
       </NeuerRahmen>

@@ -94,7 +94,8 @@ Hub ist Gold der Hauptknopf — siehe „Das neue Hub“ weiter unten.
   Edelsteine am Ende Geld kosten; und nach einem Truhenkauf zeigt das Fundblatt,
   was drin war — eine gekaufte Truhe, die nur den Münzstand ändert, wäre eine
   Zahl ohne Erklärung.
-- **Zwischen den Tabs wird auch gewischt**, nicht nur über die Leiste
+- **Zwischen den Tabs wird auch gewischt** (nur im alten Hub; im neuen seit
+  26.09.2026 nicht mehr, siehe „Das neue Hub“), nicht nur über die Leiste
   getippt: ein deutlich waagerechter Wisch auf dem Inhalt geht einen Tab
   weiter, in derselben Reihenfolge wie die Leiste. Nur klar horizontale
   Wische zählen (senkrechtes Rollen bleibt Rollen), und in einer
@@ -204,6 +205,10 @@ unter 11.
   Inset.
 
 ### Reiter
+
+**Kein Wischen zwischen den Reitern** (Robin, 26.09.2026): Spielreihen,
+Filter und Sammlung rollen im neuen Hub waagerecht, ein Wisch darin darf nie
+den Reiter wechseln. Gewechselt wird nur über die Leiste.
 
 **Shop · Spiele · Start · Sammlung · Clan**, Start mittig und größer (Robin,
 26.09.2026). Es bleiben fünf Plätze. In der App ohne Shop steht dort das
