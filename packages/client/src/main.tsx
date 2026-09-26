@@ -94,6 +94,8 @@ const devRunner = isDevFlag('runner');
  * sonst nur ueber Anmeldung, Datenbank und eine tatsaechlich offene Truhe.
  */
 const devTruhe = isDevFlag('truhe');
+/** Das neue Hub mit dem Beispielkonto aus dem Entwurf — nur im Dev-Server. */
+const devHub = import.meta.env.DEV && isDevFlag('hub');
 
 if (
   (devAvatar || devChest || devWerkstatt || devRunner || devTruhe) &&
@@ -155,11 +157,15 @@ const ProbeRuestkammer = lazy(() =>
 
 /* `lazy` wie die anderen Proben: Das Brett gehoert nicht in das Stueck, das
    jeder Spieler beim Anmelden laedt. */
+const ProbeHub = lazy(() => import('./proben/hub/ProbeHub').then((m) => ({ default: m.ProbeHub })));
+
 const ProbeBroChess = lazy(() =>
   import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
 );
 
-const werkzeug = probeArena2d ? (
+const werkzeug = devHub ? (
+  <ProbeHub />
+) : probeArena2d ? (
   <Arena2D />
 ) : probeKampf ? (
   <ProbeKampf />

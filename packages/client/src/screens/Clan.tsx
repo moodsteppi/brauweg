@@ -10,6 +10,7 @@ import {
   type ClubRole,
   type ClubSummary,
   type JoinMode,
+  type WarState,
 } from '../api';
 import { HubBanner, HubSzene } from '../hub';
 import { ClanChat } from './ClanChat';
@@ -134,7 +135,10 @@ export function Clan({
   onBald,
   onShowProfile,
   onMeChange,
+  neu = false,
 }: {
+  /** Neues Hub (Nachtblau & Gold): die neu angeordnete Halle. */
+  neu?: boolean;
   /** Der eine Clan des Kontos, oder `null`. */
   clanId: string | null;
   /** Eigenes Konto — im Chat stehen die eigenen Zeilen rechts. */
@@ -208,8 +212,9 @@ export function Clan({
     );
   }
 
+  const HalleArt = neu ? HalleNeu : Halle;
   return (
-    <Halle
+    <HalleArt
       detail={detail}
       meId={meId}
       fehler={fehler}
@@ -935,5 +940,240 @@ function ClanFelder({
         />
       </label>
     </>
+  );
+}
+
+/**
+ * Die Clanhalle im neuen Hub (Entwurf „Nachtblau & Gold", Fassung 4).
+ *
+ * Dieselben Funktionen wie `Halle`, nur neu angeordnet: Wappen und Name auf
+ * der Burghalle, oben rechts Chat (nur Web), Anfragen (Leitung) und die
+ * Clanregeln, darunter der Clankrieg mit Stand, dann die Mitglieder.
+ * Mitglieds-, Anfragen- und Regelblatt sind dieselben wie in der alten Halle.
+ *
+ * „Clantisch starten" und „Einladen" aus dem Entwurf gibt es im Code nicht —
+ * sie stehen deshalb hier nicht (FAKTENBLATT.md: nichts erfinden).
+ */
+function HalleNeu({
+  detail,
+  meId,
+  fehler,
+  onBald,
+  onShowProfile,
+  onAktion,
+}: {
+  detail: ClubDetail | null;
+  meId: string | null;
+  fehler: string | null;
+  onBald: (name: string) => void;
+  onShowProfile: (accountId: string) => void;
+  onAktion: (aktion: Promise<unknown>, danach?: () => void) => void;
+}): React.JSX.Element {
+  const [gewaehlt, setGewaehlt] = useState<ClubMemberView | null>(null);
+  const [blatt, setBlatt] = useState<'anfragen' | 'einstellungen' | null>(null);
+  const [voll, setVoll] = useState<'chat' | 'krieg' | null>(null);
+  const [krieg, setKrieg] = useState<WarState | null>(null);
+
+  useEffect(() => {
+    if (!detail) return;
+    let lebt = true;
+    void api
+      .clubWar(detail.id)
+      .then((k) => lebt && setKrieg(k))
+      .catch(() => lebt && setKrieg(null));
+    return () => {
+      lebt = false;
+    };
+  }, [detail?.id]);
+
+  const darfVerwalten = istLeitung(detail?.myRole);
+  const offen = detail?.requests.length ?? 0;
+
+  if (voll === 'chat' && detail && !inApp) {
+    return (
+      <ClanChat clubId={detail.id} meId={meId} darfLoeschen={darfVerwalten} onClose={() => setVoll(null)} onShowProfile={onShowProfile} />
+    );
+  }
+  if (voll === 'krieg' && detail) {
+    return <ClanKrieg clubId={detail.id} onClose={() => setVoll(null)} />;
+  }
+
+  const k = krieg?.aktuell ?? null;
+  const laeuft = k?.status === 'laeuft' && k.gegner;
+  const restStunden = k?.endsAt ? Math.max(0, Math.round((new Date(k.endsAt).getTime() - Date.now()) / 3600000)) : null;
+  const summe = laeuft ? Math.max(1, k.wir.score + k.gegner!.score) : 1;
+
+  const symbol = (d: React.ReactNode): React.JSX.Element => (
+    <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {d}
+    </svg>
+  );
+
+  return (
+    <div className="hb-clan">
+      <div className="hb-clan-held" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
+        <div className="hb-clan-knoepfe">
+          {!inApp && (
+            <button type="button" className="hb-rund" onClick={() => setVoll('chat')} aria-label="Clanchat">
+              {symbol(<path d="M4 5h16v11H9l-5 4z" />)}
+            </button>
+          )}
+          {darfVerwalten && (
+            <button type="button" className="hb-rund" onClick={() => setBlatt('anfragen')} aria-label={offen > 0 ? `Anfragen, ${offen} offen` : 'Anfragen'}>
+              {symbol(
+                <>
+                  <circle cx="9" cy="8" r="3.5" />
+                  <path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6" />
+                  <circle cx="17" cy="9" r="2.5" />
+                  <path d="M16 14c3 0 5 2 5 5" />
+                </>,
+              )}
+              {offen > 0 && (
+                <span className="hb-badge" aria-hidden="true">
+                  {offen}
+                </span>
+              )}
+            </button>
+          )}
+          <button type="button" className="hb-rund" onClick={() => setBlatt('einstellungen')} aria-label="Clanregeln und Einstellungen">
+            {symbol(
+              <>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" />
+              </>,
+            )}
+          </button>
+        </div>
+        <img className="hb-wappen" src={wappenBild(detail?.crest)} alt="" draggable={false} />
+        <h1>{detail?.name ?? '…'}</h1>
+        <small>{detail?.motto ? `„${detail.motto}"` : detail ? 'Für alle Spiele' : 'Wird geladen…'}</small>
+        {detail && (
+          <div className="hb-kz">
+            <span>
+              <b>
+                {detail.members} / {detail.maxMembers}
+              </b>
+              Mitglieder
+            </span>
+            <span>
+              <b>{detail.minTrophies > 0 ? `ab ${detail.minTrophies.toLocaleString('de-DE')}` : 'offen'}</b>
+              {detail.minTrophies > 0 ? 'zum Beitritt' : 'für alle'}
+            </span>
+            <span>
+              <b>{detail.trophies.toLocaleString('de-DE')}</b>
+              Clan-Trophäen
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="hb-clan-inhalt">
+        {fehler && <p className="hb-fehler">{fehler}</p>}
+
+        <button type="button" className="hb-krieg" onClick={() => setVoll('krieg')}>
+          <span className="hb-kr-kopf">
+            <strong>Clankrieg</strong>
+            <small>
+              {laeuft
+                ? `${restStunden !== null ? `noch ${restStunden} h · ` : ''}alle Spiele zählen`
+                : k?.status === 'suche'
+                  ? 'Gegner wird gesucht'
+                  : k?.status === 'angefragt'
+                    ? 'Herausforderung offen'
+                    : '48 Stunden, alle Spiele zählen'}
+            </small>
+          </span>
+          {laeuft ? (
+            <>
+              <span className="hb-kr-vs">
+                <span className="hb-kr-seite">
+                  <img src={wappenBild(k.wir.crest)} alt="" />
+                  <b>{k.wir.score}</b>
+                  <small>Wir</small>
+                </span>
+                <span className="hb-vs">VS</span>
+                <span className="hb-kr-seite is-gegner">
+                  <img src={wappenBild(k.gegner!.crest)} alt="" />
+                  <b>{k.gegner!.score}</b>
+                  <small>{k.gegner!.name}</small>
+                </span>
+              </span>
+              <span className="hb-kr-balken" aria-hidden="true">
+                <span style={{ width: `${Math.round((k.wir.score / summe) * 100)}%` }} />
+              </span>
+              <small className="hb-kr-regel">Platz 1 = 3 Punkte, Platz 2 = 1 · je Mitglied bis 10 Partien</small>
+            </>
+          ) : (
+            <span className="hb-kr-leer">
+              {krieg?.letzter?.ergebnis
+                ? `Letzter Krieg: ${krieg.letzter.ergebnis === 'wir' ? 'gewonnen' : krieg.letzter.ergebnis === 'gegner' ? 'verloren' : 'unentschieden'}`
+                : 'Gerade läuft kein Krieg.'}
+              <span className="hb-kn is-gold">{krieg?.darfFuehren ? 'Krieg starten' : 'Ansehen'}</span>
+            </span>
+          )}
+        </button>
+
+        <button type="button" className="hb-zeile" onClick={() => onBald('Clantruhe')}>
+          <img className="hb-zeile-bild" src="/hub/truhe-gold.webp" alt="" />
+          <span>
+            <strong>Clantruhe</strong>
+            <small>Gemeinsam füllen, gemeinsam öffnen</small>
+          </span>
+          <span className="hb-bald-marke">Bald</span>
+        </button>
+
+        <section className="hb-blk">
+          <h2 className="hb-ab">
+            Mitglieder
+            {detail && <span className="hb-ab-zusatz">{detail.members}</span>}
+          </h2>
+          <div className="hb-liste">
+            {detail === null && <p className="hb-klein hb-liste-leer">Wird geladen…</p>}
+            {detail?.memberList.map((m, i) => (
+              <button
+                type="button"
+                key={m.accountId}
+                className={`hb-mg${m.accountId === meId ? ' is-du' : ''}`}
+                onClick={() => (darfVerwalten ? setGewaehlt(m) : onShowProfile(m.accountId))}
+              >
+                <span className="hb-rl-rang">{i + 1}</span>
+                <img src={bildFuer(m, i)} alt="" draggable={false} />
+                <span className="hb-mg-name">
+                  <strong>{m.displayName}</strong>
+                  <small>{ROLLE[m.role]}</small>
+                </span>
+                <span className="hb-pk">
+                  <img src="/hub/symbol-pokal.webp" alt="" />
+                  {m.trophies.toLocaleString('de-DE')}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {detail && (
+          <button
+            type="button"
+            className="hb-leise-knopf"
+            onClick={() => {
+              if (!window.confirm(`Den Clan „${detail.name}" wirklich verlassen?`)) return;
+              onAktion(api.leaveClub(detail.id));
+            }}
+          >
+            Clan verlassen
+          </button>
+        )}
+      </div>
+
+      {gewaehlt && detail && (
+        <MitgliedBlatt mitglied={gewaehlt} clubId={detail.id} onClose={() => setGewaehlt(null)} onShowProfile={onShowProfile} onAktion={onAktion} />
+      )}
+      {blatt === 'anfragen' && detail && (
+        <AnfragenBlatt detail={detail} onClose={() => setBlatt(null)} onShowProfile={onShowProfile} onAktion={onAktion} />
+      )}
+      {blatt === 'einstellungen' && detail && (
+        <EinstellungenBlatt darfAendern={darfVerwalten} detail={detail} onClose={() => setBlatt(null)} onAktion={onAktion} />
+      )}
+    </div>
   );
 }
