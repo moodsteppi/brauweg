@@ -598,7 +598,7 @@ export function BroCooked({
             ))}
           </ul>
         </SpielAbschnitt>
-        <SpielAbschnitt titel="Rezepte">
+        <SpielAbschnitt titel="Zum Nachlesen">
           <div className="hb-liste">
             <button type="button" className="spe-zeile" onClick={() => setRezepteOffen(true)}>
               <span>
