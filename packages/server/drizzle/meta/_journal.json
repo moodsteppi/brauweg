@@ -218,6 +218,13 @@
       "when": 1788000000000,
       "tag": "0030_geraet_push",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788100000000,
+      "tag": "0031_trophaeenweg",
+      "breakpoints": true
     }
   ]
 }

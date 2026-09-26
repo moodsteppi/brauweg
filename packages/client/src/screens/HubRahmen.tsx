@@ -153,8 +153,10 @@ export function NeuerRahmen<T extends Reiter>({
         {tabFolge.map((r) => {
           const { label, icon } = REITER[r];
           const haupt = r === 'spielen';
-          // Punkt am Profil: Geburtstagsgeschenk. Punkt am Start: unter „Heute" liegt etwas bereit.
-          const bereit = me.bereit.truhen + me.bereit.aufgaben;
+          // Punkt am Profil: Geburtstagsgeschenk. Punkt am Start: unter „Heute"
+          // oder auf dem Trophäenweg liegt etwas bereit — beides erreicht man
+          // nur über den Start.
+          const bereit = me.bereit.truhen + me.bereit.aufgaben + (me.bereit.weg ?? 0);
           const punkt = (r === 'profil' && me.birthdayRewardClaimable) || (haupt && bereit > 0);
           return (
             <button

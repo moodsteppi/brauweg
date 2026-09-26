@@ -70,6 +70,7 @@ import { GEBURTSTAGS_OUTFIT, SLOTS, istSlot, schenken } from '../kosmetik.js';
 import { anziehen, getragenVon, kaufen, paketKaufen, shopFuer } from '../shop.js';
 import { offeneTruhen, truheKaufen, truheOeffnen, truhenFuer } from '../truhen.js';
 import { aufgabeAbholen, aufgabenFuer, offeneBelohnungen } from '../quests.js';
+import { offeneWegBelohnungen, wegFuer, wegHolen } from '../trophaeenweg.js';
 import { runnerCashout, runnerLauf, runnerRangliste, runnerTagesstand } from '../runner.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import {
@@ -1017,14 +1018,20 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const getragen = await getragenVon(deps.db, accountId);
 
     /*
-     * Was bereitliegt — zwei Zahlen, damit der Startbildschirm einen Punkt an
+     * Was bereitliegt — drei Zahlen, damit der Startbildschirm einen Punkt an
      * die Truhe haengen kann. Bewusst nur die Zaehler und nicht die ganzen
-     * Listen: Die stehen an /api/chests und /api/quests, und die ruft nur auf,
-     * wer den Bildschirm wirklich oeffnet.
+     * Listen: Die stehen an /api/chests, /api/quests und /api/weg, und die
+     * ruft nur auf, wer den Bildschirm wirklich oeffnet.
+     *
+     * Der Weg ist eine eigene Zahl und nicht in `truhen` mitgezaehlt: Der
+     * Knopf "Heute" zeigt Truhen und Aufgaben, und eine Weg-Truhe liegt dort
+     * nicht. Die Trophaeensumme kommt aus der schon geladenen Statistik.
      */
-    const [truhenOffen, belohnungenOffen] = await Promise.all([
+    const trophaeen = stats.reduce((summe, zeile) => summe + zeile.trophies, 0);
+    const [truhenOffen, belohnungenOffen, wegOffen] = await Promise.all([
       offeneTruhen(deps.db, accountId, account.xp),
       offeneBelohnungen(deps.db, accountId),
+      offeneWegBelohnungen(deps.db, accountId, trophaeen),
     ]);
     return reply.send({
       ...rest,
@@ -1050,7 +1057,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
        * einmal falsch geschriebene Zeile darf nicht das ganze Profil sperren.
        */
       figur: leseBemalung(figurBemalung),
-      bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen },
+      bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen, weg: wegOffen },
       /*
        * Stufe und Fortschritt fertig gerechnet. Der Client bekommt die
        * Zahlen, nicht die Kurve: Wird sie je nachjustiert, gilt das
@@ -1193,6 +1200,37 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .object({ questId: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/) })
         .parse(request.params);
       return reply.send(await aufgabeAbholen(deps.db, accountId, questId));
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Trophaeenweg
+  // -------------------------------------------------------------------------
+
+  /**
+   * Der ganze Weg: alle Stufen bis zur naechsten ueber 1000, auch die
+   * gesperrten, mit Zustand (erreicht, geholt, was drin war).
+   */
+  app.get('/api/weg', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    return reply.send(await wegFuer(deps.db, accountId));
+  });
+
+  /**
+   * Eine Stufe abholen. Ob es sie gibt und ob sie erreicht ist, entscheidet
+   * `wegHolen` gegen den Katalog und die Trophaeen am Server; hier wird nur die
+   * Form geprueft. Ein zweiter Aufruf bekommt einen Konflikt, keinen zweiten
+   * Wurf.
+   */
+  app.post(
+    '/api/weg/:schwelle/holen',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const { schwelle } = z
+        .object({ schwelle: z.string().regex(/^[1-9][0-9]{0,6}$/).transform(Number) })
+        .parse(request.params);
+      return reply.send(await wegHolen(deps.db, accountId, schwelle));
     },
   );
 

@@ -1,4 +1,4 @@
-import { api, SLOTS, type Kauftruhe, type Slot } from '../../api';
+import { api, SLOTS, type Kauftruhe, type Slot, type WegGrad, type WegStufe } from '../../api';
 import { GameSelect, type Tab } from '../../screens/GameSelect';
 import { probeKonto } from '../../screens/probe-konto';
 
@@ -59,6 +59,58 @@ api.chests = async () => ({
     TRUHE('s20', 'stufe', 'gold', 25, 45, 20, 'zu'),
   ],
 });
+
+/*
+ * Trophäenweg für die Probe: Stand 773 (die Summe der Beispielstatistik
+ * unten), Stufen und Belohnungen wie im Katalog des Servers
+ * (server/src/trophaeenweg-katalog.ts). Bis 500 ist alles geholt; 600, 700
+ * und Schneefeld (750) warten, damit „Holen" an Checkpoint und Station zu
+ * sehen ist. Holen verändert nur diese Liste — ohne Anmeldung gibt es am
+ * Server nichts zu holen.
+ */
+const WEG_SPANNE = { bronze: [4, 8], silber: [10, 20], gold: [25, 45], diamant: [60, 100] } as const;
+const WEG_STUFE = (
+  schwelle: number,
+  art: WegStufe['art'],
+  grad: WegGrad | null,
+  gegenstand: string | null,
+  geholt: boolean,
+): WegStufe => ({
+  schwelle,
+  art,
+  truhe: grad ? { grad, von: WEG_SPANNE[grad][0], bis: WEG_SPANNE[grad][1] } : null,
+  muenzen: grad ? null : 25,
+  gegenstand,
+  erreicht: schwelle <= 773,
+  geholt,
+  coins: geholt ? (grad ? WEG_SPANNE[grad][0] + 2 : 25) : null,
+});
+const probeWeg: WegStufe[] = [
+  WEG_STUFE(100, 'station', 'bronze', 'hut-strohhut', true),
+  WEG_STUFE(200, 'checkpoint', null, null, true),
+  WEG_STUFE(250, 'station', 'silber', 'ruecken-sommerwiese', true),
+  WEG_STUFE(300, 'checkpoint', null, null, true),
+  WEG_STUFE(400, 'checkpoint', null, null, true),
+  WEG_STUFE(500, 'station', 'gold', 'szene-kaminzimmer', true),
+  WEG_STUFE(600, 'checkpoint', null, null, false),
+  WEG_STUFE(700, 'checkpoint', null, null, false),
+  WEG_STUFE(750, 'station', 'gold', 'blatt-winterhof', false),
+  WEG_STUFE(800, 'checkpoint', null, null, false),
+  WEG_STUFE(900, 'checkpoint', null, null, false),
+  WEG_STUFE(1000, 'station', 'diamant', 'aura-sterne', false),
+  WEG_STUFE(1250, 'weiter', 'silber', null, false),
+];
+api.weg = async () => ({
+  trophaeen: 773,
+  stufen: probeWeg.map((s) => ({ ...s })),
+  bereit: probeWeg.filter((s) => s.erreicht && !s.geholt).length,
+});
+api.wegHolen = async (schwelle) => {
+  const stufe = probeWeg.find((s) => s.schwelle === schwelle)!;
+  const coins = stufe.truhe ? Math.round((stufe.truhe.von + stufe.truhe.bis) / 2) : (stufe.muenzen ?? 0);
+  Object.assign(stufe, { geholt: true, coins });
+  return { schwelle, grad: stufe.truhe?.grad ?? null, coins, gegenstand: stufe.gegenstand, gegenstandNeu: true, stand: 2480 + coins };
+};
 
 /*
  * Shop-Daten für die Probe: Preise und Namen wie im Code (FAKTENBLATT.md,
@@ -158,7 +210,7 @@ export function ProbeHub(): React.JSX.Element {
     gems: 35,
     avatar: { hut: 'hut-zylinder', brille: 'brille-sonnenbrille', hand: 'hand-kartenfaecher' },
     level: { stufe: 12, xp: 1720, imLevel: 180, fuerLevel: 260 },
-    bereit: { truhen: 1, aufgaben: 2 },
+    bereit: { truhen: 1, aufgaben: 2, weg: 3 },
     stats: [
       { gameId: 'doppelkopf', trophies: 412, parties: 146, wins: 71 },
       { gameId: 'skat', trophies: 188, parties: 64, wins: 29 },

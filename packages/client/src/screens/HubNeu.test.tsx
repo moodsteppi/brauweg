@@ -12,9 +12,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../hubNeu', () => ({ hubNeu: true }));
 
-const { claimQuest, vote } = vi.hoisted(() => ({
-  claimQuest: vi.fn(() => Promise.resolve({ ok: true })),
-  vote: vi.fn(() => Promise.resolve({ ok: true })),
+const { claimQuest, vote, wegHolen, wegStand } = vi.hoisted(() => {
+  // Der Weg ist zustandsbehaftet: Nach dem Holen liefert /api/weg die Stufe
+  // als geholt, so wie der Server es täte.
+  const wegStand = { geholt: false };
+  return {
+    claimQuest: vi.fn(() => Promise.resolve({ ok: true })),
+    vote: vi.fn(() => Promise.resolve({ ok: true })),
+    wegStand,
+    wegHolen: vi.fn((schwelle: number) => {
+      wegStand.geholt = true;
+      return Promise.resolve({ schwelle, grad: 'gold', coins: 31, gegenstand: 'szene-kaminzimmer', gegenstandNeu: true, stand: 151 });
+    }),
+  };
+});
+
+// Die Öffnung zieht sonst three.js nach; hier zählt nur, dass sie kommt und was sie zeigt.
+vi.mock('../TruhenOeffnung', () => ({
+  TruhenOeffnung: ({ muenzen, onFertig }: { muenzen: number; onFertig: () => void }) => (
+    <button type="button" onClick={onFertig}>
+      {muenzen} Münzen aus der Truhe
+    </button>
+  ),
 }));
 
 vi.mock('../api', async () => {
@@ -52,6 +71,17 @@ vi.mock('../api', async () => {
           stufen: [],
         }),
       claimQuest,
+      // Stand 600 (412 + 188): Feuerberg erreicht, noch nicht geholt; 700 zu.
+      weg: () =>
+        Promise.resolve({
+          trophaeen: 600,
+          bereit: wegStand.geholt ? 0 : 1,
+          stufen: [
+            { schwelle: 500, art: 'station', truhe: { grad: 'gold', von: 25, bis: 45 }, muenzen: null, gegenstand: 'szene-kaminzimmer', erreicht: true, geholt: wegStand.geholt, coins: wegStand.geholt ? 31 : null },
+            { schwelle: 700, art: 'checkpoint', truhe: null, muenzen: 25, gegenstand: null, erreicht: false, geholt: false, coins: null },
+          ],
+        }),
+      wegHolen,
       shop: () =>
         Promise.resolve({
           paesse: [],
@@ -83,24 +113,29 @@ const me: Me = probeKonto({
   activeTable: { tableId: 't1', gameId: 'doppelkopf', status: 'running', paused: false, visibility: 'public', maxRounds: 8, seats: 4 },
 });
 
-async function zeige(): Promise<{ onPick: ReturnType<typeof vi.fn>; onResume: ReturnType<typeof vi.fn> }> {
+async function zeige(konto: Me = me): Promise<{
+  onPick: ReturnType<typeof vi.fn>;
+  onResume: ReturnType<typeof vi.fn>;
+  onAvatarChange: ReturnType<typeof vi.fn>;
+}> {
   const onPick = vi.fn();
   const onResume = vi.fn();
+  const onAvatarChange = vi.fn();
   render(
     <GameSelect
-      me={me}
+      me={konto}
       onPick={onPick}
       onSolo={vi.fn()}
       onResume={onResume}
       onThemeChange={vi.fn()}
-      onAvatarChange={vi.fn()}
+      onAvatarChange={onAvatarChange}
       onShowProfile={vi.fn()}
       onSignOut={vi.fn()}
       onDeleted={vi.fn()}
     />,
   );
   await act(async () => {});
-  return { onPick, onResume };
+  return { onPick, onResume, onAvatarChange };
 }
 
 function reiter(): HTMLElement {
@@ -108,7 +143,37 @@ function reiter(): HTMLElement {
 }
 
 describe('Neues Hub', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    wegStand.geholt = false;
+  });
+
+  it('holt auf dem Trophäenweg eine Station ab — Truhe geht auf, danach steht dort „Erhalten"', async () => {
+    const { onAvatarChange } = await zeige();
+    fireEvent.click(screen.getByRole('button', { name: /^Trophäenweg öffnen/ }));
+    await act(async () => {});
+    const weg = screen.getByRole('dialog', { name: 'Trophäenweg' });
+    expect(within(weg).queryByText('Erhalten')).toBeNull();
+
+    fireEvent.click(within(weg).getByRole('button', { name: 'Feuerberg: Goldtruhe und Tisch „Kaminzimmer“ holen' }));
+    await act(async () => {});
+
+    expect(wegHolen).toHaveBeenCalledWith(500);
+    // Guthaben und Punkt oben neu laden lassen.
+    expect(onAvatarChange).toHaveBeenCalled();
+    // Die Truhe öffnet sich im Fundblatt mit dem Wurf des Servers.
+    expect(await screen.findByRole('button', { name: '31 Münzen aus der Truhe' })).toBeInTheDocument();
+    // Neu geladen: kein Knopf mehr, sondern „Erhalten".
+    expect(within(weg).queryByRole('button', { name: /^Feuerberg/ })).toBeNull();
+    expect(within(weg).getByText('Erhalten')).toBeInTheDocument();
+  });
+
+  it('zeigt am Trophäenweg, dass etwas zu holen ist, und zählt es am Start-Reiter mit', async () => {
+    await zeige({ ...me, bereit: { truhen: 1, aufgaben: 1, weg: 2 } });
+    expect(screen.getByRole('button', { name: /^Trophäenweg öffnen.*2 Belohnungen bereit\.$/ })).toBeInTheDocument();
+    expect(screen.getByText('2 Belohnungen')).toBeInTheDocument();
+    expect(within(reiter()).getByRole('button', { name: 'Start, 4 bereit' })).toBeInTheDocument();
+  });
 
   it('ordnet die Reiter Shop · Spiele · Start · Sammlung · Clan, Start aktiv', async () => {
     await zeige();

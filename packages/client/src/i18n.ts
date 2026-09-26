@@ -205,6 +205,10 @@ const de: Record<string, string> = {
   'error.questUnknown': 'Diese Aufgabe gibt es nicht.',
   'error.questNotDone': 'Diese Aufgabe ist noch nicht fertig.',
   'error.questAlreadyClaimed': 'Die Belohnung hast du schon geholt.',
+  // Trophäenweg (26.09.2026, server/src/trophaeenweg.ts)
+  'error.wegStufeUnbekannt': 'Diese Stufe gibt es auf dem Trophäenweg nicht.',
+  'error.wegNichtErreicht': 'Dafür fehlen dir noch Trophäen.',
+  'error.wegSchonGeholt': 'Diese Belohnung hast du schon geholt.',
   'error.itemUnknown': 'Dieses Stück gibt es nicht.',
   'error.itemNotForSale': 'Das gibt es nicht zu kaufen, nur zu bekommen.',
   'error.itemAlreadyOwned': 'Das hast du schon.',
@@ -231,6 +235,17 @@ const de: Record<string, string> = {
   'truhe.silber': 'Silbertruhe',
   'truhe.gold': 'Goldtruhe',
   'truhe.diamant': 'Diamanttruhe',
+
+  // --- Gegenstände des Trophäenwegs ----------------------------------------
+  // Je Kennung aus WEG_STATIONEN (server/src/trophaeenweg-katalog.ts). Eigene
+  // Schlüssel statt `kosmetik.*`/`deck.*`: Auf dem Weg steht dazu, WAS es ist
+  // („Kartenrücken"), weil ein Name allein bei vier Warenarten nichts sagt.
+  // trophaeenweg.test.ts prüft, dass jede Kennung hier einen Text hat.
+  'weg.hut-strohhut': 'Pinguin-Kopf „Strohhut“',
+  'weg.ruecken-sommerwiese': 'Kartenrücken „Sommerwiese“',
+  'weg.szene-kaminzimmer': 'Tisch „Kaminzimmer“',
+  'weg.blatt-winterhof': 'Kartenblatt „Winterhof“',
+  'weg.aura-sterne': 'Pinguin-Aura „Sternenkranz“',
 
   // --- Plaetze der Pinguin-Ausstattung ------------------------------------
   'slot.hut': 'Kopf',

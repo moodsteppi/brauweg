@@ -301,6 +301,20 @@
   z-index: 2;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
 }
+/* Auf dem Weg liegt etwas zu holen: goldene Pille oben links, gegenüber dem
+   Pinguin. Eigene Fläche, also kein Text direkt auf dem Bild. */
+.hb .hb-weg-bereit {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 2;
+  font: 800 12px var(--hb-txt);
+  color: var(--hb-grund);
+  background: var(--hb-gold);
+  border-radius: 999px;
+  padding: 4px 11px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
 .hb .hb-weg-biom {
   font: 400 30px/1 var(--hb-anz);
 }
@@ -1203,11 +1217,107 @@
   background: var(--hb-gruen);
   color: #004d26;
 }
+/* Holbar: die ganze Karte ist der Knopf (150 × 54 pt), „Holen" als goldene
+   Marke daran — dieselbe Stelle, an der danach „Erhalten" steht. */
+.hb .hb-st-lohn.is-holbar {
+  border: 2px solid var(--hb-gold);
+  box-shadow:
+    0 0 16px rgba(245, 192, 46, 0.45),
+    0 4px 0 rgba(0, 0, 0, 0.3);
+}
+.hb .hb-st-lohn.is-holbar:active {
+  transform: translateY(2px);
+}
+.hb .hb-st-lohn em.is-holen {
+  top: -12px;
+  font-size: 12px;
+  padding: 2px 10px;
+  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  box-shadow: 0 2px 0 rgba(120, 70, 0, 0.5);
+}
+/* Checkpoint zum Holen: Punkt und Schild sind EIN Knopf, 44 pt hoch.
+   Das Schild steht hier im Fluss statt absolut daneben — der Knopf muss es
+   umschließen: Der Druckabbruch (druckabbruch.ts) misst den Rand des Knopfes,
+   und ein Tipp auf ein Schild, das 80 px über diesen Rand hinausragt, galt
+   als weggezogener Finger und wurde verschluckt. Der Punkt bleibt auf dem
+   Weg: 44 pt breite Zone um ihn, um deren halbe Breite verschoben.
+   Zwei holbare Nachbarn überlappen sich — harmlos, beide geben dasselbe. */
+.hb .hb-cp.is-holbar {
+  transform: translate(-22px, -50%);
+  min-height: 44px;
+  padding-right: 4px;
+}
+.hb .hb-cp.is-holbar i {
+  flex: none;
+  margin: 0 14px;
+}
+.hb .hb-cp.is-holbar small {
+  position: static;
+  margin-left: -4px;
+  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  border-color: transparent;
+  color: var(--hb-grund);
+}
+.hb .hb-cp.is-geholt small {
+  color: var(--hb-gruen);
+}
+/* Über 1.000: alle 250 eine Silbertruhe. Oben rechts über dem Sternenhafen,
+   der einzige freie Fleck auf der Karte. */
+.hb .hb-weg-weiter {
+  position: absolute;
+  right: 16px;
+  top: -6px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px 0 4px;
+  border-radius: 10px;
+  background: rgba(7, 19, 47, 0.92);
+  border: 1px solid var(--hb-kontur);
+  font: 800 12px var(--hb-txt);
+}
+.hb .hb-weg-weiter img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+.hb .hb-weg-weiter > span {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.hb .hb-weg-weiter small {
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.hb .hb-weg-weiter.is-holbar {
+  border-color: transparent;
+  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  color: var(--hb-grund);
+}
+.hb .hb-weg-weiter.is-holbar small {
+  color: var(--hb-grund);
+}
+.hb .hb-weg-weiter.is-holbar::after {
+  content: '';
+  position: absolute;
+  inset: -8px -2px;
+}
+.hb .hb-weg-fehler {
+  position: relative;
+  z-index: 6;
+  margin: 0 16px 8px;
+}
 /* Die eigene Stelle: Pinguin auf goldenem Podest, Zahl daneben */
 .hb .hb-ich {
   position: absolute;
   left: 50%;
   z-index: 4;
+  /* Nur Anzeige: Der Pinguin steht über dem Weg und würde sonst den Tipp auf
+     ein Checkpoint-Schild unter sich schlucken. */
+  pointer-events: none;
   transform: translate(-50%, -100%);
   display: flex;
   flex-direction: column;
