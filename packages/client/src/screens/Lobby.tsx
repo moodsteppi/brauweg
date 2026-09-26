@@ -4,6 +4,9 @@ import { ApiError, api, type GameDefaults, type TableRow } from '../api';
 import { t } from '../i18n';
 import type { BotLevel } from '../protocol';
 import { regelBild } from '../regelbilder';
+import { hubNeu } from '../hubNeu';
+import { HbBlatt } from './HbBlatt';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 
 /**
  * Lobby und Tischerstellung.
@@ -247,6 +250,157 @@ export function Lobby({
     return true;
   });
 
+  // Neues Hub: dieselben Zustände und Aufrufe im Spieleinstieg-Baukasten.
+  if (hubNeu) {
+    const name = t(`game.${gameId}`);
+    const sitze = defaults?.seatCounts ?? [4];
+    const sitzText = sitze.length > 1 ? `${sitze[0]}–${sitze[sitze.length - 1]}` : `${sitze[0]}`;
+    if (ansicht === 'erstellen') {
+      return (
+        <SpielRahmen
+          gameId={gameId}
+          titel="Tisch erstellen"
+          unter={`${name} · ${sitzText} Spieler`}
+          onBack={() => setAnsicht('liste')}
+          zurueckText="Zurück zur Tischauswahl"
+          fuss={
+            <>
+              <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void create()}>
+                Tisch erstellen
+              </button>
+              <p className="hb-klein">{fussnote(gameId, seats, visibility)}</p>
+            </>
+          }
+        >
+          {error && <p className="hb-fehler">{error}</p>}
+          <SpielAbschnitt titel="Spieler">
+            <SpielWahl
+              name="Spieler"
+              werte={sitze.map((c) => ({ wert: c, text: `${c} Spieler` }))}
+              wert={seats}
+              onWahl={(count) => {
+                setSeats(count);
+                const first = defaults?.rounds[String(count)]?.[0];
+                if (first) setRounds(first);
+              }}
+            />
+          </SpielAbschnitt>
+          <SpielAbschnitt titel="Runden">
+            <SpielWahl name="Runden" werte={roundOptions.map((c) => ({ wert: c, text: String(c) }))} wert={rounds} onWahl={setRounds} />
+          </SpielAbschnitt>
+          <SpielAbschnitt titel="Für wen">
+            <SpielWahl
+              name="Für wen"
+              werte={[
+                { wert: 'public' as const, text: 'Offen', unter: 'für alle' },
+                { wert: 'club_only' as const, text: 'Nur Clan', unter: 'bis 100 Runden' },
+              ]}
+              wert={visibility}
+              onWahl={(v) => {
+                setVisibility(v);
+                if (v === 'public' && rounds > 20) {
+                  const first = defaults?.rounds[String(seats)]?.[0];
+                  if (first) setRounds(first);
+                }
+              }}
+            />
+          </SpielAbschnitt>
+          {gameId === 'doppelkopf' && (
+            <SpielAbschnitt titel="Bot-Stärke">
+              <SpielWahl name="Bot-Stärke" werte={BOT_STUFEN.map((b) => ({ wert: b.id, text: b.name }))} wert={botLevel} onWahl={setBotLevel} />
+            </SpielAbschnitt>
+          )}
+          <SpielAbschnitt titel="Regeln">
+            <div className="hb-liste">
+              <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
+                <span>
+                  <strong>{aktiveRegeln === 0 ? 'Standard' : `${aktiveRegeln} Sonderregeln`}</strong>
+                  <small>Antippen zum Einstellen</small>
+                </span>
+                <span className="hb-pf" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            </div>
+          </SpielAbschnitt>
+          {regelnOffen && config && <RegelSheet neu config={config} onChange={setConfig} onClose={() => setRegelnOffen(false)} />}
+        </SpielRahmen>
+      );
+    }
+    const filterWerte: [string, string][] = [
+      ['alle', 'Alle'],
+      ...sitze.map((c) => [`${c}er`, `${c}er`] as [string, string]),
+      ['offen', 'Offen'],
+      ['clan', 'Clan'],
+    ];
+    return (
+      <SpielRahmen
+        gameId={gameId}
+        titel={name}
+        unter={`${sitzText} Spieler · Tischauswahl`}
+        onBack={onBack}
+        zurueckText="Zurück zur Spielseite"
+        fuss={
+          <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => setAnsicht('erstellen')}>
+            Tisch erstellen
+          </button>
+        }
+      >
+        {error && <p className="hb-fehler">{error}</p>}
+        <div className="hb-chips spe-chips" role="group" aria-label="Filter">
+          {filterWerte.map(([wert, text]) => (
+            <button
+              type="button"
+              key={wert}
+              className={`hb-chip${filter === wert ? ' is-an' : ''}`}
+              aria-pressed={filter === wert}
+              onClick={() => setFilter(wert)}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+        <input
+          className="spe-feld"
+          placeholder="Spieler suchen…"
+          value={suche}
+          onChange={(event) => setSuche(event.target.value)}
+          aria-label="Tisch nach Gastgeber suchen"
+        />
+        <SpielAbschnitt titel="Offene Tische" zusatz={tables.length > 0 ? `${gefiltert.length} von ${tables.length}` : undefined}>
+          <div className="hb-liste">
+            {gefiltert.length === 0 && (
+              <p className="spe-leer">
+                {tables.length === 0 ? 'Gerade ist kein Tisch offen. Mach den ersten auf.' : 'Kein Tisch passt zu diesem Filter.'}
+              </p>
+            )}
+            {gefiltert.map((row) => (
+              <button type="button" className="spe-zeile spe-tisch" key={row.id} onClick={() => void join(row.id)}>
+                <span>
+                  <strong>
+                    {row.host ? `Runde von ${row.host}` : 'Offener Tisch'}
+                    {row.visibility === 'club_only' && <span className="spe-marke"> · Clan</span>}
+                  </strong>
+                  <small>
+                    {row.seats}er · {row.maxRounds} Runden · {row.ruleCount === 0 ? 'Standard' : `${row.ruleCount} Sonderregeln`}
+                  </small>
+                </span>
+                <span className="spe-punkte" aria-hidden="true">
+                  {Array.from({ length: row.seats }, (_, i) => (
+                    <i key={i} className={i < row.occupied ? '' : 'is-frei'} />
+                  ))}
+                </span>
+                <span className="spe-zahl" aria-label={`${row.occupied} von ${row.seats} Plätzen besetzt`}>
+                  {row.occupied}/{row.seats}
+                </span>
+              </button>
+            ))}
+          </div>
+        </SpielAbschnitt>
+      </SpielRahmen>
+    );
+  }
+
   if (ansicht === 'erstellen') {
     return (
       <div className="doko doko--lobby doko--erstellen">
@@ -474,10 +628,13 @@ export function Lobby({
  * tragen einen goldenen Rand mit Haken.
  */
 function RegelSheet({
+  neu = false,
   config,
   onChange,
   onClose,
 }: {
+  /** Neues Hub: als Blatt im neuen Stil, dieselben Kacheln. */
+  neu?: boolean;
   config: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
   onClose: () => void;
@@ -491,6 +648,57 @@ function RegelSheet({
   const scharf = config.deck === 'without9';
   const active = flags.filter(([, value]) => value).length + (scharf ? 1 : 0);
   const gesamt = flags.length + (hatBlattwahl ? 1 : 0);
+
+  const kacheln = (
+    <div className="regeln">
+      {hatBlattwahl && (
+        <button
+          type="button"
+          className={`regel${scharf ? ' is-on' : ''}`}
+          aria-pressed={scharf}
+          onClick={() => onChange({ ...config, deck: scharf ? 'with9' : 'without9' })}
+        >
+          <span className="regel-bild" aria-hidden="true">
+            {regelBild('scharf')}
+          </span>
+          {t('regel.scharf')}
+          <span className="regel-check" aria-hidden="true">
+            ✓
+          </span>
+        </button>
+      )}
+      {flags.map(([key, value]) => (
+        <button
+          type="button"
+          key={key}
+          className={`regel${value ? ' is-on' : ''}`}
+          aria-pressed={!!value}
+          onClick={() => onChange({ ...config, [key]: !value })}
+        >
+          <span className="regel-bild" aria-hidden="true">
+            {regelBild(key)}
+          </span>
+          {t(`regel.${key}`)}
+          <span className="regel-check" aria-hidden="true">
+            ✓
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+  if (neu) {
+    return (
+      <HbBlatt titel="Regeln" label="Regeln für diesen Tisch" onClose={onClose}>
+        <p className="hb-klein">
+          {active} von {gesamt} an · Antippen schaltet um
+        </p>
+        {kacheln}
+        <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onClose}>
+          Fertig
+        </button>
+      </HbBlatt>
+    );
+  }
 
   return (
     <div className="doko-sheet" onClick={onClose}>

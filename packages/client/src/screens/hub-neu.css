@@ -8,7 +8,9 @@
  * Wurzel ist `.hb`; nichts hier wirkt außerhalb davon. Farben nur über die
  * Variablen unten (DESIGN.md: keine Hex-Werte mitten im Code).
  */
-.hb {
+/* Farben und Schriften gelten auch im Spieleinstieg (.spe, spiel-einstieg.css). */
+.hb,
+.spe {
   --hb-grund: #0e1a3d;
   --hb-grund-tief: #07132f;
   --hb-nacht: #050b1d;
@@ -28,7 +30,8 @@
   --hb-badge: #dc2626;
   --hb-anz: 'Lilita One', system-ui, sans-serif;
   --hb-txt: 'Nunito Variable', 'Nunito', system-ui, sans-serif;
-
+}
+.hb {
   position: fixed;
   inset: 0;
   display: flex;
@@ -42,12 +45,12 @@
   font-family: var(--hb-txt);
   -webkit-tap-highlight-color: transparent;
 }
-.hb *,
-.hb *::before,
-.hb *::after {
+:is(.hb, .spe) *,
+:is(.hb, .spe) *::before,
+:is(.hb, .spe) *::after {
   box-sizing: border-box;
 }
-.hb button {
+:is(.hb, .spe) button {
   font: inherit;
   color: inherit;
   background: none;
@@ -57,11 +60,11 @@
   cursor: pointer;
   text-align: inherit;
 }
-.hb button:disabled {
+:is(.hb, .spe) button:disabled {
   opacity: 1;
   cursor: default;
 }
-.hb :focus-visible {
+:is(.hb, .spe) :focus-visible {
   outline: 3px solid var(--hb-gold-hell);
   outline-offset: 2px;
 }
@@ -82,7 +85,7 @@
   gap: 10px;
   min-height: 44px;
 }
-.hb .hb-ava {
+:is(.hb, .spe) .hb-ava {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -95,44 +98,44 @@
   align-items: flex-end;
   justify-content: center;
 }
-.hb .hb-wer {
+:is(.hb, .spe) .hb-wer {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 70px;
 }
-.hb .hb-wer strong {
+:is(.hb, .spe) .hb-wer strong {
   font-size: 15px;
   font-weight: 800;
 }
-.hb .hb-wer > span {
+:is(.hb, .spe) .hb-wer > span {
   font-size: 12px;
   color: var(--hb-leise);
   font-weight: 700;
 }
-.hb .hb-balken {
+:is(.hb, .spe) .hb-balken {
   display: block;
   height: 8px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.14);
   overflow: hidden;
 }
-.hb .hb-balken > span {
+:is(.hb, .spe) .hb-balken > span {
   display: block;
   height: 100%;
   border-radius: 4px;
   background: linear-gradient(90deg, var(--hb-gold-hell), var(--hb-gold-tief));
 }
-.hb .hb-balken.is-xp {
+:is(.hb, .spe) .hb-balken.is-xp {
   height: 5px;
   width: 70px;
 }
-.hb .hb-geld {
+:is(.hb, .spe) .hb-geld {
   margin-left: auto;
   display: flex;
   gap: 5px;
 }
-.hb .hb-pill {
+:is(.hb, .spe) .hb-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -144,12 +147,12 @@
   font: 800 13px var(--hb-txt);
   font-variant-numeric: tabular-nums;
 }
-.hb .hb-pill img {
+:is(.hb, .spe) .hb-pill img {
   width: 20px;
   height: 20px;
   object-fit: contain;
 }
-.hb .hb-pill.is-pk {
+:is(.hb, .spe) .hb-pill.is-pk {
   color: var(--hb-gold);
 }
 .hb .hb-online {
@@ -161,7 +164,7 @@
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-punkt {
+:is(.hb, .spe) .hb-punkt {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -185,25 +188,25 @@
   flex-direction: column;
   gap: 16px;
 }
-.hb .hb-blk {
+:is(.hb, .spe) .hb-blk {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.hb .hb-label {
+:is(.hb, .spe) .hb-label {
   font: 800 11px var(--hb-txt);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--hb-gold);
 }
-.hb .hb-ab {
+:is(.hb, .spe) .hb-ab {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0;
   font: 400 20px/1 var(--hb-anz);
 }
-.hb .hb-ab-mehr {
+:is(.hb, .spe) .hb-ab-mehr {
   display: inline-flex;
   align-items: center;
   font: 800 13px var(--hb-txt);
@@ -213,7 +216,7 @@
   margin: -12px 0 -12px auto;
   padding: 0 0 0 12px;
 }
-.hb .hb-pk {
+:is(.hb, .spe) .hb-pk {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -221,18 +224,18 @@
   color: var(--hb-gold);
   font-variant-numeric: tabular-nums;
 }
-.hb .hb-pk img {
+:is(.hb, .spe) .hb-pk img {
   width: 18px;
   height: 18px;
   object-fit: contain;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
 }
-.hb .hb-ic {
+:is(.hb, .spe) .hb-ic {
   width: 22px;
   height: 22px;
   flex: none;
 }
-.hb .hb-pf {
+:is(.hb, .spe) .hb-pf {
   margin-left: auto;
   font-size: 24px;
   line-height: 1;
@@ -240,7 +243,7 @@
 }
 
 /* Held: Bild bis an die Kante, unten ein dunkler Verlauf, darauf der Text */
-.hb .hb-held {
+:is(.hb, .spe) .hb-held {
   position: relative;
   display: block;
   width: 100%;
@@ -253,7 +256,7 @@
     0 0 0 2px rgba(245, 192, 46, 0.55),
     0 10px 24px rgba(0, 0, 0, 0.35);
 }
-.hb .hb-held::after {
+:is(.hb, .spe) .hb-held::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -264,7 +267,7 @@
     rgba(7, 19, 47, 0) 62%
   );
 }
-.hb .hb-held-unten {
+:is(.hb, .spe) .hb-held-unten {
   position: absolute;
   left: 14px;
   right: 14px;
@@ -276,10 +279,10 @@
 }
 
 /* Start: Trophäenweg */
-.hb .hb-weg {
+:is(.hb, .spe) .hb-weg {
   height: 222px;
 }
-.hb .hb-weg::after {
+:is(.hb, .spe) .hb-weg::after {
   /* Der Textblock reicht bis 58 % der Höhe; bis dahin mindestens 0,85
      Deckkraft, sonst hat die goldene Oberzeile über Schnee nur 3,5:1. */
   background: linear-gradient(
@@ -290,10 +293,10 @@
     rgba(7, 19, 47, 0) 88%
   );
 }
-.hb .hb-weg .hb-label {
+:is(.hb, .spe) .hb-weg .hb-label {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
-.hb .hb-weg-marke {
+:is(.hb, .spe) .hb-weg-marke {
   position: absolute;
   right: 18px;
   top: 14px;
@@ -303,7 +306,7 @@
 }
 /* Auf dem Weg liegt etwas zu holen: goldene Pille oben links, gegenüber dem
    Pinguin. Eigene Fläche, also kein Text direkt auf dem Bild. */
-.hb .hb-weg-bereit {
+:is(.hb, .spe) .hb-weg-bereit {
   position: absolute;
   left: 14px;
   top: 14px;
@@ -315,33 +318,33 @@
   padding: 4px 11px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
-.hb .hb-weg-biom {
+:is(.hb, .spe) .hb-weg-biom {
   font: 400 30px/1 var(--hb-anz);
 }
-.hb .hb-weg-zeile {
+:is(.hb, .spe) .hb-weg-zeile {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   color: var(--hb-leise);
 }
-.hb .hb-weg-zeile .hb-pk {
+:is(.hb, .spe) .hb-weg-zeile .hb-pk {
   font-size: 15px;
 }
-.hb .hb-weg-sicher {
+:is(.hb, .spe) .hb-weg-sicher {
   display: flex;
   align-items: center;
   gap: 6px;
   font: 700 12px var(--hb-txt);
   color: var(--hb-gruen);
 }
-.hb .hb-weg-sicher .hb-ic {
+:is(.hb, .spe) .hb-weg-sicher .hb-ic {
   width: 16px;
   height: 16px;
 }
 
 /* Start: Weiterspielen */
-.hb .hb-weiter {
+:is(.hb, .spe) .hb-weiter {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -353,7 +356,7 @@
   border: 1px solid var(--hb-kontur);
   flex: none;
 }
-.hb .hb-weiter-bild {
+:is(.hb, .spe) .hb-weiter-bild {
   width: 56px;
   height: 56px;
   border-radius: 12px;
@@ -361,22 +364,22 @@
   background-position: center;
   flex: none;
 }
-.hb .hb-weiter-text {
+:is(.hb, .spe) .hb-weiter-text {
   display: flex;
   flex-direction: column;
   gap: 1px;
   flex: 1;
   min-width: 0;
 }
-.hb .hb-weiter-text strong {
+:is(.hb, .spe) .hb-weiter-text strong {
   font-size: 17px;
   font-weight: 800;
 }
-.hb .hb-weiter-text > span:last-child {
+:is(.hb, .spe) .hb-weiter-text > span:last-child {
   font-size: 13px;
   color: var(--hb-leise);
 }
-.hb .hb-weiter-los {
+:is(.hb, .spe) .hb-weiter-los {
   width: 44px;
   height: 44px;
   border-radius: 12px;
@@ -389,7 +392,7 @@
 }
 
 /* Start: Spielkarten (112 pt breit, zweieinhalb sichtbar) */
-.hb .hb-reihe {
+:is(.hb, .spe) .hb-reihe {
   display: flex;
   gap: 8px;
   flex: none;
@@ -398,10 +401,10 @@
   margin: 0 -16px;
   padding: 0 16px;
 }
-.hb .hb-reihe::-webkit-scrollbar {
+:is(.hb, .spe) .hb-reihe::-webkit-scrollbar {
   display: none;
 }
-.hb .hb-sk {
+:is(.hb, .spe) .hb-sk {
   flex: none;
   width: 112px;
   border-radius: 16px;
@@ -411,20 +414,20 @@
   display: flex;
   flex-direction: column;
 }
-.hb .hb-sk-bild {
+:is(.hb, .spe) .hb-sk-bild {
   display: block;
   height: 98px;
   background-size: cover;
   background-position: center;
 }
-.hb .hb-sk strong {
+:is(.hb, .spe) .hb-sk strong {
   padding: 8px 10px 0;
   font: 400 16px var(--hb-anz);
 }
-.hb .hb-sk .hb-pk {
+:is(.hb, .spe) .hb-sk .hb-pk {
   padding: 3px 10px 10px;
 }
-.hb .hb-leer {
+:is(.hb, .spe) .hb-leer {
   width: 100%;
   min-height: 96px;
   border-radius: 16px;
@@ -436,7 +439,7 @@
 }
 
 /* Start: Knopf „Heute" (Aufgaben und Truhen liegen als Blatt dahinter) */
-.hb .hb-heute {
+:is(.hb, .spe) .hb-heute {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -449,24 +452,24 @@
   flex: none;
   margin-top: auto;
 }
-.hb .hb-heute img {
+:is(.hb, .spe) .hb-heute img {
   width: 44px;
   height: 44px;
   object-fit: contain;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
 }
-.hb .hb-heute-text {
+:is(.hb, .spe) .hb-heute-text {
   display: flex;
   flex-direction: column;
 }
-.hb .hb-heute-text strong {
+:is(.hb, .spe) .hb-heute-text strong {
   font: 400 18px/1.1 var(--hb-anz);
 }
-.hb .hb-heute-text span {
+:is(.hb, .spe) .hb-heute-text span {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-heute-bereit {
+:is(.hb, .spe) .hb-heute-bereit {
   margin-left: auto;
   font: 800 12px var(--hb-txt);
   color: var(--hb-grund);
@@ -474,7 +477,7 @@
   border-radius: 999px;
   padding: 3px 10px;
 }
-.hb .hb-heute-bereit + .hb-pf {
+:is(.hb, .spe) .hb-heute-bereit + .hb-pf {
   margin-left: 6px;
 }
 
@@ -581,12 +584,12 @@
 }
 
 /* ---------- Gemeinsame Bausteine der Unterseiten ---------- */
-.hb .hb-laden {
+:is(.hb, .spe) .hb-laden {
   padding: 24px 16px;
   color: var(--hb-leise);
   font: 700 14px var(--hb-txt);
 }
-.hb .hb-kopfzeile {
+:is(.hb, .spe) .hb-kopfzeile {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -594,28 +597,28 @@
   padding: 4px 16px 12px;
   flex: none;
 }
-.hb .hb-titel {
+:is(.hb, .spe) .hb-titel {
   margin: 0;
   font: 400 34px/1.05 var(--hb-anz);
 }
-.hb .hb-klein {
+:is(.hb, .spe) .hb-klein {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-klein b {
+:is(.hb, .spe) .hb-klein b {
   color: var(--hb-tinte);
 }
-.hb .hb-ab-zusatz {
+:is(.hb, .spe) .hb-ab-zusatz {
   margin-left: auto;
   font: 800 13px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-ab .hb-ic {
+:is(.hb, .spe) .hb-ab .hb-ic {
   width: 24px;
   height: 24px;
   color: var(--hb-gold);
 }
-.hb .hb-kn {
+:is(.hb, .spe) .hb-kn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -627,33 +630,33 @@
   white-space: nowrap;
   flex: none;
 }
-.hb .hb-kn.is-gold {
+:is(.hb, .spe) .hb-kn.is-gold {
   background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
   color: var(--hb-grund);
   box-shadow:
     inset 0 -4px 0 rgba(120, 70, 0, 0.35),
     0 4px 0 rgba(0, 0, 0, 0.3);
 }
-.hb .hb-kn.is-stimme {
+:is(.hb, .spe) .hb-kn.is-stimme {
   background: var(--hb-stimme);
   color: #fff;
   min-width: 96px;
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
 }
-.hb .hb-kn.is-stimme:disabled {
+:is(.hb, .spe) .hb-kn.is-stimme:disabled {
   background: var(--hb-karte-hoch);
   color: var(--hb-leise);
   box-shadow: none;
 }
-.hb .hb-kn.is-haupt {
+:is(.hb, .spe) .hb-kn.is-haupt {
   height: 52px;
   font-size: 18px;
   border-radius: 16px;
 }
-.hb .hb-kn.is-breit {
+:is(.hb, .spe) .hb-kn.is-breit {
   width: 100%;
 }
-.hb .hb-rund {
+:is(.hb, .spe) .hb-rund {
   position: relative;
   width: 44px;
   height: 44px;
@@ -665,7 +668,7 @@
   border: 1px solid rgba(255, 255, 255, 0.18);
   flex: none;
 }
-.hb .hb-liste {
+:is(.hb, .spe) .hb-liste {
   display: flex;
   flex-direction: column;
   border-radius: 18px;
@@ -673,12 +676,12 @@
   border: 1px solid var(--hb-kontur);
   overflow: hidden;
 }
-.hb .hb-liste-leer {
+:is(.hb, .spe) .hb-liste-leer {
   padding: 14px;
   margin: 0;
 }
 /* Bald ist lila (DESIGN.md: Lila = kommt bald) */
-.hb .hb-bald-marke {
+:is(.hb, .spe) .hb-bald-marke {
   flex: none;
   font: 800 12px var(--hb-txt);
   color: #1c0d3a;
@@ -688,12 +691,12 @@
 }
 
 /* ---------- Spiele (Hub) ---------- */
-.hb .hb-spiele {
+:is(.hb, .spe) .hb-spiele {
   height: 100%;
   display: flex;
   flex-direction: column;
 }
-.hb .hb-chips {
+:is(.hb, .spe) .hb-chips {
   display: flex;
   gap: 8px;
   padding: 4px 16px 12px;
@@ -701,10 +704,10 @@
   overflow-x: auto;
   scrollbar-width: none;
 }
-.hb .hb-chips::-webkit-scrollbar {
+:is(.hb, .spe) .hb-chips::-webkit-scrollbar {
   display: none;
 }
-.hb .hb-chip {
+:is(.hb, .spe) .hb-chip {
   position: relative;
   display: flex;
   align-items: center;
@@ -718,17 +721,17 @@
   flex: none;
 }
 /* 36 pt sichtbar, 44 pt Tippflaeche */
-.hb .hb-chip::after {
+:is(.hb, .spe) .hb-chip::after {
   content: '';
   position: absolute;
   inset: -4px 0;
 }
-.hb .hb-chip.is-an {
+:is(.hb, .spe) .hb-chip.is-an {
   background: var(--hb-gold);
   color: var(--hb-grund);
   border-color: transparent;
 }
-.hb .hb-spiele-rolle {
+:is(.hb, .spe) .hb-spiele-rolle {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -737,44 +740,44 @@
   flex-direction: column;
   gap: 20px;
 }
-.hb .hb-sk small {
+:is(.hb, .spe) .hb-sk small {
   padding: 3px 10px 10px;
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-party {
+:is(.hb, .spe) .hb-party {
   height: 150px;
 }
-.hb .hb-party::after,
-.hb .hb-quer::after {
+:is(.hb, .spe) .hb-party::after,
+:is(.hb, .spe) .hb-quer::after {
   /* Unter dem ganzen Textblock mindestens 0,85 Deckkraft (Apple-Pruefung) */
   background: linear-gradient(90deg, rgba(7, 19, 47, 0.92) 0, rgba(7, 19, 47, 0.86) 48%, rgba(7, 19, 47, 0.25) 78%, rgba(7, 19, 47, 0.05));
 }
-.hb .hb-quer::after {
+:is(.hb, .spe) .hb-quer::after {
   content: '';
   position: absolute;
   inset: 0;
 }
-.hb .hb-held-zeile {
+:is(.hb, .spe) .hb-held-zeile {
   flex-direction: row;
   align-items: flex-end;
   justify-content: space-between;
   gap: 10px;
 }
-.hb .hb-held-zeile > span:first-child {
+:is(.hb, .spe) .hb-held-zeile > span:first-child {
   display: flex;
   flex-direction: column;
   gap: 2px;
   text-align: left;
 }
-.hb .hb-held-titel {
+:is(.hb, .spe) .hb-held-titel {
   font: 400 26px/1 var(--hb-anz);
 }
-.hb .hb-held-zeile > span:first-child > span {
+:is(.hb, .spe) .hb-held-zeile > span:first-child > span {
   font-size: 13px;
   max-width: 200px;
 }
-.hb .hb-quer {
+:is(.hb, .spe) .hb-quer {
   position: relative;
   display: flex;
   align-items: flex-end;
@@ -788,25 +791,25 @@
   background-position: center;
   flex: none;
 }
-.hb .hb-quer > * {
+:is(.hb, .spe) .hb-quer > * {
   position: relative;
   z-index: 1;
 }
-.hb .hb-quer-text {
+:is(.hb, .spe) .hb-quer-text {
   display: flex;
   flex-direction: column;
   text-align: left;
 }
-.hb .hb-quer-text strong {
+:is(.hb, .spe) .hb-quer-text strong {
   font: 400 20px var(--hb-anz);
 }
-.hb .hb-quer-text span {
+:is(.hb, .spe) .hb-quer-text span {
   font-size: 13px;
 }
-.hb .hb-quer .hb-kn {
+:is(.hb, .spe) .hb-quer .hb-kn {
   min-width: 64px;
 }
-.hb .hb-bald {
+:is(.hb, .spe) .hb-bald {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -814,10 +817,10 @@
   padding-right: 12px;
   border-bottom: 1px solid rgba(53, 81, 140, 0.5);
 }
-.hb .hb-bald:last-child {
+:is(.hb, .spe) .hb-bald:last-child {
   border-bottom: 0;
 }
-.hb .hb-bald-flaeche {
+:is(.hb, .spe) .hb-bald-flaeche {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -825,7 +828,7 @@
   min-width: 0;
   min-height: 84px;
 }
-.hb .hb-bald-bild {
+:is(.hb, .spe) .hb-bald-bild {
   width: 84px;
   height: 84px;
   flex: none;
@@ -833,44 +836,44 @@
   background-position: center;
   filter: grayscale(0.35);
 }
-.hb .hb-bald-text {
+:is(.hb, .spe) .hb-bald-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
   text-align: left;
 }
-.hb .hb-bald-text strong {
+:is(.hb, .spe) .hb-bald-text strong {
   font: 400 18px var(--hb-anz);
 }
-.hb .hb-bald-text small {
+:is(.hb, .spe) .hb-bald-text small {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
 
 /* ---------- Spielseite ---------- */
-.hb .hb-spielseite {
+:is(.hb, .spe) .hb-spielseite {
   height: 100%;
   overflow-y: auto;
 }
-.hb .hb-sp-kopf {
+:is(.hb, .spe) .hb-sp-kopf {
   position: relative;
   height: 196px;
   background-size: cover;
   background-position: center 35%;
 }
-.hb .hb-sp-kopf::after {
+:is(.hb, .spe) .hb-sp-kopf::after {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, rgba(7, 19, 47, 0.6) 0, rgba(7, 19, 47, 0) 34%, var(--hb-grund) 98%);
 }
-.hb .hb-sp-kopf .hb-rund {
+:is(.hb, .spe) .hb-sp-kopf .hb-rund {
   position: absolute;
   top: 12px;
   left: 16px;
   z-index: 2;
 }
-.hb .hb-sp-inhalt {
+:is(.hb, .spe) .hb-sp-inhalt {
   position: relative;
   z-index: 2;
   margin-top: -40px;
@@ -879,15 +882,15 @@
   flex-direction: column;
   gap: 12px;
 }
-.hb .hb-sp-titel h1 {
+:is(.hb, .spe) .hb-sp-titel h1 {
   margin: 0;
   font: 400 30px/1 var(--hb-anz);
 }
-.hb .hb-sp-titel span {
+:is(.hb, .spe) .hb-sp-titel span {
   font-size: 13px;
   color: var(--hb-leise);
 }
-.hb .hb-sp-status {
+:is(.hb, .spe) .hb-sp-status {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -896,35 +899,35 @@
   background: var(--hb-karte);
   border: 1px solid rgba(245, 192, 46, 0.45);
 }
-.hb .hb-sp-zahl {
+:is(.hb, .spe) .hb-sp-zahl {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.hb .hb-sp-pokal {
+:is(.hb, .spe) .hb-sp-pokal {
   display: flex;
   align-items: center;
   gap: 8px;
   font: 400 34px/1 var(--hb-anz);
   color: var(--hb-gold);
 }
-.hb .hb-sp-pokal img {
+:is(.hb, .spe) .hb-sp-pokal img {
   width: 38px;
 }
-.hb .hb-sp-zahl .hb-klein {
+:is(.hb, .spe) .hb-sp-zahl .hb-klein {
   text-align: right;
 }
-.hb .hb-sp-anteil {
+:is(.hb, .spe) .hb-sp-anteil {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.hb .hb-sp-werte {
+:is(.hb, .spe) .hb-sp-werte {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-.hb .hb-sp-werte span {
+:is(.hb, .spe) .hb-sp-werte span {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -934,16 +937,16 @@
   font: 700 11px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-sp-werte b {
+:is(.hb, .spe) .hb-sp-werte b {
   font: 400 19px var(--hb-anz);
   color: var(--hb-tinte);
 }
-.hb .hb-mein {
+:is(.hb, .spe) .hb-mein {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
-.hb .hb-mn {
+:is(.hb, .spe) .hb-mn {
   position: relative;
   height: 104px;
   border-radius: 16px;
@@ -951,25 +954,25 @@
   background: var(--hb-karte);
   border: 1px solid var(--hb-kontur);
 }
-.hb .hb-mn-bild {
+:is(.hb, .spe) .hb-mn-bild {
   position: absolute;
   inset: 0;
   background-size: cover;
   background-position: center;
 }
-.hb .hb-mn.is-blatt .hb-mn-bild {
+:is(.hb, .spe) .hb-mn.is-blatt .hb-mn-bild {
   background-size: 52px auto;
   background-repeat: no-repeat;
   background-position: right 14px top 10px;
   background-color: #1d3470;
 }
-.hb .hb-mn::after {
+:is(.hb, .spe) .hb-mn::after {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(0deg, rgba(7, 19, 47, 0.92) 0, rgba(7, 19, 47, 0.86) 36%, rgba(7, 19, 47, 0) 64%);
 }
-.hb .hb-mn-text {
+:is(.hb, .spe) .hb-mn-text {
   position: absolute;
   left: 10px;
   bottom: 8px;
@@ -978,14 +981,14 @@
   flex-direction: column;
   text-align: left;
 }
-.hb .hb-mn-text small {
+:is(.hb, .spe) .hb-mn-text small {
   font: 700 11px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-mn-text strong {
+:is(.hb, .spe) .hb-mn-text strong {
   font-size: 15px;
 }
-.hb .hb-rl {
+:is(.hb, .spe) .hb-rl {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -993,24 +996,24 @@
   padding: 0 12px;
   border-bottom: 1px solid rgba(53, 81, 140, 0.5);
 }
-.hb .hb-rl:last-child {
+:is(.hb, .spe) .hb-rl:last-child {
   border: 0;
 }
-.hb .hb-rl.is-du {
+:is(.hb, .spe) .hb-rl.is-du {
   background: rgba(245, 192, 46, 0.1);
 }
-.hb .hb-rl-rang {
+:is(.hb, .spe) .hb-rl-rang {
   width: 30px;
   font: 400 17px var(--hb-anz);
   color: var(--hb-leise);
 }
-.hb .hb-rl strong {
+:is(.hb, .spe) .hb-rl strong {
   flex: 1;
   font-size: 15px;
 }
 
 /* Reiter ohne Kopf: Abstand zur Statusleiste selbst, die Spielseite läuft mit dem Banner darunter */
-.hb {
+:is(.hb, .spe) {
   --hb-oben: max(env(safe-area-inset-top, 0px), var(--hb-probe-oben, 0px));
 }
 .hb.is-ohne-kopf .hb-inhalt {
@@ -1020,12 +1023,12 @@
 .hb.is-ohne-kopf .hb-inhalt:has(.hb-spielseite) {
   padding-top: 0;
 }
-.hb .hb-sp-kopf .hb-rund {
+:is(.hb, .spe) .hb-sp-kopf .hb-rund {
   top: calc(var(--hb-oben) + 8px);
 }
 
 /* ---------- Trophäenweg (Vollbild, Layout von ChatGPT) ---------- */
-.hb .hb-voll {
+:is(.hb, .spe) .hb-voll {
   position: absolute;
   inset: 0;
   z-index: 40;
@@ -1034,7 +1037,7 @@
   background: #0a1734;
   overflow: hidden;
 }
-.hb .hb-voll-kopf {
+:is(.hb, .spe) .hb-voll-kopf {
   position: relative;
   z-index: 5;
   display: flex;
@@ -1044,34 +1047,34 @@
   padding: calc(var(--hb-oben) + 4px) 16px 8px;
   background: linear-gradient(180deg, #0a1734 72%, rgba(10, 23, 52, 0));
 }
-.hb .hb-voll-titel {
+:is(.hb, .spe) .hb-voll-titel {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
-.hb .hb-voll-titel h1 {
+:is(.hb, .spe) .hb-voll-titel h1 {
   margin: 0;
   font: 400 22px/1.1 var(--hb-anz);
 }
-.hb .hb-voll-titel span {
+:is(.hb, .spe) .hb-voll-titel span {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-pill.is-gross {
+:is(.hb, .spe) .hb-pill.is-gross {
   height: 40px;
   font-size: 16px;
   padding: 0 12px 0 6px;
 }
-.hb .hb-pill.is-gross img {
+:is(.hb, .spe) .hb-pill.is-gross img {
   width: 26px;
   height: 26px;
 }
-.hb .hb-weg-karte {
+:is(.hb, .spe) .hb-weg-karte {
   position: relative;
   flex: none;
   margin-top: -8px;
 }
-.hb .hb-weg-band {
+:is(.hb, .spe) .hb-weg-band {
   position: absolute;
   left: 0;
   right: 0;
@@ -1080,14 +1083,14 @@
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
   mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
 }
-.hb .hb-weg-nebel {
+:is(.hb, .spe) .hb-weg-nebel {
   position: absolute;
   inset: 0;
   background: linear-gradient(90deg, rgba(7, 19, 47, 0.45), rgba(7, 19, 47, 0) 30%, rgba(7, 19, 47, 0) 70%, rgba(7, 19, 47, 0.45));
   pointer-events: none;
 }
 /* Checkpoints zwischen den Stationen: Punkt auf dem Weg, Schild rechts daneben */
-.hb .hb-cp {
+:is(.hb, .spe) .hb-cp {
   position: absolute;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -1095,18 +1098,18 @@
   display: flex;
   align-items: center;
 }
-.hb .hb-cp i {
+:is(.hb, .spe) .hb-cp i {
   width: 16px;
   height: 16px;
   border-radius: 50%;
   background: #dfe6ff;
   border: 2px solid var(--hb-gesperrt);
 }
-.hb .hb-cp.is-ok i {
+:is(.hb, .spe) .hb-cp.is-ok i {
   background: var(--hb-gold);
   border-color: #fff;
 }
-.hb .hb-cp small {
+:is(.hb, .spe) .hb-cp small {
   position: absolute;
   /* Rechts vom Pinguin (72 pt breit), damit er kein Schild verdeckt */
   left: 40px;
@@ -1117,18 +1120,18 @@
   padding: 1px 8px;
   border-radius: 8px;
 }
-.hb .hb-cp.is-ok small {
+:is(.hb, .spe) .hb-cp.is-ok small {
   color: var(--hb-gold);
 }
 /* Station: Schild links, Punkt auf dem Weg, Belohnung rechts */
-.hb .hb-station {
+:is(.hb, .spe) .hb-station {
   position: absolute;
   left: 50%;
   z-index: 3;
   width: 0;
   transform: translateY(-50%);
 }
-.hb .hb-st-punkt {
+:is(.hb, .spe) .hb-st-punkt {
   position: absolute;
   left: -20px;
   top: -20px;
@@ -1141,15 +1144,15 @@
   border: 3px solid #fff;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 }
-.hb .hb-station.is-ok .hb-st-punkt {
+:is(.hb, .spe) .hb-station.is-ok .hb-st-punkt {
   background: var(--hb-gruen);
   color: #004d26;
 }
-.hb .hb-station.is-zu .hb-st-punkt {
+:is(.hb, .spe) .hb-station.is-zu .hb-st-punkt {
   background: var(--hb-gesperrt);
   color: #fff;
 }
-.hb .hb-st-schild {
+:is(.hb, .spe) .hb-st-schild {
   position: absolute;
   right: 30px;
   top: -27px;
@@ -1163,13 +1166,13 @@
   background: rgba(7, 19, 47, 0.9);
   border: 1px solid var(--hb-kontur);
 }
-.hb .hb-station.is-ok .hb-st-schild {
+:is(.hb, .spe) .hb-station.is-ok .hb-st-schild {
   border-color: rgba(72, 213, 107, 0.6);
 }
-.hb .hb-st-schild strong {
+:is(.hb, .spe) .hb-st-schild strong {
   font: 400 17px/1.1 var(--hb-anz);
 }
-.hb .hb-st-lohn {
+:is(.hb, .spe) .hb-st-lohn {
   position: absolute;
   left: 30px;
   top: -27px;
@@ -1183,26 +1186,26 @@
   background: rgba(40, 28, 6, 0.9);
   border: 1px solid rgba(245, 192, 46, 0.6);
 }
-.hb .hb-st-lohn img {
+:is(.hb, .spe) .hb-st-lohn img {
   width: 42px;
   height: 42px;
   object-fit: contain;
   flex: none;
 }
-.hb .hb-st-lohn > span {
+:is(.hb, .spe) .hb-st-lohn > span {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
-.hb .hb-st-lohn b {
+:is(.hb, .spe) .hb-st-lohn b {
   font: 800 13px var(--hb-txt);
   color: var(--hb-gold);
 }
-.hb .hb-st-lohn small {
+:is(.hb, .spe) .hb-st-lohn small {
   font: 700 11px/1.2 var(--hb-txt);
   color: var(--hb-tinte);
 }
-.hb .hb-st-lohn em {
+:is(.hb, .spe) .hb-st-lohn em {
   position: absolute;
   top: -10px;
   right: 8px;
@@ -1213,22 +1216,22 @@
   padding: 1px 7px;
   border-radius: 7px;
 }
-.hb .hb-st-lohn em.is-ok {
+:is(.hb, .spe) .hb-st-lohn em.is-ok {
   background: var(--hb-gruen);
   color: #004d26;
 }
 /* Holbar: die ganze Karte ist der Knopf (150 × 54 pt), „Holen" als goldene
    Marke daran — dieselbe Stelle, an der danach „Erhalten" steht. */
-.hb .hb-st-lohn.is-holbar {
+:is(.hb, .spe) .hb-st-lohn.is-holbar {
   border: 2px solid var(--hb-gold);
   box-shadow:
     0 0 16px rgba(245, 192, 46, 0.45),
     0 4px 0 rgba(0, 0, 0, 0.3);
 }
-.hb .hb-st-lohn.is-holbar:active {
+:is(.hb, .spe) .hb-st-lohn.is-holbar:active {
   transform: translateY(2px);
 }
-.hb .hb-st-lohn em.is-holen {
+:is(.hb, .spe) .hb-st-lohn em.is-holen {
   top: -12px;
   font-size: 12px;
   padding: 2px 10px;
@@ -1242,28 +1245,28 @@
    als weggezogener Finger und wurde verschluckt. Der Punkt bleibt auf dem
    Weg: 44 pt breite Zone um ihn, um deren halbe Breite verschoben.
    Zwei holbare Nachbarn überlappen sich — harmlos, beide geben dasselbe. */
-.hb .hb-cp.is-holbar {
+:is(.hb, .spe) .hb-cp.is-holbar {
   transform: translate(-22px, -50%);
   min-height: 44px;
   padding-right: 4px;
 }
-.hb .hb-cp.is-holbar i {
+:is(.hb, .spe) .hb-cp.is-holbar i {
   flex: none;
   margin: 0 14px;
 }
-.hb .hb-cp.is-holbar small {
+:is(.hb, .spe) .hb-cp.is-holbar small {
   position: static;
   margin-left: -4px;
   background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
   border-color: transparent;
   color: var(--hb-grund);
 }
-.hb .hb-cp.is-geholt small {
+:is(.hb, .spe) .hb-cp.is-geholt small {
   color: var(--hb-gruen);
 }
 /* Über 1.000: alle 250 eine Silbertruhe. Oben rechts über dem Sternenhafen,
    der einzige freie Fleck auf der Karte. */
-.hb .hb-weg-weiter {
+:is(.hb, .spe) .hb-weg-weiter {
   position: absolute;
   right: 16px;
   top: -6px;
@@ -1278,40 +1281,40 @@
   border: 1px solid var(--hb-kontur);
   font: 800 12px var(--hb-txt);
 }
-.hb .hb-weg-weiter img {
+:is(.hb, .spe) .hb-weg-weiter img {
   width: 24px;
   height: 24px;
   object-fit: contain;
 }
-.hb .hb-weg-weiter > span {
+:is(.hb, .spe) .hb-weg-weiter > span {
   display: flex;
   align-items: baseline;
   gap: 6px;
 }
-.hb .hb-weg-weiter small {
+:is(.hb, .spe) .hb-weg-weiter small {
   font: 700 11px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-weg-weiter.is-holbar {
+:is(.hb, .spe) .hb-weg-weiter.is-holbar {
   border-color: transparent;
   background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
   color: var(--hb-grund);
 }
-.hb .hb-weg-weiter.is-holbar small {
+:is(.hb, .spe) .hb-weg-weiter.is-holbar small {
   color: var(--hb-grund);
 }
-.hb .hb-weg-weiter.is-holbar::after {
+:is(.hb, .spe) .hb-weg-weiter.is-holbar::after {
   content: '';
   position: absolute;
   inset: -8px -2px;
 }
-.hb .hb-weg-fehler {
+:is(.hb, .spe) .hb-weg-fehler {
   position: relative;
   z-index: 6;
   margin: 0 16px 8px;
 }
 /* Die eigene Stelle: Pinguin auf goldenem Podest, Zahl daneben */
-.hb .hb-ich {
+:is(.hb, .spe) .hb-ich {
   position: absolute;
   left: 50%;
   z-index: 4;
@@ -1323,13 +1326,13 @@
   flex-direction: column;
   align-items: center;
 }
-.hb .hb-ich > img {
+:is(.hb, .spe) .hb-ich > img {
   width: 72px;
   position: relative;
   z-index: 1;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
 }
-.hb .hb-ich-podest {
+:is(.hb, .spe) .hb-ich-podest {
   width: 52px;
   height: 16px;
   margin-top: -10px;
@@ -1337,7 +1340,7 @@
   background: radial-gradient(var(--hb-gold-hell), var(--hb-gold-tief));
   box-shadow: 0 0 22px 6px rgba(245, 192, 46, 0.55);
 }
-.hb .hb-ich-zahl {
+:is(.hb, .spe) .hb-ich-zahl {
   position: absolute;
   right: 84px;
   top: 18px;
@@ -1350,13 +1353,13 @@
   padding: 5px 10px;
   border-radius: 12px;
 }
-.hb .hb-ich-zahl small {
+:is(.hb, .spe) .hb-ich-zahl small {
   font: 700 11px var(--hb-txt);
   color: var(--hb-tinte);
 }
 
 /* ---------- Blatt „Heute" (von unten, Apple: Griff, Wisch, Hintergrund, Knopf) ---------- */
-.hb .hb-blatt-grund {
+:is(.hb, .spe) .hb-blatt-grund {
   position: absolute;
   inset: 0;
   z-index: 45;
@@ -1365,7 +1368,7 @@
   flex-direction: column;
   justify-content: flex-end;
 }
-.hb .hb-blatt {
+:is(.hb, .spe) .hb-blatt {
   display: flex;
   flex-direction: column;
   max-height: calc(100% - var(--hb-oben) - 12px);
@@ -1375,7 +1378,7 @@
   box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.4);
   transition: transform 0.2s ease-out;
 }
-.hb .hb-blatt-griff {
+:is(.hb, .spe) .hb-blatt-griff {
   height: 24px;
   display: flex;
   align-items: center;
@@ -1383,31 +1386,31 @@
   flex: none;
   touch-action: none;
 }
-.hb .hb-blatt-griff span {
+:is(.hb, .spe) .hb-blatt-griff span {
   width: 36px;
   height: 5px;
   border-radius: 3px;
   background: var(--hb-leise);
   opacity: 0.7;
 }
-.hb .hb-blatt-kopf {
+:is(.hb, .spe) .hb-blatt-kopf {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px 8px;
   flex: none;
 }
-.hb .hb-blatt-rolle {
+:is(.hb, .spe) .hb-blatt-rolle {
   overflow-y: auto;
   padding: 4px 16px calc(24px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
-.hb .hb-blatt-rolle .hb-blk > .hb-klein {
+:is(.hb, .spe) .hb-blatt-rolle .hb-blk > .hb-klein {
   margin: 0;
 }
-.hb .hb-fehler {
+:is(.hb, .spe) .hb-fehler {
   margin: 0;
   padding: 10px 12px;
   border-radius: 12px;
@@ -1416,7 +1419,7 @@
   font: 700 14px var(--hb-txt);
 }
 /* Tagesaufgaben */
-.hb .hb-auf {
+:is(.hb, .spe) .hb-auf {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1424,38 +1427,38 @@
   padding: 8px 12px;
   border-bottom: 1px solid rgba(53, 81, 140, 0.5);
 }
-.hb .hb-auf:last-child {
+:is(.hb, .spe) .hb-auf:last-child {
   border-bottom: 0;
 }
-.hb .hb-auf.is-geholt {
+:is(.hb, .spe) .hb-auf.is-geholt {
   opacity: 0.6;
 }
-.hb .hb-auf-text {
+:is(.hb, .spe) .hb-auf-text {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 5px;
   min-width: 0;
 }
-.hb .hb-auf-text strong {
+:is(.hb, .spe) .hb-auf-text strong {
   font-size: 15px;
 }
-.hb .hb-auf-stand {
+:is(.hb, .spe) .hb-auf-stand {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.hb .hb-auf-stand .hb-balken {
+:is(.hb, .spe) .hb-auf-stand .hb-balken {
   flex: 1;
   height: 6px;
 }
-.hb .hb-auf-stand small {
+:is(.hb, .spe) .hb-auf-stand small {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
   min-width: 44px;
   text-align: right;
 }
-.hb .hb-auf-lohn {
+:is(.hb, .spe) .hb-auf-lohn {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1464,26 +1467,26 @@
   font: 800 14px var(--hb-txt);
   color: var(--hb-gold);
 }
-.hb .hb-auf.is-geholt .hb-auf-lohn {
+:is(.hb, .spe) .hb-auf.is-geholt .hb-auf-lohn {
   color: var(--hb-leise);
 }
-.hb .hb-auf-lohn img,
-.hb .hb-abholen img {
+:is(.hb, .spe) .hb-auf-lohn img,
+:is(.hb, .spe) .hb-abholen img {
   width: 18px;
   height: 18px;
 }
-.hb .hb-abholen {
+:is(.hb, .spe) .hb-abholen {
   min-width: 72px;
   padding: 0 10px;
   font-size: 14px;
 }
 /* Truhen: die ganze Karte ist der Knopf (Apple: kein Tippziel unter 44 pt) */
-.hb .hb-truhen {
+:is(.hb, .spe) .hb-truhen {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
-.hb .hb-tr {
+:is(.hb, .spe) .hb-tr {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1496,27 +1499,27 @@
   border: 1px solid var(--hb-kontur);
   text-align: center;
 }
-.hb .hb-tr img {
+:is(.hb, .spe) .hb-tr img {
   width: 56px;
   height: 56px;
   object-fit: contain;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
 }
-.hb .hb-tr strong {
+:is(.hb, .spe) .hb-tr strong {
   font-size: 12px;
 }
-.hb .hb-tr small {
+:is(.hb, .spe) .hb-tr small {
   font: 700 11px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-tr.is-offen {
+:is(.hb, .spe) .hb-tr.is-offen {
   border: 2px solid var(--hb-gold);
   box-shadow: 0 0 14px rgba(245, 192, 46, 0.35);
 }
-.hb .hb-tr.is-zu img {
+:is(.hb, .spe) .hb-tr.is-zu img {
   filter: grayscale(0.7) brightness(0.6);
 }
-.hb .hb-tr-knopf {
+:is(.hb, .spe) .hb-tr-knopf {
   margin-top: auto;
   font: 800 12px var(--hb-txt);
   background: var(--hb-gold);
@@ -1524,21 +1527,21 @@
   border-radius: 8px;
   padding: 3px 8px;
 }
-.hb .hb-tr-ok {
+:is(.hb, .spe) .hb-tr-ok {
   margin-top: auto;
   font: 800 12px var(--hb-txt);
   color: var(--hb-gruen);
 }
-.hb .hb-tr-zu {
+:is(.hb, .spe) .hb-tr-zu {
   margin-top: auto;
   color: var(--hb-leise);
 }
-.hb .hb-tr-zu .hb-ic {
+:is(.hb, .spe) .hb-tr-zu .hb-ic {
   width: 16px;
   height: 16px;
 }
 /* Zeile mit Pfeil (Rangliste) */
-.hb .hb-zeile {
+:is(.hb, .spe) .hb-zeile {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1550,23 +1553,23 @@
   border: 1px solid var(--hb-kontur);
   text-align: left;
 }
-.hb .hb-zeile > .hb-ic {
+:is(.hb, .spe) .hb-zeile > .hb-ic {
   color: var(--hb-gold);
 }
-.hb .hb-zeile > span:not(.hb-pf) {
+:is(.hb, .spe) .hb-zeile > span:not(.hb-pf) {
   display: flex;
   flex-direction: column;
 }
-.hb .hb-zeile strong {
+:is(.hb, .spe) .hb-zeile strong {
   font-size: 15px;
 }
-.hb .hb-zeile small {
+:is(.hb, .spe) .hb-zeile small {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
 
 /* ---------- Sammlung ---------- */
-.hb .hb-pinguin-held {
+:is(.hb, .spe) .hb-pinguin-held {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1575,33 +1578,33 @@
   background: linear-gradient(135deg, #2c4bb8, #172a66);
   flex: none;
 }
-.hb .hb-pinguin-held::after {
+:is(.hb, .spe) .hb-pinguin-held::after {
   display: none;
 }
-.hb .hb-ph-figur {
+:is(.hb, .spe) .hb-ph-figur {
   width: 128px;
   flex: none;
   display: flex;
   justify-content: center;
   filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4));
 }
-.hb .hb-ph-text {
+:is(.hb, .spe) .hb-ph-text {
   display: flex;
   flex-direction: column;
   gap: 6px;
   flex: 1;
   min-width: 0;
 }
-.hb .hb-ph-text > strong {
+:is(.hb, .spe) .hb-ph-text > strong {
   font: 400 20px/1 var(--hb-anz);
 }
-.hb .hb-plaetze {
+:is(.hb, .spe) .hb-plaetze {
   display: grid;
   grid-template-columns: repeat(6, 32px);
   gap: 4px;
 }
 /* 32 pt sichtbar; alle sechs führen in den Kleiderschrank (reine Anzeige mit Ziel) */
-.hb .hb-platz {
+:is(.hb, .spe) .hb-platz {
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -1611,28 +1614,28 @@
   align-items: center;
   justify-content: center;
 }
-.hb .hb-platz img {
+:is(.hb, .spe) .hb-platz img {
   width: 28px;
   height: 28px;
   object-fit: contain;
 }
-.hb .hb-platz .hb-ic {
+:is(.hb, .spe) .hb-platz .hb-ic {
   width: 18px;
   height: 18px;
   color: var(--hb-leise);
 }
 /* Belegter Platz: gold (was er trägt, sagt der Vorlesename) */
-.hb .hb-platz.is-an {
+:is(.hb, .spe) .hb-platz.is-an {
   border-color: var(--hb-gold);
   background: rgba(245, 192, 46, 0.14);
 }
-.hb .hb-platz.is-an .hb-ic {
+:is(.hb, .spe) .hb-platz.is-an .hb-ic {
   color: var(--hb-gold-hell);
 }
-.hb .hb-ph-text .hb-kn {
+:is(.hb, .spe) .hb-ph-text .hb-kn {
   align-self: flex-start;
 }
-.hb .hb-ding {
+:is(.hb, .spe) .hb-ding {
   flex: none;
   width: 100px;
   display: flex;
@@ -1640,14 +1643,14 @@
   gap: 2px;
   text-align: left;
 }
-.hb .hb-ding strong {
+:is(.hb, .spe) .hb-ding strong {
   font-size: 13px;
 }
-.hb .hb-ding small {
+:is(.hb, .spe) .hb-ding small {
   font: 700 11px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-ding-bild {
+:is(.hb, .spe) .hb-ding-bild {
   position: relative;
   height: 112px;
   border-radius: 14px;
@@ -1660,17 +1663,17 @@
   align-items: center;
   justify-content: center;
 }
-.hb .hb-ding-bild.is-blatt {
+:is(.hb, .spe) .hb-ding-bild.is-blatt {
   background-size: 62px auto;
   background-repeat: no-repeat;
 }
-.hb .hb-ding.is-aktiv .hb-ding-bild {
+:is(.hb, .spe) .hb-ding.is-aktiv .hb-ding-bild {
   border: 2px solid var(--hb-gold);
 }
-.hb .hb-ding.is-zu .hb-ding-bild {
+:is(.hb, .spe) .hb-ding.is-zu .hb-ding-bild {
   filter: brightness(0.45);
 }
-.hb .hb-ding-ok {
+:is(.hb, .spe) .hb-ding-ok {
   position: absolute;
   top: 6px;
   right: 6px;
@@ -1682,21 +1685,21 @@
   font: 800 13px/22px var(--hb-txt);
   text-align: center;
 }
-.hb .hb-ding-ok.is-gruen {
+:is(.hb, .spe) .hb-ding-ok.is-gruen {
   background: var(--hb-gruen);
   color: #004d26;
 }
-.hb .hb-ding-schloss .hb-ic {
+:is(.hb, .spe) .hb-ding-schloss .hb-ic {
   width: 36px;
   height: 36px;
   color: #fff;
 }
-.hb .hb-ding-mehr .hb-ding-bild {
+:is(.hb, .spe) .hb-ding-mehr .hb-ding-bild {
   background: transparent;
   border-style: dashed;
   color: var(--hb-gold);
 }
-.hb .hb-ding-mehr .hb-ic {
+:is(.hb, .spe) .hb-ding-mehr .hb-ic {
   width: 30px;
   height: 30px;
 }
@@ -1706,14 +1709,14 @@
 }
 
 /* ---------- Clan ---------- */
-.hb .hb-clan {
+:is(.hb, .spe) .hb-clan {
   height: 100%;
   overflow-y: auto;
 }
 .hb.is-ohne-kopf .hb-inhalt:has(.hb-clan) {
   padding-top: 0;
 }
-.hb .hb-clan-held {
+:is(.hb, .spe) .hb-clan-held {
   position: relative;
   min-height: 300px;
   padding: calc(var(--hb-oben) + 32px) 16px 12px;
@@ -1725,16 +1728,16 @@
   text-align: center;
   gap: 2px;
 }
-.hb .hb-clan-held::before {
+:is(.hb, .spe) .hb-clan-held::before {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, rgba(7, 19, 47, 0.6), rgba(14, 26, 61, 0.55) 50%, var(--hb-grund));
 }
-.hb .hb-clan-held > * {
+:is(.hb, .spe) .hb-clan-held > * {
   position: relative;
 }
-.hb .hb-clan-knoepfe {
+:is(.hb, .spe) .hb-clan-knoepfe {
   position: absolute;
   top: calc(var(--hb-oben) + 8px);
   right: 16px;
@@ -1742,7 +1745,7 @@
   gap: 12px;
   z-index: 3;
 }
-.hb .hb-badge {
+:is(.hb, .spe) .hb-badge {
   position: absolute;
   top: -3px;
   right: -3px;
@@ -1754,27 +1757,27 @@
   text-align: center;
   padding: 0 4px;
 }
-.hb .hb-wappen {
+:is(.hb, .spe) .hb-wappen {
   width: 72px;
   filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
 }
-.hb .hb-clan-held h1 {
+:is(.hb, .spe) .hb-clan-held h1 {
   margin: 0;
   font: 400 24px var(--hb-anz);
 }
-.hb .hb-clan-held > small {
+:is(.hb, .spe) .hb-clan-held > small {
   font-size: 13px;
   color: var(--hb-leise);
   font-style: italic;
 }
-.hb .hb-kz {
+:is(.hb, .spe) .hb-kz {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   width: 100%;
   margin-top: 12px;
 }
-.hb .hb-kz span {
+:is(.hb, .spe) .hb-kz span {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1787,17 +1790,17 @@
   font: 700 11px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-kz b {
+:is(.hb, .spe) .hb-kz b {
   font: 400 17px var(--hb-anz);
   color: var(--hb-tinte);
 }
-.hb .hb-clan-inhalt {
+:is(.hb, .spe) .hb-clan-inhalt {
   padding: 0 16px 32px;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.hb .hb-krieg {
+:is(.hb, .spe) .hb-krieg {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1808,67 +1811,67 @@
   border: 1px solid rgba(245, 192, 46, 0.45);
   text-align: left;
 }
-.hb .hb-kr-kopf {
+:is(.hb, .spe) .hb-kr-kopf {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
 }
-.hb .hb-kr-kopf strong {
+:is(.hb, .spe) .hb-kr-kopf strong {
   font: 400 18px var(--hb-anz);
 }
-.hb .hb-kr-kopf small {
+:is(.hb, .spe) .hb-kr-kopf small {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-kr-vs {
+:is(.hb, .spe) .hb-kr-vs {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.hb .hb-kr-seite {
+:is(.hb, .spe) .hb-kr-seite {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.hb .hb-kr-seite img {
+:is(.hb, .spe) .hb-kr-seite img {
   width: 46px;
 }
-.hb .hb-kr-seite b {
+:is(.hb, .spe) .hb-kr-seite b {
   font: 400 26px var(--hb-anz);
   color: var(--hb-gold);
 }
-.hb .hb-kr-seite small {
+:is(.hb, .spe) .hb-kr-seite small {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-kr-seite.is-gegner {
+:is(.hb, .spe) .hb-kr-seite.is-gegner {
   flex-direction: row-reverse;
 }
-.hb .hb-kr-seite.is-gegner b {
+:is(.hb, .spe) .hb-kr-seite.is-gegner b {
   color: #ff8a92;
 }
-.hb .hb-vs {
+:is(.hb, .spe) .hb-vs {
   font: 400 24px var(--hb-anz);
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
 }
-.hb .hb-kr-balken {
+:is(.hb, .spe) .hb-kr-balken {
   display: block;
   height: 10px;
   border-radius: 5px;
   background: var(--hb-rot);
   overflow: hidden;
 }
-.hb .hb-kr-balken span {
+:is(.hb, .spe) .hb-kr-balken span {
   display: block;
   height: 100%;
   background: linear-gradient(90deg, var(--hb-gold), var(--hb-eigen, #245fd7));
 }
-.hb .hb-kr-regel {
+:is(.hb, .spe) .hb-kr-regel {
   font: 700 11px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-kr-leer {
+:is(.hb, .spe) .hb-kr-leer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1876,15 +1879,15 @@
   font: 700 14px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-zeile-bild {
+:is(.hb, .spe) .hb-zeile-bild {
   width: 40px;
   height: 40px;
   object-fit: contain;
 }
-.hb .hb-zeile .hb-bald-marke {
+:is(.hb, .spe) .hb-zeile .hb-bald-marke {
   margin-left: auto;
 }
-.hb .hb-mg {
+:is(.hb, .spe) .hb-mg {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1894,36 +1897,36 @@
   border-bottom: 1px solid rgba(53, 81, 140, 0.5);
   text-align: left;
 }
-.hb .hb-mg:last-child {
+:is(.hb, .spe) .hb-mg:last-child {
   border-bottom: 0;
 }
-.hb .hb-mg.is-du {
+:is(.hb, .spe) .hb-mg.is-du {
   background: rgba(245, 192, 46, 0.1);
 }
-.hb .hb-mg > img {
+:is(.hb, .spe) .hb-mg > img {
   width: 34px;
   height: 34px;
   border-radius: 50%;
   background: var(--hb-karte-hoch);
   object-fit: cover;
 }
-.hb .hb-mg-name {
+:is(.hb, .spe) .hb-mg-name {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
-.hb .hb-mg-name strong {
+:is(.hb, .spe) .hb-mg-name strong {
   font-size: 15px;
 }
-.hb .hb-mg-name small {
+:is(.hb, .spe) .hb-mg-name small {
   font: 700 12px var(--hb-txt);
   color: var(--hb-gold);
 }
-.hb .hb-mg .hb-pk {
+:is(.hb, .spe) .hb-mg .hb-pk {
   font-size: 14px;
 }
-.hb .hb-leise-knopf {
+:is(.hb, .spe) .hb-leise-knopf {
   align-self: center;
   min-height: 44px;
   padding: 0 16px;
@@ -1932,16 +1935,16 @@
 }
 
 /* ---------- Shop: dieselben Tafeln und Kaufwege, im neuen Stil ---------- */
-.hb .hb-shop {
+:is(.hb, .spe) .hb-shop {
   height: 100%;
   display: flex;
   flex-direction: column;
 }
-.hb .hb-shop .hb-geld {
+:is(.hb, .spe) .hb-shop .hb-geld {
   display: flex;
   gap: 6px;
 }
-.hb .hb-shop-rolle {
+:is(.hb, .spe) .hb-shop-rolle {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -1951,42 +1954,42 @@
   gap: 20px;
 }
 /* Tafel: keine Holzkiste mehr, sondern Überschrift + Inhalt (wie jeder Abschnitt im Hub) */
-.hb .hb-shop .hub-tafel {
+:is(.hb, .spe) .hb-shop .hub-tafel {
   background: none;
   border: 0;
   box-shadow: none;
   border-radius: 0;
   overflow: visible;
 }
-.hb .hb-shop .hub-tafel-kopf {
+:is(.hb, .spe) .hb-shop .hub-tafel-kopf {
   background: none;
   border: 0;
   padding: 0 0 10px;
   align-items: center;
 }
-.hb .hb-shop .hub-tafel-kopf h2 {
+:is(.hb, .spe) .hb-shop .hub-tafel-kopf h2 {
   font: 400 20px/1 var(--hb-anz);
   letter-spacing: 0;
   text-transform: none;
   color: var(--hb-tinte);
   text-shadow: none;
 }
-.hb .hb-shop .hub-tafel-zusatz {
+:is(.hb, .spe) .hb-shop .hub-tafel-zusatz {
   font: 800 13px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-shop .hub-tafel-inhalt {
+:is(.hb, .spe) .hb-shop .hub-tafel-inhalt {
   padding: 0;
 }
-.hb .hb-shop .hub-reihe--drei,
-.hb .hb-shop .shop-ware {
+:is(.hb, .spe) .hb-shop .hub-reihe--drei,
+:is(.hb, .spe) .hb-shop .shop-ware {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 /* Ware: dunkle Karte, Bild, Name, Preis als Goldkontur (Apple-Prüfung, Regel 7) */
-.hb .hb-shop .hub-angebot,
-.hb .hb-shop .shop-ware-stueck {
+:is(.hb, .spe) .hb-shop .hub-angebot,
+:is(.hb, .spe) .hb-shop .shop-ware-stueck {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -2001,24 +2004,24 @@
   color: var(--hb-tinte);
   text-align: center;
 }
-.hb .hb-shop .hub-angebot > .hub-angebot-art,
-.hb .hb-shop .hub-angebot > img:first-child,
-.hb .hb-shop .shop-ware-stueck > img:first-child {
+:is(.hb, .spe) .hb-shop .hub-angebot > .hub-angebot-art,
+:is(.hb, .spe) .hb-shop .hub-angebot > img:first-child,
+:is(.hb, .spe) .hb-shop .shop-ware-stueck > img:first-child {
   width: 60px;
   height: 60px;
   object-fit: contain;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
 }
-.hb .hb-shop .hub-angebot strong {
+:is(.hb, .spe) .hb-shop .hub-angebot strong {
   font: 800 13px/1.2 var(--hb-txt);
 }
-.hb .hb-shop .shop-paket-inhalt,
-.hb .hb-shop .shop-ware-name {
+:is(.hb, .spe) .hb-shop .shop-paket-inhalt,
+:is(.hb, .spe) .hb-shop .shop-ware-name {
   font: 700 12px/1.2 var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-shop .hub-preis,
-.hb .hb-shop .shop-ware-preis {
+:is(.hb, .spe) .hb-shop .hub-preis,
+:is(.hb, .spe) .hb-shop .shop-ware-preis {
   margin-top: auto;
   display: inline-flex;
   align-items: center;
@@ -2032,31 +2035,31 @@
   color: var(--hb-gold);
   font-variant-numeric: tabular-nums;
 }
-.hb .hb-shop .shop-preis-muenze,
-.hb .hb-shop .shop-preis-stein {
+:is(.hb, .spe) .hb-shop .shop-preis-muenze,
+:is(.hb, .spe) .hb-shop .shop-preis-stein {
   width: 18px;
   height: 18px;
 }
-.hb .hb-shop .shop-bonus {
+:is(.hb, .spe) .hb-shop .shop-bonus {
   top: -8px;
   left: -4px;
   font: 800 11px var(--hb-txt);
   background: var(--hb-gruen);
   color: #004d26;
 }
-.hb .hb-shop .front-bald-tag {
+:is(.hb, .spe) .hb-shop .front-bald-tag {
   font: 800 11px var(--hb-txt);
   color: #1c0d3a;
   background: #b894ff;
 }
-.hb .hb-shop .shop-hinweis,
-.hb .hb-shop .hub-tafel .muted {
+:is(.hb, .spe) .hb-shop .shop-hinweis,
+:is(.hb, .spe) .hb-shop .hub-tafel .muted {
   margin: 8px 0 0;
   padding: 0;
   font: 700 12px/1.45 var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-shop .error {
+:is(.hb, .spe) .hb-shop .error {
   margin: 0;
   padding: 10px 12px;
   border-radius: 12px;
@@ -2066,18 +2069,18 @@
   font: 700 14px var(--hb-txt);
 }
 /* Wie im Entwurf: Truhen zuerst, dann Münzen und BroJetons */
-.hb .hb-shop-rolle > .error {
+:is(.hb, .spe) .hb-shop-rolle > .error {
   order: -2;
 }
-.hb .hb-shop-rolle > .hub-tafel:has(.shop-truhe) {
+:is(.hb, .spe) .hb-shop-rolle > .hub-tafel:has(.shop-truhe) {
   order: -1;
 }
-.hb .hb-shop-rolle > .hb-empfohlen {
+:is(.hb, .spe) .hb-shop-rolle > .hb-empfohlen {
   order: -2;
   height: 150px;
   background-position: center 20%;
 }
-.hb .hb-empfohlen .hb-kn img {
+:is(.hb, .spe) .hb-empfohlen .hb-kn img {
   width: 20px;
   height: 20px;
 }
@@ -2090,7 +2093,7 @@
 
 /* ---------- Bausteine ---------- */
 /* Karte: dunkle Fläche mit Kontur, wie Liste und Truhenkachel */
-.hb .hb-karte {
+:is(.hb, .spe) .hb-karte {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2099,77 +2102,77 @@
   background: var(--hb-karte);
   border: 1px solid var(--hb-kontur);
 }
-.hb .hb-text {
+:is(.hb, .spe) .hb-text {
   margin: 0;
   font: 600 15px/1.45 var(--hb-txt);
   color: var(--hb-tinte);
 }
-.hb .hb-ohne-rand {
+:is(.hb, .spe) .hb-ohne-rand {
   margin: 0;
 }
-.hb .hb-mitte {
+:is(.hb, .spe) .hb-mitte {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
   text-align: center;
 }
-.hb .hb-mitte-text {
+:is(.hb, .spe) .hb-mitte-text {
   text-align: center;
 }
 /* Zweitknopf: dunkel mit Kontur. Gefüllt in Gold ist nur der Hauptknopf. */
-.hb .hb-kn.is-zweit {
+:is(.hb, .spe) .hb-kn.is-zweit {
   background: var(--hb-karte-hoch);
   border: 1px solid var(--hb-kontur);
   color: var(--hb-tinte);
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
 }
 /* Goldkontur: wie die Preise im Regal — wertvoll, aber nicht der Hauptknopf */
-.hb .hb-kn.is-kontur {
+:is(.hb, .spe) .hb-kn.is-kontur {
   border: 1.5px solid var(--hb-gold);
   color: var(--hb-gold);
   background: rgba(245, 192, 46, 0.08);
 }
 /* Rot = Vorsicht (Konto löschen, Rauswerfen) */
-.hb .hb-kn.is-gefahr {
+:is(.hb, .spe) .hb-kn.is-gefahr {
   border: 1.5px solid var(--hb-rot);
   color: #ffb3b9;
   background: rgba(217, 75, 85, 0.12);
 }
 /* Klein im Aussehen, 44 pt Tippfläche bleiben (Apple HIG) */
-.hb .hb-kn.is-klein {
+:is(.hb, .spe) .hb-kn.is-klein {
   height: 36px;
   padding: 0 12px;
   font-size: 14px;
   position: relative;
 }
-.hb .hb-kn.is-klein::after {
+:is(.hb, .spe) .hb-kn.is-klein::after {
   content: '';
   position: absolute;
   inset: -4px 0;
 }
-.hb .hb-kn:disabled {
+:is(.hb, .spe) .hb-kn:disabled {
   opacity: 0.55;
 }
-.hb .hb-kn:not(:disabled):active {
+:is(.hb, .spe) .hb-kn:not(:disabled):active {
   transform: translateY(2px);
 }
-.hb .hb-kn-bild {
+:is(.hb, .spe) .hb-kn-bild {
   width: 22px;
   height: 22px;
   object-fit: contain;
 }
-.hb .hb-knopfreihe {
+:is(.hb, .spe) .hb-knopfreihe {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
-.hb .hb-knopfreihe > .hb-kn {
+:is(.hb, .spe) .hb-knopfreihe > .hb-kn {
   width: 100%;
   min-width: 0;
 }
 /* Eingabe: mindestens 16 px Schrift, sonst zoomt Safari beim Antippen hinein */
-.hb .hb-feld {
+:is(.hb, .spe) .hb-feld {
   width: 100%;
   height: 48px;
   padding: 0 14px;
@@ -2180,96 +2183,96 @@
   font: 600 16px var(--hb-txt);
   outline: none;
 }
-.hb .hb-feld::placeholder {
+:is(.hb, .spe) .hb-feld::placeholder {
   color: var(--hb-leise);
 }
-.hb .hb-feld:focus {
+:is(.hb, .spe) .hb-feld:focus {
   border-color: var(--hb-gold);
 }
-.hb .hb-feld:disabled {
+:is(.hb, .spe) .hb-feld:disabled {
   opacity: 0.7;
 }
-.hb .hb-feld.is-suche {
+:is(.hb, .spe) .hb-feld.is-suche {
   padding-left: 42px;
   background: var(--hb-grund-tief) no-repeat 14px center / 18px
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3b3dd' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E");
 }
-.hb .hb-suchzeile {
+:is(.hb, .spe) .hb-suchzeile {
   display: flex;
   gap: 8px;
 }
-.hb .hb-suchzeile .hb-kn {
+:is(.hb, .spe) .hb-suchzeile .hb-kn {
   height: 48px;
 }
-.hb .hb-chips.is-innen {
+:is(.hb, .spe) .hb-chips.is-innen {
   padding: 0;
   flex-wrap: wrap;
 }
-.hb .hb-chips--blatt {
+:is(.hb, .spe) .hb-chips--blatt {
   margin: 0 -16px;
   padding: 0 16px 4px;
 }
-.hb .hb-chip.is-belegt:not(.is-an) {
+:is(.hb, .spe) .hb-chip.is-belegt:not(.is-an) {
   border-color: var(--hb-gold);
 }
-.hb .hb-chip:disabled {
+:is(.hb, .spe) .hb-chip:disabled {
   opacity: 0.7;
 }
 
 /* Zeilen einer Liste: Namen, Wappen, kleine Knöpfe */
-.hb .hb-mg-name small.is-leise {
+:is(.hb, .spe) .hb-mg-name small.is-leise {
   color: var(--hb-leise);
 }
-.hb .hb-mg-knopf {
+:is(.hb, .spe) .hb-mg-knopf {
   align-self: stretch;
   justify-content: center;
   min-height: 56px;
   text-align: left;
 }
-.hb .hb-mg-knopf .hb-pk {
+:is(.hb, .spe) .hb-mg-knopf .hb-pk {
   font-size: 12px;
 }
-.hb .hb-mg-knoepfe {
+:is(.hb, .spe) .hb-mg-knoepfe {
   display: flex;
   gap: 6px;
   flex: none;
 }
-.hb .hb-mg > img.hb-mg-wappen,
-.hb .hb-mg > img.hb-mg-symbol {
+:is(.hb, .spe) .hb-mg > img.hb-mg-wappen,
+:is(.hb, .spe) .hb-mg > img.hb-mg-symbol {
   border-radius: 0;
   background: none;
   object-fit: contain;
 }
-.hb .hb-mg > img.hb-mg-wappen {
+:is(.hb, .spe) .hb-mg > img.hb-mg-wappen {
   width: 40px;
   height: 40px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
-.hb .hb-mg > img.hb-mg-symbol {
+:is(.hb, .spe) .hb-mg > img.hb-mg-symbol {
   width: 32px;
   height: 32px;
 }
-.hb .hb-mg > img.hb-mg-spiel {
+:is(.hb, .spe) .hb-mg > img.hb-mg-spiel {
   width: 40px;
   height: 40px;
   border-radius: 10px;
 }
-.hb .hb-mg .hb-pf {
+:is(.hb, .spe) .hb-mg .hb-pf {
   flex: none;
 }
-.hb .hb-mg .hb-bald-marke {
+:is(.hb, .spe) .hb-mg .hb-bald-marke {
   margin-left: auto;
 }
-.hb .hb-liste > .hb-liste-leer {
+:is(.hb, .spe) .hb-liste > .hb-liste-leer {
   margin: 0;
 }
-.hb ol.hb-liste,
-.hb ul.hb-liste {
+:is(.hb, .spe) ol.hb-liste,
+:is(.hb, .spe) ul.hb-liste {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.hb .hb-rl-name {
+:is(.hb, .spe) .hb-rl-name {
   flex: 1;
   min-width: 0;
   min-height: 44px;
@@ -2279,12 +2282,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.hb .hb-leise-knopf:disabled {
+:is(.hb, .spe) .hb-leise-knopf:disabled {
   opacity: 0.55;
 }
 
 /* Kopfzeile mit Zurück-Knopf (Unterseiten im selben Reiter) */
-.hb .hb-kopfzeile.is-zurueck {
+:is(.hb, .spe) .hb-kopfzeile.is-zurueck {
   justify-content: flex-start;
 }
 .hb .hb-kopf-titel {
@@ -2300,7 +2303,7 @@
   color: var(--hb-leise);
 }
 /* Hauptknopf, der unten mitläuft, solange die Liste darüber rollt */
-.hb .hb-fuss-haftend {
+:is(.hb, .spe) .hb-fuss-haftend {
   position: sticky;
   bottom: 0;
   padding: 12px 0 4px;
@@ -2308,26 +2311,26 @@
 }
 
 /* ---------- Blätter (HbBlatt) ---------- */
-.hb .hb-blatt-titel {
+:is(.hb, .spe) .hb-blatt-titel {
   font-size: 30px;
   overflow-wrap: anywhere;
   padding-right: 12px;
 }
-.hb .hb-blatt.is-klein .hb-blatt-rolle {
+:is(.hb, .spe) .hb-blatt.is-klein .hb-blatt-rolle {
   gap: 14px;
 }
-.hb .hb-bald-zeichen {
+:is(.hb, .spe) .hb-bald-zeichen {
   font-size: 56px;
   line-height: 1;
 }
-.hb .hb-kauf-bild {
+:is(.hb, .spe) .hb-kauf-bild {
   width: 112px;
   height: 112px;
   object-fit: contain;
   filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45));
 }
 /* Tische und Blätter sind Bilder mit Fläche, keine freigestellten Dinge */
-.hb .hb-kauf-bild.is-ware {
+:is(.hb, .spe) .hb-kauf-bild.is-ware {
   width: 100%;
   height: 150px;
   object-fit: cover;
@@ -2335,7 +2338,7 @@
   border: 1px solid var(--hb-kontur);
   filter: none;
 }
-.hb .hb-kauf-preis {
+:is(.hb, .spe) .hb-kauf-preis {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2344,33 +2347,33 @@
   font: 400 20px var(--hb-anz);
   color: var(--hb-gold);
 }
-.hb .hb-kauf-preis img {
+:is(.hb, .spe) .hb-kauf-preis img {
   width: 26px;
   height: 26px;
 }
-.hb .hb-kauf-form {
+:is(.hb, .spe) .hb-kauf-form {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
 /* ---------- Profil ---------- */
-.hb .hb-profil {
+:is(.hb, .spe) .hb-profil {
   min-height: 100%;
 }
-.hb .hb-profil-inhalt {
+:is(.hb, .spe) .hb-profil-inhalt {
   padding: 0 16px 32px;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
-.hb .hb-profilkopf {
+:is(.hb, .spe) .hb-profilkopf {
   flex-direction: row;
   align-items: center;
   gap: 12px;
 }
 /* Das Profilbild behält Upload und Stift, nur Form und Farbe sind neu */
-.hb .hub-profilbild {
+:is(.hb, .spe) .hub-profilbild {
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -2381,7 +2384,7 @@
   align-items: flex-end;
   justify-content: center;
 }
-.hb .hub-profilbild-stift {
+:is(.hb, .spe) .hub-profilbild-stift {
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -2389,22 +2392,22 @@
   background: var(--hb-gold);
   color: var(--hb-grund);
 }
-.hb .hb-profilkopf-text {
+:is(.hb, .spe) .hb-profilkopf-text {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.hb .hb-profilkopf-text strong {
+:is(.hb, .spe) .hb-profilkopf-text strong {
   font: 400 22px/1.1 var(--hb-anz);
   overflow-wrap: anywhere;
 }
-.hb .hb-profilkopf-text small {
+:is(.hb, .spe) .hb-profilkopf-text small {
   font: 700 13px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-stufe {
+:is(.hb, .spe) .hb-stufe {
   flex: none;
   min-width: 44px;
   height: 44px;
@@ -2417,7 +2420,7 @@
   color: var(--hb-grund);
   font: 400 22px var(--hb-anz);
 }
-.hb .hb-stufenbalken {
+:is(.hb, .spe) .hb-stufenbalken {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -2425,59 +2428,59 @@
   width: 100%;
   text-align: left;
 }
-.hb .hb-stufenbalken-kopf {
+:is(.hb, .spe) .hb-stufenbalken-kopf {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
-.hb .hb-stufenbalken-kopf strong {
+:is(.hb, .spe) .hb-stufenbalken-kopf strong {
   font: 400 20px var(--hb-anz);
 }
-.hb .hb-stufenbalken-kopf small,
-.hb .hb-stufenbalken-zahl {
+:is(.hb, .spe) .hb-stufenbalken-kopf small,
+:is(.hb, .spe) .hb-stufenbalken-zahl {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-stufenbalken > * {
+:is(.hb, .spe) .hb-stufenbalken > * {
   grid-column: 1;
 }
-.hb .hb-stufenbalken > .hb-pf {
+:is(.hb, .spe) .hb-stufenbalken > .hb-pf {
   grid-column: 2;
   grid-row: 1 / 4;
 }
-.hb .hb-geburtstag {
+:is(.hb, .spe) .hb-geburtstag {
   flex-direction: row;
   align-items: center;
   gap: 12px;
 }
-.hb .hb-geburtstag.is-heute {
+:is(.hb, .spe) .hb-geburtstag.is-heute {
   border: 2px solid var(--hb-gold);
   box-shadow: 0 0 14px rgba(245, 192, 46, 0.35);
 }
-.hb .hb-geburtstag > img {
+:is(.hb, .spe) .hb-geburtstag > img {
   width: 72px;
   height: 72px;
   object-fit: contain;
   flex: none;
 }
-.hb .hb-geburtstag-text {
+:is(.hb, .spe) .hb-geburtstag-text {
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 0;
 }
-.hb .hb-geburtstag-text strong {
+:is(.hb, .spe) .hb-geburtstag-text strong {
   font: 400 17px var(--hb-anz);
 }
-.hb .hb-geburtstag-text small {
+:is(.hb, .spe) .hb-geburtstag-text small {
   font: 700 13px/1.35 var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-geburtstag-text .hb-kn {
+:is(.hb, .spe) .hb-geburtstag-text .hb-kn {
   align-self: flex-start;
 }
-.hb .hb-figur {
+:is(.hb, .spe) .hb-figur {
   position: relative;
   display: block;
   width: 100%;
@@ -2488,16 +2491,16 @@
   border: 1px solid var(--hb-kontur);
   touch-action: manipulation;
 }
-.hb .hb-figur canvas {
+:is(.hb, .spe) .hb-figur canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
 }
-.hb .hb-figur > .pinguin {
+:is(.hb, .spe) .hb-figur > .pinguin {
   display: block;
   margin: 16px auto 0;
 }
-.hb .hb-figur-stift {
+:is(.hb, .spe) .hb-figur-stift {
   position: absolute;
   right: 10px;
   bottom: 10px;
@@ -2510,12 +2513,12 @@
   background: var(--hb-gold);
   color: var(--hb-grund);
 }
-.hb .hb-einstiege {
+:is(.hb, .spe) .hb-einstiege {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-.hb .hb-einstieg {
+:is(.hb, .spe) .hb-einstieg {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -2530,39 +2533,39 @@
   font: 800 13px var(--hb-txt);
   text-align: center;
 }
-.hb .hb-einstieg img {
+:is(.hb, .spe) .hb-einstieg img {
   width: 44px;
   height: 44px;
   object-fit: contain;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
 }
-.hb .hb-einstieg .hb-tab-punkt {
+:is(.hb, .spe) .hb-einstieg .hb-tab-punkt {
   top: 8px;
   right: 8px;
 }
-.hb .hb-trophaeen {
+:is(.hb, .spe) .hb-trophaeen {
   align-items: center;
   text-align: center;
   gap: 4px;
 }
-.hb .hb-trophaeen-zahl {
+:is(.hb, .spe) .hb-trophaeen-zahl {
   display: flex;
   align-items: center;
   gap: 8px;
   font: 400 34px/1 var(--hb-anz);
   color: var(--hb-gold);
 }
-.hb .hb-trophaeen-zahl img {
+:is(.hb, .spe) .hb-trophaeen-zahl img {
   width: 40px;
   height: 40px;
   object-fit: contain;
 }
-.hb .hb-sp-werte.is-vier {
+:is(.hb, .spe) .hb-sp-werte.is-vier {
   grid-template-columns: repeat(4, 1fr);
   width: 100%;
   margin-top: 8px;
 }
-.hb .rechtliches {
+:is(.hb, .spe) .rechtliches {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2571,7 +2574,7 @@
   font: 700 13px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .rechtliches a {
+:is(.hb, .spe) .rechtliches a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -2582,7 +2585,7 @@
 }
 
 /* ---------- Vollbilder (Kleiderschrank, Stufen) ---------- */
-.hb .hb-voll-rolle {
+:is(.hb, .spe) .hb-voll-rolle {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -2592,7 +2595,7 @@
   flex-direction: column;
   gap: 16px;
 }
-.hb .hb-schrank-buehne {
+:is(.hb, .spe) .hb-schrank-buehne {
   position: relative;
   flex: none;
   display: flex;
@@ -2603,7 +2606,7 @@
   background: linear-gradient(135deg, #2c4bb8, #172a66);
   border: 1px solid var(--hb-kontur);
 }
-.hb .hb-schrank-probe {
+:is(.hb, .spe) .hb-schrank-probe {
   position: absolute;
   top: 10px;
   left: 10px;
@@ -2613,18 +2616,18 @@
   border-radius: 999px;
   padding: 4px 10px;
 }
-.hb .hb-schrank .hb-chips {
+:is(.hb, .spe) .hb-schrank .hb-chips {
   padding-bottom: 8px;
 }
-.hb .hb-raster {
+:is(.hb, .spe) .hb-raster {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
-.hb .hb-raster.is-drei {
+:is(.hb, .spe) .hb-raster.is-drei {
   grid-template-columns: repeat(3, 1fr);
 }
-.hb .hb-stueck {
+:is(.hb, .spe) .hb-stueck {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -2637,31 +2640,31 @@
   border: 1px solid var(--hb-kontur);
   text-align: center;
 }
-.hb .hb-stueck strong {
+:is(.hb, .spe) .hb-stueck strong {
   font: 800 13px/1.2 var(--hb-txt);
 }
-.hb .hb-stueck small {
+:is(.hb, .spe) .hb-stueck small {
   margin-top: auto;
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-stueck.is-aktiv {
+:is(.hb, .spe) .hb-stueck.is-aktiv {
   border: 2px solid var(--hb-gold);
 }
-.hb .hb-stueck.is-fremd small {
+:is(.hb, .spe) .hb-stueck.is-fremd small {
   color: var(--hb-gold);
 }
-.hb .hb-stueck-schloss {
+:is(.hb, .spe) .hb-stueck-schloss {
   position: absolute;
   top: 6px;
   right: 6px;
   color: var(--hb-leise);
 }
-.hb .hb-stueck-schloss .hb-ic {
+:is(.hb, .spe) .hb-stueck-schloss .hb-ic {
   width: 16px;
   height: 16px;
 }
-.hb .hb-stufe-zeile {
+:is(.hb, .spe) .hb-stufe-zeile {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2669,13 +2672,13 @@
   padding: 0 12px;
   border-bottom: 1px solid rgba(53, 81, 140, 0.5);
 }
-.hb .hb-stufe-zeile:last-child {
+:is(.hb, .spe) .hb-stufe-zeile:last-child {
   border-bottom: 0;
 }
-.hb .hb-stufe-zeile.is-hier {
+:is(.hb, .spe) .hb-stufe-zeile.is-hier {
   background: rgba(245, 192, 46, 0.1);
 }
-.hb .hb-stufe-marke {
+:is(.hb, .spe) .hb-stufe-marke {
   width: 36px;
   height: 36px;
   flex: none;
@@ -2688,16 +2691,16 @@
   color: var(--hb-leise);
   border: 2px solid var(--hb-kontur);
 }
-.hb .hb-stufe-zeile.is-an .hb-stufe-marke {
+:is(.hb, .spe) .hb-stufe-zeile.is-an .hb-stufe-marke {
   background: var(--hb-gruen);
   border-color: #fff;
   color: #004d26;
 }
-.hb .hb-stufe-zeile.is-hier .hb-stufe-marke {
+:is(.hb, .spe) .hb-stufe-zeile.is-hier .hb-stufe-marke {
   background: var(--hb-gold);
   color: var(--hb-grund);
 }
-.hb .hb-stufe-hier {
+:is(.hb, .spe) .hb-stufe-hier {
   flex: none;
   font: 800 12px var(--hb-txt);
   color: var(--hb-grund);
@@ -2707,24 +2710,24 @@
 }
 
 /* ---------- Sammlung: „Alles ›" (Blatt, Rückseite, Tisch) ---------- */
-.hb .hb-wahl {
+:is(.hb, .spe) .hb-wahl {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
   text-align: left;
 }
-.hb .hb-wahl strong {
+:is(.hb, .spe) .hb-wahl strong {
   font-size: 14px;
 }
-.hb .hb-wahl small {
+:is(.hb, .spe) .hb-wahl small {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-wahl.is-zu small {
+:is(.hb, .spe) .hb-wahl.is-zu small {
   color: var(--hb-gold);
 }
-.hb .hb-wahl-bild {
+:is(.hb, .spe) .hb-wahl-bild {
   position: relative;
   display: flex;
   align-items: center;
@@ -2738,20 +2741,20 @@
   border: 1px solid var(--hb-kontur);
   overflow: hidden;
 }
-.hb .hb-wahl.is-aktiv .hb-wahl-bild {
+:is(.hb, .spe) .hb-wahl.is-aktiv .hb-wahl-bild {
   border: 2px solid var(--hb-gold);
 }
-.hb .hb-wahl.is-zu .hb-wahl-karten {
+:is(.hb, .spe) .hb-wahl.is-zu .hb-wahl-karten {
   filter: brightness(0.55);
 }
-.hb .hb-wahl-karten {
+:is(.hb, .spe) .hb-wahl-karten {
   display: flex;
 }
-.hb .hb-wahl-karten > * + * {
+:is(.hb, .spe) .hb-wahl-karten > * + * {
   margin-left: -14px;
 }
-.hb .hb-wahl-karten .card-img,
-.hb .hb-wahl-karten .card {
+:is(.hb, .spe) .hb-wahl-karten .card-img,
+:is(.hb, .spe) .hb-wahl-karten .card {
   display: grid;
   place-items: center;
   width: 46px;
@@ -2762,21 +2765,21 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
   font-size: 15px;
 }
-.hb .hb-wahl-karten.is-tisch .card-img,
-.hb .hb-wahl-karten.is-tisch .card {
+:is(.hb, .spe) .hb-wahl-karten.is-tisch .card-img,
+:is(.hb, .spe) .hb-wahl-karten.is-tisch .card {
   width: 38px;
   height: 55px;
 }
-.hb .hb-wahl .hb-ding-schloss {
+:is(.hb, .spe) .hb-wahl .hb-ding-schloss {
   position: absolute;
 }
-.hb .hb-ding-bild.is-ruecken {
+:is(.hb, .spe) .hb-ding-bild.is-ruecken {
   background-size: 60px auto;
   background-repeat: no-repeat;
 }
 
 /* Große Vorschau über den ganzen Bildschirm */
-.hb .hb-vorschau {
+:is(.hb, .spe) .hb-vorschau {
   position: absolute;
   inset: 0;
   z-index: 50;
@@ -2785,7 +2788,7 @@
   background: var(--hb-nacht);
   overflow: hidden;
 }
-.hb .hb-vorschau-bg {
+:is(.hb, .spe) .hb-vorschau-bg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -2793,7 +2796,7 @@
   object-fit: cover;
 }
 /* Unter dem Text mindestens 0,85 Deckkraft (DESIGN.md: Text auf Bildern) */
-.hb .hb-vorschau-kopf {
+:is(.hb, .spe) .hb-vorschau-kopf {
   position: relative;
   z-index: 2;
   display: flex;
@@ -2803,31 +2806,31 @@
   background: rgba(7, 19, 47, 0.88);
   border-bottom: 1px solid var(--hb-kontur);
 }
-.hb .hb-vorschau-titel {
+:is(.hb, .spe) .hb-vorschau-titel {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
-.hb .hb-vorschau-titel strong {
+:is(.hb, .spe) .hb-vorschau-titel strong {
   font: 400 20px/1.1 var(--hb-anz);
 }
-.hb .hb-vorschau-tisch {
+:is(.hb, .spe) .hb-vorschau-tisch {
   position: relative;
   flex: 1;
   z-index: 1;
 }
-.hb .hb-vorschau-tisch .hub-vorschau-gegner {
+:is(.hb, .spe) .hb-vorschau-tisch .hub-vorschau-gegner {
   top: 16px;
 }
-.hb .hb-vorschau-tisch .hub-vorschau-stich {
+:is(.hb, .spe) .hb-vorschau-tisch .hub-vorschau-stich {
   top: 44%;
 }
-.hb .hb-vorschau-tisch .hub-vorschau-hand {
+:is(.hb, .spe) .hb-vorschau-tisch .hub-vorschau-hand {
   bottom: 12px;
 }
-.hb .hb-vorschau-fuss {
+:is(.hb, .spe) .hb-vorschau-fuss {
   position: relative;
   z-index: 2;
   padding: 12px 16px max(12px, env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px));
@@ -2836,29 +2839,29 @@
 }
 
 /* ---------- Clan ohne Clan: Suche und Gründen ---------- */
-.hb .hb-clan-held.is-kurz {
+:is(.hb, .spe) .hb-clan-held.is-kurz {
   min-height: 0;
   padding-bottom: 20px;
 }
-.hb .hb-clan-held.is-kurz > h1 {
+:is(.hb, .spe) .hb-clan-held.is-kurz > h1 {
   font-size: 30px;
 }
-.hb .hb-clan-held.is-kurz > small {
+:is(.hb, .spe) .hb-clan-held.is-kurz > small {
   font-style: normal;
   max-width: 280px;
 }
-.hb .hb-clan-zurueck {
+:is(.hb, .spe) .hb-clan-zurueck {
   position: absolute;
   top: calc(var(--hb-oben) + 8px);
   left: 16px;
   z-index: 3;
 }
-.hb .hb-felder {
+:is(.hb, .spe) .hb-felder {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
-.hb .hb-feldzeile {
+:is(.hb, .spe) .hb-feldzeile {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -2867,27 +2870,27 @@
   border: 0;
   min-width: 0;
 }
-.hb .hb-feldzeile > span,
-.hb .hb-feldzeile > legend {
+:is(.hb, .spe) .hb-feldzeile > span,
+:is(.hb, .spe) .hb-feldzeile > legend {
   padding: 0;
   font: 800 11px var(--hb-txt);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--hb-gold);
 }
-.hb .hb-feldzeile > legend {
+:is(.hb, .spe) .hb-feldzeile > legend {
   margin-bottom: 6px;
 }
-.hb .hb-feldzeile > small {
+:is(.hb, .spe) .hb-feldzeile > small {
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-wappenraster {
+:is(.hb, .spe) .hb-wappenraster {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 6px;
 }
-.hb .hb-wappenknopf {
+:is(.hb, .spe) .hb-wappenknopf {
   position: relative;
   aspect-ratio: 1;
   min-height: 44px;
@@ -2898,62 +2901,62 @@
   background: var(--hb-karte);
   border: 1px solid var(--hb-kontur);
 }
-.hb .hb-wappenknopf img {
+:is(.hb, .spe) .hb-wappenknopf img {
   width: 78%;
   height: 78%;
   object-fit: contain;
 }
-.hb .hb-wappenknopf.is-an {
+:is(.hb, .spe) .hb-wappenknopf.is-an {
   border: 2px solid var(--hb-gold);
   background: rgba(245, 192, 46, 0.14);
 }
-.hb .hb-wappenknopf.is-zu img {
+:is(.hb, .spe) .hb-wappenknopf.is-zu img {
   filter: grayscale(0.7) brightness(0.5);
 }
-.hb .hb-wappen-schloss {
+:is(.hb, .spe) .hb-wappen-schloss {
   position: absolute;
   color: #fff;
 }
-.hb .hb-wappen-schloss .hb-ic {
+:is(.hb, .spe) .hb-wappen-schloss .hb-ic {
   width: 18px;
   height: 18px;
 }
 
 /* ---------- Clankrieg (Vollbild im Reiter) ---------- */
-.hb .hb-krieg.is-gross {
+:is(.hb, .spe) .hb-krieg.is-gross {
   gap: 12px;
   padding: 16px;
 }
 /* Groß steht jede Seite als Spalte: Wappen, Zahl, Name. In einer Zeile
    schob der Name das gegnerische Wappen über den Rand. */
-.hb .hb-krieg.is-gross .hb-kr-seite,
-.hb .hb-krieg.is-gross .hb-kr-seite.is-gegner {
+:is(.hb, .spe) .hb-krieg.is-gross .hb-kr-seite,
+:is(.hb, .spe) .hb-krieg.is-gross .hb-kr-seite.is-gegner {
   flex: 1;
   min-width: 0;
   flex-direction: column;
   gap: 2px;
 }
-.hb .hb-krieg.is-gross .hb-kr-seite img {
+:is(.hb, .spe) .hb-krieg.is-gross .hb-kr-seite img {
   width: 56px;
 }
-.hb .hb-krieg.is-gross .hb-kr-seite b {
+:is(.hb, .spe) .hb-krieg.is-gross .hb-kr-seite b {
   font-size: 30px;
 }
-.hb .hb-krieg.is-gross .hb-kr-seite small {
+:is(.hb, .spe) .hb-krieg.is-gross .hb-kr-seite small {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.hb .hb-kr-punkte {
+:is(.hb, .spe) .hb-kr-punkte {
   font: 400 20px var(--hb-anz);
   color: var(--hb-gold);
 }
-.hb .hb-warten {
+:is(.hb, .spe) .hb-warten {
   align-items: center;
   text-align: center;
 }
-.hb .hb-warten-punkt {
+:is(.hb, .spe) .hb-warten-punkt {
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -2966,55 +2969,55 @@
     box-shadow: 0 0 0 12px rgba(245, 192, 46, 0);
   }
 }
-.hb .hb-kr-anfrage {
+:is(.hb, .spe) .hb-kr-anfrage {
   border: 2px solid var(--hb-gold);
 }
-.hb .hb-kr-anfrage-kopf {
+:is(.hb, .spe) .hb-kr-anfrage-kopf {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.hb .hb-kr-anfrage-kopf img {
+:is(.hb, .spe) .hb-kr-anfrage-kopf img {
   width: 48px;
 }
-.hb .hb-kr-anfrage-kopf > span {
+:is(.hb, .spe) .hb-kr-anfrage-kopf > span {
   display: flex;
   flex-direction: column;
 }
-.hb .hb-kr-anfrage-kopf strong {
+:is(.hb, .spe) .hb-kr-anfrage-kopf strong {
   font: 400 18px var(--hb-anz);
 }
-.hb .hb-kr-anfrage-kopf small {
+:is(.hb, .spe) .hb-kr-anfrage-kopf small {
   font: 700 13px var(--hb-txt);
   color: var(--hb-leise);
 }
-.hb .hb-kr-start {
+:is(.hb, .spe) .hb-kr-start {
   align-items: center;
   text-align: center;
 }
-.hb .hb-kr-start > img {
+:is(.hb, .spe) .hb-kr-start > img {
   width: 72px;
   height: 72px;
   object-fit: contain;
 }
-.hb .hb-regelliste {
+:is(.hb, .spe) .hb-regelliste {
   margin: 0;
   padding: 14px 14px 14px 32px;
   gap: 8px;
   font: 600 14px/1.45 var(--hb-txt);
 }
-.hb .hb-regelliste b {
+:is(.hb, .spe) .hb-regelliste b {
   color: var(--hb-gold);
 }
-.hb .hb-kr-letzter {
+:is(.hb, .spe) .hb-kr-letzter {
   margin: 0;
   font: 600 15px var(--hb-txt);
   display: block;
 }
-.hb .hb-kr-letzter.is-wir strong {
+:is(.hb, .spe) .hb-kr-letzter.is-wir strong {
   color: var(--hb-gruen);
 }
-.hb .hb-kr-letzter.is-gegner strong {
+:is(.hb, .spe) .hb-kr-letzter.is-gegner strong {
   color: #ff8a92;
 }
 
@@ -3023,14 +3026,14 @@
    (doko-sheet). Nur diese beiden: Klanghalle und Werkstatt tragen dieselbe
    Hülle, aber einen eigenen Aufbau, den ein fremder Rand zerlegen würde. Hier bekommen sie nur Farbe und Schrift des neuen, ihr
    Aufbau und ihre Rückfragen bleiben. */
-.hb .doko-sheet:has(> :is(.einstellungen, .hub-loeschen)) {
+:is(.hb, .spe) .doko-sheet:has(> :is(.einstellungen, .hub-loeschen)) {
   /* An der Hub-Wurzel (ImHub) und absolut: So deckt das Blatt genau das Hub
      ab, auch wenn es auf dem Rechner schmaler steht als das Fenster. */
   position: absolute;
   background: rgba(5, 11, 29, 0.6);
   padding: 0;
 }
-.hb .doko-sheet > .doko-sheet-card:is(.einstellungen, .hub-loeschen) {
+:is(.hb, .spe) .doko-sheet > .doko-sheet-card:is(.einstellungen, .hub-loeschen) {
   max-height: calc(100% - var(--hb-oben) - 12px);
   padding: 18px 16px calc(20px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
   background: var(--hb-grund);
@@ -3042,21 +3045,21 @@
   color: var(--hb-tinte);
   font: 600 15px/1.45 var(--hb-txt);
 }
-.hb :is(.einstellungen, .hub-loeschen) h2 {
+:is(.hb, .spe) :is(.einstellungen, .hub-loeschen) h2 {
   margin: 0 0 10px;
   font: 400 30px/1.05 var(--hb-anz);
   color: var(--hb-tinte);
 }
-.hb :is(.einstellungen, .hub-loeschen) .muted {
+:is(.hb, .spe) :is(.einstellungen, .hub-loeschen) .muted {
   color: var(--hb-leise);
 }
-.hb :is(.einstellungen, .hub-loeschen) label {
+:is(.hb, .spe) :is(.einstellungen, .hub-loeschen) label {
   display: flex;
   flex-direction: column;
   gap: 6px;
   font: 800 13px var(--hb-txt);
 }
-.hb :is(.einstellungen, .hub-loeschen) input:not([type='range']) {
+:is(.hb, .spe) :is(.einstellungen, .hub-loeschen) input:not([type='range']) {
   height: 48px;
   padding: 0 14px;
   border-radius: 14px;
@@ -3065,11 +3068,11 @@
   color: var(--hb-tinte);
   font: 600 16px var(--hb-txt);
 }
-.hb :is(.einstellungen, .hub-loeschen) .hub-knopfreihe {
+:is(.hb, .spe) :is(.einstellungen, .hub-loeschen) .hub-knopfreihe {
   gap: 10px;
   margin-top: 12px;
 }
-.hb :is(.einstellungen, .hub-loeschen) .hub-knopf {
+:is(.hb, .spe) :is(.einstellungen, .hub-loeschen) .hub-knopf {
   flex-direction: row;
   justify-content: center;
   min-height: 48px;
@@ -3082,30 +3085,30 @@
   color: var(--hb-tinte);
   font: 800 15px var(--hb-txt);
 }
-.hb :is(.einstellungen, .hub-loeschen) .hub-knopf--a-gold {
+:is(.hb, .spe) :is(.einstellungen, .hub-loeschen) .hub-knopf--a-gold {
   border: 0;
   background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
   color: var(--hb-grund);
 }
-.hb :is(.einstellungen, .hub-loeschen) .hub-knopf--a-raus {
+:is(.hb, .spe) :is(.einstellungen, .hub-loeschen) .hub-knopf--a-raus {
   border: 1.5px solid var(--hb-rot);
   background: rgba(217, 75, 85, 0.12);
   color: #ffb3b9;
 }
-.hb :is(.einstellungen, .hub-loeschen) .error {
+:is(.hb, .spe) :is(.einstellungen, .hub-loeschen) .error {
   color: #ffb3b9;
 }
 
 /* Die Truhenöffnung (Fundblatt): Grund und Schrift des neuen Hubs */
-.hb .truhe-oeffnung {
+:is(.hb, .spe) .truhe-oeffnung {
   position: absolute;
   background: radial-gradient(circle at 50% 42%, rgba(27, 47, 110, 0.6), rgba(5, 11, 29, 0.95));
 }
-.hb .truhe-belohnung strong {
+:is(.hb, .spe) .truhe-belohnung strong {
   font: 400 34px var(--hb-anz);
   color: var(--hb-gold);
 }
-.hb .truhe-hinweis {
+:is(.hb, .spe) .truhe-hinweis {
   font: 700 13px var(--hb-txt);
   color: var(--hb-leise);
 }

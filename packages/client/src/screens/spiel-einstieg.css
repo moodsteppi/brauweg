@@ -1,0 +1,258 @@
+/*
+ * Spieleinstieg im neuen Hub (Lobbys und Menüs hinter „Zum Spiel").
+ *
+ * Farben, Schrift und Bausteine kommen aus hub-neu.css (dort gelten sie unter
+ * `.hb` und `.spe`). Hier steht nur der Rahmen: Banner als Kopf, rollender
+ * Inhalt, fester Fuß mit dem Hauptknopf. `--spe-akzent` ist die Farbe des
+ * Spiels.
+ */
+.spe {
+  --spe-akzent: var(--hb-gold);
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  max-width: 30rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(120% 55% at 50% 0%, #1b2f6e 0%, var(--hb-grund) 58%);
+  color: var(--hb-tinte);
+  font-family: var(--hb-txt);
+  -webkit-tap-highlight-color: transparent;
+  --hb-oben: env(safe-area-inset-top, 0px);
+}
+.spe-rolle {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Kopf: das Spielbanner bis unter die Statusleiste, unten in den Grund verlaufend */
+.spe-kopf {
+  position: relative;
+  height: calc(176px + var(--hb-oben));
+  background-size: cover;
+  background-position: center 35%;
+}
+.spe-kopf::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(7, 19, 47, 0.62) 0, rgba(7, 19, 47, 0) 32%, rgba(7, 19, 47, 0.88) 78%, var(--hb-grund) 100%),
+    linear-gradient(0deg, color-mix(in srgb, var(--spe-akzent) 22%, transparent), transparent 55%);
+}
+.spe .spe-zurueck {
+  position: absolute;
+  top: calc(var(--hb-oben) + 8px);
+  left: 16px;
+  z-index: 2;
+}
+.spe-rechts {
+  position: absolute;
+  top: calc(var(--hb-oben) + 8px);
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  gap: 12px;
+}
+.spe-titel {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 8px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.spe-titel h1 {
+  margin: 0;
+  font: 400 30px/1 var(--hb-anz);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.spe-titel span {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe-inhalt {
+  padding: 12px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.spe-fuss {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 16px max(12px, env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, rgba(14, 26, 61, 0), var(--hb-grund) 30%);
+  border-top: 1px solid rgba(53, 81, 140, 0.4);
+}
+.spe-fuss .hb-klein {
+  text-align: center;
+  margin: 0;
+}
+/* Segment-Wahl: gleich breite Knöpfe, der gewählte in der Spielfarbe umrandet */
+.spe-wahl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 8px;
+}
+.spe .spe-wahl-knopf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 48px;
+  padding: 6px 8px;
+  border-radius: 14px;
+  background: var(--hb-karte);
+  border: 1.5px solid var(--hb-kontur);
+  text-align: center;
+}
+.spe .spe-wahl-knopf strong {
+  font: 800 15px var(--hb-txt);
+}
+.spe .spe-wahl-knopf small {
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .spe-wahl-knopf.is-an {
+  border: 2px solid var(--spe-akzent);
+  background: color-mix(in srgb, var(--spe-akzent) 16%, var(--hb-karte));
+}
+/* Eine Zeile in einer Liste mit Pfeil (Regeln, Anleitung, Tische) */
+.spe .spe-zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
+  text-align: left;
+}
+.spe .spe-zeile:last-child {
+  border-bottom: 0;
+}
+.spe .spe-zeile > span:first-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.spe .spe-zeile strong {
+  font-size: 15px;
+}
+.spe .spe-zeile small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .hb-kn.is-blau {
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+}
+.spe .spe-leer {
+  margin: 0;
+  padding: 18px 14px;
+  text-align: center;
+  font: 700 14px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .spe-feld {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  color: var(--hb-tinte);
+  font: 700 15px var(--hb-txt);
+}
+.spe .spe-feld::placeholder {
+  color: var(--hb-leise);
+}
+@media (prefers-reduced-motion: reduce) {
+  .spe * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Kartenlobby: Filter, Tischzeilen mit einem Punkt je Platz */
+.spe .spe-chips {
+  padding: 0;
+  margin: 0 -16px;
+  padding-inline: 16px;
+}
+.spe .spe-tisch strong {
+  font-size: 15px;
+}
+.spe .spe-marke {
+  color: var(--hb-gold);
+  font: 800 12px var(--hb-txt);
+}
+.spe .spe-punkte {
+  display: flex;
+  gap: 4px;
+}
+.spe .spe-punkte i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--spe-akzent);
+}
+.spe .spe-punkte i.is-frei {
+  background: transparent;
+  border: 1.5px solid var(--hb-leise);
+}
+.spe .spe-zahl {
+  min-width: 34px;
+  text-align: right;
+  font: 800 14px var(--hb-txt);
+  font-variant-numeric: tabular-nums;
+}
+/* Regelkacheln im Blatt: dieselben Kacheln (regelbilder.ts), im neuen Stil */
+.spe .regeln {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.spe .regel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 96px;
+  padding: 10px 8px;
+  border-radius: 16px;
+  background: var(--hb-karte);
+  border: 1.5px solid var(--hb-kontur);
+  font: 700 13px/1.2 var(--hb-txt);
+  color: var(--hb-tinte);
+  text-align: center;
+}
+.spe .regel.is-on {
+  border: 2px solid var(--hb-gold);
+  background: color-mix(in srgb, var(--hb-gold) 12%, var(--hb-karte));
+}
+.spe .regel-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+  font: 800 13px/22px var(--hb-txt);
+  opacity: 0;
+}
+.spe .regel.is-on .regel-check {
+  opacity: 1;
+}
