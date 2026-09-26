@@ -262,6 +262,15 @@ erstellen, Online spielen …). Jedes Spiel behält seine Farbe über
 `--spe-akzent` (Auswahlrahmen, Glanz im Kopf), der Hauptknopf bleibt gold. Nur
 im neuen Hub; mit `?hub=alt` bleibt der alte Einstieg.
 
+Umgezogen (26./27.09.2026): Kartenlobby (Doppelkopf, Skat, Zauberer, Cambio,
+BroChess), BroCooked, Golf, Poker, Eiland, Filler, Mememory, Tafelrunde,
+Feldherr, Partykiste. Spieleigene Ergänzungen liegen je Spiel in
+`screens/<spiel>-einstieg.css`, die gemeinsamen der Minispiele in
+`spiel-einstieg-mini.css`. Regel: **genau ein goldener Knopf je Ansicht**,
+Nebenwege blau (`hb-kn is-blau`); Anleitung und Regeln als `HbBlatt`, nicht
+als Aufklapper. Noch im alten Look: die Spieltische selbst, Endstände auf dem
+Tisch, Klanghalle, Avatar-Werkstatt.
+
 ### Start der App (Logo, dann Ladebild)
 
 Seit dem 26.09.2026 (Robin, Vorbild Supercell/Clash Royale) startet die App im
