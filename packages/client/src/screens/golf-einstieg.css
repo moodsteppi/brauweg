@@ -1,0 +1,282 @@
+/*
+ * Golf im Spieleinstieg des neuen Hubs (Golf.tsx, `hubNeu`).
+ *
+ * Menü, „Gegen Bots", Gruppe und Ergebnis benutzen dieselben Bauteile wie im
+ * alten Hub (Regler, ModusWahl, Bahnauswahl, Rangliste) — hier bekommen sie
+ * unter `.spe` die Farben und Schriften des Hubs. Der Grund, warum so viel
+ * neu gesetzt wird: `:is(.hb, .spe) button` nimmt jedem Knopf Rand, Grund
+ * und Innenabstand (hub-neu.css), und das trifft auch die Kacheln der
+ * Bahnauswahl und die Lochknöpfe des Replays.
+ */
+
+/* Acht Bälle als Kostprobe: bis zu acht spielen gleichzeitig */
+.spe .gf-probe {
+  margin: 0;
+  gap: 6px;
+}
+
+/* Regler (Bots, Löcher) als Zeilen einer Liste */
+.spe .gf-neu-regler .gf-reglerzeile {
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
+}
+.spe .gf-neu-regler .gf-reglerzeile:last-child {
+  border-bottom: 0;
+}
+.spe .gf-neu-regler .gf-reglertitel {
+  width: 64px;
+  font: 800 15px var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.spe .gf-neu-regler .gf-reglerzeile input[type='range'] {
+  min-height: 44px;
+  accent-color: var(--spe-akzent);
+}
+.spe .gf-neu-regler .gf-reglerwert {
+  min-width: 36px;
+  font: 400 26px/1 var(--hb-anz);
+  color: var(--hb-gold);
+}
+
+/* Segmentknöpfe aus ModusWahl und Bahnauswahl: wie SpielWahl */
+.spe .gf-stufen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 8px;
+}
+.spe .gf-stufen button {
+  min-height: 48px;
+  padding: 6px 8px;
+  border-radius: 14px;
+  background: var(--hb-karte);
+  border: 1.5px solid var(--hb-kontur);
+  color: var(--hb-tinte);
+  font: 800 15px var(--hb-txt);
+  text-align: center;
+}
+.spe .gf-stufen button[data-an] {
+  border: 2px solid var(--spe-akzent);
+  background: color-mix(in srgb, var(--spe-akzent) 16%, var(--hb-karte));
+  color: var(--hb-tinte);
+}
+.spe .gf-fun-wahl {
+  gap: 8px;
+}
+.spe .gf-fun-wahl small,
+.spe .gf-bw-hinweis {
+  font: 700 13px/1.4 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .gf-bw-hinweis strong {
+  color: var(--hb-tinte);
+}
+
+/* Bahnauswahl: das Auswahl-Raster auf die Hub-Farben gestellt */
+.spe .gf-bw {
+  --aw-panel: var(--hb-karte);
+  --aw-line: var(--hb-kontur);
+  --aw-text: var(--hb-tinte);
+  --aw-muted: var(--hb-leise);
+  --accent: var(--spe-akzent);
+  gap: 10px;
+}
+.spe .gf-bw-titel {
+  font: 400 20px/1 var(--hb-anz);
+  color: var(--hb-tinte);
+}
+.spe .gf-bw-zeilentitel {
+  font: 800 11px/1 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .gf-bw-folgekopf {
+  font: 800 13px/1 var(--hb-txt);
+}
+.spe .gf-bw-folge {
+  font: 700 13px/1.5 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .gf-bw-leeren {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  font: 800 13px var(--hb-txt);
+}
+.spe .gf-bw-miniatur {
+  border-radius: 10px;
+  background: var(--hb-grund-tief);
+}
+.spe .aw-kachel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 6px 8px;
+  border: 1.5px solid var(--hb-kontur);
+  border-radius: 16px;
+  background: var(--hb-karte);
+  text-align: left;
+}
+.spe .aw-kachel.is-an {
+  border: 2px solid var(--spe-akzent);
+  box-shadow: none;
+  background: color-mix(in srgb, var(--spe-akzent) 14%, var(--hb-karte));
+}
+.spe .aw-titel {
+  font: 800 14px/1.2 var(--hb-txt);
+}
+.spe .aw-text {
+  font: 700 12px/1.3 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .aw-chips {
+  gap: 8px;
+}
+.spe .aw-chip {
+  position: relative;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  font: 700 14px var(--hb-txt);
+}
+.spe .aw-chip[aria-pressed='true'] {
+  background: var(--spe-akzent);
+  border-color: transparent;
+  color: var(--hb-grund);
+}
+.spe .aw-suche {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  font: 700 16px var(--hb-txt);
+}
+
+/* Gruppe: Sitze als Zeilen einer Liste, die eigene Zeile ist der Farbknopf */
+.spe .gf-neu-gruppe {
+  gap: 0;
+  margin: 0;
+}
+.spe .gf-neu-gruppe .gf-gruppenzeile {
+  min-height: 56px;
+  padding: 8px 14px;
+  border-radius: 0;
+  background: none;
+  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
+}
+.spe .gf-neu-gruppe .gf-gruppenzeile:last-child {
+  border-bottom: 0;
+}
+.spe .gf-neu-gruppe .gf-gruppenzeile[data-eigen] {
+  background: color-mix(in srgb, var(--spe-akzent) 14%, transparent);
+}
+.spe .gf-neu-gruppe .gf-gruppenzeile[data-leer] {
+  opacity: 0.5;
+}
+.spe .gf-gruppenname {
+  font: 800 15px/1.2 var(--hb-txt);
+}
+.spe .gf-du {
+  padding: 4px 10px;
+  background: var(--spe-akzent);
+  color: var(--hb-grund);
+  font: 800 12px/1 var(--hb-txt);
+}
+.spe .gf-farbwahl {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  margin: -8px -14px;
+  padding: 8px 14px;
+  text-align: left;
+}
+.spe .gf-warten {
+  min-height: 52px;
+  margin: 0;
+  font: 700 15px/1 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .gf-lauf i {
+  background: var(--spe-akzent);
+}
+
+/* Ergebnis: Rangliste als Karten, Sieger in Gold */
+.spe .gf-neu-ergebnis .gf-rangliste {
+  margin: 0;
+  gap: 8px;
+}
+.spe .gf-rangliste li {
+  min-height: 52px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+.spe .gf-rangliste li[data-sieger] {
+  border: 2px solid var(--hb-gold);
+  background: color-mix(in srgb, var(--hb-gold) 12%, var(--hb-karte));
+  box-shadow: none;
+}
+.spe .gf-rangliste li[data-eigen]:not([data-sieger]) {
+  border-color: var(--spe-akzent);
+  box-shadow: none;
+}
+.spe .gf-rangplatz {
+  font: 400 20px/1 var(--hb-anz);
+  color: var(--hb-gold);
+}
+.spe .gf-rangname {
+  font: 800 15px/1.2 var(--hb-txt);
+}
+.spe .gf-rangloecher i {
+  background: var(--hb-grund-tief);
+  color: var(--hb-leise);
+  font: 700 11px/1 var(--hb-txt);
+}
+.spe .gf-rangsumme {
+  font: 400 20px/1 var(--hb-anz);
+}
+.spe .gpar-kopf {
+  font: 800 11px/1 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .gpar-zupar {
+  font: 800 14px/1 var(--hb-txt);
+}
+.spe .gf-neu-ergebnis .gf-untertitel {
+  margin: 10px 0 0;
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+  text-align: center;
+}
+.spe .gf-neu-ergebnis .gf-fehler {
+  margin: 10px 0 0;
+  font: 700 14px/1.4 var(--hb-txt);
+}
+.spe .grp-loecher {
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0;
+}
+.spe .grp-loecher h2 {
+  margin: 0 0 4px;
+  font: 400 20px/1 var(--hb-anz);
+  color: var(--hb-tinte);
+}
+.spe .grp-lochknopf {
+  min-width: 44px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  font: 800 15px var(--hb-txt);
+  text-align: center;
+}

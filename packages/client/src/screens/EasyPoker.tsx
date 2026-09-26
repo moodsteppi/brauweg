@@ -10,6 +10,14 @@ import type {
   LetzteAktion,
 } from '../minispiele/easypoker/sicht';
 import { useTable } from '../useTable';
+import { hubNeu } from '../hubNeu';
+import { HbBlatt } from './HbBlatt';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+import './poker-einstieg.css';
+
+/** Farbe von Poker im neuen Hub: der grüne Filz unter den Jetons im Banner. */
+const AKZENT = '#34c38a';
+const SITZ_WAHL = [2, 3, 4, 5, 6].map((n) => ({ wert: n, text: String(n) }));
 
 /**
  * Easy Poker — Texas Hold'em zu zweit bis sechst, Hochkant-Handy.
@@ -99,6 +107,16 @@ function gleicherEinsatz(zeile: TableRow, r: PokerRegeln): boolean {
 
 function blindsText(r: Pick<PokerRegeln, 'kleinerBlind' | 'grosserBlind'>): string {
   return `${r.kleinerBlind}/${r.grosserBlind}`;
+}
+
+/** Die fertige Vorgabe, die genau diesem Einsatz entspricht — oder keine. */
+function vorgabeFuer(r: PokerRegeln): (typeof EINSATZ_VORGABEN)[number] | undefined {
+  return EINSATZ_VORGABEN.find(
+    (v) =>
+      v.regelsatz.startJetons === r.startJetons &&
+      v.regelsatz.kleinerBlind === r.kleinerBlind &&
+      v.regelsatz.grosserBlind === r.grosserBlind,
+  );
 }
 
 function pokerFehler(err: unknown, fallback: string): string {
@@ -456,10 +474,13 @@ function Einsatzwahl({
  * einen Tipp (DESIGN.md: Entscheidungen kommen als Blatt).
  */
 function Einsatzblatt({
+  neu = false,
   regelsatz,
   onChange,
   onClose,
 }: {
+  /** Neues Hub: als HbBlatt mit den Chips des Hubs, dieselben Stufen. */
+  neu?: boolean;
   regelsatz: PokerRegeln;
   onChange: (r: PokerRegeln) => void;
   onClose: () => void;
@@ -471,6 +492,84 @@ function Einsatzblatt({
       v.regelsatz.kleinerBlind === regelsatz.kleinerBlind &&
       v.regelsatz.grosserBlind === regelsatz.grosserBlind,
   );
+
+  if (neu) {
+    const chipreihe = (name: string, stufen: readonly number[], an: (zahl: number) => boolean, waehle: (zahl: number) => void) => (
+      <SpielAbschnitt titel={name}>
+        <div className="hb-chips is-innen" role="group" aria-label={name}>
+          {stufen.map((zahl) => (
+            <button
+              key={zahl}
+              type="button"
+              className={`hb-chip${an(zahl) ? ' is-an' : ''}`}
+              aria-pressed={an(zahl)}
+              onClick={() => waehle(zahl)}
+            >
+              {zahl}
+            </button>
+          ))}
+        </div>
+      </SpielAbschnitt>
+    );
+    return (
+      <HbBlatt titel="Einsatz einstellen" onClose={onClose}>
+        <p className="hb-klein">
+          Wer den Tisch aufmacht, setzt den Mindest-Einsatz und die Blinds. Die anderen bringen
+          denselben Stapel mit.
+        </p>
+        <SpielAbschnitt titel="Vorgabe">
+          <SpielWahl
+            name="Einsatzvorgabe"
+            werte={EINSATZ_VORGABEN.map((v) => ({
+              wert: v.name,
+              text: v.name,
+              unter: `${v.regelsatz.startJetons} · ${blindsText(v.regelsatz)}`,
+            }))}
+            wert={vorgabe?.name ?? ''}
+            onWahl={(name) => {
+              const v = EINSATZ_VORGABEN.find((x) => x.name === name);
+              if (v) onChange(v.regelsatz);
+            }}
+          />
+        </SpielAbschnitt>
+        {chipreihe(
+          'Mindest-Einsatz',
+          BUY_IN_STUFEN,
+          (zahl) => regelsatz.startJetons === zahl,
+          (zahl) => onChange({ startJetons: zahl, ...blindsZuBuyIn(zahl) }),
+        )}
+        {chipreihe(
+          'Kleiner Blind',
+          SB_STUFEN,
+          (zahl) => regelsatz.kleinerBlind === zahl,
+          (zahl) => onChange({ ...regelsatz, kleinerBlind: zahl, grosserBlind: zahl * 2 }),
+        )}
+        {chipreihe(
+          'Großer Blind',
+          bbStufen,
+          (zahl) => regelsatz.grosserBlind === zahl,
+          (zahl) => onChange({ ...regelsatz, grosserBlind: zahl }),
+        )}
+        {!regelsatzOk(regelsatz) && (
+          <p className="hb-fehler">
+            Der große Blind muss über dem kleinen liegen, und der Einsatz mindestens das Zehnfache
+            des großen Blinds sein.
+          </p>
+        )}
+        <button
+          className="hb-kn is-gold is-haupt is-breit spe-kn-unter"
+          type="button"
+          onClick={onClose}
+          disabled={!regelsatzOk(regelsatz)}
+        >
+          So spielen
+          <small>
+            {regelsatz.startJetons} · Blinds {blindsText(regelsatz)}
+          </small>
+        </button>
+      </HbBlatt>
+    );
+  }
 
   return (
     <div className="poker-blatt" onClick={onClose} role="presentation">
@@ -596,6 +695,8 @@ export function EasyPoker({
   const [lobbyOffen, setLobbyOffen] = useState(false);
   const [tische, setTische] = useState<TableRow[] | null>(null);
   const [tischEinsatz, setTischEinsatz] = useState<PokerRegeln | null>(null);
+  /** Neues Hub: Das Einsatzblatt hängt am Menü statt an der Einsatzwahl. */
+  const [einsatzOffen, setEinsatzOffen] = useState(false);
   /** Angetippte eigene Karte — sie hebt sich an, damit man sie besser sieht. */
   const [gehobeneKarte, setGehobeneKarte] = useState<number | null>(null);
   /** Das Setzblatt (Regler fuer den Bet-Betrag) liegt offen. */
@@ -945,6 +1046,12 @@ export function EasyPoker({
       <span>Info</span>
     </button>
   );
+  /** Derselbe Knopf im Kopf des neuen Hubs: rund, 44 pt, wie der Zurück-Knopf. */
+  const infoKnopfNeu = (
+    <button className="hb-rund pk-info" type="button" onClick={() => setRegelnOffen(true)} aria-label="Regeln nachlesen">
+      <b aria-hidden="true">i</b>
+    </button>
+  );
 
   // -------------------------------------------------------------------------
   // Hauptmenue
@@ -953,6 +1060,192 @@ export function EasyPoker({
   if (!tischId) {
     const reicht = broJetons === null || broJetons >= regelsatz.startJetons;
     const startbar = reicht && regelsatzOk(regelsatz) && !sucht;
+
+    /*
+     * Neues Hub (Spieleinstieg-Baukasten, 26.09.2026): Hauptmenü und
+     * Online-Tisch im Nachtblau-Rahmen. Dieselben Zustände und Aufrufe wie
+     * unten; nur das Aussehen verzweigt. Der Filz bleibt, wie er ist.
+     */
+    if (hubNeu && lobbyOffen) {
+      const liste = tische ?? [];
+      return (
+        <SpielRahmen
+          gameId="easypoker"
+          titel="Online-Tisch"
+          unter={`Mindest-Einsatz ${regelsatz.startJetons} · Blinds ${blindsText(regelsatz)}`}
+          akzent={AKZENT}
+          onBack={() => {
+            setLobbyOffen(false);
+            setFehler(null);
+          }}
+          zurueckText="Zurück zum Pokermenü"
+          rechts={infoKnopfNeu}
+          fuss={
+            <>
+              <button
+                className="hb-kn is-gold is-haupt is-breit spe-kn-unter"
+                type="button"
+                onClick={() => void suche()}
+                disabled={!startbar}
+              >
+                Passenden Tisch suchen
+                <small>gleicher Einsatz · sonst neu aufmachen</small>
+              </button>
+              <button
+                className="hb-kn is-blau is-breit spe-kn-unter"
+                type="button"
+                onClick={() => void eigenenTisch()}
+                disabled={!startbar}
+              >
+                Eigenen Tisch aufmachen
+                <small>6 Plätze · deine Blinds</small>
+              </button>
+            </>
+          }
+        >
+          {fehler && <p className="hb-fehler">{fehler}</p>}
+          <SpielAbschnitt titel="Offene Tische" zusatz={tische === null ? undefined : liste.length}>
+            <div className="hb-liste">
+              {tische === null ? (
+                <p className="spe-leer">Tische werden geladen…</p>
+              ) : liste.length === 0 ? (
+                <p className="spe-leer">Gerade wartet niemand. Mach den ersten Tisch auf.</p>
+              ) : (
+                liste.map((zeile) => {
+                  const buyIn = zeile.stakes?.startJetons ?? regelsatz.startJetons;
+                  const zuTeuer = broJetons !== null && broJetons < buyIn;
+                  return (
+                    <button
+                      key={zeile.id}
+                      className="spe-zeile spe-tisch"
+                      type="button"
+                      disabled={sucht || zuTeuer}
+                      onClick={() => void trittBei(zeile.id)}
+                    >
+                      <span>
+                        <strong>{zeile.host ?? 'Tisch'}</strong>
+                        <small className="pk-einsatz">
+                          <span className="poker-jeton-zeichen" aria-hidden="true" />
+                          {buyIn}
+                          {zeile.stakes ? ` · ${blindsText(zeile.stakes)}` : null}
+                        </small>
+                      </span>
+                      <span className="spe-zahl">
+                        {zeile.occupied}/{zeile.seats}
+                      </span>
+                      <span className={`pk-bei${zuTeuer ? ' is-zu-hoch' : ''}`}>{zuTeuer ? 'Zu hoch' : 'Beitreten'}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </SpielAbschnitt>
+          {regelnOffen && <Regelblatt neu onClose={() => setRegelnOffen(false)} />}
+        </SpielRahmen>
+      );
+    }
+
+    if (hubNeu) {
+      const vorgabe = vorgabeFuer(regelsatz);
+      return (
+        <SpielRahmen
+          gameId="easypoker"
+          titel="Poker"
+          unter="Zwei Karten, bis zu sechs am Tisch, vier Knöpfe."
+          akzent={AKZENT}
+          onBack={onBack}
+          rechts={infoKnopfNeu}
+          fuss={
+            <>
+              <button
+                className="hb-kn is-gold is-haupt is-breit spe-kn-unter"
+                type="button"
+                onClick={() => void sofortSpielen()}
+                disabled={!startbar}
+              >
+                Sofort spielen
+                <small>gegen den Computer · {sitzeWahl} Plätze</small>
+              </button>
+              <button
+                className="hb-kn is-blau is-breit"
+                type="button"
+                onClick={() => void oeffneLobby()}
+                disabled={sucht}
+              >
+                Online spielen
+                <span className="pk-aktiv">({aktiv ?? '…'})</span>
+              </button>
+            </>
+          }
+        >
+          <p className="pk-guthaben" aria-label={`${broJetons ?? '…'} BroJetons`}>
+            <span className="poker-jeton-zeichen" aria-hidden="true" />
+            <strong>{broJetons ?? '…'}</strong>
+            <em>BroJetons</em>
+          </p>
+          {!reicht && (
+            <p className="hb-fehler">
+              Für diesen Einsatz brauchst du {regelsatz.startJetons} BroJetons. Im Shop gibt es welche
+              gegen Münzen.
+            </p>
+          )}
+          {fehler && <p className="hb-fehler">{fehler}</p>}
+          <SpielAbschnitt titel="Name">
+            <input
+              className="hb-feld"
+              type="text"
+              inputMode="text"
+              enterKeyHint="done"
+              maxLength={NAME_MAX}
+              placeholder="Name…"
+              aria-label="Name am Tisch"
+              value={name}
+              onChange={(e) => merkeName(e.target.value)}
+            />
+          </SpielAbschnitt>
+          <SpielAbschnitt titel="Einsatz">
+            <SpielWahl
+              name="Einsatz"
+              werte={EINSATZ_VORGABEN.map((v) => ({
+                wert: v.name,
+                text: v.name,
+                unter: `${v.regelsatz.startJetons} · ${blindsText(v.regelsatz)}`,
+              }))}
+              wert={vorgabe?.name ?? ''}
+              onWahl={(n) => {
+                const v = EINSATZ_VORGABEN.find((x) => x.name === n);
+                if (v) setRegelsatz(v.regelsatz);
+              }}
+            />
+            <div className="hb-liste">
+              <button type="button" className="spe-zeile" onClick={() => setEinsatzOffen(true)}>
+                <span>
+                  <strong>{vorgabe ? 'Eigenen Einsatz…' : 'Eigener Einsatz'}</strong>
+                  {!vorgabe && (
+                    <small>
+                      Mindest-Einsatz {regelsatz.startJetons} · Blinds {blindsText(regelsatz)}
+                    </small>
+                  )}
+                </span>
+                <span className="hb-pf" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            </div>
+          </SpielAbschnitt>
+          <SpielAbschnitt
+            titel="Spieler"
+            zusatz={sitzeWahl === 2 ? 'Du gegen den Computer' : `Du und ${sitzeWahl - 1} Computer`}
+          >
+            <SpielWahl name="Spielerzahl" werte={SITZ_WAHL} wert={sitzeWahl} onWahl={setSitzeWahl} />
+          </SpielAbschnitt>
+          {einsatzOffen && (
+            <Einsatzblatt neu regelsatz={regelsatz} onChange={setRegelsatz} onClose={() => setEinsatzOffen(false)} />
+          )}
+          {regelnOffen && <Regelblatt neu onClose={() => setRegelnOffen(false)} />}
+        </SpielRahmen>
+      );
+    }
 
     if (lobbyOffen) {
       const liste = tische ?? [];
@@ -1122,6 +1415,81 @@ export function EasyPoker({
   // -------------------------------------------------------------------------
   // Wartebereich
   // -------------------------------------------------------------------------
+
+  if (!sicht && hubNeu) {
+    const plaetze = tisch.table?.seats ?? [];
+    const besetzt = plaetze.filter((platz) => platz.accountId).length;
+    const mitspieler = plaetze.filter((platz) => platz.accountId || platz.isBot).length;
+    const frei = plaetze.filter((platz) => !platz.accountId && !platz.isBot);
+    const gesamt = plaetze.length || ONLINE_SITZE;
+    const startKnopf = tisch.status === 'open' && frei.length > 0 && mitspieler >= 2;
+    const auffuellen = tisch.status === 'open' && frei.length > 0;
+    return (
+      <SpielRahmen
+        gameId="easypoker"
+        titel="Am Tisch"
+        unter={
+          (tisch.status === 'open' ? `${besetzt} von ${gesamt} Plätzen besetzt` : 'Verbindung wird aufgebaut…') +
+          (tischEinsatz
+            ? ` · Mindest-Einsatz ${tischEinsatz.startJetons} · Blinds ${blindsText(tischEinsatz)}`
+            : '')
+        }
+        akzent={AKZENT}
+        onBack={brichAb}
+        zurueckText="Abbrechen"
+        rechts={infoKnopfNeu}
+        fuss={
+          startKnopf || auffuellen ? (
+            <>
+              {/* Ab zwei Menschen muss niemand auf sechs auffuellen: Der Tisch
+                  schrumpft serverseitig auf die Besetzten und legt los. */}
+              {startKnopf && (
+                <button className="hb-kn is-gold is-haupt is-breit spe-kn-unter" type="button" onClick={() => tisch.startNow()}>
+                  Jetzt starten
+                  <small>zu {mitspieler} · ohne Auffüllen</small>
+                </button>
+              )}
+              {auffuellen && (
+                <button
+                  // Der eine goldene Knopf je Ansicht: Gibt es kein „Jetzt starten", ist es dieser.
+                  className={`hb-kn ${startKnopf ? 'is-blau' : 'is-gold is-haupt'} is-breit spe-kn-unter`}
+                  type="button"
+                  onClick={() => frei.forEach((platz) => tisch.addBot(platz.seat))}
+                >
+                  Mit Computern auffüllen
+                  <small>und loslegen</small>
+                </button>
+              )}
+            </>
+          ) : undefined
+        }
+      >
+        {plaetze.length > 0 && (
+          <SpielAbschnitt titel="Plätze">
+            <ul className="hb-liste">
+              {plaetze.map((platz) => {
+                const leer = !platz.accountId && !platz.isBot;
+                return (
+                  <li key={platz.seat} className={`spe-zeile${leer ? ' is-leer' : ''}`}>
+                    <span>
+                      <strong>{platz.displayName || (platz.isBot ? 'Computer' : 'Frei')}</strong>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </SpielAbschnitt>
+        )}
+        <div className="poker-punkte-lauf pk-lauf" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+        <p className="hb-klein pk-mitte">{aktiv ?? '…'} Spieler gerade am Tisch</p>
+        {regelnOffen && <Regelblatt neu onClose={() => setRegelnOffen(false)} />}
+      </SpielRahmen>
+    );
+  }
 
   if (!sicht) {
     const plaetze = tisch.table?.seats ?? [];
@@ -1776,12 +2144,16 @@ function Setzblatt({
  * Text auf dem Tisch (DESIGN-DOKO: "Der Tisch ist heilig"). Tipp auf den
  * Hintergrund schliesst.
  */
-function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
-  return (
-    <div className="poker-blatt" onClick={onClose} role="presentation">
-      <div className="poker-blatt-karte" onClick={(e) => e.stopPropagation()} role="presentation">
-        <h2>So geht Poker</h2>
-
+function Regelblatt({
+  onClose,
+  neu = false,
+}: {
+  onClose: () => void;
+  /** Neues Hub (Menü, Online-Tisch, Wartebereich): als HbBlatt, derselbe Text. */
+  neu?: boolean;
+}): React.JSX.Element {
+  const inhalt = (
+    <>
         <h3>Ziel</h3>
         <p>
           Jeder bekommt zwei verdeckte Karten. In der Mitte liegen nach und
@@ -1846,6 +2218,26 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           in Münzen gehen sie nicht. Wer den Tisch aufmacht, stellt Mindest-Einsatz
           und die Blinds ein.
         </p>
+    </>
+  );
+
+  if (neu) {
+    return (
+      <HbBlatt titel="So geht Poker" onClose={onClose}>
+        <div className="pk-regeln">{inhalt}</div>
+        <button className="hb-kn is-gold is-haupt is-breit" type="button" onClick={onClose}>
+          Verstanden
+        </button>
+      </HbBlatt>
+    );
+  }
+
+  return (
+    <div className="poker-blatt" onClick={onClose} role="presentation">
+      <div className="poker-blatt-karte" onClick={(e) => e.stopPropagation()} role="presentation">
+        <h2>So geht Poker</h2>
+
+        {inhalt}
 
         <button className="poker-hauptknopf" type="button" onClick={onClose}>
           <span>Verstanden</span>

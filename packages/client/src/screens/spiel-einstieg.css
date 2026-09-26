@@ -156,6 +156,35 @@
   border: 1px solid var(--hb-kontur);
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
 }
+/* Knopf mit Unterzeile („Sofort spielen" / „gegen den Computer · 2 Plätze"):
+   zwei Zeilen statt einer, die Höhe bleibt bei 52 bzw. 44 pt Mindestmaß. */
+.spe .hb-kn.spe-kn-unter {
+  flex-direction: column;
+  gap: 1px;
+  height: auto;
+  min-height: 52px;
+  padding-block: 6px;
+  line-height: 1.1;
+  white-space: normal;
+  text-align: center;
+}
+.spe .hb-kn.spe-kn-unter:not(.is-haupt) {
+  min-height: 44px;
+}
+.spe .hb-kn.spe-kn-unter small {
+  font: 700 12px/1.2 var(--hb-txt);
+  opacity: 0.8;
+}
+/* Freier Platz in einer Sitzliste (Wartebereich, Gruppe) */
+.spe .spe-zeile.is-leer {
+  opacity: 0.55;
+}
+/* Ein Absatz Erklärung unter dem Kopf (Minispiel-Menüs) */
+.spe .spe-text {
+  margin: 0;
+  font: 600 15px/1.45 var(--hb-txt);
+  color: var(--hb-leise);
+}
 .spe .spe-leer {
   margin: 0;
   padding: 18px 14px;
@@ -255,4 +284,564 @@
 }
 .spe .regel.is-on .regel-check {
   opacity: 1;
+}
+
+/* ---------- Bausteine der Minispiel-Einstiege (Tafelrunde, Feldherr, Partykiste) ---------- */
+/* Fließtext unter dem Kopf: eine Beschreibung, ein Hinweis */
+.spe .spe-text {
+  margin: 0;
+  font: 600 15px/1.45 var(--hb-txt);
+  color: var(--hb-leise);
+}
+/* Eine Karte ohne Liste darin: Beschreibung, Code, Regler */
+.spe .spe-karte {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+.spe .spe-zeichen {
+  display: flex;
+  gap: 8px;
+}
+.spe .spe-zeichen span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--hb-grund-tief);
+  border: 1px solid var(--hb-kontur);
+}
+.spe .spe-zeichen svg {
+  width: 22px;
+  height: 22px;
+}
+/* Warten (Suche, Aufbau): alles mittig, die Zahl groß */
+.spe .spe-warten {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 0 8px;
+  text-align: center;
+}
+.spe .spe-countdown {
+  margin: 0;
+  font: 400 88px/1 var(--hb-anz);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+.spe .spe-lauf {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.spe .spe-lauf span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--spe-akzent);
+  animation: spe-huepf 1.05s infinite ease-in-out;
+}
+.spe .spe-lauf span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.spe .spe-lauf span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+@keyframes spe-huepf {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  35% {
+    transform: translateY(-7px);
+    opacity: 1;
+  }
+}
+/* Beitrittscode: eintippen und groß zeigen */
+.spe .spe-codefeld {
+  height: 52px;
+  font: 400 24px var(--hb-anz);
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.spe .spe-codefeld::placeholder {
+  letter-spacing: 0.18em;
+}
+.spe .spe-code {
+  margin: 0;
+  text-align: center;
+  font: 400 40px/1.1 var(--hb-anz);
+  letter-spacing: 0.14em;
+  color: var(--hb-gold);
+}
+.spe .spe-sitz:not(.is-besetzt) strong {
+  color: var(--hb-leise);
+  font-weight: 600;
+}
+.spe button:disabled.spe-zeile {
+  opacity: 0.55;
+}
+/* Anleitungstext im Blatt */
+.spe .spe-regeltext {
+  font: 500 15px/1.5 var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.spe .spe-regeltext h3 {
+  margin: 4px 0 8px;
+  font: 400 20px/1 var(--hb-anz);
+}
+.spe .spe-regeltext ol,
+.spe .spe-regeltext ul {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.spe .spe-regeltext p {
+  margin: 0 0 8px;
+  color: var(--hb-leise);
+}
+.spe .spe-regeltext strong {
+  color: var(--hb-gold);
+}
+/* Beitreten-Marke in einer Tischzeile: in der Spielfarbe umrandet, nicht gold
+   (gefüllt in Gold ist nur der Hauptknopf) */
+.spe .spe-bei {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--spe-akzent);
+  color: var(--hb-tinte);
+  background: color-mix(in srgb, var(--spe-akzent) 18%, transparent);
+  font: 800 13px var(--hb-txt);
+}
+/* Wahl einer Figur (Feldherr: Charakter): ganze Karte ist das Ziel */
+.spe .spe-helden {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.spe .spe-held {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 56px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--hb-karte);
+  border: 1.5px solid var(--hb-kontur);
+  text-align: left;
+}
+.spe .spe-held strong {
+  font: 800 16px var(--hb-txt);
+}
+.spe .spe-held small {
+  font: 600 13px/1.4 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .spe-held.is-an {
+  border: 2px solid var(--spe-akzent);
+  background: color-mix(in srgb, var(--spe-akzent) 14%, var(--hb-karte));
+}
+.spe .spe-held.is-bald {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border-style: dashed;
+}
+.spe .spe-held.is-bald strong {
+  color: var(--hb-leise);
+}
+/* Einheiten-Übersicht: drei Kacheln je Reihe, Preis in Gold */
+.spe .spe-einheiten {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+.spe .spe-einheit {
+  position: relative;
+  min-height: 64px;
+  padding: 10px 10px 9px;
+  border-radius: 14px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  text-align: left;
+}
+.spe .spe-einheit:active {
+  background: var(--hb-karte-hoch);
+}
+.spe .spe-einheit .kn {
+  font: 800 14px/1.2 var(--hb-txt);
+  padding-right: 22px;
+}
+.spe .spe-einheit .kp {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  font: 800 13px/1 var(--hb-txt);
+  color: var(--hb-gold);
+}
+.spe .spe-einheit .kw {
+  margin-top: 4px;
+  font: 700 12px/1.35 var(--hb-txt);
+  color: var(--hb-leise);
+}
+/* Werteblatt einer Einheit */
+.spe .spe-werte .art {
+  font: 800 11px var(--hb-txt);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--spe-akzent);
+  margin-bottom: 8px;
+}
+.spe .spe-werte .satz {
+  margin: 0 0 14px;
+  font: 600 15px/1.45 var(--hb-txt);
+}
+.spe .spe-werte table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 700 13px/1.3 var(--hb-txt);
+  font-variant-numeric: tabular-nums;
+}
+.spe .spe-werte th,
+.spe .spe-werte td {
+  padding: 7px 4px;
+  text-align: right;
+  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
+}
+.spe .spe-werte th:first-child,
+.spe .spe-werte td:first-child {
+  text-align: left;
+}
+.spe .spe-werte thead th {
+  color: var(--hb-leise);
+  font-weight: 800;
+}
+.spe .spe-werte h4 {
+  margin: 16px 0 6px;
+  font: 400 18px/1 var(--hb-anz);
+}
+.spe .spe-werte ul {
+  margin: 0;
+  padding-left: 18px;
+  font: 600 14px/1.5 var(--hb-txt);
+}
+.spe .spe-werte .fuss {
+  margin: 12px 0 0;
+  font: 600 13px/1.4 var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* ---------- Partykiste ---------- */
+/* Auswahlkacheln (hub.tsx: AuswahlRaster) im neuen Stil. Die Rücksetzung
+   `:is(.hb, .spe) button` nimmt ihnen Rand und Polster — hier kommt beides
+   zurück, gewählt in der Spielfarbe. */
+.spe .aw-raster {
+  gap: 8px;
+}
+.spe .aw-kachel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 56px;
+  padding: 10px 12px 11px;
+  border-radius: 16px;
+  background: var(--hb-karte);
+  border: 1.5px solid var(--hb-kontur);
+  color: var(--hb-tinte);
+  text-align: left;
+}
+.spe .aw-kachel.is-an {
+  border: 2px solid var(--spe-akzent);
+  background: color-mix(in srgb, var(--spe-akzent) 16%, var(--hb-karte));
+  box-shadow: none;
+}
+/* Gesperrt heißt Schloss plus leise Schrift, nicht halb durchsichtig */
+.spe .aw-kachel[aria-disabled] {
+  opacity: 1;
+  cursor: not-allowed;
+  background: var(--hb-grund-tief);
+}
+.spe .aw-kachel[aria-disabled] .aw-titel,
+.spe .aw-kachel[aria-disabled] .aw-text {
+  color: var(--hb-leise);
+}
+.spe .aw-kachel[aria-disabled] .aw-bild img {
+  filter: grayscale(0.7) brightness(0.55);
+}
+.spe .aw-titel {
+  font: 800 15px/1.2 var(--hb-txt);
+}
+.spe .aw-text {
+  font: 600 12px/1.35 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .aw-badge {
+  top: 8px;
+  right: 8px;
+  min-width: 26px;
+  height: 26px;
+  justify-content: center;
+  align-items: center;
+  padding: 0 6px;
+  background: rgba(7, 19, 47, 0.85);
+  color: var(--hb-tinte);
+  font: 800 12px var(--hb-txt);
+}
+.spe .aw-kachel.is-an .aw-badge {
+  background: var(--spe-akzent);
+  color: var(--hb-grund);
+}
+.spe .pk-aw-zeichen {
+  display: block;
+  font-size: 28px;
+  line-height: 1.1;
+}
+/* Themenpakete: das Bild als Kachelkopf, quadratisch */
+.spe .spe-pakete .aw-kachel {
+  padding: 6px 6px 9px;
+}
+.spe .spe-pakete .aw-bild img,
+.spe .spe-paket-alles {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 11px;
+  object-fit: cover;
+}
+.spe .spe-paket-alles {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  color: var(--spe-akzent);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--spe-akzent) 35%, var(--hb-karte)), var(--hb-grund-tief));
+}
+.spe .spe-pakete .aw-titel,
+.spe .spe-pakete .aw-text {
+  padding: 0 4px;
+}
+/* Reihenfolge der Minispiele */
+.spe .spe-minispiele {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.spe .pk-aw-folge {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pk-aw-folge;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  overflow: hidden;
+}
+.spe .pk-aw-folge li {
+  counter-increment: pk-aw-folge;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 2px 6px 2px 14px;
+  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
+  border-radius: 0;
+  background: none;
+  font: 700 15px var(--hb-txt);
+}
+.spe .pk-aw-folge li:last-child {
+  border-bottom: 0;
+}
+.spe .pk-aw-folge li::before {
+  content: counter(pk-aw-folge) '.';
+  min-width: 1.6em;
+  color: var(--spe-akzent);
+  font-weight: 800;
+}
+.spe .pk-aw-folgename {
+  flex: 1;
+  min-width: 0;
+}
+.spe .pk-aw-folge button {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: var(--hb-tinte);
+  background: var(--hb-karte-hoch);
+}
+.spe .pk-aw-folge button:disabled {
+  opacity: 0.3;
+}
+/* Regler (Runden, Härte, Bots): Titel, Schieber in der Spielfarbe, Wert */
+/* Global tragen Labels ein margin-bottom und Eingaben Polster, Rand und Grund
+   (styles.css) — in dieser Zeile wird alles davon zurückgenommen. */
+.spe .spe-regler {
+  display: grid;
+  grid-template-columns: 64px 1fr 84px;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin: 0;
+  color: var(--hb-tinte);
+  font-size: inherit;
+}
+.spe .spe-regler .pk-reglertitel {
+  font: 700 15px var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.spe .spe-regler input[type='range'] {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  accent-color: var(--spe-akzent);
+}
+.spe .spe-regler .pk-reglerwert {
+  text-align: right;
+  font: 800 15px var(--hb-txt);
+  color: var(--hb-tinte);
+}
+/* Regelsatz eines Tisches (Regelzeile.tsx) */
+.spe .pk-regelzeile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+.spe .pk-regelchip {
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  font: 700 13px/1 var(--hb-txt);
+  color: var(--hb-tinte);
+  white-space: nowrap;
+}
+.spe .pk-regelchip[data-alkoholfrei] {
+  border-color: var(--hb-gruen);
+  color: #c9f5d4;
+}
+.spe .pk-regelhinweis {
+  flex-basis: 100%;
+  font: 600 12px/1.35 var(--hb-txt);
+  color: var(--hb-leise);
+}
+/* Eine gefundene offene Runde im Fuß: erst ansehen, dann beitreten */
+.spe .spe-angebot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.spe .spe-angebot-titel {
+  margin: 0;
+  font: 400 20px/1.1 var(--hb-anz);
+}
+.spe .spe-angebot .hb-klein {
+  margin: 0;
+}
+/* Beitreten per Code, Nebenweg */
+.spe .spe-beitritt .spe-codefeld {
+  flex: 1;
+  min-width: 0;
+}
+.spe .spe-beitritt .hb-kn {
+  height: 52px;
+}
+.spe .spe-beitritt .hb-klein {
+  margin: 0;
+}
+/* Einladung im Wartesaal: Code groß, QR auf hellem Grund, Teilen */
+.spe .spe-einladung {
+  align-items: stretch;
+}
+.spe .spe-einladung .einladung-code {
+  margin: 0;
+  text-align: center;
+  font: 400 44px/1.1 var(--hb-anz);
+  letter-spacing: 0.14em;
+  color: var(--hb-gold);
+}
+.spe .spe-einladung .einladung-qr {
+  display: block;
+  align-self: center;
+  width: min(60vw, 220px);
+  height: auto;
+  border-radius: 14px;
+}
+.spe .spe-einladung .einladung-hinweis {
+  margin: 0;
+  text-align: center;
+  font: 700 14px var(--hb-txt);
+  color: var(--hb-gruen);
+}
+.spe .spe-einladung .einladung-link {
+  margin: 0;
+  text-align: center;
+  font: 600 13px var(--hb-txt);
+  color: var(--hb-leise);
+  overflow-wrap: anywhere;
+}
+.spe .spe-einladung .einladung-unter {
+  margin: 0;
+  text-align: center;
+  font: 600 13px/1.45 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .spe-gruppe {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Melden und Blockieren (MeldenBlatt.tsx): leiser Textknopf, Namen als Chips */
+.spe .melden-leiste {
+  text-align: center;
+}
+.spe .melden-knopf {
+  min-height: 44px;
+  padding: 0 16px;
+  font: 700 14px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .melden-liste {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.spe .melden-liste button {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  font: 700 14px var(--hb-txt);
+}
+/* Kleingedrucktes als Absatz: ohne den Absatzrand aus styles.css */
+.spe p.hb-klein {
+  margin: 0;
 }

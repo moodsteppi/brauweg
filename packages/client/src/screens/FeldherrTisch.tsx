@@ -19,8 +19,21 @@ import {
   starteFeldherr,
 } from '../minispiele/feldherr/kern.js';
 import type { Feld, FeldherrSicht } from '../minispiele/feldherr/sicht';
+import { hubNeu } from '../hubNeu';
 import { moduleVersionFor, type TaktMessage, type ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
+import { HbBlatt } from './HbBlatt';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+
+/** Die Farbe des Spiels im neuen Hub: das Rot des eigenen Heeres (`--p1`). */
+const FELDHERR_AKZENT = '#f4655c';
+
+/** Die drei Stärken der KI, für beide Looks. */
+const STUFEN: readonly [Stufe, string][] = [
+  ['leicht', 'Leicht'],
+  ['normal', 'Normal'],
+  ['schwer', 'Schwer'],
+];
 
 /**
  * Feldherr — Echtzeitspiel im Browser.
@@ -91,6 +104,10 @@ const SCREEN_STIL = `
  * dem Finger. ACHTUNG: Jedes Kind, das touch-action wieder auf none setzt,
  * reisst darueber ein totes Loch in die Wischgeste - siehe .feldherr-karte.
  */
+/* Dasselbe fuer den Spieleinstieg im neuen Hub: Rollbereich und Blatt geben
+ * die senkrechte Wischgeste frei, die Einheitenkacheln wie .feldherr-karte. */
+.spe .spe-rolle,.spe .hb-blatt-rolle{touch-action:pan-y;overscroll-behavior:contain}
+.spe .spe-einheit{touch-action:pan-y;-webkit-user-select:none;user-select:none}
 main.hub{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;
   padding:calc(14px + env(safe-area-inset-top)) 14px calc(78px + env(safe-area-inset-bottom));
@@ -290,9 +307,12 @@ const HELD_STANDARD = CHARAKTERE[0]?.id ?? 'engineer';
 function Kartenblatt({
   karte,
   onClose,
+  neu = false,
 }: {
   karte: FeldherrKarte;
   onClose: () => void;
+  /** Neues Hub: als Blatt von unten (HbBlatt), dieselben Zahlen. */
+  neu?: boolean;
 }): React.JSX.Element {
   /* Nur Spalten zeigen, die diese Karte ueberhaupt fuellt — eine Mauer
    * hat keinen Schaden, ein Werk keine Reichweite. Leere Spalten sind
@@ -310,6 +330,62 @@ function Kartenblatt({
   if (hat('ertrag')) spalten.push({ kopf: 'Ertrag', wert: (s) => '+' + s.ertrag + '/s' });
   if (hat('laufzeit')) spalten.push({ kopf: 'Laufzeit', wert: (s) => s.laufzeit + ' s' });
 
+  const inhalt = (
+    <>
+      <div className="art">
+        {karte.art} · {karte.feld}
+        {karte.kartenGrenze ? ' · ' + karte.kartenGrenze + ' je Partie' : ''}
+      </div>
+      <p className="satz">{karte.satz}</p>
+      <div style={{ overflowX: 'auto' }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Stufe</th>
+              {spalten.map((s) => (
+                <th key={s.kopf}>{s.kopf}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {karte.stufen.map((st) => (
+              <tr key={st.stufe}>
+                <td>{st.stufe}</td>
+                {spalten.map((s) => (
+                  <td key={s.kopf}>{s.wert(st)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {karte.beweglich && (
+        <p className="fuss">
+          Ab Stufe 2 entsteht sie nur durch Verschmelzen zweier gleicher
+          Karten — kaufen lässt sich nur Stufe 1.
+        </p>
+      )}
+      {karte.wirkt.length > 0 && (
+        <>
+          <h4>Zusammenspiel</h4>
+          <ul>
+            {karte.wirkt.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  );
+
+  if (neu) {
+    return (
+      <HbBlatt titel={karte.nm} label={'Werte: ' + karte.nm} onClose={onClose}>
+        <div className="spe-werte">{inhalt}</div>
+      </HbBlatt>
+    );
+  }
+
   return (
     <div
       className="feldherr-blatt"
@@ -320,49 +396,7 @@ function Kartenblatt({
       {/* Klick im Blatt schliesst nicht — nur der Rand ringsum. */}
       <div className="feldherr-blatt-inner" onClick={(e) => e.stopPropagation()}>
         <h3>{karte.nm}</h3>
-        <div className="art">
-          {karte.art} · {karte.feld}
-          {karte.kartenGrenze ? ' · ' + karte.kartenGrenze + ' je Partie' : ''}
-        </div>
-        <p className="satz">{karte.satz}</p>
-        <div style={{ overflowX: 'auto' }}>
-          <table>
-            <thead>
-              <tr>
-                <th>Stufe</th>
-                {spalten.map((s) => (
-                  <th key={s.kopf}>{s.kopf}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {karte.stufen.map((st) => (
-                <tr key={st.stufe}>
-                  <td>{st.stufe}</td>
-                  {spalten.map((s) => (
-                    <td key={s.kopf}>{s.wert(st)}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {karte.beweglich && (
-          <p className="fuss">
-            Ab Stufe 2 entsteht sie nur durch Verschmelzen zweier gleicher
-            Karten — kaufen lässt sich nur Stufe 1.
-          </p>
-        )}
-        {karte.wirkt.length > 0 && (
-          <>
-            <h4>Zusammenspiel</h4>
-            <ul>
-              {karte.wirkt.map((w) => (
-                <li key={w}>{w}</li>
-              ))}
-            </ul>
-          </>
-        )}
+        {inhalt}
         <button className="btn" onClick={onClose}>
           Schließen
         </button>
@@ -379,9 +413,12 @@ function Kartenblatt({
 function Handkarte({
   karte,
   onOeffnen,
+  neu = false,
 }: {
   karte: FeldherrKarte;
   onOeffnen: () => void;
+  /** Neues Hub: Kachel im Spieleinstieg statt der Feldherr-Karte. */
+  neu?: boolean;
 }): React.JSX.Element {
   const halten = useRef<number | null>(null);
   const stop = (): void => {
@@ -403,7 +440,7 @@ function Handkarte({
   return (
     <button
       type="button"
-      className="feldherr-karte"
+      className={neu ? 'spe-einheit' : 'feldherr-karte'}
       onPointerDown={() => {
         stop();
         halten.current = window.setTimeout(() => {
@@ -1108,6 +1145,47 @@ export function FeldherrTisch({
     /** Noch keine Partie: Wartebereich mit Sitzliste. */
     if (!sicht) {
       const sitze = tisch.table?.seats ?? [];
+      if (hubNeu) {
+        return (
+          <SpielRahmen
+            gameId="feldherr"
+            titel="Tisch"
+            unter="Feldherr · Echtzeit · 2 Spieler"
+            akzent={FELDHERR_AKZENT}
+            onBack={() => {
+              // Wer den Wartebereich verlaesst, gibt den Platz frei (siehe unten).
+              void api.leaveTable(tableId).catch(() => {});
+              onBack();
+            }}
+            zurueckText="Zurück"
+          >
+            <p className={tisch.error ? 'hb-fehler' : 'spe-text'}>
+              {tisch.error ? 'Der Tisch ist nicht erreichbar.' : 'Warte auf den zweiten Feldherrn…'}
+            </p>
+            <SpielAbschnitt titel="Sitze">
+              <div className="hb-liste">
+                {sitze.map((platz) => (
+                  <div key={platz.seat} className={`spe-zeile spe-sitz${platz.displayName ? ' is-besetzt' : ''}`}>
+                    <span>
+                      <strong>Sitz {platz.seat + 1}</strong>
+                    </span>
+                    <span className="hb-klein">{platz.displayName ?? 'frei'}</span>
+                  </div>
+                ))}
+              </div>
+            </SpielAbschnitt>
+            {!tisch.error && (
+              <div className="spe-warten">
+                <div className="spe-lauf" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            )}
+          </SpielRahmen>
+        );
+      }
       return (
         <main className="hub">
           <header className="hub-kopf">
@@ -1217,6 +1295,95 @@ export function FeldherrTisch({
   }
 
   const offene = tische ?? [];
+
+  // Neues Hub: dieselben Zustände und Aufrufe im Spieleinstieg-Baukasten.
+  if (hubNeu) {
+    return (
+      <SpielRahmen
+        gameId="feldherr"
+        titel="Feldherr"
+        unter="Echtzeit · 2 Spieler"
+        akzent={FELDHERR_AKZENT}
+        onBack={onBack}
+        zurueckText="Zurück"
+        fuss={
+          <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void erstelleTisch()}>
+            Tisch erstellen
+          </button>
+        }
+      >
+        <p className="spe-text">
+          Zwei Feldherren, ein Brett, eine Mittellinie. Wer das gegnerische Haupthaus einreißt, gewinnt.
+        </p>
+
+        {/* Online steht oben — der einzige Modus, in dem jemand anderes wartet
+            (siehe die alte Ansicht unten). Erstellen ist der goldene Fuß. */}
+        <SpielAbschnitt titel="Online spielen" zusatz={offene.length > 0 ? offene.length : undefined}>
+          <div className="hb-liste">
+            {offene.map((zeile) => (
+              <button key={zeile.id} type="button" className="spe-zeile spe-tisch" onClick={() => void tretebei(zeile.id)}>
+                <span>
+                  <strong>{zeile.host ?? 'Unbekannt'}</strong>
+                </span>
+                <span className="spe-zahl" aria-label={`${zeile.occupied} von ${zeile.seats} Plätzen besetzt`}>
+                  {zeile.occupied}/{zeile.seats}
+                </span>
+                <span className="spe-bei">Beitreten</span>
+              </button>
+            ))}
+            {tische === null && <p className="spe-leer">Tische werden gesucht …</p>}
+            {tische !== null && offene.length === 0 && (
+              <p className="spe-leer">Gerade wartet niemand. Erstell den ersten Tisch.</p>
+            )}
+          </div>
+          {fehler && <p className="hb-fehler">{fehler}</p>}
+        </SpielAbschnitt>
+
+        <SpielAbschnitt titel="Wen spielst du?">
+          <div className="spe-helden">
+            {CHARAKTERE.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={'spe-held' + (held === c.id ? ' is-an' : '')}
+                aria-pressed={held === c.id}
+                onClick={() => setHeld(c.id)}
+              >
+                <strong>{c.nm}</strong>
+                <small>{c.kurz}</small>
+              </button>
+            ))}
+            {/* Platzhalter, damit die Auswahl zeigt, dass hier noch mehr kommt. */}
+            <button type="button" className="spe-held is-bald" disabled>
+              <strong>Nächster Charakter</strong>
+              <span className="hb-bald-marke">Bald</span>
+            </button>
+          </div>
+        </SpielAbschnitt>
+
+        {/* Die Kartenhand des gewaehlten Charakters. Halten oeffnet die Werte. */}
+        {gewaehlt && (
+          <SpielAbschnitt titel="Einheiten" zusatz={gewaehlt.nm}>
+            <div className="spe-einheiten">
+              {gewaehlt.karten.map((k) => (
+                <Handkarte key={k.id} neu karte={k} onOeffnen={() => setBlatt(k)} />
+              ))}
+            </div>
+            <p className="hb-klein">Karte gedrückt halten für alle Werte und das Zusammenspiel.</p>
+          </SpielAbschnitt>
+        )}
+
+        <SpielAbschnitt titel="Gegen die KI">
+          <SpielWahl name="Stärke der KI" werte={STUFEN.map(([wert, text]) => ({ wert, text }))} wert={stufe} onWahl={setStufe} />
+          <button type="button" className="hb-kn is-blau is-breit" onClick={() => setModus('ki')}>
+            Übungspartie starten
+          </button>
+        </SpielAbschnitt>
+
+        {blatt && <Kartenblatt neu karte={blatt} onClose={() => setBlatt(null)} />}
+      </SpielRahmen>
+    );
+  }
 
   return (
     <main className="hub">

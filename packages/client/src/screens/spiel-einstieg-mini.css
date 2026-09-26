@@ -1,0 +1,262 @@
+/*
+ * Minispiel-Einstiege im neuen Hub: Eiland, Filler, Mememory (26.09.2026).
+ *
+ * Eine eigene Datei neben spiel-einstieg.css, weil dort der Rahmen für ALLE
+ * Spiele steht und mehrere Sitzungen gleichzeitig Spiele umziehen — was nur
+ * diese drei brauchen (Wartezahl, Motivreihe, die Kacheln von Filler, das
+ * Heim von Mememory), bleibt hier. Farben nur über die Variablen des Hubs.
+ *
+ * Die Spielfarben (Felder, Ornamente, Bretter) kommen weiter aus styles.css:
+ * Sie sind das Motiv des Spiels und stehen auf dem Nachtblau genauso.
+ */
+
+/* Ein ruhiger Satz unter dem Kopf, wie der Untertitel im alten Menü */
+.spe .spe-text {
+  margin: 0;
+  font: 600 15px/1.45 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .spe-text b,
+.spe .spe-text strong {
+  color: var(--hb-tinte);
+}
+.spe .hb-blk > .hb-klein {
+  margin: 0;
+}
+
+/* Die Motivreihe (Felder von Eiland, Farben von Filler) linksbündig unter dem Satz */
+.spe .spe-motiv {
+  margin: 0;
+  justify-content: flex-start;
+}
+
+/* ---------- Warten: Suche und Tischaufbau ---------- */
+.spe .spe-warten {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 0 8px;
+  text-align: center;
+}
+.spe .spe-countdown {
+  margin: 0;
+  font: 400 88px/1 var(--hb-anz);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+}
+.spe .spe-warten .spe-text {
+  max-width: 22rem;
+}
+.spe .spe-lauf {
+  display: flex;
+  gap: 8px;
+}
+.spe .spe-lauf span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--spe-akzent);
+  animation: spe-lauf 1.1s ease-in-out infinite both;
+}
+.spe .spe-lauf span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.spe .spe-lauf span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+@keyframes spe-lauf {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Anleitung im Blatt ---------- */
+.spe .spe-regeltext {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.spe .spe-regeltext h3 {
+  margin: 8px 0 0;
+  font: 400 18px/1.2 var(--hb-anz);
+  color: var(--hb-tinte);
+}
+.spe .spe-regeltext p,
+.spe .spe-regeltext ol {
+  margin: 0;
+  font: 600 15px/1.5 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .spe-regeltext ol {
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.spe .spe-regeltext strong {
+  color: var(--hb-tinte);
+}
+
+/* ---------- Filler: Spielart-Kacheln (Auswahl-Raster) auf Nachtblau ---------- */
+.spe .fl-spielart {
+  margin: 0;
+  --aw-panel: var(--hb-karte);
+  --aw-line: var(--hb-kontur);
+  --aw-text: var(--hb-tinte);
+  --aw-muted: var(--hb-leise);
+  --accent: var(--spe-akzent);
+}
+.spe .fl-spielart .aw-raster {
+  gap: 10px;
+}
+/* Ausdrücklich: Die Knopf-Rückstellung des Hubs (`:is(.hb, .spe) button`)
+   wiegt mehr als `.aw-kachel` und nähme Grund und Rand sonst weg. */
+.spe .fl-spielart .aw-kachel {
+  border-radius: 16px;
+  border: 1.5px solid var(--hb-kontur);
+  background: var(--hb-karte);
+  padding: 8px 8px 10px;
+}
+.spe .fl-spielart .aw-kachel.is-an {
+  border: 2px solid var(--spe-akzent);
+  box-shadow: none;
+  background: color-mix(in srgb, var(--spe-akzent) 16%, var(--hb-karte));
+}
+.spe .fl-spielart .aw-titel {
+  font: 800 15px var(--hb-txt);
+}
+.spe .fl-spielart-text {
+  margin: 10px 0 0;
+  padding: 0;
+  font: 700 13px/1.4 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .fl-wischhinweis {
+  color: var(--hb-leise);
+  opacity: 0.8;
+}
+/* Wischen wechselt die Spielart; senkrecht rollt die Seite weiter */
+.spe .spe-wisch {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  touch-action: pan-y;
+}
+
+/* ---------- Mememory: Stufenregler und Einstellungen im neuen Look ---------- */
+.spe .mm-gegner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+.spe .mm-stufenschiene,
+.spe .mm-regler input[type='range'] {
+  accent-color: var(--hb-gold);
+}
+.spe .mm-stufenname {
+  min-height: 32px;
+  font: 700 12px/1.3 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .mm-stufenname[data-an] {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--hb-gold);
+}
+.spe .mm-stufensatz {
+  min-height: 2.9em;
+  margin: 0;
+  font: 600 13px/1.45 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .mm-regler {
+  display: block;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+.spe .mm-regler-kopf b {
+  font: 800 15px var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.spe .mm-regler-kopf em {
+  font: 800 14px var(--hb-txt);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+/* Das Zahnrad von Mememory im runden Kopfknopf; dieselbe Drehung beim Tippen */
+.spe .mm-zahnrad-neu svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.spe .mm-zahnrad-neu:active svg {
+  transform: rotate(35deg);
+}
+/* Gegner entfernen: 44 pt Treffer, ohne die Überschrift aufzublähen */
+.spe .hb-ab .spe-weg {
+  margin: -12px 0;
+}
+.spe .hb-ab .spe-weg .zeichen {
+  width: 18px;
+  height: 18px;
+}
+.spe .hb-kn .spe-kn-zahl {
+  font-style: normal;
+  font-weight: 700;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Das Heim von Mememory (Sammlung · Menü · Mehr) behält seinen Streifen und
+ * die Leiste unten. Im neuen Hub ist die mittlere Seite ein Spieleinstieg:
+ * `.spe` steht dort nicht fest über dem Fenster, sondern füllt nur seine
+ * Seite — sonst läge es auf allen drei. `z-index: auto`, damit die Leiste
+ * über der Seite bleibt (sie liegt mit 4 im Heim, `.spe` brächte 5 mit).
+ */
+.mm-blatt > .spe {
+  position: absolute;
+  inset: 0;
+  z-index: auto;
+}
+.mm-blatt > .spe .spe-fuss {
+  /* Die Leiste (40 px Knöpfe, 6 px Polster, 14 px Abstand) liegt darüber */
+  padding-bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 70px);
+}
+.mm-heim.is-neu {
+  background: radial-gradient(120% 55% at 50% 0%, #1b2f6e 0%, #0e1a3d 58%);
+}
+.mm-heim.is-neu .mm-punkte {
+  background: rgba(7, 19, 47, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(53, 81, 140, 0.9);
+}
+.mm-heim.is-neu .mm-punkt {
+  color: #a3b3dd;
+}
+.mm-heim.is-neu .mm-punkt[data-an] {
+  color: #f5c02e;
+  background: rgba(245, 192, 46, 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spe .spe-lauf span {
+    animation: none;
+    opacity: 0.7;
+  }
+}

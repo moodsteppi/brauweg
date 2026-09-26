@@ -1,0 +1,126 @@
+/*
+ * Poker im Spieleinstieg des neuen Hubs (EasyPoker.tsx, `hubNeu`).
+ *
+ * Hauptmenü, Online-Tisch, Wartebereich und die beiden Blätter (Regeln,
+ * Einsatz). Der Filz selbst behält seine eigenen Klassen (`poker-*`) und wird
+ * hier nicht angefasst. Alles unter `.spe`, damit `?hub=alt` bleibt, wie es ist.
+ */
+
+/* Info-Knopf im Kopf: ein goldenes „i" im runden Knopf */
+.spe .pk-info b {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+  font: italic 800 16px/1 Georgia, 'Times New Roman', serif;
+}
+
+/* Guthaben: ein Wert, also Gold — als Kontur, der Hauptknopf bleibt der
+   einzige gefüllte (DESIGN.md, „Das neue Hub"). */
+.spe .pk-guthaben {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0 16px 0 10px;
+  min-height: 40px;
+  border-radius: 999px;
+  background: rgba(245, 192, 46, 0.08);
+  border: 1.5px solid var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+.spe .pk-guthaben .poker-jeton-zeichen {
+  width: 24px;
+  height: 24px;
+}
+.spe .pk-guthaben strong {
+  font: 400 22px/1 var(--hb-anz);
+  color: var(--hb-gold);
+}
+.spe .pk-guthaben em {
+  font: 800 13px/1 var(--hb-txt);
+  font-style: normal;
+  color: var(--hb-leise);
+}
+
+.spe .pk-aktiv {
+  font: 700 14px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* Tischzeilen im Online-Tisch */
+.spe .spe-tisch:disabled {
+  opacity: 0.6;
+}
+.spe .pk-einsatz {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.spe .pk-einsatz .poker-jeton-zeichen {
+  width: 14px;
+  height: 14px;
+}
+.spe .pk-bei {
+  flex: none;
+  min-width: 76px;
+  text-align: right;
+  font: 800 13px var(--hb-txt);
+  color: var(--spe-akzent);
+}
+.spe .pk-bei.is-zu-hoch {
+  color: var(--hb-leise);
+}
+
+/* Wartebereich: die laufenden Punkte sagen „es lebt" */
+.spe .pk-lauf {
+  margin: 4px 0 0;
+}
+.spe .pk-lauf span {
+  background: var(--spe-akzent);
+}
+.spe .pk-mitte {
+  margin: 0;
+  text-align: center;
+}
+
+/* Regelblatt im neuen Stil: derselbe Text, Hub-Schrift */
+.spe .pk-regeln {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.spe .pk-regeln h3 {
+  margin: 12px 0 2px;
+  font: 800 11px/1 var(--hb-txt);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--hb-gold);
+}
+.spe .pk-regeln h3:first-child {
+  margin-top: 0;
+}
+.spe .pk-regeln p,
+.spe .pk-regeln ul,
+.spe .pk-regeln ol {
+  margin: 0;
+  font: 600 14px/1.55 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .pk-regeln ul,
+.spe .pk-regeln ol {
+  padding-left: 1.2rem;
+}
+.spe .pk-regeln b {
+  color: var(--hb-tinte);
+}
+.spe .pk-regeln .poker-blatt-fuss {
+  margin-top: 10px !important;
+  font-size: 12px !important;
+  color: var(--hb-leise) !important;
+}

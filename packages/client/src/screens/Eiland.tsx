@@ -17,6 +17,16 @@ import type { EilandSicht, EilandVariante } from '../minispiele/eiland/sicht';
 import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { serverAdresse } from '../laufzeit';
+import { hubNeu } from '../hubNeu';
+import { HbBlatt } from './HbBlatt';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+import './spiel-einstieg-mini.css';
+
+/**
+ * Die Farbe von Eiland im neuen Hub: das Gras der Karte (`.ei-feld[data-art='gras']`).
+ * Sie toent Auswahl und Kopf; der Hauptknopf bleibt gold (DESIGN.md, „Spieleinstieg").
+ */
+const AKZENT = '#a9c46c';
 
 /**
  * Eiland — Landnahme zu zweit, gleichzeitig gezogen.
@@ -371,9 +381,48 @@ export function Eiland({
   // Mitspieler suchen
   // -------------------------------------------------------------------------
 
+  /** Im neuen Hub unter jedem Knopf im Fuss — dieselbe Zahl wie im alten Menue. */
+  const spielerZeile = <p className="hb-klein">{aktiv ?? '…'} Spieler gerade in Eiland</p>;
+
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
     const gefunden = suchstand.suchende;
+    if (hubNeu) {
+      return (
+        <SpielRahmen
+          gameId="eiland"
+          titel="Gegner suchen"
+          unter="Eiland · Online Match"
+          akzent={AKZENT}
+          onBack={brichSucheAb}
+          zurueckText="Suche abbrechen"
+          fuss={
+            <>
+              <button type="button" className="hb-kn is-blau is-breit" onClick={brichSucheAb}>
+                Abbrechen
+              </button>
+              {spielerZeile}
+            </>
+          }
+        >
+          <div className="spe-warten">
+            <p className="spe-countdown" aria-live="polite">
+              {sekunden}
+            </p>
+            <p className="spe-text">
+              {gefunden === 1
+                ? 'Noch niemand sonst — bleibt es dabei, spielst du gegen die KI.'
+                : `${gefunden} Spieler gefunden`}
+            </p>
+            <div className="spe-lauf" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        </SpielRahmen>
+      );
+    }
     return (
       <main className="ei-seite ei-menue">
         <button className="ei-zurueck" type="button" onClick={brichSucheAb}>
@@ -405,6 +454,97 @@ export function Eiland({
   // -------------------------------------------------------------------------
   // Menue
   // -------------------------------------------------------------------------
+
+  if (!tischId && hubNeu) {
+    /*
+     * Neues Hub: dieselben Zustaende und Aufrufe im Spieleinstieg-Baukasten.
+     * Die Suche ist der Hauptknopf im Fuss; die Spielart steht wie im alten
+     * Menue im Block des KI-Knopfes, weil sie nur dort wirkt (siehe `variante`).
+     */
+    return (
+      <SpielRahmen
+        gameId="eiland"
+        titel="Eiland"
+        unter="2 Spieler · ihr zieht gleichzeitig"
+        akzent={AKZENT}
+        onBack={onBack}
+        zurueckText="Zurück zur Spielseite"
+        fuss={
+          <>
+            <button
+              type="button"
+              className="hb-kn is-gold is-haupt is-breit"
+              onClick={() => void starteSuche()}
+              disabled={sucht}
+            >
+              Online Match suchen…
+            </button>
+            {spielerZeile}
+          </>
+        }
+      >
+        <p className="spe-text">
+          Nimm Land, sammle Ornamente und komm dem anderen zuvor. Ihr zieht
+          gleichzeitig — und wer dasselbe Feld will, muss darum kämpfen.
+        </p>
+        <div className="ei-probe spe-motiv" aria-hidden="true">
+          <span data-art="gras" />
+          <span data-art="gras">
+            <Ornamentbild art={0} />
+          </span>
+          <span data-art="wasser" />
+          <span data-art="berg" />
+          {variante === 'nebel' && <span data-art="nebel" />}
+        </div>
+        {fehler && <p className="hb-fehler">{fehler}</p>}
+        <SpielAbschnitt titel="Gegen die KI">
+          <p className="hb-klein">Hier wählst du die Spielart.</p>
+          <SpielWahl
+            name="Spielart"
+            werte={[
+              { wert: 'klar' as const, text: 'Offene Karte' },
+              { wert: 'nebel' as const, text: 'Im Nebel' },
+            ]}
+            wert={variante}
+            onWahl={setVariante}
+          />
+          <p className="hb-klein">
+            {variante === 'nebel'
+              ? 'Du siehst dein Gebiet und drei Felder darüber hinaus.'
+              : 'Die ganze Insel liegt offen — für euch beide.'}
+          </p>
+          <button
+            type="button"
+            className="hb-kn is-blau is-breit"
+            onClick={() => void gegenKi()}
+            disabled={sucht}
+          >
+            Gegen die KI spielen
+          </button>
+        </SpielAbschnitt>
+        <SpielAbschnitt titel="Anleitung">
+          <div className="hb-liste">
+            <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
+              <span>
+                <strong>So spielt man Eiland</strong>
+                <small>Regeln, Ornamente, zwei Spielarten</small>
+              </span>
+              <span className="hb-pf" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          </div>
+        </SpielAbschnitt>
+        {regelnOffen && (
+          <HbBlatt titel="So spielt man Eiland" onClose={() => setRegelnOffen(false)}>
+            <div className="spe-regeltext">
+              <Regeltext />
+            </div>
+          </HbBlatt>
+        )}
+      </SpielRahmen>
+    );
+  }
 
   if (!tischId) {
     return (
@@ -497,6 +637,39 @@ export function Eiland({
 
   if (!sicht) {
     const besetzt = (tisch.table?.seats ?? []).filter((platz) => platz.accountId).length;
+    if (hubNeu) {
+      return (
+        <SpielRahmen
+          gameId="eiland"
+          titel="Tisch wird aufgebaut"
+          unter="Eiland"
+          akzent={AKZENT}
+          onBack={brichAb}
+          zurueckText="Abbrechen"
+          fuss={
+            <>
+              <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
+                Abbrechen
+              </button>
+              {spielerZeile}
+            </>
+          }
+        >
+          <div className="spe-warten">
+            <p className="spe-text">
+              {tisch.status === 'open'
+                ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
+                : 'Verbindung wird aufgebaut…'}
+            </p>
+            <div className="spe-lauf" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        </SpielRahmen>
+      );
+    }
     return (
       <main className="ei-seite ei-menue">
         <button className="ei-zurueck" type="button" onClick={brichAb}>
@@ -1260,6 +1433,15 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         ✕
       </button>
       <h2>So spielt man Eiland</h2>
+      <Regeltext />
+    </div>
+  );
+}
+
+/** Der Wortlaut der Anleitung — im alten Blatt und im Blatt des neuen Hubs derselbe. */
+function Regeltext(): React.JSX.Element {
+  return (
+    <>
       <h3>Regeln</h3>
       <ol>
         <li>Jeder startet mit einem Feld in seiner Ecke der Insel.</li>
@@ -1302,6 +1484,6 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
       </p>
       <h3>Ziel</h3>
       <p>Wer am Ende die meisten Felder hält, gewinnt.</p>
-    </div>
+    </>
   );
 }

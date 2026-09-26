@@ -38,6 +38,7 @@ import {
   wirksamesPaket,
   type PartyWahl,
 } from './wahl';
+import { SpielAbschnitt } from '../../screens/SpielEinstieg';
 import { ansageFuer, type PartyMinispiel } from './sicht';
 
 export interface PartyAuswahlStand {
@@ -86,6 +87,7 @@ export function PartyAuswahl({
   trinkmodus,
   onWahl,
   paketSperre,
+  neu = false,
 }: {
   vorgabe: Record<string, unknown> | null;
   wahl: PartyWahl;
@@ -99,10 +101,91 @@ export function PartyAuswahl({
    * entschieden hat es der Server.
    */
   paketSperre?: (paket: string) => string | undefined;
+  /**
+   * Neues Hub: dieselben Raster und Wahlen, aber als Abschnitte des
+   * Spieleinstiegs und die Themenpakete mit ihrem Bild (`/hub/paket-<id>.webp`).
+   */
+  neu?: boolean;
 }): React.JSX.Element {
   const stufe = wirksameInhaltsHaerte(vorgabe, wahl, gast);
   const paket = wirksamesPaket(vorgabe, wahl);
   const modus = wirksamerModus(vorgabe, wahl);
+  const irgendeinPaketGesperrt =
+    paketSperre !== undefined && Object.keys(PAKET_NAME).some((k) => paketSperre(k) !== undefined);
+
+  if (neu) {
+    return (
+      <>
+        {modusBekannt(vorgabe) ? (
+          <SpielAbschnitt titel="Modus">
+            <AuswahlRaster
+              label="Modus"
+              spalten={2}
+              eintraege={MODI.map((m) => ({ kennung: m.kennung, titel: m.titel, untertitel: m.text }))}
+              gewaehlt={modus}
+              onWahl={(kennung) => onWahl({ ...wahl, modus: kennung })}
+            />
+            {modus === 'themenabend' && paket === PAKET_ALLES ? (
+              <p className="hb-klein">Für den Themenabend unten ein Themenpaket wählen.</p>
+            ) : null}
+          </SpielAbschnitt>
+        ) : null}
+
+        <SpielAbschnitt titel="Themenpakete">
+          <AuswahlRaster
+            label="Themenpaket"
+            spalten={3}
+            className="spe-pakete"
+            eintraege={[
+              {
+                kennung: PAKET_ALLES,
+                titel: 'alles',
+                untertitel: 'Ohne Thema',
+                vorschau: <span className="spe-paket-alles">✦</span>,
+              },
+              ...Object.entries(PAKET_NAME).map(([kennung, titel]) => {
+                const grund = paketSperre?.(kennung);
+                return {
+                  kennung,
+                  titel,
+                  bild: `/hub/paket-${kennung}.webp`,
+                  deaktiviert: grund,
+                  // Gesperrt heißt Schloss plus leise Schrift (DESIGN.md, „Das neue Hub").
+                  badge: grund ? <SchlossZeichen /> : undefined,
+                };
+              }),
+            ]}
+            gewaehlt={paket}
+            onWahl={(kennung) => onWahl({ ...wahl, paket: kennung })}
+          />
+          <p className="hb-klein">Hat ein Paket zu wenig eigene Inhalte, mischt die Kiste allgemeine dazu.</p>
+          {irgendeinPaketGesperrt ? (
+            <p className="hb-klein" data-pk-paketsperre="">
+              Gesperrte Pakete braucht nur, wer die Runde aufmacht — alle anderen spielen mit.
+            </p>
+          ) : null}
+        </SpielAbschnitt>
+
+        {/* „Inhalte“, nicht „Härte“ — die Härte ist der Schluck-Regler in den Einstellungen. */}
+        <SpielAbschnitt titel={INHALT_TITEL}>
+          <AuswahlRaster
+            label={INHALT_TITEL}
+            spalten={3}
+            eintraege={INHALT_STUFEN.map((s) => ({
+              kennung: String(s.stufe),
+              titel: s.titel,
+              untertitel: s.text,
+              deaktiviert: gast && s.stufe === 3 ? DERB_GRUND_GAST : undefined,
+            }))}
+            gewaehlt={stufe === null ? null : String(stufe)}
+            onWahl={(kennung) => onWahl({ ...wahl, inhaltsHaerte: Number(kennung) })}
+          />
+        </SpielAbschnitt>
+
+        <MinispielAuswahl neu vorgabe={vorgabe} wahl={wahl} trinkmodus={trinkmodus} onWahl={onWahl} />
+      </>
+    );
+  }
 
   return (
     <section className="pk-aw" aria-labelledby="pk-aw-titel" data-pk-auswahl="">
@@ -164,7 +247,7 @@ export function PartyAuswahl({
         <p className="pk-aw-hinweis">
           Hat ein Paket zu wenig eigene Inhalte, mischt die Kiste allgemeine dazu.
         </p>
-        {paketSperre !== undefined && Object.keys(PAKET_NAME).some((k) => paketSperre(k) !== undefined) ? (
+        {irgendeinPaketGesperrt ? (
           <p className="pk-aw-hinweis" data-pk-paketsperre="">
             Gesperrte Pakete braucht nur, wer die Runde aufmacht — alle anderen spielen mit.
           </p>
@@ -187,17 +270,31 @@ function MinispielAuswahl({
   wahl,
   trinkmodus,
   onWahl,
+  neu = false,
 }: {
   vorgabe: Record<string, unknown> | null;
   wahl: PartyWahl;
   trinkmodus: boolean;
   onWahl: (neu: PartyWahl) => void;
+  /** Neues Hub: als Abschnitt des Spieleinstiegs. */
+  neu?: boolean;
 }): React.JSX.Element {
   const [zuWenig, setZuWenig] = useState(false);
   const alle = alleMinispiele(vorgabe);
   const gewaehlt = wirksameMinispiele(vorgabe, wahl);
 
+  const hinweis = neu ? 'hb-klein' : 'pk-aw-hinweis';
+
   if (!alle || !gewaehlt) {
+    if (neu) {
+      return (
+        <SpielAbschnitt titel="Minispiele">
+          <p className="spe-leer" data-pk-minispiele="">
+            Minispiele werden geladen …
+          </p>
+        </SpielAbschnitt>
+      );
+    }
     return (
       <div className="pk-aw-block" data-pk-minispiele="">
         <h3 className="pk-aw-titel">Minispiele</h3>
@@ -207,13 +304,13 @@ function MinispielAuswahl({
   }
 
   const mindestens = Math.min(MINDESTENS_MINISPIELE, alle.length);
-  const setze = (neu: readonly string[]): void => {
-    if (neu.length < mindestens) {
+  const setze = (folge: readonly string[]): void => {
+    if (folge.length < mindestens) {
       setZuWenig(true);
       return;
     }
     setZuWenig(false);
-    onWahl({ ...wahl, minispiele: minispielWahl(vorgabe, neu) });
+    onWahl({ ...wahl, minispiele: minispielWahl(vorgabe, folge) });
   };
 
   const eintraege: AuswahlEintrag[] = alle.map((id) => {
@@ -229,27 +326,23 @@ function MinispielAuswahl({
     };
   });
 
-  return (
-    <div className="pk-aw-block" data-pk-minispiele="">
-      <div className="pk-aw-kopf">
-        <h3 className="pk-aw-titel">Minispiele</h3>
-        <span className="pk-aw-zahl">
-          {gewaehlt.length} von {alle.length}
-        </span>
-        {gewaehlt.length < alle.length ? (
-          <button
-            type="button"
-            className="pk-textknopf"
-            data-pk-alle=""
-            onClick={() => {
-              setZuWenig(false);
-              onWahl({ ...wahl, minispiele: null });
-            }}
-          >
-            Alle
-          </button>
-        ) : null}
-      </div>
+  const alleKnopf =
+    gewaehlt.length < alle.length ? (
+      <button
+        type="button"
+        className={neu ? 'hb-ab-mehr' : 'pk-textknopf'}
+        data-pk-alle=""
+        onClick={() => {
+          setZuWenig(false);
+          onWahl({ ...wahl, minispiele: null });
+        }}
+      >
+        Alle
+      </button>
+    ) : null;
+
+  const inhalt = (
+    <>
       <AuswahlRaster
         label="Minispiele"
         mehrfach
@@ -258,7 +351,7 @@ function MinispielAuswahl({
         onWahl={(_kennung, auswahl) => setze(auswahl)}
       />
       {zuWenig ? (
-        <p className="pk-aw-hinweis" role="status">
+        <p className={hinweis} role="status">
           Mindestens {mindestens} Minispiele — sonst kommt dasselbe ständig wieder.
         </p>
       ) : null}
@@ -285,9 +378,50 @@ function MinispielAuswahl({
           </li>
         ))}
       </ol>
-      <p className="pk-aw-hinweis">
+      <p className={hinweis}>
         In dieser Reihenfolge kommen die Runden dran; sind es mehr Runden als Spiele, geht es vorn weiter.
       </p>
+    </>
+  );
+
+  if (neu) {
+    return (
+      <SpielAbschnitt
+        titel="Minispiele"
+        zusatz={
+          <>
+            {gewaehlt.length} von {alle.length}
+            {alleKnopf}
+          </>
+        }
+      >
+        <div className="spe-minispiele" data-pk-minispiele="">
+          {inhalt}
+        </div>
+      </SpielAbschnitt>
+    );
+  }
+
+  return (
+    <div className="pk-aw-block" data-pk-minispiele="">
+      <div className="pk-aw-kopf">
+        <h3 className="pk-aw-titel">Minispiele</h3>
+        <span className="pk-aw-zahl">
+          {gewaehlt.length} von {alle.length}
+        </span>
+        {alleKnopf}
+      </div>
+      {inhalt}
     </div>
+  );
+}
+
+/** Schloss an einer gesperrten Kachel — gesperrt heißt Schloss plus leise Schrift. */
+function SchlossZeichen(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" aria-label="gesperrt" role="img" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
   );
 }

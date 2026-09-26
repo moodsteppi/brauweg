@@ -9,6 +9,8 @@ import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
+import { Startbildschirm } from './screens/Startbildschirm';
+import { hubNeu } from './hubNeu';
 import { Ladevorhang } from './minispiele/tafelrunde/Ladevorhang';
 import { TISCH_PARAMETER } from './minispiele/tafelrunde/tischlink';
 import {
@@ -168,6 +170,8 @@ function AppLaedt({ text = 'Einen Moment…' }: { text?: string }): React.JSX.El
 export function App(): React.JSX.Element {
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Der Startbildschirm (Logo, Ladebild) ist durch — gezeigt wird er einmal je Start. */
+  const [startFertig, setStartFertig] = useState(false);
   /**
    * `/?tisch=KX7M9Q` fuehrt direkt zu Tafelrunde.
    *
@@ -317,6 +321,8 @@ export function App(): React.JSX.Element {
     return false;
   });
 
+  // Neues Hub: Logo und Ladebild mit Prozentzahl, bis Konto und Startbilder da sind.
+  if (hubNeu && !startFertig) return <Startbildschirm geladen={!loading} onFertig={() => setStartFertig(true)} />;
   if (loading) return <AppLaedt />;
 
   // Die Diagnose braucht ein angemeldetes Testkonto; ohne Anmeldung geht es
