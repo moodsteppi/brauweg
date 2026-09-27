@@ -281,6 +281,10 @@ mit Logo oben und goldener Leiste mit Prozentzahl unten
 (`/api/me`), die Schrift und die Bilder, die der Start gleich zeigt, und läuft
 der echten Zahl nur hinterher, nie voraus. Mit „weniger Bewegung" entfällt das
 Aufspringen. Probe: `?dev=start` (`&halt=laden` bleibt auf dem Ladebild).
+Die iOS-Startbilder für den Home-Bildschirm (`public/start/start-*.png`, in
+`index.html`) zeigen **genau diesen Grund ohne Logo**: `#050b1d` mit dem
+Schein aus `.start-logo-schein`. So ploppt das Logo auf demselben Grund auf,
+statt dass vorher kurz ein anderes Logo steht (Robin, 27.09.2026).
 
 ## Bausteine
 
