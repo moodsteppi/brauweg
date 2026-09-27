@@ -68,6 +68,7 @@ import {
   SITZE,
   ZUGZEIT_MS,
   istHaerte,
+  istInhaltsMischung,
   istMinispiel,
   istSpielmodus,
   type PartykisteAktion,
@@ -189,6 +190,20 @@ export const partykiste: GameModule<
           severity: 'error',
         });
       }
+      /*
+       * Seit dem 27.09.2026, und darf fehlen wie die beiden: Fehlt es, liest
+       * das Modul die Stufe wie bis dahin als Obergrenze (regeln.ts,
+       * `inhaltsMischung`) — ein Bildschirm von davor legt also weiter Tische
+       * an, die sich verhalten wie am Tag zuvor.
+       */
+      const mischung = roh['inhaltsMischung'];
+      if (mischung !== undefined && !istInhaltsMischung(mischung)) {
+        probleme.push({
+          path: 'inhaltsMischung',
+          messageKey: 'ruleset.partykiste.inhaltsMischung',
+          severity: 'error',
+        });
+      }
       const paket = roh['paket'];
       if (paket !== undefined && paket !== null && !istPaket(paket)) {
         probleme.push({
@@ -243,6 +258,9 @@ export const partykiste: GameModule<
             : DEFAULT_REGELN.schluckFaktor,
         /* Unsinn wird harmlos bzw. "alles" — nie derber als eingestellt. */
         inhaltsHaerte: istHaerte(regeln.inhaltsHaerte) ? regeln.inhaltsHaerte : INHALTS_HAERTE_VORGABE,
+        /* Fehlt oder Unsinn: GAR KEIN Feld, also die alte Obergrenze — nie
+           derber als eingestellt, und ein alter Tisch spielt wie gewohnt. */
+        ...(istInhaltsMischung(regeln.inhaltsMischung) ? { inhaltsMischung: regeln.inhaltsMischung } : {}),
         paket: istPaket(regeln.paket) ? regeln.paket : null,
         modus: istSpielmodus(regeln.modus) ? regeln.modus : 'turnier',
       },

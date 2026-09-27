@@ -76,13 +76,8 @@ import {
   type KoenigsbecherRunde,
   type ZehnSekundenRunde,
 } from './zeitdruck.js';
-import {
-  MINDESTMENGE,
-  hatErlaubtenVorrat,
-  waehlbareInhalte,
-  type Auswahl,
-  type InhaltsRueckfall,
-} from './inhalte/filter.js';
+import { MINDESTMENGE, hatErlaubtenVorrat, type InhaltsRueckfall } from './inhalte/filter.js';
+import { inhaltsStapel } from './inhalte/stapel.js';
 import type { Aufgabe, Haerte, Inhalt } from './inhalte/typen.js';
 import {
   DEFAULT_REGELN,
@@ -577,11 +572,8 @@ function stapel<T extends Inhalt>(
      Stufe seiner Runde (modi.ts) — sonst kaeme derselbe Spruch je Stufe neu. */
   const stufen = stufenStapel(katalog, regeln, saat, sitze, zweck, mindestens, folgeFuer(regeln, saat));
   if (stufen) return stufen;
-  const auswahl: Auswahl<T> = waehlbareInhalte(katalog, regeln, sitze, mindestens);
-  return {
-    stapel: gemischt(auswahl.inhalte, baueZufall(rundenSaat(saat, 0, zweck))),
-    rueckfall: auswahl.rueckfall,
-  };
+  /* Sonst: genau, gemischt oder die alte Obergrenze — inhalte/stapel.ts. */
+  return inhaltsStapel(katalog, regeln, saat, sitze, zweck, mindestens);
 }
 
 /** Die Stelle `stelle` eines Stapels, am Ende von vorn. */

@@ -123,8 +123,15 @@ export interface PartykisteRegeln {
    */
   readonly schluckFaktor: number;
   /**
-   * Textschaerfe der Inhalte: 1 harmlos, 2 pikant, 3 derb. Eine OBERGRENZE —
-   * ein derber Tisch bekommt auch harmlose Sprueche, ein harmloser nie derbe.
+   * Textschaerfe der Inhalte: 1 harmlos, 2 pikant, 3 derb.
+   *
+   * Seit dem 27.09.2026 (Robin: „es soll nur die Stufen haben, oder man macht
+   * gemischt an, dann ist zufaellig aus allen") haengt die Bedeutung an
+   * `inhaltsMischung`: bei „genau" GENAU diese Stufe, bei „gemischt" alle
+   * Stufen bis hierher, bunt gemischt. Bis dahin war der Wert eine
+   * Obergrenze — ein derber Tisch bekam auch Harmloses, und weil die Kataloge
+   * zu 60 % harmlos sind, praktisch vor allem das. Ein harmloser Tisch bekommt
+   * in keiner Lesart je einen derben Spruch.
    *
    * Heisst absichtlich nicht einfach "Haerte": `schluckFaktor` steht im
    * Bildschirm schon als „Härte" und meint die Schluckzahl. Zwei Regler
@@ -140,6 +147,34 @@ export interface PartykisteRegeln {
    * erst beim Start feststeht, wer sitzt.
    */
   readonly inhaltsHaerte: Haerte;
+  /**
+   * Wie `inhaltsHaerte` gelesen wird (seit dem 27.09.2026):
+   *
+   *   genau     nur Inhalte genau dieser Stufe. Hat der Katalog dort zu
+   *             wenig, kommen DANACH die der naechst milderen — nie derbere
+   *             (`inhaltsStapel` in inhalte/stapel.ts).
+   *   gemischt  Zufall aus allen Stufen bis `inhaltsHaerte`, und zwar je
+   *             STUFE gleich oft, nicht je Eintrag — sonst waere „gemischt"
+   *             wieder fast nur harmlos, der Fehler von oben. Der Bildschirm
+   *             schickt dafuer `inhaltsHaerte: 3` (Gast: 2).
+   *
+   * FEHLT DAS FELD, gilt die alte Lesart: Obergrenze wie bis zum 27.09.2026,
+   * Eintrag fuer Eintrag aus allem bis zur Stufe (`inhaltsLesart` → 'bis').
+   * Das ist Absicht und keine Bequemlichkeit: Ohne das Feld kommen nur
+   * Regelsaetze, die vor der Umstellung entstanden sind — ein wartender Tisch,
+   * dessen Oeffner „derb" noch als „bis derb" eingestellt hat, und vor allem
+   * der Snapshot einer LAUFENDEN Partie. Laese man den ploetzlich als
+   * „genau", zoege die naechste Runde aus einem anderen Stapel, und eine schon
+   * gespielte Frage koennte wiederkommen. So spielt jede alte Partie genau
+   * weiter, wie sie begann; neue Tische bekommen das Feld aus
+   * `defaultConfig()` bzw. vom Bildschirm. Bei „harmlos" sind alle drei
+   * Lesarten ohnehin dasselbe.
+   *
+   * In der Eskalation zaehlt das Feld nicht: Die Kurve nimmt schon seit dem
+   * 23.09.2026 genau die Stufe ihres Drittels und weicht nur nach unten aus
+   * (`belegeStufenweise` in modi.ts).
+   */
+  readonly inhaltsMischung?: InhaltsMischung;
   /**
    * Themenpaket als Zielgruppe — null heisst: alles. Ein gesetztes Paket
    * bevorzugt seine Inhalte, laesst Allgemeingut zu und blendet aus, was
@@ -180,11 +215,32 @@ export function istSpielmodus(x: unknown): x is Spielmodus {
   return typeof x === 'string' && (SPIELMODI as readonly string[]).includes(x);
 }
 
+/** Die beiden Lesarten, die ein Regelsatz ausdruecklich waehlen kann. Kennungen aendern sich nie. */
+export type InhaltsMischung = 'genau' | 'gemischt';
+export const INHALTS_MISCHUNGEN: readonly InhaltsMischung[] = ['genau', 'gemischt'];
+
+export function istInhaltsMischung(x: unknown): x is InhaltsMischung {
+  return x === 'genau' || x === 'gemischt';
+}
+
+/**
+ * Wie ein Regelsatz seine Inhaltsstufe meint — dazu die dritte, alte Lesart
+ * 'bis' (Obergrenze) fuer Regelsaetze ohne das Feld. Begruendung an
+ * `PartykisteRegeln.inhaltsMischung`. Gelesen wird das Feld nur hierueber.
+ */
+export type InhaltsLesart = InhaltsMischung | 'bis';
+
+export function inhaltsLesart(regeln: { readonly inhaltsMischung?: unknown }): InhaltsLesart {
+  const roh = regeln.inhaltsMischung;
+  return istInhaltsMischung(roh) ? roh : 'bis';
+}
+
 export const DEFAULT_REGELN: PartykisteRegeln = {
   minispiele: MINISPIELE,
   trinkmodus: true,
   schluckFaktor: 1,
   inhaltsHaerte: 1,
+  inhaltsMischung: 'genau',
   paket: null,
   modus: 'turnier',
 };
