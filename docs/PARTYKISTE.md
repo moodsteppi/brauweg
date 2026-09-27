@@ -18,9 +18,13 @@ sechs Ranglisten. Auf einer Party heißt das sechsmal „Tisch suchen“, währe
 alle danebenstehen. Die Kiste ist deshalb **ein** Spiel: Man setzt sich
 einmal hin, spielt 3 bis 15 Runden, und am Ende steht eine Tabelle.
 
-Die Minispiele kommen reihum in der Reihenfolge, die im Regelsatz steht
-(`minispiele`). Bewusst berechnet und nicht gewürfelt — „dreimal Quiz
-hintereinander“ ist auf einer Party kein Zufall, sondern ein Fehler.
+Die Minispiele kommen **gemischt ohne Wiederholung** (seit dem 27.09.2026,
+Robin; vorher reihum in der Reihenfolge des Regelsatzes): Jedes Spiel aus
+`minispiele` kommt einmal in zufälliger Folge dran, bevor eines wiederkommt,
+und nie dasselbe zweimal direkt hintereinander — auch nicht über die Naht zur
+nächsten Mischung. Gewürfelt wird nur mit der Saat der Partie
+(`minispielFolge` in `partie.ts`), also ist die Folge nach einer
+Wiederaufnahme dieselbe. „Dreimal Quiz hintereinander“ bleibt ein Fehler.
 
 ## Die fünfzehn Minispiele
 
@@ -50,7 +54,7 @@ Der Regelsatz (`PartykisteRegeln` in `src/regeln.ts`), geprüft von
 
 | Feld | Werte | Vorgabe | Wirkung |
 | --- | --- | --- | --- |
-| `minispiele` | Liste aus `MINISPIELE`, mindestens eins | alle fünfzehn | Reihenfolge im Turnier |
+| `minispiele` | Liste aus `MINISPIELE`, mindestens eins | alle fünfzehn | was gemischt wird (Reihenfolge egal) |
 | `trinkmodus` | an/aus | an | nur die Anzeige der Gläser |
 | `schluckFaktor` | 1–3 | 1 | Schlücke mal Faktor |
 | `inhaltsHaerte` | 1 harmlos, 2 pikant, 3 derb | 1 | Obergrenze der Textschärfe |
@@ -117,8 +121,9 @@ Runde hält das fest (siehe unten). Dünn ist heute „jga" bei „harmlos"
 bei Wahrheit (9): Solche Tische spielen mit Rückfall.
 
 **Auswahl im Menü** (seit dem 22.09.2026, `minispiele/partykiste/Auswahl.tsx`,
-Logik in `wahl.ts`): Minispiele (mehrere, mindestens drei, in eigener
-Reihenfolge — so kommen die Runden dran), Inhaltsstufe „harmlos / pikant /
+Logik in `wahl.ts`): Minispiele (an- und ausklicken wie die
+Doppelkopf-Regeln, mindestens drei; seit dem 27.09.2026 ohne Reihenfolge,
+das Modul mischt), Inhaltsstufe „harmlos / pikant /
 derb“ unter der Überschrift **„Inhalte“** (nicht „Härte“, siehe oben),
 Themenpaket („alles“ = `paket: null`) und — erst, wenn `defaultConfig()`
 ein Feld `modus` hat — der Modus. Gemerkt in `localStorage`, gilt für
@@ -127,7 +132,7 @@ Bot- und Online-Tische. Der Regelsatz entsteht als **Vorgabe des Moduls**
 darauf die Auswahl (`regelsatzAus`); was niemand gewählt hat, kommt aus
 der Vorgabe. Die Minispielliste der Kacheln ist deshalb `MINISPIELE` des
 Moduls, keine Abschrift — ein neues Minispiel steht ohne Änderung im Menü.
-Wer alle in Modulreihenfolge wählt, dem wird nichts gemerkt, damit ein
+Wer alle anklickt, dem wird nichts gemerkt, damit ein
 neues Minispiel später von selbst dazukommt. Für einen Gast (`me.gast`) ist
 „derb“ gesperrt („nur mit Konto“); die Kappung beim Start bleibt trotzdem
 die eigentliche Sperre. Paketnamen, Modusnamen und „gleichzeitig/reihum“
@@ -213,8 +218,8 @@ Zählung in `baueRunde` ändert, ändert sie dort mit.
 
 **Themenabend.** Ein `paket` ist Pflicht (`validateConfig` meldet
 `ruleset.partykiste.themenOhnePaket`; ein Tisch aus der Datenbank ohne Paket
-spielt als Turnier). Das Paket bestimmt die Minispiele und ihre Reihenfolge
-(`THEMEN_MINISPIELE`, geschnitten mit dem, was der Tisch überhaupt spielen
+spielt als Turnier). Das Paket bestimmt die Minispiele (gemischt wie
+immer; `THEMEN_MINISPIELE`, geschnitten mit dem, was der Tisch überhaupt spielen
 will) und die Inhalte über den Filter — reicht der Paketvorrat nicht, gibt
 der Filter weich nach wie bei jedem Paket-Tisch. Beim Arbeitsabend fehlen
 „Ich hab noch nie“ und W/P. Ein neues Minispiel spielt in keinem Themenabend

@@ -99,8 +99,13 @@ export { istMinispiel };
 
 export interface PartykisteRegeln {
   /**
-   * Welche Minispiele im Turnier vorkommen duerfen, in der Reihenfolge, in der
-   * sie reihum drankommen. Mindestens eines.
+   * Welche Minispiele im Turnier vorkommen duerfen. Mindestens eines.
+   *
+   * Seit dem 27.09.2026 eine Menge, keine Reihenfolge mehr (Robin: an- und
+   * ausklicken wie die Doppelkopf-Regeln, „dann ist Zufall"): Die Runden
+   * ziehen aus einem Mischbeutel, jedes Spiel einmal je Mischung und nie
+   * dasselbe zweimal hintereinander (`minispielFolge` in partie.ts). Die
+   * Reihenfolge der Liste aendert daran nichts ausser der Saat-Mischung.
    */
   readonly minispiele: readonly MinispielId[];
   /**
