@@ -21,10 +21,12 @@ const defaults = vi.hoisted(() => vi.fn());
 vi.mock('../../api', () => ({ api: { defaults } }));
 
 import { PartyAuswahl, usePartyAuswahl, type PartyAuswahlStand } from './Auswahl';
-import { SCHLUESSEL_MINISPIELE } from './wahl';
+import { SCHLUESSEL_INHALT, SCHLUESSEL_MINISPIELE } from './wahl';
 
 const ALLE = ['imposter', 'quiz', 'werbinich', 'niemals', 'wereher', 'busfahrer', 'schaetzen', 'entweder', 'wahrheitpflicht'];
 const VORGABE = { minispiele: ALLE, trinkmodus: true, schluckFaktor: 1, inhaltsHaerte: 1, paket: null };
+/** Ein Modul, das „genau/gemischt" kennt (seit dem 27.09.2026) — erst dann gibt es die vierte Kachel. */
+const VORGABE_STUFEN = { ...VORGABE, inhaltsMischung: 'genau' };
 const BASIS = { minispiele: ['quiz'], trinkmodus: false, schluckFaktor: 2 };
 
 let stand: PartyAuswahlStand | null = null;
@@ -226,5 +228,55 @@ describe('Auswahl im Menue der Partykiste', () => {
     render(<Probe />);
     expect(screen.getByText(/werden geladen/)).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Minispiele' })).toBeNull();
+  });
+
+  /*
+   * Seit dem 27.09.2026 (Robin): Jede Stufe liefert nur sich selbst, dazu
+   * „gemischt" — Zufall aus allen Stufen. Die vierte Kachel gibt es nur, wenn
+   * das Modul die Lesart kennt; sonst spielte ein alter Server „gemischt"
+   * still als „bis derb".
+   */
+  it('vier Inhalte-Kacheln: eine Stufe schickt „genau", „gemischt" schickt 3 und „gemischt"', async () => {
+    const ansicht = await aufbauen(false, VORGABE_STUFEN, true);
+    expect(within(raster('Inhalte')).getAllByRole('button')).toHaveLength(4);
+    expect(kachel('Inhalte', 'gemischt')).toHaveAccessibleDescription(/Zufall aus allen Stufen/);
+    let c = await config();
+    expect({ stufe: c['inhaltsHaerte'], mischung: c['inhaltsMischung'] }).toEqual({ stufe: 1, mischung: 'genau' });
+
+    fireEvent.click(kachel('Inhalte', 'pikant'));
+    c = await config();
+    expect({ stufe: c['inhaltsHaerte'], mischung: c['inhaltsMischung'] }).toEqual({ stufe: 2, mischung: 'genau' });
+
+    fireEvent.click(kachel('Inhalte', 'gemischt'));
+    expect(kachel('Inhalte', 'gemischt')).toHaveAttribute('aria-pressed', 'true');
+    c = await config();
+    expect({ stufe: c['inhaltsHaerte'], mischung: c['inhaltsMischung'] }).toEqual({ stufe: 3, mischung: 'gemischt' });
+    expect(localStorage.getItem(SCHLUESSEL_INHALT)).toBe('gemischt');
+
+    // Gemerkt: nach dem Neuladen steht wieder „gemischt".
+    ansicht.unmount();
+    await aufbauen(false, VORGABE_STUFEN, true);
+    expect(kachel('Inhalte', 'gemischt')).toHaveAttribute('aria-pressed', 'true');
+    expect((await config())['inhaltsMischung']).toBe('gemischt');
+  });
+
+  it('fuer einen Gast heisst „gemischt" harmlos und pikant — die Kachel sagt es, der Regelsatz auch', async () => {
+    await aufbauen(true, VORGABE_STUFEN);
+    expect(kachel('Inhalte', 'derb')).toHaveAttribute('aria-disabled', 'true');
+    const gemischt = kachel('Inhalte', 'gemischt');
+    expect(gemischt).toHaveAccessibleDescription(/harmlos und pikant/);
+    fireEvent.click(gemischt);
+    const c = await config();
+    expect({ stufe: c['inhaltsHaerte'], mischung: c['inhaltsMischung'] }).toEqual({ stufe: 2, mischung: 'gemischt' });
+  });
+
+  it('kennt das Modul „gemischt" nicht, gibt es drei Kacheln und kein neues Feld', async () => {
+    localStorage.setItem(SCHLUESSEL_INHALT, 'gemischt');
+    await aufbauen(false, VORGABE);
+    expect(within(raster('Inhalte')).queryByRole('button', { name: 'gemischt' })).toBeNull();
+    const c = await config();
+    expect('inhaltsMischung' in c).toBe(false);
+    // Eine gemerkte „gemischt" wird dort zu dem, was der alte Server darunter versteht: bis derb.
+    expect(c['inhaltsHaerte']).toBe(3);
   });
 });

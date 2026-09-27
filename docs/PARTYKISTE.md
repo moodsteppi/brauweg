@@ -57,7 +57,8 @@ Der Regelsatz (`PartykisteRegeln` in `src/regeln.ts`), geprüft von
 | `minispiele` | Liste aus `MINISPIELE`, mindestens eins | alle fünfzehn | was gemischt wird (Reihenfolge egal) |
 | `trinkmodus` | an/aus | an | nur die Anzeige der Gläser |
 | `schluckFaktor` | 1–3 | 1 | Schlücke mal Faktor |
-| `inhaltsHaerte` | 1 harmlos, 2 pikant, 3 derb | 1 | Obergrenze der Textschärfe |
+| `inhaltsHaerte` | 1 harmlos, 2 pikant, 3 derb | 1 | Textschärfe — wie gemeint, sagt `inhaltsMischung` |
+| `inhaltsMischung` | `genau`, `gemischt` | `genau` (fehlt = alte Obergrenze) | genau diese Stufe oder alle bis zu ihr, je Stufe gleich oft |
 | `paket` | `null` oder ein Paket aus `PAKETE` | `null` | Zielgruppe der Inhalte |
 | `modus` | `turnier`, `eskalation`, `themenabend`, `team` | `turnier` (fehlt = Turnier) | Spielmodus, siehe unten |
 
@@ -84,11 +85,40 @@ Wake-Lock-Sperre, und reihum vibriert das Handy, wenn man dran ist
 (`useTischwache`).
 
 **Inhaltsstufe** (`inhaltsHaerte`, seit dem 22.09.2026, Entscheidung P1):
-wie scharf die Texte sein dürfen — eine Obergrenze, ein derber Tisch bekommt
-auch harmlose Sprüche. Sie heißt absichtlich **nicht** „Härte“: Der Regler
+wie scharf die Texte sind. Sie heißt absichtlich **nicht** „Härte“: Der Regler
 `schluckFaktor` steht im Bildschirm schon als „Härte“, und zwei Regler mit
 demselben Namen — einer für Gläser, einer für Texte — stellt niemand richtig
 ein. Im Bildschirm heißt die Stufe „harmlos / pikant / derb“.
+
+**Genau oder gemischt** (`inhaltsMischung`, seit dem 27.09.2026, Robin: „es
+soll nur die Stufen haben, oder man macht gemischt an, dann ist zufällig aus
+allen“). Bis dahin war die Stufe eine Obergrenze: Ein derber Tisch bekam
+alles bis derb, und weil die Kataloge zu rund 60 % harmlos sind, praktisch
+vor allem Harmloses. Jetzt:
+
+- `genau` (Vorgabe, und was die Kacheln harmlos/pikant/derb schicken): nur
+  Einträge genau dieser Stufe. Ist die Stufe im Katalog zu dünn, kommen
+  **danach** die der nächst milderen, dann der mildesten — nie derbere, und
+  ohne Wiederholung, solange irgendeine erlaubte Stufe noch etwas hat
+  (`inhaltsStapel` in `src/inhalte/stapel.ts`; die dünne Stufe steht als
+  `inhaltsRueckfall.stufeDuenn` in der Runde). Heute betrifft das „derb“ fast
+  überall (Schätzen hat 2 derbe Fragen, Wer bin ich 7, die Regel-Karten 3) —
+  die parallele Inhaltsprüfung (`docs/PARTYKISTE-INHALTE.md`) füllt nach.
+- `gemischt` (die vierte Kachel, geschickt als `inhaltsHaerte: 3`, Gast: 2):
+  je Stufe ein gemischter Stapel, und jede Ziehung wählt per Saat erst eine
+  **Stufe** (gleich wahrscheinlich unter denen mit Vorrat), dann deren
+  nächsten Eintrag. Je Eintrag zu ziehen wäre wieder die alte Obergrenze.
+- **Fehlt das Feld**, gilt die alte Obergrenze wortgleich weiter (Lesart
+  `'bis'`, `inhaltsLesart` in `regeln.ts`). Ohne Feld kommen nur Regelsätze
+  von vor der Umstellung an: wartende Tische, deren Öffner „derb“ noch als
+  „bis derb“ meinte, und vor allem Snapshots **laufender** Partien — läse man
+  die plötzlich als „genau“, zöge die nächste Runde aus einem anderen Stapel,
+  und eine gespielte Frage könnte wiederkommen. `createParty` erfindet das
+  Feld deshalb auch bei Unsinn nicht, und die Sicht meldet `'bis'`.
+- Bei „harmlos“ sind alle drei Lesarten Stelle für Stelle dasselbe (Test);
+  ein Tisch, der nie etwas gewählt hat, zieht also dieselben Fragen wie vorher.
+- Die App-Zähmung (`appRegeln` im Server) kappt nur `inhaltsHaerte` — „gemischt“
+  heißt dort „gemischt bis zur App-Grenze“.
 
 **„Derb“ nur ohne Gast.** Ein Gastkonto entsteht mit einem Klick, ohne Mail
 und ohne Altersangabe. Sitzt ein Gast am Tisch, kappt `erzeugePartie` die
@@ -104,7 +134,9 @@ die wirksame. Zu laufenden Tischen setzt sich niemand mehr dazu
 (`joinTable` verlangt `waiting`), die Kappung beim Start deckt also den
 ganzen Abend.
 
-**Offene Lücke:** „Verifiziert“ heißt hier nur „kein Gast“. Ein normales
+**Offene Lücke:** „Verifiziert“ heißt hier nur „kein Gast“ (geprüft
+am 27.09.2026: Die Kappung sitzt allein im Modul, gefüllt aus `account.gastSeit`
+in `runtime/party.ts`; das Menü sperrt „derb“ zusätzlich, ist aber nicht die Sperre). Ein normales
 Konto hat Mail und Passwort, aber die Mail ist nicht bestätigt, und eine
 **Altersangabe gibt es nirgends** in der Datenbank. Wer „derb nur ab 18“
 ernst meint, braucht ein Feld am Konto — das ist eine Plattformfrage, keine
@@ -123,8 +155,10 @@ bei Wahrheit (9): Solche Tische spielen mit Rückfall.
 **Auswahl im Menü** (seit dem 22.09.2026, `minispiele/partykiste/Auswahl.tsx`,
 Logik in `wahl.ts`): Minispiele (an- und ausklicken wie die
 Doppelkopf-Regeln, mindestens drei; seit dem 27.09.2026 ohne Reihenfolge,
-das Modul mischt), Inhaltsstufe „harmlos / pikant /
-derb“ unter der Überschrift **„Inhalte“** (nicht „Härte“, siehe oben),
+das Modul mischt), Inhaltsstufe „harmlos / pikant / derb / gemischt“ (vier
+Kacheln seit dem 27.09.2026; „gemischt“ nur, wenn `defaultConfig()` das Feld
+`inhaltsMischung` kennt — `mischungBekannt`) unter der Überschrift
+**„Inhalte“** (nicht „Härte“, siehe oben),
 Themenpaket („alles“ = `paket: null`) und — erst, wenn `defaultConfig()`
 ein Feld `modus` hat — der Modus. Gemerkt in `localStorage`, gilt für
 Bot- und Online-Tische. Der Regelsatz entsteht als **Vorgabe des Moduls**
@@ -139,7 +173,10 @@ die eigentliche Sperre. Paketnamen, Modusnamen und „gleichzeitig/reihum“
 sind Spiegelbilder, die `vertrag/partykiste-auswahl.test.ts` gegen
 `PAKETE`, `istReihum` und `validateConfig` hält. `inhaltsHaerte` und
 `paket` dürfen im Regelsatz weiterhin fehlen — ältere Tische kennen sie
-nicht. In der Regelzeile stehen beide noch nicht: Die Sicht trägt sie nicht.
+nicht. Seit dem 27.09.2026 trägt die Sicht `inhaltsHaerte`, `inhaltsMischung`
+und `inhaltsHaerteGewollt`, und die Regelzeile nennt die Inhalte („Inhalte
+pikant“, „Inhalte gemischt“, bei alten Tischen „Inhalte bis derb“; `inhaltsChip`
+im Client). Das Paket steht dort weiterhin nur im Themenabend.
 
 ### Wie die Inhalte ausgewählt werden
 
@@ -200,7 +237,9 @@ demselben Grund, aus dem der Trinkmodus kein zweiter Ablauf ist.
 erstes Drittel 1, zweites 2, letztes 3 (`eskalationsStufe`,
 `floor(nr * 3 / runden) + 1`). Die eingestellten Werte gelten dann nicht; die
 Kurve steht je Runde in `regelnDerRunde`, und jede Ziehung, jede Aufgabe und
-jede Abrechnung liest den Regelsatz der Runde, nicht den der Partie.
+jede Abrechnung liest den Regelsatz der Runde, nicht den der Partie. Die
+Kurve **ist** die Stufenwahl: Der Regelsatz der Runde trägt
+`inhaltsMischung: 'genau'`, egal was unter „Inhalte“ eingestellt war.
 **Die Gast-Kappung wird nicht umgangen**: Die Eskalation will am Ende „derb",
 geht aber wie jeder Tisch durch `wirksameInhaltsHaerte`; mit Gast steht in
 `regeln.inhaltsHaerte` „pikant", und die Kurve steigt nie über diese Decke

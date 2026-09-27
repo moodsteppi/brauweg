@@ -659,6 +659,7 @@ const de: Record<string, string> = {
   'partykiste.sitzzahl': 'Die Partykiste spielt zu viert bis zu zwölft.',
   'partykiste.rundenzahl': 'Zwischen 3 und 15 Minispielen je Turnier.',
   'ruleset.partykiste.inhaltsHaerte': 'Die Inhalte sind harmlos (1), pikant (2) oder derb (3).',
+  'ruleset.partykiste.inhaltsMischung': 'Die Inhalte kommen genau aus einer Stufe oder gemischt aus allen.',
   'ruleset.partykiste.paket': 'Dieses Themenpaket gibt es nicht.',
   // Einladung an den Tisch (22.09.2026): Code, Link, QR — und die Eingabe dazu.
   'einladung.titel': 'Leute dazuholen',
