@@ -19551,7 +19551,16 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .pk-passtnicht:hover,
 .pk-passtnicht:focus-visible { background: rgba(255, 255, 255, 0.08); color: var(--text); }
-.pk-pn-blatt { text-align: left; color: var(--text); background: #1d1629; border-color: rgba(255, 255, 255, 0.1); }
+/* Mit doppelter Klasse: Das Holzblatt von .doko-sheet-card (weiter unten, Hub-Holz) passt nicht an den lila Tisch. */
+.doko-sheet-card.pk-pn-blatt {
+  text-align: left;
+  color: var(--text);
+  background: #1d1629;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-image: none;
+  border-radius: 20px;
+  padding: 18px 16px max(16px, env(safe-area-inset-bottom));
+}
 .pk-pn-blatt h2 { margin: 0 0 8px; font: 800 18px/1.2 system-ui; }
 .pk-pn-eintrag { margin: 0 0 12px; color: var(--muted); font-size: 14px; line-height: 1.4; }
 .pk-pn-gruppe { border: 0; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
