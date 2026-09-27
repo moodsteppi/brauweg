@@ -3,6 +3,7 @@ import { api, type GameSummary, type Me, type RankingEntry } from '../api';
 import { cardImage, deckForGame } from '../decks';
 import { t } from '../i18n';
 import { inApp } from '../laufzeit';
+import { EINZELSPIELE, einzelKennung, einzelName } from '../minispiele/partykiste/einzelspiele';
 import { sitzSpanne } from '../sitzspanne';
 import { SZENEN, szeneBild } from '../szenen';
 import { bannerFuer } from './StartNeu';
@@ -199,7 +200,7 @@ export function SpieleNeu({
                 <h2 className="hb-ab">
                   <Symbol>{k.icon}</Symbol>
                   {k.titel}
-                  <span className="hb-ab-zusatz">das erste</span>
+                  <span className="hb-ab-zusatz">{1 + EINZELSPIELE.length}</span>
                 </h2>
                 <button
                   type="button"
@@ -210,11 +211,32 @@ export function SpieleNeu({
                   <span className="hb-held-unten hb-held-zeile">
                     <span>
                       <strong className="hb-held-titel">{t(party.nameKey)}</strong>
-                      <span>15 Minispiele · {sitzSpanne(party.seatCounts)} Leute · auch ohne Alkohol</span>
+                      <span>15 Minispiele gemischt · {sitzSpanne(party.seatCounts)} Leute · auch ohne Alkohol</span>
                     </span>
                     <span className="hb-kn is-gold">Ansehen</span>
                   </span>
                 </button>
+                {/*
+                 * Die Minispiele einzeln (Robin, 27.09.2026). Kein eigenes Spiel im
+                 * Server, sondern die Kiste mit einem Minispiel — deshalb ohne
+                 * Spielseite (Trophäen und Rangliste zählen bei der Partykiste)
+                 * direkt in den Einstieg.
+                 */}
+                <div className={`hb-reihe${filter === k.id ? ' is-raster' : ''}`} aria-label="Trinkspiele einzeln">
+                  {EINZELSPIELE.map((m) => (
+                    <button
+                      type="button"
+                      className="hb-sk"
+                      key={m}
+                      data-pk-einzel={m}
+                      onClick={() => onPick(einzelKennung(m))}
+                    >
+                      <span className="hb-sk-bild" style={{ backgroundImage: `url(${bannerFuer(einzelKennung(m))})` }} />
+                      <strong>{einzelName(m)}</strong>
+                      <small>{sitzSpanne(party.seatCounts)} Spieler</small>
+                    </button>
+                  ))}
+                </div>
               </section>
             );
           }

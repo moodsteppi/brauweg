@@ -404,6 +404,21 @@
 :is(.hb, .spe) .hb-reihe::-webkit-scrollbar {
   display: none;
 }
+/* Dieselben Karten als Raster, wenn eine Rubrik allein gefiltert ist (Trinkspiele, 27.09.2026) */
+:is(.hb, .spe) .hb-reihe.is-raster {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+}
+:is(.hb, .spe) .hb-reihe.is-raster .hb-sk {
+  width: auto;
+}
+:is(.hb, .spe) .hb-reihe.is-raster .hb-sk strong {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
 :is(.hb, .spe) .hb-sk {
   flex: none;
   width: 112px;

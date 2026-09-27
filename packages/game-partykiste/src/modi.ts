@@ -271,7 +271,9 @@ function platzeJeRunde(art: MinispielId, sitze: number): number {
 // ---------------------------------------------------------------------------
 
 /**
- * Welche Minispiele zu welchem Paket passen, in der Reihenfolge des Abends.
+ * Welche Minispiele zu welchem Paket passen. Seit dem 27.09.2026 nur noch
+ * die Auswahl: Die Runden mischt `minispielFolge` (partie.ts), die
+ * Reihenfolge hier traegt keine Bedeutung mehr.
  *
  * Ein Paket ist eine Zielgruppe (typen.ts), und die Liste folgt daraus:
  * Beim Arbeitsabend fehlen "Ich hab noch nie" und Wahrheit oder Pflicht —
@@ -290,8 +292,9 @@ export const THEMEN_MINISPIELE: Readonly<Record<Paket, readonly MinispielId[]>> 
    * Die drei mit Uhr (23.09.2026) eingeordnet: Die Bombe und „10 Sekunden"
    * gehen ueberall (sie fragen nichts ab, was man vor Kollegen oder Oma nicht
    * sagen koennte), der Koenigsbecher ist eine Trinkrunde und gehoert zu
-   * WG, JGA und Studenten. Mitten in die Liste und nicht ans Ende — bei sechs
-   * Runden kaeme sonst keines davon je dran.
+   * WG, JGA und Studenten. Bis zum 27.09.2026 standen sie mitten in der
+   * Liste, weil sie am Ende bei sechs Runden reihum nie drangekommen waeren;
+   * seit dem Mischbeutel ist der Platz gleichgueltig.
    */
   'wg-abend': ['niemals', 'wereher', 'imposter', 'bombe', 'regelkarte', 'entweder', 'koenigsbecher', 'busfahrer', 'mehrheit', 'zehnsekunden', 'wahrheitpflicht', 'schaetzen'],
   jga: ['wahrheitpflicht', 'niemals', 'bombe', 'regelkarte', 'wereher', 'koenigsbecher', 'imposter', 'werbinich', 'zehnsekunden', 'mehrheit', 'entweder', 'busfahrer'],
@@ -304,7 +307,8 @@ export const THEMEN_MINISPIELE: Readonly<Record<Paket, readonly MinispielId[]>> 
  * Die Minispiele eines Themenabends: die Liste des Pakets, geschnitten mit
  * dem, was der Tisch ueberhaupt spielen will.
  *
- * Das Paket bestimmt Auswahl UND Reihenfolge; hat der Oeffner einzelne
+ * Das Paket bestimmt die Auswahl (die Folge mischt seit dem 27.09.2026
+ * `minispielFolge`); hat der Oeffner einzelne
  * Minispiele abgewaehlt, bleiben sie draussen. Bleibt nichts uebrig, gilt die
  * Paketliste — ein Themenabend ohne Minispiel ist kein Abend.
  */

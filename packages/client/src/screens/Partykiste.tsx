@@ -22,6 +22,7 @@ import { binReihumDran, useTischwache } from '../minispiele/partykiste/useTischw
 import { Abrechnung, Tabelle } from '../minispiele/partykiste/Wertung';
 import { Beitrittscode } from '../minispiele/partykiste/Beitrittscode';
 import { Einladung } from '../minispiele/partykiste/Einladung';
+import { einzelKennung, einzelName, tischPasst } from '../minispiele/partykiste/einzelspiele';
 import { MitspielerMelden } from '../melden/MeldenBlatt';
 import type { BotLevel, SeatInfo } from '../protocol';
 import { useTable } from '../useTable';
@@ -108,9 +109,16 @@ function gemerkterTrinkmodus(): boolean {
 
 export function Partykiste({
   startTisch,
+  einzel = null,
   onBack,
 }: {
   startTisch: string | null;
+  /**
+   * Ein Minispiel als Einzelspiel (minispiele/partykiste/einzelspiele.ts):
+   * dieselbe Kiste, aber der Regelsatz trägt nur dieses Spiel, und Modus und
+   * Minispielwahl entfallen im Menü.
+   */
+  einzel?: PartyMinispiel | null;
   onBack: () => void;
 }): React.JSX.Element {
   const [tischId, setTischId] = useState<string | null>(startTisch);
@@ -161,6 +169,17 @@ export function Partykiste({
     }),
     [trinkmodus, haerte],
   );
+
+  /*
+   * Der Regelsatz fürs Anlegen. Beim Einzelspiel liegt das Minispiel fest und
+   * der Modus ist das Turnier — auch wenn im Browser von der gemischten Kiste
+   * noch „Team" oder eine andere Minispielwahl gemerkt ist.
+   */
+  const { regelsatz: auswahlRegelsatz } = auswahl;
+  const tischRegelsatz = useCallback(async (): Promise<Record<string, unknown>> => {
+    const config = await auswahlRegelsatz(regelsatz);
+    return einzel ? { ...config, minispiele: [einzel], modus: 'turnier' } : config;
+  }, [auswahlRegelsatz, regelsatz, einzel]);
 
   /* Wer ich bin, entscheidet in der Lobby über den Startknopf. */
   useEffect(() => {
@@ -237,7 +256,7 @@ export function Partykiste({
         seats: 12,
         rounds: runden,
         visibility: 'public',
-        config: await auswahl.regelsatz(regelsatz),
+        config: await tischRegelsatz(),
       });
       setTischId(id);
     } catch (e) {
@@ -245,7 +264,7 @@ export function Partykiste({
     } finally {
       setLaedt(false);
     }
-  }, [runden, regelsatz, auswahl.regelsatz]);
+  }, [runden, tischRegelsatz]);
 
   /**
    * Online spielen: eine offene Runde suchen — und ZEIGEN, bevor man sitzt.
@@ -261,25 +280,31 @@ export function Partykiste({
     setLaedt(true);
     try {
       const liste = await api.tables('partykiste');
-      const offen = liste.find(
-        (zeile) => zeile.gameId === 'partykiste' && zeile.occupied < zeile.seats,
-      );
-      if (!offen) {
-        setLaedt(false);
-        await oeffneRunde();
+      const frei = liste.filter((zeile) => zeile.gameId === 'partykiste' && zeile.occupied < zeile.seats);
+      /*
+       * Seit dem 27.09.2026 gibt es Einzelspiele (einzelspiele.ts): Wer
+       * Busfahrer sucht, soll an einem Busfahrer-Tisch landen, und wer die
+       * gemischte Kiste sucht, an keinem (Robin: „nur Tische mit genau dem
+       * Spiel"). Welches Spiel ein Tisch hat, steht nur in seinen Regeln —
+       * also der Reihe nach nachsehen, höchstens acht Tische weit.
+       */
+      for (const offen of frei.slice(0, 8)) {
+        const regeln = await api
+          .tableRules(offen.id)
+          .then((antwort) => liesRegelsatz(antwort.config))
+          .catch(() => null);
+        if (!tischPasst(regeln?.minispiele ?? null, einzel)) continue;
+        setAngebot({ id: offen.id, host: offen.host, runden: offen.maxRounds, regeln });
         return;
       }
-      const regeln = await api
-        .tableRules(offen.id)
-        .then((antwort) => liesRegelsatz(antwort.config))
-        .catch(() => null);
-      setAngebot({ id: offen.id, host: offen.host, runden: offen.maxRounds, regeln });
+      setLaedt(false);
+      await oeffneRunde();
     } catch {
       setFehler('Die Runde ließ sich nicht öffnen. Noch einmal versuchen?');
     } finally {
       setLaedt(false);
     }
-  }, [oeffneRunde]);
+  }, [oeffneRunde, einzel]);
 
   const trittBei = useCallback(async (id: string): Promise<void> => {
     setFehler(null);
@@ -315,7 +340,7 @@ export function Partykiste({
         botLevel: stufe,
         /* Derselbe Regelsatz wie online — bis zum 22.09.2026 stand hier fest
            `trinkmodus: true`, weil es keinen Schalter gab. */
-        config: await auswahl.regelsatz(regelsatz),
+        config: await tischRegelsatz(),
       });
       setTischId(id);
     } catch (e) {
@@ -323,7 +348,7 @@ export function Partykiste({
     } finally {
       setLaedt(false);
     }
-  }, [bots, runden, stufe, regelsatz, auswahl.regelsatz]);
+  }, [bots, runden, stufe, tischRegelsatz]);
 
   const verlasseUndZurueck = useCallback((): void => {
     const id = tischId;
@@ -342,9 +367,9 @@ export function Partykiste({
     // Neues Hub: dieselben Zustände und Aufrufe im Spieleinstieg-Baukasten.
     return (
       <SpielRahmen
-        gameId="partykiste"
-        titel="Partykiste"
-        unter={`${Object.keys(MINISPIEL_NAME).length} Minispiele · 4 bis 12 Leute`}
+        gameId={einzel ? einzelKennung(einzel) : 'partykiste'}
+        titel={einzel ? einzelName(einzel) : 'Partykiste'}
+        unter={einzel ? 'Trinkspiel · 4 bis 12 Leute' : `${Object.keys(MINISPIEL_NAME).length} Minispiele · 4 bis 12 Leute`}
         akzent={PARTY_AKZENT}
         onBack={onBack}
         zurueckText="Zurück"
@@ -371,10 +396,16 @@ export function Partykiste({
           )
         }
       >
-        <p className="spe-text">
-          {Object.keys(MINISPIEL_NAME).length} Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum sitzen.{' '}
-          {trinkmodus ? 'Wer verliert, trinkt' : 'Wer verliert, sammelt Strafpunkte'}; wer gewinnt, steht oben.
-        </p>
+        {einzel ? (
+          <p className="spe-text">
+            {ansageFuer(einzel, trinkmodus)} Jede Runde dasselbe Spiel — für 4 bis 12 Leute, die im selben Raum sitzen.
+          </p>
+        ) : (
+          <p className="spe-text">
+            {Object.keys(MINISPIEL_NAME).length} Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum sitzen.{' '}
+            {trinkmodus ? 'Wer verliert, trinkt' : 'Wer verliert, sammelt Strafpunkte'}; wer gewinnt, steht oben.
+          </p>
+        )}
         {fehler ? <p className="hb-fehler">{fehler}</p> : null}
         <Einstellungen
           neu
@@ -396,6 +427,7 @@ export function Partykiste({
         />
         <PartyAuswahl
           neu
+          einzel={einzel !== null}
           vorgabe={auswahl.vorgabe}
           wahl={auswahl.wahl}
           gast={auswahl.gast}

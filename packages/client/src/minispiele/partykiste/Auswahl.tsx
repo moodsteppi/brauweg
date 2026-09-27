@@ -31,7 +31,6 @@ import {
   minispielWahl,
   modusBekannt,
   regelsatzAus,
-  verschiebe,
   wirksameInhaltsHaerte,
   wirksameMinispiele,
   wirksamerModus,
@@ -88,6 +87,7 @@ export function PartyAuswahl({
   onWahl,
   paketSperre,
   neu = false,
+  einzel = false,
 }: {
   vorgabe: Record<string, unknown> | null;
   wahl: PartyWahl;
@@ -106,6 +106,11 @@ export function PartyAuswahl({
    * Spieleinstiegs und die Themenpakete mit ihrem Bild (`/hub/paket-<id>.webp`).
    */
   neu?: boolean;
+  /**
+   * Einzelspiel (einzelspiele.ts): Das Minispiel liegt fest, der Modus ist das
+   * Turnier — Modus und Minispielwahl entfallen, Pakete und Inhalte bleiben.
+   */
+  einzel?: boolean;
 }): React.JSX.Element {
   const stufe = wirksameInhaltsHaerte(vorgabe, wahl, gast);
   const paket = wirksamesPaket(vorgabe, wahl);
@@ -116,7 +121,7 @@ export function PartyAuswahl({
   if (neu) {
     return (
       <>
-        {modusBekannt(vorgabe) ? (
+        {modusBekannt(vorgabe) && !einzel ? (
           <SpielAbschnitt titel="Modus">
             <AuswahlRaster
               label="Modus"
@@ -182,7 +187,9 @@ export function PartyAuswahl({
           />
         </SpielAbschnitt>
 
-        <MinispielAuswahl neu vorgabe={vorgabe} wahl={wahl} trinkmodus={trinkmodus} onWahl={onWahl} />
+        {einzel ? null : (
+          <MinispielAuswahl neu vorgabe={vorgabe} wahl={wahl} trinkmodus={trinkmodus} onWahl={onWahl} />
+        )}
       </>
     );
   }
@@ -258,12 +265,20 @@ export function PartyAuswahl({
 }
 
 /**
- * Minispiele: mehrere waehlen, und die Reihenfolge zaehlt.
+ * Minispiele: an- und ausklicken, die Kiste mischt.
  *
- * Die Reihenfolge ist die, in der die Runden drankommen (`minispielFuer`
- * im Modul: reihum durch die Liste, dann von vorn). Neu angetippte Spiele
- * haengen sich hinten an; in der Liste darunter laesst sich jedes eins
- * frueher oder spaeter setzen.
+ * Seit dem 27.09.2026 (Robin: „nicht mehr Reihenfolge, sonst wie bei
+ * Doppelkopf an/ausklickbar und dann ist Zufall"). Bis dahin zaehlte die
+ * Reihenfolge der Auswahl — die Runden gingen reihum durch die Liste, und
+ * darunter stand eine Liste mit Hoch- und Runter-Knoepfen. Jetzt mischt das
+ * Modul (`minispielFolge`): jedes angeklickte Spiel einmal je Mischung, keins
+ * zweimal hintereinander. Die Auswahl ist deshalb eine Menge und wird in der
+ * Reihenfolge des Moduls geschickt.
+ *
+ * Im neuen Hub sind es dieselben Kacheln wie die Regeln der Kartenlobby
+ * (`RegelSheet` in Lobby.tsx, `.spe .regel`): Symbol, Name, an mit goldenem
+ * Rand UND Haken — nicht nur ueber die Farbe. Im alten Hub bleibt das Raster
+ * des alten Menues, nur ohne Platznummer.
  */
 function MinispielAuswahl({
   vorgabe,
@@ -304,85 +319,33 @@ function MinispielAuswahl({
   }
 
   const mindestens = Math.min(MINDESTENS_MINISPIELE, alle.length);
-  const setze = (folge: readonly string[]): void => {
-    if (folge.length < mindestens) {
+  const umschalten = (id: string): void => {
+    const an = new Set(gewaehlt);
+    if (an.has(id)) an.delete(id);
+    else an.add(id);
+    // In der Reihenfolge des Moduls: Die Reihenfolge bedeutet nichts mehr, und
+    // so erkennt `minispielWahl` „alle an“ und merkt dann nichts.
+    const neueWahl = alle.filter((k) => an.has(k));
+    if (neueWahl.length < mindestens) {
       setZuWenig(true);
       return;
     }
     setZuWenig(false);
-    onWahl({ ...wahl, minispiele: minispielWahl(vorgabe, folge) });
+    onWahl({ ...wahl, minispiele: minispielWahl(vorgabe, neueWahl) });
   };
 
-  const eintraege: AuswahlEintrag[] = alle.map((id) => {
-    const platz = gewaehlt.indexOf(id);
-    const ablauf = MINISPIEL_ABLAUF[id as PartyMinispiel];
-    const regel = ansageFuer(id as PartyMinispiel, trinkmodus) as string | undefined;
-    return {
-      kennung: id,
-      titel: minispielName(id),
-      untertitel: [ablauf, regel].filter(Boolean).join(' · ') || undefined,
-      vorschau: <span className="pk-aw-zeichen">{MINISPIEL_ZEICHEN[id as PartyMinispiel] ?? minispielName(id).slice(0, 1)}</span>,
-      badge: platz >= 0 ? <span className="pk-aw-platz">{platz + 1}.</span> : undefined,
-    };
-  });
+  const alleAn = (): void => {
+    setZuWenig(false);
+    onWahl({ ...wahl, minispiele: null });
+  };
 
-  const alleKnopf =
-    gewaehlt.length < alle.length ? (
-      <button
-        type="button"
-        className={neu ? 'hb-ab-mehr' : 'pk-textknopf'}
-        data-pk-alle=""
-        onClick={() => {
-          setZuWenig(false);
-          onWahl({ ...wahl, minispiele: null });
-        }}
-      >
-        Alle
-      </button>
-    ) : null;
-
-  const inhalt = (
-    <>
-      <AuswahlRaster
-        label="Minispiele"
-        mehrfach
-        eintraege={eintraege}
-        gewaehlt={gewaehlt}
-        onWahl={(_kennung, auswahl) => setze(auswahl)}
-      />
-      {zuWenig ? (
-        <p className={hinweis} role="status">
-          Mindestens {mindestens} Minispiele — sonst kommt dasselbe ständig wieder.
-        </p>
-      ) : null}
-      <ol className="pk-aw-folge" aria-label="Reihenfolge der Minispiele">
-        {gewaehlt.map((id, i) => (
-          <li key={id} data-pk-folge={id}>
-            <span className="pk-aw-folgename">{minispielName(id)}</span>
-            <button
-              type="button"
-              aria-label={`${minispielName(id)} früher`}
-              disabled={i === 0}
-              onClick={() => setze(verschiebe(gewaehlt, id, -1))}
-            >
-              ↑
-            </button>
-            <button
-              type="button"
-              aria-label={`${minispielName(id)} später`}
-              disabled={i === gewaehlt.length - 1}
-              onClick={() => setze(verschiebe(gewaehlt, id, 1))}
-            >
-              ↓
-            </button>
-          </li>
-        ))}
-      </ol>
-      <p className={hinweis}>
-        In dieser Reihenfolge kommen die Runden dran; sind es mehr Runden als Spiele, geht es vorn weiter.
-      </p>
-    </>
-  );
+  const zuWenigHinweis = zuWenig ? (
+    <p className={hinweis} role="status">
+      Mindestens {mindestens} Minispiele — sonst kommt dasselbe ständig wieder.
+    </p>
+  ) : null;
+  const mischHinweis = <p className={hinweis}>Die angeklickten Spiele kommen gemischt dran, keins zweimal hintereinander.</p>;
+  const nichtAlle = gewaehlt.length < alle.length;
 
   if (neu) {
     return (
@@ -390,28 +353,81 @@ function MinispielAuswahl({
         titel="Minispiele"
         zusatz={
           <>
-            {gewaehlt.length} von {alle.length}
-            {alleKnopf}
+            {gewaehlt.length} von {alle.length} an
           </>
         }
       >
         <div className="spe-minispiele" data-pk-minispiele="">
-          {inhalt}
+          <div className="regeln spe-pk-regeln" role="group" aria-label="Minispiele">
+            {alle.map((id) => {
+              const an = gewaehlt.includes(id);
+              return (
+                <button
+                  type="button"
+                  key={id}
+                  className={`regel${an ? ' is-on' : ''}`}
+                  aria-pressed={an}
+                  data-kennung={id}
+                  onClick={() => umschalten(id)}
+                >
+                  <span className="regel-bild" aria-hidden="true">
+                    {MINISPIEL_ZEICHEN[id as PartyMinispiel] ?? minispielName(id).slice(0, 1)}
+                  </span>
+                  {minispielName(id)}
+                  <span className="regel-check" aria-hidden="true">
+                    ✓
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {zuWenigHinweis}
+          {mischHinweis}
+          {nichtAlle ? (
+            <button type="button" className="hb-kn is-blau is-klein spe-pk-alle" data-pk-alle="" onClick={alleAn}>
+              Alle an
+            </button>
+          ) : null}
         </div>
       </SpielAbschnitt>
     );
   }
+
+  const eintraege: AuswahlEintrag[] = alle.map((id) => {
+    const ablauf = MINISPIEL_ABLAUF[id as PartyMinispiel];
+    const regel = ansageFuer(id as PartyMinispiel, trinkmodus) as string | undefined;
+    return {
+      kennung: id,
+      titel: minispielName(id),
+      untertitel: [ablauf, regel].filter(Boolean).join(' · ') || undefined,
+      vorschau: <span className="pk-aw-zeichen">{MINISPIEL_ZEICHEN[id as PartyMinispiel] ?? minispielName(id).slice(0, 1)}</span>,
+      // An heisst Rand UND Haken — nicht nur die Farbe.
+      badge: gewaehlt.includes(id) ? <span className="pk-aw-an">✓</span> : undefined,
+    };
+  });
 
   return (
     <div className="pk-aw-block" data-pk-minispiele="">
       <div className="pk-aw-kopf">
         <h3 className="pk-aw-titel">Minispiele</h3>
         <span className="pk-aw-zahl">
-          {gewaehlt.length} von {alle.length}
+          {gewaehlt.length} von {alle.length} an
         </span>
-        {alleKnopf}
+        {nichtAlle ? (
+          <button type="button" className="pk-textknopf" data-pk-alle="" onClick={alleAn}>
+            Alle an
+          </button>
+        ) : null}
       </div>
-      {inhalt}
+      <AuswahlRaster
+        label="Minispiele"
+        mehrfach
+        eintraege={eintraege}
+        gewaehlt={gewaehlt}
+        onWahl={(kennung) => umschalten(kennung)}
+      />
+      {zuWenigHinweis}
+      {mischHinweis}
     </div>
   );
 }

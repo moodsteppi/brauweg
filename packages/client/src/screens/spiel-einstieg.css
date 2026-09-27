@@ -635,62 +635,27 @@
 .spe .spe-pakete .aw-text {
   padding: 0 4px;
 }
-/* Reihenfolge der Minispiele */
+/* Minispiele: dieselben Regelkacheln wie in der Kartenlobby (.spe .regel),
+   seit dem 27.09.2026 statt der Reihenfolge-Liste. Drei Spalten statt zwei,
+   weil es fünfzehn sind — in zwei Spalten stünden acht Reihen übereinander. */
 .spe .spe-minispiele {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.spe .pk-aw-folge {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: pk-aw-folge;
-  display: flex;
-  flex-direction: column;
-  border-radius: 18px;
-  background: var(--hb-karte);
-  border: 1px solid var(--hb-kontur);
-  overflow: hidden;
+.spe .spe-pk-regeln {
+  grid-template-columns: repeat(3, 1fr);
 }
-.spe .pk-aw-folge li {
-  counter-increment: pk-aw-folge;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 2px 6px 2px 14px;
-  border-bottom: 1px solid rgba(53, 81, 140, 0.5);
-  border-radius: 0;
-  background: none;
-  font: 700 15px var(--hb-txt);
-}
-.spe .pk-aw-folge li:last-child {
-  border-bottom: 0;
-}
-.spe .pk-aw-folge li::before {
-  content: counter(pk-aw-folge) '.';
-  min-width: 1.6em;
-  color: var(--spe-akzent);
-  font-weight: 800;
-}
-.spe .pk-aw-folgename {
-  flex: 1;
-  min-width: 0;
-}
-.spe .pk-aw-folge button {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
+.spe .spe-pk-regeln .regel {
+  min-height: 88px;
+  padding: 12px 6px 10px;
   justify-content: center;
-  font-size: 17px;
-  color: var(--hb-tinte);
-  background: var(--hb-karte-hoch);
 }
-.spe .pk-aw-folge button:disabled {
-  opacity: 0.3;
+.spe .spe-pk-regeln .regel-bild {
+  font-size: 26px;
+}
+.spe .spe-pk-alle {
+  align-self: flex-start;
 }
 /* Regler (Runden, Härte, Bots): Titel, Schieber in der Spielfarbe, Wert */
 /* Global tragen Labels ein margin-bottom und Eingaben Polster, Rand und Grund

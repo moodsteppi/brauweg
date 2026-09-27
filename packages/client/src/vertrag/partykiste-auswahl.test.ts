@@ -3,7 +3,7 @@ import {
   PAKETE,
   SPIELMODI,
   ablaufVon,
-  minispielFuer,
+  minispielFolge,
   partykiste,
   type PartykisteRegeln,
 } from '@brauweg/game-partykiste';
@@ -73,10 +73,17 @@ describe('Vertrag Partykiste-Auswahl', () => {
     }
   });
 
-  it('die gewaehlte Reihenfolge ist die, in der das Modul die Runden spielt', () => {
-    const folge = ['busfahrer', 'quiz', 'imposter'];
-    const regeln = regelsatzAus(vorgabe, BASIS, { ...KEINE_WAHL, minispiele: folge }, false) as unknown as PartykisteRegeln;
-    expect(Array.from({ length: 6 }, (_, nr) => minispielFuer(regeln, nr))).toEqual([...folge, ...folge]);
+  /*
+   * Bis zum 27.09.2026: „die gewaehlte Reihenfolge ist die, in der das Modul
+   * die Runden spielt“. Seitdem mischt das Modul — der Vertrag ist jetzt, dass
+   * genau die angeklickten Spiele drankommen, jedes einmal je Mischung.
+   */
+  it('die angeklickten Spiele sind genau die, die das Modul mischt', () => {
+    const wahl = ['busfahrer', 'quiz', 'imposter'];
+    const regeln = regelsatzAus(vorgabe, BASIS, { ...KEINE_WAHL, minispiele: wahl }, false) as unknown as PartykisteRegeln;
+    const folge = minispielFolge(regeln, 'vertrag', 6);
+    expect([...folge.slice(0, 3)].sort()).toEqual([...wahl].sort());
+    expect([...folge.slice(3, 6)].sort()).toEqual([...wahl].sort());
   });
 
   /*
