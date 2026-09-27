@@ -3,8 +3,7 @@ import { api, type GameSummary, type Me, type RankingEntry } from '../api';
 import { cardImage, deckForGame } from '../decks';
 import { t } from '../i18n';
 import { inApp } from '../laufzeit';
-import { EINZELSPIELE, einzelKennung } from '../minispiele/partykiste/einzelspiele';
-import { MINISPIEL_NAME } from '../minispiele/partykiste/sicht';
+import { EINZELSPIELE, einzelKennung, einzelName } from '../minispiele/partykiste/einzelspiele';
 import { sitzSpanne } from '../sitzspanne';
 import { SZENEN, szeneBild } from '../szenen';
 import { bannerFuer } from './StartNeu';
@@ -223,7 +222,7 @@ export function SpieleNeu({
                  * Spielseite (Trophäen und Rangliste zählen bei der Partykiste)
                  * direkt in den Einstieg.
                  */}
-                <div className="hb-reihe" aria-label="Trinkspiele einzeln">
+                <div className={`hb-reihe${filter === k.id ? ' is-raster' : ''}`} aria-label="Trinkspiele einzeln">
                   {EINZELSPIELE.map((m) => (
                     <button
                       type="button"
@@ -233,7 +232,7 @@ export function SpieleNeu({
                       onClick={() => onPick(einzelKennung(m))}
                     >
                       <span className="hb-sk-bild" style={{ backgroundImage: `url(${bannerFuer(einzelKennung(m))})` }} />
-                      <strong>{MINISPIEL_NAME[m]}</strong>
+                      <strong>{einzelName(m)}</strong>
                       <small>{sitzSpanne(party.seatCounts)} Spieler</small>
                     </button>
                   ))}

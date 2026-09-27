@@ -11,7 +11,10 @@ Spieleinstieg als Kopf (`bannerFuer` in `screens/StartNeu.tsx`,
 die App darüber.
 
 Bestellt am 27.09.2026 bei ChatGPT (GPT Image), mit `banner-partykiste` und
-`banner-brocooked` als Stilvorlage.
+`banner-brocooked` als Stilvorlage, verteilt auf vier Chats nebeneinander.
+**Geliefert am selben Tag**, alle 14. „Ich hab noch nie" kam im ersten Anlauf
+mit den Stirnzetteln aus „Wer bin ich?" und wurde neu bestellt. Originale in
+`moodsteppi/brauweg-art` #5.
 
 ## Verbindlich
 

@@ -15,7 +15,7 @@
  * gäbe es diese Spiele nicht.
  */
 
-import type { PartyMinispiel } from './sicht';
+import { MINISPIEL_NAME, type PartyMinispiel } from './sicht';
 
 export const EINZEL_PRAEFIX = 'pk-';
 
@@ -46,6 +46,15 @@ export function einzelVon(gameId: string): PartyMinispiel | null {
 
 export function einzelKennung(minispiel: PartyMinispiel): string {
   return `${EINZEL_PRAEFIX}${minispiel}`;
+}
+
+/**
+ * Name als Einzelspiel. In der Kiste heißt das Quiz „Allgemeinwissen" (so
+ * steht es in der Runde); als Spiel in der Liste ist „Quiz" der Name, unter
+ * dem man es sucht — und er passt auf die Karte.
+ */
+export function einzelName(minispiel: PartyMinispiel): string {
+  return minispiel === 'quiz' ? 'Quiz' : MINISPIEL_NAME[minispiel];
 }
 
 /**

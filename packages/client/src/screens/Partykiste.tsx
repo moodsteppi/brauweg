@@ -22,7 +22,7 @@ import { binReihumDran, useTischwache } from '../minispiele/partykiste/useTischw
 import { Abrechnung, Tabelle } from '../minispiele/partykiste/Wertung';
 import { Beitrittscode } from '../minispiele/partykiste/Beitrittscode';
 import { Einladung } from '../minispiele/partykiste/Einladung';
-import { einzelKennung, tischPasst } from '../minispiele/partykiste/einzelspiele';
+import { einzelKennung, einzelName, tischPasst } from '../minispiele/partykiste/einzelspiele';
 import { MitspielerMelden } from '../melden/MeldenBlatt';
 import type { BotLevel, SeatInfo } from '../protocol';
 import { useTable } from '../useTable';
@@ -368,7 +368,7 @@ export function Partykiste({
     return (
       <SpielRahmen
         gameId={einzel ? einzelKennung(einzel) : 'partykiste'}
-        titel={einzel ? MINISPIEL_NAME[einzel] : 'Partykiste'}
+        titel={einzel ? einzelName(einzel) : 'Partykiste'}
         unter={einzel ? 'Trinkspiel · 4 bis 12 Leute' : `${Object.keys(MINISPIEL_NAME).length} Minispiele · 4 bis 12 Leute`}
         akzent={PARTY_AKZENT}
         onBack={onBack}
