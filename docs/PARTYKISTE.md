@@ -432,6 +432,39 @@ Anwesenden, fallen alle Stimmen, die Reihenfolge rückt um einen Platz, und es
 wird neu geredet — höchstens dreimal (`MAX_REDERUNDEN`). Ohne Mehrheit zählt
 der Tipp als Enthaltung.
 
+## „Passt nicht“ — Inhalte am Tisch melden (nur auf staging)
+
+Seit dem 27.09.2026 (Robin: „ja, nur auf staging wie der Bug-Knopf“), die
+zweite Hälfte der Inhaltsprüfung aus `docs/PARTYKISTE-INHALTE.md`: In jeder
+Runde, die einen Katalog-Eintrag zeigt, steht unter der Runde ein leiser
+Knopf **„Passt nicht“** (44 pt, beschriftet; `minispiele/partykiste/PasstNicht.tsx`).
+Das Blatt fragt — bei mehreren Einträgen zuerst „Welcher?“ — nach dem Grund
+(ergibt keinen Sinn · zu zahm für die Stufe · zu hart für die Stufe · kennt
+keiner · falsch · sonstiges) und optional nach Freitext. Die Liste der
+Einträge wird beim Öffnen festgehalten, damit ein Weiterschalten der Runde
+nicht den falschen meldet.
+
+- **Welcher Eintrag:** Die Sicht trägt `gezeigt` (Katalog + Kennung + Text),
+  abgeleitet aus der fertigen Sicht — der Imposter bekommt die Kennung seines
+  Wortes erst im Ergebnis, bei „Wer bin ich“ fehlt der eigene Name, bei
+  „10 Sekunden“ die Aufgabe vor dem „Los“ (`gezeigteInhalte` in `sicht.ts`).
+  Die geltende Regel-Karte steht immer mit drin. Bus fahren zeigt nichts.
+- **Nur auf staging**, doppelt: Der Client zeigt den Knopf nur bei
+  `me.stage === 'staging'` (wie `FeedbackWidget.tsx`), und der Server nimmt
+  `POST /api/partykiste/meldung` nur an, wenn `deps.stage` staging ist
+  (sonst 404 `nurAufStaging`) — dieselbe Quelle, die `me` ausliefert.
+- **Server** (`http/partykiste-routen.ts`): angemeldet, Katalog aus
+  `INHALTS_KATALOGE`, Kennung in fester Form und im Katalog vorhanden
+  (`gibtInhalt`), Grund aus `PASST_NICHT_GRUENDE` (Modul, der Client spiegelt
+  sie, Vertrag `vertrag/partykiste-passtnicht.test.ts`), Freitext ≤ 500,
+  Stufe 1–3, Tisch muss existieren; 60 Meldungen je Stunde. Tabelle
+  `partykiste_meldung` (Migration 0032). `GET /api/partykiste/meldungen`
+  nur für die Aufsicht (`requireAufsicht`): je Eintrag Anzahl, verschiedene
+  Melder, Gründe und Stufen gezählt, die jüngsten fünf Freitexte, dazu Text
+  und Härte aus dem Katalog **von heute** (`inhaltKurz`).
+- Geändert wird der Katalog weiterhin von Hand bzw. über die Prüfseite —
+  nie aus einer Meldung heraus.
+
 ## Neue Inhalte ergänzen
 
 Die Kataloge sind reine Daten: Fragen, Wortpaare, Namen, Sprüche. Seit dem

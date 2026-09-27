@@ -225,6 +225,13 @@
       "when": 1788100000000,
       "tag": "0031_trophaeenweg",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788200000000,
+      "tag": "0032_partykiste_meldung",
+      "breakpoints": true
     }
   ]
 }

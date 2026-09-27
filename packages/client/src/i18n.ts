@@ -145,6 +145,10 @@ const de: Record<string, string> = {
   'error.geburtstagFehlt': 'Bitte gib dein Geburtsdatum an.',
   'error.letzteAnmeldeart': 'Das ist deine letzte Anmeldeart. Verknüpfe erst eine andere oder setze ein Passwort.',
   'error.nurAufsicht': 'Das darf nur die Aufsicht.',
+  // Partykiste „Passt nicht“ (27.09.2026, nur auf staging)
+  'error.nurAufStaging': 'Das gibt es nur auf dem Testsystem.',
+  'error.inhaltUnbekannt': 'Diesen Eintrag gibt es nicht (mehr).',
+  'error.tischUnbekannt': 'Diesen Tisch gibt es nicht (mehr).',
   'error.snapshotMissing': 'Der Spielstand ließ sich nicht laden.',
   'error.ruleSetUnknown': 'Diesen Regelsatz gibt es nicht.',
   'error.accountUnknown': 'Dieses Konto gibt es nicht.',

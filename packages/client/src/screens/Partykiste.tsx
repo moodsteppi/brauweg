@@ -9,6 +9,7 @@ import { AufstellungSeite } from '../minispiele/partykiste/Lager';
 import { LobbyRegelzeile, RegelsatzKontext, Regelzeile } from '../minispiele/partykiste/Regelzeile';
 import { Runde } from '../minispiele/partykiste/Runden';
 import { AktiveRegel } from '../minispiele/partykiste/RundenOhneUhr';
+import { PasstNicht } from '../minispiele/partykiste/PasstNicht';
 import {
   MINISPIEL_NAME,
   ansageFuer,
@@ -679,6 +680,19 @@ export function Partykiste({
         <>
           <p className="pk-ansage">{ansageFuer(sicht.art, sicht.trinkmodus)}</p>
           <Runde sicht={sicht} sitze={sitze} sende={sende} frist={tisch.view?.phaseDeadline ?? null} />
+          {/*
+           * „Passt nicht" (27.09.2026): nur auf staging, wie der Bug-Knopf
+           * (`me.stage`); ob die Runde einen Eintrag zeigt, entscheidet der
+           * Knopf selbst — sein offenes Blatt soll ein Weiterschalten der
+           * Runde ueberleben.
+           */}
+          {ich?.stage === 'staging' ? (
+            <PasstNicht
+              gezeigt={sicht.gezeigt ?? []}
+              tischId={tischId}
+              stufe={sicht.eskalation?.inhaltsHaerte ?? sicht.inhaltsHaerte ?? null}
+            />
+          ) : null}
           {sicht.phase === 'ergebnis' ? (
             <Abrechnung sicht={sicht} sitze={sitze} binFertig={binFertig} sende={sende} />
           ) : null}

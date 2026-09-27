@@ -36,7 +36,9 @@ import {
   ZEHN_SEKUNDEN,
   amZug,
   erzeugePartie,
+  gibtInhalt,
   haerteVon,
+  inhaltKurz,
   inhaltsStapel,
   partykiste,
   sichtFuer,
@@ -384,5 +386,13 @@ test('gezeigt: jeder Eintrag nennt einen bekannten Katalog und eine Kennung, die
   const partie = erzeugePartie({ regeln: regeln(2, 'gemischt', [...DEFAULT_REGELN.minispiele]), saat: 17, sitze: 7, runden: 15, gastSitze: [] });
   const gezogen = gezogeneInhalte(partie);
   assert.ok(gezogen.length >= 15);
-  for (const e of gezogen) assert.ok((INHALTS_KATALOGE as readonly string[]).includes(e.katalog), e.katalog);
+  for (const e of gezogen) {
+    assert.ok((INHALTS_KATALOGE as readonly string[]).includes(e.katalog), e.katalog);
+    /* Dasselbe Nachschlagen, mit dem der Server eine Meldung annimmt. */
+    assert.ok(gibtInhalt(e.katalog, e.kennung), `${e.katalog}/${e.kennung}`);
+    assert.ok((inhaltKurz(e.katalog, e.kennung)?.text.length ?? 0) > 0);
+  }
+  assert.equal(gibtInhalt('quiz', 'q9999'), false);
+  assert.equal(gibtInhalt('werwolf', 'q001'), false);
+  assert.deepEqual(inhaltKurz('entweder', ENTWEDER_ODER[0]!.id), { text: `${ENTWEDER_ODER[0]!.a} oder ${ENTWEDER_ODER[0]!.b}`, haerte: haerteVon(ENTWEDER_ODER[0]!) });
 });

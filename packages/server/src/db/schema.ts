@@ -1201,6 +1201,31 @@ export const report = pgTable(
   (t) => [index('report_target_idx').on(t.targetId, t.createdAt)],
 );
 
+/**
+ * „Passt nicht" zu einem Inhalt der Partykiste (seit dem 27.09.2026, nur auf
+ * staging — Migration 0032, Routen in http/partykiste-routen.ts). Gemeldet
+ * wird ein EINTRAG (Katalog + Kennung), kein Mensch; deshalb nicht `report`.
+ * Der Text des Eintrags steht im Katalog, nicht hier.
+ */
+export const partykisteMeldung = pgTable(
+  'partykiste_meldung',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    tischId: uuid().references(() => gameTable.id, { onDelete: 'set null' }),
+    katalog: text().notNull(),
+    kennung: text().notNull(),
+    grund: text().notNull(),
+    freitext: text(),
+    /** Die Inhaltsstufe des Tisches beim Melden (1 bis 3) — „zu zahm" sagt ohne sie nichts. */
+    stufe: smallint(),
+    erstelltAm: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('partykiste_meldung_eintrag_idx').on(t.katalog, t.kennung)],
+);
+
 // ---------------------------------------------------------------------------
 // Kaeufe
 // ---------------------------------------------------------------------------
