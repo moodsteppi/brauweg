@@ -27,6 +27,7 @@ import { Einstellungen, OffeneRunde } from '../../minispiele/partykiste/Einstell
 import { Regelzeile } from '../../minispiele/partykiste/Regelzeile';
 import { Runde } from '../../minispiele/partykiste/Runden';
 import { AktiveRegel } from '../../minispiele/partykiste/RundenOhneUhr';
+import { PasstNicht } from '../../minispiele/partykiste/PasstNicht';
 import { MINISPIEL_NAME, ansageFuer, type PartyMinispiel, type PartykisteSicht } from '../../minispiele/partykiste/sicht';
 import { Abrechnung, Tabelle } from '../../minispiele/partykiste/Wertung';
 import { AufstellungSeite } from '../../minispiele/partykiste/Lager';
@@ -764,15 +765,29 @@ function Schaukasten(): React.JSX.Element {
             />
           </MenueKasten>
           <MenueKasten
-            titel="Menü — Auswahl als Gast, Modus bekannt"
-            text="„derb“ gesperrt mit Grund; die Modus-Kacheln erscheinen erst, wenn defaultConfig() ein Feld modus hat."
+            titel="Menü — Auswahl als Gast, Modus bekannt, vier Inhalte-Kacheln"
+            text="„derb“ gesperrt mit Grund; „gemischt“ heißt für den Gast harmlos und pikant. Die vierte Kachel und die Modus-Kacheln erscheinen erst, wenn defaultConfig() die Felder inhaltsMischung und modus hat."
           >
             <PartyAuswahl
-              vorgabe={{ minispiele: Object.keys(MINISPIEL_NAME), inhaltsHaerte: 1, paket: null, modus: 'turnier' }}
-              wahl={{ minispiele: null, inhaltsHaerte: null, paket: null, modus: 'themenabend' }}
+              vorgabe={{ minispiele: Object.keys(MINISPIEL_NAME), inhaltsHaerte: 1, inhaltsMischung: 'genau', paket: null, modus: 'turnier' }}
+              wahl={{ minispiele: null, inhaltsHaerte: 'gemischt', paket: null, modus: 'themenabend' }}
               gast
               trinkmodus={false}
               onWahl={() => {}}
+            />
+          </MenueKasten>
+          <MenueKasten
+            titel="Am Tisch — „Passt nicht“ (nur auf staging)"
+            text="Leise unter der Runde, 44 pt. Zeigt die Runde mehrere Einträge, fragt das Blatt erst, welcher. Senden geht hier ins Leere — kein Server."
+          >
+            <PasstNicht
+              gezeigt={[
+                { katalog: 'identitaeten', kennung: 'p001', text: 'Harry Potter' },
+                { katalog: 'identitaeten', kennung: 'p002', text: 'Barbie' },
+                { katalog: 'regelkarten', kennung: 'r003', text: 'Keine Vornamen' },
+              ]}
+              tischId={null}
+              stufe={2}
             />
           </MenueKasten>
           <MenueKasten
