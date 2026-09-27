@@ -15,8 +15,7 @@ import { useCallback, useState } from 'react';
 import { AuswahlRaster, type AuswahlEintrag } from '../../hub';
 import { useSpielVorgabe } from '../../spiel-vorgabe';
 import {
-  DERB_GRUND_GAST,
-  INHALT_STUFEN,
+  INHALT_GEMISCHT,
   INHALT_TITEL,
   MINDESTENS_MINISPIELE,
   MINISPIEL_ABLAUF,
@@ -25,13 +24,14 @@ import {
   PAKET_ALLES,
   PAKET_NAME,
   alleMinispiele,
+  inhaltsKacheln,
   gemerkteWahl,
   merkeWahl,
   minispielName,
   minispielWahl,
   modusBekannt,
   regelsatzAus,
-  wirksameInhaltsHaerte,
+  wirksameInhaltsKachel,
   wirksameMinispiele,
   wirksamerModus,
   wirksamesPaket,
@@ -112,7 +112,8 @@ export function PartyAuswahl({
    */
   einzel?: boolean;
 }): React.JSX.Element {
-  const stufe = wirksameInhaltsHaerte(vorgabe, wahl, gast);
+  /* Welche der vier Inhalte-Kacheln gilt (harmlos · pikant · derb · gemischt). */
+  const kachel = wirksameInhaltsKachel(vorgabe, wahl, gast);
   const paket = wirksamesPaket(vorgabe, wahl);
   const modus = wirksamerModus(vorgabe, wahl);
   const irgendeinPaketGesperrt =
@@ -175,15 +176,10 @@ export function PartyAuswahl({
         <SpielAbschnitt titel={INHALT_TITEL}>
           <AuswahlRaster
             label={INHALT_TITEL}
-            spalten={3}
-            eintraege={INHALT_STUFEN.map((s) => ({
-              kennung: String(s.stufe),
-              titel: s.titel,
-              untertitel: s.text,
-              deaktiviert: gast && s.stufe === 3 ? DERB_GRUND_GAST : undefined,
-            }))}
-            gewaehlt={stufe === null ? null : String(stufe)}
-            onWahl={(kennung) => onWahl({ ...wahl, inhaltsHaerte: Number(kennung) })}
+            spalten={2}
+            eintraege={inhaltsKacheln(vorgabe, gast)}
+            gewaehlt={kachel}
+            onWahl={(kennung) => onWahl({ ...wahl, inhaltsHaerte: inhaltsWahlAus(kennung) })}
           />
         </SpielAbschnitt>
 
@@ -223,15 +219,10 @@ export function PartyAuswahl({
         <h3 className="pk-aw-titel">{INHALT_TITEL}</h3>
         <AuswahlRaster
           label={INHALT_TITEL}
-          spalten={3}
-          eintraege={INHALT_STUFEN.map((s) => ({
-            kennung: String(s.stufe),
-            titel: s.titel,
-            untertitel: s.text,
-            deaktiviert: gast && s.stufe === 3 ? DERB_GRUND_GAST : undefined,
-          }))}
-          gewaehlt={stufe === null ? null : String(stufe)}
-          onWahl={(kennung) => onWahl({ ...wahl, inhaltsHaerte: Number(kennung) })}
+          spalten={2}
+          eintraege={inhaltsKacheln(vorgabe, gast)}
+          gewaehlt={kachel}
+          onWahl={(kennung) => onWahl({ ...wahl, inhaltsHaerte: inhaltsWahlAus(kennung) })}
         />
       </div>
 
@@ -430,6 +421,11 @@ function MinispielAuswahl({
       {mischHinweis}
     </div>
   );
+}
+
+/** Die angetippte Inhalte-Kachel als Wahl: eine Stufe oder „gemischt". */
+function inhaltsWahlAus(kennung: string): PartyWahl['inhaltsHaerte'] {
+  return kennung === INHALT_GEMISCHT ? INHALT_GEMISCHT : Number(kennung);
 }
 
 /** Schloss an einer gesperrten Kachel — gesperrt heißt Schloss plus leise Schrift. */

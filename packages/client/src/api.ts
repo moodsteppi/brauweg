@@ -1181,6 +1181,19 @@ export const api = {
   feedbackSenden: (daten: { beschreibung: string; screenshot?: string; seite: string }) =>
     post<{ ok: true }>('/feedback', daten),
 
+  /**
+   * „Passt nicht" zu einem Inhalt der Partykiste — nur auf staging, wie das
+   * Feedback (minispiele/partykiste/PasstNicht.tsx, Server partykiste-routen.ts).
+   */
+  partykisteMelden: (daten: {
+    katalog: string;
+    kennung: string;
+    grund: string;
+    freitext?: string;
+    tischId?: string;
+    stufe?: number;
+  }) => post<{ ok: true }>('/partykiste/meldung', daten),
+
   /** Was im Kasten liegt, plus der freigegebene Bestand. Nur Aufsicht. */
   mememoryVorschlaege: () =>
     request<{

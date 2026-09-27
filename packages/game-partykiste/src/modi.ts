@@ -90,12 +90,22 @@ export function regelnDerRunde(regeln: PartykisteRegeln, nr: number, runden?: nu
     regeln.inhaltsHaerte === 1 || regeln.inhaltsHaerte === 2 || regeln.inhaltsHaerte === 3
       ? regeln.inhaltsHaerte
       : 1;
+  /*
+   * `inhaltsMischung: 'genau'` (seit dem 27.09.2026): Die Kurve IST die
+   * Stufenwahl — erstes Drittel harmlos, zweites pikant, letztes derb, jeweils
+   * genau diese Stufe und nur nach unten ausweichend. Was der Oeffner unter
+   * „Inhalte" eingestellt hat, gilt in der Eskalation nicht, so wie die
+   * eingestellte Stufe selbst nicht gilt. Wirksam wird das nur fuer einen
+   * Ersatz-Stapel ohne Eskalationskontext (baueRunde); den Hauptweg,
+   * `stufenStapel`, belegt `belegeStufenweise` ohnehin genau.
+   */
   if (runden === undefined || !Number.isFinite(runden) || runden <= 0) {
-    return { ...regeln, inhaltsHaerte: 1, schluckFaktor: 1 };
+    return { ...regeln, inhaltsHaerte: 1, inhaltsMischung: 'genau', schluckFaktor: 1 };
   }
   const stufe = eskalationsStufe(nr, runden);
   return {
     ...regeln,
+    inhaltsMischung: 'genau',
     inhaltsHaerte: kleinere(stufe, decke),
     schluckFaktor: stufe,
     eskalation: { runden, decke },

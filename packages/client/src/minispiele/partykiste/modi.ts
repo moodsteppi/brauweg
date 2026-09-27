@@ -54,3 +54,41 @@ export function modusChip(regeln: PartyRegelsatz): string | null {
 export function eskalationsHinweis(regeln: PartyRegelsatz): string | null {
   return regeln.eskalation?.gekappt ? 'Ein Gast spielt mit — „derb“ gibt es erst ohne Gast.' : null;
 }
+
+/** Die Namen der Inhaltsstufen, Stelle = Stufe — dieselben Woerter wie die Kacheln (wahl.ts). */
+const INHALT_NAME = ['', 'harmlos', 'pikant', 'derb'] as const;
+
+/**
+ * Der Chip „Inhalte …" in der Regelzeile (seit dem 27.09.2026) — oder null,
+ * wenn der Regelsatz die Stufe nicht traegt (Tisch von vor dem 22.09.2026).
+ *
+ * Er nennt, was WIRKT, und wie es gemeint ist: „pikant" heisst seit dem
+ * 27.09.2026 nur Pikantes, „gemischt" alle Stufen; ein Tisch von davor spielt
+ * noch mit der Obergrenze und heisst deshalb „bis derb". In der Eskalation
+ * steht die Stufe der Runde, im Wartesaal nur, dass sie steigt.
+ */
+export function inhaltsChip(regeln: PartyRegelsatz): string | null {
+  if (regeln.modus === 'eskalation') {
+    return regeln.eskalation ? `Inhalte ${INHALT_NAME[regeln.eskalation.inhaltsHaerte]}` : 'Inhalte steigen';
+  }
+  const stufe = regeln.inhaltsHaerte;
+  if (stufe === undefined) return null;
+  switch (regeln.inhaltsMischung ?? 'bis') {
+    case 'gemischt':
+      return stufe >= 3 ? 'Inhalte gemischt' : stufe === 2 ? 'Inhalte gemischt, ohne derb' : 'Inhalte harmlos';
+    case 'genau':
+      return `Inhalte ${INHALT_NAME[stufe]}`;
+    case 'bis':
+      return stufe === 1 ? 'Inhalte harmlos' : `Inhalte bis ${INHALT_NAME[stufe]}`;
+  }
+}
+
+/**
+ * Der Satz unter der Regelzeile, wenn ein Gast „derb" weggekappt hat — beim
+ * Turnier wie bei der Eskalation (dort `eskalationsHinweis`). Sonst null.
+ */
+export function inhaltsHinweis(regeln: PartyRegelsatz): string | null {
+  const gewollt = regeln.inhaltsHaerteGewollt;
+  if (regeln.modus === 'eskalation' || !gewollt || regeln.inhaltsHaerte === undefined) return null;
+  return gewollt > regeln.inhaltsHaerte ? 'Ein Gast spielt mit — „derb“ gibt es erst ohne Gast.' : null;
+}
