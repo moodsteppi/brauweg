@@ -88,6 +88,7 @@ export function PartyAuswahl({
   onWahl,
   paketSperre,
   neu = false,
+  einzel = false,
 }: {
   vorgabe: Record<string, unknown> | null;
   wahl: PartyWahl;
@@ -106,6 +107,11 @@ export function PartyAuswahl({
    * Spieleinstiegs und die Themenpakete mit ihrem Bild (`/hub/paket-<id>.webp`).
    */
   neu?: boolean;
+  /**
+   * Einzelspiel (einzelspiele.ts): Das Minispiel liegt fest, der Modus ist das
+   * Turnier — Modus und Minispielwahl entfallen, Pakete und Inhalte bleiben.
+   */
+  einzel?: boolean;
 }): React.JSX.Element {
   const stufe = wirksameInhaltsHaerte(vorgabe, wahl, gast);
   const paket = wirksamesPaket(vorgabe, wahl);
@@ -116,7 +122,7 @@ export function PartyAuswahl({
   if (neu) {
     return (
       <>
-        {modusBekannt(vorgabe) ? (
+        {modusBekannt(vorgabe) && !einzel ? (
           <SpielAbschnitt titel="Modus">
             <AuswahlRaster
               label="Modus"
@@ -182,7 +188,9 @@ export function PartyAuswahl({
           />
         </SpielAbschnitt>
 
-        <MinispielAuswahl neu vorgabe={vorgabe} wahl={wahl} trinkmodus={trinkmodus} onWahl={onWahl} />
+        {einzel ? null : (
+          <MinispielAuswahl neu vorgabe={vorgabe} wahl={wahl} trinkmodus={trinkmodus} onWahl={onWahl} />
+        )}
       </>
     );
   }

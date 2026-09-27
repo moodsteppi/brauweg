@@ -18,6 +18,8 @@ import {
   vorgemerkterCode,
   vormerkungLoeschen,
 } from './minispiele/partykiste/einladungslink';
+import { einzelVon } from './minispiele/partykiste/einzelspiele';
+import type { PartyMinispiel } from './minispiele/partykiste/sicht';
 
 import { leseKontoLink, type KontoLinkZiel } from './kontolink';
 import { istSpielbar } from './spielfreigabe';
@@ -130,7 +132,7 @@ type Screen =
    * einem Bildschirm. Es ist kein Kartenspiel und braucht keine Kartenlobby —
    * gewaehlt wird die Rundenzahl, kein Regelsatz.
    */
-  | { name: 'partykiste'; tisch?: string | null }
+  | { name: 'partykiste'; tisch?: string | null; einzel?: PartyMinispiel | null }
   /**
    * Tafelrunde ebenso: eigenes Hauptmenue, eigene Match-Suche, Ruestkammer
    * auf einem Bildschirm. Es ist kein Kartenspiel und braucht keine
@@ -629,6 +631,7 @@ export function App(): React.JSX.Element {
       return (
         <Partykiste
           startTisch={screen.tisch ?? null}
+          einzel={screen.einzel ?? null}
           onBack={() => {
             setScreen({ name: 'games' });
             void reload();
@@ -784,6 +787,9 @@ export function App(): React.JSX.Element {
           if (gameId === 'golf') return setScreen({ name: 'golf' });
           if (gameId === 'brocooked') return setScreen({ name: 'brocooked' });
           if (gameId === 'partykiste') return setScreen({ name: 'partykiste' });
+          // Einzelspiele der Partykiste (`pk-busfahrer` …): dieselbe Kiste, ein Minispiel.
+          const einzel = einzelVon(gameId);
+          if (einzel) return setScreen({ name: 'partykiste', einzel });
           if (gameId === 'tafelrunde') return setScreen({ name: 'tafelrunde' });
           return setScreen({ name: 'lobby', gameId });
         }}
