@@ -28,6 +28,8 @@ export type {
 } from './inhalte/typen.js';
 export { PAKETE, istPaket } from './inhalte/typen.js';
 export * from './inhalte/filter.js';
+export * from './inhalte/stapel.js';
+export { PASST_NICHT_GRUENDE, gibtInhalt, inhaltKurz, type PasstNichtGrund } from './inhalte/kataloge.js';
 /*
  * Die Kataloge selbst nach aussen, damit Tests und Werkzeuge sie zaehlen und
  * pruefen koennen (Haerte, Pakete, Doppel). Der Client importiert sie nicht —

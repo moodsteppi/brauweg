@@ -37,7 +37,7 @@ import {
   wechselbareSitze,
   type LagerPlatzierung,
 } from './modi.js';
-import type { Spielmodus } from './regeln.js';
+import { inhaltsLesart, type InhaltsLesart, type Spielmodus } from './regeln.js';
 
 /** Eskalation: wo die Kurve in der laufenden Runde steht. */
 export interface EskalationsSicht {
@@ -327,6 +327,59 @@ export interface PartykisteSicht {
   readonly lagerTabelle: readonly LagerPlatzierung[] | null;
   /** Team-Abend, solange die Lager aufgestellt werden; sonst null. */
   readonly aufstellung: AufstellungsSicht | null;
+  /*
+   * Die Inhaltsstufe des Tisches (seit dem 27.09.2026) — kein Geheimnis, sie
+   * steht im Regelsatz. Bis dahin trug die Sicht sie nicht, und die
+   * Regelzeile konnte sie nicht nennen (PARTYKISTE.md).
+   */
+  /** Die WIRKSAME Stufe, nach der Gast-Kappung (in der Eskalation die Decke). */
+  readonly inhaltsHaerte: Haerte;
+  /** Wie die Stufe gemeint ist: genau, gemischt oder — Tisch von davor — 'bis'. */
+  readonly inhaltsMischung: InhaltsLesart;
+  /** Was eingestellt war, wenn ein Gast es kappte — sonst null. */
+  readonly inhaltsHaerteGewollt: Haerte | null;
+  /**
+   * Welche Katalog-Eintraege DIESER Sitz gerade vor sich hat — fuer den
+   * Knopf „Passt nicht" (seit dem 27.09.2026, nur auf staging), der sonst
+   * nicht wuesste, welchen Eintrag er meldet.
+   *
+   * Abgeleitet aus dem, was die Sicht ohnehin zeigt, und nie mehr: Der
+   * Imposter bekommt die Kennung des Wortes erst im Ergebnis (sie fuehrte
+   * sonst ueber den Katalog zum Wort), bei „Wer bin ich" fehlt der eigene
+   * Name samt Kennung, bei „10 Sekunden" die Aufgabe vor dem „Los". Gleiches
+   * Mass wie der Test `das Imposter-Wort steht in keiner fremden Sicht`.
+   */
+  readonly gezeigt: readonly GezeigterInhalt[];
+}
+
+/**
+ * Die Kataloge, aus denen ein gezeigter Eintrag stammen kann — die Namen der
+ * Dateien unter `inhalte/`. Der Server prueft eine Meldung dagegen
+ * (`/api/partykiste/meldung`); neue kommen hinten dazu, keiner wird umbenannt,
+ * weil sie in abgelegten Meldungen stehen.
+ */
+export const INHALTS_KATALOGE = [
+  'imposter',
+  'quiz',
+  'identitaeten',
+  'niemals',
+  'wereher',
+  'schaetzen',
+  'entweder',
+  'wahrheitpflicht',
+  'kategorien',
+  'mehrheit',
+  'regelkarten',
+  'zehnsekunden',
+  'koenigsbecher',
+] as const;
+export type InhaltsKatalog = (typeof INHALTS_KATALOGE)[number];
+
+/** Ein Eintrag, den ein Sitz gerade sieht: woher, welche Kennung, und der Text zum Wiedererkennen. */
+export interface GezeigterInhalt {
+  readonly katalog: InhaltsKatalog;
+  readonly kennung: string;
+  readonly text: string;
 }
 
 function imErgebnis(partie: PartykistePartie): boolean {
@@ -495,6 +548,7 @@ function regelKarteSicht(partie: PartykistePartie): RegelKarteSicht | null {
 export function sichtFuer(partie: PartykistePartie, sitz: number): PartykisteSicht {
   const runde = partie.runde;
   const auf = imErgebnis(partie);
+  const daten = minispielSicht(partie, sitz);
   return {
     sitz,
     sitze: partie.sitze,
@@ -515,7 +569,7 @@ export function sichtFuer(partie: PartykistePartie, sitz: number): PartykisteSic
     gehandelt: runde.fertig,
     fertig: partie.fertig,
     tabelle: platzierungen(partie),
-    daten: minispielSicht(partie, sitz),
+    daten,
     regelKarte: regelKarteSicht(partie),
     modus: modusVon(partie.regeln),
     paket: partie.regeln.paket ?? null,
@@ -528,7 +582,79 @@ export function sichtFuer(partie: PartykistePartie, sitz: number): PartykisteSic
           wechselbar: sitz === TISCHOEFFNER ? wechselbareSitze(partie.lager ?? [], partie.ausgestiegen) : [],
         }
       : null,
+    inhaltsHaerte: partie.regeln.inhaltsHaerte,
+    inhaltsMischung: inhaltsLesart(partie.regeln),
+    inhaltsHaerteGewollt: partie.inhaltsHaerteGewollt ?? null,
+    gezeigt: gezeigteInhalte(partie, daten),
   };
+}
+
+/**
+ * Was `daten` gerade zeigt, als Katalog + Kennung. Liest bewusst die fertige
+ * Sicht und nicht nur die Runde: Was dort null ist (das Wort des Imposters,
+ * der eigene Name, die Aufgabe vor dem „Los"), fehlt hier samt Kennung —
+ * die Sichtbarkeit wird nicht ein zweites Mal entschieden.
+ */
+function gezeigteInhalte(partie: PartykistePartie, daten: MinispielSicht): GezeigterInhalt[] {
+  const runde = partie.runde;
+  const liste: GezeigterInhalt[] = [];
+  const dazu = (katalog: InhaltsKatalog, kennung: string, text: string | null | undefined): void => {
+    if (!kennung || !text) return;
+    if (liste.some((e) => e.katalog === katalog && e.kennung === kennung)) return;
+    liste.push({ katalog, kennung, text });
+  };
+  switch (runde.art) {
+    case 'imposter':
+      if (daten.art === 'imposter') dazu('imposter', runde.wortId, daten.meinWort ?? daten.echtesWort);
+      break;
+    case 'quiz':
+      dazu('quiz', runde.frageId, runde.frage);
+      break;
+    case 'werbinich':
+      if (daten.art === 'werbinich') daten.namen.forEach((name, s) => dazu('identitaeten', runde.identitaeten[s] ?? '', name));
+      break;
+    case 'niemals':
+      dazu('niemals', runde.spruchId, runde.text);
+      break;
+    case 'wereher':
+      dazu('wereher', runde.spruchId, runde.text);
+      break;
+    case 'busfahrer':
+      break;
+    case 'schaetzen':
+      dazu('schaetzen', runde.frageId, runde.frage);
+      break;
+    case 'entweder':
+      dazu('entweder', runde.paarId, `${runde.a} oder ${runde.b}`);
+      break;
+    case 'wahrheitpflicht':
+      if (daten.art === 'wahrheitpflicht') daten.text.forEach((text, s) => dazu('wahrheitpflicht', runde.aufgabeId[s] ?? '', text));
+      break;
+    case 'kategorien':
+      dazu('kategorien', runde.kategorieId, runde.kategorie);
+      break;
+    case 'mehrheit':
+      dazu('mehrheit', runde.frageId, runde.frage);
+      break;
+    case 'regelkarte':
+      dazu('regelkarten', runde.karteId, runde.text);
+      break;
+    case 'bombe':
+      dazu('kategorien', runde.kategorieId, runde.kategorie);
+      break;
+    case 'zehnsekunden':
+      if (daten.art === 'zehnsekunden') dazu('zehnsekunden', runde.aufgabeId, daten.aufgabe);
+      break;
+    case 'koenigsbecher':
+      if (daten.art === 'koenigsbecher' && daten.letzte) {
+        dazu('koenigsbecher', daten.letzte.kartenId, `${daten.letzte.titel}: ${daten.letzte.text}`);
+      }
+      if (runde.neueRegel) dazu('regelkarten', runde.neueRegel.karteId, runde.neueRegel.text);
+      break;
+  }
+  /* Die geltende Regel-Karte steht ueber jeder Runde — auch sie kann man melden. */
+  if (partie.regelKarte) dazu('regelkarten', partie.regelKarte.karteId, partie.regelKarte.text);
+  return liste;
 }
 
 function eskalationsSicht(partie: PartykistePartie): EskalationsSicht | null {

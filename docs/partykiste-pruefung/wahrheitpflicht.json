@@ -1,0 +1,1696 @@
+{
+  "katalog": "wahrheitpflicht",
+  "geprueft": 400,
+  "raus": [
+    {
+      "id": "a006",
+      "text": "Welche App checkst du am häufigsten, wenn dir langweilig ist?",
+      "art": "wahrheit",
+      "grund": "Ein-Wort-Antwort („Instagram\"), keine Geschichte, löst nichts aus."
+    },
+    {
+      "id": "a013",
+      "text": "Was ist dein Guilty Pleasure beim Essen?",
+      "art": "wahrheit",
+      "grund": "Dublette zu a032 (heimlich nachts essen) und a178 (seltsame Kombination)."
+    },
+    {
+      "id": "a023",
+      "text": "Was ist die verrückteste Ausrede, warum du zu spät zur Arbeit kamst?",
+      "art": "wahrheit",
+      "grund": "Dublette zu a011 (schlechteste Ausrede für eine Verspätung)."
+    },
+    {
+      "id": "a038",
+      "text": "Welchen Satz sagst du viel zu oft im Alltag?",
+      "art": "wahrheit",
+      "grund": "Dublette zu a022 (Wort, das du zu oft benutzt)."
+    },
+    {
+      "id": "a045",
+      "text": "Was war das Peinlichste, das dir vor Publikum passiert ist?",
+      "art": "wahrheit",
+      "grund": "Dublette zu a014 (Missgeschick in der Öffentlichkeit)."
+    },
+    {
+      "id": "a051",
+      "text": "Was ist das Peinlichste, das dir in einem Bewerbungsgespräch passiert ist?",
+      "art": "wahrheit",
+      "grund": "Dublette zu a035 (Fail im Vorstellungsgespräch)."
+    },
+    {
+      "id": "a054",
+      "text": "Welches Wort verwechselst du ständig mit einem anderen?",
+      "art": "wahrheit",
+      "grund": "Dublette zu a010 (Wort falsch aussprechen), schwächer."
+    },
+    {
+      "id": "a056",
+      "text": "Welchen Serienmarathon bereust du im Nachhinein?",
+      "art": "wahrheit",
+      "grund": "Dublette zu a040 (Serie an einem Tag durchgeschaut)."
+    },
+    {
+      "id": "a060",
+      "text": "Welche Ausrede fällt dir spontan ein, wenn du zu spät zu dieser Runde kämst?",
+      "art": "wahrheit",
+      "grund": "Hypothetisch, dritte Ausreden-Frage neben a003/a011 — keine echte Geschichte."
+    },
+    {
+      "id": "a121",
+      "text": "Welches Haushaltsgerät würdest du als Letztes hergeben?",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "arbeit"
+      ],
+      "art": "wahrheit",
+      "grund": "Ein-Wort-Antwort („Kaffeemaschine\"), langweilig."
+    },
+    {
+      "id": "a192",
+      "text": "Was war dein schlimmster Haarschnitt-Unfall, den du selbst verbrochen hast?",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "art": "wahrheit",
+      "grund": "Dublette zu a053 (schlimmste Frisur-Entscheidung)."
+    },
+    {
+      "id": "a199",
+      "text": "Was hast du zuletzt im Internet gesucht?",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "art": "wahrheit",
+      "grund": "Dublette zu a027 (Merkwürdigstes gegoogelt) und Pflicht a283; Antwort meist banal."
+    },
+    {
+      "id": "a203",
+      "text": "Wenn du eine Zeitmaschine hättest: ein Tag in welcher Epoche?",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "arbeit"
+      ],
+      "art": "wahrheit",
+      "grund": "Dublette zu a174 (Jahrzehnt, in dem du gern gelebt hättest)."
+    },
+    {
+      "id": "a232",
+      "text": "Wer war die letzte Person, die du heimlich online angeschaut hast?",
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "art": "wahrheit",
+      "grund": "Dublette zu a214 (Ex-Schwarm online stalken)."
+    },
+    {
+      "id": "a062",
+      "text": "Mach 30 Sekunden lang ein Kompliment-Feuerwerk für deinen Nachbarn.",
+      "art": "pflicht",
+      "grund": "Dublette zu a071 (Komplimente an den Nachbarn)."
+    },
+    {
+      "id": "a067",
+      "text": "Sag einen Zungenbrecher dreimal schnell hintereinander auf.",
+      "art": "pflicht",
+      "grund": "Dublette zu a271 (Zungenbrecher schnell); a271 liefert den Text gleich mit."
+    },
+    {
+      "id": "a079",
+      "text": "Erzähl einen Witz, über den alle mindestens einmal lachen müssen.",
+      "art": "pflicht",
+      "grund": "Dublette zu a070 (Witz erzählen), dazu unerfüllbar („alle müssen lachen\")."
+    },
+    {
+      "id": "a086",
+      "text": "Sprich die nächsten zwei Sätze wie eine Nachrichtensprecherin oder ein Nachrichtensprecher.",
+      "art": "pflicht",
+      "grund": "Dublette zu a074 (Nachrichtensprecher-Stimme)."
+    },
+    {
+      "id": "a097",
+      "text": "Mach 20 Sekunden lang ein todernstes Nachrichtensprecher-Gesicht.",
+      "art": "pflicht",
+      "grund": "Dritte Nachrichtensprecher-Aufgabe (a074), ein Gesicht halten ist langweilig zum Zuschauen."
+    },
+    {
+      "id": "a101",
+      "text": "Mach die peinlichste Tanzbewegung, die dir spontan einfällt.",
+      "art": "pflicht",
+      "grund": "Dublette zu a075 (tanzen wie jemand, der nie getanzt hat)."
+    },
+    {
+      "id": "a103",
+      "text": "Sing dein Lieblingslied so, als wärst du ein Roboter.",
+      "art": "pflicht",
+      "grund": "Dublette zu a077 (Roboter) und den übrigen Lieblingslied-Varianten."
+    },
+    {
+      "id": "a104",
+      "text": "Mach 30 Sekunden Kompliment-Battle mit deinem Nachbarn.",
+      "art": "pflicht",
+      "grund": "Dublette zu a071/a062 (Komplimente an den Nachbarn)."
+    },
+    {
+      "id": "a113",
+      "text": "Erfinde ein Motto für den heutigen Abend und ruf es einmal laut.",
+      "art": "pflicht",
+      "grund": "Dublette zu a100 (Toast/Motto auf den Abend)."
+    },
+    {
+      "id": "a115",
+      "text": "Sing den Refrain deines Lieblingslieds im Flüsterton.",
+      "art": "pflicht",
+      "grund": "Sechste Lieblingslied-Variante; geflüstert singen trägt am Tisch nicht."
+    },
+    {
+      "id": "a116",
+      "text": "Zeig deinen besten Verlierer-Gesichtsausdruck.",
+      "art": "pflicht",
+      "grund": "Dublette zu a080 (Grimasse halten)."
+    },
+    {
+      "id": "a268",
+      "text": "Beschreibe deinen Sitznachbarn in drei Wörtern — nur positive.",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "arbeit"
+      ],
+      "art": "pflicht",
+      "grund": "Dublette zu a071 (drei positive Dinge über den Nachbarn)."
+    },
+    {
+      "id": "a282",
+      "text": "Mach einen Werbespot für den Stuhl, auf dem du sitzt.",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "arbeit"
+      ],
+      "art": "pflicht",
+      "grund": "Dublette zu a073 (Werbespot für einen Gegenstand am Tisch)."
+    },
+    {
+      "id": "a303",
+      "text": "Mach ein Foto der Runde und gib ihm einen Titel wie für ein Kunstwerk.",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "arbeit"
+      ],
+      "art": "pflicht",
+      "grund": "Dublette zu a087 (Gruppenfoto der Runde)."
+    },
+    {
+      "id": "a361",
+      "text": "Lass die Person links von dir eine Nachricht an einen Kontakt deiner Wahl formulieren — du darfst sie vor dem Senden entschärfen.",
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "art": "pflicht",
+      "grund": "Bindet eine Person außerhalb des Tisches ein (Nachricht an einen Kontakt) — gegen die Pflicht-Regel."
+    },
+    {
+      "id": "a372",
+      "text": "Lass die Runde entscheiden, welches Emoji du an die dritte Person in deinem Chat schickst.",
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "art": "pflicht",
+      "grund": "Bindet eine Person außerhalb des Tisches ein (Emoji an einen Kontakt senden)."
+    },
+    {
+      "id": "a388",
+      "text": "Tu 20 Sekunden lang so, als wärst du ein Erotik-Hörbuch-Sprecher, der eine Bedienungsanleitung vorliest.",
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "art": "pflicht",
+      "grund": "Dublette zu a360 (Schlafzimmerstimme über etwas Trockenes)."
+    }
+  ],
+  "umstufen": [
+    {
+      "id": "a009",
+      "text": "Was ist das Peinlichste, das in deinem Suchverlauf steht?",
+      "von": 1,
+      "nach": 2,
+      "grund": "Peinlichster Suchverlauf läuft fast immer auf Sex hinaus — am Tisch mit Eltern zu heikel, im Zweifel höher."
+    },
+    {
+      "id": "a211",
+      "text": "Was war das Romantischste, das jemand je für dich getan hat?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Romantisch, nicht anzüglich — geht an jedem Tisch."
+    },
+    {
+      "id": "a222",
+      "text": "Welche Beziehungsregel würdest du dem Brautpaar mit auf den Weg geben?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Beziehungstipp fürs Brautpaar ist harmlos."
+    },
+    {
+      "id": "a223",
+      "text": "Was wäre für dich der perfekte Heiratsantrag — und was der schlimmste?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Heiratsantrag-Frage ist harmlos."
+    },
+    {
+      "id": "a224",
+      "text": "Wie lange sollte man zusammen sein, bevor man heiratet?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Wie lange vor der Hochzeit — reine Meinungsfrage, harmlos."
+    },
+    {
+      "id": "a238",
+      "text": "Welches Kleidungsstück ziehst du an, wenn du auffallen willst?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Kleidung zum Auffallen ist nicht anzüglich."
+    },
+    {
+      "id": "a239",
+      "text": "Was ist die kitschigste Sache, die du je für jemanden getan hast?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Kitschige Geste ist romantisch, nicht anzüglich."
+    },
+    {
+      "id": "a357",
+      "text": "Mach den Heiratsantrag nach, den du dir für das Brautpaar ausdenken würdest.",
+      "von": 2,
+      "nach": 1,
+      "grund": "Antrag nachspielen ist harmlos."
+    },
+    {
+      "id": "a359",
+      "text": "Gib deinem Handy einen Kuss und sag ihm, was du an ihm liebst.",
+      "von": 2,
+      "nach": 1,
+      "grund": "Handy küssen ist albern, nicht anzüglich."
+    },
+    {
+      "id": "a362",
+      "text": "Mach eine Liebeserklärung an dein Lieblingsessen, als wäre es ein Mensch.",
+      "von": 2,
+      "nach": 1,
+      "grund": "Liebeserklärung ans Essen ist harmlos."
+    },
+    {
+      "id": "a374",
+      "text": "Zeig uns den peinlichsten Tanz, den du je auf einer Hochzeit gesehen hast.",
+      "von": 2,
+      "nach": 1,
+      "grund": "Peinlichen Hochzeitstanz nachmachen ist harmlos."
+    },
+    {
+      "id": "a256",
+      "text": "Was ist das Frechste, das du je in einer Nachricht geschrieben hast?",
+      "von": 3,
+      "nach": 2,
+      "grund": "„Frechste Nachricht\" fiele an einem pikanten Tisch nicht auf."
+    },
+    {
+      "id": "a258",
+      "text": "Was turnt dich sofort ab?",
+      "von": 3,
+      "nach": 2,
+      "grund": "Was abturnt, ist Kneipenniveau, nicht derb."
+    },
+    {
+      "id": "a379",
+      "text": "Mach einen Strip-Tanz, bei dem du nur deine Socken ausziehst — mit voller Hingabe.",
+      "von": 3,
+      "nach": 2,
+      "grund": "Socken ausziehen ist pikant, nicht derb."
+    },
+    {
+      "id": "a386",
+      "text": "Flirte 20 Sekunden lang mit deinem eigenen Spiegelbild in der Handykamera.",
+      "von": 3,
+      "nach": 2,
+      "grund": "Flirten mit dem Spiegelbild ist pikant."
+    },
+    {
+      "id": "a387",
+      "text": "Sag, welches Kleidungsstück die Person rechts von dir heute Abend am meisten zur Geltung bringt.",
+      "von": 3,
+      "nach": 2,
+      "grund": "Kleidungsstück-Kompliment ist pikant."
+    }
+  ],
+  "umschreiben": [
+    {
+      "id": "a035",
+      "text": "Was war dein größter Fail bei einem Vorstellungsgespräch oder in der Schule?",
+      "neu": "Was war dein größter Fail in einem Vorstellungsgespräch?",
+      "grund": "Zwei Fragen in einer; die Schule deckt schon a058 ab."
+    },
+    {
+      "id": "a130",
+      "text": "Was war dein erster Job, und was hast du dort gelernt, das dir heute noch nützt?",
+      "neu": "Was war der schlimmste Job, den du je hattest?",
+      "grund": "Klang nach Bewerbungsgespräch; so kommt eine Geschichte."
+    },
+    {
+      "id": "a228",
+      "text": "Wie viele Leute hast du gleichzeitig gedatet — höchstens?",
+      "neu": "Mit wie vielen Leuten hast du schon gleichzeitig gedatet?",
+      "grund": "Satzbau („— höchstens?\") war holprig."
+    },
+    {
+      "id": "a065",
+      "text": "Versuch einen Handstand — oder wenigstens den Ansatz davon.",
+      "neu": "Mach 20 Sekunden lang den Yoga-Baum, ohne dich festzuhalten.",
+      "grund": "Handstand nach ein paar Gläsern verletzt — gleiche Idee (Körperbeherrschung), sicher."
+    },
+    {
+      "id": "a082",
+      "text": "Sing die erste Werbejingle, die dir einfällt.",
+      "neu": "Sing den ersten Werbejingle, der dir einfällt.",
+      "grund": "Grammatik („die erste Werbejingle\")."
+    },
+    {
+      "id": "a329",
+      "text": "Lass dir von der Runde eine Pose aussuchen und halte sie bis zu deinem nächsten Zug.",
+      "neu": "Lass dir von der Runde eine Pose aussuchen und halte sie 30 Sekunden.",
+      "grund": "Bis zum nächsten Zug halten ist weit über einer Minute."
+    },
+    {
+      "id": "a347",
+      "text": "Lass die Runde dein Dating-Profilfoto aussuchen — aus den Fotos, die du freiwillig zeigst.",
+      "neu": "Zeig drei Fotos von dir — die Runde wählt dein neues Dating-Profilbild.",
+      "grund": "Einschub „aus den Fotos, die du freiwillig zeigst\" verwirrte."
+    },
+    {
+      "id": "a247",
+      "text": "Was war der seltsamste Ort, an dem du je intim geworden bist?",
+      "neu": "Was war der verrückteste Ort, an dem du Sex hattest?",
+      "grund": "„Intim geworden\" ist zu zahm für derb; sagen, was gemeint ist."
+    },
+    {
+      "id": "a252",
+      "text": "Wurdest du schon mal in einer eindeutigen Situation erwischt?",
+      "neu": "Wurdest du schon mal beim Sex erwischt — von wem?",
+      "grund": "„Eindeutige Situation\" ist vage; derb darf es aussprechen."
+    },
+    {
+      "id": "a253",
+      "text": "Was ist für dich unverzichtbar für eine richtig gute Nacht zu zweit?",
+      "neu": "Was brauchst du unbedingt, damit Sex richtig gut wird?",
+      "grund": "„Gute Nacht zu zweit\" fiele an einem pikanten Tisch nicht auf."
+    },
+    {
+      "id": "a380",
+      "text": "Lies die frechste Nachricht vor, die du in den letzten Wochen geschrieben hast — oder denk dir eine aus, die noch frecher ist.",
+      "neu": "Lies die versauteste Nachricht vor, die du je geschickt hast — Namen weglassen.",
+      "grund": "„Frech\" ist pikant; derb braucht versaut, und der Ausweg „denk dir eine aus\" nahm den Reiz."
+    },
+    {
+      "id": "a384",
+      "text": "Beschreib in einem Satz deine Lieblingsstellung — nur mit Möbelstücken als Umschreibung.",
+      "neu": "Stell deine Lieblingsstellung mit zwei Gegenständen vom Tisch nach.",
+      "grund": "„Mit Möbelstücken als Umschreibung\" versteht man nicht beim ersten Lesen."
+    },
+    {
+      "id": "a389",
+      "text": "Zeig uns deine beste Bewegung für eine Tabledance-Karriere — auf dem Stuhl.",
+      "neu": "Gib dem leeren Stuhl neben dir einen Lapdance — 20 Sekunden, volle Hingabe.",
+      "grund": "„Auf dem Stuhl\" liest sich wie draufsteigen (Sturzgefahr); Lapdance ist deutlicher derb."
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was ist das Peinlichste, das du je betrunken zu einem Schwarm gesagt hast?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Welcher Ex hat sich zuletzt bei dir gemeldet, und was wollte er oder sie?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Mit wem aus deiner Vergangenheit würdest du heute noch mal ausgehen?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was hast du im Suff schon mal gepostet und schnell wieder gelöscht?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "An welchem Abend warst du am betrunkensten — und woran erinnerst du dich noch?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wem hier würdest du deinen Schwarm am wenigsten vorstellen, und warum?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wer am Tisch flirtet deiner Meinung nach am schlechtesten?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wen hier würdest du mit deinem besten Freund oder deiner besten Freundin verkuppeln?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was war dein kürzestes Date — wie viele Minuten, und warum?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was ist das Dümmste, das du getan hast, um jemanden zu beeindrucken?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Hast du schon mal mit zwei Leuten auf derselben Party rumgemacht? Erzähl."
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was war die schlimmste Nachricht, die du nach einer Trennung bekommen hast?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was vermisst du an deinem Ex heimlich doch?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wo hast du den unwahrscheinlichsten Flirt deines Lebens kennengelernt?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was ist das Ehrlichste, das du einem Date je ins Gesicht gesagt hast?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wen hast du auf einer Hochzeit oder Familienfeier schon mal angeflirtet?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was war dein unangenehmster Moment auf einer Dating-App?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wem hier würdest du dein entsperrtes Handy eine Stunde lang geben — und wem nie?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wer am Tisch hat den schlechtesten Geschmack bei Partnern — und warum?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wen am Tisch würdest du deinen Eltern als Date vorstellen, damit sie beeindruckt sind?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was war das Peinlichste, das dir beim Knutschen passiert ist?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Welchen Filmkuss würdest du gern mal nachspielen — und mit wem hier?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wie viele Leute aus deinen Kontakten hast du schon geküsst — grob?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was war der größte Fehler, den du nach Mitternacht auf einer Party gemacht hast?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Welches Kleidungsstück eines Ex hast du immer noch?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Welche Anmache ist bei dir so richtig in die Hose gegangen?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was war der teuerste Abend, den du für ein Date bezahlt hast — und hat es sich gelohnt?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Welches Lied erinnert dich an einen Ex, und warum kannst du es nicht mehr hören?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Welche Lüge hast du einem Partner oder einer Partnerin schon mal aufgetischt?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wie lange hat es nach deiner letzten Trennung gedauert, bis du wieder jemanden geküsst hast?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wer war dein peinlichster Schwarm überhaupt?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wen hast du am längsten hingehalten, ohne es ernst zu meinen?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wie hast du reagiert, als dein Date in echt ganz anders aussah als auf den Fotos?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was ist dein Trick, um auf einer Party mit jemandem ins Gespräch zu kommen?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wie peinlich war das Wiedersehen mit jemandem, mit dem du mal was hattest?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wer am Tisch wäre der anstrengendste Ex, den man haben kann — und warum?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Mit wem hier würdest du am wenigsten gern eine Nacht in einem Einzelbett schlafen?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was war die schrägste Frage, die dir jemand bei einem Date gestellt hat?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wofür hast du dich geschämt, als du ein Date zum ersten Mal mit zu dir genommen hast?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Welche drei Emojis beschreiben dein Liebesleben gerade am besten?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Welches Hobby hast du nur wegen einer Beziehung angefangen — und sofort wieder gelassen?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was ist die dreisteste Anmache, die du je bekommen hast?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Welchen Fehler machst du beim Flirten immer wieder?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was hast du auf einer Party gemacht, das am nächsten Tag alle wussten?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wie würde dein Ex dich in drei Wörtern beschreiben?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wer hier dürfte am ehesten für dich Nachrichten an deinen Schwarm schreiben?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wann bist du am spätesten nach Hause gekommen, und wo warst du bis dahin?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was war der schlechteste Kuss deines Lebens — ohne Namen, aber mit Details?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Wen hier würdest du gern mal so richtig betrunken erleben?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was ziehst du zu einem ersten Date garantiert nie an?"
+    },
+    {
+      "haerte": 2,
+      "art": "wahrheit",
+      "text": "Was war das Peinlichste, das dir auf einem Junggesellenabschied passiert ist?",
+      "paket": [
+        "jga"
+      ]
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig das Foto von dir, das du am ehesten einem Schwarm schicken würdest."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Flirte 30 Sekunden mit der Person links von dir, als würdet ihr euch gerade an der Bar kennenlernen."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig uns, wie du nach dem fünften Glas tanzt."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Mach die Person nach, die am Tisch am meisten flirtet — die Runde errät, wer gemeint ist."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Sag der Person rechts von dir, was an ihr am meisten nach Date aussieht."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Wirf der Person links von dir einen Luftkuss zu — so dramatisch wie möglich."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Erklär dein letztes Date mit genau drei Emojis, die die Runde für dich aussucht."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Gib der Person gegenüber einen Kosenamen, wie ihn frisch Verliebte benutzen."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Preis dich 20 Sekunden lang an, als wärst du beim Speed-Dating."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Tipp „Ich will dich\" in dein Handy und lies vor, was die Wortvorschläge daraus machen."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Geh deinen besten Walk of Shame einmal um den Tisch."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig pantomimisch, wie du morgens neben jemandem aufwachst, dessen Namen du nicht mehr weißt."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Tanz 20 Sekunden wie ein Stripper auf einem Junggesellenabschied — alles bleibt an.",
+      "paket": [
+        "jga"
+      ]
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Mach nach, wie du klingst, wenn du betrunken deinen Ex anrufst."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Die Person rechts macht dir ein Angebot — zeig uns, wie du einen Korb gibst."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Erzähl deinen letzten Flirt als Klappentext eines Liebesromans."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Sing zwei Zeilen eines Liebeslieds und schau dabei der Person gegenüber in die Augen."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Die Runde bestimmt jemanden, den du 15 Sekunden lang anschmachtest — ohne zu lachen."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Stell der Person links von dir drei Fragen wie in einer Datingshow."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Mach jeder Person am Tisch ein zweideutiges Kompliment."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Gesteh der Person rechts von dir betrunken deine Liebe — gespielt, aber mit voller Hingabe."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Mach die Geräusche eines Paares hinter einer dünnen Hotelwand nach, das sich streitet und dann versöhnt."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig der Runde ein altes Foto mit einem Ex — wenn du noch eins hast."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Such zwei Leute am Tisch aus, die ein gutes Paar wären, und begründe es in einem Satz."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig deinen Kuss-Stil mit einer Handbewegung — die Runde gibt eine Note von 1 bis 10."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Spiel nach, wie du reagierst, wenn dein Schwarm dir um Mitternacht schreibt."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig deinen besten „Gerade aufgewacht und trotzdem sexy\"-Blick."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Leg zehn Sekunden deinen Kopf an die Schulter der Person links — wenn sie einverstanden ist."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Streite mit der Person rechts wie ein Paar, das im Supermarkt die falschen Kondome gekauft hat."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Tanz 20 Sekunden einen Schmusetanz mit einem unsichtbaren Partner."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig in 15 Sekunden, wie du dich für ein Date fertig machst."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Die Person links stellt dir drei Fragen zu deinem letzten Date — du antwortest ehrlich."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig uns, wie du auf einer Party deinen Schwarm ganz unauffällig beobachtest."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Sag der Person gegenüber einen Satz, den du nur nach Mitternacht sagen würdest."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Erfinde einen Flirt-Tanz und bring ihn der Person links von dir bei."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig uns, wie du einem Date signalisierst, dass es jetzt nach Hause geht — mit dir."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Quatsch 20 Sekunden lang jemanden in der Schlange vor der Bar an — die Person rechts spielt mit."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Mach nach, wie dein Ex beim Streiten klang."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Sag mit vollem Ernst den Satz, der auf einem ersten Date der größte Fehler wäre."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Die Runde diktiert dir einen Anmachspruch, du sagst ihn der Person deiner Wahl."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Spiel nach, wie du um vier Uhr morgens nach der Party einen Döner bestellst."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig uns deinen Tanz auf dem Heimweg nach dem letzten Club."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Beschreib die Person links von dir mit drei Wörtern aus einem Liebesbrief."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig uns, wie du ein Selfie für deinen Schwarm machst — mit allen Versuchen."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Berate den Tisch 20 Sekunden lang wie ein Paartherapeut."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Begrüß zum ersten Mal die Eltern deines Dates — die Person rechts spielt die Mutter."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig in 15 Sekunden, wie du dich morgens aus einem fremden Schlafzimmer schleichst."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Kündige die Person links von dir an wie einen Stripper im Club."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Zeig 15 Sekunden lang deinen Balztanz, als wärst du ein Paradiesvogel."
+    },
+    {
+      "haerte": 2,
+      "art": "pflicht",
+      "text": "Mach der Person rechts von dir ein ehrliches Kompliment über ihren Hintern."
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was war der schlechteste Sex deines Lebens — und woran lag es?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welche Stellung ist für dich total überbewertet?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Mit wie vielen Leuten hattest du Sex — ehrlich, auf fünf genau?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Bist du beim Sex schon mal fast eingeschlafen?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was ist das Versauteste, das du je im Bett gesagt hast?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hattest du schon mal einen Dreier — oder wie nah warst du dran?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welche Droge hast du schon genommen, und wie war es wirklich?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was war dein schlimmster Trip oder Absturz — was ist passiert?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hast du beim Sex schon mal einen Krampf bekommen? Erzähl."
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was ist das Ekligste, das du nach einer Party in deinem Bett gefunden hast?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wann hast du dir zuletzt in die Hose gemacht — egal wie wenig?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welches Sexspielzeug liegt bei dir zu Hause — und wo versteckst du es?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was ist der peinlichste Porno-Suchbegriff in deinem Verlauf?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wer am Tisch ist wahrscheinlich am lautesten im Bett?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wer hier hat vermutlich am wenigsten Sex — Begründung bitte."
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wem am Tisch traust du den schrägsten Fetisch zu?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welchen Fetisch hast du, von dem hier noch keiner weiß?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hast du schon mal einen Orgasmus vorgetäuscht — wie oft?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wie lange war deine längste Durststrecke ohne Sex, und wie hast du sie überlebt?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wo hast du dich schon mal übergeben, wo man es wirklich nicht tun sollte?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hattest du schon mal Sex, während jemand im selben Raum geschlafen hat?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was ist das Merkwürdigste, das dich je angemacht hat?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welches Nacktbild hast du bekommen, das du nie sehen wolltest?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welche Stelle an deinem Körper ist die empfindlichste — im guten Sinn?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Untenrum: rasiert, gestutzt oder Natur — und warum?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wann hattest du zuletzt Sex? Das Datum reicht."
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wie lange ging dein längster Sex — und war es ehrlich gesagt zu lang?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wie schnell war dein schnellster Quickie — und wo?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was hast du im Bett einmal getestet und danach nie wieder gemacht?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Mit wem hier würdest du am ehesten die Hauptrolle in einem Porno spielen?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was ist die widerlichste Angewohnheit, die du hast, wenn du allein zu Hause bist?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wo hast du schon überall hingepinkelt, wo man es nicht sollte?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Riechst du an deinen Socken oder Unterhosen, um zu prüfen, ob sie noch gehen?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was ist das Ekligste, das du je freiwillig gegessen hast?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wie viele Tage hast du schon dieselbe Unterhose getragen?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welcher Körpergeruch macht dich heimlich an?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Musstest du beim Sex schon mal lachen, weil etwas völlig schiefging? Was?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welche Nachricht nach einem One-Night-Stand bereust du?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hattest du schon mal Sex mit einem Ex, obwohl du wusstest, dass es eine dumme Idee ist?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was war dein peinlichstes Geräusch beim Sex?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wenn alle hier Single wären: Mit wem am Tisch würdest du eine Nacht verbringen?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wer hier küsst vermutlich am sabbrigsten?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wer am Tisch hat den schmutzigsten Browserverlauf — und woher willst du das wissen?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "An welcher Stelle hattest du den peinlichsten Knutschfleck?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hast du schon mal jemanden abgeschleppt und danach gehofft, er oder sie geht sofort?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welches Porno-Klischee ist dir im echten Leben wirklich passiert?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hast du beim Sex schon mal an jemand anderen gedacht? An wen ungefähr?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wie oft machst du es dir pro Woche selbst — ehrlich?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wo hast du es dir schon mal selbst gemacht, wo es richtig riskant war?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hast du schon mal was geraucht, ohne zu wissen, was drin war?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was war das Dümmste, das du auf Drogen gemacht hast?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welche Droge würdest du nie anfassen — und welche würde dich doch reizen?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hast du schon mal einen Kater mit Sex auskuriert?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was war das Ekligste, das dir auf einem Festival-Klo passiert ist?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Popelst du heimlich und isst es — wann zuletzt?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was war das Schlimmste, das dir beim ersten Sex mit einer neuen Person passiert ist?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hast du schon mal ein Sexvideo von dir gedreht — und wo ist es jetzt?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welche Sexszene aus einem Film hat dich am meisten angemacht?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welchen Spitznamen hast du für deine eigenen Geschlechtsteile?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wer am Tisch ist im Bett wohl am dominantesten — und wer am devotesten?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Hattest du schon mal Sex mit jemandem, mit dem du keine gemeinsame Sprache hattest?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was ist die schrägste Bitte, die dir jemand im Bett gestellt hat?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Für wie viel Geld würdest du einen Porno drehen — ohne Gesicht?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was ist das Ekligste, das du je für eine Wette getan hast?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wer am Tisch hat die meisten Leichen im Schlafzimmerschrank?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was ist das Schrägste, das du je nackt gemacht hast?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welches Essen hast du schon mal im Bett eingesetzt — und wie ging es aus?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Welche Nacht bereust du bis heute am meisten?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Haben sich Nachbarn oder Mitbewohner schon mal über deinen Sex beschwert? Was war los?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Bist du schon mal nach einem Filmriss neben jemandem aufgewacht? Erzähl."
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was machst du nach dem Sex als Allererstes?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was ist dein ekligster Hygiene-Fail, von dem niemand wissen darf?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Was war dein gewagtestes Outfit im Bett?"
+    },
+    {
+      "haerte": 3,
+      "art": "wahrheit",
+      "text": "Wie viele Leute hier am Tisch haben dich schon nackt gesehen?"
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig zehn Sekunden lang mit der Zunge in der Luft, wie du richtig küsst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Beschreib 20 Sekunden lang dein letztes Mal Sex als Sportreportage — ohne Namen."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Lies deinen letzten Suchbegriff aus dem Inkognito-Tab vor — oder erfinde einen, der noch schlimmer ist."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zieh ein Kleidungsstück deiner Wahl aus, bis du wieder dran bist — Unterwäsche bleibt an."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Leck dir fünf Sekunden lang lasziv über die Lippen und schau dabei der Person gegenüber in die Augen."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Sprich 20 Sekunden lang Porno-Synchronstimme zu dem, was gerade am Tisch passiert."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Erfinde für jede Person am Tisch einen Pornotitel."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Riech an deiner Achsel und beschreib den Duft wie ein Weinkenner."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zieh einen Socken aus, riech daran und kommentier das Ergebnis."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Versuch, deinen Namen zu rülpsen."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig mit zwei Fingern und der Zunge, was du unter gutem Oralsex verstehst — fünf Sekunden."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Sprich 30 Sekunden Dirty Talk — aber nur mit Wörtern aus der Küche."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Rate bei jeder Person am Tisch die Farbe ihrer Unterwäsche — sie sagt nur, ob du richtig liegst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Beschreib deinen letzten feuchten Traum in drei Sätzen."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig uns zehn Sekunden lang dein Gesicht, wenn du kommst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Tausch mit der Person rechts ein Kleidungsstück, bis du wieder dran bist — wenn ihr beide wollt."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Mach 20 Sekunden lang die Geräusche nach, die du zuletzt durch eine dünne Wand gehört hast."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Erklär einen Blowjob im Ton einer Möbel-Aufbauanleitung."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig pantomimisch und mit ernster Stimme, wie man einen BH mit einer Hand öffnet."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Roaste die Person links von dir 20 Sekunden lang — alles erlaubt außer Aussehen und Herkunft."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Sag jeder Person am Tisch in einem Wort, wie sie wohl im Bett ist."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Sag der Person gegenüber, was du mit ihr im Bett als Erstes testen würdest — rein hypothetisch."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig uns, wie du nach einer durchgefeierten Nacht über der Kloschüssel hängst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Mach Werbung für Gleitgel — mit Vorführung an deinen eigenen Händen."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Beschreib deinen Körper in drei Sätzen, wie es ein Erotikroman tun würde."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Mach fünf Sekunden lang Hüftstöße auf deinem Stuhl — mit passendem Gesicht."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Lass dir von der Person rechts einen Knutschfleck auf den Unterarm machen — wenn ihr beide wollt."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Führ uns 20 Sekunden lang deinen Dirty Talk vor — so peinlich, wie er wirklich ist."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Spiel pantomimisch, wie du es dir gerade selbst machst — und plötzlich kommt dein Mitbewohner rein."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Nenn in 15 Sekunden so viele Wörter für Geschlechtsteile, wie du kannst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig uns dein Gesicht in dem Moment, in dem beim Sex das Kondom reißt."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Spiel mit der Person links eine Szene aus einem schlechten Porno — angezogen, und nur wenn sie mitmacht."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Sag die drei versautesten Wörter, die du kennst — so langsam und laut wie möglich."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Erklär einem unsichtbaren Frauenarzt oder Urologen, was dir untenrum fehlt."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Iss eine unsichtbare Banane so lasziv, wie du kannst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Leg zehn Sekunden deine Hand auf den Oberschenkel der Person rechts — nur wenn sie zustimmt, sonst auf deinen."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Die Runde grillt dich 15 Sekunden mit Fragen zu deinem Sexleben — du antwortest nur mit „ja\" oder „nein\"."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig die Farbe deiner Unterhose — ein Blick auf den Bund reicht."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Führ 20 Sekunden lang durch den Raum, als wäre er ein Sexshop und jeder Gegenstand ein Toy."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Sag der Person gegenüber einen richtig schmutzigen Anmachspruch — ohne zu lachen."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Sag der Runde, wo du am liebsten geküsst wirst — und zeig die Stelle."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig nur mit deinem Gesicht, was du von deiner letzten Nacht mit jemandem hältst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Mach die Person nach, die hier wohl am lautesten beim Sex ist — die Runde errät, wer."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Erfinde einen Namen für deine Lieblings-Sexpraktik und erklär sie, ohne sie beim echten Namen zu nennen."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Spiel die Szene, in der dich deine Mitbewohnerin beim Sex erwischt — alle Rollen selbst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig mit Gesicht und Geräusch, wie du nach drei Tagen Festival riechst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Beschreib einem unsichtbaren Arzt 20 Sekunden lang deinen schlimmsten Durchfall — mit Details."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Sag jeder Person am Tisch, welches Sexspielzeug zu ihr passt."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Halte eine 20-Sekunden-Abschiedsrede auf dein Geschlechtsteil, als ginge es in Rente."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Mach einen Werbespot für die Unterhose, die du gerade trägst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Beschreib das letzte Foto in deiner Galerie, als wäre es ein Nacktbild."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig ohne Worte, wie du dich nach dem Sex heimlich im Bad sauber machst."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Flüster der Person links, was du heute Nacht gern machen würdest — sie fasst es jugendfrei für alle zusammen."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Setz dich 30 Sekunden auf den Schoß der Person links — nur wenn sie zustimmt."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Zeig mit den Händen, wie groß das Größte war, das du je gesehen hast."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Stell 15 Sekunden lang allein die letzte Sexszene nach, die du in einem Film gesehen hast."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Leck langsam einen Finger ab und sag mit vollem Ernst „Mmh, salzig\"."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Kratz dich zehn Sekunden ungeniert am Hintern und mach dabei jemandem ein Kompliment."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Ruf bis zu deinem nächsten Zug nach jedem zweideutigen Satz der anderen „… sagte sie im Bett\"."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Stell dich der Runde vor, als wärst du beim Speed-Dating im Swingerclub."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Mach fünf Sekunden lang dein Gesicht beim Kacken."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Knutsch zehn Sekunden lang deine eigene Hand — mit Zunge, als wäre sie dein Schwarm."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Lies die Nachricht vor, die du nach deinem letzten One-Night-Stand geschrieben hast."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Spiel mit der Person gegenüber ein Paar, das mitten beim Sex einschläft — wenn sie mitmacht."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Mach das Geräusch, das dir rausrutscht, wenn dir beim Sex der Fuß einschläft."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Moderier 20 Sekunden eine Erotik-Show im Fernsehen und kündige die Person rechts als Star an."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Verrate deinen Pornonamen: der Name deines ersten Haustiers plus deine Lieblingsstellung."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Geh deinen besten Pornostar-Gang einmal um den Tisch."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Ruf „Ich bin so geil!\" — mit dem ernstesten Gesicht, das du hast."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Die Person rechts flüstert dir eine Stellung zu, du stellst sie mit den Händen nach — die Runde rät."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Lass einen fahren — oder erklär 20 Sekunden lang, warum es gerade nicht geht."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Mach nach, wie du im Club jemanden antanzt, nachdem du was genommen hast."
+    },
+    {
+      "haerte": 3,
+      "art": "pflicht",
+      "text": "Mach 15 Sekunden lang nach, wie du auf deinem schlimmsten Trip geredet hast."
+    }
+  ]
+}

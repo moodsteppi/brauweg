@@ -13,7 +13,14 @@
  *
  * Wer einen alten Eintrag BEWUSST korrigiert (ein Tippfehler in einer
  * Quizfrage — die Kennung bleibt), korrigiert ihn hier mit. Der Test soll
- * Versehen fangen, nicht Pflege verhindern.
+ * Versehen fangen, nicht Pflege verhindern. So geschehen am 27.09.2026 bei
+ * der Pruefung nach docs/PARTYKISTE-INHALTE.md: 48 umgeschriebene oder
+ * umgestufte alte Eintraege stehen hier in ihrer heutigen Fassung.
+ *
+ * GESTRICHENE alte Eintraege bleiben hier stehen — die 918 sind der Bestand
+ * vom 22.09.2026, nicht der von heute. Der Vergleich ueberspringt jede
+ * Kennung, die in der JSON-Datei unter `entfernt` steht, und prueft fuer
+ * den Rest weiter die alte Reihenfolge.
  */
 
 import type { Inhalt } from '../../src/inhalte/typen.js';

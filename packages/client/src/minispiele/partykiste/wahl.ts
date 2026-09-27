@@ -95,11 +95,50 @@ export const INHALT_TITEL = 'Inhalte';
 export const INHALT_STUFEN = [
   { stufe: 1, titel: 'harmlos', text: 'Geht an jedem Tisch.' },
   { stufe: 2, titel: 'pikant', text: 'Kneipenniveau, mal anzüglich.' },
-  { stufe: 3, titel: 'derb', text: 'Nur unter Erwachsenen.' },
+  { stufe: 3, titel: 'derb', text: 'Richtig derb, ab 18.' },
 ] as const;
+
+/**
+ * Die vierte Kachel (seit dem 27.09.2026, Robin: „oder man macht gemischt
+ * an, dann ist zufällig aus allen"). Seitdem liefert jede der drei Stufen
+ * NUR sich selbst (`inhaltsMischung: 'genau'` im Modul); wer mischen will,
+ * nimmt diese. Geschickt wird sie als `inhaltsHaerte: 3` (Gast: 2) mit
+ * `inhaltsMischung: 'gemischt'` — die Kennung der Kachel ist keine Stufe.
+ */
+export const INHALT_GEMISCHT = 'gemischt';
+export const INHALT_GEMISCHT_KACHEL = { titel: 'gemischt', text: 'Zufall aus allen Stufen.' } as const;
+/** Fuer einen Gast heisst „alle Stufen": ohne derb. So steht es auch auf der Kachel. */
+export const INHALT_GEMISCHT_GAST = 'Zufall aus harmlos und pikant.';
 
 /** Warum „derb“ fuer einen Gast gesperrt ist — steht als Grund in der Kachel. */
 export const DERB_GRUND_GAST = 'nur mit Konto';
+
+/**
+ * Die Kacheln unter „Inhalte", fuer beide Hubs gleich: harmlos · pikant ·
+ * derb · gemischt. „gemischt" nur, wenn das Modul es kennt (`mischungBekannt`
+ * weiter unten); „derb" fuer einen Gast gesperrt.
+ */
+export function inhaltsKacheln(
+  vorgabe: Record<string, unknown> | null,
+  gast: boolean,
+): { kennung: string; titel: string; untertitel: string; deaktiviert?: string }[] {
+  const stufen = INHALT_STUFEN.map((s) => ({
+    kennung: String(s.stufe),
+    titel: s.titel,
+    untertitel: s.text,
+    ...(gast && s.stufe === 3 ? { deaktiviert: DERB_GRUND_GAST } : {}),
+  }));
+  /* Solange die Vorgabe laedt, schon da — sonst springt das Raster, wenn sie kommt. */
+  if (vorgabe !== null && !mischungBekannt(vorgabe)) return stufen;
+  return [
+    ...stufen,
+    {
+      kennung: INHALT_GEMISCHT,
+      titel: INHALT_GEMISCHT_KACHEL.titel,
+      untertitel: gast ? INHALT_GEMISCHT_GAST : INHALT_GEMISCHT_KACHEL.text,
+    },
+  ];
+}
 
 /**
  * Die Themenpakete — Spiegelbild von `PAKETE` (inhalte/typen.ts). Die
@@ -146,7 +185,12 @@ export const SCHLUESSEL_MODUS = 'partykiste.modus';
  */
 export interface PartyWahl {
   minispiele: string[] | null;
-  inhaltsHaerte: number | null;
+  /**
+   * Eine Stufe (1 bis 3) oder `INHALT_GEMISCHT`. Unter demselben Schluessel
+   * gemerkt wie vor dem 27.09.2026 — eine alte 1, 2 oder 3 gilt weiter, und
+   * heisst seitdem „genau diese Stufe".
+   */
+  inhaltsHaerte: number | typeof INHALT_GEMISCHT | null;
   /** Eine Paketkennung oder `PAKET_ALLES`. */
   paket: string | null;
   modus: string | null;
@@ -180,10 +224,11 @@ export function gemerkteWahl(): PartyWahl {
   } catch {
     minispiele = null;
   }
-  const stufe = Number(lies(SCHLUESSEL_INHALT));
+  const inhalt = lies(SCHLUESSEL_INHALT);
+  const stufe = Number(inhalt);
   return {
     minispiele,
-    inhaltsHaerte: stufe === 1 || stufe === 2 || stufe === 3 ? stufe : null,
+    inhaltsHaerte: inhalt === INHALT_GEMISCHT ? INHALT_GEMISCHT : stufe === 1 || stufe === 2 || stufe === 3 ? stufe : null,
     paket: lies(SCHLUESSEL_PAKET),
     modus: lies(SCHLUESSEL_MODUS),
   };
@@ -263,10 +308,42 @@ export function wirksameInhaltsHaerte(
   wahl: PartyWahl,
   gast: boolean,
 ): number | null {
+  const kachel = wirksameInhaltsKachel(vorgabe, wahl, gast);
+  if (kachel === null) return null;
+  const stufe = kachel === INHALT_GEMISCHT ? 3 : Number(kachel);
+  return gast && stufe > 2 ? 2 : stufe;
+}
+
+/**
+ * Kennt das Modul „genau/gemischt"? Nur dann steht die Kachel „gemischt" da
+ * und geht `inhaltsMischung` mit — derselbe Gedanke wie bei `modusBekannt`:
+ * Ein Server von davor ignorierte das Feld still und spielte „bis derb".
+ */
+export function mischungBekannt(vorgabe: Record<string, unknown> | null): boolean {
+  return typeof vorgabe?.['inhaltsMischung'] === 'string';
+}
+
+/**
+ * Welche der vier Inhalte-Kacheln gilt: '1', '2', '3' oder `INHALT_GEMISCHT`
+ * — oder null, solange weder Wahl noch Vorgabe da ist. Fuer einen Gast wird
+ * aus '3' eine '2' (siehe oben); „gemischt" bleibt „gemischt", heisst fuer
+ * ihn aber harmlos + pikant.
+ */
+export function wirksameInhaltsKachel(
+  vorgabe: Record<string, unknown> | null,
+  wahl: PartyWahl,
+  gast: boolean,
+): string | null {
+  if (wahl.inhaltsHaerte === INHALT_GEMISCHT) {
+    /* Ohne Modul, das „gemischt" versteht, bleibt davon „bis derb" — angezeigt als derb bzw. pikant. */
+    if (mischungBekannt(vorgabe) || vorgabe === null) return INHALT_GEMISCHT;
+    return gast ? '2' : '3';
+  }
+  if (wahl.inhaltsHaerte === null && vorgabe?.['inhaltsMischung'] === INHALT_GEMISCHT) return INHALT_GEMISCHT;
   const roh = vorgabe?.['inhaltsHaerte'];
   const stufe = wahl.inhaltsHaerte ?? (typeof roh === 'number' ? roh : null);
   if (stufe === null) return null;
-  return gast && stufe > 2 ? 2 : stufe;
+  return String(gast && stufe > 2 ? 2 : stufe);
 }
 
 /** Das Paket als Kachelkennung: `PAKET_ALLES` fuer `null`. Unbekanntes zaehlt als „alles“. */
@@ -320,6 +397,11 @@ export function regelsatzAus(
   if (minispiele) config['minispiele'] = minispiele;
   const stufe = wirksameInhaltsHaerte(vorgabe, wahl, gast);
   if (stufe !== null) config['inhaltsHaerte'] = stufe;
+  /* Genau oder gemischt — nur, wenn das Modul das Feld kennt (mischungBekannt). */
+  if (mischungBekannt(vorgabe)) {
+    const kachel = wirksameInhaltsKachel(vorgabe, wahl, gast);
+    config['inhaltsMischung'] = kachel === INHALT_GEMISCHT ? 'gemischt' : 'genau';
+  }
   const paket = wirksamesPaket(vorgabe, wahl);
   if (paket !== null) config['paket'] = paket === PAKET_ALLES ? null : paket;
   const modus = wirksamerModus(vorgabe, wahl);

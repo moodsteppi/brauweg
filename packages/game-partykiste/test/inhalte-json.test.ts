@@ -27,6 +27,7 @@ import {
   ladeKatalog,
   normalisiere,
   pruefeKatalog,
+  pruefeKennungen,
   vergleichsText,
 } from '../src/inhalte/schema.js';
 import type { Inhalt } from '../src/inhalte/typen.js';
@@ -46,6 +47,12 @@ const HEUTE: Readonly<Record<KatalogName, readonly Inhalt[]>> = {
 /** Die Rohdatei, wie sie neben dem gebauten Modul liegt (tsc kopiert sie mit). */
 function rohDatei(name: KatalogName): Record<string, unknown> {
   return JSON.parse(readFileSync(new URL(`../src/inhalte/daten/${name}.json`, import.meta.url), 'utf8'));
+}
+
+/** Die gestrichenen Kennungen aus dem Kopf der Datei. */
+function entfernteKennungen(name: KatalogName): string[] {
+  const e = rohDatei(name).entfernt;
+  return Array.isArray(e) ? (e as string[]) : [];
 }
 
 /** Ein gueltiger Katalog mit zwei Eintraegen, an dem die Fehlerfaelle einzeln drehen. */
@@ -71,9 +78,13 @@ test('der Altbestand sind 918 Eintraege in acht Katalogen', () => {
   assert.equal(ALTE_KENNUNGEN.size, 918);
 });
 
-test('jeder alte Eintrag steht Feld fuer Feld unveraendert an seiner alten Stelle', () => {
+test('jeder alte Eintrag steht Feld fuer Feld unveraendert an seiner alten Stelle — ausser er ist gestrichen', () => {
   for (const name of KATALOGE) {
-    const alt = ALTBESTAND[name];
+    /* Seit dem 27.09.2026 duerfen Eintraege gestrichen werden; ihre Kennung
+       steht dann im Kopf unter "entfernt". Die uebrigen alten Eintraege
+       stehen weiter vorn, in alter Reihenfolge, vor allem Neuen. */
+    const entfernt = new Set(entfernteKennungen(name));
+    const alt = ALTBESTAND[name].filter((e) => !entfernt.has(e.id));
     const heute = HEUTE[name];
     assert.ok(heute.length >= alt.length, `${name}: ${heute.length} Eintraege, vorher ${alt.length}`);
     alt.forEach((eintrag, stelle) => {
@@ -97,7 +108,15 @@ test('jeder Katalog besteht das Schema', () => {
 test('jede Datei traegt die Inhaltsgrenze im Kopf', () => {
   for (const name of KATALOGE) {
     const grenze = String(rohDatei(name).grenze);
-    for (const teil of ['herabwuerdigend', 'reale benannte Personen', 'Minderjaehrige', 'Gewalt', 'Trinken']) {
+    for (const teil of [
+      'herabwuerdigend',
+      'reale benannte Personen',
+      'Minderjaehrige',
+      'Gewalt',
+      'Trinken',
+      'ab 18',
+      'docs/PARTYKISTE-INHALTE.md',
+    ]) {
       assert.ok(grenze.includes(teil), `${name}.json: die Grenze nennt "${teil}" nicht`);
     }
   }
@@ -115,8 +134,14 @@ test('das Schema faengt jeden bekannten Fehler — und wirft dabei nie', () => {
     ['stufe ausserhalb von Quiz/Schaetzen', (k) => ((k.eintraege[0]!.stufe = 1), k)],
     ['Text fehlt', (k) => (delete k.eintraege[0]!.text, k)],
     ['Text leer', (k) => ((k.eintraege[0]!.text = '  '), k)],
-    ['Kennung uebersprungen', (k) => ((k.eintraege[1]!.id = 'n003'), k)],
+    ['Kennung uebersprungen, ohne sie zu streichen', (k) => ((k.eintraege[1]!.id = 'n003'), k)],
     ['umsortiert', (k) => (k.eintraege.reverse(), k)],
+    ['gestrichene Kennung neu vergeben', (k) => ({ ...k, entfernt: ['n002'] })],
+    ['gestrichene Kennung doppelt', (k) => ((k.eintraege[1]!.id = 'n004'), { ...k, entfernt: ['n003', 'n003'] })],
+    ['entfernt keine Liste', (k) => ({ ...k, entfernt: 'n003' })],
+    ['entfernt mit fremdem Praefix', (k) => ((k.eintraege[1]!.id = 'n003'), { ...k, entfernt: ['w002'] })],
+    ['Kennung ohne Nummer', (k) => ((k.eintraege[1]!.id = 'n02'), k)],
+    ['Kennung doppelt', (k) => ((k.eintraege[1]!.id = 'n001'), k)],
     ['Dublette mit anderer Schreibung', (k) => ((k.eintraege[1]!.text = 'ICH hab noch nie   gezeltet!'), k)],
     ['Grenze fehlt', (k) => ({ ...k, grenze: undefined })],
     ['falscher Katalogname', (k) => ({ ...k, katalog: 'quiz' })],
@@ -134,6 +159,19 @@ test('das Schema faengt jeden bekannten Fehler — und wirft dabei nie', () => {
     assert.throws(() => ladeKatalog('niemals', roh), /Inhaltskatalog niemals/, was);
   }
   assert.deepEqual(pruefeKatalog('niemals', gueltig()), [], 'der Ausgangsfall selbst ist gueltig');
+  /* Eine gestrichene Kennung ist eine erlaubte Luecke — auch die letzte. */
+  const mitLuecke = gueltig();
+  mitLuecke.eintraege[1]!.id = 'n003';
+  assert.deepEqual(pruefeKatalog('niemals', { ...mitLuecke, entfernt: ['n002'] }), [], 'Luecke mit entfernt');
+  assert.deepEqual(pruefeKatalog('niemals', { ...gueltig(), entfernt: ['n003'] }), [], 'letzter Eintrag gestrichen');
+});
+
+test('pruefeKennungen: dieselbe Regel fuer die TS-Kataloge', () => {
+  assert.deepEqual(pruefeKennungen('k', ['k001', 'k003'], ['k002']), []);
+  assert.ok(pruefeKennungen('k', ['k001', 'k003']).length > 0, 'stille Luecke');
+  assert.ok(pruefeKennungen('k', ['k001', 'k002'], ['k002']).length > 0, 'Wiederverwendung');
+  assert.ok(pruefeKennungen('k', ['k002', 'k001']).length > 0, 'umsortiert');
+  assert.ok(pruefeKennungen('kb', ['kb02', 'kb03']).length > 0, 'zweistellig ist nicht die Form');
 });
 
 test('das Schema kennt die Formen der einzelnen Kataloge', () => {
@@ -185,18 +223,28 @@ test('kein Katalog enthaelt denselben Text zweimal (normalisiert)', () => {
   assert.notEqual(normalisiere('Bär'), normalisiere('Bar'), 'Umlaute bleiben');
 });
 
-test('die Kennungen laufen lueckenlos in Katalogreihenfolge', () => {
+test('die Kennungen steigen in Katalogreihenfolge, Luecken nur ueber "entfernt", keine wird neu vergeben', () => {
   for (const name of KATALOGE) {
-    HEUTE[name].forEach((e, i) => assert.equal(e.id, kennungAn(name, i), `${name} Stelle ${i + 1}`));
+    const entfernt = entfernteKennungen(name);
+    assert.deepEqual(pruefeKennungen(kennungAn(name, 0).slice(0, -3), HEUTE[name].map((e) => e.id), entfernt), [], name);
+    /* Jede alte Kennung ist noch da oder gestrichen — keine verschwindet still. */
+    const heute = new Set(HEUTE[name].map((e) => e.id));
+    for (const e of ALTBESTAND[name]) {
+      assert.ok(heute.has(e.id) !== entfernt.includes(e.id), `${name}: ${e.id} ist weder da noch gestrichen (oder beides)`);
+    }
   }
 });
 
-test('jeder neue Eintrag traegt Haerte und mindestens ein Paket, Quiz und Schaetzen auch eine Stufe', () => {
+test('jeder neue Eintrag traegt eine Haerte, Quiz und Schaetzen auch eine Stufe', () => {
+  /* Bis zum 27.09.2026 musste jeder neue Eintrag auch ein Paket tragen. Die
+     Pruefung nach docs/PARTYKISTE-INHALTE.md hat Pakete nur vergeben, wo ein
+     Eintrag wirklich zu einem Anlass gehoert; ohne Paket ist ein Eintrag
+     Allgemeingut und spielt in jedem Paket mit (docs/PARTYKISTE.md,
+     Metadaten). Ob ein Paket dann gueltig ist, prueft das Schema. */
   for (const name of KATALOGE) {
     for (const e of HEUTE[name]) {
       if (ALTE_KENNUNGEN.has(e.id)) continue;
       assert.ok(e.haerte === 1 || e.haerte === 2 || e.haerte === 3, `${e.id}: haerte fehlt`);
-      assert.ok(e.paket !== undefined && e.paket.length > 0, `${e.id}: paket fehlt`);
       if (name === 'quiz' || name === 'schaetzen') {
         assert.ok('stufe' in e && [1, 2, 3].includes((e as { stufe?: number }).stufe ?? 0), `${e.id}: stufe fehlt`);
       }
@@ -204,15 +252,59 @@ test('jeder neue Eintrag traegt Haerte und mindestens ein Paket, Quiz und Schaet
   }
 });
 
-test('die neuen Eintraege halten grob die Mischung 60 % harmlos, 30 % pikant, 10 % derb', () => {
-  /* Grob: Die Spanne soll ein Ausreisser-Katalog (nur Derbes, nur Harmloses)
-     fangen, nicht die dritte Nachkommastelle. */
+/**
+ * Wie viel jede Stufe braucht (docs/PARTYKISTE-INHALTE.md, "Wie viel es je
+ * Stufe braucht"): Seit dem 27.09.2026 liefert jede Stufe nur ihre eigenen
+ * Inhalte, also muss jede fuer sich einen Abend tragen. Bei Wahrheit oder
+ * Pflicht gilt die Zahl je Art — beide ziehen aus eigenem Stapel.
+ * Loest die bisherige Mischungsregel (60 % harmlos, 30 % pikant, 10 % derb
+ * fuer neue Eintraege) ab: Mit ihr waere "derb" nie allein spielbar geworden.
+ */
+const ZIEL_JE_STUFE: Readonly<Record<KatalogName, readonly [number, number, number]>> = {
+  niemals: [80, 80, 80],
+  wereher: [80, 80, 80],
+  wahrheitpflicht: [80, 80, 80],
+  entweder: [50, 50, 50],
+  imposter: [50, 50, 50],
+  schaetzen: [50, 50, 50],
+  quiz: [50, 50, 30],
+  identitaeten: [50, 50, 30],
+};
+
+/**
+ * Bekannte Luecken, bis Ersatz geprueft ist — je Stufe die Zahl, unter die es
+ * nicht weiter sinken darf. Wer bin ich: Robin hat am 27.09.2026 vier der
+ * vorgeschlagenen Rollen (zwei pikant, zwei derb) nicht uebernommen, danach
+ * fehlen zwei pikante und zwei derbe Namen. Schaetzen: Die Vorpruefung hat
+ * auf "derb" nur so viele Fragen mit eindeutig belegter Zahl geliefert, es
+ * fehlen 20 (das Regelwerk erlaubt die 30 nur bei Wer bin ich, Kategorien
+ * und Quiz). Sobald das Ziel erreicht ist, verlangt der Test, dass die
+ * Ausnahme hier verschwindet.
+ */
+const OFFEN_JE_STUFE: Partial<Record<KatalogName, readonly [number, number, number]>> = {
+  identitaeten: [50, 48, 28],
+  schaetzen: [50, 50, 30],
+};
+
+test('jede Stufe traegt allein einen Abend — so viele Eintraege, wie das Regelwerk verlangt', () => {
   for (const name of KATALOGE) {
-    const neu = HEUTE[name].filter((e) => !ALTE_KENNUNGEN.has(e.id));
-    if (neu.length === 0) continue;
-    const anteil = (h: number) => neu.filter((e) => e.haerte === h).length / neu.length;
-    assert.ok(anteil(1) >= 0.5 && anteil(1) <= 0.7, `${name}: harmlos ${Math.round(anteil(1) * 100)} %`);
-    assert.ok(anteil(2) >= 0.2 && anteil(2) <= 0.4, `${name}: pikant ${Math.round(anteil(2) * 100)} %`);
-    assert.ok(anteil(3) <= 0.15, `${name}: derb ${Math.round(anteil(3) * 100)} %`);
+    const ziel = ZIEL_JE_STUFE[name];
+    const offen = OFFEN_JE_STUFE[name];
+    const arten = name === 'wahrheitpflicht' ? ['wahrheit', 'pflicht'] : [null];
+    const zahlen = arten.map((art) =>
+      [1, 2, 3].map(
+        (h) => HEUTE[name].filter((e) => (e.haerte ?? 1) === h && (art === null || (e as { art?: string }).art === art)).length,
+      ),
+    );
+    for (const [i, art] of arten.entries()) {
+      [0, 1, 2].forEach((s) => {
+        const was = `${name}${art ? ` (${art})` : ''} Stufe ${s + 1}: ${zahlen[i]![s]}`;
+        assert.ok(zahlen[i]![s]! >= (offen ?? ziel)[s]!, `${was}, Ziel ${ziel[s]}`);
+      });
+    }
+    if (offen) {
+      const erreicht = zahlen.every((z) => z.every((n, s) => n >= ziel[s]!));
+      assert.ok(!erreicht, `${name}: das Ziel ist erreicht — OFFEN_JE_STUFE-Eintrag streichen`);
+    }
   }
 });

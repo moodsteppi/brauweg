@@ -1,6 +1,8 @@
 import {
+  INHALTS_MISCHUNGEN,
   MINISPIELE,
   PAKETE,
+  erzeugePartie,
   SPIELMODI,
   ablaufVon,
   minispielFolge,
@@ -10,6 +12,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
+  INHALT_GEMISCHT,
   KEINE_WAHL,
   MINISPIEL_ABLAUF,
   MODI,
@@ -64,6 +67,7 @@ describe('Vertrag Partykiste-Auswahl', () => {
       KEINE_WAHL,
       { minispiele: ['wahrheitpflicht', 'quiz', 'imposter'], inhaltsHaerte: 3, paket: 'jga', modus: null },
       { minispiele: null, inhaltsHaerte: 2, paket: 'alles', modus: null },
+      { minispiele: null, inhaltsHaerte: INHALT_GEMISCHT, paket: 'jga', modus: null },
       ...Object.keys(PAKET_NAME).map((paket) => ({ ...KEINE_WAHL, paket })),
     ];
     for (const wahl of wahlen) {
@@ -103,5 +107,34 @@ describe('Vertrag Partykiste-Auswahl', () => {
         probleme: [],
       });
     }
+  });
+
+  /*
+   * Seit dem 27.09.2026: vier Kacheln, drei Stufen GENAU und „gemischt". Was
+   * die Kachel sendet, muss das Modul so lesen, wie die Kachel es verspricht —
+   * sonst stuende „derb" drauf, und am Tisch kaeme wieder vor allem Harmloses.
+   */
+  it('die Inhalte-Kacheln schicken genau/gemischt so, wie das Modul es liest', () => {
+    expect(vorgabe['inhaltsMischung']).toBe('genau');
+    for (const stufe of [1, 2, 3]) {
+      const config = regelsatzAus(vorgabe, BASIS, { ...KEINE_WAHL, inhaltsHaerte: stufe }, false);
+      expect({ stufe: config['inhaltsHaerte'], mischung: config['inhaltsMischung'] }).toEqual({ stufe, mischung: 'genau' });
+    }
+    const gemischt = regelsatzAus(vorgabe, BASIS, { ...KEINE_WAHL, inhaltsHaerte: INHALT_GEMISCHT }, false);
+    expect({ stufe: gemischt['inhaltsHaerte'], mischung: gemischt['inhaltsMischung'] }).toEqual({ stufe: 3, mischung: 'gemischt' });
+    /* Gast: „gemischt" heisst harmlos + pikant — schon im Regelsatz, nicht erst am Server. */
+    const gast = regelsatzAus(vorgabe, BASIS, { ...KEINE_WAHL, inhaltsHaerte: INHALT_GEMISCHT }, true);
+    expect({ stufe: gast['inhaltsHaerte'], mischung: gast['inhaltsMischung'] }).toEqual({ stufe: 2, mischung: 'gemischt' });
+    expect(INHALTS_MISCHUNGEN).toEqual(['genau', INHALT_GEMISCHT]);
+
+    const partie = erzeugePartie({
+      regeln: gemischt as unknown as PartykisteRegeln,
+      saat: 3,
+      sitze: 6,
+      runden: 6,
+      gastSitze: [],
+    });
+    expect(partie.regeln.inhaltsMischung).toBe('gemischt');
+    expect(partie.regeln.inhaltsHaerte).toBe(3);
   });
 });

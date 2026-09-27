@@ -57,7 +57,8 @@ Der Regelsatz (`PartykisteRegeln` in `src/regeln.ts`), geprüft von
 | `minispiele` | Liste aus `MINISPIELE`, mindestens eins | alle fünfzehn | was gemischt wird (Reihenfolge egal) |
 | `trinkmodus` | an/aus | an | nur die Anzeige der Gläser |
 | `schluckFaktor` | 1–3 | 1 | Schlücke mal Faktor |
-| `inhaltsHaerte` | 1 harmlos, 2 pikant, 3 derb | 1 | Obergrenze der Textschärfe |
+| `inhaltsHaerte` | 1 harmlos, 2 pikant, 3 derb | 1 | Textschärfe — wie gemeint, sagt `inhaltsMischung` |
+| `inhaltsMischung` | `genau`, `gemischt` | `genau` (fehlt = alte Obergrenze) | genau diese Stufe oder alle bis zu ihr, je Stufe gleich oft |
 | `paket` | `null` oder ein Paket aus `PAKETE` | `null` | Zielgruppe der Inhalte |
 | `modus` | `turnier`, `eskalation`, `themenabend`, `team` | `turnier` (fehlt = Turnier) | Spielmodus, siehe unten |
 
@@ -84,11 +85,40 @@ Wake-Lock-Sperre, und reihum vibriert das Handy, wenn man dran ist
 (`useTischwache`).
 
 **Inhaltsstufe** (`inhaltsHaerte`, seit dem 22.09.2026, Entscheidung P1):
-wie scharf die Texte sein dürfen — eine Obergrenze, ein derber Tisch bekommt
-auch harmlose Sprüche. Sie heißt absichtlich **nicht** „Härte“: Der Regler
+wie scharf die Texte sind. Sie heißt absichtlich **nicht** „Härte“: Der Regler
 `schluckFaktor` steht im Bildschirm schon als „Härte“, und zwei Regler mit
 demselben Namen — einer für Gläser, einer für Texte — stellt niemand richtig
 ein. Im Bildschirm heißt die Stufe „harmlos / pikant / derb“.
+
+**Genau oder gemischt** (`inhaltsMischung`, seit dem 27.09.2026, Robin: „es
+soll nur die Stufen haben, oder man macht gemischt an, dann ist zufällig aus
+allen“). Bis dahin war die Stufe eine Obergrenze: Ein derber Tisch bekam
+alles bis derb, und weil die Kataloge zu rund 60 % harmlos sind, praktisch
+vor allem Harmloses. Jetzt:
+
+- `genau` (Vorgabe, und was die Kacheln harmlos/pikant/derb schicken): nur
+  Einträge genau dieser Stufe. Ist die Stufe im Katalog zu dünn, kommen
+  **danach** die der nächst milderen, dann der mildesten — nie derbere, und
+  ohne Wiederholung, solange irgendeine erlaubte Stufe noch etwas hat
+  (`inhaltsStapel` in `src/inhalte/stapel.ts`; die dünne Stufe steht als
+  `inhaltsRueckfall.stufeDuenn` in der Runde). Heute betrifft das „derb“ fast
+  überall (Schätzen hat 2 derbe Fragen, Wer bin ich 7, die Regel-Karten 3) —
+  die parallele Inhaltsprüfung (`docs/PARTYKISTE-INHALTE.md`) füllt nach.
+- `gemischt` (die vierte Kachel, geschickt als `inhaltsHaerte: 3`, Gast: 2):
+  je Stufe ein gemischter Stapel, und jede Ziehung wählt per Saat erst eine
+  **Stufe** (gleich wahrscheinlich unter denen mit Vorrat), dann deren
+  nächsten Eintrag. Je Eintrag zu ziehen wäre wieder die alte Obergrenze.
+- **Fehlt das Feld**, gilt die alte Obergrenze wortgleich weiter (Lesart
+  `'bis'`, `inhaltsLesart` in `regeln.ts`). Ohne Feld kommen nur Regelsätze
+  von vor der Umstellung an: wartende Tische, deren Öffner „derb“ noch als
+  „bis derb“ meinte, und vor allem Snapshots **laufender** Partien — läse man
+  die plötzlich als „genau“, zöge die nächste Runde aus einem anderen Stapel,
+  und eine gespielte Frage könnte wiederkommen. `createParty` erfindet das
+  Feld deshalb auch bei Unsinn nicht, und die Sicht meldet `'bis'`.
+- Bei „harmlos“ sind alle drei Lesarten Stelle für Stelle dasselbe (Test);
+  ein Tisch, der nie etwas gewählt hat, zieht also dieselben Fragen wie vorher.
+- Die App-Zähmung (`appRegeln` im Server) kappt nur `inhaltsHaerte` — „gemischt“
+  heißt dort „gemischt bis zur App-Grenze“.
 
 **„Derb“ nur ohne Gast.** Ein Gastkonto entsteht mit einem Klick, ohne Mail
 und ohne Altersangabe. Sitzt ein Gast am Tisch, kappt `erzeugePartie` die
@@ -104,7 +134,9 @@ die wirksame. Zu laufenden Tischen setzt sich niemand mehr dazu
 (`joinTable` verlangt `waiting`), die Kappung beim Start deckt also den
 ganzen Abend.
 
-**Offene Lücke:** „Verifiziert“ heißt hier nur „kein Gast“. Ein normales
+**Offene Lücke:** „Verifiziert“ heißt hier nur „kein Gast“ (geprüft
+am 27.09.2026: Die Kappung sitzt allein im Modul, gefüllt aus `account.gastSeit`
+in `runtime/party.ts`; das Menü sperrt „derb“ zusätzlich, ist aber nicht die Sperre). Ein normales
 Konto hat Mail und Passwort, aber die Mail ist nicht bestätigt, und eine
 **Altersangabe gibt es nirgends** in der Datenbank. Wer „derb nur ab 18“
 ernst meint, braucht ein Feld am Konto — das ist eine Plattformfrage, keine
@@ -123,8 +155,10 @@ bei Wahrheit (9): Solche Tische spielen mit Rückfall.
 **Auswahl im Menü** (seit dem 22.09.2026, `minispiele/partykiste/Auswahl.tsx`,
 Logik in `wahl.ts`): Minispiele (an- und ausklicken wie die
 Doppelkopf-Regeln, mindestens drei; seit dem 27.09.2026 ohne Reihenfolge,
-das Modul mischt), Inhaltsstufe „harmlos / pikant /
-derb“ unter der Überschrift **„Inhalte“** (nicht „Härte“, siehe oben),
+das Modul mischt), Inhaltsstufe „harmlos / pikant / derb / gemischt“ (vier
+Kacheln seit dem 27.09.2026; „gemischt“ nur, wenn `defaultConfig()` das Feld
+`inhaltsMischung` kennt — `mischungBekannt`) unter der Überschrift
+**„Inhalte“** (nicht „Härte“, siehe oben),
 Themenpaket („alles“ = `paket: null`) und — erst, wenn `defaultConfig()`
 ein Feld `modus` hat — der Modus. Gemerkt in `localStorage`, gilt für
 Bot- und Online-Tische. Der Regelsatz entsteht als **Vorgabe des Moduls**
@@ -139,7 +173,10 @@ die eigentliche Sperre. Paketnamen, Modusnamen und „gleichzeitig/reihum“
 sind Spiegelbilder, die `vertrag/partykiste-auswahl.test.ts` gegen
 `PAKETE`, `istReihum` und `validateConfig` hält. `inhaltsHaerte` und
 `paket` dürfen im Regelsatz weiterhin fehlen — ältere Tische kennen sie
-nicht. In der Regelzeile stehen beide noch nicht: Die Sicht trägt sie nicht.
+nicht. Seit dem 27.09.2026 trägt die Sicht `inhaltsHaerte`, `inhaltsMischung`
+und `inhaltsHaerteGewollt`, und die Regelzeile nennt die Inhalte („Inhalte
+pikant“, „Inhalte gemischt“, bei alten Tischen „Inhalte bis derb“; `inhaltsChip`
+im Client). Das Paket steht dort weiterhin nur im Themenabend.
 
 ### Wie die Inhalte ausgewählt werden
 
@@ -200,7 +237,9 @@ demselben Grund, aus dem der Trinkmodus kein zweiter Ablauf ist.
 erstes Drittel 1, zweites 2, letztes 3 (`eskalationsStufe`,
 `floor(nr * 3 / runden) + 1`). Die eingestellten Werte gelten dann nicht; die
 Kurve steht je Runde in `regelnDerRunde`, und jede Ziehung, jede Aufgabe und
-jede Abrechnung liest den Regelsatz der Runde, nicht den der Partie.
+jede Abrechnung liest den Regelsatz der Runde, nicht den der Partie. Die
+Kurve **ist** die Stufenwahl: Der Regelsatz der Runde trägt
+`inhaltsMischung: 'genau'`, egal was unter „Inhalte“ eingestellt war.
 **Die Gast-Kappung wird nicht umgangen**: Die Eskalation will am Ende „derb",
 geht aber wie jeder Tisch durch `wirksameInhaltsHaerte`; mit Gast steht in
 `regeln.inhaltsHaerte` „pikant", und die Kurve steigt nie über diese Decke
@@ -393,20 +432,71 @@ Anwesenden, fallen alle Stimmen, die Reihenfolge rückt um einen Platz, und es
 wird neu geredet — höchstens dreimal (`MAX_REDERUNDEN`). Ohne Mehrheit zählt
 der Tipp als Enthaltung.
 
+## „Passt nicht“ — Inhalte am Tisch melden (nur auf staging)
+
+Seit dem 27.09.2026 (Robin: „ja, nur auf staging wie der Bug-Knopf“), die
+zweite Hälfte der Inhaltsprüfung aus `docs/PARTYKISTE-INHALTE.md`: In jeder
+Runde, die einen Katalog-Eintrag zeigt, steht unter der Runde ein leiser
+Knopf **„Passt nicht“** (44 pt, beschriftet; `minispiele/partykiste/PasstNicht.tsx`).
+Das Blatt fragt — bei mehreren Einträgen zuerst „Welcher?“ — nach dem Grund
+(ergibt keinen Sinn · zu zahm für die Stufe · zu hart für die Stufe · kennt
+keiner · falsch · sonstiges) und optional nach Freitext. Die Liste der
+Einträge wird beim Öffnen festgehalten, damit ein Weiterschalten der Runde
+nicht den falschen meldet.
+
+- **Welcher Eintrag:** Die Sicht trägt `gezeigt` (Katalog + Kennung + Text),
+  abgeleitet aus der fertigen Sicht — der Imposter bekommt die Kennung seines
+  Wortes erst im Ergebnis, bei „Wer bin ich“ fehlt der eigene Name, bei
+  „10 Sekunden“ die Aufgabe vor dem „Los“ (`gezeigteInhalte` in `sicht.ts`).
+  Die geltende Regel-Karte steht immer mit drin. Bus fahren zeigt nichts.
+- **Nur auf staging**, doppelt: Der Client zeigt den Knopf nur bei
+  `me.stage === 'staging'` (wie `FeedbackWidget.tsx`), und der Server nimmt
+  `POST /api/partykiste/meldung` nur an, wenn `deps.stage` staging ist
+  (sonst 404 `nurAufStaging`) — dieselbe Quelle, die `me` ausliefert.
+- **Server** (`http/partykiste-routen.ts`): angemeldet, Katalog aus
+  `INHALTS_KATALOGE`, Kennung in fester Form und im Katalog vorhanden
+  (`gibtInhalt`), Grund aus `PASST_NICHT_GRUENDE` (Modul, der Client spiegelt
+  sie, Vertrag `vertrag/partykiste-passtnicht.test.ts`), Freitext ≤ 500,
+  Stufe 1–3, Tisch muss existieren; 60 Meldungen je Stunde. Tabelle
+  `partykiste_meldung` (Migration 0032). `GET /api/partykiste/meldungen`
+  nur für die Aufsicht (`requireAufsicht`): je Eintrag Anzahl, verschiedene
+  Melder, Gründe und Stufen gezählt, die jüngsten fünf Freitexte, dazu Text
+  und Härte aus dem Katalog **von heute** (`inhaltKurz`).
+- Geändert wird der Katalog weiterhin von Hand bzw. über die Prüfseite —
+  nie aus einer Meldung heraus.
+
 ## Neue Inhalte ergänzen
 
 Die Kataloge sind reine Daten: Fragen, Wortpaare, Namen, Sprüche. Seit dem
 22.09.2026 (Entscheidung P4, Datenbank später) steht jeder als **JSON-Datei**
 unter `src/inhalte/daten/<katalog>.json`; die gleichnamige `.ts` daneben lädt
 und prüft sie nur. Neue Einträge kommen **hinten** dazu und bekommen die
-nächste freie Kennung; bestehende Kennungen ändern sich nie — sie stehen in
-abgelegten Rundenprotokollen, und die Ziehung hängt an der Reihenfolge.
+nächste freie Kennung (eins über der höchsten je vergebenen); bestehende
+Kennungen ändern sich nie — sie stehen in abgelegten Rundenprotokollen, und
+die Ziehung hängt an der Reihenfolge.
 
-Jede Datei hat einen Kopf (`katalog`, `grenze`, `pflege`, `inhalt`) und
-darunter `eintraege`, ein Eintrag je Zeile. **`grenze` ist Pflicht** und sagt,
-was kein Eintrag darf: Stufe 3 („derb“) heißt pikant-erwachsen — nie
-herabwürdigend, nie über reale benannte Personen, nie über Minderjährige, nie
-Gewalt; kein Text fordert zum Trinken auf.
+**Maßstab für jeden Eintrag ist seit dem 27.09.2026
+[PARTYKISTE-INHALTE.md](PARTYKISTE-INHALTE.md)** — was je Spiel taugt, was
+jede Stufe darf, wie viele Einträge jede Stufe braucht. Geprüft wird in zwei
+Schritten (Vorprüfung durch die KI, dann Robin auf der Prüfseite); die
+Vorschläge liegen als Prüfprotokoll unter `docs/partykiste-pruefung/`.
+
+Jede Datei hat einen Kopf (`katalog`, `grenze`, `pflege`, `inhalt`,
+`entfernt`) und darunter `eintraege`, ein Eintrag je Zeile. **`grenze` ist
+Pflicht** und fasst das Regelwerk zusammen: harmlos geht an jedem Tisch,
+pikant ist Kneipenniveau und die Decke für Gäste, **derb ist richtig derb und
+nur für Konten ab 18**; tabu auf jeder Stufe sind reale benannte Personen in
+sexuellen oder herabwürdigenden Zusammenhängen, alles mit Minderjährigen,
+Gewalt, Herabwürdigung von Gruppen, Aufforderungen zu Straftaten oder
+Gefährlichem, Selbstverletzung; kein Text fordert zum Trinken auf.
+
+**Streichen** (seit dem 27.09.2026): Ein schlechter Eintrag wird gelöscht,
+seine Kennung kommt in die Liste `entfernt` im Kopf (bei den TS-Katalogen
+`KATEGORIEN_ENTFERNT` usw.) und wird **nie wieder vergeben**. Bis dahin
+verlangte das Schema lückenlose Kennungen — das ließ nur „umschreiben“ zu,
+und eine Kennung mit neuem, fremdem Text hätte in einer alten Partie auf
+etwas anderes gezeigt als damals. Mit der Liste bleibt die Lücke sichtbar
+und die Wiederverwendung prüfbar.
 
 **Das Schema** (`src/inhalte/schema.ts`, eigener Prüfer, kein zod — das Paket
 hat keine Laufzeitabhängigkeit außer game-api) läuft an drei Stellen: beim
@@ -414,8 +504,11 @@ Import jedes Katalogs (wirft), im Build (`werkzeug/inhalte-pruefen.mjs` nach
 `tsc`, nennt alle Fehler auf einmal und bricht ab) und im Test
 (`test/inhalte-json.test.ts`). Es verlangt über die Form hinaus:
 
-- Kennungen **lückenlos in Katalogreihenfolge** (`q001`, `q002`, …) — wer
-  umsortiert, löscht oder eine Nummer auslässt, fällt im Build auf.
+- Kennungen **steigen in Katalogreihenfolge** (`q001`, `q002`, …), und jede
+  Nummer bis zur höchsten steht als Eintrag da **oder** unter `entfernt` —
+  nie in beiden. Wer umsortiert, still löscht oder eine gestrichene Kennung
+  neu vergibt, fällt im Build auf (`pruefeKennungen` in `schema.ts`, dieselbe
+  Regel prüfen die Tests der TS-Kataloge).
 - **Keine Dubletten**, normalisiert (Groß/klein, Satzzeichen, Leerraum egal;
   bei Entweder-oder auch das vertauschte Paar, bei Wahrheit/Pflicht über
   beide Arten).
@@ -424,30 +517,45 @@ Import jedes Katalogs (wirft), im Build (`werkzeug/inhalte-pruefen.mjs` nach
 
 **Der Altbestand** — die 918 Einträge vom 22.09.2026 — liegt als die
 ursprünglichen TS-Dateien unter `test/altbestand/`, und ein Test vergleicht
-jeden davon Feld für Feld mit seiner Stelle im JSON. Wer einen alten Eintrag
-bewusst korrigiert, korrigiert ihn dort mit. Neue Einträge (alles jenseits
-des Altbestands) brauchen `haerte` und mindestens ein `paket`, Quiz und
-Schätzen auch `stufe`; ein Test hält die Mischung grob bei 60 % harmlos,
-30 % pikant, 10 % derb.
+jeden davon Feld für Feld mit seiner Stelle im JSON — gestrichene überspringt
+er (sie bleiben im Altbestand stehen), die übrigen müssen in alter
+Reihenfolge vor allem Neuen stehen. Wer einen alten Eintrag bewusst
+korrigiert, korrigiert ihn dort mit (so am 27.09.2026 für 48 umgeschriebene
+oder umgestufte). Neue Einträge (alles jenseits des Altbestands) brauchen
+`haerte`, Quiz und Schätzen auch `stufe`. Ein `paket` ist seit dem
+27.09.2026 freiwillig: Die Prüfung hat Pakete nur vergeben, wo ein Eintrag
+wirklich zu einem Anlass gehört; ohne Paket ist er Allgemeingut. Die alte
+Mischungsregel (60 % harmlos, 30 % pikant, 10 % derb) ist ersetzt durch die
+**Mindestzahl je Stufe** aus dem Regelwerk (`test/inhalte-json.test.ts`,
+`ohne-uhr.test.ts`, `zeitdruck.test.ts`) — mit ihr wäre „derb“ nie allein
+spielbar geworden.
 
-Stand 22.09.2026 — Einträge je Katalog, in Klammern der Altbestand:
+Stand 27.09.2026 nach der Prüfung — Einträge je Katalog, harmlos/pikant/derb,
+in Klammern der verbliebene Altbestand:
 
-- Wahrheit oder Pflicht: 400 (120, davon 60/60)
-- Wer würde eher: 300 (108)
-- Ich hab noch nie: 300 (110)
-- Entweder – oder: 250 (100)
-- Allgemeinwissen: 300 (140)
-- Schätzen: 200 (80)
-- Imposter: 250 (120)
-- Wer bin ich: 250 (140)
+- Wahrheit oder Pflicht: 617 (100 von 120) — Wahrheit 136/89/86, Pflicht 138/85/83
+- Wer würde eher: 351 — 185/84/82 (73 von 108)
+- Ich hab noch nie: 343 — 169/90/84 (84 von 110)
+- Entweder – oder: 275 — 173/52/50 (82 von 100)
+- Allgemeinwissen: 311 — 214/61/36 (118 von 140)
+- Schätzen: 212 — 131/51/30 (53 von 80) — **offen:** 20 derbe fehlen zum Ziel 50
+- Imposter: 311 — 210/50/51 (116 von 120)
+- Wer bin ich: 325 — 249/48/28 (119 von 140) — **offen:** 2 pikante, 2 derbe
+  fehlen (Robin hat vier vorgeschlagene Rollen nicht übernommen)
+
+Die offenen Lücken stehen als Ausnahme mit Untergrenze im Test
+(`OFFEN_JE_STUFE`); sobald das Ziel erreicht ist, verlangt der Test, dass
+die Ausnahme verschwindet.
 
 Dazu seit dem 22.09.2026 die drei Kataloge ohne Uhr (#213, noch als
-TS-Quelltext unter `src/inhalte/`, nicht Teil der JSON-Umstellung):
-82 Kategorien (k001–k082), 72 Mehrheitsfragen (m001–m072), 49 Regel-Karten
-(r001–r049) — jeder Eintrag **mit** `haerte`
-und mindestens einem `paket`, alle drei Stufen belegt, je Paket mindestens
-zehn harmlose (`test/ohne-uhr.test.ts`). Regel-Karten sind Befehle an alle
-und tragen deshalb wie Wahrheit oder Pflicht gar kein Trinkwort.
+TS-Quelltext unter `src/inhalte/`, nicht Teil der JSON-Umstellung) und seit
+dem 23.09.2026 „10 Sekunden“: 147 Kategorien (66/51/30), 162
+Mehrheitsfragen (60/50/52), 161 Regel-Karten (53/55/53), 154 Aufgaben für
+10 Sekunden (54/50/50) — jeder Eintrag **mit** `haerte` und mindestens einem
+`paket`, je Paket mindestens zehn harmlose (`test/ohne-uhr.test.ts`).
+Regel-Karten sind Befehle an alle und tragen deshalb wie Wahrheit oder
+Pflicht gar kein Trinkwort. Die 13 Karten des Königsbechers sind fest (eine
+je Rang) und haben keine Stufe.
 
 **Metadaten** (seit dem 22.09.2026, `src/inhalte/typen.ts`) — alle optional,
 ein Eintrag ohne Feld gilt als harmlos, allgemein, ab vier Sitzen:
@@ -475,10 +583,13 @@ ein Eintrag ohne Feld gilt als harmlos, allgemein, ab vier Sitzen:
 - `minSitze` nur, wenn der Text wirklich eine große Runde braucht („Wer von
   euch acht …“).
 
-Die Sätze zum Kiffen (n101–n110, w101–w108, zusammen 18) sind seit dem
-22.09.2026 **pikant** (`haerte: 2`) und damit an einem Tisch mit der Vorgabe
-„harmlos“ nicht mehr dabei. Sonst trägt im Altbestand kein Eintrag eine
-Härte; die neuen Einträge tragen alle eine.
+Die Sätze zum Kiffen (n101–n110, w101–w108, zusammen 18) waren seit dem
+22.09.2026 **pikant** (`haerte: 2`); seit der Prüfung vom 27.09.2026 sind
+sie **derb** (Drogen gehören nach dem Regelwerk auf „derb“, Gäste bekommen
+höchstens „pikant“), sechs davon sind gestrichen (n102, n103, n110, w103,
+w106, w107). Sonst trägt im Altbestand nur eine Härte, was die Prüfung
+umgestuft hat (`test/partykiste.test.ts` gleicht das mit den `umstufen` im
+Prüfprotokoll ab); die neuen Einträge tragen alle eine.
 
 ## Ein weiteres Minispiel einbauen
 

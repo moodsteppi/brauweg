@@ -53,6 +53,7 @@ import type { NonceSpeicher } from '../auth/nonce.js';
 import { anbieterRouten } from './anbieter-routen.js';
 import { type AppVerknuepfung, appVerknuepfungRouten } from './app-verknuepfung.js';
 import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
+import { partykisteRouten } from './partykiste-routen.js';
 import { pushRouten } from './push-routen.js';
 import type { PushAnlaesse } from '../push/anlaesse.js';
 import { verifyPassword } from '../auth/secrets.js';
@@ -825,6 +826,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     auth: deps.auth,
     requireAccount,
     limitSchreiben: LIMIT_SCHREIBEN,
+  });
+
+  // „Passt nicht" zu Inhalten der Partykiste — nur auf staging, siehe dort.
+  // Dieselbe Stufe wie in `me` (unten), aus der das Feedback-Widget liest.
+  partykisteRouten(app, {
+    db: deps.db,
+    stage: deps.stage ?? 'production',
+    requireAccount,
+    requireAufsicht,
+    limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
   pushRouten(app, {

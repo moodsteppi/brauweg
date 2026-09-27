@@ -1,0 +1,33 @@
+{
+  "katalog": "koenigsbecher",
+  "geprueft": 13,
+  "raus": [],
+  "umstufen": [],
+  "umschreiben": [
+    {
+      "id": "kb03",
+      "text": "Diese Karte geht auf dich.",
+      "neu": "Pech — du kassierst selbst.",
+      "grund": "„Diese Karte geht auf dich\" sagt nicht, was passiert; die anderen Karten sagen „kassiert\"."
+    },
+    {
+      "id": "kb07",
+      "text": "Alle zeigen nach oben und tippen „Hand hoch\" — wer zuletzt ist, kassiert.",
+      "neu": "Alle tippen sofort „Hand hoch\" — wer zuletzt tippt, kassiert.",
+      "grund": "„Zeigen nach oben und tippen\" sind zwei Handlungen; gezählt wird nur das Tippen, und „wer zuletzt ist\" ist unklar."
+    },
+    {
+      "id": "kb10",
+      "text": "Diesmal passiert nichts.",
+      "neu": "Pause — der Tisch atmet durch.",
+      "grund": "Wortgleich mit kb06 (gleicher Titel, gleicher Text). Besser wäre eine eigene Folge für die Zehn — drei von 13 Rängen (6, 10, Dame) tun nichts —, das ist aber eine Regeländerung in zeitdruck.ts, kein Text."
+    },
+    {
+      "id": "kb13",
+      "text": "Der Becher füllt sich. Wer den letzten König der Runde zieht, bekommt ihn.",
+      "neu": "Der Becher füllt sich. Wer den letzten König zieht, kassiert den ganzen Becher.",
+      "grund": "„bekommt ihn\" ist unklar (den König? den Becher?); die anderen Karten sagen „kassiert\"."
+    }
+  ],
+  "neu": []
+}

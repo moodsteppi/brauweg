@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { SeatInfo } from '../../protocol';
 import { AufstellungSeite, LagerTabelle } from './Lager';
-import { modusChip } from './modi';
+import { inhaltsChip, modusChip } from './modi';
 import { Regelzeile } from './Regelzeile';
 import {
   MINISPIEL_NAME,
@@ -65,6 +65,10 @@ function sicht(teil: Partial<PartykisteSicht> = {}): PartykisteSicht {
     lager: null,
     lagerTabelle: null,
     aufstellung: null,
+    inhaltsHaerte: 1,
+    inhaltsMischung: 'genau',
+    inhaltsHaerteGewollt: null,
+    gezeigt: [],
     ...teil,
   };
 }
@@ -171,5 +175,41 @@ describe('Die Tabelle je Lager', () => {
   it('ohne Lager zeichnet sie nichts', () => {
     const { container } = render(<LagerTabelle sicht={sicht()} sitze={SITZE} />);
     expect(container.innerHTML).toBe('');
+  });
+
+  /*
+   * Seit dem 27.09.2026 nennt die Regelzeile auch die Inhalte: genau eine
+   * Stufe, „gemischt", oder — ein Tisch von davor — die alte Obergrenze.
+   */
+  it('nennt die Inhalte: genau, gemischt und die alte Obergrenze', () => {
+    expect(inhaltsChip(sicht({ inhaltsHaerte: 2, inhaltsMischung: 'genau' }))).toBe('Inhalte pikant');
+    expect(inhaltsChip(sicht({ inhaltsHaerte: 3, inhaltsMischung: 'gemischt' }))).toBe('Inhalte gemischt');
+    expect(inhaltsChip(sicht({ inhaltsHaerte: 2, inhaltsMischung: 'gemischt' }))).toBe('Inhalte gemischt, ohne derb');
+    expect(inhaltsChip(sicht({ inhaltsHaerte: 3, inhaltsMischung: 'bis' }))).toBe('Inhalte bis derb');
+    expect(inhaltsChip(sicht({ inhaltsHaerte: 1, inhaltsMischung: 'bis' }))).toBe('Inhalte harmlos');
+    /* Ein Regelsatz von vor dem 22.09.2026 traegt gar keine Stufe: kein Chip statt eines geratenen. */
+    expect(inhaltsChip({ minispiele: ['quiz'], trinkmodus: true, schluckFaktor: 1 })).toBeNull();
+    /* Eskalation: die Stufe der Runde, im Wartesaal „steigen". */
+    expect(inhaltsChip(sicht({ modus: 'eskalation', eskalation: { stufe: 2, inhaltsHaerte: 2, schluckFaktor: 2, gekappt: false } }))).toBe(
+      'Inhalte pikant',
+    );
+    expect(inhaltsChip({ minispiele: ['quiz'], trinkmodus: true, schluckFaktor: 1, modus: 'eskalation' })).toBe('Inhalte steigen');
+  });
+
+  it('sagt, wenn ein Gast „derb" weggekappt hat — auch bei „gemischt"', () => {
+    render(<Regelzeile regeln={sicht({ inhaltsHaerte: 2, inhaltsMischung: 'gemischt', inhaltsHaerteGewollt: 3 })} />);
+    expect(screen.getByText('Inhalte gemischt, ohne derb')).toBeTruthy();
+    expect(screen.getByText(/derb.*erst ohne Gast/)).toBeTruthy();
+  });
+
+  it('liest Stufe und Lesart vom Server — ohne Lesart ist es ein Tisch von davor', () => {
+    const basis = { minispiele: ['quiz'], trinkmodus: true, schluckFaktor: 1 };
+    expect(liesRegelsatz({ ...basis, inhaltsHaerte: 3, inhaltsMischung: 'gemischt' })).toMatchObject({ inhaltsHaerte: 3, inhaltsMischung: 'gemischt' });
+    expect(liesRegelsatz({ ...basis, inhaltsHaerte: 2 })).toMatchObject({ inhaltsHaerte: 2, inhaltsMischung: 'bis' });
+    const ohne = liesRegelsatz(basis);
+    expect(ohne?.inhaltsHaerte).toBeUndefined();
+    expect(ohne?.inhaltsMischung).toBeUndefined();
+    render(<Regelzeile regeln={liesRegelsatz({ ...basis, inhaltsHaerte: 3, inhaltsMischung: 'genau' })!} runden={6} />);
+    expect(screen.getByText('Inhalte derb')).toBeTruthy();
   });
 });

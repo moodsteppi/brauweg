@@ -1,0 +1,617 @@
+{
+  "katalog": "entweder",
+  "geprueft": 250,
+  "raus": [
+    {
+      "id": "e023",
+      "text": "Musik laut oder Musik leise",
+      "a": "Musik laut",
+      "b": "Musik leise",
+      "haerte": 1,
+      "grund": "Keine echte Wahl — laut oder leise hängt nur von der Lage ab."
+    },
+    {
+      "id": "e025",
+      "text": "Fußball oder Basketball",
+      "a": "Fußball",
+      "b": "Basketball",
+      "haerte": 1,
+      "grund": "Eine Seite klar vorn: In Deutschland wählt fast jeder Fußball."
+    },
+    {
+      "id": "e026",
+      "text": "Schnee oder Sonnenschein",
+      "a": "Schnee",
+      "b": "Sonnenschein",
+      "haerte": 1,
+      "grund": "Dem Sinn nach Dublette zu e005 (Sommer oder Winter)."
+    },
+    {
+      "id": "e028",
+      "text": "Katze oder Hamster",
+      "a": "Katze",
+      "b": "Hamster",
+      "haerte": 1,
+      "grund": "Dublette zu e006 (Hund oder Katze), und der Hamster ist keine gleich starke Seite."
+    },
+    {
+      "id": "e031",
+      "text": "Zelten oder Ferienwohnung",
+      "a": "Zelten",
+      "b": "Ferienwohnung",
+      "haerte": 1,
+      "grund": "Dem Sinn nach Dublette zu e013 (Camping oder Hotel)."
+    },
+    {
+      "id": "e034",
+      "text": "SMS oder Telefonanruf",
+      "a": "SMS",
+      "b": "Telefonanruf",
+      "haerte": 1,
+      "grund": "SMS ist veraltet; dem Sinn nach Dublette zu e149 (Anrufen oder Schreiben)."
+    },
+    {
+      "id": "e036",
+      "text": "Wald oder Strand",
+      "a": "Wald",
+      "b": "Strand",
+      "haerte": 1,
+      "grund": "Dem Sinn nach Dublette zu e001 (Meer oder Berge)."
+    },
+    {
+      "id": "e044",
+      "text": "Frühe Party oder Späte Party",
+      "a": "Frühe Party",
+      "b": "Späte Party",
+      "haerte": 1,
+      "grund": "Unklar, was gemeint ist — „frühe Party\" ist keine greifbare Wahl."
+    },
+    {
+      "id": "e054",
+      "text": "Kekse oder Salzstangen",
+      "a": "Kekse",
+      "b": "Salzstangen",
+      "haerte": 1,
+      "grund": "Dem Sinn nach Dublette zu e011 (Süß oder Salzig)."
+    },
+    {
+      "id": "e068",
+      "text": "Serienmarathon oder Kinoabend",
+      "a": "Serienmarathon",
+      "b": "Kinoabend",
+      "haerte": 1,
+      "grund": "Dublette zu e007 (Netflix oder Kino)."
+    },
+    {
+      "id": "e069",
+      "text": "Wecker oder Ausschlafen",
+      "a": "Wecker",
+      "b": "Ausschlafen",
+      "haerte": 1,
+      "grund": "Eine Seite klar vorn: Ausschlafen will jeder; Dublette zu e003."
+    },
+    {
+      "id": "e079",
+      "text": "Regen oder Wind",
+      "a": "Regen",
+      "b": "Wind",
+      "haerte": 1,
+      "grund": "Zwei Übel ohne Frage dazu — niemand wählt Regen oder Wind."
+    },
+    {
+      "id": "e081",
+      "text": "Winterjacke oder Regenjacke",
+      "a": "Winterjacke",
+      "b": "Regenjacke",
+      "haerte": 1,
+      "grund": "Ergibt keinen Sinn: Winter- und Regenjacke sind keine Alternative."
+    },
+    {
+      "id": "e082",
+      "text": "Aufräumen oder Chaos lassen",
+      "a": "Aufräumen",
+      "b": "Chaos lassen",
+      "haerte": 1,
+      "grund": "Dublette zu e042 (Ordnung oder Kreatives Chaos)."
+    },
+    {
+      "id": "e083",
+      "text": "WhatsApp oder E-Mail",
+      "a": "WhatsApp",
+      "b": "E-Mail",
+      "haerte": 1,
+      "grund": "Zwei Werkzeuge für verschiedene Zwecke, keine echte Wahl; Anrufen/Schreiben deckt e149 ab."
+    },
+    {
+      "id": "e088",
+      "text": "Zeitung oder Nachrichten-App",
+      "a": "Zeitung",
+      "b": "Nachrichten-App",
+      "haerte": 1,
+      "grund": "Eine Seite klar vorn: Bei 18- bis 35-Jährigen liest kaum jemand Papierzeitung."
+    },
+    {
+      "id": "e095",
+      "text": "Wanderschuhe oder Sneaker",
+      "a": "Wanderschuhe",
+      "b": "Sneaker",
+      "haerte": 1,
+      "grund": "Ergibt keinen Sinn: Wanderschuhe und Sneaker trägt man zu verschiedenen Anlässen."
+    },
+    {
+      "id": "e098",
+      "text": "Tageslicht oder Kunstlicht",
+      "a": "Tageslicht",
+      "b": "Kunstlicht",
+      "haerte": 1,
+      "grund": "Eine Seite klar vorn: Tageslicht gewinnt immer."
+    },
+    {
+      "id": "e109",
+      "text": "Pinguin oder Eisbär",
+      "a": "Pinguin",
+      "b": "Eisbär",
+      "haerte": 1,
+      "grund": "Ohne Frage sinnlos — was soll man an Pinguin oder Eisbär wählen?"
+    },
+    {
+      "id": "e130",
+      "text": "Oper oder Musical",
+      "a": "Oper",
+      "b": "Musical",
+      "haerte": 1,
+      "grund": "Eine Seite klar vorn: Musical gewinnt am Tisch fast immer."
+    },
+    {
+      "id": "e137",
+      "text": "Kühles Wetter oder Heißes Wetter",
+      "a": "Kühles Wetter",
+      "b": "Heißes Wetter",
+      "haerte": 1,
+      "grund": "Dem Sinn nach Dublette zu e005 (Sommer oder Winter)."
+    },
+    {
+      "id": "e167",
+      "text": "Kurze Meetings oder Keine Meetings",
+      "a": "Kurze Meetings",
+      "b": "Keine Meetings",
+      "haerte": 1,
+      "grund": "Eine Seite klar vorn: Keine Meetings will jeder."
+    },
+    {
+      "id": "e170",
+      "text": "Kaffeemaschine oder Wasserspender",
+      "a": "Kaffeemaschine",
+      "b": "Wasserspender",
+      "haerte": 1,
+      "grund": "Eine Seite klar vorn und nichts zum Streiten."
+    },
+    {
+      "id": "e182",
+      "text": "Geschenke auspacken oder Geschenke einpacken",
+      "a": "Geschenke auspacken",
+      "b": "Geschenke einpacken",
+      "haerte": 1,
+      "grund": "Eine Seite klar vorn: Auspacken will jeder."
+    },
+    {
+      "id": "e207",
+      "text": "Unterwäsche mit Muster oder Unterwäsche einfarbig",
+      "a": "Unterwäsche mit Muster",
+      "b": "Unterwäsche einfarbig",
+      "haerte": 2,
+      "grund": "Löst nichts aus — Muster oder einfarbig ist weder pikant noch streitbar."
+    },
+    {
+      "id": "e231",
+      "text": "Anmachspruch oder Blickkontakt",
+      "a": "Anmachspruch",
+      "b": "Blickkontakt",
+      "haerte": 2,
+      "grund": "Dem Sinn nach Dublette zu e219 (Heimlicher Blick oder Frecher Spruch)."
+    },
+    {
+      "id": "e232",
+      "text": "Erste Nachricht schicken oder Auf die erste Nachricht warten",
+      "a": "Erste Nachricht schicken",
+      "b": "Auf die erste Nachricht warten",
+      "haerte": 2,
+      "grund": "Dem Sinn nach Dublette zu e193 (Der erste Schritt oder Warten)."
+    }
+  ],
+  "umstufen": [
+    {
+      "id": "e200",
+      "text": "Romantisches Dinner oder Picknick unter Sternen",
+      "von": 2,
+      "nach": 1,
+      "grund": "Dinner oder Picknick ist harmlos."
+    },
+    {
+      "id": "e201",
+      "text": "Getrennte Decken oder Eine gemeinsame Decke",
+      "von": 2,
+      "nach": 1,
+      "grund": "Deckenfrage ist harmlos, nichts Anzügliches."
+    },
+    {
+      "id": "e202",
+      "text": "Gemeinsames Konto oder Getrennte Kasse",
+      "von": 2,
+      "nach": 1,
+      "grund": "Geldfrage in der Beziehung ist harmlos."
+    },
+    {
+      "id": "e214",
+      "text": "Liebesbrief oder Liebeslied",
+      "von": 2,
+      "nach": 1,
+      "grund": "Liebesbrief oder Liebeslied ist harmlos."
+    },
+    {
+      "id": "e223",
+      "text": "Tanzen mit der Braut oder Tanzen mit dem Bräutigam",
+      "von": 2,
+      "nach": 1,
+      "grund": "Tanzen auf der Hochzeit ist harmlos."
+    },
+    {
+      "id": "e235",
+      "text": "Beziehung oder Single-Leben",
+      "von": 2,
+      "nach": 1,
+      "grund": "Beziehung oder Single ist harmlos."
+    }
+  ],
+  "umschreiben": [
+    {
+      "id": "e062",
+      "text": "Norden oder Süden",
+      "neu": "Urlaub in Skandinavien oder Urlaub am Mittelmeer",
+      "a": "Urlaub in Skandinavien",
+      "b": "Urlaub am Mittelmeer",
+      "grund": "„Norden oder Süden\" ohne Bezug ist unklar — als Urlaubswahl greifbar."
+    },
+    {
+      "id": "e071",
+      "text": "Fenster auf oder Fenster zu",
+      "neu": "Schlafen bei offenem Fenster oder Schlafen bei geschlossenem Fenster",
+      "a": "Schlafen bei offenem Fenster",
+      "b": "Schlafen bei geschlossenem Fenster",
+      "grund": "Ohne Anlass unklar; beim Schlafen spaltet es echt."
+    },
+    {
+      "id": "e110",
+      "text": "Drachen oder Einhorn",
+      "neu": "Drache als Haustier oder Einhorn als Haustier",
+      "a": "Drache als Haustier",
+      "b": "Einhorn als Haustier",
+      "grund": "Ohne Bezug keine Wahl; mit „als Haustier\" streitbar."
+    },
+    {
+      "id": "e111",
+      "text": "Piraten oder Ninjas",
+      "neu": "Pirat sein oder Ninja sein",
+      "a": "Pirat sein",
+      "b": "Ninja sein",
+      "grund": "Ohne Bezug keine Wahl; als Rolle streitbar."
+    },
+    {
+      "id": "e245",
+      "text": "Erotikfilm oder Erotikroman",
+      "neu": "Porno oder Erotikroman",
+      "a": "Porno",
+      "b": "Erotikroman",
+      "grund": "„Erotikfilm\" ist für derb zu zahm; „Porno\" ist die ehrliche Wahl."
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 2,
+      "text": "Nacktsauna mit den Kollegen oder Nacktsauna mit den Schwiegereltern",
+      "a": "Nacktsauna mit den Kollegen",
+      "b": "Nacktsauna mit den Schwiegereltern"
+    },
+    {
+      "haerte": 2,
+      "text": "Der Schwarm sieht dich betrunken oder Der Schwarm sieht dich verkatert",
+      "a": "Der Schwarm sieht dich betrunken",
+      "b": "Der Schwarm sieht dich verkatert"
+    },
+    {
+      "haerte": 2,
+      "text": "Flirt mit dem Barkeeper oder Flirt mit dem DJ",
+      "a": "Flirt mit dem Barkeeper",
+      "b": "Flirt mit dem DJ"
+    },
+    {
+      "haerte": 2,
+      "text": "Betrunken dem Ex schreiben oder Betrunken dem Chef schreiben",
+      "a": "Betrunken dem Ex schreiben",
+      "b": "Betrunken dem Chef schreiben"
+    },
+    {
+      "haerte": 2,
+      "text": "Tequila oder Jägermeister",
+      "a": "Tequila",
+      "b": "Jägermeister"
+    },
+    {
+      "haerte": 2,
+      "text": "Kurze oder Cocktails",
+      "a": "Kurze",
+      "b": "Cocktails",
+      "umformuliert": "Beim Einbau: „Shots\" schlaegt der Trinkwort-Test an (test/inhalte.test.ts) — „Kurze\" meint dasselbe."
+    },
+    {
+      "haerte": 2,
+      "text": "Vorglühen oder Direkt in den Club",
+      "a": "Vorglühen",
+      "b": "Direkt in den Club"
+    },
+    {
+      "haerte": 2,
+      "text": "Afterhour bis mittags oder Um zwei Uhr im Bett",
+      "a": "Afterhour bis mittags",
+      "b": "Um zwei Uhr im Bett"
+    },
+    {
+      "haerte": 2,
+      "text": "Katerfrühstück mit Döner oder Katerfrühstück mit Rollmops",
+      "a": "Katerfrühstück mit Döner",
+      "b": "Katerfrühstück mit Rollmops"
+    },
+    {
+      "haerte": 2,
+      "text": "Auf dem Tisch tanzen oder Nach fünf Bier Karaoke singen",
+      "a": "Auf dem Tisch tanzen",
+      "b": "Nach fünf Bier Karaoke singen"
+    },
+    {
+      "haerte": 2,
+      "text": "Abschiedskuss nach dem ersten Date oder Nur eine Umarmung",
+      "a": "Abschiedskuss nach dem ersten Date",
+      "b": "Nur eine Umarmung"
+    },
+    {
+      "haerte": 2,
+      "text": "Date mit zu viel Parfüm oder Date mit zu wenig Deo",
+      "a": "Date mit zu viel Parfüm",
+      "b": "Date mit zu wenig Deo"
+    },
+    {
+      "haerte": 2,
+      "text": "Flirtnachricht an die falsche Person oder Lästernachricht an die falsche Person",
+      "a": "Flirtnachricht an die falsche Person",
+      "b": "Lästernachricht an die falsche Person"
+    },
+    {
+      "haerte": 2,
+      "text": "Den besten Freund des Ex daten oder Die Schwester oder den Bruder des Ex daten",
+      "a": "Den besten Freund des Ex daten",
+      "b": "Die Schwester oder den Bruder des Ex daten"
+    },
+    {
+      "haerte": 2,
+      "text": "Betrunken tanzen oder Betrunken Deep Talk",
+      "a": "Betrunken tanzen",
+      "b": "Betrunken Deep Talk"
+    },
+    {
+      "haerte": 2,
+      "text": "Aus Versehen ein altes Foto vom Schwarm liken oder Aus Versehen den Schwarm anrufen",
+      "a": "Aus Versehen ein altes Foto vom Schwarm liken",
+      "b": "Aus Versehen den Schwarm anrufen"
+    },
+    {
+      "haerte": 3,
+      "text": "Oralsex geben oder Oralsex bekommen",
+      "a": "Oralsex geben",
+      "b": "Oralsex bekommen"
+    },
+    {
+      "haerte": 3,
+      "text": "Nie wieder Sex oder Nie wieder Alkohol",
+      "a": "Nie wieder Sex",
+      "b": "Nie wieder Alkohol"
+    },
+    {
+      "haerte": 3,
+      "text": "One-Night-Stand mit einer fremden Person oder Sex mit dem Ex",
+      "a": "One-Night-Stand mit einer fremden Person",
+      "b": "Sex mit dem Ex"
+    },
+    {
+      "haerte": 3,
+      "text": "Filmriss nach der Party oder Jedes peinliche Detail noch wissen",
+      "a": "Filmriss nach der Party",
+      "b": "Jedes peinliche Detail noch wissen"
+    },
+    {
+      "haerte": 3,
+      "text": "Die Eltern beim Sex erwischen oder Von den Eltern beim Sex erwischt werden",
+      "a": "Die Eltern beim Sex erwischen",
+      "b": "Von den Eltern beim Sex erwischt werden"
+    },
+    {
+      "haerte": 3,
+      "text": "Sex unter der Dusche oder Sex auf dem Küchentisch",
+      "a": "Sex unter der Dusche",
+      "b": "Sex auf dem Küchentisch"
+    },
+    {
+      "haerte": 3,
+      "text": "Einmal in den Swingerclub oder Einmal in den Stripclub",
+      "a": "Einmal in den Swingerclub",
+      "b": "Einmal in den Stripclub"
+    },
+    {
+      "haerte": 3,
+      "text": "Nachbarn, die laut stöhnen oder Mitbewohner, der laut schnarcht",
+      "a": "Nachbarn, die laut stöhnen",
+      "b": "Mitbewohner, der laut schnarcht"
+    },
+    {
+      "haerte": 3,
+      "text": "Sexting oder Telefonsex",
+      "a": "Sexting",
+      "b": "Telefonsex"
+    },
+    {
+      "haerte": 3,
+      "text": "Analsex ausprobieren oder Analsex niemals",
+      "a": "Analsex ausprobieren",
+      "b": "Analsex niemals"
+    },
+    {
+      "haerte": 3,
+      "text": "Kotzen und danach fit oder Nicht kotzen, aber den ganzen Tag Kater",
+      "a": "Kotzen und danach fit",
+      "b": "Nicht kotzen, aber den ganzen Tag Kater"
+    },
+    {
+      "haerte": 3,
+      "text": "Beim Sex pupsen oder Beim Sex den falschen Namen sagen",
+      "a": "Beim Sex pupsen",
+      "b": "Beim Sex den falschen Namen sagen"
+    },
+    {
+      "haerte": 3,
+      "text": "Zu früh kommen oder Gar nicht kommen",
+      "a": "Zu früh kommen",
+      "b": "Gar nicht kommen"
+    },
+    {
+      "haerte": 3,
+      "text": "Ein Jahr keine Selbstbefriedigung oder Ein Jahr kein Sex mit anderen",
+      "a": "Ein Jahr keine Selbstbefriedigung",
+      "b": "Ein Jahr kein Sex mit anderen"
+    },
+    {
+      "haerte": 3,
+      "text": "Busen oder Hintern",
+      "a": "Busen",
+      "b": "Hintern"
+    },
+    {
+      "haerte": 3,
+      "text": "Größe zählt oder Technik zählt",
+      "a": "Größe zählt",
+      "b": "Technik zählt"
+    },
+    {
+      "haerte": 3,
+      "text": "Spucken oder Schlucken",
+      "a": "Spucken",
+      "b": "Schlucken"
+    },
+    {
+      "haerte": 3,
+      "text": "Kiffen oder Saufen",
+      "a": "Kiffen",
+      "b": "Saufen"
+    },
+    {
+      "haerte": 3,
+      "text": "Ins Taxi kotzen oder Dem Gastgeber ins Bett kotzen",
+      "a": "Ins Taxi kotzen",
+      "b": "Dem Gastgeber ins Bett kotzen"
+    },
+    {
+      "haerte": 3,
+      "text": "Eine Woche nicht duschen oder Eine Woche nicht Zähne putzen",
+      "a": "Eine Woche nicht duschen",
+      "b": "Eine Woche nicht Zähne putzen"
+    },
+    {
+      "haerte": 3,
+      "text": "Eine fremde Zahnbürste benutzen oder Eine fremde Unterhose anziehen",
+      "a": "Eine fremde Zahnbürste benutzen",
+      "b": "Eine fremde Unterhose anziehen"
+    },
+    {
+      "haerte": 3,
+      "text": "Partner mit sehr viel Erfahrung oder Partner ganz ohne Erfahrung",
+      "a": "Partner mit sehr viel Erfahrung",
+      "b": "Partner ganz ohne Erfahrung"
+    },
+    {
+      "haerte": 3,
+      "text": "Nacktfoto aus Versehen in die Familiengruppe oder Pornoverlauf aus Versehen auf dem Beamer im Meeting",
+      "a": "Nacktfoto aus Versehen in die Familiengruppe",
+      "b": "Pornoverlauf aus Versehen auf dem Beamer im Meeting"
+    },
+    {
+      "haerte": 3,
+      "text": "Durchfall im Flugzeug oder Durchfall auf einer Hochzeit",
+      "a": "Durchfall im Flugzeug",
+      "b": "Durchfall auf einer Hochzeit"
+    },
+    {
+      "haerte": 3,
+      "text": "Filzläuse oder Fußpilz",
+      "a": "Filzläuse",
+      "b": "Fußpilz"
+    },
+    {
+      "haerte": 3,
+      "text": "Dessous-Shopping zu zweit oder Sextoy-Shopping zu zweit",
+      "a": "Dessous-Shopping zu zweit",
+      "b": "Sextoy-Shopping zu zweit"
+    },
+    {
+      "haerte": 3,
+      "text": "Nie wieder Oralsex oder Nie wieder Küssen",
+      "a": "Nie wieder Oralsex",
+      "b": "Nie wieder Küssen"
+    },
+    {
+      "haerte": 3,
+      "text": "Küssen mit Mundgeruch oder Küssen mit viel zu viel Spucke",
+      "a": "Küssen mit Mundgeruch",
+      "b": "Küssen mit viel zu viel Spucke"
+    },
+    {
+      "haerte": 3,
+      "text": "Einen Tag lang ständig Lust oder Einen Tag lang gar keine Lust",
+      "a": "Einen Tag lang ständig Lust",
+      "b": "Einen Tag lang gar keine Lust"
+    },
+    {
+      "haerte": 3,
+      "text": "Partner schreit beim Orgasmus oder Partner lacht beim Orgasmus",
+      "a": "Partner schreit beim Orgasmus",
+      "b": "Partner lacht beim Orgasmus"
+    },
+    {
+      "haerte": 3,
+      "text": "Lack und Leder oder Spitzen-Dessous",
+      "a": "Lack und Leder",
+      "b": "Spitzen-Dessous"
+    },
+    {
+      "haerte": 3,
+      "text": "Beim Sex einen Wadenkrampf bekommen oder Beim Sex aus dem Bett fallen",
+      "a": "Beim Sex einen Wadenkrampf bekommen",
+      "b": "Beim Sex aus dem Bett fallen"
+    },
+    {
+      "haerte": 3,
+      "text": "Gleitgel oder Massageöl",
+      "a": "Gleitgel",
+      "b": "Massageöl"
+    },
+    {
+      "haerte": 3,
+      "text": "Die Schwiegereltern hören euch nachts oder Die Mitbewohner hören euch nachts",
+      "a": "Die Schwiegereltern hören euch nachts",
+      "b": "Die Mitbewohner hören euch nachts"
+    },
+    {
+      "haerte": 3,
+      "text": "Tantra-Workshop oder Nackt-Yoga",
+      "a": "Tantra-Workshop",
+      "b": "Nackt-Yoga"
+    }
+  ]
+}

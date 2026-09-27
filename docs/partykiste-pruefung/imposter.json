@@ -1,0 +1,672 @@
+{
+  "katalog": "imposter",
+  "geprueft": 250,
+  "raus": [
+    {
+      "id": "i071",
+      "text": "Skiurlaub",
+      "hinweis": "Eine Urlaubsart",
+      "grund": "Dublette dem Sinn nach zu Skifahren (i020) — dieselben Sätze."
+    },
+    {
+      "id": "i082",
+      "text": "Schwimmen",
+      "hinweis": "Etwas im Wasser",
+      "grund": "Dublette dem Sinn nach zu Schwimmbad (i005)."
+    },
+    {
+      "id": "i109",
+      "text": "Cappuccino",
+      "hinweis": "Ein Getränk mit Kaffee",
+      "grund": "Zu nah an Kaffee (i009) — jeder Satz passt auf beide."
+    },
+    {
+      "id": "i116",
+      "text": "Moschee",
+      "hinweis": "Ein Ort zum Beten",
+      "grund": "Religion am Trinktisch: die Sätze kippen leicht in Sprüche über eine Glaubensgruppe; Priester (i057) deckt das Feld ab."
+    },
+    {
+      "id": "i192",
+      "text": "Plätzchen",
+      "hinweis": "Etwas Gebackenes",
+      "grund": "Dublette dem Sinn nach zu Kekse (i106); Lebkuchen deckt das Weihnachtsgebäck ab."
+    },
+    {
+      "id": "i219",
+      "text": "Eifersucht",
+      "hinweis": "Ein Gefühl",
+      "grund": "Zu abstrakt — Sätze zu einem Gefühl bleiben so vage, dass niemand auffliegt."
+    },
+    {
+      "id": "i229",
+      "text": "Sommerflirt",
+      "hinweis": "Etwas aus dem Urlaub",
+      "grund": "Dublette dem Sinn nach zu Flirt (i200)."
+    },
+    {
+      "id": "i230",
+      "text": "Katerfrühstück",
+      "hinweis": "Etwas zu essen",
+      "grund": "Zu nah an Kater (i206) — dieselben Sätze."
+    },
+    {
+      "id": "i240",
+      "text": "Striptease",
+      "hinweis": "Ein Tanz",
+      "grund": "Dublette dem Sinn nach zu Stripper (i233)."
+    },
+    {
+      "id": "i245",
+      "text": "Augenbinde",
+      "hinweis": "Etwas zum Verbinden",
+      "grund": "Mehrdeutig (Blindekuh, Schlafmaske) — erst mit Zusatz derb; der Hinweis „zum Verbinden\" führt zum Verband."
+    }
+  ],
+  "umstufen": [
+    {
+      "id": "i202",
+      "text": "Sauna",
+      "von": 2,
+      "nach": 1,
+      "grund": "Sauna ist Alltag, an jedem Tisch unauffällig."
+    },
+    {
+      "id": "i204",
+      "text": "Liebesbrief",
+      "von": 2,
+      "nach": 1,
+      "grund": "Liebesbrief geht auch mit Eltern am Tisch."
+    },
+    {
+      "id": "i205",
+      "text": "Whirlpool",
+      "von": 2,
+      "nach": 1,
+      "grund": "Whirlpool ist nicht anzüglich."
+    },
+    {
+      "id": "i214",
+      "text": "Tanzfläche",
+      "von": 2,
+      "nach": 1,
+      "grund": "Tanzfläche ist harmlos."
+    },
+    {
+      "id": "i215",
+      "text": "Türsteher",
+      "von": 2,
+      "nach": 1,
+      "grund": "Ein Beruf ohne jede Anzüglichkeit."
+    },
+    {
+      "id": "i216",
+      "text": "Nachtclub",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nachtclub ist ein Ort, nichts Pikantes."
+    },
+    {
+      "id": "i217",
+      "text": "Mistelzweig",
+      "von": 2,
+      "nach": 1,
+      "grund": "Weihnachtsbrauch, an jedem Tisch spielbar."
+    },
+    {
+      "id": "i218",
+      "text": "Heiratsantrag",
+      "von": 2,
+      "nach": 1,
+      "grund": "Heiratsantrag ist familientauglich."
+    },
+    {
+      "id": "i220",
+      "text": "Liebeskummer",
+      "von": 2,
+      "nach": 1,
+      "grund": "Liebeskummer kennt jeder, nichts daran ist anzüglich."
+    },
+    {
+      "id": "i225",
+      "text": "Bikini",
+      "von": 2,
+      "nach": 1,
+      "grund": "Bikini ist Badekleidung, harmlos."
+    },
+    {
+      "id": "i226",
+      "text": "Massage",
+      "von": 2,
+      "nach": 1,
+      "grund": "Massage ist harmlos."
+    },
+    {
+      "id": "i227",
+      "text": "Kuscheln",
+      "von": 2,
+      "nach": 1,
+      "grund": "Kuscheln geht an jedem Tisch."
+    },
+    {
+      "id": "i231",
+      "text": "Junggesellenabschied",
+      "von": 2,
+      "nach": 1,
+      "grund": "Das Wort selbst ist harmlos; die JGA-Runde bekommt es trotzdem."
+    },
+    {
+      "id": "i234",
+      "text": "Weihnachtsfeier",
+      "von": 2,
+      "nach": 1,
+      "grund": "Weihnachtsfeier ist harmlos."
+    },
+    {
+      "id": "i235",
+      "text": "Engelskostüm",
+      "von": 2,
+      "nach": 1,
+      "grund": "Ein Engelskostüm ist nicht anzüglich."
+    },
+    {
+      "id": "i236",
+      "text": "Morgenmantel",
+      "von": 2,
+      "nach": 1,
+      "grund": "Morgenmantel ist harmlos."
+    },
+    {
+      "id": "i237",
+      "text": "Herzchen-Emoji",
+      "von": 2,
+      "nach": 1,
+      "grund": "Herzchen-Emoji ist harmlos."
+    },
+    {
+      "id": "i238",
+      "text": "Kondom",
+      "von": 3,
+      "nach": 2,
+      "grund": "Kondom fällt an einem pikanten Tisch nicht auf — Kneipenniveau, nicht derb."
+    },
+    {
+      "id": "i243",
+      "text": "One-Night-Stand",
+      "von": 3,
+      "nach": 2,
+      "grund": "One-Night-Stand ist Kneipengespräch, an einem pikanten Tisch nicht auffällig."
+    }
+  ],
+  "umschreiben": [
+    {
+      "id": "i030",
+      "text": "Flugzeug",
+      "hinweis": "Ein Fluggerät",
+      "neu": "Flugzeug",
+      "neuHinweis": "Ein Verkehrsmittel",
+      "grund": "Der Hinweis „Ein Fluggerät\" verrät das Wort fast."
+    },
+    {
+      "id": "i032",
+      "text": "Fluss",
+      "hinweis": "Etwas mit fließendem Wasser",
+      "neu": "Fluss",
+      "neuHinweis": "Etwas in der Natur",
+      "grund": "„Etwas mit fließendem Wasser\" verrät das Wort."
+    },
+    {
+      "id": "i034",
+      "text": "Wald",
+      "hinweis": "Ein Ort mit Bäumen",
+      "neu": "Wald",
+      "neuHinweis": "Etwas in der Natur",
+      "grund": "„Ein Ort mit Bäumen\" verrät das Wort."
+    },
+    {
+      "id": "i036",
+      "text": "Regenschirm",
+      "hinweis": "Etwas gegen Regen",
+      "neu": "Regenschirm",
+      "neuHinweis": "Etwas, das man mitnimmt",
+      "grund": "„Etwas gegen Regen\" verrät das Wort."
+    },
+    {
+      "id": "i105",
+      "text": "Eis",
+      "hinweis": "Etwas Kaltes zum Essen",
+      "neu": "Eis",
+      "neuHinweis": "Etwas Süßes",
+      "grund": "„Etwas Kaltes zum Essen\" verrät das Wort."
+    },
+    {
+      "id": "i108",
+      "text": "Smoothie",
+      "hinweis": "Ein Getränk aus Obst",
+      "neu": "Smoothie",
+      "neuHinweis": "Ein Getränk",
+      "grund": "„Ein Getränk aus Obst\" verrät das Wort fast."
+    },
+    {
+      "id": "i113",
+      "text": "Krankenhaus",
+      "hinweis": "Ein Ort für Kranke",
+      "neu": "Krankenhaus",
+      "neuHinweis": "Ein großes Gebäude",
+      "grund": "„Ein Ort für Kranke\" verrät das Wort."
+    },
+    {
+      "id": "i114",
+      "text": "Apotheke",
+      "hinweis": "Ein Ort für Medikamente",
+      "neu": "Apotheke",
+      "neuHinweis": "Ein Geschäft",
+      "grund": "„Ein Ort für Medikamente\" verrät das Wort."
+    },
+    {
+      "id": "i148",
+      "text": "Bibliothek",
+      "hinweis": "Ein Ort zum Lesen",
+      "neu": "Bibliothek",
+      "neuHinweis": "Ein ruhiger Ort",
+      "grund": "„Ein Ort zum Lesen\" verrät das Wort."
+    },
+    {
+      "id": "i206",
+      "text": "Kater",
+      "hinweis": "Ein Zustand am Morgen",
+      "neu": "Kater nach der Party",
+      "neuHinweis": "Ein Zustand am Morgen",
+      "grund": "„Kater\" allein lesen die Mitspieler als Tier — dann redet der Tisch aneinander vorbei."
+    },
+    {
+      "id": "i209",
+      "text": "Schwarm",
+      "hinweis": "Eine Person",
+      "neu": "Heimlicher Schwarm",
+      "neuHinweis": "Eine Person",
+      "grund": "„Schwarm\" allein ist mehrdeutig (Fischschwarm)."
+    },
+    {
+      "id": "i223",
+      "text": "Rotlicht",
+      "hinweis": "Eine Farbe",
+      "neu": "Rotlichtviertel",
+      "neuHinweis": "Ein Stadtviertel",
+      "grund": "„Rotlicht\" mit Hinweis „Eine Farbe\" schickt den Imposter auf die falsche Fährte (Ampel)."
+    },
+    {
+      "id": "i239",
+      "text": "Handschellen",
+      "hinweis": "Etwas aus Metall",
+      "neu": "Plüschhandschellen",
+      "neuHinweis": "Ein Accessoire",
+      "grund": "„Handschellen\" sind zuerst Polizei — erst mit Plüsch derb."
+    },
+    {
+      "id": "i247",
+      "text": "Dreier",
+      "hinweis": "Eine Zahl",
+      "neu": "Dreier",
+      "neuHinweis": "Etwas zu mehreren",
+      "grund": "„Eine Zahl\" lässt den Imposter über Zahlen reden — er fliegt sofort auf."
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 2,
+      "text": "Filmriss",
+      "hinweis": "Etwas nach dem Feiern"
+    },
+    {
+      "haerte": 2,
+      "text": "Sugar Daddy",
+      "hinweis": "Eine Person"
+    },
+    {
+      "haerte": 2,
+      "text": "Aktfoto",
+      "hinweis": "Ein Foto"
+    },
+    {
+      "haerte": 2,
+      "text": "Pille danach",
+      "hinweis": "Etwas aus der Apotheke"
+    },
+    {
+      "haerte": 2,
+      "text": "Schwangerschaftstest",
+      "hinweis": "Etwas aus der Drogerie"
+    },
+    {
+      "haerte": 2,
+      "text": "Nackt-Yoga",
+      "hinweis": "Eine sportliche Aktivität"
+    },
+    {
+      "haerte": 2,
+      "text": "Pornobalken",
+      "hinweis": "Ein Bart"
+    },
+    {
+      "haerte": 2,
+      "text": "Arschgeweih",
+      "hinweis": "Ein Körperschmuck"
+    },
+    {
+      "haerte": 2,
+      "text": "Freundschaft plus",
+      "hinweis": "Eine Beziehung"
+    },
+    {
+      "haerte": 2,
+      "text": "Ghosting",
+      "hinweis": "Etwas beim Kennenlernen"
+    },
+    {
+      "haerte": 2,
+      "text": "Bierpong",
+      "hinweis": "Ein Partyspiel"
+    },
+    {
+      "haerte": 2,
+      "text": "Ballermann",
+      "hinweis": "Ein Ort im Urlaub"
+    },
+    {
+      "haerte": 2,
+      "text": "Après-Ski",
+      "hinweis": "Etwas aus dem Winter"
+    },
+    {
+      "haerte": 2,
+      "text": "Afterparty",
+      "hinweis": "Etwas nach Mitternacht"
+    },
+    {
+      "haerte": 2,
+      "text": "Tanga",
+      "hinweis": "Ein Kleidungsstück"
+    },
+    {
+      "haerte": 2,
+      "text": "Wasserbett",
+      "hinweis": "Ein Möbelstück"
+    },
+    {
+      "haerte": 2,
+      "text": "Stundenhotel",
+      "hinweis": "Eine Unterkunft"
+    },
+    {
+      "haerte": 2,
+      "text": "Brusthaar",
+      "hinweis": "Etwas am Körper"
+    },
+    {
+      "haerte": 2,
+      "text": "Nacktkalender",
+      "hinweis": "Etwas zum Aufhängen"
+    },
+    {
+      "haerte": 2,
+      "text": "Inkognito-Modus",
+      "hinweis": "Etwas im Browser"
+    },
+    {
+      "haerte": 2,
+      "text": "Bodyshots",
+      "hinweis": "Etwas von der Party"
+    },
+    {
+      "haerte": 2,
+      "text": "Wet-T-Shirt-Contest",
+      "hinweis": "Ein Wettbewerb"
+    },
+    {
+      "haerte": 2,
+      "text": "Vorglühen",
+      "hinweis": "Etwas vor der Party"
+    },
+    {
+      "haerte": 2,
+      "text": "Kneipentour",
+      "hinweis": "Ein Abend mit Freunden"
+    },
+    {
+      "haerte": 2,
+      "text": "Oben ohne",
+      "hinweis": "Etwas am Strand"
+    },
+    {
+      "haerte": 2,
+      "text": "Strip-Poker",
+      "hinweis": "Ein Kartenspiel"
+    },
+    {
+      "haerte": 2,
+      "text": "Fummeln",
+      "hinweis": "Etwas mit den Händen"
+    },
+    {
+      "haerte": 2,
+      "text": "Nacktscanner",
+      "hinweis": "Etwas am Flughafen"
+    },
+    {
+      "haerte": 2,
+      "text": "Pole Dance",
+      "hinweis": "Ein Tanz"
+    },
+    {
+      "haerte": 3,
+      "text": "Handjob",
+      "hinweis": "Etwas mit der Hand"
+    },
+    {
+      "haerte": 3,
+      "text": "Blowjob",
+      "hinweis": "Etwas mit dem Mund"
+    },
+    {
+      "haerte": 3,
+      "text": "Dickpic",
+      "hinweis": "Ein Foto"
+    },
+    {
+      "haerte": 3,
+      "text": "Doggy-Style",
+      "hinweis": "Eine Haltung"
+    },
+    {
+      "haerte": 3,
+      "text": "Missionarsstellung",
+      "hinweis": "Eine Haltung"
+    },
+    {
+      "haerte": 3,
+      "text": "Neunundsechzig",
+      "hinweis": "Eine Zahl"
+    },
+    {
+      "haerte": 3,
+      "text": "OnlyFans",
+      "hinweis": "Etwas im Internet"
+    },
+    {
+      "haerte": 3,
+      "text": "Swingerclub",
+      "hinweis": "Ein Ort für die Nacht"
+    },
+    {
+      "haerte": 3,
+      "text": "Domina",
+      "hinweis": "Ein Beruf"
+    },
+    {
+      "haerte": 3,
+      "text": "Peitsche",
+      "hinweis": "Etwas aus Leder"
+    },
+    {
+      "haerte": 3,
+      "text": "Latex",
+      "hinweis": "Ein Material"
+    },
+    {
+      "haerte": 3,
+      "text": "Sexpuppe",
+      "hinweis": "Etwas zum Aufblasen"
+    },
+    {
+      "haerte": 3,
+      "text": "Kamasutra",
+      "hinweis": "Ein Buch"
+    },
+    {
+      "haerte": 3,
+      "text": "Orgasmus",
+      "hinweis": "Ein Gefühl"
+    },
+    {
+      "haerte": 3,
+      "text": "Vorspiel",
+      "hinweis": "Etwas vor dem Hauptteil"
+    },
+    {
+      "haerte": 3,
+      "text": "Nippel",
+      "hinweis": "Ein Körperteil"
+    },
+    {
+      "haerte": 3,
+      "text": "Penis",
+      "hinweis": "Ein Körperteil"
+    },
+    {
+      "haerte": 3,
+      "text": "Vagina",
+      "hinweis": "Ein Körperteil"
+    },
+    {
+      "haerte": 3,
+      "text": "Intimrasur",
+      "hinweis": "Etwas aus dem Bad"
+    },
+    {
+      "haerte": 3,
+      "text": "Intimpiercing",
+      "hinweis": "Ein Schmuckstück"
+    },
+    {
+      "haerte": 3,
+      "text": "Kotzeimer",
+      "hinweis": "Etwas aus Plastik"
+    },
+    {
+      "haerte": 3,
+      "text": "Durchfall",
+      "hinweis": "Ein Zustand"
+    },
+    {
+      "haerte": 3,
+      "text": "Hämorrhoiden",
+      "hinweis": "Ein Leiden"
+    },
+    {
+      "haerte": 3,
+      "text": "Filzläuse",
+      "hinweis": "Etwas Kleines"
+    },
+    {
+      "haerte": 3,
+      "text": "Bremsspur",
+      "hinweis": "Ein Fleck"
+    },
+    {
+      "haerte": 3,
+      "text": "Joint",
+      "hinweis": "Etwas zum Rauchen"
+    },
+    {
+      "haerte": 3,
+      "text": "Koks",
+      "hinweis": "Ein Pulver"
+    },
+    {
+      "haerte": 3,
+      "text": "Space Cake",
+      "hinweis": "Etwas Gebackenes"
+    },
+    {
+      "haerte": 3,
+      "text": "Magic Mushrooms",
+      "hinweis": "Etwas aus dem Wald"
+    },
+    {
+      "haerte": 3,
+      "text": "Callboy",
+      "hinweis": "Ein Beruf"
+    },
+    {
+      "haerte": 3,
+      "text": "Tantra-Massage",
+      "hinweis": "Etwas zum Entspannen"
+    },
+    {
+      "haerte": 3,
+      "text": "Feuchter Traum",
+      "hinweis": "Etwas aus der Nacht"
+    },
+    {
+      "haerte": 3,
+      "text": "Selbstbefriedigung",
+      "hinweis": "Etwas, das man allein macht"
+    },
+    {
+      "haerte": 3,
+      "text": "Fußfetisch",
+      "hinweis": "Eine Vorliebe"
+    },
+    {
+      "haerte": 3,
+      "text": "Sperma",
+      "hinweis": "Eine Flüssigkeit"
+    },
+    {
+      "haerte": 3,
+      "text": "Stöhnen",
+      "hinweis": "Ein Geräusch"
+    },
+    {
+      "haerte": 3,
+      "text": "Liebesschaukel",
+      "hinweis": "Etwas zum Aufhängen"
+    },
+    {
+      "haerte": 3,
+      "text": "Schwanzvergleich",
+      "hinweis": "Ein Vergleich"
+    },
+    {
+      "haerte": 3,
+      "text": "Viagra",
+      "hinweis": "Eine Tablette"
+    },
+    {
+      "haerte": 3,
+      "text": "Nacktputzer",
+      "hinweis": "Ein Beruf"
+    },
+    {
+      "haerte": 3,
+      "text": "Sextoy-Party",
+      "hinweis": "Eine Feier"
+    },
+    {
+      "haerte": 3,
+      "text": "Dirty Talk",
+      "hinweis": "Etwas, das man sagt"
+    }
+  ]
+}

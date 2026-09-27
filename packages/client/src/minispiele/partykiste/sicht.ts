@@ -223,6 +223,29 @@ export interface PartykisteSicht {
   lagerTabelle: PartyLagerPlatzierung[] | null;
   /** Team-Abend, solange der Tischoeffner die Lager aufstellt. */
   aufstellung: PartyAufstellung | null;
+  /* Die Inhaltsstufe (seit 27.09.2026) — die Regelzeile nennt sie. */
+  /** Die wirksame Stufe, nach der Gast-Kappung. */
+  inhaltsHaerte: 1 | 2 | 3;
+  /** genau, gemischt — oder 'bis' fuer einen Tisch von vor dem 27.09.2026 (Obergrenze). */
+  inhaltsMischung: PartyInhaltsMischung;
+  /** Was eingestellt war, wenn ein Gast es kappte. */
+  inhaltsHaerteGewollt: 1 | 2 | 3 | null;
+  /** Welche Katalog-Eintraege ich gerade sehe — fuer „Passt nicht" (PasstNicht.tsx). */
+  gezeigt: PartyGezeigterInhalt[];
+}
+
+/** Lesart der Inhaltsstufe — Spiegel von `InhaltsLesart` (regeln.ts im Modul). */
+export type PartyInhaltsMischung = 'genau' | 'gemischt' | 'bis';
+
+/**
+ * Ein Eintrag, den dieser Sitz gerade vor sich hat. Die Kennung kommt nur mit,
+ * wenn auch der Text mitkommt — das entscheidet das Modul (sicht.ts dort),
+ * nicht dieser Bildschirm.
+ */
+export interface PartyGezeigterInhalt {
+  katalog: string;
+  kennung: string;
+  text: string;
 }
 
 /** Die Spielmodi. Schnellrunde und Marathon gibt es bewusst nicht. */
@@ -364,6 +387,15 @@ export interface PartyRegelsatz {
   modus?: PartyModus;
   paket?: PartyPaket | null;
   eskalation?: PartyEskalation | null;
+  /*
+   * Seit dem 27.09.2026, ebenfalls optional (ein Regelsatz von vor dem
+   * 22.09.2026 kennt nicht einmal die Stufe). Im Wartesaal eines Tisches von
+   * vor dem 27.09.2026 fehlt `inhaltsMischung` — `liesRegelsatz` macht
+   * daraus 'bis', denn so spielt das Modul ihn auch.
+   */
+  inhaltsHaerte?: 1 | 2 | 3;
+  inhaltsMischung?: PartyInhaltsMischung;
+  inhaltsHaerteGewollt?: 1 | 2 | 3 | null;
 }
 
 /** Die Namen der Haertegrade, Stelle = `schluckFaktor` (1 bis 3). */
@@ -386,7 +418,18 @@ export function liesRegelsatz(config: Record<string, unknown>): PartyRegelsatz |
      sie ist ein Turnier, und das sagt die Regelzeile dann auch. */
   const modus = config['modus'];
   const paket = config['paket'];
+  /* Die Stufe nur, wenn sie da ist; fehlt die Lesart, galt bei diesem Tisch die Obergrenze. */
+  const stufe = config['inhaltsHaerte'];
+  const mischung = config['inhaltsMischung'];
+  const inhalt =
+    stufe === 1 || stufe === 2 || stufe === 3
+      ? {
+          inhaltsHaerte: stufe as 1 | 2 | 3,
+          inhaltsMischung: (mischung === 'genau' || mischung === 'gemischt' ? mischung : 'bis') as PartyInhaltsMischung,
+        }
+      : {};
   return {
+    ...inhalt,
     minispiele,
     trinkmodus,
     schluckFaktor: faktor,

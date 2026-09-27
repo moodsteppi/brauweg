@@ -1,0 +1,898 @@
+{
+  "katalog": "niemals",
+  "geprueft": 300,
+  "raus": [
+    {
+      "id": "n009",
+      "text": "Ich hab noch nie den Müll runtergebracht und danach vor der zugefallenen Wohnungstür gestanden.",
+      "grund": "Dublette dem Sinn nach zu n002; der bleibt. (ausgesperrt, Schlüssel drinnen)"
+    },
+    {
+      "id": "n015",
+      "text": "Ich hab noch nie eine Hausaufgabe erst auf dem Weg zur Schule gemacht.",
+      "grund": "Trifft fast jeden am Tisch – keiner muss sich outen, löst nichts aus. Hausaufgaben auf den letzten Drücker hat jeder gemacht."
+    },
+    {
+      "id": "n021",
+      "text": "Ich hab noch nie eine Kundin mit dem falschen Namen angesprochen.",
+      "grund": "Nur für Leute mit Kundenkontakt; n188 (Kollegen falscher Name) deckt die Idee ab."
+    },
+    {
+      "id": "n035",
+      "text": "Ich hab noch nie beim Bildschirmteilen aus Versehen private Fotos gezeigt.",
+      "grund": "Dublette dem Sinn nach zu n036; der bleibt. (beim Bildschirmteilen etwas Privates gezeigt)"
+    },
+    {
+      "id": "n040",
+      "text": "Ich hab noch nie eine App zwanzig Minuten neu gestartet, weil sie angeblich nicht funktionierte.",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "n045",
+      "text": "Ich hab noch nie in einem Restaurant das Trinkgeld aus Versehen doppelt bezahlt.",
+      "grund": "Trifft kaum jemanden – die Runde bleibt stumm."
+    },
+    {
+      "id": "n049",
+      "text": "Ich hab noch nie ein Gericht nachbestellt, das ich beim ersten Mal kaum angerührt hatte.",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "n050",
+      "text": "Ich hab noch nie Eiswürfel für Brühwürfel gehalten und versehentlich in den Tee geworfen.",
+      "grund": "Absurd – Eiswürfel und Brühwürfel verwechselt niemand."
+    },
+    {
+      "id": "n057",
+      "text": "Ich hab noch nie eine Verkehrsinsel im Halbdunkel für eine normale Spur gehalten.",
+      "grund": "Trifft kaum jemanden – die Runde bleibt stumm."
+    },
+    {
+      "id": "n059",
+      "text": "Ich hab noch nie beim Rückwärtseinparken den Bordstein touchiert.",
+      "grund": "Dublette dem Sinn nach zu n052; der bleibt. (Bordstein beim Einparken)"
+    },
+    {
+      "id": "n061",
+      "text": "Ich hab noch nie den Blinker gesetzt und dann doch geradeaus weitergefahren.",
+      "grund": "Dublette zu n053 (Blinker) und schwächer."
+    },
+    {
+      "id": "n064",
+      "text": "Ich hab noch nie bei einer Familienfeier das falsche Geburtsjahr der Oma genannt.",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "n066",
+      "text": "Ich hab noch nie beim Familienessen laut über jemanden geredet, der gerade zur Tür kam.",
+      "grund": "Dublette dem Sinn nach zu n018; der bleibt. (gelästert, Person stand dahinter)"
+    },
+    {
+      "id": "n068",
+      "text": "Ich hab noch nie bei einem Familientreffen das falsche Familienmitglied umarmt.",
+      "grund": "Trifft kaum jemanden – die Runde bleibt stumm."
+    },
+    {
+      "id": "n072",
+      "text": "Ich hab noch nie beim Joggen die eigene Zeit schöner erzählt, als sie wirklich war.",
+      "grund": "Dublette dem Sinn nach zu n080; der bleibt. (Laufzeit geschönt)"
+    },
+    {
+      "id": "n077",
+      "text": "Ich hab noch nie beim Schwimmen versehentlich in die Bahnabtrennung geschwommen.",
+      "grund": "Nische: setzt ein Hobby oder eine Lebenslage voraus, die der halbe Tisch nicht hat. (Bahnenschwimmen)"
+    },
+    {
+      "id": "n078",
+      "text": "Ich hab noch nie beim Skifahren den Lift falsch bestiegen und gleich wieder absteigen müssen.",
+      "grund": "Nische: setzt ein Hobby oder eine Lebenslage voraus, die der halbe Tisch nicht hat. (Skifahren)"
+    },
+    {
+      "id": "n079",
+      "text": "Ich hab noch nie bei einem Wettkampf die Startnummer seitenverkehrt angesteckt.",
+      "grund": "Nische: setzt ein Hobby oder eine Lebenslage voraus, die der halbe Tisch nicht hat. (Wettkampf mit Startnummer)"
+    },
+    {
+      "id": "n081",
+      "text": "Ich hab noch nie beim Mannschaftssport den eigenen Namen falsch auf das Trikot drucken lassen.",
+      "grund": "Nische: setzt ein Hobby oder eine Lebenslage voraus, die der halbe Tisch nicht hat. (Mannschaftssport, Trikotdruck)"
+    },
+    {
+      "id": "n083",
+      "text": "Ich hab noch nie bei einem Umtrunk aus dem falschen Glas weitergetrunken.",
+      "grund": "Dublette dem Sinn nach zu n090; der bleibt. (aus fremdem Glas getrunken)"
+    },
+    {
+      "id": "n089",
+      "text": "Ich hab noch nie auf einer Feier versehentlich das Namensschild einer fremden Person getragen.",
+      "grund": "Trifft kaum jemanden – die Runde bleibt stumm."
+    },
+    {
+      "id": "n093",
+      "text": "Ich hab noch nie jemandem aus Versehen ein Like gegeben und es danach panisch wieder entfernt.",
+      "grund": "Dublette dem Sinn nach zu n098; der bleibt. (aus Versehen geliked)"
+    },
+    {
+      "id": "n096",
+      "text": "Ich hab noch nie ein altes Kindheitsfoto im Netz gefunden und sofort verschickt.",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "n115",
+      "text": "Ich hab noch nie einen Sonnenaufgang absichtlich angeschaut.",
+      "grund": "Trifft fast jeden am Tisch – keiner muss sich outen, löst nichts aus."
+    },
+    {
+      "id": "n119",
+      "text": "Ich hab noch nie eine Serie angefangen, nur weil alle darüber reden.",
+      "grund": "Trifft fast jeden am Tisch – keiner muss sich outen, löst nichts aus."
+    },
+    {
+      "id": "n120",
+      "text": "Ich hab noch nie einen Wandertag mit Blasen an beiden Füßen beendet.",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "n121",
+      "text": "Ich hab noch nie mit einem Fremden über das Wetter geredet, nur um die Stille zu füllen.",
+      "grund": "Trifft fast jeden am Tisch – keiner muss sich outen, löst nichts aus."
+    },
+    {
+      "id": "n122",
+      "text": "Ich hab noch nie ein Rezept ausprobiert, das komplett misslungen ist.",
+      "grund": "Trifft fast jeden am Tisch – keiner muss sich outen, löst nichts aus. Dazu nah an n051/n044."
+    },
+    {
+      "id": "n127",
+      "text": "Ich hab noch nie in der Warteschlange die falsche Kasse gewählt und es bereut.",
+      "grund": "Trifft fast jeden am Tisch – keiner muss sich outen, löst nichts aus."
+    },
+    {
+      "id": "n130",
+      "text": "Ich hab noch nie versucht, einer Taube Brot aus der Hand zu füttern.",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "n132",
+      "text": "Ich hab noch nie ein Selfie mit einem Tier gemacht, das nicht mitspielen wollte.",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "n138",
+      "text": "Ich hab noch nie einen Termin zweimal vergessen.",
+      "grund": "Unklar, was gemeint ist – „zweimal vergessen\" wie?"
+    },
+    {
+      "id": "n140",
+      "text": "Ich hab noch nie etwas zurückgeschickt, das ich eigentlich behalten wollte.",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "n143",
+      "text": "Ich hab noch nie ein Kreuzworträtsel komplett gelöst.",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "n145",
+      "text": "Ich hab noch nie einen ganzen Tag lang nur Sport im Fernsehen geschaut.",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "n151",
+      "text": "Ich hab noch nie einen Kaugummi verschluckt.",
+      "grund": "Trifft fast jeden am Tisch – keiner muss sich outen, löst nichts aus."
+    },
+    {
+      "id": "n152",
+      "text": "Ich hab noch nie meinen eigenen Geburtstag für einen Tag lang vergessen.",
+      "grund": "Den eigenen Geburtstag vergisst niemand einen ganzen Tag."
+    },
+    {
+      "id": "n153",
+      "text": "Ich hab noch nie ein Handy-Spiel so lange gespielt, dass der Akku leer war.",
+      "grund": "Trifft fast jeden am Tisch – keiner muss sich outen, löst nichts aus."
+    },
+    {
+      "id": "n155",
+      "text": "Ich hab noch nie meinen Namen in einem Café falsch auf den Becher geschrieben bekommen und ihn trotzdem angenommen.",
+      "grund": "Zu lang, verschachtelt, und die Pointe fehlt."
+    },
+    {
+      "id": "n156",
+      "text": "Ich hab noch nie jemanden mit einem Spitznamen angesprochen, den nur ich benutze.",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "n161",
+      "text": "Ich hab noch nie ein Formular dreimal neu ausgefüllt, weil ich mich verschrieben hatte.",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "n163",
+      "text": "Ich hab noch nie einen Fernsehkoch nachgekocht und es besser hinbekommen.",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "n193",
+      "text": "Ich hab noch nie eine Präsentation gehalten, bei der der Beamer nicht funktionierte.",
+      "grund": "Beschreibt Pech, keine eigene Tat – keine Geschichte zum Erzählen."
+    },
+    {
+      "id": "n195",
+      "text": "Ich hab noch nie auf „Allen antworten\" gedrückt, obwohl ich nur einer Person antworten wollte.",
+      "grund": "Dublette dem Sinn nach zu n013; der bleibt. (Mail an den falschen Verteiler)"
+    },
+    {
+      "id": "n199",
+      "text": "Ich hab noch nie einen Kollegen um eine Aufgabe beneidet, die ich selbst abgelehnt habe.",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "n200",
+      "text": "Ich hab noch nie eine Überstunde gemacht, die niemand bemerkt hat.",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "n208",
+      "text": "Ich hab noch nie so getan, als würde mir ein Geschenk gefallen.",
+      "grund": "Trifft fast jeden am Tisch – keiner muss sich outen, löst nichts aus."
+    },
+    {
+      "id": "n209",
+      "text": "Ich hab noch nie am Heiligabend nach der Bescherung noch geschäftlich telefoniert.",
+      "grund": "Trifft kaum jemanden – die Runde bleibt stumm."
+    },
+    {
+      "id": "n212",
+      "text": "Ich hab noch nie ein Weihnachtsgeschenk erst am 24. mittags gekauft.",
+      "grund": "Dublette dem Sinn nach zu n063; der bleibt. (Weihnachtsgeschenke auf den letzten Drücker)"
+    },
+    {
+      "id": "n102",
+      "text": "Ich hab noch nie bekifft einen Film angefangen und nach zehn Minuten vergessen, worum es ging.",
+      "grund": "Schwach und nah an n107/n108 (bekifft vergessen, worum es ging)."
+    },
+    {
+      "id": "n103",
+      "text": "Ich hab noch nie behauptet, es rieche hier nach gar nichts.",
+      "grund": "Ohne Zusammenhang unverständlich – dass es ums Kiffen geht, steht nirgends."
+    },
+    {
+      "id": "n110",
+      "text": "Ich hab noch nie bekifft am Kühlschrank gestanden und die Tür wieder zugemacht, ohne etwas herauszunehmen.",
+      "grund": "Dublette dem Sinn nach zu n101; der bleibt. (bekifft am Kühlschrank)"
+    },
+    {
+      "id": "n244",
+      "text": "Ich hab noch nie bei jemandem übernachtet, den ich erst am selben Abend getroffen hatte.",
+      "grund": "Dublette dem Sinn nach zu n281; der bleibt. – das ist ein One-Night-Stand, nur umschrieben."
+    },
+    {
+      "id": "n247",
+      "text": "Ich hab noch nie ein Date gehabt, bei dem die Eltern plötzlich mit am Tisch saßen.",
+      "grund": "Trifft kaum jemanden – die Runde bleibt stumm."
+    },
+    {
+      "id": "n254",
+      "text": "Ich hab noch nie eine Nacht durchgeredet und dabei vergessen, dass wir eigentlich ein Date hatten.",
+      "grund": "Verquer: eine Nacht durchgeredet und dabei vergessen, dass es ein Date war – ergibt keinen Sinn."
+    },
+    {
+      "id": "n274",
+      "text": "Ich hab noch nie ein Date in einer Sauna gehabt.",
+      "grund": "Trifft kaum jemanden – die Runde bleibt stumm."
+    }
+  ],
+  "umstufen": [
+    {
+      "id": "n036",
+      "text": "Ich hab noch nie beim Beamen einen Tab offen gehabt, den ich lieber niemandem gezeigt hätte.",
+      "von": 1,
+      "nach": 2,
+      "grund": "Die Andeutung („Tab, den ich lieber niemandem gezeigt hätte\") ist anzüglich – pikant."
+    },
+    {
+      "id": "n101",
+      "text": "Ich hab noch nie gekifft und danach eine Stunde lang im Kühlschrank nach etwas gesucht.",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "n104",
+      "text": "Ich hab noch nie bekifft versucht, eine ernste Nachricht zu tippen, und dreimal neu angefangen.",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "n105",
+      "text": "Ich hab noch nie einen Joint gedreht, der aussah wie eine Karotte.",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "n106",
+      "text": "Ich hab noch nie bekifft etwas gekocht, das hinterher niemand essen wollte.",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "n107",
+      "text": "Ich hab noch nie bekifft gelacht, ohne dass irgendjemand wusste, worüber.",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "n108",
+      "text": "Ich hab noch nie bekifft beschlossen, mein ganzes Leben umzukrempeln, und es am nächsten Tag vergessen.",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "n109",
+      "text": "Ich hab noch nie so getan, als hätte ich noch nie gekifft.",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "n231",
+      "text": "Ich hab noch nie in einer Beziehung ein Geschenk vergessen und schnell improvisiert.",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nicht anzüglich – passt an jeden Tisch, auch mit Eltern und Kollegen."
+    },
+    {
+      "id": "n243",
+      "text": "Ich hab noch nie in einer Fernbeziehung gelebt.",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nicht anzüglich – passt an jeden Tisch, auch mit Eltern und Kollegen."
+    },
+    {
+      "id": "n268",
+      "text": "Ich hab noch nie einen Heiratsantrag bekommen oder gemacht.",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nicht anzüglich – passt an jeden Tisch, auch mit Eltern und Kollegen."
+    },
+    {
+      "id": "n271",
+      "text": "Ich hab noch nie an Weihnachten den neuen Partner zum ersten Mal der Familie vorgestellt.",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nicht anzüglich – passt an jeden Tisch, auch mit Eltern und Kollegen."
+    },
+    {
+      "id": "n275",
+      "text": "Ich hab noch nie eine Unterhose verkehrt herum getragen, ohne es zu merken.",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nicht anzüglich – passt an jeden Tisch, auch mit Eltern und Kollegen. Unterhose verkehrt herum ist Missgeschick, nicht anzüglich."
+    },
+    {
+      "id": "n279",
+      "text": "Ich hab noch nie ein Spielzeug für Erwachsene gekauft.",
+      "von": 3,
+      "nach": 2,
+      "grund": "Fiele an einem pikanten Tisch nicht auf; Kneipenniveau, nicht „richtig derb\"."
+    },
+    {
+      "id": "n284",
+      "text": "Ich hab noch nie einen Sexshop betreten.",
+      "von": 3,
+      "nach": 2,
+      "grund": "Robins Beispiel: „Sexshop betreten\" ist kein derb."
+    },
+    {
+      "id": "n292",
+      "text": "Ich hab noch nie am FKK-Strand gelegen.",
+      "von": 3,
+      "nach": 2,
+      "grund": "Fiele an einem pikanten Tisch nicht auf; Kneipenniveau, nicht „richtig derb\"."
+    },
+    {
+      "id": "n293",
+      "text": "Ich hab noch nie eine erotische Geschichte gelesen und mich dabei ertappt gefühlt.",
+      "von": 3,
+      "nach": 2,
+      "grund": "Fiele an einem pikanten Tisch nicht auf; Kneipenniveau, nicht „richtig derb\"."
+    },
+    {
+      "id": "n297",
+      "text": "Ich hab noch nie ein Kondom gekauft und mich dabei geschämt.",
+      "von": 3,
+      "nach": 2,
+      "grund": "Fiele an einem pikanten Tisch nicht auf; Kneipenniveau, nicht „richtig derb\". Kondom kaufen ist Alltag."
+    }
+  ],
+  "umschreiben": [
+    {
+      "id": "n019",
+      "text": "Ich hab noch nie in einer Besprechung eingenickt und rechtzeitig wieder aufgewacht.",
+      "neu": "Ich bin noch nie in einem Meeting oder einer Vorlesung eingenickt und beim eigenen Namen hochgeschreckt.",
+      "grund": "Das „rechtzeitig wieder aufgewacht\" nimmt die Pointe; so wird es eine Geschichte."
+    },
+    {
+      "id": "n022",
+      "text": "Ich hab noch nie am Flughafen das falsche Gate angesteuert, bis die Anzeige zweimal blinkte.",
+      "neu": "Ich hab noch nie am falschen Gate gewartet, bis mein Name ausgerufen wurde.",
+      "grund": "„bis die Anzeige zweimal blinkte\" ist unklar."
+    },
+    {
+      "id": "n025",
+      "text": "Ich hab noch nie im Zug in die falsche Richtung gefahren und das erst nach zwei Stationen gemerkt.",
+      "neu": "Ich bin noch nie in die falsche Richtung gefahren und hab es erst nach zwei Stationen gemerkt.",
+      "grund": "Grammatik („hab … gefahren\")."
+    },
+    {
+      "id": "n030",
+      "text": "Ich hab noch nie eine Fähre nur um Sekunden erreicht, weil ich gerannt bin wie verrückt.",
+      "neu": "Ich hab noch nie einen Zug nur erwischt, weil ich wie verrückt gerannt bin.",
+      "grund": "Fähre ist Nische; Zug kennt jeder. Satzbau holpert."
+    },
+    {
+      "id": "n053",
+      "text": "Ich hab noch nie den Blinker über eine ganze Autobahnfahrt anlassen.",
+      "neu": "Ich hab noch nie den Blinker kilometerlang angelassen, ohne es zu merken.",
+      "grund": "Grammatik („anlassen\" statt „angelassen\")."
+    },
+    {
+      "id": "n055",
+      "text": "Ich hab noch nie an einer roten Ampel losgefahren, weil das Auto davor schon angefahren ist.",
+      "neu": "Ich bin noch nie bei Rot losgefahren, nur weil der Wagen neben mir losfuhr.",
+      "grund": "Grammatik („hab … losgefahren\"), und die Situation war unklar."
+    },
+    {
+      "id": "n088",
+      "text": "Ich hab noch nie mit dem völlig falschen Kostüm auf einer Mottoparty aufgetaucht.",
+      "neu": "Ich bin noch nie im völlig falschen Kostüm auf einer Mottoparty aufgetaucht.",
+      "grund": "Grammatik („hab … aufgetaucht\")."
+    },
+    {
+      "id": "n100",
+      "text": "Ich hab noch nie in einer Chat-Nachricht den falschen Namen angeschrieben und sie trotzdem abgeschickt.",
+      "neu": "Ich hab noch nie eine Nachricht über jemanden ausgerechnet an diese Person geschickt.",
+      "grund": "Der alte Satz ist wirr; die Idee dahinter ist gut."
+    },
+    {
+      "id": "n233",
+      "text": "Ich hab noch nie mit einem Ex Schluss gemacht und bin am selben Abend doch wieder hingegangen.",
+      "neu": "Ich hab noch nie Schluss gemacht und war am selben Abend wieder zusammen.",
+      "grund": "Satz ergibt so keinen Sinn („mit einem Ex Schluss gemacht\")."
+    },
+    {
+      "id": "n280",
+      "text": "Ich hab noch nie Sex an einem Ort gehabt, an dem man hätte erwischt werden können.",
+      "neu": "Ich bin noch nie beim Sex erwischt worden.",
+      "grund": "Überschneidet sich mit n289 (Sex im Freien); „erwischt worden\" ist die stärkere, eigene Idee."
+    },
+    {
+      "id": "n283",
+      "text": "Ich hab noch nie ein freizügiges Foto verschickt.",
+      "neu": "Ich hab noch nie ein Nacktfoto verschickt.",
+      "grund": "„freizügig\" ist zu weich für derb."
+    },
+    {
+      "id": "n285",
+      "text": "Ich hab noch nie einen erotischen Film zusammen mit jemandem geschaut.",
+      "neu": "Ich hab noch nie mit jemandem zusammen einen Porno geschaut.",
+      "grund": "„erotischer Film\" ist verschämt; derb darf es beim Namen nennen."
+    },
+    {
+      "id": "n296",
+      "text": "Ich hab noch nie auf einer Hochzeit mit jemandem ein Hotelzimmer geteilt, den ich dort erst kennengelernt hatte.",
+      "neu": "Ich hab noch nie auf einer Hochzeit mit einem anderen Gast geschlafen.",
+      "grund": "Hotelzimmer teilen ist verklemmt umschrieben und fiele an einem pikanten Tisch nicht auf."
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie nachts um drei meinen Ex angerufen."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie einen Filmriss gehabt und mir den Abend von anderen erzählen lassen."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie in einer Bar mit falschem Namen und erfundenem Job geflirtet."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie einem Türsteher eine Lügengeschichte aufgetischt, um reinzukommen."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "arbeit"
+      ],
+      "text": "Ich hab noch nie jemanden von der Arbeit geküsst."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie ein Date getroffen, das live komplett anders aussah als auf den Fotos."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie vor einem Date das komplette Instagram der Person durchgescrollt."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie ein Outfit nur angezogen, weil eine bestimmte Person auf der Party sein würde."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie in einer Beziehung heimlich mit jemandem geschrieben, der mir gefiel."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie auf den Partner oder die Partnerin eines Freundes gestanden."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie mit jemandem geflirtet, nur damit er mir einen Drink ausgibt."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich bin noch nie in fremden Klamotten nach Hause gegangen, weil meine eigenen hinüber waren."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie heimlich die Nachrichten auf dem Handy meines Partners gelesen."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie ein Date gehabt, das mehr als zehn Jahre älter war als ich."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie auf einem Festival im Zelt von Leuten geschlafen, die ich erst dort kennengelernt hab."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie einen Kater gehabt, der zwei volle Tage gedauert hat."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich bin noch nie in den Klamotten vom Vorabend zur Arbeit oder in die Uni gegangen."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie absichtlich eine falsche Handynummer rausgegeben."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie rausgefunden, dass mein Date gleichzeitig jemanden aus meinem Freundeskreis datet."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie auf einer Party auf dem Klo rumgemacht."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich bin noch nie auf einer Party eingeschlafen und mit bemaltem Gesicht aufgewacht."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich bin noch nie gegen etwas gelaufen, weil ich jemandem hinterhergeschaut hab."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie vor einem Date in Panik die ganze Wohnung aufgeräumt, nur für den Fall."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie auf „Ich liebe dich\" mit „Danke\" geantwortet."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie einer fremden Person in der Bahn meine Nummer zugesteckt."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie was mit dem Ex von einem Freund oder einer Freundin gehabt."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie betrunken ein Liebeslied für jemanden gesungen, der danebensaß."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie im Gruppenchat über meinen Schwarm geschrieben – und der war in der Gruppe."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie eine Beziehung vor meinen Freunden geheim gehalten."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie beim Feiern meinen Schlüssel verloren und deshalb bei jemandem übernachtet."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie auf einem Date die ganze Zeit an jemand anderen gedacht."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie jemanden hier am Tisch attraktiver gefunden, als ich zugeben würde."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie betrunken meinen Freunden eine tränenreiche Liebeserklärung gemacht."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie jemanden auf einer Dating-App angeschrieben, nur weil mir langweilig war."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie „Wir kennen uns doch!\" gesagt, nur um mit jemandem ins Gespräch zu kommen."
+    },
+    {
+      "haerte": 2,
+      "text": "Ich hab noch nie jemanden ein zweites Mal geküsst, obwohl der erste Kuss furchtbar war."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie beim Sex einen Krampf bekommen und abbrechen müssen."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Sex gehabt, während jemand anderes im selben Zimmer geschlafen hat."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie ein Sexvideo von mir aufgenommen."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie einen Orgasmus vorgetäuscht."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie mit jemandem geschlafen, dessen Namen ich bis heute nicht weiß."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Sex in der Wohnung meiner Eltern gehabt, während die zu Hause waren."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie zusammen mit jemandem ein Sexspielzeug benutzt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie auf einer Party Sex im Bad gehabt, während draußen jemand geklopft hat."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Sex am Arbeitsplatz gehabt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Sex im Zug oder im Flugzeug gehabt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie eine Freundschaft Plus gehabt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie mit jemandem hier am Tisch geschlafen."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie beim Sex Essen benutzt – Sahne, Schokolade, egal was."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Sex gehabt, bei dem ich nebenbei an meine Einkaufsliste gedacht hab."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich bin noch nie mitten in der Nacht zur Tankstelle, weil kein Kondom im Haus war."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie wegen eines gerissenen Kondoms Panik geschoben."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie ein ungefragtes Nacktbild bekommen."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich bin noch nie beim Sex aus dem Bett gefallen."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hatte noch nie so lauten Sex, dass sich die Nachbarn beschwert haben."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie in ein Taxi gekotzt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab mir noch nie in die Hose gemacht, seit ich erwachsen bin."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie beim Sex gefurzt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie eine Unterhose auf links gedreht, weil keine frische mehr da war."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab mir noch nie mit einer Socke den Hintern abgewischt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie einen Popel gegessen, seit ich erwachsen bin."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie ins Waschbecken gepinkelt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich bin noch nie beim Wildpinkeln erwischt worden."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie etwas Stärkeres als Gras probiert."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie bekifft mit meinen Eltern telefoniert und versucht, normal zu klingen."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie einen Space Cake gegessen und die Wirkung komplett unterschätzt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie bekifft Sex gehabt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Sex in einer Umkleidekabine gehabt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Sex im Wasser gehabt – See, Meer oder Pool."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie ein Kondom benutzt, das längst abgelaufen war."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie beim ersten Date Sex gehabt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie jemanden direkt nach dem Sex heimgeschickt, weil ich allein schlafen wollte."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie mit jemandem geschlafen, den ich eigentlich gar nicht attraktiv fand."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie meine Sexpartner durchgezählt und mich über die Zahl erschrocken."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie über eine App ein Treffen ausgemacht, bei dem klar war: nur Sex."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie mit jemandem geschlafen, der in einer Beziehung war."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie jemanden betrogen."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Dirty Talk ausprobiert, der komplett danebenging."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie beim Sex zwischendurch aufs Handy geschaut."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Sex mit Socken an gehabt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich bin noch nie morgens neben jemandem aufgewacht und hab gedacht: „Oh nein.\""
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend"
+      ],
+      "text": "Ich hab noch nie meine Mitbewohner beim Sex gehört und morgens so getan, als wäre nichts."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie mit jemandem geschlafen, nur um mich an meinem Ex zu rächen."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie aus Versehen Pornos auf einem fremden Handy oder Laptop entdeckt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie jemandem hier am Tisch ein Nacktfoto geschickt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich bin noch nie beim Selbstbefriedigen erwischt worden."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie jemanden geküsst, der kurz vorher gekotzt hatte."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie jemandem beim Kotzen die Haare gehalten und dabei selbst mitgekotzt."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie bei jemandem ein Sexspielzeug gefunden, das eigentlich gut versteckt war."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hatte noch nie Sex, der kürzer war als diese Runde."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Sexting mit jemandem gemacht, den ich nie getroffen hab."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie ein Kondom fallen lassen, während alle zugeschaut haben."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab mich noch nie morgens aus der Wohnung eines One-Night-Stands geschlichen, bevor er oder sie wach war."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie am selben Tag mit zwei verschiedenen Leuten geschlafen."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie auf einem Festival tagelang nicht geduscht."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie Sex auf dem Sofa eines Freundes gehabt, ohne dass er es weiß."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie die Zahnbürste von jemandem benutzt, den ich kaum kannte."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie mit jemandem einen Joint geraucht, den ich erst seit fünf Minuten kannte."
+    },
+    {
+      "haerte": 3,
+      "text": "Ich hab noch nie schnell Nacktfotos gelöscht, bevor jemand mein Handy in die Hand bekam."
+    }
+  ]
+}
