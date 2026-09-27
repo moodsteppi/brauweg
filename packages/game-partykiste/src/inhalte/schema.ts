@@ -14,10 +14,16 @@
  *
  * Was der Pruefer ueber die Form hinaus festhaelt, und warum:
  *
- *   - Die Kennungen laufen LUECKENLOS in Katalogreihenfolge (q001, q002, …).
- *     Die Ziehung haengt an der Reihenfolge (`zufall.ts`, `filter.ts`), und
- *     abgelegte Rundenprotokolle zeigen auf die Kennung. Wer umsortiert, eine
- *     Kennung auslaesst oder einen Eintrag loescht, faellt hier auf — nicht
+ *   - Die Kennungen steigen streng in Katalogreihenfolge (q001, q002, …), und
+ *     jede Nummer bis zur hoechsten steht entweder als Eintrag da oder in der
+ *     Liste `entfernt` im Kopf — nie in beiden. Die Ziehung haengt an der
+ *     Reihenfolge (`zufall.ts`, `filter.ts`), und abgelegte Rundenprotokolle
+ *     zeigen auf die Kennung. Bis zum 27.09.2026 hiess das "lueckenlos"; seit
+ *     der Pruefung nach docs/PARTYKISTE-INHALTE.md werden schlechte Eintraege
+ *     GELOESCHT, und ihre Kennung wandert nach `entfernt`. So bleibt die
+ *     Kennung verbraucht: Wer sie neu vergibt (ein neuer Eintrag mit einer
+ *     gestrichenen Nummer zeigte in einer alten Partie auf einen fremden Text),
+ *     wer umsortiert oder still eine Zeile loescht, faellt hier auf — nicht
  *     erst, wenn eine alte Partie auf den falschen Text zeigt.
  *   - Kein Text kommt zweimal vor (normalisiert: Gross/klein, Satzzeichen
  *     und Leerraum egal). Bei 2.000 Eintraegen schreibt man sonst denselben
@@ -156,9 +162,69 @@ export function vergleichsText(katalog: KatalogName, eintrag: unknown): string {
   return normalisiere(ARTEN[katalog].vergleich(eintrag as Roh));
 }
 
-/** Die Kennung an Stelle `index` (0-basiert): q001, q002, … */
+/** Die Kennung mit der laufenden Nummer `index + 1`: q001, q002, … */
 export function kennungAn(katalog: KatalogName, index: number): string {
-  return ARTEN[katalog].praefix + String(index + 1).padStart(3, '0');
+  return kennung(ARTEN[katalog].praefix, index + 1);
+}
+
+function kennung(praefix: string, nummer: number): string {
+  return praefix + String(nummer).padStart(3, '0');
+}
+
+/** Die laufende Nummer einer Kennung (n017 -> 17), oder null, wenn sie nicht die Form hat. */
+function nummerVon(praefix: string, id: unknown): number | null {
+  if (typeof id !== 'string' || !id.startsWith(praefix)) return null;
+  const rest = id.slice(praefix.length);
+  if (!/^\d+$/.test(rest)) return null;
+  const n = Number(rest);
+  return n >= 1 && kennung(praefix, n) === id ? n : null;
+}
+
+/**
+ * Die Kennungsregel fuer jeden Katalog — auch die TS-Kataloge ohne JSON
+ * (Kategorien, Mehrheit, 10 Sekunden, Regel-Karten) pruefen damit in ihren
+ * Tests:
+ *
+ *   - jede Kennung hat die Form Praefix + mindestens dreistellige Nummer,
+ *   - die Nummern steigen in Katalogreihenfolge streng (nichts umsortiert,
+ *     neue Eintraege nur hinten),
+ *   - jede Nummer von 1 bis zur hoechsten steht als Eintrag da ODER in
+ *     `entfernt` (kein stilles Loeschen),
+ *   - keine Kennung steht in beiden (keine Wiederverwendung), `entfernt` ist
+ *     aufsteigend und ohne Doppel.
+ *
+ * Gibt die Fehler zurueck, leer wenn alles stimmt. Wirft nie.
+ */
+export function pruefeKennungen(praefix: string, ids: readonly unknown[], entfernt: readonly unknown[] = []): string[] {
+  const fehler: string[] = [];
+  const da = new Set<number>();
+  let vorige = 0;
+  ids.forEach((id, stelle) => {
+    const n = nummerVon(praefix, id);
+    if (n === null) return void fehler.push(`Stelle ${stelle + 1}: Kennung ${JSON.stringify(id)} hat nicht die Form ${praefix}001`);
+    if (n <= vorige) fehler.push(`${String(id)}: steht hinter ${kennung(praefix, vorige)} — Kennungen steigen in Katalogreihenfolge, neue Eintraege nur hinten`);
+    else vorige = n;
+    if (da.has(n)) fehler.push(`${String(id)}: Kennung doppelt`);
+    da.add(n);
+  });
+  const weg = new Set<number>();
+  let vorigeWeg = 0;
+  for (const id of entfernt) {
+    const n = nummerVon(praefix, id);
+    if (n === null) {
+      fehler.push(`entfernt: ${JSON.stringify(id)} hat nicht die Form ${praefix}001`);
+      continue;
+    }
+    if (n <= vorigeWeg) fehler.push(`entfernt: ${String(id)} steht nicht aufsteigend oder doppelt`);
+    vorigeWeg = Math.max(vorigeWeg, n);
+    if (da.has(n)) fehler.push(`${String(id)}: steht in "entfernt" und wieder als Eintrag — eine gestrichene Kennung wird nie neu vergeben`);
+    weg.add(n);
+  }
+  const hoechste = Math.max(0, ...da, ...weg);
+  for (let n = 1; n <= hoechste; n++) {
+    if (!da.has(n) && !weg.has(n)) fehler.push(`${kennung(praefix, n)} fehlt — gestrichen? Dann gehoert die Kennung nach "entfernt"`);
+  }
+  return fehler;
 }
 
 function istObjekt(x: unknown): x is Roh {
@@ -201,17 +267,18 @@ export function pruefeKatalog(katalog: KatalogName, roh: unknown): string[] {
   if (typeof roh.grenze !== 'string' || roh.grenze.trim() === '') fehler.push('"grenze" fehlt — die Inhaltsgrenze steht in jeder Datei');
   if (!Array.isArray(roh.eintraege)) return [...fehler, '"eintraege" ist keine Liste'];
   if (roh.eintraege.length === 0) fehler.push('"eintraege" ist leer');
+  const entfernt = roh.entfernt ?? [];
+  if (!Array.isArray(entfernt)) fehler.push('"entfernt" ist keine Liste (oder fehlt)');
+  else fehler.push(...pruefeKennungen(def.praefix, roh.eintraege.map((e: unknown) => (istObjekt(e) ? e.id : undefined)), entfernt));
 
   const gesehen = new Map<string, string>();
   roh.eintraege.forEach((e: unknown, index: number) => {
-    const soll = kennungAn(katalog, index);
     if (!istObjekt(e)) {
-      fehler.push(`Stelle ${index + 1} (${soll}): kein Objekt`);
+      fehler.push(`Stelle ${index + 1}: kein Objekt`);
       return;
     }
     const wo = typeof e.id === 'string' ? e.id : `Stelle ${index + 1}`;
     const f: string[] = [];
-    if (e.id !== soll) f.push(`Kennung muss ${soll} sein (lueckenlos in Katalogreihenfolge), ist ${JSON.stringify(e.id)}`);
     for (const k of Object.keys(e)) if (!METADATEN.has(k) && !(k in def.felder)) f.push(`unbekanntes Feld ${JSON.stringify(k)}`);
     for (const [feld, pruefer] of Object.entries(def.felder)) {
       if (!(feld in e)) f.push(`${feld} fehlt`);

@@ -1,0 +1,1146 @@
+{
+  "katalog": "zehnsekunden",
+  "geprueft": 62,
+  "raus": [
+    {
+      "id": "z008",
+      "text": "Dinge, die man im Bad findet",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "weihnachten",
+        "arbeit"
+      ],
+      "grund": "Zu leicht: Zahnbürste, Handtuch, Seife — im Schlaf."
+    },
+    {
+      "id": "z011",
+      "text": "Dinge auf einem Schreibtisch",
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "studenten"
+      ],
+      "grund": "Zu leicht: Stift, Papier, Laptop."
+    },
+    {
+      "id": "z016",
+      "text": "Dinge, die man in eine Tasche packt",
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "studenten",
+        "wg-abend"
+      ],
+      "grund": "Zu leicht und zu offen — jedes Ding passt in eine Tasche."
+    },
+    {
+      "id": "z018",
+      "text": "Dinge, die man im Winter anzieht",
+      "haerte": 1,
+      "paket": [
+        "weihnachten",
+        "arbeit",
+        "wg-abend"
+      ],
+      "grund": "Zu leicht: Mütze, Schal, Handschuhe."
+    },
+    {
+      "id": "z019",
+      "text": "Serien auf Streamingdiensten",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "grund": "Zu leicht für 18- bis 35-Jährige."
+    },
+    {
+      "id": "z022",
+      "text": "Social-Media-Apps",
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "arbeit",
+        "wg-abend"
+      ],
+      "grund": "Zu leicht: Instagram, TikTok, Snapchat."
+    },
+    {
+      "id": "z027",
+      "text": "Fast-Food-Ketten",
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "wg-abend",
+        "jga"
+      ],
+      "grund": "Zu leicht: McDonald's, Burger King, KFC."
+    },
+    {
+      "id": "z031",
+      "text": "Dinge, die man im Kühlschrank findet",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "arbeit",
+        "studenten"
+      ],
+      "grund": "Zu leicht: Milch, Butter, Käse."
+    },
+    {
+      "id": "z033",
+      "text": "Dinge, die rund sind",
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "wg-abend",
+        "weihnachten"
+      ],
+      "grund": "Zu leicht: Ball, Rad, Uhr."
+    },
+    {
+      "id": "z044",
+      "text": "Emojis",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "grund": "Zu leicht — drei Emojis nennt jeder ohne Nachdenken."
+    },
+    {
+      "id": "z045",
+      "text": "Dinge, die man verschenken kann",
+      "haerte": 1,
+      "paket": [
+        "weihnachten",
+        "arbeit",
+        "jga"
+      ],
+      "grund": "Zu offen, jedes Ding zählt — kein Spiel."
+    },
+    {
+      "id": "z048",
+      "text": "Dinge, die Strom brauchen",
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "weihnachten",
+        "studenten"
+      ],
+      "grund": "Zu leicht: Handy, Lampe, Fernseher."
+    },
+    {
+      "id": "z050",
+      "text": "Spitznamen für die beste Freundin",
+      "haerte": 1,
+      "paket": [
+        "jga",
+        "studenten",
+        "weihnachten"
+      ],
+      "grund": "Ergibt keine Aufgabe: Spitznamen der eigenen besten Freundin kennt jeder nur einen, allgemeine gibt es kaum."
+    },
+    {
+      "id": "z059",
+      "text": "Schimpfwörter",
+      "haerte": 3,
+      "paket": [
+        "jga",
+        "wg-abend",
+        "studenten"
+      ],
+      "grund": "Zu leicht — drei Schimpfwörter in zehn Sekunden schafft jeder; derb ist daran nichts Besonderes."
+    }
+  ],
+  "umstufen": [
+    {
+      "id": "z053",
+      "text": "Dinge, die man nachts um drei im Kühlschrank sucht",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nächtlicher Kühlschrank ist harmlos."
+    },
+    {
+      "id": "z057",
+      "text": "Dinge, die in einer WG-Küche stehen bleiben",
+      "von": 2,
+      "nach": 1,
+      "grund": "WG-Küche ist harmlos."
+    },
+    {
+      "id": "z062",
+      "text": "Gründe, sich nie wieder zu melden",
+      "von": 3,
+      "nach": 2,
+      "grund": "Nichts daran ist derb — an einem pikanten Tisch völlig unauffällig."
+    }
+  ],
+  "umschreiben": [
+    {
+      "id": "z001",
+      "text": "Automarken",
+      "neu": "Automarken aus Italien",
+      "grund": "Drei Automarken sind geschenkt; aus Italien (Fiat, Ferrari, Lamborghini …) braucht es einen Moment."
+    },
+    {
+      "id": "z004",
+      "text": "Disney-Figuren",
+      "neu": "Disney-Bösewichte",
+      "grund": "Drei Disney-Figuren sind geschenkt; Bösewichte (Scar, Ursula, Jafar …) sind die richtige Schwierigkeit."
+    },
+    {
+      "id": "z017",
+      "text": "Tiere, die fliegen können",
+      "neu": "Tiere, die fliegen können, aber keine Vögel sind",
+      "grund": "Mit Vögeln zu leicht; ohne sie (Fledermaus, Biene, Libelle) knifflig, aber machbar."
+    },
+    {
+      "id": "z029",
+      "text": "Sänger oder Sängerinnen",
+      "neu": "Sängerinnen oder Sänger, die schon gestorben sind",
+      "grund": "Drei Sänger sind geschenkt; mit der Einschränkung muss man kurz nachdenken."
+    },
+    {
+      "id": "z032",
+      "text": "Urlaubsziele",
+      "neu": "Urlaubsziele in Asien",
+      "grund": "Drei Urlaubsziele sind geschenkt; in Asien braucht es einen Moment."
+    },
+    {
+      "id": "z040",
+      "text": "Superhelden",
+      "neu": "Superhelden ohne Superkräfte",
+      "grund": "Drei Superhelden sind geschenkt; ohne Kräfte (Batman, Iron Man, Hawkeye) wird es ein Spiel."
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man im Flugzeug nicht darf"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "arbeit",
+        "wg-abend"
+      ],
+      "text": "Hauptstädte in Südamerika"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "weihnachten",
+        "arbeit"
+      ],
+      "text": "Filme mit Tom Hanks"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "arbeit",
+        "weihnachten"
+      ],
+      "text": "Tiere mit Streifen"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "weihnachten",
+        "arbeit"
+      ],
+      "text": "Gemüse, das unter der Erde wächst"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "arbeit",
+        "wg-abend"
+      ],
+      "text": "Wörter, die mit Q anfangen"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "arbeit",
+        "jga"
+      ],
+      "text": "Länder mit nur vier Buchstaben"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "arbeit",
+        "jga"
+      ],
+      "text": "Sportarten mit Schläger"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "weihnachten",
+        "arbeit",
+        "wg-abend"
+      ],
+      "text": "Dinge, die man nur einmal im Jahr benutzt"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "weihnachten",
+        "arbeit",
+        "jga"
+      ],
+      "text": "Instrumente mit Saiten"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Figuren aus den Simpsons"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "jga",
+        "weihnachten"
+      ],
+      "text": "Berühmte Bauwerke"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "weihnachten"
+      ],
+      "text": "Tiere im Wasser, die keine Fische sind"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "studenten",
+        "jga"
+      ],
+      "text": "Marken mit einem Tier im Logo"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "jga",
+        "weihnachten",
+        "studenten"
+      ],
+      "text": "Städte in Italien"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Cocktails mit Rum"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Biersorten, die kein Pils sind"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schnäpse, die man nur auf Partys bestellt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Getränke, die man mit Cola mischt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ausreden, warum man noch nicht nach Hause will"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Leute, denen man betrunken schreibt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Green Flags beim ersten Date"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Dinge, die man auf einer Hausparty kaputt macht"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Sätze, die man dem Ex nie schreiben sollte"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ausreden, um ein Date früher zu verlassen"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man beim ersten Date bestellt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Lieder, bei denen man betrunken mitgrölt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Anzeichen, dass jemand mit dir flirtet"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Ausreden, um nicht zur Hochzeit vom Ex zu gehen"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Fragen, die die beste Freundin nach dem Date stellt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man vor einem Date im Bad erledigt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man im Taxi nach Hause macht"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "jga"
+      ],
+      "text": "Dinge, die man auf einem JGA tragen muss"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Promi-Paare, die noch zusammen sind"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Stellen für ein heimliches Tattoo"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die Paare auf Instagram posten"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man tut, wenn der Schwarm den Raum betritt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die im Urlaub mit Freunden schiefgehen"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man betrunken für eine gute Idee hält"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Hausmittel gegen einen Kater"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man auf Mallorca erlebt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man im Club verliert"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "jga",
+        "wg-abend",
+        "weihnachten"
+      ],
+      "text": "Leute, die man auf jeder Hochzeit trifft"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Anmachsprüche für den Supermarkt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man nach drei Jahren Beziehung nicht mehr macht"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man vom Ex behalten hat"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Dinge, die man im Inkognito-Modus sucht"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Gründe, dem Ex doch zu schreiben"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Komplimente, die falsch ankommen"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man nach dem ersten Kuss sagt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ausreden für einen Knutschfleck"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "jga"
+      ],
+      "text": "Dinge, die man auf einer Hochzeit heimlich tut"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Emojis, die man zum Flirten schickt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Orte, an denen man den Ex nicht treffen will"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Fragen, die man bei einem Blind Date stellt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Getränke an einer Strandbar"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man am FKK-Strand sieht"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Dinge, die man um vier Uhr morgens isst"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wörter für Sperma"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wörter für Hoden"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wörter für Kondom"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wörter für Sex, die deine Oma sagen würde"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Geschlechtskrankheiten"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die beim Sex Geräusche machen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ausreden, um keinen Sex zu haben"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die im Porno unrealistisch sind"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Berufe, die im Porno ständig vorkommen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Pornokategorien"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Emojis mit versauter Bedeutung"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Obst und Gemüse, das versaut aussieht"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Körperteile, die man ablecken kann"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man nicht in seiner Unterhose finden will"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Ekelhafte Dinge auf einem Club-Klo"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ausreden für Flecken auf dem Laken"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Kondom-Geschmacksrichtungen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man mit einem Kondom machen kann, außer Sex"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Gründe, warum man kotzen musste"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ekelhafte Angewohnheiten"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Stellen, an denen ungewollt Haare wachsen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Körperstellen, die schnell stinken"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Körperflüssigkeiten"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die ein Proktologe sieht"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Geräusche, die man auf dem Klo hört"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man mit Gleitgel machen kann"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Haushaltsgegenstände, die man im Bett zweckentfremden kann"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man in einem Stundenhotel findet"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die bei einem Dreier schiefgehen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die beim Sex im Auto schiefgehen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "arbeit"
+      ],
+      "text": "Orte im Büro für einen Quickie"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man nicht im Handy der Eltern finden will"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ausreden, wenn die Eltern reinplatzen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man lieber nicht auf dem Sofa der Eltern tut"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Ausreden, wenn die Mitbewohner einen gehört haben"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ausreden, warum das Bett quietscht"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die nach einer Party im Bett liegen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Gründe, warum der Sex nur zwei Minuten gedauert hat"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man nie nüchtern tun würde"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man nach einem One-Night-Stand vergisst"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Nachrichten, die man nach einem One-Night-Stand bekommt"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Gründe, im Club-Klo zu verschwinden"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man lieber nicht beim Frauenarzt sagt"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Gerüche am Morgen nach einer Party"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man lieber nicht im Whirlpool findet"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die auf einer Swingerparty auf dem Buffet stehen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Gründe, nackt vor der Tür zu stehen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die beim Pinkeln schiefgehen"
+    }
+  ]
+}

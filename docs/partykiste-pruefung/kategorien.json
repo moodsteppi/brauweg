@@ -1,0 +1,732 @@
+{
+  "katalog": "kategorien",
+  "geprueft": 82,
+  "raus": [
+    {
+      "id": "k012",
+      "text": "Länder in Afrika",
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "arbeit"
+      ],
+      "grund": "Die meisten kennen zehn bis fünfzehn afrikanische Länder — nach einer Runde um einen vollen Tisch tot."
+    },
+    {
+      "id": "k037",
+      "text": "Automodelle",
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "studenten"
+      ],
+      "grund": "Braucht Autowissen und überschneidet sich mit Automarken (k001)."
+    },
+    {
+      "id": "k044",
+      "text": "Plätzchensorten",
+      "haerte": 1,
+      "paket": [
+        "weihnachten"
+      ],
+      "grund": "Nach zehn Sorten erschöpft."
+    },
+    {
+      "id": "k050",
+      "text": "Hochzeitsbräuche",
+      "haerte": 1,
+      "paket": [
+        "jga"
+      ],
+      "grund": "Nach zehn Nennungen erschöpft."
+    },
+    {
+      "id": "k055",
+      "text": "Sternzeichen und Horoskop-Wörter",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "grund": "Zwölf Sternzeichen — bei zwölf Leuten nach einer Runde tot."
+    },
+    {
+      "id": "k058",
+      "text": "Figuren aus Weihnachtsfilmen",
+      "haerte": 1,
+      "paket": [
+        "weihnachten"
+      ],
+      "grund": "Nach gut zehn Figuren erschöpft (Kevin, Grinch, Scrooge …)."
+    },
+    {
+      "id": "k062",
+      "text": "Süßigkeiten aus der Kindheit",
+      "haerte": 1,
+      "paket": [
+        "weihnachten",
+        "wg-abend"
+      ],
+      "grund": "Dublette dem Sinn nach zu Süßigkeiten (k023)."
+    },
+    {
+      "id": "k064",
+      "text": "Wörter, die sich auf „Haus\" reimen",
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "wg-abend",
+        "arbeit",
+        "weihnachten"
+      ],
+      "grund": "Nach etwa zehn Reimen (Maus, Laus, raus …) erschöpft."
+    }
+  ],
+  "umstufen": [],
+  "umschreiben": [
+    {
+      "id": "k077",
+      "text": "Schimpfwörter",
+      "neu": "Schimpfwörter, die man im Auto brüllt",
+      "grund": "Bleibt derb, lenkt aber weg von Beleidigungen gegen Gruppen, die bei zwölf Leuten reihum sonst sicher fallen."
+    },
+    {
+      "id": "k081",
+      "text": "Körperteile, die man besser nicht fotografiert",
+      "neu": "Wörter für Penis",
+      "grund": "Alte Fassung ist nach fünf Nennungen erschöpft; der Slang gibt Dutzende her und ist richtig derb."
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "weihnachten",
+        "studenten"
+      ],
+      "text": "Eissorten"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "wg-abend",
+        "jga"
+      ],
+      "text": "YouTuber und Influencer"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "arbeit"
+      ],
+      "text": "Dinge, die stinken"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man auf ein Festival mitnimmt"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "weihnachten",
+        "wg-abend"
+      ],
+      "text": "Berühmte Deutsche"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "wg-abend",
+        "weihnachten"
+      ],
+      "text": "Dinge mit Rädern"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "weihnachten",
+        "wg-abend"
+      ],
+      "text": "Marken aus dem Supermarkt"
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "jga",
+        "wg-abend"
+      ],
+      "text": "Dinge in einem Hotelzimmer"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Cocktails"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schnäpse und Liköre"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Biermarken"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Trinkspiele"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wörter für betrunken"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ballermann-Hits und Partyschlager"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Dinge, die man betrunken online bestellt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Gründe für eine Trennung"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Red Flags beim Date"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man nach dem Feiern im Handy findet"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man dem Ex gern sagen würde"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Sätze aus Dating-Profilen"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man beim ersten Date nie sagen sollte"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Orte, an denen man jemanden kennenlernt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Lieder zum Knutschen"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Gründe, warum die Party eskaliert ist"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ausreden, warum man nicht ans Handy geht"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Dinge, die man heimlich googelt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man im Urlaub macht, aber zu Hause nie"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Typen, die man im Club trifft"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Gründe für eine Nachricht um drei Uhr nachts"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man am Morgen danach sucht"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Spitznamen für den Ex"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man beim Flirten macht"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Peinliche Tattoo-Motive"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "jga"
+      ],
+      "text": "Programmpunkte auf einem Junggesellenabschied"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "arbeit"
+      ],
+      "text": "Dinge, die man in der Sauna nicht tun sollte"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "jga",
+        "wg-abend",
+        "weihnachten"
+      ],
+      "text": "Dinge, die man vor den Eltern des Partners nicht sagt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Promi-Paare, die sich getrennt haben"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Gründe für einen Walk of Shame"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man für einen Schwarm tun würde"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Dinge, die man nach Mitternacht isst"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Lügen beim ersten Date"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Dinge, die man heimlich macht, wenn man allein zu Hause ist"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge in der Nachttischschublade"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die in einer Beziehung nerven"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ausreden, um ein Date abzusagen"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "weihnachten"
+      ],
+      "text": "Filme, die man nicht mit den Eltern schauen will"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Arten, jemandem einen Korb zu geben"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man betrunken sagt"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dinge, die man mit 18 zum ersten Mal gemacht hat"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wörter für Brüste"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wörter für Vagina"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wörter für den Hintern"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wörter für Selbstbefriedigung"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wörter für Kotzen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Wörter für Furzen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Sexstellungen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man im Sexshop kaufen kann"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Fetische"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ausreden nach schlechtem Sex"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Sexspielzeuge, die es noch nicht gibt"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Dinge, die man bekifft tut"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Ekelhafte Dinge in einer WG"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Pornoversionen von Filmtiteln"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Gründe für einen One-Night-Stand"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man nackt machen kann"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man im Swingerclub sieht"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Unpassende Orte für ein Nacktfoto"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man mit Schlagsahne im Bett machen kann"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man beim Sex heimlich denkt"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Sätze für Dirty Talk"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Erfundene Pornonamen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Dinge, die man nach dem Sex tut"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Versaute Anmachsprüche"
+    }
+  ]
+}

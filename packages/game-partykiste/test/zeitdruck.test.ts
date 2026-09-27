@@ -42,6 +42,8 @@ import {
   type MinispielId,
   type PartykistePartie,
 } from '../src/index.js';
+import { ZEHN_SEKUNDEN_ENTFERNT } from '../src/inhalte/zehnsekunden.js';
+import { pruefeKennungen } from '../src/inhalte/schema.js';
 
 function partie(minispiele: MinispielId[], sitze = 4, runden = 3, botSitze: number[] = [], saat = 11): PartykistePartie {
   return erzeugePartie({ regeln: { ...DEFAULT_REGELN, minispiele }, saat, sitze, runden, botSitze, gastSitze: [] });
@@ -72,12 +74,15 @@ function spieleMitBots(stand: PartykistePartie, grenze = 20_000): PartykistePart
 const TRINKWORT = /trink|schluck|bier|shot|🍺|🍻|🥂|🥃|🍷|🍸/i;
 const TRINKBEFEHL = /\b(trink|trinkt|trinke|trinkst|schluck|schlucke|schlückchen|shot|shots|prost)\b|🍺|🍻|🥂|🥃|🍷|🍸/i;
 
-test('10 Sekunden: genug Aufgaben, lueckenlos nummeriert, jede mit Haerte und Paket', () => {
+test('10 Sekunden: genug Aufgaben je Stufe, Kennungen ohne Wiederverwendung, jede mit Haerte und Paket', () => {
   assert.ok(ZEHN_SEKUNDEN.length >= 60, `${ZEHN_SEKUNDEN.length} Aufgaben`);
-  assert.deepEqual(
-    ZEHN_SEKUNDEN.map((z) => z.id),
-    Array.from({ length: ZEHN_SEKUNDEN.length }, (_, i) => `z${String(i + 1).padStart(3, '0')}`),
-  );
+  /* Seit dem 27.09.2026 duerfen Luecken sein — nur ueber ZEHN_SEKUNDEN_ENTFERNT. */
+  assert.deepEqual(pruefeKennungen('z', ZEHN_SEKUNDEN.map((z) => z.id), ZEHN_SEKUNDEN_ENTFERNT), []);
+  /* Jede Stufe traegt allein einen Abend (docs/PARTYKISTE-INHALTE.md: 50 je Stufe). */
+  for (const h of [1, 2, 3]) {
+    const zahl = ZEHN_SEKUNDEN.filter((z) => z.haerte === h).length;
+    assert.ok(zahl >= 50, `Stufe ${h}: nur ${zahl} Aufgaben`);
+  }
   for (const z of ZEHN_SEKUNDEN) {
     assert.ok(z.haerte === 1 || z.haerte === 2 || z.haerte === 3, `${z.id}: Haerte fehlt`);
     assert.ok(z.paket && z.paket.length > 0, `${z.id}: kein Paket`);

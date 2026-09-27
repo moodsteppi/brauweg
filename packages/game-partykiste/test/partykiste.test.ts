@@ -15,6 +15,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { ALTE_KENNUNGEN } from './altbestand/index.js';
 
@@ -679,16 +680,31 @@ test('ohne erlaubten Vorrat spielt ein anderes Minispiel — deterministisch, un
   }
 });
 
-test('im Altbestand sind die Kiffer-Sprueche und nur sie pikant', () => {
+test('im Altbestand traegt nur eine Haerte, was die Kiffer-Sprueche sind oder die Pruefung umgestuft hat', () => {
   /* Nur der Altbestand vom 22.09.2026: Neue Eintraege tragen ihre Haerte
-     selbst (inhalte-json.test.ts verlangt sie), die alten ausser den
-     Kiffer-Spruechen gar keine. */
+     selbst (inhalte-json.test.ts verlangt sie). Die alten trugen am
+     22.09.2026 ausser den Kiffer-Spruechen (pikant) gar keine. Seit der
+     Pruefung vom 27.09.2026 (docs/PARTYKISTE-INHALTE.md) gilt fuer jeden
+     alten Eintrag, der dort unter "umstufen" steht, dessen neue Stufe — und
+     fuer alle anderen weiter die alte. Eine Haerte, die sich ohne
+     Pruefprotokoll aendert, faellt hier auf. */
+  const umgestuft = new Map<string, number>();
+  for (const name of ['quiz', 'imposter', 'identitaeten', 'niemals', 'wereher', 'schaetzen', 'entweder', 'wahrheitpflicht']) {
+    const protokoll = JSON.parse(
+      readFileSync(new URL(`../../../../docs/partykiste-pruefung/${name}.json`, import.meta.url), 'utf8'),
+    ) as { umstufen: { id: string; nach: number }[] };
+    for (const u of protokoll.umstufen) umgestuft.set(u.id, u.nach);
+  }
   for (const katalog of Object.values(KATALOGE)) {
     for (const i of katalog) {
       if (!ALTE_KENNUNGEN.has(i.id)) continue;
-      assert.equal(i.haerte ?? 1, KIFFEN.has(i.id) ? 2 : 1, `${i.id} hat die falsche Haerte`);
+      const soll = umgestuft.get(i.id) ?? (KIFFEN.has(i.id) ? 2 : 1);
+      assert.equal(i.haerte ?? 1, soll, `${i.id} hat die falsche Haerte`);
     }
   }
+  /* Drogen gehoeren seit dem 27.09.2026 auf "derb" — alle Kiffer-Sprueche, die noch da sind. */
+  const kiffen = [...NIEMALS_SPRUECHE, ...WER_EHER_SPRUECHE].filter((i) => KIFFEN.has(i.id));
+  assert.deepEqual(kiffen.filter((i) => i.haerte !== 3).map((i) => i.id), []);
 });
 
 test('der Filter haelt die Haerte als Obergrenze', () => {
@@ -781,15 +797,16 @@ test('der Filter wirft nie, auch nicht bei Unsinn im Regelsatz', () => {
 });
 
 test('mit Paket haelt die Runde fest, dass die Auswahl nachgeben musste', () => {
-  /* Ein harmloser JGA-Tisch findet unter den Quizfragen weniger als
-     MINDESTMENGE eigene (die JGA-Fragen sind meist pikant) — er spielt also
-     auch Allgemeingut, und die Runde sagt das, statt es zu verschweigen. Bis
-     zum Vorrat vom 22.09.2026 trug gar kein Eintrag ein Paket; gezaehlt wird
-     darum am Katalog. */
-  const regeln: PartykisteRegeln = { ...DEFAULT_REGELN, minispiele: ['quiz'], paket: 'jga' };
+  /* Ein harmloser Weihnachtstisch findet unter den Schaetzfragen weniger als
+     MINDESTMENGE eigene — er spielt also auch Allgemeingut, und die Runde
+     sagt das, statt es zu verschweigen. Bis zum Vorrat vom 22.09.2026 trug
+     gar kein Eintrag ein Paket; gezaehlt wird darum am Katalog. (Bis zum
+     27.09.2026 stand hier das Quiz am JGA-Tisch; seit der Pruefung sind dort
+     genug JGA-Fragen harmlos.) */
+  const regeln: PartykisteRegeln = { ...DEFAULT_REGELN, minispiele: ['schaetzen'], paket: 'weihnachten' };
   const runde = baueRunde(regeln, 'saat', 6, 0, []);
-  const passend = QUIZ_FRAGEN.filter((f) => (f.haerte ?? 1) === 1 && f.paket?.includes('jga')).length;
-  assert.ok(passend < MINDESTMENGE, 'die Probe braucht ein Paket mit zu wenig harmlosen Quizfragen');
+  const passend = SCHAETZ_FRAGEN.filter((f) => (f.haerte ?? 1) === 1 && f.paket?.includes('weihnachten')).length;
+  assert.ok(passend < MINDESTMENGE, 'die Probe braucht ein Paket mit zu wenig harmlosen Schaetzfragen');
   assert.deepEqual(runde.inhaltsRueckfall, { gewollt: 'paket', genutzt: 'paketUndAllgemein', passend });
   assert.equal(baueRunde(DEFAULT_REGELN, 'saat', 6, 0, []).inhaltsRueckfall, null);
 });

@@ -1,0 +1,811 @@
+{
+  "katalog": "identitaeten",
+  "geprueft": 250,
+  "raus": [
+    {
+      "id": "p003",
+      "text": "Friedrich Schiller",
+      "grund": "Reines Bildungswissen (Robins Beispiel) — kaum jemand kann über Schiller mehr als „Dichter\" fragen."
+    },
+    {
+      "id": "p006",
+      "text": "Johann Sebastian Bach",
+      "grund": "Reines Bildungswissen (Robins Beispiel)."
+    },
+    {
+      "id": "p008",
+      "text": "Michelangelo",
+      "grund": "Bildungswissen und zu nah an Leonardo da Vinci (Renaissance, Italiener, Maler) — beide in einer Runde sind kaum auseinanderzuhalten."
+    },
+    {
+      "id": "p017",
+      "text": "Otto von Bismarck",
+      "grund": "Schulstoff: Jahreszahlen und Reichsgründung, am Tisch kennt kaum jemand Fragbares."
+    },
+    {
+      "id": "p018",
+      "text": "Konrad Adenauer",
+      "grund": "Schulstoff und für 18- bis 35-Jährige zu weit weg."
+    },
+    {
+      "id": "p019",
+      "text": "Willy Brandt",
+      "grund": "Nur der älteren Generation wirklich bekannt; Schulstoff."
+    },
+    {
+      "id": "p021",
+      "text": "Immanuel Kant",
+      "grund": "Reines Bildungswissen."
+    },
+    {
+      "id": "p022",
+      "text": "Friedrich Nietzsche",
+      "grund": "Reines Bildungswissen."
+    },
+    {
+      "id": "p023",
+      "text": "Wilhelm Tell",
+      "grund": "Figur aus Schillers Drama; mehr als „Apfel und Armbrust\" weiß kaum jemand."
+    },
+    {
+      "id": "p031",
+      "text": "Anne Frank",
+      "grund": "Ein im Holocaust ermordetes Kind als Rate-Identität am Trinktisch — unpassend (Minderjährige, Opfer)."
+    },
+    {
+      "id": "p045",
+      "text": "Uwe Seeler",
+      "grund": "Nur einer Generation bekannt; Unter-35-Jährige kennen den Namen kaum."
+    },
+    {
+      "id": "p048",
+      "text": "Katarina Witt",
+      "grund": "Nur einer Generation bekannt (Eiskunstlauf der 80er)."
+    },
+    {
+      "id": "p054",
+      "text": "Udo Jürgens",
+      "grund": "Vor allem der Elterngeneration bekannt."
+    },
+    {
+      "id": "p067",
+      "text": "Terence Hill",
+      "grund": "Zu ähnlich zu Bud Spencer (Duo, dieselben Filme) — beide in einer Runde führen zu identischen Antworten."
+    },
+    {
+      "id": "p073",
+      "text": "Audrey Hepburn",
+      "grund": "Nur einer Generation bekannt; die meisten am Tisch können keine Frage zu ihr beantworten."
+    },
+    {
+      "id": "p074",
+      "text": "Marlene Dietrich",
+      "grund": "Nur einer Generation bekannt."
+    },
+    {
+      "id": "p107",
+      "text": "Gretel",
+      "grund": "Zu ähnlich zu Hänsel (dieselbe Geschichte, dieselben Antworten bis auf das Geschlecht)."
+    },
+    {
+      "id": "p120",
+      "text": "Daffy Duck",
+      "grund": "Zu ähnlich zu Donald Duck (Zeichentrick-Ente) und deutlich weniger bekannt."
+    },
+    {
+      "id": "p125",
+      "text": "Wilma Feuerstein",
+      "grund": "Zu ähnlich zu Fred Feuerstein und weniger bekannt."
+    },
+    {
+      "id": "p127",
+      "text": "Luigi",
+      "grund": "Zu ähnlich zu Super Mario (Klempner, Italiener, Schnurrbart) — in einer Runde kaum zu trennen."
+    },
+    {
+      "id": "p131",
+      "text": "Master Chief",
+      "grund": "Nur Gamern bekannt (Halo) — Nische."
+    },
+    {
+      "id": "p138",
+      "text": "Flipper",
+      "grund": "Serie der 60er, für 18- bis 35-Jährige zu weit weg."
+    },
+    {
+      "id": "p146",
+      "text": "Alexander von Humboldt",
+      "grund": "Reines Bildungswissen."
+    },
+    {
+      "id": "p154",
+      "text": "Franz Kafka",
+      "grund": "Reines Bildungswissen."
+    },
+    {
+      "id": "p158",
+      "text": "Loriot",
+      "grund": "Vor allem der Elterngeneration bekannt."
+    },
+    {
+      "id": "p188",
+      "text": "Frosty der Schneemann",
+      "grund": "In Deutschland kaum bekannt; neben dem Schneemann Olaf überflüssig."
+    },
+    {
+      "id": "p191",
+      "text": "Clark Griswold",
+      "grund": "Den Namen kennt kaum jemand, selbst wer „Schöne Bescherung\" gesehen hat."
+    },
+    {
+      "id": "p196",
+      "text": "Aristoteles",
+      "grund": "Reines Bildungswissen und zu ähnlich zu Sokrates."
+    },
+    {
+      "id": "p205",
+      "text": "Der Nikolaus",
+      "grund": "Zu ähnlich zum Weihnachtsmann (p109) — am Tisch dieselbe Figur."
+    },
+    {
+      "id": "p210",
+      "text": "Elizabeth Bennet",
+      "grund": "Nische (Stolz und Vorurteil); Mr. Darcy deckt das bekanntere Ende ab."
+    },
+    {
+      "id": "p215",
+      "text": "Peggy Bundy",
+      "grund": "Deutlich weniger bekannt als Al Bundy; allein kaum erratbar."
+    },
+    {
+      "id": "p217",
+      "text": "Mr. Big",
+      "grund": "Nur Sex-and-the-City-Fans bekannt; „Mr. Big\" ist für den Rest kein Name."
+    },
+    {
+      "id": "p223",
+      "text": "Poison Ivy",
+      "grund": "Nischiger als Catwoman und Harley Quinn, die dieselbe Rolle abdecken."
+    },
+    {
+      "id": "p227",
+      "text": "Venus, die Göttin der Liebe",
+      "grund": "Dublette dem Sinn nach zu Aphrodite (p226) — dieselbe Göttin, römisch."
+    },
+    {
+      "id": "p228",
+      "text": "Eros",
+      "grund": "Bildungswissen; die bekannte Liebesfigur ist Amor (neu vorgeschlagen)."
+    },
+    {
+      "id": "p229",
+      "text": "Don Draper",
+      "grund": "Mad Men kennt am Tisch kaum jemand — Nische."
+    },
+    {
+      "id": "p232",
+      "text": "Danny Zuko",
+      "grund": "Grease ist 1978; den Rollennamen kennen Unter-35-Jährige kaum."
+    },
+    {
+      "id": "p235",
+      "text": "Elvira, Herrscherin der Dunkelheit",
+      "grund": "Nur einer Generation bekannt (80er-Horror-Moderatorin)."
+    },
+    {
+      "id": "p236",
+      "text": "Betty Boop",
+      "grund": "Nur einer Generation bekannt (30er-Zeichentrick)."
+    },
+    {
+      "id": "p238",
+      "text": "Captain Kirk",
+      "grund": "Star Trek ist für 18- bis 35-Jährige Nische; und pikant ist daran nichts."
+    },
+    {
+      "id": "p239",
+      "text": "Dr. Frank-N-Furter",
+      "grund": "Rocky Horror Picture Show — Kult, aber Nische."
+    },
+    {
+      "id": "p240",
+      "text": "Holly Golightly",
+      "grund": "Rollenname aus „Frühstück bei Tiffany\" — kennt kaum jemand."
+    },
+    {
+      "id": "p241",
+      "text": "Dr. Derek Shepherd",
+      "grund": "Nur Grey's-Anatomy-Fans bekannt."
+    },
+    {
+      "id": "p246",
+      "text": "Mrs. Robinson",
+      "grund": "Film von 1967; als Figur für Unter-35-Jährige nicht greifbar."
+    },
+    {
+      "id": "p247",
+      "text": "Emmanuelle",
+      "grund": "Nur einer Generation bekannt (70er-Erotikfilm)."
+    },
+    {
+      "id": "p248",
+      "text": "Lady Chatterley",
+      "grund": "Bildungswissen (Roman von 1928) — niemand am Tisch kann Fragen dazu beantworten."
+    },
+    {
+      "id": "p249",
+      "text": "Hank Moody",
+      "grund": "Californication kennt nur ein kleiner Teil des Tisches — Nische."
+    }
+  ],
+  "umstufen": [
+    {
+      "id": "p219",
+      "text": "Edward Cullen",
+      "von": 2,
+      "nach": 1,
+      "grund": "Twilight-Vampir ohne jede Anzüglichkeit — geht an jedem Tisch."
+    },
+    {
+      "id": "p221",
+      "text": "Catwoman",
+      "von": 2,
+      "nach": 1,
+      "grund": "Superheldin, am Tisch mit Kollegen völlig unauffällig."
+    },
+    {
+      "id": "p226",
+      "text": "Aphrodite",
+      "von": 2,
+      "nach": 1,
+      "grund": "Griechische Göttin, an jedem Tisch spielbar."
+    },
+    {
+      "id": "p234",
+      "text": "Morticia Addams",
+      "von": 2,
+      "nach": 1,
+      "grund": "Seit „Wednesday\" wieder bekannt, aber nichts daran ist pikant."
+    },
+    {
+      "id": "p237",
+      "text": "Johnny Bravo",
+      "von": 2,
+      "nach": 1,
+      "grund": "Kinder-Zeichentrick (Cartoon Network) — harmlos."
+    },
+    {
+      "id": "p250",
+      "text": "Gomez Addams",
+      "von": 2,
+      "nach": 1,
+      "grund": "Addams Family ist Familienunterhaltung."
+    }
+  ],
+  "umschreiben": [
+    {
+      "id": "p104",
+      "text": "Die Kleine Meerjungfrau",
+      "neu": "Arielle, die Meerjungfrau",
+      "grund": "Unter dem Namen „Arielle\" kennt sie jeder; „Die Kleine Meerjungfrau\" klingt nach dem Andersen-Märchen."
+    },
+    {
+      "id": "p140",
+      "text": "Babe",
+      "neu": "Schweinchen Babe",
+      "grund": "„Babe\" allein ist mehrdeutig (Kosename) — mit „Schweinchen\" sofort klar."
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 1,
+      "text": "Taylor Swift"
+    },
+    {
+      "haerte": 1,
+      "text": "Beyoncé"
+    },
+    {
+      "haerte": 1,
+      "text": "Rihanna"
+    },
+    {
+      "haerte": 1,
+      "text": "Lady Gaga"
+    },
+    {
+      "haerte": 1,
+      "text": "Ed Sheeran"
+    },
+    {
+      "haerte": 1,
+      "text": "Justin Bieber"
+    },
+    {
+      "haerte": 1,
+      "text": "Billie Eilish"
+    },
+    {
+      "haerte": 1,
+      "text": "Eminem"
+    },
+    {
+      "haerte": 1,
+      "text": "Shakira"
+    },
+    {
+      "haerte": 1,
+      "text": "Harry Styles"
+    },
+    {
+      "haerte": 1,
+      "text": "Cro"
+    },
+    {
+      "haerte": 1,
+      "text": "Apache 207"
+    },
+    {
+      "haerte": 1,
+      "text": "Mark Forster"
+    },
+    {
+      "haerte": 1,
+      "text": "Lena Meyer-Landrut"
+    },
+    {
+      "haerte": 1,
+      "text": "Knossi"
+    },
+    {
+      "haerte": 1,
+      "text": "Gronkh"
+    },
+    {
+      "haerte": 1,
+      "text": "MrBeast"
+    },
+    {
+      "haerte": 1,
+      "text": "Pamela Reif"
+    },
+    {
+      "haerte": 1,
+      "text": "Heidi Klum"
+    },
+    {
+      "haerte": 1,
+      "text": "Stefan Raab"
+    },
+    {
+      "haerte": 1,
+      "text": "Dieter Bohlen"
+    },
+    {
+      "haerte": 1,
+      "text": "Günther Jauch"
+    },
+    {
+      "haerte": 1,
+      "text": "Kim Kardashian"
+    },
+    {
+      "haerte": 1,
+      "text": "Elon Musk"
+    },
+    {
+      "haerte": 1,
+      "text": "Mark Zuckerberg"
+    },
+    {
+      "haerte": 1,
+      "text": "Steve Jobs"
+    },
+    {
+      "haerte": 1,
+      "text": "Bill Gates"
+    },
+    {
+      "haerte": 1,
+      "text": "Angela Merkel"
+    },
+    {
+      "haerte": 1,
+      "text": "Barack Obama"
+    },
+    {
+      "haerte": 1,
+      "text": "Cristiano Ronaldo"
+    },
+    {
+      "haerte": 1,
+      "text": "Lionel Messi"
+    },
+    {
+      "haerte": 1,
+      "text": "Thomas Müller"
+    },
+    {
+      "haerte": 1,
+      "text": "Manuel Neuer"
+    },
+    {
+      "haerte": 1,
+      "text": "Serena Williams"
+    },
+    {
+      "haerte": 1,
+      "text": "Lewis Hamilton"
+    },
+    {
+      "haerte": 1,
+      "text": "Keanu Reeves"
+    },
+    {
+      "haerte": 1,
+      "text": "Dwayne Johnson (The Rock)"
+    },
+    {
+      "haerte": 1,
+      "text": "Jennifer Aniston"
+    },
+    {
+      "haerte": 1,
+      "text": "Zendaya"
+    },
+    {
+      "haerte": 1,
+      "text": "Margot Robbie"
+    },
+    {
+      "haerte": 1,
+      "text": "Ryan Gosling"
+    },
+    {
+      "haerte": 1,
+      "text": "Ein Minion"
+    },
+    {
+      "haerte": 1,
+      "text": "Olaf, der Schneemann aus Die Eiskönigin"
+    },
+    {
+      "haerte": 1,
+      "text": "Simba"
+    },
+    {
+      "haerte": 1,
+      "text": "Nemo"
+    },
+    {
+      "haerte": 1,
+      "text": "Stitch"
+    },
+    {
+      "haerte": 1,
+      "text": "Rapunzel"
+    },
+    {
+      "haerte": 1,
+      "text": "Barbie"
+    },
+    {
+      "haerte": 1,
+      "text": "Gru"
+    },
+    {
+      "haerte": 1,
+      "text": "Thanos"
+    },
+    {
+      "haerte": 1,
+      "text": "Wednesday Addams"
+    },
+    {
+      "haerte": 1,
+      "text": "Jon Snow"
+    },
+    {
+      "haerte": 1,
+      "text": "Daenerys Targaryen"
+    },
+    {
+      "haerte": 1,
+      "text": "Chandler Bing"
+    },
+    {
+      "haerte": 1,
+      "text": "Rachel Green"
+    },
+    {
+      "haerte": 1,
+      "text": "Peppa Wutz"
+    },
+    {
+      "haerte": 1,
+      "text": "Kermit der Frosch"
+    },
+    {
+      "haerte": 1,
+      "text": "Steve aus Minecraft"
+    },
+    {
+      "haerte": 1,
+      "text": "Tarzan"
+    },
+    {
+      "haerte": 1,
+      "text": "Jack aus Titanic"
+    },
+    {
+      "haerte": 1,
+      "text": "Romeo"
+    },
+    {
+      "haerte": 1,
+      "text": "Amor"
+    },
+    {
+      "haerte": 2,
+      "text": "Peter Griffin"
+    },
+    {
+      "haerte": 2,
+      "text": "Eric Cartman"
+    },
+    {
+      "haerte": 2,
+      "text": "Rick Sanchez"
+    },
+    {
+      "haerte": 2,
+      "text": "Alan aus Hangover"
+    },
+    {
+      "haerte": 2,
+      "text": "Tyrion Lannister"
+    },
+    {
+      "haerte": 2,
+      "text": "Walter White"
+    },
+    {
+      "haerte": 2,
+      "text": "Vivian aus Pretty Woman"
+    },
+    {
+      "haerte": 2,
+      "text": "Zeki Müller aus Fack ju Göhte"
+    },
+    {
+      "haerte": 2,
+      "text": "Der Bachelor"
+    },
+    {
+      "haerte": 2,
+      "text": "Dating-Coach"
+    },
+    {
+      "haerte": 2,
+      "text": "Hochzeitscrasher"
+    },
+    {
+      "haerte": 2,
+      "text": "Ballermann-Sänger"
+    },
+    {
+      "haerte": 2,
+      "text": "Flitzer im Fußballstadion"
+    },
+    {
+      "haerte": 2,
+      "text": "FKK-Urlauber"
+    },
+    {
+      "haerte": 2,
+      "text": "Aktmodell"
+    },
+    {
+      "haerte": 2,
+      "text": "Unterwäschemodel"
+    },
+    {
+      "haerte": 2,
+      "text": "Sugar Daddy"
+    },
+    {
+      "haerte": 2,
+      "text": "Playboy-Bunny"
+    },
+    {
+      "haerte": 2,
+      "text": "Erotik-Autorin"
+    },
+    {
+      "haerte": 2,
+      "text": "Der Ex, der nachts um drei schreibt"
+    },
+    {
+      "haerte": 2,
+      "text": "Wiesn-Bedienung"
+    },
+    {
+      "haerte": 2,
+      "text": "Love-Island-Kandidatin"
+    },
+    {
+      "haerte": 2,
+      "text": "Bond-Girl"
+    },
+    {
+      "haerte": 2,
+      "text": "DJ auf Ibiza"
+    },
+    {
+      "haerte": 2,
+      "text": "Paartherapeutin"
+    },
+    {
+      "haerte": 2,
+      "text": "Scheidungsanwalt"
+    },
+    {
+      "haerte": 2,
+      "text": "Privatdetektiv für Fremdgeher"
+    },
+    {
+      "haerte": 2,
+      "text": "Feuerwehrmann aus dem Nacktkalender"
+    },
+    {
+      "haerte": 2,
+      "text": "Skilehrer beim Après-Ski"
+    },
+    {
+      "haerte": 2,
+      "text": "Animateur im Cluburlaub"
+    },
+    {
+      "haerte": 2,
+      "text": "Pool-Boy"
+    },
+    {
+      "haerte": 2,
+      "text": "Frauenarzt"
+    },
+    {
+      "haerte": 2,
+      "text": "Der Mitbewohner, der nie die Badtür abschließt"
+    },
+    {
+      "haerte": 2,
+      "text": "Der betrunkene Trauzeuge",
+      "paket": [
+        "jga"
+      ]
+    },
+    {
+      "haerte": 2,
+      "text": "Die Braut beim Junggesellinnenabschied",
+      "paket": [
+        "jga"
+      ]
+    },
+    {
+      "haerte": 2,
+      "text": "Der peinliche Onkel auf der Familienfeier",
+      "paket": [
+        "weihnachten",
+        "jga"
+      ]
+    },
+    {
+      "haerte": 3,
+      "text": "Stiflers Mom"
+    },
+    {
+      "haerte": 3,
+      "text": "Jim aus American Pie"
+    },
+    {
+      "haerte": 3,
+      "text": "Glenn Quagmire"
+    },
+    {
+      "haerte": 3,
+      "text": "Tony Montana"
+    },
+    {
+      "haerte": 3,
+      "text": "Ted, der versaute Teddybär"
+    },
+    {
+      "haerte": 3,
+      "text": "Homelander"
+    },
+    {
+      "haerte": 3,
+      "text": "Dauerkiffer"
+    },
+    {
+      "haerte": 3,
+      "text": "Pornodarsteller"
+    },
+    {
+      "haerte": 3,
+      "text": "Domina"
+    },
+    {
+      "haerte": 3,
+      "text": "Callboy"
+    },
+    {
+      "haerte": 3,
+      "text": "Swinger"
+    },
+    {
+      "haerte": 3,
+      "text": "OnlyFans-Creatorin"
+    },
+    {
+      "haerte": 3,
+      "text": "Sexshop-Verkäuferin"
+    },
+    {
+      "haerte": 3,
+      "text": "Sexspielzeug-Tester"
+    },
+    {
+      "haerte": 3,
+      "text": "Pornosynchronsprecher"
+    },
+    {
+      "haerte": 3,
+      "text": "Sextherapeutin"
+    },
+    {
+      "haerte": 3,
+      "text": "Proktologe"
+    },
+    {
+      "haerte": 3,
+      "text": "Samenspender"
+    },
+    {
+      "haerte": 3,
+      "text": "Nacktputzer"
+    },
+    {
+      "haerte": 3,
+      "text": "Mitarbeiterin einer Sexhotline"
+    },
+    {
+      "haerte": 3,
+      "text": "Fußfetischist"
+    },
+    {
+      "haerte": 3,
+      "text": "Tantra-Masseurin"
+    },
+    {
+      "haerte": 3,
+      "text": "Pizzabote aus dem Porno"
+    },
+    {
+      "haerte": 3,
+      "text": "Sexpuppen-Hersteller"
+    },
+    {
+      "haerte": 3,
+      "text": "Kondomvertreter"
+    },
+    {
+      "haerte": 3,
+      "text": "Die Nachbarin, die man nachts durch die Wand hört"
+    },
+    {
+      "haerte": 3,
+      "text": "Der Typ, der beim Sex die Socken anlässt"
+    }
+  ]
+}

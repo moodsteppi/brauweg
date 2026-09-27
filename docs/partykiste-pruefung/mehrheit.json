@@ -1,0 +1,1054 @@
+{
+  "katalog": "mehrheit",
+  "geprueft": 72,
+  "raus": [
+    {
+      "id": "m055",
+      "text": "Semesterferien lieber am Strand oder im Praktikum?",
+      "a": "Strand",
+      "b": "Praktikum",
+      "haerte": 1,
+      "paket": [
+        "studenten"
+      ],
+      "grund": "Eine Seite klar vorn: Strand schlägt Praktikum, jeder tippt die Mehrheit richtig."
+    }
+  ],
+  "umstufen": [
+    {
+      "id": "m067",
+      "text": "Den Fehler eines Kollegen lieber melden oder decken?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Arbeitsmoral, nichts Anzügliches oder Peinliches — harmlos."
+    },
+    {
+      "id": "m069",
+      "text": "Im Bett lieber Licht an oder Licht aus?",
+      "von": 3,
+      "nach": 2,
+      "grund": "„Im Bett Licht an oder aus\" ist Andeutung — pikant, nicht richtig derb."
+    },
+    {
+      "id": "m072",
+      "text": "Ein One-Night-Stand: eher ja oder eher nein?",
+      "von": 3,
+      "nach": 2,
+      "grund": "One-Night-Stand ja/nein fiele an einem pikanten Tisch nicht auf."
+    }
+  ],
+  "umschreiben": [
+    {
+      "id": "m071",
+      "text": "Lieber beim Sex erwischt werden oder beim Lästern über den, der euch erwischt?",
+      "neu": "Lieber beim Sex erwischt werden oder jemanden beim Sex erwischen?",
+      "aAlt": "Beim Sex",
+      "bAlt": "Beim Lästern",
+      "a": "Erwischt werden",
+      "b": "Selbst erwischen",
+      "grund": "Die alte Frage ergibt keinen Sinn (Lästern über den, der einen erwischt?) — jetzt eine klare Wahl."
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Mit dem Ex befreundet bleiben: geht das?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ist Flirten mit dem Barkeeper für einen Gratis-Drink okay?",
+      "a": "Okay",
+      "b": "Daneben"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Den ersten Kuss schon beim ersten Date?",
+      "a": "Ja",
+      "b": "Lieber warten"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Beim Flirten: Machst du den ersten Schritt oder wartest du?",
+      "a": "Ich mache ihn",
+      "b": "Ich warte"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Den Partner einer Freundin oder eines Freundes schon mal heimlich attraktiv gefunden?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Dein Partner küsst betrunken jemand anderen: verzeihen oder Schluss?",
+      "a": "Verzeihen",
+      "b": "Schluss"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ist ein Kuss mit jemand anderem schon Fremdgehen?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ist heimliches Flirten per Chat schon Fremdgehen?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schon mal jemanden geghostet?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Nach dem ersten Date: sofort schreiben oder einen Tag warten?",
+      "a": "Sofort",
+      "b": "Warten"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schon mal betrunken dem Ex geschrieben?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Den Standort mit dem Partner dauerhaft teilen?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Würdest du jemanden daten, der 15 Jahre älter ist?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Partner und bester Freund können sich nicht leiden: Wer gewinnt?",
+      "a": "Partner",
+      "b": "Bester Freund"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Auf der Party: tschüss sagen oder heimlich verschwinden?",
+      "a": "Tschüss sagen",
+      "b": "Heimlich weg"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Lieber verkatert nach einer großartigen Nacht oder fit nach einer langweiligen?",
+      "a": "Verkatert",
+      "b": "Fit"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Ist das Vorglühen oft besser als die Party selbst?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schon mal auf einer Party eingeschlafen?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schon mal betrunken etwas online bestellt?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schon mal einen Filmriss gehabt?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Vier Uhr nachts nach der Party: noch zum Döner oder direkt ins Bett?",
+      "a": "Döner",
+      "b": "Bett"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Den Ex der besten Freundin oder des besten Freundes daten: geht klar oder tabu?",
+      "a": "Geht klar",
+      "b": "Tabu"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Würdest du deinem Partner sagen, dass er schlecht küsst?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Pärchen-Kosenamen wie „Schatzi\": süß oder peinlich?",
+      "a": "Süß",
+      "b": "Peinlich"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Wildes Knutschen in der Öffentlichkeit: okay oder unangenehm?",
+      "a": "Okay",
+      "b": "Unangenehm"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Getrennte Schlafzimmer in einer Beziehung: Traum oder Horror?",
+      "a": "Traum",
+      "b": "Horror"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Bei Liebeskummer: lieber Party oder Sofa mit Eis?",
+      "a": "Party",
+      "b": "Sofa"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schon mal jemanden nur wegen eines Fotos angeschrieben?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schon mal jemanden geküsst, dessen Namen du nicht wusstest?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schon mal einen Schwarm online bis weit ins alte Profil gestalkt?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Der Ex schreibt um zwei Uhr nachts „Bist du wach?\": antworten oder ignorieren?",
+      "a": "Antworten",
+      "b": "Ignorieren"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Nachts mit Freunden nackt baden gehen: dabei oder nicht?",
+      "a": "Dabei",
+      "b": "Nicht dabei"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Würdest du jemanden aus dem eigenen Freundeskreis daten?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Was ist beim Date schlimmer: Mundgeruch oder Schweißgeruch?",
+      "a": "Mundgeruch",
+      "b": "Schweißgeruch"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Flirten, obwohl man vergeben ist: harmlos oder schon zu viel?",
+      "a": "Harmlos",
+      "b": "Zu viel"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Würdest du dein entsperrtes Handy einen Abend lang dem Tisch überlassen?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Schon mal jemandem absichtlich eine falsche Nummer gegeben?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Das erste „Ich liebe dich\": lieber sagen oder hören?",
+      "a": "Sagen",
+      "b": "Hören"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "arbeit",
+        "weihnachten"
+      ],
+      "text": "Auf der Weihnachtsfeier mit jemandem aus dem Büro knutschen: geht oder geht gar nicht?",
+      "a": "Geht",
+      "b": "Geht gar nicht"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Würdest du auf einer Party mit einer fremden Person knutschen?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Den Schwarm per Antwort auf die Story anflirten: mutig oder peinlich?",
+      "a": "Mutig",
+      "b": "Peinlich"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Sex beim ersten Date: okay oder zu früh?",
+      "a": "Okay",
+      "b": "Zu früh"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Pornos schauen in einer Beziehung: normal oder No-Go?",
+      "a": "Normal",
+      "b": "No-Go"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Gehört Sexspielzeug in jede Nachttischschublade?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Reizt dich die Vorstellung von einem Dreier?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Schon mal einen Orgasmus vorgetäuscht?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "In einer Beziehung lieber zu oft Sex oder zu selten?",
+      "a": "Zu oft",
+      "b": "Zu selten"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Sex während der Periode: okay oder No-Go?",
+      "a": "Okay",
+      "b": "No-Go"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Intim: komplett rasiert oder natürlich?",
+      "a": "Rasiert",
+      "b": "Natürlich"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Schon mal Nacktfotos verschickt?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Dirty Talk: macht an oder bringt zum Lachen?",
+      "a": "Macht an",
+      "b": "Zum Lachen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Schon mal Sex im Auto gehabt?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Morgensex vor dem Zähneputzen: geht oder eklig?",
+      "a": "Geht",
+      "b": "Eklig"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Könntest du eine offene Beziehung führen?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Sexfreundschaft ohne Gefühle: funktioniert das?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Sex in einer Beziehung: sehr wichtig oder überbewertet?",
+      "a": "Sehr wichtig",
+      "b": "Überbewertet"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Nach dem Sex: erst kuscheln oder sofort duschen?",
+      "a": "Kuscheln",
+      "b": "Duschen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Würdest du mal in einen Swingerclub reinschauen?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Sex am Strand: Traum oder Sand überall?",
+      "a": "Traum",
+      "b": "Sand überall"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Willst du wissen, mit wie vielen Leuten dein Partner schon geschlafen hat?",
+      "a": "Ja",
+      "b": "Lieber nicht"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Die eigene Zahl an Sexpartnern: ehrlich sagen oder schönen?",
+      "a": "Ehrlich",
+      "b": "Schönen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Schon mal beim Sex erwischt worden?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Beim Sex Musik an oder aus?",
+      "a": "An",
+      "b": "Aus"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Zusammen mit dem Partner einen Porno schauen?",
+      "a": "Gern",
+      "b": "Lieber nicht"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Eine Toy-Party mit Freunden: dabei oder nicht?",
+      "a": "Dabei",
+      "b": "Nicht dabei"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Für 10.000 Euro ein Jahr lang auf Sex verzichten?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Für eine Million Euro einen Porno drehen?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Schon mal gekifft?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Magic Mushrooms: würdest du es probieren, wenn es legal wäre?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Nach einer Partynacht schon mal neben einer fremden Person aufgewacht?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Schon mal auf einer Party gekotzt?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Pinkelst du unter der Dusche?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Vor dem Partner pupsen: ganz normal oder niemals?",
+      "a": "Normal",
+      "b": "Niemals"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Beim Klogang die Tür offen lassen, wenn der Partner da ist: geht oder geht gar nicht?",
+      "a": "Geht",
+      "b": "Geht gar nicht"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Schon mal dieselbe Unterhose zwei Tage getragen?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Die Zahnbürste des Partners benutzen: okay oder eklig?",
+      "a": "Okay",
+      "b": "Eklig"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Redest du mit Freunden über Selbstbefriedigung?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Selbstbefriedigung in einer Beziehung: normal oder komisch?",
+      "a": "Normal",
+      "b": "Komisch"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Einmal fremdgegangen: beichten oder schweigen?",
+      "a": "Beichten",
+      "b": "Schweigen"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Dein Partner ist einmal betrunken fremdgegangen: willst du es wissen?",
+      "a": "Ja",
+      "b": "Lieber nicht"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Schon mal „aus Versehen\" wieder mit dem Ex im Bett gelandet?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Rollenspiele im Bett: aufregend oder albern?",
+      "a": "Aufregend",
+      "b": "Albern"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Fesseln im Bett: reizvoll oder nichts für dich?",
+      "a": "Reizvoll",
+      "b": "Nichts für mich"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Sex an einem Ort, wo man erwischt werden könnte: reizvoll oder zu riskant?",
+      "a": "Reizvoll",
+      "b": "Zu riskant"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Lieber ein Quickie oder eine ganze Stunde?",
+      "a": "Quickie",
+      "b": "Eine Stunde"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Sex auf dem Flugzeugklo: würdest du?",
+      "a": "Ja",
+      "b": "Nein"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Stöhnen beim Sex: meistens echt oder meistens Show?",
+      "a": "Echt",
+      "b": "Show"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Der Zoll packt deinen Vibrator aus: peinlich oder egal?",
+      "a": "Peinlich",
+      "b": "Egal"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Sex nach Kalender in einer Beziehung: unsexy oder vernünftig?",
+      "a": "Unsexy",
+      "b": "Vernünftig"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Versöhnungssex: der beste Sex oder überbewertet?",
+      "a": "Der beste",
+      "b": "Überbewertet"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Dein Partner wünscht sich ein gemeinsames Sexvideo: ja oder nein?",
+      "a": "Ja",
+      "b": "Nein"
+    }
+  ]
+}

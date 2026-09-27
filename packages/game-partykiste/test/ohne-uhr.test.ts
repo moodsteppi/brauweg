@@ -37,6 +37,10 @@ import {
   type MinispielId,
   type PartykistePartie,
 } from '../src/index.js';
+import { KATEGORIEN_ENTFERNT } from '../src/inhalte/kategorien.js';
+import { MEHRHEITSFRAGEN_ENTFERNT } from '../src/inhalte/mehrheit.js';
+import { REGELKARTEN_ENTFERNT } from '../src/inhalte/regelkarten.js';
+import { pruefeKennungen } from '../src/inhalte/schema.js';
 
 function regeln(...minispiele: MinispielId[]) {
   return { ...DEFAULT_REGELN, minispiele };
@@ -91,20 +95,33 @@ function spieleMitBots(stand: PartykistePartie, grenze = 20_000): PartykistePart
 const TRINKWORT = /trink|schluck|bier|shot|🍺|🍻|🥂|🥃|🍷|🍸/i;
 const TRINKBEFEHL = /\b(trink|trinkt|trinke|trinkst|schluck|schlucke|schlückchen|shot|shots|prost)\b|🍺|🍻|🥂|🥃|🍷|🍸/i;
 
-const NEUE: { name: string; katalog: readonly Inhalt[]; mindestens: number; praefix: string }[] = [
-  { name: 'kategorien', katalog: KATEGORIEN, mindestens: 60, praefix: 'k' },
-  { name: 'mehrheit', katalog: MEHRHEITSFRAGEN, mindestens: 60, praefix: 'm' },
-  { name: 'regelkarten', katalog: REGELKARTEN, mindestens: 40, praefix: 'r' },
+/**
+ * `jeStufe`: so viele Eintraege braucht jede Stufe allein (docs/PARTYKISTE-INHALTE.md,
+ * seit dem 27.09.2026 — jede Stufe liefert nur ihre eigenen Inhalte).
+ * Kategorien darf auf "derb" weniger haben (30).
+ */
+const NEUE: {
+  name: string;
+  katalog: readonly Inhalt[];
+  entfernt: readonly string[];
+  mindestens: number;
+  jeStufe: readonly [number, number, number];
+  praefix: string;
+}[] = [
+  { name: 'kategorien', katalog: KATEGORIEN, entfernt: KATEGORIEN_ENTFERNT, mindestens: 60, jeStufe: [50, 50, 30], praefix: 'k' },
+  { name: 'mehrheit', katalog: MEHRHEITSFRAGEN, entfernt: MEHRHEITSFRAGEN_ENTFERNT, mindestens: 60, jeStufe: [50, 50, 50], praefix: 'm' },
+  { name: 'regelkarten', katalog: REGELKARTEN, entfernt: REGELKARTEN_ENTFERNT, mindestens: 40, jeStufe: [50, 50, 50], praefix: 'r' },
 ];
 
-test('die neuen Kataloge sind gross genug und lueckenlos nummeriert', () => {
-  for (const { name, katalog, mindestens, praefix } of NEUE) {
+test('die neuen Kataloge sind gross genug, je Stufe, und ihre Kennungen werden nie neu vergeben', () => {
+  for (const { name, katalog, entfernt, mindestens, jeStufe, praefix } of NEUE) {
     assert.ok(katalog.length >= mindestens, `${name}: ${katalog.length} statt mindestens ${mindestens}`);
-    assert.deepEqual(
-      katalog.map((i) => i.id),
-      Array.from({ length: katalog.length }, (_, i) => `${praefix}${String(i + 1).padStart(3, '0')}`),
-      `${name}: Kennungen nicht lueckenlos`,
-    );
+    /* Bis zum 27.09.2026 lueckenlos; seitdem Luecken nur ueber die Liste der gestrichenen. */
+    assert.deepEqual(pruefeKennungen(praefix, katalog.map((i) => i.id), entfernt), [], `${name}: Kennungen`);
+    jeStufe.forEach((ziel, s) => {
+      const zahl = katalog.filter((i) => i.haerte === s + 1).length;
+      assert.ok(zahl >= ziel, `${name} Stufe ${s + 1}: ${zahl} statt mindestens ${ziel}`);
+    });
   }
 });
 

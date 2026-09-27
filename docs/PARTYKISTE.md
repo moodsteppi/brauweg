@@ -399,14 +399,32 @@ Die Kataloge sind reine Daten: Fragen, Wortpaare, Namen, Sprüche. Seit dem
 22.09.2026 (Entscheidung P4, Datenbank später) steht jeder als **JSON-Datei**
 unter `src/inhalte/daten/<katalog>.json`; die gleichnamige `.ts` daneben lädt
 und prüft sie nur. Neue Einträge kommen **hinten** dazu und bekommen die
-nächste freie Kennung; bestehende Kennungen ändern sich nie — sie stehen in
-abgelegten Rundenprotokollen, und die Ziehung hängt an der Reihenfolge.
+nächste freie Kennung (eins über der höchsten je vergebenen); bestehende
+Kennungen ändern sich nie — sie stehen in abgelegten Rundenprotokollen, und
+die Ziehung hängt an der Reihenfolge.
 
-Jede Datei hat einen Kopf (`katalog`, `grenze`, `pflege`, `inhalt`) und
-darunter `eintraege`, ein Eintrag je Zeile. **`grenze` ist Pflicht** und sagt,
-was kein Eintrag darf: Stufe 3 („derb“) heißt pikant-erwachsen — nie
-herabwürdigend, nie über reale benannte Personen, nie über Minderjährige, nie
-Gewalt; kein Text fordert zum Trinken auf.
+**Maßstab für jeden Eintrag ist seit dem 27.09.2026
+[PARTYKISTE-INHALTE.md](PARTYKISTE-INHALTE.md)** — was je Spiel taugt, was
+jede Stufe darf, wie viele Einträge jede Stufe braucht. Geprüft wird in zwei
+Schritten (Vorprüfung durch die KI, dann Robin auf der Prüfseite); die
+Vorschläge liegen als Prüfprotokoll unter `docs/partykiste-pruefung/`.
+
+Jede Datei hat einen Kopf (`katalog`, `grenze`, `pflege`, `inhalt`,
+`entfernt`) und darunter `eintraege`, ein Eintrag je Zeile. **`grenze` ist
+Pflicht** und fasst das Regelwerk zusammen: harmlos geht an jedem Tisch,
+pikant ist Kneipenniveau und die Decke für Gäste, **derb ist richtig derb und
+nur für Konten ab 18**; tabu auf jeder Stufe sind reale benannte Personen in
+sexuellen oder herabwürdigenden Zusammenhängen, alles mit Minderjährigen,
+Gewalt, Herabwürdigung von Gruppen, Aufforderungen zu Straftaten oder
+Gefährlichem, Selbstverletzung; kein Text fordert zum Trinken auf.
+
+**Streichen** (seit dem 27.09.2026): Ein schlechter Eintrag wird gelöscht,
+seine Kennung kommt in die Liste `entfernt` im Kopf (bei den TS-Katalogen
+`KATEGORIEN_ENTFERNT` usw.) und wird **nie wieder vergeben**. Bis dahin
+verlangte das Schema lückenlose Kennungen — das ließ nur „umschreiben“ zu,
+und eine Kennung mit neuem, fremdem Text hätte in einer alten Partie auf
+etwas anderes gezeigt als damals. Mit der Liste bleibt die Lücke sichtbar
+und die Wiederverwendung prüfbar.
 
 **Das Schema** (`src/inhalte/schema.ts`, eigener Prüfer, kein zod — das Paket
 hat keine Laufzeitabhängigkeit außer game-api) läuft an drei Stellen: beim
@@ -414,8 +432,11 @@ Import jedes Katalogs (wirft), im Build (`werkzeug/inhalte-pruefen.mjs` nach
 `tsc`, nennt alle Fehler auf einmal und bricht ab) und im Test
 (`test/inhalte-json.test.ts`). Es verlangt über die Form hinaus:
 
-- Kennungen **lückenlos in Katalogreihenfolge** (`q001`, `q002`, …) — wer
-  umsortiert, löscht oder eine Nummer auslässt, fällt im Build auf.
+- Kennungen **steigen in Katalogreihenfolge** (`q001`, `q002`, …), und jede
+  Nummer bis zur höchsten steht als Eintrag da **oder** unter `entfernt` —
+  nie in beiden. Wer umsortiert, still löscht oder eine gestrichene Kennung
+  neu vergibt, fällt im Build auf (`pruefeKennungen` in `schema.ts`, dieselbe
+  Regel prüfen die Tests der TS-Kataloge).
 - **Keine Dubletten**, normalisiert (Groß/klein, Satzzeichen, Leerraum egal;
   bei Entweder-oder auch das vertauschte Paar, bei Wahrheit/Pflicht über
   beide Arten).
@@ -424,30 +445,45 @@ Import jedes Katalogs (wirft), im Build (`werkzeug/inhalte-pruefen.mjs` nach
 
 **Der Altbestand** — die 918 Einträge vom 22.09.2026 — liegt als die
 ursprünglichen TS-Dateien unter `test/altbestand/`, und ein Test vergleicht
-jeden davon Feld für Feld mit seiner Stelle im JSON. Wer einen alten Eintrag
-bewusst korrigiert, korrigiert ihn dort mit. Neue Einträge (alles jenseits
-des Altbestands) brauchen `haerte` und mindestens ein `paket`, Quiz und
-Schätzen auch `stufe`; ein Test hält die Mischung grob bei 60 % harmlos,
-30 % pikant, 10 % derb.
+jeden davon Feld für Feld mit seiner Stelle im JSON — gestrichene überspringt
+er (sie bleiben im Altbestand stehen), die übrigen müssen in alter
+Reihenfolge vor allem Neuen stehen. Wer einen alten Eintrag bewusst
+korrigiert, korrigiert ihn dort mit (so am 27.09.2026 für 48 umgeschriebene
+oder umgestufte). Neue Einträge (alles jenseits des Altbestands) brauchen
+`haerte`, Quiz und Schätzen auch `stufe`. Ein `paket` ist seit dem
+27.09.2026 freiwillig: Die Prüfung hat Pakete nur vergeben, wo ein Eintrag
+wirklich zu einem Anlass gehört; ohne Paket ist er Allgemeingut. Die alte
+Mischungsregel (60 % harmlos, 30 % pikant, 10 % derb) ist ersetzt durch die
+**Mindestzahl je Stufe** aus dem Regelwerk (`test/inhalte-json.test.ts`,
+`ohne-uhr.test.ts`, `zeitdruck.test.ts`) — mit ihr wäre „derb“ nie allein
+spielbar geworden.
 
-Stand 22.09.2026 — Einträge je Katalog, in Klammern der Altbestand:
+Stand 27.09.2026 nach der Prüfung — Einträge je Katalog, harmlos/pikant/derb,
+in Klammern der verbliebene Altbestand:
 
-- Wahrheit oder Pflicht: 400 (120, davon 60/60)
-- Wer würde eher: 300 (108)
-- Ich hab noch nie: 300 (110)
-- Entweder – oder: 250 (100)
-- Allgemeinwissen: 300 (140)
-- Schätzen: 200 (80)
-- Imposter: 250 (120)
-- Wer bin ich: 250 (140)
+- Wahrheit oder Pflicht: 617 (100 von 120) — Wahrheit 136/89/86, Pflicht 138/85/83
+- Wer würde eher: 351 — 185/84/82 (73 von 108)
+- Ich hab noch nie: 343 — 169/90/84 (84 von 110)
+- Entweder – oder: 275 — 173/52/50 (82 von 100)
+- Allgemeinwissen: 311 — 214/61/36 (118 von 140)
+- Schätzen: 212 — 131/51/30 (53 von 80) — **offen:** 20 derbe fehlen zum Ziel 50
+- Imposter: 311 — 210/50/51 (116 von 120)
+- Wer bin ich: 325 — 249/48/28 (119 von 140) — **offen:** 2 pikante, 2 derbe
+  fehlen (Robin hat vier vorgeschlagene Rollen nicht übernommen)
+
+Die offenen Lücken stehen als Ausnahme mit Untergrenze im Test
+(`OFFEN_JE_STUFE`); sobald das Ziel erreicht ist, verlangt der Test, dass
+die Ausnahme verschwindet.
 
 Dazu seit dem 22.09.2026 die drei Kataloge ohne Uhr (#213, noch als
-TS-Quelltext unter `src/inhalte/`, nicht Teil der JSON-Umstellung):
-82 Kategorien (k001–k082), 72 Mehrheitsfragen (m001–m072), 49 Regel-Karten
-(r001–r049) — jeder Eintrag **mit** `haerte`
-und mindestens einem `paket`, alle drei Stufen belegt, je Paket mindestens
-zehn harmlose (`test/ohne-uhr.test.ts`). Regel-Karten sind Befehle an alle
-und tragen deshalb wie Wahrheit oder Pflicht gar kein Trinkwort.
+TS-Quelltext unter `src/inhalte/`, nicht Teil der JSON-Umstellung) und seit
+dem 23.09.2026 „10 Sekunden“: 147 Kategorien (66/51/30), 162
+Mehrheitsfragen (60/50/52), 161 Regel-Karten (53/55/53), 154 Aufgaben für
+10 Sekunden (54/50/50) — jeder Eintrag **mit** `haerte` und mindestens einem
+`paket`, je Paket mindestens zehn harmlose (`test/ohne-uhr.test.ts`).
+Regel-Karten sind Befehle an alle und tragen deshalb wie Wahrheit oder
+Pflicht gar kein Trinkwort. Die 13 Karten des Königsbechers sind fest (eine
+je Rang) und haben keine Stufe.
 
 **Metadaten** (seit dem 22.09.2026, `src/inhalte/typen.ts`) — alle optional,
 ein Eintrag ohne Feld gilt als harmlos, allgemein, ab vier Sitzen:
@@ -475,10 +511,13 @@ ein Eintrag ohne Feld gilt als harmlos, allgemein, ab vier Sitzen:
 - `minSitze` nur, wenn der Text wirklich eine große Runde braucht („Wer von
   euch acht …“).
 
-Die Sätze zum Kiffen (n101–n110, w101–w108, zusammen 18) sind seit dem
-22.09.2026 **pikant** (`haerte: 2`) und damit an einem Tisch mit der Vorgabe
-„harmlos“ nicht mehr dabei. Sonst trägt im Altbestand kein Eintrag eine
-Härte; die neuen Einträge tragen alle eine.
+Die Sätze zum Kiffen (n101–n110, w101–w108, zusammen 18) waren seit dem
+22.09.2026 **pikant** (`haerte: 2`); seit der Prüfung vom 27.09.2026 sind
+sie **derb** (Drogen gehören nach dem Regelwerk auf „derb“, Gäste bekommen
+höchstens „pikant“), sechs davon sind gestrichen (n102, n103, n110, w103,
+w106, w107). Sonst trägt im Altbestand nur eine Härte, was die Prüfung
+umgestuft hat (`test/partykiste.test.ts` gleicht das mit den `umstufen` im
+Prüfprotokoll ab); die neuen Einträge tragen alle eine.
 
 ## Ein weiteres Minispiel einbauen
 
