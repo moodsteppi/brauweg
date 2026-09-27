@@ -749,7 +749,7 @@ function Schaukasten(): React.JSX.Element {
           </MenueKasten>
           <MenueKasten
             titel="Menü — Auswahl"
-            text="Minispiele mit Platz in der Reihenfolge, Inhaltsstufe und Themenpaket. Ohne Modus: Das Modul kennt noch keinen."
+            text="Minispiele an/aus (die Kiste mischt), Inhaltsstufe und Themenpaket. Ohne Modus: Das Modul kennt noch keinen."
           >
             <PartyAuswahl
               vorgabe={{ minispiele: Object.keys(MINISPIEL_NAME), inhaltsHaerte: 1, paket: null }}

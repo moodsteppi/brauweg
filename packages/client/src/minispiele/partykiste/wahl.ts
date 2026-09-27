@@ -203,8 +203,10 @@ export function merkeWahl(wahl: PartyWahl): void {
 /**
  * Mindestens drei Minispiele. Das Modul nimmt auch eines (`validateConfig`
  * verlangt nur „nicht leer“) — die Grenze ist eine des Menues: Mit einem
- * oder zweien laeuft der Abend auf „dreimal Quiz hintereinander“ hinaus, und
- * genau das soll die berechnete Reihenfolge verhindern (PARTYKISTE.md).
+ * laeuft der Abend auf „dreimal Quiz hintereinander“ hinaus, mit zweien auf
+ * ein stures Hin und Her, denn seit dem 27.09.2026 mischt das Modul ohne
+ * direkte Wiederholung (`minispielFolge`) — bei zwei Spielen bleibt da
+ * nichts zu mischen (PARTYKISTE.md).
  */
 export const MINDESTENS_MINISPIELE = 3;
 
@@ -230,26 +232,20 @@ export function wirksameMinispiele(vorgabe: Record<string, unknown> | null, wahl
 }
 
 /**
- * Die neue Minispielwahl zum Merken. Deckt sie sich genau mit der Vorgabe
- * (alle, in Modulreihenfolge), wird sie NICHT gemerkt: Wer so spielt, soll
- * ein neues Minispiel von selbst bekommen, statt fuer immer auf dem Stand
- * von heute zu bleiben.
+ * Die neue Minispielwahl zum Merken. Sind alle an, wird sie NICHT gemerkt:
+ * Wer so spielt, soll ein neues Minispiel von selbst bekommen, statt fuer
+ * immer auf dem Stand von heute zu bleiben.
+ *
+ * Verglichen wird seit dem 27.09.2026 als Menge — die Reihenfolge bedeutet
+ * nichts mehr (das Modul mischt), und bis dahin durfte „alle, aber
+ * umsortiert“ gemerkt werden. Dasselbe `verschiebe` fuer die Hoch- und
+ * Runter-Knoepfe ist mit der Reihenfolge gegangen.
  */
 export function minispielWahl(vorgabe: Record<string, unknown> | null, neu: readonly string[]): string[] | null {
   const alle = alleMinispiele(vorgabe);
-  if (alle && alle.length === neu.length && alle.every((id, i) => neu[i] === id)) return null;
+  const menge = new Set(neu);
+  if (alle && alle.length === menge.size && alle.every((id) => menge.has(id))) return null;
   return [...neu];
-}
-
-/** Ein Minispiel in der Reihenfolge verschieben (−1 frueher, +1 spaeter). */
-export function verschiebe(liste: readonly string[], id: string, schritt: -1 | 1): string[] {
-  const i = liste.indexOf(id);
-  const j = i + schritt;
-  if (i < 0 || j < 0 || j >= liste.length) return [...liste];
-  const neu = [...liste];
-  neu[i] = liste[j]!;
-  neu[j] = id;
-  return neu;
 }
 
 /**

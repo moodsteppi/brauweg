@@ -29,6 +29,7 @@ import {
   amZug,
   ausstieg,
   erzeugePartie,
+  minispielFolge,
   partykiste,
   sichtFuer,
   verarbeite,
@@ -43,6 +44,22 @@ function regeln(...minispiele: MinispielId[]) {
 
 function partie(minispiele: MinispielId[], sitze = 4, runden = 6, botSitze: number[] = [], saat = 11): PartykistePartie {
   return erzeugePartie({ regeln: regeln(...minispiele), saat, sitze, runden, botSitze, gastSitze: [] });
+}
+
+/**
+ * Die erste Saat, unter der die Runden genau in dieser Folge beginnen.
+ *
+ * Seit dem 27.09.2026 mischt die Kiste die Minispiele (`minispielFolge`),
+ * statt reihum durch die Liste zu gehen. Die Regel-Karten-Proben brauchen
+ * aber eine bestimmte Folge (Karte, dann zwei weitere Runden) — also suchen
+ * sie sich die Saat dazu, statt die Reihenfolge der Liste vorauszusetzen.
+ */
+function saatMitFolge(folge: MinispielId[]): number {
+  for (let saat = 1; saat < 10_000; saat++) {
+    const probe = minispielFolge(regeln(...folge), String(saat), folge.length);
+    if (probe.every((art, i) => art === folge[i])) return saat;
+  }
+  throw new Error(`keine Saat mit der Folge ${folge.join(', ')}`);
 }
 
 /** Alle Anwesenden tippen "Weiter" durch die Abrechnung. */
@@ -344,13 +361,15 @@ test('Mehrheitsraten: Bots tippen auf die haeufigere Antwort der Bots', () => {
 
 /** Regel-Karte, dann Ich hab noch nie, dann Quiz — die Karte gilt bis Runde 2. */
 function mitKarte(sitze = 4): PartykistePartie {
-  let p = partie(['regelkarte', 'niemals', 'quiz'], sitze, 6);
+  const folge: MinispielId[] = ['regelkarte', 'niemals', 'quiz'];
+  let p = partie(folge, sitze, 6, [], saatMitFolge(folge));
   for (let s = 0; s < sitze; s++) p = verarbeite(p, s, { art: 'bereit' });
   return p;
 }
 
 test('die Regel-Karte gilt ab dem Lesen bis zum Ende der uebernaechsten Runde', () => {
-  let p = partie(['regelkarte', 'niemals', 'quiz'], 4, 6);
+  const folge: MinispielId[] = ['regelkarte', 'niemals', 'quiz'];
+  let p = partie(folge, 4, 6, [], saatMitFolge(folge));
   assert.equal(p.regelKarte, null);
   assert.throws(() => verarbeite(p, 0, { art: 'genannt' }), /Regel lesen/);
   for (let s = 0; s < 4; s++) p = verarbeite(p, s, { art: 'bereit' });
@@ -413,7 +432,8 @@ test('in einer Abrechnung, nach der keine mehr kommt, ist Melden gesperrt statt 
   assert.equal(gemeldet.regelKarte!.offen[0], 1, 'der Verstoss wartet auf die naechste Abrechnung');
 
   /* Eine Karte in der vorletzten Runde gilt nur bis zum Turnierende. */
-  let kurz = erzeugePartie({ regeln: regeln('niemals', 'regelkarte'), saat: 5, sitze: 4, runden: 2, gastSitze: [] });
+  const saat = saatMitFolge(['niemals', 'regelkarte']);
+  let kurz = erzeugePartie({ regeln: regeln('niemals', 'regelkarte'), saat, sitze: 4, runden: 2, gastSitze: [] });
   for (let s = 0; s < 4; s++) kurz = verarbeite(kurz, s, { art: 'gestehen', ja: false });
   kurz = weiterTippen(kurz);
   for (let s = 0; s < 4; s++) kurz = verarbeite(kurz, s, { art: 'bereit' });
