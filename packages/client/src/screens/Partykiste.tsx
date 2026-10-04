@@ -26,6 +26,7 @@ import { Einladung } from '../minispiele/partykiste/Einladung';
 import { einzelKennung, einzelName, tischPasst } from '../minispiele/partykiste/einzelspiele';
 import { MitspielerMelden } from '../melden/MeldenBlatt';
 import type { BotLevel, SeatInfo } from '../protocol';
+import { GastHinweis } from '../tisch/GastHinweis';
 import { useTable } from '../useTable';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 
@@ -788,9 +789,7 @@ function Lobby({
         </SpielAbschnitt>
         {/* Melden und Blockieren (Apple 1.2): Hier gibt es keine Profil-Links. */}
         <MitspielerMelden sitze={sitze} ich={meineKennung} />
-        {sitze.some((platz) => platz.gast) ? (
-          <p className="spe-text">Ein Gast spielt mit — diese Runde zählt nicht für die Rangliste.</p>
-        ) : null}
+        <GastHinweis sitze={sitze} className="spe-text" />
       </SpielRahmen>
     );
   }
@@ -831,12 +830,7 @@ function Lobby({
         {/* Melden und Blockieren (Apple 1.2): Hier gibt es keine Profil-Links. */}
         <MitspielerMelden sitze={sitze} ich={meineKennung} />
 
-        {sitze.some((platz) => platz.gast) ? (
-          /* Vor dem Start, nicht erst an der Abrechnung: Ein Tisch mit Gast
-             zaehlt fuer niemanden (countsForRanking) — wer das nicht will,
-             geht jetzt, nicht nach sechs Runden. */
-          <p className="pk-warten">Ein Gast spielt mit — diese Runde zählt nicht für die Rangliste.</p>
-        ) : null}
+        <GastHinweis sitze={sitze} className="pk-warten" />
 
         {binHost ? (
           <>

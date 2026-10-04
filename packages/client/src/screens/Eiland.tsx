@@ -18,6 +18,7 @@ import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { serverAdresse } from '../laufzeit';
 import { hubNeu } from '../hubNeu';
+import { GastHinweis } from '../tisch/GastHinweis';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import './spiel-einstieg-mini.css';
@@ -666,6 +667,7 @@ export function Eiland({
               <span />
               <span />
             </div>
+            <GastHinweis sitze={tisch.table?.seats ?? []} className="spe-text" />
           </div>
         </SpielRahmen>
       );
@@ -687,6 +689,7 @@ export function Eiland({
             <span />
             <span />
           </div>
+          <GastHinweis sitze={tisch.table?.seats ?? []} className="ei-untertitel ei-klein" />
           <p className="ei-untertitel ei-klein">{aktiv ?? '…'} Spieler gerade in Eiland</p>
         </div>
       </main>

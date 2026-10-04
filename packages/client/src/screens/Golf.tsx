@@ -59,6 +59,7 @@ import { Zeichner, type Zielbild } from '../minispiele/golf/zeichnen';
 import type { BotLevel, SeatInfo, TaktMessage, ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
 import { hubNeu } from '../hubNeu';
+import { GastHinweis } from '../tisch/GastHinweis';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import './golf-einstieg.css';
 
@@ -1057,6 +1058,7 @@ function Lobby({
         <SpielAbschnitt titel="Spieler">
           <ul className="hb-liste gf-neu-gruppe">{zeilen}</ul>
         </SpielAbschnitt>
+        <GastHinweis sitze={sitze} className="hb-klein" />
         {binHost ? (
           <>
             {bahnwahl}
@@ -1094,6 +1096,7 @@ function Lobby({
         <ul className="gf-gruppe">
           {zeilen}
         </ul>
+        <GastHinweis sitze={sitze} className="gf-bw-hinweis" />
 
         {binHost ? (
           <div className="gf-regler">

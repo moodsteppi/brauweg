@@ -11,6 +11,7 @@ import type {
 } from '../minispiele/easypoker/sicht';
 import { useTable } from '../useTable';
 import { hubNeu } from '../hubNeu';
+import { GastHinweis } from '../tisch/GastHinweis';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import './poker-einstieg.css';
@@ -1480,6 +1481,7 @@ export function EasyPoker({
             </ul>
           </SpielAbschnitt>
         )}
+        <GastHinweis sitze={plaetze} className="hb-klein pk-mitte" />
         <div className="poker-punkte-lauf pk-lauf" aria-hidden="true">
           <span />
           <span />
@@ -1525,6 +1527,7 @@ export function EasyPoker({
               ))}
             </ul>
           )}
+          <GastHinweis sitze={plaetze} className="poker-untertitel" />
           <div className="poker-punkte-lauf" aria-hidden="true">
             <span />
             <span />
