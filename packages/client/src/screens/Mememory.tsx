@@ -24,6 +24,7 @@ import { PfeilLinks } from '../zeichen';
 import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { hubNeu } from '../hubNeu';
+import { GastHinweis } from '../tisch/GastHinweis';
 import { SpielAbschnitt, SpielRahmen } from './SpielEinstieg';
 import './spiel-einstieg-mini.css';
 import { AKZENT } from '../minispiele/mememory/akzent';
@@ -1537,6 +1538,7 @@ export function Mememory({
               <span />
               <span />
             </div>
+            <GastHinweis sitze={tisch.table?.seats ?? []} className="spe-text" />
           </div>
           {kannFuellen && (
             <SpielAbschnitt titel="Spielstärke der Bots">
@@ -1576,6 +1578,7 @@ export function Mememory({
             <span />
             <span />
           </div>
+          <GastHinweis sitze={tisch.table?.seats ?? []} className="mm-untertitel" />
           <p className="mm-untertitel">{aktiv ?? '…'} Spieler gerade in Mememory</p>
 
           {/*

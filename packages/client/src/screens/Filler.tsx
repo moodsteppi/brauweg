@@ -8,6 +8,7 @@ import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { serverAdresse } from '../laufzeit';
 import { hubNeu } from '../hubNeu';
+import { GastHinweis } from '../tisch/GastHinweis';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen } from './SpielEinstieg';
 import './spiel-einstieg-mini.css';
@@ -804,6 +805,7 @@ export function Filler({
               <span />
               <span />
             </div>
+            <GastHinweis sitze={tisch.table?.seats ?? []} className="spe-text" />
           </div>
         </SpielRahmen>
       );
@@ -828,6 +830,7 @@ export function Filler({
           {/* Ohne Spielart: Der Tisch aus der Schlange traegt den Regelsatz
               des Moduls, nicht den Schalter aus dem Menue — die Zeile haette
               dort schlicht gelogen. Was gilt, steht am Brett (`sicht.variante`). */}
+          <GastHinweis sitze={tisch.table?.seats ?? []} className="fl-untertitel fl-klein" />
           <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
         </div>
       </main>

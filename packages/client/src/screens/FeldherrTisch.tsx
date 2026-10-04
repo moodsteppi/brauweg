@@ -20,6 +20,7 @@ import {
 } from '../minispiele/feldherr/kern.js';
 import type { Feld, FeldherrSicht } from '../minispiele/feldherr/sicht';
 import { hubNeu } from '../hubNeu';
+import { GastHinweis } from '../tisch/GastHinweis';
 import { moduleVersionFor, type TaktMessage, type ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
 import { HbBlatt } from './HbBlatt';
@@ -1174,6 +1175,7 @@ export function FeldherrTisch({
                 ))}
               </div>
             </SpielAbschnitt>
+            <GastHinweis sitze={sitze} className="spe-text" />
             {!tisch.error && (
               <div className="spe-warten">
                 <div className="spe-lauf" aria-hidden="true">
@@ -1222,6 +1224,7 @@ export function FeldherrTisch({
               </div>
             ))}
           </section>
+          <GastHinweis sitze={sitze} className="hub-text" />
         </main>
       );
     }

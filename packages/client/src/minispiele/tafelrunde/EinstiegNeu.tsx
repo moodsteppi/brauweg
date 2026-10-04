@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { TableRow, TischVorschau } from '../../api';
 import type { BotLevel } from '../../protocol';
 import { HbBlatt } from '../../screens/HbBlatt';
+import { GastHinweis } from '../../tisch/GastHinweis';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from '../../screens/SpielEinstieg';
 import { beitrittsLink } from './tischlink';
 import { KOSTEN_FARBE, RollenZeichen } from './Zeichen';
@@ -387,6 +388,7 @@ interface Platz {
   displayName: string | null;
   accountId: string | null;
   isBot: boolean;
+  gast?: boolean;
 }
 
 /**
@@ -491,6 +493,7 @@ export function WartesaalNeu({
           )}
         </div>
       </SpielAbschnitt>
+      <GastHinweis sitze={sitze} className="spe-text" />
 
       {wartesaal.gastgeber ? (
         <>

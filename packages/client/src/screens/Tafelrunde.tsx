@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError, api, type Suchstand, type TableRow, type TischVorschau } from '../api';
 import { hubNeu } from '../hubNeu';
+import { GastHinweis } from '../tisch/GastHinweis';
 import { t } from '../i18n';
 import type { BotLevel } from '../protocol';
 import {
@@ -1143,6 +1144,7 @@ function Wartesaal({
             ))}
           </div>
         )}
+        <GastHinweis sitze={sitze} className="tr-untertitel tr-klein" />
 
         {wartesaal.gastgeber ? (
           <>
@@ -1224,6 +1226,8 @@ interface SitzZeile {
   accountId: string | null;
   avatarUrl: string | null;
   isBot: boolean;
+  /** Gastkonto — der Wartesaal sagt dann an, dass die Partie nicht zaehlt. */
+  gast?: boolean;
 }
 
 /**
