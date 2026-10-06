@@ -218,7 +218,7 @@
    "accent": "#57c98a",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>Vier Blätter, Wahl am Konto</h3>\n<ul><li><code>text</code> — Zeichen (♣D), lädt nichts nach</li>\n<li><code>minimal2</code> / <code>minimal4</code> — flache Bildkarten</li>\n<li><code>klassisch</code> — gezeichnet</li></ul>\n<p><b>Der Server kennt nur die Kennungen.</b> Wie ein Blatt aussieht, weiß\nallein der Client. Ein neues Blatt = ein Bildordner + je ein Listeneintrag.</p>\n<p>Der ausgeschriebene Kartenname steht im <code>alt</code>-Text — Vorlese­gerät\nund fehlendes Bild ergeben dieselbe Ausgabe wie das Textblatt.</p>",
+    "html": "\n<h3>Vier Blätter, Wahl am Konto</h3>\n<ul><li><code>text</code> — Zeichen (♣D), lädt nichts nach</li>\n<li><code>minimal2</code> / <code>minimal4</code> — flache Bildkarten</li>\n<li><code>klassisch</code> — gezeichnet</li></ul>\n<p><b>Der Server kennt nur die Kennungen</b>, das Aussehen allein der\nClient. Neues Blatt = Bildordner + Listeneintrag.</p>\n<p>Der ausgeschriebene Kartenname steht im <code>alt</code>-Text — Vorlese­gerät\nund fehlendes Bild ergeben dieselbe Ausgabe wie das Textblatt.</p>",
     "fontSize": 13
    }
   },
@@ -721,7 +721,7 @@
    "accent": "#6ea8fe",
    "collapsed": false,
    "state": {
-    "html": "\n<h2>packages/server/src/games/registry.ts</h2>\n<p><b>Die einzige Stelle im Server, die ein konkretes Spiel kennt.</b> Lobby,\nTische, Gateway, Laufzeit und Ranglisten arbeiten ausschließlich gegen\n<code>GameModule</code>.</p>\n<p><b>Warum das zählt:</b> Wird irgendwo sonst ein Spielpaket importiert, ist\ndie Trennung gebrochen — und das nächste Spiel wird teuer, weil es dann nicht\nmehr ein Paket ist, sondern ein Eingriff in Server und Client.</p>\n<p>Zwei Listen: <code>MODULES</code> (spielbar, zehn Stück) und\n<code>PREVIEW</code> (in der Lobby sichtbar, nicht startbar, aber\nabstimmbar — der günstigste Marktforschungsmoment, den es gibt).</p>\n<p><b>Ein neues Spiel</b> = ein neues Paket + eine Zeile in\n<code>MODULES</code> + der Eintrag aus <code>PREVIEW</code> raus.</p>",
+    "html": "\n<h2>packages/server/src/games/registry.ts</h2>\n<p><b>Die einzige Stelle im Server, die ein konkretes Spiel kennt.</b> Alles\nandere arbeitet gegen <code>GameModule</code>. Importiert sonst jemand ein\nSpielpaket, ist die Trennung gebrochen — das nächste Spiel wird dann ein\nEingriff in Server und Client statt ein Paket.</p>\n<p><code>MODULES</code> ist spielbar, <code>PREVIEW</code> sichtbar, nicht\nstartbar, aber abstimmbar (die billigste Marktforschung).</p>\n<p><b>Neues Spiel</b> = Paket + Zeile in <code>MODULES</code>, Eintrag aus\n<code>PREVIEW</code> raus.</p>",
     "fontSize": 13
    }
   },
@@ -737,7 +737,7 @@
    "accent": "#6ea8fe",
    "collapsed": false,
    "state": {
-    "html": "\n<h2>runtime/party.ts</h2>\n<p>Die Partie liegt <b>maßgeblich im Arbeitsspeicher</b>; nach <b>jeder</b>\nAktion geht ein Schnappschuss in die Datenbank. Railway startet Container\njederzeit neu — ohne das wäre jeder Tisch weg.</p>\n<ul>\n<li><code>start</code> / <code>resume</code> — Partie anlegen oder aus dem\nSchnappschuss holen</li>\n<li><code>act</code> — <code>module.act()</code>, Snapshot, Rundruf</li>\n<li><code>schedule</code> — Zugtimer; läuft er ab, zieht der Bot</li>\n<li><code>scheduleInterlude</code> — Schaupause: das Modul nennt nur die\nDauer, die Zeit misst die Plattform</li>\n<li><code>markLeft</code> — Aussteiger, die Partie läuft mit Bot weiter</li>\n</ul>",
+    "html": "\n<h2>runtime/party.ts</h2>\n<p>Die Partie liegt <b>im Arbeitsspeicher</b>, nach <b>jeder</b> Aktion\ngeht ein Schnappschuss in die Datenbank — Railway startet Container\njederzeit neu.</p>\n<ul>\n<li><code>start</code> / <code>resume</code> — Partie anlegen oder aus dem\nSchnappschuss holen</li>\n<li><code>act</code> — <code>module.act()</code>, Snapshot, Rundruf</li>\n<li><code>schedule</code> — Zugtimer; läuft er ab, zieht der Bot</li>\n<li><code>scheduleInterlude</code> — Schaupause: das Modul nennt nur die\nDauer, die Zeit misst die Plattform</li>\n<li><code>markLeft</code> — Aussteiger, die Partie läuft mit Bot weiter</li>\n</ul>",
     "fontSize": 13
    }
   },
@@ -794,7 +794,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h2>packages/game-api</h2>\n<p><b>Die einzige Schnittstelle zwischen Plattform und Spiel.</b> Server,\nLobby und Client wissen nicht, dass es Doppelkopf gibt.</p>\n<h3>Pflicht</h3>\n<ul>\n<li><code>meta</code>, <code>protocolVersion</code> — steigt, sobald sich\nAktion oder Sicht ändern; der Server weist zu alte Clients beim\n<i>Beitritt</i> ab, nicht mitten in der Partie</li>\n<li><code>defaultConfig</code>, <code>validateConfig</code> — nimmt bewusst\n<code>unknown</code>: Der Regelsatz kommt als JSON von außen, ihn schon als\ngültig zu typisieren hieße anzunehmen, was die Methode feststellen soll</li>\n<li><code>createParty</code>, <code>act</code>, <code>currentActor</code>,\n<code>legalActions</code>, <code>isFinished</code>, <code>standings</code>,\n<code>markLeft</code></li>\n<li><code>viewFor</code>, <code>spectatorView</code> — die einzigen Wege\nnach draußen</li>\n<li><code>botAction(view)</code> — nur die gefilterte Sicht</li>\n<li><code>serialize</code> / <code>deserialize</code></li>\n</ul>\n<h3>Freiwillig</h3>\n<ul>\n<li><code>interludeMs</code> / <code>advanceInterlude</code> — Schaupause.\nDas Modul nennt <b>nur die Dauer</b>, die Zeit misst die Plattform</li>\n<li><code>viewCursor</code> — anwachsende Sicht, nur Feldherr</li>\n<li><code>completedSegments</code> — Zwischenabrechnungen; die Plattform\nspeichert sie unverändert und wertet sie <b>nicht</b> aus</li>\n<li><code>xpBasis</code> — gelegte Karten je Sitz. Fehlt sie, gibt es keine\nPunkte: lieber gar keine als geratene</li>\n</ul>\n<h3>Drei Schalter in der Meta</h3>\n<p><code>xpBasisZaehltKarten</code> (Feldherr: nein — sonst füllt jedes\nGefecht die Kartenaufgabe des Tages) ·\n<code>legalActionsUnvollstaendig</code> (nur Tafelrunde) ·\n<code>chipStackField</code> (nur Easy Poker: die Plattform zieht den\nStartstapel in BroJetons ein und zahlt den Rest zurück — das Modul rechnet\nweiter mit blanken Zahlen)</p>",
+    "html": "\n<h2>packages/game-api</h2>\n<p><b>Die einzige Schnittstelle zwischen Plattform und Spiel.</b></p>\n<h3>Pflicht</h3>\n<ul>\n<li><code>meta</code>, <code>protocolVersion</code> — steigt mit jeder\nÄnderung an Aktion oder Sicht; zu alte Clients weist der Server beim\n<i>Beitritt</i> ab, nie mitten in der Partie</li>\n<li><code>defaultConfig</code>, <code>validateConfig(unknown)</code> — der\nRegelsatz kommt als JSON von außen; ihn als gültig zu typisieren nähme an,\nwas die Methode erst feststellt</li>\n<li><code>createParty</code>, <code>act</code>, <code>currentActor</code>,\n<code>legalActions</code>, <code>isFinished</code>, <code>standings</code>,\n<code>markLeft</code>, <code>serialize</code> / <code>deserialize</code></li>\n<li><code>viewFor</code>, <code>spectatorView</code> — die einzigen Wege\nnach draußen; <code>botAction(view)</code> sieht nur die gefilterte Sicht</li>\n</ul>\n<h3>Freiwillig</h3>\n<ul>\n<li><code>interludeMs</code> / <code>advanceInterlude</code> — Schaupause:\ndas Modul nennt nur die Dauer, die Zeit misst die Plattform</li>\n<li><code>viewCursor</code> — anwachsende Sicht, nur Feldherr</li>\n<li><code>completedSegments</code> — gespeichert, <b>nicht</b> ausgewertet</li>\n<li><code>xpBasis</code> — fehlt sie, gibt es keine Punkte statt geratener</li>\n</ul>\n<h3>Drei Schalter in der Meta</h3>\n<p><code>xpBasisZaehltKarten</code> (Feldherr: nein, sonst füllt jedes\nGefecht die Kartenaufgabe) · <code>legalActionsUnvollstaendig</code> (nur\nTafelrunde) · <code>chipStackField</code> (nur Easy Poker: die Plattform\nzieht den Startstapel in BroJetons ein, das Modul rechnet blanke Zahlen)</p>",
     "fontSize": 13
    }
   },
@@ -810,7 +810,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/server/test/plattform-invarianten.test.ts</h3>\n<p>Läuft über <code>registry.all()</code> und spielt je Modul vollständige\nBot-Partien durch. <b>Ein neues Modul wird automatisch mitgeprüft</b>, ohne\ndass jemand dort eine Zeile ergänzt.</p>\n<p>Geprüft wird, worauf sich Lobby, Laufzeit und Client verlassen, ohne das\nSpiel zu kennen: dass der Bot immer handeln kann, dass <code>act</code>\njeden unerlaubten Zug abweist, dass die Platzfolge in sich stimmt und dass\ndie Zuschauersicht nichts Persönliches trägt.</p>\n<p>Entstanden aus einer Nachtdurchsicht am 01.09.2026 — 215.000 simulierte\nZüge fanden keinen Regelfehler. <b>Genau deshalb</b> steht die Prüfung\ndauerhaft im Repo: damit das nächste Spiel sie beim ersten Lauf spürt und\nnicht im Betrieb.</p>",
+    "html": "\n<h3>packages/server/test/plattform-invarianten.test.ts</h3>\n<p>Spielt über <code>registry.all()</code> je Modul ganze Bot-Partien —\n<b>ein neues Modul wird automatisch mitgeprüft</b>.</p>\n<p>Geprüft wird, worauf sich die Plattform ohne Spielkenntnis verlässt: Der\nBot kann immer handeln, <code>act</code> weist jeden unerlaubten Zug ab, die\nPlatzfolge stimmt, die Zuschauersicht trägt nichts Persönliches.</p>\n<p>Aus einer Nachtdurchsicht am 01.09.2026 (215.000 Züge, kein Regelfehler)\n— dauerhaft im Repo, damit das nächste Spiel sie beim ersten Lauf spürt und\nnicht im Betrieb.</p>",
     "fontSize": 13
    }
   },
@@ -842,7 +842,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-doppelkopf</h3>\n<p>Die größte Engine im Haus: <code>round.ts</code> allein 43 kB.</p>\n<ul><li><code>ruleset.ts</code>, <code>validator.ts</code> — Regelsatz</li>\n<li><code>deal.ts</code>, <code>order.ts</code>, <code>trick.ts</code></li>\n<li>Vorbehalte, Hochzeit, <b>Armut</b>, Pflichtsolo, Schmeiß, Bock</li>\n<li><code>scoring.ts</code>, <code>trophies.ts</code>, <code>bot.ts</code></li></ul>\n<p>4 oder 5 Sitze. Die Engine kann auch 3 (Validator und Tests), aber die\nLobby bietet es nicht mehr an: Ein Dreiertisch war ohnehin ein Vierertisch\nmit Dauerbot, und genau das verwirrte.</p>\n<p>Wertet die <b>Bot-Stufe</b> in\n<code>botAction</code> aus — wie Easy Poker; Mememory zieht sie schon beim\nAufbau der Partie heran, weil sein Bot ein Gedächtnis hat. Die übrigen\nsieben Module ignorieren sie.</p>\n<p>Bei der <b>Armut</b> ist <code>legalActions</code> leer, obwohl jemand am\nZug ist — siehe Befund.</p>",
+    "html": "\n<h3>packages/game-doppelkopf</h3>\n<p>Die größte Engine im Haus: <code>round.ts</code> allein 43 kB.</p>\n<ul><li><code>ruleset.ts</code>, <code>validator.ts</code> — Regelsatz</li>\n<li><code>deal.ts</code>, <code>order.ts</code>, <code>trick.ts</code></li>\n<li>Vorbehalte, Hochzeit, <b>Armut</b>, Pflichtsolo, Schmeiß, Bock</li>\n<li><code>scoring.ts</code>, <code>trophies.ts</code>, <code>bot.ts</code></li></ul>\n<p>4 oder 5 Sitze. Die Engine kann auch 3, die Lobby bietet es nicht mehr\nan: Ein Dreiertisch war ein Vierertisch mit Dauerbot und verwirrte.</p>\n<p>Wertet die <b>Bot-Stufe</b> in <code>botAction</code> aus, wie Easy Poker;\nMememory schon in <code>createParty</code> (sein Bot hat ein Gedächtnis).\nDie übrigen Module ignorieren sie.</p>\n<p>Bei der <b>Armut</b> ist <code>legalActions</code> leer, obwohl jemand am\nZug ist — siehe Befund.</p>",
     "fontSize": 13
    }
   },
@@ -858,7 +858,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-wizard</h3>\n<p>Stichansage-Spiel, 3 bis 6 Sitze.</p>\n<p>Die xp-Basis ist hier die <b>Summe der Rundennummern</b>, beim Doppelkopf\nBlattgröße mal Runden — <b>nur das Modul weiß das.</b> Genau dafür gibt es\n<code>xpBasis</code> statt einer Formel in der Plattform.</p>\n<p>„Wizard\" ist ein eingetragenes Markenzeichen (AMIGO); im Produkt heißt\ndas Spiel <b>Zauberer</b>. Dieselbe Lage wie bei Cambio/Cabo und\nStufenrommé/Phase 10.</p>",
+    "html": "\n<h3>packages/game-wizard</h3>\n<p>Stichansage-Spiel, 3 bis 6 Sitze.</p>\n<p>xp-Basis ist die <b>Summe der Rundennummern</b> (Doppelkopf: Blattgröße\nmal Runden) — nur das Modul weiß das, deshalb <code>xpBasis</code> statt\neiner Formel in der Plattform.</p>\n<p>„Wizard\" ist ein eingetragenes Markenzeichen (AMIGO); im Produkt heißt\ndas Spiel <b>Zauberer</b>. Dieselbe Lage wie bei Cambio/Cabo und\nStufenrommé/Phase 10.</p>",
     "fontSize": 13
    }
   },
@@ -874,7 +874,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-skat</h3>\n<p>Drei Sitze, fest. Reizen, Skatwahl, Drücken, Ansage, Stich.</p>\n<p><b>Reizen, Skatwahl und Stich</b> liefert die Engine als fertige Aktionen.\n<b>Drücken und Ansage</b> baut der Client aus der Sicht; dort ist\n<code>legalActions</code> leer, obwohl jemand am Zug ist — genau wie bei der\nArmut im Doppelkopf. Siehe Befunde.</p>",
+    "html": "\n<h3>packages/game-skat</h3>\n<p>Drei Sitze, fest. Reizen, Skatwahl, Drücken, Ansage, Stich.</p>\n<p><b>Reizen, Skatwahl und Stich</b> kommen als fertige Aktionen.\n<b>Drücken und Ansage</b> baut der Client aus der Sicht; dort ist\n<code>legalActions</code> leer — siehe Befunde.</p>",
     "fontSize": 13
    }
   },
@@ -890,7 +890,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-cambio</h3>\n<p>Ablegespiel mit vier verdeckten Karten, 2 bis 6 Sitze. Werte\n<b>minimieren</b>.</p>\n<p><b>Der Endstand ist aufsteigend sortiert</b> — die niedrigste Punktzahl\ngewinnt. Der einzige Punkt, an dem Cambio von allen anderen Spielen abweicht;\ndeshalb hängen die Trophäen am <b>Platz</b>, nie an den Punkten.</p>\n<p>„Cabo\" ist ein Markenzeichen (AMIGO); Cambio ist der markenfreie Name\nder Spielfamilie.</p>",
+    "html": "\n<h3>packages/game-cambio</h3>\n<p>Ablegespiel mit vier verdeckten Karten, 2 bis 6 Sitze. Werte\n<b>minimieren</b>.</p>\n<p><b>Endstand aufsteigend</b> — die niedrigste Punktzahl gewinnt. Deshalb\nhängen die Trophäen am <b>Platz</b>, nie an den Punkten.</p>\n<p>„Cabo\" ist ein Markenzeichen (AMIGO); Cambio ist der markenfreie Name\nder Spielfamilie.</p>",
     "fontSize": 13
    }
   },
@@ -906,7 +906,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-eiland</h3>\n<p>Landnahme zu zweit auf 10×10 aus Gras, Seen und Bergen.</p>\n<p><b>Beide wählen gleichzeitig.</b> Wollen beide dasselbe Feld, entscheidet\nein Münzwurf. Eine Aktion ist eine <b>Menge</b> von Feldern, deshalb ist\n<code>legalActions</code> leer; wer ziehen darf, entscheidet allein\n<code>amZug</code> in <code>partie.ts</code>.</p>\n<p><code>currentActor</code> nennt trotzdem einen Sitz — siehe Befunde.</p>",
+    "html": "\n<h3>packages/game-eiland</h3>\n<p>Landnahme zu zweit auf 10×10 aus Gras, Seen und Bergen.</p>\n<p><b>Beide wählen gleichzeitig</b>, bei gleichem Feld entscheidet ein\nMünzwurf. Eine Aktion ist eine <b>Menge</b> von Feldern, daher\n<code>legalActions</code> leer; wer ziehen darf, sagt allein\n<code>amZug</code> in <code>partie.ts</code>.</p>\n<p><code>currentActor</code> nennt trotzdem einen Sitz — siehe Befunde.</p>",
     "fontSize": 13
    }
   },
@@ -922,7 +922,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-tafelrunde</h3>\n<p>2 bis 8 Sitze, seit 04.09.2026. <b>Ohne Blatt</b>: Jeder\nkauft zwischen den Runden aus einem eigenen Laden ein Heer, drei gleiche\nEinheiten verschmelzen zur nächsten Stufe, danach kämpfen die Bretter\nautomatisch.</p>\n<p>Wie Eiland: <b>alle rüsten gleichzeitig</b>, <code>currentActor</code>\nnennt trotzdem einen Sitz.</p>\n<p>Eigener Dreh: <code>legalActions</code> ist hier weder leer noch\nvollständig — das Verschieben fehlt darin, und die Meta sagt es\n(<code>legalActionsUnvollstaendig: true</code>). Siehe Befunde.</p>",
+    "html": "\n<h3>packages/game-tafelrunde</h3>\n<p>2 bis 8 Sitze, seit 04.09.2026. Jeder kauft aus eigenem Laden ein Heer,\ndrei gleiche Einheiten verschmelzen, danach kämpfen die Bretter\nautomatisch.</p>\n<p>Wie Eiland: <b>alle rüsten gleichzeitig</b>, <code>currentActor</code>\nnennt trotzdem einen Sitz.</p>\n<p><code>legalActions</code> ist weder leer noch vollständig\n(<code>legalActionsUnvollstaendig</code>) — siehe Befunde.</p>",
     "fontSize": 13
    }
   },
@@ -938,7 +938,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-partykiste</h3>\n<p><b>4–12 Sitze</b>, seit 18.09.2026 — erstes Spiel mit mehr als acht.\nSeit PR #154 (19.09.2026) <b>neun</b> Minispiele reihum als <b>ein</b>\nTurnier; neun Module wären neun Wartezimmer und neun Ranglisten.</p>\n<p>Mehrere laufen <b>gleichzeitig</b> — wie Eiland nennt\n<code>currentActor</code> trotzdem einen Sitz. Was von selbst weitergeht,\nsteht allein in <code>weiter()</code>.</p>\n<p><b>Sichtbarkeit IST das Spiel:</b> Das fremde Imposter-Wort und der eigene\nName aus „Wer bin ich“ werden nicht ausgeblendet, sondern gar nicht erst\nverschickt — auch nicht an Zuschauer.</p>\n<p><b>Schlücke zählen nicht in die Rangliste.</b> Sonst spielte, wer den\nTrinkmodus ausschaltet, ein anderes Spiel.</p>",
+    "html": "\n<h3>packages/game-partykiste</h3>\n<p><b>4–12 Sitze</b>, seit 18.09.2026 — erstes Spiel mit mehr als acht.\nSeit PR #154 (19.09.2026) <b>neun</b> Minispiele reihum als <b>ein</b>\nTurnier; neun Module wären neun Wartezimmer und neun Ranglisten.</p>\n<p>Mehrere ziehen <b>gleichzeitig</b>, <code>currentActor</code> nennt\ntrotzdem einen Sitz. Was von selbst weitergeht, steht allein in\n<code>weiter()</code>.</p>\n<p><b>Sichtbarkeit IST das Spiel:</b> Das fremde Imposter-Wort und der eigene\nName aus „Wer bin ich“ werden nicht ausgeblendet, sondern gar nicht erst\nverschickt — auch nicht an Zuschauer.</p>\n<p><b>Schlücke zählen nicht in die Rangliste.</b> Sonst spielte, wer den\nTrinkmodus ausschaltet, ein anderes Spiel.</p>",
     "fontSize": 13
    }
   },
@@ -986,7 +986,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-feldherr</h3>\n<p>Kein Kartenspiel, aber dieselbe Schnittstelle — <b>ohne</b> Zugfolge und\nRunden. Beide Geräte rechnen gleichzeitig aus demselben Saatkorn und\nderselben Aktionsliste weiter.</p>\n<p><code>currentActor</code> ist <b>immer null</b> und\n<code>legalActions</code> <b>immer leer</b>: In Echtzeit ist niemand am Zug.\nEin Tisch ohne Aktion ist hier der Normalfall, kein hängender Spieler — die\nLaufzeit darf daraus keinen Zugtimer ableiten.</p>\n<p>Über die Leitung gehen <b>nur Handlungen, nie Zustände</b>: eine Partie\nkommt mit einigen Dutzend Aktionen aus statt mit zwanzig Zuständen je\nSekunde. Die Sicht wächst dabei mit — deshalb als einziges Modul\n<code>viewCursor</code>: 800 Züge wären sonst 40 MB über die Leitung statt\n0,1 MB.</p>\n<p>Der Kern zieht seinen Zufall ausschließlich aus <code>saat()</code>\n(mulberry32). Wer daran etwas ändert, bricht jedes Netzspiel — sichtbar\nerst daran, dass beide einen anderen Sieger sehen.</p>\n<p><code>kern.js</code> und <code>feldherr.html</code> sind <b>gebaut, nicht\ngeschrieben</b> (Quelle: <code>quelle/teile/</code>).</p>",
+    "html": "\n<h3>packages/game-feldherr</h3>\n<p>Kein Kartenspiel, aber dieselbe Schnittstelle — <b>ohne</b> Zugfolge und\nRunden. Beide Geräte rechnen gleichzeitig aus demselben Saatkorn und\nderselben Aktionsliste weiter.</p>\n<p><code>currentActor</code> ist <b>immer null</b> und\n<code>legalActions</code> <b>immer leer</b>: In Echtzeit ist niemand am Zug.\nEin Tisch ohne Aktion ist hier der Normalfall, kein hängender Spieler — die\nLaufzeit darf daraus keinen Zugtimer ableiten.</p>\n<p>Über die Leitung gehen <b>nur Handlungen, nie Zustände</b>. Weil die\nSicht mitwächst, hat nur Feldherr <code>viewCursor</code>: 800 Züge wären\nsonst 40 MB statt 0,1 MB.</p>\n<p>Zufall ausschließlich aus <code>saat()</code> (mulberry32). Eine Änderung\ndaran bricht jedes Netzspiel — sichtbar erst, wenn beide einen anderen\nSieger sehen.</p>\n<p><code>kern.js</code> und <code>feldherr.html</code> sind <b>gebaut, nicht\ngeschrieben</b> (Quelle: <code>quelle/teile/</code>).</p>",
     "fontSize": 13,
     "boardRef": {
      "board": "Feldherr — Funktionsweise",
@@ -1842,7 +1842,7 @@
      }
     ],
     "geaendert": 1786409288000,
-    "groesse": 564963,
+    "groesse": 545926,
     "geholt": 0
    }
   },
@@ -1879,7 +1879,7 @@
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
-    "html": "\n<ol>\n<li>Ein Spielmodul ist eine <b>reine Logikbibliothek</b> — kein Netzwerk,\nkeine Datenbank, keine Uhr, kein Zufall außer dem Seed. Gleicher Zustand\nplus gleiche Aktion ergibt immer dasselbe Ergebnis.</li>\n<li>Sichtbarkeit entsteht <b>ausschließlich in <code>viewFor</code></b>.\nDer Client bekommt nie den vollen Zustand und blendet nichts selbst aus.</li>\n<li>Trophäen sind <b>nicht</b> Teil eines Spielmoduls. Module liefern\nPlatzierungen, die Plattform rechnet die Wertung.</li>\n<li>Regelsatz und Währung bleiben getrennt.</li>\n<li>Jede WebSocket-Nachricht trägt Spielkennung und Protokollversion,\njeder Zustand eine Revisionsnummer.</li>\n<li>Der Client baut seine Schaltflächen aus <code>legalActions</code> und\n<code>viewFor</code> und bildet keine Regeln nach.</li>\n</ol>",
+    "html": "\n<ol>\n<li>Ein Spielmodul ist eine <b>reine Logikbibliothek</b> — kein Netz, keine\nDatenbank, keine Uhr, kein Zufall außer dem Seed.</li>\n<li>Sichtbarkeit entsteht <b>ausschließlich in <code>viewFor</code></b>.\nDer Client bekommt nie den vollen Zustand und blendet nichts selbst aus.</li>\n<li>Trophäen sind <b>nicht</b> Teil eines Spielmoduls. Module liefern\nPlatzierungen, die Plattform rechnet die Wertung.</li>\n<li>Regelsatz und Währung bleiben getrennt.</li>\n<li>Jede WebSocket-Nachricht trägt Spielkennung und Protokollversion,\njeder Zustand eine Revisionsnummer.</li>\n<li>Der Client baut seine Schaltflächen aus <code>legalActions</code> und\n<code>viewFor</code> und bildet keine Regeln nach.</li>\n</ol>",
     "fontSize": 13
    }
   },
@@ -1927,7 +1927,7 @@
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/server/src/trophies.ts</h3>\n<p>Ein Modul liefert <code>standings</code> mit <code>points</code> und\n<code>place</code>. Die Plattform rechnet <b>ausschließlich mit\n<code>place</code></b>.</p>\n<h4>Warum nicht mit Punkten</h4>\n<ul>\n<li>Punktzahlen sind spielabhängig und maßstabslos: Beim Doppelkopf gewinnt\ndie höchste, bei <b>Cambio die niedrigste</b>. Eine Wertung über Punkte\nmüsste jedes Spiel kennen — dann trüge keine Rangliste mehr über alle.</li>\n<li>Ein Tisch mit hohen Multiplikatoren würde zur Trophäenfarm. Man suchte\nden varianzreichsten Regelsatz statt der besten Gegner.</li>\n</ul>\n<h4>Die Verteilung</h4>\n<p>Fester Abstand 6 zwischen zwei Plätzen, 2 bis 6 Sitze\n(<code>2: [3, -3]</code> … <code>6: [15, 9, 3, -3, -9, -15]</code>). Bei\nGleichstand teilen sich die Beteiligten den Mittelwert — die Werte sind so\ngewählt, dass das <b>ganzzahlig</b> bleibt.</p>\n<p>Die Grundverteilung ist eine Nullsumme. Verlassen-Strafe (−10) und\nCheckpoints durchbrechen sie bewusst: Der höchste erreichte Stand ist die\nUntergrenze für künftige Verluste. Die Inflation ist in Kauf genommen, weil\nein Absturz unter eine erreichte Marke Spieler verlässlich vertreibt.</p>",
+    "html": "\n<h3>packages/server/src/trophies.ts</h3>\n<p>Ein Modul liefert <code>standings</code> mit <code>points</code> und\n<code>place</code>. Die Plattform rechnet <b>ausschließlich mit\n<code>place</code></b>.</p>\n<h4>Warum nicht mit Punkten</h4>\n<ul>\n<li>Punkte sind maßstabslos (Cambio: die niedrigste gewinnt). Eine Wertung\ndarüber müsste jedes Spiel kennen.</li>\n<li>Hohe Multiplikatoren machten den Tisch zur Trophäenfarm — man suchte\nden varianzreichsten Regelsatz statt der besten Gegner.</li>\n</ul>\n<h4>Die Verteilung</h4>\n<p>Fester Abstand 6 je Platz (<code>2: [3, -3]</code> …\n<code>6: [15, 9, 3, -3, -9, -15]</code>); bei Gleichstand der Mittelwert,\nso gewählt, dass er <b>ganzzahlig</b> bleibt.</p>\n<p>Grundsätzlich Nullsumme. Verlassen-Strafe (−10) und Checkpoints brechen\nsie bewusst: Der höchste erreichte Stand ist die Untergrenze — ein Absturz\ndarunter vertreibt Spieler verlässlicher als jede Inflation.</p>",
     "fontSize": 13
    }
   },
@@ -1991,7 +1991,7 @@
    "accent": "#e8b45c",
    "collapsed": false,
    "state": {
-    "html": "\n<p>In Produktion liefert der <b>Server den gebauten Client selbst aus</b>.\nDamit gibt es genau einen Ursprung: Das Sitzungs-Cookie gilt ohne Sonderfall\nauch für den WebSocket, es braucht kein CORS und keine zweite Domain.</p>\n<p>In der Entwicklung übernimmt Vite diese Rolle und reicht <code>/api</code>\nund <code>/ws</code> weiter.</p>\n<p>Railway: <code>npm install --include=dev &amp;&amp; npm run build</code>,\nStart <code>node packages/server/dist/src/index.js</code>, Health-Check auf\n<code>/api/health</code>.</p>",
+    "html": "\n<p>In Produktion liefert der <b>Server den gebauten Client selbst aus</b>:\nein Ursprung, das Cookie gilt auch am WebSocket, kein CORS.</p>\n<p>In der Entwicklung übernimmt Vite diese Rolle und reicht <code>/api</code>\nund <code>/ws</code> weiter.</p>\n<p>Railway: <code>npm install --include=dev &amp;&amp; npm run build</code>,\nStart <code>node packages/server/dist/src/index.js</code>, Health-Check auf\n<code>/api/health</code>.</p>",
     "fontSize": 13
    }
   },
@@ -2007,7 +2007,7 @@
    "accent": "#e8b45c",
    "collapsed": false,
    "state": {
-    "html": "\n<p><code>apps/ios</code> (Swift, XcodeGen; ein Repo <code>Brauweg-spiel-ios</code>\ngab es nie): eine Hülle um einen <code>WKWebView</code>, die <b>genau diesen\nClient</b> aus dem App-Paket ausliefert. Keine zweite Oberfläche.</p>\n<p>Damit ist sie eine zweite Herkunft (<code>brauweg://app</code>). Cookies\ngehen dorthin nicht — sie trägt ihr Sitzungstoken selbst: per\n<code>Authorization</code>-Kopf und am WebSocket als Unterprotokoll.</p>",
+    "html": "\n<p><code>apps/ios</code> (Swift, XcodeGen; ein Repo <code>Brauweg-spiel-ios</code>\ngab es nie): eine Hülle um einen <code>WKWebView</code>, die <b>genau diesen\nClient</b> aus dem App-Paket ausliefert. Keine zweite Oberfläche.</p>\n<p>Zweite Herkunft (<code>brauweg://app</code>), also keine Cookies: Das\nSitzungstoken geht als <code>Authorization</code>-Kopf und am WebSocket als\nUnterprotokoll.</p>",
     "fontSize": 13
    }
   },
@@ -2023,7 +2023,7 @@
    "accent": "#e8b45c",
    "collapsed": false,
    "state": {
-    "html": "\n<ul>\n<li><b>Watch Paths müssen leer bleiben.</b> Railway setzt beim Import\n<code>/packages/server/**</code>. Damit werden Client-Änderungen still\nübersprungen und <b>nie ausgeliefert</b> — ohne Fehlermeldung.</li>\n<li><b>Build im Wurzelverzeichnis</b>, nie <code>--workspace</code>: sonst\nist die <code>.d.ts</code> von <code>game-api</code> alt und\n<code>tsc</code> meldet Felder als fehlend, die längst da sind.</li>\n<li><b>Supabase:</b> Session Pooler (5432), nicht Transaction Pooler (6543)\n— der kann keine Prepared Statements.</li>\n<li><b>Zonen-Apex:</b> ein CNAME ist dort nicht erlaubt, Strato bietet kein\nALIAS — deshalb <code>www</code> als Ziel und 301 davor.</li>\n</ul>\n<p style=\"color:#8a93a5\">Die Fallen im Code selbst — React-Effekte an einen\nSchlüssel statt an ein Objekt hängen, am Tisch nichts stumm verwerfen, vor\njedem Commit <code>git diff --cached --stat</code> lesen — stehen in\n<code>CLAUDE.md</code> und bewusst nicht doppelt hier: Zwei Fassungen\nderselben Warnung laufen auseinander, und dann glaubt man der falschen.</p>",
+    "html": "\n<ul>\n<li><b>Watch Paths müssen leer bleiben.</b> Railway setzt beim Import\n<code>/packages/server/**</code> — Client-Änderungen gehen dann still\n<b>nie raus</b>.</li>\n<li><b>Build im Wurzelverzeichnis</b>, nie <code>--workspace</code>: sonst\nist die <code>.d.ts</code> von <code>game-api</code> alt und\n<code>tsc</code> meldet Felder als fehlend, die längst da sind.</li>\n<li><b>Supabase:</b> Session Pooler (5432), nicht Transaction Pooler (6543)\n— der kann keine Prepared Statements.</li>\n<li><b>Zonen-Apex:</b> ein CNAME ist dort nicht erlaubt, Strato bietet kein\nALIAS — deshalb <code>www</code> als Ziel und 301 davor.</li>\n</ul>\n<p style=\"color:#8a93a5\">Die Fallen im Code selbst stehen in\n<code>CLAUDE.md</code>, bewusst nicht doppelt hier: Zwei Fassungen derselben\nWarnung laufen auseinander.</p>",
     "fontSize": 13
    }
   },
@@ -2151,7 +2151,7 @@
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
-    "html": "\n<p><b>Wo:</b> Skat (Drücken, Ansage), Doppelkopf (Armut), Eiland.</p>\n<p><b>Warum:</b> Die Aktion ist dort eine <b>Menge</b> von Karten oder\nFeldern. Sie aufzuzählen hieße, alle Kombinationen aufzuzählen — bei Eiland\nalle Teilmengen von bis zu sechs freien Feldern.</p>\n<p><b>Folge:</b> Der Client baut diese Aktion selbst aus der Sicht — die\ndokumentierte Ausnahme vom Grundsatz „der Client bildet keine Regel nach\".\nWer den Tisch umbaut und sich allein auf <code>legalActions</code> verlässt,\nmacht genau diese Züge unspielbar und merkt es nicht: Eine leere Liste sieht\naus wie „nichts erlaubt\".</p>\n<p><b>Was trotzdem trägt:</b> <code>act</code> weist jeden unerlaubten Zug\nab, und die Invariantenprüfung verlangt, dass der Bot hier handeln kann —\nsonst hängt der Tisch, sobald ein Mensch aussteigt.</p>",
+    "html": "\n<p><b>Wo:</b> Skat (Drücken, Ansage), Doppelkopf (Armut), Eiland.</p>\n<p><b>Warum:</b> Die Aktion ist dort eine <b>Menge</b> von Karten oder\nFeldern. Sie aufzuzählen hieße, alle Kombinationen aufzuzählen — bei Eiland\nalle Teilmengen von bis zu sechs freien Feldern.</p>\n<p><b>Folge:</b> Der Client baut die Aktion selbst aus der Sicht — die\ndokumentierte Ausnahme vom Grundsatz „keine Regel im Client\". Wer den Tisch\numbaut und nur <code>legalActions</code> liest, macht diese Züge lautlos\nunspielbar: Leer sieht aus wie „nichts erlaubt\".</p>\n<p><b>Was trägt:</b> <code>act</code> weist Unerlaubtes ab, und die\nInvariantenprüfung verlangt, dass der Bot hier handeln kann.</p>",
     "fontSize": 12.5
    }
   },
@@ -2167,7 +2167,7 @@
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
-    "html": "\n<p><b>Wo:</b> Tafelrunde, und nur dort.</p>\n<p>Kaufen, Würfeln, Aufsteigen und Verkaufen stehen in der Liste, das\n<b>Verschieben</b> nicht: Es wäre ein Paar aus 19 Plätzen, bis zu 342\nEinträge in jeder Sicht, die über die Leitung geht.</p>\n<p><b>Warum das gefährlicher ist als Fall 1:</b> Eine leere Liste sagt schon\nselbst, dass sie nichts aufzählt. Eine halbe Liste sieht aus wie eine ganze.\nDeshalb sagt das Modul es in seiner Meta:\n<code>legalActionsUnvollstaendig: true</code>.</p>\n<p>Wer das Feld setzt, nimmt sich damit eine Prüfung weg\n(<code>plattform-invarianten.test.ts</code>) und muss dafür sicherstellen,\ndass <code>act</code> jeden unerlaubten Zug abweist.</p>",
+    "html": "\n<p><b>Wo:</b> Tafelrunde, und nur dort.</p>\n<p>Kaufen, Würfeln, Aufsteigen und Verkaufen stehen drin, das\n<b>Verschieben</b> nicht: ein Paar aus 19 Plätzen, bis zu 342 Einträge je\nSicht.</p>\n<p><b>Gefährlicher als eine leere Liste:</b> Eine halbe sieht aus wie eine\nganze. Deshalb sagt es die Meta: <code>legalActionsUnvollstaendig: true</code>.</p>\n<p>Das Feld schaltet eine Invariantenprüfung ab — dafür muss\n<code>act</code> jeden unerlaubten Zug abweisen.</p>",
     "fontSize": 12.5
    }
   },
@@ -2183,7 +2183,7 @@
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
-    "html": "\n<p><b>Wo:</b> Eiland und Tafelrunde.</p>\n<p>Beide Spiele haben <b>keine Zugfolge</b> — alle handeln gleichzeitig.\n<code>currentActor</code> nennt trotzdem einen Sitz (den kleinsten, der noch\nnicht abgegeben hat).</p>\n<p><b>Warum die Notlüge:</b> Ohne einen genannten Sitz bekäme der Tisch von\nder Plattform keinen einzigen Timer — Zugzeit, Bot-Übernahme nach Ablauf und\ndie Verlassen-Regel hängen alle daran.</p>\n<p><b>Warum es gutgeht:</b> Der Server prüft <code>currentActor</code> beim\nHandeln gar nicht. Er prüft nur, dass jemand für den <i>eigenen</i> Sitz\nzieht; wer dran ist, entscheidet allein das Modul.</p>\n<p><b>Gegenprobe:</b> Feldherr liefert null und bekommt deshalb keinen\nZugtimer — dort hält der <code>takt</code>-Herzschlag den Tisch am Leben.</p>",
+    "html": "\n<p><b>Wo:</b> Eiland und Tafelrunde.</p>\n<p>Alle handeln gleichzeitig; <code>currentActor</code> nennt trotzdem den\nkleinsten Sitz, der noch nicht abgegeben hat.</p>\n<p><b>Warum die Notlüge:</b> Ohne Sitz bekäme der Tisch keinen Timer —\nZugzeit, Bot-Übernahme und Verlassen-Regel hängen daran.</p>\n<p><b>Warum es gutgeht:</b> Der Server prüft <code>currentActor</code> beim\nHandeln nicht, nur den <i>eigenen</i> Sitz; wer dran ist, entscheidet das\nModul.</p>\n<p><b>Gegenprobe:</b> Feldherr liefert null und bekommt deshalb keinen\nZugtimer — dort hält der <code>takt</code>-Herzschlag den Tisch am Leben.</p>",
     "fontSize": 12.5
    }
   },
@@ -2199,7 +2199,7 @@
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
-    "html": "\n<p>Feldherr rechnet auf beiden Geräten; über die Leitung gehen nur\nHandlungen. <b>Der Server kennt den Spielstand nicht mit</b> — der Preis von\nWeg B (<code>docs/FELDHERR-PLAN.md</code>).</p>\n<p><b>Absicherung:</b> Beide Geräte melden den Ausgang getrennt. Weichen sie\nab, gilt die Partie als strittig, <code>standings</code> meldet Gleichstand,\nund daraus werden null Trophäen.</p>\n<p><b>Seit dem 04.09.2026 gibt es hier Trophäen wie überall.</b> Die\nDoppelmeldung ist die einzige Absicherung, die dahintersteht. Wer beide\nGeräte in der Hand hat, kann melden, was er will.</p>\n<p>Vor der Behebung prüfen, ob die Trophäen-Entscheidung noch gilt — sie ist\nbewusst so getroffen worden, nicht übersehen.</p>",
+    "html": "\n<p>Feldherr rechnet auf beiden Geräten; über die Leitung gehen nur\nHandlungen. <b>Der Server kennt den Spielstand nicht mit</b> — der Preis von\nWeg B (<code>docs/FELDHERR-PLAN.md</code>).</p>\n<p><b>Absicherung:</b> Beide Geräte melden den Ausgang getrennt; weichen\nsie ab, ist die Partie strittig — Gleichstand, null Trophäen.</p>\n<p><b>Seit dem 04.09.2026 gibt es Trophäen wie überall</b>, gesichert nur\ndurch diese Doppelmeldung. Wer beide Geräte hält, meldet, was er will.</p>\n<p>Die Entscheidung ist bewusst, nicht übersehen — vor einer Behebung\nprüfen, ob sie noch gilt.</p>",
     "fontSize": 12.5
    }
   },
@@ -2231,7 +2231,7 @@
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
-    "html": "\n<p><code>createDeck()</code> läuft bei <b>jedem Geben</b> und zählt die\nKennungen von 0 hoch. Karte 12 aus Runde 1 ist nicht dieselbe Karte wie\nKarte 12 aus Runde 2.</p>\n<p><b>Wozu es sie gibt:</b> Im Doppelkopf kommt jede Karte doppelt vor — die\nlaufende Nummer unterscheidet die Exemplare (erste/zweite Dulle).</p>\n<p><b>Folge:</b> Eine Karten-ID ist nur innerhalb der laufenden Runde\ngültig. Wer sie über den Rundenwechsel hinweg als Schlüssel benutzt — als\nReact-<code>key</code>, in einer Animation, in einer Statistik —, bekommt\nkeine Fehlermeldung, sondern still verwechselte Karten.</p>",
+    "html": "\n<p><code>createDeck()</code> läuft bei <b>jedem Geben</b> und zählt die\nKennungen von 0 hoch. Karte 12 aus Runde 1 ist nicht dieselbe Karte wie\nKarte 12 aus Runde 2.</p>\n<p><b>Wozu es sie gibt:</b> Im Doppelkopf kommt jede Karte doppelt vor — die\nlaufende Nummer unterscheidet die Exemplare (erste/zweite Dulle).</p>\n<p><b>Folge:</b> Eine ID gilt nur in der laufenden Runde. Als Schlüssel\nüber Runden hinweg (React-<code>key</code>, Animation, Statistik) gibt sie\nkeinen Fehler, sondern still verwechselte Karten.</p>",
     "fontSize": 12.5
    }
   },
@@ -2247,7 +2247,7 @@
    "accent": "#ef6b6b",
    "collapsed": false,
    "state": {
-    "html": "\n<p><code>packages/client</code> hat rund <b>44.500 Zeilen</b> und\n<b>sieben</b> Testdateien (Eiland, Tafelrunde, Druckabbruch, Tischauswahl).\nAm 01.09.2026 waren es 36.368 Zeilen und <b>null</b> Tests — der Befund ist\nkleiner geworden, nicht erledigt.</p>\n<p><b>Warum das hier steht:</b> Der Client bildet zwar keine Regeln nach,\naber sehr wohl die Darstellung jeder Sicht. Eine gebrochene Annahme über\n<code>viewFor</code> zeigt sich deshalb erst im Browser — und dort erst,\nwenn jemand genau diesen Bildschirm öffnet.</p>",
+    "html": "\n<p><code>packages/client</code> hat rund <b>44.500 Zeilen</b> und\n<b>sieben</b> Testdateien (Eiland, Tafelrunde, Druckabbruch, Tischauswahl).\nAm 01.09.2026 waren es 36.368 Zeilen und <b>null</b> Tests — der Befund ist\nkleiner geworden, nicht erledigt.</p>\n<p><b>Warum das zählt:</b> Der Client bildet keine Regeln nach, wohl aber\ndie Darstellung jeder Sicht. Eine gebrochene Annahme über\n<code>viewFor</code> zeigt sich erst, wenn jemand genau diesen Bildschirm\nöffnet.</p>",
     "fontSize": 12.5
    }
   },
@@ -2279,7 +2279,7 @@
    "accent": "#6ea8fe",
    "collapsed": false,
    "state": {
-    "html": "\n<h1>Brauweg — Funktionsweise</h1>\n<p><b>Kartenspiel-Plattform mit frei konfigurierbaren Regelsätzen.</b> Mehrere\nklassische Spiele unter einem Dach, eigene Rangliste je Spiel plus\nspielübergreifende Gesamtwertung.</p>\n<p>Das Produktversprechen ist nicht „viele Spiele\", sondern <i>„spiel nach\neuren Regeln, über alle Spiele hinweg gewertet\"</i>. Der ganze Aufbau folgt\ndaraus: Server und Client kennen kein einzelnes Kartenspiel.</p>\n<p><b>Diese Tafel ist zugleich die Visual-Building-Tafel des Repos.</b> Der\nOrchestrator findet sie über den Namen und gibt ihr Destillat jedem Auftrag\nmit; deshalb steht alles Wissen in Notiz-Kacheln und jeder Befund trägt ein\n⚠ im Titel. Erzeugt wird sie aus\n<code>werkzeug/gamedesk/boards/_erzeuger-brauweg.mjs</code> — von Hand\ngeänderte Kacheln überschreibt der nächste Lauf.</p>\n<p style=\"color:#8a93a5;font-size:.9em\">Stand 05.09.2026: zehn Spiele\nspielbar (Doppelkopf, Zauberer, Skat, Cambio, Easy Poker, Mememory, Filler,\nEiland, Feldherr, Tafelrunde) · neun weitere als Vorschau zur Abstimmung ·\n1.300 Tests in den Paketen (402 davon im Server) plus sieben Testdateien im\nClient · live auf www.brauweg-spielen.de</p>",
+    "html": "\n<h1>Brauweg — Funktionsweise</h1>\n<p><b>Kartenspiel-Plattform mit frei konfigurierbaren Regelsätzen.</b> Mehrere\nklassische Spiele unter einem Dach, eigene Rangliste je Spiel plus\nspielübergreifende Gesamtwertung.</p>\n<p>Das Produktversprechen ist nicht „viele Spiele\", sondern <i>„spiel nach\neuren Regeln, über alle Spiele hinweg gewertet\"</i>. Der ganze Aufbau folgt\ndaraus: Server und Client kennen kein einzelnes Kartenspiel.</p>\n<p><b>Zugleich die Visual-Building-Tafel des Repos:</b> Ihr Destillat geht\nan jeden Auftrag, deshalb steht alles Wissen in Notizen und jeder Befund\nträgt ⚠. Erzeugt aus <code>werkzeug/gamedesk/boards/_erzeuger-brauweg.mjs</code>\n— Handänderungen überschreibt der nächste Lauf.</p>\n<p style=\"color:#8a93a5;font-size:.9em\">Spiele siehe „Zwölf Module, eine\nSchnittstelle\" · live auf www.brauweg-spielen.de</p>",
     "fontSize": 14
    }
   }

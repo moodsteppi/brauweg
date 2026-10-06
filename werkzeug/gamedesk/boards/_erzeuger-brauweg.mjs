@@ -203,8 +203,8 @@ win('client-decks', 'notes', 'Kartenblätter', -1560, -210, 430, 250, note(`
 <ul><li><code>text</code> — Zeichen (♣D), lädt nichts nach</li>
 <li><code>minimal2</code> / <code>minimal4</code> — flache Bildkarten</li>
 <li><code>klassisch</code> — gezeichnet</li></ul>
-<p><b>Der Server kennt nur die Kennungen.</b> Wie ein Blatt aussieht, weiß
-allein der Client. Ein neues Blatt = ein Bildordner + je ein Listeneintrag.</p>
+<p><b>Der Server kennt nur die Kennungen</b>, das Aussehen allein der
+Client. Neues Blatt = Bildordner + Listeneintrag.</p>
 <p>Der ausgeschriebene Kartenname steht im <code>alt</code>-Text — Vorlese­gerät
 und fehlendes Bild ergeben dieselbe Ausgabe wie das Textblatt.</p>`), '#57c98a');
 
@@ -356,23 +356,20 @@ const PREVIEW = ['schafkopf','romme','maumau','schwimmen',
 win('server-registry-note', 'notes', 'Die Registrierung — der einzige Ort mit Spielnamen',
   SX + 1280, -600, 440, 350, note(`
 <h2>packages/server/src/games/registry.ts</h2>
-<p><b>Die einzige Stelle im Server, die ein konkretes Spiel kennt.</b> Lobby,
-Tische, Gateway, Laufzeit und Ranglisten arbeiten ausschließlich gegen
-<code>GameModule</code>.</p>
-<p><b>Warum das zählt:</b> Wird irgendwo sonst ein Spielpaket importiert, ist
-die Trennung gebrochen — und das nächste Spiel wird teuer, weil es dann nicht
-mehr ein Paket ist, sondern ein Eingriff in Server und Client.</p>
-<p>Zwei Listen: <code>MODULES</code> (spielbar, zehn Stück) und
-<code>PREVIEW</code> (in der Lobby sichtbar, nicht startbar, aber
-abstimmbar — der günstigste Marktforschungsmoment, den es gibt).</p>
-<p><b>Ein neues Spiel</b> = ein neues Paket + eine Zeile in
-<code>MODULES</code> + der Eintrag aus <code>PREVIEW</code> raus.</p>`), '#6ea8fe');
+<p><b>Die einzige Stelle im Server, die ein konkretes Spiel kennt.</b> Alles
+andere arbeitet gegen <code>GameModule</code>. Importiert sonst jemand ein
+Spielpaket, ist die Trennung gebrochen — das nächste Spiel wird dann ein
+Eingriff in Server und Client statt ein Paket.</p>
+<p><code>MODULES</code> ist spielbar, <code>PREVIEW</code> sichtbar, nicht
+startbar, aber abstimmbar (die billigste Marktforschung).</p>
+<p><b>Neues Spiel</b> = Paket + Zeile in <code>MODULES</code>, Eintrag aus
+<code>PREVIEW</code> raus.</p>`), '#6ea8fe');
 
 win('server-runtime', 'notes', 'Laufzeit — laufende Partien', SX + 320, -190, 440, 320, note(`
 <h2>runtime/party.ts</h2>
-<p>Die Partie liegt <b>maßgeblich im Arbeitsspeicher</b>; nach <b>jeder</b>
-Aktion geht ein Schnappschuss in die Datenbank. Railway startet Container
-jederzeit neu — ohne das wäre jeder Tisch weg.</p>
+<p>Die Partie liegt <b>im Arbeitsspeicher</b>, nach <b>jeder</b> Aktion
+geht ein Schnappschuss in die Datenbank — Railway startet Container
+jederzeit neu.</p>
 <ul>
 <li><code>start</code> / <code>resume</code> — Partie anlegen oder aus dem
 Schnappschuss holen</li>
@@ -458,54 +455,44 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    Tafel-Destillat eines Auftrags. */
 win('api-vertrag', 'notes', 'Der Vertrag — was jedes Modul zusagt', GX + 570, -960, 460, 620, note(`
 <h2>packages/game-api</h2>
-<p><b>Die einzige Schnittstelle zwischen Plattform und Spiel.</b> Server,
-Lobby und Client wissen nicht, dass es Doppelkopf gibt.</p>
+<p><b>Die einzige Schnittstelle zwischen Plattform und Spiel.</b></p>
 <h3>Pflicht</h3>
 <ul>
-<li><code>meta</code>, <code>protocolVersion</code> — steigt, sobald sich
-Aktion oder Sicht ändern; der Server weist zu alte Clients beim
-<i>Beitritt</i> ab, nicht mitten in der Partie</li>
-<li><code>defaultConfig</code>, <code>validateConfig</code> — nimmt bewusst
-<code>unknown</code>: Der Regelsatz kommt als JSON von außen, ihn schon als
-gültig zu typisieren hieße anzunehmen, was die Methode feststellen soll</li>
+<li><code>meta</code>, <code>protocolVersion</code> — steigt mit jeder
+Änderung an Aktion oder Sicht; zu alte Clients weist der Server beim
+<i>Beitritt</i> ab, nie mitten in der Partie</li>
+<li><code>defaultConfig</code>, <code>validateConfig(unknown)</code> — der
+Regelsatz kommt als JSON von außen; ihn als gültig zu typisieren nähme an,
+was die Methode erst feststellt</li>
 <li><code>createParty</code>, <code>act</code>, <code>currentActor</code>,
 <code>legalActions</code>, <code>isFinished</code>, <code>standings</code>,
-<code>markLeft</code></li>
+<code>markLeft</code>, <code>serialize</code> / <code>deserialize</code></li>
 <li><code>viewFor</code>, <code>spectatorView</code> — die einzigen Wege
-nach draußen</li>
-<li><code>botAction(view)</code> — nur die gefilterte Sicht</li>
-<li><code>serialize</code> / <code>deserialize</code></li>
+nach draußen; <code>botAction(view)</code> sieht nur die gefilterte Sicht</li>
 </ul>
 <h3>Freiwillig</h3>
 <ul>
-<li><code>interludeMs</code> / <code>advanceInterlude</code> — Schaupause.
-Das Modul nennt <b>nur die Dauer</b>, die Zeit misst die Plattform</li>
+<li><code>interludeMs</code> / <code>advanceInterlude</code> — Schaupause:
+das Modul nennt nur die Dauer, die Zeit misst die Plattform</li>
 <li><code>viewCursor</code> — anwachsende Sicht, nur Feldherr</li>
-<li><code>completedSegments</code> — Zwischenabrechnungen; die Plattform
-speichert sie unverändert und wertet sie <b>nicht</b> aus</li>
-<li><code>xpBasis</code> — gelegte Karten je Sitz. Fehlt sie, gibt es keine
-Punkte: lieber gar keine als geratene</li>
+<li><code>completedSegments</code> — gespeichert, <b>nicht</b> ausgewertet</li>
+<li><code>xpBasis</code> — fehlt sie, gibt es keine Punkte statt geratener</li>
 </ul>
 <h3>Drei Schalter in der Meta</h3>
-<p><code>xpBasisZaehltKarten</code> (Feldherr: nein — sonst füllt jedes
-Gefecht die Kartenaufgabe des Tages) ·
-<code>legalActionsUnvollstaendig</code> (nur Tafelrunde) ·
-<code>chipStackField</code> (nur Easy Poker: die Plattform zieht den
-Startstapel in BroJetons ein und zahlt den Rest zurück — das Modul rechnet
-weiter mit blanken Zahlen)</p>`), '#b78cf7');
+<p><code>xpBasisZaehltKarten</code> (Feldherr: nein, sonst füllt jedes
+Gefecht die Kartenaufgabe) · <code>legalActionsUnvollstaendig</code> (nur
+Tafelrunde) · <code>chipStackField</code> (nur Easy Poker: die Plattform
+zieht den Startstapel in BroJetons ein, das Modul rechnet blanke Zahlen)</p>`), '#b78cf7');
 
 win('api-invarianten', 'notes', 'Wer den Vertrag durchsetzt', GX + 570, -290, 460, 250, note(`
 <h3>packages/server/test/plattform-invarianten.test.ts</h3>
-<p>Läuft über <code>registry.all()</code> und spielt je Modul vollständige
-Bot-Partien durch. <b>Ein neues Modul wird automatisch mitgeprüft</b>, ohne
-dass jemand dort eine Zeile ergänzt.</p>
-<p>Geprüft wird, worauf sich Lobby, Laufzeit und Client verlassen, ohne das
-Spiel zu kennen: dass der Bot immer handeln kann, dass <code>act</code>
-jeden unerlaubten Zug abweist, dass die Platzfolge in sich stimmt und dass
-die Zuschauersicht nichts Persönliches trägt.</p>
-<p>Entstanden aus einer Nachtdurchsicht am 01.09.2026 — 215.000 simulierte
-Züge fanden keinen Regelfehler. <b>Genau deshalb</b> steht die Prüfung
-dauerhaft im Repo: damit das nächste Spiel sie beim ersten Lauf spürt und
+<p>Spielt über <code>registry.all()</code> je Modul ganze Bot-Partien —
+<b>ein neues Modul wird automatisch mitgeprüft</b>.</p>
+<p>Geprüft wird, worauf sich die Plattform ohne Spielkenntnis verlässt: Der
+Bot kann immer handeln, <code>act</code> weist jeden unerlaubten Zug ab, die
+Platzfolge stimmt, die Zuschauersicht trägt nichts Persönliches.</p>
+<p>Aus einer Nachtdurchsicht am 01.09.2026 (215.000 Züge, kein Regelfehler)
+— dauerhaft im Repo, damit das nächste Spiel sie beim ersten Lauf spürt und
 nicht im Betrieb.</p>`), '#b78cf7');
 
 win('game-liste', 'notes', 'Zwölf Module, eine Schnittstelle', GX + 1080, -960, 420, 290, note(`
@@ -531,22 +518,20 @@ win('game-doko', 'notes', 'Doppelkopf', GX + 1080, -640, 420, 300, note(`
 <li><code>deal.ts</code>, <code>order.ts</code>, <code>trick.ts</code></li>
 <li>Vorbehalte, Hochzeit, <b>Armut</b>, Pflichtsolo, Schmeiß, Bock</li>
 <li><code>scoring.ts</code>, <code>trophies.ts</code>, <code>bot.ts</code></li></ul>
-<p>4 oder 5 Sitze. Die Engine kann auch 3 (Validator und Tests), aber die
-Lobby bietet es nicht mehr an: Ein Dreiertisch war ohnehin ein Vierertisch
-mit Dauerbot, und genau das verwirrte.</p>
-<p>Wertet die <b>Bot-Stufe</b> in
-<code>botAction</code> aus — wie Easy Poker; Mememory zieht sie schon beim
-Aufbau der Partie heran, weil sein Bot ein Gedächtnis hat. Die übrigen
-sieben Module ignorieren sie.</p>
+<p>4 oder 5 Sitze. Die Engine kann auch 3, die Lobby bietet es nicht mehr
+an: Ein Dreiertisch war ein Vierertisch mit Dauerbot und verwirrte.</p>
+<p>Wertet die <b>Bot-Stufe</b> in <code>botAction</code> aus, wie Easy Poker;
+Mememory schon in <code>createParty</code> (sein Bot hat ein Gedächtnis).
+Die übrigen Module ignorieren sie.</p>
 <p>Bei der <b>Armut</b> ist <code>legalActions</code> leer, obwohl jemand am
 Zug ist — siehe Befund.</p>`), '#b78cf7');
 
 win('game-wizard', 'notes', 'Zauberer', GX + 1080, -310, 420, 270, note(`
 <h3>packages/game-wizard</h3>
 <p>Stichansage-Spiel, 3 bis 6 Sitze.</p>
-<p>Die xp-Basis ist hier die <b>Summe der Rundennummern</b>, beim Doppelkopf
-Blattgröße mal Runden — <b>nur das Modul weiß das.</b> Genau dafür gibt es
-<code>xpBasis</code> statt einer Formel in der Plattform.</p>
+<p>xp-Basis ist die <b>Summe der Rundennummern</b> (Doppelkopf: Blattgröße
+mal Runden) — nur das Modul weiß das, deshalb <code>xpBasis</code> statt
+einer Formel in der Plattform.</p>
 <p>„Wizard" ist ein eingetragenes Markenzeichen (AMIGO); im Produkt heißt
 das Spiel <b>Zauberer</b>. Dieselbe Lage wie bei Cambio/Cabo und
 Stufenrommé/Phase 10.</p>`), '#b78cf7');
@@ -554,50 +539,46 @@ Stufenrommé/Phase 10.</p>`), '#b78cf7');
 win('game-skat', 'notes', 'Skat', GX + 1550, -610, 420, 270, note(`
 <h3>packages/game-skat</h3>
 <p>Drei Sitze, fest. Reizen, Skatwahl, Drücken, Ansage, Stich.</p>
-<p><b>Reizen, Skatwahl und Stich</b> liefert die Engine als fertige Aktionen.
+<p><b>Reizen, Skatwahl und Stich</b> kommen als fertige Aktionen.
 <b>Drücken und Ansage</b> baut der Client aus der Sicht; dort ist
-<code>legalActions</code> leer, obwohl jemand am Zug ist — genau wie bei der
-Armut im Doppelkopf. Siehe Befunde.</p>`), '#b78cf7');
+<code>legalActions</code> leer — siehe Befunde.</p>`), '#b78cf7');
 
 win('game-cambio', 'notes', 'Cambio — wenig ist gut', GX + 1550, -310, 420, 270, note(`
 <h3>packages/game-cambio</h3>
 <p>Ablegespiel mit vier verdeckten Karten, 2 bis 6 Sitze. Werte
 <b>minimieren</b>.</p>
-<p><b>Der Endstand ist aufsteigend sortiert</b> — die niedrigste Punktzahl
-gewinnt. Der einzige Punkt, an dem Cambio von allen anderen Spielen abweicht;
-deshalb hängen die Trophäen am <b>Platz</b>, nie an den Punkten.</p>
+<p><b>Endstand aufsteigend</b> — die niedrigste Punktzahl gewinnt. Deshalb
+hängen die Trophäen am <b>Platz</b>, nie an den Punkten.</p>
 <p>„Cabo" ist ein Markenzeichen (AMIGO); Cambio ist der markenfreie Name
 der Spielfamilie.</p>`), '#b78cf7');
 
 win('game-eiland', 'notes', 'Eiland — beide ziehen gleichzeitig', GX + 2020, -960, 420, 300, note(`
 <h3>packages/game-eiland</h3>
 <p>Landnahme zu zweit auf 10×10 aus Gras, Seen und Bergen.</p>
-<p><b>Beide wählen gleichzeitig.</b> Wollen beide dasselbe Feld, entscheidet
-ein Münzwurf. Eine Aktion ist eine <b>Menge</b> von Feldern, deshalb ist
-<code>legalActions</code> leer; wer ziehen darf, entscheidet allein
+<p><b>Beide wählen gleichzeitig</b>, bei gleichem Feld entscheidet ein
+Münzwurf. Eine Aktion ist eine <b>Menge</b> von Feldern, daher
+<code>legalActions</code> leer; wer ziehen darf, sagt allein
 <code>amZug</code> in <code>partie.ts</code>.</p>
 <p><code>currentActor</code> nennt trotzdem einen Sitz — siehe Befunde.</p>`), '#b78cf7');
 
 win('game-tafelrunde', 'notes', 'Tafelrunde — Auto-Battler', GX + 2020, -630, 420, 320, note(`
 <h3>packages/game-tafelrunde</h3>
-<p>2 bis 8 Sitze, seit 04.09.2026. <b>Ohne Blatt</b>: Jeder
-kauft zwischen den Runden aus einem eigenen Laden ein Heer, drei gleiche
-Einheiten verschmelzen zur nächsten Stufe, danach kämpfen die Bretter
+<p>2 bis 8 Sitze, seit 04.09.2026. Jeder kauft aus eigenem Laden ein Heer,
+drei gleiche Einheiten verschmelzen, danach kämpfen die Bretter
 automatisch.</p>
 <p>Wie Eiland: <b>alle rüsten gleichzeitig</b>, <code>currentActor</code>
 nennt trotzdem einen Sitz.</p>
-<p>Eigener Dreh: <code>legalActions</code> ist hier weder leer noch
-vollständig — das Verschieben fehlt darin, und die Meta sagt es
-(<code>legalActionsUnvollstaendig: true</code>). Siehe Befunde.</p>`), '#b78cf7');
+<p><code>legalActions</code> ist weder leer noch vollständig
+(<code>legalActionsUnvollstaendig</code>) — siehe Befunde.</p>`), '#b78cf7');
 
 win('game-partykiste', 'notes', 'Partykiste — neun Minispiele, ein Turnier', GX + 2490, -630, 420, 340, note(`
 <h3>packages/game-partykiste</h3>
 <p><b>4–12 Sitze</b>, seit 18.09.2026 — erstes Spiel mit mehr als acht.
 Seit PR #154 (19.09.2026) <b>neun</b> Minispiele reihum als <b>ein</b>
 Turnier; neun Module wären neun Wartezimmer und neun Ranglisten.</p>
-<p>Mehrere laufen <b>gleichzeitig</b> — wie Eiland nennt
-<code>currentActor</code> trotzdem einen Sitz. Was von selbst weitergeht,
-steht allein in <code>weiter()</code>.</p>
+<p>Mehrere ziehen <b>gleichzeitig</b>, <code>currentActor</code> nennt
+trotzdem einen Sitz. Was von selbst weitergeht, steht allein in
+<code>weiter()</code>.</p>
 <p><b>Sichtbarkeit IST das Spiel:</b> Das fremde Imposter-Wort und der eigene
 Name aus „Wer bin ich“ werden nicht ausgeblendet, sondern gar nicht erst
 verschickt — auch nicht an Zuschauer.</p>
@@ -646,14 +627,12 @@ derselben Aktionsliste weiter.</p>
 <code>legalActions</code> <b>immer leer</b>: In Echtzeit ist niemand am Zug.
 Ein Tisch ohne Aktion ist hier der Normalfall, kein hängender Spieler — die
 Laufzeit darf daraus keinen Zugtimer ableiten.</p>
-<p>Über die Leitung gehen <b>nur Handlungen, nie Zustände</b>: eine Partie
-kommt mit einigen Dutzend Aktionen aus statt mit zwanzig Zuständen je
-Sekunde. Die Sicht wächst dabei mit — deshalb als einziges Modul
-<code>viewCursor</code>: 800 Züge wären sonst 40 MB über die Leitung statt
-0,1 MB.</p>
-<p>Der Kern zieht seinen Zufall ausschließlich aus <code>saat()</code>
-(mulberry32). Wer daran etwas ändert, bricht jedes Netzspiel — sichtbar
-erst daran, dass beide einen anderen Sieger sehen.</p>
+<p>Über die Leitung gehen <b>nur Handlungen, nie Zustände</b>. Weil die
+Sicht mitwächst, hat nur Feldherr <code>viewCursor</code>: 800 Züge wären
+sonst 40 MB statt 0,1 MB.</p>
+<p>Zufall ausschließlich aus <code>saat()</code> (mulberry32). Eine Änderung
+daran bricht jedes Netzspiel — sichtbar erst, wenn beide einen anderen
+Sieger sehen.</p>
 <p><code>kern.js</code> und <code>feldherr.html</code> sind <b>gebaut, nicht
 geschrieben</b> (Quelle: <code>quelle/teile/</code>).</p>`, 13, {
   board: 'Feldherr — Funktionsweise',
@@ -693,9 +672,8 @@ frame('f-games', 'Spielmodule', 'Reine Logik · kein Netz, keine Uhr, kein Zufal
 
 win('rules-core', 'notes', 'Grundsätze, die nicht aufgeweicht werden', -1560, 260, 460, 430, note(`
 <ol>
-<li>Ein Spielmodul ist eine <b>reine Logikbibliothek</b> — kein Netzwerk,
-keine Datenbank, keine Uhr, kein Zufall außer dem Seed. Gleicher Zustand
-plus gleiche Aktion ergibt immer dasselbe Ergebnis.</li>
+<li>Ein Spielmodul ist eine <b>reine Logikbibliothek</b> — kein Netz, keine
+Datenbank, keine Uhr, kein Zufall außer dem Seed.</li>
 <li>Sichtbarkeit entsteht <b>ausschließlich in <code>viewFor</code></b>.
 Der Client bekommt nie den vollen Zustand und blendet nichts selbst aus.</li>
 <li>Trophäen sind <b>nicht</b> Teil eines Spielmoduls. Module liefern
@@ -726,21 +704,18 @@ win('rules-trophies', 'notes', 'Trophäen hängen am Platz, nie an den Punkten',
 <code>place</code></b>.</p>
 <h4>Warum nicht mit Punkten</h4>
 <ul>
-<li>Punktzahlen sind spielabhängig und maßstabslos: Beim Doppelkopf gewinnt
-die höchste, bei <b>Cambio die niedrigste</b>. Eine Wertung über Punkte
-müsste jedes Spiel kennen — dann trüge keine Rangliste mehr über alle.</li>
-<li>Ein Tisch mit hohen Multiplikatoren würde zur Trophäenfarm. Man suchte
+<li>Punkte sind maßstabslos (Cambio: die niedrigste gewinnt). Eine Wertung
+darüber müsste jedes Spiel kennen.</li>
+<li>Hohe Multiplikatoren machten den Tisch zur Trophäenfarm — man suchte
 den varianzreichsten Regelsatz statt der besten Gegner.</li>
 </ul>
 <h4>Die Verteilung</h4>
-<p>Fester Abstand 6 zwischen zwei Plätzen, 2 bis 6 Sitze
-(<code>2: [3, -3]</code> … <code>6: [15, 9, 3, -3, -9, -15]</code>). Bei
-Gleichstand teilen sich die Beteiligten den Mittelwert — die Werte sind so
-gewählt, dass das <b>ganzzahlig</b> bleibt.</p>
-<p>Die Grundverteilung ist eine Nullsumme. Verlassen-Strafe (−10) und
-Checkpoints durchbrechen sie bewusst: Der höchste erreichte Stand ist die
-Untergrenze für künftige Verluste. Die Inflation ist in Kauf genommen, weil
-ein Absturz unter eine erreichte Marke Spieler verlässlich vertreibt.</p>`), '#ef6b6b');
+<p>Fester Abstand 6 je Platz (<code>2: [3, -3]</code> …
+<code>6: [15, 9, 3, -3, -9, -15]</code>); bei Gleichstand der Mittelwert,
+so gewählt, dass er <b>ganzzahlig</b> bleibt.</p>
+<p>Grundsätzlich Nullsumme. Verlassen-Strafe (−10) und Checkpoints brechen
+sie bewusst: Der höchste erreichte Stand ist die Untergrenze — ein Absturz
+darunter vertreibt Spieler verlässlicher als jede Inflation.</p>`), '#ef6b6b');
 
 frame('f-rules', 'Grundsätze', 'Was die Trennung trägt', '#ef6b6b',
   ['rules-core', 'rules-spectator', 'rules-bot', 'rules-trophies'], 'gamedesign');
@@ -788,9 +763,8 @@ frame('f-data', 'Daten', 'PostgreSQL · Drizzle · pglite für lokal', '#4fd1c5'
    ===================================================================== */
 
 win('ops-deploy', 'notes', 'Ein Dienst, eine Domain', GX, 260, 460, 300, note(`
-<p>In Produktion liefert der <b>Server den gebauten Client selbst aus</b>.
-Damit gibt es genau einen Ursprung: Das Sitzungs-Cookie gilt ohne Sonderfall
-auch für den WebSocket, es braucht kein CORS und keine zweite Domain.</p>
+<p>In Produktion liefert der <b>Server den gebauten Client selbst aus</b>:
+ein Ursprung, das Cookie gilt auch am WebSocket, kein CORS.</p>
 <p>In der Entwicklung übernimmt Vite diese Rolle und reicht <code>/api</code>
 und <code>/ws</code> weiter.</p>
 <p>Railway: <code>npm install --include=dev &amp;&amp; npm run build</code>,
@@ -801,15 +775,15 @@ win('ops-ios', 'notes', 'iOS-App — die eine Ausnahme', GX, 600, 460, 250, note
 <p><code>apps/ios</code> (Swift, XcodeGen; ein Repo <code>Brauweg-spiel-ios</code>
 gab es nie): eine Hülle um einen <code>WKWebView</code>, die <b>genau diesen
 Client</b> aus dem App-Paket ausliefert. Keine zweite Oberfläche.</p>
-<p>Damit ist sie eine zweite Herkunft (<code>brauweg://app</code>). Cookies
-gehen dorthin nicht — sie trägt ihr Sitzungstoken selbst: per
-<code>Authorization</code>-Kopf und am WebSocket als Unterprotokoll.</p>`), '#e8b45c');
+<p>Zweite Herkunft (<code>brauweg://app</code>), also keine Cookies: Das
+Sitzungstoken geht als <code>Authorization</code>-Kopf und am WebSocket als
+Unterprotokoll.</p>`), '#e8b45c');
 
 win('ops-pitfalls', 'notes', 'Fallen, die Zeit gekostet haben', GX + 510, 260, 460, 590, note(`
 <ul>
 <li><b>Watch Paths müssen leer bleiben.</b> Railway setzt beim Import
-<code>/packages/server/**</code>. Damit werden Client-Änderungen still
-übersprungen und <b>nie ausgeliefert</b> — ohne Fehlermeldung.</li>
+<code>/packages/server/**</code> — Client-Änderungen gehen dann still
+<b>nie raus</b>.</li>
 <li><b>Build im Wurzelverzeichnis</b>, nie <code>--workspace</code>: sonst
 ist die <code>.d.ts</code> von <code>game-api</code> alt und
 <code>tsc</code> meldet Felder als fehlend, die längst da sind.</li>
@@ -818,11 +792,9 @@ ist die <code>.d.ts</code> von <code>game-api</code> alt und
 <li><b>Zonen-Apex:</b> ein CNAME ist dort nicht erlaubt, Strato bietet kein
 ALIAS — deshalb <code>www</code> als Ziel und 301 davor.</li>
 </ul>
-<p style="color:#8a93a5">Die Fallen im Code selbst — React-Effekte an einen
-Schlüssel statt an ein Objekt hängen, am Tisch nichts stumm verwerfen, vor
-jedem Commit <code>git diff --cached --stat</code> lesen — stehen in
-<code>CLAUDE.md</code> und bewusst nicht doppelt hier: Zwei Fassungen
-derselben Warnung laufen auseinander, und dann glaubt man der falschen.</p>`), '#e8b45c');
+<p style="color:#8a93a5">Die Fallen im Code selbst stehen in
+<code>CLAUDE.md</code>, bewusst nicht doppelt hier: Zwei Fassungen derselben
+Warnung laufen auseinander.</p>`), '#e8b45c');
 
 frame('f-ops', 'Betrieb & Auslieferung', 'www.brauweg-spielen.de · Railway', '#e8b45c',
   ['ops-deploy', 'ops-ios', 'ops-pitfalls'], 'betrieb');
@@ -862,39 +834,32 @@ const befunde = [
 <p><b>Warum:</b> Die Aktion ist dort eine <b>Menge</b> von Karten oder
 Feldern. Sie aufzuzählen hieße, alle Kombinationen aufzuzählen — bei Eiland
 alle Teilmengen von bis zu sechs freien Feldern.</p>
-<p><b>Folge:</b> Der Client baut diese Aktion selbst aus der Sicht — die
-dokumentierte Ausnahme vom Grundsatz „der Client bildet keine Regel nach".
-Wer den Tisch umbaut und sich allein auf <code>legalActions</code> verlässt,
-macht genau diese Züge unspielbar und merkt es nicht: Eine leere Liste sieht
-aus wie „nichts erlaubt".</p>
-<p><b>Was trotzdem trägt:</b> <code>act</code> weist jeden unerlaubten Zug
-ab, und die Invariantenprüfung verlangt, dass der Bot hier handeln kann —
-sonst hängt der Tisch, sobald ein Mensch aussteigt.</p>`],
+<p><b>Folge:</b> Der Client baut die Aktion selbst aus der Sicht — die
+dokumentierte Ausnahme vom Grundsatz „keine Regel im Client". Wer den Tisch
+umbaut und nur <code>legalActions</code> liest, macht diese Züge lautlos
+unspielbar: Leer sieht aus wie „nichts erlaubt".</p>
+<p><b>Was trägt:</b> <code>act</code> weist Unerlaubtes ab, und die
+Invariantenprüfung verlangt, dass der Bot hier handeln kann.</p>`],
 
   ['warn-legal-halb', '⚠ legalActions kann auch nur halb gefüllt sein', `
 <p><b>Wo:</b> Tafelrunde, und nur dort.</p>
-<p>Kaufen, Würfeln, Aufsteigen und Verkaufen stehen in der Liste, das
-<b>Verschieben</b> nicht: Es wäre ein Paar aus 19 Plätzen, bis zu 342
-Einträge in jeder Sicht, die über die Leitung geht.</p>
-<p><b>Warum das gefährlicher ist als Fall 1:</b> Eine leere Liste sagt schon
-selbst, dass sie nichts aufzählt. Eine halbe Liste sieht aus wie eine ganze.
-Deshalb sagt das Modul es in seiner Meta:
-<code>legalActionsUnvollstaendig: true</code>.</p>
-<p>Wer das Feld setzt, nimmt sich damit eine Prüfung weg
-(<code>plattform-invarianten.test.ts</code>) und muss dafür sicherstellen,
-dass <code>act</code> jeden unerlaubten Zug abweist.</p>`],
+<p>Kaufen, Würfeln, Aufsteigen und Verkaufen stehen drin, das
+<b>Verschieben</b> nicht: ein Paar aus 19 Plätzen, bis zu 342 Einträge je
+Sicht.</p>
+<p><b>Gefährlicher als eine leere Liste:</b> Eine halbe sieht aus wie eine
+ganze. Deshalb sagt es die Meta: <code>legalActionsUnvollstaendig: true</code>.</p>
+<p>Das Feld schaltet eine Invariantenprüfung ab — dafür muss
+<code>act</code> jeden unerlaubten Zug abweisen.</p>`],
 
   ['warn-currentactor', '⚠ currentActor nennt einen Sitz, obwohl alle gleichzeitig ziehen', `
 <p><b>Wo:</b> Eiland und Tafelrunde.</p>
-<p>Beide Spiele haben <b>keine Zugfolge</b> — alle handeln gleichzeitig.
-<code>currentActor</code> nennt trotzdem einen Sitz (den kleinsten, der noch
-nicht abgegeben hat).</p>
-<p><b>Warum die Notlüge:</b> Ohne einen genannten Sitz bekäme der Tisch von
-der Plattform keinen einzigen Timer — Zugzeit, Bot-Übernahme nach Ablauf und
-die Verlassen-Regel hängen alle daran.</p>
+<p>Alle handeln gleichzeitig; <code>currentActor</code> nennt trotzdem den
+kleinsten Sitz, der noch nicht abgegeben hat.</p>
+<p><b>Warum die Notlüge:</b> Ohne Sitz bekäme der Tisch keinen Timer —
+Zugzeit, Bot-Übernahme und Verlassen-Regel hängen daran.</p>
 <p><b>Warum es gutgeht:</b> Der Server prüft <code>currentActor</code> beim
-Handeln gar nicht. Er prüft nur, dass jemand für den <i>eigenen</i> Sitz
-zieht; wer dran ist, entscheidet allein das Modul.</p>
+Handeln nicht, nur den <i>eigenen</i> Sitz; wer dran ist, entscheidet das
+Modul.</p>
 <p><b>Gegenprobe:</b> Feldherr liefert null und bekommt deshalb keinen
 Zugtimer — dort hält der <code>takt</code>-Herzschlag den Tisch am Leben.</p>`],
 
@@ -902,14 +867,12 @@ Zugtimer — dort hält der <code>takt</code>-Herzschlag den Tisch am Leben.</p>
 <p>Feldherr rechnet auf beiden Geräten; über die Leitung gehen nur
 Handlungen. <b>Der Server kennt den Spielstand nicht mit</b> — der Preis von
 Weg B (<code>docs/FELDHERR-PLAN.md</code>).</p>
-<p><b>Absicherung:</b> Beide Geräte melden den Ausgang getrennt. Weichen sie
-ab, gilt die Partie als strittig, <code>standings</code> meldet Gleichstand,
-und daraus werden null Trophäen.</p>
-<p><b>Seit dem 04.09.2026 gibt es hier Trophäen wie überall.</b> Die
-Doppelmeldung ist die einzige Absicherung, die dahintersteht. Wer beide
-Geräte in der Hand hat, kann melden, was er will.</p>
-<p>Vor der Behebung prüfen, ob die Trophäen-Entscheidung noch gilt — sie ist
-bewusst so getroffen worden, nicht übersehen.</p>`],
+<p><b>Absicherung:</b> Beide Geräte melden den Ausgang getrennt; weichen
+sie ab, ist die Partie strittig — Gleichstand, null Trophäen.</p>
+<p><b>Seit dem 04.09.2026 gibt es Trophäen wie überall</b>, gesichert nur
+durch diese Doppelmeldung. Wer beide Geräte hält, meldet, was er will.</p>
+<p>Die Entscheidung ist bewusst, nicht übersehen — vor einer Behebung
+prüfen, ob sie noch gilt.</p>`],
 
   ['warn-punkte-platz', '⚠ Punkte sagen nichts über den Platz', `
 <p>Beim Doppelkopf gewinnt die <b>höchste</b> Punktzahl, bei <b>Cambio die
@@ -927,20 +890,19 @@ Kennungen von 0 hoch. Karte 12 aus Runde 1 ist nicht dieselbe Karte wie
 Karte 12 aus Runde 2.</p>
 <p><b>Wozu es sie gibt:</b> Im Doppelkopf kommt jede Karte doppelt vor — die
 laufende Nummer unterscheidet die Exemplare (erste/zweite Dulle).</p>
-<p><b>Folge:</b> Eine Karten-ID ist nur innerhalb der laufenden Runde
-gültig. Wer sie über den Rundenwechsel hinweg als Schlüssel benutzt — als
-React-<code>key</code>, in einer Animation, in einer Statistik —, bekommt
-keine Fehlermeldung, sondern still verwechselte Karten.</p>`],
+<p><b>Folge:</b> Eine ID gilt nur in der laufenden Runde. Als Schlüssel
+über Runden hinweg (React-<code>key</code>, Animation, Statistik) gibt sie
+keinen Fehler, sondern still verwechselte Karten.</p>`],
 
   ['warn-client-ungeprueft', '⚠ Der Client baut die Sichten nach, fast ohne Test', `
 <p><code>packages/client</code> hat rund <b>44.500 Zeilen</b> und
 <b>sieben</b> Testdateien (Eiland, Tafelrunde, Druckabbruch, Tischauswahl).
 Am 01.09.2026 waren es 36.368 Zeilen und <b>null</b> Tests — der Befund ist
 kleiner geworden, nicht erledigt.</p>
-<p><b>Warum das hier steht:</b> Der Client bildet zwar keine Regeln nach,
-aber sehr wohl die Darstellung jeder Sicht. Eine gebrochene Annahme über
-<code>viewFor</code> zeigt sich deshalb erst im Browser — und dort erst,
-wenn jemand genau diesen Bildschirm öffnet.</p>`],
+<p><b>Warum das zählt:</b> Der Client bildet keine Regeln nach, wohl aber
+die Darstellung jeder Sicht. Eine gebrochene Annahme über
+<code>viewFor</code> zeigt sich erst, wenn jemand genau diesen Bildschirm
+öffnet.</p>`],
 
   ['warn-feldherr-artefakte', '⚠ Feldherrs kern.js und feldherr.html sind gebaut, nicht geschrieben', `
 <p>Quelle ist <code>packages/game-feldherr/quelle/teile/</code>, gebaut wird
@@ -972,17 +934,12 @@ spielübergreifende Gesamtwertung.</p>
 <p>Das Produktversprechen ist nicht „viele Spiele", sondern <i>„spiel nach
 euren Regeln, über alle Spiele hinweg gewertet"</i>. Der ganze Aufbau folgt
 daraus: Server und Client kennen kein einzelnes Kartenspiel.</p>
-<p><b>Diese Tafel ist zugleich die Visual-Building-Tafel des Repos.</b> Der
-Orchestrator findet sie über den Namen und gibt ihr Destillat jedem Auftrag
-mit; deshalb steht alles Wissen in Notiz-Kacheln und jeder Befund trägt ein
-⚠ im Titel. Erzeugt wird sie aus
-<code>werkzeug/gamedesk/boards/_erzeuger-brauweg.mjs</code> — von Hand
-geänderte Kacheln überschreibt der nächste Lauf.</p>
-<p style="color:#8a93a5;font-size:.9em">Stand 05.09.2026: zehn Spiele
-spielbar (Doppelkopf, Zauberer, Skat, Cambio, Easy Poker, Mememory, Filler,
-Eiland, Feldherr, Tafelrunde) · neun weitere als Vorschau zur Abstimmung ·
-1.300 Tests in den Paketen (402 davon im Server) plus sieben Testdateien im
-Client · live auf www.brauweg-spielen.de</p>`, 14), '#6ea8fe');
+<p><b>Zugleich die Visual-Building-Tafel des Repos:</b> Ihr Destillat geht
+an jeden Auftrag, deshalb steht alles Wissen in Notizen und jeder Befund
+trägt ⚠. Erzeugt aus <code>werkzeug/gamedesk/boards/_erzeuger-brauweg.mjs</code>
+— Handänderungen überschreibt der nächste Lauf.</p>
+<p style="color:#8a93a5;font-size:.9em">Spiele siehe „Zwölf Module, eine
+Schnittstelle" · live auf www.brauweg-spielen.de</p>`, 14), '#6ea8fe');
 
 /* =======================================================================
    Verbindungen
