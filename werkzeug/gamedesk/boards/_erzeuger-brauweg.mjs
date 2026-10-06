@@ -341,13 +341,13 @@ win('server-registry', 'code', 'registry.ts — die einzige Stelle, die ein Spie
 const MODULES: readonly AnyGameModule[] = [
   doppelkopf, wizard, cambio, feldherr, skat,
   mememory, easypoker, filler, eiland, tafelrunde,
-  golf, partykiste,
+  golf, partykiste, brocooked, brochess,
 ];
 
 /** Spiele ohne Modul: sichtbar, nicht startbar, abstimmbar. */
 const PREVIEW = ['schafkopf','romme','maumau','schwimmen',
   'backgammon','bauernskat','werwolf','phase10','drecksau'];`,
-    { marks: [8, 9, 10], caption: 'Ein neues Spiel = eine Zeile in MODULES. Kein weiterer Eingriff in Server oder Client.' }),
+    { marks: [8, 9, 10, 11], caption: 'Ein neues Spiel = eine Zeile in MODULES. Kein weiterer Eingriff in Server oder Client.' }),
   '#8fa4c4');
 
 /* Dieselbe Aussage noch einmal als Notiz — und nicht aus Bequemlichkeit:
@@ -495,17 +495,18 @@ Platzfolge stimmt, die Zuschauersicht trägt nichts Persönliches.</p>
 — dauerhaft im Repo, damit das nächste Spiel sie beim ersten Lauf spürt und
 nicht im Betrieb.</p>`), '#b78cf7');
 
-win('game-liste', 'notes', 'Zwölf Module, eine Schnittstelle', GX + 1080, -960, 420, 290, note(`
-<p>Stand 18.09.2026 — alle zwölf spielbar:</p>
+win('game-liste', 'notes', 'Vierzehn Module, eine Schnittstelle', GX + 1080, -960, 420, 290, note(`
+<p>Stand 06.10.2026 — vierzehn im Code:</p>
 <ul>
 <li><b>Doppelkopf</b> 4–5 · <b>Zauberer</b> 3–6 · <b>Skat</b> 3</li>
 <li><b>Cambio</b> 2–6 · <b>Easy Poker</b> 2–6 · <b>Mememory</b> 2–4</li>
 <li><b>Filler</b> 2 · <b>Eiland</b> 2 · <b>Feldherr</b> 2</li>
 <li><b>Tafelrunde</b> 2–8 · <b>Golf</b> 1–8 · <b>Partykiste</b> 4–12</li>
+<li><b>BroCooked</b> 1–4 · <b>BroChess</b> 2</li>
 </ul>
 <p>Dazu neun Vorschau-Spiele: in der Lobby sichtbar, nicht startbar,
 abstimmbar.</p>
-<p><b>Sieben der zwölf sind keine Kartenspiele</b> — die Schnittstelle trägt
+<p><b>Neun der vierzehn sind keine Kartenspiele</b> — die Schnittstelle trägt
 sie trotzdem.</p>
 <p><b>Die Sitzgrenze der Plattform ist 12</b> (seit der Partykiste), nicht 8.
 <code>PLACEMENT_TROPHIES</code> musste im selben Zug mit: Es <i>wirft</i>
@@ -548,9 +549,7 @@ win('game-cambio', 'notes', 'Cambio — wenig ist gut', GX + 1550, -310, 420, 27
 <p>Ablegespiel mit vier verdeckten Karten, 2 bis 6 Sitze. Werte
 <b>minimieren</b>.</p>
 <p><b>Endstand aufsteigend</b> — die niedrigste Punktzahl gewinnt. Deshalb
-hängen die Trophäen am <b>Platz</b>, nie an den Punkten.</p>
-<p>„Cabo" ist ein Markenzeichen (AMIGO); Cambio ist der markenfreie Name
-der Spielfamilie.</p>`), '#b78cf7');
+hängen die Trophäen am <b>Platz</b>, nie an den Punkten.</p>`), '#b78cf7');
 
 win('game-eiland', 'notes', 'Eiland — beide ziehen gleichzeitig', GX + 2020, -960, 420, 300, note(`
 <h3>packages/game-eiland</h3>
@@ -592,20 +591,15 @@ keine Physik, nur Saatkorn und Zugliste gehen über die Leitung. Jedes Gerät
 simuliert im Gleichschritt und <b>spult zurück</b>, wenn ein verspäteter
 Schlag eintrifft.</p>
 <p>Determinismus-Regel: nur <code>+ - * /</code> und <code>Math.sqrt</code>
-(<code>physik.ts</code>, Kopf). Bis zum ersten eigenen Schlag ist ein Ball
-ein <b>Geist</b> — stößt nichts, wird nicht gestoßen. Die
+(<code>physik.ts</code>, Kopf). Die
 <b>Trödel-Regel</b> schiebt Langsame weiter, statt den Tisch warten zu
 lassen.</p>
 <p>Das Ergebnis kommt über eine <b>Prüfsummen-Mehrheit</b>
 (<code>game-golf/partie.ts</code>): Stimmt die größte Gruppe gleicher
 Prüfsummen über die Hälfte der Meldungen, gilt sie — sonst strittig.</p>
-<p><b>40 Bahnen, vier Themen, neun Zonenarten.</b> Der Katalog ist
-<b>geordnet</b>: <code>waehleKarten</code> zieht Indizes aus der Saat, neue
-Bahnen nur anhängen. „Bahnen prüfen, nicht anschauen" — <code>pruefeKarte</code>
+<p><b>40 Bahnen, vier Themen, neun Zonenarten.</b> „Bahnen prüfen, nicht anschauen" — <code>pruefeKarte</code>
 und <code>botLoestKarte</code> laufen über alle 40. Jede Physikänderung ist
-ein Protokollbruch für laufende Partien (<code>docs/GOLF-PLAN.md:129–140</code>).</p>
-<p>Ein Zweig vom 22.09.2026 stellt die Bahnfolge auf eine id-Liste um — noch
-nicht auf <code>staging</code>.</p>`), '#b78cf7');
+ein Protokollbruch für laufende Partien (<code>docs/GOLF-PLAN.md:129–140</code>).</p>`), '#b78cf7');
 
 win('game-klein', 'notes', 'Mememory · Filler · Easy Poker', GX + 2020, -280, 420, 240, note(`
 <p><b>Mememory</b> (2–4) — Memory-Duell auf 5×8 Meme-Bildern. Nutzt die
@@ -627,18 +621,26 @@ derselben Aktionsliste weiter.</p>
 <code>legalActions</code> <b>immer leer</b>: In Echtzeit ist niemand am Zug.
 Ein Tisch ohne Aktion ist hier der Normalfall, kein hängender Spieler — die
 Laufzeit darf daraus keinen Zugtimer ableiten.</p>
-<p>Über die Leitung gehen <b>nur Handlungen, nie Zustände</b>. Weil die
-Sicht mitwächst, hat nur Feldherr <code>viewCursor</code>: 800 Züge wären
-sonst 40 MB statt 0,1 MB.</p>
-<p>Zufall ausschließlich aus <code>saat()</code> (mulberry32). Eine Änderung
-daran bricht jedes Netzspiel — sichtbar erst, wenn beide einen anderen
-Sieger sehen.</p>
-<p><code>kern.js</code> und <code>feldherr.html</code> sind <b>gebaut, nicht
-geschrieben</b> (Quelle: <code>quelle/teile/</code>).</p>`, 13, {
+<p>Über die Leitung gehen <b>nur Handlungen, nie Zustände</b>.</p>`, 13, {
   board: 'Feldherr — Funktionsweise',
   wie: 'eigene Tafel im selben Ordner (feldherr-funktionsweise.gamedesk.json)',
   warum: 'Das Echtzeitspiel hat eine eigene Mechanik-Ebene — Takt, Vorlauf, Prüfsumme, Diagnose. Sie hier unterzubringen hieße, die Plattformtafel um ein einzelnes Spiel herum zu bauen.'
 }), '#b78cf7');
+
+win('game-brocooked', 'notes', 'BroCooked — Miteinander in der Küche', GX + 2960, -960, 420, 300, note(`
+<h3>packages/game-brocooked</h3>
+<p>1–4 Sitze, seit 22.09.2026. <b>Weg B wie Golf</b>: Eingaben über die
+Leitung, die Küche läuft auf den Geräten. <code>currentActor</code> immer
+null, <code>legalActions</code> leer; <code>interludeMs</code> schließt
+stillstehende Tische.</p>
+<p><b>Erstes Miteinander:</b> eine gemeinsame Punktzahl, alle auf Platz 1.</p>`), '#b78cf7');
+
+win('game-brochess', 'notes', 'BroChess — Schach als Normalfall', GX + 2960, -630, 420, 260, note(`
+<h3>packages/game-brochess</h3>
+<p>Zu zweit, seit 25.09.2026. Hält sich an jede Annahme der Schnittstelle:
+feste Zugfolge, <code>legalActions</code> vollständig. Keine Schachuhr — die Zugzeit der Plattform genügt.</p>
+<p>Auf der Webseite noch „Bald" (<code>FREIGABE</code> in
+<code>registry.ts</code>), bis es jemand gespielt hat.</p>`), '#b78cf7');
 
 win('projekt-feldherr', 'project', 'Feldherr — Funktionsweise', GX + 2490, -960, 400, 340,
   projekt('feldherr-funktionsweise.gamedesk.json'), '#e8b45c');
@@ -664,7 +666,7 @@ frame('f-games', 'Spielmodule', 'Reine Logik · kein Netz, keine Uhr, kein Zufal
   ['api-module', 'api-vertrag', 'api-invarianten', 'game-adapter', 'game-liste',
    'game-doko', 'game-wizard', 'game-feldherr', 'game-skat', 'game-cambio',
    'game-eiland', 'game-tafelrunde', 'game-partykiste', 'game-golf', 'game-klein',
-   'projekt-feldherr'], 'game');
+   'game-brocooked', 'game-brochess', 'projekt-feldherr'], 'game');
 
 /* =======================================================================
    4  Grundsätze
@@ -938,7 +940,7 @@ daraus: Server und Client kennen kein einzelnes Kartenspiel.</p>
 an jeden Auftrag, deshalb steht alles Wissen in Notizen und jeder Befund
 trägt ⚠. Erzeugt aus <code>werkzeug/gamedesk/boards/_erzeuger-brauweg.mjs</code>
 — Handänderungen überschreibt der nächste Lauf.</p>
-<p style="color:#8a93a5;font-size:.9em">Spiele siehe „Zwölf Module, eine
+<p style="color:#8a93a5;font-size:.9em">Spiele siehe „Vierzehn Module, eine
 Schnittstelle" · live auf www.brauweg-spielen.de</p>`, 14), '#6ea8fe');
 
 /* =======================================================================
