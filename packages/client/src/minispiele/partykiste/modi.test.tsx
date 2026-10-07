@@ -69,6 +69,8 @@ function sicht(teil: Partial<PartykisteSicht> = {}): PartykisteSicht {
     inhaltsMischung: 'genau',
     inhaltsHaerteGewollt: null,
     gezeigt: [],
+    weiterFehlen: null,
+    letzterWurf: null,
     ...teil,
   };
 }

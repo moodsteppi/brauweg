@@ -12,7 +12,7 @@
 
 import { useState } from 'react';
 
-import { Buehne, Leute, Wahl, Wartet, namenFuer, type RundenProps } from './Runden';
+import { Buehne, FehlenNoch, Leute, Wahl, Wartet, namenFuer, type RundenProps } from './Runden';
 import { zaehlerWort, type KategorienSicht, type MehrheitSicht, type RegelkartenSicht } from './sicht';
 
 /** Wie viele Sitze gegen `ziel` stimmen — nur abgezaehlt, entschieden hat der Server. */
@@ -219,7 +219,7 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
  * Regel-Karte
  * ----------------------------------------------------------------------- */
 
-export function RegelkartenRunde({ sicht, sende }: RundenProps): React.JSX.Element {
+export function RegelkartenRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
   const daten = sicht.daten as RegelkartenSicht;
   const auf = sicht.phase === 'ergebnis';
   const gelesen = sicht.gehandelt.includes(sicht.sitz);
@@ -239,13 +239,16 @@ export function RegelkartenRunde({ sicht, sende }: RundenProps): React.JSX.Eleme
         ton="geheim"
       />
       {auf ? null : gelesen || sicht.sitz < 0 ? (
-        <Wartet sicht={sicht} />
+        <Wartet sicht={sicht} sitze={sitze} />
       ) : (
-        <Wahl>
-          <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
-            Verstanden
-          </button>
-        </Wahl>
+        <>
+          <Wahl>
+            <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
+              Verstanden
+            </button>
+          </Wahl>
+          <FehlenNoch sicht={sicht} sitze={sitze} />
+        </>
       )}
     </>
   );
