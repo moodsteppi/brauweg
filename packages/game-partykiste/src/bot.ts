@@ -106,16 +106,25 @@ function gewussteAntwort(frage: string, antworten: readonly string[]): number {
   return antworten.indexOf(eintrag.antworten[eintrag.richtig]!);
 }
 
+/**
+ * Das „Weiter" des Bots an den drei Wartepunkten (weiter-warten.ts). Der Bot
+ * weiss nicht, ob er einen Bot-Sitz spielt oder nach der Zugzeit fuer einen
+ * Menschen einspringt — das Modul schon (`botSitze`). `vertreten` sagt ihm
+ * nur, dass dieser Tipp nicht von Hand kam: Laeuft fuer einen Menschen die
+ * Zeit ab, gibt es keinen Wurf fuer den Letzten.
+ */
+const WEITER: PartykisteAktion = { art: 'bereit', vertreten: true };
+
 export function botZug(sicht: PartykisteSicht, stufe?: BotLevel): PartykisteAktion {
   /* Team-Abend: Fuer einen Oeffner, der nicht da ist, bleiben die Lager, wie
      sie sind — der Bot tauscht niemanden, er gibt den Abend frei. */
   if (sicht.aufstellung) return { art: 'bereit' };
   /* Abrechnung: weitertippen, damit die Runde nicht auf einen Bot wartet. */
-  if (sicht.phase === 'ergebnis') return { art: 'bereit' };
+  if (sicht.phase === 'ergebnis') return WEITER;
 
   switch (sicht.daten.art) {
     case 'imposter': {
-      if (sicht.phase === 'sehen') return { art: 'bereit' };
+      if (sicht.phase === 'sehen') return WEITER;
       /*
        * Der Bot stimmt blind ab — er kann gar nicht anders, denn woran ein
        * Imposter auffliegt, ist gesagtes Wort im Raum und steht in keiner
@@ -232,7 +241,7 @@ export function botZug(sicht: PartykisteSicht, stufe?: BotLevel): PartykisteAkti
     }
     case 'regelkarte':
       /* Gelesen. Verstoesse meldet ein Bot nie — er hoert ja nicht, wer einen Vornamen sagt. */
-      return { art: 'bereit' };
+      return WEITER;
     /*
      * Die drei mit Uhr. Der Bot spielt mit, aber er hat keine Uhr und keinen
      * Mund: Er gibt die Bombe im Takt der Plattform weiter (ohne etwas zu

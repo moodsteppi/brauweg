@@ -46,6 +46,7 @@ import {
   themenMinispiele,
   waehlbareInhalte,
   verarbeite,
+  ohneVertreten,
   wechselbareSitze,
   type Haerte,
   type Inhalt,
@@ -625,7 +626,7 @@ test('in jedem Modus: legalActions nennt nur, was act annimmt, und der Bot spiel
       }
       const bot = partykiste.botAction(sichtFuer(partie, sitz!), 'genie');
       assert.ok(
-        erlaubt.length === 0 || erlaubt.some((e) => JSON.stringify(e) === JSON.stringify(bot)),
+        erlaubt.length === 0 || erlaubt.some((e) => JSON.stringify(e) === JSON.stringify(ohneVertreten(bot as PartykisteAktion))),
         `${regeln.modus}: Bot spielt ${JSON.stringify(bot)}, erlaubt ist ${JSON.stringify(erlaubt)}`,
       );
       partie = verarbeite(partie, sitz!, bot as PartykisteAktion);
