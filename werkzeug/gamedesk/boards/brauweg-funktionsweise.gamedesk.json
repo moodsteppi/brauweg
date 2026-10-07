@@ -955,7 +955,7 @@
    "accent": "#b78cf7",
    "collapsed": false,
    "state": {
-    "html": "\n<h3>packages/game-golf · Physik in packages/client/src/minispiele/golf</h3>\n<p>1–8 Sitze, seit 06.09.2026. <b>Weg B wie Feldherr</b>: Der Server rechnet\nkeine Physik, nur Saatkorn und Zugliste gehen über die Leitung. Jedes Gerät\nsimuliert im Gleichschritt und <b>spult zurück</b>, wenn ein verspäteter\nSchlag eintrifft.</p>\n<p>Determinismus-Regel: nur <code>+ - * /</code> und <code>Math.sqrt</code>\n(<code>physik.ts</code>, Kopf). Die\n<b>Trödel-Regel</b> schiebt Langsame weiter, statt den Tisch warten zu\nlassen.</p>\n<p>Das Ergebnis kommt über eine <b>Prüfsummen-Mehrheit</b>\n(<code>game-golf/partie.ts</code>): Stimmt die größte Gruppe gleicher\nPrüfsummen über die Hälfte der Meldungen, gilt sie — sonst strittig.</p>\n<p><b>40 Bahnen, vier Themen, neun Zonenarten.</b> „Bahnen prüfen, nicht anschauen\" — <code>pruefeKarte</code>\nund <code>botLoestKarte</code> laufen über alle 40. Jede Physikänderung ist\nein Protokollbruch für laufende Partien (<code>docs/GOLF-PLAN.md:129–140</code>).</p>",
+    "html": "\n<h3>packages/game-golf · Physik in packages/client/src/minispiele/golf</h3>\n<p>1–8 Sitze, seit 06.09.2026. <b>Weg B wie Feldherr</b>: Der Server rechnet\nkeine Physik, nur Saatkorn und Zugliste gehen über die Leitung. Jedes Gerät\nsimuliert im Gleichschritt und <b>spult zurück</b>, wenn ein verspäteter\nSchlag eintrifft.</p>\n<p>Determinismus-Regel: nur <code>+ - * /</code> und <code>Math.sqrt</code>\n(<code>physik.ts</code>, Kopf). Die\n<b>Trödel-Regel</b> schiebt Langsame weiter, statt den Tisch warten zu\nlassen.</p>\n<p>Das Ergebnis kommt über eine <b>Prüfsummen-Mehrheit</b>\n(<code>game-golf/partie.ts</code>): Stimmt die größte Gruppe gleicher\nPrüfsummen über die Hälfte der Meldungen, gilt sie — sonst strittig.</p>\n<p><b>60 Bahnen, vier Themen, neun Zonenarten.</b> „Bahnen prüfen, nicht anschauen\" — <code>pruefeKarte</code>\nund <code>botLoestKarte</code> laufen über alle 60. Jede Physikänderung ist\nein Protokollbruch für laufende Partien (<code>docs/GOLF-PLAN.md:129–140</code>).</p>",
     "fontSize": 13
    }
   },
@@ -1875,7 +1875,7 @@
      }
     ],
     "geaendert": 1786409288000,
-    "groesse": 545926,
+    "groesse": 564963,
     "geholt": 0
    }
   },
