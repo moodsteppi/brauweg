@@ -479,8 +479,9 @@ das Modul nennt nur die Dauer, die Zeit misst die Plattform</li>
 <li><code>xpBasis</code> — fehlt sie, gibt es keine Punkte statt geratener</li>
 </ul>
 <h3>Drei Schalter in der Meta</h3>
-<p><code>xpBasisZaehltKarten</code> (Feldherr: nein, sonst füllt jedes
-Gefecht die Kartenaufgabe) · <code>legalActionsUnvollstaendig</code> (nur
+<p><code>xpBasisZaehltKarten</code> (ja nur bei den vier Kartenspielen;
+die anderen zehn setzen nein, sonst füllt etwa jedes Feldherr-Gefecht die
+Kartenaufgabe) · <code>legalActionsUnvollstaendig</code> (nur
 Tafelrunde) · <code>chipStackField</code> (nur Easy Poker: die Plattform
 zieht den Startstapel in BroJetons ein, das Modul rechnet blanke Zahlen)</p>`), '#b78cf7');
 
