@@ -192,9 +192,11 @@ export interface GameMeta {
   suggestedRounds(seats: number): readonly number[];
   /**
    * xpBasis zaehlt gelegte Karten — nur dann speist sie die Kartenaufgaben
-   * des Tages. Fehlt das Feld, gilt ja (alle Kartenspiele). Feldherr setzt
-   * nein: Seine xpBasis ist die Partiedauer, und die als "gelegte Karten"
-   * zu zaehlen hiesse, die Kartenaufgabe mit jedem Gefecht zu fuellen.
+   * des Tages. Fehlt das Feld, gilt ja — gedacht fuer die Kartenspiele, und
+   * nur sie zaehlen Karten. Jedes andere Modul setzt ausdruecklich nein, weil
+   * seine xpBasis etwas anderes misst: bei Feldherr etwa die Partiedauer, und
+   * die als "gelegte Karten" zu zaehlen hiesse, die Kartenaufgabe mit jedem
+   * Gefecht zu fuellen. Wer ein neues Spiel ohne Karten anlegt, setzt nein.
    */
   readonly xpBasisZaehltKarten?: boolean;
   /**
