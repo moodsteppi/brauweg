@@ -597,8 +597,8 @@ lassen.</p>
 <p>Das Ergebnis kommt über eine <b>Prüfsummen-Mehrheit</b>
 (<code>game-golf/partie.ts</code>): Stimmt die größte Gruppe gleicher
 Prüfsummen über die Hälfte der Meldungen, gilt sie — sonst strittig.</p>
-<p><b>40 Bahnen, vier Themen, neun Zonenarten.</b> „Bahnen prüfen, nicht anschauen" — <code>pruefeKarte</code>
-und <code>botLoestKarte</code> laufen über alle 40. Jede Physikänderung ist
+<p><b>60 Bahnen, vier Themen, neun Zonenarten.</b> „Bahnen prüfen, nicht anschauen" — <code>pruefeKarte</code>
+und <code>botLoestKarte</code> laufen über alle 60. Jede Physikänderung ist
 ein Protokollbruch für laufende Partien (<code>docs/GOLF-PLAN.md:129–140</code>).</p>`), '#b78cf7');
 
 win('game-klein', 'notes', 'Mememory · Filler · Easy Poker', GX + 2020, -280, 420, 240, note(`
