@@ -28,9 +28,16 @@ import { Regelzeile } from '../../minispiele/partykiste/Regelzeile';
 import { Runde } from '../../minispiele/partykiste/Runden';
 import { AktiveRegel } from '../../minispiele/partykiste/RundenOhneUhr';
 import { PasstNicht } from '../../minispiele/partykiste/PasstNicht';
-import { MINISPIEL_NAME, ansageFuer, type PartyMinispiel, type PartykisteSicht } from '../../minispiele/partykiste/sicht';
+import {
+  MINISPIEL_NAME,
+  ansageFuer,
+  type PartyLetzterWurf,
+  type PartyMinispiel,
+  type PartykisteSicht,
+} from '../../minispiele/partykiste/sicht';
 import { Abrechnung, Tabelle } from '../../minispiele/partykiste/Wertung';
 import { AufstellungSeite } from '../../minispiele/partykiste/Lager';
+import { LetzterSchicht } from '../../minispiele/partykiste/LetzterWurf';
 import type { SeatInfo } from '../../protocol';
 import { bilderOhneUhr } from './bilder-ohne-uhr';
 import { bilderZeitdruck } from './bilder-zeitdruck';
@@ -81,6 +88,8 @@ function sicht(teil: Partial<PartykisteSicht> & Pick<PartykisteSicht, 'art' | 'd
     inhaltsMischung: 'genau',
     inhaltsHaerteGewollt: null,
     gezeigt: [],
+    weiterFehlen: null,
+    letzterWurf: null,
     lager: null,
     lagerTabelle: null,
     aufstellung: null,
@@ -95,14 +104,41 @@ function sicht(teil: Partial<PartykisteSicht> & Pick<PartykisteSicht, 'art' | 'd
  */
 type Zusatz = 'abrechnung' | 'tabelle';
 
-const BILDER: { titel: string; text: string; sicht: PartykisteSicht; zusatz?: Zusatz }[] = [
+interface Bild {
+  titel: string;
+  text: string;
+  sicht: PartykisteSicht;
+  zusatz?: Zusatz;
+  /** Fuer die Sichtprobe: `figure[data-sk="…"]`. */
+  kennung?: string;
+}
+
+/* Der Letzte beim „Weiter" (seit 07.10.2026): einmal getrunken, einmal Glueck. */
+const ANSAGEN: { titel: string; text: string; kennung: string; wurf: PartyLetzterWurf }[] = [
+  {
+    titel: 'Der Letzte — ein Schluck',
+    text: 'Wer beim „Weiter" zuletzt tippt, trinkt mit 50 % einen Schluck. Gewürfelt hat der Server; alle sehen dieselbe Ansage, dreieinhalb Sekunden lang über der nächsten Runde.',
+    kennung: 'letzter-trinkt',
+    wurf: { nr: 3, rundeNr: 2, sitz: 2, trinkt: true, schlucke: 1 },
+  },
+  {
+    titel: 'Der Letzte — Glück gehabt',
+    text: 'Die andere Hälfte: kein Schluck, nur die Ansage.',
+    kennung: 'letzter-glueck',
+    wurf: { nr: 4, rundeNr: 2, sitz: 3, trinkt: false, schlucke: 0 },
+  },
+];
+
+const BILDER: Bild[] = [
   {
     titel: 'Imposter — dein Wort',
-    text: 'Ein Wort, sonst nichts — und die Redereihenfolge. Einer am Tisch hat statt des Wortes nur einen Hinweis.',
+    text: 'Ein Wort, sonst nichts — und die Redereihenfolge. Darunter, wer noch nicht „Gesehen" getippt hat.',
+    kennung: 'imposter-sehen',
     sicht: sicht({
       art: 'imposter',
       phase: 'sehen',
       gehandelt: [1, 3, 4],
+      weiterFehlen: [0, 2, 5],
       daten: {
         art: 'imposter',
         meinWort: 'Schwimmbad',
@@ -497,6 +533,28 @@ const BILDER: { titel: string; text: string; sicht: PartykisteSicht; zusatz?: Zu
     }),
   },
   {
+    titel: 'Allgemeinwissen — Abrechnung, wer fehlt',
+    text: 'Schon „Weiter" getippt: Statt „Noch 2 Leute" stehen die Namen da — live, bis der Letzte tippt.',
+    zusatz: 'abrechnung',
+    kennung: 'abrechnung-fehlen',
+    sicht: sicht({
+      art: 'quiz',
+      phase: 'ergebnis',
+      rundenPunkte: [0, 2, 2, 0, 2, 0],
+      rundenSchlucke: [1, 0, 0, 1, 0, 1],
+      gehandelt: [0, 1, 2],
+      weiterFehlen: [3],
+      daten: {
+        art: 'quiz',
+        frage: 'Welcher Fluss fließt durch Wien?',
+        antworten: ['Donau', 'Rhein', 'Elbe', 'Weichsel'],
+        meineWahl: 2,
+        richtig: 0,
+        wahl: [2, 0, 0, 3, 0, 1],
+      },
+    }),
+  },
+  {
     titel: 'Allgemeinwissen — Abrechnung, alkoholfrei',
     text: 'Dieselbe Runde ohne Trinkmodus: gezählt wird genauso, nur heißt es Strafpunkte. Auch die Ansage oben redet nicht mehr vom Trinken.',
     zusatz: 'abrechnung',
@@ -630,19 +688,9 @@ const AUFSTELLUNG = sicht({
   daten: { art: 'quiz', frage: '', antworten: [], meineWahl: -1, richtig: null, wahl: null },
 });
 
-function Kasten({
-  titel,
-  text,
-  sicht: bild,
-  zusatz,
-}: {
-  titel: string;
-  text: string;
-  sicht: PartykisteSicht;
-  zusatz?: Zusatz;
-}): React.JSX.Element {
+function Kasten({ titel, text, sicht: bild, zusatz, kennung }: Bild): React.JSX.Element {
   return (
-    <figure className="sk-kasten">
+    <figure className="sk-kasten" data-sk={kennung}>
       <figcaption>
         <strong>{titel}</strong>
         <span>{text}</span>
@@ -667,7 +715,7 @@ function Kasten({
               <p className="pk-ansage">{ansageFuer(bild.art, bild.trinkmodus)}</p>
               <Runde sicht={bild} sitze={SITZE} sende={() => {}} />
               {zusatz === 'abrechnung' ? (
-                <Abrechnung sicht={bild} sitze={SITZE} binFertig={false} sende={() => {}} />
+                <Abrechnung sicht={bild} sitze={SITZE} binFertig={bild.gehandelt.includes(bild.sitz)} sende={() => {}} />
               ) : null}
             </>
           )}
@@ -850,6 +898,23 @@ function Schaukasten(): React.JSX.Element {
               runden={6}
             />
           </MenueKasten>
+          {ANSAGEN.map((a) => (
+            <figure key={a.kennung} className="sk-kasten" data-sk={a.kennung}>
+              <figcaption>
+                <strong>{a.titel}</strong>
+                <span>{a.text}</span>
+              </figcaption>
+              <div className="sk-rahmen">
+                <main className="pk-seite pk-tisch">
+                  <LetzterSchicht wurf={a.wurf} sitze={SITZE} ich={0} trinkmodus onZu={() => {}} fest />
+                  <header className="pk-kopf">
+                    <span className="pk-rundenzahl">Runde 4/6</span>
+                    <strong className="pk-spielname">Imposter</strong>
+                  </header>
+                </main>
+              </div>
+            </figure>
+          ))}
         </>
       ) : null}
       {BILDER.slice(von, bis).map((bild) => (

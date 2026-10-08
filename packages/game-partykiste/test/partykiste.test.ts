@@ -35,6 +35,7 @@ import {
   platzierungen,
   sichtFuer,
   verarbeite,
+  ohneVertreten,
   type MinispielId,
   type PartykisteAktion,
   type PartykistePartie,
@@ -540,7 +541,7 @@ test('der Bot liefert immer eine Aktion, die in legalActions steht', () => {
       const erlaubt = partykiste.legalActions(partie, sitz);
       const aktion = partykiste.botAction(sichtFuer(partie, sitz), 'genie');
       assert.ok(
-        erlaubt.length === 0 || erlaubt.some((e) => JSON.stringify(e) === JSON.stringify(aktion)),
+        erlaubt.length === 0 || erlaubt.some((e) => JSON.stringify(e) === JSON.stringify(ohneVertreten(aktion))),
         `${spiel}: Bot spielt ${JSON.stringify(aktion)}, erlaubt sind ${JSON.stringify(erlaubt)}`,
       );
       partie = verarbeite(partie, sitz, aktion);

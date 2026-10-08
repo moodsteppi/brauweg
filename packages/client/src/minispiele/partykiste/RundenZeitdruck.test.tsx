@@ -52,6 +52,8 @@ function sicht(art: PartyMinispiel, daten: PartyMinispielSicht, teil: Partial<Pa
     inhaltsMischung: 'genau',
     inhaltsHaerteGewollt: null,
     gezeigt: [],
+    weiterFehlen: null,
+    letzterWurf: null,
     lager: null,
     lagerTabelle: null,
     aufstellung: null,

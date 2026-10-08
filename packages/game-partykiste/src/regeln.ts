@@ -385,8 +385,12 @@ export const PHASE_HOECHST_MS = 30_000;
 // ---------------------------------------------------------------------------
 
 export type PartykisteAktion =
-  /** Karte gesehen, Ergebnis gelesen — der allgemeine "Weiter"-Tipp. */
-  | { readonly art: 'bereit' }
+  /**
+   * Karte gesehen, Ergebnis gelesen — der allgemeine "Weiter"-Tipp.
+   * `vertreten` setzt nur der Bot (bot.ts): Tippt er nach der Zugzeit fuer
+   * einen Menschen, gibt es keinen Wurf fuer den Letzten (weiter-warten.ts).
+   */
+  | { readonly art: 'bereit'; readonly vertreten?: boolean }
   /** Verdacht (Imposter) bzw. Wahl eines Mitspielers ("Wer wuerde eher"). */
   | { readonly art: 'stimme'; readonly ziel: number }
   /** Imposter: statt zu stimmen noch eine Rederunde verlangen. */
@@ -528,6 +532,8 @@ export const SCHLUECKE = {
   koenigsbecherKarte: 1,
   /** Koenigsbecher: je Koenig im Becher — ihn bekommt, wer den letzten Koenig der Runde zieht. */
   koenigsbecherJeKoenig: 1,
+  /** Wer beim „Weiter" zuletzt tippt — mit 50 % (weiter-warten.ts). */
+  letzterBeimWeiter: 1,
 } as const;
 
 // ---------------------------------------------------------------------------

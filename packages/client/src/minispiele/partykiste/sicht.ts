@@ -232,6 +232,23 @@ export interface PartykisteSicht {
   inhaltsHaerteGewollt: 1 | 2 | 3 | null;
   /** Welche Katalog-Eintraege ich gerade sehe — fuer „Passt nicht" (PasstNicht.tsx). */
   gezeigt: PartyGezeigterInhalt[];
+  /**
+   * Wer beim „Weiter" aller noch nicht getippt hat (Abrechnung, „Gesehen",
+   * „Verstanden") — sonst null. Seit 07.10.2026; die Liste kommt vom Modul,
+   * der Bildschirm zaehlt nicht selbst nach (weiter-warten.ts im Modul).
+   */
+  weiterFehlen: number[] | null;
+  /** Der letzte Wurf fuer den, der zuletzt tippte — angesagt, wenn `nr` neu ist. */
+  letzterWurf: PartyLetzterWurf | null;
+}
+
+/** Spiegel von `LetzterWurf` (weiter-warten.ts im Modul). */
+export interface PartyLetzterWurf {
+  nr: number;
+  rundeNr: number;
+  sitz: number;
+  trinkt: boolean;
+  schlucke: number;
 }
 
 /** Lesart der Inhaltsstufe — Spiegel von `InhaltsLesart` (regeln.ts im Modul). */

@@ -92,6 +92,7 @@ import {
   type PartykisteRegeln,
 } from './regeln.js';
 import { baueZufall, ganzzahl, gemischt, rundenSaat } from './zufall.js';
+import { tippeWeiter, type LetzterWurf } from './weiter-warten.js';
 import {
   TISCHOEFFNER,
   gewollteInhaltsHaerte,
@@ -355,6 +356,12 @@ export interface PartykistePartie {
    * neu gebaut — ihre Reihum-Folge haengt an den Lagern.
    */
   readonly aufstellung?: boolean;
+  /**
+   * Der letzte Wurf fuer den, der beim „Weiter" zuletzt tippte — oder null
+   * (weiter-warten.ts). Bleibt stehen, bis der naechste kommt. Optional, weil
+   * Snapshots von vor dem 07.10.2026 es nicht haben.
+   */
+  readonly letzterWurf?: LetzterWurf | null;
 }
 
 export interface AufbauOptionen {
@@ -1406,6 +1413,16 @@ function werteAus(partie: PartykistePartie): PartykistePartie {
         ? neueRegel(partie, { ...bubenRegel, bis: regelBis(partie.rundeNr) })
         : nachRegel;
 
+  /*
+   * Ein Schluck, der schon VOR der Auswertung in der Runde stand: der Letzte
+   * beim „Gesehen" oder „Verstanden" (weiter-warten.ts). Er gehoert in
+   * dieselbe Abrechnung. `schlucke` ist dasselbe Feld wie in `neueRunde`,
+   * also landet er dort und im Turnierstand — wie der Verstoss oben.
+   */
+  runde.schlucke.forEach((vorab, s) => {
+    if (vorab > 0) schlucke[s] = (schlucke[s] ?? 0) + vorab;
+  });
+
   return {
     ...partie,
     regelKarte,
@@ -1632,13 +1649,13 @@ export function verarbeite(
   if (runde.phase === 'ergebnis') {
     if (aktion.art !== 'bereit') verstoss('waehrend der Abrechnung geht nur Weiter');
     if (runde.fertig.includes(sitz)) return partie;
-    return weiter({ ...partie, runde: { ...runde, fertig: [...runde.fertig, sitz] } });
+    return weiter(tippeWeiter(partie, sitz, aktion.vertreten === true));
   }
 
   if (runde.art === 'imposter' && runde.phase === 'sehen') {
     if (aktion.art !== 'bereit') verstoss('zuerst das Wort ansehen');
     if (runde.fertig.includes(sitz)) return partie;
-    return weiter({ ...partie, runde: { ...runde, fertig: [...runde.fertig, sitz] } });
+    return weiter(tippeWeiter(partie, sitz, aktion.vertreten === true));
   }
 
   switch (runde.art) {
@@ -1770,7 +1787,7 @@ export function verarbeite(
     case 'regelkarte': {
       if (aktion.art !== 'bereit') verstoss('erst die Regel lesen');
       if (runde.fertig.includes(sitz)) return partie;
-      return weiter({ ...partie, runde: { ...runde, fertig: [...runde.fertig, sitz] } });
+      return weiter(tippeWeiter(partie, sitz, aktion.vertreten === true));
     }
     /* Die drei mit Uhr (zeitdruck.ts) — derselbe Vertrag wie die drei ohne. */
     case 'bombe':
