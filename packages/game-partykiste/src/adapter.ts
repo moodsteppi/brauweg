@@ -102,6 +102,24 @@ function istRegelsatz(x: unknown): x is PartykisteRegeln {
   return typeof x === 'object' && x !== null && !Array.isArray(x);
 }
 
+/**
+ * Das „Weiter" an den drei Wartepunkten (weiter-warten.ts): Abrechnung,
+ * „Gesehen" beim Imposter, „Verstanden" bei der Regel-Karte.
+ *
+ * Beide Fassungen stehen hier, weil beide gespielt werden: die blanke vom
+ * Geraet, die mit `vertreten` vom Bot (bot.ts, `WEITER`). Die Plattform haelt
+ * jeden Bot-Zug Feld fuer Feld gegen diese Liste (plattform-invarianten im
+ * Server) — fehlt die zweite, spielt der Bot etwas, das das Modul nicht
+ * zugesagt hat, und genau daran war der Servertest rot. Die Aufstellung im
+ * Team-Abend gehoert nicht dazu: Dort ist kein Wartepunkt, und der Bot tippt
+ * ohne Marke.
+ *
+ * Jedes Mal eine neue Liste — `legalActions` gibt sie aus der Hand.
+ */
+function weiterErlaubt(): PartykisteAktion[] {
+  return [{ art: 'bereit' }, { art: 'bereit', vertreten: true }];
+}
+
 export const partykiste: GameModule<
   PartykistePartie,
   PartykisteAktion,
@@ -301,7 +319,7 @@ export const partykiste: GameModule<
       ];
     }
     const runde = partie.runde;
-    if (runde.phase === 'ergebnis') return [{ art: 'bereit' }];
+    if (runde.phase === 'ergebnis') return weiterErlaubt();
 
     const andere: number[] = [];
     for (let s = 0; s < partie.sitze; s++) {
@@ -310,7 +328,7 @@ export const partykiste: GameModule<
 
     switch (runde.art) {
       case 'imposter':
-        if (runde.phase === 'sehen') return [{ art: 'bereit' }];
+        if (runde.phase === 'sehen') return weiterErlaubt();
         return [
           ...andere.map((ziel) => ({ art: 'stimme', ziel }) as const),
           ...(runde.redeRunde < MAX_REDERUNDEN ? [{ art: 'nochmal' } as const] : []),
@@ -371,7 +389,7 @@ export const partykiste: GameModule<
           [0, 1].map((tipp) => ({ art: 'mehrheitstipp', eigene, tipp }) as const),
         );
       case 'regelkarte':
-        return [{ art: 'bereit' }];
+        return weiterErlaubt();
       /* Die drei mit Uhr (zeitdruck.ts). „Hand hoch" darf jeder, Knoepfe
          bekommt wie ueberall nur der naechste Offene. */
       case 'bombe':
