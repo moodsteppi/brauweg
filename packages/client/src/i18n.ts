@@ -680,7 +680,9 @@ const de: Record<string, string> = {
   'einladung.kopiert': 'Link kopiert — jetzt in den Gruppenchat einfügen.',
   'einladung.nichtKopiert': 'Kopieren ging nicht. Der Link steht unter dem QR-Code.',
   'einladung.qrAria': 'QR-Code des Einladungslinks',
-  'einladung.vorgemerkt': 'Du bist an einen Tisch eingeladen. Melde dich an oder spiel als Gast — danach sitzt du direkt dort.',
+  // „sitzt du direkt dort" stimmte nicht mehr, seit private Kartentische eine
+  // Zusage des Gastgebers verlangen (tables/anfragen.ts, 13.10.2026).
+  'einladung.vorgemerkt': 'Du bist an einen Tisch eingeladen. Melde dich an oder spiel als Gast — danach geht es zum Tisch.',
   'einladung.laeuft': 'Du wirst an den Tisch gesetzt …',
   'einladung.eingabeTitel': 'Mit Code beitreten',
   'einladung.eingabeAria': 'Beitrittscode eingeben',

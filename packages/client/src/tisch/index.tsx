@@ -653,7 +653,7 @@ export function Wartebereich({
       <p className="muted doko-wait-hint">
         {table.visibility === 'public'
           ? 'Andere finden den Tisch in der Lobby — oder fülle freie Plätze mit Bots. Sobald alle Plätze belegt sind, geht es los.'
-          : 'Wer beitreten will, musst du hereinlassen — oder fülle freie Plätze mit Bots. Sobald alle Plätze belegt sind, geht es los.'}
+          : 'Wer beitreten will, lässt der Gastgeber herein — freie Plätze lassen sich auch mit Bots füllen. Sobald alle Plätze belegt sind, geht es los.'}
       </p>
       <GastHinweis sitze={table.seats} className="muted doko-wait-hint" />
 
