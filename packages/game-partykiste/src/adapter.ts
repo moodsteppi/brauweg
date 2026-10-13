@@ -75,6 +75,7 @@ import {
   type PartykisteRegeln,
 } from './regeln.js';
 import { sichtFuer, type PartykisteSicht } from './sicht.js';
+import { ohneVertreten } from './weiter-warten.js';
 import { TISCHOEFFNER, wechselbareSitze } from './modi.js';
 
 const SNAPSHOT_VERSION = 1;
@@ -297,6 +298,17 @@ export const partykiste: GameModule<
   },
 
   act: (partie, sitz, aktion) => verarbeite(partie, sitz, aktion),
+
+  /**
+   * `vertreten` setzt nur der Bot (bot.ts, `WEITER`). Schickt ein Geraet die
+   * Marke mit, gilt sein Tipp trotzdem als von Hand — sonst trinkt, wer sie
+   * kennt, als Letzter nie (weiter-warten.ts, Punkt 4). `legalActions` nennt
+   * die Fassung mit Marke fuer jeden, weil die Plattform Bot-Zuege dagegen
+   * haelt; erst hier faellt sie fuer Menschen weg. Die Pruefung auf ein
+   * Objekt, weil die Aktion hier noch ungeprueft ist und `act` den Unsinn
+   * abweisen soll, nicht diese Stelle.
+   */
+  vomGeraet: (aktion) => (typeof aktion === 'object' && aktion !== null ? ohneVertreten(aktion) : aktion),
 
   currentActor: (partie) => amZugVon(partie),
 

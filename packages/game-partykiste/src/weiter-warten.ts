@@ -36,8 +36,10 @@
  *      (der Bot uebernimmt diesen einen Zug), endet das Warten, ohne dass er
  *      gedrueckt hat — kein Wurf. Erkennbar am `vertreten` der Bot-Aktion
  *      (bot.ts); bei einem echten Bot-Sitz zaehlt das Feld nicht, der IST ja
- *      der Spieler. Faelschen kann es ein Geraet zwar — es spart sich damit
- *      hoechstens einen Schluck, der ohnehin nur halb so wahrscheinlich war.
+ *      der Spieler. Faelschen kann es ein Geraet nicht: Bis zum 13.10.2026
+ *      reichte der Server die Marke eines Menschen durch, und wer sie
+ *      mitschickte, trank als Letzter nie. Jetzt streicht `vomGeraet`
+ *      (adapter.ts) sie von jeder Aktion, die ueber die Leitung kommt.
  *
  * Der Wurf haengt wie jeder Zufall dieses Moduls an der Saat (zufall.ts),
  * getrennt je Runde und Phase — also EINMAL je Wartepunkt, auf dem Server,
