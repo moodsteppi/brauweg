@@ -322,18 +322,8 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
       {binDran && !handOffen && daten.wahlOffen ? (
         <Leute sicht={sicht} sitze={sitze} gewaehlt={-1} gesperrt={false} beiWahl={(ziel) => sende({ art: 'stimme', ziel })} />
       ) : null}
-      {/* Die Flasche: Jede gezogene Karte kommt obendrauf (Flasche.tsx). */}
-      <Flasche
-        flasche={daten.flasche}
-        offeneKarte={legenOffen ? daten.offeneKarte : null}
-        binDran={binDran}
-        gelegt={daten.gelegt}
-        sturz={daten.sturz}
-        sturzName={daten.sturz ? (daten.sturz.sitz === sicht.sitz ? 'du trinkst' : `${namenFuer(sitze, daten.sturz.sitz)} trinkt`) : ''}
-        trinkWort={(zahl) => `${zahl} ${zaehlerWort(sicht.trinkmodus, zahl)}`}
-        onLegen={(versatz) => sende({ art: 'legen', versatz })}
-      />
-
+      {/* Über der Flasche, nicht darunter: Die Flasche ist hoch, und am Handy
+          rutschte der Knopf sonst unter den Bildschirmrand. */}
       {binDran && !handOffen && !daten.wahlOffen && !legenOffen ? (
         <Wahl>
           <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'ziehen' })}>
@@ -341,6 +331,19 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
           </button>
         </Wahl>
       ) : null}
+
+      {/* Die Flasche: Jede gezogene Karte kommt obendrauf (Flasche.tsx). */}
+      <Flasche
+        flasche={daten.flasche}
+        offeneKarte={legenOffen ? daten.offeneKarte : null}
+        binDran={binDran}
+        gelegt={daten.gelegt}
+        sturz={daten.sturz}
+        sturzName={daten.sturz ? (daten.sturz.sitz === sicht.sitz ? 'Du trinkst' : `${namenFuer(sitze, daten.sturz.sitz)} trinkt`) : ''}
+        trinkWort={(zahl) => `${zahl} ${zaehlerWort(sicht.trinkmodus, zahl)}`}
+        onLegen={(versatz) => sende({ art: 'legen', versatz })}
+      />
+
 
       {daten.neueRegel ? (
         <p className="pk-ansage">
