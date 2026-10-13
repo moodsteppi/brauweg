@@ -64,6 +64,16 @@
       .sk-rahmen .pk-seite {
         min-height: 0;
       }
+      /* Die Kulisse (Szene.tsx) steht fest im Fenster. Hier soll sie im
+         Handyrahmen bleiben: Ein transform macht den Rahmen zum Bezug für
+         „fixed". Der Tisch bekommt Handyhöhe, sonst sieht man nur einen
+         Streifen der Szene. */
+      .sk-rahmen {
+        transform: translateZ(0);
+      }
+      .sk-rahmen .pk-tisch[data-szene] {
+        min-height: 780px;
+      }
       .sk-rahmen-banner {
         width: 480px;
       }

@@ -26,6 +26,7 @@ import { PartykisteBanner } from '../../minispiele/partykiste/Banner';
 import { Einstellungen, OffeneRunde } from '../../minispiele/partykiste/Einstellungen';
 import { Regelzeile } from '../../minispiele/partykiste/Regelzeile';
 import { Runde } from '../../minispiele/partykiste/Runden';
+import { Szene } from '../../minispiele/partykiste/Szene';
 import { AktiveRegel } from '../../minispiele/partykiste/RundenOhneUhr';
 import { PasstNicht } from '../../minispiele/partykiste/PasstNicht';
 import { MINISPIEL_NAME, ansageFuer, type PartyMinispiel, type PartykisteSicht } from '../../minispiele/partykiste/sicht';
@@ -648,7 +649,8 @@ function Kasten({
         <span>{text}</span>
       </figcaption>
       <div className="sk-rahmen">
-        <main className="pk-seite pk-tisch">
+        <main className="pk-seite pk-tisch" data-szene={bild.art}>
+          <Szene art={bild.art} />
           <header className="pk-kopf">
             <span className="pk-rundenzahl">
               Runde {bild.rundeNr + 1}/{bild.runden}

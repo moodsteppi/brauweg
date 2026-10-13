@@ -1,0 +1,788 @@
+/*
+ * Kulissen der Partykiste (Szene.tsx). Je Minispiel eine Szene hinter dem
+ * Spiel, dazu Farben für Bühne und Knöpfe über `--pk-akzent` / `--pk-grund`.
+ *
+ * Regeln, die hier jede Szene einhält:
+ * - Bewegt wird nur `transform` und `opacity` (Grafikkarte, kein Ruckeln).
+ * - Lange, ruhige Takte; nichts blinkt schneller als einmal je Sekunde — die
+ *   Leute sollen lesen und tippen, nicht hinsehen müssen.
+ * - Bei „Bewegung reduzieren" steht alles still (ganz unten).
+ */
+
+/* ---------------------------------------------------------------------------
+ * Rahmen: Szene hinten, Spiel davor, Farben je Spiel
+ * ------------------------------------------------------------------------ */
+
+.pk-tisch[data-szene] {
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+  background: var(--pk-grund, #151021);
+}
+.pk-tisch[data-szene] > :not(.pk-szene) {
+  position: relative;
+  z-index: 1;
+}
+
+.pk-szene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Das gemalte Banner als Bühnenbild oben, nach unten ausgeblendet. */
+.pk-szene-bild {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 46vh;
+  background-size: cover;
+  background-position: center 40%;
+  opacity: 0.42;
+  -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 30%, transparent 100%);
+  animation: sz-kamerafahrt 24s ease-in-out infinite alternate;
+}
+@keyframes sz-kamerafahrt {
+  from { transform: scale(1.04) translate3d(-1.5%, 0, 0); }
+  to { transform: scale(1.12) translate3d(1.5%, -1%, 0); }
+}
+
+/* Lesbarkeit vor jeder Kulisse: Bühne und Listen auf Milchglas. */
+.pk-tisch[data-szene] .pk-buehne {
+  background: color-mix(in srgb, var(--pk-grund, #151021) 72%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--pk-akzent, #a678f2) 55%, transparent),
+    0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.pk-tisch[data-szene] .pk-buehne-oben { color: var(--pk-akzent, #a678f2); }
+.pk-tisch[data-szene] .pk-knopf.is-gross,
+.pk-tisch[data-szene] .pk-knopf.is-haupt {
+  background: var(--pk-akzent, #a678f2);
+  color: var(--pk-auf-akzent, #180f28);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--pk-akzent, #a678f2) 55%, #000);
+}
+.pk-tisch[data-szene] .pk-knopf.is-gross:active:not(:disabled),
+.pk-tisch[data-szene] .pk-knopf.is-haupt:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--pk-akzent, #a678f2) 55%, #000);
+}
+.pk-tisch[data-szene] .pk-liste li,
+.pk-tisch[data-szene] .pk-knopf:not(.is-gross):not(.is-haupt):not(.is-gut):not(.is-weg) {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.pk-tisch[data-szene] .pk-spielname { color: var(--pk-akzent, #fff); }
+
+/* Kopf, Regel-Chips und Ansage liegen über der Kulisse (beim Bus über dem
+   hellen Fenster): dunkles Milchglas, sonst liest sie niemand. */
+.pk-tisch[data-szene] .pk-kopf {
+  padding: 6px 8px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--pk-grund, #151021) 70%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.pk-tisch[data-szene] .pk-regelchip {
+  background: color-mix(in srgb, var(--pk-grund, #151021) 78%, transparent);
+  color: #e9e6f2;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.pk-tisch[data-szene] .pk-ansage {
+  align-self: center;
+  max-width: 34em;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--pk-grund, #151021) 70%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: #e9e6f2;
+  text-align: center;
+}
+
+/* Farben je Spiel. */
+.pk-tisch[data-szene='busfahrer'] { --pk-grund: #17202f; --pk-akzent: #f2c14e; }
+.pk-tisch[data-szene='koenigsbecher'] { --pk-grund: #2a0f1f; --pk-akzent: #f0c75e; }
+.pk-tisch[data-szene='bombe'] { --pk-grund: #1d1212; --pk-akzent: #ff6a3d; }
+.pk-tisch[data-szene='quiz'] { --pk-grund: #111a3d; --pk-akzent: #5ec8ff; }
+.pk-tisch[data-szene='imposter'] { --pk-grund: #0f1d22; --pk-akzent: #5fe0b8; }
+.pk-tisch[data-szene='wahrheitpflicht'] { --pk-grund: #1e0f2b; --pk-akzent: #ff5fb4; }
+.pk-tisch[data-szene='niemals'] { --pk-grund: #24170d; --pk-akzent: #ffb347; }
+.pk-tisch[data-szene='wereher'] { --pk-grund: #22102a; --pk-akzent: #ff8ad8; }
+.pk-tisch[data-szene='werbinich'] { --pk-grund: #1a1830; --pk-akzent: #ffe066; }
+.pk-tisch[data-szene='schaetzen'] { --pk-grund: #0f2420; --pk-akzent: #7ee2a8; }
+.pk-tisch[data-szene='entweder'] { --pk-grund: #171424; --pk-akzent: #ffd25e; }
+.pk-tisch[data-szene='kategorien'] { --pk-grund: #121c2e; --pk-akzent: #8fb8ff; }
+.pk-tisch[data-szene='mehrheit'] { --pk-grund: #14222c; --pk-akzent: #6fd3ff; }
+.pk-tisch[data-szene='zehnsekunden'] { --pk-grund: #1d1a10; --pk-akzent: #ffd447; }
+.pk-tisch[data-szene='regelkarte'] { --pk-grund: #221a10; --pk-akzent: #e8c27a; }
+
+/* ---------------------------------------------------------------------------
+ * Bus fahren: im Bus
+ * ------------------------------------------------------------------------ */
+
+.sz-bus {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, #2b3a52 0%, #1d2738 40%, #17202f 75%, #141b28 100%);
+  animation: sz-wippen 0.9s ease-in-out infinite alternate;
+  transform-origin: 50% 100%;
+}
+@keyframes sz-wippen {
+  from { transform: translate3d(0, 0, 0) rotate(-0.15deg); }
+  to { transform: translate3d(0, 2px, 0) rotate(0.15deg); }
+}
+
+/* Fensterband oben: Himmel, Sonne, drei Landschaftsebenen. */
+.sz-bus-fenster {
+  position: absolute;
+  inset: max(8px, env(safe-area-inset-top)) 8px auto;
+  height: 30vh;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 6px #3a4a66,
+    inset 0 0 22px rgba(0, 0, 0, 0.5),
+    0 6px 0 #0f1520;
+  opacity: 0.85;
+}
+.sz-himmel {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #ffb46b 0%, #ff8f7a 35%, #7b6bd6 75%, #3d4c8c 100%);
+}
+.sz-sonne {
+  position: absolute;
+  top: 18%;
+  right: 18%;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff3b0 0%, #ffd36b 55%, rgba(255, 200, 100, 0) 72%);
+  animation: sz-sonne 6s ease-in-out infinite alternate;
+}
+@keyframes sz-sonne {
+  from { transform: scale(1); opacity: 0.85; }
+  to { transform: scale(1.12); opacity: 1; }
+}
+
+/* Je Ebene ein doppelt breites Band, das um die Hälfte wandert: nahtlos. */
+.sz-landschaft {
+  position: absolute;
+  left: 0;
+  width: 200%;
+  background-repeat: repeat-x;
+  will-change: transform;
+}
+.sz-landschaft.is-berge {
+  bottom: 18%;
+  height: 46%;
+  background-size: 50% 100%;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 100' preserveAspectRatio='none'><path d='M0 100 L0 60 L40 30 L90 62 L140 22 L190 58 L240 35 L300 70 L350 28 L400 60 L400 100 Z' fill='%234b4f8f'/></svg>");
+  animation: sz-fahrt 38s linear infinite;
+}
+.sz-landschaft.is-baeume {
+  bottom: 10%;
+  height: 34%;
+  background-size: 25% 100%;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='none'><path d='M0 100 L0 80 Q50 66 100 78 T200 76 L200 100 Z' fill='%232f5a4f'/><path d='M30 80 L42 40 L54 80 Z M120 82 L136 30 L152 82 Z' fill='%23255046'/><rect x='40' y='78' width='4' height='10' fill='%23463325'/><rect x='134' y='80' width='4' height='10' fill='%23463325'/></svg>");
+  animation: sz-fahrt 14s linear infinite;
+}
+.sz-landschaft.is-pfosten {
+  bottom: 0;
+  height: 100%;
+  background-size: 20% 100%;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect x='0' y='86' width='100' height='14' fill='%233a3a46'/><rect x='10' y='92' width='22' height='2' fill='%23f2c14e'/><rect x='60' y='92' width='22' height='2' fill='%23f2c14e'/><rect x='46' y='30' width='3' height='58' fill='%231b2230'/><circle cx='47.5' cy='30' r='4' fill='%23ffe9a6'/></svg>");
+  animation: sz-fahrt 4.2s linear infinite;
+}
+@keyframes sz-fahrt {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+/* Fensterholme teilen das Band in Scheiben. */
+.sz-holme {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-evenly;
+}
+.sz-holm {
+  width: 10px;
+  height: 100%;
+  background: linear-gradient(90deg, #2c3a52, #46597c 50%, #2c3a52);
+}
+
+/* Haltegriffe, die im Takt der Fahrt schaukeln. */
+.sz-griffe {
+  position: absolute;
+  top: calc(max(8px, env(safe-area-inset-top)) + 30vh + 4px);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+}
+.sz-griff {
+  width: 2px;
+  height: 48px;
+  background: #6d7a92;
+  transform-origin: 50% 0;
+  animation: sz-schaukeln 1.8s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -0.35s);
+}
+.sz-griff i {
+  position: absolute;
+  bottom: -18px;
+  left: -9px;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #c8d2e3;
+  border-radius: 50%;
+}
+@keyframes sz-schaukeln {
+  from { transform: rotate(-7deg); }
+  to { transform: rotate(7deg); }
+}
+
+/* Boden mit Mittelgang. */
+.sz-bus-boden {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 22vh;
+  background:
+    linear-gradient(90deg, transparent 44%, rgba(242, 193, 78, 0.18) 44%, rgba(242, 193, 78, 0.18) 56%, transparent 56%),
+    repeating-linear-gradient(0deg, #1b2434 0 10px, #19212f 10px 20px);
+  -webkit-mask-image: linear-gradient(0deg, #000 30%, transparent);
+  mask-image: linear-gradient(0deg, #000 30%, transparent);
+}
+
+/* Die Bühne im Bus ist das Armaturenbrett: dunkel, gelb umrandet. */
+.pk-tisch[data-szene='busfahrer'] .pk-buehne {
+  margin-top: calc(30vh - 70px);
+  border-radius: 22px 22px 14px 14px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Königsbecher: Thronsaal
+ * ------------------------------------------------------------------------ */
+
+.sz-glanz {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 120vmax;
+  height: 120vmax;
+  margin: -60vmax 0 0 -60vmax;
+  background: conic-gradient(from 0deg, rgba(240, 199, 94, 0.18), transparent 12%, rgba(240, 199, 94, 0.14) 25%, transparent 37%, rgba(240, 199, 94, 0.18) 50%, transparent 62%, rgba(240, 199, 94, 0.14) 75%, transparent 87%, rgba(240, 199, 94, 0.18));
+  animation: sz-drehen 40s linear infinite;
+}
+@keyframes sz-drehen {
+  to { transform: rotate(360deg); }
+}
+.sz-krone {
+  position: absolute;
+  top: 34vh;
+  left: 50%;
+  width: 90px;
+  margin-left: -45px;
+  fill: #f0c75e;
+  opacity: 0.22;
+  filter: drop-shadow(0 0 18px rgba(240, 199, 94, 0.8));
+  animation: sz-schweben 4s ease-in-out infinite alternate;
+}
+@keyframes sz-schweben {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, -10px, 0); }
+}
+.sz-kerzen {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+}
+.sz-kerze {
+  position: relative;
+  width: 12px;
+  height: 64px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(90deg, #e9dcc0, #fff7e6 50%, #d9c8a3);
+  opacity: 0.55;
+}
+.sz-kerze i {
+  position: absolute;
+  top: -20px;
+  left: 1px;
+  width: 10px;
+  height: 18px;
+  border-radius: 50% 50% 45% 45%;
+  background: radial-gradient(circle at 50% 70%, #fff6c8, #ffb648 60%, rgba(255, 120, 40, 0));
+  box-shadow: 0 0 18px 6px rgba(255, 180, 72, 0.45);
+  transform-origin: 50% 100%;
+  animation: sz-flackern 1.4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -0.23s);
+}
+@keyframes sz-flackern {
+  0% { transform: scale(1, 1) rotate(-2deg); opacity: 0.9; }
+  50% { transform: scale(0.92, 1.08) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1.05, 0.95) rotate(-1deg); opacity: 0.85; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Bombe: Alarm
+ * ------------------------------------------------------------------------ */
+
+.sz-alarm {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(255, 60, 30, 0.45) 100%);
+  animation: sz-alarm 1.6s ease-in-out infinite;
+}
+@keyframes sz-alarm {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+.sz-funken {
+  position: absolute;
+  top: 26vh;
+  left: 50%;
+}
+.sz-funke {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffd36b;
+  box-shadow: 0 0 6px 2px rgba(255, 140, 40, 0.8);
+  animation: sz-funke 1.3s ease-out infinite;
+  animation-delay: calc(var(--i) * -0.13s);
+  --winkel: calc(var(--i) * 36deg);
+}
+@keyframes sz-funke {
+  from { transform: rotate(var(--winkel)) translate3d(0, 0, 0); opacity: 1; }
+  to { transform: rotate(var(--winkel)) translate3d(0, -70px, 0); opacity: 0; }
+}
+.sz-warnband {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 0;
+  height: 26px;
+  background: repeating-linear-gradient(-45deg, #f2c14e 0 18px, #1d1212 18px 36px);
+  opacity: 0.5;
+  animation: sz-band 2.5s linear infinite;
+}
+@keyframes sz-band {
+  to { transform: translate3d(50.9px, 0, 0); }
+}
+
+/* ---------------------------------------------------------------------------
+ * Quiz: Fernsehstudio
+ * ------------------------------------------------------------------------ */
+
+.sz-kegel {
+  position: absolute;
+  top: -10vh;
+  width: 60vw;
+  height: 120vh;
+  background: linear-gradient(180deg, rgba(94, 200, 255, 0.28), rgba(94, 200, 255, 0) 80%);
+  clip-path: polygon(45% 0, 55% 0, 100% 100%, 0 100%);
+  transform-origin: 50% 0;
+}
+.sz-kegel.is-links { left: -10vw; animation: sz-schwenk 7s ease-in-out infinite alternate; }
+.sz-kegel.is-rechts {
+  right: -10vw;
+  background: linear-gradient(180deg, rgba(255, 120, 220, 0.24), rgba(255, 120, 220, 0) 80%);
+  animation: sz-schwenk 8s ease-in-out infinite alternate-reverse;
+}
+@keyframes sz-schwenk {
+  from { transform: rotate(-18deg); }
+  to { transform: rotate(18deg); }
+}
+.sz-lampen {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  display: flex;
+  justify-content: space-evenly;
+}
+.sz-lampe {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff1a8;
+  box-shadow: 0 0 10px 3px rgba(255, 220, 120, 0.7);
+  animation: sz-lampe 1.4s steps(1) infinite;
+  animation-delay: calc(var(--i) * -0.2s);
+}
+@keyframes sz-lampe {
+  0% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Imposter: Nebel und Verdacht
+ * ------------------------------------------------------------------------ */
+
+.sz-nebel {
+  position: absolute;
+  left: -50%;
+  bottom: 0;
+  width: 200%;
+  height: 60vh;
+  background:
+    radial-gradient(ellipse 30% 40% at 20% 70%, rgba(150, 220, 210, 0.16), transparent 70%),
+    radial-gradient(ellipse 25% 35% at 60% 80%, rgba(150, 220, 210, 0.12), transparent 70%),
+    radial-gradient(ellipse 30% 30% at 85% 65%, rgba(150, 220, 210, 0.14), transparent 70%);
+  animation: sz-nebel 30s ease-in-out infinite alternate;
+}
+.sz-nebel.is-zwei { bottom: 20vh; opacity: 0.7; animation-duration: 42s; animation-direction: alternate-reverse; }
+@keyframes sz-nebel {
+  from { transform: translate3d(-8%, 0, 0); }
+  to { transform: translate3d(8%, 0, 0); }
+}
+.sz-lichtkreis {
+  position: absolute;
+  top: 30vh;
+  left: 50%;
+  width: 70vw;
+  height: 70vw;
+  margin-left: -35vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(95, 224, 184, 0.16), transparent 65%);
+  animation: sz-suchen 9s ease-in-out infinite alternate;
+}
+@keyframes sz-suchen {
+  0% { transform: translate3d(-20vw, 0, 0); }
+  50% { transform: translate3d(10vw, 6vh, 0); }
+  100% { transform: translate3d(18vw, -4vh, 0); }
+}
+.sz-fragen { position: absolute; inset: 0; }
+.sz-frage {
+  position: absolute;
+  left: calc(8% + var(--i) * 13%);
+  bottom: -10vh;
+  font: 900 34px/1 system-ui;
+  color: rgba(95, 224, 184, 0.22);
+  animation: sz-steigen 14s linear infinite;
+  animation-delay: calc(var(--i) * -2s);
+}
+@keyframes sz-steigen {
+  from { transform: translate3d(0, 0, 0) rotate(-10deg); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  to { transform: translate3d(0, -120vh, 0) rotate(12deg); opacity: 0; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Wahrheit oder Pflicht: Flaschendrehen unter Neon
+ * ------------------------------------------------------------------------ */
+
+.sz-neon {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 15% 25%, rgba(255, 95, 180, 0.28), transparent 40%),
+    radial-gradient(circle at 85% 70%, rgba(80, 220, 255, 0.24), transparent 40%);
+  animation: sz-neon 3s ease-in-out infinite alternate;
+}
+@keyframes sz-neon {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+.sz-flasche {
+  position: absolute;
+  top: 50vh;
+  left: 50%;
+  width: 54px;
+  margin: -80px 0 0 -27px;
+  fill: rgba(255, 95, 180, 0.2);
+  stroke: rgba(255, 160, 210, 0.5);
+  stroke-width: 2;
+  animation: sz-flasche 6s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+}
+@keyframes sz-flasche {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(1080deg); }
+}
+
+/* ---------------------------------------------------------------------------
+ * Ich hab noch nie: an der Theke
+ * ------------------------------------------------------------------------ */
+
+.sz-theke {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18vh;
+  background: linear-gradient(180deg, #6b3f1d, #3d2410);
+  box-shadow: 0 -4px 0 #a86a32, 0 -30px 60px rgba(255, 179, 71, 0.18);
+}
+.sz-blasen { position: absolute; inset: 0; }
+.sz-blase {
+  position: absolute;
+  bottom: 14vh;
+  left: calc(6% + var(--i) * 6.5%);
+  width: calc(6px + var(--y) * 12px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 210, 140, 0.45);
+  animation: sz-blase 7s ease-in infinite;
+  animation-delay: calc(var(--i) * -0.6s);
+}
+@keyframes sz-blase {
+  from { transform: translate3d(0, 0, 0); opacity: 0; }
+  10% { opacity: 1; }
+  to { transform: translate3d(12px, -80vh, 0); opacity: 0; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Wer würde eher: Sprechblasen
+ * ------------------------------------------------------------------------ */
+
+.sz-blasen-sprech { position: absolute; inset: 0; }
+.sz-sprech {
+  position: absolute;
+  left: calc(5% + var(--i) * 15%);
+  top: calc(20vh + var(--y) * 55vh);
+  width: 64px;
+  height: 44px;
+  border-radius: 22px;
+  background: rgba(255, 138, 216, 0.16);
+  animation: sz-ploppen 5s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.8s);
+}
+.sz-sprech::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 14px;
+  border: 10px solid transparent;
+  border-top-color: rgba(255, 138, 216, 0.16);
+  border-bottom: 0;
+}
+@keyframes sz-ploppen {
+  0%, 100% { transform: scale(0.6); opacity: 0; }
+  20%, 70% { transform: scale(1); opacity: 1; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Wer bin ich: Klebezettel
+ * ------------------------------------------------------------------------ */
+
+.sz-zettel-feld { position: absolute; inset: 0; }
+.sz-zettel {
+  position: absolute;
+  left: calc(4% + var(--i) * 12%);
+  top: calc(14vh + var(--y) * 66vh);
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  background: rgba(255, 224, 102, 0.2);
+  color: rgba(26, 24, 48, 0.5);
+  font: 900 24px/1 system-ui;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  animation: sz-zettel 6s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -0.7s);
+}
+@keyframes sz-zettel {
+  from { transform: rotate(-8deg) translate3d(0, 0, 0); }
+  to { transform: rotate(8deg) translate3d(0, -12px, 0); }
+}
+
+/* ---------------------------------------------------------------------------
+ * Schätzen: Maßband und Zahlen
+ * ------------------------------------------------------------------------ */
+
+.sz-massband {
+  position: absolute;
+  left: -50%;
+  bottom: 10vh;
+  width: 200%;
+  height: 34px;
+  background:
+    repeating-linear-gradient(90deg, rgba(14, 36, 32, 0.9) 0 2px, transparent 2px 12px),
+    repeating-linear-gradient(90deg, rgba(14, 36, 32, 0.9) 0 2px, transparent 2px 60px),
+    #e8d36a;
+  opacity: 0.35;
+  transform: rotate(-4deg);
+  animation: sz-massband 12s linear infinite;
+}
+@keyframes sz-massband {
+  from { transform: rotate(-4deg) translate3d(0, 0, 0); }
+  to { transform: rotate(-4deg) translate3d(-60px, 0, 0); }
+}
+.sz-zahlen { position: absolute; inset: 0; }
+.sz-zahl {
+  position: absolute;
+  left: calc(6% + var(--i) * 12%);
+  top: calc(18vh + var(--y) * 60vh);
+  font: 900 26px/1 system-ui;
+  color: rgba(126, 226, 168, 0.18);
+  animation: sz-schweben 5s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -0.6s);
+}
+
+/* ---------------------------------------------------------------------------
+ * Entweder oder: zwei Hälften
+ * ------------------------------------------------------------------------ */
+
+.sz-haelfte {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60%;
+}
+.sz-haelfte.is-links {
+  left: 0;
+  background: linear-gradient(90deg, rgba(255, 92, 92, 0.24), transparent);
+  animation: sz-seite 4s ease-in-out infinite alternate;
+}
+.sz-haelfte.is-rechts {
+  right: 0;
+  background: linear-gradient(270deg, rgba(80, 150, 255, 0.24), transparent);
+  animation: sz-seite 4s ease-in-out infinite alternate-reverse;
+}
+@keyframes sz-seite {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+.sz-trenner {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: 50%;
+  width: 3px;
+  background: linear-gradient(180deg, transparent, rgba(255, 210, 94, 0.6), transparent);
+  animation: sz-trenner 6s ease-in-out infinite alternate;
+}
+@keyframes sz-trenner {
+  from { transform: rotate(-6deg); }
+  to { transform: rotate(6deg); }
+}
+
+/* ---------------------------------------------------------------------------
+ * Kategorien: Buchstabensteine
+ * ------------------------------------------------------------------------ */
+
+.sz-buchstaben { position: absolute; inset: 0; }
+.sz-buchstabe {
+  position: absolute;
+  left: calc(4% + var(--i) * 10.5%);
+  top: calc(16vh + var(--y) * 64vh);
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  background: rgba(143, 184, 255, 0.14);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.25);
+  color: rgba(143, 184, 255, 0.5);
+  font: 900 24px/1 system-ui;
+  animation: sz-kippen 4.5s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -0.5s);
+}
+@keyframes sz-kippen {
+  from { transform: rotate(-10deg) translate3d(0, 0, 0); }
+  to { transform: rotate(10deg) translate3d(0, -14px, 0); }
+}
+
+/* ---------------------------------------------------------------------------
+ * Mehrheit: Säulen, die abstimmen
+ * ------------------------------------------------------------------------ */
+
+.sz-balken {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 0;
+  height: 40vh;
+  display: flex;
+  align-items: flex-end;
+  gap: 8%;
+  opacity: 0.22;
+}
+.sz-saeule {
+  flex: 1;
+  height: 100%;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, #6fd3ff, #2c6f94);
+  transform-origin: 50% 100%;
+  animation: sz-saeule 3.2s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -0.45s);
+}
+@keyframes sz-saeule {
+  from { transform: scaleY(0.25); }
+  to { transform: scaleY(0.9); }
+}
+
+/* ---------------------------------------------------------------------------
+ * 10 Sekunden: die große Uhr
+ * ------------------------------------------------------------------------ */
+
+.sz-uhr {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 92vmin;
+  margin: -46vmin 0 0 -46vmin;
+  opacity: 0.16;
+  stroke: #ffd447;
+  stroke-width: 2;
+  fill: none;
+}
+.sz-uhr-rand { stroke-width: 2.5; }
+.sz-uhr-mitte { fill: #ffd447; }
+.sz-uhr-zeiger {
+  stroke-width: 3;
+  transform-origin: 50px 50px;
+  animation: sz-zeiger 10s steps(10) infinite;
+}
+@keyframes sz-zeiger {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------------------------------------------------------------------------
+ * Regel-Karte: Pergament und Siegel
+ * ------------------------------------------------------------------------ */
+
+.sz-pergament {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, rgba(232, 194, 122, 0.22), transparent 65%);
+  animation: sz-neon 4s ease-in-out infinite alternate;
+}
+.sz-siegel {
+  position: absolute;
+  bottom: 12vh;
+  right: 12vw;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #c9473f, #7a1f1a);
+  opacity: 0.35;
+  animation: sz-schweben 5s ease-in-out infinite alternate;
+}
+
+/* ---------------------------------------------------------------------------
+ * Bewegung reduzieren: alles steht.
+ * ------------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-szene,
+  .pk-szene * {
+    animation: none !important;
+  }
+}

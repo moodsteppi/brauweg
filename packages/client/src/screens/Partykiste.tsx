@@ -8,6 +8,7 @@ import { Einstellungen, OffeneRunde, Regler, type Angebot } from '../minispiele/
 import { AufstellungSeite } from '../minispiele/partykiste/Lager';
 import { LobbyRegelzeile, RegelsatzKontext, Regelzeile } from '../minispiele/partykiste/Regelzeile';
 import { Runde } from '../minispiele/partykiste/Runden';
+import { Szene } from '../minispiele/partykiste/Szene';
 import { AktiveRegel } from '../minispiele/partykiste/RundenOhneUhr';
 import { PasstNicht } from '../minispiele/partykiste/PasstNicht';
 import {
@@ -648,7 +649,9 @@ export function Partykiste({
   const binFertig = sicht.gehandelt.includes(sicht.sitz);
 
   return (
-    <main className="pk-seite pk-tisch">
+    <main className="pk-seite pk-tisch" data-szene={sicht.art}>
+      {/* Kulisse je Minispiel (Szene.tsx) — hinter allem, nimmt keine Tipps an. */}
+      <Szene art={sicht.art} />
       <header className="pk-kopf">
         <button className="pk-zurueck is-klein" type="button" onClick={verlasseUndZurueck} aria-label="Verlassen">
           ←
