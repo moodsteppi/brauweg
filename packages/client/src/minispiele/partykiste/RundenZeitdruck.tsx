@@ -19,6 +19,7 @@
 import { useEffect, useState } from 'react';
 
 import { Buehne, Karte, Leute, Wahl, Wartet, namenFuer, type RundenProps } from './Runden';
+import { Wasserfall } from './Wasserfall';
 import { zaehlerWort, type BombeSicht, type KoenigsbecherSicht, type ZehnSekundenSicht } from './sicht';
 
 /* --------------------------------------------------------------------------
@@ -251,6 +252,14 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
       ? letzte.ziele.map((z) => (z === sicht.sitz ? 'dich' : namenFuer(sitze, z))).join(', ')
       : null;
 
+  /*
+   * Wasserfall (das Ass): einmal je Zug die große Einlage (Wasserfall.tsx).
+   * Die Kennung ist die Zahl aller bisher gezogenen Karten — sie ändert sich
+   * nur mit dem nächsten Zug, nicht mit jedem Serverfunk.
+   */
+  const gezogenGesamt = daten.gezogen.reduce((summe, n) => summe + n, 0);
+  const wasserfallKennung = !auf && letzte && letzte.karte.rang === 14 ? `${gezogenGesamt}` : null;
+
   const karte = letzte ? (
     <div className="pk-zd-karte">
       <Karte karte={letzte.karte} />
@@ -266,6 +275,11 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
 
   return (
     <>
+      <Wasserfall
+        kennung={wasserfallKennung}
+        karte={letzte?.karte ?? null}
+        getroffen={`${letzte && letzte.sitz === sicht.sitz ? 'Du hast' : `${letzte ? namenFuer(sitze, letzte.sitz) : 'Jemand'} hat`} das Ass gezogen — ${sicht.trinkmodus ? 'alle trinken' : 'alle kassieren'}!`}
+      />
       <Buehne
         oben={
           auf

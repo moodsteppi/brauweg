@@ -146,6 +146,36 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
+      titel: 'Königsbecher — Wasserfall',
+      text: 'Das Ass: Alle kassieren. Ein Wasserfall stürzt über den Bildschirm, das Ass überschlägt sich im Fallen (Wasserfall.tsx). Antippen schließt ihn früher.',
+      sicht: sicht({
+        art: 'koenigsbecher',
+        gehandelt: [],
+        daten: {
+          art: 'koenigsbecher',
+          amZug: 1,
+          kartenJeSitz: 2,
+          gezogen: [1, 0, 1, 1, 1, 1],
+          restKarten: 46,
+          letzte: {
+            sitz: 0,
+            karte: { rang: 14, farbe: 0 },
+            kartenId: 'kb14',
+            folge: 'alle',
+            ziele: [0, 1, 2, 3, 4, 5],
+            titel: 'Wasserfall',
+            text: 'Alle kassieren — der ganze Tisch.',
+          },
+          wahlOffen: false,
+          hand: null,
+          kassiert: [1, 1, 1, 1, 1, 1],
+          becher: 0,
+          koenigSitz: -1,
+          neueRegel: null,
+        },
+      }),
+    },
+    {
       titel: 'Königsbecher — Hand hoch!',
       text: 'Nach einer Sieben tippen alle „Hand hoch". Die Frist (fünf Sekunden) läuft auf dem Server; wer bis dahin nicht tippt, kassiert — tippen alle, der Letzte.',
       sicht: sicht({
