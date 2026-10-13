@@ -25,7 +25,7 @@ import './szenen.css';
 export function Szene({ art }: { art: PartyMinispiel }): React.JSX.Element {
   return (
     <div className="pk-szene" data-art={art} aria-hidden="true">
-      {art !== 'busfahrer' && art !== 'regelkarte' ? (
+      {art !== 'regelkarte' ? (
         <div className="pk-szene-bild" style={{ backgroundImage: `url(/hub/banner-pk-${art}.webp)` }} />
       ) : null}
       <Kulisse art={art} />
@@ -149,23 +149,18 @@ function Kulisse({ art }: { art: PartyMinispiel }): React.JSX.Element | null {
 }
 
 /**
- * Im Bus: Fensterband mit vorbeiziehender Landschaft (drei Ebenen, je
- * näher, desto schneller), Fensterholme, schaukelnde Haltegriffe und ein
- * Boden mit Mittelgang. Der ganze Innenraum wippt leicht, als führe er.
+ * Bus fahren: eine Stadt bei Nacht, durch die der Bus fährt — Skyline,
+ * Laternen und Straße ziehen unterschiedlich schnell vorbei. Die Fahrt selbst
+ * (drei Haltestellen) steht auf der Bühne, in Buslinie.tsx.
  */
 function Bus(): React.JSX.Element {
   return (
-    <div className="sz-bus">
-      <div className="sz-bus-fenster">
-        <span className="sz-himmel" />
-        <span className="sz-sonne" />
-        <span className="sz-landschaft is-berge" />
-        <span className="sz-landschaft is-baeume" />
-        <span className="sz-landschaft is-pfosten" />
-        <div className="sz-holme">{viele(4, 'sz-holm')}</div>
-      </div>
-      <div className="sz-griffe">{viele(5, 'sz-griff', () => <i />)}</div>
-      <span className="sz-bus-boden" />
+    <div className="sz-stadt">
+      <span className="sz-sterne" />
+      <span className="sz-mond" />
+      <span className="sz-skyline" />
+      <div className="sz-laternen">{viele(8, 'sz-laterne')}</div>
+      <span className="sz-strasse" />
     </div>
   );
 }

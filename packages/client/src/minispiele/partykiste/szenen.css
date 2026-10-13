@@ -147,152 +147,220 @@
 .pk-tisch[data-szene='regelkarte'] { --pk-grund: #221a10; --pk-akzent: #e8c27a; }
 
 /* ---------------------------------------------------------------------------
- * Bus fahren: im Bus
+ * Bus fahren: Stadt bei Nacht, die Linie auf der Bühne
+ *
+ * Bis zum 13.10.2026 stand hier ein Businnenraum mit Fenster und
+ * Haltegriffen — Emile: „macht nicht so richtig Sinn". Die Regel ist eine
+ * Fahrt über drei Haltestellen; die zeigt jetzt die Buslinie auf der Bühne
+ * (Buslinie.tsx), und die Kulisse ist nur noch die Stadt, durch die er fährt.
  * ------------------------------------------------------------------------ */
 
-.sz-bus {
+.sz-stadt {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, #2b3a52 0%, #1d2738 40%, #17202f 75%, #141b28 100%);
-  animation: sz-wippen 0.9s ease-in-out infinite alternate;
-  transform-origin: 50% 100%;
+  background: linear-gradient(180deg, #0d1530 0%, #17204a 55%, #232a55 78%, #17202f 100%);
 }
-@keyframes sz-wippen {
-  from { transform: translate3d(0, 0, 0) rotate(-0.15deg); }
-  to { transform: translate3d(0, 2px, 0) rotate(0.15deg); }
-}
-
-/* Fensterband oben: Himmel, Sonne, drei Landschaftsebenen. */
-.sz-bus-fenster {
+.sz-sterne {
   position: absolute;
-  inset: max(8px, env(safe-area-inset-top)) 8px auto;
-  height: 30vh;
-  border-radius: 18px;
-  overflow: hidden;
-  box-shadow:
-    inset 0 0 0 6px #3a4a66,
-    inset 0 0 22px rgba(0, 0, 0, 0.5),
-    0 6px 0 #0f1520;
-  opacity: 0.85;
+  inset: 0 0 45%;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, #fff, transparent),
+    radial-gradient(1px 1px at 28% 40%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 47% 12%, #fff, transparent),
+    radial-gradient(1px 1px at 63% 30%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 81% 16%, #fff, transparent),
+    radial-gradient(1px 1px at 92% 44%, #fff, transparent),
+    radial-gradient(1px 1px at 36% 58%, #fff, transparent);
+  opacity: 0.6;
+  animation: sz-funkeln 4s ease-in-out infinite alternate;
 }
-.sz-himmel {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, #ffb46b 0%, #ff8f7a 35%, #7b6bd6 75%, #3d4c8c 100%);
+@keyframes sz-funkeln {
+  from { opacity: 0.35; }
+  to { opacity: 0.75; }
 }
-.sz-sonne {
+.sz-mond {
   position: absolute;
-  top: 18%;
-  right: 18%;
-  width: 54px;
-  height: 54px;
+  top: calc(env(safe-area-inset-top, 0px) + 90px);
+  right: 12%;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  background: radial-gradient(circle, #fff3b0 0%, #ffd36b 55%, rgba(255, 200, 100, 0) 72%);
-  animation: sz-sonne 6s ease-in-out infinite alternate;
-}
-@keyframes sz-sonne {
-  from { transform: scale(1); opacity: 0.85; }
-  to { transform: scale(1.12); opacity: 1; }
+  box-shadow: inset -12px 6px 0 0 #f4e7b8;
+  filter: drop-shadow(0 0 14px rgba(244, 231, 184, 0.35));
+  opacity: 0.8;
 }
 
-/* Je Ebene ein doppelt breites Band, das um die Hälfte wandert: nahtlos. */
-.sz-landschaft {
+/* Skyline und Straße: doppelt breite Bänder, die um die Hälfte wandern. */
+.sz-skyline,
+.sz-strasse {
   position: absolute;
   left: 0;
   width: 200%;
   background-repeat: repeat-x;
   will-change: transform;
 }
-.sz-landschaft.is-berge {
-  bottom: 18%;
-  height: 46%;
+.sz-skyline {
+  bottom: 70px;
+  height: 150px;
   background-size: 50% 100%;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 100' preserveAspectRatio='none'><path d='M0 100 L0 60 L40 30 L90 62 L140 22 L190 58 L240 35 L300 70 L350 28 L400 60 L400 100 Z' fill='%234b4f8f'/></svg>");
-  animation: sz-fahrt 38s linear infinite;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 150' preserveAspectRatio='none'><path d='M0 150 V90 H30 V60 H55 V95 H80 V40 H110 V100 H130 V70 H160 V110 H185 V55 H215 V90 H240 V30 H265 V100 H290 V75 H320 V105 H345 V50 H375 V95 H400 V150 Z' fill='%23111833'/><g fill='%23f2c14e' opacity='0.55'><rect x='36' y='70' width='4' height='5'/><rect x='88' y='50' width='4' height='5'/><rect x='96' y='66' width='4' height='5'/><rect x='192' y='64' width='4' height='5'/><rect x='248' y='42' width='4' height='5'/><rect x='254' y='60' width='4' height='5'/><rect x='352' y='62' width='4' height='5'/><rect x='136' y='80' width='4' height='5'/></g></svg>");
+  animation: sz-fahrt 60s linear infinite;
 }
-.sz-landschaft.is-baeume {
-  bottom: 10%;
-  height: 34%;
-  background-size: 25% 100%;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='none'><path d='M0 100 L0 80 Q50 66 100 78 T200 76 L200 100 Z' fill='%232f5a4f'/><path d='M30 80 L42 40 L54 80 Z M120 82 L136 30 L152 82 Z' fill='%23255046'/><rect x='40' y='78' width='4' height='10' fill='%23463325'/><rect x='134' y='80' width='4' height='10' fill='%23463325'/></svg>");
-  animation: sz-fahrt 14s linear infinite;
-}
-.sz-landschaft.is-pfosten {
+.sz-strasse {
   bottom: 0;
-  height: 100%;
-  background-size: 20% 100%;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect x='0' y='86' width='100' height='14' fill='%233a3a46'/><rect x='10' y='92' width='22' height='2' fill='%23f2c14e'/><rect x='60' y='92' width='22' height='2' fill='%23f2c14e'/><rect x='46' y='30' width='3' height='58' fill='%231b2230'/><circle cx='47.5' cy='30' r='4' fill='%23ffe9a6'/></svg>");
-  animation: sz-fahrt 4.2s linear infinite;
+  height: 70px;
+  background-size: 25% 100%;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 70' preserveAspectRatio='none'><rect width='200' height='70' fill='%231c2233'/><rect y='0' width='200' height='5' fill='%232b3349'/><rect x='20' y='34' width='60' height='4' fill='%23f2c14e' opacity='0.7'/><rect x='120' y='34' width='60' height='4' fill='%23f2c14e' opacity='0.7'/></svg>");
+  animation: sz-fahrt 6s linear infinite;
 }
 @keyframes sz-fahrt {
   from { transform: translate3d(0, 0, 0); }
   to { transform: translate3d(-50%, 0, 0); }
 }
-
-/* Fensterholme teilen das Band in Scheiben. */
-.sz-holme {
+/* Laternen werfen Lichtkegel auf die Straße, die vorbeiziehen. */
+.sz-laternen {
   position: absolute;
-  inset: 0;
-  display: flex;
-  justify-content: space-evenly;
-}
-.sz-holm {
-  width: 10px;
-  height: 100%;
-  background: linear-gradient(90deg, #2c3a52, #46597c 50%, #2c3a52);
-}
-
-/* Haltegriffe, die im Takt der Fahrt schaukeln. */
-.sz-griffe {
-  position: absolute;
-  top: calc(max(8px, env(safe-area-inset-top)) + 30vh + 4px);
   left: 0;
-  right: 0;
+  bottom: 70px;
+  width: 200%;
+  height: 120px;
   display: flex;
   justify-content: space-around;
+  animation: sz-fahrt 12s linear infinite;
 }
-.sz-griff {
-  width: 2px;
-  height: 48px;
-  background: #6d7a92;
-  transform-origin: 50% 0;
-  animation: sz-schaukeln 1.8s ease-in-out infinite alternate;
-  animation-delay: calc(var(--i) * -0.35s);
+.sz-laterne {
+  position: relative;
+  width: 3px;
+  height: 100%;
+  background: #2a3350;
 }
-.sz-griff i {
+.sz-laterne::before {
+  content: '';
   position: absolute;
-  bottom: -18px;
-  left: -9px;
-  width: 20px;
-  height: 20px;
-  border: 3px solid #c8d2e3;
-  border-radius: 50%;
+  top: -4px;
+  left: -5px;
+  width: 13px;
+  height: 7px;
+  border-radius: 4px;
+  background: #ffe39a;
+  box-shadow: 0 0 16px 6px rgba(255, 210, 120, 0.35);
 }
-@keyframes sz-schaukeln {
-  from { transform: rotate(-7deg); }
-  to { transform: rotate(7deg); }
+.sz-laterne::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: -40px;
+  width: 83px;
+  height: 190px;
+  background: linear-gradient(180deg, rgba(255, 220, 140, 0.16), transparent 85%);
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
 }
 
-/* Boden mit Mittelgang. */
-.sz-bus-boden {
+/* Die Buslinie auf der Bühne (Buslinie.tsx). */
+.pk-busfahrt {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  width: 100%;
+}
+.pk-linie {
+  padding: 0 22px;
+}
+.pk-linie-strecke {
+  position: relative;
+  height: 46px;
+  margin: 0 6px;
+}
+.pk-linie-strecke::before,
+.pk-linie-gefahren {
+  content: '';
   position: absolute;
   left: 0;
   right: 0;
+  bottom: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.pk-linie-gefahren {
+  right: auto;
+  background: var(--pk-akzent, #f2c14e);
+  transition: width 0.9s cubic-bezier(0.45, 0, 0.2, 1);
+}
+.pk-linie-halt {
+  position: absolute;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: #2b3349;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.35);
+  transition: background 0.3s ease 0.6s, box-shadow 0.3s ease 0.6s;
+}
+.pk-linie-halt[data-erreicht] {
+  background: var(--pk-akzent, #f2c14e);
+  box-shadow: 0 0 0 3px rgba(242, 193, 78, 0.25);
+}
+.pk-linie-halt[data-ziel] {
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
   bottom: 0;
-  height: 22vh;
-  background:
-    linear-gradient(90deg, transparent 44%, rgba(242, 193, 78, 0.18) 44%, rgba(242, 193, 78, 0.18) 56%, transparent 56%),
-    repeating-linear-gradient(0deg, #1b2434 0 10px, #19212f 10px 20px);
-  -webkit-mask-image: linear-gradient(0deg, #000 30%, transparent);
-  mask-image: linear-gradient(0deg, #000 30%, transparent);
+  border-radius: 4px;
+  background: repeating-conic-gradient(#fff 0 25%, #222 0 50%) 0 0 / 9px 9px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
-
-/* Die Bühne im Bus ist das Armaturenbrett: dunkel, gelb umrandet. */
-.pk-tisch[data-szene='busfahrer'] .pk-buehne {
-  margin-top: calc(30vh - 70px);
-  border-radius: 22px 22px 14px 14px;
+.pk-linie-bus {
+  position: absolute;
+  bottom: 14px;
+  width: 52px;
+  margin-left: -26px;
+  transition: left 0.9s cubic-bezier(0.45, 0, 0.2, 1);
+  animation: sz-tuckern 0.5s ease-in-out infinite alternate;
 }
+.pk-linie-bus svg { display: block; width: 100%; }
+@keyframes sz-tuckern {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, -1.5px, 0); }
+}
+.pk-linie-bus .bus-koerper { fill: #f2c14e; }
+.pk-linie-bus .bus-streifen { fill: #d1452f; }
+.pk-linie-bus .bus-fenster { fill: #9fd4ff; }
+.pk-linie-bus .bus-licht { fill: #fff6cc; }
+.pk-linie-bus .bus-rad circle { fill: #1c2233; stroke: #8a93a8; stroke-width: 1.5; }
+.pk-linie-bus .bus-rad rect { fill: #8a93a8; }
+.pk-linie-bus[data-faehrt] .bus-rad { animation: sz-rad 0.3s linear infinite; }
+@keyframes sz-rad {
+  to { transform: rotate(360deg); }
+}
+/* Panne: Der Bus ruckelt und raucht kurz, die Strecke wird rot. */
+.pk-linie-bus[data-panne] {
+  animation: sz-panne 0.5s ease-in-out 2;
+}
+.pk-linie-bus[data-panne] .bus-koerper { fill: #c9473f; }
+@keyframes sz-panne {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  25% { transform: translate3d(-3px, 0, 0) rotate(-4deg); }
+  75% { transform: translate3d(3px, 0, 0) rotate(4deg); }
+}
+.pk-linie-namen {
+  position: relative;
+  height: 26px;
+  margin: 6px 6px 0;
+  font: 700 10px/1.2 system-ui;
+  color: var(--muted);
+}
+.pk-linie-namen span {
+  position: absolute;
+  top: 0;
+  width: 66px;
+  margin-left: -33px;
+  text-align: center;
+  transition: color 0.3s ease 0.6s;
+}
+.pk-linie-namen span[data-erreicht] { color: var(--pk-akzent, #f2c14e); }
 
 /* ---------------------------------------------------------------------------
  * Königsbecher: Thronsaal
@@ -808,7 +876,9 @@
 @media (prefers-reduced-motion: reduce) {
   .pk-szene,
   .pk-szene *,
-  .pk-tisch[data-szene] .pk-karte {
+  .pk-tisch[data-szene] .pk-karte,
+  .pk-linie-bus,
+  .pk-linie-bus * {
     animation: none !important;
   }
 }

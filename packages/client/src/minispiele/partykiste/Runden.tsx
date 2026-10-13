@@ -35,6 +35,7 @@ import {
   type WerBinIchSicht,
   type WerEherSicht,
 } from './sicht';
+import { Buslinie } from './Buslinie';
 import { KategorienRunde, MehrheitRunde, RegelkartenRunde } from './RundenOhneUhr';
 import { BombeRunde, KoenigsbecherRunde, ZehnSekundenRunde } from './RundenZeitdruck';
 
@@ -513,16 +514,24 @@ function BusRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
   const binDran = sicht.amZug === sicht.sitz;
   const auf = sicht.phase === 'ergebnis';
   const stufe = Math.min(2, Math.max(0, daten.stufe));
+  // Am Ende der Runde steht der Bus dort, wo die letzte Fahrt aufhörte.
+  const station = auf && daten.letzter ? (daten.letzter.richtig ? 3 : daten.letzter.stufe) : daten.stufe;
+  const panne = daten.letzter !== null && !daten.letzter.richtig && (auf || daten.letzter.sitz === daten.amZug);
 
   return (
     <>
       <Buehne
         oben={auf ? 'Ausgefahren' : binDran ? 'Du fährst' : `${namenFuer(sitze, daten.amZug)} fährt`}
         gross={
-          <div className="pk-kartenreihe">
-            <Karte karte={daten.offen[0]} zu={daten.offen.length < 1} />
-            <Karte karte={daten.offen[1]} zu={daten.offen.length < 2} />
-            <Karte karte={daten.offen[2]} zu={daten.offen.length < 3} />
+          <div className="pk-busfahrt">
+            {/* Die Strecke: Station = richtige Tipps der laufenden Fahrt;
+                nach dem Ende der Runde das Ergebnis der letzten Fahrt. */}
+            <Buslinie station={station} panne={panne} />
+            <div className="pk-kartenreihe">
+              <Karte karte={daten.offen[0]} zu={daten.offen.length < 1} />
+              <Karte karte={daten.offen[1]} zu={daten.offen.length < 2} />
+              <Karte karte={daten.offen[2]} zu={daten.offen.length < 3} />
+            </div>
           </div>
         }
         unten={
