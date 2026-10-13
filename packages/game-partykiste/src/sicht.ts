@@ -27,6 +27,7 @@ import type {
 } from './partie.js';
 import { amZug, mitSchluck, platzierungen, type Platzierung } from './partie.js';
 import { meldenMoeglich, noetigJeSitz } from './ohne-uhr.js';
+import { wartepunkt, type LetzterWurf } from './weiter-warten.js';
 import type { Haerte, Paket } from './inhalte/typen.js';
 import {
   TISCHOEFFNER,
@@ -350,6 +351,19 @@ export interface PartykisteSicht {
    * Mass wie der Test `das Imposter-Wort steht in keiner fremden Sicht`.
    */
   readonly gezeigt: readonly GezeigterInhalt[];
+  /**
+   * Wartet der Tisch gerade auf das „Weiter" aller (Abrechnung, „Gesehen",
+   * „Verstanden"), stehen hier die Sitze, die noch nicht getippt haben — sonst
+   * null. Seit dem 07.10.2026; bis dahin zaehlte der Bildschirm selbst und
+   * konnte nur „Noch 2 Leute" sagen, nicht wer (weiter-warten.ts).
+   */
+  readonly weiterFehlen: readonly number[] | null;
+  /**
+   * Der letzte Wurf fuer den, der zuletzt „Weiter" tippte — oder null. Bleibt
+   * stehen, bis der naechste kommt; der Bildschirm sagt ihn an, wenn `nr` neu
+   * ist. Kein Geheimnis, also auch beim Zuschauer.
+   */
+  readonly letzterWurf: LetzterWurf | null;
 }
 
 /**
@@ -586,6 +600,8 @@ export function sichtFuer(partie: PartykistePartie, sitz: number): PartykisteSic
     inhaltsMischung: inhaltsLesart(partie.regeln),
     inhaltsHaerteGewollt: partie.inhaltsHaerteGewollt ?? null,
     gezeigt: gezeigteInhalte(partie, daten),
+    weiterFehlen: wartepunkt(partie)?.fehlen ?? null,
+    letzterWurf: partie.letzterWurf ?? null,
   };
 }
 

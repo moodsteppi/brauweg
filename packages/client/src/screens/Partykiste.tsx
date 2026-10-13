@@ -6,6 +6,7 @@ import { tischFehler, useInhaltsSperren } from '../inhaltspakete';
 import { PartyAuswahl, usePartyAuswahl } from '../minispiele/partykiste/Auswahl';
 import { Einstellungen, OffeneRunde, Regler, type Angebot } from '../minispiele/partykiste/Einstellungen';
 import { AufstellungSeite } from '../minispiele/partykiste/Lager';
+import { LetzterSchicht, useNeuerWurf } from '../minispiele/partykiste/LetzterWurf';
 import { LobbyRegelzeile, RegelsatzKontext, Regelzeile } from '../minispiele/partykiste/Regelzeile';
 import { Runde } from '../minispiele/partykiste/Runden';
 import { AktiveRegel } from '../minispiele/partykiste/RundenOhneUhr';
@@ -360,6 +361,9 @@ export function Partykiste({
   }, [tischId, onBack]);
 
   const sende = useCallback((aktion: PartyAktion): void => tisch.send(aktion), [tisch]);
+  /* Die Ansage fuer den Letzten beim „Weiter" — hier oben, weil der letzte
+     Wurf des Abends mit dem Umschalten auf den Endstand zusammenfaellt. */
+  const { angesagt, schliessen } = useNeuerWurf(tischId, sicht !== null, sicht?.letzterWurf ?? null);
 
   /* ------------------------------------------------------------------ */
   /* Menü                                                                */
@@ -631,6 +635,7 @@ export function Partykiste({
         <header className="pk-kopf">
           <span className="pk-rundenzahl">Turnier vorbei</span>
         </header>
+        <LetzterSchicht wurf={angesagt} sitze={sitze} ich={sicht.sitz} trinkmodus={sicht.trinkmodus} onZu={schliessen} />
         <h2 className="pk-endtitel">Endstand</h2>
         <Tabelle sicht={sicht} sitze={sitze} />
         <div className="pk-wahl">
@@ -666,6 +671,7 @@ export function Partykiste({
           {tafel ? 'Zurück' : 'Stand'}
         </button>
       </header>
+      <LetzterSchicht wurf={angesagt} sitze={sitze} ich={sicht.sitz} trinkmodus={sicht.trinkmodus} onZu={schliessen} />
       {/* Die Sicht traegt den Regelsatz selbst — sie passt auf PartyRegelsatz. */}
       <Regelzeile regeln={sicht} />
       {/* Die geltende Regel-Karte steht ueber JEDER Runde — gebrochen wird sie in den anderen. */}

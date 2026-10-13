@@ -97,8 +97,41 @@ export function Wahl({
   );
 }
 
+/**
+ * Wer beim „Weiter" aller noch fehlt — mit Namen, auf jedem Bildschirm, auch
+ * bei dem, der schon getippt hat. Die Liste kommt fertig aus der Sicht
+ * (`weiterFehlen`); steht dort null, wartet der Tisch gerade nicht auf ein
+ * „Weiter", und es steht nichts da.
+ */
+export function FehlenNoch({ sicht, sitze }: { sicht: PartykisteSicht; sitze: SeatInfo[] }): React.JSX.Element | null {
+  /* `?? null`: Ein Server von vor dem 07.10.2026 schickt das Feld nicht. */
+  const fehlen = sicht.weiterFehlen ?? null;
+  if (!fehlen || fehlen.length === 0) return null;
+  return (
+    <p className="pk-wartet pk-fehlen" aria-live="polite" data-pk-fehlen="">
+      Es fehlen noch:{' '}
+      {fehlen.map((s, i) => (
+        <span key={s}>
+          {i > 0 ? ', ' : null}
+          <strong data-ich={s === sicht.sitz ? '' : undefined}>{s === sicht.sitz ? 'du' : namenFuer(sitze, s)}</strong>
+        </span>
+      ))}
+    </p>
+  );
+}
+
 /** Warten auf die anderen — mit Zahl, damit man weiss, ob es hakt. */
-export function Wartet({ sicht }: { sicht: PartykisteSicht }): React.JSX.Element {
+export function Wartet({ sicht, sitze }: { sicht: PartykisteSicht; sitze?: SeatInfo[] }): React.JSX.Element {
+  /* An den drei „Weiter"-Stellen nennt die Sicht die Fehlenden selbst — dann
+     stehen hier Namen statt einer Zahl. */
+  const fehlen = sicht.weiterFehlen ?? null;
+  if (sitze && fehlen !== null) {
+    return fehlen.length > 0 ? (
+      <FehlenNoch sicht={sicht} sitze={sitze} />
+    ) : (
+      <p className="pk-wartet">Gleich geht es weiter …</p>
+    );
+  }
   /* In der Abrechnung tippen Bots kein "Weiter" — sie zaehlen als fertig,
      sonst stuende hier "Noch 3 Leute", die es nie gibt. */
   const bots = sicht.phase === 'ergebnis' ? sicht.botSitze.filter((b) => !sicht.gehandelt.includes(b)).length : 0;
@@ -200,13 +233,16 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
         <p className="pk-ansage">Redereihenfolge — jeder sagt einen Satz zum Wort:</p>
         {reihe}
         {gesehen ? (
-          <Wartet sicht={sicht} />
+          <Wartet sicht={sicht} sitze={sitze} />
         ) : (
-          <Wahl>
-            <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
-              Gesehen
-            </button>
-          </Wahl>
+          <>
+            <Wahl>
+              <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
+                Gesehen
+              </button>
+            </Wahl>
+            <FehlenNoch sicht={sicht} sitze={sitze} />
+          </>
         )}
       </>
     );
