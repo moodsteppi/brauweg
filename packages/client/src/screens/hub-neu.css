@@ -865,6 +865,33 @@
   color: var(--hb-leise);
 }
 
+/* „Kommt bald" in der App: eine Kategorie zum Aufklappen (SpieleNeu.tsx). */
+:is(.hb, .spe) .hb-ab-knopf {
+  width: 100%;
+  /* 44 pt Tippfläche */
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+:is(.hb, .spe) .hb-ab-knopf .hb-ic:last-child {
+  transition: transform 0.2s ease;
+}
+:is(.hb, .spe) .hb-ab-knopf[aria-expanded='true'] .hb-ic:last-child {
+  transform: rotate(180deg);
+}
+/* Noch nicht verfügbar: ganz grau statt nur entsättigt. */
+:is(.hb, .spe) .hb-liste.is-grau .hb-bald-bild {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+:is(.hb, .spe) .hb-liste.is-grau .hb-bald-text strong {
+  color: var(--hb-leise);
+}
+
 /* ---------- Spielseite ---------- */
 :is(.hb, .spe) .hb-spielseite {
   height: 100%;

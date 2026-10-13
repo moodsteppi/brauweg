@@ -54,10 +54,13 @@ unverändert**, und nichts davon braucht einen neuen App-Build.
 - `bald` — steht mit „Bald"-Marke da, lässt sich nicht starten, ohne Abstimmung.
 - `aus` — gar nicht zu sehen (nur App).
 
-**Stand (Robin, 23.09.2026):** In der App spielbar **Doppelkopf, Skat,
-Partykiste**; auf „Bald" alle anderen (Zauberer, Cambio, Poker, Mememory,
-Filler, Eiland, Feldherr, Tafelrunde, Golf, BroCooked); Werwolf in der App
-`aus`. Auf der Webseite alles wie bisher. **Ein Spiel wechselt mit einer
+**Stand (Emile, 13.10.2026):** In der App spielbar **Doppelkopf, Skat,
+Partykiste, Filler (in der App „Farbduell", `APP_NAMEN` in
+`packages/client/src/i18n.ts`) und BroChess**; auf „Bald" alle anderen
+(Zauberer, Cambio, Poker, Mememory, Eiland, Feldherr, Tafelrunde, Golf,
+BroCooked); Werwolf in der App `aus`. Die App zeigt die Bald-Spiele
+zugeklappt in einer eigenen Kategorie „Kommt bald" (`SpieleNeu.tsx`). Auf
+der Webseite alles wie bisher, BroChess dort weiter „Bald". **Ein Spiel wechselt mit einer
 Zeile und einem Deploy in die App** — die installierten Apps richten sich
 beim nächsten Öffnen danach.
 

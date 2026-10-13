@@ -111,6 +111,8 @@ export function SpieleNeu({
   const [games, setGames] = useState<GameSummary[] | null>(null);
   const [voted, setVoted] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<string>('alle');
+  /** „Kommt bald" in der App: zu, bis jemand hineinsieht. */
+  const [baldOffen, setBaldOffen] = useState(false);
 
   useEffect(() => {
     let lebt = true;
@@ -150,6 +152,55 @@ export function SpieleNeu({
   const bekannt = new Set(KATEGORIEN.flatMap((k) => k.spiele));
   const weitere = spielbar.filter((g) => !bekannt.has(g.id));
   const zeige = (id: string): boolean => filter === 'alle' || filter === id;
+  // In der App ist nur ein Teil der Spiele freigegeben (FREIGABE im Server).
+  // Ein Chip, hinter dem nichts Spielbares steht, wäre ein leerer Bildschirm —
+  // dort zählen deshalb nur Kategorien mit spielbaren Spielen, und alles
+  // Übrige sammelt der Chip „Kommt bald" (Emile, 13.10.2026).
+  const chips: readonly { id: string; titel: string }[] = inApp
+    ? [...KATEGORIEN.filter((k) => spielbar.some((g) => k.spiele.includes(g.id))), { id: 'bald', titel: 'Kommt bald' }]
+    : KATEGORIEN;
+
+  const baldZeile = (g: GameSummary): React.JSX.Element => (
+    <div className="hb-bald" key={g.id}>
+      <button type="button" className="hb-bald-flaeche" onClick={() => onBald(t(g.nameKey))}>
+        <span className="hb-bald-bild" style={{ backgroundImage: `url(${bannerFuer(g.id)})` }} />
+        <span className="hb-bald-text">
+          <strong>{t(g.nameKey)}</strong>
+          <small>
+            {sitzSpanne(g.seatCounts)} Spieler
+            {g.abstimmbar !== false ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
+          </small>
+        </span>
+      </button>
+      {/* Ohne Stimme, was es schon gibt und nur noch nicht freigegeben ist. */}
+      {g.abstimmbar !== false ? (
+        <button
+          type="button"
+          className="hb-kn is-stimme"
+          disabled={voted.has(g.id)}
+          onClick={() => void abstimmen(g.id)}
+        >
+          {voted.has(g.id) ? 'Abgestimmt' : 'Dafür'}
+        </button>
+      ) : (
+        <span className="hb-bald-marke">Bald</span>
+      )}
+    </div>
+  );
+
+  /** Pro-Subway und Mehrkampf: in der App ebenfalls noch nicht da. */
+  const modusZeile = (id: string, name: string, bild: string, unter: string): React.JSX.Element => (
+    <div className="hb-bald" key={id}>
+      <button type="button" className="hb-bald-flaeche" onClick={() => onBald(name)}>
+        <span className="hb-bald-bild" style={{ backgroundImage: `url(${bild})` }} />
+        <span className="hb-bald-text">
+          <strong>{name}</strong>
+          <small>{unter}</small>
+        </span>
+      </button>
+      <span className="hb-bald-marke">Bald</span>
+    </div>
+  );
 
   const karte = (g: GameSummary): React.JSX.Element => (
     <button type="button" className="hb-sk" key={g.id} onClick={() => onOeffne(g.id)}>
@@ -172,14 +223,17 @@ export function SpieleNeu({
         <h1 className="hb-titel">Spiele</h1>
       </header>
       <div className="hb-chips" role="tablist" aria-label="Kategorien">
-        {[{ id: 'alle', titel: 'Alle' }, ...KATEGORIEN].map((k) => (
+        {[{ id: 'alle', titel: 'Alle' }, ...chips].map((k) => (
           <button
             type="button"
             role="tab"
             aria-selected={filter === k.id}
             key={k.id}
             className={`hb-chip${filter === k.id ? ' is-an' : ''}`}
-            onClick={() => setFilter(k.id)}
+            onClick={() => {
+              setFilter(k.id);
+              if (k.id === 'bald') setBaldOffen(true);
+            }}
           >
             {k.id === 'denken' ? 'Denken' : k.titel}
           </button>
@@ -261,7 +315,7 @@ export function SpieleNeu({
           </section>
         )}
 
-        {filter === 'alle' && (
+        {filter === 'alle' && !inApp && (
           <>
             <section className="hb-blk">
               <h2 className="hb-ab">
@@ -271,18 +325,19 @@ export function SpieleNeu({
                 </Symbol>
                 Allein
               </h2>
-              {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026). */}
+              {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
+                  dort steht es unter „Kommt bald". */}
               <button
                 type="button"
                 className="hb-quer"
                 style={{ backgroundImage: 'url(/hub/banner-prosubway.webp)' }}
-                onClick={() => (inApp ? onBald(t('modus.prosubway')) : onSolo('prosubway'))}
+                onClick={() => onSolo('prosubway')}
               >
                 <span className="hb-quer-text">
                   <strong>{t('modus.prosubway')}</strong>
                   <span>Münzen fürs Hub · bis 40 am Tag</span>
                 </span>
-                {inApp ? <span className="hb-bald-marke">Bald</span> : <span className="hb-kn is-gold">Los</span>}
+                <span className="hb-kn is-gold">Los</span>
               </button>
             </section>
 
@@ -318,38 +373,43 @@ export function SpieleNeu({
                   Kommt bald
                   <span className="hb-ab-zusatz">Stimm ab</span>
                 </h2>
-                <div className="hb-liste">
-                  {bald.map((g) => (
-                    <div className="hb-bald" key={g.id}>
-                      <button type="button" className="hb-bald-flaeche" onClick={() => onBald(t(g.nameKey))}>
-                        <span className="hb-bald-bild" style={{ backgroundImage: `url(${bannerFuer(g.id)})` }} />
-                        <span className="hb-bald-text">
-                          <strong>{t(g.nameKey)}</strong>
-                          <small>
-                            {sitzSpanne(g.seatCounts)} Spieler
-                            {g.abstimmbar !== false ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
-                          </small>
-                        </span>
-                      </button>
-                      {/* Ohne Stimme, was es schon gibt und nur noch nicht freigegeben ist. */}
-                      {g.abstimmbar !== false ? (
-                        <button
-                          type="button"
-                          className="hb-kn is-stimme"
-                          disabled={voted.has(g.id)}
-                          onClick={() => void abstimmen(g.id)}
-                        >
-                          {voted.has(g.id) ? 'Abgestimmt' : 'Dafür'}
-                        </button>
-                      ) : (
-                        <span className="hb-bald-marke">Bald</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <div className="hb-liste">{bald.map(baldZeile)}</div>
               </section>
             )}
           </>
+        )}
+
+        {/*
+         * Die App zeigt in ihrer ersten Fassung nur einen Teil der Spiele
+         * (Emile, 13.10.2026). Der Rest steht zugeklappt in einer eigenen
+         * Kategorie: sichtbar, dass mehr kommt, ohne die Auswahl zu fluten.
+         */}
+        {inApp && (filter === 'alle' || filter === 'bald') && (
+          <section className="hb-blk hb-kommt-bald">
+            <button
+              type="button"
+              className="hb-ab hb-ab-knopf"
+              aria-expanded={baldOffen}
+              onClick={() => setBaldOffen((alt) => !alt)}
+            >
+              <Symbol>
+                <circle cx="12" cy="12" r="8" />
+                <path d="M12 8v4l3 2" />
+              </Symbol>
+              Kommt bald
+              <span className="hb-ab-zusatz">{bald.length + 2}</span>
+              <Symbol>
+                <path d="m6 9 6 6 6-6" />
+              </Symbol>
+            </button>
+            {baldOffen && (
+              <div className="hb-liste is-grau">
+                {bald.map(baldZeile)}
+                {modusZeile('prosubway', t('modus.prosubway'), '/hub/banner-prosubway.webp', 'Allein · Münzen fürs Hub')}
+                {modusZeile('mehrkampf', t('modus.mehrkampf'), '/hub/banner-mehrkampf.webp', 'Runden aus mehreren Spielen')}
+              </div>
+            )}
+          </section>
         )}
       </div>
     </div>

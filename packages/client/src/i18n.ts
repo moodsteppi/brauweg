@@ -6,6 +6,8 @@
  * zweites Woerterbuch und kein Umbau.
  */
 
+import { inApp } from './laufzeit';
+
 const de: Record<string, string> = {
   'game.doppelkopf': 'Doppelkopf',
   // Das Spiel heisst international "Wizard" und ist als Marke eingetragen
@@ -725,8 +727,21 @@ export function gameTypeLabel(gameType: { kind: string; solo?: string }): string
   return t(`spielart.${gameType.kind}`);
 }
 
+/**
+ * Was in der App anders heisst als auf der Webseite.
+ *
+ * Filler heisst in der App „Farbduell" (Emile, 13.10.2026, erste
+ * iOS-Fassung): Unter „Filler" steht im App Store schon ein bekanntes Spiel.
+ * Die Kennung `filler` bleibt, sie steht in Datenbankzeilen und Nachrichten.
+ * Hier und nicht am Bildschirm, damit Auswahl, Rangliste, Profil und Tisch
+ * denselben Namen zeigen; den Push-Text fuehrt `SPIELNAMEN` im Server.
+ */
+const APP_NAMEN: Record<string, string> = {
+  'game.filler': 'Farbduell',
+};
+
 export function t(key: string): string {
-  return de[key] ?? key;
+  return (inApp ? APP_NAMEN[key] : undefined) ?? de[key] ?? key;
 }
 
 const SUITS: Record<string, string> = { C: '♣', S: '♠', H: '♥', D: '♦' };

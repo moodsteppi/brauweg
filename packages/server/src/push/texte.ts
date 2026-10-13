@@ -15,7 +15,10 @@
 
 import type { Anlass } from './kennungen.js';
 
-/** Spielnamen, wie sie im Client heissen. Fehlt eins, steht "Brauweg" da. */
+/**
+ * Spielnamen, wie sie in der App heissen — Push erreicht nur die App. Fehlt
+ * eins, steht "Brauweg" da.
+ */
 export const SPIELNAMEN: Readonly<Record<string, string>> = {
   doppelkopf: 'Doppelkopf',
   skat: 'Skat',
@@ -23,7 +26,8 @@ export const SPIELNAMEN: Readonly<Record<string, string>> = {
   cambio: 'Cambio',
   easypoker: 'Poker',
   mememory: 'Mememory',
-  filler: 'Filler',
+  // In der App heisst Filler „Farbduell" (APP_NAMEN in i18n.ts des Clients).
+  filler: 'Farbduell',
   eiland: 'Eiland',
   feldherr: 'Feldherr',
   tafelrunde: 'Tafelrunde',

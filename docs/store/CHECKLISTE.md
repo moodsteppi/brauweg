@@ -80,5 +80,5 @@ Alle drei liegen in Dateien, die dieser Zweig bewusst nicht anfasst
 | F1 | A1–A4 als Worker-Aufgaben vergeben | erledigt: die Aufsicht hat A1–A4 selbst gebaut (#242) |
 | F2 | Nach A3 die Screenshots neu erzeugen (`SCREENSHOTS.md`) | erledigt 23.09.2026 18:40: alle 14 Bilder gegen staging mit #242/#243 neu, ohne Fehler |
 | F3 | Kommt Push („Push Server-Seite"): Geräte-Token in DATENSCHUTZ-ANGABEN.md und in der Datenschutzerklärung nachtragen; Apple- und Play-Formular neu | offen |
-| F4 | Wechselt ein weiteres Spiel in der App auf `spielbar`: ALTERSFREIGABE.md neu (Poker = simuliertes Glücksspiel), TEXTE.md, Screenshots | offen, sobald es passiert |
+| F4 | Wechselt ein weiteres Spiel in der App auf `spielbar`: ALTERSFREIGABE.md neu (Poker = simuliertes Glücksspiel), TEXTE.md, Screenshots | 13.10.2026 Farbduell (Filler) und BroChess: ALTERSFREIGABE.md (keine Änderung) und TEXTE.md nachgezogen; **Screenshots offen** |
 | F5 | Nach der Einreichung: tatsächliche Stufen (Apple, USK/PEGI) hier und in ALTERSFREIGABE.md eintragen | offen |
