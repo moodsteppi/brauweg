@@ -24,6 +24,20 @@
   z-index: 1;
 }
 
+/* Die Seite scrollt als Ganzes; ohne Abdeckung liefe der Text unter die
+   Uhrzeit. Ein Streifen in der Grundfarbe der Szene liegt darüber. */
+.pk-tisch[data-szene]::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--pk-grund, #151021);
+  z-index: 2;
+  pointer-events: none;
+}
+
 .pk-szene {
   position: fixed;
   inset: 0;
@@ -102,6 +116,17 @@
   backdrop-filter: blur(6px);
   color: #e9e6f2;
   text-align: center;
+}
+
+/* Aufgedeckte Karten drehen sich um, statt einfach da zu sein — beim Bus,
+   im Königsbecher, überall. Eine Karte wird beim Aufdecken neu gezeichnet
+   (verdeckt und offen sind zwei Elemente), also läuft das genau einmal. */
+.pk-tisch[data-szene] .pk-karte:not(.is-zu) {
+  animation: pk-aufdecken 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+@keyframes pk-aufdecken {
+  from { transform: perspective(500px) rotateY(90deg) scale(0.9); opacity: 0.4; }
+  to { transform: perspective(500px) rotateY(0deg) scale(1); opacity: 1; }
 }
 
 /* Farben je Spiel. */
@@ -782,7 +807,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pk-szene,
-  .pk-szene * {
+  .pk-szene *,
+  .pk-tisch[data-szene] .pk-karte {
     animation: none !important;
   }
 }

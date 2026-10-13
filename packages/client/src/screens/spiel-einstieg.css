@@ -27,6 +27,22 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+/* Das Banner läuft bis unter die Statusleiste — beim Scrollen lief aber auch
+   der Text darunter und stand neben der Uhrzeit (13.10.2026, gesehen in der
+   Partykiste). Ein dunkler Streifen in Höhe der Statusleiste deckt ab, was
+   darunter rollt; ungescrollt verschwindet er im dunklen Bannerrand. Wie
+   beim Clan und der Spielseite in hub-neu.css. */
+.spe::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--hb-oben);
+  background: linear-gradient(180deg, rgba(14, 26, 61, 0.96), rgba(14, 26, 61, 0.8));
+  z-index: 3;
+  pointer-events: none;
+}
 /* Kopf: das Spielbanner bis unter die Statusleiste, unten in den Grund verlaufend */
 .spe-kopf {
   position: relative;
