@@ -95,6 +95,29 @@ export function SammlungNeu({
   }, []);
   useEffect(laden, [laden]);
 
+  /*
+   * Blätter nur für Spiele, die hier spielbar sind. In der App steht Zauberer
+   * auf „Bald" (FREIGABE im Server); ein Regal voller Zauberer-Blätter wäre
+   * dort Ware für ein Spiel, das man nicht spielen kann. Gefragt wird dieselbe
+   * Liste wie in der Spielauswahl, keine zweite im Client. Bis sie da ist (und
+   * falls der Abruf scheitert oder leer ist), steht alles da wie bisher.
+   */
+  const [spielbar, setSpielbar] = useState<ReadonlySet<string> | null>(null);
+  useEffect(() => {
+    let lebt = true;
+    void api
+      .games()
+      .then((liste) => {
+        if (lebt) setSpielbar(new Set(liste.filter((g) => g.availability === 'playable').map((g) => g.id)));
+      })
+      .catch(() => {});
+    return () => {
+      lebt = false;
+    };
+  }, []);
+  // Eine leere Liste heisst „weiss nicht", nicht „nichts spielbar".
+  const blattSpiele = BLATT_SPIELE.filter((id) => !spielbar || spielbar.size === 0 || spielbar.has(id));
+
   if (offen) return <>{details(offen, () => setOffen(null))}</>;
 
   const ware = (art: RegalWare['art'], wert: string): RegalWare | undefined =>
@@ -124,7 +147,7 @@ export function SammlungNeu({
   const chips = [
     { id: 'alle', titel: 'Alle' },
     { id: 'pinguin', titel: 'Pinguin' },
-    ...BLATT_SPIELE.map((id) => ({ id, titel: t(`game.${id}`) })),
+    ...blattSpiele.map((id) => ({ id, titel: t(`game.${id}`) })),
     { id: 'partykiste', titel: t('game.partykiste') },
   ];
 
@@ -187,7 +210,7 @@ export function SammlungNeu({
           </div>
         )}
 
-        {BLATT_SPIELE.filter(zeige).map((spiel) => {
+        {blattSpiele.filter(zeige).map((spiel) => {
           const blaetter = decksFor(spiel).filter((d) => d.id !== 'text');
           const aktiv = me.themes[spiel]?.cardDeck ?? 'text';
           // Die schlichten Grundblätter stehen unter „Alles", hier nur, wenn eines aktiv ist.

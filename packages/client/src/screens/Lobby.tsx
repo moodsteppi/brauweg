@@ -41,6 +41,27 @@ const BOT_STUFEN: readonly { id: BotLevel; name: string }[] = [
 ];
 
 /**
+ * Schach gegen den Computer: alle vier Stufen, auch Anfänger. Anders als am
+ * Doppelkopftisch sitzt hier kein Mensch neben dem Bot, dem eine schwache
+ * Stufe das Spiel verdirbt — wer allein Schach lernt, braucht sie gerade.
+ * Was jede Stufe rechnet, steht in packages/game-brochess/src/bot.ts.
+ */
+const SCHACH_STUFEN: readonly { id: BotLevel; name: string; unter: string }[] = [
+  { id: 'anfaenger', name: 'Anfänger', unter: 'nimmt, was hängt' },
+  { id: 'standard', name: 'Standard', unter: 'denkt zwei Züge' },
+  { id: 'experte', name: 'Experte', unter: 'denkt drei Züge' },
+  { id: 'genie', name: 'Genie', unter: 'denkt vier Züge' },
+];
+
+/**
+ * Spiele, die man in der Lobby direkt allein gegen einen Bot beginnen kann.
+ * Bisher nur BroChess (Emile, 13.10.2026): Zu zweit gibt es sonst keinen Weg,
+ * ohne Gegner zu spielen, außer erst einen Tisch zu öffnen und dort den
+ * freien Platz zu füllen — das findet niemand.
+ */
+const ALLEIN_GEGEN_BOT: ReadonlySet<string> = new Set(['brochess']);
+
+/**
  * Der Zaehler am Schluessel verwirft alte Staende.
  *
  * Version 1 hat beim ersten Tisch jede Boolesche Regel auf aus gesetzt und
@@ -71,12 +92,14 @@ function fussnote(gameId: string, seats: number, visibility: 'public' | 'club_on
     return 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder.';
   }
   if (gameId === 'skat') {
-    return 'Skat wird zu dritt gespielt. Freie Plätze füllst du am Tisch mit Bots — dann zählt der Tisch nicht für die Rangliste.';
+    return 'Skat wird zu dritt gespielt. Freie Plätze füllst du am Tisch mit Bots — der Tisch zählt trotzdem für die Rangliste.';
   }
   if (seats === 3) {
     return 'Am Dreiertisch spielt immer ein Bot als Vierter mit. Der Tisch zählt trotzdem für die Rangliste.';
   }
-  return 'Freie Plätze füllst du am Tisch mit Bots. Dann zählt der Tisch nicht für die Rangliste.';
+  // Bots zählen seit dem 04.08.2026 für die Rangliste (`countsForRanking` im
+  // Server); bis zum 13.10.2026 stand hier noch das Gegenteil.
+  return 'Freie Plätze füllst du am Tisch mit Bots. Der Tisch zählt trotzdem für die Rangliste.';
 }
 
 export function Lobby({
@@ -98,7 +121,7 @@ export function Lobby({
   const [error, setError] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
   /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
-  const [ansicht, setAnsicht] = useState<'liste' | 'erstellen'>('liste');
+  const [ansicht, setAnsicht] = useState<'liste' | 'erstellen' | 'bot'>('liste');
   /**
    * Filter als Zeichenkette, weil die Sitz-Filter aus dem Spielmodul kommen:
    * Doppelkopf hat drei bis fünf Plätze, Zauberer drei bis sechs. Fest
@@ -207,6 +230,32 @@ export function Lobby({
     }
   };
 
+  /**
+   * Allein gegen den Bot: ein Tisch für zwei, der freie Platz sofort mit
+   * einem Bot besetzt. `on_request` hält ihn aus der Lobbyliste heraus — wie
+   * bei Farbduell und Mememory, damit niemand an einen Bot-Tisch gerät, der
+   * einen Menschen sucht.
+   */
+  const starteGegenBot = async (): Promise<void> => {
+    setError(null);
+    try {
+      const sitze = defaults?.seatCounts[0] ?? 2;
+      const runden = defaults?.rounds[String(sitze)]?.[0] ?? 1;
+      const table = await api.createTable({
+        gameId,
+        config: { ...config, tableSize: sitze, rounds: runden },
+        seats: sitze,
+        rounds: runden,
+        visibility: 'on_request',
+        fillWithBots: true,
+        botLevel,
+      });
+      onEnter(table.id);
+    } catch (err) {
+      setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+    }
+  };
+
   const join = async (id: string): Promise<void> => {
     setError(null);
     try {
@@ -255,6 +304,33 @@ export function Lobby({
     const name = t(`game.${gameId}`);
     const sitze = defaults?.seatCounts ?? [4];
     const sitzText = sitze.length > 1 ? `${sitze[0]}–${sitze[sitze.length - 1]}` : `${sitze[0]}`;
+    if (ansicht === 'bot') {
+      return (
+        <SpielRahmen
+          gameId={gameId}
+          titel="Gegen Bot spielen"
+          unter={`${name} · du gegen den Computer`}
+          onBack={() => setAnsicht('liste')}
+          zurueckText="Zurück zur Tischauswahl"
+          fuss={
+            <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void starteGegenBot()}>
+              Partie starten
+            </button>
+          }
+        >
+          {error && <p className="hb-fehler">{error}</p>}
+          <SpielAbschnitt titel="Bot-Stärke">
+            <SpielWahl
+              name="Bot-Stärke"
+              werte={SCHACH_STUFEN.map((b) => ({ wert: b.id, text: b.name, unter: b.unter }))}
+              wert={botLevel}
+              onWahl={setBotLevel}
+            />
+          </SpielAbschnitt>
+          <p className="hb-klein">Du spielst eine Partie. Wer Weiß hat, entscheidet das Los.</p>
+        </SpielRahmen>
+      );
+    }
     if (ansicht === 'erstellen') {
       return (
         <SpielRahmen
@@ -341,9 +417,20 @@ export function Lobby({
         onBack={onBack}
         zurueckText="Zurück zur Spielseite"
         fuss={
-          <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => setAnsicht('erstellen')}>
-            Tisch erstellen
-          </button>
+          <>
+            {ALLEIN_GEGEN_BOT.has(gameId) && (
+              <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => setAnsicht('bot')}>
+                Gegen Bot spielen
+              </button>
+            )}
+            <button
+              type="button"
+              className={ALLEIN_GEGEN_BOT.has(gameId) ? 'hb-kn is-breit' : 'hb-kn is-gold is-haupt is-breit'}
+              onClick={() => setAnsicht('erstellen')}
+            >
+              Tisch erstellen
+            </button>
+          </>
         }
       >
         {error && <p className="hb-fehler">{error}</p>}

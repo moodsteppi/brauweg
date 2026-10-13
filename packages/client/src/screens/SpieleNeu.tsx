@@ -160,20 +160,29 @@ export function SpieleNeu({
     ? [...KATEGORIEN.filter((k) => spielbar.some((g) => k.spiele.includes(g.id))), { id: 'bald', titel: 'Kommt bald' }]
     : KATEGORIEN;
 
+  // Spiele, ueber die erst abgestimmt wird, gibt es noch nicht — also auch
+  // kein Banner. `bannerFuer` zeigte auf eine fehlende Datei, und statt des
+  // Bildes stand ein leeres Feld (CLAUDE.md: kein <img> auf eine Datei, die es
+  // nicht gibt). Sie bekommen das gemeinsame Bald-Bild.
+  const baldBild = (g: GameSummary): string =>
+    g.abstimmbar !== false ? '/hub/spielwahl-bald.webp' : bannerFuer(g.id);
+
   const baldZeile = (g: GameSummary): React.JSX.Element => (
     <div className="hb-bald" key={g.id}>
       <button type="button" className="hb-bald-flaeche" onClick={() => onBald(t(g.nameKey))}>
-        <span className="hb-bald-bild" style={{ backgroundImage: `url(${bannerFuer(g.id)})` }} />
+        <span className="hb-bald-bild" style={{ backgroundImage: `url(${baldBild(g)})` }} />
         <span className="hb-bald-text">
           <strong>{t(g.nameKey)}</strong>
           <small>
             {sitzSpanne(g.seatCounts)} Spieler
-            {g.abstimmbar !== false ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
+            {g.abstimmbar !== false && !inApp ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
           </small>
         </span>
       </button>
-      {/* Ohne Stimme, was es schon gibt und nur noch nicht freigegeben ist. */}
-      {g.abstimmbar !== false ? (
+      {/* Ohne Stimme, was es schon gibt und nur noch nicht freigegeben ist. In
+          der App steht die ganze Liste ausgegraut und einheitlich auf „Bald":
+          Ein leuchtender Knopf mitten darin las sich wie „hier geht's los". */}
+      {g.abstimmbar !== false && !inApp ? (
         <button
           type="button"
           className="hb-kn is-stimme"

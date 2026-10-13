@@ -126,10 +126,15 @@ export function NeuerRahmen<T extends Reiter>({
         </div>
       </header>
       )}
-      {tab === 'spielen' && online !== null && (
+      {/* Gezaehlt wird, wer gerade an einem Tisch sitzt (`/api/aktiv`), nicht
+          wer die App offen hat — „online" hiess es trotzdem, und wer sie
+          oeffnete, las „0 Spieler online", waehrend er selbst online war. Bei
+          null steht die Zeile gar nicht da: Eine Null ist keine Auskunft,
+          sondern sieht nach leerem Laden aus. */}
+      {tab === 'spielen' && online !== null && online > 0 && (
         <div className="hb-online">
           <span className="hb-punkt" aria-hidden="true" />
-          {online.toLocaleString('de-DE')} Spieler online
+          {online.toLocaleString('de-DE')} Spieler gerade am Tisch
         </div>
       )}
 

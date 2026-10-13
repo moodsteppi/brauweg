@@ -91,9 +91,9 @@ export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht,
 
   spectatorView: (partie) => zuschauerSicht(partie),
 
-  botAction(sicht) {
+  botAction(sicht, level) {
     if (sicht.zuschauer) throw new Error('Bot darf nicht auf Zuschauersicht laufen');
-    return botZug(sicht);
+    return botZug(sicht, level);
   },
 
   ...snapshotCodec<BroChessPartie>(SNAPSHOT_VERSION),
