@@ -256,6 +256,31 @@
   clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
 }
 
+/* Die zuletzt gezogene Karte, klein vor dem Ergebnis des Tipps. */
+.pk-letzter-tipp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.pk-mini-karte {
+  display: inline-flex;
+  flex: none;
+}
+.pk-tisch .pk-mini-karte .pk-karte {
+  width: 28px;
+  height: 38px;
+  min-width: 0;
+  border-radius: 5px;
+  gap: 0;
+  font-size: 12px;
+  line-height: 1;
+  animation: none;
+}
+.pk-tisch .pk-mini-karte .pk-karte > * {
+  font-size: 12px;
+  line-height: 1;
+}
+
 /* Die Buslinie auf der Bühne (Buslinie.tsx). */
 .pk-busfahrt {
   display: flex;

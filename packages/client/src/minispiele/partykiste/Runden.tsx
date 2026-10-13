@@ -536,7 +536,13 @@ function BusRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
         }
         unten={
           daten.letzter ? (
-            <span data-gut={daten.letzter.richtig ? '' : undefined}>
+            <span className="pk-letzter-tipp" data-gut={daten.letzter.richtig ? '' : undefined}>
+              {/* Die Karte, die den Tipp entschieden hat. Nach einem Fehlgriff
+                  ist die Fahrt vorbei und die Reihe oben wieder leer — ohne
+                  sie sähe niemand, was eigentlich gekommen ist. */}
+              <span className="pk-mini-karte">
+                <Karte karte={daten.letzter.karte} />
+              </span>
               {namenFuer(sitze, daten.letzter.sitz)}:{' '}
               {BUS_WAHL[daten.letzter.stufe]?.[daten.letzter.wahl] ?? '?'} —{' '}
               {daten.letzter.richtig ? 'richtig' : `daneben, ein ${zaehlerWort(sicht.trinkmodus, 1)}`}
