@@ -149,6 +149,10 @@ describe('Koenigsbecher', () => {
             becher: 0,
             koenigSitz: -1,
             neueRegel: null,
+            offeneKarte: null,
+            flasche: [],
+            gelegt: 0,
+            sturz: null,
           },
           { amZug: 1 },
         )}

@@ -514,9 +514,11 @@ test('legalActions nennt nur Aktionen, die act auch annimmt', () => {
     if (sitz === null) break;
     const erlaubt = partykiste.legalActions(partie, sitz);
     if (erlaubt.length === 0) {
-      /* Falle 1 der Invarianten: Schaetzen kann seine Aktion nicht aufzaehlen
-         — der Bot muss trotzdem eine liefern, die `act` annimmt. */
-      assert.equal(partie.runde.art, 'schaetzen', `Sitz ${sitz} ist am Zug, darf aber nichts`);
+      /* Falle 1 der Invarianten: Schaetzen und das Legen auf die Flasche
+         (Koenigsbecher) koennen ihre Aktion nicht aufzaehlen — der Bot muss
+         trotzdem eine liefern, die `act` annimmt. */
+      const legen = partie.runde.art === 'koenigsbecher' && partie.runde.offeneKarte !== null;
+      assert.ok(partie.runde.art === 'schaetzen' || legen, `Sitz ${sitz} ist am Zug, darf aber nichts (${partie.runde.art})`);
       partie = verarbeite(partie, sitz, partykiste.botAction(sichtFuer(partie, sitz)));
       continue;
     }

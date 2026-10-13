@@ -56,5 +56,5 @@ export {
   type KartenFolge,
   type Koenigsbecherkarte,
 } from './inhalte/koenigsbecher.js';
-export { zuendzeit } from './zeitdruck.js';
-export type { BombeRunde, GezogeneKarte, KoenigsbecherRunde, ZehnSekundenRunde } from './zeitdruck.js';
+export { flascheHaelt, zuendzeit } from './zeitdruck.js';
+export type { BombeRunde, FlaschenSturz, GezogeneKarte, KoenigsbecherRunde, ZehnSekundenRunde } from './zeitdruck.js';

@@ -82,6 +82,14 @@ export interface KoenigsbecherSicht {
   koenigSitz: number;
   /** Die Regel, die nach dieser Runde gilt, oder null. */
   neueRegel: string | null;
+  /** Gezogen, noch nicht auf die Flasche gelegt (seit 13.10.2026). */
+  offeneKarte: PartyKarte | null;
+  /** Der Stapel auf der Flasche: je Karte ihr Versatz (-1 bis 1), unterste zuerst. */
+  flasche: number[];
+  /** Wie oft schon gelegt wurde. */
+  gelegt: number;
+  /** Der letzte Sturz, oder null. `nr` = `gelegt` beim Sturz. */
+  sturz: { sitz: number; karten: number; strich: number; kassiert: number; versatz: number[]; nr: number } | null;
 }
 
 /** Die Aktionen der drei. Koenigsbecher „du wählst" nimmt die vorhandene `stimme`. */
@@ -90,4 +98,6 @@ export type ZeitdruckAktion =
   | { art: 'fertig' }
   | { art: 'urteil'; geschafft: boolean }
   | { art: 'ziehen' }
-  | { art: 'hochzeigen' };
+  | { art: 'hochzeigen' }
+  /** Auf die Flasche legen; `versatz` am Pendel gemessen, -1 bis 1. */
+  | { art: 'legen'; versatz: number };

@@ -44,7 +44,7 @@ Wiederaufnahme dieselbe. „Dreimal Quiz hintereinander“ bleibt ein Fehler.
 | **Regel-Karte** | Eine Regel („keine Vornamen") gilt bis zum Ende der übernächsten Runde — während der anderen Minispiele. Verstoß per Selbstmeldung oder Mehrheit. | ohne Verstoß durch die Geltung +1 | je Verstoß 1 |
 | **Bombe** | Reihum laut etwas aus einer Kategorie nennen und weitergeben. Sie geht nach einer verdeckten Zeit (8–25 s, aus der Saat) hoch — die Uhr läuft auf dem Server. | nicht gehalten +1 | wer sie hält 2 |
 | **10 Sekunden** | Einer nennt drei Dinge („Nenne drei: Automarken") in zehn Sekunden auf der Uhr des Servers, danach urteilen die anderen Menschen. Gleichstand geht an den Sprecher. | geschafft +2 | nicht geschafft 2 |
-| **Königsbecher** | Reihum zwei Karten je Kopf aus dem 52er-Blatt, jede Karte ist eine Regel (2 du wählst, 3 du selbst, 7 Hand hoch, Bube neue Regel-Karte, König füllt den Becher …). | ohne Schluck +1, Neun +1 | je Treffer 1, letzter König den Becher |
+| **Königsbecher** | Reihum zwei Karten je Kopf aus dem 52er-Blatt, jede Karte ist eine Regel (2 du wählst, 3 du selbst, 7 Hand hoch, Bube neue Regel-Karte, König füllt den Becher …). Seit 13.10.2026 kommt jede gezogene Karte erst auf die **Flasche** (pendelnde Karte, Tippen legt sie ab; Aktion `legen` mit `versatz` −1…1, `legalActions` dabei leer wie beim Schätzen), danach gilt ihre Regel. Ob der Stapel hält, rechnet `flascheHaelt` (Zahlen: `FLASCHE_*` in regeln.ts). | ohne Schluck +1, Neun +1 | je Treffer 1, letzter König den Becher; Stapel umgeworfen: je Karte 1 (höchstens 6) |
 
 ## Tischoptionen
 
