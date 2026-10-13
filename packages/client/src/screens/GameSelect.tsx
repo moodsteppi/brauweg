@@ -49,7 +49,7 @@ import {
   probePaket,
   spiele,
 } from '../klang';
-import { EinstellungenBlatt } from './Einstellungen';
+import { EinstellungenBlatt, MitteilungenBlatt } from './Einstellungen';
 import {
   EdelsteinIcon,
   HubBanner,
@@ -866,6 +866,7 @@ function ProfilTab({
   const [claimError, setClaimError] = useState<string | null>(null);
   const [loeschenOffen, setLoeschenOffen] = useState(false);
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
+  const [mitteilungenOffen, setMitteilungenOffen] = useState(false);
 
   const kacheln = [
     { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: partien },
@@ -1150,12 +1151,24 @@ function ProfilTab({
                   ›
                 </span>
               </button>
-              <button type="button" className="hb-mg" onClick={() => onBald('Benachrichtigungen')}>
+              {/* In der App gibt es Mitteilungen (docs/PUSH.md), auf der
+                  Webseite nicht — dort bleibt es „Bald". */}
+              <button
+                type="button"
+                className="hb-mg"
+                onClick={() => (inApp ? setMitteilungenOffen(true) : onBald('Benachrichtigungen'))}
+              >
                 <img className="hb-mg-symbol" src="/hub/icon-benachrichtigung.webp" alt="" />
                 <span className="hb-mg-name">
                   <strong>Benachrichtigungen</strong>
                 </span>
-                <span className="hb-bald-marke">Bald</span>
+                {inApp ? (
+                  <span className="hb-pf" aria-hidden="true">
+                    ›
+                  </span>
+                ) : (
+                  <span className="hb-bald-marke">Bald</span>
+                )}
               </button>
               <button type="button" className="hb-mg" onClick={onSignOut}>
                 <img className="hb-mg-symbol" src="/hub/icon-abmelden.webp" alt="" />
@@ -1179,6 +1192,11 @@ function ProfilTab({
                 setEinstellungenOffen(false);
               }}
             />
+          </ImHub>
+        )}
+        {mitteilungenOffen && (
+          <ImHub>
+            <MitteilungenBlatt onClose={() => setMitteilungenOffen(false)} />
           </ImHub>
         )}
         {loeschenOffen && (

@@ -195,6 +195,9 @@ const de: Record<string, string> = {
   'error.internal': 'Da ist etwas schiefgelaufen.',
   'error.clubRequired': 'Für einen Clantisch brauchst du einen Clan.',
   'error.notClubMember': 'Diesen Tisch sehen nur Clanmitglieder.',
+  // Beitritt mit Zusage (tables/anfragen.ts im Server).
+  'error.notHost': 'Über Anfragen entscheidet nur, wer den Tisch aufgemacht hat.',
+  'error.anfrageUnbekannt': 'Diese Anfrage gibt es nicht mehr.',
   'error.pauseClubOnly': 'Pausieren geht nur an Clantischen.',
   'error.partyPaused': 'Der Tisch ist pausiert. Erst fortsetzen.',
   'error.clubUnknown': 'Diesen Clan gibt es nicht.',

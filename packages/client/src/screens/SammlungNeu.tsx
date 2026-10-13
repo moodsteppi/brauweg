@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, SLOTS, type Me, type RegalWare, type Shop, type Slot } from '../api';
 import { cardImage, deckBack, decksFor } from '../decks';
 import { t } from '../i18n';
+import { FIGURENSAETZE, pinguinBild } from '../minispiele/brochess/figurensatz';
 import { PAKET_NAME } from '../minispiele/partykiste/wahl';
 import { Pinguin } from '../pinguin';
 
@@ -117,6 +118,10 @@ export function SammlungNeu({
   }, []);
   // Eine leere Liste heisst „weiss nicht", nicht „nichts spielbar".
   const blattSpiele = BLATT_SPIELE.filter((id) => !spielbar || spielbar.size === 0 || spielbar.has(id));
+  // BroChess nur, wo es spielbar ist (in der App ja, auf der Webseite noch
+  // „Bald"). Weiß die Liste nichts, bleibt es weg: Ein Figurensatz für ein
+  // Spiel, das man nicht starten kann, ist kein Gewinn.
+  const mitSchach = spielbar?.has('brochess') ?? false;
 
   if (offen) return <>{details(offen, () => setOffen(null))}</>;
 
@@ -148,6 +153,7 @@ export function SammlungNeu({
     { id: 'alle', titel: 'Alle' },
     { id: 'pinguin', titel: 'Pinguin' },
     ...blattSpiele.map((id) => ({ id, titel: t(`game.${id}`) })),
+    ...(mitSchach ? [{ id: 'brochess', titel: t('game.brochess') }] : []),
     { id: 'partykiste', titel: t('game.partykiste') },
   ];
 
@@ -275,6 +281,43 @@ export function SammlungNeu({
             </section>
           );
         })}
+
+        {mitSchach && zeige('brochess') && (
+          <section className="hb-blk">
+            <h2 className="hb-ab">
+              {t('game.brochess')}
+              <span className="hb-ab-zusatz">Figuren</span>
+            </h2>
+            <div className="hb-reihe">
+              {FIGURENSAETZE.map((satz) => {
+                const aktiv = (me.themes.brochess?.cardDeck ?? 'text') === satz.id;
+                return (
+                  <button
+                    type="button"
+                    key={satz.id}
+                    className={`hb-ding${aktiv ? ' is-aktiv' : ''}`}
+                    aria-pressed={aktiv}
+                    onClick={() => onThemeChange('brochess', { cardDeck: satz.id })}
+                  >
+                    <span
+                      className="hb-ding-bild hb-ding-figur"
+                      style={satz.satz === 'pinguin' ? { backgroundImage: `url(${pinguinBild('K')})` } : undefined}
+                    >
+                      {satz.satz === 'klassisch' && <span aria-hidden="true">♚&#xFE0E;</span>}
+                      {aktiv && (
+                        <span className="hb-ding-ok" aria-hidden="true">
+                          ✓
+                        </span>
+                      )}
+                    </span>
+                    <strong>{satz.name}</strong>
+                    <small>{aktiv ? 'aktiv' : 'gehört dir'}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {zeige('partykiste') && (
           <section className="hb-blk">

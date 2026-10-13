@@ -824,6 +824,19 @@
 :is(.hb, .spe) .hb-quer .hb-kn {
   min-width: 64px;
 }
+/* Figurensatz von BroChess in der Sammlung: Figur ganz sichtbar statt
+   angeschnitten wie ein Kartenbild; das Zeichen für „Klassisch" mittig. */
+:is(.hb, .spe) .hb-ding-figur {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  font-size: 64px;
+  line-height: 1;
+  color: #fdfbf6;
+}
 :is(.hb, .spe) .hb-bald {
   display: flex;
   align-items: center;

@@ -1980,6 +1980,36 @@ td {
   color: #9fe0c1;
 }
 
+/* Beitrittsanfragen im Wartebereich (tisch/Anfragen.tsx): nur beim
+   Gastgeber eines privaten Tisches, über der Sitzreihe. */
+.tisch-anfragen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 1rem 0.8rem;
+  padding: 0.8rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 200, 70, 0.55);
+  background: rgba(255, 200, 70, 0.1);
+}
+.tisch-anfrage {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tisch-anfrage > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doko-seat-btn.is-ja {
+  background: #f2c14e;
+  border-color: #f2c14e;
+  color: #1d1a17;
+}
+
 /* Kreisel im Bot-Knopf, solange die Antwort des Tisches aussteht. */
 .doko-btn-spinner {
   display: inline-block;

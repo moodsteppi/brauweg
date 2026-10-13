@@ -179,6 +179,22 @@ enum Huelle {
         ].joined(separator: "\n")
     }
 
+    /// Eine Mitteilung wurde angetippt: `detail = {tableId, gameId}`.
+    static let tischEreignis = "brauweg:push-tisch"
+
+    /// Meldet dem Client den Tisch einer angetippten Mitteilung — wie das
+    /// Token zweimal: als Ereignis und als `window.BRAUWEG_APP.pushTisch` fuer
+    /// den, der erst nach der Anmeldung hinsieht (packages/client/src/mitteilung-antippen.ts).
+    static func tischSkript(tableId: String, gameId: String) -> String {
+        [
+            "(function () {",
+            "  var d = { tableId: \(jsText(tableId)), gameId: \(jsText(gameId)) };",
+            "  if (window.BRAUWEG_APP) window.BRAUWEG_APP.pushTisch = d;",
+            "  window.dispatchEvent(new CustomEvent('\(tischEreignis)', { detail: d }));",
+            "})();",
+        ].joined(separator: "\n")
+    }
+
     /// Fragt den Client, ob er „zurueck" selbst verarbeitet (zuruecktaste.ts).
     /// Das Ergebnis ist `true`, wenn er `preventDefault()` rief.
     static let zurueckSkript = [

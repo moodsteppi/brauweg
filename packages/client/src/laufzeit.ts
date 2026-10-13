@@ -32,6 +32,11 @@ declare global {
        * `brauweg:push-token` hinsieht (apps/android, Huelle.pushTokenSkript).
        */
       pushToken?: { plattform: 'android' | 'ios'; token: string };
+      /**
+       * Tisch einer angetippten Mitteilung, bis der Client ihn abholt
+       * (mitteilung-antippen.ts; iOS: Huelle.tischSkript).
+       */
+      pushTisch?: { tableId: string; gameId: string };
     };
   }
 }

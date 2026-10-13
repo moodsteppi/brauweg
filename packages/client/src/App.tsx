@@ -9,6 +9,8 @@ import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
+import { AnfrageWarten } from './tisch/Anfragen';
+import { horcheAufAntippen } from './mitteilung-antippen';
 import { Startbildschirm } from './screens/Startbildschirm';
 import { hubNeu } from './hubNeu';
 import { Ladevorhang } from './minispiele/tafelrunde/Ladevorhang';
@@ -141,6 +143,8 @@ type Screen =
   | { name: 'tafelrunde'; tisch?: string | null }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
+  /** Per Einladungslink an einen privaten Tisch: Warten auf die Zusage. */
+  | { name: 'anfrage'; gameId: string; tableId: string; host: string | null }
   /** Solo-Endless-Runner aus der Spielauswahl. */
   | { name: 'prosubway' }
   /**
@@ -263,8 +267,14 @@ export function App(): React.JSX.Element {
     void (async () => {
       try {
         const vorschau = await api.tischPerCode(einladung);
-        const { tableId } = await api.beitretenPerCode(einladung);
-        if (lebt) setScreen({ name: 'table', gameId: vorschau.gameId, tableId });
+        const { tableId, angefragt } = await api.beitretenPerCode(einladung);
+        if (!lebt) return;
+        // Privater Tisch: Der Gastgeber muss zusagen (tisch/Anfragen.tsx).
+        setScreen(
+          angefragt
+            ? { name: 'anfrage', gameId: vorschau.gameId, tableId, host: vorschau.host }
+            : { name: 'table', gameId: vorschau.gameId, tableId },
+        );
       } catch (err) {
         if (!lebt) return;
         fehlschlagMerken(einladung, err instanceof ApiError ? err.messageKey : 'error.internal');
@@ -283,6 +293,16 @@ export function App(): React.JSX.Element {
       lebt = false;
     };
   }, [kontoId, einladung]);
+
+  /*
+   * Angetippte Mitteilung → an den Tisch (mitteilung-antippen.ts). Erst mit Konto:
+   * Vorher gibt es keinen Platz, an den man zurückkönnte. Am Schlüssel
+   * `kontoId`, nicht am Objekt `me` — das kommt nach jedem Neuladen neu.
+   */
+  useEffect(() => {
+    if (!kontoId || !inApp) return;
+    return horcheAufAntippen(({ tableId, gameId }) => setScreen({ name: 'table', gameId, tableId }));
+  }, [kontoId]);
 
   /**
    * Musik laeuft, solange jemand angemeldet ist.
@@ -695,11 +715,25 @@ export function App(): React.JSX.Element {
       const TISCHE: Record<string, typeof Table> = {
         wizard: WizardTable as unknown as typeof Table,
         cambio: CambioTable as unknown as typeof Table,
-        // Schach braucht weder Blatt noch Szene; die Props, die es nicht
-        // kennt, laufen ins Leere.
-        brochess: BroChessTable as unknown as typeof Table,
         skat: SkatTable as unknown as typeof Table,
       };
+      // Schach braucht weder Blatt noch Szene, aber seinen Figurensatz — der
+      // steht im selben Aussehen-Feld wie das Blatt (figurensatz.ts) und darf
+      // nicht durch `deckForGame` laufen, das ihn als unbekanntes Blatt auf
+      // „Text" zuruecksetzen wuerde.
+      if (screen.gameId === 'brochess') {
+        return (
+          <BroChessTable
+            tableId={screen.tableId}
+            figurensatz={themeFuer('brochess').cardDeck}
+            onShowProfile={zeigeProfil}
+            onLeave={() => {
+              setScreen({ name: 'games' });
+              void reload();
+            }}
+          />
+        );
+      }
       const Spieltisch = TISCHE[screen.gameId] ?? Table;
       return (
         <Spieltisch
@@ -719,6 +753,18 @@ export function App(): React.JSX.Element {
             setScreen({ name: 'games' });
             void reload();
           }}
+        />
+      );
+    }
+
+    if (screen.name === 'anfrage') {
+      return (
+        <AnfrageWarten
+          gameId={screen.gameId}
+          tableId={screen.tableId}
+          gastgeber={screen.host}
+          onAngenommen={() => setScreen({ name: 'table', gameId: screen.gameId, tableId: screen.tableId })}
+          onZurueck={() => setScreen({ name: 'games' })}
         />
       );
     }

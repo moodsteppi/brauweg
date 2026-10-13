@@ -7,6 +7,7 @@ import { regelBild } from '../regelbilder';
 import { hubNeu } from '../hubNeu';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+import { AnfrageWarten } from '../tisch/Anfragen';
 
 /**
  * Lobby und Tischerstellung.
@@ -23,7 +24,7 @@ interface Gemerkt {
   seats?: number;
   rounds?: number;
   config?: Record<string, unknown>;
-  visibility?: 'public' | 'club_only';
+  visibility?: Sichtbarkeit;
   botLevel?: BotLevel;
 }
 
@@ -87,7 +88,17 @@ function gemerkteEinstellungen(gameId: string): Gemerkt | null {
  * dort ist der Dreiertisch der Normalfall und kein Behelf. Deshalb hängt der
  * Text jetzt am Spiel und nicht allein an der Platzzahl.
  */
-function fussnote(gameId: string, seats: number, visibility: 'public' | 'club_only'): string {
+/**
+ * Wer an den Tisch darf. `on_request` heißt seit dem 13.10.2026 „Privat":
+ * Er steht nicht in der Lobbyliste, man kommt nur per Einladung herein, und
+ * der Gastgeber sagt jedem Beitritt zu (Server: tables/anfragen.ts).
+ */
+type Sichtbarkeit = 'public' | 'on_request' | 'club_only';
+
+function fussnote(gameId: string, seats: number, visibility: Sichtbarkeit): string {
+  if (visibility === 'on_request') {
+    return 'Privater Tisch: Im Wartebereich steht der Einladungscode. Wer damit kommt, lässt du selbst herein.';
+  }
   if (visibility === 'club_only') {
     return 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder.';
   }
@@ -115,13 +126,15 @@ export function Lobby({
   const [defaults, setDefaults] = useState<GameDefaults | null>(null);
   const [seats, setSeats] = useState(4);
   const [rounds, setRounds] = useState(8);
-  const [visibility, setVisibility] = useState<'public' | 'club_only'>('public');
+  const [visibility, setVisibility] = useState<Sichtbarkeit>('public');
   const [botLevel, setBotLevel] = useState<BotLevel>('standard');
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
   /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
   const [ansicht, setAnsicht] = useState<'liste' | 'erstellen' | 'bot'>('liste');
+  /** Gestellte Beitrittsanfrage an einen privaten Tisch, solange sie läuft. */
+  const [anfrage, setAnfrage] = useState<{ tableId: string; host: string | null } | null>(null);
   /**
    * Filter als Zeichenkette, weil die Sitz-Filter aus dem Spielmodul kommen:
    * Doppelkopf hat drei bis fünf Plätze, Zauberer drei bis sechs. Fest
@@ -175,7 +188,7 @@ export function Lobby({
           ? merken.rounds
           : runden[0];
       if (rundenWahl) setRounds(rundenWahl);
-      if (merken?.visibility === 'club_only' || merken?.visibility === 'public') {
+      if (merken?.visibility === 'club_only' || merken?.visibility === 'public' || merken?.visibility === 'on_request') {
         setVisibility(merken.visibility);
       }
       if (
@@ -259,7 +272,12 @@ export function Lobby({
   const join = async (id: string): Promise<void> => {
     setError(null);
     try {
-      await api.joinTable(id);
+      const antwort = await api.joinTable(id);
+      // Privater Tisch: erst die Zusage des Gastgebers (tisch/Anfragen.tsx).
+      if (antwort.angefragt) {
+        setAnfrage({ tableId: id, host: tables.find((row) => row.id === id)?.host ?? null });
+        return;
+      }
       onEnter(id);
     } catch (err) {
       setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
@@ -298,6 +316,21 @@ export function Lobby({
     if (s.length > 0 && !(row.host ?? '').toLowerCase().includes(s)) return false;
     return true;
   });
+
+  if (anfrage) {
+    return (
+      <AnfrageWarten
+        gameId={gameId}
+        tableId={anfrage.tableId}
+        gastgeber={anfrage.host}
+        onAngenommen={() => onEnter(anfrage.tableId)}
+        onZurueck={() => {
+          setAnfrage(null);
+          refresh();
+        }}
+      />
+    );
+  }
 
   // Neues Hub: dieselben Zustände und Aufrufe im Spieleinstieg-Baukasten.
   if (hubNeu) {
@@ -369,6 +402,7 @@ export function Lobby({
               name="Für wen"
               werte={[
                 { wert: 'public' as const, text: 'Offen', unter: 'für alle' },
+                { wert: 'on_request' as const, text: 'Privat', unter: 'mit Einladung' },
                 { wert: 'club_only' as const, text: 'Nur Clan', unter: 'bis 100 Runden' },
               ]}
               wert={visibility}

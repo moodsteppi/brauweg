@@ -91,6 +91,16 @@ final class HuelleTests: XCTestCase {
         XCTAssertEqual(Mitteilungen.hex(Data([0x00, 0xAB, 0x0F])), "00ab0f")
     }
 
+    /// Angetippte Mitteilung: Tisch und Spiel gehen als Ereignis und als
+    /// `pushTisch` an den Client (mitteilung-antippen.ts), sicher maskiert.
+    func testTischSkriptMeldetTischUndSpiel() {
+        let skript = Huelle.tischSkript(tableId: "t-1", gameId: "doppelkopf")
+        XCTAssertTrue(skript.contains("{ tableId: \"t-1\", gameId: \"doppelkopf\" }"))
+        XCTAssertTrue(skript.contains("window.BRAUWEG_APP.pushTisch = d"))
+        XCTAssertTrue(skript.contains("new CustomEvent('brauweg:push-tisch', { detail: d })"))
+        XCTAssertTrue(Huelle.tischSkript(tableId: "a\"b", gameId: "g").contains("\"a\\\"b\""))
+    }
+
     func testJsTextSchuetztZeilenumbrueche() {
         XCTAssertEqual(Huelle.jsText("a\r\nb"), "\"a\\r\\nb\"")
         XCTAssertEqual(Huelle.jsText("\u{2028}"), "\"\\u2028\"")

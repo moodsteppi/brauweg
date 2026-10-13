@@ -10,6 +10,7 @@ const ZEILEN: readonly { anlass: PushAnlass; name: string; hinweis: string }[] =
   { anlass: 'dran', name: 'Du bist dran', hinweis: 'Wenn der Tisch auf deinen Zug wartet' },
   { anlass: 'start', name: 'Deine Runde startet', hinweis: 'Wenn dein Tisch voll ist' },
   { anlass: 'einladung', name: 'Einladung angenommen', hinweis: 'Wenn jemand über deinen Code kommt' },
+  { anlass: 'anfrage', name: 'Beitrittsanfragen', hinweis: 'Wenn jemand an deinen privaten Tisch möchte' },
 ];
 
 /**

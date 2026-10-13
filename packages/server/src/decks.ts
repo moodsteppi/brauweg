@@ -29,6 +29,11 @@ export const CARD_DECKS = [
   'schiefer',
   'pinguin',
   'zauberwald',
+  // Kein Kartenblatt, sondern der Figurensatz von BroChess (Pinguine statt
+  // Zeichen). Er steht im selben Aussehen-Feld je Spiel, damit es dafuer
+  // keine eigene Spalte braucht (client: minispiele/brochess/figurensatz.ts).
+  // Frei, weil er nicht in tischware.ts steht.
+  'schach-pinguin',
 ] as const;
 
 export type CardDeck = (typeof CARD_DECKS)[number];

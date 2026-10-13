@@ -78,8 +78,8 @@ test('project.yml: Bundle-ID, iOS 16, nur iPhone, keine Team-ID im Repo', () => 
   assert.deepEqual(werte(yml, 'DEVELOPMENT_TEAM'), []);
   assert.deepEqual(werte(yml, 'INFOPLIST_FILE'), ['Konfiguration/Info.plist']);
   assert.deepEqual(werte(yml, 'GENERATE_INFOPLIST_FILE'), ['NO', 'YES']);
-  // Push: vorbereitet, Vorgabe aus, und der Schalter waehlt die Berechtigungen.
-  assert.deepEqual(werte(yml, 'BRAUWEG_PUSH'), ['NO']);
+  // Push: seit dem 13.10.2026 an, und der Schalter waehlt die Berechtigungen.
+  assert.deepEqual(werte(yml, 'BRAUWEG_PUSH'), ['YES']);
   assert.deepEqual(werte(yml, 'CODE_SIGN_ENTITLEMENTS'), ['Konfiguration/Push-$(BRAUWEG_PUSH).entitlements']);
   // Debug spricht mit Staging, Release mit der Produktion.
   assert.deepEqual(werte(yml, 'BRAUWEG_API_BASE'), [

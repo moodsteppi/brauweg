@@ -1020,7 +1020,21 @@ export const api = {
        `/tables/:id` nachzuholen waere ein zweiter Ruf fuer eine Zeile, die
        schon vorliegt. */
   }) => post<{ id: string; joinCode: string | null }>('/tables', body),
-  joinTable: (id: string) => post<{ ok: true }>(`/tables/${id}/join`),
+  /**
+   * `angefragt`: Der Tisch ist nicht öffentlich, man sitzt noch nicht, der
+   * Gastgeber muss zusagen (Server: tables/anfragen.ts). Dann wartet der
+   * Bildschirm mit `anfrageStand` auf die Antwort.
+   */
+  joinTable: (id: string) => post<{ ok: true; angefragt?: boolean }>(`/tables/${id}/join`),
+  /** Offene Beitrittsanfragen; nur der Gastgeber bekommt sie (sonst 403). */
+  anfragen: (id: string) =>
+    request<{ anfragen: { accountId: string; displayName: string }[] }>(`/tables/${id}/anfragen`),
+  entscheideAnfrage: (id: string, accountId: string, annehmen: boolean) =>
+    post<{ ok: true }>(`/tables/${id}/anfragen/${accountId}`, { annehmen }),
+  anfrageStand: (id: string) =>
+    request<{ stand: 'offen' | 'angenommen' | 'abgelehnt' }>(`/tables/${id}/anfrage`),
+  zieheAnfrageZurueck: (id: string) =>
+    request<{ ok: true }>(`/tables/${id}/anfrage`, { method: 'DELETE' }),
   /**
    * Der Tisch hinter einem Beitrittscode — zum Ansehen, ohne beizutreten.
    *
@@ -1030,7 +1044,7 @@ export const api = {
   tischPerCode: (code: string) =>
     request<TischVorschau>(`/tables/code/${encodeURIComponent(code)}`),
   beitretenPerCode: (code: string) =>
-    post<{ tableId: string }>(`/tables/code/${encodeURIComponent(code)}/join`),
+    post<{ tableId: string; angefragt?: boolean }>(`/tables/code/${encodeURIComponent(code)}/join`),
   /**
    * Ein Tisch mit seinem Beitrittscode — fuer die Einladung im Wartesaal.
    *
@@ -1299,7 +1313,7 @@ export const api = {
 // ---------------------------------------------------------------------------
 
 /** Kennungen wie im Server (push/kennungen.ts). Nie umbenennen. */
-export type PushAnlass = 'dran' | 'start' | 'einladung';
+export type PushAnlass = 'dran' | 'start' | 'einladung' | 'anfrage';
 
 export interface PushEinstellungen {
   anlaesse: Record<PushAnlass, boolean>;
