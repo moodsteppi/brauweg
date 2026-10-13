@@ -215,3 +215,15 @@ test('die Sicht traegt den Wurf zu allen, auch zum Zuschauer', () => {
   for (const s of [0, 1, 2, 3]) p = verarbeite(p, s, bereit);
   for (const sitz of [-1, 0, 3]) assert.deepEqual(sichtFuer(p, sitz).letzterWurf, p.letzterWurf);
 });
+
+test('vomGeraet streicht vertreten: ein Mensch, der die Marke als Letzter mitschickt, wuerfelt trotzdem', () => {
+  let p = inAbrechnung();
+  for (const s of [0, 1, 2]) p = verarbeite(p, s, bereit);
+  const vomGeraet = partykiste.vomGeraet!;
+  assert.deepEqual(vomGeraet({ art: 'bereit', vertreten: true }), bereit);
+  const nach = partykiste.act(p, 3, vomGeraet({ art: 'bereit', vertreten: true }));
+  assert.equal(nach.letzterWurf?.sitz, 3);
+  /* Andere Aktionen und ungepruefter Unsinn gehen unveraendert durch — abweisen ist Sache von act. */
+  assert.deepEqual(vomGeraet({ art: 'antwort', wahl: 2 }), { art: 'antwort', wahl: 2 });
+  assert.equal(vomGeraet(null as never), null);
+});

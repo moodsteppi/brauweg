@@ -425,6 +425,25 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    */
   act(party: TParty, seat: number, action: TAction): TParty;
 
+  /**
+   * Die Aktion eines GERAETS, bevor `act` sie sieht — fuer Felder, die nur
+   * der Bot-Weg setzen darf.
+   *
+   * Seit dem 13.10.2026 fuer die Partykiste: Das „Weiter" des Bots traegt
+   * `vertreten`, und daran erkennt das Modul den Zeitablauf (kein Wurf fuer
+   * den Letzten). `act` selbst sieht nicht, ob ein Mensch oder der Bot
+   * geschickt hat, und das Modul weiss nur von dauerhaften Bot-Sitzen, nicht
+   * von der Uebernahme nach der Zugzeit. Ohne diesen Schritt trank ein
+   * Geraet, das die Marke mitschickte, als Letzter nie.
+   *
+   * Die Plattform ruft es fuer jede Aktion, die ueber die Leitung kommt, und
+   * fuer keine Bot-Aktion. Weil die Aktion dort noch ungeprueft ist, muss das
+   * Modul auch Unsinn heil durchreichen — abweisen ist Sache von `act`.
+   *
+   * Optional: Fehlt es, geht die Aktion unveraendert an `act`.
+   */
+  vomGeraet?(action: TAction): TAction;
+
   /** Sitz, der am Zug ist, oder null wenn gerade niemand handeln muss. */
   currentActor(party: TParty): number | null;
 

@@ -648,7 +648,7 @@ export class PartyRuntime {
        * ist kein Rennen, sondern ein Fehler, und sie soll auch so heissen.
        */
       const sitz = this.seatOf(party, accountId);
-      if (sitz !== null && this.wirkungslos(party, sitz, action)) return;
+      if (sitz !== null && this.wirkungslos(party, sitz, this.vomGeraet(party, action))) return;
       throw conflict('partyFinished');
     }
     if (party.paused) throw conflict('partyPaused');
@@ -661,7 +661,7 @@ export class PartyRuntime {
       party.botControlled.delete(seat);
     }
 
-    const next = party.module.act(party.state, seat, action);
+    const next = party.module.act(party.state, seat, this.vomGeraet(party, action));
     // Wer selbst handelt, ist zurueck: Die Abwesenheitsuhr faengt beim
     // naechsten Mal wieder bei null an und nicht dort, wo sie stehen blieb.
     party.absentSince.delete(seat);
@@ -674,6 +674,15 @@ export class PartyRuntime {
     party.state = next;
 
     await this.afterAction(party);
+  }
+
+  /**
+   * Die Aktion eines Geraets so, wie das Modul sie annimmt (`vomGeraet` in
+   * game-api). Nur hier und nie in `playBot`: Felder, die allein der Bot-Weg
+   * setzen darf, haette sonst jedes Geraet in der Hand.
+   */
+  private vomGeraet(party: LiveParty, action: unknown): unknown {
+    return party.module.vomGeraet ? party.module.vomGeraet(action) : action;
   }
 
   /**
