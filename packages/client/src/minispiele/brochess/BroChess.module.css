@@ -17,6 +17,11 @@
   gap: 0.8rem;
   min-height: 100dvh;
   padding: 0.8rem;
+  /* In der App reicht die Seite bis unter Statusleiste und Home-Strich: Ohne
+     diese Raender lag der Zurueck-Knopf auf der Uhrzeit und die Ueberschrift
+     hinter der Dynamic Island. Im Browser sind die Werte 0, es bleibt 0.8rem. */
+  padding-top: max(0.8rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(0.8rem, env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
   background: var(--bg);
   color: var(--text);

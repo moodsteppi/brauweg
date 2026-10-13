@@ -512,7 +512,15 @@ function SpielSeite({
           </div>
           <div className="hb-sp-anteil">
             <span className="hb-klein">
-              Dein Beitrag zum Trophäenweg: <b>{eigene.toLocaleString('de-DE')} von {gesamt.toLocaleString('de-DE')}</b>
+              {/* „0 von 0" sah nach einem Rechenfehler aus; ohne eine einzige
+                  Trophäe gibt es noch keinen Anteil, nur eine Einladung. */}
+              {gesamt > 0 ? (
+                <>
+                  Dein Beitrag zum Trophäenweg: <b>{eigene.toLocaleString('de-DE')} von {gesamt.toLocaleString('de-DE')}</b>
+                </>
+              ) : (
+                'Gewinn eine Partie — jede Trophäe bringt dich auf dem Trophäenweg weiter.'
+              )}
             </span>
             <span className="hb-balken" aria-hidden="true">
               <span style={{ width: `${gesamt > 0 ? Math.round((eigene / gesamt) * 100) : 0}%` }} />
