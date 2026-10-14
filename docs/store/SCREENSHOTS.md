@@ -19,6 +19,33 @@ node screenshots.mjs --ziel ../../../app-store-lauf/screenshots
 node screenshots.mjs --geraet play --motiv 05   # ein einzelnes Bild neu
 ```
 
+## iOS V1 (14.10.2026) — ersetzt die Motive unten für den App Store
+
+Mit der ersten iOS-Fassung (fünf Spiele, Partykiste-Szenen, Pinguin-Schach)
+stimmen die alten Bilder nicht mehr. Der neue Satz ist **im Simulator** (iPhone
+17 Pro Max, 1320 × 2868, PNG ohne Alpha) aus der echten App gegen einen
+lokalen Server entstanden, nicht mit `screenshots.mjs`: Das Skript kennt die
+neuen Bildschirme (Bot-Schach, Farbduell, Flasche) nicht. Statusleiste über
+`xcrun simctl status_bar … override` auf 9:41, volles Netz und Akku. Gespielt
+als Gast „Kiebitz", Mitspieler sind Bots oder Testgäste mit Vogelnamen;
+Partykiste **alkoholfrei**. Die Bilder liegen nicht im Repo.
+
+| Datei | Was zu sehen ist |
+| --- | --- |
+| `01-spiele` | Reiter „Spiele": Kartenspiele, Trinkspiele, Denken & Strategie, „Kommt bald" zugeklappt |
+| `02-doppelkopf` | Doppelkopf gegen drei Bots, Hochzeit, zwei Karten im Stich, du bist dran |
+| `03-skat` | „Du bist am Reizen", „22 sagen" / „Rechner" / „Weg" |
+| `04-brochess` | Pinguin-Figuren gegen den Bot, Läufer angewählt mit Zugpunkt |
+| `05-farbduell` | Farbduell (Normal) gegen die KI, 7 : 7 |
+| `06-busfahren` | Bus fahren als Fahrer: Buslinie, erste Karte richtig, „Höher oder tiefer?" |
+| `07-koenigsbecher-flasche` | Königsbecher: Karte pendelt über der Flasche, „Tippen, wenn die Karte über der Flasche ist!" |
+
+Zwei Fehler sind dabei aufgefallen und behoben: Beim Skat fehlte im Blatt
+„Klassisch" die Sieben/Acht als kaputtes Bild statt Textkarte, und auf dem
+hellen Farbduell war die weiße Statusleiste unlesbar.
+
+## Web-Lauf mit dem Skript (23.09.2026)
+
 Das Skript leitet alles, was der Client an `https://www.brauweg-spielen.de`
 schickt, nach staging um (damit der QR-Code im Bild auf die echte Adresse
 zeigt) und lässt nichts zur Produktion durch. Warum, steht im Kopf des
