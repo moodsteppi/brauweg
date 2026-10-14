@@ -129,6 +129,7 @@
 .spe .fl-spielart .aw-kachel.is-an {
   border: 2px solid var(--spe-akzent);
   box-shadow: none;
+  background: var(--hb-karte);
   background: color-mix(in srgb, var(--spe-akzent) 16%, var(--hb-karte));
 }
 .spe .fl-spielart .aw-titel {

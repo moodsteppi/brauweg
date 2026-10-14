@@ -58,6 +58,7 @@
 }
 .spe .gf-stufen button[data-an] {
   border: 2px solid var(--spe-akzent);
+  background: var(--hb-karte);
   background: color-mix(in srgb, var(--spe-akzent) 16%, var(--hb-karte));
   color: var(--hb-tinte);
 }
@@ -122,6 +123,7 @@
 .spe .aw-kachel.is-an {
   border: 2px solid var(--spe-akzent);
   box-shadow: none;
+  background: var(--hb-karte);
   background: color-mix(in srgb, var(--spe-akzent) 14%, var(--hb-karte));
 }
 .spe .aw-titel {
@@ -173,6 +175,7 @@
   border-bottom: 0;
 }
 .spe .gf-neu-gruppe .gf-gruppenzeile[data-eigen] {
+  background: rgba(255, 255, 255, 0.07);
   background: color-mix(in srgb, var(--spe-akzent) 14%, transparent);
 }
 .spe .gf-neu-gruppe .gf-gruppenzeile[data-leer] {
@@ -221,6 +224,7 @@
 }
 .spe .gf-rangliste li[data-sieger] {
   border: 2px solid var(--hb-gold);
+  background: var(--hb-karte);
   background: color-mix(in srgb, var(--hb-gold) 12%, var(--hb-karte));
   box-shadow: none;
 }

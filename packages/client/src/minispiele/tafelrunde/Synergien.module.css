@@ -79,6 +79,7 @@
  * halbdurchsichtiger Farbton allein auf dem dunklen Grund kaum auffaellt.
  */
 .chip[data-aktiv] {
+  background: rgba(255, 255, 255, 0.09);
   background: color-mix(in srgb, var(--marke) 18%, transparent);
   box-shadow: inset 0 0 0 1px var(--marke);
   color: var(--text);
@@ -277,6 +278,7 @@
 /* Die erreichte Stufe: gruen, wie ueberall auf der Plattform "gilt gerade". */
 .stufe[data-aktiv] {
   border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   opacity: 1;
 }
@@ -357,6 +359,7 @@
   width: 17px;
   height: 17px;
   border-radius: 50%;
+  background: rgba(255, 255, 255, 0.11);
   background: color-mix(in srgb, var(--gold) 22%, transparent);
   box-shadow: inset 0 0 0 1px var(--gold);
   color: var(--gold);

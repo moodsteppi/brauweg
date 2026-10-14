@@ -56,6 +56,9 @@
   inset: 0;
   background:
     linear-gradient(180deg, rgba(7, 19, 47, 0.62) 0, rgba(7, 19, 47, 0) 32%, rgba(7, 19, 47, 0.88) 78%, var(--hb-grund) 100%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.11), transparent 55%);
+  background:
+    linear-gradient(180deg, rgba(7, 19, 47, 0.62) 0, rgba(7, 19, 47, 0) 32%, rgba(7, 19, 47, 0.88) 78%, var(--hb-grund) 100%),
     linear-gradient(0deg, color-mix(in srgb, var(--spe-akzent) 22%, transparent), transparent 55%);
 }
 .spe .spe-zurueck {
@@ -138,6 +141,7 @@
 }
 .spe .spe-wahl-knopf.is-an {
   border: 2px solid var(--spe-akzent);
+  background: var(--hb-karte);
   background: color-mix(in srgb, var(--spe-akzent) 16%, var(--hb-karte));
 }
 /* Eine Zeile in einer Liste mit Pfeil (Regeln, Anleitung, Tische) */
@@ -284,6 +288,7 @@
 }
 .spe .regel.is-on {
   border: 2px solid var(--hb-gold);
+  background: var(--hb-karte);
   background: color-mix(in srgb, var(--hb-gold) 12%, var(--hb-karte));
 }
 .spe .regel-check {
@@ -440,6 +445,7 @@
   border-radius: 999px;
   border: 1.5px solid var(--spe-akzent);
   color: var(--hb-tinte);
+  background: rgba(255, 255, 255, 0.09);
   background: color-mix(in srgb, var(--spe-akzent) 18%, transparent);
   font: 800 13px var(--hb-txt);
 }
@@ -469,6 +475,7 @@
 }
 .spe .spe-held.is-an {
   border: 2px solid var(--spe-akzent);
+  background: var(--hb-karte);
   background: color-mix(in srgb, var(--spe-akzent) 14%, var(--hb-karte));
 }
 .spe .spe-held.is-bald {
@@ -583,6 +590,7 @@
 }
 .spe .aw-kachel.is-an {
   border: 2px solid var(--spe-akzent);
+  background: var(--hb-karte);
   background: color-mix(in srgb, var(--spe-akzent) 16%, var(--hb-karte));
   box-shadow: none;
 }
@@ -645,6 +653,7 @@
   justify-content: center;
   font-size: 34px;
   color: var(--spe-akzent);
+  background: radial-gradient(circle at 50% 40%, var(--hb-karte), var(--hb-grund-tief));
   background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--spe-akzent) 35%, var(--hb-karte)), var(--hb-grund-tief));
 }
 .spe .spe-pakete .aw-titel,

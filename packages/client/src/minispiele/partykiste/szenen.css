@@ -65,9 +65,13 @@
 
 /* Lesbarkeit vor jeder Kulisse: Bühne und Listen auf Milchglas. */
 .pk-tisch[data-szene] .pk-buehne {
+  background: rgba(14, 10, 24, 0.72);
   background: color-mix(in srgb, var(--pk-grund, #151021) 72%, transparent);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(240, 199, 94, 0.55),
+    0 10px 30px rgba(0, 0, 0, 0.35);
   box-shadow:
     inset 0 0 0 1.5px color-mix(in srgb, var(--pk-akzent, #a678f2) 55%, transparent),
     0 10px 30px rgba(0, 0, 0, 0.35);
@@ -77,11 +81,13 @@
 .pk-tisch[data-szene] .pk-knopf.is-haupt {
   background: var(--pk-akzent, #a678f2);
   color: var(--pk-auf-akzent, #180f28);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45);
   box-shadow: 0 4px 0 color-mix(in srgb, var(--pk-akzent, #a678f2) 55%, #000);
 }
 .pk-tisch[data-szene] .pk-knopf.is-gross:active:not(:disabled),
 .pk-tisch[data-szene] .pk-knopf.is-haupt:active:not(:disabled) {
   transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--pk-akzent, #a678f2) 55%, #000);
 }
 .pk-tisch[data-szene] .pk-liste li,
@@ -96,11 +102,13 @@
 .pk-tisch[data-szene] .pk-kopf {
   padding: 6px 8px;
   border-radius: 16px;
+  background: rgba(14, 10, 24, 0.70);
   background: color-mix(in srgb, var(--pk-grund, #151021) 70%, transparent);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 .pk-tisch[data-szene] .pk-regelchip {
+  background: rgba(14, 10, 24, 0.78);
   background: color-mix(in srgb, var(--pk-grund, #151021) 78%, transparent);
   color: #e9e6f2;
   -webkit-backdrop-filter: blur(6px);
@@ -111,6 +119,7 @@
   max-width: 34em;
   padding: 6px 12px;
   border-radius: 12px;
+  background: rgba(14, 10, 24, 0.70);
   background: color-mix(in srgb, var(--pk-grund, #151021) 70%, transparent);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
