@@ -37,8 +37,14 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     }
 
     /// Helle Symbole auf dunkler Kopfzeile — wie `black-translucent` in der
-    /// index.html fuer die Safari-Fassung.
-    override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
+    /// index.html fuer die Safari-Fassung. Ausnahme sind die hellen Schirme
+    /// (Farbduell): Dort setzt der Client `theme-color` auf seinen Grund, und
+    /// weisse Uhr und Akku standen sonst unlesbar auf Hellgrau.
+    override var preferredStatusBarStyle: UIStatusBarStyle { kopfzeileHell ? .darkContent : .lightContent }
+    private var kopfzeileHell = false {
+        didSet { if kopfzeileHell != oldValue { setNeedsStatusBarAppearanceUpdate() } }
+    }
+    private var kopffarbeBeobachter: NSKeyValueObservation?
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
 
     override func viewDidLoad() {
@@ -86,6 +92,10 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
         ansicht.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(ansicht)
         self.ansicht = ansicht
+        // `themeColor` folgt dem `<meta name="theme-color">` der Seite.
+        kopffarbeBeobachter = ansicht.observe(\.themeColor, options: [.initial, .new]) { [weak self] wv, _ in
+            self?.kopfzeileHell = wv.themeColor.map(Farben.istHell) ?? false
+        }
 
         fehlerschirm.isHidden = true
         fehlerschirm.beimErneutVersuchen = { [weak self] in self?.pruefeServer() }

@@ -9,6 +9,7 @@ import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { serverAdresse } from '../laufzeit';
 import { hubNeu } from '../hubNeu';
+import { HelleKopfzeile } from '../kopfzeile';
 import { GastHinweis } from '../tisch/GastHinweis';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen } from './SpielEinstieg';
@@ -593,6 +594,7 @@ export function Filler({
     }
     return (
       <main className="fl-seite fl-menue">
+        <HelleKopfzeile />
         <button className="fl-zurueck" type="button" onClick={brichSucheAb}>
           ← Abbrechen
         </button>
@@ -704,6 +706,7 @@ export function Filler({
   if (!tischId) {
     return (
       <main className="fl-seite fl-menue">
+        <HelleKopfzeile />
         <button className="fl-zurueck" type="button" onClick={onBack} aria-label="Zurück">
           ←
         </button>
@@ -813,6 +816,7 @@ export function Filler({
     }
     return (
       <main className="fl-seite fl-menue">
+        <HelleKopfzeile />
         <button className="fl-zurueck" type="button" onClick={brichAb}>
           ← Abbrechen
         </button>
@@ -1047,6 +1051,7 @@ function Brett({
 
   return (
     <main className="fl-seite fl-tisch">
+      <HelleKopfzeile />
       <div className="fl-kopf">
         <button className="fl-zurueck fl-zurueck-tisch" type="button" onClick={onZurueck} aria-label="Zurück">
           ←

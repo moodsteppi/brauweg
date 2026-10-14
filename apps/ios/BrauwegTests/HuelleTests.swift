@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import Brauweg
 
 /// Welche Links die App oeffnet, und was sie dem Client mitgibt.
@@ -104,5 +105,11 @@ final class HuelleTests: XCTestCase {
     func testJsTextSchuetztZeilenumbrueche() {
         XCTAssertEqual(Huelle.jsText("a\r\nb"), "\"a\\r\\nb\"")
         XCTAssertEqual(Huelle.jsText("\u{2028}"), "\"\\u2028\"")
+    }
+
+    func testHelleKopfzeileBrauchtDunkleSymbole() {
+        XCTAssertFalse(Farben.istHell(Farben.blau))
+        // Der Grund des Farbduells (styles.css, .fl-seite).
+        XCTAssertTrue(Farben.istHell(UIColor(red: 0xEE / 255.0, green: 0xEE / 255.0, blue: 0xEE / 255.0, alpha: 1)))
     }
 }
