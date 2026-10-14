@@ -232,6 +232,13 @@
       "when": 1788200000000,
       "tag": "0032_partykiste_meldung",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788300000000,
+      "tag": "0033_tisch_anfrage",
+      "breakpoints": true
     }
   ]
 }

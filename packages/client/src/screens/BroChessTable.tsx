@@ -1,5 +1,6 @@
 import { Ladekreis } from '../Ladekreis';
 import { Brett, statusText } from '../minispiele/brochess/Brett';
+import { figurensatzAus } from '../minispiele/brochess/figurensatz';
 import stil from '../minispiele/brochess/BroChess.module.css';
 import type { BroChessSicht, BroChessZug, Farbe } from '../minispiele/brochess/sicht';
 import { TurnClock, Wartebereich } from '../tisch';
@@ -20,10 +21,13 @@ export function BroChessTable({
   tableId,
   onShowProfile,
   onLeave,
+  figurensatz,
 }: {
   tableId: string;
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
+  /** Gespeichertes Aussehen (`themes.brochess.cardDeck`), siehe figurensatz.ts. */
+  figurensatz?: string;
 }): React.JSX.Element {
   const { view, table, error, connected, send, addBot, removeBot, setBotLevel } =
     useTable<BroChessSicht>(tableId, 'brochess');
@@ -101,6 +105,7 @@ export function BroChessTable({
         sicht={sicht}
         zuege={view.legalActions as unknown as BroChessZug[]}
         onZug={(zug) => send(zug)}
+        figurensatz={figurensatzAus(figurensatz)}
       />
       {spielerZeile(unten)}
 

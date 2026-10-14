@@ -166,16 +166,20 @@ export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
   cambio: { web: 'spielbar', app: 'bald' },
   easypoker: { web: 'spielbar', app: 'bald' },
   mememory: { web: 'spielbar', app: 'bald' },
-  filler: { web: 'spielbar', app: 'bald' },
+  /* In der App unter dem Namen „Farbduell" (i18n.ts im Client, Emile,
+     13.10.2026) — die erste iOS-Fassung: Doppelkopf, Skat, Partykiste,
+     Farbduell und BroChess. */
+  filler: { web: 'spielbar', app: 'spielbar' },
   eiland: { web: 'spielbar', app: 'bald' },
   feldherr: { web: 'spielbar', app: 'bald' },
   tafelrunde: { web: 'spielbar', app: 'bald' },
   golf: { web: 'spielbar', app: 'bald' },
   brocooked: { web: 'spielbar', app: 'bald' },
-  /* Seit dem 25.09.2026 im Code. Auch auf der Webseite erst „Bald", bis
-     es jemand gespielt hat (Robin, 26.09.2026, vor dem Release). Danach
-     web: spielbar; in die App erst, wenn es auf der Webseite getaugt hat. */
-  brochess: { web: 'bald', app: 'bald' },
+  /* Seit dem 25.09.2026 im Code. Auf der Webseite erst „Bald", bis es
+     jemand gespielt hat (Robin, 26.09.2026, vor dem Release). In der App
+     dagegen schon spielbar: Es gehoert zur ersten iOS-Fassung (Emile,
+     13.10.2026), die Webseite bleibt davon unberuehrt. */
+  brochess: { web: 'bald', app: 'spielbar' },
   /* Vorschau-Spiel mit Moderationsbedarf (freier Text zwischen Sitzen, siehe
      PREVIEW) — in der App gar nicht erst ankuendigen. */
   werwolf: { web: 'bald', app: 'aus' },

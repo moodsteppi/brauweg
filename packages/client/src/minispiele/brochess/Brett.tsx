@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { anzeigeReihenfolge, beweglicheFelder, feldName, zielfelder, zuegeNach } from './auswahl';
 import stil from './BroChess.module.css';
+import { type Figurensatz, pinguinBild } from './figurensatz';
 import type { BroChessSicht, BroChessZug, Farbe, Umwandlung } from './sicht';
 
 /**
@@ -44,11 +45,14 @@ export function Brett({
   sicht,
   zuege,
   onZug,
+  figurensatz = 'klassisch',
 }: {
   sicht: BroChessSicht;
   /** `legalActions` des Servers; leer, wenn man nicht am Zug ist. */
   zuege: readonly BroChessZug[];
   onZug: (zug: BroChessZug) => void;
+  /** Aussehen der Figuren (figurensatz.ts); die Regeln kennen es nicht. */
+  figurensatz?: Figurensatz;
 }): React.JSX.Element {
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
   /** Offene Umwandlung: die vier (oder weniger) angebotenen Zuege. */
@@ -116,13 +120,16 @@ export function Brett({
             aria-label={beschriftung}
             onClick={() => tippe(name)}
           >
-            {figur && (
-              <span
-                className={`${stil.figur} ${farbeDer(figur) === 'w' ? stil.figurWeiss : stil.figurSchwarz}`}
-              >
-                {ZEICHEN[figur.toLowerCase()]}
-              </span>
-            )}
+            {figur &&
+              (figurensatz === 'pinguin' ? (
+                <img className={stil.figurBild} src={pinguinBild(figur)} alt="" draggable={false} />
+              ) : (
+                <span
+                  className={`${stil.figur} ${farbeDer(figur) === 'w' ? stil.figurWeiss : stil.figurSchwarz}`}
+                >
+                  {ZEICHEN[figur.toLowerCase()]}
+                </span>
+              ))}
             {/* Koordinaten am linken und unteren Rand, von der eigenen Seite aus. */}
             {position % 8 === 0 && (
               <span className={`${stil.koordinate} ${stil.koordinateZeile}`}>{name[1]}</span>
@@ -152,7 +159,16 @@ export function Brett({
                     setGewaehlt(null);
                   }}
                 >
-                  {ZEICHEN[art]}
+                  {figurensatz === 'pinguin' ? (
+                    <img
+                      className={stil.figurBild}
+                      src={pinguinBild(sicht.amZug === 'w' ? art.toUpperCase() : art)}
+                      alt=""
+                      draggable={false}
+                    />
+                  ) : (
+                    ZEICHEN[art]
+                  )}
                 </button>
               );
             })}

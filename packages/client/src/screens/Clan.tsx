@@ -1396,9 +1396,12 @@ function HalleNeu({
               </b>
               Mitglieder
             </span>
+            {/* Beitrittsart oben, Schwelle darunter. Vorher stand hier nur die
+                Schwelle, bei 0 als „offen / für alle" — und ein Clan „auf
+                Anfrage" sah damit aus wie ein offener. */}
             <span>
-              <b>{detail.minTrophies > 0 ? `ab ${detail.minTrophies.toLocaleString('de-DE')}` : 'offen'}</b>
-              {detail.minTrophies > 0 ? 'zum Beitritt' : 'für alle'}
+              <b>{detail.joinMode === 'open' ? 'offen' : 'auf Anfrage'}</b>
+              {detail.minTrophies > 0 ? `ab ${detail.minTrophies.toLocaleString('de-DE')} Trophäen` : 'ohne Schwelle'}
             </span>
             <span>
               <b>{detail.trophies.toLocaleString('de-DE')}</b>

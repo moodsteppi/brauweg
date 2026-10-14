@@ -30,7 +30,6 @@ import {
 } from '../api';
 import { inApp, serverAdresse } from '../laufzeit';
 import {
-  DECKS,
   RUECKEN,
   cardImage,
   deckBack,
@@ -50,7 +49,7 @@ import {
   probePaket,
   spiele,
 } from '../klang';
-import { EinstellungenBlatt } from './Einstellungen';
+import { EinstellungenBlatt, MitteilungenBlatt } from './Einstellungen';
 import {
   EdelsteinIcon,
   HubBanner,
@@ -867,12 +866,16 @@ function ProfilTab({
   const [claimError, setClaimError] = useState<string | null>(null);
   const [loeschenOffen, setLoeschenOffen] = useState(false);
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
+  const [mitteilungenOffen, setMitteilungenOffen] = useState(false);
 
   const kacheln = [
     { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: partien },
     { icon: '/hub/krone.png', name: 'Siege', wert: siege },
     { icon: '/hub/muenze.png', name: 'Siegquote', wert: quote },
-    { icon: '/hub/tab-blatt.webp', name: 'Blätter', wert: DECKS.length },
+    // Hier stand `DECKS.length` als „Blätter" — die Zahl aller Blätter im
+    // Katalog, also bei jedem Spieler dieselbe 15. Die eigenen kennt erst die
+    // Sammlung (sie braucht den Shop); hier steht, was das Profil weiß.
+    { icon: '/hub/tab-blatt.webp', name: 'Spiele', wert: me.stats.filter((s) => s.parties > 0).length },
   ];
 
   const geburtstagText = (() => {
@@ -1045,7 +1048,9 @@ function ProfilTab({
             <h2 className="hb-ab">
               Deine Sachen
               <span className="hb-ab-zusatz">
-                {Object.keys(me.avatar).length} von {SLOTS.length} Plätzen
+                {/* Die Plätze der Figur, nicht die Kacheln darunter: „0 von 6
+                    Plätzen" über drei Kacheln las sich wie fehlende Kacheln. */}
+                {Object.keys(me.avatar).length} von {SLOTS.length} angezogen
               </span>
             </h2>
             <div className="hb-einstiege">
@@ -1109,9 +1114,12 @@ function ProfilTab({
                 ))
               )}
             </div>
+            {/* Bis zum 13.10.2026 stand hier „nur an Tischen ohne Bots". Der
+                Server zählt Bot-Tische aber seit dem 04.08.2026 mit
+                (`countsForRanking` in tables/service.ts); ausgenommen sind nur
+                Gäste am Tisch und Training. */}
             <p className="hb-klein hb-ohne-rand">
-              Trophäen gibt es nur an Tischen ohne Bots. Partien und Siege werden überall gezählt,
-              auch gegen Bots.
+              Trophäen gibt es auch gegen Bots — nur nicht, wenn ein Gast mitspielt oder Training an ist.
             </p>
           </section>
 
@@ -1143,12 +1151,24 @@ function ProfilTab({
                   ›
                 </span>
               </button>
-              <button type="button" className="hb-mg" onClick={() => onBald('Benachrichtigungen')}>
+              {/* In der App gibt es Mitteilungen (docs/PUSH.md), auf der
+                  Webseite nicht — dort bleibt es „Bald". */}
+              <button
+                type="button"
+                className="hb-mg"
+                onClick={() => (inApp ? setMitteilungenOffen(true) : onBald('Benachrichtigungen'))}
+              >
                 <img className="hb-mg-symbol" src="/hub/icon-benachrichtigung.webp" alt="" />
                 <span className="hb-mg-name">
                   <strong>Benachrichtigungen</strong>
                 </span>
-                <span className="hb-bald-marke">Bald</span>
+                {inApp ? (
+                  <span className="hb-pf" aria-hidden="true">
+                    ›
+                  </span>
+                ) : (
+                  <span className="hb-bald-marke">Bald</span>
+                )}
               </button>
               <button type="button" className="hb-mg" onClick={onSignOut}>
                 <img className="hb-mg-symbol" src="/hub/icon-abmelden.webp" alt="" />
@@ -1172,6 +1192,11 @@ function ProfilTab({
                 setEinstellungenOffen(false);
               }}
             />
+          </ImHub>
+        )}
+        {mitteilungenOffen && (
+          <ImHub>
+            <MitteilungenBlatt onClose={() => setMitteilungenOffen(false)} />
           </ImHub>
         )}
         {loeschenOffen && (
@@ -1325,14 +1350,11 @@ function ProfilTab({
           ))
         )}
 
-        {/* „zählen alles" war eine Verkürzung, die niemand so sagt — und sie
-            liess offen, was denn alles. Gemeint ist der Gegensatz zur Zeile
-            davor: Trophäen sind an Tische ohne Bots gebunden, die Zählung von
-            Partien und Siegen ist es nicht. Wortgleich mit dem fremden Profil
-            (`Profile.tsx`) — dieselbe Regel, dieselbe Erklärung. */}
+        {/* Wortgleich mit dem fremden Profil (`Profile.tsx`) — dieselbe Regel,
+            dieselbe Erklärung. Die Regel selbst steht im Server
+            (`countsForRanking`): Bots zählen seit dem 04.08.2026 mit. */}
         <p className="hub-statistik-hinweis">
-          Trophäen gibt es nur an Tischen ohne Bots. Partien und Siege werden
-          überall gezählt, auch gegen Bots.
+          Trophäen gibt es auch gegen Bots — nur nicht, wenn ein Gast mitspielt oder Training an ist.
         </p>
       </Tafel>
 

@@ -824,6 +824,19 @@
 :is(.hb, .spe) .hb-quer .hb-kn {
   min-width: 64px;
 }
+/* Figurensatz von BroChess in der Sammlung: Figur ganz sichtbar statt
+   angeschnitten wie ein Kartenbild; das Zeichen für „Klassisch" mittig. */
+:is(.hb, .spe) .hb-ding-figur {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  font-size: 64px;
+  line-height: 1;
+  color: #fdfbf6;
+}
 :is(.hb, .spe) .hb-bald {
   display: flex;
   align-items: center;
@@ -862,6 +875,33 @@
 }
 :is(.hb, .spe) .hb-bald-text small {
   font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* „Kommt bald" in der App: eine Kategorie zum Aufklappen (SpieleNeu.tsx). */
+:is(.hb, .spe) .hb-ab-knopf {
+  width: 100%;
+  /* 44 pt Tippfläche */
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+:is(.hb, .spe) .hb-ab-knopf .hb-ic:last-child {
+  transition: transform 0.2s ease;
+}
+:is(.hb, .spe) .hb-ab-knopf[aria-expanded='true'] .hb-ic:last-child {
+  transform: rotate(180deg);
+}
+/* Noch nicht verfügbar: ganz grau statt nur entsättigt. */
+:is(.hb, .spe) .hb-liste.is-grau .hb-bald-bild {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+:is(.hb, .spe) .hb-liste.is-grau .hb-bald-text strong {
   color: var(--hb-leise);
 }
 
@@ -1730,6 +1770,22 @@
 }
 .hb.is-ohne-kopf .hb-inhalt:has(.hb-clan) {
   padding-top: 0;
+}
+/* Clanhalle und Spielseite laufen mit dem Bild bis unter die Statusleiste.
+   Beim Scrollen lief aber auch der Inhalt darunter, und „Name" stand neben
+   der Uhrzeit. Ein dunkler Streifen in Höhe der Statusleiste deckt ab, was
+   darunter rollt; ungescrollt geht er im dunklen oberen Bildrand unter. */
+.hb.is-ohne-kopf .hb-inhalt:has(.hb-clan)::before,
+.hb.is-ohne-kopf .hb-inhalt:has(.hb-spielseite)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--hb-oben);
+  background: linear-gradient(180deg, rgba(14, 26, 61, 0.96), rgba(14, 26, 61, 0.8));
+  z-index: 5;
+  pointer-events: none;
 }
 :is(.hb, .spe) .hb-clan-held {
   position: relative;

@@ -1,8 +1,10 @@
 # Store-Texte: App Store und Google Play
 
-Stand 23.09.2026, für **Version 1.0**. In dieser Version spielbar sind
-**Doppelkopf, Skat und die Partykiste**; alle anderen Spiele stehen in der
-App auf „Bald" (`FREIGABE` in `packages/server/src/games/registry.ts`). Es
+Stand 13.10.2026, für **Version 1.0**. In dieser Version spielbar sind
+**Doppelkopf, Skat, die Partykiste, Farbduell und BroChess** (Farbduell ist
+Filler, in der App umbenannt; Emile, 13.10.2026); alle anderen Spiele stehen
+in der App unter „Kommt bald" (`FREIGABE` in
+`packages/server/src/games/registry.ts`). Es
 gibt in der App **keine Käufe**, keine Werbung und kein Tracking. Anmeldung
 mit Mail und Passwort oder als Gast; Google/Apple sind in der App aus.
 
@@ -84,6 +86,10 @@ PARTYKISTE – DAS TURNIER FÜR DEN SPIELEABEND
 
 Die Partykiste ist ein Partyspiel für Erwachsene. Wer trinkt, trinkt verantwortungsvoll – oder ihr spielt alkoholfrei.
 
+FARBDUELL UND BROCHESS – ZU ZWEIT
+• Farbduell: Färbe dein Gebiet um und schlucke, was daran grenzt – in vier Spielarten, eine davon im Nebel
+• BroChess: Schach zu zweit, online
+
 AUSSERDEM
 • Sofort loslegen: Bots füllen jeden freien Platz
 • Trophäen, Ranglisten, Tagesaufgaben und Truhen
@@ -98,7 +104,7 @@ Brauweg braucht eine Internetverbindung.
 
 <!-- feld: apple.de.neuheiten max=4000 -->
 ```text
-Die erste Version von Brauweg: Doppelkopf, Skat und die Partykiste – online mit Freunden oder gegen Bots. Weitere Spiele folgen.
+Die erste Version von Brauweg: Doppelkopf, Skat, die Partykiste, Farbduell und BroChess – online mit Freunden oder gegen Bots. Weitere Spiele folgen.
 ```
 
 ---
@@ -152,6 +158,10 @@ PARTY BOX – THE TOURNAMENT FOR YOUR GAME NIGHT
 
 The Party Box is a party game for adults. If you drink, drink responsibly – or play alcohol-free.
 
+FARBDUELL AND BROCHESS – HEAD TO HEAD
+• Farbduell: recolour your territory and swallow whatever touches it – four modes, one of them in fog of war
+• BroChess: chess for two, online
+
 ALSO
 • Start right away: bots fill every free seat
 • Trophies, leaderboards, daily quests and chests
@@ -166,7 +176,7 @@ Brauweg requires an internet connection.
 
 <!-- feld: apple.en.neuheiten max=4000 -->
 ```text
-The first version of Brauweg: Doppelkopf, Skat and the Party Box – online with friends or against bots. More games are coming.
+The first version of Brauweg: Doppelkopf, Skat, the Party Box, Farbduell and BroChess – online with friends or against bots. More games are coming.
 ```
 
 ---
@@ -215,6 +225,10 @@ PARTYKISTE – DAS TURNIER FÜR DEN SPIELEABEND
 • Vier Modi: Turnier, Eskalation, Themenabend und Team
 
 Die Partykiste ist ein Partyspiel für Erwachsene. Wer trinkt, trinkt verantwortungsvoll – oder ihr spielt alkoholfrei.
+
+FARBDUELL UND BROCHESS – ZU ZWEIT
+• Farbduell: Färbe dein Gebiet um und schlucke, was daran grenzt – in vier Spielarten, eine davon im Nebel
+• BroChess: Schach zu zweit, online
 
 AUSSERDEM
 • Sofort loslegen: Bots füllen jeden freien Platz
@@ -266,6 +280,10 @@ PARTY BOX – THE TOURNAMENT FOR YOUR GAME NIGHT
 • Four modes: tournament, escalation, theme night and teams
 
 The Party Box is a party game for adults. If you drink, drink responsibly – or play alcohol-free.
+
+FARBDUELL AND BROCHESS – HEAD TO HEAD
+• Farbduell: recolour your territory and swallow whatever touches it – four modes, one of them in fog of war
+• BroChess: chess for two, online
 
 ALSO
 • Start right away: bots fill every free seat

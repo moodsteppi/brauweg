@@ -446,7 +446,14 @@ export type PartykisteAktion =
   /** Koenigsbecher: der Sitz am Zug zieht die naechste Karte. */
   | { readonly art: 'ziehen' }
   /** Koenigsbecher nach einer Sieben: Hand hoch — wer zuletzt tippt, kassiert. */
-  | { readonly art: 'hochzeigen' };
+  | { readonly art: 'hochzeigen' }
+  /**
+   * Koenigsbecher: die gezogene Karte auf die Flasche legen. `versatz` ist,
+   * wo sie landet: -1 ganz links am Flaschenhals, 0 genau mittig, 1 ganz
+   * rechts. Der Bildschirm misst ihn am Pendel beim Tippen; ob der Stapel
+   * haelt, rechnet das Modul (`flascheHaelt` in zeitdruck.ts).
+   */
+  | { readonly art: 'legen'; readonly versatz: number };
 
 // ---------------------------------------------------------------------------
 // Punkte und Schluecke
@@ -495,6 +502,25 @@ export const PUNKTE = {
   koenigsbecherGlueck: 1,
 } as const;
 
+/**
+ * Flaschenstapel im Koenigsbecher (Emile, 13.10.2026): Jede gezogene Karte
+ * wird auf die Flasche gelegt. Wie wacklig er ist, steht hier.
+ *
+ * - FLASCHE_RAND: Liegt eine Karte weiter aussen, verfehlt sie den Hals.
+ * - Der Schwerpunkt des Stapels (Mittel aller Versaetze) darf hoechstens
+ *   FLASCHE_GRENZE_START von der Mitte weg sein; mit jeder weiteren Karte
+ *   wird das um FLASCHE_GRENZE_JE_KARTE enger, nie enger als
+ *   FLASCHE_GRENZE_MIN. Ein hoher Turm faellt also leichter.
+ * - FLASCHE_RUTSCH: Wie weit eine Karte neben der obersten liegen darf,
+ *   bevor sie abrutscht und den Stapel mitreisst.
+ */
+export const FLASCHE_RAND = 0.9;
+export const FLASCHE_GRENZE_START = 0.5;
+export const FLASCHE_GRENZE_JE_KARTE = 0.05;
+export const FLASCHE_GRENZE_MIN = 0.15;
+export const FLASCHE_RUTSCH = 0.8;
+export const FLASCHE_HOECHST_KARTEN = 6;
+
 export const SCHLUECKE = {
   /** Quiz: falsch geantwortet oder gar nicht. */
   quizFalsch: 1,
@@ -534,6 +560,12 @@ export const SCHLUECKE = {
   koenigsbecherJeKoenig: 1,
   /** Wer beim „Weiter" zuletzt tippt — mit 50 % (weiter-warten.ts). */
   letzterBeimWeiter: 1,
+  /**
+   * Koenigsbecher: je Karte, die mit dem Flaschenstapel herunterfaellt — an
+   * den, der ihn umgeworfen hat (Emile, 13.10.2026). Gedeckelt bei
+   * FLASCHE_HOECHST_KARTEN, sonst waere ein hoher Turm ein Gelage.
+   */
+  koenigsbecherFlascheJeKarte: 1,
 } as const;
 
 // ---------------------------------------------------------------------------

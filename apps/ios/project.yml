@@ -29,10 +29,15 @@ settings:
     # Die echte Buildnummer setzt werkzeug/app/ios-testflight.sh.
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
-    # Push-Mitteilungen: nur vorbereitet, Vorgabe AUS (Mitteilungen.swift).
+    # Push-Mitteilungen: seit dem 13.10.2026 AN (Emile: „baue die ein").
     # Waehlt die Berechtigungsdatei (CODE_SIGN_ENTITLEMENTS) und landet ueber
-    # die Info.plist in Huelle.pushEingeschaltet.
-    BRAUWEG_PUSH: "NO"
+    # die Info.plist in Huelle.pushEingeschaltet. Zugestellt wird erst, wenn
+    # der Server den APNs-Schluessel hat (docs/PUSH.md); bis dahin meldet die
+    # App ihr Token, und der Server schreibt jede Mitteilung ins Log. Mit Push
+    # braucht der App-Eintrag die Faehigkeit „Push Notifications" (die
+    # automatische Signierung legt sie an) und die Store-Angaben die
+    # Geraete-Kennung (docs/store/DATENSCHUTZ-ANGABEN.md, Checkliste F3).
+    BRAUWEG_PUSH: "YES"
   configs:
     # Debug spricht mit Staging, wie die Test-APK unter Android: Wer aus Xcode
     # startet, soll nicht aus Versehen Produktionsdaten anlegen.

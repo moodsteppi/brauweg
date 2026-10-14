@@ -170,6 +170,30 @@ export class PushAnlaesse {
     );
   }
 
+  /**
+   * Jemand bittet um einen Platz an einem nicht-oeffentlichen Tisch
+   * (tables/anfragen.ts) — an den Gastgeber, der zusagen muss. Ohne diese
+   * Mitteilung saesse der Anfragende vor einem Tisch, dessen Gastgeber
+   * gerade im Menue steht und von nichts weiss.
+   */
+  anfrageGestellt(tableId: string, gastgeber: string, gastId: string): void {
+    if (this.aus.has('anfrage')) return;
+    this.merke(
+      (async () => {
+        const [tisch] = await this.db
+          .select({ gameId: s.gameTable.gameId })
+          .from(s.gameTable)
+          .where(eq(s.gameTable.id, tableId));
+        const [gast] = await this.db
+          .select({ displayName: s.account.displayName })
+          .from(s.account)
+          .where(eq(s.account.id, gastId));
+        if (!tisch) return;
+        await this.zustellen('anfrage', [gastgeber], tableId, tisch.gameId, gast?.displayName ?? null);
+      })(),
+    );
+  }
+
   /** Wartet, bis alle angestossenen Zustellungen durch sind (Tests, Serverende). */
   async ruhe(): Promise<void> {
     while (this.laufend.size > 0) await Promise.allSettled([...this.laufend]);

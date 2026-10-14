@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type Suchstand } from '../api';
 import { AuswahlRaster } from '../hub';
+import { t } from '../i18n';
 import { FARBEN, GRAUTOENE, farbeVon, farbzahlAus } from '../minispiele/filler/farben';
 import type { FillerSicht, Variante } from '../minispiele/filler/sicht';
 import { useSpielVorgabe } from '../spiel-vorgabe';
@@ -549,7 +550,7 @@ export function Filler({
   // -------------------------------------------------------------------------
 
   /** Im neuen Hub unter den Knoepfen im Fuss — dieselbe Zahl wie im alten Menue. */
-  const spielerZeile = <p className="hb-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>;
+  const spielerZeile = <p className="hb-klein">{aktiv ?? '…'} Spieler gerade in {t('game.filler')}</p>;
 
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
@@ -559,7 +560,7 @@ export function Filler({
         <SpielRahmen
           gameId="filler"
           titel="Gegner suchen"
-          unter={`Filler · ${VARIANTE_NAME[variante]}`}
+          unter={`${t('game.filler')} · ${VARIANTE_NAME[variante]}`}
           akzent={AKZENT}
           onBack={brichSucheAb}
           zurueckText="Suche abbrechen"
@@ -612,7 +613,7 @@ export function Filler({
             <span />
             <span />
           </div>
-          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
+          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in {t('game.filler')}</p>
         </div>
       </main>
     );
@@ -632,7 +633,7 @@ export function Filler({
     return (
       <SpielRahmen
         gameId="filler"
-        titel="Filler"
+        titel={t('game.filler')}
         unter={`2 Spieler · ${VARIANTE_NAME[variante]}`}
         akzent={AKZENT}
         onBack={onBack}
@@ -679,7 +680,7 @@ export function Filler({
             <div className="hb-liste">
               <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
                 <span>
-                  <strong>So spielt man Filler</strong>
+                  <strong>So spielt man {t('game.filler')}</strong>
                   <small>Regeln und die vier Spielarten</small>
                 </span>
                 <span className="hb-pf" aria-hidden="true">
@@ -690,7 +691,7 @@ export function Filler({
           </SpielAbschnitt>
         </div>
         {regelnOffen && (
-          <HbBlatt titel="So spielt man Filler" onClose={() => setRegelnOffen(false)}>
+          <HbBlatt titel={`So spielt man ${t('game.filler')}`} onClose={() => setRegelnOffen(false)}>
             <div className="spe-regeltext">
               <Regeltext />
             </div>
@@ -707,7 +708,7 @@ export function Filler({
           ←
         </button>
         <div className="fl-menue-mitte" data-wischbar="" {...wischen}>
-          <h1 className="fl-titel">Filler</h1>
+          <h1 className="fl-titel">{t('game.filler')}</h1>
           {/*
             * Nur der Satz, der fuer ALLE vier Spielarten gilt. Der Nebel-Zusatz
             * stand hier bis zum 19.09.2026 fest drin — aus der Zeit, als Nebel
@@ -759,10 +760,10 @@ export function Filler({
             </button>
           </div>
           <button className="fl-regelknopf" type="button" onClick={() => setRegelnOffen(true)}>
-            So spielt man Filler
+            So spielt man {t('game.filler')}
           </button>
           {fehler && <p className="fl-fehler">{fehler}</p>}
-          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
+          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in {t('game.filler')}</p>
         </div>
         {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
       </main>
@@ -781,7 +782,7 @@ export function Filler({
         <SpielRahmen
           gameId="filler"
           titel="Tisch wird aufgebaut"
-          unter="Filler"
+          unter={t('game.filler')}
           akzent={AKZENT}
           onBack={brichAb}
           zurueckText="Abbrechen"
@@ -831,7 +832,7 @@ export function Filler({
               des Moduls, nicht den Schalter aus dem Menue — die Zeile haette
               dort schlicht gelogen. Was gilt, steht am Brett (`sicht.variante`). */}
           <GastHinweis sitze={tisch.table?.seats ?? []} className="fl-untertitel fl-klein" />
-          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in Filler</p>
+          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in {t('game.filler')}</p>
         </div>
       </main>
     );
@@ -1599,11 +1600,11 @@ function Vorschaubrett({
  */
 function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
-    <div className="fl-blatt" role="dialog" aria-label="So spielt man Filler">
+    <div className="fl-blatt" role="dialog" aria-label={`So spielt man ${t('game.filler')}`}>
       <button className="fl-blatt-zu" type="button" onClick={onClose} aria-label="Schließen">
         ✕
       </button>
-      <h2>So spielt man Filler</h2>
+      <h2>So spielt man {t('game.filler')}</h2>
       <Regeltext />
     </div>
   );

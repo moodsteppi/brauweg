@@ -173,6 +173,15 @@ import {
   tischPerCode,
   verlasseKiTisch,
 } from '../tables/service.js';
+import {
+  anfrageStand,
+  brauchtZusage,
+  entscheide,
+  gastgeberVon,
+  offeneAnfragen,
+  stelleAnfrage,
+  zieheAnfrageZurueck,
+} from '../tables/anfragen.js';
 import type { Vermittlung } from '../suche/vermittlung.js';
 import type { PartyRuntime } from '../runtime/party.js';
 
@@ -2180,6 +2189,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       const { code } = z.object({ code: z.string().min(1).max(24) }).parse(request.params);
       const table = await tischPerCode(deps.db, code);
       await pruefeBeitritt(request, table.id, accountId);
+      // Nicht-oeffentlich: erst die Zusage des Gastgebers (tables/anfragen.ts).
+      if (await stelltAnfrage(table.id, accountId)) {
+        return reply.send({ tableId: table.id, angefragt: true });
+      }
       await joinTable(deps.db, table.id, accountId);
       deps.vermittlung?.verlaesstAlle(accountId);
       deps.runtime.notify(table.id);
@@ -2231,10 +2244,75 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({ config: await tableRules(deps.db, tableId) });
   });
 
+  /**
+   * Braucht dieser Beitritt die Zusage des Gastgebers? Dann wird statt des
+   * Hinsetzens eine Anfrage gestellt, der Gastgeber bekommt eine Mitteilung,
+   * und die Antwort sagt `angefragt` — der Bildschirm wartet dann auf die
+   * Zusage (GET …/anfrage). Wer schon sitzt, kommt wie immer an seinen Platz.
+   */
+  async function stelltAnfrage(tableId: string, accountId: string): Promise<boolean> {
+    const { table, seats } = await tableWithSeats(deps.db, tableId);
+    if (!brauchtZusage(table)) return false;
+    if (seats.some((seat) => seat.accountId === accountId)) return false;
+    await stelleAnfrage(deps.db, tableId, accountId);
+    const gastgeber = gastgeberVon(seats);
+    if (gastgeber) deps.push?.anfrageGestellt(tableId, gastgeber, accountId);
+    return true;
+  }
+
+  /** Offene Beitrittsanfragen — nur der Gastgeber sieht sie. */
+  app.get('/api/tables/:tableId/anfragen', async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    const anfragen = await offeneAnfragen(deps.db, tableId, accountId);
+    return reply.send({
+      anfragen: anfragen.map((a) => ({ accountId: a.accountId, displayName: a.displayName })),
+    });
+  });
+
+  /** Der Gastgeber nimmt eine Anfrage an oder lehnt sie ab. */
+  app.post(
+    '/api/tables/:tableId/anfragen/:accountId',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const gastgeber = await requireAccount(request);
+      const { tableId, accountId } = z
+        .object({ tableId: z.string().uuid(), accountId: z.string().uuid() })
+        .parse(request.params);
+      const { annehmen } = z.object({ annehmen: z.boolean() }).parse(request.body);
+      await entscheide(deps.db, tableId, gastgeber, accountId, annehmen);
+      if (annehmen) {
+        deps.vermittlung?.verlaesstAlle(accountId);
+        // Der neue Sitz geht an alle Verbundenen, und ist der Tisch damit
+        // voll, startet die Partie von selbst — wie beim direkten Beitritt.
+        deps.runtime.notify(tableId);
+      }
+      return reply.send({ ok: true });
+    },
+  );
+
+  /** Was aus der eigenen Anfrage wurde: offen, angenommen oder abgelehnt. */
+  app.get('/api/tables/:tableId/anfrage', async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    return reply.send({ stand: await anfrageStand(deps.db, tableId, accountId) });
+  });
+
+  /** Eigene Anfrage zuruecknehmen. */
+  app.delete('/api/tables/:tableId/anfrage', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    await zieheAnfrageZurueck(deps.db, tableId, accountId);
+    return reply.send({ ok: true });
+  });
+
   app.post('/api/tables/:tableId/join', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     await pruefeBeitritt(request, tableId, accountId);
+    if (await stelltAnfrage(tableId, accountId)) {
+      return reply.send({ ok: true, angefragt: true });
+    }
     await joinTable(deps.db, tableId, accountId);
     // Wer sich an einen Tisch setzt, steht nicht mehr in der Schnellsuche.
     deps.vermittlung?.verlaesstAlle(accountId);

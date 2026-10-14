@@ -10,10 +10,9 @@ import { MeldenBlatt } from '../melden/MeldenBlatt';
 /**
  * Spielerprofil (Entwurf A — knallig, Pokal-Hero).
  *
- * Zwei getrennte Zahlenwelten, bewusst nebeneinander: Die Wertung zaehlt nur
- * Tische ohne Bots (sonst waere die Rangliste eine Bot-Farm), "gespielt"
- * zaehlt alles. Wer fuenfmal gegen Bots geuebt hat, soll kein leeres Profil
- * sehen - aber auch keine Trophaeen dafuer bekommen.
+ * Zwei getrennte Zahlenwelten, bewusst nebeneinander: Die Wertung zaehlt
+ * nicht ueberall (Gast am Tisch oder Training: nein, siehe `countsForRanking`
+ * im Server; Bots zaehlen seit dem 04.08.2026 mit), "gespielt" zaehlt alles.
  */
 export function Profile({
   accountId,
@@ -129,13 +128,11 @@ export function Profile({
           ))
         )}
 
-        {/* „zählen alles" war eine Verkürzung, die niemand so sagt — und sie
-            liess offen, was denn alles. Gemeint ist der Gegensatz zur Zeile
-            davor: Trophäen sind an Tische ohne Bots gebunden, die Zählung von
-            Partien und Siegen ist es nicht. */}
+        {/* Die Regel steht im Server (`countsForRanking`): Bots zählen seit dem
+            04.08.2026 mit, Gäste und Training nicht. Bis zum 13.10.2026 stand
+            hier noch „nur an Tischen ohne Bots". */}
         <p className="hub-statistik-hinweis">
-          Trophäen gibt es nur an Tischen ohne Bots. Partien und Siege werden
-          überall gezählt, auch gegen Bots.
+          Trophäen gibt es auch gegen Bots — nur nicht, wenn ein Gast mitspielt oder Training an ist.
         </p>
 
         <FriendButton

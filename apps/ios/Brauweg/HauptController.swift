@@ -120,6 +120,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
         view.addGestureRecognizer(wisch)
 
         Mitteilungen.shared.beiToken = { [weak self] token in self?.pushTokenMelden(token) }
+        Mitteilungen.shared.beiAntippen = { [weak self] tableId, gameId in self?.tischMelden(tableId, gameId) }
 
         netz.pathUpdateHandler = { [weak self] pfad in
             guard pfad.status == .satisfied else { return }
@@ -292,6 +293,8 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         // Ein Token, das vor dem Laden kam, geht nach jedem Laden noch einmal hin.
         if Mitteilungen.shared.gemeldet { pushTokenMelden(Mitteilungen.shared.token) }
+        // Eine Mitteilung, die die App gestartet hat, kam vor der Seite.
+        if let offen = Mitteilungen.shared.angetippt { tischMelden(offen.tableId, offen.gameId) }
     }
 
     /// WebKit hat den Inhaltsprozess beendet (Speicherdruck im Hintergrund).
@@ -355,6 +358,15 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     private func pushTokenMelden(_ token: String?) {
         guard isViewLoaded else { return }
         ansicht.evaluateJavaScript(Huelle.pushSkript(token: token), completionHandler: nil)
+    }
+
+    /// Erst nach dem Laden abgeben: Davor gibt es niemanden, der zuhoert, und
+    /// `angetippt` bleibt fuer `didFinish` stehen.
+    private func tischMelden(_ tableId: String, _ gameId: String) {
+        guard isViewLoaded, ansicht.url != nil, !ansicht.isLoading else { return }
+        ansicht.evaluateJavaScript(Huelle.tischSkript(tableId: tableId, gameId: gameId)) { _, fehler in
+            if fehler == nil { Mitteilungen.shared.angetipptAbgeholt() }
+        }
     }
 }
 

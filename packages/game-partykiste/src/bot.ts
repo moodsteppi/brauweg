@@ -264,6 +264,12 @@ export function botZug(sicht: PartykisteSicht, stufe?: BotLevel): PartykisteAkti
     case 'koenigsbecher': {
       const daten = sicht.daten;
       if (daten.hand !== null) return { art: 'hochzeigen' };
+      if (daten.offeneKarte !== null) {
+        /* Auf die Flasche legen: Wie ruhig die Hand ist, sagt die Spielstaerke. */
+        const zittern = flaschenZittern(stufe);
+        const r = strom(sicht, `flasche-${daten.gelegt}`)();
+        return { art: 'legen', versatz: (r * 2 - 1) * zittern };
+      }
       if (daten.wahlOffen) {
         const moeglich = ziele(sicht);
         if (moeglich.length === 0) return { art: 'ziehen' };
@@ -271,6 +277,23 @@ export function botZug(sicht: PartykisteSicht, stufe?: BotLevel): PartykisteAkti
       }
       return { art: 'ziehen' };
     }
+  }
+}
+
+/**
+ * Koenigsbecher: wie weit ein Bot beim Legen hoechstens neben die Mitte
+ * trifft. Ein Anfaenger wirft den Stapel gern um, ein Genie fast nie.
+ */
+function flaschenZittern(stufe: BotLevel | undefined): number {
+  switch (stufe) {
+    case 'anfaenger':
+      return 0.85;
+    case 'experte':
+      return 0.3;
+    case 'genie':
+      return 0.15;
+    default:
+      return 0.55;
   }
 }
 

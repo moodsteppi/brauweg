@@ -1101,6 +1101,25 @@ export const pushEinstellung = pgTable('push_einstellung', {
   geaendert: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Offene Beitrittsanfragen an Tischen, die nicht oeffentlich sind (Migration
+ * 0033). Angenommen oder abgelehnt, verschwindet die Zeile; was daraus wurde,
+ * zeigt der Sitz. Regeln in tables/anfragen.ts.
+ */
+export const tischAnfrage = pgTable(
+  'tisch_anfrage',
+  {
+    tischId: uuid()
+      .notNull()
+      .references(() => gameTable.id, { onDelete: 'cascade' }),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    erstellt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.tischId, t.accountId] })],
+);
+
 // ---------------------------------------------------------------------------
 // Trophaeen
 // ---------------------------------------------------------------------------

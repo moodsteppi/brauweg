@@ -6,6 +6,8 @@
  * zweites Woerterbuch und kein Umbau.
  */
 
+import { inApp } from './laufzeit';
+
 const de: Record<string, string> = {
   'game.doppelkopf': 'Doppelkopf',
   // Das Spiel heisst international "Wizard" und ist als Marke eingetragen
@@ -193,6 +195,9 @@ const de: Record<string, string> = {
   'error.internal': 'Da ist etwas schiefgelaufen.',
   'error.clubRequired': 'Für einen Clantisch brauchst du einen Clan.',
   'error.notClubMember': 'Diesen Tisch sehen nur Clanmitglieder.',
+  // Beitritt mit Zusage (tables/anfragen.ts im Server).
+  'error.notHost': 'Über Anfragen entscheidet nur, wer den Tisch aufgemacht hat.',
+  'error.anfrageUnbekannt': 'Diese Anfrage gibt es nicht mehr.',
   'error.pauseClubOnly': 'Pausieren geht nur an Clantischen.',
   'error.partyPaused': 'Der Tisch ist pausiert. Erst fortsetzen.',
   'error.clubUnknown': 'Diesen Clan gibt es nicht.',
@@ -675,7 +680,9 @@ const de: Record<string, string> = {
   'einladung.kopiert': 'Link kopiert — jetzt in den Gruppenchat einfügen.',
   'einladung.nichtKopiert': 'Kopieren ging nicht. Der Link steht unter dem QR-Code.',
   'einladung.qrAria': 'QR-Code des Einladungslinks',
-  'einladung.vorgemerkt': 'Du bist an einen Tisch eingeladen. Melde dich an oder spiel als Gast — danach sitzt du direkt dort.',
+  // „sitzt du direkt dort" stimmte nicht mehr, seit private Kartentische eine
+  // Zusage des Gastgebers verlangen (tables/anfragen.ts, 13.10.2026).
+  'einladung.vorgemerkt': 'Du bist an einen Tisch eingeladen. Melde dich an oder spiel als Gast — danach geht es zum Tisch.',
   'einladung.laeuft': 'Du wirst an den Tisch gesetzt …',
   'einladung.eingabeTitel': 'Mit Code beitreten',
   'einladung.eingabeAria': 'Beitrittscode eingeben',
@@ -725,8 +732,21 @@ export function gameTypeLabel(gameType: { kind: string; solo?: string }): string
   return t(`spielart.${gameType.kind}`);
 }
 
+/**
+ * Was in der App anders heisst als auf der Webseite.
+ *
+ * Filler heisst in der App „Farbduell" (Emile, 13.10.2026, erste
+ * iOS-Fassung): Unter „Filler" steht im App Store schon ein bekanntes Spiel.
+ * Die Kennung `filler` bleibt, sie steht in Datenbankzeilen und Nachrichten.
+ * Hier und nicht am Bildschirm, damit Auswahl, Rangliste, Profil und Tisch
+ * denselben Namen zeigen; den Push-Text fuehrt `SPIELNAMEN` im Server.
+ */
+const APP_NAMEN: Record<string, string> = {
+  'game.filler': 'Farbduell',
+};
+
 export function t(key: string): string {
-  return de[key] ?? key;
+  return (inApp ? APP_NAMEN[key] : undefined) ?? de[key] ?? key;
 }
 
 const SUITS: Record<string, string> = { C: '♣', S: '♠', H: '♥', D: '♦' };
