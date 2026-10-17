@@ -98,6 +98,7 @@ export function SpieleNeu({
   onSolo,
   onBald,
   onSammlung,
+  onLernen,
 }: {
   me: Me;
   /** Das Spiel, dessen Spielseite offen ist, oder null für die Übersicht. */
@@ -107,6 +108,8 @@ export function SpieleNeu({
   onSolo: (modusId: string) => void;
   onBald: (name: string) => void;
   onSammlung: () => void;
+  /** „Doppelkopf lernen" auf der Doppelkopf-Seite — nur in der App gesetzt. */
+  onLernen?: () => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[] | null>(null);
   const [voted, setVoted] = useState<Set<string>>(new Set());
@@ -144,6 +147,7 @@ export function SpieleNeu({
         onZurueck={() => onOeffne(null)}
         onZumSpiel={() => onPick(offenesSpiel.id)}
         onSammlung={onSammlung}
+        onLernen={offenesSpiel.id === 'doppelkopf' ? onLernen : undefined}
       />
     );
   }
@@ -439,12 +443,14 @@ function SpielSeite({
   onZurueck,
   onZumSpiel,
   onSammlung,
+  onLernen,
 }: {
   game: GameSummary;
   me: Me;
   onZurueck: () => void;
   onZumSpiel: () => void;
   onSammlung: () => void;
+  onLernen?: () => void;
 }): React.JSX.Element {
   const [rangliste, setRangliste] = useState<RankingEntry[] | null>(null);
   useEffect(() => {
@@ -542,6 +548,11 @@ function SpielSeite({
         <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onZumSpiel}>
           Zum Spiel
         </button>
+        {onLernen && (
+          <button type="button" className="hb-kn is-stimme is-haupt is-breit" onClick={onLernen}>
+            Doppelkopf lernen
+          </button>
+        )}
 
         {MIT_THEMEN.has(game.id) && (
           <section className="hb-blk">

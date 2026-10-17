@@ -12,6 +12,7 @@
 
 import type { Bemalung } from './bemalung';
 import type { BotLevel } from './protocol';
+import type { Lektion, LernpfadAnsicht, LernserieKurz, Spieltag } from './lernen/sicht';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
 
 export class ApiError extends Error {
@@ -161,6 +162,11 @@ export interface Me {
      */
     weg?: number;
   };
+  /**
+   * Die Lernserie „Doppelkopf lernen" (Server, lernpfad.ts) — fuer die Flamme
+   * auf dem Start. Optional aus demselben Grund wie `bereit.weg`.
+   */
+  lernen?: LernserieKurz;
   /**
    * Stufe und Fortschritt, fertig gerechnet vom Server.
    *
@@ -1035,6 +1041,13 @@ export const api = {
     request<{ stand: 'offen' | 'angenommen' | 'abgelehnt' }>(`/tables/${id}/anfrage`),
   zieheAnfrageZurueck: (id: string) =>
     request<{ ok: true }>(`/tables/${id}/anfrage`, { method: 'DELETE' }),
+  /** Doppelkopf lernen: Pfad, erledigte Lektionen und Serie (lernen/sicht.ts). */
+  lernpfad: () => request<LernpfadAnsicht>('/lernpfad'),
+  lektion: (id: string) => request<Lektion>(`/lernpfad/lektion/${encodeURIComponent(id)}`),
+  /** Lektion geschafft — zaehlt als Spieltag der Serie. */
+  lektionFertig: (id: string) => post<Spieltag>(`/lernpfad/lektion/${encodeURIComponent(id)}/fertig`),
+  /** Uebungsrunde gegen drei Anfaenger-Bots; endet nach einer Runde. */
+  lernUebung: () => post<{ tableId: string }>('/lernpfad/uebung'),
   /**
    * Der Tisch hinter einem Beitrittscode — zum Ansehen, ohne beizutreten.
    *

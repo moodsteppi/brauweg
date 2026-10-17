@@ -34,6 +34,8 @@ import {
   cardImage,
   deckBack,
   deckById,
+  deckForGame,
+  deckMitRuecken,
   decksFor,
   rueckenBild,
   type Deck,
@@ -95,6 +97,8 @@ const Avatar3D = lazy(() => import('../Avatar3D'));
 const Avatarwerkstatt = lazy(() =>
   import('./Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
 );
+/** „Doppelkopf lernen" — nur in der App und erst beim Oeffnen nachgeladen. */
+const Lernpfad = lazy(() => import('../lernen/Lernpfad').then((m) => ({ default: m.Lernpfad })));
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -196,6 +200,9 @@ export function GameSelect({
   const [schrankOffen, setSchrankOffen] = useState(false);
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
   const [werkstattOffen, setWerkstattOffen] = useState(false);
+  /** Doppelkopf lernen (nur App): Lernpfad als Vollbild. */
+  const [lernenOffen, setLernenOffen] = useState(false);
+  const oeffneLernen = inApp && hubNeu ? () => setLernenOffen(true) : undefined;
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   /**
@@ -392,6 +399,7 @@ export function GameSelect({
             onSolo={onSolo}
             onBald={setBald}
             onSammlung={() => setTab('blatt')}
+            onLernen={oeffneLernen}
           />
         );
       case 'spielen':
@@ -414,6 +422,7 @@ export function GameSelect({
               }}
               onHeute={() => setAufgabenOffen(true)}
               onWeg={() => setWegOffen(true)}
+              onLernen={oeffneLernen}
             />
           );
         }
@@ -542,6 +551,28 @@ export function GameSelect({
               // Neu laden, damit die Figur im Profil sofort so aussieht wie
               // gerade gespeichert.
               onGespeichert={() => onAvatarChange()}
+            />
+          </Suspense>
+        )}
+        {lernenOffen && (
+          <Suspense
+            fallback={
+              <div className="doko-sheet doko-sheet--mitte">
+                <Ladekreis text="Lernpfad wird geladen…" />
+              </div>
+            }
+          >
+            <Lernpfad
+              deck={deckMitRuecken(
+                deckForGame('doppelkopf', me.themes.doppelkopf?.cardDeck),
+                me.themes.doppelkopf?.cardBack,
+              )}
+              onClose={() => setLernenOffen(false)}
+              onUebung={(tableId) => {
+                setLernenOffen(false);
+                onResume('doppelkopf', tableId);
+              }}
+              onGeaendert={onAvatarChange}
             />
           </Suspense>
         )}

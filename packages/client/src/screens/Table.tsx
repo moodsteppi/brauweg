@@ -33,6 +33,9 @@ import {
 import { aktionenAufteilen, armutKartenwahl } from '../tisch-armut';
 import { useTischklang } from '../tisch/klangtisch';
 import { type ConnectionStatus, useCountdown, useTable } from '../useTable';
+import { LernTipp } from '../lernen/LernTipp';
+import { istUebung } from '../lernen/uebung';
+import { inApp } from '../laufzeit';
 
 /** Grenzen der Tischgroesse: klein genug fuer die Uebersicht, gross genug,
     dass die Karten nicht aus dem Faecher wachsen. */
@@ -1083,6 +1086,19 @@ export function Table({
           <TurnClock deadline={view.turnDeadline} />
         )}
       </div>
+
+      {/* Uebungsrunde aus dem Lernpfad: ein Satz zur Lage (lernen/LernTipp.tsx). */}
+      {view.seat !== null && inApp && istUebung(tableId) && (
+        <LernTipp
+          phase={round?.phase ?? null}
+          amZug={view.currentActor === view.seat}
+          vorbehaltGefragt={vorbehaltActions.length > 0}
+          erlaubt={playable.size}
+          handGroesse={hand.length}
+          stichLeer={liveTrick.length === 0 || liveTrick.length === seatCount}
+          partei={round?.myParty ?? null}
+        />
+      )}
 
       {view.seat !== null && (
         <div className={`doko-hand${dealing ? ' is-dealing' : ''}${handJustDealt ? ' is-dealt' : ''}`}>
