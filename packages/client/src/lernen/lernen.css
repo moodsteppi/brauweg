@@ -380,12 +380,19 @@
 :is(.hb, .spe) .ln-handkarte:active:not(:disabled) {
   transform: translateY(-6px);
 }
-:is(.hb, .spe) .ln-handkarte:disabled {
+:is(.hb, .spe) .ln-handkarte:disabled:not(.is-richtig):not(.is-falsch):not(.is-markiert) {
   opacity: 0.45;
 }
 :is(.hb, .spe) .ln-handkarte.is-richtig {
   transform: translateY(-12px);
   box-shadow: 0 0 0 4px var(--ln-richtig), 0 8px 18px rgba(72, 213, 107, 0.45);
+}
+:is(.hb, .spe) .ln-handkarte.is-markiert {
+  transform: translateY(-12px);
+  box-shadow: 0 0 0 4px var(--hb-gold), 0 8px 18px rgba(245, 192, 46, 0.4);
+}
+:is(.hb, .spe) .ln-handkarte.is-markiert:disabled {
+  opacity: 1;
 }
 :is(.hb, .spe) .ln-handkarte.is-falsch {
   box-shadow: 0 0 0 4px var(--ln-falsch);

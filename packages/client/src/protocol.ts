@@ -604,6 +604,13 @@ export interface TableMessage {
    * Bildschirm holt den Regelsatz neu. Fehlt bei älteren Servern.
    */
   regelstand?: string;
+  /**
+   * Übungstisch aus dem Lernpfad (seit dem 17.10.2026): Der Doppelkopftisch
+   * zeigt dann Tipps und „Übungsrunde". Kommt vom Server, damit es auf jedem
+   * Gerät gilt und nicht nur auf dem, das den Tisch angelegt hat. Fehlt bei
+   * älteren Servern — dann eben ein gewöhnlicher Tisch.
+   */
+  uebung?: boolean;
 }
 
 export interface PartyMessage {

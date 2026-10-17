@@ -24,7 +24,11 @@ import { LERN_NAMEN, type Lektion, type LernSchritt, type LernStichKarte, type S
  * Modul (game-doppelkopf/src/lernen.ts). Hier wird nur verglichen.
  */
 
-type Antwort = { stimmt: boolean };
+/**
+ * `fehlt`: Bei „alle antippen" war nichts Falsches dabei, aber eine erlaubte
+ * Karte fehlte noch — dann heisst es „Fast!" statt des Hinweises.
+ */
+type Antwort = { stimmt: boolean; fehlt?: boolean };
 
 export function LektionSpieler({
   lektionId,
@@ -50,6 +54,8 @@ export function LektionSpieler({
   const [antwort, setAntwort] = useState<Antwort | null>(null);
   /** Was zuletzt getippt wurde — Kartenkennung oder Antwortnummer. */
   const [gewaehlt, setGewaehlt] = useState<number | null>(null);
+  /** „Alle antippen" (`alle` im Schritt): die markierten Karten, noch ungeprueft. */
+  const [markiert, setMarkiert] = useState<number[]>([]);
   const [fehlversuche, setFehlversuche] = useState(0);
   const [ergebnis, setErgebnis] = useState<Spieltag | null>(null);
   const [startet, setStartet] = useState(false);
@@ -101,16 +107,40 @@ export function LektionSpieler({
     spiele(stimmt ? 'stich-ein' : 'fehler');
   };
 
+  /**
+   * Alle markierten Karten auf einmal pruefen. Richtig ist es nur, wenn GENAU
+   * die erlaubten markiert sind — die Menge kommt aus der Lektion, hier wird
+   * nur verglichen.
+   */
+  const pruefeAlle = (richtig: readonly number[]): void => {
+    if (antwort?.stimmt || markiert.length === 0) return;
+    const soll = new Set(richtig);
+    const falsche = markiert.some((id) => !soll.has(id));
+    const stimmt = !falsche && markiert.length === soll.size;
+    setAntwort({ stimmt, fehlt: !stimmt && !falsche });
+    if (!stimmt) setFehlversuche((n) => n + 1);
+    spiele(stimmt ? 'stich-ein' : 'fehler');
+  };
+
+  const umschalten = (id: number): void => {
+    if (antwort) return;
+    setMarkiert((alt) => (alt.includes(id) ? alt.filter((x) => x !== id) : [...alt, id]));
+  };
+
   const weiter = (): void => {
     setAntwort(null);
     setGewaehlt(null);
+    setMarkiert([]);
     setIndex((i) => i + 1);
   };
 
+  /** Die Markierung bleibt stehen: Man soll sie verbessern, nicht neu anfangen. */
   const nochmal = (): void => {
     setAntwort(null);
     setGewaehlt(null);
   };
+
+  const mehrfach = schritt?.art === 'waehlen' && schritt.alle === true;
 
   const fortschritt = anzahl === 0 ? 0 : Math.min(1, (index + (antwort?.stimmt ? 1 : 0)) / anzahl);
 
@@ -147,10 +177,14 @@ export function LektionSpieler({
             schritt={schritt}
             deck={deck}
             gewaehlt={gewaehlt}
+            markiert={markiert}
+            antwort={antwort}
             gesperrt={antwort?.stimmt === true}
-            onKarte={(karte) =>
-              schritt.art === 'waehlen' && pruefe(schritt.richtig.includes(karte.id), karte.id)
-            }
+            onKarte={(karte) => {
+              if (schritt.art !== 'waehlen') return;
+              if (schritt.alle) umschalten(karte.id);
+              else pruefe(schritt.richtig.includes(karte.id), karte.id);
+            }}
             onAntwort={(nr) => schritt.art === 'frage' && pruefe(nr === schritt.richtig, nr)}
           />
         )}
@@ -169,12 +203,28 @@ export function LektionSpieler({
         {schritt && antwort && schritt.art !== 'erklaerung' && (
           <div className="ln-rueckmeldung" role="status">
             <strong>{antwort.stimmt ? 'Richtig!' : 'Nicht ganz'}</strong>
-            <span>{antwort.stimmt ? schritt.merke : schritt.hinweis}</span>
+            <span>
+              {antwort.stimmt
+                ? schritt.merke
+                : antwort.fehlt
+                  ? 'Fast! Eine erlaubte Karte fehlt noch.'
+                  : schritt.hinweis}
+            </span>
           </div>
         )}
         {schritt?.art === 'erklaerung' && (
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={weiter}>
             Weiter
+          </button>
+        )}
+        {mehrfach && !antwort && schritt?.art === 'waehlen' && (
+          <button
+            type="button"
+            className="hb-kn is-gold is-haupt is-breit"
+            disabled={markiert.length === 0}
+            onClick={() => pruefeAlle(schritt.richtig)}
+          >
+            {markiert.length === 0 ? 'Karten antippen' : 'Prüfen'}
           </button>
         )}
         {schritt && schritt.art !== 'erklaerung' && antwort?.stimmt && (
@@ -235,6 +285,8 @@ function SchrittAnsicht({
   schritt,
   deck,
   gewaehlt,
+  markiert,
+  antwort,
   gesperrt,
   onKarte,
   onAntwort,
@@ -242,6 +294,8 @@ function SchrittAnsicht({
   schritt: LernSchritt;
   deck: Deck;
   gewaehlt: number | null;
+  markiert: readonly number[];
+  antwort: Antwort | null;
   gesperrt: boolean;
   onKarte: (karte: Card) => void;
   onAntwort: (nr: number) => void;
@@ -266,7 +320,11 @@ function SchrittAnsicht({
           gelegt={schritt.art === 'waehlen' ? schritt.stich : schritt.stich ?? []}
           deck={deck}
           mitDir={schritt.art === 'waehlen'}
-          meine={schritt.art === 'waehlen' && gesperrt ? schritt.hand.find((k) => k.id === gewaehlt) ?? null : null}
+          meine={
+            schritt.art === 'waehlen' && gesperrt && !schritt.alle
+              ? schritt.hand.find((k) => k.id === gewaehlt) ?? null
+              : null
+          }
         />
       )}
 
@@ -275,12 +333,25 @@ function SchrittAnsicht({
           {schritt.hand.map((karte) => {
             const istGewaehlt = gewaehlt === karte.id;
             const stimmt = schritt.richtig.includes(karte.id);
+            const istMarkiert = markiert.includes(karte.id);
+            // Mehrfach: markiert ist gold; nach dem Pruefen gruen, oder rot,
+            // wenn die Karte nicht erlaubt war. Was fehlt, wird nicht verraten.
+            const klasse = schritt.alle
+              ? istMarkiert
+                ? antwort?.stimmt
+                  ? ' is-richtig'
+                  : antwort && !stimmt
+                    ? ' is-falsch'
+                    : ' is-markiert'
+                : ''
+              : `${istGewaehlt ? (stimmt ? ' is-richtig' : ' is-falsch') : ''}${istGewaehlt && stimmt && gesperrt ? ' is-gelegt' : ''}`;
             return (
               <button
                 type="button"
                 key={karte.id}
-                className={`ln-handkarte${istGewaehlt ? (stimmt ? ' is-richtig' : ' is-falsch') : ''}${istGewaehlt && stimmt && gesperrt ? ' is-gelegt' : ''}`}
-                disabled={gesperrt && !istGewaehlt}
+                className={`ln-handkarte${klasse}`}
+                aria-pressed={schritt.alle ? istMarkiert : undefined}
+                disabled={schritt.alle ? antwort !== null : gesperrt && !istGewaehlt}
                 onClick={() => {
                   spiele('karte-legen');
                   onKarte(karte);

@@ -45,6 +45,7 @@ Hochzeit, Armut und Soli werden nur erwähnt („lernst du am Tisch kennen").
 | Serie, Wochenschutz, Outfit, Erinnerung | `packages/server/src/lernpfad.ts` | Kalender (Berlin) und Besitz sind Serversache. |
 | Endpunkte | `packages/server/src/http/lernpfad-routen.ts` | `GET /api/lernpfad`, `GET …/lektion/:id`, `POST …/lektion/:id/fertig`, `POST /api/lernpfad/uebung` |
 | Übungstisch | `uebung` in den Tischfiltern, `runtime/party.ts` | endet nach der ersten Runde (`endAfterRound`), zählt dann `uebungGespielt` für jeden Menschen am Tisch |
+| Tipps am Tisch | `uebung` in der Tischnachricht (`realtime/gateway.ts`), `screens/Table.tsx`, `lernen/LernTipp.tsx` | seit dem 17.10.2026 vom Server, also auf jedem Gerät — vorher ein Merkzettel nur auf dem Gerät, das den Tisch angelegt hatte |
 | Tabelle | `drizzle/0034_lernpfad.sql` | eine Zeile je Konto |
 | Bildschirme | `packages/client/src/lernen/` | Lernpfad, LektionSpieler, LernKarte, LernTipp, Feier |
 | Outfit | `kosmetik.ts` (`LERN_OUTFIT`, Herkunft Geschenk), `pinguin.tsx` (Zeichnung) | gemalte Bilder bestellt in `docs/ASSETS-DOKO-MEISTER.md` |
@@ -65,9 +66,6 @@ Hochzeit, Armut und Soli werden nur erwähnt („lernst du am Tisch kennen").
 
 ## Offen
 
-- Die Übungsrunde zeigt die Tipps nur auf dem Gerät, das den Tisch geöffnet
-  hat (`lernen/uebung.ts`, Merkzettel im Gerät). Der Server weiß es zwar
-  (`uebung`), schickt es aber nicht in der Tischnachricht mit.
 - Die 3D-Figur im Profil trägt das Outfit nicht — sie hat bisher nur für die
   Wollmütze ein Modell (`docs/ASSETS-3D-ZUBEHOER.md`).
 - Website: nicht freigeschaltet; die Schalter hängen an `inApp`
