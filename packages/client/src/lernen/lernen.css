@@ -89,9 +89,6 @@
   background: linear-gradient(180deg, var(--ln-flamme-hoch), var(--ln-flamme-tief));
   border-color: transparent;
 }
-.ln-punkte li:last-child {
-  background-image: none;
-}
 .ln-punkte li:last-child:not(.is-voll) {
   border-color: var(--hb-gold-tief);
   color: var(--hb-gold);
