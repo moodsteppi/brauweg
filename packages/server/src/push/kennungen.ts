@@ -13,7 +13,9 @@
 // `anfrage` seit dem 13.10.2026: jemand moechte an einen nicht-oeffentlichen
 // Tisch (tables/anfragen.ts). Angehaengt, nicht eingereiht — die Reihenfolge
 // ist egal, aber eine neue Kennung ist fuer alle Konten von selbst an.
-export const ANLAESSE = ['dran', 'start', 'einladung', 'anfrage'] as const;
+// `serie` seit dem 17.10.2026: Abend-Erinnerung an die Lernserie, wenn heute
+// noch keine Lektion lief (lernpfad.ts) — gehoert zu keinem Tisch.
+export const ANLAESSE = ['dran', 'start', 'einladung', 'anfrage', 'serie'] as const;
 export type Anlass = (typeof ANLAESSE)[number];
 
 export function istAnlass(wert: unknown): wert is Anlass {

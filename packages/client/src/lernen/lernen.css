@@ -1,0 +1,688 @@
+/*
+ * Doppelkopf lernen (Lernpfad.tsx, LektionSpieler.tsx, LernKarte.tsx, LernTipp.tsx).
+ *
+ * Farben aus dem Hub (hub-neu.css, Nachtblau & Gold). Dazu kommen nur die
+ * Flamme und die beiden Rueckmeldefarben — Gruen fuer richtig, Rot fuer
+ * nicht ganz — als eigene Variablen, damit sie nirgends als Hex im Code stehen.
+ */
+
+:is(.hb, .spe, .doko-table, body) {
+  --ln-flamme-hoch: #ffd75a;
+  --ln-flamme-tief: #f0641e;
+  --ln-flamme-kern-hoch: #fff6c8;
+  --ln-flamme-kern-tief: #ffb12e;
+  --ln-richtig: #48d56b;
+  --ln-richtig-tief: #1f7a3a;
+  --ln-falsch: #ff6b74;
+  --ln-falsch-tief: #8f2730;
+  --ln-filz: #1d5a35;
+  --ln-filz-tief: #12391f;
+}
+
+.ln-flamme {
+  display: inline-block;
+  flex: none;
+  filter: drop-shadow(0 2px 6px rgba(240, 100, 30, 0.45));
+}
+.ln-flamme.is-aus {
+  filter: grayscale(1) brightness(0.85);
+  opacity: 0.55;
+}
+
+/* ---------- Pfad ---------- */
+
+.ln .ln-pill {
+  gap: 4px;
+  padding: 0 12px 0 8px;
+  font: 400 18px var(--hb-anz);
+  color: var(--hb-gold-hell);
+}
+
+.ln-serie {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, var(--hb-karte-hoch), var(--hb-karte));
+  border: 1px solid var(--hb-kontur);
+}
+.ln-serie-kopf {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ln-serie-kopf > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ln-serie-zahl {
+  font: 400 30px/1 var(--hb-anz);
+  color: var(--hb-tinte);
+}
+.ln-serie-text {
+  font: 700 14px/1.3 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.ln-punkte {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ln-punkte li {
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 800 13px var(--hb-txt);
+  color: var(--hb-gesperrt);
+  background: var(--hb-grund-tief);
+  border: 1px solid var(--hb-kontur);
+}
+.ln-punkte li.is-voll {
+  color: var(--hb-grund);
+  background: linear-gradient(180deg, var(--ln-flamme-hoch), var(--ln-flamme-tief));
+  border-color: transparent;
+}
+.ln-punkte li:last-child:not(.is-voll) {
+  border-color: var(--hb-gold-tief);
+  color: var(--hb-gold);
+}
+.ln-schutz {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 700 12px/1.3 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.ln-schutz .hb-ic {
+  width: 18px;
+  height: 18px;
+  color: var(--hb-gold);
+  flex: none;
+}
+
+.ln-belohnung {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px 10px 6px;
+  border-radius: 20px;
+  background: radial-gradient(circle at 18% 50%, rgba(245, 192, 46, 0.22), transparent 55%), var(--hb-karte);
+  border: 1px solid var(--hb-gold-tief);
+}
+.ln-belohnung > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ln-belohnung strong {
+  font: 400 22px/1.1 var(--hb-anz);
+}
+.ln-belohnung:not(.is-frei) .pinguin {
+  filter: saturate(0.85);
+}
+
+.ln-pfad {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ln-station {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ln-station.is-mitte {
+  padding-left: 44px;
+}
+.ln-station.is-rechts {
+  padding-left: 88px;
+}
+:is(.hb, .spe) .ln-knoten {
+  position: relative;
+  flex: none;
+  width: 74px;
+  height: 70px;
+  border-radius: 50%;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hb-grund);
+  font: 400 28px var(--hb-anz);
+  background: radial-gradient(circle at 50% 35%, var(--hb-gold-hell), var(--hb-gold-tief));
+  box-shadow: 0 7px 0 #a86f0c, 0 10px 18px rgba(0, 0, 0, 0.35);
+  transition: transform 0.12s ease;
+}
+:is(.hb, .spe) .ln-knoten:active:not(:disabled) {
+  transform: translateY(5px);
+  box-shadow: 0 2px 0 #a86f0c;
+}
+:is(.hb, .spe) .ln-knoten.is-erledigt {
+  background: radial-gradient(circle at 50% 35%, #7ce48f, var(--ln-richtig-tief));
+  color: #fff;
+  box-shadow: 0 7px 0 #165a2a, 0 10px 18px rgba(0, 0, 0, 0.35);
+}
+:is(.hb, .spe) .ln-knoten.is-gesperrt {
+  background: var(--hb-karte-hoch);
+  color: var(--hb-gesperrt);
+  box-shadow: 0 7px 0 var(--hb-grund-tief);
+}
+:is(.hb, .spe) .ln-knoten-inhalt {
+  display: flex;
+}
+:is(.hb, .spe) .ln-knoten-inhalt svg {
+  width: 30px;
+  height: 30px;
+}
+:is(.hb, .spe) .ln-knoten.is-aktuell::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 4px solid var(--hb-gold);
+  opacity: 0.8;
+  animation: ln-puls 1.6s ease-out infinite;
+}
+.ln-start {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--hb-tinte);
+  color: var(--hb-grund);
+  font: 800 13px var(--hb-txt);
+  white-space: nowrap;
+}
+.ln-start::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  margin-left: -5px;
+  border: 5px solid transparent;
+  border-bottom: 0;
+  border-top-color: var(--hb-tinte);
+}
+.ln-station-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ln-station-text strong {
+  font: 800 16px/1.2 var(--hb-txt);
+}
+.ln-station-text span {
+  font: 700 12px/1.3 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.ln-weiter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+.ln-weiter strong {
+  font: 400 20px var(--hb-anz);
+}
+
+@keyframes ln-puls {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+/* ---------- Lektion ---------- */
+
+.ln-lektion {
+  z-index: 50;
+  background: radial-gradient(120% 60% at 50% 0%, #1b3170, #0a1734 60%);
+}
+.ln-lektion-kopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  padding: calc(var(--hb-oben) + 6px) 16px 10px;
+}
+.ln-balken {
+  flex: 1;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--hb-grund-tief);
+  border: 1px solid var(--hb-kontur);
+  overflow: hidden;
+}
+.ln-balken span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, #7ce48f, var(--ln-richtig));
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35);
+  transition: width 0.35s ease;
+}
+.ln-lektion-rolle {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 16px 16px;
+}
+.ln-schritt {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: ln-rein 0.25s ease-out;
+}
+.ln-text {
+  margin: 0;
+  font: 800 21px/1.35 var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.ln-karte {
+  --ln-k: 62px;
+  width: var(--ln-k);
+  height: calc(var(--ln-k) * 1.452);
+  flex: none;
+}
+.ln-reihe {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.ln-reihe.is-dicht {
+  gap: 5px;
+}
+.ln-reihe.is-dicht .ln-karte {
+  --ln-k: 46px;
+}
+.ln-filz {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 10px 10px;
+  border-radius: 20px;
+  background: radial-gradient(circle at 50% 30%, var(--ln-filz), var(--ln-filz-tief));
+  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.25), inset 0 2px 14px rgba(0, 0, 0, 0.4);
+}
+.ln-gelegt {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.ln-gelegt .ln-karte {
+  --ln-k: 58px;
+}
+.ln-gelegt figcaption {
+  font: 800 12px var(--hb-txt);
+  color: #d9f2df;
+}
+.ln-platz {
+  width: 58px;
+  height: calc(58px * 1.452);
+  border-radius: 0.32rem;
+  border: 2px dashed rgba(255, 255, 255, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 26px var(--hb-anz);
+  color: rgba(255, 255, 255, 0.6);
+}
+.ln-hand {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+:is(.hb, .spe) .ln-handkarte {
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 0.45rem;
+  transition: transform 0.15s ease;
+}
+:is(.hb, .spe) .ln-handkarte .ln-karte {
+  --ln-k: 72px;
+}
+/* Die richtige Karte liegt jetzt im Stich — in der Hand bleibt ihr Platz frei. */
+:is(.hb, .spe) .ln-handkarte.is-gelegt {
+  visibility: hidden;
+}
+.ln-gelegt.is-meine .ln-karte {
+  box-shadow: 0 0 0 3px var(--ln-richtig), 0 6px 16px rgba(0, 0, 0, 0.4);
+  animation: ln-ablegen 0.3s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+:is(.hb, .spe) .ln-handkarte:active:not(:disabled) {
+  transform: translateY(-6px);
+}
+:is(.hb, .spe) .ln-handkarte:disabled {
+  opacity: 0.45;
+}
+:is(.hb, .spe) .ln-handkarte.is-richtig {
+  transform: translateY(-12px);
+  box-shadow: 0 0 0 4px var(--ln-richtig), 0 8px 18px rgba(72, 213, 107, 0.45);
+}
+:is(.hb, .spe) .ln-handkarte.is-falsch {
+  box-shadow: 0 0 0 4px var(--ln-falsch);
+  animation: ln-wackeln 0.35s ease;
+}
+:is(.hb, .spe) .ln-antworten {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+:is(.hb, .spe) .ln-antworten.is-raster {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+:is(.hb, .spe) .ln-antwort {
+  min-height: 56px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 2px solid var(--hb-kontur);
+  background: var(--hb-karte);
+  color: var(--hb-tinte);
+  font: 800 18px var(--hb-txt);
+  box-shadow: 0 4px 0 var(--hb-grund-tief);
+}
+:is(.hb, .spe) .ln-antwort:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--hb-grund-tief);
+}
+:is(.hb, .spe) .ln-antwort:disabled {
+  opacity: 0.5;
+}
+:is(.hb, .spe) .ln-antwort.is-richtig {
+  border-color: var(--ln-richtig);
+  background: var(--ln-richtig-tief);
+  opacity: 1;
+}
+:is(.hb, .spe) .ln-antwort.is-falsch {
+  border-color: var(--ln-falsch);
+  background: var(--ln-falsch-tief);
+  animation: ln-wackeln 0.35s ease;
+}
+
+.ln-fuss {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px calc(16px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
+  border-top: 1px solid var(--hb-kontur);
+  background: var(--hb-grund);
+  transition: background 0.2s ease;
+}
+.ln-fuss.is-richtig {
+  background: #123d24;
+  border-top-color: var(--ln-richtig);
+}
+.ln-fuss.is-falsch {
+  background: #43161c;
+  border-top-color: var(--ln-falsch);
+}
+.ln-rueckmeldung {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: ln-rein 0.2s ease-out;
+}
+.ln-rueckmeldung strong {
+  font: 400 22px var(--hb-anz);
+}
+.ln-fuss.is-richtig .ln-rueckmeldung strong {
+  color: var(--ln-richtig);
+}
+.ln-fuss.is-falsch .ln-rueckmeldung strong {
+  color: var(--ln-falsch);
+}
+.ln-rueckmeldung span {
+  font: 700 15px/1.35 var(--hb-txt);
+  color: var(--hb-tinte);
+}
+:is(.hb, .spe) .hb-kn.ln-kn-gruen {
+  background: linear-gradient(180deg, #7ce48f, var(--ln-richtig));
+  color: #06240f;
+  box-shadow: inset 0 -4px 0 rgba(0, 60, 20, 0.35), 0 4px 0 rgba(0, 0, 0, 0.3);
+}
+:is(.hb, .spe) .hb-kn.ln-kn-rot {
+  background: linear-gradient(180deg, #ff8d94, var(--ln-falsch));
+  color: #3a0a0f;
+  box-shadow: inset 0 -4px 0 rgba(90, 0, 10, 0.35), 0 4px 0 rgba(0, 0, 0, 0.3);
+}
+:is(.hb, .spe) .hb-kn.ln-kn-leise {
+  background: transparent;
+  color: var(--hb-leise);
+  border: 1px solid var(--hb-kontur);
+}
+
+.ln-ende {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding-top: 16px;
+  animation: ln-rein 0.3s ease-out;
+}
+.ln-ende h2 {
+  margin: 0;
+  font: 400 30px var(--hb-anz);
+}
+.ln-ende p {
+  margin: 0;
+  font: 700 16px/1.4 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.ln-ende-bild {
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 20px;
+}
+.ln-feier-flamme {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  animation: ln-auflodern 0.7s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.ln-feier-zahl {
+  font: 400 64px/1 var(--hb-anz);
+  color: var(--hb-gold-hell);
+  text-shadow: 0 4px 0 rgba(140, 50, 0, 0.55);
+}
+.ln-feier-pinguin {
+  animation: ln-auflodern 0.8s cubic-bezier(0.2, 1.4, 0.4, 1);
+  filter: drop-shadow(0 10px 30px rgba(245, 192, 46, 0.45));
+}
+.ln-fehlerzahl {
+  font: 800 13px var(--hb-txt) !important;
+  color: var(--hb-gold) !important;
+}
+
+@keyframes ln-rein {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ln-ablegen {
+  from {
+    transform: translateY(60px) scale(1.15);
+    opacity: 0.4;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes ln-wackeln {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+@keyframes ln-auflodern {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ---------- Start: die Lernkarte ---------- */
+
+.hb-start .ln-startkarte {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--hb-gold-tief);
+  background: radial-gradient(circle at 12% 50%, rgba(240, 100, 30, 0.25), transparent 50%), var(--hb-karte);
+  color: var(--hb-tinte);
+  text-align: left;
+}
+.ln-startkarte-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.ln-startkarte-text strong {
+  font: 400 20px/1.1 var(--hb-anz);
+}
+.ln-startkarte-punkte {
+  display: flex;
+  gap: 4px;
+}
+.ln-startkarte-punkte i {
+  width: 18px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--hb-grund-tief);
+}
+.ln-startkarte-punkte i.is-voll {
+  background: linear-gradient(90deg, var(--ln-flamme-tief), var(--ln-flamme-hoch));
+}
+.ln-startkarte-zahl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font: 400 20px/1 var(--hb-anz);
+  color: var(--hb-gold-hell);
+}
+
+/* ---------- Tipp am Uebungstisch ---------- */
+
+.ln-tipp {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(13.5rem + env(safe-area-inset-bottom, 0px));
+  max-width: 480px;
+  margin: 0 auto;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(10, 23, 52, 0.88);
+  border: 1px solid rgba(245, 192, 46, 0.6);
+  color: #f3f5ff;
+  font: 700 14px/1.35 'Nunito Variable', 'Nunito', system-ui, sans-serif;
+  pointer-events: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  animation: ln-rein 0.25s ease-out;
+}
+.ln-tipp b {
+  color: #ffd75a;
+}
+.ln-tipp-symbol {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5c02e;
+  color: #0e1a3d;
+  font: 900 17px system-ui;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ln-knoten.is-aktuell::after,
+  .ln-schritt,
+  .ln-rueckmeldung,
+  .ln-ende,
+  .ln-feier-flamme,
+  .ln-feier-pinguin,
+  .ln-handkarte.is-falsch,
+  .ln-antwort.is-falsch,
+  .ln-gelegt.is-meine .ln-karte,
+  .ln-tipp {
+    animation: none;
+  }
+}
+
+/* Uebungstisch beim Bedienen: Die nicht erlaubten Karten treten zurueck
+   (der Tisch selbst markiert sie nur fuer Vorlesegeraete, `aria-disabled`). */
+.doko:has(.ln-tipp[data-bedienen]) .doko-handcard[aria-disabled='true'] .pc {
+  filter: brightness(0.5) saturate(0.6);
+}
+
+/* Die Feier hat keinen Kopf: Abstand zur Statusleiste selbst, Inhalt mittig. */
+.ln-feier {
+  min-height: 100%;
+  justify-content: center;
+  padding-top: calc(var(--hb-oben) + 12px);
+}
+.ln-lektion-rolle:has(.ln-feier) {
+  display: flex;
+  flex-direction: column;
+}

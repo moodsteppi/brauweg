@@ -54,6 +54,8 @@ import { anbieterRouten } from './anbieter-routen.js';
 import { type AppVerknuepfung, appVerknuepfungRouten } from './app-verknuepfung.js';
 import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
 import { partykisteRouten } from './partykiste-routen.js';
+import { lernpfadRouten } from './lernpfad-routen.js';
+import { lernserieKurz } from '../lernpfad.js';
 import { pushRouten } from './push-routen.js';
 import type { PushAnlaesse } from '../push/anlaesse.js';
 import { verifyPassword } from '../auth/secrets.js';
@@ -847,6 +849,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
+  // Doppelkopf lernen: Lernpfad, Lektionen, Uebungstisch — siehe dort.
+  lernpfadRouten(app, {
+    db: deps.db,
+    requireAccount,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
   pushRouten(app, {
     db: deps.db,
     requireSitzung: async (request) => {
@@ -1048,10 +1058,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
      * nicht. Die Trophaeensumme kommt aus der schon geladenen Statistik.
      */
     const trophaeen = stats.reduce((summe, zeile) => summe + zeile.trophies, 0);
-    const [truhenOffen, belohnungenOffen, wegOffen] = await Promise.all([
+    const [truhenOffen, belohnungenOffen, wegOffen, lernen] = await Promise.all([
       offeneTruhen(deps.db, accountId, account.xp),
       offeneBelohnungen(deps.db, accountId),
       offeneWegBelohnungen(deps.db, accountId, trophaeen),
+      lernserieKurz(deps.db, accountId),
     ]);
     return reply.send({
       ...rest,
@@ -1078,6 +1089,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
        */
       figur: leseBemalung(figurBemalung),
       bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen, weg: wegOffen },
+      /** Die Lernserie fuer die Flamme auf dem Start (lernpfad.ts) — nur die Zahlen. */
+      lernen,
       /*
        * Stufe und Fortschritt fertig gerechnet. Der Client bekommt die
        * Zahlen, nicht die Kurve: Wird sie je nachjustiert, gilt das

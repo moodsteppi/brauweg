@@ -59,6 +59,12 @@ export interface CreateTableInput {
    * Partiestart uebernommen. Fehlt sie, gilt die Vorgabe (`tableBotLevel`).
    */
   readonly botLevel?: BotLevel;
+  /**
+   * Uebungsrunde aus dem Lernpfad (lernpfad.ts): Die Partie endet nach der
+   * ersten abgerechneten Runde, und diese Runde zaehlt fuer die Lernserie.
+   * Steht wie die Bot-Stufe in den Tischfiltern.
+   */
+  readonly uebung?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -299,6 +305,7 @@ export async function createTable(db: Db, input: CreateTableInput) {
         botLevel: BOT_LEVELS.includes(input.botLevel as BotLevel)
           ? input.botLevel
           : DEFAULT_BOT_LEVEL,
+        ...(input.uebung ? { uebung: true } : {}),
       },
     })
     .returning();
@@ -771,6 +778,11 @@ const BOT_LEVELS: readonly BotLevel[] = ['anfaenger', 'standard', 'experte', 'ge
  * Server — so kostet sie keine Migration. Fehlt sie (alte Tische), gilt die
  * Vorgabe.
  */
+/** Uebungstisch aus dem Lernpfad? Siehe `CreateTableInput.uebung`. */
+export function istUebungstisch(filters: unknown): boolean {
+  return (filters as { uebung?: unknown } | null)?.uebung === true;
+}
+
 export function tableBotLevel(filters: unknown): BotLevel {
   const lvl = (filters as { botLevel?: unknown } | null)?.botLevel;
   return BOT_LEVELS.includes(lvl as BotLevel) ? (lvl as BotLevel) : DEFAULT_BOT_LEVEL;

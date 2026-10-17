@@ -1,5 +1,6 @@
 import type { ActiveTable, Me } from '../api';
 import { t } from '../i18n';
+import { LernKarte } from '../lernen/LernKarte';
 import { BIOME } from './Pfad';
 
 /**
@@ -40,6 +41,7 @@ export function StartNeu({
   onAlleSpiele,
   onHeute,
   onWeg,
+  onLernen,
 }: {
   me: Me;
   trophies: number;
@@ -54,6 +56,8 @@ export function StartNeu({
   onHeute: () => void;
   /** Öffnet den Trophäenweg als Vollbild. */
   onWeg: () => void;
+  /** „Doppelkopf lernen" — nur in der App gesetzt; ohne steht keine Lernkarte da. */
+  onLernen?: () => void;
 }): React.JSX.Element {
   const stufe = [...BIOME].reverse().find((b) => trophies >= b.cp) ?? BIOME[0]!;
   const naechstes = BIOME.find((b) => b.cp > trophies) ?? null;
@@ -136,6 +140,8 @@ export function StartNeu({
           </span>
         </button>
       )}
+
+      {onLernen && <LernKarte serie={me.lernen} onOeffnen={onLernen} />}
 
       <section className="hb-blk">
         <h2 className="hb-ab">

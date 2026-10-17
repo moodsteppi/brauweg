@@ -16,6 +16,8 @@ export * from './schmeiss.js';
 export * from './round.js';
 export * from './party.js';
 export * from './bot.js';
+// Der Lernpfad: Lektionen, deren Antworten diese Engine ausrechnet (lernen.ts).
+export * from './lernen.js';
 
 // Das Spielmodul selbst. Fuer die Plattform ist dies der einzige Einstieg;
 // alles darueber ist die Engine, die nur der Adapter braucht.
