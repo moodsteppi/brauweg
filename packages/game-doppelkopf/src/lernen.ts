@@ -64,6 +64,13 @@ export type LernSchritt =
       readonly hand: readonly Card[];
       readonly stich: readonly LernStichKarte[];
       readonly richtig: readonly number[];
+      /**
+       * ALLE richtigen Karten antippen, dann pruefen — statt einer einzigen.
+       * Fuer „Was darfst du legen?": Wer nur eine von zwei erlaubten Karten
+       * findet, hat die Regel erst halb (Emile, 17.10.2026). Fehlt das Feld,
+       * reicht eine richtige Karte (stechen, Fuchs legen — dort legt man eine).
+       */
+      readonly alle?: true;
       /** Steht da, wenn die falsche Karte getippt wurde. */
       readonly hinweis: string;
       /** Steht da, wenn es stimmt — der Satz, den man mitnehmen soll. */
@@ -227,13 +234,16 @@ function legeErlaubt(
   merke: string,
 ): LernSchritt {
   const sortierteHand = sortiert(hand);
+  const darf = ids(erlaubt(sortierteHand, gelegt));
   return {
     art: 'waehlen',
     titel: 'Was darfst du legen?',
-    text,
+    // Wie viele es sind, sagt die Engine — der Satz passt sich an.
+    text: `${text} ${darf.length === 1 ? 'Tippe sie an.' : 'Tippe alle an, die erlaubt sind.'}`,
     hand: sortierteHand,
     stich: gelegt,
-    richtig: ids(erlaubt(sortierteHand, gelegt)),
+    richtig: darf,
+    ...(darf.length > 1 ? { alle: true as const } : {}),
     hinweis,
     merke,
   };
@@ -441,22 +451,22 @@ function lektionBedienen(): Lektion {
         'Reihum legt jeder eine Karte — das ist ein Stich. Die erste Karte bestimmt, was gespielt wird. Du musst „bedienen": dieselbe Farbe legen, wenn du sie hast.',
       ),
       legeErlaubt(
-        'Ole spielt das Pik-Ass aus. Welche Karte darfst du legen?',
+        'Ole spielt das Pik-Ass aus. Welche Karten darfst du legen?',
         karten('S9', 'SK', 'HQ', 'CA', 'D9'),
         stich([1, 'SA']),
         'Du hast Pik — also musst du Pik legen.',
-        'Wer die Farbe hat, muss sie legen.',
+        'Beide Pik-Karten gehen: Wer die Farbe hat, muss sie legen — welche, ist egal.',
       ),
       erklaerung(
         'Trumpf ist eine eigene Farbe',
         'Wird Trumpf ausgespielt, musst du Trumpf legen — auch eine Dame oder einen Buben. Umgekehrt: Wird Herz ausgespielt, zählt die Herz-Dame NICHT als Herz, sondern als Trumpf.',
       ),
       legeErlaubt(
-        'Ole spielt den Karo-König aus — das ist Trumpf. Was darfst du legen?',
+        'Ole spielt den Karo-König aus — das ist Trumpf. Welche Karten darfst du legen?',
         karten('HA', 'CQ', 'SA', 'C9', 'SJ'),
         stich([1, 'DK']),
         'Damen und Buben sind Trumpf. Du hast welche!',
-        'Trumpf wird mit Trumpf bedient.',
+        'Kreuz-Dame und Pik-Bube: Trumpf wird mit Trumpf bedient.',
       ),
       legeStechend(
         'Ole spielt Herz-Ass, Mia und Kai legen Herz dazu. Du hast kein normales Herz — also darfst du stechen. Hol dir den Stich!',

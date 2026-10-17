@@ -23,6 +23,8 @@ export type LernSchritt =
       hand: Card[];
       stich: LernStichKarte[];
       richtig: number[];
+      /** Alle richtigen Karten antippen, dann pruefen (statt einer). */
+      alle?: true;
       hinweis: string;
       merke: string;
     }

@@ -201,6 +201,10 @@ test('die Uebungsrunde endet nach einer Runde und zaehlt fuer die Serie', async 
   const a = await TestClient.connect(h.wsUrl, await h.cookieFor(anna.accountId));
   a.passive = true;
   a.join(tableId);
+  await a.waitFor(() => a.lastTable !== null, 'Tischzustand');
+  // Das Merkmal kommt mit der Tischnachricht — so zeigt auch ein Geraet, das
+  // den Tisch nicht selbst angelegt hat, Tipps und „Uebungsrunde".
+  assert.equal(a.lastTable!.uebung, true, 'die Tischnachricht nennt den Uebungstisch');
   await a.waitFor(() => a.lastView?.finished === true, 'Uebungsrunde laeuft durch', 60_000);
 
   const party = h.runtime.get(tableId);

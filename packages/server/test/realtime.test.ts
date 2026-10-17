@@ -423,6 +423,7 @@ test('ein Fremder kann sich nicht auf einen Clantisch schalten', async (t) => {
   drin.passive = true;
   drin.join(table.id);
   await drin.waitFor(() => drin.lastTable !== null, 'Tischzustand');
+  assert.equal(drin.lastTable!.uebung, false, 'ein gewoehnlicher Tisch ist keine Uebung');
 
   eindringling.close();
   drin.close();

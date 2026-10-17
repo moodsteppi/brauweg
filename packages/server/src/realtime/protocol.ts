@@ -272,6 +272,14 @@ export interface TableMessage {
    * Rundruf ueber die Leitung. Additiv: Aeltere Clients lesen es nicht.
    */
   readonly regelstand: string;
+  /**
+   * Uebungstisch aus dem Lernpfad (`istUebungstisch`, seit dem 17.10.2026).
+   * Der Doppelkopftisch blendet daran die Tipps und die Kopfzeile
+   * „Uebungsrunde" ein. Steht hier und nicht in einem Merkzettel des
+   * Geraets, das den Tisch angelegt hat: Sonst sah ein zweites Geraet
+   * desselben Kontos eine gewoehnliche Runde ohne jede Hilfe.
+   */
+  readonly uebung: boolean;
 }
 
 export interface PartyMessage {

@@ -153,4 +153,51 @@ describe('LektionSpieler', () => {
     await act(async () => {});
     expect(lektionFertig).not.toHaveBeenCalled();
   });
+
+  it('„alle antippen": erst Fast, dann der Hinweis, dann richtig', async () => {
+    lektion.mockResolvedValue({
+      ...LEKTION,
+      schritte: [
+        {
+          art: 'waehlen',
+          titel: 'Was darfst du legen?',
+          text: 'Tippe alle an, die erlaubt sind.',
+          hand: [KARTE(1, 'S', 'K'), KARTE(2, 'H', 'Q'), KARTE(3, 'S', '9')],
+          stich: [],
+          richtig: [1, 3],
+          alle: true,
+          hinweis: 'Du hast Pik.',
+          merke: 'Beide Pik-Karten gehen.',
+        },
+      ],
+    });
+    render(
+      <LektionSpieler lektionId="mehr" deck={DECKS[0]!} onClose={vi.fn()} onGeschafft={vi.fn()} onUebung={vi.fn()} onAnziehen={vi.fn()} />,
+    );
+    const karten = (): NodeListOf<HTMLButtonElement> =>
+      screen.getByRole('group', { name: 'Deine Karten' }).querySelectorAll('button');
+    await screen.findByText('Tippe alle an, die erlaubt sind.');
+    expect((screen.getByRole('button', { name: 'Karten antippen' }) as HTMLButtonElement).disabled).toBe(true);
+
+    // Nur eine von zwei: „Fast!"
+    fireEvent.click(karten()[0]!);
+    expect(karten()[0]!.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Prüfen' }));
+    expect(screen.getByText('Fast! Eine erlaubte Karte fehlt noch.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Nochmal' }));
+
+    // Eine falsche dazu: der Hinweis, die falsche rot.
+    fireEvent.click(karten()[1]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Prüfen' }));
+    expect(screen.getByText('Du hast Pik.')).toBeTruthy();
+    expect(karten()[1]!.className).toContain('is-falsch');
+    fireEvent.click(screen.getByRole('button', { name: 'Nochmal' }));
+
+    // Falsche weg, fehlende dazu: richtig.
+    fireEvent.click(karten()[1]!);
+    fireEvent.click(karten()[2]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Prüfen' }));
+    expect(screen.getByText('Richtig!')).toBeTruthy();
+    expect(screen.getByText('Beide Pik-Karten gehen.')).toBeTruthy();
+  });
 });

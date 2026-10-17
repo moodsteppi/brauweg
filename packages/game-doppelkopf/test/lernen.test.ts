@@ -68,6 +68,15 @@ test('die Antworten stimmen mit den Regeln ueberein', () => {
   assert.equal(zweiKarten.art === 'frage' && zweiKarten.antworten[zweiKarten.richtig], 'Nein');
 });
 
+test('„Was darfst du legen?" verlangt alle erlaubten Karten, wenn es mehrere sind', () => {
+  const schritte = lektionVon('bedienen')!.schritte.filter((s) => s.art === 'waehlen' && s.titel === 'Was darfst du legen?');
+  assert.equal(schritte.length, 2);
+  for (const s of schritte) {
+    assert.ok(s.art === 'waehlen' && s.alle === true && s.richtig.length === 2, s.text);
+    assert.ok(s.text.endsWith('Tippe alle an, die erlaubt sind.'));
+  }
+});
+
 test('Kartennamen sind deutsch', () => {
   assert.equal(kartenName({ suit: 'H', rank: 'T' }), 'Herz-Zehn');
   assert.equal(kartenName({ suit: 'D', rank: 'A' }), 'Karo-Ass');

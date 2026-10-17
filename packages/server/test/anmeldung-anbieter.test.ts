@@ -52,6 +52,7 @@ import {
 import { AppError } from '../src/errors.js';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
 import { PartyRuntime } from '../src/runtime/party.js';
+import { berlinToday } from '../src/birthday.js';
 import { createTestContext, createVerifiedAccount, schema as s, seedInvite } from './helpers.js';
 
 const APPLE_ID = 'de.brauweg-spielen.web';
@@ -319,9 +320,14 @@ function profil(mehr: Partial<AnbieterProfil> = {}): AnbieterProfil {
 const ERWACHSEN = '1990-06-15';
 
 /** Ein Datum, an dem man heute genau so alt ist. */
+/**
+ * Heute vor `jahre` Jahren — nach dem Berliner Kalender, wie der Server
+ * prueft (birthday.ts). Mit der Ortszeit des Rechners war „genau 18" auf
+ * einem Rechner in Shanghai nach Mitternacht einen Tag zu jung (18.10.2026).
+ */
 function geborenVor(jahre: number): string {
-  const d = new Date();
-  return `${d.getFullYear() - jahre}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const { y, m, d } = berlinToday();
+  return `${y - jahre}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 /**
