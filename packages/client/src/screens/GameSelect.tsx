@@ -29,6 +29,7 @@ import {
   type Shop as ShopDaten,
 } from '../api';
 import { inApp, serverAdresse } from '../laufzeit';
+import { schonGefeiert } from '../lernen/gefeiert';
 import {
   RUECKEN,
   cardImage,
@@ -99,6 +100,7 @@ const Avatarwerkstatt = lazy(() =>
 );
 /** „Doppelkopf lernen" — nur in der App und erst beim Oeffnen nachgeladen. */
 const Lernpfad = lazy(() => import('../lernen/Lernpfad').then((m) => ({ default: m.Lernpfad })));
+const MeisterFeier = lazy(() => import('../lernen/Feier').then((m) => ({ default: m.MeisterFeier })));
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
@@ -203,6 +205,9 @@ export function GameSelect({
   /** Doppelkopf lernen (nur App): Lernpfad als Vollbild. */
   const [lernenOffen, setLernenOffen] = useState(false);
   const oeffneLernen = inApp && hubNeu ? () => setLernenOffen(true) : undefined;
+  /** Das Outfit kam ueber die Uebungsrunde: einmal feiern (lernen/Feier.tsx). */
+  const [feierZu, setFeierZu] = useState(false);
+  const zeigeFeier = Boolean(oeffneLernen) && me.lernen?.belohnt === true && !feierZu && !lernenOffen && !schonGefeiert();
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   /**
@@ -573,6 +578,15 @@ export function GameSelect({
                 onResume('doppelkopf', tableId);
               }}
               onGeaendert={onAvatarChange}
+            />
+          </Suspense>
+        )}
+        {zeigeFeier && (
+          <Suspense fallback={null}>
+            <MeisterFeier
+              outfit={['hut-doktorhut', 'oberteil-meisterrobe']}
+              onClose={() => setFeierZu(true)}
+              onAngezogen={onAvatarChange}
             />
           </Suspense>
         )}

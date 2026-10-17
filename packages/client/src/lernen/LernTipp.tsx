@@ -28,8 +28,11 @@ export function LernTipp({
 }): React.JSX.Element | null {
   const satz = tippText({ phase, amZug, vorbehaltGefragt, erlaubt, handGroesse, stichLeer, partei });
   if (!satz) return null;
+  // Beim Bedienen dunkelt lernen.css die nicht erlaubten Handkarten ab — nur
+  // dann stimmt „Nur die hellen Karten sind erlaubt".
+  const bedienen = phase === 'playing' && amZug && !stichLeer && erlaubt > 0 && erlaubt < handGroesse;
   return (
-    <div className="ln-tipp" role="status" style={{ bottom: 'calc(13.5rem + env(safe-area-inset-bottom, 0px))' }}>
+    <div className="ln-tipp" role="status" data-bedienen={bedienen ? '' : undefined}>
       <span className="ln-tipp-symbol" aria-hidden="true">
         ?
       </span>

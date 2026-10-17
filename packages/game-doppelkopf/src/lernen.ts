@@ -296,8 +296,17 @@ function frageSieger(text: string, gelegt: LernStichKarte[], hinweis: string, me
   };
 }
 
+/** `{summe}` im Merksatz wird durch die gezaehlten Augen ersetzt — keine Zahl von Hand. */
 function frageAugen(text: string, gezeigt: Card[], hinweis: string, merke: string): LernSchritt {
-  return { art: 'frage', titel: 'Augen zählen', text, karten: gezeigt, ...augenAntworten(gezeigt), hinweis, merke };
+  return {
+    art: 'frage',
+    titel: 'Augen zählen',
+    text,
+    karten: gezeigt,
+    ...augenAntworten(gezeigt),
+    hinweis,
+    merke: merke.replace('{summe}', String(sumValues(gezeigt))),
+  };
 }
 
 function frageJaNein(
@@ -436,7 +445,7 @@ function lektionBedienen(): Lektion {
         karten('S9', 'SK', 'HQ', 'CA', 'D9'),
         stich([1, 'SA']),
         'Du hast Pik — also musst du Pik legen.',
-        'Richtig: Wer die Farbe hat, muss sie legen.',
+        'Wer die Farbe hat, muss sie legen.',
       ),
       erklaerung(
         'Trumpf ist eine eigene Farbe',
@@ -447,7 +456,7 @@ function lektionBedienen(): Lektion {
         karten('HA', 'CQ', 'SA', 'C9', 'SJ'),
         stich([1, 'DK']),
         'Damen und Buben sind Trumpf. Du hast welche!',
-        'Genau: Trumpf wird mit Trumpf bedient.',
+        'Trumpf wird mit Trumpf bedient.',
       ),
       legeStechend(
         'Ole spielt Herz-Ass, Mia und Kai legen Herz dazu. Du hast kein normales Herz — also darfst du stechen. Hol dir den Stich!',
@@ -498,13 +507,13 @@ function lektionAugen(): Lektion {
         'Wie viele Augen liegen in diesem Stich?',
         karten('SA', 'ST', 'SK', 'S9'),
         'Ass 11, Zehn 10, König 4, Neun 0.',
-        'Gut gezählt!',
+        'Ass 11 + Zehn 10 + König 4 + Neun 0 = {summe}.',
       ),
       frageAugen(
         'Und in diesem?',
         karten('CQ', 'DJ', 'HA', 'D9'),
         'Dame 3, Bube 2, Ass 11, Neun 0.',
-        'Auch Truempfe zählen ganz normal ihre Augen.',
+        'Auch Trümpfe zählen ganz normal ihre Augen.',
       ),
       erklaerung(
         'Ab 121 gewinnst du',
@@ -648,14 +657,14 @@ function lektionAnsagen(): Lektion {
         'Du hast schon eine Karte gelegt. Darfst du noch „Re" sagen?',
         mayAnnounce(0, 1),
         'Die Ansage hat eine Frist, aber die ist noch nicht vorbei.',
-        'Ja: Bis du deine zweite Karte legst, ist noch Zeit.',
+        'Bis du deine zweite Karte legst, ist noch Zeit.',
       ),
       frageJaNein(
         'Bis wann?',
         'Du hast schon zwei Karten gelegt. Darfst du noch „Re" sagen?',
         mayAnnounce(0, 2),
         'Die Frist endet mit deiner zweiten Karte.',
-        'Nein: Nach der zweiten Karte ist es zu spät.',
+        'Nach der zweiten Karte ist es zu spät.',
       ),
       frageWerGewinnt(
         'Wer gewinnt?',

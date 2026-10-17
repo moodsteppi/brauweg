@@ -763,7 +763,12 @@ export function Table({
         </button>
         <div className="doko-top-mid">
           <strong>
-            Runde {view.view.roundIndex + 1} / {view.view.totalRounds}
+            {/* Am Uebungstisch wird EINE Runde gespielt (Server: `uebung`) —
+                „1 / 4" stimmte zwar mit der Tischregel, aber nicht mit dem,
+                was gleich passiert. */}
+            {inApp && istUebung(tableId)
+              ? 'Übungsrunde'
+              : `Runde ${view.view.roundIndex + 1} / ${view.view.totalRounds}`}
           </strong>
           <span className="muted">{gameLine}</span>
         </div>

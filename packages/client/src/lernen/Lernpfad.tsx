@@ -175,6 +175,10 @@ export function Lernpfad({
 
       {offen && (
         <LektionSpieler
+          // Je Lektion ein frischer Spieler: Ohne `key` behielt er beim Wechsel
+          // den Schrittzaehler der vorigen Lektion, und die neue stand sofort
+          // „am Ende" — und meldete sich als geschafft, ohne gespielt zu sein.
+          key={offen}
           lektionId={offen}
           deck={deck}
           onClose={() => {

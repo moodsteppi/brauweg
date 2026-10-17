@@ -7,6 +7,7 @@ import { t } from '../i18n';
 import { spiele } from '../klang';
 import { Pinguin } from '../pinguin';
 import type { Card } from '../protocol';
+import { merkeGefeiert } from './gefeiert';
 import { Flamme } from './Flamme';
 import { LERN_NAMEN, type Lektion, type LernSchritt, type LernStichKarte, type Spieltag } from './sicht';
 
@@ -66,7 +67,9 @@ export function LektionSpieler({
   }, [lektionId]);
 
   const anzahl = lektion?.schritte.length ?? 0;
-  const amEnde = lektion !== null && index >= anzahl;
+  // Eine Lektion ohne Schritte ist nie „geschafft" — sonst meldete sie sich
+  // beim Oeffnen sofort als erledigt.
+  const amEnde = lektion !== null && anzahl > 0 && index >= anzahl;
 
   // Am Ende einmal melden — an der Kennung und dem Ende haengen, nicht an Objekten.
   useEffect(() => {
@@ -77,6 +80,8 @@ export function LektionSpieler({
       .then((tag) => {
         setErgebnis(tag);
         onGeschafft(tag);
+        // Hier wird schon gefeiert — der Start soll es nicht noch einmal tun (Feier.tsx).
+        if (tag.belohnung) merkeGefeiert();
         spiele(tag.belohnung ? 'truhe' : 'sieg');
       })
       .catch((err: unknown) => {
@@ -257,7 +262,12 @@ function SchrittAnsicht({
       )}
 
       {(schritt.art === 'waehlen' || (schritt.art === 'frage' && schritt.stich && schritt.stich.length > 0)) && (
-        <Stich gelegt={schritt.art === 'waehlen' ? schritt.stich : schritt.stich ?? []} deck={deck} mitDir={schritt.art === 'waehlen'} />
+        <Stich
+          gelegt={schritt.art === 'waehlen' ? schritt.stich : schritt.stich ?? []}
+          deck={deck}
+          mitDir={schritt.art === 'waehlen'}
+          meine={schritt.art === 'waehlen' && gesperrt ? schritt.hand.find((k) => k.id === gewaehlt) ?? null : null}
+        />
       )}
 
       {schritt.art === 'waehlen' && (
@@ -269,7 +279,7 @@ function SchrittAnsicht({
               <button
                 type="button"
                 key={karte.id}
-                className={`ln-handkarte${istGewaehlt ? (stimmt ? ' is-richtig' : ' is-falsch') : ''}`}
+                className={`ln-handkarte${istGewaehlt ? (stimmt ? ' is-richtig' : ' is-falsch') : ''}${istGewaehlt && stimmt && gesperrt ? ' is-gelegt' : ''}`}
                 disabled={gesperrt && !istGewaehlt}
                 onClick={() => {
                   spiele('karte-legen');
@@ -307,8 +317,21 @@ function SchrittAnsicht({
   );
 }
 
-/** Der Stich auf grünem Filz, mit Namen darunter. `mitDir`: ein leerer Platz für deine Karte. */
-function Stich({ gelegt, deck, mitDir }: { gelegt: readonly LernStichKarte[]; deck: Deck; mitDir: boolean }): React.JSX.Element {
+/**
+ * Der Stich auf grünem Filz, mit Namen darunter. `mitDir`: ein Platz für deine
+ * Karte — leer, bis sie richtig gewählt ist, dann liegt sie dort (`meine`).
+ */
+function Stich({
+  gelegt,
+  deck,
+  mitDir,
+  meine,
+}: {
+  gelegt: readonly LernStichKarte[];
+  deck: Deck;
+  mitDir: boolean;
+  meine: Card | null;
+}): React.JSX.Element {
   return (
     <div className="ln-filz">
       {gelegt.map((g) => (
@@ -320,10 +343,16 @@ function Stich({ gelegt, deck, mitDir }: { gelegt: readonly LernStichKarte[]; de
         </figure>
       ))}
       {mitDir && (
-        <figure className="ln-gelegt is-frei">
-          <div className="ln-platz" aria-hidden="true">
-            ?
-          </div>
+        <figure className={`ln-gelegt${meine ? ' is-meine' : ' is-frei'}`}>
+          {meine ? (
+            <div className="pc ln-karte">
+              <CardFront card={meine} deck={deck} />
+            </div>
+          ) : (
+            <div className="ln-platz" aria-hidden="true">
+              ?
+            </div>
+          )}
           <figcaption>Du</figcaption>
         </figure>
       )}

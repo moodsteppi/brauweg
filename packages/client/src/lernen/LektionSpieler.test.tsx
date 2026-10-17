@@ -136,4 +136,21 @@ describe('LektionSpieler', () => {
     expect(onUebung).toHaveBeenCalledTimes(1);
     expect(lektionFertig).not.toHaveBeenCalled();
   });
+
+  it('eine Lektion ohne Schritte meldet sich nicht als geschafft', async () => {
+    lektion.mockResolvedValue({ ...LEKTION, schritte: [] });
+    render(
+      <LektionSpieler
+        lektionId="leer"
+        deck={DECKS[0]!}
+        onClose={vi.fn()}
+        onGeschafft={vi.fn()}
+        onUebung={vi.fn()}
+        onAnziehen={vi.fn()}
+      />,
+    );
+    await act(async () => {});
+    await act(async () => {});
+    expect(lektionFertig).not.toHaveBeenCalled();
+  });
 });
