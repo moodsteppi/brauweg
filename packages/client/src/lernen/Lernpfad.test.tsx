@@ -20,7 +20,6 @@ vi.mock('../api', async () => {
 vi.mock('../klang', () => ({ spiele: vi.fn() }));
 
 import { Lernpfad } from './Lernpfad';
-import { istUebung } from './uebung';
 
 function pfad(erledigt: number): LernpfadAnsicht {
   const titel = ['Karten & Trumpf', 'Bedienen & Stiche', 'Augen zählen', 'Re & Kontra', 'Fuchs', 'Ansagen', 'Deine erste Runde'];
@@ -51,7 +50,7 @@ describe('Lernpfad', () => {
     expect(screen.queryByRole('button', { name: 'Übungsrunde spielen' })).toBeNull();
   });
 
-  it('nach allen Lektionen: Uebungsrunde, und der Tisch ist als Uebung gemerkt', async () => {
+  it('nach allen Lektionen: Uebungsrunde, und es geht an den Tisch', async () => {
     lernpfad.mockResolvedValue(pfad(7));
     lernUebung.mockResolvedValue({ tableId: 'tisch-42' });
     const onUebung = vi.fn();
@@ -61,6 +60,5 @@ describe('Lernpfad', () => {
       fireEvent.click(knopf);
     });
     expect(onUebung).toHaveBeenCalledWith('tisch-42');
-    expect(istUebung('tisch-42')).toBe(true);
   });
 });

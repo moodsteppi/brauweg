@@ -8,7 +8,6 @@ import { Pinguin } from '../pinguin';
 import { Flamme } from './Flamme';
 import { LektionSpieler } from './LektionSpieler';
 import type { LernpfadAnsicht } from './sicht';
-import { merkeUebung } from './uebung';
 import './lernen.css';
 
 /**
@@ -54,7 +53,6 @@ export function Lernpfad({
 
   const starteUebung = async (): Promise<void> => {
     const { tableId } = await api.lernUebung();
-    merkeUebung(tableId);
     onUebung(tableId);
   };
 
