@@ -27,6 +27,7 @@ import {
   isReadyToStart,
   pauseTable,
   resumeTable,
+  istUebungstisch,
   tableBotLevel,
   tableWithSeats,
   touch,
@@ -40,6 +41,7 @@ import {
 import { xpFuerPartie } from '../level.js';
 import { recordPartyResult } from '../clubs/war.js';
 import { fortschreiben } from '../quests.js';
+import { uebungGespielt } from '../lernpfad.js';
 import { einsatzVon, zahleAus, zieheEinsatz } from '../brojetons.js';
 import { verbucheBestleistungen } from '../bestleistung.js';
 
@@ -111,6 +113,11 @@ export interface LiveParty {
   readonly absentSince: Map<number, number>;
   readonly online: Set<number>;
   segmentsWritten: number;
+  /**
+   * Uebungstisch aus dem Lernpfad (`istUebungstisch`): endet nach der ersten
+   * Runde, und die zaehlt fuer die Lernserie der Menschen am Tisch.
+   */
+  readonly uebung: boolean;
   /**
    * Diese Partie endet, sobald die laufende Runde durch ist.
    *
@@ -432,7 +439,10 @@ export class PartyRuntime {
       absentSince: new Map(),
       online: new Set(),
       segmentsWritten: 0,
-      endAfterRound: false,
+      uebung: istUebungstisch(table.filters),
+      // Eine Uebungsrunde ist EINE Runde — die Rotation verlangt vier, gespielt
+      // wird bis zur ersten Abrechnung (dieselbe Regel wie beim Aufloesen).
+      endAfterRound: istUebungstisch(table.filters),
       turnDeadline: null,
       interludeDeadline: null,
       phaseDeadline: null,
@@ -509,7 +519,8 @@ export class PartyRuntime {
       absentSince: new Map(),
       online: new Set(),
       segmentsWritten: (module.completedSegments?.(state) ?? []).length,
-      endAfterRound: false,
+      uebung: istUebungstisch(table.filters),
+      endAfterRound: istUebungstisch(table.filters),
       turnDeadline: null,
       interludeDeadline: null,
       phaseDeadline: null,
@@ -704,6 +715,7 @@ export class PartyRuntime {
   private async afterAction(party: LiveParty): Promise<void> {
     const rundeVorbei = await this.persist(party);
     await touch(this.db, party.tableId);
+    if (rundeVorbei && party.uebung) await this.uebungZaehlen(party);
 
     if (party.module.isFinished(party.state)) {
       await this.finish(party);
@@ -1132,6 +1144,23 @@ export class PartyRuntime {
     );
     party.segmentsWritten = segments.length;
     return true;
+  }
+
+  /**
+   * Eine Uebungsrunde ist abgerechnet: Spieltag fuer jeden Menschen am Tisch
+   * (lernpfad.ts). Ein Fehler hier darf die Partie nicht aufhalten — er landet
+   * im Log, die Runde ist trotzdem gespielt.
+   */
+  private async uebungZaehlen(party: LiveParty): Promise<void> {
+    for (const platz of party.seats) {
+      if (!platz.accountId || platz.permanentBot) continue;
+      try {
+        await uebungGespielt(this.db, platz.accountId);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(`Lernserie an Tisch ${party.tableId}, Sitz ${platz.index}:`, err);
+      }
+    }
   }
 
   // -------------------------------------------------------------------------

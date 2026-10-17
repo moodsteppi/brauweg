@@ -1313,7 +1313,7 @@ export const api = {
 // ---------------------------------------------------------------------------
 
 /** Kennungen wie im Server (push/kennungen.ts). Nie umbenennen. */
-export type PushAnlass = 'dran' | 'start' | 'einladung' | 'anfrage';
+export type PushAnlass = 'dran' | 'start' | 'einladung' | 'anfrage' | 'serie';
 
 export interface PushEinstellungen {
   anlaesse: Record<PushAnlass, boolean>;

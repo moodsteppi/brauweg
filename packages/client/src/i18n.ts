@@ -198,6 +198,7 @@ const de: Record<string, string> = {
   // Beitritt mit Zusage (tables/anfragen.ts im Server).
   'error.notHost': 'Über Anfragen entscheidet nur, wer den Tisch aufgemacht hat.',
   'error.anfrageUnbekannt': 'Diese Anfrage gibt es nicht mehr.',
+  'error.lektionUnbekannt': 'Diese Lektion gibt es nicht.',
   'error.pauseClubOnly': 'Pausieren geht nur an Clantischen.',
   'error.partyPaused': 'Der Tisch ist pausiert. Erst fortsetzen.',
   'error.clubUnknown': 'Diesen Clan gibt es nicht.',
@@ -276,6 +277,7 @@ const de: Record<string, string> = {
   'kosmetik.hut-bergsteiger': 'Bergsteigerhelm',
   'kosmetik.hut-krone': 'Krone',
   'kosmetik.hut-partyhut': 'Partyhut',
+  'kosmetik.hut-doktorhut': 'Doko-Doktorhut',
   'kosmetik.brille-keine': 'Ohne Brille',
   'kosmetik.brille-sonnenbrille': 'Sonnenbrille',
   'kosmetik.brille-lesebrille': 'Lesebrille',
@@ -287,6 +289,7 @@ const de: Record<string, string> = {
   'kosmetik.oberteil-weste': 'Lederweste',
   'kosmetik.oberteil-regenjacke': 'Regenjacke',
   'kosmetik.oberteil-frack': 'Frack',
+  'kosmetik.oberteil-meisterrobe': 'Meisterrobe',
   'kosmetik.schuhe-flossen': 'Barfuß',
   'kosmetik.schuhe-gummistiefel': 'Gummistiefel',
   'kosmetik.schuhe-turnschuhe': 'Turnschuhe',

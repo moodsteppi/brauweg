@@ -194,6 +194,16 @@ export class PushAnlaesse {
     );
   }
 
+  /**
+   * Abend-Erinnerung an die Lernserie (lernpfad.ts, `faelligeErinnerungen`).
+   * Gehoert zu keinem Tisch: Die Mitteilung traegt keine Tischkennung, und
+   * Antippen oeffnet nur die App — auf dem Start steht die Flamme.
+   */
+  serieErinnern(konten: readonly string[]): void {
+    if (this.aus.has('serie') || konten.length === 0) return;
+    this.merke(this.zustellen('serie', konten, null, 'doppelkopf', null));
+  }
+
   /** Wartet, bis alle angestossenen Zustellungen durch sind (Tests, Serverende). */
   async ruhe(): Promise<void> {
     while (this.laufend.size > 0) await Promise.allSettled([...this.laufend]);
@@ -215,7 +225,8 @@ export class PushAnlaesse {
   private async zustellen(
     anlass: Anlass,
     konten: readonly string[],
-    tableId: string,
+    /** null: Mitteilung ohne Tisch (`serie`). */
+    tableId: string | null,
     gameId: string,
     name: string | null,
   ): Promise<void> {
@@ -226,7 +237,7 @@ export class PushAnlaesse {
     const empfaenger: string[] = [];
     for (const konto of new Set(konten)) {
       if (this.vordergrund(konto)) continue;
-      const schluessel = `${konto}|${tableId}`;
+      const schluessel = `${konto}|${tableId ?? anlass}`;
       const zuletzt = this.zuletzt.get(schluessel);
       if (zuletzt !== undefined && jetzt - zuletzt < this.drosselMs) continue;
       // VOR dem ersten await setzen: Zwei Anstoesse im selben Augenblick
@@ -243,8 +254,9 @@ export class PushAnlaesse {
     const mitteilung: Mitteilung = {
       titel,
       text,
-      daten: { anlass, tableId, gameId },
-      sammelKennung: `tisch-${tableId}`,
+      // Ohne Tisch keine Tischkennung — die Huelle springt nur mit beiden Feldern an einen Tisch.
+      daten: tableId ? { anlass, tableId, gameId } : { anlass, gameId },
+      sammelKennung: tableId ? `tisch-${tableId}` : anlass,
     };
 
     const tot: string[] = [];

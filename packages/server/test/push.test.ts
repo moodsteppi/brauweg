@@ -254,7 +254,7 @@ test('Einstellungen: Vorgabe alles an, einzeln abschaltbar, und aus heisst kein 
   await anmelden(s, a.kopf, 'ios', IOS_TOKEN);
 
   const vorher = await s.app.inject({ method: 'GET', url: '/api/push/einstellungen', headers: a.kopf });
-  assert.deepEqual(vorher.json(), { anlaesse: { dran: true, start: true, einladung: true, anfrage: true }, geraete: 1 });
+  assert.deepEqual(vorher.json(), { anlaesse: { dran: true, start: true, einladung: true, anfrage: true, serie: true }, geraete: 1 });
 
   const nachher = await s.app.inject({
     method: 'PUT',
@@ -262,7 +262,7 @@ test('Einstellungen: Vorgabe alles an, einzeln abschaltbar, und aus heisst kein 
     headers: a.kopf,
     payload: { dran: false },
   });
-  assert.deepEqual(nachher.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: true });
+  assert.deepEqual(nachher.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: true, serie: true });
 
   assert.equal((await geraeteFuer(s.ctx.db, [anna.accountId], 'dran')).length, 0);
   assert.equal((await geraeteFuer(s.ctx.db, [anna.accountId], 'start')).length, 1);

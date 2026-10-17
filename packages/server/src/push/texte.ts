@@ -82,6 +82,10 @@ export const TEXTE: Readonly<Record<Anlass, Textbaustein>> = {
     titel: 'Jemand will mitspielen',
     text: '{name} möchte an deinen {spiel}-Tisch. Sag zu oder ab.',
   },
+  serie: {
+    titel: 'Deine Serie wartet 🔥',
+    text: 'Heute noch keine Runde {spiel} gelernt — eine Lektion, und die Flamme brennt weiter.',
+  },
 };
 
 export function mitteilungstext(

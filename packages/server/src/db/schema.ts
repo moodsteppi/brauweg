@@ -1475,3 +1475,26 @@ export const clubRelations = relations(club, ({ many, one }) => ({
     references: [account.id],
   }),
 }));
+
+// ---------------------------------------------------------------------------
+// Doppelkopf lernen
+// ---------------------------------------------------------------------------
+
+/**
+ * Lernpfad und Tagesserie, eine Zeile je Konto (lernpfad.ts). Die Zeile
+ * entsteht beim ersten Fortschritt, nicht mit dem Konto.
+ */
+export const lernpfad = pgTable('lernpfad', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  /** Kennungen der erledigten Lektionen (`LEKTIONEN` in game-doppelkopf). */
+  lektionen: jsonb().$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  serie: integer().notNull().default(0),
+  beste: integer().notNull().default(0),
+  /** Kalendertage in Europe/Berlin, wie bei den Tagesaufgaben. */
+  letzterTag: date(),
+  schutzTag: date(),
+  belohntAm: timestamp({ withTimezone: true }),
+  erinnertTag: date(),
+});
