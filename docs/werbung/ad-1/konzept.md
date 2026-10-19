@@ -68,7 +68,7 @@ Bildschirmaufnahme = Clip aus `werkzeug/store/clips.mjs` (Dateiname wie in
 | 2 | 2–5 s | KI | Halbtotale: drei Freunde am Küchentisch unter Hängelampe, vierter Stuhl leer, Jule blickt aufs Handy und seufzt | langsamer Push-in auf den leeren Stuhl | 3 s | Sonntag. Doppelkopf. Einer sagt ab. | Raumton, Seufzer |
 | 3 | 5–8 s | KI | Nah auf Jule: Enttäuschung kippt in ein Grinsen, sie hebt das Handy | Schwenk vom leeren Stuhl auf Jule, leichte Handkamera | 3 s | — | Musik setzt mit Beat ein |
 | 4 | 8–12 s | Bildschirmaufnahme **02-doppelkopf-austeilen** | Letzter Bot setzt sich, Karten werden ausgeteilt, „gesund" | — (Clip, im Handyrahmen) | 4 s | Bot rein. Karten raus. | Karten-Wischen, Beat |
-| 5 | 12–15 s | KI | Über die Schulter: alle drei beugen sich über ihre eigenen Handys, auf dem leeren Platz liegt ein Handy und leuchtet | langsame halbe Kreisfahrt um den Tisch | 3 s | Ihr drei am Tisch. Der Bot als Vierter. | Musik, Tippen |
+| 5 | 12–15 s | KI | Über die Schulter: alle drei beugen sich über ihre eigenen Handys, der leere Stuhl stört niemanden mehr | langsame halbe Kreisfahrt um den Tisch | 3 s | Ihr drei am Tisch. Der Bot als Vierter. | Musik, Tippen |
 | 6 | 15–19 s | Bildschirmaufnahme **04-doppelkopf-stich** | Vierte Karte schließt den Stich, Stich wird eingezogen | — (Clip, im Handyrahmen) | 4 s | Der Bot spielt mit — in drei Stärken. | Karten-Klack auf dem Beat |
 | 7 | 19–22 s | KI | Reaktion: Freund schlägt lachend auf den Tisch, Jule reißt triumphierend die Faust hoch | Handkamera, kurzer Ruck mit der Bewegung | 3 s | — | Lachen, Musik-Höhepunkt |
 | 8 | 22–25 s | Bildschirmaufnahme **06-skat-reizen** | Reizen mit Reizrechner, „18 sagen" | — (Clip, im Handyrahmen) | 3 s | Beim Skat fehlt der Dritte auch nie. | Beat läuft weiter |
@@ -178,10 +178,10 @@ Freigabe eine Wahl bleibt. Eingang jeweils: Ankerbild + Charakterbogen.
   "S3c: Her face lit by the phone screen, determined, lamp light on her hair",
   "S3d: Profile shot, she taps the phone, a smile spreading, friend in soft focus behind",
 
-  "S4a: Over-the-shoulder, all three leaning over their own phones, a fourth phone glowing on the empty seat's place",
-  "S4b: Top-down view of the table: three pairs of hands with phones, one phone lying alone at the empty place, glowing",
-  "S4c: Wide shot, the three friends focused and smiling at their screens, the empty chair now has a glowing phone on the table in front of it",
-  "S4d: Close-up of the empty place: tea mug and a lit phone, friends blurred in the background",
+  "S4a: Over-the-shoulder, all three leaning over their own phones, the empty chair in the frame, nobody minds it anymore",
+  "S4b: Top-down view of the table: three pairs of hands with glowing phones, the empty place with an untouched tea mug",
+  "S4c: Wide shot, the three friends focused and smiling at their screens, screen light on their faces, the empty chair beside them",
+  "S4d: Close-up of the empty chair, friends laughing over their phones in soft focus behind it",
 
   "S5a: Reaction: the bearded friend slaps the table laughing, she throws her fist up in triumph",
   "S5b: Medium shot, all three laughing loudly, cards and phones on the table, warm joyful light",
@@ -204,7 +204,7 @@ geschnitten wird auf die Dauer der Tabelle.
 | 1 | Static shot with a very slow push-in on the phone. The phone vibrates once, her hands stop shuffling and hold still. |
 | 2 | Slow push-in towards the empty chair. She lowers the phone and sighs, the friends glance at each other. |
 | 3 | Camera pans from the empty chair to her face, slight handheld movement. Her disappointed look turns into a grin and she lifts the phone. |
-| 5 | Slow half orbit around the table. The three friends tap on their phones and lean in, the phone on the empty place keeps glowing. |
+| 5 | Slow half orbit around the table. The three friends tap on their phones and lean in, the empty chair stays in view. |
 | 7 | Handheld, short jolt with the movement. The friend slaps the table laughing, she throws her fist up. |
 
 **Verkettung (K5):** Szene 2 → 3 ist eine fortlaufende Bewegung (Stuhl →
