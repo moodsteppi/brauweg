@@ -305,13 +305,13 @@ Handybildschirme bleiben schlichtes Leuchten, Handkamera ohne Zoom.
 
 | Szene | Standbild (gewählt) | Handlung im Video | Video |
 |---|---|---|---|
-| 1 | `e560ad47` | Jule mischt (Riffle), das Handy neben dem Stapel vibriert, die Hände erstarren | ⏳ s. u. |
-| 2 | `8b4d023d` (Retusche von `34b2a05f`: Flasche auf der Arbeitsplatte entfernt) | Seufzen, Handy sinkt auf den Tisch, Tarek zuckt mit den Schultern, Mira presst die Lippen zusammen | ⏳ s. u. |
+| 1 | `1c90270b` (vom Menschen freigegeben statt `e560ad47`; über die Schulter, deshalb eigener Video-Prompt für eine Person) | Jule mischt (Riffle), das Handy neben dem Stapel vibriert, die Hände erstarren, der Kopf dreht sich zum Handy | ⏳ |
+| 2 | `8b4d023d` (Retusche von `34b2a05f`: Flasche auf der Arbeitsplatte entfernt) | Seufzen, Handy sinkt auf den Tisch, Tarek zuckt mit den Schultern, Mira presst die Lippen zusammen | ⏳ |
 | 3 | `9dd02d2b` | Grinsen wird breit, sie hebt das Handy und dreht den Bildschirm zu den Freunden | `2c8d1c3d` |
 | 5 | `eaea185d` | Tarek tippt zweimal, Mira kratzt sich am Kopf, Jule trinkt einen Schluck Wasser | `30644f4c` |
 | 7 | `9ff7d0db` | Hand klatscht auf den Tisch, Karten springen, Jule lacht mit Faust oben, Mira hinter der Hand | `62ee469b` |
 
-Verworfen (bleiben als Assets stehen): Anker `384812db`, s1 `1c90270b`, s2
+Verworfen (bleiben als Assets stehen): Anker `384812db`, s1 `e560ad47` (nicht freigegeben), s2
 `34b2a05f` (Flasche), s3 `d8abdd7d`, s5 `78af69c5`. Die Anker-Variante hatte
 vom alten Anker eine dunkle Flasche auf der Arbeitsplatte geerbt — beim
 Auswählen jedes Bild auf den Hintergrund prüfen, nicht nur auf die Gesichter.
