@@ -268,3 +268,86 @@ Kling 2.5 Turbo Pro. Für diese Ad genügt das — die Bewegungen sind klein.
 Der Bot ist **kein** Gerät: Kein Bild zeigt ein „viertes Handy" auf dem leeren
 Platz. Das wäre ein schönes Sinnbild, behauptet aber, man brauche ein weiteres
 Gerät — der Bot sitzt nur in der App (Szenen 4 und 6).
+
+## 9. Nachdreh 19.10.2026 — „realer, mit echten Bewegungen"
+
+Anlass: Robins Rückmeldung zum Schnitt adb1def1 („sieht noch etwas KI-mäßig
+aus"). Neu erzeugt wurden die Standbilder der Szenen 1, 2, 3, 5 und 7 und je
+ein Video mit **einer konkreten Handlung**. Die alten Assets bleiben stehen.
+
+**Was beim ersten Durchgang schiefging:** Die alten Kling-Videos tragen in
+der Erzeugungsliste den Prompt `$P$G` — eine Windows-Prompt-Variable, die beim
+Aufruf aus der Shell an die Stelle des Textes trat. Kling hat also ohne
+Bewegungsanweisung animiert, daher das ziellose Wabern. **Prompts immer aus
+einer Datei lesen, nie über die Kommandozeile reichen.**
+
+### 9.1 Stil (an jeden Szenen-Prompt angehängt)
+
+> Shot on an ordinary smartphone, candid snapshot, not a film still and not an
+> advertisement. Natural evening light only from the warm hanging lamp …,
+> visible sensor grain …, slight softness and a touch of motion blur, imperfect
+> off-center framing, no color grading, no teal-and-orange look … Real skin
+> with pores, fine lines, small blemishes … ordinary non-model faces … Messy
+> everyday kitchen table: worn plain cards, blank cardboard coasters, half-empty
+> bowl of chips with crumbs, plain glasses of tap water, pencil and scoring pad,
+> charger cable. No bottles, no beer, no wine, no alcohol, no logos, no brand
+> names, no readable text, no extra people.
+
+Modell für Bilder: `nano-banana-pro` (15 ct), Referenzen Ankerbild
+`92f88249` (neu, im selben Stil) und Charakterbogen `4c72a3e9`.
+Modell für Videos: `kling-bild` (Kling 2.5 Turbo Pro, 5 s, 35 ct) — ein
+stärkeres Bild-zu-Video-Modell bietet die Creatives-Anbindung derzeit nicht.
+Jeder Video-Prompt endet mit derselben Leitplanke: nur die drei Personen im
+Bild, niemand setzt sich auf den leeren Stuhl, keine neuen Gegenstände,
+Handybildschirme bleiben schlichtes Leuchten, Handkamera ohne Zoom.
+
+### 9.2 Szenen
+
+| Szene | Standbild (gewählt) | Handlung im Video | Video |
+|---|---|---|---|
+| 1 | `1c90270b` (vom Menschen freigegeben statt `e560ad47`; über die Schulter, deshalb eigener Video-Prompt für eine Person) | Jule mischt (Riffle), das Handy neben dem Stapel vibriert, die Hände erstarren, der Kopf dreht sich zum Handy | `184a86b6` (Einstieg 3,0 s) |
+| 2 | `8b4d023d` (Retusche von `34b2a05f`: Flasche auf der Arbeitsplatte entfernt) | Seufzen, Handy sinkt auf den Tisch, Tarek zuckt mit den Schultern, Mira presst die Lippen zusammen | `d155f751` (2. Versuch; der 1. `8d4609e6` hatte einen Leuchtfleck auf dem Tisch) |
+| 3 | `9dd02d2b` | Grinsen wird breit, sie hebt das Handy und dreht den Bildschirm zu den Freunden | `2c8d1c3d` (Einstieg 1,5 s) |
+| 5 | `eaea185d` | Tarek tippt zweimal, Mira kratzt sich am Kopf, Jule trinkt einen Schluck Wasser | `30644f4c` (Einstieg 0,8 s) |
+| 7 | `9ff7d0db` | Hand klatscht auf den Tisch, Karten springen, Jule lacht mit Faust oben, Mira hinter der Hand | `62ee469b` |
+
+Verworfen (bleiben als Assets stehen): Anker `384812db`, s1 `e560ad47` (nicht freigegeben), s2
+`34b2a05f` (Flasche), s3 `d8abdd7d`, s5 `78af69c5`. Die Anker-Variante hatte
+vom alten Anker eine dunkle Flasche auf der Arbeitsplatte geerbt — beim
+Auswählen jedes Bild auf den Hintergrund prüfen, nicht nur auf die Gesichter.
+
+### 9.3 Schnitt v2 — was sonst noch anders ist
+
+- **Szene 6:** In der Aufnahme `04-doppelkopf-stich` verschwinden in den
+  Bildern 64–67 (30 fps) drei Karten des Stichs und kommen wieder — das
+  Flackerbild bei ≈ 16,3 s im ersten Schnitt. Im Schnitt mit
+  `freezeframes=first=64:last=67:replace=63` überbrückt; die Ursache in der App
+  bzw. im Aufnahmeskript ist nicht behoben.
+- **Szene 8:** Die alte Reizaufnahme (`9de37cb7`) zeigt nie „18 sagen", nur
+  23 und 24 — welcher Wert auf dem Knopf steht, hängt am Sitz in der Partie.
+  Neu aufgenommen als `d3d1b1f2` (`06-skat-reizen-18.mp4`), mit einer Prüfung
+  im Aufnahmeskript, die abbricht, wenn der Knopf nicht 18 zeigt. Im Schnitt
+  ab 4,8 s.
+- **Endkarte:** vollformatig 1080×1920 (`5cb9ef8c`), ohne Handyrahmen, ohne
+  „auch ohne Alkohol", Logo, drei Spielkacheln, `brauweg-spielen.de`, „Bald im
+  App Store". Die Textebene 9 liegt nicht mehr darüber — die Karte trägt
+  denselben Inhalt.
+- Keine `delogo`-Retusche mehr: Die neuen Bilder haben keine Flaschen.
+- Musik, Geräusche, Einblendungen und Szenenlängen wie im ersten Schnitt.
+
+### 9.4 Ergebnis
+
+Schnitt v2: Asset `dd8509ad-a5b5-4e89-adda-103fec7213ad`
+(`ad-1-dir-fehlt-der-vierte-v2.mp4`), 28,0 s, 1080×1920, 30 fps, H.264 +
+AAC, 19,0 MB, −19,7 LUFS, sha256
+`eb4bf3164070c853ab0574a4b326cd298ba3c805c8b2095522ab36be515531f5`. Nicht
+freigegeben.
+
+Kosten des Nachdrehs: 4,10 € — 11 Bilder × 15 ct und 7 Kling-Aufrufe × 35 ct.
+Einer davon (Szene 2, 16:02 UTC) scheiterte am abgelehnten fal-Schlüssel und
+wurde trotzdem gebucht.
+
+Der hochgeladene Schnitt trägt keinen `kiHinweis`: `POST /creatives/:id/assets`
+nimmt das Feld nicht an. Die Kennzeichnung steckt in den KI-Assets, aus denen
+er gebaut ist. Eingebrannt ist „KI-generiert" nicht — das tut nur der
+Server-Schnitt (`lib/creatives/schnitt.ts`).
