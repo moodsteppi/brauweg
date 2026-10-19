@@ -40,7 +40,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -416,11 +416,14 @@ async function skatSchritt(page, zustand) {
   if (await druecken.isVisible().catch(() => false)) {
     const karten = page.locator('.doko-hand .doko-handcard');
     if ((await page.locator('.doko-hand .doko-handcard[aria-pressed="true"]').count()) < 2) {
+      // Am Element ausloesen, nicht per Mausklick: Die Handkarten liegen
+      // ueberlappend, ein Klick auf die Mitte traf die Nachbarin und schaltete
+      // sie zweimal um (am 19.10.2026 blieb „Noch 2 Karten waehlen" stehen).
       const n = await karten.count();
-      await karten.nth(n - 1).click({ timeout: 2000 });
-      await page.waitForTimeout(500);
-      await karten.nth(n - 2).click({ timeout: 2000 });
-      await page.waitForTimeout(700);
+      await karten.nth(n - 1).evaluate((el) => el.click());
+      await page.waitForTimeout(600);
+      await karten.nth(n - 2).evaluate((el) => el.click());
+      await page.waitForTimeout(800);
     }
     await druecken.click({ timeout: 2000 });
     return;
@@ -663,7 +666,16 @@ function nachMp4(webm) {
   return r.status === 0 ? mp4 : null;
 }
 
-async function listeSchreiben(format) {
+/**
+ * Ein Lauf mit --szene ersetzt nur die Zeilen seiner Szenen; was andere Szenen
+ * frueher aufgenommen haben, bleibt in der Liste stehen.
+ */
+async function listeSchreiben(format, szenen) {
+  const alt = await readFile(join(ZIEL, 'liste.md'), 'utf8').catch(() => '');
+  const behalten = alt
+    .split('\n')
+    .filter((z) => /^\| \d\d-/.test(z) && !szenen.some((s) => z.includes(`-${s.name}`)));
+  const neu = clips.map((c) => `| ${c.datei}.${format} | ${c.spiel} | ${c.szene} | ${c.sekunden.toFixed(1)} s | ${c.eignung} |`);
   const zeilen = [
     '# Bildschirmaufnahmen brauweg-spielen.de',
     '',
@@ -672,7 +684,7 @@ async function listeSchreiben(format) {
     '',
     '| Datei | Spiel | Szene | Länge | Eignung |',
     '| --- | --- | --- | --- | --- |',
-    ...clips.map((c) => `| ${c.datei}.${format} | ${c.spiel} | ${c.szene} | ${c.sekunden.toFixed(1)} s | ${c.eignung} |`),
+    ...[...behalten, ...neu].sort(),
     '',
   ];
   await writeFile(join(ZIEL, 'liste.md'), zeilen.join('\n'), 'utf8');
@@ -689,6 +701,10 @@ async function main() {
   try {
     for (const szene of szenen) {
       console.log(szene.name);
+      // Alte Clips dieser Szene weg — sonst laege ein 07-skat-stich-3 neben einem neuen 07-skat-ansage.
+      for (const f of await readdir(ZIEL)) {
+        if (/^\d\d-/.test(f) && f.includes(`-${szene.name}`)) await rm(join(ZIEL, f), { force: true });
+      }
       try {
         await szene.machen(browser);
       } catch (e) {
@@ -708,7 +724,7 @@ async function main() {
   } else {
     console.log('Kein ffmpeg mit H.264 im PATH — Clips bleiben WebM (VP8).');
   }
-  await listeSchreiben(format);
+  await listeSchreiben(format, szenen);
   console.log(`${clips.length} Clips, liste.md geschrieben.`);
   if (fehlerZahl > 0) process.exitCode = 1;
 }
