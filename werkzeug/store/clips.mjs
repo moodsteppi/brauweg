@@ -12,14 +12,25 @@
  * WebM (VP8) mit Playwrights ffmpeg — ebenso scharf, nur groesser.
  *
  * Weitere Schalter:
- *   --szene <name>   nur eine Szene (Teilwort genuegt: doppelkopf, skat, partykiste, auswahl)
+ *   --szene <name>   nur eine Szene (Teilwort genuegt: doppelkopf, skat, partykiste, auswahl, 14)
  *   --basis <url>    Server, gegen den gespielt wird (Vorgabe: staging)
  *   --sichtbar       Browserfenster zeigen
  *
  * Technik wie in screenshots.mjs (App-Modus, App-Herkunft, frische Gastkonten
  * mit Vogelnamen, alle Mitspieler Bots, Umleitung Produktion → staging) —
- * das Warum steht dort im Kopf. Die Bausteine sind hierher ABGESCHRIEBEN,
- * nicht importiert: screenshots.mjs liest beim Laden seine Schalter und
+ * das Warum steht dort im Kopf.
+ *
+ * Ausnahme von „alle Mitspieler Bots": Szene 14 (`14-doppelkopf-runde-stich`,
+ * fuer Ad 2). Der Tisch beschriftet einen Bot-Platz mit „Bot 2", „Bot 3"
+ * (Table.tsx), und Ad 2 erzaehlt von vier Freunden, die zusammen spielen —
+ * ein Bot im Bild waere genau die falsche Pointe. Dort sitzen deshalb vier
+ * Gastkonten (Lena, Tobi, Sara, Jonas) in je eigenem Browserkontext; Lena
+ * legt den Tisch an, die anderen treten per API bei, drei spielen per
+ * Autopilot, aufgenommen wird Lena. Spielt ein Freund zu langsam, uebernimmt
+ * der Server dessen Platz, und es steht wieder „Bot" da — der Autopilot muss
+ * also auf allen drei Seiten laufen, bis der Clip fertig ist.
+ *
+ * Die Bausteine sind hierher ABGESCHRIEBEN, nicht importiert: screenshots.mjs liest beim Laden seine Schalter und
  * startet sofort `main()`, ein Import wuerde also einen Screenshot-Lauf
  * ausloesen. Wer die Umleitung oder die App-Herkunft dort aendert, aendert
  * sie hier mit.
@@ -96,7 +107,7 @@ const warte = (ms) => new Promise((r) => setTimeout(r, ms));
 // Sitzung als App (abgeschrieben aus screenshots.mjs, siehe Kopf)
 // ---------------------------------------------------------------------------
 
-async function appSeite(browser, lokal = {}) {
+async function appSeite(browser, lokal = {}, name = naechsterName()) {
   const ctx = await browser.newContext({
     viewport: VIEWPORT,
     deviceScaleFactor: FAKTOR,
@@ -109,7 +120,7 @@ async function appSeite(browser, lokal = {}) {
   });
 
   const antwort = await ctx.request.post(`${BASIS}/api/auth/gast`, {
-    data: { name: naechsterName() },
+    data: { name },
     headers: { origin: APP_HERKUNFT },
   });
   if (!antwort.ok()) throw new Error(`Gastkonto: ${antwort.status()} ${await antwort.text()}`);
@@ -228,13 +239,61 @@ async function fehlerbild(page, name) {
 
 /** Wie botTisch in screenshots.mjs — nur ohne den letzten Bot: der setzt die Partie in Gang und gehoert in den ersten Clip. */
 async function botTischBisAufEinen(page, spiel, spieler) {
+  await leererTisch(page, spiel, spieler);
+  for (let i = 1; i < spieler - 1; i++) await klick(page, '+ Bot', { warte: 1500 });
+}
+
+/** Tisch ueber die Oberflaeche anlegen — mit dem Regelsatz, den die Lobby vorschlaegt. Man sitzt danach allein am wartenden Tisch. */
+async function leererTisch(page, spiel, spieler) {
   await zurSpielauswahl(page);
   await klick(page, spiel, { warte: 2500 });
   await zumSpiel(page);
   await klick(page, 'Tisch erstellen', { warte: 2000 });
   await klick(page, `${spieler} Spieler`, { warte: 800 });
   await klick(page, 'Tisch erstellen', { warte: 3000 });
-  for (let i = 1; i < spieler - 1; i++) await klick(page, '+ Bot', { warte: 1500 });
+}
+
+/**
+ * Ein API-Aufruf im Namen der Seite. Er geht an SCHEIN, damit ihn dieselbe
+ * Umleitung wie die App selbst nimmt — mit App-Herkunft, sonst gaelte die
+ * Anfrage als Webseite und saehe andere Regeln.
+ */
+async function api(page, methode, pfad, body) {
+  return page.evaluate(
+    async ([basis, methode, pfad, body]) => {
+      const token = localStorage.getItem('brauweg.sitzung');
+      const r = await fetch(`${basis}/api${pfad}`, {
+        method: methode,
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      return { status: r.status, daten: await r.json().catch(() => null) };
+    },
+    [SCHEIN, methode, pfad, body],
+  );
+}
+
+/**
+ * Setzt `gast` an den Tisch von `gastgeber`. Doppelkopf-Tische ausser
+ * oeffentlichen brauchen die Zusage des Gastgebers (MIT_ZUSAGE in
+ * tables/anfragen.ts) — die gibt hier der Gastgeber per API, statt dass
+ * wir ihn durch seine Anfrageliste klicken.
+ */
+async function anDenTisch(gastgeber, gast, tischId) {
+  const ich = await api(gast, 'GET', '/me');
+  const beitritt = await api(gast, 'POST', `/tables/${tischId}/join`, {});
+  if (beitritt.status !== 200) throw new Error(`Beitritt: ${beitritt.status} ${JSON.stringify(beitritt.daten)}`);
+  if (beitritt.daten?.angefragt) {
+    const zusage = await api(gastgeber, 'POST', `/tables/${tischId}/anfragen/${ich.daten.id}`, { annehmen: true });
+    if (zusage.status !== 200) throw new Error(`Zusage: ${zusage.status} ${JSON.stringify(zusage.daten)}`);
+  }
+  // Der Beitritt ueber die API weiss die Seite nicht: neu laden, dann steht
+  // auf der Startseite „Weiterspielen" mit dem Tisch.
+  await gast.goto(`${BASIS}/`);
+  await gast.waitForLoadState('networkidle').catch(() => {});
+  await ruhig(gast);
+  await gast.locator('button.hb-weiter').first().click({ timeout: 15_000 });
+  await gast.waitForTimeout(1500);
 }
 
 function partyAuswahl(minispiele) {
@@ -722,7 +781,52 @@ const SZENEN = [
       throw new Error('in acht Versuchen keine brauchbare Quizrunde');
     },
   },
+  {
+    // Ad 2 (docs/werbung/ad-2/konzept.md, Abschnitt 3): vier Freunde an einem
+    // Tisch. Mit Bots stuende dort „Bot 2" — genau die Pointe, die Ad 2 nicht
+    // erzaehlt. Deshalb vier echte Gastkonten; die Ziffer im Namen macht die
+    // Szene mit `--szene 14` eindeutig waehlbar (`doppelkopf` traefe beide).
+    name: '14-doppelkopf-runde-stich',
+    async machen(browser) {
+      const seiten = [];
+      const autos = [];
+      try {
+        // Nacheinander, nicht parallel: Die Gastanlage liegt hinter einer Ratenbremse.
+        for (const name of RUNDE) seiten.push(await appSeite(browser, {}, name));
+        const [lena, ...freunde] = seiten.map((s) => s.page);
+        await leererTisch(lena, 'Doppelkopf', 4);
+        const tischId = (await api(lena, 'GET', '/me')).daten?.activeTable?.tableId;
+        if (!tischId) throw new Error('Lena sitzt an keinem Tisch');
+        // Die Freunde spielen von selbst, sobald sie sitzen; Lena erst, wenn
+        // der Tisch voll ist — der letzte Beitritt startet die Partie.
+        for (const freund of freunde) {
+          await anDenTisch(lena, freund, tischId);
+          autos.push(autopilot(freund, dokoSchritt));
+        }
+        const auto = autopilot(lena, dokoSchritt);
+        autos.push(auto);
+        await stichClip(
+          lena,
+          auto,
+          { datei: '14-doppelkopf-runde-stich', spiel: 'Doppelkopf', szene: 'Vier Freunde (Lena, Tobi, Sara, Jonas), keine Bots: Lenas vierte Karte schliesst den Stich, er wird eingezogen', eignung: 'Ad 2, Szene 4' },
+          3,
+        );
+      } catch (e) {
+        if (seiten[0]) await fehlerbild(seiten[0].page, '14-doppelkopf-runde-stich');
+        throw e;
+      } finally {
+        for (const a of autos) await a.stop();
+        for (const { ctx, page } of seiten) {
+          await tischVerlassen(page);
+          await ctx.close();
+        }
+      }
+    },
+  },
 ];
+
+/** Die vier Freunde aus Ad 2; aufgenommen wird die erste, sie legt den Tisch an. */
+const RUNDE = ['Lena', 'Tobi', 'Sara', 'Jonas'];
 
 // ---------------------------------------------------------------------------
 // Nachbereitung
@@ -768,6 +872,18 @@ function kodiererWaehlen() {
 const KODIERER = kodiererWaehlen();
 
 /**
+ * Welche Szene eine Datei (oder Listenzeile, die mit dem Dateinamen beginnt)
+ * geschrieben hat: die mit dem laengsten passenden Namen. Frueher hiess es
+ * nur „Name kommt vor" — dann haette ein Lauf von `doppelkopf` auch
+ * 14-doppelkopf-runde-stich geloescht, das eine andere Szene aufnimmt.
+ */
+function szeneDerDatei(datei) {
+  return SZENEN.filter((s) => datei.startsWith(`${s.name}.`) || datei.includes(`-${s.name}`)).sort(
+    (a, b) => b.name.length - a.name.length,
+  )[0];
+}
+
+/**
  * Ein Lauf mit --szene ersetzt nur die Zeilen seiner Szenen; was andere Szenen
  * frueher aufgenommen haben, bleibt in der Liste stehen.
  */
@@ -775,13 +891,13 @@ async function listeSchreiben(format, szenen) {
   const alt = await readFile(join(ZIEL, 'liste.md'), 'utf8').catch(() => '');
   const behalten = alt
     .split('\n')
-    .filter((z) => /^\| \d\d-/.test(z) && !szenen.some((s) => z.includes(`-${s.name}`)));
+    .filter((z) => /^\| \d\d-/.test(z) && !szenen.includes(szeneDerDatei(z.slice(2))));
   const neu = clips.map((c) => `| ${c.datei}.${format} | ${c.spiel} | ${c.szene} | ${c.sekunden.toFixed(1)} s | ${c.eignung} |`);
   const zeilen = [
     '# Bildschirmaufnahmen brauweg-spielen.de',
     '',
     `Erzeugt von \`werkzeug/store/clips.mjs\` am ${new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} gegen ${BASIS}.`,
-    `App-Modus, Gastkonten mit Vogelnamen, alle Mitspieler Bots, Partykiste alkoholfrei. ${VIDEO.width} × ${VIDEO.height} (9:16), ${format}.`,
+    `App-Modus, Gastkonten mit Vogelnamen, alle Mitspieler Bots (ausser 14: vier Gastkonten Lena, Tobi, Sara, Jonas), Partykiste alkoholfrei. ${VIDEO.width} × ${VIDEO.height} (9:16), ${format}.`,
     '',
     '| Datei | Spiel | Szene | Länge | Eignung |',
     '| --- | --- | --- | --- | --- |',
@@ -806,7 +922,7 @@ async function main() {
       console.log(szene.name);
       // Alte Clips dieser Szene weg — sonst laege ein 07-skat-stich-3 neben einem neuen 07-skat-ansage.
       for (const f of await readdir(ZIEL)) {
-        if (/^\d\d-/.test(f) && f.includes(`-${szene.name}`)) await rm(join(ZIEL, f), { force: true });
+        if (/^\d\d-/.test(f) && szeneDerDatei(f) === szene) await rm(join(ZIEL, f), { force: true });
       }
       try {
         await szene.machen(browser);
