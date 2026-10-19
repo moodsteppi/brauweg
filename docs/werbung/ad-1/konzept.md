@@ -320,7 +320,7 @@ Auswählen jedes Bild auf den Hintergrund prüfen, nicht nur auf die Gesichter.
 
 - **Szene 6:** In der Aufnahme `04-doppelkopf-stich` verschwinden in den
   Bildern 64–67 (30 fps) drei Karten des Stichs und kommen wieder — das
-  Flackerbild bei ≈ 16,3 s im ersten Schnitt. Im Schnitt mit
+  Flackerbild bei ≈ 16,3 s im ersten Schnitt. Im Schnitt mit (wirkungslos, siehe 9.5)
   `freezeframes=first=64:last=67:replace=63` überbrückt; die Ursache in der App
   bzw. im Aufnahmeskript ist nicht behoben.
 - **Szene 8:** Die alte Reizaufnahme (`9de37cb7`) zeigt nie „18 sagen", nur
@@ -351,3 +351,23 @@ Der hochgeladene Schnitt trägt keinen `kiHinweis`: `POST /creatives/:id/assets`
 nimmt das Feld nicht an. Die Kennzeichnung steckt in den KI-Assets, aus denen
 er gebaut ist. Eingebrannt ist „KI-generiert" nicht — das tut nur der
 Server-Schnitt (`lib/creatives/schnitt.ts`).
+
+### 9.5 Schnitt v3 — Schwarzbild in Szene 6 behoben
+
+In v2 (`dd8509ad`) war der Handybildschirm in Szene 6 bei 16,300–16,400 s
+(4 Bilder) schwarz: YAVG 23,8 im Ausschnitt `crop=500:800:290:500`, davor
+und danach ≈ 91. Das Einfrieren aus 9.3 hatte nie gewirkt. `freezeframes`
+braucht **zwei** Eingänge (Hauptbild und Ersatzquelle); mit nur einem lief
+ffmpeg ohne Fehlermeldung durch und ließ die Bilder unverändert. Jetzt steht
+es hinter dem Trim, auf den Bildnummern der Szene:
+`split[fa6][fb6];[fa6][fb6]freezeframes=first=43:last=46:replace=42` hält das
+Bild bei 16,267 s.
+
+Schnitt v3: Asset `9ff58caa-7ce6-439a-92ae-0694ad5f803f`
+(`ad-1-dir-fehlt-der-vierte-v3.mp4`), 28,0 s, 1080×1920, 30 fps, sha256
+`83023a299967a5dd89857ce2593f77a6c5425ec55f42c0ed39135274b6d57197`. Nicht
+freigegeben, v2 bleibt stehen. Keine neuen KI-Kosten.
+
+Kleinste YAVG je Szene (alle 840 Bilder gemessen, gleicher Ausschnitt):
+1: 114,5 · 2: 83,9 · 3: 83,9 · **4: 42,3** (erstes Bild, 8,0 s) · 5: 72,7 ·
+**6: 77,3** · 7: 68,5 · **8: 74,6** · 9: 66,6. Kein Bild liegt unter 40.
