@@ -388,3 +388,78 @@ genug dafür.
    läuft ffmpeg ohne Fehlermeldung durch und lässt das Bild unverändert.
 6. Ergebnis als Creative-Asset hochladen und hier als Abschnitt 9 nachtragen
    (Asset-Kennung, Länge, Größe, Lautheit, sha256, Kosten), so wie in Ad 1.
+
+---
+
+## 9. Erzeugung — Stand 19.10.2026, abgebrochen am fal-Guthaben
+
+Creative **`1bda9128-aa21-4ffa-9574-2cd9d194c34f`** („Ad 2 - Drei Staedte,
+eine Runde", Instagram Reel, Anzeige), Seite
+`https://bpb.broweg.de/dashboard/creatives/1bda9128-aa21-4ffa-9574-2cd9d194c34f`.
+Das Skript aus Abschnitt 3 steht im Feld `skript`.
+
+**Kein einziges KI-Bild ist entstanden.** Die Probe vor dem ersten teuren
+Aufruf (ein `flux-schnell`-Bild für 1 ct, 17:32 UTC) kam als `FEHLER`
+zurück: „fal.ai hat den Schlüssel abgelehnt (403)". Abgelehnt schon beim
+Absenden, deshalb ohne Auftragskennung und **ohne Buchung (0 ct)**. Einen
+Endpunkt für den Kontostand gibt es in der Creatives-API nicht, und der
+FAL_KEY liegt nur auf dem Server — „Guthaben prüfen" heißt deshalb: diese
+Probe. Ein 403 ist nach den Erfahrungen von Ad 1 (9.4) leeres Guthaben oder
+ein gesperrter Schlüssel. Tageslimit zu dem Zeitpunkt: 11,77 € von 20 €
+verbraucht (alles Ad 1).
+
+### 9.1 Was bereitliegt
+
+Die Prompts liegen als Dateien unter `prompts/` (nie über die Kommandozeile
+reichen, Ad 1 9: `$P$G`). Der Plan ist gegenüber Abschnitt 7 auf das
+Kartenbudget von **5 €** gekürzt — 31 Bilder × 15 ct = 4,65 €, Reserve 2
+Bilder:
+
+| Schritt | Dateien | Modell, Format | Referenzen |
+|---|---|---|---|
+| Porträt heute, **1** statt 2 Varianten | `portraet-*.txt` | nano-banana-pro, 9:16 | `f742485b` (eigener Doppelkopf-Screenshot, nur Farbe — wie Ad 1) |
+| Bogen heute | `bogen-heute-*.txt` | nano-banana-pro, 16:9 | gewähltes Porträt |
+| Bogen jung | `bogen-jung-*.txt` | nano-banana-pro, 16:9 | Bogen heute derselben Figur |
+| Anker früher, **1** statt 2 | `anker-frueher.txt` | nano-banana-pro, 9:16 | die vier Bögen jung |
+| Anker heute, **1** statt 2 | `anker-heute.txt` | nano-banana-pro, 16:9 | Bogen heute Lena, `f742485b` |
+| Szenen, **17** statt 22 | `s1a s1d s2a s2b s2c` (9:16) · `s3a s3a2 s3b s3b2 s3c s3c2 s5a s5a2 s5b s5b2 s5c s5c2` (16:9) | nano-banana-pro | S1/2: Anker früher + Bögen jung (2b: nur Lena) · S3/5: Anker heute + Bogen heute der Figur(en) |
+
+Gestrichen gegenüber 6.2: S1b, S1c, S2a2, S2b2, S2c2 — für 2a–2c je ein
+Versuch, für die Szenen mit Gesichtern (3, 5) und den Hook (1) je zwei.
+
+### 9.2 Szene 4 — Bildschirmaufnahme (fertig)
+
+`clips.mjs` hat die Szene **`14-doppelkopf-runde-stich`** bekommen (`node
+clips.mjs --szene 14`): vier Gastkonten Lena, Tobi, Sara, Jonas in je eigenem
+Browserkontext, Lena legt den Tisch an, die drei anderen treten per API bei
+(Doppelkopf will die Zusage des Gastgebers, die gibt Lena per API), alle vier
+spielen per Autopilot, aufgenommen wird Lena. Eine echte Partie, kein Bot.
+
+Asset **`acd84aa3-05b7-4eec-897f-f74f69cc4da4`**
+(`14-doppelkopf-runde-stich.mp4`, Art AUFNAHME), 6,97 s, 1080 × 1920,
+30 fps, H.264, 1,0 MB, sha256
+`4b9072a336480db7752bd22e68802073f0886949eea05f632bebd861d1288d1b`.
+
+- Im Bild: oben Sara, links Tobi, rechts Jonas, unten „Lena · Team Kontra".
+  Kein „Bot", kein Stärkeregler (ein Bild je 0,5 s angesehen).
+- Ablauf: bis ≈ 1,9 s liegen drei Karten; bei ≈ 2,0 s (Bild 61) legt Lena
+  die vierte; ab 3,77 s (Bild 113) wird der Stich eingezogen, bei 4,17 s ist
+  er weg; danach legt Jonas aus. Für die 6 s im Schnitt passt 0,0–6,0 s.
+- YAVG (alle 209 Bilder): ganzes Bild mindestens 70,1, Tischmitte mindestens
+  104,8 — kein Schwarzbild.
+- **Aussetzer in Bild 65–66 (≈ 2,17–2,20 s):** Die drei fremden Karten
+  springen kurz zurück und spielen ihre Legeanimation neu (Tischmitte YAVG
+  156 → 139,5 → 155,7). Derselbe Fehler wie „drei Karten verschwinden" in
+  Ad 1, und er liegt im **Client**, nicht in der Aufnahme: In `Table.tsx`
+  wird die Liegezeit des vollen Stichs erst in einem `useEffect` gesetzt; im
+  ersten Rendern nach der vierten Karte steht deshalb nur der leere Stich
+  plus die eigene Karte da. Für den Schnitt: Bild 64 und 67 zeigen dieselbe
+  Lage, also `split[a][b];[a][b]freezeframes=first=65:last=66:replace=64`.
+
+### 9.3 Fortsetzen
+
+Erst wenn fal wieder antwortet (eine 1-ct-Probe wie oben): Porträts → Bögen
+heute → Bögen jung → **Gegenprobe der Gesichter** (Abschnitt 4, Schritt 4)
+→ Anker → Szenen. Keine Videos, keine Freigaben (`POST
+/creatives/assets/:id/freigabe` ist die Kostenschranke und bleibt beim
+Menschen).
