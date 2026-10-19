@@ -62,3 +62,10 @@ apps/android/firebase.properties
 werkzeug/app/ios-lokal.env
 werkzeug/app/ios-bau/
 *.p8
+
+# Bildschirmaufnahmen aus werkzeug/store/clips.mjs: Rohmaterial fuer
+# Werbevideos, mehrere hundert kB je Clip — gehoert ins Material-Archiv, nicht
+# hierher. Der Vorgabeordner des Skripts kommt dazu, falls ohne --ziel gestartet.
+*.webm
+*.mp4
+werkzeug/store/clips/
