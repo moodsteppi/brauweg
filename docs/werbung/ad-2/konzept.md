@@ -585,3 +585,57 @@ Bögen verglichen, kein fremder Mensch. Gesucht wurde in Ausschnitten bei voller
 Auflösung, aber nicht jedes Bild Pixel für Pixel nach Kleinstlogos (Handyrücken,
 Plattenspieler rechts im Köln-Anker, Kachelofen). Ob 3b/5b und 3c/5c im
 dreigeteilten Schnitt (1080 × 640) gut zusammenstehen, ist nicht geprüft.
+
+### 9.6 Videos (Kling 2.5 Turbo Pro, 19.10.2026)
+
+Aus den zehn freigegebenen Standbildern (Szene 1 ohne Video, Schnittzoom) je
+ein Clip mit `kling-bild`, 5 s. Die Prompts liegen als `prompts/v-*.txt`
+(Leitplanke aus 6.3 angehängt; 3b/5b nennen das Kölner Cordsofa, 3c/5c die
+Leipziger Bücherwand). Der Server hat jeden Prompt wörtlich gespeichert, kein
+`$P$G`. Alle Clips sind 5,04 s lang, haben 121 Bilder bei 24 fps und sind
+1072 × 1928 (9:16) bzw. 1928 × 1072 (16:9) groß. Der Server hat den
+KI-Hinweis selbst gesetzt. Freigegeben ist nichts.
+
+**Bildfehler:** YAVG je Bild (`signalstats`) in allen elf Clips gemessen. Kein
+Sprung über 3 von Bild zu Bild, höchstens 2,68 (2b, Zug fährt aus dem Bild).
+Kein Schwarzbild, der niedrigste Wert liegt bei 70,4 (2c, das Licht wird wie
+verlangt dunkler: 75,0 → 70,4). Was unten als Fehler steht, sind Fehler der
+Handlung, keine Bildaussetzer.
+
+| Szene | Video-Kennung | Länge | Befund (brauchbar ab/bis) |
+|---|---|---|---|
+| 2a | `a0d45050` | 5,04 s | **0,0–5,0 s.** Die Hand zieht das Band über den Deckel und drückt es an, das zweite Händepaar hält still, die Karten bleiben liegen. Hände unverformt, kein Text, keine Flasche |
+| 2b | `8668b324` | 5,04 s | **0,0–2,7 s.** Lena lächelt über die Schulter, winkt und dreht sich weg (in umgekehrter Reihenfolge wie im Prompt, wirkt aber). Ab ≈ 2,8 s (Bild 67) kommt ein Gegenzug mit orangem Zielanzeiger, Laufschrift unscharf, aber als Schrift erkennbar. Danach Gleise und Häuser |
+| 2c | `1729ce41` | 5,04 s | **0,0–5,0 s.** Statisch, die Küche bleibt leer, kein Mensch tritt ein, Stühle unverändert; das Licht wird langsam dunkler |
+| 3a | `b95abea1` | 5,04 s | **0,0–5,0 s.** Lena sieht zum Regenfenster, dann aufs Handy und lächelt. Gesicht stabil, ein Handy, grünes Licht auf der Brille |
+| 3b | `b3ee6ba6` | 5,04 s | **0,0–5,0 s.** Sara stupst Tobi bei ≈ 0,5 s an und lacht, er grinst aufs Handy. Je ein Handy, Gesichter stabil. Der Schwenk ist kaum zu sehen (Kling, siehe Ad 1) |
+| 3c | `89d9e17d` | 5,04 s | **0,0–2,4 s.** Jonas liegt zurückgelehnt, hebt das Handy und lächelt. Ab ≈ 2,5 s (Bild 60) dreht sich das Handy in der Hand um: Man sieht die Rückseite mit Kamera, das grüne Licht auf dem Gesicht ist weg |
+| 5a | `1be62fc0` (gewählt) | 5,04 s | **0,0–2,9 s.** Lacht, Hand vor dem Mund, Handy in der anderen Hand. Von ≈ 3,0 bis 3,9 s (Bild 72–94) beugt sie sich vor, das Haar fällt übers Gesicht, und das Gesicht ist vom Displaylicht überstrahlt und nicht mehr Lena. Ab 4,0 s ist sie wieder erkennbar |
+| 5a Nachdreh | `57125473` (`v-5a-n.txt`) | 5,04 s | **schlechter:** Sie beugt sich trotz des Zusatzes „does not bend forward" schon bei ≈ 1,5–2,4 s und bei ≈ 4,5 s vor. Brauchbar nur 0,0–1,4 und 2,5–4,2 s |
+| 5b | `60f22645` | 5,04 s | verworfen: Tobi schüttelt nicht den Kopf, sondern senkt ihn ab ≈ 2 s aufs Handy, man sieht dann nur seinen Scheitel. Sara lacht und knufft ihn |
+| 5b Nachdreh | `2f0f11cc` (`v-5b-n.txt`, gewählt) | 5,04 s | **0,0–5,0 s.** Beide lachen zur Kamera, Sara stößt ihn mit dem Ellbogen an, Tobi grinst. Ein deutliches Kopfschütteln ist nicht zu sehen. Je ein Handy, die Tassen bleiben stehen |
+| 5c | `bee71c65` | 5,04 s | **0,0–5,0 s.** Jonas reckt die Faust, mehrmals statt einmal, und jubelt aufs Handy. Bei den Faustbewegungen ist der Arm bewegungsunscharf (≈ 1,0, 2,0, 3,0, 4,0 s), die Hand bleibt aber ganz. Gesicht stabil |
+
+**Für den Schnitt:** Die Szenen 2 und 3 brauchen je 1,3–1,4 s, das liegt bei
+allen in den brauchbaren Bereichen. **Szene 5 braucht 6 s je Streifen, die
+Clips sind 5 s lang.** 5b und 5c lassen sich auf 6 s strecken (`setpts`, 0,83×).
+5a ist nur bis 2,9 s sauber: entweder halbe Geschwindigkeit (0,0–2,9 s auf
+5,8 s), oder 0,0–2,9 s plus 4,0–5,0 s mit einem Schnitt in Lenas Streifen.
+
+**Kosten laut `/creatives/kosten`:** Buchungen auf diesem Creative vorher
+691 ct, nachher **1076 ct**. Die Videos haben also **3,85 €** gekostet:
+11 × 35 ct, davon 2 Nachdrehs (Rahmen 4,60 € bzw. 12 Videos). Kein
+Fehlschlag, kein 402/403. Tagesstand danach: 22,53 € von 30 €.
+
+**Was misslang:** 5a lässt sich auch im Nachdreh nicht davon abbringen, sich
+vorzubeugen. Ein zweiter Nachdreh war nach der Auftragsregel nicht erlaubt.
+Kling hält den Kopf offenbar nicht oben, wenn die Hand vor dem Mund liegt. 3c
+kippt das Handy, in 2b kommt ein Zug mit Zielanzeiger. Beide liegen außerhalb
+der Sekunden, die der Schnitt braucht.
+
+**Nicht geprüft:** Gesichter und Hände hat nur der Worker angesehen, in
+Kontaktbögen alle 0,5 s und in Ausschnitten. Nicht jedes der 121 Bilder je
+Clip und nicht in voller Auflösung. Auf Kleinstlogos (Handyrückseite in 3c ab
+2,5 s, Rucksacketikett in 2b) ist nicht pixelgenau gesucht. Der Ton der Clips
+ist nicht geprüft (im Schnitt kommt er ohnehin von Hand). Ebenso nicht, wie die
+drei Streifen von Szene 5 im Ausschnitt 1080 × 640 nebeneinander wirken.
