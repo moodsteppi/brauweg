@@ -55,6 +55,8 @@ import { type AppVerknuepfung, appVerknuepfungRouten } from './app-verknuepfung.
 import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
 import { partykisteRouten } from './partykiste-routen.js';
 import { lernpfadRouten } from './lernpfad-routen.js';
+import { herkunftRouten } from './herkunft-routen.js';
+import { gastkontoZaehlen } from '../herkunft.js';
 import { lernserieKurz } from '../lernpfad.js';
 import { pushRouten } from './push-routen.js';
 import type { PushAnlaesse } from '../push/anlaesse.js';
@@ -294,6 +296,11 @@ export interface AppDeps {
    * eingerichtet ist und man trotzdem an die Daten muss.
    */
   readonly diagnoseSchluessel?: string | null;
+  /**
+   * Schluessel fuer die Auswertung der Werbelinks (`HERKUNFT_SCHLUESSEL`,
+   * src/herkunft.ts). Fehlt er, ist `/api/herkunft/auswertung` zu.
+   */
+  readonly herkunftSchluessel?: string | null;
   /**
    * OAuth-Client-ID fuer "Mit Google anmelden" (GOOGLE_CLIENT_ID). Fehlt
    * sie, gibt es den Knopf nicht — der Rest der Anmeldung laeuft unveraendert.
@@ -849,6 +856,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
+  // Werbelinks `?q=`: Besuch zaehlen, Summen fuer den bro-server — siehe dort.
+  herkunftRouten(app, {
+    db: deps.db,
+    schluessel: deps.herkunftSchluessel ?? null,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
   // Doppelkopf lernen: Lernpfad, Lektionen, Uebungstisch — siehe dort.
   lernpfadRouten(app, {
     db: deps.db,
@@ -878,10 +892,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * nichts.
    */
   app.post('/api/auth/gast', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
-    const { name } = z
-      .object({ name: z.string().min(GAST_NAME_MIN).max(GAST_NAME_MAX) })
+    const { name, herkunft } = z
+      .object({
+        name: z.string().min(GAST_NAME_MIN).max(GAST_NAME_MAX),
+        // Kennung aus `?q=` (src/herkunft.ts). Ungueltig heisst: ohne
+        // Herkunft anlegen, nicht abweisen.
+        herkunft: z.string().max(100).optional(),
+      })
       .parse(request.body);
     const { token, accountId, displayName } = await gastKonto(deps.auth, name);
+    if (herkunft !== undefined) await gastkontoZaehlen(deps.db, accountId, herkunft);
     setSession(reply, token);
     // Wie beim Passwort-Login: Nur die iOS-Huelle bekommt das Token selbst.
     if (istAppHerkunft(request.headers.origin)) {
