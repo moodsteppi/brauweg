@@ -7,6 +7,10 @@
  *   npx playwright install chromium ffmpeg   # einmal je Rechner
  *   node clips.mjs --ziel <ordner>           # alle Szenen
  *
+ * Fuer MP4 ein vollstaendiges ffmpeg mit H.264 in den PATH legen (Windows:
+ * `winget install Gyan.FFmpeg`, danach neue Shell). Fehlt es, entstehen
+ * WebM (VP8) mit Playwrights ffmpeg — ebenso scharf, nur groesser.
+ *
  * Weitere Schalter:
  *   --szene <name>   nur eine Szene (Teilwort genuegt: doppelkopf, skat, partykiste, auswahl)
  *   --basis <url>    Server, gegen den gespielt wird (Vorgabe: staging)
@@ -20,28 +24,41 @@
  * ausloesen. Wer die Umleitung oder die App-Herkunft dort aendert, aendert
  * sie hier mit.
  *
- * Aufgenommen wird mit `page.screencast` (Playwright ≥ 1.59), nicht mit dem
- * `recordVideo` des Kontexts: Der Kontext nimmt alles von der Anmeldung bis
- * zum Schliessen in EINE Datei auf. Mit dem Screencast laesst sich dieselbe
- * laufende Partie in mehrere 5–10-Sekunden-Stuecke schneiden, und das
- * Anlegen des Tisches, das Bots-Hinzufuegen und das Warten bleiben draussen.
- * Der Kodierer ist derselbe (Playwrights ffmpeg, VP8 in WebM).
+ * Aufgenommen wird je Clip ueber den CDP-Screencast (`Page.startScreencast`),
+ * nicht mit dem `recordVideo` des Kontexts: Der nimmt alles von der Anmeldung
+ * bis zum Schliessen in EINE Datei auf. So laesst sich dieselbe laufende
+ * Partie in mehrere 5–10-Sekunden-Stuecke schneiden, und das Anlegen des
+ * Tisches, das Bots-Hinzufuegen und das Warten bleiben draussen.
  *
  * Format: 9:16 hochkant. Breite wie das iPhone-Motiv in screenshots.mjs
  * (440 CSS-Pixel), Hoehe auf 9:16 gekuerzt (782 statt 956 — sonst wuerde das
- * Video seitlich mit Grau aufgefuellt), Faktor 3, Video 1080 × 1920.
+ * Video seitlich mit Grau aufgefuellt), Faktor 3. Chromium liefert damit
+ * 1320 × 2346 Geraetepixel, verkleinert wird auf 1080 × 1920.
+ *
+ * Warum nicht Playwrights `page.screencast` (so bis zum 19.10.2026): Die
+ * Clips fuer Ad 1 waren unscharf — die App fuellte nur 440 × 782 von
+ * 1080 × 1920, der Rest war Grau. Zwei Gruende. Erstens liefert Chromiums
+ * Screencast trotz `deviceScaleFactor` nur CSS-Pixel; Geraetepixel gibt es
+ * erst mit dem Startschalter `--force-device-scale-factor`, und Playwright
+ * fuellt ein zu kleines Bild mit Grau auf, statt es zu skalieren. Zweitens
+ * kodiert Playwright in Echtzeit mit 1 Mbit/s VP8 — Schrift wird dabei auch
+ * in voller Aufloesung matschig. Deshalb sammelt `aufnahmeStarten` die
+ * JPEG-Bilder im Speicher, und `kodieren` macht daraus nach dem Clip in Ruhe
+ * EIN Video mit fester Bildrate (Lanczos, nur verkleinern, nie vergroessern).
  *
  * Die Aufnahmen gehoeren NICHT ins Repository (*.webm/*.mp4 in .gitignore).
  * Neben die Clips schreibt das Skript `liste.md` (Datei, Spiel, Szene, Laenge,
- * Eignung). Steht ein vollstaendiges ffmpeg mit H.264 im PATH, legt es zu
- * jedem Clip eine MP4 daneben — Playwrights eigenes ffmpeg kann nur VP8.
+ * Eignung). Steht ein vollstaendiges ffmpeg mit H.264 im PATH, entstehen MP4,
+ * sonst WebM — Playwrights eigenes ffmpeg kann nur VP8.
  *
  * Zauberer/Wizard kommt bewusst nicht vor (fremde Marke, in der App „Bald").
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+import { readdirSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { chromium } from 'playwright';
@@ -67,6 +84,7 @@ const ZIEL = resolve(arg.ziel);
 const VIEWPORT = { width: 440, height: 782 };
 const FAKTOR = 3;
 const VIDEO = { width: 1080, height: 1920 };
+const BILDRATE = 30;
 
 const NAMEN = ['Kiebitz', 'Pirol', 'Zilpzalp', 'Gimpel', 'Stieglitz', 'Wiedehopf', 'Eisvogel', 'Kleiber', 'Neuntöter', 'Rotschwanz'];
 let namenZaehler = Math.floor(Math.random() * NAMEN.length);
@@ -268,10 +286,10 @@ const clips = [];
  * 10 s geschnitten (das Video endet, die Partie laeuft weiter).
  */
 async function clip(page, eintrag, tun) {
-  const datei = join(ZIEL, `${eintrag.datei}.webm`);
+  const datei = join(ZIEL, `${eintrag.datei}.${KODIERER.endung}`);
   process.stdout.write(`  ${eintrag.datei} … `);
   const beginn = Date.now();
-  await page.screencast.start({ path: datei, size: VIDEO });
+  const stoppen = await aufnahmeStarten(page);
   let fehler = null;
   try {
     await Promise.race([tun(), warte(10_000)]);
@@ -280,17 +298,77 @@ async function clip(page, eintrag, tun) {
   }
   const rest = 5000 - (Date.now() - beginn);
   if (rest > 0) await warte(rest);
-  await page.screencast.stop();
+  const aufnahme = await stoppen();
   const sekunden = (Date.now() - beginn) / 1000;
   if (fehler) {
     console.log(`verworfen: ${String(fehler).split('\n')[0]}`);
-    await rm(datei, { force: true });
     return false;
   }
+  await kodieren(aufnahme, datei);
   const kb = Math.round((await stat(datei)).size / 1024);
   console.log(`${sekunden.toFixed(1)} s, ${kb} kB`);
   clips.push({ ...eintrag, sekunden });
   return true;
+}
+
+/**
+ * Startet den Screencast und sammelt die Bilder mit ihrer Ankunftszeit.
+ * Chromium schickt nur bei Aenderung ein neues Bild; die Luecken fuellt
+ * `kodieren` mit dem jeweils letzten. Quittiert wird sofort — ohne Quittung
+ * kommt kein naechstes Bild.
+ */
+async function aufnahmeStarten(page) {
+  const cdp = await page.context().newCDPSession(page);
+  const beginn = performance.now();
+  const bilder = [];
+  cdp.on('Page.screencastFrame', ({ data, sessionId }) => {
+    bilder.push({ ms: performance.now() - beginn, jpeg: Buffer.from(data, 'base64') });
+    cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => {});
+  });
+  // Hoechstmass = volle Geraetepixel, damit Chromium nicht selbst (bilinear) verkleinert.
+  await cdp.send('Page.startScreencast', {
+    format: 'jpeg',
+    quality: 95,
+    maxWidth: VIEWPORT.width * FAKTOR,
+    maxHeight: VIEWPORT.height * FAKTOR,
+  });
+  return async () => {
+    await cdp.send('Page.stopScreencast').catch(() => {});
+    const ms = performance.now() - beginn;
+    await cdp.detach().catch(() => {});
+    return { bilder, ms };
+  };
+}
+
+/**
+ * Macht aus den gesammelten Bildern ein Video mit fester Bildrate: je Takt
+ * das letzte Bild, das bis dahin angekommen war. 1320 × 2346 wird auf
+ * 1080 × 1920 verkleinert; die 0,04 % Unterschied im Seitenverhaeltnis
+ * gleicht `-aspect` aus, damit die Pixel quadratisch bleiben.
+ */
+async function kodieren({ bilder, ms }, datei) {
+  if (bilder.length === 0) throw new Error('Screencast lieferte kein einziges Bild');
+  const takte = Math.max(1, Math.round((ms / 1000) * BILDRATE));
+  const args = [
+    '-y', '-loglevel', 'error',
+    '-f', 'image2pipe', '-c:v', 'mjpeg', '-framerate', String(BILDRATE), '-i', 'pipe:0',
+    '-an', '-vf', `scale=${VIDEO.width}:${VIDEO.height}:flags=lanczos`, '-aspect', `${VIDEO.width}:${VIDEO.height}`,
+    ...KODIERER.args,
+    datei,
+  ];
+  const ff = spawn(KODIERER.pfad, args, { stdio: ['pipe', 'ignore', 'pipe'] });
+  let meldung = '';
+  ff.stderr.on('data', (d) => (meldung += d));
+  ff.stdin.on('error', () => {});
+  const ende = once(ff, 'close');
+  let j = 0;
+  for (let i = 0; i < takte && ff.exitCode === null; i++) {
+    while (j + 1 < bilder.length && bilder[j + 1].ms <= (i * 1000) / BILDRATE) j++;
+    if (!ff.stdin.write(bilder[j].jpeg)) await Promise.race([once(ff.stdin, 'drain'), ende]);
+  }
+  ff.stdin.end();
+  const [code] = await ende;
+  if (code !== 0) throw new Error(`ffmpeg (${code}): ${meldung.trim().split('\n')[0]}`);
 }
 
 /**
@@ -627,7 +705,7 @@ const SZENEN = [
             const danach = (await page.locator('.pk-frage, .pk-knopf, .pk-wort').allInnerTexts().catch(() => [])).join(' ');
             if (FREMDE_MARKEN.test(danach) && clips.at(-1)?.datei === '13-partykiste-weiter') {
               console.log('  13 verworfen: nächste Frage nennt eine fremde Marke');
-              await rm(join(ZIEL, `${clips.pop().datei}.webm`), { force: true });
+              await rm(join(ZIEL, `${clips.pop().datei}.${KODIERER.endung}`), { force: true });
             }
             return;
           }
@@ -639,7 +717,7 @@ const SZENEN = [
           await ctx.close();
         }
         console.log(`  ${grund}, neuer Tisch (${versuch}) …`);
-        for (const c of clips.splice(vorher)) await rm(join(ZIEL, `${c.datei}.webm`), { force: true });
+        for (const c of clips.splice(vorher)) await rm(join(ZIEL, `${c.datei}.${KODIERER.endung}`), { force: true });
       }
       throw new Error('in acht Versuchen keine brauchbare Quizrunde');
     },
@@ -656,15 +734,38 @@ function ffmpegMitH264() {
   return r.status === 0 && /libx264|h264_/.test(r.stdout);
 }
 
-function nachMp4(webm) {
-  const mp4 = webm.replace(/\.webm$/, '.mp4');
-  const r = spawnSync(
-    'ffmpeg',
-    ['-y', '-loglevel', 'error', '-i', webm, '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', mp4],
-    { encoding: 'utf8' },
-  );
-  return r.status === 0 ? mp4 : null;
+/** Playwrights ffmpeg liegt neben dem Chromium: <ms-playwright>/ffmpeg-NNNN/ffmpeg-<plattform>. */
+function playwrightFfmpeg() {
+  let ordner = dirname(chromium.executablePath());
+  while (!/^chromium(_headless_shell)?-\d+$/.test(basename(ordner)) && dirname(ordner) !== ordner) ordner = dirname(ordner);
+  const wurzel = dirname(ordner);
+  const ff = readdirSync(wurzel).find((f) => /^ffmpeg-\d+$/.test(f));
+  if (!ff) throw new Error('Kein ffmpeg — weder mit H.264 im PATH noch von Playwright (npx playwright install ffmpeg).');
+  const name = { win32: 'ffmpeg-win64.exe', darwin: 'ffmpeg-mac' }[process.platform] ?? 'ffmpeg-linux';
+  return join(wurzel, ff, name);
 }
+
+/**
+ * Wer kodiert: ein ffmpeg mit H.264 aus dem PATH (MP4), sonst Playwrights
+ * eigenes (nur VP8, WebM). Die VP8-Werte liegen bewusst weit ueber
+ * Playwrights 1 Mbit/s — Schrift braucht Bitrate, und es eilt nicht mehr.
+ */
+function kodiererWaehlen() {
+  if (ffmpegMitH264()) {
+    return {
+      pfad: 'ffmpeg',
+      endung: 'mp4',
+      args: ['-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-pix_fmt', 'yuv420p', '-movflags', '+faststart'],
+    };
+  }
+  return {
+    pfad: playwrightFfmpeg(),
+    endung: 'webm',
+    args: ['-c:v', 'libvpx', '-b:v', '20M', '-crf', '4', '-qmin', '0', '-qmax', '24', '-deadline', 'good', '-cpu-used', '2'],
+  };
+}
+
+const KODIERER = kodiererWaehlen();
 
 /**
  * Ein Lauf mit --szene ersetzt nur die Zeilen seiner Szenen; was andere Szenen
@@ -696,7 +797,9 @@ async function main() {
   await mkdir(ZIEL, { recursive: true });
   console.log(`Server ${BASIS} (Client glaubt ${SCHEIN}) → ${ZIEL}`);
 
-  const browser = await chromium.launch({ headless: !arg.sichtbar });
+  console.log(`Kodierer: ${KODIERER.pfad} → ${KODIERER.endung}`);
+  // Ohne den Schalter liefert der Screencast nur CSS-Pixel (440 × 782), siehe Kopf.
+  const browser = await chromium.launch({ headless: !arg.sichtbar, args: [`--force-device-scale-factor=${FAKTOR}`] });
   let fehlerZahl = 0;
   try {
     for (const szene of szenen) {
@@ -716,15 +819,7 @@ async function main() {
     await browser.close();
   }
 
-  let format = 'webm';
-  if (ffmpegMitH264()) {
-    const alle = clips.map((c) => nachMp4(join(ZIEL, `${c.datei}.webm`)));
-    if (alle.every(Boolean)) format = 'mp4';
-    else console.log('MP4-Wandlung teilweise gescheitert — liste.md nennt die WebM.');
-  } else {
-    console.log('Kein ffmpeg mit H.264 im PATH — Clips bleiben WebM (VP8).');
-  }
-  await listeSchreiben(format, szenen);
+  await listeSchreiben(KODIERER.endung, szenen);
   console.log(`${clips.length} Clips, liste.md geschrieben.`);
   if (fehlerZahl > 0) process.exitCode = 1;
 }
