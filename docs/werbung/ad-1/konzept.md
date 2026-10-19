@@ -305,10 +305,10 @@ Handybildschirme bleiben schlichtes Leuchten, Handkamera ohne Zoom.
 
 | Szene | Standbild (gewählt) | Handlung im Video | Video |
 |---|---|---|---|
-| 1 | `1c90270b` (vom Menschen freigegeben statt `e560ad47`; über die Schulter, deshalb eigener Video-Prompt für eine Person) | Jule mischt (Riffle), das Handy neben dem Stapel vibriert, die Hände erstarren, der Kopf dreht sich zum Handy | ⏳ |
-| 2 | `8b4d023d` (Retusche von `34b2a05f`: Flasche auf der Arbeitsplatte entfernt) | Seufzen, Handy sinkt auf den Tisch, Tarek zuckt mit den Schultern, Mira presst die Lippen zusammen | ⏳ |
-| 3 | `9dd02d2b` | Grinsen wird breit, sie hebt das Handy und dreht den Bildschirm zu den Freunden | `2c8d1c3d` |
-| 5 | `eaea185d` | Tarek tippt zweimal, Mira kratzt sich am Kopf, Jule trinkt einen Schluck Wasser | `30644f4c` |
+| 1 | `1c90270b` (vom Menschen freigegeben statt `e560ad47`; über die Schulter, deshalb eigener Video-Prompt für eine Person) | Jule mischt (Riffle), das Handy neben dem Stapel vibriert, die Hände erstarren, der Kopf dreht sich zum Handy | `184a86b6` (Einstieg 3,0 s) |
+| 2 | `8b4d023d` (Retusche von `34b2a05f`: Flasche auf der Arbeitsplatte entfernt) | Seufzen, Handy sinkt auf den Tisch, Tarek zuckt mit den Schultern, Mira presst die Lippen zusammen | `d155f751` (2. Versuch; der 1. `8d4609e6` hatte einen Leuchtfleck auf dem Tisch) |
+| 3 | `9dd02d2b` | Grinsen wird breit, sie hebt das Handy und dreht den Bildschirm zu den Freunden | `2c8d1c3d` (Einstieg 1,5 s) |
+| 5 | `eaea185d` | Tarek tippt zweimal, Mira kratzt sich am Kopf, Jule trinkt einen Schluck Wasser | `30644f4c` (Einstieg 0,8 s) |
 | 7 | `9ff7d0db` | Hand klatscht auf den Tisch, Karten springen, Jule lacht mit Faust oben, Mira hinter der Hand | `62ee469b` |
 
 Verworfen (bleiben als Assets stehen): Anker `384812db`, s1 `e560ad47` (nicht freigegeben), s2
@@ -334,3 +334,20 @@ Auswählen jedes Bild auf den Hintergrund prüfen, nicht nur auf die Gesichter.
   denselben Inhalt.
 - Keine `delogo`-Retusche mehr: Die neuen Bilder haben keine Flaschen.
 - Musik, Geräusche, Einblendungen und Szenenlängen wie im ersten Schnitt.
+
+### 9.4 Ergebnis
+
+Schnitt v2: Asset `dd8509ad-a5b5-4e89-adda-103fec7213ad`
+(`ad-1-dir-fehlt-der-vierte-v2.mp4`), 28,0 s, 1080×1920, 30 fps, H.264 +
+AAC, 19,0 MB, −19,7 LUFS, sha256
+`eb4bf3164070c853ab0574a4b326cd298ba3c805c8b2095522ab36be515531f5`. Nicht
+freigegeben.
+
+Kosten des Nachdrehs: 4,10 € — 11 Bilder × 15 ct und 7 Kling-Aufrufe × 35 ct.
+Einer davon (Szene 2, 16:02 UTC) scheiterte am abgelehnten fal-Schlüssel und
+wurde trotzdem gebucht.
+
+Der hochgeladene Schnitt trägt keinen `kiHinweis`: `POST /creatives/:id/assets`
+nimmt das Feld nicht an. Die Kennzeichnung steckt in den KI-Assets, aus denen
+er gebaut ist. Eingebrannt ist „KI-generiert" nicht — das tut nur der
+Server-Schnitt (`lib/creatives/schnitt.ts`).
