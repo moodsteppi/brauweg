@@ -639,3 +639,89 @@ Clip und nicht in voller Auflösung. Auf Kleinstlogos (Handyrückseite in 3c ab
 2,5 s, Rucksacketikett in 2b) ist nicht pixelgenau gesucht. Der Ton der Clips
 ist nicht geprüft (im Schnitt kommt er ohnehin von Hand). Ebenso nicht, wie die
 drei Streifen von Szene 5 im Ausschnitt 1080 × 640 nebeneinander wirken.
+
+### 9.7 Schnitt 9:16 mit Endkarte (19.10.2026)
+
+Von Hand geschnitten mit ffmpeg 9.0.2, weil der Server-Schnitt weder
+Schnittzoom noch Streifen noch Einblendungen kann. Danach lief er **einmal
+über den fertigen Schnitt**, damit der Server „KI-generiert" einbrennt und
+den KI-Hinweis setzt. Damit ist der offene Punkt aus 8.4 erledigt: Der Hinweis
+kommt vom Server und nicht aus der Hand. Weil das Kennzeichen oben rechts
+steht, sind die Ortsmarken links gesetzt, sonst lägen sie darunter.
+Die Werkzeuge liegen unter
+`schnitt/` (`schnitt.sh` baut den Film, `ebenen.html` und `rendern.cjs` die
+Einblendungen, `hochladen.mjs` und `servergang.mjs` den Weg auf den Server).
+Die Quellen holt `holen.mjs` aus dem Creative. Der Pfad zu ffmpeg in `ff.sh`
+und zu den Klängen in `schnitt.sh` gilt nur für den Mood-XPS.
+
+| | |
+|---|---|
+| **Ergebnis (gekennzeichnet)** | Asset `73c7aeb0-7bdb-4281-a5b1-9c8db4ee22d7`, Herkunft SCHNITT, kiHinweis gesetzt |
+| Länge, Format | 28,000 s, 840 Bilder, 30 fps, 1080 × 1920, H.264 + AAC |
+| Größe | 6 816 705 Byte (Server kodiert neu: crf 23, veryfast) |
+| Lautheit | −16,1 LUFS integriert, LRA 5,4 LU, True Peak −2,6 dBFS |
+| sha256 | `041f9b6731e6064e1031beab6fea13becc511bf871c893d7eee0b7807d1c95ee` |
+| Handschnitt (ohne Kennzeichen) | Asset `530610d1-637e-4314-90fa-6ade43b64040`, 14 903 354 Byte, crf 19, sha256 `d609b47e…9e09`. **Nur Vorstufe, nicht ausspielen** |
+| Server-Schnitt | `e804dd94`, ein Abschnitt 0–28 000 ms, `untertitel: false`, `kiKennzeichnung: true`, 5,3 s Laufzeit |
+
+**Zeitleiste:**
+
+| Zeit | Szene | Quelle und Behandlung | Einblendung |
+|---|---|---|---|
+| 0,0–3,0 | 1 | Standbild `800a1741`, Schnittzoom 1,07 → 1,13. Der Ausschnitt reicht rechts nur bis x 720 des Originals; die Restflasche (ab x 738) ist in keinem Bild zu sehen, am ersten und letzten Bild geprüft | „Früher: jeden Sonntag." ab 0,3 s |
+| 3,0–4,3 | 2a | `v-2a` 0,6–1,9 s | „Dann kam das Leben." bis 7,0 s |
+| 4,3–5,6 | 2b | `v-2b` 0,0–1,3 s (vor dem Gegenzug) | |
+| 5,6–7,0 | 2c | `v-2c` 3,6–5,0 s (das Licht ist schon gedimmt) | |
+| 7,0–8,3 | 3a | `v-3a` 0,3–1,6 s, aus 16:9 auf 9:16 beschnitten | „Heute: immer noch Sonntag." bis 11,0 s; „Hamburg · So 19:00" |
+| 8,3–9,6 | 3b | `v-3b` 0,0–1,3 s, beschnitten | „Köln" |
+| 9,6–11,0 | 3c | `v-3c` 0,0–1,4 s, beschnitten (bevor das Handy kippt) | „Leipzig" |
+| 11,0–17,0 | 4 | `acd84aa3` 0–6 s, Bild 64 auf 65/66 kopiert (`freezeframes` mit zwei Eingängen, 9.2) | „Doppelkopf. Wie früher. Nur weiter weg." ab 11,4 s |
+| 17,0–23,0 | 5 | drei Streifen 1080 × 640, Trennlinien 6 px Nachtblau. Hamburg: `v-5a` 0,0–2,9 + 4,0–5,0 s, auf 6 s gestreckt. Köln: `v-5b-n`, Leipzig: `v-5c`, je 0–5 s ×1,2 | Ortsmarke je Streifen |
+| 23,0–28,0 | Endkarte | Logo, „Doppelkopf · Skat · Partykiste", die drei Spielbanner, „Jetzt im Browser spielen: **brauweg-spielen.de**", „App bald im App Store und bei Google Play" | |
+
+Die Einblendungen sind in Lilita One gesetzt (Überschriften der App), die
+Endkarte darunter in Nunito, weiß auf halbdurchsichtigem Nachtblau. Gerendert
+hat Chromium sie als PNG, weil `drawtext` in diesem ffmpeg mangels fontconfig
+abstürzt.
+
+**Ton:** Musik `musik-traeume.mp3` aus der App (CC0, siehe `docs/KLANG.md`)
+ab 46 s der Datei. Bis 7 s liegt sie halb so laut, von 7 bis 9 s zieht sie an,
+ab 24 s blendet sie über 4 s aus. Geräusche: Papier/Karten
+(`karte-geben-1`) bei 0,15 s, Kartenklack (`karte-legen-1`) bei 13,0 s und
+`stich-ein-1` bei 14,77 s, beide aus der App (Kenney, CC0). Klebeband (3,15 s),
+Zug (4,15 s) und Regen (7,0 s) sind aus Rauschen gebaut (`anoisesrc`). Damit
+bleibt keine Lizenzfrage offen.
+
+**Bildprüfung (8.5):** YAVG je Bild nach dem Handschnitt gemessen. Szene 4
+(Tischausschnitt y 300–1500): 180 Bilder, 69,3–101,1. Szene 5, Hamburg
+50,8–88,9, Köln 83,5–121,0, Leipzig 84,3–109,0. **Kein Bild unter 40.** Ein
+Sprung über 12 von Bild zu Bild kommt nur an den Szenengrenzen vor, innerhalb
+der Szenen nicht. Kontaktbogen alle 0,5 s: Alle Einblendungen stehen an der
+richtigen Stelle, die Streifen bewegen sich die vollen 6 s, die Endkarte steht
+5 s. Im fertigen Asset ist „KI-generiert" oben rechts lesbar (Bild bei 18 s und
+24 s angesehen), es überdeckt weder Ortsmarke noch Link.
+
+**Abweichungen vom Konzept:**
+- Endkarte ohne das Wort „Brauweg" in der Spielezeile (Endkarte in `drehbuecher.md`): Das
+  Logo darüber trägt den Namen, zweimal untereinander wirkt wie ein Versehen.
+- Die Ortsnamen stehen auch auf den Streifen von Szene 5, nicht nur in Szene 3.
+  So bleibt ohne Ton klar, wer wo sitzt.
+- **Kein Lachen** im Ton: Eine CC0-Quelle gibt es nicht, und gebaut aus
+  Rauschen klingt es nicht nach Lachen. Kling-Ton wurde nicht verwendet.
+- Musik nach dem Pegelverlauf gewählt, nicht nach Gehör abgenommen. Der
+  „Beat bei 11 s" ist ein Anstieg der Musik bei 7–9 s plus Kartenklack bei
+  13 s, kein eigener Schlag.
+- Szene 3 ist ein enger 9:16-Ausschnitt aus 16:9-Clips, also etwa 1,8-fach
+  hochskaliert. Am Handy sieht man das nicht, auf dem Rechner wirkt es weich.
+- Hamburgs Streifen in Szene 5 hat bei ≈ 21,5 s einen Schnitt (5a 2,9 → 4,0 s,
+  die zweite Möglichkeit aus 9.6).
+
+**Kosten laut `/creatives/kosten`:** Der Schnitt kostet nichts, das Creative
+steht vorher und nachher bei **1076 ct**. Tagesstand unverändert 22,53 € von
+30 €.
+
+**Nicht geprüft und offen:** Der Ton ist nicht mit Ohren abgenommen, nur
+gemessen. Nicht jedes der 840 Bilder in voller Auflösung angesehen. **Freigegeben
+ist nichts:** Robin sieht sich das Asset `73c7aeb0` an, bevor es in einen Test
+geht. Der Handschnitt `530610d1` trägt kein Kennzeichen und darf nicht
+ausgespielt werden.
