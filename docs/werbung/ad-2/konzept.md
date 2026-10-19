@@ -535,3 +535,53 @@ Wangen, ausdrücklich „clearly much younger“).
 Worker. Die Bilder wurden in verkleinerter Ansicht angesehen, nicht in voller
 Auflösung, und nicht pixelgenau nach kleinen Logos durchsucht (etwa auf Handys,
 Fernbedienung, Lautsprecher). Kein Bild ist freigegeben, kein Video erzeugt.
+
+### 9.5 Nachdreh nach der Storyboard-Sichtung (19.10.2026)
+
+Robin hat das Storyboard gesehen und den Nachdreh freigegeben. Ziel: Köln und
+Leipzig bekommen eigene Räume, 2c einen wirklich leeren Tisch, Szene 1 und 2a
+eine Retusche. 2b, 3a und 5a bleiben unverändert. Alles nano-banana-pro, 1K
+(der Server liefert 1376 × 768 bzw. 768 × 1376), Prompts unter `prompts/`.
+
+**Neue Anker je Stadt.** Nano Banana Pro nimmt kein Bild ohne Eingabe an
+(400: „braucht ein Eingabebild (bildAssetIds)", nicht gebucht). Die leeren
+Räume laufen deshalb wie die Porträts gegen den App-Screenshot `f742485b`,
+ausdrücklich nur als Farbhinweis. Die Szenen laufen danach gegen den Anker
+ihrer Stadt und **nicht mehr** gegen Lenas Anker `6a55811a`. Seitdem bleibt
+jede Szene in ihrem Raum.
+
+| Szene | Gewählte Kennung (alt → neu) | Warum |
+|---|---|---|
+| Anker Köln | neu `7dd71bde` (`anker-koeln.txt`) | leer; braunes Cordsofa, Strickdecke, viele Pflanzen, Flickenteppich, hohe weiße Flügelfenster mit Pflanzen auf dem Sims, draußen trockene Straße mit ockerfarbener Fassade, Laterne und Platane. Kein graues Sofa, kein Backstein, kein Regen |
+| Anker Leipzig | neu `33a49768` (`anker-leipzig.txt`) | leer; breite Dielen, Stuck, Bücherwand (Rücken unlesbar), grüner Samtsessel, dunkelblaues Sofa, Messing-Leselampe, Kachelofen, gegenüber eine helle Gründerzeitfassade mit Balkonen |
+| **1** | `ddab042e` → `800a1741` (zweiter Versuch, auf `a2664468`) | Soßenflasche neben dem Besteckbecher ist weg (schon im ersten Versuch `a2664468`). ⚠ **Die klare Flasche am rechten Rand des Abzugs steht in beiden Versuchen noch** (hinter Jonas' Mütze, klein). Sonst ist das Bild unverändert: Gesichter, Karten, Kratzer, Rand |
+| **2a** | `44592c86` → `4822ebfa` (zweiter Versuch, auf `1e18f65c`) | Sprühflasche und Flasche auf dem Schreibtisch sind weg (erster Versuch). Im zweiten sind das gelbe und das graugrüne Poster leere Farbflächen, die übrigen Zettel tragen keine Buchstaben mehr. Rest: verschwommener Scheindruck auf dem Klebebandkern, nicht lesbar (stand schon im Original). Das zweite Händepaar links ist geblieben, die Retusche sollte nichts anderes ändern |
+| **2c** | `6e6458bf` → `d3ad494d` (`s2c-n.txt`, nur gegen Anker früher, ohne Bögen) | dieselbe WG-Küche: Kühlschrank mit Zetteln, Hängelampe, Lichterkette. Leerer, abgewischter Tisch, vier verschiedene Stühle, Dämmerung im Fenster, niemand im Bild, keine Flasche auf der Arbeitsplatte. Oben auf dem Regal ein Karton und ein Glas, ohne lesbaren Aufdruck |
+| **3b** | `9490d2f5` → `a4bdb9a1` (`s3b-n2.txt`, zweiter Versuch) | Köln-Anker erkennbar (Cordsofa, Pflanzen, Fenster, Platane). Sara lehnt sich lachend an Tobi, er grinst aufs Handy. Je ein Handy mit grünem Licht. Der erste Versuch `0c0a25ac` stand ebenfalls richtig, Tobi hatte darin aber **zwei Handys** (eines im Schoß) |
+| **3c** | `48168658` → `7ded0269` (`s3c-n2.txt`, zweiter Versuch) | Leipzig-Anker (Bücherwand, Leselampe, blaues Sofa, Gründerzeitfassade). Jonas liegt weit zurückgelehnt, einen Arm hinter dem Kopf, das Handy hoch über dem Gesicht, das Gesicht erkennbar. Der erste Versuch `a9e84132` war ein Weitwinkel, Jonas darin klein und vorgebeugt |
+| **5b** | `002f5503` → `9861970a` (`s5b-n.txt`) | Köln-Anker. Tobi schüttelt skeptisch den Kopf, Sara lacht laut und knufft ihn, beide halten ein Handy. Auf dem Couchtisch zwei Tassen Kaffee, eine davon mit Comicfigur ohne Schrift |
+| **5c** | `7183ca0f` → `2c37cd59` (`s5c-n.txt`) | Leipzig-Anker (Bücherwand, Leselampe, Fenster mit Fassade). Faust hoch, das Handy mit grünem Licht in der anderen Hand, genau die Handlung |
+
+**Kosten laut `/creatives/kosten`:** Buchungen auf diesem Creative vorher
+496 ct, nachher **691 ct**. Der Nachdreh hat also **1,95 €** gekostet:
+13 Bilder × 15 ct (Rahmen 2,00 €). Nicht gebucht wurden der 400 der ersten
+Anker (siehe oben) und ein „500 Interner Serverfehler" beim ersten Absenden
+von `s2a-retusche2`; für beide ist keine Erzeugung entstanden. Kein 402/403.
+Tagesstand danach: 18,68 € verbraucht, das Tageslimit stand inzwischen auf
+30 €. Freigegeben ist nichts, Videos gibt es keine.
+
+**Was misslang:**
+
+- **Szene 1:** Die klare Flasche am rechten Rand ist nach zwei Retuschen noch
+  da. Ein dritter Versuch war nach der Auftragsregel nicht erlaubt. Ausweg im
+  Schnitt: Der Schnittzoom geht auf die Gesichter, und schon ein Zoom ab etwa
+  110 % mit leicht linker Mitte schneidet den rechten Rand ab. Sonst bleibt nur
+  eine Retusche mit Pinsel oder ein neuer Auftrag.
+- Erste Versuche 3b (zwei Handys) und 3c (zu klein, nicht zurückgelehnt) lagen
+  daneben. Der zweite Versuch hat beide behoben.
+
+**Nicht geprüft:** Die Gesichter der neuen Szenen hat nur der Worker mit den
+Bögen verglichen, kein fremder Mensch. Gesucht wurde in Ausschnitten bei voller
+Auflösung, aber nicht jedes Bild Pixel für Pixel nach Kleinstlogos (Handyrücken,
+Plattenspieler rechts im Köln-Anker, Kachelofen). Ob 3b/5b und 3c/5c im
+dreigeteilten Schnitt (1080 × 640) gut zusammenstehen, ist nicht geprüft.
