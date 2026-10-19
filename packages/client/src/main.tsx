@@ -2,6 +2,8 @@ import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
+import { api } from './api';
+import { merkeHerkunft } from './herkunft';
 import { installiereDruckabbruch } from './druckabbruch';
 import { FeedbackWidget } from './FeedbackWidget';
 import { starteKlang } from './klang';
@@ -15,6 +17,13 @@ starteKlang();
 // Ebenfalls vor dem ersten Bild und einmal fuer alles: Ein Knopf, von dem
 // der Finger weit weggezogen wurde, loest nicht aus (siehe druckabbruch.ts).
 installiereDruckabbruch();
+
+// Werbelink `?q=` lesen, bevor irgendein Schirm die Adresse anfasst (siehe
+// herkunft.ts). Scheitert die Meldung, faellt nur ein Besuch aus der Zaehlung
+// — dafuer zeigt niemand einen Fehler.
+merkeHerkunft((kennung) => {
+  api.herkunftBesuch(kennung).catch(() => undefined);
+});
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Kein Wurzelelement gefunden');

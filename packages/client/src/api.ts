@@ -14,6 +14,7 @@ import type { Bemalung } from './bemalung';
 import type { BotLevel } from './protocol';
 import type { Lektion, LernpfadAnsicht, LernserieKurz, Spieltag } from './lernen/sicht';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
+import { herkunft } from './herkunft';
 
 export class ApiError extends Error {
   constructor(
@@ -687,6 +688,9 @@ export type AnbieterAnmeldung =
   | { geburtstagNoetig: true; schein: string };
 
 export const api = {
+  /** Ein Aufruf ueber einen Werbelink `?q=` (herkunft.ts). */
+  herkunftBesuch: (kennung: string) => post<{ ok: true }>('/herkunft/besuch', { kennung }),
+
   register: (body: {
     email: string;
     password: string;
@@ -791,14 +795,18 @@ export const api = {
    * einem Anzeigenamen. Cookie und Token laufen wie bei `login` — die App
    * braucht das Token, weil sie kein Cookie ueber die Herkunftsgrenze
    * bekommt.
+   *
+   * Kam der Aufruf ueber einen Werbelink, geht dessen Kennung mit
+   * (herkunft.ts) — nur hier, weil nur das Gastkonto gezaehlt wird.
    */
   gastLogin: async (name: string) => {
+    const kennung = herkunft();
     const antwort = await post<{
       ok: true;
       accountId: string;
       displayName: string;
       token?: string;
-    }>('/auth/gast', { name });
+    }>('/auth/gast', kennung ? { name, herkunft: kennung } : { name });
     if (antwort.token) setSessionToken(antwort.token);
     return antwort;
   },

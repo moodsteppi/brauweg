@@ -158,6 +158,7 @@ async function main(): Promise<void> {
     sessionTtlDays: config.sessionTtlDays,
     stage: config.stage,
     diagnoseSchluessel: config.diagnoseSchluessel,
+    herkunftSchluessel: config.herkunftSchluessel,
     googleClientId: config.googleClientId,
     appInhalt,
     appVerknuepfung: appVerknuepfungAusUmgebung(),

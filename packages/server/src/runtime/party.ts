@@ -44,6 +44,7 @@ import { fortschreiben } from '../quests.js';
 import { uebungGespielt } from '../lernpfad.js';
 import { einsatzVon, zahleAus, zieheEinsatz } from '../brojetons.js';
 import { verbucheBestleistungen } from '../bestleistung.js';
+import { spielZaehlen } from '../herkunft.js';
 
 export interface RuntimeOptions {
   /** 60 Sekunden je Zug, serverseitig gemessen. */
@@ -1143,7 +1144,30 @@ export class PartyRuntime {
       })),
     );
     party.segmentsWritten = segments.length;
+    await this.herkunftZaehlen(party, 'runden', fresh.length);
     return true;
+  }
+
+  /**
+   * Runden und Partien fuer die Werbelinks (src/herkunft.ts). Wie bei
+   * `uebungZaehlen`: Ein Fehler hier darf die Partie nicht aufhalten, eine
+   * fehlende Zaehlung ist ein Aergernis, ein haengender Tisch ein Ausfall.
+   * Dauerhafte Bots sitzen ohne Konto da und fallen von selbst heraus.
+   */
+  private async herkunftZaehlen(
+    party: LiveParty,
+    art: 'runden' | 'partien',
+    anzahl: number,
+  ): Promise<void> {
+    const konten = party.seats.flatMap((platz) =>
+      platz.accountId && !platz.permanentBot ? [platz.accountId] : [],
+    );
+    try {
+      await spielZaehlen(this.db, konten, art, anzahl);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`Herkunft (${art}) an Tisch ${party.tableId}:`, err);
+    }
   }
 
   /**
@@ -1214,6 +1238,7 @@ export class PartyRuntime {
       await this.recordWar(party, standings);
       await this.countQuests(party, standings);
       await this.recordBestleistungen(party, standings);
+      await this.herkunftZaehlen(party, 'partien', 1);
     } finally {
       party.abrechnungLaeuft = false;
     }

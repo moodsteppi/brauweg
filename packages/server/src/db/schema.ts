@@ -269,6 +269,13 @@ export const account = pgTable(
      * der Geduld.
      */
     gastSeit: timestamp({ withTimezone: true }),
+    /**
+     * Werbelink, ueber den das Konto entstanden ist (`?q=`, src/herkunft.ts).
+     * Nur gesetzt, wenn ein Gastkonto mit Kennung angelegt wurde; danach
+     * zaehlen seine Runden in `herkunft_zaehler`. Bleibt beim Sichern stehen
+     * — wer aus dem Gast ein Konto macht, ist erst recht ein Geworbener.
+     */
+    herkunft: text(),
   },
   (t) => [
     uniqueIndex('account_email_key').on(t.email),
@@ -1498,3 +1505,27 @@ export const lernpfad = pgTable('lernpfad', {
   belohntAm: timestamp({ withTimezone: true }),
   erinnertTag: date(),
 });
+
+// ---------------------------------------------------------------------------
+// Herkunft je Werbelink
+// ---------------------------------------------------------------------------
+
+/**
+ * Summen je Werbekennung und Kalendertag (Europe/Berlin), src/herkunft.ts.
+ * Bewusst KEINE Zeile je Besuch und kein Bezug aufs Konto: Gezaehlt wird,
+ * nicht protokolliert, und ein geloeschtes Konto nimmt seine Runden nicht
+ * aus der Summe mit.
+ */
+export const herkunftZaehler = pgTable(
+  'herkunft_zaehler',
+  {
+    kennung: text().notNull(),
+    tag: date().notNull(),
+    besuche: integer().notNull().default(0),
+    gastkonten: integer().notNull().default(0),
+    /** Je Konto: zwei Geworbene an einem Tisch sind zwei Runden. */
+    runden: integer().notNull().default(0),
+    partien: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.kennung, t.tag] }), index('herkunft_zaehler_tag_idx').on(t.tag)],
+);
