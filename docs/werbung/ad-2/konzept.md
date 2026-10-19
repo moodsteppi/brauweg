@@ -391,22 +391,23 @@ genug dafür.
 
 ---
 
-## 9. Erzeugung — Stand 19.10.2026, abgebrochen am fal-Guthaben
+## 9. Erzeugung — Stand 19.10.2026
 
 Creative **`1bda9128-aa21-4ffa-9574-2cd9d194c34f`** („Ad 2 - Drei Staedte,
 eine Runde", Instagram Reel, Anzeige), Seite
 `https://bpb.broweg.de/dashboard/creatives/1bda9128-aa21-4ffa-9574-2cd9d194c34f`.
 Das Skript aus Abschnitt 3 steht im Feld `skript`.
 
-**Kein einziges KI-Bild ist entstanden.** Die Probe vor dem ersten teuren
-Aufruf (ein `flux-schnell`-Bild für 1 ct, 17:32 UTC) kam als `FEHLER`
+**Erster Anlauf (Karte d6f973f2):** Kein einziges KI-Bild ist entstanden.
+Die Probe vor dem ersten teuren Aufruf (ein `flux-schnell`-Bild für 1 ct, 17:32 UTC) kam als `FEHLER`
 zurück: „fal.ai hat den Schlüssel abgelehnt (403)". Abgelehnt schon beim
 Absenden, deshalb ohne Auftragskennung und **ohne Buchung (0 ct)**. Einen
 Endpunkt für den Kontostand gibt es in der Creatives-API nicht, und der
 FAL_KEY liegt nur auf dem Server — „Guthaben prüfen" heißt deshalb: diese
 Probe. Ein 403 ist nach den Erfahrungen von Ad 1 (9.4) leeres Guthaben oder
 ein gesperrter Schlüssel. Tageslimit zu dem Zeitpunkt: 11,77 € von 20 €
-verbraucht (alles Ad 1).
+verbraucht (alles Ad 1). Um 17:50 UTC ging eine neue 1-ct-Probe des
+Orchestrators durch (`c0e5433d`, `FERTIG`); der zweite Anlauf steht in 9.4.
 
 ### 9.1 Was bereitliegt
 
@@ -462,4 +463,75 @@ Erst wenn fal wieder antwortet (eine 1-ct-Probe wie oben): Porträts → Bögen
 heute → Bögen jung → **Gegenprobe der Gesichter** (Abschnitt 4, Schritt 4)
 → Anker → Szenen. Keine Videos, keine Freigaben (`POST
 /creatives/assets/:id/freigabe` ist die Kostenschranke und bleibt beim
-Menschen).
+Menschen). — Erledigt in diesem Ablauf am 19.10.2026 ab 17:52 UTC, siehe 9.4.
+
+### 9.4 Standbilder — Ergebnis des zweiten Anlaufs
+
+Alle 31 Bilder aus 9.1 plus beide Reservebilder sind entstanden (33 ×
+nano-banana-pro), kein Fehlschlag, kein 403/402. **Gebucht laut
+`/creatives/kosten`:** 34 Buchungen auf diesem Creative, zusammen **4,96 €**
+— davon 4,95 € für die 33 Bilder dieses Laufs und 1 ct für die Probe des
+Orchestrators. Das Kartenbudget (4,95 €) ist damit **ausgeschöpft**, eine
+Retusche war nicht mehr drin. Tagesstand danach: 16,73 € von 20 €. Freigegeben
+ist nichts, Videos gibt es keine.
+
+**Gesichtsprobe (Abschnitt 4, Schritt 4):** Alle vier Bögen „jung“ sind
+eindeutig dieselben Menschen wie „heute“ — Gesichtsform, Augen, Nase und das
+Merkmal bleiben erhalten. Das Problem war das **Alter**, nicht das Wiedererkennen:
+Der Verjüngungs-Prompt hat bei Sara fast nichts verjüngt (jung sah aus wie 37),
+Tobi wirkte Ende 20. Für das Foto „2010“ trägt das die Geschichte nicht, deshalb
+gingen die zwei Reservebilder an diese beiden, mit einem schärferen Prompt
+(`bogen-jung-sara-r.txt`, `bogen-jung-tobi-r.txt`: glatte Haut, vollere
+Wangen, ausdrücklich „clearly much younger“).
+
+| Figur | Bogen jung (gewählt) | Ergebnis |
+|---|---|---|
+| Lena | `fbcf062f` | erkennbar; wirkt Mitte 20, Pony, langes Haar — passt |
+| Tobi | `30519eb4` (Reserve) | erkennbar an den Brauen; wirkt um 24 — passt. Der erste Versuch `3d042ee9` wirkte Ende 20 |
+| Sara | `a68afe04` (Reserve) | erkennbar an Locken und Creolen; wirkt **immer noch um 30** — nur etwas jünger als der erste Versuch `c4e77519`. Schwächste Figur |
+| Jonas | `68fa7e91` | erkennbar an Brille und Gesicht; wirkt Mitte bis Ende 20, Mütze und lange Haare tragen das Alter |
+
+**Gewählte Bilder** (volle Kennungen in `GET /creatives/1bda9128…` →
+`kiErzeugungen[].assetId`):
+
+| Szene | Gewähltes Asset | Warum | Hintergrund |
+|---|---|---|---|
+| Porträt Lena | `47f5936f` | einzige Variante; rotes Bob, Sommersprossen, Brille, echt | ok |
+| Porträt Tobi | `ab6f6923` | einzige Variante; Brauen, Bart mit Grau, Flanell | ok |
+| Porträt Sara | `2b0bff79` | einzige Variante; Locken, Creolen, cremefarbener Pullover | ok |
+| Porträt Jonas | `6a04becb` | einzige Variante; runde Brille, schütteres Blond, Altbau | ok |
+| Bogen heute L/T/S/J | `8387a2d0` · `1c750608` · `7d621746` · `483acf1e` | einzige Variante je Figur, Gesicht wie im Porträt | grau, ok |
+| Bogen jung | siehe Gesichtsprobe | | grau, ok |
+| Anker früher | `90a250de` | alle vier jung erkennbar, Tobi lacht, Tee, Chips, Block | ⚠ auf der Arbeitsplatte eine Soßenflasche und rechts am Rand eine klare Flasche; Kühlschrankzettel gekritzelt, nicht lesbar |
+| Anker heute | `6a55811a` | Lena, graues Sofa, Regenfenster, grünes Displaylicht | Buchrücken mit Scheinschrift |
+| **1** | `ddab042e` (S1d) | wirkt mehr wie ein alter Abzug als S1a (`970c3efa`): schräg, Kratzer, verblasst; S1a ist nur der Anker mit Rand | ⚠ dieselben zwei Flaschen wie im Anker (klein, im Schnittzoom aber sichtbar) |
+| **2a** | `44592c86` | einziger Versuch; Klebeband, Karton, Kartenspiel ohne Aufdruck | ⚠ **Poster mit lesbarem Schriftzug** oben links, auf dem Schreibtisch Sprühflasche/Flasche; zweites Händepaar links |
+| **2b** | `388be56b` | einziger Versuch; Lena jung, Pony, winkt, Zug unscharf, keine Schilder | ok; kleines Etikett am Rucksack, Gesäßtaschen-Naht an der Jeans |
+| **2c** | `6e6458bf` — **misslungen** | einziger Versuch: am Tisch **sitzen die vier** noch, der Tisch ist nur leer geräumt. Als „leerer Tisch“ unbrauchbar | Soßenflasche auf der Arbeitsplatte |
+| **3a** | `316bb666` (S3a) | Blick hebt sich wie im Drehbuch; S3a2 (`a7179e84`) ist fast der Anker | Buchrücken mit Scheinschrift, ein Wasserglas (erlaubt) |
+| **3b** | `9490d2f5` (S3b2) | Cordsofa, anderes Zimmer als Hamburg; S3b (`a27a2382`) hat das Anstupsen, steht aber **in Lenas Wohnzimmer** | ok; Fenster wieder mit Regen und Backstein — Köln wirkt wie Hamburg |
+| **3c** | `48168658` (S3c) | Dielen, Bücherwände, lehnt sich zurück, Handy hoch; S3c2 (`6d9006bf`) ist Lenas Wohnzimmer | ok; graues Sofa und Regenfenster wie Hamburg |
+| **5a** | `bcd4e923` (S5a) | lacht, Hand vor dem Mund, Handy in der anderen — genau die Handlung; S5a2 (`555f3e46`) ohne Hand | Buchrücken mit Scheinschrift |
+| **5b** | `002f5503` (S5b2) | er schlägt die Hand vors Gesicht, sie lacht ihn aus; S5b (`d9347224`) steht in Lenas Wohnzimmer | ok |
+| **5c** | `7183ca0f` (S5c) — **Raum falsch** | Faust hoch, Handy in der Hand; S5c2 (`cd73c61d`) ohne Handy. **Beide stehen in Lenas Hamburger Wohnzimmer** | Buchrücken mit Scheinschrift |
+
+**Was misslang und warum:**
+
+- **Drei Städte, ein Wohnzimmer.** Der Anker „heute“ zeigt Lenas Hamburger
+  Wohnzimmer, und alle Szenen 3 und 5 laufen gegen ihn. Nano Banana Pro hat
+  den Raum übernommen, obwohl der Prompt ihn nur „for the look and light“
+  freigibt: S3b, S3c2, S5b, S5c und S5c2 stehen wörtlich in Hamburg, S3b2,
+  S3c und S5b2 teilweise (Regenfenster, graues Sofa). Für Köln und Leipzig
+  braucht es einen **eigenen Anker je Stadt** (Abschnitt 6.1 hat nur einen)
+  oder den Anker gar nicht als Referenz, nur den Bogen der Figur. Am
+  dringendsten: **5c** (kein Leipziger Bild mit Faust) und **2c** (kein leerer
+  Tisch).
+- **Retusche offen:** Flaschen in Szene 1 (aus dem Anker früher) und Poster mit
+  Schrift und Flasche in 2a. Das Budget war bei 4,95 € erreicht.
+- **Sara jung** ist nur mäßig verjüngt (um 30).
+
+**Nicht geprüft:** Kein fremder Mensch hat die Gesichtsprobe gemacht (Abschnitt
+4 verlangt jemanden, der die Figuren nicht kennt) — beurteilt hat sie nur der
+Worker. Die Bilder wurden in verkleinerter Ansicht angesehen, nicht in voller
+Auflösung, und nicht pixelgenau nach kleinen Logos durchsucht (etwa auf Handys,
+Fernbedienung, Lautsprecher). Kein Bild ist freigegeben, kein Video erzeugt.
