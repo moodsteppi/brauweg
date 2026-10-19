@@ -51,6 +51,31 @@ schickt, nach staging um (damit der QR-Code im Bild auf die echte Adresse
 zeigt) und lässt nichts zur Produktion durch. Warum, steht im Kopf des
 Skripts.
 
+## Clips für Werbevideos (19.10.2026)
+
+`werkzeug/store/clips.mjs` nimmt mit derselben Technik (App-Modus, Gastkonto
+mit Vogelnamen, nur Bots, Umleitung Produktion → staging) kurze Clips auf:
+hochkant 9:16, 1080 × 1920, je Szene 5–10 s, als WebM (VP8 aus Playwrights
+`page.screencast`). Szenen: Reiter „Spiele“, Doppelkopf (Austeilen,
+Ausspielen, Stich), Skat (Reizen mit Rechner, ggf. Ansage, Stich), Partykiste
+**alkoholfrei** (Menü, Quizfrage, Auflösung, Weiter). Fragen mit Marken
+Dritter verwirft es wie das Screenshot-Skript; Zauberer kommt nicht vor.
+Neben die Clips schreibt es `liste.md` (Datei, Spiel, Szene, Länge, Eignung
+als Hook/Spielszene/Endkarte). MP4 (H.264) legt es nur an, wenn ein ffmpeg
+mit H.264 im PATH liegt — Playwrights eigenes kann nur VP8.
+
+```bash
+cd werkzeug/store
+npx playwright install chromium ffmpeg
+node clips.mjs --ziel C:/Users/robin/Broweg/material/demo-ad/brauweg-spielen
+node clips.mjs --ziel … --szene skat     # nur eine Szene
+```
+
+Die Clips liegen nicht im Repository (`*.webm`/`*.mp4` in `.gitignore`).
+Beim Bau ist aufgefallen: `screenshots.mjs` findet seit dem neuen Hub
+(Leiste unten, Spielseite mit „Zum Spiel“) den Knopf „Spielauswahl“ nicht
+mehr — jedes Motiv scheitert. `clips.mjs` geht über den Reiter „Spiele“.
+
 ## Größen
 
 | Ordner | Pixel | Wofür | Quelle |
