@@ -29,7 +29,7 @@ gibt.
 | 1 | **Die Messung ist in der Produktion.** `?q=` (#307) liegt nur auf `staging`. Auf `www.brauweg-spielen.de` antwortet `/api/herkunft/auswertung` mit **404**. Ohne Release laufen alle Klicks ins Leere, und es gibt keine Möglichkeit, sie nachträglich zuzuordnen. | fehlt | Release `staging` → `main` |
 | 2 | **`HERKUNFT_SCHLUESSEL` gesetzt** (mindestens 20 Zeichen, sonst bleibt die Auswertung zu, `config.ts`), in der Produktion und im bro-server als Dienstzugang `brauweg` (in brotool anzulegen, keine Umgebungsvariable) | offen | Mensch mit Railway-Zugang |
 | 3 | **Ad 2 freigegeben.** Robin sieht Asset `73c7aeb0` an und gibt es frei. Ausgespielt wird **nur das freigegebene Video mit KI-Kennzeichen** (Asset `73c7aeb0`), **nie** der Handschnitt `530610d1` (ohne KI-Kennzeichen). | offen | Robin |
-| 3a | **KI-Label beim Einschalten prüfen.** Meta: Die Anzeige muss das Label „AI info“ zeigen, sonst nicht einschalten. TikTok: Die KI-Selbstauskunft setzt das Tool beim Anlegen selbst. | — | wer einschaltet |
+| 3a | **KI-Kennzeichen im Video.** Es genügt, dass das ausgespielte Video das KI-Kennzeichen im Bild trägt (Asset `73c7aeb0`; das Tool lässt ohnehin nur gekennzeichnete Videos hinaus). Meta: Ein API-Feld für die KI-Kennzeichnung gibt es nicht, das Label „AI info“ setzt Meta selbst. Beim Einschalten nur ansehen, ob es erscheint, und vermerken — keine Bedingung für den Start. TikTok: Die KI-Selbstauskunft setzt das Tool beim Anlegen selbst. | — | wer einschaltet |
 | 4 | **Datenschutzerklärung prüfen.** `rechtliches/datenschutz.html` sagt „keine Werbung, kein Tracking“. Seit #307 merkt sich ein Gastkonto aber, über welchen Werbelink es entstanden ist (`account.herkunft`). Das sollte dort stehen, bevor bezahlte Anzeigen auf die Seite führen. | offen | Robin |
 | 5 | **Werbekonten mit Zahlungsmittel:** Meta-Werbekonto mit dem Instagram-Profil `<KANAL>`, TikTok-Werbekonto `<KANAL>`, beide im bro-server angebunden (Meta- und TikTok-Anbindung im Creatives-Tab) | ungeprüft | Robin |
 | 6 | **Auswertung im Tool erreichbar.** `GET /creatives/herkunft` und `/creatives/link-kennungen` laufen im bro-server in der Produktion. Stand 19.10.2026 liegen sie erst auf einem Aufgabenzweig des bro-servers, nicht auf dessen `staging`. Die Anlage bei Meta und TikTok (`/creatives/meta`, `/creatives/tiktok`) ist dort schon. | fehlt | Release bro-server |
@@ -124,8 +124,10 @@ ab, auch gegen die Kennungen von Hand.
 
 **KI-Kennzeichnung:** Im Video steht „KI-generiert“ eingebrannt. Das Tool
 lädt nur freigegebene Videos mit KI-Kennzeichen hoch und setzt bei TikTok die
-KI-Selbstauskunft selbst. Bei Meta beim Einschalten prüfen, ob die Anzeige
-das Label „AI info“ zeigt (Abschnitt 1, Punkt 3a).
+KI-Selbstauskunft selbst. Das Kennzeichen im Video genügt. Bei Meta setzt das
+Label „AI info“ die Plattform selbst (kein API-Feld); beim Einschalten nur
+ansehen, ob es erscheint, und vermerken — es ist keine Bedingung (Abschnitt 1,
+Punkt 3a).
 
 ---
 
