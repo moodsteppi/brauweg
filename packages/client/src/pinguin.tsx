@@ -269,12 +269,12 @@ const AUSSEHEN: Record<string, Aussehen> = {
   },
 
   /*
-   * Doko-Meister (Lernserie, 17.10.2026). Noch ohne gemaltes Bild: Die
-   * Bilderzeugung hatte beim Einbau kein Guthaben, die Bestellung steht in
-   * docs/ASSETS-DOKO-MEISTER.md. Bis dahin traegt die Zeichnung — mit
-   * Verlaeufen, damit sie neben den gemalten Stuecken nicht flach wirkt.
+   * Doko-Meister (Lernserie, 17.10.2026). Gemalt seit dem 21.10.2026 „am
+   * Pinguin anprobiert" (docs/ASSETS-PINGUIN-ANPROBE.md); die Zeichnung
+   * bleibt als Rueckfall, falls das Bild nicht laedt.
    */
   'hut-doktorhut': {
+    bild: '/hub/pinguin/hut-doktorhut.webp',
     zeichnung: (
       <g>
         <defs>
@@ -379,6 +379,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
 
   // Doko-Meister, siehe Doktorhut.
   'oberteil-meisterrobe': {
+    bild: '/hub/pinguin/oberteil-meisterrobe.webp',
     zeichnung: (
       <g>
         <defs>
@@ -780,12 +781,14 @@ function EbeneMitPlatz({ slot, itemId, bewegt }: { slot: Slot; itemId: string | 
  * schneidet `StueckAllein` das Stueck fuer die Faecher im Spind aus.
  */
 const AUSSCHNITT: Readonly<Record<Slot, string>> = {
-  hut: '36 -6 168 94',
-  brille: '78 44 84 60',
-  oberteil: '44 98 152 122',
-  schuhe: '62 204 116 56',
-  hand: '154 94 92 128',
-  aura: '0 0 240 256',
+  // Nachgemessen am 21.10.2026 für die angezogenen Stücke: Ärmel reichen
+  // weiter, Wanderstab und Monokelkette tiefer als die alten Einzelbilder.
+  hut: '34 -6 171 80',
+  brille: '58 44 123 94',
+  oberteil: '25 97 189 138',
+  schuhe: '54 206 131 54',
+  hand: '130 84 101 172',
+  aura: '-6 -5 251 261',
 };
 
 /**

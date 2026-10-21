@@ -54,12 +54,31 @@ let SCHWELLE = 46;
  * tiefer. Ohne Bereich käme dieses fremde Gesicht mit in die Krone.
  */
 const BEREICH = {
-  hut: [0, 250],
-  brille: [230, 400],
-  oberteil: [415, 930],
-  schuhe: [860, 1024],
-  hand: [380, 900],
-  aura: [0, 1024],
+  hut: { y: [0, 250] },
+  // Bis unter den Schnabel: Die Kette des Monokels hängt tief.
+  brille: { y: [200, 560] },
+  oberteil: { y: [415, 930] },
+  schuhe: { y: [860, 1024] },
+  // Nur rechts im Bild (dort hält die Flosse), dafür bis zum Boden — der
+  // Wanderstab steht auf.
+  hand: { y: [360, 1024], x: [470, 1024] },
+  aura: { y: [0, 1024] },
+};
+
+/**
+ * Wie aufgeräumt wird, je Platz. Auren sind Funken und Sterne — winzig, der
+ * Krümelfilter löschte sie alle, und Löcherfüllen nähme den Pinguin in der
+ * Mitte gleich mit. Für sie zählt deshalb nur, was AUSSERHALB des nackten
+ * Pinguins liegt: Die Aura wird hinter ihn gezeichnet, drinnen sähe man
+ * ohnehin nichts, und im Fach des Spinds stünde sonst ein halber Pinguin.
+ */
+const AUFRAEUMEN = {
+  hut: { oeffnen: 2, kruemel: 900, schliessen: 8, fuellen: true, aussen: false },
+  brille: { oeffnen: 1, kruemel: 150, schliessen: 6, fuellen: true, aussen: false },
+  oberteil: { oeffnen: 2, kruemel: 900, schliessen: 26, fuellen: true, aussen: false },
+  schuhe: { oeffnen: 2, kruemel: 900, schliessen: 8, fuellen: true, aussen: false },
+  hand: { oeffnen: 2, kruemel: 600, schliessen: 14, fuellen: true, aussen: false },
+  aura: { oeffnen: 0, kruemel: 12, schliessen: 0, fuellen: false, aussen: true },
 };
 
 const args = process.argv.slice(2);
@@ -198,10 +217,16 @@ function hintergrundVon(bild) {
 const hintergrund = hintergrundVon(quelleGross);
 
 let maske = new Uint8Array(GROSS * GROSS);
-const [vonY, bisY] = BEREICH[platz];
+const [vonY, bisY] = BEREICH[platz].y;
+const [vonX, bisX] = BEREICH[platz].x ?? [0, GROSS];
+const regel = AUFRAEUMEN[platz];
+// Für Auren: der nackte Pinguin, etwas aufgeweitet — dort ist nichts zu holen.
+const pinguinBreit = regel.aussen ? morph(basisMaske, 6, true) : null;
 for (let p = 0; p < GROSS * GROSS; p++) {
   const y = Math.floor(p / GROSS);
-  if (y < vonY || y >= bisY) continue;
+  const x = p % GROSS;
+  if (y < vonY || y >= bisY || x < vonX || x >= bisX) continue;
+  if (pinguinBreit && pinguinBreit[p]) continue;
   const i = p * 4;
   if (hintergrund[p]) continue;
   // Außerhalb des nackten Pinguins ist alles Nicht-Grüne neu (Krone über dem Kopf).
@@ -294,20 +319,38 @@ function loecherFuellen(m) {
   return m;
 }
 
-maske = morph(morph(maske, 2, false), 2, true); // öffnen: Rauschen und Umrisslinien weg
-maske = kruemelWeg(maske, 900);
+if (regel.oeffnen) maske = morph(morph(maske, regel.oeffnen, false), regel.oeffnen, true); // Rauschen, Umrisslinien
+maske = kruemelWeg(maske, regel.kruemel);
 // Schließen: Spalten im Stück zu. Oberteile großzügig — schwarzer Stoff auf
 // dunklem Körper und weißes Hemd auf weißem Bauch heben sich kaum ab, erkannt
 // wird nur, wo Schwarz auf Weiß trifft (Frack, erste Probe). Was dabei an
 // Körper mitkommt, sieht aus wie der Körper darunter.
-const SCHLIESSEN = { oberteil: 26, hut: 8, brille: 6, schuhe: 8, hand: 14, aura: 6 };
-maske = morph(morph(maske, SCHLIESSEN[platz], true), SCHLIESSEN[platz], false);
-maske = loecherFuellen(maske);
+if (regel.schliessen) maske = morph(morph(maske, regel.schliessen, true), regel.schliessen, false);
+if (regel.fuellen) maske = loecherFuellen(maske);
 // Nie über den Umriss hinaus: Grün bleibt draußen.
 for (let p = 0; p < GROSS * GROSS; p++) if (hintergrund[p]) maske[p] = 0;
 
 // --- 3. Ebene bauen -----------------------------------------------------------
 const ebene = Buffer.alloc(GROSS * GROSS * 4);
+/*
+ * Eingeschlossenes Leinwandgrün: zwischen Kufe und Schuh, unter der Quaste,
+ * im Laternenhenkel. Vom Rand her ist es nicht erreichbar, also bleibt es oben
+ * in der Maske. Leinwand ist ab Grün 200 — der helle Strick des Pullis
+ * reichte in der ersten Lieferung bis 199. Um solche Stellen herum wird der
+ * Grünstich mit entfernt.
+ */
+const leinwand = new Uint8Array(GROSS * GROSS);
+for (let p = 0; p < GROSS * GROSS; p++) {
+  if (!maske[p]) continue;
+  const i = p * 4;
+  const [r, g, b] = [quelleGross[i], quelleGross[i + 1], quelleGross[i + 2]];
+  if (g >= 200 && g > r * 1.45 && g > b * 1.45) {
+    leinwand[p] = 1;
+    maske[p] = 0;
+  }
+}
+const nahLeinwand = morph(leinwand, 3, true);
+
 // Nur der äußerste Rand bekommt den Grünstich entfernt. Über die ganze
 // Fläche färbte das einen grünen Pulli schwarz (erste Probe, 21.10.2026).
 const kern = morph(maske, 3, false);
@@ -316,7 +359,7 @@ for (let p = 0; p < GROSS * GROSS; p++) {
   const i = p * 4;
   let [r, g, b] = [quelleGross[i], quelleGross[i + 1], quelleGross[i + 2]];
   const deckel = Math.max(r, b) + 12;
-  if (!kern[p] && g > deckel) g = deckel;
+  if ((!kern[p] || nahLeinwand[p]) && g > deckel) g = deckel;
   ebene[i] = r;
   ebene[i + 1] = g;
   ebene[i + 2] = b;
