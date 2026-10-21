@@ -550,6 +550,7 @@ export function GameSelect({
             }
           >
             <Avatarwerkstatt
+              neu={hubNeu}
               bemalung={me.figur ?? null}
               getragen={me.avatar}
               onClose={() => setWerkstattOffen(false)}

@@ -269,12 +269,12 @@ const AUSSEHEN: Record<string, Aussehen> = {
   },
 
   /*
-   * Doko-Meister (Lernserie, 17.10.2026). Noch ohne gemaltes Bild: Die
-   * Bilderzeugung hatte beim Einbau kein Guthaben, die Bestellung steht in
-   * docs/ASSETS-DOKO-MEISTER.md. Bis dahin traegt die Zeichnung — mit
-   * Verlaeufen, damit sie neben den gemalten Stuecken nicht flach wirkt.
+   * Doko-Meister (Lernserie, 17.10.2026). Gemalt seit dem 21.10.2026 „am
+   * Pinguin anprobiert" (docs/ASSETS-PINGUIN-ANPROBE.md); die Zeichnung
+   * bleibt als Rueckfall, falls das Bild nicht laedt.
    */
   'hut-doktorhut': {
+    bild: '/hub/pinguin/hut-doktorhut.webp',
     zeichnung: (
       <g>
         <defs>
@@ -379,6 +379,7 @@ const AUSSEHEN: Record<string, Aussehen> = {
 
   // Doko-Meister, siehe Doktorhut.
   'oberteil-meisterrobe': {
+    bild: '/hub/pinguin/oberteil-meisterrobe.webp',
     zeichnung: (
       <g>
         <defs>
@@ -725,6 +726,7 @@ export function Pinguin({
   groesse = 3,
   className,
   titel,
+  anziehen = false,
 }: {
   getragen: Getragen;
   /** Hoehe in rem. */
@@ -732,6 +734,13 @@ export function Pinguin({
   className?: string;
   /** Beschriftung fuer Vorlesegeraete. Fehlt sie, ist der Pinguin Zierde. */
   titel?: string;
+  /**
+   * Anzieh-Animation (Spind): Jede Ebene haengt an ihrer Kennung, wechselt
+   * das Stueck, entsteht sie neu und spielt `pg-anziehen` (screens/spind.css).
+   * Ohne den Schalter bleibt alles ruhig — der Pinguin oben in
+   * der Kopfzeile soll nicht bei jedem Neuladen zappeln.
+   */
+  anziehen?: boolean;
 }): React.JSX.Element {
   const breite = (groesse * RAHMEN.breite) / RAHMEN.hoehe;
 
@@ -745,12 +754,58 @@ export function Pinguin({
       aria-hidden={titel ? undefined : true}
     >
       {HINTEN.map((slot) => (
-        <Ebene key={slot} itemId={getragen[slot]} />
+        <EbeneMitPlatz key={`${slot}-${anziehen ? getragen[slot] ?? '' : ''}`} slot={slot} itemId={getragen[slot]} bewegt={anziehen} />
       ))}
       <PinguinBasis />
       {VORN.map((slot) => (
-        <Ebene key={slot} itemId={getragen[slot]} />
+        <EbeneMitPlatz key={`${slot}-${anziehen ? getragen[slot] ?? '' : ''}`} slot={slot} itemId={getragen[slot]} bewegt={anziehen} />
       ))}
+    </svg>
+  );
+}
+
+/** Eine Ebene mit ihrem Platz als Klasse — daran haengt die Anzieh-Animation. */
+function EbeneMitPlatz({ slot, itemId, bewegt }: { slot: Slot; itemId: string | undefined; bewegt: boolean }): React.JSX.Element | null {
+  if (!itemId) return null;
+  if (!bewegt) return <Ebene itemId={itemId} />;
+  return (
+    <g className={`pg-ebene pg-ebene--${slot}`}>
+      <Ebene itemId={itemId} />
+    </g>
+  );
+}
+
+/**
+ * Wo die Stuecke eines Platzes im Rahmen sitzen (x, y, Breite, Hoehe) —
+ * gemessen am Alphakanal aller Ebenen je Platz, mit etwas Luft. Daraus
+ * schneidet `StueckAllein` das Stueck fuer die Faecher im Spind aus.
+ */
+const AUSSCHNITT: Readonly<Record<Slot, string>> = {
+  // Nachgemessen am 21.10.2026 für die angezogenen Stücke: Ärmel reichen
+  // weiter, Wanderstab und Monokelkette tiefer als die alten Einzelbilder.
+  hut: '34 -6 171 80',
+  brille: '58 44 123 94',
+  oberteil: '25 97 189 138',
+  schuhe: '54 206 131 54',
+  hand: '130 84 101 172',
+  aura: '-6 -5 251 261',
+};
+
+/**
+ * Nur das Stueck, ohne Pinguin — so wie es im Spind im Fach liegt oder am
+ * Buegel haengt. Ein Mini-Pinguin je Kachel war auf 40 Pixeln vor allem
+ * Pinguin; das Stueck selbst war kaum zu sehen.
+ */
+export function StueckAllein({ itemId, slot, groesse = 4 }: { itemId: string; slot: Slot; groesse?: number }): React.JSX.Element {
+  return (
+    <svg
+      className="pinguin pinguin--stueck"
+      viewBox={AUSSCHNITT[slot]}
+      style={{ height: `${groesse}rem`, width: `${groesse}rem` }}
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+    >
+      <Ebene itemId={itemId} />
     </svg>
   );
 }
