@@ -15,7 +15,7 @@
  *                     (Dateiname nennt die Sekunde).
  *   --behalten        Zwischenteile nicht loeschen.
  *
- * Fehlt ein Clip, steht an seiner Stelle eine dunkle Tafel „H2 · folgt" in der
+ * Fehlt ein Clip, steht an seiner Stelle eine dunkle Tafel „H2 · Runway folgt" in der
  * richtigen Laenge, MIT der Einblendung darueber — so laesst sich der Schnitt
  * schon abnehmen, bevor Runway fertig ist, und ein zweiter Lauf mit den neuen
  * Clips braucht keine Handarbeit. B1–B3 duerfen nicht fehlen: Ihre
@@ -222,9 +222,9 @@ function tafelHtml(kuerzel) {
   return `<style>${GRUND}
     body { background: radial-gradient(circle at 50% 40%, #2b2017 0%, #120c07 75%); }
     .feld { top: 520px; flex-direction: column; align-items: center; gap: 18px; color: #d9c7a8; text-align: center; }
-    .k { font-size: 120px; font-weight: 800; letter-spacing: 4px; }
+    .k { font-size: 78px; white-space: nowrap; font-weight: 800; letter-spacing: 4px; }
     .u { font-size: 42px; color: #9b8a70; }
-  </style><div class="feld"><div class="k">${esc(kuerzel)} · folgt</div><div class="u">Runway-Clip fehlt noch</div></div>`;
+  </style><div class="feld"><div class="k">${esc(kuerzel)} · Runway folgt</div><div class="u">Platzhalter in der Länge laut Tabelle</div></div>`;
 }
 
 function endkarteHtml() {
@@ -370,7 +370,7 @@ async function main() {
       art = `Runway ${basename(quellen[z.kuerzel])} 0.0–${dauer.toFixed(1)} s${lang < dauer ? ` (nur ${lang.toFixed(2)} s lang, letztes Bild steht)` : ''}`;
     } else {
       teil({ quelle: bilder[`tafel-${z.kuerzel}`], standbild: true, dauer, ueber: text, ziel });
-      art = `TAFEL „${z.kuerzel} · folgt"`;
+      art = `TAFEL „${z.kuerzel} · Runway folgt"`;
     }
     teile.push(ziel);
     bericht.push(`${z.von.toFixed(1).padStart(4)}–${z.bis.toFixed(1).padStart(4)} s  ${z.kuerzel.padEnd(4)}  ${art}`);
