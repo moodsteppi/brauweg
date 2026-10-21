@@ -18,6 +18,9 @@
 
 import { memo, useEffect, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
+import { GastHinweis } from './GastHinweis';
+import { AnfragenLeiste } from './Anfragen';
+import { Einladung } from '../minispiele/partykiste/Einladung';
 
 import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
@@ -584,6 +587,13 @@ export function Wartebereich({
         </button>
       )}
 
+      {/* Nur an privaten Tischen kann es Anfragen geben; ob man Gastgeber
+          ist, weiß der Server (die Leiste bleibt sonst leer). */}
+      {table.visibility !== 'public' && <AnfragenLeiste tableId={tableId} />}
+      {/* Privater Tisch: Hier steht, womit andere hereinkommen — Code, Link,
+          QR. Derselbe Baustein wie in der Partykiste. */}
+      {table.visibility === 'on_request' && <Einladung spiel={table.game} tischId={tableId} />}
+
       <div className="doko-wait">
         {table.seats.map((seat) => (
           <div
@@ -641,9 +651,11 @@ export function Wartebereich({
         ))}
       </div>
       <p className="muted doko-wait-hint">
-        Teile die Adresse dieser Seite, dann können andere direkt beitreten — oder
-        fülle freie Plätze mit Bots. Sobald alle Plätze belegt sind, geht es los.
+        {table.visibility === 'public'
+          ? 'Andere finden den Tisch in der Lobby — oder fülle freie Plätze mit Bots. Sobald alle Plätze belegt sind, geht es los.'
+          : 'Wer beitreten will, lässt der Gastgeber herein — freie Plätze lassen sich auch mit Bots füllen. Sobald alle Plätze belegt sind, geht es los.'}
       </p>
+      <GastHinweis sitze={table.seats} className="muted doko-wait-hint" />
 
       {error && <p className="doko-error">{t(error)}</p>}
       {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}

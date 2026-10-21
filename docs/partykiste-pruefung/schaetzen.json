@@ -1,0 +1,833 @@
+{
+  "katalog": "schaetzen",
+  "geprueft": 200,
+  "raus": [
+    {
+      "id": "s014",
+      "text": "In welchem Jahr fiel die Berliner Mauer?",
+      "antwort": 1989,
+      "einheit": "Jahr",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (1989)"
+    },
+    {
+      "id": "s018",
+      "text": "In welchem Jahr endete der Zweite Weltkrieg?",
+      "antwort": 1945,
+      "einheit": "Jahr",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (1945)"
+    },
+    {
+      "id": "s020",
+      "text": "In welchem Jahr wurde Deutschland wiedervereinigt?",
+      "antwort": 1990,
+      "einheit": "Jahr",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (1990)"
+    },
+    {
+      "id": "s028",
+      "text": "Wie viele Minuten dauert die reguläre Spielzeit eines Fußballspiels?",
+      "antwort": 90,
+      "einheit": "Minuten",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (90 Minuten)"
+    },
+    {
+      "id": "s029",
+      "text": "Wie viele Einwohner hat Deutschland, grob gerundet?",
+      "antwort": 84,
+      "einheit": "Millionen",
+      "haerte": 1,
+      "grund": "Zahl ändert sich jährlich, und seit dem Zensus 2022 (Korrektur um rund 1,4 Mio.) widersprechen sich die Quellen — nicht eindeutig."
+    },
+    {
+      "id": "s031",
+      "text": "Wie viele Einwohner hat Berlin, grob gerundet?",
+      "antwort": 3.8,
+      "einheit": "Millionen",
+      "haerte": 1,
+      "grund": "Einwohnerzahl Berlins ist je nach Quelle verschieden (Melderegister rund 3,9 Mio., Zensus 2022 rund 3,6 Mio.) — nicht eindeutig."
+    },
+    {
+      "id": "s035",
+      "text": "Wie hoch ist der Mont Blanc, der höchste Berg der Alpen?",
+      "antwort": 4810,
+      "einheit": "Meter",
+      "haerte": 1,
+      "grund": "Höhe schwankt mit der Eiskappe (Messung 2021: 4807,8 m, 2023: 4805,6 m); die Katalogzahl 4810 stimmt nicht mehr."
+    },
+    {
+      "id": "s037",
+      "text": "Wie viele Bundesländer hat Deutschland?",
+      "antwort": 16,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (16)"
+    },
+    {
+      "id": "s038",
+      "text": "Wie viele Planeten hat unser Sonnensystem?",
+      "antwort": 8,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (8)"
+    },
+    {
+      "id": "s039",
+      "text": "Wie viele Saiten hat eine Geige?",
+      "antwort": 4,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Kleine Zahl, die man weiß oder errät (4) — kein Schätzen."
+    },
+    {
+      "id": "s040",
+      "text": "Wie viele Spieler stehen bei Basketball gleichzeitig auf dem Feld (pro Team)?",
+      "antwort": 5,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Regelwissen mit kleiner Zahl (5) — weiß man oder rät man, schätzen geht nicht."
+    },
+    {
+      "id": "s041",
+      "text": "Wie viele Spieler stehen bei Volleyball gleichzeitig auf dem Feld (pro Team)?",
+      "antwort": 6,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Regelwissen mit kleiner Zahl (6) — weiß man oder rät man; Dublette zu Quiz q174."
+    },
+    {
+      "id": "s042",
+      "text": "Wie viele Löcher hat eine Golfrunde?",
+      "antwort": 18,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (18); Dublette zu Quiz q175."
+    },
+    {
+      "id": "s043",
+      "text": "Wie viele Farben hat der Regenbogen klassischerweise?",
+      "antwort": 7,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Kinderwissen (7 Farben) — Gleichstand am Tisch."
+    },
+    {
+      "id": "s044",
+      "text": "Wie viele Buchstaben hat das deutsche Alphabet inklusive Umlauten und ß?",
+      "antwort": 30,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Abzählaufgabe und Dublette zu Quiz q069."
+    },
+    {
+      "id": "s045",
+      "text": "Wie viele Kammern hat ein menschliches Herz?",
+      "antwort": 4,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Schulwissen (4 Kammern), Dublette zu Quiz q140."
+    },
+    {
+      "id": "s047",
+      "text": "Wie viel wiegt ein ausgewachsener Blauwal ungefähr?",
+      "antwort": 130,
+      "einheit": "Tonnen",
+      "haerte": 1,
+      "grund": "Gewicht ausgewachsener Blauwale schwankt je nach Quelle stark (rund 100–190 t) — keine belastbare Zahl."
+    },
+    {
+      "id": "s051",
+      "text": "Wie lang ist ein Marathon?",
+      "antwort": 42,
+      "einheit": "Kilometer",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (42 km); Dublette zu Quiz q088."
+    },
+    {
+      "id": "s052",
+      "text": "Wie hoch sind die Niagarafälle (Horseshoe Falls)?",
+      "antwort": 51,
+      "einheit": "Meter",
+      "haerte": 1,
+      "grund": "Höhenangabe schwankt je nach Quelle und Bezug (rund 51–57 m) — nicht eindeutig."
+    },
+    {
+      "id": "s065",
+      "text": "Wie viele Symphonien hat Beethoven komponiert?",
+      "antwort": 9,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Beethovens „Neunte\" verrät die Zahl; Dublette zu Quiz q165."
+    },
+    {
+      "id": "s072",
+      "text": "Wie viele Sterne zeigt die Flagge der USA?",
+      "antwort": 50,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (50 Sterne, einer je Bundesstaat)."
+    },
+    {
+      "id": "s074",
+      "text": "Wie viele Ringe zeigt die Olympische Flagge?",
+      "antwort": 5,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (5); Dublette zu Quiz q040."
+    },
+    {
+      "id": "s075",
+      "text": "Wie viele Figuren hat jeder Spieler beim Schach zu Beginn?",
+      "antwort": 16,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Spielwissen (16 Figuren), das jeder abzählen kann."
+    },
+    {
+      "id": "s076",
+      "text": "Wie viele Felder hat ein Schachbrett?",
+      "antwort": 64,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Spielwissen (8×8), jeder rechnet es aus."
+    },
+    {
+      "id": "s077",
+      "text": "Wie viele Karten hat ein Skatblatt?",
+      "antwort": 32,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Dublette zu Quiz q180 (Skatblatt 32)."
+    },
+    {
+      "id": "s078",
+      "text": "Wie viele Karten hat ein Standard-Pokerblatt ohne Joker?",
+      "antwort": 52,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (52)."
+    },
+    {
+      "id": "s079",
+      "text": "Wie viele Spieler braucht man für Doppelkopf?",
+      "antwort": 4,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Trivial: Doppelkopf spielt man zu viert — kein Schätzen."
+    },
+    {
+      "id": "s091",
+      "text": "Wie hoch ist die normale Körpertemperatur eines Menschen ungefähr?",
+      "antwort": 37,
+      "einheit": "Grad Celsius",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (37 °C)."
+    },
+    {
+      "id": "s092",
+      "text": "Wie viele Sekunden hat ein Tag?",
+      "antwort": 86400,
+      "einheit": "Sekunden",
+      "haerte": 1,
+      "grund": "Rechenaufgabe statt Schätzen — wer rechnet, trifft exakt."
+    },
+    {
+      "id": "s093",
+      "text": "Wie viele Minuten hat eine Woche?",
+      "antwort": 10080,
+      "einheit": "Minuten",
+      "haerte": 1,
+      "grund": "Rechenaufgabe statt Schätzen — wer rechnet, trifft exakt."
+    },
+    {
+      "id": "s136",
+      "text": "Wie viele Bände hat die Harry-Potter-Hauptreihe?",
+      "antwort": 7,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (7 Bände)."
+    },
+    {
+      "id": "s139",
+      "text": "Wie viele Tage dauert die Reise in Jules Vernes berühmtem Roman um die Welt?",
+      "antwort": 80,
+      "einheit": "Tage",
+      "haerte": 1,
+      "grund": "Antwort steht im Titel („In 80 Tagen um die Welt\")."
+    },
+    {
+      "id": "s145",
+      "text": "Wie viele Türchen hat ein klassischer Adventskalender?",
+      "antwort": 24,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Die Zahl kennt fast jeder genau — kein Schätzen, nur Gleichstand am Tisch. (24 Türchen)."
+    },
+    {
+      "id": "s146",
+      "text": "Wie viele Tage liegen zwischen Heiligabend und Silvester?",
+      "antwort": 7,
+      "einheit": "Tage",
+      "haerte": 1,
+      "grund": "Unklar gezählt (6 oder 7 Tage „dazwischen\") und trivial."
+    },
+    {
+      "id": "s160",
+      "text": "Wie viele Rosen hat ein klassisches Dutzend?",
+      "antwort": 12,
+      "einheit": "Stück",
+      "haerte": 1,
+      "grund": "Ein Dutzend ist per Definition 12 — keine Schätzfrage."
+    },
+    {
+      "id": "s162",
+      "text": "Wie viele Liter passen in eine Maß?",
+      "antwort": 1,
+      "einheit": "Liter",
+      "haerte": 2,
+      "grund": "Eine Maß ist ein Liter — jeder weiß es."
+    },
+    {
+      "id": "s166",
+      "text": "Wie viele Milliliter hat eine Standard-Weinflasche?",
+      "antwort": 750,
+      "einheit": "Milliliter",
+      "haerte": 2,
+      "grund": "Die 0,75-Liter-Flasche kennt jeder — kein Schätzen."
+    },
+    {
+      "id": "s171",
+      "text": "Wie viele Tage dauert der „Dry January\"?",
+      "antwort": 31,
+      "einheit": "Tage",
+      "haerte": 2,
+      "grund": "Der Januar hat 31 Tage — keine Schätzfrage."
+    },
+    {
+      "id": "s187",
+      "text": "In welchem Jahr erschien der Roman „Lady Chatterley\" zum ersten Mal?",
+      "antwort": 1928,
+      "einheit": "Jahr",
+      "haerte": 2,
+      "grund": "Der Roman ist der Zielgruppe (18–35) unbekannt — niemand hat eine Ahnung."
+    },
+    {
+      "id": "s190",
+      "text": "Wie viele Männer kommen in „Mamma Mia!\" als Vater von Sophie infrage?",
+      "antwort": 3,
+      "einheit": "Stück",
+      "haerte": 2,
+      "grund": "Die Zahl ist die Handlung des Films; Dublette zu Quiz q263."
+    },
+    {
+      "id": "s192",
+      "text": "In welchem Jahr kam „Der letzte Tango in Paris\" ins Kino?",
+      "antwort": 1972,
+      "einheit": "Jahr",
+      "haerte": 2,
+      "grund": "Film von 1972, den die Zielgruppe (18–35) kaum kennt — reines Raten."
+    }
+  ],
+  "umstufen": [
+    {
+      "id": "s177",
+      "text": "Wie viele Wochen dauert eine Schwangerschaft im Durchschnitt, gerechnet ab der letzten Periode?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Schwangerschaftsdauer ist Biologie, nichts Anzügliches."
+    },
+    {
+      "id": "s181",
+      "text": "In welchem Jahr kam „Dirty Dancing\" ins Kino?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Kinojahr eines Tanzfilms — harmlos."
+    },
+    {
+      "id": "s182",
+      "text": "In welchem Jahr kam „Grease\" mit Danny und Sandy ins Kino?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Kinojahr eines Musicalfilms — harmlos."
+    },
+    {
+      "id": "s195",
+      "text": "In welchem Jahr kam „Bridget Jones – Schokolade zum Frühstück\" ins Kino?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Kinojahr einer romantischen Komödie — harmlos."
+    },
+    {
+      "id": "s196",
+      "text": "In welchem Jahr kam der erste „Twilight\"-Film ins Kino?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Kinojahr eines Jugendfilms — harmlos."
+    },
+    {
+      "id": "s198",
+      "text": "In welchem Jahr kam „Notting Hill\" ins Kino?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Kinojahr einer romantischen Komödie — harmlos."
+    },
+    {
+      "id": "s200",
+      "text": "Bis zu wie viele Tage können Spermien im Körper einer Frau überleben?",
+      "von": 3,
+      "nach": 2,
+      "grund": "Fruchtbarkeitsbiologie fiele an einem pikanten Tisch nicht auf — nicht derb."
+    }
+  ],
+  "umschreiben": [
+    {
+      "id": "s005",
+      "text": "Wie lang ist der Nil, der längste Fluss der Welt?",
+      "neu": "Wie lang ist der Nil?",
+      "grund": "„Der längste Fluss der Welt\" ist umstritten (je nach Messung der Amazonas); die Zahl bleibt (6650 km, Britannica)."
+    },
+    {
+      "id": "s027",
+      "text": "Wie viele Minuten dauert \"Der Herr der Ringe: Die Rückkehr des Königs\"?",
+      "neu": "Wie viele Minuten dauert die Kinofassung von „Der Herr der Ringe: Die Rückkehr des Königs\"?",
+      "grund": "Die erweiterte Fassung dauert 263 Minuten — ohne Angabe zwei richtige Zahlen."
+    },
+    {
+      "id": "s030",
+      "text": "Wie viele Menschen leben ungefähr auf der Erde?",
+      "neu": "Wie viele Milliarden Menschen leben laut UN-Schätzung im Jahr 2025 auf der Erde?",
+      "grund": "Zahl ändert sich laufend; mit Jahr und Quelle eindeutig (UN World Population Prospects 2024: 8,2 Mrd. für 2025).",
+      "antwortAlt": 8,
+      "antwort": 8.2
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr wurde die „Pille danach\" in Deutschland rezeptfrei?",
+      "antwort": 2015,
+      "einheit": "Jahr",
+      "stufe": 2,
+      "beleg": "Rezeptfreiheit seit 15. März 2015 (Änderung der Arzneimittelverschreibungsverordnung)."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr trat in Deutschland das Prostitutionsgesetz in Kraft?",
+      "antwort": 2002,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "ProstG, in Kraft seit 1. Januar 2002."
+    },
+    {
+      "haerte": 2,
+      "text": "Wie viel Gramm reiner Alkohol stecken in einem halben Liter Bier mit 5 %?",
+      "antwort": 20,
+      "einheit": "Gramm",
+      "stufe": 3,
+      "beleg": "500 ml × 5 % = 25 ml Ethanol × 0,8 g/ml = 20 g (Standardrechnung, u. a. BZgA)."
+    },
+    {
+      "haerte": 2,
+      "text": "Wie viele Kräuter und Gewürze stecken laut Hersteller in Jägermeister?",
+      "antwort": 56,
+      "einheit": "Stück",
+      "stufe": 2,
+      "beleg": "Herstellerangabe Mast-Jägermeister: 56 Kräuter, Blüten, Wurzeln und Früchte."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr kam Jägermeister auf den Markt?",
+      "antwort": 1935,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "Herstellerangabe: seit 1935 im Handel."
+    },
+    {
+      "haerte": 2,
+      "text": "Wie viel Prozent Alkohol hat Jägermeister?",
+      "antwort": 35,
+      "einheit": "Prozent",
+      "stufe": 2,
+      "beleg": "Etikett/Hersteller: 35 % vol."
+    },
+    {
+      "haerte": 2,
+      "text": "Wie viel Prozent Alkohol hat Aperol?",
+      "antwort": 11,
+      "einheit": "Prozent",
+      "stufe": 2,
+      "beleg": "Etikett/Hersteller Campari: 11 % vol."
+    },
+    {
+      "haerte": 2,
+      "text": "Wie viele normale Flaschen Champagner passen in eine Nebukadnezar-Flasche?",
+      "antwort": 20,
+      "einheit": "Flaschen",
+      "stufe": 3,
+      "beleg": "Nebukadnezar = 15 Liter = 20 × 0,75 l."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr kam „Fifty Shades of Grey\" ins Kino?",
+      "antwort": 2015,
+      "einheit": "Jahr",
+      "stufe": 2,
+      "beleg": "Kinostart Februar 2015."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr lief „Love Island\" zum ersten Mal im deutschen Fernsehen?",
+      "antwort": 2017,
+      "einheit": "Jahr",
+      "stufe": 2,
+      "beleg": "Erste deutsche Staffel bei RTL II, 2017."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr lief „Der Bachelor\" zum ersten Mal im deutschen Fernsehen?",
+      "antwort": 2003,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "Erste deutsche Staffel bei RTL, 2003 (Neustart 2012)."
+    },
+    {
+      "haerte": 2,
+      "text": "Wie viele Folgen hat die Serie „Sex Education\" insgesamt?",
+      "antwort": 32,
+      "einheit": "Folgen",
+      "stufe": 2,
+      "beleg": "Netflix, vier Staffeln à acht Folgen (2019–2023)."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr startete die Nacktdatingshow „Adam sucht Eva\"?",
+      "antwort": 2014,
+      "einheit": "Jahr",
+      "stufe": 2,
+      "beleg": "Erstausstrahlung bei RTL, 2014."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr startete die Serie „Bridgerton\"?",
+      "antwort": 2020,
+      "einheit": "Jahr",
+      "stufe": 1,
+      "beleg": "Netflix-Start 25. Dezember 2020."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr ging die Dating-App Grindr online?",
+      "antwort": 2009,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "Start im März 2009."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr ging die Dating-App Bumble online?",
+      "antwort": 2014,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "Start im Dezember 2014."
+    },
+    {
+      "haerte": 2,
+      "text": "Bei wie viel Grad unter null gefriert Wodka mit 40 % ungefähr?",
+      "antwort": 27,
+      "einheit": "Grad unter null",
+      "stufe": 3,
+      "beleg": "Gefrierpunkt eines 40-%-Ethanol-Wasser-Gemischs rund −27 °C (physikalische Tabellen)."
+    },
+    {
+      "haerte": 2,
+      "text": "Wie viele Kilokalorien hat ein Liter Pils ungefähr?",
+      "antwort": 420,
+      "einheit": "Kilokalorien",
+      "stufe": 2,
+      "beleg": "Nährwertangaben üblicher Pilsmarken: rund 40–43 kcal je 100 ml."
+    },
+    {
+      "haerte": 2,
+      "text": "Wie viele Punkte in Flensburg gibt es beim ersten Mal Autofahren mit 0,5 Promille?",
+      "antwort": 2,
+      "einheit": "Punkte",
+      "stufe": 2,
+      "beleg": "Bußgeldkatalog zu § 24a StVG: 500 €, 2 Punkte, 1 Monat Fahrverbot."
+    },
+    {
+      "haerte": 2,
+      "text": "Wie viel bar Druck herrscht ungefähr in einer Flasche Champagner?",
+      "antwort": 6,
+      "einheit": "bar",
+      "stufe": 3,
+      "beleg": "Rund 6 bar (Comité Champagne)."
+    },
+    {
+      "haerte": 2,
+      "text": "Wie viel Prozent Alkohol hat der stärkste Stroh-Rum?",
+      "antwort": 80,
+      "einheit": "Prozent",
+      "stufe": 2,
+      "beleg": "Stroh 80, 80 % vol (Hersteller)."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr wurde das bayerische Reinheitsgebot für Bier erlassen?",
+      "antwort": 1516,
+      "einheit": "Jahr",
+      "stufe": 1,
+      "beleg": "Erlass in Ingolstadt am 23. April 1516."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr kam „Hangover\" ins Kino?",
+      "antwort": 2009,
+      "einheit": "Jahr",
+      "stufe": 1,
+      "beleg": "Kinostart 2009."
+    },
+    {
+      "haerte": 2,
+      "text": "In welchem Jahr wurde der Bikini zum ersten Mal vorgeführt?",
+      "antwort": 1946,
+      "einheit": "Jahr",
+      "stufe": 2,
+      "beleg": "Louis Réard, Paris, 5. Juli 1946."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie lang ist ein erigierter Penis laut großer Auswertung (2015) im Schnitt, in Zentimetern?",
+      "antwort": 13.1,
+      "einheit": "Zentimeter",
+      "stufe": 2,
+      "beleg": "Veale et al. 2015, BJU International, 15.521 Männer: 13,12 cm."
+    },
+    {
+      "haerte": 3,
+      "text": "Welchen Umfang hat ein erigierter Penis laut derselben Auswertung (2015) im Schnitt?",
+      "antwort": 11.7,
+      "einheit": "Zentimeter",
+      "stufe": 3,
+      "beleg": "Veale et al. 2015, BJU International: 11,66 cm."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viele Minuten dauert Sex vom Eindringen bis zum Samenerguss laut großer Studie im Mittel?",
+      "antwort": 5.4,
+      "einheit": "Minuten",
+      "stufe": 2,
+      "beleg": "Waldinger et al. 2005, J Sex Med, 500 Paare in fünf Ländern: Median 5,4 Minuten."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viele Kilokalorien verbrannten Männer in einer kanadischen Studie (2013) pro Mal Sex?",
+      "antwort": 101,
+      "einheit": "Kilokalorien",
+      "stufe": 3,
+      "beleg": "Frappier et al. 2013, PLoS ONE: Männer 101 kcal, Frauen 69 kcal je Sitzung."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viele Kondome wurden bei Olympia 2024 in Paris an die Athleten verteilt?",
+      "antwort": 300000,
+      "einheit": "Stück",
+      "stufe": 2,
+      "beleg": "Organisationskomitee Paris 2024: rund 300.000 Kondome im Olympischen Dorf."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viel wiegen die Hoden eines Glattwals zusammen ungefähr?",
+      "antwort": 1000,
+      "einheit": "Kilogramm",
+      "stufe": 3,
+      "beleg": "Brownell & Ralls 1986: Hoden des Glattwals zusammen rund eine Tonne."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viele Arten des Liebesspiels zählt das Kamasutra traditionell auf?",
+      "antwort": 64,
+      "einheit": "Stück",
+      "stufe": 2,
+      "beleg": "Kamasutra, Buch 2: die „64 Künste\" (acht mal acht)."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viel Gramm Kot scheidet ein Erwachsener pro Tag im Mittel aus?",
+      "antwort": 128,
+      "einheit": "Gramm",
+      "stufe": 3,
+      "beleg": "Rose et al. 2015, Crit Rev Food Sci Nutr (Übersichtsarbeit): Median 128 g pro Tag."
+    },
+    {
+      "haerte": 3,
+      "text": "In welchem Jahr brachte Bayer Heroin als Hustenmittel auf den Markt?",
+      "antwort": 1898,
+      "einheit": "Jahr",
+      "stufe": 2,
+      "beleg": "Bayer, Markteinführung 1898 (Marke „Heroin\")."
+    },
+    {
+      "haerte": 3,
+      "text": "In welchem Jahr entdeckte Albert Hofmann die Rauschwirkung von LSD?",
+      "antwort": 1943,
+      "einheit": "Jahr",
+      "stufe": 2,
+      "beleg": "Selbstversuch am 19. April 1943 („Bicycle Day\"), Sandoz Basel."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie alt wurde LSD-Entdecker Albert Hofmann?",
+      "antwort": 102,
+      "einheit": "Jahre",
+      "stufe": 2,
+      "beleg": "Albert Hofmann, 1906–2008."
+    },
+    {
+      "haerte": 3,
+      "text": "In welchem Jahr wurde MDMA (Ecstasy) zum ersten Mal hergestellt?",
+      "antwort": 1912,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "Synthese bei Merck in Darmstadt 1912, Patent 1914."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viel Gramm Cannabis dürfen Erwachsene in Deutschland laut Cannabisgesetz unterwegs dabeihaben?",
+      "antwort": 25,
+      "einheit": "Gramm",
+      "stufe": 2,
+      "beleg": "CanG § 3 (seit 1. April 2024): 25 g im öffentlichen Raum."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viele Cannabispflanzen darf ein Erwachsener in Deutschland zu Hause anbauen?",
+      "antwort": 3,
+      "einheit": "Pflanzen",
+      "stufe": 2,
+      "beleg": "CanG § 3 (seit 1. April 2024): bis zu drei Pflanzen."
+    },
+    {
+      "haerte": 3,
+      "text": "In welchem Jahr legalisierte Uruguay als erstes Land Cannabis vollständig?",
+      "antwort": 2013,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "Gesetz Nr. 19.172 vom Dezember 2013."
+    },
+    {
+      "haerte": 3,
+      "text": "In welchem Jahr kam der Pornofilm „Deep Throat\" ins Kino?",
+      "antwort": 1972,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "Uraufführung Juni 1972, New York."
+    },
+    {
+      "haerte": 3,
+      "text": "In welchem Jahr ging Pornhub online?",
+      "antwort": 2007,
+      "einheit": "Jahr",
+      "stufe": 2,
+      "beleg": "Start im Mai 2007."
+    },
+    {
+      "haerte": 3,
+      "text": "In welchem Jahr ging OnlyFans online?",
+      "antwort": 2016,
+      "einheit": "Jahr",
+      "stufe": 2,
+      "beleg": "Start 2016 in London."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viele Nervenfasern zählte eine US-Studie (2022) im Hauptnerv der Klitoris?",
+      "antwort": 10281,
+      "einheit": "Stück",
+      "stufe": 3,
+      "beleg": "Uloko et al., Oregon Health & Science University, vorgestellt 2022: im Mittel 10.281."
+    },
+    {
+      "haerte": 3,
+      "text": "In welchem Jahr ließ die US-Arzneibehörde die erste Lustpille für Frauen zu?",
+      "antwort": 2015,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "FDA-Zulassung von Flibanserin (Addyi) im August 2015."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viele Stunden kann die Wirkung von Cialis laut Hersteller anhalten?",
+      "antwort": 36,
+      "einheit": "Stunden",
+      "stufe": 2,
+      "beleg": "Fachinformation Tadalafil: Wirkung bis zu 36 Stunden."
+    },
+    {
+      "haerte": 3,
+      "text": "Ab wie vielen Stunden Erektion soll man laut Viagra-Beipackzettel sofort zum Arzt?",
+      "antwort": 4,
+      "einheit": "Stunden",
+      "stufe": 2,
+      "beleg": "Gebrauchsinformation Sildenafil: Erektion länger als 4 Stunden → sofort Arzt."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie lang ist die Harnröhre eines Mannes ungefähr?",
+      "antwort": 20,
+      "einheit": "Zentimeter",
+      "stufe": 3,
+      "beleg": "Anatomie-Lehrbuch: rund 18–22 cm (Frau: 3–5 cm)."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viele Millionen Spermien pro Milliliter gelten laut WHO (2021) als unterer Normalwert?",
+      "antwort": 16,
+      "einheit": "Millionen pro Milliliter",
+      "stufe": 3,
+      "beleg": "WHO-Laborhandbuch Samenanalyse, 6. Auflage 2021: unterer Referenzwert 16 Mio./ml."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie lang ist ein erigierter Gorilla-Penis ungefähr?",
+      "antwort": 3,
+      "einheit": "Zentimeter",
+      "stufe": 3,
+      "beleg": "Dixson, „Primate Sexuality\": rund 3 cm."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viele Jahre alt ist der Stein-Phallus aus der Höhle Hohle Fels (Schwäbische Alb)?",
+      "antwort": 28000,
+      "einheit": "Jahre",
+      "stufe": 3,
+      "beleg": "Fund der Universität Tübingen, vorgestellt 2005: rund 28.000 Jahre."
+    },
+    {
+      "haerte": 3,
+      "text": "Wie viele Liter Urin scheidet ein Erwachsener pro Tag ungefähr aus?",
+      "antwort": 1.5,
+      "einheit": "Liter",
+      "stufe": 2,
+      "beleg": "Physiologie-Lehrbuch: rund 1,5 Liter pro Tag."
+    },
+    {
+      "haerte": 3,
+      "text": "Aus welchem Jahr stammen die ältesten erhaltenen Kondome (Dudley Castle, England) etwa?",
+      "antwort": 1640,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "Fund in einer vor 1647 versiegelten Latrine, datiert um 1640."
+    },
+    {
+      "haerte": 3,
+      "text": "In welchem Jahr eröffnete in Amsterdam der erste Coffeeshop?",
+      "antwort": 1972,
+      "einheit": "Jahr",
+      "stufe": 3,
+      "beleg": "„Mellow Yellow\", eröffnet 1972."
+    }
+  ]
+}

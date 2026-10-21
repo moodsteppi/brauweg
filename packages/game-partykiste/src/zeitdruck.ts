@@ -48,6 +48,12 @@ import {
   BOMBE_MIN_MS,
   BOMBE_SCHRITT_MS,
   BOMBE_WEITERGABEN_HOECHST,
+  FLASCHE_GRENZE_JE_KARTE,
+  FLASCHE_GRENZE_MIN,
+  FLASCHE_GRENZE_START,
+  FLASCHE_HOECHST_KARTEN,
+  FLASCHE_RAND,
+  FLASCHE_RUTSCH,
   KOENIGSBECHER_HAND_MS,
   KOENIGSBECHER_KARTEN_JE_SITZ,
   PHASE_HOECHST_MS,
@@ -165,6 +171,43 @@ export interface KoenigsbecherRunde extends RundenBasis {
   readonly buben: number;
   /** Die Regel des letzten Buben — gilt nach dieser Runde. null ohne Buben. */
   readonly neueRegel: { readonly karteId: string; readonly text: string } | null;
+  /**
+   * Gezogen, aber noch nicht auf die Flasche gelegt. Solange sie da ist,
+   * wartet die Runde auf `legen` des Sitzes am Zug; erst danach gilt ihre
+   * Regel (Emile, 13.10.2026: erst legen, dann lesen).
+   */
+  readonly offeneKarte: Karte | null;
+  /** Der Stapel auf der Flasche: je Karte ihr Versatz, unterste zuerst. */
+  readonly flasche: readonly number[];
+  /** Wie oft schon gelegt wurde — Merkmal fuer Bildschirm-Einlagen. */
+  readonly gelegt: number;
+  /** Der letzte Sturz: wer, wie viele Karten, wo sie lagen, bei welchem Legen. */
+  readonly sturz: FlaschenSturz | null;
+}
+
+export interface FlaschenSturz {
+  readonly sitz: number;
+  readonly karten: number;
+  /** Was der Sitz dafuer kassiert, noch OHNE Haertegrad (gedeckelt). */
+  readonly strich: number;
+  readonly versatz: readonly number[];
+  /** `gelegt` beim Sturz — der Bildschirm zeigt ihn genau einmal. */
+  readonly nr: number;
+}
+
+/**
+ * Haelt der Stapel, wenn eine Karte mit diesem Versatz dazukommt?
+ * Deterministisch — dieselben Karten ergeben dasselbe Ergebnis auf jedem
+ * Geraet. Die Zahlen stehen in regeln.ts (FLASCHE_*).
+ */
+export function flascheHaelt(stapel: readonly number[], versatz: number): boolean {
+  if (Math.abs(versatz) > FLASCHE_RAND) return false;
+  const oben = stapel.at(-1);
+  if (oben !== undefined && Math.abs(versatz - oben) > FLASCHE_RUTSCH) return false;
+  const alle = [...stapel, versatz];
+  const schwerpunkt = alle.reduce((summe, v) => summe + v, 0) / alle.length;
+  const grenze = Math.max(FLASCHE_GRENZE_MIN, FLASCHE_GRENZE_START - FLASCHE_GRENZE_JE_KARTE * (alle.length - 1));
+  return Math.abs(schwerpunkt) <= grenze;
 }
 
 export type ZeitdruckRunde = BombeRunde | ZehnSekundenRunde | KoenigsbecherRunde;
@@ -265,6 +308,10 @@ export function koenigsbecherStart(
     regelVorrat,
     buben: 0,
     neueRegel: null,
+    offeneKarte: null,
+    flasche: [],
+    gelegt: 0,
+    sturz: null,
   };
 }
 
@@ -296,7 +343,7 @@ function bombeVorbei(partie: PartykistePartie, runde: BombeRunde): boolean {
 
 /** Hat jeder Anwesende seine Karten gezogen, und ist nichts mehr offen? */
 function koenigsbecherVorbei(partie: PartykistePartie, runde: KoenigsbecherRunde): boolean {
-  if (runde.wahlOffen || runde.hand !== null) return false;
+  if (runde.wahlOffen || runde.hand !== null || runde.offeneKarte !== null) return false;
   return lebende(partie).every((s) => (runde.gezogen[s] ?? 0) >= KOENIGSBECHER_KARTEN_JE_SITZ);
 }
 
@@ -358,6 +405,11 @@ export function zeitdruckSchritt(
       if (runde.hand !== null) {
         if (naechsteHand(partie, runde.hand) !== null) return 'ruhe';
         return { ...partie, runde: handAbschliessen(partie, runde, []) };
+      }
+      if (runde.offeneKarte !== null) {
+        if (!partie.ausgestiegen.includes(runde.amZug)) return 'ruhe';
+        /* Wer legen sollte, ist weg: Die Karte gilt trotzdem, nur ohne Flasche. */
+        return spieleKarte(partie, { ...runde, offeneKarte: null }, runde.amZug, runde.offeneKarte);
       }
       if (runde.wahlOffen) {
         /* Gezeigt wird auch nach der letzten eigenen Karte — dann ist `gezogen` schon voll. */
@@ -543,19 +595,57 @@ export function koenigsbecherZug(
     };
   }
 
+  if (runde.offeneKarte !== null) {
+    if (aktion.art !== 'legen') return 'erst die Karte auf die Flasche legen';
+    if (typeof aktion.versatz !== 'number' || !Number.isFinite(aktion.versatz)) return 'der Versatz ist eine Zahl';
+    const versatz = Math.max(-1, Math.min(1, aktion.versatz));
+    const gelegt = runde.gelegt + 1;
+    let neu: KoenigsbecherRunde = { ...runde, offeneKarte: null, gelegt };
+    if (flascheHaelt(runde.flasche, versatz)) {
+      neu = { ...neu, flasche: [...runde.flasche, versatz] };
+    } else {
+      /* Umgekippt: Der Leger kassiert je heruntergefallener Karte, der Stapel beginnt neu. */
+      const alle = [...runde.flasche, versatz];
+      const karten = Math.min(FLASCHE_HOECHST_KARTEN, alle.length);
+      const strich = [...neu.strich];
+      strich[sitz] = (strich[sitz] ?? 0) + karten * SCHLUECKE.koenigsbecherFlascheJeKarte;
+      neu = {
+        ...neu,
+        flasche: [],
+        strich,
+        sturz: { sitz, karten: alle.length, strich: karten * SCHLUECKE.koenigsbecherFlascheJeKarte, versatz: alle, nr: gelegt },
+      };
+    }
+    return spieleKarte(partie, neu, sitz, runde.offeneKarte);
+  }
+
   if (aktion.art !== 'ziehen') return 'jetzt wird gezogen';
   if ((runde.gezogen[sitz] ?? 0) >= KOENIGSBECHER_KARTEN_JE_SITZ) return partie;
   /* Der Stapel reicht immer (zwoelf mal zwei sind 24 von 52); am Ende von vorn, falls doch nicht. */
   const karte = runde.stapel[runde.naechste % Math.max(1, runde.stapel.length)];
   if (!karte) return 'der Stapel ist leer';
-  const regel = koenigsbecherKarte(karte.rang);
   const gezogen = [...runde.gezogen];
   gezogen[sitz] = (gezogen[sitz] ?? 0) + 1;
+  /* Erst auf die Flasche legen (`legen`), dann gilt die Regel — siehe spieleKarte. */
+  return { ...partie, runde: { ...runde, gezogen, naechste: runde.naechste + 1, offeneKarte: karte } };
+}
+
+/**
+ * Die Regel einer gelegten Karte. Getrennt vom Ziehen, seit die Karte erst auf
+ * die Flasche muss: Ihre Wirkung (Wasserfall, Zwei, Sieben …) kommt danach.
+ */
+function spieleKarte(
+  partie: PartykistePartie,
+  runde: KoenigsbecherRunde,
+  sitz: number,
+  karte: Karte,
+): PartykistePartie {
+  const regel = koenigsbecherKarte(karte.rang);
   const anwesend = lebende(partie);
   const andere = anwesend.filter((s) => s !== sitz);
 
   let ziele: number[] = [];
-  let neu: KoenigsbecherRunde = { ...runde, gezogen, naechste: runde.naechste + 1 };
+  let neu: KoenigsbecherRunde = runde;
   let weiterzug = true;
 
   switch (regel.folge) {
@@ -699,6 +789,9 @@ export function zeitdruckAktionen(partie: PartykistePartie, runde: ZeitdruckRund
           .filter((s) => s !== sitz)
           .map((ziel) => ({ art: 'stimme', ziel }) as const);
       }
+      /* Der Versatz ist eine Zahl und nicht aufzaehlbar — wie beim Schaetzen
+         bleibt die Liste leer, und der Bildschirm baut `legen` selbst. */
+      if (runde.offeneKarte !== null) return [];
       return [{ art: 'ziehen' }];
   }
 }
@@ -759,6 +852,13 @@ export interface KoenigsbecherSicht {
   readonly koenigSitz: number;
   /** Die Regel, die nach dieser Runde gilt (letzter Bube), oder null. */
   readonly neueRegel: string | null;
+  /** Gezogen, noch nicht gelegt — fuer ALLE sichtbar, wie am echten Tisch. */
+  readonly offeneKarte: Karte | null;
+  /** Der Stapel auf der Flasche, je Karte ihr Versatz (-1 bis 1), unterste zuerst. */
+  readonly flasche: readonly number[];
+  readonly gelegt: number;
+  /** Der letzte Sturz; `kassiert` mit Haertegrad, wie `kassiert` oben. */
+  readonly sturz: (FlaschenSturz & { readonly kassiert: number }) | null;
 }
 
 export type ZeitdruckSicht = BombeSicht | ZehnSekundenSicht | KoenigsbecherSicht;
@@ -809,6 +909,10 @@ export function zeitdruckSicht(
         becher: runde.becher,
         koenigSitz: runde.koenigSitz,
         neueRegel: runde.neueRegel?.text ?? null,
+        offeneKarte: runde.offeneKarte,
+        flasche: runde.flasche,
+        gelegt: runde.gelegt,
+        sturz: runde.sturz ? { ...runde.sturz, kassiert: schluck(runde.sturz.strich) } : null,
       };
     }
   }

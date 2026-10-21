@@ -269,6 +269,13 @@ export const account = pgTable(
      * der Geduld.
      */
     gastSeit: timestamp({ withTimezone: true }),
+    /**
+     * Werbelink, ueber den das Konto entstanden ist (`?q=`, src/herkunft.ts).
+     * Nur gesetzt, wenn ein Gastkonto mit Kennung angelegt wurde; danach
+     * zaehlen seine Runden in `herkunft_zaehler`. Bleibt beim Sichern stehen
+     * — wer aus dem Gast ein Konto macht, ist erst recht ein Geworbener.
+     */
+    herkunft: text(),
   },
   (t) => [
     uniqueIndex('account_email_key').on(t.email),
@@ -470,6 +477,38 @@ export const chestClaim = pgTable(
     primaryKey({ columns: [t.accountId, t.chestId] }),
     index('chest_claim_account_idx').on(t.accountId, t.claimedAt),
   ],
+);
+
+/**
+ * Abgeholte Belohnungen des Trophaeenwegs (0031, `src/trophaeenweg.ts`).
+ *
+ * Eine Zeile je Konto und Schwelle, und der Primaerschluessel IST die Sperre
+ * gegen das zweite Abholen — wie bei `chest_claim`. Eine eigene Tabelle und
+ * nicht `chest_claim`, weil dort zwei Dinge nicht hineinpassen: Ein
+ * Checkpoint gibt feste Muenzen und hat keinen Truhengrad (`grade` ist dort
+ * Pflicht), und eine Station gibt Truhe UND Gegenstand in einem Zug — beides
+ * gehoert an dieselbe Zeile, sonst koennte ein halb abgeholter Stand
+ * entstehen, den keine der beiden Tabellen erklaert.
+ *
+ * `coins` ist, was gutgeschrieben wurde (bei einer Truhe der Wurf, der nur
+ * einmal faellt — Begruendung in `truhen.ts`). `item_id` ist der Gegenstand,
+ * der mitkam, auch wenn er schon im Besitz war: Die Zeile sagt, was die Stufe
+ * gab, nicht, was neu war.
+ */
+export const wegAbholung = pgTable(
+  'weg_abholung',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    schwelle: integer().notNull(),
+    /** Truhengrad; null bei Checkpoints mit festen Muenzen. */
+    grade: chestGrade(),
+    coins: integer().notNull(),
+    itemId: text(),
+    abgeholtAm: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.schwelle] })],
 );
 
 /**
@@ -1069,6 +1108,25 @@ export const pushEinstellung = pgTable('push_einstellung', {
   geaendert: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Offene Beitrittsanfragen an Tischen, die nicht oeffentlich sind (Migration
+ * 0033). Angenommen oder abgelehnt, verschwindet die Zeile; was daraus wurde,
+ * zeigt der Sitz. Regeln in tables/anfragen.ts.
+ */
+export const tischAnfrage = pgTable(
+  'tisch_anfrage',
+  {
+    tischId: uuid()
+      .notNull()
+      .references(() => gameTable.id, { onDelete: 'cascade' }),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    erstellt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.tischId, t.accountId] })],
+);
+
 // ---------------------------------------------------------------------------
 // Trophaeen
 // ---------------------------------------------------------------------------
@@ -1167,6 +1225,31 @@ export const report = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('report_target_idx').on(t.targetId, t.createdAt)],
+);
+
+/**
+ * „Passt nicht" zu einem Inhalt der Partykiste (seit dem 27.09.2026, nur auf
+ * staging — Migration 0032, Routen in http/partykiste-routen.ts). Gemeldet
+ * wird ein EINTRAG (Katalog + Kennung), kein Mensch; deshalb nicht `report`.
+ * Der Text des Eintrags steht im Katalog, nicht hier.
+ */
+export const partykisteMeldung = pgTable(
+  'partykiste_meldung',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    tischId: uuid().references(() => gameTable.id, { onDelete: 'set null' }),
+    katalog: text().notNull(),
+    kennung: text().notNull(),
+    grund: text().notNull(),
+    freitext: text(),
+    /** Die Inhaltsstufe des Tisches beim Melden (1 bis 3) — „zu zahm" sagt ohne sie nichts. */
+    stufe: smallint(),
+    erstelltAm: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('partykiste_meldung_eintrag_idx').on(t.katalog, t.kennung)],
 );
 
 // ---------------------------------------------------------------------------
@@ -1399,3 +1482,50 @@ export const clubRelations = relations(club, ({ many, one }) => ({
     references: [account.id],
   }),
 }));
+
+// ---------------------------------------------------------------------------
+// Doppelkopf lernen
+// ---------------------------------------------------------------------------
+
+/**
+ * Lernpfad und Tagesserie, eine Zeile je Konto (lernpfad.ts). Die Zeile
+ * entsteht beim ersten Fortschritt, nicht mit dem Konto.
+ */
+export const lernpfad = pgTable('lernpfad', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  /** Kennungen der erledigten Lektionen (`LEKTIONEN` in game-doppelkopf). */
+  lektionen: jsonb().$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  serie: integer().notNull().default(0),
+  beste: integer().notNull().default(0),
+  /** Kalendertage in Europe/Berlin, wie bei den Tagesaufgaben. */
+  letzterTag: date(),
+  schutzTag: date(),
+  belohntAm: timestamp({ withTimezone: true }),
+  erinnertTag: date(),
+});
+
+// ---------------------------------------------------------------------------
+// Herkunft je Werbelink
+// ---------------------------------------------------------------------------
+
+/**
+ * Summen je Werbekennung und Kalendertag (Europe/Berlin), src/herkunft.ts.
+ * Bewusst KEINE Zeile je Besuch und kein Bezug aufs Konto: Gezaehlt wird,
+ * nicht protokolliert, und ein geloeschtes Konto nimmt seine Runden nicht
+ * aus der Summe mit.
+ */
+export const herkunftZaehler = pgTable(
+  'herkunft_zaehler',
+  {
+    kennung: text().notNull(),
+    tag: date().notNull(),
+    besuche: integer().notNull().default(0),
+    gastkonten: integer().notNull().default(0),
+    /** Je Konto: zwei Geworbene an einem Tisch sind zwei Runden. */
+    runden: integer().notNull().default(0),
+    partien: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.kennung, t.tag] }), index('herkunft_zaehler_tag_idx').on(t.tag)],
+);

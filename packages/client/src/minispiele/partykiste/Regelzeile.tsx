@@ -9,12 +9,12 @@
  * gibt) und im Spielkopf (Regelsatz aus der Sicht). Beide Male dieselbe
  * Komponente, damit die Woerter nicht auseinanderlaufen.
  *
- * Sie bildet keine Regel nach: Sie liest drei Felder und benennt sie.
+ * Sie bildet keine Regel nach: Sie liest die Felder des Regelsatzes und benennt sie.
  */
 
 import { createContext, useContext } from 'react';
 
-import { eskalationsHinweis, modusChip } from './modi';
+import { eskalationsHinweis, inhaltsChip, inhaltsHinweis, modusChip } from './modi';
 import { HAERTE_NAME, MINISPIEL_NAME, type PartyRegelsatz } from './sicht';
 
 export function Regelzeile({
@@ -34,7 +34,9 @@ export function Regelzeile({
   const spieleTitel = regeln.minispiele.map((id) => MINISPIEL_NAME[id]).join(', ');
   /* Der Modus (seit 22.09.2026) steht vorn; das Turnier bekommt keinen Chip. */
   const modus = modusChip(regeln);
-  const hinweis = eskalationsHinweis(regeln);
+  const hinweis = eskalationsHinweis(regeln) ?? inhaltsHinweis(regeln);
+  /* Die Inhaltsstufe (seit 27.09.2026): genau, gemischt, oder bei alten Tischen die Obergrenze. */
+  const inhalte = inhaltsChip(regeln);
   /* In der Eskalation gilt nicht die eingestellte Haerte, sondern die der
      Runde — und vor der ersten Runde (Wartesaal) steht nur fest, dass sie steigt. */
   const haerte = regeln.modus === 'eskalation' ? (regeln.eskalation?.schluckFaktor ?? null) : regeln.schluckFaktor;
@@ -52,6 +54,11 @@ export function Regelzeile({
       <span className="pk-regelchip">
         Härte {haerte === null ? 'steigt' : (HAERTE_NAME[haerte] ?? haerte)}
       </span>
+      {inhalte ? (
+        <span className="pk-regelchip" data-pk-inhalte={regeln.inhaltsMischung ?? ''}>
+          {inhalte}
+        </span>
+      ) : null}
       <span className="pk-regelchip" data-alkoholfrei={regeln.trinkmodus ? undefined : ''}>
         {regeln.trinkmodus ? 'Trinkmodus' : 'alkoholfrei'}
       </span>

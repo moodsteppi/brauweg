@@ -15,7 +15,9 @@
 
 import { useState } from 'react';
 
+import { SpielAbschnitt, SpielRahmen } from '../../screens/SpielEinstieg';
 import { Kreuz } from '../../zeichen';
+import { AKZENT } from './akzent';
 import { STUFEN, Stufenregler, type Stufe } from './Stufenregler';
 
 /**
@@ -28,11 +30,14 @@ import { STUFEN, Stufenregler, type Stufe } from './Stufenregler';
 const GEGNER_MAX = 3;
 
 export function KiMatch({
+  neu = false,
   laeuft,
   fehler,
   onStart,
   onBack,
 }: {
+  /** Neues Hub: derselbe Bildschirm im Spieleinstieg-Baukasten. */
+  neu?: boolean;
   /** Der Tisch wird gerade aufgemacht — der Knopf darf nicht zweimal gehen. */
   laeuft: boolean;
   fehler: string | null;
@@ -45,6 +50,82 @@ export function KiMatch({
     setGegner((alt) => alt.map((wert, i) => (i === index ? stufe : wert)));
   };
 
+  const unter =
+    gegner.length === 1
+      ? 'Wie gut soll dein Gegner sich erinnern?'
+      : `${gegner.length} Gegner — jeder mit eigenem Gedächtnis.`;
+
+  if (neu) {
+    return (
+      <SpielRahmen
+        gameId="mememory"
+        titel="KI-Match erstellen"
+        unter={unter}
+        akzent={AKZENT}
+        // Wie der alte Zurueck-Knopf: gesperrt, solange der Tisch aufgeht.
+        onBack={() => {
+          if (!laeuft) onBack();
+        }}
+        zurueckText="Zurück"
+        fuss={
+          <button
+            type="button"
+            className="hb-kn is-gold is-haupt is-breit"
+            onClick={() => onStart(gegner)}
+            disabled={laeuft}
+          >
+            {laeuft ? 'Tisch wird aufgemacht…' : 'Match starten'}
+          </button>
+        }
+      >
+        {fehler && <p className="hb-fehler">{fehler}</p>}
+        {gegner.map((gewaehlt, index) => (
+          <SpielAbschnitt
+            key={index}
+            // "Gegner 1" erst ab dem zweiten, aus demselben Grund wie unten.
+            titel={gegner.length > 1 ? `Gegner ${index + 1}` : 'Gegner'}
+            zusatz={
+              gegner.length > 1 ? (
+                <button
+                  type="button"
+                  className="hb-rund spe-weg"
+                  onClick={() => setGegner((alt) => alt.filter((_, i) => i !== index))}
+                  disabled={laeuft}
+                  aria-label={`Gegner ${index + 1} entfernen`}
+                >
+                  <Kreuz />
+                </button>
+              ) : undefined
+            }
+          >
+            <div className="mm-gegner">
+              <Stufenregler
+                wert={gewaehlt}
+                onWert={(stufe) => setze(index, stufe)}
+                gesperrt={laeuft}
+                beschriftung={`Spielstärke von Gegner ${index + 1}`}
+              />
+              <p className="mm-stufensatz">
+                {STUFEN.find((eintrag) => eintrag.stufe === gewaehlt)?.satz}
+              </p>
+            </div>
+          </SpielAbschnitt>
+        ))}
+        {gegner.length < GEGNER_MAX && (
+          <button
+            type="button"
+            className="hb-kn is-blau is-breit"
+            onClick={() => setGegner((alt) => [...alt, 'mittel'])}
+            disabled={laeuft}
+          >
+            <span>+ Gegner hinzufügen</span>
+            <em className="spe-kn-zahl">bis zu {GEGNER_MAX}</em>
+          </button>
+        )}
+      </SpielRahmen>
+    );
+  }
+
   return (
     <main className="mm-menue">
       <button className="mm-zurueck" type="button" onClick={onBack} disabled={laeuft}>
@@ -53,11 +134,7 @@ export function KiMatch({
 
       <div className="mm-menue-mitte">
         <h1 className="mm-titel mm-titel-klein">KI-Match erstellen</h1>
-        <p className="mm-untertitel">
-          {gegner.length === 1
-            ? 'Wie gut soll dein Gegner sich erinnern?'
-            : `${gegner.length} Gegner — jeder mit eigenem Gedächtnis.`}
-        </p>
+        <p className="mm-untertitel">{unter}</p>
 
         {gegner.map((gewaehlt, index) => (
           <div className="mm-gegner" key={index}>

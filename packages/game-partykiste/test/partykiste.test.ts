@@ -15,6 +15,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { ALTE_KENNUNGEN } from './altbestand/index.js';
 
@@ -28,6 +29,7 @@ import {
   baueRunde,
   erzeugePartie,
   istRot,
+  minispielFolge,
   minispielFuer,
   partykiste,
   platzierungen,
@@ -109,11 +111,79 @@ test('jedes einzelne Minispiel kommt fuer sich zu Ende', () => {
   }
 });
 
-test('die Reihenfolge der Minispiele folgt dem Regelsatz', () => {
-  const regeln = { ...DEFAULT_REGELN, minispiele: ['quiz', 'imposter'] as MinispielId[] };
-  assert.equal(minispielFuer(regeln, 0), 'quiz');
-  assert.equal(minispielFuer(regeln, 1), 'imposter');
-  assert.equal(minispielFuer(regeln, 2), 'quiz');
+/*
+ * Seit dem 27.09.2026 ein Mischbeutel statt reihum (Robin: Mischen ohne
+ * Wiederholung). Bis dahin stand hier „die Reihenfolge der Minispiele folgt
+ * dem Regelsatz" mit quiz, imposter, quiz — genau das soll nicht mehr gelten.
+ */
+test('die Minispielfolge haengt nur an Saat und Regelsatz', () => {
+  const regeln = { ...DEFAULT_REGELN, minispiele: ['quiz', 'imposter', 'niemals', 'bombe'] as MinispielId[] };
+  assert.deepEqual(minispielFolge(regeln, 'abc', 40), minispielFolge(regeln, 'abc', 40), 'gleiche Saat, gleiche Folge');
+  assert.deepEqual(
+    minispielFolge(regeln, 'abc', 40).slice(0, 25),
+    minispielFolge(regeln, 'abc', 25),
+    'ein kuerzerer Blick sieht denselben Anfang',
+  );
+  for (let nr = 0; nr < 40; nr++) {
+    assert.equal(minispielFuer(regeln, 'abc', nr), minispielFolge(regeln, 'abc', 40)[nr], `Runde ${nr}`);
+  }
+  /* Nicht mehr reihum: Unter zwanzig Saaten fangen nicht alle gleich an. */
+  const anfaenge = new Set(Array.from({ length: 20 }, (_, s) => minispielFolge(regeln, `s${s}`, 4).join(',')));
+  assert.ok(anfaenge.size > 1, 'jede Saat ergibt dieselbe Folge — das ist wieder reihum');
+});
+
+test('jede Mischung bringt jedes Spiel genau einmal, und nie kommt eins zweimal hintereinander', () => {
+  const vierzehn = MINISPIELE.slice(0, 14);
+  assert.equal(vierzehn.length, 14);
+  for (const liste of [['quiz', 'imposter'], ['quiz', 'imposter', 'niemals'], vierzehn] as MinispielId[][]) {
+    const regeln = { ...DEFAULT_REGELN, minispiele: liste };
+    for (const saat of ['1', '2', '4711', 'ff00ee']) {
+      const folge = minispielFolge(regeln, saat, 200);
+      assert.equal(folge.length, 200);
+      for (let nr = 1; nr < folge.length; nr++) {
+        assert.notEqual(folge[nr], folge[nr - 1], `${liste.length} Spiele, Saat ${saat}: Runde ${nr} wiederholt ${folge[nr]}`);
+      }
+      for (let k = 0; (k + 1) * liste.length <= 200; k++) {
+        const mischung = folge.slice(k * liste.length, (k + 1) * liste.length);
+        assert.deepEqual([...mischung].sort(), [...liste].sort(), `${liste.length} Spiele, Saat ${saat}: Mischung ${k}`);
+      }
+    }
+  }
+});
+
+test('ein einziges Minispiel kommt jede Runde, doppelte Eintraege zaehlen einmal', () => {
+  const allein = { ...DEFAULT_REGELN, minispiele: ['quiz'] as MinispielId[] };
+  assert.deepEqual(minispielFolge(allein, 'x', 5), ['quiz', 'quiz', 'quiz', 'quiz', 'quiz']);
+  const { partie } = spieleDurch(neuePartie(4, 4, allein, [0, 1, 2, 3]));
+  assert.deepEqual(
+    partie.protokoll.map((p) => p.art),
+    ['quiz', 'quiz', 'quiz', 'quiz'],
+    'allein spielt es durch',
+  );
+  const doppelt = { ...DEFAULT_REGELN, minispiele: ['quiz', 'quiz', 'imposter'] as MinispielId[] };
+  const folge = minispielFolge(doppelt, 'x', 30);
+  for (let nr = 1; nr < folge.length; nr++) assert.notEqual(folge[nr], folge[nr - 1]);
+  assert.deepEqual(new Set(folge), new Set(['quiz', 'imposter']));
+});
+
+test('die Folge ueberlebt Snapshot und Wiederaufnahme', () => {
+  const regeln = { ...DEFAULT_REGELN, minispiele: ['quiz', 'imposter', 'niemals', 'entweder', 'mehrheit'] as MinispielId[] };
+  let partie = erzeugePartie({ regeln, saat: 99, sitze: 5, runden: 12, botSitze: [0, 1, 2, 3, 4] });
+  const erwartet = minispielFolge(partie.regeln, partie.saat, 12);
+  let zuege = 0;
+  while (!partie.fertig) {
+    assert.ok(++zuege < 20_000);
+    const sitz = amZug(partie)!;
+    partie = verarbeite(partie, sitz, partykiste.botAction(sichtFuer(partie, sitz), partie.botStufe));
+    /* Nach jedem Zug einmal durch die Leitung: Die Folge steht nicht im
+       Snapshot und muss trotzdem stimmen. */
+    partie = partykiste.deserialize(partykiste.serialize(partie));
+    if (!partie.fertig) assert.equal(partie.runde.art, erwartet[partie.rundeNr], `Runde ${partie.rundeNr}`);
+  }
+  assert.deepEqual(
+    partie.protokoll.map((p) => p.art),
+    erwartet,
+  );
 });
 
 test('dieselbe Saat ergibt dieselbe Partie', () => {
@@ -444,9 +514,11 @@ test('legalActions nennt nur Aktionen, die act auch annimmt', () => {
     if (sitz === null) break;
     const erlaubt = partykiste.legalActions(partie, sitz);
     if (erlaubt.length === 0) {
-      /* Falle 1 der Invarianten: Schaetzen kann seine Aktion nicht aufzaehlen
-         — der Bot muss trotzdem eine liefern, die `act` annimmt. */
-      assert.equal(partie.runde.art, 'schaetzen', `Sitz ${sitz} ist am Zug, darf aber nichts`);
+      /* Falle 1 der Invarianten: Schaetzen und das Legen auf die Flasche
+         (Koenigsbecher) koennen ihre Aktion nicht aufzaehlen — der Bot muss
+         trotzdem eine liefern, die `act` annimmt. */
+      const legen = partie.runde.art === 'koenigsbecher' && partie.runde.offeneKarte !== null;
+      assert.ok(partie.runde.art === 'schaetzen' || legen, `Sitz ${sitz} ist am Zug, darf aber nichts (${partie.runde.art})`);
       partie = verarbeite(partie, sitz, partykiste.botAction(sichtFuer(partie, sitz)));
       continue;
     }
@@ -596,28 +668,45 @@ test('zu wenig Harmloses: der Filter nimmt nur das Harmlose, nie das Derbe', () 
 test('ohne erlaubten Vorrat spielt ein anderes Minispiel — deterministisch, und nie haengt der Tisch', () => {
   const liste: MinispielId[] = ['quiz', 'niemals', 'imposter'];
   const ohneNiemals = (art: MinispielId): boolean => art !== 'niemals';
-  assert.equal(ersatzMinispiel(liste, 0, ohneNiemals), 'quiz', 'ein spielbares Minispiel wird nicht ersetzt');
-  assert.equal(ersatzMinispiel(liste, 1, ohneNiemals), 'imposter', 'der Ersatz ist das naechste der Liste');
-  assert.equal(ersatzMinispiel(liste, 4, ohneNiemals), 'imposter', 'dieselbe Runde ergibt denselben Ersatz');
-  assert.equal(ersatzMinispiel(liste, 1, () => false), 'busfahrer', 'zur Not Bus fahren, das keinen Inhalt braucht');
+  /* Seit dem 27.09.2026 bekommt der Ersatz das geplante Spiel statt der
+     Rundennummer — die Folge geht nicht mehr reihum durch die Liste. */
+  assert.equal(ersatzMinispiel(liste, 'quiz', ohneNiemals), 'quiz', 'ein spielbares Minispiel wird nicht ersetzt');
+  assert.equal(ersatzMinispiel(liste, 'niemals', ohneNiemals), 'imposter', 'der Ersatz ist das naechste der Liste');
+  assert.equal(ersatzMinispiel(liste, 'imposter', (art) => art === 'quiz'), 'quiz', 'am Ende der Liste geht es vorn weiter');
+  assert.equal(ersatzMinispiel(liste, 'niemals', () => false), 'busfahrer', 'zur Not Bus fahren, das keinen Inhalt braucht');
   /* Mit den echten Katalogen kommt der Ersatz heute nie vor — jedes
      Minispiel hat Harmloses, also spielt jede Runde, was geplant ist. */
   for (const art of MINISPIELE) assert.equal(hatVorrat(art, 1), true, `${art} hat nichts Harmloses`);
-  for (let nr = 0; nr < MINISPIELE.length; nr++) {
-    assert.equal(spielbaresMinispiel(DEFAULT_REGELN, nr), minispielFuer(DEFAULT_REGELN, nr));
+  for (let nr = 0; nr < 3 * MINISPIELE.length; nr++) {
+    assert.equal(spielbaresMinispiel(DEFAULT_REGELN, '4711', nr), minispielFuer(DEFAULT_REGELN, '4711', nr));
   }
 });
 
-test('im Altbestand sind die Kiffer-Sprueche und nur sie pikant', () => {
+test('im Altbestand traegt nur eine Haerte, was die Kiffer-Sprueche sind oder die Pruefung umgestuft hat', () => {
   /* Nur der Altbestand vom 22.09.2026: Neue Eintraege tragen ihre Haerte
-     selbst (inhalte-json.test.ts verlangt sie), die alten ausser den
-     Kiffer-Spruechen gar keine. */
+     selbst (inhalte-json.test.ts verlangt sie). Die alten trugen am
+     22.09.2026 ausser den Kiffer-Spruechen (pikant) gar keine. Seit der
+     Pruefung vom 27.09.2026 (docs/PARTYKISTE-INHALTE.md) gilt fuer jeden
+     alten Eintrag, der dort unter "umstufen" steht, dessen neue Stufe — und
+     fuer alle anderen weiter die alte. Eine Haerte, die sich ohne
+     Pruefprotokoll aendert, faellt hier auf. */
+  const umgestuft = new Map<string, number>();
+  for (const name of ['quiz', 'imposter', 'identitaeten', 'niemals', 'wereher', 'schaetzen', 'entweder', 'wahrheitpflicht']) {
+    const protokoll = JSON.parse(
+      readFileSync(new URL(`../../../../docs/partykiste-pruefung/${name}.json`, import.meta.url), 'utf8'),
+    ) as { umstufen: { id: string; nach: number }[] };
+    for (const u of protokoll.umstufen) umgestuft.set(u.id, u.nach);
+  }
   for (const katalog of Object.values(KATALOGE)) {
     for (const i of katalog) {
       if (!ALTE_KENNUNGEN.has(i.id)) continue;
-      assert.equal(i.haerte ?? 1, KIFFEN.has(i.id) ? 2 : 1, `${i.id} hat die falsche Haerte`);
+      const soll = umgestuft.get(i.id) ?? (KIFFEN.has(i.id) ? 2 : 1);
+      assert.equal(i.haerte ?? 1, soll, `${i.id} hat die falsche Haerte`);
     }
   }
+  /* Drogen gehoeren seit dem 27.09.2026 auf "derb" — alle Kiffer-Sprueche, die noch da sind. */
+  const kiffen = [...NIEMALS_SPRUECHE, ...WER_EHER_SPRUECHE].filter((i) => KIFFEN.has(i.id));
+  assert.deepEqual(kiffen.filter((i) => i.haerte !== 3).map((i) => i.id), []);
 });
 
 test('der Filter haelt die Haerte als Obergrenze', () => {
@@ -710,15 +799,16 @@ test('der Filter wirft nie, auch nicht bei Unsinn im Regelsatz', () => {
 });
 
 test('mit Paket haelt die Runde fest, dass die Auswahl nachgeben musste', () => {
-  /* Ein harmloser JGA-Tisch findet unter den Quizfragen weniger als
-     MINDESTMENGE eigene (die JGA-Fragen sind meist pikant) — er spielt also
-     auch Allgemeingut, und die Runde sagt das, statt es zu verschweigen. Bis
-     zum Vorrat vom 22.09.2026 trug gar kein Eintrag ein Paket; gezaehlt wird
-     darum am Katalog. */
-  const regeln: PartykisteRegeln = { ...DEFAULT_REGELN, minispiele: ['quiz'], paket: 'jga' };
+  /* Ein harmloser Weihnachtstisch findet unter den Schaetzfragen weniger als
+     MINDESTMENGE eigene — er spielt also auch Allgemeingut, und die Runde
+     sagt das, statt es zu verschweigen. Bis zum Vorrat vom 22.09.2026 trug
+     gar kein Eintrag ein Paket; gezaehlt wird darum am Katalog. (Bis zum
+     27.09.2026 stand hier das Quiz am JGA-Tisch; seit der Pruefung sind dort
+     genug JGA-Fragen harmlos.) */
+  const regeln: PartykisteRegeln = { ...DEFAULT_REGELN, minispiele: ['schaetzen'], paket: 'weihnachten' };
   const runde = baueRunde(regeln, 'saat', 6, 0, []);
-  const passend = QUIZ_FRAGEN.filter((f) => (f.haerte ?? 1) === 1 && f.paket?.includes('jga')).length;
-  assert.ok(passend < MINDESTMENGE, 'die Probe braucht ein Paket mit zu wenig harmlosen Quizfragen');
+  const passend = SCHAETZ_FRAGEN.filter((f) => (f.haerte ?? 1) === 1 && f.paket?.includes('weihnachten')).length;
+  assert.ok(passend < MINDESTMENGE, 'die Probe braucht ein Paket mit zu wenig harmlosen Schaetzfragen');
   assert.deepEqual(runde.inhaltsRueckfall, { gewollt: 'paket', genutzt: 'paketUndAllgemein', passend });
   assert.equal(baueRunde(DEFAULT_REGELN, 'saat', 6, 0, []).inhaltsRueckfall, null);
 });
@@ -908,12 +998,13 @@ test('ueber eine ganze Partie kommt keine Kennung zweimal — auch zu zwoelft in
   for (const saat of [1, 2, 3, 4711]) {
     const partie = erzeugePartie({ regeln: DEFAULT_REGELN, saat, sitze: 12, runden: 15, gastSitze: [] });
     const gesehen = gezeigteKennungen(partie);
-    /* Alle Minispiele reihum in fuenfzehn Runden. Wie oft Wer bin ich und
-       Wahrheit oder Pflicht drankommen, haengt an der Laenge der Liste — seit
-       dem 23.09.2026 sind es fuenfzehn, also jedes einmal. Gezaehlt statt
-       hingeschrieben, damit das naechste Minispiel diese Zeile nicht bricht. */
+    /* Alle Minispiele gemischt in fuenfzehn Runden. Wie oft Wer bin ich und
+       Wahrheit oder Pflicht drankommen, haengt an der Laenge der Liste (seit
+       dem 23.09.2026 fuenfzehn, also in fuenfzehn Runden jedes einmal) und
+       seit dem 27.09.2026 an der Mischung. Gezaehlt statt hingeschrieben,
+       damit das naechste Minispiel diese Zeile nicht bricht. */
     const wieOft = (art: MinispielId): number =>
-      Array.from({ length: 15 }, (_, nr) => minispielFuer(DEFAULT_REGELN, nr)).filter((a) => a === art).length;
+      minispielFolge(partie.regeln, partie.saat, 15).filter((a) => a === art).length;
     assert.equal(gesehen.get('identitaeten')?.length, 12 * wieOft('werbinich'), 'Wer bin ich zu zwoelft');
     assert.equal(gesehen.get('aufgaben')?.length, 12 * wieOft('wahrheitpflicht'), 'Wahrheit oder Pflicht zu zwoelft');
     keineDoppelten(gesehen, `Saat ${saat}`);

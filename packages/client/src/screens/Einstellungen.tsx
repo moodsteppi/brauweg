@@ -39,6 +39,29 @@ const Mitteilungen = lazy(() =>
  * in dasselbe Blatt zu legen hieße, dass eine wachsende Sammlung eine
  * Lautstärkeeinstellung immer weiter nach unten schiebt.
  */
+/**
+ * Nur die Mitteilungen, als eigenes Blatt — für „Benachrichtigungen" im
+ * Profil (bis zum 13.10.2026 dort eine „Bald"-Zeile). Dieselbe Komponente wie
+ * unten in den Einstellungen, nur ohne Ton und Anmeldearten drumherum.
+ */
+export function MitteilungenBlatt({ onClose }: { onClose: () => void }): React.JSX.Element {
+  return (
+    <div className="doko-sheet" onClick={onClose}>
+      <div className="doko-sheet-card einstellungen" onClick={(event) => event.stopPropagation()}>
+        <h2>Benachrichtigungen</h2>
+        <Suspense fallback={null}>
+          <Mitteilungen />
+        </Suspense>
+        <div className="hub-knopfreihe hub-knopfreihe--a">
+          <button className="hub-knopf hub-knopf--a" onClick={onClose}>
+            Fertig
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.JSX.Element {
   const werte = useKlang();
 

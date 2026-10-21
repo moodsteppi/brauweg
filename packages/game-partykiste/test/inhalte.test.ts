@@ -22,10 +22,16 @@
  * Die Kiffer-Sprueche (n101–n110, w101–w108) reden vom Kiffen, nicht vom
  * Trinken — sie fallen unter keine der beiden Regeln, und der Test haelt das
  * ausdruecklich fest, damit niemand sie beim naechsten Aufraeumen "mitnimmt".
+ * Seit der Pruefung vom 27.09.2026 sind sie derb (Drogen gehoeren nach
+ * docs/PARTYKISTE-INHALTE.md auf "derb"), und sechs davon sind BEWUSST
+ * gestrichen (n102, n103, n110, w103, w106, w107 — Dubletten und
+ * Unverstaendliches, Gruende in docs/partykiste-pruefung/): Jeder ist da
+ * oder steht unter "entfernt", keiner verschwindet still.
  */
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { ENTWEDER_ODER } from '../src/inhalte/entweder.js';
 import { IDENTITAETEN } from '../src/inhalte/identitaeten.js';
@@ -35,6 +41,13 @@ import { QUIZ_FRAGEN } from '../src/inhalte/quiz.js';
 import { SCHAETZ_FRAGEN } from '../src/inhalte/schaetzen.js';
 import { AUFGABEN } from '../src/inhalte/wahrheitpflicht.js';
 import { WER_EHER_SPRUECHE } from '../src/inhalte/wereher.js';
+import { pruefeKennungen } from '../src/inhalte/schema.js';
+
+/** Die gestrichenen Kennungen aus dem Kopf einer JSON-Datei. */
+function entfernt(name: string): string[] {
+  const roh = JSON.parse(readFileSync(new URL(`../src/inhalte/daten/${name}.json`, import.meta.url), 'utf8'));
+  return Array.isArray(roh.entfernt) ? roh.entfernt : [];
+}
 
 /** Stufe 1: das blosse Wort. Substring, Gross- und Kleinschreibung egal. */
 const TRINKWORT = /trink|schluck|bier|shot|🍺|🍻|🥂|🥃|🍷|🍸/i;
@@ -70,32 +83,39 @@ test('kein Text in irgendeinem Katalog fordert zum Trinken auf', () => {
   assert.deepEqual(treffer, []);
 });
 
-test('die Kiffer-Sprueche sind vollstaendig da und sagen nichts vom Trinken', () => {
+test('die Kiffer-Sprueche sind da oder bewusst gestrichen, derb, und sagen nichts vom Trinken', () => {
   const n = Array.from({ length: 10 }, (_, i) => `n${101 + i}`);
   const w = Array.from({ length: 8 }, (_, i) => `w${101 + i}`);
-  const sprueche = [
-    ...n.map((id) => NIEMALS_SPRUECHE.find((s) => s.id === id)),
-    ...w.map((id) => WER_EHER_SPRUECHE.find((s) => s.id === id)),
+  const weg = new Set([...entfernt('niemals'), ...entfernt('wereher')]);
+  const fehlt = [
+    ...n.filter((id) => !weg.has(id) && !NIEMALS_SPRUECHE.some((s) => s.id === id)),
+    ...w.filter((id) => !weg.has(id) && !WER_EHER_SPRUECHE.some((s) => s.id === id)),
   ];
-  assert.ok(sprueche.every((s) => s !== undefined), 'n101–n110 und w101–w108 muessen alle vorhanden sein');
+  assert.deepEqual(fehlt, [], 'n101–n110 und w101–w108 muessen da sein oder unter "entfernt" stehen');
+  const sprueche = [
+    ...NIEMALS_SPRUECHE.filter((s) => n.includes(s.id)),
+    ...WER_EHER_SPRUECHE.filter((s) => w.includes(s.id)),
+  ];
+  assert.ok(sprueche.length >= 12, `nur noch ${sprueche.length} Kiffer-Sprueche`);
+  assert.deepEqual(sprueche.filter((s) => s.haerte !== 3).map((s) => s.id), [], 'Drogen sind derb');
   /* Hier gilt sogar Stufe 1: Diese Sprueche reden vom Kiffen, und zwar NUR davon. */
   const treffer = sprueche.filter((s) => s && TRINKWORT.test(s.text)).map((s) => s!.id);
   assert.deepEqual(treffer, []);
 });
 
-test('die Kennungen der Aufgaben sind lueckenlos ab a001 und eindeutig, a001–a120 wie am 22.09.2026', () => {
+test('die Kennungen der Aufgaben steigen ab a001, sind eindeutig, und a001–a120 behalten ihre Art', () => {
   /*
    * Die sieben Texte vom 22.09.2026 wurden UMGESCHRIEBEN, nicht ersetzt: Eine
    * neue Kennung fuer einen alten Platz zeigte in abgelegten Rundenprotokollen
    * auf nichts. Der Test haelt fest, dass beim Umschreiben keine Kennung
-   * verrutscht ist.
+   * verrutscht ist. Seit dem 27.09.2026 duerfen Aufgaben gestrichen werden —
+   * dann steht ihre Kennung unter "entfernt" und wird nie neu vergeben.
    */
   const ids = AUFGABEN.map((a) => a.id);
-  assert.deepEqual(
-    ids,
-    Array.from({ length: AUFGABEN.length }, (_, i) => `a${String(i + 1).padStart(3, '0')}`),
-  );
-  const alt = AUFGABEN.slice(0, 120);
-  assert.equal(alt.filter((a) => a.art === 'wahrheit').length, 60);
-  assert.equal(alt.filter((a) => a.art === 'pflicht').length, 60);
+  assert.deepEqual(pruefeKennungen('a', ids, entfernt('wahrheitpflicht')), []);
+  /* a001–a060 waren Wahrheit, a061–a120 Pflicht — was davon noch da ist, bleibt es. */
+  const nummer = (id: string) => Number(id.slice(1));
+  const alt = AUFGABEN.filter((a) => nummer(a.id) <= 120);
+  assert.deepEqual(alt.filter((a) => (nummer(a.id) <= 60) !== (a.art === 'wahrheit')).map((a) => a.id), []);
+  assert.equal(alt.length + entfernt('wahrheitpflicht').filter((id) => nummer(id) <= 120).length, 120);
 });

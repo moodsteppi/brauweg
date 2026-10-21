@@ -170,6 +170,40 @@ export class PushAnlaesse {
     );
   }
 
+  /**
+   * Jemand bittet um einen Platz an einem nicht-oeffentlichen Tisch
+   * (tables/anfragen.ts) — an den Gastgeber, der zusagen muss. Ohne diese
+   * Mitteilung saesse der Anfragende vor einem Tisch, dessen Gastgeber
+   * gerade im Menue steht und von nichts weiss.
+   */
+  anfrageGestellt(tableId: string, gastgeber: string, gastId: string): void {
+    if (this.aus.has('anfrage')) return;
+    this.merke(
+      (async () => {
+        const [tisch] = await this.db
+          .select({ gameId: s.gameTable.gameId })
+          .from(s.gameTable)
+          .where(eq(s.gameTable.id, tableId));
+        const [gast] = await this.db
+          .select({ displayName: s.account.displayName })
+          .from(s.account)
+          .where(eq(s.account.id, gastId));
+        if (!tisch) return;
+        await this.zustellen('anfrage', [gastgeber], tableId, tisch.gameId, gast?.displayName ?? null);
+      })(),
+    );
+  }
+
+  /**
+   * Abend-Erinnerung an die Lernserie (lernpfad.ts, `faelligeErinnerungen`).
+   * Gehoert zu keinem Tisch: Die Mitteilung traegt keine Tischkennung, und
+   * Antippen oeffnet nur die App — auf dem Start steht die Flamme.
+   */
+  serieErinnern(konten: readonly string[]): void {
+    if (this.aus.has('serie') || konten.length === 0) return;
+    this.merke(this.zustellen('serie', konten, null, 'doppelkopf', null));
+  }
+
   /** Wartet, bis alle angestossenen Zustellungen durch sind (Tests, Serverende). */
   async ruhe(): Promise<void> {
     while (this.laufend.size > 0) await Promise.allSettled([...this.laufend]);
@@ -191,7 +225,8 @@ export class PushAnlaesse {
   private async zustellen(
     anlass: Anlass,
     konten: readonly string[],
-    tableId: string,
+    /** null: Mitteilung ohne Tisch (`serie`). */
+    tableId: string | null,
     gameId: string,
     name: string | null,
   ): Promise<void> {
@@ -202,7 +237,7 @@ export class PushAnlaesse {
     const empfaenger: string[] = [];
     for (const konto of new Set(konten)) {
       if (this.vordergrund(konto)) continue;
-      const schluessel = `${konto}|${tableId}`;
+      const schluessel = `${konto}|${tableId ?? anlass}`;
       const zuletzt = this.zuletzt.get(schluessel);
       if (zuletzt !== undefined && jetzt - zuletzt < this.drosselMs) continue;
       // VOR dem ersten await setzen: Zwei Anstoesse im selben Augenblick
@@ -219,8 +254,9 @@ export class PushAnlaesse {
     const mitteilung: Mitteilung = {
       titel,
       text,
-      daten: { anlass, tableId, gameId },
-      sammelKennung: `tisch-${tableId}`,
+      // Ohne Tisch keine Tischkennung — die Huelle springt nur mit beiden Feldern an einen Tisch.
+      daten: tableId ? { anlass, tableId, gameId } : { anlass, gameId },
+      sammelKennung: tableId ? `tisch-${tableId}` : anlass,
     };
 
     const tot: string[] = [];

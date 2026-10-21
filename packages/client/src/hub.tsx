@@ -135,7 +135,7 @@ export function EdelsteinIcon({ className }: { className?: string }): React.JSX.
 export function HubBanner(): React.JSX.Element {
   return (
     <div className="hub-banner" aria-hidden="true">
-      <img src="/hub/logo.png" alt="" draggable={false} />
+      <img src="/hub/logo.webp" alt="" draggable={false} />
     </div>
   );
 }

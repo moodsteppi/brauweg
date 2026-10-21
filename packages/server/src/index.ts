@@ -22,12 +22,14 @@ import { PartyRuntime } from './runtime/party.js';
 import { Vermittlung } from './suche/vermittlung.js';
 import { applyStaffEmails } from './staff.js';
 import { aufraeumen } from './diagnose.js';
+import { faelligeErinnerungen } from './lernpfad.js';
 import { expireStaleTables } from './tables/service.js';
 import { PushAnlaesse } from './push/anlaesse.js';
 import { leseAbgeschaltet } from './push/kennungen.js';
 import { waehlePushVersand } from './push/versand.js';
 
 const HOUR = 3600_000;
+const MINUTE = 60_000;
 
 const here = dirname(fileURLToPath(import.meta.url));
 /** dist/src -> packages/server/drizzle */
@@ -156,6 +158,7 @@ async function main(): Promise<void> {
     sessionTtlDays: config.sessionTtlDays,
     stage: config.stage,
     diagnoseSchluessel: config.diagnoseSchluessel,
+    herkunftSchluessel: config.herkunftSchluessel,
     googleClientId: config.googleClientId,
     appInhalt,
     appVerknuepfung: appVerknuepfungAusUmgebung(),
@@ -194,8 +197,19 @@ async function main(): Promise<void> {
     void aufraeumen(db).catch((err) => app.log.error(err));
   }, HOUR);
 
+  // Abend-Erinnerung an die Lernserie (lernpfad.ts). Eigener, kurzer Takt:
+  // Im Stundentakt des Aufraeumens kaeme sie je nach Startzeit erst um kurz
+  // vor acht. Wer schon erinnert wurde, steht in `erinnert_tag` — ein
+  // Neustart schickt also nichts doppelt.
+  const serienWecker = setInterval(() => {
+    void faelligeErinnerungen(db)
+      .then((konten) => push.serieErinnern(konten))
+      .catch((err) => app.log.error(err));
+  }, 15 * MINUTE);
+
   const stop = async (): Promise<void> => {
     clearInterval(sweeper);
+    clearInterval(serienWecker);
     runtime.shutdown();
     pushVersand.schliessen();
     await app.close();

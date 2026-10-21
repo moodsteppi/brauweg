@@ -71,6 +71,12 @@ const FELDER = [
   'lager',
   'lagerTabelle',
   'aufstellung',
+  'inhaltsHaerte',
+  'inhaltsMischung',
+  'inhaltsHaerteGewollt',
+  'gezeigt',
+  'weiterFehlen',
+  'letzterWurf',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof PartykisteSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof PartykisteSicht>>;

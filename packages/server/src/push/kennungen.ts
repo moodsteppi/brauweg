@@ -10,7 +10,12 @@
  * Variablen PUSH_AUS — **nie umbenennen**, sonst schaltet sich bei jedem
  * Konto, das einen Anlass abgewaehlt hat, dieser still wieder ein.
  */
-export const ANLAESSE = ['dran', 'start', 'einladung'] as const;
+// `anfrage` seit dem 13.10.2026: jemand moechte an einen nicht-oeffentlichen
+// Tisch (tables/anfragen.ts). Angehaengt, nicht eingereiht — die Reihenfolge
+// ist egal, aber eine neue Kennung ist fuer alle Konten von selbst an.
+// `serie` seit dem 17.10.2026: Abend-Erinnerung an die Lernserie, wenn heute
+// noch keine Lektion lief (lernpfad.ts) — gehoert zu keinem Tisch.
+export const ANLAESSE = ['dran', 'start', 'einladung', 'anfrage', 'serie'] as const;
 export type Anlass = (typeof ANLAESSE)[number];
 
 export function istAnlass(wert: unknown): wert is Anlass {

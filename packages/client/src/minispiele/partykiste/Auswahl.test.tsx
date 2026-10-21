@@ -7,9 +7,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * Geprueft wird, was am Tisch ankommt — der Regelsatz, den der Bildschirm
  * als `config` schickt —, nicht die Kacheln um ihrer selbst willen. Drei
  * Dinge verlangt die Karte ausdruecklich: Die Auswahl schreibt die `config`,
- * „derb“ ist fuer einen Gast gesperrt, und die Reihenfolge bleibt (auch
- * ueber ein Neuladen hinweg). Dazu der Modus: unsichtbar, solange das Modul
- * ihn nicht kennt.
+ * „derb“ ist fuer einen Gast gesperrt, und die Wahl bleibt (auch ueber ein
+ * Neuladen hinweg). Bis zum 27.09.2026 stand hier „die Reihenfolge bleibt“ —
+ * seitdem mischt das Modul, und die Minispiele sind nur noch an oder aus.
+ * Dazu der Modus: unsichtbar, solange das Modul ihn nicht kennt.
  *
  * Die Vorgabe hier ist ein fester Regelsatz und nicht der des Moduls — ob der
  * erzeugte Regelsatz auch am echten `validateConfig` vorbeikommt, prueft der
@@ -20,23 +21,29 @@ const defaults = vi.hoisted(() => vi.fn());
 vi.mock('../../api', () => ({ api: { defaults } }));
 
 import { PartyAuswahl, usePartyAuswahl, type PartyAuswahlStand } from './Auswahl';
-import { SCHLUESSEL_MINISPIELE } from './wahl';
+import { SCHLUESSEL_INHALT, SCHLUESSEL_MINISPIELE } from './wahl';
 
 const ALLE = ['imposter', 'quiz', 'werbinich', 'niemals', 'wereher', 'busfahrer', 'schaetzen', 'entweder', 'wahrheitpflicht'];
 const VORGABE = { minispiele: ALLE, trinkmodus: true, schluckFaktor: 1, inhaltsHaerte: 1, paket: null };
+/** Ein Modul, das „genau/gemischt" kennt (seit dem 27.09.2026) — erst dann gibt es die vierte Kachel. */
+const VORGABE_STUFEN = { ...VORGABE, inhaltsMischung: 'genau' };
 const BASIS = { minispiele: ['quiz'], trinkmodus: false, schluckFaktor: 2 };
 
 let stand: PartyAuswahlStand | null = null;
 
-function Probe({ gast = false }: { gast?: boolean }): React.JSX.Element {
+function Probe({ gast = false, neu = false }: { gast?: boolean; neu?: boolean }): React.JSX.Element {
   const a = usePartyAuswahl(gast);
   stand = a;
-  return <PartyAuswahl vorgabe={a.vorgabe} wahl={a.wahl} gast={a.gast} trinkmodus onWahl={a.setWahl} />;
+  return <PartyAuswahl vorgabe={a.vorgabe} wahl={a.wahl} gast={a.gast} trinkmodus onWahl={a.setWahl} neu={neu} />;
 }
 
-async function aufbauen(gast = false, vorgabe: Record<string, unknown> = VORGABE): Promise<ReturnType<typeof render>> {
+async function aufbauen(
+  gast = false,
+  vorgabe: Record<string, unknown> = VORGABE,
+  neu = false,
+): Promise<ReturnType<typeof render>> {
   defaults.mockResolvedValue({ config: vorgabe, protocolVersion: 1, seatCounts: [4], rounds: {} });
-  const ansicht = render(<Probe gast={gast} />);
+  const ansicht = render(<Probe gast={gast} neu={neu} />);
   await screen.findByRole('group', { name: 'Minispiele' });
   return ansicht;
 }
@@ -117,27 +124,70 @@ describe('Auswahl im Menue der Partykiste', () => {
     expect((await config())['inhaltsHaerte']).toBe(3);
   });
 
-  it('die Reihenfolge bleibt: wie angetippt, verschoben — und nach dem Neuladen', async () => {
+  /*
+   * Bis zum 27.09.2026: „die Reihenfolge bleibt: wie angetippt, verschoben“.
+   * Seitdem mischt das Modul (`minispielFolge`), und die Wahl ist eine Menge —
+   * in der Reihenfolge des Moduls, egal in welcher angetippt wurde.
+   */
+  it('an und aus: die Wahl ist eine Menge in Modulreihenfolge und bleibt nach dem Neuladen', async () => {
     const ansicht = await aufbauen();
-    // Alles ausser drei abwaehlen, dann in eigener Reihenfolge wieder dazu.
+    // Alles ausser drei abwaehlen, dann in anderer Reihenfolge wieder dazu.
     for (const name of ['Imposter', 'Allgemeinwissen', 'Wer bin ich?', 'Ich hab noch nie', 'Wer würde eher?', 'Bus fahren']) {
       fireEvent.click(kachel('Minispiele', name));
     }
     fireEvent.click(kachel('Minispiele', 'Bus fahren'));
     fireEvent.click(kachel('Minispiele', 'Imposter'));
-    expect((await config())['minispiele']).toEqual(['schaetzen', 'entweder', 'wahrheitpflicht', 'busfahrer', 'imposter']);
-
-    // Die Kachel zeigt den Platz, die Liste darunter verschiebt.
-    expect(kachel('Minispiele', 'Imposter')).toHaveAccessibleDescription(/5\./);
-    fireEvent.click(screen.getByRole('button', { name: 'Imposter früher' }));
-    const erwartet = ['schaetzen', 'entweder', 'wahrheitpflicht', 'imposter', 'busfahrer'];
+    const erwartet = ['imposter', 'busfahrer', 'schaetzen', 'entweder', 'wahrheitpflicht'];
     expect((await config())['minispiele']).toEqual(erwartet);
+    expect(kachel('Minispiele', 'Imposter')).toHaveAttribute('aria-pressed', 'true');
+    expect(kachel('Minispiele', 'Allgemeinwissen')).toHaveAttribute('aria-pressed', 'false');
+    // Keine Reihenfolge mehr: weder Liste noch Hoch/Runter.
+    expect(screen.queryByRole('list', { name: /Reihenfolge/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /früher|später/ })).toBeNull();
+    expect(screen.getByText(/gemischt dran, keins zweimal hintereinander/)).toBeInTheDocument();
 
     ansicht.unmount();
     await aufbauen();
     expect((await config())['minispiele']).toEqual(erwartet);
-    const folge = within(screen.getByRole('list', { name: 'Reihenfolge der Minispiele' })).getAllByRole('listitem');
-    expect(folge.map((li) => li.getAttribute('data-pk-folge'))).toEqual(erwartet);
+  });
+
+  it('alle wieder an, in anderer Reihenfolge angetippt: nichts gemerkt', async () => {
+    await aufbauen();
+    fireEvent.click(kachel('Minispiele', 'Imposter'));
+    fireEvent.click(kachel('Minispiele', 'Allgemeinwissen'));
+    fireEvent.click(kachel('Minispiele', 'Allgemeinwissen'));
+    fireEvent.click(kachel('Minispiele', 'Imposter'));
+    expect((await config())['minispiele']).toEqual(ALLE);
+    expect(localStorage.getItem(SCHLUESSEL_MINISPIELE)).toBeNull();
+  });
+
+  it('im neuen Hub: Regelkacheln mit Haken, „Alle an“ nur, wenn nicht alle an sind', async () => {
+    const { container } = await aufbauen(false, VORGABE, true);
+    const kacheln = within(raster('Minispiele')).getAllByRole('button');
+    expect(kacheln).toHaveLength(ALLE.length);
+    // Dieselben Kacheln wie die Doppelkopf-Regeln, an heisst Rahmen UND Haken.
+    expect(kacheln.every((k) => k.classList.contains('regel') && k.classList.contains('is-on'))).toBe(true);
+    expect(container.querySelectorAll('.regel-check')).toHaveLength(ALLE.length);
+    expect(screen.queryByRole('button', { name: 'Alle an' })).toBeNull();
+
+    fireEvent.click(kachel('Minispiele', 'Allgemeinwissen'));
+    expect(kachel('Minispiele', 'Allgemeinwissen')).toHaveAttribute('aria-pressed', 'false');
+    expect(kachel('Minispiele', 'Allgemeinwissen')).not.toHaveClass('is-on');
+    expect((await config())['minispiele']).toEqual(ALLE.filter((id) => id !== 'quiz'));
+    expect(screen.getByText(/gemischt dran, keins zweimal hintereinander/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alle an' }));
+    expect((await config())['minispiele']).toEqual(ALLE);
+    expect(screen.queryByRole('button', { name: 'Alle an' })).toBeNull();
+  });
+
+  it('im neuen Hub bleibt unter drei die Kachel an, ein Hinweis sagt warum', async () => {
+    localStorage.setItem(SCHLUESSEL_MINISPIELE, JSON.stringify(['quiz', 'imposter', 'entweder']));
+    await aufbauen(false, VORGABE, true);
+    fireEvent.click(kachel('Minispiele', 'Allgemeinwissen'));
+    expect(kachel('Minispiele', 'Allgemeinwissen')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('status')).toHaveTextContent(/Mindestens 3/);
+    expect((await config())['minispiele']).toEqual(['quiz', 'imposter', 'entweder']);
   });
 
   it('unter drei Minispiele geht es nicht — die Kachel bleibt an, ein Hinweis sagt warum', async () => {
@@ -155,11 +205,11 @@ describe('Auswahl im Menue der Partykiste', () => {
     expect((await config())['minispiele']).toEqual(['quiz', 'imposter', 'entweder']);
   });
 
-  it('„Alle“ setzt auf die Vorgabe zurueck und vergisst die Wahl', async () => {
+  it('„Alle an“ setzt auf die Vorgabe zurueck und vergisst die Wahl', async () => {
     await aufbauen();
     fireEvent.click(kachel('Minispiele', 'Allgemeinwissen'));
     expect(localStorage.getItem(SCHLUESSEL_MINISPIELE)).not.toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Alle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Alle an' }));
     expect((await config())['minispiele']).toEqual(ALLE);
     expect(localStorage.getItem(SCHLUESSEL_MINISPIELE)).toBeNull();
   });
@@ -178,5 +228,55 @@ describe('Auswahl im Menue der Partykiste', () => {
     render(<Probe />);
     expect(screen.getByText(/werden geladen/)).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Minispiele' })).toBeNull();
+  });
+
+  /*
+   * Seit dem 27.09.2026 (Robin): Jede Stufe liefert nur sich selbst, dazu
+   * „gemischt" — Zufall aus allen Stufen. Die vierte Kachel gibt es nur, wenn
+   * das Modul die Lesart kennt; sonst spielte ein alter Server „gemischt"
+   * still als „bis derb".
+   */
+  it('vier Inhalte-Kacheln: eine Stufe schickt „genau", „gemischt" schickt 3 und „gemischt"', async () => {
+    const ansicht = await aufbauen(false, VORGABE_STUFEN, true);
+    expect(within(raster('Inhalte')).getAllByRole('button')).toHaveLength(4);
+    expect(kachel('Inhalte', 'gemischt')).toHaveAccessibleDescription(/Zufall aus allen Stufen/);
+    let c = await config();
+    expect({ stufe: c['inhaltsHaerte'], mischung: c['inhaltsMischung'] }).toEqual({ stufe: 1, mischung: 'genau' });
+
+    fireEvent.click(kachel('Inhalte', 'pikant'));
+    c = await config();
+    expect({ stufe: c['inhaltsHaerte'], mischung: c['inhaltsMischung'] }).toEqual({ stufe: 2, mischung: 'genau' });
+
+    fireEvent.click(kachel('Inhalte', 'gemischt'));
+    expect(kachel('Inhalte', 'gemischt')).toHaveAttribute('aria-pressed', 'true');
+    c = await config();
+    expect({ stufe: c['inhaltsHaerte'], mischung: c['inhaltsMischung'] }).toEqual({ stufe: 3, mischung: 'gemischt' });
+    expect(localStorage.getItem(SCHLUESSEL_INHALT)).toBe('gemischt');
+
+    // Gemerkt: nach dem Neuladen steht wieder „gemischt".
+    ansicht.unmount();
+    await aufbauen(false, VORGABE_STUFEN, true);
+    expect(kachel('Inhalte', 'gemischt')).toHaveAttribute('aria-pressed', 'true');
+    expect((await config())['inhaltsMischung']).toBe('gemischt');
+  });
+
+  it('fuer einen Gast heisst „gemischt" harmlos und pikant — die Kachel sagt es, der Regelsatz auch', async () => {
+    await aufbauen(true, VORGABE_STUFEN);
+    expect(kachel('Inhalte', 'derb')).toHaveAttribute('aria-disabled', 'true');
+    const gemischt = kachel('Inhalte', 'gemischt');
+    expect(gemischt).toHaveAccessibleDescription(/harmlos und pikant/);
+    fireEvent.click(gemischt);
+    const c = await config();
+    expect({ stufe: c['inhaltsHaerte'], mischung: c['inhaltsMischung'] }).toEqual({ stufe: 2, mischung: 'gemischt' });
+  });
+
+  it('kennt das Modul „gemischt" nicht, gibt es drei Kacheln und kein neues Feld', async () => {
+    localStorage.setItem(SCHLUESSEL_INHALT, 'gemischt');
+    await aufbauen(false, VORGABE);
+    expect(within(raster('Inhalte')).queryByRole('button', { name: 'gemischt' })).toBeNull();
+    const c = await config();
+    expect('inhaltsMischung' in c).toBe(false);
+    // Eine gemerkte „gemischt" wird dort zu dem, was der alte Server darunter versteht: bis derb.
+    expect(c['inhaltsHaerte']).toBe(3);
   });
 });

@@ -5,6 +5,16 @@ enum Farben {
     /// `brauweg_blau` der Android-Huelle. Steht hinter allem, bis der Client
     /// zeichnet — kein weisser Blitz beim Start.
     static let blau = UIColor(red: 0x1A / 255.0, green: 0x3F / 255.0, blue: 0x7A / 255.0, alpha: 1)
+
+    /// Braucht diese Kopfzeilenfarbe dunkle Symbole in der Statusleiste?
+    /// Gemessen an der relativen Helligkeit, nicht an einer Liste von Farben:
+    /// Der Client sagt seine Farbe per `theme-color` an (kopfzeile.ts), und
+    /// welche er nimmt, soll hier nicht nachgetragen werden muessen.
+    static func istHell(_ farbe: UIColor) -> Bool {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard farbe.getRed(&r, green: &g, blue: &b, alpha: &a) else { return false }
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.6
+    }
 }
 
 /// Ist der Server erreichbar? Eine kurze Anfrage an `/api/health`.

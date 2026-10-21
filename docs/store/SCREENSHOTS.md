@@ -19,10 +19,62 @@ node screenshots.mjs --ziel ../../../app-store-lauf/screenshots
 node screenshots.mjs --geraet play --motiv 05   # ein einzelnes Bild neu
 ```
 
+## iOS V1 (14.10.2026) — ersetzt die Motive unten für den App Store
+
+Mit der ersten iOS-Fassung (fünf Spiele, Partykiste-Szenen, Pinguin-Schach)
+stimmen die alten Bilder nicht mehr. Der neue Satz ist **im Simulator** (iPhone
+17 Pro Max, 1320 × 2868, PNG ohne Alpha) aus der echten App gegen einen
+lokalen Server entstanden, nicht mit `screenshots.mjs`: Das Skript kennt die
+neuen Bildschirme (Bot-Schach, Farbduell, Flasche) nicht. Statusleiste über
+`xcrun simctl status_bar … override` auf 9:41, volles Netz und Akku. Gespielt
+als Gast „Kiebitz", Mitspieler sind Bots oder Testgäste mit Vogelnamen;
+Partykiste **alkoholfrei**. Die Bilder liegen nicht im Repo.
+
+| Datei | Was zu sehen ist |
+| --- | --- |
+| `01-spiele` | Reiter „Spiele": Kartenspiele, Trinkspiele, Denken & Strategie, „Kommt bald" zugeklappt |
+| `02-doppelkopf` | Doppelkopf gegen drei Bots, Hochzeit, zwei Karten im Stich, du bist dran |
+| `03-skat` | „Du bist am Reizen", „22 sagen" / „Rechner" / „Weg" |
+| `04-brochess` | Pinguin-Figuren gegen den Bot, Läufer angewählt mit Zugpunkt |
+| `05-farbduell` | Farbduell (Normal) gegen die KI, 7 : 7 |
+| `06-busfahren` | Bus fahren als Fahrer: Buslinie, erste Karte richtig, „Höher oder tiefer?" |
+| `07-koenigsbecher-flasche` | Königsbecher: Karte pendelt über der Flasche, „Tippen, wenn die Karte über der Flasche ist!" |
+
+Zwei Fehler sind dabei aufgefallen und behoben: Beim Skat fehlte im Blatt
+„Klassisch" die Sieben/Acht als kaputtes Bild statt Textkarte, und auf dem
+hellen Farbduell war die weiße Statusleiste unlesbar.
+
+## Web-Lauf mit dem Skript (23.09.2026)
+
 Das Skript leitet alles, was der Client an `https://www.brauweg-spielen.de`
 schickt, nach staging um (damit der QR-Code im Bild auf die echte Adresse
 zeigt) und lässt nichts zur Produktion durch. Warum, steht im Kopf des
 Skripts.
+
+## Clips für Werbevideos (19.10.2026)
+
+`werkzeug/store/clips.mjs` nimmt mit derselben Technik (App-Modus, Gastkonto
+mit Vogelnamen, nur Bots, Umleitung Produktion → staging) kurze Clips auf:
+hochkant 9:16, 1080 × 1920, je Szene 5–10 s, als WebM (VP8 aus Playwrights
+`page.screencast`). Szenen: Reiter „Spiele“, Doppelkopf (Austeilen,
+Ausspielen, Stich), Skat (Reizen mit Rechner, ggf. Ansage, Stich), Partykiste
+**alkoholfrei** (Menü, Quizfrage, Auflösung, Weiter). Fragen mit Marken
+Dritter verwirft es wie das Screenshot-Skript; Zauberer kommt nicht vor.
+Neben die Clips schreibt es `liste.md` (Datei, Spiel, Szene, Länge, Eignung
+als Hook/Spielszene/Endkarte). MP4 (H.264) legt es nur an, wenn ein ffmpeg
+mit H.264 im PATH liegt — Playwrights eigenes kann nur VP8.
+
+```bash
+cd werkzeug/store
+npx playwright install chromium ffmpeg
+node clips.mjs --ziel C:/Users/robin/Broweg/material/demo-ad/brauweg-spielen
+node clips.mjs --ziel … --szene skat     # nur eine Szene
+```
+
+Die Clips liegen nicht im Repository (`*.webm`/`*.mp4` in `.gitignore`).
+Beim Bau ist aufgefallen: `screenshots.mjs` findet seit dem neuen Hub
+(Leiste unten, Spielseite mit „Zum Spiel“) den Knopf „Spielauswahl“ nicht
+mehr — jedes Motiv scheitert. `clips.mjs` geht über den Reiter „Spiele“.
 
 ## Größen
 

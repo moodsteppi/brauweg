@@ -207,8 +207,9 @@ export const DEFAULT_DECK: DeckId = 'text';
 /**
  * Bekannte Luecke: Die Bildblaetter reichen von Neun bis Ass (Doppelkopf-
  * Bereich). Skat braucht auch Sieben und Acht. Solange die Flaechen fehlen,
- * faellt genau diese Karte auf die Textdarstellung zurueck (`CardFront`
- * fängt den Ladefehler ab) — ein gemischtes Blatt statt eines kaputten Bildes.
+ * faellt genau diese Karte auf die Textdarstellung zurueck (`cardImage`
+ * liefert dafuer gar keinen Pfad) — ein gemischtes Blatt statt eines
+ * kaputten Bildes.
  *
  * Steht hier als Konstante und nicht nur als Kommentar, damit die Blattwahl
  * den Hinweis anzeigen kann, statt dass jemand den Wechsel für einen Fehler
@@ -276,6 +277,12 @@ export function cardImage(deck: Deck, card: { suit: string; rank: string }): str
   // kein Bild gibt. Dann faellt die Karte auf die Textdarstellung zurueck,
   // statt ein kaputtes Bild zu zeigen.
   if (!suit || !rank) return null;
+  // Die Skat-Luecke (DECK_LUECKE) gar nicht erst anfragen: In der iOS-App
+  // feuert WebKit bei der 404 des App-Schemas kein `error` am `<img>`, und
+  // statt der Textkarte stand dort ein kaputtes Bild mit „Herz 7" daneben
+  // (Store-Bilder, 14.10.2026). Nur die Blaetter fuer Doppelkopf/Skat haben
+  // die Luecke; der Zauberwald bringt Sieben und Acht mit.
+  if (deck.games?.includes('skat') && (rank === '7' || rank === '8')) return null;
   return `/karten/${deck.dir}/${suit}_${rank}.${deck.ext}`;
 }
 

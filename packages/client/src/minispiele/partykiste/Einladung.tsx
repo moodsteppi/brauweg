@@ -30,9 +30,12 @@ import { qrMatrix, qrPfad, type QrMatrix } from './qr';
 export function Einladung({
   spiel,
   tischId,
+  neu = false,
 }: {
   spiel: string;
   tischId?: string | null;
+  /** Neues Hub: als Abschnitt des Spieleinstiegs, dieselben drei Wege. */
+  neu?: boolean;
 }): React.JSX.Element | null {
   const [code, setCode] = useState<string | null>(null);
   const [hinweis, setHinweis] = useState<'kopiert' | 'nichtKopiert' | null>(null);
@@ -116,8 +119,8 @@ export function Einladung({
 
   const rand = 4;
   return (
-    <section className="einladung" aria-label={t('einladung.titel')}>
-      <h2 className="einladung-titel">{t('einladung.titel')}</h2>
+    <section className={neu ? 'hb-blk spe-einladung' : 'einladung'} aria-label={t('einladung.titel')}>
+      <h2 className={neu ? 'hb-ab' : 'einladung-titel'}>{t('einladung.titel')}</h2>
       {/* Vorgelesen wird Zeichen fuer Zeichen — der Bildschirmleser soll es
           genauso sagen und nicht „K7X9MQ" als Wort versuchen. */}
       <p className="einladung-code" aria-label={`${t('einladung.codeAria')} ${code.split('').join(' ')}`}>
@@ -143,7 +146,11 @@ export function Einladung({
           <path d={qrPfad(matrix)} fill="#000" />
         </svg>
       ) : null}
-      <button className="einladung-teilen" type="button" onClick={() => void teile()}>
+      <button
+        className={neu ? 'hb-kn is-blau is-breit' : 'einladung-teilen'}
+        type="button"
+        onClick={() => void teile()}
+      >
         {t('einladung.teilen')}
       </button>
       {hinweis ? (

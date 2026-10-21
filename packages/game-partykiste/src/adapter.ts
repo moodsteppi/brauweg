@@ -68,12 +68,14 @@ import {
   SITZE,
   ZUGZEIT_MS,
   istHaerte,
+  istInhaltsMischung,
   istMinispiel,
   istSpielmodus,
   type PartykisteAktion,
   type PartykisteRegeln,
 } from './regeln.js';
 import { sichtFuer, type PartykisteSicht } from './sicht.js';
+import { ohneVertreten } from './weiter-warten.js';
 import { TISCHOEFFNER, wechselbareSitze } from './modi.js';
 
 const SNAPSHOT_VERSION = 1;
@@ -99,6 +101,24 @@ const meta: GameMeta = {
 
 function istRegelsatz(x: unknown): x is PartykisteRegeln {
   return typeof x === 'object' && x !== null && !Array.isArray(x);
+}
+
+/**
+ * Das „Weiter" an den drei Wartepunkten (weiter-warten.ts): Abrechnung,
+ * „Gesehen" beim Imposter, „Verstanden" bei der Regel-Karte.
+ *
+ * Beide Fassungen stehen hier, weil beide gespielt werden: die blanke vom
+ * Geraet, die mit `vertreten` vom Bot (bot.ts, `WEITER`). Die Plattform haelt
+ * jeden Bot-Zug Feld fuer Feld gegen diese Liste (plattform-invarianten im
+ * Server) — fehlt die zweite, spielt der Bot etwas, das das Modul nicht
+ * zugesagt hat, und genau daran war der Servertest rot. Die Aufstellung im
+ * Team-Abend gehoert nicht dazu: Dort ist kein Wartepunkt, und der Bot tippt
+ * ohne Marke.
+ *
+ * Jedes Mal eine neue Liste — `legalActions` gibt sie aus der Hand.
+ */
+function weiterErlaubt(): PartykisteAktion[] {
+  return [{ art: 'bereit' }, { art: 'bereit', vertreten: true }];
 }
 
 export const partykiste: GameModule<
@@ -189,6 +209,20 @@ export const partykiste: GameModule<
           severity: 'error',
         });
       }
+      /*
+       * Seit dem 27.09.2026, und darf fehlen wie die beiden: Fehlt es, liest
+       * das Modul die Stufe wie bis dahin als Obergrenze (regeln.ts,
+       * `inhaltsMischung`) — ein Bildschirm von davor legt also weiter Tische
+       * an, die sich verhalten wie am Tag zuvor.
+       */
+      const mischung = roh['inhaltsMischung'];
+      if (mischung !== undefined && !istInhaltsMischung(mischung)) {
+        probleme.push({
+          path: 'inhaltsMischung',
+          messageKey: 'ruleset.partykiste.inhaltsMischung',
+          severity: 'error',
+        });
+      }
       const paket = roh['paket'];
       if (paket !== undefined && paket !== null && !istPaket(paket)) {
         probleme.push({
@@ -243,6 +277,9 @@ export const partykiste: GameModule<
             : DEFAULT_REGELN.schluckFaktor,
         /* Unsinn wird harmlos bzw. "alles" — nie derber als eingestellt. */
         inhaltsHaerte: istHaerte(regeln.inhaltsHaerte) ? regeln.inhaltsHaerte : INHALTS_HAERTE_VORGABE,
+        /* Fehlt oder Unsinn: GAR KEIN Feld, also die alte Obergrenze — nie
+           derber als eingestellt, und ein alter Tisch spielt wie gewohnt. */
+        ...(istInhaltsMischung(regeln.inhaltsMischung) ? { inhaltsMischung: regeln.inhaltsMischung } : {}),
         paket: istPaket(regeln.paket) ? regeln.paket : null,
         modus: istSpielmodus(regeln.modus) ? regeln.modus : 'turnier',
       },
@@ -261,6 +298,17 @@ export const partykiste: GameModule<
   },
 
   act: (partie, sitz, aktion) => verarbeite(partie, sitz, aktion),
+
+  /**
+   * `vertreten` setzt nur der Bot (bot.ts, `WEITER`). Schickt ein Geraet die
+   * Marke mit, gilt sein Tipp trotzdem als von Hand — sonst trinkt, wer sie
+   * kennt, als Letzter nie (weiter-warten.ts, Punkt 4). `legalActions` nennt
+   * die Fassung mit Marke fuer jeden, weil die Plattform Bot-Zuege dagegen
+   * haelt; erst hier faellt sie fuer Menschen weg. Die Pruefung auf ein
+   * Objekt, weil die Aktion hier noch ungeprueft ist und `act` den Unsinn
+   * abweisen soll, nicht diese Stelle.
+   */
+  vomGeraet: (aktion) => (typeof aktion === 'object' && aktion !== null ? ohneVertreten(aktion) : aktion),
 
   currentActor: (partie) => amZugVon(partie),
 
@@ -283,7 +331,7 @@ export const partykiste: GameModule<
       ];
     }
     const runde = partie.runde;
-    if (runde.phase === 'ergebnis') return [{ art: 'bereit' }];
+    if (runde.phase === 'ergebnis') return weiterErlaubt();
 
     const andere: number[] = [];
     for (let s = 0; s < partie.sitze; s++) {
@@ -292,7 +340,7 @@ export const partykiste: GameModule<
 
     switch (runde.art) {
       case 'imposter':
-        if (runde.phase === 'sehen') return [{ art: 'bereit' }];
+        if (runde.phase === 'sehen') return weiterErlaubt();
         return [
           ...andere.map((ziel) => ({ art: 'stimme', ziel }) as const),
           ...(runde.redeRunde < MAX_REDERUNDEN ? [{ art: 'nochmal' } as const] : []),
@@ -353,7 +401,7 @@ export const partykiste: GameModule<
           [0, 1].map((tipp) => ({ art: 'mehrheitstipp', eigene, tipp }) as const),
         );
       case 'regelkarte':
-        return [{ art: 'bereit' }];
+        return weiterErlaubt();
       /* Die drei mit Uhr (zeitdruck.ts). „Hand hoch" darf jeder, Knoepfe
          bekommt wie ueberall nur der naechste Offene. */
       case 'bombe':

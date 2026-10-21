@@ -5,6 +5,10 @@ Trinkmodus). Jede Antwort ist aus dem Code begründet, nicht aus dem Gefühl.
 **Ergebnis: Apple 18+, IARC voraussichtlich USK 16 / PEGI 16** (18 möglich,
 siehe unten).
 
+**Nachtrag 13.10.2026:** Farbduell (Filler) und BroChess sind in der App
+dazugekommen. Beide sind Brettspiele zu zweit ohne Einsatz, ohne freien Text
+und ohne Gewalt — an keiner Antwort unten ändert sich dadurch etwas.
+
 Die Antworten müssen **neu gegeben werden**, sobald sich eine Grundlage
 ändert: ein weiteres Spiel wechselt in der App auf `spielbar` (Poker!), der
 Rückweg `APP_PARTYKISTE_TRINKMODUS=aus` / `APP_PARTYKISTE_HAERTE_MAX` wird

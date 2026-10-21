@@ -32,6 +32,7 @@ import {
   ZEHN_SEKUNDEN,
   ZEHN_SEKUNDEN_MS,
   ablaufVon,
+  flascheHaelt,
   amZug,
   erzeugePartie,
   partykiste,
@@ -42,6 +43,8 @@ import {
   type MinispielId,
   type PartykistePartie,
 } from '../src/index.js';
+import { ZEHN_SEKUNDEN_ENTFERNT } from '../src/inhalte/zehnsekunden.js';
+import { pruefeKennungen } from '../src/inhalte/schema.js';
 
 function partie(minispiele: MinispielId[], sitze = 4, runden = 3, botSitze: number[] = [], saat = 11): PartykistePartie {
   return erzeugePartie({ regeln: { ...DEFAULT_REGELN, minispiele }, saat, sitze, runden, botSitze, gastSitze: [] });
@@ -72,12 +75,15 @@ function spieleMitBots(stand: PartykistePartie, grenze = 20_000): PartykistePart
 const TRINKWORT = /trink|schluck|bier|shot|🍺|🍻|🥂|🥃|🍷|🍸/i;
 const TRINKBEFEHL = /\b(trink|trinkt|trinke|trinkst|schluck|schlucke|schlückchen|shot|shots|prost)\b|🍺|🍻|🥂|🥃|🍷|🍸/i;
 
-test('10 Sekunden: genug Aufgaben, lueckenlos nummeriert, jede mit Haerte und Paket', () => {
+test('10 Sekunden: genug Aufgaben je Stufe, Kennungen ohne Wiederverwendung, jede mit Haerte und Paket', () => {
   assert.ok(ZEHN_SEKUNDEN.length >= 60, `${ZEHN_SEKUNDEN.length} Aufgaben`);
-  assert.deepEqual(
-    ZEHN_SEKUNDEN.map((z) => z.id),
-    Array.from({ length: ZEHN_SEKUNDEN.length }, (_, i) => `z${String(i + 1).padStart(3, '0')}`),
-  );
+  /* Seit dem 27.09.2026 duerfen Luecken sein — nur ueber ZEHN_SEKUNDEN_ENTFERNT. */
+  assert.deepEqual(pruefeKennungen('z', ZEHN_SEKUNDEN.map((z) => z.id), ZEHN_SEKUNDEN_ENTFERNT), []);
+  /* Jede Stufe traegt allein einen Abend (docs/PARTYKISTE-INHALTE.md: 50 je Stufe). */
+  for (const h of [1, 2, 3]) {
+    const zahl = ZEHN_SEKUNDEN.filter((z) => z.haerte === h).length;
+    assert.ok(zahl >= 50, `Stufe ${h}: nur ${zahl} Aufgaben`);
+  }
   for (const z of ZEHN_SEKUNDEN) {
     assert.ok(z.haerte === 1 || z.haerte === 2 || z.haerte === 3, `${z.id}: Haerte fehlt`);
     assert.ok(z.paket && z.paket.length > 0, `${z.id}: kein Paket`);
@@ -295,6 +301,15 @@ function mitKarte(p: PartykistePartie, rang: number): PartykistePartie {
   return { ...p, runde: { ...runde, stapel } };
 }
 
+/**
+ * Ziehen und mittig auf die Flasche legen — seit dem 13.10.2026 gilt die
+ * Kartenregel erst nach dem Legen. Mittig (0) faellt der Stapel nie.
+ */
+function zieheUndLege(p: PartykistePartie, sitz: number, versatz = 0): PartykistePartie {
+  const gezogen = verarbeite(p, sitz, { art: 'ziehen' });
+  return verarbeite(gezogen, sitz, { art: 'legen', versatz });
+}
+
 function kb(p: PartykistePartie): KoenigsbecherRunde {
   if (p.runde.art !== 'koenigsbecher') throw new Error('kein Koenigsbecher');
   return p.runde;
@@ -311,7 +326,7 @@ test('Koenigsbecher: jeder zieht zwei Karten, dann wird abgerechnet — Protokol
 test('Koenigsbecher: die Zwei — der Ziehende zeigt, der Gezeigte kassiert', () => {
   let p = mitKarte(partie(['koenigsbecher'], 4, 3), 2);
   const zieher = amZug(p)!;
-  p = verarbeite(p, zieher, { art: 'ziehen' });
+  p = zieheUndLege(p, zieher);
   assert.equal(kb(p).wahlOffen, true);
   assert.equal(amZug(p), zieher);
   assert.deepEqual(partykiste.legalActions(p, zieher).map((a) => a.art), ['stimme', 'stimme', 'stimme']);
@@ -325,7 +340,7 @@ test('Koenigsbecher: die Zwei — der Ziehende zeigt, der Gezeigte kassiert', ()
 test('Koenigsbecher: die Sieben hat eine Uhr — wer nicht tippt, war zu langsam', () => {
   let p = mitKarte(partie(['koenigsbecher'], 4, 3), 7);
   const zieher = amZug(p)!;
-  p = verarbeite(p, zieher, { art: 'ziehen' });
+  p = zieheUndLege(p, zieher);
   assert.equal(partykiste.phaseMs!(p), KOENIGSBECHER_HAND_MS);
   /* Zwei tippen, zwei nicht — dann laeuft die Uhr ab. */
   p = verarbeite(p, 1, { art: 'hochzeigen' });
@@ -339,7 +354,7 @@ test('Koenigsbecher: die Sieben hat eine Uhr — wer nicht tippt, war zu langsam
 
 test('Koenigsbecher: tippen alle, kassiert der Letzte — sofort, ohne auf die Uhr zu warten', () => {
   let p = mitKarte(partie(['koenigsbecher'], 4, 3, [2]), 7);
-  p = verarbeite(p, amZug(p)!, { art: 'ziehen' });
+  p = zieheUndLege(p, amZug(p)!);
   /* Bots zuerst: Sie reagieren im Takt der Plattform, Menschen warten nicht auf sie. */
   assert.equal(amZug(p), 2);
   for (const s of [2, 0, 3, 1]) p = verarbeite(p, s, { art: 'hochzeigen' });
@@ -350,17 +365,17 @@ test('Koenigsbecher: tippen alle, kassiert der Letzte — sofort, ohne auf die U
 test('Koenigsbecher: der Bube bringt nach der Runde eine Regel-Karte, der letzte Koenig den Becher', () => {
   let p = partie(['koenigsbecher', 'quiz'], 4, 3);
   const erster = amZug(p)!;
-  p = verarbeite(mitKarte(p, 11), erster, { art: 'ziehen' });
+  p = zieheUndLege(mitKarte(p, 11), erster);
   const regel = kb(p).neueRegel;
   assert.ok(regel !== null, 'der Bube hat keine Regel gebracht');
   assert.equal(p.regelKarte ?? null, null, 'die Regel gilt erst nach der Runde');
   const zweiter = amZug(p)!;
-  p = verarbeite(mitKarte(p, 13), zweiter, { art: 'ziehen' });
-  p = verarbeite(mitKarte(p, 13), amZug(p)!, { art: 'ziehen' });
+  p = zieheUndLege(mitKarte(p, 13), zweiter);
+  p = zieheUndLege(mitKarte(p, 13), amZug(p)!);
   const koenig = kb(p).koenigSitz;
   assert.equal(kb(p).becher, 2);
   /* Der Rest zieht Sechsen, bis die Runde um ist. */
-  while (p.runde.phase === 'spiel') p = verarbeite(mitKarte(p, 6), amZug(p)!, { art: 'ziehen' });
+  while (p.runde.phase === 'spiel') p = zieheUndLege(mitKarte(p, 6), amZug(p)!);
   const runde = kb(p);
   assert.equal(runde.schlucke[koenig], 2 * SCHLUECKE.koenigsbecherJeKoenig, 'der Becher ging nicht an den letzten Koenig');
   assert.equal(p.regelKarte?.karteId, regel.karteId);
@@ -398,4 +413,62 @@ test('ein Snapshot mitten in der Bombe tickt weiter wie das Original', () => {
   assert.equal(partykiste.phaseMs!(kopie), partykiste.phaseMs!(p));
   assert.equal(partykiste.phaseKey!(kopie), partykiste.phaseKey!(p));
   assert.deepEqual(partykiste.advancePhase!(kopie).runde, partykiste.advancePhase!(p).runde);
+});
+
+// ---------------------------------------------------------------------------
+// Koenigsbecher: die Flasche (Emile, 13.10.2026)
+// ---------------------------------------------------------------------------
+
+test('Flasche: erst legen, dann gilt die Karte — vorher wartet die Runde', () => {
+  let p = mitKarte(partie(['koenigsbecher'], 4, 3), 14);
+  const zieher = amZug(p)!;
+  p = verarbeite(p, zieher, { art: 'ziehen' });
+  assert.deepEqual(kb(p).offeneKarte, { rang: 14, farbe: 0 });
+  assert.equal(amZug(p), zieher, 'der Ziehende muss noch legen');
+  assert.deepEqual([...kb(p).strich], [0, 0, 0, 0], 'der Wasserfall gilt erst nach dem Legen');
+  /* Der Versatz ist nicht aufzaehlbar — leer wie beim Schaetzen. */
+  assert.deepEqual(partykiste.legalActions(p, zieher), []);
+  assert.throws(() => verarbeite(p, zieher, { art: 'ziehen' }), /Flasche/);
+  p = verarbeite(p, zieher, { art: 'legen', versatz: 0.1 });
+  assert.equal(kb(p).offeneKarte, null);
+  assert.deepEqual([...kb(p).flasche], [0.1]);
+  assert.deepEqual([...kb(p).strich], [1, 1, 1, 1], 'jetzt gilt der Wasserfall');
+  assert.notEqual(amZug(p), zieher);
+});
+
+test('Flasche: neben den Hals gelegt, faellt alles — der Leger kassiert je Karte', () => {
+  let p = mitKarte(partie(['koenigsbecher'], 4, 3), 6);
+  const erster = amZug(p)!;
+  p = zieheUndLege(p, erster, 0.05);
+  const zweiter = amZug(p)!;
+  p = zieheUndLege(mitKarte(p, 6), zweiter, -0.05);
+  assert.equal(kb(p).flasche.length, 2);
+  const dritter = amZug(p)!;
+  p = zieheUndLege(mitKarte(p, 6), dritter, 0.95);
+  assert.deepEqual([...kb(p).flasche], [], 'der Stapel beginnt neu');
+  assert.equal(kb(p).strich[dritter], 3 * SCHLUECKE.koenigsbecherFlascheJeKarte);
+  assert.equal(kb(p).sturz?.sitz, dritter);
+  assert.equal(kb(p).sturz?.karten, 3);
+  assert.equal(kb(p).sturz?.nr, kb(p).gelegt);
+});
+
+test('Flasche: Haltbarkeit — Schwerpunkt, Rand und Abrutschen', () => {
+  assert.equal(flascheHaelt([], 0), true);
+  assert.equal(flascheHaelt([], 0.95), false, 'neben den Hals');
+  assert.equal(flascheHaelt([0.4, 0.4], 0.45), false, 'Schwerpunkt zu weit aussen');
+  assert.equal(flascheHaelt([0.3], -0.3), true);
+  assert.equal(flascheHaelt([0.5], -0.4), false, 'rutscht von der obersten Karte');
+  /* Je hoeher, desto enger: Derselbe Versatz haelt unten, oben nicht mehr. */
+  assert.equal(flascheHaelt([0.3], 0.3), true);
+  assert.equal(flascheHaelt([0.3, 0.3, 0.3, 0.3, 0.3, 0.3], 0.3), false);
+});
+
+test('Flasche: wer mit offener Karte geht, dessen Karte gilt trotzdem', () => {
+  let p = mitKarte(partie(['koenigsbecher'], 4, 3), 3);
+  const zieher = amZug(p)!;
+  p = verarbeite(p, zieher, { art: 'ziehen' });
+  p = partykiste.markLeft(p, zieher);
+  assert.equal(kb(p).offeneKarte, null, 'die offene Karte ist abgehandelt');
+  assert.equal(kb(p).strich[zieher], 1, 'die Drei gilt — der Ziehende kassiert selbst');
+  assert.notEqual(amZug(p), zieher);
 });

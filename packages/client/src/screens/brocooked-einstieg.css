@@ -1,0 +1,62 @@
+/*
+ * BroCooked im Spieleinstieg des neuen Hubs (BroCooked.tsx, `hubNeu`).
+ *
+ * Nur, was der Baukasten (spiel-einstieg.css) nicht schon hat: Sterne der
+ * Küchen, die Rezeptkarte im Blatt, die Punktzahl am Feierabend. Alles unter
+ * `.spe`, damit die alte Fassung (`?hub=alt`) unberührt bleibt.
+ */
+/* Sechs Runden in einer Reihe: Der Baukasten bricht unter 64 px um, und eine
+   einsame „6" in der zweiten Zeile sah aus wie ein eigener Abschnitt. */
+.spe .bc-runden .spe-wahl {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.spe .bc-sterne {
+  flex: none;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: var(--hb-gold);
+}
+.spe .bc-koch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--hb-leise);
+}
+.spe .spe-zeile > .bc-koch + span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* Die Rezeptkarte bringt die Plattformfarben mit (--panel, --line, --muted);
+   hier auf die Farben des Hubs gestellt. */
+.spe .bc-rezepte {
+  --panel: var(--hb-karte);
+  --line: var(--hb-kontur);
+  --muted: var(--hb-leise);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 700 15px var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.spe .bc-rezepte > li {
+  min-height: 44px;
+  border-radius: 14px;
+}
+.spe .bc-endpunkte {
+  margin: 4px 0 0;
+  text-align: center;
+  font: 700 15px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .bc-endpunkte strong {
+  display: block;
+  font: 400 56px/1 var(--hb-anz);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}

@@ -120,7 +120,8 @@ in den Einstellungen der App (*Mitteilungen*, drei Schalter; gespeichert in
 | --- | --- | --- | --- |
 | `dran` | Du bist dran | `{Spiel}: Der Tisch wartet auf deinen Zug.` | Der Zug wechselt zu einem Menschen (`currentActor`), nur in Spielen mit echter Zugfolge: Doppelkopf, Skat, Zauberer, Cambio, Poker, Mememory, Filler (`ZUGSPIELE` in `push/kennungen.ts`). Nicht bei Feldherr, Golf, BroCooked (Echtzeit), Eiland, Tafelrunde (alle gleichzeitig) und der Partykiste (man sitzt zusammen). |
 | `start` | Deine Runde startet | `{Spiel}: Der Tisch ist voll — es geht los.` | Der Gateway startet die Partie (`ensureStarted`) — an alle Menschen am Tisch. |
-| `einladung` | Einladung angenommen | `{Name} sitzt jetzt mit an deinem {Spiel}-Tisch.` | Jemand löst den Beitrittscode ein (`/api/tables/code/:code/join`) — an den Gastgeber (erster Mensch am Tisch). |
+| `einladung` | Einladung angenommen | `{Name} sitzt jetzt mit an deinem {Spiel}-Tisch.` | Jemand löst den Beitrittscode ein (`/api/tables/code/:code/join`) — an den Gastgeber (erster Mensch am Tisch). An privaten Kartentischen kommt stattdessen `anfrage`, weil der Gast erst nach der Zusage sitzt. |
+| `anfrage` | Jemand will mitspielen | `{Name} möchte an deinen {Spiel}-Tisch. Sag zu oder ab.` | Seit 13.10.2026: Beitritt an einen nicht-öffentlichen Tisch der Kartenlobby (`tables/anfragen.ts`) — an den Gastgeber, der zusagen muss. |
 
 Die Texte stehen im Wörterbuch `packages/server/src/push/texte.ts`. **Außer
 dem Anzeigenamen dessen, der die Einladung annimmt, steht nichts über Dritte
@@ -194,11 +195,12 @@ Mitteilung.
 
 ## 7. Offen
 
-- **iOS-Hülle:** entsteht parallel (`apps/ios`); sie muss den Vertrag aus
-  Abschnitt 3 umsetzen. Bis dahin ist `push` dort nicht gesetzt, und der
-  Client fragt nicht.
-- **Antippen führt an den Tisch:** Die Daten (`tableId`, `gameId`) gehen mit,
-  weder Hülle noch Client werten sie aus.
+- ~~**Antippen führt an den Tisch**~~ — erledigt am 13.10.2026 für iOS:
+  `Mitteilungen.swift` (Delegat) → `Huelle.tischSkript` → Ereignis
+  `brauweg:push-tisch` bzw. `window.BRAUWEG_APP.pushTisch` →
+  `packages/client/src/mitteilung-antippen.ts`. Auch beim Kaltstart aus der
+  Mitteilung. Android wertet die Daten noch nicht aus.
+- **iOS-Hülle:** Push ist seit dem 13.10.2026 an (`BRAUWEG_PUSH = YES`).
 - **Clantische** laufen über Wochen; „du bist dran" dort ist gewollt, die
   Drosselung je Minute ist für sie aber kurz. Beobachten.
 - **Hintergrund auf iOS** hängt an `visibilitychange` im WKWebView. Kommt es

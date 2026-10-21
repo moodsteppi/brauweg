@@ -27,6 +27,7 @@ import {
   isReadyToStart,
   pauseTable,
   resumeTable,
+  istUebungstisch,
   tableBotLevel,
   tableWithSeats,
   touch,
@@ -40,8 +41,10 @@ import {
 import { xpFuerPartie } from '../level.js';
 import { recordPartyResult } from '../clubs/war.js';
 import { fortschreiben } from '../quests.js';
+import { uebungGespielt } from '../lernpfad.js';
 import { einsatzVon, zahleAus, zieheEinsatz } from '../brojetons.js';
 import { verbucheBestleistungen } from '../bestleistung.js';
+import { spielZaehlen } from '../herkunft.js';
 
 export interface RuntimeOptions {
   /** 60 Sekunden je Zug, serverseitig gemessen. */
@@ -111,6 +114,11 @@ export interface LiveParty {
   readonly absentSince: Map<number, number>;
   readonly online: Set<number>;
   segmentsWritten: number;
+  /**
+   * Uebungstisch aus dem Lernpfad (`istUebungstisch`): endet nach der ersten
+   * Runde, und die zaehlt fuer die Lernserie der Menschen am Tisch.
+   */
+  readonly uebung: boolean;
   /**
    * Diese Partie endet, sobald die laufende Runde durch ist.
    *
@@ -432,7 +440,10 @@ export class PartyRuntime {
       absentSince: new Map(),
       online: new Set(),
       segmentsWritten: 0,
-      endAfterRound: false,
+      uebung: istUebungstisch(table.filters),
+      // Eine Uebungsrunde ist EINE Runde — die Rotation verlangt vier, gespielt
+      // wird bis zur ersten Abrechnung (dieselbe Regel wie beim Aufloesen).
+      endAfterRound: istUebungstisch(table.filters),
       turnDeadline: null,
       interludeDeadline: null,
       phaseDeadline: null,
@@ -509,7 +520,8 @@ export class PartyRuntime {
       absentSince: new Map(),
       online: new Set(),
       segmentsWritten: (module.completedSegments?.(state) ?? []).length,
-      endAfterRound: false,
+      uebung: istUebungstisch(table.filters),
+      endAfterRound: istUebungstisch(table.filters),
       turnDeadline: null,
       interludeDeadline: null,
       phaseDeadline: null,
@@ -648,7 +660,7 @@ export class PartyRuntime {
        * ist kein Rennen, sondern ein Fehler, und sie soll auch so heissen.
        */
       const sitz = this.seatOf(party, accountId);
-      if (sitz !== null && this.wirkungslos(party, sitz, action)) return;
+      if (sitz !== null && this.wirkungslos(party, sitz, this.vomGeraet(party, action))) return;
       throw conflict('partyFinished');
     }
     if (party.paused) throw conflict('partyPaused');
@@ -661,7 +673,7 @@ export class PartyRuntime {
       party.botControlled.delete(seat);
     }
 
-    const next = party.module.act(party.state, seat, action);
+    const next = party.module.act(party.state, seat, this.vomGeraet(party, action));
     // Wer selbst handelt, ist zurueck: Die Abwesenheitsuhr faengt beim
     // naechsten Mal wieder bei null an und nicht dort, wo sie stehen blieb.
     party.absentSince.delete(seat);
@@ -674,6 +686,15 @@ export class PartyRuntime {
     party.state = next;
 
     await this.afterAction(party);
+  }
+
+  /**
+   * Die Aktion eines Geraets so, wie das Modul sie annimmt (`vomGeraet` in
+   * game-api). Nur hier und nie in `playBot`: Felder, die allein der Bot-Weg
+   * setzen darf, haette sonst jedes Geraet in der Hand.
+   */
+  private vomGeraet(party: LiveParty, action: unknown): unknown {
+    return party.module.vomGeraet ? party.module.vomGeraet(action) : action;
   }
 
   /**
@@ -695,6 +716,7 @@ export class PartyRuntime {
   private async afterAction(party: LiveParty): Promise<void> {
     const rundeVorbei = await this.persist(party);
     await touch(this.db, party.tableId);
+    if (rundeVorbei && party.uebung) await this.uebungZaehlen(party);
 
     if (party.module.isFinished(party.state)) {
       await this.finish(party);
@@ -1122,7 +1144,47 @@ export class PartyRuntime {
       })),
     );
     party.segmentsWritten = segments.length;
+    await this.herkunftZaehlen(party, 'runden', fresh.length);
     return true;
+  }
+
+  /**
+   * Runden und Partien fuer die Werbelinks (src/herkunft.ts). Wie bei
+   * `uebungZaehlen`: Ein Fehler hier darf die Partie nicht aufhalten, eine
+   * fehlende Zaehlung ist ein Aergernis, ein haengender Tisch ein Ausfall.
+   * Dauerhafte Bots sitzen ohne Konto da und fallen von selbst heraus.
+   */
+  private async herkunftZaehlen(
+    party: LiveParty,
+    art: 'runden' | 'partien',
+    anzahl: number,
+  ): Promise<void> {
+    const konten = party.seats.flatMap((platz) =>
+      platz.accountId && !platz.permanentBot ? [platz.accountId] : [],
+    );
+    try {
+      await spielZaehlen(this.db, konten, art, anzahl);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`Herkunft (${art}) an Tisch ${party.tableId}:`, err);
+    }
+  }
+
+  /**
+   * Eine Uebungsrunde ist abgerechnet: Spieltag fuer jeden Menschen am Tisch
+   * (lernpfad.ts). Ein Fehler hier darf die Partie nicht aufhalten — er landet
+   * im Log, die Runde ist trotzdem gespielt.
+   */
+  private async uebungZaehlen(party: LiveParty): Promise<void> {
+    for (const platz of party.seats) {
+      if (!platz.accountId || platz.permanentBot) continue;
+      try {
+        await uebungGespielt(this.db, platz.accountId);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(`Lernserie an Tisch ${party.tableId}, Sitz ${platz.index}:`, err);
+      }
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -1176,6 +1238,7 @@ export class PartyRuntime {
       await this.recordWar(party, standings);
       await this.countQuests(party, standings);
       await this.recordBestleistungen(party, standings);
+      await this.herkunftZaehlen(party, 'partien', 1);
     } finally {
       party.abrechnungLaeuft = false;
     }

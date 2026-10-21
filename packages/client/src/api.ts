@@ -12,7 +12,9 @@
 
 import type { Bemalung } from './bemalung';
 import type { BotLevel } from './protocol';
+import type { Lektion, LernpfadAnsicht, LernserieKurz, Spieltag } from './lernen/sicht';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
+import { herkunft } from './herkunft';
 
 export class ApiError extends Error {
   constructor(
@@ -150,7 +152,22 @@ export interface Me {
    * Nur die Zahlen — die Listen stehen an `/chests` und `/quests`. Sie treiben
    * den Punkt an der Truhe auf dem Startbildschirm.
    */
-  bereit: { truhen: number; aufgaben: number };
+  bereit: {
+    truhen: number;
+    aufgaben: number;
+    /**
+     * Abholbare Stufen des Trophäenwegs. Eigene Zahl, weil sie nicht unter
+     * „Heute" liegen, sondern auf dem Weg. Optional, weil die App ihren
+     * Client mitbringt und dabei an einen Server geraten kann, der das Feld
+     * noch nicht kennt — dann gilt 0.
+     */
+    weg?: number;
+  };
+  /**
+   * Die Lernserie „Doppelkopf lernen" (Server, lernpfad.ts) — fuer die Flamme
+   * auf dem Start. Optional aus demselben Grund wie `bereit.weg`.
+   */
+  lernen?: LernserieKurz;
   /**
    * Stufe und Fortschritt, fertig gerechnet vom Server.
    *
@@ -296,6 +313,48 @@ export interface Aufgaben {
   aufgaben: Aufgabe[];
   /** Summe der fertigen, noch nicht abgeholten Belohnungen. */
   offeneBelohnung: number;
+}
+
+/** Die Truhengrade, die der Trophäenweg vergibt — Holz gibt es dort nicht. */
+export type WegGrad = Exclude<Grad, 'holz'>;
+
+/**
+ * Eine Stufe des Trophäenwegs, wie `/api/weg` sie liefert
+ * (`server/src/trophaeenweg.ts`). Was es wo gibt, sagt allein der Server.
+ */
+export interface WegStufe {
+  schwelle: number;
+  /** Station (Truhe + Gegenstand), Checkpoint (feste Münzen), weiter (über 1.000). */
+  art: 'station' | 'checkpoint' | 'weiter';
+  truhe: { grad: WegGrad; von: number; bis: number } | null;
+  /** Feste Münzen am Checkpoint, sonst null. */
+  muenzen: number | null;
+  /** Kennung des Gegenstands (`account_cosmetic`), sonst null. Name: `weg.<kennung>` in i18n. */
+  gegenstand: string | null;
+  erreicht: boolean;
+  geholt: boolean;
+  /** Was gutgeschrieben wurde — erst gesetzt, wenn `geholt`. */
+  coins: number | null;
+}
+
+export interface Weg {
+  /** Summe der Trophäen über alle Spiele, am Server gezählt. */
+  trophaeen: number;
+  stufen: WegStufe[];
+  /** Wie viele Stufen jetzt abgeholt werden können. */
+  bereit: number;
+}
+
+export interface WegFund {
+  schwelle: number;
+  /** Grad der Truhe; null bei festen Münzen (Checkpoint). */
+  grad: WegGrad | null;
+  coins: number;
+  gegenstand: string | null;
+  /** Nein, wenn der Gegenstand schon im Besitz war. */
+  gegenstandNeu: boolean;
+  /** Münzstand danach. */
+  stand: number;
 }
 
 export type Seltenheit = 'gewoehnlich' | 'selten' | 'episch' | 'legendaer';
@@ -629,6 +688,9 @@ export type AnbieterAnmeldung =
   | { geburtstagNoetig: true; schein: string };
 
 export const api = {
+  /** Ein Aufruf ueber einen Werbelink `?q=` (herkunft.ts). */
+  herkunftBesuch: (kennung: string) => post<{ ok: true }>('/herkunft/besuch', { kennung }),
+
   register: (body: {
     email: string;
     password: string;
@@ -733,14 +795,18 @@ export const api = {
    * einem Anzeigenamen. Cookie und Token laufen wie bei `login` — die App
    * braucht das Token, weil sie kein Cookie ueber die Herkunftsgrenze
    * bekommt.
+   *
+   * Kam der Aufruf ueber einen Werbelink, geht dessen Kennung mit
+   * (herkunft.ts) — nur hier, weil nur das Gastkonto gezaehlt wird.
    */
   gastLogin: async (name: string) => {
+    const kennung = herkunft();
     const antwort = await post<{
       ok: true;
       accountId: string;
       displayName: string;
       token?: string;
-    }>('/auth/gast', { name });
+    }>('/auth/gast', kennung ? { name, herkunft: kennung } : { name });
     if (antwort.token) setSessionToken(antwort.token);
     return antwort;
   },
@@ -815,6 +881,13 @@ export const api = {
   quests: () => request<Aufgaben>('/quests'),
   claimQuest: (questId: string) =>
     post<{ betrag: number; waehrung: Waehrung; stand: number }>(`/quests/${questId}/claim`),
+
+  // --- Trophäenweg ----------------------------------------------------------
+
+  /** Alle Stufen bis zur nächsten über 1.000, mit Zustand. */
+  weg: () => request<Weg>('/weg'),
+  /** Eine Stufe abholen. Gewürfelt wird am Server, genau einmal. */
+  wegHolen: (schwelle: number) => post<WegFund>(`/weg/${schwelle}/holen`),
 
   // --- Pro-Subway -----------------------------------------------------------
 
@@ -961,7 +1034,28 @@ export const api = {
        `/tables/:id` nachzuholen waere ein zweiter Ruf fuer eine Zeile, die
        schon vorliegt. */
   }) => post<{ id: string; joinCode: string | null }>('/tables', body),
-  joinTable: (id: string) => post<{ ok: true }>(`/tables/${id}/join`),
+  /**
+   * `angefragt`: Der Tisch ist nicht öffentlich, man sitzt noch nicht, der
+   * Gastgeber muss zusagen (Server: tables/anfragen.ts). Dann wartet der
+   * Bildschirm mit `anfrageStand` auf die Antwort.
+   */
+  joinTable: (id: string) => post<{ ok: true; angefragt?: boolean }>(`/tables/${id}/join`),
+  /** Offene Beitrittsanfragen; nur der Gastgeber bekommt sie (sonst 403). */
+  anfragen: (id: string) =>
+    request<{ anfragen: { accountId: string; displayName: string }[] }>(`/tables/${id}/anfragen`),
+  entscheideAnfrage: (id: string, accountId: string, annehmen: boolean) =>
+    post<{ ok: true }>(`/tables/${id}/anfragen/${accountId}`, { annehmen }),
+  anfrageStand: (id: string) =>
+    request<{ stand: 'offen' | 'angenommen' | 'abgelehnt' }>(`/tables/${id}/anfrage`),
+  zieheAnfrageZurueck: (id: string) =>
+    request<{ ok: true }>(`/tables/${id}/anfrage`, { method: 'DELETE' }),
+  /** Doppelkopf lernen: Pfad, erledigte Lektionen und Serie (lernen/sicht.ts). */
+  lernpfad: () => request<LernpfadAnsicht>('/lernpfad'),
+  lektion: (id: string) => request<Lektion>(`/lernpfad/lektion/${encodeURIComponent(id)}`),
+  /** Lektion geschafft — zaehlt als Spieltag der Serie. */
+  lektionFertig: (id: string) => post<Spieltag>(`/lernpfad/lektion/${encodeURIComponent(id)}/fertig`),
+  /** Uebungsrunde gegen drei Anfaenger-Bots; endet nach einer Runde. */
+  lernUebung: () => post<{ tableId: string }>('/lernpfad/uebung'),
   /**
    * Der Tisch hinter einem Beitrittscode — zum Ansehen, ohne beizutreten.
    *
@@ -971,7 +1065,7 @@ export const api = {
   tischPerCode: (code: string) =>
     request<TischVorschau>(`/tables/code/${encodeURIComponent(code)}`),
   beitretenPerCode: (code: string) =>
-    post<{ tableId: string }>(`/tables/code/${encodeURIComponent(code)}/join`),
+    post<{ tableId: string; angefragt?: boolean }>(`/tables/code/${encodeURIComponent(code)}/join`),
   /**
    * Ein Tisch mit seinem Beitrittscode — fuer die Einladung im Wartesaal.
    *
@@ -1122,6 +1216,19 @@ export const api = {
   feedbackSenden: (daten: { beschreibung: string; screenshot?: string; seite: string }) =>
     post<{ ok: true }>('/feedback', daten),
 
+  /**
+   * „Passt nicht" zu einem Inhalt der Partykiste — nur auf staging, wie das
+   * Feedback (minispiele/partykiste/PasstNicht.tsx, Server partykiste-routen.ts).
+   */
+  partykisteMelden: (daten: {
+    katalog: string;
+    kennung: string;
+    grund: string;
+    freitext?: string;
+    tischId?: string;
+    stufe?: number;
+  }) => post<{ ok: true }>('/partykiste/meldung', daten),
+
   /** Was im Kasten liegt, plus der freigegebene Bestand. Nur Aufsicht. */
   mememoryVorschlaege: () =>
     request<{
@@ -1227,7 +1334,7 @@ export const api = {
 // ---------------------------------------------------------------------------
 
 /** Kennungen wie im Server (push/kennungen.ts). Nie umbenennen. */
-export type PushAnlass = 'dran' | 'start' | 'einladung';
+export type PushAnlass = 'dran' | 'start' | 'einladung' | 'anfrage' | 'serie';
 
 export interface PushEinstellungen {
   anlaesse: Record<PushAnlass, boolean>;

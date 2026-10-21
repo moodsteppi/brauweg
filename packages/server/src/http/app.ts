@@ -53,6 +53,11 @@ import type { NonceSpeicher } from '../auth/nonce.js';
 import { anbieterRouten } from './anbieter-routen.js';
 import { type AppVerknuepfung, appVerknuepfungRouten } from './app-verknuepfung.js';
 import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
+import { partykisteRouten } from './partykiste-routen.js';
+import { lernpfadRouten } from './lernpfad-routen.js';
+import { herkunftRouten } from './herkunft-routen.js';
+import { gastkontoZaehlen } from '../herkunft.js';
+import { lernserieKurz } from '../lernpfad.js';
 import { pushRouten } from './push-routen.js';
 import type { PushAnlaesse } from '../push/anlaesse.js';
 import { verifyPassword } from '../auth/secrets.js';
@@ -70,6 +75,7 @@ import { GEBURTSTAGS_OUTFIT, SLOTS, istSlot, schenken } from '../kosmetik.js';
 import { anziehen, getragenVon, kaufen, paketKaufen, shopFuer } from '../shop.js';
 import { offeneTruhen, truheKaufen, truheOeffnen, truhenFuer } from '../truhen.js';
 import { aufgabeAbholen, aufgabenFuer, offeneBelohnungen } from '../quests.js';
+import { offeneWegBelohnungen, wegFuer, wegHolen } from '../trophaeenweg.js';
 import { runnerCashout, runnerLauf, runnerRangliste, runnerTagesstand } from '../runner.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
 import {
@@ -171,6 +177,15 @@ import {
   tischPerCode,
   verlasseKiTisch,
 } from '../tables/service.js';
+import {
+  anfrageStand,
+  brauchtZusage,
+  entscheide,
+  gastgeberVon,
+  offeneAnfragen,
+  stelleAnfrage,
+  zieheAnfrageZurueck,
+} from '../tables/anfragen.js';
 import type { Vermittlung } from '../suche/vermittlung.js';
 import type { PartyRuntime } from '../runtime/party.js';
 
@@ -281,6 +296,11 @@ export interface AppDeps {
    * eingerichtet ist und man trotzdem an die Daten muss.
    */
   readonly diagnoseSchluessel?: string | null;
+  /**
+   * Schluessel fuer die Auswertung der Werbelinks (`HERKUNFT_SCHLUESSEL`,
+   * src/herkunft.ts). Fehlt er, ist `/api/herkunft/auswertung` zu.
+   */
+  readonly herkunftSchluessel?: string | null;
   /**
    * OAuth-Client-ID fuer "Mit Google anmelden" (GOOGLE_CLIENT_ID). Fehlt
    * sie, gibt es den Knopf nicht — der Rest der Anmeldung laeuft unveraendert.
@@ -826,6 +846,31 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitSchreiben: LIMIT_SCHREIBEN,
   });
 
+  // „Passt nicht" zu Inhalten der Partykiste — nur auf staging, siehe dort.
+  // Dieselbe Stufe wie in `me` (unten), aus der das Feedback-Widget liest.
+  partykisteRouten(app, {
+    db: deps.db,
+    stage: deps.stage ?? 'production',
+    requireAccount,
+    requireAufsicht,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // Werbelinks `?q=`: Besuch zaehlen, Summen fuer den bro-server — siehe dort.
+  herkunftRouten(app, {
+    db: deps.db,
+    schluessel: deps.herkunftSchluessel ?? null,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // Doppelkopf lernen: Lernpfad, Lektionen, Uebungstisch — siehe dort.
+  lernpfadRouten(app, {
+    db: deps.db,
+    requireAccount,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
   pushRouten(app, {
     db: deps.db,
     requireSitzung: async (request) => {
@@ -847,10 +892,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * nichts.
    */
   app.post('/api/auth/gast', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
-    const { name } = z
-      .object({ name: z.string().min(GAST_NAME_MIN).max(GAST_NAME_MAX) })
+    const { name, herkunft } = z
+      .object({
+        name: z.string().min(GAST_NAME_MIN).max(GAST_NAME_MAX),
+        // Kennung aus `?q=` (src/herkunft.ts). Ungueltig heisst: ohne
+        // Herkunft anlegen, nicht abweisen.
+        herkunft: z.string().max(100).optional(),
+      })
       .parse(request.body);
     const { token, accountId, displayName } = await gastKonto(deps.auth, name);
+    if (herkunft !== undefined) await gastkontoZaehlen(deps.db, accountId, herkunft);
     setSession(reply, token);
     // Wie beim Passwort-Login: Nur die iOS-Huelle bekommt das Token selbst.
     if (istAppHerkunft(request.headers.origin)) {
@@ -1017,14 +1068,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const getragen = await getragenVon(deps.db, accountId);
 
     /*
-     * Was bereitliegt — zwei Zahlen, damit der Startbildschirm einen Punkt an
+     * Was bereitliegt — drei Zahlen, damit der Startbildschirm einen Punkt an
      * die Truhe haengen kann. Bewusst nur die Zaehler und nicht die ganzen
-     * Listen: Die stehen an /api/chests und /api/quests, und die ruft nur auf,
-     * wer den Bildschirm wirklich oeffnet.
+     * Listen: Die stehen an /api/chests, /api/quests und /api/weg, und die
+     * ruft nur auf, wer den Bildschirm wirklich oeffnet.
+     *
+     * Der Weg ist eine eigene Zahl und nicht in `truhen` mitgezaehlt: Der
+     * Knopf "Heute" zeigt Truhen und Aufgaben, und eine Weg-Truhe liegt dort
+     * nicht. Die Trophaeensumme kommt aus der schon geladenen Statistik.
      */
-    const [truhenOffen, belohnungenOffen] = await Promise.all([
+    const trophaeen = stats.reduce((summe, zeile) => summe + zeile.trophies, 0);
+    const [truhenOffen, belohnungenOffen, wegOffen, lernen] = await Promise.all([
       offeneTruhen(deps.db, accountId, account.xp),
       offeneBelohnungen(deps.db, accountId),
+      offeneWegBelohnungen(deps.db, accountId, trophaeen),
+      lernserieKurz(deps.db, accountId),
     ]);
     return reply.send({
       ...rest,
@@ -1050,7 +1108,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
        * einmal falsch geschriebene Zeile darf nicht das ganze Profil sperren.
        */
       figur: leseBemalung(figurBemalung),
-      bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen },
+      bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen, weg: wegOffen },
+      /** Die Lernserie fuer die Flamme auf dem Start (lernpfad.ts) — nur die Zahlen. */
+      lernen,
       /*
        * Stufe und Fortschritt fertig gerechnet. Der Client bekommt die
        * Zahlen, nicht die Kurve: Wird sie je nachjustiert, gilt das
@@ -1193,6 +1253,37 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .object({ questId: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/) })
         .parse(request.params);
       return reply.send(await aufgabeAbholen(deps.db, accountId, questId));
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Trophaeenweg
+  // -------------------------------------------------------------------------
+
+  /**
+   * Der ganze Weg: alle Stufen bis zur naechsten ueber 1000, auch die
+   * gesperrten, mit Zustand (erreicht, geholt, was drin war).
+   */
+  app.get('/api/weg', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    return reply.send(await wegFuer(deps.db, accountId));
+  });
+
+  /**
+   * Eine Stufe abholen. Ob es sie gibt und ob sie erreicht ist, entscheidet
+   * `wegHolen` gegen den Katalog und die Trophaeen am Server; hier wird nur die
+   * Form geprueft. Ein zweiter Aufruf bekommt einen Konflikt, keinen zweiten
+   * Wurf.
+   */
+  app.post(
+    '/api/weg/:schwelle/holen',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const { schwelle } = z
+        .object({ schwelle: z.string().regex(/^[1-9][0-9]{0,6}$/).transform(Number) })
+        .parse(request.params);
+      return reply.send(await wegHolen(deps.db, accountId, schwelle));
     },
   );
 
@@ -2131,6 +2222,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       const { code } = z.object({ code: z.string().min(1).max(24) }).parse(request.params);
       const table = await tischPerCode(deps.db, code);
       await pruefeBeitritt(request, table.id, accountId);
+      // Nicht-oeffentlich: erst die Zusage des Gastgebers (tables/anfragen.ts).
+      if (await stelltAnfrage(table.id, accountId)) {
+        return reply.send({ tableId: table.id, angefragt: true });
+      }
       await joinTable(deps.db, table.id, accountId);
       deps.vermittlung?.verlaesstAlle(accountId);
       deps.runtime.notify(table.id);
@@ -2182,10 +2277,75 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({ config: await tableRules(deps.db, tableId) });
   });
 
+  /**
+   * Braucht dieser Beitritt die Zusage des Gastgebers? Dann wird statt des
+   * Hinsetzens eine Anfrage gestellt, der Gastgeber bekommt eine Mitteilung,
+   * und die Antwort sagt `angefragt` — der Bildschirm wartet dann auf die
+   * Zusage (GET …/anfrage). Wer schon sitzt, kommt wie immer an seinen Platz.
+   */
+  async function stelltAnfrage(tableId: string, accountId: string): Promise<boolean> {
+    const { table, seats } = await tableWithSeats(deps.db, tableId);
+    if (!brauchtZusage(table)) return false;
+    if (seats.some((seat) => seat.accountId === accountId)) return false;
+    await stelleAnfrage(deps.db, tableId, accountId);
+    const gastgeber = gastgeberVon(seats);
+    if (gastgeber) deps.push?.anfrageGestellt(tableId, gastgeber, accountId);
+    return true;
+  }
+
+  /** Offene Beitrittsanfragen — nur der Gastgeber sieht sie. */
+  app.get('/api/tables/:tableId/anfragen', async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    const anfragen = await offeneAnfragen(deps.db, tableId, accountId);
+    return reply.send({
+      anfragen: anfragen.map((a) => ({ accountId: a.accountId, displayName: a.displayName })),
+    });
+  });
+
+  /** Der Gastgeber nimmt eine Anfrage an oder lehnt sie ab. */
+  app.post(
+    '/api/tables/:tableId/anfragen/:accountId',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const gastgeber = await requireAccount(request);
+      const { tableId, accountId } = z
+        .object({ tableId: z.string().uuid(), accountId: z.string().uuid() })
+        .parse(request.params);
+      const { annehmen } = z.object({ annehmen: z.boolean() }).parse(request.body);
+      await entscheide(deps.db, tableId, gastgeber, accountId, annehmen);
+      if (annehmen) {
+        deps.vermittlung?.verlaesstAlle(accountId);
+        // Der neue Sitz geht an alle Verbundenen, und ist der Tisch damit
+        // voll, startet die Partie von selbst — wie beim direkten Beitritt.
+        deps.runtime.notify(tableId);
+      }
+      return reply.send({ ok: true });
+    },
+  );
+
+  /** Was aus der eigenen Anfrage wurde: offen, angenommen oder abgelehnt. */
+  app.get('/api/tables/:tableId/anfrage', async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    return reply.send({ stand: await anfrageStand(deps.db, tableId, accountId) });
+  });
+
+  /** Eigene Anfrage zuruecknehmen. */
+  app.delete('/api/tables/:tableId/anfrage', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    await zieheAnfrageZurueck(deps.db, tableId, accountId);
+    return reply.send({ ok: true });
+  });
+
   app.post('/api/tables/:tableId/join', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
     await pruefeBeitritt(request, tableId, accountId);
+    if (await stelltAnfrage(tableId, accountId)) {
+      return reply.send({ ok: true, angefragt: true });
+    }
     await joinTable(deps.db, tableId, accountId);
     // Wer sich an einen Tisch setzt, steht nicht mehr in der Schnellsuche.
     deps.vermittlung?.verlaesstAlle(accountId);

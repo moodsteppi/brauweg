@@ -19,6 +19,8 @@
 import { useEffect, useState } from 'react';
 
 import { Buehne, Karte, Leute, Wahl, Wartet, namenFuer, type RundenProps } from './Runden';
+import { Flasche } from './Flasche';
+import { Wasserfall } from './Wasserfall';
 import { zaehlerWort, type BombeSicht, type KoenigsbecherSicht, type ZehnSekundenSicht } from './sicht';
 
 /* --------------------------------------------------------------------------
@@ -251,6 +253,16 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
       ? letzte.ziele.map((z) => (z === sicht.sitz ? 'dich' : namenFuer(sitze, z))).join(', ')
       : null;
 
+  /*
+   * Wasserfall (das Ass): einmal je Zug die große Einlage (Wasserfall.tsx).
+   * Die Kennung ist die Zahl aller bisher gezogenen Karten — sie ändert sich
+   * nur mit dem nächsten Zug, nicht mit jedem Serverfunk.
+   */
+  /* Am Legen, nicht am Ziehen: Seit der Flasche gilt die Karte erst nach dem
+     Ablegen, und `letzte` wechselt genau dann. */
+  const wasserfallKennung = !auf && letzte && letzte.karte.rang === 14 ? `${daten.gelegt}` : null;
+  const legenOffen = !auf && daten.offeneKarte !== null;
+
   const karte = letzte ? (
     <div className="pk-zd-karte">
       <Karte karte={letzte.karte} />
@@ -266,17 +278,26 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
 
   return (
     <>
+      <Wasserfall
+        kennung={wasserfallKennung}
+        karte={letzte?.karte ?? null}
+        getroffen={`${letzte && letzte.sitz === sicht.sitz ? 'Du hast' : `${letzte ? namenFuer(sitze, letzte.sitz) : 'Jemand'} hat`} das Ass gezogen — ${sicht.trinkmodus ? 'alle trinken' : 'alle kassieren'}!`}
+      />
       <Buehne
         oben={
           auf
             ? 'Die Runde ist um'
             : handOffen
               ? 'Hand hoch!'
-              : binDran
-                ? daten.wahlOffen
-                  ? 'Zeig auf jemanden'
-                  : 'Du ziehst'
-                : `${namenFuer(sitze, daten.amZug)} ${daten.wahlOffen ? 'zeigt auf jemanden' : 'zieht'}`
+              : legenOffen
+                ? binDran
+                  ? 'Leg deine Karte auf die Flasche'
+                  : `${namenFuer(sitze, daten.amZug)} legt die Karte auf die Flasche`
+                : binDran
+                  ? daten.wahlOffen
+                    ? 'Zeig auf jemanden'
+                    : 'Du ziehst'
+                  : `${namenFuer(sitze, daten.amZug)} ${daten.wahlOffen ? 'zeigt auf jemanden' : 'zieht'}`
         }
         gross={karte}
         unten={
@@ -301,13 +322,28 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
       {binDran && !handOffen && daten.wahlOffen ? (
         <Leute sicht={sicht} sitze={sitze} gewaehlt={-1} gesperrt={false} beiWahl={(ziel) => sende({ art: 'stimme', ziel })} />
       ) : null}
-      {binDran && !handOffen && !daten.wahlOffen ? (
+      {/* Über der Flasche, nicht darunter: Die Flasche ist hoch, und am Handy
+          rutschte der Knopf sonst unter den Bildschirmrand. */}
+      {binDran && !handOffen && !daten.wahlOffen && !legenOffen ? (
         <Wahl>
           <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'ziehen' })}>
             Karte ziehen
           </button>
         </Wahl>
       ) : null}
+
+      {/* Die Flasche: Jede gezogene Karte kommt obendrauf (Flasche.tsx). */}
+      <Flasche
+        flasche={daten.flasche}
+        offeneKarte={legenOffen ? daten.offeneKarte : null}
+        binDran={binDran}
+        gelegt={daten.gelegt}
+        sturz={daten.sturz}
+        sturzName={daten.sturz ? (daten.sturz.sitz === sicht.sitz ? 'Du trinkst' : `${namenFuer(sitze, daten.sturz.sitz)} trinkt`) : ''}
+        trinkWort={(zahl) => `${zahl} ${zaehlerWort(sicht.trinkmodus, zahl)}`}
+        onLegen={(versatz) => sende({ art: 'legen', versatz })}
+      />
+
 
       {daten.neueRegel ? (
         <p className="pk-ansage">

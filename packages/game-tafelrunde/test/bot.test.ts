@@ -336,8 +336,50 @@ describe('Bot: kaufen', () => {
      * dreimal so viel aus wie der Schildknappe, der dafuer laenger steht. Es
      * ist genau der Fall, in dem eine addierende Bewertung den Sandsack
      * gekauft haette (siehe `staerke`).
+     *
+     * DIESE PROBE IST ZUGLEICH DIE OBERE SCHRANKE FUER `ZAEHIGKEIT_HOCHZAHL`,
+     * und zusammen mit der naechsten klemmt sie die Zahl von beiden Seiten
+     * ein. Auf 2 gestellt — der Wert, den die Karte vorschlug, aus der die
+     * Hochzahl kommt — kauft der Bot hier den Schildknappen, und diese Zeile
+     * wird rot (nachgestellt am 22.09.2026; drei weitere Proben fielen mit).
      */
     assert.deepEqual(zug(p, 'hart'), { typ: 'kaufen', platz: 2 });
+  });
+
+  /**
+   * Die untere Schranke: ohne Hochzahl waere es das Irrlicht.
+   *
+   * Schildknappe und Irrlicht kosten beide 1 Gold, stehen beide in der
+   * Vorderreihe (Rolle `wache`, Reichweite 1) und teilen keine Marke mit dem
+   * Grimmbart auf dem Brett. Damit faellt alles weg, was sonst mitentscheidet:
+   * kein Markenbonus, keine Verschmelzung, und weil beide Nahkaempfer sind,
+   * auch kein Unterschied in der Deckung (`deckungIm`). Uebrig bleibt genau
+   * die Frage, um die es bei `ZAEHIGKEIT_HOCHZAHL` geht.
+   *
+   * Als reines Produkt liegen die beiden praktisch gleichauf, und das Irrlicht
+   * liegt vorn: 203 zu 205. Mit der Hochzahl dreht sich das auf 211 zu 199 —
+   * der Schildknappe haelt 1207 aus, das Irrlicht 862, und diese Spanne wiegt
+   * jetzt schwerer als die 17 zu 24 beim Austeilen.
+   *
+   * ES IST DAS EINZIGE PAAR IM KATALOG, an dem sich das ohne Nebenwirkung
+   * zeigen laesst — gleiche Kosten, gleiche Reichweite, gedrehte Reihenfolge.
+   * Wer die Hochzahl auf 1 zuruecknimmt, bekommt hier Platz 1 statt Platz 0.
+   */
+  it('zieht bei fast gleichem Produkt die zaehere Einheit vor', () => {
+    const brett = leeresBrett();
+    brett[platzNummer(0, 2)] = { id: 'grimmbart', stufe: 1 };
+    // Level 9 wie oben: Dort steht kein Aufstieg mehr vor dem Kauf.
+    const p = mitHeer(neu(), 0, {
+      gold: 3,
+      level: 9,
+      brett,
+      bank: leereBank(),
+      laden: ladenMit(['schildknappe', 'irrlicht']),
+    });
+    // Ohne `sanft`: Dessen Patzerquote von 0,75 wuerfelt die Wahl aus.
+    for (const grad of ['normal', 'hart'] as const) {
+      assert.deepEqual(zug(p, grad), { typ: 'kaufen', platz: 0 }, grad);
+    }
   });
 
   /**

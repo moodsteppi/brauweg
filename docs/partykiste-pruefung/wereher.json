@@ -1,0 +1,780 @@
+{
+  "katalog": "wereher",
+  "geprueft": 300,
+  "raus": [
+    {
+      "id": "w002",
+      "text": "Wer würde eher aus Versehen die Gruppe im falschen Chat anschreiben?",
+      "grund": "Unklar formuliert und Dublette zu w015 (private Nachricht öffentlich)."
+    },
+    {
+      "id": "w026",
+      "text": "Wer würde eher im Gruppenchat den falschen Namen in eine Nachricht schreiben?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken. Nah an w015."
+    },
+    {
+      "id": "w058",
+      "text": "Wer würde eher als Erster auf der Tanzfläche stehen?",
+      "grund": "Dublette dem Sinn nach zu w003; der bleibt. (als Erster auf der Tanzfläche)"
+    },
+    {
+      "id": "w076",
+      "text": "Wer würde eher auf einer Wanderung die Karte verkehrt herum halten?",
+      "grund": "Dublette dem Sinn nach zu w006; der bleibt. (Karte verkehrt herum)"
+    },
+    {
+      "id": "w050",
+      "text": "Wer würde eher bei einem Ausflug die Richtung vorgeben und komplett falsch liegen?",
+      "grund": "Dublette dem Sinn nach zu w009; der bleibt. (Richtung vorgeben, sich verlaufen)"
+    },
+    {
+      "id": "w051",
+      "text": "Wer würde eher mit dem Rad eine \"Abkürzung\" nehmen und sich dabei verfahren?",
+      "grund": "Dublette dem Sinn nach zu w009; der bleibt. (Abkürzung, verfahren)"
+    },
+    {
+      "id": "w087",
+      "text": "Wer würde eher mit einem Umweg fest davon überzeugt sein, schneller anzukommen?",
+      "grund": "Dublette dem Sinn nach zu w009; der bleibt. (Umweg, überzeugt vom richtigen Weg)"
+    },
+    {
+      "id": "w032",
+      "text": "Wer würde eher auf einer langen Autofahrt als Erster wegdösen?",
+      "grund": "Dritte Variante von „schläft als Erster ein\" neben w011 und w021."
+    },
+    {
+      "id": "w072",
+      "text": "Wer würde eher bei einem Spieleabend am Ende allen die Regeln neu erklären wollen?",
+      "grund": "Dublette dem Sinn nach zu w025; der bleibt. (Regeln neu erklären/umschreiben)"
+    },
+    {
+      "id": "w088",
+      "text": "Wer würde eher bei einem Spieleabend als Erster die eigenen Regeln vergessen?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken. Nah an w025."
+    },
+    {
+      "id": "w043",
+      "text": "Wer würde eher beim Umzug die falschen Kartons als Erstes auspacken?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "w068",
+      "text": "Wer würde eher nach einem Umzug vergessen, wo die Kaffeemaschine gelandet ist?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "w023",
+      "text": "Wer würde eher bei einer Schnitzeljagd als Letzter aufgeben?",
+      "grund": "Nische: setzt ein Hobby oder eine Lebenslage voraus, die der halbe Tisch nicht hat. (Schnitzeljagd)"
+    },
+    {
+      "id": "w086",
+      "text": "Wer würde eher das letzte Stück Kuchen heimlich verschwinden lassen?",
+      "grund": "Dublette dem Sinn nach zu w024; der bleibt. (das letzte Stück heimlich)"
+    },
+    {
+      "id": "w079",
+      "text": "Wer würde eher mit einem Trick versuchen, die letzte Portion Nachtisch zu sichern?",
+      "grund": "Dublette dem Sinn nach zu w024; der bleibt. (die letzte Portion sichern)"
+    },
+    {
+      "id": "w056",
+      "text": "Wer würde eher den Fotoapparat ausgerechnet am Ausflugstag zu Hause vergessen?",
+      "grund": "Veraltet – einen Fotoapparat nimmt kaum noch jemand mit."
+    },
+    {
+      "id": "w049",
+      "text": "Wer würde eher die Trinkflasche ausgerechnet auf der Wanderung vergessen?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "w035",
+      "text": "Wer würde eher bei einer Umfrage in der Runde als Letzter antworten?",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "w036",
+      "text": "Wer würde eher aus Versehen ein Selfie mit dem Handy eines anderen machen?",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "w094",
+      "text": "Wer würde eher die Playlist auf einer Feier heimlich um eigene Lieder erweitern?",
+      "grund": "Dublette dem Sinn nach zu w037; der bleibt. (Musik heimlich umstellen)"
+    },
+    {
+      "id": "w039",
+      "text": "Wer würde eher live eine Ausrede für Zuspätkommen erfinden?",
+      "grund": "Dublette dem Sinn nach zu w089; der bleibt. (Ausrede fürs Zuspätkommen)"
+    },
+    {
+      "id": "w061",
+      "text": "Wer würde eher jemanden mit einem richtig schlechten Kalauer aufheitern wollen?",
+      "grund": "Dublette dem Sinn nach zu w055; der bleibt. (schlechtes Wortspiel)"
+    },
+    {
+      "id": "w059",
+      "text": "Wer würde eher bei einem Rätsel einfach raten, statt nachzudenken?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "w063",
+      "text": "Wer würde eher ein Zelt mitten im Regen aufbauen, statt auf besseres Wetter zu warten?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "w064",
+      "text": "Wer würde eher bei einem Spaziergang die geplante Strecke einfach verdoppeln?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "w066",
+      "text": "Wer würde eher bei einer Autopanne als Erster den Pannendienst rufen?",
+      "grund": "Keine Eigenschaft, auf die man zeigt – den Pannendienst ruft einfach wer."
+    },
+    {
+      "id": "w071",
+      "text": "Wer würde eher mitten im Videocall den Hintergrund wechseln, ohne es zu merken?",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "w100",
+      "text": "Wer würde eher beim Fotoshooting am längsten nach der perfekten Pose suchen?",
+      "grund": "Dublette dem Sinn nach zu w078; der bleibt. (am längsten posieren)"
+    },
+    {
+      "id": "w082",
+      "text": "Wer würde eher mitten im Telefonat aus Versehen auflegen und gleich zurückrufen?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "w083",
+      "text": "Wer würde eher versuchen, den Fernseher mit einem uralten Trick zu reparieren?",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "w092",
+      "text": "Wer würde eher das Wetter für einen Ausflug komplett falsch einschätzen?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "w096",
+      "text": "Wer würde eher bei einem Spaziergang plötzlich einen ganz neuen Weg vorschlagen?",
+      "grund": "Dublette dem Sinn nach zu w009/w064 (spontan anderer Weg)."
+    },
+    {
+      "id": "w144",
+      "text": "Wer würde eher einen Wettbewerb im Luftballon-Aufblasen gewinnen?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "w145",
+      "text": "Wer würde eher im Kino den Film laut mitsprechen?",
+      "grund": "Dublette dem Sinn nach zu w047; der bleibt. (Film durchgehend kommentieren)"
+    },
+    {
+      "id": "w146",
+      "text": "Wer würde eher einen Tag lang nur rückwärts laufen, wenn man ihn darum bittet?",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "w152",
+      "text": "Wer würde eher bei einer Wette auf Ananas-Pizza verzichten?",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "w103",
+      "text": "Wer würde eher beim Drehen so lange brauchen, dass alle anderen schon fertig sind?",
+      "grund": "Ohne Zusammenhang unverständlich – „beim Drehen\" kann alles heißen."
+    },
+    {
+      "id": "w106",
+      "text": "Wer würde eher bekifft eine Diskussion anfangen, an die sich am nächsten Tag niemand erinnert?",
+      "grund": "Dublette dem Sinn nach zu w108; der bleibt. (bekifft vergessen)"
+    },
+    {
+      "id": "w107",
+      "text": "Wer würde eher bekifft die Musik aussuchen und dabei nie über den ersten Song hinauskommen?",
+      "grund": "Zu harmlos und beliebig – keine Geschichte, kein Lachen, nur Abhaken."
+    },
+    {
+      "id": "w237",
+      "text": "Wer würde eher einen Ex-Partner im Urlaub zufällig wiedertreffen und wieder schwach werden?",
+      "grund": "Dublette dem Sinn nach zu w225; der bleibt. (beim Ex wieder schwach werden)"
+    },
+    {
+      "id": "w244",
+      "text": "Wer würde eher heimlich in einen Promi verliebt sein und dessen Bild im Portemonnaie tragen?",
+      "grund": "Verquer; Promi-Foto im Portemonnaie macht niemand."
+    },
+    {
+      "id": "w252",
+      "text": "Wer würde eher auf einem Ausflug auf den Arm eines Fremden einschlafen?",
+      "grund": "Ergibt keinen rechten Sinn; nach dem Vorlesen fragt man „hä?\"."
+    },
+    {
+      "id": "w255",
+      "text": "Wer würde eher auf einer Party das Bad besetzen, um in Ruhe zu telefonieren — mit einem Schwarm?",
+      "grund": "Zu verschachtelt; die Pointe kommt erst nach dem Gedankenstrich."
+    },
+    {
+      "id": "w265",
+      "text": "Wer würde eher die Dünnwand-WG mit nächtlichem Besuch wachhalten?",
+      "grund": "Dublette dem Sinn nach zu w295; der bleibt. (so laut, dass alle Bescheid wissen); der derbe bleibt."
+    },
+    {
+      "id": "w275",
+      "text": "Wer würde eher in einem Liebesroman als Hauptfigur funktionieren?",
+      "grund": "Kein Verhalten, auf das man zeigen kann – zu abstrakt."
+    },
+    {
+      "id": "w278",
+      "text": "Wer würde eher zum ersten Date die eigene Mutter mitbringen?",
+      "grund": "Absurd, passt auf niemanden am Tisch."
+    }
+  ],
+  "umstufen": [
+    {
+      "id": "w101",
+      "text": "Wer würde eher bekifft die Pizza bestellen und die Adresse falsch angeben?",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "w102",
+      "text": "Wer würde eher bekifft eine halbe Stunde über eine Wolke reden?",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "w104",
+      "text": "Wer würde eher bekifft behaupten, er sei überhaupt nicht bekifft?",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "w105",
+      "text": "Wer würde eher bekifft den ganzen Snackvorrat der Gruppe allein wegessen?",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "w108",
+      "text": "Wer würde eher bekifft mitten im Satz vergessen, was er sagen wollte?",
+      "von": 2,
+      "nach": 3,
+      "grund": "Drogen gehören laut Regelwerk auf „derb\"; Gäste ohne Konto (Alter unbekannt) bekommen höchstens „pikant\"."
+    },
+    {
+      "id": "w238",
+      "text": "Wer würde eher einen kitschigen Heiratsantrag vor Publikum machen?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nicht anzüglich – passt an jeden Tisch, auch mit Eltern und Kollegen."
+    },
+    {
+      "id": "w239",
+      "text": "Wer würde eher Liebeskummer mit einem Eimer Eis und traurigen Liedern behandeln?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nicht anzüglich – passt an jeden Tisch, auch mit Eltern und Kollegen."
+    },
+    {
+      "id": "w249",
+      "text": "Wer würde eher in einer Fernbeziehung landen?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nicht anzüglich – passt an jeden Tisch, auch mit Eltern und Kollegen."
+    },
+    {
+      "id": "w260",
+      "text": "Wer würde eher bei einem Liebesfilm heimlich weinen?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nicht anzüglich – passt an jeden Tisch, auch mit Eltern und Kollegen."
+    },
+    {
+      "id": "w261",
+      "text": "Wer würde eher im Club so lange tanzen, bis das Licht angeht?",
+      "von": 2,
+      "nach": 1,
+      "grund": "Nicht anzüglich – passt an jeden Tisch, auch mit Eltern und Kollegen."
+    },
+    {
+      "id": "w283",
+      "text": "Wer würde eher einen Sexshop mit einer ausführlichen Beratung verlassen?",
+      "von": 3,
+      "nach": 2,
+      "grund": "Robins Beispiel: Sexshop ist kein derb."
+    },
+    {
+      "id": "w284",
+      "text": "Wer würde eher im Urlaub am FKK-Strand landen und bleiben?",
+      "von": 3,
+      "nach": 2,
+      "grund": "Fiele an einem pikanten Tisch nicht auf; Kneipenniveau, nicht „richtig derb\"."
+    },
+    {
+      "id": "w289",
+      "text": "Wer würde eher Kondome im Großpack kaufen und dabei die Kassiererin anstrahlen?",
+      "von": 3,
+      "nach": 2,
+      "grund": "Fiele an einem pikanten Tisch nicht auf; Kneipenniveau, nicht „richtig derb\". Kondome kaufen ist Alltag."
+    },
+    {
+      "id": "w292",
+      "text": "Wer würde eher beim JGA einen Stripper oder eine Stripperin buchen?",
+      "von": 3,
+      "nach": 2,
+      "grund": "Fiele an einem pikanten Tisch nicht auf; Kneipenniveau, nicht „richtig derb\". Stripper beim JGA ist Kneipenniveau."
+    },
+    {
+      "id": "w293",
+      "text": "Wer würde eher die Hochzeitsnacht verschlafen?",
+      "von": 3,
+      "nach": 2,
+      "grund": "Fiele an einem pikanten Tisch nicht auf; Kneipenniveau, nicht „richtig derb\". Nicht sexuell, nur angedeutet."
+    }
+  ],
+  "umschreiben": [
+    {
+      "id": "w006",
+      "text": "Wer würde eher auf einem Roadtrip die Karte verkehrt herum halten?",
+      "neu": "Wer würde eher trotz Navi falsch abbiegen und dem Navi die Schuld geben?",
+      "grund": "Papierkarten nutzt kaum noch jemand; die Navi-Variante trifft den Tisch."
+    },
+    {
+      "id": "w060",
+      "text": "Wer würde eher vom Kurztrip den halben ungenutzten Koffer wieder mit nach Hause bringen?",
+      "neu": "Wer würde eher für drei Tage Urlaub den größten Koffer packen?",
+      "grund": "Satz holpert („den halben ungenutzten Koffer\")."
+    },
+    {
+      "id": "w142",
+      "text": "Wer würde eher eine Einkaufstour mit einem vollen Wagen und ohne Geldbeutel enden lassen?",
+      "neu": "Wer würde eher mit vollem Wagen an der Kasse merken, dass der Geldbeutel zu Hause liegt?",
+      "grund": "Der alte Satz ist verdreht und schwer zu lesen."
+    },
+    {
+      "id": "w224",
+      "text": "Wer würde eher auf einem ersten Date einen peinlichen Witz machen und trotzdem ein zweites bekommen?",
+      "neu": "Wer würde eher auf einem ersten Date einen Witz reißen, der komplett danebengeht?",
+      "grund": "Zu lang; der Nachsatz mit dem zweiten Date nimmt die Pointe."
+    },
+    {
+      "id": "w273",
+      "text": "Wer würde eher ein Weihnachtsgeschenk kaufen, das eigentlich für sich selbst ist — Dessous inklusive?",
+      "neu": "Wer würde eher dem Partner Dessous schenken, die eigentlich ein Geschenk an sich selbst sind?",
+      "grund": "Der alte Satz ist unklar („Dessous inklusive\")."
+    },
+    {
+      "id": "w286",
+      "text": "Wer würde eher in einer Umkleidekabine erwischt werden?",
+      "neu": "Wer würde eher beim Sex in einer Umkleidekabine erwischt werden?",
+      "grund": "Ohne „beim Sex\" ist es nicht derb, sondern nur Ladendiebstahl-Verdacht."
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 2,
+      "text": "Wer würde eher nach einem Filmriss den Abend über die Instagram-Storys der anderen rekonstruieren?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher dem Türsteher eine rührende Geschichte erzählen, um doch reinzukommen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher auf einer Party jemanden küssen, nur damit der Ex es sieht?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher den Schwarm auf Instagram bis zum allerersten Foto zurückstalken?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher mit dem DJ flirten, nur damit er das eigene Lied spielt?"
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "weihnachten"
+      ],
+      "text": "Wer würde eher auf der Weihnachtsfeier mit der Chefin oder dem Chef knutschen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher in den Klamotten vom Vorabend zur Arbeit kommen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher eine Dating-App nur für die Bestätigung nutzen und nie jemanden treffen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher auf einem Date vor lauter Nervosität das Glas umkippen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher nach drei Drinks jedem am Tisch sagen, wie sehr er ihn liebt?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher auf einer Party auf dem Klo einschlafen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher eine neue Nummer unter „Bar, rote Jacke\" speichern?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher eine Woche nach der Trennung schon das nächste Date haben?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher für einen Schwarm ein neues Hobby anfangen und es nach der Trennung sofort hinschmeißen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher im Club die Schuhe ausziehen und barfuß weitertanzen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher einem Date erzählen, dass es bei ihm „immer so ordentlich\" ist?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher auf einem Festival ohne eigenes Zelt, aber mit neuer Bekanntschaft aufwachen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher auf einer Party behaupten, Pilotin oder Arzt zu sein, nur um zu flirten?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher einen fetten Kater mit „ich bin nur ein bisschen müde\" erklären?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher mit jemandem hier am Tisch schon mal was gehabt haben?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher in einer Beziehung als Erster „Ich liebe dich\" sagen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher auf einem Date den ganzen Abend nur über sich selbst reden?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher einer fremden Person in der Bahn einen Zettel mit der Nummer zustecken?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher nach nur einem Date mit einer App-Bekanntschaft in den Urlaub fahren?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher beim Flaschendrehen als Einziger kneifen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher mit einem Ex befreundet bleiben – mit gewissen Vorzügen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher einen Knutschfleck stolz herumzeigen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher auf einem Date so betrunken werden, dass er auf dem Heimweg einschläft?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher nach dem Club noch alle zu sich nach Hause einladen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher heimlich in den Partner oder die Partnerin eines Kumpels verliebt sein?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher beim Speed-Dating allen denselben Anmachspruch bringen?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher von einem Date erzählen, das es nie gegeben hat?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher beim Wiedersehen mit der ersten großen Liebe sofort schwach werden?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher in der Sauna das Handtuch um den Kopf statt um die Hüfte wickeln?"
+    },
+    {
+      "haerte": 2,
+      "text": "Wer würde eher eine Hausparty so eskalieren lassen, dass die Polizei klingelt?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher einen OnlyFans-Account aufmachen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher im Bett nach drei Minuten fertig sein?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher beim Sex einen Krampf kriegen und laut „Aua\" schreien?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher einen Orgasmus vortäuschen, nur damit es schneller vorbei ist?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher mit jemandem hier am Tisch im Bett landen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher eine Freundschaft Plus anfangen und sich dann doch verlieben?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher im Club auf dem Klo Sex haben?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher Sex im Büro haben?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher jemandem hier am Tisch ein Sexspielzeug zum Geburtstag schenken?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher beim Sex aus Versehen jemanden anrufen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher Sex mit Socken haben und das auch noch verteidigen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher beim Dirty Talk etwas völlig Unerotisches sagen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher einen Swingerclub ausprobieren?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher Sex am Strand haben und danach eine Woche lang Sand finden?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher in ein Taxi kotzen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher kotzen und fünf Minuten später wieder an der Bar stehen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher betrunken in die Hose pinkeln?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher ins Waschbecken pinkeln?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher beim Wildpinkeln erwischt werden?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher eine Woche lang dieselbe Unterhose tragen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher beim Sex furzen und es aufs Bett schieben?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher Popel unter den Tisch kleben?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher mit Mundgeruch knutschen und es nicht merken?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher ein benutztes Kondom im Bett eines Freundes vergessen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher auf einem Festival fünf Tage lang nicht duschen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher bekifft zum Familienessen erscheinen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher nach einem Space Cake zwei Stunden lang die Decke anstarren?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher auf Pilzen ein tiefes Gespräch mit einem Baum führen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher einen Joint drehen, der beim Anzünden auseinanderfällt?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher mit jemandem sexten, den er nie getroffen hat?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher die Zahl seiner Sexpartner nach unten schummeln?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher mit dem Ex schlafen, obwohl alle hier am Tisch abgeraten haben?"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "jga"
+      ],
+      "text": "Wer würde eher beim JGA an der Stripstange eine Show hinlegen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher fremdgehen und es sofort beichten?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher nach dem Sex als Erstes den Kühlschrank plündern?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde sich eher nach einem One-Night-Stand rausschleichen, während der andere noch schläft?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher einen Fetisch haben, von dem hier niemand etwas ahnt?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher beim Sex aus dem Bett fallen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher beim Sex im Auto aus Versehen die Hupe erwischen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher das erste Date direkt im Bett beenden?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher nach dem Sex fragen: „Und, wie war ich?\""
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher Sex auf der Waschmaschine im Schleudergang ausprobieren?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher Pornos wegen der Handlung schauen – angeblich?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher in einem Porno mitspielen, wenn die Kohle stimmt?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher beim Sex zwischendurch aufs Handy schauen?"
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend"
+      ],
+      "text": "Wer würde eher nachts nackt durch die WG laufen und dabei einem Mitbewohner begegnen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher nach einer Party neben einem vollen Kotzeimer aufwachen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher eine Dating-App nur für Sex benutzen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher Sex im Kino haben?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher am selben Tag mit zwei verschiedenen Leuten schlafen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher auf einer Party am Ende nackt dastehen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher eine Affäre mit der Chefin oder dem Chef anfangen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher professionelle Nacktfotos von sich machen lassen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher im Bett Sahne und Schokolade einsetzen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher auf einer Party das Klo verstopfen und einfach verschwinden?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher ein Nacktfoto von sich als Sperrbildschirm haben?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher ein Sex-Date absagen, weil die Serie gerade zu spannend ist?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher beim Kiffen den Rauchmelder auslösen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher nach einer Party in einem fremden Bett ohne Unterhose aufwachen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher ein Sexspielzeug in der Tasche haben und es ausgerechnet bei der Arbeit fallen lassen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher Sex in der Wohnung der Eltern haben, während die nebenan sitzen?"
+    },
+    {
+      "haerte": 3,
+      "text": "Wer würde eher einen Porno im Browser offen lassen, während der Laptop am Fernseher hängt?"
+    }
+  ]
+}

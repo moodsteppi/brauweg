@@ -256,6 +256,22 @@ export interface Gangart {
  * Siegen um 100, und keine Deutung traegt mehr als die Streuung. Wer eine
  * Gangart misst, misst den Kontrolllauf mit.
  *
+ * DIE ZAEHIGKEITS-HOCHZAHL HAT SIE NICHT BEWEGT, nachgemessen am 22.09.2026,
+ * als `ZAEHIGKEIT_HOCHZAHL` von 1 auf 1,2 ging. Das war zu erwarten und ist
+ * trotzdem gemessen worden, weil die Regel dieses Absatzes keine Ausnahmen
+ * kennt: Die Hochzahl hilft ALLEN Sitzen gleich, sie kann eine Gangart gegen
+ * die andere also nur ueber Umwege verschieben. Sechs Saatbasen zu je 400
+ * Partien zu viert, Schnitt je 400, links der alte und rechts der neue Stand
+ * auf DENSELBEN Basen:
+ *
+ *     hart : normal    207,2 : 64,3      214,5 : 61,9
+ *     hart : sanft     378,5 :  7,2      375,3 :  8,2
+ *     normal : sanft   354,0 : 15,3      344,7 : 18,4
+ *
+ * Die Reihenfolge steht, die Abstaende bewegen sich im Rauschen. (Die Zahlen
+ * der Tabelle darueber stehen daneben, weil sie aus je EINER Basis kommen und
+ * diese hier aus sechs — kein Widerspruch, eine andere Stichprobe.)
+ *
  * WAS DIE ZAHLEN SCHON ZWEIMAL GEKIPPT HAT, WAR DER LADEN. Am 05.09.2026
  * verlor `hart` gegen `normal` (77 : 107,7) — nicht wegen der kurzen Partie
  * und schon gar nicht wegen des Zeitraffers (bei 20 Leben bewegt er die Zahl
@@ -320,6 +336,102 @@ const POLSTER_AB_RUNDE = 4;
 const STAERKE_TEILER = 100;
 
 /**
+ * Wie stark die Zaehigkeit gegenueber dem Austeilen zaehlt.
+ *
+ * WARUM UEBERHAUPT EINE HOCHZAHL: Wer stirbt, teilt nicht mehr aus. Das reine
+ * Produkt `haelt * teiltAus` behandelt Leben und Schaden als austauschbar und
+ * unterschaetzt die Zaehigkeit damit — wer laenger steht, schlaegt nicht nur
+ * oefter, sondern bindet auch den Gegner, der auf ihn einschlaegt.
+ *
+ * UND GENAU HIER LIEGT DIE FALLE, DERETWEGEN DIESER ABSATZ SO KURZ BLEIBT:
+ * Denkt man das zu Ende ("beide Haelften des Vorteils zaehlen, also
+ * quadrieren"), landet man bei 2,00 — dem schlechtesten Wert im ganzen Feld,
+ * siehe unten. Das Argument ueberschaetzt sich, weil es nur den Anfang des
+ * Kampfes beschreibt. Zaehigkeit, die ueber das Ende des Kampfes hinausreicht,
+ * ist verschenkt — und wer zu wenig austeilt, kommt an die Hoechstdauer
+ * (`HOECHSTDAUER_MS` in kampf.ts). Dort gewinnt nicht der, dem mehr Leben
+ * geblieben ist, sondern der, der den ANDEREN naeher an den Tod gedrueckt hat
+ * (`entscheideNachZeit`); ein Heer aus Saecken verliert das Zeitpatt, das es
+ * selbst herbeigefuehrt hat. Wie weit der Vorteil traegt, ist deshalb keine
+ * Ueberlegung, sondern eine Messung — und sie faellt klein aus.
+ *
+ * DIE ZAHL IST GEMESSEN, nicht hergeleitet — der Betrag, um den die Zaehigkeit
+ * ueberwiegt, folgt aus keiner Rechnung, die man aufschreiben koennte.
+ * Gemessen mit `werkzeug/gangarten.mjs` (wie, steht unten): Alle vier Sitze
+ * spielen `normal`, nur Sitz 0 rechnet mit der Hochzahl. Die Saat haengt nicht
+ * an ihr, zwei Laeufe spielen also DIESELBEN Partien, und verglichen wird die
+ * Entscheidung statt der Stichprobe. Je 400 Partien ueber zwanzig Saatbasen,
+ * eindeutige Siege von Sitz 0 je 400 (100 waere unentschieden), dazu der
+ * t-Wert des gepaarten Unterschieds ueber die zwanzig Basen:
+ *
+ *     0,80     56,7   -46,1   t -25,6
+ *     0,90     68,7   -34,2   t -20,0
+ *     0,95     94,1    -8,8   t  -7,0
+ *     0,98    100,0    -2,9   t  -3,1
+ *     1,00    102,8      —            der Stand bis zum 22.09.2026
+ *     1,01    104,6    +1,8   t  +4,1
+ *     1,02    106,2    +3,4   t  +4,0
+ *     1,05    108,3    +5,4   t  +3,2
+ *     1,10    109,3    +6,5   t  +4,0
+ *     1,15    109,7    +6,8   t  +4,2
+ *     1,20    108,3    +5,5   t  +3,9   <- gebaut
+ *     1,25    108,7    +5,8   t  +3,0
+ *     1,30    109,0    +6,1   t  +3,2
+ *     1,35    108,0    +5,2   t  +2,7
+ *     1,50     89,0   -13,8   t  -5,3
+ *     1,75     74,4   -28,4   t -11,4
+ *     2,00     64,8   -38,0   t -14,4
+ *
+ * QUADRATISCH WAERE DER NAHELIEGENDE GRIFF UND IST DER SCHLIMMSTE: Die Karte,
+ * aus der diese Arbeit kommt, schlug ausdruecklich "etwa quadratisch" vor. Bei
+ * 2,00 verliert der Bot 38 von 100 Siegen — mehr, als er ohne jede Hochzahl
+ * verliert. Wer die Zahl hebt, hebt sie um Zehntel und misst nach.
+ *
+ * 1,20 IST DIE MITTE DER EBENE und nicht ihr hoechster Punkt (1,15). Dieselbe
+ * Wahl wie bei `REICHWEITEN_GEWICHT`, aus demselben Grund: Von 1,05 bis 1,35
+ * liegen alle sieben Messpunkte zwischen +5,2 und +6,8, unterscheidbar sind
+ * sie nicht. Das Maximum einer solchen Ebene ist Rauschen; die Mitte laesst
+ * nach beiden Seiten gleich viel Luft, und die Kanten sind steil.
+ *
+ * DIE RICHTUNG GILT AUCH FUER DIE ANDEREN BESETZUNGEN, gemessen bei 1,20 ueber
+ * dieselben zwanzig Basen: `hart` gegen `hart` +9,5 (t 5,9), `sanft` gegen
+ * `sanft` +6,9 (t 3,4), das Duell zu zweit +6,3 (t 3,5). Zu acht steht +2,2
+ * bei t 1,0 — dieselbe Richtung, aber bei 50 Siegen je 400 zu duenn fuer eine
+ * Aussage.
+ *
+ * NACHMESSEN GEHT NUR MIT EINER SCHRAUBE, UND DIE IST NICHT GEBAUT. Damit ein
+ * Sitz anders rechnet als seine Gegner, braucht `Gangart` ein Feld
+ * `zaehigkeitsHochzahl`, das `botZug` an `staerke` durchreicht; erst dann
+ * greift `gangarten.mjs --schraube zaehigkeitsHochzahl=…`. Das ist ein
+ * Geruest fuer die Messung und kein Stand, den der Bot braucht — es stand
+ * waehrend dieser Messung in der Datei und ist danach wieder heraus, genau wie
+ * bei `REICHWEITEN_GEWICHT` (dessen Kommentar denselben Schalter nennt).
+ * WER NACHMISST, BAUT ES WIEDER EIN; ein ungepaarter Lauf beantwortet die
+ * Frage nicht, weil der Unterschied kleiner ist als die Streuung zwischen zwei
+ * Stichproben.
+ */
+const ZAEHIGKEIT_HOCHZAHL = 1.2;
+
+/**
+ * Der Drehpunkt der Hochzahl — und eine Zahl OHNE Wirkung auf das Spiel.
+ *
+ * `BEZUG * (haelt / BEZUG) ** h` ist dasselbe wie `BEZUG ** (1 - h) * haelt ** h`,
+ * also `haelt ** h` mal einem festen Faktor. Ein fester Faktor auf ALLE
+ * Staerken aendert keine Rangfolge: Verglichen werden sie nur untereinander,
+ * und die beiden Aufschlaege daneben (`VERSCHMELZ_FAKTOR`, `PAAR_FAKTOR`) sind
+ * ebenfalls Faktoren, `umfeldGewinn` eine Differenz von Staerken. Bis auf das
+ * `Math.round` am Ende ist die Zahl damit frei waehlbar.
+ *
+ * SIE STEHT TROTZDEM DA, und zwar fuer die Lesbarkeit, um die es schon bei
+ * `STAERKE_TEILER` geht: Ohne Drehpunkt waere `haelt ** 1,2` rund viermal so
+ * gross wie `haelt`, und jede Staerke in diesem Modul und in den Dokumenten
+ * bekaeme eine Stelle mehr. 1000 liegt mitten im Feld der Zaehigkeiten (553
+ * beim Funkenlehrling, 2300 beim Wurzelriesen), also bleiben die Zahlen dort,
+ * wo die aelteren Messungen sie haben.
+ */
+const ZAEHIGKEIT_BEZUG = 1000;
+
+/**
  * Was ein Feld Reichweite ueber den Nahkampf hinaus wert ist — bei voller
  * Deckung, und je Feld.
  *
@@ -339,7 +451,17 @@ const STAERKE_TEILER = 100;
  *
  * DIE ZAHL IST GEMESSEN, nicht geschaetzt. Gemessen wird mit
  * `werkzeug/gangarten.mjs --schraube reichweitenGewicht=…`: Alle vier Sitze
- * spielen `normal`, nur Sitz 0 rechnet mit dem Faktor. Die Saat haengt nicht
+ * spielen `normal`, nur Sitz 0 rechnet mit dem Faktor.
+ *
+ * DIESE SCHRAUBE GIBT ES IM GEBAUTEN STAND NICHT, und das gehoert dazugesagt,
+ * weil die Zeile darueber sonst zu einem Aufruf einlaedt, der mit
+ * `--schraube kennt "reichweitenGewicht" nicht` abbricht. `--schraube` kann
+ * nur Felder von `Gangart` verstellen; fuer die Messung bekam `Gangart` ein
+ * Feld `reichweitenGewicht`, das `botZug` an `staerke` durchreichte, und
+ * danach ist es wieder heraus — eine Stellschraube, die niemand stellt, gehoert
+ * nicht in den gebauten Stand (siehe `Schwierigkeit`). Wer nachmisst, baut sie
+ * wieder ein; dasselbe gilt fuer `ZAEHIGKEIT_HOCHZAHL`, wo es noch einmal
+ * steht. Die Saat haengt nicht
  * an der Schraube, zwei Laeufe spielen also DIESELBEN Partien. Je 400 Partien
  * ueber sechs Saatbasen, gezaehlt werden die eindeutigen Siege von Sitz 0:
  *
@@ -504,7 +626,7 @@ function bezugsSchaden(id: EinheitId, stufe: Stufe): number {
 }
 
 /** Kein Rueckhalt: Reichweite bringt der Einheit dann gar nichts. */
-const KEINE_DECKUNG = 0;
+export const KEINE_DECKUNG = 0;
 
 /** Voller Rueckhalt: Reichweite zaehlt mit `REICHWEITEN_GEWICHT` je Feld. */
 export const VOLLE_DECKUNG = 1;
@@ -557,6 +679,14 @@ function deckungIm(einheiten: readonly Kaempfer[]): number {
  * stuende dann vor jedem Angreifer, und der Bot baute ein Heer, das nichts
  * umbringt.
  *
+ * DIE BEIDEN HAELFTEN SIND TROTZDEM NICHT AUSTAUSCHBAR, und seit dem
+ * 22.09.2026 sagt die Formel das: Das Aushalten geht mit
+ * `ZAEHIGKEIT_HOCHZAHL` ein und nicht glatt. Wer stirbt, teilt nicht mehr
+ * aus — im Gruppenkampf ist Zaehigkeit darum etwas mehr wert, als ein reines
+ * Produkt hergibt. Die Betonung liegt auf ETWAS: Gemessen traegt die Hochzahl
+ * nur zwischen 1,05 und 1,35, und quadratisch ist sie schlimmer als gar keine.
+ * Die Kurve steht bei der Konstanten.
+ *
  * Die Ruestung ist ein Faktor auf das Leben und keine Zugabe: Der Kampf
  * mindert jeden Treffer um ihren Prozentsatz (`schadenNach` in kampf.ts), 50
  * Ruestung verdoppeln also das, was eine Einheit aushaelt.
@@ -578,6 +708,41 @@ function deckungIm(einheiten: readonly Kaempfer[]): number {
  * Den Kampf wirklich durchrechnen zu lassen waere verlockend und falsch: Der
  * Bot entscheidet mehrmals je Runde, und `simuliereKampf` ist die teuerste
  * Rechnung des Moduls.
+ *
+ * WER DIESE ZAHL ZUM BALANCIEREN LIEST, MUSS DIE DECKUNG MITGEBEN — sonst
+ * bekommt er eine Rangfolge, die der Kampfmessung WIDERSPRICHT. Gemessen mit
+ * `werkzeug/bewertungsprobe.mjs` gegen das Monokultur-Turnier, Rangkorrelation
+ * nach Spearman ueber die drei Kostenstufen, drei Saatbasen:
+ *
+ *     staerke(k, KEIN_BONUS, VOLLE_DECKUNG)    +0,84  +0,82  +0,82
+ *     staerke(k)  — also KEINE_DECKUNG         -0,29  -0,27  -0,27
+ *
+ * Die ganze Vorhersagekraft steckt also im Reichweitenfaktor, und der ist in
+ * der Vorgabe ABGESCHALTET. Fuer den Bot ist das richtig so und mit Absicht
+ * (siehe `kandidaten`: der Reichweitenwert kommt ueber `umfeldGewinn` herein,
+ * damit ihn `VERSCHMELZ_FAKTOR` nicht mitmultipliziert). Fuer einen Menschen,
+ * der zwei Einheiten vergleicht, ist es eine Falle: `staerke({ id, stufe: 1 })`
+ * sieht nach "wie stark ist die" aus und ist es nicht.
+ *
+ * DASS DIE ZWEITE ZAHL MIT `ZAEHIGKEIT_HOCHZAHL` GESUNKEN IST (von -0,13 auf
+ * -0,29), waehrend der Bot MEHR Partien gewinnt, ist kein Widerspruch und der
+ * Grund, warum hier zwei Werkzeuge stehen statt einem: Die Korrelation misst
+ * die blanke Zahl, `werkzeug/gangarten.mjs` misst die Entscheidung. Der Bot
+ * trifft sie nie mit `staerke` allein — Verschmelzung, Marken und
+ * `umfeldGewinn` stehen daneben, und die Deckung kommt ueber den letzten
+ * wieder herein. Wer die eine Zahl mit der anderen begruendet, begruendet
+ * nichts.
+ *
+ * DIE ROLLE SAGT HEUTE NICHTS MEHR VORAUS. Am 05.09.2026 war die Turnier-
+ * Rangfolge fast monoton in ihr — wache/meuchler vor schuetze vor magier vor
+ * beistand —, und daraus entstand die Vermutung, die Bewertung brauche vor
+ * allem mehr Zaehigkeit. Auf dem tiefen Brett (vier Reihen je Seite, zwei
+ * leere dazwischen, seit dem 06.09.2026) steht die Reihenfolge fast
+ * umgekehrt: Bei 1 Gold gewinnt der Funkenlehrling (magier) alle Kaempfe und
+ * das Irrlicht (wache) keinen, bei 3 Gold fuehrt der Sturmrufer (magier, 96 %)
+ * vor dem Wurzelriesen (wache, 20 %). Es wird jetzt gelaufen, und wer laeuft,
+ * kassiert dabei. Wer die alte Beobachtung noch irgendwo zitiert findet: Sie
+ * ist mit der Arena verfallen, nicht widerlegt worden.
  *
  * Der `bonus` ist der Synergie-Aufschlag, den die Einheit in IHRER Umgebung
  * bekommt (siehe `heerStaerke`). Ohne ihn misst die Funktion die nackte
@@ -603,7 +768,10 @@ export function staerke(
   // Nah und Fern nicht schon traegt. Warum und wie viel: `ANMARSCH_SEKUNDEN`.
   const offen = VOLLE_DECKUNG - deckung;
   const anmarsch = w.reichweite <= 1 ? ANMARSCH_SEKUNDEN * bezugsSchaden(k.id, k.stufe) * offen : 0;
-  const haelt = Math.max(0, (w.leben * 100) / Math.max(1, 100 - w.ruestung) - anmarsch);
+  // Die Hochzahl erst NACH dem Anmarsch: Was auf dem Weg verloren geht, ist
+  // keine Zaehigkeit mehr, die im Kampf ueberproportional zaehlen koennte.
+  const steht = Math.max(0, (w.leben * 100) / Math.max(1, 100 - w.ruestung) - anmarsch);
+  const haelt = ZAEHIGKEIT_BEZUG * (steht / ZAEHIGKEIT_BEZUG) ** ZAEHIGKEIT_HOCHZAHL;
   const teiltAus = leistung(k.id, w.angriff) * w.tempo;
   const ausDerFerne = 1 + (w.reichweite - 1) * REICHWEITEN_GEWICHT * deckung;
   return Math.round((haelt * teiltAus * ausDerFerne) / STAERKE_TEILER);

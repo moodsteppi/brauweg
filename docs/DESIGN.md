@@ -47,7 +47,8 @@ mitten im Code:
 | `--danger` | `#c2564c` | Fehler, Verluste |
 
 Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
-**Rot = Vorsicht**. Nicht mischen (kein goldener Abbrechen-Knopf).
+**Rot = Vorsicht**. Nicht mischen (kein goldener Abbrechen-Knopf). Im neuen
+Hub ist Gold der Hauptknopf — siehe „Das neue Hub“ weiter unten.
 
 ## Zwei Welten (CI)
 
@@ -93,7 +94,8 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
   Edelsteine am Ende Geld kosten; und nach einem Truhenkauf zeigt das Fundblatt,
   was drin war — eine gekaufte Truhe, die nur den Münzstand ändert, wäre eine
   Zahl ohne Erklärung.
-- **Zwischen den Tabs wird auch gewischt**, nicht nur über die Leiste
+- **Zwischen den Tabs wird auch gewischt** (nur im alten Hub; im neuen seit
+  26.09.2026 nicht mehr, siehe „Das neue Hub“), nicht nur über die Leiste
   getippt: ein deutlich waagerechter Wisch auf dem Inhalt geht einen Tab
   weiter, in derselben Reihenfolge wie die Leiste. Nur klar horizontale
   Wische zählen (senkrechtes Rollen bleibt Rollen), und in einer
@@ -121,6 +123,168 @@ Bedeutung ist fest: **Grün = tun**, **Gold = wert**, **Lila = bald**,
 - Was es noch nicht gibt, steht trotzdem in der Oberfläche — mit ehrlicher
   Null und **„Bald"-Marke** (lila). Antippen öffnet das „Kommt bald"-Blatt,
   nie einen toten Knopf.
+
+## Das neue Hub „Nachtblau & Gold" (ab 26.09.2026)
+
+Robin hat am 26.09.2026 entschieden, das Hub vor dem App-Start neu zu
+gestalten: im Stil der Anmeldung (#272), aufgeräumt wie Apple, mit dem
+Spielgefühl von Clash Royale. **Seit dem 26.09.2026 abends ist das neue Hub
+der Standard** (Robin). Das alte bleibt über einen Schalter erreichbar, bis
+es entfernt wird (`src/hubNeu.ts`: `?hub=alt` merkt sich die Wahl, `?hub=neu`
+nimmt sie zurück); für das alte gilt alles oben Stehende. Für das neue Hub
+gilt dieser Abschnitt, und wo er dem Rest widerspricht, gewinnt er.
+
+**Wo es steht:** `screens/hub-neu.css` (Wurzel `.hb`, nichts wirkt nach
+draußen), Rahmen `HubRahmen.tsx`, Seiten `StartNeu`, `SpieleNeu`,
+`TrophaeenwegNeu`, `HeuteNeu`, `SammlungNeu`, `HalleNeu` (in `Clan.tsx`) und
+`ShopRahmen` (in `GameSelect.tsx`). Die übrigen Ansichten tragen ein `neu`
+an derselben Komponente statt einer Kopie (seit 26.09.2026): Profil
+(`ProfilTab`), „Alles ›" der Sammlung (`DeckPicker`, `TischVorschau`),
+Clan ohne Clan (`Suche`, `Gruenden`, `ClanFelder`), `ClanKrieg`,
+`Kleiderschrank`, `Stufenleiter` und die Blätter `KaufFrage`,
+`RanglisteBlatt`, `BaldBlatt` sowie die Clan-Blätter. So bleiben Aufrufe und
+Rückfragen an einer Stelle, nur das Aussehen verzweigt.
+
+**Blätter** baut `HbBlatt` (`screens/HbBlatt.tsx`): Griff, Wisch, Hintergrund,
+Schließen-Knopf, Escape (nur das oberste Blatt schließt). Es hängt sich per
+`ImHub` an die Wurzel `.hb` — die Seitenschiene des Pagers trägt immer ein
+`transform` und würde `position: fixed` sonst auf die Seite beschränken, die
+Reiterleiste bliebe darunter antippbar. **Truhenbilder** kommen aus
+`truhenBild()` (`src/truhenbild.ts`), eine Zeile je Grad, für Shop, „Heute"
+und Trophäenweg.
+
+Probe mit Beispielkonto nur im Dev-Server: `/?dev=hub&iphone`, dazu
+`&tab=spiele|blatt|clan|shop|profil`, `&spiel=doppelkopf`, `&weg`, `&heute`,
+`&ohneclan` (Clansuche), `&krieg=laeuft|suche|angefragt|keiner|anfrage` und
+`&tipp=Text|Text` (tippt nacheinander auf Knöpfe mit diesem Namen — für
+Bildschirmfotos von Blättern und Unterseiten). Der Entwurf, an dem gemessen
+wird, liegt außerhalb des Repos (Entwurfsordner „redesign-2026-09",
+Fassung 4).
+
+### Farben (Variablen in `.hb`)
+
+| Variable | Wert | Verwendung |
+| --- | --- | --- |
+| `--hb-grund` | `#0e1a3d` | Seitengrund |
+| `--hb-karte` | `#182b5c` | Karten, Listen |
+| `--hb-kontur` | `#35518c` | Ränder |
+| `--hb-tinte` | `#f3f5ff` | Text |
+| `--hb-leise` | `#a3b3dd` | Nebentext (5,2:1 auf `--hb-karte-hoch`, sonst ≥ 6,5:1) |
+| `--hb-gold` | `#f5c02e` | Hauptknopf, Werte, aktiver Reiter |
+| `--hb-gruen` | `#48d56b` | erreicht, erhalten |
+| `--hb-stimme` | `#2b66d9` | Abstimmen (weiß darauf 5,2:1) |
+| `--hb-badge` | `#dc2626` | Zähler an Knöpfen |
+
+**Bedeutung im neuen Hub:** **Gold = der eine Hauptknopf je Ansicht und alles,
+was wert ist** (Robin, 26.09.2026; die Anmeldung macht es seit #272 schon so).
+**Grün = erreicht/erhalten**, **Lila = bald** (unverändert), **Rot = Vorsicht**.
+Preise im Regal tragen eine Goldkontur statt einer vollen Goldfläche, damit der
+Hauptknopf der einzige gefüllte bleibt. `--hb-gesperrt` (`#7382a6`) ist nie
+Text: Gesperrt heißt Schloss plus `--hb-leise`.
+
+### Schrift
+
+Titel in **Lilita One**, Text in **Nunito**. Beide liegen als Paket im Bundle
+(`@fontsource/lilita-one`, `@fontsource-variable/nunito`), nichts wird zur
+Laufzeit von fremden Servern geladen. Die Regel „keine Webfonts" oben meint
+genau das und gilt weiter. Stufen: 34 Seitentitel · 30 Held · 20 Abschnitt ·
+16–17 Kartentitel · 15 Text · 13 Nebentext · 12 Klein · **11 nur für
+Versalien-Oberzeilen, Reiter und Zähler**. Preise und Belohnungsnamen nie
+unter 11.
+
+### Maße (Apple HIG, geprüft am 26.09.2026)
+
+- **Tippflächen mindestens 44 × 44 pt**, Hauptknopf 52 pt hoch. Wo eine Karte
+  als Ganzes antippbar ist, ist sie das Ziel, kein kleiner Knopf darin
+  (Truhen: die ganze Kachel öffnet). Chips sind 36 pt hoch mit 44 pt
+  Trefferfläche.
+- **Seitenrand 16 pt**, Abstand zwischen Abschnitten 16–20 pt.
+- **Text auf Bildern** nur auf einer Abdeckung aus `#07132f` mit mindestens
+  0,85 Deckkraft unter dem ganzen Textblock, gemessen gegen ein weißes Pixel.
+- **Safe Areas nur über `env()`**. Die Reiterleiste ist 56 pt plus der untere
+  Inset.
+
+### Reiter
+
+**Kein Wischen zwischen den Reitern** (Robin, 26.09.2026): Spielreihen,
+Filter und Sammlung rollen im neuen Hub waagerecht, ein Wisch darin darf nie
+den Reiter wechseln. Gewechselt wird nur über die Leiste.
+
+**Shop · Spiele · Start · Sammlung · Clan**, Start mittig und größer (Robin,
+26.09.2026). Es bleiben fünf Plätze. In der App ohne Shop steht dort das
+Profil, damit Start in der Mitte bleibt; sonst erreicht man das Profil über den
+Avatar im Kopf. Der aktive Reiter unterscheidet sich nicht nur in der Farbe
+(Kachel dahinter, gefülltes Symbol). Der Kopf mit Guthaben steht nur auf dem
+Start, die anderen Reiter haben ihre Überschrift.
+
+### Aufbau
+
+- **Start** passt in eine Viewport-Höhe: Trophäenweg als Held, Weiterspielen,
+  eigene Spiele, Knopf **„Heute"**. Aufgaben, Truhen und der Weg zur Rangliste
+  liegen als **Blatt von unten** dahinter (Griff, Wisch nach unten,
+  Hintergrund, Schließen-Knopf, Escape; ein Blatt zugleich).
+- **Spiele** stehen nach **Kategorien**. Die gibt es nur im Client
+  (`KATEGORIEN` in `SpieleNeu.tsx`); ein Spiel ohne Kategorie landet unter
+  „Weitere" und fällt nie still heraus.
+- **Jedes Spiel hat eine Spielseite.** Erst „Zum Spiel" öffnet die eigene
+  Seite des Spiels (Lobby, Menü) in dessen Stil — die zweite Welt oben bleibt
+  unberührt.
+- **Trophäenweg:** alle Stationen auf einem Bildschirm, links die Station,
+  rechts die Belohnung, dazwischen die Checkpoints. Belohnungen je Station sind
+  beschlossen (Robin, 26.09.2026: Truhe plus fester Gegenstand, 25 Münzen je
+  Checkpoint, über 1.000 alle 250 eine Silbertruhe) und **kommen vom Server**
+  (`/api/weg`, Katalog in `server/src/trophaeenweg-katalog.ts`); der Client
+  kennt nur Name und Bild der Biome (`src/trophaeenweg.ts`). Gezählt wird die
+  Summe der Trophäen über alle Spiele. Abgeholt wird von Hand: Erreichtes
+  trägt „Holen" (an der Station ist die ganze Belohnungskarte der Knopf, am
+  Checkpoint das Schild mit 44 pt Treffer), die Truhe geht im Fundblatt auf,
+  danach steht dort „Erhalten". Liegt etwas bereit, trägt die Karte auf dem
+  Start eine goldene Pille („2 Belohnungen"), und der Punkt am Start-Reiter
+  zählt es mit (`me.bereit.weg`).
+- **Sammlung** nach Spielen getrennt, nur der Pinguin gilt für alle.
+- **Kartenblätter und Tische gibt es auch im Shop** (Robin, 26.09.2026), nicht
+  mehr nur in der Themenauswahl. Die große Vorschau in Tischgröße bleibt in der
+  Sammlung unter „Alles ›".
+- **Nichts erfinden:** Was der Entwurf zeigt, der Code aber nicht kann
+  (Clantisch, Einladen), steht nicht auf der Seite. Neue Funktionen kommen als
+  eigener Schritt, nicht als Knopf ohne Dahinter.
+
+### Spieleinstieg (Lobbys und Menüs hinter „Zum Spiel“)
+
+Seit dem 26.09.2026 (Robin: „die Spiele an das Design anpassen“) steht auch,
+was hinter „Zum Spiel“ kommt, im neuen System — die Spieltische selbst nicht.
+Baukasten: `screens/SpielEinstieg.tsx` (`SpielRahmen`, `SpielAbschnitt`,
+`SpielWahl`) und `spiel-einstieg.css`, Wurzel `.spe`. Die Bausteine des Hubs
+(`hb-kn`, `hb-chip`, `hb-liste`, `hb-ab`, `HbBlatt` …) gelten unter `.spe`
+genauso. Aufbau: oben das **Spielbanner als Kopf** mit Zurück-Knopf, Titel und
+einer Zeile; darunter Abschnitte; unten fest der **goldene Hauptknopf** (Tisch
+erstellen, Online spielen …). Jedes Spiel behält seine Farbe über
+`--spe-akzent` (Auswahlrahmen, Glanz im Kopf), der Hauptknopf bleibt gold. Nur
+im neuen Hub; mit `?hub=alt` bleibt der alte Einstieg.
+
+Umgezogen (26./27.09.2026): Kartenlobby (Doppelkopf, Skat, Zauberer, Cambio,
+BroChess), BroCooked, Golf, Poker, Eiland, Filler, Mememory, Tafelrunde,
+Feldherr, Partykiste. Spieleigene Ergänzungen liegen je Spiel in
+`screens/<spiel>-einstieg.css`, die gemeinsamen der Minispiele in
+`spiel-einstieg-mini.css`. Regel: **genau ein goldener Knopf je Ansicht**,
+Nebenwege blau (`hb-kn is-blau`); Anleitung und Regeln als `HbBlatt`, nicht
+als Aufklapper. Noch im alten Look: die Spieltische selbst, Endstände auf dem
+Tisch, Klanghalle, Avatar-Werkstatt.
+
+### Start der App (Logo, dann Ladebild)
+
+Seit dem 26.09.2026 (Robin, Vorbild Supercell/Clash Royale) startet die App im
+neuen Hub mit **zwei Bildschirmen**: 1,3 s das Logo, das auf Nachtblau
+aufspringt, dann das Ladebild (`hub/ladebild.webp`, ASSETS-LADESCREEN-HUB.md)
+mit Logo oben und goldener Leiste mit Prozentzahl unten
+(`screens/Startbildschirm.tsx`). **Die Zahl ist ehrlich:** Sie zählt das Konto
+(`/api/me`), die Schrift und die Bilder, die der Start gleich zeigt, und läuft
+der echten Zahl nur hinterher, nie voraus. Mit „weniger Bewegung" entfällt das
+Aufspringen. Probe: `?dev=start` (`&halt=laden` bleibt auf dem Ladebild).
+Die iOS-Startbilder für den Home-Bildschirm (`public/start/start-*.png`, in
+`index.html`) zeigen **genau diesen Grund ohne Logo**: `#050b1d` mit dem
+Schein aus `.start-logo-schein`. So ploppt das Logo auf demselben Grund auf,
+statt dass vorher kurz ein anderes Logo steht (Robin, 27.09.2026).
 
 ## Bausteine
 

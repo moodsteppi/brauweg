@@ -6,6 +6,7 @@
  * mit, dieser Teil nichts davon.
  */
 
+import { SpielAbschnitt, SpielWahl } from '../../screens/SpielEinstieg';
 import { Regelzeile } from './Regelzeile';
 import { HAERTE_NAME, type PartyRegelsatz } from './sicht';
 
@@ -33,6 +34,7 @@ export function Einstellungen({
   onRunden,
   onHaerte,
   onTrinkmodus,
+  neu = false,
 }: {
   runden: number;
   haerte: number;
@@ -40,7 +42,37 @@ export function Einstellungen({
   onRunden: (w: number) => void;
   onHaerte: (w: number) => void;
   onTrinkmodus: (an: boolean) => void;
+  /** Neues Hub: im Spieleinstieg-Baukasten (DESIGN.md, „Spieleinstieg“). */
+  neu?: boolean;
 }): React.JSX.Element {
+  const hinweis = (
+    <>
+      {trinkmodus
+        ? 'Wer verliert, trinkt — die Härte nimmt alle Schlücke mal.'
+        : 'Statt Schlücken gibt es Strafpunkte, die Härte nimmt sie mal. Die Punkte fürs Turnier bleiben gleich.'}{' '}
+      Gilt für deine eigene Runde, online wie gegen Bots.
+    </>
+  );
+  if (neu) {
+    return (
+      <SpielAbschnitt titel="Einstellungen">
+        <div className="spe-karte" data-pk-einstellungen="">
+          <SpielWahl
+            name="Trinkmodus"
+            werte={[
+              { wert: 'an' as const, text: 'Trinkspiel' },
+              { wert: 'aus' as const, text: 'Alkoholfrei' },
+            ]}
+            wert={trinkmodus ? 'an' : 'aus'}
+            onWahl={(w) => onTrinkmodus(w === 'an')}
+          />
+          <Regler neu titel="Runden" wert={runden} min={3} max={15} onWahl={onRunden} />
+          <Regler neu titel="Härte" wert={haerte} min={1} max={3} zusatz={HAERTE_NAME[haerte]} onWahl={onHaerte} />
+          <p className="hb-klein">{hinweis}</p>
+        </div>
+      </SpielAbschnitt>
+    );
+  }
   return (
     <section className="pk-einstellungen" aria-labelledby="pk-einstellungen-titel">
       <h2 id="pk-einstellungen-titel" className="pk-einstellungen-titel">
@@ -66,12 +98,7 @@ export function Einstellungen({
       </div>
       <Regler titel="Runden" wert={runden} min={3} max={15} onWahl={onRunden} />
       <Regler titel="Härte" wert={haerte} min={1} max={3} zusatz={HAERTE_NAME[haerte]} onWahl={onHaerte} />
-      <p className="pk-einstellungen-hinweis">
-        {trinkmodus
-          ? 'Wer verliert, trinkt — die Härte nimmt alle Schlücke mal.'
-          : 'Statt Schlücken gibt es Strafpunkte, die Härte nimmt sie mal. Die Punkte fürs Turnier bleiben gleich.'}{' '}
-        Gilt für deine eigene Runde, online wie gegen Bots.
-      </p>
+      <p className="pk-einstellungen-hinweis">{hinweis}</p>
     </section>
   );
 }
@@ -89,13 +116,46 @@ export function OffeneRunde({
   onBeitreten,
   onEigene,
   onAbbrechen,
+  neu = false,
 }: {
   angebot: Angebot;
   laedt: boolean;
   onBeitreten: () => void;
   onEigene: () => void;
   onAbbrechen: () => void;
+  /** Neues Hub: steht im festen Fuß, Beitreten ist der goldene Hauptknopf. */
+  neu?: boolean;
 }): React.JSX.Element {
+  if (neu) {
+    return (
+      <div className="spe-angebot" data-pk-angebot="">
+        <p className="spe-angebot-titel">Offene Runde{angebot.host ? ` von ${angebot.host}` : ''}</p>
+        {angebot.regeln ? (
+          <Regelzeile regeln={angebot.regeln} runden={angebot.runden} />
+        ) : (
+          <p className="hb-klein">Die Regeln dieser Runde ließen sich nicht lesen.</p>
+        )}
+        <p className="hb-klein">Dort gelten die Regeln der Runde, nicht deine Einstellungen.</p>
+        <button
+          className="hb-kn is-gold is-haupt is-breit"
+          type="button"
+          data-pk-beitreten=""
+          onClick={onBeitreten}
+          disabled={laedt}
+        >
+          Beitreten
+        </button>
+        <div className="hb-knopfreihe">
+          <button className="hb-kn is-blau" type="button" data-pk-eigene="" onClick={onEigene} disabled={laedt}>
+            Eigene aufmachen
+          </button>
+          <button className="hb-kn is-blau" type="button" onClick={onAbbrechen}>
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="pk-angebot" data-pk-angebot="">
       <p className="pk-angebot-titel">
@@ -129,6 +189,7 @@ export function Regler({
   max,
   zusatz,
   onWahl,
+  neu = false,
 }: {
   titel: string;
   wert: number;
@@ -136,9 +197,11 @@ export function Regler({
   max: number;
   zusatz?: string;
   onWahl: (wert: number) => void;
+  /** Neues Hub: dieselbe Zeile in den Farben des Spieleinstiegs. */
+  neu?: boolean;
 }): React.JSX.Element {
   return (
-    <label className="pk-reglerzeile">
+    <label className={neu ? 'spe-regler' : 'pk-reglerzeile'}>
       <span className="pk-reglertitel">{titel}</span>
       <input
         type="range"

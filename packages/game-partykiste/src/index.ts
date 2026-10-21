@@ -11,6 +11,7 @@ export * from './regeln.js';
 export * from './partie.js';
 export * from './sicht.js';
 export * from './modi.js';
+export * from './weiter-warten.js';
 export { botZug } from './bot.js';
 export { partykiste } from './adapter.js';
 export type {
@@ -28,6 +29,8 @@ export type {
 } from './inhalte/typen.js';
 export { PAKETE, istPaket } from './inhalte/typen.js';
 export * from './inhalte/filter.js';
+export * from './inhalte/stapel.js';
+export { PASST_NICHT_GRUENDE, gibtInhalt, inhaltKurz, type PasstNichtGrund } from './inhalte/kataloge.js';
 /*
  * Die Kataloge selbst nach aussen, damit Tests und Werkzeuge sie zaehlen und
  * pruefen koennen (Haerte, Pakete, Doppel). Der Client importiert sie nicht —
@@ -54,5 +57,5 @@ export {
   type KartenFolge,
   type Koenigsbecherkarte,
 } from './inhalte/koenigsbecher.js';
-export { zuendzeit } from './zeitdruck.js';
-export type { BombeRunde, GezogeneKarte, KoenigsbecherRunde, ZehnSekundenRunde } from './zeitdruck.js';
+export { flascheHaelt, zuendzeit } from './zeitdruck.js';
+export type { BombeRunde, FlaschenSturz, GezogeneKarte, KoenigsbecherRunde, ZehnSekundenRunde } from './zeitdruck.js';

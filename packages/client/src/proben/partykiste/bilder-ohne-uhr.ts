@@ -220,6 +220,7 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
         art: 'regelkarte',
         rundeNr: 1,
         gehandelt: [2, 4, 5],
+        weiterFehlen: [0, 1, 3],
         daten: { art: 'regelkarte', text: REGEL.text, bis: 3 },
       }),
     },

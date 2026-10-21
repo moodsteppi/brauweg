@@ -15,7 +15,7 @@ wiederverwendet:
 
 | Vorhanden | Wofür in der Anmeldung |
 | --- | --- |
-| `logo.png` | Der Brauweg-Schriftzug über dem Formular |
+| `logo.webp` | Der Brauweg-Schriftzug über dem Formular |
 | `menue-blatt.webp` | Der Grund des Anmeldeformulars |
 | `menue-feld.webp` | E-Mail, Passwort, Name, Einladungscode, Geburtstag |
 | `menue-knopf-gruen.webp` | „Anmelden" und „Konto anlegen" |
@@ -94,7 +94,7 @@ Breite angezeigt, die doppelte Auflösung ist für scharfe Darstellung.
 Giebel, warmes Licht, der Pinguin klein am Rand. Ruhig, keine Hektik.
 
 **Ausnahme zur Schrift-Regel — hier ausdrücklich erwünscht:** In dieses
-Bild **gehört der Brauweg-Schriftzug hinein**, gemalt wie auf `logo.png`.
+Bild **gehört der Brauweg-Schriftzug hinein**, gemalt wie auf `logo.webp`.
 Grund: In einer E-Mail lassen sich nicht zuverlässig zwei Bilder
 übereinanderlegen, und ein separater Schriftzug würde bei vielen
 Mailprogrammen verrutschen. Deshalb ein Bild, das für sich steht.

@@ -1,15 +1,18 @@
 import {
+  INHALTS_MISCHUNGEN,
   MINISPIELE,
   PAKETE,
+  erzeugePartie,
   SPIELMODI,
   ablaufVon,
-  minispielFuer,
+  minispielFolge,
   partykiste,
   type PartykisteRegeln,
 } from '@brauweg/game-partykiste';
 import { describe, expect, it } from 'vitest';
 
 import {
+  INHALT_GEMISCHT,
   KEINE_WAHL,
   MINISPIEL_ABLAUF,
   MODI,
@@ -64,6 +67,7 @@ describe('Vertrag Partykiste-Auswahl', () => {
       KEINE_WAHL,
       { minispiele: ['wahrheitpflicht', 'quiz', 'imposter'], inhaltsHaerte: 3, paket: 'jga', modus: null },
       { minispiele: null, inhaltsHaerte: 2, paket: 'alles', modus: null },
+      { minispiele: null, inhaltsHaerte: INHALT_GEMISCHT, paket: 'jga', modus: null },
       ...Object.keys(PAKET_NAME).map((paket) => ({ ...KEINE_WAHL, paket })),
     ];
     for (const wahl of wahlen) {
@@ -73,10 +77,17 @@ describe('Vertrag Partykiste-Auswahl', () => {
     }
   });
 
-  it('die gewaehlte Reihenfolge ist die, in der das Modul die Runden spielt', () => {
-    const folge = ['busfahrer', 'quiz', 'imposter'];
-    const regeln = regelsatzAus(vorgabe, BASIS, { ...KEINE_WAHL, minispiele: folge }, false) as unknown as PartykisteRegeln;
-    expect(Array.from({ length: 6 }, (_, nr) => minispielFuer(regeln, nr))).toEqual([...folge, ...folge]);
+  /*
+   * Bis zum 27.09.2026: „die gewaehlte Reihenfolge ist die, in der das Modul
+   * die Runden spielt“. Seitdem mischt das Modul — der Vertrag ist jetzt, dass
+   * genau die angeklickten Spiele drankommen, jedes einmal je Mischung.
+   */
+  it('die angeklickten Spiele sind genau die, die das Modul mischt', () => {
+    const wahl = ['busfahrer', 'quiz', 'imposter'];
+    const regeln = regelsatzAus(vorgabe, BASIS, { ...KEINE_WAHL, minispiele: wahl }, false) as unknown as PartykisteRegeln;
+    const folge = minispielFolge(regeln, 'vertrag', 6);
+    expect([...folge.slice(0, 3)].sort()).toEqual([...wahl].sort());
+    expect([...folge.slice(3, 6)].sort()).toEqual([...wahl].sort());
   });
 
   /*
@@ -96,5 +107,34 @@ describe('Vertrag Partykiste-Auswahl', () => {
         probleme: [],
       });
     }
+  });
+
+  /*
+   * Seit dem 27.09.2026: vier Kacheln, drei Stufen GENAU und „gemischt". Was
+   * die Kachel sendet, muss das Modul so lesen, wie die Kachel es verspricht —
+   * sonst stuende „derb" drauf, und am Tisch kaeme wieder vor allem Harmloses.
+   */
+  it('die Inhalte-Kacheln schicken genau/gemischt so, wie das Modul es liest', () => {
+    expect(vorgabe['inhaltsMischung']).toBe('genau');
+    for (const stufe of [1, 2, 3]) {
+      const config = regelsatzAus(vorgabe, BASIS, { ...KEINE_WAHL, inhaltsHaerte: stufe }, false);
+      expect({ stufe: config['inhaltsHaerte'], mischung: config['inhaltsMischung'] }).toEqual({ stufe, mischung: 'genau' });
+    }
+    const gemischt = regelsatzAus(vorgabe, BASIS, { ...KEINE_WAHL, inhaltsHaerte: INHALT_GEMISCHT }, false);
+    expect({ stufe: gemischt['inhaltsHaerte'], mischung: gemischt['inhaltsMischung'] }).toEqual({ stufe: 3, mischung: 'gemischt' });
+    /* Gast: „gemischt" heisst harmlos + pikant — schon im Regelsatz, nicht erst am Server. */
+    const gast = regelsatzAus(vorgabe, BASIS, { ...KEINE_WAHL, inhaltsHaerte: INHALT_GEMISCHT }, true);
+    expect({ stufe: gast['inhaltsHaerte'], mischung: gast['inhaltsMischung'] }).toEqual({ stufe: 2, mischung: 'gemischt' });
+    expect(INHALTS_MISCHUNGEN).toEqual(['genau', INHALT_GEMISCHT]);
+
+    const partie = erzeugePartie({
+      regeln: gemischt as unknown as PartykisteRegeln,
+      saat: 3,
+      sitze: 6,
+      runden: 6,
+      gastSitze: [],
+    });
+    expect(partie.regeln.inhaltsMischung).toBe('gemischt');
+    expect(partie.regeln.inhaltsHaerte).toBe(3);
   });
 });

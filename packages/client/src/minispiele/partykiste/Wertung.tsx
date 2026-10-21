@@ -14,7 +14,7 @@
 import type { SeatInfo } from '../../protocol';
 import { LagerTabelle } from './Lager';
 import { lagerKurz } from './modi';
-import { Wartet, namenFuer } from './Runden';
+import { FehlenNoch, Wartet, namenFuer } from './Runden';
 import { zaehlerWort, type PartyAktion, type PartykisteSicht } from './sicht';
 
 /**
@@ -77,8 +77,10 @@ export function Abrechnung({
         </button>
       </div>
       {/* Es geht erst weiter, wenn ALLE getippt haben — keine Uhr mehr.
-          Die Zahl sagt, auf wen die Runde wartet. */}
-      {binFertig ? <Wartet sicht={sicht} /> : null}
+          Die Namen sagen, auf wen die Runde wartet; sie stehen auch bei dem,
+          der noch nicht getippt hat (seit 07.10.2026), denn wer zuletzt
+          tippt, trinkt mit 50 % einen Schluck. */}
+      {binFertig ? <Wartet sicht={sicht} sitze={sitze} /> : <FehlenNoch sicht={sicht} sitze={sitze} />}
     </div>
   );
 }

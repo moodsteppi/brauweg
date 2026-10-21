@@ -1,6 +1,12 @@
 # Bildbestellung: Brauweg-Schriftzug neu
 
-`logo.png` ist der Schriftzug mit dem Ritter-Pinguin. Er steht auf der
+> **Geliefert am 27.09.2026** (Robin: „das Logo hat ja noch paar Flecken … Generierfehler"). Bei ChatGPT (GPT Image) nach dieser Bestellung neu gezeichnet, die alte Datei als Vorlage. Ausgeliefert als `packages/client/public/hub/logo.webp` (1040 × 680, Qualität 90, volles Alpha, 92 kB); `hub/logo.png` ist entfernt. Original in `moodsteppi/brauweg-art`, `hub-nachtblau/logo.png`.
+>
+> **Nachbearbeitet:** Die Lieferung war auch innen nur zu 80–99 % deckend. Alpha ab 200 wurde auf 255 gezogen, darunter linear hochgerechnet; die weiche Kante bleibt. Probe auf Rot, Weiß und Nachtblau: kein Saum, keine Flecken, Helm überall gleich hell. Der Pinguin lugt jetzt hinter dem Band hervor statt mit den Flügeln darauf; sonst ist das Motiv gleich.
+>
+> Der Text unten beschreibt den alten Fehler und die Bestellung; er bleibt als Begründung stehen.
+
+`logo.webp` (bis 27.09.2026 `logo.png`) ist der Schriftzug mit dem Ritter-Pinguin. Er steht auf der
 Startseite oben links und auf dem Anmeldebildschirm über dem Formular —
 zwei der sichtbarsten Stellen der App.
 

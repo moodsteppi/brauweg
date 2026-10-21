@@ -99,8 +99,13 @@ export { istMinispiel };
 
 export interface PartykisteRegeln {
   /**
-   * Welche Minispiele im Turnier vorkommen duerfen, in der Reihenfolge, in der
-   * sie reihum drankommen. Mindestens eines.
+   * Welche Minispiele im Turnier vorkommen duerfen. Mindestens eines.
+   *
+   * Seit dem 27.09.2026 eine Menge, keine Reihenfolge mehr (Robin: an- und
+   * ausklicken wie die Doppelkopf-Regeln, „dann ist Zufall"): Die Runden
+   * ziehen aus einem Mischbeutel, jedes Spiel einmal je Mischung und nie
+   * dasselbe zweimal hintereinander (`minispielFolge` in partie.ts). Die
+   * Reihenfolge der Liste aendert daran nichts ausser der Saat-Mischung.
    */
   readonly minispiele: readonly MinispielId[];
   /**
@@ -118,8 +123,15 @@ export interface PartykisteRegeln {
    */
   readonly schluckFaktor: number;
   /**
-   * Textschaerfe der Inhalte: 1 harmlos, 2 pikant, 3 derb. Eine OBERGRENZE —
-   * ein derber Tisch bekommt auch harmlose Sprueche, ein harmloser nie derbe.
+   * Textschaerfe der Inhalte: 1 harmlos, 2 pikant, 3 derb.
+   *
+   * Seit dem 27.09.2026 (Robin: „es soll nur die Stufen haben, oder man macht
+   * gemischt an, dann ist zufaellig aus allen") haengt die Bedeutung an
+   * `inhaltsMischung`: bei „genau" GENAU diese Stufe, bei „gemischt" alle
+   * Stufen bis hierher, bunt gemischt. Bis dahin war der Wert eine
+   * Obergrenze — ein derber Tisch bekam auch Harmloses, und weil die Kataloge
+   * zu 60 % harmlos sind, praktisch vor allem das. Ein harmloser Tisch bekommt
+   * in keiner Lesart je einen derben Spruch.
    *
    * Heisst absichtlich nicht einfach "Haerte": `schluckFaktor` steht im
    * Bildschirm schon als „Härte" und meint die Schluckzahl. Zwei Regler
@@ -135,6 +147,34 @@ export interface PartykisteRegeln {
    * erst beim Start feststeht, wer sitzt.
    */
   readonly inhaltsHaerte: Haerte;
+  /**
+   * Wie `inhaltsHaerte` gelesen wird (seit dem 27.09.2026):
+   *
+   *   genau     nur Inhalte genau dieser Stufe. Hat der Katalog dort zu
+   *             wenig, kommen DANACH die der naechst milderen — nie derbere
+   *             (`inhaltsStapel` in inhalte/stapel.ts).
+   *   gemischt  Zufall aus allen Stufen bis `inhaltsHaerte`, und zwar je
+   *             STUFE gleich oft, nicht je Eintrag — sonst waere „gemischt"
+   *             wieder fast nur harmlos, der Fehler von oben. Der Bildschirm
+   *             schickt dafuer `inhaltsHaerte: 3` (Gast: 2).
+   *
+   * FEHLT DAS FELD, gilt die alte Lesart: Obergrenze wie bis zum 27.09.2026,
+   * Eintrag fuer Eintrag aus allem bis zur Stufe (`inhaltsLesart` → 'bis').
+   * Das ist Absicht und keine Bequemlichkeit: Ohne das Feld kommen nur
+   * Regelsaetze, die vor der Umstellung entstanden sind — ein wartender Tisch,
+   * dessen Oeffner „derb" noch als „bis derb" eingestellt hat, und vor allem
+   * der Snapshot einer LAUFENDEN Partie. Laese man den ploetzlich als
+   * „genau", zoege die naechste Runde aus einem anderen Stapel, und eine schon
+   * gespielte Frage koennte wiederkommen. So spielt jede alte Partie genau
+   * weiter, wie sie begann; neue Tische bekommen das Feld aus
+   * `defaultConfig()` bzw. vom Bildschirm. Bei „harmlos" sind alle drei
+   * Lesarten ohnehin dasselbe.
+   *
+   * In der Eskalation zaehlt das Feld nicht: Die Kurve nimmt schon seit dem
+   * 23.09.2026 genau die Stufe ihres Drittels und weicht nur nach unten aus
+   * (`belegeStufenweise` in modi.ts).
+   */
+  readonly inhaltsMischung?: InhaltsMischung;
   /**
    * Themenpaket als Zielgruppe — null heisst: alles. Ein gesetztes Paket
    * bevorzugt seine Inhalte, laesst Allgemeingut zu und blendet aus, was
@@ -175,11 +215,32 @@ export function istSpielmodus(x: unknown): x is Spielmodus {
   return typeof x === 'string' && (SPIELMODI as readonly string[]).includes(x);
 }
 
+/** Die beiden Lesarten, die ein Regelsatz ausdruecklich waehlen kann. Kennungen aendern sich nie. */
+export type InhaltsMischung = 'genau' | 'gemischt';
+export const INHALTS_MISCHUNGEN: readonly InhaltsMischung[] = ['genau', 'gemischt'];
+
+export function istInhaltsMischung(x: unknown): x is InhaltsMischung {
+  return x === 'genau' || x === 'gemischt';
+}
+
+/**
+ * Wie ein Regelsatz seine Inhaltsstufe meint — dazu die dritte, alte Lesart
+ * 'bis' (Obergrenze) fuer Regelsaetze ohne das Feld. Begruendung an
+ * `PartykisteRegeln.inhaltsMischung`. Gelesen wird das Feld nur hierueber.
+ */
+export type InhaltsLesart = InhaltsMischung | 'bis';
+
+export function inhaltsLesart(regeln: { readonly inhaltsMischung?: unknown }): InhaltsLesart {
+  const roh = regeln.inhaltsMischung;
+  return istInhaltsMischung(roh) ? roh : 'bis';
+}
+
 export const DEFAULT_REGELN: PartykisteRegeln = {
   minispiele: MINISPIELE,
   trinkmodus: true,
   schluckFaktor: 1,
   inhaltsHaerte: 1,
+  inhaltsMischung: 'genau',
   paket: null,
   modus: 'turnier',
 };
@@ -324,8 +385,12 @@ export const PHASE_HOECHST_MS = 30_000;
 // ---------------------------------------------------------------------------
 
 export type PartykisteAktion =
-  /** Karte gesehen, Ergebnis gelesen — der allgemeine "Weiter"-Tipp. */
-  | { readonly art: 'bereit' }
+  /**
+   * Karte gesehen, Ergebnis gelesen — der allgemeine "Weiter"-Tipp.
+   * `vertreten` setzt nur der Bot (bot.ts): Tippt er nach der Zugzeit fuer
+   * einen Menschen, gibt es keinen Wurf fuer den Letzten (weiter-warten.ts).
+   */
+  | { readonly art: 'bereit'; readonly vertreten?: boolean }
   /** Verdacht (Imposter) bzw. Wahl eines Mitspielers ("Wer wuerde eher"). */
   | { readonly art: 'stimme'; readonly ziel: number }
   /** Imposter: statt zu stimmen noch eine Rederunde verlangen. */
@@ -381,7 +446,14 @@ export type PartykisteAktion =
   /** Koenigsbecher: der Sitz am Zug zieht die naechste Karte. */
   | { readonly art: 'ziehen' }
   /** Koenigsbecher nach einer Sieben: Hand hoch — wer zuletzt tippt, kassiert. */
-  | { readonly art: 'hochzeigen' };
+  | { readonly art: 'hochzeigen' }
+  /**
+   * Koenigsbecher: die gezogene Karte auf die Flasche legen. `versatz` ist,
+   * wo sie landet: -1 ganz links am Flaschenhals, 0 genau mittig, 1 ganz
+   * rechts. Der Bildschirm misst ihn am Pendel beim Tippen; ob der Stapel
+   * haelt, rechnet das Modul (`flascheHaelt` in zeitdruck.ts).
+   */
+  | { readonly art: 'legen'; readonly versatz: number };
 
 // ---------------------------------------------------------------------------
 // Punkte und Schluecke
@@ -430,6 +502,25 @@ export const PUNKTE = {
   koenigsbecherGlueck: 1,
 } as const;
 
+/**
+ * Flaschenstapel im Koenigsbecher (Emile, 13.10.2026): Jede gezogene Karte
+ * wird auf die Flasche gelegt. Wie wacklig er ist, steht hier.
+ *
+ * - FLASCHE_RAND: Liegt eine Karte weiter aussen, verfehlt sie den Hals.
+ * - Der Schwerpunkt des Stapels (Mittel aller Versaetze) darf hoechstens
+ *   FLASCHE_GRENZE_START von der Mitte weg sein; mit jeder weiteren Karte
+ *   wird das um FLASCHE_GRENZE_JE_KARTE enger, nie enger als
+ *   FLASCHE_GRENZE_MIN. Ein hoher Turm faellt also leichter.
+ * - FLASCHE_RUTSCH: Wie weit eine Karte neben der obersten liegen darf,
+ *   bevor sie abrutscht und den Stapel mitreisst.
+ */
+export const FLASCHE_RAND = 0.9;
+export const FLASCHE_GRENZE_START = 0.5;
+export const FLASCHE_GRENZE_JE_KARTE = 0.05;
+export const FLASCHE_GRENZE_MIN = 0.15;
+export const FLASCHE_RUTSCH = 0.8;
+export const FLASCHE_HOECHST_KARTEN = 6;
+
 export const SCHLUECKE = {
   /** Quiz: falsch geantwortet oder gar nicht. */
   quizFalsch: 1,
@@ -467,6 +558,14 @@ export const SCHLUECKE = {
   koenigsbecherKarte: 1,
   /** Koenigsbecher: je Koenig im Becher — ihn bekommt, wer den letzten Koenig der Runde zieht. */
   koenigsbecherJeKoenig: 1,
+  /** Wer beim „Weiter" zuletzt tippt — mit 50 % (weiter-warten.ts). */
+  letzterBeimWeiter: 1,
+  /**
+   * Koenigsbecher: je Karte, die mit dem Flaschenstapel herunterfaellt — an
+   * den, der ihn umgeworfen hat (Emile, 13.10.2026). Gedeckelt bei
+   * FLASCHE_HOECHST_KARTEN, sonst waere ein hoher Turm ein Gelage.
+   */
+  koenigsbecherFlascheJeKarte: 1,
 } as const;
 
 // ---------------------------------------------------------------------------

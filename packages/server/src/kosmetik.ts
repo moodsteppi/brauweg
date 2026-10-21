@@ -114,6 +114,7 @@ export const KATALOG: readonly Stueck[] = [
   muenzen('hut-bergsteiger', 'hut', 400, 'episch'),
   edelsteine('hut-krone', 'hut', 40, 'legendaer'),
   geschenk('hut-partyhut', 'hut', 'episch'),
+  geschenk('hut-doktorhut', 'hut', 'legendaer'),
 
   // --- Augen ----------------------------------------------------------------
   // Eigener Platz und nicht Teil des Hutes: Wer eine Sonnenbrille aufsetzt,
@@ -132,6 +133,7 @@ export const KATALOG: readonly Stueck[] = [
   muenzen('oberteil-weste', 'oberteil', 200),
   muenzen('oberteil-regenjacke', 'oberteil', 320, 'selten'),
   edelsteine('oberteil-frack', 'oberteil', 60, 'legendaer'),
+  geschenk('oberteil-meisterrobe', 'oberteil', 'legendaer'),
 
   // --- Fuesse -------------------------------------------------------------
   frei('schuhe-flossen', 'schuhe'),
@@ -234,6 +236,13 @@ export function preisIn(stueck: Stueck, waehrung: Waehrung): number {
 
 /** Das Geburtstagsoutfit — was der Geburtstags-Pinguin einbringt. */
 export const GEBURTSTAGS_OUTFIT = ['hut-partyhut', 'aura-konfetti'] as const;
+
+/**
+ * Das Doko-Meister-Outfit — nach sieben Tagen Lernserie (lernpfad.ts). Ein
+ * Geschenk und nicht kaeuflich: Sonst waere es fuer Edelsteine zu haben, und
+ * die Serie belanglos (dieselbe Begruendung wie beim Geburtstag).
+ */
+export const LERN_OUTFIT = ['hut-doktorhut', 'oberteil-meisterrobe'] as const;
 
 // ---------------------------------------------------------------------------
 // Besitz und Getragenes

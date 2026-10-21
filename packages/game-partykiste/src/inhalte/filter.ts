@@ -17,9 +17,17 @@
  *      zu wenig uebrig bleibt — ein Tisch, der "harmlos" eingestellt hat,
  *      bekommt aber unter keinen Umstaenden einen derben Spruch, auch nicht,
  *      weil das Paket sonst leer waere.
+ *
+ * Seit dem 27.09.2026 kennt der Filter zwei Masse fuer die Haerte (siehe
+ * `PartykisteRegeln.inhaltsMischung`): GENAU die Stufe (`genau`) oder alles
+ * BIS zur Stufe (`gemischt` und die alte Lesart ohne Feld). Er liefert immer
+ * nur eine Menge in Katalogreihenfolge; wie daraus ein Stapel wird — genau
+ * zuerst, dann milder, oder je Stufe gleich oft —, entscheidet
+ * `inhaltsStapel` (stapel.ts), weil dafuer gemischt werden muss und hier
+ * nicht gemischt wird (Regel 1).
  */
 
-import type { PartykisteRegeln } from '../regeln.js';
+import { inhaltsLesart, type PartykisteRegeln } from '../regeln.js';
 import type { Haerte, Inhalt, Paket } from './typen.js';
 
 /**
@@ -32,11 +40,12 @@ import type { Haerte, Inhalt, Paket } from './typen.js';
 export const MINDESTMENGE = 10;
 
 /**
- * Was der Filter vom Regelsatz braucht. Beides optional, weil auch ein
+ * Was der Filter vom Regelsatz braucht. Alles optional, weil auch ein
  * Regelsatz aus einem Snapshot von vor dem 22.09.2026 hier ankommt — der
- * kennt die Felder nicht und soll trotzdem spielen (harmlos, alles).
+ * kennt die Felder nicht und soll trotzdem spielen (harmlos, alles). Fehlt
+ * `inhaltsMischung`, gilt die alte Obergrenze (regeln.ts, `inhaltsLesart`).
  */
-export type InhaltsRegeln = Partial<Pick<PartykisteRegeln, 'inhaltsHaerte' | 'paket'>>;
+export type InhaltsRegeln = Partial<Pick<PartykisteRegeln, 'inhaltsHaerte' | 'paket' | 'inhaltsMischung'>>;
 
 /**
  * Die Stufen, in denen die Auswahl nachgibt — von streng nach weich.
@@ -74,6 +83,14 @@ export interface InhaltsRueckfall {
   readonly gewollt: AuswahlStufe;
   readonly genutzt: AuswahlStufe;
   readonly passend: number;
+  /**
+   * Nur bei `inhaltsMischung: 'genau'` (seit dem 27.09.2026): Die gewollte
+   * Stufe hatte nur `passend` Eintraege, weniger als eine Partie braucht —
+   * hinter ihnen liegen im Stapel die der milderen Stufen. Dann kann
+   * `gewollt` gleich `genutzt` sein: Das Paket hat gereicht, die Stufe nicht.
+   * Optional wie das ganze Feld in Snapshots von davor.
+   */
+  readonly stufeDuenn?: { readonly stufe: Haerte; readonly passend: number };
 }
 
 export interface Auswahl<T> {
@@ -106,29 +123,30 @@ function istAllgemein(inhalt: Inhalt): boolean {
 function stufeAnwenden<T extends Inhalt>(
   katalog: readonly T[],
   stufe: AuswahlStufe,
-  haerte: Haerte,
+  /* Das Haertemass kommt fertig herein: genau oder bis (waehlbareInhalte). */
+  passtH: (inhalt: Inhalt) => boolean,
   paket: Paket | null,
   sitze: number,
 ): T[] {
   switch (stufe) {
     case 'paket':
       return katalog.filter(
-        (i) => passtHaerte(i, haerte) && passtSitze(i, sitze) && paket !== null && traegtPaket(i, paket),
+        (i) => passtH(i) && passtSitze(i, sitze) && paket !== null && traegtPaket(i, paket),
       );
     case 'paketUndAllgemein':
       return katalog.filter(
         (i) =>
-          passtHaerte(i, haerte) &&
+          passtH(i) &&
           passtSitze(i, sitze) &&
           (istAllgemein(i) || (paket !== null && traegtPaket(i, paket))),
       );
     case 'ohnePaket':
-      return katalog.filter((i) => passtHaerte(i, haerte) && passtSitze(i, sitze));
+      return katalog.filter((i) => passtH(i) && passtSitze(i, sitze));
     case 'ohneMinSitze':
-      return katalog.filter((i) => passtHaerte(i, haerte));
+      return katalog.filter((i) => passtH(i));
     /* Nie mehr angesteuert (siehe AuswahlStufe) — und selbst dann nie ueber die Haerte. */
     case 'vollerKatalog':
-      return katalog.filter((i) => passtHaerte(i, haerte));
+      return katalog.filter((i) => passtH(i));
   }
 }
 
@@ -155,6 +173,13 @@ export function hatErlaubtenVorrat(katalog: readonly Inhalt[], haerte: Haerte): 
  * umgehen (`baueRunde` ersetzt dann das Minispiel, siehe
  * `spielbaresMinispiel`).
  *
+ * Mit `inhaltsMischung: 'genau'` zaehlt nur GENAU die Stufe — auch fuer das
+ * Nachgeben der Paketstufen, die also mit den Eintraegen dieser einen Stufe
+ * rechnen. Leer ist dann haeufig (ein Katalog ohne Derbes); das Ausweichen
+ * auf die mildere Stufe macht `inhaltsStapel` (stapel.ts), nicht dieser
+ * Filter, weil die mildere Stufe HINTER die genaue gehoert und nicht
+ * dazwischen.
+ *
  * Wirft nie. Ein Regelsatz mit Unsinn in `inhaltsHaerte` gilt als harmlos,
  * einer mit Unsinn in `paket` als "alles" — dieselbe Nachsicht wie in
  * `createParty`, denn hier kommen auch Snapshots alter Partien an.
@@ -172,6 +197,9 @@ export function waehlbareInhalte<T extends Inhalt>(
   const paket: Paket | null = typeof regeln.paket === 'string' ? regeln.paket : null;
   const grenze = Number.isFinite(sitze) ? sitze : 0;
   const ziel = Math.max(1, Math.floor(Number.isFinite(mindestens) ? mindestens : MINDESTMENGE));
+  /* Genau die Stufe oder alles bis zu ihr — nie darueber (regeln.ts, inhaltsMischung). */
+  const genau = inhaltsLesart(regeln) === 'genau';
+  const passtH = (i: Inhalt): boolean => (genau ? haerteVon(i) === haerte : passtHaerte(i, haerte));
 
   /* Ohne 'vollerKatalog': Die letzte Stufe filtert noch auf die Haerte (siehe AuswahlStufe). */
   const stufen: AuswahlStufe[] = paket
@@ -182,7 +210,7 @@ export function waehlbareInhalte<T extends Inhalt>(
   let passend = -1;
   let letzte: T[] = [];
   for (const stufe of stufen) {
-    const treffer = stufeAnwenden(katalog, stufe, haerte, paket, grenze);
+    const treffer = stufeAnwenden(katalog, stufe, passtH, paket, grenze);
     if (passend < 0) passend = treffer.length;
     letzte = treffer;
     if (treffer.length >= ziel) {

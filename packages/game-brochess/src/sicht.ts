@@ -4,7 +4,7 @@
  * Beim Schach ist das alles: Es gibt nichts Verdecktes, Spieler und
  * Zuschauer sehen dasselbe Brett. Die Trennung von `sichtFuer` und
  * `zuschauerSicht` bleibt trotzdem, weil nur der Sitz eine eigene Farbe hat
- * — und weil der Ersatzbot laut game-api nie auf einer Zuschauersicht laufen
+ * — und weil der Bot laut game-api nie auf einer Zuschauersicht laufen
  * darf.
  *
  * Die Wiederholungszaehlung geht NICHT mit: Sie ist Buchhaltung des Servers,
@@ -18,7 +18,7 @@ export interface BroChessSicht {
   readonly zuschauer: boolean;
   /**
    * Die Stellung als FEN. Der Bildschirm liest `brett`; die FEN ist fuer den
-   * Ersatzbot da, der laut game-api nur die Sicht bekommt und daraus seine
+   * Bot da, der laut game-api nur die Sicht bekommt und daraus seine
    * Zuege rechnen muss.
    */
   readonly fen: string;

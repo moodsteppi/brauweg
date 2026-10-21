@@ -1,0 +1,129 @@
+/*
+ * Start der App: Logo auf dunklem Grund, dann Ladebild mit Leiste
+ * (Startbildschirm.tsx). Farben wie im neuen Hub (Nachtblau & Gold).
+ */
+.start-logo,
+.start-laden {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  background: #050b1d;
+  font-family: 'Lilita One', system-ui, sans-serif;
+  color: #f3f5ff;
+}
+
+/* 1. Das Logo springt auf, dahinter ein weicher Schein */
+.start-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.start-logo-schein {
+  position: absolute;
+  width: 120vmin;
+  height: 120vmin;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 192, 46, 0.22) 0%, rgba(43, 102, 217, 0.12) 38%, rgba(5, 11, 29, 0) 68%);
+}
+.start-logo-bild {
+  position: relative;
+  width: min(72vw, 340px);
+  height: auto;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.6));
+}
+.start-logo-bild.is-springt {
+  animation: start-springt 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes start-springt {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 2. Ladebild: unten bündig in voller Breite, darüber Nachtblau wie der Himmel */
+.start-laden {
+  background: linear-gradient(180deg, #0a1433 0%, #0e1a3d 45%, #0e1a3d 100%);
+  animation: start-einblenden 0.35s ease-out both;
+  transition: opacity 0.35s ease-in;
+}
+.start-laden.is-weg {
+  opacity: 0;
+}
+@keyframes start-einblenden {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.start-laden-bild {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  max-width: 34rem;
+  transform: translateX(-50%);
+  /* Oben weich in den Himmel verlaufen, damit keine Kante entsteht */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 12%);
+}
+.start-laden-logo {
+  position: absolute;
+  left: 50%;
+  top: max(6vh, calc(env(safe-area-inset-top, 0px) + 20px));
+  width: min(64vw, 300px);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.55));
+}
+/* Die Leiste unten, mit der Prozentzahl in der Mitte */
+.start-laden-leiste {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: max(28px, calc(env(safe-area-inset-bottom, 0px) + 16px));
+  max-width: 30rem;
+  margin: 0 auto;
+  height: 30px;
+  border-radius: 15px;
+  background: rgba(5, 11, 29, 0.78);
+  border: 2px solid rgba(245, 192, 46, 0.55);
+  overflow: hidden;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+}
+.start-laden-fuellung {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(180deg, #ffd75a, #e9a91a);
+  box-shadow: inset 0 -4px 0 rgba(120, 70, 0, 0.35);
+  transition: width 0.12s linear;
+}
+.start-laden-leiste strong {
+  position: relative;
+  display: block;
+  font: 400 18px/26px 'Lilita One', system-ui, sans-serif;
+  text-align: center;
+  color: #f3f5ff;
+  text-shadow: 0 1px 0 #07132f, 0 0 6px rgba(7, 19, 47, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .start-logo-bild.is-springt,
+  .start-laden {
+    animation: none;
+  }
+  .start-laden,
+  .start-laden-fuellung {
+    transition: none;
+  }
+}

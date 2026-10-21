@@ -45,7 +45,7 @@ Grundsätze, die für beide Formulare gelten:
 | Clan-Nachrichten | **nur Webseite** (Chat in der App aus, `Clan.tsx:280,338`) | `club_message` `:722` | nein |
 | Meldungen (Grund + optional Freitext bis 500 Zeichen) | wer meldet | `report` `:1108`; `melden-routen.ts:127` | nein |
 | Server-Protokolle (IP, Zeit, Adresse) | alle | Railway-Logs, Aufbewahrung **offen** (rote Lücke in der Datenschutzerklärung) | technisch |
-| **Geräte-Token für Push** | **noch nicht** — kommt mit „Push Server-Seite" | — | — |
+| **Geräte-Token für Push** | **ja, iOS seit 13.10.2026** (`BRAUWEG_PUSH = YES`) — Apple-Formular vor der nächsten Einreichung anpassen (Checkliste F3) | — | — |
 
 Nicht erhoben: Standort, Kontakte, Fotos/Kamera in der App, Telefonnummer,
 Anschrift, Zahlungsdaten (keine Käufe in der App), Werbe-ID,

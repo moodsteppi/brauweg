@@ -29,6 +29,7 @@ import {
   amZug,
   ausstieg,
   erzeugePartie,
+  minispielFolge,
   partykiste,
   sichtFuer,
   verarbeite,
@@ -36,6 +37,10 @@ import {
   type MinispielId,
   type PartykistePartie,
 } from '../src/index.js';
+import { KATEGORIEN_ENTFERNT } from '../src/inhalte/kategorien.js';
+import { MEHRHEITSFRAGEN_ENTFERNT } from '../src/inhalte/mehrheit.js';
+import { REGELKARTEN_ENTFERNT } from '../src/inhalte/regelkarten.js';
+import { pruefeKennungen } from '../src/inhalte/schema.js';
 
 function regeln(...minispiele: MinispielId[]) {
   return { ...DEFAULT_REGELN, minispiele };
@@ -43,6 +48,22 @@ function regeln(...minispiele: MinispielId[]) {
 
 function partie(minispiele: MinispielId[], sitze = 4, runden = 6, botSitze: number[] = [], saat = 11): PartykistePartie {
   return erzeugePartie({ regeln: regeln(...minispiele), saat, sitze, runden, botSitze, gastSitze: [] });
+}
+
+/**
+ * Die erste Saat, unter der die Runden genau in dieser Folge beginnen.
+ *
+ * Seit dem 27.09.2026 mischt die Kiste die Minispiele (`minispielFolge`),
+ * statt reihum durch die Liste zu gehen. Die Regel-Karten-Proben brauchen
+ * aber eine bestimmte Folge (Karte, dann zwei weitere Runden) — also suchen
+ * sie sich die Saat dazu, statt die Reihenfolge der Liste vorauszusetzen.
+ */
+function saatMitFolge(folge: MinispielId[]): number {
+  for (let saat = 1; saat < 10_000; saat++) {
+    const probe = minispielFolge(regeln(...folge), String(saat), folge.length);
+    if (probe.every((art, i) => art === folge[i])) return saat;
+  }
+  throw new Error(`keine Saat mit der Folge ${folge.join(', ')}`);
 }
 
 /** Alle Anwesenden tippen "Weiter" durch die Abrechnung. */
@@ -74,20 +95,33 @@ function spieleMitBots(stand: PartykistePartie, grenze = 20_000): PartykistePart
 const TRINKWORT = /trink|schluck|bier|shot|🍺|🍻|🥂|🥃|🍷|🍸/i;
 const TRINKBEFEHL = /\b(trink|trinkt|trinke|trinkst|schluck|schlucke|schlückchen|shot|shots|prost)\b|🍺|🍻|🥂|🥃|🍷|🍸/i;
 
-const NEUE: { name: string; katalog: readonly Inhalt[]; mindestens: number; praefix: string }[] = [
-  { name: 'kategorien', katalog: KATEGORIEN, mindestens: 60, praefix: 'k' },
-  { name: 'mehrheit', katalog: MEHRHEITSFRAGEN, mindestens: 60, praefix: 'm' },
-  { name: 'regelkarten', katalog: REGELKARTEN, mindestens: 40, praefix: 'r' },
+/**
+ * `jeStufe`: so viele Eintraege braucht jede Stufe allein (docs/PARTYKISTE-INHALTE.md,
+ * seit dem 27.09.2026 — jede Stufe liefert nur ihre eigenen Inhalte).
+ * Kategorien darf auf "derb" weniger haben (30).
+ */
+const NEUE: {
+  name: string;
+  katalog: readonly Inhalt[];
+  entfernt: readonly string[];
+  mindestens: number;
+  jeStufe: readonly [number, number, number];
+  praefix: string;
+}[] = [
+  { name: 'kategorien', katalog: KATEGORIEN, entfernt: KATEGORIEN_ENTFERNT, mindestens: 60, jeStufe: [50, 50, 30], praefix: 'k' },
+  { name: 'mehrheit', katalog: MEHRHEITSFRAGEN, entfernt: MEHRHEITSFRAGEN_ENTFERNT, mindestens: 60, jeStufe: [50, 50, 50], praefix: 'm' },
+  { name: 'regelkarten', katalog: REGELKARTEN, entfernt: REGELKARTEN_ENTFERNT, mindestens: 40, jeStufe: [50, 50, 50], praefix: 'r' },
 ];
 
-test('die neuen Kataloge sind gross genug und lueckenlos nummeriert', () => {
-  for (const { name, katalog, mindestens, praefix } of NEUE) {
+test('die neuen Kataloge sind gross genug, je Stufe, und ihre Kennungen werden nie neu vergeben', () => {
+  for (const { name, katalog, entfernt, mindestens, jeStufe, praefix } of NEUE) {
     assert.ok(katalog.length >= mindestens, `${name}: ${katalog.length} statt mindestens ${mindestens}`);
-    assert.deepEqual(
-      katalog.map((i) => i.id),
-      Array.from({ length: katalog.length }, (_, i) => `${praefix}${String(i + 1).padStart(3, '0')}`),
-      `${name}: Kennungen nicht lueckenlos`,
-    );
+    /* Bis zum 27.09.2026 lueckenlos; seitdem Luecken nur ueber die Liste der gestrichenen. */
+    assert.deepEqual(pruefeKennungen(praefix, katalog.map((i) => i.id), entfernt), [], `${name}: Kennungen`);
+    jeStufe.forEach((ziel, s) => {
+      const zahl = katalog.filter((i) => i.haerte === s + 1).length;
+      assert.ok(zahl >= ziel, `${name} Stufe ${s + 1}: ${zahl} statt mindestens ${ziel}`);
+    });
   }
 });
 
@@ -344,13 +378,15 @@ test('Mehrheitsraten: Bots tippen auf die haeufigere Antwort der Bots', () => {
 
 /** Regel-Karte, dann Ich hab noch nie, dann Quiz — die Karte gilt bis Runde 2. */
 function mitKarte(sitze = 4): PartykistePartie {
-  let p = partie(['regelkarte', 'niemals', 'quiz'], sitze, 6);
+  const folge: MinispielId[] = ['regelkarte', 'niemals', 'quiz'];
+  let p = partie(folge, sitze, 6, [], saatMitFolge(folge));
   for (let s = 0; s < sitze; s++) p = verarbeite(p, s, { art: 'bereit' });
   return p;
 }
 
 test('die Regel-Karte gilt ab dem Lesen bis zum Ende der uebernaechsten Runde', () => {
-  let p = partie(['regelkarte', 'niemals', 'quiz'], 4, 6);
+  const folge: MinispielId[] = ['regelkarte', 'niemals', 'quiz'];
+  let p = partie(folge, 4, 6, [], saatMitFolge(folge));
   assert.equal(p.regelKarte, null);
   assert.throws(() => verarbeite(p, 0, { art: 'genannt' }), /Regel lesen/);
   for (let s = 0; s < 4; s++) p = verarbeite(p, s, { art: 'bereit' });
@@ -413,7 +449,8 @@ test('in einer Abrechnung, nach der keine mehr kommt, ist Melden gesperrt statt 
   assert.equal(gemeldet.regelKarte!.offen[0], 1, 'der Verstoss wartet auf die naechste Abrechnung');
 
   /* Eine Karte in der vorletzten Runde gilt nur bis zum Turnierende. */
-  let kurz = erzeugePartie({ regeln: regeln('niemals', 'regelkarte'), saat: 5, sitze: 4, runden: 2, gastSitze: [] });
+  const saat = saatMitFolge(['niemals', 'regelkarte']);
+  let kurz = erzeugePartie({ regeln: regeln('niemals', 'regelkarte'), saat, sitze: 4, runden: 2, gastSitze: [] });
   for (let s = 0; s < 4; s++) kurz = verarbeite(kurz, s, { art: 'gestehen', ja: false });
   kurz = weiterTippen(kurz);
   for (let s = 0; s < 4; s++) kurz = verarbeite(kurz, s, { art: 'bereit' });

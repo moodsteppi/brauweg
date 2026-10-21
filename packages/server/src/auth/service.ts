@@ -720,6 +720,9 @@ export async function anonymizeAccount(db: Db, accountId: string): Promise<void>
       // eines geloeschten Kontos weiter an jeden aus.
       avatar: null,
       figurBemalung: null,
+      // Ueber welche Anzeige jemand kam, geht niemanden mehr etwas an. Die
+      // schon gezaehlten Runden bleiben in herkunft_zaehler (src/herkunft.ts).
+      herkunft: null,
       anonymizedAt: now,
     })
     .where(eq(s.account.id, accountId));

@@ -17,6 +17,11 @@
   gap: 0.8rem;
   min-height: 100dvh;
   padding: 0.8rem;
+  /* In der App reicht die Seite bis unter Statusleiste und Home-Strich: Ohne
+     diese Raender lag der Zurueck-Knopf auf der Uhrzeit und die Ueberschrift
+     hinter der Dynamic Island. Im Browser sind die Werte 0, es bleibt 0.8rem. */
+  padding-top: max(0.8rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(0.8rem, env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
   background: var(--bg);
   color: var(--text);
@@ -162,6 +167,22 @@
   position: relative;
   z-index: 1;
   pointer-events: none;
+}
+
+/* Pinguin-Figuren (figurensatz.ts): Bild statt Zeichen, ganz im Feld, nach
+   unten ausgerichtet wie eine Figur, die auf dem Feld steht. */
+.figurBild {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  /* Etwas Abstand nach oben: Der König füllt sonst das Feld bis an die Kante. */
+  padding-top: 4%;
+  box-sizing: border-box;
 }
 
 .figurWeiss {

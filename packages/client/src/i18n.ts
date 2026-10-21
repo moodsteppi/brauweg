@@ -6,6 +6,8 @@
  * zweites Woerterbuch und kein Umbau.
  */
 
+import { inApp } from './laufzeit';
+
 const de: Record<string, string> = {
   'game.doppelkopf': 'Doppelkopf',
   // Das Spiel heisst international "Wizard" und ist als Marke eingetragen
@@ -145,6 +147,10 @@ const de: Record<string, string> = {
   'error.geburtstagFehlt': 'Bitte gib dein Geburtsdatum an.',
   'error.letzteAnmeldeart': 'Das ist deine letzte Anmeldeart. Verknüpfe erst eine andere oder setze ein Passwort.',
   'error.nurAufsicht': 'Das darf nur die Aufsicht.',
+  // Partykiste „Passt nicht“ (27.09.2026, nur auf staging)
+  'error.nurAufStaging': 'Das gibt es nur auf dem Testsystem.',
+  'error.inhaltUnbekannt': 'Diesen Eintrag gibt es nicht (mehr).',
+  'error.tischUnbekannt': 'Diesen Tisch gibt es nicht (mehr).',
   'error.snapshotMissing': 'Der Spielstand ließ sich nicht laden.',
   'error.ruleSetUnknown': 'Diesen Regelsatz gibt es nicht.',
   'error.accountUnknown': 'Dieses Konto gibt es nicht.',
@@ -189,6 +195,10 @@ const de: Record<string, string> = {
   'error.internal': 'Da ist etwas schiefgelaufen.',
   'error.clubRequired': 'Für einen Clantisch brauchst du einen Clan.',
   'error.notClubMember': 'Diesen Tisch sehen nur Clanmitglieder.',
+  // Beitritt mit Zusage (tables/anfragen.ts im Server).
+  'error.notHost': 'Über Anfragen entscheidet nur, wer den Tisch aufgemacht hat.',
+  'error.anfrageUnbekannt': 'Diese Anfrage gibt es nicht mehr.',
+  'error.lektionUnbekannt': 'Diese Lektion gibt es nicht.',
   'error.pauseClubOnly': 'Pausieren geht nur an Clantischen.',
   'error.partyPaused': 'Der Tisch ist pausiert. Erst fortsetzen.',
   'error.clubUnknown': 'Diesen Clan gibt es nicht.',
@@ -205,6 +215,10 @@ const de: Record<string, string> = {
   'error.questUnknown': 'Diese Aufgabe gibt es nicht.',
   'error.questNotDone': 'Diese Aufgabe ist noch nicht fertig.',
   'error.questAlreadyClaimed': 'Die Belohnung hast du schon geholt.',
+  // Trophäenweg (26.09.2026, server/src/trophaeenweg.ts)
+  'error.wegStufeUnbekannt': 'Diese Stufe gibt es auf dem Trophäenweg nicht.',
+  'error.wegNichtErreicht': 'Dafür fehlen dir noch Trophäen.',
+  'error.wegSchonGeholt': 'Diese Belohnung hast du schon geholt.',
   'error.itemUnknown': 'Dieses Stück gibt es nicht.',
   'error.itemNotForSale': 'Das gibt es nicht zu kaufen, nur zu bekommen.',
   'error.itemAlreadyOwned': 'Das hast du schon.',
@@ -232,6 +246,17 @@ const de: Record<string, string> = {
   'truhe.gold': 'Goldtruhe',
   'truhe.diamant': 'Diamanttruhe',
 
+  // --- Gegenstände des Trophäenwegs ----------------------------------------
+  // Je Kennung aus WEG_STATIONEN (server/src/trophaeenweg-katalog.ts). Eigene
+  // Schlüssel statt `kosmetik.*`/`deck.*`: Auf dem Weg steht dazu, WAS es ist
+  // („Kartenrücken"), weil ein Name allein bei vier Warenarten nichts sagt.
+  // trophaeenweg.test.ts prüft, dass jede Kennung hier einen Text hat.
+  'weg.hut-strohhut': 'Pinguin-Kopf „Strohhut“',
+  'weg.ruecken-sommerwiese': 'Kartenrücken „Sommerwiese“',
+  'weg.szene-kaminzimmer': 'Tisch „Kaminzimmer“',
+  'weg.blatt-winterhof': 'Kartenblatt „Winterhof“',
+  'weg.aura-sterne': 'Pinguin-Aura „Sternenkranz“',
+
   // --- Plaetze der Pinguin-Ausstattung ------------------------------------
   'slot.hut': 'Kopf',
   'slot.brille': 'Augen',
@@ -252,6 +277,7 @@ const de: Record<string, string> = {
   'kosmetik.hut-bergsteiger': 'Bergsteigerhelm',
   'kosmetik.hut-krone': 'Krone',
   'kosmetik.hut-partyhut': 'Partyhut',
+  'kosmetik.hut-doktorhut': 'Doko-Doktorhut',
   'kosmetik.brille-keine': 'Ohne Brille',
   'kosmetik.brille-sonnenbrille': 'Sonnenbrille',
   'kosmetik.brille-lesebrille': 'Lesebrille',
@@ -263,6 +289,7 @@ const de: Record<string, string> = {
   'kosmetik.oberteil-weste': 'Lederweste',
   'kosmetik.oberteil-regenjacke': 'Regenjacke',
   'kosmetik.oberteil-frack': 'Frack',
+  'kosmetik.oberteil-meisterrobe': 'Meisterrobe',
   'kosmetik.schuhe-flossen': 'Barfuß',
   'kosmetik.schuhe-gummistiefel': 'Gummistiefel',
   'kosmetik.schuhe-turnschuhe': 'Turnschuhe',
@@ -644,6 +671,7 @@ const de: Record<string, string> = {
   'partykiste.sitzzahl': 'Die Partykiste spielt zu viert bis zu zwölft.',
   'partykiste.rundenzahl': 'Zwischen 3 und 15 Minispielen je Turnier.',
   'ruleset.partykiste.inhaltsHaerte': 'Die Inhalte sind harmlos (1), pikant (2) oder derb (3).',
+  'ruleset.partykiste.inhaltsMischung': 'Die Inhalte kommen genau aus einer Stufe oder gemischt aus allen.',
   'ruleset.partykiste.paket': 'Dieses Themenpaket gibt es nicht.',
   // Einladung an den Tisch (22.09.2026): Code, Link, QR — und die Eingabe dazu.
   'einladung.titel': 'Leute dazuholen',
@@ -655,7 +683,9 @@ const de: Record<string, string> = {
   'einladung.kopiert': 'Link kopiert — jetzt in den Gruppenchat einfügen.',
   'einladung.nichtKopiert': 'Kopieren ging nicht. Der Link steht unter dem QR-Code.',
   'einladung.qrAria': 'QR-Code des Einladungslinks',
-  'einladung.vorgemerkt': 'Du bist an einen Tisch eingeladen. Melde dich an oder spiel als Gast — danach sitzt du direkt dort.',
+  // „sitzt du direkt dort" stimmte nicht mehr, seit private Kartentische eine
+  // Zusage des Gastgebers verlangen (tables/anfragen.ts, 13.10.2026).
+  'einladung.vorgemerkt': 'Du bist an einen Tisch eingeladen. Melde dich an oder spiel als Gast — danach geht es zum Tisch.',
   'einladung.laeuft': 'Du wirst an den Tisch gesetzt …',
   'einladung.eingabeTitel': 'Mit Code beitreten',
   'einladung.eingabeAria': 'Beitrittscode eingeben',
@@ -705,8 +735,21 @@ export function gameTypeLabel(gameType: { kind: string; solo?: string }): string
   return t(`spielart.${gameType.kind}`);
 }
 
+/**
+ * Was in der App anders heisst als auf der Webseite.
+ *
+ * Filler heisst in der App „Farbduell" (Emile, 13.10.2026, erste
+ * iOS-Fassung): Unter „Filler" steht im App Store schon ein bekanntes Spiel.
+ * Die Kennung `filler` bleibt, sie steht in Datenbankzeilen und Nachrichten.
+ * Hier und nicht am Bildschirm, damit Auswahl, Rangliste, Profil und Tisch
+ * denselben Namen zeigen; den Push-Text fuehrt `SPIELNAMEN` im Server.
+ */
+const APP_NAMEN: Record<string, string> = {
+  'game.filler': 'Farbduell',
+};
+
 export function t(key: string): string {
-  return de[key] ?? key;
+  return (inApp ? APP_NAMEN[key] : undefined) ?? de[key] ?? key;
 }
 
 const SUITS: Record<string, string> = { C: '♣', S: '♠', H: '♥', D: '♦' };

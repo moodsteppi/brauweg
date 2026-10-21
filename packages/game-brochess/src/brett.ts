@@ -11,7 +11,7 @@
  *
  * Figuren schreiben sich wie in der FEN: Grossbuchstaben Weiss, Kleinbuchstaben
  * Schwarz, ein leeres Feld ist ''. FEN ist hier nicht Zierde, sondern das
- * Eingabeformat der Tests — und die Sicht, aus der der Ersatzbot rechnet.
+ * Eingabeformat der Tests — und die Sicht, aus der der Bot rechnet.
  */
 
 export type Farbe = 'w' | 'b';
@@ -21,8 +21,8 @@ export type Umwandlung = 'q' | 'r' | 'b' | 'n';
 
 /**
  * Reihenfolge der Umwandlungen in der Zugliste. Die Dame zuerst, weil der
- * Ersatzbot den ersten legalen Zug nimmt — und eine Unterverwandlung als
- * Voreinstellung waere ein Geschenk an den Gegner.
+ * Bot bei gleicher Bewertung den zuerst erzeugten Zug nimmt (bot.ts) — und
+ * eine Unterverwandlung als Voreinstellung waere ein Geschenk an den Gegner.
  */
 export const UMWANDLUNGEN: readonly Umwandlung[] = ['q', 'r', 'b', 'n'];
 
@@ -245,8 +245,14 @@ const ROCHADEN: Readonly<
   q: { koenig: 60, ziel: 58, turm: 56, leer: [57, 58, 59], sicher: [60, 59, 58] },
 };
 
-/** Alle Zuege nach Gangart, ohne Ruecksicht auf den eigenen König. */
-function pseudoZuege(stellung: Stellung): Zug[] {
+/**
+ * Alle Zuege nach Gangart, ohne Ruecksicht auf den eigenen König.
+ *
+ * Exportiert fuer den Bot (bot.ts): Er prueft die Legalitaet erst beim
+ * Ausfuehren, statt jede Stellung doppelt aufzubauen — sonst rechnet er im
+ * Serverprozess spuerbar lange.
+ */
+export function pseudoZuege(stellung: Stellung): Zug[] {
   const { brett, amZug } = stellung;
   const zuege: Zug[] = [];
   const feind = (f: number): boolean => brett[f] !== '' && farbeVon(brett[f]!) !== amZug;

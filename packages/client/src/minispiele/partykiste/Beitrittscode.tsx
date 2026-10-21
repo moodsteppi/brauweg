@@ -26,9 +26,12 @@ import { codeNormalisieren, fehlschlagLesen, fehlschlagVergessen } from './einla
 export function Beitrittscode({
   spiel,
   onBeigetreten,
+  neu = false,
 }: {
   spiel: string;
   onBeigetreten: (tableId: string) => void;
+  /** Neues Hub: als Abschnitt des Spieleinstiegs, Beitreten als Nebenweg. */
+  neu?: boolean;
 }): React.JSX.Element {
   const [vorher] = useState(fehlschlagLesen);
   const [code, setCode] = useState(vorher?.code ?? '');
@@ -77,6 +80,49 @@ export function Beitrittscode({
       setLaeuft(false);
     }
   };
+
+  if (neu) {
+    return (
+      <form
+        className="hb-blk spe-beitritt"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (fertig && !laeuft) void trittBei();
+        }}
+      >
+        <h2 className="hb-ab">{t('einladung.eingabeTitel')}</h2>
+        <div className="hb-suchzeile">
+          <input
+            className="spe-feld spe-codefeld"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="CODE"
+            aria-label={t('einladung.eingabeAria')}
+            autoCapitalize="characters"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="go"
+            maxLength={12}
+          />
+          <button className="hb-kn is-blau" type="submit" disabled={!fertig || laeuft}>
+            {t('einladung.beitreten')}
+          </button>
+        </div>
+        {vorschau ? (
+          <p className="hb-klein">
+            {vorschau.host ? `${t('einladung.tischVon')} ${vorschau.host}` : t('einladung.offenerTisch')} ·{' '}
+            {vorschau.occupied}/{vorschau.seats} {t('einladung.besetzt')}
+          </p>
+        ) : null}
+        {fehler ? (
+          <p className="hb-fehler" role="alert">
+            {fehler}
+          </p>
+        ) : null}
+      </form>
+    );
+  }
 
   return (
     <form

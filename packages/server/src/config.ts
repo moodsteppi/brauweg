@@ -40,6 +40,13 @@ export interface Config {
    */
   readonly diagnoseSchluessel: string | null;
   /**
+   * Schluessel, mit dem der bro-server die Werbelink-Summen abruft
+   * (`HERKUNFT_SCHLUESSEL`, src/herkunft.ts). Wie beim Diagnoseschluessel
+   * nicht vorbelegt und erst ab 20 Zeichen gueltig; ohne ihn ist die
+   * Auswertung zu, gezaehlt wird trotzdem.
+   */
+  readonly herkunftSchluessel: string | null;
+  /**
    * OAuth-Client-ID fuer "Mit Google anmelden" (GOOGLE_CLIENT_ID). Ohne sie
    * gibt es den Knopf nicht; E-Mail+Passwort geht immer.
    */
@@ -118,6 +125,10 @@ export function loadConfig(): Config {
     diagnoseSchluessel:
       (process.env.DIAGNOSE_SCHLUESSEL ?? '').length >= 20
         ? (process.env.DIAGNOSE_SCHLUESSEL as string)
+        : null,
+    herkunftSchluessel:
+      (process.env.HERKUNFT_SCHLUESSEL ?? '').length >= 20
+        ? (process.env.HERKUNFT_SCHLUESSEL as string)
         : null,
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? null,
     appleClientId: process.env.APPLE_CLIENT_ID || null,

@@ -2,6 +2,8 @@ import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
+import { api } from './api';
+import { merkeHerkunft } from './herkunft';
 import { installiereDruckabbruch } from './druckabbruch';
 import { FeedbackWidget } from './FeedbackWidget';
 import { starteKlang } from './klang';
@@ -15,6 +17,13 @@ starteKlang();
 // Ebenfalls vor dem ersten Bild und einmal fuer alles: Ein Knopf, von dem
 // der Finger weit weggezogen wurde, loest nicht aus (siehe druckabbruch.ts).
 installiereDruckabbruch();
+
+// Werbelink `?q=` lesen, bevor irgendein Schirm die Adresse anfasst (siehe
+// herkunft.ts). Scheitert die Meldung, faellt nur ein Besuch aus der Zaehlung
+// — dafuer zeigt niemand einen Fehler.
+merkeHerkunft((kennung) => {
+  api.herkunftBesuch(kennung).catch(() => undefined);
+});
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Kein Wurzelelement gefunden');
@@ -94,6 +103,10 @@ const devRunner = isDevFlag('runner');
  * sonst nur ueber Anmeldung, Datenbank und eine tatsaechlich offene Truhe.
  */
 const devTruhe = isDevFlag('truhe');
+/** Das neue Hub mit dem Beispielkonto aus dem Entwurf — nur im Dev-Server. */
+const devHub = import.meta.env.DEV && isDevFlag('hub');
+/** Der Startbildschirm (Logo, Ladebild, Leiste) zum Ansehen — nur im Dev-Server. */
+const devStart = import.meta.env.DEV && isDevFlag('start');
 
 if (
   (devAvatar || devChest || devWerkstatt || devRunner || devTruhe) &&
@@ -155,11 +168,18 @@ const ProbeRuestkammer = lazy(() =>
 
 /* `lazy` wie die anderen Proben: Das Brett gehoert nicht in das Stueck, das
    jeder Spieler beim Anmelden laedt. */
+const ProbeStart = lazy(() => import('./proben/start/ProbeStart').then((m) => ({ default: m.ProbeStart })));
+const ProbeHub = lazy(() => import('./proben/hub/ProbeHub').then((m) => ({ default: m.ProbeHub })));
+
 const ProbeBroChess = lazy(() =>
   import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
 );
 
-const werkzeug = probeArena2d ? (
+const werkzeug = devStart ? (
+  <ProbeStart />
+) : devHub ? (
+  <ProbeHub />
+) : probeArena2d ? (
   <Arena2D />
 ) : probeKampf ? (
   <ProbeKampf />

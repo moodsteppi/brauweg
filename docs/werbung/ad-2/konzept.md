@@ -1,0 +1,727 @@
+# Ad 2 — „Drei Städte, eine Runde" (Konzept und Storyboard)
+
+Die erste Brauweg-Ad, die ausgestrahlt werden soll. Ad 1
+(`docs/werbung/ad-1/konzept.md`) bleibt die Probe. Grundlage ist das
+Drehbuch B aus `docs/werbung/drehbuecher.md`, das Robin am 19.10.2026
+freigegeben hat.
+
+Dieses Blatt ist **nur das Konzept**. Erzeugt wird hier nichts: keine
+fal-Aufrufe und kein Creative. Das übernimmt die Folgekarte, nach dem
+Verfahren in bro-server `docs/creatives/ki-ads-verfahren.md`: Referenzen,
+dann Figur und Charakterbogen, dann Ankerbild, dann die Szenen als Stapel.
+Danach kommt die **Freigabe des Storyboards**. Erst dann entsteht Video, und
+zwar nur aus freigegebenen Bildern, zuletzt Schnitt und Ton. Dazu kommen die
+Lehren aus Ad 1, Abschnitt 9: realer Look, echte und sinnvolle Bewegungen,
+kein Schwarzbild.
+
+Stand 19.10.2026. In der App wird nur Version 1.0 gezeigt: Doppelkopf, Skat
+und Partykiste (`docs/store/PRUEFHINWEISE.md`). Ad 2 zeigt davon nur
+Doppelkopf, die beiden anderen Spiele stehen auf der Endkarte.
+
+---
+
+## 1. Zielgruppe und Kernbotschaft
+
+**Zielgruppe:** Menschen zwischen 25 und 55, die früher eine feste
+Doppelkopfrunde hatten, aus Schule, Studium oder WG. Heute ist die Runde über
+mehrere Städte verteilt. Die Regeln kennen sie. Was fehlt, ist der Tisch.
+
+**Kernbotschaft (eine):** *Eure Runde gibt es noch — sie spielt jetzt in der
+App, von überall.*
+
+Ausdrücklich **nicht** erzählt wird:
+
+- **„Es fehlt einer":** Das war Ad 1. In Ad 2 sind alle vier da.
+- **„Ein Bot spielt mit":** Am Tisch in der App sitzen vier Menschen. Ein Bot
+  als Pointe würde die Geschichte umdrehen, denn dann wäre die Runde eben
+  nicht mehr vollständig.
+
+Der Aufruf am Ende geht ins Web, weil die App dort sofort läuft:
+**brauweg-spielen.de**, im Browser spielbar. Die Stores werden nur
+angekündigt.
+
+---
+
+## 2. Hook und Geschichte (9:16, 28 s)
+
+**Hook, 0–3 s:** Ein ausgedrucktes, verblasstes Foto: vier junge Leute an einem
+WG-Küchentisch, Karten in der Hand, einer lacht mit offenem Mund. Darüber steht
+**„Früher: jeden Sonntag."** Wer so eine Runde hatte, erkennt sie in diesem
+Moment wieder.
+
+**Geschichte, 3–28 s:** Das Leben zieht die vier auseinander: ein
+Umzugskarton, ein Bahnsteig, der Küchentisch von damals, jetzt leer. Schnitt
+auf heute, Sonntag 19:00. Lena sitzt in Hamburg, Tobi und Sara in Köln, Jonas
+in Leipzig, alle mit dem Handy auf dem Sofa. In der App liegt ein Stich auf
+dem Doppelkopftisch und wird eingezogen. Danach sieht man alle drei
+Wohnzimmer in derselben Sekunde: Lena lacht, Tobi schüttelt den Kopf, Jonas
+reckt die Faust. Endkarte.
+
+Der Bogen geht von **Nähe (früher)** über **Trennung (das Leben)** zu
+**derselben Nähe auf Entfernung (heute)**. Es gibt keinen Sprecher. Bild,
+Einblendung und Musik tragen die Geschichte, damit sie auch ohne Ton im Feed
+funktioniert.
+
+---
+
+## 3. Szenenliste
+
+Was die Arten bedeuten:
+
+- **KI:** ein Standbild aus Nano Banana Pro, bewegt mit Kling (Bild zu Video).
+- **KI, Schnittzoom:** ein Standbild ohne Kling. Bewegt wird es im Schnitt
+  mit einem langsamen `zoompan`. Ein Foto ist ein Foto, darin bewegt sich
+  niemand. Kling würde die Gesichter im Abzug zum Leben erwecken, und das wäre
+  falsch.
+- **Bildschirmaufnahme:** ein Clip aus `werkzeug/store/clips.mjs`. Szene 6
+  braucht dafür eine neue Variante, siehe den Absatz unter der Tabelle.
+
+| Nr | Zeit | Art | Bildinhalt | Kamera/Bewegung | Dauer | Texteinblendung | Ton |
+|---|---|---|---|---|---|---|---|
+| 1 | 0–3 s | KI, Schnittzoom | Nah auf einen verblassten, leicht vergilbten Fotoabzug (ca. 2010): die vier jung am WG-Küchentisch, Karten in der Hand, Tobi lacht mit offenem Mund; die Ränder des Abzugs sind sichtbar, er liegt auf Holz | sehr langsamer Push-in auf die Gesichter (im Schnitt) | 3 s | **Früher: jeden Sonntag.** | leises Papierrascheln, Musik setzt zart ein |
+| 2a | 3,0–4,3 s | KI | Hände kleben einen Umzugskarton zu, auf dem Karton liegt ein abgegriffenes Kartenspiel | Handkamera, kurze Bewegung mit dem Klebeband | 1,3 s | **Dann kam das Leben.** (steht über 2a–2c) | Klebeband-Ratschen |
+| 2b | 4,3–5,6 s | KI | Bahnsteig in der Dämmerung, Lena mit Rucksack (jung) dreht sich ein letztes Mal um und winkt | Handkamera, Zug fährt unscharf durchs Bild | 1,3 s | (weiter) | Zuggeräusch |
+| 2c | 5,6–7,0 s | KI | Derselbe Küchentisch wie auf dem Foto, leer, vier Stühle, Abendlicht | statisch, Licht wird langsam dunkler | 1,4 s | (weiter) | Stille, Musik hält |
+| 3a | 7,0–8,3 s | KI | **Hamburg:** Lena (heute) auf grauem Sofa, Regen am Fenster, Handy in der Hand, Blick hebt sich | leichter Push-in | 1,3 s | **Heute: immer noch Sonntag.** · klein: Hamburg · So 19:00 | Regen, Musik zieht an |
+| 3b | 8,3–9,6 s | KI | **Köln:** Tobi und Sara (heute) nebeneinander auf einem Cordsofa, jeder mit eigenem Handy, Sara stupst ihn an | leichter Schwenk | 1,3 s | (weiter) · klein: Köln | Lachen leise |
+| 3c | 9,6–11,0 s | KI | **Leipzig:** Jonas (heute) im Altbauwohnzimmer mit Dielen, lehnt sich zurück, Handy hoch | leichter Push-in | 1,4 s | (weiter) · klein: Leipzig | Musik-Beat bei 11 s |
+| 4 | 11–17 s | Bildschirmaufnahme **NEU: `14-doppelkopf-runde-stich`** (siehe unten) | Doppelkopftisch mit vier Menschen namens Lena, Tobi, Sara, Jonas; die vierte Karte schließt den Stich, der Stich wird eingezogen | — (Clip, bildfüllend oder im schlichten Handyrahmen wie in Ad 1) | 6 s | **Doppelkopf. Wie früher. Nur weiter weg.** | Karten-Klack auf dem Beat |
+| 5 | 17–23 s | KI ×3, im Schnitt **dreigeteilt** (drei Streifen übereinander, je 1080 × 640) | oben Hamburg: Lena lacht laut, Hand vor dem Mund · Mitte Köln: Tobi schüttelt den Kopf, Sara lacht und knufft ihn · unten Leipzig: Jonas reckt die Faust | Handkamera, je eine Bewegung; alle drei Streifen starten gleichzeitig | 6 s | — | Lachen aus drei Räumen, Musik-Höhepunkt |
+| 6 | 23–28 s | Endkarte (neu, im Schnitt gesetzt) | Brauweg-Logo; drei Zeilen wie unten | — | 5 s | **Brauweg · Doppelkopf · Skat · Partykiste** / Jetzt im Browser spielen: **brauweg-spielen.de** / App bald im App Store und bei Google Play | Musik klingt aus |
+
+**Endkarte:** Die vorhandene Endkarte aus Ad 1 (`5cb9ef8c`) trägt den Text
+„Bald im App Store" und passt deshalb nicht. Für Ad 2 wird sie neu gesetzt,
+vollformatig 1080 × 1920, mit Logo und den drei Zeilen aus
+`drehbuecher.md`. Es gibt **kein Store-Badge**, und das Apple- bzw.
+Google-Logo darf vor der Veröffentlichung nicht erscheinen.
+
+**Szene 4 braucht eine neue Aufnahme.** Die vorhandenen Doppelkopf-Clips
+02–05 kommen aus `clips.mjs`, und dort sind „alle Mitspieler Bots" (Kopf des
+Skripts). Der Tisch zeigt freie Bots als „Bot 2", „Bot 3" usw.
+(`packages/client/src/screens/Table.tsx`, `Bot ${seat + 1}`). Damit wäre
+ausgerechnet die Pointe zu sehen, die Ad 2 nicht erzählen will. Die
+Folgekarte erweitert `clips.mjs` deshalb um eine Szene mit **vier
+Gastkonten**. Das Skript legt Gäste ohnehin mit Namen an (`appSeite`,
+`POST /api/auth/gast` mit `name`). Die Namen sind dann Lena, Tobi, Sara und
+Jonas: Einer erstellt den Tisch, drei treten bei, drei Seiten spielen
+automatisch, und aufgenommen wird die Seite von Lena. Danach muss jemand
+prüfen, dass im Bild kein „Bot" steht und kein Bot-Stärkeregler zu sehen
+ist. Kann die Szene nicht als echte Partie mit vier Konten entstehen, ist die
+Szene offen. Ein KI-Bild der App ist kein Ersatz.
+
+**Bekannte Falle der Aufnahme:** In Ad 1 sind beim Stich-Clip
+(`04-doppelkopf-stich`) für 4 Bilder drei Karten verschwunden, und im Schnitt
+erschien dort ein Schwarzbild (Ad 1, 9.3 und 9.5). Die neue Aufnahme muss
+deshalb vor dem Schnitt Bild für Bild auf solche Aussetzer geprüft werden
+(YAVG im Bildschirmausschnitt, wie in 9.5).
+
+---
+
+## 4. Figuren mit Charakterbögen (vier Freunde, je jung und heute)
+
+Hauptrisiko dieser Ad: **Auf dem Foto von 2010 müssen dieselben vier Gesichter
+zu sehen sein wie 2026 in den Wohnzimmern.** Deshalb bekommt jede Figur zwei
+Bögen, einen für heute und einen für die junge Fassung. Der junge Bogen
+entsteht *aus* dem Bogen von heute und nicht frei. So bleibt das Gesicht der
+Anker, und nur das Alter ändert sich.
+
+Jede Figur hat ein **Erkennungsmerkmal, das über die Jahre bleibt**. Daran
+erkennt man sie auch in 1,3 s:
+
+| Figur | Stadt heute | Merkmal (bleibt) | Jung, ca. 2010 (~21) | Heute, 2026 (~37) |
+|---|---|---|---|---|
+| **Lena** | Hamburg | rote Haare, Sommersprossen | lange rote Haare mit Pony, ausgeleierter grüner Wollpullover | rotes Haar als kinnlanger Bob, dünne Brille, dunkelgrüner Strickpullover; Lachfalten |
+| **Tobi** | Köln | dichte dunkle Augenbrauen, breites Lachen, kräftige Statur | glattrasiert, dunkles Haar etwas länger, Kapuzenpulli ohne Aufdruck | kurz geschorenes Haar, Vollbart mit ersten grauen Stellen, kariertes Flanellhemd |
+| **Sara** | Köln (mit Tobi zusammen) | schwarze Locken, goldene Creolen | Locken hochgebunden, Jeansjacke, Creolen | Locken schulterlang, cremefarbener Pullover, dieselben Creolen |
+| **Jonas** | Leipzig | runde Metallbrille, schmales Gesicht, blond | lange blonde Haare unter einer schlichten Strickmütze, einfarbiges Shirt | kurzes, dünner werdendes blondes Haar, dieselbe Art Brille, dunkelblauer Pullover |
+
+**Vier Handys statt drei.** Im Drehbuch steht „drei Sofas, drei Handys".
+Weil Tobi und Sara zusammen in Köln sitzen und jeder Sitz am Tisch ein eigenes
+Gerät braucht, zeigt Ad 2 **drei Sofas und vier Handys**. Das ist ehrlich zur
+App, und das Paar in Köln erzählt „Dann kam das Leben" gleich mit. Es ist eine
+Abweichung vom Wortlaut, aber nicht vom Sinn des freigegebenen Drehbuchs.
+
+**Ablauf je Figur** (das sind die Posten aus Abschnitt 7):
+
+1. **Porträt heute:** 2 Varianten. Ein Mensch wählt eine aus.
+2. **Charakterbogen heute:** aus dem gewählten Porträt.
+3. **Charakterbogen jung:** aus dem Bogen von heute, mit dem Verjüngungs-Prompt.
+4. **Gegenprobe vor dem Stapel:** die vier Bögen „jung" nebeneinander und die
+   vier Bögen „heute" nebeneinander. Erkennt jemand, der die Figuren nicht
+   kennt, die Paare richtig zu, geht es weiter. Wenn nicht, wird der junge
+   Bogen der betroffenen Figur neu erzeugt (Reserve).
+
+Porträt-Prompt heute (Vorlage; die Merkmale je Figur aus der Tabelle
+einsetzen, Beispiel Lena):
+
+```text
+Candid smartphone portrait of an ordinary woman around 37, chin-length red bob, freckles, thin-rimmed glasses, dark green knit sweater, faint laugh lines. Sitting on a grey sofa in a lived-in living room in the evening, warm lamp light, rain on the window behind her. Real skin with pores and small blemishes, not a model, no makeup look, slight sensor grain, imperfect framing. No text, no logos.
+```
+
+Charakterbogen-Prompt (Referenz: das gewählte Porträt):
+
+```text
+Character reference sheet of the person in the reference image, same face, hair and clothing. Top row: full body standing, front view, three-quarter view, side view, back view, like a 3D model turnaround, neutral pose. Bottom row: close-ups of the face — front, three-quarter left, three-quarter right, profile, and one laughing. Plain light grey background, even soft light, consistent proportions across all views. Real skin texture, not stylized. No text, no labels.
+```
+
+Verjüngungs-Prompt (Referenz: Charakterbogen heute):
+
+```text
+Character reference sheet of the SAME person as in the reference sheet, but about sixteen years younger, around 21, in the year 2010. Keep the identical face structure, eye shape, nose, ears and the distinctive features ({MERKMAL}); only age and hairstyle change: {JUNG}. Same layout: top row full body front, three-quarter, side, back; bottom row face close-ups front, three-quarter left, three-quarter right, profile, laughing. Plain light grey background, even soft light. Real skin, not stylized, not airbrushed. No text, no labels.
+```
+
+`{MERKMAL}` und `{JUNG}` werden je Figur aus der Tabelle übernommen. Die
+Prompts kommen aus einer Datei, nie über die Kommandozeile (Ad 1, 9: `$P$G`).
+
+---
+
+## 5. Look — Referenzen
+
+Fremde Filmstills werden nicht verwendet, wegen der Rechte. Die Referenzen
+stehen als Beschreibung hier oder sind eigene Screenshots aus
+`werkzeug/store/screenshots.mjs`. Für jedes Bild gilt der **Handy-Look aus
+Ad 1, 9.1**: wie mit einem gewöhnlichen Handy geknipst, kein Filmstill, keine
+Werbeoptik, keine Farbkorrektur und kein Teal-and-Orange-Look. Die Haut ist
+echt, mit Poren, die Gesichter sind ganz normale Gesichter.
+
+| R | Beschreibung | Trägt |
+|---|---|---|
+| R1 | **WG-Küche um 2010:** abgewetzter Holztisch, unpassende Stühle, Lichterkette und Kühlschrank mit Zetteln, Licht von einer billigen Hängelampe. Als Foto: ein ausgedruckter Abzug, verblasst, die Farben ins Gelbe verschoben, leichte Knicke an der Ecke | Szene 1, 2c |
+| R2 | **Drei Wohnzimmer heute, deutlich verschieden:** Hamburg mit grauem Sofa, Regenfenster und kühlem Licht. Köln mit Cordsofa, Pflanzen und warmer Stehlampe. Leipzig als Altbau mit Dielen, hoher Decke, Bücherregal und gelber Leselampe | Szene 3, 5 |
+| R3 | **Farbklang Nachtblau & Gold** (`docs/DESIGN.md`: `#0e1a3d`, `#f5c02e`): Schatten kühl-blau, Lichter warm. Grün (`#48d56b`) nur sparsam an Pflanzen oder Kleidung | Farbe |
+| R4 | **Eigener Screenshot des Doppelkopf-Tischs** aus `screenshots.mjs`. Daraus kommt die Farbe des Displaylichts in den Gesichtern | Bildschirmlicht |
+| R5 | **Requisiten:** abgegriffene Karten ohne Herstelleraufdruck, Block mit Strichliste, Teebecher, Leitungswasser in schlichten Gläsern, Chipsschale, Ladekabel. 2010: Röhrenlampe, Lichterkette | Detail |
+
+**Nicht ins Bild** (gilt für jeden Prompt und steht als Negativliste im
+Ankerbild):
+
+- **Alkohol:** keine Flaschen und keine Bier- oder Weingläser. Das gilt
+  ausdrücklich auch für die WG-Küche von 2010, wo die Modelle gern
+  Bierflaschen dazudichten.
+- **Text und Marken:** keine Logos, kein lesbarer Text, keine Markenkarten,
+  keine Handys mit erkennbarem Herstellerlogo, keine Bandshirts mit Aufdruck.
+  Auch kein Ortsschild und kein Bahnhofsschild mit Namen; die Städte stehen
+  nur als Einblendung da.
+- **Sonst:** keine anderen Spiele (Würfel, Brettspiele), kein Rauchen und
+  keine fünfte Person.
+
+---
+
+## 6. Prompts
+
+Die Prompts sind englisch, denn sie sind Eingabe für die Modelle. Die
+Einblendungen und die Endkarte bleiben deutsch und entstehen im Schnitt.
+An jeden Szenen-Prompt wird der **Stil-Anhang** gehängt. Er ist der aus Ad 1,
+9.1, ergänzt um die Negativliste von oben:
+
+```text
+Shot on an ordinary smartphone, candid snapshot, not a film still and not an advertisement. Natural light only from the lamps in the room, visible sensor grain, slight softness and a touch of motion blur, imperfect off-center framing, no color grading, no teal-and-orange look. Real skin with pores, fine lines, small blemishes, ordinary non-model faces. No bottles, no beer, no wine, no alcohol, no logos, no brand names, no readable text, no signs, no extra people.
+```
+
+### 6.1 Ankerbilder (zwei Zeiten, je 2 Varianten, 1K)
+
+**Anker früher.** Eingänge sind die vier Charakterbögen „jung" und R1 als
+Beschreibung, Format 9:16.
+
+```text
+A Sunday evening around 2010 in a shabby shared-flat kitchen. Four friends in their early twenties — the four people from the reference sheets — sit around a worn wooden table playing cards, mismatched chairs, a cheap hanging lamp, fairy lights, a fridge covered in notes. Mugs of tea, a bowl of crisps, a scoring pad. The guy with the thick eyebrows laughs with his mouth open. Warm, a bit chaotic, very close friends.
+```
+
+**Anker heute.** Eingänge sind die vier Charakterbögen „heute" und R2 bzw. R4,
+Format 16:9, weil die Wohnzimmer im Schnitt gestapelt werden.
+
+```text
+Sunday evening, present day. A lived-in living room, a person from the reference sheets on the sofa holding a phone with both hands, the screen lighting their face softly with a dark green glow. Warm lamp light against cool blue window light. Quiet, cozy, expectant.
+```
+
+### 6.2 Szenen-Stapel (22 Prompts, gegen das passende Ankerbild)
+
+Szene 1 und 2c laufen gegen „Anker früher". 2a und 2b laufen gegen
+„Anker früher" plus den passenden jungen Bogen. 3a–3c und 5 laufen gegen
+„Anker heute" plus den Bogen heute der jeweiligen Figur. Szene 1 und 2 sind
+9:16, Szene 3 und 5 sind 16:9.
+
+```json
+[
+  "S1a: Close-up of a faded printed photo from around 2010 lying on a wooden table, edges and a bent corner visible, colours shifted to yellow: the four young friends at the shared-flat kitchen table with cards, the guy with thick eyebrows laughing",
+  "S1b: The same faded print held by an adult hand at the edge of the frame, the four young friends clearly recognisable, warm lamp light on the paper",
+  "S1c: Top-down view of the faded print on a table next to a worn deck of plain cards and a scoring pad",
+  "S1d: Slightly angled macro of the faded print, focus on the four laughing faces, paper texture and fading visible",
+
+  "S2a1: Hands taping a cardboard moving box shut, a worn deck of plain cards lying on top, cluttered room in the background",
+  "S2a2: Close-up of a half-packed moving box, a young hand drops a deck of plain cards inside",
+  "S2b1: The young red-haired woman with a backpack on a train platform at dusk, turning back once and waving, train blurred behind her, no signs",
+  "S2b2: Wide shot of a platform at dusk, the young red-haired woman small in the frame waving, motion-blurred train",
+  "S2c1: The same shared-flat kitchen table from the photo, empty, four chairs, evening light fading",
+  "S2c2: Close-up of the empty table top, a single forgotten playing card, light fading",
+
+  "S3a1: Hamburg flat: the red-haired woman around 37 on a grey sofa, rain on the window, phone in hand, she looks up expectantly",
+  "S3a2: Over-the-shoulder of the red-haired woman on the sofa, phone screen glowing, rainy window",
+  "S3b1: Cologne flat: the bearded man and the curly-haired woman around 37 side by side on a corduroy sofa, each with their own phone, she nudges him",
+  "S3b2: Medium shot of the couple on the corduroy sofa among plants, both leaning into their phones, warm floor lamp",
+  "S3c1: Leipzig flat: the blond man with round glasses around 37 in an old apartment with wooden floorboards and bookshelves, leaning back on the sofa, phone raised",
+  "S3c2: Wide shot of the high-ceilinged old living room, the blond man alone on the sofa under a yellow reading lamp, phone glowing",
+
+  "S5a1: The red-haired woman on the grey sofa bursts out laughing, hand over her mouth, phone in the other hand",
+  "S5a2: Close-up of the red-haired woman laughing hard, leaning back into the sofa",
+  "S5b1: The bearded man shakes his head in mock disbelief, the curly-haired woman next to him laughs and elbows him",
+  "S5b2: Close-up of the couple, he covers his face with one hand, she laughs at him",
+  "S5c1: The blond man with round glasses throws his fist up in triumph on the sofa, phone in the other hand",
+  "S5c2: Medium shot of the blond man jumping up from the sofa with a fist pump, reading lamp swinging slightly"
+]
+```
+
+Szene 4 ist eine Bildschirmaufnahme und Szene 6 die Endkarte, beide brauchen
+keinen Prompt. Die 22 Prompts sind Erstversuche, die Reserve steht in
+Abschnitt 7.
+
+### 6.3 Video-Prompts (Kling, Bild zu Video, 5 s je freigegebenem Standbild)
+
+Die Prompts beschreiben nur Kamera und Handlung, und zwar je eine konkrete
+Handlung (Ad 1, 9). Jeder endet mit der Leitplanke aus Ad 1, 9.1, angepasst:
+
+> Only the people already in the frame, nobody enters, no new objects, phone
+> screens stay a plain glow, handheld without zoom.
+
+| Szene | Video-Prompt |
+|---|---|
+| 1 | — kein Kling. Im Schnitt `zoompan` von 100 auf 106 % über 3 s, Mitte auf den Gesichtern |
+| 2a | Handheld close-up. The hands pull the tape across the box lid in one movement and press it down; the cards on top wobble slightly. |
+| 2b | Handheld. She turns her head back over her shoulder, raises one hand and waves once, then turns away; the blurred train passes behind her. |
+| 2c | Static shot. Nothing moves except the light: the evening light on the table slowly dims. |
+| 3a | Slow push-in. She glances at the rainy window, then down at her phone and starts to smile. |
+| 3b | Slight pan. She nudges him with her elbow, he grins without looking up from his phone. |
+| 3c | Slow push-in. He leans back into the sofa, lifts the phone closer and taps once. |
+| 5a | Handheld. She bursts out laughing and claps her free hand over her mouth, shoulders shaking. |
+| 5b | Handheld. He slowly shakes his head and drops it back against the sofa, she laughs and elbows him. |
+| 5c | Handheld, small jolt with the movement. He throws his fist up once and pulls it down, grinning. |
+
+**Verkettung:** Es gibt keine. Die Szenen sind bewusst harte Schnitte zwischen
+Orten und Zeiten. Damit entfällt K5, und das spart die Kosten dafür.
+
+---
+
+## 7. Kostenvoranschlag
+
+Die Preise stammen aus der Modellliste in bro-server, `origin/staging`
+(Commit `f9f1f44`, Datei zuletzt geändert in `138b8a3`),
+`src/lib/creatives/ki-anbieter.ts`, `KI_MODELLE`:
+
+- **Nano Banana Pro** (`kennung: "nano-banana-pro"`, Endpunkt
+  `fal-ai/nano-banana-pro/edit`, bis zu 14 Referenzbilder): 15 ct je Bild in
+  1K, Stand 19.10.2026.
+- **Kling 2.5 Turbo Pro, Bild zu Video** (`kennung: "kling-bild"`, Endpunkt
+  `fal-ai/kling-video/v2.5-turbo/pro/image-to-video`): 0,07 $ je Sekunde,
+  gebucht 7 ct/s, **5 s = 35 ct**. Stand der Preise laut Kopf der Liste:
+  18.10.2026.
+
+Gebucht wird der Dollarbetrag als Euro-Cent (Kopf von `ki-anbieter.ts`). Die
+Zahlen liegen deshalb eher über dem echten Preis.
+
+**Standbilder**
+
+| Posten | Bilder | Kosten |
+|---|---|---|
+| Porträts heute: 4 Figuren × 2 Varianten | 8 | 1,20 € |
+| Charakterbögen heute: 4 × 1 | 4 | 0,60 € |
+| Charakterbögen jung (aus dem Bogen heute): 4 × 1 | 4 | 0,60 € |
+| Ankerbilder: früher 2 + heute 2 | 4 | 0,60 € |
+| Szenen-Stapel (22 Prompts × 1) | 22 | 3,30 € |
+| Reserve: junger Bogen nach Gegenprobe, Retusche (z. B. Flasche im Hintergrund wie in Ad 1) | 4 | 0,60 € |
+| **Summe** | **46** | **6,90 €** |
+
+**Videos (nur aus freigegebenen Standbildern)**
+
+| Posten | Clips | Kosten |
+|---|---|---|
+| Szene 1 | 0 (Schnittzoom) | 0,00 € |
+| Szenen 2a–2c, 3a–3c, 5a–5c: 9 × 1 × 5 s | 9 | 3,15 € |
+| Nachdrehs (misslungene Handlung) | 3 | 1,05 € |
+| **Summe** | **12** | **4,20 €** |
+
+**Gesamt: höchstens 11,10 €** und damit unter der Vorgabe von 12 €. Das liegt
+auch unter dem Tageslimit von 20 € (`TAGESLIMIT_VORGABE_CENT = 2000` in
+`src/lib/creatives/kosten.ts`), die Ad lässt sich also an einem Tag erzeugen.
+Die Bildschirmaufnahme, der Schnittzoom und die Endkarte kosten nichts.
+
+**Wo der Puffer dünn ist:** Bis zur Grenze bleiben 0,90 €, das sind sechs
+Bilder oder zwei Videos. Der Nachdreh von Ad 1 hat 11 Bilder und 7 Videos
+gebraucht. Ein gescheiterter Aufruf wurde dort trotzdem gebucht (Ad 1, 9.4).
+Reicht die Reserve nicht, wird nicht einfach weiter erzeugt. Dann gilt diese
+Reihenfolge: zuerst je Szene 5 auf ein gemeinsames Video verzichten (im
+Schnitt ein Standbild mit Zoom), dann fragen.
+
+Ein Hinweis zum Modell: Das Verfahren empfiehlt Kling 3.0, angebunden ist
+Kling 2.5 Turbo Pro. Ein stärkeres Bild-zu-Video-Modell bietet die
+Creatives-Anbindung nicht an (Ad 1, 9.1). Die Handlungen hier sind klein
+genug dafür.
+
+---
+
+## 8. Freigabe und Schnitt
+
+1. **Gegenprobe der Gesichter** (Abschnitt 4, Schritt 4), bevor der Stapel
+   läuft.
+2. **Storyboard an Robin zur Freigabe (K2):** je Szene das gewählte Standbild
+   und ein Standbild aus der neuen Doppelkopf-Aufnahme. Das passiert,
+   **bevor** ein Video entsteht. Jedes Bild wird auch auf den Hintergrund
+   geprüft, nicht nur auf die Gesichter (Flasche in Ad 1, 9.2).
+3. **Videos nur aus freigegebenen Bildern.** Die Prompts kommen aus einer
+   Datei.
+4. **Schnitt:**
+   - Szene 5 als drei Streifen übereinander, je 1080 × 640, aus 16:9-Videos
+     mittig beschnitten, mit dünnen dunklen Trennlinien. Die drei Streifen
+     starten auf demselben Bild.
+   - Szene 3 mit Ortsnamen klein in einer Ecke. „So 19:00" steht nur einmal
+     da, bei 3a.
+   - Die Einblendungen sind in der Schrift der App gesetzt, der Ton kommt von
+     Hand (K7): Die Musik setzt leise bei 0 s ein und zieht bei 7 s an
+     (heute), der Beat liegt bei 11 s (App). Dazu Geräusche: Klebeband, Zug,
+     Regen, Kartenklack, Lachen.
+   - Das KI-Kennzeichen „KI-generiert" brennt nur der Server-Schnitt ein
+     (`lib/creatives/schnitt.ts`, Ad 1, 9.4). Wird von Hand geschnitten, muss
+     die Kennzeichnung vor der Ausstrahlung eigens geklärt werden.
+5. **Kein Schwarzbild (Ad 1, 9.5):** Vor dem Hochladen wird jedes Bild im
+   Bildschirmausschnitt der Szene 4 und in allen drei Streifen der Szene 5
+   gemessen (YAVG, kein Bild unter 40). `freezeframes` braucht **zwei
+   Eingänge** (`split[a][b];[a][b]freezeframes=…`). Mit nur einem Eingang
+   läuft ffmpeg ohne Fehlermeldung durch und lässt das Bild unverändert.
+6. Ergebnis als Creative-Asset hochladen und hier als Abschnitt 9 nachtragen
+   (Asset-Kennung, Länge, Größe, Lautheit, sha256, Kosten), so wie in Ad 1.
+
+---
+
+## 9. Erzeugung — Stand 19.10.2026
+
+Creative **`1bda9128-aa21-4ffa-9574-2cd9d194c34f`** („Ad 2 - Drei Staedte,
+eine Runde", Instagram Reel, Anzeige), Seite
+`https://bpb.broweg.de/dashboard/creatives/1bda9128-aa21-4ffa-9574-2cd9d194c34f`.
+Das Skript aus Abschnitt 3 steht im Feld `skript`.
+
+**Erster Anlauf (Karte d6f973f2):** Kein einziges KI-Bild ist entstanden.
+Die Probe vor dem ersten teuren Aufruf (ein `flux-schnell`-Bild für 1 ct, 17:32 UTC) kam als `FEHLER`
+zurück: „fal.ai hat den Schlüssel abgelehnt (403)". Abgelehnt schon beim
+Absenden, deshalb ohne Auftragskennung und **ohne Buchung (0 ct)**. Einen
+Endpunkt für den Kontostand gibt es in der Creatives-API nicht, und der
+FAL_KEY liegt nur auf dem Server — „Guthaben prüfen" heißt deshalb: diese
+Probe. Ein 403 ist nach den Erfahrungen von Ad 1 (9.4) leeres Guthaben oder
+ein gesperrter Schlüssel. Tageslimit zu dem Zeitpunkt: 11,77 € von 20 €
+verbraucht (alles Ad 1). Um 17:50 UTC ging eine neue 1-ct-Probe des
+Orchestrators durch (`c0e5433d`, `FERTIG`); der zweite Anlauf steht in 9.4.
+
+### 9.1 Was bereitliegt
+
+Die Prompts liegen als Dateien unter `prompts/` (nie über die Kommandozeile
+reichen, Ad 1 9: `$P$G`). Der Plan ist gegenüber Abschnitt 7 auf das
+Kartenbudget von **5 €** gekürzt — 31 Bilder × 15 ct = 4,65 €, Reserve 2
+Bilder:
+
+| Schritt | Dateien | Modell, Format | Referenzen |
+|---|---|---|---|
+| Porträt heute, **1** statt 2 Varianten | `portraet-*.txt` | nano-banana-pro, 9:16 | `f742485b` (eigener Doppelkopf-Screenshot, nur Farbe — wie Ad 1) |
+| Bogen heute | `bogen-heute-*.txt` | nano-banana-pro, 16:9 | gewähltes Porträt |
+| Bogen jung | `bogen-jung-*.txt` | nano-banana-pro, 16:9 | Bogen heute derselben Figur |
+| Anker früher, **1** statt 2 | `anker-frueher.txt` | nano-banana-pro, 9:16 | die vier Bögen jung |
+| Anker heute, **1** statt 2 | `anker-heute.txt` | nano-banana-pro, 16:9 | Bogen heute Lena, `f742485b` |
+| Szenen, **17** statt 22 | `s1a s1d s2a s2b s2c` (9:16) · `s3a s3a2 s3b s3b2 s3c s3c2 s5a s5a2 s5b s5b2 s5c s5c2` (16:9) | nano-banana-pro | S1/2: Anker früher + Bögen jung (2b: nur Lena) · S3/5: Anker heute + Bogen heute der Figur(en) |
+
+Gestrichen gegenüber 6.2: S1b, S1c, S2a2, S2b2, S2c2 — für 2a–2c je ein
+Versuch, für die Szenen mit Gesichtern (3, 5) und den Hook (1) je zwei.
+
+### 9.2 Szene 4 — Bildschirmaufnahme (fertig)
+
+`clips.mjs` hat die Szene **`14-doppelkopf-runde-stich`** bekommen (`node
+clips.mjs --szene 14`): vier Gastkonten Lena, Tobi, Sara, Jonas in je eigenem
+Browserkontext, Lena legt den Tisch an, die drei anderen treten per API bei
+(Doppelkopf will die Zusage des Gastgebers, die gibt Lena per API), alle vier
+spielen per Autopilot, aufgenommen wird Lena. Eine echte Partie, kein Bot.
+
+Asset **`acd84aa3-05b7-4eec-897f-f74f69cc4da4`**
+(`14-doppelkopf-runde-stich.mp4`, Art AUFNAHME), 6,97 s, 1080 × 1920,
+30 fps, H.264, 1,0 MB, sha256
+`4b9072a336480db7752bd22e68802073f0886949eea05f632bebd861d1288d1b`.
+
+- Im Bild: oben Sara, links Tobi, rechts Jonas, unten „Lena · Team Kontra".
+  Kein „Bot", kein Stärkeregler (ein Bild je 0,5 s angesehen).
+- Ablauf: bis ≈ 1,9 s liegen drei Karten; bei ≈ 2,0 s (Bild 61) legt Lena
+  die vierte; ab 3,77 s (Bild 113) wird der Stich eingezogen, bei 4,17 s ist
+  er weg; danach legt Jonas aus. Für die 6 s im Schnitt passt 0,0–6,0 s.
+- YAVG (alle 209 Bilder): ganzes Bild mindestens 70,1, Tischmitte mindestens
+  104,8 — kein Schwarzbild.
+- **Aussetzer in Bild 65–66 (≈ 2,17–2,20 s):** Die drei fremden Karten
+  springen kurz zurück und spielen ihre Legeanimation neu (Tischmitte YAVG
+  156 → 139,5 → 155,7). Derselbe Fehler wie „drei Karten verschwinden" in
+  Ad 1, und er liegt im **Client**, nicht in der Aufnahme: In `Table.tsx`
+  wird die Liegezeit des vollen Stichs erst in einem `useEffect` gesetzt; im
+  ersten Rendern nach der vierten Karte steht deshalb nur der leere Stich
+  plus die eigene Karte da. Für den Schnitt: Bild 64 und 67 zeigen dieselbe
+  Lage, also `split[a][b];[a][b]freezeframes=first=65:last=66:replace=64`.
+
+### 9.3 Fortsetzen
+
+Erst wenn fal wieder antwortet (eine 1-ct-Probe wie oben): Porträts → Bögen
+heute → Bögen jung → **Gegenprobe der Gesichter** (Abschnitt 4, Schritt 4)
+→ Anker → Szenen. Keine Videos, keine Freigaben (`POST
+/creatives/assets/:id/freigabe` ist die Kostenschranke und bleibt beim
+Menschen). — Erledigt in diesem Ablauf am 19.10.2026 ab 17:52 UTC, siehe 9.4.
+
+### 9.4 Standbilder — Ergebnis des zweiten Anlaufs
+
+Alle 31 Bilder aus 9.1 plus beide Reservebilder sind entstanden (33 ×
+nano-banana-pro), kein Fehlschlag, kein 403/402. **Gebucht laut
+`/creatives/kosten`:** 34 Buchungen auf diesem Creative, zusammen **4,96 €**
+— davon 4,95 € für die 33 Bilder dieses Laufs und 1 ct für die Probe des
+Orchestrators. Das Kartenbudget (4,95 €) ist damit **ausgeschöpft**, eine
+Retusche war nicht mehr drin. Tagesstand danach: 16,73 € von 20 €. Freigegeben
+ist nichts, Videos gibt es keine.
+
+**Gesichtsprobe (Abschnitt 4, Schritt 4):** Alle vier Bögen „jung“ sind
+eindeutig dieselben Menschen wie „heute“ — Gesichtsform, Augen, Nase und das
+Merkmal bleiben erhalten. Das Problem war das **Alter**, nicht das Wiedererkennen:
+Der Verjüngungs-Prompt hat bei Sara fast nichts verjüngt (jung sah aus wie 37),
+Tobi wirkte Ende 20. Für das Foto „2010“ trägt das die Geschichte nicht, deshalb
+gingen die zwei Reservebilder an diese beiden, mit einem schärferen Prompt
+(`bogen-jung-sara-r.txt`, `bogen-jung-tobi-r.txt`: glatte Haut, vollere
+Wangen, ausdrücklich „clearly much younger“).
+
+| Figur | Bogen jung (gewählt) | Ergebnis |
+|---|---|---|
+| Lena | `fbcf062f` | erkennbar; wirkt Mitte 20, Pony, langes Haar — passt |
+| Tobi | `30519eb4` (Reserve) | erkennbar an den Brauen; wirkt um 24 — passt. Der erste Versuch `3d042ee9` wirkte Ende 20 |
+| Sara | `a68afe04` (Reserve) | erkennbar an Locken und Creolen; wirkt **immer noch um 30** — nur etwas jünger als der erste Versuch `c4e77519`. Schwächste Figur |
+| Jonas | `68fa7e91` | erkennbar an Brille und Gesicht; wirkt Mitte bis Ende 20, Mütze und lange Haare tragen das Alter |
+
+**Gewählte Bilder** (volle Kennungen in `GET /creatives/1bda9128…` →
+`kiErzeugungen[].assetId`):
+
+| Szene | Gewähltes Asset | Warum | Hintergrund |
+|---|---|---|---|
+| Porträt Lena | `47f5936f` | einzige Variante; rotes Bob, Sommersprossen, Brille, echt | ok |
+| Porträt Tobi | `ab6f6923` | einzige Variante; Brauen, Bart mit Grau, Flanell | ok |
+| Porträt Sara | `2b0bff79` | einzige Variante; Locken, Creolen, cremefarbener Pullover | ok |
+| Porträt Jonas | `6a04becb` | einzige Variante; runde Brille, schütteres Blond, Altbau | ok |
+| Bogen heute L/T/S/J | `8387a2d0` · `1c750608` · `7d621746` · `483acf1e` | einzige Variante je Figur, Gesicht wie im Porträt | grau, ok |
+| Bogen jung | siehe Gesichtsprobe | | grau, ok |
+| Anker früher | `90a250de` | alle vier jung erkennbar, Tobi lacht, Tee, Chips, Block | ⚠ auf der Arbeitsplatte eine Soßenflasche und rechts am Rand eine klare Flasche; Kühlschrankzettel gekritzelt, nicht lesbar |
+| Anker heute | `6a55811a` | Lena, graues Sofa, Regenfenster, grünes Displaylicht | Buchrücken mit Scheinschrift |
+| **1** | `ddab042e` (S1d) | wirkt mehr wie ein alter Abzug als S1a (`970c3efa`): schräg, Kratzer, verblasst; S1a ist nur der Anker mit Rand | ⚠ dieselben zwei Flaschen wie im Anker (klein, im Schnittzoom aber sichtbar) |
+| **2a** | `44592c86` | einziger Versuch; Klebeband, Karton, Kartenspiel ohne Aufdruck | ⚠ **Poster mit lesbarem Schriftzug** oben links, auf dem Schreibtisch Sprühflasche/Flasche; zweites Händepaar links |
+| **2b** | `388be56b` | einziger Versuch; Lena jung, Pony, winkt, Zug unscharf, keine Schilder | ok; kleines Etikett am Rucksack, Gesäßtaschen-Naht an der Jeans |
+| **2c** | `6e6458bf` — **misslungen** | einziger Versuch: am Tisch **sitzen die vier** noch, der Tisch ist nur leer geräumt. Als „leerer Tisch“ unbrauchbar | Soßenflasche auf der Arbeitsplatte |
+| **3a** | `316bb666` (S3a) | Blick hebt sich wie im Drehbuch; S3a2 (`a7179e84`) ist fast der Anker | Buchrücken mit Scheinschrift, ein Wasserglas (erlaubt) |
+| **3b** | `9490d2f5` (S3b2) | Cordsofa, anderes Zimmer als Hamburg; S3b (`a27a2382`) hat das Anstupsen, steht aber **in Lenas Wohnzimmer** | ok; Fenster wieder mit Regen und Backstein — Köln wirkt wie Hamburg |
+| **3c** | `48168658` (S3c) | Dielen, Bücherwände, lehnt sich zurück, Handy hoch; S3c2 (`6d9006bf`) ist Lenas Wohnzimmer | ok; graues Sofa und Regenfenster wie Hamburg |
+| **5a** | `bcd4e923` (S5a) | lacht, Hand vor dem Mund, Handy in der anderen — genau die Handlung; S5a2 (`555f3e46`) ohne Hand | Buchrücken mit Scheinschrift |
+| **5b** | `002f5503` (S5b2) | er schlägt die Hand vors Gesicht, sie lacht ihn aus; S5b (`d9347224`) steht in Lenas Wohnzimmer | ok |
+| **5c** | `7183ca0f` (S5c) — **Raum falsch** | Faust hoch, Handy in der Hand; S5c2 (`cd73c61d`) ohne Handy. **Beide stehen in Lenas Hamburger Wohnzimmer** | Buchrücken mit Scheinschrift |
+
+**Was misslang und warum:**
+
+- **Drei Städte, ein Wohnzimmer.** Der Anker „heute“ zeigt Lenas Hamburger
+  Wohnzimmer, und alle Szenen 3 und 5 laufen gegen ihn. Nano Banana Pro hat
+  den Raum übernommen, obwohl der Prompt ihn nur „for the look and light“
+  freigibt: S3b, S3c2, S5b, S5c und S5c2 stehen wörtlich in Hamburg, S3b2,
+  S3c und S5b2 teilweise (Regenfenster, graues Sofa). Für Köln und Leipzig
+  braucht es einen **eigenen Anker je Stadt** (Abschnitt 6.1 hat nur einen)
+  oder den Anker gar nicht als Referenz, nur den Bogen der Figur. Am
+  dringendsten: **5c** (kein Leipziger Bild mit Faust) und **2c** (kein leerer
+  Tisch).
+- **Retusche offen:** Flaschen in Szene 1 (aus dem Anker früher) und Poster mit
+  Schrift und Flasche in 2a. Das Budget war bei 4,95 € erreicht.
+- **Sara jung** ist nur mäßig verjüngt (um 30).
+
+**Nicht geprüft:** Kein fremder Mensch hat die Gesichtsprobe gemacht (Abschnitt
+4 verlangt jemanden, der die Figuren nicht kennt) — beurteilt hat sie nur der
+Worker. Die Bilder wurden in verkleinerter Ansicht angesehen, nicht in voller
+Auflösung, und nicht pixelgenau nach kleinen Logos durchsucht (etwa auf Handys,
+Fernbedienung, Lautsprecher). Kein Bild ist freigegeben, kein Video erzeugt.
+
+### 9.5 Nachdreh nach der Storyboard-Sichtung (19.10.2026)
+
+Robin hat das Storyboard gesehen und den Nachdreh freigegeben. Ziel: Köln und
+Leipzig bekommen eigene Räume, 2c einen wirklich leeren Tisch, Szene 1 und 2a
+eine Retusche. 2b, 3a und 5a bleiben unverändert. Alles nano-banana-pro, 1K
+(der Server liefert 1376 × 768 bzw. 768 × 1376), Prompts unter `prompts/`.
+
+**Neue Anker je Stadt.** Nano Banana Pro nimmt kein Bild ohne Eingabe an
+(400: „braucht ein Eingabebild (bildAssetIds)", nicht gebucht). Die leeren
+Räume laufen deshalb wie die Porträts gegen den App-Screenshot `f742485b`,
+ausdrücklich nur als Farbhinweis. Die Szenen laufen danach gegen den Anker
+ihrer Stadt und **nicht mehr** gegen Lenas Anker `6a55811a`. Seitdem bleibt
+jede Szene in ihrem Raum.
+
+| Szene | Gewählte Kennung (alt → neu) | Warum |
+|---|---|---|
+| Anker Köln | neu `7dd71bde` (`anker-koeln.txt`) | leer; braunes Cordsofa, Strickdecke, viele Pflanzen, Flickenteppich, hohe weiße Flügelfenster mit Pflanzen auf dem Sims, draußen trockene Straße mit ockerfarbener Fassade, Laterne und Platane. Kein graues Sofa, kein Backstein, kein Regen |
+| Anker Leipzig | neu `33a49768` (`anker-leipzig.txt`) | leer; breite Dielen, Stuck, Bücherwand (Rücken unlesbar), grüner Samtsessel, dunkelblaues Sofa, Messing-Leselampe, Kachelofen, gegenüber eine helle Gründerzeitfassade mit Balkonen |
+| **1** | `ddab042e` → `800a1741` (zweiter Versuch, auf `a2664468`) | Soßenflasche neben dem Besteckbecher ist weg (schon im ersten Versuch `a2664468`). ⚠ **Die klare Flasche am rechten Rand des Abzugs steht in beiden Versuchen noch** (hinter Jonas' Mütze, klein). Sonst ist das Bild unverändert: Gesichter, Karten, Kratzer, Rand |
+| **2a** | `44592c86` → `4822ebfa` (zweiter Versuch, auf `1e18f65c`) | Sprühflasche und Flasche auf dem Schreibtisch sind weg (erster Versuch). Im zweiten sind das gelbe und das graugrüne Poster leere Farbflächen, die übrigen Zettel tragen keine Buchstaben mehr. Rest: verschwommener Scheindruck auf dem Klebebandkern, nicht lesbar (stand schon im Original). Das zweite Händepaar links ist geblieben, die Retusche sollte nichts anderes ändern |
+| **2c** | `6e6458bf` → `d3ad494d` (`s2c-n.txt`, nur gegen Anker früher, ohne Bögen) | dieselbe WG-Küche: Kühlschrank mit Zetteln, Hängelampe, Lichterkette. Leerer, abgewischter Tisch, vier verschiedene Stühle, Dämmerung im Fenster, niemand im Bild, keine Flasche auf der Arbeitsplatte. Oben auf dem Regal ein Karton und ein Glas, ohne lesbaren Aufdruck |
+| **3b** | `9490d2f5` → `a4bdb9a1` (`s3b-n2.txt`, zweiter Versuch) | Köln-Anker erkennbar (Cordsofa, Pflanzen, Fenster, Platane). Sara lehnt sich lachend an Tobi, er grinst aufs Handy. Je ein Handy mit grünem Licht. Der erste Versuch `0c0a25ac` stand ebenfalls richtig, Tobi hatte darin aber **zwei Handys** (eines im Schoß) |
+| **3c** | `48168658` → `7ded0269` (`s3c-n2.txt`, zweiter Versuch) | Leipzig-Anker (Bücherwand, Leselampe, blaues Sofa, Gründerzeitfassade). Jonas liegt weit zurückgelehnt, einen Arm hinter dem Kopf, das Handy hoch über dem Gesicht, das Gesicht erkennbar. Der erste Versuch `a9e84132` war ein Weitwinkel, Jonas darin klein und vorgebeugt |
+| **5b** | `002f5503` → `9861970a` (`s5b-n.txt`) | Köln-Anker. Tobi schüttelt skeptisch den Kopf, Sara lacht laut und knufft ihn, beide halten ein Handy. Auf dem Couchtisch zwei Tassen Kaffee, eine davon mit Comicfigur ohne Schrift |
+| **5c** | `7183ca0f` → `2c37cd59` (`s5c-n.txt`) | Leipzig-Anker (Bücherwand, Leselampe, Fenster mit Fassade). Faust hoch, das Handy mit grünem Licht in der anderen Hand, genau die Handlung |
+
+**Kosten laut `/creatives/kosten`:** Buchungen auf diesem Creative vorher
+496 ct, nachher **691 ct**. Der Nachdreh hat also **1,95 €** gekostet:
+13 Bilder × 15 ct (Rahmen 2,00 €). Nicht gebucht wurden der 400 der ersten
+Anker (siehe oben) und ein „500 Interner Serverfehler" beim ersten Absenden
+von `s2a-retusche2`; für beide ist keine Erzeugung entstanden. Kein 402/403.
+Tagesstand danach: 18,68 € verbraucht, das Tageslimit stand inzwischen auf
+30 €. Freigegeben ist nichts, Videos gibt es keine.
+
+**Was misslang:**
+
+- **Szene 1:** Die klare Flasche am rechten Rand ist nach zwei Retuschen noch
+  da. Ein dritter Versuch war nach der Auftragsregel nicht erlaubt. Ausweg im
+  Schnitt: Der Schnittzoom geht auf die Gesichter, und schon ein Zoom ab etwa
+  110 % mit leicht linker Mitte schneidet den rechten Rand ab. Sonst bleibt nur
+  eine Retusche mit Pinsel oder ein neuer Auftrag.
+- Erste Versuche 3b (zwei Handys) und 3c (zu klein, nicht zurückgelehnt) lagen
+  daneben. Der zweite Versuch hat beide behoben.
+
+**Nicht geprüft:** Die Gesichter der neuen Szenen hat nur der Worker mit den
+Bögen verglichen, kein fremder Mensch. Gesucht wurde in Ausschnitten bei voller
+Auflösung, aber nicht jedes Bild Pixel für Pixel nach Kleinstlogos (Handyrücken,
+Plattenspieler rechts im Köln-Anker, Kachelofen). Ob 3b/5b und 3c/5c im
+dreigeteilten Schnitt (1080 × 640) gut zusammenstehen, ist nicht geprüft.
+
+### 9.6 Videos (Kling 2.5 Turbo Pro, 19.10.2026)
+
+Aus den zehn freigegebenen Standbildern (Szene 1 ohne Video, Schnittzoom) je
+ein Clip mit `kling-bild`, 5 s. Die Prompts liegen als `prompts/v-*.txt`
+(Leitplanke aus 6.3 angehängt; 3b/5b nennen das Kölner Cordsofa, 3c/5c die
+Leipziger Bücherwand). Der Server hat jeden Prompt wörtlich gespeichert, kein
+`$P$G`. Alle Clips sind 5,04 s lang, haben 121 Bilder bei 24 fps und sind
+1072 × 1928 (9:16) bzw. 1928 × 1072 (16:9) groß. Der Server hat den
+KI-Hinweis selbst gesetzt. Freigegeben ist nichts.
+
+**Bildfehler:** YAVG je Bild (`signalstats`) in allen elf Clips gemessen. Kein
+Sprung über 3 von Bild zu Bild, höchstens 2,68 (2b, Zug fährt aus dem Bild).
+Kein Schwarzbild, der niedrigste Wert liegt bei 70,4 (2c, das Licht wird wie
+verlangt dunkler: 75,0 → 70,4). Was unten als Fehler steht, sind Fehler der
+Handlung, keine Bildaussetzer.
+
+| Szene | Video-Kennung | Länge | Befund (brauchbar ab/bis) |
+|---|---|---|---|
+| 2a | `a0d45050` | 5,04 s | **0,0–5,0 s.** Die Hand zieht das Band über den Deckel und drückt es an, das zweite Händepaar hält still, die Karten bleiben liegen. Hände unverformt, kein Text, keine Flasche |
+| 2b | `8668b324` | 5,04 s | **0,0–2,7 s.** Lena lächelt über die Schulter, winkt und dreht sich weg (in umgekehrter Reihenfolge wie im Prompt, wirkt aber). Ab ≈ 2,8 s (Bild 67) kommt ein Gegenzug mit orangem Zielanzeiger, Laufschrift unscharf, aber als Schrift erkennbar. Danach Gleise und Häuser |
+| 2c | `1729ce41` | 5,04 s | **0,0–5,0 s.** Statisch, die Küche bleibt leer, kein Mensch tritt ein, Stühle unverändert; das Licht wird langsam dunkler |
+| 3a | `b95abea1` | 5,04 s | **0,0–5,0 s.** Lena sieht zum Regenfenster, dann aufs Handy und lächelt. Gesicht stabil, ein Handy, grünes Licht auf der Brille |
+| 3b | `b3ee6ba6` | 5,04 s | **0,0–5,0 s.** Sara stupst Tobi bei ≈ 0,5 s an und lacht, er grinst aufs Handy. Je ein Handy, Gesichter stabil. Der Schwenk ist kaum zu sehen (Kling, siehe Ad 1) |
+| 3c | `89d9e17d` | 5,04 s | **0,0–2,4 s.** Jonas liegt zurückgelehnt, hebt das Handy und lächelt. Ab ≈ 2,5 s (Bild 60) dreht sich das Handy in der Hand um: Man sieht die Rückseite mit Kamera, das grüne Licht auf dem Gesicht ist weg |
+| 5a | `1be62fc0` (gewählt) | 5,04 s | **0,0–2,9 s.** Lacht, Hand vor dem Mund, Handy in der anderen Hand. Von ≈ 3,0 bis 3,9 s (Bild 72–94) beugt sie sich vor, das Haar fällt übers Gesicht, und das Gesicht ist vom Displaylicht überstrahlt und nicht mehr Lena. Ab 4,0 s ist sie wieder erkennbar |
+| 5a Nachdreh | `57125473` (`v-5a-n.txt`) | 5,04 s | **schlechter:** Sie beugt sich trotz des Zusatzes „does not bend forward" schon bei ≈ 1,5–2,4 s und bei ≈ 4,5 s vor. Brauchbar nur 0,0–1,4 und 2,5–4,2 s |
+| 5b | `60f22645` | 5,04 s | verworfen: Tobi schüttelt nicht den Kopf, sondern senkt ihn ab ≈ 2 s aufs Handy, man sieht dann nur seinen Scheitel. Sara lacht und knufft ihn |
+| 5b Nachdreh | `2f0f11cc` (`v-5b-n.txt`, gewählt) | 5,04 s | **0,0–5,0 s.** Beide lachen zur Kamera, Sara stößt ihn mit dem Ellbogen an, Tobi grinst. Ein deutliches Kopfschütteln ist nicht zu sehen. Je ein Handy, die Tassen bleiben stehen |
+| 5c | `bee71c65` | 5,04 s | **0,0–5,0 s.** Jonas reckt die Faust, mehrmals statt einmal, und jubelt aufs Handy. Bei den Faustbewegungen ist der Arm bewegungsunscharf (≈ 1,0, 2,0, 3,0, 4,0 s), die Hand bleibt aber ganz. Gesicht stabil |
+
+**Für den Schnitt:** Die Szenen 2 und 3 brauchen je 1,3–1,4 s, das liegt bei
+allen in den brauchbaren Bereichen. **Szene 5 braucht 6 s je Streifen, die
+Clips sind 5 s lang.** 5b und 5c lassen sich auf 6 s strecken (`setpts`, 0,83×).
+5a ist nur bis 2,9 s sauber: entweder halbe Geschwindigkeit (0,0–2,9 s auf
+5,8 s), oder 0,0–2,9 s plus 4,0–5,0 s mit einem Schnitt in Lenas Streifen.
+
+**Kosten laut `/creatives/kosten`:** Buchungen auf diesem Creative vorher
+691 ct, nachher **1076 ct**. Die Videos haben also **3,85 €** gekostet:
+11 × 35 ct, davon 2 Nachdrehs (Rahmen 4,60 € bzw. 12 Videos). Kein
+Fehlschlag, kein 402/403. Tagesstand danach: 22,53 € von 30 €.
+
+**Was misslang:** 5a lässt sich auch im Nachdreh nicht davon abbringen, sich
+vorzubeugen. Ein zweiter Nachdreh war nach der Auftragsregel nicht erlaubt.
+Kling hält den Kopf offenbar nicht oben, wenn die Hand vor dem Mund liegt. 3c
+kippt das Handy, in 2b kommt ein Zug mit Zielanzeiger. Beide liegen außerhalb
+der Sekunden, die der Schnitt braucht.
+
+**Nicht geprüft:** Gesichter und Hände hat nur der Worker angesehen, in
+Kontaktbögen alle 0,5 s und in Ausschnitten. Nicht jedes der 121 Bilder je
+Clip und nicht in voller Auflösung. Auf Kleinstlogos (Handyrückseite in 3c ab
+2,5 s, Rucksacketikett in 2b) ist nicht pixelgenau gesucht. Der Ton der Clips
+ist nicht geprüft (im Schnitt kommt er ohnehin von Hand). Ebenso nicht, wie die
+drei Streifen von Szene 5 im Ausschnitt 1080 × 640 nebeneinander wirken.
+
+### 9.7 Schnitt 9:16 mit Endkarte (19.10.2026)
+
+Von Hand geschnitten mit ffmpeg 9.0.2, weil der Server-Schnitt weder
+Schnittzoom noch Streifen noch Einblendungen kann. Danach lief er **einmal
+über den fertigen Schnitt**, damit der Server „KI-generiert" einbrennt und
+den KI-Hinweis setzt. Damit ist der offene Punkt aus 8.4 erledigt: Der Hinweis
+kommt vom Server und nicht aus der Hand. Weil das Kennzeichen oben rechts
+steht, sind die Ortsmarken links gesetzt, sonst lägen sie darunter.
+Die Werkzeuge liegen unter
+`schnitt/` (`schnitt.sh` baut den Film, `ebenen.html` und `rendern.cjs` die
+Einblendungen, `hochladen.mjs` und `servergang.mjs` den Weg auf den Server).
+Die Quellen holt `holen.mjs` aus dem Creative. Der Pfad zu ffmpeg in `ff.sh`
+und zu den Klängen in `schnitt.sh` gilt nur für den Mood-XPS.
+
+| | |
+|---|---|
+| **Ergebnis (gekennzeichnet)** | Asset `73c7aeb0-7bdb-4281-a5b1-9c8db4ee22d7`, Herkunft SCHNITT, kiHinweis gesetzt |
+| Länge, Format | 28,000 s, 840 Bilder, 30 fps, 1080 × 1920, H.264 + AAC |
+| Größe | 6 816 705 Byte (Server kodiert neu: crf 23, veryfast) |
+| Lautheit | −16,1 LUFS integriert, LRA 5,4 LU, True Peak −2,6 dBFS |
+| sha256 | `041f9b6731e6064e1031beab6fea13becc511bf871c893d7eee0b7807d1c95ee` |
+| Handschnitt (ohne Kennzeichen) | Asset `530610d1-637e-4314-90fa-6ade43b64040`, 14 903 354 Byte, crf 19, sha256 `d609b47e…9e09`. **Nur Vorstufe, nicht ausspielen** |
+| Server-Schnitt | `e804dd94`, ein Abschnitt 0–28 000 ms, `untertitel: false`, `kiKennzeichnung: true`, 5,3 s Laufzeit |
+
+**Zeitleiste:**
+
+| Zeit | Szene | Quelle und Behandlung | Einblendung |
+|---|---|---|---|
+| 0,0–3,0 | 1 | Standbild `800a1741`, Schnittzoom 1,07 → 1,13. Der Ausschnitt reicht rechts nur bis x 720 des Originals; die Restflasche (ab x 738) ist in keinem Bild zu sehen, am ersten und letzten Bild geprüft | „Früher: jeden Sonntag." ab 0,3 s |
+| 3,0–4,3 | 2a | `v-2a` 0,6–1,9 s | „Dann kam das Leben." bis 7,0 s |
+| 4,3–5,6 | 2b | `v-2b` 0,0–1,3 s (vor dem Gegenzug) | |
+| 5,6–7,0 | 2c | `v-2c` 3,6–5,0 s (das Licht ist schon gedimmt) | |
+| 7,0–8,3 | 3a | `v-3a` 0,3–1,6 s, aus 16:9 auf 9:16 beschnitten | „Heute: immer noch Sonntag." bis 11,0 s; „Hamburg · So 19:00" |
+| 8,3–9,6 | 3b | `v-3b` 0,0–1,3 s, beschnitten | „Köln" |
+| 9,6–11,0 | 3c | `v-3c` 0,0–1,4 s, beschnitten (bevor das Handy kippt) | „Leipzig" |
+| 11,0–17,0 | 4 | `acd84aa3` 0–6 s, Bild 64 auf 65/66 kopiert (`freezeframes` mit zwei Eingängen, 9.2) | „Doppelkopf. Wie früher. Nur weiter weg." ab 11,4 s |
+| 17,0–23,0 | 5 | drei Streifen 1080 × 640, Trennlinien 6 px Nachtblau. Hamburg: `v-5a` 0,0–2,9 + 4,0–5,0 s, auf 6 s gestreckt. Köln: `v-5b-n`, Leipzig: `v-5c`, je 0–5 s ×1,2 | Ortsmarke je Streifen |
+| 23,0–28,0 | Endkarte | Logo, „Doppelkopf · Skat · Partykiste", die drei Spielbanner, „Jetzt im Browser spielen: **brauweg-spielen.de**", „App bald im App Store und bei Google Play" | |
+
+Die Einblendungen sind in Lilita One gesetzt (Überschriften der App), die
+Endkarte darunter in Nunito, weiß auf halbdurchsichtigem Nachtblau. Gerendert
+hat Chromium sie als PNG, weil `drawtext` in diesem ffmpeg mangels fontconfig
+abstürzt.
+
+**Ton:** Musik `musik-traeume.mp3` aus der App (CC0, siehe `docs/KLANG.md`)
+ab 46 s der Datei. Bis 7 s liegt sie halb so laut, von 7 bis 9 s zieht sie an,
+ab 24 s blendet sie über 4 s aus. Geräusche: Papier/Karten
+(`karte-geben-1`) bei 0,15 s, Kartenklack (`karte-legen-1`) bei 13,0 s und
+`stich-ein-1` bei 14,77 s, beide aus der App (Kenney, CC0). Klebeband (3,15 s),
+Zug (4,15 s) und Regen (7,0 s) sind aus Rauschen gebaut (`anoisesrc`). Damit
+bleibt keine Lizenzfrage offen.
+
+**Bildprüfung (8.5):** YAVG je Bild nach dem Handschnitt gemessen. Szene 4
+(Tischausschnitt y 300–1500): 180 Bilder, 69,3–101,1. Szene 5, Hamburg
+50,8–88,9, Köln 83,5–121,0, Leipzig 84,3–109,0. **Kein Bild unter 40.** Ein
+Sprung über 12 von Bild zu Bild kommt nur an den Szenengrenzen vor, innerhalb
+der Szenen nicht. Kontaktbogen alle 0,5 s: Alle Einblendungen stehen an der
+richtigen Stelle, die Streifen bewegen sich die vollen 6 s, die Endkarte steht
+5 s. Im fertigen Asset ist „KI-generiert" oben rechts lesbar (Bild bei 18 s und
+24 s angesehen), es überdeckt weder Ortsmarke noch Link.
+
+**Abweichungen vom Konzept:**
+- Endkarte ohne das Wort „Brauweg" in der Spielezeile (Endkarte in `drehbuecher.md`): Das
+  Logo darüber trägt den Namen, zweimal untereinander wirkt wie ein Versehen.
+- Die Ortsnamen stehen auch auf den Streifen von Szene 5, nicht nur in Szene 3.
+  So bleibt ohne Ton klar, wer wo sitzt.
+- **Kein Lachen** im Ton: Eine CC0-Quelle gibt es nicht, und gebaut aus
+  Rauschen klingt es nicht nach Lachen. Kling-Ton wurde nicht verwendet.
+- Musik nach dem Pegelverlauf gewählt, nicht nach Gehör abgenommen. Der
+  „Beat bei 11 s" ist ein Anstieg der Musik bei 7–9 s plus Kartenklack bei
+  13 s, kein eigener Schlag.
+- Szene 3 ist ein enger 9:16-Ausschnitt aus 16:9-Clips, also etwa 1,8-fach
+  hochskaliert. Am Handy sieht man das nicht, auf dem Rechner wirkt es weich.
+- Hamburgs Streifen in Szene 5 hat bei ≈ 21,5 s einen Schnitt (5a 2,9 → 4,0 s,
+  die zweite Möglichkeit aus 9.6).
+
+**Kosten laut `/creatives/kosten`:** Der Schnitt kostet nichts, das Creative
+steht vorher und nachher bei **1076 ct**. Tagesstand unverändert 22,53 € von
+30 €.
+
+**Nicht geprüft und offen:** Der Ton ist nicht mit Ohren abgenommen, nur
+gemessen. Nicht jedes der 840 Bilder in voller Auflösung angesehen. **Freigegeben
+ist nichts:** Robin sieht sich das Asset `73c7aeb0` an, bevor es in einen Test
+geht. Der Handschnitt `530610d1` trägt kein Kennzeichen und darf nicht
+ausgespielt werden.

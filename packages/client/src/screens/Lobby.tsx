@@ -4,6 +4,10 @@ import { ApiError, api, type GameDefaults, type TableRow } from '../api';
 import { t } from '../i18n';
 import type { BotLevel } from '../protocol';
 import { regelBild } from '../regelbilder';
+import { hubNeu } from '../hubNeu';
+import { HbBlatt } from './HbBlatt';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+import { AnfrageWarten } from '../tisch/Anfragen';
 
 /**
  * Lobby und Tischerstellung.
@@ -20,7 +24,7 @@ interface Gemerkt {
   seats?: number;
   rounds?: number;
   config?: Record<string, unknown>;
-  visibility?: 'public' | 'club_only';
+  visibility?: Sichtbarkeit;
   botLevel?: BotLevel;
 }
 
@@ -36,6 +40,27 @@ const BOT_STUFEN: readonly { id: BotLevel; name: string }[] = [
   { id: 'experte', name: 'Experte' },
   { id: 'genie', name: 'Genie' },
 ];
+
+/**
+ * Schach gegen den Computer: alle vier Stufen, auch Anfänger. Anders als am
+ * Doppelkopftisch sitzt hier kein Mensch neben dem Bot, dem eine schwache
+ * Stufe das Spiel verdirbt — wer allein Schach lernt, braucht sie gerade.
+ * Was jede Stufe rechnet, steht in packages/game-brochess/src/bot.ts.
+ */
+const SCHACH_STUFEN: readonly { id: BotLevel; name: string; unter: string }[] = [
+  { id: 'anfaenger', name: 'Anfänger', unter: 'nimmt, was hängt' },
+  { id: 'standard', name: 'Standard', unter: 'denkt zwei Züge' },
+  { id: 'experte', name: 'Experte', unter: 'denkt drei Züge' },
+  { id: 'genie', name: 'Genie', unter: 'denkt vier Züge' },
+];
+
+/**
+ * Spiele, die man in der Lobby direkt allein gegen einen Bot beginnen kann.
+ * Bisher nur BroChess (Emile, 13.10.2026): Zu zweit gibt es sonst keinen Weg,
+ * ohne Gegner zu spielen, außer erst einen Tisch zu öffnen und dort den
+ * freien Platz zu füllen — das findet niemand.
+ */
+const ALLEIN_GEGEN_BOT: ReadonlySet<string> = new Set(['brochess']);
 
 /**
  * Der Zaehler am Schluessel verwirft alte Staende.
@@ -63,17 +88,29 @@ function gemerkteEinstellungen(gameId: string): Gemerkt | null {
  * dort ist der Dreiertisch der Normalfall und kein Behelf. Deshalb hängt der
  * Text jetzt am Spiel und nicht allein an der Platzzahl.
  */
-function fussnote(gameId: string, seats: number, visibility: 'public' | 'club_only'): string {
+/**
+ * Wer an den Tisch darf. `on_request` heißt seit dem 13.10.2026 „Privat":
+ * Er steht nicht in der Lobbyliste, man kommt nur per Einladung herein, und
+ * der Gastgeber sagt jedem Beitritt zu (Server: tables/anfragen.ts).
+ */
+type Sichtbarkeit = 'public' | 'on_request' | 'club_only';
+
+function fussnote(gameId: string, seats: number, visibility: Sichtbarkeit): string {
+  if (visibility === 'on_request') {
+    return 'Privater Tisch: Im Wartebereich steht der Einladungscode. Wer damit kommt, lässt du selbst herein.';
+  }
   if (visibility === 'club_only') {
     return 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder.';
   }
   if (gameId === 'skat') {
-    return 'Skat wird zu dritt gespielt. Freie Plätze füllst du am Tisch mit Bots — dann zählt der Tisch nicht für die Rangliste.';
+    return 'Skat wird zu dritt gespielt. Freie Plätze füllst du am Tisch mit Bots — der Tisch zählt trotzdem für die Rangliste.';
   }
   if (seats === 3) {
     return 'Am Dreiertisch spielt immer ein Bot als Vierter mit. Der Tisch zählt trotzdem für die Rangliste.';
   }
-  return 'Freie Plätze füllst du am Tisch mit Bots. Dann zählt der Tisch nicht für die Rangliste.';
+  // Bots zählen seit dem 04.08.2026 für die Rangliste (`countsForRanking` im
+  // Server); bis zum 13.10.2026 stand hier noch das Gegenteil.
+  return 'Freie Plätze füllst du am Tisch mit Bots. Der Tisch zählt trotzdem für die Rangliste.';
 }
 
 export function Lobby({
@@ -89,13 +126,15 @@ export function Lobby({
   const [defaults, setDefaults] = useState<GameDefaults | null>(null);
   const [seats, setSeats] = useState(4);
   const [rounds, setRounds] = useState(8);
-  const [visibility, setVisibility] = useState<'public' | 'club_only'>('public');
+  const [visibility, setVisibility] = useState<Sichtbarkeit>('public');
   const [botLevel, setBotLevel] = useState<BotLevel>('standard');
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
   /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
-  const [ansicht, setAnsicht] = useState<'liste' | 'erstellen'>('liste');
+  const [ansicht, setAnsicht] = useState<'liste' | 'erstellen' | 'bot'>('liste');
+  /** Gestellte Beitrittsanfrage an einen privaten Tisch, solange sie läuft. */
+  const [anfrage, setAnfrage] = useState<{ tableId: string; host: string | null } | null>(null);
   /**
    * Filter als Zeichenkette, weil die Sitz-Filter aus dem Spielmodul kommen:
    * Doppelkopf hat drei bis fünf Plätze, Zauberer drei bis sechs. Fest
@@ -149,7 +188,7 @@ export function Lobby({
           ? merken.rounds
           : runden[0];
       if (rundenWahl) setRounds(rundenWahl);
-      if (merken?.visibility === 'club_only' || merken?.visibility === 'public') {
+      if (merken?.visibility === 'club_only' || merken?.visibility === 'public' || merken?.visibility === 'on_request') {
         setVisibility(merken.visibility);
       }
       if (
@@ -204,10 +243,41 @@ export function Lobby({
     }
   };
 
+  /**
+   * Allein gegen den Bot: ein Tisch für zwei, der freie Platz sofort mit
+   * einem Bot besetzt. `on_request` hält ihn aus der Lobbyliste heraus — wie
+   * bei Farbduell und Mememory, damit niemand an einen Bot-Tisch gerät, der
+   * einen Menschen sucht.
+   */
+  const starteGegenBot = async (): Promise<void> => {
+    setError(null);
+    try {
+      const sitze = defaults?.seatCounts[0] ?? 2;
+      const runden = defaults?.rounds[String(sitze)]?.[0] ?? 1;
+      const table = await api.createTable({
+        gameId,
+        config: { ...config, tableSize: sitze, rounds: runden },
+        seats: sitze,
+        rounds: runden,
+        visibility: 'on_request',
+        fillWithBots: true,
+        botLevel,
+      });
+      onEnter(table.id);
+    } catch (err) {
+      setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+    }
+  };
+
   const join = async (id: string): Promise<void> => {
     setError(null);
     try {
-      await api.joinTable(id);
+      const antwort = await api.joinTable(id);
+      // Privater Tisch: erst die Zusage des Gastgebers (tisch/Anfragen.tsx).
+      if (antwort.angefragt) {
+        setAnfrage({ tableId: id, host: tables.find((row) => row.id === id)?.host ?? null });
+        return;
+      }
       onEnter(id);
     } catch (err) {
       setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
@@ -246,6 +316,211 @@ export function Lobby({
     if (s.length > 0 && !(row.host ?? '').toLowerCase().includes(s)) return false;
     return true;
   });
+
+  if (anfrage) {
+    return (
+      <AnfrageWarten
+        gameId={gameId}
+        tableId={anfrage.tableId}
+        gastgeber={anfrage.host}
+        onAngenommen={() => onEnter(anfrage.tableId)}
+        onZurueck={() => {
+          setAnfrage(null);
+          refresh();
+        }}
+      />
+    );
+  }
+
+  // Neues Hub: dieselben Zustände und Aufrufe im Spieleinstieg-Baukasten.
+  if (hubNeu) {
+    const name = t(`game.${gameId}`);
+    const sitze = defaults?.seatCounts ?? [4];
+    const sitzText = sitze.length > 1 ? `${sitze[0]}–${sitze[sitze.length - 1]}` : `${sitze[0]}`;
+    if (ansicht === 'bot') {
+      return (
+        <SpielRahmen
+          gameId={gameId}
+          titel="Gegen Bot spielen"
+          unter={`${name} · du gegen den Computer`}
+          onBack={() => setAnsicht('liste')}
+          zurueckText="Zurück zur Tischauswahl"
+          fuss={
+            <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void starteGegenBot()}>
+              Partie starten
+            </button>
+          }
+        >
+          {error && <p className="hb-fehler">{error}</p>}
+          <SpielAbschnitt titel="Bot-Stärke">
+            <SpielWahl
+              name="Bot-Stärke"
+              werte={SCHACH_STUFEN.map((b) => ({ wert: b.id, text: b.name, unter: b.unter }))}
+              wert={botLevel}
+              onWahl={setBotLevel}
+            />
+          </SpielAbschnitt>
+          <p className="hb-klein">Du spielst eine Partie. Wer Weiß hat, entscheidet das Los.</p>
+        </SpielRahmen>
+      );
+    }
+    if (ansicht === 'erstellen') {
+      return (
+        <SpielRahmen
+          gameId={gameId}
+          titel="Tisch erstellen"
+          unter={`${name} · ${sitzText} Spieler`}
+          onBack={() => setAnsicht('liste')}
+          zurueckText="Zurück zur Tischauswahl"
+          fuss={
+            <>
+              <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void create()}>
+                Tisch erstellen
+              </button>
+              <p className="hb-klein">{fussnote(gameId, seats, visibility)}</p>
+            </>
+          }
+        >
+          {error && <p className="hb-fehler">{error}</p>}
+          <SpielAbschnitt titel="Spieler">
+            <SpielWahl
+              name="Spieler"
+              werte={sitze.map((c) => ({ wert: c, text: `${c} Spieler` }))}
+              wert={seats}
+              onWahl={(count) => {
+                setSeats(count);
+                const first = defaults?.rounds[String(count)]?.[0];
+                if (first) setRounds(first);
+              }}
+            />
+          </SpielAbschnitt>
+          <SpielAbschnitt titel="Runden">
+            <SpielWahl name="Runden" werte={roundOptions.map((c) => ({ wert: c, text: String(c) }))} wert={rounds} onWahl={setRounds} />
+          </SpielAbschnitt>
+          <SpielAbschnitt titel="Für wen">
+            <SpielWahl
+              name="Für wen"
+              werte={[
+                { wert: 'public' as const, text: 'Offen', unter: 'für alle' },
+                { wert: 'on_request' as const, text: 'Privat', unter: 'mit Einladung' },
+                { wert: 'club_only' as const, text: 'Nur Clan', unter: 'bis 100 Runden' },
+              ]}
+              wert={visibility}
+              onWahl={(v) => {
+                setVisibility(v);
+                if (v === 'public' && rounds > 20) {
+                  const first = defaults?.rounds[String(seats)]?.[0];
+                  if (first) setRounds(first);
+                }
+              }}
+            />
+          </SpielAbschnitt>
+          {gameId === 'doppelkopf' && (
+            <SpielAbschnitt titel="Bot-Stärke">
+              <SpielWahl name="Bot-Stärke" werte={BOT_STUFEN.map((b) => ({ wert: b.id, text: b.name }))} wert={botLevel} onWahl={setBotLevel} />
+            </SpielAbschnitt>
+          )}
+          <SpielAbschnitt titel="Regeln">
+            <div className="hb-liste">
+              <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
+                <span>
+                  <strong>{aktiveRegeln === 0 ? 'Standard' : `${aktiveRegeln} Sonderregeln`}</strong>
+                  <small>Antippen zum Einstellen</small>
+                </span>
+                <span className="hb-pf" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            </div>
+          </SpielAbschnitt>
+          {regelnOffen && config && <RegelSheet neu config={config} onChange={setConfig} onClose={() => setRegelnOffen(false)} />}
+        </SpielRahmen>
+      );
+    }
+    const filterWerte: [string, string][] = [
+      ['alle', 'Alle'],
+      ...sitze.map((c) => [`${c}er`, `${c}er`] as [string, string]),
+      ['offen', 'Offen'],
+      ['clan', 'Clan'],
+    ];
+    return (
+      <SpielRahmen
+        gameId={gameId}
+        titel={name}
+        unter={`${sitzText} Spieler · Tischauswahl`}
+        onBack={onBack}
+        zurueckText="Zurück zur Spielseite"
+        fuss={
+          <>
+            {ALLEIN_GEGEN_BOT.has(gameId) && (
+              <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => setAnsicht('bot')}>
+                Gegen Bot spielen
+              </button>
+            )}
+            <button
+              type="button"
+              className={ALLEIN_GEGEN_BOT.has(gameId) ? 'hb-kn is-breit' : 'hb-kn is-gold is-haupt is-breit'}
+              onClick={() => setAnsicht('erstellen')}
+            >
+              Tisch erstellen
+            </button>
+          </>
+        }
+      >
+        {error && <p className="hb-fehler">{error}</p>}
+        <div className="hb-chips spe-chips" role="group" aria-label="Filter">
+          {filterWerte.map(([wert, text]) => (
+            <button
+              type="button"
+              key={wert}
+              className={`hb-chip${filter === wert ? ' is-an' : ''}`}
+              aria-pressed={filter === wert}
+              onClick={() => setFilter(wert)}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+        <input
+          className="spe-feld"
+          placeholder="Spieler suchen…"
+          value={suche}
+          onChange={(event) => setSuche(event.target.value)}
+          aria-label="Tisch nach Gastgeber suchen"
+        />
+        <SpielAbschnitt titel="Offene Tische" zusatz={tables.length > 0 ? `${gefiltert.length} von ${tables.length}` : undefined}>
+          <div className="hb-liste">
+            {gefiltert.length === 0 && (
+              <p className="spe-leer">
+                {tables.length === 0 ? 'Gerade ist kein Tisch offen. Mach den ersten auf.' : 'Kein Tisch passt zu diesem Filter.'}
+              </p>
+            )}
+            {gefiltert.map((row) => (
+              <button type="button" className="spe-zeile spe-tisch" key={row.id} onClick={() => void join(row.id)}>
+                <span>
+                  <strong>
+                    {row.host ? `Runde von ${row.host}` : 'Offener Tisch'}
+                    {row.visibility === 'club_only' && <span className="spe-marke"> · Clan</span>}
+                  </strong>
+                  <small>
+                    {row.seats}er · {row.maxRounds} Runden · {row.ruleCount === 0 ? 'Standard' : `${row.ruleCount} Sonderregeln`}
+                  </small>
+                </span>
+                <span className="spe-punkte" aria-hidden="true">
+                  {Array.from({ length: row.seats }, (_, i) => (
+                    <i key={i} className={i < row.occupied ? '' : 'is-frei'} />
+                  ))}
+                </span>
+                <span className="spe-zahl" aria-label={`${row.occupied} von ${row.seats} Plätzen besetzt`}>
+                  {row.occupied}/{row.seats}
+                </span>
+              </button>
+            ))}
+          </div>
+        </SpielAbschnitt>
+      </SpielRahmen>
+    );
+  }
 
   if (ansicht === 'erstellen') {
     return (
@@ -474,10 +749,13 @@ export function Lobby({
  * tragen einen goldenen Rand mit Haken.
  */
 function RegelSheet({
+  neu = false,
   config,
   onChange,
   onClose,
 }: {
+  /** Neues Hub: als Blatt im neuen Stil, dieselben Kacheln. */
+  neu?: boolean;
   config: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
   onClose: () => void;
@@ -491,6 +769,57 @@ function RegelSheet({
   const scharf = config.deck === 'without9';
   const active = flags.filter(([, value]) => value).length + (scharf ? 1 : 0);
   const gesamt = flags.length + (hatBlattwahl ? 1 : 0);
+
+  const kacheln = (
+    <div className="regeln">
+      {hatBlattwahl && (
+        <button
+          type="button"
+          className={`regel${scharf ? ' is-on' : ''}`}
+          aria-pressed={scharf}
+          onClick={() => onChange({ ...config, deck: scharf ? 'with9' : 'without9' })}
+        >
+          <span className="regel-bild" aria-hidden="true">
+            {regelBild('scharf')}
+          </span>
+          {t('regel.scharf')}
+          <span className="regel-check" aria-hidden="true">
+            ✓
+          </span>
+        </button>
+      )}
+      {flags.map(([key, value]) => (
+        <button
+          type="button"
+          key={key}
+          className={`regel${value ? ' is-on' : ''}`}
+          aria-pressed={!!value}
+          onClick={() => onChange({ ...config, [key]: !value })}
+        >
+          <span className="regel-bild" aria-hidden="true">
+            {regelBild(key)}
+          </span>
+          {t(`regel.${key}`)}
+          <span className="regel-check" aria-hidden="true">
+            ✓
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+  if (neu) {
+    return (
+      <HbBlatt titel="Regeln" label="Regeln für diesen Tisch" onClose={onClose}>
+        <p className="hb-klein">
+          {active} von {gesamt} an · Antippen schaltet um
+        </p>
+        {kacheln}
+        <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onClose}>
+          Fertig
+        </button>
+      </HbBlatt>
+    );
+  }
 
   return (
     <div className="doko-sheet" onClick={onClose}>

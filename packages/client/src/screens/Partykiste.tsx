@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, type Me } from '../api';
+import { hubNeu } from '../hubNeu';
 import { tischFehler, useInhaltsSperren } from '../inhaltspakete';
 import { PartyAuswahl, usePartyAuswahl } from '../minispiele/partykiste/Auswahl';
 import { Einstellungen, OffeneRunde, Regler, type Angebot } from '../minispiele/partykiste/Einstellungen';
 import { AufstellungSeite } from '../minispiele/partykiste/Lager';
+import { LetzterSchicht, useNeuerWurf } from '../minispiele/partykiste/LetzterWurf';
 import { LobbyRegelzeile, RegelsatzKontext, Regelzeile } from '../minispiele/partykiste/Regelzeile';
 import { Runde } from '../minispiele/partykiste/Runden';
+import { Szene } from '../minispiele/partykiste/Szene';
 import { AktiveRegel } from '../minispiele/partykiste/RundenOhneUhr';
+import { PasstNicht } from '../minispiele/partykiste/PasstNicht';
 import {
   MINISPIEL_NAME,
   ansageFuer,
@@ -21,9 +25,15 @@ import { binReihumDran, useTischwache } from '../minispiele/partykiste/useTischw
 import { Abrechnung, Tabelle } from '../minispiele/partykiste/Wertung';
 import { Beitrittscode } from '../minispiele/partykiste/Beitrittscode';
 import { Einladung } from '../minispiele/partykiste/Einladung';
+import { einzelKennung, einzelName, tischPasst } from '../minispiele/partykiste/einzelspiele';
 import { MitspielerMelden } from '../melden/MeldenBlatt';
 import type { BotLevel, SeatInfo } from '../protocol';
+import { GastHinweis } from '../tisch/GastHinweis';
 import { useTable } from '../useTable';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+
+/** Das Lila der Partykiste bleibt im neuen Hub ihr Akzent (`--lila`). */
+const PARTY_AKZENT = '#a678f2';
 
 /**
  * Partykiste — ein Turnier aus Partyminispielen fuer 4 bis 12 Leute.
@@ -103,9 +113,16 @@ function gemerkterTrinkmodus(): boolean {
 
 export function Partykiste({
   startTisch,
+  einzel = null,
   onBack,
 }: {
   startTisch: string | null;
+  /**
+   * Ein Minispiel als Einzelspiel (minispiele/partykiste/einzelspiele.ts):
+   * dieselbe Kiste, aber der Regelsatz trägt nur dieses Spiel, und Modus und
+   * Minispielwahl entfallen im Menü.
+   */
+  einzel?: PartyMinispiel | null;
   onBack: () => void;
 }): React.JSX.Element {
   const [tischId, setTischId] = useState<string | null>(startTisch);
@@ -156,6 +173,17 @@ export function Partykiste({
     }),
     [trinkmodus, haerte],
   );
+
+  /*
+   * Der Regelsatz fürs Anlegen. Beim Einzelspiel liegt das Minispiel fest und
+   * der Modus ist das Turnier — auch wenn im Browser von der gemischten Kiste
+   * noch „Team" oder eine andere Minispielwahl gemerkt ist.
+   */
+  const { regelsatz: auswahlRegelsatz } = auswahl;
+  const tischRegelsatz = useCallback(async (): Promise<Record<string, unknown>> => {
+    const config = await auswahlRegelsatz(regelsatz);
+    return einzel ? { ...config, minispiele: [einzel], modus: 'turnier' } : config;
+  }, [auswahlRegelsatz, regelsatz, einzel]);
 
   /* Wer ich bin, entscheidet in der Lobby über den Startknopf. */
   useEffect(() => {
@@ -232,7 +260,7 @@ export function Partykiste({
         seats: 12,
         rounds: runden,
         visibility: 'public',
-        config: await auswahl.regelsatz(regelsatz),
+        config: await tischRegelsatz(),
       });
       setTischId(id);
     } catch (e) {
@@ -240,7 +268,7 @@ export function Partykiste({
     } finally {
       setLaedt(false);
     }
-  }, [runden, regelsatz, auswahl.regelsatz]);
+  }, [runden, tischRegelsatz]);
 
   /**
    * Online spielen: eine offene Runde suchen — und ZEIGEN, bevor man sitzt.
@@ -256,25 +284,31 @@ export function Partykiste({
     setLaedt(true);
     try {
       const liste = await api.tables('partykiste');
-      const offen = liste.find(
-        (zeile) => zeile.gameId === 'partykiste' && zeile.occupied < zeile.seats,
-      );
-      if (!offen) {
-        setLaedt(false);
-        await oeffneRunde();
+      const frei = liste.filter((zeile) => zeile.gameId === 'partykiste' && zeile.occupied < zeile.seats);
+      /*
+       * Seit dem 27.09.2026 gibt es Einzelspiele (einzelspiele.ts): Wer
+       * Busfahrer sucht, soll an einem Busfahrer-Tisch landen, und wer die
+       * gemischte Kiste sucht, an keinem (Robin: „nur Tische mit genau dem
+       * Spiel"). Welches Spiel ein Tisch hat, steht nur in seinen Regeln —
+       * also der Reihe nach nachsehen, höchstens acht Tische weit.
+       */
+      for (const offen of frei.slice(0, 8)) {
+        const regeln = await api
+          .tableRules(offen.id)
+          .then((antwort) => liesRegelsatz(antwort.config))
+          .catch(() => null);
+        if (!tischPasst(regeln?.minispiele ?? null, einzel)) continue;
+        setAngebot({ id: offen.id, host: offen.host, runden: offen.maxRounds, regeln });
         return;
       }
-      const regeln = await api
-        .tableRules(offen.id)
-        .then((antwort) => liesRegelsatz(antwort.config))
-        .catch(() => null);
-      setAngebot({ id: offen.id, host: offen.host, runden: offen.maxRounds, regeln });
+      setLaedt(false);
+      await oeffneRunde();
     } catch {
       setFehler('Die Runde ließ sich nicht öffnen. Noch einmal versuchen?');
     } finally {
       setLaedt(false);
     }
-  }, [oeffneRunde]);
+  }, [oeffneRunde, einzel]);
 
   const trittBei = useCallback(async (id: string): Promise<void> => {
     setFehler(null);
@@ -310,7 +344,7 @@ export function Partykiste({
         botLevel: stufe,
         /* Derselbe Regelsatz wie online — bis zum 22.09.2026 stand hier fest
            `trinkmodus: true`, weil es keinen Schalter gab. */
-        config: await auswahl.regelsatz(regelsatz),
+        config: await tischRegelsatz(),
       });
       setTischId(id);
     } catch (e) {
@@ -318,7 +352,7 @@ export function Partykiste({
     } finally {
       setLaedt(false);
     }
-  }, [bots, runden, stufe, regelsatz, auswahl.regelsatz]);
+  }, [bots, runden, stufe, tischRegelsatz]);
 
   const verlasseUndZurueck = useCallback((): void => {
     const id = tischId;
@@ -328,10 +362,134 @@ export function Partykiste({
   }, [tischId, onBack]);
 
   const sende = useCallback((aktion: PartyAktion): void => tisch.send(aktion), [tisch]);
+  /* Die Ansage fuer den Letzten beim „Weiter" — hier oben, weil der letzte
+     Wurf des Abends mit dem Umschalten auf den Endstand zusammenfaellt. */
+  const { angesagt, schliessen } = useNeuerWurf(tischId, sicht !== null, sicht?.letzterWurf ?? null);
 
   /* ------------------------------------------------------------------ */
   /* Menü                                                                */
   /* ------------------------------------------------------------------ */
+
+  if (!tischId && hubNeu) {
+    // Neues Hub: dieselben Zustände und Aufrufe im Spieleinstieg-Baukasten.
+    return (
+      <SpielRahmen
+        gameId={einzel ? einzelKennung(einzel) : 'partykiste'}
+        titel={einzel ? einzelName(einzel) : 'Partykiste'}
+        unter={einzel ? 'Trinkspiel · 4 bis 12 Leute' : `${Object.keys(MINISPIEL_NAME).length} Minispiele · 4 bis 12 Leute`}
+        akzent={PARTY_AKZENT}
+        onBack={onBack}
+        zurueckText="Zurück"
+        fuss={
+          angebot ? (
+            <OffeneRunde
+              neu
+              angebot={angebot}
+              laedt={laedt}
+              onBeitreten={() => void trittBei(angebot.id)}
+              onEigene={() => void oeffneRunde()}
+              onAbbrechen={() => setAngebot(null)}
+            />
+          ) : (
+            <button
+              className="hb-kn is-gold is-haupt is-breit"
+              type="button"
+              data-pk-online=""
+              onClick={() => void spieleOnline()}
+              disabled={laedt}
+            >
+              Online spielen
+            </button>
+          )
+        }
+      >
+        {einzel ? (
+          <p className="spe-text">
+            {ansageFuer(einzel, trinkmodus)} Jede Runde dasselbe Spiel — für 4 bis 12 Leute, die im selben Raum sitzen.
+          </p>
+        ) : (
+          <p className="spe-text">
+            {Object.keys(MINISPIEL_NAME).length} Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum sitzen.{' '}
+            {trinkmodus ? 'Wer verliert, trinkt' : 'Wer verliert, sammelt Strafpunkte'}; wer gewinnt, steht oben.
+          </p>
+        )}
+        {fehler ? <p className="hb-fehler">{fehler}</p> : null}
+        <Einstellungen
+          neu
+          runden={runden}
+          haerte={haerte}
+          trinkmodus={trinkmodus}
+          onRunden={(w) => {
+            setRunden(w);
+            merke(SCHLUESSEL_RUNDEN, w);
+          }}
+          onHaerte={(w) => {
+            setHaerte(w);
+            merke(SCHLUESSEL_HAERTE, w);
+          }}
+          onTrinkmodus={(an) => {
+            setTrinkmodus(an);
+            merke(SCHLUESSEL_TRINKMODUS, an ? '1' : '0');
+          }}
+        />
+        <PartyAuswahl
+          neu
+          einzel={einzel !== null}
+          vorgabe={auswahl.vorgabe}
+          wahl={auswahl.wahl}
+          gast={auswahl.gast}
+          trinkmodus={trinkmodus}
+          onWahl={auswahl.setWahl}
+          paketSperre={(paket) => sperre('paket', paket)}
+        />
+        <SpielAbschnitt titel="Gegen Bots">
+          <button
+            className="hb-kn is-blau is-breit"
+            type="button"
+            data-pk-bots=""
+            aria-expanded={botsOffen}
+            onClick={() => setBotsOffen((an) => !an)}
+          >
+            Gegen Bots
+          </button>
+          {botsOffen ? (
+            <div className="spe-karte">
+              <Regler
+                neu
+                titel="Bots"
+                wert={bots}
+                min={3}
+                max={11}
+                onWahl={(w) => {
+                  setBots(w);
+                  merke(SCHLUESSEL_BOTS, w);
+                }}
+              />
+              <SpielWahl
+                name="Spielstärke der Bots"
+                werte={STUFEN.map((s) => ({ wert: s, text: STUFE_NAME[s] }))}
+                wert={stufe}
+                onWahl={(s) => {
+                  setStufe(s);
+                  merke(SCHLUESSEL_STUFE, s);
+                }}
+              />
+              <button
+                className="hb-kn is-blau is-breit"
+                type="button"
+                data-pk-los=""
+                onClick={() => void spieleGegenBots()}
+                disabled={laedt}
+              >
+                Los
+              </button>
+            </div>
+          ) : null}
+        </SpielAbschnitt>
+        <Beitrittscode neu spiel="partykiste" onBeigetreten={setTischId} />
+      </SpielRahmen>
+    );
+  }
 
   if (!tischId) {
     return (
@@ -478,6 +636,7 @@ export function Partykiste({
         <header className="pk-kopf">
           <span className="pk-rundenzahl">Turnier vorbei</span>
         </header>
+        <LetzterSchicht wurf={angesagt} sitze={sitze} ich={sicht.sitz} trinkmodus={sicht.trinkmodus} onZu={schliessen} />
         <h2 className="pk-endtitel">Endstand</h2>
         <Tabelle sicht={sicht} sitze={sitze} />
         <div className="pk-wahl">
@@ -495,7 +654,9 @@ export function Partykiste({
   const binFertig = sicht.gehandelt.includes(sicht.sitz);
 
   return (
-    <main className="pk-seite pk-tisch">
+    <main className="pk-seite pk-tisch" data-szene={sicht.art}>
+      {/* Kulisse je Minispiel (Szene.tsx) — hinter allem, nimmt keine Tipps an. */}
+      <Szene art={sicht.art} />
       <header className="pk-kopf">
         <button className="pk-zurueck is-klein" type="button" onClick={verlasseUndZurueck} aria-label="Verlassen">
           ←
@@ -513,6 +674,7 @@ export function Partykiste({
           {tafel ? 'Zurück' : 'Stand'}
         </button>
       </header>
+      <LetzterSchicht wurf={angesagt} sitze={sitze} ich={sicht.sitz} trinkmodus={sicht.trinkmodus} onZu={schliessen} />
       {/* Die Sicht traegt den Regelsatz selbst — sie passt auf PartyRegelsatz. */}
       <Regelzeile regeln={sicht} />
       {/* Die geltende Regel-Karte steht ueber JEDER Runde — gebrochen wird sie in den anderen. */}
@@ -528,6 +690,19 @@ export function Partykiste({
         <>
           <p className="pk-ansage">{ansageFuer(sicht.art, sicht.trinkmodus)}</p>
           <Runde sicht={sicht} sitze={sitze} sende={sende} frist={tisch.view?.phaseDeadline ?? null} />
+          {/*
+           * „Passt nicht" (27.09.2026): nur auf staging, wie der Bug-Knopf
+           * (`me.stage`); ob die Runde einen Eintrag zeigt, entscheidet der
+           * Knopf selbst — sein offenes Blatt soll ein Weiterschalten der
+           * Runde ueberleben.
+           */}
+          {ich?.stage === 'staging' ? (
+            <PasstNicht
+              gezeigt={sicht.gezeigt ?? []}
+              tischId={tischId}
+              stufe={sicht.eskalation?.inhaltsHaerte ?? sicht.inhaltsHaerte ?? null}
+            />
+          ) : null}
           {sicht.phase === 'ergebnis' ? (
             <Abrechnung sicht={sicht} sitze={sitze} binFertig={binFertig} sende={sende} />
           ) : null}
@@ -566,6 +741,68 @@ function Lobby({
   const binHost = host !== null && meineKennung !== null && host.accountId === meineKennung;
   const genug = anwesend.length >= 4;
 
+  if (hubNeu) {
+    return (
+      <SpielRahmen
+        gameId="partykiste"
+        titel="Runde"
+        unter={`${anwesend.length} von ${sitze.length} da · ${runden} Minispiele`}
+        akzent={PARTY_AKZENT}
+        onBack={onZurueck}
+        zurueckText="Zurück"
+        fuss={
+          binHost ? (
+            <>
+              <button
+                className="hb-kn is-gold is-haupt is-breit"
+                type="button"
+                data-pk-start=""
+                onClick={onStart}
+                disabled={!verbunden || !genug}
+              >
+                Starten
+              </button>
+              {!genug ? <p className="hb-klein">Ab vier Leuten geht es los.</p> : null}
+            </>
+          ) : (
+            <p className="hb-klein" aria-live="polite">
+              Warten, bis {host?.displayName ?? 'der Erste'} startet …
+            </p>
+          )
+        }
+      >
+        <LobbyRegelzeile />
+        {!verbunden ? <p className="hb-fehler">Keine Verbindung — es wird neu aufgebaut …</p> : null}
+        <Einladung neu spiel="partykiste" />
+        <SpielAbschnitt titel="Am Tisch" zusatz={`${anwesend.length}/${sitze.length}`}>
+          <ul className="hb-liste spe-gruppe">
+            {sitze.map((platz) => {
+              const eigen = meineKennung !== null && platz.accountId === meineKennung;
+              const leer = platz.accountId === null && !platz.isBot;
+              return (
+                <li
+                  key={platz.seat}
+                  className={`spe-zeile spe-sitz${leer ? '' : ' is-besetzt'}`}
+                  data-pk-sitz={platz.seat}
+                  data-leer={leer ? '' : undefined}
+                  data-eigen={eigen ? '' : undefined}
+                >
+                  <span>
+                    <strong>{leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'))}</strong>
+                  </span>
+                  {eigen ? <span className="spe-marke">du</span> : null}
+                </li>
+              );
+            })}
+          </ul>
+        </SpielAbschnitt>
+        {/* Melden und Blockieren (Apple 1.2): Hier gibt es keine Profil-Links. */}
+        <MitspielerMelden sitze={sitze} ich={meineKennung} />
+        <GastHinweis sitze={sitze} className="spe-text" />
+      </SpielRahmen>
+    );
+  }
+
   return (
     <main className="pk-seite pk-menue">
       <button className="pk-zurueck" type="button" onClick={onZurueck} aria-label="Zurück">
@@ -602,12 +839,7 @@ function Lobby({
         {/* Melden und Blockieren (Apple 1.2): Hier gibt es keine Profil-Links. */}
         <MitspielerMelden sitze={sitze} ich={meineKennung} />
 
-        {sitze.some((platz) => platz.gast) ? (
-          /* Vor dem Start, nicht erst an der Abrechnung: Ein Tisch mit Gast
-             zaehlt fuer niemanden (countsForRanking) — wer das nicht will,
-             geht jetzt, nicht nach sechs Runden. */
-          <p className="pk-warten">Ein Gast spielt mit — diese Runde zählt nicht für die Rangliste.</p>
-        ) : null}
+        <GastHinweis sitze={sitze} className="pk-warten" />
 
         {binHost ? (
           <>

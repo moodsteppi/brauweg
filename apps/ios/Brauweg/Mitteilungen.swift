@@ -1,13 +1,15 @@
 import UIKit
 import UserNotifications
 
-/// Push-Mitteilungen („du bist dran") — NUR VORBEREITET.
+/// Push-Mitteilungen („du bist dran").
 ///
-/// Solange `Huelle.pushEingeschaltet` aus ist (Vorgabe, Build-Einstellung
-/// `BRAUWEG_PUSH = NO`), tut hier nichts etwas: keine Frage nach der
-/// Erlaubnis, keine Registrierung, und im Signierprofil steht auch kein
-/// `aps-environment` (Konfiguration/Push-NO.entitlements). Die Server-Seite
-/// (Tabelle fuer Geraete-Token, APNs-Schluessel) baut ein anderer Auftrag.
+/// Seit dem 13.10.2026 eingeschaltet (`BRAUWEG_PUSH = YES` in project.yml).
+/// Ist es aus, tut hier nichts etwas: keine Frage nach der Erlaubnis, keine
+/// Registrierung, und im Signierprofil steht kein `aps-environment`
+/// (Konfiguration/Push-NO.entitlements). Zugestellt wird erst, wenn auf dem
+/// Server der APNs-Schluessel gesetzt ist (docs/PUSH.md, Abschnitt 1) — bis
+/// dahin meldet die App ihr Token, und der Server schreibt jede Mitteilung
+/// nur ins Log.
 ///
 /// Eingeschaltet laeuft es so: Der Client fragt ueber die Bruecke an
 /// (`BrauwegNativ.pushErlauben()`) — nie die App von sich aus beim ersten
@@ -21,9 +23,10 @@ import UserNotifications
 /// „abgelehnt oder nicht da" — auch das bekommt der Client zu hoeren, damit
 /// er nicht auf ein Token wartet, das nie kommt.
 ///
-/// Mitteilungen, waehrend die App vorne ist, zeigt iOS ohne
-/// `UNUserNotificationCenterDelegate` gar nicht an — gewollt (PUSH.md: kein
-/// Banner ueber der App).
+/// Mitteilungen, waehrend die App vorne ist, zeigen wir nicht an — gewollt
+/// (PUSH.md: kein Banner ueber der App). Der Delegat ist trotzdem da, weil
+/// er das ANTIPPEN meldet: Die Mitteilung traegt `tableId` und `gameId`, und
+/// der Client springt damit an den Tisch (`Huelle.tischSkript`).
 ///
 /// APNs-Umgebung: `aps-environment` steht in Push-YES.entitlements auf
 /// `development`. Ein Bau aus Xcode (Debug, Entwicklerprofil) bekommt damit
@@ -31,7 +34,7 @@ import UserNotifications
 /// es selbst auf `production`. Fest `production` in die Datei zu schreiben,
 /// liesse schon das Archiv scheitern, weil es mit dem Entwicklerprofil
 /// signiert wird. Der Server muss dazu passen (`APNS_UMGEBUNG`).
-final class Mitteilungen {
+final class Mitteilungen: NSObject, UNUserNotificationCenterDelegate {
 
     static let shared = Mitteilungen()
 
@@ -43,12 +46,22 @@ final class Mitteilungen {
     /// Wer das Token an den Client weiterreicht (HauptController). nil = kein Token.
     var beiToken: ((String?) -> Void)?
 
-    private init() {}
+    /// Zuletzt angetippte Mitteilung, bis der Client sie abgeholt hat. Beim
+    /// Kaltstart tippt man, BEVOR die Seite geladen ist — dann holt sie
+    /// HauptController nach dem Laden ab.
+    private(set) var angetippt: (tableId: String, gameId: String)?
+    /// Wer das Antippen an den Client weiterreicht (HauptController).
+    var beiAntippen: ((String, String) -> Void)?
+
+    private override init() {}
 
     /// Beim Start: nur, wenn eingeschaltet. Schon erlaubt → frisches Token
     /// holen, ohne zu fragen; abgelehnt → das dem Client sagen.
     func beimStart() {
         guard Huelle.pushEingeschaltet else { return }
+        // Vor dem Ende von didFinishLaunching setzen: Nur dann bekommt der
+        // Delegat auch das Antippen, das die App erst gestartet hat.
+        UNUserNotificationCenter.current().delegate = self
         UNUserNotificationCenter.current().getNotificationSettings { einstellungen in
             switch einstellungen.authorizationStatus {
             case .authorized, .provisional, .ephemeral:
@@ -84,6 +97,33 @@ final class Mitteilungen {
     /// Simulator ohne Konto).
     func gescheitert() {
         melden(nil)
+    }
+
+    /// Der Client hat den Tisch uebernommen; nicht noch einmal melden.
+    func angetipptAbgeholt() {
+        angetippt = nil
+    }
+
+    // MARK: - UNUserNotificationCenterDelegate
+
+    /// Im Vordergrund: nichts anzeigen (siehe oben).
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([])
+    }
+
+    /// Angetippt: an den Tisch, von dem die Mitteilung handelt. Die Daten
+    /// stehen neben `aps` (docs/PUSH.md, Abschnitt 3).
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        let daten = response.notification.request.content.userInfo
+        if let tableId = daten["tableId"] as? String, let gameId = daten["gameId"] as? String {
+            angetippt = (tableId, gameId)
+            beiAntippen?(tableId, gameId)
+        }
+        completionHandler()
     }
 
     private func melden(_ neu: String?) {

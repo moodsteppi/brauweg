@@ -29,7 +29,7 @@ export function KontoLink({
   return (
     <main className="auth kontolink">
       <h1 className="auth-marke">
-        <img src="/hub/logo.png" alt="Brauweg" draggable={false} />
+        <img src="/hub/logo.webp" alt="Brauweg" draggable={false} />
       </h1>
       {ziel.art === 'verify' ? (
         <Bestaetigen token={ziel.token} angemeldet={angemeldet} onFertig={onFertig} />

@@ -91,6 +91,15 @@ function absageRequirement(level: AbsageLevel, party: Party): number {
 }
 
 /**
+ * Dieselbe Schwelle nach aussen — fuer den Lernpfad (lernen.ts), der „Re
+ * braucht 121" und „keine 90 heisst 151" abfragt. Er rechnet die Antwort aus
+ * dieser Funktion, statt die Zahlen ein zweites Mal hinzuschreiben.
+ */
+export function mindestAugen(party: Party, level: AbsageLevel = 0): number {
+  return absageRequirement(level, party);
+}
+
+/**
  * Effektive Mindestpunktzahl beider Parteien.
  *
  * Wer eine Absage macht, muss sie selbst erfuellen. Die Gegenpartei gewinnt

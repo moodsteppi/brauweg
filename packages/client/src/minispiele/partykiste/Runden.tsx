@@ -35,6 +35,7 @@ import {
   type WerBinIchSicht,
   type WerEherSicht,
 } from './sicht';
+import { Buslinie } from './Buslinie';
 import { KategorienRunde, MehrheitRunde, RegelkartenRunde } from './RundenOhneUhr';
 import { BombeRunde, KoenigsbecherRunde, ZehnSekundenRunde } from './RundenZeitdruck';
 
@@ -97,8 +98,41 @@ export function Wahl({
   );
 }
 
+/**
+ * Wer beim „Weiter" aller noch fehlt — mit Namen, auf jedem Bildschirm, auch
+ * bei dem, der schon getippt hat. Die Liste kommt fertig aus der Sicht
+ * (`weiterFehlen`); steht dort null, wartet der Tisch gerade nicht auf ein
+ * „Weiter", und es steht nichts da.
+ */
+export function FehlenNoch({ sicht, sitze }: { sicht: PartykisteSicht; sitze: SeatInfo[] }): React.JSX.Element | null {
+  /* `?? null`: Ein Server von vor dem 07.10.2026 schickt das Feld nicht. */
+  const fehlen = sicht.weiterFehlen ?? null;
+  if (!fehlen || fehlen.length === 0) return null;
+  return (
+    <p className="pk-wartet pk-fehlen" aria-live="polite" data-pk-fehlen="">
+      Es fehlen noch:{' '}
+      {fehlen.map((s, i) => (
+        <span key={s}>
+          {i > 0 ? ', ' : null}
+          <strong data-ich={s === sicht.sitz ? '' : undefined}>{s === sicht.sitz ? 'du' : namenFuer(sitze, s)}</strong>
+        </span>
+      ))}
+    </p>
+  );
+}
+
 /** Warten auf die anderen — mit Zahl, damit man weiss, ob es hakt. */
-export function Wartet({ sicht }: { sicht: PartykisteSicht }): React.JSX.Element {
+export function Wartet({ sicht, sitze }: { sicht: PartykisteSicht; sitze?: SeatInfo[] }): React.JSX.Element {
+  /* An den drei „Weiter"-Stellen nennt die Sicht die Fehlenden selbst — dann
+     stehen hier Namen statt einer Zahl. */
+  const fehlen = sicht.weiterFehlen ?? null;
+  if (sitze && fehlen !== null) {
+    return fehlen.length > 0 ? (
+      <FehlenNoch sicht={sicht} sitze={sitze} />
+    ) : (
+      <p className="pk-wartet">Gleich geht es weiter …</p>
+    );
+  }
   /* In der Abrechnung tippen Bots kein "Weiter" — sie zaehlen als fertig,
      sonst stuende hier "Noch 3 Leute", die es nie gibt. */
   const bots = sicht.phase === 'ergebnis' ? sicht.botSitze.filter((b) => !sicht.gehandelt.includes(b)).length : 0;
@@ -200,13 +234,16 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
         <p className="pk-ansage">Redereihenfolge — jeder sagt einen Satz zum Wort:</p>
         {reihe}
         {gesehen ? (
-          <Wartet sicht={sicht} />
+          <Wartet sicht={sicht} sitze={sitze} />
         ) : (
-          <Wahl>
-            <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
-              Gesehen
-            </button>
-          </Wahl>
+          <>
+            <Wahl>
+              <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
+                Gesehen
+              </button>
+            </Wahl>
+            <FehlenNoch sicht={sicht} sitze={sitze} />
+          </>
         )}
       </>
     );
@@ -513,21 +550,35 @@ function BusRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
   const binDran = sicht.amZug === sicht.sitz;
   const auf = sicht.phase === 'ergebnis';
   const stufe = Math.min(2, Math.max(0, daten.stufe));
+  // Am Ende der Runde steht der Bus dort, wo die letzte Fahrt aufhörte.
+  const station = auf && daten.letzter ? (daten.letzter.richtig ? 3 : daten.letzter.stufe) : daten.stufe;
+  const panne = daten.letzter !== null && !daten.letzter.richtig && (auf || daten.letzter.sitz === daten.amZug);
 
   return (
     <>
       <Buehne
         oben={auf ? 'Ausgefahren' : binDran ? 'Du fährst' : `${namenFuer(sitze, daten.amZug)} fährt`}
         gross={
-          <div className="pk-kartenreihe">
-            <Karte karte={daten.offen[0]} zu={daten.offen.length < 1} />
-            <Karte karte={daten.offen[1]} zu={daten.offen.length < 2} />
-            <Karte karte={daten.offen[2]} zu={daten.offen.length < 3} />
+          <div className="pk-busfahrt">
+            {/* Die Strecke: Station = richtige Tipps der laufenden Fahrt;
+                nach dem Ende der Runde das Ergebnis der letzten Fahrt. */}
+            <Buslinie station={station} panne={panne} />
+            <div className="pk-kartenreihe">
+              <Karte karte={daten.offen[0]} zu={daten.offen.length < 1} />
+              <Karte karte={daten.offen[1]} zu={daten.offen.length < 2} />
+              <Karte karte={daten.offen[2]} zu={daten.offen.length < 3} />
+            </div>
           </div>
         }
         unten={
           daten.letzter ? (
-            <span data-gut={daten.letzter.richtig ? '' : undefined}>
+            <span className="pk-letzter-tipp" data-gut={daten.letzter.richtig ? '' : undefined}>
+              {/* Die Karte, die den Tipp entschieden hat. Nach einem Fehlgriff
+                  ist die Fahrt vorbei und die Reihe oben wieder leer — ohne
+                  sie sähe niemand, was eigentlich gekommen ist. */}
+              <span className="pk-mini-karte">
+                <Karte karte={daten.letzter.karte} />
+              </span>
               {namenFuer(sitze, daten.letzter.sitz)}:{' '}
               {BUS_WAHL[daten.letzter.stufe]?.[daten.letzter.wahl] ?? '?'} —{' '}
               {daten.letzter.richtig ? 'richtig' : `daneben, ein ${zaehlerWort(sicht.trinkmodus, 1)}`}

@@ -21,6 +21,7 @@ import { type SessionInfo, sessionFromToken } from '../auth/service.js';
 import { PartyRuntime } from '../runtime/party.js';
 import {
   isReadyToStart,
+  istUebungstisch,
   schrumpfeAufBesetzte,
   setSeatBot,
   setSeatColor,
@@ -1180,6 +1181,7 @@ export class Gateway {
       paused: table.pausedAt !== null || (party?.paused ?? false),
       botLevel: tableBotLevel(table.filters),
       regelstand: `${table.ruleSetId}:${table.ruleSetVersion}`,
+      uebung: istUebungstisch(table.filters),
     };
 
     /**

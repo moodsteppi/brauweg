@@ -166,7 +166,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         {/* Der Schriftzug ist gemalt; die Ueberschrift bleibt als Text fuer
             Vorlesegeraete. */}
         <h1 className="anm-marke">
-          <img src="/hub/logo.png" alt="Brauweg" draggable={false} />
+          <img src="/hub/logo.webp" alt="Brauweg" draggable={false} />
         </h1>
         <img className="anm-held" src="/hub/pinguin.png" alt="" draggable={false} />
         <p className="anm-spruch">
@@ -219,7 +219,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         <button type="button" className="anm-zurueck" onClick={() => wechsle('wahl')} aria-label="Zurück">
           ‹
         </button>
-        <img className="anm-marke-klein" src="/hub/logo.png" alt="Brauweg" draggable={false} />
+        <img className="anm-marke-klein" src="/hub/logo.webp" alt="Brauweg" draggable={false} />
       </header>
       <h2 className="anm-titel">{titel}</h2>
 

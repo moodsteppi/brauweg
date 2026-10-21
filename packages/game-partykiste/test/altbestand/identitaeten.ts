@@ -114,7 +114,7 @@ export const IDENTITAETEN: readonly Identitaet[] = [
   { id: 'p101', name: 'Rotkäppchen' },
   { id: 'p102', name: 'Der Froschkönig' },
   { id: 'p103', name: 'Rumpelstilzchen' },
-  { id: 'p104', name: 'Die Kleine Meerjungfrau' },
+  { id: 'p104', name: 'Arielle, die Meerjungfrau' },
   { id: 'p105', name: 'Dornröschen' },
   { id: 'p106', name: 'Hänsel' },
   { id: 'p107', name: 'Gretel' },
@@ -150,5 +150,5 @@ export const IDENTITAETEN: readonly Identitaet[] = [
   { id: 'p137', name: 'Godzilla' },
   { id: 'p138', name: 'Flipper' },
   { id: 'p139', name: 'Lassie' },
-  { id: 'p140', name: 'Babe' },
+  { id: 'p140', name: 'Schweinchen Babe' },
 ];
