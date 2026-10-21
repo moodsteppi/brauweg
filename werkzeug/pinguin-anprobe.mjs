@@ -2,7 +2,7 @@
 /**
  * Pinguin-Kleidung „am Pinguin anprobiert" ausschneiden (docs/ASSETS-PINGUIN-ANPROBE.md).
  *
- *   node werkzeug/pinguin-anprobe.mjs <angezogen.png> <ziel.png> [--vorschau <vorschau.png>]
+ *   node werkzeug/pinguin-anprobe.mjs <angezogen.png> <ziel.png> --platz <hut|brille|oberteil|schuhe|hand|aura> [--vorschau <vorschau.png>]
  *
  * Eingabe ist ein Bild des Pinguins MIT dem Stück, erzeugt aus der Vorlage
  * (nackter Pinguin 960 × 1024 bei x = 32 auf 1024 × 1024 Grün). Ausgabe ist
@@ -40,13 +40,36 @@ const BASIS = join(HIER, '../packages/client/public/hub/pinguin/pinguin-basis.we
 const GROSS = 1024; // Arbeitsgröße
 const PG = { x: 32, y: 0, b: 960, h: 1024 }; // Lage des Pinguins in der Vorlage
 const RAHMEN = { b: 480, h: 512 };
-const SCHWELLE = 46; // Farbabstand, ab dem ein Pixel „anders" ist
+/**
+ * Farbabstand, ab dem ein Pixel „anders" ist. 46 reicht für Helles auf
+ * Dunklem (Krone, Stiefel); schwarzer Stoff auf dem dunkelblauen Körper
+ * (Frack) braucht weniger — dafür `--schwelle`.
+ */
+let SCHWELLE = 46;
+
+/**
+ * Wo ein Stück eines Platzes liegen darf (y von–bis in der 1024er-Vorlage).
+ * Die Bild-KI zeichnet den Pinguin bei jedem Bild leicht anders — im
+ * Kronen-Bild der ersten Probe (21.10.2026) saß das Gesicht ein Stück
+ * tiefer. Ohne Bereich käme dieses fremde Gesicht mit in die Krone.
+ */
+const BEREICH = {
+  hut: [0, 250],
+  brille: [230, 400],
+  oberteil: [415, 930],
+  schuhe: [860, 1024],
+  hand: [380, 900],
+  aura: [0, 1024],
+};
 
 const args = process.argv.slice(2);
 const [quelle, ziel] = args;
-const vorschau = args.includes('--vorschau') ? args[args.indexOf('--vorschau') + 1] : null;
-if (!quelle || !ziel) {
-  console.error('Aufruf: node werkzeug/pinguin-anprobe.mjs <angezogen.png> <ziel.png> [--vorschau <bild.png>]');
+const wert = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
+const vorschau = wert('--vorschau');
+if (wert('--schwelle')) SCHWELLE = Number(wert('--schwelle'));
+const platz = wert('--platz');
+if (!quelle || !ziel || !platz || !BEREICH[platz]) {
+  console.error('Aufruf: node werkzeug/pinguin-anprobe.mjs <angezogen.png> <ziel.png> --platz <hut|brille|oberteil|schuhe|hand|aura> [--vorschau <bild.png>]');
   process.exit(1);
 }
 
@@ -146,28 +169,76 @@ const faktor = GROSS / KLEIN;
 const quelleGross = await verschoben(bester.s, bester.dx * faktor, bester.dy * faktor, GROSS);
 
 // --- 2. Maske -----------------------------------------------------------------
+
+/**
+ * Hintergrund = Grün, das vom Bildrand her zusammenhängend erreichbar ist.
+ * Ein Pixel einzeln nach „grün?" zu fragen, schnitt helle Maschen aus dem
+ * grünen Pulli (erste Probe): Strickgrün und Leinwandgrün liegen dafür zu
+ * nah beieinander. Innerhalb des Pinguins ist Grün nie Hintergrund.
+ */
+function hintergrundVon(bild) {
+  const hg = new Uint8Array(GROSS * GROSS);
+  const stapel = [];
+  for (let x = 0; x < GROSS; x++) stapel.push(x, (GROSS - 1) * GROSS + x);
+  for (let y = 0; y < GROSS; y++) stapel.push(y * GROSS, y * GROSS + GROSS - 1);
+  while (stapel.length) {
+    const p = stapel.pop();
+    if (hg[p]) continue;
+    const i = p * 4;
+    if (!istGruen(bild[i], bild[i + 1], bild[i + 2])) continue;
+    hg[p] = 1;
+    const x = p % GROSS;
+    if (x > 0) stapel.push(p - 1);
+    if (x < GROSS - 1) stapel.push(p + 1);
+    if (p >= GROSS) stapel.push(p - GROSS);
+    if (p < hg.length - GROSS) stapel.push(p + GROSS);
+  }
+  return hg;
+}
+const hintergrund = hintergrundVon(quelleGross);
+
 let maske = new Uint8Array(GROSS * GROSS);
+const [vonY, bisY] = BEREICH[platz];
 for (let p = 0; p < GROSS * GROSS; p++) {
+  const y = Math.floor(p / GROSS);
+  if (y < vonY || y >= bisY) continue;
   const i = p * 4;
-  if (istGruen(quelleGross[i], quelleGross[i + 1], quelleGross[i + 2])) continue;
+  if (hintergrund[p]) continue;
   // Außerhalb des nackten Pinguins ist alles Nicht-Grüne neu (Krone über dem Kopf).
   if (!basisMaske[p] || abstand(quelleGross, i, vorlage, i) > SCHWELLE) maske[p] = 1;
 }
 
-/** Morphologie mit quadratischem Fenster r. */
+/**
+ * Morphologie mit quadratischem Fenster r — getrennt nach Zeilen und Spalten,
+ * weil ein Quadrat aus zwei Strecken besteht. So kostet r = 24 (Oberteile)
+ * Sekunden statt Minuten.
+ */
 function morph(m, r, dehnen) {
-  const aus = new Uint8Array(m.length);
+  const zeilen = new Uint8Array(m.length);
   for (let y = 0; y < GROSS; y++) {
-    for (let x = 0; x < GROSS; x++) {
-      let wert = dehnen ? 0 : 1;
-      for (let yy = Math.max(0, y - r); yy <= Math.min(GROSS - 1, y + r) && wert === (dehnen ? 0 : 1); yy++) {
-        for (let xx = Math.max(0, x - r); xx <= Math.min(GROSS - 1, x + r); xx++) {
-          const v = m[yy * GROSS + xx];
-          if (dehnen && v) { wert = 1; break; }
-          if (!dehnen && !v) { wert = 0; break; }
-        }
-      }
-      aus[y * GROSS + x] = wert;
+    let summe = 0;
+    const reihe = y * GROSS;
+    for (let x = -r; x < GROSS; x++) {
+      const rein = x + r;
+      if (rein < GROSS) summe += m[reihe + rein];
+      const raus = x - r - 1;
+      if (raus >= 0) summe -= m[reihe + raus];
+      if (x < 0) continue;
+      const breite = Math.min(GROSS - 1, x + r) - Math.max(0, x - r) + 1;
+      zeilen[reihe + x] = dehnen ? (summe > 0 ? 1 : 0) : summe === breite ? 1 : 0;
+    }
+  }
+  const aus = new Uint8Array(m.length);
+  for (let x = 0; x < GROSS; x++) {
+    let summe = 0;
+    for (let y = -r; y < GROSS; y++) {
+      const rein = y + r;
+      if (rein < GROSS) summe += zeilen[rein * GROSS + x];
+      const raus = y - r - 1;
+      if (raus >= 0) summe -= zeilen[raus * GROSS + x];
+      if (y < 0) continue;
+      const hoehe = Math.min(GROSS - 1, y + r) - Math.max(0, y - r) + 1;
+      aus[y * GROSS + x] = dehnen ? (summe > 0 ? 1 : 0) : summe === hoehe ? 1 : 0;
     }
   }
   return aus;
@@ -225,18 +296,27 @@ function loecherFuellen(m) {
 
 maske = morph(morph(maske, 2, false), 2, true); // öffnen: Rauschen und Umrisslinien weg
 maske = kruemelWeg(maske, 900);
-maske = morph(morph(maske, 8, true), 8, false); // schließen: Spalten im Stück zu
+// Schließen: Spalten im Stück zu. Oberteile großzügig — schwarzer Stoff auf
+// dunklem Körper und weißes Hemd auf weißem Bauch heben sich kaum ab, erkannt
+// wird nur, wo Schwarz auf Weiß trifft (Frack, erste Probe). Was dabei an
+// Körper mitkommt, sieht aus wie der Körper darunter.
+const SCHLIESSEN = { oberteil: 26, hut: 8, brille: 6, schuhe: 8, hand: 14, aura: 6 };
+maske = morph(morph(maske, SCHLIESSEN[platz], true), SCHLIESSEN[platz], false);
 maske = loecherFuellen(maske);
+// Nie über den Umriss hinaus: Grün bleibt draußen.
+for (let p = 0; p < GROSS * GROSS; p++) if (hintergrund[p]) maske[p] = 0;
 
 // --- 3. Ebene bauen -----------------------------------------------------------
 const ebene = Buffer.alloc(GROSS * GROSS * 4);
+// Nur der äußerste Rand bekommt den Grünstich entfernt. Über die ganze
+// Fläche färbte das einen grünen Pulli schwarz (erste Probe, 21.10.2026).
+const kern = morph(maske, 3, false);
 for (let p = 0; p < GROSS * GROSS; p++) {
   if (!maske[p]) continue;
   const i = p * 4;
   let [r, g, b] = [quelleGross[i], quelleGross[i + 1], quelleGross[i + 2]];
-  // Grünstich am Rand: Grün auf den Mittelwert der anderen Kanäle kappen.
   const deckel = Math.max(r, b) + 12;
-  if (g > deckel) g = deckel;
+  if (!kern[p] && g > deckel) g = deckel;
   ebene[i] = r;
   ebene[i + 1] = g;
   ebene[i + 2] = b;
