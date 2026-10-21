@@ -110,10 +110,24 @@ describe('Einladung', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Link teilen' }));
     await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
     expect(share.mock.calls[0]![0]).toMatchObject({
+      title: 'Partykiste bei Brauweg',
       url: `${window.location.origin}/beitritt/K7X9MQ`,
       text: expect.stringContaining('K7X9MQ'),
     });
     expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it('nennt im Titel das Spiel des Tisches, nicht immer die Partykiste', async () => {
+    // Derselbe Baustein steht am privaten Kartentisch (tisch/index.tsx).
+    tischMitCode.mockResolvedValue({
+      table: { id: TISCH, gameId: 'doppelkopf', status: 'waiting', joinCode: 'K7X9MQ' },
+    });
+    const share = vi.fn().mockResolvedValue(undefined);
+    setzeNavigator('share', share);
+    render(<Einladung spiel="doppelkopf" tischId={TISCH} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Link teilen' }));
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
+    expect(share.mock.calls[0]![0]).toMatchObject({ title: 'Doppelkopf bei Brauweg' });
   });
 
   it('kopiert nicht, wenn jemand das Teilen abbricht', async () => {

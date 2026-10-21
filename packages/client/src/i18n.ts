@@ -678,7 +678,9 @@ const de: Record<string, string> = {
   'einladung.hinweis': 'Code vorlesen, Link teilen oder den QR-Code scannen lassen.',
   'einladung.codeAria': 'Beitrittscode',
   'einladung.teilen': 'Link teilen',
-  'einladung.teilenTitel': 'Partykiste bei Brauweg',
+  // Davor steht der Spielname (Einladung.tsx) — bis zum 21.10.2026 hiess es
+  // hier fest „Partykiste bei Brauweg", auch am privaten Doppelkopftisch.
+  'einladung.teilenTitel': 'bei Brauweg',
   'einladung.teilenText': 'Komm an meinen Tisch. Code:',
   'einladung.kopiert': 'Link kopiert — jetzt in den Gruppenchat einfügen.',
   'einladung.nichtKopiert': 'Kopieren ging nicht. Der Link steht unter dem QR-Code.',

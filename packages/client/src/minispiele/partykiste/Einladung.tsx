@@ -98,7 +98,7 @@ export function Einladung({
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({
-          title: t('einladung.teilenTitel'),
+          title: teilenTitel(spiel),
           text: `${t('einladung.teilenText')} ${code}`,
           url: link,
         });
@@ -162,4 +162,17 @@ export function Einladung({
       <p className="einladung-unter">{t('einladung.hinweis')}</p>
     </section>
   );
+}
+
+/**
+ * Der Titel der Vorschau im Gruppenchat. Nach `spiel`, weil derselbe Baustein
+ * auch an privaten Doppelkopf- und Skattischen steht (tisch/index.tsx) — mit
+ * festem „Partykiste" lud man dort zum falschen Spiel ein. Kennt `t` eine
+ * Kennung nicht, gibt es den Schluessel selbst zurueck; dann lieber nur
+ * „Brauweg" als „game.xyz bei Brauweg".
+ */
+function teilenTitel(spiel: string): string {
+  const schluessel = `game.${spiel}`;
+  const name = t(schluessel);
+  return name === schluessel ? 'Brauweg' : `${name} ${t('einladung.teilenTitel')}`;
 }
