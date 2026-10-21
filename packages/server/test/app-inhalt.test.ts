@@ -6,9 +6,14 @@
  * `APP_PARTYKISTE_TRINKMODUS=aus` genuegen. Geprueft wird: Vorgabe AUS
  * aendert nichts, eingeschaltet werden Tische aus der App gezaehmt, und an
  * einen auf der Webseite angelegten Trinktisch kommt aus der App niemand.
+ *
+ * Seit dem 21.10.2026 steht die Partykiste in der App auf „Kommt bald"
+ * (Emile). Der Rueckweg bleibt trotzdem geprueft — er wird gebraucht, sobald
+ * sie zurueckkommt. Die Datei schaltet die Freigabe dafuer fuer ihre Dauer
+ * selbst ein und danach wieder zurueck.
  */
 
-import { test } from 'node:test';
+import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { GameId } from '@brauweg/game-api';
@@ -16,6 +21,7 @@ import type { GameId } from '@brauweg/game-api';
 import { APP_ORIGIN, buildApp } from '../src/http/app.js';
 import {
   APP_INHALT_WIE_WEB,
+  FREIGABE,
   type AppInhalt,
   appInhaltAusUmgebung,
   appRegeln,
@@ -28,6 +34,15 @@ import { createTestContext, createVerifiedAccount, seedInvite } from './helpers.
 
 const PARTY = 'partykiste' as GameId;
 const ZAHM: AppInhalt = { trinkmodusAus: true, haerteMax: 2 };
+
+const freigabe = FREIGABE as Record<string, { web: string; app: string } | undefined>;
+const freigabeVorher = freigabe.partykiste;
+before(() => {
+  freigabe.partykiste = { web: 'spielbar', app: 'spielbar' };
+});
+after(() => {
+  freigabe.partykiste = freigabeVorher;
+});
 
 test('die Umgebung schaltet nur mit ausdruecklichen Werten', () => {
   assert.deepEqual(appInhaltAusUmgebung({}), APP_INHALT_WIE_WEB);

@@ -1,0 +1,212 @@
+PINGUIN-KLEIDUNG — ALLE AUFTRÄGE FÜR CHATGPT (29 Stück)
+
+So geht's:
+  1. Neuen Chat öffnen, vorlage-pinguin.png hochladen.
+  2. Einen Auftrag unten (alles zwischen den Strichen) einfügen. EIN Stück je Bild.
+  3. Bild speichern unter dem Namen in eckigen Klammern, z. B. hut-zylinder.png.
+  4. Sieht der Pinguin anders aus (größer, gedreht, anderes Gesicht): neu erzeugen.
+  Tipp: Für jedes Stück einen frischen Chat — sonst trägt der Pinguin noch das letzte.
+  Fertig sind schon: Krone, Frack, Strickpulli, Gummistiefel.
+
+==============================================================================
+01 · Kopf · Wollmütze   [hut-wollmuetze.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a cozy purple knitted beanie with a folded ribbed brim and a light lilac pom-pom on top. The hat sits ON the head, its rim resting on the head and following the head's curve, casting a soft shadow onto the dark head feathers. It must not float above the head and must not cover the eyes.
+
+==============================================================================
+02 · Kopf · Strohhut   [hut-strohhut.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a woven natural straw hat with a wide round brim and a dark red ribbon band. The hat sits ON the head, its rim resting on the head and following the head's curve, casting a soft shadow onto the dark head feathers. It must not float above the head and must not cover the eyes.
+
+==============================================================================
+03 · Kopf · Zylinder   [hut-zylinder.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a tall black top hat with a short brim and a dark red satin band. The hat sits ON the head, its rim resting on the head and following the head's curve, casting a soft shadow onto the dark head feathers. It must not float above the head and must not cover the eyes.
+
+==============================================================================
+04 · Kopf · Bergsteigerhelm   [hut-bergsteiger.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a blue mountaineering helmet with a small headlamp in front and a strap; the strap goes down the sides of the head. The hat sits ON the head, its rim resting on the head and following the head's curve, casting a soft shadow onto the dark head feathers. It must not float above the head and must not cover the eyes.
+
+==============================================================================
+05 · Kopf · Partyhut   [hut-partyhut.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a pointed pink party cone hat with yellow stripes and a mint pom-pom on the tip, slightly tilted, thin elastic under the chin. The hat sits ON the head, its rim resting on the head and following the head's curve, casting a soft shadow onto the dark head feathers. It must not float above the head and must not cover the eyes.
+
+==============================================================================
+06 · Kopf · Doko-Doktorhut   [hut-doktorhut.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a black graduation mortarboard: flat square top, round cap underneath, a golden tassel hanging on the right side and a small golden club symbol (♣) badge on the front of the cap. The hat sits ON the head, its rim resting on the head and following the head's curve, casting a soft shadow onto the dark head feathers. It must not float above the head and must not cover the eyes.
+
+==============================================================================
+07 · Augen · Sonnenbrille   [brille-sonnenbrille.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: cool black sunglasses with dark reflective lenses (the eyes are hidden behind dark glass, but a soft reflection shows). The glasses sit ON the face in front of the eyes, the frame follows the round face. Nothing else on the head.
+
+==============================================================================
+08 · Augen · Lesebrille   [brille-lesebrille.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: small round golden reading glasses with clear lenses, sitting a bit low on the beak's top. The glasses sit ON the face in front of the eyes, the frame follows the round face, the eyes are still visible through the lenses. Nothing else on the head.
+
+==============================================================================
+09 · Augen · Taucherbrille   [brille-taucherbrille.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a blue diving mask with one wide clear lens over both eyes, the rubber strap going around the head. The glasses sit ON the face in front of the eyes, the frame follows the round face, the eyes are still visible through the lenses. Nothing else on the head.
+
+==============================================================================
+10 · Augen · Skibrille   [brille-skibrille.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: orange mirrored ski goggles with a white frame and a colorful strap around the head. The glasses sit ON the face in front of the eyes, the frame follows the round face, the eyes are still visible through the lenses. Nothing else on the head.
+
+==============================================================================
+11 · Augen · Monokel   [brille-monokel.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a golden monocle over the penguin's right eye (right side of the image) with a thin golden chain hanging down. The glasses sit ON the face in front of the eyes, the frame follows the round face, the eyes are still visible through the lenses. Nothing else on the head.
+
+==============================================================================
+12 · Oberteil · Vereinstrikot   [oberteil-trikot.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a white football jersey with two vertical red stripes on the front, red round collar and short red-trimmed sleeves. The garment wraps around the round body and follows its shape. The flippers go INTO the sleeves (if it has sleeves): the sleeves cover the upper part of each flipper, the flipper tips stay visible, flippers stay exactly where they are. Face and feet stay uncovered.
+
+==============================================================================
+13 · Oberteil · Lederweste   [oberteil-weste.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a brown leather vest, open in front over the white belly, two golden buttons, no sleeves (the flippers stay free). The garment wraps around the round body and follows its shape. The flippers go INTO the sleeves (if it has sleeves): the sleeves cover the upper part of each flipper, the flipper tips stay visible, flippers stay exactly where they are. Face and feet stay uncovered.
+
+==============================================================================
+14 · Oberteil · Regenjacke   [oberteil-regenjacke.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a glossy yellow rain jacket with a front zipper, two pockets and the hood lying down on the back, sleeves covering the upper flippers. The garment wraps around the round body and follows its shape. The flippers go INTO the sleeves (if it has sleeves): the sleeves cover the upper part of each flipper, the flipper tips stay visible, flippers stay exactly where they are. Face and feet stay uncovered.
+
+==============================================================================
+15 · Oberteil · Meisterrobe   [oberteil-meisterrobe.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a royal-blue scholar's robe with wide golden trim along the open front edges and sleeve ends, white collar, two golden buttons and a small golden club symbol (♣) on the left chest. The garment wraps around the round body and follows its shape. The flippers go INTO the sleeves (if it has sleeves): the sleeves cover the upper part of each flipper, the flipper tips stay visible, flippers stay exactly where they are. Face and feet stay uncovered.
+
+==============================================================================
+16 · Schuhe · Turnschuhe   [schuhe-turnschuhe.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a pair of white sneakers with red stripes and white laces. Each one is exactly where a foot is, the feet are inside, same position as the feet. Nothing else changes.
+
+==============================================================================
+17 · Schuhe · Schlittschuhe   [schuhe-schlittschuhe.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a pair of white figure ice skates with silver blades underneath; the blades lift the penguin's feet a tiny bit. Each one is exactly where a foot is, the feet are inside, same position as the feet. Nothing else changes.
+
+==============================================================================
+18 · Schuhe · Goldstiefel   [schuhe-goldstiefel.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a pair of shiny golden boots with a small red gem on each. Each one is exactly where a foot is, the feet are inside, same position as the feet. Nothing else changes.
+
+==============================================================================
+19 · Flosse · Becher Kakao   [hand-kakao.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a red mug of hot cocoa with whipped cream and a little steam. The penguin HOLDS it in its RIGHT flipper (the flipper on the right side of the image): the flipper tip wraps around it, the flipper stays where it is, the object is held in front of the lower right body. Nothing on the head or body.
+
+==============================================================================
+20 · Flosse · Kartenfächer   [hand-kartenfaecher.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a fan of five playing cards (German Doppelkopf style card backs facing the viewer are fine, no readable letters). The penguin HOLDS it in its RIGHT flipper (the flipper on the right side of the image): the flipper tip wraps around it, the flipper stays where it is, the object is held in front of the lower right body. Nothing on the head or body.
+
+==============================================================================
+21 · Flosse · Wanderstab   [hand-wanderstab.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a tall wooden hiking staff, standing on the ground next to the right foot and reaching up to head height. The penguin HOLDS it in its RIGHT flipper (the flipper on the right side of the image): the flipper tip wraps around it, the flipper stays where it is, the object is held in front of the lower right body. Nothing on the head or body.
+
+==============================================================================
+22 · Flosse · Laterne   [hand-laterne.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a small brass lantern with a warm glowing candle inside, hanging from the flipper by its handle. The penguin HOLDS it in its RIGHT flipper (the flipper on the right side of the image): the flipper tip wraps around it, the flipper stays where it is, the object is held in front of the lower right body. Nothing on the head or body.
+
+==============================================================================
+23 · Flosse · Zauberstab   [hand-zauberstab.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a dark wooden magic wand with a golden star tip and a few sparkles. The penguin HOLDS it in its RIGHT flipper (the flipper on the right side of the image): the flipper tip wraps around it, the flipper stays where it is, the object is held in front of the lower right body. Nothing on the head or body.
+
+==============================================================================
+24 · Ringsum · Glitzer   [aura-glitzer.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: soft white and light-blue twinkling glitter sparkles. The effect floats AROUND the penguin in the green space next to and above it, a loose ring of particles; it must NOT cover the penguin's face, belly or feet, only a few particles may overlap the outline. The penguin itself stays unchanged.
+
+==============================================================================
+25 · Ringsum · Blätterwirbel   [aura-blaetter.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a swirl of autumn leaves in orange, red and yellow. The effect floats AROUND the penguin in the green space next to and above it, a loose ring of particles; it must NOT cover the penguin's face, belly or feet, only a few particles may overlap the outline. The penguin itself stays unchanged.
+
+==============================================================================
+26 · Ringsum · Schneeflocken   [aura-schneeflocken.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: gently falling white and pale-blue snowflakes. The effect floats AROUND the penguin in the green space next to and above it, a loose ring of particles; it must NOT cover the penguin's face, belly or feet, only a few particles may overlap the outline. The penguin itself stays unchanged.
+
+==============================================================================
+27 · Ringsum · Funkenflug   [aura-funken.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: glowing orange and golden fire sparks drifting upward. The effect floats AROUND the penguin in the green space next to and above it, a loose ring of particles; it must NOT cover the penguin's face, belly or feet, only a few particles may overlap the outline. The penguin itself stays unchanged.
+
+==============================================================================
+28 · Ringsum · Sternenkranz   [aura-sterne.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: a ring of small shiny golden stars circling the penguin. The effect floats AROUND the penguin in the green space next to and above it, a loose ring of particles; it must NOT cover the penguin's face, belly or feet, only a few particles may overlap the outline. The penguin itself stays unchanged.
+
+==============================================================================
+29 · Ringsum · Konfetti   [aura-konfetti.png]
+------------------------------------------------------------------------------
+Edit the uploaded image. Keep the penguin EXACTLY as it is: same pose, same size, same position in the frame, same face, same eyes, same lighting, same camera, same pure green #00FF00 background. Do not move, rotate, scale or redraw the penguin. Only dress it in the item described below, worn naturally on its body, in the same glossy soft 3D cartoon render style. Output 1024x1024. No text, no logo, no extra objects, no shadow on the background.
+
+Item: colorful party confetti pieces and small streamers. The effect floats AROUND the penguin in the green space next to and above it, a loose ring of particles; it must NOT cover the penguin's face, belly or feet, only a few particles may overlap the outline. The penguin itself stays unchanged.

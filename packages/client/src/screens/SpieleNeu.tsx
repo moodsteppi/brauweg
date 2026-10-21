@@ -134,11 +134,24 @@ export function SpieleNeu({
     setGames(await api.games());
   };
 
+  // Vor dem frühen Rückgabewert unten: Hooks immer in derselben Reihenfolge.
+  const offenBald = offen ? games?.find((g) => g.id === offen && g.availability === 'preview') : undefined;
+  useEffect(() => {
+    if (!offenBald) return;
+    onOeffne(null);
+    onBald(t(offenBald.nameKey));
+    // An der Kennung hängen, nicht am Objekt (CLAUDE.md).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offenBald?.id]);
+
   if (!games) return <p className="hb-laden">Spiele werden geladen…</p>;
 
   const spielbar = games.filter((g) => g.availability === 'playable');
   const bald = games.filter((g) => g.availability === 'preview');
-  const offenesSpiel = offen ? games.find((g) => g.id === offen) : undefined;
+  // Nur Spielbares hat eine Spielseite. Ein „Bald"-Spiel kann trotzdem
+  // ankommen — vom Start aus „Deine Spiele", wenn man es früher gespielt hat
+  // (Partykiste in der App, seit 21.10.2026 „Kommt bald").
+  const offenesSpiel = offen ? spielbar.find((g) => g.id === offen) : undefined;
   if (offenesSpiel) {
     return (
       <SpielSeite
