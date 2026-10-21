@@ -12,7 +12,7 @@
  * WebM (VP8) mit Playwrights ffmpeg — ebenso scharf, nur groesser.
  *
  * Weitere Schalter:
- *   --szene <name>   nur eine Szene (Teilwort genuegt: doppelkopf, skat, partykiste, auswahl, 14)
+ *   --szene <name>   nur eine Szene (Teilwort genuegt: doppelkopf, skat, partykiste, auswahl, 14, ad3)
  *   --basis <url>    Server, gegen den gespielt wird (Vorgabe: staging)
  *   --sichtbar       Browserfenster zeigen
  *
@@ -29,6 +29,17 @@
  * Autopilot, aufgenommen wird Lena. Spielt ein Freund zu langsam, uebernimmt
  * der Server dessen Platz, und es steht wieder „Bot" da — der Autopilot muss
  * also auf allen drei Seiten laufen, bis der Clip fertig ist.
+ *
+ * Dasselbe fuer Ad 3 (`ad3-wartesaal`, Clips 15–17): Bro legt einen PRIVATEN
+ * Tisch an, Nele, Kalle und Basti fragen an, Bro sagt in der Oberflaeche zu,
+ * und aus derselben Partie entsteht der erste Stich. Der Stich geht nicht
+ * zufaellig an Basti: Die Bruecke liest die Sicht jedes Gastes mit
+ * (Trumpfreihenfolge, erlaubte Karten), Basti legt seine staerkste, alle
+ * anderen ihre schwaechste Karte. Bekommt er ihn trotzdem nicht, wird der
+ * Clip verworfen und der naechste Stich versucht. Den Zuruf „Na sowas!"
+ * besitzt kein Gastkonto — er wird in Bros Leitung eingespielt (siehe
+ * `zurufEinspielen`). Am Ende loescht die Szene ihre vier Gastkonten, weil
+ * Anzeigenamen eindeutig sind und ein zweiter Lauf sonst „Bro 7" hiesse.
  *
  * Die Bausteine sind hierher ABGESCHRIEBEN, nicht importiert: screenshots.mjs liest beim Laden seine Schalter und
  * startet sofort `main()`, ein Import wuerde also einen Screenshot-Lauf
@@ -124,8 +135,10 @@ async function appSeite(browser, lokal = {}, name = naechsterName()) {
     headers: { origin: APP_HERKUNFT },
   });
   if (!antwort.ok()) throw new Error(`Gastkonto: ${antwort.status()} ${await antwort.text()}`);
-  const { token } = await antwort.json();
+  const { token, displayName } = await antwort.json();
   if (!token) throw new Error('Gastkonto ohne Token — erkennt der Server die App-Herkunft nicht mehr?');
+  /** Was ueber die Tischleitung laeuft — nur die Ad-3-Szene liest und schreibt darin (siehe `bruecke`). */
+  const leitung = { sicht: null, seite: null, server: null };
 
   const weiter = async (route) => {
     const anfrage = route.request();
@@ -140,7 +153,7 @@ async function appSeite(browser, lokal = {}, name = naechsterName()) {
   await ctx.route(`${SCHEIN}/**`, (route) =>
     route.request().url().startsWith(`${SCHEIN}/api/`) ? route.fallback() : route.abort(),
   );
-  await ctx.routeWebSocket(`${SCHEIN.replace(/^http/, 'ws')}/ws`, (ws) => bruecke(ws, token));
+  await ctx.routeWebSocket(`${SCHEIN.replace(/^http/, 'ws')}/ws`, (ws) => bruecke(ws, token, leitung));
 
   await ctx.addInitScript(
     ([apiBase, sitzung, eintraege]) => {
@@ -156,11 +169,21 @@ async function appSeite(browser, lokal = {}, name = naechsterName()) {
   await page.goto(`${BASIS}/`);
   await page.waitForLoadState('networkidle').catch(() => {});
   await ruhig(page);
-  return { ctx, page };
+  return { ctx, page, leitung, name: displayName };
 }
 
-function bruecke(seite, token) {
+/**
+ * Reicht die Tischleitung zwischen Seite und staging durch. Nebenbei merkt
+ * sie sich die letzte Sicht (`leitung.sicht`) und haelt beide Enden fest:
+ * Die Ad-3-Szene liest daraus Trumpfreihenfolge und erlaubte Karten, legt
+ * fuer die nicht aufgenommenen Gaeste direkt ueber die Leitung und spielt
+ * Bro einen Zuruf ein (`zurufEinspielen`). Die uebrigen Szenen beachten die
+ * Leitung nicht.
+ */
+function bruecke(seite, token, leitung) {
   const server = new WebSocket(`${BASIS.replace(/^http/, 'ws')}/ws`, ['brauweg-token', token]);
+  leitung.seite = seite;
+  leitung.server = server;
   const puffer = [];
   seite.onMessage((nachricht) => {
     if (server.readyState === WebSocket.OPEN) server.send(nachricht);
@@ -171,6 +194,13 @@ function bruecke(seite, token) {
     for (const n of puffer.splice(0)) server.send(n);
   });
   server.addEventListener('message', (e) => {
+    if (typeof e.data === 'string' && e.data.includes('"type":"view"')) {
+      try {
+        leitung.sicht = JSON.parse(e.data);
+      } catch {
+        /* Keine Sicht — dann eben die alte. */
+      }
+    }
     seite.send(typeof e.data === 'string' ? e.data : Buffer.from(e.data));
   });
   server.addEventListener('close', () => seite.close().catch(() => {}));
@@ -342,16 +372,18 @@ const clips = [];
 /**
  * Nimmt auf, waehrend `tun` laeuft. Die Laenge haelt sich in 5–10 s: was
  * frueher fertig ist, laeuft bis 5 s weiter, was laenger braucht, wird bei
- * 10 s geschnitten (das Video endet, die Partie laeuft weiter).
+ * 10 s geschnitten (das Video endet, die Partie laeuft weiter). `hoechstens`
+ * verschiebt die obere Grenze — die Ad-3-Szenen B2 und B3 erzaehlen einen
+ * ganzen Ablauf und waeren bei 10 s mittendrin abgeschnitten.
  */
-async function clip(page, eintrag, tun) {
+async function clip(page, eintrag, tun, { hoechstens = 10_000 } = {}) {
   const datei = join(ZIEL, `${eintrag.datei}.${KODIERER.endung}`);
   process.stdout.write(`  ${eintrag.datei} … `);
   const beginn = Date.now();
   const stoppen = await aufnahmeStarten(page);
   let fehler = null;
   try {
-    await Promise.race([tun(), warte(10_000)]);
+    await Promise.race([tun(), warte(hoechstens)]);
   } catch (e) {
     fehler = e;
   }
@@ -823,10 +855,359 @@ const SZENEN = [
       }
     },
   },
+  {
+    // Ad 3, Variante 1 (docs/werbung/ad-3/konzept.md, Tabelle B1–B3): EINE
+    // durchgehende Partie, drei Clips daraus. Wie Szene 14 ohne Bots — „Fehlt
+    // noch einer" erzaehlt von Freunden, die man dazuholt, und ein „Bot 3"
+    // im Bild waere die Gegenpointe. Gewaehlt mit `--szene ad3`.
+    name: 'ad3-wartesaal',
+    async machen(browser) {
+      const spieler = [];
+      const autos = [];
+      try {
+        for (const name of AD3) {
+          const s = await appSeite(browser, {}, name);
+          spieler.push(s);
+          // Ein vergebener Name kaeme als „Bro 7" zurueck — das darf nicht ins Bild.
+          if (s.name !== name) throw new Error(`Name „${name}" ist auf dem Server vergeben (bekam „${s.name}") — Konto erst freigeben`);
+        }
+        const [bro, nele, kalle, basti] = spieler;
+        // Am Rechner kopiert „Link teilen" und meldet „Link kopiert …" (Einladung.tsx).
+        // Ohne `navigator.share` nimmt Chromium sicher diesen Weg, statt ein
+        // Teilen-Fenster zu versuchen; die Zwischenablage muss es duerfen.
+        await bro.ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASIS });
+        await bro.page.evaluate(() => delete Navigator.prototype.share);
+
+        await privaterTisch(bro.page);
+        const tischId = (await api(bro.page, 'GET', '/me')).daten?.activeTable?.tableId;
+        if (!tischId) throw new Error('Bro sitzt an keinem Tisch');
+        await bro.page.locator('.einladung-teilen').waitFor({ state: 'visible', timeout: 15_000 });
+        await bro.page.waitForTimeout(1500);
+
+        // B1: Wartesaal mit „Leute dazuholen", Tipp auf „Link teilen".
+        const b1 = { datei: '15-ad3-wartesaal-b1-link-teilen', spiel: 'Doppelkopf', szene: 'Privater Tisch, Wartesaal „Leute dazuholen" (Code, QR), Tipp auf „Link teilen" → „Link kopiert …"', eignung: 'Ad 3, B1' };
+        await clip(bro.page, b1, async () => {
+          const adresse = sichtbarkeitMessen(bro.page, '.einladung-link, .einladung-qr');
+          await bro.page.waitForTimeout(2000);
+          await bro.page.locator('.einladung-teilen').click({ timeout: 3000 });
+          await bro.page.locator('.einladung-hinweis').waitFor({ state: 'visible', timeout: 3000 });
+          await bro.page.waitForTimeout(3000);
+          const hinweis = await bro.page.locator('.einladung-hinweis').innerText().catch(() => '');
+          b1.szene += ` — Hinweis „${hinweis.trim()}"; Staging-Adresse/QR: ${spannenText(await adresse())}`;
+        });
+
+        // B2: Anfragen kommen an, Bro laesst herein; bei 3 von 4 kurz stehen, dann Basti, dann wird ausgeteilt.
+        const b2 = { datei: '16-ad3-wartesaal-b2-einlassen', spiel: 'Doppelkopf', szene: 'Anfragen von Nele und Kalle, Bro sagt zu; 3 von 4 Plätzen stehen kurz, dann Basti, dann wird ausgeteilt', eignung: 'Ad 3, B2' };
+        const hinein = [];
+        await clip(
+          bro.page,
+          b2,
+          async () => {
+            const adresse = sichtbarkeitMessen(bro.page, '.einladung-link, .einladung-qr');
+            await bro.page.waitForTimeout(1000);
+            await anfragen(nele, tischId);
+            await anfragen(kalle, tischId);
+            await zusagen(bro, nele);
+            hinein.push(hereinkommen(nele, autos));
+            await zuDenPlaetzen(bro, nele);
+            await zusagen(bro, kalle);
+            hinein.push(hereinkommen(kalle, autos));
+            // Bastis Anfrage schon jetzt: Die Liste holt nach einer Zusage
+            // sofort neu, so steht er bereit, und die Pause bei 3 von 4 haengt
+            // nicht am 2,5-s-Takt der Abfrage (im ersten Lauf waren es 4,6 s).
+            await anfragen(basti, tischId);
+            await zuDenPlaetzen(bro, kalle);
+            await plaetzeBesetzt(bro, 3);
+            const dreiVonVier = Date.now();
+            await bro.page.locator('.tisch-anfrage', { hasText: basti.name }).waitFor({ state: 'attached', timeout: 15_000 });
+            // Rund 2 s bei 3 von 4; `zusagen` braucht selbst knapp 1 s bis zum Tipp.
+            const rest = 2000 - (Date.now() - dreiVonVier) - 900;
+            if (rest > 0) await bro.page.waitForTimeout(rest);
+            await zusagen(bro, basti);
+            hinein.push(hereinkommen(basti, autos));
+            const dreiSek = (Date.now() - dreiVonVier) / 1000;
+            // Der volle Tisch startet die Partie: Bro spielt ab hier mit (Vorbehalt „gesund"), Karten legt die Regie.
+            const auto = autopilot(bro.page, dokoSchritt);
+            auto.zustand.karten = false;
+            autos.push(auto);
+            await bro.page.locator('.doko-hand .doko-handcard').first().waitFor({ state: 'visible', timeout: 15_000 });
+            await bro.page.waitForTimeout(3500);
+            b2.szene += ` (3 von 4 standen ${dreiSek.toFixed(1)} s); Staging-Adresse/QR: ${spannenText(await adresse())}`;
+          },
+          { hoechstens: 30_000 },
+        );
+        await Promise.all(hinein);
+
+        // B3: erster Stich an Basti, Zuruf „Na sowas!" ueber seinem Sitz.
+        const ende = Date.now() + 60_000;
+        while (!spieler.some((s) => spielZuege(s.leitung.sicht).length > 0)) {
+          if (Date.now() > ende) throw new Error('Die Partie kommt nicht ans Ausspielen');
+          await warte(200);
+        }
+        const bastiSitz = basti.leitung.sicht.seat;
+        for (let nr = 1; nr <= 6; nr++) {
+          let sitz = null;
+          const b3 = {
+            datei: '17-ad3-wartesaal-b3-stich-basti',
+            spiel: 'Doppelkopf',
+            szene: `${nr === 1 ? 'Erster' : `${nr}.`} Stich, vier Menschen (Bro, Nele, Kalle, Basti), keine Bots: geht an Basti, Zuruf „Na sowas!" über seinem Sitz`,
+            eignung: 'Ad 3, B3 (Variante 1)',
+          };
+          const ok = await clip(
+            bro.page,
+            b3,
+            async () => {
+              await bro.page.waitForTimeout(800);
+              sitz = await ad3Stich(spieler, basti, { timeout: 20_000 });
+              if (sitz !== bastiSitz) return;
+              await bro.page.waitForTimeout(700);
+              zurufEinspielen(bro, bastiSitz, 'na-sowas');
+              await bro.page.waitForTimeout(3200);
+            },
+            { hoechstens: 25_000 },
+          );
+          if (!ok) throw new Error('B3-Clip verworfen');
+          const bots = bro.leitung.sicht?.botSeats ?? [];
+          const verwerfen = sitz !== bastiSitz ? `Stich ${nr} ging an Sitz ${sitz}, nicht an Basti` : bots.length > 0 ? `Bot auf Sitz ${bots.join(', ')}` : null;
+          if (!verwerfen) {
+            console.log(`  B3: Stich ${nr} ging an Basti`);
+            break;
+          }
+          console.log(`  ${verwerfen} — Clip verworfen`);
+          const weg = clips.pop();
+          await rm(join(ZIEL, `${weg.datei}.${KODIERER.endung}`), { force: true });
+          if (bots.length > 0) throw new Error('Ein Platz wurde durch einen Bot ersetzt');
+        }
+        if (!clips.some((c) => c.datei.startsWith('17-'))) throw new Error('In sechs Stichen keiner an Basti');
+      } catch (e) {
+        if (spieler[0]) await fehlerbild(spieler[0].page, 'ad3-wartesaal');
+        throw e;
+      } finally {
+        for (const a of autos) await a.stop();
+        for (const { ctx, page } of spieler) {
+          await tischVerlassen(page);
+          await gastLoeschen(page);
+          await ctx.close();
+        }
+      }
+    },
+  },
 ];
 
 /** Die vier Freunde aus Ad 2; aufgenommen wird die erste, sie legt den Tisch an. */
 const RUNDE = ['Lena', 'Tobi', 'Sara', 'Jonas'];
+
+// ---------------------------------------------------------------------------
+// Ad 3: Wartesaal, Einlassen, erster Stich (B1–B3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ad 3 (docs/werbung/ad-3/konzept.md, „Was an Bildschirmaufnahmen fehlt"):
+ * aufgenommen wird Bro, der Gastgeber; die Freunde kommen in dieser
+ * Reihenfolge herein. Bewusst andere Namen als Ad 2 — Ad 3 uebernimmt nichts
+ * von dort.
+ */
+const AD3 = ['Bro', 'Nele', 'Kalle', 'Basti'];
+
+const FARBNAME = { C: 'Kreuz', S: 'Pik', H: 'Herz', D: 'Karo' };
+const WERTNAME = { A: 'Ass', T: 'Zehn', K: 'König', Q: 'Dame', J: 'Bube', 9: 'Neun' };
+
+/** Wie `cardName` im Client (i18n.ts) — so steht die Karte im `alt` ihres Bildes bzw. im `aria-label` des Textblatts (CardFace.tsx). */
+const kartenName = (k) => `${FARBNAME[k.suit] ?? k.suit} ${WERTNAME[k.rank] ?? k.rank}`;
+
+/** Bedienfarbe wie `servingSuit` in game-doppelkopf/src/order.ts: Trumpf ist eine eigene Farbe. */
+const bedienfarbe = (k, order) => (order.trumps.includes(`${k.suit}${k.rank}`) ? 'T' : k.suit);
+
+/** Staerke wie `strength` in game-doppelkopf/src/order.ts. Die Regel steht dort; das hier ist nur Regie. */
+function staerke(k, order, lead) {
+  const key = `${k.suit}${k.rank}`;
+  const t = order.trumps.indexOf(key);
+  if (t >= 0) return 1000 - t;
+  if (lead === 'T' || k.suit !== lead) return -1;
+  const f = order.fehl[k.suit]?.indexOf(key) ?? -1;
+  return f >= 0 ? 500 - f : -1;
+}
+
+const spielZuege = (sicht) => (sicht?.legalActions ?? []).filter((a) => a.type === 'playCard');
+
+/**
+ * Regie fuer den Stich: Der Sticher legt seine staerkste erlaubte Karte, alle
+ * anderen ihre schwaechste. Garantiert ist das nicht (wer bedienen muss, kann
+ * zu hoch liegen; von zwei gleichen Karten sticht die erste), deshalb prueft
+ * die Szene danach, wer den Stich wirklich bekommen hat.
+ */
+function karteWaehlen(sicht, stark) {
+  const runde = sicht.view.round;
+  const erlaubt = new Map(spielZuege(sicht).map((a) => [a.cardId, a]));
+  const karten = runde.hand.filter((k) => erlaubt.has(k.id));
+  const lead = runde.currentTrick.length > 0 ? bedienfarbe(runde.currentTrick[0].card, runde.order) : null;
+  const wert = (k) => staerke(k, runde.order, lead ?? bedienfarbe(k, runde.order));
+  karten.sort((a, b) => wert(a) - wert(b));
+  const karte = stark ? karten.at(-1) : karten[0];
+  return { karte, aktion: erlaubt.get(karte.id) };
+}
+
+const stichZahl = (sicht) => sicht?.view?.round?.alleStiche?.length ?? 0;
+
+/**
+ * Spielt genau einen Stich zu Ende und gibt den Sitz zurueck, der ihn bekam.
+ * Bro legt ueber die Oberflaeche — er wird aufgenommen, man soll seine Karte
+ * fliegen sehen; die drei anderen legen direkt ueber ihre Leitung, ihre
+ * Bildschirme sieht niemand.
+ */
+async function ad3Stich(spieler, sticher, { timeout = 60_000 } = {}) {
+  const [bro] = spieler;
+  const vorher = stichZahl(bro.leitung.sicht);
+  const gelegt = new Set();
+  const ende = Date.now() + timeout;
+  while (Date.now() < ende) {
+    const sicht = bro.leitung.sicht;
+    if (stichZahl(sicht) > vorher) return sicht.view.round.alleStiche.at(-1).winnerSeat;
+    for (const s of spieler) {
+      const eigen = s.leitung.sicht;
+      const marke = `${s.name}:${eigen?.revision}`;
+      if (spielZuege(eigen).length === 0 || gelegt.has(marke)) continue;
+      gelegt.add(marke);
+      const { karte, aktion } = karteWaehlen(eigen, s === sticher);
+      // Denkpause: Im Video soll man sehen, dass reihum gelegt wird.
+      await warte(1100);
+      const name = kartenName(karte);
+      const knopf = s === bro ? bro.page.locator(`${SPIELBAR}:has(img.pc-img[alt="${name}"], .pc-text[aria-label="${name}"])`).first() : null;
+      if (knopf && (await knopf.count()) > 0) {
+        await knopf.click({ timeout: 3000 });
+      } else {
+        // Fuer Bro nur der Rueckfall (Karte im DOM nicht erkannt): Dann fliegt keine Karte, gelegt ist sie trotzdem.
+        if (s === bro) console.warn(`  Bro: ${name} nicht in der Hand gefunden, lege ueber die Leitung`);
+        s.leitung.server.send(JSON.stringify({ v: eigen.v, game: eigen.game, type: 'action', tableId: eigen.tableId, action: aktion }));
+      }
+    }
+    await warte(150);
+  }
+  throw new Error('Stich wurde nicht fertig');
+}
+
+/**
+ * Zeigt Bro einen Zuruf ueber dem Sitz eines anderen. Ein frisches Gastkonto
+ * besitzt „Na sowas!" nicht (100 Muenzen, server/src/tischware.ts), und der
+ * Server verwirft fremde Zurufe still. Die Nachricht ist deshalb genau die,
+ * die der Server sonst verteilt (EmoteMessage) — sie kommt nur aus der
+ * Bruecke; anzeigen tut sie der echte Tisch.
+ */
+function zurufEinspielen(bro, seat, emote) {
+  const { v, game, tableId } = bro.leitung.sicht;
+  bro.leitung.seite.send(JSON.stringify({ v, game, type: 'emote', tableId, seat, emote }));
+}
+
+/**
+ * Misst, wann ein Element im Bild steht (im Ausschnitt, nicht nur im DOM) —
+ * fuer die Staging-Adresse unter dem QR-Code: Der Schnitt muss sie abdecken
+ * und braucht dafuer die Sekunden. `stop()` liefert die Spannen ab Start.
+ */
+function sichtbarkeitMessen(page, selektor) {
+  const beginn = Date.now();
+  const spannen = [];
+  let an = null;
+  let laeuft = true;
+  const lauf = (async () => {
+    while (laeuft) {
+      const box = await page.locator(selektor).first().boundingBox({ timeout: 200 }).catch(() => null);
+      const drin = !!box && box.y < VIEWPORT.height && box.y + box.height > 0;
+      const t = (Date.now() - beginn) / 1000;
+      if (drin && an === null) an = t;
+      if (!drin && an !== null) {
+        spannen.push([an, t]);
+        an = null;
+      }
+      await warte(100);
+    }
+  })();
+  return async () => {
+    laeuft = false;
+    await lauf;
+    if (an !== null) spannen.push([an, (Date.now() - beginn) / 1000]);
+    return spannen;
+  };
+}
+
+const spannenText = (spannen) =>
+  spannen.length === 0 ? 'nicht im Bild' : spannen.map(([a, b]) => `${a.toFixed(1)}–${b.toFixed(1)} s`).join(', ');
+
+/** Wie `leererTisch`, aber „Privat": Nur dann stehen Einladung und Anfragen im Wartesaal (tisch/index.tsx). */
+async function privaterTisch(page) {
+  await zurSpielauswahl(page);
+  await klick(page, 'Doppelkopf', { warte: 2500 });
+  await zumSpiel(page);
+  await klick(page, 'Tisch erstellen', { warte: 2000 });
+  await klick(page, '4 Spieler', { warte: 800 });
+  await klick(page, 'Privat', { warte: 800 });
+  await klick(page, 'Tisch erstellen', { warte: 3000 });
+}
+
+/** Gast fragt per API an — beim Gastgeber steht er dann unter „Möchten mitspielen". */
+async function anfragen(gast, tischId) {
+  const r = await api(gast.page, 'POST', `/tables/${tischId}/join`, {});
+  if (r.status !== 200) throw new Error(`Anfrage ${gast.name}: ${r.status} ${JSON.stringify(r.daten)}`);
+  if (!r.daten?.angefragt) throw new Error(`${gast.name} sass sofort — ist der Tisch nicht privat?`);
+}
+
+/**
+ * Bro tippt in seiner Anfragenliste auf „Zusagen", sobald der Gast dort steht
+ * (die Liste fragt alle 2,5 s nach), und sieht danach zu, wie der Platz sich
+ * fuellt. Gescrollt wird, weil bei 782 Pixeln Hoehe nicht alles passt: Die
+ * Anfragen stehen oben, die Einladung schiebt die Plaetze unter den Rand.
+ */
+async function zusagen(bro, gast) {
+  const knopf = bro.page.locator('.tisch-anfrage', { hasText: gast.name }).getByRole('button', { name: 'Zusagen' });
+  await knopf.waitFor({ state: 'attached', timeout: 15_000 });
+  await bro.page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  await bro.page.waitForTimeout(900);
+  await knopf.click({ timeout: 3000 });
+}
+
+/** Scrollt sanft zu den Plaetzen und wartet, bis `gast` dort sitzt. */
+async function zuDenPlaetzen(bro, gast) {
+  await bro.page
+    .locator('.doko-wait-seat', { hasText: gast.name })
+    .first()
+    .waitFor({ state: 'attached', timeout: 20_000 });
+  await bro.page.locator('.doko-wait').first().evaluate((el) => el.scrollIntoView({ behavior: 'smooth', block: 'end' }));
+  await bro.page.waitForTimeout(1200);
+}
+
+/**
+ * Nach der Zusage den Gast an den Tisch holen (wie in `anDenTisch`) und
+ * seinen Autopiloten starten — ohne Karten, die legt `ad3Stich`. Laeuft
+ * neben dem Clip her; sein Bildschirm wird nicht aufgenommen.
+ */
+async function hereinkommen(gast, autos) {
+  const ende = Date.now() + 20_000;
+  while (Date.now() < ende && !(await api(gast.page, 'GET', '/me')).daten?.activeTable?.tableId) await warte(500);
+  await gast.page.goto(`${BASIS}/`);
+  await gast.page.waitForLoadState('networkidle').catch(() => {});
+  await ruhig(gast.page);
+  await gast.page.locator('button.hb-weiter').first().click({ timeout: 15_000 });
+  await gast.page.waitForTimeout(1000);
+  const auto = autopilot(gast.page, dokoSchritt);
+  auto.zustand.karten = false;
+  autos.push(auto);
+}
+
+/** Wartet, bis Bros Wartesaal `n` besetzte Plaetze zeigt. */
+async function plaetzeBesetzt(bro, n) {
+  await bro.page.waitForFunction((n) => document.querySelectorAll('.doko-wait-seat:not(.is-empty)').length >= n, n, {
+    timeout: 20_000,
+  });
+}
+
+/**
+ * Das Gastkonto loeschen (anonymisieren), damit der Name wieder frei ist.
+ * Anzeigenamen sind eindeutig (account_display_name_key): Ohne das hiesse
+ * Bro beim naechsten Lauf „Bro 7". Ein Gast bestaetigt mit dem Wort.
+ */
+async function gastLoeschen(page) {
+  const r = await api(page, 'DELETE', '/me', { bestaetigung: 'LÖSCHEN' }).catch((e) => ({ status: String(e) }));
+  if (r.status !== 200) console.warn(`  Gastkonto nicht geloescht (${r.status}) — der Name bleibt belegt.`);
+}
 
 // ---------------------------------------------------------------------------
 // Nachbereitung
@@ -897,7 +1278,7 @@ async function listeSchreiben(format, szenen) {
     '# Bildschirmaufnahmen brauweg-spielen.de',
     '',
     `Erzeugt von \`werkzeug/store/clips.mjs\` am ${new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} gegen ${BASIS}.`,
-    `App-Modus, Gastkonten mit Vogelnamen, alle Mitspieler Bots (ausser 14: vier Gastkonten Lena, Tobi, Sara, Jonas), Partykiste alkoholfrei. ${VIDEO.width} × ${VIDEO.height} (9:16), ${format}.`,
+    `App-Modus, Gastkonten mit Vogelnamen, alle Mitspieler Bots (ausser 14: vier Gastkonten Lena, Tobi, Sara, Jonas; 15–17: Bro, Nele, Kalle, Basti), Partykiste alkoholfrei. ${VIDEO.width} × ${VIDEO.height} (9:16), ${format}.`,
     '',
     '| Datei | Spiel | Szene | Länge | Eignung |',
     '| --- | --- | --- | --- | --- |',
