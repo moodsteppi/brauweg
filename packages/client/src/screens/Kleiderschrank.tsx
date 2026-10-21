@@ -30,10 +30,27 @@ import {
   type Slot,
   type Waehrung,
 } from '../api';
-import { Pinguin, StueckBild } from '../pinguin';
+import { Pinguin, StueckAllein, StueckBild } from '../pinguin';
 import { EdelsteinIcon, Tafel } from '../hub';
 import { t } from '../i18n';
 import { HbBlatt, Schliessen } from './HbBlatt';
+import './spind.css';
+
+/**
+ * Die Plaetze als Schubladen im Spind: je Platz ein kleines Zeichen.
+ * Gezeichnet statt geladen, weil es sechs Striche sind und kein Bild.
+ */
+const SCHUBLADEN_ZEICHEN: Readonly<Record<Slot, string>> = {
+  hut: 'M4 15h16M7 15c0-5 2-8 5-8s5 3 5 8',
+  brille: 'M3 11h2m14 0h2M5 11a3 3 0 1 0 6 0a3 3 0 1 0-6 0m8 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
+  oberteil: 'M8 4l-4 3 2 4 2-1v10h8V10l2 1 2-4-4-3c-1 2-2 3-4 3S9 6 8 4z',
+  schuhe: 'M4 16v-5c2 0 4-1 5-3h3v5l7 2v3H4z',
+  hand: 'M12 3v9M8 6v7M16 6v7M5 13c1 5 4 8 7 8s6-3 7-8',
+  aura: 'M12 3l2 5 5 .5-4 3.5 1.5 5L12 14l-4.5 3 1.5-5-4-3.5L10 8z',
+};
+
+/** Oberteile haengen am Buegel, der Rest liegt im Fach. */
+const AM_BUEGEL: ReadonlySet<Slot> = new Set<Slot>(['oberteil']);
 
 /** Betrag mit Einheit, Einzahl beachtet: „1 Münze", „8 Edelsteine". */
 function betragText(betrag: number, waehrung: Waehrung): string {
@@ -174,40 +191,69 @@ export function Kleiderschrank({
 
   if (neu) {
     return (
-      <div className="hb-voll hb-schrank" role="dialog" aria-modal="true" aria-label="Kleiderschrank">
+      <div className="hb-voll hb-schrank sp" role="dialog" aria-modal="true" aria-label="Kleiderschrank">
         <header className="hb-voll-kopf">
           <Schliessen onClick={onClose} />
           <div className="hb-voll-titel">
-            <h1>Kleiderschrank</h1>
+            <h1>Dein Spind</h1>
             <span>Dein Pinguin · für alle Spiele</span>
           </div>
         </header>
 
-        {/* Die Bühne bleibt stehen, nur die Liste darunter rollt (Begründung
-            in der alten Fassung unten). */}
-        <div className="hb-schrank-buehne">
-          <Pinguin getragen={gezeigt} groesse={10} titel="Dein Pinguin" />
+        {/*
+          Der offene Spind ist die Bühne: Holzkorpus, zwei aufgeklappte
+          Türen, Kleiderstange und Lampe innen, der Pinguin steht davor auf
+          dem Teppich. Sie bleibt stehen, nur die Fächer darunter rollen
+          (Begründung in der alten Fassung unten). Alles CSS — kein Bild, das
+          fehlen könnte (CLAUDE.md, „Kein <img> auf eine Datei, die es noch
+          nicht gibt").
+        */}
+        <div className="sp-buehne">
+          <div className="sp-korpus" aria-hidden="true">
+            <div className="sp-innen">
+              <span className="sp-lampe" />
+              <span className="sp-ablage" />
+              <span className="sp-stange" />
+              <span className="sp-buegel is-1" />
+              <span className="sp-buegel is-2" />
+              <span className="sp-buegel is-3" />
+            </div>
+            <span className="sp-tuer is-links">
+              <span className="sp-spiegel" />
+            </span>
+            <span className="sp-tuer is-rechts">
+              <span className="sp-griff" />
+            </span>
+          </div>
+          <span className="sp-teppich" aria-hidden="true" />
+          <div className="sp-pinguin">
+            <Pinguin getragen={gezeigt} groesse={10.5} titel="Dein Pinguin" anziehen />
+          </div>
           {Object.keys(probe).length > 0 && <span className="hb-schrank-probe">Anprobe</span>}
         </div>
 
-        <nav className="hb-chips" aria-label="Plätze">
+        <nav className="sp-schubladen" aria-label="Plätze">
           {SLOTS.map((s) => (
             <button
               type="button"
               key={s}
-              className={`hb-chip${s === slot ? ' is-an' : ''}${getragen[s] ? ' is-belegt' : ''}`}
+              className={`sp-schublade${s === slot ? ' is-an' : ''}${getragen[s] ? ' is-belegt' : ''}`}
               aria-pressed={s === slot}
               onClick={() => {
                 setSlot(s);
                 setProbe({});
               }}
             >
-              {t(`slot.${s}`)}
+              <svg viewBox="0 0 24 24" className="sp-schublade-zeichen" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d={SCHUBLADEN_ZEICHEN[s]} />
+              </svg>
+              <span>{t(`slot.${s}`)}</span>
+              <i className="sp-knauf" aria-hidden="true" />
             </button>
           ))}
         </nav>
 
-        <div className="hb-voll-rolle">
+        <div className="hb-voll-rolle sp-rolle">
           {fehler && <p className="hb-fehler">{fehler}</p>}
           {!shop && !fehler && <p className="hb-laden">Wird geladen…</p>}
           {regal && (
@@ -222,14 +268,14 @@ export function Kleiderschrank({
                   <span className="hb-ab-zusatz">Nichts an</span>
                 )}
               </h2>
-              <div className="hb-raster is-drei">
+              <div className={`hb-raster is-drei sp-faecher${AM_BUEGEL.has(slot) ? ' is-buegel' : ''}`}>
                 {regal.stuecke.map((stueck) => {
                   const sitzt = getragen[slot] === stueck.id;
                   return (
                     <button
                       type="button"
                       key={stueck.id}
-                      className={`hb-stueck is-${stueck.seltenheit}${sitzt ? ' is-aktiv' : ''}${stueck.besessen ? '' : ' is-fremd'}`}
+                      className={`hb-stueck sp-fach is-${stueck.seltenheit}${sitzt ? ' is-aktiv' : ''}${stueck.besessen ? '' : ' is-fremd'}`}
                       aria-pressed={sitzt}
                       disabled={laeuft !== null}
                       onClick={() => {
@@ -242,7 +288,10 @@ export function Kleiderschrank({
                         if (!stueck.geschenk) setKaufen(stueck);
                       }}
                     >
-                      <StueckBild itemId={stueck.id} slot={slot} />
+                      <span className="sp-fach-bild">
+                        {AM_BUEGEL.has(slot) && <span className="sp-fach-haken" aria-hidden="true" />}
+                        <StueckAllein itemId={stueck.id} slot={slot} groesse={4.6} />
+                      </span>
                       <strong>{t(stueck.nameKey)}</strong>
                       <small>{stueck.besessen ? (sitzt ? 'trägst du' : 'gehört dir') : stueck.geschenk ? 'Geschenk' : `${stueck.preis.coins.toLocaleString('de-DE')} Münzen`}</small>
                       {sitzt && (

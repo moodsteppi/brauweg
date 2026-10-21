@@ -725,6 +725,7 @@ export function Pinguin({
   groesse = 3,
   className,
   titel,
+  anziehen = false,
 }: {
   getragen: Getragen;
   /** Hoehe in rem. */
@@ -732,6 +733,13 @@ export function Pinguin({
   className?: string;
   /** Beschriftung fuer Vorlesegeraete. Fehlt sie, ist der Pinguin Zierde. */
   titel?: string;
+  /**
+   * Anzieh-Animation (Spind): Jede Ebene haengt an ihrer Kennung, wechselt
+   * das Stueck, entsteht sie neu und spielt `pg-anziehen` (screens/spind.css).
+   * Ohne den Schalter bleibt alles ruhig — der Pinguin oben in
+   * der Kopfzeile soll nicht bei jedem Neuladen zappeln.
+   */
+  anziehen?: boolean;
 }): React.JSX.Element {
   const breite = (groesse * RAHMEN.breite) / RAHMEN.hoehe;
 
@@ -745,12 +753,56 @@ export function Pinguin({
       aria-hidden={titel ? undefined : true}
     >
       {HINTEN.map((slot) => (
-        <Ebene key={slot} itemId={getragen[slot]} />
+        <EbeneMitPlatz key={`${slot}-${anziehen ? getragen[slot] ?? '' : ''}`} slot={slot} itemId={getragen[slot]} bewegt={anziehen} />
       ))}
       <PinguinBasis />
       {VORN.map((slot) => (
-        <Ebene key={slot} itemId={getragen[slot]} />
+        <EbeneMitPlatz key={`${slot}-${anziehen ? getragen[slot] ?? '' : ''}`} slot={slot} itemId={getragen[slot]} bewegt={anziehen} />
       ))}
+    </svg>
+  );
+}
+
+/** Eine Ebene mit ihrem Platz als Klasse — daran haengt die Anzieh-Animation. */
+function EbeneMitPlatz({ slot, itemId, bewegt }: { slot: Slot; itemId: string | undefined; bewegt: boolean }): React.JSX.Element | null {
+  if (!itemId) return null;
+  if (!bewegt) return <Ebene itemId={itemId} />;
+  return (
+    <g className={`pg-ebene pg-ebene--${slot}`}>
+      <Ebene itemId={itemId} />
+    </g>
+  );
+}
+
+/**
+ * Wo die Stuecke eines Platzes im Rahmen sitzen (x, y, Breite, Hoehe) —
+ * gemessen am Alphakanal aller Ebenen je Platz, mit etwas Luft. Daraus
+ * schneidet `StueckAllein` das Stueck fuer die Faecher im Spind aus.
+ */
+const AUSSCHNITT: Readonly<Record<Slot, string>> = {
+  hut: '36 -6 168 94',
+  brille: '78 44 84 60',
+  oberteil: '44 98 152 122',
+  schuhe: '62 204 116 56',
+  hand: '154 94 92 128',
+  aura: '0 0 240 256',
+};
+
+/**
+ * Nur das Stueck, ohne Pinguin — so wie es im Spind im Fach liegt oder am
+ * Buegel haengt. Ein Mini-Pinguin je Kachel war auf 40 Pixeln vor allem
+ * Pinguin; das Stueck selbst war kaum zu sehen.
+ */
+export function StueckAllein({ itemId, slot, groesse = 4 }: { itemId: string; slot: Slot; groesse?: number }): React.JSX.Element {
+  return (
+    <svg
+      className="pinguin pinguin--stueck"
+      viewBox={AUSSCHNITT[slot]}
+      style={{ height: `${groesse}rem`, width: `${groesse}rem` }}
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+    >
+      <Ebene itemId={itemId} />
     </svg>
   );
 }
