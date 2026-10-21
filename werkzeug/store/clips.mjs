@@ -1064,6 +1064,9 @@ async function ad3Stich(spieler, sticher, { timeout = 60_000 } = {}) {
     const sicht = bro.leitung.sicht;
     if (stichZahl(sicht) > vorher) return sicht.view.round.alleStiche.at(-1).winnerSeat;
     for (const s of spieler) {
+      // Vor JEDER Karte nachsehen: Sonst legt der Sieger im selben Durchgang
+      // schon den naechsten Stich an, waehrend sein Zuruf steht (so im zweiten Lauf).
+      if (stichZahl(bro.leitung.sicht) > vorher) break;
       const eigen = s.leitung.sicht;
       const marke = `${s.name}:${eigen?.revision}`;
       if (spielZuege(eigen).length === 0 || gelegt.has(marke)) continue;
@@ -1071,6 +1074,7 @@ async function ad3Stich(spieler, sticher, { timeout = 60_000 } = {}) {
       const { karte, aktion } = karteWaehlen(eigen, s === sticher);
       // Denkpause: Im Video soll man sehen, dass reihum gelegt wird.
       await warte(1100);
+      if (stichZahl(bro.leitung.sicht) > vorher) break;
       const name = kartenName(karte);
       const knopf = s === bro ? bro.page.locator(`${SPIELBAR}:has(img.pc-img[alt="${name}"], .pc-text[aria-label="${name}"])`).first() : null;
       if (knopf && (await knopf.count()) > 0) {
