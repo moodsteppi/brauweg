@@ -43,8 +43,20 @@ Drei Zeilen, deutsch, im Schnitt gesetzt (nicht im KI-Bild):
 > Jetzt im Browser spielen: **brauweg-spielen.de**
 > App bald im App Store und bei Google Play
 
-**Kein Store-Badge.** Das Apple- und das Google-Play-Abzeichen darf man erst
-zeigen, wenn die App dort erschienen ist. Vorher steht der Satz nur als Text da.
+**Bis zur Veröffentlichung: kein Store-Badge.** Das Apple- und das
+Google-Play-Abzeichen darf man erst zeigen, wenn die App dort erschienen ist.
+Vorher steht der Satz nur als Text da.
+
+**Ab der Veröffentlichung: Das Abzeichen ist Pflicht.** Sobald die App in
+einem Store erschienen ist, gehört das offizielle Abzeichen dieses Stores auf
+die Endkarte und ersetzt dort die Textzeile „App bald …". Für den Store, in dem
+die App noch fehlt, gibt es weder Abzeichen noch Text. Verwendet wird
+ausschließlich das Originalabzeichen in der deutschen Fassung, unverändert und
+nach den Vorgaben des Stores. **Ad 3 zeigt nur das App-Store-Abzeichen**
+(„Laden im App Store"), kein Google Play, und geht erst nach der
+Veröffentlichung im App Store hinaus. Quelle, Apples Vorgaben und die
+Spiele-Zeile ohne Partykiste stehen in `docs/werbung/ad-3/konzept.md`,
+Variante 1, „Endkarte für Ad 3".
 
 ---
 
