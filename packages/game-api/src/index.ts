@@ -541,6 +541,35 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
   /** Beendet die laufende Phase nach Ablauf der Frist. */
   advancePhase?(party: TParty): TParty;
 
+  /**
+   * Schachuhr: ein Zeitkonto je Sitz statt einer Zugzeit, die bei jedem Zug
+   * neu anfaengt. Seit dem 22.10.2026 fuer BroChess (Bullet, Blitz, Rapid).
+   *
+   * Die Arbeit ist geteilt wie ueberall: Die Plattform MISST — sie weiss,
+   * seit wann der Sitz am Zug ist, und weckt sich, wenn sein Konto leer ist.
+   * Das Modul REGELT — wie viel Zeit es gibt, wann der Zuschlag kommt (das
+   * ist Teil von `act`) und was ein Zeitablauf heisst (Verlust, oder Remis,
+   * wenn der Gegner gar nicht mattsetzen koennte). Ein Modul hat ja keine
+   * Uhr (Grundsatz oben); es bekommt die verbrauchte Zeit als Zahl.
+   *
+   * Solange `restMs` eine Zahl liefert, gilt fuer diesen Sitz KEINE Zugzeit
+   * und keine Bot-Uebernahme nach Ablauf: Wer am Schachbrett die Zeit
+   * ueberschreitet, verliert, statt dass ein Bot fuer ihn zieht.
+   *
+   * Optional: Fehlt es oder liefert `restMs` null, laeuft die Zugzeit wie
+   * bei jedem anderen Spiel.
+   */
+  schachuhr?: {
+    /** Restzeit des Sitzes vor dem laufenden Zug in ms, null = ohne Uhr. */
+    restMs(party: TParty, seat: number): number | null;
+    /**
+     * Bucht verbrauchte Zeit ab. Ist das Konto damit leer, beendet das Modul
+     * die Partie nach seinen Regeln — die Plattform erkennt das an
+     * `isFinished` und wirft die Aktion, die zu spaet kam, weg.
+     */
+    verbrauche(party: TParty, seat: number, ms: number): TParty;
+  };
+
   standings(party: TParty): PartyStanding[];
 
   /** Markiert einen Sitz als ausgestiegen. Die Partie laeuft mit Bot weiter. */

@@ -8,6 +8,32 @@ import { hubNeu } from '../hubNeu';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import { AnfrageWarten } from '../tisch/Anfragen';
+import { ARTNAME, VORGABE_ZEIT, regelnFuer, zeitText, zeitkontrolle } from '../minispiele/brochess/zeit';
+import { ArtZeichen, ZeitWahlBlatt } from '../minispiele/brochess/ZeitWahl';
+
+/**
+ * Gemerkte Zeitkontrolle fuer BroChess. Eigener Schluessel statt im
+ * gemerkten Regelsatz: Der Regelsatz uebernimmt nur Felder, die die
+ * Vorgabe des Moduls kennt, und die Vorgabe hat keine Uhr — sonst bekaeme
+ * jeder alte Tisch eine.
+ */
+const ZEIT_KEY = 'brochess.zeit';
+
+function gemerkteZeit(): string {
+  try {
+    return localStorage.getItem(ZEIT_KEY) ?? VORGABE_ZEIT;
+  } catch {
+    return VORGABE_ZEIT;
+  }
+}
+
+function merkeZeit(id: string): void {
+  try {
+    localStorage.setItem(ZEIT_KEY, id);
+  } catch {
+    // Gesperrter Speicher: dann eben beim naechsten Mal wieder die Vorgabe.
+  }
+}
 
 /**
  * Lobby und Tischerstellung.
@@ -131,6 +157,15 @@ export function Lobby({
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
+  /**
+   * Zeitkontrolle (nur BroChess, Emile, 22.10.2026): Bullet, Blitz, Rapid wie
+   * auf den grossen Schachseiten. Sie geht als Teil des Regelsatzes an den
+   * Tisch; pruefen und messen tun Modul und Server.
+   */
+  const istSchach = gameId === 'brochess';
+  const [zeitId, setZeitId] = useState(gemerkteZeit);
+  const [zeitOffen, setZeitOffen] = useState(false);
+  const zeitRegeln = istSchach ? regelnFuer(zeitkontrolle(zeitId)) : {};
   /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
   const [ansicht, setAnsicht] = useState<'liste' | 'erstellen' | 'bot'>('liste');
   /** Gestellte Beitrittsanfrage an einen privaten Tisch, solange sie läuft. */
@@ -217,7 +252,7 @@ export function Lobby({
     try {
       const table = await api.createTable({
         gameId,
-        config: { ...config, tableSize: seats, rounds },
+        config: { ...config, tableSize: seats, rounds, ...zeitRegeln },
         seats,
         rounds,
         visibility,
@@ -229,6 +264,7 @@ export function Lobby({
       });
       // Erst nach dem Erfolg merken: Ein abgelehnter Regelsatz soll nicht
       // beim naechsten Besuch wieder vorgelegt werden.
+      if (istSchach) merkeZeit(zeitId);
       try {
         localStorage.setItem(
           merkKey(gameId),
@@ -256,13 +292,14 @@ export function Lobby({
       const runden = defaults?.rounds[String(sitze)]?.[0] ?? 1;
       const table = await api.createTable({
         gameId,
-        config: { ...config, tableSize: sitze, rounds: runden },
+        config: { ...config, tableSize: sitze, rounds: runden, ...zeitRegeln },
         seats: sitze,
         rounds: runden,
         visibility: 'on_request',
         fillWithBots: true,
         botLevel,
       });
+      if (istSchach) merkeZeit(zeitId);
       onEnter(table.id);
     } catch (err) {
       setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
@@ -333,6 +370,29 @@ export function Lobby({
   }
 
   // Neues Hub: dieselben Zustände und Aufrufe im Spieleinstieg-Baukasten.
+  const zeitWahl = zeitkontrolle(zeitId);
+  const zeitAbschnitt = istSchach ? (
+    <SpielAbschnitt titel="Zeit">
+      <div className="hb-liste">
+        <button type="button" className="spe-zeile" onClick={() => setZeitOffen(true)}>
+          <span>
+            <strong>
+              <ArtZeichen art={zeitWahl.art} /> {zeitText(zeitWahl)}
+            </strong>
+            <small>{ARTNAME[zeitWahl.art]} · antippen zum Ändern</small>
+          </span>
+          <span className="hb-pf" aria-hidden="true">
+            ›
+          </span>
+        </button>
+      </div>
+    </SpielAbschnitt>
+  ) : null;
+  const zeitBlatt =
+    istSchach && zeitOffen ? (
+      <ZeitWahlBlatt wert={zeitId} onWahl={setZeitId} onClose={() => setZeitOffen(false)} />
+    ) : null;
+
   if (hubNeu) {
     const name = t(`game.${gameId}`);
     const sitze = defaults?.seatCounts ?? [4];
@@ -352,6 +412,7 @@ export function Lobby({
           }
         >
           {error && <p className="hb-fehler">{error}</p>}
+          {zeitAbschnitt}
           <SpielAbschnitt titel="Bot-Stärke">
             <SpielWahl
               name="Bot-Stärke"
@@ -361,6 +422,7 @@ export function Lobby({
             />
           </SpielAbschnitt>
           <p className="hb-klein">Du spielst eine Partie. Wer Weiß hat, entscheidet das Los.</p>
+          {zeitBlatt}
         </SpielRahmen>
       );
     }
@@ -382,6 +444,11 @@ export function Lobby({
           }
         >
           {error && <p className="hb-fehler">{error}</p>}
+          {zeitAbschnitt}
+          {/* Schach kennt nur zwei Spieler und eine Partie — zwei Wahlen mit
+              je einer Möglichkeit wären keine Wahl. */}
+          {!istSchach && (
+          <>
           <SpielAbschnitt titel="Spieler">
             <SpielWahl
               name="Spieler"
@@ -397,6 +464,8 @@ export function Lobby({
           <SpielAbschnitt titel="Runden">
             <SpielWahl name="Runden" werte={roundOptions.map((c) => ({ wert: c, text: String(c) }))} wert={rounds} onWahl={setRounds} />
           </SpielAbschnitt>
+          </>
+          )}
           <SpielAbschnitt titel="Für wen">
             <SpielWahl
               name="Für wen"
@@ -420,6 +489,7 @@ export function Lobby({
               <SpielWahl name="Bot-Stärke" werte={BOT_STUFEN.map((b) => ({ wert: b.id, text: b.name }))} wert={botLevel} onWahl={setBotLevel} />
             </SpielAbschnitt>
           )}
+          {!istSchach && (
           <SpielAbschnitt titel="Regeln">
             <div className="hb-liste">
               <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
@@ -433,7 +503,9 @@ export function Lobby({
               </button>
             </div>
           </SpielAbschnitt>
+          )}
           {regelnOffen && config && <RegelSheet neu config={config} onChange={setConfig} onClose={() => setRegelnOffen(false)} />}
+          {zeitBlatt}
         </SpielRahmen>
       );
     }

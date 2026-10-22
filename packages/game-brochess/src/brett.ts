@@ -436,3 +436,159 @@ export function ungenuegendesMaterial(brett: readonly string[]): boolean {
   }
   return false;
 }
+
+// ---------------------------------------------------------------------------
+// Notation, Vorab-Zuege, Material (seit dem 22.10.2026)
+// ---------------------------------------------------------------------------
+
+const BUCHSTABE: Readonly<Record<string, string>> = { n: 'N', b: 'B', r: 'R', q: 'Q', k: 'K' };
+
+/**
+ * Der Zug in algebraischer Kurzschrift (SAN), etwa „Nbd7", „exd5", „e8=Q+",
+ * „O-O-O" oder „Qh7#". Fuer die Zugliste am Brett.
+ *
+ * Englische Buchstaben, weil das die Schreibweise ist, die jede Schachseite
+ * und jedes Buch versteht; der Bildschirm setzt dafuer Figurenzeichen ein.
+ * Mehrdeutigkeit wird wie in FIDE C.10 aufgeloest: erst die Linie, dann die
+ * Reihe, notfalls beides.
+ */
+export function sanVon(stellung: Stellung, zug: Zug): string {
+  const { brett } = stellung;
+  const figur = brett[zug.von]!;
+  const art = figur.toLowerCase();
+  let text: string;
+
+  if (art === 'k' && Math.abs(zug.nach - zug.von) === 2) {
+    text = zug.nach > zug.von ? 'O-O' : 'O-O-O';
+  } else {
+    const schlag = brett[zug.nach] !== '' || (art === 'p' && zug.nach === stellung.epFeld);
+    const ziel = feldName(zug.nach);
+    if (art === 'p') {
+      const linie = feldName(zug.von)[0]!;
+      text = `${schlag ? `${linie}x` : ''}${ziel}${zug.umwandlung ? `=${zug.umwandlung.toUpperCase()}` : ''}`;
+    } else {
+      const andere = legaleZuege(stellung).filter(
+        (z) => z.nach === zug.nach && z.von !== zug.von && brett[z.von] === figur,
+      );
+      let zusatz = '';
+      if (andere.length > 0) {
+        const name = feldName(zug.von);
+        if (!andere.some((z) => linieVon(z.von) === linieVon(zug.von))) zusatz = name[0]!;
+        else if (!andere.some((z) => reiheVon(z.von) === reiheVon(zug.von))) zusatz = name[1]!;
+        else zusatz = name;
+      }
+      text = `${BUCHSTABE[art]}${zusatz}${schlag ? 'x' : ''}${ziel}`;
+    }
+  }
+
+  const danach = wendeAn(stellung, zug);
+  if (imSchach(danach)) text += legaleZuege(danach).length === 0 ? '#' : '+';
+  return text;
+}
+
+/**
+ * Wohin jede eigene Figur VORAB ziehen koennte, solange der Gegner noch
+ * ueberlegt (Premove).
+ *
+ * Gezaehlt wird die reine Gangart auf leerem Brett — der Gegner kann bis zu
+ * unserem Zug noch alles umstellen: eine Linie oeffnen, eine Figur zum
+ * Schlagen hinstellen. Deshalb auch beide Schraegfelder fuer jeden Bauern
+ * und die Rochade, solange das Recht besteht. Ob der vorgemerkte Zug dann
+ * wirklich geht, entscheidet `legalActions` im Moment, in dem man dran ist;
+ * der Bildschirm verwirft ihn sonst.
+ *
+ * Steht hier im Modul und nicht im Bildschirm, weil auch die Gangart eine
+ * Regel ist (CLAUDE.md: „Der Client bildet keine Regel nach").
+ */
+export function vorabZiele(stellung: Stellung, farbe: Farbe): Record<string, string[]> {
+  const { brett } = stellung;
+  const ziele: Record<string, string[]> = {};
+  for (let von = 0; von < 64; von += 1) {
+    const figur = brett[von]!;
+    if (figur === '' || farbeVon(figur) !== farbe) continue;
+    const l = linieVon(von);
+    const r = reiheVon(von);
+    const art = figur.toLowerCase();
+    const nach = new Set<number>();
+    const dazu = (f: number): void => {
+      if (f >= 0 && f !== von && !(brett[f] !== '' && brett[f]!.toLowerCase() === 'k' && farbeVon(brett[f]!) === farbe)) {
+        nach.add(f);
+      }
+    };
+
+    if (art === 'p') {
+      const vor = farbe === 'w' ? 1 : -1;
+      dazu(feldBei(l, r + vor));
+      if (r === (farbe === 'w' ? 1 : 6)) dazu(feldBei(l, r + 2 * vor));
+      dazu(feldBei(l - 1, r + vor));
+      dazu(feldBei(l + 1, r + vor));
+    } else {
+      const weit = art !== 'n' && art !== 'k';
+      const richtungen =
+        art === 'n' ? SPRINGER : art === 'k' ? KOENIG : art === 'b' ? SCHRAEG : art === 'r' ? GERADE : [...GERADE, ...SCHRAEG];
+      for (const [dl, dr] of richtungen) {
+        for (let schritt = 1; schritt < 8; schritt += 1) {
+          const f = feldBei(l + dl * schritt, r + dr * schritt);
+          if (f < 0) break;
+          dazu(f);
+          if (!weit) break;
+        }
+      }
+      if (art === 'k') {
+        for (const recht of farbe === 'w' ? ['K', 'Q'] : ['k', 'q']) {
+          if (stellung.rochade.includes(recht) && ROCHADEN[recht as keyof typeof ROCHADEN].koenig === von) {
+            dazu(ROCHADEN[recht as keyof typeof ROCHADEN].ziel);
+          }
+        }
+      }
+    }
+    if (nach.size > 0) ziele[feldName(von)] = [...nach].map(feldName);
+  }
+  return ziele;
+}
+
+const GRUNDBESTAND: Readonly<Record<string, number>> = { q: 1, r: 2, b: 2, n: 2, p: 8 };
+const WERT: Readonly<Record<string, number>> = { q: 9, r: 5, b: 3, n: 3, p: 1 };
+
+/**
+ * Welche Figuren jeder Farbe vom Brett sind, staerkste zuerst, und wer wie
+ * viel Material vorn liegt (Bauer 1, Leichtfigur 3, Turm 5, Dame 9).
+ *
+ * Gerechnet gegen den Grundbestand statt mitgeschrieben: Das Brett ist die
+ * ganze Wahrheit, und eine Liste, die man fortschreibt, koennte von ihm
+ * abweichen. Nach einer Umwandlung gibt es mehr Damen als zu Beginn — dann
+ * fehlt eben keine, und der Vorsprung zaehlt die neue Dame mit.
+ */
+export function materialStand(brett: readonly string[]): {
+  readonly geschlagen: { readonly w: readonly string[]; readonly b: readonly string[] };
+  /** Positiv: Weiss liegt vorn. */
+  readonly vorsprung: number;
+} {
+  const zahl: Record<Farbe, Record<string, number>> = { w: {}, b: {} };
+  for (const figur of brett) {
+    if (figur === '' || figur.toLowerCase() === 'k') continue;
+    const seite = zahl[farbeVon(figur)];
+    const art = figur.toLowerCase();
+    seite[art] = (seite[art] ?? 0) + 1;
+  }
+  const fehlend = (farbe: Farbe): string[] =>
+    Object.keys(GRUNDBESTAND).flatMap((art) =>
+      Array.from({ length: Math.max(0, GRUNDBESTAND[art]! - (zahl[farbe][art] ?? 0)) }, () => art),
+    );
+  const wert = (farbe: Farbe): number =>
+    Object.entries(zahl[farbe]).reduce((summe, [art, n]) => summe + WERT[art]! * n, 0);
+  return { geschlagen: { w: fehlend('w'), b: fehlend('b') }, vorsprung: wert('w') - wert('b') };
+}
+
+/**
+ * Kann diese Farbe ueberhaupt noch mattsetzen? Nein bei nacktem König und
+ * bei König mit einer einzelnen Leichtfigur. Fuer den Zeitablauf (FIDE
+ * 6.9): Wer die Zeit ueberschreitet, verliert — ausser der Gegner koennte
+ * mit keiner Zugfolge mehr mattsetzen, dann ist es Remis.
+ */
+export function kannMattsetzen(brett: readonly string[], farbe: Farbe): boolean {
+  const eigene = brett.filter((f) => f !== '' && farbeVon(f) === farbe && f.toLowerCase() !== 'k');
+  if (eigene.length === 0) return false;
+  if (eigene.length === 1 && ['n', 'b'].includes(eigene[0]!.toLowerCase())) return false;
+  return true;
+}

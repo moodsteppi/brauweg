@@ -46,3 +46,34 @@ export function zielfelder(zuege: readonly BroChessZug[], von: string | null): S
 export function zuegeNach(zuege: readonly BroChessZug[], von: string, nach: string): BroChessZug[] {
   return zuege.filter((z) => z.von === von && z.nach === nach);
 }
+
+/**
+ * Welches Feld liegt unter einem Punkt auf dem Brett? Fuer das Ziehen mit
+ * dem Finger: `x`/`y` relativ zur linken oberen Ecke, `seite` die Kante des
+ * quadratischen Bretts. Ausserhalb: null.
+ */
+export function feldAnPunkt(x: number, y: number, seite: number, unten: Farbe | null): string | null {
+  if (seite <= 0 || x < 0 || y < 0 || x >= seite || y >= seite) return null;
+  const spalte = Math.floor((x / seite) * 8);
+  const zeile = Math.floor((y / seite) * 8);
+  const index = anzeigeReihenfolge(unten)[zeile * 8 + spalte];
+  return index === undefined ? null : feldName(index);
+}
+
+/** Zeile und Spalte eines Feldes in der Anzeige (0 = oben bzw. links). */
+export function anzeigePosition(name: string, unten: Farbe | null): { zeile: number; spalte: number } {
+  const index = (Number(name[1]) - 1) * 8 + LINIEN.indexOf(name[0]!);
+  const stelle = anzeigeReihenfolge(unten).indexOf(index);
+  return { zeile: Math.floor(stelle / 8), spalte: stelle % 8 };
+}
+
+/**
+ * Ein vorgemerkter Zug, sobald man dran ist: der passende Eintrag aus
+ * `legalActions`, bei einer Umwandlung die Dame — fuer eine Rueckfrage ist
+ * im Bullet keine Zeit. Geht der Zug nicht mehr (der Gegner hat die Linie
+ * zugestellt), null: Dann verfaellt er.
+ */
+export function vorabZug(zuege: readonly BroChessZug[], von: string, nach: string): BroChessZug | null {
+  const passend = zuegeNach(zuege, von, nach);
+  return passend.find((z) => z.umwandlung === 'q') ?? passend[0] ?? null;
+}

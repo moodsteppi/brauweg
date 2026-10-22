@@ -153,8 +153,12 @@ export const BROCOOKED_MODULE_VERSION = 1;
 /**
  * 1 seit dem 25. September 2026 — die erste Fassung. Klassisches Schach zu
  * zweit; die Zuege kommen vollstaendig als `legalActions`.
+ *
+ * 2 seit dem 22.10.2026: Schachuhr, Zugliste, geschlagene Figuren und
+ * Vorab-Ziele in der Sicht, dazu die Aktion `aufgeben`. Ein Client der
+ * Fassung 1 zeigte an einem Tisch mit Uhr keine Zeit und verloere still.
  */
-export const BROCHESS_MODULE_VERSION = 1;
+export const BROCHESS_MODULE_VERSION = 2;
 
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,

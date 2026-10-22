@@ -1,7 +1,14 @@
-import { type BroChessAktion, type BroChessSicht as ModulSicht, brochess } from '@brauweg/game-brochess';
+import {
+  type BroChessAufgabe as ModulAufgabe,
+  type BroChessSicht as ModulSicht,
+  type BroChessZug as ModulZug,
+  brochess,
+  pruefeRegeln,
+} from '@brauweg/game-brochess';
 import { describe, expect, it } from 'vitest';
 
-import type { BroChessSicht, BroChessZug } from '../minispiele/brochess/sicht';
+import type { BroChessAufgabe, BroChessSicht, BroChessZug } from '../minispiele/brochess/sicht';
+import { ZEITKONTROLLEN, regelnFuer } from '../minispiele/brochess/zeit';
 import {
   type Beweglich,
   type Leer,
@@ -35,8 +42,10 @@ type _keinFeldNurImClient = Leer<Exclude<keyof BroChessSicht, keyof EchteSicht>>
  * Die Aktion ebenso: Der Bildschirm schickt einen Eintrag aus
  * `legalActions` zurueck, liest aber `von`, `nach` und `umwandlung` daraus.
  */
-type _zugPasst = PasstAuf<BroChessZug, Beweglich<BroChessAktion>>;
-type _keinZugfeldNurImClient = Leer<Exclude<keyof BroChessZug, keyof BroChessAktion>>;
+type _zugPasst = PasstAuf<BroChessZug, Beweglich<ModulZug>>;
+type _keinZugfeldNurImClient = Leer<Exclude<keyof BroChessZug, keyof ModulZug>>;
+/** Aufgeben baut der Bildschirm selbst — es steht nicht in `legalActions`. */
+type _aufgabePasst = PasstAuf<BroChessAufgabe, Beweglich<ModulAufgabe>>;
 
 // ---------------------------------------------------------------------------
 // Beim Prüfen: Liefert eine echte Partie die Felder auch wirklich?
@@ -52,6 +61,11 @@ const FELDER = [
   'schach',
   'letzterZug',
   'ende',
+  'verlauf',
+  'uhr',
+  'geschlagen',
+  'vorsprung',
+  'vorab',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof BroChessSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof BroChessSicht>>;
@@ -72,5 +86,15 @@ describe('Vertrag BroChess', () => {
     const zuege = brochess.legalActions(partie, brochess.currentActor(partie) ?? 0);
     expect(zuege).toHaveLength(20);
     expect(zuege).toContainEqual({ type: 'zug', von: 'e2', nach: 'e4' });
+  });
+});
+
+describe('Vertrag BroChess: Zeitauswahl', () => {
+  // Die Auswahl im Bildschirm (zeit.ts) darf nichts anbieten, was das Modul
+  // ablehnt — sonst scheitert genau dieser Tisch erst beim Erstellen.
+  it('jede angebotene Zeit nimmt das Modul auch an', () => {
+    for (const z of ZEITKONTROLLEN) {
+      expect(pruefeRegeln({ tableSize: 2, rounds: 1, ...regelnFuer(z) }, 2, 1), z.id).toEqual([]);
+    }
   });
 });

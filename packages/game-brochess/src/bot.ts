@@ -37,7 +37,7 @@ import {
   pseudoZuege,
   wendeAn,
 } from './brett.js';
-import type { BroChessAktion } from './partie.js';
+import type { BroChessZug } from './partie.js';
 import type { BroChessSicht } from './sicht.js';
 
 /** Figurenwerte in Hundertstel-Bauern. */
@@ -273,7 +273,7 @@ function gleich(a: Zug, b: Zug): boolean {
 }
 
 /** Fuer die Plattform: Zug als Aktion, aus der Sicht des Sitzes am Zug. */
-export function botZug(sicht: BroChessSicht, level: BotLevel = 'standard'): BroChessAktion {
+export function botZug(sicht: BroChessSicht, level: BotLevel = 'standard'): BroChessZug {
   const zug = besterZug(ausFen(sicht.fen), level);
   return {
     type: 'zug',

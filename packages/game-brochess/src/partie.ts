@@ -17,14 +17,16 @@ import {
   feldIndex,
   feldName,
   imSchach,
+  kannMattsetzen,
   legaleZuege,
+  sanVon,
   stellungsSchluessel,
   ungenuegendesMaterial,
   wendeAn,
 } from './brett.js';
-import type { BroChessRegeln } from './regeln.js';
+import { type BroChessRegeln, zeitkontrolle } from './regeln.js';
 
-export interface BroChessAktion {
+export interface BroChessZug {
   readonly type: 'zug';
   /** Feldname wie "e2". */
   readonly von: string;
@@ -34,6 +36,20 @@ export interface BroChessAktion {
 }
 
 /**
+ * Aufgeben, seit dem 22.10.2026. Mit einer Schachuhr wartet sonst jemand,
+ * der verloren steht, eine Stunde lang auf sein eigenes Zeitende.
+ *
+ * Jederzeit erlaubt, auch wenn der Gegner am Zug ist — die Plattform prueft
+ * `currentActor` beim Handeln nicht (siehe CLAUDE.md, Eiland), und am Brett
+ * gibt man ja auch auf, waehrend der andere ueberlegt.
+ */
+export interface BroChessAufgabe {
+  readonly type: 'aufgeben';
+}
+
+export type BroChessAktion = BroChessZug | BroChessAufgabe;
+
+/**
  * Wie die Partie endete.
  *
  * Remis gibt es in vier Formen. Die 50-Zuege-Regel und die dreifache
@@ -41,7 +57,15 @@ export interface BroChessAktion {
  * muss: Ein Anspruch waere eine eigene Aktion samt Knopf, und am Handy
  * uebersieht man ihn — die Partie liefe dann ins Leere weiter.
  */
-export type Ausgang = 'matt' | 'patt' | 'fuenfzigZuege' | 'wiederholung' | 'material';
+export type Ausgang =
+  | 'matt'
+  | 'patt'
+  | 'fuenfzigZuege'
+  | 'wiederholung'
+  | 'material'
+  /** Zeit ueberschritten. Mit Sieger null: Remis, weil der Gegner nicht mattsetzen koennte. */
+  | 'zeit'
+  | 'aufgabe';
 
 export interface Ende {
   readonly ausgang: Ausgang;
@@ -59,6 +83,19 @@ export interface BroChessPartie {
   readonly letzterZug: { readonly von: string; readonly nach: string } | null;
   readonly ende: Ende | null;
   readonly verlassen: readonly number[];
+  /**
+   * Gespielte Zuege in Kurzschrift (SAN), in Reihenfolge. Seit dem 22.10.2026,
+   * fuer die Zugliste am Brett — aus der Stellung allein laesst sie sich
+   * nicht zurueckrechnen.
+   */
+  readonly verlauf: readonly string[];
+  /**
+   * Restzeit je Sitz (Index = Sitz) bis zum Beginn des laufenden Zuges, oder
+   * null ohne Schachuhr. Wie viel vom laufenden Zug schon weg ist, weiss
+   * nur die Plattform (`schachuhr` in game-api) — sie bucht es ab, bevor der
+   * Zug gilt.
+   */
+  readonly uhr: { readonly restMs: readonly number[] } | null;
 }
 
 /**
@@ -84,6 +121,11 @@ export function erstellePartie(
     letzterZug: null,
     ende: null,
     verlassen: [],
+    verlauf: [],
+    uhr: (() => {
+      const kontrolle = zeitkontrolle(regeln);
+      return kontrolle ? { restMs: [kontrolle.bedenkzeitMs, kontrolle.bedenkzeitMs] } : null;
+    })(),
   };
 }
 
@@ -100,8 +142,15 @@ export function amZug(partie: BroChessPartie): number | null {
   return sitzVonFarbe(partie, partie.stellung.amZug);
 }
 
-/** Jeder legale Zug als Aktion; leer, wenn der Sitz nicht dran ist. */
-export function erlaubteZuege(partie: BroChessPartie, sitz: number): BroChessAktion[] {
+/**
+ * Jeder legale Zug als Aktion; leer, wenn der Sitz nicht dran ist.
+ *
+ * Aufgeben steht bewusst NICHT darin: Die Liste beantwortet „welche Zuege
+ * gehen?", und der Bildschirm hebt aus ihr die Zielfelder hervor. Ein
+ * Eintrag ohne Feld darin waere fuer jeden, der sie durchgeht, eine Falle —
+ * und Aufgeben geht immer, das muss niemand nachschlagen.
+ */
+export function erlaubteZuege(partie: BroChessPartie, sitz: number): BroChessZug[] {
   if (amZug(partie) !== sitz) return [];
   return legaleZuege(partie.stellung).map((zug) => ({
     type: 'zug',
@@ -134,10 +183,13 @@ export function fuehreAus(
   aktion: BroChessAktion,
 ): BroChessPartie {
   if (partie.ende) throw new Error('Partie ist zu Ende');
-  if (amZug(partie) !== sitz) throw new Error('Nicht am Zug');
-  if (typeof aktion !== 'object' || aktion === null || aktion.type !== 'zug') {
-    throw new Error('Unbekannte Aktion');
+  if (typeof aktion !== 'object' || aktion === null) throw new Error('Unbekannte Aktion');
+  if (aktion.type === 'aufgeben') {
+    if (sitz !== 0 && sitz !== 1) throw new Error('Sitz gibt es nicht');
+    return { ...partie, ende: { ausgang: 'aufgabe', sieger: 1 - sitz } };
   }
+  if (amZug(partie) !== sitz) throw new Error('Nicht am Zug');
+  if (aktion.type !== 'zug') throw new Error('Unbekannte Aktion');
   const von = feldIndex(aktion.von);
   const nach = feldIndex(aktion.nach);
   if (von < 0 || nach < 0) throw new Error('Feld gibt es nicht');
@@ -160,12 +212,50 @@ export function fuehreAus(
   const schluessel = stellungsSchluessel(stellung);
   const wiederholt = (partie.wiederholungen[schluessel] ?? 0) + 1;
 
+  // Der Zuschlag kommt NACH dem Zug (Fischer, FIDE 6.1): Er gehoert zum Zug
+  // und ist darum Regel des Moduls, nicht Messung der Plattform.
+  const kontrolle = zeitkontrolle(partie.regeln);
+  const uhr =
+    partie.uhr && kontrolle
+      ? { restMs: partie.uhr.restMs.map((ms, s) => (s === sitz ? ms + kontrolle.zuschlagMs : ms)) }
+      : partie.uhr;
+
   return {
     ...partie,
     stellung,
     wiederholungen: { ...partie.wiederholungen, [schluessel]: wiederholt },
     letzterZug: { von: aktion.von, nach: aktion.nach },
     ende: endeNach(stellung, wiederholt, sitz),
+    verlauf: [...partie.verlauf, sanVon(partie.stellung, zug)],
+    uhr,
+  };
+}
+
+/** Restzeit des Sitzes vor seinem laufenden Zug, null ohne Schachuhr oder nach dem Ende. */
+export function restzeit(partie: BroChessPartie, sitz: number): number | null {
+  if (!partie.uhr || partie.ende) return null;
+  return partie.uhr.restMs[sitz] ?? null;
+}
+
+/**
+ * Die Plattform bucht verbrauchte Zeit ab (`schachuhr` in game-api). Ist das
+ * Konto leer, ist die Partie aus: verloren auf Zeit — oder Remis, wenn der
+ * Gegner mit seinem Material nie mattsetzen koennte (FIDE 6.9).
+ */
+export function verbraucheZeit(partie: BroChessPartie, sitz: number, ms: number): BroChessPartie {
+  if (!partie.uhr || partie.ende) return partie;
+  const rest = Math.max(0, (partie.uhr.restMs[sitz] ?? 0) - Math.max(0, ms));
+  const uhr = { restMs: partie.uhr.restMs.map((alt, s) => (s === sitz ? rest : alt)) };
+  if (rest > 0) return { ...partie, uhr };
+  const gegner = 1 - sitz;
+  const gegnerFarbe = farbeVonSitz(partie, gegner);
+  return {
+    ...partie,
+    uhr,
+    ende: {
+      ausgang: 'zeit',
+      sieger: kannMattsetzen(partie.stellung.brett, gegnerFarbe) ? gegner : null,
+    },
   };
 }
 

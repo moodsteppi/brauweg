@@ -9,6 +9,10 @@ export {
   angegriffen,
   ausFen,
   farbeVon,
+  kannMattsetzen,
+  materialStand,
+  sanVon,
+  vorabZiele,
   feldIndex,
   feldName,
   imSchach,
@@ -21,7 +25,9 @@ export {
 export {
   type Ausgang,
   type BroChessAktion,
+  type BroChessAufgabe,
   type BroChessPartie,
+  type BroChessZug,
   type Ende,
   amZug,
   erlaubteZuege,
@@ -30,13 +36,16 @@ export {
   fuehreAus,
   markiereVerlassen,
   platzierungen,
+  restzeit,
   sitzVonFarbe,
+  verbraucheZeit,
 } from './partie.js';
 export {
   type BroChessRegeln,
   DEFAULT_REGELN,
   SEAT_COUNTS,
   pruefeRegeln,
+  zeitkontrolle,
 } from './regeln.js';
 export { type BroChessSicht, sichtFuer, zuschauerSicht } from './sicht.js';
 export { botZug } from './bot.js';

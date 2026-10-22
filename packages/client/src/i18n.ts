@@ -469,6 +469,8 @@ const de: Record<string, string> = {
   'ruleset.noTrumpVsDealerPicks': 'Ohne Trumpf gibt es nichts zu wählen.',
   'ruleset.hiddenBidsVsBidSum': 'Verdeckt angesagt gibt es keinen letzten Ansager.',
   'ruleset.roundsOutOfRange': 'So viele Runden gibt das Blatt nicht her.',
+  'ruleset.bedenkzeit': 'Die Bedenkzeit muss zwischen 20 Sekunden und 3 Stunden liegen.',
+  'ruleset.zuschlag': 'Der Zuschlag braucht eine Bedenkzeit und darf höchstens 60 Sekunden betragen.',
   'ruleset.tableSizeUnsupported': 'Diese Spielerzahl gibt es bei diesem Spiel nicht.',
 
   // Meldungen des Cambio-Regelsatzes.

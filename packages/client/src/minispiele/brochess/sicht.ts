@@ -15,7 +15,14 @@ export type Farbe = 'w' | 'b';
 export type Umwandlung = 'q' | 'r' | 'b' | 'n';
 
 /** Muss zu `Ausgang` in packages/game-brochess/src/partie.ts passen. */
-export type Ausgang = 'matt' | 'patt' | 'fuenfzigZuege' | 'wiederholung' | 'material';
+export type Ausgang =
+  | 'matt'
+  | 'patt'
+  | 'fuenfzigZuege'
+  | 'wiederholung'
+  | 'material'
+  | 'zeit'
+  | 'aufgabe';
 
 /** Sicht des Moduls, siehe packages/game-brochess/src/sicht.ts. */
 export interface BroChessSicht {
@@ -30,6 +37,19 @@ export interface BroChessSicht {
   schach: boolean;
   letzterZug: { von: string; nach: string } | null;
   ende: { ausgang: Ausgang; sieger: number | null } | null;
+  /** Gespielte Zuege in Kurzschrift (SAN), etwa „Nf3", „exd5", „O-O". */
+  verlauf: string[];
+  /**
+   * Schachuhr oder null. `restMs` je Sitz auf dem Stand vor dem laufenden
+   * Zug; fuer den Sitz am Zug zaehlt die Uhr von `turnDeadline` herunter.
+   */
+  uhr: { restMs: number[]; bedenkzeitMs: number; zuschlagMs: number } | null;
+  /** Vom Brett genommene Figuren je Farbe, staerkste zuerst. */
+  geschlagen: { w: string[]; b: string[] };
+  /** Materialvorsprung von Weiss; negativ heisst Schwarz vorn. */
+  vorsprung: number;
+  /** Ziele fuer einen Vorab-Zug, nur solange man NICHT am Zug ist. */
+  vorab: Record<string, string[]>;
 }
 
 /**
@@ -42,4 +62,9 @@ export interface BroChessZug {
   von: string;
   nach: string;
   umwandlung?: Umwandlung;
+}
+
+/** Aufgeben — geht jederzeit und steht nicht in `legalActions`. */
+export interface BroChessAufgabe {
+  type: 'aufgeben';
 }
