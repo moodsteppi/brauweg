@@ -262,7 +262,7 @@ export function Kleiderschrank({
               <h2 className="hb-ab">
                 {t(`slot.${slot}`)}
                 {belegt ? (
-                  <button type="button" className="hb-ab-mehr" onClick={ausziehen} disabled={laeuft !== null}>
+                  <button type="button" className="hb-ab-mehr sp-ausziehen" onClick={ausziehen} disabled={laeuft !== null}>
                     Ausziehen
                   </button>
                 ) : (
@@ -335,7 +335,9 @@ export function Kleiderschrank({
               {/* Gold ist der eine Hauptknopf: die Münzen, die kein echtes Geld
                   gekostet haben (dieselbe Überlegung wie bei der Eingabetaste). */}
               {mitEdelsteinen && <p className="hb-klein hb-ohne-rand hb-mitte-text">Womit bezahlen?</p>}
-              <div className="hb-knopfreihe">
+              {/* Ohne Edelsteine bleibt EIN Knopf — er steht dann mittig über die
+                  ganze Breite statt allein in der linken Spalte (Emile, 22.10.2026). */}
+              <div className={`hb-knopfreihe${mitEdelsteinen ? '' : ' is-einzeln'}`}>
                 <button type="submit" className={`hb-kn is-gold is-haupt${mitEdelsteinen ? '' : ' is-breit'}`} disabled={laeuft !== null}>
                   {kauftMit === 'coins' ? (
                     'Kauft…'

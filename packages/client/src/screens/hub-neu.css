@@ -3492,3 +3492,19 @@
     transition: none;
   }
 }
+
+/* Ein einzelner Knopf in der Knopfreihe (Kauf nur mit Münzen): ganze Breite. */
+:is(.hb, .spe) .hb-knopfreihe.is-einzeln {
+  grid-template-columns: 1fr;
+}
+/* „Ausziehen" im Spind: als Knopf erkennbar und groß genug für den Daumen
+   (vorher nur ein Wort neben der Überschrift, 22.10.2026). */
+:is(.hb, .spe) .hb-ab-mehr.sp-ausziehen {
+  margin: -6px 0 -6px auto;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--hb-karte-hoch);
+  border: 1px solid var(--hb-kontur);
+  color: var(--hb-gold);
+}

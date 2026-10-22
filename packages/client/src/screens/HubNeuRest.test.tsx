@@ -128,19 +128,21 @@ describe('Neues Hub: die restlichen Ansichten', () => {
   });
 
   it('kauft unter „Alles ›" ein fremdes Kartenblatt erst nach der Rückfrage', async () => {
-    const frage = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
     const { onThemeChange } = await zeige(probeKonto(), 'blatt');
     fireEvent.click(screen.getAllByRole('button', { name: /^Alles/ })[0]!);
     await act(async () => {});
     const blaetter = screen.getByRole('heading', { name: /^Kartenblatt/ }).closest('section')!;
 
     const rubin = within(blaetter).getByRole('button', { name: /Rubin/ });
+    // Die eigene Rückfrage im Hub statt des grauen iOS-Dialogs (22.10.2026).
     // Nein heißt nein: nichts gekauft, nichts eingestellt.
     fireEvent.click(rubin);
+    expect(screen.getByRole('dialog', { name: '„Rubin\u201c kaufen?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     expect(aufrufe.buyItem).not.toHaveBeenCalled();
     fireEvent.click(rubin);
+    fireEvent.click(screen.getByRole('button', { name: 'Für 1.200 Münzen kaufen' }));
     await act(async () => {});
-    expect(frage).toHaveBeenLastCalledWith('„Rubin" für 1200 Münzen kaufen?');
     expect(aufrufe.buyItem).toHaveBeenCalledWith('blatt-rubin', 'coins');
     expect(onThemeChange).toHaveBeenCalledWith('doppelkopf', { cardDeck: 'rubin' });
     // Danach die große Vorschau in Tischgröße, mit „Passt" als Ausgang.

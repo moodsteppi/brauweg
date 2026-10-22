@@ -1073,6 +1073,9 @@ function ProfilTab({
 
           {!inApp && me.birthdayRewardClaimable && geburtstag}
 
+          {/* In der App ohne 3D-Figur: Für die erste Fassung gibt es dort den
+              Kleiderschrank (Emile, 22.10.2026). */}
+          {!inApp && (
           <section className="hb-blk">
             <h2 className="hb-ab">
               Deine Figur
@@ -1092,6 +1095,7 @@ function ProfilTab({
             </button>
             <p className="hb-klein hb-ohne-rand">Drehen, anmalen, Mütze aufsetzen — antippen.</p>
           </section>
+          )}
 
           <section className="hb-blk">
             <h2 className="hb-ab">
