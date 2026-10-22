@@ -343,6 +343,35 @@ export function SpieleNeu({
           </section>
         )}
 
+        {/* In der App: die beiden Solo-Spiele (Emile, 23.10.2026). Gemalte
+            Banner kommen mit der Bildbestellung (docs/ASSETS-KARTENMANUFAKTUR.md);
+            bis dahin ein gezeichnetes Feld statt eines fehlenden Bildes. */}
+        {filter === 'alle' && inApp && (
+          <section className="hb-blk">
+            <h2 className="hb-ab">
+              <Symbol>
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+              </Symbol>
+              Allein
+            </h2>
+            <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
+              <span className="hb-quer-text">
+                <strong>Kartenmanufaktur</strong>
+                <span>Pressen, Laufband, Meister — sie druckt auch, wenn du weg bist</span>
+              </span>
+              <span className="hb-kn is-gold">Los</span>
+            </button>
+            <button type="button" className="hb-quer hb-quer-browort" onClick={() => onSolo('browort')}>
+              <span className="hb-quer-text">
+                <strong>Browort</strong>
+                <span>Jeden Tag ein Wort, sechs Versuche</span>
+              </span>
+              <span className="hb-kn is-gold">Los</span>
+            </button>
+          </section>
+        )}
+
         {filter === 'alle' && !inApp && (
           <>
             <section className="hb-blk">

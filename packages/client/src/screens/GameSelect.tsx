@@ -105,6 +105,9 @@ const Avatarwerkstatt = lazy(() =>
 const Lernpfad = lazy(() => import('../lernen/Lernpfad').then((m) => ({ default: m.Lernpfad })));
 const Browort = lazy(() => import('../browort/Browort').then((m) => ({ default: m.Browort })));
 const Clanwort = lazy(() => import('../browort/Clanwort').then((m) => ({ default: m.Clanwort })));
+const Kartenmanufaktur = lazy(() =>
+  import('../manufaktur/Kartenmanufaktur').then((m) => ({ default: m.Kartenmanufaktur })),
+);
 const MeisterFeier = lazy(() => import('../lernen/Feier').then((m) => ({ default: m.MeisterFeier })));
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
@@ -215,6 +218,13 @@ export function GameSelect({
   const [clanwortOffen, setClanwortOffen] = useState(false);
   const oeffneBrowort = inApp && hubNeu ? () => setBrowortOffen(true) : undefined;
   const oeffneClanwort = inApp && hubNeu ? () => setClanwortOffen(true) : undefined;
+  /** Kartenmanufaktur (nur App): das Idle-Spiel als Vollbild. */
+  const [manufakturOffen, setManufakturOffen] = useState(false);
+  const soloStarten = (modusId: string): void => {
+    if (modusId === 'kartenmanufaktur') setManufakturOffen(true);
+    else if (modusId === 'browort') setBrowortOffen(true);
+    else onSolo(modusId);
+  };
   /** Das Outfit kam ueber die Uebungsrunde: einmal feiern (lernen/Feier.tsx). */
   const [feierZu, setFeierZu] = useState(false);
   const zeigeFeier = Boolean(oeffneLernen) && me.lernen?.belohnt === true && !feierZu && !lernenOffen && !schonGefeiert();
@@ -412,7 +422,7 @@ export function GameSelect({
             offen={spielseite}
             onOeffne={setSpielseite}
             onPick={onPick}
-            onSolo={onSolo}
+            onSolo={soloStarten}
             onBald={setBald}
             onSammlung={() => setTab('blatt')}
             onLernen={oeffneLernen}
@@ -602,6 +612,11 @@ export function GameSelect({
         {clanwortOffen && (
           <Suspense fallback={null}>
             <Clanwort onClose={() => setClanwortOffen(false)} onGeaendert={onAvatarChange} />
+          </Suspense>
+        )}
+        {manufakturOffen && (
+          <Suspense fallback={null}>
+            <Kartenmanufaktur onClose={() => setManufakturOffen(false)} onGeaendert={onAvatarChange} />
           </Suspense>
         )}
         {zeigeFeier && (

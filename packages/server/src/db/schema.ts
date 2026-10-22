@@ -1607,3 +1607,17 @@ export const clanwortRunde = pgTable(
   },
   (t) => [primaryKey({ columns: [t.clubId, t.tag, t.accountId] })],
 );
+
+// ---------------------------------------------------------------------------
+// Kartenmanufaktur (Emile, 23.10.2026) — src/manufaktur/dienst.ts
+// ---------------------------------------------------------------------------
+
+/** Der Stand der Kartenmanufaktur je Konto, als Ganzes (manufaktur/regeln.ts). */
+export const manufaktur = pgTable('manufaktur', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  stand: jsonb().$type<import('../manufaktur/regeln.js').ManufakturStand>().notNull(),
+  version: integer().notNull().default(0),
+  aktualisiert: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});

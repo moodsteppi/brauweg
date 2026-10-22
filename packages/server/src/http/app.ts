@@ -56,6 +56,7 @@ import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.j
 import { partykisteRouten } from './partykiste-routen.js';
 import { lernpfadRouten } from './lernpfad-routen.js';
 import { browortRouten } from './browort-routen.js';
+import { manufakturRouten } from './manufaktur-routen.js';
 import { browortKurz, browortProfil } from '../browort/dienst.js';
 import { herkunftRouten } from './herkunft-routen.js';
 import { gastkontoZaehlen } from '../herkunft.js';
@@ -871,6 +872,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // Doppelkopf lernen: Lernpfad, Lektionen, Uebungstisch — siehe dort.
   lernpfadRouten(app, {
+    db: deps.db,
+    requireAccount,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // Kartenmanufaktur: das Idle-Spiel — siehe dort.
+  manufakturRouten(app, {
     db: deps.db,
     requireAccount,
     limitSchreiben: LIMIT_SCHREIBEN,

@@ -14,6 +14,7 @@ import type { Bemalung } from './bemalung';
 import type { BotLevel } from './protocol';
 import type { Lektion, LernpfadAnsicht, LernserieKurz, Spieltag } from './lernen/sicht';
 import type { Belohnung, BrowortAnsicht, BrowortKurz, BrowortProfil, ClanwortAnsicht } from './browort/sicht';
+import type { ManufakturAktion, ManufakturAntwort } from './manufaktur/sicht';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
 import { herkunft } from './herkunft';
 
@@ -1071,6 +1072,10 @@ export const api = {
   clanwortWahl: (wort: string) => post<{ clanwort: ClanwortAnsicht }>('/clanwort/wahl', { wort }),
   clanwortVersuch: (wort: string) =>
     post<{ clanwort: ClanwortAnsicht; belohnung: Belohnung | null }>('/clanwort/versuch', { wort }),
+  /** Kartenmanufaktur: bis jetzt nachrechnen und zeigen (manufaktur/sicht.ts). */
+  manufaktur: () => request<ManufakturAntwort>('/manufaktur'),
+  /** Ausbauen, Meister, Schicht, Presse freischalten, Umziehen. */
+  manufakturAktion: (aktion: ManufakturAktion) => post<ManufakturAntwort>('/manufaktur/aktion', aktion),
   /**
    * Der Tisch hinter einem Beitrittscode — zum Ansehen, ohne beizutreten.
    *

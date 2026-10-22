@@ -1,0 +1,461 @@
+/*
+ * Kartenmanufaktur (Kartenmanufaktur.tsx) — Emile, 23.10.2026.
+ *
+ * Gezeichnet, bis die Bilder aus docs/ASSETS-KARTENMANUFAKTUR.md da sind:
+ * Holz, Messing und Nachtblau mit den Hub-Variablen. Jede gemalte Stelle
+ * (Presse, Laufband, Lager, Wagen) hat hier eine Klasse `mf-bild-*`, die das
+ * Bild spaeter ersetzt.
+ */
+
+.mf {
+  --mf-holz: #6b4423;
+  --mf-holz-hell: #9a6a3a;
+  --mf-messing: #c9a24a;
+  background:
+    radial-gradient(120% 60% at 50% 0%, #2a2140 0%, transparent 60%),
+    #0d1530;
+}
+
+.mf .mf-mitte {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mf .mf-kasse {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+  background: var(--hb-grund-tief);
+  border: 1px solid var(--hb-kontur);
+  font: 400 18px var(--hb-anz);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Taler: Muenze mit Pik — anders als die Hub-Muenze mit Stern. */
+.mf-taler {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe08a, #d79b1c);
+  box-shadow: inset 0 -1px 0 rgba(120, 70, 0, 0.5);
+  font-style: normal;
+  flex: none;
+}
+.mf-taler::before {
+  content: '♠';
+  font-size: 10px;
+  line-height: 1;
+  color: #7a4a00;
+}
+.mf-taler.is-gross {
+  width: 24px;
+  height: 24px;
+}
+.mf-taler.is-gross::before {
+  font-size: 14px;
+}
+
+.mf .mf-leiste {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 16px 8px;
+}
+.mf .mf-einkommen {
+  font: 800 15px var(--hb-txt);
+  color: var(--hb-gruen);
+}
+.mf .mf-engpass {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(245, 192, 46, 0.14);
+  border: 1px solid var(--hb-gold-tief);
+  font: 800 12px var(--hb-txt);
+  color: var(--hb-gold);
+}
+
+.mf .mf-meldung {
+  position: absolute;
+  top: calc(var(--hb-oben) + 110px);
+  left: 50%;
+  z-index: 20;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--hb-tinte);
+  color: var(--hb-grund);
+  font: 800 14px var(--hb-txt);
+  white-space: nowrap;
+}
+
+.mf .mf-rolle {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 12px calc(24px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* --- Karten ---------------------------------------------------------------- */
+
+.mf .mf-karte {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%),
+    #1c2547;
+  border: 1px solid #34406b;
+  color: var(--hb-tinte);
+  text-align: left;
+}
+.mf .mf-karte.is-tippbar {
+  cursor: pointer;
+  border-color: var(--hb-gold-tief);
+}
+.mf .mf-karte strong {
+  font: 800 14px var(--hb-txt);
+}
+.mf .mf-zahl {
+  font: 400 18px var(--hb-anz);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.mf .mf-oben {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 10px;
+}
+
+.mf .mf-halle {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 8px;
+}
+
+/* Laufband: ein senkrechtes Holzband, das bei Arbeit nach oben laeuft. */
+.mf .mf-band {
+  position: relative;
+  border-radius: 10px;
+  background: var(--mf-holz);
+  border: 2px solid #3a2414;
+  overflow: hidden;
+}
+.mf .mf-band.is-tippbar {
+  border-color: var(--hb-gold-tief);
+}
+.mf .mf-band-streifen {
+  position: absolute;
+  inset: -40px 3px 0;
+  background: repeating-linear-gradient(180deg, var(--mf-holz-hell) 0 14px, #4a2e17 14px 20px);
+  border-radius: 6px;
+}
+.mf .mf-band.is-aktiv .mf-band-streifen {
+  animation: mf-band 0.8s linear infinite;
+}
+
+.mf .mf-pressen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mf .mf-presse-kopf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mf .mf-presse-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mf .mf-presse-text small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.mf .mf-ablage {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 400 16px var(--hb-anz);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Gezeichnete Bilder (bis die gemalten kommen) ------------------------- */
+
+.mf .mf-bild {
+  position: relative;
+  flex: none;
+}
+/* Presse: Rahmen, Walze, Hebel; arbeitet sie, nickt die Walze. */
+.mf .mf-bild-presse {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #4b5470, #2b3250);
+  border: 2px solid var(--mf-messing);
+}
+.mf .mf-bild-presse i:first-child {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 8px;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #d9dbe4, #8a90a6);
+}
+.mf .mf-bild-presse i:last-child {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 6px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--mf-farbe, #fff);
+  box-shadow: 0 -3px 0 rgba(255, 255, 255, 0.5);
+}
+.mf .mf-presse.is-aktiv .mf-bild-presse i:first-child {
+  animation: mf-walze 0.6s ease-in-out infinite;
+}
+
+.mf .mf-stapel {
+  width: 16px;
+  height: 20px;
+  border-radius: 3px;
+  background: var(--mf-farbe, #fff);
+  box-shadow:
+    2px 2px 0 rgba(255, 255, 255, 0.35),
+    4px 4px 0 rgba(255, 255, 255, 0.2);
+}
+
+.mf .mf-farbe-1 { --mf-farbe: #d94b55; }
+.mf .mf-farbe-2 { --mf-farbe: #3f6fd8; }
+.mf .mf-farbe-3 { --mf-farbe: #3fa45a; }
+.mf .mf-farbe-4 { --mf-farbe: #8b5cf6; }
+.mf .mf-farbe-5 { --mf-farbe: #2a2a2a; }
+.mf .mf-farbe-6 { --mf-farbe: #c7ccd8; }
+.mf .mf-farbe-7 { --mf-farbe: #9b1c2c; }
+.mf .mf-farbe-8 { --mf-farbe: #f5c02e; }
+
+/* Lager: drei Kartons */
+.mf .mf-bild-lager {
+  height: 36px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+.mf .mf-bild-lager i {
+  width: 18px;
+  height: 16px;
+  border-radius: 2px;
+  background: #b98a4e;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.2);
+}
+.mf .mf-bild-lager i:nth-child(2) {
+  height: 26px;
+}
+
+/* Wagen: Kasten mit zwei Raedern; faehrt er, ruckelt er. */
+.mf .mf-bild-wagen {
+  width: 64px;
+  height: 36px;
+}
+.mf .mf-bild-wagen i {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 4px;
+  height: 22px;
+  border-radius: 6px 10px 4px 4px;
+  background: linear-gradient(180deg, #2b4fa8, #1b2f6e);
+  border: 2px solid var(--mf-messing);
+}
+.mf .mf-bild-wagen::before,
+.mf .mf-bild-wagen::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #222;
+  border: 2px solid #888;
+}
+.mf .mf-bild-wagen::before {
+  left: 10px;
+}
+.mf .mf-bild-wagen::after {
+  right: 10px;
+}
+.mf .mf-versand.is-aktiv .mf-bild-wagen i {
+  animation: mf-ruckeln 0.4s ease-in-out infinite;
+}
+
+/* --- Knoepfe --------------------------------------------------------------- */
+
+.mf .mf-knoepfe {
+  display: flex;
+  gap: 6px;
+}
+.mf .mf-ausbau,
+.mf .mf-meister {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 48px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font: 800 12px var(--hb-txt);
+  text-align: left;
+}
+.mf .mf-knoepfe .mf-ausbau {
+  flex: 1;
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+  box-shadow: inset 0 -2px 0 rgba(120, 70, 0, 0.3);
+}
+.mf .mf-ausbau b,
+.mf .mf-meister b {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 15px var(--hb-anz);
+}
+.mf .mf-ausbau small {
+  font: 700 10px var(--hb-txt);
+  opacity: 0.75;
+}
+.mf .mf-knoepfe .mf-ausbau:disabled {
+  background: #3a4466;
+  color: var(--hb-leise);
+  box-shadow: none;
+}
+.mf .mf-ausbau.is-max {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--hb-leise);
+}
+.mf .mf-knoepfe .mf-meister {
+  flex: none;
+  min-width: 92px;
+  background: #2c3966;
+  border: 1px solid var(--hb-kontur);
+  color: var(--hb-tinte);
+}
+.mf .mf-knoepfe .mf-meister:disabled {
+  opacity: 0.55;
+}
+.mf .mf-meister.is-da {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  background: rgba(72, 213, 107, 0.12);
+  border-color: var(--hb-gruen);
+  color: var(--hb-gruen);
+}
+
+/* Schicht ohne Meister */
+.mf .mf-schicht {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.mf .mf-schicht i {
+  display: block;
+  height: 100%;
+  background: var(--hb-gruen);
+  transition: width 0.25s linear;
+}
+.mf .mf-antippen {
+  font: 800 11px var(--hb-txt);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hb-gold);
+}
+
+.mf .mf-karte.mf-neu {
+  align-items: center;
+  border: 2px dashed var(--hb-kontur);
+  background: transparent;
+}
+.mf .mf-karte.mf-neu b {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 16px var(--hb-anz);
+  color: var(--hb-gold);
+}
+.mf .mf-karte.mf-neu:disabled {
+  opacity: 0.6;
+}
+
+.mf .mf-umzug small {
+  font: 700 12px/1.4 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.mf .mf-fortschritt {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.mf .mf-fortschritt i {
+  display: block;
+  height: 100%;
+  background: var(--hb-gold);
+}
+
+.mf-offline-betrag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  font: 400 30px var(--hb-anz);
+  color: var(--hb-gold);
+}
+
+@keyframes mf-band {
+  from { transform: translateY(0); }
+  to { transform: translateY(-20px); }
+}
+@keyframes mf-walze {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(10px); }
+}
+@keyframes mf-ruckeln {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mf .mf-band.is-aktiv .mf-band-streifen,
+  .mf .mf-presse.is-aktiv .mf-bild-presse i:first-child,
+  .mf .mf-versand.is-aktiv .mf-bild-wagen i {
+    animation: none;
+  }
+}
