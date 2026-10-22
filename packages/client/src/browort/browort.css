@@ -138,6 +138,10 @@
 }
 
 .bw .bw-tastenreihe .bw-taste {
+  /* Kein Doppeltipp-Zoom: Er verschluckte einen von zwei schnellen Tipps. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
   flex: 1;
   max-width: 40px;
   height: 52px;

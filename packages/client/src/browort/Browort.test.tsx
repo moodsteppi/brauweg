@@ -35,7 +35,7 @@ function stand(teil: Partial<BrowortAnsicht> = {}): BrowortAnsicht {
 }
 
 function tippe(wort: string): void {
-  for (const buchstabe of wort) fireEvent.click(screen.getByRole('button', { name: buchstabe }));
+  for (const buchstabe of wort) fireEvent.pointerDown(screen.getByRole('button', { name: buchstabe }));
 }
 
 describe('Browort', () => {
@@ -46,9 +46,20 @@ describe('Browort', () => {
     render(<Browort onClose={vi.fn()} onGeaendert={vi.fn()} />);
     expect(await screen.findByLabelText('Serie 2, Ø 3,5 Versuche')).toBeTruthy();
     tippe('KAT');
-    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Löschen' }));
     const zeile = screen.getAllByRole('row')[0]!;
     expect(zeile.textContent).toBe('KA');
+  });
+
+  it('verliert bei schnellem Tippen keinen Buchstaben', async () => {
+    browort.mockResolvedValue(stand());
+    render(<Browort onClose={vi.fn()} onGeaendert={vi.fn()} />);
+    await screen.findByLabelText(/Serie 2/);
+    // Alle Tipps in EINEM Durchgang, ohne Darstellung dazwischen.
+    act(() => {
+      for (const b of 'PAPST') fireEvent.pointerDown(screen.getByRole('button', { name: b }));
+    });
+    expect(screen.getAllByRole('row')[0]!.textContent).toBe('PAPST');
   });
 
   it('ein unbekanntes Wort kostet nichts — die Meldung kommt vom Server', async () => {
@@ -58,7 +69,7 @@ describe('Browort', () => {
     await screen.findByLabelText(/Serie 2/);
     tippe('QWERT');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Raten' }));
+      fireEvent.pointerDown(screen.getByRole('button', { name: 'Raten' }));
     });
     expect(browortVersuch).toHaveBeenCalledWith('QWERT');
     expect((await screen.findByRole('alert')).textContent).toBe('Das Wort kenne ich nicht.');
@@ -83,7 +94,7 @@ describe('Browort', () => {
     await screen.findByLabelText(/Serie 2/);
     tippe('KATZE');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Raten' }));
+      fireEvent.pointerDown(screen.getByRole('button', { name: 'Raten' }));
     });
     expect(await screen.findByText('Im ersten Versuch!')).toBeTruthy();
     expect(screen.getByText('KATZE')).toBeTruthy();

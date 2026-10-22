@@ -3585,8 +3585,14 @@
 }
 
 /* Clanwort-Zeile in der Clanhalle (Clan.tsx): drei Buchstabenfelder statt eines Bildes. */
-:is(.hb, .spe) .hb-clanwort-bild {
+:is(.hb, .spe) .hb-zeile .hb-clanwort-bild {
+  /* Drei Felder nebeneinander: breiter als die 40 px eines Zeilenbildes. */
+  width: 54px;
+  height: 40px;
+  flex: none;
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 2px;

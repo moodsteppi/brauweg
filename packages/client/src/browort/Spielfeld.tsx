@@ -100,7 +100,18 @@ export function Tastatur({
                 type="button"
                 className={`bw-taste${breit ? ' is-breit' : ''}${farbe ? ` is-${farbe}` : ''}`}
                 disabled={gesperrt}
-                onClick={() => onTaste(taste)}
+                // Beim Aufsetzen des Fingers, nicht erst beim Klick: So reagiert
+                // eine echte Tastatur, und iOS verschluckt keinen von zwei
+                // schnellen Tipps mehr (Doppeltipp-Erkennung, 23.10.2026). Der
+                // Klick bleibt fuer Tastatur und Vorlesehilfe (detail 0).
+                onPointerDown={(e) => {
+                  if (e.pointerType === 'mouse' && e.button !== 0) return;
+                  e.preventDefault();
+                  onTaste(taste);
+                }}
+                onClick={(e) => {
+                  if (e.detail === 0) onTaste(taste);
+                }}
                 aria-label={taste === 'ENTER' ? 'Raten' : taste === 'LOESCHEN' ? 'Löschen' : taste}
               >
                 {taste === 'ENTER' ? (
@@ -166,8 +177,15 @@ export function useWortEingabe<T extends Runde>({
     (taste: string): void => {
       const { eingabe: jetzt, aktiv: an, laeuft: unterwegs, runde: r } = zustand.current;
       if (!an || unterwegs || !r) return;
+      // Den neuen Stand SOFORT in die Referenz: Zwei schnelle Tipps zwischen
+      // zwei Darstellungen lasen sonst beide den alten Stand, und der erste
+      // Buchstabe ging verloren (im Simulator gesehen, 23.10.2026).
+      const setze = (neu: string): void => {
+        zustand.current = { ...zustand.current, eingabe: neu };
+        setEingabe(neu);
+      };
       if (taste === 'LOESCHEN') {
-        setEingabe(jetzt.slice(0, -1));
+        setze(jetzt.slice(0, -1));
         return;
       }
       if (taste === 'ENTER') {
@@ -176,9 +194,10 @@ export function useWortEingabe<T extends Runde>({
           return;
         }
         setLaeuft(true);
+        zustand.current = { ...zustand.current, laeuft: true };
         void schicke(jetzt)
           .then((neu) => {
-            setEingabe('');
+            setze('');
             setAufdecken(neu.versuche.length - 1);
             window.setTimeout(() => setAufdecken(null), 160 * LAENGE + 500);
             spiele(neu.geloest ? 'sieg' : 'karte-legen');
@@ -193,7 +212,7 @@ export function useWortEingabe<T extends Runde>({
         return;
       }
       if (jetzt.length < LAENGE) {
-        setEingabe(jetzt + taste);
+        setze(jetzt + taste);
         spiele('tipp', 0.5);
       }
     },
