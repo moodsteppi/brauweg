@@ -1529,3 +1529,81 @@ export const herkunftZaehler = pgTable(
   },
   (t) => [primaryKey({ columns: [t.kennung, t.tag] }), index('herkunft_zaehler_tag_idx').on(t.tag)],
 );
+
+// ---------------------------------------------------------------------------
+// Browort und Clanwort (Emile, 23.10.2026) — src/browort.ts
+// ---------------------------------------------------------------------------
+
+/** Eine Browort-Runde je Konto und Kalendertag (Europe/Berlin). */
+export const browortRunde = pgTable(
+  'browort_runde',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    tag: date().notNull(),
+    /** Geratene Woerter in Grossbuchstaben, in Reihenfolge. Farben rechnet browort.ts. */
+    versuche: jsonb().$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    geloest: boolean().notNull().default(false),
+    fertig: boolean().notNull().default(false),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.tag] })],
+);
+
+/** Serien und Zahlen je Konto — Browort und Clanwort getrennt. */
+export const browortStand = pgTable('browort_stand', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  serie: integer().notNull().default(0),
+  beste: integer().notNull().default(0),
+  letzterTag: date(),
+  schutzTag: date(),
+  erinnertTag: date(),
+  gespielt: integer().notNull().default(0),
+  geloest: integer().notNull().default(0),
+  /** Summe der Versuche geloester Woerter; der Schnitt ist Summe durch `geloest`. */
+  versucheSumme: integer().notNull().default(0),
+  /** Wie oft mit 1, 2, … 6 Versuchen geloest. */
+  verteilung: jsonb().$type<number[]>().notNull().default(sql`'[0,0,0,0,0,0]'::jsonb`),
+  clanSerie: integer().notNull().default(0),
+  clanBeste: integer().notNull().default(0),
+  clanLetzterTag: date(),
+  clanSchutzTag: date(),
+});
+
+/** Das Clanwort eines Tages: wer waehlt, was gewaehlt ist. */
+export const clanwortTag = pgTable(
+  'clanwort_tag',
+  {
+    clubId: uuid()
+      .notNull()
+      .references(() => club.id, { onDelete: 'cascade' }),
+    tag: date().notNull(),
+    waehlerId: uuid().references(() => account.id, { onDelete: 'set null' }),
+    /** Null, solange niemand gewaehlt hat. */
+    wort: text(),
+    /** Der Server hat gewaehlt, weil bis Mittag nichts kam. */
+    zufall: boolean().notNull().default(false),
+    gewaehltAm: timestamp({ withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.clubId, t.tag] })],
+);
+
+/** Eine Clanwort-Runde je Mitglied und Tag. */
+export const clanwortRunde = pgTable(
+  'clanwort_runde',
+  {
+    clubId: uuid()
+      .notNull()
+      .references(() => club.id, { onDelete: 'cascade' }),
+    tag: date().notNull(),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    versuche: jsonb().$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    geloest: boolean().notNull().default(false),
+    fertig: boolean().notNull().default(false),
+  },
+  (t) => [primaryKey({ columns: [t.clubId, t.tag, t.accountId] })],
+);

@@ -15,7 +15,9 @@
 // ist egal, aber eine neue Kennung ist fuer alle Konten von selbst an.
 // `serie` seit dem 17.10.2026: Abend-Erinnerung an die Lernserie, wenn heute
 // noch keine Lektion lief (lernpfad.ts) — gehoert zu keinem Tisch.
-export const ANLAESSE = ['dran', 'start', 'einladung', 'anfrage', 'serie'] as const;
+// `browort` und `clanwort` seit dem 23.10.2026: Abend-Erinnerung ans offene
+// Tageswort und die Auslosung „du waehlst heute das Clanwort" (browort/dienst.ts).
+export const ANLAESSE = ['dran', 'start', 'einladung', 'anfrage', 'serie', 'browort', 'clanwort'] as const;
 export type Anlass = (typeof ANLAESSE)[number];
 
 export function istAnlass(wert: unknown): wert is Anlass {

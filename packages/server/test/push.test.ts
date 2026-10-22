@@ -254,7 +254,7 @@ test('Einstellungen: Vorgabe alles an, einzeln abschaltbar, und aus heisst kein 
   await anmelden(s, a.kopf, 'ios', IOS_TOKEN);
 
   const vorher = await s.app.inject({ method: 'GET', url: '/api/push/einstellungen', headers: a.kopf });
-  assert.deepEqual(vorher.json(), { anlaesse: { dran: true, start: true, einladung: true, anfrage: true, serie: true }, geraete: 1 });
+  assert.deepEqual(vorher.json(), { anlaesse: { dran: true, start: true, einladung: true, anfrage: true, serie: true, browort: true, clanwort: true }, geraete: 1 });
 
   const nachher = await s.app.inject({
     method: 'PUT',
@@ -262,7 +262,7 @@ test('Einstellungen: Vorgabe alles an, einzeln abschaltbar, und aus heisst kein 
     headers: a.kopf,
     payload: { dran: false },
   });
-  assert.deepEqual(nachher.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: true, serie: true });
+  assert.deepEqual(nachher.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: true, serie: true, browort: true, clanwort: true });
 
   assert.equal((await geraeteFuer(s.ctx.db, [anna.accountId], 'dran')).length, 0);
   assert.equal((await geraeteFuer(s.ctx.db, [anna.accountId], 'start')).length, 1);
@@ -276,7 +276,7 @@ test('Einstellungen: Vorgabe alles an, einzeln abschaltbar, und aus heisst kein 
     payload: { serie: false, anfrage: false },
   });
   assert.equal(serie.statusCode, 200, serie.body);
-  assert.deepEqual(serie.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: false, serie: false });
+  assert.deepEqual(serie.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: false, serie: false, browort: true, clanwort: true });
 
   const unsinn = await s.app.inject({
     method: 'PUT',

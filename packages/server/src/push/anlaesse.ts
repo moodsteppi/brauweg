@@ -204,6 +204,18 @@ export class PushAnlaesse {
     this.merke(this.zustellen('serie', konten, null, 'doppelkopf', null));
   }
 
+  /** Abend-Erinnerung ans offene Browort (browort/dienst.ts, `faelligeBrowortErinnerungen`). */
+  browortErinnern(konten: readonly string[]): void {
+    if (this.aus.has('browort') || konten.length === 0) return;
+    this.merke(this.zustellen('browort', konten, null, 'browort', null));
+  }
+
+  /** Das ausgeloste Mitglied waehlt heute das Clanwort. */
+  clanwortWaehlen(konto: string): void {
+    if (this.aus.has('clanwort')) return;
+    this.merke(this.zustellen('clanwort', [konto], null, 'browort', null));
+  }
+
   /** Wartet, bis alle angestossenen Zustellungen durch sind (Tests, Serverende). */
   async ruhe(): Promise<void> {
     while (this.laufend.size > 0) await Promise.allSettled([...this.laufend]);

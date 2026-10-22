@@ -55,6 +55,8 @@ import { type AppVerknuepfung, appVerknuepfungRouten } from './app-verknuepfung.
 import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
 import { partykisteRouten } from './partykiste-routen.js';
 import { lernpfadRouten } from './lernpfad-routen.js';
+import { browortRouten } from './browort-routen.js';
+import { browortKurz, browortProfil } from '../browort/dienst.js';
 import { herkunftRouten } from './herkunft-routen.js';
 import { gastkontoZaehlen } from '../herkunft.js';
 import { lernserieKurz } from '../lernpfad.js';
@@ -875,6 +877,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
+  // Browort und Clanwort: das taegliche Wortraetsel — siehe dort.
+  browortRouten(app, {
+    db: deps.db,
+    requireAccount,
+    push: deps.push,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
   pushRouten(app, {
     db: deps.db,
     requireSitzung: async (request) => {
@@ -1082,11 +1093,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
      * nicht. Die Trophaeensumme kommt aus der schon geladenen Statistik.
      */
     const trophaeen = stats.reduce((summe, zeile) => summe + zeile.trophies, 0);
-    const [truhenOffen, belohnungenOffen, wegOffen, lernen] = await Promise.all([
+    const [truhenOffen, belohnungenOffen, wegOffen, lernen, browort] = await Promise.all([
       offeneTruhen(deps.db, accountId, account.xp),
       offeneBelohnungen(deps.db, accountId),
       offeneWegBelohnungen(deps.db, accountId, trophaeen),
       lernserieKurz(deps.db, accountId),
+      browortKurz(deps.db, accountId),
     ]);
     return reply.send({
       ...rest,
@@ -1115,6 +1127,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen, weg: wegOffen },
       /** Die Lernserie fuer die Flamme auf dem Start (lernpfad.ts) — nur die Zahlen. */
       lernen,
+      /** Browort fuer seine Flamme auf dem Start: Serie und Schnitt (browort/dienst.ts). */
+      browort,
       /*
        * Stufe und Fortschritt fertig gerechnet. Der Client bekommt die
        * Zahlen, nicht die Kurve: Wird sie je nachjustiert, gilt das
@@ -1740,6 +1754,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       ...(await playerProfile(deps.db, viewerId, accountId)),
       // Hat der Betrachter diesen Spieler blockiert? (melden-routen.ts)
       blockiert: await hatBlockiert(deps.db, viewerId, accountId),
+      // Browort-Serie und Schnitt — Emile: „steht im Profil des jeweiligen Spielers".
+      browort: await browortProfil(deps.db, accountId),
     });
   });
 

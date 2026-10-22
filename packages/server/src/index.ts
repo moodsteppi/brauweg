@@ -23,6 +23,7 @@ import { Vermittlung } from './suche/vermittlung.js';
 import { applyStaffEmails } from './staff.js';
 import { aufraeumen } from './diagnose.js';
 import { faelligeErinnerungen } from './lernpfad.js';
+import { faelligeBrowortErinnerungen } from './browort/dienst.js';
 import { expireStaleTables } from './tables/service.js';
 import { PushAnlaesse } from './push/anlaesse.js';
 import { leseAbgeschaltet } from './push/kennungen.js';
@@ -204,6 +205,10 @@ async function main(): Promise<void> {
   const serienWecker = setInterval(() => {
     void faelligeErinnerungen(db)
       .then((konten) => push.serieErinnern(konten))
+      .catch((err) => app.log.error(err));
+    // Browort im selben Takt und nach derselben Regel (browort/dienst.ts).
+    void faelligeBrowortErinnerungen(db)
+      .then((konten) => push.browortErinnern(konten))
       .catch((err) => app.log.error(err));
   }, 15 * MINUTE);
 

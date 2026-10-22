@@ -35,6 +35,7 @@ export const SPIELNAMEN: Readonly<Record<string, string>> = {
   partykiste: 'Partykiste',
   brocooked: 'BroCooked',
   brochess: 'BroChess',
+  browort: 'Browort',
 };
 
 export function spielname(gameId: string): string {
@@ -85,6 +86,14 @@ export const TEXTE: Readonly<Record<Anlass, Textbaustein>> = {
   serie: {
     titel: 'Deine Serie wartet 🔥',
     text: 'Heute noch keine Runde {spiel} gelernt — eine Lektion, und die Flamme brennt weiter.',
+  },
+  browort: {
+    titel: 'Dein Browort wartet 🔥',
+    text: 'Das Wort von heute ist noch offen — rate es, und deine Serie brennt weiter.',
+  },
+  clanwort: {
+    titel: 'Du wählst das Clanwort',
+    text: 'Heute bist du dran: Such bis 12 Uhr das Wort für deinen Clan aus.',
   },
 };
 
