@@ -387,7 +387,7 @@
   color: var(--hb-grund);
   font: 800 28px/42px var(--hb-txt);
   text-align: center;
-  box-shadow: inset 0 -3px 0 rgba(120, 70, 0, 0.35);
+  box-shadow: inset 0 -2px 0 rgba(120, 70, 0, 0.3);
   flex: none;
 }
 
@@ -549,15 +549,15 @@
   justify-content: center;
   background: var(--hb-karte);
   border: 2px solid var(--hb-kontur);
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 .hb .hb-tab.is-haupt.is-an .hb-tab-rund {
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   border-color: transparent;
   color: var(--hb-grund);
   box-shadow:
-    inset 0 -4px 0 rgba(120, 70, 0, 0.35),
-    0 4px 0 rgba(0, 0, 0, 0.3);
+    inset 0 -2px 0 rgba(120, 70, 0, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.35);
 }
 .hb .hb-tab.is-haupt .hb-ic {
   width: 28px;
@@ -633,6 +633,13 @@
   height: 24px;
   color: var(--hb-gold);
 }
+/*
+ * Knöpfe: „Gold, aber ruhiger" (Emile, 22.10.2026). Vorher Goldverlauf mit
+ * Glanzkante und Schlagschatten — das las sich wie ein generierter
+ * Spieleknopf. Jetzt eine flache Fläche, eine schmale dunklere Unterkante
+ * als einziger Tiefenhinweis und weniger Rundung. Dieselbe Regel gilt für
+ * alle goldenen Flächen, die man antippt (Reiter, Holen-Schilder, Spind).
+ */
 :is(.hb, .spe) .hb-kn {
   display: inline-flex;
   align-items: center;
@@ -640,17 +647,15 @@
   gap: 8px;
   height: 44px;
   padding: 0 16px;
-  border-radius: 14px;
+  border-radius: 10px;
   font: 800 15px var(--hb-txt);
   white-space: nowrap;
   flex: none;
 }
 :is(.hb, .spe) .hb-kn.is-gold {
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   color: var(--hb-grund);
-  box-shadow:
-    inset 0 -4px 0 rgba(120, 70, 0, 0.35),
-    0 4px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 -2px 0 rgba(120, 70, 0, 0.3);
 }
 :is(.hb, .spe) .hb-kn.is-stimme {
   background: var(--hb-stimme);
@@ -665,8 +670,8 @@
 }
 :is(.hb, .spe) .hb-kn.is-haupt {
   height: 52px;
-  font-size: 18px;
-  border-radius: 16px;
+  font-size: 17px;
+  border-radius: 12px;
 }
 :is(.hb, .spe) .hb-kn.is-breit {
   width: 100%;
@@ -1290,7 +1295,7 @@
   top: -12px;
   font-size: 12px;
   padding: 2px 10px;
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   box-shadow: 0 2px 0 rgba(120, 70, 0, 0.5);
 }
 /* Checkpoint zum Holen: Punkt und Schild sind EIN Knopf, 44 pt hoch.
@@ -1312,7 +1317,7 @@
 :is(.hb, .spe) .hb-cp.is-holbar small {
   position: static;
   margin-left: -4px;
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   border-color: transparent;
   color: var(--hb-grund);
 }
@@ -1352,7 +1357,7 @@
 }
 :is(.hb, .spe) .hb-weg-weiter.is-holbar {
   border-color: transparent;
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   color: var(--hb-grund);
 }
 :is(.hb, .spe) .hb-weg-weiter.is-holbar small {
@@ -2199,7 +2204,6 @@
   background: var(--hb-karte-hoch);
   border: 1px solid var(--hb-kontur);
   color: var(--hb-tinte);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
 }
 /* Goldkontur: wie die Preise im Regal — wertvoll, aber nicht der Hauptknopf */
 :is(.hb, .spe) .hb-kn.is-kontur {
@@ -2229,7 +2233,8 @@
   opacity: 0.55;
 }
 :is(.hb, .spe) .hb-kn:not(:disabled):active {
-  transform: translateY(2px);
+  transform: translateY(1px);
+  filter: brightness(0.95);
 }
 :is(.hb, .spe) .hb-kn-bild {
   width: 22px;
@@ -2490,7 +2495,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   color: var(--hb-grund);
   font: 400 22px var(--hb-anz);
 }
@@ -3161,7 +3166,7 @@
 }
 :is(.hb, .spe) :is(.einstellungen, .hub-loeschen) .hub-knopf--a-gold {
   border: 0;
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   color: var(--hb-grund);
 }
 :is(.hb, .spe) :is(.einstellungen, .hub-loeschen) .hub-knopf--a-raus {
@@ -3203,9 +3208,9 @@
   align-self: center;
 }
 :is(.hb, .spe) .hb-kn.is-gefahr {
-  background: linear-gradient(180deg, #ff7d86, var(--hb-rot));
+  background: var(--hb-rot);
   color: #fff;
-  box-shadow: inset 0 -4px 0 rgba(90, 0, 10, 0.35), 0 4px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 -2px 0 rgba(90, 0, 10, 0.3);
 }
 
 /* ---------- Fremdes Profil (Profile.tsx, ProfilNeu) — Emile, 22.10.2026 ---------- */
@@ -3507,4 +3512,74 @@
   background: var(--hb-karte-hoch);
   border: 1px solid var(--hb-kontur);
   color: var(--hb-gold);
+}
+
+/* Formular im Blatt (KontoSichern `neu`): Beschriftung über dem Feld. */
+:is(.hb, .spe) .hb-formular {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+:is(.hb, .spe) .hb-formular .hb-klein {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+:is(.hb, .spe) .hb-formular label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  color: var(--hb-tinte);
+}
+:is(.hb, .spe) .hb-formular label > span {
+  font: 800 13px var(--hb-txt);
+}
+:is(.hb, .spe) .hb-formular label > small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+:is(.hb, .spe) .hb-mg-symbol-ic {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hb-gold);
+}
+
+/* Eigene Ebene über einem Tisch (PushBegleiter): Hub-Farben, aber kein
+   Vollbild-Hintergrund — der Tisch bleibt abgedunkelt zu sehen. */
+.spe.spe-schicht {
+  max-width: none;
+  z-index: 1000;
+  justify-content: flex-end;
+  background: rgba(5, 11, 29, 0.62);
+}
+.spe .spe-frage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 22px 18px calc(16px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  border-radius: 24px 24px 0 0;
+  background: var(--hb-grund);
+  border-top: 1px solid var(--hb-kontur);
+}
+.spe .spe-frage h2 {
+  margin: 0;
+  font-size: 26px;
+}
+.spe .spe-frage p {
+  margin: 0;
+  font: 600 15px/1.45 var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.spe .spe-frage p.hb-klein {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
 }

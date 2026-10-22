@@ -796,7 +796,9 @@ export function App(): React.JSX.Element {
      * Hier und nicht in GameSelect: Die Route gab es seit dem Gastkonto, nur
      * keinen Weg dorthin — und das Blatt kommt erst beim Antippen nach.
      */
-    const gastLeiste = me.gast ? (
+    // Im neuen Hub laege die Leiste unter dessen Vollbild; dort steht
+    // „Konto sichern" im Profil (GameSelect.tsx, Abschnitt Konto).
+    const gastLeiste = me.gast && !hubNeu ? (
       <div className="gastsichern-leiste" role="note">
         <span>Du spielst als Gast.</span>
         <button type="button" onClick={() => setSichernOffen(true)}>

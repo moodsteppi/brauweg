@@ -78,6 +78,7 @@ import { sitzSpanne } from '../sitzspanne';
 import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
+import { KontoSichern } from './KontoSichern';
 import { Klanghalle } from './Klanghalle';
 import { LEERE_BEMALUNG } from '../bemalung';
 
@@ -914,6 +915,7 @@ function ProfilTab({
   const [loeschenOffen, setLoeschenOffen] = useState(false);
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
   const [mitteilungenOffen, setMitteilungenOffen] = useState(false);
+  const [sichernOffen, setSichernOffen] = useState(false);
 
   const kacheln = [
     { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: partien },
@@ -1188,6 +1190,23 @@ function ProfilTab({
               <span className="hb-ab-zusatz">{me.displayName}</span>
             </h2>
             <div className="hb-liste">
+              {me.gast && (
+                <button type="button" className="hb-mg is-du" onClick={() => setSichernOffen(true)}>
+                  <span className="hb-mg-symbol hb-mg-symbol-ic" aria-hidden="true">
+                    <HbSymbol>
+                      <rect x="5" y="11" width="14" height="9" rx="2" />
+                      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                    </HbSymbol>
+                  </span>
+                  <span className="hb-mg-name">
+                    <strong>Konto sichern</strong>
+                    <small>Du spielst als Gast</small>
+                  </span>
+                  <span className="hb-pf" aria-hidden="true">
+                    ›
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 className="hb-mg"
@@ -1252,6 +1271,16 @@ function ProfilTab({
           <ImHub>
             <MitteilungenBlatt neu onClose={() => setMitteilungenOffen(false)} />
           </ImHub>
+        )}
+        {sichernOffen && (
+          <KontoSichern
+            neu
+            onClose={() => setSichernOffen(false)}
+            onGesichert={() => {
+              setSichernOffen(false);
+              onMeChange();
+            }}
+          />
         )}
         {loeschenOffen && (
           <ImHub>

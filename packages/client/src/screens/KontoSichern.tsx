@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
+import { HbBlatt } from './HbBlatt';
 
 /**
  * Gastkonto sichern: Mail, Passwort und Geburtstag nachtragen.
@@ -17,7 +18,14 @@ import { t } from '../i18n';
 export function KontoSichern({
   onClose,
   onGesichert,
+  neu = false,
 }: {
+  /**
+   * Neues Hub (seit dem 22.10.2026, aus dem Profil): Blatt in Nachtblau &
+   * Gold. Die Leiste ueber der Spielauswahl lag dort unter dem Vollbild des
+   * Hubs — ein Gast fand den Weg zum Sichern gar nicht.
+   */
+  neu?: boolean;
   onClose: () => void;
   /** Konto ist gesichert — die App laedt `me` neu, die Gastleiste verschwindet. */
   onGesichert: () => void;
@@ -51,6 +59,63 @@ export function KontoSichern({
       )
       .finally(() => setBusy(false));
   };
+
+  if (neu) {
+    return (
+      <HbBlatt titel="Konto sichern" onClose={erledigt ? onGesichert : onClose}>
+        {erledigt ? (
+          <div className="hb-formular">
+            <p className="hb-klein">{erledigt}</p>
+            <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onGesichert}>
+              Weiter
+            </button>
+          </div>
+        ) : (
+          <form className="hb-formular" onSubmit={sichern}>
+            <p className="hb-klein">
+              Dein Spielstand bleibt, wie er ist. Mit Adresse und Passwort kommst du auch nach dem
+              Abmelden wieder an dieses Konto.
+            </p>
+            <label>
+              <span>E-Mail</span>
+              <input className="hb-feld" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </label>
+            <label>
+              <span>Passwort</span>
+              <input
+                className="hb-feld"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={12}
+                required
+              />
+              <small>Mindestens zwölf Zeichen.</small>
+            </label>
+            <label>
+              <span>Geburtstag</span>
+              <input
+                className="hb-feld"
+                type="date"
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+                required
+                max={new Date().toISOString().slice(0, 10)}
+              />
+            </label>
+            {error && <span className="hb-fehler">{error}</span>}
+            <button type="submit" className="hb-kn is-gold is-haupt is-breit" disabled={busy}>
+              {busy ? 'Wird gesichert…' : 'Konto sichern'}
+            </button>
+            <button type="button" className="hb-leise-knopf" onClick={onClose}>
+              Später
+            </button>
+          </form>
+        )}
+      </HbBlatt>
+    );
+  }
 
   return (
     <div className="doko-sheet" onClick={erledigt ? onGesichert : onClose}>

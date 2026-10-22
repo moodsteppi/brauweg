@@ -170,7 +170,7 @@
 }
 .kh .kh-zeile.is-spielt .kh-hoeren {
   color: var(--hb-grund);
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   border-color: transparent;
 }
 :is(.hb, .spe) .kh-waehlen {

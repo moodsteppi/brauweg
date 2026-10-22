@@ -7,7 +7,10 @@ function ArtZeichen({ art }: { art: Zeitart }): React.JSX.Element {
   return (
     <svg viewBox="0 0 24 24" className={`${stil.artZeichen} ${stil[`art_${art}`] ?? ''}`} aria-hidden="true">
       {art === 'bullet' && (
-        <path d="M14.5 3.5c2.5 0 5 1.1 6 2.1-1 1-2.1 3.5-2.1 6L9 21H5v-4z M5 17l4 4" />
+        <>
+          <path d="M9 15l6.5-6.5a3.5 3.5 0 0 1 4.9 0 3.5 3.5 0 0 1 0 4.9L14 20z" />
+          <path d="M9 15l5 5 M4 20l3-3 M3.5 15.5l2-2 M8.5 20.5l2-2" />
+        </>
       )}
       {art === 'blitz' && <path d="M13 2L4 14h7l-1 8 9-12h-7z" />}
       {art === 'rapid' && (

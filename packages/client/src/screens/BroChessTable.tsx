@@ -118,7 +118,11 @@ export function BroChessTable({
   const sicht = view.view;
   const sitzVon = (farbe: Farbe): number => (farbe === 'w' ? sicht.weissSitz : 1 - sicht.weissSitz);
   const platz = (farbe: Farbe) => table?.seats.find((s) => s.seat === sitzVon(farbe));
-  const nameVon = (farbe: Farbe): string => platz(farbe)?.displayName ?? (farbe === 'w' ? 'Weiß' : 'Schwarz');
+  // Ein Botplatz hat keinen Namen; „Weiß gewinnt" las sich dann, als sei
+  // die Farbe ein Spieler.
+  const nameVon = (farbe: Farbe): string =>
+    platz(farbe)?.displayName ??
+    (view.botSeats.includes(sitzVon(farbe)) ? 'Bot' : farbe === 'w' ? 'Weiß' : 'Schwarz');
 
   const oben: Farbe = sicht.meineFarbe === 'b' ? 'w' : 'b';
   const unten: Farbe = oben === 'w' ? 'b' : 'w';
@@ -143,7 +147,7 @@ export function BroChessTable({
           <strong>
             {spielerName(nameVon(farbe), platz(farbe)?.accountId)}
             {ich && <small> (du)</small>}
-            {istBot && <small> · Bot</small>}
+            {istBot && <small> · {farbe === 'w' ? 'Weiß' : 'Schwarz'}</small>}
             {view.leftSeats.includes(sitz) && <small> · weg</small>}
           </strong>
           <span className={stil.gefangen} aria-label={`${gefangen.length} Figuren geschlagen`}>

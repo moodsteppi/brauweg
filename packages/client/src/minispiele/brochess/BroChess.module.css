@@ -280,7 +280,10 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
-.feld {
+/* `.brett .feld` statt `.feld`: Im Hub setzt `:is(.hb, .spe) button` jeden
+   Knopf auf durchsichtig zurueck und wiegt mehr als eine einzelne Klasse —
+   die Felder waeren sonst farblos. */
+.brett .feld {
   position: relative;
   display: flex;
   align-items: center;
@@ -301,35 +304,35 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.hell {
+.brett .hell {
   background: #eed9b5;
 }
 
-.dunkel {
+.brett .dunkel {
   background: #b58863;
 }
 
-.klickbar {
+.brett .klickbar {
   cursor: pointer;
 }
 
-.gewaehlt {
+.brett .gewaehlt {
   background-image: linear-gradient(rgba(245, 192, 46, 0.55), rgba(245, 192, 46, 0.55));
 }
 
 /* Der letzte Zug bleibt sichtbar — sonst sieht man nach dem Wegschauen nicht,
    was der Gegner gezogen hat. */
-.zuletzt {
+.brett .zuletzt {
   background-image: linear-gradient(rgba(226, 182, 79, 0.42), rgba(226, 182, 79, 0.42));
 }
 
 /* Vorgemerkter Zug: kuehl statt warm, damit man ihn nicht fuer den
    letzten Zug haelt. */
-.vorab {
+.brett .vorab {
   background-image: linear-gradient(rgba(64, 110, 214, 0.55), rgba(64, 110, 214, 0.55));
 }
 
-.koenigImSchach {
+.brett .koenigImSchach {
   background-image: radial-gradient(circle, rgba(217, 75, 85, 0.95) 0%, rgba(217, 75, 85, 0) 72%);
 }
 
@@ -441,11 +444,11 @@
   top: 2px;
 }
 
-.hell .koordinate {
+.brett .hell .koordinate {
   color: #b58863;
 }
 
-.dunkel .koordinate {
+.brett .dunkel .koordinate {
   color: #eed9b5;
 }
 
@@ -470,7 +473,7 @@
   gap: 8px;
 }
 
-.umwandlungWahl button {
+.brett .umwandlungWahl button {
   width: calc(var(--bc-brett, min(94vw, 72dvh, 640px)) / 5.5);
   aspect-ratio: 1;
   border: 0;
@@ -533,7 +536,7 @@
   gap: 8px;
 }
 
-.zeitKachel {
+.zeitraster .zeitKachel {
   min-height: 48px;
   border-radius: 12px;
   background: var(--hb-karte);
@@ -543,7 +546,7 @@
   text-align: center;
 }
 
-.zeitKachelAn {
+.zeitraster .zeitKachelAn {
   border: 2px solid var(--hb-gold);
   background: var(--hb-karte-hoch);
 }
