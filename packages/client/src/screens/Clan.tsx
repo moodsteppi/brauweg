@@ -136,10 +136,13 @@ export function Clan({
   onBald,
   onShowProfile,
   onMeChange,
+  onClanwort,
   neu = false,
 }: {
   /** Neues Hub (Nachtblau & Gold): die neu angeordnete Halle. */
   neu?: boolean;
+  /** Clanwort oeffnen (nur App, neues Hub) — ohne steht die Zeile nicht da. */
+  onClanwort?: () => void;
   /** Der eine Clan des Kontos, oder `null`. */
   clanId: string | null;
   /** Eigenes Konto — im Chat stehen die eigenen Zeilen rechts. */
@@ -224,6 +227,7 @@ export function Clan({
       onBald={onBald}
       onShowProfile={onShowProfile}
       onAktion={tue}
+      onClanwort={onClanwort}
     />
   );
 }
@@ -1312,6 +1316,7 @@ function HalleNeu({
   onBald,
   onShowProfile,
   onAktion,
+  onClanwort,
 }: {
   detail: ClubDetail | null;
   meId: string | null;
@@ -1319,6 +1324,7 @@ function HalleNeu({
   onBald: (name: string) => void;
   onShowProfile: (accountId: string) => void;
   onAktion: (aktion: Promise<unknown>, danach?: () => void) => void;
+  onClanwort?: () => void;
 }): React.JSX.Element {
   const [gewaehlt, setGewaehlt] = useState<ClubMemberView | null>(null);
   const [blatt, setBlatt] = useState<'anfragen' | 'einstellungen' | null>(null);
@@ -1469,6 +1475,24 @@ function HalleNeu({
             </span>
           )}
         </button>
+        )}
+
+        {/* Clanwort (Emile, 23.10.2026): ein ausgelostes Mitglied waehlt, alle raten. */}
+        {onClanwort && (
+          <button type="button" className="hb-zeile hb-clanwort-zeile" onClick={onClanwort}>
+            <span className="hb-zeile-bild hb-clanwort-bild" aria-hidden="true">
+              <i>W</i>
+              <i>O</i>
+              <i>R</i>
+            </span>
+            <span>
+              <strong>Clanwort</strong>
+              <small>Ein Mitglied wählt, alle raten — heute</small>
+            </span>
+            <span className="hb-pf" aria-hidden="true">
+              ›
+            </span>
+          </button>
         )}
 
         <button type="button" className="hb-zeile" onClick={() => onBald('Clantruhe')}>

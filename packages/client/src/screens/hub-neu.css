@@ -3583,3 +3583,30 @@
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
+
+/* Clanwort-Zeile in der Clanhalle (Clan.tsx): drei Buchstabenfelder statt eines Bildes. */
+:is(.hb, .spe) .hb-clanwort-bild {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+:is(.hb, .spe) .hb-clanwort-bild i {
+  width: 16px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font: 400 11px var(--hb-anz);
+  font-style: normal;
+  color: #fff;
+  background: #3fa45a;
+}
+:is(.hb, .spe) .hb-clanwort-bild i:nth-child(2) {
+  background: #d9a521;
+  color: #1a1407;
+}
+:is(.hb, .spe) .hb-clanwort-bild i:nth-child(3) {
+  background: #3b4668;
+}

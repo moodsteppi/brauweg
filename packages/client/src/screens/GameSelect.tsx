@@ -79,6 +79,7 @@ import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
 import { KontoSichern } from './KontoSichern';
+import { BrowortImProfil } from '../browort/BrowortImProfil';
 import { Klanghalle } from './Klanghalle';
 import { LEERE_BEMALUNG } from '../bemalung';
 
@@ -102,6 +103,8 @@ const Avatarwerkstatt = lazy(() =>
 );
 /** „Doppelkopf lernen" — nur in der App und erst beim Oeffnen nachgeladen. */
 const Lernpfad = lazy(() => import('../lernen/Lernpfad').then((m) => ({ default: m.Lernpfad })));
+const Browort = lazy(() => import('../browort/Browort').then((m) => ({ default: m.Browort })));
+const Clanwort = lazy(() => import('../browort/Clanwort').then((m) => ({ default: m.Clanwort })));
 const MeisterFeier = lazy(() => import('../lernen/Feier').then((m) => ({ default: m.MeisterFeier })));
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
@@ -207,6 +210,11 @@ export function GameSelect({
   /** Doppelkopf lernen (nur App): Lernpfad als Vollbild. */
   const [lernenOffen, setLernenOffen] = useState(false);
   const oeffneLernen = inApp && hubNeu ? () => setLernenOffen(true) : undefined;
+  /** Browort und Clanwort (nur App, neues Hub): Vollbilder wie der Lernpfad. */
+  const [browortOffen, setBrowortOffen] = useState(false);
+  const [clanwortOffen, setClanwortOffen] = useState(false);
+  const oeffneBrowort = inApp && hubNeu ? () => setBrowortOffen(true) : undefined;
+  const oeffneClanwort = inApp && hubNeu ? () => setClanwortOffen(true) : undefined;
   /** Das Outfit kam ueber die Uebungsrunde: einmal feiern (lernen/Feier.tsx). */
   const [feierZu, setFeierZu] = useState(false);
   const zeigeFeier = Boolean(oeffneLernen) && me.lernen?.belohnt === true && !feierZu && !lernenOffen && !schonGefeiert();
@@ -394,6 +402,7 @@ export function GameSelect({
             onBald={setBald}
             onShowProfile={onShowProfile}
             onMeChange={onAvatarChange}
+            onClanwort={oeffneClanwort}
           />
         );
       case 'spiele':
@@ -430,6 +439,7 @@ export function GameSelect({
               onHeute={() => setAufgabenOffen(true)}
               onWeg={() => setWegOffen(true)}
               onLernen={oeffneLernen}
+              onBrowort={oeffneBrowort}
             />
           );
         }
@@ -582,6 +592,16 @@ export function GameSelect({
               }}
               onGeaendert={onAvatarChange}
             />
+          </Suspense>
+        )}
+        {browortOffen && (
+          <Suspense fallback={null}>
+            <Browort onClose={() => setBrowortOffen(false)} onGeaendert={onAvatarChange} />
+          </Suspense>
+        )}
+        {clanwortOffen && (
+          <Suspense fallback={null}>
+            <Clanwort onClose={() => setClanwortOffen(false)} onGeaendert={onAvatarChange} />
           </Suspense>
         )}
         {zeigeFeier && (
@@ -1177,6 +1197,16 @@ function ProfilTab({
               Trophäen gibt es auch gegen Bots — nur nicht, wenn ein Gast mitspielt oder Training an ist.
             </p>
           </section>
+
+          {/* Browort nur in der App (wie der Lernpfad), Zahlen aus `/api/me`. */}
+          {inApp && (
+            <BrowortImProfil
+              du
+              serie={me.browort?.serie ?? 0}
+              schnitt={me.browort?.schnitt ?? null}
+              geloest={me.browort?.geloest ?? 0}
+            />
+          )}
 
           <Freunde neu onShowProfile={onShowProfile} />
 

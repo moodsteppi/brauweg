@@ -178,11 +178,24 @@ export interface Rueckfrage {
   readonly gefahr?: boolean;
 }
 
-export function useRueckfrage(): [(frage: Rueckfrage, dann: () => void) => void, React.JSX.Element | null] {
-  const [offen, setOffen] = useState<{ frage: Rueckfrage; dann: () => void } | null>(null);
-  const fragen = useCallback((frage: Rueckfrage, dann: () => void) => setOffen({ frage, dann }), []);
+export function useRueckfrage(): [
+  (frage: Rueckfrage, dann: () => void, sonst?: () => void) => void,
+  React.JSX.Element | null,
+] {
+  const [offen, setOffen] = useState<{ frage: Rueckfrage; dann: () => void; sonst?: () => void } | null>(null);
+  const fragen = useCallback(
+    (frage: Rueckfrage, dann: () => void, sonst?: () => void) => setOffen({ frage, dann, sonst }),
+    [],
+  );
+  // `sonst` fuer Aufrufer, die auf die Antwort warten (Clanwort-Wahl): Auch
+  // Abbrechen, Wischen und Escape sind eine Antwort.
+  const abbrechen = (): void => {
+    const sonst = offen?.sonst;
+    setOffen(null);
+    sonst?.();
+  };
   const blatt = offen ? (
-    <HbBlatt titel={offen.frage.titel} onClose={() => setOffen(null)} klasse="is-klein">
+    <HbBlatt titel={offen.frage.titel} onClose={abbrechen} klasse="is-klein">
       <div className="hb-rueckfrage">
         {offen.frage.text && <p className="hb-text">{offen.frage.text}</p>}
         <button
@@ -196,7 +209,7 @@ export function useRueckfrage(): [(frage: Rueckfrage, dann: () => void) => void,
         >
           {offen.frage.ja}
         </button>
-        <button type="button" className="hb-leise-knopf" onClick={() => setOffen(null)}>
+        <button type="button" className="hb-leise-knopf" onClick={abbrechen}>
           Abbrechen
         </button>
       </div>

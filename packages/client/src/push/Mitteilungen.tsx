@@ -12,6 +12,8 @@ const ZEILEN: readonly { anlass: PushAnlass; name: string; hinweis: string }[] =
   { anlass: 'einladung', name: 'Einladung angenommen', hinweis: 'Wenn jemand über deinen Code kommt' },
   { anlass: 'anfrage', name: 'Beitrittsanfragen', hinweis: 'Wenn jemand an deinen privaten Tisch möchte' },
   { anlass: 'serie', name: 'Lernserie', hinweis: 'Abends, wenn du heute noch keine Lektion gemacht hast' },
+  { anlass: 'browort', name: 'Browort', hinweis: 'Abends, wenn das Wort von heute noch offen ist' },
+  { anlass: 'clanwort', name: 'Clanwort', hinweis: 'Wenn du ausgelost bist, das Clanwort zu wählen' },
 ];
 
 /**

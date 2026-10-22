@@ -2,6 +2,7 @@ import type { ActiveTable, Me } from '../api';
 import { t } from '../i18n';
 import { inAppSichtbar } from '../app-sichtbar';
 import { LernKarte } from '../lernen/LernKarte';
+import { BrowortKarte } from '../browort/BrowortKarte';
 import { BIOME } from './Pfad';
 
 /**
@@ -43,6 +44,7 @@ export function StartNeu({
   onHeute,
   onWeg,
   onLernen,
+  onBrowort,
 }: {
   me: Me;
   trophies: number;
@@ -59,6 +61,8 @@ export function StartNeu({
   onWeg: () => void;
   /** „Doppelkopf lernen" — nur in der App gesetzt; ohne steht keine Lernkarte da. */
   onLernen?: () => void;
+  /** Browort — nur in der App gesetzt (wie `onLernen`). */
+  onBrowort?: () => void;
 }): React.JSX.Element {
   const stufe = [...BIOME].reverse().find((b) => trophies >= b.cp) ?? BIOME[0]!;
   const naechstes = BIOME.find((b) => b.cp > trophies) ?? null;
@@ -144,6 +148,7 @@ export function StartNeu({
       )}
 
       {onLernen && <LernKarte serie={me.lernen} onOeffnen={onLernen} />}
+      {onBrowort && <BrowortKarte stand={me.browort} onOeffnen={onBrowort} />}
 
       <section className="hb-blk">
         <h2 className="hb-ab">

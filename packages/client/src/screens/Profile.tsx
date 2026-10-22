@@ -9,6 +9,7 @@ import { hubNeu } from '../hubNeu';
 import { t } from '../i18n';
 import { MeldenBlatt } from '../melden/MeldenBlatt';
 import { useRueckfrage, Zurueck } from './HbBlatt';
+import { BrowortImProfil } from '../browort/BrowortImProfil';
 import { bannerFuer } from './StartNeu';
 import './hub-neu.css';
 
@@ -403,6 +404,16 @@ function ProfilNeu({
             Trophäen gibt es auch gegen Bots — nur nicht, wenn ein Gast mitspielt oder Training an ist.
           </p>
         </section>
+
+        {profile.browort && (
+          <BrowortImProfil
+            du={false}
+            serie={profile.browort.serie}
+            schnitt={profile.browort.schnitt}
+            geloest={profile.browort.geloest}
+            beste={profile.browort.beste}
+          />
+        )}
 
         {/* Beenden steht leise unten, nicht groß unter der Figur: Es ist der
             eine Knopf auf dieser Seite, den man bereut. */}
