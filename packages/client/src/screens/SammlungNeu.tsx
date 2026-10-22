@@ -161,7 +161,8 @@ export function SammlungNeu({
   const zeige = (id: string): boolean => filter === 'alle' || filter === id;
   const chips = [
     { id: 'alle', titel: 'Alle' },
-    { id: 'pinguin', titel: 'Pinguin' },
+    // Kein eigener Filter „Pinguin" mehr (Emile, 22.10.2026): Die Pinguin-
+    // Karte steht unter „Alle" ganz oben, und ihre Teile hat der Spind.
     ...blattSpiele.map((id) => ({ id, titel: t(`game.${id}`) })),
     ...(mitSchach ? [{ id: 'brochess', titel: t('game.brochess') }] : []),
     ...(mitParty ? [{ id: 'partykiste', titel: t('game.partykiste') }] : []),
