@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import type { Me } from '../api';
-import { serverAdresse } from '../laufzeit';
+import { mitEdelsteinen, serverAdresse } from '../laufzeit';
 import { kompakteZahl } from '../i18n';
 
 /** Bis 9.999 ausgeschrieben (wie im Entwurf), darüber kurz („12K“). */
@@ -109,7 +109,7 @@ export function NeuerRahmen<T extends Reiter>({
           </span>
           {[
             { wert: me.coins, bild: '/hub/symbol-muenze.webp', name: 'Münzen' },
-            { wert: me.gems, bild: '/hub/symbol-edelstein.webp', name: 'Edelsteine' },
+            ...(mitEdelsteinen ? [{ wert: me.gems, bild: '/hub/symbol-edelstein.webp', name: 'Edelsteine' }] : []),
           ].map(({ wert, bild, name }) =>
             zumShop ? (
               <button type="button" key={name} className="hb-pill" onClick={zumShop} aria-label={`${wert} ${name}, zum Shop`}>

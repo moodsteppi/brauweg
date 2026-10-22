@@ -1,5 +1,6 @@
 import type { ActiveTable, Me } from '../api';
 import { t } from '../i18n';
+import { inAppSichtbar } from '../app-sichtbar';
 import { LernKarte } from '../lernen/LernKarte';
 import { BIOME } from './Pfad';
 
@@ -65,6 +66,7 @@ export function StartNeu({
     ? Math.min(1, Math.max(0, (trophies - stufe.cp) / (naechstes.cp - stufe.cp)))
     : 1;
   const eigene = [...me.stats]
+    .filter((s) => inAppSichtbar(s.gameId))
     .filter((s) => s.parties > 0 || s.trophies > 0)
     .sort((a, b) => b.trophies - a.trophies)
     .slice(0, 6);

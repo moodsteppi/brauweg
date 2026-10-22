@@ -29,6 +29,7 @@ import {
   type Shop as ShopDaten,
 } from '../api';
 import { inApp, serverAdresse } from '../laufzeit';
+import { inAppSichtbar } from '../app-sichtbar';
 import { schonGefeiert } from '../lernen/gefeiert';
 import {
   RUECKEN,
@@ -113,7 +114,7 @@ import { SpieleNeu } from './SpieleNeu';
 import { TrophaeenwegNeu } from './TrophaeenwegNeu';
 import { HeuteNeu } from './HeuteNeu';
 import { SammlungNeu } from './SammlungNeu';
-import { HbBlatt, HbSymbol, ImHub, Schliessen, Zurueck, useEscape } from './HbBlatt';
+import { HbBlatt, HbSymbol, ImHub, Schliessen, Zurueck, useEscape, useRueckfrage } from './HbBlatt';
 import { bannerFuer } from './StartNeu';
 import { truhenBild } from '../truhenbild';
 import '@fontsource/lilita-one';
@@ -537,7 +538,7 @@ export function GameSelect({
             onGuthaben={onAvatarChange}
           />
         )}
-        {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
+        {klanghalleOffen && <Klanghalle neu={hubNeu} onClose={() => setKlanghalleOffen(false)} />}
         {werkstattOffen && (
           // Der Rueckfall traegt dieselbe Blatthuelle wie die Werkstatt selbst:
           // Der Tipp verdunkelt sofort den Hintergrund, statt bis zum
@@ -1053,7 +1054,9 @@ function ProfilTab({
             <ProfilBild me={me} onChanged={onAvatarChange} />
             <span className="hb-profilkopf-text">
               <strong>{me.displayName}</strong>
-              <small>{geburtstagText}</small>
+              {/* In der App ohne Geburtstag (Emile, 22.10.2026) — dort steht
+                  stattdessen die Stufe in Worten. */}
+              <small>{inApp ? `Stufe ${me.level.stufe}` : geburtstagText}</small>
             </span>
             <span className="hb-stufe" aria-label={`Stufe ${me.level.stufe}`}>
               {me.level.stufe}
@@ -1068,7 +1071,7 @@ function ProfilTab({
             onClick={onStufen}
           />
 
-          {me.birthdayRewardClaimable && geburtstag}
+          {!inApp && me.birthdayRewardClaimable && geburtstag}
 
           <section className="hb-blk">
             <h2 className="hb-ab">
@@ -1143,7 +1146,7 @@ function ProfilTab({
               {me.stats.length === 0 ? (
                 <p className="hb-klein hb-liste-leer">Noch keine Partie gespielt.</p>
               ) : (
-                me.stats.map((row) => (
+                me.stats.filter((row) => inAppSichtbar(row.gameId)).map((row) => (
                   <div className="hb-mg" key={row.gameId}>
                     <img className="hb-mg-spiel" src={bannerFuer(row.gameId)} alt="" />
                     <span className="hb-mg-name">
@@ -1171,7 +1174,7 @@ function ProfilTab({
 
           <Freunde neu onShowProfile={onShowProfile} />
 
-          {!me.birthdayRewardClaimable && geburtstag}
+          {!inApp && !me.birthdayRewardClaimable && geburtstag}
 
           {/* Harmlos nach oben, endgültig nach unten — Löschen steht allein
               und rot am Schluss, nicht neben „Abmelden" (siehe oben). */}
@@ -1233,6 +1236,7 @@ function ProfilTab({
         {einstellungenOffen && (
           <ImHub>
             <EinstellungenBlatt
+              neu
               onClose={() => {
                 spiele('blatt-zu');
                 setEinstellungenOffen(false);
@@ -1242,7 +1246,7 @@ function ProfilTab({
         )}
         {mitteilungenOffen && (
           <ImHub>
-            <MitteilungenBlatt onClose={() => setMitteilungenOffen(false)} />
+            <MitteilungenBlatt neu onClose={() => setMitteilungenOffen(false)} />
           </ImHub>
         )}
         {loeschenOffen && (
@@ -1386,7 +1390,7 @@ function ProfilTab({
         {me.stats.length === 0 ? (
           <p className="muted hub-stat-leer">Noch keine Partie gespielt.</p>
         ) : (
-          me.stats.map((row) => (
+          me.stats.filter((row) => inAppSichtbar(row.gameId)).map((row) => (
             <StatSpiel
               key={row.gameId}
               name={t(`game.${row.gameId}`)}
@@ -3459,16 +3463,32 @@ function Freunde({
   const [lists, setLists] = useState<FriendLists | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlayerRef[] | null>(null);
+  /*
+    Bis zum 22.10.2026 schluckte die Liste jeden Fehler: Ging `/friends`
+    schief, stand für immer „Wird geladen…", und ein Tipp auf Annehmen,
+    Suchen oder Anfragen tat ohne Netz einfach nichts. Jetzt steht da, was
+    nicht ging (CLAUDE.md: „Am Tisch nichts stumm verwerfen").
+  */
+  const [fehler, setFehler] = useState<string | null>(null);
+  const fang = (err: unknown): void =>
+    setFehler(err instanceof ApiError ? t(err.messageKey) : 'Das hat nicht geklappt. Prüf die Verbindung.');
 
   const reload = (): void => {
-    void api.friends().then(setLists);
+    void api
+      .friends()
+      .then((l) => {
+        setLists(l);
+        setFehler(null);
+      })
+      .catch(fang);
   };
   useEffect(reload, []);
 
   const search = (event: React.FormEvent): void => {
     event.preventDefault();
     if (query.trim().length < 2) return;
-    void api.searchPlayers(query).then(setResults);
+    setFehler(null);
+    void api.searchPlayers(query).then(setResults).catch(fang);
   };
 
   const anzahl = lists ? lists.friends.length : 0;
@@ -3480,17 +3500,27 @@ function Freunde({
         setResults((alt) => (alt ?? []).filter((entry) => entry.id !== player.id));
         reload();
       })
-      .catch(() => undefined);
+      .catch(fang);
 
   if (neu) {
-    const zeile = (player: PlayerRef, rechts?: React.ReactNode): React.JSX.Element => (
-      <div className="hb-mg" key={player.id}>
-        <button type="button" className="hb-mg-name hb-mg-knopf" onClick={() => onShowProfile(player.id)}>
-          <strong>{player.displayName}</strong>
+    /* Die ganze Zeile ist der Weg zum Profil, nicht nur der Name: Vorher
+       traf ein Tipp auf den Pfeil oder die freie Fläche daneben nichts. */
+    const zeile = (player: PlayerRef, rechts?: React.ReactNode): React.JSX.Element =>
+      rechts === undefined ? (
+        <button type="button" className="hb-mg hb-mg-ganz" key={player.id} onClick={() => onShowProfile(player.id)}>
+          <span className="hb-mg-name">
+            <strong>{player.displayName}</strong>
+          </span>
+          <span className="hb-pf" aria-hidden="true">›</span>
         </button>
-        {rechts}
-      </div>
-    );
+      ) : (
+        <div className="hb-mg" key={player.id}>
+          <button type="button" className="hb-mg-name hb-mg-knopf" onClick={() => onShowProfile(player.id)}>
+            <strong>{player.displayName}</strong>
+          </button>
+          {rechts}
+        </div>
+      );
     return (
       <section className="hb-blk">
         <h2 className="hb-ab">
@@ -3500,22 +3530,34 @@ function Freunde({
         {/* Anfragen zuoberst: sie verlangen eine Antwort. */}
         {(lists === null || lists.incoming.length > 0 || lists.friends.length > 0) && (
           <div className="hb-liste">
-            {lists === null && <p className="hb-klein hb-liste-leer">Wird geladen…</p>}
+            {lists === null && (
+              <p className="hb-klein hb-liste-leer">{fehler ? 'Freunde ließen sich nicht laden.' : 'Wird geladen…'}</p>
+            )}
             {lists?.incoming.map((player) =>
               zeile(
                 player,
                 <span className="hb-mg-knoepfe">
-                  <button type="button" className="hb-kn is-gold is-klein" onClick={() => void api.acceptFriend(player.id).then(reload)}>
+                  <button type="button" className="hb-kn is-gold is-klein" onClick={() => void api.acceptFriend(player.id).then(reload).catch(fang)}>
                     Annehmen
                   </button>
-                  <button type="button" className="hb-kn is-zweit is-klein" onClick={() => void api.removeFriend(player.id).then(reload)}>
+                  <button type="button" className="hb-kn is-zweit is-klein" onClick={() => void api.removeFriend(player.id).then(reload).catch(fang)}>
                     Nein
                   </button>
                 </span>,
               ),
             )}
-            {lists?.friends.map((player) => zeile(player, <span className="hb-pf" aria-hidden="true">›</span>))}
+            {lists?.friends.map((player) => zeile(player))}
           </div>
+        )}
+        {fehler && (
+          <span className="hb-fehler">
+            {fehler}{' '}
+            {lists === null && (
+              <button type="button" className="hb-link" onClick={reload}>
+                Nochmal
+              </button>
+            )}
+          </span>
         )}
         {lists !== null && lists.friends.length === 0 && lists.incoming.length === 0 && (
           <p className="hb-klein hb-ohne-rand">Noch keine Freunde. Such unten nach einem Namen.</p>
@@ -3825,6 +3867,7 @@ function DeckPicker({
   onRueckenChange: (cardBack: string) => void;
   onGekauft: () => void;
 }): React.JSX.Element {
+  const [frage, rueckfrage] = useRueckfrage();
   /**
    * Angetippt wird die Wahl sofort übernommen UND groß gezeigt: Ein Blatt in
    * Daumennagelgröße sagt nichts darüber, wie es am Tisch aussieht — und
@@ -3894,6 +3937,14 @@ function DeckPicker({
     }
     const w = wareZu(art, id);
     if (!w) return;
+    // Im neuen Hub die eigene Rückfrage statt des grauen iOS-Dialogs.
+    if (neu) {
+      frage(
+        { titel: `„${name}“ kaufen?`, text: `Kostet ${w.preis.coins.toLocaleString('de-DE')} Münzen.`, ja: `Für ${w.preis.coins.toLocaleString('de-DE')} Münzen kaufen` },
+        () => kaufen(w, setzen),
+      );
+      return;
+    }
     if (!window.confirm(`„${name}" für ${w.preis.coins} Münzen kaufen?`)) return;
     kaufen(w, setzen);
   };
@@ -4061,6 +4112,7 @@ function DeckPicker({
             onClose={() => setVorschau(false)}
           />
         )}
+        {rueckfrage}
       </div>
     );
   }

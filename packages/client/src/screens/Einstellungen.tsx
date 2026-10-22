@@ -8,6 +8,7 @@ import {
   type Einstellungen,
 } from '../klang';
 import { inApp } from '../laufzeit';
+import { HbBlatt } from './HbBlatt';
 
 /**
  * Anmeldearten (Apple, Google) — nachgeladen: Dieses Blatt haengt am
@@ -44,7 +45,23 @@ const Mitteilungen = lazy(() =>
  * Profil (bis zum 13.10.2026 dort eine „Bald"-Zeile). Dieselbe Komponente wie
  * unten in den Einstellungen, nur ohne Ton und Anmeldearten drumherum.
  */
-export function MitteilungenBlatt({ onClose }: { onClose: () => void }): React.JSX.Element {
+export function MitteilungenBlatt({
+  onClose,
+  neu = false,
+}: {
+  onClose: () => void;
+  /** Neues Hub: Blatt in Nachtblau & Gold (bis zum 22.10.2026 Holzkarte mit fremden Schaltern). */
+  neu?: boolean;
+}): React.JSX.Element {
+  if (neu) {
+    return (
+      <HbBlatt titel="Benachrichtigungen" onClose={onClose}>
+        <Suspense fallback={<p className="hb-klein">Einen Moment…</p>}>
+          <Mitteilungen neu />
+        </Suspense>
+      </HbBlatt>
+    );
+  }
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card einstellungen" onClick={(event) => event.stopPropagation()}>
@@ -62,8 +79,65 @@ export function MitteilungenBlatt({ onClose }: { onClose: () => void }): React.J
   );
 }
 
-export function EinstellungenBlatt({ onClose }: { onClose: () => void }): React.JSX.Element {
+export function EinstellungenBlatt({
+  onClose,
+  neu = false,
+}: {
+  onClose: () => void;
+  /** Neues Hub: dieselben Regler und Abschnitte als Hub-Blatt. */
+  neu?: boolean;
+}): React.JSX.Element {
   const werte = useKlang();
+
+  if (neu) {
+    return (
+      <HbBlatt titel="Einstellungen" onClose={onClose}>
+        <div className="hb-einst">
+          <section className="hb-blk">
+            <h2 className="hb-ab">Ton</h2>
+            <div className="hb-karte hb-einst-karte">
+              <ReglerNeu
+                symbol="/hub/icon-einstellung-sounds.webp"
+                name="Sounds"
+                hinweis="Karten, Knöpfe, Abrechnung"
+                wert={werte.sounds}
+                onChange={(sounds) => setzeEinstellungen({ sounds })}
+                onFertig={() => spiele('karte-legen')}
+              />
+              <ReglerNeu
+                symbol="/hub/icon-einstellung-musik.webp"
+                name="Musik"
+                hinweis="Im Menü und am Spieltisch"
+                wert={werte.musik}
+                onChange={(musik) => setzeEinstellungen({ musik })}
+              />
+            </div>
+            {/* Beide Sätze wortgleich mit der alten Fassung, Begründung dort. */}
+            <p className="hb-klein hb-ohne-rand">
+              Welches Stück läuft und welches Klangpaket gilt, steht in der Klanghalle in deinem Profil.
+            </p>
+            <p className="hb-klein hb-ohne-rand">
+              Läuft bei dir Musik in einer anderen App, spielt sie weiter — wir drängeln uns nicht davor.
+              Dafür schaltet am iPhone der Klingelschalter auch uns stumm.
+            </p>
+          </section>
+
+          {inApp && (
+            <Suspense fallback={null}>
+              <Mitteilungen neu />
+            </Suspense>
+          )}
+
+          {/* In der App gibt es den Abschnitt nicht (Anmeldearten.tsx). */}
+          {!inApp && (
+            <Suspense fallback={null}>
+              <Anmeldearten />
+            </Suspense>
+          )}
+        </div>
+      </HbBlatt>
+    );
+  }
 
   return (
     <div className="doko-sheet" onClick={onClose}>
@@ -175,6 +249,48 @@ function Regler({
         />
         <span className="einstellungen-wert">{wert}</span>
       </div>
+    </div>
+  );
+}
+
+/** Neues Hub: derselbe Regler, Schiene in Gold, Zahl rechts. */
+function ReglerNeu({
+  symbol,
+  name,
+  hinweis,
+  wert,
+  onChange,
+  onFertig,
+}: {
+  symbol?: string;
+  name: string;
+  hinweis: string;
+  wert: number;
+  onChange: (wert: number) => void;
+  onFertig?: () => void;
+}): React.JSX.Element {
+  return (
+    <div className="hb-regler">
+      <div className="hb-regler-kopf">
+        {symbol && <img src={symbol} alt="" aria-hidden="true" />}
+        <span className="hb-regler-text">
+          <strong>{name}</strong>
+          <small>{hinweis}</small>
+        </span>
+        <span className="hb-regler-wert">{wert}</span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={wert}
+        aria-label={name}
+        style={{ '--hb-regler-anteil': `${wert}%` } as React.CSSProperties}
+        onChange={(event) => onChange(Number(event.target.value))}
+        onPointerUp={onFertig}
+        onKeyUp={onFertig}
+      />
     </div>
   );
 }

@@ -267,6 +267,17 @@ test('Einstellungen: Vorgabe alles an, einzeln abschaltbar, und aus heisst kein 
   assert.equal((await geraeteFuer(s.ctx.db, [anna.accountId], 'dran')).length, 0);
   assert.equal((await geraeteFuer(s.ctx.db, [anna.accountId], 'start')).length, 1);
 
+  // Jeder Anlass laesst sich schalten - die Pruefung stand bis zum 22.10.2026
+  // mit drei von fuenf Anlaessen da und lehnte `anfrage` und `serie` ab.
+  const serie = await s.app.inject({
+    method: 'PUT',
+    url: '/api/push/einstellungen',
+    headers: a.kopf,
+    payload: { serie: false, anfrage: false },
+  });
+  assert.equal(serie.statusCode, 200, serie.body);
+  assert.deepEqual(serie.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: false, serie: false });
+
   const unsinn = await s.app.inject({
     method: 'PUT',
     url: '/api/push/einstellungen',

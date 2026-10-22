@@ -578,7 +578,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    */
   await app.register(cors, {
     origin: [...APP_ORIGINS],
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    // PUT fehlte bis zum 22.10.2026: Der Browser auf der Webseite merkt das
+    // nie (same-origin), die App aber scheitert schon an der Vorabfrage.
+    // Getroffen hat es die Mitteilungs-Schalter („Das hat nicht geklappt")
+    // und den Mememory-Gurt — jede Route mit `app.put` gehört hierher.
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['content-type', 'authorization'],
     credentials: false,
     maxAge: 86_400,
@@ -1379,6 +1383,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       const { waehrung } = z
         .object({ waehrung: z.enum(WAEHRUNGEN).default('coins') })
         .parse(request.body ?? {});
+      // In der App vorerst nur Muenzen (Emile, 22.10.2026): Edelsteine stehen
+      // dort nirgends mehr, also wird auch nicht mit ihnen gekauft.
+      if (waehrung === 'gems' && plattformVon(request) === 'app') throw forbidden('nurMuenzenInApp');
       return reply.send(await kaufen(deps.db, accountId, itemId, waehrung));
     },
   );

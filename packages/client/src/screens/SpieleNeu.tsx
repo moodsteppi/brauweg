@@ -3,6 +3,7 @@ import { api, type GameSummary, type Me, type RankingEntry } from '../api';
 import { cardImage, deckForGame } from '../decks';
 import { t } from '../i18n';
 import { inApp } from '../laufzeit';
+import { inAppSichtbar } from '../app-sichtbar';
 import { EINZELSPIELE, einzelKennung, einzelName } from '../minispiele/partykiste/einzelspiele';
 import { sitzSpanne } from '../sitzspanne';
 import { SZENEN, szeneBild } from '../szenen';
@@ -147,7 +148,8 @@ export function SpieleNeu({
   if (!games) return <p className="hb-laden">Spiele werden geladen…</p>;
 
   const spielbar = games.filter((g) => g.availability === 'playable');
-  const bald = games.filter((g) => g.availability === 'preview');
+  // Die Partykiste steht in der App nicht einmal unter „Kommt bald“ (app-sichtbar.ts).
+  const bald = games.filter((g) => g.availability === 'preview' && inAppSichtbar(g.id));
   // Nur Spielbares hat eine Spielseite. Ein „Bald"-Spiel kann trotzdem
   // ankommen — vom Start aus „Deine Spiele", wenn man es früher gespielt hat
   // (Partykiste in der App, seit 21.10.2026 „Kommt bald").

@@ -30,6 +30,7 @@ import {
   type Slot,
   type Waehrung,
 } from '../api';
+import { mitEdelsteinen } from '../laufzeit';
 import { Pinguin, StueckAllein, StueckBild } from '../pinguin';
 import { EdelsteinIcon, Tafel } from '../hub';
 import { t } from '../i18n';
@@ -333,9 +334,9 @@ export function Kleiderschrank({
               </div>
               {/* Gold ist der eine Hauptknopf: die Münzen, die kein echtes Geld
                   gekostet haben (dieselbe Überlegung wie bei der Eingabetaste). */}
-              <p className="hb-klein hb-ohne-rand hb-mitte-text">Womit bezahlen?</p>
+              {mitEdelsteinen && <p className="hb-klein hb-ohne-rand hb-mitte-text">Womit bezahlen?</p>}
               <div className="hb-knopfreihe">
-                <button type="submit" className="hb-kn is-gold is-haupt" disabled={laeuft !== null}>
+                <button type="submit" className={`hb-kn is-gold is-haupt${mitEdelsteinen ? '' : ' is-breit'}`} disabled={laeuft !== null}>
                   {kauftMit === 'coins' ? (
                     'Kauft…'
                   ) : (
@@ -345,6 +346,8 @@ export function Kleiderschrank({
                     </>
                   )}
                 </button>
+                {/* In der App nur Münzen (laufzeit.ts, `mitEdelsteinen`). */}
+                {mitEdelsteinen && (
                 <button
                   type="button"
                   className="hb-kn is-zweit is-haupt"
@@ -360,6 +363,7 @@ export function Kleiderschrank({
                     </>
                   )}
                 </button>
+                )}
               </div>
               <button type="button" className="hb-leise-knopf" onClick={() => setKaufen(null)}>
                 Später

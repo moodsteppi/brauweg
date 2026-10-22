@@ -1,0 +1,245 @@
+/*
+ * Klanghalle im neuen Hub (Klanghalle.tsx, `neu`) — Emile, 22.10.2026.
+ *
+ * Vollbild wie der Spind: Bühne mit Plattenteller oben, darunter die Listen.
+ * Der Teller ist reines CSS; er dreht sich nur, solange eine Hörprobe läuft —
+ * ein Teller, der immer dreht, sagt nichts mehr. Farben nur über die
+ * Hub-Variablen (hub-neu.css).
+ */
+
+.kh .kh-rolle {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Bühne */
+.kh .kh-buehne {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 16px;
+  border-radius: 24px;
+  background:
+    radial-gradient(60% 80% at 22% 50%, rgba(255, 215, 90, 0.16), transparent 70%),
+    linear-gradient(180deg, var(--hb-karte-hoch), var(--hb-grund-tief));
+  border: 1px solid var(--hb-kontur);
+  overflow: hidden;
+}
+.kh .kh-platte {
+  position: relative;
+  flex: none;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, #10131c 0 2px, #1b2030 2px 4px),
+    #10131c;
+  box-shadow:
+    0 10px 18px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+}
+/* Glanzstreifen: macht die Drehung überhaupt sichtbar */
+.kh .kh-platte::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 30deg,
+    transparent 0 40deg,
+    rgba(255, 255, 255, 0.12) 60deg,
+    transparent 80deg 220deg,
+    rgba(255, 255, 255, 0.08) 240deg,
+    transparent 260deg
+  );
+}
+.kh .kh-etikett {
+  position: absolute;
+  inset: 34%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--hb-grund) 0 12%, var(--hb-gold) 13% 100%);
+  box-shadow: inset 0 0 0 3px var(--hb-gold-tief);
+}
+.kh .kh-buehne.is-laeuft .kh-platte {
+  animation: kh-drehen 1.8s linear infinite;
+}
+.kh .kh-arm {
+  position: absolute;
+  left: 112px;
+  top: 14px;
+  width: 6px;
+  height: 64px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--hb-leise), var(--hb-gesperrt));
+  transform-origin: 50% 4px;
+  transform: rotate(8deg);
+  transition: transform 0.4s ease;
+}
+.kh .kh-arm::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: -5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--hb-leise);
+}
+.kh .kh-buehne.is-laeuft .kh-arm {
+  transform: rotate(26deg);
+}
+.kh .kh-jetzt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 10px;
+}
+.kh .kh-jetzt small {
+  font: 800 11px var(--hb-txt);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hb-gold);
+}
+.kh .kh-jetzt strong {
+  font: 400 22px/1.1 var(--hb-anz);
+  color: var(--hb-tinte);
+  overflow-wrap: anywhere;
+}
+.kh .kh-jetzt span {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* Listen */
+.kh .kh-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kh .kh-zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 8px 10px;
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.kh .kh-zeile.is-gewaehlt {
+  border-color: var(--hb-gold);
+  box-shadow: 0 0 0 2px rgba(245, 192, 46, 0.25);
+}
+:is(.hb, .spe) .kh-hoeren {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hb-karte-hoch);
+  border: 1px solid var(--hb-kontur);
+  color: var(--hb-tinte);
+}
+:is(.hb, .spe) .kh-hoeren svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+:is(.hb, .spe) .kh-hoeren.is-leer {
+  color: var(--hb-leise);
+  background: transparent;
+}
+:is(.hb, .spe) .kh-hoeren.is-leer svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.kh .kh-zeile.is-spielt .kh-hoeren {
+  color: var(--hb-grund);
+  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  border-color: transparent;
+}
+:is(.hb, .spe) .kh-waehlen {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.kh .kh-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kh .kh-text strong {
+  font: 800 16px var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.kh .kh-text small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.kh .kh-haken {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--hb-kontur);
+}
+.kh .kh-zeile.is-gewaehlt .kh-haken {
+  border-color: transparent;
+  background: var(--hb-gold);
+  color: var(--hb-grund);
+}
+.kh .kh-haken svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.kh .kh-fuss {
+  flex: none;
+  padding: 10px 16px calc(12px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
+  border-top: 1px solid var(--hb-kontur);
+  background: var(--hb-grund);
+}
+
+@keyframes kh-drehen {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kh .kh-buehne.is-laeuft .kh-platte {
+    animation: none;
+  }
+  .kh .kh-arm,
+  .kh .kh-zeile {
+    transition: none;
+  }
+}

@@ -198,6 +198,7 @@ const de: Record<string, string> = {
   // Beitritt mit Zusage (tables/anfragen.ts im Server).
   'error.notHost': 'Über Anfragen entscheidet nur, wer den Tisch aufgemacht hat.',
   'error.anfrageUnbekannt': 'Diese Anfrage gibt es nicht mehr.',
+  'error.nurMuenzenInApp': 'In der App wird mit Münzen bezahlt.',
   'error.lektionUnbekannt': 'Diese Lektion gibt es nicht.',
   'error.pauseClubOnly': 'Pausieren geht nur an Clantischen.',
   'error.partyPaused': 'Der Tisch ist pausiert. Erst fortsetzen.',

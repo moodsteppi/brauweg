@@ -32,7 +32,6 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 
 import { assertValidBirthday } from '../birthday.js';
-import { ensureBetaClubMembership } from '../clubs/service.js';
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { AppError, badRequest, conflict, forbidden, notFound, unauthorized } from '../errors.js';
@@ -263,7 +262,8 @@ async function anmelden(
     }
     throw err;
   }
-  await ensureBetaClubMembership(db, accountId);
+  // Kein Clan mehr von selbst (Emile, 22.10.2026): Ein neues Konto ist in
+  // keinem Clan und gruendet oder sucht sich selbst einen.
   const token = await createSession(deps, accountId);
   return { token, accountId, neu: true };
 }
@@ -492,8 +492,6 @@ export async function verknuepfeAnbieter(
     throw err;
   }
 
-  // Wie bei `gastSichern`: Erst ein richtiges Konto kommt in den Beta-Clan.
-  if (sichern) await ensureBetaClubMembership(db, accountId);
   return { gesichert: sichern };
 }
 
