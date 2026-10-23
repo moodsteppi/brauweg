@@ -141,19 +141,26 @@ export function Kartenmanufaktur({
 
   // Die Szene: einmal bauen, sobald der Stand da ist; ohne WebGL bleibt sie weg.
   const szene = useRef<Szene | null>(null);
+  // Laeuft die Szene, steht der Direktor dort als Rig-Figur; der DOM-Pinguin
+  // bleibt nur fuer Geraete ohne WebGL. Ueber eine Ref gelesen, damit ein
+  // neues Outfit die Szene nicht neu baut.
+  const [szeneLaeuft, setSzeneLaeuft] = useState(false);
+  const getragenRef = useRef(getragen);
+  getragenRef.current = getragen;
   useEffect(() => {
     if (!m.bereit || !buehne.current) return;
     let aus = false;
     void import('./szene/Szene').then(({ Szene }) =>
       Szene.erstelle(
         buehne.current!,
-        { stand: () => m.steuerung.stand(), jetzt: () => m.steuerung.jetzt() },
+        { stand: () => m.steuerung.stand(), jetzt: () => m.steuerung.jetzt(), getragen: () => getragenRef.current },
         () => ({ ...ausschnitt.current, oben: feld.current?.scrollTop ?? 0 }),
         beimEreignis,
       ).then((s) => {
         if (aus) s?.zerstoere();
         else {
           szene.current = s;
+          setSzeneLaeuft(!!s);
           // Nur in der Entwicklung: Proben zeichnen damit auch im verdeckten Fenster.
           if (import.meta.env.DEV) (window as unknown as { __manufakturSzene?: Szene | null }).__manufakturSzene = s;
         }
@@ -166,6 +173,7 @@ export function Kartenmanufaktur({
       aus = true;
       szene.current?.zerstoere();
       szene.current = null;
+      setSzeneLaeuft(false);
     };
   }, [m.bereit, m.steuerung, beimEreignis]);
 
@@ -276,7 +284,7 @@ export function Kartenmanufaktur({
               stand={stand}
               jetzt={jetzt}
               engpass={glied}
-              getragen={getragen}
+              getragen={szeneLaeuft ? undefined : getragen}
               direktor={ausgebaut ? 'jubelt' : verkauft ? 'winkt' : 'ruhig'}
               onArbeiten={(ziel) => {
                 const s = stationVon(stand, ziel);

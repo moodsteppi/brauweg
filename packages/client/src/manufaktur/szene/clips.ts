@@ -9,6 +9,13 @@
  * Werte je Keyframe: `dreh` (Grad), `hoch` (Welt-Einheiten nach oben),
  * `breit`/`hoch_s` (Stauchung, 1 = normal). Ein Ablauf dauert `dauer` ms bei
  * Tempo 1 und laeuft im Kreis, wenn `schleife` gesetzt ist.
+ *
+ * Seit dem Rig (Lieferung 23.10.2026) zusaetzlich je Einzelteil, in Grad um
+ * den Drehpunkt des Teils: `fv`/`fh` Vorder-/Hinterflosse, `fuv`/`fuh`
+ * Vorder-/Hinterfuss, `lid` 0 … 1 (Lider zu). Negativ dreht die Vorderflosse
+ * nach vorn hoch — so haelt der Pinguin etwas vor der Brust (−75°, wie in den
+ * Montageproben). Das Einzelbild ohne Rig kennt diese Kanaele nicht und
+ * ueberspringt sie.
  */
 
 export type ClipName =
@@ -29,6 +36,11 @@ export interface Pose {
   hoch: number;
   breit: number;
   hochS: number;
+  fv: number;
+  fh: number;
+  fuv: number;
+  fuh: number;
+  lid: number;
 }
 
 export interface Keyframe extends Partial<Pose> {
@@ -44,7 +56,10 @@ export interface Clip {
   keyframes: Keyframe[];
 }
 
-export const RUHE: Pose = { dreh: 0, hoch: 0, breit: 1, hochS: 1 };
+export const RUHE: Pose = { dreh: 0, hoch: 0, breit: 1, hochS: 1, fv: 0, fh: 0, fuv: 0, fuh: 0, lid: 0 };
+const FELDER = Object.keys(RUHE) as (keyof Pose)[];
+/** Vorderflosse, wenn der Pinguin etwas vor der Brust haelt. */
+const TRAGEN = -75;
 
 /** Ueberblendung zwischen zwei Ablaeufen (ms) — 100 … 150 laut Auftrag. */
 export const UEBERBLENDUNG_MS = 120;
@@ -54,117 +69,121 @@ export const CLIPS: Record<ClipName, Clip> = {
     dauer: 2200,
     schleife: true,
     keyframes: [
-      { t: 0, breit: 1, hochS: 1 },
-      { t: 0.5, breit: 1.02, hochS: 0.985, easing: 'weich' },
-      { t: 1, breit: 1, hochS: 1, easing: 'weich' },
+      { t: 0, breit: 1, hochS: 1, fv: 0, fh: 0 },
+      { t: 0.5, breit: 1.02, hochS: 0.985, fv: -5, fh: 5, easing: 'weich' },
+      { t: 1, breit: 1, hochS: 1, fv: 0, fh: 0, easing: 'weich' },
     ],
   },
-  // Watscheln: links, Mitte (gehoben), rechts, Mitte (gehoben).
+  // Watscheln: Fuesse im Wechsel, der Rumpf pendelt mit, die Flossen gegenlaeufig.
   laufen: {
     dauer: 520,
     schleife: true,
     keyframes: [
-      { t: 0, dreh: -6, hoch: 0 },
-      { t: 0.25, dreh: 0, hoch: 2.5, easing: 'raus' },
-      { t: 0.5, dreh: 6, hoch: 0, easing: 'weich' },
-      { t: 0.75, dreh: 0, hoch: 2.5, easing: 'raus' },
-      { t: 1, dreh: -6, hoch: 0, easing: 'weich' },
+      { t: 0, dreh: -6, hoch: 0, fuv: 16, fuh: -12, fv: 12, fh: -10 },
+      { t: 0.25, dreh: 0, hoch: 2.5, fuv: 0, fuh: 0, fv: 0, fh: 0, easing: 'raus' },
+      { t: 0.5, dreh: 6, hoch: 0, fuv: -12, fuh: 16, fv: -12, fh: 10, easing: 'weich' },
+      { t: 0.75, dreh: 0, hoch: 2.5, fuv: 0, fuh: 0, fv: 0, fh: 0, easing: 'raus' },
+      { t: 1, dreh: -6, hoch: 0, fuv: 16, fuh: -12, fv: 12, fh: -10, easing: 'weich' },
     ],
   },
-  // Mit Last: kleinere Schritte, tiefer, etwas langsamer.
+  // Mit Last: kleinere Schritte, tiefer, die Vorderflosse haelt fest.
   laufen_tragen: {
     dauer: 600,
     schleife: true,
     keyframes: [
-      { t: 0, dreh: -4, hoch: 0, hochS: 0.98 },
-      { t: 0.25, dreh: 0, hoch: 1.5, hochS: 1, easing: 'raus' },
-      { t: 0.5, dreh: 4, hoch: 0, hochS: 0.98, easing: 'weich' },
-      { t: 0.75, dreh: 0, hoch: 1.5, hochS: 1, easing: 'raus' },
-      { t: 1, dreh: -4, hoch: 0, hochS: 0.98, easing: 'weich' },
+      { t: 0, dreh: -3, hoch: 0, hochS: 0.98, fuv: 12, fuh: -10, fv: TRAGEN, fh: -6 },
+      { t: 0.25, dreh: 0, hoch: 1.5, hochS: 1, fuv: 0, fuh: 0, fv: TRAGEN - 4, fh: 0, easing: 'raus' },
+      { t: 0.5, dreh: 3, hoch: 0, hochS: 0.98, fuv: -10, fuh: 12, fv: TRAGEN, fh: 6, easing: 'weich' },
+      { t: 0.75, dreh: 0, hoch: 1.5, hochS: 1, fuv: 0, fuh: 0, fv: TRAGEN - 4, fh: 0, easing: 'raus' },
+      { t: 1, dreh: -3, hoch: 0, hochS: 0.98, fuv: 12, fuh: -10, fv: TRAGEN, fh: -6, easing: 'weich' },
     ],
   },
-  // An der Presse: nach vorn beugen und druecken, im Takt der Schlaege.
+  // An der Presse: die Vorderflosse drueckt den Hebel, im Takt der Schlaege.
   arbeiten: {
     dauer: 700,
     schleife: true,
     keyframes: [
-      { t: 0, dreh: 0, hochS: 1, breit: 1 },
-      { t: 0.35, dreh: 8, hochS: 0.95, breit: 1.04, easing: 'weich' },
-      { t: 0.5, dreh: 10, hochS: 0.93, breit: 1.05, easing: 'raus' },
-      { t: 1, dreh: 0, hochS: 1, breit: 1, easing: 'weich' },
+      { t: 0, dreh: 0, hochS: 1, breit: 1, fv: -55, fh: -8 },
+      { t: 0.35, dreh: 6, hochS: 0.95, breit: 1.04, fv: -95, fh: -14, easing: 'weich' },
+      { t: 0.5, dreh: 8, hochS: 0.93, breit: 1.05, fv: -105, fh: -16, easing: 'raus' },
+      { t: 1, dreh: 0, hochS: 1, breit: 1, fv: -55, fh: -8, easing: 'weich' },
     ],
   },
   ablegen: {
     dauer: 400,
     schleife: false,
     keyframes: [
-      { t: 0, dreh: 0, hochS: 1 },
-      { t: 0.5, dreh: -12, hochS: 0.94, easing: 'weich' },
-      { t: 1, dreh: 0, hochS: 1, easing: 'weich' },
+      { t: 0, dreh: 0, hochS: 1, fv: TRAGEN },
+      { t: 0.5, dreh: -10, hochS: 0.94, fv: -25, easing: 'weich' },
+      { t: 1, dreh: 0, hochS: 1, fv: 0, easing: 'weich' },
     ],
   },
-  // Schlafen: zur Seite gesunken, atmet langsam.
+  // Schlafen: zur Seite gesunken, Lider zu, atmet langsam.
   schlafen: {
     dauer: 3000,
     schleife: true,
     keyframes: [
-      { t: 0, dreh: -14, hochS: 0.96, breit: 1.02 },
-      { t: 0.5, dreh: -15, hochS: 0.93, breit: 1.04, easing: 'weich' },
-      { t: 1, dreh: -14, hochS: 0.96, breit: 1.02, easing: 'weich' },
+      { t: 0, dreh: -12, hochS: 0.96, breit: 1.02, lid: 1, fv: 6, fh: -6 },
+      { t: 0.5, dreh: -13, hochS: 0.93, breit: 1.04, lid: 1, fv: 8, fh: -8, easing: 'weich' },
+      { t: 1, dreh: -12, hochS: 0.96, breit: 1.02, lid: 1, fv: 6, fh: -6, easing: 'weich' },
     ],
   },
-  // Zwei Freudenspruenge mit Stauchung beim Landen.
+  // Zwei Freudenspruenge, beide Flossen hoch.
   jubeln: {
     dauer: 800,
     schleife: false,
     keyframes: [
-      { t: 0, hoch: 0, hochS: 0.9, breit: 1.08 },
-      { t: 0.2, hoch: 12, hochS: 1.08, breit: 0.95, easing: 'raus' },
-      { t: 0.42, hoch: 0, hochS: 0.9, breit: 1.08, easing: 'weich' },
-      { t: 0.62, hoch: 9, hochS: 1.06, breit: 0.96, easing: 'raus' },
-      { t: 0.84, hoch: 0, hochS: 0.92, breit: 1.06, easing: 'weich' },
-      { t: 1, hoch: 0, hochS: 1, breit: 1, easing: 'weich' },
+      { t: 0, hoch: 0, hochS: 0.9, breit: 1.08, fv: 20, fh: -20 },
+      { t: 0.2, hoch: 12, hochS: 1.08, breit: 0.95, fv: 120, fh: -120, easing: 'raus' },
+      { t: 0.42, hoch: 0, hochS: 0.9, breit: 1.08, fv: 60, fh: -60, easing: 'weich' },
+      { t: 0.62, hoch: 9, hochS: 1.06, breit: 0.96, fv: 120, fh: -120, easing: 'raus' },
+      { t: 0.84, hoch: 0, hochS: 0.92, breit: 1.06, fv: 30, fh: -30, easing: 'weich' },
+      { t: 1, hoch: 0, hochS: 1, breit: 1, fv: 0, fh: 0, easing: 'weich' },
     ],
   },
+  // Am Antriebsrad: die Vorderflosse dreht im Kreis.
   kurbeln: {
     dauer: 600,
     schleife: true,
     keyframes: [
-      { t: 0, dreh: -5 },
-      { t: 0.5, dreh: 5, easing: 'weich' },
-      { t: 1, dreh: -5, easing: 'weich' },
+      { t: 0, dreh: -3, fv: -30 },
+      { t: 0.25, dreh: 0, fv: -75, easing: 'weich' },
+      { t: 0.5, dreh: 3, fv: -110, easing: 'weich' },
+      { t: 0.75, dreh: 0, fv: -75, easing: 'weich' },
+      { t: 1, dreh: -3, fv: -30, easing: 'weich' },
     ],
   },
-  // Den Karton in den Wagen wuchten.
+  // Das Paket in den Wagen schieben.
   einladen: {
     dauer: 500,
     schleife: false,
     keyframes: [
-      { t: 0, dreh: 0, hoch: 0 },
-      { t: 0.4, dreh: 10, hoch: 3, hochS: 1.04, easing: 'raus' },
-      { t: 0.7, dreh: 14, hoch: 0, hochS: 0.95, easing: 'weich' },
-      { t: 1, dreh: 0, hoch: 0, hochS: 1, easing: 'weich' },
+      { t: 0, dreh: 0, hoch: 0, fv: TRAGEN },
+      { t: 0.4, dreh: 10, hoch: 3, hochS: 1.04, fv: -110, easing: 'raus' },
+      { t: 0.7, dreh: 14, hoch: 0, hochS: 0.95, fv: -120, easing: 'weich' },
+      { t: 1, dreh: 0, hoch: 0, hochS: 1, fv: 0, easing: 'weich' },
     ],
   },
+  // Dem Wagen nachwinken: die Hinterflosse hoch und hin und her.
   winken: {
     dauer: 700,
     schleife: true,
     keyframes: [
-      { t: 0, dreh: -4 },
-      { t: 0.5, dreh: 4, hoch: 1, easing: 'weich' },
-      { t: 1, dreh: -4, easing: 'weich' },
+      { t: 0, dreh: -3, fh: -120 },
+      { t: 0.5, dreh: 3, hoch: 1, fh: -155, easing: 'weich' },
+      { t: 1, dreh: -3, fh: -120, easing: 'weich' },
     ],
   },
-  // Meister: kurz aufrichten und wippen, wenn er die Faehigkeit ausloest.
+  // Meister: Flosse an den Schnabel, aufrichten, wippen — er pfeift die Faehigkeit an.
   pfeifen: {
     dauer: 900,
     schleife: false,
     keyframes: [
-      { t: 0, hochS: 1, hoch: 0 },
-      { t: 0.25, hochS: 1.07, hoch: 3, easing: 'raus' },
-      { t: 0.5, hochS: 1.02, hoch: 1, dreh: 4, easing: 'weich' },
-      { t: 0.75, hochS: 1.05, hoch: 2, dreh: -4, easing: 'weich' },
-      { t: 1, hochS: 1, hoch: 0, dreh: 0, easing: 'weich' },
+      { t: 0, hochS: 1, hoch: 0, fv: 0 },
+      { t: 0.25, hochS: 1.07, hoch: 3, fv: -135, easing: 'raus' },
+      { t: 0.5, hochS: 1.02, hoch: 1, dreh: 4, fv: -140, easing: 'weich' },
+      { t: 0.75, hochS: 1.05, hoch: 2, dreh: -4, fv: -135, easing: 'weich' },
+      { t: 1, hochS: 1, hoch: 0, dreh: 0, fv: 0, easing: 'weich' },
     ],
   },
 };
@@ -185,20 +204,18 @@ export function poseBei(clip: Clip, t: number): Pose {
   const b = k[Math.min(i + 1, k.length - 1)]!;
   const spanne = b.t - a.t;
   const f = spanne <= 0 ? 0 : easing(b.easing, (x - a.t) / spanne);
-  const wert = (feld: keyof Pose): number => {
+  const pose = { ...RUHE };
+  for (const feld of FELDER) {
     const va = a[feld] ?? RUHE[feld];
     const vb = b[feld] ?? RUHE[feld];
-    return va + (vb - va) * f;
-  };
-  return { dreh: wert('dreh'), hoch: wert('hoch'), breit: wert('breit'), hochS: wert('hochS') };
+    pose[feld] = va + (vb - va) * f;
+  }
+  return pose;
 }
 
 export function mische(a: Pose, b: Pose, gewicht: number): Pose {
   const w = Math.min(1, Math.max(0, gewicht));
-  return {
-    dreh: a.dreh + (b.dreh - a.dreh) * w,
-    hoch: a.hoch + (b.hoch - a.hoch) * w,
-    breit: a.breit + (b.breit - a.breit) * w,
-    hochS: a.hochS + (b.hochS - a.hochS) * w,
-  };
+  const pose = { ...RUHE };
+  for (const feld of FELDER) pose[feld] = a[feld] + (b[feld] - a[feld]) * w;
+  return pose;
 }

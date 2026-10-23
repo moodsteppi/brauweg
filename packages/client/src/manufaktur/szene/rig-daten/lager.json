@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "canvas": [
+    512,
+    512
+  ],
+  "tisch": "lager-tisch.png",
+  "abstellpunkt": [
+    167,
+    242
+  ],
+  "position_packer": [
+    487,
+    474
+  ],
+  "kisten": {
+    "klein": {
+      "datei": "lager-kisten-1.png",
+      "drehpunkt": [
+        128,
+        240
+      ],
+      "skala": 0.85
+    },
+    "mittel": {
+      "datei": "lager-kisten-2.png",
+      "drehpunkt": [
+        128,
+        240
+      ],
+      "skala": 0.85
+    },
+    "gross": {
+      "datei": "lager-kisten-3.png",
+      "drehpunkt": [
+        128,
+        240
+      ],
+      "skala": 0.85
+    }
+  }
+}

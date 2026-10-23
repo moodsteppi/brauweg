@@ -1,0 +1,254 @@
+{
+  "version": 1,
+  "motive": [
+    {
+      "original": "outputs/aura-blaetter.png",
+      "katalog": "aura-blaetter",
+      "datei": "fx-aura-blatt.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/aura-blaetter.png"
+    },
+    {
+      "original": "outputs/aura-funken.png",
+      "katalog": "aura-funken",
+      "datei": "fx-aura-funke.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/aura-funken.png"
+    },
+    {
+      "original": "outputs/aura-glitzer.png",
+      "katalog": "aura-glitzer",
+      "datei": "fx-aura-glitzer.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/aura-glitzer.png"
+    },
+    {
+      "original": "outputs/aura-konfetti.png",
+      "katalog": "aura-konfetti",
+      "datei": "fx-aura-konfetti.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/aura-konfetti.png"
+    },
+    {
+      "original": "outputs/aura-schneeflocken.png",
+      "katalog": "aura-schneeflocken",
+      "datei": "fx-aura-schneeflocke.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/aura-schneeflocken.png"
+    },
+    {
+      "original": "outputs/aura-sterne.png",
+      "katalog": "aura-sterne",
+      "datei": "fx-aura-stern.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/aura-sterne.png"
+    },
+    {
+      "original": "outputs/brille-lesebrille.png",
+      "katalog": "brille-lesebrille",
+      "datei": "brille-lesebrille.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/brille-lesebrille.png"
+    },
+    {
+      "original": "outputs/brille-monokel.png",
+      "katalog": "brille-monokel",
+      "datei": "brille-monokel.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/brille-monokel.png"
+    },
+    {
+      "original": "outputs/brille-skibrille.png",
+      "katalog": "brille-skibrille",
+      "datei": "brille-skibrille.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/brille-skibrille.png"
+    },
+    {
+      "original": "outputs/brille-sonnenbrille.png",
+      "katalog": "brille-sonnenbrille",
+      "datei": "brille-sonnenbrille.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/brille-sonnenbrille.png"
+    },
+    {
+      "original": "outputs/brille-taucherbrille.png",
+      "katalog": "brille-taucherbrille",
+      "datei": "brille-taucherbrille.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/brille-taucherbrille.png"
+    },
+    {
+      "original": "outputs/hand-kakao.png",
+      "katalog": "hand-kakao",
+      "datei": "hand-kakao.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hand-kakao.png"
+    },
+    {
+      "original": "outputs/hand-kartenfaecher.png",
+      "katalog": "hand-kartenfaecher",
+      "datei": "hand-kartenfaecher.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hand-kartenfaecher.png"
+    },
+    {
+      "original": "outputs/hand-laterne.png",
+      "katalog": "hand-laterne",
+      "datei": "hand-laterne.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hand-laterne.png"
+    },
+    {
+      "original": "outputs/hand-wanderstab.png",
+      "katalog": "hand-wanderstab",
+      "datei": "hand-wanderstab.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hand-wanderstab.png"
+    },
+    {
+      "original": "outputs/hand-zauberstab.png",
+      "katalog": "hand-zauberstab",
+      "datei": "hand-zauberstab.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hand-zauberstab.png"
+    },
+    {
+      "original": "outputs/hut-bergsteiger.png",
+      "katalog": "hut-bergsteiger",
+      "datei": "hut-bergsteiger.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hut-bergsteiger.png"
+    },
+    {
+      "original": "outputs/hut-doktorhut.png",
+      "katalog": "hut-doktorhut",
+      "datei": "hut-doktorhut.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hut-doktorhut.png"
+    },
+    {
+      "original": "outputs/hut-krone.png",
+      "katalog": "hut-krone",
+      "datei": "hut-krone.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hut-krone.png"
+    },
+    {
+      "original": "outputs/hut-partyhut.png",
+      "katalog": "hut-partyhut",
+      "datei": "hut-partyhut.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hut-partyhut.png"
+    },
+    {
+      "original": "outputs/hut-strohhut.png",
+      "katalog": "hut-strohhut",
+      "datei": "hut-strohhut.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hut-strohhut.png"
+    },
+    {
+      "original": "outputs/hut-wollmuetze.png",
+      "katalog": "hut-wollmuetze",
+      "datei": "hut-wollmuetze.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hut-wollmuetze.png"
+    },
+    {
+      "original": "outputs/hut-zylinder.png",
+      "katalog": "hut-zylinder",
+      "datei": "hut-zylinder.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/hut-zylinder.png"
+    },
+    {
+      "original": "outputs/oberteil-frack.png",
+      "katalog": "oberteil-frack",
+      "datei": "oberteil-frack.png",
+      "weitere_ebenen": [
+        "flosse-vorn-frack",
+        "flosse-hinten-frack"
+      ],
+      "probe": "proben/kosmetik/oberteil-frack.png"
+    },
+    {
+      "original": "outputs/oberteil-meisterrobe.png",
+      "katalog": "oberteil-meisterrobe",
+      "datei": "oberteil-meisterrobe.png",
+      "weitere_ebenen": [
+        "flosse-vorn-meisterrobe",
+        "flosse-hinten-meisterrobe"
+      ],
+      "probe": "proben/kosmetik/oberteil-meisterrobe.png"
+    },
+    {
+      "original": "outputs/oberteil-pulli.png",
+      "katalog": "oberteil-pulli",
+      "datei": "oberteil-pulli.png",
+      "weitere_ebenen": [
+        "flosse-vorn-pulli",
+        "flosse-hinten-pulli"
+      ],
+      "probe": "proben/kosmetik/oberteil-pulli.png"
+    },
+    {
+      "original": "outputs/oberteil-regenjacke.png",
+      "katalog": "oberteil-regenjacke",
+      "datei": "oberteil-regenjacke.png",
+      "weitere_ebenen": [
+        "flosse-vorn-regenjacke",
+        "flosse-hinten-regenjacke"
+      ],
+      "probe": "proben/kosmetik/oberteil-regenjacke.png"
+    },
+    {
+      "original": "outputs/oberteil-trikot.png",
+      "katalog": "oberteil-trikot",
+      "datei": "oberteil-trikot.png",
+      "weitere_ebenen": [
+        "flosse-vorn-trikot",
+        "flosse-hinten-trikot"
+      ],
+      "probe": "proben/kosmetik/oberteil-trikot.png"
+    },
+    {
+      "original": "outputs/oberteil-weste.png",
+      "katalog": "oberteil-weste",
+      "datei": "oberteil-weste.png",
+      "weitere_ebenen": [
+        "flosse-vorn-weste",
+        "flosse-hinten-weste"
+      ],
+      "probe": "proben/kosmetik/oberteil-weste.png"
+    },
+    {
+      "original": "outputs/schuhe-goldstiefel.png",
+      "katalog": "schuhe-goldstiefel",
+      "datei": "schuhe-goldstiefel.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/schuhe-goldstiefel.png"
+    },
+    {
+      "original": "outputs/schuhe-gummistiefel.png",
+      "katalog": "schuhe-gummistiefel",
+      "datei": "schuhe-gummistiefel.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/schuhe-gummistiefel.png"
+    },
+    {
+      "original": "outputs/schuhe-schlittschuhe.png",
+      "katalog": "schuhe-schlittschuhe",
+      "datei": "schuhe-schlittschuhe.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/schuhe-schlittschuhe.png"
+    },
+    {
+      "original": "outputs/schuhe-turnschuhe.png",
+      "katalog": "schuhe-turnschuhe",
+      "datei": "schuhe-turnschuhe.png",
+      "weitere_ebenen": [],
+      "probe": "proben/kosmetik/schuhe-turnschuhe.png"
+    }
+  ]
+}

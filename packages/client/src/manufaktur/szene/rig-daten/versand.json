@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "canvas": [
+    640,
+    384
+  ],
+  "richtung": "rechts",
+  "korpus_offen": "versand-korpus-offen.png",
+  "korpus_zu": "versand-korpus-zu.png",
+  "rad": {
+    "datei": "versand-rad.png",
+    "drehpunkt": [
+      64,
+      64
+    ]
+  },
+  "raeder": {
+    "hinten": {
+      "position": [
+        200,
+        317
+      ],
+      "skala": [
+        1,
+        0.96
+      ]
+    },
+    "vorn": {
+      "position": [
+        483,
+        321
+      ],
+      "skala": [
+        0.94,
+        0.9
+      ]
+    }
+  },
+  "ladepunkt": [
+    82,
+    279
+  ],
+  "auspuff": [
+    91,
+    321
+  ],
+  "reihenfolge": [
+    "korpus",
+    "rad_hinten",
+    "rad_vorn"
+  ]
+}

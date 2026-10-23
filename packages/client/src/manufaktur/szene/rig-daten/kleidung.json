@@ -1,0 +1,557 @@
+{
+  "version": 1,
+  "teile": {
+    "lederschuerze": {
+      "slot": "koerper",
+      "datei": "koerper-lederschuerze.png"
+    },
+    "latzhose": {
+      "slot": "koerper",
+      "datei": "koerper-latzhose.png"
+    },
+    "gruene-schuerze": {
+      "slot": "koerper",
+      "datei": "koerper-gruene-schuerze.png"
+    },
+    "schiebermuetze": {
+      "slot": "kopf",
+      "datei": "muetze-schiebermuetze.png",
+      "drehpunkt": [
+        128,
+        199
+      ]
+    },
+    "schirmmuetze": {
+      "slot": "kopf",
+      "datei": "muetze-schirmmuetze-blau.png",
+      "drehpunkt": [
+        128,
+        199
+      ]
+    },
+    "brille-rund": {
+      "slot": "augen",
+      "datei": "brille-rund.png",
+      "drehpunkt": [
+        79,
+        63
+      ],
+      "skala": [
+        1.867,
+        1.867
+      ],
+      "neigung_grad": 10.2
+    },
+    "druckbogen": {
+      "slot": "hand",
+      "datei": "req-druckbogen.png",
+      "drehpunkt": [
+        60,
+        190
+      ]
+    },
+    "klemmbrett": {
+      "slot": "hand",
+      "datei": "req-klemmbrett.png",
+      "drehpunkt": [
+        72,
+        168
+      ]
+    },
+    "paket": {
+      "slot": "hand",
+      "datei": "req-paket.png",
+      "drehpunkt": [
+        54,
+        162
+      ]
+    },
+    "oberteil-frack": {
+      "slot": "koerper",
+      "datei": "oberteil-frack.png",
+      "begleiter": [
+        "flosse-vorn-frack",
+        "flosse-hinten-frack"
+      ]
+    },
+    "flosse-hinten-frack": {
+      "slot": "flosse_hinten",
+      "datei": "flosse-hinten-frack.png",
+      "drehpunkt": [
+        97,
+        68
+      ]
+    },
+    "oberteil-pulli": {
+      "slot": "koerper",
+      "datei": "oberteil-pulli.png",
+      "begleiter": [
+        "flosse-vorn-pulli",
+        "flosse-hinten-pulli"
+      ]
+    },
+    "flosse-hinten-pulli": {
+      "slot": "flosse_hinten",
+      "datei": "flosse-hinten-pulli.png",
+      "drehpunkt": [
+        97,
+        68
+      ]
+    },
+    "oberteil-trikot": {
+      "slot": "koerper",
+      "datei": "oberteil-trikot.png",
+      "begleiter": [
+        "flosse-vorn-trikot",
+        "flosse-hinten-trikot"
+      ]
+    },
+    "flosse-vorn-trikot": {
+      "slot": "flosse_vorn",
+      "datei": "flosse-vorn-trikot.png",
+      "drehpunkt": [
+        140,
+        70
+      ]
+    },
+    "flosse-hinten-trikot": {
+      "slot": "flosse_hinten",
+      "datei": "flosse-hinten-trikot.png",
+      "drehpunkt": [
+        97,
+        68
+      ]
+    },
+    "oberteil-weste": {
+      "slot": "koerper",
+      "datei": "oberteil-weste.png",
+      "begleiter": [
+        "flosse-vorn-weste",
+        "flosse-hinten-weste"
+      ]
+    },
+    "oberteil-regenjacke": {
+      "slot": "koerper",
+      "datei": "oberteil-regenjacke.png",
+      "begleiter": [
+        "flosse-vorn-regenjacke",
+        "flosse-hinten-regenjacke"
+      ]
+    },
+    "flosse-hinten-regenjacke": {
+      "slot": "flosse_hinten",
+      "datei": "flosse-hinten-regenjacke.png",
+      "drehpunkt": [
+        97,
+        68
+      ]
+    },
+    "oberteil-meisterrobe": {
+      "slot": "koerper",
+      "datei": "oberteil-meisterrobe.png",
+      "begleiter": [
+        "flosse-vorn-meisterrobe",
+        "flosse-hinten-meisterrobe"
+      ]
+    },
+    "flosse-vorn-meisterrobe": {
+      "slot": "flosse_vorn",
+      "datei": "flosse-vorn-meisterrobe.png",
+      "drehpunkt": [
+        140,
+        70
+      ]
+    },
+    "flosse-hinten-meisterrobe": {
+      "slot": "flosse_hinten",
+      "datei": "flosse-hinten-meisterrobe.png",
+      "drehpunkt": [
+        97,
+        68
+      ]
+    },
+    "hut-wollmuetze": {
+      "slot": "kopf",
+      "datei": "hut-wollmuetze.png",
+      "drehpunkt": [
+        128,
+        198
+      ]
+    },
+    "hut-strohhut": {
+      "slot": "kopf",
+      "datei": "hut-strohhut.png",
+      "drehpunkt": [
+        128,
+        189
+      ]
+    },
+    "hut-zylinder": {
+      "slot": "kopf",
+      "datei": "hut-zylinder.png",
+      "drehpunkt": [
+        128,
+        196
+      ]
+    },
+    "hut-bergsteiger": {
+      "slot": "kopf",
+      "datei": "hut-bergsteiger.png",
+      "drehpunkt": [
+        128,
+        147
+      ]
+    },
+    "hut-partyhut": {
+      "slot": "kopf",
+      "datei": "hut-partyhut.png",
+      "drehpunkt": [
+        128,
+        130
+      ],
+      "skala": [
+        1.1,
+        1.6
+      ]
+    },
+    "hut-doktorhut": {
+      "slot": "kopf",
+      "datei": "hut-doktorhut.png",
+      "drehpunkt": [
+        128,
+        171
+      ]
+    },
+    "hut-krone": {
+      "slot": "kopf",
+      "datei": "hut-krone.png",
+      "drehpunkt": [
+        128,
+        198
+      ]
+    },
+    "brille-sonnenbrille": {
+      "slot": "augen",
+      "datei": "brille-sonnenbrille.png",
+      "drehpunkt": [
+        70,
+        62
+      ],
+      "skala": [
+        1.65,
+        1.65
+      ],
+      "neigung_grad": 0
+    },
+    "brille-lesebrille": {
+      "slot": "augen",
+      "datei": "brille-lesebrille.png",
+      "drehpunkt": [
+        77.5,
+        66
+      ],
+      "skala": [
+        1.845,
+        1.845
+      ],
+      "neigung_grad": 2.5
+    },
+    "brille-taucherbrille": {
+      "slot": "augen",
+      "datei": "brille-taucherbrille.png",
+      "drehpunkt": [
+        67,
+        64
+      ],
+      "skala": [
+        1.85,
+        1.65
+      ],
+      "neigung_grad": 0
+    },
+    "brille-skibrille": {
+      "slot": "augen",
+      "datei": "brille-skibrille.png",
+      "drehpunkt": [
+        67,
+        64
+      ],
+      "skala": [
+        1.85,
+        1.65
+      ],
+      "neigung_grad": 0
+    },
+    "brille-monokel": {
+      "slot": "augen",
+      "datei": "brille-monokel.png",
+      "drehpunkt": [
+        77.4,
+        42.8
+      ],
+      "skala": [
+        0.9,
+        0.9
+      ],
+      "versatz": [
+        47,
+        -15
+      ]
+    },
+    "hand-kakao": {
+      "slot": "hand",
+      "datei": "hand-kakao.png",
+      "drehpunkt": [
+        82,
+        144
+      ],
+      "probe_flosse_vorn_grad": -75
+    },
+    "hand-kartenfaecher": {
+      "slot": "hand",
+      "datei": "hand-kartenfaecher.png",
+      "drehpunkt": [
+        126,
+        182
+      ],
+      "probe_flosse_vorn_grad": -75
+    },
+    "hand-wanderstab": {
+      "slot": "hand",
+      "datei": "hand-wanderstab.png",
+      "drehpunkt": [
+        128,
+        191
+      ],
+      "skala": [
+        1.74,
+        1.74
+      ],
+      "probe_flosse_vorn_grad": -10
+    },
+    "hand-laterne": {
+      "slot": "hand",
+      "datei": "hand-laterne.png",
+      "drehpunkt": [
+        128,
+        64
+      ],
+      "probe_flosse_vorn_grad": -75
+    },
+    "hand-zauberstab": {
+      "slot": "hand",
+      "datei": "hand-zauberstab.png",
+      "drehpunkt": [
+        99,
+        205
+      ],
+      "neigung_grad": 25,
+      "probe_flosse_vorn_grad": -75
+    },
+    "schuhe-gummistiefel": {
+      "slot": "fuss",
+      "datei": "schuhe-gummistiefel.png",
+      "drehpunkt": [
+        43,
+        46
+      ]
+    },
+    "schuhe-turnschuhe": {
+      "slot": "fuss",
+      "datei": "schuhe-turnschuhe.png",
+      "drehpunkt": [
+        43,
+        46
+      ]
+    },
+    "aura-konfetti": {
+      "slot": "aura",
+      "datei": "fx-aura-konfetti.png",
+      "drehpunkt": [
+        32,
+        32
+      ]
+    },
+    "aura-schneeflocken": {
+      "slot": "aura",
+      "datei": "fx-aura-schneeflocke.png",
+      "drehpunkt": [
+        32,
+        32
+      ]
+    },
+    "aura-sterne": {
+      "slot": "aura",
+      "datei": "fx-aura-stern.png",
+      "drehpunkt": [
+        32,
+        32
+      ]
+    },
+    "flosse-vorn-weste": {
+      "slot": "flosse_vorn",
+      "datei": "flosse-vorn-weste.png",
+      "drehpunkt": [
+        140,
+        70
+      ]
+    },
+    "flosse-hinten-weste": {
+      "slot": "flosse_hinten",
+      "datei": "flosse-hinten-weste.png",
+      "drehpunkt": [
+        97,
+        68
+      ]
+    },
+    "aura-funken": {
+      "slot": "aura",
+      "datei": "fx-aura-funke.png",
+      "drehpunkt": [
+        32,
+        32
+      ]
+    },
+    "aura-glitzer": {
+      "slot": "aura",
+      "datei": "fx-aura-glitzer.png",
+      "drehpunkt": [
+        32,
+        32
+      ]
+    },
+    "flosse-vorn-frack": {
+      "slot": "flosse_vorn",
+      "datei": "flosse-vorn-frack.png",
+      "drehpunkt": [
+        140,
+        70
+      ]
+    },
+    "flosse-vorn-pulli": {
+      "slot": "flosse_vorn",
+      "datei": "flosse-vorn-pulli.png",
+      "drehpunkt": [
+        140,
+        70
+      ]
+    },
+    "flosse-vorn-regenjacke": {
+      "slot": "flosse_vorn",
+      "datei": "flosse-vorn-regenjacke.png",
+      "drehpunkt": [
+        140,
+        70
+      ]
+    },
+    "schuhe-schlittschuhe": {
+      "slot": "fuss",
+      "datei": "schuhe-schlittschuhe.png",
+      "drehpunkt": [
+        43,
+        46
+      ]
+    },
+    "schuhe-goldstiefel": {
+      "slot": "fuss",
+      "datei": "schuhe-goldstiefel.png",
+      "drehpunkt": [
+        43,
+        46
+      ]
+    },
+    "aura-blaetter": {
+      "slot": "aura",
+      "datei": "fx-aura-blatt.png",
+      "drehpunkt": [
+        32,
+        32
+      ]
+    }
+  },
+  "berufe": {
+    "drucker": [
+      "lederschuerze",
+      "schiebermuetze"
+    ],
+    "traeger": [
+      "latzhose",
+      "schirmmuetze"
+    ],
+    "meister": [
+      "gruene-schuerze",
+      "brille-rund",
+      "klemmbrett"
+    ]
+  },
+  "montageproben": {
+    "drucker": {
+      "zusaetzlich": [
+        "druckbogen"
+      ],
+      "flosse_vorn_grad": -75,
+      "gegenstand_dreht_mit_flosse": false
+    },
+    "traeger": {
+      "zusaetzlich": [
+        "paket"
+      ],
+      "flosse_vorn_grad": -75,
+      "gegenstand_dreht_mit_flosse": false
+    },
+    "meister": {
+      "zusaetzlich": [],
+      "flosse_vorn_grad": -75,
+      "gegenstand_dreht_mit_flosse": false
+    }
+  },
+  "kosmetik": {
+    "version": 1,
+    "koordinaten": "Alle Anker in rig-pinguin.json; eigene Drehpunkte in gelieferten Pixeln.",
+    "kopf": [
+      "hut-wollmuetze",
+      "hut-strohhut",
+      "hut-zylinder",
+      "hut-bergsteiger",
+      "hut-partyhut",
+      "hut-doktorhut",
+      "hut-krone"
+    ],
+    "augen": [
+      "brille-sonnenbrille",
+      "brille-lesebrille",
+      "brille-taucherbrille",
+      "brille-skibrille",
+      "brille-monokel"
+    ],
+    "hand": [
+      "hand-kakao",
+      "hand-kartenfaecher",
+      "hand-wanderstab",
+      "hand-laterne",
+      "hand-zauberstab"
+    ],
+    "koerper": [
+      "oberteil-frack",
+      "oberteil-pulli",
+      "oberteil-trikot",
+      "oberteil-weste",
+      "oberteil-regenjacke",
+      "oberteil-meisterrobe"
+    ],
+    "fuss": [
+      "schuhe-gummistiefel",
+      "schuhe-turnschuhe",
+      "schuhe-schlittschuhe",
+      "schuhe-goldstiefel"
+    ],
+    "aura": [
+      "aura-konfetti",
+      "aura-schneeflocken",
+      "aura-sterne",
+      "aura-funken",
+      "aura-glitzer",
+      "aura-blaetter"
+    ]
+  }
+}
