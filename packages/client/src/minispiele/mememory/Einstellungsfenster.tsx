@@ -19,17 +19,9 @@
 import { useState } from 'react';
 
 import { HbBlatt } from '../../screens/HbBlatt';
-import { Kreuz } from '../../zeichen';
 import { lautstaerke, setzeLautstaerke, spieleKlang, tonAn } from './klaenge';
 
-export function Einstellungsfenster({
-  onFertig,
-  neu = false,
-}: {
-  onFertig: () => void;
-  /** Neues Hub: als Blatt von unten (HbBlatt), derselbe Regler darin. */
-  neu?: boolean;
-}): React.JSX.Element {
+export function Einstellungsfenster({ onFertig }: { onFertig: () => void }): React.JSX.Element {
   /**
    * Der Regler ist neu; wer den Ton nie eingeschaltet hat, soll hier die Null
    * sehen und nicht die Vorgabe. Sonst stuende dort "70", waehrend nichts zu
@@ -66,31 +58,9 @@ export function Einstellungsfenster({
     </label>
   );
 
-  if (neu) {
-    return (
-      <HbBlatt titel="Einstellungen" onClose={onFertig} klasse="is-klein">
-        {regler}
-      </HbBlatt>
-    );
-  }
-
   return (
-    <div
-      className="mm-kasten-schicht"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Einstellungen"
-    >
-      <div className="mm-kasten-blatt mm-blatt-schmal">
-        <div className="mm-kasten-kopf">
-          <h2>Einstellungen</h2>
-          <button type="button" className="mm-kasten-zu" onClick={onFertig} aria-label="Schließen">
-            <Kreuz />
-          </button>
-        </div>
-
-        <div className="mm-kasten-inhalt">{regler}</div>
-      </div>
-    </div>
+    <HbBlatt titel="Einstellungen" onClose={onFertig} klasse="is-klein">
+      {regler}
+    </HbBlatt>
   );
 }

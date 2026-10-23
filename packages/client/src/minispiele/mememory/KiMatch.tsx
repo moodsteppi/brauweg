@@ -30,14 +30,11 @@ import { STUFEN, Stufenregler, type Stufe } from './Stufenregler';
 const GEGNER_MAX = 3;
 
 export function KiMatch({
-  neu = false,
   laeuft,
   fehler,
   onStart,
   onBack,
 }: {
-  /** Neues Hub: derselbe Bildschirm im Spieleinstieg-Baukasten. */
-  neu?: boolean;
   /** Der Tisch wird gerade aufgemacht — der Knopf darf nicht zweimal gehen. */
   laeuft: boolean;
   fehler: string | null;
@@ -55,105 +52,50 @@ export function KiMatch({
       ? 'Wie gut soll dein Gegner sich erinnern?'
       : `${gegner.length} Gegner — jeder mit eigenem Gedächtnis.`;
 
-  if (neu) {
-    return (
-      <SpielRahmen
-        gameId="mememory"
-        titel="KI-Match erstellen"
-        unter={unter}
-        akzent={AKZENT}
-        // Wie der alte Zurueck-Knopf: gesperrt, solange der Tisch aufgeht.
-        onBack={() => {
-          if (!laeuft) onBack();
-        }}
-        zurueckText="Zurück"
-        fuss={
-          <button
-            type="button"
-            className="hb-kn is-gold is-haupt is-breit"
-            onClick={() => onStart(gegner)}
-            disabled={laeuft}
-          >
-            {laeuft ? 'Tisch wird aufgemacht…' : 'Match starten'}
-          </button>
-        }
-      >
-        {fehler && <p className="hb-fehler">{fehler}</p>}
-        {gegner.map((gewaehlt, index) => (
-          <SpielAbschnitt
-            key={index}
-            // "Gegner 1" erst ab dem zweiten, aus demselben Grund wie unten.
-            titel={gegner.length > 1 ? `Gegner ${index + 1}` : 'Gegner'}
-            zusatz={
-              gegner.length > 1 ? (
-                <button
-                  type="button"
-                  className="hb-rund spe-weg"
-                  onClick={() => setGegner((alt) => alt.filter((_, i) => i !== index))}
-                  disabled={laeuft}
-                  aria-label={`Gegner ${index + 1} entfernen`}
-                >
-                  <Kreuz />
-                </button>
-              ) : undefined
-            }
-          >
-            <div className="mm-gegner">
-              <Stufenregler
-                wert={gewaehlt}
-                onWert={(stufe) => setze(index, stufe)}
-                gesperrt={laeuft}
-                beschriftung={`Spielstärke von Gegner ${index + 1}`}
-              />
-              <p className="mm-stufensatz">
-                {STUFEN.find((eintrag) => eintrag.stufe === gewaehlt)?.satz}
-              </p>
-            </div>
-          </SpielAbschnitt>
-        ))}
-        {gegner.length < GEGNER_MAX && (
-          <button
-            type="button"
-            className="hb-kn is-blau is-breit"
-            onClick={() => setGegner((alt) => [...alt, 'mittel'])}
-            disabled={laeuft}
-          >
-            <span>+ Gegner hinzufügen</span>
-            <em className="spe-kn-zahl">bis zu {GEGNER_MAX}</em>
-          </button>
-        )}
-      </SpielRahmen>
-    );
-  }
-
   return (
-    <main className="mm-menue">
-      <button className="mm-zurueck" type="button" onClick={onBack} disabled={laeuft}>
-        ← Zurück
-      </button>
-
-      <div className="mm-menue-mitte">
-        <h1 className="mm-titel mm-titel-klein">KI-Match erstellen</h1>
-        <p className="mm-untertitel">{unter}</p>
-
-        {gegner.map((gewaehlt, index) => (
-          <div className="mm-gegner" key={index}>
-            {/* Die Kopfzeile erscheint erst ab dem zweiten Gegner: Bei genau
-                einem waere "Gegner 1" eine Beschriftung ohne Aussage. */}
-            {gegner.length > 1 && (
-              <div className="mm-gegner-kopf">
-                <span>Gegner {index + 1}</span>
-                <button
-                  type="button"
-                  className="mm-gegner-weg"
-                  onClick={() => setGegner((alt) => alt.filter((_, i) => i !== index))}
-                  disabled={laeuft}
-                  aria-label={`Gegner ${index + 1} entfernen`}
-                >
-                  <Kreuz />
-                </button>
-              </div>
-            )}
+    <SpielRahmen
+      gameId="mememory"
+      titel="KI-Match erstellen"
+      unter={unter}
+      akzent={AKZENT}
+      // Gesperrt, solange der Tisch aufgeht.
+      onBack={() => {
+        if (!laeuft) onBack();
+      }}
+      zurueckText="Zurück"
+      fuss={
+        <button
+          type="button"
+          className="hb-kn is-gold is-haupt is-breit"
+          onClick={() => onStart(gegner)}
+          disabled={laeuft}
+        >
+          {laeuft ? 'Tisch wird aufgemacht…' : 'Match starten'}
+        </button>
+      }
+    >
+      {fehler && <p className="hb-fehler">{fehler}</p>}
+      {gegner.map((gewaehlt, index) => (
+        <SpielAbschnitt
+          key={index}
+          // "Gegner 1" erst ab dem zweiten: Bei genau einem waere die Nummer
+          // eine Beschriftung ohne Aussage.
+          titel={gegner.length > 1 ? `Gegner ${index + 1}` : 'Gegner'}
+          zusatz={
+            gegner.length > 1 ? (
+              <button
+                type="button"
+                className="hb-rund spe-weg"
+                onClick={() => setGegner((alt) => alt.filter((_, i) => i !== index))}
+                disabled={laeuft}
+                aria-label={`Gegner ${index + 1} entfernen`}
+              >
+                <Kreuz />
+              </button>
+            ) : undefined
+          }
+        >
+          <div className="mm-gegner">
             <Stufenregler
               wert={gewaehlt}
               onWert={(stufe) => setze(index, stufe)}
@@ -164,37 +106,19 @@ export function KiMatch({
               {STUFEN.find((eintrag) => eintrag.stufe === gewaehlt)?.satz}
             </p>
           </div>
-        ))}
-
-        {/*
-          * Der Knopf verschwindet beim dritten Gegner, statt nur grau zu
-          * werden: Ein Knopf, der nichts mehr tut, ist eine Einladung zum
-          * Danebentippen. Wie viele es hoechstens sind, sagt der Satz
-          * darunter ohnehin.
-          */}
-        {gegner.length < GEGNER_MAX && (
-          <button
-            className="mm-gegner-mehr"
-            type="button"
-            onClick={() => setGegner((alt) => [...alt, 'mittel'])}
-            disabled={laeuft}
-          >
-            <span>+ Gegner hinzufügen</span>
-            <em>bis zu {GEGNER_MAX}</em>
-          </button>
-        )}
-
+        </SpielAbschnitt>
+      ))}
+      {gegner.length < GEGNER_MAX && (
         <button
-          className="mm-suchen"
           type="button"
-          onClick={() => onStart(gegner)}
+          className="hb-kn is-blau is-breit"
+          onClick={() => setGegner((alt) => [...alt, 'mittel'])}
           disabled={laeuft}
         >
-          <span>{laeuft ? 'Tisch wird aufgemacht…' : 'Match starten'}</span>
+          <span>+ Gegner hinzufügen</span>
+          <em className="spe-kn-zahl">bis zu {GEGNER_MAX}</em>
         </button>
-
-        {fehler && <p className="mm-fehler">{fehler}</p>}
-      </div>
-    </main>
+      )}
+    </SpielRahmen>
   );
 }

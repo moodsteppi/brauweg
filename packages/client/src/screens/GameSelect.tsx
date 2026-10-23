@@ -62,7 +62,7 @@ import {
 import { Pinguin } from '../pinguin';
 import { Kreuz, Note, Wuerfel } from '../zeichen';
 import { Clan } from './Clan';
-import { FundBlatt, TruhenBild } from './Aufgaben';
+import { FundBlatt } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
 import { KontoSichern } from './KontoSichern';
 import { BrowortImProfil } from '../browort/BrowortImProfil';
@@ -256,7 +256,7 @@ export function GameSelect({
     switch (tt) {
       case 'shop':
         return zeigeKaufbares ? (
-          <Shop neu coins={me.coins} gems={me.gems} onBald={setBald} onGuthaben={onAvatarChange} />
+          <Shop coins={me.coins} gems={me.gems} onBald={setBald} onGuthaben={onAvatarChange} />
         ) : null;
       case 'clan':
         return (
@@ -1348,10 +1348,7 @@ function Shop({
   gems,
   onBald,
   onGuthaben,
-  neu = false,
 }: {
-  /** Neues Hub: derselbe Inhalt im neuen Rahmen. */
-  neu?: boolean;
   /**
    * Der Guthabenstand — nur als Ausloeser zum Neuladen, nicht zur Anzeige.
    * Bewusst die zwei Zahlen statt des ganzen Kontos: Der Shop liest sonst
@@ -3042,32 +3039,16 @@ function ProfilBild({
   );
 }
 
-
-
-/**
- * Rahmen des Shops: im alten Hub die gemalte Szene mit Logo-Schild, im neuen
- * Überschrift und Guthaben. Der Inhalt (Tafeln, Kaufrückfrage, Fundblatt) ist
- * in beiden derselbe — so geht kein Kaufweg verloren.
- */
+/** Rahmen des Shops: Überschrift und Guthaben über dem Inhalt. */
 function ShopRahmen({
-  neu,
   coins,
   gems,
   children,
 }: {
-  neu: boolean;
   coins: number;
   gems: number;
   children: React.ReactNode;
 }): React.JSX.Element {
-  if (!neu) {
-    return (
-      <HubSzene bg="/hub/bg-shop.webp" className="front-shop front-shop--b">
-        <HubBanner />
-        {children}
-      </HubSzene>
-    );
-  }
   return (
     <div className="hb-shop">
       <header className="hb-kopfzeile">
