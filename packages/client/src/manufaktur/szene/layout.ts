@@ -81,9 +81,10 @@ export function etage(index: number): {
     // Rahmen mit „+" und Preis, eingestellt steht er selbst da (Rahmen weg).
     meister: { x: 124, y: boden - 62, b: 46, h: 58 },
     meisterFigur: { x: 124, y: boden - 62, b: 46, h: 62 },
-    arbeit: { x: 176, y: y + 40, b: 158, h: boden - (y + 40) },
-    // Weit rechts bis knapp vors Schild: Davor braucht die Kolonne Platz zum Anstehen.
-    presse: { x: 222, y: boden - 104, b: 112, h: 112 },
+    arbeit: { x: 176, y: y + 40, b: 160, h: boden - (y + 40) },
+    // Weit rechts, unter die Kante des Schilds: Davor braucht die Kolonne Platz
+    // zum Anstehen, und das Rad der Gusseisenpresse sitzt tiefer als das Schild.
+    presse: { x: 244, y: boden - 104, b: 112, h: 112 },
     schild: { x: 336, y: y + 16, b: SCHILD, h: SCHILD },
     nummer: { x: SCHACHT.x + SCHACHT.b / 2, y: y + 20 },
     sperrSchild: { x: 128, y: y + 34, b: 190, h: 60 },
