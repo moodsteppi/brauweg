@@ -7,8 +7,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * beitreten, Tisch erstellen mit gewählten Plätzen, Regeln als Blatt.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { createTable, joinTable } = vi.hoisted(() => ({
   createTable: vi.fn(() => Promise.resolve({ id: 'neu-1' })),
   joinTable: vi.fn(() => Promise.resolve({ ok: true })),

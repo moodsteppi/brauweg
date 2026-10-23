@@ -10,8 +10,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * die Küche ohne Server, und die Rezeptkarte liegt als Blatt dahinter.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { tables, joinTable, createTable, leaveTable, startNow, addBot } = vi.hoisted(() => ({
   tables: vi.fn(),
   joinTable: vi.fn(),

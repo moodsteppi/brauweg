@@ -19,8 +19,6 @@ const { me, partykisteMelden, ansicht } = vi.hoisted(() => ({
   ansicht: { view: null as unknown },
 }));
 
-vi.mock('../../hubNeu', () => ({ hubNeu: true }));
-
 vi.mock('../../api', () => ({
   ApiError: class ApiError extends Error {
     messageKey = 'error.unbekannt';

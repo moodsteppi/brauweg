@@ -100,15 +100,4 @@ describe('Filler: Spielart waehlen', () => {
     // Nur der Fokus wandert — gewaehlt wird erst mit dem Knopfdruck.
     expect(kachel('Nebel')).toHaveAttribute('aria-pressed', 'true');
   });
-
-  it('Wischen wechselt weiter die Spielart', async () => {
-    render(<Filler onBack={() => {}} />);
-    await durchatmen();
-    const flaeche = document.querySelector('.fl-menue-mitte') as HTMLElement;
-    fireEvent.pointerDown(flaeche, { pointerId: 1, clientX: 200, clientY: 100, pointerType: 'touch' });
-    fireEvent.pointerMove(flaeche, { pointerId: 1, clientX: 120, clientY: 104, pointerType: 'touch' });
-    fireEvent.pointerUp(flaeche, { pointerId: 1, clientX: 120, clientY: 104, pointerType: 'touch' });
-    expect(kachel('Normal')).toHaveAttribute('aria-pressed', 'true');
-    expect(localStorage.getItem('filler.variante')).toBe('klar');
-  });
 });

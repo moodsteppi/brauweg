@@ -9,8 +9,6 @@ import { describe, expect, it, vi } from 'vitest';
  * bis die Zusage kommt, und geht erst dann hinein.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { joinTable, anfrageStand } = vi.hoisted(() => ({
   joinTable: vi.fn(() => Promise.resolve({ ok: true, angefragt: true })),
   anfrageStand: vi.fn(() => Promise.resolve({ stand: 'offen' as 'offen' | 'angenommen' | 'abgelehnt' })),
