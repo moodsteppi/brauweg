@@ -78,8 +78,8 @@ export function Ueberlagerung({
       <Schild r={h.versandSchild} name="Versand" stand={stand} ziel={{ art: 'versand' }} engpass={engpass === 'versand'} onClick={onSchild} />
       <MeisterPlatz r={h.versandMeister} figur={h.versandMeisterFigur} name="Versand" stand={stand} ziel={{ art: 'versand' }} jetzt={jetzt} onClick={onMeister} />
       <Bestand x={h.packtisch.x + 8} y={h.packtisch.y - 22} wert={stand.packtisch} bild={stapelBild(0)} name="Packtisch" />
-      {versandSchlaeft && <Zzz x={h.traegerWeg.von + 6} y={h.boden - 74} />}
-      {paternosterSchlaeft && <Zzz x={h.kurbler.x + 6} y={h.boden - 74} />}
+      {versandSchlaeft && <Zzz x={h.traegerWeg.von + 6} y={h.boden - 56} />}
+      {paternosterSchlaeft && <Zzz x={h.kurbler.x + 6} y={h.boden - 56} />}
       {/* Der Direktor: dein eigener Pinguin auf seinem Podest, mit allem, was du traegst. */}
       {getragen && (
         <span className={`mf-direktor is-${direktor}`} style={lage(h.direktor)} aria-hidden="true">
@@ -98,7 +98,8 @@ export function Ueberlagerung({
             </span>
             <Bestand x={e.bestand.x} y={e.bestand.y} wert={p.kiste} bild={stapelBild(i)} name={`Kiste ${i + 1}`} />
             <Flaeche r={e.arbeit} label={`Presse ${i + 1}, ${KARTENARTEN[i]}: arbeiten`} onClick={() => onArbeiten(ziel)} />
-            {schlaeft(p, true) && <Zzz x={e.arbeit.x + 26} y={e.boden - 74} />}
+            {/* Ueber dem Kopf des vordersten Arbeiters: Rig-Figuren sind 40 hoch, nicht 54. */}
+            {schlaeft(p, true) && <Zzz x={e.arbeit.x + 26} y={e.boden - 56} />}
             <MeisterPlatz r={e.meister} figur={e.meisterFigur} name={`Presse ${i + 1}`} stand={stand} ziel={ziel} jetzt={jetzt} onClick={onMeister} />
             <Schild r={e.schild} name={`Presse ${i + 1}`} stand={stand} ziel={ziel} engpass={engpass === 'pressen'} onClick={onSchild} />
           </div>
