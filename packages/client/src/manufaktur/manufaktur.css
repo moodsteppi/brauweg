@@ -482,3 +482,62 @@
     box-shadow: 0 0 0 3px rgba(230, 70, 70, 0.6);
   }
 }
+
+/* --- Rueckmeldung: Muenzflug, Popup, Glanz -------------------------------- */
+
+.mf .mf-effekte {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  overflow: hidden;
+}
+.mf .mf-effekte > span > * {
+  position: absolute;
+}
+.mf .mf-flug {
+  width: 22px;
+  height: 22px;
+  animation: mf-flug 0.8s cubic-bezier(0.5, 0, 0.75, 0.4) both;
+}
+@keyframes mf-flug {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  15% { transform: translate(-10px, -24px) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.8); opacity: 0.9; }
+}
+.mf .mf-popup {
+  transform: translate(-100%, 0);
+  font: 400 20px var(--hb-anz);
+  color: var(--hb-gold);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  animation: mf-popup 1s ease-out both;
+}
+@keyframes mf-popup {
+  0% { transform: translate(-100%, 0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(-100%, -40px); opacity: 0; }
+}
+/* Aufgestiegen: ein Glanz laeuft ueber das Schild. */
+.mf .mf-ueber .mf-schild-stufe.is-glanz {
+  animation: mf-glanz 0.7s ease-out;
+}
+@keyframes mf-glanz {
+  0% { filter: brightness(1); transform: scale(1); }
+  30% { filter: brightness(1.6); transform: scale(1.1); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
+.mf-debug {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mf .mf-flug,
+  .mf .mf-popup,
+  .mf .mf-ueber .mf-schild-stufe.is-glanz {
+    animation-duration: 1ms;
+  }
+}

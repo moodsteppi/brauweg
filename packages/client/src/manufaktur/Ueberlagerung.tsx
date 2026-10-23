@@ -12,6 +12,7 @@ import {
 import type { Getragen } from '../api';
 import { Pinguin } from '../pinguin';
 import { BILD } from './bilder';
+import { useGeaendert } from './effekte';
 import { KARTENARTEN } from './namen';
 import { type Rechteck, BREITE, etage, gesamtHoehe, halle } from './szene/layout';
 import { kurz } from './zahlen';
@@ -96,7 +97,7 @@ export function Ueberlagerung({
         {kurz(stand.packtisch)}
       </span>
       {schlaeft(stand.versand, stand.packtisch > 0) && <Zzz x={h.traegerWeg.von + 10} y={h.boden - 70} />}
-      {schlaeft(stand.paternoster, stand.pressen.some((p) => p.kiste > 0)) && <Zzz x={h.kopf.x + h.kopf.b - 4} y={h.kopf.y - 10} />}
+      {schlaeft(stand.paternoster, stand.pressen.some((p) => p.kiste > 0)) && <Zzz x={h.kopf.x + 6} y={h.kopf.y - 22} />}
       {/* Der Direktor: dein eigener Pinguin, mit allem, was du traegst. */}
       {getragen && (
         <span className="mf-direktor" style={lage(h.direktor)} aria-hidden="true">
@@ -203,10 +204,12 @@ function Schild({
   engpass: boolean;
   onClick: () => void;
 }): React.JSX.Element {
+  // Aufgestiegen: kurz glaenzen (die Arbeiter jubeln in der Szene dazu).
+  const glanz = useGeaendert(station.stufe);
   return (
     <button
       type="button"
-      className={`mf-schild-stufe${leistbar ? ' is-leistbar' : ''}${engpass ? ' is-engpass' : ''}`}
+      className={`mf-schild-stufe${leistbar ? ' is-leistbar' : ''}${engpass ? ' is-engpass' : ''}${glanz ? ' is-glanz' : ''}`}
       style={lage(r)}
       onClick={onClick}
       aria-label={`${name}, Stufe ${station.stufe}${leistbar ? ', Ausbau bezahlbar' : ''}${engpass ? ', Engpass' : ''}`}

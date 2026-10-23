@@ -215,10 +215,15 @@ export function MeisterUebersicht({
 /** Untere Leiste → Manufaktur: wo man ist, und der Umzug in die naechste. */
 export function ManufakturBlatt({
   stand,
+  debug,
+  onDebug,
   onUmziehen,
   onClose,
 }: {
   stand: ManufakturStand;
+  /** Debug-Ansicht: Anker und Drehpunkte in der Szene, zum Pruefen gelieferter Teile. */
+  debug: boolean;
+  onDebug: (an: boolean) => void;
   onUmziehen: () => void;
   onClose: () => void;
 }): React.JSX.Element {
@@ -250,6 +255,9 @@ export function ManufakturBlatt({
             </button>
           </>
         )}
+        <label className="mf-debug">
+          <input type="checkbox" checked={debug} onChange={(e) => onDebug(e.target.checked)} /> Anker und Drehpunkte zeigen
+        </label>
       </div>
     </HbBlatt>
   );

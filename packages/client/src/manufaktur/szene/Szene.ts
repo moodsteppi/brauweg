@@ -6,6 +6,11 @@
  * (Ueberlagerung.tsx, beide aus layout.ts) — das haelt Schrift scharf,
  * VoiceOver bedienbar und die Tippflaechen bei mindestens 44 pt.
  *
+ * **Die Bilder luegen nie.** Jede Bewegung haengt am Stand (abbild.ts): Der
+ * Arbeiter legt den Stapel ab, wenn der Warenwert in der Kiste landet, die
+ * Kabine traegt nur Karten, wenn sie faehrt, der Wagen faehrt erst beladen,
+ * und das Tempo der Ablaeufe kommt aus der Zykluszeit der Station.
+ *
  * Die Leinwand ist so gross wie der sichtbare Ausschnitt und klebt oben im
  * Rollbereich (`position: sticky`); gerollt wird, indem die Welt verschoben
  * wird. Was nicht im Ausschnitt liegt, wird nicht gezeichnet, und im
@@ -15,18 +20,23 @@
 
 import { Application, Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
 
-import { type ManufakturStand, MAX_PRESSEN, arbeiter, versandKapazitaet } from '@brauweg/manufaktur-kern';
+import { type ManufakturStand, type Presse, MAX_PRESSEN, arbeiter, versandKapazitaet } from '@brauweg/manufaktur-kern';
 
 import { BILD, presseBild, stapelBild } from '../bilder';
+import { ton } from '../toene';
 import {
+  ablaufTempo,
+  arbeiterAblauf,
   arbeiterOrt,
   kistenStapel,
   packtischKartons,
   paternosterOrt,
   pressenPhase,
+  schlagZwischen,
   traegtStapel,
   wagenOrt,
 } from './abbild';
+import { Figur } from './figur';
 import {
   BALKEN,
   BREITE,
@@ -54,6 +64,9 @@ export interface Ausschnitt {
   breite: number;
 }
 
+/** Was die Szene dem DOM meldet — Muenzflug und Zahlen-Popup laufen dort. */
+export type SzenenEreignis = { art: 'verkauf'; betrag: number; x: number; y: number };
+
 const DATEIEN = [
   '/manufaktur/kulisse-halle.webp',
   '/manufaktur/wand-keller.webp',
@@ -67,6 +80,12 @@ const DATEIEN = [
   presseBild(100),
   ...Array.from({ length: MAX_PRESSEN }, (_, i) => stapelBild(i)),
 ];
+
+/** Laufband-Kachel: 256 × 512, im Schacht 40 breit. */
+const BAND = { breite: 40, kachel: 80 };
+const ARBEITER_HOEHE = 54;
+/** Laenger als ein Bild darf ein Schritt nicht sein — sonst springen Ablaeufe nach einer Pause. */
+const MAX_DT = 100;
 
 /**
  * Bilder als <img> laden und daraus Texturen machen — nicht ueber Pixis
@@ -86,52 +105,89 @@ async function ladeTexturen(dateien: readonly string[]): Promise<Record<string, 
   return Object.fromEntries(paare);
 }
 
-/** Pinguinbilder: 384 Pixel, die Fuesse stehen auf Zeile 371. */
-const PINGUIN = { groesse: 384, fuss: 371 / 384, hoehe: 54 };
-/** Laufband-Kachel: 256 × 512, im Schacht 40 breit. */
-const BAND = { breite: 40, kachel: 80 };
+/** Kurzlebige Teilchen: Dampf, Staub, ein fliegender Bogen. */
+interface Teilchen {
+  g: Container;
+  vx: number;
+  vy: number;
+  leben: number;
+  dauer: number;
+  wachsen: number;
+}
 
-/** Ein Arbeiter. Phase 2: Stehen, Gehen, Schlafen — die Bewegung kommt in Phase 3. */
-class Arbeiter {
-  readonly koerper = new Container();
-  private readonly bild: Sprite;
-  private readonly stapel: Sprite;
+class Teilchenwolke {
+  readonly wurzel = new Container();
+  private readonly liste: Teilchen[] = [];
 
-  constructor(textur: Texture, stapelTextur: Texture) {
-    this.bild = new Sprite(textur);
-    this.bild.anchor.set(0.5, PINGUIN.fuss);
-    this.bild.scale.set(PINGUIN.hoehe / PINGUIN.groesse);
-    this.stapel = new Sprite(stapelTextur);
-    this.stapel.anchor.set(0.5, 1);
-    this.stapel.scale.set(22 / 256);
-    this.stapel.position.set(12, -18);
-    this.koerper.addChild(this.bild, this.stapel);
+  dampf(x: number, y: number): void {
+    for (let i = 0; i < 3; i += 1) {
+      const g = new Graphics().circle(0, 0, 4 + Math.random() * 3).fill({ color: 0xffffff, alpha: 0.55 });
+      g.position.set(x + (Math.random() - 0.5) * 6, y);
+      this.dazu({ g, vx: (Math.random() - 0.5) * 8, vy: -22 - Math.random() * 10, leben: 0, dauer: 900, wachsen: 1.6 });
+    }
   }
 
-  zeige(x: number, y: number, schlaeft: boolean, traegt: boolean, nachLinks: boolean): void {
-    this.koerper.position.set(x, y);
-    this.bild.rotation = schlaeft ? -0.18 : 0;
-    this.bild.scale.x = Math.abs(this.bild.scale.x) * (nachLinks ? -1 : 1);
-    this.stapel.visible = traegt;
+  staub(x: number, y: number): void {
+    for (let i = 0; i < 6; i += 1) {
+      const g = new Graphics().circle(0, 0, 3 + Math.random() * 4).fill({ color: 0xc8b090, alpha: 0.6 });
+      g.position.set(x, y - Math.random() * 6);
+      this.dazu({ g, vx: -30 - Math.random() * 40, vy: -6 - Math.random() * 10, leben: 0, dauer: 600, wachsen: 1.8 });
+    }
   }
 
-  stapelBild(textur: Texture): void {
-    this.stapel.texture = textur;
+  bogen(x: number, y: number, zielX: number, zielY: number): void {
+    const g = new Graphics().roundRect(-5, -7, 10, 14, 2).fill(0xfaf6ec).stroke({ width: 1, color: 0xc9a24a });
+    g.position.set(x, y);
+    const dauer = 260;
+    this.dazu({ g, vx: ((zielX - x) / dauer) * 1000, vy: ((zielY - y) / dauer) * 1000 - 40, leben: 0, dauer, wachsen: 0.9 });
+  }
+
+  private dazu(t: Teilchen): void {
+    this.liste.push(t);
+    this.wurzel.addChild(t.g);
+  }
+
+  aktualisiere(dt: number): void {
+    for (let i = this.liste.length - 1; i >= 0; i -= 1) {
+      const t = this.liste[i]!;
+      t.leben += dt;
+      const s = dt / 1000;
+      t.g.x += t.vx * s;
+      t.g.y += t.vy * s;
+      const f = t.leben / t.dauer;
+      t.g.alpha = 1 - f;
+      t.g.scale.set(1 + (t.wachsen - 1) * f);
+      if (t.leben >= t.dauer) {
+        t.g.destroy();
+        this.liste.splice(i, 1);
+      }
+    }
   }
 }
 
-/** Eine Etage: Balken, Kiste mit Stapeln, Presse, Arbeiter — oder die Bretterwand. */
+/** Eine Etage: Balken, Kiste mit Stapeln, Presse, Arbeiter, Meister — oder die Bretterwand. */
 class EtageBild {
   readonly wurzel = new Container();
   private readonly gebaut = new Container();
   private readonly gesperrt = new Container();
   private readonly stapel: Sprite[] = [];
   private readonly presse: Sprite;
-  private readonly arbeiter: Arbeiter[] = [];
+  private readonly arbeiter: Figur[] = [];
+  private readonly meister: Figur;
+  /** Merkzettel vom letzten Bild — daraus entstehen Schlaege, Jubel und Einlauf. */
+  private letzteStufe = 0;
+  private letzteAnzahl = 0;
+  private letzterAnteil: number[] = [];
+  private letztePhase: string[] = [];
+  private einlauf: number[] = [];
+  private jubelBis = 0;
+  private schlag = 0;
+  private pfeifenSeit = 0;
 
   constructor(
     private readonly index: number,
     private readonly t: Record<string, Texture>,
+    private readonly wolke: Teilchenwolke,
   ) {
     const e = etage(index);
     const b = balken(BREITE, BALKEN);
@@ -157,10 +213,18 @@ class EtageBild {
     this.presse.position.set(e.presse.x + e.presse.b / 2, e.boden);
     this.gebaut.addChild(this.presse);
 
+    this.meister = new Figur(t[BILD.meister]!, 46, t[stapelBild(index)]!);
+    this.meister.wurzel.position.set(e.presse.x + e.presse.b + 6, e.boden);
+    this.meister.schaue(-1);
+    this.gebaut.addChild(this.meister.wurzel);
+
     for (let i = 0; i < 5; i += 1) {
-      const a = new Arbeiter(t[BILD.drucker]!, t[stapelBild(index)]!);
+      const a = new Figur(t[BILD.drucker]!, ARBEITER_HOEHE, t[stapelBild(index)]!);
       this.arbeiter.push(a);
-      this.gebaut.addChild(a.koerper);
+      this.letzterAnteil.push(0);
+      this.letztePhase.push('');
+      this.einlauf.push(0);
+      this.gebaut.addChild(a.wurzel);
     }
 
     const wand = bretterwand(BREITE - SCHACHT.x - SCHACHT.b - 10, ETAGE_HOEHE - BALKEN - 8);
@@ -170,31 +234,103 @@ class EtageBild {
     this.gesperrt.addChild(wand, sch);
   }
 
-  zeige(stand: ManufakturStand, jetzt: number, rest: number): void {
+  zeige(stand: ManufakturStand, jetzt: number, rest: number, dt: number): void {
     const p = stand.pressen[this.index];
     this.gebaut.visible = !!p;
     this.gesperrt.visible = !p && this.index === stand.pressen.length;
-    if (!p) return;
+    if (!p) {
+      this.letzteStufe = 0;
+      this.letzteAnzahl = 0;
+      return;
+    }
     const e = etage(this.index);
+
+    // Aufstieg: Die Arbeiter jubeln. Beim ersten Bild nicht — das ist kein Aufstieg.
+    if (this.letzteStufe > 0 && p.stufe > this.letzteStufe) this.jubelBis = jetzt + 800;
+    this.letzteStufe = p.stufe;
 
     const { anzahl } = kistenStapel(p, this.index, stand.manufaktur);
     this.stapel.forEach((s, i) => (s.visible = i < anzahl));
     this.presse.texture = this.t[presseBild(p.stufe)]!;
 
     const zahl = arbeiter(p.stufe);
+    // Meilenstein: Wer neu dazukommt, laeuft von rechts herein.
+    if (this.letzteAnzahl > 0 && zahl > this.letzteAnzahl) {
+      for (let k = this.letzteAnzahl; k < zahl; k += 1) this.einlauf[k] = 1;
+    }
+    this.letzteAnzahl = zahl;
+
     const kisteX = e.kiste.x + e.kiste.b + 12;
     const presseX = e.presse.x + 6;
+    const tempo = ablaufTempo(p, jetzt);
+    let geschlagen = false;
     this.arbeiter.forEach((a, k) => {
-      a.koerper.visible = k < zahl;
+      a.wurzel.visible = k < zahl;
       if (k >= zahl) return;
       // Die Kolonne laeuft leicht versetzt, aber nie spaeter als der Zyklus:
       // Der erste legt genau dann ab, wenn der Warenwert in der Kiste landet.
-      const vorlauf = { ...p, fortschritt: p.laeuft ? Math.min(0.9999, p.fortschritt + k * 0.02) : 0 };
+      const vorlauf: Presse = { ...p, fortschritt: p.laeuft ? Math.min(0.9999, p.fortschritt + k * 0.02) : 0 };
       const ph = pressenPhase(vorlauf, jetzt, rest);
       const ort = arbeiterOrt(ph.phase, ph.anteil);
-      const x = kisteX + k * 9 + (presseX - kisteX - k * 23) * ort;
-      a.zeige(x, e.boden, ph.phase === 'schlafen', traegtStapel(ph.phase), ph.phase === 'zurueck');
+      let x = kisteX + k * 9 + (presseX - kisteX - k * 23) * ort;
+
+      if (this.einlauf[k]! > 0) {
+        this.einlauf[k] = Math.max(0, this.einlauf[k]! - dt / 1200);
+        x += (BREITE + 30 - x) * this.einlauf[k]!;
+        a.spiele('laufen');
+        a.schaue(-1);
+      } else if (jetzt < this.jubelBis) {
+        a.spiele('jubeln');
+      } else {
+        a.spiele(arbeiterAblauf(ph.phase), tempo);
+        a.schaue(ph.phase === 'zurueck' ? -1 : 1);
+      }
+      a.traegt(traegtStapel(ph.phase) ? this.t[stapelBild(this.index)]! : null);
+      a.wurzel.position.set(x, e.boden);
+      a.aktualisiere(dt);
+
+      // Pressenschlag im Takt des vordersten Arbeiters.
+      if (k === 0 && ph.phase === 'arbeiten') {
+        const vorher = this.letztePhase[k] === 'arbeiten' ? this.letzterAnteil[k]! : 0;
+        if (schlagZwischen(vorher, ph.anteil)) geschlagen = true;
+      }
+      // Der fertige Bogen fliegt zum Arbeiter, sobald er losgeht.
+      if (k === 0 && ph.phase === 'zurueck' && this.letztePhase[k] === 'arbeiten') {
+        this.wolke.bogen(this.presse.x, e.boden - 38, x, e.boden - 30);
+      }
+      this.letzterAnteil[k] = ph.anteil;
+      this.letztePhase[k] = ph.phase;
     });
+
+    if (geschlagen) {
+      this.schlag = 120;
+      ton('pressenschlag', 0.4);
+      if (p.stufe >= 100) this.wolke.dampf(this.presse.x - 30, e.boden - 96);
+    }
+    // Squash beim Schlag: 0,94 hoch / 1,04 breit, 120 ms.
+    this.schlag = Math.max(0, this.schlag - dt);
+    const f = this.schlag / 120;
+    const basis = e.presse.b / 512;
+    this.presse.scale.set(basis * (1 + 0.04 * f), basis * (1 - 0.06 * f));
+
+    // Der Meister steht neben seiner Presse und pfeift, wenn er die Faehigkeit ausloest.
+    this.meister.wurzel.visible = p.meister;
+    if (p.meister) {
+      if (jetzt < p.faehigkeitBis && this.pfeifenSeit === 0) this.pfeifenSeit = jetzt;
+      if (jetzt >= p.faehigkeitBis) this.pfeifenSeit = 0;
+      this.meister.spiele(this.pfeifenSeit > 0 && jetzt - this.pfeifenSeit < 900 ? 'pfeifen' : 'idle');
+      this.meister.aktualisiere(dt);
+    }
+  }
+
+  /** Debug: Fusspunkte, Griffe und den Drehpunkt der Presse. */
+  punkte(): { x: number; y: number }[] {
+    const liste = [{ x: this.presse.x, y: this.presse.y }];
+    for (const a of this.arbeiter) {
+      if (!a.wurzel.visible) continue;
+      for (const q of a.punkte()) liste.push({ x: a.wurzel.x + q.x, y: a.wurzel.y + q.y });
+    }
+    return liste;
   }
 }
 
@@ -209,13 +345,23 @@ export class Szene {
   private readonly roehre: Graphics;
   private readonly kartons: Graphics[] = [];
   private readonly wagen: Sprite;
-  private readonly traeger: Arbeiter;
+  private readonly traeger: Figur;
   private readonly wand: TilingSprite;
+  private readonly wolke = new Teilchenwolke();
+  private readonly debug = new Graphics();
+  private debugAn = false;
   private bandWeg = 0;
   private letzteEtagen = -1;
+  private letzteWagenPhase = 'steht';
+  private letzterVerdienst: number | null = null;
+  private wagenSquash = 0;
+  private letzteZeit = performance.now();
   private sichtbarkeit = (): void => {
     if (document.hidden) this.app.ticker.stop();
-    else this.app.ticker.start();
+    else {
+      this.letzteZeit = performance.now();
+      this.app.ticker.start();
+    }
   };
 
   private constructor(
@@ -223,6 +369,7 @@ export class Szene {
     private readonly t: Record<string, Texture>,
     private readonly quelle: Quelle,
     private readonly ausschnitt: () => Ausschnitt,
+    private readonly ereignis: (e: SzenenEreignis) => void,
   ) {
     app.stage.addChild(this.welt);
 
@@ -250,11 +397,11 @@ export class Szene {
     this.band.position.set(SCHACHT.x + (SCHACHT.b - BAND.breite) / 2, HALLE_HOEHE - 20);
 
     // Kabine: ein Tablett, das an den Etagen haelt. Ladung nur, wenn wirklich etwas faehrt.
-    const tablett = new Graphics().roundRect(-20, -4, 40, 8, 2).fill(FARBE.holzHell);
+    const tablett = new Graphics().roundRect(-22, -5, 44, 10, 3).fill(FARBE.holzHell).stroke({ width: 2, color: FARBE.holzDunkel });
     this.kabinenLadung = new Sprite(t[stapelBild(0)]);
     this.kabinenLadung.anchor.set(0.5, 1);
-    this.kabinenLadung.scale.set(26 / 256);
-    this.kabinenLadung.position.set(0, -3);
+    this.kabinenLadung.scale.set(28 / 256);
+    this.kabinenLadung.position.set(0, -4);
     this.kabine.addChild(tablett, this.kabinenLadung);
     this.kabine.position.set(SCHACHT.x + SCHACHT.b / 2, 0);
 
@@ -280,15 +427,15 @@ export class Szene {
     this.wagen = new Sprite(t[BILD.versand]);
     this.wagen.anchor.set(0, 371 / 384);
     this.wagen.scale.set(h.wagen.b / 640);
-    this.traeger = new Arbeiter(t[BILD.drucker]!, t[stapelBild(0)]!);
+    this.traeger = new Figur(t[BILD.drucker]!, ARBEITER_HOEHE, t[stapelBild(0)]!);
 
     this.welt.addChild(halleBild, this.wand, this.roehre, this.band, this.fuss);
     for (let i = 0; i < MAX_PRESSEN; i += 1) {
-      const e = new EtageBild(i, t);
+      const e = new EtageBild(i, t, this.wolke);
       this.etagen.push(e);
       this.welt.addChild(e.wurzel);
     }
-    this.welt.addChild(tisch, ...this.kartons, this.traeger.koerper, this.wagen, kopf, this.antrieb, this.kabine);
+    this.welt.addChild(tisch, ...this.kartons, this.traeger.wurzel, this.wagen, kopf, this.antrieb, this.kabine, this.wolke.wurzel, this.debug);
 
     app.ticker.maxFPS = 60;
     app.ticker.add(() => this.bild());
@@ -296,7 +443,12 @@ export class Szene {
   }
 
   /** Baut die Szene in `host`. null, wenn das Geraet kein WebGL kann (dann bleibt das DOM). */
-  static async erstelle(host: HTMLElement, quelle: Quelle, ausschnitt: () => Ausschnitt): Promise<Szene | null> {
+  static async erstelle(
+    host: HTMLElement,
+    quelle: Quelle,
+    ausschnitt: () => Ausschnitt,
+    ereignis: (e: SzenenEreignis) => void = () => undefined,
+  ): Promise<Szene | null> {
     const app = new Application();
     try {
       const { breite, hoehe } = ausschnitt();
@@ -324,12 +476,17 @@ export class Szene {
     }
     app.canvas.classList.add('mf-leinwand');
     host.appendChild(app.canvas);
-    const szene = new Szene(app, texturen, quelle, ausschnitt);
-    return szene;
+    return new Szene(app, texturen, quelle, ausschnitt, ereignis);
   }
 
   groesse(breite: number, hoehe: number): void {
     this.app.renderer.resize(breite, hoehe);
+  }
+
+  /** Debug-Ansicht: Anker und Drehpunkte einblenden, um gelieferte Teile zu pruefen. */
+  zeigeDebug(an: boolean): void {
+    this.debugAn = an;
+    if (!an) this.debug.clear();
   }
 
   zerstoere(): void {
@@ -341,6 +498,9 @@ export class Szene {
   private bild(): void {
     const stand = this.quelle.stand();
     if (!stand) return;
+    const nun = performance.now();
+    const dt = Math.min(MAX_DT, nun - this.letzteZeit);
+    this.letzteZeit = nun;
     const jetzt = this.quelle.jetzt();
     const rest = Math.max(0, jetzt - stand.zeit);
     const { oben, hoehe, breite } = this.ausschnitt();
@@ -358,11 +518,13 @@ export class Szene {
       const y = etage(i).reihe.y;
       const sichtbar = y + ETAGE_HOEHE > von && y < bis;
       e.wurzel.visible = sichtbar;
-      if (sichtbar) e.zeige(stand, jetzt, rest);
+      if (sichtbar) e.zeige(stand, jetzt, rest, dt);
     });
 
     this.zeigePaternoster(stand, jetzt, rest);
-    this.zeigeVersand(stand, jetzt, rest);
+    this.zeigeVersand(stand, jetzt, rest, dt);
+    this.wolke.aktualisiere(dt);
+    if (this.debugAn) this.zeichneDebug();
   }
 
   /** Wand, Roehre und Fussstueck reichen bis unter die tiefste Etage. */
@@ -400,19 +562,74 @@ export class Szene {
     return an(unten) + (an(unten + 1) - an(unten)) * (k - unten);
   }
 
-  private zeigeVersand(stand: ManufakturStand, jetzt: number, rest: number): void {
+  private zeigeVersand(stand: ManufakturStand, jetzt: number, rest: number, dt: number): void {
     const h = halle();
     const { anzahl } = packtischKartons(stand.packtisch, versandKapazitaet(stand.versand.stufe, stand.manufaktur));
     this.kartons.forEach((k, i) => (k.visible = i < anzahl));
 
     const wagen = wagenOrt(stand, jetzt, rest);
-    this.wagen.x = h.wagen.x + wagen.weg * (BREITE - h.wagen.x + 30);
-    this.wagen.y = h.boden;
+    const strecke = BREITE - h.wagen.x + 30;
+    this.wagen.x = h.wagen.x + wagen.weg * strecke;
 
+    // Anfahren: kurz stauchen, Staubwolke, Hupe.
+    if (wagen.phase === 'weg' && this.letzteWagenPhase === 'laden') {
+      this.wagenSquash = 160;
+      this.wolke.staub(h.wagen.x + 10, h.boden - 4);
+      ton('hupe', 0.5);
+    }
+    this.letzteWagenPhase = wagen.phase;
+    this.wagenSquash = Math.max(0, this.wagenSquash - dt);
+    const sq = this.wagenSquash / 160;
+    const basis = h.wagen.b / 640;
+    // Unterwegs wippt der Wagen leicht — die Raeder sind ins Bild gemalt und drehen sich nicht.
+    const wippen = wagen.phase === 'weg' || wagen.phase === 'zurueck' ? Math.sin(jetzt / 60) * 0.8 : 0;
+    this.wagen.scale.set(basis * (1 + 0.04 * sq), basis * (1 - 0.05 * sq));
+    this.wagen.y = h.boden - wippen;
+
+    // Verkauf: Muenzen fliegen im DOM vom rechten Bildrand zum Taler-Zaehler.
+    if (this.letzterVerdienst !== null && stand.verdient > this.letzterVerdienst) {
+      const { oben, breite } = this.ausschnitt();
+      const faktor = breite / BREITE;
+      this.ereignis({ art: 'verkauf', betrag: stand.verdient - this.letzterVerdienst, x: breite - 30, y: (h.boden - 60) * faktor - oben });
+      ton('muenzen', 0.5);
+    }
+    this.letzterVerdienst = stand.verdient;
+
+    // Der Traeger: traegt zum Wagen, laedt ein, geht zurueck, winkt dem Wagen nach.
     const v = stand.versand;
-    const laedt = wagen.phase === 'laden';
-    const x = laedt ? h.traegerWeg.von + (h.traegerWeg.bis - h.traegerWeg.von) * wagen.anteil : h.traegerWeg.von;
-    const schlaeft = !v.meister && !v.laeuft;
-    this.traeger.zeige(x, h.boden, schlaeft, laedt, false);
+    const { von, bis } = h.traegerWeg;
+    let x = von;
+    if (wagen.phase === 'laden') {
+      const a = Math.min(1, wagen.anteil / 0.7);
+      x = von + (bis - von) * a;
+      this.traeger.spiele(wagen.anteil < 0.7 ? 'laufen_tragen' : 'einladen');
+      this.traeger.schaue(1);
+      this.traeger.traegt(wagen.anteil < 0.85 ? this.t[stapelBild(0)]! : null);
+    } else if (wagen.phase === 'weg') {
+      const a = Math.min(1, wagen.anteil / 0.6);
+      x = bis - (bis - von) * a;
+      this.traeger.spiele(a < 1 ? 'laufen' : 'winken');
+      this.traeger.schaue(a < 1 ? -1 : 1);
+      this.traeger.traegt(null);
+    } else {
+      this.traeger.spiele(!v.meister && !v.laeuft && stand.packtisch > 0 ? 'schlafen' : 'idle');
+      this.traeger.schaue(1);
+      this.traeger.traegt(null);
+    }
+    this.traeger.wurzel.position.set(x, h.boden);
+    this.traeger.aktualisiere(dt);
+  }
+
+  private zeichneDebug(): void {
+    const g = this.debug;
+    g.clear();
+    const kreuz = (x: number, y: number, farbe: number): void => {
+      g.moveTo(x - 5, y).lineTo(x + 5, y).moveTo(x, y - 5).lineTo(x, y + 5).stroke({ width: 1.5, color: farbe });
+    };
+    for (const e of this.etagen) if (e.wurzel.visible) for (const q of e.punkte()) kreuz(q.x, q.y, 0xff3355);
+    kreuz(this.traeger.wurzel.x, this.traeger.wurzel.y, 0x33ff88);
+    kreuz(this.wagen.x, this.wagen.y, 0x33aaff);
+    kreuz(this.antrieb.x, this.antrieb.y, 0xffcc00);
+    kreuz(this.kabine.x, this.kabine.y, 0xffcc00);
   }
 }

@@ -18,9 +18,10 @@ import { type AnleitungsZiel, anleitungsSchritt } from './anleitung';
 import { ManufakturBlatt, MeisterBlatt, MeisterUebersicht, UpgradeBlatt } from './Blaetter';
 import { manufakturBild } from './bilder';
 import { manufakturName } from './namen';
-import type { Ausschnitt, Szene } from './szene/Szene';
+import type { Ausschnitt, Szene, SzenenEreignis } from './szene/Szene';
 import { type Rechteck, BREITE, ETAGE_HOEHE, etage, gesamtHoehe, halle } from './szene/layout';
 import { Ueberlagerung } from './Ueberlagerung';
+import { type Verkauf, Verkaeufe, useZaehler } from './effekte';
 import { useManufaktur } from './useManufaktur';
 import { dauer, kurz } from './zahlen';
 import './manufaktur.css';
@@ -84,6 +85,25 @@ export function Kartenmanufaktur({
   const buehne = useRef<HTMLDivElement>(null);
   const [masse, setMasse] = useState({ breite: BREITE, hoehe: 600 });
   const ausschnitt = useRef<Ausschnitt>({ oben: 0, hoehe: 600, breite: BREITE });
+  const wurzel = useRef<HTMLDivElement>(null);
+  const kasse = useRef<HTMLSpanElement>(null);
+  const [verkaeufe, setVerkaeufe] = useState<Verkauf[]>([]);
+  const [debug, setDebug] = useState(false);
+  const zaehler = useRef(0);
+
+  // Verkauf aus der Szene: Muenzen fliegen vom Wagen zum Zaehler im HUD.
+  const beimEreignis = useCallback((e: SzenenEreignis) => {
+    const r = wurzel.current?.getBoundingClientRect();
+    const f = feld.current?.getBoundingClientRect();
+    const k = kasse.current?.getBoundingClientRect();
+    if (!r || !f || !k) return;
+    const x = f.left - r.left + e.x;
+    const y = f.top - r.top + e.y;
+    const id = (zaehler.current += 1);
+    const neu: Verkauf = { id, betrag: e.betrag, x, y, dx: k.left - r.left + 12 - x, dy: k.top - r.top + 12 - y };
+    setVerkaeufe((alt) => [...alt.slice(-4), neu]);
+    window.setTimeout(() => setVerkaeufe((alt) => alt.filter((v) => v.id !== id)), 1100);
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => setTakt((n) => n + 1), ZEICHNEN_MS);
@@ -122,6 +142,7 @@ export function Kartenmanufaktur({
         buehne.current!,
         { stand: () => m.steuerung.stand(), jetzt: () => m.steuerung.jetzt() },
         () => ({ ...ausschnitt.current, oben: feld.current?.scrollTop ?? 0 }),
+        beimEreignis,
       ).then((s) => {
         if (aus) s?.zerstoere();
         else szene.current = s;
@@ -132,11 +153,17 @@ export function Kartenmanufaktur({
       szene.current?.zerstoere();
       szene.current = null;
     };
-  }, [m.bereit, m.steuerung]);
+  }, [m.bereit, m.steuerung, beimEreignis]);
 
   useEffect(() => {
     szene.current?.groesse(masse.breite, leinwandHoehe);
   }, [masse.breite, leinwandHoehe]);
+
+  useEffect(() => {
+    szene.current?.zeigeDebug(debug);
+  }, [debug]);
+
+  const talerAnzeige = useZaehler(stand?.taler ?? 0);
 
   const tue = useCallback(
     (aktion: Aktion, klang: 'tipp' | 'kauf' = 'tipp'): boolean => {
@@ -182,7 +209,13 @@ export function Kartenmanufaktur({
     feld.current?.scrollBy({ top: richtung * ETAGE_HOEHE * faktor, behavior: 'smooth' });
 
   return (
-    <div className="hb-voll mf" role="dialog" aria-modal="true" aria-label={`Kartenmanufaktur, ${manufakturName(stand.manufaktur)}`}>
+    <div
+      className="hb-voll mf"
+      ref={wurzel}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Kartenmanufaktur, ${manufakturName(stand.manufaktur)}`}
+    >
       <header className="mf-hud">
         <Schliessen onClick={onClose} />
         {leerlauf !== null && (
@@ -190,11 +223,12 @@ export function Kartenmanufaktur({
             +{kurz(leerlauf)}/s
           </span>
         )}
-        <span className="mf-kasse" aria-label={`${kurz(stand.taler)} Taler`}>
+        <span className="mf-kasse" ref={kasse} aria-label={`${kurz(stand.taler)} Taler`}>
           <i className="mf-taler is-gross" aria-hidden="true" />
-          {kurz(stand.taler)}
+          {kurz(talerAnzeige)}
         </span>
       </header>
+      <Verkaeufe liste={verkaeufe} />
 
       {m.meldung && (
         <p className="mf-meldung" role="status">
@@ -284,6 +318,8 @@ export function Kartenmanufaktur({
       {blatt?.art === 'manufaktur' && (
         <ManufakturBlatt
           stand={stand}
+          debug={debug}
+          onDebug={setDebug}
           onClose={() => setBlatt(null)}
           onUmziehen={() =>
             frage(

@@ -153,3 +153,36 @@ function bremsen(x: number): number {
   const t = Math.min(1, Math.max(0, x));
   return 1 - (1 - t) * (1 - t);
 }
+
+/** Welcher Ablauf zu welcher Phase gehoert — der Zustandsautomat des Arbeiters. */
+export function arbeiterAblauf(phase: PressenPhase): 'schlafen' | 'idle' | 'laufen' | 'arbeiten' | 'laufen_tragen' | 'ablegen' {
+  switch (phase) {
+    case 'schlafen':
+      return 'schlafen';
+    case 'wartet':
+      return 'idle';
+    case 'hin':
+      return 'laufen';
+    case 'arbeiten':
+      return 'arbeiten';
+    case 'zurueck':
+      return 'laufen_tragen';
+    case 'ablegen':
+      return 'ablegen';
+  }
+}
+
+/**
+ * Wie schnell die Ablaeufe einer Presse laufen: im Verhaeltnis zur Zykluszeit
+ * auf Stufe 1, mal Meister-Faehigkeit. Ein Upgrade macht die Presse sichtbar
+ * schneller, weil ihr Zyklus kuerzer wird — nicht, weil hier etwas erfunden ist.
+ */
+export function ablaufTempo(p: Presse, jetzt: number): number {
+  return (presseZyklus(1) / presseZyklus(p.stufe)) * tempo(p, jetzt);
+}
+
+/** Wurde zwischen `vorher` und `jetzt` (Anteile der Arbeitsphase) ein Pressenschlag erreicht? */
+export function schlagZwischen(vorher: number, jetzt: number): boolean {
+  if (jetzt < vorher) return SCHLAEGE.some((s) => s <= jetzt || s > vorher);
+  return SCHLAEGE.some((s) => s > vorher && s <= jetzt);
+}

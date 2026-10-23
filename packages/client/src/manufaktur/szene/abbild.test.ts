@@ -81,3 +81,20 @@ describe('Abbild der Manufaktur', () => {
     expect(wagenOrt(neuerStand(T0), T0, 0)).toEqual({ phase: 'steht', weg: 0, anteil: 0 });
   });
 });
+
+describe('Zustandsautomat der Arbeiter', () => {
+  it('jede Phase hat ihren Ablauf, und ein Schlag wird genau einmal erkannt', async () => {
+    const { arbeiterAblauf, schlagZwischen } = await import('./abbild');
+    expect(arbeiterAblauf('schlafen')).toBe('schlafen');
+    expect(arbeiterAblauf('zurueck')).toBe('laufen_tragen');
+    expect(schlagZwischen(0.1, 0.25)).toBe(true);
+    expect(schlagZwischen(0.25, 0.3)).toBe(false);
+    expect(schlagZwischen(0.9, 0.1)).toBe(false);
+  });
+
+  it('ein Upgrade macht die Abläufe schneller', async () => {
+    const { ablaufTempo } = await import('./abbild');
+    const p = neuerStand(T0).pressen[0]!;
+    expect(ablaufTempo({ ...p, stufe: 40 }, T0)).toBeGreaterThan(ablaufTempo(p, T0));
+  });
+});
