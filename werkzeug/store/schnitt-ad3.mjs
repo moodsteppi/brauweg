@@ -235,7 +235,7 @@ function endkarteHtml() {
     .icon { width: 260px; height: 260px; border-radius: 58px; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
     .titel { margin-top: 64px; font-size: 56px; white-space: nowrap; font-weight: 800; }
     .zeile { margin-top: 54px; font-size: 44px; color: #cdbb9c; }
-    /* Seit der Umstellung auf www (brauweg-spielen.de ohne www hat kein
+    /* Seit der Umstellung auf www (die Domain ohne www hat kein
        Zertifikat) brach die Adresse bei 76 px am Bindestrich um. Einzeilig
        erzwingen und so klein setzen, dass sie in die 840 px der sicheren Zone passt. */
     .adresse { margin-top: 10px; font-size: 64px; white-space: nowrap; font-weight: 800; color: #e7b54a; }
