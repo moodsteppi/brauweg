@@ -195,6 +195,8 @@ describe('Neues Hub: die restlichen Ansichten', () => {
       'Deine Figur',
       'Deine Sachen',
       'Trophäen',
+      // Seit dem 23.10.2026 auch auf der Webseite (vorher nur in der App).
+      'Browort',
       'Freunde',
       'Geburtstag',
       'Konto',
@@ -217,6 +219,8 @@ describe('Neues Hub: die restlichen Ansichten', () => {
       'Deine Figur',
       'Deine Sachen',
       'Trophäen',
+      // Seit dem 23.10.2026 auch auf der Webseite (vorher nur in der App).
+      'Browort',
       'Freunde',
       'Konto',
     ]);
