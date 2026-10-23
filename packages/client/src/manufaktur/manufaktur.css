@@ -1,16 +1,17 @@
 /*
  * Kartenmanufaktur (Kartenmanufaktur.tsx) — Emile, 23.10.2026.
  *
- * Bilder aus docs/ASSETS-KARTENMANUFAKTUR.md unter public/manufaktur/; welches
- * Bild zu welcher Stufe gehoert, steht in bilder.ts. Oben die Halle
- * (kulisse-halle), darunter der Keller (wand-keller, gekachelt) mit Laufband
- * und Pressen — wie Schacht und Lager im Vorbild.
+ * Die Welt zeichnet Pixi (szene/Szene.ts); hier steht nur, was DOM ist: HUD,
+ * die Knoepfe ueber der Szene (Ueberlagerung.tsx), die untere Leiste und die
+ * Blaetter. Die Knoepfe liegen in Welt-Einheiten (390 breit) und werden mit
+ * der Szene skaliert — Lage und Groesse kommen aus szene/layout.ts.
+ *
+ * Gold heisst nur „Geld" oder „kannst du dir leisten". Alles andere ist
+ * Nachtblau, Holz oder Weiss.
  */
 
 .mf {
-  background:
-    radial-gradient(120% 60% at 50% 0%, #2a2140 0%, transparent 60%),
-    #0d1530;
+  background: #0d1530;
 }
 
 .mf .mf-mitte {
@@ -20,15 +21,34 @@
   justify-content: center;
 }
 
+/* --- HUD: links der Leerlauf-Ertrag, rechts die Taler. Mehr nicht. --------- */
+
+.mf .mf-hud {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(var(--hb-oben) + 4px) 12px 8px;
+}
+.mf .mf-leerlauf {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(72, 213, 107, 0.14);
+  border: 1px solid rgba(72, 213, 107, 0.5);
+  font: 400 15px var(--hb-anz);
+  color: var(--hb-gruen);
+  font-variant-numeric: tabular-nums;
+}
 .mf .mf-kasse {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px 6px 8px;
+  padding: 6px 14px 6px 8px;
   border-radius: 999px;
   background: var(--hb-grund-tief);
   border: 1px solid var(--hb-kontur);
-  font: 400 18px var(--hb-anz);
+  font: 400 20px var(--hb-anz);
   color: var(--hb-gold);
   font-variant-numeric: tabular-nums;
 }
@@ -40,36 +60,16 @@
   height: 16px;
   background: url('/manufaktur/taler.webp') center / contain no-repeat;
   flex: none;
+  vertical-align: -2px;
 }
 .mf-taler.is-gross {
   width: 24px;
   height: 24px;
 }
 
-.mf .mf-leiste {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 16px 8px;
-}
-.mf .mf-einkommen {
-  font: 800 15px var(--hb-txt);
-  color: var(--hb-gruen);
-}
-.mf .mf-engpass {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(245, 192, 46, 0.14);
-  border: 1px solid var(--hb-gold-tief);
-  font: 800 12px var(--hb-txt);
-  color: var(--hb-gold);
-}
-
 .mf .mf-meldung {
   position: absolute;
-  top: calc(var(--hb-oben) + 110px);
+  top: calc(var(--hb-oben) + 64px);
   left: 50%;
   z-index: 20;
   transform: translateX(-50%);
@@ -80,379 +80,384 @@
   color: var(--hb-grund);
   font: 800 14px var(--hb-txt);
   white-space: nowrap;
+  pointer-events: none;
 }
 
-.mf .mf-rolle {
+/* --- Spielfeld: klebende Leinwand, Knoepfe darueber ------------------------- */
+
+.mf .mf-feld {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 12px calc(24px + env(safe-area-inset-bottom, 0px));
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.mf .mf-welt {
+  position: relative;
+  /* Ohne Szene (kein WebGL) bleibt wenigstens der Keller-Grund. */
+  background: #1a1410;
+}
+.mf .mf-buehne {
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mf .mf-buehne .mf-leinwand {
+  display: block;
+}
+.mf .mf-ueber-huelle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 390px;
+  transform-origin: 0 0;
+}
+.mf .mf-ueber {
+  position: relative;
+}
+.mf .mf-ueber > *,
+.mf .mf-etage-ueber > * {
+  position: absolute;
+}
+
+/* Tippflaechen ueber Figur und Maschine: unsichtbar, aber gross genug. */
+.mf .mf-ueber .mf-tipp {
+  border-radius: 14px;
+}
+.mf .mf-ueber .mf-tipp:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mf .mf-zzz {
+  font: 400 15px var(--hb-anz);
+  color: rgba(230, 236, 255, 0.85);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  animation: mf-zzz 2.4s ease-in-out infinite;
+}
+@keyframes mf-zzz {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-5px); opacity: 1; }
+}
+
+.mf .mf-nummer {
+  transform: translate(-50%, -50%);
+  min-width: 26px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(7, 19, 47, 0.85);
+  border: 1px solid rgba(201, 162, 74, 0.6);
+  font: 400 14px var(--hb-anz);
+  color: #f3e6c4;
+  text-align: center;
+  pointer-events: none;
+}
+.mf .mf-etage-ueber .mf-bestand {
+  transform: translateX(-50%);
+}
+.mf .mf-bestand {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(7, 19, 47, 0.78);
+  font: 400 12px var(--hb-anz);
+  color: #f3e6c4;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Stufen-Schild: Holzschild, gold wenn bezahlbar, rot pulsierend als Engpass. */
+.mf .mf-ueber .mf-schild-stufe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #8a5a30, #5e3a1c);
+  border: 2px solid #3a2414;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  color: #f3e6c4;
+}
+.mf .mf-schild-stufe small {
+  font: 800 9px var(--hb-txt);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.mf .mf-schild-stufe b {
+  font: 400 22px/1 var(--hb-anz);
+}
+.mf .mf-ueber .mf-schild-stufe.is-leistbar {
+  background: linear-gradient(180deg, #ffd65a, #e0a21c);
+  border-color: #9a6a10;
+  color: #2a1a05;
+}
+.mf .mf-ueber .mf-schild-stufe.is-engpass {
+  animation: mf-engpass 1.6s ease-in-out infinite;
+}
+.mf .mf-warnung {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e64646;
+  color: #fff;
+  font: 400 14px/20px var(--hb-anz);
+  font-style: normal;
+  text-align: center;
+}
+@keyframes mf-engpass {
+  0%, 100% { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(230, 70, 70, 0); }
+  50% { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(230, 70, 70, 0.6); }
+}
+
+/* Meister-Platz: Portraetrahmen. */
+.mf .mf-ueber .mf-meisterplatz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(7, 19, 47, 0.75);
+  border: 3px solid #c9a24a;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+.mf .mf-meisterplatz img {
+  width: 54px;
+  height: 54px;
+  margin-top: 6px;
+}
+.mf .mf-ueber .mf-meisterplatz.is-leer {
+  border-style: dashed;
+  border-color: rgba(243, 230, 196, 0.45);
+  color: rgba(243, 230, 196, 0.85);
+}
+.mf .mf-meisterplatz.is-leer span {
+  font: 400 26px/1 var(--hb-anz);
+}
+.mf .mf-meisterplatz.is-leer small {
+  font: 400 11px var(--hb-anz);
+}
+.mf .mf-ueber .mf-meisterplatz.is-leer.is-leistbar {
+  border-color: var(--hb-gold);
+  color: var(--hb-gold);
+}
+.mf .mf-ueber .mf-meisterplatz.is-bereit {
+  box-shadow: 0 0 0 3px rgba(72, 213, 107, 0.55);
+}
+.mf .mf-ueber .mf-meisterplatz.is-wirkt {
+  border-color: #48d56b;
+  animation: mf-wirkt 0.8s ease-in-out infinite;
+}
+@keyframes mf-wirkt {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Gesperrte Etage: Bretterwand (Szene) mit Preis (hier). */
+.mf .mf-ueber .mf-gesperrt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: rgba(7, 19, 47, 0.82);
+  border: 2px solid rgba(243, 230, 196, 0.35);
+  color: #f3e6c4;
+  font: 800 14px var(--hb-txt);
+}
+.mf .mf-gesperrt b {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 18px var(--hb-anz);
+}
+.mf .mf-ueber .mf-gesperrt.is-leistbar {
+  border-color: var(--hb-gold);
+  color: var(--hb-gold);
+}
+
+.mf .mf-direktor {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: mf-direktor 3.2s ease-in-out infinite;
+}
+@keyframes mf-direktor {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+
+/* Fingeranleitung: zeigt beim ersten Start, wohin man tippt. */
+.mf .mf-finger {
+  font-size: 34px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+  animation: mf-finger 1.1s ease-in-out infinite;
+}
+@keyframes mf-finger {
+  0%, 100% { transform: translate(-30%, 0); }
+  50% { transform: translate(-30%, -10px); }
+}
+
+/* --- Untere Leiste ------------------------------------------------------ */
+
+.mf .mf-unten {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: var(--hb-grund-tief);
+  border-top: 1px solid var(--hb-kontur);
+}
+.mf .mf-unten .mf-unten-knopf {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border-radius: 12px;
+  background: #1c2547;
+  border: 1px solid var(--hb-kontur);
+  color: var(--hb-tinte);
+  font: 800 13px var(--hb-txt);
+}
+.mf .mf-unten .mf-unten-knopf:disabled {
+  opacity: 0.45;
+}
+.mf .mf-pfeile {
+  display: flex;
+  gap: 4px;
+}
+.mf .mf-unten .mf-unten-knopf.is-pfeil {
+  flex: none;
+  width: 46px;
+}
+
+/* --- Blaetter ------------------------------------------------------------ */
+
+.mf-blatt {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-
-/* --- Karten ---------------------------------------------------------------- */
-
-.mf .mf-karte {
-  position: relative;
+.mf-blatt-stufe {
+  margin: 0;
+  font: 400 20px var(--hb-anz);
+  text-align: center;
+}
+.mf-kennzahlen {
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px;
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%),
-    #1c2547;
-  border: 1px solid #34406b;
-  color: var(--hb-tinte);
-  text-align: left;
 }
-.mf .mf-karte.is-tippbar {
-  cursor: pointer;
-  border-color: var(--hb-gold-tief);
-}
-.mf .mf-karte strong {
-  font: 800 14px var(--hb-txt);
-}
-.mf .mf-titelzeile {
+.mf-kennzahlen div {
   display: flex;
-  align-items: baseline;
   justify-content: space-between;
   gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
 }
-.mf .mf-zahl {
-  font: 400 18px var(--hb-anz);
-  color: var(--hb-gold);
-  font-variant-numeric: tabular-nums;
-}
-
-/* --- Halle: Lager und Lieferwagen ---------------------------------------- */
-
-.mf .mf-oben {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-/*
- * Ausschnitt der Kulisse von Zeile 430 bis 1000 (von 1536): Fenster, Tor und
- * Boden. Seitenverhaeltnis und Lage haengen zusammen — bei voller Breite ist
- * das Bild 1,5 Breiten hoch, der Kasten 0,556; 44,5 % schiebt Zeile 430 an
- * die Oberkante. Wer eins aendert, rechnet das andere nach.
- */
-.mf .mf-szene {
-  position: relative;
-  aspect-ratio: 1024 / 570;
-  border-radius: 18px;
-  overflow: hidden;
-  background: #2a1a10 url('/manufaktur/kulisse-halle.webp') center 44.5% / 100% auto no-repeat;
-  box-shadow: inset 0 0 0 1px rgba(255, 215, 120, 0.18);
-}
-/* Beides steht auf dem Boden (Vorderkante bei rund 95 % der Kastenhoehe). */
-.mf .mf-lager-bild {
-  position: absolute;
-  left: 2%;
-  bottom: 4%;
-  width: 38%;
-  pointer-events: none;
-  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45));
-}
-.mf .mf-schild {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 4px 10px;
-  border-radius: 12px;
-  background: rgba(7, 19, 47, 0.82);
-  border: 1px solid rgba(255, 215, 120, 0.3);
-}
-.mf .mf-schild small {
-  font: 800 10px var(--hb-txt);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.mf-kennzahlen dt {
+  font: 700 13px var(--hb-txt);
   color: var(--hb-leise);
 }
-.mf .mf-schild-lager {
-  left: 3%;
-  top: 6%;
+.mf-kennzahlen dd {
+  margin: 0;
+  font: 400 15px var(--hb-anz);
+  font-variant-numeric: tabular-nums;
 }
-.mf .mf-szene .mf-wagen {
-  position: absolute;
-  right: 1%;
-  bottom: 3%;
-  width: 52%;
-  border-radius: 16px;
-}
-.mf .mf-wagen img {
-  display: block;
-  width: 100%;
-  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45));
-}
-/* Antippen: der Wagen leuchtet golden, wie die tippbaren Karten. */
-.mf .mf-wagen.is-tippbar img {
-  filter: drop-shadow(0 0 6px rgba(255, 200, 80, 0.9)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45));
-}
-.mf .mf-wagen.is-aktiv img {
-  animation: mf-ruckeln 0.4s ease-in-out infinite;
-}
-
-/* --- Keller: Laufband und Pressen ---------------------------------------- */
-
-.mf .mf-halle {
-  display: grid;
-  grid-template-columns: 40px 1fr;
-  gap: 8px;
-  padding: 10px 10px 10px 8px;
-  border-radius: 18px;
-  background:
-    linear-gradient(rgba(8, 12, 30, 0.35), rgba(8, 12, 30, 0.35)),
-    #2a1d14 url('/manufaktur/wand-keller.webp') 0 0 / 192px 192px repeat;
-}
-
-/*
- * Laufband: das Bild senkrecht gekachelt, eine Kachel ist bei 40 px Breite
- * 80 px hoch. Laeuft es, rueckt der Streifen um genau eine Kachel nach oben —
- * deshalb ragt er unten 80 px heraus, sonst klafft am Ende eine Luecke.
- */
-.mf .mf-band {
-  position: relative;
-  border-radius: 10px;
-  background: rgba(20, 12, 6, 0.55);
-  overflow: hidden;
-}
-.mf .mf-band.is-tippbar {
-  box-shadow: inset 0 0 0 2px var(--hb-gold-tief);
-}
-.mf .mf-band-streifen {
-  position: absolute;
-  inset: 0 0 -80px;
-  background: url('/manufaktur/laufband.webp') center top / 40px 80px repeat-y;
-}
-.mf .mf-band.is-aktiv .mf-band-streifen {
-  animation: mf-band 1.2s linear infinite;
-}
-
-.mf .mf-pressen {
+.mf-meilenstein {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-}
-
-/* Ueber der Kellerwand: fast deckend, sonst liest man die Zahlen nicht. */
-.mf .mf-halle .mf-karte {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%),
-    rgba(22, 30, 62, 0.9);
-}
-
-.mf .mf-presse-kopf {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-/* Presse mit Pinguin davor: Drucker (antippen) oder Meister (von selbst). */
-.mf .mf-maschine {
-  position: relative;
-  flex: none;
-  width: 72px;
-  height: 64px;
-}
-.mf .mf-presse-bild {
-  position: absolute;
-  left: -6px;
-  top: -6px;
-  width: 72px;
-  height: 72px;
-  transform-origin: 50% 88%;
-}
-.mf .mf-presse.is-aktiv .mf-presse-bild {
-  animation: mf-druck 0.6s ease-in-out infinite;
-}
-.mf .mf-pinguin {
-  position: absolute;
-  right: -6px;
-  bottom: -6px;
-  width: 38px;
-  height: 38px;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
-}
-.mf .mf-presse-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.mf .mf-presse-text small {
+  gap: 6px;
   font: 700 12px var(--hb-txt);
   color: var(--hb-leise);
 }
-.mf .mf-ablage {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font: 400 16px var(--hb-anz);
-  color: var(--hb-gold);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Kartenstapel je Presse (stapel-1 … stapel-8) */
-.mf .mf-stapel {
-  flex: none;
-  width: 28px;
-  height: 28px;
-}
-.mf .mf-stapel.is-gross {
-  width: 44px;
-  height: 44px;
-  opacity: 0.85;
-}
-
-/* --- Knoepfe --------------------------------------------------------------- */
-
-.mf .mf-knoepfe {
-  display: flex;
-  gap: 6px;
-}
-.mf .mf-ausbau,
-.mf .mf-meister {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 48px;
-  padding: 4px 10px;
-  border-radius: 10px;
-  font: 800 12px var(--hb-txt);
-  text-align: left;
-}
-.mf .mf-knoepfe .mf-ausbau {
-  flex: 1;
-  background: var(--hb-gold);
-  color: var(--hb-grund);
-  box-shadow: inset 0 -2px 0 rgba(120, 70, 0, 0.3);
-}
-.mf .mf-ausbau b,
-.mf .mf-meister b {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font: 400 15px var(--hb-anz);
-}
-.mf .mf-ausbau small {
-  font: 700 10px var(--hb-txt);
-  opacity: 0.75;
-}
-.mf .mf-knoepfe .mf-ausbau:disabled {
-  background: #3a4466;
-  color: var(--hb-leise);
-  box-shadow: none;
-}
-.mf .mf-ausbau.is-max {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--hb-leise);
-}
-.mf .mf-knoepfe .mf-meister {
-  flex: none;
-  min-width: 92px;
-  background: #2c3966;
-  border: 1px solid var(--hb-kontur);
-  color: var(--hb-tinte);
-}
-.mf .mf-knoepfe .mf-meister:disabled {
-  opacity: 0.55;
-}
-.mf .mf-meister.is-da {
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
-  padding-left: 4px;
-  background: rgba(72, 213, 107, 0.12);
-  border: 1px solid var(--hb-gruen);
-  color: var(--hb-gruen);
-}
-.mf .mf-meister.is-da img {
-  width: 36px;
-  height: 36px;
-}
-
-/* Schicht ohne Meister */
-.mf .mf-schicht {
-  display: block;
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-.mf .mf-schicht i {
-  display: block;
-  height: 100%;
-  background: var(--hb-gruen);
-  transition: width 0.25s linear;
-}
-.mf .mf-antippen {
-  font: 800 11px var(--hb-txt);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--hb-gold);
-}
-
-/* Nicht durchsichtig: Auf der Kellerwand verschwand die Schrift in den Ziegeln. */
-.mf .mf-karte.mf-neu {
-  align-items: center;
-  border: 2px dashed var(--hb-kontur);
-  background: rgba(13, 21, 48, 0.82);
-}
-.mf .mf-karte.mf-neu b {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font: 400 16px var(--hb-anz);
-  color: var(--hb-gold);
-}
-.mf .mf-karte.mf-neu:disabled {
-  opacity: 0.6;
-}
-
-/* Die naechste Manufaktur als Kopfbild der Karte, Name unten links. */
-.mf .mf-umzug-bild {
-  display: flex;
-  align-items: flex-end;
-  margin: -10px -10px 2px;
-  aspect-ratio: 2 / 1;
-  padding: 10px 12px;
-  border-radius: 16px 16px 0 0;
-  background-size: cover;
-  background-position: center;
-}
-.mf .mf-umzug-bild strong {
-  font: 400 20px var(--hb-anz);
-  color: #fff;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
-}
-.mf .mf-umzug-gross {
-  width: 100%;
-  aspect-ratio: 2 / 1;
-  border-radius: 14px;
-  object-fit: cover;
-}
-
-.mf .mf-umzug small {
-  font: 700 12px/1.4 var(--hb-txt);
-  color: var(--hb-leise);
-}
-.mf .mf-fortschritt {
+.mf-fortschritt {
   display: block;
   height: 8px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
-.mf .mf-fortschritt i {
+.mf-fortschritt i {
   display: block;
   height: 100%;
-  background: var(--hb-gold);
+  background: #48d56b;
+}
+.mf-mengen {
+  display: flex;
+  gap: 6px;
+}
+:is(.hb, .spe) .mf-mengen .mf-menge {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hb-kontur);
+  font: 800 14px var(--hb-txt);
+}
+:is(.hb, .spe) .mf-mengen .mf-menge.is-an {
+  background: var(--hb-tinte);
+  color: var(--hb-grund);
+}
+.mf-meister-gross {
+  width: 96px;
+  height: 96px;
+  align-self: center;
+}
+.mf-meisterliste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mf-meisterliste li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mf-meisterliste img {
+  width: 40px;
+  height: 40px;
+}
+.mf-meisterliste span {
+  flex: 1;
+  font: 700 14px var(--hb-txt);
+}
+
+.mf-umzug-bild {
+  display: flex;
+  align-items: flex-end;
+  aspect-ratio: 2 / 1;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background-size: cover;
+  background-position: center;
+}
+.mf-umzug-bild strong {
+  font: 400 20px var(--hb-anz);
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.mf-umzug-gross {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border-radius: 14px;
+  object-fit: cover;
 }
 
 .mf-offline-betrag {
@@ -465,95 +470,15 @@
   color: var(--hb-gold);
 }
 
-@keyframes mf-band {
-  from { transform: translateY(0); }
-  to { transform: translateY(-80px); }
-}
-/* Die Presse drueckt: kurz gestaucht, auf der Bodenlinie stehend. */
-@keyframes mf-druck {
-  0%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(0.94); }
-}
-@keyframes mf-ruckeln {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-1px); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .mf .mf-band.is-aktiv .mf-band-streifen,
-  .mf .mf-presse.is-aktiv .mf-presse-bild,
-  .mf .mf-wagen.is-aktiv img {
+  .mf .mf-zzz,
+  .mf .mf-finger,
+  .mf .mf-direktor,
+  .mf .mf-ueber .mf-meisterplatz.is-wirkt {
     animation: none;
   }
-}
-
-/* --- Stationskarten (Uebergang bis zur Spielwelt) -------------------------- */
-
-.mf .mf-station .mf-arbeit {
-  position: relative;
-  flex: none;
-  min-width: 56px;
-  min-height: 56px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-}
-.mf .mf-zzz {
-  position: absolute;
-  right: 2px;
-  top: -6px;
-  font: 400 13px var(--hb-anz);
-  color: var(--hb-leise);
-}
-/* Gold heisst „kannst du dir leisten" — sonst nichts. */
-.mf .mf-station .mf-schild-knopf {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 76px;
-  min-height: 48px;
-  padding: 4px 8px;
-  border-radius: 10px;
-  background: #2c3966;
-  border: 1px solid var(--hb-kontur);
-  color: var(--hb-tinte);
-  font: 800 12px var(--hb-txt);
-}
-.mf .mf-station .mf-schild-knopf b {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font: 400 14px var(--hb-anz);
-}
-.mf .mf-station .mf-schild-knopf.is-leistbar {
-  background: var(--hb-gold);
-  border-color: var(--hb-gold);
-  color: var(--hb-grund);
-}
-.mf .mf-station .mf-meister-knopf {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  align-self: flex-start;
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--hb-tinte);
-  font: 800 12px var(--hb-txt);
-}
-/* Engpass: dezent rot pulsierend, an der Station selbst. */
-.mf .mf-karte.is-engpass {
-  animation: mf-engpass 1.6s ease-in-out infinite;
-}
-@keyframes mf-engpass {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(230, 70, 70, 0); }
-  50% { box-shadow: 0 0 0 3px rgba(230, 70, 70, 0.55); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .mf .mf-karte.is-engpass {
+  .mf .mf-ueber .mf-schild-stufe.is-engpass {
     animation: none;
-    box-shadow: 0 0 0 2px rgba(230, 70, 70, 0.55);
+    box-shadow: 0 0 0 3px rgba(230, 70, 70, 0.6);
   }
 }

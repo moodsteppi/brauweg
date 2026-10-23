@@ -616,7 +616,7 @@ export function GameSelect({
         )}
         {manufakturOffen && (
           <Suspense fallback={null}>
-            <Kartenmanufaktur onClose={() => setManufakturOffen(false)} onGeaendert={onAvatarChange} />
+            <Kartenmanufaktur onClose={() => setManufakturOffen(false)} onGeaendert={onAvatarChange} getragen={me.avatar} />
           </Suspense>
         )}
         {zeigeFeier && (

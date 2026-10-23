@@ -1,56 +1,89 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
-  type ManufakturStand,
+  type Aktion,
+  type Menge,
   type Ziel,
-  ausbauLeistbar,
-  ausbauVorschau,
   engpass,
-  freischaltKosten,
-  kannUmziehen,
+  faehigkeitBereit,
   leerlaufErtrag,
-  meisterKosten,
-  paternosterKapazitaet,
-  presseErtrag,
-  versandKapazitaet,
+  stationVon,
 } from '@brauweg/manufaktur-kern';
 
+import type { Getragen } from '../api';
 import { t } from '../i18n';
 import { spiele } from '../klang';
 import { HbBlatt, Schliessen, useEscape, useRueckfrage } from '../screens/HbBlatt';
-import { BILD, manufakturBild, presseBild, stapelBild } from './bilder';
+import { type AnleitungsZiel, anleitungsSchritt } from './anleitung';
+import { ManufakturBlatt, MeisterBlatt, MeisterUebersicht, UpgradeBlatt } from './Blaetter';
+import { manufakturBild } from './bilder';
+import { manufakturName } from './namen';
+import type { Ausschnitt, Szene } from './szene/Szene';
+import { type Rechteck, BREITE, ETAGE_HOEHE, etage, gesamtHoehe, halle } from './szene/layout';
+import { Ueberlagerung } from './Ueberlagerung';
 import { useManufaktur } from './useManufaktur';
 import { dauer, kurz } from './zahlen';
 import './manufaktur.css';
 
-/** Je Presse eine Kartenart — tiefer heisst wertvoller (Spielentwurf). */
-export const KARTENARTEN = ['Skatblatt', 'Doppelkopf', 'Zauberer', 'Poker', 'Schafkopf', 'Rommé', 'Tarock', 'Goldblatt'];
-export const MANUFAKTUREN = ['Werkstatt im Dorf', 'Fabrik am Fluss', 'Bergdruckerei', 'Hafen-Druckhaus', 'Kartenpalast'];
+export { KARTENARTEN, MANUFAKTUREN } from './namen';
 
-/** So oft zeichnet das DOM neu — die Zahlen rechnet die Steuerung, nicht dieser Takt. */
+/** So oft zeichnet das DOM neu — die Szene laeuft mit 60 Bildern, die Zahlen rechnet die Steuerung. */
 const ZEICHNEN_MS = 250;
+
+type Blatt =
+  | { art: 'upgrade'; ziel: Ziel }
+  | { art: 'meister'; ziel: Ziel }
+  | { art: 'meisterliste' }
+  | { art: 'manufaktur' };
+
+function fingerOrt(ziel: AnleitungsZiel): Rechteck {
+  const h = halle();
+  switch (ziel.wo) {
+    case 'presse':
+      return etage(0).arbeit;
+    case 'paternoster':
+      return h.kopf;
+    case 'wagen':
+      return h.wagen;
+    case 'schild':
+      return etage(0).schild;
+    case 'meister':
+      return ziel.art === 'versand' ? h.versandMeister : ziel.art === 'paternoster' ? h.paternosterMeister : etage(0).meister;
+  }
+}
 
 /**
  * Die Kartenmanufaktur (Emile, 23.10.2026): Idle-Spiel wie Idle Miner
  * Tycoon, nur in der App. Spielentwurf: docs/SPEZIFIKATION-KARTENMANUFAKTUR.md.
  *
- * Gerechnet wird mit dem gemeinsamen Kern (@brauweg/manufaktur-kern), den die
- * Steuerung in jedem Bild bis „jetzt" weiterrechnet — massgeblich bleibt der
- * Server. Bilder: docs/ASSETS-KARTENMANUFAKTUR.md, welches wohin gehoert
- * steht in bilder.ts.
+ * Aufbau wie im Vorbild, von oben nach unten: Versandhalle, Schacht links
+ * durch alle Etagen, je Etage Kiste, Meister-Platz, Presse und Stufen-Schild.
+ * Die Welt ist eine Pixi-Szene (szene/Szene.ts), alles zum Tippen liegt als
+ * DOM daruebern (Ueberlagerung.tsx), HUD und Blaetter bleiben DOM.
+ *
+ * Gerechnet wird mit dem gemeinsamen Kern (@brauweg/manufaktur-kern); die
+ * Steuerung rechnet ihn bis „jetzt" weiter, massgeblich bleibt der Server.
  */
 export function Kartenmanufaktur({
   onClose,
   onGeaendert,
+  getragen,
 }: {
   onClose: () => void;
   /** Muenzen fuers Hub kamen dazu — `/api/me` neu laden. */
   onGeaendert: () => void;
+  /** Was der eigene Pinguin traegt — er steht als Direktor in der Halle. */
+  getragen?: Getragen;
 }): React.JSX.Element {
   useEscape(onClose);
   const m = useManufaktur(onGeaendert);
   const [, setTakt] = useState(0);
+  const [blatt, setBlatt] = useState<Blatt | null>(null);
   const [frage, rueckfrage] = useRueckfrage();
+  const feld = useRef<HTMLDivElement>(null);
+  const buehne = useRef<HTMLDivElement>(null);
+  const [masse, setMasse] = useState({ breite: BREITE, hoehe: 600 });
+  const ausschnitt = useRef<Ausschnitt>({ oben: 0, hoehe: 600, breite: BREITE });
 
   useEffect(() => {
     const id = window.setInterval(() => setTakt((n) => n + 1), ZEICHNEN_MS);
@@ -61,16 +94,68 @@ export function Kartenmanufaktur({
     };
   }, [m.steuerung]);
 
+  // Groesse des Spielfelds: daran haengt der Massstab von Szene und Knoepfen.
+  useLayoutEffect(() => {
+    const el = feld.current;
+    if (!el) return;
+    const messen = (): void => setMasse({ breite: el.clientWidth, hoehe: el.clientHeight });
+    messen();
+    const beobachter = new ResizeObserver(messen);
+    beobachter.observe(el);
+    return () => beobachter.disconnect();
+  }, [m.bereit]);
+
   const stand = m.bereit ? m.steuerung.stand() : null;
+  const anzahl = stand?.pressen.length ?? 1;
+  const faktor = masse.breite / BREITE;
+  const weltHoehe = gesamtHoehe(anzahl) * faktor;
+  const leinwandHoehe = Math.min(masse.hoehe, weltHoehe);
+  ausschnitt.current = { oben: feld.current?.scrollTop ?? 0, hoehe: leinwandHoehe, breite: masse.breite };
+
+  // Die Szene: einmal bauen, sobald der Stand da ist; ohne WebGL bleibt sie weg.
+  const szene = useRef<Szene | null>(null);
+  useEffect(() => {
+    if (!m.bereit || !buehne.current) return;
+    let aus = false;
+    void import('./szene/Szene').then(({ Szene }) =>
+      Szene.erstelle(
+        buehne.current!,
+        { stand: () => m.steuerung.stand(), jetzt: () => m.steuerung.jetzt() },
+        () => ({ ...ausschnitt.current, oben: feld.current?.scrollTop ?? 0 }),
+      ).then((s) => {
+        if (aus) s?.zerstoere();
+        else szene.current = s;
+      }),
+    );
+    return () => {
+      aus = true;
+      szene.current?.zerstoere();
+      szene.current = null;
+    };
+  }, [m.bereit, m.steuerung]);
+
+  useEffect(() => {
+    szene.current?.groesse(masse.breite, leinwandHoehe);
+  }, [masse.breite, leinwandHoehe]);
+
+  const tue = useCallback(
+    (aktion: Aktion, klang: 'tipp' | 'kauf' = 'tipp'): boolean => {
+      const ergebnis = m.steuerung.tue(aktion);
+      if (ergebnis.ok) spiele(klang);
+      else {
+        spiele('fehler');
+        m.melde(t(`error.${ergebnis.code}`));
+      }
+      return ergebnis.ok;
+    },
+    [m],
+  );
 
   if (!stand) {
     return (
       <div className="hb-voll mf" role="dialog" aria-modal="true" aria-label="Kartenmanufaktur">
-        <header className="hb-voll-kopf">
+        <header className="mf-hud">
           <Schliessen onClick={onClose} />
-          <div className="hb-voll-titel">
-            <h1>Kartenmanufaktur</h1>
-          </div>
         </header>
         <div className="mf-mitte">
           {m.ladefehler ? (
@@ -88,39 +173,28 @@ export function Kartenmanufaktur({
     );
   }
 
-  const tue = (aktion: Parameters<typeof m.steuerung.tue>[0], klang: 'tipp' | 'kauf' = 'tipp'): void => {
-    const ergebnis = m.steuerung.tue(aktion);
-    if (ergebnis.ok) spiele(klang);
-    else {
-      spiele('fehler');
-      m.melde(t(`error.${ergebnis.code}`));
-    }
-  };
-
+  const jetzt = m.steuerung.jetzt();
   const leerlauf = leerlaufErtrag(stand);
   const glied = engpass(stand);
+  const finger = anleitungsSchritt(stand);
+  const boostBereit = [stand.versand, stand.paternoster, ...stand.pressen].some((s) => faehigkeitBereit(s, jetzt));
+  const rolle = (richtung: 1 | -1): void =>
+    feld.current?.scrollBy({ top: richtung * ETAGE_HOEHE * faktor, behavior: 'smooth' });
 
   return (
-    <div className="hb-voll mf" role="dialog" aria-modal="true" aria-label="Kartenmanufaktur">
-      <header className="hb-voll-kopf">
+    <div className="hb-voll mf" role="dialog" aria-modal="true" aria-label={`Kartenmanufaktur, ${manufakturName(stand.manufaktur)}`}>
+      <header className="mf-hud">
         <Schliessen onClick={onClose} />
-        <div className="hb-voll-titel">
-          <h1>Kartenmanufaktur</h1>
-          <span>
-            {MANUFAKTUREN[stand.manufaktur - 1] ?? `Manufaktur ${stand.manufaktur}`} · {stand.manufaktur}/5
+        {leerlauf !== null && (
+          <span className="mf-leerlauf" aria-label={`Leerlauf-Ertrag ${kurz(leerlauf)} Taler je Sekunde`}>
+            +{kurz(leerlauf)}/s
           </span>
-        </div>
+        )}
         <span className="mf-kasse" aria-label={`${kurz(stand.taler)} Taler`}>
           <i className="mf-taler is-gross" aria-hidden="true" />
           {kurz(stand.taler)}
         </span>
       </header>
-
-      {leerlauf !== null && (
-        <div className="mf-leiste">
-          <span className="mf-einkommen">Leerlauf +{kurz(leerlauf)}/s</span>
-        </div>
-      )}
 
       {m.meldung && (
         <p className="mf-meldung" role="status">
@@ -128,110 +202,104 @@ export function Kartenmanufaktur({
         </p>
       )}
 
-      <div className="mf-rolle">
-        <div className="mf-oben">
-          <div className="mf-szene">
-            <img className="mf-lager-bild" src={BILD.lager} alt="" draggable={false} />
-            <span className="mf-schild mf-schild-lager" aria-label={`Packtisch ${kurz(stand.packtisch)}`}>
-              <small>Packtisch</small>
-              <span className="mf-zahl">{kurz(stand.packtisch)}</span>
-            </span>
-            <button
-              type="button"
-              className={`mf-wagen${stand.versand.laeuft ? ' is-aktiv' : ''}`}
-              onClick={() => tue({ typ: 'arbeiten', ziel: { art: 'versand' } })}
-              aria-label="Lieferwagen beladen"
-            >
-              <img src={BILD.versand} alt="" draggable={false} />
-            </button>
-          </div>
-          <StationsKarte
-            titel="Versand"
-            stand={stand}
-            ziel={{ art: 'versand' }}
-            engpass={glied === 'versand'}
-            zeile={`Ladung ${kurz(stand.versand.ladung)} / ${kurz(versandKapazitaet(stand.versand.stufe, stand.manufaktur))}`}
-            tue={tue}
-          />
-        </div>
-
-        <div className="mf-halle">
-          <div className={`mf-band${stand.paternoster.laeuft ? ' is-aktiv' : ''}`} aria-hidden="true">
-            <span className="mf-band-streifen" />
-          </div>
-          <div className="mf-pressen">
-            <StationsKarte
-              titel="Paternoster"
+      <div className="mf-feld" ref={feld}>
+        <div className="mf-welt" style={{ height: weltHoehe }}>
+          <div className="mf-buehne" ref={buehne} style={{ height: leinwandHoehe }} />
+          <div className="mf-ueber-huelle" style={{ transform: `scale(${faktor})` }}>
+            <Ueberlagerung
               stand={stand}
-              ziel={{ art: 'paternoster' }}
-              engpass={glied === 'paternoster'}
-              zeile={`Ladung ${kurz(stand.paternoster.ladung)} / ${kurz(paternosterKapazitaet(stand.paternoster.stufe, stand.manufaktur))}`}
-              tue={tue}
+              jetzt={jetzt}
+              engpass={glied}
+              getragen={getragen}
+              onArbeiten={(ziel) => {
+                const s = stationVon(stand, ziel);
+                // Mit Meister oder mitten im Zyklus ist nichts zu tun — dann auch kein Ton.
+                if (s && !s.meister && !s.laeuft) tue({ typ: 'arbeiten', ziel });
+              }}
+              onSchild={(ziel) => setBlatt({ art: 'upgrade', ziel })}
+              onMeister={(ziel) => setBlatt({ art: 'meister', ziel })}
+              onFreischalten={() => tue({ typ: 'freischalten' }, 'kauf')}
             />
-            {stand.pressen.map((p, i) => (
-              <StationsKarte
-                key={i}
-                titel={`${i + 1} · ${KARTENARTEN[i]}`}
-                stand={stand}
-                ziel={{ art: 'presse', index: i }}
-                engpass={glied === 'pressen'}
-                zeile={`Kiste ${kurz(p.kiste)} · je Zyklus ${kurz(presseErtrag(i, p.stufe, stand.manufaktur))}`}
-                bild={
-                  <span className="mf-maschine" aria-hidden="true">
-                    <img className="mf-presse-bild" src={presseBild(p.stufe)} alt="" draggable={false} />
-                    <img className="mf-pinguin" src={p.meister ? BILD.meister : BILD.drucker} alt="" draggable={false} />
-                  </span>
-                }
-                tue={tue}
-              />
-            ))}
-            {stand.pressen.length < 8 && (
-              <button
-                type="button"
-                className="mf-karte mf-neu"
-                onClick={() => tue({ typ: 'freischalten' }, 'kauf')}
-                disabled={stand.taler < freischaltKosten(stand.pressen.length, stand.manufaktur)}
-              >
-                <img className="mf-stapel is-gross" src={stapelBild(stand.pressen.length)} alt="" draggable={false} />
-                <strong>
-                  Presse {stand.pressen.length + 1} bauen · {KARTENARTEN[stand.pressen.length]}
-                </strong>
-                <b>
-                  <i className="mf-taler" aria-hidden="true" />
-                  {kurz(freischaltKosten(stand.pressen.length, stand.manufaktur))}
-                </b>
-              </button>
+            {finger && (
+              <span className="mf-finger" style={mitte(fingerOrt(finger))} aria-hidden="true">
+                👆
+              </span>
             )}
           </div>
         </div>
-
-        {stand.manufaktur < 5 && (
-          <div className="mf-karte mf-umzug">
-            <span className="mf-umzug-bild" style={{ backgroundImage: `url(${manufakturBild(stand.manufaktur + 1)})` }}>
-              <strong>{MANUFAKTUREN[stand.manufaktur] ?? 'Neue Manufaktur'}</strong>
-            </span>
-            <small>Mit allen acht Pressen ziehst du um: alles beginnt neu, leistet aber doppelt so viel — und es gibt 300 Münzen fürs Hub.</small>
-            {kannUmziehen(stand) && (
-              <button
-                type="button"
-                className="hb-kn is-gold is-breit"
-                onClick={() =>
-                  frage(
-                    {
-                      titel: 'Umziehen?',
-                      text: 'Pressen, Stufen, Meister und Taler beginnen neu. Die neue Manufaktur leistet doppelt so viel.',
-                      ja: 'Umziehen',
-                    },
-                    () => tue({ typ: 'umziehen' }, 'kauf'),
-                  )
-                }
-              >
-                Neue Manufaktur eröffnen
-              </button>
-            )}
-          </div>
-        )}
       </div>
+
+      <nav className="mf-unten" aria-label="Manufaktur">
+        <button type="button" className="mf-unten-knopf" onClick={() => setBlatt({ art: 'meisterliste' })}>
+          Meister
+        </button>
+        <button
+          type="button"
+          className="mf-unten-knopf"
+          disabled={!boostBereit}
+          onClick={() => tue({ typ: 'boost' }, 'kauf')}
+          aria-label="Boost: alle bereiten Meister-Fähigkeiten auslösen"
+        >
+          Boost
+        </button>
+        <button type="button" className="mf-unten-knopf" onClick={() => setBlatt({ art: 'manufaktur' })}>
+          {stand.manufaktur}/5
+        </button>
+        <span className="mf-pfeile">
+          <button type="button" className="mf-unten-knopf is-pfeil" onClick={() => rolle(-1)} aria-label="Nach oben">
+            ▲
+          </button>
+          <button type="button" className="mf-unten-knopf is-pfeil" onClick={() => rolle(1)} aria-label="Nach unten">
+            ▼
+          </button>
+        </span>
+      </nav>
+
+      {blatt?.art === 'upgrade' && (
+        <UpgradeBlatt
+          stand={stand}
+          ziel={blatt.ziel}
+          onKaufen={(menge: Menge) => tue({ typ: 'ausbauen', ziel: blatt.ziel, menge }, 'kauf')}
+          onClose={() => setBlatt(null)}
+        />
+      )}
+      {blatt?.art === 'meister' && (
+        <MeisterBlatt
+          stand={stand}
+          ziel={blatt.ziel}
+          jetzt={jetzt}
+          onEinstellen={() => tue({ typ: 'meister', ziel: blatt.ziel }, 'kauf') && setBlatt(null)}
+          onFaehigkeit={() => tue({ typ: 'faehigkeit', ziel: blatt.ziel }, 'kauf') && setBlatt(null)}
+          onClose={() => setBlatt(null)}
+        />
+      )}
+      {blatt?.art === 'meisterliste' && (
+        <MeisterUebersicht
+          stand={stand}
+          jetzt={jetzt}
+          onFaehigkeit={(ziel) => tue({ typ: 'faehigkeit', ziel }, 'kauf')}
+          onClose={() => setBlatt(null)}
+        />
+      )}
+      {blatt?.art === 'manufaktur' && (
+        <ManufakturBlatt
+          stand={stand}
+          onClose={() => setBlatt(null)}
+          onUmziehen={() =>
+            frage(
+              {
+                titel: 'Umziehen?',
+                text: 'Pressen, Stufen, Meister und Taler beginnen neu. Die neue Manufaktur leistet doppelt so viel.',
+                ja: 'Umziehen',
+              },
+              () => {
+                setBlatt(null);
+                tue({ typ: 'umziehen' }, 'kauf');
+              },
+            )
+          }
+        />
+      )}
 
       {m.offline && (
         <HbBlatt titel="Willkommen zurück" onClose={m.schliesseOffline} klasse="is-klein">
@@ -249,7 +317,7 @@ export function Kartenmanufaktur({
         </HbBlatt>
       )}
       {m.umgezogen !== null && (
-        <HbBlatt titel={MANUFAKTUREN[m.umgezogen - 1] ?? `Manufaktur ${m.umgezogen}`} onClose={m.schliesseUmzug} klasse="is-klein">
+        <HbBlatt titel={manufakturName(m.umgezogen)} onClose={m.schliesseUmzug} klasse="is-klein">
           <div className="hb-rueckfrage">
             <img className="mf-umzug-gross" src={manufakturBild(m.umgezogen)} alt="" draggable={false} />
             <p className="hb-text">Neue Manufaktur, alles beginnt von vorn — und jede Station leistet doppelt so viel.</p>
@@ -264,69 +332,6 @@ export function Kartenmanufaktur({
   );
 }
 
-/**
- * Eine Station als Karte — Uebergang bis zur Spielwelt (Phase 2). Tippen auf
- * das Bild arbeitet, das Schild baut aus, der Meister-Knopf stellt ein.
- */
-function StationsKarte({
-  titel,
-  stand,
-  ziel,
-  engpass: istEngpass,
-  zeile,
-  bild,
-  tue,
-}: {
-  titel: string;
-  stand: ManufakturStand;
-  ziel: Ziel;
-  engpass: boolean;
-  zeile: string;
-  bild?: React.ReactNode;
-  tue: (aktion: Parameters<ReturnType<typeof useManufaktur>['steuerung']['tue']>[0], klang?: 'tipp' | 'kauf') => void;
-}): React.JSX.Element {
-  const s = ziel.art === 'presse' ? stand.pressen[ziel.index]! : ziel.art === 'paternoster' ? stand.paternoster : stand.versand;
-  const vorschau = ausbauVorschau(stand, ziel, 1);
-  const schlaeft = !s.meister && !s.laeuft;
-  return (
-    <div className={`mf-karte mf-station${istEngpass ? ' is-engpass' : ''}`}>
-      <div className="mf-presse-kopf">
-        <button
-          type="button"
-          className="mf-arbeit"
-          onClick={() => tue({ typ: 'arbeiten', ziel })}
-          aria-label={`${titel}: arbeiten`}
-        >
-          {bild}
-          {schlaeft && <span className="mf-zzz" aria-hidden="true">Zzz</span>}
-        </button>
-        <span className="mf-presse-text">
-          <strong>{titel}</strong>
-          <small>{zeile}</small>
-        </span>
-        <button
-          type="button"
-          className={`mf-schild-knopf${ausbauLeistbar(stand, ziel) ? ' is-leistbar' : ''}`}
-          onClick={() => tue({ typ: 'ausbauen', ziel, menge: 1 }, 'kauf')}
-          aria-label={`Stufe ${s.stufe}, ausbauen für ${kurz(vorschau.kosten)} Taler`}
-        >
-          <span>Stufe {s.stufe}</span>
-          <b>
-            <i className="mf-taler" aria-hidden="true" />
-            {kurz(vorschau.kosten)}
-          </b>
-        </button>
-      </div>
-      {!s.meister && (
-        <button
-          type="button"
-          className="mf-meister-knopf"
-          onClick={() => tue({ typ: 'meister', ziel }, 'kauf')}
-        >
-          Meister einstellen · <i className="mf-taler" aria-hidden="true" />
-          {kurz(meisterKosten(ziel, stand.manufaktur))}
-        </button>
-      )}
-    </div>
-  );
+function mitte(r: Rechteck): React.CSSProperties {
+  return { left: r.x + r.b / 2, top: r.y + r.h / 2 };
 }
