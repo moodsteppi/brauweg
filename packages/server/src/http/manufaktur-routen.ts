@@ -1,20 +1,21 @@
 /**
  * Kartenmanufaktur — die Endpunkte (manufaktur/dienst.ts).
  *
- *   GET  /api/manufaktur          bis jetzt nachrechnen, Ansicht, Offline-Meldung
- *   POST /api/manufaktur/aktion   { typ, ziel? } — ausbauen, meister, schicht,
- *                                 freischalten, umziehen
+ *   GET  /api/manufaktur          bis jetzt nachrechnen, Stand, Offline-Meldung
+ *   POST /api/manufaktur/aktion   { typ, ziel?, menge? } — arbeiten, ausbauen,
+ *                                 meister, faehigkeit, boost, freischalten, umziehen
  *
- * Gerechnet wird nur hier; der Bildschirm zaehlt mit den gelieferten Raten
- * hoch, bis die naechste Antwort kommt.
+ * Massgeblich gerechnet wird hier; der Bildschirm rechnet mit demselben Kern
+ * (@brauweg/manufaktur-kern) weiter, bis die naechste Antwort kommt.
  */
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
+import { MAX_PRESSEN } from '@brauweg/manufaktur-kern';
+
 import type { Db } from '../db/types.js';
 import { manufakturAktion, manufakturHeute } from '../manufaktur/dienst.js';
-import { MAX_PRESSEN } from '../manufaktur/regeln.js';
 
 type Grenze = { max: number; timeWindow: string };
 
@@ -27,14 +28,18 @@ export interface ManufakturRoutenDeps {
 
 const ziel = z.discriminatedUnion('art', [
   z.object({ art: z.literal('presse'), index: z.number().int().min(0).max(MAX_PRESSEN - 1) }),
-  z.object({ art: z.literal('laufband') }),
+  z.object({ art: z.literal('paternoster') }),
   z.object({ art: z.literal('versand') }),
 ]);
 
+const menge = z.union([z.literal(1), z.literal(10), z.literal(50), z.literal('max')]);
+
 const aktion = z.discriminatedUnion('typ', [
-  z.object({ typ: z.literal('ausbauen'), ziel }),
+  z.object({ typ: z.literal('arbeiten'), ziel }),
+  z.object({ typ: z.literal('ausbauen'), ziel, menge }),
   z.object({ typ: z.literal('meister'), ziel }),
-  z.object({ typ: z.literal('schicht'), ziel }),
+  z.object({ typ: z.literal('faehigkeit'), ziel }),
+  z.object({ typ: z.literal('boost') }),
   z.object({ typ: z.literal('freischalten') }),
   z.object({ typ: z.literal('umziehen') }),
 ]);
@@ -45,7 +50,8 @@ export function manufakturRouten(app: FastifyInstance, deps: ManufakturRoutenDep
     return reply.send(await manufakturHeute(deps.db, accountId));
   });
 
-  // Eigene, grosszuegige Grenze: Ausbauen tippt man gern zehnmal hintereinander.
+  // Eigene, grosszuegige Grenze: Ohne Meister ist jeder Zyklus ein Tipp, und
+  // ausbauen tippt man gern zehnmal hintereinander.
   app.post(
     '/api/manufaktur/aktion',
     { config: { rateLimit: { max: 240, timeWindow: '1 minute' } } },

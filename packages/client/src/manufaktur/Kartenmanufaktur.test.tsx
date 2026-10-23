@@ -1,13 +1,15 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ManufakturAnsicht, ManufakturAntwort, StationAnsicht } from './sicht';
+import { type ManufakturStand, MAX_PRESSEN, neuePresse, neuerStand } from '@brauweg/manufaktur-kern';
+
+import type { ManufakturAntwort } from './sicht';
 
 /*
- * Kartenmanufaktur (Kartenmanufaktur.tsx): Die Bilder folgen dem, was der
- * Server meldet — Pressenbild nach Stufe, Pinguin nach Meister —, und nach
- * einem Umzug kommt die neue Manufaktur einmal gross. Im Simulator ist der
- * Umzug nicht erreichbar (10 Mrd. Taler), deshalb steht er hier.
+ * Kartenmanufaktur (Kartenmanufaktur.tsx): Der Bildschirm rechnet mit dem
+ * Kern, die Bilder folgen dem Stand — Pressenbild nach Stufe, Pinguin nach
+ * Meister —, und nach einem Umzug kommt die neue Manufaktur einmal gross.
+ * Im Simulator ist der Umzug kaum erreichbar, deshalb steht er hier.
  */
 
 const { manufaktur, manufakturAktion } = vi.hoisted(() => ({
@@ -23,46 +25,8 @@ vi.mock('../klang', () => ({ spiele: vi.fn() }));
 
 import { Kartenmanufaktur } from './Kartenmanufaktur';
 
-const T0 = Date.parse('2026-10-23T10:00:00Z');
-
-function station(teil: Partial<StationAnsicht> = {}): StationAnsicht {
-  return {
-    stufe: 1,
-    maxStufe: 200,
-    meister: false,
-    aktiv: false,
-    schichtBis: null,
-    rate: 1,
-    rateNaechste: 2,
-    ausbauKosten: 10,
-    meisterKosten: 100,
-    ...teil,
-  };
-}
-
-function antwort(teil: Partial<ManufakturAnsicht> = {}): ManufakturAntwort {
-  return {
-    ansicht: {
-      manufaktur: 1,
-      maxManufaktur: 5,
-      taler: 0,
-      verdient: 0,
-      lager: 0,
-      pressen: [{ ...station(), ablage: 0 }],
-      laufband: station({ rate: 4 }),
-      versand: station({ rate: 4 }),
-      freischaltKosten: 60,
-      umzugAb: 1e10,
-      kannUmziehen: false,
-      proSekunde: { taler: 0, lager: 0, ablagen: [0] },
-      engpass: 'pressen',
-      gueltigBis: null,
-      zeit: T0,
-      ...teil,
-    },
-    offline: null,
-    muenzen: 0,
-  };
+function antwort(stand: ManufakturStand): ManufakturAntwort {
+  return { stand, zeit: Date.now(), offline: null, muenzen: 0 };
 }
 
 function bildQuellen(): string[] {
@@ -73,28 +37,33 @@ describe('Kartenmanufaktur', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('zeigt Pressenbild nach Stufe und den Meister-Pinguin, wo einer arbeitet', async () => {
-    manufaktur.mockResolvedValue(
-      antwort({
-        pressen: [
-          { ...station({ stufe: 30, meister: true }), ablage: 0 },
-          { ...station({ stufe: 1 }), ablage: 0 },
-        ],
-        proSekunde: { taler: 0, lager: 0, ablagen: [0, 0] },
-      }),
-    );
+    const stand = neuerStand(Date.now());
+    stand.pressen = [
+      { ...neuePresse(), stufe: 30, meister: true },
+      { ...neuePresse(), stufe: 1 },
+    ];
+    manufaktur.mockResolvedValue(antwort(stand));
     render(<Kartenmanufaktur onClose={vi.fn()} onGeaendert={vi.fn()} />);
-    await screen.findByText(/Presse 1 · Skatblatt/);
+    await screen.findByText(/1 · Skatblatt/);
     const quellen = bildQuellen();
     expect(quellen).toContain('/manufaktur/presse-2.webp');
     expect(quellen).toContain('/manufaktur/presse-1.webp');
     expect(quellen).toContain('/manufaktur/pinguin-meister.webp');
     expect(quellen).toContain('/manufaktur/pinguin-drucker.webp');
-    expect(quellen).toContain('/manufaktur/stapel-2.webp');
+    expect(quellen).toContain('/manufaktur/stapel-3.webp');
+  });
+
+  it('Transport zeigt Ladung und Kapazität, nie Taler je Sekunde', async () => {
+    manufaktur.mockResolvedValue(antwort(neuerStand(Date.now())));
+    render(<Kartenmanufaktur onClose={vi.fn()} onGeaendert={vi.fn()} />);
+    expect(await screen.findByText(/Ladung 0 \/ 8/)).toBeTruthy();
+    expect(screen.queryByText(/Taler\/s/)).toBeNull();
   });
 
   it('zeigt nach dem Umzug die neue Manufaktur — beim Öffnen nicht', async () => {
-    manufaktur.mockResolvedValue(antwort({ verdient: 1e10, kannUmziehen: true }));
-    manufakturAktion.mockResolvedValue(antwort({ manufaktur: 2 }));
+    const stand = { ...neuerStand(Date.now()), pressen: Array.from({ length: MAX_PRESSEN }, neuePresse) };
+    manufaktur.mockResolvedValue(antwort(stand));
+    manufakturAktion.mockResolvedValue(antwort(neuerStand(Date.now(), 2)));
     render(<Kartenmanufaktur onClose={vi.fn()} onGeaendert={vi.fn()} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Neue Manufaktur eröffnen' }));

@@ -1,54 +1,19 @@
 /**
- * Die Kartenmanufaktur, wie der Client sie vom Server bekommt
- * (packages/server/src/manufaktur/regeln.ts, `ansicht`). Zweitbeschreibung
- * wie bei den Spielsichten: Der Client importiert nichts aus dem Server und
- * rechnet keine Regel nach — Raten und Kosten kommen fertig.
+ * Was der Server zur Kartenmanufaktur schickt. Anders als bei den
+ * Spielsichten gibt es hier keine Zweitbeschreibung: Der Stand ist der des
+ * gemeinsamen Kerns (@brauweg/manufaktur-kern), und der Client rechnet mit
+ * demselben Kern weiter — eine zweite Beschreibung waere genau die zweite
+ * Wahrheit, die es nicht geben soll.
  */
 
-export interface StationAnsicht {
-  stufe: number;
-  maxStufe: number;
-  meister: boolean;
-  aktiv: boolean;
-  /** Ende der laufenden Schicht (ms), ohne Meister. */
-  schichtBis: number | null;
-  rate: number;
-  rateNaechste: number;
-  ausbauKosten: number | null;
-  meisterKosten: number | null;
-}
+import type { ManufakturStand } from '@brauweg/manufaktur-kern';
 
-export interface ManufakturAnsicht {
-  manufaktur: number;
-  maxManufaktur: number;
-  taler: number;
-  verdient: number;
-  lager: number;
-  pressen: (StationAnsicht & { ablage: number })[];
-  laufband: StationAnsicht;
-  versand: StationAnsicht;
-  freischaltKosten: number | null;
-  umzugAb: number;
-  kannUmziehen: boolean;
-  proSekunde: { taler: number; lager: number; ablagen: number[] };
-  engpass: 'pressen' | 'laufband' | 'versand' | null;
-  /** Bis hierhin (Server-Zeit, ms) gelten die Raten; null = bis man etwas tut. */
-  gueltigBis: number | null;
-  /** Server-Zeit (ms), zu der die Zahlen gelten. */
-  zeit: number;
-}
+export type { Aktion as ManufakturAktion, ManufakturStand, Ziel } from '@brauweg/manufaktur-kern';
 
 export interface ManufakturAntwort {
-  ansicht: ManufakturAnsicht;
+  stand: ManufakturStand;
+  /** Server-Zeit (ms) der Antwort. */
+  zeit: number;
   offline: { sekunden: number; taler: number } | null;
   muenzen: number;
 }
-
-export type Ziel = { art: 'presse'; index: number } | { art: 'laufband' } | { art: 'versand' };
-
-export type ManufakturAktion =
-  | { typ: 'ausbauen'; ziel: Ziel }
-  | { typ: 'meister'; ziel: Ziel }
-  | { typ: 'schicht'; ziel: Ziel }
-  | { typ: 'freischalten' }
-  | { typ: 'umziehen' };

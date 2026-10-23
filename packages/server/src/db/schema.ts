@@ -1612,12 +1612,16 @@ export const clanwortRunde = pgTable(
 // Kartenmanufaktur (Emile, 23.10.2026) — src/manufaktur/dienst.ts
 // ---------------------------------------------------------------------------
 
-/** Der Stand der Kartenmanufaktur je Konto, als Ganzes (manufaktur/regeln.ts). */
+/**
+ * Der Stand der Kartenmanufaktur je Konto, als Ganzes (@brauweg/manufaktur-kern).
+ * `unknown`, weil hier auch aeltere Fassungen liegen koennen — gelesen wird
+ * nur ueber `migriere`.
+ */
 export const manufaktur = pgTable('manufaktur', {
   accountId: uuid()
     .primaryKey()
     .references(() => account.id, { onDelete: 'cascade' }),
-  stand: jsonb().$type<import('../manufaktur/regeln.js').ManufakturStand>().notNull(),
+  stand: jsonb().$type<unknown>().notNull(),
   version: integer().notNull().default(0),
   aktualisiert: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });

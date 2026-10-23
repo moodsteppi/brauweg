@@ -7,65 +7,103 @@ App**, eigene Währung, Meilensteine geben ein paar Münzen.
 ## Der Kreislauf
 
 ```
-   ┌──────────── Oben: Lager ──► Versand ──► Taler ──┐
-   │                                                 │
- Laufband (fährt die Bögen nach oben)          Ausbauen, Meister,
-   │                                           neue Pressen
-   ├── Presse 1  (Skat)        ──► Ablage 1          │
-   ├── Presse 2  (Doppelkopf)  ──► Ablage 2          │
-   ├── Presse 3  (Zauberer)    ──► Ablage 3   ◄──────┘
-   └── …
+   Versandhalle:  Packtisch ──► Träger ──► Lieferwagen ──► Taler
+        ▲
+   Paternoster (fährt alle Etagen ab, hält an jeder Kiste)
+        │
+   ├── Etage 1  Presse (Skatblatt)    ──► Ablage-Kiste 1
+   ├── Etage 2  Presse (Doppelkopf)   ──► Ablage-Kiste 2
+   └── … bis Etage 8 (Goldblatt)
 ```
 
-- **Pressen** (wie die Schächte im Vorbild) drucken Bögen in ihre Ablage.
-  Jede tiefere Presse druckt eine wertvollere Kartenart.
-- Das **Laufband** (wie der Aufzug) holt die Bögen aus den Ablagen nach
-  oben ins Lager — von oben nach unten, bis seine Ladung voll ist.
-- Der **Versand** (wie das Lager im Vorbild) verkauft aus dem Lager. Was er
-  verkauft, wird zu **Talern**, der Währung der Manufaktur.
+**Eine Werteinheit: Warenwert in Talern.** Pressen erzeugen Warenwert
+(Karten × Kartenwert der Sorte), Paternoster und Versand *bewegen* ihn, erst
+der Versand macht daraus Taler. Transportstationen haben deshalb Ladung und
+Kapazität, nie „Taler je Sekunde".
 
-Gerechnet wird alles in **Wert** (Taler), nicht in Stück: Eine Presse
-„druckt 12 Taler je Sekunde". So vergleicht man drei Stationen mit einer
-Zahl, und der Engpass ist sofort sichtbar — genau dort rüstet man auf.
+Alles läuft in **Zyklen** (seit dem 23.10.2026 abends, vorher flossen Raten):
+
+- **Presse:** Pinguin geht zur Presse, presst, trägt den Stapel zur Kiste,
+  legt ab. Der Warenwert landet genau beim Ablegen in der Kiste.
+- **Paternoster:** fährt bis zur tiefsten Etage, hält an jeder Kiste und lädt
+  bis zur Kapazität, fährt hinauf, entlädt auf den Packtisch. Ohne Ware fährt
+  er nicht.
+- **Versand:** Der Träger nimmt vom Packtisch, was in den Wagen passt, der
+  Wagen fährt ab, unterwegs wird verkauft, er kommt leer zurück. Ohne Ware
+  fährt er nicht.
+
+**Einkommen je Sekunde = min(Summe der Pressen, Paternoster, Versand).**
+Das langsamste Glied ist der Engpass und wird an der Station gezeigt.
 
 ## Stationen arbeiten lassen
 
-- **Ohne Meister** arbeitet eine Station nur nach einem Tipp: eine **Schicht**
-  von 10 Sekunden. Wer dabei bleibt, tippt.
+- **Ohne Meister** läuft eine Station genau **einen Zyklus je Tipp**, danach
+  schläft der Pinguin.
 - Ein **Meister** (einmal kaufen, je Station) lässt sie ohne Pause arbeiten.
-  Erst mit Meistern läuft die Manufaktur, wenn man weg ist.
+  Jeder Meister hat eine **Fähigkeit**: doppeltes Tempo für 30 s, danach 5 min
+  Pause. „Boost" löst alle bereiten Fähigkeiten auf einmal aus.
 
 ## Zahlen
 
-Alle Formeln stehen in `packages/server/src/manufaktur/regeln.ts` und nur
-dort. Der Bildschirm bekommt Raten und Kosten fertig gerechnet.
+Alle Formeln stehen in `packages/manufaktur-kern/src/formeln.ts`, die
+Stellschrauben gesammelt in `STELLSCHRAUBEN`. **Server und Client rechnen mit
+demselben Kern** — der Server maßgeblich (Aktionen, Münzen, Nachrechnen),
+der Client in jedem Bild mit, damit jede Bewegung an einem echten Zyklus hängt.
 
-| | Grundwert | je Stufe | Ausbaukosten |
-| --- | --- | --- | --- |
-| Presse p (1 … 8) | `1 · 9^(p−1)` Taler/s | linear, ×2 alle 25 Stufen | `10 · 11^(p−1) · 1,13^(L−1)` |
-| Laufband | 4 Taler/s | linear, ×2 alle 25 Stufen | `25 · 1,14^(L−1)` |
-| Versand | 4 Taler/s | linear, ×2 alle 25 Stufen | `25 · 1,14^(L−1)` |
+- **Kosten:** `K(L) = K0 · g^(L−1)`, g = 1,13 für Pressen, 1,12 für
+  Paternoster und Versand. Kaufmengen x1, x10, x50, Max (geometrische Summe).
+- **Pressen:** Leistung wächst linear mit der Stufe, Kartenwert ×6 je Etage.
+  Der Zyklus wird mit jeder Stufe etwas kürzer (bis halb so lang).
+- **Meilensteine** bei Stufe 10, 25, 50, 100, 150, 200, 300, 400: je ×2. Bis
+  Stufe 100 bringt jeder einen sichtbaren Arbeiter mehr (höchstens 5).
+- **Transport** wächst geometrisch (×1,09 je Stufe), nicht linear: Ein linear
+  wachsender Paternoster war in der ersten Simulation ab Etage 3 eine Mauer.
+- **Neue Etage:** 180 Taler für Presse 2, danach rund ×12 je Etage — früh
+  steiler, hinten flacher (`FREISCHALT_FORM`), sonst ist die Mitte zu leicht
+  und das Ende zäh.
+- **Jede weitere Manufaktur** leistet ×2 und kostet ×1,8 — der Umzug lohnt
+  sich, ist aber keine Abkürzung.
+- Höchststufe je Station: 400.
 
-- Neue Presse p freischalten: `60 · 13^(p−2)` (Presse 1 steht von Anfang an).
-- Meister: Presse p `100 · 12^(p−1)`, Laufband und Versand je 150.
-- Höchststufe je Station: 200.
+Angezeigt werden ganze Zahlen: `1.240`, `12 Tsd.`, `3,4 Mio.`, `34 Mio.`,
+`Mrd.`, `Bio.`, danach `aa`, `ab` … (`packages/client/src/manufaktur/zahlen.ts`).
 
-Zahlen wachsen schnell; angezeigt wird mit Kürzeln (Tsd., Mio., Mrd., Bio.,
-danach aa, ab, …).
+## Die Simulation
+
+`npm run sim --workspace @brauweg/manufaktur-kern` spielt drei Stunden mit
+einem vernünftigen Spieler (tippt dreimal je Sekunde, solange Meister fehlen,
+kauft den besten Ertrag je Taler, zieht um, sobald er kann). `-- --suche`
+fährt eine Rastersuche über die wichtigsten Stellschrauben.
+
+Stand 23.10.2026:
+
+| Ereignis | Ziel | erreicht |
+| --- | --- | --- |
+| erste Karte verkauft | < 15 s | 0:10 |
+| erstes Upgrade | < 20 s | 0:10 |
+| erster Meister | 1–2 min | 0:57 (3 s zu früh) |
+| Presse 2 | 2–3 min | 3:29 (30 s zu spät) |
+| Presse 3 | 6–8 min | 7:12 |
+| Presse 5 | 25–35 min | 27:21 |
+| alle 8 Pressen und erster Umzug | 60–90 min | 77:33 |
+| längste Strecke ohne Kauf | < 3 min | 1,1 min |
+
+Die beiden Abweichungen kommen daher, dass der Sim-Spieler vor Presse 2 alle
+drei Meister kauft. Die Manufakturen 2–4 dauern 64, 57 und 51 min.
 
 ## Offline-Verdienst
 
-Mit Meistern läuft die Manufaktur weiter, während die App zu ist — bis zu
-**8 Stunden**. Der Server rechnet die Zeit beim nächsten Öffnen nach
-(Sekundenschritte, dieselbe Rechnung wie online) und meldet einmal „Während
-du weg warst: +… Taler".
+Ohne Meister schlafen die Pinguine nach ihrem Zyklus ein — deshalb zählt
+offline von selbst nur die **Meister-Kette**, ohne Versand-Meister gibt es
+nichts. Höchstens **2 Stunden**. Der Server rechnet beim nächsten Öffnen mit
+derselben Simulation nach und meldet einmal „Willkommen zurück: +… Taler".
 
 ## Neue Manufaktur (Prestige)
 
-Ab **10 Mrd. Taler Gesamtverdienst** in der laufenden Manufaktur kann man
-umziehen: alles beginnt von vorn (Pressen, Stufen, Meister, Taler), dafür
-druckt jede weitere Manufaktur **dauerhaft ×2** (die zweite ×2, die dritte ×4
-…) und bekommt einen neuen Namen und eine neue Kulisse. Höchstens 5.
+Mit **allen acht Pressen** kann man umziehen: alles beginnt von vorn
+(Pressen, Stufen, Meister, Taler), dafür leistet jede weitere Manufaktur
+**dauerhaft ×2** (die zweite ×2, die dritte ×4 …) und kostet ×1,8. Neuer
+Name, neue Kulisse. Höchstens 5.
 
 **Münzen fürs Hub (Meilensteine, eigene Währung bleibt getrennt):**
 
@@ -79,16 +117,20 @@ Weitere Münzen gibt es nicht — wer wartet, erzeugt Taler, keine Münzen
 
 ## Server und Bildschirm
 
-- Tabelle `manufaktur` (eine Zeile je Konto, Stand als JSON, Zeitpunkt des
-  letzten Nachrechnens). Migration 0037.
-- `GET /api/manufaktur` rechnet bis jetzt nach und liefert die Ansicht:
-  Stationen mit Stufe, Rate, Ausbaukosten, Meister, Ablagen, Lager, Taler,
-  Einkommen je Sekunde, Engpass, Offline-Meldung.
-- `POST /api/manufaktur/aktion` mit `ausbauen`, `meister`, `freischalten`,
-  `schicht` (Tipp), `umziehen` (Prestige). Der Server rechnet erst bis jetzt
-  nach, dann wendet er die Aktion an.
-- Der Bildschirm zählt zwischen zwei Antworten mit den gelieferten Raten
-  hoch und fragt alle 20 Sekunden und nach jeder Aktion neu.
+- Tabelle `manufaktur` (eine Zeile je Konto, Stand als JSON mit `fassung`,
+  Zeitpunkt des letzten Nachrechnens). Migration 0037. Ältere Fassungen
+  übernimmt `migriere` beim Lesen — Spielstände werden nie verworfen.
+- `GET /api/manufaktur` rechnet bis jetzt nach und liefert `{ stand, zeit,
+  offline, muenzen }` — den ganzen Stand, nicht abgeleitete Raten.
+- `POST /api/manufaktur/aktion` mit `arbeiten` (Tipp), `ausbauen` (mit
+  `menge`), `meister`, `faehigkeit`, `boost`, `freischalten`, `umziehen`. Der
+  Server rechnet erst bis jetzt nach, dann wendet er die Aktion an.
+- Der Bildschirm (`client/src/manufaktur/steuerung.ts`) rechnet denselben
+  Kern bis „jetzt" weiter, wendet eine Aktion sofort an (Vorhersage), schickt
+  sie der Reihe nach und gleicht jede Antwort ab. Nachfragen alle 30 s und
+  beim Zurückkommen in die App.
+- Gerechnet wird in festen Takten von 50 ms. Gleicher Stand plus gleiche Zeit
+  ergibt auf Server und Client dasselbe, egal in wie vielen Schritten.
 
 ## Bilder
 

@@ -1,0 +1,247 @@
+/**
+ * Der Kern der Kartenmanufaktur: Kosten, Max-Kauf, Engpass, Offline-Ertrag,
+ * Meilensteine, Zyklen und die Uebernahme alter Staende. Zeit ist hier nur
+ * eine Zahl — Stunden laufen ohne Warten.
+ */
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+import {
+  type ManufakturStand,
+  type Ziel,
+  AktionAbgelehnt,
+  FASSUNG,
+  MAX_PRESSEN,
+  MAX_STUFE,
+  OFFLINE_MS,
+  TAKT_MS,
+  arbeiter,
+  ausbauKosten,
+  ausbauKostenFuer,
+  ausbauVorschau,
+  durchsatz,
+  engpass,
+  handle,
+  leerlaufErtrag,
+  maxKaufbar,
+  meilensteinBalken,
+  migriere,
+  neuerStand,
+  presseErtrag,
+  presseLeistung,
+  presseZyklus,
+  sprung,
+  versandZyklus,
+  vorspulen,
+} from '../src/index.js';
+
+const T0 = Date.parse('2026-10-23T10:00:00Z');
+const STUNDE = 3_600_000;
+const presse: Ziel = { art: 'presse', index: 0 };
+
+function abgelehnt(code: string) {
+  return (err: unknown) => err instanceof AktionAbgelehnt && err.code === code;
+}
+
+function mitMeistern(stand: ManufakturStand): ManufakturStand {
+  return {
+    ...stand,
+    pressen: stand.pressen.map((p) => ({ ...p, meister: true })),
+    paternoster: { ...stand.paternoster, meister: true },
+    versand: { ...stand.versand, meister: true },
+  };
+}
+
+test('Kosten folgen K0 · g^(L−1), mehrere Stufen als geometrische Summe', () => {
+  const einzeln = [1, 2, 3, 4, 5].reduce((summe, l) => summe + ausbauKosten(presse, l, 1), 0);
+  assert.ok(Math.abs(ausbauKostenFuer(presse, 1, 5, 1) - einzeln) < 1e-9);
+  assert.ok(Math.abs(ausbauKosten(presse, 2, 1) / ausbauKosten(presse, 1, 1) - 1.13) < 1e-12);
+  const transport: Ziel = { art: 'versand' };
+  assert.ok(Math.abs(ausbauKosten(transport, 2, 1) / ausbauKosten(transport, 1, 1) - 1.12) < 1e-12);
+});
+
+test('Max-Kauf: genau so viele Stufen, wie das Geld reicht — und nicht ueber die Hoechststufe', () => {
+  for (const taler of [0, 3, 50, 1234.5, 1e6, 1e12]) {
+    const n = maxKaufbar(presse, 7, taler, 1);
+    assert.ok(ausbauKostenFuer(presse, 7, n, 1) <= taler + 1e-9, `${n} Stufen fuer ${taler}`);
+    if (7 + n < MAX_STUFE) assert.ok(ausbauKostenFuer(presse, 7, n + 1, 1) > taler, `eine mehr waere zu teuer (${taler})`);
+  }
+  assert.equal(maxKaufbar(presse, MAX_STUFE - 2, 1e300, 1), 2);
+});
+
+test('Ausbau mit x10 kauft zehn Stufen, mit Max so viele wie gehen, ohne Geld nichts', () => {
+  const arm = neuerStand(T0);
+  assert.throws(() => handle(arm, { typ: 'ausbauen', ziel: presse, menge: 1 }, T0), abgelehnt('manufakturZuTeuer'));
+  const reich = { ...arm, taler: 1e6 };
+  assert.equal(handle(reich, { typ: 'ausbauen', ziel: presse, menge: 10 }, T0).stand.pressen[0]!.stufe, 11);
+  const max = handle(reich, { typ: 'ausbauen', ziel: presse, menge: 'max' }, T0).stand;
+  assert.equal(max.pressen[0]!.stufe, 1 + maxKaufbar(presse, 1, 1e6, 1));
+  assert.ok(max.taler >= 0);
+});
+
+test('Meilensteine verdoppeln die Leistung, bis Stufe 100 kommt je einer ein Arbeiter dazu', () => {
+  assert.equal(sprung(9), 1);
+  assert.equal(sprung(10), 2);
+  assert.equal(sprung(25), 4);
+  assert.equal(sprung(400), 256);
+  assert.equal(presseLeistung(0, 10, 1) / presseLeistung(0, 9, 1), (10 / 9) * 2);
+  assert.deepEqual([1, 10, 25, 50, 100, 150].map(arbeiter), [1, 2, 3, 4, 5, 5]);
+  assert.deepEqual(meilensteinBalken(12), { von: 10, bis: 25 });
+  assert.equal(meilensteinBalken(400), null);
+});
+
+test('Ohne Meister: ein Tipp, ein Zyklus — danach schlaeft der Pinguin', () => {
+  let stand = handle(neuerStand(T0), { typ: 'arbeiten', ziel: presse }, T0).stand;
+  assert.equal(stand.pressen[0]!.laeuft, true);
+  // Ein zweiter Tipp verlaengert nichts.
+  stand = handle(stand, { typ: 'arbeiten', ziel: presse }, T0 + 500).stand;
+  stand = vorspulen(stand, T0 + 60_000);
+  assert.ok(Math.abs(stand.pressen[0]!.kiste - presseErtrag(0, 1, 1)) < 1e-9, 'genau ein Zyklus in der Kiste');
+  assert.equal(stand.pressen[0]!.laeuft, false);
+});
+
+test('Paternoster und Versand fahren nur, wenn es etwas zu bewegen gibt', () => {
+  const leer = handle(neuerStand(T0), { typ: 'arbeiten', ziel: { art: 'paternoster' } }, T0).stand;
+  assert.equal(leer.paternoster.laeuft, false);
+  const wagen = handle(neuerStand(T0), { typ: 'arbeiten', ziel: { art: 'versand' } }, T0).stand;
+  assert.equal(wagen.versand.laeuft, false);
+});
+
+test('Die ganze Kette von Hand: pressen, hochfahren, verkaufen', () => {
+  let stand = handle(neuerStand(T0), { typ: 'arbeiten', ziel: presse }, T0).stand;
+  stand = vorspulen(stand, T0 + 10_000);
+  const ware = stand.pressen[0]!.kiste;
+  stand = handle(stand, { typ: 'arbeiten', ziel: { art: 'paternoster' } }, T0 + 10_000).stand;
+  stand = vorspulen(stand, T0 + 20_000);
+  assert.equal(stand.pressen[0]!.kiste, 0);
+  assert.ok(Math.abs(stand.packtisch - ware) < 1e-9);
+  stand = handle(stand, { typ: 'arbeiten', ziel: { art: 'versand' } }, T0 + 20_000).stand;
+  stand = vorspulen(stand, T0 + 20_000 + versandZyklus(1) + TAKT_MS);
+  assert.ok(Math.abs(stand.taler - ware) < 1e-9, 'aus Warenwert werden genau so viele Taler');
+  assert.equal(stand.verdient, stand.taler);
+});
+
+test('Mit Meistern laeuft die Kette von selbst — der Engpass bestimmt das Einkommen', () => {
+  const start = mitMeistern(neuerStand(T0));
+  const stand = vorspulen(start, T0 + STUNDE);
+  const d = durchsatz(start);
+  const erwartet = Math.min(d.pressen, d.paternoster, d.versand) * 3600;
+  // Anlauf und Restladungen: ein paar Prozent Abweichung sind Physik, nicht Fehler.
+  assert.ok(Math.abs(stand.taler - erwartet) / erwartet < 0.05, `${stand.taler} gegen ${erwartet}`);
+  assert.equal(engpass(start), 'pressen');
+});
+
+test('Engpass Paternoster, wenn die Pressen mehr liefern als er traegt', () => {
+  const stand = mitMeistern({
+    ...neuerStand(T0),
+    pressen: Array.from({ length: 4 }, () => ({ ...neuerStand(T0).pressen[0]!, stufe: 80 })),
+    versand: { ...neuerStand(T0).versand, stufe: 200 },
+  });
+  assert.equal(engpass(stand), 'paternoster');
+});
+
+test('Offline: nur die Meister-Kette, hoechstens zwei Stunden — ohne Versand-Meister nichts', () => {
+  const voll = vorspulen(mitMeistern(neuerStand(T0)), T0 + 10 * STUNDE);
+  const zwei = vorspulen(mitMeistern(neuerStand(T0)), T0 + OFFLINE_MS);
+  assert.ok(Math.abs(voll.taler - zwei.taler) < 1e-6, 'nach zwei Stunden kommt nichts mehr dazu');
+  assert.equal(voll.zeit, T0 + 10 * STUNDE, 'die Uhr springt trotzdem auf jetzt');
+
+  const ohneVersand = { ...mitMeistern(neuerStand(T0)), versand: neuerStand(T0).versand };
+  assert.equal(vorspulen(ohneVersand, T0 + STUNDE).taler, 0);
+  assert.equal(leerlaufErtrag(ohneVersand), 0);
+  assert.equal(leerlaufErtrag(neuerStand(T0)), null, 'ohne jeden Meister zeigt das HUD nichts');
+});
+
+test('Meister-Faehigkeit: doppeltes Tempo fuer 30 s, dann fuenf Minuten Pause', () => {
+  const start = mitMeistern(neuerStand(T0));
+  const normal = vorspulen(start, T0 + 30_000);
+  const mitBoost = vorspulen(handle(start, { typ: 'faehigkeit', ziel: presse }, T0).stand, T0 + 30_000);
+  const zyklen = (s: ManufakturStand) => s.pressen[0]!.kiste + s.paternoster.ladung + s.packtisch + s.taler;
+  assert.ok(zyklen(mitBoost) > zyklen(normal) * 1.5, 'die Presse schafft fast doppelt so viel');
+  const nachher = handle(start, { typ: 'faehigkeit', ziel: presse }, T0).stand;
+  assert.throws(() => handle(nachher, { typ: 'faehigkeit', ziel: presse }, T0 + 60_000), abgelehnt('manufakturAbklingen'));
+  assert.doesNotThrow(() => handle(nachher, { typ: 'faehigkeit', ziel: presse }, T0 + 5 * 60_000));
+  assert.throws(() => handle(neuerStand(T0), { typ: 'boost' }, T0), abgelehnt('manufakturAbklingen'));
+});
+
+test('Upgrade-Vorschau: vorher → nachher und der Weg zum naechsten Meilenstein', () => {
+  const stand = { ...neuerStand(T0), taler: 1e9 };
+  const v = ausbauVorschau(stand, presse, 10);
+  assert.equal(v.stufe, 1);
+  assert.equal(v.neueStufe, 11);
+  assert.equal(v.leistbar, true);
+  const ertrag = v.kennzahlen.find((k) => k.name === 'Ertrag je Zyklus')!;
+  assert.ok(ertrag.nachher > ertrag.vorher);
+  const zyklus = v.kennzahlen.find((k) => k.name === 'Zyklus')!;
+  assert.ok(Math.abs(zyklus.vorher - presseZyklus(1) / 1000) < 1e-9);
+  assert.ok(zyklus.nachher < zyklus.vorher, 'ein Upgrade macht die Presse schneller');
+  // Max ohne Geld zeigt trotzdem die naechste Stufe.
+  const arm = ausbauVorschau(neuerStand(T0), presse, 'max');
+  assert.equal(arm.neueStufe, 2);
+  assert.equal(arm.leistbar, false);
+});
+
+test('Umzug erst mit allen acht Pressen, dann alles neu mit Muenzen und doppelter Leistung', () => {
+  const stand = { ...neuerStand(T0), taler: 1e30 };
+  assert.throws(() => handle(stand, { typ: 'umziehen' }, T0), abgelehnt('manufakturUmzugZuFrueh'));
+  let voll: ManufakturStand = stand;
+  while (voll.pressen.length < MAX_PRESSEN) voll = handle(voll, { typ: 'freischalten' }, T0).stand;
+  assert.throws(() => handle(voll, { typ: 'freischalten' }, T0), abgelehnt('manufakturVoll'));
+  const umzug = handle(voll, { typ: 'umziehen' }, T0);
+  assert.equal(umzug.stand.manufaktur, 2);
+  assert.equal(umzug.stand.taler, 0);
+  assert.equal(umzug.stand.pressen.length, 1);
+  assert.deepEqual(umzug.meilensteine, [{ kennung: 'umzug-2', muenzen: 300 }]);
+  assert.equal(presseLeistung(0, 1, 2), 2 * presseLeistung(0, 1, 1));
+});
+
+test('Die erste Million bringt Muenzen, genau einmal', () => {
+  const reich = { ...neuerStand(T0), taler: 2e6, verdient: 2e6 };
+  const erst = handle(reich, { typ: 'arbeiten', ziel: presse }, T0);
+  assert.deepEqual(erst.meilensteine, [{ kennung: 'million-1', muenzen: 50 }]);
+  assert.deepEqual(handle(erst.stand, { typ: 'arbeiten', ziel: presse }, T0 + 1000).meilensteine, []);
+});
+
+test('Gleicher Stand, gleiche Zeit, gleiches Ergebnis — egal in wie vielen Schritten', () => {
+  const start = mitMeistern({ ...neuerStand(T0), pressen: [neuerStand(T0).pressen[0]!, neuerStand(T0).pressen[0]!] });
+  const amStueck = vorspulen(start, T0 + 600_000);
+  let schritte = start;
+  for (let t = T0; t < T0 + 600_000; t += 17) schritte = vorspulen(schritte, t);
+  schritte = vorspulen(schritte, T0 + 600_000);
+  assert.deepEqual(schritte, amStueck);
+});
+
+test('Alte Staende (Fassung 1) werden uebernommen, nicht verworfen', () => {
+  const alt = {
+    manufaktur: 2,
+    taler: 1234,
+    verdient: 5678,
+    pressen: [
+      { stufe: 12, meister: true, aktivBis: 0, ablage: 40 },
+      { stufe: 3, meister: false, aktivBis: T0 + 5000, ablage: 0 },
+    ],
+    laufband: { stufe: 7, meister: true, aktivBis: 0 },
+    versand: { stufe: 5, meister: false, aktivBis: 0 },
+    lager: 99,
+    meilensteine: ['million-1'],
+    zeit: T0,
+  };
+  const neu = migriere(alt);
+  assert.equal(neu.fassung, FASSUNG);
+  assert.equal(neu.manufaktur, 2);
+  assert.equal(neu.taler, 1234);
+  assert.deepEqual(
+    neu.pressen.map((p) => [p.stufe, p.meister, p.kiste]),
+    [
+      [12, true, 40],
+      [3, false, 0],
+    ],
+  );
+  assert.equal(neu.paternoster.stufe, 7);
+  assert.equal(neu.paternoster.meister, true);
+  assert.equal(neu.versand.stufe, 5);
+  assert.equal(neu.packtisch, 99);
+  assert.deepEqual(neu.meilensteine, ['million-1']);
+  assert.equal(migriere(neu), neu, 'ein neuer Stand bleibt, wie er ist');
+});

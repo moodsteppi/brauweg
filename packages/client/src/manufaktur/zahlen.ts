@@ -1,10 +1,16 @@
 /**
- * Grosse Zahlen fuer die Kartenmanufaktur: „12,3 Tsd.", „4,56 Mio.", und
- * jenseits der Billiarde Buchstabenpaare (aa, ab …) wie in Idle-Spielen
- * ueblich — eine Zahl mit 30 Stellen liest am Handy niemand.
+ * Zahlen fuer die Kartenmanufaktur, immer ohne Kommastellen-Gewimmel:
+ *
+ *   1.240 · 12 Tsd. · 3,4 Mio. · 34 Mio. · 1,2 Mrd. · 5 Bio. · 1 aa · 7,5 ab
+ *
+ * Bis 9.999 steht die ganze Zahl da, bis unter einer Million ganze Tausender,
+ * darueber eine Nachkommastelle nur, solange die Zahl einstellig ist. Nach den
+ * Billionen kommen Buchstabenpaare wie in Idle-Spielen ueblich — eine Zahl mit
+ * dreissig Stellen liest am Handy niemand. Abgerundet wird immer: Es steht nie
+ * mehr da, als da ist. Gerechnet wird intern weiter mit double.
  */
 
-const STUFEN = ['', 'Tsd.', 'Mio.', 'Mrd.', 'Bio.', 'Brd.'];
+const EINHEITEN = ['', 'Tsd.', 'Mio.', 'Mrd.', 'Bio.'];
 
 function buchstaben(n: number): string {
   // n = 0 → aa, 1 → ab, …, 25 → az, 26 → ba
@@ -12,23 +18,28 @@ function buchstaben(n: number): string {
   return `${a[Math.floor(n / 26) % 26]}${a[n % 26]}`;
 }
 
+/** Abrunden mit Toleranz — sonst wird aus 3,4 durch Gleitkomma 3,3999… und daraus 3,3. */
+function ab(wert: number, stellen: number): number {
+  const f = 10 ** stellen;
+  return Math.floor(wert * f + 1e-9) / f;
+}
+
 export function kurz(wert: number): string {
   if (!Number.isFinite(wert)) return '∞';
+  const vorzeichen = wert < 0 ? '−' : '';
   const betrag = Math.abs(wert);
-  if (betrag < 1000) {
-    return (Math.floor(wert * 10) / 10).toLocaleString('de-DE', { maximumFractionDigits: betrag < 100 ? 1 : 0 });
-  }
-  const stufe = Math.floor(Math.log10(betrag) / 3);
-  const geteilt = wert / 1000 ** stufe;
-  const stellen = Math.abs(geteilt) < 10 ? 2 : Math.abs(geteilt) < 100 ? 1 : 0;
-  // Abgerundet, damit nie mehr dasteht, als da ist — mit Toleranz, sonst
-  // wird aus 4,56 durch Gleitkomma 4,5599… und daraus 4,55.
-  const zahl = (Math.floor(geteilt * 10 ** stellen + 1e-9) / 10 ** stellen).toLocaleString('de-DE', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: stellen,
-  });
-  const einheit = stufe < STUFEN.length ? STUFEN[stufe]! : buchstaben(stufe - STUFEN.length);
-  return `${zahl} ${einheit}`;
+  if (betrag < 10_000) return vorzeichen + ab(betrag, 0).toLocaleString('de-DE');
+  if (betrag < 1e6) return `${vorzeichen}${ab(betrag / 1000, 0).toLocaleString('de-DE')} Tsd.`;
+  const stufe = Math.floor(Math.log10(betrag) / 3 + 1e-12);
+  const geteilt = betrag / 1000 ** stufe;
+  const zahl = ab(geteilt, geteilt < 10 ? 1 : 0).toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  const einheit = stufe < EINHEITEN.length ? EINHEITEN[stufe]! : buchstaben(stufe - EINHEITEN.length);
+  return `${vorzeichen}${zahl} ${einheit}`;
+}
+
+/** Sekunden fuer Kennzahlen: „3 s", „1,5 s" unter zehn Sekunden — dort zaehlt das Zehntel. */
+export function sekunden(wert: number): string {
+  return `${ab(wert, wert < 10 ? 1 : 0).toLocaleString('de-DE', { maximumFractionDigits: 1 })} s`;
 }
 
 /** „3 Std. 12 Min." für die Offline-Meldung. */

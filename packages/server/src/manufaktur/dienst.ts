@@ -1,35 +1,41 @@
 /**
  * Kartenmanufaktur: was der Server festhaelt (Emile, 23.10.2026).
  *
- * Eine Zeile je Konto mit dem ganzen Stand. Jeder Aufruf rechnet erst bis
- * jetzt nach (`vorspulen` in regeln.ts), dann gilt die Aktion. Muenzen fuers
- * Hub gibt es nur fuer Meilensteine, die regeln.ts meldet — Taler bleiben
- * Taler (Wirtschaftsmodell, docs/SPEZIFIKATION-KARTENMANUFAKTUR.md).
+ * Eine Zeile je Konto mit dem ganzen Stand. Gerechnet wird mit
+ * @brauweg/manufaktur-kern — demselben Kern, den der Client in jedem Bild
+ * mitrechnet. Massgeblich ist dieser hier: Jeder Aufruf rechnet bis jetzt nach,
+ * dann gilt die Aktion, und nur hier fallen Muenzen fuers Hub (Meilensteine).
+ * Taler bleiben Taler (Wirtschaftsmodell, docs/SPEZIFIKATION-KARTENMANUFAKTUR.md).
  */
 
 import { and, eq } from 'drizzle-orm';
+
+import {
+  type Aktion,
+  AktionAbgelehnt,
+  type ManufakturStand,
+  OFFLINE_MS,
+  type Meilenstein,
+  handle,
+  migriere,
+  neueMeilensteine,
+  neuerStand,
+  vorspulen,
+} from '@brauweg/manufaktur-kern';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { badRequest, conflict } from '../errors.js';
 import { gutschreiben } from '../waehrung.js';
-import {
-  type Aktion,
-  AktionAbgelehnt,
-  type ManufakturAnsicht,
-  type ManufakturStand,
-  ansicht,
-  handle,
-  neueMeilensteine,
-  neuerStand,
-  vorspulen,
-} from './regeln.js';
 
-/** Ab dieser Abwesenheit meldet der Bildschirm „Waehrend du weg warst". */
+/** Ab dieser Abwesenheit meldet der Bildschirm „Willkommen zurueck". */
 const OFFLINE_MELDUNG_AB_MS = 5 * 60 * 1000;
 
 export interface ManufakturAntwort {
-  ansicht: ManufakturAnsicht;
+  /** Der Stand, gerechnet bis `zeit` — der Client rechnet von dort weiter. */
+  stand: ManufakturStand;
+  /** Server-Zeit (ms) der Antwort. */
+  zeit: number;
   /** Gesetzt, wenn seit dem letzten Besuch Zeit vergangen ist und Taler kamen. */
   offline: { sekunden: number; taler: number } | null;
   /** Muenzen fuers Hub, die gerade gutgeschrieben wurden. */
@@ -38,7 +44,7 @@ export interface ManufakturAntwort {
 
 async function lade(db: Db, accountId: string): Promise<{ stand: ManufakturStand; version: number } | null> {
   const [zeile] = await db.select().from(s.manufaktur).where(eq(s.manufaktur.accountId, accountId));
-  return zeile ? { stand: zeile.stand, version: zeile.version } : null;
+  return zeile ? { stand: migriere(zeile.stand), version: zeile.version } : null;
 }
 
 /**
@@ -69,12 +75,14 @@ async function speichere(
   return geaendert.length > 0;
 }
 
-async function zahleAus(db: Db, accountId: string, muenzen: number): Promise<void> {
+async function zahleAus(db: Db, accountId: string, meilensteine: Meilenstein[]): Promise<number> {
+  const muenzen = meilensteine.reduce((summe, m) => summe + m.muenzen, 0);
   if (muenzen > 0) await gutschreiben(db, accountId, 'coins', muenzen);
+  return muenzen;
 }
 
 /**
- * Den Stand bis jetzt nachrechnen und zeigen. Die erste Million unterwegs
+ * Den Stand bis jetzt nachrechnen und liefern. Die erste Million unterwegs
  * (auch offline) zahlt ihren Meilenstein hier aus.
  */
 export async function manufakturHeute(db: Db, accountId: string, jetzt = new Date()): Promise<ManufakturAntwort> {
@@ -89,14 +97,14 @@ export async function manufakturHeute(db: Db, accountId: string, jetzt = new Dat
       ? { ...vorgespult, meilensteine: [...vorgespult.meilensteine, ...meilensteine.map((m) => m.kennung)] }
       : vorgespult;
     if (!(await speichere(db, accountId, stand, geladen?.version ?? null, jetzt))) continue;
-    const muenzen = meilensteine.reduce((summe, m) => summe + m.muenzen, 0);
-    await zahleAus(db, accountId, muenzen);
+    const muenzen = await zahleAus(db, accountId, meilensteine);
     const gewonnen = stand.taler - alt.taler;
     return {
-      ansicht: ansicht(stand, ms),
+      stand,
+      zeit: ms,
       offline:
         geladen && weg >= OFFLINE_MELDUNG_AB_MS && gewonnen > 0
-          ? { sekunden: Math.round(weg / 1000), taler: gewonnen }
+          ? { sekunden: Math.round(Math.min(weg, OFFLINE_MS) / 1000), taler: gewonnen }
           : null,
       muenzen,
     };
@@ -104,7 +112,7 @@ export async function manufakturHeute(db: Db, accountId: string, jetzt = new Dat
   throw conflict('manufakturBeschaeftigt');
 }
 
-/** Eine Aktion: ausbauen, Meister, Schicht, freischalten, umziehen. */
+/** Eine Aktion: arbeiten, ausbauen, Meister, Faehigkeit, Boost, freischalten, umziehen. */
 export async function manufakturAktion(
   db: Db,
   accountId: string,
@@ -123,9 +131,8 @@ export async function manufakturAktion(
       throw err;
     }
     if (!(await speichere(db, accountId, ergebnis.stand, geladen?.version ?? null, jetzt))) continue;
-    const muenzen = ergebnis.meilensteine.reduce((summe, m) => summe + m.muenzen, 0);
-    await zahleAus(db, accountId, muenzen);
-    return { ansicht: ansicht(ergebnis.stand, ms), offline: null, muenzen };
+    const muenzen = await zahleAus(db, accountId, ergebnis.meilensteine);
+    return { stand: ergebnis.stand, zeit: ms, offline: null, muenzen };
   }
   throw conflict('manufakturBeschaeftigt');
 }

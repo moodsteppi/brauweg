@@ -28,6 +28,7 @@
     "@brauweg/game-skat": "*",
     "@brauweg/game-tafelrunde": "*",
     "@brauweg/game-wizard": "*",
+    "@brauweg/manufaktur-kern": "*",
     "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
     "@fastify/helmet": "^13.1.0",
