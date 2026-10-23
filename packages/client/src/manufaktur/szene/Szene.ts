@@ -357,6 +357,8 @@ class EtageBild {
 
   /** Debug: Fusspunkte, Griffe und den Drehpunkt der Presse. */
   punkte(): { x: number; y: number }[] {
+    // Nur gebaute Etagen — Umriss-Etagen haben nichts, was man pruefen koennte.
+    if (!this.gebaut.visible) return [];
     const liste = [{ x: this.presse.x, y: this.presse.y }];
     for (const a of this.arbeiter) {
       if (!a.wurzel.visible) continue;

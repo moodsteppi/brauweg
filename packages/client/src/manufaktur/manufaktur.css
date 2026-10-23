@@ -250,6 +250,7 @@
 }
 .mf-debug {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 8px;
   font: 700 12px var(--hb-txt);
@@ -742,4 +743,12 @@
     animation: none;
     box-shadow: 0 0 0 3px rgba(230, 70, 70, 0.6);
   }
+}
+
+/* Das Hub-Stylesheet zieht Eingabefelder auf volle Breite — hier nicht. */
+:is(.hb, .spe) .mf-debug input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
 }
