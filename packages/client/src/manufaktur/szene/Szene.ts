@@ -106,8 +106,8 @@ const DATEIEN = [
   ...maschinenDateien(),
 ];
 
-/** Paternoster-Mittelkachel: 256 × 512 mit vier Tabletts im Abstand 128. Im Schacht 58 breit. */
-const BAND = { breite: 58, px: 256, kachelPx: 512, tablettAbstandPx: 128, tablettPx: 64, ladungPx: 87 };
+/** Paternoster-Mittelkachel: 256 × 512 mit vier Tabletts im Abstand 128. Im Schacht 68 breit. */
+const BAND = { breite: 68, px: 256, kachelPx: 512, tablettAbstandPx: 128, tablettPx: 64, ladungPx: 87 };
 const BAND_M = BAND.breite / BAND.px;
 /**
  * Scheitel bis Fuss. Kleiner als die 54 der Einzelbilder: Dort lag Luft um
