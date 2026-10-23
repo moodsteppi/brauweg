@@ -34,7 +34,6 @@ import { aktionenAufteilen, armutKartenwahl } from '../tisch-armut';
 import { useTischklang } from '../tisch/klangtisch';
 import { type ConnectionStatus, useCountdown, useTable } from '../useTable';
 import { LernTipp } from '../lernen/LernTipp';
-import { inApp } from '../laufzeit';
 
 /** Grenzen der Tischgroesse: klein genug fuer die Uebersicht, gross genug,
     dass die Karten nicht aus dem Faecher wachsen. */
@@ -635,8 +634,11 @@ export function Table({
    * Uebungsrunde aus dem Lernpfad. Das Merkmal kommt mit der Tischnachricht
    * vom Server; bis zum 17.10.2026 stand es in einem Merkzettel des Geraets,
    * das den Tisch angelegt hatte — auf jedem anderen fehlten Tipps und Kopfzeile.
+   * Seit dem 23.10.2026 auch auf der Webseite (vorher `inApp &&`): Der
+   * Lernpfad ist dort erreichbar, und ohne Tipps waere seine Uebung eine
+   * gewoehnliche Botrunde.
    */
-  const uebung = inApp && table?.uebung === true;
+  const uebung = table?.uebung === true;
 
   const seatList = party?.seats ?? [];
   const seatCount = seatList.length || Object.keys(round?.handCounts ?? {}).length || 4;

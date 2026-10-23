@@ -230,6 +230,20 @@ describe('Neues Hub', () => {
     expect(vote).toHaveBeenCalledWith('schafkopf');
   });
 
+  it('zeigt auch auf der Webseite Lernpfad, Browort und die Solo-Spiele — in einem Abschnitt „Allein"', async () => {
+    // Bis zum 23.10.2026 hingen diese Einstiege an `inApp` und fehlten hier
+    // (docs/release/ios-web-abgleich.md). Diese Datei laeuft ohne Huelle.
+    await zeige();
+    expect(screen.getByRole('button', { name: /^Doppelkopf lernen\./ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Browort\./ })).toBeInTheDocument();
+    fireEvent.click(within(reiter()).getByRole('button', { name: 'Spiele' }));
+    await act(async () => {});
+    expect(screen.getAllByText('Allein')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Kartenmanufaktur/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Jeden Tag ein Wort/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pro-Subway/ })).toBeInTheDocument();
+  });
+
   it('holt in „Heute" eine fertige Aufgabe ab, Abholbares steht oben', async () => {
     await zeige();
     fireEvent.click(screen.getByRole('button', { name: /^Heute/ }));

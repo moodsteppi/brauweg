@@ -57,7 +57,7 @@ function fingerOrt(ziel: AnleitungsZiel): Rechteck {
 
 /**
  * Die Kartenmanufaktur (Emile, 23.10.2026): Idle-Spiel wie Idle Miner
- * Tycoon, nur in der App. Spielentwurf: docs/SPEZIFIKATION-KARTENMANUFAKTUR.md.
+ * Tycoon, in App und Web (Web seit 23.10.2026). Spielentwurf: docs/SPEZIFIKATION-KARTENMANUFAKTUR.md.
  *
  * Aufbau wie im Vorbild, von oben nach unten: Versandhalle, Schacht links
  * durch alle Etagen, je Etage Kiste, Meister-Platz, Presse und Stufen-Schild.

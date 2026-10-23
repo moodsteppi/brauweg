@@ -142,7 +142,7 @@ export function Clan({
 }: {
   /** Neues Hub (Nachtblau & Gold): die neu angeordnete Halle. */
   neu?: boolean;
-  /** Clanwort oeffnen (nur App, neues Hub) — ohne steht die Zeile nicht da. */
+  /** Clanwort oeffnen (nur im Umfang gesetzt) — ohne steht die Zeile nicht da. */
   onClanwort?: () => void;
   /** Der eine Clan des Kontos, oder `null`. */
   clanId: string | null;

@@ -182,9 +182,11 @@ export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
   brocooked: { web: 'spielbar', app: 'bald' },
   /* Seit dem 25.09.2026 im Code. Auf der Webseite erst „Bald", bis es
      jemand gespielt hat (Robin, 26.09.2026, vor dem Release). In der App
-     dagegen schon spielbar: Es gehoert zur ersten iOS-Fassung (Emile,
-     13.10.2026), die Webseite bleibt davon unberuehrt. */
-  brochess: { web: 'bald', app: 'spielbar' },
+     schon spielbar: Es gehoert zur ersten iOS-Fassung (Emile, 13.10.2026).
+     Seit dem 23.10.2026 auch auf der Webseite spielbar — Web und App sollen
+     dasselbe anbieten (docs/release/ios-web-abgleich.md); fuer die Produktion
+     bleibt UMFANG die Obergrenze. */
+  brochess: { web: 'spielbar', app: 'spielbar' },
   /* Vorschau-Spiel mit Moderationsbedarf (freier Text zwischen Sitzen, siehe
      PREVIEW) — in der App gar nicht erst ankuendigen. */
   werwolf: { web: 'bald', app: 'aus' },

@@ -96,11 +96,11 @@ haben es, verschieden · **nur Web** = Kandidat zum Ausblenden auf `main`
 | Punkt | iOS | Web | Lücke |
 | --- | --- | --- | --- |
 | Doppelkopf, Skat, Filler | spielbar | spielbar | anders in Web: Filler heißt in der App „Farbduell" |
-| BroChess | spielbar | bald | **fehlt in Web** (eine Zeile `registry.ts:183`) |
-| Kartenmanufaktur (neu) | spielbar | kein Einstieg | **fehlt in Web** |
-| Browort | spielbar + Startkarte + Profilstatistik | kein Einstieg | **fehlt in Web** |
-| Clanwort | im Clan | kein Einstieg | **fehlt in Web** |
-| Doppelkopf lernen / Übungsrunde | ja | nein | **fehlt in Web** |
+| BroChess | spielbar | ~~bald~~ spielbar seit 23.10.2026 | erledigt (`registry.ts:187`) |
+| Kartenmanufaktur (neu) | spielbar | ~~kein Einstieg~~ „Allein" seit 23.10.2026 | erledigt |
+| Browort | spielbar + Startkarte + Profilstatistik | ~~kein Einstieg~~ wie App seit 23.10.2026 | erledigt |
+| Clanwort | im Clan | ~~kein Einstieg~~ im Clan seit 23.10.2026 | erledigt |
+| Doppelkopf lernen / Übungsrunde | ja | ~~nein~~ ja seit 23.10.2026 | erledigt |
 | Mitteilungen | Push | „Bald" | anders in Web (Web-Push gibt es nicht; „Bald" ist ehrlich) |
 | Partykiste | bald + ausgeblendet | spielbar (Trinkmodus) | nur Web → ausblenden? |
 | Zauberer, Cambio, Poker, Mememory, Eiland, Feldherr, Tafelrunde, Golf, BroCooked | bald | spielbar | nur Web → ausblenden? |

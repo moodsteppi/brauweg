@@ -113,16 +113,17 @@ test('die Webseite sieht alles wie bisher, die App genau das, was die Liste sagt
   const s = await setup();
   t.after(() => s.close());
 
-  // Robins Entscheidung vom 23.09.2026: Auf der Webseite aendert sich nichts —
-  // ausser einem Spiel, das dort ausdruecklich erst „Bald" ist (BroChess,
-  // 26.09.2026). Die Webseite folgt dafuer derselben Liste wie die App.
+  // Robins Entscheidung vom 23.09.2026: Auf der Webseite aendert sich nichts.
+  // BroChess war dort vom 26.09. bis zum 23.10.2026 erst „Bald"; seitdem ist
+  // jedes Modul auf der Webseite spielbar. Die Webseite folgt dafuer
+  // derselben Liste wie die App.
   const web = await spiele(s, 'web');
   assert.deepEqual(
     web.map((g) => [g.id, g.availability]),
     registry.all().map((m) => [m.id, freigabeAuf(m.id, 'web') === 'spielbar' ? m.availability : 'preview']),
   );
   const imWebBald = registry.all().filter((m) => freigabeAuf(m.id, 'web') !== 'spielbar' && m.availability === 'playable');
-  assert.deepEqual(imWebBald.map((m) => m.id), ['brochess'], 'nur BroChess ist auf der Webseite zurueckgehalten');
+  assert.deepEqual(imWebBald.map((m) => m.id), [], 'auf der Webseite ist kein Modul zurueckgehalten');
 
   // Die App folgt der Liste — hier nicht abgeschrieben, sondern je Spiel
   // gegen `freigabeAuf` gehalten, damit eine geaenderte Zeile keinen Test
