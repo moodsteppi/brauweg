@@ -108,7 +108,14 @@ const DATEIEN = [
 
 /** Paternoster-Mittelkachel: 256 × 512 mit vier Tabletts im Abstand 128. Im Schacht 68 breit. */
 const BAND = { breite: 68, px: 256, kachelPx: 512, tablettAbstandPx: 128, tablettPx: 64, ladungPx: 87 };
-const BAND_M = BAND.breite / BAND.px;
+/**
+ * Massstab der Mittelkachel. Tabletts und Schienen belegen nur das mittlere
+ * Viertel der 256 px — auf Schachtbreite gestreckt waeren sie winzig. Also
+ * groesser zeichnen und die leeren Raender an der Schachtbreite abschneiden.
+ */
+const BAND_M = 0.5;
+/** Der Kopf ist breiter als die Tabletts (Radgehaeuse); im vollen Massstab ragte er aus dem Bild. */
+const KOPF_M = 0.42;
 /**
  * Scheitel bis Fuss. Kleiner als die 54 der Einzelbilder: Dort lag Luft um
  * den Pinguin, beim Rig misst die Hoehe nur die Figur selbst.
@@ -514,15 +521,17 @@ export class Szene {
     this.roehre.position.set(SCHACHT.x, this.segmentOben);
     this.band = new TilingSprite({ texture: t[R('laufband-leer.png')]!, width: BAND.breite, height: 100 });
     this.band.tileScale.set(BAND_M);
+    // Kachelmitte auf die Bandmitte, sonst stuende das Tablett am linken Rand.
+    this.band.tilePosition.x = BAND.breite / 2 - (BAND.px / 2) * BAND_M;
     this.band.position.set(bandX, this.segmentOben);
     this.kopf = new Sprite(t[R('laufband-kopf.png')]);
     this.kopf.anchor.set(0.5, 1);
-    this.kopf.scale.set(BAND_M);
+    this.kopf.scale.set(KOPF_M);
     this.kopf.position.set(bandX + BAND.breite / 2, this.segmentOben);
     this.antrieb = new Sprite(t[R('laufband-antriebsrad.png')]);
     this.antrieb.anchor.set(0.5);
-    this.antrieb.scale.set(BAND_M * 0.6071428571428571);
-    this.antrieb.position.set(bandX + BAND.breite / 2, this.segmentOben - (256 - 97) * BAND_M);
+    this.antrieb.scale.set(KOPF_M * 0.6071428571428571);
+    this.antrieb.position.set(bandX + BAND.breite / 2, this.segmentOben - (256 - 97) * KOPF_M);
     this.fuss = new Sprite(t[R('laufband-fuss.png')]);
     this.fuss.anchor.set(0.5, 0);
     this.fuss.scale.set(BAND_M);
