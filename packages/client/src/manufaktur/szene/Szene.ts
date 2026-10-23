@@ -31,8 +31,11 @@ import {
   type ManufakturStand,
   type Presse,
   MAX_PRESSEN,
+  VERSAND_ABFAHRT,
   arbeiter,
+  tempo,
   versandKapazitaet,
+  versandZyklus,
 } from '@brauweg/manufaktur-kern';
 
 import type { Getragen } from '../../api';
@@ -44,12 +47,16 @@ import {
   arbeiterOrt,
   kistenStapel,
   packtischKartons,
+  LAUFEN_TEMPO_MAX,
   paternosterOrt,
+  phasenTempo,
   pressenPhase,
+  pressenPhaseMs,
   schlagZwischen,
   traegtStapel,
   wagenOrt,
 } from './abbild';
+import { CLIPS } from './clips';
 import { type Figur, RigFigur } from './figur';
 import { BREITE, ETAGE_HOEHE, HALLE_HOEHE, KULISSE, SCHACHT, etage, gesamtHoehe, haltY, halle } from './layout';
 import { PresseBild, maschinenDateien } from './maschine';
@@ -392,7 +399,8 @@ class EtageBild {
       } else if (jetzt < this.jubelBis) {
         a.spiele('jubeln');
       } else {
-        a.spiele(arbeiterAblauf(ph.phase), tempo);
+        const ablauf = arbeiterAblauf(ph.phase);
+        a.spiele(ablauf, phasenTempo(CLIPS[ablauf], ablauf, pressenPhaseMs(p, ph.phase, jetzt), tempo));
         a.schaue(ph.phase === 'zurueck' ? -1 : 1);
       }
       a.traegt(traegtStapel(ph.phase) ? this.t[stapelBild(this.index)]! : null);
@@ -788,7 +796,9 @@ export class Szene {
     if (Math.abs(weg) < 200) {
       this.bandWeg += weg;
       this.band.tilePosition.y = this.bandWeg;
-      this.antrieb.rotation += weg / 9;
+      // Hoechstens rund 20° je Bild: Schneller wirkt ein Speichenrad, als
+      // drehte es rueckwaerts (Wagenrad-Effekt), sobald der Paternoster flott ist.
+      this.antrieb.rotation += Math.max(-0.35, Math.min(0.35, weg / 9));
     }
     // Ladung nur auf den Tabletts, die gerade Ware hinauftragen: auf der
     // Rueckfahrt nach oben, zwischen der Etage, an der die Kabine ist, und dem Kopf.
@@ -846,7 +856,10 @@ export class Szene {
     this.wagen.x = h.wagen.x + wagen.weg * strecke;
     // Raeder: Drehwinkel aus Strecke durch Radius (in Wagen-Pixeln).
     const gefahren = (this.wagen.x - vorher) / wm;
-    if (Math.abs(gefahren) < 400) for (const r of this.raeder) r.rotation += gefahren / WAGEN.radRadius;
+    if (Math.abs(gefahren) < 400) {
+      const dreh = Math.max(-0.35, Math.min(0.35, gefahren / WAGEN.radRadius));
+      for (const r of this.raeder) r.rotation += dreh;
+    }
     // Tuer offen am Tor, zu unterwegs — als Zustandswechsel mit kurzem Squash.
     const offen = wagen.phase === 'steht' || wagen.phase === 'laden';
     const korpus = this.t[R(offen ? 'versand-korpus-offen.png' : 'versand-korpus-zu.png')]!;
@@ -889,13 +902,19 @@ export class Szene {
     if (wagen.phase === 'laden') {
       const a = Math.min(1, wagen.anteil / 0.7);
       x = von + (bis - von) * a;
-      this.traeger.spiele(wagen.anteil < 0.7 ? 'laufen_tragen' : 'einladen');
+      // Laden dauert bei vollem Tempo nur noch Sekundenbruchteile — die
+      // Ablaeufe muessen in ihren Abschnitt passen (phasenTempo).
+      const ladenMs = (VERSAND_ABFAHRT * versandZyklus(v.stufe)) / tempo(v, jetzt);
+      const grund = (versandZyklus(1) / versandZyklus(v.stufe)) * tempo(v, jetzt);
+      const name = wagen.anteil < 0.7 ? 'laufen_tragen' : 'einladen';
+      this.traeger.spiele(name, phasenTempo(CLIPS[name], name, ladenMs * (name === 'einladen' ? 0.3 : 0.7), grund));
       this.traeger.schaue(1);
       this.traeger.traegt(wagen.anteil < 0.85 ? this.paket : null);
     } else if (wagen.phase === 'weg') {
       const a = Math.min(1, wagen.anteil / 0.6);
       x = bis - (bis - von) * a;
-      this.traeger.spiele(a < 1 ? 'laufen' : 'winken');
+      const grund = (versandZyklus(1) / versandZyklus(v.stufe)) * tempo(v, jetzt);
+      this.traeger.spiele(a < 1 ? 'laufen' : 'winken', a < 1 ? Math.min(LAUFEN_TEMPO_MAX, grund) : 1);
       this.traeger.schaue(a < 1 ? -1 : 1);
       this.traeger.traegt(null);
     } else {

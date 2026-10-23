@@ -181,6 +181,37 @@ export function ablaufTempo(p: Presse, jetzt: number): number {
   return (presseZyklus(1) / presseZyklus(p.stufe)) * tempo(p, jetzt);
 }
 
+/**
+ * Laufschritte hoechstens so viel schneller als auf Stufe 1. Darueber
+ * trippelten die Pinguine nur noch (Rueckmeldung 23.10.2026); der Weg selbst
+ * wird trotzdem in der Zeit geschafft, die der Zyklus vorgibt.
+ */
+export const LAUFEN_TEMPO_MAX = 2;
+
+/**
+ * Wie schnell der Ablauf zu einer Phase laufen muss, damit er in die Phase
+ * passt. Die Ablaeufe haben feste Laengen (clips.ts), die Phasen nicht: Bei
+ * vollem Tempo dauert `ablegen` 50 ms, der Ablauf 400 ms — er brach immer
+ * mitten im Bewegen ab, und die Figur zuckte.
+ *
+ * - einmalige Ablaeufe: genau so schnell, dass sie mit der Phase enden
+ * - `arbeiten`: eine Bewegung je Pressenschlag (drei je Phase)
+ * - Laufen: im Takt des Zyklus, aber gedeckelt
+ */
+export function phasenTempo(ablauf: { dauer: number; schleife: boolean }, name: string, phaseMs: number, grundTempo: number): number {
+  if (phaseMs <= 0) return grundTempo;
+  if (name === 'arbeiten') return ablauf.dauer / (phaseMs / SCHLAEGE.length);
+  if (!ablauf.schleife) return Math.max(1, ablauf.dauer / phaseMs);
+  if (name.startsWith('laufen')) return Math.min(LAUFEN_TEMPO_MAX, grundTempo);
+  return grundTempo;
+}
+
+/** Wie lange eine Phase der Presse gerade dauert (ms), mit Meister-Faehigkeit. */
+export function pressenPhaseMs(p: Presse, phase: PressenPhase, jetzt: number): number {
+  if (phase === 'schlafen' || phase === 'wartet') return 0;
+  return (PRESSE_PHASEN[phase] * presseZyklus(p.stufe)) / tempo(p, jetzt);
+}
+
 /** Wurde zwischen `vorher` und `jetzt` (Anteile der Arbeitsphase) ein Pressenschlag erreicht? */
 export function schlagZwischen(vorher: number, jetzt: number): boolean {
   if (jetzt < vorher) return SCHLAEGE.some((s) => s <= jetzt || s > vorher);
