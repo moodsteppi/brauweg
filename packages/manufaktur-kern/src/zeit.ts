@@ -10,7 +10,9 @@
 
 import {
   FAEHIGKEIT_TEMPO,
+  ABWESEND_AB_MS,
   OFFLINE_MS,
+  OFFLINE_TEMPO,
   TAKT_MS,
   VERSAND_ABFAHRT,
   VERSAND_VERKAUF,
@@ -77,7 +79,7 @@ function takt(stand: ManufakturStand): void {
     if (!p.laeuft) return;
     p.fortschritt += (TAKT_MS * tempo(p, t)) / presseZyklus(p.stufe);
     if (p.fortschritt >= 1) {
-      p.kiste += presseErtrag(index, p.stufe, stand.manufaktur);
+      p.kiste += presseErtrag(index, p.stufe, stand.manufaktur, stand.jubilaeen);
       p.laeuft = false;
       p.fortschritt = 0;
     }
@@ -136,7 +138,9 @@ function ruhig(stand: ManufakturStand): boolean {
 /**
  * Laesst die Zeit bis `bis` laufen, in ganzen Takten — was vom letzten Takt
  * uebrig bleibt, rechnet der naechste Aufruf. Liegt der Stand laenger als
- * OFFLINE_MS zurueck, laeuft nur so viel; die Uhr springt trotzdem nach vorn.
+ * ABWESEND_AB_MS zurueck, war niemand da: Dann laeuft hoechstens OFFLINE_MS,
+ * und das nur zum halben Tempo (OFFLINE_TEMPO) — die Uhr springt trotzdem
+ * nach vorn. Kurze Luecken (der Bildschirm fragt alle 30 s) rechnen voll.
  * Ohne Meister schlafen die Pinguine nach ihrem Zyklus ein — deshalb zaehlt
  * offline ganz von selbst nur, was die Meister schaffen.
  */
@@ -145,7 +149,9 @@ export function vorspulen(alt: ManufakturStand, bis: number): ManufakturStand {
   if (takte <= 0) return alt;
   const stand = kopiere(alt);
   const ende = alt.zeit + takte * TAKT_MS;
-  const rechnen = Math.min(takte, Math.floor(OFFLINE_MS / TAKT_MS));
+  const luecke = takte * TAKT_MS;
+  const rechnen =
+    luecke > ABWESEND_AB_MS ? Math.floor((Math.min(luecke, OFFLINE_MS) * OFFLINE_TEMPO) / TAKT_MS) : takte;
   for (let i = 0; i < rechnen; i += 1) {
     if (ruhig(stand)) break;
     takt(stand);

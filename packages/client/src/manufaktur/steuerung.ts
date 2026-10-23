@@ -36,6 +36,8 @@ export interface Ereignisse {
   fehler?: (textSchluessel: string | null) => void;
   /** Eine neue Manufaktur ist bezogen (auch von einem zweiten Geraet aus). */
   umzug?: (nummer: number) => void;
+  /** Ein Jubilaeum ist gefeiert (Kartenpalast neu, ein Siegel mehr). */
+  jubilaeum?: (siegel: number) => void;
 }
 
 /** Nach so langer Zeit fragt der Client ohnehin neu — fuer ein zweites Geraet. */
@@ -50,6 +52,7 @@ export class Steuerung {
   private kette: Promise<void> = Promise.resolve();
   private hoerer = new Set<() => void>();
   private letzteManufaktur: number | null = null;
+  private letzteJubilaeen: number | null = null;
 
   constructor(
     private readonly leitung: Leitung,
@@ -157,6 +160,9 @@ export class Steuerung {
     if (antwort.muenzen > 0) this.ereignisse.muenzen?.(antwort.muenzen);
     const nummer = antwort.stand.manufaktur;
     if (this.letzteManufaktur !== null && nummer > this.letzteManufaktur) this.ereignisse.umzug?.(nummer);
+    const siegel = antwort.stand.jubilaeen;
+    if (this.letzteJubilaeen !== null && siegel > this.letzteJubilaeen) this.ereignisse.jubilaeum?.(siegel);
+    this.letzteJubilaeen = siegel;
     this.letzteManufaktur = nummer;
     this.melden();
   }

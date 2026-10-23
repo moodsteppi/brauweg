@@ -424,6 +424,8 @@ export interface RegalWare {
   /** Beide Preise — der Käufer wählt, wie bei der Kosmetik. */
   preis: Preis;
   besessen: boolean;
+  /** Nur zu erspielen (Kartenruecken der Kartenmanufaktur), nicht zu kaufen. */
+  nurErspielt?: true;
   /**
    * Nur bei `inhaltspaket` (Golf-Kurs, Partykiste-Themenpaket): Spiel und
    * Regelsatzfeld. Der Wert steht in `wert` — so sperrt die Auswahl des

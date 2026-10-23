@@ -26,10 +26,13 @@ export function useManufaktur(
   schliesseOffline: () => void;
   umgezogen: number | null;
   schliesseUmzug: () => void;
+  gefeiert: number | null;
+  schliesseFeier: () => void;
 } {
   const [meldung, setMeldung] = useState<string | null>(null);
   const [offline, setOffline] = useState<ManufakturAntwort['offline']>(null);
   const [umgezogen, setUmgezogen] = useState<number | null>(null);
+  const [gefeiert, setGefeiert] = useState<number | null>(null);
   const [bereit, setBereit] = useState(false);
   const [ladefehler, setLadefehler] = useState<string | null>(null);
 
@@ -54,6 +57,7 @@ export function useManufaktur(
           },
           offline: setOffline,
           umzug: setUmgezogen,
+          jubilaeum: setGefeiert,
           fehler: (schluessel) => {
             spiele('fehler');
             melde(schluessel ? t(schluessel) : 'Keine Verbindung.');
@@ -103,5 +107,7 @@ export function useManufaktur(
     schliesseOffline: () => setOffline(null),
     umgezogen,
     schliesseUmzug: () => setUmgezogen(null),
+    gefeiert,
+    schliesseFeier: () => setGefeiert(null),
   };
 }

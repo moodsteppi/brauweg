@@ -27,6 +27,7 @@ import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { badRequest, conflict } from '../errors.js';
 import { gutschreiben } from '../waehrung.js';
+import { rueckenFuer } from './rueckseiten.js';
 
 /** Ab dieser Abwesenheit meldet der Bildschirm „Willkommen zurueck". */
 const OFFLINE_MELDUNG_AB_MS = 5 * 60 * 1000;
@@ -80,9 +81,18 @@ async function speichere(
   return geaendert.length > 0;
 }
 
+/** Muenzen fuers Hub und erspielte Kartenruecken — beides nur hier, nie im Client. */
 async function zahleAus(db: Db, accountId: string, meilensteine: Meilenstein[]): Promise<number> {
   const muenzen = meilensteine.reduce((summe, m) => summe + m.muenzen, 0);
   if (muenzen > 0) await gutschreiben(db, accountId, 'coins', muenzen);
+  const ruecken = rueckenFuer(meilensteine.map((m) => m.kennung));
+  if (ruecken.length > 0) {
+    // Zweimal eingetragen aendert nichts (Besitz ist eine Zeile je Stueck).
+    await db
+      .insert(s.accountCosmetic)
+      .values(ruecken.map((itemId) => ({ accountId, itemId })))
+      .onConflictDoNothing();
+  }
   return muenzen;
 }
 

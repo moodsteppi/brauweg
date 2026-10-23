@@ -9,7 +9,7 @@
 
 import { MAX_PRESSEN } from './formeln.js';
 
-export const FASSUNG = 2;
+export const FASSUNG = 3;
 
 /** Ein Arbeitszyklus: laeuft er, und wie weit ist er (0 … 1)? */
 export interface Zyklus {
@@ -57,6 +57,8 @@ export interface ManufakturStand {
   versand: Versand;
   /** Warenwert auf dem Packtisch in der Versandhalle. */
   packtisch: number;
+  /** Gefeierte Jubilaeen im Kartenpalast = Gildensiegel, je +10 % Kartenwert. Bleiben fuer immer. */
+  jubilaeen: number;
   /** Erreichte Meilensteine, etwa `million-2`. Bleiben ueber den Umzug. */
   meilensteine: string[];
   /** Bis hierhin (ms) ist gerechnet — immer ein ganzer Takt. */
@@ -71,10 +73,11 @@ export function neuePresse(): Presse {
   return { ...station(), kiste: 0 };
 }
 
-export function neuerStand(jetzt: number, manufaktur = 1, meilensteine: string[] = []): ManufakturStand {
+export function neuerStand(jetzt: number, manufaktur = 1, meilensteine: string[] = [], jubilaeen = 0): ManufakturStand {
   return {
     fassung: FASSUNG,
     manufaktur,
+    jubilaeen,
     taler: 0,
     verdient: 0,
     pressen: [neuePresse()],
@@ -117,6 +120,8 @@ interface StandFassung1 {
 export function migriere(roh: unknown): ManufakturStand {
   const alt = roh as Partial<ManufakturStand> & Partial<StandFassung1>;
   if (alt.fassung === FASSUNG) return alt as ManufakturStand;
+  // Fassung 2 (Zyklen, ohne Jubilaeum): alles bleibt, es gab nur noch keine Siegel.
+  if ((alt.fassung as number | undefined) === 2) return { ...(alt as ManufakturStand), fassung: FASSUNG, jubilaeen: 0 };
   const v1 = alt as StandFassung1;
   const neu = neuerStand(v1.zeit, v1.manufaktur ?? 1, v1.meilensteine ?? []);
   neu.taler = v1.taler ?? 0;

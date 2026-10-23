@@ -253,6 +253,7 @@ export async function shopFuer(db: Db, accountId: string): Promise<ShopAnsicht> 
       preis: ware.preis,
       besessen: eigeneWare.has(ware.id),
       ...(ware.inhalt ? { inhalt: ware.inhalt } : {}),
+      ...(ware.nurErspielt ? { nurErspielt: true } : {}),
     })),
     truhen: KAUFTRUHEN,
     kurs: MUENZEN_JE_EDELSTEIN,
@@ -398,6 +399,8 @@ async function kaufeWare(
   // Was allen gehoert, laesst sich nicht kaufen. Sonst koennte man Muenzen
   // fuer die Stube ausgeben, die man ohnehin hat.
   if (istFrei(ware)) throw conflict('itemAlreadyOwned');
+  // Erspielt, nicht gekauft: Der Kartenrücken der Manufaktur ist ein Abzeichen.
+  if (ware.nurErspielt) throw conflict('itemNurErspielt');
 
   const [konto] = await db
     .select({ premiumUntil: s.account.premiumUntil, isStaff: s.account.isStaff })

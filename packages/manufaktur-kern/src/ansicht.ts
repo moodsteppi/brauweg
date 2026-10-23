@@ -5,6 +5,7 @@
  */
 
 import {
+  OFFLINE_TEMPO,
   type Ziel,
   arbeiter,
   ausbauKostenFuer,
@@ -26,7 +27,7 @@ export type Kettenglied = 'pressen' | 'paternoster' | 'versand';
 /** Was die Kettenglieder je Sekunde schaffen, wenn alle arbeiten. */
 export function durchsatz(stand: ManufakturStand, nurMeister = false): Record<Kettenglied, number> {
   const pressen = stand.pressen.reduce(
-    (summe, p, i) => summe + (nurMeister && !p.meister ? 0 : presseLeistung(i, p.stufe, stand.manufaktur)),
+    (summe, p, i) => summe + (nurMeister && !p.meister ? 0 : presseLeistung(i, p.stufe, stand.manufaktur, stand.jubilaeen)),
     0,
   );
   const f = stand.paternoster;
@@ -56,7 +57,8 @@ export function leerlaufErtrag(stand: ManufakturStand): number | null {
     stand.pressen.some((p) => p.meister) || stand.paternoster.meister || stand.versand.meister;
   if (!irgendeiner) return null;
   const d = durchsatz(stand, true);
-  return Math.min(d.pressen, d.paternoster, d.versand);
+  // Offline laeuft alles zum halben Tempo (zeit.ts) — das zeigt die Anzeige auch.
+  return Math.min(d.pressen, d.paternoster, d.versand) * OFFLINE_TEMPO;
 }
 
 /**
@@ -86,7 +88,7 @@ export function engpassSichtbar(stand: ManufakturStand): Kettenglied | null {
 /** Leistung einer Station je Sekunde auf Stufe `stufe` — die Hauptzeile im Upgrade-Blatt. */
 export function leistungJeSekunde(stand: ManufakturStand, ziel: Ziel, stufe: number): number {
   const m = stand.manufaktur;
-  if (ziel.art === 'presse') return presseLeistung(ziel.index, stufe, m);
+  if (ziel.art === 'presse') return presseLeistung(ziel.index, stufe, m, stand.jubilaeen);
   if (ziel.art === 'paternoster') return paternosterKapazitaet(stufe, m) / (paternosterFahrt(stand.pressen.length, stufe) / 1000);
   return versandKapazitaet(stufe, m) / (versandZyklus(stufe) / 1000);
 }
@@ -114,7 +116,7 @@ function kennzahlenBei(stand: ManufakturStand, ziel: Ziel, stufe: number): Omit<
   const m = stand.manufaktur;
   if (ziel.art === 'presse') {
     return [
-      { name: 'Ertrag je Zyklus', vorher: presseErtrag(ziel.index, stufe, m), einheit: 'wert' },
+      { name: 'Ertrag je Zyklus', vorher: presseErtrag(ziel.index, stufe, m, stand.jubilaeen), einheit: 'wert' },
       { name: 'Zyklus', vorher: presseZyklus(stufe) / 1000, einheit: 'sekunden' },
       { name: 'Arbeiter', vorher: arbeiter(stufe), einheit: 'anzahl' },
     ];

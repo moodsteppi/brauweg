@@ -376,6 +376,19 @@ export function Kartenmanufaktur({
           debug={debug}
           onDebug={setDebug}
           onClose={() => setBlatt(null)}
+          onJubilaeum={() =>
+            frage(
+              {
+                titel: 'Jubiläum feiern?',
+                text: 'Pressen, Stufen, Meister und Taler beginnen neu. Dafür bekommst du ein Gildensiegel: für immer 10 % mehr Kartenwert.',
+                ja: 'Feiern',
+              },
+              () => {
+                setBlatt(null);
+                tue({ typ: 'jubilaeum' }, 'kauf');
+              },
+            )
+          }
           onUmziehen={() =>
             frage(
               {
@@ -410,6 +423,20 @@ export function Kartenmanufaktur({
             <p className="hb-text">Neue Manufaktur, alles beginnt von vorn — und jede Station leistet doppelt so viel.</p>
             <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={m.schliesseUmzug}>
               Loslegen
+            </button>
+          </div>
+        </HbBlatt>
+      )}
+      {m.gefeiert !== null && (
+        <HbBlatt titel={`${m.gefeiert}. Jubiläum`} onClose={m.schliesseFeier} klasse="is-klein">
+          <div className="hb-rueckfrage">
+            <img className="mf-umzug-gross" src={manufakturBild(5)} alt="" draggable={false} />
+            <p className="hb-text">
+              Der Kartenpalast beginnt neu — mit {m.gefeiert} {m.gefeiert === 1 ? 'Gildensiegel' : 'Gildensiegeln'}: Alle Karten sind
+              jetzt {m.gefeiert * 10} % mehr wert, für immer.
+            </p>
+            <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={m.schliesseFeier}>
+              Weiter
             </button>
           </div>
         </HbBlatt>

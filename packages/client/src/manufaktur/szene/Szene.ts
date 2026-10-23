@@ -270,7 +270,7 @@ class EtageBild {
     if (this.letzteStufe > 0 && p.stufe > this.letzteStufe) this.jubelBis = jetzt + 800;
     this.letzteStufe = p.stufe;
 
-    const { anzahl } = kistenStapel(p, this.index, stand.manufaktur);
+    const { anzahl } = kistenStapel(p, this.index, stand.manufaktur, stand.jubilaeen);
     this.stapel.forEach((s, i) => (s.visible = i < anzahl));
     this.presse.texture = this.t[presseBild(p.stufe)]!;
 

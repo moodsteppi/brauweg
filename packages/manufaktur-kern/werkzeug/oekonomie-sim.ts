@@ -306,7 +306,7 @@ function tageUndStunde(ms: number): string {
 /** Profil „Gelegenheitsspieler": vier Sitzungen a drei Minuten am Tag, dazwischen offline. */
 function gelegenheit(): void {
   const lauf = simuliere(60 * TAG, 2, GELEGENHEIT);
-  console.log('\nProfil Gelegenheitsspieler (4 × 3 min am Tag, dazwischen offline, Deckel 2 h)\n');
+  console.log('\nProfil Gelegenheitsspieler (4 × 3 min am Tag, dazwischen offline: hoechstens 1 h zum halben Tempo)\n');
   for (const e of lauf.ereignisse) {
     if (/gebaut|Umzug|erster Meister|Meister Versand|Meister Paternoster/.test(e.was)) console.log(`  ${tageUndStunde(e.zeit).padEnd(16)} ${e.was}`);
   }

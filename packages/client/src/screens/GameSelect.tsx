@@ -4015,6 +4015,11 @@ function DeckPicker({
     }
     const w = wareZu(art, id);
     if (!w) return;
+    // Erspielt, nicht gekauft (Kartenruecken der Manufaktur): kein Kaufangebot.
+    if (w.nurErspielt) {
+      setKaufFehler(t('error.itemNurErspielt'));
+      return;
+    }
     // Im neuen Hub die eigene Rückfrage statt des grauen iOS-Dialogs.
     if (neu) {
       frage(
@@ -4042,7 +4047,11 @@ function DeckPicker({
   if (neu) {
     /** Unterzeile einer Kachel: aktiv, gehört dir oder der Preis. */
     const stand = (art: RegalWare['art'], id: string, aktiv: boolean): string => {
-      if (!gehoert(art, id)) return `${(wareZu(art, id)?.preis.coins ?? 0).toLocaleString('de-DE')} Münzen`;
+      if (!gehoert(art, id)) {
+        const w = wareZu(art, id);
+        if (w?.nurErspielt) return 'In der Kartenmanufaktur erspielen';
+        return `${(w?.preis.coins ?? 0).toLocaleString('de-DE')} Münzen`;
+      }
       return aktiv ? 'aktiv' : 'gehört dir';
     };
     const marke = (aktiv: boolean, mein: boolean): React.JSX.Element | null =>

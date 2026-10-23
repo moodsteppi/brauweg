@@ -95,15 +95,34 @@ drei Meister kauft. Die Manufakturen 2–4 dauern 64, 57 und 51 min.
 
 Ohne Meister schlafen die Pinguine nach ihrem Zyklus ein — deshalb zählt
 offline von selbst nur die **Meister-Kette**, ohne Versand-Meister gibt es
-nichts. Höchstens **2 Stunden**. Der Server rechnet beim nächsten Öffnen mit
-derselben Simulation nach und meldet einmal „Willkommen zurück: +… Taler".
+nichts. Offline läuft alles **zum halben Tempo und höchstens eine Stunde**
+(`OFFLINE_TEMPO`, `OFFLINE_MS`); als weg gilt, wer länger als eine Minute
+nicht gefragt hat. Der Server rechnet beim nächsten Öffnen mit derselben
+Simulation nach und meldet „Willkommen zurück". Liegt das Produzierte weit
+über dem Verkauften, erklärt das Blatt den Stau und führt zu den Meistern.
+
+Simulation Gelegenheitsspieler (4 × 3 min am Tag), Stand 23.10.2026:
+Presse 5 nach 0,9 Tagen, erster Umzug nach 1,5 Tagen. Vor der Halbierung
+waren es 0,8 und 1,3 Tage — der Hebel für ein längeres Spiel ist nicht der
+Offline-Deckel, sondern der Preis der späteren Manufakturen.
 
 ## Neue Manufaktur (Prestige)
 
 Mit **allen acht Pressen** kann man umziehen: alles beginnt von vorn
 (Pressen, Stufen, Meister, Taler), dafür leistet jede weitere Manufaktur
 **dauerhaft ×2** (die zweite ×2, die dritte ×4 …) und kostet ×1,8. Neuer
-Name, neue Kulisse. Höchstens 5.
+Name, neue Kulisse. Höchstens 5. Wer umzieht, bekommt den **Kartenrücken**
+der verlassenen Manufaktur (nur erspielbar, am Tisch wählbar; Bilder:
+`docs/ASSETS-KARTENMANUFAKTUR-RUECKEN.md`).
+
+## Jubiläum (nach Manufaktur 5)
+
+Im Kartenpalast mit allen acht Pressen: **Jubiläum feiern** — der Palast
+beginnt neu, und es gibt ein **Gildensiegel**, dauerhaft **+10 %
+Kartenwert** je Siegel (aufaddiert). So endet das Spiel nicht. Das erste
+Jubiläum schenkt den Kartenrücken „Kartenpalast". Münzen fürs Hub: 100 je
+Jubiläum, aber nur für die ersten zehn — sonst wäre es eine endlose
+Münzquelle.
 
 **Münzen fürs Hub (Meilensteine, eigene Währung bleibt getrennt):**
 
@@ -111,6 +130,7 @@ Name, neue Kulisse. Höchstens 5.
 | --- | --- |
 | erste Million Taler (je Manufaktur) | 50 |
 | neue Manufaktur eröffnet | 300 |
+| Jubiläum (die ersten zehn) | 100 |
 
 Weitere Münzen gibt es nicht — wer wartet, erzeugt Taler, keine Münzen
 (Wirtschaftsmodell, CLAUDE.md: „Edelsteine kaufen alles, Münzen nicht").

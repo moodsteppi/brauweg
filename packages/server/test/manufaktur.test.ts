@@ -10,11 +10,12 @@ import assert from 'node:assert/strict';
 
 import { eq } from 'drizzle-orm';
 
-import { type ManufakturStand, FASSUNG, migriere } from '@brauweg/manufaktur-kern';
+import { type ManufakturStand, FASSUNG, MAX_PRESSEN, migriere, neuePresse } from '@brauweg/manufaktur-kern';
 
 import { manufakturAktion, manufakturHeute } from '../src/manufaktur/dienst.js';
 import * as s from '../src/db/schema.js';
 import { AppError } from '../src/errors.js';
+import { kaufen } from '../src/shop.js';
 import { createTestContext, createVerifiedAccount, seedInvite } from './helpers.js';
 
 const T0 = Date.parse('2026-10-23T10:00:00Z');
@@ -101,7 +102,7 @@ test('Dienst: meldet Offline-Verdienst und zahlt Meilenstein-Muenzen genau einma
 
   const spaeter = await manufakturHeute(c.db, accountId, new Date(T0 + 5 * STUNDE));
   assert.ok(spaeter.offline);
-  assert.equal(spaeter.offline.sekunden, 2 * 3600, 'gemeldet wird hoechstens die Offline-Grenze');
+  assert.equal(spaeter.offline.sekunden, 3600, 'gemeldet wird hoechstens die Offline-Grenze');
   assert.ok(spaeter.offline.taler > 0);
   assert.ok(spaeter.offline.produziert >= spaeter.offline.taler, 'verkauft wird nur, was gepresst wurde');
   assert.equal(spaeter.muenzen, 50, 'die erste Million ist unterwegs gefallen');
@@ -127,4 +128,30 @@ test('Dienst: meldet einen Stau — gepresst, aber nichts verkauft', async (t) =
   assert.ok(spaeter.offline);
   assert.equal(spaeter.offline.taler, 0);
   assert.ok(spaeter.offline.produziert > 0);
+});
+
+test('Dienst: Wer umzieht, bekommt den Kartenruecken seiner Manufaktur — kaufen kann man ihn nicht', async (t) => {
+  const c = await createTestContext();
+  t.after(() => c.close());
+  await seedInvite(c.db);
+  const { accountId } = await createVerifiedAccount(c, 'Emil');
+  await manufakturHeute(c.db, accountId, new Date(T0));
+
+  await assert.rejects(
+    () => kaufen(c.db, accountId, 'ruecken-manufaktur-dorf'),
+    (err: unknown) => err instanceof AppError && err.code === 'itemNurErspielt',
+  );
+
+  const [zeile] = await c.db.select().from(s.manufaktur).where(eq(s.manufaktur.accountId, accountId));
+  const stand = migriere(zeile!.stand);
+  stand.pressen = Array.from({ length: MAX_PRESSEN }, neuePresse);
+  await c.db.update(s.manufaktur).set({ stand }).where(eq(s.manufaktur.accountId, accountId));
+
+  const umzug = await manufakturAktion(c.db, accountId, { typ: 'umziehen' }, new Date(T0 + 1000));
+  assert.equal(umzug.stand.manufaktur, 2);
+  const besitz = await c.db
+    .select({ itemId: s.accountCosmetic.itemId })
+    .from(s.accountCosmetic)
+    .where(eq(s.accountCosmetic.accountId, accountId));
+  assert.ok(besitz.some((b) => b.itemId === 'ruecken-manufaktur-dorf'));
 });

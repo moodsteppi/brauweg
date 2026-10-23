@@ -11,6 +11,8 @@
 import {
   ABKLINGEN_MS,
   FAEHIGKEIT_MS,
+  JUBILAEEN_MIT_MUENZEN,
+  MUENZEN_JUBILAEUM,
   MAX_MANUFAKTUR,
   MAX_PRESSEN,
   MAX_STUFE,
@@ -36,7 +38,9 @@ export type Aktion =
   /** Alle bereiten Meister-Faehigkeiten auf einmal. */
   | { typ: 'boost' }
   | { typ: 'freischalten' }
-  | { typ: 'umziehen' };
+  | { typ: 'umziehen' }
+  /** Im Kartenpalast mit allen acht Pressen: neu anfangen, ein Gildensiegel mehr. */
+  | { typ: 'jubilaeum' };
 
 export interface Meilenstein {
   kennung: string;
@@ -75,6 +79,15 @@ export function faehigkeitBereit(s: Station, jetzt: number): boolean {
 /** Umziehen darf, wer alle acht Pressen gebaut hat. */
 export function kannUmziehen(stand: ManufakturStand): boolean {
   return stand.pressen.length >= MAX_PRESSEN && stand.manufaktur < MAX_MANUFAKTUR;
+}
+
+/**
+ * Jubilaeum: Wer im Kartenpalast (der letzten Manufaktur) alle acht Pressen
+ * gebaut hat, kann neu anfangen und bekommt ein Gildensiegel — dauerhaft +10 %
+ * Kartenwert. So endet das Spiel nicht nach fuenf Manufakturen.
+ */
+export function kannJubilaeum(stand: ManufakturStand): boolean {
+  return stand.manufaktur >= MAX_MANUFAKTUR && stand.pressen.length >= MAX_PRESSEN;
 }
 
 /** Neue Meilensteine in diesem Stand — der Aufrufer zahlt die Muenzen. */
@@ -166,7 +179,14 @@ export function handle(
       const naechste = stand.manufaktur + 1;
       const kennung = `umzug-${naechste}`;
       meilensteine.push({ kennung, muenzen: MUENZEN_UMZUG });
-      return { stand: neuerStand(t, naechste, [...stand.meilensteine, kennung]), meilensteine };
+      return { stand: neuerStand(t, naechste, [...stand.meilensteine, kennung], stand.jubilaeen), meilensteine };
+    }
+    case 'jubilaeum': {
+      if (!kannJubilaeum(stand)) throw new AktionAbgelehnt('manufakturJubilaeumZuFrueh');
+      const nummer = stand.jubilaeen + 1;
+      const kennung = `jubilaeum-${nummer}`;
+      meilensteine.push({ kennung, muenzen: nummer <= JUBILAEEN_MIT_MUENZEN ? MUENZEN_JUBILAEUM : 0 });
+      return { stand: neuerStand(t, stand.manufaktur, [...stand.meilensteine, kennung], nummer), meilensteine };
     }
   }
 

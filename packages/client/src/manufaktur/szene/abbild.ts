@@ -78,9 +78,9 @@ export const SCHLAEGE = [0.2, 0.5, 0.8] as const;
  * hoechstens sechs. Darueber quillt die Kiste ueber — dann staut es sich hier
  * (der Paternoster kommt nicht nach).
  */
-export function kistenStapel(p: Presse, index: number, manufaktur: number): { anzahl: number; quillt: boolean } {
+export function kistenStapel(p: Presse, index: number, manufaktur: number, jubilaeen = 0): { anzahl: number; quillt: boolean } {
   if (p.kiste <= 1e-9) return { anzahl: 0, quillt: false };
-  const zyklen = p.kiste / presseErtrag(index, p.stufe, manufaktur);
+  const zyklen = p.kiste / presseErtrag(index, p.stufe, manufaktur, jubilaeen);
   return { anzahl: Math.min(6, Math.max(1, Math.ceil(zyklen - 1e-9))), quillt: zyklen > 6 };
 }
 

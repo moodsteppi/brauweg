@@ -69,7 +69,7 @@ function isDevFlag(name: string): boolean {
  *   Brett, Bank und Laden mit einem aufgezeichneten Vorbereitungsstand. Auch
  *   sie bleibt, und aus demselben Grund (siehe Kopf von
  *   `proben/ruestkammer/ProbeRuestkammer.tsx`).
- * - /probe/manufaktur?fall=neu|mitte|voll — die echte Kartenmanufaktur mit
+ * - /probe/manufaktur?fall=neu|mitte|voll|palast — die echte Kartenmanufaktur mit
  *   festen Staenden und einem nachgestellten Server aus demselben Kern. Fuer
  *   Bildschirmgroessen und gelieferte Bilder, auch im Browser (das Spiel
  *   selbst gibt es nur in der App).

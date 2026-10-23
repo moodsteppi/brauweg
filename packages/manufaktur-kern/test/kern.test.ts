@@ -42,6 +42,13 @@ const T0 = Date.parse('2026-10-23T10:00:00Z');
 const STUNDE = 3_600_000;
 const presse: Ziel = { art: 'presse', index: 0 };
 
+/** Wie der Bildschirm: alle 30 s nachfragen — so zaehlt nichts als Abwesenheit. */
+function online(stand: ManufakturStand, bis: number): ManufakturStand {
+  let s = stand;
+  for (let t = s.zeit + 30_000; t < bis; t += 30_000) s = vorspulen(s, t);
+  return vorspulen(s, bis);
+}
+
 function abgelehnt(code: string) {
   return (err: unknown) => err instanceof AktionAbgelehnt && err.code === code;
 }
@@ -126,7 +133,7 @@ test('Die ganze Kette von Hand: pressen, hochfahren, verkaufen', () => {
 
 test('Mit Meistern laeuft die Kette von selbst — der Engpass bestimmt das Einkommen', () => {
   const start = mitMeistern(neuerStand(T0));
-  const stand = vorspulen(start, T0 + STUNDE);
+  const stand = online(start, T0 + STUNDE);
   const d = durchsatz(start);
   const erwartet = Math.min(d.pressen, d.paternoster, d.versand) * 3600;
   // Anlauf und Restladungen: ein paar Prozent Abweichung sind Physik, nicht Fehler.
@@ -143,15 +150,21 @@ test('Engpass Paternoster, wenn die Pressen mehr liefern als er traegt', () => {
   assert.equal(engpass(stand), 'paternoster');
 });
 
-test('Offline: nur die Meister-Kette, hoechstens zwei Stunden — ohne Versand-Meister nichts', () => {
+test('Offline: nur die Meister-Kette, hoechstens eine Stunde zum halben Tempo — ohne Versand-Meister nichts', () => {
   const voll = vorspulen(mitMeistern(neuerStand(T0)), T0 + 10 * STUNDE);
-  const zwei = vorspulen(mitMeistern(neuerStand(T0)), T0 + OFFLINE_MS);
-  assert.ok(Math.abs(voll.taler - zwei.taler) < 1e-6, 'nach zwei Stunden kommt nichts mehr dazu');
+  const eine = vorspulen(mitMeistern(neuerStand(T0)), T0 + OFFLINE_MS);
+  assert.ok(Math.abs(voll.taler - eine.taler) < 1e-6, 'nach einer Stunde kommt nichts mehr dazu');
+  // Halbes Tempo: eine Stunde weg bringt so viel wie eine halbe Stunde Spielen.
+  const dabei = online(mitMeistern(neuerStand(T0)), T0 + OFFLINE_MS / 2);
+  assert.ok(Math.abs(eine.taler - dabei.taler) / dabei.taler < 0.02, `${eine.taler} gegen ${dabei.taler}`);
   assert.equal(voll.zeit, T0 + 10 * STUNDE, 'die Uhr springt trotzdem auf jetzt');
 
   const ohneVersand = { ...mitMeistern(neuerStand(T0)), versand: neuerStand(T0).versand };
   assert.equal(vorspulen(ohneVersand, T0 + STUNDE).taler, 0);
   assert.equal(leerlaufErtrag(ohneVersand), 0);
+  // Die Anzeige zeigt, was offline wirklich ankommt: die halbe Kette.
+  const d = durchsatz(mitMeistern(neuerStand(T0)));
+  assert.equal(leerlaufErtrag(mitMeistern(neuerStand(T0))), Math.min(d.pressen, d.paternoster, d.versand) * 0.5);
   assert.equal(leerlaufErtrag(neuerStand(T0)), null, 'ohne jeden Meister zeigt das HUD nichts');
 });
 
@@ -207,7 +220,8 @@ test('Die erste Million bringt Muenzen, genau einmal', () => {
 
 test('Gleicher Stand, gleiche Zeit, gleiches Ergebnis — egal in wie vielen Schritten', () => {
   const start = mitMeistern({ ...neuerStand(T0), pressen: [neuerStand(T0).pressen[0]!, neuerStand(T0).pressen[0]!] });
-  const amStueck = vorspulen(start, T0 + 600_000);
+  // Luecken unter einer Minute: So rechnen Server und Client im Betrieb.
+  const amStueck = online(start, T0 + 600_000);
   let schritte = start;
   for (let t = T0; t < T0 + 600_000; t += 17) schritte = vorspulen(schritte, t);
   schritte = vorspulen(schritte, T0 + 600_000);
@@ -256,14 +270,14 @@ test('Engpass sichtbar nur bei arbeitender Kette — und die Ware staut sich dav
   const stark = { ...neuerStand(T0).pressen[0]!, stufe: 80, meister: true };
   const schacht = mitMeistern({ ...neuerStand(T0), pressen: [stark, stark], versand: { ...neuerStand(T0).versand, stufe: 200 } });
   assert.equal(engpassSichtbar(schacht), 'paternoster');
-  const spaeter = vorspulen(schacht, T0 + 10 * 60_000);
+  const spaeter = online(schacht, T0 + 10 * 60_000);
   const kisten = spaeter.pressen.reduce((s, p) => s + p.kiste, 0);
   assert.ok(kisten > 100 * spaeter.packtisch, `Stau in den Kisten (${kisten}) statt auf dem Packtisch (${spaeter.packtisch})`);
 
   // Versand zu schwach: Der Packtisch laeuft voll.
   const wagen = mitMeistern({ ...neuerStand(T0), pressen: [stark], paternoster: { ...neuerStand(T0).paternoster, stufe: 200 } });
   assert.equal(engpassSichtbar(wagen), 'versand');
-  const danach = vorspulen(wagen, T0 + 10 * 60_000);
+  const danach = online(wagen, T0 + 10 * 60_000);
   assert.ok(danach.packtisch > danach.pressen[0]!.kiste, 'Stau auf dem Packtisch');
 });
 
@@ -278,4 +292,36 @@ test('Der Versand-Meister ist der guenstigste', async () => {
   const { meisterKosten } = await import('../src/index.js');
   assert.ok(meisterKosten({ art: 'versand' }, 1) < meisterKosten({ art: 'paternoster' }, 1));
   assert.ok(meisterKosten({ art: 'paternoster' }, 1) < meisterKosten(presse, 1));
+});
+
+test('Jubilaeum im Kartenpalast: neu anfangen, ein Siegel mehr, +10 % Kartenwert fuer immer', async () => {
+  const { kannJubilaeum, siegelFaktor } = await import('../src/index.js');
+  const palast = { ...neuerStand(T0, 5), taler: 1e60 };
+  assert.throws(() => handle(palast, { typ: 'jubilaeum' }, T0), abgelehnt('manufakturJubilaeumZuFrueh'));
+  let voll: ManufakturStand = palast;
+  while (voll.pressen.length < MAX_PRESSEN) voll = handle(voll, { typ: 'freischalten' }, T0).stand;
+  assert.equal(kannJubilaeum(voll), true);
+  assert.throws(() => handle(voll, { typ: 'umziehen' }, T0), abgelehnt('manufakturLetzte'));
+  const fest = handle(voll, { typ: 'jubilaeum' }, T0);
+  assert.equal(fest.stand.manufaktur, 5);
+  assert.equal(fest.stand.jubilaeen, 1);
+  assert.equal(fest.stand.pressen.length, 1);
+  assert.equal(fest.stand.taler, 0);
+  assert.deepEqual(fest.meilensteine, [{ kennung: 'jubilaeum-1', muenzen: 100 }]);
+  assert.equal(siegelFaktor(3), 1.3);
+  assert.ok(Math.abs(presseLeistung(0, 1, 5, 2) / presseLeistung(0, 1, 5, 0) - 1.2) < 1e-12);
+  // Ab dem elften gibt es keine Muenzen mehr — sonst eine endlose Muenzquelle.
+  let elf: ManufakturStand = { ...voll, jubilaeen: 10 };
+  elf = handle(elf, { typ: 'jubilaeum' }, T0).stand;
+  assert.equal(elf.jubilaeen, 11);
+});
+
+test('Staende der Fassung 2 bekommen 0 Siegel und behalten alles andere', () => {
+  const v2 = { ...neuerStand(T0, 3), taler: 77, fassung: 2 } as unknown as Record<string, unknown>;
+  delete v2.jubilaeen;
+  const neu = migriere(v2);
+  assert.equal(neu.fassung, FASSUNG);
+  assert.equal(neu.jubilaeen, 0);
+  assert.equal(neu.manufaktur, 3);
+  assert.equal(neu.taler, 77);
 });

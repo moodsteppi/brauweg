@@ -42,6 +42,7 @@ const aktion = z.discriminatedUnion('typ', [
   z.object({ typ: z.literal('boost') }),
   z.object({ typ: z.literal('freischalten') }),
   z.object({ typ: z.literal('umziehen') }),
+  z.object({ typ: z.literal('jubilaeum') }),
 ]);
 
 export function manufakturRouten(app: FastifyInstance, deps: ManufakturRoutenDeps): void {

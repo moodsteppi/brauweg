@@ -121,3 +121,22 @@ describe('Kartenmanufaktur: Meister und Leerlauf', () => {
     expect(within(blatt).getByText(/Versand und Paternoster/)).toBeTruthy();
   });
 });
+
+describe('Kartenmanufaktur: Jubiläum im Kartenpalast', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('mit acht Pressen feiern, danach das Fest-Blatt mit dem neuen Siegel', async () => {
+    const palast = { ...neuerStand(Date.now(), 5), pressen: Array.from({ length: MAX_PRESSEN }, neuePresse) };
+    manufaktur.mockResolvedValue(antwort(palast));
+    manufakturAktion.mockResolvedValue(antwort({ ...neuerStand(Date.now(), 5), jubilaeen: 1 }));
+    render(<Kartenmanufaktur onClose={vi.fn()} onGeaendert={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /5\/5/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Jubiläum feiern' }));
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Jubiläum feiern?' })).getByRole('button', { name: 'Feiern' }));
+
+    const fest = await screen.findByRole('dialog', { name: '1. Jubiläum' });
+    expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'jubilaeum' });
+    expect(within(fest).getByText(/10 % mehr wert/)).toBeTruthy();
+  });
+});

@@ -9,6 +9,10 @@ import {
   type Ziel,
   ausbauVorschau,
   faehigkeitBereit,
+  JUBILAEEN_MIT_MUENZEN,
+  MUENZEN_JUBILAEUM,
+  SIEGEL_BONUS,
+  kannJubilaeum,
   kannUmziehen,
   meisterKosten,
   stationVon,
@@ -234,8 +238,8 @@ export function LeerlaufBlatt({
       <div className="mf-blatt">
         <p className="mf-blatt-stufe">{kurz(ertrag)} Taler pro Sekunde</p>
         <p className="hb-text">
-          So viel verdient deine Manufaktur, während du weg bist — bis zu zwei Stunden lang. Es zählt nur, was Meister von selbst
-          erledigen.
+          So viel verdient deine Manufaktur, während du weg bist: zum halben Tempo und höchstens eine Stunde lang. Es zählt nur, was
+          Meister von selbst erledigen.
         </p>
         {kette.length > 0 && (
           <p className="hb-text mf-blatt-warnung">
@@ -315,6 +319,7 @@ export function ManufakturBlatt({
   debug,
   onDebug,
   onUmziehen,
+  onJubilaeum,
   onClose,
 }: {
   stand: ManufakturStand;
@@ -322,14 +327,38 @@ export function ManufakturBlatt({
   debug: boolean;
   onDebug: (an: boolean) => void;
   onUmziehen: () => void;
+  onJubilaeum: () => void;
   onClose: () => void;
 }): React.JSX.Element {
   const naechste = stand.manufaktur < MANUFAKTUREN.length ? stand.manufaktur + 1 : null;
+  const siegel = stand.jubilaeen;
+  const naechstesMitMuenzen = siegel + 1 <= JUBILAEEN_MIT_MUENZEN;
   return (
     <HbBlatt titel={`${manufakturName(stand.manufaktur)} · ${stand.manufaktur}/${MANUFAKTUREN.length}`} onClose={onClose} klasse="is-klein">
       <div className="mf-blatt">
         {naechste === null ? (
-          <p className="hb-text">Das ist die größte Manufaktur. Weiter geht es nicht — aber höher.</p>
+          <>
+            <span className="mf-umzug-bild" style={{ backgroundImage: `url(${manufakturBild(stand.manufaktur)})` }}>
+              <strong>Jubiläum im Kartenpalast</strong>
+            </span>
+            <p className="hb-text">
+              Mit allen acht Pressen feierst du ein Jubiläum: Der Palast beginnt neu, und du bekommst ein Gildensiegel — für immer{' '}
+              {Math.round(SIEGEL_BONUS * 100)} % mehr Kartenwert
+              {naechstesMitMuenzen ? ` und ${MUENZEN_JUBILAEUM} Münzen fürs Hub` : ''}.
+            </p>
+            <p className="mf-blatt-stufe">
+              {siegel > 0 ? `${siegel} Siegel · +${Math.round(siegel * SIEGEL_BONUS * 100)} % Kartenwert` : 'Noch kein Siegel'}
+            </p>
+            <p className="mf-blatt-stufe">Pressen {stand.pressen.length}/8</p>
+            <button
+              type="button"
+              className={`hb-kn is-haupt is-breit${kannJubilaeum(stand) ? ' is-gold' : ''}`}
+              disabled={!kannJubilaeum(stand)}
+              onClick={onJubilaeum}
+            >
+              Jubiläum feiern
+            </button>
+          </>
         ) : (
           <>
             <span className="mf-umzug-bild" style={{ backgroundImage: `url(${manufakturBild(naechste)})` }}>

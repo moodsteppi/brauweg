@@ -304,7 +304,26 @@ export function deckBack(deck: Deck): string | null {
 export interface Ruecken {
   readonly id: string;
   readonly name: string;
+  /** Nur in der Kartenmanufaktur zu erspielen, nicht im Shop. */
+  readonly nurErspielt?: true;
 }
+
+/**
+ * Kartenruecken der Kartenmanufaktur: einer je abgeschlossener Manufaktur
+ * (server: manufaktur/rueckseiten.ts). Der Server schenkt sie schon; zeigen
+ * kann sie der Client erst, wenn die Bilder geliefert sind
+ * (docs/ASSETS-KARTENMANUFAKTUR-RUECKEN.md) — kein <img> auf eine Datei, die
+ * es noch nicht gibt. Liegen sie unter public/manufaktur/ruecken/, auf true.
+ */
+export const MANUFAKTUR_RUECKEN_VORHANDEN = false;
+
+const MANUFAKTUR_RUECKEN: readonly Ruecken[] = [
+  { id: 'manufaktur-dorf', name: 'Werkstatt im Dorf', nurErspielt: true },
+  { id: 'manufaktur-fluss', name: 'Fabrik am Fluss', nurErspielt: true },
+  { id: 'manufaktur-berg', name: 'Bergdruckerei', nurErspielt: true },
+  { id: 'manufaktur-hafen', name: 'Hafen-Druckhaus', nurErspielt: true },
+  { id: 'manufaktur-palast', name: 'Kartenpalast', nurErspielt: true },
+];
 
 export const RUECKEN: readonly Ruecken[] = [
   { id: 'standard', name: 'Zum Blatt passend' },
@@ -318,6 +337,7 @@ export const RUECKEN: readonly Ruecken[] = [
   { id: 'koeniglich', name: 'Königlich' },
   { id: 'schiefer', name: 'Schiefer' },
   { id: 'pinguin', name: 'Pinguin' },
+  ...(MANUFAKTUR_RUECKEN_VORHANDEN ? MANUFAKTUR_RUECKEN : []),
 ];
 
 export const STANDARD_RUECKEN = 'standard';
@@ -330,6 +350,9 @@ export const STANDARD_RUECKEN = 'standard';
  */
 export function rueckenBild(id: string | null | undefined): string | null {
   if (!id || id === STANDARD_RUECKEN) return null;
+  if (id.startsWith('manufaktur-')) {
+    return MANUFAKTUR_RUECKEN_VORHANDEN ? `/manufaktur/ruecken/${id.slice('manufaktur-'.length)}.webp` : null;
+  }
   // Die Endung folgt dem Blatt, sie ist NICHT fest ".png". Seit die Blaetter
   // auf WebP liefen, lud jede Rueckseite ausser der klassischen ins Leere:
   // im Themen-Waehler blieb nur Preis und Name stehen, und am Tisch bekam der

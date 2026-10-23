@@ -26,8 +26,22 @@ export const MEILENSTEINE = [10, 25, 50, 100, 150, 200, 300, 400] as const;
 /** Bis Stufe 100 bringt jeder Meilenstein einen sichtbaren Arbeiter mehr. */
 export const ARBEITER_BIS_STUFE = 100;
 export const MAX_ARBEITER = 5;
-/** So lange laeuft die Manufaktur hoechstens weiter, waehrend niemand hinsieht. */
-export const OFFLINE_MS = 2 * 60 * 60 * 1000;
+/**
+ * Offline: hoechstens eine Stunde, und nur zum halben Tempo. Mit 2 h zum
+ * vollen Tempo verdiente ein Gelegenheitsspieler (4 × 3 min am Tag) mehr in
+ * den Pausen als beim Spielen und zog nach 1,3 Tagen das erste Mal um
+ * (Simulation, Profil Gelegenheit, 23.10.2026).
+ */
+export const OFFLINE_MS = 60 * 60 * 1000;
+export const OFFLINE_TEMPO = 0.5;
+/** Ab dieser Luecke zwischen zwei Rechnungen gilt jemand als weg. */
+export const ABWESEND_AB_MS = 60_000;
+
+/** Jubilaeum: Jedes Gildensiegel gibt dauerhaft so viel mehr Kartenwert. */
+export const SIEGEL_BONUS = 0.1;
+/** Muenzen fuers Hub je Jubilaeum — nur fuer die ersten, sonst waere es eine endlose Muenzquelle. */
+export const MUENZEN_JUBILAEUM = 100;
+export const JUBILAEEN_MIT_MUENZEN = 10;
 
 /** Meister-Faehigkeit: doppeltes Tempo fuer 30 s, danach 5 min Pause. */
 export const FAEHIGKEIT_MS = 30_000;
@@ -153,8 +167,13 @@ export function kartenwert(index: number): number {
 }
 
 /** Warenwert je Sekunde, den die Presse liefert, solange sie arbeitet. */
-export function presseLeistung(index: number, stufe: number, manufaktur: number): number {
-  return W.PRESSE_GRUND * kartenwert(index) * stufe * sprung(stufe) * faktor(manufaktur);
+/** Dauerhafter Bonus aus Gildensiegeln (Jubilaeum im Kartenpalast). */
+export function siegelFaktor(jubilaeen: number): number {
+  return 1 + SIEGEL_BONUS * jubilaeen;
+}
+
+export function presseLeistung(index: number, stufe: number, manufaktur: number, jubilaeen = 0): number {
+  return W.PRESSE_GRUND * kartenwert(index) * stufe * sprung(stufe) * faktor(manufaktur) * siegelFaktor(jubilaeen);
 }
 
 /** Dauer eines Arbeitszyklus (ms): Ein Upgrade macht die Presse sichtbar schneller. */
@@ -163,8 +182,8 @@ export function presseZyklus(stufe: number): number {
 }
 
 /** Warenwert, den ein Zyklus in die Ablage-Kiste legt. */
-export function presseErtrag(index: number, stufe: number, manufaktur: number): number {
-  return (presseLeistung(index, stufe, manufaktur) * presseZyklus(stufe)) / 1000;
+export function presseErtrag(index: number, stufe: number, manufaktur: number, jubilaeen = 0): number {
+  return (presseLeistung(index, stufe, manufaktur, jubilaeen) * presseZyklus(stufe)) / 1000;
 }
 
 function transportTempo(stufe: number): number {
