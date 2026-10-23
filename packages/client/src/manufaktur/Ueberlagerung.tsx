@@ -186,9 +186,13 @@ function Schild({
   );
 }
 
-function countdown(ms: number): string {
+/**
+ * Fuer die Muenze ueber dem Meister: hoechstens drei Zeichen, sie ist nur
+ * 26 pt breit — „1m 05s" lief ueber den Rand.
+ */
+function kurzeZeit(ms: number): string {
   const s = Math.max(0, Math.ceil(ms / 1000));
-  return s >= 60 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s` : `${s}s`;
+  return s >= 60 ? `${Math.ceil(s / 60)}m` : `${s}s`;
 }
 
 /**
@@ -240,7 +244,8 @@ function MeisterPlatz({
         style={{ left: figur.x + figur.b / 2, top: figur.y - 18 }}
         aria-hidden="true"
       >
-        {wirkt ? countdown(s.faehigkeitBis - jetzt) : bereit ? '⚡' : countdown(s.abklingenBis - jetzt)}
+        {/* Bereit: das gemalte Blitz-Zeichen allein (CSS); sonst die Zeit auf der leeren Muenze. */}
+        {wirkt ? kurzeZeit(s.faehigkeitBis - jetzt) : bereit ? '' : kurzeZeit(s.abklingenBis - jetzt)}
       </span>
       <button
         type="button"

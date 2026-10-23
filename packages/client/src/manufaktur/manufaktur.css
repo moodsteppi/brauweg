@@ -126,9 +126,12 @@
 }
 
 .mf .mf-zzz {
-  font: 400 15px var(--hb-anz);
-  color: rgba(230, 236, 255, 0.85);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  /* Das gemalte Schlafzeichen; der Text „Zzz" bleibt im DOM (Tests), unsichtbar. */
+  width: 26px;
+  height: 26px;
+  background: url(/manufaktur/ui/ui-schlaf.webp) center / contain no-repeat;
+  font-size: 0;
+  color: transparent;
   pointer-events: none;
   animation: mf-zzz 2.4s ease-in-out infinite;
 }
@@ -139,18 +142,41 @@
 
 /* Fingeranleitung: zeigt beim ersten Start, wohin man tippt. */
 .mf .mf-finger {
-  /* Liegt neben der Knopf-Ebene, nicht in ihr — deshalb selbst absolut. */
+  /* Liegt neben der Knopf-Ebene, nicht in ihr — deshalb selbst absolut. Der
+     Punkt (0, 0) ist das Ziel; Ring und Hand haengen daran. */
   position: absolute;
   z-index: 5;
-  font-size: 34px;
-  line-height: 1;
+  width: 0;
+  height: 0;
   pointer-events: none;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+.mf .mf-finger-ring {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  animation: mf-ring 1.1s ease-out infinite;
+}
+.mf .mf-finger-hand {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  /* Fingerspitze genau aufs Ziel (gemessen in ui.json, siehe bilder.ts). */
+  left: calc(var(--spitze-x) * -44px);
+  top: calc(var(--spitze-y) * -44px);
+  transform-origin: calc(var(--spitze-x) * 100%) calc(var(--spitze-y) * 100%);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
   animation: mf-finger 1.1s ease-in-out infinite;
 }
 @keyframes mf-finger {
-  0%, 100% { transform: translate(-30%, 0); }
-  50% { transform: translate(-30%, -10px); }
+  0%, 100% { transform: translate(6px, 10px); }
+  50% { transform: translate(0, 0) scale(0.94); }
+}
+@keyframes mf-ring {
+  0%, 40% { transform: scale(0.4); opacity: 0; }
+  55% { opacity: 1; }
+  100% { transform: scale(1.1); opacity: 0; }
 }
 
 /* --- Blaetter ------------------------------------------------------------ */
@@ -159,6 +185,17 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.mf-blatt-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.mf-medaillon {
+  width: 48px;
+  height: 48px;
+  flex: none;
 }
 .mf-blatt-stufe {
   margin: 0;
@@ -313,9 +350,11 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 6px 1px 3px;
-  border-radius: 6px;
-  background: rgba(7, 19, 47, 0.8);
+  padding: 1px 8px 1px 4px;
+  /* Dreiteiler: Kappen je 32 von 192 px, nur die Mitte wird gestreckt (ui.json). */
+  border: solid transparent;
+  border-width: 0 9px;
+  border-image: url(/manufaktur/ui/ui-bestand.webp) 0 32 fill / 0 9px stretch;
   font: 400 12px var(--hb-anz);
   color: #f3e6c4;
   font-variant-numeric: tabular-nums;
@@ -333,26 +372,33 @@
   align-items: center;
   justify-content: center;
   border-radius: 9px;
-  background: linear-gradient(180deg, #8a5a30, #5e3a1c);
-  border: 2px solid #3a2414;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 220, 160, 0.25);
-  color: #f3e6c4;
+  /* Das Motiv belegt 228 von 256 px — leicht vergroessert fuellt es das Schild. */
+  background: url(/manufaktur/ui/ui-schild-stufe.webp) center / 112% 112% no-repeat;
+  color: #fff6df;
+}
+.mf .mf-ueber .mf-schild-stufe.is-leistbar {
+  background-image: url(/manufaktur/ui/ui-schild-stufe-gold.webp);
 }
 .mf .mf-schild-stufe b {
   font: 400 20px/1 var(--hb-anz);
+  /* Helle Zahl auf hellem Holz: dunkle Kontur, wie in der Lesbarkeitsprobe. */
+  -webkit-text-stroke: 3px #3a2414;
+  paint-order: stroke fill;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 .mf .mf-schild-stufe .mf-pfeil {
   position: absolute;
-  top: -15px;
+  top: -18px;
   left: 50%;
-  width: 18px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   transform: translateX(-50%);
-  clip-path: polygon(50% 0, 100% 60%, 70% 60%, 70% 100%, 30% 100%, 30% 60%, 0 60%);
-  background: rgba(243, 230, 196, 0.35);
+  background: url(/manufaktur/ui/ui-pfeil-hoch-grau.webp) center / contain no-repeat;
+  opacity: 0.7;
 }
 .mf .mf-schild-stufe.is-leistbar .mf-pfeil {
-  background: linear-gradient(180deg, #ffe08a, #e0a21c);
+  background-image: url(/manufaktur/ui/ui-pfeil-hoch.webp);
+  opacity: 1;
   filter: drop-shadow(0 0 3px rgba(255, 200, 60, 0.9));
   animation: mf-pfeil 1.2s ease-in-out infinite;
 }
@@ -362,12 +408,11 @@
 }
 .mf .mf-schild-stufe .mf-anzahl {
   position: absolute;
-  right: -8px;
-  bottom: -8px;
-  min-width: 20px;
-  padding: 1px 4px;
-  border-radius: 999px;
-  background: #e0a21c;
+  right: -9px;
+  bottom: -9px;
+  min-width: 24px;
+  padding: 2px 5px;
+  background: url(/manufaktur/ui/ui-plakette.webp) center / 100% 100% no-repeat;
   color: #2a1a05;
   font: 400 11px/14px var(--hb-anz);
   text-align: center;
@@ -388,9 +433,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: rgba(7, 19, 47, 0.55);
-  border: 2px dashed rgba(243, 230, 196, 0.45);
+  background: url(/manufaktur/ui/ui-meisterplatz.webp) center / 100% 100% no-repeat;
   color: rgba(243, 230, 196, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 .mf .mf-meisterplatz span {
   font: 400 24px/1 var(--hb-anz);
@@ -399,29 +444,33 @@
   font: 400 11px var(--hb-anz);
 }
 .mf .mf-ueber .mf-meisterplatz.is-leistbar {
-  border-color: var(--hb-gold);
   color: var(--hb-gold);
+  filter: drop-shadow(0 0 4px rgba(255, 200, 60, 0.6));
 }
 /* Ueber dem eingestellten Meister: Faehigkeit bereit (⚡) oder Countdown. */
 .mf .mf-faehigkeit {
+  /* Leere Muenze mit der Zeit darauf; bereit die Muenze mit Blitz, ohne Text. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
   transform: translate(-50%, -100%);
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: rgba(7, 19, 47, 0.85);
-  font: 400 11px var(--hb-anz);
-  color: var(--hb-leise);
+  background: url(/manufaktur/ui/ui-faehigkeit-wartet.webp) center / contain no-repeat;
+  font: 400 10px/1 var(--hb-anz);
+  color: #fff6df;
+  -webkit-text-stroke: 2px #3a2408;
+  paint-order: stroke fill;
   white-space: nowrap;
   pointer-events: none;
 }
 .mf .mf-faehigkeit.is-bereit {
-  background: #e0a21c;
-  color: #2a1a05;
-  font-size: 13px;
+  background-image: url(/manufaktur/ui/ui-faehigkeit-bereit.webp);
   animation: mf-pfeil 1.2s ease-in-out infinite;
 }
+/* Waehrend die Faehigkeit wirkt: gruener Schein um die Muenze. */
 .mf .mf-faehigkeit.is-wirkt {
-  background: #2e8a49;
-  color: #fff;
+  filter: drop-shadow(0 0 4px rgba(72, 213, 107, 0.95));
 }
 
 /* Gesperrte Etage: kleines Holzschild an der Bretterwand. */
@@ -518,9 +567,13 @@
   opacity: 0.55;
 }
 .mf .mf-symbol {
-  width: 20px;
-  height: 20px;
-  fill: #f0d27a;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.mf .mf-unten .is-pfeil .mf-symbol {
+  width: 22px;
+  height: 22px;
 }
 .mf .mf-unten .mf-ort {
   flex: 1.6;
@@ -645,26 +698,34 @@
   justify-content: center;
   gap: 2px;
   min-height: 56px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid transparent;
-  color: var(--hb-tinte);
+  /* Holzplatte als Neunteiler: Ecken 28 von 192 × 112 px bleiben unverzerrt. */
+  border: solid transparent;
+  border-width: 10px;
+  border-image: url(/manufaktur/ui/ui-menge.webp) 28 fill / 10px stretch;
+  background: none;
+  color: #fff6df;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   text-align: center;
 }
 :is(.hb, .spe) .mf-mengen .mf-menge b {
   font: 400 17px var(--hb-anz);
 }
+:is(.hb, .spe) .mf-mengen .mf-menge b,
+:is(.hb, .spe) .mf-mengen .mf-menge small {
+  /* Helle Schrift auf hellem Holz: nur mit dunkler Kontur lesbar. */
+  -webkit-text-stroke: 3px #3a2414;
+  paint-order: stroke fill;
+}
 :is(.hb, .spe) .mf-mengen .mf-menge small {
   font: 400 12px var(--hb-anz);
-  color: var(--hb-leise);
+  color: #e9dcc0;
 }
 :is(.hb, .spe) .mf-mengen .mf-menge.is-leistbar small {
-  color: var(--hb-gold);
+  color: #ffd65a;
 }
 /* Auswahl: Messingrand. */
 :is(.hb, .spe) .mf-mengen .mf-menge.is-an {
-  border-color: #c9a24a;
-  background: rgba(201, 162, 74, 0.14);
+  border-image-source: url(/manufaktur/ui/ui-menge-an.webp);
 }
 :is(.hb, .spe) .mf-kaufen {
   min-height: 56px;
@@ -716,14 +777,10 @@
   height: 40px;
   flex: none;
 }
+/* Noch kein Meister: das Medaillon der Station, gedaempft. */
 .mf-meisterliste-bild.is-leer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px dashed rgba(243, 230, 196, 0.45);
-  border-radius: 10px;
-  font: 400 20px var(--hb-anz);
-  color: rgba(243, 230, 196, 0.85);
+  filter: grayscale(0.7) brightness(0.75);
+  opacity: 0.8;
 }
 .mf-meisterliste-text {
   flex: 1;

@@ -20,7 +20,7 @@ import {
 } from '@brauweg/manufaktur-kern';
 
 import { HbBlatt } from '../screens/HbBlatt';
-import { BILD, manufakturBild } from './bilder';
+import { manufakturBild, medaillonBild, meisterBild } from './bilder';
 import { MANUFAKTUREN, manufakturName, stationName } from './namen';
 import { dauer, kurz, proSekunde, sekunden } from './zahlen';
 
@@ -86,9 +86,12 @@ export function UpgradeBlatt({
   return (
     <HbBlatt titel={stationName(ziel)} onClose={onClose} klasse="is-klein">
       <div className="mf-blatt">
-        <p className="mf-blatt-stufe" aria-label={`Stufe ${v.stufe} auf ${v.neueStufe}`}>
-          Stufe {v.stufe} → <b>{v.neueStufe}</b>
-        </p>
+        <div className="mf-blatt-kopf">
+          <img className="mf-medaillon" src={medaillonBild(ziel.art)} alt="" draggable={false} />
+          <p className="mf-blatt-stufe" aria-label={`Stufe ${v.stufe} auf ${v.neueStufe}`}>
+            Stufe {v.stufe} → <b>{v.neueStufe}</b>
+          </p>
+        </div>
         <div className="mf-hauptzeile">
           <small>{HAUPTZEILE[ziel.art].titel}</small>
           <span>
@@ -201,9 +204,8 @@ export function MeisterBlatt({
               const leistbar = stand.taler + 1e-9 >= kosten;
               return (
                 <li key={name} className={`is-leer${istMarkiert ? ' is-markiert' : ''}`}>
-                  <span className="mf-meisterliste-bild is-leer" aria-hidden="true">
-                    +
-                  </span>
+                  {/* Noch kein Meister: das Medaillon der Station, gedaempft. */}
+                  <img className="mf-meisterliste-bild is-leer" src={medaillonBild(z.art)} alt="" draggable={false} />
                   <span className="mf-meisterliste-text">
                     <strong>{name}</strong>
                     <small>Schläft ohne Meister</small>
@@ -224,7 +226,7 @@ export function MeisterBlatt({
             const bereit = faehigkeitBereit(s, jetzt);
             return (
               <li key={name} className={istMarkiert ? 'is-markiert' : undefined}>
-                <img className="mf-meisterliste-bild" src={BILD.meister} alt="" draggable={false} />
+                <img className="mf-meisterliste-bild" src={meisterBild(z.art)} alt="" draggable={false} />
                 <span className="mf-meisterliste-text">
                   <strong>{name}</strong>
                   <small>

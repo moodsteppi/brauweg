@@ -17,7 +17,7 @@ import { spiele } from '../klang';
 import { HbBlatt, Schliessen, useEscape, useRueckfrage } from '../screens/HbBlatt';
 import { type AnleitungsZiel, anleitungsSchritt } from './anleitung';
 import { LeerlaufBlatt, ManufakturBlatt, MeisterBlatt, UpgradeBlatt, WillkommenBlatt } from './Blaetter';
-import { manufakturBild } from './bilder';
+import { FINGER, TIPP_RING, UI_ORDNER, manufakturBild } from './bilder';
 import { manufakturName } from './namen';
 import type { Ausschnitt, Szene, SzenenEreignis } from './szene/Szene';
 import { type Rechteck, BREITE, ETAGE_HOEHE, etage, gesamtHoehe, halle } from './szene/layout';
@@ -305,9 +305,18 @@ export function Kartenmanufaktur({
               }}
               onFreischalten={() => tue({ typ: 'freischalten' }, 'kauf')}
             />
+            {/* Der Punkt liegt auf dem Ziel; Ring und Hand richten sich daran aus —
+                die Hand mit ihrer gemessenen Fingerspitze, nicht mit ihrer Mitte. */}
             {finger && (
               <span className="mf-finger" style={mitte(fingerOrt(finger))} aria-hidden="true">
-                👆
+                <img className="mf-finger-ring" src={TIPP_RING} alt="" draggable={false} />
+                <img
+                  className="mf-finger-hand"
+                  src={FINGER.bild}
+                  alt=""
+                  draggable={false}
+                  style={{ '--spitze-x': FINGER.spitze[0], '--spitze-y': FINGER.spitze[1] } as React.CSSProperties}
+                />
               </span>
             )}
           </div>
@@ -459,19 +468,10 @@ export function Kartenmanufaktur({
 }
 
 /** Symbole der unteren Leiste — gezeichnet, im Holz-Messing-Stil der Leiste. */
+/** Die gemalten Zeichen der unteren Leiste (Lieferung 24.10.2026). */
 function Symbol({ art }: { art: 'meister' | 'boost' | 'haus' | 'hoch' | 'runter' }): React.JSX.Element {
-  const pfad = {
-    meister: 'M12 3a4 4 0 0 1 4 4v1H8V7a4 4 0 0 1 4-4zM6 9h12l-1 2H7zM8 12h8v2a4 4 0 0 1-8 0zM5 21c0-3 3-5 7-5s7 2 7 5z',
-    boost: 'M13 2 4 14h6l-1 8 9-12h-6z',
-    haus: 'M3 11 12 4l9 7v9h-6v-6H9v6H3z',
-    hoch: 'M12 6l7 9H5z',
-    runter: 'M12 18 5 9h14z',
-  }[art];
-  return (
-    <svg className="mf-symbol" viewBox="0 0 24 24" aria-hidden="true">
-      <path d={pfad} />
-    </svg>
-  );
+  const datei = { meister: 'icon-meister', boost: 'icon-boost', haus: 'icon-manufaktur', hoch: 'icon-hoch', runter: 'icon-runter' }[art];
+  return <img className="mf-symbol" src={`${UI_ORDNER}/${datei}.webp`} alt="" aria-hidden="true" draggable={false} />;
 }
 
 function mitte(r: Rechteck): React.CSSProperties {
