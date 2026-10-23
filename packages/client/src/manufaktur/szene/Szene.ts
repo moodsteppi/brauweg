@@ -63,11 +63,23 @@ export interface Quelle {
   getragen?: () => Getragen | undefined;
 }
 
-/** Wie gerollt ist (Bildschirmpunkte) und wie hoch der Ausschnitt ist. */
+/** Wie gerollt ist (Bildschirmpunkte), wie hoch der Ausschnitt und wie hoch die ganze Leinwand ist. */
 export interface Ausschnitt {
   oben: number;
   hoehe: number;
   breite: number;
+  /** Hoehe der Leinwand = Hoehe der ganzen Welt in Bildschirmpunkten. */
+  leinwand: number;
+}
+
+/**
+ * Aufloesung der Leinwand: hoechstens doppelt (dreifach sieht man am iPhone
+ * nicht und kostet Speicher), und bei einer hohen Welt so weit herunter, dass
+ * die Leinwand unter rund acht Millionen Bildpunkten bleibt.
+ */
+function aufloesung(breite: number, hoehe: number): number {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  return Math.max(1, Math.min(dpr, Math.sqrt(8_000_000 / Math.max(1, breite * hoehe))));
 }
 
 /** Was die Szene dem DOM meldet — Muenzflug und Zahlen-Popup laufen dort. */
@@ -629,14 +641,13 @@ export class Szene {
   ): Promise<Szene | null> {
     const app = new Application();
     try {
-      const { breite, hoehe } = ausschnitt();
+      const { breite, leinwand } = ausschnitt();
       await app.init({
         width: breite,
-        height: hoehe,
+        height: leinwand,
         backgroundAlpha: 0,
         antialias: true,
-        // Drei-fache Aufloesung kostet am iPhone viel Speicher und sieht man nicht.
-        resolution: Math.min(window.devicePixelRatio || 1, 2),
+        resolution: aufloesung(breite, leinwand),
         autoDensity: true,
         preference: 'webgl',
       });
@@ -658,7 +669,7 @@ export class Szene {
   }
 
   groesse(breite: number, hoehe: number): void {
-    this.app.renderer.resize(breite, hoehe);
+    this.app.renderer.resize(breite, hoehe, aufloesung(breite, hoehe));
   }
 
   /** Debug-Ansicht: Anker und Drehpunkte einblenden, um gelieferte Teile zu pruefen. */
@@ -702,25 +713,33 @@ export class Szene {
     }
     const jetzt = this.quelle.jetzt();
     const rest = Math.max(0, jetzt - stand.zeit);
-    const { oben, hoehe, breite } = this.ausschnitt();
+    const { oben, hoehe, breite, leinwand } = this.ausschnitt();
     const faktor = breite / BREITE;
+    // Die Leinwand ist so hoch wie die Welt und rollt mit dem Rollbereich mit
+    // — wie Schilder und Knoepfe darueber. Bis zum 23.10.2026 klebte sie oben
+    // (`sticky`), und die Szene verschob die Welt selbst um `scrollTop`. Am
+    // iPhone kam das Bild beim Schwungrollen ein Bild zu spaet: Hintergrund,
+    // Pinguine und Pressen rutschten gegen die Schilder.
     this.welt.scale.set(faktor);
-    this.welt.y = -oben;
+    this.welt.y = 0;
 
     const anzahl = stand.pressen.length;
     if (anzahl !== this.letzteEtagen) this.bauKeller(anzahl);
     // Kein leerer Raum unter der Welt: Die Wand reicht bis zum unteren Rand
     // des Ausschnitts und laeuft nach unten ins Dunkle aus.
-    const wandUnten = Math.max(gesamtHoehe(anzahl), (oben + hoehe) / faktor);
+    const wandUnten = Math.max(gesamtHoehe(anzahl), leinwand / faktor);
     if (Math.abs(wandUnten - this.letzteWandHoehe) > 1) {
       this.letzteWandHoehe = wandUnten;
       this.wand.height = wandUnten - HALLE_HOEHE;
       this.zeichneDunkel(etage(Math.min(anzahl + 1, MAX_PRESSEN)).reihe.y - ETAGE_HOEHE * 0.3, wandUnten);
     }
 
-    // Nur zeichnen, was im Ausschnitt liegt (mit einer Etage Luft).
-    const von = oben / faktor - ETAGE_HOEHE;
-    const bis = (oben + hoehe) / faktor + ETAGE_HOEHE;
+    // Nur bewegen und zeichnen, was im Ausschnitt liegt — mit einem ganzen
+    // Ausschnitt Luft nach oben und unten: Das Rollen laeuft ohne die Szene,
+    // und eine Etage, die erst im naechsten Bild auftaucht, waere kurz leer.
+    const luft = hoehe / faktor;
+    const von = oben / faktor - luft;
+    const bis = (oben + hoehe) / faktor + luft;
     this.etagen.forEach((e, i) => {
       const y = etage(i).reihe.y;
       const sichtbar = y + ETAGE_HOEHE > von && y < bis;

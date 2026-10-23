@@ -89,7 +89,7 @@ export function Kartenmanufaktur({
   const feld = useRef<HTMLDivElement>(null);
   const buehne = useRef<HTMLDivElement>(null);
   const [masse, setMasse] = useState({ breite: BREITE, hoehe: 600 });
-  const ausschnitt = useRef<Ausschnitt>({ oben: 0, hoehe: 600, breite: BREITE });
+  const ausschnitt = useRef<Ausschnitt>({ oben: 0, hoehe: 600, breite: BREITE, leinwand: 600 });
   const wurzel = useRef<HTMLDivElement>(null);
   const kasse = useRef<HTMLSpanElement>(null);
   const [verkaeufe, setVerkaeufe] = useState<Verkauf[]>([]);
@@ -136,8 +136,7 @@ export function Kartenmanufaktur({
   // Mindestens so hoch wie das Feld: Unter der Welt soll kein leerer Raum
   // bleiben — die Kellerwand laeuft bis zum Rand ins Dunkle aus (Szene).
   const weltHoehe = Math.max(gesamtHoehe(anzahl) * faktor, masse.hoehe);
-  const leinwandHoehe = masse.hoehe;
-  ausschnitt.current = { oben: feld.current?.scrollTop ?? 0, hoehe: leinwandHoehe, breite: masse.breite };
+  ausschnitt.current = { oben: feld.current?.scrollTop ?? 0, hoehe: masse.hoehe, breite: masse.breite, leinwand: weltHoehe };
 
   // Die Szene: einmal bauen, sobald der Stand da ist; ohne WebGL bleibt sie weg.
   const szene = useRef<Szene | null>(null);
@@ -178,8 +177,8 @@ export function Kartenmanufaktur({
   }, [m.bereit, m.steuerung, beimEreignis]);
 
   useEffect(() => {
-    szene.current?.groesse(masse.breite, leinwandHoehe);
-  }, [masse.breite, leinwandHoehe]);
+    szene.current?.groesse(masse.breite, weltHoehe);
+  }, [masse.breite, weltHoehe]);
 
   useEffect(() => {
     szene.current?.zeigeDebug(debug);
@@ -278,7 +277,7 @@ export function Kartenmanufaktur({
 
       <div className="mf-feld" ref={feld}>
         <div className="mf-welt" style={{ height: weltHoehe }}>
-          <div className="mf-buehne" ref={buehne} style={{ height: leinwandHoehe }} />
+          <div className="mf-buehne" ref={buehne} style={{ height: weltHoehe }} />
           <div className="mf-ueber-huelle" style={{ transform: `scale(${faktor})` }}>
             <Ueberlagerung
               stand={stand}

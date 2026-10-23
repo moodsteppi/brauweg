@@ -88,9 +88,14 @@
   /* Ohne Szene (kein WebGL) bleibt wenigstens der Keller-Grund. */
   background: #1a1410;
 }
+/* So hoch wie die Welt und mit ihr gerollt — nicht `sticky`: Dann verschob
+   die Szene das Bild selbst, und am iPhone hinkte es beim Schwungrollen den
+   Schildern hinterher (Szene.ts, bild()). */
 .mf .mf-buehne {
-  position: sticky;
+  position: absolute;
   top: 0;
+  left: 0;
+  right: 0;
   overflow: hidden;
   pointer-events: none;
 }
