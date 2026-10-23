@@ -30,7 +30,7 @@ export const ETAGE_HOEHE = 136;
 export const BALKEN = 12;
 export const FUSS_HOEHE = 48;
 
-export const SCHACHT: { x: number; b: number } = { x: 6, b: 52 };
+export const SCHACHT: { x: number; b: number } = { x: 4, b: 62 };
 
 /** Mindestens 44 pt, damit es keine Fehltipps gibt (Apple HIG). */
 export const TIPP_MIN = 44;
@@ -74,13 +74,13 @@ export function etage(index: number): {
   return {
     reihe: { x: 0, y, b: BREITE, h: ETAGE_HOEHE },
     boden,
-    kiste: { x: 62, y: boden - 50, b: 58, h: 50 },
+    kiste: { x: 70, y: boden - 50, b: 58, h: 50 },
     // Ueber den Stapeln, damit die Kiste sichtbar bleibt.
-    bestand: { x: 62, y: boden - 84 },
+    bestand: { x: 70, y: boden - 84 },
     // Wie im Vorbild: Der Meister steht vorn an der Kiste. Leer ist hier ein
     // Rahmen mit „+" und Preis, eingestellt steht er selbst da (Rahmen weg).
-    meister: { x: 124, y: boden - 62, b: 46, h: 58 },
-    meisterFigur: { x: 124, y: boden - 62, b: 46, h: 62 },
+    meister: { x: 129, y: boden - 62, b: 46, h: 58 },
+    meisterFigur: { x: 129, y: boden - 62, b: 46, h: 62 },
     arbeit: { x: 176, y: y + 40, b: 160, h: boden - (y + 40) },
     // Weit rechts, unter die Kante des Schilds: Davor braucht die Kolonne Platz
     // zum Anstehen, und das Rad der Gusseisenpresse sitzt tiefer als das Schild.
