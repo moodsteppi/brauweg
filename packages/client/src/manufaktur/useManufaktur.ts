@@ -48,7 +48,7 @@ export function useManufaktur(
   const steuerung = useMemo(
     () =>
       new Steuerung(
-        leitung ?? { laden: () => api.manufaktur(), senden: (aktion) => api.manufakturAktion(aktion) },
+        leitung ?? { laden: () => api.manufaktur(), senden: (aktion, bei) => api.manufakturAktion(aktion, bei) },
         {
           muenzen: (anzahl) => {
             spiele('kauf');

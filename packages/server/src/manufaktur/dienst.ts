@@ -20,6 +20,7 @@ import {
   migriere,
   neueMeilensteine,
   neuerStand,
+  stationVon,
   vorspulen,
 } from '@brauweg/manufaktur-kern';
 
@@ -136,19 +137,37 @@ export async function manufakturHeute(db: Db, accountId: string, jetzt = new Dat
 }
 
 /** Eine Aktion: arbeiten, ausbauen, Meister, Faehigkeit, Boost, freischalten, umziehen. */
+/**
+ * So weit darf der Zeitpunkt, den der Client fuer einen Tipp nennt, zurueck
+ * liegen. Der Client zeigt die Aktion sofort; rechnete der Server ab
+ * Eingang, kaeme seine Antwort um die Laufzeit spaeter heraus, und der
+ * Pinguin spraenge kurz zurueck (gemeldet am 23.10.2026). Mehr als die
+ * Laufzeit eines Handys im Funkloch braucht es nicht, und mehr waere ein
+ * Hebel: Wer zurueckdatiert, holt sich die Zeit zwischen zwei Tipps zurueck.
+ */
+export const NACHSICHT_MS = 1500;
+
 export async function manufakturAktion(
   db: Db,
   accountId: string,
   aktion: Aktion,
   jetzt = new Date(),
+  /** Wann der Client getippt hat (Server-Zeit nach seiner Uhr); fehlt er, gilt der Eingang. */
+  bei?: number,
 ): Promise<ManufakturAntwort> {
   const ms = jetzt.getTime();
+  const getippt = bei === undefined ? ms : Math.min(ms, Math.max(ms - NACHSICHT_MS, bei));
   for (let versuch = 0; versuch < 3; versuch += 1) {
     const geladen = await lade(db, accountId);
     const alt = geladen?.stand ?? neuerStand(ms);
     let ergebnis: ReturnType<typeof handle>;
     try {
-      ergebnis = handle(alt, aktion, ms);
+      ergebnis = handle(alt, aktion, getippt);
+      // Zum genannten Zeitpunkt lief die Station noch (Uhr des Geraets
+      // ungenau): Dann gilt der Tipp ab Eingang, statt stumm zu verpuffen.
+      if (getippt < ms && aktion.typ === 'arbeiten' && !stationVon(ergebnis.stand, aktion.ziel)?.laeuft) {
+        ergebnis = handle(alt, aktion, ms);
+      }
     } catch (err) {
       if (err instanceof AktionAbgelehnt) throw badRequest(err.code);
       throw err;

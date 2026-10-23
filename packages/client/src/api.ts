@@ -1077,7 +1077,9 @@ export const api = {
   /** Kartenmanufaktur: bis jetzt nachrechnen und zeigen (manufaktur/sicht.ts). */
   manufaktur: () => request<ManufakturAntwort>('/manufaktur'),
   /** Ausbauen, Meister, Schicht, Presse freischalten, Umziehen. */
-  manufakturAktion: (aktion: ManufakturAktion) => post<ManufakturAntwort>('/manufaktur/aktion', aktion),
+  /** `bei`: wann getippt wurde, in Server-Zeit — sonst rechnet der Server ab Eingang, und der Tipp springt zurueck. */
+  manufakturAktion: (aktion: ManufakturAktion, bei?: number) =>
+    post<ManufakturAntwort>('/manufaktur/aktion', { ...aktion, bei }),
   /**
    * Der Tisch hinter einem Beitrittscode — zum Ansehen, ohne beizutreten.
    *

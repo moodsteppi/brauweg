@@ -68,8 +68,8 @@ function nachgestellterServer(start: ManufakturStand): Leitung {
       stand = vorspulen(stand, Date.now());
       return antwort();
     },
-    senden: async (aktion: Aktion) => {
-      stand = handle(stand, aktion, Date.now()).stand;
+    senden: async (aktion: Aktion, bei: number) => {
+      stand = handle(stand, aktion, bei).stand;
       return antwort();
     },
   };

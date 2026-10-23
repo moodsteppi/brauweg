@@ -10,9 +10,9 @@ import assert from 'node:assert/strict';
 
 import { eq } from 'drizzle-orm';
 
-import { type ManufakturStand, FASSUNG, MAX_PRESSEN, migriere, neuePresse } from '@brauweg/manufaktur-kern';
+import { type ManufakturStand, FASSUNG, MAX_PRESSEN, handle, migriere, neuePresse } from '@brauweg/manufaktur-kern';
 
-import { manufakturAktion, manufakturHeute } from '../src/manufaktur/dienst.js';
+import { NACHSICHT_MS, manufakturAktion, manufakturHeute } from '../src/manufaktur/dienst.js';
 import * as s from '../src/db/schema.js';
 import { AppError } from '../src/errors.js';
 import { kaufen } from '../src/shop.js';
@@ -52,6 +52,27 @@ test('Dienst: legt an, lehnt ab, was zu teuer ist, und rechnet einen Tipp', asyn
   assert.equal(tipp.stand.pressen[0]!.laeuft, true);
   const spaeter = await manufakturHeute(c.db, accountId, new Date(T0 + 30_000));
   assert.ok(spaeter.stand.pressen[0]!.kiste > 0, 'der Zyklus ist in der Kiste angekommen');
+});
+
+test('Dienst: ein Tipp gilt ab dem Zeitpunkt des Geraets, aber nur mit kleiner Nachsicht', async (t) => {
+  const c = await createTestContext();
+  t.after(() => c.close());
+  await seedInvite(c.db);
+  const { accountId } = await createVerifiedAccount(c, 'Anna');
+  const erst = await manufakturHeute(c.db, accountId, new Date(T0));
+  const arbeiten = { typ: 'arbeiten' as const, ziel: presse };
+
+  // Ohne den Zeitpunkt sprang der Pinguin bei der Antwort um die Laufzeit zurueck.
+  const tipp = await manufakturAktion(c.db, accountId, arbeiten, new Date(T0 + 1000), T0 + 700);
+  assert.deepEqual(tipp.stand.pressen[0], handle(erst.stand, arbeiten, T0 + 700).stand.pressen[0]);
+
+  // Weiter zurueck als NACHSICHT_MS gilt nicht: Sonst holte man sich jede Pause zwischen zwei Tipps zurueck.
+  const spaet = await manufakturHeute(c.db, accountId, new Date(T0 + 60_000));
+  const zweiter = await manufakturAktion(c.db, accountId, arbeiten, new Date(T0 + 65_000), T0 + 60_000);
+  assert.deepEqual(
+    zweiter.stand.pressen[0],
+    handle(spaet.stand, arbeiten, T0 + 65_000 - NACHSICHT_MS).stand.pressen[0],
+  );
 });
 
 test('Dienst: uebernimmt einen Stand der alten Fassung, statt ihn zu verwerfen', async (t) => {

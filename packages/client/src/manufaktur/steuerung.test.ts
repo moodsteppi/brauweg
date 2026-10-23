@@ -23,11 +23,12 @@ function falscherServer(start: ManufakturStand, uhr: () => number) {
       stand = vorspulen(stand, uhr());
       return antwort();
     },
-    senden: (aktion: Aktion) =>
+    senden: (aktion: Aktion, bei: number) =>
       new Promise<ManufakturAntwort>((fertig) => {
         // Antworten erst, wenn der Test es sagt — so liegt etwas „unterwegs".
+        // Wie der echte Dienst: ab dem genannten Zeitpunkt, hoechstens 1,5 s zurueck.
         offen.push(() => {
-          stand = handle(stand, aktion, uhr()).stand;
+          stand = handle(stand, aktion, Math.max(bei, uhr() - 1500)).stand;
           fertig(antwort());
         });
       }),
@@ -59,6 +60,21 @@ describe('Steuerung der Manufaktur', () => {
     await server.antworte();
     await s.fertig();
     expect(s.stand()!.pressen[0]!.stufe).toBe(3);
+  });
+
+  it('laesst den Pinguin nicht zurueckspringen, wenn die Antwort spaeter kommt', async () => {
+    let jetzt = T0;
+    const uhr = () => jetzt;
+    const server = falscherServer(neuerStand(T0), uhr);
+    const s = new Steuerung(server.leitung, {}, uhr);
+    await s.laden();
+    s.tue({ typ: 'arbeiten', ziel: presse });
+    // 300 ms Laufzeit: Vorhersage und Server muessen danach denselben Zyklus haben.
+    jetzt += 300;
+    const vorher = s.stand()!.pressen[0]!.fortschritt;
+    await server.antworte();
+    await s.fertig();
+    expect(s.stand()!.pressen[0]!.fortschritt).toBeCloseTo(vorher, 6);
   });
 
   it('schickt nichts, was schon der Kern ablehnt', async () => {

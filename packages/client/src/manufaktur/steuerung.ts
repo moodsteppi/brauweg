@@ -24,7 +24,8 @@ import type { ManufakturAntwort } from './sicht';
 
 export interface Leitung {
   laden: () => Promise<ManufakturAntwort>;
-  senden: (aktion: Aktion) => Promise<ManufakturAntwort>;
+  /** `bei`: der Zeitpunkt, an dem die Vorhersage die Aktion angewendet hat (Server-Zeit). */
+  senden: (aktion: Aktion, bei: number) => Promise<ManufakturAntwort>;
 }
 
 export interface Ereignisse {
@@ -48,7 +49,7 @@ export class Steuerung {
   /** Server-Zeit minus eigene Uhr. */
   private versatz = 0;
   /** Gesendet, aber noch nicht bestaetigt — in dieser Reihenfolge. */
-  private unterwegs: Aktion[] = [];
+  private unterwegs: { aktion: Aktion; bei: number }[] = [];
   private kette: Promise<void> = Promise.resolve();
   private hoerer = new Set<() => void>();
   private letzteManufaktur: number | null = null;
@@ -103,18 +104,22 @@ export class Steuerung {
   tue(aktion: Aktion): { ok: true } | { ok: false; code: string } {
     const stand = this.stand();
     if (!stand) return { ok: false, code: 'manufakturBeschaeftigt' };
+    const bei = this.jetzt();
     try {
-      this.basis = handle(stand, aktion, this.jetzt()).stand;
+      this.basis = handle(stand, aktion, bei).stand;
     } catch (err) {
       if (err instanceof AktionAbgelehnt) return { ok: false, code: err.code };
       throw err;
     }
-    this.unterwegs.push(aktion);
+    this.unterwegs.push({ aktion, bei });
     this.melden();
     void this.anhaengen(async () => {
       const gesendet = this.uhr();
       try {
-        const antwort = await this.leitung.senden(aktion);
+        // Mit dem Zeitpunkt der Vorhersage: Rechnete der Server ab Eingang,
+        // laege sein Zyklus um die Laufzeit spaeter, und der Pinguin, der
+        // schon zur Presse geht, spraenge bei der Antwort zurueck.
+        const antwort = await this.leitung.senden(aktion, bei);
         this.unterwegs.shift();
         this.uebernehmen(antwort, gesendet);
       } catch (err) {
@@ -149,9 +154,9 @@ export class Steuerung {
     const empfangen = this.uhr();
     this.versatz = antwort.zeit - (gesendet + empfangen) / 2;
     let stand = antwort.stand;
-    for (const aktion of this.unterwegs) {
+    for (const { aktion, bei } of this.unterwegs) {
       try {
-        stand = handle(stand, aktion, this.jetzt()).stand;
+        stand = handle(stand, aktion, bei).stand;
       } catch {
         // Was der Server gleich ablehnen wird, zeigen wir auch nicht.
       }

@@ -58,7 +58,9 @@ export function manufakturRouten(app: FastifyInstance, deps: ManufakturRoutenDep
     { config: { rateLimit: { max: 240, timeWindow: '1 minute' } } },
     async (request, reply) => {
       const accountId = await deps.requireAccount(request);
-      return reply.send(await manufakturAktion(deps.db, accountId, aktion.parse(request.body ?? {})));
+      // `bei`: wann getippt wurde — der Dienst nimmt es nur mit kleiner Nachsicht an.
+      const bei = z.object({ bei: z.number().finite().optional() }).parse(request.body ?? {}).bei;
+      return reply.send(await manufakturAktion(deps.db, accountId, aktion.parse(request.body ?? {}), new Date(), bei));
     },
   );
 }

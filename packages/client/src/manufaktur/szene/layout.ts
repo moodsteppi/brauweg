@@ -86,7 +86,8 @@ export function etage(index: number): {
     // zum Anstehen, und das Rad der Gusseisenpresse sitzt tiefer als das Schild.
     presse: { x: 244, y: boden - 104, b: 112, h: 112 },
     schild: { x: 336, y: y + 16, b: SCHILD, h: SCHILD },
-    nummer: { x: SCHACHT.x + SCHACHT.b / 2, y: y + 20 },
+    // Mittig auf dem Schacht, in halber Etagenhoehe (der Punkt ist die Mitte, siehe .mf-nummer).
+    nummer: { x: SCHACHT.x + SCHACHT.b / 2, y: y + (ETAGE_HOEHE - BALKEN) / 2 },
     sperrSchild: { x: 128, y: y + 34, b: 190, h: 60 },
   };
 }

@@ -46,7 +46,7 @@ describe('Kartenmanufaktur', () => {
     expect(screen.getAllByText('Zzz').length).toBeGreaterThan(0);
     fireEvent.click(presse);
     await vi.waitFor(() =>
-      expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'arbeiten', ziel: { art: 'presse', index: 0 } }),
+      expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'arbeiten', ziel: { art: 'presse', index: 0 } }, expect.any(Number)),
     );
   });
 
@@ -64,7 +64,7 @@ describe('Kartenmanufaktur', () => {
     expect(kaufen).toHaveLength(1);
     fireEvent.click(kaufen[0]!);
     await vi.waitFor(() =>
-      expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'ausbauen', ziel: { art: 'presse', index: 0 }, menge: 10 }),
+      expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'ausbauen', ziel: { art: 'presse', index: 0 }, menge: 10 }, expect.any(Number)),
     );
   });
 
@@ -93,7 +93,7 @@ describe('Kartenmanufaktur', () => {
     fireEvent.click(within(await screen.findByRole('dialog', { name: 'Umziehen?' })).getByRole('button', { name: 'Umziehen' }));
 
     const blatt = await screen.findByRole('dialog', { name: 'Fabrik am Fluss' });
-    expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'umziehen' });
+    expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'umziehen' }, expect.any(Number));
     expect(blatt.querySelector('img')?.getAttribute('src')).toBe('/manufaktur/manufaktur-2.webp');
   });
 });
@@ -136,7 +136,7 @@ describe('Kartenmanufaktur: Jubiläum im Kartenpalast', () => {
     fireEvent.click(within(await screen.findByRole('dialog', { name: 'Jubiläum feiern?' })).getByRole('button', { name: 'Feiern' }));
 
     const fest = await screen.findByRole('dialog', { name: '1. Jubiläum' });
-    expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'jubilaeum' });
+    expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'jubilaeum' }, expect.any(Number));
     expect(within(fest).getByText(/10 % mehr wert/)).toBeTruthy();
   });
 });
