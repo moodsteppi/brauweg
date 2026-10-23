@@ -159,67 +159,6 @@ export function HubZahl({
   );
 }
 
-/** Entwurf A: großer Pokal-Hero mit Trophäenzahl. */
-export function StatHero({
-  wert,
-  label = 'Trophäen gesamt',
-}: {
-  wert: number | string;
-  label?: string;
-}): React.JSX.Element {
-  return (
-    <div className="hub-stat-hero">
-      <img src="/hub/pokal.png" alt="" aria-hidden="true" />
-      <strong className="hub-stat-hero-zahl">{wert}</strong>
-      <span className="hub-stat-hero-label">{label}</span>
-    </div>
-  );
-}
-
-/** Entwurf A: knallige Statistik-Kachel im 2×2-Raster. */
-export function StatKachel({
-  icon,
-  wert,
-  name,
-}: {
-  icon: string;
-  wert: number | string;
-  name: string;
-}): React.JSX.Element {
-  return (
-    <span className="hub-stat-kachel">
-      <img src={icon} alt="" aria-hidden="true" />
-      <strong>{wert}</strong>
-      <span>{name}</span>
-    </span>
-  );
-}
-
-/** Entwurf A: Spielzeile als blaue Karte. */
-export function StatSpiel({
-  name,
-  meta,
-  cups,
-}: {
-  name: string;
-  meta?: string;
-  cups: number | string;
-}): React.JSX.Element {
-  return (
-    <div className="hub-stat-spiel">
-      <img src="/hub/tab-spielen.webp" alt="" aria-hidden="true" />
-      <div className="hub-stat-spiel-text">
-        <strong>{name}</strong>
-        {meta !== undefined && <span className="muted">{meta}</span>}
-      </div>
-      <span className="hub-stat-spiel-cups">
-        <img src="/hub/pokal.png" alt="" aria-hidden="true" />
-        {cups}
-      </span>
-    </div>
-  );
-}
-
 /*
  * ===========================================================================
  * Auswahl-Kachel und Auswahl-Raster (22.09.2026, Robins Entscheidung S2)

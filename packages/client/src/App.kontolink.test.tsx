@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /*
@@ -19,6 +19,17 @@ vi.mock('./api', () => ({
 vi.mock('./klang', () => ({ musikAn: () => {} }));
 vi.mock('./screens/Auth', () => ({ Auth: () => <p>Anmelden-Attrappe</p> }));
 vi.mock('./screens/GameSelect', () => ({ GameSelect: () => <p>Spielauswahl-Attrappe</p> }));
+// Der Startbildschirm laedt echte Bilder und Schriften; hier tritt er sofort
+// beiseite, damit App.tsx zum gepruften Weg durchgeht.
+vi.mock('./screens/Startbildschirm', async () => {
+  const { useEffect } = await import('react');
+  return {
+    Startbildschirm: ({ onFertig }: { onFertig: () => void }) => {
+      useEffect(onFertig, [onFertig]);
+      return null;
+    },
+  };
+});
 vi.mock('./screens/Lobby', () => ({ Lobby: () => <p>Lobby-Attrappe</p> }));
 vi.mock('./screens/KontoLink', () => ({
   KontoLink: ({ ziel, angemeldet }: { ziel: { art: string; token: string }; angemeldet: boolean }) => (
@@ -27,7 +38,6 @@ vi.mock('./screens/KontoLink', () => ({
     </p>
   ),
 }));
-vi.mock('./screens/KontoSichern', () => ({ KontoSichern: () => <p>KontoSichern-Attrappe</p> }));
 
 import { App } from './App';
 
@@ -63,23 +73,5 @@ describe('Mail-Links', () => {
     me.mockRejectedValue(new Error('401'));
     render(<App />);
     expect(await screen.findByText('Anmelden-Attrappe')).toBeInTheDocument();
-  });
-});
-
-describe('Gastleiste', () => {
-  it('bietet Gaesten "Konto sichern" an und laedt das Blatt erst beim Antippen', async () => {
-    me.mockResolvedValue(GAST);
-    render(<App />);
-    expect(await screen.findByText('Spielauswahl-Attrappe')).toBeInTheDocument();
-    expect(screen.queryByText('KontoSichern-Attrappe')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Konto sichern' }));
-    expect(await screen.findByText('KontoSichern-Attrappe')).toBeInTheDocument();
-  });
-
-  it('zeigt sie echten Konten nicht', async () => {
-    me.mockResolvedValue({ ...GAST, gast: false });
-    render(<App />);
-    expect(await screen.findByText('Spielauswahl-Attrappe')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Konto sichern' })).toBeNull();
   });
 });

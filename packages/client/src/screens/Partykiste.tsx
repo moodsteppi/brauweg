@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, type Me } from '../api';
-import { hubNeu } from '../hubNeu';
 import { tischFehler, useInhaltsSperren } from '../inhaltspakete';
 import { PartyAuswahl, usePartyAuswahl } from '../minispiele/partykiste/Auswahl';
 import { Einstellungen, OffeneRunde, Regler, type Angebot } from '../minispiele/partykiste/Einstellungen';
@@ -370,8 +369,7 @@ export function Partykiste({
   /* Menü                                                                */
   /* ------------------------------------------------------------------ */
 
-  if (!tischId && hubNeu) {
-    // Neues Hub: dieselben Zustände und Aufrufe im Spieleinstieg-Baukasten.
+  if (!tischId) {
     return (
       <SpielRahmen
         gameId={einzel ? einzelKennung(einzel) : 'partykiste'}
@@ -488,121 +486,6 @@ export function Partykiste({
         </SpielAbschnitt>
         <Beitrittscode neu spiel="partykiste" onBeigetreten={setTischId} />
       </SpielRahmen>
-    );
-  }
-
-  if (!tischId) {
-    return (
-      <main className="pk-seite pk-menue">
-        <button className="pk-zurueck" type="button" onClick={onBack} aria-label="Zurück">
-          ←
-        </button>
-        <div className="pk-menue-mitte">
-          <h1 className="pk-titel">Partykiste</h1>
-          <p className="pk-untertitel">
-            {Object.keys(MINISPIEL_NAME).length} Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum
-            sitzen. {trinkmodus ? 'Wer verliert, trinkt' : 'Wer verliert, sammelt Strafpunkte'}; wer
-            gewinnt, steht oben.
-          </p>
-          <Einstellungen
-            runden={runden}
-            haerte={haerte}
-            trinkmodus={trinkmodus}
-            onRunden={(w) => {
-              setRunden(w);
-              merke(SCHLUESSEL_RUNDEN, w);
-            }}
-            onHaerte={(w) => {
-              setHaerte(w);
-              merke(SCHLUESSEL_HAERTE, w);
-            }}
-            onTrinkmodus={(an) => {
-              setTrinkmodus(an);
-              merke(SCHLUESSEL_TRINKMODUS, an ? '1' : '0');
-            }}
-          />
-          <PartyAuswahl
-            vorgabe={auswahl.vorgabe}
-            wahl={auswahl.wahl}
-            gast={auswahl.gast}
-            trinkmodus={trinkmodus}
-            onWahl={auswahl.setWahl}
-            paketSperre={(paket) => sperre('paket', paket)}
-          />
-
-          {fehler ? <p className="pk-fehler">{fehler}</p> : null}
-          {angebot ? (
-            <OffeneRunde
-              angebot={angebot}
-              laedt={laedt}
-              onBeitreten={() => void trittBei(angebot.id)}
-              onEigene={() => void oeffneRunde()}
-              onAbbrechen={() => setAngebot(null)}
-            />
-          ) : (
-            <button
-              className="pk-knopf is-haupt"
-              type="button"
-              data-pk-online=""
-              onClick={() => void spieleOnline()}
-              disabled={laedt}
-            >
-              Online spielen
-            </button>
-          )}
-          <div className="pk-botblock">
-            <button
-              className="pk-knopf is-neben"
-              type="button"
-              data-pk-bots=""
-              aria-expanded={botsOffen}
-              onClick={() => setBotsOffen((an) => !an)}
-            >
-              Gegen Bots
-            </button>
-            {botsOffen ? (
-              <div className="pk-regler">
-                <Regler
-                  titel="Bots"
-                  wert={bots}
-                  min={3}
-                  max={11}
-                  onWahl={(w) => {
-                    setBots(w);
-                    merke(SCHLUESSEL_BOTS, w);
-                  }}
-                />
-                <div className="pk-stufen" role="group" aria-label="Spielstärke der Bots">
-                  {STUFEN.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      data-an={stufe === s ? '' : undefined}
-                      aria-pressed={stufe === s}
-                      onClick={() => {
-                        setStufe(s);
-                        merke(SCHLUESSEL_STUFE, s);
-                      }}
-                    >
-                      {STUFE_NAME[s]}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="pk-knopf is-haupt"
-                  type="button"
-                  data-pk-los=""
-                  onClick={() => void spieleGegenBots()}
-                  disabled={laedt}
-                >
-                  Los
-                </button>
-              </div>
-            ) : null}
-          </div>
-          <Beitrittscode spiel="partykiste" onBeigetreten={setTischId} />
-        </div>
-      </main>
     );
   }
 
@@ -741,110 +624,19 @@ function Lobby({
   const binHost = host !== null && meineKennung !== null && host.accountId === meineKennung;
   const genug = anwesend.length >= 4;
 
-  if (hubNeu) {
-    return (
-      <SpielRahmen
-        gameId="partykiste"
-        titel="Runde"
-        unter={`${anwesend.length} von ${sitze.length} da · ${runden} Minispiele`}
-        akzent={PARTY_AKZENT}
-        onBack={onZurueck}
-        zurueckText="Zurück"
-        fuss={
-          binHost ? (
-            <>
-              <button
-                className="hb-kn is-gold is-haupt is-breit"
-                type="button"
-                data-pk-start=""
-                onClick={onStart}
-                disabled={!verbunden || !genug}
-              >
-                Starten
-              </button>
-              {!genug ? <p className="hb-klein">Ab vier Leuten geht es los.</p> : null}
-            </>
-          ) : (
-            <p className="hb-klein" aria-live="polite">
-              Warten, bis {host?.displayName ?? 'der Erste'} startet …
-            </p>
-          )
-        }
-      >
-        <LobbyRegelzeile />
-        {!verbunden ? <p className="hb-fehler">Keine Verbindung — es wird neu aufgebaut …</p> : null}
-        <Einladung neu spiel="partykiste" />
-        <SpielAbschnitt titel="Am Tisch" zusatz={`${anwesend.length}/${sitze.length}`}>
-          <ul className="hb-liste spe-gruppe">
-            {sitze.map((platz) => {
-              const eigen = meineKennung !== null && platz.accountId === meineKennung;
-              const leer = platz.accountId === null && !platz.isBot;
-              return (
-                <li
-                  key={platz.seat}
-                  className={`spe-zeile spe-sitz${leer ? '' : ' is-besetzt'}`}
-                  data-pk-sitz={platz.seat}
-                  data-leer={leer ? '' : undefined}
-                  data-eigen={eigen ? '' : undefined}
-                >
-                  <span>
-                    <strong>{leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'))}</strong>
-                  </span>
-                  {eigen ? <span className="spe-marke">du</span> : null}
-                </li>
-              );
-            })}
-          </ul>
-        </SpielAbschnitt>
-        {/* Melden und Blockieren (Apple 1.2): Hier gibt es keine Profil-Links. */}
-        <MitspielerMelden sitze={sitze} ich={meineKennung} />
-        <GastHinweis sitze={sitze} className="spe-text" />
-      </SpielRahmen>
-    );
-  }
-
   return (
-    <main className="pk-seite pk-menue">
-      <button className="pk-zurueck" type="button" onClick={onZurueck} aria-label="Zurück">
-        ←
-      </button>
-      <div className="pk-menue-mitte">
-        <h1 className="pk-titel">Runde</h1>
-        <p className="pk-untertitel">
-          {anwesend.length} von {sitze.length} da · {runden} Minispiele
-        </p>
-        <LobbyRegelzeile />
-        {!verbunden ? <p className="pk-fehler">Keine Verbindung — es wird neu aufgebaut …</p> : null}
-        <Einladung spiel="partykiste" />
-
-        <ul className="pk-gruppe">
-          {sitze.map((platz) => {
-            const eigen = meineKennung !== null && platz.accountId === meineKennung;
-            const leer = platz.accountId === null && !platz.isBot;
-            return (
-              <li
-                key={platz.seat}
-                data-pk-sitz={platz.seat}
-                data-leer={leer ? '' : undefined}
-                data-eigen={eigen ? '' : undefined}
-              >
-                <span className="pk-gruppenname">
-                  {leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'))}
-                </span>
-                {eigen ? <em className="pk-du">du</em> : null}
-              </li>
-            );
-          })}
-        </ul>
-        {/* Melden und Blockieren (Apple 1.2): Hier gibt es keine Profil-Links. */}
-        <MitspielerMelden sitze={sitze} ich={meineKennung} />
-
-        <GastHinweis sitze={sitze} className="pk-warten" />
-
-        {binHost ? (
+    <SpielRahmen
+      gameId="partykiste"
+      titel="Runde"
+      unter={`${anwesend.length} von ${sitze.length} da · ${runden} Minispiele`}
+      akzent={PARTY_AKZENT}
+      onBack={onZurueck}
+      zurueckText="Zurück"
+      fuss={
+        binHost ? (
           <>
             <button
-              className="pk-knopf is-haupt"
+              className="hb-kn is-gold is-haupt is-breit"
               type="button"
               data-pk-start=""
               onClick={onStart}
@@ -852,14 +644,43 @@ function Lobby({
             >
               Starten
             </button>
-            {!genug ? <p className="pk-warten">Ab vier Leuten geht es los.</p> : null}
+            {!genug ? <p className="hb-klein">Ab vier Leuten geht es los.</p> : null}
           </>
         ) : (
-          <p className="pk-warten" aria-live="polite">
+          <p className="hb-klein" aria-live="polite">
             Warten, bis {host?.displayName ?? 'der Erste'} startet …
           </p>
-        )}
-      </div>
-    </main>
+        )
+      }
+    >
+      <LobbyRegelzeile />
+      {!verbunden ? <p className="hb-fehler">Keine Verbindung — es wird neu aufgebaut …</p> : null}
+      <Einladung neu spiel="partykiste" />
+      <SpielAbschnitt titel="Am Tisch" zusatz={`${anwesend.length}/${sitze.length}`}>
+        <ul className="hb-liste spe-gruppe">
+          {sitze.map((platz) => {
+            const eigen = meineKennung !== null && platz.accountId === meineKennung;
+            const leer = platz.accountId === null && !platz.isBot;
+            return (
+              <li
+                key={platz.seat}
+                className={`spe-zeile spe-sitz${leer ? '' : ' is-besetzt'}`}
+                data-pk-sitz={platz.seat}
+                data-leer={leer ? '' : undefined}
+                data-eigen={eigen ? '' : undefined}
+              >
+                <span>
+                  <strong>{leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'))}</strong>
+                </span>
+                {eigen ? <span className="spe-marke">du</span> : null}
+              </li>
+            );
+          })}
+        </ul>
+      </SpielAbschnitt>
+      {/* Melden und Blockieren (Apple 1.2): Hier gibt es keine Profil-Links. */}
+      <MitspielerMelden sitze={sitze} ich={meineKennung} />
+      <GastHinweis sitze={sitze} className="spe-text" />
+    </SpielRahmen>
   );
 }

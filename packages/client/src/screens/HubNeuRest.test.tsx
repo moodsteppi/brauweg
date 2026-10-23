@@ -10,9 +10,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * verliert oder eine Rückfrage überspringt, fällt hier auf.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-// three und die Truhenöffnung laden unter jsdom nicht (siehe Profil.test.tsx);
-// hier geht es um die Knöpfe drumherum, nicht um die Figur.
+// three und die Truhenöffnung laden unter jsdom nicht (three holt `/3d/…glb`
+// per `fetch`, und Node nimmt keine Adresse ohne Wurzel); hier geht es um die
+// Knöpfe drumherum, nicht um die Figur.
 vi.mock('../Avatar3D', () => ({ default: () => null }));
 vi.mock('../TruhenOeffnung', () => ({ TruhenOeffnung: () => null }));
 
@@ -204,6 +204,23 @@ describe('Neues Hub: die restlichen Ansichten', () => {
     }
     fireEvent.click(screen.getByRole('button', { name: 'Abmelden' }));
     expect(onSignOut).toHaveBeenCalled();
+  });
+
+  it('holt den Geburtstag nach oben, sobald die Belohnung bereitliegt', async () => {
+    // Übernommen aus dem Profil-Test des alten Hubs: Steht die Tafel unten,
+    // sieht niemand den Knopf, und das Geschenk gibt es nur an einem Tag im Jahr.
+    await zeige(probeKonto({ daysUntilBirthday: 0, birthdayToday: true, birthdayRewardClaimable: true }));
+    fireEvent.click(screen.getByRole('button', { name: /zum Profil$/ }));
+    await act(async () => {});
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.childNodes[0]?.textContent)).toEqual([
+      'Geburtstag',
+      'Deine Figur',
+      'Deine Sachen',
+      'Trophäen',
+      'Freunde',
+      'Konto',
+    ]);
+    expect(screen.getByRole('button', { name: 'Belohnung holen' })).toBeInTheDocument();
   });
 
   it('schließt ein Blatt mit Escape und hängt es über die Reiterleiste', async () => {

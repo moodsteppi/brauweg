@@ -9,10 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * und „Los" legt den Bot-Tisch mit denselben Zahlen an, der Zurück-Knopf
  * führt aus ihr ins Menü statt aus dem Spiel. Die Verdrahtung im Einzelnen
  * (Regelsatz, Bahnwahl, Farben) steht in Golf.lobby.test.tsx und
- * Golf.bahnauswahl.test.tsx — beide laufen ohne Schalter ebenfalls im neuen Hub.
+ * Golf.bahnauswahl.test.tsx.
  */
-
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
 
 const { createTable, joinTable, tables, leaveTable, me, startNow } = vi.hoisted(() => ({
   createTable: vi.fn(),

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 
-import { hubNeu } from '../hubNeu';
 import '../screens/hub-neu.css';
 import '../screens/spiel-einstieg.css';
 import { TISCH_EREIGNIS, erlauben, melde, merkeGefragt, sollFragen } from './dienst';
@@ -44,56 +43,28 @@ export function PushBegleiter({ kontoId }: { kontoId: string }): React.JSX.Eleme
   };
 
   /*
-   * Neues Hub (22.10.2026): dieselbe Frage im Nachtblau-&-Gold-Stil. Sie
+   * Die Frage im Nachtblau-&-Gold-Stil des Hubs. Sie
    * kommt am Tisch, also ausserhalb der Hub-Wurzel — die eigene Ebene
    * `.spe.spe-schicht` bringt Farben und Knoepfe des Hubs mit, ohne den
    * Tisch darunter zu verdecken.
    */
-  if (hubNeu) {
-    return (
-      <div className="spe spe-schicht" role="presentation">
-        <div className="spe-frage" role="dialog" aria-modal="true" aria-labelledby="push-frage-titel">
-          <h2 id="push-frage-titel" className="hb-titel">
-            Sollen wir dir Bescheid sagen?
-          </h2>
-          <p>
-            Wenn du dran bist oder deine Runde startet, schicken wir dir eine kurze Mitteilung —
-            auch wenn die App gerade zu ist.
-          </p>
-          <p className="hb-klein">Was genau, stellst du jederzeit in den Einstellungen ein.</p>
-          <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={ja}>
-            Ja, gern
-          </button>
-          <button type="button" className="hb-leise-knopf" onClick={nein}>
-            Lieber nicht
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="doko-sheet doko-sheet--mitte push-frage">
-      <div
-        className="doko-sheet-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="push-frage-titel"
-      >
-        <h2 id="push-frage-titel">Sollen wir dir Bescheid sagen?</h2>
+    <div className="spe spe-schicht" role="presentation">
+      <div className="spe-frage" role="dialog" aria-modal="true" aria-labelledby="push-frage-titel">
+        <h2 id="push-frage-titel" className="hb-titel">
+          Sollen wir dir Bescheid sagen?
+        </h2>
         <p>
           Wenn du dran bist oder deine Runde startet, schicken wir dir eine kurze Mitteilung —
           auch wenn die App gerade zu ist.
         </p>
-        <p className="muted">Was genau, stellst du jederzeit in den Einstellungen ein.</p>
-        <div className="hub-knopfreihe hub-knopfreihe--a">
-          <button type="button" className="hub-knopf" onClick={nein}>
-            Lieber nicht
-          </button>
-          <button type="button" className="hub-knopf hub-knopf--a" onClick={ja}>
-            Ja, gern
-          </button>
-        </div>
+        <p className="hb-klein">Was genau, stellst du jederzeit in den Einstellungen ein.</p>
+        <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={ja}>
+          Ja, gern
+        </button>
+        <button type="button" className="hb-leise-knopf" onClick={nein}>
+          Lieber nicht
+        </button>
       </div>
     </div>
   );

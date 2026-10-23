@@ -11,8 +11,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * auf. Der Filz selbst kommt hier nicht vor — er ist unverändert.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { createTable, joinTable, tables, leaveTable, me, aktiveSpieler, tableRules, startNow, addBot } = vi.hoisted(
   () => ({
     createTable: vi.fn(),

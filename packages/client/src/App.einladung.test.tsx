@@ -38,6 +38,17 @@ vi.mock('./screens/Auth', () => ({
   ),
 }));
 vi.mock('./screens/GameSelect', () => ({ GameSelect: () => <p>Spielauswahl-Attrappe</p> }));
+// Der Startbildschirm laedt echte Bilder und Schriften; hier tritt er sofort
+// beiseite, damit App.tsx zum gepruften Weg durchgeht.
+vi.mock('./screens/Startbildschirm', async () => {
+  const { useEffect } = await import('react');
+  return {
+    Startbildschirm: ({ onFertig }: { onFertig: () => void }) => {
+      useEffect(onFertig, [onFertig]);
+      return null;
+    },
+  };
+});
 vi.mock('./screens/Lobby', () => ({ Lobby: () => <p>Lobby-Attrappe</p> }));
 vi.mock('./screens/Partykiste', () => ({
   Partykiste: ({ startTisch }: { startTisch: string | null }) => (

@@ -7,8 +7,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * Bot-Tisch, Tisch erstellen mit gewählten Plätzen, Regeln als Blatt.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { sucheStarten, sucheAbbrechen, createTable, leaveTable, tables } = vi.hoisted(() => ({
   sucheStarten: vi.fn(),
   sucheAbbrechen: vi.fn(() => Promise.resolve({ ok: true })),
