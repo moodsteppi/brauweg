@@ -15,7 +15,8 @@ import { connect } from './db/connect.js';
 import * as s from './db/schema.js';
 import { waehleMailer } from './mail/index.js';
 import { APP_ORIGINS, buildApp } from './http/app.js';
-import { appInhaltAusUmgebung } from './games/registry.js';
+import { appInhaltAusUmgebung, registry } from './games/registry.js';
+import { umfangAusUmgebung, umfangZeile } from './umfang.js';
 import { appVerknuepfungAusUmgebung } from './http/app-verknuepfung.js';
 import { Gateway } from './realtime/gateway.js';
 import { PartyRuntime } from './runtime/party.js';
@@ -121,6 +122,15 @@ async function main(): Promise<void> {
       `App-Rueckweg aktiv: Partykiste ${appInhalt.trinkmodusAus ? 'ohne Trinkmodus' : 'mit Trinkmodus'}, Textschaerfe hoechstens ${appInhalt.haerteMax}`,
     );
   }
+  /* Was diese Ausgabe anbietet (src/umfang.ts) — ohne UMFANG alles. Immer
+     eine Zeile: Fehlt auf der Produktion ein Spiel, ist das die erste Stelle,
+     an der man nachsieht, und ein vertippter Name steht gleich mit da. */
+  const { umfang, unbekannt: umfangUnbekannt } = umfangAusUmgebung(
+    process.env.UMFANG,
+    registry.all().map((meta) => meta.id),
+  );
+  // eslint-disable-next-line no-console
+  (umfangUnbekannt.length > 0 ? console.warn : console.info)(umfangZeile(umfang, umfangUnbekannt));
   const vermittlung = new Vermittlung(db, runtime, {
     beiFehler: (gameId, fehler) =>
       // eslint-disable-next-line no-console
@@ -162,6 +172,7 @@ async function main(): Promise<void> {
     herkunftSchluessel: config.herkunftSchluessel,
     googleClientId: config.googleClientId,
     appInhalt,
+    umfang,
     appVerknuepfung: appVerknuepfungAusUmgebung(),
     appleClientId: config.appleClientId,
     appleRedirectUri: config.appleRedirectUri,

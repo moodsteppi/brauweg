@@ -17,6 +17,7 @@ import type { Belohnung, BrowortAnsicht, BrowortKurz, BrowortProfil, ClanwortAns
 import type { ManufakturAktion, ManufakturAntwort } from './manufaktur/sicht';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
 import { herkunft } from './herkunft';
+import { setzeUmfang } from './umfang';
 
 export class ApiError extends Error {
   constructor(
@@ -214,6 +215,12 @@ export interface Me {
   };
   /** Welche Ausgabe läuft: `production`, `staging` oder `development`. */
   stage: 'production' | 'staging' | 'development';
+  /**
+   * Was diese Ausgabe anbietet (`UMFANG` im Server, siehe umfang.ts):
+   * `null` heißt alles. Optional wie `lernen` — ein älterer Server kennt es
+   * nicht, und dann ist ebenfalls alles an.
+   */
+  umfang?: string[] | null;
 }
 
 export interface RankingEntry {
@@ -851,7 +858,12 @@ export const api = {
       setSessionToken(null);
     }
   },
-  me: () => request<Me>('/me'),
+  // Der Umfang kommt mit /api/me und gilt ab da fuer jeden Bildschirm (umfang.ts).
+  me: () =>
+    request<Me>('/me').then((me) => {
+      setzeUmfang(me.umfang);
+      return me;
+    }),
   /** Kartenblatt oder Szenerie eines Spiels setzen. */
   setTheme: (
     gameId: string,

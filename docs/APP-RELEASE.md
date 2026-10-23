@@ -96,6 +96,32 @@ Deploy mit einer Umgebungsvariablen — kein neuer Build:
 Vorgabe: beide nicht gesetzt = App wie Web. Der Server sagt beim Start eine
 Zeile, wenn der Rückweg aktiv ist.
 
+### Umfang der Ausgabe: `UMFANG`
+
+Welche Spiele und Funktionen eine Ausgabe überhaupt anbietet — für Webseite
+und App aus **einer** Liste (`packages/server/src/umfang.ts`). Kommagetrennt,
+Spielkennungen der Registry plus diese Funktionen: `kartenmanufaktur`,
+`browort`, `clanwort`, `lernpfad`, `prosubway`, `clankrieg`, `clanchat`.
+
+```
+UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad
+```
+
+- **Nicht gesetzt (oder leer) = alles an.** So läuft `staging`.
+- Was fehlt, ist auf **beiden** Plattformen weg: nicht in der Auswahl, nicht
+  unter „Kommt bald", und der Server weist jeden direkten Aufruf ab (Tisch
+  anlegen, Beitritt per Code oder Link, Suche, Abstimmung:
+  `gameNotPlayable`; Routen der Funktionen: `nichtImUmfang`). Wer schon an
+  einem Tisch sitzt, kommt weiter zurück.
+- Der Umfang ist eine **Obergrenze**: Er nimmt nur weg. Was drinsteht, ist so
+  frei, wie `FREIGABE` und die `inApp`-Weichen es heute sagen — BroChess auf
+  der Webseite bleibt „Bald", Browort bleibt dort ohne Einstieg.
+- Der Client bekommt die Liste mit `/api/me` (`umfang`, `null` = alles); ein
+  Deploy genügt, installierte Apps folgen beim nächsten Öffnen.
+- Beim Start schreibt der Server eine Zeile `Umfang: …`, vertippte Namen als
+  `UMFANG unbekannt: …`.
+- Bewusst kein Schalter in der Oberfläche und keine Einstellung je Konto.
+
 ### Moderation
 
 - **Melden und Blockieren** gibt es jetzt (Apple 1.2): im fremden Profil (am

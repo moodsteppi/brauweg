@@ -32,6 +32,7 @@ import { skat } from '@brauweg/game-skat';
 import { tafelrunde } from '@brauweg/game-tafelrunde';
 import { wizard } from '@brauweg/game-wizard';
 import { notFound } from '../errors.js';
+import { ALLES, imUmfang, type Umfang } from '../umfang.js';
 
 const MODULES: readonly AnyGameModule[] = [
   doppelkopf as unknown as AnyGameModule,
@@ -126,7 +127,10 @@ export type Plattform = 'web' | 'app';
  *   starten. Dieselbe Darstellung wie ein Vorschau-Spiel ohne Modul, nur
  *   ohne Abstimmung: Das Spiel gibt es ja, man muss niemanden danach fragen.
  * - `aus` — gar nicht zu sehen. Nur fuer die App: Auf der Webseite zeigt
- *   Brauweg nach DESIGN.md auch, was es noch nicht gibt.
+ *   Brauweg nach DESIGN.md auch, was es noch nicht gibt. Ausnahme: Was
+ *   nicht im Umfang der Ausgabe steht (`UMFANG`, src/umfang.ts), ist auf
+ *   beiden Plattformen `aus` — das ist nicht „noch nicht", sondern „nicht
+ *   in diesem Release".
  */
 export type Freigabe = 'spielbar' | 'bald' | 'aus';
 
@@ -186,8 +190,16 @@ export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
   werwolf: { web: 'bald', app: 'aus' },
 };
 
-/** Was ein Spiel auf dieser Plattform ist (siehe `Freigabe`). */
-export function freigabeAuf(id: GameId, plattform: Plattform): Freigabe {
+/**
+ * Was ein Spiel auf dieser Plattform ist (siehe `Freigabe`).
+ *
+ * `umfang` ist die Obergrenze der Ausgabe (`UMFANG`, src/umfang.ts): Was
+ * dort nicht steht, ist `aus` — auch auf der Webseite, die sonst nur
+ * `spielbar` und `bald` kennt. Die Vorgabe `ALLES` laesst `FREIGABE` allein
+ * entscheiden, wie vor dem Schalter.
+ */
+export function freigabeAuf(id: GameId, plattform: Plattform, umfang: Umfang = ALLES): Freigabe {
+  if (!imUmfang(umfang, id)) return 'aus';
   const eintrag = FREIGABE[id];
   if (!byId.has(id)) {
     // Ohne Modul bleibt es Vorschau; nur die App darf es ganz ausblenden.
@@ -197,8 +209,8 @@ export function freigabeAuf(id: GameId, plattform: Plattform): Freigabe {
 }
 
 /** Laesst sich das Spiel auf dieser Plattform starten und betreten? */
-export function spielbarAuf(id: GameId, plattform: Plattform): boolean {
-  return byId.has(id) && freigabeAuf(id, plattform) === 'spielbar';
+export function spielbarAuf(id: GameId, plattform: Plattform, umfang: Umfang = ALLES): boolean {
+  return byId.has(id) && freigabeAuf(id, plattform, umfang) === 'spielbar';
 }
 
 /**
@@ -210,8 +222,8 @@ export function spielbarAuf(id: GameId, plattform: Plattform): boolean {
  * waere keine: Ueber einen Einladungslink oder einen alten Lesezeichen-
  * Aufruf kaeme man sonst doch an den Tisch.
  */
-export function requireSpielbar(id: GameId, plattform: Plattform): void {
-  if (!spielbarAuf(id, plattform)) throw notFound('gameNotPlayable');
+export function requireSpielbar(id: GameId, plattform: Plattform, umfang: Umfang = ALLES): void {
+  if (!spielbarAuf(id, plattform, umfang)) throw notFound('gameNotPlayable');
 }
 
 /**
@@ -224,9 +236,10 @@ export function requireSpielbar(id: GameId, plattform: Plattform): void {
  */
 export function spieleFuer(
   plattform: Plattform,
+  umfang: Umfang = ALLES,
 ): { meta: GameMeta; availability: GameMeta['availability']; abstimmbar: boolean }[] {
   return registry.all().flatMap((meta) => {
-    const freigabe = freigabeAuf(meta.id, plattform);
+    const freigabe = freigabeAuf(meta.id, plattform, umfang);
     if (freigabe === 'aus') return [];
     return [
       {

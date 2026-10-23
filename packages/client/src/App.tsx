@@ -5,6 +5,7 @@ import { t } from './i18n';
 import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { inApp } from './laufzeit';
+import { imUmfang } from './umfang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
@@ -843,7 +844,7 @@ export function App(): React.JSX.Element {
         }}
         onSolo={(modusId) => {
           // In der App kommt Pro-Subway erst spaeter (GameSelect zeigt "Bald").
-          if (modusId === 'prosubway' && !inApp) setScreen({ name: 'prosubway' });
+          if (modusId === 'prosubway' && !inApp && imUmfang('prosubway')) setScreen({ name: 'prosubway' });
         }}
         onResume={(gameId, tableId) => setScreen({ name: 'table', gameId, tableId })}
         onShowProfile={zeigeProfil}

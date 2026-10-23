@@ -30,6 +30,7 @@ import {
 } from '../api';
 import { inApp, serverAdresse } from '../laufzeit';
 import { inAppSichtbar } from '../app-sichtbar';
+import { imUmfang } from '../umfang';
 import { schonGefeiert } from '../lernen/gefeiert';
 import {
   RUECKEN,
@@ -212,12 +213,14 @@ export function GameSelect({
   const [werkstattOffen, setWerkstattOffen] = useState(false);
   /** Doppelkopf lernen (nur App): Lernpfad als Vollbild. */
   const [lernenOffen, setLernenOffen] = useState(false);
-  const oeffneLernen = inApp && hubNeu ? () => setLernenOffen(true) : undefined;
+  // Jeweils zusätzlich der Umfang der Ausgabe (umfang.ts): Fehlt der Teil
+  // dort, fehlt sein Einstieg — die Route sperrt der Server ohnehin.
+  const oeffneLernen = inApp && hubNeu && imUmfang('lernpfad') ? () => setLernenOffen(true) : undefined;
   /** Browort und Clanwort (nur App, neues Hub): Vollbilder wie der Lernpfad. */
   const [browortOffen, setBrowortOffen] = useState(false);
   const [clanwortOffen, setClanwortOffen] = useState(false);
-  const oeffneBrowort = inApp && hubNeu ? () => setBrowortOffen(true) : undefined;
-  const oeffneClanwort = inApp && hubNeu ? () => setClanwortOffen(true) : undefined;
+  const oeffneBrowort = inApp && hubNeu && imUmfang('browort') ? () => setBrowortOffen(true) : undefined;
+  const oeffneClanwort = inApp && hubNeu && imUmfang('clanwort') ? () => setClanwortOffen(true) : undefined;
   /** Kartenmanufaktur (nur App): das Idle-Spiel als Vollbild. */
   const [manufakturOffen, setManufakturOffen] = useState(false);
   const soloStarten = (modusId: string): void => {
@@ -1214,7 +1217,7 @@ function ProfilTab({
           </section>
 
           {/* Browort nur in der App (wie der Lernpfad), Zahlen aus `/api/me`. */}
-          {inApp && (
+          {inApp && imUmfang('browort') && (
             <BrowortImProfil
               du
               serie={me.browort?.serie ?? 0}
@@ -3326,8 +3329,9 @@ export function Spielwahl({
           <div className="hub-themenwahl kachelraster">
             {/* In der App kommt Pro-Subway erst spaeter (Robin, 23.09.2026):
                 dieselbe "Bald"-Kachel wie die noch nicht freigegebenen Spiele,
-                ohne Stimme. Der Server nimmt Laeufe aus der App ohnehin nicht an. */}
-            {inApp ? (
+                ohne Stimme. Der Server nimmt Laeufe aus der App ohnehin nicht an.
+                Steht er nicht im Umfang der Ausgabe (umfang.ts), fehlt er ganz. */}
+            {!imUmfang('prosubway') ? null : inApp ? (
               <div className="hub-themenspiel is-bald">
                 <button className="spielwahl-flaeche" onClick={() => onBald(t('modus.prosubway'))}>
                   <span className="hub-themenspiel-bild" aria-hidden="true">
