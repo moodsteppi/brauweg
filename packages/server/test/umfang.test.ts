@@ -70,10 +70,10 @@ test('ohne UMFANG ist alles an — fehlend, leer oder nur Kommas', () => {
 });
 
 test('UMFANG wird ohne Ruecksicht auf Gross- und Leerschreibung gelesen, Unbekanntes gemeldet', () => {
-  const { umfang, unbekannt } = lies(' Doppelkopf , SKAT,browort,schafkopf ');
+  const { umfang, unbekannt } = lies(' Doppelkopf , SKAT,browort,mau-mau ');
   assert.equal(umfang.alles, false);
-  assert.deepEqual([...umfang.frei].sort(), ['browort', 'doppelkopf', 'schafkopf', 'skat']);
-  assert.deepEqual(unbekannt, ['schafkopf']);
+  assert.deepEqual([...umfang.frei].sort(), ['browort', 'doppelkopf', 'mau-mau', 'skat']);
+  assert.deepEqual(unbekannt, ['mau-mau']);
 });
 
 test('jede Funktion hat ihre Routen — und keine Route zeigt auf eine unbekannte Funktion', () => {
