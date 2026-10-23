@@ -296,6 +296,9 @@
 
 /* Fingeranleitung: zeigt beim ersten Start, wohin man tippt. */
 .mf .mf-finger {
+  /* Liegt neben der Knopf-Ebene, nicht in ihr — deshalb selbst absolut. */
+  position: absolute;
+  z-index: 5;
   font-size: 34px;
   line-height: 1;
   pointer-events: none;

@@ -4,14 +4,18 @@ import { api } from '../api';
 import { t } from '../i18n';
 import { spiele } from '../klang';
 import type { ManufakturAntwort } from './sicht';
-import { NACHFRAGEN_MS, Steuerung } from './steuerung';
+import { type Leitung, NACHFRAGEN_MS, Steuerung } from './steuerung';
 
 /**
  * Die Steuerung fuer einen Bildschirm: eine je geoeffneter Manufaktur, mit
  * Nachfragen alle 30 s und beim Zurueckkommen in die App. Meldungen (Muenzen,
  * Fehler, Offline, Umzug) landen als React-Zustand beim Bildschirm.
  */
-export function useManufaktur(onGeaendert: () => void): {
+export function useManufaktur(
+  onGeaendert: () => void,
+  /** Nur fuer Proben (proben/manufaktur): ein nachgestellter Server statt der echten API. */
+  leitung?: Leitung,
+): {
   steuerung: Steuerung;
   bereit: boolean;
   ladefehler: string | null;
@@ -41,7 +45,7 @@ export function useManufaktur(onGeaendert: () => void): {
   const steuerung = useMemo(
     () =>
       new Steuerung(
-        { laden: () => api.manufaktur(), senden: (aktion) => api.manufakturAktion(aktion) },
+        leitung ?? { laden: () => api.manufaktur(), senden: (aktion) => api.manufakturAktion(aktion) },
         {
           muenzen: (anzahl) => {
             spiele('kauf');

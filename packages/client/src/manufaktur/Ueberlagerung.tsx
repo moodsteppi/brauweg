@@ -123,7 +123,7 @@ export function Ueberlagerung({
               label={`Presse ${i + 1}, ${KARTENARTEN[i]}: arbeiten`}
               onClick={() => onArbeiten(ziel)}
             />
-            {schlaeft(p, true) && <Zzz x={e.kiste.x + e.kiste.b + 18} y={e.boden - 66} />}
+            {schlaeft(p, true) && <Zzz x={e.kiste.x + e.kiste.b + 34} y={e.boden - 50} />}
             <MeisterPlatz
               r={e.meister}
               name={`Presse ${i + 1}`}

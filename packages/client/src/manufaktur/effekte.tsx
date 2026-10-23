@@ -53,7 +53,16 @@ export function Verkaeufe({ liste }: { liste: Verkauf[] }): React.JSX.Element {
 export function useZaehler(wert: number): number {
   const [anzeige, setAnzeige] = useState(wert);
   const von = useRef(wert);
+  const erst = useRef(true);
   useEffect(() => {
+    // Der erste echte Stand nach dem Laden springt — sonst zaehlte die Kasse
+    // beim Oeffnen jedes Mal von 0 hoch, als waere alles gerade verdient.
+    if (erst.current && wert > 0) {
+      erst.current = false;
+      von.current = wert;
+      setAnzeige(wert);
+      return;
+    }
     if (wert <= anzeige) {
       von.current = wert;
       setAnzeige(wert);

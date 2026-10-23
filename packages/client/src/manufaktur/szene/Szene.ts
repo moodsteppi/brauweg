@@ -97,8 +97,14 @@ async function ladeTexturen(dateien: readonly string[]): Promise<Record<string, 
   const paare = await Promise.all(
     dateien.map(async (url) => {
       const bild = new Image();
-      bild.src = url;
-      await bild.decode();
+      // `onload` statt `decode()`: decode() kam in einem verdeckten Fenster
+      // nie zurueck (Browser schieben das Dekodieren dann auf), und die
+      // Buehne blieb leer, bis man wegsah und wiederkam.
+      await new Promise<void>((fertig, fehler) => {
+        bild.onload = () => fertig();
+        bild.onerror = () => fehler(new Error(`Bild fehlt: ${url}`));
+        bild.src = url;
+      });
       return [url, Texture.from(bild)] as const;
     }),
   );
@@ -272,7 +278,11 @@ class EtageBild {
       const vorlauf: Presse = { ...p, fortschritt: p.laeuft ? Math.min(0.9999, p.fortschritt + k * 0.02) : 0 };
       const ph = pressenPhase(vorlauf, jetzt, rest);
       const ort = arbeiterOrt(ph.phase, ph.anteil);
-      let x = kisteX + k * 9 + (presseX - kisteX - k * 23) * ort;
+      // Fuenf Arbeiter brauchen Abstand: an der Kiste und an der Presse je
+      // eine kleine Reihe, sonst stehen sie als ein Klumpen da.
+      const anKiste = kisteX + k * 11;
+      const anPresse = presseX - k * 17;
+      let x = anKiste + (anPresse - anKiste) * ort;
 
       if (this.einlauf[k]! > 0) {
         this.einlauf[k] = Math.max(0, this.einlauf[k]! - dt / 1200);
@@ -487,6 +497,16 @@ export class Szene {
   zeigeDebug(an: boolean): void {
     this.debugAn = an;
     if (!an) this.debug.clear();
+  }
+
+  /**
+   * Ein Bild sofort zeichnen, ohne auf den Takt zu warten. Fuer Proben in
+   * einem verdeckten Fenster: Dort laeuft requestAnimationFrame nicht, und
+   * die Buehne bliebe fuer Bildschirmfotos leer.
+   */
+  zeichneEinmal(): void {
+    this.bild();
+    this.app.render();
   }
 
   zerstoere(): void {

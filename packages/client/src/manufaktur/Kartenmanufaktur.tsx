@@ -22,6 +22,7 @@ import type { Ausschnitt, Szene, SzenenEreignis } from './szene/Szene';
 import { type Rechteck, BREITE, ETAGE_HOEHE, etage, gesamtHoehe, halle } from './szene/layout';
 import { Ueberlagerung } from './Ueberlagerung';
 import { type Verkauf, Verkaeufe, useZaehler } from './effekte';
+import type { Leitung } from './steuerung';
 import { useManufaktur } from './useManufaktur';
 import { dauer, kurz } from './zahlen';
 import './manufaktur.css';
@@ -69,15 +70,18 @@ export function Kartenmanufaktur({
   onClose,
   onGeaendert,
   getragen,
+  leitung,
 }: {
   onClose: () => void;
   /** Muenzen fuers Hub kamen dazu — `/api/me` neu laden. */
   onGeaendert: () => void;
   /** Was der eigene Pinguin traegt — er steht als Direktor in der Halle. */
   getragen?: Getragen;
+  /** Nur fuer Proben: ein nachgestellter Server (proben/manufaktur). */
+  leitung?: Leitung;
 }): React.JSX.Element {
   useEscape(onClose);
-  const m = useManufaktur(onGeaendert);
+  const m = useManufaktur(onGeaendert, leitung);
   const [, setTakt] = useState(0);
   const [blatt, setBlatt] = useState<Blatt | null>(null);
   const [frage, rueckfrage] = useRueckfrage();
@@ -145,9 +149,16 @@ export function Kartenmanufaktur({
         beimEreignis,
       ).then((s) => {
         if (aus) s?.zerstoere();
-        else szene.current = s;
+        else {
+          szene.current = s;
+          // Nur in der Entwicklung: Proben zeichnen damit auch im verdeckten Fenster.
+          if (import.meta.env.DEV) (window as unknown as { __manufakturSzene?: Szene | null }).__manufakturSzene = s;
+        }
       }),
-    );
+    ).catch((err: unknown) => {
+      // Ohne Szene bleibt das Spiel bedienbar (alle Knoepfe sind DOM) — aber nicht still.
+      console.error('Manufaktur: Szene nicht aufgebaut', err);
+    });
     return () => {
       aus = true;
       szene.current?.zerstoere();
