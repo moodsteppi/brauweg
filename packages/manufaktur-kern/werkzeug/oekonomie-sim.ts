@@ -126,7 +126,38 @@ function mmss(ms: number): string {
   return `${String(Math.floor(s / 60)).padStart(3, ' ')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-function simuliere(DAUER_MS: number, bisManufaktur = Infinity): { ereignisse: Ereignis[]; laengsteLuecke: { ab: number; dauer: number }; stand: ManufakturStand } {
+/** Wann gespielt wird: immer (Profil „aktiv") oder in Sitzungen (Profil „Gelegenheit"). */
+interface Plan {
+  /** Spielt jemand zur Zeit `t`? */
+  aktiv: (t: number) => boolean;
+  /** Der Beginn der naechsten Sitzung nach `t`. */
+  naechste: (t: number) => number;
+}
+
+const IMMER: Plan = { aktiv: () => true, naechste: (t) => t };
+
+const TAG = 24 * 3600_000;
+/** Vier Sitzungen a drei Minuten: morgens, mittags, abends, spaet. */
+const SITZUNGEN_H = [8, 12, 18, 22];
+const SITZUNG_MS = 3 * 60_000;
+const GELEGENHEIT: Plan = {
+  aktiv: (t) => SITZUNGEN_H.some((h) => {
+    const start = Math.floor(t / TAG) * TAG + h * 3600_000;
+    return t >= start && t < start + SITZUNG_MS;
+  }),
+  naechste: (t) => {
+    const tag = Math.floor(t / TAG) * TAG;
+    for (let d = 0; d < 2; d += 1) {
+      for (const h of SITZUNGEN_H) {
+        const start = tag + d * TAG + h * 3600_000;
+        if (start > t) return start;
+      }
+    }
+    return tag + 2 * TAG;
+  },
+};
+
+function simuliere(DAUER_MS: number, bisManufaktur = Infinity, plan: Plan = IMMER): { ereignisse: Ereignis[]; laengsteLuecke: { ab: number; dauer: number }; stand: ManufakturStand } {
   let stand = neuerStand(0);
   const ereignisse: Ereignis[] = [];
   const merke = (zeit: number, was: string): void => {
@@ -139,7 +170,14 @@ function simuliere(DAUER_MS: number, bisManufaktur = Infinity): { ereignisse: Er
   let ersterAusbau = false;
   let ersterMeister = false;
 
-  for (let t = 0; t <= DAUER_MS; t += SCHRITT_MS) {
+  for (let t = plan.aktiv(0) ? 0 : plan.naechste(0); t <= DAUER_MS; t += SCHRITT_MS) {
+    if (!plan.aktiv(t)) {
+      // Offline bis zur naechsten Sitzung — der Kern deckelt selbst auf OFFLINE_MS.
+      t = plan.naechste(t);
+      stand = vorspulen(stand, t);
+      letzterKauf = t;
+      continue;
+    }
     stand = vorspulen(stand, t);
     // Ein Tipp: die naechste schlafende Station ohne Meister, die anfangen kann.
     const liste = ziele(stand);
@@ -257,6 +295,31 @@ function suche(): void {
     const lauf = simuliere(4 * 3600_000, 2);
     console.log(`  PREIS_JE_MANUFAKTUR ${p}: ${abstand(lauf.ereignisse, lauf.laengsteLuecke.dauer / 60_000).toFixed(1)}`);
   }
+}
+
+function tageUndStunde(ms: number): string {
+  const tag = Math.floor(ms / TAG) + 1;
+  const h = Math.floor((ms % TAG) / 3600_000);
+  return `Tag ${tag}, ${String(h).padStart(2, '0')} Uhr`;
+}
+
+/** Profil „Gelegenheitsspieler": vier Sitzungen a drei Minuten am Tag, dazwischen offline. */
+function gelegenheit(): void {
+  const lauf = simuliere(60 * TAG, 2, GELEGENHEIT);
+  console.log('\nProfil Gelegenheitsspieler (4 × 3 min am Tag, dazwischen offline, Deckel 2 h)\n');
+  for (const e of lauf.ereignisse) {
+    if (/gebaut|Umzug|erster Meister|Meister Versand|Meister Paternoster/.test(e.was)) console.log(`  ${tageUndStunde(e.zeit).padEnd(16)} ${e.was}`);
+  }
+  const p5 = lauf.ereignisse.find((e) => /^Presse 5 gebaut/.test(e.was));
+  const umzug = lauf.ereignisse.find((e) => /^Umzug in Manufaktur 2/.test(e.was));
+  const tage = (e?: Ereignis) => (e ? `${(e.zeit / TAG).toFixed(1)} Tage (${tageUndStunde(e.zeit)})` : 'nicht in 60 Tagen');
+  console.log(`\n  Bis Presse 5:        ${tage(p5)}`);
+  console.log(`  Bis zum ersten Umzug: ${tage(umzug)}\n`);
+}
+
+if (process.argv.includes('--gelegenheit')) {
+  gelegenheit();
+  process.exit(0);
 }
 
 if (process.argv.includes('--suche')) {

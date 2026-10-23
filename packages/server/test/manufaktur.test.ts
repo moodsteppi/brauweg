@@ -103,6 +103,7 @@ test('Dienst: meldet Offline-Verdienst und zahlt Meilenstein-Muenzen genau einma
   assert.ok(spaeter.offline);
   assert.equal(spaeter.offline.sekunden, 2 * 3600, 'gemeldet wird hoechstens die Offline-Grenze');
   assert.ok(spaeter.offline.taler > 0);
+  assert.ok(spaeter.offline.produziert >= spaeter.offline.taler, 'verkauft wird nur, was gepresst wurde');
   assert.equal(spaeter.muenzen, 50, 'die erste Million ist unterwegs gefallen');
   const [nachher] = await c.db.select({ coins: s.account.coins }).from(s.account).where(eq(s.account.id, accountId));
   assert.equal(nachher!.coins - vorher!.coins, 50);
@@ -110,4 +111,20 @@ test('Dienst: meldet Offline-Verdienst und zahlt Meilenstein-Muenzen genau einma
   const nochmal = await manufakturHeute(c.db, accountId, new Date(T0 + 5 * STUNDE + 1000));
   assert.equal(nochmal.muenzen, 0);
   assert.equal(nochmal.offline, null);
+});
+
+test('Dienst: meldet einen Stau — gepresst, aber nichts verkauft', async (t) => {
+  const c = await createTestContext();
+  t.after(() => c.close());
+  await seedInvite(c.db);
+  const { accountId } = await createVerifiedAccount(c, 'Dora');
+  await manufakturHeute(c.db, accountId, new Date(T0));
+  const [zeile] = await c.db.select().from(s.manufaktur).where(eq(s.manufaktur.accountId, accountId));
+  const stand = migriere(zeile!.stand);
+  stand.pressen[0]!.meister = true;
+  await c.db.update(s.manufaktur).set({ stand }).where(eq(s.manufaktur.accountId, accountId));
+  const spaeter = await manufakturHeute(c.db, accountId, new Date(T0 + STUNDE));
+  assert.ok(spaeter.offline);
+  assert.equal(spaeter.offline.taler, 0);
+  assert.ok(spaeter.offline.produziert > 0);
 });

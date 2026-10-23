@@ -15,7 +15,7 @@
   "scripts": {
     "build": "node ../../werkzeug/dist-raeumen.mjs && tsc",
     "test": "npm run build && node --test \"dist/test/**/*.test.js\"",
-    "sim": "npm run build && node dist/werkzeug/oekonomie-sim.js"
+    "sim": "npm run build && node dist/werkzeug/oekonomie-sim.js && node dist/werkzeug/oekonomie-sim.js --gelegenheit"
   },
   "files": ["dist", "src"],
   "devDependencies": {

@@ -14,6 +14,7 @@ export interface ManufakturAntwort {
   stand: ManufakturStand;
   /** Server-Zeit (ms) der Antwort. */
   zeit: number;
-  offline: { sekunden: number; taler: number } | null;
+  /** `produziert`: Warenwert der Pressen in der Zeit — weit ueber `taler` heisst Stau. */
+  offline: { sekunden: number; taler: number; produziert?: number } | null;
   muenzen: number;
 }

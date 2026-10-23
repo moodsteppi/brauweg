@@ -13,8 +13,16 @@ import { Container, Sprite, type Texture } from 'pixi.js';
 
 import { CLIPS, type ClipName, type Pose, RUHE, UEBERBLENDUNG_MS, mische, poseBei } from './clips';
 
-/** Pinguinbilder: 384 Pixel, die Fuesse stehen auf Zeile 371. */
-const EINZELBILD = { groesse: 384, fuss: 371 / 384 };
+/** Masse eines Einzelbilds: wie hoch die Figur darin ist (px) und wo die Fuesse stehen (Anteil). */
+export interface Bildmasse {
+  figur: number;
+  fuss: number;
+}
+
+/** Drucker und Meister: 384 Pixel, die Fuesse stehen auf Zeile 371. */
+export const MANUFAKTUR_PINGUIN: Bildmasse = { figur: 384, fuss: 371 / 384 };
+/** Der nackte Basis-Pinguin (hub/pinguin): 480 × 512, Figur von Zeile 50 bis 497. */
+export const BASIS_PINGUIN: Bildmasse = { figur: 500, fuss: 497 / 512 };
 
 export class Figur {
   /** Position = Fusspunkt in der Welt. */
@@ -30,10 +38,10 @@ export class Figur {
   private blinzelIn = 2000 + Math.random() * 3000;
   private richtung = 1;
 
-  constructor(textur: Texture, hoehe: number, lastTextur: Texture, lastGroesse = 22) {
+  constructor(textur: Texture, hoehe: number, lastTextur: Texture, lastGroesse = 22, masse: Bildmasse = MANUFAKTUR_PINGUIN) {
     this.bild = new Sprite(textur);
-    this.bild.anchor.set(0.5, EINZELBILD.fuss);
-    this.bild.scale.set(hoehe / EINZELBILD.groesse);
+    this.bild.anchor.set(0.5, masse.fuss);
+    this.bild.scale.set(hoehe / masse.figur);
     this.koerper.addChild(this.bild);
     this.last = new Sprite(lastTextur);
     this.last.anchor.set(0.5, 1);

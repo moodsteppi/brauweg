@@ -59,6 +59,38 @@ export function leerlaufErtrag(stand: ManufakturStand): number | null {
   return Math.min(d.pressen, d.paternoster, d.versand);
 }
 
+/**
+ * Arbeitet ein Kettenglied gerade (Meister oder laufender Zyklus)? Eine
+ * Station, die schlaeft, ist kein Engpass — sie wartet auf einen Tipp.
+ */
+export function arbeitet(stand: ManufakturStand, glied: Kettenglied): boolean {
+  if (glied === 'pressen') return stand.pressen.some((p) => p.meister || p.laeuft);
+  const s = glied === 'paternoster' ? stand.paternoster : stand.versand;
+  return s.meister || s.laeuft;
+}
+
+/**
+ * Der Engpass, wie ihn der Bildschirm zeigt: nur, wenn die ganze Kette
+ * arbeitet. Schlaeft eine Station, ist DAS das Problem (Zzz am Pinguin), und
+ * ein roter Puls an einer anderen Stelle wuerde in die Irre fuehren. Die Ware
+ * staut sich dann sichtbar VOR dem Engpass: in den Kisten, wenn es der
+ * Paternoster ist, auf dem Packtisch, wenn es der Versand ist.
+ */
+export function engpassSichtbar(stand: ManufakturStand): Kettenglied | null {
+  const glied = engpass(stand);
+  if (!glied) return null;
+  const alle: Kettenglied[] = ['pressen', 'paternoster', 'versand'];
+  return alle.every((g) => arbeitet(stand, g)) ? glied : null;
+}
+
+/** Leistung einer Station je Sekunde auf Stufe `stufe` — die Hauptzeile im Upgrade-Blatt. */
+export function leistungJeSekunde(stand: ManufakturStand, ziel: Ziel, stufe: number): number {
+  const m = stand.manufaktur;
+  if (ziel.art === 'presse') return presseLeistung(ziel.index, stufe, m);
+  if (ziel.art === 'paternoster') return paternosterKapazitaet(stufe, m) / (paternosterFahrt(stand.pressen.length, stufe) / 1000);
+  return versandKapazitaet(stufe, m) / (versandZyklus(stufe) / 1000);
+}
+
 /** Das langsamste Glied — dort lohnt der Ausbau. null, wenn es noch keine Kette gibt. */
 export function engpass(stand: ManufakturStand): Kettenglied | null {
   const d = durchsatz(stand);
@@ -101,6 +133,10 @@ function kennzahlenBei(stand: ManufakturStand, ziel: Ziel, stufe: number): Omit<
 
 export interface AusbauVorschau {
   stufe: number;
+  /** Warenwert je Sekunde vorher → nachher. */
+  leistung: { vorher: number; nachher: number };
+  /** So viele Stufen sind gerade bezahlbar (kleine Zahl am Schild). */
+  bezahlbar: number;
   /** Stufe nach dem Kauf; gleich `stufe`, wenn `menge` gerade nichts kauft. */
   neueStufe: number;
   kosten: number;
@@ -122,6 +158,8 @@ export function ausbauVorschau(stand: ManufakturStand, ziel: Ziel, menge: Menge)
   const nachher = kennzahlenBei(stand, ziel, neueStufe);
   return {
     stufe: s.stufe,
+    leistung: { vorher: leistungJeSekunde(stand, ziel, s.stufe), nachher: leistungJeSekunde(stand, ziel, neueStufe) },
+    bezahlbar: stufenFuer(stand, ziel, 'max'),
     neueStufe,
     kosten,
     leistbar: zeigen > 0 && stand.taler + 1e-9 >= kosten,

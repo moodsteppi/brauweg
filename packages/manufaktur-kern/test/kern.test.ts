@@ -22,6 +22,8 @@ import {
   ausbauVorschau,
   durchsatz,
   engpass,
+  engpassSichtbar,
+  leistungJeSekunde,
   handle,
   leerlaufErtrag,
   maxKaufbar,
@@ -244,4 +246,36 @@ test('Alte Staende (Fassung 1) werden uebernommen, nicht verworfen', () => {
   assert.equal(neu.packtisch, 99);
   assert.deepEqual(neu.meilensteine, ['million-1']);
   assert.equal(migriere(neu), neu, 'ein neuer Stand bleibt, wie er ist');
+});
+
+test('Engpass sichtbar nur bei arbeitender Kette — und die Ware staut sich davor', () => {
+  // Schlafende Stationen sind kein Engpass, sondern schlafen.
+  assert.equal(engpassSichtbar(neuerStand(T0)), null);
+
+  // Paternoster zu schwach: Die Kisten laufen voll, der Packtisch nicht.
+  const stark = { ...neuerStand(T0).pressen[0]!, stufe: 80, meister: true };
+  const schacht = mitMeistern({ ...neuerStand(T0), pressen: [stark, stark], versand: { ...neuerStand(T0).versand, stufe: 200 } });
+  assert.equal(engpassSichtbar(schacht), 'paternoster');
+  const spaeter = vorspulen(schacht, T0 + 10 * 60_000);
+  const kisten = spaeter.pressen.reduce((s, p) => s + p.kiste, 0);
+  assert.ok(kisten > 100 * spaeter.packtisch, `Stau in den Kisten (${kisten}) statt auf dem Packtisch (${spaeter.packtisch})`);
+
+  // Versand zu schwach: Der Packtisch laeuft voll.
+  const wagen = mitMeistern({ ...neuerStand(T0), pressen: [stark], paternoster: { ...neuerStand(T0).paternoster, stufe: 200 } });
+  assert.equal(engpassSichtbar(wagen), 'versand');
+  const danach = vorspulen(wagen, T0 + 10 * 60_000);
+  assert.ok(danach.packtisch > danach.pressen[0]!.kiste, 'Stau auf dem Packtisch');
+});
+
+test('Leistung je Sekunde steigt mit der Stufe, auch beim Transport', () => {
+  const stand = neuerStand(T0);
+  for (const ziel of [presse, { art: 'paternoster' as const }, { art: 'versand' as const }]) {
+    assert.ok(leistungJeSekunde(stand, ziel, 2) > leistungJeSekunde(stand, ziel, 1));
+  }
+});
+
+test('Der Versand-Meister ist der guenstigste', async () => {
+  const { meisterKosten } = await import('../src/index.js');
+  assert.ok(meisterKosten({ art: 'versand' }, 1) < meisterKosten({ art: 'paternoster' }, 1));
+  assert.ok(meisterKosten({ art: 'paternoster' }, 1) < meisterKosten(presse, 1));
 });

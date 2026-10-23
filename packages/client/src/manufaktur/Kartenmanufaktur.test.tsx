@@ -52,12 +52,13 @@ describe('Kartenmanufaktur', () => {
 
   it('das Schild öffnet das Upgrade-Blatt mit vorher → nachher und genau einem Kaufen-Knopf', async () => {
     oeffne({ ...neuerStand(Date.now()), taler: 1000 });
-    const schild = await screen.findByRole('button', { name: /Presse 1, Stufe 1, Ausbau bezahlbar/ });
+    const schild = await screen.findByRole('button', { name: /Presse 1, Stufe 1, \d+ Stufen bezahlbar/ });
     expect(schild.className).toContain('is-leistbar');
     fireEvent.click(schild);
     const blatt = await screen.findByRole('dialog', { name: /Presse 1/ });
     expect(within(blatt).getByText('Ertrag je Zyklus')).toBeTruthy();
-    fireEvent.click(within(blatt).getByRole('radio', { name: 'x10' }));
+    expect(within(blatt).getByText('Leistung pro Sekunde')).toBeTruthy();
+    fireEvent.click(within(blatt).getAllByRole('radio')[1]!);
     expect(within(blatt).getByLabelText('Stufe 1 auf 11')).toBeTruthy();
     const kaufen = within(blatt).getAllByRole('button').filter((b) => /Kaufen/.test(b.textContent ?? ''));
     expect(kaufen).toHaveLength(1);
@@ -86,7 +87,7 @@ describe('Kartenmanufaktur', () => {
     manufakturAktion.mockResolvedValue(antwort(neuerStand(Date.now(), 2)));
     render(<Kartenmanufaktur onClose={vi.fn()} onGeaendert={vi.fn()} />);
 
-    fireEvent.click(await screen.findByRole('button', { name: '1/5' }));
+    fireEvent.click(await screen.findByRole('button', { name: /1\/5/ }));
     expect(screen.queryByRole('dialog', { name: 'Fabrik am Fluss' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Umziehen' }));
     fireEvent.click(within(await screen.findByRole('dialog', { name: 'Umziehen?' })).getByRole('button', { name: 'Umziehen' }));
@@ -94,5 +95,29 @@ describe('Kartenmanufaktur', () => {
     const blatt = await screen.findByRole('dialog', { name: 'Fabrik am Fluss' });
     expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'umziehen' });
     expect(blatt.querySelector('img')?.getAttribute('src')).toBe('/manufaktur/manufaktur-2.webp');
+  });
+});
+
+describe('Kartenmanufaktur: Meister und Leerlauf', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('ein leerer Meister-Platz zeigt Preis; das Meister-Blatt listet alle Stationen', async () => {
+    oeffne({ ...neuerStand(Date.now()), taler: 100 });
+    fireEvent.click(await screen.findByRole('button', { name: /Meister für Versand einstellen/ }));
+    const blatt = await screen.findByRole('dialog', { name: 'Meister' });
+    expect(within(blatt).getByText('Versand')).toBeTruthy();
+    expect(within(blatt).getByText('Paternoster')).toBeTruthy();
+    expect(within(blatt).getByText(/Presse 1/)).toBeTruthy();
+  });
+
+  it('die Leerlauf-Anzeige ist bei 0 grau und erklärt, welche Meister fehlen', async () => {
+    const stand = neuerStand(Date.now());
+    stand.pressen[0] = { ...stand.pressen[0]!, meister: true };
+    oeffne(stand);
+    const pille = await screen.findByRole('button', { name: /Leerlauf-Ertrag 0/ });
+    expect(pille.className).toContain('is-null');
+    fireEvent.click(pille);
+    const blatt = await screen.findByRole('dialog', { name: 'Leerlauf-Ertrag' });
+    expect(within(blatt).getByText(/Versand und Paternoster/)).toBeTruthy();
   });
 });

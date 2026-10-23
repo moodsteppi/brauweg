@@ -36,8 +36,13 @@ export interface ManufakturAntwort {
   stand: ManufakturStand;
   /** Server-Zeit (ms) der Antwort. */
   zeit: number;
-  /** Gesetzt, wenn seit dem letzten Besuch Zeit vergangen ist und Taler kamen. */
-  offline: { sekunden: number; taler: number } | null;
+  /**
+   * Gesetzt, wenn seit dem letzten Besuch Zeit vergangen ist und etwas
+   * passiert ist. `produziert` ist der Warenwert, den die Pressen in der Zeit
+   * gemacht haben — liegt er weit ueber `taler`, steht die Ware irgendwo im
+   * Stau, und das Willkommens-Blatt sagt, wo.
+   */
+  offline: { sekunden: number; taler: number; produziert: number } | null;
   /** Muenzen fuers Hub, die gerade gutgeschrieben wurden. */
   muenzen: number;
 }
@@ -81,6 +86,13 @@ async function zahleAus(db: Db, accountId: string, meilensteine: Meilenstein[]):
   return muenzen;
 }
 
+/** Alles, was je gepresst wurde und noch da ist oder verkauft wurde (in dieser Manufaktur). */
+function warenwert(s: ManufakturStand): number {
+  return (
+    s.pressen.reduce((summe, p) => summe + p.kiste, 0) + s.paternoster.ladung + s.packtisch + s.versand.ladung + s.verdient
+  );
+}
+
 /**
  * Den Stand bis jetzt nachrechnen und liefern. Die erste Million unterwegs
  * (auch offline) zahlt ihren Meilenstein hier aus.
@@ -99,12 +111,13 @@ export async function manufakturHeute(db: Db, accountId: string, jetzt = new Dat
     if (!(await speichere(db, accountId, stand, geladen?.version ?? null, jetzt))) continue;
     const muenzen = await zahleAus(db, accountId, meilensteine);
     const gewonnen = stand.taler - alt.taler;
+    const produziert = warenwert(stand) - warenwert(alt);
     return {
       stand,
       zeit: ms,
       offline:
-        geladen && weg >= OFFLINE_MELDUNG_AB_MS && gewonnen > 0
-          ? { sekunden: Math.round(Math.min(weg, OFFLINE_MS) / 1000), taler: gewonnen }
+        geladen && weg >= OFFLINE_MELDUNG_AB_MS && (gewonnen > 0 || produziert > 0)
+          ? { sekunden: Math.round(Math.min(weg, OFFLINE_MS) / 1000), taler: gewonnen, produziert }
           : null,
       muenzen,
     };

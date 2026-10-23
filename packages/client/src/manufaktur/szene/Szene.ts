@@ -20,7 +20,7 @@
 
 import { Application, Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
 
-import { type ManufakturStand, type Presse, MAX_PRESSEN, arbeiter, versandKapazitaet } from '@brauweg/manufaktur-kern';
+import { FAEHIGKEIT_MS, type ManufakturStand, type Presse, MAX_PRESSEN, arbeiter, versandKapazitaet } from '@brauweg/manufaktur-kern';
 
 import { BILD, presseBild, stapelBild } from '../bilder';
 import { ton } from '../toene';
@@ -36,7 +36,7 @@ import {
   traegtStapel,
   wagenOrt,
 } from './abbild';
-import { Figur } from './figur';
+import { BASIS_PINGUIN, Figur } from './figur';
 import {
   BALKEN,
   BREITE,
@@ -67,6 +67,12 @@ export interface Ausschnitt {
 /** Was die Szene dem DOM meldet — Muenzflug und Zahlen-Popup laufen dort. */
 export type SzenenEreignis = { art: 'verkauf'; betrag: number; x: number; y: number };
 
+/**
+ * Packer und Kurbler: der nackte Basis-Pinguin. Das Druckerbild haelt einen
+ * gemalten Druckbogen in der Flosse — als Packer trug er dann Bogen UND Paket.
+ */
+const BASIS = '/hub/pinguin/pinguin-basis.webp';
+
 const DATEIEN = [
   '/manufaktur/kulisse-halle.webp',
   '/manufaktur/wand-keller.webp',
@@ -79,6 +85,7 @@ const DATEIEN = [
   presseBild(25),
   presseBild(100),
   ...Array.from({ length: MAX_PRESSEN }, (_, i) => stapelBild(i)),
+  BASIS,
 ];
 
 /** Laufband-Kachel: 256 × 512, im Schacht 40 breit. */
@@ -176,6 +183,7 @@ class EtageBild {
   readonly wurzel = new Container();
   private readonly gebaut = new Container();
   private readonly gesperrt = new Container();
+  private readonly schloss: Graphics;
   private readonly stapel: Sprite[] = [];
   private readonly presse: Sprite;
   private readonly arbeiter: Figur[] = [];
@@ -206,9 +214,10 @@ class EtageBild {
     for (let i = 0; i < 6; i += 1) {
       const s = new Sprite(t[stapelBild(index)]);
       s.anchor.set(0.5, 1);
-      s.scale.set(30 / 256);
-      // Zwei Reihen in der Kiste, die oberen ragen heraus — so sieht man, wie voll sie ist.
-      s.position.set(e.kiste.x + 16 + (i % 2) * 26, e.boden - 14 - Math.floor(i / 2) * 12);
+      // Klein (rund 60 % der ersten Fassung), damit die Kiste sichtbar bleibt:
+      // zwei Reihen zu drei, die obere ragt heraus — so sieht man, wie voll sie ist.
+      s.scale.set(18 / 256);
+      s.position.set(e.kiste.x + 12 + (i % 3) * 17, e.boden - 12 - Math.floor(i / 3) * 10);
       this.stapel.push(s);
       this.gebaut.addChild(s);
     }
@@ -219,10 +228,9 @@ class EtageBild {
     this.presse.position.set(e.presse.x + e.presse.b / 2, e.boden);
     this.gebaut.addChild(this.presse);
 
-    this.meister = new Figur(t[BILD.meister]!, 46, t[stapelBild(index)]!);
-    this.meister.wurzel.position.set(e.presse.x + e.presse.b + 6, e.boden);
-    this.meister.schaue(-1);
-    this.gebaut.addChild(this.meister.wurzel);
+    // Wie im Vorbild steht der Meister vorn an der Kiste, in Arbeitergroesse.
+    this.meister = new Figur(t[BILD.meister]!, ARBEITER_HOEHE, t[stapelBild(index)]!);
+    this.meister.wurzel.position.set(e.meisterFigur.x + e.meisterFigur.b / 2, e.boden);
 
     for (let i = 0; i < 5; i += 1) {
       const a = new Figur(t[BILD.drucker]!, ARBEITER_HOEHE, t[stapelBild(index)]!);
@@ -232,18 +240,25 @@ class EtageBild {
       this.einlauf.push(0);
       this.gebaut.addChild(a.wurzel);
     }
+    // Vor den Arbeitern: Sonst verschwindet er hinter der Kolonne, und nur sein ⚡ bleibt sichtbar.
+    this.gebaut.addChild(this.meister.wurzel);
 
     const wand = bretterwand(BREITE - SCHACHT.x - SCHACHT.b - 10, ETAGE_HOEHE - BALKEN - 8);
     wand.position.set(SCHACHT.x + SCHACHT.b + 6, e.reihe.y + 4);
-    const sch = schloss(26);
-    sch.position.set(BREITE / 2 + 20, e.reihe.y + 52);
-    this.gesperrt.addChild(wand, sch);
+    this.schloss = schloss(26);
+    this.schloss.position.set(e.sperrSchild.x - 22, e.reihe.y + 74);
+    this.gesperrt.addChild(wand, this.schloss);
   }
 
   zeige(stand: ManufakturStand, jetzt: number, rest: number, dt: number): void {
     const p = stand.pressen[this.index];
     this.gebaut.visible = !!p;
-    this.gesperrt.visible = !p && this.index === stand.pressen.length;
+    // Die naechste Etage ist eine Bretterwand mit Schloss, die zwei danach
+    // nur dunkle Umrisse — man sieht, dass es weitergeht, ohne Laerm.
+    const abstand = this.index - stand.pressen.length;
+    this.gesperrt.visible = !p && abstand >= 0 && abstand < 3;
+    this.gesperrt.alpha = abstand === 0 ? 1 : 0.28;
+    this.schloss.visible = abstand === 0;
     if (!p) {
       this.letzteStufe = 0;
       this.letzteAnzahl = 0;
@@ -266,8 +281,11 @@ class EtageBild {
     }
     this.letzteAnzahl = zahl;
 
-    const kisteX = e.kiste.x + e.kiste.b + 12;
-    const presseX = e.presse.x + 6;
+    // Zwischen Meister und Presse: Hier gehen die Arbeiter hin und her; den
+    // Stapel werfen sie am Ende in die Kiste (siehe unten).
+    // Ruheplatz rechts vom Meister-Platz, damit der leere Rahmen ihn nicht verdeckt.
+    const kisteX = e.arbeit.x + 20;
+    const presseX = e.presse.x + 8;
     const tempo = ablaufTempo(p, jetzt);
     let geschlagen = false;
     this.arbeiter.forEach((a, k) => {
@@ -280,8 +298,8 @@ class EtageBild {
       const ort = arbeiterOrt(ph.phase, ph.anteil);
       // Fuenf Arbeiter brauchen Abstand: an der Kiste und an der Presse je
       // eine kleine Reihe, sonst stehen sie als ein Klumpen da.
-      const anKiste = kisteX + k * 11;
-      const anPresse = presseX - k * 17;
+      const anKiste = kisteX + k * 9;
+      const anPresse = presseX - k * 13;
       let x = anKiste + (anPresse - anKiste) * ort;
 
       if (this.einlauf[k]! > 0) {
@@ -308,6 +326,10 @@ class EtageBild {
       if (k === 0 && ph.phase === 'zurueck' && this.letztePhase[k] === 'arbeiten') {
         this.wolke.bogen(this.presse.x, e.boden - 38, x, e.boden - 30);
       }
+      // Zyklus fertig: Der Stapel fliegt in die Kiste — genau jetzt ist er drin.
+      if (k === 0 && this.letztePhase[k] === 'ablegen' && ph.phase !== 'ablegen') {
+        this.wolke.bogen(x, e.boden - 30, e.kiste.x + e.kiste.b / 2, e.boden - 24);
+      }
       this.letzterAnteil[k] = ph.anteil;
       this.letztePhase[k] = ph.phase;
     });
@@ -323,7 +345,7 @@ class EtageBild {
     const basis = e.presse.b / 512;
     this.presse.scale.set(basis * (1 + 0.04 * f), basis * (1 - 0.06 * f));
 
-    // Der Meister steht neben seiner Presse und pfeift, wenn er die Faehigkeit ausloest.
+    // Eingestellt steht der Meister an der Kiste und pfeift, wenn er die Faehigkeit ausloest.
     this.meister.wurzel.visible = p.meister;
     if (p.meister) {
       if (jetzt < p.faehigkeitBis && this.pfeifenSeit === 0) this.pfeifenSeit = jetzt;
@@ -356,7 +378,16 @@ export class Szene {
   private readonly kartons: Graphics[] = [];
   private readonly wagen: Sprite;
   private readonly traeger: Figur;
+  private readonly kurbler: Figur;
+  private readonly paternosterMeister: Figur;
+  private readonly versandMeister: Figur;
   private readonly wand: TilingSprite;
+  private readonly abdunkeln = new Graphics();
+  private readonly paket: Texture;
+  private letzteWandHoehe = 0;
+  private bilder = 0;
+  private bilderSeit = performance.now();
+  private bildrate = 0;
   private readonly wolke = new Teilchenwolke();
   private readonly debug = new Graphics();
   private debugAn = false;
@@ -419,7 +450,7 @@ export class Szene {
     const kopf = kopfstueck(h.kopf.b, h.kopf.h);
     kopf.position.set(h.kopf.x, h.kopf.y);
     this.antrieb = rad(16);
-    this.antrieb.position.set(h.kopf.x + h.kopf.b / 2, h.kopf.y + 26);
+    this.antrieb.position.set(h.rad.x, h.rad.y);
 
     this.fuss = fussstueck(SCHACHT.b, FUSS_HOEHE - 12);
 
@@ -427,17 +458,34 @@ export class Szene {
     tisch.width = h.packtisch.b;
     tisch.height = h.packtisch.b;
     tisch.position.set(h.packtisch.x, h.boden - h.packtisch.b * (500 / 512));
+    const platte = h.boden - h.packtisch.b * 0.46;
     for (let i = 0; i < 8; i += 1) {
-      const k = karton(16, 12);
+      const k = karton(14, 11);
       // Ein kleiner Stapel auf der Tischplatte, von links nach rechts und dann hoch.
-      k.position.set(h.packtisch.x + 30 + (i % 4) * 17, h.boden - 52 - Math.floor(i / 4) * 12);
+      k.position.set(h.packtisch.x + 24 + (i % 4) * 15, platte - Math.floor(i / 4) * 11);
       this.kartons.push(k);
     }
+    // Der Direktor (DOM) steht auf diesem Podest vor dem Fenster — ausserhalb der Laufwege.
+    const podest = new Graphics()
+      .roundRect(h.podest.x, h.podest.y, h.podest.b, h.podest.h, 3)
+      .fill(FARBE.holz)
+      .rect(h.podest.x, h.podest.y, h.podest.b, 3)
+      .fill(FARBE.messing);
 
     this.wagen = new Sprite(t[BILD.versand]);
     this.wagen.anchor.set(0, 371 / 384);
     this.wagen.scale.set(h.wagen.b / 640);
-    this.traeger = new Figur(t[BILD.drucker]!, ARBEITER_HOEHE, t[stapelBild(0)]!);
+    // Der Packer traegt Pakete, keine Druckboegen.
+    const paket = app.renderer.generateTexture(karton(18, 14));
+    this.paket = paket;
+    this.traeger = new Figur(t[BASIS]!, ARBEITER_HOEHE, paket, 16, BASIS_PINGUIN);
+    this.kurbler = new Figur(t[BASIS]!, ARBEITER_HOEHE, paket, 16, BASIS_PINGUIN);
+    this.kurbler.schaue(-1);
+    this.kurbler.wurzel.position.set(h.kurbler.x, h.boden);
+    this.paternosterMeister = new Figur(t[BILD.meister]!, ARBEITER_HOEHE, paket);
+    this.paternosterMeister.wurzel.position.set(h.paternosterMeisterFigur.x + h.paternosterMeisterFigur.b / 2, h.boden);
+    this.versandMeister = new Figur(t[BILD.meister]!, ARBEITER_HOEHE, paket);
+    this.versandMeister.wurzel.position.set(h.versandMeisterFigur.x + h.versandMeisterFigur.b / 2, h.boden);
 
     this.welt.addChild(halleBild, this.wand, this.roehre, this.band, this.fuss);
     for (let i = 0; i < MAX_PRESSEN; i += 1) {
@@ -445,7 +493,23 @@ export class Szene {
       this.etagen.push(e);
       this.welt.addChild(e.wurzel);
     }
-    this.welt.addChild(tisch, ...this.kartons, this.traeger.wurzel, this.wagen, kopf, this.antrieb, this.kabine, this.wolke.wurzel, this.debug);
+    // Ueber den Etagen: So verschwinden auch die Umriss-Etagen im Dunkel.
+    this.welt.addChild(this.abdunkeln);
+    this.welt.addChild(
+      podest,
+      tisch,
+      ...this.kartons,
+      this.paternosterMeister.wurzel,
+      this.versandMeister.wurzel,
+      this.traeger.wurzel,
+      this.wagen,
+      kopf,
+      this.antrieb,
+      this.kurbler.wurzel,
+      this.kabine,
+      this.wolke.wurzel,
+      this.debug,
+    );
 
     app.ticker.maxFPS = 60;
     app.ticker.add(() => this.bild());
@@ -509,6 +573,11 @@ export class Szene {
     this.app.render();
   }
 
+  /** Bilder je Sekunde, gemittelt ueber die letzte Sekunde (Debug-Ansicht). */
+  fps(): number {
+    return this.bildrate;
+  }
+
   zerstoere(): void {
     document.removeEventListener('visibilitychange', this.sichtbarkeit);
     this.app.destroy(true, { children: true });
@@ -521,6 +590,12 @@ export class Szene {
     const nun = performance.now();
     const dt = Math.min(MAX_DT, nun - this.letzteZeit);
     this.letzteZeit = nun;
+    this.bilder += 1;
+    if (nun - this.bilderSeit >= 1000) {
+      this.bildrate = (this.bilder * 1000) / (nun - this.bilderSeit);
+      this.bilder = 0;
+      this.bilderSeit = nun;
+    }
     const jetzt = this.quelle.jetzt();
     const rest = Math.max(0, jetzt - stand.zeit);
     const { oben, hoehe, breite } = this.ausschnitt();
@@ -530,6 +605,14 @@ export class Szene {
 
     const anzahl = stand.pressen.length;
     if (anzahl !== this.letzteEtagen) this.bauKeller(anzahl);
+    // Kein leerer Raum unter der Welt: Die Wand reicht bis zum unteren Rand
+    // des Ausschnitts und laeuft nach unten ins Dunkle aus.
+    const wandUnten = Math.max(gesamtHoehe(anzahl), (oben + hoehe) / faktor);
+    if (Math.abs(wandUnten - this.letzteWandHoehe) > 1) {
+      this.letzteWandHoehe = wandUnten;
+      this.wand.height = wandUnten - HALLE_HOEHE;
+      this.zeichneDunkel(etage(Math.min(anzahl + 1, MAX_PRESSEN)).reihe.y - ETAGE_HOEHE * 0.3, wandUnten);
+    }
 
     // Nur zeichnen, was im Ausschnitt liegt (mit einer Etage Luft).
     const von = oben / faktor - ETAGE_HOEHE;
@@ -541,17 +624,30 @@ export class Szene {
       if (sichtbar) e.zeige(stand, jetzt, rest, dt);
     });
 
+    this.dtZuletzt = dt;
     this.zeigePaternoster(stand, jetzt, rest);
     this.zeigeVersand(stand, jetzt, rest, dt);
     this.wolke.aktualisiere(dt);
     if (this.debugAn) this.zeichneDebug();
   }
 
+  /** Von `ab` bis `bis` immer dunkler — die Umriss-Etagen verschwinden im Dunkel. */
+  private zeichneDunkel(ab: number, bis: number): void {
+    const g = this.abdunkeln;
+    g.clear();
+    const stufen = 12;
+    const spanne = Math.max(1, (bis - ab) * 0.6);
+    for (let i = 0; i < stufen; i += 1) {
+      const y = ab + (spanne / stufen) * i;
+      g.rect(0, y, BREITE, spanne / stufen + 1).fill({ color: 0x07090f, alpha: ((i + 1) / stufen) * 0.92 });
+    }
+    g.rect(0, ab + spanne, BREITE, Math.max(0, bis - ab - spanne) + 2).fill({ color: 0x07090f, alpha: 0.92 });
+  }
+
   /** Wand, Roehre und Fussstueck reichen bis unter die tiefste Etage. */
   private bauKeller(anzahl: number): void {
     this.letzteEtagen = anzahl;
-    const unten = gesamtHoehe(anzahl);
-    this.wand.height = unten - HALLE_HOEHE;
+    this.letzteWandHoehe = 0;
     const schachtUnten = etage(anzahl - 1).boden + BALKEN;
     this.roehre.height = schachtUnten - (HALLE_HOEHE - 20);
     this.band.height = schachtUnten - (HALLE_HOEHE - 20);
@@ -572,6 +668,23 @@ export class Szene {
       this.band.tilePosition.y = this.bandWeg;
       this.antrieb.rotation += weg / 16;
     }
+    // Der Kurbler dreht das Rad, solange die Kabine faehrt; ohne Meister und
+    // mit Ware in den Kisten schlaeft er.
+    const schlaeft = !f.meister && !f.laeuft && stand.pressen.some((p) => p.kiste > 0);
+    this.kurbler.spiele(f.laeuft ? 'kurbeln' : schlaeft ? 'schlafen' : 'idle');
+    this.kurbler.aktualisiere(this.dtZuletzt);
+    this.zeigeMeister(this.paternosterMeister, f, jetzt);
+  }
+
+  private dtZuletzt = 16;
+
+  /** Ein Hallen-Meister: steht, wenn eingestellt, und pfeift beim Ausloesen der Faehigkeit. */
+  private zeigeMeister(figur: Figur, s: { meister: boolean; faehigkeitBis: number; abklingenBis: number }, jetzt: number): void {
+    figur.wurzel.visible = s.meister;
+    if (!s.meister) return;
+    const seit = jetzt - (s.faehigkeitBis - FAEHIGKEIT_MS);
+    figur.spiele(jetzt < s.faehigkeitBis && seit < 900 ? 'pfeifen' : 'idle');
+    figur.aktualisiere(this.dtZuletzt);
   }
 
   /** Hoehe der Kabine: 0 = oben in der Halle, k = an Etage k, dazwischen gleichmaessig. */
@@ -624,7 +737,7 @@ export class Szene {
       x = von + (bis - von) * a;
       this.traeger.spiele(wagen.anteil < 0.7 ? 'laufen_tragen' : 'einladen');
       this.traeger.schaue(1);
-      this.traeger.traegt(wagen.anteil < 0.85 ? this.t[stapelBild(0)]! : null);
+      this.traeger.traegt(wagen.anteil < 0.85 ? this.paket : null);
     } else if (wagen.phase === 'weg') {
       const a = Math.min(1, wagen.anteil / 0.6);
       x = bis - (bis - von) * a;
@@ -638,6 +751,7 @@ export class Szene {
     }
     this.traeger.wurzel.position.set(x, h.boden);
     this.traeger.aktualisiere(dt);
+    this.zeigeMeister(this.versandMeister, v, jetzt);
   }
 
   private zeichneDebug(): void {

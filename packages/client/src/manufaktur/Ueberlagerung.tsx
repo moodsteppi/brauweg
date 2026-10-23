@@ -3,15 +3,15 @@ import {
   type ManufakturStand,
   type Station,
   type Ziel,
-  ausbauLeistbar,
   faehigkeitBereit,
   freischaltKosten,
   meisterKosten,
+  stufenFuer,
 } from '@brauweg/manufaktur-kern';
 
 import type { Getragen } from '../api';
 import { Pinguin } from '../pinguin';
-import { BILD } from './bilder';
+import { stapelBild } from './bilder';
 import { useGeaendert } from './effekte';
 import { KARTENARTEN } from './namen';
 import { type Rechteck, BREITE, etage, gesamtHoehe, halle } from './szene/layout';
@@ -20,17 +20,24 @@ import { kurz } from './zahlen';
 /**
  * Alles, worauf man tippt, als DOM-Knoepfe genau ueber der Szene — in
  * Welt-Einheiten (390 breit), skaliert wie die Szene. Die Regel fuers Tippen:
- * Figur oder Maschine → arbeiten, Schild → Upgrade, Meister-Platz → Meister.
- * Kein Dauertext: Ein schlafender Pinguin mit „Zzz" ist Hinweis genug.
+ * Figur oder Maschine → arbeiten, Schild → Upgrade, Meister → Faehigkeit
+ * (oder, leer, einstellen).
  *
- * Gold heisst nur „Geld" oder „kannst du dir leisten". Ein Schild leuchtet
- * gold, wenn der Ausbau bezahlbar ist; der Engpass pulsiert rot.
+ * Zwei Zustaende, nie verwechselt (Rueckmeldung 23.10.2026):
+ * - **schlaeft**: kein Meister, wartet auf einen Tipp → „Zzz" am Kopf des
+ *   Pinguins dieser Station.
+ * - **Engpass**: die Kette laeuft, diese Station ist die langsamste → das
+ *   Schild pulsiert rot. Die Ware staut sich davor (Kisten, Packtisch).
+ *
+ * Gold heisst nur „bezahlbar": der Pfeil am Schild, ein leerer Meister-Platz,
+ * das Schild an der Bretterwand.
  */
 export function Ueberlagerung({
   stand,
   jetzt,
   engpass,
   getragen,
+  direktor,
   onArbeiten,
   onSchild,
   onMeister,
@@ -40,6 +47,8 @@ export function Ueberlagerung({
   jetzt: number;
   engpass: Kettenglied | null;
   getragen: Getragen | undefined;
+  /** Was der Direktor gerade tut — er winkt bei Verkaeufen und jubelt bei Upgrades. */
+  direktor: 'ruhig' | 'winkt' | 'jubelt';
   onArbeiten: (ziel: Ziel) => void;
   onSchild: (ziel: Ziel) => void;
   onMeister: (ziel: Ziel) => void;
@@ -48,60 +57,33 @@ export function Ueberlagerung({
   const h = halle();
   const anzahl = stand.pressen.length;
   const gesperrt = anzahl < KARTENARTEN.length ? anzahl : null;
+  const paternosterSchlaeft = schlaeft(stand.paternoster, stand.pressen.some((p) => p.kiste > 0));
+  const versandSchlaeft = schlaeft(stand.versand, stand.packtisch > 0);
 
   return (
     <div className="mf-ueber" style={{ width: BREITE, height: gesamtHoehe(anzahl) }}>
-      {/* Versandhalle */}
+      {/* Versandhalle: Wagen und Packer, Kopfstueck und Kurbler zum Arbeiten */}
       <Flaeche
-        r={h.wagen}
-        klasse="mf-tipp"
+        r={{ x: h.traegerWeg.von - 20, y: h.wagen.y, b: h.wagen.x + h.wagen.b - h.traegerWeg.von + 20, h: h.wagen.h }}
         label="Lieferwagen beladen"
         onClick={() => onArbeiten({ art: 'versand' })}
       />
-      <Flaeche r={h.kopf} klasse="mf-tipp" label="Paternoster fahren" onClick={() => onArbeiten({ art: 'paternoster' })} />
-      <Schild
-        r={h.paternosterSchild}
-        name="Paternoster"
-        station={stand.paternoster}
-        leistbar={ausbauLeistbar(stand, { art: 'paternoster' })}
-        engpass={engpass === 'paternoster'}
-        onClick={() => onSchild({ art: 'paternoster' })}
+      <Flaeche
+        r={{ x: h.kopf.x, y: h.kopf.y, b: h.kurbler.x + 20 - h.kopf.x, h: h.kopf.h }}
+        label="Paternoster fahren"
+        onClick={() => onArbeiten({ art: 'paternoster' })}
       />
-      <MeisterPlatz
-        r={h.paternosterMeister}
-        name="Paternoster"
-        station={stand.paternoster}
-        kosten={meisterKosten({ art: 'paternoster' }, stand.manufaktur)}
-        taler={stand.taler}
-        jetzt={jetzt}
-        onClick={() => onMeister({ art: 'paternoster' })}
-      />
-      <Schild
-        r={h.versandSchild}
-        name="Versand"
-        station={stand.versand}
-        leistbar={ausbauLeistbar(stand, { art: 'versand' })}
-        engpass={engpass === 'versand'}
-        onClick={() => onSchild({ art: 'versand' })}
-      />
-      <MeisterPlatz
-        r={h.versandMeister}
-        name="Versand"
-        station={stand.versand}
-        kosten={meisterKosten({ art: 'versand' }, stand.manufaktur)}
-        taler={stand.taler}
-        jetzt={jetzt}
-        onClick={() => onMeister({ art: 'versand' })}
-      />
-      <span className="mf-bestand" style={{ left: h.packtisch.x + 8, top: h.packtisch.y - 6 }} aria-label={`Packtisch ${kurz(stand.packtisch)}`}>
-        {kurz(stand.packtisch)}
-      </span>
-      {schlaeft(stand.versand, stand.packtisch > 0) && <Zzz x={h.traegerWeg.von + 10} y={h.boden - 70} />}
-      {schlaeft(stand.paternoster, stand.pressen.some((p) => p.kiste > 0)) && <Zzz x={h.kopf.x + 6} y={h.kopf.y - 22} />}
-      {/* Der Direktor: dein eigener Pinguin, mit allem, was du traegst. */}
+      <Schild r={h.paternosterSchild} name="Paternoster" stand={stand} ziel={{ art: 'paternoster' }} engpass={engpass === 'paternoster'} onClick={onSchild} />
+      <MeisterPlatz r={h.paternosterMeister} figur={h.paternosterMeisterFigur} name="Paternoster" stand={stand} ziel={{ art: 'paternoster' }} jetzt={jetzt} onClick={onMeister} />
+      <Schild r={h.versandSchild} name="Versand" stand={stand} ziel={{ art: 'versand' }} engpass={engpass === 'versand'} onClick={onSchild} />
+      <MeisterPlatz r={h.versandMeister} figur={h.versandMeisterFigur} name="Versand" stand={stand} ziel={{ art: 'versand' }} jetzt={jetzt} onClick={onMeister} />
+      <Bestand x={h.packtisch.x + 8} y={h.packtisch.y - 22} wert={stand.packtisch} bild={stapelBild(0)} name="Packtisch" />
+      {versandSchlaeft && <Zzz x={h.traegerWeg.von + 6} y={h.boden - 74} />}
+      {paternosterSchlaeft && <Zzz x={h.kurbler.x + 6} y={h.boden - 74} />}
+      {/* Der Direktor: dein eigener Pinguin auf seinem Podest, mit allem, was du traegst. */}
       {getragen && (
-        <span className="mf-direktor" style={lage(h.direktor)} aria-hidden="true">
-          <Pinguin getragen={getragen} groesse={3.2} />
+        <span className={`mf-direktor is-${direktor}`} style={lage(h.direktor)} aria-hidden="true">
+          <Pinguin getragen={getragen} groesse={3.1} />
         </span>
       )}
 
@@ -114,33 +96,11 @@ export function Ueberlagerung({
             <span className="mf-nummer" style={{ left: e.nummer.x, top: e.nummer.y }} aria-hidden="true">
               {i + 1}
             </span>
-            <span className="mf-bestand" style={{ left: e.kiste.x + e.kiste.b / 2, top: e.boden - 24 }} aria-label={`Kiste ${kurz(p.kiste)}`}>
-              {kurz(p.kiste)}
-            </span>
-            <Flaeche
-              r={e.arbeit}
-              klasse="mf-tipp"
-              label={`Presse ${i + 1}, ${KARTENARTEN[i]}: arbeiten`}
-              onClick={() => onArbeiten(ziel)}
-            />
-            {schlaeft(p, true) && <Zzz x={e.kiste.x + e.kiste.b + 34} y={e.boden - 50} />}
-            <MeisterPlatz
-              r={e.meister}
-              name={`Presse ${i + 1}`}
-              station={p}
-              kosten={meisterKosten(ziel, stand.manufaktur)}
-              taler={stand.taler}
-              jetzt={jetzt}
-              onClick={() => onMeister(ziel)}
-            />
-            <Schild
-              r={e.schild}
-              name={`Presse ${i + 1}`}
-              station={p}
-              leistbar={ausbauLeistbar(stand, ziel)}
-              engpass={engpass === 'pressen'}
-              onClick={() => onSchild(ziel)}
-            />
+            <Bestand x={e.bestand.x} y={e.bestand.y} wert={p.kiste} bild={stapelBild(i)} name={`Kiste ${i + 1}`} />
+            <Flaeche r={e.arbeit} label={`Presse ${i + 1}, ${KARTENARTEN[i]}: arbeiten`} onClick={() => onArbeiten(ziel)} />
+            {schlaeft(p, true) && <Zzz x={e.arbeit.x + 26} y={e.boden - 74} />}
+            <MeisterPlatz r={e.meister} figur={e.meisterFigur} name={`Presse ${i + 1}`} stand={stand} ziel={ziel} jetzt={jetzt} onClick={onMeister} />
+            <Schild r={e.schild} name={`Presse ${i + 1}`} stand={stand} ziel={ziel} engpass={engpass === 'pressen'} onClick={onSchild} />
           </div>
         );
       })}
@@ -174,83 +134,95 @@ function Zzz({ x, y }: { x: number; y: number }): React.JSX.Element {
   );
 }
 
-function Flaeche({
-  r,
-  klasse,
-  label,
-  onClick,
-}: {
-  r: Rechteck;
-  klasse: string;
-  label: string;
-  onClick: () => void;
-}): React.JSX.Element {
-  return <button type="button" className={klasse} style={lage(r)} aria-label={label} onClick={onClick} />;
+function Bestand({ x, y, wert, bild, name }: { x: number; y: number; wert: number; bild: string; name: string }): React.JSX.Element {
+  return (
+    <span className="mf-bestand" style={{ left: x, top: y }} aria-label={`${name}: ${kurz(wert)}`}>
+      <img src={bild} alt="" draggable={false} />
+      {kurz(wert)}
+    </span>
+  );
 }
 
-/** Das Stufen-Schild: der einzige Upgrade-Knopf einer Station. */
+function Flaeche({ r, label, onClick }: { r: Rechteck; label: string; onClick: () => void }): React.JSX.Element {
+  return <button type="button" className="mf-tipp" style={lage(r)} aria-label={label} onClick={onClick} />;
+}
+
+/**
+ * Das Stufen-Schild: der einzige Upgrade-Knopf einer Station. Nur Zahl und
+ * Pfeil; der Pfeil wird gold, wenn ein Ausbau bezahlbar ist, und die kleine
+ * Zahl daneben sagt, wie viele Stufen gerade gehen.
+ */
 function Schild({
   r,
   name,
-  station,
-  leistbar,
+  stand,
+  ziel,
   engpass,
   onClick,
 }: {
   r: Rechteck;
   name: string;
-  station: Station;
-  leistbar: boolean;
+  stand: ManufakturStand;
+  ziel: Ziel;
   engpass: boolean;
-  onClick: () => void;
+  onClick: (ziel: Ziel) => void;
 }): React.JSX.Element {
-  // Aufgestiegen: kurz glaenzen (die Arbeiter jubeln in der Szene dazu).
-  const glanz = useGeaendert(station.stufe);
+  const s = ziel.art === 'presse' ? stand.pressen[ziel.index]! : ziel.art === 'paternoster' ? stand.paternoster : stand.versand;
+  const bezahlbar = stufenFuer(stand, ziel, 'max');
+  const glanz = useGeaendert(s.stufe);
   return (
     <button
       type="button"
-      className={`mf-schild-stufe${leistbar ? ' is-leistbar' : ''}${engpass ? ' is-engpass' : ''}${glanz ? ' is-glanz' : ''}`}
+      className={`mf-schild-stufe${bezahlbar > 0 ? ' is-leistbar' : ''}${engpass ? ' is-engpass' : ''}${glanz ? ' is-glanz' : ''}`}
       style={lage(r)}
-      onClick={onClick}
-      aria-label={`${name}, Stufe ${station.stufe}${leistbar ? ', Ausbau bezahlbar' : ''}${engpass ? ', Engpass' : ''}`}
+      onClick={() => onClick(ziel)}
+      aria-label={`${name}, Stufe ${s.stufe}${bezahlbar > 0 ? `, ${bezahlbar} Stufen bezahlbar` : ''}${engpass ? ', Engpass' : ''}`}
     >
-      {engpass && (
-        <i className="mf-warnung" aria-hidden="true">
-          !
-        </i>
-      )}
-      <small>Stufe</small>
-      <b>{station.stufe}</b>
+      <i className="mf-pfeil" aria-hidden="true" />
+      <b>{s.stufe}</b>
+      {bezahlbar > 0 && <small className="mf-anzahl">+{bezahlbar > 99 ? '99' : bezahlbar}</small>}
     </button>
   );
 }
 
-/** Porträtrahmen: leer mit „+", besetzt mit dem Meister. */
+function countdown(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return s >= 60 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s` : `${s}s`;
+}
+
+/**
+ * Meister nur einmal zeigen: Leer ist der Platz ein Rahmen mit „+" und Preis.
+ * Eingestellt steht der Meister in der Szene (Arbeitergroesse); hier liegt
+ * dann nur eine Tippflaeche ueber ihm, darueber das Zeichen seiner
+ * Faehigkeit oder der Countdown bis sie wieder bereit ist.
+ */
 function MeisterPlatz({
   r,
+  figur,
   name,
-  station,
-  kosten,
-  taler,
+  stand,
+  ziel,
   jetzt,
   onClick,
 }: {
   r: Rechteck;
+  figur: Rechteck;
   name: string;
-  station: Station;
-  kosten: number;
-  taler: number;
+  stand: ManufakturStand;
+  ziel: Ziel;
   jetzt: number;
-  onClick: () => void;
+  onClick: (ziel: Ziel) => void;
 }): React.JSX.Element {
-  if (!station.meister) {
-    const leistbar = taler + 1e-9 >= kosten;
+  const s = ziel.art === 'presse' ? stand.pressen[ziel.index]! : ziel.art === 'paternoster' ? stand.paternoster : stand.versand;
+  if (!s.meister) {
+    const kosten = meisterKosten(ziel, stand.manufaktur);
+    const leistbar = stand.taler + 1e-9 >= kosten;
     return (
       <button
         type="button"
-        className={`mf-meisterplatz is-leer${leistbar ? ' is-leistbar' : ''}`}
+        className={`mf-meisterplatz${leistbar ? ' is-leistbar' : ''}`}
         style={lage(r)}
-        onClick={onClick}
+        onClick={() => onClick(ziel)}
         aria-label={`Meister für ${name} einstellen, ${kurz(kosten)} Taler`}
       >
         <span aria-hidden="true">+</span>
@@ -258,18 +230,25 @@ function MeisterPlatz({
       </button>
     );
   }
-  const wirkt = jetzt < station.faehigkeitBis;
-  const bereit = faehigkeitBereit(station, jetzt);
+  const wirkt = jetzt < s.faehigkeitBis;
+  const bereit = faehigkeitBereit(s, jetzt);
   return (
-    <button
-      type="button"
-      className={`mf-meisterplatz${wirkt ? ' is-wirkt' : bereit ? ' is-bereit' : ''}`}
-      style={lage(r)}
-      onClick={onClick}
-      aria-label={`Meister ${name}${wirkt ? ', Fähigkeit wirkt' : bereit ? ', Fähigkeit bereit' : ''}`}
-    >
-      <img src={BILD.meister} alt="" draggable={false} />
-    </button>
+    <>
+      <span
+        className={`mf-faehigkeit${wirkt ? ' is-wirkt' : bereit ? ' is-bereit' : ''}`}
+        style={{ left: figur.x + figur.b / 2, top: figur.y - 18 }}
+        aria-hidden="true"
+      >
+        {wirkt ? countdown(s.faehigkeitBis - jetzt) : bereit ? '⚡' : countdown(s.abklingenBis - jetzt)}
+      </span>
+      <button
+        type="button"
+        className="mf-tipp"
+        style={lage(figur)}
+        onClick={() => onClick(ziel)}
+        aria-label={`Meister ${name}${wirkt ? ', Fähigkeit wirkt' : bereit ? ', Fähigkeit auslösen' : ''}`}
+      />
+    </>
   );
 }
 
@@ -288,18 +267,19 @@ function GesperrteEtage({
   return (
     <button
       type="button"
-      className={`mf-gesperrt${leistbar ? ' is-leistbar' : ''}`}
-      style={{ left: e.kiste.x, top: e.reihe.y + 60, width: BREITE - e.kiste.x - 8, height: 56 }}
+      className={`mf-sperrschild${leistbar ? ' is-leistbar' : ''}`}
+      style={lage(e.sperrSchild)}
       onClick={onClick}
       aria-label={`Etage ${index + 1} mit ${KARTENARTEN[index]} bauen, ${kurz(kosten)} Taler`}
     >
+      <img src={stapelBild(index)} alt="" draggable={false} />
       <span>
-        Etage {index + 1} · {KARTENARTEN[index]}
+        <strong>{KARTENARTEN[index]}</strong>
+        <b>
+          <i className="mf-taler" aria-hidden="true" />
+          {kurz(kosten)}
+        </b>
       </span>
-      <b>
-        <i className="mf-taler" aria-hidden="true" />
-        {kurz(kosten)}
-      </b>
     </button>
   );
 }

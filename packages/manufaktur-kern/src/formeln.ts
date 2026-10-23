@@ -98,7 +98,13 @@ export const STELLSCHRAUBEN = {
 
   MEISTER_PRESSE: 120,
   MEISTER_PRESSE_STEIGUNG: 12,
-  MEISTER_TRANSPORT: 90,
+  /**
+   * Der Versand-Meister ist der guenstigste: Er ist der erste, den die
+   * Anleitung zeigt, weil ohne ihn offline nichts ankommt — wer zuerst einen
+   * Pressen-Meister kauft, produziert in einen Stau (Rueckmeldung 23.10.2026).
+   */
+  MEISTER_VERSAND: 60,
+  MEISTER_PATERNOSTER: 90,
 
   /**
    * Jede weitere Manufaktur ist teurer. Ohne das machte der doppelte Ertrag
@@ -267,6 +273,11 @@ export function freischaltKosten(anzahlPressen: number, manufaktur: number): num
 }
 
 export function meisterKosten(ziel: Ziel, manufaktur: number): number {
-  const grund = ziel.art === 'presse' ? W.MEISTER_PRESSE * W.MEISTER_PRESSE_STEIGUNG ** ziel.index : W.MEISTER_TRANSPORT;
+  const grund =
+    ziel.art === 'presse'
+      ? W.MEISTER_PRESSE * W.MEISTER_PRESSE_STEIGUNG ** ziel.index
+      : ziel.art === 'paternoster'
+        ? W.MEISTER_PATERNOSTER
+        : W.MEISTER_VERSAND;
   return grund * preisfaktor(manufaktur);
 }

@@ -30,15 +30,6 @@
   gap: 10px;
   padding: calc(var(--hb-oben) + 4px) 12px 8px;
 }
-.mf .mf-leerlauf {
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: rgba(72, 213, 107, 0.14);
-  border: 1px solid rgba(72, 213, 107, 0.5);
-  font: 400 15px var(--hb-anz);
-  color: var(--hb-gruen);
-  font-variant-numeric: tabular-nums;
-}
 .mf .mf-kasse {
   margin-left: auto;
   display: flex;
@@ -141,159 +132,6 @@
   50% { transform: translateY(-5px); opacity: 1; }
 }
 
-.mf .mf-nummer {
-  transform: translate(-50%, -50%);
-  min-width: 26px;
-  padding: 2px 6px;
-  border-radius: 8px;
-  background: rgba(7, 19, 47, 0.85);
-  border: 1px solid rgba(201, 162, 74, 0.6);
-  font: 400 14px var(--hb-anz);
-  color: #f3e6c4;
-  text-align: center;
-  pointer-events: none;
-}
-.mf .mf-etage-ueber .mf-bestand {
-  transform: translateX(-50%);
-}
-.mf .mf-bestand {
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: rgba(7, 19, 47, 0.78);
-  font: 400 12px var(--hb-anz);
-  color: #f3e6c4;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
-
-/* Stufen-Schild: Holzschild, gold wenn bezahlbar, rot pulsierend als Engpass. */
-.mf .mf-ueber .mf-schild-stufe {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #8a5a30, #5e3a1c);
-  border: 2px solid #3a2414;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
-  color: #f3e6c4;
-}
-.mf .mf-schild-stufe small {
-  font: 800 9px var(--hb-txt);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.8;
-}
-.mf .mf-schild-stufe b {
-  font: 400 22px/1 var(--hb-anz);
-}
-.mf .mf-ueber .mf-schild-stufe.is-leistbar {
-  background: linear-gradient(180deg, #ffd65a, #e0a21c);
-  border-color: #9a6a10;
-  color: #2a1a05;
-}
-.mf .mf-ueber .mf-schild-stufe.is-engpass {
-  animation: mf-engpass 1.6s ease-in-out infinite;
-}
-.mf .mf-warnung {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #e64646;
-  color: #fff;
-  font: 400 14px/20px var(--hb-anz);
-  font-style: normal;
-  text-align: center;
-}
-@keyframes mf-engpass {
-  0%, 100% { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(230, 70, 70, 0); }
-  50% { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(230, 70, 70, 0.6); }
-}
-
-/* Meister-Platz: Portraetrahmen. */
-.mf .mf-ueber .mf-meisterplatz {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border-radius: 12px;
-  background: rgba(7, 19, 47, 0.75);
-  border: 3px solid #c9a24a;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
-}
-.mf .mf-meisterplatz img {
-  width: 54px;
-  height: 54px;
-  margin-top: 6px;
-}
-.mf .mf-ueber .mf-meisterplatz.is-leer {
-  border-style: dashed;
-  border-color: rgba(243, 230, 196, 0.45);
-  color: rgba(243, 230, 196, 0.85);
-}
-.mf .mf-meisterplatz.is-leer span {
-  font: 400 26px/1 var(--hb-anz);
-}
-.mf .mf-meisterplatz.is-leer small {
-  font: 400 11px var(--hb-anz);
-}
-.mf .mf-ueber .mf-meisterplatz.is-leer.is-leistbar {
-  border-color: var(--hb-gold);
-  color: var(--hb-gold);
-}
-.mf .mf-ueber .mf-meisterplatz.is-bereit {
-  box-shadow: 0 0 0 3px rgba(72, 213, 107, 0.55);
-}
-.mf .mf-ueber .mf-meisterplatz.is-wirkt {
-  border-color: #48d56b;
-  animation: mf-wirkt 0.8s ease-in-out infinite;
-}
-@keyframes mf-wirkt {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-/* Gesperrte Etage: Bretterwand (Szene) mit Preis (hier). */
-.mf .mf-ueber .mf-gesperrt {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 14px;
-  border-radius: 14px;
-  background: rgba(7, 19, 47, 0.82);
-  border: 2px solid rgba(243, 230, 196, 0.35);
-  color: #f3e6c4;
-  font: 800 14px var(--hb-txt);
-}
-.mf .mf-gesperrt b {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font: 400 18px var(--hb-anz);
-}
-.mf .mf-ueber .mf-gesperrt.is-leistbar {
-  border-color: var(--hb-gold);
-  color: var(--hb-gold);
-}
-
-.mf .mf-direktor {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  pointer-events: none;
-  transform-origin: 50% 100%;
-  animation: mf-direktor 3.2s ease-in-out infinite;
-}
-@keyframes mf-direktor {
-  0%, 100% { transform: rotate(-2deg); }
-  50% { transform: rotate(2deg); }
-}
-
 /* Fingeranleitung: zeigt beim ersten Start, wohin man tippt. */
 .mf .mf-finger {
   /* Liegt neben der Knopf-Ebene, nicht in ihr — deshalb selbst absolut. */
@@ -310,41 +148,6 @@
   50% { transform: translate(-30%, -10px); }
 }
 
-/* --- Untere Leiste ------------------------------------------------------ */
-
-.mf .mf-unten {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
-  background: var(--hb-grund-tief);
-  border-top: 1px solid var(--hb-kontur);
-}
-.mf .mf-unten .mf-unten-knopf {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 46px;
-  border-radius: 12px;
-  background: #1c2547;
-  border: 1px solid var(--hb-kontur);
-  color: var(--hb-tinte);
-  font: 800 13px var(--hb-txt);
-}
-.mf .mf-unten .mf-unten-knopf:disabled {
-  opacity: 0.45;
-}
-.mf .mf-pfeile {
-  display: flex;
-  gap: 4px;
-}
-.mf .mf-unten .mf-unten-knopf.is-pfeil {
-  flex: none;
-  width: 46px;
-}
-
 /* --- Blaetter ------------------------------------------------------------ */
 
 .mf-blatt {
@@ -357,91 +160,6 @@
   font: 400 20px var(--hb-anz);
   text-align: center;
 }
-.mf-kennzahlen {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.mf-kennzahlen div {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-}
-.mf-kennzahlen dt {
-  font: 700 13px var(--hb-txt);
-  color: var(--hb-leise);
-}
-.mf-kennzahlen dd {
-  margin: 0;
-  font: 400 15px var(--hb-anz);
-  font-variant-numeric: tabular-nums;
-}
-.mf-meilenstein {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font: 700 12px var(--hb-txt);
-  color: var(--hb-leise);
-}
-.mf-fortschritt {
-  display: block;
-  height: 8px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-.mf-fortschritt i {
-  display: block;
-  height: 100%;
-  background: #48d56b;
-}
-.mf-mengen {
-  display: flex;
-  gap: 6px;
-}
-:is(.hb, .spe) .mf-mengen .mf-menge {
-  flex: 1;
-  min-height: 44px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--hb-kontur);
-  font: 800 14px var(--hb-txt);
-}
-:is(.hb, .spe) .mf-mengen .mf-menge.is-an {
-  background: var(--hb-tinte);
-  color: var(--hb-grund);
-}
-.mf-meister-gross {
-  width: 96px;
-  height: 96px;
-  align-self: center;
-}
-.mf-meisterliste {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.mf-meisterliste li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.mf-meisterliste img {
-  width: 40px;
-  height: 40px;
-}
-.mf-meisterliste span {
-  flex: 1;
-  font: 700 14px var(--hb-txt);
-}
-
 .mf-umzug-bild {
   display: flex;
   align-items: flex-end;
@@ -542,5 +260,486 @@
   .mf .mf-popup,
   .mf .mf-ueber .mf-schild-stufe.is-glanz {
     animation-duration: 1ms;
+  }
+}
+
+/* === Rueckmeldung 23.10.2026: Schilder und Meister in der Welt ============= */
+
+/* Leerlauf: gruen, wenn die Meister-Kette etwas abwirft; grau bei 0. Antippen erklaert. */
+.mf .mf-hud .mf-leerlauf {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(72, 213, 107, 0.14);
+  border: 1px solid rgba(72, 213, 107, 0.5);
+  font: 400 15px var(--hb-anz);
+  color: var(--hb-gruen);
+  font-variant-numeric: tabular-nums;
+}
+.mf .mf-hud .mf-leerlauf.is-null {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--hb-leise);
+}
+.mf .mf-bildrate {
+  font: 400 13px var(--hb-anz);
+  color: #ffcc00;
+}
+
+/* Etagennummer: Messingschild am Schacht. */
+.mf .mf-nummer {
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #f0d27a, #b8892c);
+  border: 1px solid #6e4e14;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 2px 2px rgba(0, 0, 0, 0.5);
+  font: 400 15px var(--hb-anz);
+  color: #3a2608;
+  pointer-events: none;
+}
+
+/* Bestand: kleines Kartensymbol und die Zahl, ueber der Kiste. */
+.mf .mf-bestand {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px 1px 3px;
+  border-radius: 6px;
+  background: rgba(7, 19, 47, 0.8);
+  font: 400 12px var(--hb-anz);
+  color: #f3e6c4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.mf .mf-bestand img {
+  width: 14px;
+  height: 14px;
+}
+
+/* Stufen-Schild: kleines Holzschild, nur Zahl; der Pfeil darueber wird gold, wenn bezahlbar. */
+.mf .mf-ueber .mf-schild-stufe {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #8a5a30, #5e3a1c);
+  border: 2px solid #3a2414;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 220, 160, 0.25);
+  color: #f3e6c4;
+}
+.mf .mf-schild-stufe b {
+  font: 400 20px/1 var(--hb-anz);
+}
+.mf .mf-schild-stufe .mf-pfeil {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  width: 18px;
+  height: 14px;
+  transform: translateX(-50%);
+  clip-path: polygon(50% 0, 100% 60%, 70% 60%, 70% 100%, 30% 100%, 30% 60%, 0 60%);
+  background: rgba(243, 230, 196, 0.35);
+}
+.mf .mf-schild-stufe.is-leistbar .mf-pfeil {
+  background: linear-gradient(180deg, #ffe08a, #e0a21c);
+  filter: drop-shadow(0 0 3px rgba(255, 200, 60, 0.9));
+  animation: mf-pfeil 1.2s ease-in-out infinite;
+}
+@keyframes mf-pfeil {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -3px); }
+}
+.mf .mf-schild-stufe .mf-anzahl {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  min-width: 20px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: #e0a21c;
+  color: #2a1a05;
+  font: 400 11px/14px var(--hb-anz);
+  text-align: center;
+}
+/* Engpass: Die Kette laeuft, diese Station ist die langsamste — roter Puls. */
+.mf .mf-ueber .mf-schild-stufe.is-engpass {
+  animation: mf-engpass 1.6s ease-in-out infinite;
+}
+@keyframes mf-engpass {
+  0%, 100% { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 0 0 rgba(230, 70, 70, 0); }
+  50% { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 0 5px rgba(230, 70, 70, 0.65); }
+}
+
+/* Leerer Meister-Platz: Rahmen mit „+" und Preis. Eingestellt verschwindet er. */
+.mf .mf-ueber .mf-meisterplatz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(7, 19, 47, 0.55);
+  border: 2px dashed rgba(243, 230, 196, 0.45);
+  color: rgba(243, 230, 196, 0.85);
+}
+.mf .mf-meisterplatz span {
+  font: 400 24px/1 var(--hb-anz);
+}
+.mf .mf-meisterplatz small {
+  font: 400 11px var(--hb-anz);
+}
+.mf .mf-ueber .mf-meisterplatz.is-leistbar {
+  border-color: var(--hb-gold);
+  color: var(--hb-gold);
+}
+/* Ueber dem eingestellten Meister: Faehigkeit bereit (⚡) oder Countdown. */
+.mf .mf-faehigkeit {
+  transform: translate(-50%, -100%);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(7, 19, 47, 0.85);
+  font: 400 11px var(--hb-anz);
+  color: var(--hb-leise);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.mf .mf-faehigkeit.is-bereit {
+  background: #e0a21c;
+  color: #2a1a05;
+  font-size: 13px;
+  animation: mf-pfeil 1.2s ease-in-out infinite;
+}
+.mf .mf-faehigkeit.is-wirkt {
+  background: #2e8a49;
+  color: #fff;
+}
+
+/* Gesperrte Etage: kleines Holzschild an der Bretterwand. */
+.mf .mf-ueber .mf-sperrschild {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #8a5a30, #5e3a1c);
+  border: 2px solid #3a2414;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+  color: #f3e6c4;
+  text-align: left;
+}
+.mf .mf-sperrschild img {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.mf .mf-sperrschild span {
+  display: flex;
+  flex-direction: column;
+}
+.mf .mf-sperrschild strong {
+  font: 400 16px var(--hb-anz);
+}
+.mf .mf-sperrschild b {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 15px var(--hb-anz);
+}
+.mf .mf-ueber .mf-sperrschild.is-leistbar {
+  border-color: var(--hb-gold);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 10px rgba(255, 200, 60, 0.6);
+}
+.mf .mf-ueber .mf-sperrschild.is-leistbar b {
+  color: var(--hb-gold);
+}
+
+/* Der Direktor auf seinem Podest: steht still, winkt bei Verkaeufen, jubelt bei Upgrades. */
+.mf .mf-direktor {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+}
+.mf .mf-direktor.is-winkt {
+  animation: mf-winkt 0.4s ease-in-out 3;
+}
+.mf .mf-direktor.is-jubelt {
+  animation: mf-jubelt 0.5s ease-out 2;
+}
+@keyframes mf-winkt {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(-8deg); }
+}
+@keyframes mf-jubelt {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(-10px) scale(0.95, 1.05); }
+  70% { transform: translateY(0) scale(1.06, 0.94); }
+}
+
+/* --- Untere Leiste: Holz und Messing, mit Symbolen ------------------------ */
+
+.mf .mf-unten {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, #4a2e17, #2e1b0c);
+  border-top: 2px solid #c9a24a;
+}
+.mf .mf-unten .mf-unten-knopf {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 50px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #8a5a30, #5e3a1c);
+  border: 1px solid #c9a24a;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.25), 0 2px 0 rgba(0, 0, 0, 0.45);
+  color: #f3e6c4;
+  font: 400 12px var(--hb-anz);
+}
+.mf .mf-unten .mf-unten-knopf:disabled {
+  opacity: 0.55;
+}
+.mf .mf-symbol {
+  width: 20px;
+  height: 20px;
+  fill: #f0d27a;
+}
+.mf .mf-unten .mf-ort {
+  flex: 1.6;
+}
+.mf .mf-ort span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  text-align: center;
+}
+.mf .mf-ort small {
+  font: 400 10px var(--hb-anz);
+  color: #f0d27a;
+}
+/* Boost: Ring zeigt, wie weit die naechste Faehigkeit wieder bereit ist. */
+.mf .mf-unten .mf-boost::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: conic-gradient(#f0d27a calc(var(--anteil, 0) * 360deg), rgba(255, 255, 255, 0.12) 0);
+  -webkit-mask: radial-gradient(circle, transparent 10px, #000 11px);
+  mask: radial-gradient(circle, transparent 10px, #000 11px);
+}
+.mf .mf-unten .mf-boost.is-bereit::before {
+  background: #ffd65a;
+  box-shadow: 0 0 8px rgba(255, 200, 60, 0.8);
+}
+.mf .mf-pfeile {
+  display: flex;
+  gap: 4px;
+}
+.mf .mf-unten .mf-unten-knopf.is-pfeil {
+  flex: none;
+  width: 44px;
+}
+
+/* --- Upgrade-Blatt ------------------------------------------------------ */
+
+.mf-hauptzeile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.mf-hauptzeile small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.mf-hauptzeile span {
+  font: 400 24px var(--hb-anz);
+  font-variant-numeric: tabular-nums;
+}
+.mf-hauptzeile b {
+  color: #48d56b;
+}
+.mf-kennzahlen {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mf-kennzahlen div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.mf-kennzahlen dt {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.mf-kennzahlen dd {
+  margin: 0;
+  font: 400 15px var(--hb-anz);
+  font-variant-numeric: tabular-nums;
+}
+.mf-meilenstein {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.mf-fortschritt {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.mf-fortschritt i {
+  display: block;
+  height: 100%;
+  background: #48d56b;
+}
+.mf-mengen {
+  display: flex;
+  gap: 6px;
+}
+:is(.hb, .spe) .mf-mengen .mf-menge {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 56px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  color: var(--hb-tinte);
+  text-align: center;
+}
+:is(.hb, .spe) .mf-mengen .mf-menge b {
+  font: 400 17px var(--hb-anz);
+}
+:is(.hb, .spe) .mf-mengen .mf-menge small {
+  font: 400 12px var(--hb-anz);
+  color: var(--hb-leise);
+}
+:is(.hb, .spe) .mf-mengen .mf-menge.is-leistbar small {
+  color: var(--hb-gold);
+}
+/* Auswahl: Messingrand. */
+:is(.hb, .spe) .mf-mengen .mf-menge.is-an {
+  border-color: #c9a24a;
+  background: rgba(201, 162, 74, 0.14);
+}
+:is(.hb, .spe) .mf-kaufen {
+  min-height: 56px;
+  font: 400 19px var(--hb-anz);
+}
+:is(.hb, .spe) .hb-kn.mf-kaufen.is-gedaempft,
+:is(.hb, .spe) .hb-kn.mf-kaufen:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--hb-leise);
+  box-shadow: none;
+  opacity: 1;
+}
+
+/* --- Meister-Blatt ------------------------------------------------------ */
+
+.mf-blatt-hinweis {
+  margin: 0;
+  font-size: 13px;
+  color: var(--hb-leise);
+}
+.mf-blatt-warnung {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(230, 70, 70, 0.12);
+  border: 1px solid rgba(230, 70, 70, 0.45);
+}
+.mf-meisterliste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mf-meisterliste li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.mf-meisterliste li.is-markiert {
+  outline: 2px solid #c9a24a;
+}
+.mf-meisterliste-bild {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.mf-meisterliste-bild.is-leer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(243, 230, 196, 0.45);
+  border-radius: 10px;
+  font: 400 20px var(--hb-anz);
+  color: rgba(243, 230, 196, 0.85);
+}
+.mf-meisterliste-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.mf-meisterliste-text strong {
+  font: 700 14px var(--hb-txt);
+}
+.mf-meisterliste-text small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+:is(.hb, .spe) .mf-meisterliste .hb-kn {
+  flex: none;
+  min-width: 96px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mf .mf-schild-stufe.is-leistbar .mf-pfeil,
+  .mf .mf-faehigkeit.is-bereit,
+  .mf .mf-direktor.is-winkt,
+  .mf .mf-direktor.is-jubelt {
+    animation: none;
+  }
+  .mf .mf-ueber .mf-schild-stufe.is-engpass {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(230, 70, 70, 0.6);
   }
 }

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
+  ABKLINGEN_MS,
   type Aktion,
   type Menge,
   type Ziel,
-  engpass,
+  engpassSichtbar,
   faehigkeitBereit,
   leerlaufErtrag,
   stationVon,
@@ -15,16 +16,16 @@ import { t } from '../i18n';
 import { spiele } from '../klang';
 import { HbBlatt, Schliessen, useEscape, useRueckfrage } from '../screens/HbBlatt';
 import { type AnleitungsZiel, anleitungsSchritt } from './anleitung';
-import { ManufakturBlatt, MeisterBlatt, MeisterUebersicht, UpgradeBlatt } from './Blaetter';
+import { LeerlaufBlatt, ManufakturBlatt, MeisterBlatt, UpgradeBlatt, WillkommenBlatt } from './Blaetter';
 import { manufakturBild } from './bilder';
 import { manufakturName } from './namen';
 import type { Ausschnitt, Szene, SzenenEreignis } from './szene/Szene';
 import { type Rechteck, BREITE, ETAGE_HOEHE, etage, gesamtHoehe, halle } from './szene/layout';
 import { Ueberlagerung } from './Ueberlagerung';
-import { type Verkauf, Verkaeufe, useZaehler } from './effekte';
+import { type Verkauf, Verkaeufe, useGeaendert, useZaehler } from './effekte';
 import type { Leitung } from './steuerung';
 import { useManufaktur } from './useManufaktur';
-import { dauer, kurz } from './zahlen';
+import { kurz } from './zahlen';
 import './manufaktur.css';
 
 export { KARTENARTEN, MANUFAKTUREN } from './namen';
@@ -34,8 +35,8 @@ const ZEICHNEN_MS = 250;
 
 type Blatt =
   | { art: 'upgrade'; ziel: Ziel }
-  | { art: 'meister'; ziel: Ziel }
-  | { art: 'meisterliste' }
+  | { art: 'meister'; ziel?: Ziel }
+  | { art: 'leerlauf' }
   | { art: 'manufaktur' };
 
 function fingerOrt(ziel: AnleitungsZiel): Rechteck {
@@ -132,8 +133,10 @@ export function Kartenmanufaktur({
   const stand = m.bereit ? m.steuerung.stand() : null;
   const anzahl = stand?.pressen.length ?? 1;
   const faktor = masse.breite / BREITE;
-  const weltHoehe = gesamtHoehe(anzahl) * faktor;
-  const leinwandHoehe = Math.min(masse.hoehe, weltHoehe);
+  // Mindestens so hoch wie das Feld: Unter der Welt soll kein leerer Raum
+  // bleiben — die Kellerwand laeuft bis zum Rand ins Dunkle aus (Szene).
+  const weltHoehe = Math.max(gesamtHoehe(anzahl) * faktor, masse.hoehe);
+  const leinwandHoehe = masse.hoehe;
   ausschnitt.current = { oben: feld.current?.scrollTop ?? 0, hoehe: leinwandHoehe, breite: masse.breite };
 
   // Die Szene: einmal bauen, sobald der Stand da ist; ohne WebGL bleibt sie weg.
@@ -175,6 +178,12 @@ export function Kartenmanufaktur({
   }, [debug]);
 
   const talerAnzeige = useZaehler(stand?.taler ?? 0);
+  // Der Direktor winkt, wenn verkauft wird, und jubelt bei jedem Ausbau.
+  const verkauft = useGeaendert(stand?.verdient ?? 0, 1200);
+  const ausgebaut = useGeaendert(
+    stand ? [stand.versand, stand.paternoster, ...stand.pressen].reduce((summe, x) => summe + x.stufe, 0) : 0,
+    1000,
+  );
 
   const tue = useCallback(
     (aktion: Aktion, klang: 'tipp' | 'kauf' = 'tipp'): boolean => {
@@ -213,11 +222,17 @@ export function Kartenmanufaktur({
 
   const jetzt = m.steuerung.jetzt();
   const leerlauf = leerlaufErtrag(stand);
-  const glied = engpass(stand);
+  const glied = engpassSichtbar(stand);
   const finger = anleitungsSchritt(stand);
-  const boostBereit = [stand.versand, stand.paternoster, ...stand.pressen].some((s) => faehigkeitBereit(s, jetzt));
+  const stationen = [stand.versand, stand.paternoster, ...stand.pressen];
+  const mitMeister = stationen.filter((s) => s.meister);
+  const boostBereit = mitMeister.some((s) => faehigkeitBereit(s, jetzt));
+  // Ring im Boost-Knopf: wie weit die naechste Faehigkeit wieder bereit ist.
+  const naechsteBereit = mitMeister.length === 0 ? null : Math.min(...mitMeister.map((s) => Math.max(0, s.abklingenBis - jetzt)));
+  const boostAnteil = naechsteBereit === null ? 0 : 1 - naechsteBereit / ABKLINGEN_MS;
   const rolle = (richtung: 1 | -1): void =>
     feld.current?.scrollBy({ top: richtung * ETAGE_HOEHE * faktor, behavior: 'smooth' });
+  const bildrate = debug ? szene.current?.fps() ?? 0 : 0;
 
   return (
     <div
@@ -230,10 +245,16 @@ export function Kartenmanufaktur({
       <header className="mf-hud">
         <Schliessen onClick={onClose} />
         {leerlauf !== null && (
-          <span className="mf-leerlauf" aria-label={`Leerlauf-Ertrag ${kurz(leerlauf)} Taler je Sekunde`}>
+          <button
+            type="button"
+            className={`mf-leerlauf${leerlauf <= 0 ? ' is-null' : ''}`}
+            onClick={() => setBlatt({ art: 'leerlauf' })}
+            aria-label={`Leerlauf-Ertrag ${kurz(leerlauf)} Taler je Sekunde, Erklärung`}
+          >
             +{kurz(leerlauf)}/s
-          </span>
+          </button>
         )}
+        {debug && <span className="mf-bildrate">{Math.round(bildrate)} fps</span>}
         <span className="mf-kasse" ref={kasse} aria-label={`${kurz(stand.taler)} Taler`}>
           <i className="mf-taler is-gross" aria-hidden="true" />
           {kurz(talerAnzeige)}
@@ -256,13 +277,20 @@ export function Kartenmanufaktur({
               jetzt={jetzt}
               engpass={glied}
               getragen={getragen}
+              direktor={ausgebaut ? 'jubelt' : verkauft ? 'winkt' : 'ruhig'}
               onArbeiten={(ziel) => {
                 const s = stationVon(stand, ziel);
                 // Mit Meister oder mitten im Zyklus ist nichts zu tun — dann auch kein Ton.
                 if (s && !s.meister && !s.laeuft) tue({ typ: 'arbeiten', ziel });
               }}
               onSchild={(ziel) => setBlatt({ art: 'upgrade', ziel })}
-              onMeister={(ziel) => setBlatt({ art: 'meister', ziel })}
+              onMeister={(ziel) => {
+                // Wie im Vorbild: Ein Tipp auf den Meister loest seine Faehigkeit aus,
+                // wenn sie bereit ist; sonst (und fuer leere Plaetze) das Meister-Blatt.
+                const s = stationVon(stand, ziel);
+                if (s?.meister && faehigkeitBereit(s, jetzt)) tue({ typ: 'faehigkeit', ziel }, 'kauf');
+                else setBlatt({ art: 'meister', ziel });
+              }}
               onFreischalten={() => tue({ typ: 'freischalten' }, 'kauf')}
             />
             {finger && (
@@ -275,29 +303,45 @@ export function Kartenmanufaktur({
       </div>
 
       <nav className="mf-unten" aria-label="Manufaktur">
-        <button type="button" className="mf-unten-knopf" onClick={() => setBlatt({ art: 'meisterliste' })}>
-          Meister
+        <button type="button" className="mf-unten-knopf" onClick={() => setBlatt({ art: 'meister' })}>
+          <Symbol art="meister" />
+          <span>Meister</span>
         </button>
         <button
           type="button"
-          className="mf-unten-knopf"
+          className={`mf-unten-knopf mf-boost${boostBereit ? ' is-bereit' : ''}`}
           disabled={!boostBereit}
           onClick={() => tue({ typ: 'boost' }, 'kauf')}
-          aria-label="Boost: alle bereiten Meister-Fähigkeiten auslösen"
+          style={{ '--anteil': boostAnteil } as React.CSSProperties}
+          aria-label={
+            boostBereit
+              ? 'Boost: alle bereiten Meister-Fähigkeiten auslösen'
+              : naechsteBereit === null
+                ? 'Boost: braucht einen Meister'
+                : `Boost bereit in ${Math.ceil(naechsteBereit / 1000)} Sekunden`
+          }
         >
-          Boost
+          <Symbol art="boost" />
+          <span>Boost</span>
         </button>
-        <button type="button" className="mf-unten-knopf" onClick={() => setBlatt({ art: 'manufaktur' })}>
-          {stand.manufaktur}/5
+        <button type="button" className="mf-unten-knopf mf-ort" onClick={() => setBlatt({ art: 'manufaktur' })}>
+          <Symbol art="haus" />
+          <span>
+            {manufakturName(stand.manufaktur)}
+            <small>{stand.manufaktur}/5</small>
+          </span>
         </button>
-        <span className="mf-pfeile">
-          <button type="button" className="mf-unten-knopf is-pfeil" onClick={() => rolle(-1)} aria-label="Nach oben">
-            ▲
-          </button>
-          <button type="button" className="mf-unten-knopf is-pfeil" onClick={() => rolle(1)} aria-label="Nach unten">
-            ▼
-          </button>
-        </span>
+        {/* Rollen lohnt erst, wenn die Welt hoeher ist als der Bildschirm. */}
+        {anzahl >= 3 && (
+          <span className="mf-pfeile">
+            <button type="button" className="mf-unten-knopf is-pfeil" onClick={() => rolle(-1)} aria-label="Nach oben">
+              <Symbol art="hoch" />
+            </button>
+            <button type="button" className="mf-unten-knopf is-pfeil" onClick={() => rolle(1)} aria-label="Nach unten">
+              <Symbol art="runter" />
+            </button>
+          </span>
+        )}
       </nav>
 
       {blatt?.art === 'upgrade' && (
@@ -311,18 +355,18 @@ export function Kartenmanufaktur({
       {blatt?.art === 'meister' && (
         <MeisterBlatt
           stand={stand}
-          ziel={blatt.ziel}
           jetzt={jetzt}
-          onEinstellen={() => tue({ typ: 'meister', ziel: blatt.ziel }, 'kauf') && setBlatt(null)}
-          onFaehigkeit={() => tue({ typ: 'faehigkeit', ziel: blatt.ziel }, 'kauf') && setBlatt(null)}
+          markiert={blatt.ziel}
+          onEinstellen={(ziel) => tue({ typ: 'meister', ziel }, 'kauf')}
+          onFaehigkeit={(ziel) => tue({ typ: 'faehigkeit', ziel }, 'kauf')}
           onClose={() => setBlatt(null)}
         />
       )}
-      {blatt?.art === 'meisterliste' && (
-        <MeisterUebersicht
+      {blatt?.art === 'leerlauf' && (
+        <LeerlaufBlatt
           stand={stand}
-          jetzt={jetzt}
-          onFaehigkeit={(ziel) => tue({ typ: 'faehigkeit', ziel }, 'kauf')}
+          ertrag={leerlauf ?? 0}
+          onMeister={() => setBlatt({ art: 'meister' })}
           onClose={() => setBlatt(null)}
         />
       )}
@@ -349,19 +393,15 @@ export function Kartenmanufaktur({
       )}
 
       {m.offline && (
-        <HbBlatt titel="Willkommen zurück" onClose={m.schliesseOffline} klasse="is-klein">
-          <div className="hb-rueckfrage">
-            <p className="hb-text">
-              Während du weg warst ({dauer(m.offline.sekunden)}), haben deine Meister gepresst und verkauft:
-            </p>
-            <p className="mf-offline-betrag">
-              <i className="mf-taler is-gross" aria-hidden="true" />+{kurz(m.offline.taler)} Taler
-            </p>
-            <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={m.schliesseOffline}>
-              Weiter
-            </button>
-          </div>
-        </HbBlatt>
+        <WillkommenBlatt
+          stand={stand}
+          offline={m.offline}
+          onMeister={() => {
+            m.schliesseOffline();
+            setBlatt({ art: 'meister' });
+          }}
+          onClose={m.schliesseOffline}
+        />
       )}
       {m.umgezogen !== null && (
         <HbBlatt titel={manufakturName(m.umgezogen)} onClose={m.schliesseUmzug} klasse="is-klein">
@@ -376,6 +416,22 @@ export function Kartenmanufaktur({
       )}
       {rueckfrage}
     </div>
+  );
+}
+
+/** Symbole der unteren Leiste — gezeichnet, im Holz-Messing-Stil der Leiste. */
+function Symbol({ art }: { art: 'meister' | 'boost' | 'haus' | 'hoch' | 'runter' }): React.JSX.Element {
+  const pfad = {
+    meister: 'M12 3a4 4 0 0 1 4 4v1H8V7a4 4 0 0 1 4-4zM6 9h12l-1 2H7zM8 12h8v2a4 4 0 0 1-8 0zM5 21c0-3 3-5 7-5s7 2 7 5z',
+    boost: 'M13 2 4 14h6l-1 8 9-12h-6z',
+    haus: 'M3 11 12 4l9 7v9h-6v-6H9v6H3z',
+    hoch: 'M12 6l7 9H5z',
+    runter: 'M12 18 5 9h14z',
+  }[art];
+  return (
+    <svg className="mf-symbol" viewBox="0 0 24 24" aria-hidden="true">
+      <path d={pfad} />
+    </svg>
   );
 }
 

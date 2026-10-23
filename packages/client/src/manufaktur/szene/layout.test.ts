@@ -12,7 +12,7 @@ describe('Manufaktur-Layout', () => {
   it('jede Tippfläche ist mindestens 44 pt groß, auch auf dem kleinsten Handy', () => {
     const faktor = 375 / BREITE; // iPhone SE
     const h = halle();
-    for (const r of [etage(0).meister, etage(0).schild, etage(0).arbeit, h.wagen, h.kopf, h.versandSchild, h.paternosterSchild, h.versandMeister, h.paternosterMeister]) {
+    for (const r of [etage(0).meister, etage(0).meisterFigur, etage(0).schild, etage(0).arbeit, etage(0).sperrSchild, h.wagen, h.kopf, h.versandSchild, h.paternosterSchild, h.versandMeister, h.paternosterMeister]) {
       expect(r.b * faktor).toBeGreaterThanOrEqual(TIPP_MIN);
       expect(r.h * faktor).toBeGreaterThanOrEqual(TIPP_MIN);
     }
@@ -30,8 +30,9 @@ describe('Manufaktur-Layout', () => {
     }
   });
 
-  it('die gesperrte Etage gibt es nur, solange noch eine fehlt', () => {
-    expect(reihen(1)).toBe(2);
+  it('unter der letzten Etage: die gesperrte und bis zu zwei Umrisse, nie mehr als acht', () => {
+    expect(reihen(1)).toBe(4);
+    expect(reihen(6)).toBe(8);
     expect(reihen(8)).toBe(8);
     expect(gesamtHoehe(8)).toBeGreaterThan(gesamtHoehe(1));
   });
