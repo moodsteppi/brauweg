@@ -56,8 +56,8 @@ describe('Kartenmanufaktur', () => {
     expect(schild.className).toContain('is-leistbar');
     fireEvent.click(schild);
     const blatt = await screen.findByRole('dialog', { name: /Presse 1/ });
-    expect(within(blatt).getByText('Ertrag je Zyklus')).toBeTruthy();
-    expect(within(blatt).getByText('Leistung pro Sekunde')).toBeTruthy();
+    expect(within(blatt).getByText('Wert pro Druckgang')).toBeTruthy();
+    expect(within(blatt).getByText('Druckt pro Sekunde')).toBeTruthy();
     fireEvent.click(within(blatt).getAllByRole('radio')[1]!);
     expect(within(blatt).getByLabelText('Stufe 1 auf 11')).toBeTruthy();
     const kaufen = within(blatt).getAllByRole('button').filter((b) => /Kaufen/.test(b.textContent ?? ''));

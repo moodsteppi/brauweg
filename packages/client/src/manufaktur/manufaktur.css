@@ -585,6 +585,12 @@
 .mf-hauptzeile b {
   color: #48d56b;
 }
+.mf-hauptzeile em {
+  font: 400 12px var(--hb-txt);
+  font-style: normal;
+  color: var(--hb-leise);
+  text-align: center;
+}
 .mf-kennzahlen {
   margin: 0;
   display: flex;

@@ -42,6 +42,16 @@ export function sekunden(wert: number): string {
   return `${ab(wert, wert < 10 ? 1 : 0).toLocaleString('de-DE', { maximumFractionDigits: 1 })} s`;
 }
 
+/**
+ * Eine Rate fuer die Hauptzeile im Upgrade-Blatt: unter 100 mit einer
+ * Nachkommastelle. Ganzzahlig stand dort „6 → 6", obwohl die Stufe 6,2 auf
+ * 6,7 hob — der Ausbau sah nutzlos aus.
+ */
+export function proSekunde(wert: number): string {
+  if (Math.abs(wert) >= 100) return kurz(wert);
+  return ab(wert, 1).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 /** „3 Std. 12 Min." für die Offline-Meldung. */
 export function dauer(sekunden: number): string {
   const std = Math.floor(sekunden / 3600);

@@ -286,9 +286,14 @@ export function Kartenmanufaktur({
               getragen={szeneLaeuft ? undefined : getragen}
               direktor={ausgebaut ? 'jubelt' : verkauft ? 'winkt' : 'ruhig'}
               onArbeiten={(ziel) => {
-                const s = stationVon(stand, ziel);
-                // Mit Meister oder mitten im Zyklus ist nichts zu tun — dann auch kein Ton.
-                if (s && !s.meister && !s.laeuft) tue({ typ: 'arbeiten', ziel });
+                // Der Stand von jetzt, nicht der vom letzten Zeichnen: React zeichnet
+                // nur bei sichtbaren DOM-Aenderungen neu, und ein alter Stand hielt
+                // einen laufenden Zyklus fuer beendet.
+                const s = stationVon(m.steuerung.stand() ?? stand, ziel);
+                // Mit Meister, mitten im Zyklus oder solange der letzte Tipp noch
+                // unterwegs ist, ist nichts zu tun — dann auch kein Ton. Ein zweiter
+                // Tipp vor der Antwort setzte den Pinguin sonst manchmal zurueck.
+                if (s && !s.meister && !s.laeuft && !m.steuerung.unterwegsFuer(ziel)) tue({ typ: 'arbeiten', ziel });
               }}
               onSchild={(ziel) => setBlatt({ art: 'upgrade', ziel })}
               onMeister={(ziel) => {

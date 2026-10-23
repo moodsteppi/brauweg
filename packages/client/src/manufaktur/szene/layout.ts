@@ -131,9 +131,11 @@ export function halle(): {
     kopf,
     rad: { x: kopf.x + kopf.b / 2, y: kopf.y + 26 },
     kurbler: { x: kopf.x + kopf.b + 14 },
-    // Auf dem Kopfstueck, ueber dem Antriebsrad; der Meister-Platz darueber am Schacht.
-    paternosterSchild: { x: kopf.x + 5, y: kopf.y - SCHILD - 4, b: SCHILD, h: SCHILD },
-    paternosterMeister: { x: kopf.x + 3, y: kopf.y - SCHILD - 66, b: 50, h: 56 },
+    // Mittig ueber dem Schacht, auf dem Kopfstueck — es ist rund 107 hoch
+    // (Szene.ts, KOPF_M); tiefer verdeckte das Schild das Zahnrad. Der
+    // Meister-Platz steht darueber, ebenfalls mittig.
+    paternosterSchild: { x: kopf.x + (kopf.b - SCHILD) / 2, y: boden - 107 - SCHILD + 4, b: SCHILD, h: SCHILD },
+    paternosterMeister: { x: kopf.x + (kopf.b - 50) / 2, y: boden - 107 - SCHILD + 4 - 62, b: 50, h: 56 },
     paternosterMeisterFigur: { x: kopf.x + kopf.b + 36, y: boden - 60, b: 34, h: 60 },
     podest: { x: 70, y: boden - 100, b: 36, h: 10 },
     direktor: { x: 70, y: boden - 150, b: 36, h: 50 },

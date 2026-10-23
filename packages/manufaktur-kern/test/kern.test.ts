@@ -186,9 +186,9 @@ test('Upgrade-Vorschau: vorher → nachher und der Weg zum naechsten Meilenstein
   assert.equal(v.stufe, 1);
   assert.equal(v.neueStufe, 11);
   assert.equal(v.leistbar, true);
-  const ertrag = v.kennzahlen.find((k) => k.name === 'Ertrag je Zyklus')!;
+  const ertrag = v.kennzahlen.find((k) => k.name === 'Wert pro Druckgang')!;
   assert.ok(ertrag.nachher > ertrag.vorher);
-  const zyklus = v.kennzahlen.find((k) => k.name === 'Zyklus')!;
+  const zyklus = v.kennzahlen.find((k) => k.name === 'Dauer pro Druckgang')!;
   assert.ok(Math.abs(zyklus.vorher - presseZyklus(1) / 1000) < 1e-9);
   assert.ok(zyklus.nachher < zyklus.vorher, 'ein Upgrade macht die Presse schneller');
   // Max ohne Geld zeigt trotzdem die naechste Stufe.

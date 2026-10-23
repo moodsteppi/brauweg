@@ -18,7 +18,7 @@
  * sich etwas Sichtbares am DOM aendern kann.
  */
 
-import { type Aktion, AktionAbgelehnt, type ManufakturStand, handle, vorspulen } from '@brauweg/manufaktur-kern';
+import { type Aktion, AktionAbgelehnt, type ManufakturStand, type Ziel, handle, vorspulen } from '@brauweg/manufaktur-kern';
 
 import type { ManufakturAntwort } from './sicht';
 
@@ -131,6 +131,16 @@ export class Steuerung {
       }
     });
     return { ok: true };
+  }
+
+  /** Liegt fuer diese Station noch ein Tipp unbestaetigt beim Server? */
+  unterwegsFuer(ziel: Ziel): boolean {
+    return this.unterwegs.some(
+      ({ aktion }) =>
+        aktion.typ === 'arbeiten' &&
+        aktion.ziel.art === ziel.art &&
+        (ziel.art !== 'presse' || (aktion.ziel.art === 'presse' && aktion.ziel.index === ziel.index)),
+    );
   }
 
   /** Wartet, bis alles Gesendete bestaetigt ist (fuer Tests und das Schliessen). */

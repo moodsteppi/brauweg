@@ -8,6 +8,7 @@ import {
   type Menge,
   type Ziel,
   ausbauVorschau,
+  arbeiter,
   faehigkeitBereit,
   JUBILAEEN_MIT_MUENZEN,
   MUENZEN_JUBILAEUM,
@@ -21,7 +22,7 @@ import {
 import { HbBlatt } from '../screens/HbBlatt';
 import { BILD, manufakturBild } from './bilder';
 import { MANUFAKTUREN, manufakturName, stationName } from './namen';
-import { dauer, kurz, sekunden } from './zahlen';
+import { dauer, kurz, proSekunde, sekunden } from './zahlen';
 
 const MENGEN: Menge[] = [1, 10, 50, 'max'];
 
@@ -33,6 +34,30 @@ function zahl(k: Pick<Kennzahl, 'einheit'>, wert: number): string {
 export function alleZiele(stand: ManufakturStand): Ziel[] {
   return [{ art: 'versand' }, { art: 'paternoster' }, ...stand.pressen.map((_, index) => ({ art: 'presse' as const, index }))];
 }
+
+/**
+ * Was die Hauptzeile je Station misst. „Leistung pro Sekunde" sagte nicht,
+ * was da gezaehlt wird (Rueckmeldung 23.10.2026): Gemeint ist immer der
+ * Warenwert in Talern, aber er entsteht an der Presse, faehrt im Paternoster
+ * und wird am Wagen verkauft.
+ */
+const HAUPTZEILE: Record<Ziel['art'], { titel: string; erklaerung: string; meilenstein: string }> = {
+  presse: {
+    titel: 'Druckt pro Sekunde',
+    erklaerung: 'Karten im Wert von so vielen Talern, solange die Presse läuft',
+    meilenstein: 'doppelt so viel pro Sekunde',
+  },
+  paternoster: {
+    titel: 'Bringt pro Sekunde nach oben',
+    erklaerung: 'Karten im Wert von so vielen Talern, aus allen Etagen zum Packtisch',
+    meilenstein: 'doppelt so viel pro Sekunde',
+  },
+  versand: {
+    titel: 'Verkauft pro Sekunde',
+    erklaerung: 'So viele Taler bringt der Wagen ein, wenn genug am Packtisch liegt',
+    meilenstein: 'doppelt so viel pro Sekunde',
+  },
+};
 
 /**
  * Das Upgrade-Blatt: oeffnet sich beim Tipp auf ein Schild. Hauptzeile ist
@@ -65,10 +90,11 @@ export function UpgradeBlatt({
           Stufe {v.stufe} → <b>{v.neueStufe}</b>
         </p>
         <div className="mf-hauptzeile">
-          <small>Leistung pro Sekunde</small>
+          <small>{HAUPTZEILE[ziel.art].titel}</small>
           <span>
-            {kurz(v.leistung.vorher)} → <b>{kurz(v.leistung.nachher)}</b>
+            {proSekunde(v.leistung.vorher)} → <b>{proSekunde(v.leistung.nachher)}</b>
           </span>
+          <em>{HAUPTZEILE[ziel.art].erklaerung}</em>
         </div>
         {zeilen.length > 0 && (
           <dl className="mf-kennzahlen">
@@ -84,7 +110,11 @@ export function UpgradeBlatt({
         )}
         {balken && (
           <div className="mf-meilenstein">
-            <span>Nächster Meilenstein: Stufe {balken.bis} · Leistung ×2</span>
+            <span>
+              Ab Stufe {balken.bis}: {HAUPTZEILE[ziel.art].meilenstein}
+              {/* Neue Arbeiter gibt es nur bis Stufe 100 — danach waere der Satz gelogen. */}
+              {ziel.art === 'presse' && arbeiter(balken.bis) > arbeiter(v.stufe) ? ', ein Arbeiter mehr' : ''}
+            </span>
             <span className="mf-fortschritt" aria-label={`Stufe ${v.stufe} von ${balken.bis}`}>
               <i style={{ width: `${((v.stufe - balken.von) / (balken.bis - balken.von)) * 100}%` }} />
             </span>

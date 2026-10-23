@@ -116,20 +116,22 @@ function kennzahlenBei(stand: ManufakturStand, ziel: Ziel, stufe: number): Omit<
   const m = stand.manufaktur;
   if (ziel.art === 'presse') {
     return [
-      { name: 'Ertrag je Zyklus', vorher: presseErtrag(ziel.index, stufe, m, stand.jubilaeen), einheit: 'wert' },
-      { name: 'Zyklus', vorher: presseZyklus(stufe) / 1000, einheit: 'sekunden' },
+      // Namen, wie sie im Upgrade-Blatt stehen — „Zyklus" und „Kapazität"
+      // verstand beim ersten Spielen niemand (Rueckmeldung 23.10.2026).
+      { name: 'Wert pro Druckgang', vorher: presseErtrag(ziel.index, stufe, m, stand.jubilaeen), einheit: 'wert' },
+      { name: 'Dauer pro Druckgang', vorher: presseZyklus(stufe) / 1000, einheit: 'sekunden' },
       { name: 'Arbeiter', vorher: arbeiter(stufe), einheit: 'anzahl' },
     ];
   }
   if (ziel.art === 'paternoster') {
     return [
-      { name: 'Kapazität', vorher: paternosterKapazitaet(stufe, m), einheit: 'wert' },
-      { name: 'Fahrt', vorher: paternosterFahrt(stand.pressen.length, stufe) / 1000, einheit: 'sekunden' },
+      { name: 'Ladung pro Fahrt', vorher: paternosterKapazitaet(stufe, m), einheit: 'wert' },
+      { name: 'Dauer pro Fahrt', vorher: paternosterFahrt(stand.pressen.length, stufe) / 1000, einheit: 'sekunden' },
     ];
   }
   return [
-    { name: 'Kapazität', vorher: versandKapazitaet(stufe, m), einheit: 'wert' },
-    { name: 'Fahrt', vorher: versandZyklus(stufe) / 1000, einheit: 'sekunden' },
+    { name: 'Ladung pro Lieferung', vorher: versandKapazitaet(stufe, m), einheit: 'wert' },
+    { name: 'Dauer pro Lieferung', vorher: versandZyklus(stufe) / 1000, einheit: 'sekunden' },
   ];
 }
 
