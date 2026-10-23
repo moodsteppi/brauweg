@@ -4,6 +4,7 @@ import { cardImage, deckForGame } from '../decks';
 import { t } from '../i18n';
 import { inApp } from '../laufzeit';
 import { inAppSichtbar } from '../app-sichtbar';
+import { imUmfang } from '../umfang';
 import { EINZELSPIELE, einzelKennung, einzelName } from '../minispiele/partykiste/einzelspiele';
 import { sitzSpanne } from '../sitzspanne';
 import { SZENEN, szeneBild } from '../szenen';
@@ -186,6 +187,12 @@ export function SpieleNeu({
   const baldBild = (g: GameSummary): string =>
     g.abstimmbar !== false ? '/hub/spielwahl-bald.webp' : bannerFuer(g.id);
 
+  // Was der Umfang der Ausgabe nicht enthält, verschwindet ganz — auch aus
+  // „Kommt bald": Es kommt in diesem Release ja nicht (umfang.ts).
+  const mitManufaktur = imUmfang('kartenmanufaktur');
+  const mitBrowort = imUmfang('browort');
+  const mitProSubway = imUmfang('prosubway');
+
   const baldZeile = (g: GameSummary): React.JSX.Element => (
     <div className="hb-bald" key={g.id}>
       <button type="button" className="hb-bald-flaeche" onClick={() => onBald(t(g.nameKey))}>
@@ -346,7 +353,7 @@ export function SpieleNeu({
         {/* In der App: die beiden Solo-Spiele (Emile, 23.10.2026). Die
             Manufaktur hat ihr Bild (docs/ASSETS-KARTENMANUFAKTUR.md), Browort
             bis zu einer Bestellung ein gezeichnetes Feld statt eines fehlenden Bildes. */}
-        {filter === 'alle' && inApp && (
+        {filter === 'alle' && inApp && (mitManufaktur || mitBrowort) && (
           <section className="hb-blk">
             <h2 className="hb-ab">
               <Symbol>
@@ -355,48 +362,54 @@ export function SpieleNeu({
               </Symbol>
               Allein
             </h2>
-            <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
-              <span className="hb-quer-text">
-                <strong>Kartenmanufaktur</strong>
-                <span>Pressen, Laufband, Meister — sie druckt auch, wenn du weg bist</span>
-              </span>
-              <span className="hb-kn is-gold">Los</span>
-            </button>
-            <button type="button" className="hb-quer hb-quer-browort" onClick={() => onSolo('browort')}>
-              <span className="hb-quer-text">
-                <strong>Browort</strong>
-                <span>Jeden Tag ein Wort, sechs Versuche</span>
-              </span>
-              <span className="hb-kn is-gold">Los</span>
-            </button>
+            {mitManufaktur && (
+              <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
+                <span className="hb-quer-text">
+                  <strong>Kartenmanufaktur</strong>
+                  <span>Pressen, Laufband, Meister — sie druckt auch, wenn du weg bist</span>
+                </span>
+                <span className="hb-kn is-gold">Los</span>
+              </button>
+            )}
+            {mitBrowort && (
+              <button type="button" className="hb-quer hb-quer-browort" onClick={() => onSolo('browort')}>
+                <span className="hb-quer-text">
+                  <strong>Browort</strong>
+                  <span>Jeden Tag ein Wort, sechs Versuche</span>
+                </span>
+                <span className="hb-kn is-gold">Los</span>
+              </button>
+            )}
           </section>
         )}
 
         {filter === 'alle' && !inApp && (
           <>
-            <section className="hb-blk">
-              <h2 className="hb-ab">
-                <Symbol>
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-                </Symbol>
-                Allein
-              </h2>
-              {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
-                  dort steht es unter „Kommt bald". */}
-              <button
-                type="button"
-                className="hb-quer"
-                style={{ backgroundImage: 'url(/hub/banner-prosubway.webp)' }}
-                onClick={() => onSolo('prosubway')}
-              >
-                <span className="hb-quer-text">
-                  <strong>{t('modus.prosubway')}</strong>
-                  <span>Münzen fürs Hub · bis 40 am Tag</span>
-                </span>
-                <span className="hb-kn is-gold">Los</span>
-              </button>
-            </section>
+            {mitProSubway && (
+              <section className="hb-blk">
+                <h2 className="hb-ab">
+                  <Symbol>
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+                  </Symbol>
+                  Allein
+                </h2>
+                {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
+                    dort steht es unter „Kommt bald". */}
+                <button
+                  type="button"
+                  className="hb-quer"
+                  style={{ backgroundImage: 'url(/hub/banner-prosubway.webp)' }}
+                  onClick={() => onSolo('prosubway')}
+                >
+                  <span className="hb-quer-text">
+                    <strong>{t('modus.prosubway')}</strong>
+                    <span>Münzen fürs Hub · bis 40 am Tag</span>
+                  </span>
+                  <span className="hb-kn is-gold">Los</span>
+                </button>
+              </section>
+            )}
 
             <section className="hb-blk">
               <h2 className="hb-ab">
@@ -454,7 +467,7 @@ export function SpieleNeu({
                 <path d="M12 8v4l3 2" />
               </Symbol>
               Kommt bald
-              <span className="hb-ab-zusatz">{bald.length + 2}</span>
+              <span className="hb-ab-zusatz">{bald.length + (mitProSubway ? 2 : 1)}</span>
               <Symbol>
                 <path d="m6 9 6 6 6-6" />
               </Symbol>
@@ -462,7 +475,8 @@ export function SpieleNeu({
             {baldOffen && (
               <div className="hb-liste is-grau">
                 {bald.map(baldZeile)}
-                {modusZeile('prosubway', t('modus.prosubway'), '/hub/banner-prosubway.webp', 'Allein · Münzen fürs Hub')}
+                {mitProSubway &&
+                  modusZeile('prosubway', t('modus.prosubway'), '/hub/banner-prosubway.webp', 'Allein · Münzen fürs Hub')}
                 {modusZeile('mehrkampf', t('modus.mehrkampf'), '/hub/banner-mehrkampf.webp', 'Runden aus mehreren Spielen')}
               </div>
             )}

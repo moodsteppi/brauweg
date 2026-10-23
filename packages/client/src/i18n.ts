@@ -177,6 +177,7 @@ const de: Record<string, string> = {
   'error.tooManyMessages': 'Zu viele Anfragen. Lade die Seite neu.',
   'error.tooManyConnections': 'Zu viele offene Verbindungen. Schließe andere Fenster.',
   'error.gameNotPlayable': 'Dieses Spiel gibt es noch nicht.',
+  'error.nichtImUmfang': 'Das gibt es hier nicht.',
   'error.tischNichtInDerApp': 'An diesen Tisch kommst du in der App nicht.',
   'error.loeschcodeFalsch': 'Der Code stimmt nicht oder ist abgelaufen.',
   'error.loeschcodeUnnoetig': 'Für dieses Konto gibt es keinen Löschcode.',
