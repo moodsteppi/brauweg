@@ -32,6 +32,8 @@ export interface ManufakturAnsicht {
   kannUmziehen: boolean;
   proSekunde: { taler: number; lager: number; ablagen: number[] };
   engpass: 'pressen' | 'laufband' | 'versand' | null;
+  /** Bis hierhin (Server-Zeit, ms) gelten die Raten; null = bis man etwas tut. */
+  gueltigBis: number | null;
   /** Server-Zeit (ms), zu der die Zahlen gelten. */
   zeit: number;
 }

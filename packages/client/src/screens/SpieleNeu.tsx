@@ -343,9 +343,9 @@ export function SpieleNeu({
           </section>
         )}
 
-        {/* In der App: die beiden Solo-Spiele (Emile, 23.10.2026). Gemalte
-            Banner kommen mit der Bildbestellung (docs/ASSETS-KARTENMANUFAKTUR.md);
-            bis dahin ein gezeichnetes Feld statt eines fehlenden Bildes. */}
+        {/* In der App: die beiden Solo-Spiele (Emile, 23.10.2026). Die
+            Manufaktur hat ihr Bild (docs/ASSETS-KARTENMANUFAKTUR.md), Browort
+            bis zu einer Bestellung ein gezeichnetes Feld statt eines fehlenden Bildes. */}
         {filter === 'alle' && inApp && (
           <section className="hb-blk">
             <h2 className="hb-ab">

@@ -1,16 +1,13 @@
 /*
  * Kartenmanufaktur (Kartenmanufaktur.tsx) — Emile, 23.10.2026.
  *
- * Gezeichnet, bis die Bilder aus docs/ASSETS-KARTENMANUFAKTUR.md da sind:
- * Holz, Messing und Nachtblau mit den Hub-Variablen. Jede gemalte Stelle
- * (Presse, Laufband, Lager, Wagen) hat hier eine Klasse `mf-bild-*`, die das
- * Bild spaeter ersetzt.
+ * Bilder aus docs/ASSETS-KARTENMANUFAKTUR.md unter public/manufaktur/; welches
+ * Bild zu welcher Stufe gehoert, steht in bilder.ts. Oben die Halle
+ * (kulisse-halle), darunter der Keller (wand-keller, gekachelt) mit Laufband
+ * und Pressen — wie Schacht und Lager im Vorbild.
  */
 
 .mf {
-  --mf-holz: #6b4423;
-  --mf-holz-hell: #9a6a3a;
-  --mf-messing: #c9a24a;
   background:
     radial-gradient(120% 60% at 50% 0%, #2a2140 0%, transparent 60%),
     #0d1530;
@@ -38,29 +35,15 @@
 
 /* Taler: Muenze mit Pik — anders als die Hub-Muenze mit Stern. */
 .mf-taler {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
   width: 16px;
   height: 16px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffe08a, #d79b1c);
-  box-shadow: inset 0 -1px 0 rgba(120, 70, 0, 0.5);
-  font-style: normal;
+  background: url('/manufaktur/taler.webp') center / contain no-repeat;
   flex: none;
-}
-.mf-taler::before {
-  content: '♠';
-  font-size: 10px;
-  line-height: 1;
-  color: #7a4a00;
 }
 .mf-taler.is-gross {
   width: 24px;
   height: 24px;
-}
-.mf-taler.is-gross::before {
-  font-size: 14px;
 }
 
 .mf .mf-leiste {
@@ -132,43 +115,122 @@
 .mf .mf-karte strong {
   font: 800 14px var(--hb-txt);
 }
+.mf .mf-titelzeile {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
 .mf .mf-zahl {
   font: 400 18px var(--hb-anz);
   color: var(--hb-gold);
   font-variant-numeric: tabular-nums;
 }
 
+/* --- Halle: Lager und Lieferwagen ---------------------------------------- */
+
 .mf .mf-oben {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
+/*
+ * Ausschnitt der Kulisse von Zeile 430 bis 1000 (von 1536): Fenster, Tor und
+ * Boden. Seitenverhaeltnis und Lage haengen zusammen — bei voller Breite ist
+ * das Bild 1,5 Breiten hoch, der Kasten 0,556; 44,5 % schiebt Zeile 430 an
+ * die Oberkante. Wer eins aendert, rechnet das andere nach.
+ */
+.mf .mf-szene {
+  position: relative;
+  aspect-ratio: 1024 / 570;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #2a1a10 url('/manufaktur/kulisse-halle.webp') center 44.5% / 100% auto no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(255, 215, 120, 0.18);
+}
+/* Beides steht auf dem Boden (Vorderkante bei rund 95 % der Kastenhoehe). */
+.mf .mf-lager-bild {
+  position: absolute;
+  left: 2%;
+  bottom: 4%;
+  width: 38%;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45));
+}
+.mf .mf-schild {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(7, 19, 47, 0.82);
+  border: 1px solid rgba(255, 215, 120, 0.3);
+}
+.mf .mf-schild small {
+  font: 800 10px var(--hb-txt);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hb-leise);
+}
+.mf .mf-schild-lager {
+  left: 3%;
+  top: 6%;
+}
+.mf .mf-szene .mf-wagen {
+  position: absolute;
+  right: 1%;
+  bottom: 3%;
+  width: 52%;
+  border-radius: 16px;
+}
+.mf .mf-wagen img {
+  display: block;
+  width: 100%;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45));
+}
+/* Antippen: der Wagen leuchtet golden, wie die tippbaren Karten. */
+.mf .mf-wagen.is-tippbar img {
+  filter: drop-shadow(0 0 6px rgba(255, 200, 80, 0.9)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45));
+}
+.mf .mf-wagen.is-aktiv img {
+  animation: mf-ruckeln 0.4s ease-in-out infinite;
+}
+
+/* --- Keller: Laufband und Pressen ---------------------------------------- */
 
 .mf .mf-halle {
   display: grid;
-  grid-template-columns: 30px 1fr;
+  grid-template-columns: 40px 1fr;
   gap: 8px;
+  padding: 10px 10px 10px 8px;
+  border-radius: 18px;
+  background:
+    linear-gradient(rgba(8, 12, 30, 0.35), rgba(8, 12, 30, 0.35)),
+    #2a1d14 url('/manufaktur/wand-keller.webp') 0 0 / 192px 192px repeat;
 }
 
-/* Laufband: ein senkrechtes Holzband, das bei Arbeit nach oben laeuft. */
+/*
+ * Laufband: das Bild senkrecht gekachelt, eine Kachel ist bei 40 px Breite
+ * 80 px hoch. Laeuft es, rueckt der Streifen um genau eine Kachel nach oben —
+ * deshalb ragt er unten 80 px heraus, sonst klafft am Ende eine Luecke.
+ */
 .mf .mf-band {
   position: relative;
   border-radius: 10px;
-  background: var(--mf-holz);
-  border: 2px solid #3a2414;
+  background: rgba(20, 12, 6, 0.55);
   overflow: hidden;
 }
 .mf .mf-band.is-tippbar {
-  border-color: var(--hb-gold-tief);
+  box-shadow: inset 0 0 0 2px var(--hb-gold-tief);
 }
 .mf .mf-band-streifen {
   position: absolute;
-  inset: -40px 3px 0;
-  background: repeating-linear-gradient(180deg, var(--mf-holz-hell) 0 14px, #4a2e17 14px 20px);
-  border-radius: 6px;
+  inset: 0 0 -80px;
+  background: url('/manufaktur/laufband.webp') center top / 40px 80px repeat-y;
 }
 .mf .mf-band.is-aktiv .mf-band-streifen {
-  animation: mf-band 0.8s linear infinite;
+  animation: mf-band 1.2s linear infinite;
 }
 
 .mf .mf-pressen {
@@ -178,10 +240,43 @@
   min-width: 0;
 }
 
+/* Ueber der Kellerwand: fast deckend, sonst liest man die Zahlen nicht. */
+.mf .mf-halle .mf-karte {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%),
+    rgba(22, 30, 62, 0.9);
+}
+
 .mf .mf-presse-kopf {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+/* Presse mit Pinguin davor: Drucker (antippen) oder Meister (von selbst). */
+.mf .mf-maschine {
+  position: relative;
+  flex: none;
+  width: 72px;
+  height: 64px;
+}
+.mf .mf-presse-bild {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  width: 72px;
+  height: 72px;
+  transform-origin: 50% 88%;
+}
+.mf .mf-presse.is-aktiv .mf-presse-bild {
+  animation: mf-druck 0.6s ease-in-out infinite;
+}
+.mf .mf-pinguin {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 38px;
+  height: 38px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
 }
 .mf .mf-presse-text {
   flex: 1;
@@ -202,114 +297,16 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Gezeichnete Bilder (bis die gemalten kommen) ------------------------- */
-
-.mf .mf-bild {
-  position: relative;
+/* Kartenstapel je Presse (stapel-1 … stapel-8) */
+.mf .mf-stapel {
   flex: none;
+  width: 28px;
+  height: 28px;
 }
-/* Presse: Rahmen, Walze, Hebel; arbeitet sie, nickt die Walze. */
-.mf .mf-bild-presse {
+.mf .mf-stapel.is-gross {
   width: 44px;
   height: 44px;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #4b5470, #2b3250);
-  border: 2px solid var(--mf-messing);
-}
-.mf .mf-bild-presse i:first-child {
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  top: 8px;
-  height: 10px;
-  border-radius: 5px;
-  background: linear-gradient(180deg, #d9dbe4, #8a90a6);
-}
-.mf .mf-bild-presse i:last-child {
-  position: absolute;
-  left: 9px;
-  right: 9px;
-  bottom: 6px;
-  height: 12px;
-  border-radius: 2px;
-  background: var(--mf-farbe, #fff);
-  box-shadow: 0 -3px 0 rgba(255, 255, 255, 0.5);
-}
-.mf .mf-presse.is-aktiv .mf-bild-presse i:first-child {
-  animation: mf-walze 0.6s ease-in-out infinite;
-}
-
-.mf .mf-stapel {
-  width: 16px;
-  height: 20px;
-  border-radius: 3px;
-  background: var(--mf-farbe, #fff);
-  box-shadow:
-    2px 2px 0 rgba(255, 255, 255, 0.35),
-    4px 4px 0 rgba(255, 255, 255, 0.2);
-}
-
-.mf .mf-farbe-1 { --mf-farbe: #d94b55; }
-.mf .mf-farbe-2 { --mf-farbe: #3f6fd8; }
-.mf .mf-farbe-3 { --mf-farbe: #3fa45a; }
-.mf .mf-farbe-4 { --mf-farbe: #8b5cf6; }
-.mf .mf-farbe-5 { --mf-farbe: #2a2a2a; }
-.mf .mf-farbe-6 { --mf-farbe: #c7ccd8; }
-.mf .mf-farbe-7 { --mf-farbe: #9b1c2c; }
-.mf .mf-farbe-8 { --mf-farbe: #f5c02e; }
-
-/* Lager: drei Kartons */
-.mf .mf-bild-lager {
-  height: 36px;
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-}
-.mf .mf-bild-lager i {
-  width: 18px;
-  height: 16px;
-  border-radius: 2px;
-  background: #b98a4e;
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.2);
-}
-.mf .mf-bild-lager i:nth-child(2) {
-  height: 26px;
-}
-
-/* Wagen: Kasten mit zwei Raedern; faehrt er, ruckelt er. */
-.mf .mf-bild-wagen {
-  width: 64px;
-  height: 36px;
-}
-.mf .mf-bild-wagen i {
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  top: 4px;
-  height: 22px;
-  border-radius: 6px 10px 4px 4px;
-  background: linear-gradient(180deg, #2b4fa8, #1b2f6e);
-  border: 2px solid var(--mf-messing);
-}
-.mf .mf-bild-wagen::before,
-.mf .mf-bild-wagen::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #222;
-  border: 2px solid #888;
-}
-.mf .mf-bild-wagen::before {
-  left: 10px;
-}
-.mf .mf-bild-wagen::after {
-  right: 10px;
-}
-.mf .mf-versand.is-aktiv .mf-bild-wagen i {
-  animation: mf-ruckeln 0.4s ease-in-out infinite;
+  opacity: 0.85;
 }
 
 /* --- Knoepfe --------------------------------------------------------------- */
@@ -369,10 +366,15 @@
 .mf .mf-meister.is-da {
   flex-direction: row;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding-left: 4px;
   background: rgba(72, 213, 107, 0.12);
-  border-color: var(--hb-gruen);
+  border: 1px solid var(--hb-gruen);
   color: var(--hb-gruen);
+}
+.mf .mf-meister.is-da img {
+  width: 36px;
+  height: 36px;
 }
 
 /* Schicht ohne Meister */
@@ -396,10 +398,11 @@
   color: var(--hb-gold);
 }
 
+/* Nicht durchsichtig: Auf der Kellerwand verschwand die Schrift in den Ziegeln. */
 .mf .mf-karte.mf-neu {
   align-items: center;
   border: 2px dashed var(--hb-kontur);
-  background: transparent;
+  background: rgba(13, 21, 48, 0.82);
 }
 .mf .mf-karte.mf-neu b {
   display: flex;
@@ -410,6 +413,29 @@
 }
 .mf .mf-karte.mf-neu:disabled {
   opacity: 0.6;
+}
+
+/* Die naechste Manufaktur als Kopfbild der Karte, Name unten links. */
+.mf .mf-umzug-bild {
+  display: flex;
+  align-items: flex-end;
+  margin: -10px -10px 2px;
+  aspect-ratio: 2 / 1;
+  padding: 10px 12px;
+  border-radius: 16px 16px 0 0;
+  background-size: cover;
+  background-position: center;
+}
+.mf .mf-umzug-bild strong {
+  font: 400 20px var(--hb-anz);
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.mf .mf-umzug-gross {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border-radius: 14px;
+  object-fit: cover;
 }
 
 .mf .mf-umzug small {
@@ -441,11 +467,12 @@
 
 @keyframes mf-band {
   from { transform: translateY(0); }
-  to { transform: translateY(-20px); }
+  to { transform: translateY(-80px); }
 }
-@keyframes mf-walze {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(10px); }
+/* Die Presse drueckt: kurz gestaucht, auf der Bodenlinie stehend. */
+@keyframes mf-druck {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.94); }
 }
 @keyframes mf-ruckeln {
   0%, 100% { transform: translateY(0); }
@@ -454,8 +481,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mf .mf-band.is-aktiv .mf-band-streifen,
-  .mf .mf-presse.is-aktiv .mf-bild-presse i:first-child,
-  .mf .mf-versand.is-aktiv .mf-bild-wagen i {
+  .mf .mf-presse.is-aktiv .mf-presse-bild,
+  .mf .mf-wagen.is-aktiv img {
     animation: none;
   }
 }

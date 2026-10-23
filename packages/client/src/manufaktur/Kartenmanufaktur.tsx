@@ -4,6 +4,7 @@ import { ApiError, api } from '../api';
 import { t } from '../i18n';
 import { spiele } from '../klang';
 import { HbBlatt, Schliessen, useEscape, useRueckfrage } from '../screens/HbBlatt';
+import { BILD, manufakturBild, presseBild, stapelBild } from './bilder';
 import type { ManufakturAktion, ManufakturAnsicht, ManufakturAntwort, StationAnsicht, Ziel } from './sicht';
 import { dauer, kurz } from './zahlen';
 import './manufaktur.css';
@@ -22,8 +23,8 @@ const NACHFRAGEN_MS = 20_000;
  * Gerechnet wird auf dem Server (manufaktur/regeln.ts). Der Bildschirm
  * zaehlt zwischen zwei Antworten mit den gelieferten Raten hoch — Taler,
  * Lager, Ablagen — und fragt neu, sobald eine Schicht endet, nach jeder
- * Aktion und alle 20 Sekunden. Bilder kommen spaeter (docs/ASSETS-
- * KARTENMANUFAKTUR.md); bis dahin ist alles gezeichnet.
+ * Aktion und alle 20 Sekunden. Bilder: docs/ASSETS-KARTENMANUFAKTUR.md,
+ * welches wohin gehoert steht in bilder.ts.
  */
 export function Kartenmanufaktur({
   onClose,
@@ -38,9 +39,17 @@ export function Kartenmanufaktur({
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [offline, setOffline] = useState<ManufakturAntwort['offline']>(null);
+  /** Nach dem Umzug: die neue Manufaktur einmal gross zeigen. */
+  const [umgezogen, setUmgezogen] = useState<number | null>(null);
+  const letzteManufaktur = useRef<number | null>(null);
   const [jetzt, setJetzt] = useState(() => Date.now());
   const [frage, rueckfrage] = useRueckfrage();
-  const laeuft = useRef(false);
+  /*
+   * Aktionen laufen der Reihe nach, keine wird verworfen: Wer fuenfmal schnell
+   * auf „Ausbauen" tippt, will fuenf Stufen. Eine Sperre „eine Aktion zur
+   * Zeit" schluckte die Tipps, die kamen, waehrend die erste unterwegs war.
+   */
+  const kette = useRef<Promise<void>>(Promise.resolve());
 
   const melde = useCallback((text: string) => {
     setMeldung(text);
@@ -50,6 +59,11 @@ export function Kartenmanufaktur({
   const uebernehmen = useCallback(
     (antwort: ManufakturAntwort) => {
       setStand({ ansicht: antwort.ansicht, empfangen: Date.now() });
+      // Am Zaehler erkannt, nicht an der Aktion: So zeigt auch ein zweites
+      // Geraet den Umzug, und die erste Antwort nach dem Oeffnen zeigt nichts.
+      const nummer = antwort.ansicht.manufaktur;
+      if (letzteManufaktur.current !== null && nummer > letzteManufaktur.current) setUmgezogen(nummer);
+      letzteManufaktur.current = nummer;
       if (antwort.offline) setOffline(antwort.offline);
       if (antwort.muenzen > 0) {
         spiele('kauf');
@@ -80,32 +94,27 @@ export function Kartenmanufaktur({
     };
   }, [laden]);
 
-  // Endet eine Schicht, aendern sich die Raten — dann sofort neu fragen.
-  const naechstesSchichtende = stand ? schichtEnde(stand.ansicht) : null;
+  // Laufen die Raten aus (Schichtende, leere Ablage), sofort neu fragen.
+  const gueltigBis = stand?.ansicht.gueltigBis ?? null;
   useEffect(() => {
-    if (!stand || naechstesSchichtende === null) return;
-    const bisDahin = naechstesSchichtende - stand.ansicht.zeit - (Date.now() - stand.empfangen);
-    const id = window.setTimeout(laden, Math.max(0, bisDahin) + 300);
+    if (!stand || gueltigBis === null) return;
+    const bisDahin = gueltigBis - stand.ansicht.zeit - (Date.now() - stand.empfangen);
+    const id = window.setTimeout(laden, Math.max(0, bisDahin) + 200);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [naechstesSchichtende, stand?.empfangen]);
+  }, [gueltigBis, stand?.empfangen]);
 
   const tue = (aktion: ManufakturAktion, klang: 'tipp' | 'kauf' = 'tipp'): void => {
-    if (laeuft.current) return;
-    laeuft.current = true;
-    api
-      .manufakturAktion(aktion)
-      .then((antwort) => {
-        spiele(klang);
-        uebernehmen(antwort);
-      })
-      .catch((err: unknown) => {
-        spiele('fehler');
-        melde(err instanceof ApiError ? t(err.messageKey) : 'Keine Verbindung.');
-      })
-      .finally(() => {
-        laeuft.current = false;
-      });
+    spiele(klang);
+    kette.current = kette.current.then(() =>
+      api
+        .manufakturAktion(aktion)
+        .then(uebernehmen)
+        .catch((err: unknown) => {
+          spiele('fehler');
+          melde(err instanceof ApiError ? t(err.messageKey) : 'Keine Verbindung.');
+        }),
+    );
   };
 
   if (!stand) {
@@ -135,8 +144,11 @@ export function Kartenmanufaktur({
 
   const a = stand.ansicht;
   // Server-Zeit jetzt: die Zeit der Antwort plus, was seitdem vergangen ist.
-  const vergangen = Math.max(0, (jetzt - stand.empfangen) / 1000);
-  const serverJetzt = a.zeit + vergangen * 1000;
+  const seither = Math.max(0, (jetzt - stand.empfangen) / 1000);
+  const serverJetzt = a.zeit + seither * 1000;
+  // Hochgezaehlt wird nur, solange die Raten gelten (`gueltigBis`) — sonst
+  // waechst das Lager weiter, obwohl die Ablage laengst leer ist.
+  const vergangen = a.gueltigBis === null ? seither : Math.min(seither, Math.max(0, (a.gueltigBis - a.zeit) / 1000));
   const taler = a.taler + a.proSekunde.taler * vergangen;
   const lager = Math.max(0, a.lager + a.proSekunde.lager * vergangen);
   const ablage = (i: number): number => Math.max(0, a.pressen[i]!.ablage + (a.proSekunde.ablagen[i] ?? 0) * vergangen);
@@ -169,7 +181,7 @@ export function Kartenmanufaktur({
       )}
       {station.meister ? (
         <span className="mf-meister is-da" title="Meister arbeitet von selbst">
-          <i aria-hidden="true">🐧</i> Meister
+          <img src={BILD.meister} alt="" draggable={false} /> Meister
         </span>
       ) : (
         <button
@@ -245,34 +257,40 @@ export function Kartenmanufaktur({
       )}
 
       <div className="mf-rolle">
-        {/* Oben: Lager und Versand */}
+        {/* Oben die Halle: Lager am Packtisch, Lieferwagen im Tor */}
         <div className="mf-oben">
-          <div className="mf-karte mf-lager">
-            <span className="mf-bild mf-bild-lager" aria-hidden="true">
-              <i />
-              <i />
-              <i />
+          <div className="mf-szene">
+            <img className="mf-lager-bild" src={BILD.lager} alt="" draggable={false} />
+            <span className="mf-schild mf-schild-lager" aria-label={`Lager ${kurz(lager)}`}>
+              <small>Lager</small>
+              <span className="mf-zahl">{kurz(lager)}</span>
             </span>
-            <strong>Lager</strong>
-            <span className="mf-zahl">{kurz(lager)}</span>
+            <button
+              type="button"
+              className={`mf-wagen${a.versand.aktiv ? ' is-aktiv' : ''}${versand.onClick ? ' is-tippbar' : ''}`}
+              onClick={versand.onClick}
+              disabled={!versand.onClick}
+              aria-label={versand.onClick ? 'Versand: Schicht starten' : 'Lieferwagen'}
+            >
+              <img src={BILD.versand} alt="" draggable={false} />
+            </button>
           </div>
           <div
-            className={`mf-karte mf-versand${a.versand.aktiv ? ' is-aktiv' : ''}${versand.onClick ? ' is-tippbar' : ''}`}
+            className={`mf-karte mf-versand${versand.onClick ? ' is-tippbar' : ''}`}
             onClick={versand.onClick}
             role={versand.onClick ? 'button' : undefined}
             aria-label={versand.onClick ? 'Versand: Schicht starten' : undefined}
           >
-            <span className="mf-bild mf-bild-wagen" aria-hidden="true">
-              <i />
+            <span className="mf-titelzeile">
+              <strong>Versand · Stufe {a.versand.stufe}</strong>
+              <span className="mf-zahl">{kurz(a.versand.rate)} Taler/s</span>
             </span>
-            <strong>Versand · Stufe {a.versand.stufe}</strong>
-            <span className="mf-zahl">{kurz(a.versand.rate)} Taler/s</span>
             {versand.balken}
             {knoepfe(a.versand, { art: 'versand' })}
           </div>
         </div>
 
-        {/* Die Halle: Laufband links, Pressen rechts */}
+        {/* Der Keller: Laufband links, Pressen rechts */}
         <div className="mf-halle">
           <div
             className={`mf-band${a.laufband.aktiv ? ' is-aktiv' : ''}${band.onClick ? ' is-tippbar' : ''}`}
@@ -284,8 +302,10 @@ export function Kartenmanufaktur({
           </div>
           <div className="mf-pressen">
             <div className={`mf-karte mf-bandkarte${band.onClick ? ' is-tippbar' : ''}`} onClick={band.onClick}>
-              <strong>Laufband · Stufe {a.laufband.stufe}</strong>
-              <span className="mf-zahl">{kurz(a.laufband.rate)} Taler/s</span>
+              <span className="mf-titelzeile">
+                <strong>Laufband · Stufe {a.laufband.stufe}</strong>
+                <span className="mf-zahl">{kurz(a.laufband.rate)} Taler/s</span>
+              </span>
               {band.balken}
               {knoepfe(a.laufband, { art: 'laufband' })}
             </div>
@@ -302,9 +322,15 @@ export function Kartenmanufaktur({
                   aria-label={arbeit.onClick ? `Presse ${i + 1}: Schicht starten` : undefined}
                 >
                   <div className="mf-presse-kopf">
-                    <span className={`mf-bild mf-bild-presse mf-farbe-${i + 1}`} aria-hidden="true">
-                      <i />
-                      <i />
+                    {/* Wer hier arbeitet, sieht man: Drucker zum Antippen, Meister von selbst */}
+                    <span className="mf-maschine" aria-hidden="true">
+                      <img className="mf-presse-bild" src={presseBild(p.stufe)} alt="" draggable={false} />
+                      <img
+                        className="mf-pinguin"
+                        src={p.meister ? BILD.meister : BILD.drucker}
+                        alt=""
+                        draggable={false}
+                      />
                     </span>
                     <span className="mf-presse-text">
                       <strong>
@@ -315,7 +341,7 @@ export function Kartenmanufaktur({
                       </small>
                     </span>
                     <span className="mf-ablage" aria-label={`Ablage ${kurz(ablage(i))}`}>
-                      <i className={`mf-stapel mf-farbe-${i + 1}`} aria-hidden="true" />
+                      <img className="mf-stapel" src={stapelBild(i)} alt="" draggable={false} />
                       {kurz(ablage(i))}
                     </span>
                   </div>
@@ -332,6 +358,7 @@ export function Kartenmanufaktur({
                 disabled={!leistbar(a.freischaltKosten)}
                 onClick={() => tue({ typ: 'freischalten' }, 'kauf')}
               >
+                <img className="mf-stapel is-gross" src={stapelBild(a.pressen.length)} alt="" draggable={false} />
                 <strong>
                   Presse {a.pressen.length + 1} bauen · {KARTENARTEN[a.pressen.length]}
                 </strong>
@@ -347,7 +374,10 @@ export function Kartenmanufaktur({
         {/* Neue Manufaktur (Prestige) */}
         {a.manufaktur < a.maxManufaktur && (
           <div className="mf-karte mf-umzug">
-            <strong>{MANUFAKTUREN[a.manufaktur] ?? 'Neue Manufaktur'}</strong>
+            {/* Das Bild ist unten links ruhig gehalten — dort steht der Name */}
+            <span className="mf-umzug-bild" style={{ backgroundImage: `url(${manufakturBild(a.manufaktur + 1)})` }}>
+              <strong>{MANUFAKTUREN[a.manufaktur] ?? 'Neue Manufaktur'}</strong>
+            </span>
             <small>
               Ab {kurz(a.umzugAb)} verdienten Talern ziehst du um: alles beginnt neu, druckt aber doppelt so viel —
               und es gibt 300 Münzen fürs Hub.
@@ -392,15 +422,23 @@ export function Kartenmanufaktur({
           </div>
         </HbBlatt>
       )}
+      {umgezogen !== null && (
+        <HbBlatt
+          titel={MANUFAKTUREN[umgezogen - 1] ?? `Manufaktur ${umgezogen}`}
+          onClose={() => setUmgezogen(null)}
+          klasse="is-klein"
+        >
+          <div className="hb-rueckfrage">
+            <img className="mf-umzug-gross" src={manufakturBild(umgezogen)} alt="" draggable={false} />
+            <p className="hb-text">Neue Manufaktur, alles beginnt von vorn — und jede Presse druckt doppelt so viel.</p>
+            <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={() => setUmgezogen(null)}>
+              Loslegen
+            </button>
+          </div>
+        </HbBlatt>
+      )}
       {rueckfrage}
     </div>
   );
 }
 
-/** Das frueheste Schichtende (Server-Zeit), oder null, wenn keine Schicht laeuft. */
-function schichtEnde(a: ManufakturAnsicht): number | null {
-  const enden = [a.laufband, a.versand, ...a.pressen]
-    .map((s) => s.schichtBis)
-    .filter((t): t is number => t !== null);
-  return enden.length > 0 ? Math.min(...enden) : null;
-}

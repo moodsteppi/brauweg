@@ -316,6 +316,13 @@ export interface ManufakturAnsicht {
   proSekunde: { taler: number; lager: number; ablagen: number[] };
   /** Der langsamste Teil der Kette, dort lohnt der Ausbau. */
   engpass: 'pressen' | 'laufband' | 'versand' | null;
+  /**
+   * Bis hierhin (ms) gelten die Raten in `proSekunde`: das naechste
+   * Schichtende oder der Augenblick, in dem eine Ablage oder das Lager
+   * leerlaeuft. Danach fliesst es anders — der Bildschirm zaehlt nicht
+   * darueber hinaus und fragt neu. null: Die Raten gelten, bis man etwas tut.
+   */
+  gueltigBis: number | null;
   zeit: number;
 }
 
@@ -370,6 +377,18 @@ export function ansicht(stand: ManufakturStand, jetzt: number): ManufakturAnsich
   const kleinste = Math.min(gesamtDruck, bandVoll, versandVoll);
   const engpass = kleinste === gesamtDruck ? 'pressen' : kleinste === bandVoll ? 'laufband' : 'versand';
 
+  const ablagenNetto = druck.map((d, i) => d - abholen[i]!);
+  const lagerNetto = zufluss - verkauf;
+  const grenzen: number[] = [];
+  for (const s of [stand.laufband, stand.versand, ...stand.pressen]) {
+    if (!s.meister && s.aktivBis > jetzt) grenzen.push(s.aktivBis);
+  }
+  stand.pressen.forEach((p, i) => {
+    const netto = ablagenNetto[i]!;
+    if (netto < 0 && p.ablage > 0) grenzen.push(jetzt + (p.ablage / -netto) * 1000);
+  });
+  if (lagerNetto < 0 && stand.lager > 0) grenzen.push(jetzt + (stand.lager / -lagerNetto) * 1000);
+
   return {
     manufaktur: stand.manufaktur,
     maxManufaktur: MAX_MANUFAKTUR,
@@ -387,10 +406,11 @@ export function ansicht(stand: ManufakturStand, jetzt: number): ManufakturAnsich
     kannUmziehen: stand.verdient >= UMZUG_AB && stand.manufaktur < MAX_MANUFAKTUR,
     proSekunde: {
       taler: verkauf,
-      lager: zufluss - verkauf,
-      ablagen: druck.map((d, i) => d - abholen[i]!),
+      lager: lagerNetto,
+      ablagen: ablagenNetto,
     },
     engpass,
+    gueltigBis: grenzen.length > 0 ? Math.min(...grenzen) : null,
     zeit: jetzt,
   };
 }

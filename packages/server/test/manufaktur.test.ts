@@ -77,6 +77,21 @@ test('mit Meistern läuft die Kette von selbst — der Engpass bestimmt das Eink
   assert.equal(Math.round(sicht.proSekunde.taler), 1);
 });
 
+test('die Raten gelten nur, bis eine Ablage leerläuft oder eine Schicht endet', () => {
+  // 10 Taler in der Ablage, Laufband holt 4 je Sekunde: nach 2,5 s ist sie leer.
+  let stand: ManufakturStand = { ...neuerStand(T0), pressen: [{ stufe: 1, meister: false, aktivBis: 0, ablage: 10 }] };
+  stand = handle(stand, { typ: 'schicht', ziel: { art: 'laufband' } }, T0).stand;
+  const sicht = ansicht(stand, T0);
+  assert.equal(sicht.proSekunde.ablagen[0], -4);
+  assert.equal(sicht.proSekunde.lager, 4);
+  assert.equal(sicht.gueltigBis, T0 + 2_500);
+  // Ohne Bewegung gibt es keine Grenze.
+  assert.equal(ansicht(neuerStand(T0), T0).gueltigBis, null);
+  // Eine Schicht ohne Vorrat endet nach zehn Sekunden.
+  const presse0 = handle(neuerStand(T0), { typ: 'schicht', ziel: presse }, T0).stand;
+  assert.equal(ansicht(presse0, T0).gueltigBis, T0 + SCHICHT_MS);
+});
+
 test('offline läuft die Manufaktur höchstens acht Stunden', () => {
   const stand = vorspulen(alleMeister(neuerStand(T0)), T0 + 20 * STUNDE);
   assert.equal(Math.round(stand.taler), OFFLINE_MS / 1000);

@@ -7,6 +7,8 @@
  * Spiels.
  */
 .spe {
+  /* Wie im Hub: kein Doppeltipp-Zoom, sonst verschluckt iOS schnelle Tipps. */
+  touch-action: manipulation;
   --spe-akzent: var(--hb-gold);
   position: fixed;
   inset: 0;

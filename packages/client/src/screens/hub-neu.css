@@ -32,6 +32,11 @@
   --hb-txt: 'Nunito Variable', 'Nunito', system-ui, sans-serif;
 }
 .hb {
+  /* Kein Doppeltipp-Zoom im ganzen Hub (23.10.2026): Zwei schnelle Tipps
+     an verschiedenen Stellen las iOS als Geste und verschluckte einen —
+     in Browort ein Buchstabe, in der Manufaktur eine Schicht. Rollen und
+     Zoomen mit zwei Fingern bleiben. */
+  touch-action: manipulation;
   position: fixed;
   inset: 0;
   display: flex;
@@ -3617,12 +3622,10 @@
   background: #3b4668;
 }
 
-/* Solo-Banner in der App, gezeichnet bis die Bilder da sind (SpieleNeu.tsx). */
+/* Solo-Banner in der App (SpieleNeu.tsx): Manufaktur gemalt, Browort noch gezeichnet. */
 :is(.hb, .spe) .hb-quer.hb-quer-manufaktur {
-  background:
-    repeating-linear-gradient(90deg, rgba(255, 215, 90, 0.08) 0 2px, transparent 2px 46px),
-    radial-gradient(60% 90% at 85% 20%, rgba(255, 190, 80, 0.35), transparent 70%),
-    linear-gradient(135deg, #3a2414, #1b2f6e);
+  /* Die erste Manufaktur; unten links ist das Bild ruhig, dort steht der Text. */
+  background: #1b2f6e url('/manufaktur/manufaktur-1.webp') center 40% / cover no-repeat;
 }
 :is(.hb, .spe) .hb-quer.hb-quer-browort {
   background:
