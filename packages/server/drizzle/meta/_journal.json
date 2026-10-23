@@ -253,6 +253,20 @@
       "when": 1788500000000,
       "tag": "0035_herkunft",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1788600000000,
+      "tag": "0036_browort",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1788700000000,
+      "tag": "0037_manufaktur",
+      "breakpoints": true
     }
   ]
 }

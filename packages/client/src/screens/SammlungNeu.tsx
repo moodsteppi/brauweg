@@ -5,6 +5,8 @@ import { t } from '../i18n';
 import { FIGURENSAETZE, pinguinBild } from '../minispiele/brochess/figurensatz';
 import { PAKET_NAME } from '../minispiele/partykiste/wahl';
 import { Pinguin } from '../pinguin';
+import { inApp } from '../laufzeit';
+import { useRueckfrage } from './HbBlatt';
 
 /**
  * Der Reiter „Sammlung" im neuen Hub (Entwurf Fassung 4): nach Spielen
@@ -122,6 +124,10 @@ export function SammlungNeu({
   // „Bald"). Weiß die Liste nichts, bleibt es weg: Ein Figurensatz für ein
   // Spiel, das man nicht starten kann, ist kein Gewinn.
   const mitSchach = spielbar?.has('brochess') ?? false;
+  // Die Partykiste nur, wo sie spielbar ist — in der App seit dem 22.10.2026
+  // „Kommt bald" (Emile). Weiß die Liste nichts, bleibt sie wie bisher stehen.
+  const mitParty = !spielbar || spielbar.size === 0 || spielbar.has('partykiste');
+  const [frage, rueckfrage] = useRueckfrage();
 
   if (offen) return <>{details(offen, () => setOffen(null))}</>;
 
@@ -130,7 +136,12 @@ export function SammlungNeu({
   const hat = (art: RegalWare['art'], wert: string): boolean => ware(art, wert)?.besessen ?? true;
 
   const kaufen = (w: RegalWare, name: string, danach: () => void): void => {
-    if (!window.confirm(`„${name}" für ${w.preis.coins.toLocaleString('de-DE')} Münzen kaufen?`)) return;
+    frage(
+      { titel: `„${name}“ kaufen?`, text: `Kostet ${w.preis.coins.toLocaleString('de-DE')} Münzen.`, ja: `Für ${w.preis.coins.toLocaleString('de-DE')} Münzen kaufen` },
+      () => jetztKaufen(w, danach),
+    );
+  };
+  const jetztKaufen = (w: RegalWare, danach: () => void): void => {
     setKauft(w.id);
     setFehler(null);
     void api
@@ -151,10 +162,11 @@ export function SammlungNeu({
   const zeige = (id: string): boolean => filter === 'alle' || filter === id;
   const chips = [
     { id: 'alle', titel: 'Alle' },
-    { id: 'pinguin', titel: 'Pinguin' },
+    // Kein eigener Filter „Pinguin" mehr (Emile, 22.10.2026): Auf der
+    // Webseite steht die Karte unter „Alle", in der App gar nicht (unten).
     ...blattSpiele.map((id) => ({ id, titel: t(`game.${id}`) })),
     ...(mitSchach ? [{ id: 'brochess', titel: t('game.brochess') }] : []),
-    { id: 'partykiste', titel: t('game.partykiste') },
+    ...(mitParty ? [{ id: 'partykiste', titel: t('game.partykiste') }] : []),
   ];
 
   return (
@@ -180,7 +192,10 @@ export function SammlungNeu({
       <div className="hb-spiele-rolle">
         {fehler && <p className="hb-fehler">{fehler}</p>}
 
-        {zeige('pinguin') && (
+        {/* In der App ohne Pinguin-Karte (Emile, 22.10.2026): Ihr „Bemalen"
+            führt in die Figur-Werkstatt, die es dort in der ersten Fassung
+            nicht gibt — die Teile stehen im Kleiderschrank. */}
+        {!inApp && zeige('pinguin') && (
           <div className="hb-held hb-pinguin-held">
             <button type="button" className="hb-ph-figur" onClick={onSchrank} aria-label="Kleiderschrank öffnen">
               <Pinguin getragen={me.avatar} groesse={8.4} />
@@ -319,7 +334,7 @@ export function SammlungNeu({
           </section>
         )}
 
-        {zeige('partykiste') && (
+        {mitParty && zeige('partykiste') && (
           <section className="hb-blk">
             <h2 className="hb-ab">
               {t('game.partykiste')}
@@ -364,6 +379,7 @@ export function SammlungNeu({
           </section>
         )}
       </div>
+      {rueckfrage}
     </div>
   );
 }

@@ -15,7 +15,7 @@ import {
 import { HubBanner, HubSzene } from '../hub';
 import { ClanChat } from './ClanChat';
 import { ClanKrieg } from './ClanKrieg';
-import { HbBlatt, Zurueck } from './HbBlatt';
+import { HbBlatt, Zurueck, useRueckfrage } from './HbBlatt';
 import { inApp, serverAdresse } from '../laufzeit';
 
 /**
@@ -136,10 +136,13 @@ export function Clan({
   onBald,
   onShowProfile,
   onMeChange,
+  onClanwort,
   neu = false,
 }: {
   /** Neues Hub (Nachtblau & Gold): die neu angeordnete Halle. */
   neu?: boolean;
+  /** Clanwort oeffnen (nur App, neues Hub) — ohne steht die Zeile nicht da. */
+  onClanwort?: () => void;
   /** Der eine Clan des Kontos, oder `null`. */
   clanId: string | null;
   /** Eigenes Konto — im Chat stehen die eigenen Zeilen rechts. */
@@ -224,6 +227,7 @@ export function Clan({
       onBald={onBald}
       onShowProfile={onShowProfile}
       onAktion={tue}
+      onClanwort={onClanwort}
     />
   );
 }
@@ -477,21 +481,28 @@ function MitgliedBlatt({
     { id: 'member', wort: 'Mitglied', hinweis: '' },
   ];
 
-  /** Rang ändern — mit derselben Rückfrage wie bisher. */
+  /**
+   * Rückfragen: im neuen Hub als eigenes Blatt (useRueckfrage), sonst wie
+   * bisher. `window.confirm` zeigte in der App den grauen iOS-Dialog.
+   */
+  const [frage, rueckfrage] = useRueckfrage();
+  const bestaetige = (titel: string, text: string | undefined, ja: string, gefahr: boolean, dann: () => void): void => {
+    if (neu) frage({ titel, text, ja, gefahr }, dann);
+    else if (window.confirm(text ? `${titel} ${text}` : titel)) dann();
+  };
   const befoerdern = (r: (typeof RAENGE)[number]): void => {
-    if (
-      !window.confirm(
-        `${mitglied.displayName} zum ${r.wort} machen?` +
-          (istLeitung(r.id) ? ' Damit darf er aufnehmen, rauswerfen und die Clanregeln ändern.' : ''),
-      )
-    ) {
-      return;
-    }
-    onAktion(api.setClubRole(clubId, mitglied.accountId, r.id), onClose);
+    bestaetige(
+      `${mitglied.displayName} zum ${r.wort} machen?`,
+      istLeitung(r.id) ? 'Damit darf er aufnehmen, rauswerfen und die Clanregeln ändern.' : undefined,
+      `Zum ${r.wort} machen`,
+      false,
+      () => onAktion(api.setClubRole(clubId, mitglied.accountId, r.id), onClose),
+    );
   };
   const rauswerfen = (): void => {
-    if (!window.confirm(`${mitglied.displayName} aus dem Clan werfen?`)) return;
-    onAktion(api.kickClubMember(clubId, mitglied.accountId), onClose);
+    bestaetige(`${mitglied.displayName} aus dem Clan werfen?`, undefined, 'Rauswerfen', true, () =>
+      onAktion(api.kickClubMember(clubId, mitglied.accountId), onClose),
+    );
   };
 
   if (neu) {
@@ -522,6 +533,7 @@ function MitgliedBlatt({
         <button type="button" className="hb-kn is-gefahr is-breit" onClick={rauswerfen}>
           Rauswerfen
         </button>
+        {rueckfrage}
       </HbBlatt>
     );
   }
@@ -1132,7 +1144,9 @@ function ClanFelder({
         <fieldset className="hb-feldzeile hb-wappenwahl">
           <legend>Wappen</legend>
           <div className="hb-wappenraster">
-            {WAPPEN.map((w) => {
+            {/* In der App gibt es den Wappen-Shop nicht — dort nur, was dem
+                Konto gehört, statt Schlösser, die nirgendwohin führen. */}
+            {WAPPEN.filter((w) => !inApp || meineWappen === null || meineWappen.has(w)).map((w) => {
               const mein = meineWappen === null || meineWappen.has(w);
               return (
                 <button
@@ -1302,6 +1316,7 @@ function HalleNeu({
   onBald,
   onShowProfile,
   onAktion,
+  onClanwort,
 }: {
   detail: ClubDetail | null;
   meId: string | null;
@@ -1309,14 +1324,17 @@ function HalleNeu({
   onBald: (name: string) => void;
   onShowProfile: (accountId: string) => void;
   onAktion: (aktion: Promise<unknown>, danach?: () => void) => void;
+  onClanwort?: () => void;
 }): React.JSX.Element {
   const [gewaehlt, setGewaehlt] = useState<ClubMemberView | null>(null);
   const [blatt, setBlatt] = useState<'anfragen' | 'einstellungen' | null>(null);
   const [voll, setVoll] = useState<'chat' | 'krieg' | null>(null);
   const [krieg, setKrieg] = useState<WarState | null>(null);
+  const [frage, rueckfrage] = useRueckfrage();
 
   useEffect(() => {
-    if (!detail) return;
+    // Clankrieg in der App vorerst raus (Emile, 22.10.2026) — dann auch nicht laden.
+    if (!detail || inApp) return;
     let lebt = true;
     void api
       .clubWar(detail.id)
@@ -1414,6 +1432,7 @@ function HalleNeu({
       <div className="hb-clan-inhalt">
         {fehler && <p className="hb-fehler">{fehler}</p>}
 
+        {!inApp && (
         <button type="button" className="hb-krieg" onClick={() => setVoll('krieg')}>
           <span className="hb-kr-kopf">
             <strong>Clankrieg</strong>
@@ -1456,6 +1475,25 @@ function HalleNeu({
             </span>
           )}
         </button>
+        )}
+
+        {/* Clanwort (Emile, 23.10.2026): ein ausgelostes Mitglied waehlt, alle raten. */}
+        {onClanwort && (
+          <button type="button" className="hb-zeile hb-clanwort-zeile" onClick={onClanwort}>
+            <span className="hb-zeile-bild hb-clanwort-bild" aria-hidden="true">
+              <i>W</i>
+              <i>O</i>
+              <i>R</i>
+            </span>
+            <span>
+              <strong>Clanwort</strong>
+              <small>Ein Mitglied wählt, alle raten — heute</small>
+            </span>
+            <span className="hb-pf" aria-hidden="true">
+              ›
+            </span>
+          </button>
+        )}
 
         <button type="button" className="hb-zeile" onClick={() => onBald('Clantruhe')}>
           <img className="hb-zeile-bild" src="/hub/truhe-gold.webp" alt="" />
@@ -1499,15 +1537,17 @@ function HalleNeu({
           <button
             type="button"
             className="hb-leise-knopf"
-            onClick={() => {
-              if (!window.confirm(`Den Clan „${detail.name}" wirklich verlassen?`)) return;
-              onAktion(api.leaveClub(detail.id));
-            }}
+            onClick={() =>
+              frage({ titel: `„${detail.name}“ verlassen?`, text: 'Du kannst danach einem anderen Clan beitreten oder selbst einen gründen.', ja: 'Clan verlassen', gefahr: true }, () =>
+                onAktion(api.leaveClub(detail.id)),
+              )
+            }
           >
             Clan verlassen
           </button>
         )}
       </div>
+      {rueckfrage}
 
       {gewaehlt && detail && (
         <MitgliedBlatt neu mitglied={gewaehlt} clubId={detail.id} onClose={() => setGewaehlt(null)} onShowProfile={onShowProfile} onAktion={onAktion} />

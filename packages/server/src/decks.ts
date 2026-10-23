@@ -59,6 +59,13 @@ export const CARD_BACKS = [
   'pinguin',
   'koeniglich',
   'schiefer',
+  // Nur in der Kartenmanufaktur zu erspielen — je abgeschlossener
+  // Manufaktur einer (manufaktur/rueckseiten.ts), nicht im Shop.
+  'manufaktur-dorf',
+  'manufaktur-fluss',
+  'manufaktur-berg',
+  'manufaktur-hafen',
+  'manufaktur-palast',
 ] as const;
 
 export type CardBack = (typeof CARD_BACKS)[number];

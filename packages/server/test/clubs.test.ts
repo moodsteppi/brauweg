@@ -95,7 +95,10 @@ test('man ist in genau einem Clan', async (t) => {
   t.after(() => c.close());
   const anna = await createVerifiedAccount(c, 'Anna');
 
-  // Ohne Austritt aus dem Beta-Clan geht das Gruenden nicht.
+  // Ein neues Konto ist in keinem Clan (seit dem 22.10.2026 kein Beta-Clan
+  // mehr von selbst). Nach dem ersten Gruenden geht ein zweites nicht.
+  assert.deepEqual(await clubsFor(c.db, anna.accountId), []);
+  await createClub(c.db, anna.accountId, { name: 'Erstclan', crest: 'wappen-1' });
   await assert.rejects(
     () => createClub(c.db, anna.accountId, { name: 'Zweitclan', crest: 'wappen-1' }),
     (e: AppError) => e.status === 409 && e.code === 'alreadyInClub',
@@ -437,16 +440,17 @@ test('Kontoloeschung gibt den Clan frei statt ihn fuehrerlos zu lassen', async (
   assert.equal(detail.members, 1);
 });
 
-test('austreten bleibt ausgetreten - der Beta-Clan holt niemanden zurueck', async (t) => {
+test('austreten bleibt ausgetreten - kein Clan holt jemanden zurueck', async (t) => {
   const c = await ctx();
   t.after(() => c.close());
   const anna = await createVerifiedAccount(c, 'Anna');
   const bert = await createVerifiedAccount(c, 'Bert');
 
-  // Anna gruendet den Beta-Clan mit, Bert kommt hinzu. Bert tritt aus.
-  const [beta] = await clubsFor(c.db, bert.accountId);
-  assert.equal(beta?.name, BETA_CLUB_NAME);
-  await leaveClub(c.db, beta!.id, bert.accountId);
+  // Neue Konten sind in keinem Clan. Anna gruendet, Bert tritt bei und aus.
+  assert.deepEqual(await clubsFor(c.db, bert.accountId), []);
+  const clubId = await gruende(c, anna.accountId, 'Kegelclub Nord', { joinMode: 'open' });
+  await joinClub(c.db, clubId, bert.accountId);
+  await leaveClub(c.db, clubId, bert.accountId);
 
   // Frueher trug ihn das naechste Lesen wieder ein.
   assert.deepEqual(await clubsFor(c.db, bert.accountId), []);

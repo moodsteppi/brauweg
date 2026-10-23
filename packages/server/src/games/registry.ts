@@ -157,11 +157,12 @@ export interface SpielFreigabe {
 export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
   doppelkopf: { web: 'spielbar', app: 'spielbar' },
   skat: { web: 'spielbar', app: 'spielbar' },
-  /* Wie auf der Webseite, MIT Trinkmodus (Robins Entscheidung; das Risiko
-     bei Apple 1.4.3 kennt er). Fuer den Fall einer Ablehnung steht der
-     Rueckweg ohne neuen Build bereit: APP_OHNE_TRINKMODUS, siehe
-     games/app-inhalt.ts. */
-  partykiste: { web: 'spielbar', app: 'spielbar' },
+  /* In der App seit dem 21.10.2026 „Kommt bald" (Emile): Die erste
+     iOS-Fassung geht ohne Trinkspiele an den Start. Vorher lief sie dort wie
+     auf der Webseite mit Trinkmodus (Robins Entscheidung, Risiko Apple
+     1.4.3). Zurueck in die App ist es diese eine Zeile; fuer eine Fassung
+     ohne Trinkmodus steht APP_OHNE_TRINKMODUS bereit (games/app-inhalt.ts). */
+  partykiste: { web: 'spielbar', app: 'bald' },
   wizard: { web: 'spielbar', app: 'bald' },
   cambio: { web: 'spielbar', app: 'bald' },
   easypoker: { web: 'spielbar', app: 'bald' },

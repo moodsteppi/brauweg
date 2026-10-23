@@ -16,6 +16,7 @@ import { useState } from 'react';
 
 import { ApiError, api, type Meldegrund } from '../api';
 import { t } from '../i18n';
+import { HbBlatt } from '../screens/HbBlatt';
 
 const GRUENDE: { wert: Meldegrund; text: string }[] = [
   { wert: 'beleidigung', text: 'Beleidigung oder Belästigung' },
@@ -31,9 +32,12 @@ export function MeldenBlatt({
   blockiert,
   onBlockiert,
   onClose,
+  neu = false,
 }: {
   accountId: string;
   name: string;
+  /** Neues Hub: Blatt in Nachtblau & Gold statt der alten Holzkarte. */
+  neu?: boolean;
   /** Hat man ihn schon blockiert? Dann bietet das Blatt das Aufheben an. */
   blockiert: boolean;
   onBlockiert?: (blockiert: boolean) => void;
@@ -75,6 +79,57 @@ export function MeldenBlatt({
       .finally(() => setBusy(false));
   };
 
+  const hinweis = istBlockiert
+    ? 'Du hast diesen Spieler blockiert: Ihr sitzt nicht mehr zusammen an öffentlichen Tischen.'
+    : 'Blockieren wirkt sofort: Ihr sitzt nicht mehr zusammen an öffentlichen Tischen, und eine Freundschaft endet.';
+
+  if (neu) {
+    return (
+      <HbBlatt titel={name} label={`${name} melden oder blockieren`} onClose={onClose}>
+        <form className="hb-melden" onSubmit={melden}>
+          <p className="hb-klein">{hinweis}</p>
+          <button type="button" className="hb-kn is-zweit is-breit" onClick={blockUmschalten} disabled={busy}>
+            {istBlockiert ? 'Blockierung aufheben' : 'Blockieren'}
+          </button>
+
+          {meldung ? (
+            <p className="hb-melden-danke" role="status">
+              {meldung}
+            </p>
+          ) : (
+            <fieldset className="hb-melden-gruende">
+              <legend className="hb-ab">Melden</legend>
+              {GRUENDE.map((g) => (
+                <label key={g.wert} className={`hb-melden-grund${grund === g.wert ? ' is-an' : ''}`}>
+                  <input
+                    type="radio"
+                    name="meldegrund"
+                    value={g.wert}
+                    checked={grund === g.wert}
+                    onChange={() => setGrund(g.wert)}
+                  />
+                  <span>{g.text}</span>
+                </label>
+              ))}
+              <label className="hb-melden-text">
+                <span className="hb-klein">Was ist passiert? (freiwillig)</span>
+                <textarea className="hb-feld" value={text} maxLength={500} onChange={(e) => setText(e.target.value)} />
+              </label>
+            </fieldset>
+          )}
+
+          {fehler && <span className="hb-fehler">{fehler}</span>}
+
+          {!meldung && (
+            <button type="submit" className="hb-kn is-haupt is-breit is-gefahr" disabled={busy || !grund}>
+              Melden
+            </button>
+          )}
+        </form>
+      </HbBlatt>
+    );
+  }
+
   return (
     <div className="doko-sheet" onClick={onClose} role="presentation">
       <form
@@ -86,11 +141,7 @@ export function MeldenBlatt({
       >
         <h2>{name}</h2>
 
-        <p className="muted">
-          {istBlockiert
-            ? 'Du hast diesen Spieler blockiert: Ihr sitzt nicht mehr zusammen an öffentlichen Tischen.'
-            : 'Blockieren wirkt sofort: Ihr sitzt nicht mehr zusammen an öffentlichen Tischen, und eine Freundschaft endet.'}
-        </p>
+        <p className="muted">{hinweis}</p>
         <button type="button" className="hub-knopf hub-knopf--a" onClick={blockUmschalten} disabled={busy}>
           {istBlockiert ? 'Blockierung aufheben' : 'Blockieren'}
         </button>

@@ -55,6 +55,9 @@ import { type AppVerknuepfung, appVerknuepfungRouten } from './app-verknuepfung.
 import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
 import { partykisteRouten } from './partykiste-routen.js';
 import { lernpfadRouten } from './lernpfad-routen.js';
+import { browortRouten } from './browort-routen.js';
+import { manufakturRouten } from './manufaktur-routen.js';
+import { browortKurz, browortProfil } from '../browort/dienst.js';
 import { herkunftRouten } from './herkunft-routen.js';
 import { gastkontoZaehlen } from '../herkunft.js';
 import { lernserieKurz } from '../lernpfad.js';
@@ -578,7 +581,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    */
   await app.register(cors, {
     origin: [...APP_ORIGINS],
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    // PUT fehlte bis zum 22.10.2026: Der Browser auf der Webseite merkt das
+    // nie (same-origin), die App aber scheitert schon an der Vorabfrage.
+    // Getroffen hat es die Mitteilungs-Schalter („Das hat nicht geklappt")
+    // und den Mememory-Gurt — jede Route mit `app.put` gehört hierher.
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['content-type', 'authorization'],
     credentials: false,
     maxAge: 86_400,
@@ -871,6 +878,23 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
+  // Kartenmanufaktur: das Idle-Spiel — siehe dort.
+  manufakturRouten(app, {
+    db: deps.db,
+    requireAccount,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // Browort und Clanwort: das taegliche Wortraetsel — siehe dort.
+  browortRouten(app, {
+    db: deps.db,
+    requireAccount,
+    push: deps.push,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
   pushRouten(app, {
     db: deps.db,
     requireSitzung: async (request) => {
@@ -1078,11 +1102,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
      * nicht. Die Trophaeensumme kommt aus der schon geladenen Statistik.
      */
     const trophaeen = stats.reduce((summe, zeile) => summe + zeile.trophies, 0);
-    const [truhenOffen, belohnungenOffen, wegOffen, lernen] = await Promise.all([
+    const [truhenOffen, belohnungenOffen, wegOffen, lernen, browort] = await Promise.all([
       offeneTruhen(deps.db, accountId, account.xp),
       offeneBelohnungen(deps.db, accountId),
       offeneWegBelohnungen(deps.db, accountId, trophaeen),
       lernserieKurz(deps.db, accountId),
+      browortKurz(deps.db, accountId),
     ]);
     return reply.send({
       ...rest,
@@ -1111,6 +1136,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen, weg: wegOffen },
       /** Die Lernserie fuer die Flamme auf dem Start (lernpfad.ts) — nur die Zahlen. */
       lernen,
+      /** Browort fuer seine Flamme auf dem Start: Serie und Schnitt (browort/dienst.ts). */
+      browort,
       /*
        * Stufe und Fortschritt fertig gerechnet. Der Client bekommt die
        * Zahlen, nicht die Kurve: Wird sie je nachjustiert, gilt das
@@ -1379,6 +1406,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       const { waehrung } = z
         .object({ waehrung: z.enum(WAEHRUNGEN).default('coins') })
         .parse(request.body ?? {});
+      // In der App vorerst nur Muenzen (Emile, 22.10.2026): Edelsteine stehen
+      // dort nirgends mehr, also wird auch nicht mit ihnen gekauft.
+      if (waehrung === 'gems' && plattformVon(request) === 'app') throw forbidden('nurMuenzenInApp');
       return reply.send(await kaufen(deps.db, accountId, itemId, waehrung));
     },
   );
@@ -1733,6 +1763,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       ...(await playerProfile(deps.db, viewerId, accountId)),
       // Hat der Betrachter diesen Spieler blockiert? (melden-routen.ts)
       blockiert: await hatBlockiert(deps.db, viewerId, accountId),
+      // Browort-Serie und Schnitt — Emile: „steht im Profil des jeweiligen Spielers".
+      browort: await browortProfil(deps.db, accountId),
     });
   });
 

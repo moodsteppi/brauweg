@@ -82,6 +82,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+// `as never` bei den getContext-Attrappen: Seit pixi.js (Kartenmanufaktur) im
+// Client steckt, sind die WebGPU-Typen global, und `vi.spyOn` nimmt die letzte
+// Ueberladung — `getContext('webgpu')`. Die Attrappe ist weiter ein 2D-Kontext.
 describe('BroCookedBanner', () => {
   it('rendert und haengt eine Leinwand ein', () => {
     taktAttrappe();
@@ -96,7 +99,7 @@ describe('BroCookedBanner', () => {
   it('zeichnet und taktet weiter, wenn Bewegung erwuenscht ist', () => {
     const { rufe } = taktAttrappe();
     wenigerBewegung(false);
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctxAttrappe());
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctxAttrappe() as never);
 
     render(<BroCookedBanner />);
     expect(rufe).toHaveLength(1);
@@ -109,7 +112,7 @@ describe('BroCookedBanner', () => {
   it('taktet bei weniger Bewegung nicht weiter', () => {
     const { rufe } = taktAttrappe();
     wenigerBewegung(true);
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctxAttrappe());
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctxAttrappe() as never);
 
     render(<BroCookedBanner />);
     // Ein einziges Bild wird bestellt — und dieses eine bestellt kein weiteres.

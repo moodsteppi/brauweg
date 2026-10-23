@@ -1,0 +1,385 @@
+/*
+ * Browort und Clanwort (browort/*.tsx) — Emile, 23.10.2026.
+ *
+ * Vollbild im neuen Hub (`.hb-voll`), Farben nur über die Hub-Variablen.
+ * Die drei Wortfarben sind bewusst satt und gut unterscheidbar — auch ohne
+ * Farbe zu sehen: Jede Zelle sagt sie zusätzlich der Vorlesehilfe.
+ */
+
+.bw {
+  --bw-gruen: #3fa45a;
+  --bw-gelb: #d9a521;
+  --bw-grau: #3b4668;
+}
+
+.bw .bw-mitte {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px;
+  position: relative;
+}
+
+.bw .bw-rolle {
+  overflow-y: auto;
+  justify-content: flex-start;
+  padding-top: 8px;
+  padding-bottom: 16px;
+}
+
+.bw .bw-kopf-flamme {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 22px var(--hb-anz);
+  color: var(--hb-gold);
+}
+
+.bw .bw-kopf-serie {
+  font: 800 16px var(--hb-txt);
+  color: var(--hb-gold);
+}
+
+/* --- Raster --------------------------------------------------------------- */
+
+.bw .bw-raster {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bw .bw-zeile {
+  display: grid;
+  grid-template-columns: repeat(5, min(15vw, 62px));
+  gap: 6px;
+}
+
+.bw .bw-zeile.is-wackelt {
+  animation: bw-wackeln 0.4s ease;
+}
+
+.bw .bw-feld {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 2px solid var(--hb-kontur);
+  font: 400 min(8vw, 32px) var(--hb-anz);
+  color: var(--hb-tinte);
+  text-transform: uppercase;
+}
+
+.bw .bw-feld.is-voll {
+  border-color: var(--hb-leise);
+  animation: bw-tippen 0.1s ease;
+}
+
+.bw .bw-feld.is-g,
+.bw .bw-feld.is-v,
+.bw .bw-feld.is-x {
+  border-color: transparent;
+  animation: none;
+}
+
+.bw .bw-feld.is-g {
+  background: var(--bw-gruen);
+}
+
+.bw .bw-feld.is-v {
+  background: var(--bw-gelb);
+  color: #1a1407;
+}
+
+.bw .bw-feld.is-x {
+  background: var(--bw-grau);
+}
+
+/* Aufdecken: Die Zelle klappt um, die Farbe erscheint zur Hälfte der Drehung. */
+.bw .bw-feld.is-dreht {
+  animation: bw-drehen 0.5s ease both;
+}
+
+.bw .bw-meldung {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--hb-tinte);
+  color: var(--hb-grund);
+  font: 800 14px var(--hb-txt);
+}
+
+.bw .bw-hinweis {
+  text-align: center;
+  max-width: 22rem;
+}
+
+/* --- Tastatur ------------------------------------------------------------- */
+
+.bw .bw-tastatur {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px 4px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+.bw .bw-tastenreihe {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.bw .bw-tastenreihe .bw-taste {
+  /* Kein Doppeltipp-Zoom: Er verschluckte einen von zwei schnellen Tipps. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  flex: 1;
+  max-width: 40px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: #5a6688;
+  color: #fff;
+  font: 800 16px var(--hb-txt);
+  text-align: center;
+}
+
+.bw .bw-tastenreihe .bw-taste.is-breit {
+  flex: 1.6;
+  max-width: 64px;
+  font-size: 13px;
+}
+
+.bw .bw-tastenreihe .bw-taste svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.bw .bw-tastenreihe .bw-taste.is-g {
+  background: var(--bw-gruen);
+}
+
+.bw .bw-tastenreihe .bw-taste.is-v {
+  background: var(--bw-gelb);
+  color: #1a1407;
+}
+
+.bw .bw-tastenreihe .bw-taste.is-x {
+  background: #262f4a;
+  color: var(--hb-gesperrt);
+}
+
+.bw .bw-tastenreihe .bw-taste:active {
+  filter: brightness(1.15);
+}
+
+/* --- Ende ----------------------------------------------------------------- */
+
+.bw .bw-ende {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+}
+
+.bw .bw-ergebnis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  text-align: center;
+}
+
+.bw .bw-ergebnis.is-geloest {
+  border-color: var(--hb-gold);
+}
+
+.bw .bw-ergebnis strong {
+  font: 400 24px/1.1 var(--hb-anz);
+}
+
+.bw .bw-ergebnis span {
+  font: 700 14px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+.bw .bw-ergebnis b {
+  color: var(--hb-tinte);
+  letter-spacing: 0.08em;
+}
+
+.bw .bw-ergebnis .bw-lohn {
+  color: var(--hb-gold);
+}
+
+.bw .bw-zahlen {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.bw .bw-zahlen span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  border-radius: 10px;
+  background: rgba(7, 19, 47, 0.45);
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+.bw .bw-zahlen b {
+  font: 400 20px var(--hb-anz);
+  color: var(--hb-tinte);
+}
+
+.bw .bw-verteilung {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bw .bw-balkenzeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 800 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+.bw .bw-balkenzeile span {
+  width: 10px;
+  text-align: right;
+}
+
+.bw .bw-balkenzeile i {
+  display: block;
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bw-grau);
+  color: var(--hb-tinte);
+  font-style: normal;
+  text-align: right;
+}
+
+.bw .bw-balkenzeile i.is-heute {
+  background: var(--bw-gruen);
+}
+
+.bw .bw-morgen {
+  margin: 0;
+  text-align: center;
+}
+
+/* --- Clanwort ------------------------------------------------------------- */
+
+.bw .bw-warten {
+  width: 100%;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+
+.bw .bw-warten strong {
+  font: 400 20px/1.2 var(--hb-anz);
+}
+
+.bw .bw-geheim {
+  letter-spacing: 0.2em;
+  color: var(--hb-gold);
+}
+
+.bw .bw-rangliste {
+  width: 100%;
+}
+
+.bw .bw-platz {
+  width: 22px;
+  font: 400 18px var(--hb-anz);
+  color: var(--hb-gold);
+  text-align: center;
+}
+
+/* --- Flamme mit Schnitt ---------------------------------------------------- */
+
+.bw-flamme {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.bw-flamme-zahl {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14%;
+  text-align: center;
+  font: 400 0.95rem/1 var(--hb-anz, system-ui);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(90, 30, 0, 0.6);
+}
+
+.hb-start .bw-startkarte {
+  background: radial-gradient(circle at 12% 50%, rgba(63, 164, 90, 0.22), transparent 50%), var(--hb-karte);
+  border-color: var(--hb-kontur);
+}
+
+@keyframes bw-wackeln {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes bw-tippen {
+  from { transform: scale(1.08); }
+  to { transform: scale(1); }
+}
+
+@keyframes bw-drehen {
+  0% { transform: rotateX(0); background: transparent; border-color: var(--hb-leise); }
+  49% { transform: rotateX(90deg); background: transparent; border-color: var(--hb-leise); }
+  51% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bw .bw-zeile.is-wackelt,
+  .bw .bw-feld.is-voll,
+  .bw .bw-feld.is-dreht {
+    animation: none;
+  }
+}
+
+/* Browort im Profil (BrowortImProfil.tsx) */
+.bw-profil {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+.bw-profil .hb-sp-werte {
+  flex: 1;
+}

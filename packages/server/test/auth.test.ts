@@ -14,6 +14,7 @@ import {
   verifyEmail,
 } from '../src/auth/service.js';
 import { AppError } from '../src/errors.js';
+import { ensureBetaClubMembership } from '../src/clubs/service.js';
 import { INVITE, createTestContext, createVerifiedAccount, schema, seedInvite } from './helpers.js';
 
 const PASSWORD = 'geheim-genug-1234';
@@ -371,6 +372,8 @@ test('Kontoloeschung nimmt Freundschaften, Blockierungen und Clan-Nachrichten mi
   const anna = (await createVerifiedAccount(ctx, 'Anna')).accountId;
   const ben = (await createVerifiedAccount(ctx, 'Ben')).accountId;
   const cora = (await createVerifiedAccount(ctx, 'Cora')).accountId;
+  // Seit dem 22.10.2026 kein Clan mehr von selbst: Anna tritt ausdruecklich bei.
+  await ensureBetaClubMembership(ctx.db, anna);
   const [mitglied] = await ctx.db
     .select({ clubId: schema.clubMember.clubId })
     .from(schema.clubMember)

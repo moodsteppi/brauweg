@@ -9,6 +9,7 @@
     "noEmit": true,
     "skipLibCheck": true,
     "isolatedModules": true,
+    "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "types": ["vite/client"],
     /*
@@ -32,6 +33,12 @@
      *
      * Dieselbe Zuordnung steht als `resolve.alias` in `vitest.config.ts`;
      * beide muessen zusammen gepflegt werden.
+     *
+     * Ausnahme seit dem 23.10.2026: `@brauweg/manufaktur-kern` ist kein
+     * Spielpaket, sondern die Simulation der Kartenmanufaktur, und der Client
+     * rechnet sie zur Laufzeit mit (sonst stuende jede Regel ein zweites Mal
+     * hier). Deshalb steht sie zusaetzlich als `resolve.alias` in
+     * `vite.config.ts` — aus demselben Reihenfolge-Grund wie oben.
      */
     "baseUrl": ".",
     "paths": {
@@ -49,7 +56,8 @@
       "@brauweg/game-partykiste": ["../game-partykiste/src/index.ts"],
       "@brauweg/game-skat": ["../game-skat/src/index.ts"],
       "@brauweg/game-tafelrunde": ["../game-tafelrunde/src/index.ts"],
-      "@brauweg/game-wizard": ["../game-wizard/src/index.ts"]
+      "@brauweg/game-wizard": ["../game-wizard/src/index.ts"],
+      "@brauweg/manufaktur-kern": ["../manufaktur-kern/src/index.ts"]
     }
   },
   /*

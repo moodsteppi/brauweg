@@ -13,6 +13,8 @@
 import type { Bemalung } from './bemalung';
 import type { BotLevel } from './protocol';
 import type { Lektion, LernpfadAnsicht, LernserieKurz, Spieltag } from './lernen/sicht';
+import type { Belohnung, BrowortAnsicht, BrowortKurz, BrowortProfil, ClanwortAnsicht } from './browort/sicht';
+import type { ManufakturAktion, ManufakturAntwort } from './manufaktur/sicht';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
 import { herkunft } from './herkunft';
 
@@ -168,6 +170,8 @@ export interface Me {
    * auf dem Start. Optional aus demselben Grund wie `bereit.weg`.
    */
   lernen?: LernserieKurz;
+  /** Browort fuer seine Flamme auf dem Start (Server, browort/dienst.ts). Optional wie `lernen`. */
+  browort?: BrowortKurz;
   /**
    * Stufe und Fortschritt, fertig gerechnet vom Server.
    *
@@ -420,6 +424,8 @@ export interface RegalWare {
   /** Beide Preise — der Käufer wählt, wie bei der Kosmetik. */
   preis: Preis;
   besessen: boolean;
+  /** Nur zu erspielen (Kartenruecken der Kartenmanufaktur), nicht zu kaufen. */
+  nurErspielt?: true;
   /**
    * Nur bei `inhaltspaket` (Golf-Kurs, Partykiste-Themenpaket): Spiel und
    * Regelsatzfeld. Der Wert steht in `wert` — so sperrt die Auswahl des
@@ -533,6 +539,8 @@ export interface PlayerProfile {
     wins: number;
   }[];
   totals: { parties: number; wins: number; trophies: number };
+  /** Browort-Serie und Schnitt; null, wenn nie gespielt. Fehlt bei aelteren Servern. */
+  browort?: BrowortProfil | null;
 }
 
 export interface FriendLists {
@@ -1056,6 +1064,22 @@ export const api = {
   lektionFertig: (id: string) => post<Spieltag>(`/lernpfad/lektion/${encodeURIComponent(id)}/fertig`),
   /** Uebungsrunde gegen drei Anfaenger-Bots; endet nach einer Runde. */
   lernUebung: () => post<{ tableId: string }>('/lernpfad/uebung'),
+  /** Browort: heutige Runde, Serie, Zahlen (browort/sicht.ts). */
+  browort: () => request<BrowortAnsicht>('/browort'),
+  /** Ein Versuch. Unbekannte Woerter kommen als `browortUnbekannt` zurueck und kosten nichts. */
+  browortVersuch: (wort: string) =>
+    post<BrowortAnsicht & { belohnung: Belohnung | null; geschuetzt: boolean }>('/browort/versuch', { wort }),
+  /** Heutiges Clanwort; null ohne Clan. */
+  clanwort: () => request<{ clanwort: ClanwortAnsicht | null }>('/clanwort'),
+  clanwortWahl: (wort: string) => post<{ clanwort: ClanwortAnsicht }>('/clanwort/wahl', { wort }),
+  clanwortVersuch: (wort: string) =>
+    post<{ clanwort: ClanwortAnsicht; belohnung: Belohnung | null }>('/clanwort/versuch', { wort }),
+  /** Kartenmanufaktur: bis jetzt nachrechnen und zeigen (manufaktur/sicht.ts). */
+  manufaktur: () => request<ManufakturAntwort>('/manufaktur'),
+  /** Ausbauen, Meister, Schicht, Presse freischalten, Umziehen. */
+  /** `bei`: wann getippt wurde, in Server-Zeit — sonst rechnet der Server ab Eingang, und der Tipp springt zurueck. */
+  manufakturAktion: (aktion: ManufakturAktion, bei?: number) =>
+    post<ManufakturAntwort>('/manufaktur/aktion', { ...aktion, bei }),
   /**
    * Der Tisch hinter einem Beitrittscode — zum Ansehen, ohne beizutreten.
    *
@@ -1334,7 +1358,7 @@ export const api = {
 // ---------------------------------------------------------------------------
 
 /** Kennungen wie im Server (push/kennungen.ts). Nie umbenennen. */
-export type PushAnlass = 'dran' | 'start' | 'einladung' | 'anfrage' | 'serie';
+export type PushAnlass = 'dran' | 'start' | 'einladung' | 'anfrage' | 'serie' | 'browort' | 'clanwort';
 
 export interface PushEinstellungen {
   anlaesse: Record<PushAnlass, boolean>;

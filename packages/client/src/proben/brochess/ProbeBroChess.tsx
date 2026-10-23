@@ -43,10 +43,20 @@ interface Fall {
 
 const GRUND = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 
+/** Was die Probe nicht zeigt: keine Uhr, keine Zugliste, nichts geschlagen. */
+const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' | 'vorab'> = {
+  verlauf: [],
+  uhr: null,
+  geschlagen: { w: [], b: [] },
+  vorsprung: 0,
+  vorab: {},
+};
+
 const FAELLE: Fall[] = [
   {
     titel: 'Grundstellung, Weiß am Zug',
     sicht: {
+      ...OHNE,
       zuschauer: false,
       fen: `${GRUND} w KQkq - 0 1`,
       brett: brettAus(GRUND),
@@ -68,6 +78,7 @@ const FAELLE: Fall[] = [
   {
     titel: 'Schach — Schwarz spielt, Blick von unten',
     sicht: {
+      ...OHNE,
       zuschauer: false,
       fen: 'rnbqkbnr/ppp2ppp/3p4/1B2p3/4P3/8/PPPP1PPP/RNBQK1NR b KQkq - 1 3',
       brett: brettAus('rnbqkbnr/ppp2ppp/3p4/1B2p3/4P3/8/PPPP1PPP/RNBQK1NR'),
@@ -83,6 +94,7 @@ const FAELLE: Fall[] = [
   {
     titel: 'Umwandlung',
     sicht: {
+      ...OHNE,
       zuschauer: false,
       fen: '8/1P4k1/8/8/8/8/6K1/8 w - - 0 1',
       brett: brettAus('8/1P4k1/8/8/8/8/6K1/8'),
@@ -111,6 +123,7 @@ const FAELLE: Fall[] = [
   {
     titel: 'Matt (Narrenmatt)',
     sicht: {
+      ...OHNE,
       zuschauer: false,
       fen: 'rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3',
       brett: brettAus('rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR'),
@@ -126,6 +139,7 @@ const FAELLE: Fall[] = [
   {
     titel: 'Patt',
     sicht: {
+      ...OHNE,
       zuschauer: false,
       fen: '7k/5Q2/6K1/8/8/8/8/8 b - - 0 1',
       brett: brettAus('7k/5Q2/6K1/8/8/8/8/8'),

@@ -3,8 +3,8 @@
  *
  *   POST   /api/push/geraet          { plattform: 'ios'|'android', token }
  *   DELETE /api/push/geraet          { token }
- *   GET    /api/push/einstellungen   → { anlaesse: { dran, start, einladung }, geraete }
- *   PUT    /api/push/einstellungen   { dran?, start?, einladung? } → wie GET
+ *   GET    /api/push/einstellungen   → { anlaesse: { <je Anlass>: boolean }, geraete }
+ *   PUT    /api/push/einstellungen   { <Anlass>?: boolean } → wie GET
  *
  * Die Registrierung haengt an der SITZUNG, nicht nur am Konto: Beim Abmelden
  * nimmt `logout` die Tokens dieser Sitzung mit (auth/service.ts), auch wenn
@@ -21,6 +21,7 @@ import { z } from 'zod';
 
 import type { SessionInfo } from '../auth/service.js';
 import type { Db } from '../db/types.js';
+import { ANLAESSE } from '../push/anlaesse.js';
 import {
   leseEinstellungen,
   meldeGeraetAb,
@@ -81,14 +82,13 @@ export function pushRouten(app: FastifyInstance, deps: PushRoutenDeps): void {
 
   app.put('/api/push/einstellungen', { config: { rateLimit: deps.limitSchreiben } }, async (request, reply) => {
     const { accountId } = await deps.requireSitzung(request);
+    // Aus `ANLAESSE` statt von Hand: Die Liste stand hier mit drei Anlässen,
+    // als es längst fünf gab — `strict()` lehnte `anfrage` und `serie` ab, und
+    // ihr Schalter in der App scheiterte bei jedem Tipp.
     const body = z
-      .object({
-        dran: z.boolean().optional(),
-        start: z.boolean().optional(),
-        einladung: z.boolean().optional(),
-      })
+      .object(Object.fromEntries(ANLAESSE.map((a) => [a, z.boolean().optional()])))
       .strict()
-      .parse(request.body ?? {});
+      .parse(request.body ?? {}) as Partial<Record<(typeof ANLAESSE)[number], boolean>>;
     return reply.send({
       anlaesse: await setzeEinstellungen(deps.db, accountId, body),
       geraete: await zaehleGeraete(deps.db, accountId),

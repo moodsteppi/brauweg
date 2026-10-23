@@ -152,6 +152,19 @@ export interface LiveParty {
    * Merkmal.
    */
   phaseMarke: string | number | null;
+  /**
+   * Schachuhr (`schachuhr` in game-api): welcher Sitz gerade Zeit verbraucht
+   * und seit wann. Gesetzt nur beim Wechsel des Sitzes am Zug — `schedule`
+   * kommt auch nach Wiederverbinden oder einer Botpause, und dabei darf die
+   * Uhr nicht von vorn anfangen.
+   *
+   * Nur im Speicher, nicht im Snapshot: Nach einem Neustart laeuft die Uhr
+   * ab dem Wiederanlauf weiter. Die Ausfallzeit geht so keinem Spieler
+   * verloren; gebucht ist ohnehin alles bis zum letzten Zug (im Zustand des
+   * Moduls).
+   */
+  uhrSitz: number | null;
+  uhrSeit: number;
   timer: NodeJS.Timeout | null;
   offlineTimer: NodeJS.Timeout | null;
   /** Gesetzt, solange der Clantisch pausiert ist. */
@@ -448,6 +461,8 @@ export class PartyRuntime {
       interludeDeadline: null,
       phaseDeadline: null,
       phaseMarke: null,
+      uhrSitz: null,
+      uhrSeit: 0,
       timer: null,
       offlineTimer: null,
       paused: false,
@@ -526,6 +541,8 @@ export class PartyRuntime {
       interludeDeadline: null,
       phaseDeadline: null,
       phaseMarke: null,
+      uhrSitz: null,
+      uhrSeit: 0,
       timer: null,
       offlineTimer: null,
       paused: table.pausedAt !== null,
@@ -551,6 +568,13 @@ export class PartyRuntime {
       if (party.timer) {
         clearTimeout(party.timer);
         party.timer = null;
+      }
+      // Die Schachuhr steht in der Pause: bis hierher buchen, danach laeuft
+      // sie beim Fortsetzen neu an (`uhrSitz` null erzwingt den Neubeginn).
+      if (party.uhrSitz !== null) {
+        const gebucht = this.bucheUhr(party, party.uhrSitz);
+        if (!party.module.isFinished(gebucht)) party.state = gebucht;
+        party.uhrSitz = null;
       }
       party.turnDeadline = null;
       if (party.offlineTimer) {
@@ -673,7 +697,17 @@ export class PartyRuntime {
       party.botControlled.delete(seat);
     }
 
-    const next = party.module.act(party.state, seat, this.vomGeraet(party, action));
+    // Schachuhr: erst die verbrauchte Zeit buchen, dann den Zug. War das
+    // Konto schon leer, bevor der Zug ankam, entscheidet die Uhr — der Zug
+    // zaehlt nicht (FIDE 6.9: wer die Zeit ueberschreitet, hat verloren).
+    const gebucht = this.bucheUhr(party, seat);
+    if (gebucht !== party.state && party.module.isFinished(gebucht)) {
+      party.state = gebucht;
+      await this.afterAction(party);
+      return;
+    }
+
+    const next = party.module.act(gebucht, seat, this.vomGeraet(party, action));
     // Wer selbst handelt, ist zurueck: Die Abwesenheitsuhr faengt beim
     // naechsten Mal wieder bei null an und nicht dort, wo sie stehen blieb.
     party.absentSince.delete(seat);
@@ -681,8 +715,9 @@ export class PartyRuntime {
     // Eine Aktion ohne Wirkung - etwa ein doppeltes oder knapp zu spaetes
     // "Weiter" - wird nicht verbucht: kein Snapshot, kein Rundruf. Sonst
     // bekaeme jeder Client denselben Stand unter neuer Revision noch einmal
-    // und hielte ihn fuer eine Aenderung.
-    if (next === party.state) return;
+    // und hielte ihn fuer eine Aenderung. Gegen `gebucht` verglichen: Ohne
+    // Wirkung faellt auch die Buchung weg, und die Uhr laeuft einfach weiter.
+    if (next === gebucht) return;
     party.state = next;
 
     await this.afterAction(party);
@@ -764,6 +799,11 @@ export class PartyRuntime {
     party.turnDeadline = null;
 
     const actor = party.module.currentActor(party.state);
+    // Die Schachuhr faengt nur bei einem Wechsel neu an (siehe `uhrSitz`).
+    if (party.uhrSitz !== actor) {
+      party.uhrSitz = actor;
+      party.uhrSeit = Date.now();
+    }
     if (actor === null) {
       // Niemand am Zug heisst Schaupause, und die hat ihre eigene Frist. Zwei
       // Uhren nebeneinander waeren zwei Antworten auf dieselbe Frage.
@@ -783,6 +823,29 @@ export class PartyRuntime {
     // die Verlassen-Regel liefe ins Leere. `botControlled` ist deshalb nur
     // eine Anzeige, kein Steuerflag.
     const isBot = !seat || !seat.accountId || party.leftSeats.has(actor);
+
+    /*
+     * Schachuhr statt Zugzeit. Die Frist ist das Ende des Zeitkontos, und
+     * nach ihr zieht kein Bot, sondern die Uhr entscheidet. Auch ein Botsitz
+     * hat eine Uhr — seine Frist geht deshalb ebenfalls mit, damit beide
+     * Uhren am Brett laufen. Zusammen mit `phaseMs` gibt es das nicht: Eine
+     * Phase gilt fuer den ganzen Tisch, eine Schachuhr fuer einen Sitz.
+     */
+    const rest = this.uhrRest(party, actor);
+    if (rest !== null) {
+      party.turnDeadline = party.uhrSeit + rest;
+      const bisAblauf = Math.max(0, party.turnDeadline - Date.now());
+      if (isBot && this.botTakt(party) < bisAblauf) {
+        party.timer = setTimeout(() => {
+          void this.playBot(party, actor);
+        }, this.botTakt(party));
+        return;
+      }
+      party.timer = setTimeout(() => {
+        void this.onUhrAbgelaufen(party, actor);
+      }, bisAblauf);
+      return;
+    }
 
     /*
      * Ein Timer fuer zwei Fristen: Der naechste Weckruf ist der fruehere von
@@ -969,7 +1032,11 @@ export class PartyRuntime {
         party.module.viewFor(party.state, seat),
         party.botLevel,
       );
-      party.state = party.module.act(party.state, seat, action);
+      // Auch der Bot zahlt mit seiner Uhr (siehe `act`).
+      const gebucht = this.bucheUhr(party, seat);
+      party.state = party.module.isFinished(gebucht)
+        ? gebucht
+        : party.module.act(gebucht, seat, action);
       await this.afterAction(party);
     } catch (err) {
       // Ein Botfehler darf den Tisch nicht einfrieren. Er wird protokolliert,
@@ -978,6 +1045,39 @@ export class PartyRuntime {
       console.error(`Bot an Tisch ${party.tableId}, Sitz ${seat}:`, err);
       await this.finish(party);
     }
+  }
+
+  /** Restzeit des Sitzes vor seinem laufenden Zug, null = ohne Schachuhr. */
+  private uhrRest(party: LiveParty, seat: number): number | null {
+    return party.module.schachuhr?.restMs(party.state, seat) ?? null;
+  }
+
+  /**
+   * Bucht die Zeit, die der Sitz am Zug seit `uhrSeit` verbraucht hat.
+   * Liefert den Zustand danach und aendert `party.state` NICHT — der Aufrufer
+   * entscheidet, ob die Buchung gilt (bei einem abgewiesenen Zug nicht).
+   * Fuer jeden anderen Sitz und ohne Uhr kommt der Zustand unveraendert
+   * zurueck: Wer nicht am Zug ist, verbraucht keine Zeit (Aufgeben geht
+   * jederzeit).
+   */
+  private bucheUhr(party: LiveParty, seat: number, mindestens = 0): unknown {
+    const uhr = party.module.schachuhr;
+    if (!uhr || party.uhrSitz !== seat || uhr.restMs(party.state, seat) === null) return party.state;
+    return uhr.verbrauche(party.state, seat, Math.max(mindestens, Date.now() - party.uhrSeit));
+  }
+
+  /**
+   * Zeitkonto leer. `mindestens = rest`, weil der Timer ein paar
+   * Millisekunden zu frueh feuern darf — dann gaebe die Buchung sonst einen
+   * Rest von 1 ms, und die Partie liefe weiter, ohne dass je wieder ein
+   * Wecker kaeme.
+   */
+  private async onUhrAbgelaufen(party: LiveParty, seat: number): Promise<void> {
+    if (party.finished || !this.live.has(party.tableId)) return;
+    const gebucht = this.bucheUhr(party, seat, this.uhrRest(party, seat) ?? 0);
+    if (gebucht === party.state) return;
+    party.state = gebucht;
+    await this.afterAction(party);
   }
 
   /**

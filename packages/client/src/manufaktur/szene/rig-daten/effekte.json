@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "canvas": [
+    128,
+    128
+  ],
+  "effekte": {
+    "fx-dampf-1": {
+      "datei": "fx-dampf-1.png",
+      "drehpunkt": [
+        64,
+        64
+      ]
+    },
+    "fx-dampf-2": {
+      "datei": "fx-dampf-2.png",
+      "drehpunkt": [
+        64,
+        64
+      ]
+    },
+    "fx-dampf-3": {
+      "datei": "fx-dampf-3.png",
+      "drehpunkt": [
+        64,
+        64
+      ]
+    },
+    "fx-staub": {
+      "datei": "fx-staub.png",
+      "drehpunkt": [
+        64,
+        64
+      ]
+    },
+    "fx-funke": {
+      "datei": "fx-funke.png",
+      "drehpunkt": [
+        64,
+        64
+      ]
+    },
+    "fx-glanz": {
+      "datei": "fx-glanz.png",
+      "drehpunkt": [
+        64,
+        64
+      ]
+    },
+    "fx-karte": {
+      "datei": "fx-karte.png",
+      "drehpunkt": [
+        64,
+        64
+      ]
+    }
+  }
+}

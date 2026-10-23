@@ -29,6 +29,7 @@ import {
   type Shop as ShopDaten,
 } from '../api';
 import { inApp, serverAdresse } from '../laufzeit';
+import { inAppSichtbar } from '../app-sichtbar';
 import { schonGefeiert } from '../lernen/gefeiert';
 import {
   RUECKEN,
@@ -77,6 +78,8 @@ import { sitzSpanne } from '../sitzspanne';
 import { Clan } from './Clan';
 import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
+import { KontoSichern } from './KontoSichern';
+import { BrowortImProfil } from '../browort/BrowortImProfil';
 import { Klanghalle } from './Klanghalle';
 import { LEERE_BEMALUNG } from '../bemalung';
 
@@ -100,6 +103,11 @@ const Avatarwerkstatt = lazy(() =>
 );
 /** „Doppelkopf lernen" — nur in der App und erst beim Oeffnen nachgeladen. */
 const Lernpfad = lazy(() => import('../lernen/Lernpfad').then((m) => ({ default: m.Lernpfad })));
+const Browort = lazy(() => import('../browort/Browort').then((m) => ({ default: m.Browort })));
+const Clanwort = lazy(() => import('../browort/Clanwort').then((m) => ({ default: m.Clanwort })));
+const Kartenmanufaktur = lazy(() =>
+  import('../manufaktur/Kartenmanufaktur').then((m) => ({ default: m.Kartenmanufaktur })),
+);
 const MeisterFeier = lazy(() => import('../lernen/Feier').then((m) => ({ default: m.MeisterFeier })));
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
@@ -113,7 +121,7 @@ import { SpieleNeu } from './SpieleNeu';
 import { TrophaeenwegNeu } from './TrophaeenwegNeu';
 import { HeuteNeu } from './HeuteNeu';
 import { SammlungNeu } from './SammlungNeu';
-import { HbBlatt, HbSymbol, ImHub, Schliessen, Zurueck, useEscape } from './HbBlatt';
+import { HbBlatt, HbSymbol, ImHub, Schliessen, Zurueck, useEscape, useRueckfrage } from './HbBlatt';
 import { bannerFuer } from './StartNeu';
 import { truhenBild } from '../truhenbild';
 import '@fontsource/lilita-one';
@@ -205,6 +213,18 @@ export function GameSelect({
   /** Doppelkopf lernen (nur App): Lernpfad als Vollbild. */
   const [lernenOffen, setLernenOffen] = useState(false);
   const oeffneLernen = inApp && hubNeu ? () => setLernenOffen(true) : undefined;
+  /** Browort und Clanwort (nur App, neues Hub): Vollbilder wie der Lernpfad. */
+  const [browortOffen, setBrowortOffen] = useState(false);
+  const [clanwortOffen, setClanwortOffen] = useState(false);
+  const oeffneBrowort = inApp && hubNeu ? () => setBrowortOffen(true) : undefined;
+  const oeffneClanwort = inApp && hubNeu ? () => setClanwortOffen(true) : undefined;
+  /** Kartenmanufaktur (nur App): das Idle-Spiel als Vollbild. */
+  const [manufakturOffen, setManufakturOffen] = useState(false);
+  const soloStarten = (modusId: string): void => {
+    if (modusId === 'kartenmanufaktur') setManufakturOffen(true);
+    else if (modusId === 'browort') setBrowortOffen(true);
+    else onSolo(modusId);
+  };
   /** Das Outfit kam ueber die Uebungsrunde: einmal feiern (lernen/Feier.tsx). */
   const [feierZu, setFeierZu] = useState(false);
   const zeigeFeier = Boolean(oeffneLernen) && me.lernen?.belohnt === true && !feierZu && !lernenOffen && !schonGefeiert();
@@ -392,6 +412,7 @@ export function GameSelect({
             onBald={setBald}
             onShowProfile={onShowProfile}
             onMeChange={onAvatarChange}
+            onClanwort={oeffneClanwort}
           />
         );
       case 'spiele':
@@ -401,7 +422,7 @@ export function GameSelect({
             offen={spielseite}
             onOeffne={setSpielseite}
             onPick={onPick}
-            onSolo={onSolo}
+            onSolo={soloStarten}
             onBald={setBald}
             onSammlung={() => setTab('blatt')}
             onLernen={oeffneLernen}
@@ -428,6 +449,7 @@ export function GameSelect({
               onHeute={() => setAufgabenOffen(true)}
               onWeg={() => setWegOffen(true)}
               onLernen={oeffneLernen}
+              onBrowort={oeffneBrowort}
             />
           );
         }
@@ -537,7 +559,7 @@ export function GameSelect({
             onGuthaben={onAvatarChange}
           />
         )}
-        {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
+        {klanghalleOffen && <Klanghalle neu={hubNeu} onClose={() => setKlanghalleOffen(false)} />}
         {werkstattOffen && (
           // Der Rueckfall traegt dieselbe Blatthuelle wie die Werkstatt selbst:
           // Der Tipp verdunkelt sofort den Hintergrund, statt bis zum
@@ -550,6 +572,7 @@ export function GameSelect({
             }
           >
             <Avatarwerkstatt
+              neu={hubNeu}
               bemalung={me.figur ?? null}
               getragen={me.avatar}
               onClose={() => setWerkstattOffen(false)}
@@ -579,6 +602,21 @@ export function GameSelect({
               }}
               onGeaendert={onAvatarChange}
             />
+          </Suspense>
+        )}
+        {browortOffen && (
+          <Suspense fallback={null}>
+            <Browort onClose={() => setBrowortOffen(false)} onGeaendert={onAvatarChange} />
+          </Suspense>
+        )}
+        {clanwortOffen && (
+          <Suspense fallback={null}>
+            <Clanwort onClose={() => setClanwortOffen(false)} onGeaendert={onAvatarChange} />
+          </Suspense>
+        )}
+        {manufakturOffen && (
+          <Suspense fallback={null}>
+            <Kartenmanufaktur onClose={() => setManufakturOffen(false)} onGeaendert={onAvatarChange} getragen={me.avatar} />
           </Suspense>
         )}
         {zeigeFeier && (
@@ -912,6 +950,7 @@ function ProfilTab({
   const [loeschenOffen, setLoeschenOffen] = useState(false);
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
   const [mitteilungenOffen, setMitteilungenOffen] = useState(false);
+  const [sichernOffen, setSichernOffen] = useState(false);
 
   const kacheln = [
     { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: partien },
@@ -1052,7 +1091,9 @@ function ProfilTab({
             <ProfilBild me={me} onChanged={onAvatarChange} />
             <span className="hb-profilkopf-text">
               <strong>{me.displayName}</strong>
-              <small>{geburtstagText}</small>
+              {/* In der App ohne Geburtstag (Emile, 22.10.2026) — dort steht
+                  stattdessen die Stufe in Worten. */}
+              <small>{inApp ? `Stufe ${me.level.stufe}` : geburtstagText}</small>
             </span>
             <span className="hb-stufe" aria-label={`Stufe ${me.level.stufe}`}>
               {me.level.stufe}
@@ -1067,8 +1108,11 @@ function ProfilTab({
             onClick={onStufen}
           />
 
-          {me.birthdayRewardClaimable && geburtstag}
+          {!inApp && me.birthdayRewardClaimable && geburtstag}
 
+          {/* In der App ohne 3D-Figur: Für die erste Fassung gibt es dort den
+              Kleiderschrank (Emile, 22.10.2026). */}
+          {!inApp && (
           <section className="hb-blk">
             <h2 className="hb-ab">
               Deine Figur
@@ -1088,6 +1132,7 @@ function ProfilTab({
             </button>
             <p className="hb-klein hb-ohne-rand">Drehen, anmalen, Mütze aufsetzen — antippen.</p>
           </section>
+          )}
 
           <section className="hb-blk">
             <h2 className="hb-ab">
@@ -1142,7 +1187,7 @@ function ProfilTab({
               {me.stats.length === 0 ? (
                 <p className="hb-klein hb-liste-leer">Noch keine Partie gespielt.</p>
               ) : (
-                me.stats.map((row) => (
+                me.stats.filter((row) => inAppSichtbar(row.gameId)).map((row) => (
                   <div className="hb-mg" key={row.gameId}>
                     <img className="hb-mg-spiel" src={bannerFuer(row.gameId)} alt="" />
                     <span className="hb-mg-name">
@@ -1168,9 +1213,19 @@ function ProfilTab({
             </p>
           </section>
 
+          {/* Browort nur in der App (wie der Lernpfad), Zahlen aus `/api/me`. */}
+          {inApp && (
+            <BrowortImProfil
+              du
+              serie={me.browort?.serie ?? 0}
+              schnitt={me.browort?.schnitt ?? null}
+              geloest={me.browort?.geloest ?? 0}
+            />
+          )}
+
           <Freunde neu onShowProfile={onShowProfile} />
 
-          {!me.birthdayRewardClaimable && geburtstag}
+          {!inApp && !me.birthdayRewardClaimable && geburtstag}
 
           {/* Harmlos nach oben, endgültig nach unten — Löschen steht allein
               und rot am Schluss, nicht neben „Abmelden" (siehe oben). */}
@@ -1180,6 +1235,23 @@ function ProfilTab({
               <span className="hb-ab-zusatz">{me.displayName}</span>
             </h2>
             <div className="hb-liste">
+              {me.gast && (
+                <button type="button" className="hb-mg is-du" onClick={() => setSichernOffen(true)}>
+                  <span className="hb-mg-symbol hb-mg-symbol-ic" aria-hidden="true">
+                    <HbSymbol>
+                      <rect x="5" y="11" width="14" height="9" rx="2" />
+                      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                    </HbSymbol>
+                  </span>
+                  <span className="hb-mg-name">
+                    <strong>Konto sichern</strong>
+                    <small>Du spielst als Gast</small>
+                  </span>
+                  <span className="hb-pf" aria-hidden="true">
+                    ›
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 className="hb-mg"
@@ -1232,6 +1304,7 @@ function ProfilTab({
         {einstellungenOffen && (
           <ImHub>
             <EinstellungenBlatt
+              neu
               onClose={() => {
                 spiele('blatt-zu');
                 setEinstellungenOffen(false);
@@ -1241,8 +1314,18 @@ function ProfilTab({
         )}
         {mitteilungenOffen && (
           <ImHub>
-            <MitteilungenBlatt onClose={() => setMitteilungenOffen(false)} />
+            <MitteilungenBlatt neu onClose={() => setMitteilungenOffen(false)} />
           </ImHub>
+        )}
+        {sichernOffen && (
+          <KontoSichern
+            neu
+            onClose={() => setSichernOffen(false)}
+            onGesichert={() => {
+              setSichernOffen(false);
+              onMeChange();
+            }}
+          />
         )}
         {loeschenOffen && (
           <ImHub>
@@ -1385,7 +1468,7 @@ function ProfilTab({
         {me.stats.length === 0 ? (
           <p className="muted hub-stat-leer">Noch keine Partie gespielt.</p>
         ) : (
-          me.stats.map((row) => (
+          me.stats.filter((row) => inAppSichtbar(row.gameId)).map((row) => (
             <StatSpiel
               key={row.gameId}
               name={t(`game.${row.gameId}`)}
@@ -3458,16 +3541,32 @@ function Freunde({
   const [lists, setLists] = useState<FriendLists | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlayerRef[] | null>(null);
+  /*
+    Bis zum 22.10.2026 schluckte die Liste jeden Fehler: Ging `/friends`
+    schief, stand für immer „Wird geladen…", und ein Tipp auf Annehmen,
+    Suchen oder Anfragen tat ohne Netz einfach nichts. Jetzt steht da, was
+    nicht ging (CLAUDE.md: „Am Tisch nichts stumm verwerfen").
+  */
+  const [fehler, setFehler] = useState<string | null>(null);
+  const fang = (err: unknown): void =>
+    setFehler(err instanceof ApiError ? t(err.messageKey) : 'Das hat nicht geklappt. Prüf die Verbindung.');
 
   const reload = (): void => {
-    void api.friends().then(setLists);
+    void api
+      .friends()
+      .then((l) => {
+        setLists(l);
+        setFehler(null);
+      })
+      .catch(fang);
   };
   useEffect(reload, []);
 
   const search = (event: React.FormEvent): void => {
     event.preventDefault();
     if (query.trim().length < 2) return;
-    void api.searchPlayers(query).then(setResults);
+    setFehler(null);
+    void api.searchPlayers(query).then(setResults).catch(fang);
   };
 
   const anzahl = lists ? lists.friends.length : 0;
@@ -3479,17 +3578,27 @@ function Freunde({
         setResults((alt) => (alt ?? []).filter((entry) => entry.id !== player.id));
         reload();
       })
-      .catch(() => undefined);
+      .catch(fang);
 
   if (neu) {
-    const zeile = (player: PlayerRef, rechts?: React.ReactNode): React.JSX.Element => (
-      <div className="hb-mg" key={player.id}>
-        <button type="button" className="hb-mg-name hb-mg-knopf" onClick={() => onShowProfile(player.id)}>
-          <strong>{player.displayName}</strong>
+    /* Die ganze Zeile ist der Weg zum Profil, nicht nur der Name: Vorher
+       traf ein Tipp auf den Pfeil oder die freie Fläche daneben nichts. */
+    const zeile = (player: PlayerRef, rechts?: React.ReactNode): React.JSX.Element =>
+      rechts === undefined ? (
+        <button type="button" className="hb-mg hb-mg-ganz" key={player.id} onClick={() => onShowProfile(player.id)}>
+          <span className="hb-mg-name">
+            <strong>{player.displayName}</strong>
+          </span>
+          <span className="hb-pf" aria-hidden="true">›</span>
         </button>
-        {rechts}
-      </div>
-    );
+      ) : (
+        <div className="hb-mg" key={player.id}>
+          <button type="button" className="hb-mg-name hb-mg-knopf" onClick={() => onShowProfile(player.id)}>
+            <strong>{player.displayName}</strong>
+          </button>
+          {rechts}
+        </div>
+      );
     return (
       <section className="hb-blk">
         <h2 className="hb-ab">
@@ -3499,22 +3608,34 @@ function Freunde({
         {/* Anfragen zuoberst: sie verlangen eine Antwort. */}
         {(lists === null || lists.incoming.length > 0 || lists.friends.length > 0) && (
           <div className="hb-liste">
-            {lists === null && <p className="hb-klein hb-liste-leer">Wird geladen…</p>}
+            {lists === null && (
+              <p className="hb-klein hb-liste-leer">{fehler ? 'Freunde ließen sich nicht laden.' : 'Wird geladen…'}</p>
+            )}
             {lists?.incoming.map((player) =>
               zeile(
                 player,
                 <span className="hb-mg-knoepfe">
-                  <button type="button" className="hb-kn is-gold is-klein" onClick={() => void api.acceptFriend(player.id).then(reload)}>
+                  <button type="button" className="hb-kn is-gold is-klein" onClick={() => void api.acceptFriend(player.id).then(reload).catch(fang)}>
                     Annehmen
                   </button>
-                  <button type="button" className="hb-kn is-zweit is-klein" onClick={() => void api.removeFriend(player.id).then(reload)}>
+                  <button type="button" className="hb-kn is-zweit is-klein" onClick={() => void api.removeFriend(player.id).then(reload).catch(fang)}>
                     Nein
                   </button>
                 </span>,
               ),
             )}
-            {lists?.friends.map((player) => zeile(player, <span className="hb-pf" aria-hidden="true">›</span>))}
+            {lists?.friends.map((player) => zeile(player))}
           </div>
+        )}
+        {fehler && (
+          <span className="hb-fehler">
+            {fehler}{' '}
+            {lists === null && (
+              <button type="button" className="hb-link" onClick={reload}>
+                Nochmal
+              </button>
+            )}
+          </span>
         )}
         {lists !== null && lists.friends.length === 0 && lists.incoming.length === 0 && (
           <p className="hb-klein hb-ohne-rand">Noch keine Freunde. Such unten nach einem Namen.</p>
@@ -3824,6 +3945,7 @@ function DeckPicker({
   onRueckenChange: (cardBack: string) => void;
   onGekauft: () => void;
 }): React.JSX.Element {
+  const [frage, rueckfrage] = useRueckfrage();
   /**
    * Angetippt wird die Wahl sofort übernommen UND groß gezeigt: Ein Blatt in
    * Daumennagelgröße sagt nichts darüber, wie es am Tisch aussieht — und
@@ -3893,6 +4015,19 @@ function DeckPicker({
     }
     const w = wareZu(art, id);
     if (!w) return;
+    // Erspielt, nicht gekauft (Kartenruecken der Manufaktur): kein Kaufangebot.
+    if (w.nurErspielt) {
+      setKaufFehler(t('error.itemNurErspielt'));
+      return;
+    }
+    // Im neuen Hub die eigene Rückfrage statt des grauen iOS-Dialogs.
+    if (neu) {
+      frage(
+        { titel: `„${name}“ kaufen?`, text: `Kostet ${w.preis.coins.toLocaleString('de-DE')} Münzen.`, ja: `Für ${w.preis.coins.toLocaleString('de-DE')} Münzen kaufen` },
+        () => kaufen(w, setzen),
+      );
+      return;
+    }
     if (!window.confirm(`„${name}" für ${w.preis.coins} Münzen kaufen?`)) return;
     kaufen(w, setzen);
   };
@@ -3912,7 +4047,11 @@ function DeckPicker({
   if (neu) {
     /** Unterzeile einer Kachel: aktiv, gehört dir oder der Preis. */
     const stand = (art: RegalWare['art'], id: string, aktiv: boolean): string => {
-      if (!gehoert(art, id)) return `${(wareZu(art, id)?.preis.coins ?? 0).toLocaleString('de-DE')} Münzen`;
+      if (!gehoert(art, id)) {
+        const w = wareZu(art, id);
+        if (w?.nurErspielt) return 'In der Kartenmanufaktur erspielen';
+        return `${(w?.preis.coins ?? 0).toLocaleString('de-DE')} Münzen`;
+      }
       return aktiv ? 'aktiv' : 'gehört dir';
     };
     const marke = (aktiv: boolean, mein: boolean): React.JSX.Element | null =>
@@ -4060,6 +4199,7 @@ function DeckPicker({
             onClose={() => setVorschau(false)}
           />
         )}
+        {rueckfrage}
       </div>
     );
   }

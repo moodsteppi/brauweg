@@ -69,6 +69,10 @@ function isDevFlag(name: string): boolean {
  *   Brett, Bank und Laden mit einem aufgezeichneten Vorbereitungsstand. Auch
  *   sie bleibt, und aus demselben Grund (siehe Kopf von
  *   `proben/ruestkammer/ProbeRuestkammer.tsx`).
+ * - /probe/manufaktur?fall=neu|mitte|voll|palast — die echte Kartenmanufaktur mit
+ *   festen Staenden und einem nachgestellten Server aus demselben Kern. Fuer
+ *   Bildschirmgroessen und gelieferte Bilder, auch im Browser (das Spiel
+ *   selbst gibt es nur in der App).
  * - /probe/brochess — das echte Schachbrett mit festen Stellungen (Grund-
  *   stellung, Schach, Umwandlung, Matt, Patt), ohne Server. Bleibt, damit
  *   man das Brett ansehen kann, ohne zwei Konten an einen Tisch zu setzen.
@@ -90,6 +94,7 @@ const probeArena2d = istProbe('arena-2d');
 const probeKampf = istProbe('kampf');
 const probeRuestkammer = istProbe('ruestkammer');
 const probeBroChess = istProbe('brochess');
+const probeManufaktur = istProbe('manufaktur');
 
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
@@ -171,6 +176,9 @@ const ProbeRuestkammer = lazy(() =>
 const ProbeStart = lazy(() => import('./proben/start/ProbeStart').then((m) => ({ default: m.ProbeStart })));
 const ProbeHub = lazy(() => import('./proben/hub/ProbeHub').then((m) => ({ default: m.ProbeHub })));
 
+const ProbeManufaktur = lazy(() =>
+  import('./proben/manufaktur/ProbeManufaktur').then((m) => ({ default: m.ProbeManufaktur })),
+);
 const ProbeBroChess = lazy(() =>
   import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
 );
@@ -187,6 +195,8 @@ const werkzeug = devStart ? (
   <ProbeRuestkammer />
 ) : probeBroChess ? (
   <ProbeBroChess />
+) : probeManufaktur ? (
+  <ProbeManufaktur />
 ) : devAvatar ? (
   <AvatarAligner />
 ) : devChest ? (

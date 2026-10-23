@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 /**
@@ -155,4 +155,65 @@ export function HbBlatt({
       </div>
     </ImHub>
   );
+}
+
+/**
+ * Rückfrage im Hub-Stil statt `window.confirm` (Emile, 22.10.2026).
+ *
+ * In der App zeigte iOS für `confirm` seinen eigenen grauen Dialog — fremd
+ * mitten im Nachtblau, und mit „OK" statt einer Aussage. Hier steht, was
+ * passiert, auf dem Knopf.
+ *
+ *   const [frage, rueckfrage] = useRueckfrage();
+ *   frage({ titel: 'Clan verlassen?', ja: 'Verlassen', gefahr: true }, () => …);
+ *   …
+ *   {rueckfrage}
+ */
+export interface Rueckfrage {
+  readonly titel: string;
+  readonly text?: string;
+  /** Beschriftung des Bestätigungsknopfs — ein Verb, nicht „OK". */
+  readonly ja: string;
+  /** Rot statt Gold: Verlassen, Werfen, Löschen. */
+  readonly gefahr?: boolean;
+}
+
+export function useRueckfrage(): [
+  (frage: Rueckfrage, dann: () => void, sonst?: () => void) => void,
+  React.JSX.Element | null,
+] {
+  const [offen, setOffen] = useState<{ frage: Rueckfrage; dann: () => void; sonst?: () => void } | null>(null);
+  const fragen = useCallback(
+    (frage: Rueckfrage, dann: () => void, sonst?: () => void) => setOffen({ frage, dann, sonst }),
+    [],
+  );
+  // `sonst` fuer Aufrufer, die auf die Antwort warten (Clanwort-Wahl): Auch
+  // Abbrechen, Wischen und Escape sind eine Antwort.
+  const abbrechen = (): void => {
+    const sonst = offen?.sonst;
+    setOffen(null);
+    sonst?.();
+  };
+  const blatt = offen ? (
+    <HbBlatt titel={offen.frage.titel} onClose={abbrechen} klasse="is-klein">
+      <div className="hb-rueckfrage">
+        {offen.frage.text && <p className="hb-text">{offen.frage.text}</p>}
+        <button
+          type="button"
+          className={`hb-kn is-haupt is-breit ${offen.frage.gefahr ? 'is-gefahr' : 'is-gold'}`}
+          onClick={() => {
+            const { dann } = offen;
+            setOffen(null);
+            dann();
+          }}
+        >
+          {offen.frage.ja}
+        </button>
+        <button type="button" className="hb-leise-knopf" onClick={abbrechen}>
+          Abbrechen
+        </button>
+      </div>
+    </HbBlatt>
+  ) : null;
+  return [fragen, blatt];
 }

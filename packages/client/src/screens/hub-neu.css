@@ -32,6 +32,11 @@
   --hb-txt: 'Nunito Variable', 'Nunito', system-ui, sans-serif;
 }
 .hb {
+  /* Kein Doppeltipp-Zoom im ganzen Hub (23.10.2026): Zwei schnelle Tipps
+     an verschiedenen Stellen las iOS als Geste und verschluckte einen —
+     in Browort ein Buchstabe, in der Manufaktur eine Schicht. Rollen und
+     Zoomen mit zwei Fingern bleiben. */
+  touch-action: manipulation;
   position: fixed;
   inset: 0;
   display: flex;
@@ -387,7 +392,7 @@
   color: var(--hb-grund);
   font: 800 28px/42px var(--hb-txt);
   text-align: center;
-  box-shadow: inset 0 -3px 0 rgba(120, 70, 0, 0.35);
+  box-shadow: inset 0 -2px 0 rgba(120, 70, 0, 0.3);
   flex: none;
 }
 
@@ -549,15 +554,15 @@
   justify-content: center;
   background: var(--hb-karte);
   border: 2px solid var(--hb-kontur);
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 .hb .hb-tab.is-haupt.is-an .hb-tab-rund {
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   border-color: transparent;
   color: var(--hb-grund);
   box-shadow:
-    inset 0 -4px 0 rgba(120, 70, 0, 0.35),
-    0 4px 0 rgba(0, 0, 0, 0.3);
+    inset 0 -2px 0 rgba(120, 70, 0, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.35);
 }
 .hb .hb-tab.is-haupt .hb-ic {
   width: 28px;
@@ -633,6 +638,13 @@
   height: 24px;
   color: var(--hb-gold);
 }
+/*
+ * Knöpfe: „Gold, aber ruhiger" (Emile, 22.10.2026). Vorher Goldverlauf mit
+ * Glanzkante und Schlagschatten — das las sich wie ein generierter
+ * Spieleknopf. Jetzt eine flache Fläche, eine schmale dunklere Unterkante
+ * als einziger Tiefenhinweis und weniger Rundung. Dieselbe Regel gilt für
+ * alle goldenen Flächen, die man antippt (Reiter, Holen-Schilder, Spind).
+ */
 :is(.hb, .spe) .hb-kn {
   display: inline-flex;
   align-items: center;
@@ -640,17 +652,15 @@
   gap: 8px;
   height: 44px;
   padding: 0 16px;
-  border-radius: 14px;
+  border-radius: 10px;
   font: 800 15px var(--hb-txt);
   white-space: nowrap;
   flex: none;
 }
 :is(.hb, .spe) .hb-kn.is-gold {
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   color: var(--hb-grund);
-  box-shadow:
-    inset 0 -4px 0 rgba(120, 70, 0, 0.35),
-    0 4px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 -2px 0 rgba(120, 70, 0, 0.3);
 }
 :is(.hb, .spe) .hb-kn.is-stimme {
   background: var(--hb-stimme);
@@ -665,8 +675,8 @@
 }
 :is(.hb, .spe) .hb-kn.is-haupt {
   height: 52px;
-  font-size: 18px;
-  border-radius: 16px;
+  font-size: 17px;
+  border-radius: 12px;
 }
 :is(.hb, .spe) .hb-kn.is-breit {
   width: 100%;
@@ -1290,7 +1300,7 @@
   top: -12px;
   font-size: 12px;
   padding: 2px 10px;
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   box-shadow: 0 2px 0 rgba(120, 70, 0, 0.5);
 }
 /* Checkpoint zum Holen: Punkt und Schild sind EIN Knopf, 44 pt hoch.
@@ -1312,7 +1322,7 @@
 :is(.hb, .spe) .hb-cp.is-holbar small {
   position: static;
   margin-left: -4px;
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   border-color: transparent;
   color: var(--hb-grund);
 }
@@ -1352,7 +1362,7 @@
 }
 :is(.hb, .spe) .hb-weg-weiter.is-holbar {
   border-color: transparent;
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   color: var(--hb-grund);
 }
 :is(.hb, .spe) .hb-weg-weiter.is-holbar small {
@@ -1866,7 +1876,10 @@
   color: var(--hb-tinte);
 }
 :is(.hb, .spe) .hb-clan-inhalt {
-  padding: 0 16px 32px;
+  /* Unten 56 statt 32 px: Der erhöhte Start-Knopf der Reiterleiste ragt
+     rund 24 px nach oben, und beim Gründen lag genau dort der letzte Knopf
+     (Emile, 22.10.2026). */
+  padding: 0 16px 56px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -2196,7 +2209,6 @@
   background: var(--hb-karte-hoch);
   border: 1px solid var(--hb-kontur);
   color: var(--hb-tinte);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
 }
 /* Goldkontur: wie die Preise im Regal — wertvoll, aber nicht der Hauptknopf */
 :is(.hb, .spe) .hb-kn.is-kontur {
@@ -2226,7 +2238,8 @@
   opacity: 0.55;
 }
 :is(.hb, .spe) .hb-kn:not(:disabled):active {
-  transform: translateY(2px);
+  transform: translateY(1px);
+  filter: brightness(0.95);
 }
 :is(.hb, .spe) .hb-kn-bild {
   width: 22px;
@@ -2487,7 +2500,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   color: var(--hb-grund);
   font: 400 22px var(--hb-anz);
 }
@@ -3158,7 +3171,7 @@
 }
 :is(.hb, .spe) :is(.einstellungen, .hub-loeschen) .hub-knopf--a-gold {
   border: 0;
-  background: linear-gradient(180deg, var(--hb-gold-hell), var(--hb-gold-tief));
+  background: var(--hb-gold);
   color: var(--hb-grund);
 }
 :is(.hb, .spe) :is(.einstellungen, .hub-loeschen) .hub-knopf--a-raus {
@@ -3182,4 +3195,440 @@
 :is(.hb, .spe) .truhe-hinweis {
   font: 700 13px var(--hb-txt);
   color: var(--hb-leise);
+}
+
+/* Rückfrage (useRueckfrage in HbBlatt.tsx) */
+:is(.hb, .spe) .hb-rueckfrage {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+:is(.hb, .spe) .hb-rueckfrage .hb-text {
+  margin: 0 0 4px;
+  text-align: center;
+}
+:is(.hb, .spe) .hb-rueckfrage .hb-leise-knopf {
+  align-self: center;
+}
+:is(.hb, .spe) .hb-kn.is-gefahr {
+  background: var(--hb-rot);
+  color: #fff;
+  box-shadow: inset 0 -2px 0 rgba(90, 0, 10, 0.3);
+}
+
+/* ---------- Fremdes Profil (Profile.tsx, ProfilNeu) — Emile, 22.10.2026 ---------- */
+.hb.hb-fremd {
+  z-index: 30;
+}
+.hb .hb-fremd-rolle {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px calc(32px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.hb .hb-fremd-held {
+  position: relative;
+  align-items: center;
+  padding: 18px 12px 14px;
+  background:
+    radial-gradient(70% 60% at 50% 40%, rgba(255, 215, 90, 0.16), transparent 70%),
+    linear-gradient(180deg, var(--hb-karte-hoch), var(--hb-karte));
+}
+.hb .hb-fremd-held img {
+  width: 132px;
+  height: auto;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.4));
+}
+.hb .hb-fremd-beziehung:not(:empty) {
+  margin-top: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(7, 19, 47, 0.6);
+  font: 800 12px var(--hb-txt);
+  color: var(--hb-gold);
+}
+.hb .hb-fremd-fehler {
+  gap: 12px;
+}
+/* Ganze Zeile als Knopf: in der Freundesliste und im fremden Profil */
+:is(.hb, .spe) button.hb-mg-ganz {
+  cursor: pointer;
+}
+:is(.hb, .spe) button.hb-mg-ganz:active {
+  background: rgba(255, 255, 255, 0.05);
+}
+:is(.hb, .spe) .hb-fehler .hb-link {
+  color: var(--hb-gold);
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+/* Melden oder blockieren (melden/MeldenBlatt.tsx, `neu`) */
+:is(.hb, .spe) .hb-melden {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+:is(.hb, .spe) .hb-melden .hb-klein {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+:is(.hb, .spe) .hb-melden-gruende {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+:is(.hb, .spe) .hb-melden-gruende legend {
+  margin-bottom: 8px;
+}
+:is(.hb, .spe) .hb-melden-grund {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  /* Ohne eigene Farbe und Rand erben die Zeilen die alten Formularregeln
+     (styles.css, `label`): grau und mit Abstand darunter. */
+  margin: 0;
+  color: var(--hb-tinte);
+  font: 700 15px var(--hb-txt);
+  cursor: pointer;
+}
+:is(.hb, .spe) .hb-melden-grund.is-an {
+  border-color: var(--hb-gold);
+  box-shadow: 0 0 0 2px rgba(245, 192, 46, 0.3);
+}
+:is(.hb, .spe) .hb-melden-grund input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+:is(.hb, .spe) .hb-melden-grund:has(input:focus-visible) {
+  outline: 3px solid var(--hb-gold-hell);
+  outline-offset: 2px;
+}
+:is(.hb, .spe) .hb-melden-text {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+:is(.hb, .spe) .hb-melden-text textarea.hb-feld {
+  height: auto;
+  min-height: 88px;
+  padding: 10px 14px;
+  resize: vertical;
+}
+:is(.hb, .spe) .hb-melden-danke {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(72, 213, 107, 0.14);
+  border: 1px solid var(--hb-gruen);
+  font: 700 14px var(--hb-txt);
+}
+
+/* ---------- Einstellungen und Benachrichtigungen (Einstellungen.tsx, `neu`) — 22.10.2026 ---------- */
+:is(.hb, .spe) .hb-einst {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+:is(.hb, .spe) .hb-einst-karte {
+  gap: 0;
+  padding: 4px 14px;
+}
+:is(.hb, .spe) .hb-regler {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+:is(.hb, .spe) .hb-regler + .hb-regler {
+  border-top: 1px solid rgba(53, 81, 140, 0.5);
+}
+:is(.hb, .spe) .hb-regler-kopf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+:is(.hb, .spe) .hb-regler-kopf img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+:is(.hb, .spe) .hb-regler-text,
+:is(.hb, .spe) .hb-schalter-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+:is(.hb, .spe) .hb-regler-text strong,
+:is(.hb, .spe) .hb-schalter-text strong {
+  font: 800 15px var(--hb-txt);
+  color: var(--hb-tinte);
+}
+:is(.hb, .spe) .hb-regler-text small,
+:is(.hb, .spe) .hb-schalter-text small {
+  font: 700 12px/1.3 var(--hb-txt);
+  color: var(--hb-leise);
+}
+:is(.hb, .spe) .hb-regler-wert {
+  min-width: 40px;
+  text-align: right;
+  font: 400 20px var(--hb-anz);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+/* Eigene Schiene statt der Systemfarbe: links Gold bis zum Wert. */
+:is(.hb, .spe) .hb-regler input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  background: transparent;
+}
+:is(.hb, .spe) .hb-regler input[type='range']::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--hb-gold) 0 var(--hb-regler-anteil, 50%),
+    var(--hb-grund-tief) var(--hb-regler-anteil, 50%) 100%
+  );
+  border: 1px solid var(--hb-kontur);
+}
+:is(.hb, .spe) .hb-regler input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--hb-gold);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+:is(.hb, .spe) .hb-regler input[type='range']::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--hb-grund-tief);
+  border: 1px solid var(--hb-kontur);
+}
+:is(.hb, .spe) .hb-regler input[type='range']::-moz-range-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--hb-gold);
+}
+:is(.hb, .spe) .hb-regler input[type='range']::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--hb-gold);
+}
+
+/* Schalter wie in der Figur-Werkstatt (werkstatt.css, `.ws-schalter`) */
+:is(.hb, .spe) .hb-schalter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  /* Ohne `margin: 0` erbt das Label den Abstand der alten Formulare. */
+  margin: 0;
+  padding: 10px 0;
+  cursor: pointer;
+}
+:is(.hb, .spe) .hb-schalter + .hb-schalter {
+  border-top: 1px solid rgba(53, 81, 140, 0.5);
+}
+:is(.hb, .spe) .hb-schalter input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+:is(.hb, .spe) .hb-schalter i {
+  flex: none;
+  position: relative;
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--hb-grund-tief);
+  border: 1px solid var(--hb-kontur);
+  transition: background 0.15s ease;
+}
+:is(.hb, .spe) .hb-schalter i::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--hb-leise);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+:is(.hb, .spe) .hb-schalter input:checked + i {
+  background: var(--hb-gruen);
+  border-color: transparent;
+}
+:is(.hb, .spe) .hb-schalter input:checked + i::after {
+  transform: translateX(22px);
+  background: #fff;
+}
+:is(.hb, .spe) .hb-schalter input:focus-visible + i {
+  outline: 3px solid var(--hb-gold-hell);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.hb, .spe) .hb-schalter i,
+  :is(.hb, .spe) .hb-schalter i::after {
+    transition: none;
+  }
+}
+
+/* Ein einzelner Knopf in der Knopfreihe (Kauf nur mit Münzen): ganze Breite. */
+:is(.hb, .spe) .hb-knopfreihe.is-einzeln {
+  grid-template-columns: 1fr;
+}
+/* „Ausziehen" im Spind: als Knopf erkennbar und groß genug für den Daumen
+   (vorher nur ein Wort neben der Überschrift, 22.10.2026). */
+:is(.hb, .spe) .hb-ab-mehr.sp-ausziehen {
+  margin: -6px 0 -6px auto;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--hb-karte-hoch);
+  border: 1px solid var(--hb-kontur);
+  color: var(--hb-gold);
+}
+
+/* Formular im Blatt (KontoSichern `neu`): Beschriftung über dem Feld. */
+:is(.hb, .spe) .hb-formular {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+:is(.hb, .spe) .hb-formular .hb-klein {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+:is(.hb, .spe) .hb-formular label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  color: var(--hb-tinte);
+}
+:is(.hb, .spe) .hb-formular label > span {
+  font: 800 13px var(--hb-txt);
+}
+:is(.hb, .spe) .hb-formular label > small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+:is(.hb, .spe) .hb-mg-symbol-ic {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hb-gold);
+}
+
+/* Eigene Ebene über einem Tisch (PushBegleiter): Hub-Farben, aber kein
+   Vollbild-Hintergrund — der Tisch bleibt abgedunkelt zu sehen. */
+.spe.spe-schicht {
+  max-width: none;
+  z-index: 1000;
+  justify-content: flex-end;
+  background: rgba(5, 11, 29, 0.62);
+}
+.spe .spe-frage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 22px 18px calc(16px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  border-radius: 24px 24px 0 0;
+  background: var(--hb-grund);
+  border-top: 1px solid var(--hb-kontur);
+}
+.spe .spe-frage h2 {
+  margin: 0;
+  font-size: 26px;
+}
+.spe .spe-frage p {
+  margin: 0;
+  font: 600 15px/1.45 var(--hb-txt);
+  color: var(--hb-tinte);
+}
+.spe .spe-frage p.hb-klein {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* Clanwort-Zeile in der Clanhalle (Clan.tsx): drei Buchstabenfelder statt eines Bildes. */
+:is(.hb, .spe) .hb-zeile .hb-clanwort-bild {
+  /* Drei Felder nebeneinander: breiter als die 40 px eines Zeilenbildes. */
+  width: 54px;
+  height: 40px;
+  flex: none;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+:is(.hb, .spe) .hb-clanwort-bild i {
+  width: 16px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font: 400 11px var(--hb-anz);
+  font-style: normal;
+  color: #fff;
+  background: #3fa45a;
+}
+:is(.hb, .spe) .hb-clanwort-bild i:nth-child(2) {
+  background: #d9a521;
+  color: #1a1407;
+}
+:is(.hb, .spe) .hb-clanwort-bild i:nth-child(3) {
+  background: #3b4668;
+}
+
+/* Solo-Banner in der App (SpieleNeu.tsx): Manufaktur gemalt, Browort noch gezeichnet. */
+:is(.hb, .spe) .hb-quer.hb-quer-manufaktur {
+  /* Die erste Manufaktur; unten links ist das Bild ruhig, dort steht der Text. */
+  background: #1b2f6e url('/manufaktur/manufaktur-1.webp') center 40% / cover no-repeat;
+}
+:is(.hb, .spe) .hb-quer.hb-quer-browort {
+  background:
+    radial-gradient(60% 90% at 85% 20%, rgba(63, 164, 90, 0.35), transparent 70%),
+    linear-gradient(135deg, #17324a, #1b2f6e);
 }

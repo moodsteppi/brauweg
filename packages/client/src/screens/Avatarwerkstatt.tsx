@@ -11,6 +11,8 @@ import {
   type Bemalung,
   type Strich,
 } from '../bemalung';
+import { Schliessen } from './HbBlatt';
+import './werkstatt.css';
 
 /**
  * Avatar-Werkstatt — die Figur drehen, anziehen und anmalen.
@@ -33,7 +35,10 @@ export function Avatarwerkstatt({
   getragen = {},
   onClose,
   onGespeichert,
+  neu = false,
 }: {
+  /** Neues Hub: Vollbild in Nachtblau & Gold statt des alten Holzblatts. */
+  neu?: boolean;
   /** Was am Konto steht. `null` heißt: nie bemalt. */
   bemalung?: Bemalung | null;
   /**
@@ -118,6 +123,172 @@ export function Avatarwerkstatt({
 
   const bemalbar = bemalung.design === 'bemalt';
 
+  const figur = (
+    <Suspense fallback={<p className="muted werkstatt-laedt">Figur wird geladen…</p>}>
+      {vermessen && (
+        <Avatar3D
+          getragen={zubehoer ? getragen : {}}
+          bemalung={bemalung}
+          malen={malen}
+          farbe={farbe}
+          breite={breite}
+          onStrich={neuerStrich}
+          onBereit={anstossen}
+        />
+      )}
+    </Suspense>
+  );
+
+  if (neu) {
+    return (
+      <div className="hb-voll ws" role="dialog" aria-modal="true" aria-label="Deine Figur">
+        <header className="hb-voll-kopf">
+          <Schliessen onClick={schliessen} />
+          <div className="hb-voll-titel">
+            <h1>Deine Figur</h1>
+            <span>Drehen, anmalen, Zubehör</span>
+          </div>
+        </header>
+
+        <div className="hb-voll-rolle ws-rolle">
+          <div className={`ws-buehne${malen ? ' is-malen' : ''}${bemalbar ? ' is-klein' : ''}`} ref={buehne}>
+            {figur}
+            <span className="ws-hinweis" aria-live="polite">
+              {malen ? 'Mit dem Finger malen' : 'Zum Drehen wischen'}
+            </span>
+          </div>
+
+          {/* „Original" ist der Pinguin, wie er gemalt wurde; „Anmalen" gibt
+              ihm einen hellen Grundton, auf dem man arbeitet. */}
+          <Umschalter
+            name="Aussehen"
+            wahl={bemalbar ? 'bemalt' : 'standard'}
+            werte={[
+              { wert: 'standard', text: 'Original' },
+              { wert: 'bemalt', text: 'Anmalen' },
+            ]}
+            onWahl={(wert) => {
+              if (wert === 'standard') {
+                spiele('tipp');
+                setMalen(false);
+              } else {
+                spiele('schalter');
+              }
+              setBemalung((b) => ({ ...b, design: wert as Bemalung['design'] }));
+            }}
+          />
+
+          {bemalbar && (
+            <section className="ws-pinsel" aria-label="Pinsel">
+              <Umschalter
+                name="Werkzeug"
+                wahl={malen ? 'pinsel' : 'drehen'}
+                werte={[
+                  { wert: 'drehen', text: 'Drehen' },
+                  { wert: 'pinsel', text: 'Pinsel' },
+                ]}
+                onWahl={(wert) => {
+                  spiele('tipp');
+                  setMalen(wert === 'pinsel');
+                }}
+              />
+              <div className="ws-farben" role="group" aria-label="Farbe">
+                {FARBEN.map((f) => (
+                  <button
+                    type="button"
+                    key={f.wert}
+                    className={`ws-farbe${f.wert === farbe ? ' is-an' : ''}`}
+                    style={{ background: f.wert }}
+                    aria-label={f.name}
+                    aria-pressed={f.wert === farbe}
+                    onClick={() => {
+                      setFarbe(f.wert);
+                      setMalen(true);
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="ws-zeile">
+                <div className="hb-chips ws-breiten" role="group" aria-label="Pinselgröße">
+                  {BREITEN.map((b) => (
+                    <button
+                      type="button"
+                      key={b.wert}
+                      className={`hb-chip${b.wert === breite ? ' is-an' : ''}`}
+                      aria-pressed={b.wert === breite}
+                      onClick={() => setBreite(b.wert)}
+                    >
+                      {b.name}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="ws-rund"
+                  aria-label="Letzten Strich zurücknehmen"
+                  disabled={bemalung.striche.length === 0}
+                  onClick={() => {
+                    spiele('blatt-zu');
+                    setBemalung(ohneLetzten);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 14L4 9l5-5" />
+                    <path d="M4 9h10a6 6 0 0 1 0 12h-3" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="ws-rund is-rot"
+                  aria-label="Alles wegwischen"
+                  disabled={bemalung.striche.length === 0}
+                  onClick={() => {
+                    spiele('fehler');
+                    setBemalung((b) => ({ ...b, striche: [] }));
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
+                  </svg>
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* Zubehör nur ausblenden, nicht ausziehen — damit man den Kopf
+              bemalen kann (Begründung in der alten Fassung unten). */}
+          <label className="ws-schalter">
+            <span>
+              <strong>Zubehör zeigen</strong>
+              <small>Zum Bemalen des Kopfes kurz ausblenden — angezogen bleibt es.</small>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={zubehoer}
+              onChange={(e) => {
+                spiele(e.target.checked ? 'schalter' : 'tipp');
+                setZubehoer(e.target.checked);
+              }}
+            />
+            <i aria-hidden="true" />
+          </label>
+
+          {fehler && <p className="hb-fehler">{fehler}</p>}
+        </div>
+
+        <footer className="ws-fuss">
+          <button type="button" className="hb-kn is-gold is-haupt is-breit" disabled={speichert} onClick={speichern}>
+            {speichert ? 'Wird gespeichert…' : 'Speichern'}
+          </button>
+          <button type="button" className="hb-leise-knopf" onClick={schliessen}>
+            Abbrechen
+          </button>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="doko-sheet doko-sheet--mitte" onClick={schliessen}>
       <div
@@ -127,21 +298,7 @@ export function Avatarwerkstatt({
         <h2>Deine Figur</h2>
 
         <div className="werkstatt-buehne" ref={buehne}>
-          <Suspense
-            fallback={<p className="muted werkstatt-laedt">Figur wird geladen…</p>}
-          >
-            {vermessen && (
-              <Avatar3D
-                getragen={zubehoer ? getragen : {}}
-                bemalung={bemalung}
-                malen={malen}
-                farbe={farbe}
-                breite={breite}
-                onStrich={neuerStrich}
-                onBereit={anstossen}
-              />
-            )}
-          </Suspense>
+          {figur}
         </div>
 
         <p className="muted werkstatt-hinweis">
@@ -308,6 +465,36 @@ export function Avatarwerkstatt({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Zwei bis drei Möglichkeiten nebeneinander, eine gewählt — im Hub-Stil. */
+function Umschalter({
+  name,
+  wahl,
+  werte,
+  onWahl,
+}: {
+  name: string;
+  wahl: string;
+  werte: readonly { wert: string; text: string }[];
+  onWahl: (wert: string) => void;
+}): React.JSX.Element {
+  return (
+    <div className="ws-umschalter" role="radiogroup" aria-label={name}>
+      {werte.map((w) => (
+        <button
+          type="button"
+          role="radio"
+          key={w.wert}
+          aria-checked={w.wert === wahl}
+          className={w.wert === wahl ? 'is-an' : undefined}
+          onClick={() => w.wert !== wahl && onWahl(w.wert)}
+        >
+          {w.text}
+        </button>
+      ))}
     </div>
   );
 }

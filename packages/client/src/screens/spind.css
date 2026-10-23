@@ -1,0 +1,408 @@
+/*
+ * Der Spind (Kleiderschrank.tsx, neues Hub) — Emile, 21.10.2026.
+ *
+ * Ein offener Holzspind als Bühne statt eines blauen Kastens: Korpus, zwei
+ * aufgeklappte Türen (Spiegel links, Griff rechts), innen Lampe, Hutablage
+ * und Kleiderstange mit Bügeln, davor der Pinguin auf dem Teppich. Darunter
+ * die Plätze als Schubladen und die Stücke in Fächern — Oberteile am Bügel.
+ *
+ * Alles CSS: keine Grafik, die fehlen könnte. Holzfarben stehen als
+ * Variablen hier und nicht in hub-neu.css, weil nur der Spind sie braucht.
+ */
+
+.sp {
+  --sp-holz-hell: #9a6337;
+  --sp-holz: #7a4a26;
+  --sp-holz-tief: #4e2c14;
+  --sp-holz-fuge: rgba(40, 20, 6, 0.45);
+  --sp-innen: #2a170b;
+  --sp-messing: #e7b44c;
+  --sp-messing-tief: #a5761f;
+  --sp-licht: rgba(255, 214, 130, 0.38);
+  --sp-teppich: #8c2a3a;
+  --sp-teppich-rand: #d8a24a;
+}
+
+/* ---------- Bühne ---------- */
+
+.sp .sp-buehne {
+  position: relative;
+  flex: none;
+  height: 300px;
+  margin: 0 16px 10px;
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 50% 110%, rgba(255, 190, 110, 0.18), transparent 60%),
+    linear-gradient(180deg, #1a2b5e, #0e1a3d);
+  border: 1px solid var(--hb-kontur);
+}
+
+.sp .sp-korpus {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  width: 210px;
+  height: 250px;
+  transform: translateX(-50%);
+  perspective: 600px;
+}
+
+/* Das Innere: dunkle Rückwand aus Brettern, oben die Hutablage. */
+.sp .sp-innen {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px 10px 4px 4px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 34px, var(--sp-holz-fuge) 34px 36px),
+    linear-gradient(180deg, #3b2210, var(--sp-innen));
+  box-shadow:
+    inset 0 0 0 9px var(--sp-holz),
+    inset 0 0 0 11px var(--sp-holz-tief),
+    inset 0 18px 30px rgba(0, 0, 0, 0.55),
+    0 14px 26px rgba(0, 0, 0, 0.45);
+}
+.sp .sp-innen::before {
+  /* Kranz oben: die Kante, die den Spind wie ein Möbel aussehen lässt. */
+  content: '';
+  position: absolute;
+  left: -10px;
+  right: -10px;
+  top: -12px;
+  height: 18px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, var(--sp-holz-hell), var(--sp-holz-tief));
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+.sp .sp-lampe {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 150px;
+  height: 140px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 0%, var(--sp-licht), transparent 70%);
+  pointer-events: none;
+}
+.sp .sp-ablage {
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  top: 54px;
+  height: 8px;
+  background: linear-gradient(180deg, var(--sp-holz-hell), var(--sp-holz-tief));
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.45);
+}
+.sp .sp-stange {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 76px;
+  height: 5px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #f3d48a, var(--sp-messing-tief));
+}
+/* Drei leere Bügel: Hier hängt, was der Pinguin gerade nicht anhat. */
+.sp .sp-buegel {
+  position: absolute;
+  top: 70px;
+  width: 34px;
+  height: 22px;
+  border: 2px solid rgba(231, 180, 76, 0.55);
+  border-top: 0;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+}
+.sp .sp-buegel::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  width: 7px;
+  height: 9px;
+  margin-left: -3px;
+  border: 2px solid rgba(231, 180, 76, 0.55);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+}
+.sp .sp-buegel.is-1 {
+  left: 22px;
+  transform: rotate(-4deg);
+}
+.sp .sp-buegel.is-2 {
+  left: 46px;
+  transform: rotate(3deg);
+}
+.sp .sp-buegel.is-3 {
+  right: 24px;
+  transform: rotate(-2deg);
+}
+
+/* Die aufgeklappten Türen, links mit Spiegel, rechts mit Griff. */
+.sp .sp-tuer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 104px;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06), transparent 40%),
+    repeating-linear-gradient(180deg, var(--sp-holz) 0 22px, var(--sp-holz-hell) 22px 23px, var(--sp-holz) 23px 46px),
+    var(--sp-holz);
+  box-shadow:
+    inset 0 0 0 4px var(--sp-holz-tief),
+    inset 0 0 0 10px rgba(0, 0, 0, 0.12),
+    0 10px 20px rgba(0, 0, 0, 0.45);
+}
+.sp .sp-tuer.is-links {
+  left: -2px;
+  transform-origin: left center;
+  transform: rotateY(-62deg);
+}
+.sp .sp-tuer.is-rechts {
+  right: -2px;
+  transform-origin: right center;
+  transform: rotateY(62deg);
+}
+.sp .sp-spiegel {
+  position: absolute;
+  inset: 18px 16px;
+  border-radius: 50px 50px 10px 10px;
+  background: linear-gradient(160deg, #cfe3f2, #7f9cb5 55%, #b8d0e2);
+  box-shadow: inset 0 0 0 3px var(--sp-messing-tief);
+  opacity: 0.85;
+}
+.sp .sp-griff {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 7px;
+  height: 34px;
+  margin-top: -17px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f6d98e, var(--sp-messing-tief));
+}
+
+.sp .sp-teppich {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  width: 190px;
+  height: 34px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #a33547 30%, var(--sp-teppich) 62%);
+  box-shadow:
+    inset 0 0 0 3px var(--sp-teppich-rand),
+    inset 0 0 0 7px var(--sp-teppich),
+    inset 0 0 0 9px rgba(216, 162, 74, 0.6),
+    0 6px 14px rgba(0, 0, 0, 0.4);
+}
+.sp .sp-pinguin {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45));
+}
+
+/* ---------- Anziehen ---------- */
+
+/*
+ * Jede Ebene entsteht neu, wenn ihr Stück wechselt (`key` in pinguin.tsx),
+ * und fällt dabei von oben an ihren Platz: Hüte auf den Kopf, Schuhe von
+ * unten an die Füße, der Rest aus der Mitte. `fill-box`, damit der Bezug
+ * die Ebene selbst ist und nicht das ganze SVG.
+ */
+.pg-ebene {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: pg-anziehen 0.42s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+.pg-ebene--schuhe {
+  transform-origin: 50% 0%;
+  animation-name: pg-anziehen-unten;
+}
+.pg-ebene--aura {
+  transform-origin: 50% 50%;
+  animation-name: pg-aufleuchten;
+}
+@keyframes pg-anziehen {
+  from {
+    transform: translateY(-14%) scale(1.12);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes pg-anziehen-unten {
+  from {
+    transform: translateY(18%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes pg-aufleuchten {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* ---------- Schubladen (Plätze) ---------- */
+
+.sp .sp-schubladen {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 16px 12px;
+  scrollbar-width: none;
+}
+.sp .sp-schubladen::-webkit-scrollbar {
+  display: none;
+}
+:is(.hb, .spe) .sp-schublade {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 72px;
+  padding: 8px 4px 12px;
+  border-radius: 10px;
+  color: #f6e6c8;
+  font: 800 12px var(--hb-txt);
+  background: linear-gradient(180deg, var(--sp-holz-hell), var(--sp-holz) 60%, var(--sp-holz-tief));
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.25),
+    inset 0 2px 0 rgba(255, 255, 255, 0.12),
+    0 3px 0 var(--sp-holz-tief);
+}
+:is(.hb, .spe) .sp-schublade.is-an {
+  color: var(--hb-grund);
+  background: var(--hb-gold);
+  box-shadow: inset 0 -2px 0 rgba(120, 70, 0, 0.3);
+  transform: translateY(2px);
+}
+.sp .sp-schublade-zeichen {
+  width: 24px;
+  height: 24px;
+}
+.sp .sp-knauf {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 16px;
+  height: 4px;
+  margin-left: -8px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #f6d98e, var(--sp-messing-tief));
+}
+/* Belegter Platz: ein Punkt, damit man sieht, wo schon etwas sitzt. */
+.sp .sp-schublade.is-belegt::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hb-gruen);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- Fächer ---------- */
+
+.sp :is(.hb-stueck).sp-fach {
+  background:
+    linear-gradient(180deg, transparent 72%, rgba(0, 0, 0, 0.2)),
+    linear-gradient(180deg, #3a2312, var(--sp-innen));
+  border: 0;
+  box-shadow:
+    inset 0 0 0 4px var(--sp-holz),
+    inset 0 0 0 5px var(--sp-holz-tief),
+    inset 0 12px 16px rgba(0, 0, 0, 0.45);
+  color: #f6e6c8;
+  padding: 10px 8px 10px;
+}
+.sp :is(.hb-stueck).sp-fach::after {
+  /* Fachboden: das Stück liegt auf einem Brett. */
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 86px;
+  height: 5px;
+  background: linear-gradient(180deg, var(--sp-holz-hell), var(--sp-holz-tief));
+}
+.sp-faecher.is-buegel .sp-fach::after {
+  display: none;
+}
+.sp :is(.hb-stueck).sp-fach.is-aktiv {
+  border: 0;
+  box-shadow:
+    inset 0 0 0 4px var(--hb-gold),
+    inset 0 0 0 5px var(--hb-gold-tief),
+    inset 0 12px 16px rgba(0, 0, 0, 0.35),
+    0 0 14px rgba(245, 192, 46, 0.35);
+}
+.sp :is(.hb-stueck).sp-fach small {
+  color: #d8c3a0;
+}
+.sp .sp-fach-bild {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 80px;
+  width: 100%;
+}
+.sp .sp-fach-bild .pinguin--stueck {
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
+}
+/* Am Bügel: Haken und Bügel über dem Oberteil. */
+.sp .sp-fach-haken {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 46px;
+  height: 14px;
+  margin-left: -23px;
+  border: 3px solid var(--sp-messing);
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+}
+.sp .sp-fach-haken::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -11px;
+  width: 9px;
+  height: 11px;
+  margin-left: -5px;
+  border: 3px solid var(--sp-messing);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+.sp-faecher.is-buegel .sp-fach-bild {
+  align-items: center;
+}
+.sp .sp-fach.is-fremd .sp-fach-bild .pinguin--stueck {
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pg-ebene {
+    animation: none;
+  }
+}

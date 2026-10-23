@@ -3,6 +3,7 @@ import { api, type GameSummary, type Me, type RankingEntry } from '../api';
 import { cardImage, deckForGame } from '../decks';
 import { t } from '../i18n';
 import { inApp } from '../laufzeit';
+import { inAppSichtbar } from '../app-sichtbar';
 import { EINZELSPIELE, einzelKennung, einzelName } from '../minispiele/partykiste/einzelspiele';
 import { sitzSpanne } from '../sitzspanne';
 import { SZENEN, szeneBild } from '../szenen';
@@ -134,11 +135,25 @@ export function SpieleNeu({
     setGames(await api.games());
   };
 
+  // Vor dem frühen Rückgabewert unten: Hooks immer in derselben Reihenfolge.
+  const offenBald = offen ? games?.find((g) => g.id === offen && g.availability === 'preview') : undefined;
+  useEffect(() => {
+    if (!offenBald) return;
+    onOeffne(null);
+    onBald(t(offenBald.nameKey));
+    // An der Kennung hängen, nicht am Objekt (CLAUDE.md).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offenBald?.id]);
+
   if (!games) return <p className="hb-laden">Spiele werden geladen…</p>;
 
   const spielbar = games.filter((g) => g.availability === 'playable');
-  const bald = games.filter((g) => g.availability === 'preview');
-  const offenesSpiel = offen ? games.find((g) => g.id === offen) : undefined;
+  // Die Partykiste steht in der App nicht einmal unter „Kommt bald“ (app-sichtbar.ts).
+  const bald = games.filter((g) => g.availability === 'preview' && inAppSichtbar(g.id));
+  // Nur Spielbares hat eine Spielseite. Ein „Bald"-Spiel kann trotzdem
+  // ankommen — vom Start aus „Deine Spiele", wenn man es früher gespielt hat
+  // (Partykiste in der App, seit 21.10.2026 „Kommt bald").
+  const offenesSpiel = offen ? spielbar.find((g) => g.id === offen) : undefined;
   if (offenesSpiel) {
     return (
       <SpielSeite
@@ -325,6 +340,35 @@ export function SpieleNeu({
               Weitere<span className="hb-ab-zusatz">{weitere.length}</span>
             </h2>
             <div className="hb-reihe">{weitere.map(karte)}</div>
+          </section>
+        )}
+
+        {/* In der App: die beiden Solo-Spiele (Emile, 23.10.2026). Die
+            Manufaktur hat ihr Bild (docs/ASSETS-KARTENMANUFAKTUR.md), Browort
+            bis zu einer Bestellung ein gezeichnetes Feld statt eines fehlenden Bildes. */}
+        {filter === 'alle' && inApp && (
+          <section className="hb-blk">
+            <h2 className="hb-ab">
+              <Symbol>
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+              </Symbol>
+              Allein
+            </h2>
+            <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
+              <span className="hb-quer-text">
+                <strong>Kartenmanufaktur</strong>
+                <span>Pressen, Laufband, Meister — sie druckt auch, wenn du weg bist</span>
+              </span>
+              <span className="hb-kn is-gold">Los</span>
+            </button>
+            <button type="button" className="hb-quer hb-quer-browort" onClick={() => onSolo('browort')}>
+              <span className="hb-quer-text">
+                <strong>Browort</strong>
+                <span>Jeden Tag ein Wort, sechs Versuche</span>
+              </span>
+              <span className="hb-kn is-gold">Los</span>
+            </button>
           </section>
         )}
 

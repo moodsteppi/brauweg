@@ -70,6 +70,12 @@ export interface Ware {
    * des Spiels zu sperren — ohne die Kennung zerlegen zu muessen.
    */
   readonly inhalt?: { readonly spiel: string; readonly feld: string };
+  /**
+   * Nur zu erspielen, nicht zu kaufen (Kartenmanufaktur, seit 23.10.2026).
+   * Der Preis steht trotzdem da — er sagt, was das Stueck wert ist, und haelt
+   * `istFrei` falsch: Preis 0 hiesse „gehoert allen".
+   */
+  readonly nurErspielt?: true;
 }
 
 /**
@@ -91,6 +97,10 @@ function ware(art: WareArt, praefix: string) {
     seltenheit,
     preis: { coins: muenzen, gems: muenzen === 0 ? 0 : inEdelsteine(muenzen) },
   });
+}
+
+function erspielt(ware: Ware): Ware {
+  return { ...ware, nurErspielt: true };
 }
 
 const szene = ware('szene', 'szene');
@@ -201,6 +211,13 @@ export const WAREN: readonly Ware[] = [
   ruecken('smaragd', 500, 'episch'),
   ruecken('koeniglich', 700, 'episch'),
   ruecken('pinguin', 900, 'legendaer'),
+  // Je abgeschlossener Manufaktur einer, der Kartenpalast mit dem ersten
+  // Jubilaeum (manufaktur/rueckseiten.ts).
+  erspielt(ruecken('manufaktur-dorf', 400, 'selten')),
+  erspielt(ruecken('manufaktur-fluss', 500, 'selten')),
+  erspielt(ruecken('manufaktur-berg', 700, 'episch')),
+  erspielt(ruecken('manufaktur-hafen', 900, 'episch')),
+  erspielt(ruecken('manufaktur-palast', 1500, 'legendaer')),
 
   // --- Emotes -------------------------------------------------------------
   // Zwei sind frei: Wer noch nie etwas gekauft hat, soll trotzdem einmal

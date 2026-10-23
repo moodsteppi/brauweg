@@ -8,7 +8,6 @@
 import { and, eq, gt, isNull, or, sql } from 'drizzle-orm';
 
 import { assertValidBirthday } from '../birthday.js';
-import { ensureBetaClubMembership } from '../clubs/service.js';
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { badRequest, conflict, forbidden, unauthorized } from '../errors.js';
@@ -187,9 +186,9 @@ export async function register(
     }
   });
 
-  // Beta: jeder Einladungs-Nutzer landet im gemeinsamen Clan — sonst
-  // gaebe es keine Clantische und keine Pause.
-  await ensureBetaClubMembership(db, accountId);
+  // Kein Beta-Clan mehr von selbst (Emile, 22.10.2026): Bis dahin landete
+  // jedes neue Konto im Clan „Brauweg", damit es Clantische gab. Jetzt ist
+  // man zuerst in keinem Clan und gruendet oder sucht sich einen.
 
   // Der Versand steht bewusst NACH dem Konto und darf es nicht mehr umwerfen.
   // Scheitert er - Versanddienst nicht erreichbar, Schluessel falsch,
@@ -483,8 +482,6 @@ export async function gastSichern(
     if (constraintOf(err) === 'account_email_key') throw conflict('emailTaken');
     throw err;
   }
-
-  await ensureBetaClubMembership(deps.db, accountId);
 
   // Wie bei der Registrierung: Der Versand darf das Konto nicht mehr
   // umwerfen. Wer keine Mail bekommt, fordert sie neu an — und erfaehrt es,

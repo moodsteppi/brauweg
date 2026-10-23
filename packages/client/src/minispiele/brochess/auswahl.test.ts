@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { anzeigeReihenfolge, beweglicheFelder, feldName, zielfelder, zuegeNach } from './auswahl';
+import {
+  anzeigePosition,
+  anzeigeReihenfolge,
+  beweglicheFelder,
+  feldAnPunkt,
+  feldName,
+  vorabZug,
+  zielfelder,
+  zuegeNach,
+} from './auswahl';
 import type { BroChessZug } from './sicht';
 
 const ZUEGE: BroChessZug[] = [
@@ -35,5 +44,32 @@ describe('BroChess: Auswahl auf dem Brett', () => {
   it('liefert bei einer Umwandlung alle angebotenen Figuren', () => {
     expect(zuegeNach(ZUEGE, 'b7', 'b8').map((z) => z.umwandlung)).toEqual(['q', 'n']);
     expect(zuegeNach(ZUEGE, 'g1', 'f3')).toHaveLength(1);
+  });
+});
+
+describe('Ziehen und Vorab-Zug', () => {
+  it('findet das Feld unter dem Finger, von beiden Seiten aus', () => {
+    expect(feldAnPunkt(5, 5, 800, 'w')).toBe('a8');
+    expect(feldAnPunkt(795, 795, 800, 'w')).toBe('h1');
+    expect(feldAnPunkt(5, 5, 800, 'b')).toBe('h1');
+    expect(feldAnPunkt(-1, 5, 800, 'w')).toBeNull();
+    expect(feldAnPunkt(800, 5, 800, 'w')).toBeNull();
+  });
+
+  it('kennt die Lage eines Feldes in der Anzeige', () => {
+    expect(anzeigePosition('a8', 'w')).toEqual({ zeile: 0, spalte: 0 });
+    expect(anzeigePosition('e2', 'w')).toEqual({ zeile: 6, spalte: 4 });
+    expect(anzeigePosition('e2', 'b')).toEqual({ zeile: 1, spalte: 3 });
+  });
+
+  it('nimmt beim Vorab-Zug den angebotenen Zug, bei Umwandlung die Dame', () => {
+    const zuege = [
+      { type: 'zug' as const, von: 'a7', nach: 'a8', umwandlung: 'n' as const },
+      { type: 'zug' as const, von: 'a7', nach: 'a8', umwandlung: 'q' as const },
+      { type: 'zug' as const, von: 'e2', nach: 'e4' },
+    ];
+    expect(vorabZug(zuege, 'a7', 'a8')?.umwandlung).toBe('q');
+    expect(vorabZug(zuege, 'e2', 'e4')).toEqual({ type: 'zug', von: 'e2', nach: 'e4' });
+    expect(vorabZug(zuege, 'e2', 'e5')).toBeNull();
   });
 });

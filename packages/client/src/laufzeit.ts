@@ -46,6 +46,13 @@ const huelle = typeof window === 'undefined' ? undefined : window.BRAUWEG_APP;
 /** Laeuft der Client in der nativen Huelle? */
 export const inApp = huelle !== undefined;
 
+/**
+ * Edelsteine zeigen? In der App vorerst nicht (Emile, 22.10.2026): Dort wird
+ * nur mit erspielten Münzen gekauft. Der Server lehnt Edelstein-Käufe aus der
+ * App ebenfalls ab (`nurMuenzenInApp`).
+ */
+export const mitEdelsteinen = !inApp;
+
 /** Vorsatz aller API-Aufrufe. Im Browser leer, also dieselbe Herkunft. */
 export const apiBase = (huelle?.apiBase ?? '').replace(/\/+$/, '');
 

@@ -45,7 +45,7 @@ test('act weist fremde Zuege, unerlaubte Zuege und Unsinn ab', () => {
   assert.throws(() => fuehreAus(p, 0, zug('e2', 'e5')), /nicht erlaubt/);
   assert.throws(() => fuehreAus(p, 0, zug('e7', 'e5')), /nicht erlaubt/);
   assert.throws(() => fuehreAus(p, 0, zug('z9', 'e4')), /Feld/);
-  assert.throws(() => fuehreAus(p, 0, { type: 'aufgeben' } as never), /Unbekannte Aktion/);
+  assert.throws(() => fuehreAus(p, 0, { type: 'remisAnbieten' } as never), /Unbekannte Aktion/);
 });
 
 test('legalActions nur fuer den Sitz am Zug, und jede davon nimmt act an', () => {

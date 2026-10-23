@@ -74,8 +74,8 @@ test('Weiterspielen: /api/me liefert den laufenden Tisch', async (t) => {
     clubs: { id: string; name: string }[];
   };
   assert.equal(body.activeTable?.tableId, table.id);
-  assert.equal(body.clubs.length, 1);
-  assert.equal(body.clubs[0]!.name, 'Brauweg');
+  // Kein Clan von selbst (22.10.2026).
+  assert.equal(body.clubs.length, 0);
 });
 
 test('Clantisch: nur Mitglieder sehen und betreten ihn', async (t) => {
@@ -83,7 +83,10 @@ test('Clantisch: nur Mitglieder sehen und betreten ihn', async (t) => {
   t.after(() => c.close());
   const anna = await createVerifiedAccount(c, 'Anna');
   const bert = await createVerifiedAccount(c, 'Bert');
+  // Seit dem 22.10.2026 kommt niemand mehr von selbst in einen Clan — beide
+  // treten hier ausdruecklich bei.
   const club = await ensureBetaClubMembership(c.db, anna.accountId);
+  await ensureBetaClubMembership(c.db, bert.accountId);
 
   const table = await createTable(c.db, {
     accountId: anna.accountId,

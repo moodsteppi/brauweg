@@ -10,8 +10,12 @@
  * Bildschirm hebt daraus die Zielfelder hervor und prueft selbst nichts.
  *
  * Es gibt keine Schaupause und keine Phasenfrist: Nach einem Zug ist der
- * andere dran, und die Zugzeit der Plattform genuegt als Uhr. Eine
- * Schachuhr ist bewusst nicht Teil dieses Moduls.
+ * andere dran. Seit dem 22.10.2026 gibt es eine Schachuhr (`schachuhr` in
+ * game-api): Die Plattform misst, das Modul regelt Zuschlag und Zeitablauf.
+ * Ohne Zeitkontrolle im Regelsatz bleibt es bei der Zugzeit der Plattform.
+ *
+ * Eine Ausnahme von „legalActions ist vollstaendig" gibt es seitdem doch:
+ * Aufgeben steht nicht darin (Begruendung an `erlaubteZuege`).
  */
 
 import {
@@ -33,6 +37,8 @@ import {
   fuehreAus,
   markiereVerlassen,
   platzierungen,
+  restzeit,
+  verbraucheZeit,
 } from './partie.js';
 import {
   type BroChessRegeln,
@@ -48,8 +54,24 @@ import { type BroChessSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * Format des Partie-Snapshots. Steigt, sobald sich der gespeicherte Aufbau
  * aendert — der Server muss einen unlesbaren Snapshot als Fehler erkennen,
  * statt ihn falsch zu deuten.
+ *
+ * 2 seit dem 22.10.2026 (Zugliste und Schachuhr). Eine Partie aus Fassung 1
+ * laeuft weiter: ohne Uhr und mit leerer Zugliste — mehr wusste sie nicht.
  */
-const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_VERSION = 2;
+const codec = snapshotCodec<BroChessPartie>(SNAPSHOT_VERSION);
+
+function ladeSnapshot(raw: unknown): BroChessPartie {
+  const snap = raw as { v?: unknown } | null;
+  if (snap && snap.v === 1) {
+    const alt = codec.deserialize({ ...snap, v: SNAPSHOT_VERSION }) as BroChessPartie & {
+      verlauf?: string[];
+      uhr?: BroChessPartie['uhr'];
+    };
+    return { ...alt, verlauf: alt.verlauf ?? [], uhr: alt.uhr ?? null };
+  }
+  return codec.deserialize(raw);
+}
 
 const meta: GameMeta = {
   id: 'brochess',
@@ -64,8 +86,11 @@ const meta: GameMeta = {
 
 export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht, BroChessRegeln> = {
   meta,
-  /** 1 seit dem 24. September 2026 — die erste Fassung. */
-  protocolVersion: 1,
+  /**
+   * 1 seit dem 24. September 2026 — die erste Fassung. 2 seit dem 22.10.2026:
+   * Aufgeben als Aktion, Uhr, Zugliste, Material und Vorab-Ziele in der Sicht.
+   */
+  protocolVersion: 2,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -80,6 +105,11 @@ export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht,
   currentActor: (partie) => amZug(partie),
 
   legalActions: (partie, sitz) => erlaubteZuege(partie, sitz),
+
+  schachuhr: {
+    restMs: (partie, sitz) => restzeit(partie, sitz),
+    verbrauche: (partie, sitz, ms) => verbraucheZeit(partie, sitz, ms),
+  },
 
   isFinished: (partie) => partie.ende !== null,
 
@@ -96,5 +126,6 @@ export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht,
     return botZug(sicht, level);
   },
 
-  ...snapshotCodec<BroChessPartie>(SNAPSHOT_VERSION),
+  serialize: codec.serialize,
+  deserialize: ladeSnapshot,
 };
