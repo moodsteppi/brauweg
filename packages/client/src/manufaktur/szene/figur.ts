@@ -322,7 +322,6 @@ export class RigFigur implements Figur {
   aktualisiere(dt: number): void {
     this.ablauf.weiter(dt);
     const p = this.ablauf.pose();
-    const [bx, by] = RIG.boden;
     // Haltung von Rumpf und Vordergruppe: um den Boden gedreht, gehoben, gestaucht.
     for (const c of [this.rumpf, this.vorn]) {
       c.rotation = p.dreh * GRAD;
@@ -346,8 +345,6 @@ export class RigFigur implements Figur {
         s.alpha = 0.55 + 0.45 * Math.sin(w * 2);
       });
     }
-    void bx;
-    void by;
   }
 
   punkte(): { x: number; y: number }[] {
