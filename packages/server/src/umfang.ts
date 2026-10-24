@@ -6,6 +6,8 @@
  *
  *   UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad
  *
+ * (Der vorgeschlagene Wert fuer die Produktion steht in docs/APP-RELEASE.md.)
+ *
  * **Ohne Variable ist alles an.** Das ist `staging`: Dort soll jeder Teil
  * laufen, auch der, der fuer die Produktion noch nicht freigegeben ist. Auf
  * `main` steht die Liste dessen, was zum Release gehoert (Projekt
@@ -51,6 +53,25 @@ export const FUNKTIONEN = [
   'clankrieg',
   /** Der Clan-Chat. */
   'clanchat',
+  /**
+   * Shop und Edelsteine: der Reiter, Edelstein-Pakete und -Truhen und das
+   * Bezahlen mit Edelsteinen. Kaufen mit Muenzen (Kleiderschrank, Sammlung)
+   * gehoert NICHT dazu — das gibt es in der App auch.
+   */
+  'shop',
+  /** Die Abstimmung ueber kuenftige Spiele unter „Kommt bald". */
+  'abstimmung',
+  /** Ein eigenes Profilbild hochladen. Angezeigt wird ein vorhandenes trotzdem. */
+  'profilbild',
+  /**
+   * Die 3D-Figur im Profil, ihre Werkstatt und die Pinguin-Karte der
+   * Sammlung. EINE Funktion, weil alle drei an derselben Route haengen
+   * (`/api/me/figur`) und die Karte vor allem in die Werkstatt fuehrt —
+   * getrennt schaltbar gaebe es eine Karte, deren Knopf ins Leere geht.
+   */
+  'figur',
+  /** Geburtstag im Profil samt Geburtstagsgeschenk. */
+  'geburtstag',
 ] as const;
 
 export type Funktion = (typeof FUNKTIONEN)[number];

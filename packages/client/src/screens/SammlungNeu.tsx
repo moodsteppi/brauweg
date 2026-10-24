@@ -6,6 +6,7 @@ import { FIGURENSAETZE, pinguinBild } from '../minispiele/brochess/figurensatz';
 import { PAKET_NAME } from '../minispiele/partykiste/wahl';
 import { Pinguin } from '../pinguin';
 import { inApp } from '../laufzeit';
+import { imUmfang } from '../umfang';
 import { useRueckfrage } from './HbBlatt';
 
 /**
@@ -194,8 +195,9 @@ export function SammlungNeu({
 
         {/* In der App ohne Pinguin-Karte (Emile, 22.10.2026): Ihr „Bemalen"
             führt in die Figur-Werkstatt, die es dort in der ersten Fassung
-            nicht gibt — die Teile stehen im Kleiderschrank. */}
-        {!inApp && zeige('pinguin') && (
+            nicht gibt — die Teile stehen im Kleiderschrank. Auf der Webseite
+            aus demselben Grund mit der Figur am Umfang (`figur`). */}
+        {!inApp && imUmfang('figur') && zeige('pinguin') && (
           <div className="hb-held hb-pinguin-held">
             <button type="button" className="hb-ph-figur" onClick={onSchrank} aria-label="Kleiderschrank öffnen">
               <Pinguin getragen={me.avatar} groesse={8.4} />

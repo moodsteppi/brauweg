@@ -109,7 +109,7 @@ export function NeuerRahmen<T extends Reiter>({
           </span>
           {[
             { wert: me.coins, bild: '/hub/symbol-muenze.webp', name: 'Münzen' },
-            ...(mitEdelsteinen ? [{ wert: me.gems, bild: '/hub/symbol-edelstein.webp', name: 'Edelsteine' }] : []),
+            ...(mitEdelsteinen() ? [{ wert: me.gems, bild: '/hub/symbol-edelstein.webp', name: 'Edelsteine' }] : []),
           ].map(({ wert, bild, name }) =>
             zumShop ? (
               <button type="button" key={name} className="hb-pill" onClick={zumShop} aria-label={`${wert} ${name}, zum Shop`}>

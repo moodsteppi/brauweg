@@ -21,6 +21,7 @@ import { useEffect, useState } from 'react';
 import { api, type RegalWare } from './api';
 import { t } from './i18n';
 import { inApp } from './laufzeit';
+import { imUmfang } from './umfang';
 
 /** Wo im Shop die Pakete stehen — derselbe Titel wie das Regal in GameSelect. */
 export const SHOP_RUBRIK = 'Spielpakete';
@@ -30,9 +31,14 @@ export const SHOP_RUBRIK = 'Spielpakete';
  *
  * In der App gibt es keinen Shop, und ein Verweis auf einen Kaufweg ausserhalb
  * der App verstoesst gegen Apple 3.1.1. Dort steht nur, dass es gesperrt ist.
+ * Ebenso auf der Webseite, wenn der Shop nicht im Umfang steht (umfang.ts):
+ * Ein Verweis auf einen Reiter, den es nicht gibt, ist eine Sackgasse.
  */
-export function sperrgrund(ware: Pick<RegalWare, 'preis'>, app: boolean = inApp): string {
-  if (app) return 'Nicht freigeschaltet';
+export function sperrgrund(
+  ware: Pick<RegalWare, 'preis'>,
+  ohneShop: boolean = inApp || !imUmfang('shop'),
+): string {
+  if (ohneShop) return 'Nicht freigeschaltet';
   return `${ware.preis.coins} Münzen · Im Shop ansehen: „${SHOP_RUBRIK}“`;
 }
 

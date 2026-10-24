@@ -800,7 +800,9 @@ export function App(): React.JSX.Element {
           if (gameId === 'filler') return setScreen({ name: 'filler' });
           if (gameId === 'eiland') return setScreen({ name: 'eiland' });
           if (gameId === 'golf') return setScreen({ name: 'golf' });
-          if (gameId === 'brocooked') return setScreen({ name: 'brocooked' });
+          // BroCooked läuft allein und zu zweit ohne Tisch, also ohne eine
+          // Route, die der Server sperren könnte — der Umfang greift nur hier.
+          if (gameId === 'brocooked') return imUmfang('brocooked') ? setScreen({ name: 'brocooked' }) : undefined;
           if (gameId === 'partykiste') return setScreen({ name: 'partykiste' });
           // Einzelspiele der Partykiste (`pk-busfahrer` …): dieselbe Kiste, ein Minispiel.
           const einzel = einzelVon(gameId);
