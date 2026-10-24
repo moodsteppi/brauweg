@@ -193,6 +193,22 @@ mehr, weil davor renoviert wird): erste Renovierung 60–90 min, erster Umzug
 3 min; danach, im endlosen Jubiläum, wächst sie auf rund 8 min — gewollt
 weich, kein Ende.
 
+## Baustellen vor Etage 5 und 8 (seit 24.10.2026)
+
+`packages/manufaktur-kern/src/baustelle.ts`. Vor Etage 5 und 8 liegt Schutt:
+erst Bauarbeiten (¼ des Etagenpreises), dann **10 min bzw. 30 min** warten —
+auch offline. Kein Sofort-Fertigstellen; kürzer nur mit „Flinke Bautrupps"
+(−25 % je Stufe). Beginnen darf man **zwei Etagen vorher**: Ab der Etage
+davor zu bauen, liess den aktiven Spieler vor Etage 8 eine halbe Stunde
+warten (erster Umzug 119 statt 99 min). Geräumt wird **einmal je Ort** —
+Renovieren setzt die Etagen zurück, aber nicht den Schutt. Sichtbar: Schutt
+mit Gerüst, Countdown-Schild, zwei Bauarbeiter mit Helm; fertig bricht die
+Wand mit Staub und Brocken weg.
+
+Simulation: aktiv Presse 5 nach 35:41 (0,7 min über dem Fenster), erster
+Umzug 99:43; Gelegenheitsspieler kaum betroffen (Presse 5 nach 1,5 statt 1,3
+Tagen) — die Wartezeit fällt in die Offline-Phasen.
+
 **Münzen fürs Hub (Meilensteine, eigene Währung bleibt getrennt):**
 
 | Meilenstein | Münzen |

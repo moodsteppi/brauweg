@@ -35,6 +35,7 @@ import {
   ziehe,
 } from './meister.js';
 import { MAX_RENOVIERUNG, kannRenovieren, renovierKosten, renovierung } from './renovieren.js';
+import { bauDauer, bauKosten, hatBaustelle, kannBauen, naechsteBaustelle } from './baustelle.js';
 import { type Eintrag, BUCH, SIEGEL_RENOVIERUNG, SIEGEL_UMZUG, buchPreis, feilschenFaktor, poolGroesse } from './werkstattbuch.js';
 import { type ManufakturStand, type Station, kopiere, neuePresse, neuerStand } from './stand.js';
 import { kannStarten, starte, vorspulen } from './zeit.js';
@@ -70,7 +71,9 @@ export type Aktion =
    * An einen schon erreichten Ort zurueck (oder wieder vor): Die Halle
    * beginnt neu, die Renovierung des Orts gilt. Es laeuft immer nur einer.
    */
-  | { typ: 'wechseln'; nach: number };
+  | { typ: 'wechseln'; nach: number }
+  /** Bauarbeiten vor Etage 5 oder 8 beginnen: Taler sofort, dann warten. */
+  | { typ: 'bauen' };
 
 export interface Meilenstein {
   kennung: string;
@@ -270,8 +273,18 @@ export function handle(
       stand.werkstattbuch[aktion.eintrag] = (stand.werkstattbuch[aktion.eintrag] ?? 0) + 1;
       break;
     }
+    case 'bauen': {
+      if (!kannBauen(stand)) throw new AktionAbgelehnt('manufakturKeineBaustelle');
+      const etage = naechsteBaustelle(stand)!;
+      bezahle(stand, bauKosten(etage, stand.manufaktur));
+      const ort = stand.orte[String(stand.manufaktur)] ?? { renovierung: 0, geraeumt: [] };
+      stand.orte[String(stand.manufaktur)] = { ...ort, bau: { etage, bis: t + bauDauer(stand, etage) } };
+      break;
+    }
     case 'freischalten': {
       if (stand.pressen.length >= MAX_PRESSEN) throw new AktionAbgelehnt('manufakturVoll');
+      // Vor Etage 5 und 8: erst den Schutt wegraeumen (Bauarbeiten, Phase 4).
+      if (hatBaustelle(stand, stand.pressen.length)) throw new AktionAbgelehnt('manufakturBaustelle');
       bezahle(stand, freischaltKosten(stand.pressen.length, stand.manufaktur));
       stand.pressen.push(neuePresse());
       // Hat diese Etage aus einer frueheren Halle schon einen Meister, steht er gleich da.

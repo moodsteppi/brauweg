@@ -134,6 +134,9 @@ export const STELLSCHRAUBEN = {
   /** Jubilaeum im Palast (Stufe 5 und hoeher): flacher, damit es nie davonlaeuft. */
   JUBILAEUM_WACHSTUM: 1.5,
   JUBILAEUM_KOSTEN: 3,
+
+  /** Bauarbeiten vor Etage 5 und 8 (baustelle.ts) kosten diesen Teil der Etage selbst. */
+  BAU_KOSTEN: 0.25,
 };
 const W = STELLSCHRAUBEN;
 

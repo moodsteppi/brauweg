@@ -201,7 +201,8 @@ test('Upgrade-Vorschau: vorher → nachher und der Weg zum naechsten Meilenstein
 
 test('Umzug erst mit allen acht Pressen und einer Renovierung, dann alles neu mit Muenzen und doppelter Leistung', () => {
   // Renoviert ist hier schon — wann das geht, prueft renovieren.test.ts.
-  const stand = { ...neuerStand(T0, 1, { orte: { '1': { renovierung: 1, geraeumt: [] } } }), taler: 1e30 };
+  // Renoviert und die Baustellen geraeumt — beides pruefen eigene Dateien.
+  const stand = { ...neuerStand(T0, 1, { orte: { '1': { renovierung: 1, geraeumt: [4, 7] } } }), taler: 1e30 };
   assert.throws(() => handle(stand, { typ: 'umziehen' }, T0), abgelehnt('manufakturUmzugZuFrueh'));
   let voll: ManufakturStand = stand;
   while (voll.pressen.length < MAX_PRESSEN) voll = handle(voll, { typ: 'freischalten' }, T0).stand;

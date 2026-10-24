@@ -167,6 +167,17 @@ describe('Kartenmanufaktur: Werkstattbuch', () => {
   });
 });
 
+describe('Kartenmanufaktur: Baustellen', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('vor Etage 5 erst Schutt räumen, dann läuft der Countdown', async () => {
+    oeffne({ ...neuerStand(Date.now()), pressen: Array.from({ length: 4 }, neuePresse), taler: 1e9 });
+    fireEvent.click(await screen.findByRole('button', { name: /Schutt räumen vor Etage 5/ }));
+    await vi.waitFor(() => expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'bauen' }, expect.any(Number)));
+    expect(await screen.findByRole('status', { name: /Bauarbeiten vor Etage 5, noch 10:00|Bauarbeiten vor Etage 5, noch 9:5/ })).toBeTruthy();
+  });
+});
+
 describe('Kartenmanufaktur: Renovieren', () => {
   beforeEach(() => vi.clearAllMocks());
 

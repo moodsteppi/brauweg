@@ -328,6 +328,7 @@ export function Kartenmanufaktur({
                 else setBlatt({ art: 'meister', ziel });
               }}
               onFreischalten={() => tue({ typ: 'freischalten' }, 'kauf')}
+              onBauen={() => tue({ typ: 'bauen' }, 'kauf')}
             />
             {/* Der Punkt liegt auf dem Ziel; Ring und Hand richten sich daran aus —
                 die Hand mit ihrer gemessenen Fingerspitze, nicht mit ihrer Mitte. */}

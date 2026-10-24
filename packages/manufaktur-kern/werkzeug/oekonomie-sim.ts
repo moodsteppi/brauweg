@@ -28,6 +28,10 @@ import {
   kannStarten,
   kannUmziehen,
   kannRenovieren,
+  kannBauen,
+  naechsteBaustelle,
+  hatBaustelle,
+  bauKosten,
   hoechsterOrt,
   MAX_MANUFAKTUR,
   renovierKosten,
@@ -120,7 +124,17 @@ function kandidaten(stand: ManufakturStand): Kandidat[] {
       });
     }
   }
-  if (stand.pressen.length < MAX_PRESSEN) {
+  // Bauarbeiten (Phase 4): sobald eine Baustelle in Reichweite ist — so viel wert wie die Etage selbst.
+  const bau = naechsteBaustelle(stand);
+  if (bau !== null && kannBauen(stand)) {
+    liste.push({
+      aktion: { typ: 'bauen' },
+      kosten: bauKosten(bau, stand.manufaktur),
+      wert: presseLeistung(bau, 1, stand.manufaktur) * 0.5,
+      name: `Bauarbeiten vor Presse ${bau + 1}`,
+    });
+  }
+  if (stand.pressen.length < MAX_PRESSEN && !hatBaustelle(stand, stand.pressen.length)) {
     const neu = stand.pressen.length;
     const probe: ManufakturStand = JSON.parse(JSON.stringify(stand));
     probe.pressen.push({ ...probe.pressen[0]!, stufe: 1, meister: false, kiste: 0, laeuft: false, fortschritt: 0 });
@@ -371,7 +385,7 @@ function simuliere(DAUER_MS: number, bisManufaktur = Infinity, plan: Plan = IMME
           merke(t, ersterMeister ? beste.name : `erster Meister (${beste.name})`);
           ersterMeister = true;
         }
-        if (beste.aktion.typ === 'freischalten') merke(t, beste.name);
+        if (beste.aktion.typ === 'freischalten' || beste.aktion.typ === 'bauen') merke(t, beste.name);
       }
     }
   }

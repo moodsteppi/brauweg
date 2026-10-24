@@ -1138,3 +1138,33 @@
 .mf-orte-text strong {
   font: 700 14px var(--hb-txt);
 }
+
+/* --- Baustellen (Phase 4) ---------------------------------------------- */
+/* Das Countdown-Schild der Lieferung (320 × 160, Textflaeche 40/65/240/65). */
+.mf .mf-ueber .mf-bauschild {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding-top: 14px;
+  background: url(/manufaktur/rig2/countdown-schild.webp) center / contain no-repeat;
+  color: #fff6df;
+  -webkit-text-stroke: 3px #3a2414;
+  paint-order: stroke fill;
+}
+.mf .mf-bauschild small {
+  font: 400 11px var(--hb-anz);
+}
+.mf .mf-bauschild b {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font: 400 16px var(--hb-anz);
+}
+.mf .mf-ueber .mf-bauschild.is-leistbar {
+  filter: drop-shadow(0 0 6px rgba(255, 200, 60, 0.8));
+}
+.mf .mf-ueber .mf-bauschild:disabled {
+  opacity: 0.85;
+}

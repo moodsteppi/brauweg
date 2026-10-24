@@ -18,7 +18,7 @@ import type { Leitung } from '../../manufaktur/steuerung';
 import '../../screens/hub-neu.css';
 
 /**
- * Probe unter `/probe/manufaktur?fall=neu|mitte|voll|palast`: die ECHTE
+ * Probe unter `/probe/manufaktur?fall=neu|mitte|bau|voll|palast`: die ECHTE
  * Kartenmanufaktur mit festen Staenden, ohne Server und ohne Anmeldung — auch
  * im Browser, obwohl es das Spiel sonst nur in der App gibt.
  *
@@ -64,6 +64,15 @@ function fall(name: string, jetzt: number): ManufakturStand {
       paternoster: [['ober', 'ladung'], ['jung', 'tempo'], ['jung', 'rabatt']],
       versand: [['jung', 'tempo'], ['jung', 'rabatt'], ['meister', 'ladung']],
     });
+  }
+  if (name === 'bau') {
+    // Vier Etagen, vor Etage 5 wird gebaut (noch 7 min) — Schutt, Geruest, Bautrupp, Countdown.
+    stand.taler = 2e5;
+    stand.pressen = [60, 40, 25, 12].map((stufe) => ({ ...neuePresse(), stufe }));
+    stand.paternoster = { ...stand.paternoster, stufe: 30 };
+    stand.versand = { ...stand.versand, stufe: 30 };
+    stand.orte = { '1': { renovierung: 0, geraeumt: [], bau: { etage: 4, bis: jetzt + 7 * 60_000 } } };
+    mitPools(stand, { versand: [['jung', 'tempo']], paternoster: [['jung', 'tempo']] });
   }
   if (name === 'palast') {
     // Kartenpalast mit allen acht Pressen: Das Jubilaeum ist bereit.

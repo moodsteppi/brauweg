@@ -356,11 +356,18 @@ export function SpieleNeu({
               Allein
             </h2>
             <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
-              <span className="hb-quer-text">
-                <strong>Kartenmanufaktur</strong>
-                <span>Pressen, Laufband, Meister — sie druckt auch, wenn du weg bist</span>
+              <img className="hb-manufaktur-bild" src="/manufaktur/werkstatt-hero.webp" alt="" />
+              <span className="hb-manufaktur-inhalt">
+                <span className="hb-manufaktur-marke">Deine eigene Kartenwerkstatt</span>
+                <span className="hb-quer-text">
+                  <strong>Kartenmanufaktur</strong>
+                  <span>Drucke Karten, baue deine Werkstatt aus und stelle fleißige Meister ein.</span>
+                </span>
+                <span className="hb-manufaktur-fuss">
+                  <span className="hb-manufaktur-hinweis">Produziert auch in deiner Pause</span>
+                  <span className="hb-kn is-gold">Werkstatt öffnen <span aria-hidden="true">→</span></span>
+                </span>
               </span>
-              <span className="hb-kn is-gold">Los</span>
             </button>
             <button type="button" className="hb-quer hb-quer-browort" onClick={() => onSolo('browort')}>
               <span className="hb-quer-text">

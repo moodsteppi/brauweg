@@ -25,6 +25,7 @@ import {
 import { ladungFaktor, tempoFaktor } from './meister.js';
 import { ortFaktor, presseBonus } from './renovieren.js';
 import { offlineMs } from './werkstattbuch.js';
+import { raeumeAuf } from './baustelle.js';
 import { type ManufakturStand, kopiere } from './stand.js';
 
 /** Liegt in irgendeiner Kiste etwas fuer den Paternoster? */
@@ -155,6 +156,8 @@ export function vorspulen(alt: ManufakturStand, bis: number): ManufakturStand {
     takt(stand);
   }
   stand.zeit = ende;
+  // Baustellen haengen nur an der Uhr: Sie werden auch offline fertig.
+  raeumeAuf(stand);
   return stand;
 }
 

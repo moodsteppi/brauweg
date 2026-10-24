@@ -28,7 +28,11 @@ const T0 = Date.parse('2026-10-24T14:00:00Z');
 const abgelehnt = (code: string) => (e: unknown) => e instanceof AktionAbgelehnt && e.code === code;
 
 function vollerOrt(manufaktur = 1): ManufakturStand {
-  let stand: ManufakturStand = { ...neuerStand(T0, manufaktur, { zufall: 3 }), taler: 1e40 };
+  // Baustellen geraeumt: Die prueft baustelle.test.ts.
+  let stand: ManufakturStand = {
+    ...neuerStand(T0, manufaktur, { zufall: 3, orte: { [String(manufaktur)]: { renovierung: 0, geraeumt: [4, 7] } } }),
+    taler: 1e40,
+  };
   stand = handle(stand, { typ: 'einstellen', ziel: { art: 'versand' } }, T0).stand;
   while (stand.pressen.length < MAX_PRESSEN) stand = handle(stand, { typ: 'freischalten' }, T0).stand;
   stand.pressen[0]!.stufe = 77;

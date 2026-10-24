@@ -82,6 +82,8 @@ export interface OrtStand {
   renovierung: number;
   /** Etagen (Index), deren Baustelle an diesem Ort schon geraeumt ist (Phase 4). */
   geraeumt: number[];
+  /** Laufende Bauarbeiten an diesem Ort: vor welcher Etage, fertig um (ms). */
+  bau?: { etage: number; bis: number };
 }
 
 export interface ManufakturStand {
@@ -167,7 +169,9 @@ export function neuerStand(jetzt: number, manufaktur = 1, bleibt: Bleibt = {}): 
 
 function kopiereOrte(o: Record<string, OrtStand>): Record<string, OrtStand> {
   const neu: Record<string, OrtStand> = {};
-  for (const [k, v] of Object.entries(o)) neu[k] = { renovierung: v.renovierung, geraeumt: [...v.geraeumt] };
+  for (const [k, v] of Object.entries(o)) {
+    neu[k] = { renovierung: v.renovierung, geraeumt: [...v.geraeumt], ...(v.bau ? { bau: { ...v.bau } } : {}) };
+  }
   return neu;
 }
 

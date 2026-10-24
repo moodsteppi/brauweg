@@ -36,6 +36,9 @@ import {
   VERSAND_ABFAHRT,
   arbeiter,
   kartenwertBonus,
+  hatBaustelle,
+  laufenderBau,
+  naechsteBaustelle,
   renovierung,
   tempoFaktor,
   versandKapazitaet,
@@ -234,6 +237,15 @@ class Teilchenwolke {
     }
   }
 
+  /** Die Schuttwand bricht weg: Brocken fliegen, Staub steigt auf. */
+  truemmer(x: number, y: number, breite: number): void {
+    for (let i = 0; i < 9; i += 1) {
+      const g = this.neu(`rig2/barriere-brocken-${1 + (i % 3)}.png`, x + (Math.random() - 0.5) * breite * 0.7, y + Math.random() * 30, 22);
+      this.dazu({ g, vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 80, dreh: (Math.random() - 0.5) * 6, leben: 0, dauer: 900, von: 22, bis: 16 });
+    }
+    for (let i = 0; i < 6; i += 1) this.staub(x + (Math.random() - 0.5) * breite * 0.6, y + 30);
+  }
+
   /** Konfetti beim Renovieren: Karten in Festfarben regnen ueber die Halle. */
   konfetti(breite: number, oben: number): void {
     const farben = [0xffd65a, 0xe85a5a, 0x5aa0ff, 0x6fe08d, 0xffffff];
@@ -341,6 +353,10 @@ class EtageBild {
   readonly wurzel = new Container();
   private readonly gebaut = new Container();
   private readonly gesperrt = new Container();
+  /** Schutt mit Geruest vor Etage 5 und 8 (Phase 4), solange er nicht geraeumt ist. */
+  private readonly baustelle = new Container();
+  private readonly bauarbeiter: Figur[] = [];
+  private hatteSchutt: boolean | null = null;
   private readonly stapel: Sprite[] = [];
   private readonly presse: PresseBild;
   private readonly arbeiter: Figur[] = [];
@@ -416,6 +432,24 @@ class EtageBild {
     wand.height = (breite * 320) / 1024;
     wand.position.set(SCHACHT.x + SCHACHT.b + 4, e.boden - wand.height - 1);
     this.gesperrt.addChild(wand);
+
+    // Baustelle (baustelle.json): Schutt und Geruest im selben Rahmen, Bodenlinie y 312 von 320.
+    for (const datei of ['rig2/barriere-schutt.png', 'rig2/barriere-geruest.png']) {
+      const teil = new Sprite(t[R(datei)]);
+      teil.width = breite;
+      teil.height = (breite * 320) / 1024;
+      teil.position.set(SCHACHT.x + SCHACHT.b + 4, e.boden - (teil.height * 312) / 320);
+      this.baustelle.addChild(teil);
+    }
+    // Zwei Bauarbeiter (Fuss bei x 300 von 1024): einer haemmert, einer schaufelt.
+    for (const [werkzeug, x] of [['hammer', 0.26], ['schaufel', 0.4]] as const) {
+      const ausstattung = { ...berufsAusstattung('bauarbeiter'), hand: werkzeug };
+      const figur = new RigFigur(t, ARBEITER_HOEHE, ausstattung);
+      figur.wurzel.position.set(SCHACHT.x + SCHACHT.b + 4 + breite * x, e.boden);
+      this.bauarbeiter.push(figur);
+      this.baustelle.addChild(figur.wurzel);
+    }
+    this.wurzel.addChild(this.baustelle);
   }
 
   zeige(stand: ManufakturStand, jetzt: number, rest: number, dt: number): void {
@@ -424,8 +458,29 @@ class EtageBild {
     // Die naechste Etage ist die vernagelte Wand, die zwei danach nur dunkle
     // Umrisse — man sieht, dass es weitergeht, ohne Laerm.
     const abstand = this.index - stand.pressen.length;
-    this.gesperrt.visible = !p && abstand >= 0 && abstand < 3;
+    const schutt = !p && hatBaustelle(stand, this.index);
+    const bau = laufenderBau(stand);
+    const hierWirdGebaut = !!bau && bau.etage === this.index;
+    const sichtbar = !p && abstand >= 0 && abstand < 3;
+    this.gesperrt.visible = sichtbar && !schutt;
     this.gesperrt.alpha = abstand === 0 ? 1 : 0.28;
+    // Die Baustelle ist ganz zu sehen, sobald man dort bauen kann oder baut — sonst wie die Umrisse.
+    this.baustelle.visible = sichtbar && schutt;
+    this.baustelle.alpha = abstand === 0 || hierWirdGebaut || naechsteBaustelle(stand) === this.index ? 1 : 0.28;
+    this.bauarbeiter.forEach((a, k) => {
+      a.wurzel.visible = hierWirdGebaut;
+      if (!hierWirdGebaut) return;
+      a.spiele('arbeiten', 1 + k * 0.15);
+      a.schaue(k === 0 ? 1 : -1);
+      a.aktualisiere(dt);
+    });
+    // Fertig: Die Wand bricht mit Staub und Brocken weg.
+    if (this.hatteSchutt === true && !schutt && sichtbar) {
+      const mitte = SCHACHT.x + SCHACHT.b + (BREITE - SCHACHT.x - SCHACHT.b) / 2;
+      this.wolke.truemmer(mitte, etage(this.index).boden - 40, BREITE - SCHACHT.x - SCHACHT.b);
+      ton('hupe', 0.3);
+    }
+    this.hatteSchutt = schutt;
     if (!p) {
       this.letzteStufe = 0;
       this.letzteAnzahl = 0;

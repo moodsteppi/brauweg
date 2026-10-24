@@ -6,6 +6,12 @@ import {
   faehigkeitBereit,
   freischaltKosten,
   einstellPreis,
+  bauDauer,
+  bauKosten,
+  hatBaustelle,
+  kannBauen,
+  laufenderBau,
+  naechsteBaustelle,
   MAX_RENOVIERUNG,
   renovierung,
   einstellenLeistbar,
@@ -45,6 +51,7 @@ export function Ueberlagerung({
   onSchild,
   onMeister,
   onFreischalten,
+  onBauen,
 }: {
   stand: ManufakturStand;
   jetzt: number;
@@ -56,10 +63,16 @@ export function Ueberlagerung({
   onSchild: (ziel: Ziel) => void;
   onMeister: (ziel: Ziel) => void;
   onFreischalten: () => void;
+  onBauen: () => void;
 }): React.JSX.Element {
   const h = halle();
   const anzahl = stand.pressen.length;
   const gesperrt = anzahl < KARTENARTEN.length ? anzahl : null;
+  // Welche Baustellen ein Schild bekommen: die laufende, die startbare, und Schutt direkt vor der naechsten Etage.
+  const laeuft = laufenderBau(stand)?.etage ?? null;
+  const baustellen = [...new Set([laeuft, naechsteBaustelle(stand), gesperrt !== null && hatBaustelle(stand, gesperrt) ? gesperrt : null])].filter(
+    (b): b is number => b !== null,
+  );
   const paternosterSchlaeft = schlaeft(stand.paternoster, stand.pressen.some((p) => p.kiste > 0));
   const versandSchlaeft = schlaeft(stand.versand, stand.packtisch > 0);
 
@@ -116,7 +129,11 @@ export function Ueberlagerung({
         );
       })}
 
-      {gesperrt !== null && (
+      {/* Baustellen (Phase 4): Schutt vor Etage 5 und 8 — Bau starten oder Countdown. */}
+      {baustellen.map((b) => (
+        <BauSchild key={b} etage={b} stand={stand} jetzt={jetzt} onBauen={onBauen} />
+      ))}
+      {gesperrt !== null && !hatBaustelle(stand, gesperrt) && (
         <GesperrteEtage
           index={gesperrt}
           kosten={freischaltKosten(anzahl, stand.manufaktur)}
@@ -266,6 +283,64 @@ function MeisterPlatz({
       />
     </>
   );
+}
+
+/**
+ * Das Schild an einer Baustelle: Bau starten (Preis und Dauer), oder der
+ * Countdown, solange gebaut wird. Sofort-Fertigstellen gibt es nicht.
+ */
+function BauSchild({
+  etage: index,
+  stand,
+  jetzt,
+  onBauen,
+}: {
+  etage: number;
+  stand: ManufakturStand;
+  jetzt: number;
+  onBauen: () => void;
+}): React.JSX.Element {
+  const e = etage(index);
+  const bau = laufenderBau(stand);
+  if (bau && bau.etage === index) {
+    const rest = Math.max(0, bau.bis - jetzt);
+    return (
+      <span className="mf-bauschild is-laeuft" style={lage(e.sperrSchild)} role="status" aria-label={`Bauarbeiten vor Etage ${index + 1}, noch ${uhrzeit(rest)}`}>
+        <small>Bauarbeiten</small>
+        <b>{uhrzeit(rest)}</b>
+      </span>
+    );
+  }
+  const kosten = bauKosten(index, stand.manufaktur);
+  const startbar = kannBauen(stand) && naechsteBaustelle(stand) === index;
+  const leistbar = startbar && stand.taler + 1e-9 >= kosten;
+  return (
+    <button
+      type="button"
+      className={`mf-bauschild${leistbar ? ' is-leistbar' : ''}`}
+      style={lage(e.sperrSchild)}
+      disabled={!startbar}
+      onClick={onBauen}
+      aria-label={startbar ? `Schutt räumen vor Etage ${index + 1}, ${kurz(kosten)} Taler, ${uhrzeit(bauDauer(stand, index))}` : 'Baustelle'}
+    >
+      <small>{startbar ? `Schutt räumen · ${uhrzeit(bauDauer(stand, index))}` : bau ? 'Bautrupp ist beschäftigt' : `Ab Etage ${index - 1}`}</small>
+      {startbar && (
+        <b>
+          <i className="mf-taler" aria-hidden="true" />
+          {kurz(kosten)}
+        </b>
+      )}
+    </button>
+  );
+}
+
+/** „7:42" bzw. „1:05:00" fuer Bauzeiten. */
+function uhrzeit(ms: number): string {
+  const s = Math.ceil(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sek = String(s % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sek}` : `${m}:${sek}`;
 }
 
 function GesperrteEtage({
