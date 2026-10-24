@@ -189,9 +189,10 @@ Simulation, 24.10.2026 (`npm run sim --workspace @brauweg/manufaktur-kern`):
 
 Vorschlag neue Zielzeiten (die alten „erster Umzug 60–90 min" passen nicht
 mehr, weil davor renoviert wird): erste Renovierung 60–90 min, erster Umzug
-75–100 min. Die längste Strecke ohne Kauf bleibt bis „alles renoviert" unter
-3 min; danach, im endlosen Jubiläum, wächst sie auf rund 8 min — gewollt
-weich, kein Ende.
+75–100 min. Die längste Strecke ohne Kauf: in den ersten drei Stunden 1 min,
+über den ganzen Bogen 6,4 min — bei 28 h, beim Sparen auf die letzte, teure
+Stufe eines alten Orts (6000 × die achte Presse). Wer das kürzer will, senkt
+den letzten Wert von `RENOV_KOSTEN`; dann ist „alles renoviert" früher.
 
 ## Baustellen vor Etage 5 und 8 (seit 24.10.2026)
 
