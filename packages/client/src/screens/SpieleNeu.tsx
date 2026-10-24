@@ -192,6 +192,8 @@ export function SpieleNeu({
   const mitManufaktur = imUmfang('kartenmanufaktur');
   const mitBrowort = imUmfang('browort');
   const mitProSubway = imUmfang('prosubway');
+  // Abstimmen über künftige Spiele: nicht in der App, und nur im Umfang.
+  const mitAbstimmung = !inApp && imUmfang('abstimmung');
 
   const baldZeile = (g: GameSummary): React.JSX.Element => (
     <div className="hb-bald" key={g.id}>
@@ -201,14 +203,14 @@ export function SpieleNeu({
           <strong>{t(g.nameKey)}</strong>
           <small>
             {sitzSpanne(g.seatCounts)} Spieler
-            {g.abstimmbar !== false && !inApp ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
+            {g.abstimmbar !== false && mitAbstimmung ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
           </small>
         </span>
       </button>
       {/* Ohne Stimme, was es schon gibt und nur noch nicht freigegeben ist. In
           der App steht die ganze Liste ausgegraut und einheitlich auf „Bald":
           Ein leuchtender Knopf mitten darin las sich wie „hier geht's los". */}
-      {g.abstimmbar !== false && !inApp ? (
+      {g.abstimmbar !== false && mitAbstimmung ? (
         <button
           type="button"
           className="hb-kn is-stimme"

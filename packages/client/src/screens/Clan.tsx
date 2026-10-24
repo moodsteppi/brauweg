@@ -1150,8 +1150,9 @@ function ClanFelder({
           <legend>Wappen</legend>
           <div className="hb-wappenraster">
             {/* In der App gibt es den Wappen-Shop nicht — dort nur, was dem
-                Konto gehört, statt Schlösser, die nirgendwohin führen. */}
-            {WAPPEN.filter((w) => !inApp || meineWappen === null || meineWappen.has(w)).map((w) => {
+                Konto gehört, statt Schlösser, die nirgendwohin führen. Auf
+                der Webseite ebenso ohne Shop im Umfang. */}
+            {WAPPEN.filter((w) => (!inApp && imUmfang('shop')) || meineWappen === null || meineWappen.has(w)).map((w) => {
               const mein = meineWappen === null || meineWappen.has(w);
               return (
                 <button

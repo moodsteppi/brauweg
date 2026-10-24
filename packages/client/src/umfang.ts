@@ -10,7 +10,10 @@
  * Die Spiele der Registry brauchen das nicht — die liefert der Server
  * gleich gefiltert (`/api/games`). Gefragt wird hier nach den Funktionen
  * daneben: kartenmanufaktur, browort, clanwort, lernpfad, prosubway,
- * clankrieg, clanchat. Der Umfang ist eine Obergrenze: Die bestehenden
+ * clankrieg, clanchat, shop, abstimmung, profilbild, figur, geburtstag —
+ * und nach zwei Spielen, deren Einstieg nicht aus `/api/games` kommt:
+ * `doppelkopf` (die Übungsrunde im Lernpfad) und `brocooked` (läuft allein
+ * ohne Tisch, also ohne Route, die der Server sperren könnte). Der Umfang ist eine Obergrenze: Die bestehenden
  * Weichen (`inApp` …) gelten weiter, er nimmt nur weg.
  *
  * Ein Modulwert und kein React-Zustand, weil jeder Bildschirm, der fragt,

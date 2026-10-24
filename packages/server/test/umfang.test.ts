@@ -13,7 +13,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { APP_ORIGIN, FUNKTION_ZU_ROUTE, buildApp } from '../src/http/app.js';
+import { eq } from 'drizzle-orm';
+
+import { APP_ORIGIN, FUNKTION_ZU_ROUTE, SPIEL_ZU_ROUTE, buildApp } from '../src/http/app.js';
+import * as schema from '../src/db/schema.js';
 import { freigabeAuf, registry } from '../src/games/registry.js';
 import { PartyRuntime } from '../src/runtime/party.js';
 import { createSession } from '../src/auth/service.js';
@@ -46,6 +49,8 @@ async function setup(roh: string | undefined) {
   return {
     app,
     offen,
+    db: ctx.db,
+    annaId: anna.accountId,
     anna: (plattform: 'web' | 'app' = 'web') => kopf(annaToken, plattform),
     ben: (plattform: 'web' | 'app' = 'web') => kopf(benToken, plattform),
     async close() {
@@ -82,6 +87,8 @@ test('jede Funktion hat ihre Routen — und keine Route zeigt auf eine unbekannt
   // Keine Funktion darf heissen wie ein Spiel: Eine Kennung im Umfang muss
   // genau eines meinen.
   assert.deepEqual(FUNKTIONEN.filter((f) => SPIELE.includes(f)), []);
+  // Und jede Spiel-Nebenroute zeigt auf ein Spiel der Registry.
+  for (const [spiel] of SPIEL_ZU_ROUTE) assert.ok(SPIELE.includes(spiel), spiel);
 });
 
 test('ausserhalb des Umfangs ist ein Spiel auf beiden Plattformen aus, innerhalb gilt FREIGABE', () => {
@@ -198,7 +205,7 @@ test('gesperrtes Spiel: kein Beitritt per Einladungslink, wer schon sitzt, kommt
 // ---------------------------------------------------------------------------
 
 /** Je Funktion ein Aufruf, der ohne Sperre beim Handler ankaeme. */
-const AUFRUFE: readonly { funktion: string; method: 'GET' | 'POST'; url: string; payload?: object }[] = [
+const AUFRUFE: readonly { funktion: string; method: 'GET' | 'POST' | 'PATCH'; url: string; payload?: object }[] = [
   { funktion: 'kartenmanufaktur', method: 'GET', url: '/api/manufaktur' },
   { funktion: 'kartenmanufaktur', method: 'POST', url: '/api/manufaktur/aktion', payload: { typ: 'boost' } },
   { funktion: 'browort', method: 'GET', url: '/api/browort' },
@@ -218,6 +225,14 @@ const AUFRUFE: readonly { funktion: string; method: 'GET' | 'POST'; url: string;
     url: '/api/clubs/00000000-0000-0000-0000-000000000000/messages',
     payload: { text: 'hallo' },
   },
+  { funktion: 'shop', method: 'POST', url: '/api/shop/pakete/muenzen-klein/buy' },
+  { funktion: 'shop', method: 'POST', url: '/api/shop/truhen/truhe-silber/buy' },
+  // Bezahlen mit Edelsteinen sperrt der Kaufweg selbst (dieselbe Route wie Muenzen).
+  { funktion: 'shop', method: 'POST', url: '/api/shop/irgendwas/buy', payload: { waehrung: 'gems' } },
+  { funktion: 'abstimmung', method: 'POST', url: '/api/games/doppelkopf/vote' },
+  { funktion: 'profilbild', method: 'PATCH', url: '/api/me', payload: { avatar: null } },
+  { funktion: 'figur', method: 'PATCH', url: '/api/me/figur', payload: {} },
+  { funktion: 'geburtstag', method: 'POST', url: '/api/me/birthday-reward' },
 ];
 
 test('jede Funktion hat hier mindestens einen Aufruf', () => {
@@ -271,4 +286,128 @@ test('ohne Umfang bleibt alles offen — keine Route meldet nichtImUmfang', asyn
     const res = await s.app.inject({ ...anfrage, headers: s.anna('web') });
     assert.notEqual(res.json()?.code, 'nichtImUmfang', `${funktion}: ${anfrage.url}`);
   }
+});
+
+// ---------------------------------------------------------------------------
+// Die Sperre: Funktionen, die sich eine Route mit Erlaubtem teilen
+// ---------------------------------------------------------------------------
+
+test('ohne Profilbild bleibt /api/me lesbar — gesperrt ist nur das Hochladen', async (t) => {
+  const s = await setup('doppelkopf');
+  t.after(() => s.close());
+
+  const me = await s.app.inject({ method: 'GET', url: '/api/me', headers: s.anna() });
+  assert.equal(me.statusCode, 200, me.body);
+  const hoch = await s.app.inject({ method: 'PATCH', url: '/api/me', headers: s.anna(), payload: { avatar: null } });
+  assert.equal(hoch.statusCode, 404);
+  assert.equal(hoch.json().code, 'nichtImUmfang');
+});
+
+test('ohne Shop wird mit Muenzen weiter gekauft (Kleiderschrank), nur nicht mit Edelsteinen', async (t) => {
+  const s = await setup('doppelkopf');
+  t.after(() => s.close());
+
+  // Der Katalog bleibt lesbar: Kleiderschrank und Sammlung holen ihre Regale dort.
+  const regal = await s.app.inject({ method: 'GET', url: '/api/shop', headers: s.anna() });
+  assert.equal(regal.statusCode, 200, regal.body);
+  for (const plattform of ['web', 'app'] as const) {
+    const muenzen = await s.app.inject({
+      method: 'POST',
+      url: '/api/shop/irgendwas/buy',
+      headers: s.anna(plattform),
+      payload: { waehrung: 'coins' },
+    });
+    assert.notEqual(muenzen.json()?.code, 'nichtImUmfang', plattform);
+  }
+});
+
+test('ohne Geburtstag liegt kein Geschenk bereit, auch nicht am Geburtstag', async (t) => {
+  const s = await setup('doppelkopf');
+  t.after(() => s.close());
+
+  // Heute, nur im Jahr 2000 (ein Schaltjahr — auch am 29. Februar gueltig).
+  const heute = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
+  await s.db
+    .update(schema.account)
+    .set({ birthday: `2000${heute.slice(4)}` })
+    .where(eq(schema.account.id, s.annaId));
+
+  const ohne = await s.app.inject({ method: 'GET', url: '/api/me', headers: s.anna() });
+  assert.equal(ohne.json().birthdayRewardClaimable, false);
+  const offen = await s.offen.inject({ method: 'GET', url: '/api/me', headers: s.anna() });
+  assert.equal(offen.json().birthdayRewardClaimable, true);
+});
+
+// ---------------------------------------------------------------------------
+// Die Sperre: Nebenrouten der Spiele
+// ---------------------------------------------------------------------------
+
+test('ausgeblendetes Spiel: Rangliste, Bestleistungen, Vorgaben, Aussehen und Mememory sind zu', async (t) => {
+  const s = await setup('doppelkopf');
+  t.after(() => s.close());
+
+  const anfragen = [
+    { method: 'GET', url: '/api/rankings/skat' },
+    { method: 'GET', url: '/api/me/bestleistungen/golf' },
+    { method: 'GET', url: '/api/games/golf/bestleistungen/bahn-1' },
+    { method: 'GET', url: '/api/games/skat/defaults' },
+    { method: 'GET', url: '/api/games/skat/aktiv' },
+    { method: 'PATCH', url: '/api/me/themes/skat', payload: { cardDeck: 'text' } },
+    { method: 'GET', url: '/api/mememory/motive' },
+    { method: 'GET', url: '/api/mememory/sammlung' },
+    { method: 'GET', url: '/api/mememory/vorschlaege/anzahl' },
+  ] as const;
+  for (const plattform of ['web', 'app'] as const) {
+    for (const anfrage of anfragen) {
+      const res = await s.app.inject({ ...anfrage, headers: s.anna(plattform) });
+      assert.equal(res.statusCode, 404, `${anfrage.method} ${anfrage.url} (${plattform}): ${res.body}`);
+      assert.equal(res.json().code, 'gameNotPlayable', `${anfrage.method} ${anfrage.url}`);
+    }
+  }
+
+  // Was im Umfang steht, antwortet wie bisher — und ohne Umfang alles.
+  const doko = await s.app.inject({ method: 'GET', url: '/api/rankings/doppelkopf', headers: s.anna() });
+  assert.equal(doko.statusCode, 200, doko.body);
+  const mememory = await s.offen.inject({ method: 'GET', url: '/api/mememory/motive', headers: s.anna() });
+  assert.equal(mememory.statusCode, 200, mememory.body);
+});
+
+test('die Uebungsrunde des Lernpfads haengt an Doppelkopf, nicht am Lernpfad allein', async (t) => {
+  const ohne = await setup('lernpfad,skat');
+  t.after(() => ohne.close());
+  const zu = await ohne.app.inject({ method: 'POST', url: '/api/lernpfad/uebung', headers: ohne.anna() });
+  assert.equal(zu.statusCode, 404, zu.body);
+  assert.equal(zu.json().code, 'gameNotPlayable');
+  // Die Lektionen selbst bleiben.
+  const pfad = await ohne.app.inject({ method: 'GET', url: '/api/lernpfad', headers: ohne.anna() });
+  assert.equal(pfad.statusCode, 200, pfad.body);
+
+  const mit = await setup('lernpfad,doppelkopf');
+  t.after(() => mit.close());
+  const auf = await mit.app.inject({ method: 'POST', url: '/api/lernpfad/uebung', headers: mit.anna() });
+  assert.equal(auf.statusCode, 200, auf.body);
+  assert.equal(typeof auf.json().tableId, 'string');
+});
+
+test('Profilstatistiken zeigen je Spiel nur den Umfang, die Summen bleiben ueber alle', async (t) => {
+  const s = await setup('doppelkopf');
+  t.after(() => s.close());
+
+  await s.db.insert(schema.accountGameStat).values([
+    { accountId: s.annaId, gameId: 'doppelkopf', trophies: 30, parties: 3, wins: 1 },
+    { accountId: s.annaId, gameId: 'wizard', trophies: 12, parties: 2, wins: 2 },
+  ]);
+
+  const me = await s.app.inject({ method: 'GET', url: '/api/me', headers: s.anna() });
+  assert.deepEqual((me.json().stats as { gameId: string }[]).map((z) => z.gameId), ['doppelkopf']);
+
+  const profil = await s.app.inject({ method: 'GET', url: `/api/players/${s.annaId}`, headers: s.ben() });
+  assert.equal(profil.statusCode, 200, profil.body);
+  assert.deepEqual((profil.json().ranking as { gameId: string }[]).map((z) => z.gameId), ['doppelkopf']);
+  // Erspielt ist erspielt: Die Summe rechnet Zauberer mit.
+  assert.equal(profil.json().totals.trophies, 42);
+
+  // Ohne Umfang wie bisher.
+  const offen = await s.offen.inject({ method: 'GET', url: '/api/me', headers: s.anna() });
+  assert.equal((offen.json().stats as unknown[]).length, 2);
 });

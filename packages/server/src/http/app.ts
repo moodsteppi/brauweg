@@ -268,9 +268,17 @@ export function plattformVon(request: FastifyRequest): Plattform {
  * Gegen das Routenmuster, wie Fastify es meldet (`/api/clubs/:clubId/war`),
  * nicht gegen die Adresse: Eine Kennung in der Adresse kann aussehen wie
  * ein Pfadteil, ein Muster nicht. Die Spiele der Registry stehen hier nicht —
- * die sperrt `requireSpielbar` an jedem Tisch-Einstieg.
+ * die sperrt `requireSpielbar` an jedem Tisch-Einstieg, ihre Nebenrouten
+ * `SPIEL_ZU_ROUTE` darunter.
+ *
+ * Die dritte Angabe ist die Methode, wo das Muster allein zu viel traefe:
+ * Das Profilbild geht ueber `PATCH /api/me`, und `GET /api/me` ist der
+ * Ladeweg jedes Bildschirms.
+ *
+ * Bezahlen mit Edelsteinen (`shop`) steht nicht hier, weil es dieselbe
+ * Kaufroute ist wie das Bezahlen mit Muenzen — das sperrt der Kaufweg selbst.
  */
-export const FUNKTION_ZU_ROUTE: readonly (readonly [Funktion, RegExp])[] = [
+export const FUNKTION_ZU_ROUTE: readonly (readonly [Funktion, RegExp, string?])[] = [
   ['kartenmanufaktur', /^\/api\/manufaktur(\/|$)/],
   ['browort', /^\/api\/browort(\/|$)/],
   ['clanwort', /^\/api\/clanwort(\/|$)/],
@@ -278,6 +286,31 @@ export const FUNKTION_ZU_ROUTE: readonly (readonly [Funktion, RegExp])[] = [
   ['prosubway', /^\/api\/runner(\/|$)/],
   ['clankrieg', /^\/api\/clubs\/:clubId\/war(\/|$)/],
   ['clanchat', /^\/api\/clubs\/:clubId\/messages(\/|$)/],
+  ['shop', /^\/api\/shop\/(pakete|truhen)(\/|$)/],
+  ['abstimmung', /^\/api\/games\/:gameId\/vote$/],
+  ['profilbild', /^\/api\/me$/, 'PATCH'],
+  ['figur', /^\/api\/me\/figur$/],
+  ['geburtstag', /^\/api\/me\/birthday-reward$/],
+];
+
+/**
+ * Nebenrouten eines Spiels, die keine Spielkennung im Pfad tragen. Was ein
+ * `:gameId` hat (Ranglisten, Bestleistungen, Vorgaben, Aussehen), prueft der
+ * Haken unten ohnehin an der Kennung — hier steht nur, was er daran nicht
+ * erkennt.
+ *
+ * Die Uebungsrunde des Lernpfads gehoert zu Doppelkopf, nicht zum Lernpfad:
+ * Sie legt einen Doppelkopf-Tisch an, und ohne Doppelkopf im Umfang gaebe es
+ * sonst genau einen Weg an einen Tisch des Spiels.
+ *
+ * Bewusst NICHT hier: die Partykiste-Meldung (`/api/partykiste/meldung`) und
+ * die Feldherr-Diagnose. Beide gehoeren zu einer laufenden Partie, und die
+ * stirbt nicht am Umfang (siehe den Beitritt in test/umfang.test.ts) — wer
+ * dort einen Text melden will, soll es koennen.
+ */
+export const SPIEL_ZU_ROUTE: readonly (readonly [GameId, RegExp])[] = [
+  ['mememory', /^\/api\/mememory(\/|$)/],
+  ['doppelkopf', /^\/api\/lernpfad\/uebung$/],
 ];
 
 export interface AppDeps {
@@ -749,12 +782,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * Liste unten ist die ganze Sperre auf einen Blick, und eine neue Route
    * unter `/api/browort/…` ist von selbst mitgesperrt. `preHandler`, damit
    * die Ratengrenze (onRequest) vorher zaehlt.
+   *
+   * Dasselbe fuer die Nebenrouten der Spiele: Ein ausgeblendetes Spiel hat
+   * keine Rangliste, keine Bestleistungen und keine Mememory-Motive mehr,
+   * auch nicht per direktem Aufruf. Geprueft wird nur der Umfang, nicht
+   * `FREIGABE` — die Rangliste eines Spiels, das in der App auf „Bald" steht,
+   * war dort schon immer lesbar. Das Spiel zuerst: Eine Abstimmung ueber ein
+   * Spiel ausserhalb des Umfangs ist `gameNotPlayable`, wie bisher.
    */
   app.addHook('preHandler', async (request) => {
     if (umfang.alles) return;
     const muster = request.routeOptions.url;
     if (!muster) return;
-    for (const [funktion, route] of FUNKTION_ZU_ROUTE) {
+    const { gameId } = (request.params ?? {}) as { gameId?: unknown };
+    if (typeof gameId === 'string' && !imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
+    for (const [spiel, route] of SPIEL_ZU_ROUTE) {
+      if (route.test(muster) && !imUmfang(umfang, spiel)) throw notFound('gameNotPlayable');
+    }
+    for (const [funktion, route, methode] of FUNKTION_ZU_ROUTE) {
+      if (methode !== undefined && request.method !== methode) continue;
       if (route.test(muster) && !imUmfang(umfang, funktion)) throw notFound('nichtImUmfang');
     }
   });
@@ -1207,9 +1253,18 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       birthday,
       daysUntilBirthday: birthday ? daysUntilBirthday(birthday) : null,
       birthdayToday: birthday ? isBirthdayToday(birthday) : false,
-      birthdayRewardClaimable: birthdayRewardClaimable(birthday, birthdayRewardYear),
+      // Ohne Geburtstag im Umfang liegt auch kein Geschenk bereit — sonst
+      // haengt der Punkt am Profil-Reiter, und dahinter ist nichts.
+      birthdayRewardClaimable:
+        imUmfang(umfang, 'geburtstag') && birthdayRewardClaimable(birthday, birthdayRewardYear),
       avatarUrl: hasAvatar ? `/api/avatars/${account.id}` : null,
-      stats,
+      /*
+       * Nur die Spiele im Umfang: Die Statistik fuellt „Deine Spiele" und den
+       * Start, und ein ausgeblendetes Spiel stuende dort sonst mit seinem
+       * Banner. Die Trophaeensumme oben (Trophaeenweg) rechnet bewusst ueber
+       * alle — erspielt ist erspielt, auch in einem Spiel, das heute fehlt.
+       */
+      stats: stats.filter((zeile) => imUmfang(umfang, zeile.gameId)),
       clubs,
       activeTable,
     });
@@ -1459,6 +1514,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .parse(request.body ?? {});
       // In der App vorerst nur Muenzen (Emile, 22.10.2026): Edelsteine stehen
       // dort nirgends mehr, also wird auch nicht mit ihnen gekauft.
+      // Ohne Shop im Umfang gibt es keine Edelsteine zu sehen, also wird auch
+      // nicht mit ihnen bezahlt — auf beiden Plattformen. Muenzen gehen
+      // weiter: Der Kleiderschrank kauft ueber genau diese Route.
+      if (waehrung === 'gems' && !imUmfang(umfang, 'shop')) throw notFound('nichtImUmfang');
       if (waehrung === 'gems' && plattformVon(request) === 'app') throw forbidden('nurMuenzenInApp');
       return reply.send(await kaufen(deps.db, accountId, itemId, waehrung));
     },
@@ -1810,8 +1869,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.get('/api/players/:accountId', async (request, reply) => {
     const viewerId = await requireAccount(request);
     const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
+    const profil = await playerProfile(deps.db, viewerId, accountId);
     return reply.send({
-      ...(await playerProfile(deps.db, viewerId, accountId)),
+      ...profil,
+      // Wie `stats` an /api/me: je Spiel nur, was im Umfang steht. Die Summen
+      // (`totals`) bleiben ueber alle Spiele — siehe dort.
+      ranking: profil.ranking.filter((zeile) => imUmfang(umfang, zeile.gameId)),
       // Hat der Betrachter diesen Spieler blockiert? (melden-routen.ts)
       blockiert: await hatBlockiert(deps.db, viewerId, accountId),
       // Browort-Serie und Schnitt — Emile: „steht im Profil des jeweiligen Spielers".
