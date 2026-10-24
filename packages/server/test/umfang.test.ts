@@ -411,3 +411,77 @@ test('Profilstatistiken zeigen je Spiel nur den Umfang, die Summen bleiben ueber
   const offen = await s.offen.inject({ method: 'GET', url: '/api/me', headers: s.anna() });
   assert.equal((offen.json().stats as unknown[]).length, 2);
 });
+
+
+// ---------------------------------------------------------------------------
+// Die Sperre: welche Routen sie ueberhaupt trifft
+// ---------------------------------------------------------------------------
+
+/**
+ * Alle Routen des Servers als `METHODE muster`, gelesen aus `printRoutes`.
+ * Fastify druckt einen Baum, dessen Knoten nur das Stueck NACH dem Elternteil
+ * tragen (`/api/auth/reset` und darunter `-request`); hier wird er wieder zu
+ * vollen Mustern zusammengesetzt. Jede Stufe ist vier Zeichen breit.
+ */
+function alleRouten(app: { printRoutes(o: { commonPrefix: boolean }): string }): string[] {
+  const pfad: string[] = [];
+  const routen: string[] = [];
+  for (const zeile of app.printRoutes({ commonPrefix: false }).split('\n')) {
+    const treffer = /^((?:[│ ] {3})*)[├└]── (.*?)(?: \(([^)]*)\))?$/.exec(zeile);
+    if (!treffer) continue;
+    const tiefe = treffer[1]!.length / 4;
+    pfad.length = tiefe;
+    pfad.push(treffer[2]!);
+    for (const methode of (treffer[3] ?? '').split(', ').filter((m) => m && m !== 'HEAD')) {
+      routen.push(`${methode} ${pfad.join('')}`);
+    }
+  }
+  return routen;
+}
+
+test('die Spielsperre trifft genau diese Routen mit :gameId — eine neue muss hier bewusst dazu', async (t) => {
+  /*
+   * Der Haken sperrt JEDE Route, deren Muster ein `:gameId` traegt, sobald das
+   * Spiel nicht im Umfang steht. Das ist gewollt (Ranglisten, Bestleistungen
+   * … eines ausgeblendeten Spiels), trifft aber auch eine kuenftige Route, die
+   * ihren Parameter nur zufaellig so nennt. Diese Liste zwingt dazu, bei einer
+   * neuen Route einmal hinzusehen, statt es erst auf der Produktion zu merken.
+   */
+  const s = await setup('doppelkopf');
+  t.after(() => s.close());
+  const routen = alleRouten(s.app);
+  // Erst pruefen, dass das Lesen ueberhaupt etwas findet — sonst waere die
+  // Liste unten auch dann „gleich", wenn sich das Druckformat aendert.
+  assert.ok(routen.includes('GET /api/me'), routen.slice(0, 20).join('\n'));
+  assert.ok(routen.length > 100, String(routen.length));
+
+  assert.deepEqual(routen.filter((r) => r.includes(':gameId')).sort(), [
+    'GET /api/games/:gameId/aktiv',
+    'GET /api/games/:gameId/bestleistungen/:inhaltId',
+    'GET /api/games/:gameId/defaults',
+    'GET /api/me/bestleistungen/:gameId',
+    'GET /api/rankings/:gameId',
+    // Die Suche haengt ohnehin am Spiel (requireSpielbar). Das Abbrechen geht
+    // mit zu: Wer beim Deploy gerade sucht, sitzt an einem wartenden Tisch
+    // (suche/vermittlung.ts) und verlaesst ihn ueber die Tischrouten, die
+    // keine Spielkennung tragen.
+    'GET /api/suche/:gameId',
+    'PATCH /api/me/themes/:gameId',
+    'POST /api/games/:gameId/vote',
+    'POST /api/suche/:gameId',
+    'POST /api/suche/:gameId/abbrechen',
+  ]);
+});
+
+test('ohne Profilbild bleiben die anderen Wege an /api/me offen — Konto loeschen eingeschlossen', async (t) => {
+  /*
+   * `profilbild` sperrt nur `PATCH /api/me`. An demselben Muster haengt auch
+   * `DELETE /api/me` (Konto loeschen, Pflicht in beiden Stores): Faellt die
+   * Methodenangabe in FUNKTION_ZU_ROUTE einmal weg, waere es mitgesperrt.
+   */
+  const s = await setup('doppelkopf');
+  t.after(() => s.close());
+  assert.ok(alleRouten(s.app).includes('DELETE /api/me'));
+  const loeschen = await s.app.inject({ method: 'DELETE', url: '/api/me', headers: s.anna(), payload: {} });
+  assert.notEqual(loeschen.json()?.code, 'nichtImUmfang', loeschen.body);
+});
