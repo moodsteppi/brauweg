@@ -11,7 +11,7 @@
  * einbringen. Wer alles renoviert hat, hat das Buch voll.
  */
 
-import { OFFLINE_MS, SIEGEL_BONUS } from './formeln.js';
+import { OFFLINE_MS } from './formeln.js';
 import type { ManufakturStand, Rang } from './stand.js';
 
 export type Eintrag = 'nachtschicht' | 'ruf' | 'erfahrene' | 'pausen' | 'feilschen' | 'bewerber' | 'bautrupps' | 'lager';
@@ -52,9 +52,9 @@ export function offlineMs(stand: ManufakturStand): number {
   return OFFLINE_MS * (1 + buchStufe(stand, 'nachtschicht'));
 }
 
-/** Guter Ruf: +10 % Kartenwert je Stufe — zusammen mit den alten Gildensiegeln. */
+/** Guter Ruf: +10 % Kartenwert je Stufe. */
 export function kartenwertBonus(stand: ManufakturStand): number {
-  return (1 + SIEGEL_BONUS * stand.jubilaeen) * (1 + 0.1 * buchStufe(stand, 'ruf'));
+  return 1 + 0.1 * buchStufe(stand, 'ruf');
 }
 
 /** Erfahrene Meister: +15 % Wirkdauer je Stufe. */

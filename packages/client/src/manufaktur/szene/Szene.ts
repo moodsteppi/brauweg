@@ -36,6 +36,7 @@ import {
   VERSAND_ABFAHRT,
   arbeiter,
   kartenwertBonus,
+  renovierung,
   tempoFaktor,
   versandKapazitaet,
   versandZyklus,
@@ -123,6 +124,15 @@ const DATEIEN = [
   R('fx-glanz.png'),
   R('fx-karte.png'),
   R('req-paket.png'),
+  // Zweite Lieferung (outputs/rig2/): Deko ab Renovierung 2, Baustelle vor Etage 5 und 8.
+  R('rig2/deko-girlande.png'),
+  R('rig2/deko-lampe.png'),
+  R('rig2/deko-lampe-licht.png'),
+  R('rig2/barriere-schutt.png'),
+  R('rig2/barriere-geruest.png'),
+  R('rig2/barriere-brocken-1.png'),
+  R('rig2/barriere-brocken-2.png'),
+  R('rig2/barriere-brocken-3.png'),
   ...Array.from({ length: MAX_PRESSEN }, (_, i) => stapelBild(i)),
   ...rigDateien(),
   ...maschinenDateien(),
@@ -221,6 +231,16 @@ class Teilchenwolke {
       const w = (i / 5) * Math.PI * 2;
       const g = this.neu('fx-funke.png', x, y, 10);
       this.dazu({ g, vx: Math.cos(w) * 50, vy: Math.sin(w) * 50 - 20, dreh: 4, leben: 0, dauer: 600, von: 12, bis: 4 });
+    }
+  }
+
+  /** Konfetti beim Renovieren: Karten in Festfarben regnen ueber die Halle. */
+  konfetti(breite: number, oben: number): void {
+    const farben = [0xffd65a, 0xe85a5a, 0x5aa0ff, 0x6fe08d, 0xffffff];
+    for (let i = 0; i < 46; i += 1) {
+      const g = this.neu('fx-karte.png', Math.random() * breite, oben - Math.random() * 40, 10);
+      g.tint = farben[i % farben.length]!;
+      this.dazu({ g, vx: (Math.random() - 0.5) * 50, vy: 60 + Math.random() * 90, dreh: (Math.random() - 0.5) * 8, leben: 0, dauer: 1800 + Math.random() * 600, von: 10, bis: 9 });
     }
   }
 
@@ -496,6 +516,11 @@ class EtageBild {
     this.meister.zeige(p, jetzt, dt, { x: this.presse.wurzel.x, y: e.boden - 50, groesse: 150 });
   }
 
+  /** Festmoment (Renovierung): alle Arbeiter dieser Etage jubeln. */
+  jubel(bis: number): void {
+    this.jubelBis = Math.max(this.jubelBis, bis);
+  }
+
   /** Debug: Rig-Anker der Arbeiter und die Punkte der Presse. */
   punkte(): { x: number; y: number }[] {
     // Nur gebaute Etagen — Umriss-Etagen haben nichts, was man pruefen koennte.
@@ -535,6 +560,11 @@ export class Szene {
   private direktorWinken = 0;
   private stufenSumme = -1;
   private readonly direktorHalter = new Container();
+  /** Deko ab Renovierung 2 (Girlande) und 3 (Lampen) — renovierung.json. */
+  private readonly girlande: TilingSprite;
+  private readonly lampen = new Container();
+  private feierAnfrage = false;
+  private feierBis = 0;
   private readonly wand: TilingSprite;
   private readonly abdunkeln = new Graphics();
   private readonly paket: Texture;
@@ -579,6 +609,25 @@ export class Szene {
     );
     halleBild.width = BREITE;
     halleBild.height = HALLE_HOEHE;
+
+    // Deko: Girlande oben quer (1024 × 128, waagrecht kachelbar), zwei Lampen mit Licht.
+    this.girlande = new TilingSprite({ texture: t[R('rig2/deko-girlande.png')]!, width: BREITE, height: 32 });
+    this.girlande.tileScale.set(32 / 128);
+    this.girlande.position.set(0, 2);
+    for (const x of [128, 300]) {
+      const lampe = new Container();
+      const licht = new Sprite(t[R('rig2/deko-lampe-licht.png')]);
+      licht.anchor.set(128 / 256, 16 / 384);
+      licht.position.set(0, (239 - 8) * 0.3);
+      licht.scale.set(0.3);
+      licht.blendMode = 'screen';
+      const koerper = new Sprite(t[R('rig2/deko-lampe.png')]);
+      koerper.anchor.set(64 / 128, 8 / 256);
+      koerper.scale.set(0.3);
+      lampe.addChild(licht, koerper);
+      lampe.position.set(x, 0);
+      this.lampen.addChild(lampe);
+    }
 
     // Keller: Ziegelwand, gekachelt, etwas abgedunkelt fuer die Schilder.
     this.wand = new TilingSprite({ texture: t['/manufaktur/wand-keller.webp']!, width: BREITE, height: 100 });
@@ -663,7 +712,7 @@ export class Szene {
       .fill(0xc9a24a);
     this.direktorHalter.position.set(h.podest.x + h.podest.b / 2, h.podest.y);
 
-    this.welt.addChild(halleBild, this.wand, this.roehre, this.band, this.bandLadung, this.fuss);
+    this.welt.addChild(halleBild, this.lampen, this.girlande, this.wand, this.roehre, this.band, this.bandLadung, this.fuss);
     for (let i = 0; i < MAX_PRESSEN; i += 1) {
       const e = new EtageBild(i, t, this.wolke);
       this.etagen.push(e);
@@ -748,6 +797,17 @@ export class Szene {
     this.app.render();
   }
 
+  /** Der Packer — beim Festmoment jubelt er statt zu arbeiten (ein Ablauf je Bild, sonst beginnt er immer neu). */
+  private spieleTraeger(jetzt: number, name: Parameters<Figur['spiele']>[0], tempo?: number): void {
+    if (jetzt < this.feierBis) this.traeger.spiele('jubeln');
+    else this.traeger.spiele(name, tempo);
+  }
+
+  /** Festmoment nach dem Renovieren: Konfetti, alle Pinguine und der Direktor jubeln. */
+  feiere(): void {
+    this.feierAnfrage = true;
+  }
+
   /** Bilder je Sekunde, gemittelt ueber die letzte Sekunde (Debug-Ansicht). */
   fps(): number {
     return this.bildrate;
@@ -807,6 +867,16 @@ export class Szene {
       if (sichtbar) e.zeige(stand, jetzt, rest, dt);
     });
 
+    if (this.feierAnfrage) {
+      this.feierAnfrage = false;
+      this.feierBis = jetzt + 1800;
+      this.direktorJubel = 1800;
+      for (const e of this.etagen) e.jubel(this.feierBis);
+      this.wolke.konfetti(BREITE, oben / faktor);
+    }
+    const stufe = renovierung(stand);
+    this.girlande.visible = stufe >= 2;
+    this.lampen.visible = stufe >= 3;
     this.zeigePaternoster(stand, jetzt, rest, dt);
     this.zeigeVersand(stand, jetzt, rest, dt);
     this.zeigeDirektor(stand, dt);
@@ -866,7 +936,7 @@ export class Szene {
     // Der Kurbler dreht das Rad, solange die Kabine faehrt; ohne Meister und
     // mit Ware in den Kisten schlaeft er.
     const schlaeft = !f.meister && !f.laeuft && stand.pressen.some((p) => p.kiste > 0);
-    this.kurbler.spiele(f.laeuft ? 'kurbeln' : schlaeft ? 'schlafen' : 'idle');
+    this.kurbler.spiele(jetzt < this.feierBis ? 'jubeln' : f.laeuft ? 'kurbeln' : schlaeft ? 'schlafen' : 'idle');
     this.kurbler.aktualisiere(dt);
     this.paternosterMeister.zeige(f, jetzt, dt, { x: this.kopf.x, y: this.kopf.y - 50, groesse: 130 });
   }
@@ -944,18 +1014,18 @@ export class Szene {
       const ladenMs = (VERSAND_ABFAHRT * versandZyklus(v.stufe)) / tempoFaktor('versand', v, jetzt);
       const grund = (versandZyklus(1) / versandZyklus(v.stufe)) * tempoFaktor('versand', v, jetzt);
       const name = wagen.anteil < 0.7 ? 'laufen_tragen' : 'einladen';
-      this.traeger.spiele(name, phasenTempo(CLIPS[name], name, ladenMs * (name === 'einladen' ? 0.3 : 0.7), grund));
+      this.spieleTraeger(jetzt, name, phasenTempo(CLIPS[name], name, ladenMs * (name === 'einladen' ? 0.3 : 0.7), grund));
       this.traeger.schaue(1);
       this.traeger.traegt(wagen.anteil < 0.85 ? this.paket : null);
     } else if (wagen.phase === 'weg') {
       const a = Math.min(1, wagen.anteil / 0.6);
       x = bis - (bis - von) * a;
       const grund = (versandZyklus(1) / versandZyklus(v.stufe)) * tempoFaktor('versand', v, jetzt);
-      this.traeger.spiele(a < 1 ? 'laufen' : 'winken', a < 1 ? Math.min(LAUFEN_TEMPO_MAX, grund) : 1);
+      this.spieleTraeger(jetzt, a < 1 ? 'laufen' : 'winken', a < 1 ? Math.min(LAUFEN_TEMPO_MAX, grund) : 1);
       this.traeger.schaue(a < 1 ? -1 : 1);
       this.traeger.traegt(null);
     } else {
-      this.traeger.spiele(!v.meister && !v.laeuft && stand.packtisch > 0 ? 'schlafen' : 'idle');
+      this.spieleTraeger(jetzt, !v.meister && !v.laeuft && stand.packtisch > 0 ? 'schlafen' : 'idle');
       this.traeger.schaue(1);
       this.traeger.traegt(null);
     }

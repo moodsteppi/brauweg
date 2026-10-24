@@ -18,7 +18,16 @@
  * sich etwas Sichtbares am DOM aendern kann.
  */
 
-import { type Aktion, AktionAbgelehnt, type ManufakturStand, type Ziel, handle, vorspulen } from '@brauweg/manufaktur-kern';
+import {
+  type Aktion,
+  AktionAbgelehnt,
+  type ManufakturStand,
+  type Ziel,
+  handle,
+  hoechsterOrt,
+  renovierung,
+  vorspulen,
+} from '@brauweg/manufaktur-kern';
 
 import type { ManufakturAntwort } from './sicht';
 
@@ -37,8 +46,8 @@ export interface Ereignisse {
   fehler?: (textSchluessel: string | null) => void;
   /** Eine neue Manufaktur ist bezogen (auch von einem zweiten Geraet aus). */
   umzug?: (nummer: number) => void;
-  /** Ein Jubilaeum ist gefeiert (Kartenpalast neu, ein Siegel mehr). */
-  jubilaeum?: (siegel: number) => void;
+  /** Renoviert (auch von einem zweiten Geraet): die neue Stufe des Orts, ab 5 im Palast das Jubilaeum. */
+  renoviert?: (stufe: number) => void;
 }
 
 /** Nach so langer Zeit fragt der Client ohnehin neu — fuer ein zweites Geraet. */
@@ -53,7 +62,8 @@ export class Steuerung {
   private kette: Promise<void> = Promise.resolve();
   private hoerer = new Set<() => void>();
   private letzteManufaktur: number | null = null;
-  private letzteJubilaeen: number | null = null;
+  private letzteRenovierung: number | null = null;
+  private letzterWeitester: number | null = null;
 
   constructor(
     private readonly leitung: Leitung,
@@ -173,11 +183,17 @@ export class Steuerung {
     }
     this.basis = stand;
     if (antwort.muenzen > 0) this.ereignisse.muenzen?.(antwort.muenzen);
+    // Umzug heisst: ein NEUER Ort. Ein Wechsel zurueck (oder wieder vor) feiert nichts.
+    const weitester = hoechsterOrt(antwort.stand);
+    if (this.letzterWeitester !== null && weitester > this.letzterWeitester) this.ereignisse.umzug?.(weitester);
+    // Renoviert: dieselbe Manufaktur, eine Stufe mehr.
     const nummer = antwort.stand.manufaktur;
-    if (this.letzteManufaktur !== null && nummer > this.letzteManufaktur) this.ereignisse.umzug?.(nummer);
-    const siegel = antwort.stand.jubilaeen;
-    if (this.letzteJubilaeen !== null && siegel > this.letzteJubilaeen) this.ereignisse.jubilaeum?.(siegel);
-    this.letzteJubilaeen = siegel;
+    const stufe = renovierung(antwort.stand);
+    if (this.letzteManufaktur === nummer && this.letzteRenovierung !== null && stufe > this.letzteRenovierung) {
+      this.ereignisse.renoviert?.(stufe);
+    }
+    this.letzterWeitester = weitester;
+    this.letzteRenovierung = stufe;
     this.letzteManufaktur = nummer;
     this.melden();
   }

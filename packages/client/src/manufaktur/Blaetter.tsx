@@ -17,10 +17,11 @@ import {
   ausbauVorschau,
   arbeiter,
   faehigkeitBereit,
-  JUBILAEEN_MIT_MUENZEN,
-  MUENZEN_JUBILAEUM,
-  SIEGEL_BONUS,
-  kannJubilaeum,
+  MAX_PRESSEN,
+  MAX_RENOVIERUNG,
+  hoechsterOrt,
+  renovierVorschau,
+  renovierung,
   kannUmziehen,
   einstellPreis,
   einstellenLeistbar,
@@ -29,7 +30,7 @@ import {
 } from '@brauweg/manufaktur-kern';
 
 import { HbBlatt } from '../screens/HbBlatt';
-import { abzeichenBild, buchBild, faehigkeitBild, siegelBild, manufakturBild, medaillonBild, meisterBild } from './bilder';
+import { abzeichenBild, buchBild, faehigkeitBild, siegelBild, sternBild, manufakturBild, medaillonBild, meisterBild } from './bilder';
 import { MANUFAKTUREN, RANG_NAME, faehigkeitText, manufakturName, stationName } from './namen';
 import { dauer, kurz, proSekunde, sekunden } from './zahlen';
 
@@ -450,72 +451,144 @@ export function WillkommenBlatt({
   );
 }
 
-/** Untere Leiste → Manufaktur: wo man ist, und der Umzug in die naechste. */
+/** Sterne einer Renovierung: gefuellt bis `stufe`, von vier (im Palast darueber eine Zahl). */
+function Sterne({ stufe }: { stufe: number }): React.JSX.Element {
+  return (
+    <span className="mf-sterne" aria-label={`${Math.min(stufe, MAX_RENOVIERUNG)} von ${MAX_RENOVIERUNG} Sternen`}>
+      {Array.from({ length: MAX_RENOVIERUNG }, (_, i) => (
+        <img key={i} className={i < stufe ? 'is-voll' : undefined} src={sternBild()} alt="" draggable={false} />
+      ))}
+      {stufe > MAX_RENOVIERUNG && <b className="mf-jubilaeen">+{stufe - MAX_RENOVIERUNG}</b>}
+    </span>
+  );
+}
+
+/**
+ * Das Manufaktur-Blatt (Phase 2): Renovieren mit Stufe, Multiplikator,
+ * Preis und Bedingung; Umziehen in einen neuen Ort; Wechseln an einen schon
+ * erreichten. Die Warnung „Stufen werden zurueckgesetzt, Meister bleiben"
+ * steht direkt am Knopf, die Rueckfrage kommt danach.
+ */
 export function ManufakturBlatt({
   stand,
   debug,
   onDebug,
+  onRenovieren,
   onUmziehen,
-  onJubilaeum,
+  onWechseln,
   onClose,
 }: {
   stand: ManufakturStand;
   /** Debug-Ansicht: Anker, Drehpunkte und Bildrate — zum Pruefen gelieferter Teile. */
   debug: boolean;
   onDebug: (an: boolean) => void;
+  onRenovieren: () => void;
   onUmziehen: () => void;
-  onJubilaeum: () => void;
+  onWechseln: (nach: number) => void;
   onClose: () => void;
 }): React.JSX.Element {
+  const r = renovierVorschau(stand);
+  const voll = !r.istJubilaeum && r.stufe >= MAX_RENOVIERUNG;
   const naechste = stand.manufaktur < MANUFAKTUREN.length ? stand.manufaktur + 1 : null;
-  const siegel = stand.jubilaeen;
-  const naechstesMitMuenzen = siegel + 1 <= JUBILAEEN_MIT_MUENZEN;
+  const neuerOrt = naechste !== null && hoechsterOrt(stand) === stand.manufaktur;
+  const fehltPressen = Math.max(0, MAX_PRESSEN - stand.pressen.length);
+  const orte = Array.from({ length: hoechsterOrt(stand) }, (_, i) => i + 1);
   return (
     <HbBlatt titel={`${manufakturName(stand.manufaktur)} · ${stand.manufaktur}/${MANUFAKTUREN.length}`} onClose={onClose} klasse="is-klein">
       <div className="mf-blatt">
-        {naechste === null ? (
-          <>
-            <span className="mf-umzug-bild" style={{ backgroundImage: `url(${manufakturBild(stand.manufaktur)})` }}>
-              <strong>Jubiläum im Kartenpalast</strong>
-            </span>
-            <p className="hb-text">
-              Mit allen acht Pressen feierst du ein Jubiläum: Der Palast beginnt neu, und du bekommst ein Gildensiegel — für immer{' '}
-              {Math.round(SIEGEL_BONUS * 100)} % mehr Kartenwert
-              {naechstesMitMuenzen ? ` und ${MUENZEN_JUBILAEUM} Münzen fürs Hub` : ''}.
-            </p>
-            <p className="mf-blatt-stufe">
-              {siegel > 0 ? `${siegel} Siegel · +${Math.round(siegel * SIEGEL_BONUS * 100)} % Kartenwert` : 'Noch kein Siegel'}
-            </p>
-            <p className="mf-blatt-stufe">Pressen {stand.pressen.length}/8</p>
-            <button
-              type="button"
-              className={`hb-kn is-haupt is-breit${kannJubilaeum(stand) ? ' is-gold' : ''}`}
-              disabled={!kannJubilaeum(stand)}
-              onClick={onJubilaeum}
-            >
-              Jubiläum feiern
-            </button>
-          </>
-        ) : (
-          <>
+        <section className="mf-renovieren" aria-label={r.istJubilaeum ? 'Jubiläum' : 'Renovieren'}>
+          <span className="mf-umzug-bild" style={{ backgroundImage: `url(${manufakturBild(stand.manufaktur)})` }}>
+            <strong>{r.istJubilaeum ? `${r.neueStufe - MAX_RENOVIERUNG}. Jubiläum` : 'Renovieren'}</strong>
+            <Sterne stufe={r.stufe} />
+          </span>
+          {voll ? (
+            <p className="hb-text">Ganz renoviert — dieser Ort leistet für immer ×{kurz(r.faktorVorher)}.</p>
+          ) : (
+            <>
+              <div className="mf-hauptzeile">
+                <small>Alles hier leistet dauerhaft</small>
+                <span>
+                  ×{kurz(r.faktorVorher)} → <b>×{kurz(r.faktorNachher)}</b>
+                </span>
+                <em>
+                  {r.siegel > 0 ? (
+                    <>
+                      und es gibt <img className="mf-buch-preis" src={siegelBild()} alt="" /> {r.siegel} Siegel fürs Werkstattbuch
+                    </>
+                  ) : (
+                    'Im Palast geht es als Jubiläum weiter — flacher, aber ohne Ende.'
+                  )}
+                </em>
+              </div>
+              <p className="mf-warnung">Stufen, Etagen und Taler werden zurückgesetzt. Meister, Werkstattbuch und Sterne bleiben.</p>
+              <button
+                type="button"
+                className={`hb-kn is-haupt is-breit${r.leistbar ? ' is-gold' : ' is-gedaempft'}`}
+                disabled={!r.leistbar}
+                onClick={onRenovieren}
+              >
+                {!r.moeglich ? (
+                  `Erst alle 8 Pressen (${fehltPressen} fehlen)`
+                ) : r.leistbar ? (
+                  <>
+                    {r.istJubilaeum ? 'Jubiläum feiern' : 'Renovieren'} · <i className="mf-taler" aria-hidden="true" /> {kurz(r.kosten)}
+                  </>
+                ) : (
+                  `Es fehlen ${kurz(r.kosten - stand.taler)} Taler`
+                )}
+              </button>
+            </>
+          )}
+        </section>
+
+        {neuerOrt && (
+          <section className="mf-umziehen" aria-label="Umziehen">
             <span className="mf-umzug-bild" style={{ backgroundImage: `url(${manufakturBild(naechste)})` }}>
               <strong>{manufakturName(naechste)}</strong>
             </span>
             <p className="hb-text">
-              Mit allen acht Pressen ziehst du um: Stufen, Meister und Taler beginnen neu, dafür leistet alles doppelt so viel — und es
-              gibt 300 Münzen fürs Hub.
+              Ein neuer Ort: alles leistet doppelt so viel, kostet aber auch mehr. Es gibt 300 Münzen fürs Hub und 5 Siegel — die
+              Sterne hier bleiben dem Ort.
             </p>
-            <p className="mf-blatt-stufe">Pressen {stand.pressen.length}/8</p>
             <button
               type="button"
               className={`hb-kn is-haupt is-breit${kannUmziehen(stand) ? ' is-gold' : ''}`}
               disabled={!kannUmziehen(stand)}
               onClick={onUmziehen}
             >
-              Umziehen
+              {kannUmziehen(stand)
+                ? 'Umziehen'
+                : r.stufe < 1
+                  ? 'Erst einmal renovieren'
+                  : `Erst alle 8 Pressen (${fehltPressen} fehlen)`}
             </button>
-          </>
+          </section>
         )}
+
+        {orte.length > 1 && (
+          <section className="mf-orte" aria-label="Orte">
+            <h3>Deine Orte</h3>
+            <p className="hb-text">Zurück an einen Ort, um ihn weiter zu renovieren. Es läuft immer nur einer; die Halle beginnt dort neu.</p>
+            <ul>
+              {orte.map((o) => (
+                <li key={o} className={o === stand.manufaktur ? 'is-hier' : undefined}>
+                  <span className="mf-orte-text">
+                    <strong>{manufakturName(o)}</strong>
+                    <Sterne stufe={renovierung(stand, o)} />
+                  </span>
+                  {o === stand.manufaktur ? (
+                    <small>hier</small>
+                  ) : (
+                    <button type="button" className="hb-kn" onClick={() => onWechseln(o)}>
+                      Hierher
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <label className="mf-debug">
           <input type="checkbox" checked={debug} onChange={(e) => onDebug(e.target.checked)} /> Anker, Drehpunkte und Bildrate zeigen
         </label>

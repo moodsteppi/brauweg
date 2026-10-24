@@ -154,23 +154,44 @@ Presse 5 nach 0,9 Tagen, erster Umzug nach 1,5 Tagen. Vor der Halbierung
 waren es 0,8 und 1,3 Tage — der Hebel für ein längeres Spiel ist nicht der
 Offline-Deckel, sondern der Preis der späteren Manufakturen.
 
-## Neue Manufaktur (Prestige)
+## Renovieren, Umzug und Orte (seit 24.10.2026)
 
-Mit **allen acht Pressen** kann man umziehen: alles beginnt von vorn
-(Pressen, Stufen, Meister, Taler), dafür leistet jede weitere Manufaktur
-**dauerhaft ×2** (die zweite ×2, die dritte ×4 …) und kostet ×1,8. Neuer
-Name, neue Kulisse. Höchstens 5. Wer umzieht, bekommt den **Kartenrücken**
-der verlassenen Manufaktur (nur erspielbar, am Tisch wählbar; Bilder:
-`docs/ASSETS-KARTENMANUFAKTUR-RUECKEN.md`).
+`packages/manufaktur-kern/src/renovieren.ts`. Mit **allen acht Pressen**
+kann man den Ort **renovieren**: Stufen, Etagen und Taler beginnen neu,
+Meister-Pools, Werkstattbuch, Siegel und die Sterne bleiben. Jede Stufe
+(1–4) gibt dem Ort dauerhaft **×4 / ×10 / ×25 / ×60** (Gesamtwert, für die
+ganze Kette) und **3 / 5 / 8 / 12 Siegel**, keine Hub-Münzen. Preis: 0,5 /
+15 / 300 / 6000 × die achte Presse dieses Orts.
 
-## Jubiläum (nach Manufaktur 5)
+- **Umziehen** in einen neuen Ort geht erst nach Stufe 1 (und mit acht
+  Pressen): doppelte Leistung, Preise ×2,6, 300 Münzen fürs Hub, 5 Siegel,
+  der Kartenrücken des alten Orts.
+- **Wechseln**: An jeden schon erreichten Ort kann man zurück, um ihn
+  weiter zu renovieren — es läuft immer nur einer, die Halle beginnt dort
+  neu, seine Sterne gelten. Keine Münzen, keine Siegel.
+- **Im Kartenpalast** geht es nach Stufe 4 als **Jubiläum** weiter: ×1,5 je
+  Stufe, Preis ×3 je Stufe, 100 Münzen für die ersten zehn. Den Rücken des
+  Palasts gibt es für die erste Renovierung dort.
+- Sichtbar: Messingschild mit 0–4 Sternen oben in der Halle, Girlande ab
+  Stufe 2, Lampen ab Stufe 3; beim Renovieren Konfetti und alle Pinguine
+  jubeln. Alte Gildensiegel (Fassung 5) zählen als Renovierungsstufen des
+  Palasts.
 
-Im Kartenpalast mit allen acht Pressen: **Jubiläum feiern** — der Palast
-beginnt neu, und es gibt ein **Gildensiegel**, dauerhaft **+10 %
-Kartenwert** je Siegel (aufaddiert). So endet das Spiel nicht. Das erste
-Jubiläum schenkt den Kartenrücken „Kartenpalast". Münzen fürs Hub: 100 je
-Jubiläum, aber nur für die ersten zehn — sonst wäre es eine endlose
-Münzquelle.
+Simulation, 24.10.2026 (`npm run sim --workspace @brauweg/manufaktur-kern`):
+
+| | aktiver Spieler | Gelegenheit (4 × 3 min/Tag) |
+| --- | --- | --- |
+| erste Renovierung | 1,3 h | — |
+| erster Umzug | 1,5 h | 3,3 Tage |
+| Manufaktur 3 / 4 / 5 | 3,4 / 5,8 / 9,1 h | Palast nach 12,9 Tagen |
+| alles renoviert | 28,9 h | 16,5 Tage |
+| Siegel | 5 je Stunde | 1,9 je Tag |
+
+Vorschlag neue Zielzeiten (die alten „erster Umzug 60–90 min" passen nicht
+mehr, weil davor renoviert wird): erste Renovierung 60–90 min, erster Umzug
+75–100 min. Die längste Strecke ohne Kauf bleibt bis „alles renoviert" unter
+3 min; danach, im endlosen Jubiläum, wächst sie auf rund 8 min — gewollt
+weich, kein Ende.
 
 **Münzen fürs Hub (Meilensteine, eigene Währung bleibt getrennt):**
 

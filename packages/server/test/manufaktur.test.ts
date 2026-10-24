@@ -166,6 +166,8 @@ test('Dienst: Wer umzieht, bekommt den Kartenruecken seiner Manufaktur — kaufe
   const [zeile] = await c.db.select().from(s.manufaktur).where(eq(s.manufaktur.accountId, accountId));
   const stand = migriere(zeile!.stand);
   stand.pressen = Array.from({ length: MAX_PRESSEN }, neuePresse);
+  // Umziehen geht erst nach der ersten Renovierung (Phase 2).
+  stand.orte = { '1': { renovierung: 1, geraeumt: [] } };
   await c.db.update(s.manufaktur).set({ stand }).where(eq(s.manufaktur.accountId, accountId));
 
   const umzug = await manufakturAktion(c.db, accountId, { typ: 'umziehen' }, new Date(T0 + 1000));

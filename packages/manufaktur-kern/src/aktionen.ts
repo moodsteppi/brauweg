@@ -34,7 +34,8 @@ import {
   wirkMs,
   ziehe,
 } from './meister.js';
-import { type Eintrag, BUCH, SIEGEL_UMZUG, buchPreis, feilschenFaktor, poolGroesse } from './werkstattbuch.js';
+import { MAX_RENOVIERUNG, kannRenovieren, renovierKosten, renovierung } from './renovieren.js';
+import { type Eintrag, BUCH, SIEGEL_RENOVIERUNG, SIEGEL_UMZUG, buchPreis, feilschenFaktor, poolGroesse } from './werkstattbuch.js';
 import { type ManufakturStand, type Station, kopiere, neuePresse, neuerStand } from './stand.js';
 import { kannStarten, starte, vorspulen } from './zeit.js';
 
@@ -58,8 +59,18 @@ export type Aktion =
   | { typ: 'boost' }
   | { typ: 'freischalten' }
   | { typ: 'umziehen' }
-  /** Im Kartenpalast mit allen acht Pressen: neu anfangen, ein Gildensiegel mehr. */
-  | { typ: 'jubilaeum' };
+  /**
+   * Mit allen acht Pressen: Halle zuruecksetzen, dauerhaft mehr leisten,
+   * Siegel bekommen. Im Palast ab Stufe 5 das Jubilaeum. `jubilaeum` ist
+   * der alte Name und tut dasselbe.
+   */
+  | { typ: 'renovieren' }
+  | { typ: 'jubilaeum' }
+  /**
+   * An einen schon erreichten Ort zurueck (oder wieder vor): Die Halle
+   * beginnt neu, die Renovierung des Orts gilt. Es laeuft immer nur einer.
+   */
+  | { typ: 'wechseln'; nach: number };
 
 export interface Meilenstein {
   kennung: string;
@@ -112,18 +123,16 @@ export function faehigkeitBereit(s: Station, jetzt: number): boolean {
   return s.meister && jetzt >= s.abklingenBis;
 }
 
-/** Umziehen darf, wer alle acht Pressen gebaut hat. */
-export function kannUmziehen(stand: ManufakturStand): boolean {
-  return stand.pressen.length >= MAX_PRESSEN && stand.manufaktur < MAX_MANUFAKTUR;
+/** Der weiteste Ort, den man schon bezogen hat — bis dorthin darf man wechseln. */
+export function hoechsterOrt(stand: ManufakturStand): number {
+  const umzuege = stand.meilensteine.filter((k) => k.startsWith('umzug-')).map((k) => Number(k.slice(6)));
+  return Math.max(stand.manufaktur, ...umzuege);
 }
 
-/**
- * Jubilaeum: Wer im Kartenpalast (der letzten Manufaktur) alle acht Pressen
- * gebaut hat, kann neu anfangen und bekommt ein Gildensiegel — dauerhaft +10 %
- * Kartenwert. So endet das Spiel nicht nach fuenf Manufakturen.
- */
-export function kannJubilaeum(stand: ManufakturStand): boolean {
-  return stand.manufaktur >= MAX_MANUFAKTUR && stand.pressen.length >= MAX_PRESSEN;
+/** Umziehen darf, wer alle acht Pressen gebaut und den Ort mindestens einmal renoviert hat. */
+export function kannUmziehen(stand: ManufakturStand): boolean {
+  // Nur in einen NEUEN Ort; dorthin, wo man schon war, fuehrt `wechseln`.
+  return stand.pressen.length >= MAX_PRESSEN && hoechsterOrt(stand) === stand.manufaktur && stand.manufaktur < MAX_MANUFAKTUR && renovierung(stand) >= 1;
 }
 
 /** Neue Meilensteine in diesem Stand — der Aufrufer zahlt die Muenzen. */
@@ -151,12 +160,15 @@ function loeseAus(stand: ManufakturStand, s: Station, jetzt: number): void {
   s.abklingenBis = s.faehigkeitBis + abklingMs(stand, rang);
 }
 
-/** Neue Halle (Umzug, Jubilaeum): alles von vorn, nur Meister, Zufall und Meilensteine bleiben. */
-function neueHalle(stand: ManufakturStand, t: number, manufaktur: number, kennung: string, jubilaeen: number): ManufakturStand {
+/**
+ * Neue Halle (Umzug, Renovieren): Stufen, Etagen und Taler von vorn. Es
+ * bleiben Meister, Zufall, Meilensteine, Siegel, Werkstattbuch und die Orte.
+ */
+function neueHalle(stand: ManufakturStand, t: number, manufaktur: number, kennung: string | null): ManufakturStand {
   sichereUhren(stand);
   const neu = neuerStand(t, manufaktur, {
-    meilensteine: [...stand.meilensteine, kennung],
-    jubilaeen,
+    meilensteine: kennung ? [...stand.meilensteine, kennung] : stand.meilensteine,
+    orte: stand.orte,
     belegschaft: stand.belegschaft,
     zufall: stand.zufall,
     naechsteMeisterId: stand.naechsteMeisterId,
@@ -273,14 +285,36 @@ export function handle(
       const kennung = `umzug-${naechste}`;
       meilensteine.push({ kennung, muenzen: MUENZEN_UMZUG });
       stand.siegel += SIEGEL_UMZUG;
-      return { stand: neueHalle(stand, t, naechste, kennung, stand.jubilaeen), meilensteine };
+      return { stand: neueHalle(stand, t, naechste, kennung), meilensteine };
     }
+    case 'wechseln': {
+      if (!Number.isInteger(aktion.nach) || aktion.nach < 1 || aktion.nach > hoechsterOrt(stand)) {
+        throw new AktionAbgelehnt('manufakturUnbekannt');
+      }
+      if (aktion.nach === stand.manufaktur) break;
+      // Keine Muenzen, keine Siegel: Die gibt es nur beim ersten Bezug.
+      return { stand: neueHalle(stand, t, aktion.nach, null), meilensteine };
+    }
+    case 'renovieren':
     case 'jubilaeum': {
-      if (!kannJubilaeum(stand)) throw new AktionAbgelehnt('manufakturJubilaeumZuFrueh');
-      const nummer = stand.jubilaeen + 1;
+      if (!kannRenovieren(stand)) throw new AktionAbgelehnt('manufakturRenovierenZuFrueh');
+      const stufe = renovierung(stand);
+      bezahle(stand, renovierKosten(stand.manufaktur, stufe));
+      const neueStufe = stufe + 1;
+      const ort = stand.orte[String(stand.manufaktur)] ?? { renovierung: 0, geraeumt: [] };
+      stand.orte[String(stand.manufaktur)] = { ...ort, renovierung: neueStufe };
+      if (neueStufe <= MAX_RENOVIERUNG) {
+        stand.siegel += SIEGEL_RENOVIERUNG[neueStufe - 1]!;
+        // Siegel, keine Hub-Muenzen — die Kennung zaehlt nur fuer Kartenruecken und Ziele.
+        const kennung = `renovierung-${stand.manufaktur}-${neueStufe}`;
+        meilensteine.push({ kennung, muenzen: 0 });
+        return { stand: neueHalle(stand, t, stand.manufaktur, kennung), meilensteine };
+      }
+      // Jubilaeum im Palast: die alten Hub-Muenzen fuer die ersten zehn.
+      const nummer = neueStufe - MAX_RENOVIERUNG;
       const kennung = `jubilaeum-${nummer}`;
       meilensteine.push({ kennung, muenzen: nummer <= JUBILAEEN_MIT_MUENZEN ? MUENZEN_JUBILAEUM : 0 });
-      return { stand: neueHalle(stand, t, stand.manufaktur, kennung, nummer), meilensteine };
+      return { stand: neueHalle(stand, t, stand.manufaktur, kennung), meilensteine };
     }
   }
 

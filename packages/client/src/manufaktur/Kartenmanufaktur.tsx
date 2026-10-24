@@ -2,6 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 
 import {
   abklingMs,
+  MAX_RENOVIERUNG,
+  istJubilaeum,
+  renovierFaktor,
+  renovierVorschau,
   EINTRAEGE,
   buchPreis,
   wirkMs,
@@ -184,6 +188,11 @@ export function Kartenmanufaktur({
   useEffect(() => {
     szene.current?.groesse(masse.breite, weltHoehe);
   }, [masse.breite, weltHoehe]);
+
+  // Renoviert: Festmoment in der Szene. An der Stufe (Zahl) haengen, nicht am Stand.
+  useEffect(() => {
+    if (m.gefeiert !== null) szene.current?.feiere();
+  }, [m.gefeiert]);
 
   useEffect(() => {
     szene.current?.zeigeDebug(debug);
@@ -426,16 +435,29 @@ export function Kartenmanufaktur({
           debug={debug}
           onDebug={setDebug}
           onClose={() => setBlatt(null)}
-          onJubilaeum={() =>
+          onRenovieren={() =>
             frage(
               {
-                titel: 'Jubiläum feiern?',
-                text: 'Pressen, Stufen, Meister und Taler beginnen neu. Dafür bekommst du ein Gildensiegel: für immer 10 % mehr Kartenwert.',
-                ja: 'Feiern',
+                titel: istJubilaeum(stand) ? 'Jubiläum feiern?' : 'Renovieren?',
+                text: `Stufen, Etagen und Taler beginnen neu — Meister, Werkstattbuch und Sterne bleiben. Danach leistet alles hier ×${kurz(renovierVorschau(stand).faktorNachher)}.`,
+                ja: istJubilaeum(stand) ? 'Feiern' : 'Renovieren',
               },
               () => {
                 setBlatt(null);
-                tue({ typ: 'jubilaeum' }, 'kauf');
+                tue({ typ: 'renovieren' }, 'kauf');
+              },
+            )
+          }
+          onWechseln={(nach) =>
+            frage(
+              {
+                titel: `Nach ${manufakturName(nach)}?`,
+                text: 'Die Halle dort beginnt neu (Stufen, Etagen, Taler). Meister, Werkstattbuch und die Sterne jedes Orts bleiben.',
+                ja: 'Wechseln',
+              },
+              () => {
+                setBlatt(null);
+                tue({ typ: 'wechseln', nach });
               },
             )
           }
@@ -443,7 +465,7 @@ export function Kartenmanufaktur({
             frage(
               {
                 titel: 'Umziehen?',
-                text: 'Pressen, Stufen, Meister und Taler beginnen neu. Die neue Manufaktur leistet doppelt so viel.',
+                text: 'Stufen, Etagen und Taler beginnen neu — Meister, Werkstattbuch und Sterne bleiben. Der neue Ort leistet doppelt so viel.',
                 ja: 'Umziehen',
               },
               () => {
@@ -478,12 +500,16 @@ export function Kartenmanufaktur({
         </HbBlatt>
       )}
       {m.gefeiert !== null && (
-        <HbBlatt titel={`${m.gefeiert}. Jubiläum`} onClose={m.schliesseFeier} klasse="is-klein">
+        <HbBlatt
+          titel={m.gefeiert > MAX_RENOVIERUNG ? `${m.gefeiert - MAX_RENOVIERUNG}. Jubiläum` : `Renoviert · ${m.gefeiert} ${m.gefeiert === 1 ? 'Stern' : 'Sterne'}`}
+          onClose={m.schliesseFeier}
+          klasse="is-klein"
+        >
           <div className="hb-rueckfrage">
-            <img className="mf-umzug-gross" src={manufakturBild(5)} alt="" draggable={false} />
+            <img className="mf-umzug-gross" src={manufakturBild(stand.manufaktur)} alt="" draggable={false} />
             <p className="hb-text">
-              Der Kartenpalast beginnt neu — mit {m.gefeiert} {m.gefeiert === 1 ? 'Gildensiegel' : 'Gildensiegeln'}: Alle Karten sind
-              jetzt {m.gefeiert * 10} % mehr wert, für immer.
+              {manufakturName(stand.manufaktur)} beginnt neu — und leistet jetzt für immer ×{kurz(renovierFaktor(m.gefeiert))}.
+              {m.gefeiert <= MAX_RENOVIERUNG && ' Die Siegel liegen im Werkstattbuch.'}
             </p>
             <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={m.schliesseFeier}>
               Weiter

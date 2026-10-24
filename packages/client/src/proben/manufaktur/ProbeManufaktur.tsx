@@ -68,7 +68,8 @@ function fall(name: string, jetzt: number): ManufakturStand {
   if (name === 'palast') {
     // Kartenpalast mit allen acht Pressen: Das Jubilaeum ist bereit.
     stand.manufaktur = 5;
-    stand.jubilaeen = 2;
+    stand.orte = { '1': { renovierung: 4, geraeumt: [] }, '2': { renovierung: 2, geraeumt: [] }, '5': { renovierung: 2, geraeumt: [] } };
+    stand.meilensteine = ['umzug-2', 'umzug-3', 'umzug-4', 'umzug-5'];
     stand.taler = 4e12;
     // Werkstattbuch: ein paar Seiten gekauft, Siegel fuer die naechsten.
     stand.siegel = 23;

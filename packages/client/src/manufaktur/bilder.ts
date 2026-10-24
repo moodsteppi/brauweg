@@ -68,12 +68,19 @@ export function faehigkeitBild(art: 'tempo' | 'ladung' | 'rabatt' | 'alle'): str
   return `${RIG2_ORDNER}/faehigkeit-${art}.webp`;
 }
 
+export function sternBild(): string {
+  return `${RIG2_ORDNER}/renovierung-stern.webp`;
+}
+
 export function siegelBild(): string {
   return `${RIG2_ORDNER}/siegel.webp`;
 }
 
+/** Die Lieferung nennt drei Zeichen anders als die Eintraege im Kern. */
+const BUCH_DATEI: Record<string, string> = { erfahrene: 'dauer', pausen: 'pause', bautrupps: 'bautrupp' };
+
 export function buchBild(eintrag: string): string {
-  return `${RIG2_ORDNER}/wb-${eintrag}.webp`;
+  return `${RIG2_ORDNER}/wb-${BUCH_DATEI[eintrag] ?? eintrag}.webp`;
 }
 
 export const BILD = {

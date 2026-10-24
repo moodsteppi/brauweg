@@ -15,3 +15,4 @@ export * from './aktionen.js';
 export * from './ansicht.js';
 export * from './meister.js';
 export * from './werkstattbuch.js';
+export * from './renovieren.js';

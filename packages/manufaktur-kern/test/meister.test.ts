@@ -144,6 +144,7 @@ test('Meister bleiben ueber den Umzug und stehen an ihren Stationen', () => {
   stand = stelleEin(stand, presse, 1);
   for (let i = 1; i < 8; i += 1) stand = handle(stand, { typ: 'freischalten' }, T0).stand;
   stand = stelleEin(stand, { art: 'presse', index: 6 }, 1);
+  stand.orte['1'] = { renovierung: 1, geraeumt: [] };
   const neu = handle(stand, { typ: 'umziehen' }, T0).stand;
   assert.equal(neu.manufaktur, 2);
   assert.equal(neu.versand.meister, true);

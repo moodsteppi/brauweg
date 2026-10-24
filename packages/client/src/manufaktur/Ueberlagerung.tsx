@@ -6,6 +6,8 @@ import {
   faehigkeitBereit,
   freischaltKosten,
   einstellPreis,
+  MAX_RENOVIERUNG,
+  renovierung,
   einstellenLeistbar,
   stufenFuer,
 } from '@brauweg/manufaktur-kern';
@@ -81,6 +83,13 @@ export function Ueberlagerung({
       <Bestand x={h.packtisch.x + 8} y={h.packtisch.y - 22} wert={stand.packtisch} bild={stapelBild(0)} name="Packtisch" />
       {versandSchlaeft && <Zzz x={h.traegerWeg.von + 6} y={h.boden - 56} />}
       {paternosterSchlaeft && <Zzz x={h.kurbler.x + 6} y={h.boden - 56} />}
+      {/* Messingschild mit 0–4 Sternen (renovierung.json: Sterne bei x 178/228/278/328, y 94 von 384 × 160). */}
+      <span className="mf-sternschild" style={lage(h.sternSchild)} aria-label={`Renoviert: ${Math.min(renovierung(stand), MAX_RENOVIERUNG)} von ${MAX_RENOVIERUNG} Sternen`}>
+        {[178, 228, 278, 328].map((x, i) => (
+          <i key={x} className={i < renovierung(stand) ? 'is-voll' : undefined} style={{ left: `${(x / 384) * 100}%` }} />
+        ))}
+        {renovierung(stand) > MAX_RENOVIERUNG && <b>+{renovierung(stand) - MAX_RENOVIERUNG}</b>}
+      </span>
       {/* Der Direktor: dein eigener Pinguin auf seinem Podest, mit allem, was du traegst. */}
       {getragen && (
         <span className={`mf-direktor is-${direktor}`} style={lage(h.direktor)} aria-hidden="true">

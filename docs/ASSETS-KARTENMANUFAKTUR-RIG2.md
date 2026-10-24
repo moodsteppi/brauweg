@@ -4,10 +4,12 @@ Stand 24.10.2026 (Emile, mit Claude). Spiel: `docs/SPEZIFIKATION-KARTENMANUFAKTU
 Stil und Aufbau wie die erste Rig-Lieferung (`outputs/rig/`) und die
 Bedienelemente (`outputs/ui/`, `docs/ASSETS-KARTENMANUFAKTUR-UI.md`).
 
-**Lieferung nach `outputs/rig2/`.** Bis sie kommt, liegen unter genau diesen
-Namen und Maßen Platzhalter in `packages/client/public/manufaktur/rig2/`
-(erzeugt mit `node werkzeug/manufaktur-platzhalter.mjs`). Eingebaut wird
-durch Austauschen der Datei — Code und Maße bleiben.
+**Geliefert am 24.10.2026** (`outputs/rig2/`, 36 Bilder) und eingebaut unter
+`packages/client/public/manufaktur/rig2/`. Bis dahin lagen dort Platzhalter
+gleichen Namens. Abweichungen der Lieferung, so übernommen: Die Weste ist ein
+Ersatzkörper ohne Ärmel; drei Buch-Zeichen heißen `wb-dauer`, `wb-pause`,
+`wb-bautrupp`; dazu kamen `barriere-brocken-1…3`, `countdown-schild` und
+`deko-lampe-licht`. Montagedaten: `outputs/rig2/json/`.
 
 ## Gemeinsamer Teil (vor jeden Text)
 

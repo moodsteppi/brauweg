@@ -20,7 +20,8 @@ import {
 } from './formeln.js';
 import { type Menge, ausbauRabatt, stationVon, stufenFuer } from './aktionen.js';
 import { einstellPreis, platzVon } from './meister.js';
-import { feilschenFaktor, kartenwertBonus, poolGroesse } from './werkstattbuch.js';
+import { ortFaktor, presseBonus } from './renovieren.js';
+import { feilschenFaktor, poolGroesse } from './werkstattbuch.js';
 import type { ManufakturStand } from './stand.js';
 
 export type Kettenglied = 'pressen' | 'paternoster' | 'versand';
@@ -28,7 +29,7 @@ export type Kettenglied = 'pressen' | 'paternoster' | 'versand';
 /** Was die Kettenglieder je Sekunde schaffen, wenn alle arbeiten. */
 export function durchsatz(stand: ManufakturStand, nurMeister = false): Record<Kettenglied, number> {
   const pressen = stand.pressen.reduce(
-    (summe, p, i) => summe + (nurMeister && !p.meister ? 0 : presseLeistung(i, p.stufe, stand.manufaktur, kartenwertBonus(stand))),
+    (summe, p, i) => summe + (nurMeister && !p.meister ? 0 : presseLeistung(i, p.stufe, stand.manufaktur, presseBonus(stand))),
     0,
   );
   const f = stand.paternoster;
@@ -36,9 +37,9 @@ export function durchsatz(stand: ManufakturStand, nurMeister = false): Record<Ke
   const paternoster =
     nurMeister && !f.meister
       ? 0
-      : paternosterKapazitaet(f.stufe, stand.manufaktur) / (paternosterFahrt(stand.pressen.length, f.stufe) / 1000);
+      : paternosterKapazitaet(f.stufe, stand.manufaktur, ortFaktor(stand)) / (paternosterFahrt(stand.pressen.length, f.stufe) / 1000);
   const versand =
-    nurMeister && !v.meister ? 0 : versandKapazitaet(v.stufe, stand.manufaktur) / (versandZyklus(v.stufe) / 1000);
+    nurMeister && !v.meister ? 0 : versandKapazitaet(v.stufe, stand.manufaktur, ortFaktor(stand)) / (versandZyklus(v.stufe) / 1000);
   return { pressen, paternoster, versand };
 }
 
@@ -89,9 +90,9 @@ export function engpassSichtbar(stand: ManufakturStand): Kettenglied | null {
 /** Leistung einer Station je Sekunde auf Stufe `stufe` — die Hauptzeile im Upgrade-Blatt. */
 export function leistungJeSekunde(stand: ManufakturStand, ziel: Ziel, stufe: number): number {
   const m = stand.manufaktur;
-  if (ziel.art === 'presse') return presseLeistung(ziel.index, stufe, m, kartenwertBonus(stand));
-  if (ziel.art === 'paternoster') return paternosterKapazitaet(stufe, m) / (paternosterFahrt(stand.pressen.length, stufe) / 1000);
-  return versandKapazitaet(stufe, m) / (versandZyklus(stufe) / 1000);
+  if (ziel.art === 'presse') return presseLeistung(ziel.index, stufe, m, presseBonus(stand));
+  if (ziel.art === 'paternoster') return paternosterKapazitaet(stufe, m, ortFaktor(stand)) / (paternosterFahrt(stand.pressen.length, stufe) / 1000);
+  return versandKapazitaet(stufe, m, ortFaktor(stand)) / (versandZyklus(stufe) / 1000);
 }
 
 /** Das langsamste Glied — dort lohnt der Ausbau. null, wenn es noch keine Kette gibt. */
@@ -119,19 +120,19 @@ function kennzahlenBei(stand: ManufakturStand, ziel: Ziel, stufe: number): Omit<
     return [
       // Namen, wie sie im Upgrade-Blatt stehen — „Zyklus" und „Kapazität"
       // verstand beim ersten Spielen niemand (Rueckmeldung 23.10.2026).
-      { name: 'Wert pro Druckgang', vorher: presseErtrag(ziel.index, stufe, m, kartenwertBonus(stand)), einheit: 'wert' },
+      { name: 'Wert pro Druckgang', vorher: presseErtrag(ziel.index, stufe, m, presseBonus(stand)), einheit: 'wert' },
       { name: 'Dauer pro Druckgang', vorher: presseZyklus(stufe) / 1000, einheit: 'sekunden' },
       { name: 'Arbeiter', vorher: arbeiter(stufe), einheit: 'anzahl' },
     ];
   }
   if (ziel.art === 'paternoster') {
     return [
-      { name: 'Ladung pro Fahrt', vorher: paternosterKapazitaet(stufe, m), einheit: 'wert' },
+      { name: 'Ladung pro Fahrt', vorher: paternosterKapazitaet(stufe, m, ortFaktor(stand)), einheit: 'wert' },
       { name: 'Dauer pro Fahrt', vorher: paternosterFahrt(stand.pressen.length, stufe) / 1000, einheit: 'sekunden' },
     ];
   }
   return [
-    { name: 'Ladung pro Lieferung', vorher: versandKapazitaet(stufe, m), einheit: 'wert' },
+    { name: 'Ladung pro Lieferung', vorher: versandKapazitaet(stufe, m, ortFaktor(stand)), einheit: 'wert' },
     { name: 'Dauer pro Lieferung', vorher: versandZyklus(stufe) / 1000, einheit: 'sekunden' },
   ];
 }

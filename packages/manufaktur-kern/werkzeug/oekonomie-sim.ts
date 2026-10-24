@@ -27,6 +27,12 @@ import {
   handle,
   kannStarten,
   kannUmziehen,
+  kannRenovieren,
+  hoechsterOrt,
+  MAX_MANUFAKTUR,
+  renovierKosten,
+  renovierung,
+  MAX_RENOVIERUNG,
   einstellPreis,
   faehigkeitBereit,
   platzVon,
@@ -43,6 +49,8 @@ import {
 } from '../src/index.js';
 
 const SCHRITT_MS = 1000 / 3;
+// Zum Vergleichen mehrerer Einstellungen nebeneinander: SIM_SETZE='{"PREIS_JE_MANUFAKTUR":3}'.
+if (process.env.SIM_SETZE) Object.assign(STELLSCHRAUBEN, JSON.parse(process.env.SIM_SETZE));
 const stundenArg = process.argv.indexOf('--stunden');
 const DAUER = (stundenArg > 0 ? Number(process.argv[stundenArg + 1]) : 3) * 3600_000;
 
@@ -247,6 +255,7 @@ function simuliere(DAUER_MS: number, bisManufaktur = Infinity, plan: Plan = IMME
   let ersterMeister = false;
   let ersterOber = false;
   let rabattKaeufe = 0;
+  let allesRenoviert = false;
 
   for (let t = plan.aktiv(0) ? 0 : plan.naechste(0); t <= DAUER_MS; t += SCHRITT_MS) {
     if (!plan.aktiv(t)) {
@@ -284,12 +293,51 @@ function simuliere(DAUER_MS: number, bisManufaktur = Infinity, plan: Plan = IMME
       merke(t, 'erste Karte verkauft');
     }
 
+    // Renovieren, sobald es geht und bezahlbar ist; umziehen, sobald man darf
+    // und die naechste Renovierung mehr als eine Viertelstunde Ertrag kostet.
+    if (kannRenovieren(stand)) {
+      const kosten = renovierKosten(stand.manufaktur, renovierung(stand));
+      const lohnt = kosten <= ertragProSekunde(stand) * 900 || !kannUmziehen(stand);
+      if (lohnt && kosten <= stand.taler) {
+        const stufe = renovierung(stand) + 1;
+        stand = handle(stand, { typ: 'renovieren' }, t).stand;
+        merke(t, stufe > MAX_RENOVIERUNG ? `Jubilaeum ${stufe - MAX_RENOVIERUNG}` : `Renovierung ${stufe} in Manufaktur ${stand.manufaktur}`);
+        letzterKauf = t;
+        continue;
+      }
+    }
+    // Endspiel: Ist der Palast erreicht, holt der Spieler die fehlenden
+    // Renovierungen frueherer Orte nach — immer nur ein Ort laeuft.
+    if (hoechsterOrt(stand) >= MAX_MANUFAKTUR) {
+      const offen = [1, 2, 3, 4].find((m) => renovierung(stand, m) < MAX_RENOVIERUNG);
+      const ziel = offen ?? MAX_MANUFAKTUR;
+      const hierFertig = stand.manufaktur !== MAX_MANUFAKTUR && renovierung(stand) >= MAX_RENOVIERUNG;
+      const hierZaeh =
+        kannRenovieren(stand) && renovierKosten(stand.manufaktur, renovierung(stand)) > ertragProSekunde(stand) * 900;
+      if (ziel !== stand.manufaktur && (hierFertig || hierZaeh || stand.manufaktur === MAX_MANUFAKTUR)) {
+        if (!allesRenoviert && offen === undefined) {
+          allesRenoviert = true;
+          merke(t, 'alles renoviert');
+        }
+        stand = handle(stand, { typ: 'wechseln', nach: ziel }, t).stand;
+        merke(t, `Wechsel nach Manufaktur ${ziel}`);
+        letzterKauf = t;
+        continue;
+      }
+      if (!allesRenoviert && offen === undefined && renovierung(stand, MAX_MANUFAKTUR) >= MAX_RENOVIERUNG) {
+        allesRenoviert = true;
+        merke(t, 'alles renoviert');
+      }
+    }
     if (kannUmziehen(stand)) {
-      merke(t, `Umzug in Manufaktur ${stand.manufaktur + 1}`);
-      if (stand.manufaktur + 1 > bisManufaktur) break;
-      stand = handle(stand, { typ: 'umziehen' }, t).stand;
-      letzterKauf = t;
-      continue;
+      const naechsteTeuer = !kannRenovieren(stand) || renovierKosten(stand.manufaktur, renovierung(stand)) > ertragProSekunde(stand) * 900;
+      if (naechsteTeuer) {
+        merke(t, `Umzug in Manufaktur ${stand.manufaktur + 1} (renoviert ${renovierung(stand)})`);
+        if (stand.manufaktur + 1 > bisManufaktur) break;
+        stand = handle(stand, { typ: 'umziehen' }, t).stand;
+        letzterKauf = t;
+        continue;
+      }
     }
 
     // Kaufen: das Beste unter dem, was in etwa einer Minute erreichbar ist.
@@ -339,7 +387,9 @@ const ZIELE: { was: RegExp; text: string; von: number; bis: number }[] = [
   { was: /^Presse 3 gebaut/, text: 'Presse 3', von: 6, bis: 8 },
   { was: /^Presse 5 gebaut/, text: 'Presse 5', von: 25, bis: 35 },
   { was: /^Presse 8 gebaut/, text: 'alle 8 Pressen', von: 60, bis: 90 },
-  { was: /^Umzug in Manufaktur 2/, text: 'erster Umzug', von: 60, bis: 90 },
+  // Seit dem Renovieren (Phase 2): erst renovieren, dann umziehen.
+  { was: /^Renovierung 1 in Manufaktur 1/, text: 'erste Renovierung', von: 60, bis: 90 },
+  { was: /^Umzug in Manufaktur 2/, text: 'erster Umzug', von: 75, bis: 100 },
 ];
 
 /** Wie weit ein Lauf von den Zielen weg ist (Minuten ausserhalb der Fenster). */
@@ -404,16 +454,20 @@ function tageUndStunde(ms: number): string {
 
 /** Profil „Gelegenheitsspieler": vier Sitzungen a drei Minuten am Tag, dazwischen offline. */
 function gelegenheit(): void {
-  const lauf = simuliere(60 * TAG, 2, GELEGENHEIT);
-  console.log('\nProfil Gelegenheitsspieler (4 × 3 min am Tag, dazwischen offline: hoechstens 1 h zum halben Tempo)\n');
+  const lauf = simuliere(Number(process.env.GELEGENHEIT_TAGE ?? 120) * TAG, Infinity, GELEGENHEIT);
+  console.log('\nProfil Gelegenheitsspieler (4 × 3 min am Tag, dazwischen offline: Deckel aus dem Werkstattbuch, halbes Tempo)\n');
   for (const e of lauf.ereignisse) {
-    if (/gebaut|Umzug|erster Meister|Meister Versand|Meister Paternoster/.test(e.was)) console.log(`  ${tageUndStunde(e.zeit).padEnd(16)} ${e.was}`);
+    if (/Presse 5 gebaut|Renovierung|Umzug|erster Meister|Obermeister|alles renoviert/.test(e.was)) console.log(`  ${tageUndStunde(e.zeit).padEnd(16)} ${e.was}`);
   }
   const p5 = lauf.ereignisse.find((e) => /^Presse 5 gebaut/.test(e.was));
   const umzug = lauf.ereignisse.find((e) => /^Umzug in Manufaktur 2/.test(e.was));
   const tage = (e?: Ereignis) => (e ? `${(e.zeit / TAG).toFixed(1)} Tage (${tageUndStunde(e.zeit)})` : 'nicht in 60 Tagen');
   console.log(`\n  Bis Presse 5:        ${tage(p5)}`);
-  console.log(`  Bis zum ersten Umzug: ${tage(umzug)}\n`);
+  console.log(`  Bis zum ersten Umzug: ${tage(umzug)}`);
+  console.log(`  Bis zum Palast:       ${tage(lauf.ereignisse.find((e) => /^Umzug in Manufaktur 5/.test(e.was)))}`);
+  console.log(`  Alles renoviert:      ${tage(lauf.ereignisse.find((e) => /^alles renoviert/.test(e.was)))}`);
+  const tagGesamt = (lauf.ereignisse.at(-1)?.zeit ?? TAG) / TAG;
+  console.log(`  Siegel je Tag:        ${(siegelEingenommen(lauf.ereignisse) / tagGesamt).toFixed(1)}\n`);
 }
 
 // Belastungsprobe: Jede zufaellige Einstellung ist ein Obermeister — bricht
@@ -463,3 +517,30 @@ console.log(
   ` Ende: Manufaktur ${stand.manufaktur}, ${stand.pressen.length} Pressen, Stufen ${stand.pressen.map((p) => p.stufe).join('/')}, Paternoster ${stand.paternoster.stufe}, Versand ${stand.versand.stufe}`,
 );
 console.log(` ${abweichungen} Ziel(e) verfehlt.\n`);
+
+// Phase 2 bis 4: der lange Bogen ueber alle Orte, ohne die Minuten-Ziele.
+const bogen = simuliere(Number(process.env.BOGEN_STUNDEN ?? 30) * 3600_000);
+const wann = (muster: RegExp) => bogen.ereignisse.find((e) => muster.test(e.was));
+const stunde = (e?: Ereignis) => (e ? `${(e.zeit / 3600_000).toFixed(1)} h` : 'nicht erreicht');
+console.log(' Der lange Bogen (aktiver Spieler):');
+console.log(`  erster Obermeister   ${stunde(wann(/^erster Obermeister/))}`);
+console.log(`  erste Renovierung    ${stunde(wann(/^Renovierung 1 in Manufaktur 1/))}`);
+for (let m = 2; m <= 5; m += 1) console.log(`  Manufaktur ${m}         ${stunde(wann(new RegExp(`^Umzug in Manufaktur ${m}`)))}`);
+const fertig = wann(/^alles renoviert/);
+console.log(`  alles renoviert      ${stunde(fertig)}`);
+const siegelGesamt = bogen.stand.siegel + Object.values(bogen.stand.werkstattbuch).length * 0;
+const ende = (fertig?.zeit ?? bogen.ereignisse.at(-1)?.zeit ?? 1) / 3600_000;
+const ausgegeben = bogen.ereignisse.filter((e) => e.was.startsWith('Werkstattbuch')).length;
+console.log(`  Siegel je Stunde     ${((siegelEingenommen(bogen.ereignisse)) / ende).toFixed(1)} (Buch: ${ausgegeben} Stufen gekauft, ${siegelGesamt} uebrig)`);
+console.log(`  laengste Strecke ohne Kauf ${(bogen.laengsteLuecke.dauer / 60_000).toFixed(1)} min (ab ${(bogen.laengsteLuecke.ab / 3600_000).toFixed(1)} h)\n`);
+
+function siegelEingenommen(ereignisse: Ereignis[]): number {
+  const je = [3, 5, 8, 12];
+  let summe = 0;
+  for (const e of ereignisse) {
+    const r = /^Renovierung (\d) /.exec(e.was);
+    if (r) summe += je[Number(r[1]) - 1] ?? 0;
+    if (/^Umzug in Manufaktur/.test(e.was)) summe += 5;
+  }
+  return summe;
+}

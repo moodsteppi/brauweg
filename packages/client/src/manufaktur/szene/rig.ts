@@ -67,20 +67,26 @@ const GELIEFERT = kleidungDaten as unknown as {
 };
 
 /**
- * Rang-Kleidung und Baustelle (zweite Lieferung, outputs/rig2/,
- * docs/ASSETS-KARTENMANUFAKTUR-RIG2.md). Drehpunkte wie bei den
- * vergleichbaren Teilen aus Paket 7; die Dateien liegen unter rig2/ —
- * bis zur Lieferung als Platzhalter (werkzeug/manufaktur-platzhalter.mjs).
+ * Rang-Kleidung und Baustelle (zweite Lieferung vom 24.10.2026,
+ * outputs/rig2/json/kleidung.json). Kopfteile sitzen wie die Muetzen aus
+ * Paket 7 auf kopf_oben (Drehpunkt 128/199); die Meister-Weste ist ein
+ * Ersatzkoerper ohne eigene Aermel. Werkzeug haelt der Pinguin an seinem
+ * Griffpunkt, aufrecht, wie die Probe es zeigt.
  */
 const RIG2_TEILE: Record<string, Kleidungsteil> = {
-  'rang-jung': { slot: 'kopf', datei: 'rig2/muetze-jungmeister.png', drehpunkt: [128, 199] },
-  'rang-meister': { slot: 'koerper', datei: 'rig2/koerper-weste-meister.png', begleiter: ['rang-meister-vorn', 'rang-meister-hinten'] },
-  'rang-meister-vorn': { slot: 'flosse_vorn', datei: 'rig2/flosse-vorn-weste-meister.png', drehpunkt: [140, 70] },
-  'rang-meister-hinten': { slot: 'flosse_hinten', datei: 'rig2/flosse-hinten-weste-meister.png', drehpunkt: [97, 68] },
-  'rang-ober': { slot: 'kopf', datei: 'rig2/hut-obermeister.png', drehpunkt: [128, 196] },
-  bauhelm: { slot: 'kopf', datei: 'rig2/muetze-bauhelm.png', drehpunkt: [128, 198] },
-  schaufel: { slot: 'hand', datei: 'rig2/req-schaufel.png', drehpunkt: [60, 190] },
-  hammer: { slot: 'hand', datei: 'rig2/req-hammer.png', drehpunkt: [60, 190] },
+  jungmeister: { slot: 'kopf', datei: 'rig2/muetze-jungmeister.png', drehpunkt: [128, 199] },
+  'weste-meister': { slot: 'koerper', datei: 'rig2/koerper-weste-meister.png' },
+  obermeister: { slot: 'kopf', datei: 'rig2/hut-obermeister.png', drehpunkt: [128, 199] },
+  bauhelm: { slot: 'kopf', datei: 'rig2/muetze-bauhelm.png', drehpunkt: [128, 199] },
+  schaufel: { slot: 'hand', datei: 'rig2/req-schaufel.png', drehpunkt: [118, 126] },
+  hammer: { slot: 'hand', datei: 'rig2/req-hammer.png', drehpunkt: [89, 165] },
+};
+
+/** Was ein Meister je Rang traegt (Lieferung `raenge`), dazu das Klemmbrett seines Berufs. */
+const RANG_KLEIDUNG: Record<'jung' | 'meister' | 'ober', string[]> = {
+  jung: ['gruene-schuerze', 'jungmeister', 'klemmbrett'],
+  meister: ['weste-meister', 'brille-rund', 'klemmbrett'],
+  ober: ['weste-meister', 'obermeister', 'brille-rund', 'klemmbrett'],
 };
 
 export const KLEIDUNG = { teile: { ...GELIEFERT.teile, ...RIG2_TEILE }, berufe: GELIEFERT.berufe };
@@ -117,20 +123,17 @@ export type Beruf = 'drucker' | 'traeger' | 'meister' | 'bauarbeiter';
 
 /** Berufskleidung laut kleidung.json (ohne die Requisite — die traegt die Szene). */
 export function berufsAusstattung(beruf: Beruf): Ausstattung {
-  if (beruf === 'bauarbeiter') return ausstattungAus(['latzhose', 'bauhelm', 'hammer']);
+  if (beruf === 'bauarbeiter') return ausstattungAus(['latzhose', 'bauhelm', 'schaufel']);
   return ausstattungAus(KLEIDUNG.berufe[beruf]);
 }
 
 /**
- * Ein Meister nach Rang: Jungmeister mit Muetze, Meister mit Weste (statt
- * Schuerze), Obermeister mit Zylinder — sonst wie der Berufs-Meister.
+ * Ein Meister nach Rang: Jungmeister mit Muetze, Meister mit Weste statt
+ * Schuerze, Obermeister mit Weste und Zylinder. Ohne Rang (alte Staende)
+ * wie der Berufs-Meister.
  */
 export function meisterAusstattung(rang: 'jung' | 'meister' | 'ober' | null): Ausstattung {
-  const grund = KLEIDUNG.berufe.meister;
-  if (rang === 'jung') return ausstattungAus([...grund, 'rang-jung']);
-  if (rang === 'meister') return ausstattungAus([...grund, 'rang-meister']);
-  if (rang === 'ober') return ausstattungAus([...grund, 'rang-ober']);
-  return ausstattungAus(grund);
+  return ausstattungAus(rang ? RANG_KLEIDUNG[rang] : KLEIDUNG.berufe.meister);
 }
 
 /** Alle Bilddateien, die Rig, Berufe und Kosmetik brauchen koennen. */

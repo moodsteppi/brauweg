@@ -90,9 +90,13 @@ describe('Kartenmanufaktur', () => {
   });
 
   it('zeigt nach dem Umzug die neue Manufaktur — beim Öffnen nicht', async () => {
-    const stand = { ...neuerStand(Date.now()), pressen: Array.from({ length: MAX_PRESSEN }, neuePresse) };
+    // Umziehen geht erst nach der ersten Renovierung.
+    const stand = {
+      ...neuerStand(Date.now(), 1, { orte: { '1': { renovierung: 1, geraeumt: [] } } }),
+      pressen: Array.from({ length: MAX_PRESSEN }, neuePresse),
+    };
     manufaktur.mockResolvedValue(antwort(stand));
-    manufakturAktion.mockResolvedValue(antwort(neuerStand(Date.now(), 2)));
+    manufakturAktion.mockResolvedValue(antwort(neuerStand(Date.now(), 2, { meilensteine: ['umzug-2'] })));
     render(<Kartenmanufaktur onClose={vi.fn()} onGeaendert={vi.fn()} />);
 
     fireEvent.click(await screen.findByRole('button', { name: /1\/5/ }));
@@ -163,21 +167,20 @@ describe('Kartenmanufaktur: Werkstattbuch', () => {
   });
 });
 
-describe('Kartenmanufaktur: Jubiläum im Kartenpalast', () => {
+describe('Kartenmanufaktur: Renovieren', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('mit acht Pressen feiern, danach das Fest-Blatt mit dem neuen Siegel', async () => {
-    const palast = { ...neuerStand(Date.now(), 5), pressen: Array.from({ length: MAX_PRESSEN }, neuePresse) };
-    manufaktur.mockResolvedValue(antwort(palast));
-    manufakturAktion.mockResolvedValue(antwort({ ...neuerStand(Date.now(), 5), jubilaeen: 1 }));
-    render(<Kartenmanufaktur onClose={vi.fn()} onGeaendert={vi.fn()} />);
-
-    fireEvent.click(await screen.findByRole('button', { name: /5\/5/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Jubiläum feiern' }));
-    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Jubiläum feiern?' })).getByRole('button', { name: 'Feiern' }));
-
-    const fest = await screen.findByRole('dialog', { name: '1. Jubiläum' });
-    expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'jubilaeum' }, expect.any(Number));
-    expect(within(fest).getByText(/10 % mehr wert/)).toBeTruthy();
+  it('mit acht Pressen renovieren, Warnung und Rückfrage, danach das Fest-Blatt', async () => {
+    oeffne({ ...neuerStand(Date.now()), pressen: Array.from({ length: MAX_PRESSEN }, neuePresse), taler: 1e12 });
+    fireEvent.click(await screen.findByRole('button', { name: /1\/5/ }));
+    const blatt = await screen.findByRole('dialog', { name: 'Werkstatt im Dorf · 1/5' });
+    expect(within(blatt).getByText(/Meister, Werkstattbuch und Sterne bleiben/)).toBeTruthy();
+    // Umziehen geht erst nach der ersten Renovierung.
+    expect((within(blatt).getByRole('button', { name: 'Erst einmal renovieren' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(within(blatt).getByRole('button', { name: /^Renovieren/ }));
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Renovieren?' })).getByRole('button', { name: 'Renovieren' }));
+    await vi.waitFor(() => expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'renovieren' }, expect.any(Number)));
+    const fest = await screen.findByRole('dialog', { name: 'Renoviert · 1 Stern' });
+    expect(within(fest).getByText(/×4/)).toBeTruthy();
   });
 });

@@ -4,7 +4,7 @@
  *   GET  /api/manufaktur          bis jetzt nachrechnen, Stand, Offline-Meldung
  *   POST /api/manufaktur/aktion   { typ, ziel?, menge?, id? } — arbeiten, ausbauen,
  *                                 einstellen, zuweisen, verkaufen, faehigkeit, boost,
- *                                 freischalten, umziehen, jubilaeum
+ *                                 freischalten, umziehen, renovieren, wechseln, buch
  *
  * Massgeblich gerechnet wird hier; der Bildschirm rechnet mit demselben Kern
  * (@brauweg/manufaktur-kern) weiter, bis die naechste Antwort kommt.
@@ -48,6 +48,8 @@ const aktion = z.discriminatedUnion('typ', [
   z.object({ typ: z.literal('freischalten') }),
   z.object({ typ: z.literal('umziehen') }),
   z.object({ typ: z.literal('jubilaeum') }),
+  z.object({ typ: z.literal('renovieren') }),
+  z.object({ typ: z.literal('wechseln'), nach: z.number().int().min(1).max(5) }),
 ]);
 
 export function manufakturRouten(app: FastifyInstance, deps: ManufakturRoutenDeps): void {

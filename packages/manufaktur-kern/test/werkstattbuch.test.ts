@@ -101,6 +101,7 @@ test('Gute Bewerber verschiebt die Chancen, Grosses Lager vergroessert den Pool'
 test('Umzug: +5 Siegel, das Buch bleibt', () => {
   let stand = mitBuch({ ruf: 2 }, 1);
   stand.pressen = Array.from({ length: MAX_PRESSEN }, neuePresse);
+  stand.orte['1'] = { renovierung: 1, geraeumt: [] };
   stand = handle(stand, { typ: 'umziehen' }, T0).stand;
   assert.equal(stand.manufaktur, 2);
   assert.equal(stand.siegel, 6);

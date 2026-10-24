@@ -9,7 +9,7 @@
 
 import { MAX_PRESSEN, meisterKosten } from './formeln.js';
 
-export const FASSUNG = 5;
+export const FASSUNG = 6;
 
 /** Ein Arbeitszyklus: laeuft er, und wie weit ist er (0 … 1)? */
 export interface Zyklus {
@@ -77,6 +77,13 @@ export interface Versand extends Station {
   verkauft: boolean;
 }
 
+export interface OrtStand {
+  /** 0 … 4; im Palast darueber hinaus (Jubilaeum). */
+  renovierung: number;
+  /** Etagen (Index), deren Baustelle an diesem Ort schon geraeumt ist (Phase 4). */
+  geraeumt: number[];
+}
+
 export interface ManufakturStand {
   fassung: typeof FASSUNG;
   /** Welche Manufaktur (1 … 5) — steigt beim Umzug. */
@@ -89,8 +96,11 @@ export interface ManufakturStand {
   versand: Versand;
   /** Warenwert auf dem Packtisch in der Versandhalle. */
   packtisch: number;
-  /** Gefeierte Jubilaeen im Kartenpalast = Gildensiegel, je +10 % Kartenwert. Bleiben fuer immer. */
-  jubilaeen: number;
+  /**
+   * Je Ort (Schluessel: Nummer der Manufaktur) die Renovierungsstufe und die
+   * schon geraeumten Baustellen. Bleibt fuer immer (renovieren.ts).
+   */
+  orte: Record<string, OrtStand>;
   /** Erreichte Meilensteine, etwa `million-2`. Bleiben ueber den Umzug. */
   meilensteine: string[];
   /**
@@ -121,7 +131,7 @@ export function neuePresse(): Presse {
 /** Was ueber Umzug und Renovieren erhalten bleibt (alles ausser der Halle selbst). */
 export interface Bleibt {
   meilensteine?: string[];
-  jubilaeen?: number;
+  orte?: Record<string, OrtStand>;
   belegschaft?: Record<string, MeisterPlatz>;
   zufall?: number;
   naechsteMeisterId?: number;
@@ -145,7 +155,7 @@ export function neuerStand(jetzt: number, manufaktur = 1, bleibt: Bleibt = {}): 
     versand: { ...station(), ladung: 0, verkauft: false },
     packtisch: 0,
     meilensteine: [...(bleibt.meilensteine ?? [])],
-    jubilaeen: bleibt.jubilaeen ?? 0,
+    orte: kopiereOrte(bleibt.orte ?? {}),
     belegschaft: kopiereBelegschaft(bleibt.belegschaft ?? {}),
     zufall: bleibt.zufall ?? 1,
     naechsteMeisterId: bleibt.naechsteMeisterId ?? 1,
@@ -153,6 +163,12 @@ export function neuerStand(jetzt: number, manufaktur = 1, bleibt: Bleibt = {}): 
     werkstattbuch: { ...(bleibt.werkstattbuch ?? {}) },
     zeit: jetzt,
   };
+}
+
+function kopiereOrte(o: Record<string, OrtStand>): Record<string, OrtStand> {
+  const neu: Record<string, OrtStand> = {};
+  for (const [k, v] of Object.entries(o)) neu[k] = { renovierung: v.renovierung, geraeumt: [...v.geraeumt] };
+  return neu;
 }
 
 function kopiereBelegschaft(b: Record<string, MeisterPlatz>): Record<string, MeisterPlatz> {
@@ -170,6 +186,7 @@ export function kopiere(stand: ManufakturStand): ManufakturStand {
     meilensteine: [...stand.meilensteine],
     belegschaft: kopiereBelegschaft(stand.belegschaft),
     werkstattbuch: { ...stand.werkstattbuch },
+    orte: kopiereOrte(stand.orte),
   };
 }
 
@@ -187,7 +204,12 @@ interface StandFassung1 {
 }
 
 /** Fassung 3 (bis 24.10.2026): Meister nur als Ja/Nein an der Station, ohne Pool. */
-type StandFassung3 = Omit<ManufakturStand, 'fassung' | 'belegschaft' | 'zufall' | 'naechsteMeisterId' | 'siegel' | 'werkstattbuch'> & { fassung: 3 };
+type StandFassung3 = Omit<ManufakturStand, 'fassung' | 'belegschaft' | 'zufall' | 'naechsteMeisterId' | 'siegel' | 'werkstattbuch' | 'orte'> & {
+  fassung: 3;
+  jubilaeen: number;
+};
+/** Fassung 5 (bis 24.10.2026): mit Buch, aber Jubilaeen statt Renovierung. */
+type StandFassung5 = Omit<ManufakturStand, 'fassung' | 'orte'> & { fassung: 5; jubilaeen: number };
 
 /**
  * Ein Anfangswert fuer den Zufall aus der Uhrzeit. Nur fuer umgebaute
@@ -207,10 +229,10 @@ export function zufallAus(zahl: number): number {
  * naechste der feste Rabatt-Jungmeister). Laufende Faehigkeiten enden — die
  * alte dauerte 30 s.
  */
-function ausFassung3(alt: StandFassung3): ManufakturStand {
-  const stand: ManufakturStand = {
-    ...(alt as unknown as ManufakturStand),
-    fassung: FASSUNG,
+function ausFassung3(alt: StandFassung3): StandFassung5 {
+  const stand: StandFassung5 = {
+    ...(alt as unknown as StandFassung5),
+    fassung: 5,
     belegschaft: {},
     zufall: zufallAus(alt.zeit),
     naechsteMeisterId: 1,
@@ -244,20 +266,43 @@ function ausFassung3(alt: StandFassung3): ManufakturStand {
 }
 
 /**
- * Bringt einen gespeicherten Stand auf die jetzige Fassung. Stufen, Meister,
- * Taler, Bestaende und Meilensteine bleiben; laufende Schichten der alten
- * Fassung enden (es gab sie nur zehn Sekunden lang).
+ * Fassung 5 → 6: Das Jubilaeum wird zur Renovierung des Palasts. Jedes
+ * gefeierte Jubilaeum zaehlt als eine Renovierungsstufe dort (hoechstens
+ * vier, mehr waren nie moeglich). Die +10 % Kartenwert je Gildensiegel gibt
+ * es nicht mehr — dafuer gilt der Multiplikator der Stufe.
+ */
+function ausFassung5(alt: StandFassung5): ManufakturStand {
+  const { jubilaeen, ...rest } = alt;
+  const orte: Record<string, OrtStand> = {};
+  if (jubilaeen > 0) orte['5'] = { renovierung: Math.min(4, jubilaeen), geraeumt: [] };
+  return { ...(rest as unknown as ManufakturStand), fassung: FASSUNG, orte };
+}
+
+/**
+ * Bringt einen gespeicherten Stand auf die jetzige Fassung — Schritt fuer
+ * Schritt, jede Fassung nur aus der vorigen. Stufen, Meister, Taler,
+ * Bestaende und Meilensteine bleiben; nichts wird verworfen.
  */
 export function migriere(roh: unknown): ManufakturStand {
-  const alt = roh as Partial<ManufakturStand> & Partial<StandFassung1>;
-  if (alt.fassung === FASSUNG) return alt as ManufakturStand;
+  const alt = roh as { fassung?: number } & Partial<StandFassung1>;
+  if (alt.fassung === FASSUNG) return alt as unknown as ManufakturStand;
+  let f3: StandFassung3 | null = null;
   // Fassung 2 (Zyklen, ohne Jubilaeum): alles bleibt, es gab nur noch keine Siegel.
-  if ((alt.fassung as number | undefined) === 2) return ausFassung3({ ...(alt as unknown as StandFassung3), fassung: 3, jubilaeen: 0 });
-  if ((alt.fassung as number | undefined) === 3) return ausFassung3(alt as unknown as StandFassung3);
+  if (alt.fassung === 2) f3 = { ...(alt as unknown as StandFassung3), fassung: 3, jubilaeen: 0 };
+  if (alt.fassung === 3) f3 = alt as unknown as StandFassung3;
+  if (alt.fassung === undefined || alt.fassung === 1) f3 = ausFassung1(alt as StandFassung1);
+  let f5: StandFassung5;
+  if (f3) f5 = ausFassung3(f3);
   // Fassung 4 (Meister mit Pools, ohne Werkstattbuch): alles bleibt, Buch leer.
-  if ((alt.fassung as number | undefined) === 4) return { ...(alt as ManufakturStand), fassung: FASSUNG, siegel: 0, werkstattbuch: {} };
-  const v1 = alt as StandFassung1;
+  else if (alt.fassung === 4) f5 = { ...(alt as unknown as StandFassung5), fassung: 5, siegel: 0, werkstattbuch: {} };
+  else f5 = alt as unknown as StandFassung5;
+  return ausFassung5(f5);
+}
+
+/** Fassung 1 (Raten statt Zyklen) → 3. */
+function ausFassung1(v1: StandFassung1): StandFassung3 {
   const neu = neuerStand(v1.zeit, v1.manufaktur ?? 1, { meilensteine: v1.meilensteine ?? [] }) as unknown as StandFassung3;
+  neu.jubilaeen = 0;
   neu.taler = v1.taler ?? 0;
   neu.verdient = v1.verdient ?? 0;
   neu.pressen = (v1.pressen ?? []).slice(0, MAX_PRESSEN).map((p) => ({
@@ -270,5 +315,5 @@ export function migriere(roh: unknown): ManufakturStand {
   neu.paternoster = { ...neu.paternoster, stufe: Math.max(1, v1.laufband?.stufe ?? 1), meister: !!v1.laufband?.meister };
   neu.versand = { ...neu.versand, stufe: Math.max(1, v1.versand?.stufe ?? 1), meister: !!v1.versand?.meister };
   neu.packtisch = v1.lager ?? 0;
-  return ausFassung3({ ...neu, fassung: 3 });
+  return { ...neu, fassung: 3 };
 }

@@ -203,6 +203,7 @@
   text-align: center;
 }
 .mf-umzug-bild {
+  position: relative;
   display: flex;
   align-items: flex-end;
   aspect-ratio: 2 / 1;
@@ -867,6 +868,7 @@
   min-height: 34px;
   font-size: 13px;
 }
+:is(.hb, .spe) .mf-orte .hb-kn,
 :is(.hb, .spe) .mf-meister-karte .hb-kn:not(.is-gold):not(.is-leise) {
   /* Zuweisen: dieselbe Holzplatte wie die Mengen-Knoepfe, sonst stand dort nur Text. */
   border: solid transparent;
@@ -1030,4 +1032,109 @@
 }
 .mf .mf-unten .mf-buch-knopf.is-bereit {
   box-shadow: 0 0 8px rgba(255, 200, 60, 0.8), inset 0 1px 0 rgba(255, 220, 160, 0.25);
+}
+
+/* --- Renovieren (Phase 2) ---------------------------------------------- */
+/* Das Messingschild in der Halle: leere Vertiefungen gedaempft, eingesetzte Sterne voll. */
+.mf .mf-sternschild {
+  background: url(/manufaktur/rig2/renovierung-schild.webp) center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.mf .mf-sternschild i {
+  position: absolute;
+  top: 58.75%;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  background: url(/manufaktur/rig2/renovierung-stern.webp) center / contain no-repeat;
+  filter: grayscale(1) brightness(0.45);
+  opacity: 0.55;
+}
+.mf .mf-sternschild i.is-voll {
+  filter: drop-shadow(0 0 3px rgba(255, 210, 90, 0.9));
+  opacity: 1;
+}
+.mf .mf-sternschild b {
+  position: absolute;
+  left: 18%;
+  top: 58%;
+  transform: translate(-50%, -50%);
+  font: 400 12px var(--hb-anz);
+  color: #fff6df;
+  -webkit-text-stroke: 3px #5a3a10;
+  paint-order: stroke fill;
+}
+.mf-sterne {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.mf-sterne img {
+  width: 16px;
+  height: 16px;
+  filter: grayscale(1) brightness(0.5);
+  opacity: 0.6;
+}
+.mf-sterne img.is-voll {
+  filter: none;
+  opacity: 1;
+}
+.mf-jubilaeen {
+  margin-left: 4px;
+  font: 400 13px var(--hb-anz);
+  color: #f0d27a;
+}
+.mf-warnung {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(230, 120, 60, 0.14);
+  color: #f0b48a;
+  font: 700 12px var(--hb-txt);
+  text-align: center;
+}
+.mf-renovieren,
+.mf-umziehen,
+.mf-orte {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mf-umzug-bild .mf-sterne {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+}
+.mf-orte h3 {
+  margin: 0;
+  font: 400 15px var(--hb-anz);
+  color: #f0d27a;
+}
+.mf-orte ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mf-orte li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.mf-orte li.is-hier {
+  outline: 1px solid rgba(201, 162, 74, 0.6);
+}
+.mf-orte-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mf-orte-text strong {
+  font: 700 14px var(--hb-txt);
 }

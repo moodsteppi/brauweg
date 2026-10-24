@@ -23,7 +23,8 @@ import {
   versandZyklus,
 } from './formeln.js';
 import { ladungFaktor, tempoFaktor } from './meister.js';
-import { kartenwertBonus, offlineMs } from './werkstattbuch.js';
+import { ortFaktor, presseBonus } from './renovieren.js';
+import { offlineMs } from './werkstattbuch.js';
 import { type ManufakturStand, kopiere } from './stand.js';
 
 /** Liegt in irgendeiner Kiste etwas fuer den Paternoster? */
@@ -58,7 +59,7 @@ export function starte(stand: ManufakturStand, ziel: { art: 'presse'; index: num
   // Der Traeger nimmt beim Start vom Packtisch, was in den Wagen passt.
   const v = stand.versand;
   // Ladungs-Meister: Der Wagen nimmt mehr, wenn die Faehigkeit beim Beladen wirkt.
-  const kapazitaet = versandKapazitaet(v.stufe, stand.manufaktur) * ladungFaktor('versand', v, stand.zeit);
+  const kapazitaet = versandKapazitaet(v.stufe, stand.manufaktur, ortFaktor(stand)) * ladungFaktor('versand', v, stand.zeit);
   const ladung = Math.min(kapazitaet, stand.packtisch);
   stand.packtisch -= ladung;
   v.ladung = ladung;
@@ -76,7 +77,7 @@ function takt(stand: ManufakturStand): void {
     if (!p.laeuft) return;
     p.fortschritt += (TAKT_MS * tempoFaktor('presse', p, t)) / presseZyklus(p.stufe);
     if (p.fortschritt >= 1) {
-      p.kiste += presseErtrag(index, p.stufe, stand.manufaktur, kartenwertBonus(stand));
+      p.kiste += presseErtrag(index, p.stufe, stand.manufaktur, presseBonus(stand));
       p.laeuft = false;
       p.fortschritt = 0;
     }
@@ -86,7 +87,7 @@ function takt(stand: ManufakturStand): void {
   if (!f.laeuft && f.meister && kistenVoll(stand)) starte(stand, { art: 'paternoster' });
   if (f.laeuft) {
     f.fortschritt += (TAKT_MS * tempoFaktor('paternoster', f, t)) / paternosterFahrt(f.etagen, f.stufe);
-    const kapazitaet = paternosterKapazitaet(f.stufe, stand.manufaktur) * ladungFaktor('paternoster', f, t);
+    const kapazitaet = paternosterKapazitaet(f.stufe, stand.manufaktur, ortFaktor(stand)) * ladungFaktor('paternoster', f, t);
     while (f.geholt < f.etagen && f.fortschritt >= paternosterHalt(f.geholt + 1, f.etagen).ab) {
       const presse = stand.pressen[f.geholt];
       if (presse) {

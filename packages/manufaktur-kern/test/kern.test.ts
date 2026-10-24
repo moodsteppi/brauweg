@@ -199,8 +199,9 @@ test('Upgrade-Vorschau: vorher → nachher und der Weg zum naechsten Meilenstein
   assert.equal(arm.leistbar, false);
 });
 
-test('Umzug erst mit allen acht Pressen, dann alles neu mit Muenzen und doppelter Leistung', () => {
-  const stand = { ...neuerStand(T0), taler: 1e30 };
+test('Umzug erst mit allen acht Pressen und einer Renovierung, dann alles neu mit Muenzen und doppelter Leistung', () => {
+  // Renoviert ist hier schon — wann das geht, prueft renovieren.test.ts.
+  const stand = { ...neuerStand(T0, 1, { orte: { '1': { renovierung: 1, geraeumt: [] } } }), taler: 1e30 };
   assert.throws(() => handle(stand, { typ: 'umziehen' }, T0), abgelehnt('manufakturUmzugZuFrueh'));
   let voll: ManufakturStand = stand;
   while (voll.pressen.length < MAX_PRESSEN) voll = handle(voll, { typ: 'freischalten' }, T0).stand;
@@ -296,34 +297,3 @@ test('Der Versand-Meister ist der guenstigste', async () => {
   assert.ok(meisterKosten({ art: 'paternoster' }, 1) < meisterKosten(presse, 1));
 });
 
-test('Jubilaeum im Kartenpalast: neu anfangen, ein Siegel mehr, +10 % Kartenwert fuer immer', async () => {
-  const { kannJubilaeum, siegelFaktor } = await import('../src/index.js');
-  const palast = { ...neuerStand(T0, 5), taler: 1e60 };
-  assert.throws(() => handle(palast, { typ: 'jubilaeum' }, T0), abgelehnt('manufakturJubilaeumZuFrueh'));
-  let voll: ManufakturStand = palast;
-  while (voll.pressen.length < MAX_PRESSEN) voll = handle(voll, { typ: 'freischalten' }, T0).stand;
-  assert.equal(kannJubilaeum(voll), true);
-  assert.throws(() => handle(voll, { typ: 'umziehen' }, T0), abgelehnt('manufakturLetzte'));
-  const fest = handle(voll, { typ: 'jubilaeum' }, T0);
-  assert.equal(fest.stand.manufaktur, 5);
-  assert.equal(fest.stand.jubilaeen, 1);
-  assert.equal(fest.stand.pressen.length, 1);
-  assert.equal(fest.stand.taler, 0);
-  assert.deepEqual(fest.meilensteine, [{ kennung: 'jubilaeum-1', muenzen: 100 }]);
-  assert.equal(siegelFaktor(3), 1.3);
-  assert.ok(Math.abs(presseLeistung(0, 1, 5, siegelFaktor(2)) / presseLeistung(0, 1, 5) - 1.2) < 1e-12);
-  // Ab dem elften gibt es keine Muenzen mehr — sonst eine endlose Muenzquelle.
-  let elf: ManufakturStand = { ...voll, jubilaeen: 10 };
-  elf = handle(elf, { typ: 'jubilaeum' }, T0).stand;
-  assert.equal(elf.jubilaeen, 11);
-});
-
-test('Staende der Fassung 2 bekommen 0 Siegel und behalten alles andere', () => {
-  const v2 = { ...neuerStand(T0, 3), taler: 77, fassung: 2 } as unknown as Record<string, unknown>;
-  delete v2.jubilaeen;
-  const neu = migriere(v2);
-  assert.equal(neu.fassung, FASSUNG);
-  assert.equal(neu.jubilaeen, 0);
-  assert.equal(neu.manufaktur, 3);
-  assert.equal(neu.taler, 77);
-});
