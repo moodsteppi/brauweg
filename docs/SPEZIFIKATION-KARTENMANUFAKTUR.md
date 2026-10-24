@@ -209,6 +209,22 @@ Simulation: aktiv Presse 5 nach 35:41 (0,7 min über dem Fenster), erster
 Umzug 99:43; Gelegenheitsspieler kaum betroffen (Presse 5 nach 1,5 statt 1,3
 Tagen) — die Wartezeit fällt in die Offline-Phasen.
 
+## Zielkette (seit 24.10.2026)
+
+`packages/manufaktur-kern/src/ziele.ts`. Immer genau ein Ziel unten links
+über der Leiste, mit Fortschritt; erreicht wird es zum Abholen-Knopf (5 %
+des Preises der nächsten Etage in Talern — nie Siegel oder Hub-Münzen). Die
+Kette: zweiten Meister einstellen, eine Fähigkeit auslösen, einen Meister
+tauschen, eine Stufe mit Rabatt, 3 Fähigkeiten, 10 Stufen mit Rabatt, alle 8
+Pressen, erste Renovierung, erster Eintrag im Werkstattbuch, erster Umzug.
+Gezählt wird über `stand.zaehler` (Fähigkeiten, Tausche, Stufen mit Rabatt).
+Neben der Fingeranleitung erscheint sie nicht.
+
+Die Tagesaufgaben des Hubs (`server/src/quests.ts`) sind bewusst nicht
+erweitert: Sie zahlen Hub-Münzen, und „Löse 3 Fähigkeiten aus" täglich wäre
+die Brücke zwischen den Wirtschaften, die das Werkstattbuch vermeidet. Die
+beiden vorgeschlagenen Vorlagen stehen deshalb in der Kette.
+
 **Münzen fürs Hub (Meilensteine, eigene Währung bleibt getrennt):**
 
 | Meilenstein | Münzen |

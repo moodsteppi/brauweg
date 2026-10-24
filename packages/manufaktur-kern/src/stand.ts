@@ -9,7 +9,7 @@
 
 import { MAX_PRESSEN, meisterKosten } from './formeln.js';
 
-export const FASSUNG = 6;
+export const FASSUNG = 7;
 
 /** Ein Arbeitszyklus: laeuft er, und wie weit ist er (0 … 1)? */
 export interface Zyklus {
@@ -103,6 +103,10 @@ export interface ManufakturStand {
    * schon geraeumten Baustellen. Bleibt fuer immer (renovieren.ts).
    */
   orte: Record<string, OrtStand>;
+  /** Zaehler fuer die Zielkette (ziele.ts): ausgeloeste Faehigkeiten, Tausche, Stufen mit Rabatt. */
+  zaehler: Record<string, number>;
+  /** Index des jetzigen Ziels in der Zielkette. */
+  ziel: number;
   /** Erreichte Meilensteine, etwa `million-2`. Bleiben ueber den Umzug. */
   meilensteine: string[];
   /**
@@ -134,6 +138,8 @@ export function neuePresse(): Presse {
 export interface Bleibt {
   meilensteine?: string[];
   orte?: Record<string, OrtStand>;
+  zaehler?: Record<string, number>;
+  ziel?: number;
   belegschaft?: Record<string, MeisterPlatz>;
   zufall?: number;
   naechsteMeisterId?: number;
@@ -158,6 +164,8 @@ export function neuerStand(jetzt: number, manufaktur = 1, bleibt: Bleibt = {}): 
     packtisch: 0,
     meilensteine: [...(bleibt.meilensteine ?? [])],
     orte: kopiereOrte(bleibt.orte ?? {}),
+    zaehler: { ...(bleibt.zaehler ?? {}) },
+    ziel: bleibt.ziel ?? 0,
     belegschaft: kopiereBelegschaft(bleibt.belegschaft ?? {}),
     zufall: bleibt.zufall ?? 1,
     naechsteMeisterId: bleibt.naechsteMeisterId ?? 1,
@@ -191,6 +199,7 @@ export function kopiere(stand: ManufakturStand): ManufakturStand {
     belegschaft: kopiereBelegschaft(stand.belegschaft),
     werkstattbuch: { ...stand.werkstattbuch },
     orte: kopiereOrte(stand.orte),
+    zaehler: { ...stand.zaehler },
   };
 }
 
@@ -279,7 +288,12 @@ function ausFassung5(alt: StandFassung5): ManufakturStand {
   const { jubilaeen, ...rest } = alt;
   const orte: Record<string, OrtStand> = {};
   if (jubilaeen > 0) orte['5'] = { renovierung: Math.min(4, jubilaeen), geraeumt: [] };
-  return { ...(rest as unknown as ManufakturStand), fassung: FASSUNG, orte };
+  return ausFassung6({ ...(rest as unknown as ManufakturStand), fassung: 6 as typeof FASSUNG, orte });
+}
+
+/** Fassung 6 → 7: Die Zielkette beginnt von vorn, ihre Zaehler bei null. */
+function ausFassung6(alt: ManufakturStand): ManufakturStand {
+  return { ...alt, fassung: FASSUNG, zaehler: alt.zaehler ?? {}, ziel: alt.ziel ?? 0 };
 }
 
 /**
@@ -290,6 +304,7 @@ function ausFassung5(alt: StandFassung5): ManufakturStand {
 export function migriere(roh: unknown): ManufakturStand {
   const alt = roh as { fassung?: number } & Partial<StandFassung1>;
   if (alt.fassung === FASSUNG) return alt as unknown as ManufakturStand;
+  if (alt.fassung === 6) return ausFassung6(alt as unknown as ManufakturStand);
   let f3: StandFassung3 | null = null;
   // Fassung 2 (Zyklen, ohne Jubilaeum): alles bleibt, es gab nur noch keine Siegel.
   if (alt.fassung === 2) f3 = { ...(alt as unknown as StandFassung3), fassung: 3, jubilaeen: 0 };

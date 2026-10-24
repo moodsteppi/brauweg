@@ -167,6 +167,20 @@ describe('Kartenmanufaktur: Werkstattbuch', () => {
   });
 });
 
+describe('Kartenmanufaktur: Zielkette', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('ein erreichtes Ziel wird zum Abholen-Knopf', async () => {
+    let stand = { ...neuerStand(Date.now(), 1, { zufall: 2 }), taler: 1e6, verdient: 10 };
+    stand = handle(stand, { typ: 'einstellen', ziel: { art: 'versand' } }, Date.now()).stand;
+    stand = handle(stand, { typ: 'einstellen', ziel: { art: 'versand' } }, Date.now()).stand;
+    oeffne(stand);
+    fireEvent.click(await screen.findByRole('button', { name: /Ziel erreicht: Stelle einen zweiten Meister ein/ }));
+    await vi.waitFor(() => expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'ziel' }, expect.any(Number)));
+    expect(await screen.findByRole('button', { name: /Ziel: Löse eine Meister-Fähigkeit aus/ })).toBeTruthy();
+  });
+});
+
 describe('Kartenmanufaktur: Baustellen', () => {
   beforeEach(() => vi.clearAllMocks());
 

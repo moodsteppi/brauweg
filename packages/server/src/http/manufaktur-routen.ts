@@ -49,6 +49,8 @@ const aktion = z.discriminatedUnion('typ', [
   z.object({ typ: z.literal('umziehen') }),
   z.object({ typ: z.literal('jubilaeum') }),
   z.object({ typ: z.literal('renovieren') }),
+  z.object({ typ: z.literal('bauen') }),
+  z.object({ typ: z.literal('ziel') }),
   z.object({ typ: z.literal('wechseln'), nach: z.number().int().min(1).max(5) }),
 ]);
 

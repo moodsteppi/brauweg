@@ -17,3 +17,4 @@ export * from './meister.js';
 export * from './werkstattbuch.js';
 export * from './renovieren.js';
 export * from './baustelle.js';
+export * from './ziele.js';

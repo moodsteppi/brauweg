@@ -2,6 +2,9 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 
 import {
   abklingMs,
+  aktuellesZiel,
+  zielBelohnung,
+  zielErreicht,
   MAX_RENOVIERUNG,
   istJubilaeum,
   renovierFaktor,
@@ -245,6 +248,9 @@ export function Kartenmanufaktur({
   const leerlauf = leerlaufErtrag(stand);
   const glied = engpassSichtbar(stand);
   const finger = anleitungsSchritt(stand);
+  const kettenziel = aktuellesZiel(stand);
+  const zielStand = kettenziel?.messe(stand) ?? { ist: 0, soll: 1 };
+  const zielFertig = zielErreicht(stand);
   const stationen = [stand.versand, stand.paternoster, ...stand.pressen];
   const mitMeister = stationen.filter((s) => s.meister);
   // „Alle aktivieren": wie viele bereit sind; sonst der kuerzeste Countdown als Ring.
@@ -292,6 +298,30 @@ export function Kartenmanufaktur({
         </span>
       </header>
       <Verkaeufe liste={verkaeufe} />
+      {/* Zielkette (Phase 5): immer ein Ziel; erreicht wird es zum Abholen-Knopf. Nicht neben der Fingeranleitung. */}
+      {kettenziel && !finger && (
+        <button
+          type="button"
+          className={`mf-ziel${zielFertig ? ' is-fertig' : ''}`}
+          disabled={!zielFertig}
+          onClick={() => tue({ typ: 'ziel' }, 'kauf')}
+          aria-label={zielFertig ? `Ziel erreicht: ${kettenziel.text}. Abholen, ${kurz(zielBelohnung(stand))} Taler` : `Ziel: ${kettenziel.text}, ${zielStand.ist} von ${zielStand.soll}`}
+        >
+          <small>{zielFertig ? 'Ziel erreicht' : 'Ziel'}</small>
+          <span>{kettenziel.text}</span>
+          {zielFertig ? (
+            <b>
+              Abholen · <i className="mf-taler" aria-hidden="true" /> {kurz(zielBelohnung(stand))}
+            </b>
+          ) : (
+            zielStand.soll > 1 && (
+              <span className="mf-ziel-balken" aria-hidden="true">
+                <i style={{ width: `${(zielStand.ist / zielStand.soll) * 100}%` }} />
+              </span>
+            )
+          )}
+        </button>
+      )}
 
       {m.meldung && (
         <p className="mf-meldung" role="status">

@@ -36,6 +36,7 @@ import {
 } from './meister.js';
 import { MAX_RENOVIERUNG, kannRenovieren, renovierKosten, renovierung } from './renovieren.js';
 import { bauDauer, bauKosten, hatBaustelle, kannBauen, naechsteBaustelle } from './baustelle.js';
+import { type Zaehler, zielBelohnung, zielErreicht } from './ziele.js';
 import { type Eintrag, BUCH, SIEGEL_RENOVIERUNG, SIEGEL_UMZUG, buchPreis, feilschenFaktor, poolGroesse } from './werkstattbuch.js';
 import { type ManufakturStand, type Station, kopiere, neuePresse, neuerStand } from './stand.js';
 import { kannStarten, starte, vorspulen } from './zeit.js';
@@ -73,7 +74,9 @@ export type Aktion =
    */
   | { typ: 'wechseln'; nach: number }
   /** Bauarbeiten vor Etage 5 oder 8 beginnen: Taler sofort, dann warten. */
-  | { typ: 'bauen' };
+  | { typ: 'bauen' }
+  /** Die Belohnung des erreichten Ziels abholen; danach kommt das naechste. */
+  | { typ: 'ziel' };
 
 export interface Meilenstein {
   kennung: string;
@@ -138,6 +141,10 @@ export function kannUmziehen(stand: ManufakturStand): boolean {
   return stand.pressen.length >= MAX_PRESSEN && hoechsterOrt(stand) === stand.manufaktur && stand.manufaktur < MAX_MANUFAKTUR && renovierung(stand) >= 1;
 }
 
+function zaehle(stand: ManufakturStand, z: Zaehler, um: number): void {
+  stand.zaehler[z] = (stand.zaehler[z] ?? 0) + um;
+}
+
 /** Neue Meilensteine in diesem Stand — der Aufrufer zahlt die Muenzen. */
 export function neueMeilensteine(stand: ManufakturStand): Meilenstein[] {
   const neu: Meilenstein[] = [];
@@ -172,6 +179,8 @@ function neueHalle(stand: ManufakturStand, t: number, manufaktur: number, kennun
   const neu = neuerStand(t, manufaktur, {
     meilensteine: kennung ? [...stand.meilensteine, kennung] : stand.meilensteine,
     orte: stand.orte,
+    zaehler: stand.zaehler,
+    ziel: stand.ziel,
     belegschaft: stand.belegschaft,
     zufall: stand.zufall,
     naechsteMeisterId: stand.naechsteMeisterId,
@@ -208,6 +217,8 @@ export function handle(
       if (s.stufe >= MAX_STUFE) throw new AktionAbgelehnt('manufakturHoechststufe');
       const anzahl = stufenFuer(stand, aktion.ziel, aktion.menge);
       if (anzahl <= 0) throw new AktionAbgelehnt('manufakturZuTeuer');
+      // Fuer die Zielkette: Stufen, die mit Meister-Rabatt gekauft wurden.
+      if (ausbauRabatt(stand, aktion.ziel) > 0) zaehle(stand, 'rabattStufen', anzahl);
       bezahle(stand, ausbauPreis(stand, aktion.ziel, anzahl));
       s.stufe += anzahl;
       break;
@@ -235,7 +246,10 @@ export function handle(
       if (!s) throw new AktionAbgelehnt('manufakturUnbekannt');
       const platz = stand.belegschaft[slotVon(aktion.ziel)];
       if (!platz?.pool.some((m) => m.id === aktion.id)) throw new AktionAbgelehnt('manufakturKeinMeister');
-      if (platz.zugewiesen !== aktion.id) weiseZu(stand, aktion.ziel, aktion.id, s, t);
+      if (platz.zugewiesen !== aktion.id) {
+        weiseZu(stand, aktion.ziel, aktion.id, s, t);
+        zaehle(stand, 'getauscht', 1);
+      }
       break;
     }
     case 'verkaufen': {
@@ -254,6 +268,7 @@ export function handle(
       if (!s.meister) throw new AktionAbgelehnt('manufakturKeinMeister');
       if (!faehigkeitBereit(s, t)) throw new AktionAbgelehnt('manufakturAbklingen');
       loeseAus(stand, s, t);
+      zaehle(stand, 'faehigkeiten', 1);
       break;
     }
     case 'boost': {
@@ -262,6 +277,7 @@ export function handle(
         .filter((s) => faehigkeitBereit(s, t));
       if (bereit.length === 0) throw new AktionAbgelehnt('manufakturAbklingen');
       for (const s of bereit) loeseAus(stand, s, t);
+      zaehle(stand, 'faehigkeiten', bereit.length);
       break;
     }
     case 'buch': {
@@ -271,6 +287,12 @@ export function handle(
       if (stand.siegel < preis) throw new AktionAbgelehnt('manufakturZuWenigSiegel');
       stand.siegel -= preis;
       stand.werkstattbuch[aktion.eintrag] = (stand.werkstattbuch[aktion.eintrag] ?? 0) + 1;
+      break;
+    }
+    case 'ziel': {
+      if (!zielErreicht(stand)) throw new AktionAbgelehnt('manufakturZielOffen');
+      stand.taler += zielBelohnung(stand);
+      stand.ziel += 1;
       break;
     }
     case 'bauen': {
