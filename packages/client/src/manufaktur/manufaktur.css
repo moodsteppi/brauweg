@@ -686,6 +686,21 @@
   height: 100%;
   background: #48d56b;
 }
+/* Rabatt im Upgrade-Blatt: gruene Zeile, alter Preis durchgestrichen. */
+.mf-rabatt {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(72, 213, 107, 0.16);
+  color: #6fe08d;
+  font: 400 14px var(--hb-anz);
+  text-align: center;
+}
+.mf-alter-preis {
+  opacity: 0.6;
+  font-size: 0.8em;
+  margin-right: 4px;
+}
 .mf-mengen {
   display: flex;
   gap: 6px;
@@ -798,6 +813,112 @@
 :is(.hb, .spe) .mf-meisterliste .hb-kn {
   flex: none;
   min-width: 96px;
+}
+
+/* --- Meister-Blatt mit Pools (Phase 1) --------------------------------- */
+.mf-meister-abschnitt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.mf-meister-abschnitt h3 {
+  margin: 0 0 2px;
+  font: 400 15px var(--hb-anz);
+  color: #f0d27a;
+}
+.mf-meister-karte {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.mf-meister-karte.is-zugewiesen {
+  background: rgba(201, 162, 74, 0.12);
+  outline: 1px solid rgba(201, 162, 74, 0.5);
+}
+.mf-meister-karte.is-wirkt {
+  outline-color: #48d56b;
+  box-shadow: 0 0 10px rgba(72, 213, 107, 0.35);
+}
+.mf-meister-karte small.is-wirkt {
+  color: #6fe08d;
+}
+.mf-meister-pool {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mf-meister-knoepfe {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+:is(.hb, .spe) .mf-meister-karte .hb-kn {
+  flex: none;
+  min-width: 92px;
+  min-height: 34px;
+  font-size: 13px;
+}
+:is(.hb, .spe) .mf-meister-karte .hb-kn:not(.is-gold):not(.is-leise) {
+  /* Zuweisen: dieselbe Holzplatte wie die Mengen-Knoepfe, sonst stand dort nur Text. */
+  border: solid transparent;
+  border-width: 8px;
+  border-image: url(/manufaktur/ui/ui-menge.webp) 28 fill / 8px stretch;
+  background: none;
+  color: #fff6df;
+  -webkit-text-stroke: 3px #3a2414;
+  paint-order: stroke fill;
+}
+:is(.hb, .spe) .mf-meister-karte .hb-kn.is-leise {
+  opacity: 0.75;
+  font-size: 11px;
+}
+.mf-meister-leer {
+  margin: 0;
+  font-size: 13px;
+}
+/* Rang am Portraet: Ring in Bronze, Silber oder Gold, das Abzeichen unten rechts. */
+.mf-meister-bild {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--rang);
+}
+.mf-meister-bild.is-jung {
+  --rang: #c4834a;
+}
+.mf-meister-bild.is-meister {
+  --rang: #c8d0da;
+}
+.mf-meister-bild.is-ober {
+  --rang: #f2c94c;
+  box-shadow: 0 0 0 3px var(--rang), 0 0 10px rgba(242, 201, 76, 0.7);
+}
+.mf-meister-bild img {
+  width: 100%;
+  height: 100%;
+}
+.mf-meister-bild .mf-abzeichen {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 20px;
+  height: 20px;
+}
+.mf-faehigkeit-zeichen {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
 }
 
 @media (prefers-reduced-motion: reduce) {

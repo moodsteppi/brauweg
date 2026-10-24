@@ -9,8 +9,6 @@
  */
 
 import {
-  ABKLINGEN_MS,
-  FAEHIGKEIT_MS,
   JUBILAEEN_MIT_MUENZEN,
   MUENZEN_JUBILAEUM,
   MAX_MANUFAKTUR,
@@ -22,8 +20,20 @@ import {
   ausbauKostenFuer,
   freischaltKosten,
   maxKaufbar,
-  meisterKosten,
 } from './formeln.js';
+import {
+  POOL_GROESSE,
+  RAENGE,
+  VERKAUF_ANTEIL,
+  besetze,
+  einstellPreis,
+  platzVon,
+  rabatt,
+  sichereUhren,
+  slotVon,
+  weiseZu,
+  ziehe,
+} from './meister.js';
 import { type ManufakturStand, type Station, kopiere, neuePresse, neuerStand } from './stand.js';
 import { kannStarten, starte, vorspulen } from './zeit.js';
 
@@ -33,7 +43,13 @@ export type Aktion =
   /** Figur oder Maschine angetippt: ein Zyklus, wenn kein Meister da ist. */
   | { typ: 'arbeiten'; ziel: Ziel }
   | { typ: 'ausbauen'; ziel: Ziel; menge: Menge }
+  /** Einen Meister einstellen (Zufall ab der vierten Einstellung). `meister` ist der alte Name. */
+  | { typ: 'einstellen'; ziel: Ziel }
   | { typ: 'meister'; ziel: Ziel }
+  /** Einen Meister aus dem Pool an die Station stellen — kostenlos, jederzeit. */
+  | { typ: 'zuweisen'; ziel: Ziel; id: number }
+  /** Einen Meister entlassen: die Haelfte seines Preises zurueck. */
+  | { typ: 'verkaufen'; ziel: Ziel; id: number }
   | { typ: 'faehigkeit'; ziel: Ziel }
   /** Alle bereiten Meister-Faehigkeiten auf einmal. */
   | { typ: 'boost' }
@@ -63,11 +79,28 @@ function bezahle(stand: ManufakturStand, kosten: number): void {
   stand.taler = Math.max(0, stand.taler - kosten);
 }
 
-/** Wie viele Stufen `menge` gerade bedeutet (0: geht nicht). */
+/** Anteil, der beim Ausbau gerade vom Preis abgeht — nur solange der Rabatt-Meister wirkt. */
+export function ausbauRabatt(stand: ManufakturStand, ziel: Ziel): number {
+  const s = stationVon(stand, ziel);
+  return s ? rabatt(ziel.art, s, stand.zeit) : 0;
+}
+
+/** Was `anzahl` Stufen ab der jetzigen kosten — mit Rabatt, wenn er gerade wirkt. */
+export function ausbauPreis(stand: ManufakturStand, ziel: Ziel, anzahl: number): number {
+  const s = stationVon(stand, ziel);
+  if (!s) return Infinity;
+  return ausbauKostenFuer(ziel, s.stufe, anzahl, stand.manufaktur) * (1 - ausbauRabatt(stand, ziel));
+}
+
+/** Wie viele Stufen `menge` gerade bedeutet (0: geht nicht). Max rechnet mit dem Rabatt. */
 export function stufenFuer(stand: ManufakturStand, ziel: Ziel, menge: Menge): number {
   const s = stationVon(stand, ziel);
   if (!s) return 0;
-  if (menge === 'max') return maxKaufbar(ziel, s.stufe, stand.taler, stand.manufaktur);
+  if (menge === 'max') {
+    // Der Rabatt senkt jeden Preis um denselben Anteil — also reicht das Geld so weit wie ohne Rabatt mehr Geld.
+    const frei = 1 - ausbauRabatt(stand, ziel);
+    return maxKaufbar(ziel, s.stufe, stand.taler / Math.max(1e-9, frei), stand.manufaktur);
+  }
   return Math.min(menge, MAX_STUFE - s.stufe);
 }
 
@@ -108,9 +141,25 @@ function alleZiele(stand: ManufakturStand): Ziel[] {
   ];
 }
 
+/** Die Pause beginnt, wenn die Wirkung endet — so steht es in der Rangtabelle (1 min, dann 5 min). */
 function loeseAus(s: Station, jetzt: number): void {
-  s.faehigkeitBis = jetzt + FAEHIGKEIT_MS;
-  s.abklingenBis = jetzt + ABKLINGEN_MS;
+  const r = RAENGE[s.rang ?? 'jung'];
+  s.faehigkeitBis = jetzt + r.wirkMs;
+  s.abklingenBis = s.faehigkeitBis + r.abklingMs;
+}
+
+/** Neue Halle (Umzug, Jubilaeum): alles von vorn, nur Meister, Zufall und Meilensteine bleiben. */
+function neueHalle(stand: ManufakturStand, t: number, manufaktur: number, kennung: string, jubilaeen: number): ManufakturStand {
+  sichereUhren(stand);
+  const neu = neuerStand(t, manufaktur, {
+    meilensteine: [...stand.meilensteine, kennung],
+    jubilaeen,
+    belegschaft: stand.belegschaft,
+    zufall: stand.zufall,
+    naechsteMeisterId: stand.naechsteMeisterId,
+  });
+  besetze(neu);
+  return neu;
 }
 
 export function handle(
@@ -139,16 +188,44 @@ export function handle(
       if (s.stufe >= MAX_STUFE) throw new AktionAbgelehnt('manufakturHoechststufe');
       const anzahl = stufenFuer(stand, aktion.ziel, aktion.menge);
       if (anzahl <= 0) throw new AktionAbgelehnt('manufakturZuTeuer');
-      bezahle(stand, ausbauKostenFuer(aktion.ziel, s.stufe, anzahl, stand.manufaktur));
+      bezahle(stand, ausbauPreis(stand, aktion.ziel, anzahl));
       s.stufe += anzahl;
       break;
     }
-    case 'meister': {
+    case 'meister':
+    case 'einstellen': {
       const s = stationVon(stand, aktion.ziel);
       if (!s) throw new AktionAbgelehnt('manufakturUnbekannt');
-      if (s.meister) throw new AktionAbgelehnt('manufakturHatMeister');
-      bezahle(stand, meisterKosten(aktion.ziel, stand.manufaktur));
-      s.meister = true;
+      const platz = platzVon(stand, aktion.ziel);
+      if (platz.pool.length >= POOL_GROESSE) throw new AktionAbgelehnt('manufakturPoolVoll');
+      const preis = einstellPreis(stand, aktion.ziel);
+      bezahle(stand, preis);
+      const { rang, art } = ziehe(stand, aktion.ziel);
+      const id = stand.naechsteMeisterId;
+      stand.naechsteMeisterId += 1;
+      platz.pool.push({ id, rang, art, preis, faehigkeitBis: 0, abklingenBis: 0 });
+      platz.eingestellt += 1;
+      stand.belegschaft[slotVon(aktion.ziel)] = platz;
+      // Der Erste arbeitet gleich; jeder weitere wartet im Pool, bis man ihn zuweist.
+      if (platz.zugewiesen === null) weiseZu(stand, aktion.ziel, id, s, t);
+      break;
+    }
+    case 'zuweisen': {
+      const s = stationVon(stand, aktion.ziel);
+      if (!s) throw new AktionAbgelehnt('manufakturUnbekannt');
+      const platz = stand.belegschaft[slotVon(aktion.ziel)];
+      if (!platz?.pool.some((m) => m.id === aktion.id)) throw new AktionAbgelehnt('manufakturKeinMeister');
+      if (platz.zugewiesen !== aktion.id) weiseZu(stand, aktion.ziel, aktion.id, s, t);
+      break;
+    }
+    case 'verkaufen': {
+      const s = stationVon(stand, aktion.ziel);
+      const platz = stand.belegschaft[slotVon(aktion.ziel)];
+      const m = platz?.pool.find((k) => k.id === aktion.id);
+      if (!platz || !m) throw new AktionAbgelehnt('manufakturKeinMeister');
+      if (platz.zugewiesen === m.id) weiseZu(stand, aktion.ziel, null, s, t);
+      platz.pool = platz.pool.filter((k) => k.id !== m.id);
+      stand.taler += m.preis * VERKAUF_ANTEIL;
       break;
     }
     case 'faehigkeit': {
@@ -171,6 +248,8 @@ export function handle(
       if (stand.pressen.length >= MAX_PRESSEN) throw new AktionAbgelehnt('manufakturVoll');
       bezahle(stand, freischaltKosten(stand.pressen.length, stand.manufaktur));
       stand.pressen.push(neuePresse());
+      // Hat diese Etage aus einer frueheren Halle schon einen Meister, steht er gleich da.
+      besetze(stand);
       break;
     }
     case 'umziehen': {
@@ -179,14 +258,14 @@ export function handle(
       const naechste = stand.manufaktur + 1;
       const kennung = `umzug-${naechste}`;
       meilensteine.push({ kennung, muenzen: MUENZEN_UMZUG });
-      return { stand: neuerStand(t, naechste, [...stand.meilensteine, kennung], stand.jubilaeen), meilensteine };
+      return { stand: neueHalle(stand, t, naechste, kennung, stand.jubilaeen), meilensteine };
     }
     case 'jubilaeum': {
       if (!kannJubilaeum(stand)) throw new AktionAbgelehnt('manufakturJubilaeumZuFrueh');
       const nummer = stand.jubilaeen + 1;
       const kennung = `jubilaeum-${nummer}`;
       meilensteine.push({ kennung, muenzen: nummer <= JUBILAEEN_MIT_MUENZEN ? MUENZEN_JUBILAEUM : 0 });
-      return { stand: neuerStand(t, stand.manufaktur, [...stand.meilensteine, kennung], nummer), meilensteine };
+      return { stand: neueHalle(stand, t, stand.manufaktur, kennung, nummer), meilensteine };
     }
   }
 

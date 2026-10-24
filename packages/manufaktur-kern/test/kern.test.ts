@@ -56,9 +56,10 @@ function abgelehnt(code: string) {
 function mitMeistern(stand: ManufakturStand): ManufakturStand {
   return {
     ...stand,
-    pressen: stand.pressen.map((p) => ({ ...p, meister: true })),
-    paternoster: { ...stand.paternoster, meister: true },
-    versand: { ...stand.versand, meister: true },
+    // Jungmeister mit Tempo, wie sie aus der Uebernahme alter Staende kommen.
+    pressen: stand.pressen.map((p) => ({ ...p, meister: true, rang: 'jung' as const, art: 'tempo' as const })),
+    paternoster: { ...stand.paternoster, meister: true, rang: 'jung' as const, art: 'tempo' as const },
+    versand: { ...stand.versand, meister: true, rang: 'jung' as const, art: 'tempo' as const },
   };
 }
 
@@ -168,15 +169,16 @@ test('Offline: nur die Meister-Kette, hoechstens eine Stunde zum halben Tempo â€
   assert.equal(leerlaufErtrag(neuerStand(T0)), null, 'ohne jeden Meister zeigt das HUD nichts');
 });
 
-test('Meister-Faehigkeit: doppeltes Tempo fuer 30 s, dann fuenf Minuten Pause', () => {
+test('Meister-Faehigkeit: Jungmeister dreifaches Tempo fuer 1 min, danach 5 min Pause', () => {
   const start = mitMeistern(neuerStand(T0));
   const normal = vorspulen(start, T0 + 30_000);
   const mitBoost = vorspulen(handle(start, { typ: 'faehigkeit', ziel: presse }, T0).stand, T0 + 30_000);
   const zyklen = (s: ManufakturStand) => s.pressen[0]!.kiste + s.paternoster.ladung + s.packtisch + s.taler;
-  assert.ok(zyklen(mitBoost) > zyklen(normal) * 1.5, 'die Presse schafft fast doppelt so viel');
+  assert.ok(zyklen(mitBoost) > zyklen(normal) * 2.5, 'die Presse schafft fast dreimal so viel');
   const nachher = handle(start, { typ: 'faehigkeit', ziel: presse }, T0).stand;
-  assert.throws(() => handle(nachher, { typ: 'faehigkeit', ziel: presse }, T0 + 60_000), abgelehnt('manufakturAbklingen'));
-  assert.doesNotThrow(() => handle(nachher, { typ: 'faehigkeit', ziel: presse }, T0 + 5 * 60_000));
+  // Die Pause beginnt, wenn die Wirkung endet: 1 min + 5 min.
+  assert.throws(() => handle(nachher, { typ: 'faehigkeit', ziel: presse }, T0 + 5 * 60_000), abgelehnt('manufakturAbklingen'));
+  assert.doesNotThrow(() => handle(nachher, { typ: 'faehigkeit', ziel: presse }, T0 + 6 * 60_000));
   assert.throws(() => handle(neuerStand(T0), { typ: 'boost' }, T0), abgelehnt('manufakturAbklingen'));
 });
 

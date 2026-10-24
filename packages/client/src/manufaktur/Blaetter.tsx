@@ -1,8 +1,10 @@
 import { useState } from 'react';
 
 import {
-  ABKLINGEN_MS,
-  FAEHIGKEIT_MS,
+  type FaehigkeitArt,
+  POOL_GROESSE,
+  type Rang,
+  VERKAUF_ANTEIL,
   type Kennzahl,
   type ManufakturStand,
   type Menge,
@@ -15,13 +17,15 @@ import {
   SIEGEL_BONUS,
   kannJubilaeum,
   kannUmziehen,
-  meisterKosten,
+  einstellPreis,
+  einstellenLeistbar,
+  platzVon,
   stationVon,
 } from '@brauweg/manufaktur-kern';
 
 import { HbBlatt } from '../screens/HbBlatt';
-import { manufakturBild, medaillonBild, meisterBild } from './bilder';
-import { MANUFAKTUREN, manufakturName, stationName } from './namen';
+import { abzeichenBild, faehigkeitBild, manufakturBild, medaillonBild, meisterBild } from './bilder';
+import { MANUFAKTUREN, RANG_NAME, faehigkeitText, manufakturName, stationName } from './namen';
 import { dauer, kurz, proSekunde, sekunden } from './zahlen';
 
 const MENGEN: Menge[] = [1, 10, 50, 'max'];
@@ -123,6 +127,12 @@ export function UpgradeBlatt({
             </span>
           </div>
         )}
+        {/* Rabatt-Meister wirkt: der Kniff „rein, viel kaufen, zuruecktauschen" soll man sehen. */}
+        {v.rabatt > 0 && (
+          <p className="mf-rabatt" role="status">
+            Rabatt −{Math.round(v.rabatt * 100)} % · noch {bereitIn(v.rabattBis - (stand.zeit ?? 0))}
+          </p>
+        )}
         <div className="mf-mengen" role="radiogroup" aria-label="Kaufmenge">
           {MENGEN.map((m) => {
             const option = ausbauVorschau(stand, ziel, m);
@@ -151,7 +161,8 @@ export function UpgradeBlatt({
             'Höchststufe'
           ) : v.leistbar ? (
             <>
-              Kaufen · <i className="mf-taler" aria-hidden="true" /> {kurz(v.kosten)}
+              Kaufen · <i className="mf-taler" aria-hidden="true" />{' '}
+              {v.rabatt > 0 && <s className="mf-alter-preis">{kurz(v.kostenOhneRabatt)}</s>} {kurz(v.kosten)}
             </>
           ) : (
             `Es fehlen ${kurz(fehlt)} Taler`
@@ -168,9 +179,10 @@ function bereitIn(ms: number): string {
 }
 
 /**
- * Das Meister-Blatt: alle Stationen auf einen Blick. Eingestellte mit ihrer
- * Faehigkeit, Countdown und Ausloesen-Knopf; fehlende mit Preis und
- * Einstellen-Knopf. `markiert` hebt die Station hervor, von der man kam.
+ * Das Meister-Blatt (Phase 1, 24.10.2026): je Station der zugewiesene Meister
+ * mit Rang, Faehigkeit, Countdown und Ausloesen, darunter der Pool mit
+ * Zuweisen und Verkaufen, zuletzt Einstellen mit Preis. Aus der Welt (Tipp
+ * auf einen Platz) zeigt es nur die eine Station, aus der Leiste alle.
  */
 export function MeisterBlatt({
   stand,
@@ -178,6 +190,8 @@ export function MeisterBlatt({
   markiert,
   onEinstellen,
   onFaehigkeit,
+  onZuweisen,
+  onVerkaufen,
   onClose,
 }: {
   stand: ManufakturStand;
@@ -185,68 +199,154 @@ export function MeisterBlatt({
   markiert?: Ziel;
   onEinstellen: (ziel: Ziel) => void;
   onFaehigkeit: (ziel: Ziel) => void;
+  onZuweisen: (ziel: Ziel, id: number) => void;
+  onVerkaufen: (ziel: Ziel, id: number) => void;
   onClose: () => void;
 }): React.JSX.Element {
+  const ziele = markiert ? [markiert] : alleZiele(stand);
   return (
-    <HbBlatt titel="Meister" onClose={onClose} klasse="is-klein">
+    <HbBlatt titel={markiert ? stationName(markiert) : 'Meister'} onClose={onClose} klasse="is-klein">
       <div className="mf-blatt">
-        <p className="hb-text mf-blatt-hinweis">
-          Ein Meister arbeitet ohne Tippen, auch wenn du weg bist. Seine Fähigkeit: doppeltes Tempo für {FAEHIGKEIT_MS / 1000} s,
-          danach {ABKLINGEN_MS / 60_000} min Pause.
-        </p>
-        <ul className="mf-meisterliste">
-          {alleZiele(stand).map((z) => {
-            const s = stationVon(stand, z)!;
-            const name = stationName(z);
-            const istMarkiert = markiert && stationName(markiert) === name;
-            if (!s.meister) {
-              const kosten = meisterKosten(z, stand.manufaktur);
-              const leistbar = stand.taler + 1e-9 >= kosten;
-              return (
-                <li key={name} className={`is-leer${istMarkiert ? ' is-markiert' : ''}`}>
-                  {/* Noch kein Meister: das Medaillon der Station, gedaempft. */}
-                  <img className="mf-meisterliste-bild is-leer" src={medaillonBild(z.art)} alt="" draggable={false} />
-                  <span className="mf-meisterliste-text">
-                    <strong>{name}</strong>
-                    <small>Schläft ohne Meister</small>
-                  </span>
+        {!markiert && (
+          <p className="hb-text mf-blatt-hinweis">
+            Ein Meister arbeitet ohne Tippen, auch wenn du weg bist. Tauschen kostet nichts — eine laufende Fähigkeit endet
+            dabei, jeder Meister behält seine eigene Pause.
+          </p>
+        )}
+        {ziele.map((z) => (
+          <MeisterAbschnitt
+            key={stationName(z)}
+            stand={stand}
+            ziel={z}
+            jetzt={jetzt}
+            mitTitel={!markiert}
+            onEinstellen={onEinstellen}
+            onFaehigkeit={onFaehigkeit}
+            onZuweisen={onZuweisen}
+            onVerkaufen={onVerkaufen}
+          />
+        ))}
+      </div>
+    </HbBlatt>
+  );
+}
+
+function MeisterAbschnitt({
+  stand,
+  ziel,
+  jetzt,
+  mitTitel,
+  onEinstellen,
+  onFaehigkeit,
+  onZuweisen,
+  onVerkaufen,
+}: {
+  stand: ManufakturStand;
+  ziel: Ziel;
+  jetzt: number;
+  mitTitel: boolean;
+  onEinstellen: (ziel: Ziel) => void;
+  onFaehigkeit: (ziel: Ziel) => void;
+  onZuweisen: (ziel: Ziel, id: number) => void;
+  onVerkaufen: (ziel: Ziel, id: number) => void;
+}): React.JSX.Element {
+  const s = stationVon(stand, ziel)!;
+  const platz = platzVon(stand, ziel);
+  const zugewiesen = platz.pool.find((m) => m.id === platz.zugewiesen);
+  const andere = platz.pool.filter((m) => m.id !== platz.zugewiesen);
+  const preis = einstellPreis(stand, ziel);
+  const voll = platz.pool.length >= POOL_GROESSE;
+  const leistbar = einstellenLeistbar(stand, ziel);
+  const wirkt = jetzt < s.faehigkeitBis;
+  const bereit = faehigkeitBereit(s, jetzt);
+  return (
+    <section className="mf-meister-abschnitt" aria-label={stationName(ziel)}>
+      {mitTitel && <h3>{stationName(ziel)}</h3>}
+      {zugewiesen ? (
+        <div className={`mf-meister-karte is-zugewiesen${wirkt ? ' is-wirkt' : ''}`}>
+          <MeisterBild ziel={ziel} rang={zugewiesen.rang} />
+          <span className="mf-meisterliste-text">
+            <strong>
+              {RANG_NAME[zugewiesen.rang]} <FaehigkeitZeichen art={zugewiesen.art} />
+            </strong>
+            <small>{faehigkeitText(ziel.art, zugewiesen.rang, zugewiesen.art)}</small>
+            <small className={wirkt ? 'is-wirkt' : undefined}>
+              {wirkt ? `Wirkt noch ${bereitIn(s.faehigkeitBis - jetzt)}` : bereit ? 'Bereit' : `Bereit in ${bereitIn(s.abklingenBis - jetzt)}`}
+            </small>
+          </span>
+          <button type="button" className={`hb-kn${bereit ? ' is-gold' : ''}`} disabled={!bereit} onClick={() => onFaehigkeit(ziel)}>
+            Auslösen
+          </button>
+        </div>
+      ) : (
+        <p className="hb-text mf-meister-leer">Kein Meister zugewiesen — die Station schläft nach jedem Durchgang ein.</p>
+      )}
+      {andere.length > 0 && (
+        <ul className="mf-meister-pool">
+          {andere.map((m) => {
+            const pausiert = jetzt < m.abklingenBis;
+            return (
+              <li key={m.id} className="mf-meister-karte">
+                <MeisterBild ziel={ziel} rang={m.rang} />
+                <span className="mf-meisterliste-text">
+                  <strong>
+                    {RANG_NAME[m.rang]} <FaehigkeitZeichen art={m.art} />
+                  </strong>
+                  <small>{faehigkeitText(ziel.art, m.rang, m.art)}</small>
+                  {pausiert && <small>Bereit in {bereitIn(m.abklingenBis - jetzt)}</small>}
+                </span>
+                <span className="mf-meister-knoepfe">
+                  <button type="button" className="hb-kn" onClick={() => onZuweisen(ziel, m.id)}>
+                    Zuweisen
+                  </button>
                   <button
                     type="button"
-                    className={`hb-kn${leistbar ? ' is-gold' : ''}`}
-                    disabled={!leistbar}
-                    onClick={() => onEinstellen(z)}
-                    aria-label={`Meister für ${name} einstellen, ${kurz(kosten)} Taler`}
+                    className="hb-kn is-leise"
+                    onClick={() => onVerkaufen(ziel, m.id)}
+                    aria-label={`${RANG_NAME[m.rang]} verkaufen, ${kurz(m.preis * VERKAUF_ANTEIL)} Taler zurück`}
                   >
-                    <i className="mf-taler" aria-hidden="true" /> {kurz(kosten)}
+                    Verkaufen +{kurz(m.preis * VERKAUF_ANTEIL)}
                   </button>
-                </li>
-              );
-            }
-            const wirkt = jetzt < s.faehigkeitBis;
-            const bereit = faehigkeitBereit(s, jetzt);
-            return (
-              <li key={name} className={istMarkiert ? 'is-markiert' : undefined}>
-                <img className="mf-meisterliste-bild" src={meisterBild(z.art)} alt="" draggable={false} />
-                <span className="mf-meisterliste-text">
-                  <strong>{name}</strong>
-                  <small>
-                    {wirkt
-                      ? `Tempo ×2 · noch ${bereitIn(s.faehigkeitBis - jetzt)}`
-                      : bereit
-                        ? 'Fähigkeit bereit'
-                        : `Bereit in ${bereitIn(s.abklingenBis - jetzt)}`}
-                  </small>
                 </span>
-                <button type="button" className="hb-kn" disabled={!bereit} onClick={() => onFaehigkeit(z)}>
-                  ⚡ Tempo ×2
-                </button>
               </li>
             );
           })}
         </ul>
-      </div>
-    </HbBlatt>
+      )}
+      <button
+        type="button"
+        className={`hb-kn is-breit mf-einstellen${leistbar ? ' is-gold' : ''}`}
+        disabled={!leistbar}
+        onClick={() => onEinstellen(ziel)}
+        aria-label={voll ? 'Pool voll' : `Meister einstellen, ${kurz(preis)} Taler`}
+      >
+        {voll ? (
+          `Pool voll (${POOL_GROESSE})`
+        ) : (
+          <>
+            Einstellen · <i className="mf-taler" aria-hidden="true" /> {kurz(preis)}
+          </>
+        )}
+      </button>
+    </section>
   );
+}
+
+/**
+ * Bruststueck mit Rang-Ring (Bronze, Silber, Gold). Der Ring steht da, bis
+ * die Abzeichen aus outputs/rig2/ kommen (docs/ASSETS-KARTENMANUFAKTUR-RIG2.md).
+ */
+function MeisterBild({ ziel, rang }: { ziel: Ziel; rang: Rang }): React.JSX.Element {
+  return (
+    <span className={`mf-meister-bild is-${rang}`}>
+      <img src={meisterBild(ziel.art)} alt="" draggable={false} />
+      <img className="mf-abzeichen" src={abzeichenBild(rang)} alt="" draggable={false} />
+    </span>
+  );
+}
+
+function FaehigkeitZeichen({ art }: { art: FaehigkeitArt }): React.JSX.Element {
+  return <img className="mf-faehigkeit-zeichen" src={faehigkeitBild(art)} alt={art} draggable={false} />;
 }
 
 /** Tipp auf die Leerlauf-Anzeige: was offline laeuft und welche Meister fehlen. */

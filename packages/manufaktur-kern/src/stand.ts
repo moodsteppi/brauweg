@@ -7,9 +7,9 @@
  * nie verworfen.
  */
 
-import { MAX_PRESSEN } from './formeln.js';
+import { MAX_PRESSEN, meisterKosten } from './formeln.js';
 
-export const FASSUNG = 3;
+export const FASSUNG = 4;
 
 /** Ein Arbeitszyklus: laeuft er, und wie weit ist er (0 … 1)? */
 export interface Zyklus {
@@ -17,9 +17,41 @@ export interface Zyklus {
   fortschritt: number;
 }
 
+/** Rang eines Meisters (Phase 1, 24.10.2026): bestimmt Dauer, Pause und Staerke. */
+export type Rang = 'jung' | 'meister' | 'ober';
+/** Was die Faehigkeit tut: schneller, mehr Ladung, billigere Ausbauten. */
+export type FaehigkeitArt = 'tempo' | 'ladung' | 'rabatt';
+
+/** Ein eingestellter Meister im Pool einer Station. Die Uhren gehoeren ihm, nicht der Station. */
+export interface MeisterKarte {
+  id: number;
+  rang: Rang;
+  art: FaehigkeitArt;
+  /** Was er beim Einstellen gekostet hat — Verkaufen gibt die Haelfte zurueck. */
+  preis: number;
+  faehigkeitBis: number;
+  abklingenBis: number;
+}
+
+/** Pool einer Station: eingestellte Meister, genau einer davon (oder keiner) zugewiesen. */
+export interface MeisterPlatz {
+  pool: MeisterKarte[];
+  zugewiesen: number | null;
+  /** Wie oft hier schon eingestellt wurde — davon haengt der Preis ab, Verkaufen zaehlt nicht zurueck. */
+  eingestellt: number;
+}
+
 export interface Station extends Zyklus {
   stufe: number;
+  /**
+   * Spiegel des zugewiesenen Meisters (meister.ts, `weiseZu`): ob einer da
+   * ist, sein Rang, seine Faehigkeit und ihre Uhren. Gespiegelt, weil Takt
+   * und Bildschirm sie in jedem Bild brauchen; geschrieben werden sie nur
+   * beim Zuweisen und Ausloesen, nie von Hand.
+   */
   meister: boolean;
+  rang: Rang | null;
+  art: FaehigkeitArt | null;
   /** Meister-Faehigkeit wirkt bis hier (ms), danach Pause bis `abklingenBis`. */
   faehigkeitBis: number;
   abklingenBis: number;
@@ -61,32 +93,64 @@ export interface ManufakturStand {
   jubilaeen: number;
   /** Erreichte Meilensteine, etwa `million-2`. Bleiben ueber den Umzug. */
   meilensteine: string[];
+  /**
+   * Meister-Pools je Station (`presse-0` … `presse-7`, `paternoster`,
+   * `versand`). Bleiben ueber Umzug und Renovieren — wer einmal einen
+   * Obermeister hat, verliert ihn nicht.
+   */
+  belegschaft: Record<string, MeisterPlatz>;
+  /** Zustand des Zufalls fuer das Einstellen; der Server setzt den Anfang, der Kern zieht weiter. */
+  zufall: number;
+  naechsteMeisterId: number;
   /** Bis hierhin (ms) ist gerechnet — immer ein ganzer Takt. */
   zeit: number;
 }
 
 function station(): Station {
-  return { stufe: 1, meister: false, faehigkeitBis: 0, abklingenBis: 0, laeuft: false, fortschritt: 0 };
+  return { stufe: 1, meister: false, rang: null, art: null, faehigkeitBis: 0, abklingenBis: 0, laeuft: false, fortschritt: 0 };
 }
 
 export function neuePresse(): Presse {
   return { ...station(), kiste: 0 };
 }
 
-export function neuerStand(jetzt: number, manufaktur = 1, meilensteine: string[] = [], jubilaeen = 0): ManufakturStand {
+/** Was ueber Umzug und Renovieren erhalten bleibt (alles ausser der Halle selbst). */
+export interface Bleibt {
+  meilensteine?: string[];
+  jubilaeen?: number;
+  belegschaft?: Record<string, MeisterPlatz>;
+  zufall?: number;
+  naechsteMeisterId?: number;
+}
+
+/**
+ * Ein frischer Stand. Zugewiesene Meister aus `bleibt.belegschaft` stehen
+ * danach noch NICHT an den Stationen — das erledigt `besetze` (meister.ts),
+ * damit die Spiegel-Regel an einer Stelle bleibt.
+ */
+export function neuerStand(jetzt: number, manufaktur = 1, bleibt: Bleibt = {}): ManufakturStand {
   return {
     fassung: FASSUNG,
     manufaktur,
-    jubilaeen,
     taler: 0,
     verdient: 0,
     pressen: [neuePresse()],
     paternoster: { ...station(), ladung: 0, etagen: 1, geholt: 0 },
     versand: { ...station(), ladung: 0, verkauft: false },
     packtisch: 0,
-    meilensteine,
+    meilensteine: [...(bleibt.meilensteine ?? [])],
+    jubilaeen: bleibt.jubilaeen ?? 0,
+    belegschaft: kopiereBelegschaft(bleibt.belegschaft ?? {}),
+    zufall: bleibt.zufall ?? 1,
+    naechsteMeisterId: bleibt.naechsteMeisterId ?? 1,
     zeit: jetzt,
   };
+}
+
+function kopiereBelegschaft(b: Record<string, MeisterPlatz>): Record<string, MeisterPlatz> {
+  const neu: Record<string, MeisterPlatz> = {};
+  for (const [slot, platz] of Object.entries(b)) neu[slot] = { ...platz, pool: platz.pool.map((m) => ({ ...m })) };
+  return neu;
 }
 
 export function kopiere(stand: ManufakturStand): ManufakturStand {
@@ -96,6 +160,7 @@ export function kopiere(stand: ManufakturStand): ManufakturStand {
     paternoster: { ...stand.paternoster },
     versand: { ...stand.versand },
     meilensteine: [...stand.meilensteine],
+    belegschaft: kopiereBelegschaft(stand.belegschaft),
   };
 }
 
@@ -112,6 +177,61 @@ interface StandFassung1 {
   zeit: number;
 }
 
+/** Fassung 3 (bis 24.10.2026): Meister nur als Ja/Nein an der Station, ohne Pool. */
+type StandFassung3 = Omit<ManufakturStand, 'fassung' | 'belegschaft' | 'zufall' | 'naechsteMeisterId'> & { fassung: 3 };
+
+/**
+ * Ein Anfangswert fuer den Zufall aus der Uhrzeit. Nur fuer umgebaute
+ * Staende: Neue bekommen ihren Anfang vom Server (crypto). Wichtig ist
+ * allein, dass er im Stand steht — wer neu laedt, zieht dasselbe.
+ */
+export function zufallAus(zahl: number): number {
+  let h = Math.floor(zahl) ^ 0x9e3779b9;
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return (h ^ (h >>> 16)) >>> 0 || 1;
+}
+
+/**
+ * Fassung 3 → 4: Jeder vorhandene Meister wird ein Jungmeister mit Tempo,
+ * zugewiesen und als erste Einstellung seiner Station gezaehlt (so kommt als
+ * naechste der feste Rabatt-Jungmeister). Laufende Faehigkeiten enden — die
+ * alte dauerte 30 s.
+ */
+function ausFassung3(alt: StandFassung3): ManufakturStand {
+  const stand: ManufakturStand = {
+    ...(alt as unknown as ManufakturStand),
+    fassung: FASSUNG,
+    belegschaft: {},
+    zufall: zufallAus(alt.zeit),
+    naechsteMeisterId: 1,
+  };
+  const stationen: [string, Station][] = [
+    ...alt.pressen.map((p, i): [string, Station] => [`presse-${i}`, p]),
+    ['paternoster', alt.paternoster],
+    ['versand', alt.versand],
+  ];
+  const ziele: Record<string, Parameters<typeof meisterKosten>[0]> = { paternoster: { art: 'paternoster' }, versand: { art: 'versand' } };
+  for (const [slot, s] of stationen) {
+    s.rang = null;
+    s.art = null;
+    s.faehigkeitBis = 0;
+    s.abklingenBis = 0;
+    if (!s.meister) continue;
+    const id = stand.naechsteMeisterId;
+    stand.naechsteMeisterId += 1;
+    const ziel = ziele[slot] ?? { art: 'presse' as const, index: Number(slot.slice(7)) };
+    stand.belegschaft[slot] = {
+      pool: [{ id, rang: 'jung', art: 'tempo', preis: meisterKosten(ziel, alt.manufaktur), faehigkeitBis: 0, abklingenBis: 0 }],
+      zugewiesen: id,
+      eingestellt: 1,
+    };
+    s.rang = 'jung';
+    s.art = 'tempo';
+  }
+  return stand;
+}
+
 /**
  * Bringt einen gespeicherten Stand auf die jetzige Fassung. Stufen, Meister,
  * Taler, Bestaende und Meilensteine bleiben; laufende Schichten der alten
@@ -121,9 +241,10 @@ export function migriere(roh: unknown): ManufakturStand {
   const alt = roh as Partial<ManufakturStand> & Partial<StandFassung1>;
   if (alt.fassung === FASSUNG) return alt as ManufakturStand;
   // Fassung 2 (Zyklen, ohne Jubilaeum): alles bleibt, es gab nur noch keine Siegel.
-  if ((alt.fassung as number | undefined) === 2) return { ...(alt as ManufakturStand), fassung: FASSUNG, jubilaeen: 0 };
+  if ((alt.fassung as number | undefined) === 2) return ausFassung3({ ...(alt as unknown as StandFassung3), fassung: 3, jubilaeen: 0 });
+  if ((alt.fassung as number | undefined) === 3) return ausFassung3(alt as unknown as StandFassung3);
   const v1 = alt as StandFassung1;
-  const neu = neuerStand(v1.zeit, v1.manufaktur ?? 1, v1.meilensteine ?? []);
+  const neu = neuerStand(v1.zeit, v1.manufaktur ?? 1, { meilensteine: v1.meilensteine ?? [] }) as unknown as StandFassung3;
   neu.taler = v1.taler ?? 0;
   neu.verdient = v1.verdient ?? 0;
   neu.pressen = (v1.pressen ?? []).slice(0, MAX_PRESSEN).map((p) => ({
@@ -136,5 +257,5 @@ export function migriere(roh: unknown): ManufakturStand {
   neu.paternoster = { ...neu.paternoster, stufe: Math.max(1, v1.laufband?.stufe ?? 1), meister: !!v1.laufband?.meister };
   neu.versand = { ...neu.versand, stufe: Math.max(1, v1.versand?.stufe ?? 1), meister: !!v1.versand?.meister };
   neu.packtisch = v1.lager ?? 0;
-  return neu;
+  return ausFassung3({ ...neu, fassung: 3 });
 }

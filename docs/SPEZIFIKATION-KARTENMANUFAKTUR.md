@@ -39,9 +39,37 @@ Das langsamste Glied ist der Engpass und wird an der Station gezeigt.
 
 - **Ohne Meister** läuft eine Station genau **einen Zyklus je Tipp**, danach
   schläft der Pinguin.
-- Ein **Meister** (einmal kaufen, je Station) lässt sie ohne Pause arbeiten.
-  Jeder Meister hat eine **Fähigkeit**: doppeltes Tempo für 30 s, danach 5 min
-  Pause. „Boost" löst alle bereiten Fähigkeiten auf einmal aus.
+- Ein **Meister** lässt sie ohne Pause arbeiten. Seit dem 24.10.2026 mit Tiefe
+  (`packages/manufaktur-kern/src/meister.ts`):
+
+| Rang | Wirkung | danach Pause | Ring |
+| --- | --- | --- | --- |
+| Jungmeister | 1 min | 5 min | Bronze |
+| Meister | 3 min | 15 min | Silber |
+| Obermeister | 10 min | 50 min | Gold |
+
+  Fähigkeiten (Jung / Meister / Ober): Presse Tempo ×3/5/7 oder Rabatt
+  40/70/80 %; Paternoster Bandtempo ×2/4/6, Ladung ×3/5/7 oder Rabatt;
+  Versand Lauftempo ×3/5/7, Wagenladung ×3/5/8 oder Rabatt. Der Rabatt gilt
+  nur für den Ausbau der eigenen Station und nur, solange er wirkt; Max rechnet
+  mit ihm.
+
+- **Einstellen:** Die ersten drei je Station sind fest (Jung/Tempo,
+  Jung/Rabatt, Meister/Ladung — an der Presse Meister/Tempo), danach Zufall
+  70/25/5 % mit dem Zustand `zufall` im Stand (den Anfang setzt der Server;
+  Neuladen zieht denselben). Jede Einstellung kostet ×1,6 mehr.
+- **Pool:** höchstens 5 je Station, genau einer zugewiesen. Tauschen kostet
+  nichts; eine laufende Fähigkeit endet, jeder Meister behält seine eigene
+  Pause. Verkaufen bringt die Hälfte zurück. Die Pools bleiben über den Umzug.
+- „**Alle aktivieren**" löst alle bereiten Fähigkeiten aus und zeigt, wie
+  viele bereit sind; sonst den kürzesten Countdown als Ring.
+
+Simulation (24.10.2026): erster Obermeister nach 21 min, erster
+Rabatt-Kauf nach 5:33, erster Umzug 77 min. Belastungsprobe „jede zufällige
+Einstellung ein Obermeister" (`sim -- --ober`): erster Umzug nur 3,5 min
+früher — die langen Pausen und der Engpass der Kette deckeln die starken
+Kombinationen. Gelegenheitsspieler: erster Umzug nach 1,9 Tagen (vorher 1,5;
+der Sim-Spieler gibt jetzt auch Geld für weitere Meister aus).
 
 ## Zahlen
 

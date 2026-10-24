@@ -114,7 +114,7 @@ describe('Zustandsautomat der Arbeiter', () => {
 
 describe('Ablaeufe bei hohem Tempo', () => {
   // Stufe 100 mit Meister-Faehigkeit: ein Zyklus dauert eine Sekunde.
-  const schnell = { ...neuePresse(), stufe: 100, laeuft: true, meister: true, faehigkeitBis: T0 + 60_000 };
+  const schnell = { ...neuePresse(), stufe: 100, laeuft: true, meister: true, rang: 'jung' as const, art: 'tempo' as const, faehigkeitBis: T0 + 60_000 };
 
   it('ein einmaliger Ablauf endet mit seiner Phase, statt mittendrin abzubrechen', () => {
     const phaseMs = pressenPhaseMs(schnell, 'ablegen', T0);

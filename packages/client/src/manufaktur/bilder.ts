@@ -53,6 +53,21 @@ export function meisterBild(art: 'presse' | 'paternoster' | 'versand'): string {
 export const FINGER = { bild: `${UI_ORDNER}/ui-finger.webp`, spitze: [45 / 256, 20 / 256] as const };
 export const TIPP_RING = `${UI_ORDNER}/ui-tipp-ring.webp`;
 
+/**
+ * Teile aus der zweiten Rig-Lieferung (outputs/rig2/,
+ * docs/ASSETS-KARTENMANUFAKTUR-RIG2.md). Bis sie kommen, liegen unter
+ * denselben Namen Platzhalter — getauscht werden nur die Dateien.
+ */
+export const RIG2_ORDNER = '/manufaktur/rig2';
+
+export function abzeichenBild(rang: 'jung' | 'meister' | 'ober'): string {
+  return `${RIG2_ORDNER}/abzeichen-${{ jung: 'bronze', meister: 'silber', ober: 'gold' }[rang]}.webp`;
+}
+
+export function faehigkeitBild(art: 'tempo' | 'ladung' | 'rabatt' | 'alle'): string {
+  return `${RIG2_ORDNER}/faehigkeit-${art}.webp`;
+}
+
 export const BILD = {
   lager: `${ORDNER}/lager.webp`,
   versand: `${ORDNER}/versand.webp`,

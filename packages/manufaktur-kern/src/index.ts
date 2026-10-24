@@ -13,3 +13,4 @@ export * from './stand.js';
 export * from './zeit.js';
 export * from './aktionen.js';
 export * from './ansicht.js';
+export * from './meister.js';

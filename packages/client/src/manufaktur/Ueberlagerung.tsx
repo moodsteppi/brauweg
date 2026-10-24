@@ -5,7 +5,8 @@ import {
   type Ziel,
   faehigkeitBereit,
   freischaltKosten,
-  meisterKosten,
+  einstellPreis,
+  einstellenLeistbar,
   stufenFuer,
 } from '@brauweg/manufaktur-kern';
 
@@ -220,8 +221,8 @@ function MeisterPlatz({
 }): React.JSX.Element {
   const s = ziel.art === 'presse' ? stand.pressen[ziel.index]! : ziel.art === 'paternoster' ? stand.paternoster : stand.versand;
   if (!s.meister) {
-    const kosten = meisterKosten(ziel, stand.manufaktur);
-    const leistbar = stand.taler + 1e-9 >= kosten;
+    const kosten = einstellPreis(stand, ziel);
+    const leistbar = einstellenLeistbar(stand, ziel);
     return (
       <button
         type="button"

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
-  ABKLINGEN_MS,
+  RAENGE,
+  bereiteMeister,
   type Aktion,
   type Menge,
   type Ziel,
@@ -233,10 +234,15 @@ export function Kartenmanufaktur({
   const finger = anleitungsSchritt(stand);
   const stationen = [stand.versand, stand.paternoster, ...stand.pressen];
   const mitMeister = stationen.filter((s) => s.meister);
-  const boostBereit = mitMeister.some((s) => faehigkeitBereit(s, jetzt));
-  // Ring im Boost-Knopf: wie weit die naechste Faehigkeit wieder bereit ist.
-  const naechsteBereit = mitMeister.length === 0 ? null : Math.min(...mitMeister.map((s) => Math.max(0, s.abklingenBis - jetzt)));
-  const boostAnteil = naechsteBereit === null ? 0 : 1 - naechsteBereit / ABKLINGEN_MS;
+  // „Alle aktivieren": wie viele bereit sind; sonst der kuerzeste Countdown als Ring.
+  const bereitZahl = bereiteMeister(stand, jetzt);
+  const boostBereit = bereitZahl > 0;
+  const pausierend = mitMeister.filter((s) => !faehigkeitBereit(s, jetzt));
+  const naechster = pausierend.reduce<(typeof pausierend)[number] | null>((a, s) => (!a || s.abklingenBis < a.abklingenBis ? s : a), null);
+  const naechsteBereit = naechster ? Math.max(0, naechster.abklingenBis - jetzt) : null;
+  // Die ganze Pause dieses Meisters: Wirkung plus Abklingen, je nach Rang.
+  const ganzePause = naechster ? RAENGE[naechster.rang ?? 'jung'].wirkMs + RAENGE[naechster.rang ?? 'jung'].abklingMs : 1;
+  const boostAnteil = naechsteBereit === null ? 0 : 1 - naechsteBereit / ganzePause;
   const rolle = (richtung: 1 | -1): void =>
     feld.current?.scrollBy({ top: richtung * ETAGE_HOEHE * faktor, behavior: 'smooth' });
   const bildrate = debug ? szene.current?.fps() ?? 0 : 0;
@@ -336,14 +342,14 @@ export function Kartenmanufaktur({
           style={{ '--anteil': boostAnteil } as React.CSSProperties}
           aria-label={
             boostBereit
-              ? 'Boost: alle bereiten Meister-Fähigkeiten auslösen'
+              ? `Alle aktivieren: ${bereitZahl} Fähigkeiten auslösen`
               : naechsteBereit === null
-                ? 'Boost: braucht einen Meister'
-                : `Boost bereit in ${Math.ceil(naechsteBereit / 1000)} Sekunden`
+                ? 'Alle aktivieren: braucht einen Meister'
+                : `Nächste Fähigkeit bereit in ${Math.ceil(naechsteBereit / 1000)} Sekunden`
           }
         >
           <Symbol art="boost" />
-          <span>Boost</span>
+          <span>{boostBereit ? `Alle ×${bereitZahl}` : naechsteBereit !== null ? kurzeDauer(naechsteBereit) : 'Alle'}</span>
         </button>
         <button type="button" className="mf-unten-knopf mf-ort" onClick={() => setBlatt({ art: 'manufaktur' })}>
           <Symbol art="haus" />
@@ -378,8 +384,10 @@ export function Kartenmanufaktur({
           stand={stand}
           jetzt={jetzt}
           markiert={blatt.ziel}
-          onEinstellen={(ziel) => tue({ typ: 'meister', ziel }, 'kauf')}
+          onEinstellen={(ziel) => tue({ typ: 'einstellen', ziel }, 'kauf')}
           onFaehigkeit={(ziel) => tue({ typ: 'faehigkeit', ziel }, 'kauf')}
+          onZuweisen={(ziel, id) => tue({ typ: 'zuweisen', ziel, id })}
+          onVerkaufen={(ziel, id) => tue({ typ: 'verkaufen', ziel, id }, 'kauf')}
           onClose={() => setBlatt(null)}
         />
       )}
@@ -472,6 +480,12 @@ export function Kartenmanufaktur({
 function Symbol({ art }: { art: 'meister' | 'boost' | 'haus' | 'hoch' | 'runter' }): React.JSX.Element {
   const datei = { meister: 'icon-meister', boost: 'icon-boost', haus: 'icon-manufaktur', hoch: 'icon-hoch', runter: 'icon-runter' }[art];
   return <img className="mf-symbol" src={`${UI_ORDNER}/${datei}.webp`} alt="" aria-hidden="true" draggable={false} />;
+}
+
+/** „4:12" bzw. „38s" unter dem Knopf. */
+function kurzeDauer(ms: number): string {
+  const s = Math.ceil(ms / 1000);
+  return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}s`;
 }
 
 function mitte(r: Rechteck): React.CSSProperties {

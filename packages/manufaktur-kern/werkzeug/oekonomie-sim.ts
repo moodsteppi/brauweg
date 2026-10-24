@@ -27,7 +27,11 @@ import {
   handle,
   kannStarten,
   kannUmziehen,
-  meisterKosten,
+  einstellPreis,
+  faehigkeitBereit,
+  platzVon,
+  POOL_GROESSE,
+  RANG_CHANCE,
   neuerStand,
   vorspulen,
   presseLeistung,
@@ -84,14 +88,25 @@ function kandidaten(stand: ManufakturStand): Kandidat[] {
         name: `${name(ziel)} Stufe ${s.stufe + 1}`,
       });
     }
+    const platz = platzVon(stand, ziel);
     if (!s.meister) {
       // Ein Meister macht den Finger frei: Er ist so viel wert wie ein guter
       // Teil des Ertrags, den die Station sonst nur durch Tippen bringt.
       liste.push({
-        aktion: { typ: 'meister', ziel },
-        kosten: meisterKosten(ziel, stand.manufaktur),
+        aktion: { typ: 'einstellen', ziel },
+        kosten: einstellPreis(stand, ziel),
         wert: Math.max(jetzt, 0.5) * 0.5,
         name: `Meister ${name(ziel)}`,
+      });
+    } else if (platz.pool.length < POOL_GROESSE && s.stufe >= 10) {
+      // Weitere Meister: Rabatt und staerkere Faehigkeiten. Wert grob „ein
+      // Zehntel mehr Ertrag", danach halb so viel — der Spieler sammelt, jagt
+      // aber nicht jeden Obermeister.
+      liste.push({
+        aktion: { typ: 'einstellen', ziel },
+        kosten: einstellPreis(stand, ziel),
+        wert: jetzt * (platz.eingestellt < 3 ? 0.1 : 0.05),
+        name: `weiterer Meister ${name(ziel)}`,
       });
     }
   }
@@ -110,6 +125,48 @@ function kandidaten(stand: ManufakturStand): Kandidat[] {
     });
   }
   return liste;
+}
+
+/** Der beste Meister ohne Rabatt (hoechster Rang) — der steht normalerweise an der Station. */
+function standardMeister(stand: ManufakturStand, ziel: Ziel): number | null {
+  const rang = { jung: 0, meister: 1, ober: 2 } as const;
+  const kandidaten = platzVon(stand, ziel).pool.filter((m) => m.art !== 'rabatt');
+  kandidaten.sort((a, b) => rang[b.rang] - rang[a.rang]);
+  return kandidaten[0]?.id ?? null;
+}
+
+/**
+ * Was ein Spieler mit Meistern tut: Tempo- und Ladungs-Faehigkeiten ausloesen,
+ * sobald sie bereit sind, und den staerksten an die Station stellen.
+ */
+function pflegeMeister(stand: ManufakturStand, t: number): ManufakturStand {
+  for (const ziel of ziele(stand)) {
+    const s = station(stand, ziel);
+    const bester = standardMeister(stand, ziel);
+    const platz = platzVon(stand, ziel);
+    if (bester !== null && platz.zugewiesen !== bester && !(s.meister && t < s.faehigkeitBis)) {
+      stand = versuche(stand, { typ: 'zuweisen', ziel, id: bester }, t)?.stand ?? stand;
+    }
+    const jetzt = station(stand, ziel);
+    if (jetzt.meister && jetzt.art !== 'rabatt' && faehigkeitBereit(jetzt, t)) {
+      stand = versuche(stand, { typ: 'faehigkeit', ziel }, t)?.stand ?? stand;
+    }
+  }
+  return stand;
+}
+
+/** Der IMT-Kniff: Rabatt-Meister rein, ausloesen, Max kaufen, zuruecktauschen. */
+function mitRabatt(stand: ManufakturStand, ziel: Ziel, t: number): ManufakturStand | null {
+  const platz = platzVon(stand, ziel);
+  const rabatt = platz.pool.find((m) => m.art === 'rabatt' && t >= m.abklingenBis);
+  if (!rabatt) return null;
+  const vorher = platz.zugewiesen;
+  let neu = versuche(stand, { typ: 'zuweisen', ziel, id: rabatt.id }, t)?.stand;
+  neu = neu && versuche(neu, { typ: 'faehigkeit', ziel }, t)?.stand;
+  neu = neu && versuche(neu, { typ: 'ausbauen', ziel, menge: 'max' }, t)?.stand;
+  if (!neu) return null;
+  if (vorher !== null) neu = versuche(neu, { typ: 'zuweisen', ziel, id: vorher }, t)?.stand ?? neu;
+  return neu;
 }
 
 function versuche(stand: ManufakturStand, aktion: Aktion, t: number): { stand: ManufakturStand } | null {
@@ -169,6 +226,8 @@ function simuliere(DAUER_MS: number, bisManufaktur = Infinity, plan: Plan = IMME
   let ersterVerkauf = false;
   let ersterAusbau = false;
   let ersterMeister = false;
+  let ersterOber = false;
+  let rabattKaeufe = 0;
 
   for (let t = plan.aktiv(0) ? 0 : plan.naechste(0); t <= DAUER_MS; t += SCHRITT_MS) {
     if (!plan.aktiv(t)) {
@@ -179,6 +238,15 @@ function simuliere(DAUER_MS: number, bisManufaktur = Infinity, plan: Plan = IMME
       continue;
     }
     stand = vorspulen(stand, t);
+    stand = pflegeMeister(stand, t);
+    for (const ziel of ziele(stand)) {
+      for (const m of platzVon(stand, ziel).pool) {
+        if (m.rang === 'ober' && !ersterOber) {
+          ersterOber = true;
+          merke(t, `erster Obermeister (${name(ziel)})`);
+        }
+      }
+    }
     // Ein Tipp: die naechste schlafende Station ohne Meister, die anfangen kann.
     const liste = ziele(stand);
     for (let k = 0; k < liste.length; k += 1) {
@@ -209,6 +277,17 @@ function simuliere(DAUER_MS: number, bisManufaktur = Infinity, plan: Plan = IMME
     const beste = kandidaten(stand)
       .filter((k) => k.kosten <= erreichbar && k.wert > 0)
       .sort((a, b) => b.wert / b.kosten - a.wert / a.kosten)[0];
+    if (beste && beste.aktion.typ === 'ausbauen') {
+      // Lohnt sich ein Rabatt? Erst wenn das Geld fuer mehrere Stufen reicht.
+      const rabattiert = beste.kosten * 3 <= stand.taler ? mitRabatt(stand, beste.aktion.ziel, t) : null;
+      if (rabattiert) {
+        stand = rabattiert;
+        rabattKaeufe += 1;
+        if (rabattKaeufe === 1) merke(t, `erster Rabatt-Kauf (${name(beste.aktion.ziel)})`);
+        letzterKauf = t;
+        continue;
+      }
+    }
     if (beste && beste.kosten <= stand.taler) {
       const neu = versuche(stand, beste.aktion, t);
       if (neu) {
@@ -220,7 +299,7 @@ function simuliere(DAUER_MS: number, bisManufaktur = Infinity, plan: Plan = IMME
           ersterAusbau = true;
           merke(t, `erstes Upgrade (${beste.name})`);
         }
-        if (beste.aktion.typ === 'meister') {
+        if (beste.aktion.typ === 'einstellen' && !beste.name.startsWith('weiterer')) {
           merke(t, ersterMeister ? beste.name : `erster Meister (${beste.name})`);
           ersterMeister = true;
         }
@@ -315,6 +394,12 @@ function gelegenheit(): void {
   const tage = (e?: Ereignis) => (e ? `${(e.zeit / TAG).toFixed(1)} Tage (${tageUndStunde(e.zeit)})` : 'nicht in 60 Tagen');
   console.log(`\n  Bis Presse 5:        ${tage(p5)}`);
   console.log(`  Bis zum ersten Umzug: ${tage(umzug)}\n`);
+}
+
+// Belastungsprobe: Jede zufaellige Einstellung ist ein Obermeister — bricht
+// eine Kombination (Tempo ×7, Ladung ×8, Rabatt 80 %) das Spiel?
+if (process.argv.includes('--ober')) {
+  Object.assign(RANG_CHANCE, { jung: 0, meister: 0, ober: 1 });
 }
 
 if (process.argv.includes('--gelegenheit')) {

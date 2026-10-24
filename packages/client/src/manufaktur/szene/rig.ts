@@ -61,16 +61,37 @@ export interface Kleidungsteil {
 }
 
 export const RIG = rigDaten as unknown as RigPinguin;
-export const KLEIDUNG = kleidungDaten as unknown as {
+const GELIEFERT = kleidungDaten as unknown as {
   teile: Record<string, Kleidungsteil>;
   berufe: Record<'drucker' | 'traeger' | 'meister', string[]>;
 };
 
+/**
+ * Rang-Kleidung und Baustelle (zweite Lieferung, outputs/rig2/,
+ * docs/ASSETS-KARTENMANUFAKTUR-RIG2.md). Drehpunkte wie bei den
+ * vergleichbaren Teilen aus Paket 7; die Dateien liegen unter rig2/ —
+ * bis zur Lieferung als Platzhalter (werkzeug/manufaktur-platzhalter.mjs).
+ */
+const RIG2_TEILE: Record<string, Kleidungsteil> = {
+  'rang-jung': { slot: 'kopf', datei: 'rig2/muetze-jungmeister.png', drehpunkt: [128, 199] },
+  'rang-meister': { slot: 'koerper', datei: 'rig2/koerper-weste-meister.png', begleiter: ['rang-meister-vorn', 'rang-meister-hinten'] },
+  'rang-meister-vorn': { slot: 'flosse_vorn', datei: 'rig2/flosse-vorn-weste-meister.png', drehpunkt: [140, 70] },
+  'rang-meister-hinten': { slot: 'flosse_hinten', datei: 'rig2/flosse-hinten-weste-meister.png', drehpunkt: [97, 68] },
+  'rang-ober': { slot: 'kopf', datei: 'rig2/hut-obermeister.png', drehpunkt: [128, 196] },
+  bauhelm: { slot: 'kopf', datei: 'rig2/muetze-bauhelm.png', drehpunkt: [128, 198] },
+  schaufel: { slot: 'hand', datei: 'rig2/req-schaufel.png', drehpunkt: [60, 190] },
+  hammer: { slot: 'hand', datei: 'rig2/req-hammer.png', drehpunkt: [60, 190] },
+};
+
+export const KLEIDUNG = { teile: { ...GELIEFERT.teile, ...RIG2_TEILE }, berufe: GELIEFERT.berufe };
+
 /** Hoehe der Figur im Rig-Canvas: vom Scheitel (kopf_oben) bis zum Boden. */
 export const FIGUR_HOEHE_PX = RIG.boden[1] - RIG.anker.kopf_oben![1];
 
+/** Geliefert heisst .png, ausgeliefert .webp. Ein Pfad mit Ordner (`rig2/…`) gilt ab /manufaktur. */
 export function rigDatei(datei: string): string {
-  return `${RIG_ORDNER}/${datei.replace(/\.png$/, '.webp')}`;
+  const webp = datei.replace(/\.png$/, '.webp');
+  return webp.includes('/') ? `/manufaktur/${webp}` : `${RIG_ORDNER}/${webp}`;
 }
 
 /** Eine Ausstattung: je Slot die Kennung eines Kleidungsteils (kleidung.json). */
@@ -92,11 +113,24 @@ export function ausstattungAus(kennungen: readonly (string | undefined)[]): Auss
   return aus;
 }
 
-export type Beruf = 'drucker' | 'traeger' | 'meister';
+export type Beruf = 'drucker' | 'traeger' | 'meister' | 'bauarbeiter';
 
 /** Berufskleidung laut kleidung.json (ohne die Requisite — die traegt die Szene). */
 export function berufsAusstattung(beruf: Beruf): Ausstattung {
+  if (beruf === 'bauarbeiter') return ausstattungAus(['latzhose', 'bauhelm', 'hammer']);
   return ausstattungAus(KLEIDUNG.berufe[beruf]);
+}
+
+/**
+ * Ein Meister nach Rang: Jungmeister mit Muetze, Meister mit Weste (statt
+ * Schuerze), Obermeister mit Zylinder — sonst wie der Berufs-Meister.
+ */
+export function meisterAusstattung(rang: 'jung' | 'meister' | 'ober' | null): Ausstattung {
+  const grund = KLEIDUNG.berufe.meister;
+  if (rang === 'jung') return ausstattungAus([...grund, 'rang-jung']);
+  if (rang === 'meister') return ausstattungAus([...grund, 'rang-meister']);
+  if (rang === 'ober') return ausstattungAus([...grund, 'rang-ober']);
+  return ausstattungAus(grund);
 }
 
 /** Alle Bilddateien, die Rig, Berufe und Kosmetik brauchen koennen. */

@@ -10,7 +10,6 @@ import {
   arbeiter,
   ausbauKostenFuer,
   meilensteinBalken,
-  meisterKosten,
   paternosterFahrt,
   paternosterKapazitaet,
   presseErtrag,
@@ -19,7 +18,8 @@ import {
   versandKapazitaet,
   versandZyklus,
 } from './formeln.js';
-import { type Menge, stationVon, stufenFuer } from './aktionen.js';
+import { type Menge, ausbauRabatt, stationVon, stufenFuer } from './aktionen.js';
+import { POOL_GROESSE, einstellPreis, platzVon } from './meister.js';
 import type { ManufakturStand } from './stand.js';
 
 export type Kettenglied = 'pressen' | 'paternoster' | 'versand';
@@ -143,7 +143,13 @@ export interface AusbauVorschau {
   bezahlbar: number;
   /** Stufe nach dem Kauf; gleich `stufe`, wenn `menge` gerade nichts kauft. */
   neueStufe: number;
+  /** Was es kostet — mit Rabatt, wenn er gerade wirkt. */
   kosten: number;
+  /** Der Preis ohne Rabatt (im Blatt durchgestrichen); gleich `kosten`, wenn keiner wirkt. */
+  kostenOhneRabatt: number;
+  /** Anteil Rabatt (0 … 1) und bis wann er wirkt (ms) — 0, wenn keiner. */
+  rabatt: number;
+  rabattBis: number;
   leistbar: boolean;
   kennzahlen: Kennzahl[];
   meilenstein: { von: number; bis: number } | null;
@@ -157,7 +163,9 @@ export function ausbauVorschau(stand: ManufakturStand, ziel: Ziel, menge: Menge)
   // worauf man spart.
   const zeigen = Math.max(anzahl, menge === 'max' ? 1 : 0);
   const neueStufe = s.stufe + zeigen;
-  const kosten = ausbauKostenFuer(ziel, s.stufe, zeigen, stand.manufaktur);
+  const kostenOhneRabatt = ausbauKostenFuer(ziel, s.stufe, zeigen, stand.manufaktur);
+  const rabatt = ausbauRabatt(stand, ziel);
+  const kosten = kostenOhneRabatt * (1 - rabatt);
   const vorher = kennzahlenBei(stand, ziel, s.stufe);
   const nachher = kennzahlenBei(stand, ziel, neueStufe);
   return {
@@ -166,6 +174,9 @@ export function ausbauVorschau(stand: ManufakturStand, ziel: Ziel, menge: Menge)
     bezahlbar: stufenFuer(stand, ziel, 'max'),
     neueStufe,
     kosten,
+    kostenOhneRabatt,
+    rabatt,
+    rabattBis: rabatt > 0 ? s.faehigkeitBis : 0,
     leistbar: zeigen > 0 && stand.taler + 1e-9 >= kosten,
     kennzahlen: vorher.map((k, i) => ({ ...k, nachher: nachher[i]!.vorher })),
     meilenstein: meilensteinBalken(s.stufe),
@@ -177,7 +188,14 @@ export function ausbauLeistbar(stand: ManufakturStand, ziel: Ziel): boolean {
   return stufenFuer(stand, ziel, 'max') > 0;
 }
 
+/** Kann man an dieser Station gerade einen Meister einstellen (Platz im Pool, genug Taler)? */
+export function einstellenLeistbar(stand: ManufakturStand, ziel: Ziel): boolean {
+  const s = stationVon(stand, ziel);
+  return !!s && platzVon(stand, ziel).pool.length < POOL_GROESSE && stand.taler + 1e-9 >= einstellPreis(stand, ziel);
+}
+
+/** Fuer den leeren Platz in der Welt: noch kein Meister, und der erste ist bezahlbar. */
 export function meisterLeistbar(stand: ManufakturStand, ziel: Ziel): boolean {
   const s = stationVon(stand, ziel);
-  return !!s && !s.meister && stand.taler + 1e-9 >= meisterKosten(ziel, stand.manufaktur);
+  return !!s && !s.meister && einstellenLeistbar(stand, ziel);
 }

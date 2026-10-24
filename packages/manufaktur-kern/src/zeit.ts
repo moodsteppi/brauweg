@@ -9,7 +9,6 @@
  */
 
 import {
-  FAEHIGKEIT_TEMPO,
   ABWESEND_AB_MS,
   OFFLINE_MS,
   OFFLINE_TEMPO,
@@ -24,12 +23,8 @@ import {
   versandKapazitaet,
   versandZyklus,
 } from './formeln.js';
-import { type ManufakturStand, type Station, kopiere } from './stand.js';
-
-/** Tempo einer Station zum Zeitpunkt `t`: doppelt, solange die Meister-Faehigkeit wirkt. */
-export function tempo(s: Station, t: number): number {
-  return s.meister && t < s.faehigkeitBis ? FAEHIGKEIT_TEMPO : 1;
-}
+import { ladungFaktor, tempoFaktor } from './meister.js';
+import { type ManufakturStand, kopiere } from './stand.js';
 
 /** Liegt in irgendeiner Kiste etwas fuer den Paternoster? */
 export function kistenVoll(stand: ManufakturStand): boolean {
@@ -62,7 +57,9 @@ export function starte(stand: ManufakturStand, ziel: { art: 'presse'; index: num
   }
   // Der Traeger nimmt beim Start vom Packtisch, was in den Wagen passt.
   const v = stand.versand;
-  const ladung = Math.min(versandKapazitaet(v.stufe, stand.manufaktur), stand.packtisch);
+  // Ladungs-Meister: Der Wagen nimmt mehr, wenn die Faehigkeit beim Beladen wirkt.
+  const kapazitaet = versandKapazitaet(v.stufe, stand.manufaktur) * ladungFaktor('versand', v, stand.zeit);
+  const ladung = Math.min(kapazitaet, stand.packtisch);
   stand.packtisch -= ladung;
   v.ladung = ladung;
   v.laeuft = true;
@@ -77,7 +74,7 @@ function takt(stand: ManufakturStand): void {
   stand.pressen.forEach((p, index) => {
     if (!p.laeuft && p.meister) starte(stand, { art: 'presse', index });
     if (!p.laeuft) return;
-    p.fortschritt += (TAKT_MS * tempo(p, t)) / presseZyklus(p.stufe);
+    p.fortschritt += (TAKT_MS * tempoFaktor('presse', p, t)) / presseZyklus(p.stufe);
     if (p.fortschritt >= 1) {
       p.kiste += presseErtrag(index, p.stufe, stand.manufaktur, stand.jubilaeen);
       p.laeuft = false;
@@ -88,8 +85,8 @@ function takt(stand: ManufakturStand): void {
   const f = stand.paternoster;
   if (!f.laeuft && f.meister && kistenVoll(stand)) starte(stand, { art: 'paternoster' });
   if (f.laeuft) {
-    f.fortschritt += (TAKT_MS * tempo(f, t)) / paternosterFahrt(f.etagen, f.stufe);
-    const kapazitaet = paternosterKapazitaet(f.stufe, stand.manufaktur);
+    f.fortschritt += (TAKT_MS * tempoFaktor('paternoster', f, t)) / paternosterFahrt(f.etagen, f.stufe);
+    const kapazitaet = paternosterKapazitaet(f.stufe, stand.manufaktur) * ladungFaktor('paternoster', f, t);
     while (f.geholt < f.etagen && f.fortschritt >= paternosterHalt(f.geholt + 1, f.etagen).ab) {
       const presse = stand.pressen[f.geholt];
       if (presse) {
@@ -110,7 +107,7 @@ function takt(stand: ManufakturStand): void {
   const v = stand.versand;
   if (!v.laeuft && v.meister && stand.packtisch > 0) starte(stand, { art: 'versand' });
   if (v.laeuft) {
-    v.fortschritt += (TAKT_MS * tempo(v, t)) / versandZyklus(v.stufe);
+    v.fortschritt += (TAKT_MS * tempoFaktor('versand', v, t)) / versandZyklus(v.stufe);
     if (!v.verkauft && v.fortschritt >= VERSAND_VERKAUF) {
       stand.taler += v.ladung;
       stand.verdient += v.ladung;

@@ -23,14 +23,15 @@ import {
   paternosterWende,
   presseErtrag,
   presseZyklus,
-  tempo,
+  type StationArt,
+  tempoFaktor,
   versandZyklus,
 } from '@brauweg/manufaktur-kern';
 
 /** Wie weit der laufende Zyklus im Bild ist — mit dem Rest seit dem letzten Takt. */
-export function fortschrittImBild(s: Station, dauerMs: number, jetzt: number, rest: number): number {
+export function fortschrittImBild(art: StationArt, s: Station, dauerMs: number, jetzt: number, rest: number): number {
   if (!s.laeuft) return 0;
-  return Math.min(0.9999, s.fortschritt + (rest * tempo(s, jetzt)) / dauerMs);
+  return Math.min(0.9999, s.fortschritt + (rest * tempoFaktor(art, s, jetzt)) / dauerMs);
 }
 
 export type PressenPhase = 'schlafen' | 'wartet' | 'hin' | 'arbeiten' | 'zurueck' | 'ablegen';
@@ -38,7 +39,7 @@ export type PressenPhase = 'schlafen' | 'wartet' | 'hin' | 'arbeiten' | 'zurueck
 /** Was der Arbeiter an einer Presse gerade tut, und wie weit (0 … 1) er darin ist. */
 export function pressenPhase(p: Presse, jetzt: number, rest: number): { phase: PressenPhase; anteil: number; fortschritt: number } {
   if (!p.laeuft) return { phase: p.meister ? 'wartet' : 'schlafen', anteil: 0, fortschritt: 0 };
-  const f = fortschrittImBild(p, presseZyklus(p.stufe), jetzt, rest);
+  const f = fortschrittImBild('presse', p, presseZyklus(p.stufe), jetzt, rest);
   let grenze = 0;
   for (const phase of ['hin', 'arbeiten', 'zurueck', 'ablegen'] as const) {
     const laenge = PRESSE_PHASEN[phase];
@@ -98,7 +99,7 @@ export function packtischKartons(packtisch: number, wagenKapazitaet: number): { 
 export function paternosterOrt(stand: ManufakturStand, jetzt: number, rest: number): { etage: number; faehrt: boolean; abwaerts: boolean } {
   const f = stand.paternoster;
   if (!f.laeuft) return { etage: 0, faehrt: false, abwaerts: false };
-  const p = fortschrittImBild(f, paternosterFahrt(f.etagen, f.stufe), jetzt, rest);
+  const p = fortschrittImBild('paternoster', f, paternosterFahrt(f.etagen, f.stufe), jetzt, rest);
   const wende = paternosterWende(f.etagen);
   if (p < wende) {
     let vorher = 0;
@@ -126,7 +127,7 @@ export type WagenPhase = 'steht' | 'laden' | 'weg' | 'zurueck';
 export function wagenOrt(stand: ManufakturStand, jetzt: number, rest: number): { phase: WagenPhase; weg: number; anteil: number } {
   const v = stand.versand;
   if (!v.laeuft) return { phase: 'steht', weg: 0, anteil: 0 };
-  const f = fortschrittImBild(v, versandZyklus(v.stufe), jetzt, rest);
+  const f = fortschrittImBild('versand', v, versandZyklus(v.stufe), jetzt, rest);
   if (f < VERSAND_ABFAHRT) return { phase: 'laden', weg: 0, anteil: f / VERSAND_ABFAHRT };
   if (f < VERSAND_VERKAUF) {
     const a = (f - VERSAND_ABFAHRT) / (VERSAND_VERKAUF - VERSAND_ABFAHRT);
@@ -178,7 +179,7 @@ export function arbeiterAblauf(phase: PressenPhase): 'schlafen' | 'idle' | 'lauf
  * schneller, weil ihr Zyklus kuerzer wird — nicht, weil hier etwas erfunden ist.
  */
 export function ablaufTempo(p: Presse, jetzt: number): number {
-  return (presseZyklus(1) / presseZyklus(p.stufe)) * tempo(p, jetzt);
+  return (presseZyklus(1) / presseZyklus(p.stufe)) * tempoFaktor('presse', p, jetzt);
 }
 
 /**
@@ -209,7 +210,7 @@ export function phasenTempo(ablauf: { dauer: number; schleife: boolean }, name: 
 /** Wie lange eine Phase der Presse gerade dauert (ms), mit Meister-Faehigkeit. */
 export function pressenPhaseMs(p: Presse, phase: PressenPhase, jetzt: number): number {
   if (phase === 'schlafen' || phase === 'wartet') return 0;
-  return (PRESSE_PHASEN[phase] * presseZyklus(p.stufe)) / tempo(p, jetzt);
+  return (PRESSE_PHASEN[phase] * presseZyklus(p.stufe)) / tempoFaktor('presse', p, jetzt);
 }
 
 /** Wurde zwischen `vorher` und `jetzt` (Anteile der Arbeitsphase) ein Pressenschlag erreicht? */

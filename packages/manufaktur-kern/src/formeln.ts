@@ -43,11 +43,6 @@ export const SIEGEL_BONUS = 0.1;
 export const MUENZEN_JUBILAEUM = 100;
 export const JUBILAEEN_MIT_MUENZEN = 10;
 
-/** Meister-Faehigkeit: doppeltes Tempo fuer 30 s, danach 5 min Pause. */
-export const FAEHIGKEIT_MS = 30_000;
-export const ABKLINGEN_MS = 5 * 60_000;
-export const FAEHIGKEIT_TEMPO = 2;
-
 /** Meilensteine fuers Hub: Muenzen, nicht Taler. */
 export const MUENZEN_MILLION = 50;
 export const MUENZEN_UMZUG = 300;

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type ManufakturStand, MAX_PRESSEN, neuePresse, neuerStand } from '@brauweg/manufaktur-kern';
+import { type Aktion, type ManufakturStand, MAX_PRESSEN, handle, neuePresse, neuerStand } from '@brauweg/manufaktur-kern';
 
 import type { ManufakturAntwort } from './sicht';
 
@@ -33,7 +33,15 @@ function antwort(stand: ManufakturStand): ManufakturAntwort {
 
 function oeffne(stand: ManufakturStand): void {
   manufaktur.mockResolvedValue(antwort(stand));
-  manufakturAktion.mockImplementation(async () => antwort(stand));
+  // Wie der Server: die Aktion auf den Stand anwenden, sonst nimmt die Antwort die Vorhersage zurueck.
+  manufakturAktion.mockImplementation(async (aktion: Aktion) => {
+    try {
+      stand = handle(stand, aktion, Date.now()).stand;
+    } catch {
+      // abgelehnt: der Stand bleibt
+    }
+    return antwort(stand);
+  });
   render(<Kartenmanufaktur onClose={vi.fn()} onGeaendert={vi.fn()} />);
 }
 
@@ -101,13 +109,32 @@ describe('Kartenmanufaktur', () => {
 describe('Kartenmanufaktur: Meister und Leerlauf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('ein leerer Meister-Platz zeigt Preis; das Meister-Blatt listet alle Stationen', async () => {
+  it('ein leerer Meister-Platz öffnet seine Station; die Leiste zeigt alle mit Pool', async () => {
     oeffne({ ...neuerStand(Date.now()), taler: 100 });
     fireEvent.click(await screen.findByRole('button', { name: /Meister für Versand einstellen/ }));
+    const eine = await screen.findByRole('dialog', { name: 'Versand' });
+    fireEvent.click(within(eine).getByRole('button', { name: /Meister einstellen/ }));
+    await vi.waitFor(() =>
+      expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'einstellen', ziel: { art: 'versand' } }, expect.any(Number)),
+    );
+    // Der erste ist fest: Jungmeister mit Lauftempo, sofort zugewiesen.
+    expect(await within(eine).findByText(/Lauftempo ×3 für 1 min/)).toBeTruthy();
+  });
+
+  it('das Meister-Blatt aus der Leiste listet alle Stationen, Tauschen weist zu', async () => {
+    let stand = { ...neuerStand(Date.now()), taler: 1e9 };
+    stand = handle(stand, { typ: 'einstellen', ziel: { art: 'versand' } }, Date.now()).stand;
+    stand = handle(stand, { typ: 'einstellen', ziel: { art: 'versand' } }, Date.now()).stand;
+    oeffne(stand);
+    fireEvent.click(await screen.findByRole('button', { name: /^Meister$/ }));
     const blatt = await screen.findByRole('dialog', { name: 'Meister' });
-    expect(within(blatt).getByText('Versand')).toBeTruthy();
-    expect(within(blatt).getByText('Paternoster')).toBeTruthy();
-    expect(within(blatt).getByText(/Presse 1/)).toBeTruthy();
+    expect(within(blatt).getByRole('region', { name: 'Versand' })).toBeTruthy();
+    expect(within(blatt).getByRole('region', { name: 'Paternoster' })).toBeTruthy();
+    expect(within(blatt).getByText(/Ausbau −40 % für 1 min/)).toBeTruthy();
+    fireEvent.click(within(blatt).getByRole('button', { name: 'Zuweisen' }));
+    await vi.waitFor(() =>
+      expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'zuweisen', ziel: { art: 'versand' }, id: 2 }, expect.any(Number)),
+    );
   });
 
   it('die Leerlauf-Anzeige ist bei 0 grau und erklärt, welche Meister fehlen', async () => {

@@ -2,8 +2,9 @@
  * Kartenmanufaktur — die Endpunkte (manufaktur/dienst.ts).
  *
  *   GET  /api/manufaktur          bis jetzt nachrechnen, Stand, Offline-Meldung
- *   POST /api/manufaktur/aktion   { typ, ziel?, menge? } — arbeiten, ausbauen,
- *                                 meister, faehigkeit, boost, freischalten, umziehen
+ *   POST /api/manufaktur/aktion   { typ, ziel?, menge?, id? } — arbeiten, ausbauen,
+ *                                 einstellen, zuweisen, verkaufen, faehigkeit, boost,
+ *                                 freischalten, umziehen, jubilaeum
  *
  * Massgeblich gerechnet wird hier; der Bildschirm rechnet mit demselben Kern
  * (@brauweg/manufaktur-kern) weiter, bis die naechste Antwort kommt.
@@ -38,6 +39,9 @@ const aktion = z.discriminatedUnion('typ', [
   z.object({ typ: z.literal('arbeiten'), ziel }),
   z.object({ typ: z.literal('ausbauen'), ziel, menge }),
   z.object({ typ: z.literal('meister'), ziel }),
+  z.object({ typ: z.literal('einstellen'), ziel }),
+  z.object({ typ: z.literal('zuweisen'), ziel, id: z.number().int().positive() }),
+  z.object({ typ: z.literal('verkaufen'), ziel, id: z.number().int().positive() }),
   z.object({ typ: z.literal('faehigkeit'), ziel }),
   z.object({ typ: z.literal('boost') }),
   z.object({ typ: z.literal('freischalten') }),
