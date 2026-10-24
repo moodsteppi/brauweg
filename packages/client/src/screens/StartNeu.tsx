@@ -59,9 +59,9 @@ export function StartNeu({
   onHeute: () => void;
   /** Öffnet den Trophäenweg als Vollbild. */
   onWeg: () => void;
-  /** „Doppelkopf lernen" — nur in der App gesetzt; ohne steht keine Lernkarte da. */
+  /** „Doppelkopf lernen" — fehlt es im Umfang, steht keine Lernkarte da. */
   onLernen?: () => void;
-  /** Browort — nur in der App gesetzt (wie `onLernen`). */
+  /** Browort — wie `onLernen` nur gesetzt, wenn es im Umfang steht. */
   onBrowort?: () => void;
 }): React.JSX.Element {
   const stufe = [...BIOME].reverse().find((b) => trophies >= b.cp) ?? BIOME[0]!;

@@ -89,10 +89,12 @@ test('ausserhalb des Umfangs ist ein Spiel auf beiden Plattformen aus, innerhalb
   assert.equal(freigabeAuf('skat', 'web', nurDoko), 'aus');
   assert.equal(freigabeAuf('skat', 'app', nurDoko), 'aus');
   assert.equal(freigabeAuf('doppelkopf', 'web', nurDoko), freigabeAuf('doppelkopf', 'web', ALLES));
-  // Der Umfang nimmt nur weg: BroChess steht auf der Webseite auf bald und
-  // bleibt es, auch wenn es im Umfang steht.
-  const mitSchach = lies('brochess').umfang;
-  assert.equal(freigabeAuf('brochess', 'web', mitSchach), freigabeAuf('brochess', 'web', ALLES));
+  // Der Umfang nimmt nur weg: Zauberer steht in der App auf bald und bleibt
+  // es, auch wenn es im Umfang steht. (Bis zum 23.10.2026 stand hier BroChess
+  // auf der Webseite — das ist dort seitdem spielbar.)
+  const mitZauberer = lies('wizard').umfang;
+  assert.equal(freigabeAuf('wizard', 'app', mitZauberer), 'bald');
+  assert.equal(freigabeAuf('wizard', 'app', mitZauberer), freigabeAuf('wizard', 'app', ALLES));
 });
 
 // ---------------------------------------------------------------------------

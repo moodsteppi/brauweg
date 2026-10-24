@@ -110,7 +110,7 @@ export function SpieleNeu({
   onSolo: (modusId: string) => void;
   onBald: (name: string) => void;
   onSammlung: () => void;
-  /** „Doppelkopf lernen" auf der Doppelkopf-Seite — nur in der App gesetzt. */
+  /** „Doppelkopf lernen" auf der Doppelkopf-Seite — nur gesetzt, wenn es im Umfang steht. */
   onLernen?: () => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[] | null>(null);
@@ -350,10 +350,13 @@ export function SpieleNeu({
           </section>
         )}
 
-        {/* In der App: die beiden Solo-Spiele (Emile, 23.10.2026). Die
-            Manufaktur hat ihr Bild (docs/ASSETS-KARTENMANUFAKTUR.md), Browort
-            bis zu einer Bestellung ein gezeichnetes Feld statt eines fehlenden Bildes. */}
-        {filter === 'alle' && inApp && (mitManufaktur || mitBrowort) && (
+        {/* Die Solo-Spiele (Emile, 23.10.2026; seit demselben Tag auch auf der
+            Webseite, vorher nur `inApp`). Die Manufaktur hat ihr Bild
+            (docs/ASSETS-KARTENMANUFAKTUR.md), Browort bis zu einer Bestellung
+            ein gezeichnetes Feld statt eines fehlenden Bildes. Pro-Subway steht
+            im selben Abschnitt — zwei Überschriften „Allein" untereinander
+            sähen nach einem Fehler aus. */}
+        {filter === 'alle' && (mitManufaktur || mitBrowort || (!inApp && mitProSubway)) && (
           <section className="hb-blk">
             <h2 className="hb-ab">
               <Symbol>
@@ -362,6 +365,22 @@ export function SpieleNeu({
               </Symbol>
               Allein
             </h2>
+            {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
+                dort steht es unter „Kommt bald". */}
+            {!inApp && mitProSubway && (
+              <button
+                type="button"
+                className="hb-quer"
+                style={{ backgroundImage: 'url(/hub/banner-prosubway.webp)' }}
+                onClick={() => onSolo('prosubway')}
+              >
+                <span className="hb-quer-text">
+                  <strong>{t('modus.prosubway')}</strong>
+                  <span>Münzen fürs Hub · bis 40 am Tag</span>
+                </span>
+                <span className="hb-kn is-gold">Los</span>
+              </button>
+            )}
             {mitManufaktur && (
               <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
                 <span className="hb-quer-text">
@@ -385,32 +404,6 @@ export function SpieleNeu({
 
         {filter === 'alle' && !inApp && (
           <>
-            {mitProSubway && (
-              <section className="hb-blk">
-                <h2 className="hb-ab">
-                  <Symbol>
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-                  </Symbol>
-                  Allein
-                </h2>
-                {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
-                    dort steht es unter „Kommt bald". */}
-                <button
-                  type="button"
-                  className="hb-quer"
-                  style={{ backgroundImage: 'url(/hub/banner-prosubway.webp)' }}
-                  onClick={() => onSolo('prosubway')}
-                >
-                  <span className="hb-quer-text">
-                    <strong>{t('modus.prosubway')}</strong>
-                    <span>Münzen fürs Hub · bis 40 am Tag</span>
-                  </span>
-                  <span className="hb-kn is-gold">Los</span>
-                </button>
-              </section>
-            )}
-
             <section className="hb-blk">
               <h2 className="hb-ab">
                 <Symbol>

@@ -194,17 +194,20 @@ export function GameSelect({
   const [schrankOffen, setSchrankOffen] = useState(false);
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
   const [werkstattOffen, setWerkstattOffen] = useState(false);
-  /** Doppelkopf lernen (nur App): Lernpfad als Vollbild. */
+  /** Doppelkopf lernen: Lernpfad als Vollbild. */
   const [lernenOffen, setLernenOffen] = useState(false);
-  // Jeweils zusätzlich der Umfang der Ausgabe (umfang.ts): Fehlt der Teil
-  // dort, fehlt sein Einstieg — die Route sperrt der Server ohnehin.
-  const oeffneLernen = inApp && imUmfang('lernpfad') ? () => setLernenOffen(true) : undefined;
-  /** Browort und Clanwort (nur App): Vollbilder wie der Lernpfad. */
+  // Allein der Umfang der Ausgabe entscheidet (umfang.ts): Fehlt der Teil
+  // dort, fehlt sein Einstieg — die Route sperrt der Server ohnehin. Bis zum
+  // 23.10.2026 stand davor `inApp`, und die Webseite hing der App hinterher
+  // (docs/release/ios-web-abgleich.md); die Routen fragen keine Plattform,
+  // gefehlt hat nur der Einstieg.
+  const oeffneLernen = imUmfang('lernpfad') ? () => setLernenOffen(true) : undefined;
+  /** Browort und Clanwort: Vollbilder wie der Lernpfad. */
   const [browortOffen, setBrowortOffen] = useState(false);
   const [clanwortOffen, setClanwortOffen] = useState(false);
-  const oeffneBrowort = inApp && imUmfang('browort') ? () => setBrowortOffen(true) : undefined;
-  const oeffneClanwort = inApp && imUmfang('clanwort') ? () => setClanwortOffen(true) : undefined;
-  /** Kartenmanufaktur (nur App): das Idle-Spiel als Vollbild. */
+  const oeffneBrowort = imUmfang('browort') ? () => setBrowortOffen(true) : undefined;
+  const oeffneClanwort = imUmfang('clanwort') ? () => setClanwortOffen(true) : undefined;
+  /** Kartenmanufaktur: das Idle-Spiel als Vollbild. */
   const [manufakturOffen, setManufakturOffen] = useState(false);
   const soloStarten = (modusId: string): void => {
     if (modusId === 'kartenmanufaktur') setManufakturOffen(true);
@@ -758,8 +761,8 @@ function ProfilTab({
           </p>
         </section>
 
-        {/* Browort nur in der App (wie der Lernpfad), Zahlen aus `/api/me`. */}
-        {inApp && imUmfang('browort') && (
+        {/* Browort wie der Lernpfad, Zahlen aus `/api/me`. */}
+        {imUmfang('browort') && (
           <BrowortImProfil
             du
             serie={me.browort?.serie ?? 0}
