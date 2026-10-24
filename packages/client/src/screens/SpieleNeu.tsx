@@ -88,6 +88,27 @@ function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element 
   );
 }
 
+/**
+ * Die Chips über der Spielliste (ohne „Alle", das immer davor steht).
+ *
+ * Ein Chip, hinter dem nichts Spielbares steht, wäre ein leerer Bildschirm.
+ * In der App ist nur ein Teil der Spiele freigegeben (FREIGABE im Server):
+ * Dort zählen deshalb nur Kategorien mit spielbaren Spielen, und alles
+ * Übrige sammelt der Chip „Kommt bald" (Emile, 13.10.2026). Auf der Webseite
+ * passiert dasselbe, seit `UMFANG` dort ganze Kategorien leeren kann
+ * (Abnahme-Probe 3d2e54c6, 24.10.2026: „Trinkspiele" und „Echtzeit" führten
+ * ins Leere) — aber ohne „Kommt bald": Das Bald steht dort unter „Modi".
+ * Ohne `UMFANG` ist auf der Webseite jede Kategorie spielbar, die Leiste
+ * also dieselbe wie vorher.
+ *
+ * Herausgezogen, damit die Proben sie ohne Bildschirm und ohne `inApp`-Mock
+ * für beide Plattformen fragen können.
+ */
+export function chipsFuer(spielbar: readonly string[], app: boolean): readonly { id: string; titel: string }[] {
+  const belegt = KATEGORIEN.filter((k) => spielbar.some((id) => k.spiele.includes(id)));
+  return app ? [...belegt, { id: 'bald', titel: 'Kommt bald' }] : belegt;
+}
+
 function kategorieVon(gameId: string): Kategorie | null {
   return KATEGORIEN.find((k) => k.spiele.includes(gameId)) ?? null;
 }
@@ -172,13 +193,7 @@ export function SpieleNeu({
   const bekannt = new Set(KATEGORIEN.flatMap((k) => k.spiele));
   const weitere = spielbar.filter((g) => !bekannt.has(g.id));
   const zeige = (id: string): boolean => filter === 'alle' || filter === id;
-  // In der App ist nur ein Teil der Spiele freigegeben (FREIGABE im Server).
-  // Ein Chip, hinter dem nichts Spielbares steht, wäre ein leerer Bildschirm —
-  // dort zählen deshalb nur Kategorien mit spielbaren Spielen, und alles
-  // Übrige sammelt der Chip „Kommt bald" (Emile, 13.10.2026).
-  const chips: readonly { id: string; titel: string }[] = inApp
-    ? [...KATEGORIEN.filter((k) => spielbar.some((g) => k.spiele.includes(g.id))), { id: 'bald', titel: 'Kommt bald' }]
-    : KATEGORIEN;
+  const chips = chipsFuer(spielbar.map((g) => g.id), inApp);
 
   // Spiele, ueber die erst abgestimmt wird, gibt es noch nicht — also auch
   // kein Banner. `bannerFuer` zeigte auf eine fehlende Datei, und statt des
