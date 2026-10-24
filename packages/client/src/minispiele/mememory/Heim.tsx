@@ -41,7 +41,6 @@ export function Heim({
   menue,
   mehr,
   onSeite,
-  neu = false,
 }: {
   sammlung: React.ReactNode;
   /**
@@ -52,8 +51,6 @@ export function Heim({
   mehr: React.ReactNode;
   /** Welche Seite gerade vorne liegt. */
   onSeite?: (seite: Seite) => void;
-  /** Neues Hub: Grund und Leiste in Nachtblau & Gold (spiel-einstieg-mini.css). */
-  neu?: boolean;
 }): React.JSX.Element {
   const streifenRef = useRef<HTMLDivElement | null>(null);
   const [seite, setSeite] = useState<Seite>('menue');
@@ -126,8 +123,9 @@ export function Heim({
     });
   }, []);
 
+  // `is-neu`: Grund und Leiste in Nachtblau & Gold (spiel-einstieg-mini.css).
   return (
-    <main className={neu ? 'mm-heim is-neu' : 'mm-heim'}>
+    <main className="mm-heim is-neu">
       <div className="mm-streifen" ref={streifenRef}>
         <section className="mm-blatt" aria-label="Sammlung">
           {sammlung}

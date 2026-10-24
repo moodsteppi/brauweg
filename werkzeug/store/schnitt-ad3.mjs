@@ -58,7 +58,7 @@ const ABLAUF = [
   { kuerzel: 'H2', von: 9.5, bis: 11.5, text: 'Basti …?' },
   { kuerzel: 'R3', von: 11.5, bis: 13.5, text: 'Basti: Bin im Bus. Bin drin.' },
   { kuerzel: 'B3', von: 13.5, bis: 17.0, text: 'Erster Stich: Basti.' },
-  { kuerzel: 'H3', von: 17.0, bis: 19.0, text: 'Euren Tisch macht ihr auf brauweg-spielen.de auf.' },
+  { kuerzel: 'H3', von: 17.0, bis: 19.0, text: 'Euren Tisch macht ihr auf www.brauweg-spielen.de auf.' },
   { kuerzel: 'ENDE', von: 19.0, bis: 21.0 },
 ];
 
@@ -210,11 +210,12 @@ function chatBlaseHtml(code) {
       padding: 30px 38px 32px; width: 760px; box-shadow: 0 10px 34px rgba(0,0,0,0.5); }
     .wer { font-size: 30px; font-weight: 700; color: #8a5a1c; margin-bottom: 8px; }
     .text { font-size: 50px; font-weight: 700; line-height: 1.15; }
-    .link { margin-top: 18px; font-size: 38px; color: #2459c4; text-decoration: underline; word-break: break-all; }
+    /* 35 statt 38 px: Mit www davor brach der Link sonst im Code um („FUXHY / A"). */
+    .link { margin-top: 18px; font-size: 35px; color: #2459c4; text-decoration: underline; word-break: break-all; }
   </style><div class="feld"><div class="blase">
     <div class="wer">Bro</div>
     <div class="text">Heute 20 Uhr. Wer ist dabei?</div>
-    <div class="link">brauweg-spielen.de/beitritt/${esc(code)}</div>
+    <div class="link">www.brauweg-spielen.de/beitritt/${esc(code)}</div>
   </div></div>`;
 }
 
@@ -234,7 +235,10 @@ function endkarteHtml() {
     .icon { width: 260px; height: 260px; border-radius: 58px; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
     .titel { margin-top: 64px; font-size: 56px; white-space: nowrap; font-weight: 800; }
     .zeile { margin-top: 54px; font-size: 44px; color: #cdbb9c; }
-    .adresse { margin-top: 10px; font-size: 76px; font-weight: 800; color: #e7b54a; }
+    /* Seit der Umstellung auf www (die Domain ohne www hat kein
+       Zertifikat) brach die Adresse bei 76 px am Bindestrich um. Einzeilig
+       erzwingen und so klein setzen, dass sie in die 840 px der sicheren Zone passt. */
+    .adresse { margin-top: 10px; font-size: 64px; white-space: nowrap; font-weight: 800; color: #e7b54a; }
     /* Platzhalter fuer das offizielle Abzeichen „Laden im App Store" (3:1). Das
        Original kommt erst nach der Veroeffentlichung und nie ins Repo. */
     .abzeichen { margin-top: 90px; width: 420px; height: 140px; border: 4px dashed #8f7d60; border-radius: 22px;
@@ -243,7 +247,7 @@ function endkarteHtml() {
     <img class="icon" src="${datenUrl(join(PUBLIC, 'icon-512.png'))}">
     <div class="titel">Brauweg · Doppelkopf · Skat</div>
     <div class="zeile">Jetzt im Browser spielen:</div>
-    <div class="adresse">brauweg-spielen.de</div>
+    <div class="adresse">www.brauweg-spielen.de</div>
     <div class="abzeichen">App-Store-Abzeichen</div>
   </div>`;
 }

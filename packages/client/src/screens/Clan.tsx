@@ -17,6 +17,7 @@ import { ClanChat } from './ClanChat';
 import { ClanKrieg } from './ClanKrieg';
 import { HbBlatt, Zurueck, useRueckfrage } from './HbBlatt';
 import { inApp, serverAdresse } from '../laufzeit';
+import { imUmfang } from '../umfang';
 
 /**
  * Clan-Tab (Plan 9.3).
@@ -288,8 +289,12 @@ function Halle({
 
   const darfVerwalten = istLeitung(detail?.myRole);
   const offen = detail?.requests.length ?? 0;
+  // Chat und Krieg nur, wenn die Ausgabe sie anbietet (umfang.ts) — die
+  // Routen sperrt der Server dann ohnehin.
+  const mitChat = !inApp && imUmfang('clanchat');
+  const mitKrieg = imUmfang('clankrieg');
 
-  if (voll === 'chat' && detail && !inApp) {
+  if (voll === 'chat' && detail && mitChat) {
     return (
       <ClanChat
         clubId={detail.id}
@@ -301,7 +306,7 @@ function Halle({
     );
   }
 
-  if (voll === 'krieg' && detail) {
+  if (voll === 'krieg' && detail && mitKrieg) {
     return <ClanKrieg clubId={detail.id} onClose={() => setVoll(null)} />;
   }
 
@@ -347,9 +352,9 @@ function Halle({
             Reaktion binnen kurzer Zeit. Melden und Blockieren gibt es jetzt,
             einen Filter und jemanden, der die Meldungen abarbeitet, noch
             nicht. Auf der Webseite bleibt der Chat. */}
-        {!inApp && <IconKnopf icon="chat" label="Chat" onClick={() => setVoll('chat')} />}
+        {mitChat && <IconKnopf icon="chat" label="Chat" onClick={() => setVoll('chat')} />}
         <IconKnopf icon="truhe" label="Truhe" bald onClick={() => onBald('Clantruhe')} />
-        <IconKnopf icon="krieg" label="Krieg" onClick={() => setVoll('krieg')} />
+        {mitKrieg && <IconKnopf icon="krieg" label="Krieg" onClick={() => setVoll('krieg')} />}
         {/* Anfragen sind Bewerberdaten - die sieht nur die Leitung. */}
         {darfVerwalten && (
           <IconKnopf
@@ -1333,8 +1338,9 @@ function HalleNeu({
   const [frage, rueckfrage] = useRueckfrage();
 
   useEffect(() => {
-    // Clankrieg in der App vorerst raus (Emile, 22.10.2026) — dann auch nicht laden.
-    if (!detail || inApp) return;
+    // Clankrieg in der App vorerst raus (Emile, 22.10.2026) — dann auch nicht
+    // laden. Ebenso, wenn er nicht im Umfang der Ausgabe steht (umfang.ts).
+    if (!detail || inApp || !imUmfang('clankrieg')) return;
     let lebt = true;
     void api
       .clubWar(detail.id)
@@ -1347,13 +1353,17 @@ function HalleNeu({
 
   const darfVerwalten = istLeitung(detail?.myRole);
   const offen = detail?.requests.length ?? 0;
+  // Chat und Krieg nur, wenn die Ausgabe sie anbietet (umfang.ts) — die
+  // Routen sperrt der Server dann ohnehin.
+  const mitChat = !inApp && imUmfang('clanchat');
+  const mitKrieg = imUmfang('clankrieg');
 
-  if (voll === 'chat' && detail && !inApp) {
+  if (voll === 'chat' && detail && mitChat) {
     return (
       <ClanChat clubId={detail.id} meId={meId} darfLoeschen={darfVerwalten} onClose={() => setVoll(null)} onShowProfile={onShowProfile} />
     );
   }
-  if (voll === 'krieg' && detail) {
+  if (voll === 'krieg' && detail && mitKrieg) {
     return <ClanKrieg neu clubId={detail.id} onClose={() => setVoll(null)} />;
   }
 
@@ -1372,7 +1382,7 @@ function HalleNeu({
     <div className="hb-clan">
       <div className="hb-clan-held" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
         <div className="hb-clan-knoepfe">
-          {!inApp && (
+          {mitChat && (
             <button type="button" className="hb-rund" onClick={() => setVoll('chat')} aria-label="Clanchat">
               {symbol(<path d="M4 5h16v11H9l-5 4z" />)}
             </button>
@@ -1432,7 +1442,7 @@ function HalleNeu({
       <div className="hb-clan-inhalt">
         {fehler && <p className="hb-fehler">{fehler}</p>}
 
-        {!inApp && (
+        {!inApp && mitKrieg && (
         <button type="button" className="hb-krieg" onClick={() => setVoll('krieg')}>
           <span className="hb-kr-kopf">
             <strong>Clankrieg</strong>

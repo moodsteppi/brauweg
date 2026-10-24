@@ -140,7 +140,7 @@ Basti den ersten Stich und schickt „Na sowas!".
 | 9,5–11,5 | Bro schaut erst aufs Handy, dann mit hochgezogenen Augenbrauen in die Kamera | „Basti …?" | **Runway** (H2, Bild→Video vom Startbild S0) |
 | 11,5–13,5 | Nachts an einer Bushaltestelle: Basti zieht das Handy aus der Jackentasche, tippt und hebt den Kopf, weil der Bus kommt | „Basti: Bin im Bus. Bin drin." | **Runway** (R3) |
 | 13,5–17,0 | Vierter Platz besetzt (Bro, Nele, Kalle, Basti), Karten werden ausgeteilt, erster Stich geht an Basti, über seinem Sitz steht „Na sowas!" | „Erster Stich: Basti." | **Bildschirmaufnahme** (B3) |
-| 17,0–19,0 | Bro lacht kurz über sein Handy, schaut dann in die Kamera | „Euren Tisch macht ihr auf brauweg-spielen.de auf." | **Runway** (H3, Bild→Video vom Startbild S0) |
+| 17,0–19,0 | Bro lacht kurz über sein Handy, schaut dann in die Kamera | „Euren Tisch macht ihr auf www.brauweg-spielen.de auf." | **Runway** (H3, Bild→Video vom Startbild S0) |
 | 19,0–21,0 | Endkarte für Ad 3 (siehe unten) | Adresse + Abzeichen „Laden im App Store" | Schnitt |
 
 Gesamt 21 s. Soll es genau 20 s sein, wird H2 auf 1,5 s gekürzt.
@@ -264,7 +264,7 @@ schon die Endkarte für die Zeit danach (`drehbuecher.md`, „Gemeinsame
 Endkarte"). Gesetzt wird sie im Schnitt, nicht im KI-Bild:
 
 > **Brauweg · Doppelkopf · Skat**
-> Jetzt im Browser spielen: **brauweg-spielen.de**
+> Jetzt im Browser spielen: **www.brauweg-spielen.de**
 > *[offizielles Abzeichen „Laden im App Store"]*
 
 - **Nur App Store, kein Google Play.** Ad 3 nennt Google Play nicht und zeigt
@@ -328,7 +328,7 @@ Jubel und auf Robins Gesicht.
 | 8,5–10,0 | Robin schaut auf seine Karten, dann in die Kamera, tippt sich zweimal an die Brust | „Re. Natürlich." | **Handy** (H2) |
 | 10,0–13,5 | Erster Stich: Robin legt den Fuchs (Karo-Ass), zwei Karten folgen. **Standbild 0,8 s** vor der vierten Karte, dann sticht die vierte, und der Stich geht an Nele | erst „Und jetzt …", dann „Fuchs weg." | **Bildschirmaufnahme** (B3) |
 | 13,5–15,5 | Nele auf dem Sofa reißt die Faust hoch und lacht | „Nele: Danke für den Fuchs." | **Runway** (R4) |
-| 15,5–18,0 | Robin schaut kurz aufs Handy, schüttelt den Kopf, grinst dann in die Kamera | „Revanche? Tisch aufmachen auf brauweg-spielen.de." | **Handy** (H3) |
+| 15,5–18,0 | Robin schaut kurz aufs Handy, schüttelt den Kopf, grinst dann in die Kamera | „Revanche? Tisch aufmachen auf www.brauweg-spielen.de." | **Handy** (H3) |
 | 18,0–20,0 | Gemeinsame Endkarte | (siehe `drehbuecher.md`) | Schnitt |
 
 Gesamt 20 s.
@@ -344,7 +344,7 @@ Gesamt 20 s.
   sich zweimal mit zwei Fingern an die Brust und sagt nur: „Re."
 - **H3 (15,5–18 s):** Gleicher Platz. Robin schaut aufs Handy, schüttelt den
   Kopf und atmet hörbar aus. Dann grinst er in die Kamera und sagt: „Revanche?
-  Tisch aufmachen auf brauweg-spielen.de."
+  Tisch aufmachen auf www.brauweg-spielen.de."
 
 ### Runway-Prompts
 
@@ -414,7 +414,7 @@ der Rührschüssel und sagt, wo man den Tisch aufmacht.
 | 8,0–10,0 | Mann am Herd rührt in einem Topf, tippt mit der freien Hand | „Basti: Ich back sicher nicht." | **Runway** (R3) |
 | 10,0–14,0 | Anfragen zulassen, vier Namen, Karten raus, der erste Stich geht nicht an Robin; über einem Sitz „Das wird eng!" | „Das wird eng!" kommt aus der App, keine eigene Einblendung | **Bildschirmaufnahme** (B2) |
 | 14,0–15,0 | Texttafel auf Brauweg-Nachtblau, nicht auf Schwarz (kein Schwarzbild, Ad 1 §9.5) | „Eine Stunde später." | Schnitt |
-| 15,0–18,0 | Robin in der Küche, hält eine Rührschüssel mit Mehl im Arm, schaut ergeben in die Kamera | „Ich back dann mal. Euren Tisch macht ihr auf brauweg-spielen.de auf." | **Handy** (H2) |
+| 15,0–18,0 | Robin in der Küche, hält eine Rührschüssel mit Mehl im Arm, schaut ergeben in die Kamera | „Ich back dann mal. Euren Tisch macht ihr auf www.brauweg-spielen.de auf." | **Handy** (H2) |
 | 18,0–20,0 | Gemeinsame Endkarte | (siehe `drehbuecher.md`) | Schnitt |
 
 Gesamt 20 s.
@@ -430,7 +430,7 @@ Gesamt 20 s.
   hält eine Rührschüssel mit Mehl im Arm (Schneebesen drin, keine
   Markenpackung im Bild), stellt das Handy gegen etwas an der Arbeitsplatte
   und schaut ergeben hinein. Er sagt trocken: „Ich back dann mal. Euren Tisch
-  macht ihr auf brauweg-spielen.de auf."
+  macht ihr auf www.brauweg-spielen.de auf."
 
 ### Runway-Prompts
 

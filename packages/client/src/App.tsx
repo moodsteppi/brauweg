@@ -5,6 +5,7 @@ import { t } from './i18n';
 import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { inApp } from './laufzeit';
+import { imUmfang } from './umfang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
@@ -12,7 +13,6 @@ import { Lobby } from './screens/Lobby';
 import { AnfrageWarten } from './tisch/Anfragen';
 import { horcheAufAntippen } from './mitteilung-antippen';
 import { Startbildschirm } from './screens/Startbildschirm';
-import { hubNeu } from './hubNeu';
 import { Ladevorhang } from './minispiele/tafelrunde/Ladevorhang';
 import { TISCH_PARAMETER } from './minispiele/tafelrunde/tischlink';
 import {
@@ -31,9 +31,6 @@ const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.R
 /** Landeseiten der Mail-Links und die Mail-Diagnose (seit dem 23.09.2026). */
 const KontoLink = lazy(() =>
   import('./screens/KontoLink').then((m) => ({ default: m.KontoLink })),
-);
-const KontoSichern = lazy(() =>
-  import('./screens/KontoSichern').then((m) => ({ default: m.KontoSichern })),
 );
 
 /**
@@ -211,7 +208,6 @@ export function App(): React.JSX.Element {
    * eben sein Konto gesichert hat, oeffnet den Bestaetigungslink angemeldet.
    */
   const [kontoLink, setKontoLink] = useState<KontoLinkZiel | null>(() => leseKontoLink());
-  const [sichernOffen, setSichernOffen] = useState(false);
   /** Kam der Start ueber den Tafelrunde-Link `/?tisch=`? Nur dann wird nachgefragt. */
   const [tischLinkPruefen] = useState(() => screen.name === 'tafelrunde');
 
@@ -343,8 +339,8 @@ export function App(): React.JSX.Element {
     return false;
   });
 
-  // Neues Hub: Logo und Ladebild mit Prozentzahl, bis Konto und Startbilder da sind.
-  if (hubNeu && !startFertig) return <Startbildschirm geladen={!loading} onFertig={() => setStartFertig(true)} />;
+  // Logo und Ladebild mit Prozentzahl, bis Konto und Startbilder da sind.
+  if (!startFertig) return <Startbildschirm geladen={!loading} onFertig={() => setStartFertig(true)} />;
   if (loading) return <AppLaedt />;
 
   // Die Diagnose braucht ein angemeldetes Testkonto; ohne Anmeldung geht es
@@ -791,36 +787,7 @@ export function App(): React.JSX.Element {
       );
     }
 
-    /*
-     * Gaeste bekommen ueber der Spielauswahl eine schmale Leiste zum Sichern.
-     * Hier und nicht in GameSelect: Die Route gab es seit dem Gastkonto, nur
-     * keinen Weg dorthin — und das Blatt kommt erst beim Antippen nach.
-     */
-    // Im neuen Hub laege die Leiste unter dessen Vollbild; dort steht
-    // „Konto sichern" im Profil (GameSelect.tsx, Abschnitt Konto).
-    const gastLeiste = me.gast && !hubNeu ? (
-      <div className="gastsichern-leiste" role="note">
-        <span>Du spielst als Gast.</span>
-        <button type="button" onClick={() => setSichernOffen(true)}>
-          Konto sichern
-        </button>
-        {sichernOffen && (
-          <Suspense fallback={null}>
-            <KontoSichern
-              onClose={() => setSichernOffen(false)}
-              onGesichert={() => {
-                setSichernOffen(false);
-                void reload();
-              }}
-            />
-          </Suspense>
-        )}
-      </div>
-    ) : null;
-
     return (
-      <>
-      {gastLeiste}
       <GameSelect
         me={me}
         // Feldherr und Mememory haben keine Kartenlobby: Tisch erstellen und
@@ -843,7 +810,7 @@ export function App(): React.JSX.Element {
         }}
         onSolo={(modusId) => {
           // In der App kommt Pro-Subway erst spaeter (GameSelect zeigt "Bald").
-          if (modusId === 'prosubway' && !inApp) setScreen({ name: 'prosubway' });
+          if (modusId === 'prosubway' && !inApp && imUmfang('prosubway')) setScreen({ name: 'prosubway' });
         }}
         onResume={(gameId, tableId) => setScreen({ name: 'table', gameId, tableId })}
         onShowProfile={zeigeProfil}
@@ -862,7 +829,6 @@ export function App(): React.JSX.Element {
         // das Cookie geraeumt - ein Abmelden danach liefe in ein 401.
         onDeleted={() => setMe(null)}
       />
-      </>
     );
   };
 

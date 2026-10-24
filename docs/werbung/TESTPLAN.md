@@ -95,10 +95,10 @@ Beide bezahlten Kanäle starten **am selben Tag zur selben Stunde**.
 
 | Kanal | Link |
 |---|---|
-| Instagram | `https://brauweg-spielen.de/?q=insta-ad2` |
-| TikTok | `https://brauweg-spielen.de/?q=tiktok-ad2` |
-| Bekannte | `https://brauweg-spielen.de/?q=bekannte-ad2` |
-| Probelauf | `https://brauweg-spielen.de/?q=probe-ad2` |
+| Instagram | `https://www.brauweg-spielen.de/?q=insta-ad2` |
+| TikTok | `https://www.brauweg-spielen.de/?q=tiktok-ad2` |
+| Bekannte | `https://www.brauweg-spielen.de/?q=bekannte-ad2` |
+| Probelauf | `https://www.brauweg-spielen.de/?q=probe-ad2` |
 
 **Warum `-ad2` angehängt ist:** Die Summen bleiben bestehen
 (`herkunft_zaehler` wächst nur). Ein späterer Test mit Ad 1 oder Drehbuch A
@@ -111,8 +111,8 @@ Werbekonto:
 
 | Kanal | Wo | Kennung |
 |---|---|---|
-| Instagram | `/creatives/meta`, Video Asset `73c7aeb0`, Ziel-Adresse `https://brauweg-spielen.de/` | `insta-ad2` ins Feld Kennung, nicht den Vorschlag des Tools |
-| TikTok | `/creatives/tiktok`, Video Asset `73c7aeb0`, Ziel-Adresse `https://brauweg-spielen.de/` | `tiktok-ad2`, ebenso |
+| Instagram | `/creatives/meta`, Video Asset `73c7aeb0`, Ziel-Adresse `https://www.brauweg-spielen.de/` | `insta-ad2` ins Feld Kennung, nicht den Vorschlag des Tools |
+| TikTok | `/creatives/tiktok`, Video Asset `73c7aeb0`, Ziel-Adresse `https://www.brauweg-spielen.de/` | `tiktok-ad2`, ebenso |
 | Bekannte | `/creatives/link-kennungen`, **Kennung von Hand** | `bekannte-ad2` |
 | Probelauf | `/creatives/link-kennungen`, Kennung von Hand | `probe-ad2` |
 
@@ -195,7 +195,7 @@ keine vorab geschätzte Zahl.
 
 ## 5. Probelauf (vor dem Start, in der Produktion)
 
-1. `https://brauweg-spielen.de/?q=probe-ad2` am Handy **im Browser von
+1. `https://www.brauweg-spielen.de/?q=probe-ad2` am Handy **im Browser von
    Instagram** öffnen (Link per Direktnachricht an sich selbst), dann
    dasselbe in TikTok.
 2. Adresszeile prüfen: `?q=` ist verschwunden.

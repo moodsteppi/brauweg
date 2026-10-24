@@ -1,9 +1,9 @@
 /*
- * Poker im Spieleinstieg des neuen Hubs (EasyPoker.tsx, `hubNeu`).
+ * Poker im Spieleinstieg des Hubs (EasyPoker.tsx).
  *
  * Hauptmenü, Online-Tisch, Wartebereich und die beiden Blätter (Regeln,
  * Einsatz). Der Filz selbst behält seine eigenen Klassen (`poker-*`) und wird
- * hier nicht angefasst. Alles unter `.spe`, damit `?hub=alt` bleibt, wie es ist.
+ * hier nicht angefasst. Alles unter `.spe`: Es gilt nur im Spieleinstieg.
  */
 
 /* Info-Knopf im Kopf: ein goldenes „i" im runden Knopf */

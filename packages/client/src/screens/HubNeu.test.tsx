@@ -10,8 +10,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * und dass im Shop auch Kartenblätter und Tische zu haben sind.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { claimQuest, vote, wegHolen, wegStand } = vi.hoisted(() => {
   // Der Weg ist zustandsbehaftet: Nach dem Holen liefert /api/weg die Stufe
   // als geholt, so wie der Server es täte.

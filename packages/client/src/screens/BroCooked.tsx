@@ -14,12 +14,11 @@ import { kameraFuer, zeichne } from '../minispiele/brocooked/zeichnen';
 import stil from '../minispiele/brocooked/BroCooked.module.css';
 import type { ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
-import { hubNeu } from '../hubNeu';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import './brocooked-einstieg.css';
 
-/** Farbe von BroCooked im neuen Hub: das Feuer unter der Pfanne im Banner. */
+/** Farbe von BroCooked im Hub: das Feuer unter der Pfanne im Banner. */
 const AKZENT = '#ff8a3d';
 const RUNDEN_WAHL = [1, 2, 3, 4, 5, 6].map((n) => ({ wert: n, text: String(n) }));
 
@@ -383,7 +382,7 @@ export function BroCooked({
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [abschluss, setAbschluss] = useState<Lauf | null>(null);
-  /** Neues Hub: die Rezeptkarte liegt als Blatt hinter einer Zeile statt im Aufklapper. */
+  /** Die Rezeptkarte liegt als Blatt hinter einer Zeile statt im Aufklapper. */
   const [rezepteOffen, setRezepteOffen] = useState(false);
 
   /* --- Lokal: der Motor steht hier ---------------------------------- */
@@ -540,11 +539,10 @@ export function BroCooked({
   /* --- Anzeige ------------------------------------------------------- */
 
   /*
-   * Neues Hub (Spieleinstieg-Baukasten, 26.09.2026): Menü, Gruppe und
-   * Feierabend im Nachtblau-Rahmen. Dieselben Zustände und Aufrufe wie unten,
-   * nur das Aussehen verzweigt; die Küche selbst bleibt, wie sie ist.
+   * Spieleinstieg-Baukasten (seit 26.09.2026): Menü, Gruppe und Feierabend im
+   * Nachtblau-Rahmen; die Küche selbst bleibt, wie sie ist.
    */
-  if (hubNeu && modus.art === 'menue') {
+  if (modus.art === 'menue') {
     const sterne = gemerkteSterne();
     return (
       <SpielRahmen
@@ -639,7 +637,7 @@ export function BroCooked({
     );
   }
 
-  if (hubNeu && abschluss !== null) {
+  if (abschluss !== null) {
     return (
       <SpielRahmen
         gameId="brocooked"
@@ -687,7 +685,7 @@ export function BroCooked({
     );
   }
 
-  if (hubNeu && modus.art === 'tisch' && tisch.view === null) {
+  if (modus.art === 'tisch' && tisch.view === null) {
     const plaetze = tisch.table?.seats ?? [];
     const freierPlatz = plaetze.find((p) => p.displayName === null && !p.isBot)?.seat ?? null;
     const besetzt = plaetze.filter((s) => s.displayName !== null).length;
@@ -746,151 +744,6 @@ export function BroCooked({
           </SpielAbschnitt>
         )}
       </SpielRahmen>
-    );
-  }
-
-  if (modus.art === 'menue') {
-    const sterne = gemerkteSterne();
-    return (
-      <div className={stil.seite}>
-        <header>
-          <button type="button" className="ghost" onClick={onBack}>
-            Zurück
-          </button>
-          <h1>BroCooked</h1>
-          <p>
-            Bestellungen kommen herein, ihr schneidet, kocht, richtet an und gebt durch. Gekocht
-            wird miteinander: Es gibt eine Punktzahl für alle.
-          </p>
-        </header>
-
-        <label className={stil.regler}>
-          Runden: <strong>{runden}</strong>
-          <input
-            type="range"
-            min={1}
-            max={6}
-            value={runden}
-            onChange={(e) => setRunden(Number(e.target.value))}
-          />
-        </label>
-
-        <div className={stil.wahl}>
-          <button type="button" onClick={() => starteLokal(1)}>
-            Allein kochen
-          </button>
-          <button type="button" onClick={() => starteLokal(2)}>
-            Zu zweit an diesem Gerät
-          </button>
-          <button type="button" disabled={laedt} onClick={() => void offenenTischSuchen()}>
-            {laedt ? 'Tisch wird gesucht …' : 'Am Tisch (2–4 Geräte)'}
-          </button>
-        </div>
-
-        {fehler !== null && <p className={stil.fehler}>{fehler}</p>}
-
-        <ul className={stil.kuechen}>
-          {KUECHEN.map((k) => (
-            <li key={k.id}>
-              <span>{k.name}</span>
-              <span aria-label={`${sterne[k.id] ?? 0} von 3 Sternen`}>
-                {'★'.repeat(sterne[k.id] ?? 0)}
-                {'☆'.repeat(3 - (sterne[k.id] ?? 0))}
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        {/*
-          * Die Rezeptkarte: was in welcher Küche bestellt wird und was dafür
-          * nötig ist. Sie steht im Menü und nicht in einem Hilfefenster —
-          * wer mitten in der Schicht nachschlagen muss, hat schon verloren.
-          */}
-        <details className={stil.rezeptblock}>
-          <summary>Rezepte</summary>
-          {KUECHEN.map((k) => (
-            <div key={k.id} className={stil.rezeptkueche}>
-              <h2>{k.name}</h2>
-              <ul className={stil.rezepte}>
-                {k.rezepte.map((id) => (
-                  <Rezeptkarte key={id} rezeptId={id} />
-                ))}
-              </ul>
-            </div>
-          ))}
-          <p className={stil.hinweis}>
-            Eine Marke mit Schnitt muss geschnitten werden, eine runde Marke gegart. Roh kommt
-            nichts auf den Teller.
-          </p>
-        </details>
-
-        <p className={stil.hinweis}>
-          Am Rechner: WASD und Leertaste/E für den ersten Koch, Pfeiltasten und Enter/Null für den
-          zweiten. Am Handy erscheinen Stick und Knöpfe auf dem Bild.
-        </p>
-      </div>
-    );
-  }
-
-  if (abschluss !== null) {
-    return (
-      <div className={stil.seite}>
-        <h2>Feierabend</h2>
-        <p className={stil.endpunkte}>{abschluss.punkte} Punkte</p>
-        <ul>
-          {abschluss.sterne.map((s, i) => (
-            <li key={i}>
-              {kuechenplan(KUECHEN[i % KUECHEN.length].id).name}: {'★'.repeat(s)}
-              {'☆'.repeat(3 - s)}
-            </li>
-          ))}
-        </ul>
-        <div className={stil.wahl}>
-          {modus.art === 'lokal' && (
-            <button type="button" onClick={() => starteLokal(modus.koeche)}>
-              Noch einmal
-            </button>
-          )}
-          <button type="button" onClick={verlassen}>
-            Zurück ins Menü
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (modus.art === 'tisch' && tisch.view === null) {
-    const plaetze = tisch.table?.seats ?? [];
-    // Der erste freie Platz — `null`, wenn alle besetzt sind.
-    const freierPlatz =
-      plaetze.find((p) => p.displayName === null && !p.isBot)?.seat ?? null;
-    return (
-      <div className={stil.seite}>
-        <h2>Küche füllt sich</h2>
-        <p>
-          {plaetze.filter((s) => s.displayName !== null).length} von {Math.max(plaetze.length, 2)}{' '}
-          Plätzen besetzt. Ihr könnt jederzeit loslegen — leere Plätze fallen dann weg. Wer eine
-          Hand mehr in der Küche will, setzt vorher einen Hilfskoch dazu.
-        </p>
-        <div className={stil.wahl}>
-          <button type="button" onClick={() => tisch.startNow(runden)}>
-            Jetzt anfangen
-          </button>
-          <button
-            type="button"
-            disabled={freierPlatz === null}
-            onClick={() => {
-              if (freierPlatz !== null) tisch.addBot(freierPlatz);
-            }}
-          >
-            Hilfskoch dazu
-          </button>
-          <button type="button" className="ghost" onClick={verlassen}>
-            Tisch verlassen
-          </button>
-        </div>
-        {tisch.error !== null && <p className={stil.fehler}>{tisch.error}</p>}
-      </div>
     );
   }
 

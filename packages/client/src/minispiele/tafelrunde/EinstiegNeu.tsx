@@ -13,8 +13,6 @@ import { KOSTEN_FARBE, RollenZeichen } from './Zeichen';
  *
  * Nur das Aussehen: Zustände, Aufrufe und Regeln bleiben in
  * `screens/Tafelrunde.tsx`, und jede Ansicht hier bekommt sie fertig herein.
- * Deshalb verzweigt der Bildschirm je Ansicht an genau einer Stelle
- * (`if (hubNeu)`), und `?hub=alt` zeigt weiter das alte Menü.
  *
  * Grün ist die Farbe des Spiels (die Rollenzeichen im Laden); der Hauptknopf
  * bleibt gold, wie überall im neuen Hub.
@@ -56,7 +54,7 @@ export function MenueNeu({
   aktiv: number | null;
   startet: boolean;
   fehler: string | null;
-  /** Der Regeltext, derselbe wie im alten Regelblatt. */
+  /** Der Regeltext, derselbe wie im Regelblatt der Rüstkammer. */
   regeln: React.ReactNode;
   onBack: () => void;
   onSuche: () => void;
@@ -392,8 +390,17 @@ interface Platz {
 }
 
 /**
- * Wartesaal im neuen Look. Wann gestartet werden darf, entscheidet weiter
- * der Server; der Knopf ist grau bei derselben Zahl wie im alten Wartesaal.
+ * Was zwischen „Tisch aufgemacht" und „Partie läuft" auf dem Schirm steht.
+ *
+ * Der Gastgeber sieht seinen Code, die Beigetretenen und den Startknopf; die
+ * Gäste sehen dasselbe ohne Knöpfe. Die Sitzliste kommt aus dem Rundruf des
+ * Tisches und nicht aus einer eigenen Abfrage, deshalb füllt sie sich ohne
+ * Zutun, sobald jemand beitritt.
+ *
+ * Der Wartesaal bildet keine Regel nach: WANN gestartet werden darf,
+ * entscheidet der Server (`isReadyToStart`, `schrumpfeAufBesetzte`). Hier
+ * steht nur, wann der Knopf grau ist — und das ist dieselbe Zahl, die
+ * daneben steht.
  */
 export function WartesaalNeu({
   wartesaal,

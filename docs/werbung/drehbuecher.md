@@ -40,7 +40,7 @@ sind dazugekommen.
 Drei Zeilen, deutsch, im Schnitt gesetzt (nicht im KI-Bild):
 
 > **Brauweg · Doppelkopf · Skat · Partykiste**
-> Jetzt im Browser spielen: **brauweg-spielen.de**
+> Jetzt im Browser spielen: **www.brauweg-spielen.de**
 > App bald im App Store und bei Google Play
 
 **Bis zur Veröffentlichung: kein Store-Badge.** Das Apple- und das

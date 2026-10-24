@@ -7,8 +7,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * erstellen, offenen Tisch beitreten, Werte einer Einheit als Blatt.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { tables, createTable, joinTable } = vi.hoisted(() => ({
   tables: vi.fn(),
   createTable: vi.fn(),

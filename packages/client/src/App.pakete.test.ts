@@ -32,10 +32,10 @@ const NACHGELADEN = [
   'EasyPoker',
   'Eiland',
   'FeldherrTisch',
-  // Seit dem 23.09.2026: Landeseiten der Mail-Links und das Blatt zum
-  // Sichern eines Gastkontos. App.tsx liest den Pfad beim Start.
+  // Seit dem 23.09.2026: Landeseiten der Mail-Links. App.tsx liest den Pfad
+  // beim Start. (Das Blatt zum Sichern eines Gastkontos stand bis zum
+  // 23.10.2026 mit hier; es hing an der Gastleiste des alten Hubs.)
   'KontoLink',
-  'KontoSichern',
   'Filler',
   'Mememory',
   // Seit dem 22.09.2026 in der Liste: Ab da liest App.tsx beim Start den

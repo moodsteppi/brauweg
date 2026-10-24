@@ -93,6 +93,7 @@ import {
   taugtFuerApp,
   type Plattform,
 } from '../games/registry.js';
+import { ALLES, imUmfang, umfangFuerClient, type Funktion, type Umfang } from '../umfang.js';
 import {
   acceptFriendship,
   listFriendships,
@@ -261,6 +262,24 @@ export function plattformVon(request: FastifyRequest): Plattform {
   return istAppHerkunft(request.headers.origin) ? 'app' : 'web';
 }
 
+/**
+ * Welche Routen zu welcher Funktion des Umfangs gehoeren (src/umfang.ts).
+ *
+ * Gegen das Routenmuster, wie Fastify es meldet (`/api/clubs/:clubId/war`),
+ * nicht gegen die Adresse: Eine Kennung in der Adresse kann aussehen wie
+ * ein Pfadteil, ein Muster nicht. Die Spiele der Registry stehen hier nicht —
+ * die sperrt `requireSpielbar` an jedem Tisch-Einstieg.
+ */
+export const FUNKTION_ZU_ROUTE: readonly (readonly [Funktion, RegExp])[] = [
+  ['kartenmanufaktur', /^\/api\/manufaktur(\/|$)/],
+  ['browort', /^\/api\/browort(\/|$)/],
+  ['clanwort', /^\/api\/clanwort(\/|$)/],
+  ['lernpfad', /^\/api\/lernpfad(\/|$)/],
+  ['prosubway', /^\/api\/runner(\/|$)/],
+  ['clankrieg', /^\/api\/clubs\/:clubId\/war(\/|$)/],
+  ['clanchat', /^\/api\/clubs\/:clubId\/messages(\/|$)/],
+];
+
 export interface AppDeps {
   readonly db: Db;
   readonly auth: AuthDeps;
@@ -286,6 +305,11 @@ export interface AppDeps {
    * der App. Fehlt es, sieht die App dasselbe wie die Webseite.
    */
   readonly appInhalt?: AppInhalt;
+  /**
+   * Was diese Ausgabe anbietet (`UMFANG`, src/umfang.ts). Fehlt es, ist
+   * alles an — wie auf `staging` und in jedem Test, der es nicht setzt.
+   */
+  readonly umfang?: Umfang;
   /**
    * Universal Links und App Links fuer `/beitritt/*` (app-verknuepfung.ts).
    * Fehlt es, liefert der Server beide Dateien nicht aus.
@@ -452,6 +476,7 @@ const BODY_LIMIT = 128 * 1024;
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({ logger: false, bodyLimit: BODY_LIMIT });
   const appInhalt = deps.appInhalt ?? APP_INHALT_WIE_WEB;
+  const umfang = deps.umfang ?? ALLES;
   await app.register(cookie);
 
   // Sicherheits-Kopfzeilen. Ohne frame-ancestors laesst sich die Seite in
@@ -713,6 +738,26 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .where(eq(s.account.id, accountId));
     if (!konto?.isStaff) throw forbidden('nurAufsicht');
   };
+
+  /**
+   * Funktionen ausserhalb des Umfangs sind auch am Server zu — nicht nur in
+   * der Auswahl. Sonst kaeme ein alter App-Build, ein Lesezeichen oder ein
+   * Aufruf von Hand doch an Browort oder den Clankrieg, obwohl die Ausgabe
+   * sie nicht anbietet.
+   *
+   * Als EIN Haken ueber die Routenmuster statt einer Zeile je Route: Die
+   * Liste unten ist die ganze Sperre auf einen Blick, und eine neue Route
+   * unter `/api/browort/…` ist von selbst mitgesperrt. `preHandler`, damit
+   * die Ratengrenze (onRequest) vorher zaehlt.
+   */
+  app.addHook('preHandler', async (request) => {
+    if (umfang.alles) return;
+    const muster = request.routeOptions.url;
+    if (!muster) return;
+    for (const [funktion, route] of FUNKTION_ZU_ROUTE) {
+      if (route.test(muster) && !imUmfang(umfang, funktion)) throw notFound('nichtImUmfang');
+    }
+  });
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof RuleSetInvalidError) {
@@ -1152,6 +1197,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
        * fehlen lassen.
        */
       stage: deps.stage ?? 'production',
+      /**
+       * Was diese Ausgabe anbietet (src/umfang.ts): `null` heisst alles,
+       * sonst die Kennungen. Der Client blendet danach aus — gesperrt ist es
+       * trotzdem hier, siehe den preHandler-Haken oben.
+       */
+      umfang: umfangFuerClient(umfang),
       themes,
       birthday,
       daysUntilBirthday: birthday ? daysUntilBirthday(birthday) : null,
@@ -1810,7 +1861,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // Je Plattform: In der App kann ein Spiel `bald` oder ganz weg sein,
     // obwohl es auf der Webseite laeuft (siehe FREIGABE in registry.ts).
     return reply.send(
-      spieleFuer(plattformVon(request)).map(({ meta, availability, abstimmbar }) => ({
+      spieleFuer(plattformVon(request), umfang).map(({ meta, availability, abstimmbar }) => ({
         id: meta.id,
         nameKey: meta.nameKey,
         availability,
@@ -1828,6 +1879,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     if (isPlayable(gameId)) {
       return reply.status(400).send({ code: 'alreadyPlayable', messageKey: 'error.alreadyPlayable' });
     }
+    // Was nicht im Umfang steht, steht nicht in der Auswahl — also auch
+    // nicht zur Wahl.
+    if (!imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
     await deps.db.insert(s.gameVote).values({ accountId, gameId }).onConflictDoNothing();
     return reply.send({ ok: true });
   });
@@ -2146,7 +2200,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   ): Promise<void> => {
     const { table, seats } = await tableWithSeats(deps.db, tableId);
     if (seats.some((seat) => seat.accountId === accountId)) return;
-    requireSpielbar(table.gameId, plattformVon(request));
+    requireSpielbar(table.gameId, plattformVon(request), umfang);
     await pruefeAppTisch(request, table.gameId, tableId);
   };
 
@@ -2176,7 +2230,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         rounds: z.coerce.number().int().optional(),
       })
       .parse(request.query);
-    requireSpielbar(query.game, plattformVon(request));
+    requireSpielbar(query.game, plattformVon(request), umfang);
 
     const clubs = await clubsFor(deps.db, accountId);
     return reply.send(
@@ -2192,7 +2246,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/tables', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const body = createTableSchema.parse(request.body);
-    requireSpielbar(body.gameId, plattformVon(request));
+    requireSpielbar(body.gameId, plattformVon(request), umfang);
     if (plattformVon(request) === 'app') {
       body.config = appRegeln(body.gameId, body.config, appInhalt);
     }
@@ -2225,7 +2279,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // Wer schon sitzt, kommt immer an seinen Platz zurueck — auch wenn das
     // Spiel hier inzwischen nicht mehr freigegeben ist. Neu dazu nicht.
     if (!seats.some((seat) => seat.accountId === accountId)) {
-      requireSpielbar(table.gameId, plattformVon(request));
+      requireSpielbar(table.gameId, plattformVon(request), umfang);
       await pruefeAppTisch(request, table.gameId, table.id);
     }
     const gastgeber = seats.find((seat) => seat.accountId)?.accountId ?? null;
@@ -2429,7 +2483,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/suche/:gameId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
-    requireSpielbar(gameId, plattformVon(request));
+    requireSpielbar(gameId, plattformVon(request), umfang);
     // Optionaler Regelsatz (Spielart); ohne Rumpf gilt die Vorgabe des Moduls.
     const { config } = z
       .object({ config: z.unknown().optional() })

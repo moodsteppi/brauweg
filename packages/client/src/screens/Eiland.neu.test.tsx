@@ -7,8 +7,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * die Schlange, KI-Tisch mit der gewählten Spielart, Anleitung als Blatt.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { sucheStarten, sucheAbbrechen, createTable, defaults } = vi.hoisted(() => ({
   sucheStarten: vi.fn(),
   sucheAbbrechen: vi.fn(),
