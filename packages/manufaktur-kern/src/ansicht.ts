@@ -19,7 +19,8 @@ import {
   versandZyklus,
 } from './formeln.js';
 import { type Menge, ausbauRabatt, stationVon, stufenFuer } from './aktionen.js';
-import { POOL_GROESSE, einstellPreis, platzVon } from './meister.js';
+import { einstellPreis, platzVon } from './meister.js';
+import { feilschenFaktor, kartenwertBonus, poolGroesse } from './werkstattbuch.js';
 import type { ManufakturStand } from './stand.js';
 
 export type Kettenglied = 'pressen' | 'paternoster' | 'versand';
@@ -27,7 +28,7 @@ export type Kettenglied = 'pressen' | 'paternoster' | 'versand';
 /** Was die Kettenglieder je Sekunde schaffen, wenn alle arbeiten. */
 export function durchsatz(stand: ManufakturStand, nurMeister = false): Record<Kettenglied, number> {
   const pressen = stand.pressen.reduce(
-    (summe, p, i) => summe + (nurMeister && !p.meister ? 0 : presseLeistung(i, p.stufe, stand.manufaktur, stand.jubilaeen)),
+    (summe, p, i) => summe + (nurMeister && !p.meister ? 0 : presseLeistung(i, p.stufe, stand.manufaktur, kartenwertBonus(stand))),
     0,
   );
   const f = stand.paternoster;
@@ -88,7 +89,7 @@ export function engpassSichtbar(stand: ManufakturStand): Kettenglied | null {
 /** Leistung einer Station je Sekunde auf Stufe `stufe` — die Hauptzeile im Upgrade-Blatt. */
 export function leistungJeSekunde(stand: ManufakturStand, ziel: Ziel, stufe: number): number {
   const m = stand.manufaktur;
-  if (ziel.art === 'presse') return presseLeistung(ziel.index, stufe, m, stand.jubilaeen);
+  if (ziel.art === 'presse') return presseLeistung(ziel.index, stufe, m, kartenwertBonus(stand));
   if (ziel.art === 'paternoster') return paternosterKapazitaet(stufe, m) / (paternosterFahrt(stand.pressen.length, stufe) / 1000);
   return versandKapazitaet(stufe, m) / (versandZyklus(stufe) / 1000);
 }
@@ -118,7 +119,7 @@ function kennzahlenBei(stand: ManufakturStand, ziel: Ziel, stufe: number): Omit<
     return [
       // Namen, wie sie im Upgrade-Blatt stehen — „Zyklus" und „Kapazität"
       // verstand beim ersten Spielen niemand (Rueckmeldung 23.10.2026).
-      { name: 'Wert pro Druckgang', vorher: presseErtrag(ziel.index, stufe, m, stand.jubilaeen), einheit: 'wert' },
+      { name: 'Wert pro Druckgang', vorher: presseErtrag(ziel.index, stufe, m, kartenwertBonus(stand)), einheit: 'wert' },
       { name: 'Dauer pro Druckgang', vorher: presseZyklus(stufe) / 1000, einheit: 'sekunden' },
       { name: 'Arbeiter', vorher: arbeiter(stufe), einheit: 'anzahl' },
     ];
@@ -163,7 +164,8 @@ export function ausbauVorschau(stand: ManufakturStand, ziel: Ziel, menge: Menge)
   // worauf man spart.
   const zeigen = Math.max(anzahl, menge === 'max' ? 1 : 0);
   const neueStufe = s.stufe + zeigen;
-  const kostenOhneRabatt = ausbauKostenFuer(ziel, s.stufe, zeigen, stand.manufaktur);
+  // „Ohne Rabatt" heisst ohne Meister-Rabatt; Feilschen aus dem Buch gilt immer.
+  const kostenOhneRabatt = ausbauKostenFuer(ziel, s.stufe, zeigen, stand.manufaktur) * feilschenFaktor(stand);
   const rabatt = ausbauRabatt(stand, ziel);
   const kosten = kostenOhneRabatt * (1 - rabatt);
   const vorher = kennzahlenBei(stand, ziel, s.stufe);
@@ -191,7 +193,7 @@ export function ausbauLeistbar(stand: ManufakturStand, ziel: Ziel): boolean {
 /** Kann man an dieser Station gerade einen Meister einstellen (Platz im Pool, genug Taler)? */
 export function einstellenLeistbar(stand: ManufakturStand, ziel: Ziel): boolean {
   const s = stationVon(stand, ziel);
-  return !!s && platzVon(stand, ziel).pool.length < POOL_GROESSE && stand.taler + 1e-9 >= einstellPreis(stand, ziel);
+  return !!s && platzVon(stand, ziel).pool.length < poolGroesse(stand) && stand.taler + 1e-9 >= einstellPreis(stand, ziel);
 }
 
 /** Fuer den leeren Platz in der Welt: noch kein Meister, und der erste ist bezahlbar. */

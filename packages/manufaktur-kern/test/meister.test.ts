@@ -12,7 +12,6 @@ import {
   type Ziel,
   AktionAbgelehnt,
   FASSUNG,
-  POOL_GROESSE,
   RAENGE,
   ausbauKostenFuer,
   ausbauVorschau,
@@ -85,7 +84,7 @@ test('der Zufall haengt am Stand: gleicher Anfang, gleiche Meister — und die V
 });
 
 test('der Pool ist begrenzt', () => {
-  const stand = stelleEin(reich(), versand, POOL_GROESSE);
+  const stand = stelleEin(reich(), versand, 5);
   assert.throws(
     () => handle(stand, { typ: 'einstellen', ziel: versand }, T0),
     (e: unknown) => e instanceof AktionAbgelehnt && e.code === 'manufakturPoolVoll',

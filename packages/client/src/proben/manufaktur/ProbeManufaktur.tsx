@@ -70,6 +70,9 @@ function fall(name: string, jetzt: number): ManufakturStand {
     stand.manufaktur = 5;
     stand.jubilaeen = 2;
     stand.taler = 4e12;
+    // Werkstattbuch: ein paar Seiten gekauft, Siegel fuer die naechsten.
+    stand.siegel = 23;
+    stand.werkstattbuch = { ruf: 2, feilschen: 1, lager: 1 };
     stand.pressen = Array.from({ length: MAX_PRESSEN }, (_, i) => ({ ...neuePresse(), stufe: 90 - i * 10 }));
     stand.paternoster = { ...stand.paternoster, stufe: 140 };
     stand.versand = { ...stand.versand, stufe: 130 };

@@ -10,7 +10,6 @@
 
 import {
   ABWESEND_AB_MS,
-  OFFLINE_MS,
   OFFLINE_TEMPO,
   TAKT_MS,
   VERSAND_ABFAHRT,
@@ -24,6 +23,7 @@ import {
   versandZyklus,
 } from './formeln.js';
 import { ladungFaktor, tempoFaktor } from './meister.js';
+import { kartenwertBonus, offlineMs } from './werkstattbuch.js';
 import { type ManufakturStand, kopiere } from './stand.js';
 
 /** Liegt in irgendeiner Kiste etwas fuer den Paternoster? */
@@ -76,7 +76,7 @@ function takt(stand: ManufakturStand): void {
     if (!p.laeuft) return;
     p.fortschritt += (TAKT_MS * tempoFaktor('presse', p, t)) / presseZyklus(p.stufe);
     if (p.fortschritt >= 1) {
-      p.kiste += presseErtrag(index, p.stufe, stand.manufaktur, stand.jubilaeen);
+      p.kiste += presseErtrag(index, p.stufe, stand.manufaktur, kartenwertBonus(stand));
       p.laeuft = false;
       p.fortschritt = 0;
     }
@@ -148,7 +148,7 @@ export function vorspulen(alt: ManufakturStand, bis: number): ManufakturStand {
   const ende = alt.zeit + takte * TAKT_MS;
   const luecke = takte * TAKT_MS;
   const rechnen =
-    luecke > ABWESEND_AB_MS ? Math.floor((Math.min(luecke, OFFLINE_MS) * OFFLINE_TEMPO) / TAKT_MS) : takte;
+    luecke > ABWESEND_AB_MS ? Math.floor((Math.min(luecke, offlineMs(alt)) * OFFLINE_TEMPO) / TAKT_MS) : takte;
   for (let i = 0; i < rechnen; i += 1) {
     if (ruhig(stand)) break;
     takt(stand);

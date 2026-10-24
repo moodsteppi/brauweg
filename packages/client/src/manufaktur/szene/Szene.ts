@@ -35,7 +35,7 @@ import {
   MAX_PRESSEN,
   VERSAND_ABFAHRT,
   arbeiter,
-  RAENGE,
+  kartenwertBonus,
   tempoFaktor,
   versandKapazitaet,
   versandZyklus,
@@ -420,7 +420,7 @@ class EtageBild {
     }
     this.letzteStufe = p.stufe;
 
-    const { anzahl } = kistenStapel(p, this.index, stand.manufaktur, stand.jubilaeen);
+    const { anzahl } = kistenStapel(p, this.index, stand.manufaktur, kartenwertBonus(stand));
     this.stapel.forEach((s, i) => (s.visible = i < anzahl));
     this.presse.setzeFassung(p.stufe >= 100 ? 3 : p.stufe >= 25 ? 2 : 1);
 

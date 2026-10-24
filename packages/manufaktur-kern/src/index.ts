@@ -14,3 +14,4 @@ export * from './zeit.js';
 export * from './aktionen.js';
 export * from './ansicht.js';
 export * from './meister.js';
+export * from './werkstattbuch.js';

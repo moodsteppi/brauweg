@@ -167,8 +167,9 @@ export function siegelFaktor(jubilaeen: number): number {
   return 1 + SIEGEL_BONUS * jubilaeen;
 }
 
-export function presseLeistung(index: number, stufe: number, manufaktur: number, jubilaeen = 0): number {
-  return W.PRESSE_GRUND * kartenwert(index) * stufe * sprung(stufe) * faktor(manufaktur) * siegelFaktor(jubilaeen);
+/** `bonus`: dauerhafter Kartenwert-Faktor (Gildensiegel, Guter Ruf) — `kartenwertBonus(stand)`. */
+export function presseLeistung(index: number, stufe: number, manufaktur: number, bonus = 1): number {
+  return W.PRESSE_GRUND * kartenwert(index) * stufe * sprung(stufe) * faktor(manufaktur) * bonus;
 }
 
 /** Dauer eines Arbeitszyklus (ms): Ein Upgrade macht die Presse sichtbar schneller. */
@@ -177,8 +178,8 @@ export function presseZyklus(stufe: number): number {
 }
 
 /** Warenwert, den ein Zyklus in die Ablage-Kiste legt. */
-export function presseErtrag(index: number, stufe: number, manufaktur: number, jubilaeen = 0): number {
-  return (presseLeistung(index, stufe, manufaktur, jubilaeen) * presseZyklus(stufe)) / 1000;
+export function presseErtrag(index: number, stufe: number, manufaktur: number, bonus = 1): number {
+  return (presseLeistung(index, stufe, manufaktur, bonus) * presseZyklus(stufe)) / 1000;
 }
 
 function transportTempo(stufe: number): number {

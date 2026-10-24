@@ -30,8 +30,10 @@ import {
   einstellPreis,
   faehigkeitBereit,
   platzVon,
-  POOL_GROESSE,
-  RANG_CHANCE,
+  buchPreis,
+  poolGroesse,
+  type Eintrag,
+  RANG_CHANCEN,
   neuerStand,
   vorspulen,
   presseLeistung,
@@ -98,7 +100,7 @@ function kandidaten(stand: ManufakturStand): Kandidat[] {
         wert: Math.max(jetzt, 0.5) * 0.5,
         name: `Meister ${name(ziel)}`,
       });
-    } else if (platz.pool.length < POOL_GROESSE && s.stufe >= 10) {
+    } else if (platz.pool.length < poolGroesse(stand) && s.stufe >= 10) {
       // Weitere Meister: Rabatt und staerkere Faehigkeiten. Wert grob „ein
       // Zehntel mehr Ertrag", danach halb so viel — der Spieler sammelt, jagt
       // aber nicht jeden Obermeister.
@@ -150,6 +152,23 @@ function pflegeMeister(stand: ManufakturStand, t: number): ManufakturStand {
     const jetzt = station(stand, ziel);
     if (jetzt.meister && jetzt.art !== 'rabatt' && faehigkeitBereit(jetzt, t)) {
       stand = versuche(stand, { typ: 'faehigkeit', ziel }, t)?.stand ?? stand;
+    }
+  }
+  return stand;
+}
+
+/** In dieser Reihenfolge kauft der Sim-Spieler im Werkstattbuch, sobald die Siegel reichen. */
+const BUCH_REIHENFOLGE: Eintrag[] = ['ruf', 'feilschen', 'nachtschicht', 'erfahrene', 'pausen', 'bewerber', 'lager', 'bautrupps'];
+
+function kaufeImBuch(stand: ManufakturStand, t: number, merke: (t: number, was: string) => void): ManufakturStand {
+  for (const e of BUCH_REIHENFOLGE) {
+    const preis = buchPreis(stand, e);
+    if (preis !== null && preis <= stand.siegel) {
+      const neu = versuche(stand, { typ: 'buch', eintrag: e }, t);
+      if (neu) {
+        merke(t, `Werkstattbuch: ${e} Stufe ${neu.stand.werkstattbuch[e]}`);
+        return neu.stand;
+      }
     }
   }
   return stand;
@@ -239,6 +258,7 @@ function simuliere(DAUER_MS: number, bisManufaktur = Infinity, plan: Plan = IMME
     }
     stand = vorspulen(stand, t);
     stand = pflegeMeister(stand, t);
+    stand = kaufeImBuch(stand, t, merke);
     for (const ziel of ziele(stand)) {
       for (const m of platzVon(stand, ziel).pool) {
         if (m.rang === 'ober' && !ersterOber) {
@@ -399,7 +419,7 @@ function gelegenheit(): void {
 // Belastungsprobe: Jede zufaellige Einstellung ist ein Obermeister — bricht
 // eine Kombination (Tempo ×7, Ladung ×8, Rabatt 80 %) das Spiel?
 if (process.argv.includes('--ober')) {
-  Object.assign(RANG_CHANCE, { jung: 0, meister: 0, ober: 1 });
+  for (const c of RANG_CHANCEN) Object.assign(c, { jung: 0, meister: 0, ober: 1 });
 }
 
 if (process.argv.includes('--gelegenheit')) {

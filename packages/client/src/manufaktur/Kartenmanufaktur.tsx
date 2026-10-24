@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
-  RAENGE,
+  abklingMs,
+  EINTRAEGE,
+  buchPreis,
+  wirkMs,
   bereiteMeister,
   type Aktion,
   type Menge,
@@ -17,8 +20,8 @@ import { t } from '../i18n';
 import { spiele } from '../klang';
 import { HbBlatt, Schliessen, useEscape, useRueckfrage } from '../screens/HbBlatt';
 import { type AnleitungsZiel, anleitungsSchritt } from './anleitung';
-import { LeerlaufBlatt, ManufakturBlatt, MeisterBlatt, UpgradeBlatt, WillkommenBlatt } from './Blaetter';
-import { FINGER, TIPP_RING, UI_ORDNER, manufakturBild } from './bilder';
+import { BuchBlatt, LeerlaufBlatt, ManufakturBlatt, MeisterBlatt, UpgradeBlatt, WillkommenBlatt } from './Blaetter';
+import { FINGER, RIG2_ORDNER, TIPP_RING, UI_ORDNER, manufakturBild } from './bilder';
 import { manufakturName } from './namen';
 import type { Ausschnitt, Szene, SzenenEreignis } from './szene/Szene';
 import { type Rechteck, BREITE, ETAGE_HOEHE, etage, gesamtHoehe, halle } from './szene/layout';
@@ -38,7 +41,8 @@ type Blatt =
   | { art: 'upgrade'; ziel: Ziel }
   | { art: 'meister'; ziel?: Ziel }
   | { art: 'leerlauf' }
-  | { art: 'manufaktur' };
+  | { art: 'manufaktur' }
+  | { art: 'buch' };
 
 function fingerOrt(ziel: AnleitungsZiel): Rechteck {
   const h = halle();
@@ -241,8 +245,13 @@ export function Kartenmanufaktur({
   const naechster = pausierend.reduce<(typeof pausierend)[number] | null>((a, s) => (!a || s.abklingenBis < a.abklingenBis ? s : a), null);
   const naechsteBereit = naechster ? Math.max(0, naechster.abklingenBis - jetzt) : null;
   // Die ganze Pause dieses Meisters: Wirkung plus Abklingen, je nach Rang.
-  const ganzePause = naechster ? RAENGE[naechster.rang ?? 'jung'].wirkMs + RAENGE[naechster.rang ?? 'jung'].abklingMs : 1;
+  const ganzePause = naechster ? wirkMs(stand, naechster.rang ?? 'jung') + abklingMs(stand, naechster.rang ?? 'jung') : 1;
   const boostAnteil = naechsteBereit === null ? 0 : 1 - naechsteBereit / ganzePause;
+  // Leuchtet, sobald die Siegel fuer irgendeinen Eintrag reichen.
+  const buchLeistbar = EINTRAEGE.some((e) => {
+    const preis = buchPreis(stand, e);
+    return preis !== null && stand.siegel >= preis;
+  });
   const rolle = (richtung: 1 | -1): void =>
     feld.current?.scrollBy({ top: richtung * ETAGE_HOEHE * faktor, behavior: 'smooth' });
   const bildrate = debug ? szene.current?.fps() ?? 0 : 0;
@@ -351,6 +360,15 @@ export function Kartenmanufaktur({
           <Symbol art="boost" />
           <span>{boostBereit ? `Alle ×${bereitZahl}` : naechsteBereit !== null ? kurzeDauer(naechsteBereit) : 'Alle'}</span>
         </button>
+        <button
+          type="button"
+          className={`mf-unten-knopf mf-buch-knopf${buchLeistbar ? ' is-bereit' : ''}`}
+          onClick={() => setBlatt({ art: 'buch' })}
+          aria-label={`Werkstattbuch, ${stand.siegel} Siegel`}
+        >
+          <img className="mf-symbol" src={buchSymbol} alt="" aria-hidden="true" draggable={false} />
+          <span>Buch</span>
+        </button>
         <button type="button" className="mf-unten-knopf mf-ort" onClick={() => setBlatt({ art: 'manufaktur' })}>
           <Symbol art="haus" />
           <span>
@@ -398,6 +416,9 @@ export function Kartenmanufaktur({
           onMeister={() => setBlatt({ art: 'meister' })}
           onClose={() => setBlatt(null)}
         />
+      )}
+      {blatt?.art === 'buch' && (
+        <BuchBlatt stand={stand} onKaufen={(eintrag) => tue({ typ: 'buch', eintrag }, 'kauf')} onClose={() => setBlatt(null)} />
       )}
       {blatt?.art === 'manufaktur' && (
         <ManufakturBlatt
@@ -481,6 +502,8 @@ function Symbol({ art }: { art: 'meister' | 'boost' | 'haus' | 'hoch' | 'runter'
   const datei = { meister: 'icon-meister', boost: 'icon-boost', haus: 'icon-manufaktur', hoch: 'icon-hoch', runter: 'icon-runter' }[art];
   return <img className="mf-symbol" src={`${UI_ORDNER}/${datei}.webp`} alt="" aria-hidden="true" draggable={false} />;
 }
+
+const buchSymbol = `${RIG2_ORDNER}/werkstattbuch.webp`;
 
 /** „4:12" bzw. „38s" unter dem Knopf. */
 function kurzeDauer(ms: number): string {

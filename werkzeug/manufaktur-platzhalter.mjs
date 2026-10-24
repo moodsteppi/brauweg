@@ -99,7 +99,7 @@ await form('siegel', 128, 128, '<circle cx="64" cy="64" r="54" fill="#b3262c" st
 await form('werkstattbuch', 256, 256, '<rect x="40" y="30" width="176" height="200" rx="14" fill="#6a3418" stroke="#2e160a" stroke-width="8"/><rect x="58" y="30" width="10" height="200" fill="#3e1e0c"/><path d="M40 30 h40 l-40 40 z M216 30 h-40 l40 40 z M40 230 h40 l-40 -40 z M216 230 h-40 l40 -40 z" fill="#d9a83a"/>');
 await form('werkstattbuch-seite', 768, 1024, '<rect x="0" y="0" width="768" height="1024" rx="24" fill="#f1e2bd"/>' + Array.from({ length: 22 }, (_, i) => `<line x1="80" y1="${120 + i * 40}" x2="688" y2="${120 + i * 40}" stroke="#e0cc9c" stroke-width="2"/>`).join(''));
 const glyph = {
-  nachtschicht: '<path d="M78 30 a34 34 0 1 0 0 68 a26 26 0 1 1 0 -68 z" fill="#f0d27a"/>',
+  nachtschicht: '<circle cx="60" cy="64" r="30" fill="#f0d27a"/><circle cx="76" cy="54" r="26" fill="#4a2a14"/>',
   ruf: '<rect x="46" y="34" width="36" height="52" rx="5" fill="#fff" stroke="#7a5410" stroke-width="4"/><path d="M30 96 q34 20 68 0" stroke="#5cb85c" stroke-width="6" fill="none"/>',
   erfahrene: '<path d="M42 30 h44 l-22 34 l22 34 h-44 l22 -34 z" fill="#e6d4a8" stroke="#7a5410" stroke-width="4"/>',
   pausen: '<rect x="36" y="50" width="44" height="44" rx="8" fill="#fff"/><path d="M80 60 q16 12 0 24" stroke="#fff" stroke-width="6" fill="none"/>',

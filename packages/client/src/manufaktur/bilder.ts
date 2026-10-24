@@ -68,6 +68,14 @@ export function faehigkeitBild(art: 'tempo' | 'ladung' | 'rabatt' | 'alle'): str
   return `${RIG2_ORDNER}/faehigkeit-${art}.webp`;
 }
 
+export function siegelBild(): string {
+  return `${RIG2_ORDNER}/siegel.webp`;
+}
+
+export function buchBild(eintrag: string): string {
+  return `${RIG2_ORDNER}/wb-${eintrag}.webp`;
+}
+
 export const BILD = {
   lager: `${ORDNER}/lager.webp`,
   versand: `${ORDNER}/versand.webp`,

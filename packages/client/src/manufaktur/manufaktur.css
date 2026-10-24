@@ -941,3 +941,93 @@
   height: 20px;
   margin: 0;
 }
+
+/* --- Werkstattbuch (Phase 3) ------------------------------------------- */
+/* Buchoptik: die Pergamentseite als Grund, dunkle Tinte darauf. */
+.mf-buch {
+  padding: 12px;
+  border-radius: 14px;
+  background: url(/manufaktur/rig2/werkstattbuch-seite.webp) center / 100% 100% no-repeat;
+  color: #3a2608;
+}
+.mf-buch-siegel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font: 400 22px var(--hb-anz);
+}
+.mf-buch-siegel img {
+  width: 28px;
+  height: 28px;
+}
+.mf-buch-siegel small {
+  flex-basis: 100%;
+  font: 700 12px var(--hb-txt);
+  color: #6b4a20;
+}
+.mf-buch-liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mf-buch-liste li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(107, 74, 32, 0.25);
+}
+.mf-buch-zeichen {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.mf-buch-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.mf-buch-text strong {
+  font: 700 14px var(--hb-txt);
+}
+.mf-buch-text small {
+  font: 700 12px var(--hb-txt);
+  color: #6b4a20;
+}
+.mf-buch-text small b {
+  color: #1f6b3a;
+}
+.mf-buch-stufen {
+  display: flex;
+  gap: 3px;
+  margin-top: 3px;
+}
+.mf-buch-stufen i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #8a6a30;
+}
+.mf-buch-stufen i.is-voll {
+  background: #b3262c;
+  border-color: #6a1014;
+}
+:is(.hb, .spe) .mf-buch-liste .hb-kn {
+  flex: none;
+  min-width: 70px;
+  min-height: 36px;
+}
+.mf-buch-preis {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+}
+.mf .mf-unten .mf-buch-knopf.is-bereit {
+  box-shadow: 0 0 8px rgba(255, 200, 60, 0.8), inset 0 1px 0 rgba(255, 220, 160, 0.25);
+}

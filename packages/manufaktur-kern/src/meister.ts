@@ -15,6 +15,7 @@
 
 import { type Ziel, meisterKosten } from './formeln.js';
 import type { FaehigkeitArt, ManufakturStand, MeisterKarte, MeisterPlatz, Rang, Station } from './stand.js';
+import { pausenFaktor, rangChance, wirkFaktor } from './werkstattbuch.js';
 
 export type StationArt = Ziel['art'];
 
@@ -26,6 +27,16 @@ export const RAENGE: Record<Rang, { wirkMs: number; abklingMs: number }> = {
 };
 
 const RANG_INDEX: Record<Rang, number> = { jung: 0, meister: 1, ober: 2 };
+
+/** Wirkdauer mit dem Werkstattbuch (Erfahrene Meister). */
+export function wirkMs(stand: ManufakturStand, rang: Rang): number {
+  return RAENGE[rang].wirkMs * wirkFaktor(stand);
+}
+
+/** Pause nach der Wirkung mit dem Werkstattbuch (Kurze Pausen). */
+export function abklingMs(stand: ManufakturStand, rang: Rang): number {
+  return RAENGE[rang].abklingMs * pausenFaktor(stand);
+}
 
 /**
  * Staerke je Station, Faehigkeit und Rang (Jung / Meister / Ober). Tempo und
@@ -50,8 +61,6 @@ export function festeEinstellung(station: StationArt, nummer: number): { rang: R
   return null;
 }
 
-/** Wahrscheinlichkeiten beim zufaelligen Einstellen. */
-export const RANG_CHANCE: Record<Rang, number> = { jung: 0.7, meister: 0.25, ober: 0.05 };
 /** Jede weitere Einstellung an derselben Station kostet so viel mehr. */
 export const EINSTELLEN_STEIGUNG = 1.6;
 export const POOL_GROESSE = 5;
@@ -108,7 +117,8 @@ export function zieheZahl(zustand: number): [number, number] {
 }
 
 /** Rang und Faehigkeit der naechsten Einstellung — veraendert `stand.zufall`, wenn gezogen wird. */
-export function ziehe(stand: ManufakturStand, ziel: Ziel, chance: Record<Rang, number> = RANG_CHANCE): { rang: Rang; art: FaehigkeitArt } {
+export function ziehe(stand: ManufakturStand, ziel: Ziel): { rang: Rang; art: FaehigkeitArt } {
+  const chance = rangChance(stand);
   const fest = festeEinstellung(ziel.art, platzVon(stand, ziel).eingestellt);
   if (fest) return fest;
   const [a, z1] = zieheZahl(stand.zufall);

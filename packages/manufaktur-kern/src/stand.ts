@@ -9,7 +9,7 @@
 
 import { MAX_PRESSEN, meisterKosten } from './formeln.js';
 
-export const FASSUNG = 4;
+export const FASSUNG = 5;
 
 /** Ein Arbeitszyklus: laeuft er, und wie weit ist er (0 … 1)? */
 export interface Zyklus {
@@ -102,6 +102,10 @@ export interface ManufakturStand {
   /** Zustand des Zufalls fuer das Einstellen; der Server setzt den Anfang, der Kern zieht weiter. */
   zufall: number;
   naechsteMeisterId: number;
+  /** Siegel fuers Werkstattbuch (Renovieren, Umzug). Eigene Waehrung, nie Hub-Muenzen. */
+  siegel: number;
+  /** Stufe je Eintrag des Werkstattbuchs (werkstattbuch.ts). Wird nie zurueckgesetzt. */
+  werkstattbuch: Record<string, number>;
   /** Bis hierhin (ms) ist gerechnet — immer ein ganzer Takt. */
   zeit: number;
 }
@@ -121,6 +125,8 @@ export interface Bleibt {
   belegschaft?: Record<string, MeisterPlatz>;
   zufall?: number;
   naechsteMeisterId?: number;
+  siegel?: number;
+  werkstattbuch?: Record<string, number>;
 }
 
 /**
@@ -143,6 +149,8 @@ export function neuerStand(jetzt: number, manufaktur = 1, bleibt: Bleibt = {}): 
     belegschaft: kopiereBelegschaft(bleibt.belegschaft ?? {}),
     zufall: bleibt.zufall ?? 1,
     naechsteMeisterId: bleibt.naechsteMeisterId ?? 1,
+    siegel: bleibt.siegel ?? 0,
+    werkstattbuch: { ...(bleibt.werkstattbuch ?? {}) },
     zeit: jetzt,
   };
 }
@@ -161,6 +169,7 @@ export function kopiere(stand: ManufakturStand): ManufakturStand {
     versand: { ...stand.versand },
     meilensteine: [...stand.meilensteine],
     belegschaft: kopiereBelegschaft(stand.belegschaft),
+    werkstattbuch: { ...stand.werkstattbuch },
   };
 }
 
@@ -178,7 +187,7 @@ interface StandFassung1 {
 }
 
 /** Fassung 3 (bis 24.10.2026): Meister nur als Ja/Nein an der Station, ohne Pool. */
-type StandFassung3 = Omit<ManufakturStand, 'fassung' | 'belegschaft' | 'zufall' | 'naechsteMeisterId'> & { fassung: 3 };
+type StandFassung3 = Omit<ManufakturStand, 'fassung' | 'belegschaft' | 'zufall' | 'naechsteMeisterId' | 'siegel' | 'werkstattbuch'> & { fassung: 3 };
 
 /**
  * Ein Anfangswert fuer den Zufall aus der Uhrzeit. Nur fuer umgebaute
@@ -205,6 +214,8 @@ function ausFassung3(alt: StandFassung3): ManufakturStand {
     belegschaft: {},
     zufall: zufallAus(alt.zeit),
     naechsteMeisterId: 1,
+    siegel: 0,
+    werkstattbuch: {},
   };
   const stationen: [string, Station][] = [
     ...alt.pressen.map((p, i): [string, Station] => [`presse-${i}`, p]),
@@ -243,6 +254,8 @@ export function migriere(roh: unknown): ManufakturStand {
   // Fassung 2 (Zyklen, ohne Jubilaeum): alles bleibt, es gab nur noch keine Siegel.
   if ((alt.fassung as number | undefined) === 2) return ausFassung3({ ...(alt as unknown as StandFassung3), fassung: 3, jubilaeen: 0 });
   if ((alt.fassung as number | undefined) === 3) return ausFassung3(alt as unknown as StandFassung3);
+  // Fassung 4 (Meister mit Pools, ohne Werkstattbuch): alles bleibt, Buch leer.
+  if ((alt.fassung as number | undefined) === 4) return { ...(alt as ManufakturStand), fassung: FASSUNG, siegel: 0, werkstattbuch: {} };
   const v1 = alt as StandFassung1;
   const neu = neuerStand(v1.zeit, v1.manufaktur ?? 1, { meilensteine: v1.meilensteine ?? [] }) as unknown as StandFassung3;
   neu.taler = v1.taler ?? 0;

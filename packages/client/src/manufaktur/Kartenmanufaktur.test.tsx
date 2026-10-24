@@ -149,6 +149,20 @@ describe('Kartenmanufaktur: Meister und Leerlauf', () => {
   });
 });
 
+describe('Kartenmanufaktur: Werkstattbuch', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('die Leiste öffnet das Buch, ein Eintrag kostet Siegel', async () => {
+    oeffne({ ...neuerStand(Date.now(), 1, { siegel: 4 }), taler: 10 });
+    fireEvent.click(await screen.findByRole('button', { name: /Werkstattbuch, 4 Siegel/ }));
+    const buch = await screen.findByRole('dialog', { name: 'Werkstattbuch' });
+    fireEvent.click(within(buch).getByRole('button', { name: 'Guter Ruf kaufen, 2 Siegel' }));
+    await vi.waitFor(() => expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'buch', eintrag: 'ruf' }, expect.any(Number)));
+    // Zu teuer: ausgegraut.
+    expect((within(buch).getByRole('button', { name: 'Gute Bewerber kaufen, 6 Siegel' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
 describe('Kartenmanufaktur: Jubiläum im Kartenpalast', () => {
   beforeEach(() => vi.clearAllMocks());
 

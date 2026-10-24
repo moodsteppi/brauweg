@@ -71,6 +71,26 @@ früher — die langen Pausen und der Engpass der Kette deckeln die starken
 Kombinationen. Gelegenheitsspieler: erster Umzug nach 1,9 Tagen (vorher 1,5;
 der Sim-Spieler gibt jetzt auch Geld für weitere Meister aus).
 
+## Werkstattbuch (dauerhaft)
+
+Eigene Währung **Siegel** — für jede Renovierung (3 / 5 / 8 / 12 je Stufe)
+und jeden Umzug (5), **nie Hub-Münzen**. Das Buch wird nie zurückgesetzt
+(`packages/manufaktur-kern/src/werkstattbuch.ts`):
+
+| Eintrag | je Stufe | Stufen | Preise (Siegel) |
+| --- | --- | --- | --- |
+| Längere Nachtschicht | Offline-Deckel +1 h (1 → 4 h) | 3 | 3 / 6 / 10 |
+| Guter Ruf | Kartenwert +10 % | 5 | 2 / 4 / 6 / 9 / 13 |
+| Erfahrene Meister | Fähigkeitsdauer +15 % | 3 | 4 / 7 / 11 |
+| Kurze Pausen | Abklingzeit −10 % | 3 | 4 / 7 / 11 |
+| Feilschen | Ausbau −5 % | 3 | 3 / 6 / 10 |
+| Gute Bewerber | Obermeister 5 → 8 → 12 % | 2 | 6 / 12 |
+| Flinke Bautrupps | Bauzeit −25 % | 2 | 4 / 8 |
+| Großes Lager | Pool +2 | 1 | 8 |
+
+Zusammen 154 Siegel = fünf voll renovierte Orte plus vier Umzüge. Die
+Nachtschicht geht bewusst von 1 h aus, nicht von 2 h (siehe Offline-Verdienst).
+
 ## Zahlen
 
 Alle Formeln stehen in `packages/manufaktur-kern/src/formeln.ts`, die

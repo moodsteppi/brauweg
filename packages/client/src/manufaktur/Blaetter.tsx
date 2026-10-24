@@ -1,8 +1,13 @@
 import { useState } from 'react';
 
 import {
+  BUCH,
+  EINTRAEGE,
+  type Eintrag,
+  buchPreis,
+  buchStufe,
   type FaehigkeitArt,
-  POOL_GROESSE,
+  poolGroesse,
   type Rang,
   VERKAUF_ANTEIL,
   type Kennzahl,
@@ -24,7 +29,7 @@ import {
 } from '@brauweg/manufaktur-kern';
 
 import { HbBlatt } from '../screens/HbBlatt';
-import { abzeichenBild, faehigkeitBild, manufakturBild, medaillonBild, meisterBild } from './bilder';
+import { abzeichenBild, buchBild, faehigkeitBild, siegelBild, manufakturBild, medaillonBild, meisterBild } from './bilder';
 import { MANUFAKTUREN, RANG_NAME, faehigkeitText, manufakturName, stationName } from './namen';
 import { dauer, kurz, proSekunde, sekunden } from './zahlen';
 
@@ -255,7 +260,7 @@ function MeisterAbschnitt({
   const zugewiesen = platz.pool.find((m) => m.id === platz.zugewiesen);
   const andere = platz.pool.filter((m) => m.id !== platz.zugewiesen);
   const preis = einstellPreis(stand, ziel);
-  const voll = platz.pool.length >= POOL_GROESSE;
+  const voll = platz.pool.length >= poolGroesse(stand);
   const leistbar = einstellenLeistbar(stand, ziel);
   const wirkt = jetzt < s.faehigkeitBis;
   const bereit = faehigkeitBereit(s, jetzt);
@@ -269,7 +274,7 @@ function MeisterAbschnitt({
             <strong>
               {RANG_NAME[zugewiesen.rang]} <FaehigkeitZeichen art={zugewiesen.art} />
             </strong>
-            <small>{faehigkeitText(ziel.art, zugewiesen.rang, zugewiesen.art)}</small>
+            <small>{faehigkeitText(stand, ziel.art, zugewiesen.rang, zugewiesen.art)}</small>
             <small className={wirkt ? 'is-wirkt' : undefined}>
               {wirkt ? `Wirkt noch ${bereitIn(s.faehigkeitBis - jetzt)}` : bereit ? 'Bereit' : `Bereit in ${bereitIn(s.abklingenBis - jetzt)}`}
             </small>
@@ -292,7 +297,7 @@ function MeisterAbschnitt({
                   <strong>
                     {RANG_NAME[m.rang]} <FaehigkeitZeichen art={m.art} />
                   </strong>
-                  <small>{faehigkeitText(ziel.art, m.rang, m.art)}</small>
+                  <small>{faehigkeitText(stand, ziel.art, m.rang, m.art)}</small>
                   {pausiert && <small>Bereit in {bereitIn(m.abklingenBis - jetzt)}</small>}
                 </span>
                 <span className="mf-meister-knoepfe">
@@ -321,7 +326,7 @@ function MeisterAbschnitt({
         aria-label={voll ? 'Pool voll' : `Meister einstellen, ${kurz(preis)} Taler`}
       >
         {voll ? (
-          `Pool voll (${POOL_GROESSE})`
+          `Pool voll (${poolGroesse(stand)})`
         ) : (
           <>
             Einstellen · <i className="mf-taler" aria-hidden="true" /> {kurz(preis)}
@@ -514,6 +519,89 @@ export function ManufakturBlatt({
         <label className="mf-debug">
           <input type="checkbox" checked={debug} onChange={(e) => onDebug(e.target.checked)} /> Anker, Drehpunkte und Bildrate zeigen
         </label>
+      </div>
+    </HbBlatt>
+  );
+}
+
+/** Name und Wirkung je Eintrag — die Zahlen kommen aus dem Kern (werkstattbuch.ts). */
+const BUCH_TEXT: Record<Eintrag, { name: string; wirkung: (stufe: number) => string }> = {
+  nachtschicht: { name: 'Längere Nachtschicht', wirkung: (s) => `Offline bis ${1 + s} h` },
+  ruf: { name: 'Guter Ruf', wirkung: (s) => `Kartenwert +${10 * s} %` },
+  erfahrene: { name: 'Erfahrene Meister', wirkung: (s) => `Fähigkeiten +${15 * s} % länger` },
+  pausen: { name: 'Kurze Pausen', wirkung: (s) => `Pausen −${10 * s} %` },
+  feilschen: { name: 'Feilschen', wirkung: (s) => `Ausbau −${5 * s} %` },
+  bewerber: { name: 'Gute Bewerber', wirkung: (s) => `Obermeister ${[5, 8, 12][s]} %` },
+  bautrupps: { name: 'Flinke Bautrupps', wirkung: (s) => `Bauzeit −${25 * s} %` },
+  lager: { name: 'Großes Lager', wirkung: (s) => `${5 + 2 * s} Meister je Station` },
+};
+
+/**
+ * Das Werkstattbuch (Phase 3): dauerhafte Verbesserungen fuer Siegel. Wird
+ * nie zurueckgesetzt — deshalb steht oben, woher Siegel kommen.
+ */
+export function BuchBlatt({
+  stand,
+  onKaufen,
+  onClose,
+}: {
+  stand: ManufakturStand;
+  onKaufen: (eintrag: Eintrag) => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  return (
+    <HbBlatt titel="Werkstattbuch" onClose={onClose} klasse="is-klein">
+      <div className="mf-blatt mf-buch">
+        <p className="mf-buch-siegel" aria-label={`${stand.siegel} Siegel`}>
+          <img src={siegelBild()} alt="" draggable={false} /> {stand.siegel}
+          <small>Siegel gibt es fürs Renovieren und für jeden Umzug. Was hier steht, bleibt für immer.</small>
+        </p>
+        <ul className="mf-buch-liste">
+          {EINTRAEGE.map((e) => {
+            const stufe = buchStufe(stand, e);
+            const max = BUCH[e].length;
+            const preis = buchPreis(stand, e);
+            const text = BUCH_TEXT[e];
+            const leistbar = preis !== null && stand.siegel >= preis;
+            return (
+              <li key={e}>
+                <img className="mf-buch-zeichen" src={buchBild(e)} alt="" draggable={false} />
+                <span className="mf-buch-text">
+                  <strong>{text.name}</strong>
+                  <small>
+                    {stufe > 0 ? text.wirkung(stufe) : 'noch nicht'}
+                    {preis !== null && (
+                      <>
+                        {' → '}
+                        <b>{text.wirkung(stufe + 1)}</b>
+                      </>
+                    )}
+                  </small>
+                  <span className="mf-buch-stufen" aria-label={`Stufe ${stufe} von ${max}`}>
+                    {Array.from({ length: max }, (_, i) => (
+                      <i key={i} className={i < stufe ? 'is-voll' : undefined} />
+                    ))}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  className={`hb-kn${leistbar ? ' is-gold' : ''}`}
+                  disabled={!leistbar}
+                  onClick={() => onKaufen(e)}
+                  aria-label={preis === null ? `${text.name}: voll` : `${text.name} kaufen, ${preis} Siegel`}
+                >
+                  {preis === null ? (
+                    'Voll'
+                  ) : (
+                    <>
+                      <img className="mf-buch-preis" src={siegelBild()} alt="" draggable={false} /> {preis}
+                    </>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </HbBlatt>
   );

@@ -16,12 +16,12 @@ import {
   type Aktion,
   AktionAbgelehnt,
   type ManufakturStand,
-  OFFLINE_MS,
   type Meilenstein,
   handle,
   migriere,
   neueMeilensteine,
   neuerStand,
+  offlineMs,
   stationVon,
   vorspulen,
 } from '@brauweg/manufaktur-kern';
@@ -130,7 +130,7 @@ export async function manufakturHeute(db: Db, accountId: string, jetzt = new Dat
       zeit: ms,
       offline:
         geladen && weg >= OFFLINE_MELDUNG_AB_MS && (gewonnen > 0 || produziert > 0)
-          ? { sekunden: Math.round(Math.min(weg, OFFLINE_MS) / 1000), taler: gewonnen, produziert }
+          ? { sekunden: Math.round(Math.min(weg, offlineMs(alt)) / 1000), taler: gewonnen, produziert }
           : null,
       muenzen,
     };
