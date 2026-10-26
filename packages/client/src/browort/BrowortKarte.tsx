@@ -2,7 +2,7 @@ import type { BrowortKurz } from './sicht';
 import { BrowortFlamme, schnittText } from './Spielfeld';
 
 /**
- * Browort auf dem Start (nur in der App): Flamme mit dem Schnitt der
+ * Browort auf dem Start (App und Webseite): Flamme mit dem Schnitt der
  * Versuche, darunter die Serie. Ein Tipp oeffnet das Wort des Tages.
  *
  * Ohne `stand` (ein Server, der das Feld noch nicht kennt) steht die Karte

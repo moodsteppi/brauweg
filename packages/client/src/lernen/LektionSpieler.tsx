@@ -7,6 +7,7 @@ import { t } from '../i18n';
 import { spiele } from '../klang';
 import { Pinguin } from '../pinguin';
 import type { Card } from '../protocol';
+import { imUmfang } from '../umfang';
 import { merkeGefeiert } from './gefeiert';
 import { Flamme } from './Flamme';
 import { LERN_NAMEN, type Lektion, type LernSchritt, type LernStichKarte, type Spieltag } from './sicht';
@@ -98,6 +99,9 @@ export function LektionSpieler({
   }, [amEnde, lektion?.id]);
 
   const schritt = lektion && !amEnde ? lektion.schritte[index]! : null;
+  // Die Übungsrunde ist ein Doppelkopf-Tisch: Ohne Doppelkopf im Umfang
+  // gibt es sie nicht (der Server lehnt sie dann ab, umfang.ts im Server).
+  const mitTisch = imUmfang('doppelkopf');
 
   const pruefe = (stimmt: boolean, wert: number): void => {
     if (antwort?.stimmt) return;
@@ -191,8 +195,17 @@ export function LektionSpieler({
         {amEnde && lektion?.uebung && (
           <div className="ln-ende">
             <img className="ln-ende-bild" src="/hub/banner-doppelkopf.webp" alt="" />
-            <h2>Bereit für den Tisch?</h2>
-            <p>Eine Runde, drei Bots, und unten stehen Tipps. Wenn die Runde abgerechnet ist, zählt sie für deine Serie.</p>
+            {mitTisch ? (
+              <>
+                <h2>Bereit für den Tisch?</h2>
+                <p>Eine Runde, drei Bots, und unten stehen Tipps. Wenn die Runde abgerechnet ist, zählt sie für deine Serie.</p>
+              </>
+            ) : (
+              <>
+                <h2>Ende der Lektion</h2>
+                <p>Die Übungsrunde am Tisch gibt es hier nicht.</p>
+              </>
+            )}
           </div>
         )}
         {amEnde && !lektion?.uebung && ergebnis && <Ergebnis tag={ergebnis} fehlversuche={fehlversuche} />}
@@ -237,7 +250,7 @@ export function LektionSpieler({
             Nochmal
           </button>
         )}
-        {amEnde && lektion?.uebung && (
+        {amEnde && lektion?.uebung && mitTisch && (
           <button
             type="button"
             className="hb-kn is-gold is-haupt is-breit"
@@ -251,6 +264,11 @@ export function LektionSpieler({
             }}
           >
             {startet ? 'Tisch wird gedeckt…' : 'Runde starten'}
+          </button>
+        )}
+        {amEnde && lektion?.uebung && !mitTisch && (
+          <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onClose}>
+            Weiter
           </button>
         )}
         {amEnde && ergebnis && ergebnis.belohnung && (

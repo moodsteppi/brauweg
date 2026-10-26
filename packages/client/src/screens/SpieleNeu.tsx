@@ -91,6 +91,27 @@ function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element 
   );
 }
 
+/**
+ * Die Chips über der Spielliste (ohne „Alle", das immer davor steht).
+ *
+ * Ein Chip, hinter dem nichts Spielbares steht, wäre ein leerer Bildschirm.
+ * In der App ist nur ein Teil der Spiele freigegeben (FREIGABE im Server):
+ * Dort zählen deshalb nur Kategorien mit spielbaren Spielen, und alles
+ * Übrige sammelt der Chip „Kommt bald" (Emile, 13.10.2026). Auf der Webseite
+ * passiert dasselbe, seit `UMFANG` dort ganze Kategorien leeren kann
+ * (Abnahme-Probe 3d2e54c6, 24.10.2026: „Trinkspiele" und „Echtzeit" führten
+ * ins Leere) — aber ohne „Kommt bald": Das Bald steht dort unter „Modi".
+ * Ohne `UMFANG` ist auf der Webseite jede Kategorie spielbar, die Leiste
+ * also dieselbe wie vorher.
+ *
+ * Herausgezogen, damit die Proben sie ohne Bildschirm und ohne `inApp`-Mock
+ * für beide Plattformen fragen können.
+ */
+export function chipsFuer(spielbar: readonly string[], app: boolean): readonly { id: string; titel: string }[] {
+  const belegt = KATEGORIEN.filter((k) => spielbar.some((id) => k.spiele.includes(id)));
+  return app ? [...belegt, { id: 'bald', titel: 'Kommt bald' }] : belegt;
+}
+
 function kategorieVon(gameId: string): Kategorie | null {
   return KATEGORIEN.find((k) => k.spiele.includes(gameId)) ?? null;
 }
@@ -113,7 +134,7 @@ export function SpieleNeu({
   onSolo: (modusId: string) => void;
   onBald: (name: string) => void;
   onSammlung: () => void;
-  /** „Doppelkopf lernen" auf der Doppelkopf-Seite — nur in der App gesetzt. */
+  /** „Doppelkopf lernen" auf der Doppelkopf-Seite — nur gesetzt, wenn es im Umfang steht. */
   onLernen?: () => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[] | null>(null);
@@ -193,13 +214,7 @@ export function SpieleNeu({
   const bekannt = new Set(KATEGORIEN.flatMap((k) => k.spiele));
   const weitere = spielbar.filter((g) => !bekannt.has(g.id));
   const zeige = (id: string): boolean => filter === 'alle' || filter === id;
-  // In der App ist nur ein Teil der Spiele freigegeben (FREIGABE im Server).
-  // Ein Chip, hinter dem nichts Spielbares steht, wäre ein leerer Bildschirm —
-  // dort zählen deshalb nur Kategorien mit spielbaren Spielen, und alles
-  // Übrige sammelt der Chip „Kommt bald" (Emile, 13.10.2026).
-  const chips: readonly { id: string; titel: string }[] = inApp
-    ? [...KATEGORIEN.filter((k) => spielbar.some((g) => k.spiele.includes(g.id))), { id: 'bald', titel: 'Kommt bald' }]
-    : KATEGORIEN;
+  const chips = chipsFuer(spielbar.map((g) => g.id), inApp);
 
   // Spiele, ueber die erst abgestimmt wird, gibt es noch nicht — also auch
   // kein Banner. `bannerFuer` zeigte auf eine fehlende Datei, und statt des
@@ -213,6 +228,8 @@ export function SpieleNeu({
   const mitManufaktur = imUmfang('kartenmanufaktur');
   const mitBrowort = imUmfang('browort');
   const mitProSubway = imUmfang('prosubway');
+  // Auf beiden Plattformen abstimmen, soweit der Releaseumfang es erlaubt.
+  const mitAbstimmung = imUmfang('abstimmung');
 
   const baldZeile = (g: GameSummary): React.JSX.Element => (
     <div className="hb-bald" key={g.id} role="group" aria-label={t(g.nameKey)}>
@@ -222,12 +239,12 @@ export function SpieleNeu({
           <strong>{t(g.nameKey)}</strong>
           <small>
             {sitzSpanne(g.seatCounts)} Spieler
-            {g.abstimmbar !== false ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
+            {g.abstimmbar !== false && mitAbstimmung ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
           </small>
         </span>
       </button>
       {/* Eine Stimme je Konto und angekuendigtem Spiel, vom Server bestaetigt. */}
-      {g.abstimmbar !== false ? (
+      {g.abstimmbar !== false && mitAbstimmung ? (
         <button
           type="button"
           className="hb-kn is-stimme"
@@ -370,10 +387,13 @@ export function SpieleNeu({
           </section>
         )}
 
-        {/* In der App: die beiden Solo-Spiele (Emile, 23.10.2026). Die
-            Manufaktur hat ihr Bild (docs/ASSETS-KARTENMANUFAKTUR.md), Browort
-            bis zu einer Bestellung ein gezeichnetes Feld statt eines fehlenden Bildes. */}
-        {filter === 'alle' && inApp && (mitManufaktur || mitBrowort) && (
+        {/* Die Solo-Spiele (Emile, 23.10.2026; seit demselben Tag auch auf der
+            Webseite, vorher nur `inApp`). Die Manufaktur hat ihr Bild
+            (docs/ASSETS-KARTENMANUFAKTUR.md), Browort bis zu einer Bestellung
+            ein gezeichnetes Feld statt eines fehlenden Bildes. Pro-Subway steht
+            im selben Abschnitt — zwei Überschriften „Allein" untereinander
+            sähen nach einem Fehler aus. */}
+        {filter === 'alle' && (mitManufaktur || mitBrowort || (!inApp && mitProSubway)) && (
           <section className="hb-blk">
             <h2 className="hb-ab">
               <Symbol>
@@ -382,6 +402,22 @@ export function SpieleNeu({
               </Symbol>
               Allein
             </h2>
+            {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
+                dort steht es unter „Kommt bald". */}
+            {!inApp && mitProSubway && (
+              <button
+                type="button"
+                className="hb-quer"
+                style={{ backgroundImage: 'url(/hub/banner-prosubway.webp)' }}
+                onClick={() => onSolo('prosubway')}
+              >
+                <span className="hb-quer-text">
+                  <strong>{t('modus.prosubway')}</strong>
+                  <span>Münzen fürs Hub · bis 40 am Tag</span>
+                </span>
+                <span className="hb-kn is-gold">Los</span>
+              </button>
+            )}
             {mitManufaktur && (
               <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
                 <img className="hb-manufaktur-bild" src="/manufaktur/werkstatt-hero.webp" alt="" />
@@ -412,32 +448,6 @@ export function SpieleNeu({
 
         {filter === 'alle' && !inApp && (
           <>
-            {mitProSubway && (
-              <section className="hb-blk">
-                <h2 className="hb-ab">
-                  <Symbol>
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-                  </Symbol>
-                  Allein
-                </h2>
-                {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
-                    dort steht es unter „Kommt bald". */}
-                <button
-                  type="button"
-                  className="hb-quer"
-                  style={{ backgroundImage: 'url(/hub/banner-prosubway.webp)' }}
-                  onClick={() => onSolo('prosubway')}
-                >
-                  <span className="hb-quer-text">
-                    <strong>{t('modus.prosubway')}</strong>
-                    <span>Münzen fürs Hub · bis 40 am Tag</span>
-                  </span>
-                  <span className="hb-kn is-gold">Los</span>
-                </button>
-              </section>
-            )}
-
             <section className="hb-blk">
               <h2 className="hb-ab">
                 <Symbol>

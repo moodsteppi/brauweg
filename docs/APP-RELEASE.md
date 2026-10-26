@@ -54,13 +54,13 @@ unverändert**, und nichts davon braucht einen neuen App-Build.
 - `bald` — steht mit „Bald"-Marke da, lässt sich nicht starten, ohne Abstimmung.
 - `aus` — gar nicht zu sehen (nur App).
 
-**Stand (Emile, 13.10.2026):** In der App spielbar **Doppelkopf, Skat,
-Partykiste, Filler (in der App „Farbduell", `APP_NAMEN` in
+**Stand (Emile, 13.10.2026; Partykiste seit 21.10. „Bald"):** In der App spielbar **Doppelkopf, Skat,
+Filler (in der App „Farbduell", `APP_NAMEN` in
 `packages/client/src/i18n.ts`) und BroChess**; auf „Bald" alle anderen
-(Zauberer, Cambio, Poker, Mememory, Eiland, Feldherr, Tafelrunde, Golf,
+(Partykiste, Zauberer, Cambio, Poker, Mememory, Eiland, Feldherr, Tafelrunde, Golf,
 BroCooked); Werwolf in der App `aus`. Die App zeigt die Bald-Spiele
 zugeklappt in einer eigenen Kategorie „Kommt bald" (`SpieleNeu.tsx`). Auf
-der Webseite alles wie bisher, BroChess dort weiter „Bald". **Ein Spiel wechselt mit einer
+der Webseite alles spielbar, BroChess seit #325 auch. **Ein Spiel wechselt mit einer
 Zeile und einem Deploy in die App** — die installierten Apps richten sich
 beim nächsten Öffnen danach.
 
@@ -101,11 +101,35 @@ Zeile, wenn der Rückweg aktiv ist.
 Welche Spiele und Funktionen eine Ausgabe überhaupt anbietet — für Webseite
 und App aus **einer** Liste (`packages/server/src/umfang.ts`). Kommagetrennt,
 Spielkennungen der Registry plus diese Funktionen: `kartenmanufaktur`,
-`browort`, `clanwort`, `lernpfad`, `prosubway`, `clankrieg`, `clanchat`.
+`browort`, `clanwort`, `lernpfad`, `prosubway`, `clankrieg`, `clanchat`,
+`shop`, `abstimmung`, `profilbild`, `figur`, `geburtstag`.
+
+**Vorschlag für die Produktion (Robin, 23.10.2026): die Webseite zeigt genau
+den Umfang der App.**
 
 ```
 UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad
 ```
+
+Das sind die fünf Spiele, die in der App `spielbar` sind (`FREIGABE` in
+`registry.ts`; die Partykiste steht seit dem 21.10.2026 auch in der App auf
+„Bald") und die Solo-Funktionen, die die App zeigt. Weg sind damit auf der
+Webseite: alle übrigen Spiele, Pro-Subway, Clankrieg und Clan-Chat sowie
+alles, was es in der App nicht gibt:
+
+| Funktion | gesperrte Route(n) | Einstieg im Client |
+| --- | --- | --- |
+| `shop` | `/api/shop/pakete…`, `/api/shop/truhen…`, `POST /api/shop/:itemId/buy` mit Edelsteinen | Shop-Reiter und Plus-Knöpfe (`GameSelect.tsx`), Edelsteinpreise (`mitEdelsteinen` in `laufzeit.ts`), Shop-Verweis an gesperrten Paketen (`inhaltspakete.ts`), Kaufwappen (`Clan.tsx`) |
+| `abstimmung` | `POST /api/games/:gameId/vote` | Stimmenzahl und „Dafür" (`SpieleNeu.tsx`) |
+| `profilbild` | `PATCH /api/me` | Hochladen am Profilbild (`GameSelect.tsx`, `ProfilBild`) |
+| `figur` | `/api/me/figur` | 3D-Figur und Werkstatt im Profil (`GameSelect.tsx`), Pinguin-Karte (`SammlungNeu.tsx`) |
+| `geburtstag` | `POST /api/me/birthday-reward` | Geburtstagsabschnitte im Profil (`GameSelect.tsx`); `/api/me` meldet `birthdayRewardClaimable: false` |
+
+Der Kauf mit **Münzen** bleibt ohne `shop` möglich — Kleiderschrank, Sammlung
+und Blattwahl hängen daran, und `GET /api/shop` liefert weiter das Regal.
+Die Pinguin-Karte führt nur in die Werkstatt und hängt deshalb an `figur`.
+**Die Anmeldung mit Apple und Google ist bewusst KEIN Teil des Umfangs** —
+sie bleibt auf der Webseite an.
 
 - **Nicht gesetzt (oder leer) = alles an.** So läuft `staging`.
 - Was fehlt, ist auf **beiden** Plattformen weg: nicht in der Auswahl, nicht
@@ -113,9 +137,17 @@ UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfa
   anlegen, Beitritt per Code oder Link, Suche, Abstimmung:
   `gameNotPlayable`; Routen der Funktionen: `nichtImUmfang`). Wer schon an
   einem Tisch sitzt, kommt weiter zurück.
+- Auch die **Nebenrouten** eines Spiels sind zu, sobald es fehlt: alles mit
+  `:gameId` in der Route (Ranglisten je Spiel, Bestleistungen, Vorgaben,
+  Tischthemen), dazu `SPIEL_ZU_ROUTE` in `app.ts` — die Mememory-Motive
+  und die Übungsrunde im Lernpfad (`/api/lernpfad/uebung`, hängt an
+  `doppelkopf`). Die Spielwerte im Profil (`/api/me`, `/api/players/:id`)
+  zeigen nur Spiele im Umfang; Trophäensumme und Gesamtrangliste zählen
+  weiter alles, was jemand je gespielt hat.
+- **BroCooked** sperrt nur der Client: Allein und zu zweit läuft es ohne
+  Tisch, also ohne Route, die der Server sperren könnte.
 - Der Umfang ist eine **Obergrenze**: Er nimmt nur weg. Was drinsteht, ist so
-  frei, wie `FREIGABE` und die `inApp`-Weichen es heute sagen — BroChess auf
-  der Webseite bleibt „Bald", Browort bleibt dort ohne Einstieg.
+  frei, wie `FREIGABE` und die `inApp`-Weichen es heute sagen.
 - Der Client bekommt die Liste mit `/api/me` (`umfang`, `null` = alles); ein
   Deploy genügt, installierte Apps folgen beim nächsten Öffnen.
 - Beim Start schreibt der Server eine Zeile `Umfang: …`, vertippte Namen als

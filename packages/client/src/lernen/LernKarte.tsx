@@ -3,7 +3,7 @@ import type { LernserieKurz } from './sicht';
 import './lernen.css';
 
 /**
- * Die Lernserie auf dem Start (nur in der App): Flamme, Tageszahl und die
+ * Die Lernserie auf dem Start (App und Webseite): Flamme, Tageszahl und die
  * sieben Striche bis zum Doko-Meister. Ein Tipp oeffnet den Lernpfad.
  *
  * Ohne `serie` (ein Server, der das Feld noch nicht kennt) steht die Karte

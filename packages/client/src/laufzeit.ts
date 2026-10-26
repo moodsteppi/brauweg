@@ -18,6 +18,8 @@
  * laeuft. Fehlt es, ist dies ein Browser.
  */
 
+import { imUmfang } from './umfang';
+
 declare global {
   interface Window {
     BRAUWEG_APP?: {
@@ -50,8 +52,14 @@ export const inApp = huelle !== undefined;
  * Edelsteine zeigen? In der App vorerst nicht (Emile, 22.10.2026): Dort wird
  * nur mit erspielten Münzen gekauft. Der Server lehnt Edelstein-Käufe aus der
  * App ebenfalls ab (`nurMuenzenInApp`).
+ *
+ * Auf der Webseite haengt es am Umfang (`shop`, umfang.ts). Darum eine
+ * Funktion und kein Wert: Der Umfang kommt erst mit `/api/me`, also nach dem
+ * Laden dieser Datei — ein Wert stuende fest, bevor er bekannt ist.
  */
-export const mitEdelsteinen = !inApp;
+export function mitEdelsteinen(): boolean {
+  return !inApp && imUmfang('shop');
+}
 
 /** Vorsatz aller API-Aufrufe. Im Browser leer, also dieselbe Herkunft. */
 export const apiBase = (huelle?.apiBase ?? '').replace(/\/+$/, '');

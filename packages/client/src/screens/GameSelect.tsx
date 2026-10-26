@@ -136,8 +136,11 @@ export type Tab = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil' | 'spiele';
  * Im Browser bleibt er sichtbar. Dort gilt DESIGN.md: Was es noch nicht
  * gibt, steht trotzdem da, mit ehrlicher Null und "Bald"-Marke.
  * Siehe docs/APPSTORE.md.
+ *
+ * Auf der Webseite haengt er am Umfang (`shop`, umfang.ts). Eine Funktion,
+ * weil der Umfang erst mit `/api/me` kommt — nach dem Laden dieser Datei.
  */
-const zeigeKaufbares = !inApp;
+const zeigeKaufbares = (): boolean => !inApp && imUmfang('shop');
 
 export function GameSelect({
   me,
@@ -194,17 +197,20 @@ export function GameSelect({
   const [schrankOffen, setSchrankOffen] = useState(false);
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
   const [werkstattOffen, setWerkstattOffen] = useState(false);
-  /** Doppelkopf lernen (nur App): Lernpfad als Vollbild. */
+  /** Doppelkopf lernen: Lernpfad als Vollbild. */
   const [lernenOffen, setLernenOffen] = useState(false);
-  // Jeweils zusätzlich der Umfang der Ausgabe (umfang.ts): Fehlt der Teil
-  // dort, fehlt sein Einstieg — die Route sperrt der Server ohnehin.
-  const oeffneLernen = inApp && imUmfang('lernpfad') ? () => setLernenOffen(true) : undefined;
-  /** Browort und Clanwort (nur App): Vollbilder wie der Lernpfad. */
+  // Allein der Umfang der Ausgabe entscheidet (umfang.ts): Fehlt der Teil
+  // dort, fehlt sein Einstieg — die Route sperrt der Server ohnehin. Bis zum
+  // 23.10.2026 stand davor `inApp`, und die Webseite hing der App hinterher
+  // (docs/release/ios-web-abgleich.md); die Routen fragen keine Plattform,
+  // gefehlt hat nur der Einstieg.
+  const oeffneLernen = imUmfang('lernpfad') ? () => setLernenOffen(true) : undefined;
+  /** Browort und Clanwort: Vollbilder wie der Lernpfad. */
   const [browortOffen, setBrowortOffen] = useState(false);
   const [clanwortOffen, setClanwortOffen] = useState(false);
-  const oeffneBrowort = inApp && imUmfang('browort') ? () => setBrowortOffen(true) : undefined;
-  const oeffneClanwort = inApp && imUmfang('clanwort') ? () => setClanwortOffen(true) : undefined;
-  /** Kartenmanufaktur (nur App): das Idle-Spiel als Vollbild. */
+  const oeffneBrowort = imUmfang('browort') ? () => setBrowortOffen(true) : undefined;
+  const oeffneClanwort = imUmfang('clanwort') ? () => setClanwortOffen(true) : undefined;
+  /** Kartenmanufaktur: das Idle-Spiel als Vollbild. */
   const [manufakturOffen, setManufakturOffen] = useState(false);
   const soloStarten = (modusId: string): void => {
     if (modusId === 'kartenmanufaktur') setManufakturOffen(true);
@@ -247,7 +253,8 @@ export function GameSelect({
   // Shop (siehe zeigeKaufbares); dort steht das Profil an seiner Stelle, damit
   // Start in der Mitte bleibt. Gewechselt wird nur über die Leiste, nicht per
   // Wisch — warum, steht in HubRahmen.tsx am Track.
-  const tabFolge: Tab[] = [zeigeKaufbares ? 'shop' : 'profil', 'spiele', 'spielen', 'blatt', 'clan'];
+  const kaufbar = zeigeKaufbares();
+  const tabFolge: Tab[] = [kaufbar ? 'shop' : 'profil', 'spiele', 'spielen', 'blatt', 'clan'];
   const trackRef = useRef<HTMLDivElement>(null);
   // Am Track hängt immer nur der offene Reiter — sonst lüde der Start alle auf einmal.
   const fenster: Tab[] = [tab];
@@ -255,7 +262,7 @@ export function GameSelect({
   const renderTab = (tt: Tab): React.JSX.Element | null => {
     switch (tt) {
       case 'shop':
-        return zeigeKaufbares ? (
+        return kaufbar ? (
           <Shop coins={me.coins} gems={me.gems} onBald={setBald} onGuthaben={onAvatarChange} />
         ) : null;
       case 'clan':
@@ -473,7 +480,7 @@ export function GameSelect({
       tabFolge={tabFolge}
       online={online}
       trophies={trophies}
-      kaufbar={zeigeKaufbares}
+      kaufbar={kaufbar}
       onTab={setTab}
       fenster={fenster}
       trackRef={trackRef}
@@ -571,6 +578,8 @@ function ProfilTab({
     { icon: '/hub/tab-blatt.webp', name: 'Spiele', wert: me.stats.filter((s) => s.parties > 0).length },
   ];
 
+  // Geburtstag und Geschenk: nicht in der App (Emile, 22.10.2026) und nur im Umfang.
+  const mitGeburtstag = !inApp && imUmfang('geburtstag');
   const geburtstagText = (() => {
     if (me.daysUntilBirthday === null) return 'Geburtstag noch nicht hinterlegt';
     if (me.daysUntilBirthday === 0) return 'Heute ist dein Geburtstag!';
@@ -637,8 +646,9 @@ function ProfilTab({
           <span className="hb-profilkopf-text">
             <strong>{me.displayName}</strong>
             {/* In der App ohne Geburtstag (Emile, 22.10.2026) — dort steht
-                stattdessen die Stufe in Worten. */}
-            <small>{inApp ? `Stufe ${me.level.stufe}` : geburtstagText}</small>
+                stattdessen die Stufe in Worten. Auf der Webseite ebenso, wenn
+                der Geburtstag nicht im Umfang steht. */}
+            <small>{mitGeburtstag ? geburtstagText : `Stufe ${me.level.stufe}`}</small>
           </span>
           <span className="hb-stufe" aria-label={`Stufe ${me.level.stufe}`}>
             {me.level.stufe}
@@ -653,11 +663,12 @@ function ProfilTab({
           onClick={onStufen}
         />
 
-        {!inApp && me.birthdayRewardClaimable && geburtstag}
+        {mitGeburtstag && me.birthdayRewardClaimable && geburtstag}
 
         {/* In der App ohne 3D-Figur: Für die erste Fassung gibt es dort den
-            Kleiderschrank (Emile, 22.10.2026). */}
-        {!inApp && (
+            Kleiderschrank (Emile, 22.10.2026). Auf der Webseite hängt sie
+            am Umfang (`figur`). */}
+        {!inApp && imUmfang('figur') && (
         <section className="hb-blk">
           <h2 className="hb-ab">
             Deine Figur
@@ -758,8 +769,8 @@ function ProfilTab({
           </p>
         </section>
 
-        {/* Browort nur in der App (wie der Lernpfad), Zahlen aus `/api/me`. */}
-        {inApp && imUmfang('browort') && (
+        {/* Browort wie der Lernpfad, Zahlen aus `/api/me`. */}
+        {imUmfang('browort') && (
           <BrowortImProfil
             du
             serie={me.browort?.serie ?? 0}
@@ -770,7 +781,7 @@ function ProfilTab({
 
         <Freunde neu onShowProfile={onShowProfile} />
 
-        {!inApp && !me.birthdayRewardClaimable && geburtstag}
+        {mitGeburtstag && !me.birthdayRewardClaimable && geburtstag}
 
         {/* Harmlos nach oben, endgültig nach unten — Löschen steht allein
             und rot am Schluss, nicht neben „Abmelden" (siehe oben). */}
@@ -3002,9 +3013,10 @@ function ProfilBild({
    * In der App nur anzeigen, nicht hochladen — bis es eine Moderation gibt.
    * Ein eigenes Foto ist Nutzerinhalt, den alle am Tisch sehen, und Apple
    * verlangt dafuer (1.2) eine Pruefung, die es noch nicht gibt. Wer auf der
-   * Webseite ein Bild gesetzt hat, sieht es hier trotzdem.
+   * Webseite ein Bild gesetzt hat, sieht es hier trotzdem. Dasselbe auf der
+   * Webseite ohne `profilbild` im Umfang: Der Server nimmt dann keins an.
    */
-  if (inApp) {
+  if (inApp || !imUmfang('profilbild')) {
     return (
       <span className="hub-profilbild">
         {src ? (

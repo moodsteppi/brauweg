@@ -11,7 +11,7 @@ import type { LernpfadAnsicht } from './sicht';
 import './lernen.css';
 
 /**
- * „Doppelkopf lernen" — der Pfad (Emile, 17.10.2026, nur in der App).
+ * „Doppelkopf lernen" — der Pfad (Emile, 17.10.2026; seit dem 23.10. auch im Web).
  *
  * Oben die Serie wie bei Duolingo: Flamme, Tageszahl, sieben Punkte bis zum
  * Outfit. Darunter die sieben Lektionen als Pfad. Gesperrt ist eine Lektion,
