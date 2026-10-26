@@ -182,16 +182,24 @@ describe('Neues Hub', () => {
     expect(within(reiter()).getByRole('button', { name: /^Start/ })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('wechselt beim waagerechten Wischen über den Inhalt nicht den Reiter', async () => {
-    // Robin, 26.09.2026: Spielreihen rollen selbst waagerecht; ein Wisch darin
-    // sprang vorher auf den Nachbarreiter.
+  it('zieht beim waagerechten Wischen über den Inhalt den Nachbarreiter herein', async () => {
+    // Seit dem 26.10.2026 wird wieder gewischt (docs/APP-ABSTIMMUNG-NAVIGATION.md).
+    // Spielreihen behalten ihre eigene Geste — das prüft hub-wischen.test.tsx.
     await zeige();
-    const inhalt = document.querySelector('.hb-inhalt')!;
+    const inhalt = document.querySelector<HTMLElement>('.hb-inhalt')!;
+    Object.defineProperty(inhalt, 'clientWidth', { value: 390, configurable: true });
     fireEvent.touchStart(inhalt, { touches: [{ clientX: 300, clientY: 400 }] });
     fireEvent.touchMove(inhalt, { touches: [{ clientX: 60, clientY: 405 }] });
+    // Beim Ziehen liegt die Sammlung schon neben dem Start, nur noch nicht offen.
+    await act(async () => {});
+    const plaetze = [...document.querySelectorAll('.hb-reiterplatz')];
+    const sammlung = plaetze[3]!;
+    expect(sammlung.hasAttribute('inert')).toBe(true);
+    expect(sammlung.querySelector('.hb-seite')!.childElementCount).toBeGreaterThan(0);
     fireEvent.touchEnd(inhalt);
     await act(async () => {});
-    expect(within(reiter()).getByRole('button', { name: /^Start/ })).toHaveAttribute('aria-current', 'page');
+    expect(within(reiter()).getByRole('button', { name: 'Sammlung' })).toHaveAttribute('aria-current', 'page');
+    expect(sammlung.hasAttribute('inert')).toBe(false);
   });
 
   it('zeigt am Start-Reiter, dass unter „Heute" etwas bereitliegt', async () => {

@@ -251,13 +251,11 @@ export function GameSelect({
 
   // Shop · Spiele · Start · Sammlung · Clan, Start mittig. In der App fehlt der
   // Shop (siehe zeigeKaufbares); dort steht das Profil an seiner Stelle, damit
-  // Start in der Mitte bleibt. Gewechselt wird nur über die Leiste, nicht per
-  // Wisch — warum, steht in HubRahmen.tsx am Track.
+  // Start in der Mitte bleibt. Gewechselt wird über die Leiste oder per Wisch
+  // in derselben Reihenfolge (hub-wischen.ts); welche Reiter dafür am Track
+  // hängen, regelt HubRahmen.tsx.
   const kaufbar = zeigeKaufbares();
   const tabFolge: Tab[] = [kaufbar ? 'shop' : 'profil', 'spiele', 'spielen', 'blatt', 'clan'];
-  const trackRef = useRef<HTMLDivElement>(null);
-  // Am Track hängt immer nur der offene Reiter — sonst lüde der Start alle auf einmal.
-  const fenster: Tab[] = [tab];
 
   const renderTab = (tt: Tab): React.JSX.Element | null => {
     switch (tt) {
@@ -482,8 +480,6 @@ export function GameSelect({
       trophies={trophies}
       kaufbar={kaufbar}
       onTab={setTab}
-      fenster={fenster}
-      trackRef={trackRef}
       renderTab={renderTab}
     >
       {overlays}
