@@ -441,7 +441,7 @@ function Ergebnis({ tag, fehlversuche }: { tag: Spieltag; fehlversuche: number }
             <Pinguin getragen={{ hut: 'hut-doktorhut', oberteil: 'oberteil-meisterrobe' }} groesse={11} titel="Pinguin als Doko-Meister" />
           </div>
           <h2>Doko-Meister!</h2>
-          <p>Sieben Tage am Stück — dein Pinguin hat sich Doktorhut und Meisterrobe verdient. Beides liegt jetzt in deinem Kleiderschrank.</p>
+          <p>Sieben Tage am Stück - dein Pinguin hat sich Doktorhut und Meisterrobe verdient. Beides liegt jetzt in deinem Kleiderschrank.</p>
         </>
       ) : (
         <>
@@ -454,7 +454,7 @@ function Ergebnis({ tag, fehlversuche }: { tag: Spieltag; fehlversuche: number }
             {tag.neuerTag
               ? tag.serie === 1
                 ? 'Deine Serie beginnt. Komm morgen wieder, dann brennt die Flamme weiter.'
-                : `${tag.serie} Tage am Stück — weiter so!`
+                : `${tag.serie} Tage am Stück - weiter so!`
               : 'Heute hast du schon gespielt, die Flamme brennt.'}
             {tag.geschuetzt && ' Dein Wochenschutz hat den verpassten Tag überbrückt.'}
           </p>

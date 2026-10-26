@@ -55,7 +55,7 @@ export function PushBegleiter({ kontoId }: { kontoId: string }): React.JSX.Eleme
           Sollen wir dir Bescheid sagen?
         </h2>
         <p>
-          Wenn du dran bist oder deine Runde startet, schicken wir dir eine kurze Mitteilung —
+          Wenn du dran bist oder deine Runde startet, schicken wir dir eine kurze Mitteilung -
           auch wenn die App gerade zu ist.
         </p>
         <p className="hb-klein">Was genau, stellst du jederzeit in den Einstellungen ein.</p>

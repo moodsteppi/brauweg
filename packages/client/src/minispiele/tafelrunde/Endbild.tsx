@@ -128,7 +128,7 @@ export function Endbild({
           <svg viewBox="0 0 48 48" className={stil.kranzbild}>
             <path d="M24 6 27.7 17.3H39.6L30 24.3 33.7 35.6 24 28.6 14.3 35.6 18 24.3 8.4 17.3H20.3Z" />
           </svg>
-          <strong className={stil.platzzahl}>{platz ?? '–'}</strong>
+          <strong className={stil.platzzahl}>{platz ?? '-'}</strong>
         </div>
 
         <h2 className={stil.wort}>{abschlusswort(platz, geteilt)}</h2>

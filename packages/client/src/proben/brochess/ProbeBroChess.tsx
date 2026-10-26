@@ -76,7 +76,7 @@ const FAELLE: Fall[] = [
     ],
   },
   {
-    titel: 'Schach — Schwarz spielt, Blick von unten',
+    titel: 'Schach - Schwarz spielt, Blick von unten',
     sicht: {
       ...OHNE,
       zuschauer: false,
@@ -163,7 +163,7 @@ export function ProbeBroChess(): React.JSX.Element {
   return (
     <div className={stil.seite}>
       <header className={stil.kopf}>
-        <h1>BroChess — Probe</h1>
+        <h1>BroChess - Probe</h1>
         <select
           value={nummer}
           onChange={(e) => {
@@ -181,7 +181,7 @@ export function ProbeBroChess(): React.JSX.Element {
       <Brett
         sicht={fall.sicht}
         zuege={fall.zuege}
-        onZug={(zug) => setGesendet(`${zug.von}–${zug.nach}${zug.umwandlung ? ` = ${zug.umwandlung}` : ''}`)}
+        onZug={(zug) => setGesendet(`${zug.von}-${zug.nach}${zug.umwandlung ? ` = ${zug.umwandlung}` : ''}`)}
       />
       <p
         className={`${stil.status} ${

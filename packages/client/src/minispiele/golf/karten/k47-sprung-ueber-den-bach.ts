@@ -26,7 +26,7 @@ export const bahn: Karte = {
     { art: 'sprungfeld', x: 10, y: 23, w: 5, h: 2, rx: 0, ry: -1, weite: 10 },
   ],
   dekor: 'nacht',
-  beschreibung: 'Ein Bach quert die Bahn, nur ganz rechts führt ein Sandsteg hinüber. Direkt davor wirft ein Sprungfeld den Ball über das Wasser — mit genug Tempo landet er fast am Loch.',
+  beschreibung: 'Ein Bach quert die Bahn, nur ganz rechts führt ein Sandsteg hinüber. Direkt davor wirft ein Sprungfeld den Ball über das Wasser - mit genug Tempo landet er fast am Loch.',
   thema: 'Sprungfeld',
   autor: 'Aufsicht (Nachtlauf 22.09.2026)',
   tags: ['sprungfeld', 'wasser', 'sand', 'abkuerzung'],

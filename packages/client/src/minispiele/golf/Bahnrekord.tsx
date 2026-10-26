@@ -66,7 +66,7 @@ export function Bahnrekord({
     stand.rekord === null
       ? t('golf.rekord.keiner')
       : `${stand.rekord.wert} (${stand.rekord.du ? t('golf.rekord.du') : stand.rekord.name})`;
-  const eigenes = stand.eigenes === null ? '–' : String(stand.eigenes);
+  const eigenes = stand.eigenes === null ? '-' : String(stand.eigenes);
 
   return (
     <div className="grek" data-grek-neu={neu.bahnrekord || neu.eigenesBestes ? '' : undefined}>

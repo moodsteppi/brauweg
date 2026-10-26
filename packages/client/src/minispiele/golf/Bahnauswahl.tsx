@@ -224,7 +224,7 @@ export function Bahnauswahl({
                 untertitel: `${kurs.bahnen.length} Löcher · ${kurs.beschreibung}`,
                 badge: Math.max(0, ...bahnen.map((b) => b?.schwierigkeit ?? 0)),
                 vorschau: finale ? <Bahnminiatur karte={finale} /> : undefined,
-                deaktiviert: fehlt ? 'Neue Bahnen — bitte neu laden' : kursSperre?.(kurs.kennung),
+                deaktiviert: fehlt ? 'Neue Bahnen - bitte neu laden' : kursSperre?.(kurs.kennung),
               };
             })}
             gewaehlt={wahl.kurs}
@@ -232,7 +232,7 @@ export function Bahnauswahl({
           />
           {kursSperre !== undefined && daten.kurse.some((k) => kursSperre(k.kennung) !== undefined) && (
             <p className="gf-bw-hinweis" data-golf-kurssperre="">
-              Gesperrte Kurse braucht nur, wer den Tisch aufmacht — alle anderen spielen mit.
+              Gesperrte Kurse braucht nur, wer den Tisch aufmacht - alle anderen spielen mit.
             </p>
           )}
           <Folge ids={daten.kurse.find((k) => k.kennung === wahl.kurs)?.bahnen ?? []} karten={nachId} />
@@ -362,7 +362,7 @@ function FilterWahl({
         {leer
           ? 'Ohne Filter zieht das Spiel aus allen Bahnen.'
           : treffer === 0
-            ? 'Keine Bahn passt — gezogen wird dann aus allen.'
+            ? 'Keine Bahn passt - gezogen wird dann aus allen.'
             : `${treffer} ${treffer === 1 ? 'Bahn passt' : 'Bahnen passen'}. Reichen sie nicht für alle Löcher, füllt das Spiel mit ähnlich schweren auf.`}
       </p>
     </div>

@@ -157,7 +157,7 @@ export function Flasche({
             />
           ))}
           <p className="fl-sturz-text">
-            Umgekippt! {sturzName} — {trinkWort(sturz.kassiert)}
+            Umgekippt! {sturzName} - {trinkWort(sturz.kassiert)}
           </p>
         </div>
       ) : null}

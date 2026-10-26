@@ -117,13 +117,13 @@ interface Bild {
 /* Der Letzte beim „Weiter" (seit 07.10.2026): einmal getrunken, einmal Glueck. */
 const ANSAGEN: { titel: string; text: string; kennung: string; wurf: PartyLetzterWurf }[] = [
   {
-    titel: 'Der Letzte — ein Schluck',
+    titel: 'Der Letzte - ein Schluck',
     text: 'Wer beim „Weiter" zuletzt tippt, trinkt mit 50 % einen Schluck. Gewürfelt hat der Server; alle sehen dieselbe Ansage, dreieinhalb Sekunden lang über der nächsten Runde.',
     kennung: 'letzter-trinkt',
     wurf: { nr: 3, rundeNr: 2, sitz: 2, trinkt: true, schlucke: 1 },
   },
   {
-    titel: 'Der Letzte — Glück gehabt',
+    titel: 'Der Letzte - Glück gehabt',
     text: 'Die andere Hälfte: kein Schluck, nur die Ansage.',
     kennung: 'letzter-glueck',
     wurf: { nr: 4, rundeNr: 2, sitz: 3, trinkt: false, schlucke: 0 },
@@ -132,8 +132,8 @@ const ANSAGEN: { titel: string; text: string; kennung: string; wurf: PartyLetzte
 
 const BILDER: Bild[] = [
   {
-    titel: 'Imposter — dein Wort',
-    text: 'Ein Wort, sonst nichts — und die Redereihenfolge. Darunter, wer noch nicht „Gesehen" getippt hat.',
+    titel: 'Imposter - dein Wort',
+    text: 'Ein Wort, sonst nichts - und die Redereihenfolge. Darunter, wer noch nicht „Gesehen" getippt hat.',
     kennung: 'imposter-sehen',
     sicht: sicht({
       art: 'imposter',
@@ -158,7 +158,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Imposter — du bist es',
+    titel: 'Imposter - du bist es',
     text: 'Der Imposter sieht, dass er es ist, und bekommt nur einen Hinweis. Mitreden muss er trotzdem.',
     sicht: sicht({
       art: 'imposter',
@@ -182,7 +182,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Imposter — abstimmen',
+    titel: 'Imposter - abstimmen',
     text: 'Nach der Rederunde: Wer passt nicht? Das eigene Wort bleibt klein im Blick.',
     sicht: sicht({
       art: 'imposter',
@@ -206,7 +206,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Imposter — durchgekommen',
+    titel: 'Imposter - durchgekommen',
     text: 'Keine eindeutige Mehrheit: Der Imposter holt vier Punkte, die Runde trinkt.',
     sicht: sicht({
       art: 'imposter',
@@ -248,7 +248,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Allgemeinwissen — aufgelöst',
+    titel: 'Allgemeinwissen - aufgelöst',
     text: 'Richtig steht grün, der eigene Fehlgriff rot. Darunter, wer was hatte.',
     sicht: sicht({
       art: 'quiz',
@@ -266,7 +266,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Wer bin ich — du bist dran',
+    titel: 'Wer bin ich - du bist dran',
     text: 'Du siehst alle Namen außer deinem. Gefragt und geantwortet wird am Tisch.',
     sicht: sicht({
       art: 'werbinich',
@@ -281,8 +281,8 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Wer bin ich — ein anderer rät',
-    text: 'Bei den anderen steht ihr Name offen — deiner bleibt auch dann verdeckt.',
+    titel: 'Wer bin ich - ein anderer rät',
+    text: 'Bei den anderen steht ihr Name offen - deiner bleibt auch dann verdeckt.',
     sicht: sicht({
       art: 'werbinich',
       phase: 'spiel',
@@ -297,7 +297,7 @@ const BILDER: Bild[] = [
   },
   {
     titel: 'Ich hab noch nie',
-    text: 'Zwei Knöpfe. Wer gesteht, trinkt — wer sauber bleibt, bekommt einen Punkt.',
+    text: 'Zwei Knöpfe. Wer gesteht, trinkt - wer sauber bleibt, bekommt einen Punkt.',
     sicht: sicht({
       art: 'niemals',
       phase: 'spiel',
@@ -311,7 +311,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Ich hab noch nie — aufgedeckt',
+    titel: 'Ich hab noch nie - aufgedeckt',
     text: 'Und dann steht es da.',
     sicht: sicht({
       art: 'niemals',
@@ -343,7 +343,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Wer würde eher — die Balken',
+    titel: 'Wer würde eher - die Balken',
     text: 'Die Runde hat entschieden. Wer keine Stimme bekam, nimmt einen Punkt mit.',
     sicht: sicht({
       art: 'wereher',
@@ -360,7 +360,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Bus fahren — du fährst',
+    titel: 'Bus fahren - du fährst',
     text: 'Drei Fragen hintereinander. Gleichstand zählt gegen den Fahrer.',
     sicht: sicht({
       art: 'busfahrer',
@@ -394,7 +394,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Schätzen — aufgelöst',
+    titel: 'Schätzen - aufgelöst',
     text: 'Sortiert nach Abstand. Wer nicht getippt hat, steht ganz unten.',
     sicht: sicht({
       art: 'schaetzen',
@@ -413,7 +413,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Entweder – oder',
+    titel: 'Entweder - oder',
     text: 'Zwei Knöpfe, sonst nichts. Die Minderheit trinkt.',
     sicht: sicht({
       art: 'entweder',
@@ -422,7 +422,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Entweder – oder — aufgelöst',
+    titel: 'Entweder - oder - aufgelöst',
     text: 'Die Mehrheit leuchtet grün und nimmt einen Punkt mit.',
     sicht: sicht({
       art: 'entweder',
@@ -440,7 +440,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Wahrheit oder Pflicht — wählen',
+    titel: 'Wahrheit oder Pflicht - wählen',
     text: 'Erst die Wahl, dann die Aufgabe. Vorher sieht niemand beide.',
     sicht: sicht({
       art: 'wahrheitpflicht',
@@ -456,8 +456,8 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Wahrheit oder Pflicht — Aufgabe',
-    text: 'Die Runde sieht die Aufgabe mit — sonst könnte man „gemacht" behaupten.',
+    titel: 'Wahrheit oder Pflicht - Aufgabe',
+    text: 'Die Runde sieht die Aufgabe mit - sonst könnte man „gemacht" behaupten.',
     sicht: sicht({
       art: 'wahrheitpflicht',
       phase: 'spiel',
@@ -466,13 +466,13 @@ const BILDER: Bild[] = [
         art: 'wahrheitpflicht',
         amZug: 2,
         gewaehlt: [1, 0, 1, -1, -1, -1],
-        text: ['Sing den Refrain deines Lieblingssongs — laut.', 'Was war dein peinlichster Moment auf einer Party?', 'Mach 20 Sekunden den Akzent deiner Wahl, bis alle geraten haben, welcher es ist.', '', '', ''],
+        text: ['Sing den Refrain deines Lieblingssongs - laut.', 'Was war dein peinlichster Moment auf einer Party?', 'Mach 20 Sekunden den Akzent deiner Wahl, bis alle geraten haben, welcher es ist.', '', '', ''],
         erfolg: [1, 0, -1, -1, -1, -1],
       },
     }),
   },
   {
-    titel: 'Bus fahren — daneben',
+    titel: 'Bus fahren - daneben',
     text: 'Innen getippt, außen gekommen: ein Schluck, der Nächste steigt ein.',
     sicht: sicht({
       art: 'busfahrer',
@@ -495,7 +495,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Bus fahren — daneben, alkoholfrei',
+    titel: 'Bus fahren - daneben, alkoholfrei',
     text: 'Derselbe Fehlgriff ohne Trinkmodus: ein Strafpunkt statt eines Schlucks. Die Regelzeile oben sagt es auch.',
     sicht: sicht({
       art: 'busfahrer',
@@ -513,7 +513,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Allgemeinwissen — Abrechnung, Trinkmodus',
+    titel: 'Allgemeinwissen - Abrechnung, Trinkmodus',
     text: 'Unter der Auflösung: was die Runde gebracht hat. Schlücke als Wort und Zahl, kein Glas mehr.',
     zusatz: 'abrechnung',
     sicht: sicht({
@@ -534,8 +534,8 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Allgemeinwissen — Abrechnung, wer fehlt',
-    text: 'Schon „Weiter" getippt: Statt „Noch 2 Leute" stehen die Namen da — live, bis der Letzte tippt.',
+    titel: 'Allgemeinwissen - Abrechnung, wer fehlt',
+    text: 'Schon „Weiter" getippt: Statt „Noch 2 Leute" stehen die Namen da - live, bis der Letzte tippt.',
     zusatz: 'abrechnung',
     kennung: 'abrechnung-fehlen',
     sicht: sicht({
@@ -556,7 +556,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Allgemeinwissen — Abrechnung, alkoholfrei',
+    titel: 'Allgemeinwissen - Abrechnung, alkoholfrei',
     text: 'Dieselbe Runde ohne Trinkmodus: gezählt wird genauso, nur heißt es Strafpunkte. Auch die Ansage oben redet nicht mehr vom Trinken.',
     zusatz: 'abrechnung',
     sicht: sicht({
@@ -577,7 +577,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Stand — alkoholfrei',
+    titel: 'Stand - alkoholfrei',
     text: 'Die Turniertabelle ohne Trinkmodus. Punkte entscheiden, die Strafpunkte stehen daneben.',
     zusatz: 'tabelle',
     sicht: sicht({
@@ -593,7 +593,7 @@ const BILDER: Bild[] = [
   ...bilderZeitdruck(sicht),
   /* -- Spielmodi (22.09.2026) ------------------------------------------- */
   {
-    titel: 'Ich hab noch nie — Eskalation, Stufe 2',
+    titel: 'Ich hab noch nie - Eskalation, Stufe 2',
     text: 'Das zweite Drittel: pikante Sprüche und doppelte Härte. Die Regelzeile sagt, wo die Kurve steht.',
     sicht: sicht({
       art: 'niemals',
@@ -603,8 +603,8 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Entweder – oder — Eskalation, letzte Runde mit Gast',
-    text: 'Stufe 3, aber ein Gast sitzt am Tisch: Die Härte steigt, die Texte bleiben pikant — und die Zeile sagt warum.',
+    titel: 'Entweder - oder - Eskalation, letzte Runde mit Gast',
+    text: 'Stufe 3, aber ein Gast sitzt am Tisch: Die Härte steigt, die Texte bleiben pikant - und die Zeile sagt warum.',
     sicht: sicht({
       art: 'entweder',
       rundeNr: 5,
@@ -614,7 +614,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Wahrheit oder Pflicht — Themenabend JGA',
+    titel: 'Wahrheit oder Pflicht - Themenabend JGA',
     text: 'Das Paket bestimmt die Minispiele (neun von zwölf) und die Inhalte; die Zeile nennt das Thema.',
     sicht: sicht({
       art: 'wahrheitpflicht',
@@ -632,8 +632,8 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Stand — Team-Abend',
-    text: 'Oben die Lager, darunter jede Person mit ihrem Lager. Der Platz ist der des Lagers — für die Trophäen zählt, wie das Lager abschneidet.',
+    titel: 'Stand - Team-Abend',
+    text: 'Oben die Lager, darunter jede Person mit ihrem Lager. Der Platz ist der des Lagers - für die Trophäen zählt, wie das Lager abschneidet.',
     zusatz: 'tabelle',
     sicht: sicht({
       art: 'quiz',
@@ -655,7 +655,7 @@ const BILDER: Bild[] = [
     }),
   },
   {
-    titel: 'Stand — Team-Abend, ungleiche Lager',
+    titel: 'Stand - Team-Abend, ungleiche Lager',
     text: 'Vier gegen zwei, weil der Öffner getauscht hat: Es entscheidet der Schnitt je Kopf, nicht die Summe.',
     zusatz: 'tabelle',
     sicht: sicht({
@@ -703,7 +703,7 @@ function Kasten({ titel, text, sicht: bild, zusatz, kennung }: Bild): React.JSX.
             <span className="pk-rundenzahl">
               Runde {bild.rundeNr + 1}/{bild.runden}
             </span>
-            <strong className="pk-spielname">{titel.split(' —')[0]}</strong>
+            <strong className="pk-spielname">{titel.split(' -')[0]}</strong>
             <button className="pk-tafelknopf" type="button">
               Stand
             </button>
@@ -776,7 +776,7 @@ function Schaukasten(): React.JSX.Element {
     <div className="sk-seite">
       {kopf ? (
         <>
-          <h1>Partykiste — Schaukasten</h1>
+          <h1>Partykiste - Schaukasten</h1>
           <p className="sk-vorwort">
             Jede Ansicht mit erfundenen Daten. Nichts davon ist mit einem Server verbunden;
             die Knöpfe tun absichtlich nichts.
@@ -784,26 +784,26 @@ function Schaukasten(): React.JSX.Element {
           <figure className="sk-kasten">
             <figcaption>
               <strong>Banner der Spielauswahl</strong>
-              <span>Gezeichnet, nicht geladen — für die Kiste gibt es noch kein gemaltes Bild.</span>
+              <span>Gezeichnet, nicht geladen - für die Kiste gibt es noch kein gemaltes Bild.</span>
             </figcaption>
             <div className="sk-rahmen sk-rahmen-banner">
               <PartykisteBanner />
             </div>
           </figure>
           <MenueKasten
-            titel="Menü — Einstellungen, Trinkspiel"
+            titel="Menü - Einstellungen, Trinkspiel"
             text="Runden, Härte und Trinkmodus stehen offen im Menü und gelten online wie gegen Bots."
           >
             <Einstellungen runden={6} haerte={2} trinkmodus onRunden={() => {}} onHaerte={() => {}} onTrinkmodus={() => {}} />
           </MenueKasten>
           <MenueKasten
-            titel="Menü — Einstellungen, alkoholfrei"
+            titel="Menü - Einstellungen, alkoholfrei"
             text="Ausgeschaltet heißt der Zähler Strafpunkte; der Hinweis sagt, dass die Turnierpunkte gleich bleiben."
           >
             <Einstellungen runden={8} haerte={1} trinkmodus={false} onRunden={() => {}} onHaerte={() => {}} onTrinkmodus={() => {}} />
           </MenueKasten>
           <MenueKasten
-            titel="Menü — Auswahl"
+            titel="Menü - Auswahl"
             text="Minispiele an/aus (die Kiste mischt), Inhaltsstufe und Themenpaket. Ohne Modus: Das Modul kennt noch keinen."
           >
             <PartyAuswahl
@@ -815,7 +815,7 @@ function Schaukasten(): React.JSX.Element {
             />
           </MenueKasten>
           <MenueKasten
-            titel="Menü — Auswahl als Gast, Modus bekannt, vier Inhalte-Kacheln"
+            titel="Menü - Auswahl als Gast, Modus bekannt, vier Inhalte-Kacheln"
             text="„derb“ gesperrt mit Grund; „gemischt“ heißt für den Gast harmlos und pikant. Die vierte Kachel und die Modus-Kacheln erscheinen erst, wenn defaultConfig() die Felder inhaltsMischung und modus hat."
           >
             <PartyAuswahl
@@ -827,8 +827,8 @@ function Schaukasten(): React.JSX.Element {
             />
           </MenueKasten>
           <MenueKasten
-            titel="Am Tisch — „Passt nicht“ (nur auf staging)"
-            text="Leise unter der Runde, 44 pt. Zeigt die Runde mehrere Einträge, fragt das Blatt erst, welcher. Senden geht hier ins Leere — kein Server."
+            titel="Am Tisch - „Passt nicht“ (nur auf staging)"
+            text="Leise unter der Runde, 44 pt. Zeigt die Runde mehrere Einträge, fragt das Blatt erst, welcher. Senden geht hier ins Leere - kein Server."
           >
             <PasstNicht
               gezeigt={[
@@ -841,7 +841,7 @@ function Schaukasten(): React.JSX.Element {
             />
           </MenueKasten>
           <MenueKasten
-            titel="Online — offene Runde gefunden"
+            titel="Online - offene Runde gefunden"
             text="Erst ansehen, dann beitreten: Dort gilt der Regelsatz des Öffners, nicht die eigenen Einstellungen."
           >
             <OffeneRunde
@@ -859,7 +859,7 @@ function Schaukasten(): React.JSX.Element {
           </MenueKasten>
           <figure className="sk-kasten">
             <figcaption>
-              <strong>Team-Abend — Lager aufstellen</strong>
+              <strong>Team-Abend - Lager aufstellen</strong>
               <span>
                 Vor der ersten Runde: abwechselnd nach Sitz vorbelegt, der Öffner tippt Namen hinüber. Hier hat er
                 Emil ins Lager A geholt.
@@ -871,7 +871,7 @@ function Schaukasten(): React.JSX.Element {
           </figure>
           <figure className="sk-kasten">
             <figcaption>
-              <strong>Team-Abend — die anderen warten</strong>
+              <strong>Team-Abend - die anderen warten</strong>
               <span>Dieselben Spalten ohne Knöpfe, solange der Öffner aufstellt.</span>
             </figcaption>
             <div className="sk-rahmen">
@@ -883,7 +883,7 @@ function Schaukasten(): React.JSX.Element {
             </div>
           </figure>
           <MenueKasten
-            titel="Wartesaal — Regelzeile, Eskalation"
+            titel="Wartesaal - Regelzeile, Eskalation"
             text="Vor der ersten Runde steht nur fest, dass die Härte steigt; im Spiel nennt die Zeile die Stufe."
           >
             <Regelzeile
@@ -892,7 +892,7 @@ function Schaukasten(): React.JSX.Element {
             />
           </MenueKasten>
           <MenueKasten
-            titel="Wartesaal — Regelzeile"
+            titel="Wartesaal - Regelzeile"
             text="Dieselbe Zeile steht im Wartesaal (vom Server gelesen) und im Spielkopf (aus der Sicht)."
           >
             <Regelzeile

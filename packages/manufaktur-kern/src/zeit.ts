@@ -25,6 +25,7 @@ import {
 import { ladungFaktor, tempoFaktor } from './meister.js';
 import { ortFaktor, presseBonus } from './renovieren.js';
 import { offlineMs } from './werkstattbuch.js';
+import { liefereAuftrag } from './auftraege.js';
 import { raeumeAuf } from './baustelle.js';
 import { type ManufakturStand, kopiere } from './stand.js';
 
@@ -113,6 +114,7 @@ function takt(stand: ManufakturStand): void {
     if (!v.verkauft && v.fortschritt >= VERSAND_VERKAUF) {
       stand.taler += v.ladung;
       stand.verdient += v.ladung;
+      liefereAuftrag(stand, v.ladung);
       v.ladung = 0;
       v.verkauft = true;
     }

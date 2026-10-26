@@ -502,7 +502,7 @@ export function ProbeRuestkammer(): React.JSX.Element {
       */}
       <div className={css.werkbank}>
         <div className={css.kopf}>
-          <h1 className={css.titel}>Probe — die Rüstkammer</h1>
+          <h1 className={css.titel}>Probe - die Rüstkammer</h1>
           {/* Zuklappbar, weil die Werkbank am Handy sonst genau die
               Kopfleiste verdeckt, die sie zeigen soll. */}
           <button
@@ -538,11 +538,11 @@ export function ProbeRuestkammer(): React.JSX.Element {
             Runde {SZENE.runde} von {SZENE.rundenGrenze} einer Partie zu {SZENE.sitze.length} mit
             Bots (Saat „{SZENE.saat}", Gangart {SZENE.gangart}), angehalten nach{' '}
             {SZENE.zuegeGespielt} Zügen von {nameVon(SZENE.ich)}. Ein Tipp auf eine Einheit schlägt
-            ihr Blatt auf; „Aufstellen" darin wählt sie, und der nächste Tipp setzt sie ab — oder man
+            ihr Blatt auf; „Aufstellen" darin wählt sie, und der nächste Tipp setzt sie ab - oder man
             zieht sie mit dem Finger, genau wie am Tisch. Verkaufen nimmt sie hier nur vom
             Feld und zählt kein Gold, so wie ein Klick auf eine Karte sie nicht kauft, sondern nur
             ihren Platz abräumt: So sieht man den leeren Rahmen. Würfeln, Aufsteigen und Bereit tun
-            nichts — das sind Regeln, und die bringt die Probe absichtlich nicht mit. „zurücksetzen"
+            nichts - das sind Regeln, und die bringt die Probe absichtlich nicht mit. „zurücksetzen"
             stellt alles wieder her.
           </p>
         )}

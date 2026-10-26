@@ -19,7 +19,7 @@ export function BrowortImProfil({
   /** Eigenes Profil: anders formuliert, wenn noch nichts gespielt ist. */
   du: boolean;
 }): React.JSX.Element {
-  const schnittText = schnitt === null ? '–' : schnitt.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  const schnittText = schnitt === null ? '-' : schnitt.toLocaleString('de-DE', { maximumFractionDigits: 1 });
   return (
     <section className="hb-blk">
       <h2 className="hb-ab">
@@ -42,7 +42,7 @@ export function BrowortImProfil({
         </span>
       </div>
       {du && geloest === 0 && (
-        <p className="hb-klein hb-ohne-rand">Rate dein erstes Wort — dann steht hier dein Schnitt.</p>
+        <p className="hb-klein hb-ohne-rand">Rate dein erstes Wort - dann steht hier dein Schnitt.</p>
       )}
     </section>
   );

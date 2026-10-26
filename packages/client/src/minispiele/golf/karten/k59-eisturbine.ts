@@ -32,7 +32,7 @@ export const bahn: Karte = {
     { art: 'bumper', x: 28, y: 36, r: 1 },
   ],
   dekor: 'eis',
-  beschreibung: 'Einmal ums Hufeisen: das Eis hinauf, zwei Schubfelder nehmen den Ball um die Ecken mit, und rechts wirft ein Sprungfeld ihn über den Tümpel — daneben führt nur ein schmaler Sandsteg vorbei.',
+  beschreibung: 'Einmal ums Hufeisen: das Eis hinauf, zwei Schubfelder nehmen den Ball um die Ecken mit, und rechts wirft ein Sprungfeld ihn über den Tümpel - daneben führt nur ein schmaler Sandsteg vorbei.',
   thema: 'Eis',
   autor: 'Aufsicht (Nachtlauf 22.09.2026)',
   tags: ['eis', 'beschleuniger', 'sprungfeld', 'wasser', 'meister'],

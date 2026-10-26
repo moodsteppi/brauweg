@@ -117,7 +117,7 @@ export function EinstellungenBlatt({
               Welches Stück läuft und welches Klangpaket gilt, steht in der Klanghalle in deinem Profil.
             </p>
             <p className="hb-klein hb-ohne-rand">
-              Läuft bei dir Musik in einer anderen App, spielt sie weiter — wir drängeln uns nicht davor.
+              Läuft bei dir Musik in einer anderen App, spielt sie weiter - wir drängeln uns nicht davor.
               Dafür schaltet am iPhone der Klingelschalter auch uns stumm.
             </p>
           </section>
@@ -179,7 +179,7 @@ export function EinstellungenBlatt({
           uns mit stummschaltet.
         */}
         <p className="einstellungen-fussnote muted">
-          Läuft bei dir Musik in einer anderen App, spielt sie weiter — wir
+          Läuft bei dir Musik in einer anderen App, spielt sie weiter - wir
           drängeln uns nicht davor. Dafür schaltet am iPhone der
           Klingelschalter auch uns stumm.
         </p>

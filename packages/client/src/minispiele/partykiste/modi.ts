@@ -52,7 +52,7 @@ export function modusChip(regeln: PartyRegelsatz): string | null {
  * zahmer ist, als "Eskalation" verspricht.
  */
 export function eskalationsHinweis(regeln: PartyRegelsatz): string | null {
-  return regeln.eskalation?.gekappt ? 'Ein Gast spielt mit — „derb“ gibt es erst ohne Gast.' : null;
+  return regeln.eskalation?.gekappt ? 'Ein Gast spielt mit - „derb“ gibt es erst ohne Gast.' : null;
 }
 
 /** Die Namen der Inhaltsstufen, Stelle = Stufe — dieselben Woerter wie die Kacheln (wahl.ts). */
@@ -90,5 +90,5 @@ export function inhaltsChip(regeln: PartyRegelsatz): string | null {
 export function inhaltsHinweis(regeln: PartyRegelsatz): string | null {
   const gewollt = regeln.inhaltsHaerteGewollt;
   if (regeln.modus === 'eskalation' || !gewollt || regeln.inhaltsHaerte === undefined) return null;
-  return gewollt > regeln.inhaltsHaerte ? 'Ein Gast spielt mit — „derb“ gibt es erst ohne Gast.' : null;
+  return gewollt > regeln.inhaltsHaerte ? 'Ein Gast spielt mit - „derb“ gibt es erst ohne Gast.' : null;
 }

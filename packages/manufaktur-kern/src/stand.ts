@@ -9,7 +9,9 @@
 
 import { MAX_PRESSEN, meisterKosten } from './formeln.js';
 
-export const FASSUNG = 7;
+import type { Auftragsbuch } from './auftraege.js';
+
+export const FASSUNG = 8;
 
 /** Ein Arbeitszyklus: laeuft er, und wie weit ist er (0 … 1)? */
 export interface Zyklus {
@@ -87,6 +89,7 @@ export interface OrtStand {
 }
 
 export interface ManufakturStand {
+  auftraege: Auftragsbuch;
   fassung: typeof FASSUNG;
   /** Welche Manufaktur (1 … 5) — steigt beim Umzug. */
   manufaktur: number;
@@ -136,6 +139,7 @@ export function neuePresse(): Presse {
 
 /** Was ueber Umzug und Renovieren erhalten bleibt (alles ausser der Halle selbst). */
 export interface Bleibt {
+  auftraege?: Auftragsbuch;
   meilensteine?: string[];
   orte?: Record<string, OrtStand>;
   zaehler?: Record<string, number>;
@@ -155,6 +159,7 @@ export interface Bleibt {
 export function neuerStand(jetzt: number, manufaktur = 1, bleibt: Bleibt = {}): ManufakturStand {
   return {
     fassung: FASSUNG,
+    auftraege: { erledigt: bleibt.auftraege?.erledigt ?? 0, aktiv: bleibt.auftraege?.aktiv ? { ...bleibt.auftraege.aktiv } : null },
     manufaktur,
     taler: 0,
     verdient: 0,
@@ -192,6 +197,7 @@ function kopiereBelegschaft(b: Record<string, MeisterPlatz>): Record<string, Mei
 export function kopiere(stand: ManufakturStand): ManufakturStand {
   return {
     ...stand,
+    auftraege: { ...stand.auftraege, aktiv: stand.auftraege.aktiv ? { ...stand.auftraege.aktiv } : null },
     pressen: stand.pressen.map((p) => ({ ...p })),
     paternoster: { ...stand.paternoster },
     versand: { ...stand.versand },
@@ -293,7 +299,7 @@ function ausFassung5(alt: StandFassung5): ManufakturStand {
 
 /** Fassung 6 → 7: Die Zielkette beginnt von vorn, ihre Zaehler bei null. */
 function ausFassung6(alt: ManufakturStand): ManufakturStand {
-  return { ...alt, fassung: FASSUNG, zaehler: alt.zaehler ?? {}, ziel: alt.ziel ?? 0 };
+  return { ...alt, fassung: FASSUNG, auftraege: { erledigt: 0, aktiv: null }, zaehler: alt.zaehler ?? {}, ziel: alt.ziel ?? 0 };
 }
 
 /**
@@ -304,6 +310,7 @@ function ausFassung6(alt: ManufakturStand): ManufakturStand {
 export function migriere(roh: unknown): ManufakturStand {
   const alt = roh as { fassung?: number } & Partial<StandFassung1>;
   if (alt.fassung === FASSUNG) return alt as unknown as ManufakturStand;
+  if (alt.fassung === 7) return ausFassung6(alt as unknown as ManufakturStand);
   if (alt.fassung === 6) return ausFassung6(alt as unknown as ManufakturStand);
   let f3: StandFassung3 | null = null;
   // Fassung 2 (Zyklen, ohne Jubilaeum): alles bleibt, es gab nur noch keine Siegel.

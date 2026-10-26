@@ -1044,7 +1044,7 @@ export function Table({
           <div className="doko-sheet-card">
             <h2>Tisch pausiert</h2>
             <p className="muted">
-              Der Zugtimer steht still. Jeder am Tisch kann fortsetzen — ideal für
+              Der Zugtimer steht still. Jeder am Tisch kann fortsetzen - ideal für
               Clantische über mehrere Abende.
             </p>
             {view.seat !== null && (
@@ -1750,7 +1750,7 @@ function ArmutEntscheidung({
       <div className="doko-sheet-card">
         <h2>Armut</h2>
         <p>
-          {ansager ? `${ansager} hat Armut angesagt` : 'Ein Mitspieler hat Armut angesagt'} — er
+          {ansager ? `${ansager} hat Armut angesagt` : 'Ein Mitspieler hat Armut angesagt'} - er
           hält höchstens drei Trümpfe. Nimmst du an, wirst du sein Partner: Du
           bekommst seine Trümpfe und gibst dafür gleich viele Karten zurück.
           Lehnst du ab, wird der Nächste gefragt.
@@ -1940,7 +1940,7 @@ function RundenAbrechnung({
         {result.feigling && (
           <p className="doko-feigling">
             <strong>Feigling.</strong> {reGewinnt ? 'Kontra' : 'Re'} hatte die
-            Augen, aber zu niedrig angesagt — die Punkte gehen an die
+            Augen, aber zu niedrig angesagt - die Punkte gehen an die
             Gegenpartei. Sonderpunkte bleiben, wo sie erspielt wurden.
           </p>
         )}

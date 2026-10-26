@@ -1238,3 +1238,63 @@
     animation: none;
   }
 }
+
+/* Auftragsbrett: kompakter Einstieg, Karten auf Papier, dauerhafte Sammlung. */
+.mf .mf-auftragszugang {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  margin: 0 10px 6px; padding: 8px 12px; min-height: 48px;
+  border: 1px solid #a98140; border-radius: 12px;
+  background: linear-gradient(100deg, #253957, #182a43); color: #ffe2a0;
+  text-align: left;
+}
+.mf .mf-auftragszugang > span:first-child { font-size: 26px; }
+.mf .mf-auftragszugang > span:nth-child(2) { flex: 1; display: grid; gap: 2px; }
+.mf .mf-auftragszugang strong { font-size: 13px; }
+.mf .mf-auftragszugang small { color: #d7dfeb; font-size: 11px; }
+.mf .mf-auftragszugang.is-fertig { background: #365335; border-color: #f5c02e; }
+.mf-auftraege { display: grid; gap: 16px; padding-bottom: 16px; }
+.mf-auftrag-hero { display: block; width: 100%; aspect-ratio: 2 / 1; object-fit: cover; border-radius: 14px; }
+.mf-auftraege p { margin: 0; line-height: 1.5; }
+.mf-auftrag-angebote { display: grid; gap: 12px; }
+.mf-auftrag-karte {
+  display: grid; gap: 10px; padding: 16px; border-radius: 14px;
+  background: #f3e5c5; border: 1px solid #c59a4b; color: #342617;
+}
+.mf-auftrag-karte > small { color: #795020; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.mf-auftraege h3 { margin: 0; font: 400 22px var(--hb-anz); }
+.mf-auftrag-karte dl { display: grid; gap: 6px; margin: 0; font-size: 13px; }
+.mf-auftrag-karte dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+.mf-auftrag-karte dd { margin: 0; font-weight: 800; }
+.mf-auftrag-karte progress { width: 100%; height: 14px; accent-color: #398048; }
+.mf-auftrag-karte .hb-kn { min-height: 44px; height: auto; padding: 12px; white-space: normal; }
+.mf-auftrag-leise { font-size: 12px; opacity: .8; }
+.mf-auftrag-sammlung { display: grid; gap: 10px; }
+.mf-auftrag-abzeichen { display: grid; gap: 8px; }
+.mf-auftrag-abzeichen > div { display: grid; grid-template-columns: 32px 1fr; gap: 2px 8px; padding: 10px; border: 1px solid #425477; border-radius: 10px; color: #a3b3dd; }
+.mf-auftrag-abzeichen > .is-erreicht { color: #ffe2a0; border-color: #bf9347; background: #293750; }
+.mf-auftrag-abzeichen span { grid-row: span 2; font-size: 28px; align-self: center; }
+.mf-auftrag-abzeichen small { grid-column: 2; }
+.mf-auftrag-abzeichen img { width: 16px; height: 16px; vertical-align: middle; }
+
+/* Meisterschule und Erinnerungen: dieselben Papier- und Messingtoene wie Auftraege. */
+.mf-schule { display: grid; gap: 16px; padding-bottom: 16px; }
+.mf-schule p { margin: 0; line-height: 1.5; }
+.mf-schule h3 { margin: 0; font: 400 20px var(--hb-anz); }
+.mf-schule-konto { display: grid; gap: 6px; padding: 14px; border: 1px solid #b68d42; border-radius: 14px; background: #243653; }
+.mf-schule-konto strong { color: #ffe2a0; font-size: 22px; }
+.mf-schule-konto span { font-size: 13px; }
+.mf-schule-station { display: grid; gap: 10px; }
+.mf-schule-karte { display: grid; gap: 10px; padding: 14px; background: #f3e5c5; color: #342617; border: 1px solid #c59a4b; border-radius: 14px; }
+.mf-schule-rang { display: flex; align-items: center; gap: 10px; }
+.mf-schule-rang img { width: 36px; height: 36px; object-fit: contain; }
+.mf-schule-danach { color: #286037; font-weight: 800; }
+.mf-schule .hb-kn { min-height: 44px; height: auto; white-space: normal; padding: 12px; }
+.mf-werkstatt-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.mf-werkstatt-links .hb-kn { flex: 1; min-height: 44px; height: auto; padding: 12px; white-space: normal; }
+.mf-chronik-liste { display: grid; gap: 10px; }
+.mf-chronik-eintrag { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid #435377; border-radius: 14px; color: #b8c6e1; }
+.mf-chronik-eintrag.is-erreicht { color: #ffe2a0; background: #253550; border-color: #a98140; }
+.mf-chronik-eintrag > span { font-size: 26px; }
+.mf-chronik-eintrag > div { display: grid; flex: 1; gap: 6px; }
+.mf-chronik-eintrag p { font-size: 13px; }
+.mf-chronik-eintrag progress { width: 100%; height: 8px; accent-color: #f5c02e; }

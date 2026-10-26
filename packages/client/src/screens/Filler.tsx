@@ -83,11 +83,11 @@ const SUCH_TAKT_MS = 1000;
  */
 const SPIELARTEN = [
   { kennung: 'nebel', name: 'Nebel', text: 'Du siehst nur dein Gebiet und dessen Rand.' },
-  { kennung: 'klar', name: 'Normal', text: 'Das ganze Brett liegt offen — wie im Original.' },
+  { kennung: 'klar', name: 'Normal', text: 'Das ganze Brett liegt offen - wie im Original.' },
   {
     kennung: 'build',
     name: 'Build',
-    text: 'Offenes Brett, dazu zehn Mauern je Spieler — eine je Zug, färben darfst du danach trotzdem.',
+    text: 'Offenes Brett, dazu zehn Mauern je Spieler - eine je Zug, färben darfst du danach trotzdem.',
   },
   {
     kennung: 'extreme',
@@ -578,7 +578,7 @@ export function Filler({
           </p>
           <p className="spe-text">
             {gefunden === 1
-              ? 'Noch niemand sonst — bleibt es dabei, spielst du gegen einen Bot.'
+              ? 'Noch niemand sonst - bleibt es dabei, spielst du gegen einen Bot.'
               : `${gefunden} Spieler gefunden`}
           </p>
           <div className="spe-lauf" aria-hidden="true">
@@ -1490,18 +1490,18 @@ function Regeltext(): React.JSX.Element {
       </p>
       <p>
         <strong>Nebel</strong> zeigt dir nur dein eigenes Gebiet und die Felder,
-        die direkt daran grenzen. Alles andere liegt grau — auch für den Gegner.
+        die direkt daran grenzen. Alles andere liegt grau - auch für den Gegner.
         Wo ein aufgedecktes Feld an sein Gebiet stößt, steht eine weiße Kante.
       </p>
       <p>
         <strong>Build</strong> spielt auf offenem Brett, gibt aber jedem zehn
         Mauern. Eine Mauer steht zwischen zwei Feldern und hält beide Seiten
-        auf — auch dich. Du darfst pro Zug eine setzen und danach ganz normal
+        auf - auch dich. Du darfst pro Zug eine setzen und danach ganz normal
         färben; erst das Färben gibt ab. Die ersten drei Züge der Partie sind
-        mauerfrei — das Schloss auf dem Knopf zählt sie herunter; ab dem
+        mauerfrei - das Schloss auf dem Knopf zählt sie herunter; ab dem
         zweiten Zug des zweiten Spielers darf gebaut werden. Und du darfst
         kein Feld einmauern: Eine Kante, nach der ein freies Feld für niemanden
-        mehr erreichbar wäre, lässt sich nicht bebauen — jedes Feld bleibt bis
+        mehr erreichbar wäre, lässt sich nicht bebauen - jedes Feld bleibt bis
         zum Ende zu holen. Auch den Gegner kannst du nicht einsperren.
       </p>
       <p>
@@ -1511,7 +1511,7 @@ function Regeltext(): React.JSX.Element {
         Mauer dazu.
       </p>
       <h3>Ziel</h3>
-      <p>Wer am Ende die meisten Felder hält, gewinnt — in Extreme die meisten Punkte.</p>
+      <p>Wer am Ende die meisten Felder hält, gewinnt - in Extreme die meisten Punkte.</p>
     </>
   );
 }

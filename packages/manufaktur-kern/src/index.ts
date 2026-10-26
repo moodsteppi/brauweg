@@ -18,3 +18,6 @@ export * from './werkstattbuch.js';
 export * from './renovieren.js';
 export * from './baustelle.js';
 export * from './ziele.js';
+export * from './auftraege.js';
+export * from './ausbildung.js';
+export * from './chronik.js';

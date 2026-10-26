@@ -121,7 +121,7 @@ export function Lernpfad({
               <span className="hb-klein">
                 {pfad.belohnt
                   ? 'Doktorhut und Meisterrobe liegen in deinem Kleiderschrank.'
-                  : 'Doktorhut und Meisterrobe für deinen Pinguin — gibt es nur über die Serie.'}
+                  : 'Doktorhut und Meisterrobe für deinen Pinguin - gibt es nur über die Serie.'}
               </span>
             </div>
           </section>
@@ -159,7 +159,7 @@ export function Lernpfad({
         {allesGeschafft && (
           <section className="ln-weiter">
             <strong>Alle Lektionen geschafft!</strong>
-            <span className="hb-klein">Halte deine Serie mit einer Übungsrunde gegen drei Bots — eine Runde reicht für heute.</span>
+            <span className="hb-klein">Halte deine Serie mit einer Übungsrunde gegen drei Bots - eine Runde reicht für heute.</span>
             <button
               type="button"
               className="hb-kn is-gold is-haupt is-breit"
@@ -196,7 +196,7 @@ export function Lernpfad({
 }
 
 function serienText(serie: LernpfadAnsicht['serie']): string {
-  if (serie.heuteGespielt) return 'Heute geschafft — morgen geht es weiter.';
+  if (serie.heuteGespielt) return 'Heute geschafft - morgen geht es weiter.';
   if (serie.brauchtSchutz) return 'Gestern verpasst. Spiel heute, dann rettet dich der Wochenschutz.';
   if (serie.serie > 0) return 'Heute noch eine Lektion, sonst erlischt die Flamme.';
   return 'Mach heute deine erste Lektion und starte deine Serie.';

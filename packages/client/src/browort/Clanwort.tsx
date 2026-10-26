@@ -94,7 +94,7 @@ export function Clanwort({
       <div className="hb-liste">
         {stand.rangliste.map((zeile, i) => (
           <div key={zeile.accountId} className="hb-mg">
-            <span className="bw-platz">{zeile.geloest ? i + 1 : '–'}</span>
+            <span className="bw-platz">{zeile.geloest ? i + 1 : '-'}</span>
             <span className="hb-mg-name">
               <strong>{zeile.name}</strong>
               <small className="is-leise">
@@ -156,7 +156,7 @@ export function Clanwort({
           <div className="hb-karte bw-warten">
             <strong>{stand.waehler?.name ?? 'Jemand'} sucht gerade das Wort aus.</strong>
             <span className="hb-klein">
-              Spätestens um {stand.wahlBis} Uhr geht es los — kommt bis dahin nichts, wählt der Zufall.
+              Spätestens um {stand.wahlBis} Uhr geht es los - kommt bis dahin nichts, wählt der Zufall.
             </span>
           </div>
           {rangliste}
@@ -166,7 +166,7 @@ export function Clanwort({
           <div className="hb-karte bw-warten">
             <span className="hb-klein">Dein Wort für heute</span>
             <strong className="bw-geheim">{stand.loesung}</strong>
-            <span className="hb-klein">Du rätst heute nicht mit — schau zu, wie sich dein Clan schlägt.</span>
+            <span className="hb-klein">Du rätst heute nicht mit - schau zu, wie sich dein Clan schlägt.</span>
           </div>
           {rangliste || <p className="hb-klein bw-hinweis">Noch hat niemand geraten.</p>}
         </div>

@@ -738,7 +738,7 @@ export function Vorschlagskasten({
         setFrei(0);
         setFehler(
           uebrig > 1
-            ? `Es warten schon fünf Bilder von dir. Die restlichen ${uebrig} sind nicht eingereicht — warte, bis die anderen geprüft sind.`
+            ? `Es warten schon fünf Bilder von dir. Die restlichen ${uebrig} sind nicht eingereicht - warte, bis die anderen geprüft sind.`
             : 'Es warten schon fünf Bilder von dir. Warte, bis sie geprüft sind.',
         );
         setMeldung(schlussmeldung());
@@ -952,7 +952,7 @@ export function Vorschlagskasten({
                 )}
                 <p className="mm-kasten-hinweis">
                   {bearbeitet
-                    ? 'Neuer Ausschnitt, neuer Name — die Kennung bleibt, laufende Tische behalten das Motiv.'
+                    ? 'Neuer Ausschnitt, neuer Name - die Kennung bleibt, laufende Tische behalten das Motiv.'
                     : 'Schieben zum Verrücken, zwei Finger oder der Regler zum Zoomen. Was im Rahmen steht, kommt auf die Karte.'}
                 </p>
                 {stapelhinweis && <p className="mm-kasten-hinweis">{stapelhinweis}</p>}
@@ -1050,7 +1050,7 @@ export function Vorschlagskasten({
                       )}
                     </div>
                     <p className="mm-tonzeile-satz">
-                      Höchstens {String(TON_SEKUNDEN).replace('.', ',')} Sekunden — was länger ist,
+                      Höchstens {String(TON_SEKUNDEN).replace('.', ',')} Sekunden - was länger ist,
                       wird abgeschnitten. Er spielt, sobald jemand dieses Meme über den Tisch wirft.
                     </p>
                   </div>
@@ -1104,8 +1104,8 @@ export function Vorschlagskasten({
               <>
                 <p className="mm-kasten-hinweis">
                   {istAufsicht
-                    ? 'Bilder aussuchen — auch mehrere auf einmal. Du schneidest sie nacheinander zu, jedes ist sofort im Spiel.'
-                    : 'Such dir Memes aus deiner Galerie aus, gern mehrere auf einmal. Du schneidest sie nacheinander selbst zurecht — was auf dem Brett landet, entscheidet die Aufsicht.'}
+                    ? 'Bilder aussuchen - auch mehrere auf einmal. Du schneidest sie nacheinander zu, jedes ist sofort im Spiel.'
+                    : 'Such dir Memes aus deiner Galerie aus, gern mehrere auf einmal. Du schneidest sie nacheinander selbst zurecht - was auf dem Brett landet, entscheidet die Aufsicht.'}
                 </p>
                 {typeof frei === 'number' && (
                   <p className="mm-kasten-hinweis">
@@ -1187,7 +1187,7 @@ export function Vorschlagskasten({
           <div className="mm-kasten-inhalt">
             <p className="mm-kasten-hinweis">
               Alles, was zusätzlich zu den 88 Grundmotiven im Spiel ist. ✎ ändert Name,
-              Zuschnitt und Ton, ✕ nimmt heraus — beides wirkt sofort für neue Partien. Der
+              Zuschnitt und Ton, ✕ nimmt heraus - beides wirkt sofort für neue Partien. Der
               Name steht im Spiel groß über dem Brett, sobald jemand das Paar findet.
             </p>
             {!laedt && bestand.length === 0 && (
@@ -1211,7 +1211,7 @@ export function Vorschlagskasten({
                         src={`${motivBildPfad(eintrag.kennung)}?v=${stand}`}
                         alt={eintrag.titel ?? eintrag.kennung}
                       />
-                      <span className="mm-bestand-name">{eintrag.titel ?? '—'}</span>
+                      <span className="mm-bestand-name">{eintrag.titel ?? '-'}</span>
                       <button
                         type="button"
                         className="mm-bestand-knopf mm-bestand-stift"

@@ -229,7 +229,7 @@ export function HeuteNeu({
                       <small>
                         {!tr.offen && !tr.geholt && tr.fehltStufen !== null
                           ? `noch ${tr.fehltStufen} ${tr.fehltStufen === 1 ? 'Stufe' : 'Stufen'}`
-                          : `${GRAD_NAME[tr.grad]} · ${tr.von}–${tr.bis}`}
+                          : `${GRAD_NAME[tr.grad]} · ${tr.von}-${tr.bis}`}
                       </small>
                       {offen ? (
                         <span className="hb-tr-knopf">Öffnen</span>

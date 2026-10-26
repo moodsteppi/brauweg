@@ -245,7 +245,7 @@ export function BroChessTable({
             {status.text}
           </p>
         )}
-        {!connected && <p className="hb-fehler">Verbindung unterbrochen — verbinde neu…</p>}
+        {!connected && <p className="hb-fehler">Verbindung unterbrochen - verbinde neu…</p>}
         {error && connected && <p className="hb-fehler">{error}</p>}
         {view.finished || aus ? (
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onLeave}>

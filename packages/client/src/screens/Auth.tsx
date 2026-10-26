@@ -64,7 +64,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
       const antwort = await api.resendVerification(email);
       setNote(
         antwort.mailVersand === 'log'
-          ? 'Der Mailversand ist gerade nicht eingerichtet — es geht keine Mail hinaus. Melde dich bitte bei uns.'
+          ? 'Der Mailversand ist gerade nicht eingerichtet - es geht keine Mail hinaus. Melde dich bitte bei uns.'
           : 'Falls es die Adresse gibt und sie noch nicht bestätigt ist, ist eine neue E-Mail unterwegs.',
       );
     });
@@ -138,7 +138,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         // Verzeichnis registrierter Konten.
         setNote(
           antwort.mailVersand === 'log'
-            ? 'Der Mailversand ist gerade nicht eingerichtet — es geht keine Mail hinaus. Melde dich bitte bei uns.'
+            ? 'Der Mailversand ist gerade nicht eingerichtet - es geht keine Mail hinaus. Melde dich bitte bei uns.'
             : 'Falls es ein Konto mit dieser Adresse gibt, ist ein Link zum neuen Passwort unterwegs. Er gilt zwei Stunden.',
         );
         return;

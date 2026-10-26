@@ -329,7 +329,7 @@ function Halle({
           <div className="hub-clanschild-zahlen">
             <span>
               <img src="/hub/tab-clan.webp" alt="" aria-hidden="true" />
-              {detail ? `${detail.members}/${detail.maxMembers}` : '–'}
+              {detail ? `${detail.members}/${detail.maxMembers}` : '-'}
             </span>
             <span>
               <img src="/hub/pokal.png" alt="" aria-hidden="true" />
@@ -821,7 +821,7 @@ function Suche({
       <div className="hb-clan">
         <div className="hb-clan-held is-kurz" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
           <h1>Clans</h1>
-          <small>Such dir einen Clan — oder gründe deinen eigenen.</small>
+          <small>Such dir einen Clan - oder gründe deinen eigenen.</small>
         </div>
         <div className="hb-clan-inhalt">
           <input
@@ -1497,7 +1497,7 @@ function HalleNeu({
             </span>
             <span>
               <strong>Clanwort</strong>
-              <small>Ein Mitglied wählt, alle raten — heute</small>
+              <small>Ein Mitglied wählt, alle raten - heute</small>
             </span>
             <span className="hb-pf" aria-hidden="true">
               ›

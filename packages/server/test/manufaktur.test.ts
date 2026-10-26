@@ -178,3 +178,53 @@ test('Dienst: Wer umzieht, bekommt den Kartenruecken seiner Manufaktur — kaufe
     .where(eq(s.accountCosmetic.accountId, accountId));
   assert.ok(besitz.some((b) => b.itemId === 'ruecken-manufaktur-dorf'));
 });
+
+
+test('Dienst: speichert Auftraege und zahlt die Praemie genau einmal', async (t) => {
+  const c = await createTestContext();
+  t.after(() => c.close());
+  await seedInvite(c.db);
+  const { accountId } = await createVerifiedAccount(c, 'Druckerei');
+  const erst = await manufakturHeute(c.db, accountId, new Date(T0));
+  const stand = erst.stand;
+  stand.pressen = Array.from({ length: 3 }, () => neuePresse());
+  await c.db.update(s.manufaktur).set({ stand }).where(eq(s.manufaktur.accountId, accountId));
+  const angenommen = await manufakturAktion(c.db, accountId, { typ: 'auftrag-annehmen', art: 'laden' }, new Date(T0));
+  const gespeichert = await manufakturHeute(c.db, accountId, new Date(T0));
+  assert.deepEqual(gespeichert.stand.auftraege, angenommen.stand.auftraege);
+  const bereit = gespeichert.stand;
+  bereit.auftraege.aktiv!.geliefert = bereit.auftraege.aktiv!.ziel;
+  const praemie = bereit.auftraege.aktiv!.belohnung;
+  await c.db.update(s.manufaktur).set({ stand: bereit }).where(eq(s.manufaktur.accountId, accountId));
+  const fertig = await manufakturAktion(c.db, accountId, { typ: 'auftrag-abholen' }, new Date(T0));
+  assert.equal(fertig.stand.taler, praemie);
+  assert.equal(fertig.stand.auftraege.erledigt, 1);
+  assert.equal(fertig.muenzen, 0);
+  await assert.rejects(() => manufakturAktion(c.db, accountId, { typ: 'auftrag-abholen' }, new Date(T0)),
+    (e: unknown) => e instanceof AppError && e.code === 'manufakturAuftragOffen');
+});
+
+
+test('Dienst: Ausbildung speichert den Rang und verbraucht nur Lehrbriefe', async (t) => {
+  const c = await createTestContext();
+  t.after(() => c.close());
+  await seedInvite(c.db);
+  const { accountId } = await createVerifiedAccount(c, 'Lehrmeister');
+  const erst = await manufakturHeute(c.db, accountId, new Date(T0));
+  let stand = erst.stand;
+  stand.taler = 1000;
+  stand.siegel = 7;
+  stand.auftraege.erledigt = 3;
+  stand = handle(stand, { typ: 'einstellen', ziel: { art: 'versand' } }, T0).stand;
+  const id = stand.belegschaft.versand.pool[0].id;
+  await c.db.update(s.manufaktur).set({ stand }).where(eq(s.manufaktur.accountId, accountId));
+  const ausgebildet = await manufakturAktion(c.db, accountId, { typ: 'ausbilden', ziel: { art: 'versand' }, id }, new Date(T0));
+  assert.equal(ausgebildet.stand.versand.rang, 'meister');
+  assert.equal(ausgebildet.stand.zaehler.lehrbriefeVerbraucht, 3);
+  assert.equal(ausgebildet.stand.siegel, 7);
+  assert.equal(ausgebildet.muenzen, 0);
+  const gespeichert = await manufakturHeute(c.db, accountId, new Date(T0));
+  assert.equal(gespeichert.stand.belegschaft.versand.pool[0].rang, 'meister');
+  await assert.rejects(() => manufakturAktion(c.db, accountId, { typ: 'ausbilden', ziel: { art: 'versand' }, id }, new Date(T0)),
+    (e: unknown) => e instanceof AppError && e.code === 'manufakturZuWenigLehrbriefe');
+});

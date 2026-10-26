@@ -48,7 +48,7 @@ export function Einstellungen({
   const hinweis = (
     <>
       {trinkmodus
-        ? 'Wer verliert, trinkt — die Härte nimmt alle Schlücke mal.'
+        ? 'Wer verliert, trinkt - die Härte nimmt alle Schlücke mal.'
         : 'Statt Schlücken gibt es Strafpunkte, die Härte nimmt sie mal. Die Punkte fürs Turnier bleiben gleich.'}{' '}
       Gilt für deine eigene Runde, online wie gegen Bots.
     </>

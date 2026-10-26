@@ -553,7 +553,7 @@ function ProfilTab({
   const partien = me.stats.reduce((sum, s) => sum + s.parties, 0);
   const siege = me.stats.reduce((sum, s) => sum + s.wins, 0);
   const trophaeen = me.stats.reduce((sum, s) => sum + s.trophies, 0);
-  const quote = partien > 0 ? `${Math.round((siege / partien) * 100)} %` : '–';
+  const quote = partien > 0 ? `${Math.round((siege / partien) * 100)} %` : '-';
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [loeschenOffen, setLoeschenOffen] = useState(false);
@@ -675,7 +675,7 @@ function ProfilTab({
               </HbSymbol>
             </span>
           </button>
-          <p className="hb-klein hb-ohne-rand">Drehen, anmalen, Mütze aufsetzen — antippen.</p>
+          <p className="hb-klein hb-ohne-rand">Drehen, anmalen, Mütze aufsetzen - antippen.</p>
         </section>
         )}
 
@@ -754,7 +754,7 @@ function ProfilTab({
               (`countsForRanking` in tables/service.ts); ausgenommen sind nur
               Gäste am Tisch und Training. */}
           <p className="hb-klein hb-ohne-rand">
-            Trophäen gibt es auch gegen Bots — nur nicht, wenn ein Gast mitspielt oder Training an ist.
+            Trophäen gibt es auch gegen Bots - nur nicht, wenn ein Gast mitspielt oder Training an ist.
           </p>
         </section>
 
@@ -929,7 +929,7 @@ export function KontoLoeschenBlatt({
         setCodeHinweis(
           antwort.versandt
             ? 'Der Code ist unterwegs. Er gilt 15 Minuten.'
-            : 'Eben kam schon ein Code — er gilt weiter. Einen neuen gibt es in einer Minute.',
+            : 'Eben kam schon ein Code - er gilt weiter. Einen neuen gibt es in einer Minute.',
         ),
       )
       .catch((err: unknown) =>
@@ -971,7 +971,7 @@ export function KontoLoeschenBlatt({
         <h2>Konto löschen</h2>
         <p className="muted">
           Das lässt sich nicht rückgängig machen. Dein Name, deine E-Mail-Adresse und dein
-          Geburtstag werden entfernt, du wirst aus deinem Clan ausgetragen — führst du ihn,
+          Geburtstag werden entfernt, du wirst aus deinem Clan ausgetragen - führst du ihn,
           rückt das älteste Mitglied nach.
         </p>
         <p className="muted">
@@ -1141,7 +1141,7 @@ function preisSchild(paket: Paket): React.JSX.Element | string {
       </>
     );
   }
-  if (paket.gems === null) return '—';
+  if (paket.gems === null) return '-';
   return (
     <>
       {paket.gems}
@@ -1535,7 +1535,7 @@ function Shop({
           ))}
         </div>
         <p className="shop-hinweis muted">
-          BroJetons setzt du am Pokertisch. Zurück in Münzen oder Edelsteine gehen sie nicht —
+          BroJetons setzt du am Pokertisch. Zurück in Münzen oder Edelsteine gehen sie nicht -
           wer gewinnt, hat mehr Chips für die nächste Runde.
         </p>
       </Tafel>
@@ -1552,7 +1552,7 @@ function Shop({
           ))}
         </div>
         <p className="shop-hinweis muted">
-          Die Spanne steht dran und wird beim Kauf ausgewürfelt. Ihre Mitte ist genau der Kurs —
+          Die Spanne steht dran und wird beim Kauf ausgewürfelt. Ihre Mitte ist genau der Kurs -
           das Würfeln kostet im Schnitt nichts, es verteilt nur. Wer die feste Zahl will, nimmt
           ein Paket.
         </p>
@@ -1571,7 +1571,7 @@ function Shop({
           ))}
         </div>
         <p className="shop-hinweis muted">
-          Edelsteine fallen nicht aus Truhen und nicht aus Aufgaben — sie sind das Einzige, was
+          Edelsteine fallen nicht aus Truhen und nicht aus Aufgaben - sie sind das Einzige, was
           echtes Geld kostet. Dafür ist mit ihnen alles andere hier zu haben.
         </p>
       </Tafel>

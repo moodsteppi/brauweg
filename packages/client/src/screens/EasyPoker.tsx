@@ -1773,19 +1773,19 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         <h3>Die vier Knöpfe</h3>
         <ul className="poker-blatt-liste">
           <li>
-            <b>Fold</b> — aussteigen. Du verlierst, was du schon gesetzt hast,
+            <b>Fold</b> - aussteigen. Du verlierst, was du schon gesetzt hast,
             mehr nicht.
           </li>
           <li>
-            <b>Check</b> — weiter, ohne zu setzen. Geht nur, wenn nichts offen
+            <b>Check</b> - weiter, ohne zu setzen. Geht nur, wenn nichts offen
             steht.
           </li>
           <li>
-            <b>Call</b> — den offenen Einsatz bezahlen. Die Zahl auf dem
+            <b>Call</b> - den offenen Einsatz bezahlen. Die Zahl auf dem
             Knopf ist der Preis.
           </li>
           <li>
-            <b>Bet</b> — setzen oder erhöhen. Auch hier steht der Betrag auf
+            <b>Bet</b> - setzen oder erhöhen. Auch hier steht der Betrag auf
             dem Knopf.
           </li>
         </ul>
@@ -1796,17 +1796,17 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           jeder neuen Karte wird gesetzt. Wer als Letzter nicht gefoldet hat,
           gewinnt ohne Zeigen. Sonst werden die Hände verglichen. Wer all-in
           weniger setzen konnte als die anderen, spielt nur um den Topf bis zu
-          seinem Beitrag — der Rest ist ein Nebentopf.
+          seinem Beitrag - der Rest ist ein Nebentopf.
         </p>
 
         <h3>Was schlägt was</h3>
         <ol className="poker-blatt-rang">
-          <li>Straight Flush — fünf in Reihe, alle gleiche Farbe</li>
-          <li>Vierling — vier gleiche Werte</li>
-          <li>Full House — Drilling und Paar</li>
-          <li>Flush — fünf gleiche Farbe</li>
-          <li>Straße — fünf in Reihe</li>
-          <li>Drilling — drei gleiche Werte</li>
+          <li>Straight Flush - fünf in Reihe, alle gleiche Farbe</li>
+          <li>Vierling - vier gleiche Werte</li>
+          <li>Full House - Drilling und Paar</li>
+          <li>Flush - fünf gleiche Farbe</li>
+          <li>Straße - fünf in Reihe</li>
+          <li>Drilling - drei gleiche Werte</li>
           <li>Zwei Paare</li>
           <li>Ein Paar</li>
           <li>Höchste Karte</li>

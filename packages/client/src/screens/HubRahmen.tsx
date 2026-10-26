@@ -1,4 +1,5 @@
-import type { RefObject } from 'react';
+import { useRef, type RefObject } from 'react';
+import { useHubWischen } from './hub-wischen';
 import type { Me } from '../api';
 import { mitEdelsteinen, serverAdresse } from '../laufzeit';
 import { kompakteZahl } from '../i18n';
@@ -79,6 +80,8 @@ export function NeuerRahmen<T extends Reiter>({
   renderTab: (tab: T) => React.JSX.Element | null;
   children: React.ReactNode;
 }): React.JSX.Element {
+  const inhalt = useRef<HTMLDivElement>(null);
+  useHubWischen(inhalt, tab, tabFolge, onTab);
   const zumShop = kaufbar ? () => onTab('shop' as T) : undefined;
   return (
     <div className={`hb${tab === 'spielen' ? '' : ' is-ohne-kopf'}`}>
@@ -138,11 +141,8 @@ export function NeuerRahmen<T extends Reiter>({
         </div>
       )}
 
-      {/* Kein Wischen zwischen den Reitern (Robin, 26.09.2026): Im neuen Hub
-          rollen Spielreihen und Filter selbst waagerecht, und ein Wisch darin
-          sprang auf den Nachbarreiter, statt die Reihe weiterzuschieben.
-          Gewechselt wird über die Leiste unten — so hält es auch Apple. */}
-      <div className="hb-inhalt">
+      {/* Wischen wechselt Hauptseiten; horizontale Spielreihen behalten ihre Geste. */}
+      <div className="hb-inhalt" ref={inhalt}>
         <div className="front-track hb-track" ref={trackRef}>
           {fenster.map((tt) => (
             <div className="hb-seite" key={tt}>

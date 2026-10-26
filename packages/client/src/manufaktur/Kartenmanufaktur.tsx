@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
+  auftragFertig,
   abklingMs,
   aktuellesZiel,
   zielBelohnung,
@@ -28,6 +29,8 @@ import { spiele } from '../klang';
 import { HbBlatt, Schliessen, useEscape, useRueckfrage } from '../screens/HbBlatt';
 import { type AnleitungsZiel, anleitungsSchritt } from './anleitung';
 import { BuchBlatt, LeerlaufBlatt, ManufakturBlatt, MeisterBlatt, UpgradeBlatt, WillkommenBlatt } from './Blaetter';
+import { Meisterschule, ChronikBlatt } from './Meisterschule';
+import { AuftraegeBlatt } from './AuftraegeBlatt';
 import { FINGER, RIG2_ORDNER, TIPP_RING, UI_ORDNER, manufakturBild } from './bilder';
 import { manufakturName } from './namen';
 import type { Ausschnitt, Szene, SzenenEreignis } from './szene/Szene';
@@ -49,7 +52,10 @@ type Blatt =
   | { art: 'meister'; ziel?: Ziel }
   | { art: 'leerlauf' }
   | { art: 'manufaktur' }
-  | { art: 'buch' };
+  | { art: 'buch' }
+  | { art: 'auftraege' }
+  | { art: 'schule' }
+  | { art: 'chronik' };
 
 function fingerOrt(ziel: AnleitungsZiel): Rechteck {
   const h = halle();
@@ -323,6 +329,18 @@ export function Kartenmanufaktur({
         </button>
       )}
 
+      {!finger && (stand.pressen.length >= 3 || stand.auftraege.aktiv || stand.auftraege.erledigt > 0) && (
+        <button type="button" className={`mf-auftragszugang${auftragFertig(stand) ? ' is-fertig' : ''}`} onClick={() => setBlatt({ art: 'auftraege' })}>
+          <span aria-hidden="true">✉</span>
+          <span><strong>{auftragFertig(stand) ? 'Lieferung fertig · Prämie abholen' : 'Auftragsbrett'}</strong>
+            <small>{stand.auftraege.aktiv ? `${kurz(stand.auftraege.aktiv.geliefert)} / ${kurz(stand.auftraege.aktiv.ziel)} Taler geliefert` : 'Neue Kunden warten auf deine Karten'}</small>
+          </span><span aria-hidden="true">›</span>
+        </button>
+      )}
+      {blatt?.art === 'auftraege' && <AuftraegeBlatt stand={stand} onSchule={() => setBlatt({ art: 'schule' })} onChronik={() => setBlatt({ art: 'chronik' })} onAktion={(aktion) => tue(aktion, 'kauf')} onClose={() => setBlatt(null)} />}
+
+      {blatt?.art === 'schule' && <Meisterschule stand={stand} jetzt={jetzt} onAktion={(a) => tue(a, 'kauf')} onClose={() => setBlatt(null)} />}
+      {blatt?.art === 'chronik' && <ChronikBlatt stand={stand} onClose={() => setBlatt(null)} />}
       {m.meldung && (
         <p className="mf-meldung" role="status">
           {m.meldung}
@@ -439,6 +457,7 @@ export function Kartenmanufaktur({
       )}
       {blatt?.art === 'meister' && (
         <MeisterBlatt
+          onSchule={() => setBlatt({ art: 'schule' })}
           stand={stand}
           jetzt={jetzt}
           markiert={blatt.ziel}
@@ -470,7 +489,7 @@ export function Kartenmanufaktur({
             frage(
               {
                 titel: istJubilaeum(stand) ? 'Jubiläum feiern?' : 'Renovieren?',
-                text: `Stufen, Etagen und Taler beginnen neu — Meister, Werkstattbuch und Sterne bleiben. Danach leistet alles hier ×${kurz(renovierVorschau(stand).faktorNachher)}.`,
+                text: `Stufen, Etagen und Taler beginnen neu - Meister, Werkstattbuch und Sterne bleiben. Danach leistet alles hier ×${kurz(renovierVorschau(stand).faktorNachher)}.`,
                 ja: istJubilaeum(stand) ? 'Feiern' : 'Renovieren',
               },
               () => {
@@ -496,7 +515,7 @@ export function Kartenmanufaktur({
             frage(
               {
                 titel: 'Umziehen?',
-                text: 'Stufen, Etagen und Taler beginnen neu — Meister, Werkstattbuch und Sterne bleiben. Der neue Ort leistet doppelt so viel.',
+                text: 'Stufen, Etagen und Taler beginnen neu - Meister, Werkstattbuch und Sterne bleiben. Der neue Ort leistet doppelt so viel.',
                 ja: 'Umziehen',
               },
               () => {
@@ -523,7 +542,7 @@ export function Kartenmanufaktur({
         <HbBlatt titel={manufakturName(m.umgezogen)} onClose={m.schliesseUmzug} klasse="is-klein">
           <div className="hb-rueckfrage">
             <img className="mf-umzug-gross" src={manufakturBild(m.umgezogen)} alt="" draggable={false} />
-            <p className="hb-text">Neue Manufaktur, alles beginnt von vorn — und jede Station leistet doppelt so viel.</p>
+            <p className="hb-text">Neue Manufaktur, alles beginnt von vorn - und jede Station leistet doppelt so viel.</p>
             <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={m.schliesseUmzug}>
               Loslegen
             </button>
@@ -539,7 +558,7 @@ export function Kartenmanufaktur({
           <div className="hb-rueckfrage">
             <img className="mf-umzug-gross" src={manufakturBild(stand.manufaktur)} alt="" draggable={false} />
             <p className="hb-text">
-              {manufakturName(stand.manufaktur)} beginnt neu — und leistet jetzt für immer ×{kurz(renovierFaktor(m.gefeiert))}.
+              {manufakturName(stand.manufaktur)} beginnt neu - und leistet jetzt für immer ×{kurz(renovierFaktor(m.gefeiert))}.
               {m.gefeiert <= MAX_RENOVIERUNG && ' Die Siegel liegen im Werkstattbuch.'}
             </p>
             <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={m.schliesseFeier}>

@@ -149,7 +149,7 @@ export function ClanKrieg({
               <img src="/hub/icon-krieg.webp" alt="" draggable={false} />
               <h2 className="hb-ab">Kein Krieg im Gange</h2>
               <p className="hb-text">
-                Zwei Clans, 48 Stunden, Punkte aus euren Partien. Sucht euch einen Gegner — oder
+                Zwei Clans, 48 Stunden, Punkte aus euren Partien. Sucht euch einen Gegner - oder
                 fordert einen bestimmten Clan heraus.
               </p>
               {stand.darfFuehren ? (
@@ -300,7 +300,7 @@ export function ClanKrieg({
             <img className="clan-krieg-bild" src="/hub/icon-krieg.webp" alt="" draggable={false} />
             <h3>Kein Krieg im Gange</h3>
             <p className="muted">
-              Zwei Clans, 48 Stunden, Punkte aus euren Partien. Sucht euch einen Gegner —
+              Zwei Clans, 48 Stunden, Punkte aus euren Partien. Sucht euch einen Gegner -
               oder fordert einen bestimmten Clan heraus.
             </p>
             {stand.darfFuehren ? (
@@ -370,7 +370,7 @@ function Schlacht({ krieg }: { krieg: WarView }): React.JSX.Element {
       <h3 className="clan-krieg-untertitel">Wer hat gepunktet</h3>
       {krieg.beitraege.length === 0 && (
         <p className="muted">
-          Noch keine Punkte. Spielt eine Partie — mindestens zwei Menschen am Tisch.
+          Noch keine Punkte. Spielt eine Partie - mindestens zwei Menschen am Tisch.
         </p>
       )}
       <ul className="clan-krieg-beitraege">
@@ -426,7 +426,7 @@ function SchlachtNeu({ krieg }: { krieg: WarView }): React.JSX.Element {
         </h2>
         {krieg.beitraege.length === 0 ? (
           <p className="hb-klein hb-ohne-rand">
-            Noch keine Punkte. Spielt eine Partie — mindestens zwei Menschen am Tisch.
+            Noch keine Punkte. Spielt eine Partie - mindestens zwei Menschen am Tisch.
           </p>
         ) : (
           <ul className="hb-liste">

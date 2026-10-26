@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * kein Servertest findet.
  *
  * `useTable` ist ersetzt, weil der echte eine WebSocket aufmacht. Alles
- * andere — Sicht, `legalActions`, Katalog — ist genau die Form, die das Modul
+ * andere - Sicht, `legalActions`, Katalog - ist genau die Form, die das Modul
  * ausliefert (packages/game-tafelrunde/src/sicht.ts).
  */
 
@@ -24,7 +24,7 @@ vi.mock('../useTable', () => ({
 
 /*
  * Das Vorladen ist ausgehaengt. `useVorladen` haelt die Ruestkammer zurueck,
- * bis Figuren und Untergrund entpackt sind (vorladen.ts) — und in jsdom laedt
+ * bis Figuren und Untergrund entpackt sind (vorladen.ts) - und in jsdom laedt
  * kein Bild, `decode()` gibt es dort gar nicht. Der Vorhang bliebe also bis zur
  * Frist stehen, und jeder Test hier prueft eine leere Seite. Der Vorhang selbst
  * wird in vorladen.test.ts und Ladebildschirm.test.tsx geprueft.
@@ -92,7 +92,7 @@ const KATALOG = [
  * Werte und Erloes je Sternstufe, wie sie mit dem Katalog kommen (sicht.ts).
  *
  * Die Zahlen sind die des Moduls: Stufe 2 das 1,8-fache, Stufe 3 das
- * 3,2-fache — und zwar NUR auf Leben und Angriff. Der Erloes ist der volle
+ * 3,2-fache - und zwar NUR auf Leben und Angriff. Der Erloes ist der volle
  * Preis aller steckenden Karten (1, 3, 9 Karten mal Kosten).
  */
 const STUFENWERTE = {
@@ -125,7 +125,7 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
     phase: 'vorbereitung',
     fertig: false,
     sieger: null,
-    /* Die Rangliste kommt fertig aus dem Modul (sicht.ts) — hier wird sie
+    /* Die Rangliste kommt fertig aus dem Modul (sicht.ts) - hier wird sie
        gestellt, nicht nachgerechnet. Beide stehen noch, Runde 3. */
     platzierung: [
       { sitz: 0, platz: 1, runden: 3 },
@@ -137,7 +137,7 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
     /*
      * Eine kleine Probearena: zwei Reihen je Seite, keine Luecke dazwischen.
      * Am Tisch sind es seit dem 06.09.2026 vier und zwei (Arena 5 x 10,
-     * arena.ts) — die Fixture bleibt klein, weil ihre Arenaplaetze
+     * arena.ts) - die Fixture bleibt klein, weil ihre Arenaplaetze
      * (`kampfProbe`) von Hand gesetzt sind. Wichtig ist, dass sie zu SICH
      * passt: Der Bildschirm rechnet die Arenahoehe nicht mehr aus
      * `brettReihen`, er liest `arenaReihen`.
@@ -188,7 +188,7 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
       aufstiegKosten: 4,
       darfHandeln: true,
       /*
-       * Drei Krieger stehen, die naechste Schwelle ist die 4 — der Kauf einer
+       * Drei Krieger stehen, die naechste Schwelle ist die 4 - der Kauf einer
        * vierten Krieger-Einheit macht sie also voll. Genau der Fall, an dem
        * die Hervorhebung im Laden haengt. Naturwesen steht NICHT drin: Das
        * Modul schickt nur Marken mit mindestens einem Traeger.
@@ -213,7 +213,7 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
 
 /**
  * Der kuerzeste Kampf, den es gibt: Start, Ende. Mehr braucht der Bildschirm
- * nicht — das Abspielen selbst prueft KampfAnzeige.test.tsx.
+ * nicht - das Abspielen selbst prueft KampfAnzeige.test.tsx.
  */
 function kampfProbe(): Record<string, unknown> {
   return {
@@ -245,7 +245,7 @@ function stelle(
     { typ: 'levelAuf' },
     /* Das Modul schickt je BESETZTEM Platz ein `verkaufen` mit (partie.ts,
        `erlaubteZuege`). Hier stehen die beiden ersten, weil die Fixture dort
-       eine Einheit hat — die Verkaufen-Knoepfe fragen die Liste, statt selbst
+       eine Einheit hat - die Verkaufen-Knoepfe fragen die Liste, statt selbst
        zu entscheiden. */
     { typ: 'verkaufen', ort: { bereich: 'bank', platz: 0 } },
     { typ: 'verkaufen', ort: { bereich: 'brett', platz: 0 } },
@@ -300,10 +300,10 @@ describe('Kopfzeile', () => {
     zeige();
     // In der KOPFZEILE gesucht und nicht auf der ganzen Seite: Seit die
     // Mitspielerleiste auch den eigenen Sitz zeigt, steht das eigene Leben
-    // zweimal am Bildschirm — beide Male aus derselben Sicht.
+    // zweimal am Bildschirm - beide Male aus derselben Sicht.
     const kopf = screen.getByText('0/3 Feld').closest('header')!;
     expect(within(kopf).getByText('92')).toBeInTheDocument();
-    // Der Rang steht mit den Feldplaetzen daneben — beide Zahlen kommen aus
+    // Der Rang steht mit den Feldplaetzen daneben - beide Zahlen kommen aus
     // der Sicht, damit der Client die Leveltabelle nicht nachbaut.
     expect(screen.getByText('0/3 Feld')).toBeInTheDocument();
   });
@@ -312,7 +312,7 @@ describe('Kopfzeile', () => {
     /*
      * Nicht Zierde, sondern der Platz am Handy: Bis zum 06.09.2026 standen
      * Werte-Kasten und Markenleiste untereinander und kosteten auf Robins
-     * iPhone (440 x 956, IMG_1047) zusammen 88 Pixel — fuer fuenf kurze
+     * iPhone (440 x 956, IMG_1047) zusammen 88 Pixel - fuer fuenf kurze
      * Angaben. Die fehlten unten am Laden.
      *
      * Geprueft wird die einzige Aussage, die ein Test ohne Layout treffen
@@ -371,7 +371,7 @@ describe('Kopfzeile', () => {
   });
 
   it('zeigt das Gold gross am Laden und nicht mehr in der Kopfzeile', () => {
-    // Es ist die Zahl, gegen die man jeden Preis rechnet — sie gehoert
+    // Es ist die Zahl, gegen die man jeden Preis rechnet - sie gehoert
     // neben die Preise und nicht ans andere Ende des Schirms.
     zeige();
     const kopf = screen.getByText('0/3 Feld').closest('header')!;
@@ -383,7 +383,7 @@ describe('Kopfzeile', () => {
   it('zeigt ohne Frist der Plattform, wer schon bereit ist', () => {
     /*
      * DIE RESTZEIT WIRD NICHT ERFUNDEN. Schickt der Server keine
-     * `phaseDeadline` — ein Tisch aus der Zeit vor der Rundenfrist —, steht
+     * `phaseDeadline` - ein Tisch aus der Zeit vor der Rundenfrist -, steht
      * dort der wahre Druck und keine gerechnete Zahl (Kopf von
      * Phasenzeile.tsx). Die Zugzeit der Plattform waere keine Restzeit: Sie
      * wird bei jeder Aktion irgendeines Sitzes neu gestellt.
@@ -464,7 +464,7 @@ describe('Was gerade nicht geht, und warum', () => {
   /*
    * Vorher sahen alle gesperrten Karten gleich aus: blass. Ob das Gold
    * fehlte, die Bank voll war oder man schon bereit ist, musste man
-   * ausprobieren — und am Handy probiert man nicht, dort tippt man einmal
+   * ausprobieren - und am Handy probiert man nicht, dort tippt man einmal
    * und legt weg.
    *
    * Wichtig an diesen Tests ist die Richtung: `legalActions` ENTSCHEIDET
@@ -479,7 +479,7 @@ describe('Was gerade nicht geht, und warum', () => {
 
   it('daempft eine Karte, die man sich nicht leisten kann', () => {
     /* Wer den Laden ueberfliegt, soll die bezahlbaren herausgreifen, ohne
-       fuenf Preise zu lesen. Das Wort steht trotzdem an der Karte — Farbe
+       fuenf Preise zu lesen. Das Wort steht trotzdem an der Karte - Farbe
        allein traegt keine Auskunft. */
     stelle(sicht({ eigenes: { gold: 0 } }), [{ typ: 'bereit' }]);
     zeige();
@@ -527,7 +527,7 @@ describe('Was gerade nicht geht, und warum', () => {
   });
 
   it('faerbt den Preis nicht, wenn die Zahlen die Sperre nicht erklaeren', () => {
-    // Gold 7, Wuerfeln kostet 2 — gesperrt ist der Knopf aus einem anderen
+    // Gold 7, Wuerfeln kostet 2 - gesperrt ist der Knopf aus einem anderen
     // Grund. Ein roter Preis waere hier eine Behauptung.
     stelle(sicht(), [{ typ: 'bereit' }]);
     zeige();
@@ -567,7 +567,7 @@ describe('Was gerade nicht geht, und warum', () => {
 });
 
 describe('Leere Flaechen erklaeren sich', () => {
-  // Eine leere Flaeche sagt nicht, dass sie zu fuellen ist — sie sieht aus
+  // Eine leere Flaeche sagt nicht, dass sie zu fuellen ist - sie sieht aus
   // wie ein Fehler. Je ein Satz statt einer stummen Flaeche.
   it('sagt am leeren Brett, was zu tun ist', () => {
     zeige();
@@ -595,7 +595,7 @@ describe('Leere Flaechen erklaeren sich', () => {
 
   it('sagt am leeren Laden, dass der Vorrat nichts mehr hergibt', () => {
     // Seit dem Nachbesetzen steht der Laden nur noch leer, wenn wirklich
-    // nichts mehr da ist — ein Verweis aufs Wuerfeln waere dann eine Sackgasse.
+    // nichts mehr da ist - ein Verweis aufs Wuerfeln waere dann eine Sackgasse.
     stelle(sicht({ eigenes: { laden: [null, null, null, null, null] } }));
     zeige();
     expect(screen.getByText(/Der Vorrat gibt nichts mehr her/)).toBeInTheDocument();
@@ -603,7 +603,7 @@ describe('Leere Flaechen erklaeren sich', () => {
 });
 
 /**
- * Antippen und dann im Blatt „Aufstellen" — der Weg, der seit dem 6.9.2026
+ * Antippen und dann im Blatt „Aufstellen" - der Weg, der seit dem 6.9.2026
  * zur Auswahl fuehrt.
  *
  * Als Helfer, weil er in jeder Probe dieses Abschnitts vorkommt: Ein Tipp
@@ -620,7 +620,7 @@ describe('Das Blatt einer angetippten Einheit', () => {
   it('schlaegt beim Tipp auf, mit Werten aus der Sicht statt aus dem Katalog', () => {
     /*
      * Der Anlass: Ein Tipp waehlte die Einheit nur aus und sagte nichts ueber
-     * sie — „ein Spieler muss raten, wofuer er drei Muenzen ausgibt".
+     * sie - „ein Spieler muss raten, wofuer er drei Muenzen ausgibt".
      *
      * Und die Zahlen gelten fuer die STERNSTUFE, auf der die Einheit steht.
      * Die Dorfwache hier ist Stufe 2: 1170 Leben aus `stufenwerte`, nicht die
@@ -647,7 +647,7 @@ describe('Das Blatt einer angetippten Einheit', () => {
     expect(within(blatt).getByRole('button', { name: /Verkaufen/ })).toHaveTextContent('3');
   });
 
-  it('verkauft aus dem Blatt heraus — mit dem Ort, den der Server erwartet', () => {
+  it('verkauft aus dem Blatt heraus - mit dem Ort, den der Server erwartet', () => {
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
     fireEvent.pointerDown(within(bank).getByTitle(/Dorfwache/));
@@ -696,7 +696,7 @@ describe('Das Blatt einer Ladenkarte', () => {
   /*
    * Der Anlass (18.09.2026): Die Marken-Auskunft hing nur an den Zaehlern der
    * Leiste. Auf der Ladenkarte trugen die Zeichen ein `title`, das am Handy
-   * nie erscheint — ausgerechnet dort, wo die Auskunft am meisten wert ist:
+   * nie erscheint - ausgerechnet dort, wo die Auskunft am meisten wert ist:
    * Der Kauf ist die Entscheidung, um die es im Laden geht.
    *
    * Der Griff sitzt NEBEN der Karte, weil die Karte selbst eine Schaltflaeche
@@ -706,7 +706,7 @@ describe('Das Blatt einer Ladenkarte', () => {
     zeige();
     fireEvent.click(screen.getByRole('button', { name: 'Astschütze ansehen' }));
     const blatt = screen.getByRole('dialog', { name: /Astschütze/ });
-    // Die Werte der ERSTEN Stufe — gekauft wird ein einzelner Recke.
+    // Die Werte der ERSTEN Stufe - gekauft wird ein einzelner Recke.
     expect(blatt).toHaveTextContent('480');
     expect(blatt).not.toHaveTextContent('864');
     expect(within(blatt).getByText('Naturwesen')).toBeInTheDocument();
@@ -738,7 +738,7 @@ describe('Das Blatt einer Ladenkarte', () => {
   it('bietet den Kauf nicht an, wenn legalActions ihn nicht nennt', () => {
     // Dieselbe Regel wie an der Karte: Was kaufbar ist, sagt der Server. Ein
     // zweiter Weg zum Kauf, der nicht fragt, waere eine zweite Antwort auf
-    // dieselbe Frage — nachlesen darf man trotzdem.
+    // dieselbe Frage - nachlesen darf man trotzdem.
     stelle(sicht(), [{ typ: 'bereit' }]);
     zeige();
     fireEvent.click(screen.getByRole('button', { name: 'Astschütze ansehen' }));
@@ -752,7 +752,7 @@ describe('Setzen per Antippen', () => {
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
     tippeUndWaehle(within(bank).getByTitle(/Dorfwache/));
-    // Erst danach steht das Auswahlband da — sonst hätte der Tipp nichts
+    // Erst danach steht das Auswahlband da - sonst hätte der Tipp nichts
     // bewirkt, und genau das merkt man am Handy sofort.
     expect(screen.getByText(/Dorfwache gewählt/)).toBeInTheDocument();
 
@@ -767,7 +767,7 @@ describe('Setzen per Antippen', () => {
   it('zeigt die erlaubten Felder an, sobald etwas gewaehlt ist', () => {
     /*
      * Ohne diese Markierung leuchtete beim Antipp-Weg die Bank, aber nicht
-     * das Brett — also alles ausser der Flaeche, auf die man will.
+     * das Brett - also alles ausser der Flaeche, auf die man will.
      */
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
@@ -796,7 +796,7 @@ describe('Setzen per Antippen', () => {
 
   it('nimmt die gewaehlte Einheit ueber einen leeren Bankplatz zurueck', () => {
     // Der Rueckweg war ein angeklickter Kasten ohne Namen und ohne
-    // Tastaturweg — mit einem Vorlesegeraet gab es das Ziel gar nicht.
+    // Tastaturweg - mit einem Vorlesegeraet gab es das Ziel gar nicht.
     stelle(
       sicht({
         eigenes: {
@@ -816,16 +816,16 @@ describe('Setzen per Antippen', () => {
     });
   });
 
-  it('waehlt auch mit der Tastatur — der Weg des Vorlesegeraets', () => {
+  it('waehlt auch mit der Tastatur - der Weg des Vorlesegeraets', () => {
     /*
      * Der Antipp-Weg lief allein ueber `pointerup`. VoiceOver und TalkBack
-     * loesen beim Doppeltippen aber einen KLICK aus, keine Zeigerfolge — die
+     * loesen beim Doppeltippen aber einen KLICK aus, keine Zeigerfolge - die
      * Zusage "geht mit einem Vorlesegeraet" war damit nicht eingeloest.
      */
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
     fireEvent.keyDown(within(bank).getByTitle(/Dorfwache/), { key: 'Enter' });
-    // Auch hier steht zuerst das Blatt — und aus ihm heraus geht es weiter.
+    // Auch hier steht zuerst das Blatt - und aus ihm heraus geht es weiter.
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Aufstellen' }));
     expect(screen.getByText(/Dorfwache gew/)).toBeInTheDocument();
@@ -833,7 +833,7 @@ describe('Setzen per Antippen', () => {
 
   it('macht aus einem Finger-Tipp kein doppeltes Blatt', () => {
     // Der Browser schickt hinter jedem Tipp noch einen Klick her. Ohne die
-    // Pruefung auf `detail` liefe der Tipp zweimal — und der zweite Lauf
+    // Pruefung auf `detail` liefe der Tipp zweimal - und der zweite Lauf
     // naehme das eben Aufgeschlagene gleich wieder zurueck.
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
@@ -858,7 +858,7 @@ describe('Setzen per Antippen', () => {
   });
 
   it('setzt nichts, wenn kein Feldplatz mehr frei ist', () => {
-    // Die einzige Regel, die der Bildschirm selbst prüft — und sie darf nicht
+    // Die einzige Regel, die der Bildschirm selbst prüft - und sie darf nicht
     // schärfer sein als das Modul.
     stelle(sicht({ eigenes: { feldplaetze: 1, belegt: 1, brett: [{ id: 'astschuetze', stufe: 1 }, ...Array.from({ length: 9 }, () => null)] } }));
     zeige();
@@ -872,7 +872,7 @@ describe('Setzen per Antippen', () => {
 describe('Setzen per Ziehen', () => {
   it('legt die Einheit dort ab, wo der Finger loslässt', () => {
     /*
-     * Der Weg, den die Aufgabe zuerst nennt — und der am Handy schiefgeht,
+     * Der Weg, den die Aufgabe zuerst nennt - und der am Handy schiefgeht,
      * wenn er nicht gebaut ist. Getroffen wird ueber `elementFromPoint`, weil
      * das Ziel unter dem FINGER liegt und nicht unter dem Ereignis: Die
      * Zeigererfassung schickt jedes `pointerup` an die gezogene Einheit
@@ -901,7 +901,7 @@ describe('Setzen per Ziehen', () => {
   it('zeigt beim Ziehen, auf welchem Feld die Einheit landen wuerde', () => {
     /*
      * Der Schatten haengt am Finger und verdeckt genau die Wabe, auf die man
-     * zielt — ohne diese Vorschau laesst man blind los. Geprueft wird, dass
+     * zielt - ohne diese Vorschau laesst man blind los. Geprueft wird, dass
      * die Vorschau AN DEMSELBEN Feld haengt, das das Ablegen treffen wuerde:
      * beide gehen durch `zielUnter`.
      */
@@ -917,7 +917,7 @@ describe('Setzen per Ziehen', () => {
     fireEvent.pointerMove(marke, { clientX: 90, clientY: 140 });
     expect(wabe.hasAttribute('data-unterzeiger')).toBe(true);
 
-    // Und nach dem Loslassen ist die Vorschau weg — sie gehoert zum Ziehen.
+    // Und nach dem Loslassen ist die Vorschau weg - sie gehoert zum Ziehen.
     fireEvent.pointerUp(marke, { clientX: 90, clientY: 140 });
     expect(
       screen.getByRole('button', { name: 'Feld 4' }).parentElement!.hasAttribute(
@@ -928,7 +928,7 @@ describe('Setzen per Ziehen', () => {
 
   it('zeigt kein Ziel an, wo die Einheit gar nicht landen darf', () => {
     /* Die Vorschau darf nicht mehr versprechen, als das Ablegen einloest:
-       Ist das Feld voll, leuchtet nichts — und genau das ist die Auskunft.
+       Ist das Feld voll, leuchtet nichts - und genau das ist die Auskunft.
        Geprueft wird mit denselben zwei Zahlen der Sicht wie beim Ablegen. */
     stelle(sicht({ eigenes: { belegt: 3, feldplaetze: 3 } }));
     zeige();
@@ -960,7 +960,7 @@ describe('Setzen per Ziehen', () => {
 describe('Verschmelzen sichtbar machen', () => {
   it('meldet, wenn aus drei Gleichen eine stärkere geworden ist', () => {
     /*
-     * Der Kern der Aufgabe: Das Modul verschmilzt STILL — in der neuen Sicht
+     * Der Kern der Aufgabe: Das Modul verschmilzt STILL - in der neuen Sicht
      * liegt einfach eine staerkere Einheit, und die drei schwachen sind weg.
      * Ohne diese Meldung sieht man nur das Ergebnis.
      */
@@ -1043,11 +1043,11 @@ describe('Bereit und Kampfpause', () => {
     expect(within(arena).getByText('Du')).toBeInTheDocument();
     expect(screen.queryByText('Die Heere treten an')).not.toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Laden' })).not.toBeInTheDocument();
-    // Die Bretter der Ruestkammer sind waehrenddessen weg — die Arena steht an ihrer Stelle.
+    // Die Bretter der Ruestkammer sind waehrenddessen weg - die Arena steht an ihrer Stelle.
     expect(document.querySelector('.tr-bretter')).toBeNull();
 
     // Und sie steht auf der Buehne: Zum Auftakt nennt die Ansage die Runde
-    // (Buehne.tsx). Das Verhalten der Ansage selbst prueft Buehne.test.tsx —
+    // (Buehne.tsx). Das Verhalten der Ansage selbst prueft Buehne.test.tsx -
     // hier zaehlt allein, dass die Rundenzahl der SICHT ankommt und nicht
     // irgendeine.
     // Im Vorhang gesucht und nicht auf der ganzen Seite: Die Phasenzeile
@@ -1059,7 +1059,7 @@ describe('Bereit und Kampfpause', () => {
   });
 
   /*
-   * `kaempfe` haelt fuer einen Spieler nur seinen EIGENEN Kampf (sicht.ts) —
+   * `kaempfe` haelt fuer einen Spieler nur seinen EIGENEN Kampf (sicht.ts) -
    * die uebrigen Tische der Runde stehen in `paarungen`, ohne Protokoll.
    * Geprueft wird hier die Verdrahtung: dass das zweite Feld der Sicht bis in
    * die Arena durchkommt. Was in der Zeile steht, prueft KampfAnzeige.test.
@@ -1087,7 +1087,7 @@ describe('Bereit und Kampfpause', () => {
    * WAS IM KAMPF ZUSAMMENKLAPPT, und warum das eine Regel ist und keine
    * Anordnung.
    *
-   * Auf 390 Pixeln — der Zielgroesse — kosten Werte-Kasten und Bank zusammen
+   * Auf 390 Pixeln - der Zielgroesse - kosten Werte-Kasten und Bank zusammen
    * 117 Pixel ueber und unter dem Brett, und keines von beiden laesst sich im
    * Kampf gebrauchen: Das eigene Leben steht ohnehin auf der eigenen Kachel in
    * der Mitspielerleiste, und von der Bank geht nichts aufs Feld, solange
@@ -1095,7 +1095,7 @@ describe('Bereit und Kampfpause', () => {
    * steht in Buehne.module.css.
    *
    * Geprueft wird es hier und nicht am Bild, weil es genau die Art Aenderung
-   * ist, die jemand beim naechsten Umbau versehentlich zurueckdreht — man
+   * ist, die jemand beim naechsten Umbau versehentlich zurueckdreht - man
    * sieht einem wieder eingehaengten Kasten nicht an, dass er weg sein soll.
    */
   it('klappt Werte-Kasten und Bank waehrend des Kampfes zusammen', () => {
@@ -1134,7 +1134,7 @@ describe('Figuren und Untergrund', () => {
    * SEIT DEM 6.9.2026 ZEIGT DIE RUESTKAMMER DIESELBEN FIGUREN WIE DIE ARENA:
    * die vorgerenderten 3D-Bildfolgen, je ROLLE ein Blatt fuer alle Einheiten
    * dieser Rolle (bildfolge.ts). Vorher liefen sie nur im Kampf, und auf
-   * Brett, Bank und Ladenkarte standen die 32er-Pixelbilder aus figuren.ts —
+   * Brett, Bank und Ladenkarte standen die 32er-Pixelbilder aus figuren.ts -
    * wer spielt, ist die meiste Zeit in der Vorbereitung und sah dort also
    * etwas anderes als im Kampf. Genau dieser Bruch war gemeint.
    *
@@ -1147,7 +1147,7 @@ describe('Figuren und Untergrund', () => {
   it('zeigt im Laden die Figur zur Rolle der ausliegenden Einheit', () => {
     zeige();
     const laden = screen.getByRole('group', { name: 'Laden' });
-    // Die Dorfwache ist eine Wache, der Astschuetze ein Schuetze — die KARTE
+    // Die Dorfwache ist eine Wache, der Astschuetze ein Schuetze - die KARTE
     // bleibt eine Karte, nur die Figur darauf kommt aus dem Blatt.
     expect(within(laden).getByAltText('Dorfwache')).toHaveAttribute('src', blattPfad('wache'));
     expect(within(laden).getByAltText('Astschütze')).toHaveAttribute(
@@ -1156,7 +1156,7 @@ describe('Figuren und Untergrund', () => {
     );
   });
 
-  it('zeigt auf der Bank die Figur — und daneben weiter die Stufe', () => {
+  it('zeigt auf der Bank die Figur - und daneben weiter die Stufe', () => {
     stelle(
       sicht({
         eigenes: {
@@ -1207,16 +1207,16 @@ describe('Figuren und Untergrund', () => {
     const marke = within(bank).getByTitle(/Dorfwache/);
     expect(within(marke).getByAltText('Dorfwache')).toHaveAttribute('src', blattPfad('wache'));
 
-    // Erste Stufe: kein Blatt — dann die Pixelfigur der Einheit.
+    // Erste Stufe: kein Blatt - dann die Pixelfigur der Einheit.
     fireEvent.error(within(marke).getByAltText('Dorfwache'));
     const pixel = within(marke).getByAltText('Dorfwache');
     expect(pixel).toHaveAttribute('src', FIGUREN.dorfwache);
 
-    // Zweite Stufe: auch die fehlt — dann das gezeichnete Rollenzeichen.
+    // Zweite Stufe: auch die fehlt - dann das gezeichnete Rollenzeichen.
     fireEvent.error(pixel);
     expect(within(marke).queryByAltText('Dorfwache')).not.toBeInTheDocument();
     expect(marke.querySelector('svg.tr-rolle')).not.toBeNull();
-    // Die Einheit bleibt bedienbar — der Rueckfall ist ein Bildwechsel, kein
+    // Die Einheit bleibt bedienbar - der Rueckfall ist ein Bildwechsel, kein
     // Verlust der Marke.
     expect(marke).toHaveAttribute('aria-label', 'Dorfwache, Wache, Stufe 1');
   });
@@ -1225,7 +1225,7 @@ describe('Figuren und Untergrund', () => {
     /*
      * Alle Blaetter schauen nach rechts (FIGUREN3D_BLICKT). Das gegnerische
      * Brett steht ohnehin auf dem Kopf; ohne Spiegeln blickten beide Heere in
-     * dieselbe Richtung, statt einander gegenueberzustehen — dieselbe
+     * dieselbe Richtung, statt einander gegenueberzustehen - dieselbe
      * Ueberlegung wie in der Arena.
      */
     stelle(
@@ -1245,7 +1245,7 @@ describe('Figuren und Untergrund', () => {
   });
 
   it('stellt auch in der Kampfanzeige die Figuren auf', () => {
-    /* Die Arena bekommt die Figur nicht durchgereicht, sie holt sie selbst —
+    /* Die Arena bekommt die Figur nicht durchgereicht, sie holt sie selbst -
        hier zaehlt, dass die Verdrahtung am Tisch steht. Seit dem 6.9.2026 sind
        es dort die 3D-Bildfolgen, und die haengen an der ROLLE der Einheit
        (bildfolge.ts): Die Dorfwache ist eine Wache, der Astschuetze ein
@@ -1290,7 +1290,7 @@ describe('Figuren und Untergrund', () => {
 describe('Synergien', () => {
   /*
    * Was die Leiste ANZEIGT, prueft Synergien.test.tsx. Hier geht es allein um
-   * die Verdrahtung: Kommt an, was in der Sicht steht — und faellt der
+   * die Verdrahtung: Kommt an, was in der Sicht steht - und faellt der
    * Bildschirm um, wenn es fehlt?
    */
   it('zeigt die Marken des eigenen Bretts aus der Sicht', () => {
@@ -1303,7 +1303,7 @@ describe('Synergien', () => {
   });
 
   it('hebt im Laden die Karte hervor, deren Kauf eine Schwelle erreicht', () => {
-    // Dorfwache traegt Krieger (3 von 4 — der Kauf macht die vier voll),
+    // Dorfwache traegt Krieger (3 von 4 - der Kauf macht die vier voll),
     // Astschuetze traegt Naturwesen (steht noch gar nicht auf dem Brett).
     zeige();
     const laden = screen.getByRole('group', { name: 'Laden' });
@@ -1344,13 +1344,13 @@ describe('Synergien', () => {
   it('zeigt die Marken auch an den Einheiten auf der Bank', () => {
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
-    // Die Dorfwache traegt Krieger — ein Zeichen, kein Text.
+    // Die Dorfwache traegt Krieger - ein Zeichen, kein Text.
     expect(within(bank).getByTitle('Krieger')).toBeInTheDocument();
   });
 
   it('haelt einen Tisch aus, der die Synergien noch gar nicht mitschickt', () => {
     // Ein Tisch aus der Zeit vor den Synergien. Die Leiste bleibt leer, der
-    // Laden zeigt keine Hervorhebung — und nichts stolpert.
+    // Laden zeigt keine Hervorhebung - und nichts stolpert.
     stelle(sicht({ synergieTabelle: undefined, eigenes: { synergien: undefined } }));
     zeige();
     expect(screen.getByText(/Noch keine Marken/)).toBeInTheDocument();
@@ -1370,17 +1370,17 @@ describe('Mitspieler', () => {
     expect(within(leiste).getByText('KI')).toBeInTheDocument();
   });
 
-  it('zeigt auch den eigenen Sitz — man vergleicht sich mit den anderen', () => {
+  it('zeigt auch den eigenen Sitz - man vergleicht sich mit den anderen', () => {
     zeige();
     const leiste = screen.getByRole('group', { name: /Mitspieler/ });
     expect(within(leiste).getByText('Ich')).toBeInTheDocument();
     expect(within(leiste).getByText('92')).toBeInTheDocument();
-    expect(leiste).toHaveAccessibleName('Mitspieler — noch 2 von 2');
+    expect(leiste).toHaveAccessibleName('Mitspieler - noch 2 von 2');
   });
 
   it('nennt in der Kampfphase, gegen wen ich antrete', () => {
     // Die Paarung steht NUR in `kaempfe`, und die Sicht führt sie nur während
-    // des Kampfes (sicht.ts) — vorher gibt es die Auskunft nirgends.
+    // des Kampfes (sicht.ts) - vorher gibt es die Auskunft nirgends.
     stelle(
       sicht({
         phase: 'kampf',
@@ -1463,7 +1463,7 @@ describe('Endbild', () => {
   });
 
   it('lässt sich nach dem eigenen Ausscheiden wegklicken', () => {
-    // Zusehen ist bei einem Auto-Battler kein Trostpreis — man sieht, gegen
+    // Zusehen ist bei einem Auto-Battler kein Trostpreis - man sieht, gegen
     // wen man verloren hätte. Deshalb ein Überblender und kein Ortswechsel.
     stelle(
       sicht({
@@ -1484,7 +1484,7 @@ describe('Endbild', () => {
 });
 
 /**
- * Ein Gegnersitz mit Marken auf dem Brett — die Zahlen passen bewusst NICHT
+ * Ein Gegnersitz mit Marken auf dem Brett - die Zahlen passen bewusst NICHT
  * zur Tabelle (vier Waechter, laut Sicht aber erst Schwelle 4 und als
  * naechste die 6). Wer sie abzaehlte oder nachrechnete, kaeme auf etwas
  * anderes als das, was hier geprueft wird.
@@ -1523,7 +1523,7 @@ describe('Marken des Gegners', () => {
     expect(within(zeile).getByText('4/6')).toBeInTheDocument();
   });
 
-  it('sind auch für einen Zuschauer da — er bekommt dasselbe Feld', () => {
+  it('sind auch für einen Zuschauer da - er bekommt dasselbe Feld', () => {
     stelle(sicht({ zuschauer: true, ich: null, eigenes: null, gegner: [gegnerMitMarken()] }));
     zeige();
     expect(
@@ -1553,11 +1553,11 @@ describe('Zuschauer', () => {
 });
 
 /**
- * Das Blatt zum LESEN — seit dem 19.9.2026.
+ * Das Blatt zum LESEN - seit dem 19.9.2026.
  *
  * Bis dahin hing das Blatt an `darfHandeln`: Wer „Bereit" gedrueckt hatte oder
  * zusah, kam an keine Werte mehr, und am Brett des Gegners gab es ohnehin
- * keinen Weg. Bewusst, weil zwei der drei Knoepfe dann tot waeren — und genau
+ * keinen Weg. Bewusst, weil zwei der drei Knoepfe dann tot waeren - und genau
  * das wird hier mitgeprueft: Das Blatt geht auf, aber ohne einen einzigen
  * Handlungsknopf. Die Werte kommen weiterhin aus `stufenwerte`, auch fuer den
  * Recken des Gegners.
@@ -1569,7 +1569,7 @@ describe('Das Blatt zum Lesen', () => {
   ];
   const HANDLUNGSKNOPF = /Verkaufen|Aufstellen|Verschieben|Ablegen/;
 
-  it('geht nach „Bereit" noch auf — nur ohne Knoepfe', () => {
+  it('geht nach „Bereit" noch auf - nur ohne Knoepfe', () => {
     stelle(sicht({ eigenes: { bereit: true, darfHandeln: false } }), []);
     zeige();
     const bank = screen.getByRole('group', { name: 'Reservebank' });
@@ -1582,7 +1582,7 @@ describe('Das Blatt zum Lesen', () => {
     expect(within(blatt).queryByRole('button', { name: HANDLUNGSKNOPF })).toBeNull();
   });
 
-  it('geht am Brett des Gegners auf — mit den Werten SEINER Sternstufe', () => {
+  it('geht am Brett des Gegners auf - mit den Werten SEINER Sternstufe', () => {
     // Der Laden ist leer gestellt, damit die einzige Astschuetze-Schaltflaeche
     // auf dem Schirm die auf dem fremden Brett ist.
     stelle(
@@ -1619,9 +1619,9 @@ describe('Das Blatt zum Lesen', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('fuehrt den Zuschauer zum Blatt einer Marke — mit den Staenden des gezeigten Sitzes', () => {
+  it('fuehrt den Zuschauer zum Blatt einer Marke - mit den Staenden des gezeigten Sitzes', () => {
     // Der Anlass (21.09.2026): Ein Zuschauer hat keine eigenen Staende, und
-    // der gemeinsame Griff lief fuer ihn mit einer leeren Liste — deshalb war
+    // der gemeinsame Griff lief fuer ihn mit einer leeren Liste - deshalb war
     // der Weg in seinem Zweig gar nicht verdrahtet. Jetzt zaehlt das Blatt,
     // was der Brettkopf ueber dem Brett auch zaehlt: die Marken DIESES Sitzes.
     stelle(

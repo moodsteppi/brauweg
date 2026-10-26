@@ -12,7 +12,7 @@ export function BrowortKarte({ stand, onOeffnen }: { stand: BrowortKurz | undefi
   const serie = stand?.serie ?? 0;
   const heute = stand?.heuteGespielt ?? false;
   const unter = heute
-    ? 'Für heute erledigt — morgen kommt ein neues Wort.'
+    ? 'Für heute erledigt - morgen kommt ein neues Wort.'
     : serie > 0
       ? 'Das Wort von heute wartet, sonst erlischt die Flamme.'
       : 'Fünf Buchstaben, sechs Versuche, jeden Tag ein neues Wort.';

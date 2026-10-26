@@ -75,7 +75,7 @@ export function BombeRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Elem
   return (
     <>
       <Buehne
-        oben={binDran ? 'Du hast die Bombe — nenn etwas und gib weiter!' : `${namenFuer(sitze, daten.amZug)} hat die Bombe`}
+        oben={binDran ? 'Du hast die Bombe - nenn etwas und gib weiter!' : `${namenFuer(sitze, daten.amZug)} hat die Bombe`}
         gross={
           <>
             <TickendeBombe hoch={false} />
@@ -88,7 +88,7 @@ export function BombeRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Elem
       {binDran ? (
         <Wahl>
           <button type="button" className="pk-knopf is-gross is-gut pk-zd-weiter" onClick={() => sende({ art: 'weitergeben' })}>
-            Genannt — weiter!
+            Genannt - weiter!
           </button>
         </Wahl>
       ) : null}
@@ -134,7 +134,7 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
       <>
         <Buehne
           oben={daten.geschafft ? 'Geschafft' : 'Nicht geschafft'}
-          gross={<span className="pk-frage">Drei: {daten.aufgabe ?? '—'}</span>}
+          gross={<span className="pk-frage">Drei: {daten.aufgabe ?? '-'}</span>}
           unten={<span>{binSprecher ? 'Du hast gesprochen.' : `${sprecherName} hat gesprochen.`}</span>}
           ton={daten.geschafft ? 'gut' : 'schlecht'}
         />
@@ -158,7 +158,7 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
         <Buehne
           oben={binSprecher ? 'Du bist dran' : `${sprecherName} ist dran`}
           gross={<span className="pk-wort is-klein">{daten.anzahl} Dinge in zehn Sekunden</span>}
-          unten={<span>Die Aufgabe kommt mit „Los" — für alle gleichzeitig, und die Uhr läuft auf dem Server.</span>}
+          unten={<span>Die Aufgabe kommt mit „Los" - für alle gleichzeitig, und die Uhr läuft auf dem Server.</span>}
           ton={binSprecher ? 'geheim' : undefined}
         />
         {binSprecher ? (
@@ -182,7 +182,7 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
           gross={
             <>
               <Restzeit frist={frist ?? null} />
-              <span className="pk-frage">{daten.aufgabe ?? '—'}</span>
+              <span className="pk-frage">{daten.aufgabe ?? '-'}</span>
             </>
           }
           ton="geheim"
@@ -194,7 +194,7 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
             </button>
           </Wahl>
         ) : (
-          <p className="pk-wartet">Zuhören — gleich wird geurteilt.</p>
+          <p className="pk-wartet">Zuhören - gleich wird geurteilt.</p>
         )}
       </>
     );
@@ -209,11 +209,11 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
         oben={
           binSprecher
             ? binRichter
-              ? `Hast du ${daten.anzahl} geschafft? Ehrlich sein — niemand sonst hat zugehört.`
+              ? `Hast du ${daten.anzahl} geschafft? Ehrlich sein - niemand sonst hat zugehört.`
               : 'Die Runde urteilt'
             : `Hat ${sprecherName} ${daten.anzahl} geschafft?`
         }
-        gross={<span className="pk-frage">{daten.aufgabe ?? '—'}</span>}
+        gross={<span className="pk-frage">{daten.aufgabe ?? '-'}</span>}
         unten={
           <span>
             {daten.abgegeben.length} von {daten.richter.length} geurteilt
@@ -281,7 +281,7 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
       <Wasserfall
         kennung={wasserfallKennung}
         karte={letzte?.karte ?? null}
-        getroffen={`${letzte && letzte.sitz === sicht.sitz ? 'Du hast' : `${letzte ? namenFuer(sitze, letzte.sitz) : 'Jemand'} hat`} das Ass gezogen — ${sicht.trinkmodus ? 'alle trinken' : 'alle kassieren'}!`}
+        getroffen={`${letzte && letzte.sitz === sicht.sitz ? 'Du hast' : `${letzte ? namenFuer(sitze, letzte.sitz) : 'Jemand'} hat`} das Ass gezogen - ${sicht.trinkmodus ? 'alle trinken' : 'alle kassieren'}!`}
       />
       <Buehne
         oben={
@@ -303,7 +303,7 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
         unten={
           <span>
             {letzte ? `${letzte.sitz === sicht.sitz ? 'Deine' : `${namenFuer(sitze, letzte.sitz)}s`} Karte` : 'Noch keine Karte'}
-            {getroffen ? ` — trifft ${getroffen}` : ''}
+            {getroffen ? ` - trifft ${getroffen}` : ''}
             {' · '}Becher: {daten.becher} {daten.becher === 1 ? 'König' : 'Könige'}
           </span>
         }

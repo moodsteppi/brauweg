@@ -41,6 +41,10 @@ import { type Eintrag, BUCH, SIEGEL_RENOVIERUNG, SIEGEL_UMZUG, buchPreis, feilsc
 import { type ManufakturStand, type Station, kopiere, neuePresse, neuerStand } from './stand.js';
 import { kannStarten, starte, vorspulen } from './zeit.js';
 
+import { type Auftragsart, auftragsangebote, auftragFertig, auftragsSiegel } from './auftraege.js';
+
+import { ausbildungsVorschau } from './ausbildung.js';
+
 export type Menge = 1 | 10 | 50 | 'max';
 
 export type Aktion =
@@ -76,7 +80,10 @@ export type Aktion =
   /** Bauarbeiten vor Etage 5 oder 8 beginnen: Taler sofort, dann warten. */
   | { typ: 'bauen' }
   /** Die Belohnung des erreichten Ziels abholen; danach kommt das naechste. */
-  | { typ: 'ziel' };
+  | { typ: 'ziel' }
+  | { typ: 'auftrag-annehmen'; art: Auftragsart }
+  | { typ: 'auftrag-abholen' }
+  | { typ: 'ausbilden'; ziel: Ziel; id: number };
 
 export interface Meilenstein {
   kennung: string;
@@ -186,6 +193,7 @@ function neueHalle(stand: ManufakturStand, t: number, manufaktur: number, kennun
     naechsteMeisterId: stand.naechsteMeisterId,
     siegel: stand.siegel,
     werkstattbuch: stand.werkstattbuch,
+    auftraege: stand.auftraege,
   });
   besetze(neu);
   return neu;
@@ -287,6 +295,34 @@ export function handle(
       if (stand.siegel < preis) throw new AktionAbgelehnt('manufakturZuWenigSiegel');
       stand.siegel -= preis;
       stand.werkstattbuch[aktion.eintrag] = (stand.werkstattbuch[aktion.eintrag] ?? 0) + 1;
+      break;
+    }
+    case 'ausbilden': {
+      const v = ausbildungsVorschau(stand, aktion.ziel, aktion.id, t);
+      if (!v) throw new AktionAbgelehnt('manufakturKeinMeister');
+      if (!v.danach) throw new AktionAbgelehnt('manufakturHoechststufe');
+      if (v.wirkt) throw new AktionAbgelehnt('manufakturAusbildungWirkt');
+      if (!v.leistbar) throw new AktionAbgelehnt('manufakturZuWenigLehrbriefe');
+      sichereUhren(stand);
+      stand.zaehler.lehrbriefeVerbraucht = (stand.zaehler.lehrbriefeVerbraucht ?? 0) + v.lehrbriefe;
+      const m = platzVon(stand, aktion.ziel).pool.find(m => m.id === aktion.id)!;
+      m.rang = v.danach;
+      besetze(stand);
+      zaehle(stand, 'ausgebildet', 1);
+      break;
+    }
+    case 'auftrag-annehmen': {
+      const angebot = auftragsangebote(stand).find((a) => a.art === aktion.art);
+      if (!angebot?.frei || stand.auftraege.aktiv) throw new AktionAbgelehnt('manufakturAuftragGesperrt');
+      stand.auftraege.aktiv = { art: angebot.art, ziel: angebot.ziel, belohnung: angebot.belohnung, geliefert: 0 };
+      break;
+    }
+    case 'auftrag-abholen': {
+      if (!auftragFertig(stand)) throw new AktionAbgelehnt('manufakturAuftragOffen');
+      stand.taler += stand.auftraege.aktiv!.belohnung;
+      stand.auftraege.erledigt += 1;
+      stand.siegel += auftragsSiegel(stand.auftraege.erledigt);
+      stand.auftraege.aktiv = null;
       break;
     }
     case 'ziel': {

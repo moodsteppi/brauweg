@@ -138,9 +138,9 @@ test('die Webseite sieht alles wie bisher, die App genau das, was die Liste sagt
     assert.equal(eintrag?.availability, freigabe === 'spielbar' ? 'playable' : 'preview', meta.id);
   }
 
-  // Abgestimmt wird nur ueber Spiele, die es noch gar nicht gibt.
+  // Jede sichtbare Vorschau auf der jeweiligen Plattform ist abstimmbar.
   for (const spiel of [...web, ...app]) {
-    assert.equal(spiel.abstimmbar, !isPlayable(spiel.id as GameId), spiel.id);
+    assert.equal(spiel.abstimmbar, spiel.availability === 'preview', spiel.id);
   }
 });
 
@@ -150,7 +150,7 @@ test('ein Vorschau-Spiel bleibt Vorschau, auch wenn es als spielbar eingetragen 
   assert.equal(freigabeAuf('schafkopf' as GameId, 'app'), 'bald');
 });
 
-test('app: bald zeigt das Spiel in der App als Vorschau ohne Abstimmung, die Webseite bleibt', async (t) => {
+test('app: bald zeigt das Spiel in der App als Vorschau mit Abstimmung, die Webseite bleibt', async (t) => {
   stelle(t, 'doppelkopf' as GameId, { web: 'spielbar', app: 'bald' });
   const s = await setup();
   t.after(() => s.close());
@@ -159,15 +159,15 @@ test('app: bald zeigt das Spiel in der App als Vorschau ohne Abstimmung, die Web
   const inApp = (await spiele(s, 'app')).find((g) => g.id === 'doppelkopf');
   assert.equal(imWeb?.availability, 'playable');
   assert.equal(inApp?.availability, 'preview');
-  assert.equal(inApp?.abstimmbar, false);
+  assert.equal(inApp?.abstimmbar, true);
 
-  // Eine Stimme fuer ein Spiel, das es gibt, nimmt der Server weiter nicht an.
+  // Die Stimme gilt fuer die Plattform, auf der es noch angekuendigt ist.
   const stimme = await s.app.inject({
     method: 'POST',
     url: '/api/games/doppelkopf/vote',
     headers: s.anna('app'),
   });
-  assert.equal(stimme.statusCode, 400);
+  assert.equal(stimme.statusCode, 200);
 });
 
 test('app: aus nimmt das Spiel aus der App-Auswahl, auch ein Vorschau-Spiel', async (t) => {
@@ -319,4 +319,30 @@ test('Pro-Subway: in der App kein Lauf und keine Auszahlung, auf der Webseite wi
 
   const web = await s.app.inject({ method: 'POST', url: '/api/runner/lauf', headers: s.anna('web'), payload: lauf });
   assert.equal(web.statusCode, 200);
+});
+
+
+test('Abstimmung: eine Stimme pro Konto und Spiel, nach neuem Abruf erhalten', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const vote = (headers: Record<string, string>, gameId = 'schafkopf') => s.app.inject({ method: 'POST', url: `/api/games/${gameId}/vote`, headers });
+  const list = async (headers: Record<string, string>) => {
+    const res = await s.app.inject({ method: 'GET', url: '/api/games', headers });
+    assert.match(String(res.headers['cache-control']), /no-store/);
+    return res.json() as { id: string; votes: number; meineStimme: boolean }[];
+  };
+  assert.equal((await vote(s.anna('app'))).statusCode, 200);
+  assert.equal((await vote(s.anna('app'))).statusCode, 200);
+  const anna = (await list(s.anna('app'))).find(g => g.id === 'schafkopf')!;
+  assert.equal(anna.votes, 1);
+  assert.equal(anna.meineStimme, true);
+  const ben = (await list(s.ben('app'))).find(g => g.id === 'schafkopf')!;
+  assert.equal(ben.votes, 1);
+  assert.equal(ben.meineStimme, false);
+  assert.equal((await vote(s.ben('app'))).statusCode, 200);
+  assert.equal((await list(s.anna('app'))).find(g => g.id === 'schafkopf')!.votes, 2);
+  assert.equal((await vote(s.anna('app'), 'skat')).statusCode, 400);
+  assert.equal((await vote({})).statusCode, 401);
+  const offen = await s.app.inject({ method: 'GET', url: '/api/games' });
+  assert.ok(offen.json().every((g: { meineStimme: boolean }) => !g.meineStimme));
 });

@@ -126,7 +126,7 @@ export function LagerTabelle({ sicht, sitze }: { sicht: PartykisteSicht; sitze: 
           </li>
         ))}
       </ol>
-      {ungleich ? <p className="pk-warten">Die Lager sind ungleich groß — es entscheidet der Schnitt je Kopf.</p> : null}
+      {ungleich ? <p className="pk-warten">Die Lager sind ungleich groß - es entscheidet der Schnitt je Kopf.</p> : null}
     </div>
   );
 }

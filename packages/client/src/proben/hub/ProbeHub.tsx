@@ -197,6 +197,18 @@ api.club = async () => ({
  * ClanKrieg.tsx plus die offene Herausforderung.
  */
 const PROBE = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search);
+// Eigenstaendige Vorschau fuer Bilder und Abstimmzustaende, ohne echtes Konto.
+if (PROBE.has('abstimmung')) {
+  const gewaehlt = new Set<string>(['schafkopf']);
+  const geplant = ['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10', 'drecksau'];
+  api.games = async () => [
+    ...['doppelkopf', 'skat'].map(id => ({ id, nameKey: `game.${id}`, availability: 'playable' as const, seatCounts: [4], votes: 0, abstimmbar: false })),
+    ...geplant.map((id, i) => ({ id, nameKey: `game.${id}`, availability: 'preview' as const, seatCounts: [2, 3, 4],
+      votes: 32 - i * 3 + (gewaehlt.has(id) ? 1 : 0), meineStimme: gewaehlt.has(id), abstimmbar: true })),
+  ];
+  api.vote = async id => { gewaehlt.add(id); return { ok: true }; };
+}
+
 const WIR = { clubId: 'probe-clan', name: 'Die Stichhaltigen', crest: 'wappen-12', score: 31 };
 const ASSE = { clubId: 'gegner', name: 'Die Asse', crest: 'wappen-7', score: 24 };
 const KRIEG = (status: 'laeuft' | 'suche' | 'angefragt' | 'beendet', mehr: Partial<WarView> = {}) => ({

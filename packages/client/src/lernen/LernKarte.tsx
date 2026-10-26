@@ -18,7 +18,7 @@ export function LernKarte({ serie, onOeffnen }: { serie: LernserieKurz | undefin
       ? 'Heute geschafft. Doko-Meister bist du schon.'
       : 'Halte deine Flamme am Brennen.'
     : heute
-      ? `Heute geschafft — noch ${Math.max(0, ziel - tage)} bis zum Doko-Meister.`
+      ? `Heute geschafft - noch ${Math.max(0, ziel - tage)} bis zum Doko-Meister.`
       : tage > 0
         ? 'Heute noch eine Lektion, sonst erlischt die Flamme.'
         : `${ziel} Tage am Stück, dann gibt es ein Pinguin-Outfit.`;

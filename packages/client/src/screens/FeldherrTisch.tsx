@@ -153,7 +153,7 @@ function Kartenblatt({
   const hat = (feld: keyof (typeof karte.stufen)[number]): boolean =>
     karte.stufen.some((s) => typeof s[feld] === 'number' && (s[feld] as number) > 0);
   const spalten: { kopf: string; wert: (s: (typeof karte.stufen)[number]) => string }[] = [
-    { kopf: 'Preis', wert: (s) => (s.preis === null ? '—' : String(s.preis)) },
+    { kopf: 'Preis', wert: (s) => (s.preis === null ? '-' : String(s.preis)) },
     { kopf: 'Leben', wert: (s) => String(s.hp) },
   ];
   if (hat('dmg')) spalten.push({ kopf: 'Schaden', wert: (s) => String(s.dmg) });
@@ -195,7 +195,7 @@ function Kartenblatt({
       {karte.beweglich && (
         <p className="fuss">
           Ab Stufe 2 entsteht sie nur durch Verschmelzen zweier gleicher
-          Karten — kaufen lässt sich nur Stufe 1.
+          Karten - kaufen lässt sich nur Stufe 1.
         </p>
       )}
       {karte.wirkt.length > 0 && (
@@ -437,7 +437,7 @@ export function FeldherrTisch({
         );
         console.warn(
           'feldherr: Serverliste ist kuerzer als der eigene Stand (' +
-            zuege.length + ' statt ' + gereicht.current + ') — Kern wird neu gestartet.',
+            zuege.length + ' statt ' + gereicht.current + ') - Kern wird neu gestartet.',
         );
         alleZuege.current = zuege.slice();
         /* Der Neustart-Effekt setzt `gereicht` zurueck und reicht die
@@ -461,7 +461,7 @@ export function FeldherrTisch({
       });
       console.warn(
         'feldherr: Zugliste hat ein Loch (Sicht beginnt bei ' + ab + ', vorhanden ' +
-          liste.length + ') — volle Sicht wird neu angefordert.',
+          liste.length + ') - volle Sicht wird neu angefordert.',
       );
       neuVerbindenRef.current();
       return;
@@ -712,7 +712,7 @@ export function FeldherrTisch({
         heilungen.current.push(jetzt);
         console.warn(
           'feldherr: Gleichlauf verloren (' + probe.grund + ' bei Takt ' + probe.takt +
-            ') — Neustart aus der Server-Zugliste.',
+            ') - Neustart aus der Server-Zugliste.',
         );
         setHeilt(true);
         /**
@@ -1012,7 +1012,7 @@ export function FeldherrTisch({
         {dreiD && <Buehne3D sitzungRef={sitzungRef} />}
         {verworfen && !fremdesEnde && !strittigLokal && (
           <div className="feldherr-hinweis">
-            Der Zug kam nicht durch — der Tisch war gerade nicht bereit. Leg
+            Der Zug kam nicht durch - der Tisch war gerade nicht bereit. Leg
             noch einmal.
           </div>
         )}

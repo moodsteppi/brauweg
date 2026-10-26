@@ -73,11 +73,11 @@ export interface GameSummary {
   availability: 'playable' | 'preview';
   seatCounts: number[];
   votes: number;
+  /** Eigene gespeicherte Stimme; fehlt nur bei aelteren Servern. */
+  meineStimme?: boolean;
   /**
-   * Nur Vorschau-Spiele ohne Modul sind abstimmbar. Ein Spiel, das es gibt
-   * und das hier nur noch nicht freigegeben ist (App-Schalter, siehe
-   * `FREIGABE` im Server), steht als „Bald" da, aber ohne Stimme. Fehlt das
-   * Feld (aelterer Server), gilt es wie bisher als abstimmbar.
+   * Ob das Spiel auf dieser Plattform noch angekuendigt und abstimmbar ist.
+   * Fehlt das Feld bei aelteren Servern, bleibt die Vorschau abstimmbar.
    */
   abstimmbar?: boolean;
 }

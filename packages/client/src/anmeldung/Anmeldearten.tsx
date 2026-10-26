@@ -115,7 +115,7 @@ export function Anmeldearten(): React.JSX.Element | null {
             <span className="muted">
               {stand.passwort
                 ? stand.email
-                : 'Kein Passwort gesetzt — über „Passwort vergessen“ legst du eins an.'}
+                : 'Kein Passwort gesetzt - über „Passwort vergessen“ legst du eins an.'}
             </span>
           </div>
         </div>

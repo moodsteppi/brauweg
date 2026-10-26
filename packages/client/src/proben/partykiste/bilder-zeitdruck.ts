@@ -23,8 +23,8 @@ export interface ZeitdruckBild {
 export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
   return [
     {
-      titel: 'Bombe — du hast sie',
-      text: 'Reihum laut etwas aus der Kategorie nennen und weitergeben. Die Bombe tickt gleichmäßig; wann sie hochgeht, weiß nur der Server — die Frist geht nicht über die Leitung.',
+      titel: 'Bombe - du hast sie',
+      text: 'Reihum laut etwas aus der Kategorie nennen und weitergeben. Die Bombe tickt gleichmäßig; wann sie hochgeht, weiß nur der Server - die Frist geht nicht über die Leitung.',
       sicht: sicht({
         art: 'bombe',
         gehandelt: [],
@@ -32,7 +32,7 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
-      titel: 'Bombe — ein anderer hat sie',
+      titel: 'Bombe - ein anderer hat sie',
       text: 'Wer die Bombe nicht hat, sieht nur, bei wem sie gerade tickt.',
       sicht: sicht({
         art: 'bombe',
@@ -42,8 +42,8 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
-      titel: 'Bombe — hochgegangen',
-      text: 'Wer sie in der Hand hatte, kassiert; alle anderen bekommen einen Punkt. Die Zündzeit steht auch hier nicht — der Tisch soll nicht lernen, wie lang eine Bombe tickt.',
+      titel: 'Bombe - hochgegangen',
+      text: 'Wer sie in der Hand hatte, kassiert; alle anderen bekommen einen Punkt. Die Zündzeit steht auch hier nicht - der Tisch soll nicht lernen, wie lang eine Bombe tickt.',
       zusatz: 'abrechnung',
       sicht: sicht({
         art: 'bombe',
@@ -55,8 +55,8 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
-      titel: '10 Sekunden — du bist dran',
-      text: 'Die Aufgabe kommt erst mit „Los", für alle gleichzeitig. Vorher sieht sie niemand, auch der Sprecher nicht — sonst hätte er Bedenkzeit, die keine Uhr misst.',
+      titel: '10 Sekunden - du bist dran',
+      text: 'Die Aufgabe kommt erst mit „Los", für alle gleichzeitig. Vorher sieht sie niemand, auch der Sprecher nicht - sonst hätte er Bedenkzeit, die keine Uhr misst.',
       sicht: sicht({
         art: 'zehnsekunden',
         gehandelt: [],
@@ -75,7 +75,7 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
-      titel: '10 Sekunden — die Uhr läuft',
+      titel: '10 Sekunden - die Uhr läuft',
       text: 'Die Zeit misst der Server und schaltet danach selbst aufs Urteil. Angezeigt wird seine Frist (phaseDeadline); im Schaukasten gibt es keine, darum steht hier keine Zahl.',
       sicht: sicht({
         art: 'zehnsekunden',
@@ -96,7 +96,7 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
-      titel: '10 Sekunden — du urteilst',
+      titel: '10 Sekunden - du urteilst',
       text: 'Es urteilen die Menschen außer dem Sprecher; Bots hören nicht zu. Wie die anderen geurteilt haben, steht erst in der Abrechnung.',
       sicht: sicht({
         art: 'zehnsekunden',
@@ -116,8 +116,8 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
-      titel: 'Königsbecher — du legst auf die Flasche',
-      text: 'Reihum eine Karte aus dem 52er-Blatt, jede Karte ist eine Regel. Der Text sagt „kassiert", nie „trinkt" — ob das ein Schluck ist, sagt der Trinkmodus.',
+      titel: 'Königsbecher - du legst auf die Flasche',
+      text: 'Reihum eine Karte aus dem 52er-Blatt, jede Karte ist eine Regel. Der Text sagt „kassiert", nie „trinkt" - ob das ein Schluck ist, sagt der Trinkmodus.',
       sicht: sicht({
         art: 'koenigsbecher',
         gehandelt: [],
@@ -150,7 +150,7 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
-      titel: 'Königsbecher — Wasserfall',
+      titel: 'Königsbecher - Wasserfall',
       text: 'Das Ass: Alle kassieren. Ein Wasserfall stürzt über den Bildschirm, das Ass überschlägt sich im Fallen (Wasserfall.tsx). Antippen schließt ihn früher.',
       sicht: sicht({
         art: 'koenigsbecher',
@@ -168,7 +168,7 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
             folge: 'alle',
             ziele: [0, 1, 2, 3, 4, 5],
             titel: 'Wasserfall',
-            text: 'Alle kassieren — der ganze Tisch.',
+            text: 'Alle kassieren - der ganze Tisch.',
           },
           wahlOffen: false,
           hand: null,
@@ -184,7 +184,7 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
-      titel: 'Königsbecher — umgekippt',
+      titel: 'Königsbecher - umgekippt',
       text: 'Der Stapel auf der Flasche ist gefallen: Wer ihn umwarf, kassiert je Karte einen (gedeckelt), der Stapel beginnt neu.',
       sicht: sicht({
         art: 'koenigsbecher',
@@ -218,8 +218,8 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
-      titel: 'Königsbecher — Hand hoch!',
-      text: 'Nach einer Sieben tippen alle „Hand hoch". Die Frist (fünf Sekunden) läuft auf dem Server; wer bis dahin nicht tippt, kassiert — tippen alle, der Letzte.',
+      titel: 'Königsbecher - Hand hoch!',
+      text: 'Nach einer Sieben tippen alle „Hand hoch". Die Frist (fünf Sekunden) läuft auf dem Server; wer bis dahin nicht tippt, kassiert - tippen alle, der Letzte.',
       sicht: sicht({
         art: 'koenigsbecher',
         gehandelt: [],
@@ -237,7 +237,7 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
             folge: 'hand',
             ziele: [],
             titel: 'Hand hoch',
-            text: 'Alle zeigen nach oben und tippen „Hand hoch" — wer zuletzt ist, kassiert.',
+            text: 'Alle zeigen nach oben und tippen „Hand hoch" - wer zuletzt ist, kassiert.',
           },
           wahlOffen: false,
           hand: [4, 5, 2],
@@ -253,7 +253,7 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
       }),
     },
     {
-      titel: 'Königsbecher — du wählst',
+      titel: 'Königsbecher - du wählst',
       text: 'Eine Zwei: Wer zieht, zeigt auf jemanden. Dieselbe Geste wie „Wer würde eher", derselbe Knopf.',
       sicht: sicht({
         art: 'koenigsbecher',
@@ -271,7 +271,7 @@ export function bilderZeitdruck(sicht: Geruest): ZeitdruckBild[] {
             folge: 'waehlen',
             ziele: [],
             titel: 'Du wählst',
-            text: 'Zeig auf jemanden — der kassiert.',
+            text: 'Zeig auf jemanden - der kassiert.',
           },
           wahlOffen: true,
           hand: null,

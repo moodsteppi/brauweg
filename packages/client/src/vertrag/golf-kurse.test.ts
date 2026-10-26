@@ -88,7 +88,7 @@ describe('Vertrag Golf-Kurse', () => {
       }
     }
     for (const regeln of faelle) {
-      expect(varianteImClient(regeln as Bahnregeln, daten!), JSON.stringify(regeln)).toBe(varianteImModul(regeln as GolfRegeln));
+      expect(varianteImClient(regeln as Bahnregeln, daten!), JSON.stringify(regeln)).toBe((varianteImModul(regeln as GolfRegeln)?.replace(/[–—]/g, '-') ?? null));
     }
   });
 

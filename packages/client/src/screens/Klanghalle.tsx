@@ -148,7 +148,7 @@ export function Klanghalle({
             </Tafel>
 
             <p className="muted klanghalle-fuss">
-              Neue Stücke und Pakete gibt es im Shop — dort lassen sie sich vor
+              Neue Stücke und Pakete gibt es im Shop - dort lassen sie sich vor
               dem Kauf anhören. Wie laut es ist, steht in den Einstellungen.
             </p>
           </>
@@ -333,7 +333,7 @@ function KlanghalleNeu({
             </section>
 
             <p className="hb-klein hb-ohne-rand">
-              Neue Stücke und Pakete gibt es im Shop — dort lassen sie sich vor dem Kauf anhören. Wie laut
+              Neue Stücke und Pakete gibt es im Shop - dort lassen sie sich vor dem Kauf anhören. Wie laut
               es ist, steht in den Einstellungen.
             </p>
           </>

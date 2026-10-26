@@ -82,7 +82,7 @@ export function MenueNeu({
     >
       <div className="spe-karte">
         <p className="spe-text">
-          Kaufe Recken, stelle sie aufs Feld und lege drei gleiche zusammen — aus dreien wird eine stärkere. Wer am
+          Kaufe Recken, stelle sie aufs Feld und lege drei gleiche zusammen - aus dreien wird eine stärkere. Wer am
           längsten steht, gewinnt.
         </p>
         <div className="spe-zeichen" aria-hidden="true">
@@ -170,7 +170,7 @@ export function SucheNeu({
         </p>
         <p className="spe-text">
           {gefunden === 1
-            ? 'Noch niemand sonst — bleibt es dabei, wird mit Bots aufgefüllt.'
+            ? 'Noch niemand sonst - bleibt es dabei, wird mit Bots aufgefüllt.'
             : `${gefunden} Spieler gefunden`}
         </p>
         <Lauf />
@@ -323,7 +323,7 @@ export function BeitretenNeu({
         </button>
       }
     >
-      <p className="spe-text">Tippe den Code ein, den du bekommen hast — oder nimm einen offenen Tisch.</p>
+      <p className="spe-text">Tippe den Code ein, den du bekommen hast - oder nimm einen offenen Tisch.</p>
       <SpielAbschnitt titel="Code">
         <input
           className="spe-feld spe-codefeld"
@@ -453,7 +453,7 @@ export function WartesaalNeu({
             </button>
             <p className="hb-klein">
               {wartesaal.botsFuellen
-                ? 'Freie Plätze übernehmen Bots — du kannst sofort losspielen.'
+                ? 'Freie Plätze übernehmen Bots - du kannst sofort losspielen.'
                 : menschen < 2
                   ? 'Ohne Bots braucht es mindestens einen Mitspieler.'
                   : `Es spielen ${menschen} Menschen, die leeren Plätze fallen weg.`}

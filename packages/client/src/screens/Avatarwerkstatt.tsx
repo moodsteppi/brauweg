@@ -260,7 +260,7 @@ export function Avatarwerkstatt({
           <label className="ws-schalter">
             <span>
               <strong>Zubehör zeigen</strong>
-              <small>Zum Bemalen des Kopfes kurz ausblenden — angezogen bleibt es.</small>
+              <small>Zum Bemalen des Kopfes kurz ausblenden - angezogen bleibt es.</small>
             </span>
             <input
               type="checkbox"

@@ -10,7 +10,7 @@ import { MINISPIEL_NAME, type PartyLetzterWurf, type PartyMinispiel, type Partyk
 /*
  * Das Warten auf das „Weiter" aller am Bildschirm (07.10.2026). Wer fehlt und
  * ob der Letzte trinkt, entscheidet das Modul (weiter-warten.test.ts dort);
- * hier steht nur, dass der Bildschirm es mit Namen zeigt — und einen Wurf
+ * hier steht nur, dass der Bildschirm es mit Namen zeigt - und einen Wurf
  * genau einmal ansagt.
  */
 
@@ -71,7 +71,7 @@ describe('wer beim „Weiter" noch fehlt', () => {
     expect(screen.getByText(/Es fehlen noch/).textContent).toBe('Es fehlen noch: Anna, Ben');
   });
 
-  it('steht auch bei dem, der noch nicht getippt hat — und nennt ihn „du"', () => {
+  it('steht auch bei dem, der noch nicht getippt hat - und nennt ihn „du"', () => {
     render(<Abrechnung sicht={sicht({ gehandelt: [], weiterFehlen: [0, 2] })} sitze={SITZE} binFertig={false} sende={() => {}} />);
     expect(screen.getByText(/Es fehlen noch/).textContent).toBe('Es fehlen noch: du, Ben');
   });
@@ -83,18 +83,18 @@ describe('wer beim „Weiter" noch fehlt', () => {
 });
 
 describe('die Ansage für den Letzten', () => {
-  it('sagt den Schluck an — und das Glück', () => {
+  it('sagt den Schluck an - und das Glück', () => {
     const { rerender, container } = render(<AnsageLetzter wurf={WURF} sitze={SITZE} ich={0} trinkmodus />);
-    expect(container.textContent).toContain('Ben war Letzter – ein Schluck!');
+    expect(container.textContent).toContain('Ben war Letzter - ein Schluck!');
     rerender(<AnsageLetzter wurf={{ ...WURF, trinkt: false, schlucke: 0 }} sitze={SITZE} ich={0} trinkmodus />);
-    expect(container.textContent).toContain('Ben war Letzter – Glück gehabt!');
+    expect(container.textContent).toContain('Ben war Letzter - Glück gehabt!');
     rerender(<AnsageLetzter wurf={WURF} sitze={SITZE} ich={2} trinkmodus={false} />);
-    expect(container.textContent).toContain('Du warst Letzter – ein Strafpunkt!');
+    expect(container.textContent).toContain('Du warst Letzter - ein Strafpunkt!');
   });
 
   it('sagt nur NEUE Würfe an, einmal und kurz', () => {
     vi.useFakeTimers();
-    /* Beim Öffnen steht schon ein Wurf in der Sicht — der ist alt. */
+    /* Beim Öffnen steht schon ein Wurf in der Sicht - der ist alt. */
     const { result, rerender } = renderHook(({ wurf }) => useNeuerWurf('t1', true, wurf), {
       initialProps: { wurf: WURF as PartyLetzterWurf | null },
     });

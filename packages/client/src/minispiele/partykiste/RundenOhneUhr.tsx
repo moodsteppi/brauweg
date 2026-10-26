@@ -70,7 +70,7 @@ export function KategorienRunde({ sicht, sitze, sende }: RundenProps): React.JSX
   return (
     <>
       <Buehne
-        oben={binDran ? 'Du bist dran — nenn etwas' : `${namenFuer(sitze, daten.amZug)} ist dran`}
+        oben={binDran ? 'Du bist dran - nenn etwas' : `${namenFuer(sitze, daten.amZug)} ist dran`}
         gross={<span className="pk-frage">{daten.kategorie}</span>}
         unten={
           <span>
@@ -102,7 +102,7 @@ export function KategorienRunde({ sicht, sitze, sende }: RundenProps): React.JSX
                 disabled={noetig === 0}
                 onClick={() => sende({ art: 'einspruch', ziel })}
               >
-                {ziel === daten.amZug ? 'Stockt!' : 'Doppelt!'} — {namenFuer(sitze, ziel)}
+                {ziel === daten.amZug ? 'Stockt!' : 'Doppelt!'} - {namenFuer(sitze, ziel)}
                 <small className="pk-zaehler">
                   {stimmenGegen(daten.einspruch, ziel)} von {noetig} nötig
                 </small>
@@ -135,7 +135,7 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
       <>
         <Buehne
           gross={<span className="pk-frage">{daten.frage}</span>}
-          unten={<span>{mehrheit < 0 ? 'Gleichstand — keine Mehrheit, alle lagen daneben.' : `Die Mehrheit: ${seiten[mehrheit]}`}</span>}
+          unten={<span>{mehrheit < 0 ? 'Gleichstand - keine Mehrheit, alle lagen daneben.' : `Die Mehrheit: ${seiten[mehrheit]}`}</span>}
           ton={mehrheit < 0 ? 'schlecht' : 'gut'}
         />
         <Wahl>
@@ -152,7 +152,7 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
               <li key={sitz} data-gut={mehrheit >= 0 && tipp === mehrheit ? '' : undefined}>
                 <span>{namenFuer(sitze, sitz)}</span>
                 <span className="muted">
-                  {tipp < 0 ? 'kein Tipp' : `sagt ${seiten[daten.eigene?.[sitz] ?? -1] ?? '—'}, tippt ${seiten[tipp]}`}
+                  {tipp < 0 ? 'kein Tipp' : `sagt ${seiten[daten.eigene?.[sitz] ?? -1] ?? '-'}, tippt ${seiten[tipp]}`}
                 </span>
               </li>
             ),
@@ -168,7 +168,7 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
         <Buehne gross={<span className="pk-frage">{daten.frage}</span>} />
         {abgegeben ? (
           <p className="pk-busfrage">
-            Du: {seiten[daten.meine]} · Dein Tipp: {seiten[daten.meinTipp] ?? '—'}
+            Du: {seiten[daten.meine]} · Dein Tipp: {seiten[daten.meinTipp] ?? '-'}
           </p>
         ) : null}
         <Wartet sicht={sicht} />
@@ -179,7 +179,7 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
   return (
     <>
       <Buehne
-        oben={eigene < 0 ? 'Schritt 1 — was sagst du?' : 'Schritt 2 — was sagt die Mehrheit?'}
+        oben={eigene < 0 ? 'Schritt 1 - was sagst du?' : 'Schritt 2 - was sagt die Mehrheit?'}
         gross={<span className="pk-frage">{daten.frage}</span>}
         unten={eigene < 0 ? undefined : <span>Du: {seiten[eigene]}</span>}
       />
@@ -233,7 +233,7 @@ export function RegelkartenRunde({ sicht, sitze, sende }: RundenProps): React.JS
         unten={
           <span>
             {bis <= sicht.rundeNr + 1 ? 'Gilt bis zum Schluss.' : `Gilt bis zum Ende von Runde ${bis}.`} Wer
-            verstößt, meldet sich selbst — oder die Runde meldet ihn.
+            verstößt, meldet sich selbst - oder die Runde meldet ihn.
           </span>
         }
         ton="geheim"
@@ -307,7 +307,7 @@ export function AktiveRegel({ sicht, sitze, sende }: RundenProps): React.JSX.Ele
               />
               <p className="pk-ou-regel-hinweis muted">
                 {meineAnklage >= 0
-                  ? `${namenFuer(sitze, meineAnklage)}: ${stimmenGegen(regel.anklage, meineAnklage)} von ${regel.noetig[meineAnklage] ?? 0} Stimmen — dann ist es ein ${zaehlerWort(sicht.trinkmodus, 1)}.`
+                  ? `${namenFuer(sitze, meineAnklage)}: ${stimmenGegen(regel.anklage, meineAnklage)} von ${regel.noetig[meineAnklage] ?? 0} Stimmen - dann ist es ein ${zaehlerWort(sicht.trinkmodus, 1)}.`
                   : 'Es zählt, wenn die Mehrheit denselben meldet.'}
               </p>
             </>

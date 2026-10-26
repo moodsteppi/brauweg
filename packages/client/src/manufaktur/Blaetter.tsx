@@ -152,7 +152,7 @@ export function UpgradeBlatt({
                 onClick={() => setMenge(m)}
               >
                 <b>{m === 'max' ? `Max${option.neueStufe > option.stufe ? ` +${option.neueStufe - option.stufe}` : ''}` : `x${m}`}</b>
-                <small>{option.neueStufe > option.stufe ? kurz(option.kosten) : '—'}</small>
+                <small>{option.neueStufe > option.stufe ? kurz(option.kosten) : '-'}</small>
               </button>
             );
           })}
@@ -191,6 +191,7 @@ function bereitIn(ms: number): string {
  * auf einen Platz) zeigt es nur die eine Station, aus der Leiste alle.
  */
 export function MeisterBlatt({
+  onSchule,
   stand,
   jetzt,
   markiert,
@@ -207,15 +208,17 @@ export function MeisterBlatt({
   onFaehigkeit: (ziel: Ziel) => void;
   onZuweisen: (ziel: Ziel, id: number) => void;
   onVerkaufen: (ziel: Ziel, id: number) => void;
+  onSchule: () => void;
   onClose: () => void;
 }): React.JSX.Element {
   const ziele = markiert ? [markiert] : alleZiele(stand);
   return (
     <HbBlatt titel={markiert ? stationName(markiert) : 'Meister'} onClose={onClose} klasse="is-klein">
       <div className="mf-blatt">
+        <button type="button" className="hb-kn is-gold is-breit" onClick={onSchule}>Meisterschule öffnen</button>
         {!markiert && (
           <p className="hb-text mf-blatt-hinweis">
-            Ein Meister arbeitet ohne Tippen, auch wenn du weg bist. Tauschen kostet nichts — eine laufende Fähigkeit endet
+            Ein Meister arbeitet ohne Tippen, auch wenn du weg bist. Tauschen kostet nichts - eine laufende Fähigkeit endet
             dabei, jeder Meister behält seine eigene Pause.
           </p>
         )}
@@ -285,7 +288,7 @@ function MeisterAbschnitt({
           </button>
         </div>
       ) : (
-        <p className="hb-text mf-meister-leer">Kein Meister zugewiesen — die Station schläft nach jedem Durchgang ein.</p>
+        <p className="hb-text mf-meister-leer">Kein Meister zugewiesen - die Station schläft nach jedem Durchgang ein.</p>
       )}
       {andere.length > 0 && (
         <ul className="mf-meister-pool">
@@ -381,7 +384,7 @@ export function LeerlaufBlatt({
         </p>
         {kette.length > 0 && (
           <p className="hb-text mf-blatt-warnung">
-            Ohne Meister an {kette.map(stationName).join(' und ')} kommt nichts beim Kunden an — die Pressen produzieren dann in einen
+            Ohne Meister an {kette.map(stationName).join(' und ')} kommt nichts beim Kunden an - die Pressen produzieren dann in einen
             Stau.
           </p>
         )}
@@ -432,7 +435,7 @@ export function WillkommenBlatt({
           <>
             <p className="hb-text mf-blatt-warnung">
               Deine Pressen haben {kurz(produziert)} produziert, aber {schlafend.join(' und ')} {schlafend.length > 1 ? 'schlafen' : 'schläft'}{' '}
-              — die Ware wartet in den Kisten.
+              - die Ware wartet in den Kisten.
             </p>
             <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={onMeister}>
               Meister einstellen
@@ -502,7 +505,7 @@ export function ManufakturBlatt({
             <Sterne stufe={r.stufe} />
           </span>
           {voll ? (
-            <p className="hb-text">Ganz renoviert — dieser Ort leistet für immer ×{kurz(r.faktorVorher)}.</p>
+            <p className="hb-text">Ganz renoviert - dieser Ort leistet für immer ×{kurz(r.faktorVorher)}.</p>
           ) : (
             <>
               <div className="mf-hauptzeile">
@@ -516,7 +519,7 @@ export function ManufakturBlatt({
                       und es gibt <img className="mf-buch-preis" src={siegelBild()} alt="" /> {r.siegel} Siegel fürs Werkstattbuch
                     </>
                   ) : (
-                    'Im Palast geht es als Jubiläum weiter — flacher, aber ohne Ende.'
+                    'Im Palast geht es als Jubiläum weiter - flacher, aber ohne Ende.'
                   )}
                 </em>
               </div>
@@ -547,7 +550,7 @@ export function ManufakturBlatt({
               <strong>{manufakturName(naechste)}</strong>
             </span>
             <p className="hb-text">
-              Ein neuer Ort: alles leistet doppelt so viel, kostet aber auch mehr. Es gibt 300 Münzen fürs Hub und 5 Siegel — die
+              Ein neuer Ort: alles leistet doppelt so viel, kostet aber auch mehr. Es gibt 300 Münzen fürs Hub und 5 Siegel - die
               Sterne hier bleiben dem Ort.
             </p>
             <button

@@ -50,7 +50,7 @@ export function KiMatch({
   const unter =
     gegner.length === 1
       ? 'Wie gut soll dein Gegner sich erinnern?'
-      : `${gegner.length} Gegner — jeder mit eigenem Gedächtnis.`;
+      : `${gegner.length} Gegner - jeder mit eigenem Gedächtnis.`;
 
   return (
     <SpielRahmen

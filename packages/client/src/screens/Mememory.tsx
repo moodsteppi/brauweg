@@ -1283,7 +1283,7 @@ export function Mememory({
           </p>
           <p className="spe-text">
             {gefunden === 1
-              ? 'Noch niemand sonst — bleibt es dabei, wird mit Bots aufgefüllt.'
+              ? 'Noch niemand sonst - bleibt es dabei, wird mit Bots aufgefüllt.'
               : `${gefunden} Spieler gefunden`}
           </p>
           <div className="spe-lauf" aria-hidden="true">

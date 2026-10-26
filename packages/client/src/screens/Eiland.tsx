@@ -410,7 +410,7 @@ export function Eiland({
           </p>
           <p className="spe-text">
             {gefunden === 1
-              ? 'Noch niemand sonst — bleibt es dabei, spielst du gegen die KI.'
+              ? 'Noch niemand sonst - bleibt es dabei, spielst du gegen die KI.'
               : `${gefunden} Spieler gefunden`}
           </p>
           <div className="spe-lauf" aria-hidden="true">
@@ -457,7 +457,7 @@ export function Eiland({
       >
         <p className="spe-text">
           Nimm Land, sammle Ornamente und komm dem anderen zuvor. Ihr zieht
-          gleichzeitig — und wer dasselbe Feld will, muss darum kämpfen.
+          gleichzeitig - und wer dasselbe Feld will, muss darum kämpfen.
         </p>
         <div className="ei-probe spe-motiv" aria-hidden="true">
           <span data-art="gras" />
@@ -483,7 +483,7 @@ export function Eiland({
           <p className="hb-klein">
             {variante === 'nebel'
               ? 'Du siehst dein Gebiet und drei Felder darüber hinaus.'
-              : 'Die ganze Insel liegt offen — für euch beide.'}
+              : 'Die ganze Insel liegt offen - für euch beide.'}
           </p>
           <button
             type="button"
@@ -1291,7 +1291,7 @@ function Regeltext(): React.JSX.Element {
       <ol>
         <li>Jeder startet mit einem Feld in seiner Ecke der Insel.</li>
         <li>
-          Pro Runde nimmst du ein freies Wiesenfeld, das an dein Gebiet grenzt —
+          Pro Runde nimmst du ein freies Wiesenfeld, das an dein Gebiet grenzt -
           und ein Feld mehr für jedes Ornament, das du eingesammelt hast.
         </li>
         <li>
@@ -1300,7 +1300,7 @@ function Regeltext(): React.JSX.Element {
         </li>
         <li>
           Ihr wählt <strong>gleichzeitig</strong>, ohne die Wahl des anderen zu
-          sehen. Wollen beide dasselbe Feld, wird darum gekämpft — der Ausgang
+          sehen. Wollen beide dasselbe Feld, wird darum gekämpft - der Ausgang
           steht fünfzig zu fünfzig. Wer verliert, kommt an dieser Stelle nicht
           weiter; Felder dahinter bleiben frei.
         </li>
@@ -1309,7 +1309,7 @@ function Regeltext(): React.JSX.Element {
           Einsatz: Bei jedem Streitfeld fliegt einer aufs Feld. Hat nur einer
           von euch einen, gewinnt er das Feld sicher; haben beide einen,
           entscheidet wieder der Münzwurf. Die Streitfelder kommen in
-          zufälliger Reihenfolge dran, bis die Einsätze verbraucht sind — der
+          zufälliger Reihenfolge dran, bis die Einsätze verbraucht sind - der
           Rest bleibt fünfzig zu fünfzig.
         </li>
         <li>Die Partie endet, wenn keiner mehr irgendwohin kann.</li>
@@ -1318,12 +1318,12 @@ function Regeltext(): React.JSX.Element {
       <p>
         Städte und Brunnen liegen verstreut auf der Insel. Wer das Feld nimmt,
         auf dem eines steht, nimmt von da an ein Feld mehr pro Runde. Es liegen
-        immer vier auf der Karte — für jedes eingesammelte rückt eines nach.
+        immer vier auf der Karte - für jedes eingesammelte rückt eines nach.
       </p>
       <h3>Zwei Spielarten</h3>
       <p>
         <strong>Im Nebel</strong> siehst du dein Gebiet und drei Felder darüber
-        hinaus; alles andere liegt grau — auch für den Gegner. Auf der{' '}
+        hinaus; alles andere liegt grau - auch für den Gegner. Auf der{' '}
         <strong>offenen Karte</strong> seht ihr beide die ganze Insel. Was auf
         dem Zettel des anderen steht, bleibt in beiden Fällen geheim.
       </p>

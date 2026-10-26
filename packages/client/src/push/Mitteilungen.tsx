@@ -110,7 +110,7 @@ export function Mitteilungen({
         ? gefragt
           ? 'Kommt nichts an? Dann sind Mitteilungen für Brauweg in den Systemeinstellungen deines Telefons aus.'
           : 'Dieses Telefon bekommt noch keine Mitteilungen.'
-        : 'Diese Fassung der App kann noch keine Mitteilungen — das kommt mit dem nächsten Update.'
+        : 'Diese Fassung der App kann noch keine Mitteilungen - das kommt mit dem nächsten Update.'
       : null;
 
   if (neu) {

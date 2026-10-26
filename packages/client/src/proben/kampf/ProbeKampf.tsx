@@ -325,7 +325,7 @@ export function ProbeKampf(): React.JSX.Element {
           klebt es beim Rollen oben fest. Beides gilt am Tisch genauso. */}
       <div className="tr-oben">
         <div className={`tr-oben-reihe ${css.kopf}`}>
-          <h1 className={css.titel}>Probe — die Kampfanzeige</h1>
+          <h1 className={css.titel}>Probe - die Kampfanzeige</h1>
           <Uhr key={durchgang} dauerMs={BERICHT.dauerMs} />
         </div>
         {/*
@@ -493,14 +493,14 @@ export function ProbeKampf(): React.JSX.Element {
             <p className={css.hinweis}>
               Drei Stufen, in dieser Reihenfolge: das 3D-Blatt der Rolle, darunter die Pixelfigur
               der Einheit, darunter ihr Strichzeichen. Die Kästchen lassen die oberen Stufen
-              ausfallen — so, wie es eine fehlende Datei täte, und ohne Eingriff in die
+              ausfallen - so, wie es eine fehlende Datei täte, und ohne Eingriff in die
               Kampfanzeige. Mitten im Kampf umschaltbar: Die Figuren tauschen an Ort und Stelle,
               Größe und Stellung lassen sich also unmittelbar vergleichen.
             </p>
             <p className={css.fuss}>
               Runde {SZENE.runde} einer Partie zu {SZENE.sitze.length} mit Bots (Saat „
               {SZENE.saat}", Gangart {SZENE.gangart}): Du sitzt auf {nameVon(SZENE.kampf.a)} und
-              trittst gegen {nameVon(SZENE.kampf.b)} an — {BERICHT.start.length} Einheiten (
+              trittst gegen {nameVon(SZENE.kampf.b)} an - {BERICHT.start.length} Einheiten (
               {stufenSatz()}), erreichte Markenschwellen {markenSatz(0)} gegen {markenSatz(1)}.
               Gerechnet mit Zeitraffer x{SZENE.zeitraffer}, dem Tempo, das beurteilt werden
               soll: {sekunden(BERICHT.dauerMs)}, {zaehle('bewegung')} Bewegungen,{' '}

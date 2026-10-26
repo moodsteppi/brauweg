@@ -375,7 +375,7 @@ function GeburtstagNachfrage({
 
   return (
     <div className="anbieter-nachfrage" role="group" aria-label="Geburtsdatum nachtragen">
-      <p>Fast geschafft — noch eine Frage, dann legen wir dein Konto an.</p>
+      <p>Fast geschafft - noch eine Frage, dann legen wir dein Konto an.</p>
       <label>
         Geburtstag
         <input

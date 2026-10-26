@@ -128,7 +128,7 @@ function fussnote(gameId: string, seats: number, visibility: Sichtbarkeit): stri
     return 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder.';
   }
   if (gameId === 'skat') {
-    return 'Skat wird zu dritt gespielt. Freie Plätze füllst du am Tisch mit Bots — der Tisch zählt trotzdem für die Rangliste.';
+    return 'Skat wird zu dritt gespielt. Freie Plätze füllst du am Tisch mit Bots - der Tisch zählt trotzdem für die Rangliste.';
   }
   if (seats === 3) {
     return 'Am Dreiertisch spielt immer ein Bot als Vierter mit. Der Tisch zählt trotzdem für die Rangliste.';
@@ -394,7 +394,7 @@ export function Lobby({
 
   const name = t(`game.${gameId}`);
   const sitze = defaults?.seatCounts ?? [4];
-  const sitzText = sitze.length > 1 ? `${sitze[0]}–${sitze[sitze.length - 1]}` : `${sitze[0]}`;
+  const sitzText = sitze.length > 1 ? `${sitze[0]}-${sitze[sitze.length - 1]}` : `${sitze[0]}`;
   if (ansicht === 'bot') {
     return (
       <SpielRahmen

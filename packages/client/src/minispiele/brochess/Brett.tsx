@@ -501,7 +501,7 @@ export function statusText(
   nameVon: (farbe: Farbe) => string,
 ): { text: string; art: 'normal' | 'schach' | 'ende' } {
   const aus = ergebnis(sicht, nameVon);
-  if (aus) return { text: aus.grund ? `${aus.titel} — ${aus.grund}` : aus.titel, art: 'ende' };
+  if (aus) return { text: aus.grund ? `${aus.titel} - ${aus.grund}` : aus.titel, art: 'ende' };
   const du = sicht.meineFarbe === sicht.amZug;
   const wer = du ? 'Du bist am Zug' : `${nameVon(sicht.amZug)} ist am Zug`;
   return sicht.schach ? { text: `Schach! ${wer}.`, art: 'schach' } : { text: wer, art: 'normal' };

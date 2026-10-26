@@ -20,7 +20,7 @@ import { MAX_PRESSEN, freischaltKosten } from './formeln.js';
 import { renovierung } from './renovieren.js';
 import type { ManufakturStand } from './stand.js';
 
-export type Zaehler = 'faehigkeiten' | 'getauscht' | 'rabattStufen';
+export type Zaehler = 'faehigkeiten' | 'getauscht' | 'rabattStufen' | 'ausgebildet';
 
 export function zaehler(stand: ManufakturStand, z: Zaehler): number {
   return stand.zaehler[z] ?? 0;

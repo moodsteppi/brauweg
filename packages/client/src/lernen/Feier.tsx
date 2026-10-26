@@ -40,7 +40,7 @@ export function MeisterFeier({ outfit, onClose, onAngezogen }: { outfit: readonl
             <Pinguin getragen={{ hut: 'hut-doktorhut', oberteil: 'oberteil-meisterrobe' }} groesse={13} titel="Pinguin als Doko-Meister" />
           </div>
           <h2>Doko-Meister!</h2>
-          <p>Sieben Tage am Stück Doppelkopf gelernt. Dein Pinguin hat sich Doktorhut und Meisterrobe verdient — beides liegt jetzt in deinem Kleiderschrank.</p>
+          <p>Sieben Tage am Stück Doppelkopf gelernt. Dein Pinguin hat sich Doktorhut und Meisterrobe verdient - beides liegt jetzt in deinem Kleiderschrank.</p>
         </div>
       </div>
       <footer className="ln-fuss">

@@ -570,7 +570,7 @@ export function Golf({
       <SpielRahmen
         gameId="golf"
         titel="Golf"
-        unter="1–8 Spieler · alle gleichzeitig"
+        unter="1-8 Spieler · alle gleichzeitig"
         akzent={AKZENT}
         onBack={onBack}
         fuss={
@@ -597,7 +597,7 @@ export function Golf({
       >
         <p className="spe-text">
           Minigolf von oben, alle gleichzeitig auf derselben Bahn. Zieh deinen Ball zurück wie
-          einen Flitzebogen, lass los — und wer nach allen Löchern die wenigsten Schläge hat,
+          einen Flitzebogen, lass los - und wer nach allen Löchern die wenigsten Schläge hat,
           gewinnt.
         </p>
         <div className="gf-probe" aria-hidden="true">
@@ -606,7 +606,7 @@ export function Golf({
           ))}
         </div>
         {KARTEN.length === 0 && (
-          <p className="hb-fehler">Es sind noch keine Bahnen eingebaut — spielen lässt sich noch nicht.</p>
+          <p className="hb-fehler">Es sind noch keine Bahnen eingebaut - spielen lässt sich noch nicht.</p>
         )}
         {fehler && <p className="hb-fehler">{fehler}</p>}
       </SpielRahmen>
@@ -687,7 +687,7 @@ export function Golf({
     return (
       <SpielRahmen gameId="golf" titel="Bahnen fehlen" akzent={AKZENT} onBack={verlasseUndZurueck}>
         <p className="spe-text">
-          Dieser Stand bringt noch keine Bahnen mit. Ohne sie lässt sich die Partie nicht rechnen —
+          Dieser Stand bringt noch keine Bahnen mit. Ohne sie lässt sich die Partie nicht rechnen -
           der Tisch bleibt bestehen.
         </p>
       </SpielRahmen>
@@ -706,7 +706,7 @@ export function Golf({
       <SpielRahmen gameId="golf" titel="Neue Bahnen" akzent={AKZENT} onBack={verlasseUndZurueck}>
         <p className="spe-text" data-golf-bahnen-fehlen="">
           Diese Partie spielt {fehlendeBahnen.length === 1 ? 'eine Bahn' : `${fehlendeBahnen.length} Bahnen`},
-          die diese Fassung noch nicht kennt. Bitte die Seite neu laden — der Tisch bleibt bestehen.
+          die diese Fassung noch nicht kennt. Bitte die Seite neu laden - der Tisch bleibt bestehen.
         </p>
       </SpielRahmen>
     );
@@ -897,7 +897,7 @@ function Lobby({
         )
       }
     >
-      {!verbunden && <p className="hb-fehler">Keine Verbindung — es wird neu aufgebaut …</p>}
+      {!verbunden && <p className="hb-fehler">Keine Verbindung - es wird neu aufgebaut …</p>}
       <SpielAbschnitt titel="Spieler">
         <ul className="hb-liste gf-neu-gruppe">{zeilen}</ul>
       </SpielAbschnitt>
@@ -1473,7 +1473,7 @@ function Partie({
             >
               <strong>{schlaege}</strong>
               <em>
-                {hud.eingelocht[sitz] ? '✓' : hud.fertig[sitz] ? '–' : ''}
+                {hud.eingelocht[sitz] ? '✓' : hud.fertig[sitz] ? '-' : ''}
                 {hud.gesamt[sitz]}
               </em>
               <i>{name(sitz).slice(0, 3)}</i>
@@ -1504,7 +1504,7 @@ function Partie({
 
       {hud.pause && (
         <div className="gf-pause">
-          <h2>Loch {hud.loch + 1} — Zwischenstand</h2>
+          <h2>Loch {hud.loch + 1} - Zwischenstand</h2>
           <table className="gf-tafel">
             <thead>
               <tr>
@@ -1572,7 +1572,7 @@ function Partie({
       >
         <Kartenzeichen />
       </button>
-      {uebersicht && <p className="gf-uebersichthinweis">Übersicht — tippe zum Zurück</p>}
+      {uebersicht && <p className="gf-uebersichthinweis">Übersicht - tippe zum Zurück</p>}
     </main>
   );
 }
@@ -1773,7 +1773,7 @@ export function Abschluss({
           <span className="gf-rangname">{name(zeile.sitz)}</span>
           <span className="gf-rangloecher">
             {daten.ergebnis.map((reihe, loch) => (
-              <i key={loch}>{reihe[zeile.sitz] ?? '–'}</i>
+              <i key={loch}>{reihe[zeile.sitz] ?? '-'}</i>
             ))}
           </span>
           <strong className="gf-rangsumme">{zeile.schlaege}</strong>
@@ -1787,7 +1787,7 @@ export function Abschluss({
       <p className="gf-untertitel gf-klein">Ergebnis wird bestätigt …</p>
     ) : ausgang.strittig ? (
       <p className="gf-fehler">
-        Die Geräte sind auf verschiedene Ergebnisse gekommen — die Partie
+        Die Geräte sind auf verschiedene Ergebnisse gekommen - die Partie
         zählt als strittig, alle stehen auf Platz 1.
       </p>
     ) : null;

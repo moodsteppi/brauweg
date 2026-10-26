@@ -89,6 +89,7 @@ import {
   registry,
   requireModule,
   requireSpielbar,
+  freigabeAuf,
   spieleFuer,
   taugtFuerApp,
   type Plattform,
@@ -1857,6 +1858,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .from(s.gameVote)
       .groupBy(s.gameVote.gameId);
     const countOf = new Map(votes.map((row) => [row.gameId, row.count]));
+    const sitzung = await sessionFromToken(deps.db, sessionToken(request));
+    const eigene = sitzung
+      ? await deps.db.select({ gameId: s.gameVote.gameId }).from(s.gameVote).where(eq(s.gameVote.accountId, sitzung.accountId))
+      : [];
+    const meineStimmen = new Set(eigene.map(v => v.gameId));
+    // Kontobezogene Antworten duerfen nicht zwischen Konten zwischengespeichert werden.
+    reply.header('Cache-Control', 'private, no-store');
 
     // Je Plattform: In der App kann ein Spiel `bald` oder ganz weg sein,
     // obwohl es auf der Webseite laeuft (siehe FREIGABE in registry.ts).
@@ -1867,6 +1875,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         availability,
         seatCounts: meta.seatCounts,
         votes: countOf.get(meta.id) ?? 0,
+        meineStimme: meineStimmen.has(meta.id),
         abstimmbar,
       })),
     );
@@ -1876,7 +1885,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/games/:gameId/vote', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
-    if (isPlayable(gameId)) {
+    if (!imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
+    if (freigabeAuf(gameId, plattformVon(request), umfang) !== 'bald') {
       return reply.status(400).send({ code: 'alreadyPlayable', messageKey: 'error.alreadyPlayable' });
     }
     // Was nicht im Umfang steht, steht nicht in der Auswahl — also auch

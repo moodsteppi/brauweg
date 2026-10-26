@@ -135,7 +135,7 @@ export function ClanChat({
         {laedt && <Ladekreis />}
         {!laedt && zeilen.length === 0 && (
           <p className="muted clan-chat-hinweis">
-            Noch nichts gesagt. Fang an — die anderen sehen es sofort.
+            Noch nichts gesagt. Fang an - die anderen sehen es sofort.
           </p>
         )}
 

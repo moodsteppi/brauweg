@@ -116,7 +116,7 @@ function PasstNichtBlatt({
         {fertig ? (
           <>
             <p role="status" className="pk-pn-danke">
-              Danke — ist notiert. Wir sehen uns den Eintrag an.
+              Danke - ist notiert. Wir sehen uns den Eintrag an.
             </p>
             <div className="pk-pn-knoepfe">
               <button type="button" className="pk-knopf is-haupt" onClick={onClose}>

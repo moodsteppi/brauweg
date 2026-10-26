@@ -17,9 +17,8 @@ export function sitzSpanne(seatCounts: readonly number[]): string {
   let ende: number | null = null;
   const abschliessen = () => {
     if (anfang === null || ende === null) return;
-    // Ein Gedankenstrich, kein Bindestrich: „4–5" ist eine Spanne, „4-5" saehe
-    // nach einem Rechenzeichen aus.
-    teile.push(anfang === ende ? String(anfang) : `${anfang}–${ende}`);
+    // Kurzer Bindestrich fuer Spannen, wie in allen sichtbaren App-Texten.
+    teile.push(anfang === ende ? String(anfang) : `${anfang}-${ende}`);
   };
   for (const n of zahlen) {
     if (ende !== null && n === ende + 1) {

@@ -359,7 +359,7 @@ export function Aufgabenblatt({
               />
             ))}
             <p className="quest-hinweis muted">
-              Gezählt wird am Ende einer Partie — auch an Tischen mit Bots. Abgebrochene Partien
+              Gezählt wird am Ende einer Partie - auch an Tischen mit Bots. Abgebrochene Partien
               zählen nicht.
             </p>
           </Tafel>
@@ -376,7 +376,7 @@ export function Aufgabenblatt({
               onOeffnen={() => oeffnen(truhen.tag)}
             />
             <p className="quest-hinweis muted">
-              Die Tagestruhe steht jeden Tag einmal bereit. Die anderen kommen mit den Stufen —
+              Die Tagestruhe steht jeden Tag einmal bereit. Die anderen kommen mit den Stufen -
               erreicht ist erreicht, sie gehen nie wieder zu.
             </p>
             {truhen.stufen.map((truhe) => (

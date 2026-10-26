@@ -167,7 +167,7 @@ export function PartyAuswahl({
           <p className="hb-klein">Hat ein Paket zu wenig eigene Inhalte, mischt die Kiste allgemeine dazu.</p>
           {irgendeinPaketGesperrt ? (
             <p className="hb-klein" data-pk-paketsperre="">
-              Gesperrte Pakete braucht nur, wer die Runde aufmacht — alle anderen spielen mit.
+              Gesperrte Pakete braucht nur, wer die Runde aufmacht - alle anderen spielen mit.
             </p>
           ) : null}
         </SpielAbschnitt>
@@ -247,7 +247,7 @@ export function PartyAuswahl({
         </p>
         {irgendeinPaketGesperrt ? (
           <p className="pk-aw-hinweis" data-pk-paketsperre="">
-            Gesperrte Pakete braucht nur, wer die Runde aufmacht — alle anderen spielen mit.
+            Gesperrte Pakete braucht nur, wer die Runde aufmacht - alle anderen spielen mit.
           </p>
         ) : null}
       </div>
@@ -332,7 +332,7 @@ function MinispielAuswahl({
 
   const zuWenigHinweis = zuWenig ? (
     <p className={hinweis} role="status">
-      Mindestens {mindestens} Minispiele — sonst kommt dasselbe ständig wieder.
+      Mindestens {mindestens} Minispiele - sonst kommt dasselbe ständig wieder.
     </p>
   ) : null;
   const mischHinweis = <p className={hinweis}>Die angeklickten Spiele kommen gemischt dran, keins zweimal hintereinander.</p>;

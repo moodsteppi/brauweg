@@ -200,7 +200,7 @@ export function ModusAnzeige({ modus }: { modus: Golfmodus }): React.JSX.Element
   if (modus !== 'fun') return null;
   return (
     <p className="gf-bw-hinweis" data-golf-modus-anzeige={modus}>
-      <strong>{t('golf.fun.fun')}</strong> — {t('golf.fun.funText')}
+      <strong>{t('golf.fun.fun')}</strong> - {t('golf.fun.funText')}
     </p>
   );
 }

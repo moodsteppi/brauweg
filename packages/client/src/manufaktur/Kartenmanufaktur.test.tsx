@@ -209,3 +209,61 @@ describe('Kartenmanufaktur: Renovieren', () => {
     expect(within(fest).getByText(/×4/)).toBeTruthy();
   });
 });
+
+
+describe('Kartenmanufaktur: Auftragsbrett', () => {
+  beforeEach(() => vi.clearAllMocks());
+  it('oeffnet Kundenangebote und nimmt eine Lieferung an', async () => {
+    const s = neuerStand(Date.now());
+    s.pressen = Array.from({ length: 3 }, () => neuePresse());
+    s.versand.meister = true;
+    oeffne(s);
+    fireEvent.click(await screen.findByRole('button', { name: /Auftragsbrett/ }));
+    const blatt = await screen.findByRole('dialog', { name: 'Auftragsbrett' });
+    expect((within(blatt).getByRole('button', { name: 'Der königliche Hof: Auftrag annehmen' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(within(blatt).getByRole('button', { name: 'Der Spieleladen: Auftrag annehmen' }));
+    await vi.waitFor(() => expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'auftrag-annehmen', art: 'laden' }, expect.any(Number)));
+    expect(await within(blatt).findByRole('progressbar', { name: 'Lieferfortschritt' })).toBeTruthy();
+    expect((within(blatt).getByRole('button', { name: 'Deine Werkstatt liefert automatisch' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+  it('zeigt fertige Lieferung und zahlt die Praemie aus', async () => {
+    const s = neuerStand(Date.now());
+    s.versand.meister = true;
+    s.auftraege.aktiv = { art: 'laden', ziel: 100, geliefert: 100, belohnung: 10 };
+    oeffne(s);
+    fireEvent.click(await screen.findByRole('button', { name: /Lieferung fertig/ }));
+    const blatt = await screen.findByRole('dialog', { name: 'Auftragsbrett' });
+    fireEvent.click(within(blatt).getByRole('button', { name: 'Prämie abholen' }));
+    await vi.waitFor(() => expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'auftrag-abholen' }, expect.any(Number)));
+    expect(await within(blatt).findByText('1 Auftrag abgeschlossen')).toBeTruthy();
+  });
+});
+
+
+describe('Kartenmanufaktur: Meisterschule und Chronik', () => {
+  beforeEach(() => vi.clearAllMocks());
+  it('bildet einen Meister aus und zeigt den neuen Rang', async () => {
+    let s = neuerStand(Date.now());
+    s.taler = 1000;
+    s.auftraege.erledigt = 3;
+    s = handle(s, { typ: 'einstellen', ziel: { art: 'versand' } }, Date.now()).stand;
+    oeffne(s);
+    fireEvent.click(await screen.findByRole('button', { name: /^Meister$/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Meisterschule öffnen' }));
+    const schule = await screen.findByRole('dialog', { name: 'Meisterschule' });
+    fireEvent.click(within(schule).getByRole('button', { name: 'Versand: Meister 1 ausbilden, 3 Lehrbriefe' }));
+    await vi.waitFor(() => expect(manufakturAktion).toHaveBeenCalledWith({ typ: 'ausbilden', ziel: { art: 'versand' }, id: 1 }, expect.any(Number)));
+    expect(await within(schule).findByText('0 Lehrbriefe')).toBeTruthy();
+    expect(await within(schule).findByText(/Danach: Lauftempo ×7/)).toBeTruthy();
+  });
+  it('oeffnet die Chronik vom Auftragsbrett', async () => {
+    const s = neuerStand(Date.now(), 2);
+    s.pressen = Array.from({ length: 3 }, () => neuePresse());
+    oeffne(s);
+    fireEvent.click(await screen.findByRole('button', { name: /Auftragsbrett/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Werkstatt-Chronik' }));
+    const chronik = await screen.findByRole('dialog', { name: 'Werkstatt-Chronik' });
+    expect(within(chronik).getByText('Am Fluss')).toBeTruthy();
+    expect(within(chronik).getByText('1 von 12 Erinnerungen')).toBeTruthy();
+  });
+});

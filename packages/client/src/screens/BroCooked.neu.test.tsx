@@ -23,7 +23,7 @@ vi.mock('../api', () => ({
   api: { tables, joinTable, createTable, leaveTable },
 }));
 
-/** Was `useTable` gerade zurückgibt — ohne Sicht, also Menü oder Gruppe. */
+/** Was `useTable` gerade zurückgibt - ohne Sicht, also Menü oder Gruppe. */
 let tischStand: unknown = null;
 vi.mock('../useTable', () => ({
   useTable: () => tischStand,
@@ -67,7 +67,7 @@ describe('BroCooked im neuen Hub', () => {
     render(<BroCooked onBack={() => {}} />);
     expect(screen.getByRole('heading', { name: 'BroCooked' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '4' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Am Tisch (2–4 Geräte)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Am Tisch (2-4 Geräte)' }));
     await durchatmen();
 
     expect(tables).toHaveBeenCalledWith('brocooked');
@@ -79,7 +79,7 @@ describe('BroCooked im neuen Hub', () => {
   it('tritt einem offenen Tisch bei, statt einen zweiten aufzumachen', async () => {
     tables.mockResolvedValue([{ id: 'offen-3', gameId: 'brocooked', seats: 4, occupied: 1 }]);
     render(<BroCooked onBack={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Am Tisch (2–4 Geräte)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Am Tisch (2-4 Geräte)' }));
     await durchatmen();
 
     expect(joinTable).toHaveBeenCalledWith('offen-3');

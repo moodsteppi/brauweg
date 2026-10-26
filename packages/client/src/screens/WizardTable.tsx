@@ -699,7 +699,7 @@ export function WizardTable({
           <div className="doko-sheet-card">
             <h2>Tisch pausiert</h2>
             <p className="muted">
-              Der Zugtimer steht still. Jeder am Tisch kann fortsetzen — ideal für
+              Der Zugtimer steht still. Jeder am Tisch kann fortsetzen - ideal für
               Clantische über mehrere Abende.
             </p>
             {view.seat !== null && (
@@ -945,7 +945,7 @@ function GegnerSitz({
       {/* Gebot und Stiche gehoeren an den Sitz. Beides ist oeffentlich, und
           ohne diese Zahlen laesst sich keine Karte beurteilen. */}
       <span className={`wiz-gebot${gebot !== null && stiche === gebot ? ' is-genau' : ''}`}>
-        {gebot === null ? '–' : gebot}
+        {gebot === null ? '-' : gebot}
         <i>/</i>
         {stiche}
       </span>
@@ -1155,7 +1155,7 @@ function Rundenblatt({
               return (
                 <tr key={seat} className={punkte > 0 ? 'is-treffer' : undefined}>
                   <td>{nameOf(seat)}</td>
-                  <td>{runde.bids[seat] ?? '–'}</td>
+                  <td>{runde.bids[seat] ?? '-'}</td>
                   <td>{runde.tricks[seat] ?? 0}</td>
                   <td className={punkte < 0 ? 'is-minus' : undefined}>
                     {punkte > 0 ? `+${punkte}` : punkte}
@@ -1218,7 +1218,7 @@ function Punktetafel({
                           {/* Gebot und Stiche nebeneinander: Daran sieht man,
                               woher die Punkte kommen. */}
                           <span className="wiz-zelle">
-                            {runde.bids[seat] ?? '–'}/{runde.tricks[seat] ?? 0}
+                            {runde.bids[seat] ?? '-'}/{runde.tricks[seat] ?? 0}
                           </span>
                           <b>{runde.totals[seat] ?? 0}</b>
                         </td>

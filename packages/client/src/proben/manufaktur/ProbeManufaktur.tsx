@@ -50,7 +50,7 @@ function mitPools(stand: ManufakturStand, pools: Record<string, Karte[]>): Manuf
 
 function fall(name: string, jetzt: number): ManufakturStand {
   const stand = neuerStand(jetzt, 1, { zufall: 4711 });
-  if (name === 'mitte') {
+  if (name === 'mitte' || name === 'schule') {
     // Vier Etagen, der Paternoster kommt nicht nach: Kisten voll, Engpass am Schacht.
     stand.taler = 4_800;
     stand.verdient = 90_000;
@@ -104,6 +104,11 @@ function fall(name: string, jetzt: number): ManufakturStand {
       paternoster: [['meister', 'ladung']],
       versand: [['meister', 'ladung']],
     });
+  }
+  if (name === 'schule') {
+    stand.auftraege.erledigt = 12;
+    stand.zaehler.lehrbriefeVerbraucht = 3;
+    stand.zaehler.ausgebildet = 1;
   }
   return stand;
 }

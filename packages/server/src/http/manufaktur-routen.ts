@@ -51,6 +51,9 @@ const aktion = z.discriminatedUnion('typ', [
   z.object({ typ: z.literal('renovieren') }),
   z.object({ typ: z.literal('bauen') }),
   z.object({ typ: z.literal('ziel') }),
+  z.object({ typ: z.literal('auftrag-annehmen'), art: z.enum(['laden', 'gilde', 'hof']) }),
+  z.object({ typ: z.literal('auftrag-abholen') }),
+  z.object({ typ: z.literal('ausbilden'), ziel, id: z.number().int().positive() }),
   z.object({ typ: z.literal('wechseln'), nach: z.number().int().min(1).max(5) }),
 ]);
 

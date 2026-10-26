@@ -27,7 +27,7 @@ export const bahn: Karte = {
     { art: 'strudel', x: 18, y: 24, r: 2, staerke: 30 },
   ],
   dekor: 'nacht',
-  beschreibung: 'Eine Wand teilt die Bahn, hinüber geht es nur durchs Portal — und das setzt den Ball mitten in einen Strudel. Wohin er dort geschleudert wird, entscheidet über den zweiten Schlag.',
+  beschreibung: 'Eine Wand teilt die Bahn, hinüber geht es nur durchs Portal - und das setzt den Ball mitten in einen Strudel. Wohin er dort geschleudert wird, entscheidet über den zweiten Schlag.',
   thema: 'Portale',
   autor: 'Aufsicht (Nachtlauf 22.09.2026)',
   tags: ['portal', 'strudel'],

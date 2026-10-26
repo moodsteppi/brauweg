@@ -116,7 +116,7 @@ function ProfilNeu({
   const quote =
     profile.totals.parties > 0
       ? `${Math.round((profile.totals.wins / profile.totals.parties) * 100)} %`
-      : '–';
+      : '-';
   // „Checkpoint" stand im alten Profil — das neue Hub kennt den Begriff
   // nirgends mehr, das eigene Profil zeigt an der Stelle die Spiele.
   const werte = [
@@ -202,7 +202,7 @@ function ProfilNeu({
           {/* Wortgleich mit dem eigenen Profil — dieselbe Regel aus dem
               Server (`countsForRanking`). */}
           <p className="hb-klein hb-ohne-rand">
-            Trophäen gibt es auch gegen Bots — nur nicht, wenn ein Gast mitspielt oder Training an ist.
+            Trophäen gibt es auch gegen Bots - nur nicht, wenn ein Gast mitspielt oder Training an ist.
           </p>
         </section>
 

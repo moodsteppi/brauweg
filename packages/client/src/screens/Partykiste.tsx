@@ -403,11 +403,11 @@ export function Partykiste({
       >
         {einzel ? (
           <p className="spe-text">
-            {ansageFuer(einzel, trinkmodus)} Jede Runde dasselbe Spiel — für 4 bis 12 Leute, die im selben Raum sitzen.
+            {ansageFuer(einzel, trinkmodus)} Jede Runde dasselbe Spiel - für 4 bis 12 Leute, die im selben Raum sitzen.
           </p>
         ) : (
           <p className="spe-text">
-            {Object.keys(MINISPIEL_NAME).length} Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum sitzen.{' '}
+            {Object.keys(MINISPIEL_NAME).length} Minispiele, ein Turnier - für 4 bis 12 Leute, die im selben Raum sitzen.{' '}
             {trinkmodus ? 'Wer verliert, trinkt' : 'Wer verliert, sammelt Strafpunkte'}; wer gewinnt, steht oben.
           </p>
         )}
@@ -564,7 +564,7 @@ export function Partykiste({
       <AktiveRegel sicht={sicht} sitze={sitze} sende={sende} />
 
       {!tisch.connected ? (
-        <p className="pk-fehler">Keine Verbindung — es wird neu aufgebaut …</p>
+        <p className="pk-fehler">Keine Verbindung - es wird neu aufgebaut …</p>
       ) : null}
 
       {tafel ? (
@@ -654,7 +654,7 @@ function Lobby({
       }
     >
       <LobbyRegelzeile />
-      {!verbunden ? <p className="hb-fehler">Keine Verbindung — es wird neu aufgebaut …</p> : null}
+      {!verbunden ? <p className="hb-fehler">Keine Verbindung - es wird neu aufgebaut …</p> : null}
       <Einladung neu spiel="partykiste" />
       <SpielAbschnitt titel="Am Tisch" zusatz={`${anwesend.length}/${sitze.length}`}>
         <ul className="hb-liste spe-gruppe">

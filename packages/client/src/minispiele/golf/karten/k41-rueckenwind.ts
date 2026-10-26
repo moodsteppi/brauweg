@@ -24,7 +24,7 @@ export const bahn: Karte = {
     { art: 'beschleuniger', x: 5, y: 14, w: 6, h: 6, rx: 0, ry: -1, staerke: 20 },
   ],
   dekor: 'wiese',
-  beschreibung: 'Ein Schubfeld mitten auf der Geraden trägt den Ball weiter, als der Schlag allein reicht — wer zu zaghaft schlägt, bleibt davor liegen. Mit Mut geht das Loch in einem Schlag.',
+  beschreibung: 'Ein Schubfeld mitten auf der Geraden trägt den Ball weiter, als der Schlag allein reicht - wer zu zaghaft schlägt, bleibt davor liegen. Mit Mut geht das Loch in einem Schlag.',
   thema: 'Beschleuniger',
   autor: 'Aufsicht (Nachtlauf 22.09.2026)',
   tags: ['beschleuniger', 'einstieg', 'gerade'],

@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
  *
  * Geprueft wird, was man beim Spielen sofort merken wuerde: Steht mein
  * eigener Sitz mit drin, ist ein ausgeschiedener Sitz als solcher erkennbar,
- * und ist mein Gegner dieser Runde AUCH IM TEXT markiert — nicht nur in der
+ * und ist mein Gegner dieser Runde AUCH IM TEXT markiert - nicht nur in der
  * Farbe. Die Zahlen selbst kommen aus der Sicht; die Leiste darf sie nicht
  * nachrechnen, deshalb bekommt sie hier Werte, die sich nicht ableiten
  * lassen (Leben 0 an einem Sitz, der noch dabei ist).
@@ -54,7 +54,7 @@ describe('sitzname', () => {
 });
 
 describe('Mitspielerleiste', () => {
-  it('zeigt alle Sitze — auch den eigenen', () => {
+  it('zeigt alle Sitze - auch den eigenen', () => {
     /* Genau die Luecke der Aufgabe: Vorher standen nur die Gegner da, und man
        konnte sein eigenes Leben nicht mit ihrem vergleichen. */
     zeichne();
@@ -73,7 +73,7 @@ describe('Mitspielerleiste', () => {
     /* Sichtbar sagen es die ausgegrauten Kacheln; als Satz steht die Zahl im
        Namen der Gruppe, damit ein Vorlesegeraet sie nennt, ohne dass eine
        Zeile in der festgehefteten Kopfleiste dafuer draufgeht. */
-    expect(screen.getByRole('group', { name: 'Mitspieler — noch 2 von 4' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Mitspieler - noch 2 von 4' })).toBeInTheDocument();
   });
 
   it('markiert den Gegner der Runde mit einem Wort, nicht nur mit Farbe', () => {
@@ -98,7 +98,7 @@ describe('Mitspielerleiste', () => {
   });
 
   it('macht aus dem eigenen Sitz keine Schaltflaeche', () => {
-    /* Sein Brett liegt ohnehin unten — ein Knopf, der nichts tut, ist
+    /* Sein Brett liegt ohnehin unten - ein Knopf, der nichts tut, ist
        schlimmer als keiner. */
     const { onWahl } = zeichne();
     expect(screen.queryByRole('button', { name: /Robin/ })).toBeNull();
@@ -119,9 +119,9 @@ describe('Mitspielerleiste', () => {
     expect(screen.getAllByText('bereit')).toHaveLength(1);
   });
 
-  it('laesst sich nicht mehr zuklappen — sie steht oben und bleibt', () => {
-    /* Bis zum 05.09.2026 war sie eine zuklappbare Liste. Wer sie zuklappte —
-       und das tat man, weil acht Zeilen den Laden unter den Rand drueckten —,
+  it('laesst sich nicht mehr zuklappen - sie steht oben und bleibt', () => {
+    /* Bis zum 05.09.2026 war sie eine zuklappbare Liste. Wer sie zuklappte -
+       und das tat man, weil acht Zeilen den Laden unter den Rand drueckten -,
        hatte die halbe Auskunft der Partie nicht mehr. Jetzt ist sie ein
        Streifen, der seitlich rollt; einen Klappknopf gibt es nicht mehr, und
        genau darauf prueft dieser Fall. */
@@ -133,7 +133,7 @@ describe('Mitspielerleiste', () => {
 
   it('zeigt das Bild eines Sitzes, sonst seinen Anfangsbuchstaben', () => {
     /* Kein `<img>` auf eine Datei, die es nicht gibt (CLAUDE.md): Wo kein
-       Profilbild vorliegt — und bei Bots liegt nie eins vor —, steht ein
+       Profilbild vorliegt - und bei Bots liegt nie eins vor -, steht ein
        Buchstabe statt eines weissen Kastens. */
     render(
       <Mitspielerleiste
@@ -151,7 +151,7 @@ describe('Mitspielerleiste', () => {
     const bilder = document.querySelectorAll('img');
     expect(bilder).toHaveLength(1);
     expect(bilder[0]).toHaveAttribute('src', '/bilder/robin.webp');
-    // Die KI hat keins — dort steht das K.
+    // Die KI hat keins - dort steht das K.
     expect(screen.getByText('K')).toBeInTheDocument();
   });
 
@@ -178,7 +178,7 @@ describe('Mitspielerleiste', () => {
     expect(screen.getByText('7')).toBeInTheDocument();
   });
 
-  it('kommt ohne eigenen Sitz aus — der Zuschauer hat keinen', () => {
+  it('kommt ohne eigenen Sitz aus - der Zuschauer hat keinen', () => {
     zeichne({ eigenes: null, gegner: [stand({ sitz: 0 }), stand({ sitz: 1 })] });
     expect(screen.queryByText('Du')).toBeNull();
     expect(screen.getByRole('group', { name: /noch 2 von 2/ })).toBeInTheDocument();
@@ -186,7 +186,7 @@ describe('Mitspielerleiste', () => {
 
   /*
    * Das Zusehen. Bis zum 06.09.2026 war die Kachel des Sitzes, dessen Brett
-   * gerade unten liegt, nur an einem Ring von einem Pixel zu erkennen — man
+   * gerade unten liegt, nur an einem Ring von einem Pixel zu erkennen - man
    * tippte, das Brett wechselte, und nichts sagte einem, dass man das getan
    * hatte. Geprueft wird deshalb, was man SIEHT und was ein Vorlesegeraet
    * HOERT, nicht die Farbe.

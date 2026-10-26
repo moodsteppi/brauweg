@@ -548,7 +548,7 @@ export function BroCooked({
       <SpielRahmen
         gameId="brocooked"
         titel="BroCooked"
-        unter="1–4 Köche · miteinander"
+        unter="1-4 Köche · miteinander"
         akzent={AKZENT}
         onBack={onBack}
         fuss={
@@ -566,7 +566,7 @@ export function BroCooked({
                 disabled={laedt}
                 onClick={() => void offenenTischSuchen()}
               >
-                {laedt ? 'Tisch wird gesucht …' : 'Am Tisch (2–4 Geräte)'}
+                {laedt ? 'Tisch wird gesucht …' : 'Am Tisch (2-4 Geräte)'}
               </button>
             </div>
           </>
@@ -721,7 +721,7 @@ export function BroCooked({
         }
       >
         <p className="spe-text">
-          Ihr könnt jederzeit loslegen — leere Plätze fallen dann weg. Wer eine Hand mehr in der
+          Ihr könnt jederzeit loslegen - leere Plätze fallen dann weg. Wer eine Hand mehr in der
           Küche will, setzt vorher einen Hilfskoch dazu.
         </p>
         {tisch.error !== null && <p className="hb-fehler">{tisch.error}</p>}

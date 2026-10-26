@@ -185,8 +185,9 @@
   position: relative;
 }
 .hb .hb-start {
-  height: 100%;
-  overflow: hidden;
+  /* Die hb-seite scrollt. Der Start darf mit seinen Karten hoeher werden. */
+  min-height: 100%;
+  height: auto;
   /* Unten Luft für den erhöhten Start-Knopf der Reiterleiste */
   padding: 4px 16px 32px;
   display: flex;
@@ -599,8 +600,9 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-.hb .hb-seite:has(> .hb-start) {
-  overflow: hidden;
+.hb .hb-start > * {
+  /* Kleine Displays und grosse Schrift duerfen Karten nicht zusammenquetschen. */
+  flex-shrink: 0;
 }
 
 /* ---------- Gemeinsame Bausteine der Unterseiten ---------- */
@@ -3624,8 +3626,70 @@
 
 /* Solo-Banner in der App (SpieleNeu.tsx): Manufaktur gemalt, Browort noch gezeichnet. */
 :is(.hb, .spe) .hb-quer.hb-quer-manufaktur {
-  /* Die erste Manufaktur; unten links ist das Bild ruhig, dort steht der Text. */
-  background: #1b2f6e url('/manufaktur/manufaktur-1.webp') center 40% / cover no-repeat;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: auto;
+  padding: 0;
+  text-align: left;
+  background: #102345;
+  border: 1px solid rgba(255, 195, 65, 0.32);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+:is(.hb, .spe) .hb-quer.hb-quer-manufaktur::after {
+  display: none;
+}
+:is(.hb, .spe) .hb-manufaktur-bild {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+:is(.hb, .spe) .hb-manufaktur-inhalt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: linear-gradient(145deg, #173359, #0c1b38);
+}
+:is(.hb, .spe) .hb-manufaktur-marke {
+  color: #ffd57a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+:is(.hb, .spe) .hb-quer-manufaktur .hb-quer-text {
+  gap: 7px;
+}
+:is(.hb, .spe) .hb-quer-manufaktur .hb-quer-text strong {
+  font-size: clamp(23px, 6vw, 30px);
+  overflow-wrap: anywhere;
+}
+:is(.hb, .spe) .hb-quer-manufaktur .hb-quer-text > span {
+  color: #d4dff1;
+  font-size: 14px;
+  line-height: 1.5;
+}
+:is(.hb, .spe) .hb-manufaktur-fuss {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 5px;
+}
+:is(.hb, .spe) .hb-manufaktur-hinweis {
+  color: #b7c9e5;
+  font-size: 12px;
+}
+:is(.hb, .spe) .hb-quer-manufaktur .hb-kn {
+  min-height: 44px;
+  gap: 10px;
+}
+:is(.hb, .spe) .hb-quer-manufaktur:focus-visible {
+  outline: 3px solid #ffd57a;
+  outline-offset: 4px;
 }
 :is(.hb, .spe) .hb-quer.hb-quer-browort {
   background:

@@ -8,7 +8,7 @@ import { BIOME } from './Pfad';
 /**
  * Der Start im neuen Hub (Entwurf „Nachtblau & Gold", Fassung 4 vom 26.09.2026).
  *
- * Eine Viewport-Höhe, wie DESIGN.md es für Hub-Seiten verlangt: der
+ * Die Startseite scrollt innerhalb des Hub-Rahmens: der
  * Trophäenweg als Held, darunter „Weiterspielen", die eigenen Spiele und der
  * Knopf „Heute", hinter dem Aufgaben und Truhen als Blatt liegen. Maße und
  * Farben kommen 1:1 aus dem Bauplan (`hub-neu.css`), damit die Seite aussieht

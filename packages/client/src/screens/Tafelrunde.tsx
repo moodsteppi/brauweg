@@ -1638,7 +1638,7 @@ function Ruestkammer({
                    auffordert. `belegt` kommt aus der Sicht — der Client zaehlt
                    das Brett nicht selbst ab. */
                   <p className="tr-leer-satz tr-leer-brett">
-                    Dein Feld ist leer — zieh einen Recken von der Bank auf eine Wabe oder tipp erst
+                    Dein Feld ist leer - zieh einen Recken von der Bank auf eine Wabe oder tipp erst
                     ihn, dann die Wabe an.
                   </p>
                 )}
@@ -1804,7 +1804,7 @@ function Ruestkammer({
         {/* ---- Was mit der Auswahl geschehen kann ------------------------- */}
         {gewaehlt && darfHandeln && (
           <div className="tr-auswahlband">
-            <span>{gewaehlteEinheit?.name ?? 'Einheit'} gewählt — Ziel antippen</span>
+            <span>{gewaehlteEinheit?.name ?? 'Einheit'} gewählt - Ziel antippen</span>
             {/* Derselbe Riegel wie im Blatt: Verkauft wird, was `legalActions`
                 anbietet. Zwei Verkaufen-Knoepfe auf einem Bildschirm, von denen
                 der eine fragt und der andere nicht, waeren zwei Antworten auf
@@ -1853,7 +1853,7 @@ function Ruestkammer({
                  erklaert, warum der Laden zu ist — und dass er von selbst
                  wieder aufgeht, denn die Dauer bestimmt der Server. */
               <p className="tr-hinweis">
-                Der Kampf läuft von selbst — danach geht der Laden wieder auf.
+                Der Kampf läuft von selbst - danach geht der Laden wieder auf.
               </p>
             ) : (
               /* Ausgeschieden: Fuer ihn geht kein Laden mehr auf, der Satz
@@ -1861,7 +1861,7 @@ function Ruestkammer({
                  einen echten Kampf statt einer Textzeile — und hier steht,
                  wessen. Ein Zurueck gibt es nicht, weil es nichts gibt, wohin. */
               <p className="tr-hinweis">
-                Du siehst {spielername(zeile(kampfSitz ?? 0), kampfSitz ?? 0)} zu — tippe oben
+                Du siehst {spielername(zeile(kampfSitz ?? 0), kampfSitz ?? 0)} zu - tippe oben
                 einen anderen Sitz an, um dessen Kampf zu sehen.
               </p>
             )
@@ -1949,7 +1949,7 @@ function Ruestkammer({
                 ändern kann. */}
             {eigenes.laden.every((id) => id === null) && (
               <p className="tr-leer-satz">
-                Der Vorrat gibt nichts mehr her — alle Recken sind im Umlauf.
+                Der Vorrat gibt nichts mehr her - alle Recken sind im Umlauf.
                 Mach dich bereit.
               </p>
             )}
@@ -2020,7 +2020,7 @@ function Ruestkammer({
               {eigenes.bereit
                 ? 'Auf die anderen warten'
                 : gewaehlt
-                  ? 'Ziel antippen — oder abbrechen'
+                  ? 'Ziel antippen - oder abbrechen'
                   : 'Karte antippen zum Kaufen · Einheit ziehen oder antippen zum Setzen'}
             </p>
           </>
@@ -2320,7 +2320,7 @@ function RegelText(): React.JSX.Element {
         </li>
         <li>
           Gekaufte Recken landen auf der Reservebank. Aufs Feld kommen sie, indem du sie auf eine
-          Wabe ziehst — oder antippst und dann die Wabe antippst.
+          Wabe ziehst - oder antippst und dann die Wabe antippst.
         </li>
         <li>
           <strong>Drei gleiche Recken derselben Stufe verschmelzen von selbst</strong> zu einem
@@ -2328,13 +2328,13 @@ function RegelText(): React.JSX.Element {
         </li>
         <li>
           Wie viele Recken gleichzeitig auf dem Feld stehen dürfen, sagt dein Rang. Rang steigern
-          kostet Gold und bringt einen Feldplatz — und bessere Karten im Laden.
+          kostet Gold und bringt einen Feldplatz - und bessere Karten im Laden.
         </li>
         <li>
           Recken gehören Klassen an wie Krieger, Wächter oder Untot. Stehen{' '}
           <strong>zwei Träger derselben Klasse auf dem Feld</strong>, wird die Klasse stärker; ab
           drei und ab fünf noch einmal deutlicher. Der Bonus gilt nur für die Träger selbst und nur
-          auf dem Feld — was auf der Bank liegt, zählt nicht mit. Was gerade greift und wie weit es
+          auf dem Feld - was auf der Bank liegt, zählt nicht mit. Was gerade greift und wie weit es
           bis zur nächsten Stufe ist, zeigt die Synergie-Leiste. Tippe einen Zähler darin an, und du
           bekommst alle Stufen der Klasse und alle Recken, die sie tragen.
         </li>
@@ -2343,7 +2343,7 @@ function RegelText(): React.JSX.Element {
           Serien. Was die nächste Runde bringt, steht klein neben deinem Gold.
         </li>
         <li>
-          Sind alle bereit, kämpft dein Feld gegen das eines Mitspielers — von selbst, du siehst nur
+          Sind alle bereit, kämpft dein Feld gegen das eines Mitspielers - von selbst, du siehst nur
           zu. Der Verlierer verliert Leben: je mehr Gegner noch stehen, desto mehr.
         </li>
         <li>Wer keine Lebenspunkte mehr hat, scheidet aus. Der Letzte gewinnt.</li>

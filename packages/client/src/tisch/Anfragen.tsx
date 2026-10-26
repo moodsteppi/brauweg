@@ -169,7 +169,7 @@ export function AnfrageWarten({
       <SpielAbschnitt titel={stand === 'abgelehnt' ? 'Abgelehnt' : 'Warte auf Zusage'}>
         <p className="hb-klein">
           {stand === 'abgelehnt'
-            ? `${wer} hat abgelehnt — oder der Tisch ist inzwischen voll.`
+            ? `${wer} hat abgelehnt - oder der Tisch ist inzwischen voll.`
             : `${wer} muss dich hereinlassen. Sobald die Zusage kommt, geht es an den Tisch.`}
         </p>
       </SpielAbschnitt>

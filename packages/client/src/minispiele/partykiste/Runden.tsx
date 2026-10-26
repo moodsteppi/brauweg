@@ -207,10 +207,10 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
   const karte = daten.binImposter ? (
     <>
       <span className="pk-wort">IMPOSTER</span>
-      <span className="pk-hinweis">Hinweis: {daten.hinweis ?? '—'}</span>
+      <span className="pk-hinweis">Hinweis: {daten.hinweis ?? '-'}</span>
     </>
   ) : (
-    <span className="pk-wort">{daten.meinWort ?? '—'}</span>
+    <span className="pk-wort">{daten.meinWort ?? '-'}</span>
   );
   const reihe = (
     <ol className="pk-reihe" aria-label="Redereihenfolge">
@@ -227,11 +227,11 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
     return (
       <>
         <Buehne
-          oben={daten.binImposter ? 'Du bist es — zeig es niemandem' : 'Dein Wort — zeig es niemandem'}
+          oben={daten.binImposter ? 'Du bist es - zeig es niemandem' : 'Dein Wort - zeig es niemandem'}
           gross={<span className="pk-karte-inhalt">{karte}</span>}
           ton={daten.binImposter ? 'schlecht' : 'geheim'}
         />
-        <p className="pk-ansage">Redereihenfolge — jeder sagt einen Satz zum Wort:</p>
+        <p className="pk-ansage">Redereihenfolge - jeder sagt einen Satz zum Wort:</p>
         {reihe}
         {gesehen ? (
           <Wartet sicht={sicht} sitze={sitze} />
@@ -257,12 +257,12 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
           oben={daten.binImposter ? 'Du bist der Imposter' : 'Dein Wort'}
           gross={
             <span className="pk-wort is-klein">
-              {daten.binImposter ? `Hinweis: ${daten.hinweis ?? '—'}` : (daten.meinWort ?? '—')}
+              {daten.binImposter ? `Hinweis: ${daten.hinweis ?? '-'}` : (daten.meinWort ?? '-')}
             </span>
           }
           unten={
             <span>
-              {daten.redeRunde > 1 ? `${daten.redeRunde}. Rederunde — ` : ''}
+              {daten.redeRunde > 1 ? `${daten.redeRunde}. Rederunde - ` : ''}
               Reihum ein Satz, in dieser Reihenfolge. Dann: Wer passt nicht?
             </span>
           }
@@ -368,7 +368,7 @@ function QuizRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
               <li key={sitz} data-gut={wahl === daten.richtig ? '' : undefined}>
                 <span>{namenFuer(sitze, sitz)}</span>
                 <span className="muted">
-                  {wahl < 0 ? 'keine Antwort' : (daten.antworten[wahl] ?? '—')}
+                  {wahl < 0 ? 'keine Antwort' : (daten.antworten[wahl] ?? '-')}
                 </span>
               </li>
             ),
@@ -580,7 +580,7 @@ function BusRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
                 <Karte karte={daten.letzter.karte} />
               </span>
               {namenFuer(sitze, daten.letzter.sitz)}:{' '}
-              {BUS_WAHL[daten.letzter.stufe]?.[daten.letzter.wahl] ?? '?'} —{' '}
+              {BUS_WAHL[daten.letzter.stufe]?.[daten.letzter.wahl] ?? '?'} -{' '}
               {daten.letzter.richtig ? 'richtig' : `daneben, ein ${zaehlerWort(sicht.trinkmodus, 1)}`}
             </span>
           ) : (
@@ -715,7 +715,7 @@ function EntwederRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
             {daten.a} <span className="muted">oder</span> {daten.b}?
           </span>
         }
-        unten={auf ? <span>{zaehlA === zaehlB ? 'Gleichstand — alle trinken.' : 'Die Minderheit trinkt.'}</span> : undefined}
+        unten={auf ? <span>{zaehlA === zaehlB ? 'Gleichstand - alle trinken.' : 'Die Minderheit trinkt.'}</span> : undefined}
       />
       <Wahl>
         <button
@@ -782,7 +782,7 @@ function WahrheitPflichtRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
         <Buehne
           oben={`${wer} · ${wahl === 1 ? 'Pflicht' : 'Wahrheit'}`}
           gross={<span className="pk-frage">{text}</span>}
-          unten={binDran ? <span>Mach es vor der Runde. Dann ehrlich tippen.</span> : <span>Zuschauen — und dann entscheiden, ob das zählt.</span>}
+          unten={binDran ? <span>Mach es vor der Runde. Dann ehrlich tippen.</span> : <span>Zuschauen - und dann entscheiden, ob das zählt.</span>}
           ton={binDran ? 'geheim' : undefined}
         />
       )}

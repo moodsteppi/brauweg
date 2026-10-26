@@ -230,9 +230,8 @@ export function requireSpielbar(id: GameId, plattform: Plattform, umfang: Umfang
  * Die Spielauswahl, wie sie diese Plattform sieht.
  *
  * `bald` wird zur Vorschau (`availability: 'preview'`), `aus` faellt heraus.
- * `abstimmbar` trennt die echten Vorschau-Spiele (ohne Modul, dort wird
- * abgestimmt) von denen, die es gibt und die hier nur noch nicht freigegeben
- * sind — fuer die gibt es keine Stimme, siehe `/api/games/:gameId/vote`.
+ * Jedes sichtbare `bald`-Spiel ist abstimmbar. Entscheidend ist die Freigabe
+ * dieser Plattform, auch wenn es auf einer anderen schon spielbar ist.
  */
 export function spieleFuer(
   plattform: Plattform,
@@ -245,7 +244,7 @@ export function spieleFuer(
       {
         meta,
         availability: freigabe === 'spielbar' ? ('playable' as const) : ('preview' as const),
-        abstimmbar: !byId.has(meta.id),
+        abstimmbar: freigabe === 'bald',
       },
     ];
   });
