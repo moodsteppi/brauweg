@@ -390,3 +390,46 @@ test('jedes in der App freigegebene Tischspiel startet mit Bots', async () => {
     } finally { await s.close(); }
   }
 });
+
+test('Webseite: jede sichtbare Vorschau samt Mehrkampf ist kontogebunden abstimmbar, Pro-Subway nicht', async t => {
+  const s = await setup(); t.after(() => s.close());
+  const web = await spiele(s, 'web');
+  const bald = web.filter(g => g.availability === 'preview');
+  assert.ok(bald.some(g => g.id === 'mehrkampf'), 'Mehrkampf fehlt auf der Webseite');
+  // Pro-Subway laeuft auf der Webseite schon, es steht dort nicht zur Wahl.
+  assert.equal(web.find(g => g.id === 'prosubway'), undefined);
+  for (const spiel of bald) {
+    assert.equal(spiel.abstimmbar, true, spiel.id);
+    const res = await s.app.inject({ method: 'POST', url: `/api/games/${spiel.id}/vote`, headers: s.anna('web') });
+    assert.equal(res.statusCode, 200, `${spiel.id}: ${res.body}`);
+  }
+  const anna = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna('web') })).json();
+  const ben = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.ben('web') })).json();
+  for (const spiel of bald) {
+    const eigen = anna.find((g: { id: string }) => g.id === spiel.id);
+    assert.equal(eigen.meineStimme, true, spiel.id);
+    assert.equal(eigen.votes, 1, spiel.id);
+    assert.equal(ben.find((g: { id: string }) => g.id === spiel.id).meineStimme, false, spiel.id);
+  }
+  // Was auf der Webseite spielbar ist, nimmt dort keine Stimme an.
+  assert.equal((await s.app.inject({ method: 'POST', url: '/api/games/skat/vote', headers: s.anna('web') })).statusCode, 400);
+});
+
+test('Webseite: eine Stimme fuer ein Spiel, das in der App noch angekuendigt ist, gibt es dort nicht', async t => {
+  stelle(t, 'wizard' as GameId, { web: 'spielbar', app: 'bald' });
+  const s = await setup(); t.after(() => s.close());
+  assert.equal((await spiele(s, 'web')).find(g => g.id === 'wizard')?.abstimmbar, false);
+  assert.equal((await s.app.inject({ method: 'POST', url: '/api/games/wizard/vote', headers: s.anna('web') })).statusCode, 400);
+});
+
+test('abstimmModiFuer: der Umfang wirkt auf beiden Plattformen', () => {
+  const nur = (...frei: string[]) => ({ alles: false, frei: new Set(frei) });
+  assert.deepEqual(abstimmModiFuer('web').map(m => m.id), ['mehrkampf']);
+  assert.deepEqual(abstimmModiFuer('app').map(m => m.id), ['prosubway', 'mehrkampf']);
+  // Ohne Abstimmung im Umfang ist nichts angekuendigt, weder hier noch dort.
+  assert.deepEqual(abstimmModiFuer('web', nur('doppelkopf', 'prosubway')), []);
+  assert.deepEqual(abstimmModiFuer('app', nur('doppelkopf', 'prosubway')), []);
+  // Ohne Pro-Subway im Umfang kuendigt auch die App es nicht an.
+  assert.deepEqual(abstimmModiFuer('app', nur('abstimmung')).map(m => m.id), ['mehrkampf']);
+  assert.deepEqual(abstimmModiFuer('web', nur('abstimmung', 'prosubway')).map(m => m.id), ['mehrkampf']);
+});

@@ -86,13 +86,20 @@ const byId = new Map<GameId, AnyGameModule>(
   MODULES.map((m) => [m.meta.id, m]),
 );
 
-/** Angekündigte Modi bleiben außerhalb der Tisch-Registry: Sie haben kein Spielmodul. */
+/**
+ * Angekündigte Modi bleiben außerhalb der Tisch-Registry: Sie haben kein Spielmodul.
+ *
+ * Der Mehrkampf ist auf beiden Plattformen angekündigt (bis zum 26.10.2026
+ * nur in der App, die Webseite hatte dafür nur eine Marke ohne Stimme).
+ * Pro-Subway dagegen nur in der App: Auf der Webseite läuft der Runner schon
+ * (`/api/runner/lauf` sperrt nur die App), dort gibt es nichts abzustimmen.
+ */
 export function abstimmModiFuer(plattform: Plattform, umfang: Umfang = ALLES): (Omit<GameMeta, 'id'> & { id: string })[] {
-  if (plattform !== 'app' || !imUmfang(umfang, 'abstimmung')) return [];
+  if (!imUmfang(umfang, 'abstimmung')) return [];
   return [
     { id: 'prosubway', nameKey: 'modus.prosubway', seatCounts: [1] },
     { id: 'mehrkampf', nameKey: 'modus.mehrkampf', seatCounts: [2, 3, 4, 5, 6, 7, 8] },
-  ].filter(m => m.id === 'mehrkampf' || imUmfang(umfang, m.id)).map(m => ({
+  ].filter(m => m.id === 'mehrkampf' || (plattform === 'app' && imUmfang(umfang, m.id))).map(m => ({
     ...m, availability: 'preview' as const,
     rotationSize: (sitze: number) => sitze, suggestedRounds: () => [],
   }));

@@ -101,3 +101,16 @@ Sprung erst („Spiele werden geladen…"). Jetzt (`hub-wischen.ts`,
   waagerecht der Pager. Bei `prefers-reduced-motion` rastet es ohne Animation ein.
 - iOS-Hülle: Die Randgeste von links blättert im Hub nicht und lässt die
   Touches im WebView (`cancelsTouchesInView = false`), also kein Konflikt.
+
+
+## Webseite gleichgezogen (26.10.2026, Abend)
+
+Abgleich gegen ff3282f: Fast alles oben wirkte schon auf beiden Plattformen
+(Abstimmung mit `meineStimme`, Bald-Bilder, Zieh-Pager per Touch, Manufaktur-
+und Browort-Bilder, Ladebildschirm). Die einzige neue App-Weiche war
+`abstimmModiFuer` (registry.ts): Den Mehrkampf kündigt der Server jetzt auch
+der Webseite an, er steht dort wie in der App unter „Kommt bald" mit Stimme.
+Die feste „Modi"-Marke bleibt nur, wenn `abstimmung` nicht im Umfang ist.
+Pro-Subway bleibt Ankündigung nur in der App, denn auf der Webseite läuft der
+Runner schon. Proben: `test/spielfreigabe.test.ts` (Web-Fälle),
+`SpieleNeu.web.test.tsx`.
