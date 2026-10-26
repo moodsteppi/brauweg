@@ -18,16 +18,24 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { and, eq, gt } from 'drizzle-orm';
 import { wizard } from '@brauweg/game-wizard';
+import { partykiste } from '@brauweg/game-partykiste';
+import { doppelkopf } from '@brauweg/game-doppelkopf';
 
 import { gastKonto, gastSichern, sessionFromToken, createSession } from '../src/auth/service.js';
 import { createTable, expireStaleTables } from '../src/tables/service.js';
 import {
   aktivVermerken,
+  partieBeginnZaehlen,
   pufferStand,
+  regelAbweichungen,
   statistikSchreiben,
   tischart,
   zaehle,
 } from '../src/statistik.js';
+import { buildApp } from '../src/http/app.js';
+import { PartyRuntime } from '../src/runtime/party.js';
+import { SALZ, browortRaten } from '../src/browort/dienst.js';
+import { tageswort } from '../src/browort/regeln.js';
 import type { Db } from '../src/db/types.js';
 import { createTestContext, createVerifiedAccount, schema as s, seedInvite } from './helpers.js';
 import { startHarness } from './harness.js';
@@ -226,6 +234,7 @@ test('eine Partie: Tisch, Start, Spieler und regulaeres Ende — ohne Kennungen'
 
   assert.deepEqual(await stand(h.ctx.db), [
     'aktive_konten|||=1',
+    'bot_stufe|wizard||standard=1',
     'konto_erstellt||gast|=1',
     'lobby_erstellt|wizard||=1',
     'online_runde_beendet|wizard|mit_bots|abgeschlossen=1',
@@ -300,4 +309,252 @@ test('ein verfallener laufender Tisch zaehlt als abgebrochen, ein verfallener wa
 
   assert.equal(await expireStaleTables(ctx.db), 2, 'das Verhalten des Aufraeumens bleibt');
   assert.deepEqual(await stand(ctx.db), ['online_runde_beendet|wizard|mit_bots|abgebrochen=1']);
+});
+
+// ---------------------------------------------------------------------------
+// Erweiterungen: Regelsatz, Partykiste, Bots, Routen, Fehlerlog
+// ---------------------------------------------------------------------------
+
+test('Regelabweichungen: Form der Vorgabe entscheidet, Freitext bleibt draussen', () => {
+  const vorgabe = doppelkopf.defaultConfig();
+  assert.deepEqual(regelAbweichungen(vorgabe, vorgabe), [], 'Standard = nichts');
+
+  const geaendert = {
+    ...vorgabe,
+    name: 'Mein Stammtisch', // Freitext: nie
+    id: 'eigene-id', // Kennung: nie
+    rounds: 12, // Tischgroesse, keine Regel
+    deck: 'without9', // Aufzaehlung: der Wert
+    schweinchen: true, // Wahrheitswert: an
+    hochzeit: false, // … aus
+    pflichtansageThreshold: 35, // Zahl: nur die Richtung
+    bockFactor: 2, // gleich: nichts
+    solos: ['queens', 'jacks'], // Liste weicht ab: je Element
+    erfunden: true, // ohne Vorgabe: nichts
+  };
+  assert.deepEqual(
+    regelAbweichungen(geaendert, vorgabe)
+      .map((a) => `${a.schluessel}=${a.wert}`)
+      .sort(),
+    [
+      'deck=without9',
+      'hochzeit=aus',
+      'pflichtansageThreshold=groesser',
+      'schweinchen=an',
+      'solos=jacks',
+      'solos=queens',
+    ],
+  );
+
+  // Eine Zeichenkette, die kein Bezeichner ist, kommt nicht durch — auch
+  // wenn ein kaputtes Modul sie durchliesse.
+  assert.deepEqual(regelAbweichungen({ deck: 'mit Leerzeichen' }, { deck: 'with9' }), []);
+  assert.deepEqual(regelAbweichungen({ deck: 'x'.repeat(40) }, { deck: 'with9' }), []);
+  // Golf und BroChess haben eine leere Vorgabe: dort zaehlt nichts.
+  assert.deepEqual(regelAbweichungen({ kurs: 'profi', variante: 'Hansis Runde' }, {}), []);
+  assert.deepEqual(regelAbweichungen(null, vorgabe), []);
+});
+
+test('Partiestart Partykiste: Minispiele, Trinkmodus, Bot-Stufe und Regelvarianten', async (t) => {
+  await frisch();
+  const ctx = await createTestContext();
+  t.after(() => ctx.close());
+
+  partieBeginnZaehlen({
+    spiel: 'partykiste',
+    tischart: 'mit_bots',
+    menschen: 2,
+    botStufe: 'experte',
+    config: {
+      ...partykiste.defaultConfig(),
+      minispiele: ['quiz', 'bombe', 'gibts-nicht'],
+      trinkmodus: false,
+      schluckFaktor: 2,
+    },
+    vorgabe: partykiste.defaultConfig(),
+  });
+
+  assert.deepEqual(await stand(ctx.db), [
+    'bot_stufe|partykiste||experte=1',
+    'minispiel_gespielt|bombe||=1',
+    'minispiel_gespielt|quiz||=1',
+    'online_runde_gestartet|partykiste|mit_bots|=1',
+    'online_spieler|partykiste|mit_bots|=2',
+    'partykiste_trinkmodus|||aus=1',
+    'regel_variante|partykiste|minispiele|bombe=1',
+    'regel_variante|partykiste|minispiele|gibts-nicht=1',
+    'regel_variante|partykiste|minispiele|quiz=1',
+    'regel_variante|partykiste|schluckFaktor|groesser=1',
+    'regel_variante|partykiste|trinkmodus|aus=1',
+  ]);
+});
+
+test('Partiestart am echten Tisch: der Regelsatz kommt aus rule_set', async (t) => {
+  await frisch();
+  const h = await startHarness();
+  t.after(() => h.close());
+  const anna = await createVerifiedAccount(h.ctx, 'Anna');
+  const tisch = await createTable(h.ctx.db, {
+    accountId: anna.accountId,
+    gameId: 'partykiste',
+    config: { ...partykiste.defaultConfig(), minispiele: ['quiz'], trinkmodus: false },
+    seats: 4,
+    rounds: 3,
+    fillWithBots: true,
+    botLevel: 'genie',
+  });
+  await frisch();
+  await h.runtime.start(tisch.id);
+  await h.runtime.verwirf(tisch.id);
+
+  const zeilen = await stand(h.ctx.db);
+  for (const erwartet of [
+    'bot_stufe|partykiste||genie=1',
+    'minispiel_gespielt|quiz||=1',
+    'partykiste_trinkmodus|||aus=1',
+    'regel_variante|partykiste|minispiele|quiz=1',
+    'regel_variante|partykiste|trinkmodus|aus=1',
+    'online_spieler|partykiste|mit_bots|=1',
+  ]) {
+    assert.ok(zeilen.includes(erwartet), [erwartet, ...zeilen].join(' / '));
+  }
+});
+
+/** App mit einem angemeldeten Konto, fuer die Routen. */
+async function mitApp(t: { after(fn: () => unknown): void }) {
+  const ctx = await createTestContext();
+  await seedInvite(ctx.db);
+  const runtime = new PartyRuntime(ctx.db, { botDelayMs: 0 });
+  const app = await buildApp({ db: ctx.db, runtime, auth: ctx.auth, cookieSecure: false, sessionTtlDays: 30 });
+  t.after(async () => {
+    runtime.shutdown();
+    await app.close();
+    await ctx.close();
+  });
+  const konto = await createVerifiedAccount(ctx, 'Anna');
+  const token = await createSession(ctx.auth, konto.accountId);
+  await frisch();
+  return { ctx, app, kopf: { authorization: `Bearer ${token}` } };
+}
+
+/** Wie `stand`, aber ohne die Anmeldung, die jeder Aufruf mitzaehlt. */
+async function standOhneAktiv(db: Db) {
+  return (await stand(db)).filter((z) => !z.startsWith('aktive_konten|'));
+}
+
+test('Runner und Lektion zaehlen erst nach der Pruefung — ohne Zahlen, ohne Lektion', async (t) => {
+  const { ctx, app, kopf } = await mitApp(t);
+
+  const kaputt = await app.inject({
+    method: 'POST',
+    url: '/api/runner/lauf',
+    headers: kopf,
+    payload: { muenzen: 9999, punkte: 1, meter: 1 },
+  });
+  assert.equal(kaputt.statusCode, 400);
+  const lauf = await app.inject({
+    method: 'POST',
+    url: '/api/runner/lauf',
+    headers: kopf,
+    payload: { muenzen: 12, punkte: 3400, meter: 800 },
+  });
+  assert.equal(lauf.statusCode, 200, lauf.body);
+
+  const unbekannt = await app.inject({
+    method: 'POST',
+    url: '/api/lernpfad/lektion/gibts-nicht/fertig',
+    headers: kopf,
+  });
+  assert.equal(unbekannt.statusCode, 404);
+  const lektion = await app.inject({
+    method: 'POST',
+    url: '/api/lernpfad/lektion/karten/fertig',
+    headers: kopf,
+  });
+  assert.equal(lektion.statusCode, 200, lektion.body);
+
+  assert.deepEqual(await standOhneAktiv(ctx.db), ['lektion_fertig|||=1', 'runner_lauf|||=1']);
+});
+
+test('Manufaktur zaehlt je gelungener Aktion, mit dem Aktionstyp', async (t) => {
+  const { ctx, app, kopf } = await mitApp(t);
+  const presse = { art: 'presse', index: 0 };
+
+  assert.equal((await app.inject({ method: 'GET', url: '/api/manufaktur', headers: kopf })).statusCode, 200);
+  const zuTeuer = await app.inject({
+    method: 'POST',
+    url: '/api/manufaktur/aktion',
+    headers: kopf,
+    payload: { typ: 'ausbauen', ziel: presse, menge: 1 },
+  });
+  assert.notEqual(zuTeuer.statusCode, 200, 'abgelehnt zaehlt nicht');
+  const tipp = await app.inject({
+    method: 'POST',
+    url: '/api/manufaktur/aktion',
+    headers: kopf,
+    payload: { typ: 'arbeiten', ziel: presse },
+  });
+  assert.equal(tipp.statusCode, 200, tipp.body);
+
+  assert.deepEqual(await standOhneAktiv(ctx.db), ['manufaktur_aktion||arbeiten|=1']);
+});
+
+test('Browort: begonnen beim ersten Versuch, geloest, wenn der Server entscheidet', async (t) => {
+  await frisch();
+  const ctx = await createTestContext();
+  t.after(() => ctx.close());
+  await seedInvite(ctx.db);
+  const { accountId } = await createVerifiedAccount(ctx, 'Anna');
+  await frisch();
+
+  const tag = '2026-10-23';
+  const jetzt = new Date(`${tag}T10:00:00Z`);
+  const loesung = tageswort(tag, SALZ);
+  const anderes = [tageswort('2026-10-24', SALZ), tageswort('2026-10-25', SALZ)].find(
+    (w) => w !== loesung,
+  )!;
+
+  await browortRaten(ctx.db, accountId, anderes, jetzt, SALZ);
+  await browortRaten(ctx.db, accountId, loesung, jetzt, SALZ);
+
+  assert.deepEqual(await stand(ctx.db), [
+    'wortspiel_runde|browort||begonnen=1',
+    'wortspiel_runde|browort||geloest=1',
+  ]);
+});
+
+test('ein 500er loggt das Routen-Muster, nie Pfadwerte oder Query', async (t) => {
+  const ctx = await createTestContext();
+  const app = await buildApp({
+    db: ctx.db,
+    runtime: new PartyRuntime(ctx.db),
+    auth: ctx.auth,
+    cookieSecure: false,
+    sessionTtlDays: 30,
+  });
+  t.after(async () => {
+    await app.close();
+    await ctx.close();
+  });
+  app.get('/api/probe/code/:code', async () => {
+    throw new Error('absichtlich');
+  });
+
+  const zeilen: string[] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => {
+    zeilen.push(String(args[0]));
+  };
+  try {
+    const antwort = await app.inject({
+      method: 'GET',
+      url: '/api/probe/code/GEHEIM7?q=tiktok-1&search=Anna',
+    });
+    assert.equal(antwort.statusCode, 500);
+  } finally {
+    console.error = original;
+  }
+
+  assert.ok(zeilen.includes('500 bei GET /api/probe/code/:code:'), zeilen.join(' / '));
+  assert.ok(!zeilen.some((z) => z.includes('GEHEIM7') || z.includes('tiktok-1')));
 });

@@ -60,6 +60,7 @@ import { manufakturRouten } from './manufaktur-routen.js';
 import { browortKurz, browortProfil } from '../browort/dienst.js';
 import { herkunftRouten } from './herkunft-routen.js';
 import { gastkontoZaehlen } from '../herkunft.js';
+import { zaehle } from '../statistik.js';
 import { lernserieKurz } from '../lernpfad.js';
 import { pushRouten } from './push-routen.js';
 import type { PushAnlaesse } from '../push/anlaesse.js';
@@ -507,6 +508,14 @@ const FEEDBACK_BODY_LIMIT = 3_200_000;
  */
 const BODY_LIMIT = 128 * 1024;
 
+/**
+ * Wie eine Anfrage im Log heisst: Methode plus Routen-Muster (`/api/tables/code/:code`),
+ * nie die URL mit Werten. Ohne Route (404-Weg) nur ein Platzhalter.
+ */
+export function routenMuster(request: FastifyRequest): string {
+  return request.routeOptions?.url ?? '(ohne Route)';
+}
+
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({ logger: false, bodyLimit: BODY_LIMIT });
   const appInhalt = deps.appInhalt ?? APP_INHALT_WIE_WEB;
@@ -850,8 +859,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
     // Hierher kommt nur, was wirklich unerwartet ist. Es MUSS im Log landen,
     // sonst sucht man es spaeter vergeblich.
+    //
+    // Das Routen-Muster und nicht `request.url`: Die URL traegt Pfadparameter
+    // (Beitrittscodes unter /api/tables/code/:code) und die Query (?q=,
+    // ?search=) mit ins Betriebslog. Fuer die Fehlersuche reicht, welche
+    // Route es war; der Fehler selbst steht daneben.
     // eslint-disable-next-line no-console
-    console.error(`500 bei ${request.method} ${request.url}:`, error);
+    console.error(`500 bei ${request.method} ${routenMuster(request)}:`, error);
     return reply.status(500).send({ code: 'internal', messageKey: 'error.internal' });
   });
 
@@ -1471,7 +1485,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         meter: z.number().int().min(0).max(100_000),
       })
       .parse(request.body);
-    return reply.send(await runnerLauf(deps.db, accountId, body));
+    const antwort = await runnerLauf(deps.db, accountId, body);
+    // Erst nach Pruefung und Verbuchung; ohne die Zahlen des Laufs (statistik.ts).
+    zaehle('runner_lauf');
+    return reply.send(antwort);
   });
 
   /** Die heutige Tagesliste: beste zehn plus eigener Platz. */

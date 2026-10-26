@@ -205,23 +205,32 @@ async function main(): Promise<void> {
   // nach zwei Wochen (docs/FELDHERR-DIAGNOSE.md). Beides im selben Takt: Es
   // ist dieselbe Art Aufraeumen, und ein zweiter Timer waere nur ein
   // zweiter Ort, an dem man ihn vergessen kann.
+  //
+  // Fehler per console.error wie im 500er-Weg (http/app.ts): `app.log` ist
+  // bei `logger: false` stumm, und ein Aufraeumen, das stundenlang scheitert,
+  // fiel so niemandem auf.
   const sweeper = setInterval(() => {
-    void expireStaleTables(db).catch((err) => app.log.error(err));
-    void aufraeumen(db).catch((err) => app.log.error(err));
+    // eslint-disable-next-line no-console
+    void expireStaleTables(db).catch((err) => console.error('Aufraeumen (Tische):', err));
+    // eslint-disable-next-line no-console
+    void aufraeumen(db).catch((err) => console.error('Aufraeumen (Feldherr-Diagnose):', err));
   }, HOUR);
 
   // Abend-Erinnerung an die Lernserie (lernpfad.ts). Eigener, kurzer Takt:
   // Im Stundentakt des Aufraeumens kaeme sie je nach Startzeit erst um kurz
   // vor acht. Wer schon erinnert wurde, steht in `erinnert_tag` — ein
-  // Neustart schickt also nichts doppelt.
+  // Neustart schickt also nichts doppelt. Fehler wie beim Aufraeumen per
+  // console.error — `app.log` schweigt hier ebenso.
   const serienWecker = setInterval(() => {
     void faelligeErinnerungen(db)
       .then((konten) => push.serieErinnern(konten))
-      .catch((err) => app.log.error(err));
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error('Erinnerung (Lernserie):', err));
     // Browort im selben Takt und nach derselben Regel (browort/dienst.ts).
     void faelligeBrowortErinnerungen(db)
       .then((konten) => push.browortErinnern(konten))
-      .catch((err) => app.log.error(err));
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error('Erinnerung (Browort):', err));
   }, 15 * MINUTE);
 
   // Tagesstatistik (statistik.ts): Gezaehlt wird im Speicher, abgelegt im

@@ -45,7 +45,7 @@ import { uebungGespielt } from '../lernpfad.js';
 import { einsatzVon, zahleAus, zieheEinsatz } from '../brojetons.js';
 import { verbucheBestleistungen } from '../bestleistung.js';
 import { spielZaehlen } from '../herkunft.js';
-import { type Ausgang, tischart, zaehle } from '../statistik.js';
+import { type Ausgang, partieBeginnZaehlen, tischart, zaehle } from '../statistik.js';
 
 export interface RuntimeOptions {
   /** 60 Sekunden je Zug, serverseitig gemessen. */
@@ -475,9 +475,14 @@ export class PartyRuntime {
     this.live.set(tableId, liveParty);
     // Nur hier, nicht in `resume`: Eine nach dem Neustart zurueckgeholte
     // Partie ist dieselbe Partie und keine neue (statistik.ts).
-    const statistik = { spiel: liveParty.gameId, modus: this.tischart(liveParty) };
-    zaehle('online_runde_gestartet', statistik);
-    zaehle('online_spieler', statistik, seats.filter((seat) => seat.accountId).length);
+    partieBeginnZaehlen({
+      spiel: liveParty.gameId,
+      tischart: this.tischart(liveParty),
+      menschen: seats.filter((seat) => seat.accountId).length,
+      botStufe: emptySeats.length > 0 ? liveParty.botLevel : null,
+      config: rs.config,
+      vorgabe: module.defaultConfig(),
+    });
     await this.persist(liveParty);
     this.schedule(liveParty);
     this.emit(tableId);

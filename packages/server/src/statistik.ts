@@ -27,7 +27,8 @@
  */
 
 import { and, eq, isNull, ne, or, sql } from 'drizzle-orm';
-import type { GameId } from '@brauweg/game-api';
+import type { BotLevel, GameId } from '@brauweg/game-api';
+import { MINISPIELE, type MinispielId } from '@brauweg/game-partykiste';
 
 import type { Db } from './db/types.js';
 import * as s from './db/schema.js';
@@ -49,6 +50,22 @@ export const METRIKEN = [
   'konto_upgrade',
   /** Konten mit mindestens einer angemeldeten Anfrage an diesem Tag. */
   'aktive_konten',
+  /** Je Minispiel im Regelsatz eines gestarteten Partykiste-Tisches, `spiel` = MinispielId. */
+  'minispiel_gespielt',
+  /** Je gestartetem Partykiste-Tisch, `ergebnis` = an|aus. Nie je Person, nie Schlucke. */
+  'partykiste_trinkmodus',
+  /** Abweichung vom Modul-Regelsatz beim Start: `modus` = Schluessel, `ergebnis` = Wert(klasse). */
+  'regel_variante',
+  /** Gestartete Tische mit Bots, `ergebnis` = Bot-Stufe. */
+  'bot_stufe',
+  /** Ein Pro-Subway-Lauf ist gemeldet (nach der Pruefung). */
+  'runner_lauf',
+  /** Eine Lernpfad-Lektion ist abgeschlossen — ohne die Lektion. */
+  'lektion_fertig',
+  /** Browort/Clanwort: `ergebnis` = begonnen | geloest | verloren. */
+  'wortspiel_runde',
+  /** Kartenmanufaktur, `modus` = Aktionstyp aus dem festen Verzeichnis der Route. */
+  'manufaktur_aktion',
 ] as const;
 export type Metrik = (typeof METRIKEN)[number];
 
@@ -84,10 +101,19 @@ export function tischart(tisch: {
   return tisch.visibility === 'public' ? 'oeffentlich' : 'privat';
 }
 
+/** Wie eine Wortspiel-Runde steht: angefangen, oder vom Server entschieden. */
+export type Wortausgang = 'begonnen' | 'geloest' | 'verloren';
+
+/**
+ * Was in die drei Spalten darf. Jeder Wert ist ein Bezeichner aus dem Code
+ * oder aus einem gegen das Modul geprueften Regelsatz — die einzigen
+ * Zeichenketten aus einem Regelsatz laufen durch `regelAbweichungen`, die
+ * Freitext und Kennungslisten aussiebt.
+ */
 export interface Dimensionen {
-  readonly spiel?: GameId;
-  readonly modus?: Tischart | Kontoart;
-  readonly ergebnis?: Ausgang;
+  readonly spiel?: GameId | MinispielId | 'browort' | 'clanwort';
+  readonly modus?: Tischart | Kontoart | string;
+  readonly ergebnis?: Ausgang | Wortausgang | BotLevel | 'an' | 'aus' | string;
 }
 
 interface Zeile {
@@ -235,5 +261,123 @@ export async function aktivVermerken(db: Db, accountId: string, jetzt = new Date
     vermerkt.delete(accountId);
     // eslint-disable-next-line no-console
     console.error('Statistik (aktive_konten):', err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Partiestart: Tisch, Spieler, Bots, Regelsatz
+// ---------------------------------------------------------------------------
+
+/**
+ * Schluessel, die zwar im Regelsatz stehen, aber keine Regel sind: Kennung
+ * und Anzeigename (Freitext!), Version, die vom Tisch ueberschriebenen
+ * Groessen und das Uebungsmerkmal, das schon `Tischart` traegt.
+ */
+const KEINE_REGEL = new Set(['id', 'name', 'version', 'tableSize', 'rounds', 'training']);
+
+/**
+ * So sieht ein Wert aus, der als Dimension taugt: ein Bezeichner wie
+ * `with9`, `redealAndBock`, `nebel`. Alles andere — Leerzeichen, Umlaute,
+ * Ueberlaenge — ist kein Aufzaehlungswert, sondern Text, und bleibt draussen.
+ */
+const BEZEICHNER = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
+
+export interface RegelAbweichung {
+  readonly schluessel: string;
+  readonly wert: string;
+}
+
+/**
+ * Wo weicht ein Regelsatz vom Vorgabesatz des Moduls ab? Rein und
+ * spielblind — die Form der Vorgabe entscheidet, wie verglichen wird:
+ *
+ *   - Wahrheitswert: `an` / `aus`.
+ *   - Zahl: `kleiner` / `groesser` als die Vorgabe. Keine Rohwerte: Ein
+ *     Startkapital von 137 waere eine Spalte, die sich jeder selbst fuellt.
+ *   - Zeichenkette (oder Vorgabe `null`, Partykiste `paket`): der Wert, wenn
+ *     er wie ein Bezeichner aussieht — gueltige Werte prueft vorher das Modul.
+ *   - Liste von Zeichenketten: weicht die Menge ab, je Element eine Zeile.
+ *   - Alles andere (Objekte, Schluessel ohne Vorgabe wie bei Golf und
+ *     BroChess, deren Vorgabe leer ist): nicht gezaehlt. Lieber eine Luecke
+ *     als eine Spalte, in der Freitext oder Upload-Kennungen landen.
+ */
+export function regelAbweichungen(config: unknown, vorgabe: unknown): RegelAbweichung[] {
+  if (!istObjekt(config) || !istObjekt(vorgabe)) return [];
+  const ab: RegelAbweichung[] = [];
+  for (const [schluessel, standard] of Object.entries(vorgabe)) {
+    if (KEINE_REGEL.has(schluessel) || !(schluessel in config)) continue;
+    const wert = config[schluessel];
+    if (typeof standard === 'boolean') {
+      if (typeof wert === 'boolean' && wert !== standard) {
+        ab.push({ schluessel, wert: wert ? 'an' : 'aus' });
+      }
+    } else if (typeof standard === 'number') {
+      if (typeof wert === 'number' && Number.isFinite(wert) && wert !== standard) {
+        ab.push({ schluessel, wert: wert < standard ? 'kleiner' : 'groesser' });
+      }
+    } else if (typeof standard === 'string' || standard === null) {
+      if (typeof wert === 'string' && wert !== standard && BEZEICHNER.test(wert)) {
+        ab.push({ schluessel, wert });
+      }
+    } else if (Array.isArray(standard) && standard.every((x) => typeof x === 'string')) {
+      if (!Array.isArray(wert) || !wert.every((x) => typeof x === 'string')) continue;
+      const gleich =
+        new Set(wert).size === new Set(standard).size && wert.every((x) => standard.includes(x));
+      if (gleich) continue;
+      for (const element of new Set(wert)) {
+        if (BEZEICHNER.test(element)) ab.push({ schluessel, wert: element });
+      }
+    }
+  }
+  return ab;
+}
+
+function istObjekt(wert: unknown): wert is Record<string, unknown> {
+  return typeof wert === 'object' && wert !== null && !Array.isArray(wert);
+}
+
+/**
+ * Eine Partie an einem Servertisch ist losgegangen (runtime/party.ts, nur
+ * beim echten Start, nie beim Wiederaufnehmen). Alles, was der Start ueber
+ * den Tisch weiss, in einem Zug — und alles hinter einem Fang: Ein
+ * Regelsatz, der hier unerwartet aussieht, darf den Start nicht kosten.
+ */
+export function partieBeginnZaehlen(start: {
+  readonly spiel: GameId;
+  readonly tischart: Tischart;
+  readonly menschen: number;
+  /** Bot-Stufe, wenn mindestens ein Sitz von Anfang an ein Bot ist. */
+  readonly botStufe: BotLevel | null;
+  readonly config: unknown;
+  readonly vorgabe: unknown;
+}): void {
+  try {
+    const { spiel } = start;
+    const dim = { spiel, modus: start.tischart };
+    zaehle('online_runde_gestartet', dim);
+    zaehle('online_spieler', dim, start.menschen);
+    if (start.botStufe) zaehle('bot_stufe', { spiel, ergebnis: start.botStufe });
+
+    for (const { schluessel, wert } of regelAbweichungen(start.config, start.vorgabe)) {
+      zaehle('regel_variante', { spiel, modus: schluessel, ergebnis: wert });
+    }
+
+    if (spiel === 'partykiste' && istObjekt(start.config)) {
+      const { minispiele, trinkmodus } = start.config;
+      if (Array.isArray(minispiele)) {
+        // Gegen das Verzeichnis des Moduls: `spiel` bekommt nur, was es dort gibt.
+        for (const id of new Set(minispiele)) {
+          if (MINISPIELE.includes(id as MinispielId)) {
+            zaehle('minispiel_gespielt', { spiel: id as MinispielId });
+          }
+        }
+      }
+      if (typeof trinkmodus === 'boolean') {
+        zaehle('partykiste_trinkmodus', { ergebnis: trinkmodus ? 'an' : 'aus' });
+      }
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Statistik (Partiestart):', err);
   }
 }

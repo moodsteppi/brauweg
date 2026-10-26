@@ -21,6 +21,7 @@ import { doppelkopf, lektionVon } from '@brauweg/game-doppelkopf';
 import type { Db } from '../db/types.js';
 import { notFound } from '../errors.js';
 import { lektionAbschliessen, lernpfadVon } from '../lernpfad.js';
+import { zaehle } from '../statistik.js';
 import { createTable } from '../tables/service.js';
 
 type Grenze = { max: number; timeWindow: string };
@@ -55,6 +56,8 @@ export function lernpfadRouten(app: FastifyInstance, deps: LernpfadRoutenDeps): 
       const accountId = await deps.requireAccount(request);
       const { id } = kennung.parse(request.params);
       const spieltag = await lektionAbschliessen(deps.db, accountId, id);
+      // Ohne die Lektion: Welche es war, ist eine Frage fuer Stufe 1 (statistik.ts).
+      zaehle('lektion_fertig');
       return reply.send({ ...spieltag, pfad: await lernpfadVon(deps.db, accountId) });
     },
   );
