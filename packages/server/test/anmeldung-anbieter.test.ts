@@ -53,6 +53,8 @@ import { AppError } from '../src/errors.js';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
 import { PartyRuntime } from '../src/runtime/party.js';
 import { berlinToday } from '../src/birthday.js';
+import { statistikSchreiben } from '../src/statistik.js';
+import type { Db } from '../src/db/types.js';
 import { createTestContext, createVerifiedAccount, schema as s, seedInvite } from './helpers.js';
 
 const APPLE_ID = 'de.brauweg-spielen.web';
@@ -834,4 +836,29 @@ test('die Kopfzeilen lassen die Anbieter-Popups zu, und nur diese', async (t) =>
   // Die ganze Herkunft stand frueher drin — jetzt nur noch die Pfade.
   assert.doesNotMatch(csp, /https:\/\/accounts\.google\.com(?!\/gsi\/)/);
   assert.doesNotMatch(csp, /appleid\.apple\.com/, 'der Popup-Modus braucht Apples Anmeldeseite nicht in der CSP');
+});
+
+test('Tagesstatistik: Erstanmeldung zaehlt als neues Konto, Sichern ueber den Anbieter als Upgrade', async (t) => {
+  // Was andere Tests dieses Prozesses gezaehlt haben, gehoert nicht hierher
+  // (src/statistik.ts puffert je Prozess).
+  const schlucker = {
+    insert: () => ({ values: () => ({ onConflictDoUpdate: async () => undefined }) }),
+  } as unknown as Db;
+  await statistikSchreiben(schlucker);
+
+  const ctx = await createTestContext();
+  await seedInvite(ctx.db);
+  t.after(() => ctx.close());
+
+  await anmelden(ctx, profil());
+  await anmelden(ctx, profil()); // die zweite findet das Konto nur wieder
+  const gast = await gastKonto(ctx.auth, 'Laufkunde');
+  await verknuepfeAnbieter(ctx.db, gast.accountId, profil({ anbieter: 'apple', sub: 'a-gast', email: 'lauf@example.org' }), ERWACHSEN);
+
+  await statistikSchreiben(ctx.db);
+  const zeilen = await ctx.db.select().from(s.statsTag);
+  assert.deepEqual(
+    zeilen.map((z) => `${z.metrik}|${z.modus}=${z.wert}`).sort(),
+    ['konto_erstellt|gast=1', 'konto_erstellt|registriert=1', 'konto_upgrade|=1'],
+  );
 });

@@ -26,6 +26,7 @@ import * as s from '../db/schema.js';
 import { badRequest, conflict, forbidden, notFound } from '../errors.js';
 import { type SerieHeute, type SerienStand, LEERE_SERIE, serieHeute, spielen, tagDavor } from '../lernpfad.js';
 import { heute } from '../truhen.js';
+import { zaehle } from '../statistik.js';
 import { gutschreiben } from '../waehrung.js';
 import {
   type Farbe,
@@ -186,6 +187,17 @@ export async function browortHeute(db: Db, accountId: string, jetzt = new Date()
   };
 }
 
+/**
+ * Tagesstatistik (statistik.ts). Erst hier, nachdem der Versuch in der
+ * Zeile steht — ein abgewiesener Doppelversuch zaehlt nicht. `begonnen` beim
+ * ersten Versuch des Tages, `geloest`/`verloren`, sobald der Server die Runde
+ * entschieden hat; wer aufhoert, bleibt nur in `begonnen`.
+ */
+function rundeZaehlen(spiel: 'browort' | 'clanwort', erster: boolean, fertig: boolean, geloest: boolean): void {
+  if (erster) zaehle('wortspiel_runde', { spiel, ergebnis: 'begonnen' });
+  if (fertig) zaehle('wortspiel_runde', { spiel, ergebnis: geloest ? 'geloest' : 'verloren' });
+}
+
 export async function browortRaten(
   db: Db,
   accountId: string,
@@ -231,6 +243,8 @@ export async function browortRaten(
       .returning({ tag: s.browortRunde.tag });
     if (geaendert.length === 0) throw conflict('browortDoppelt');
   }
+
+  rundeZaehlen('browort', !alt, fertig, geloest);
 
   let belohnung: Belohnung | null = null;
   let geschuetzt = false;
@@ -567,6 +581,8 @@ export async function clanwortRaten(
       .returning({ tag: s.clanwortRunde.tag });
     if (geaendert.length === 0) throw conflict('browortDoppelt');
   }
+
+  rundeZaehlen('clanwort', !alt, fertig, geloest);
 
   let belohnung: Belohnung | null = null;
   if (fertig) {

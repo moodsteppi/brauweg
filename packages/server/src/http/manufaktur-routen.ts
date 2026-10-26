@@ -17,6 +17,7 @@ import { MAX_PRESSEN } from '@brauweg/manufaktur-kern';
 
 import type { Db } from '../db/types.js';
 import { manufakturAktion, manufakturHeute } from '../manufaktur/dienst.js';
+import { zaehle } from '../statistik.js';
 
 type Grenze = { max: number; timeWindow: string };
 
@@ -72,7 +73,11 @@ export function manufakturRouten(app: FastifyInstance, deps: ManufakturRoutenDep
       const accountId = await deps.requireAccount(request);
       // `bei`: wann getippt wurde — der Dienst nimmt es nur mit kleiner Nachsicht an.
       const bei = z.object({ bei: z.number().finite().optional() }).parse(request.body ?? {}).bei;
-      return reply.send(await manufakturAktion(deps.db, accountId, aktion.parse(request.body ?? {}), new Date(), bei));
+      const geprueft = aktion.parse(request.body ?? {});
+      const antwort = await manufakturAktion(deps.db, accountId, geprueft, new Date(), bei);
+      // `typ` ist eines der Literale oben, also ein festes Verzeichnis (statistik.ts).
+      zaehle('manufaktur_aktion', { modus: geprueft.typ });
+      return reply.send(antwort);
     },
   );
 }

@@ -17,6 +17,7 @@ import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { RuleSetInvalidError, badRequest, conflict, forbidden, notFound } from '../errors.js';
 import { requireModule } from '../games/registry.js';
+import { tischart, zaehle } from '../statistik.js';
 import { einsatzVon, stakesVon, verlangen } from '../brojetons.js';
 import { verlangeInhaltspakete } from '../tischware.js';
 
@@ -318,6 +319,9 @@ export async function createTable(db: Db, input: CreateTableInput) {
     })),
   );
 
+  // Hier und nicht in der Route: Lobby, Mitspielersuche und Uebung legen
+  // alle ueber diese Funktion an (statistik.ts).
+  zaehle('lobby_erstellt', { spiel: input.gameId });
   return table!;
 }
 
@@ -1041,24 +1045,76 @@ export async function expireStaleTables(
 ): Promise<number> {
   const waitingCutoff = new Date(Date.now() - waitingHours * 3600_000);
   const runningCutoff = new Date(Date.now() - runningHours * 3600_000);
-  const rows = await db
+  const wartende = await db
     .update(s.gameTable)
     .set({ status: 'abandoned' })
     .where(
-      or(
-        and(
-          eq(s.gameTable.status, 'waiting'),
-          sql`${s.gameTable.lastActivityAt} < ${waitingCutoff}`,
-        ),
-        and(
-          eq(s.gameTable.status, 'running'),
-          isNull(s.gameTable.pausedAt),
-          sql`${s.gameTable.lastActivityAt} < ${runningCutoff}`,
-        ),
+      and(
+        eq(s.gameTable.status, 'waiting'),
+        sql`${s.gameTable.lastActivityAt} < ${waitingCutoff}`,
       ),
     )
     .returning({ id: s.gameTable.id });
-  return rows.length;
+  /*
+   * Laufende getrennt: Eine verfallene laufende Partie ist eine beendete und
+   * zaehlt in der Tagesstatistik als abgebrochen (statistik.ts). Aus EINER
+   * Abfrage liesse sich nicht mehr sagen, welcher Tisch vorher lief —
+   * `returning` liefert den neuen Status.
+   */
+  const laufende = await db
+    .update(s.gameTable)
+    .set({ status: 'abandoned' })
+    .where(
+      and(
+        eq(s.gameTable.status, 'running'),
+        isNull(s.gameTable.pausedAt),
+        sql`${s.gameTable.lastActivityAt} < ${runningCutoff}`,
+      ),
+    )
+    .returning({
+      id: s.gameTable.id,
+      gameId: s.gameTable.gameId,
+      visibility: s.gameTable.visibility,
+      filters: s.gameTable.filters,
+    });
+  if (laufende.length > 0) await verfallZaehlen(db, laufende);
+  return wartende.length + laufende.length;
+}
+
+/** Siehe `expireStaleTables`. Darf das Aufraeumen nicht umwerfen. */
+async function verfallZaehlen(
+  db: Db,
+  tische: readonly { id: string; gameId: GameId; visibility: s.TableVisibility; filters: unknown }[],
+): Promise<void> {
+  try {
+    const botSitze = await db
+      .selectDistinct({ tableId: s.tableSeat.tableId })
+      .from(s.tableSeat)
+      .where(
+        and(
+          inArray(
+            s.tableSeat.tableId,
+            tische.map((tisch) => tisch.id),
+          ),
+          eq(s.tableSeat.isBot, true),
+        ),
+      );
+    const mitBots = new Set(botSitze.map((sitz) => sitz.tableId));
+    for (const tisch of tische) {
+      zaehle('online_runde_beendet', {
+        spiel: tisch.gameId,
+        modus: tischart({
+          visibility: tisch.visibility,
+          uebung: istUebungstisch(tisch.filters),
+          mitBots: mitBots.has(tisch.id),
+        }),
+        ergebnis: 'abgebrochen',
+      });
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Statistik (verfallene Tische):', err);
+  }
 }
 
 export interface ActiveTable {

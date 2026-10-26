@@ -35,6 +35,7 @@ import { assertValidBirthday } from '../birthday.js';
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { AppError, badRequest, conflict, forbidden, notFound, unauthorized } from '../errors.js';
+import { zaehle } from '../statistik.js';
 import { createSession, type AuthDeps } from './service.js';
 
 export const ANBIETER = ['google', 'apple'] as const;
@@ -311,7 +312,7 @@ async function legeKontoAn(
     const displayName =
       versuch === 0 ? basis : `${basis}-${Math.floor(Math.random() * 9000) + 1000}`;
     try {
-      return await db.transaction(async (tx) => {
+      const id = await db.transaction(async (tx) => {
         const [row] = await tx
           .insert(s.account)
           .values({
@@ -330,6 +331,8 @@ async function legeKontoAn(
         });
         return row!.id;
       });
+      zaehle('konto_erstellt', { modus: 'registriert' });
+      return id;
     } catch (err) {
       if (constraintOf(err) === 'account_display_name_key') continue;
       if (constraintOf(err) === 'account_email_key') throw conflict('emailTaken');
@@ -492,6 +495,7 @@ export async function verknuepfeAnbieter(
     throw err;
   }
 
+  if (sichern) zaehle('konto_upgrade');
   return { gesichert: sichern };
 }
 
