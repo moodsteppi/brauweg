@@ -1,6 +1,6 @@
 # App: Spielabstimmung, Bilder und Wischen
 
-Stand 26.10.2026. Lokale Änderungen, noch nicht veröffentlicht.
+Stand 26.10.2026.
 
 ## Kontogebundene Abstimmung
 
@@ -61,3 +61,19 @@ Die App unterstützt wieder persistente Stimmen für angekündigte Spiele.
 Der Server liefert persönliche Stimmen und plattformbezogene Abstimmfreigabe.
 Das Hub hat eine abgegrenzte Wischsteuerung, die eigene Scrollbereiche ausnimmt.
 Keine Datenbankmigration und keine Änderung der Spielbarkeit selbst nötig.
+
+
+## Korrekturen vom 26.10.2026
+
+Nach links wischen öffnet den rechts benachbarten Reiter, nach rechts den linken.
+Auch Pro-Subway und Mehrkampf kommen als Vorschauen vom Server und speichern
+Stimmen in game_vote. Sie werden nicht zu Tisch-Spielmodulen. Zusammen mit den
+17 sichtbaren Spielvorschauen gibt es in der App 19 abstimmbare Ankündigungen.
+Die Partykiste bleibt gemäß bestehender App-Inhaltsentscheidung ausgeblendet.
+Die Typisierung von game_vote.game_id umfasst nun auch Modi; SQL bleibt TEXT,
+daher keine Migration. Browort hat ein eigenes 1200 × 400 WebP-Motiv (50 kB).
+Solo-Spiele zeigen beim Nachladen sofort einen schließbaren Ladebildschirm.
+
+TAFEL: Modi gehören zur kontoabhängigen Spielauswahl mit derselben
+Stimmen-Speicherung, außerhalb der Tisch-Registry. Wischrichtung folgt der
+räumlichen Reiterfolge. Tafelzugang derzeit mit 401 abgewiesen.

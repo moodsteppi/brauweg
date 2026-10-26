@@ -665,7 +665,8 @@ export const gameVote = pgTable(
     accountId: uuid()
       .notNull()
       .references(() => account.id, { onDelete: 'cascade' }),
-    gameId: gameId(),
+    // Auch angekündigte Solo-Modi haben Stimmen, aber kein Tisch-Spielmodul.
+    gameId: text().notNull(),
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.accountId, t.gameId] })],
