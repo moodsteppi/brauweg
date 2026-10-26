@@ -86,6 +86,18 @@ const byId = new Map<GameId, AnyGameModule>(
   MODULES.map((m) => [m.meta.id, m]),
 );
 
+/** Angekündigte Modi bleiben außerhalb der Tisch-Registry: Sie haben kein Spielmodul. */
+export function abstimmModiFuer(plattform: Plattform, umfang: Umfang = ALLES): (Omit<GameMeta, 'id'> & { id: string })[] {
+  if (plattform !== 'app' || !imUmfang(umfang, 'abstimmung')) return [];
+  return [
+    { id: 'prosubway', nameKey: 'modus.prosubway', seatCounts: [1] },
+    { id: 'mehrkampf', nameKey: 'modus.mehrkampf', seatCounts: [2, 3, 4, 5, 6, 7, 8] },
+  ].filter(m => m.id === 'mehrkampf' || imUmfang(umfang, m.id)).map(m => ({
+    ...m, availability: 'preview' as const,
+    rotationSize: (sitze: number) => sitze, suggestedRounds: () => [],
+  }));
+}
+
 export const registry: GameRegistry = {
   all: () => [...MODULES.map((m) => m.meta), ...PREVIEW],
   get: (id) => byId.get(id),

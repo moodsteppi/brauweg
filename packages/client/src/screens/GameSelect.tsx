@@ -443,17 +443,17 @@ export function GameSelect({
           </Suspense>
         )}
         {browortOffen && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<SoloLaedt name="Browort" onClose={() => setBrowortOffen(false)} />}>
             <Browort onClose={() => setBrowortOffen(false)} onGeaendert={onAvatarChange} />
           </Suspense>
         )}
         {clanwortOffen && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<SoloLaedt name="Clanwort" onClose={() => setClanwortOffen(false)} />}>
             <Clanwort onClose={() => setClanwortOffen(false)} onGeaendert={onAvatarChange} />
           </Suspense>
         )}
         {manufakturOffen && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<SoloLaedt name="Kartenmanufaktur" onClose={() => setManufakturOffen(false)} />}>
             <Kartenmanufaktur onClose={() => setManufakturOffen(false)} onGeaendert={onAvatarChange} getragen={me.avatar} />
           </Suspense>
         )}
@@ -489,6 +489,15 @@ export function GameSelect({
       {overlays}
     </NeuerRahmen>
   );
+}
+
+/** Sofortige Rückmeldung beim ersten Laden eines Spielpakets, auch bei langsamer Verbindung. */
+function SoloLaedt({ name, onClose }: { name: string; onClose: () => void }): React.JSX.Element {
+  useEscape(onClose);
+  return <div className="hb-voll" role="dialog" aria-modal="true" aria-label={`${name} wird geladen`}>
+    <header className="hb-voll-kopf"><Schliessen onClick={onClose} /></header>
+    <Ladekreis text={`${name} wird geladen…`} />
+  </div>;
 }
 
 /**

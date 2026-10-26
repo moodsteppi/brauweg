@@ -92,6 +92,7 @@ import {
   requireSpielbar,
   freigabeAuf,
   spieleFuer,
+  abstimmModiFuer,
   taugtFuerApp,
   type Plattform,
 } from '../games/registry.js';
@@ -1949,7 +1950,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // Je Plattform: In der App kann ein Spiel `bald` oder ganz weg sein,
     // obwohl es auf der Webseite laeuft (siehe FREIGABE in registry.ts).
     return reply.send(
-      spieleFuer(plattformVon(request), umfang).map(({ meta, availability, abstimmbar }) => ({
+      [
+        ...spieleFuer(plattformVon(request), umfang),
+        ...abstimmModiFuer(plattformVon(request), umfang).map(meta => ({ meta, availability: 'preview' as const, abstimmbar: true })),
+      ].map(({ meta, availability, abstimmbar }) => ({
         id: meta.id,
         nameKey: meta.nameKey,
         availability,
@@ -1964,14 +1968,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   /** Vorschau-Spiele: Abstimmung, welches zuerst kommt. */
   app.post('/api/games/:gameId/vote', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
-    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
-    if (!imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
-    if (freigabeAuf(gameId, plattformVon(request), umfang) !== 'bald') {
+    const { gameId } = z.object({ gameId: z.union([gameIdSchema, z.enum(['prosubway', 'mehrkampf'])]) }).parse(request.params);
+    if (gameId !== 'mehrkampf' && !imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
+    const modus = gameId === 'prosubway' || gameId === 'mehrkampf';
+    const abstimmbar = modus
+      ? abstimmModiFuer(plattformVon(request), umfang).some(m => m.id === gameId)
+      : freigabeAuf(gameId, plattformVon(request), umfang) === 'bald';
+    if (!abstimmbar) {
       return reply.status(400).send({ code: 'alreadyPlayable', messageKey: 'error.alreadyPlayable' });
     }
-    // Was nicht im Umfang steht, steht nicht in der Auswahl — also auch
-    // nicht zur Wahl.
-    if (!imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
     await deps.db.insert(s.gameVote).values({ accountId, gameId }).onConflictDoNothing();
     return reply.send({ ok: true });
   });

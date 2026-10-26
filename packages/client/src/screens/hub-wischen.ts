@@ -11,7 +11,7 @@ function eigenesWischen(target: EventTarget | null, wurzel: HTMLElement): boolea
   return false;
 }
 
-/** Rechts = naechster Reiter (Profil -> Spiele), links = vorheriger. */
+/** Nach links wischen zeigt den rechts danebenliegenden Reiter. */
 export function useHubWischen<T extends string>(ref: RefObject<HTMLDivElement | null>, tab: T, folge: T[], wechseln: (tab: T) => void): void {
   const aktuell = useRef({ tab, folge, wechseln });
   aktuell.current = { tab, folge, wechseln };
@@ -40,7 +40,7 @@ export function useHubWischen<T extends string>(ref: RefObject<HTMLDivElement | 
       const dy = e.changedTouches[0]!.clientY - von.y;
       if (Math.abs(dx) < 56 || Math.abs(dx) <= Math.abs(dy) * 1.5) return;
       const { folge, tab, wechseln } = aktuell.current;
-      const nach = folge[folge.indexOf(tab) + (dx > 0 ? 1 : -1)];
+      const nach = folge[folge.indexOf(tab) + (dx < 0 ? 1 : -1)];
       sperreKlickBis = Date.now() + 500;
       if (nach) wechseln(nach);
     };

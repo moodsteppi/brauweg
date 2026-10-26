@@ -30,7 +30,7 @@ vi.mock('../api', async () => {
     ...echt,
     api: {
       ...echt.api,
-      games: () => Promise.resolve([spiel('doppelkopf', 'playable'), spiel('wizard', 'preview')]),
+      games: () => Promise.resolve([spiel('doppelkopf', 'playable'), spiel('wizard', 'preview'), { ...spiel('mehrkampf', 'preview'), nameKey: 'modus.mehrkampf', abstimmbar: true }]),
     },
   };
 });
@@ -87,11 +87,11 @@ describe('Umfang im Client', () => {
     zeige();
     const kopf = await screen.findByRole('button', { name: /Kommt bald/ });
     expect(screen.queryByText('Allein')).toBeNull();
-    // Gezählt werden das Bald-Spiel und der Mehrkampf — Pro-Subway nicht mehr.
+    // Der Server liefert nur die in diesem Umfang angebotenen Vorschauen.
     expect(kopf.textContent).toContain('2');
     fireEvent.click(kopf);
     expect(screen.queryByText('Pro-Subway')).toBeNull();
-    // Der Mehrkampf hängt an keinem Umfang und bleibt.
+    // Der Mehrkampf bleibt unabhängig vom Umfang einzelner Spiele angekündigt.
     expect(screen.getByText('Brauweg-Bock')).toBeTruthy();
   });
 });

@@ -44,7 +44,9 @@ vi.mock('../api', async () => {
           spiel('brochess', 'playable'),
           { ...spiel('wizard', 'preview'), abstimmbar: true, meineStimme: true, votes: 5 },
           { ...spiel('golf', 'preview'), abstimmbar: true },
-          spiel('tafelrunde', 'preview'),
+          { ...spiel('tafelrunde', 'preview'), abstimmbar: true },
+          { ...spiel('prosubway', 'preview'), nameKey: 'modus.prosubway', abstimmbar: true },
+          { ...spiel('mehrkampf', 'preview'), nameKey: 'modus.mehrkampf', abstimmbar: true },
         ]),
     },
   };
@@ -138,4 +140,16 @@ it('laesst nach Speicherfehler erneut abstimmen', async () => {
   fireEvent.click(within(golf).getByRole('button', { name: 'Dafür' }));
   expect(await screen.findByRole('alert')).toBeTruthy();
   expect((within(golf).getByRole('button', { name: 'Dafür' }) as HTMLButtonElement).disabled).toBe(false);
+});
+
+it('lässt auch für beide angekündigten Modi abstimmen', async () => {
+  vote.mockResolvedValue({ ok: true });
+  zeige();
+  fireEvent.click(await screen.findByRole('tab', { name: 'Kommt bald' }));
+  for (const [name, id] of [['Pro-Subway', 'prosubway'], ['Brauweg-Bock', 'mehrkampf']]) {
+    const zeile = screen.getByRole('group', { name });
+    fireEvent.click(within(zeile).getByRole('button', { name: 'Dafür' }));
+    expect(await within(zeile).findByRole('button', { name: 'Abgestimmt' })).toBeTruthy();
+    expect(vote).toHaveBeenCalledWith(id);
+  }
 });

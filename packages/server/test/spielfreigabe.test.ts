@@ -22,6 +22,7 @@ import { APP_ORIGIN, buildApp } from '../src/http/app.js';
 import {
   FREIGABE,
   freigabeAuf,
+  abstimmModiFuer,
   registry,
   isPlayable,
   type SpielFreigabe,
@@ -64,6 +65,7 @@ async function setup() {
 
   return {
     app,
+    runtime,
     anna: (plattform: 'web' | 'app') => kopf(annaToken, plattform),
     ben: (plattform: 'web' | 'app') => kopf(benToken, plattform),
     async close() {
@@ -120,7 +122,8 @@ test('die Webseite sieht alles wie bisher, die App genau das, was die Liste sagt
   const web = await spiele(s, 'web');
   assert.deepEqual(
     web.map((g) => [g.id, g.availability]),
-    registry.all().map((m) => [m.id, freigabeAuf(m.id, 'web') === 'spielbar' ? m.availability : 'preview']),
+    [...registry.all().map((m) => [m.id, freigabeAuf(m.id, 'web') === 'spielbar' ? m.availability : 'preview']),
+      ...abstimmModiFuer('web').map(m => [m.id, 'preview'])],
   );
   const imWebBald = registry.all().filter((m) => freigabeAuf(m.id, 'web') !== 'spielbar' && m.availability === 'playable');
   assert.deepEqual(imWebBald.map((m) => m.id), [], 'auf der Webseite ist kein Modul zurueckgehalten');
@@ -346,4 +349,44 @@ test('Abstimmung: eine Stimme pro Konto und Spiel, nach neuem Abruf erhalten', a
   assert.equal((await vote({})).statusCode, 401);
   const offen = await s.app.inject({ method: 'GET', url: '/api/games' });
   assert.ok(offen.json().every((g: { meineStimme: boolean }) => !g.meineStimme));
+});
+
+test('alle 19 sichtbaren Bald-Einträge der App sind kontogebunden abstimmbar', async t => {
+  const s = await setup(); t.after(() => s.close());
+  const bald = (await spiele(s, 'app')).filter(g => g.availability === 'preview' && g.id !== 'partykiste');
+  assert.equal(bald.length, 19);
+  for (const spiel of bald) {
+    assert.equal(spiel.abstimmbar, true, spiel.id);
+    const res = await s.app.inject({ method: 'POST', url: `/api/games/${spiel.id}/vote`, headers: s.anna('app') });
+    assert.equal(res.statusCode, 200, `${spiel.id}: ${res.body}`);
+  }
+  const anna = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna('app') })).json();
+  const ben = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.ben('app') })).json();
+  for (const spiel of bald) {
+    assert.equal(anna.find((g: {id: string}) => g.id === spiel.id).meineStimme, true, spiel.id);
+    assert.equal(ben.find((g: {id: string}) => g.id === spiel.id).meineStimme, false, spiel.id);
+  }
+  for (const id of ['prosubway', 'mehrkampf']) {
+    const res = await s.app.inject({ method: 'POST', url: `/api/games/${id}/vote`, headers: s.anna('app') });
+    assert.equal(res.statusCode, 200);
+    const liste = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna('app') })).json();
+    assert.equal(liste.find((g: {id: string}) => g.id === id).votes, 1);
+  }
+  const web = await s.app.inject({ method: 'POST', url: '/api/games/prosubway/vote', headers: s.anna('web') });
+  assert.equal(web.statusCode, 400, 'Im Web ist der Runner schon spielbar');
+});
+
+test('jedes in der App freigegebene Tischspiel startet mit Bots', async () => {
+  for (const meta of registry.all().filter(m => freigabeAuf(m.id, 'app') === 'spielbar')) {
+    const s = await setup();
+    try {
+      const res = await s.app.inject({ method: 'POST', url: '/api/tables', headers: s.anna('app'),
+        payload: { gameId: meta.id, seats: meta.seatCounts[0], rounds: meta.rotationSize(meta.seatCounts[0]!), fillWithBots: true } });
+      assert.equal(res.statusCode, 201, `${meta.id}: ${res.body}`);
+      const partie = await s.runtime.start(res.json().id);
+      assert.equal(partie.gameId, meta.id);
+      assert.ok(partie.state, `${meta.id}: initialer Spielstand fehlt`);
+      assert.equal(partie.seats.length, meta.seatCounts[0]);
+    } finally { await s.close(); }
+  }
 });

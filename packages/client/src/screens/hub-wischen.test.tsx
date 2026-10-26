@@ -14,13 +14,13 @@ function wisch(el: Element, dx = 100, dy = 0) {
   fireEvent.touchEnd(el, { touches: [], changedTouches: [{ clientX: 100 + dx, clientY: 100 + dy }] });
 }
 describe('Hub-Wischen', () => {
-  it('Profil nach rechts zu Spiele, links zurueck; kein versehentlicher Klick', () => {
+  it('Profil nach links zu Spiele, rechts zurueck; kein versehentlicher Klick', () => {
     const klick = vi.fn(); render(<Probe onKlick={klick} />);
-    wisch(screen.getByRole('button', { name: 'Karte' }));
+    wisch(screen.getByRole('button', { name: 'Karte' }), -100);
     expect(screen.getByText('spiele')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Karte' }));
     expect(klick).not.toHaveBeenCalled();
-    wisch(screen.getByTestId('inhalt'), -100);
+    wisch(screen.getByTestId('inhalt'), 100);
     expect(screen.getByText('profil')).toBeTruthy();
   });
   it('vertikales Scrollen, kurze Gesten und eigene Reihen wechseln nicht', () => {

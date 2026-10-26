@@ -221,7 +221,7 @@ export function SpieleNeu({
   // Bildes stand ein leeres Feld (CLAUDE.md: kein <img> auf eine Datei, die es
   // nicht gibt). Sie bekommen das gemeinsame Bald-Bild.
   const baldBild = (g: GameSummary): string =>
-    BALD_BILDER.has(g.id) ? `/hub/bald-${g.id}.webp` : g.abstimmbar !== false && !BESTEHENDE_BANNER.has(g.id) ? '/hub/spielwahl-bald.webp' : bannerFuer(g.id);
+    g.id === 'prosubway' || g.id === 'mehrkampf' ? `/hub/banner-${g.id}.webp` : BALD_BILDER.has(g.id) ? `/hub/bald-${g.id}.webp` : g.abstimmbar !== false && !BESTEHENDE_BANNER.has(g.id) ? '/hub/spielwahl-bald.webp' : bannerFuer(g.id);
 
   // Was der Umfang der Ausgabe nicht enthält, verschwindet ganz — auch aus
   // „Kommt bald": Es kommt in diesem Release ja nicht (umfang.ts).
@@ -238,7 +238,7 @@ export function SpieleNeu({
         <span className="hb-bald-text">
           <strong>{t(g.nameKey)}</strong>
           <small>
-            {sitzSpanne(g.seatCounts)} Spieler
+            {g.id === 'prosubway' ? 'Allein · Münzen fürs Hub' : g.id === 'mehrkampf' ? 'Runden aus mehreren Spielen' : `${sitzSpanne(g.seatCounts)} Spieler`}
             {g.abstimmbar !== false && mitAbstimmung ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
           </small>
         </span>
@@ -256,20 +256,6 @@ export function SpieleNeu({
       ) : (
         <span className="hb-bald-marke">Bald</span>
       )}
-    </div>
-  );
-
-  /** Pro-Subway und Mehrkampf: in der App ebenfalls noch nicht da. */
-  const modusZeile = (id: string, name: string, bild: string, unter: string): React.JSX.Element => (
-    <div className="hb-bald" key={id}>
-      <button type="button" className="hb-bald-flaeche" onClick={() => onBald(name)}>
-        <span className="hb-bald-bild" style={{ backgroundImage: `url(${bild})` }} />
-        <span className="hb-bald-text">
-          <strong>{name}</strong>
-          <small>{unter}</small>
-        </span>
-      </button>
-      <span className="hb-bald-marke">Bald</span>
     </div>
   );
 
@@ -436,6 +422,7 @@ export function SpieleNeu({
             )}
             {mitBrowort && (
               <button type="button" className="hb-quer hb-quer-browort" onClick={() => onSolo('browort')}>
+                <img className="hb-browort-bild" src="/hub/browort-hero.webp" alt="" />
                 <span className="hb-quer-text">
                   <strong>Browort</strong>
                   <span>Jeden Tag ein Wort, sechs Versuche</span>
@@ -504,7 +491,7 @@ export function SpieleNeu({
                 <path d="M12 8v4l3 2" />
               </Symbol>
               Kommt bald
-              <span className="hb-ab-zusatz">{bald.length + (mitProSubway ? 2 : 1)}</span>
+              <span className="hb-ab-zusatz">{bald.length}</span>
               <Symbol>
                 <path d="m6 9 6 6 6-6" />
               </Symbol>
@@ -512,9 +499,6 @@ export function SpieleNeu({
             {baldOffen && (
               <div className="hb-liste">
                 {bald.map(baldZeile)}
-                {mitProSubway &&
-                  modusZeile('prosubway', t('modus.prosubway'), '/hub/banner-prosubway.webp', 'Allein · Münzen fürs Hub')}
-                {modusZeile('mehrkampf', t('modus.mehrkampf'), '/hub/banner-mehrkampf.webp', 'Runden aus mehreren Spielen')}
               </div>
             )}
           </section>
