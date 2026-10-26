@@ -25,6 +25,7 @@ import { applyStaffEmails } from './staff.js';
 import { aufraeumen } from './diagnose.js';
 import { faelligeErinnerungen } from './lernpfad.js';
 import { faelligeBrowortErinnerungen } from './browort/dienst.js';
+import { statistikSchreiben } from './statistik.js';
 import { expireStaleTables } from './tables/service.js';
 import { PushAnlaesse } from './push/anlaesse.js';
 import { leseAbgeschaltet } from './push/kennungen.js';
@@ -223,12 +224,20 @@ async function main(): Promise<void> {
       .catch((err) => app.log.error(err));
   }, 15 * MINUTE);
 
+  // Tagesstatistik (statistik.ts): Gezaehlt wird im Speicher, abgelegt im
+  // Minutentakt. Ein Absturz kostet so hoechstens eine Minute Zaehlung.
+  const statistikTakt = setInterval(() => void statistikSchreiben(db), MINUTE);
+
   const stop = async (): Promise<void> => {
     clearInterval(sweeper);
     clearInterval(serienWecker);
+    clearInterval(statistikTakt);
     runtime.shutdown();
     pushVersand.schliessen();
     await app.close();
+    // Nach `app.close`, damit auch die letzten Anfragen noch mitzaehlen, und
+    // vor der Datenbank. Wirft nie, haelt das Herunterfahren also nicht auf.
+    await statistikSchreiben(db);
     await connection.close();
     process.exit(0);
   };

@@ -276,6 +276,12 @@ export const account = pgTable(
      * — wer aus dem Gast ein Konto macht, ist erst recht ein Geworbener.
      */
     herkunft: text(),
+    /**
+     * Letzter Kalendertag (Berlin) mit einer angemeldeten Anfrage — nur das
+     * Datum, keine Historie. Einziger Zweck: das Konto je Tag EINMAL in
+     * `aktive_konten` zu zaehlen (src/statistik.ts).
+     */
+    zuletztAktiv: date(),
   },
   (t) => [
     uniqueIndex('account_email_key').on(t.email),
@@ -1528,6 +1534,33 @@ export const herkunftZaehler = pgTable(
     partien: integer().notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.kennung, t.tag] }), index('herkunft_zaehler_tag_idx').on(t.tag)],
+);
+
+// ---------------------------------------------------------------------------
+// Tagesstatistik (Tracking Stufe 0) — src/statistik.ts
+// ---------------------------------------------------------------------------
+
+/**
+ * Summen je Kalendertag (Europe/Berlin) und Metrik. Wie `herkunft_zaehler`
+ * ohne jeden Bezug auf Konto, Tisch oder Geraet. Nicht belegte Dimensionen
+ * sind `''`, nicht NULL: Sie stehen im Primaerschluessel.
+ */
+export const statsTag = pgTable(
+  'stats_tag',
+  {
+    datum: date().notNull(),
+    metrik: text().notNull(),
+    spiel: text().notNull().default(''),
+    modus: text().notNull().default(''),
+    ergebnis: text().notNull().default(''),
+    wert: bigint({ mode: 'number' }).notNull().default(0),
+  },
+  (t) => [
+    primaryKey({
+      name: 'stats_tag_pk',
+      columns: [t.datum, t.metrik, t.spiel, t.modus, t.ergebnis],
+    }),
+  ],
 );
 
 // ---------------------------------------------------------------------------

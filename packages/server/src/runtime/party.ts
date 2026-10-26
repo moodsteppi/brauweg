@@ -45,6 +45,7 @@ import { uebungGespielt } from '../lernpfad.js';
 import { einsatzVon, zahleAus, zieheEinsatz } from '../brojetons.js';
 import { verbucheBestleistungen } from '../bestleistung.js';
 import { spielZaehlen } from '../herkunft.js';
+import { type Ausgang, tischart, zaehle } from '../statistik.js';
 
 export interface RuntimeOptions {
   /** 60 Sekunden je Zug, serverseitig gemessen. */
@@ -472,6 +473,11 @@ export class PartyRuntime {
     };
 
     this.live.set(tableId, liveParty);
+    // Nur hier, nicht in `resume`: Eine nach dem Neustart zurueckgeholte
+    // Partie ist dieselbe Partie und keine neue (statistik.ts).
+    const statistik = { spiel: liveParty.gameId, modus: this.tischart(liveParty) };
+    zaehle('online_runde_gestartet', statistik);
+    zaehle('online_spieler', statistik, seats.filter((seat) => seat.accountId).length);
     await this.persist(liveParty);
     this.schedule(liveParty);
     this.emit(tableId);
@@ -754,7 +760,7 @@ export class PartyRuntime {
     if (rundeVorbei && party.uebung) await this.uebungZaehlen(party);
 
     if (party.module.isFinished(party.state)) {
-      await this.finish(party);
+      await this.finish(party, 'abgeschlossen');
       return;
     }
 
@@ -762,7 +768,9 @@ export class PartyRuntime {
     // trotzdem erst an der Rundengrenze: Wer mitten im Solo abbricht, nimmt
     // den anderen drei eine Runde weg, die sie schon halb gespielt haben.
     if (party.endAfterRound && rundeVorbei) {
-      await this.finish(party);
+      // Die Uebungsrunde endet so planmaessig; jeder andere Tisch, weil
+      // jemand gegangen ist.
+      await this.finish(party, party.uebung ? 'abgeschlossen' : 'abgebrochen');
       return;
     }
 
@@ -1043,7 +1051,7 @@ export class PartyRuntime {
       // die Partie mit Wertung beendet.
       // eslint-disable-next-line no-console
       console.error(`Bot an Tisch ${party.tableId}, Sitz ${seat}:`, err);
-      await this.finish(party);
+      await this.finish(party, 'abgebrochen');
     }
   }
 
@@ -1150,6 +1158,11 @@ export class PartyRuntime {
     party.turnDeadline = null;
     party.phaseDeadline = null;
     this.live.delete(tableId);
+    zaehle('online_runde_beendet', {
+      spiel: party.gameId,
+      modus: this.tischart(party),
+      ergebnis: 'abgebrochen',
+    });
 
     await this.db
       .update(s.party)
@@ -1205,7 +1218,7 @@ export class PartyRuntime {
     );
     if (!humansOnline && !party.offlineTimer && !party.finished) {
       party.offlineTimer = setTimeout(() => {
-        void this.finish(party);
+        void this.finish(party, 'verbindung_verloren');
       }, this.opts.absenceMs);
     }
   }
@@ -1270,6 +1283,15 @@ export class PartyRuntime {
     }
   }
 
+  /** Tischart fuer die Tagesstatistik. Bots = Sitze, die nie ein Mensch hatte. */
+  private tischart(party: LiveParty) {
+    return tischart({
+      visibility: party.visibility,
+      uebung: party.uebung,
+      mitBots: party.seats.some((platz) => platz.permanentBot),
+    });
+  }
+
   /**
    * Eine Uebungsrunde ist abgerechnet: Spieltag fuer jeden Menschen am Tisch
    * (lernpfad.ts). Ein Fehler hier darf die Partie nicht aufhalten — er landet
@@ -1291,9 +1313,16 @@ export class PartyRuntime {
   // Partie-Ende
   // -------------------------------------------------------------------------
 
-  private async finish(party: LiveParty): Promise<void> {
+  private async finish(party: LiveParty, ausgang: Ausgang): Promise<void> {
     if (party.finished) return;
     party.finished = true;
+    // Vor allem anderen: Scheitert unten die Abrechnung, ist die Partie
+    // trotzdem zu Ende (statistik.ts).
+    zaehle('online_runde_beendet', {
+      spiel: party.gameId,
+      modus: this.tischart(party),
+      ergebnis: ausgang,
+    });
     // Nach aussen bleibt die Partie bis zum Rundruf am Ende dieser Methode
     // ungemeldet; nach innen ist ab hier zu.
     party.abrechnungLaeuft = true;

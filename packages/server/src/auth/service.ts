@@ -14,6 +14,7 @@ import { badRequest, conflict, forbidden, unauthorized } from '../errors.js';
 import type { Mailer } from '../mail/index.js';
 import { baueHtml } from '../mail/vorlage.js';
 import { loescheGeraeteDerSitzung, loescheGeraeteDesKontos } from '../push/geraete.js';
+import { aktivVermerken, zaehle } from '../statistik.js';
 import {
   hashPassword,
   hashToken,
@@ -185,6 +186,7 @@ export async function register(
       throw err;
     }
   });
+  zaehle('konto_erstellt', { modus: 'registriert' });
 
   // Kein Beta-Clan mehr von selbst (Emile, 22.10.2026): Bis dahin landete
   // jedes neue Konto im Clan „Brauweg", damit es Clantische gab. Jetzt ist
@@ -421,6 +423,7 @@ export async function gastKonto(
         .insert(s.account)
         .values({ displayName, gastSeit: new Date() })
         .returning({ id: s.account.id });
+      zaehle('konto_erstellt', { modus: 'gast' });
 
       const token = await createSession(deps, row!.id);
       return { token, accountId: row!.id, displayName };
@@ -482,6 +485,7 @@ export async function gastSichern(
     if (constraintOf(err) === 'account_email_key') throw conflict('emailTaken');
     throw err;
   }
+  zaehle('konto_upgrade');
 
   // Wie bei der Registrierung: Der Versand darf das Konto nicht mehr
   // umwerfen. Wer keine Mail bekommt, fordert sie neu an — und erfaehrt es,
@@ -543,6 +547,8 @@ export async function sessionFromToken(
     .update(s.session)
     .set({ lastSeenAt: new Date() })
     .where(eq(s.session.id, row.id));
+  // Hoechstens eine Schreibabfrage je Konto und Tag, wirft nie (statistik.ts).
+  await aktivVermerken(db, row.accountId);
 
   return { accountId: row.accountId, sessionId: row.id };
 }
@@ -720,6 +726,8 @@ export async function anonymizeAccount(db: Db, accountId: string): Promise<void>
       // Ueber welche Anzeige jemand kam, geht niemanden mehr etwas an. Die
       // schon gezaehlten Runden bleiben in herkunft_zaehler (src/herkunft.ts).
       herkunft: null,
+      // Wann jemand zuletzt da war, ebenso. `aktive_konten` ist schon gezaehlt.
+      zuletztAktiv: null,
       anonymizedAt: now,
     })
     .where(eq(s.account.id, accountId));
