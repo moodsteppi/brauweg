@@ -183,6 +183,11 @@
   min-height: 0;
   overflow: hidden;
   position: relative;
+  /* Senkrecht rollt der Browser selbst, waagerecht gehört der Finger dem
+     Zieh-Pager (hub-wischen.ts). Ohne das entscheidet iOS beim ersten
+     touchmove fürs Rollen, und die Seite rollte schräg mit. Eigene
+     waagerechte Reihen rollen weiter: Dort endet die Suche beim Scroller. */
+  touch-action: pan-y pinch-zoom;
 }
 .hb .hb-start {
   /* Die hb-seite scrollt. Der Start darf mit seinen Karten hoeher werden. */
@@ -587,16 +592,26 @@
   }
 }
 
-/* Zieh-Pager: dieselbe Mechanik wie im alten Hub (front-track), eigene Seiten */
+/* Zieh-Pager (hub-wischen.ts): ein Platz je Reiter nebeneinander, der Track
+   wird per transform verschoben. Der Platz rollt nicht selbst — so bleiben
+   Abstand und Streifen oben stehen, während die hb-seite darin rollt. */
 .hb .hb-track {
   display: flex;
   height: 100%;
   will-change: transform;
 }
-.hb .hb-seite {
+.hb .hb-reiterplatz {
   flex: 0 0 100%;
   min-width: 0;
   height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.hb .hb-seite {
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -1083,11 +1098,13 @@
 :is(.hb, .spe) {
   --hb-oben: max(env(safe-area-inset-top, 0px), var(--hb-probe-oben, 0px));
 }
-.hb.is-ohne-kopf .hb-inhalt {
+/* Je Platz, nicht am ganzen Inhalt: Beim Ziehen stehen zwei Reiter
+   nebeneinander, und jeder bringt seinen eigenen Abstand mit. */
+.hb .hb-reiterplatz:not(.is-start) {
   padding-top: var(--hb-oben);
 }
 /* Die Spielseite läuft mit dem Banner bis unter die Statusleiste */
-.hb.is-ohne-kopf .hb-inhalt:has(.hb-spielseite) {
+.hb .hb-reiterplatz:has(.hb-spielseite) {
   padding-top: 0;
 }
 :is(.hb, .spe) .hb-sp-kopf .hb-rund {
@@ -1780,15 +1797,15 @@
   height: 100%;
   overflow-y: auto;
 }
-.hb.is-ohne-kopf .hb-inhalt:has(.hb-clan) {
+.hb .hb-reiterplatz:has(.hb-clan) {
   padding-top: 0;
 }
 /* Clanhalle und Spielseite laufen mit dem Bild bis unter die Statusleiste.
    Beim Scrollen lief aber auch der Inhalt darunter, und „Name" stand neben
    der Uhrzeit. Ein dunkler Streifen in Höhe der Statusleiste deckt ab, was
    darunter rollt; ungescrollt geht er im dunklen oberen Bildrand unter. */
-.hb.is-ohne-kopf .hb-inhalt:has(.hb-clan)::before,
-.hb.is-ohne-kopf .hb-inhalt:has(.hb-spielseite)::before {
+.hb .hb-reiterplatz:has(.hb-clan)::before,
+.hb .hb-reiterplatz:has(.hb-spielseite)::before {
   content: '';
   position: absolute;
   top: 0;

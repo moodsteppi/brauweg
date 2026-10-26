@@ -77,3 +77,27 @@ Solo-Spiele zeigen beim Nachladen sofort einen schließbaren Ladebildschirm.
 TAFEL: Modi gehören zur kontoabhängigen Spielauswahl mit derselben
 Stimmen-Speicherung, außerhalb der Tisch-Registry. Wischrichtung folgt der
 räumlichen Reiterfolge. Tafelzugang derzeit mit 401 abgewiesen.
+
+
+## Zieh-Pager statt Sprung (26.10.2026, Nachmittag)
+
+Rückmeldung mit Bildschirmvideo: Das Wischen fühlte sich stockend an. Die
+Geste wurde erst beim Loslassen ausgewertet und der Reiter dann hart
+getauscht; der Nachbarreiter hing gar nicht am Track und lud nach dem
+Sprung erst („Spiele werden geladen…"). Jetzt (`hub-wischen.ts`,
+`HubRahmen.tsx`):
+
+- Jeder Reiter hat einen festen Platz im Track (`hb-reiterplatz`); die Seite
+  folgt dem Finger 1:1, die Nachbarseite schiebt sich sichtbar mit herein, am
+  Rand ohne Nachbarn ein Gummiband.
+- Loslassen: Ziel ist, wo die Seite mit ihrem Schwung (Fingertempo × 200 ms)
+  hinkäme; ab der halben Breite rastet der Nachbar ein. Das Einrasten
+  übernimmt das Fingertempo (160–340 ms), erneutes Anfassen fängt die Seite
+  mitten in der Bewegung.
+- Nachbarn werden beim Anfassen angehängt, einmal geladene Reiter bleiben
+  hängen (`inert`, solange sie nicht offen sind). Der Kopf des Starts zieht im
+  Platz des Starts mit, der Abstand zur Statusleiste steht je Platz.
+- `touch-action: pan-y pinch-zoom` am Inhalt: Senkrecht rollt der Browser,
+  waagerecht der Pager. Bei `prefers-reduced-motion` rastet es ohne Animation ein.
+- iOS-Hülle: Die Randgeste von links blättert im Hub nicht und lässt die
+  Touches im WebView (`cancelsTouchesInView = false`), also kein Konflikt.
