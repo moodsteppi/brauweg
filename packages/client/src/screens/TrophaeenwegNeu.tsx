@@ -84,11 +84,12 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
       {stufe.truhe && <img className="reise-truhe" src={truhenBild(stufe.truhe.grad)} alt="" />}
       <span className="reise-lohntext"><strong>{stufe.truhe ? t(`truhe.${stufe.truhe.grad}`) : 'Belohnung'}</strong>
         {stufe.gegenstand && <small>{t(`weg.${stufe.gegenstand}`)}</small>}
+        {stufe.truhe && (stufe.muenzen ?? 0) > 0 && <small className="reise-bonus"><img src="/hub/muenze.png" alt="" />+{stufe.muenzen!.toLocaleString('de-DE')} Münzen extra</small>}
         <em>{stufe.geholt ? 'Erhalten' : bereit ? laeuft === stufe.schwelle ? 'Wird geholt…' : 'Jetzt holen' : `Noch ${(stufe.schwelle - stand).toLocaleString('de-DE')} Trophäen`}</em>
       </span>
     </>;
     return bereit ? <button type="button" className="reise-lohn ist-bereit" disabled={laeuft !== null} onClick={() => holen(stufe)}
-      aria-label={`${name}: ${stufe.truhe ? t(`truhe.${stufe.truhe.grad}`) : 'Belohnung'}${stufe.gegenstand ? ` und ${t(`weg.${stufe.gegenstand}`)}` : ''} holen`}>{inhalt}</button>
+      aria-label={`${name}: ${stufe.truhe ? t(`truhe.${stufe.truhe.grad}`) : 'Belohnung'}${stufe.gegenstand ? ` und ${t(`weg.${stufe.gegenstand}`)}` : ''}${stufe.truhe && stufe.muenzen ? ` und ${stufe.muenzen} Münzen extra` : ''} holen`}>{inhalt}</button>
       : <div className={`reise-lohn${stufe.geholt ? ' ist-geholt' : ''}`}>{inhalt}</div>;
   };
 
@@ -125,7 +126,7 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
             ? <button className="ist-bereit" disabled={laeuft !== null} onClick={() => holen(s)} aria-label={`Checkpoint ${s.schwelle}: ${s.muenzen ?? 0} Münzen holen`}>{text}</button>
             : <span className={s.geholt ? 'ist-geholt' : ''}>{text}</span>}</div>;
         })}
-        {weiter.map(s => <div className="reise-station" key={s.schwelle} style={{ top: punktY(s.schwelle), left: `${punktX(punktY(s.schwelle)) / 4}%` }}><span className="reise-marke">{s.schwelle.toLocaleString('de-DE')}</span>{belohnung(s, `Silbertruhe bei ${s.schwelle} Trophäen`)}</div>)}
+        {weiter.map(s => <div className="reise-station" key={s.schwelle} style={{ top: punktY(s.schwelle), left: `${punktX(punktY(s.schwelle)) / 4}%` }}><span className="reise-marke">{s.schwelle.toLocaleString('de-DE')}</span>{belohnung(s, `Belohnung bei ${s.schwelle} Trophäen`)}</div>)}
         <div className="reise-ich" style={{ top: ichY, left: `${punktX(ichY) / 4}%` }} aria-label={`Du bist hier: ${stand} Trophäen`}><Pinguin getragen={getragen} groesse={5} titel="Dein Pinguin aus dem Kleiderschrank" /><span>Du bist hier<small>{stand.toLocaleString('de-DE')} 🏆</small></span></div>
         <div className="reise-anfang">Spiele. Gewinne. Entdecke.</div>
       </div>

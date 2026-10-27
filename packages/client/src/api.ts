@@ -338,7 +338,7 @@ export interface WegStufe {
   /** Station (Truhe + Gegenstand), Checkpoint (feste Münzen), weiter (über 1.000). */
   art: 'station' | 'checkpoint' | 'weiter';
   truhe: { grad: WegGrad; von: number; bis: number } | null;
-  /** Feste Münzen am Checkpoint, sonst null. */
+  /** Feste Münzen am Checkpoint oder zusätzlicher Bonus zur Truhe. */
   muenzen: number | null;
   /** Kennung des Gegenstands (`account_cosmetic`), sonst null. Name: `weg.<kennung>` in i18n. */
   gegenstand: string | null;

@@ -13,7 +13,7 @@
  *    Gegenstand. Schwellen und Reihenfolge folgen `BIOME` in
  *    `packages/client/src/screens/Pfad.tsx`.
  *  - **Checkpoints** alle 100 bis 1000, die keine Station sind: feste Muenzen.
- *  - **Weiter** ueber 1000: alle 250 eine Silbertruhe, ohne Ende.
+ *  - **Weiter** ueber 1000: bei 1250 eine Diamanttruhe mit Muenzbonus, danach alle 250 eine Silbertruhe.
  *
  * **Diese Datei importiert absichtlich nichts.** Sie ist die eine Liste, die
  * auch der Client-Test liest (`packages/client/src/trophaeenweg.test.ts` haelt
@@ -74,7 +74,7 @@ export interface WegStufe {
   readonly art: WegArt;
   /** Grad der Truhe, oder null, wenn es feste Muenzen gibt. */
   readonly truhe: WegGrad | null;
-  /** Feste Muenzen (nur Checkpoints), sonst null. */
+  /** Feste Muenzen am Checkpoint oder zusaetzlicher Bonus zur Truhe. */
   readonly muenzen: number | null;
   /** Kennung des Gegenstands (nur Stationen), sonst null. */
   readonly gegenstand: string | null;
@@ -99,6 +99,9 @@ export function wegStufe(schwelle: number): WegStufe | null {
     return schwelle % 100 === 0
       ? { schwelle, art: 'checkpoint', truhe: null, muenzen: CHECKPOINT_MUENZEN, gegenstand: null }
       : null;
+  }
+  if (schwelle === WEG_FEST_BIS + WEITER_ABSTAND) {
+    return { schwelle, art: 'weiter', truhe: 'diamant', muenzen: 100, gegenstand: null };
   }
   return schwelle > WEG_FEST_BIS && schwelle % WEITER_ABSTAND === 0
     ? { schwelle, art: 'weiter', truhe: WEITER_TRUHE, muenzen: null, gegenstand: null }
@@ -126,7 +129,7 @@ export function wegStufenBis(bis: number): WegStufe[] {
 /**
  * Bis wohin der Weg gezeigt wird: alles Erreichte, dazu die naechste Stufe
  * ueber 1000 als Ziel. Wer bei 773 steht, sieht also schon die erste
- * Silbertruhe bei 1250 - ein Weg, der am Sternenhafen scheinbar endet, gaebe
+ * Diamanttruhe mit Muenzbonus bei 1250 - ein Weg, der am Sternenhafen scheinbar endet, gaebe
  * keinen Grund weiterzuspielen.
  */
 export function wegSichtbarBis(summe: number): number {

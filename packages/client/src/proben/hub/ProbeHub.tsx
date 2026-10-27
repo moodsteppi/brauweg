@@ -98,7 +98,7 @@ const probeWeg: WegStufe[] = [
   WEG_STUFE(800, 'checkpoint', null, null, false),
   WEG_STUFE(900, 'checkpoint', null, null, false),
   WEG_STUFE(1000, 'station', 'diamant', 'aura-sterne', false),
-  WEG_STUFE(1250, 'weiter', 'silber', null, false),
+  { ...WEG_STUFE(1250, 'weiter', 'diamant', null, false), muenzen: 100 },
 ];
 api.weg = async () => ({
   trophaeen: 773,
@@ -107,7 +107,7 @@ api.weg = async () => ({
 });
 api.wegHolen = async (schwelle) => {
   const stufe = probeWeg.find((s) => s.schwelle === schwelle)!;
-  const coins = stufe.truhe ? Math.round((stufe.truhe.von + stufe.truhe.bis) / 2) : (stufe.muenzen ?? 0);
+  const coins = (stufe.truhe ? Math.round((stufe.truhe.von + stufe.truhe.bis) / 2) : 0) + (stufe.muenzen ?? 0);
   Object.assign(stufe, { geholt: true, coins });
   return { schwelle, grad: stufe.truhe?.grad ?? null, coins, gegenstand: stufe.gegenstand, gegenstandNeu: true, stand: 2480 + coins };
 };

@@ -41,7 +41,7 @@ export interface WegStufeAnsicht {
   readonly art: WegArt;
   /** Die Truhe mit ihrer Spanne — angezeigt, damit nichts geraten wird. */
   readonly truhe: (Spanne & { readonly grad: Grad }) | null;
-  /** Feste Muenzen (Checkpoint), sonst null. */
+  /** Feste Muenzen am Checkpoint oder zusaetzlicher Bonus zur Truhe. */
   readonly muenzen: number | null;
   /** Kennung des Gegenstands (Station), sonst null. */
   readonly gegenstand: string | null;
@@ -171,7 +171,8 @@ export async function wegHolen(db: Db, accountId: string, schwelle: number): Pro
   const grad: Grad | null = stufe.truhe;
   // Gewuerfelt wird vor dem Eintrag, damit die Zeile gleich das Ergebnis traegt.
   // Wer den Eintrag verliert (zweite Anfrage), dessen Wurf verfaellt ungesehen.
-  const coins = grad ? wuerfeln(grad) : (stufe.muenzen ?? 0);
+  // Die Truhe und ihr fester Bonus werden zusammen gespeichert und einmal ausgezahlt.
+  const coins = (grad ? wuerfeln(grad) : 0) + (stufe.muenzen ?? 0);
 
   const eingetragen = await db
     .insert(s.wegAbholung)

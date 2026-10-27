@@ -67,3 +67,18 @@ mehr auf den echten Tisch.
 
 TAFEL: Trophäenreise → Sterneninseln für Folgetruhen; Lernpfad → Parteien
 mit Erklärung der Hochzeit aus den Standardregeln. Tafelzugang weiter 401.
+
+## Belohnung bei 1.250 Trophäen
+
+Die erste Folgestufe gibt nun eine Diamanttruhe plus 100 feste Münzen.
+Beides kommt aus dem Serverkatalog; die Anzeige übernimmt den Grad und
+zeigt den Bonus ausdrücklich als „Münzen extra“. Die Öffnung zeigt den
+Gesamtbetrag aus gewürfeltem Truheninhalt und festem Bonus.
+
+Die vorhandene Zeile in `weg_abholung` speichert den Gesamtbetrag. Der
+Eindeutigkeitsschutz gilt für das ganze Paket, auch bei gleichzeitigen
+Anfragen. Keine Migration, kein Rücksetzen bereits abgeholter Stufen und
+keine nachträgliche zweite Auszahlung. Ab 1.500 bleiben die Silbertruhen.
+
+TAFEL: Trophäenweg → 1.250 Diamanttruhe mit 100 Münzen Bonus; Auszahlen →
+Truheninhalt plus feste Münzen gemeinsam und einmalig gespeichert.

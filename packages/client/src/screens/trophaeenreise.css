@@ -58,3 +58,6 @@
 .trophaeenreise .reise-fehler button { margin-left: 10px; background: none; color: #ffdd93; border: 0; text-decoration: underline; min-height: 44px; }
 .trophaeenreise button:focus-visible, .trophaeenreise .reise-scroll:focus-visible { outline: 3px solid #fff0ac; outline-offset: -3px; }
 @media (min-width: 600px) { .trophaeenreise .reise-lohn { width: 176px; } .trophaeenreise .reise-truhe { width: 96px; height: 83px; } }
+
+.trophaeenreise .reise-lohn .reise-bonus { display: flex; align-items: center; gap: 4px; color: #ffe08b; font-weight: 800; }
+.trophaeenreise .reise-bonus img { width: 16px; height: 16px; object-fit: contain; }
