@@ -109,28 +109,45 @@ Zeile, wenn der Rückweg aktiv ist.
 ### Umfang der Ausgabe: `UMFANG`
 
 Welche Spiele und Funktionen eine Ausgabe überhaupt anbietet — für Webseite
-und App aus **einer** Liste (`packages/server/src/umfang.ts`). Kommagetrennt,
-Spielkennungen der Registry plus diese Funktionen: `kartenmanufaktur`,
-`browort`, `clanwort`, `lernpfad`, `prosubway`, `clankrieg`, `clanchat`,
-`shop`, `abstimmung`, `profilbild`, `figur`, `geburtstag`.
+und App aus **einer** Liste (`packages/server/src/umfang.ts`). Kommagetrennt:
+Spielkennungen der Registry (auch die Vorschau-Spiele ohne Modul wie
+`schafkopf`), die angekündigten Modi `mehrkampf` und `prosubway` und diese
+Funktionen: `kartenmanufaktur`, `browort`, `clanwort`, `lernpfad`,
+`prosubway`, `clankrieg`, `clanchat`, `shop`, `abstimmung`, `profilbild`,
+`figur`, `geburtstag`.
 
-**Vorschlag für die Produktion (Robin, 23.10.2026): die Webseite zeigt genau
-den Umfang der App.**
+**Zeile für die Produktion (Board-Karte b75320d0, 27.10.2026): die Webseite
+zeigt genau den Umfang der App, samt Spielabstimmung.**
 
 ```
-UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad
+UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau
 ```
 
-Das sind die fünf Spiele, die in der App `spielbar` sind (`FREIGABE` in
-`registry.ts`; die Partykiste steht seit dem 21.10.2026 auch in der App auf
-„Bald") und die Solo-Funktionen, die die App zeigt. Weg sind damit auf der
-Webseite: alle übrigen Spiele, Pro-Subway, Clankrieg und Clan-Chat sowie
+Damit **an**:
+
+- die vier Spiele, die in der App `spielbar` sind — Doppelkopf, Skat, Filler,
+  BroChess (`FREIGABE` in `registry.ts`);
+- die Solo-Funktionen der App: Kartenmanufaktur, Browort, Clanwort,
+  Lernpfad samt Übungsrunde (hängt an `doppelkopf`);
+- die **Spielabstimmung** (`abstimmung`) unter „Kommt bald" mit neun
+  Titeln: Mehrkampf und die acht Vorschau-Spiele Schafkopf, Rommé, Mau-Mau,
+  Schwimmen, Backgammon, Bauernskat, Phase 10, Drecksau
+  (`docs/APP-ABSTIMMUNG-NAVIGATION.md`). Jeder Titel braucht dafür seine
+  eigene Kennung UND `abstimmung`: Ohne seine Kennung fehlt er ganz, ohne
+  `abstimmung` stehen die Vorschau-Spiele ohne Stimme da und der Mehrkampf
+  fehlt (bis zum 27.10.2026 kam er allein mit `abstimmung` mit). Gesperrt
+  wird ohne `abstimmung` die Route `POST /api/games/:gameId/vote`, im Client
+  verschwinden Stimmenzahl und „Dafür" (`SpieleNeu.tsx`).
+
+Damit **weg**, auf beiden Plattformen: alle übrigen Spiele — auch als
+„Kommt bald" (Partykiste, Zauberer, Cambio, Poker, Mememory, Eiland,
+Feldherr, Tafelrunde, Golf, BroCooked) und die Vorschau Werwolf —,
+Pro-Subway (Runner und seine Ankündigung), Clankrieg und Clan-Chat sowie
 alles, was es in der App nicht gibt:
 
 | Funktion | gesperrte Route(n) | Einstieg im Client |
 | --- | --- | --- |
 | `shop` | `/api/shop/pakete…`, `/api/shop/truhen…`, `POST /api/shop/:itemId/buy` mit Edelsteinen | Shop-Reiter und Plus-Knöpfe (`GameSelect.tsx`), Edelsteinpreise (`mitEdelsteinen` in `laufzeit.ts`), Shop-Verweis an gesperrten Paketen (`inhaltspakete.ts`), Kaufwappen (`Clan.tsx`) |
-| `abstimmung` | `POST /api/games/:gameId/vote` | Stimmenzahl und „Dafür" (`SpieleNeu.tsx`) |
 | `profilbild` | `PATCH /api/me` | Hochladen am Profilbild (`GameSelect.tsx`, `ProfilBild`) |
 | `figur` | `/api/me/figur` | 3D-Figur und Werkstatt im Profil (`GameSelect.tsx`), Pinguin-Karte (`SammlungNeu.tsx`) |
 | `geburtstag` | `POST /api/me/birthday-reward` | Geburtstagsabschnitte im Profil (`GameSelect.tsx`); `/api/me` meldet `birthdayRewardClaimable: false` |
@@ -160,8 +177,11 @@ sie bleibt auf der Webseite an.
   frei, wie `FREIGABE` und die `inApp`-Weichen es heute sagen.
 - Der Client bekommt die Liste mit `/api/me` (`umfang`, `null` = alles); ein
   Deploy genügt, installierte Apps folgen beim nächsten Öffnen.
-- Beim Start schreibt der Server eine Zeile `Umfang: …`, vertippte Namen als
-  `UMFANG unbekannt: …`.
+- Beim Start schreibt der Server eine Zeile in die Railway-Logs: `Umfang
+  (18): abstimmung, backgammon, …` mit der Zahl der Einträge, ohne Variable
+  `Umfang: alles an (UMFANG nicht gesetzt, wie staging)` — steht das auf der
+  Produktion, greift die Variable nicht. Vertippte Namen kommen als Warnung
+  `UMFANG unbekannt: …` dazu.
 - Bewusst kein Schalter in der Oberfläche und keine Einstellung je Konto.
 
 ### Moderation

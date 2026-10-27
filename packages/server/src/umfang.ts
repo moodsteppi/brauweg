@@ -2,11 +2,19 @@
  * Der Umfang: welche Spiele und Funktionen diese Ausgabe ueberhaupt anbietet.
  *
  * Eine Umgebungsvariable, `UMFANG`, kommagetrennt — Spielkennungen aus der
- * Registry und die Funktionen unten:
+ * Registry (auch die Vorschau-Spiele ohne Modul), die angekuendigten Modi
+ * (`mehrkampf`, `prosubway`; `umfangKennungen` in games/registry.ts) und
+ * die Funktionen unten. Die Zeile fuer den Release:
  *
- *   UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad
+ *   UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,
+ *          abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,
+ *          bauernskat,phase10,drecksau
  *
- * (Der vorgeschlagene Wert fuer die Produktion steht in docs/APP-RELEASE.md.)
+ * (In einer Zeile ohne Leerzeichen; begruendet in docs/APP-RELEASE.md.)
+ * Eine Ankuendigung, fuer die man unter „Kommt bald" stimmen kann, braucht
+ * ZWEI Eintraege: ihre eigene Kennung und `abstimmung`. Ohne ihre Kennung
+ * fehlt sie ganz; ohne `abstimmung` stehen die Vorschau-Spiele dort ohne
+ * Stimme, und die Modi fehlen ganz (sie haben nur die Stimme).
  *
  * **Ohne Variable ist alles an.** Das ist `staging`: Dort soll jeder Teil
  * laufen, auch der, der fuer die Produktion noch nicht freigegeben ist. Auf
@@ -135,9 +143,11 @@ export function umfangFuerClient(umfang: Umfang): string[] | null {
 
 /** Eine Zeile fuer das Startprotokoll. */
 export function umfangZeile(umfang: Umfang, unbekannt: readonly string[]): string {
-  if (umfang.alles) return 'Umfang: alles an (UMFANG nicht gesetzt)';
+  // „wie staging" steht dabei, weil das in den Railway-Logs der Produktion
+  // der Fehler ist, nach dem man sucht: die Variable greift nicht.
+  if (umfang.alles) return 'Umfang: alles an (UMFANG nicht gesetzt, wie staging)';
   return (
-    `Umfang: ${umfangFuerClient(umfang)?.join(', ')}` +
+    `Umfang (${umfang.frei.size}): ${umfangFuerClient(umfang)?.join(', ')}` +
     (unbekannt.length > 0 ? `; UMFANG unbekannt: ${unbekannt.join(', ')}` : '')
   );
 }

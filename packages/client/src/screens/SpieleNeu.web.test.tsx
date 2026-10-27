@@ -98,7 +98,7 @@ describe('Spiele auf der Webseite', () => {
   });
 
   it('ohne Abstimmung im Umfang: keine Stimmknöpfe, der Mehrkampf behält seine Marke unter „Modi"', async () => {
-    setzeUmfang(['doppelkopf', 'skat', 'schafkopf']);
+    setzeUmfang(['doppelkopf', 'skat', 'schafkopf', 'mehrkampf']);
     // Der Server kündigt den Mehrkampf dann gar nicht an (abstimmModiFuer).
     liste.spiele = WEB().filter((g) => g.id === 'doppelkopf' || g.id === 'skat' || g.id === 'schafkopf');
     await zeige();
@@ -106,5 +106,13 @@ describe('Spiele auf der Webseite', () => {
     expect(screen.getByText('Brauweg-Bock')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Dafür' })).toBeNull();
     expect(within(zeile('Schafkopf')).getByText('Bald')).toBeTruthy();
+  });
+
+  it('ohne Mehrkampf im Umfang fehlt auch seine Marke unter „Modi"', async () => {
+    setzeUmfang(['doppelkopf', 'skat', 'schafkopf']);
+    liste.spiele = WEB().filter((g) => g.id === 'doppelkopf' || g.id === 'skat' || g.id === 'schafkopf');
+    await zeige();
+    expect(screen.queryByText('Modi')).toBeNull();
+    expect(screen.queryByText('Brauweg-Bock')).toBeNull();
   });
 });

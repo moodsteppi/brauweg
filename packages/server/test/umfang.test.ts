@@ -17,10 +17,10 @@ import { eq } from 'drizzle-orm';
 
 import { APP_ORIGIN, FUNKTION_ZU_ROUTE, SPIEL_ZU_ROUTE, buildApp } from '../src/http/app.js';
 import * as schema from '../src/db/schema.js';
-import { freigabeAuf, registry } from '../src/games/registry.js';
+import { freigabeAuf, registry, umfangKennungen } from '../src/games/registry.js';
 import { PartyRuntime } from '../src/runtime/party.js';
 import { createSession } from '../src/auth/service.js';
-import { ALLES, FUNKTIONEN, umfangAusUmgebung, type Umfang } from '../src/umfang.js';
+import { ALLES, FUNKTIONEN, umfangAusUmgebung, umfangZeile, type Umfang } from '../src/umfang.js';
 import { createTestContext, createVerifiedAccount, seedInvite } from './helpers.js';
 
 const SPIELE = registry.all().map((meta) => meta.id as string);
@@ -484,4 +484,79 @@ test('ohne Profilbild bleiben die anderen Wege an /api/me offen — Konto loesch
   assert.ok(alleRouten(s.app).includes('DELETE /api/me'));
   const loeschen = await s.app.inject({ method: 'DELETE', url: '/api/me', headers: s.anna(), payload: {} });
   assert.notEqual(loeschen.json()?.code, 'nichtImUmfang', loeschen.body);
+});
+
+// ---------------------------------------------------------------------------
+// Die Zeile fuer den Release (docs/APP-RELEASE.md)
+// ---------------------------------------------------------------------------
+
+/** Genau die Zeile aus docs/APP-RELEASE.md — aendert sie sich dort, hier mit. */
+const RELEASE =
+  'doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,' +
+  'schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau';
+/** Die angekuendigten Titel der Zeile — alle mit Stimme unter „Kommt bald". */
+const RELEASE_BALD = ['backgammon', 'bauernskat', 'drecksau', 'maumau', 'mehrkampf', 'phase10', 'romme', 'schafkopf', 'schwimmen'];
+
+test('die Release-Zeile kennt der Start ganz — keine Kennung wird als unbekannt gemeldet', () => {
+  /*
+   * Mit denselben Kennungen wie index.ts. Bis zum 27.10.2026 meldete der Start
+   * `mehrkampf` als unbekannt: Der Modus haengte allein an `abstimmung`.
+   */
+  const { umfang, unbekannt } = umfangAusUmgebung(RELEASE, umfangKennungen());
+  assert.deepEqual(unbekannt, []);
+  assert.equal(umfang.frei.size, 18);
+  assert.match(umfangZeile(umfang, unbekannt), /^Umfang \(18\): abstimmung, backgammon, /);
+  assert.equal(umfangZeile(ALLES, []), 'Umfang: alles an (UMFANG nicht gesetzt, wie staging)');
+  assert.match(umfangZeile(lies('skat,mau-mau').umfang, ['mau-mau']), /; UMFANG unbekannt: mau-mau$/);
+});
+
+test('mit der Release-Zeile: vier Spiele spielbar, neun Titel mit Stimme — auf Webseite und App', async (t) => {
+  const s = await setup(RELEASE);
+  t.after(() => s.close());
+
+  for (const plattform of ['web', 'app'] as const) {
+    const liste = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna(plattform) })).json() as {
+      id: string; availability: string; abstimmbar: boolean;
+    }[];
+    const spielbar = liste.filter((g) => g.availability === 'playable').map((g) => g.id).sort();
+    assert.deepEqual(spielbar, ['brochess', 'doppelkopf', 'filler', 'skat'], plattform);
+    const bald = liste.filter((g) => g.availability === 'preview');
+    assert.deepEqual(bald.map((g) => g.id).sort(), RELEASE_BALD, plattform);
+    for (const titel of bald) {
+      assert.equal(titel.abstimmbar, true, `${titel.id} (${plattform})`);
+      const res = await s.app.inject({ method: 'POST', url: `/api/games/${titel.id}/vote`, headers: s.anna(plattform) });
+      assert.equal(res.statusCode, 200, `${titel.id} (${plattform}): ${res.body}`);
+    }
+    // Was nicht in der Zeile steht, ist weg — auch die Stimme dafuer.
+    for (const id of ['werwolf', 'prosubway', 'wizard']) {
+      const res = await s.app.inject({ method: 'POST', url: `/api/games/${id}/vote`, headers: s.anna(plattform) });
+      assert.equal(res.statusCode, 404, `${id} (${plattform})`);
+    }
+  }
+});
+
+test('die Release-Zeile ohne `abstimmung`: keine Stimme, kein Mehrkampf', async (t) => {
+  const ohne = RELEASE.split(',').filter((k) => k !== 'abstimmung').join(',');
+  const s = await setup(ohne);
+  t.after(() => s.close());
+
+  for (const plattform of ['web', 'app'] as const) {
+    const liste = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna(plattform) })).json() as { id: string }[];
+    assert.equal(liste.find((g) => g.id === 'mehrkampf'), undefined, plattform);
+    for (const id of ['schafkopf', 'mehrkampf']) {
+      const res = await s.app.inject({ method: 'POST', url: `/api/games/${id}/vote`, headers: s.anna(plattform) });
+      assert.equal(res.statusCode, 404, `${id} (${plattform})`);
+      assert.equal(res.json().code, 'nichtImUmfang', `${id} (${plattform})`);
+    }
+  }
+});
+
+test('der Mehrkampf braucht seine eigene Kennung — `abstimmung` allein reicht nicht', async (t) => {
+  const s = await setup('doppelkopf,abstimmung');
+  t.after(() => s.close());
+  const liste = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna('web') })).json() as { id: string }[];
+  assert.equal(liste.find((g) => g.id === 'mehrkampf'), undefined);
+  const res = await s.app.inject({ method: 'POST', url: '/api/games/mehrkampf/vote', headers: s.anna('web') });
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.json().code, 'gameNotPlayable');
 });
