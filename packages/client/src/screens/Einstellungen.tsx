@@ -26,6 +26,11 @@ const Mitteilungen = lazy(() =>
   import('../push/Mitteilungen').then((m) => ({ default: m.Mitteilungen })),
 );
 
+/** Münz-Code einlösen — nur Webseite, nachgeladen wie die Abschnitte oben. */
+const CodeEinloesenLazy = lazy(() =>
+  import('../anmeldung/CodeEinloesen').then((m) => ({ default: m.CodeEinloesen })),
+);
+
 /**
  * Einstellungen — wie laut, und womit man sich anmeldet.
  *
@@ -82,10 +87,13 @@ export function MitteilungenBlatt({
 export function EinstellungenBlatt({
   onClose,
   neu = false,
+  onGuthaben,
 }: {
   onClose: () => void;
   /** Neues Hub: dieselben Regler und Abschnitte als Hub-Blatt. */
   neu?: boolean;
+  /** Nach einem eingelösten Münz-Code: Stand in der Kopfzeile neu laden. */
+  onGuthaben?: () => void;
 }): React.JSX.Element {
   const werte = useKlang();
 
@@ -128,10 +136,16 @@ export function EinstellungenBlatt({
             </Suspense>
           )}
 
-          {/* In der App gibt es den Abschnitt nicht (Anmeldearten.tsx). */}
+          {/* In der App nur Apple, nativ — Anmeldearten entscheidet selbst
+              und zeigt nichts, wenn die Hülle den Dialog nicht kann. */}
+          <Suspense fallback={null}>
+            <Anmeldearten />
+          </Suspense>
+
+          {/* Nur auf der Webseite (Apple 3.1.1, CodeEinloesen.tsx). */}
           {!inApp && (
             <Suspense fallback={null}>
-              <Anmeldearten />
+              <CodeEinloesenLazy onEingeloest={onGuthaben} />
             </Suspense>
           )}
         </div>

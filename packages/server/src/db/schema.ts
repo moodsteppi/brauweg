@@ -1565,6 +1565,34 @@ export const statsTag = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Muenz-Codes (27.10.2026) — src/muenzcodes.ts, Migration 0039
+// ---------------------------------------------------------------------------
+
+/**
+ * Einmal-Codes fuer Muenzen. Erzeugt im brotool (Tab „Spielen"), eingeloest
+ * auf der Webseite. Verbraucht ist ein Code, sobald `eingeloestVon` steht.
+ */
+export const muenzCode = pgTable(
+  'muenz_code',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    code: text().notNull(),
+    muenzen: integer().notNull(),
+    notiz: text(),
+    erstellt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    gueltigBis: timestamp({ withTimezone: true }),
+    gesperrt: boolean().notNull().default(false),
+    eingeloestVon: uuid().references(() => account.id),
+    eingeloestAm: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('muenz_code_code_key').on(t.code),
+    index('muenz_code_erstellt_idx').on(t.erstellt),
+    check('muenz_code_muenzen_check', sql`${t.muenzen} > 0`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Browort und Clanwort (Emile, 23.10.2026) — src/browort.ts
 // ---------------------------------------------------------------------------
 
