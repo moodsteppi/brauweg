@@ -1,28 +1,40 @@
 # Altersfreigabe: Apple und IARC (Google Play)
 
-Stand 23.09.2026, für Version 1.0 (Doppelkopf, Skat, Partykiste mit
-Trinkmodus). Jede Antwort ist aus dem Code begründet, nicht aus dem Gefühl.
-**Ergebnis: Apple 18+, IARC voraussichtlich USK 16 / PEGI 16** (18 möglich,
-siehe unten).
+Stand 27.10.2026, für Version 1.0. Jede Antwort ist aus dem Code begründet,
+nicht aus dem Gefühl.
 
-**Nachtrag 13.10.2026:** Farbduell (Filler) und BroChess sind in der App
-dazugekommen. Beide sind Brettspiele zu zweit ohne Einsatz, ohne freien Text
-und ohne Gewalt — an keiner Antwort unten ändert sich dadurch etwas.
+**Was sich seit dem 23.09.2026 geändert hat:** Die Partykiste (Trinkmodus,
+Stufen „pikant"/„derb", Kiffer-Einträge) ist **in der App nicht mehr
+erreichbar** (`partykiste: { web: 'spielbar', app: 'bald' }` in
+`packages/server/src/games/registry.ts`, Commit „App aufräumen", 22.10.2026;
+in der App nirgends sichtbar). Sie trug allein die frühere Einstufung 18+.
+In der App spielbar sind jetzt:
+
+- **Doppelkopf, Skat** — Kartenspiele um Punkte
+- **Farbduell** (Filler), **BroChess** — Brettspiele zu zweit
+- **Doppelkopf lernen** (Lernpfad), **Browort** und **Clanwort**
+  (Wortratespiel), **Kartenmanufaktur** (Aufbauspiel allein)
+
+Produktion schaltet das über `UMFANG`
+(`doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad`,
+`docs/APP-RELEASE.md`).
+
+**Ergebnis: Apple 4+ aus dem Fragebogen, IARC voraussichtlich USK 0 / PEGI 3
+mit Hinweis „Nutzerinteraktion".** Dazu steht eine Entscheidung offen
+(CHECKLISTE, Altersgrenze): Konten gibt es weiter erst **ab 18** (`MIN_AGE`
+in `packages/server/src/birthday.ts`). Siehe „Freigabe und Mindestalter" unten.
 
 Die Antworten müssen **neu gegeben werden**, sobald sich eine Grundlage
-ändert: ein weiteres Spiel wechselt in der App auf `spielbar` (Poker!), der
-Rückweg `APP_PARTYKISTE_TRINKMODUS=aus` / `APP_PARTYKISTE_HAERTE_MAX` wird
-gesetzt, Clan-Chat oder Bild-Upload gehen in der App an, Push kommt.
+ändert: ein weiteres Spiel wechselt in der App auf `spielbar` (Poker =
+simuliertes Glücksspiel, Partykiste = Alkohol), Clan-Chat oder Bild-Upload
+gehen in der App an, Edelsteine/Käufe kommen in die App.
 
 ---
 
 ## Apple — der Fragebogen seit 2025
 
-Apple hat die Stufen 2025 umgestellt: **4+, 9+, 13+, 16+, 18+** (17+ gibt es
-nicht mehr). Die neuen Fragen mussten bis 31.01.2026 beantwortet sein, seit
-September 2026 kommen Pflichtfragen zu Social Media dazu. Die Inhaltsfragen
-haben die Antworten **Keine / Selten (Infrequent) / Häufig (Frequent)**,
-Glücksspiel und Lootboxen Ja/Nein. Die Stufe rechnet Apple selbst aus.
+Stufen **4+, 9+, 13+, 16+, 18+**. Inhaltsfragen: **Keine / Selten / Häufig**,
+Glücksspiel und Lootboxen Ja/Nein. Die Stufe rechnet Apple aus.
 
 Quellen (abgerufen 23.09.2026):
 [Age ratings values and definitions](https://developer.apple.com/help/app-store-connect/reference/age-ratings-values-and-definitions) ·
@@ -30,41 +42,30 @@ Quellen (abgerufen 23.09.2026):
 [Ankündigung 24.07.2025](https://developer.apple.com/news/?id=ks775ehf) ·
 [Social-Media-Fragen](https://developer.apple.com/news/?id=tlur8uvi)
 
-Apples Zuordnung für die Fragen, die hier zählen:
-
-| Inhalt | Selten → | Häufig → |
-| --- | --- | --- |
-| Alkohol, Tabak, Drogen (Konsum oder Bezüge) | 13+ | **18+** |
-| Grober Humor / Schimpfwörter | 9+ | 13+ |
-| Anzügliche Themen (Mature or Suggestive) | 9+ | 16+ |
-| Simuliertes Glücksspiel | 13+ | 18+ |
-| Wettbewerbe | 4+ | 13+ |
-
 ### In-App Controls
 
 | Frage | Antwort | Warum |
 | --- | --- | --- |
 | Parental Controls | **Nein** | Es gibt keine Elternfunktion. |
-| Age Assurance | **Nein** | Das Geburtsdatum ist eine Selbstangabe (Pflicht ab 18, `MIN_AGE` in `packages/server/src/birthday.ts:11`), Gäste geben keins an. Das ist keine Altersprüfung im Sinne der Frage. |
+| Age Assurance | **Nein** | Das Geburtsdatum ist eine Selbstangabe (Pflicht ab 18 für Konten, `MIN_AGE`), Gäste geben keins an. Keine Altersprüfung im Sinne der Frage. |
 
 ### Capabilities
 
 | Frage | Antwort | Warum |
 | --- | --- | --- |
-| Unrestricted Web Access | **Nein** | Die Hülle zeigt nur den gebündelten Client; Impressum und Datenschutz öffnen als Blatt (`docs/APPSTORE.md`, WebAnsicht). Kein freier Browser. |
-| User-Generated Content | **Ja** | Anzeigenamen, Clan-Namen und -Motto (`club.name`/`club.motto`, `packages/server/src/db/schema.ts:643,664`), Figurbemalung, Profilbilder, die auf der Webseite hochgeladen wurden, erscheinen auch in der App. Melden und Blockieren gibt es (`packages/server/src/http/melden-routen.ts`). |
-| Social Media | **Nein** | Kein Feed, nichts wird weiterverbreitet, verstärkt oder kommentiert. |
-| Social Media Disabled for Users Under 13 | entfällt | |
-| Messaging and Chat | **Nein** | Clan-Chat ist in der App aus (`packages/client/src/screens/Clan.tsx:280,338`). Am Tisch gibt es nur vorgefertigte Zurufe (`emotes.ts`), keinen freien Text. **Geht der Clan-Chat in der App an: Ja.** |
+| Unrestricted Web Access | **Nein** | Die Hülle zeigt nur den gebündelten Client; Impressum und Datenschutz öffnen als Blatt (`docs/APPSTORE.md`). |
+| User-Generated Content | **Ja** | Anzeigenamen, Clan-Name und -Motto, Figurbemalung, auf der Webseite hochgeladene Profilbilder erscheinen auch in der App; im Clanwort wählt ein Mitglied das Wort (nur aus der Wortliste des Servers, `wortGueltig` in `packages/server/src/browort/woerter.ts`). Melden und Blockieren gibt es (`packages/server/src/http/melden-routen.ts`). |
+| Social Media | **Nein** | Kein Feed, nichts wird weiterverbreitet oder kommentiert. |
+| Messaging and Chat | **Nein** | Clan-Chat ist in der App aus (`mitChat = !inApp && …` in `packages/client/src/screens/Clan.tsx`). Am Tisch nur vorgefertigte Zurufe (`emotes.ts`). **Geht der Clan-Chat in der App an: Ja.** |
 | Advertising | **Nein** | Kein Werbe-SDK, keine Werbung. |
 
 ### Mature Themes
 
 | Frage | Antwort | Warum |
 | --- | --- | --- |
-| Profanity or Crude Humor | **Häufig** | Partykiste Stufe „derb" (137 Einträge mit `haerte: 3`, z. B. Kategorie „Schimpfwörter", `packages/game-partykiste/src/inhalte/kategorien.ts:101`) und „pikant" („Kneipenniveau, mal anzüglich"). → 13+ |
+| Profanity or Crude Humor | **Keine** | Die Kartenspiele haben keine Texte dieser Art; die Browort-Lösungen sind „ohne Anstößiges" ausgewählt (`LOESUNGEN`, `woerter.ts`). |
 | Horror/Fear Themes | **Keine** | |
-| Alcohol, Tobacco, or Drug Use or References | **Häufig** | Der Trinkmodus ist die Vorgabe der Partykiste (`trinkmodus: an`, `docs/PARTYKISTE.md` Tischoptionen); die Minispielbeschreibungen sagen „Falsch heißt trinken", „Jede Stimme ist ein Schluck". Dazu 16 Kiffer-Einträge auf „pikant" (`niemals.json` n101–n110, `wereher.json` w101–w108). Apple zählt schon Bezüge. → **18+** |
+| Alcohol, Tobacco, or Drug Use or References | **Keine** — wenn `BIERE` aus der Browort-Lösungsliste fliegt | Partykiste nicht in der App; Lernpfad (`packages/game-doppelkopf/src/lernen.ts`) und Kartenmanufaktur ohne Bezüge (Suche nach Bier/Kneipe/Schnaps/Prost/Kater, 27.10.2026). **Aber:** `LOESUNGEN` in `packages/server/src/browort/woerter.ts` enthält `BIERE` — als Tageswort ein Alkoholbezug, ehrlich „Selten" → **13+**. Wort aus `LOESUNGEN` nehmen (in `ERLAUBT` darf es bleiben, Raten ist kein Bezug der App), dann „Keine". `KATER` ist das Tier und bleibt. |
 
 ### Medical or Wellness
 
@@ -77,15 +78,15 @@ Apples Zuordnung für die Fragen, die hier zählen:
 
 | Frage | Antwort | Warum |
 | --- | --- | --- |
-| Mature or Suggestive Themes | **Häufig** | Auf „derb" ausdrücklich sexuelle Fragen und Kategorien (`mehrheit.ts:95–98`: „Sex lieber morgens oder abends?", `kategorien.ts:102`: „Wörter für Sex"), auf „pikant" Anzügliches. Die Einträge kommen nur auf Wunsch der Runde — ehrlich wäre auch „Selten", aber „Häufig" ändert das Ergebnis nicht (18+ kommt vom Alkohol) und lässt keine Angriffsfläche. → 16+ |
-| Sexual Content or Nudity | **Keine** | Keine Bilder, keine Beschreibung sexueller Handlungen — nur Fragen und Kategorien, über die am Tisch geredet wird. |
+| Mature or Suggestive Themes | **Keine** | Die anzüglichen Partykiste-Inhalte sind in der App nicht erreichbar. |
+| Sexual Content or Nudity | **Keine** | |
 | Graphic Sexual Content and Nudity | **Keine** | |
 
 ### Violence
 
 | Frage | Antwort | Warum |
 | --- | --- | --- |
-| Cartoon or Fantasy Violence | **Keine** | Die drei Spiele haben keine. (Tafelrunde und Feldherr stehen auf „Bald" — **wechseln sie in die App: neu beantworten.**) |
+| Cartoon or Fantasy Violence | **Keine** | Keins der Spiele hat Kampf. (Tafelrunde, Feldherr: „Bald" — **wechseln sie in die App: neu beantworten.**) |
 | Realistic Violence | **Keine** | |
 | Prolonged Graphic or Sadistic Realistic Violence | **Keine** | |
 | Guns or Other Weapons | **Keine** | |
@@ -94,69 +95,70 @@ Apples Zuordnung für die Fragen, die hier zählen:
 
 | Frage | Antwort | Warum |
 | --- | --- | --- |
-| Gambling (Echtgeld) | **Nein** | Nirgends Einsätze mit Geld, keine Käufe in der App. |
-| Simulated Gambling | **Keine** | Doppelkopf und Skat werden um Punkte gespielt, nicht um Einsätze. Poker (Spielgeld „BroJetons") steht in der App auf „Bald" und lässt sich nicht starten (`FREIGABE` in `packages/server/src/games/registry.ts:165`). Bus fahren und Königsbecher benutzen Karten, aber ohne Wetteinsatz. **Wechselt Poker in die App: Häufig → 18+.** |
+| Gambling (Echtgeld) | **Nein** | Keine Einsätze, keine Käufe in der App. |
+| Simulated Gambling | **Keine** | Doppelkopf und Skat um Punkte. Poker steht in der App auf „Bald". **Wechselt Poker in die App: Häufig → 18+.** |
 | Contests | **Keine** | Ranglisten und Trophäen ohne Preise. |
-| Loot Boxes | **Nein** | Truhen gibt es aus Tagesaufgaben, nie gegen Geld; der Shop ist in der App aus (`zeigeKaufbares` in `GameSelect.tsx:128`). Wer auch hier vorsichtig sein will: „Ja" ergäbe 9+ und ändert das Ergebnis nicht. |
+| Loot Boxes | **Nein** | Truhen gibt es aus Tagesaufgaben und dem Trophäenweg, nie gegen Geld; in der App wird nur mit erspielten Münzen gekauft (`nurMuenzenInApp`, `mitEdelsteinen()` in `packages/client/src/laufzeit.ts`). Vorsichtiger: „Ja" ergäbe 9+. |
 
-### Ergebnis Apple: **18+**
+### Ergebnis Apple: **4+** (mit „Loot Boxes: Ja" 9+; solange `BIERE` Tageswort sein kann 13+)
 
-Getragen allein von „Alkohol häufig". Ohne Trinkmodus und ohne Kiffer-Sprüche
-(`APP_PARTYKISTE_TRINKMODUS=aus` und `APP_PARTYKISTE_HAERTE_MAX=1`, siehe
-`docs/APP-RELEASE.md` Abschnitt 2) blieben Alkoholbezüge in Texten (Glühwein,
-Kater) — „Selten" → 13+, zusammen mit derbem Humor (bei `HAERTE_MAX=1` fällt
-auch der weg) wäre die App dann bei **13+**. Das ist der Rückweg, falls Apple
-nach 1.4.3 ablehnt.
+---
 
-**Hinweis für Tom beim Ausfüllen:** Apple kann die Stufe „manuell höher
-setzen" anbieten — nicht nötig, 18+ ist schon die höchste.
+## Freigabe und Mindestalter
+
+Die Store-Stufe und die Altersgrenze der Konten sind zwei Dinge:
+
+- **Store-Stufe** sagt, was die Inhalte vertragen. Ohne Partykiste: 4+.
+- **`MIN_AGE = 18`** sagt, wer ein Konto anlegen darf. Gäste spielen ohne
+  Altersangabe.
+
+Eine 4+-App, die bei der Registrierung „mindestens 18" verlangt, ist
+erlaubt, wirkt aber widersprüchlich — und die Datenschutzerklärung sagt „ab
+18". Drei Wege (**Robin entscheidet**, CHECKLISTE):
+
+1. **18 bleibt, Stufe manuell auf 18+ setzen.** Apple bietet beim Ausfüllen
+   an, die Stufe höher zu setzen. Konsistent mit `MIN_AGE`, Datenschutz und
+   der Webseite (dort gibt es die Partykiste). Kostet Reichweite.
+2. **18 bleibt, Stufe 4+/9+.** Inhaltlich richtig, die Altersgrenze bleibt
+   eine Hausregel. Prüfer fragen selten danach.
+3. **`MIN_AGE` auf 16 senken** (DSGVO-Einwilligungsalter in Deutschland),
+   Stufe 4+/9+. Braucht eine Änderung an `birthday.ts`, Texten und
+   Datenschutzerklärung — und die Webseite hat die Partykiste mit Trinkmodus.
+
+Vorschlag: **Weg 1**, solange Web und App dieselben Konten teilen und die
+Partykiste im Web ab 18 bleibt.
 
 ---
 
 ## IARC (Google Play „Inhaltsbewertung")
 
-Den Fragebogen füllt man in der Play Console unter *Richtlinien → App-Inhalte
-→ Einstufung* aus, Kategorie **Spiel**. Den genauen Wortlaut veröffentlicht
-IARC nicht; die Fragen folgen denselben Themen. Unten steht je Thema die
-Antwort und der Grund. Quellen:
+Play Console → *Richtlinien → App-Inhalte → Einstufung*, Kategorie **Spiel**.
+Gilt erst, wenn die Android-App eingereicht wird. Quellen:
 [Play-Hilfe Einstufung](https://support.google.com/googleplay/android-developer/answer/188189),
-[USK im IARC-System](https://usk.de/fuer-unternehmen/spiele-und-apps-pruefen-lassen/spiele-und-apps-im-iarc-system/),
-[PEGI Drugs](https://pegi.info/index.php/drugs).
+[USK im IARC-System](https://usk.de/fuer-unternehmen/spiele-und-apps-pruefen-lassen/spiele-und-apps-im-iarc-system/).
 
 | Thema | Antwort | Warum |
 | --- | --- | --- |
-| Gewalt | **Nein** | wie oben |
+| Gewalt | **Nein** | |
 | Angst, Horror | **Nein** | |
-| Sexualität / Nacktheit | **Nein** zu Darstellung; **Ja** zu sexuellen Anspielungen/Andeutungen | derb/pikant, siehe Apple „Mature or Suggestive" |
-| Glücksspiel | **Nein** (weder echt noch simuliert) | wie oben — **mit Poker in der App: Ja, simuliert** |
-| Sprache: Schimpfwörter | **Ja, mild** | die Texte selbst sind zahm (kein Kraftausdruck im Katalog außer „Pornofilm", „Kater"); die Runde soll auf „derb" Schimpfwörter **nennen** |
-| Derber Humor | **Ja** | Stufe „derb" |
-| Alkohol | **Ja — Bezüge und Aufforderung zum Trinken im Spiel** | Trinkmodus: Wer verliert, trinkt |
-| Tabak | **Nein** | |
-| Drogen | **Ja — Bezüge** (Cannabis, humoristisch) | 16 Kiffer-Einträge; keine Anleitung, kein Kauf |
-| Wird Drogenkonsum verherrlicht / belohnt? | **Nein** | Die Einträge fragen „Wer würde eher bekifft …" — keine Belohnung für Konsum im Spiel |
-| Nutzer interagieren / tauschen Inhalte aus | **Ja** | Mehrspieler mit Fremden an öffentlichen Tischen, sichtbare Namen, Clans. Kein Chat in der App. |
+| Sexualität / Nacktheit | **Nein** | |
+| Glücksspiel | **Nein** | **mit Poker: Ja, simuliert** |
+| Sprache: Schimpfwörter | **Nein** | |
+| Derber Humor | **Nein** | |
+| Alkohol, Tabak, Drogen | **Nein** | Partykiste nicht in der App |
+| Nutzer interagieren / tauschen Inhalte aus | **Ja** | Mehrspieler mit Fremden, sichtbare Namen, Clans. Kein Chat in der App. |
 | Teilt den Standort | **Nein** | |
 | Digitale Käufe | **Nein** | |
 | Werbung | **Nein** | |
 | Uneingeschränkter Internetzugang | **Nein** | |
 
-### Ergebnis IARC: **USK 16, PEGI 16** (erwartet)
+### Ergebnis IARC: **USK 0 / PEGI 3** (erwartet), Hinweis „Nutzerinteraktion"
 
-- **PEGI:** Alkohol/Drogen im Spiel ergibt immer 16 oder 18
-  ([pegi.info](https://pegi.info/index.php/drugs)); 18 dann, wenn die
-  Antworten den Konsum als verherrlichend einstufen.
-- **USK:** Vergleichsfall mit „Alkohol und Drogen positiv oder häufig
-  dargestellt" bekam 16 ([USK-Titel 58449](https://usk.de/usktitle/58449/));
-  bei „unreflektierter Darstellung von Drogenkonsum" ist 18 möglich.
-- Dazu die Hinweise **„Nutzerinteraktion"**. Die IARC-Matrix ist nicht
-  öffentlich — **die tatsächliche Stufe steht erst nach dem Absenden fest**
-  und wird hier nachgetragen.
+Die tatsächliche Stufe steht erst nach dem Absenden fest und wird hier
+nachgetragen (CHECKLISTE).
 
 ### Zielgruppe bei Play (App-Inhalte → Zielgruppe)
 
-**Nur „18 und älter"** ankreuzen. Dann greifen die Familienrichtlinien nicht,
-und es passt zu Apple 18+. Seit dem 23.09.2026 (Robin) lässt die App auch
-Konten erst ab **18** zu (`MIN_AGE = 18`), und die Datenschutzerklärung sagt
-„ab 18 Jahren". Bestandskonten zwischen 16 und 18 bleiben bestehen; ob sie
-gesperrt werden, ist offen (CHECKLISTE C1).
+Hängt an der Entscheidung oben. Mit `MIN_AGE = 18`: **nur „18 und älter"**
+ankreuzen — dann greifen die Familienrichtlinien nicht. Wer jüngere
+Zielgruppen ankreuzt, muss die Familienrichtlinien erfüllen.
