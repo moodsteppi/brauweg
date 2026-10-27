@@ -16,13 +16,16 @@ In der App spielbar sind jetzt:
   (Wortratespiel), **Kartenmanufaktur** (Aufbauspiel allein)
 
 Produktion schaltet das über `UMFANG`
-(`doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad`,
-`docs/APP-RELEASE.md`).
+(`doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau`,
+Robin 27.10.2026: dazu „Kommt bald" mit Abstimmung; die Vorschau-Spiele haben
+kein Spielmodul und sind nicht spielbar, `docs/APP-RELEASE.md`).
 
-**Ergebnis: Apple 4+ aus dem Fragebogen, IARC voraussichtlich USK 0 / PEGI 3
-mit Hinweis „Nutzerinteraktion".** Dazu steht eine Entscheidung offen
-(CHECKLISTE, Altersgrenze): Konten gibt es weiter erst **ab 18** (`MIN_AGE`
-in `packages/server/src/birthday.ts`). Siehe „Freigabe und Mindestalter" unten.
+**Ergebnis: Apple voraussichtlich 13+ aus dem Fragebogen** (Alkohol- und
+Drogenbezug „Selten" über die Clanwort-Wahl, siehe unten). **Robin hat am
+27.10.2026 entschieden:** Die Stufe kommt aus dem Fragebogen, nicht pauschal
+18+, und die Clanwort-Wahl bleibt, wie sie ist. Konten gibt es weiter erst
+**ab 18** (`MIN_AGE` in `packages/server/src/birthday.ts`). Siehe „Freigabe und
+Mindestalter" unten.
 
 Die Antworten müssen **neu gegeben werden**, sobald sich eine Grundlage
 ändert: ein weiteres Spiel wechselt in der App auf `spielbar` (Poker =
@@ -65,7 +68,7 @@ Quellen (abgerufen 23.09.2026):
 | --- | --- | --- |
 | Profanity or Crude Humor | **Keine** | Die Kartenspiele haben keine Texte dieser Art; die Browort-Lösungen sind „ohne Anstößiges" ausgewählt (`LOESUNGEN`, `woerter.ts`). |
 | Horror/Fear Themes | **Keine** | |
-| Alcohol, Tobacco, or Drug Use or References | **Keine** — wenn `BIERE` aus der Browort-Lösungsliste fliegt | Partykiste nicht in der App; Lernpfad (`packages/game-doppelkopf/src/lernen.ts`) und Kartenmanufaktur ohne Bezüge (Suche nach Bier/Kneipe/Schnaps/Prost/Kater, 27.10.2026). **Aber:** `LOESUNGEN` in `packages/server/src/browort/woerter.ts` enthält `BIERE` — als Tageswort ein Alkoholbezug, ehrlich „Selten" → **13+**. Wort aus `LOESUNGEN` nehmen (in `ERLAUBT` darf es bleiben, Raten ist kein Bezug der App), dann „Keine". `KATER` ist das Tier und bleibt. |
+| Alcohol, Tobacco, or Drug Use or References | **Selten** | Partykiste nicht in der App; Lernpfad (`packages/game-doppelkopf/src/lernen.ts`) und Kartenmanufaktur ohne Bezüge (Suche nach Bier/Kneipe/Schnaps/Prost/Kater, 27.10.2026). Das **Tageswort** kommt nur aus `LOESUNGEN` (`packages/server/src/browort/woerter.ts`), dort steht kein solches Wort; `BIERE` steht nur in `NUR_ERLAUBT` (Rate-Wörter). **Aber:** Im **Clanwort** wählt das ausgeloste Mitglied das Wort, geprüft gegen `ERLAUBT` = `LOESUNGEN` + `NUR_ERLAUBT` (`clanwortWaehlen` → `pruefeWort` in `packages/server/src/browort/dienst.ts`). Wählbar sind damit u. a. BIERE, BOWLE, WEINE, DROGE, und alle im Clan sehen das Wort. Robin 27.10.2026: bleibt so, deshalb ehrlich „Selten" → **13+**. Wer 4+ will, beschränkt die Clanwort-Wahl auf `LOESUNGEN`; dann hier „Keine". `KATER` ist das Tier. |
 
 ### Medical or Wellness
 
@@ -86,7 +89,7 @@ Quellen (abgerufen 23.09.2026):
 
 | Frage | Antwort | Warum |
 | --- | --- | --- |
-| Cartoon or Fantasy Violence | **Keine** | Keins der Spiele hat Kampf. (Tafelrunde, Feldherr: „Bald" — **wechseln sie in die App: neu beantworten.**) |
+| Cartoon or Fantasy Violence | **Keine** | Keins der Spiele hat Kampf. (Tafelrunde, Feldherr: „Bald" — **wechseln sie in die App: neu beantworten.**) Im Clanwort sind auch Wörter wie MORDE oder GIFTE wählbar: ein Wort ohne Darstellung, keine Gewalt im Sinne der Frage. |
 | Realistic Violence | **Keine** | |
 | Prolonged Graphic or Sadistic Realistic Violence | **Keine** | |
 | Guns or Other Weapons | **Keine** | |
@@ -100,7 +103,7 @@ Quellen (abgerufen 23.09.2026):
 | Contests | **Keine** | Ranglisten und Trophäen ohne Preise. |
 | Loot Boxes | **Nein** | Truhen gibt es aus Tagesaufgaben und dem Trophäenweg, nie gegen Geld; in der App wird nur mit erspielten Münzen gekauft (`nurMuenzenInApp`, `mitEdelsteinen()` in `packages/client/src/laufzeit.ts`). Vorsichtiger: „Ja" ergäbe 9+. |
 
-### Ergebnis Apple: **4+** (mit „Loot Boxes: Ja" 9+; solange `BIERE` Tageswort sein kann 13+)
+### Ergebnis Apple: **13+** (wegen „Alkohol/Drogen: Selten" über die Clanwort-Wahl; ohne sie 4+, mit „Loot Boxes: Ja" 9+). Apple rechnet die Stufe selbst aus.
 
 ---
 
@@ -108,13 +111,13 @@ Quellen (abgerufen 23.09.2026):
 
 Die Store-Stufe und die Altersgrenze der Konten sind zwei Dinge:
 
-- **Store-Stufe** sagt, was die Inhalte vertragen. Ohne Partykiste: 4+.
+- **Store-Stufe** sagt, was die Inhalte vertragen. Ohne Partykiste: 13+ (Clanwort), sonst 4+.
 - **`MIN_AGE = 18`** sagt, wer ein Konto anlegen darf. Gäste spielen ohne
   Altersangabe.
 
-Eine 4+-App, die bei der Registrierung „mindestens 18" verlangt, ist
-erlaubt, wirkt aber widersprüchlich — und die Datenschutzerklärung sagt „ab
-18". Drei Wege (**Robin entscheidet**, CHECKLISTE):
+**Entschieden (Robin, 27.10.2026):** Stufe nach dem Fragebogen, nicht manuell
+18+. `MIN_AGE` bleibt 18 als Hausregel (Weg 2). Die drei Wege, wie sie zur Wahl
+standen:
 
 1. **18 bleibt, Stufe manuell auf 18+ setzen.** Apple bietet beim Ausfüllen
    an, die Stufe höher zu setzen. Konsistent mit `MIN_AGE`, Datenschutz und
@@ -125,8 +128,7 @@ erlaubt, wirkt aber widersprüchlich — und die Datenschutzerklärung sagt „a
    Stufe 4+/9+. Braucht eine Änderung an `birthday.ts`, Texten und
    Datenschutzerklärung — und die Webseite hat die Partykiste mit Trinkmodus.
 
-Vorschlag: **Weg 1**, solange Web und App dieselben Konten teilen und die
-Partykiste im Web ab 18 bleibt.
+Der frühere Vorschlag war Weg 1; gewählt ist Weg 2.
 
 ---
 
@@ -145,14 +147,14 @@ Gilt erst, wenn die Android-App eingereicht wird. Quellen:
 | Glücksspiel | **Nein** | **mit Poker: Ja, simuliert** |
 | Sprache: Schimpfwörter | **Nein** | |
 | Derber Humor | **Nein** | |
-| Alkohol, Tabak, Drogen | **Nein** | Partykiste nicht in der App |
+| Alkohol, Tabak, Drogen | **Ja, nur als Wort** | Partykiste nicht in der App; im Clanwort sind Wörter wie BIERE oder DROGE wählbar (siehe Apple oben) |
 | Nutzer interagieren / tauschen Inhalte aus | **Ja** | Mehrspieler mit Fremden, sichtbare Namen, Clans. Kein Chat in der App. |
 | Teilt den Standort | **Nein** | |
 | Digitale Käufe | **Nein** | |
 | Werbung | **Nein** | |
 | Uneingeschränkter Internetzugang | **Nein** | |
 
-### Ergebnis IARC: **USK 0 / PEGI 3** (erwartet), Hinweis „Nutzerinteraktion"
+### Ergebnis IARC: steht nach dem Absenden fest (ohne den Wortbezug wäre USK 0 / PEGI 3 zu erwarten), Hinweis „Nutzerinteraktion"
 
 Die tatsächliche Stufe steht erst nach dem Absenden fest und wird hier
 nachgetragen (CHECKLISTE).

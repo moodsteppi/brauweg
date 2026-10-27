@@ -35,15 +35,15 @@ Sprachen: **Deutsch** ist die Hauptsprache, **Englisch** die zweite
 
 | Feld | Wert |
 | --- | --- |
-| Support-URL | `https://www.brauweg-spielen.de/rechtliches/impressum.html` — trägt die Kontaktangaben, **sobald die roten Lücken gefüllt sind** (CHECKLISTE) |
+| Support-URL | `https://www.brauweg-spielen.de/rechtliches/impressum.html` — trägt Toms Kontaktangaben (eingetragen 27.10.2026) |
 | Marketing-URL (optional) | `https://www.brauweg-spielen.de` |
 | Datenschutz-URL | `https://www.brauweg-spielen.de/rechtliches/datenschutz.html` |
 | Konto-löschen-URL (nur Play) | `https://www.brauweg-spielen.de/konto-loeschen` (neu, siehe `DATENSCHUTZ-ANGABEN.md`) |
 | Kategorie App Store | Spiele — Unterkategorien **Karten** und **Gelegenheitsspiele** |
 | Kategorie Google Play | Spiel → **Karten** |
 | Preis | kostenlos, keine In-App-Käufe |
-| Copyright (Apple) | `2026 <NAME WIE IM KONTO>` — Toms Name, solange das Konto Individual ist |
-| Altersfreigabe | siehe `ALTERSFREIGABE.md` (Fragebogen ergibt Apple 4+, IARC USK 0 / PEGI 3; ob manuell 18+, entscheidet Robin — CHECKLISTE) |
+| Copyright (Apple) | `2026 Tom Justus Tiedtke` — Toms Name, solange das Konto Individual ist |
+| Altersfreigabe | siehe `ALTERSFREIGABE.md`: nach Apples Fragebogen, voraussichtlich 13+ (Robin 27.10.2026, CHECKLISTE C1/C2) |
 | Verfügbarkeit | Deutschland, Österreich, Schweiz (Robin, 23.09.2026) — die Texte der App sind nur deutsch |
 
 ---

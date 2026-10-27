@@ -24,7 +24,7 @@ Produktion grenzt das über `UMFANG` ein (`docs/APP-RELEASE.md`).
 
 | # | Punkt | Wer | Status |
 | --- | --- | --- | --- |
-| A1 | **Rechtstexte ausfüllen.** In `impressum.html`, `datenschutz.html` und `konto-loeschen.html` (`packages/client/public/rechtliches/`) stehen noch rote Lücken (`class="luecke"`): Name, Rechtsform, Anschrift, Telefon, USt-IdNr./Kleinunternehmer, Support-Adresse, Datenbankanbieter, Regionen, Protokoll-Aufbewahrung, Datum. **Sie sind so live** auf www.brauweg-spielen.de. Ohne Impressum keine Support-URL. | Robin, Tom | offen |
+| A1 | **Rechtstexte ausfüllen.** Toms Angaben sind eingetragen (27.10.2026, Anbieter Privatperson, ohne USt-Abschnitt). Offen in `datenschutz.html` und `konto-loeschen.html`: Region von Railway (Dienst und Datenbank), Aufbewahrung der Railway-HTTP-Logs in Tagen, Datum der Veröffentlichung. Bis zum Release sind auf www die alten Platzhalter live. | Robin, Tom | teilweise |
 | A2 | **Datenschutzerklärung freigeben.** Entwurf vom 27.10.2026 in `datenschutz.html` (Apple/Google-Anmeldung, Push, Tagesstatistik, Werbekennung, neue Spiele, Löschung). Gegenlesen, idealerweise juristisch. | Robin | offen |
 | A3 | **Sign in with Apple in der App** (PR #330): nach dem Merge in TestFlight mit einer echten Apple-ID durchspielen — neues Konto (Geburtstag-Nachfrage), zweite Anmeldung, „E-Mail verbergen", Verknüpfen in den Einstellungen. Server nimmt `aud` = Bundle-ID an (`APPLE_APP_ID`, vorbelegt). Fähigkeit an der App-ID: legt die automatische Signierung an (signiertes Archiv am 27.10.2026 geprüft). | Tom (TestFlight), Aufsicht | offen |
 | A4 | **Screenshots neu.** Die vom 23.09.2026 zeigen die Partykiste, die es in der App nicht mehr gibt (Apple 2.3.3). Neue Motive: Doppelkopf, Skat, Lernpfad, Browort, Kartenmanufaktur, BroChess (`werkzeug/store/screenshots.mjs`, `SCREENSHOTS.md`). | Aufsicht | offen |
@@ -49,9 +49,9 @@ Produktion grenzt das über `UMFANG` ein (`docs/APP-RELEASE.md`).
 
 | # | Frage | Wer | Status |
 | --- | --- | --- | --- |
-| C1 | **Altersfreigabe und Mindestalter.** Ohne Partykiste ergibt Apples Fragebogen **4+** (ALTERSFREIGABE.md), Konten gibt es aber erst ab 18 (`MIN_AGE`). Vorschlag: 18 behalten und die Stufe in App Store Connect **manuell auf 18+** setzen (Web und App teilen Konten, im Web gibt es die Partykiste). Alternativen dort. | Robin | entscheiden |
-| C2 | **`BIERE` als Browort-Tageswort.** Hebt die Apple-Stufe auf 13+ (Alkoholbezug „Selten"). Vorschlag: aus `LOESUNGEN` in `packages/server/src/browort/woerter.ts` nehmen. Erledigt sich, wenn C1 auf 18+ fällt. | Robin, Aufsicht | entscheiden |
-| C3 | **Datenbank der Produktion vor dem Launch zurücksetzen?** Heute liegen dort Testkonten, Testpartien und Bestenlisten aus der Testphase. Wenn ja: vorher Backup (Railway), Umfang festlegen (alles oder nur Spielstände), Prüfkonto (A6) danach neu, Ankündigung an Testspieler. **Nichts ohne ausdrückliche Freigabe ausführen.** | Robin, Tom | entscheiden |
+| C1 | **Altersfreigabe und Mindestalter.** Stufe nach Apples Fragebogen, nicht manuell 18+; `MIN_AGE` bleibt 18 (ALTERSFREIGABE.md, Weg 2). Erwartet: **13+** (siehe C2). | Robin | entschieden 27.10.2026 |
+| C2 | **Alkohol-/Drogenwörter im Clanwort.** Als Tageswort kommt `BIERE` nie dran (steht nur in `NUR_ERLAUBT`, nicht in `LOESUNGEN`). Im Clanwort sind aber alle Wörter aus `ERLAUBT` wählbar, also auch BIERE, BOWLE, DROGE (`clanwortWaehlen` in `packages/server/src/browort/dienst.ts`). Bleibt so; im Fragebogen „Selten" → 13+. | Robin | entschieden 27.10.2026 |
+| C3 | **Datenbank der Produktion vor dem Launch zurücksetzen.** Entschieden: nur Spielstände und Testkonten, vorher Backup (Railway), Prüfkonto (A6) danach neu. Vorschau- und Reset-Skript liegen bei der Aufsicht vor (endet mit ROLLBACK). **Nichts ohne ausdrückliche Freigabe ausführen.** | Robin, Tom | entschieden 27.10.2026, ausführen nach dem Release |
 | C4 | **Verfügbarkeit:** nur Deutschland, Österreich, Schweiz. | Robin | entschieden 23.09.2026 |
 | C5 | **Löschung nimmt alles mit** (Freundschaften, Blockierungen, Clan-Nachrichten, Beitrittsanfragen, Push-Token, Werbekennung); Meldungen gegen das Konto bleiben für die Moderation. | Robin | entschieden 23.09.2026, ergänzt 27.10.2026 |
 | C6 | **EU-Händlerstatus (DSA):** Was angekreuzt wird, entscheidet Tom beim Anlegen des Eintrags. Die Anschrift ist die des Büros (Robin, 23.09.2026). | Tom | offen: Tom kreuzt an |
@@ -64,7 +64,7 @@ Produktion grenzt das über `UMFANG` ein (`docs/APP-RELEASE.md`).
 | --- | --- | --- |
 | D1 | `APPLE_TEAM_ID=K772DG59JN` — ohne sie liefert `/.well-known/apple-app-site-association` 404, Einladungslinks öffnen dann nicht die App | offen (27.10.2026: 404) |
 | D2 | `BROWORT_SALZ` mit eigenem, langem Zufallswert — sonst lässt sich das Tageswort aus dem Repo vorausrechnen | offen |
-| D3 | `UMFANG` prüfen (siehe A5) | offen |
+| D3 | `UMFANG` = `doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau` (Robin 27.10.2026: mit Abstimmung), **vor** dem Release-Merge setzen | offen |
 | D4 | APNs-Schlüssel für Push (docs/PUSH.md) — ohne ihn schreibt der Server Mitteilungen nur ins Log | offen |
 | D5 | `HERKUNFT_SCHLUESSEL` (nur für die Werbeauswertung, kein Blocker) | offen |
 
