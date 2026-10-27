@@ -1,3 +1,4 @@
+import { probeTagesmarkt } from './probe-tagesmarkt';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,6 +32,7 @@ vi.mock('../api', async () => {
     ...echt,
     api: {
       ...echt.api,
+      tagesmarkt: () => Promise.resolve(probeTagesmarkt()),
       ...aufrufe,
       aktiveGesamt: () => Promise.resolve({ aktiv: 12 }),
       games: () => Promise.resolve([]),
@@ -127,27 +129,17 @@ describe('Neues Hub: die restlichen Ansichten', () => {
     vi.restoreAllMocks();
   });
 
-  it('kauft unter „Alles ›" ein fremdes Kartenblatt erst nach der Rückfrage', async () => {
+  it('führt bei fremden Designs aus der Sammlung zum Shop und kauft dort nicht ungefragt', async () => {
     const { onThemeChange } = await zeige(probeKonto(), 'blatt');
-    fireEvent.click(screen.getAllByRole('button', { name: /^Alles/ })[0]!);
-    await act(async () => {});
-    const blaetter = screen.getByRole('heading', { name: /^Kartenblatt/ }).closest('section')!;
-
-    const rubin = within(blaetter).getByRole('button', { name: /Rubin/ });
-    // Die eigene Rückfrage im Hub statt des grauen iOS-Dialogs (22.10.2026).
-    // Nein heißt nein: nichts gekauft, nichts eingestellt.
+    const rubin = screen.getByRole('button', { name: /Rubin/ });
     fireEvent.click(rubin);
-    expect(screen.getByRole('dialog', { name: '„Rubin\u201c kaufen?' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.getByRole('dialog', { name: 'Rubin' })).toBeInTheDocument();
     expect(aufrufe.buyItem).not.toHaveBeenCalled();
-    fireEvent.click(rubin);
-    fireEvent.click(screen.getByRole('button', { name: 'Für 1.200 Münzen kaufen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zum Shop' }));
     await act(async () => {});
-    expect(aufrufe.buyItem).toHaveBeenCalledWith('blatt-rubin', 'coins');
-    expect(onThemeChange).toHaveBeenCalledWith('doppelkopf', { cardDeck: 'rubin' });
-    // Danach die große Vorschau in Tischgröße, mit „Passt" als Ausgang.
-    fireEvent.click(screen.getByRole('button', { name: 'Passt' }));
-    expect(screen.queryByRole('dialog', { name: /Vorschau/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Shop', level: 1 })).toBeInTheDocument();
+    expect(aufrufe.buyItem).not.toHaveBeenCalled();
+    expect(onThemeChange).not.toHaveBeenCalled();
   });
 
   it('lässt ohne Clan beitreten, eine Anfrage zurücknehmen und einen Clan gründen', async () => {
@@ -238,16 +230,9 @@ describe('Neues Hub: die restlichen Ansichten', () => {
     expect(screen.queryByRole('dialog', { name: /Kommt bald/ })).not.toBeInTheDocument();
   });
 
-  it('zeigt im Shop die gemalte Truhe und öffnet sie erst nach der Rückfrage', async () => {
+  it('zeigt die Tages-Holztruhe als tägliches Geschenk statt einer Edelstein-Kauftruhe', async () => {
     await zeige(probeKonto(), 'shop');
-    const kachel = screen.getByRole('button', { name: /Diamanttruhe/ });
-    expect(kachel.querySelector('img')).toHaveAttribute('src', '/hub/truhe-diamant.webp');
-    fireEvent.click(kachel);
-    const frage = screen.getByRole('dialog', { name: 'Kauf bestätigen' });
-    expect(frage.querySelector('.hb-kauf-bild')).toHaveAttribute('src', '/hub/truhe-diamant.webp');
+    expect(screen.getByText('Tages-Holztruhe')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Heute geöffnet/ })).toBeDisabled();
     expect(aufrufe.buyChest).not.toHaveBeenCalled();
-    fireEvent.click(within(frage).getByRole('button', { name: 'Öffnen' }));
-    await act(async () => {});
-    expect(aufrufe.buyChest).toHaveBeenCalledWith('truhe-diamant');
-  });
-});
+  });});

@@ -79,11 +79,13 @@ export function Kleiderschrank({
   onGetragen,
   onGuthaben,
   neu = false,
+  onShop,
 }: {
   /** Neues Hub: Vollbild in Nachtblau & Gold, dieselben Käufe und Rückfragen. */
   neu?: boolean;
   /** Was gerade sitzt — kommt aus /api/me, damit es nur eine Wahrheit gibt. */
   getragen: Getragen;
+  onShop?: (artikel: string) => void;
   onClose: () => void;
   /** Nach dem Anziehen: /api/me neu laden. */
   onGetragen: () => void;
@@ -287,7 +289,7 @@ export function Kleiderschrank({
                         }
                         // Anprobieren darf man immer; kaufen braucht ein Ja.
                         setProbe({ [slot]: stueck.id });
-                        if (!stueck.geschenk) setKaufen(stueck);
+                        if (!stueck.geschenk) { if (onShop) onShop(stueck.id); else setKaufen(stueck); }
                       }}
                     >
                       <span className="sp-fach-bild">
@@ -451,7 +453,7 @@ export function Kleiderschrank({
                       }
                       // Erst anprobieren, dann fragen. Der Kauf braucht ein Ja.
                       setProbe({ [slot]: stueck.id });
-                      setKaufen(stueck);
+                      if (onShop) onShop(stueck.id); else setKaufen(stueck);
                     }}
                   >
                     <StueckBild itemId={stueck.id} slot={slot} />

@@ -1,3 +1,4 @@
+import { probeTagesmarkt } from './probe-tagesmarkt';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -40,6 +41,7 @@ vi.mock('../api', async () => {
     ...echt,
     api: {
       ...echt.api,
+      tagesmarkt: () => Promise.resolve(probeTagesmarkt()),
       aktiveGesamt: () => Promise.resolve({ aktiv: 214 }),
       games: () =>
         Promise.resolve([
@@ -263,12 +265,12 @@ describe('Neues Hub', () => {
     expect(claimQuest).toHaveBeenCalledWith('partie-spielen');
   });
 
-  it('verkauft im Shop auch Kartenblätter und Tische', async () => {
+  it('zeigt im persönlichen Shop Sonderangebote und tägliche Geschenke', async () => {
     await zeige();
     fireEvent.click(within(reiter()).getByRole('button', { name: 'Shop' }));
     await act(async () => {});
-    expect(screen.getByRole('heading', { name: 'Kartenblätter' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Tische' })).toBeInTheDocument();
-    expect(screen.getByText('Empfohlen · Tisch')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Deine drei Sonderangebote' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Gewöhnliches Angebot aufdecken' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Dein tägliches Geschenk' })).toBeInTheDocument();
   });
 });

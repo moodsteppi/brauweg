@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { api, SLOTS, WAPPEN, type Kauftruhe, type Slot, type WarView, type WegGrad, type WegStufe } from '../../api';
 import { GameSelect, type Tab } from '../../screens/GameSelect';
 import { probeKonto } from '../../screens/probe-konto';
+import MARKT_PROBE from './markt-probe.json';
+import type { Tagesmarkt, MarktAngebot } from '../../api';
 
 /**
  * Probe: das neue Hub mit dem Beispielkonto aus dem Entwurf (Fassung 4).
@@ -216,6 +219,37 @@ if (PROBE.has('farbduell')) {
   api.games = async () => [{ id: 'filler', nameKey: 'game.filler', availability: 'playable', seatCounts: [2], votes: 0, abstimmbar: false }];
 }
 
+// Kontofreie Produktvorschau. Die Auswahl wurde aus dem echten Serverkatalog erzeugt.
+if (PROBE.has('markt')) {
+  api.games = async () => ['doppelkopf', 'skat', 'brochess'].map(id => ({ id, nameKey: `game.${id}`, availability: 'playable' as const, seatCounts: id === 'doppelkopf' ? [4] : id === 'skat' ? [3] : [2], votes: 0 }));
+  api.ranking = async () => [];
+  const aufgedeckt = new Set<string>(), gekauft = new Set<string>();
+  let gratis = false, holz = false;
+  const shopVorher = api.shop;
+  api.shop = async () => {
+    const shop = await shopVorher();
+    const schach = { id: 'blatt-schach-pinguin', art: 'blatt' as const, wert: 'schach-pinguin', nameKey: 'blatt.schach-pinguin', seltenheit: 'episch', preis: { coins: 1600, gems: 107 }, besessen: gekauft.has('blatt-schach-pinguin') };
+    return { ...shop, tischware: [...shop.tischware.filter(w => w.id !== schach.id).map(w => ({ ...w, besessen: gekauft.has(w.id) || w.besessen })), schach] };
+  };
+  const tage = () => {
+    const tag = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    let a = Date.now(), b = a + 27 * 3600000;
+    while (b - a > 1000) { const m = Math.floor((a + b) / 2); if (new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(m)) === tag) a = m; else b = m; }
+    return { tag, wechseltAm: new Date(b).toISOString() };
+  };
+  api.tagesmarkt = async (): Promise<Tagesmarkt> => ({ ...tage(), serverZeit: new Date().toISOString(), gratisMuenzen: { betrag: 25, geholt: gratis },
+    angebote: (MARKT_PROBE as MarktAngebot[]).map(a => {
+      const offen = a.aufgedeckt || aufgedeckt.has(a.id);
+      return { ...a, aufgedeckt: offen, artikel: offen ? a.artikel : null, preis: offen ? a.preis : null, normalpreis: offen ? a.normalpreis : null, besessen: !!a.artikel && gekauft.has(a.artikel.id) };
+    }) });
+  api.marktAufdecken = async id => { aufgedeckt.add(id); return api.tagesmarkt(); };
+  api.marktGratis = async () => { gratis = true; return { coins: 25, stand: 2505 }; };
+  api.buyItem = async (id, waehrung) => { gekauft.add(id); return { itemId: id, bezahlt: MARKT_PROBE.find(a => a.artikel?.id === id)?.preis ?? 0, waehrung, stand: 1000 }; };
+  const truhenVorher = api.chests;
+  api.chests = async () => { const truhen = await truhenVorher(); return { ...truhen, tag: { ...truhen.tag, geholt: holz } }; };
+  api.openChest = async () => { holz = true; return { chestId: 'tag', grad: 'holz', coins: 3, stand: 2483 }; };
+}
+
 const WIR = { clubId: 'probe-clan', name: 'Die Stichhaltigen', crest: 'wappen-12', score: 31 };
 const ASSE = { clubId: 'gegner', name: 'Die Asse', crest: 'wappen-7', score: 24 };
 const KRIEG = (status: 'laeuft' | 'suche' | 'angefragt' | 'beendet', mehr: Partial<WarView> = {}) => ({
@@ -332,7 +366,7 @@ if (typeof window !== 'undefined' && PROBE.get('tipp')) {
 }
 
 export function ProbeHub(): React.JSX.Element {
-  const me = probeKonto({
+  const [me, setMe] = useState(() => probeKonto({
     displayName: 'Eisvogel',
     coins: 2480,
     gems: 35,
@@ -358,7 +392,7 @@ export function ProbeHub(): React.JSX.Element {
       maxRounds: 8,
       seats: 4,
     },
-  });
+  }));
   const nichts = (): void => undefined;
   const suche = new URLSearchParams(window.location.search);
   const anfangsTab = (suche.get('tab') as Tab | null) ?? undefined;
@@ -385,7 +419,7 @@ export function ProbeHub(): React.JSX.Element {
       onPick={nichts}
       onSolo={nichts}
       onResume={nichts}
-      onThemeChange={nichts}
+      onThemeChange={(spiel, teil) => setMe(alt => ({ ...alt, themes: { ...alt.themes, [spiel]: { ...(alt.themes[spiel] ?? { cardDeck: 'text', tableScene: 'stube', cardBack: 'standard' }), ...teil } } }))}
       onAvatarChange={nichts}
       onShowProfile={nichts}
       onSignOut={nichts}

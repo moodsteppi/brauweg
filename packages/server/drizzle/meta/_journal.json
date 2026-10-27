@@ -281,6 +281,13 @@
       "when": 1788900000000,
       "tag": "0039_muenz_code",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793109970954,
+      "tag": "0040_tagesmarkt",
+      "breakpoints": true
     }
   ]
 }

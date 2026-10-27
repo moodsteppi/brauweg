@@ -1,3 +1,4 @@
+import { tagesmarktFuer, marktAufdecken, marktKaufen, marktGratis } from '../tagesmarkt.js';
 /**
  * HTTP-Schnittstelle.
  *
@@ -25,7 +26,7 @@ import { MOTIVE } from '@brauweg/game-mememory';
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { AppError, RuleSetInvalidError, badRequest, conflict, forbidden, notFound, unauthorized } from '../errors.js';
-import { darfBenutzen } from '../tischware.js';
+import { darfBenutzen, wareMit } from '../tischware.js';
 import { leseBemalung, pruefeBemalung } from '../bemalung.js';
 import {
   type AuthDeps,
@@ -1190,13 +1191,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .select()
       .from(s.accountGameTheme)
       .where(eq(s.accountGameTheme.accountId, accountId));
+    const schachPinguinErlaubt = await darfBenutzen(deps.db, accountId, 'blatt', 'schach-pinguin', entitlementsFor(account).ownsEverything);
     const themes = Object.fromEntries(
       registry.all().map((meta) => {
         const zeile = gespeicherte.find((z) => z.gameId === meta.id);
         return [
           meta.id,
           {
-            cardDeck: zeile?.cardDeck ?? DEFAULT_CARD_DECK,
+            cardDeck: zeile?.cardDeck === 'schach-pinguin' && !schachPinguinErlaubt ? DEFAULT_CARD_DECK : zeile?.cardDeck ?? DEFAULT_CARD_DECK,
             tableScene: zeile?.tableScene ?? DEFAULT_TABLE_SCENE,
             cardBack: zeile?.cardBack ?? DEFAULT_CARD_BACK,
           },
@@ -1535,6 +1537,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * Der Shop: Paesse, Pakete, Kauftruhen und die Kosmetikregale mit beiden
    * Preisen, dem Kurs und dem Besitzstand des Kontos.
    */
+  app.get('/api/tagesmarkt', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    return reply.send(await tagesmarktFuer(deps.db, await requireAccount(request)));
+  });
+  app.post('/api/tagesmarkt/:angebotId/aufdecken', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { angebotId } = z.object({ angebotId: z.string().max(60) }).parse(request.params);
+    const { tag } = z.object({ tag: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).parse(request.body);
+    return reply.send(await marktAufdecken(deps.db, accountId, angebotId, tag));
+  });
+  app.post('/api/tagesmarkt/gratis', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tag } = z.object({ tag: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).parse(request.body);
+    return reply.send(await marktGratis(deps.db, accountId, tag));
+  });
+
   app.get('/api/shop', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     return reply.send(await shopFuer(deps.db, accountId));
@@ -1557,17 +1574,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .parse(request.params);
       // Der Rumpf darf ganz fehlen: Ein Kauf ohne Angabe ist ein Kauf in
       // Muenzen, und die alten Aufrufe ohne Rumpf bleiben damit gueltig.
-      const { waehrung } = z
-        .object({ waehrung: z.enum(WAEHRUNGEN).default('coins') })
+      const { waehrung, tag } = z
+        .object({ waehrung: z.enum(WAEHRUNGEN).default('coins'), tag: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() })
         .parse(request.body ?? {});
       // In der App vorerst nur Muenzen (Emile, 22.10.2026): Edelsteine stehen
       // dort nirgends mehr, also wird auch nicht mit ihnen gekauft.
       // Ohne Shop im Umfang gibt es keine Edelsteine zu sehen, also wird auch
       // nicht mit ihnen bezahlt — auf beiden Plattformen. Muenzen gehen
-      // weiter: Der Kleiderschrank kauft ueber genau diese Route.
+      // weiter: Der Tages-Shop kauft ueber genau diese Route.
       if (waehrung === 'gems' && !imUmfang(umfang, 'shop')) throw notFound('nichtImUmfang');
       if (waehrung === 'gems' && plattformVon(request) === 'app') throw forbidden('nurMuenzenInApp');
-      return reply.send(await kaufen(deps.db, accountId, itemId, waehrung));
+      // Klanghalle, Wappen und eigenständige Spielinhalte behalten ihren bisherigen Kaufweg.
+      const ware = wareMit(itemId);
+      if (ware && !['blatt', 'ruecken', 'szene'].includes(ware.art)) return reply.send(await kaufen(deps.db, accountId, itemId, waehrung));
+      if (waehrung !== 'coins') throw forbidden('nurMuenzenImTagesmarkt');
+      return reply.send(await marktKaufen(deps.db, accountId, itemId, tag));
     },
   );
 

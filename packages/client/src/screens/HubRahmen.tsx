@@ -71,7 +71,7 @@ export function NeuerRahmen<T extends Reiter>({
   tabFolge: T[];
   online: number | null;
   trophies: number;
-  /** Im App-Paket gibt es keinen Shop; die Pillen sind dann reine Anzeigen. */
+  /** Der Münz-Shop ist erreichbar; Echtgeldpakete gehören nicht in diesen Reiter. */
   kaufbar: boolean;
   onTab: (tab: T) => void;
   renderTab: (tab: T) => React.JSX.Element | null;

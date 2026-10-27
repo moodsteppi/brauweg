@@ -441,6 +441,18 @@ export interface RegalWare {
   inhalt?: { spiel: string; feld: string };
 }
 
+export interface MarktArtikel {
+  id: string; art: string; wert: string; nameKey: string; seltenheit: string; normalpreis: number; slot?: Slot;
+}
+export interface MarktAngebot {
+  id: string; spiel: string; stufe: string | null; rabatt: number; aufgedeckt: boolean;
+  leer: boolean; artikel: MarktArtikel | null; preis: number | null; normalpreis: number | null; besessen: boolean;
+}
+export interface Tagesmarkt {
+  tag: string; wechseltAm: string; serverZeit: string;
+  gratisMuenzen: { betrag: number; geholt: boolean }; angebote: MarktAngebot[];
+}
+
 export interface Shop {
   paesse: Paket[];
   muenzpakete: Paket[];
@@ -958,16 +970,19 @@ export const api = {
   // --- Shop und Kleiderschrank ---------------------------------------------
 
   shop: () => request<Shop>('/shop'),
+  tagesmarkt: () => request<Tagesmarkt>('/tagesmarkt'),
+  marktAufdecken: (id: string, tag: string) => post<Tagesmarkt>(`/tagesmarkt/${id}/aufdecken`, { tag }),
+  marktGratis: (tag: string) => post<{ coins: number; stand: number }>('/tagesmarkt/gratis', { tag }),
   /**
    * Kosmetik kaufen — gegen Münzen oder Edelsteine.
    *
    * Mit geht nur, **welche** Währung es sein soll. Der Betrag kommt vom Server;
    * ihn mitzuschicken wäre die Einladung, ihn zu ändern.
    */
-  buyItem: (itemId: string, waehrung: Waehrung) =>
+  buyItem: (itemId: string, waehrung: Waehrung, tag?: string) =>
     post<{ itemId: string; bezahlt: number; waehrung: Waehrung; stand: number }>(
       `/shop/${itemId}/buy`,
-      { waehrung },
+      { waehrung, ...(tag ? { tag } : {}) },
     ),
   /** Ein Paket gegen Edelsteine kaufen — heute die drei Münzpakete. */
   buyPack: (paketId: string) => post<Paketkauf>(`/shop/pakete/${paketId}/buy`),

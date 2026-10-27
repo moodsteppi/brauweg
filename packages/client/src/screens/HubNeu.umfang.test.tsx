@@ -95,7 +95,7 @@ afterEach(() => {
 });
 
 describe('Umfang im Hub (Webseite)', () => {
-  it('„shop": ohne Umfang ein Shop-Reiter und Edelsteine, ohne die Kennung das Profil an seiner Stelle', async () => {
+  it('der Münz-Shop bleibt erreichbar, ohne Echtgeldumfang fehlen weiter die Edelsteine', async () => {
     await zeige();
     expect(reiter()[0]).toBe('Shop');
     expect(screen.getAllByLabelText(/Edelsteine/).length).toBeGreaterThan(0);
@@ -103,8 +103,8 @@ describe('Umfang im Hub (Webseite)', () => {
 
     setzeUmfang(['doppelkopf']);
     await zeige();
-    expect(reiter()).not.toContain('Shop');
-    expect(reiter()[0]).toBe('Profil');
+    expect(reiter()[0]).toBe('Shop');
+    expect(reiter()).not.toContain('Profil');
     expect(screen.queryAllByLabelText(/Edelsteine/)).toHaveLength(0);
   });
 
@@ -121,13 +121,14 @@ describe('Umfang im Hub (Webseite)', () => {
     expect(document.querySelector('span.hub-profilbild')).not.toBeNull();
   });
 
-  it('„figur": ohne die Kennung keine Figur im Profil und keine Pinguin-Karte in der Sammlung', async () => {
+  it('„figur": Werkstatt folgt dem Umfang, der Kleiderschrank-Pinguin bleibt unabhängig', async () => {
     await zeige();
     await oeffneProfil();
     expect(abschnitte()).toContain('Deine Figur');
     cleanup();
     await zeige(undefined, 'blatt');
-    expect(document.querySelector('.hb-pinguin-held')).not.toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Mein Pinguin' }));
+    expect(document.querySelector('.sam-pinguin')).not.toBeNull();
     cleanup();
 
     setzeUmfang(['doppelkopf']);
@@ -138,7 +139,8 @@ describe('Umfang im Hub (Webseite)', () => {
     expect(screen.getByRole('button', { name: /^Kleiderschrank/ })).toBeInTheDocument();
     cleanup();
     await zeige(undefined, 'blatt');
-    expect(document.querySelector('.hb-pinguin-held')).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Mein Pinguin' }));
+    expect(document.querySelector('.sam-pinguin')).not.toBeNull();
   });
 
   it('„geburtstag": ohne die Kennung kein Abschnitt, kein Geschenk und die Stufe statt des Datums', async () => {

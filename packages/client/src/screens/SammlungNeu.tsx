@@ -1,387 +1,74 @@
-import { useCallback, useEffect, useState } from 'react';
-import { api, SLOTS, type Me, type RegalWare, type Shop, type Slot } from '../api';
-import { cardImage, deckBack, decksFor } from '../decks';
+import { useEffect, useState } from 'react';
+import { api, type Me, type Shop, type RegalWare } from '../api';
+import { decksFor, RUECKEN } from '../decks';
+import { SZENEN } from '../szenen';
 import { t } from '../i18n';
-import { FIGURENSAETZE, pinguinBild } from '../minispiele/brochess/figurensatz';
-import { PAKET_NAME } from '../minispiele/partykiste/wahl';
+import { FIGURENSAETZE } from '../minispiele/brochess/figurensatz';
 import { Pinguin } from '../pinguin';
-import { inApp } from '../laufzeit';
-import { imUmfang } from '../umfang';
 import { useRueckfrage } from './HbBlatt';
+import { MarktBild, marktName } from './MarktBild';
+import './tagesmarkt.css';
 
-/**
- * Der Reiter „Sammlung" im neuen Hub (Entwurf Fassung 4): nach Spielen
- * getrennt, nur der Pinguin gilt für alle.
- *
- * Ein eigenes Blatt wird mit einem Tipp gewählt, ein fremdes nach Rückfrage
- * gekauft (DESIGN.md: jeder Kauf hat eine Rückfrage). Rückseite, Tisch und die
- * große Vorschau stehen hinter „Alles ›" in der bisherigen Auswahl, damit
- * nichts verloren geht, bis auch die neu gestaltet ist.
- */
-
-const SLOT_NAME: Record<Slot, string> = {
-  hut: 'Kopf',
-  brille: 'Augen',
-  oberteil: 'Oberteil',
-  schuhe: 'Schuhe',
-  hand: 'Flosse',
-  aura: 'Aura',
-};
-const SLOT_ICON: Record<Slot, React.JSX.Element> = {
-  hut: <path d="M5 14c0-4 3-8 7-8s7 4 7 8M3 14h18v3H3z" />,
-  brille: (
-    <>
-      <circle cx="7.5" cy="12" r="3.5" />
-      <circle cx="16.5" cy="12" r="3.5" />
-      <path d="M11 12h2" />
-    </>
-  ),
-  oberteil: <path d="M8 4l-5 4 3 3 2-1v10h8V10l2 1 3-3-5-4c-1 2-5 2-6 0z" />,
-  schuhe: <path d="M4 16V8h5v5l9 1c2 0 3 1 3 2v2H4z" />,
-  hand: <path d="M6 20c0-8 4-14 12-16-2 6-2 10 0 16z" />,
-  aura: <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />,
-};
-
-/** Spiele mit Kartenblättern, in dieser Reihenfolge. */
-const BLATT_SPIELE = ['doppelkopf', 'skat', 'wizard'] as const;
-/** Schlichte, freie Grundblätter; sie stehen unter „Alles ›". */
-const GRUNDBLAETTER = new Set(['minimal2', 'minimal4']);
-/** Themenpakete der Partykiste, die jeder hat (FAKTENBLATT.md, Abschnitt 6). */
-const FREIE_PAKETE = ['wg-abend', 'studenten', 'arbeit'];
-
-function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      {children}
-    </svg>
-  );
-}
-
-function Schloss(): React.JSX.Element {
-  return (
-    <span className="hb-ding-schloss" aria-hidden="true">
-      <Symbol>
-        <rect x="5" y="11" width="14" height="9" rx="2" />
-        <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-      </Symbol>
-    </span>
-  );
-}
-
-export function SammlungNeu({
-  me,
-  onThemeChange,
-  onGekauft,
-  onSchrank,
-  onWerkstatt,
-  details,
-}: {
+/** Sammlung ist Auswahl des Besitzes; gekauft wird ausschließlich im Tages-Shop. */
+export function SammlungNeu({ me, onThemeChange, onSchrank, onShop, spiel = 'doppelkopf', onSpiel }: {
   me: Me;
-  onThemeChange: (gameId: string, teil: { cardDeck?: string }) => void;
-  /** Nach einem Kauf Guthaben neu laden. */
-  onGekauft: () => void;
+  onThemeChange: (gameId: string, teil: { cardDeck?: string; tableScene?: string; cardBack?: string }) => void;
   onSchrank: () => void;
-  onWerkstatt: () => void;
-  /** Die bisherige, vollständige Auswahl (Blatt, Rückseite, Tisch, Vorschau) für ein Spiel. */
-  details: (gameId: string, zurueck: () => void) => React.ReactNode;
-}): React.JSX.Element {
+  onShop?: (spiel: string, artikel?: string) => void;
+  spiel?: string; onSpiel?: (spiel: string) => void;
+  onGekauft?: () => void; onWerkstatt?: () => void;
+  details?: (gameId: string, zurueck: () => void) => React.ReactNode;
+}) {
   const [shop, setShop] = useState<Shop | null>(null);
-  const [filter, setFilter] = useState('alle');
-  const [offen, setOffen] = useState<string | null>(null);
-  const [kauft, setKauft] = useState<string | null>(null);
-  const [fehler, setFehler] = useState<string | null>(null);
-
-  const laden = useCallback(() => {
-    void api
-      .shop()
-      .then(setShop)
-      .catch(() => setShop(null));
-  }, []);
-  useEffect(laden, [laden]);
-
-  /*
-   * Blätter nur für Spiele, die hier spielbar sind. In der App steht Zauberer
-   * auf „Bald" (FREIGABE im Server); ein Regal voller Zauberer-Blätter wäre
-   * dort Ware für ein Spiel, das man nicht spielen kann. Gefragt wird dieselbe
-   * Liste wie in der Spielauswahl, keine zweite im Client. Bis sie da ist (und
-   * falls der Abruf scheitert oder leer ist), steht alles da wie bisher.
-   */
-  const [spielbar, setSpielbar] = useState<ReadonlySet<string> | null>(null);
-  useEffect(() => {
-    let lebt = true;
-    void api
-      .games()
-      .then((liste) => {
-        if (lebt) setSpielbar(new Set(liste.filter((g) => g.availability === 'playable').map((g) => g.id)));
-      })
-      .catch(() => {});
-    return () => {
-      lebt = false;
-    };
-  }, []);
-  // Eine leere Liste heisst „weiss nicht", nicht „nichts spielbar".
-  const blattSpiele = BLATT_SPIELE.filter((id) => !spielbar || spielbar.size === 0 || spielbar.has(id));
-  // BroChess nur, wo es spielbar ist (in der App ja, auf der Webseite noch
-  // „Bald"). Weiß die Liste nichts, bleibt es weg: Ein Figurensatz für ein
-  // Spiel, das man nicht starten kann, ist kein Gewinn.
-  const mitSchach = spielbar?.has('brochess') ?? false;
-  // Die Partykiste nur, wo sie spielbar ist — in der App seit dem 22.10.2026
-  // „Kommt bald" (Emile). Weiß die Liste nichts, bleibt sie wie bisher stehen.
-  const mitParty = !spielbar || spielbar.size === 0 || spielbar.has('partykiste');
+  const [filter, setFilter] = useState(spiel);
+  const [spiele, setSpiele] = useState<string[]>(['doppelkopf', 'skat', 'brochess']);
+  const [fehler, setFehler] = useState(false);
   const [frage, rueckfrage] = useRueckfrage();
-
-  if (offen) return <>{details(offen, () => setOffen(null))}</>;
-
-  const ware = (art: RegalWare['art'], wert: string): RegalWare | undefined =>
-    shop?.tischware.find((w) => w.art === art && w.wert === wert);
-  const hat = (art: RegalWare['art'], wert: string): boolean => ware(art, wert)?.besessen ?? true;
-
-  const kaufen = (w: RegalWare, name: string, danach: () => void): void => {
-    frage(
-      { titel: `„${name}“ kaufen?`, text: `Kostet ${w.preis.coins.toLocaleString('de-DE')} Münzen.`, ja: `Für ${w.preis.coins.toLocaleString('de-DE')} Münzen kaufen` },
-      () => jetztKaufen(w, danach),
-    );
-  };
-  const jetztKaufen = (w: RegalWare, danach: () => void): void => {
-    setKauft(w.id);
-    setFehler(null);
-    void api
-      .buyItem(w.id, 'coins')
-      .then(() => {
-        laden();
-        onGekauft();
-        danach();
-      })
-      .catch((e: unknown) =>
-        setFehler((e as { code?: string })?.code === 'coinsInsufficient' ? 'Dafür fehlen dir Münzen.' : 'Der Kauf hat nicht geklappt.'),
-      )
-      .finally(() => setKauft(null));
-  };
-
-  const teile = shop?.regale.flatMap((r) => r.stuecke) ?? [];
-  const tische = shop?.tischware.filter((w) => w.art === 'szene') ?? [];
-  const zeige = (id: string): boolean => filter === 'alle' || filter === id;
-  const chips = [
-    { id: 'alle', titel: 'Alle' },
-    // Kein eigener Filter „Pinguin" mehr (Emile, 22.10.2026): Auf der
-    // Webseite steht die Karte unter „Alle", in der App gar nicht (unten).
-    ...blattSpiele.map((id) => ({ id, titel: t(`game.${id}`) })),
-    ...(mitSchach ? [{ id: 'brochess', titel: t('game.brochess') }] : []),
-    ...(mitParty ? [{ id: 'partykiste', titel: t('game.partykiste') }] : []),
-  ];
-
-  return (
-    <div className="hb-spiele">
-      <header className="hb-kopfzeile">
-        <h1 className="hb-titel">Sammlung</h1>
-      </header>
-      <div className="hb-chips" role="tablist" aria-label="Bereiche">
-        {chips.map((c) => (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filter === c.id}
-            key={c.id}
-            className={`hb-chip${filter === c.id ? ' is-an' : ''}`}
-            onClick={() => setFilter(c.id)}
-          >
-            {c.titel}
-          </button>
-        ))}
-      </div>
-
-      <div className="hb-spiele-rolle">
-        {fehler && <p className="hb-fehler">{fehler}</p>}
-
-        {/* In der App ohne Pinguin-Karte (Emile, 22.10.2026): Ihr „Bemalen"
-            führt in die Figur-Werkstatt, die es dort in der ersten Fassung
-            nicht gibt — die Teile stehen im Kleiderschrank. Auf der Webseite
-            aus demselben Grund mit der Figur am Umfang (`figur`). */}
-        {!inApp && imUmfang('figur') && zeige('pinguin') && (
-          <div className="hb-held hb-pinguin-held">
-            <button type="button" className="hb-ph-figur" onClick={onSchrank} aria-label="Kleiderschrank öffnen">
-              <Pinguin getragen={me.avatar} groesse={8.4} />
-            </button>
-            <div className="hb-ph-text">
-              <span className="hb-label">Dein Pinguin · für alle Spiele</span>
-              <strong>
-                {shop ? `${teile.filter((s) => s.besessen).length} von ${teile.length} Teilen` : 'Dein Pinguin'}
-              </strong>
-              <div className="hb-plaetze">
-                {SLOTS.map((slot) => {
-                  const traegt = me.avatar[slot];
-                  return (
-                    <button
-                      type="button"
-                      key={slot}
-                      className={`hb-platz${traegt ? ' is-an' : ''}`}
-                      onClick={onSchrank}
-                      aria-label={`${SLOT_NAME[slot]}${traegt ? `: ${t(`kosmetik.${traegt}`)}` : ', leer'}`}
-                    >
-                      <Symbol>{SLOT_ICON[slot]}</Symbol>
-                    </button>
-                  );
-                })}
-              </div>
-              <button type="button" className="hb-kn is-gold" onClick={onWerkstatt}>
-                <Symbol>
-                  <path d="M14 4l6 6-8 8H6v-6z M12 6l6 6" />
-                </Symbol>
-                Bemalen
-              </button>
-            </div>
-          </div>
-        )}
-
-        {blattSpiele.filter(zeige).map((spiel) => {
-          const blaetter = decksFor(spiel).filter((d) => d.id !== 'text');
-          const aktiv = me.themes[spiel]?.cardDeck ?? 'text';
-          // Die schlichten Grundblätter stehen unter „Alles", hier nur, wenn eines aktiv ist.
-          const gezeigt = blaetter.filter((d) => !GRUNDBLAETTER.has(d.id) || d.id === aktiv);
-          const eigene = blaetter.filter((d) => hat('blatt', d.id)).length;
-          // Aktives zuerst, dann eigene, dann der Rest nach Preis.
-          const reihe = [...gezeigt].sort((a, b) => {
-            const wert = (id: string): number => (id === aktiv ? 0 : hat('blatt', id) ? 1 : 2);
-            return wert(a.id) - wert(b.id) || (ware('blatt', a.id)?.preis.coins ?? 0) - (ware('blatt', b.id)?.preis.coins ?? 0);
-          });
-          return (
-            <section className="hb-blk" key={spiel}>
-              <h2 className="hb-ab">
-                {t(`game.${spiel}`)}
-                <span className="hb-ab-zusatz">
-                  Blätter {eigene} von {blaetter.length}
-                  {spiel !== 'wizard' && tische.length > 0 ? ` · Tische ${tische.filter((w) => w.besessen).length} von ${tische.length}` : ''}
-                </span>
-              </h2>
-              <div className="hb-reihe">
-                {reihe.map((deck) => {
-                  const w = ware('blatt', deck.id);
-                  const mein = hat('blatt', deck.id);
-                  const bild = cardImage(deck, { suit: 'H', rank: 'Q' }) ?? deckBack(deck);
-                  return (
-                    <button
-                      type="button"
-                      key={deck.id}
-                      className={`hb-ding${deck.id === aktiv ? ' is-aktiv' : ''}${mein ? '' : ' is-zu'}`}
-                      disabled={kauft === w?.id}
-                      aria-pressed={deck.id === aktiv}
-                      onClick={() => {
-                        if (mein) onThemeChange(spiel, { cardDeck: deck.id });
-                        else if (w) kaufen(w, t(deck.nameKey), () => onThemeChange(spiel, { cardDeck: deck.id }));
-                      }}
-                    >
-                      <span className="hb-ding-bild is-blatt" style={bild ? { backgroundImage: `url(${bild})` } : undefined}>
-                        {deck.id === aktiv && (
-                          <span className="hb-ding-ok" aria-hidden="true">
-                            ✓
-                          </span>
-                        )}
-                        {!mein && <Schloss />}
-                      </span>
-                      <strong>{t(deck.nameKey)}</strong>
-                      <small>
-                        {deck.id === aktiv ? 'aktiv' : mein ? 'gehört dir' : `${(w?.preis.coins ?? 0).toLocaleString('de-DE')} Münzen`}
-                      </small>
-                    </button>
-                  );
-                })}
-                <button type="button" className="hb-ding hb-ding-mehr" onClick={() => setOffen(spiel)}>
-                  <span className="hb-ding-bild">
-                    <Symbol>
-                      <path d="M9 5l7 7-7 7" />
-                    </Symbol>
-                  </span>
-                  <strong>Alles</strong>
-                  <small>Rückseite, Tisch, Vorschau</small>
-                </button>
-              </div>
-            </section>
-          );
-        })}
-
-        {mitSchach && zeige('brochess') && (
-          <section className="hb-blk">
-            <h2 className="hb-ab">
-              {t('game.brochess')}
-              <span className="hb-ab-zusatz">Figuren</span>
-            </h2>
-            <div className="hb-reihe">
-              {FIGURENSAETZE.map((satz) => {
-                const aktiv = (me.themes.brochess?.cardDeck ?? 'text') === satz.id;
-                return (
-                  <button
-                    type="button"
-                    key={satz.id}
-                    className={`hb-ding${aktiv ? ' is-aktiv' : ''}`}
-                    aria-pressed={aktiv}
-                    onClick={() => onThemeChange('brochess', { cardDeck: satz.id })}
-                  >
-                    <span
-                      className="hb-ding-bild hb-ding-figur"
-                      style={satz.satz === 'pinguin' ? { backgroundImage: `url(${pinguinBild('K')})` } : undefined}
-                    >
-                      {satz.satz === 'klassisch' && <span aria-hidden="true">♚&#xFE0E;</span>}
-                      {aktiv && (
-                        <span className="hb-ding-ok" aria-hidden="true">
-                          ✓
-                        </span>
-                      )}
-                    </span>
-                    <strong>{satz.name}</strong>
-                    <small>{aktiv ? 'aktiv' : 'gehört dir'}</small>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {mitParty && zeige('partykiste') && (
-          <section className="hb-blk">
-            <h2 className="hb-ab">
-              {t('game.partykiste')}
-              <span className="hb-ab-zusatz">
-                Themenpakete{' '}
-                {FREIE_PAKETE.length +
-                  (shop?.tischware.filter((w) => w.inhalt?.spiel === 'partykiste' && w.besessen).length ?? 0)}{' '}
-                von {Object.keys(PAKET_NAME).length}
-              </span>
-            </h2>
-            <div className="hb-reihe">
-              {Object.entries(PAKET_NAME)
-                .sort(([a], [b]) => Number(!FREIE_PAKETE.includes(a)) - Number(!FREIE_PAKETE.includes(b)))
-                .map(([id, name]) => {
-                  const w = shop?.tischware.find((x) => x.inhalt?.spiel === 'partykiste' && x.wert === id);
-                  const mein = FREIE_PAKETE.includes(id) || (w?.besessen ?? false);
-                  return (
-                    <button
-                      type="button"
-                      key={id}
-                      className={`hb-ding${mein ? '' : ' is-zu'}`}
-                      disabled={mein || kauft === w?.id}
-                      onClick={() => w && !mein && kaufen(w, `Partykiste: ${name}`, () => undefined)}
-                    >
-                      <span className="hb-ding-bild" style={{ backgroundImage: `url(/hub/paket-${id}.webp)` }}>
-                        {mein ? (
-                          <span className="hb-ding-ok is-gruen" aria-hidden="true">
-                            ✓
-                          </span>
-                        ) : (
-                          <Schloss />
-                        )}
-                      </span>
-                      <strong>{name}</strong>
-                      <small>
-                        {FREIE_PAKETE.includes(id) ? 'frei' : mein ? 'gehört dir' : `${(w?.preis.coins ?? 0).toLocaleString('de-DE')} Münzen`}
-                      </small>
-                    </button>
-                  );
-                })}
-            </div>
-          </section>
-        )}
-      </div>
-      {rueckfrage}
-    </div>
-  );
+  const laden = () => { setFehler(false); void api.shop().then(setShop).catch(() => setFehler(true)); };
+  useEffect(laden, [me.coins]);
+  useEffect(() => { setFilter(spiel); }, [spiel]);
+  useEffect(() => { void api.games().then(liste => {
+    const ids = liste.filter(g => g.availability === 'playable' && ['doppelkopf', 'skat', 'brochess', 'wizard', 'cambio', 'easypoker'].includes(g.id)).map(g => g.id);
+    if (ids.length) setSpiele(ids);
+  }).catch(() => {}); }, []);
+  const ware = (art: string, wert: string) => shop?.tischware.find(w => w.art === art && w.wert === wert);
+  const imShop = (gameId: string, w: RegalWare) => w.nurErspielt ? frage({ titel: marktName(w), text: 'Dieses Design erspielst du in der Kartenmanufaktur. Es ist nicht im Shop erhältlich.', ja: 'Verstanden' }, () => {}) : frage({ titel: marktName(w), text: 'Dieses Design gehört dir noch nicht. Im Shop findest du deine persönlichen Tagesangebote. Die Auswahl wechselt täglich um 0 Uhr deutscher Zeit.', ja: 'Zum Shop' }, () => onShop?.(gameId, w.id));
+  const kachel = (gameId: string, w: RegalWare, aktiv: boolean, auswaehlen: () => void) => <button key={w.id} type="button" className={`sam-design${aktiv ? ' ist-aktiv' : ''}${w.besessen ? '' : ' ist-zu'}`}
+    aria-pressed={aktiv} onClick={() => w.besessen ? auswaehlen() : imShop(gameId, w)}>
+    <MarktBild artikel={{ id: w.id, art: w.art, wert: w.wert }} /><strong>{marktName(w)}</strong>
+    <small>{aktiv ? 'Ausgewählt ✓' : w.besessen ? 'Auswählen' : w.nurErspielt ? 'In der Kartenmanufaktur erspielen' : `🔒 ${w.preis.coins.toLocaleString('de-DE')} Münzen · Zum Shop`}</small>
+  </button>;
+  const gewechselt = (id: string) => { setFilter(id); onSpiel?.(id); };
+  return <div className="hb-spiele sammlung-neu">
+    <header className="hb-kopfzeile"><h1 className="hb-titel">Sammlung</h1><button className="sam-shoplink" onClick={() => onShop?.(filter)}>Zum Shop ›</button></header>
+    <div className="hb-chips" role="tablist" aria-label="Spiele in der Sammlung">{['alle', ...spiele, 'pinguin'].map(id => <button key={id} role="tab" aria-selected={filter === id} className={`hb-chip${filter === id ? ' is-an' : ''}`} onClick={() => gewechselt(id)}>{id === 'alle' ? 'Alle' : id === 'pinguin' ? 'Mein Pinguin' : t(`game.${id}`)}</button>)}</div>
+    <div className="hb-spiele-rolle sam-rolle">
+      {fehler && <p role="alert">Deine Sammlung ließ sich nicht laden. <button onClick={laden}>Erneut versuchen</button></p>}
+      {!shop && !fehler && <p role="status">Deine Sammlung wird geladen…</p>}
+      {(filter === 'alle' || filter === 'pinguin') && <section className="sam-pinguin"><Pinguin getragen={me.avatar} groesse={7} /><div><h2>Dein Pinguin</h2><p>Dein Outfit für alle Spiele.</p><button className="markt-knopf" onClick={onSchrank}>Zum Kleiderschrank</button></div></section>}
+      {shop && spiele.filter(id => filter === 'alle' || filter === id).map(gameId => {
+        const thema = me.themes[gameId];
+        return <section className="sam-spiel" key={gameId}><h2>{t(`game.${gameId}`)}</h2>
+          <nav className="sam-unterkategorien" aria-label={`${t(`game.${gameId}`)} Designbereiche`}>{[[gameId === 'brochess' ? 'Figuren' : 'Blätter', 'blaetter'], ...(gameId === 'brochess' ? [] : [['Tisch', 'tisch']]), ...(gameId === 'brochess' ? [] : [['Rückseiten', 'ruecken']])].map(([name, id]) => <button key={id} onClick={() => document.getElementById(`sam-${gameId}-${id}`)?.scrollIntoView?.({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>{name}</button>)}</nav>
+          {gameId === 'brochess' ? <section id={`sam-${gameId}-blaetter`} className="sam-bereich"><h3>Figuren</h3><div className="sam-raster">{FIGURENSAETZE.map(satz => {
+            const w = ware('blatt', satz.id);
+            const aktiv = (thema?.cardDeck ?? 'text') === satz.id;
+            if (w && satz.id !== 'text') return kachel(gameId, w, aktiv, () => onThemeChange(gameId, { cardDeck: satz.id }));
+            return <button key={satz.id} className={`sam-design${aktiv ? ' ist-aktiv' : ''}`} aria-pressed={aktiv} onClick={() => onThemeChange(gameId, { cardDeck: satz.id })}><span className="sam-klassisch" aria-hidden="true">♚</span><strong>{satz.name}</strong><small>{aktiv ? 'Ausgewählt ✓' : 'Auswählen'}</small></button>;
+          })}</div></section> : <section id={`sam-${gameId}-blaetter`} className="sam-bereich"><h3>Blätter</h3><div className="sam-raster">{decksFor(gameId).map(deck => {
+            const w = ware('blatt', deck.id);
+            return w ? kachel(gameId, w, (thema?.cardDeck ?? 'text') === deck.id, () => onThemeChange(gameId, { cardDeck: deck.id })) : null;
+          })}</div></section>}
+          {gameId !== 'brochess' && <section id={`sam-${gameId}-tisch`} className="sam-bereich"><h3>Tisch</h3><p>Wähle den Untergrund für dein {t(`game.${gameId}`)}.</p><div className="sam-raster ist-tische">{SZENEN.map(szene => {
+            const w = ware('szene', szene.id);
+            return w ? kachel(gameId, w, (thema?.tableScene ?? 'stube') === szene.id, () => onThemeChange(gameId, { tableScene: szene.id })) : null;
+          })}</div></section>}
+          {gameId !== 'brochess' && <section id={`sam-${gameId}-ruecken`} className="sam-bereich"><h3>Rückseiten</h3><div className="sam-raster">{RUECKEN.map(r => {
+            const w = ware('ruecken', r.id);
+            return w ? kachel(gameId, w, (thema?.cardBack ?? 'standard') === r.id, () => onThemeChange(gameId, { cardBack: r.id })) : null;
+          })}</div></section>}
+        </section>;
+      })}
+    </div>{rueckfrage}
+  </div>;
 }

@@ -12,12 +12,13 @@ Rand und Luft um das Motiv; keine extreme Nahaufnahme mehr. Die Gesichter
 bleiben auch beim fast quadratischen Beschnitt der Spielauswahl erkennbar.
 
 Keine Schrift, kein Logo, kein Wasserzeichen, kein Schachbrett als Transparenz.
-Keine Karten, Würfel oder Tetris-Steine. Vollflächig ohne äußeren App-Rahmen.
+Keine Karten, Würfel, Tetris-Steine, Pucks, Spielsteine oder Figuren auf dem Spielfeld.
+Das Spielfeld enthält ausschließlich die flachen farbigen Felder. Vollflächig ohne äußeren App-Rahmen.
 Abnahme: Pinguine und Farbgebiete klein erkennbar, passend zu den anderen Spielen.
 
 Erzeugt mit eingebauter Bildgenerierung anhand des Doppelkopf-Banners. Original
-im separaten Archiv `brauweg-art/hub/farbduell/pinguine-original.png`; die
-vorherige Fassung bleibt dort als `original.png` erhalten. Auslieferung WebP:
+im separaten Archiv `brauweg-art/hub/farbduell/pinguine-ohne-pucks-original.png`; die
+vorherigen Fassungen bleiben dort als `pinguine-original.png` und `original.png` erhalten. Auslieferung WebP:
 `hub/spielwahl-farbduell.webp` 512 × 512 und `hub/banner-farbduell.webp`
 960 × 640; Profil `szene`. Keine Originalauflösung unter public.
 `bannerFuer('filler')` verbindet Spieleliste, Favoriten und Spielseite mit dem neuen Bild.

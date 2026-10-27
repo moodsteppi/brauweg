@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type GameSummary, type Me, type RankingEntry } from '../api';
-import { cardImage, deckForGame } from '../decks';
+import { deckForGame, rueckenBild } from '../decks';
+import { CardFront, CardBack } from '../CardFace';
 import { t } from '../i18n';
 import { inApp } from '../laufzeit';
 import { inAppSichtbar } from '../app-sichtbar';
@@ -81,7 +82,7 @@ const ZUSATZ: Record<string, string> = {
 const BALD_BILDER = new Set(['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10', 'drecksau']);
 const BESTEHENDE_BANNER = new Set(KATEGORIEN.flatMap(k => k.spiele));
 
-const MIT_THEMEN = new Set(['doppelkopf', 'skat', 'wizard', 'cambio']);
+const MIT_THEMEN = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'easypoker']);
 
 function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
@@ -567,7 +568,12 @@ function SpielSeite({
   const quote = stat && stat.parties > 0 ? Math.round((stat.wins / stat.parties) * 100) : null;
   const thema = me.themes[game.id];
   const deck = deckForGame(game.id, thema?.cardDeck);
-  const blattBild = cardImage(deck, { suit: 'H', rank: 'Q' });
+  const vorschaukarten = game.id === 'wizard'
+    ? [{ id: 1, suit: 'Z', rank: '1' }, { id: 2, suit: 'H', rank: '13' }, { id: 3, suit: 'C', rank: '7' }]
+    : game.id === 'cambio' ? [{ id: 1, suit: 'H', rank: '13' }, { id: 2, suit: 'C', rank: '7' }, { id: 3, suit: 'D', rank: '1' }]
+    : [{ id: 1, suit: 'C', rank: 'Q' }, { id: 2, suit: 'H', rank: 'T' }, { id: 3, suit: 'D', rank: 'A' }];
+  // Dieselbe persönliche Rückseite wie am Spieltisch, statt immer der Standardrückseite.
+  const rueckenDeck = { ...deck, ...(thema?.cardBack && thema.cardBack !== 'standard' ? { backSrc: rueckenBild(thema.cardBack) ?? undefined } : {}) };
   const szene = SZENEN.find((s) => s.id === thema?.tableScene) ?? SZENEN[0]!;
 
   return (
@@ -632,15 +638,6 @@ function SpielSeite({
           </div>
         </div>
 
-        <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onZumSpiel}>
-          Zum Spiel
-        </button>
-        {onLernen && (
-          <button type="button" className="hb-kn is-stimme is-haupt is-breit" onClick={onLernen}>
-            Doppelkopf lernen
-          </button>
-        )}
-
         {MIT_THEMEN.has(game.id) && (
           <section className="hb-blk">
             <h2 className="hb-ab">
@@ -649,9 +646,13 @@ function SpielSeite({
                 Sammlung ›
               </button>
             </h2>
+            <div className="hb-sp-kartenvorschau" role="group" aria-label="Vorschau deiner gewählten Karten" style={{ backgroundImage: `linear-gradient(#08162f33,#08162f44),url(${szeneBild(szene.id)})` }}>
+              <span className="hb-sp-probekarten">{vorschaukarten.map(karte => <span className="pc" key={karte.id}><CardFront card={karte} deck={deck} /></span>)}<span className="pc ist-ruecken" aria-label="Gewählte Kartenrückseite"><CardBack deck={rueckenDeck} /></span></span>
+              <span className="hb-sp-probetext">{t(deck.nameKey)} · {szene.name}</span>
+            </div>
             <div className="hb-mein">
               <button type="button" className="hb-mn is-blatt" onClick={onSammlung}>
-                <span className="hb-mn-bild" style={blattBild ? { backgroundImage: `url(${blattBild})` } : undefined} />
+                <span className="hb-mn-bild hb-mn-karte"><span className="pc"><CardFront card={vorschaukarten[0]!} deck={deck} /></span></span>
                 <span className="hb-mn-text">
                   <small>Blatt</small>
                   <strong>{t(deck.nameKey)}</strong>
@@ -667,6 +668,17 @@ function SpielSeite({
             </div>
           </section>
         )}
+
+        <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onZumSpiel}>
+          Zum Spiel
+        </button>
+        {onLernen && (
+          <button type="button" className="hb-kn is-stimme is-haupt is-breit" onClick={onLernen}>
+            Doppelkopf lernen
+          </button>
+        )}
+
+
 
         <section className="hb-blk">
           <h2 className="hb-ab">

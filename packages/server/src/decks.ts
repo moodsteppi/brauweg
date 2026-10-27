@@ -32,7 +32,7 @@ export const CARD_DECKS = [
   // Kein Kartenblatt, sondern der Figurensatz von BroChess (Pinguine statt
   // Zeichen). Er steht im selben Aussehen-Feld je Spiel, damit es dafuer
   // keine eigene Spalte braucht (client: minispiele/brochess/figurensatz.ts).
-  // Frei, weil er nicht in tischware.ts steht.
+  // Regulär 1.600 Münzen, Besitz wird über tischware.ts geprüft.
   'schach-pinguin',
 ] as const;
 

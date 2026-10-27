@@ -722,6 +722,7 @@ export function App(): React.JSX.Element {
           <BroChessTable
             tableId={screen.tableId}
             figurensatz={themeFuer('brochess').cardDeck}
+            szene={themeFuer('brochess').tableScene}
             onShowProfile={zeigeProfil}
             onLeave={() => {
               setScreen({ name: 'games' });
