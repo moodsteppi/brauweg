@@ -149,6 +149,7 @@ const de: Record<string, string> = {
   'error.nurAufsicht': 'Das darf nur die Aufsicht.',
   'error.codeUngueltig': 'Dieser Code gilt nicht (mehr). Tippfehler? Jeder Code geht nur einmal.',
   'error.codeNurImWeb': 'Codes löst du auf www.brauweg-spielen.de ein.',
+  'error.codeUnbekannt': 'Diesen Code gibt es nicht, oder er ist schon eingelöst.',
   // Partykiste „Passt nicht“ (27.09.2026, nur auf staging)
   'error.nurAufStaging': 'Das gibt es nur auf dem Testsystem.',
   'error.inhaltUnbekannt': 'Diesen Eintrag gibt es nicht (mehr).',
