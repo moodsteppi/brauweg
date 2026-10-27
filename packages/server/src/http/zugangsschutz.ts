@@ -21,8 +21,9 @@
  *   (Universal Links, Domain-Nachweis) ohne Anmeldung.
  * - `/api/auth/apple/rueckweg` — dorthin schickt Apple im Notfall ein Formular.
  * - **Anfragen der App** (Herkunft `brauweg://app` bzw. die Android-Herkunft)
- *   und **Anfragen mit eigenem Bearer-Schluessel** (App nach der Anmeldung,
- *   bro-server mit seinen Dienstschluesseln): Die TestFlight-Fassung „Brauweg
+ *   und **Anfragen mit eigenem Schluessel** — Bearer (App nach der
+ *   Anmeldung) oder eine `x-…-schluessel`-Kopfzeile (bro-server:
+ *   `x-herkunft-schluessel`, `x-team-schluessel`, Diagnose): Die TestFlight-Fassung „Brauweg
  *   Test" spricht mit staging und kann keine Passwortabfrage beantworten. Die
  *   Route prueft das Token ohnehin selbst. Wer eine Herkunft faelscht, kommt
  *   damit an die API, nicht an die Webseite — und die API zeigt nichts, was
@@ -63,6 +64,8 @@ function frei(request: FastifyRequest, istApp: (origin: string | undefined) => b
   const pfad = request.url.split('?')[0] ?? '';
   if (FREI.some((muster) => muster.test(pfad))) return true;
   if (istApp(request.headers.origin)) return true;
+  // Die Route prueft den Schluessel selbst; hier zaehlt nur, dass einer da ist.
+  if (Object.keys(request.headers).some((name) => /^x-[a-z]+-schluessel$/.test(name))) return true;
   return /^bearer\s+\S/i.test(request.headers.authorization ?? '');
 }
 
