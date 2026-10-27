@@ -49,7 +49,7 @@ export function SammlungNeu({ me, onThemeChange, onSchrank, onShop, spiel = 'dop
       {shop && spiele.filter(id => filter === 'alle' || filter === id).map(gameId => {
         const thema = me.themes[gameId];
         return <section className="sam-spiel" key={gameId}><h2>{t(`game.${gameId}`)}</h2>
-          <nav className="sam-unterkategorien" aria-label={`${t(`game.${gameId}`)} Designbereiche`}>{[[gameId === 'brochess' ? 'Figuren' : 'Blätter', 'blaetter'], ['Tisch', 'tisch'], ...(gameId === 'brochess' ? [] : [['Rückseiten', 'ruecken']])].map(([name, id]) => <button key={id} onClick={() => document.getElementById(`sam-${gameId}-${id}`)?.scrollIntoView?.({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>{name}</button>)}</nav>
+          <nav className="sam-unterkategorien" aria-label={`${t(`game.${gameId}`)} Designbereiche`}>{[[gameId === 'brochess' ? 'Figuren' : 'Blätter', 'blaetter'], ...(gameId === 'brochess' ? [] : [['Tisch', 'tisch']]), ...(gameId === 'brochess' ? [] : [['Rückseiten', 'ruecken']])].map(([name, id]) => <button key={id} onClick={() => document.getElementById(`sam-${gameId}-${id}`)?.scrollIntoView?.({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>{name}</button>)}</nav>
           {gameId === 'brochess' ? <section id={`sam-${gameId}-blaetter`} className="sam-bereich"><h3>Figuren</h3><div className="sam-raster">{FIGURENSAETZE.map(satz => {
             const w = ware('blatt', satz.id);
             const aktiv = (thema?.cardDeck ?? 'text') === satz.id;
@@ -59,10 +59,10 @@ export function SammlungNeu({ me, onThemeChange, onSchrank, onShop, spiel = 'dop
             const w = ware('blatt', deck.id);
             return w ? kachel(gameId, w, (thema?.cardDeck ?? 'text') === deck.id, () => onThemeChange(gameId, { cardDeck: deck.id })) : null;
           })}</div></section>}
-          <section id={`sam-${gameId}-tisch`} className="sam-bereich"><h3>Tisch</h3><p>Wähle den Untergrund für dein {t(`game.${gameId}`)}.</p><div className="sam-raster ist-tische">{SZENEN.map(szene => {
+          {gameId !== 'brochess' && <section id={`sam-${gameId}-tisch`} className="sam-bereich"><h3>Tisch</h3><p>Wähle den Untergrund für dein {t(`game.${gameId}`)}.</p><div className="sam-raster ist-tische">{SZENEN.map(szene => {
             const w = ware('szene', szene.id);
             return w ? kachel(gameId, w, (thema?.tableScene ?? 'stube') === szene.id, () => onThemeChange(gameId, { tableScene: szene.id })) : null;
-          })}</div></section>
+          })}</div></section>}
           {gameId !== 'brochess' && <section id={`sam-${gameId}-ruecken`} className="sam-bereich"><h3>Rückseiten</h3><div className="sam-raster">{RUECKEN.map(r => {
             const w = ware('ruecken', r.id);
             return w ? kachel(gameId, w, (thema?.cardBack ?? 'standard') === r.id, () => onThemeChange(gameId, { cardBack: r.id })) : null;

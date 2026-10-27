@@ -31,6 +31,8 @@ it('sperrt den BroChess-Pinguinsatz und zeigt den regulären Preis', async () =>
   render(<SammlungNeu me={probeKonto()} onThemeChange={thema} onSchrank={vi.fn()} onShop={vi.fn()} spiel="brochess" />);
   const pinguin = await screen.findByRole('button', { name: /Pinguin-Figuren/ });
   expect(pinguin).toHaveTextContent('1.600 Münzen');
+  expect(screen.queryByRole('heading', { name: 'Tisch' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Stube/ })).not.toBeInTheDocument();
   fireEvent.click(pinguin);
   await waitFor(() => expect(screen.getByRole('dialog', { name: 'Pinguin-Figuren' })).toBeInTheDocument());
   expect(thema).not.toHaveBeenCalled();

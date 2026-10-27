@@ -70,3 +70,6 @@
 @media (prefers-reduced-motion: reduce) { .tages-shop .markt-angebot.ist-aufgedeckt :is(.markt-bild,.markt-stueck) { animation: none; } }
 
 :is(.tages-shop,.sammlung-neu) .markt-textkarte { display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f8f3e9; border-radius: 7px; width: 54px; height: 80px; box-shadow: 0 4px 8px #0005; color: #b43742; font: 900 27px 'Nunito Variable',sans-serif; }
+
+/* Ein einzelner Figurensatz soll nicht in einer schmalen Dreierspalte verschwinden. */
+.tages-shop .markt-regulaer:has(> :only-child) { grid-template-columns: minmax(0, 200px); justify-content: center; }

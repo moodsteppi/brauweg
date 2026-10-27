@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
-import { MARKT_ARTIKEL, marktAuswahl, marktWechsel, tagesmarktFuer, marktAufdecken, marktGratis, marktKaufen } from '../src/tagesmarkt.js';
+import { MARKT_ARTIKEL, marktAuswahl, marktPasst, marktWechsel, tagesmarktFuer, marktAufdecken, marktGratis, marktKaufen } from '../src/tagesmarkt.js';
 import { heute } from '../src/truhen.js';
 import { darfBenutzen, wareMit } from '../src/tischware.js';
 import { gutschreiben, standVon } from '../src/waehrung.js';
@@ -22,13 +22,26 @@ test('13 eindeutige persönliche Plätze, Preisnachlass je Stufe und neue Auswah
   assert.equal(a.length, 13);
   assert.equal(new Set(a.map(p => p.artikelId)).size, 13);
   assert.deepEqual(a.filter(p => p.stufe).map(p => [p.stufe, p.rabatt, p.aufgedeckt]), [['gewoehnlich', 15, false], ['selten', 25, false], ['episch', 35, false]]);
-  for (const spiel of ['doppelkopf', 'skat', 'brochess']) assert.equal(a.filter(p => p.spiel === spiel).length, 3);
+  for (const [spiel, anzahl] of [['doppelkopf', 3], ['skat', 3], ['brochess', 1], ['allgemein', 3]] as const) assert.equal(a.filter(p => p.spiel === spiel).length, anzahl);
   for (const p of a) assert.equal(p.preis, Math.floor(p.normalpreis * (100 - p.rabatt) / 100));
   assert.deepEqual(a, marktAuswahl('konto-a', '2026-10-27', new Set()));
   assert.notDeepEqual(a, marktAuswahl('konto-b', '2026-10-27', new Set()));
   assert.notDeepEqual(a, marktAuswahl('konto-a', '2026-10-28', new Set()));
   const eigene = new Set(a.map(p => p.artikelId!));
   assert.ok(marktAuswahl('konto-a', '2026-10-28', eigene).every(p => !p.artikelId || !eigene.has(p.artikelId)));
+});
+
+test('Kategorien enthalten nur nutzbare Artikel, auch in den Sonderangeboten', () => {
+  for (let tag = 1; tag <= 31; tag++) {
+    const auswahl = marktAuswahl(`konto-${tag}`, `2026-10-${String(tag).padStart(2, '0')}`, new Set());
+    for (const platz of auswahl) {
+      if (!platz.artikelId) continue;
+      const artikel = MARKT_ARTIKEL.find(a => a.id === platz.artikelId)!;
+      assert.ok(marktPasst(artikel, platz.spiel));
+      assert.notEqual(artikel.wert, 'zauberwald');
+      if (platz.spiel === 'brochess') assert.equal(artikel.wert, 'schach-pinguin');
+    }
+  }
 });
 
 test('Wechsel ist Berliner Mitternacht, einschließlich Sommerzeit und Winterzeit', () => {
@@ -54,6 +67,20 @@ test('Verdeckte Inhalte bleiben privat; Aufdecken bleibt gespeichert und ein and
     const morgen = await tagesmarktFuer(ctx.db, accountId, new Date('2026-10-27T23:00:01Z'));
     assert.notEqual(morgen.tag, m.tag);
     assert.ok(morgen.angebote.filter(a => a.stufe).every(a => !a.aufgedeckt));
+  } finally { await ctx.close(); }
+});
+
+test('alte unpassende Tagesangebote sind weder sichtbar noch kaufbar', async () => {
+  const { ctx, accountId } = await aufbau();
+  try {
+    const markt = await tagesmarktFuer(ctx.db, accountId, ZEIT);
+    await ctx.db.update(schema.tagesmarkt).set({ angebote: [
+      { id: 'brochess-2', spiel: 'brochess', stufe: null, rabatt: 0, artikelId: 'szene-wirtshaus', normalpreis: 250, preis: 250, aufgedeckt: true },
+      { id: 'doppelkopf-1', spiel: 'doppelkopf', stufe: null, rabatt: 0, artikelId: 'blatt-zauberwald', normalpreis: 1200, preis: 1200, aufgedeckt: true },
+    ] }).where(eq(schema.tagesmarkt.accountId, accountId));
+    assert.equal((await tagesmarktFuer(ctx.db, accountId, ZEIT)).angebote.length, 0);
+    for (const id of ['szene-wirtshaus', 'blatt-zauberwald'])
+      await assert.rejects(() => marktKaufen(ctx.db, accountId, id, markt.tag, ZEIT), { code: id === 'blatt-zauberwald' ? 'itemUnknown' : 'marktNichtImAngebot' });
   } finally { await ctx.close(); }
 });
 

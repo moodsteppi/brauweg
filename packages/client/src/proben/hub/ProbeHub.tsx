@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { api, SLOTS, WAPPEN, type Kauftruhe, type Slot, type WarView, type WegGrad, type WegStufe } from '../../api';
 import { GameSelect, type Tab } from '../../screens/GameSelect';
 import { probeKonto } from '../../screens/probe-konto';
@@ -220,6 +221,8 @@ if (PROBE.has('farbduell')) {
 
 // Kontofreie Produktvorschau. Die Auswahl wurde aus dem echten Serverkatalog erzeugt.
 if (PROBE.has('markt')) {
+  api.games = async () => ['doppelkopf', 'skat', 'brochess'].map(id => ({ id, nameKey: `game.${id}`, availability: 'playable' as const, seatCounts: id === 'doppelkopf' ? [4] : id === 'skat' ? [3] : [2], votes: 0 }));
+  api.ranking = async () => [];
   const aufgedeckt = new Set<string>(), gekauft = new Set<string>();
   let gratis = false, holz = false;
   const shopVorher = api.shop;
@@ -363,7 +366,7 @@ if (typeof window !== 'undefined' && PROBE.get('tipp')) {
 }
 
 export function ProbeHub(): React.JSX.Element {
-  const me = probeKonto({
+  const [me, setMe] = useState(() => probeKonto({
     displayName: 'Eisvogel',
     coins: 2480,
     gems: 35,
@@ -389,7 +392,7 @@ export function ProbeHub(): React.JSX.Element {
       maxRounds: 8,
       seats: 4,
     },
-  });
+  }));
   const nichts = (): void => undefined;
   const suche = new URLSearchParams(window.location.search);
   const anfangsTab = (suche.get('tab') as Tab | null) ?? undefined;
@@ -416,7 +419,7 @@ export function ProbeHub(): React.JSX.Element {
       onPick={nichts}
       onSolo={nichts}
       onResume={nichts}
-      onThemeChange={nichts}
+      onThemeChange={(spiel, teil) => setMe(alt => ({ ...alt, themes: { ...alt.themes, [spiel]: { ...(alt.themes[spiel] ?? { cardDeck: 'text', tableScene: 'stube', cardBack: 'standard' }), ...teil } } }))}
       onAvatarChange={nichts}
       onShowProfile={nichts}
       onSignOut={nichts}

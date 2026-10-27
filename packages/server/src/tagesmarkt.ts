@@ -20,6 +20,16 @@ export const MARKT_ARTIKEL: readonly MarktArtikel[] = [
 ];
 const NACH_ID = new Map(MARKT_ARTIKEL.map(a => [a.id, a]));
 
+/** Schach hat Figuren, keine Kartenblätter oder Filztische. Zauberwald gehört nur zu Zauberer. */
+export function marktPasst(artikel: MarktArtikel, spiel: string): boolean {
+  if (spiel === 'alle') return ['brochess', 'doppelkopf', 'skat', 'allgemein'].some(id => marktPasst(artikel, id));
+  if (spiel === 'brochess') return artikel.wert === 'schach-pinguin';
+  if (spiel === 'allgemein') return artikel.art === 'pinguin';
+  return ['doppelkopf', 'skat'].includes(spiel) && (['szene', 'ruecken'].includes(artikel.art)
+    || artikel.art === 'blatt' && !['schach-pinguin', 'zauberwald'].includes(artikel.wert));
+}
+
+
 /** Echte nächste Berliner Mitternacht, auch an den beiden Zeitumstellungstagen. */
 export function marktWechsel(now: Date): string {
   const tag = heute(now);
@@ -36,7 +46,7 @@ export function marktAuswahl(accountId: string, tag: string, eigene: ReadonlySet
   const gesehen = new Set<string>();
   const rang = (id: string, slot: string) => createHash('sha256').update(`${accountId}:${tag}:${slot}:${id}`).digest('hex');
   const platz = (id: string, spiel: string, stufe: string | null, rabatt: number, passt: (a: MarktArtikel) => boolean): s.MarktPlatz => {
-    const artikel = MARKT_ARTIKEL.filter(a => !eigene.has(a.id) && !gesehen.has(a.id) && passt(a))
+    const artikel = MARKT_ARTIKEL.filter(a => !eigene.has(a.id) && !gesehen.has(a.id) && marktPasst(a, spiel) && passt(a))
       .sort((a, b) => rang(a.id, id).localeCompare(rang(b.id, id)))[0];
     if (artikel) gesehen.add(artikel.id);
     return { id, spiel, stufe, rabatt, artikelId: artikel?.id ?? null, normalpreis: artikel?.normalpreis ?? 0,
@@ -47,12 +57,8 @@ export function marktAuswahl(accountId: string, tag: string, eigene: ReadonlySet
     platz('sonder-selten', 'alle', 'selten', 25, a => a.normalpreis >= 350 && a.normalpreis < 1000),
     platz('sonder-episch', 'alle', 'episch', 35, a => a.normalpreis >= 1000),
   ];
-  for (const spiel of ['brochess', 'doppelkopf', 'skat']) for (let i = 1; i <= 3; i++) {
-    auswahl.push(platz(`${spiel}-${i}`, spiel, null, 0, a => spiel === 'brochess'
-      ? a.wert === 'schach-pinguin' || a.art === 'szene'
-      : ['blatt', 'szene', 'ruecken'].includes(a.art) && a.wert !== 'schach-pinguin'));
-  }
-  auswahl.push(platz('allgemein-1', 'allgemein', null, 0, a => a.art === 'pinguin'));
+  for (const [spiel, anzahl] of [['doppelkopf', 3], ['skat', 3], ['brochess', 1], ['allgemein', 3]] as const)
+    for (let i = 1; i <= anzahl; i++) auswahl.push(platz(`${spiel}-${i}`, spiel, null, 0, () => true));
   return auswahl;
 }
 
@@ -78,7 +84,7 @@ export async function tagesmarktFuer(db: Db, accountId: string, now = new Date()
   const [konto] = await db.select().from(s.account).where(eq(s.account.id, accountId));
   const alles = !!konto && entitlementsFor(konto).ownsEverything;
   return { tag: markt.tag, serverZeit: now.toISOString(), wechseltAm: marktWechsel(now), gratisMuenzen: { betrag: TAGESMUENZEN, geholt: markt.muenzenGeholt },
-    angebote: markt.angebote.map(p => ({ id: p.id, spiel: p.spiel, stufe: p.stufe, rabatt: p.rabatt,
+    angebote: markt.angebote.filter(p => !p.artikelId || !!NACH_ID.get(p.artikelId) && marktPasst(NACH_ID.get(p.artikelId)!, p.spiel)).map(p => ({ id: p.id, spiel: p.spiel, stufe: p.stufe, rabatt: p.rabatt,
       aufgedeckt: p.aufgedeckt, leer: !p.artikelId || !NACH_ID.has(p.artikelId), artikel: p.aufgedeckt && p.artikelId ? NACH_ID.get(p.artikelId) ?? null : null,
       preis: p.aufgedeckt ? p.preis : null, normalpreis: p.aufgedeckt ? p.normalpreis : null,
       besessen: p.aufgedeckt && !!p.artikelId && (alles || eigene.has(p.artikelId)) })) };
@@ -102,7 +108,7 @@ export async function marktKaufen(db: Db, accountId: string, itemId: string, tag
   if (!NACH_ID.has(itemId)) throw notFound('itemUnknown');
   const markt = await vorbereiten(db, accountId, now);
   const angebot = markt.angebote.find(p => p.artikelId === itemId);
-  if (!angebot) throw forbidden('marktNichtImAngebot');
+  if (!angebot || !marktPasst(NACH_ID.get(itemId)!, angebot.spiel)) throw forbidden('marktNichtImAngebot');
   if (!angebot.aufgedeckt) throw forbidden('marktNochVerdeckt');
   return db.transaction(async tx => {
     const [konto] = await tx.select().from(s.account).where(eq(s.account.id, accountId)).for('update');

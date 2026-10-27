@@ -4,7 +4,7 @@ Auftrag 27.10.2026: drei verdeckte Sonderangebote (gewöhnlich, selten, episch),
 zehn reguläre Angebote, 25 Gratis-Münzen und vorhandene Tages-Holztruhe.
 Wechsel je Kalendertag Europe/Berlin, auch bei Sommer-/Winterzeit. Daten und
 Aufdeckstatus je Konto in tagesmarkt. Rabatte 15/25/35 Prozent; regulär je drei
-Doppelkopf/Skat/BroChess plus ein allgemeines Stück, soweit noch nicht besessen.
+Doppelkopf/Skat, ein BroChess-Figurensatz und drei allgemeine Pinguin-Stücke, soweit noch nicht besessen.
 
 Grafikauftrag: freundlicher Pinguin-Händler an einem nächtlichen Marktstand,
 drei versiegelte dunkelblaue Geschenkbeutel mit Gold, blauem und violettem
@@ -31,9 +31,9 @@ Aufdecken, Preis und Kauf werden serverseitig geprüft. Keine Echtgeldkäufe.
   daher gibt es durch den Shop keinen zweiten täglichen Truhenbonus.
 - BroChess-Pinguin: regulär 1.600 Münzen. Alte Auswahl ohne Besitz fällt auf
   klassische Figuren zurück; bereits erworbener Besitz bleibt erhalten.
-- Sammlung: pro Spiel Blätter/Figuren, Tisch und gegebenenfalls Rückseiten.
+- Sammlung: Kartenspiele mit Blättern, Tisch und Rückseiten; BroChess mit Figuren.
   Gesperrte Designs führen zum Shop; erspielbare Manufaktur-Designs erklären
-  weiterhin ihre Herkunft. BroChess zeigt jetzt auch den gewählten Tisch.
+  weiterhin ihre Herkunft. BroChess führt ausschließlich Figuren; Filztische bleiben in den Kartenspiel-Kategorien.
 - Eigene Stücke werden beim Erstellen der Tagesauswahl ausgelassen. Sind nicht
   genug passende Stücke übrig, zeigt der betreffende Platz keinen Ersatzkauf an.
   Musik, Klänge, Emotes und Inhalts-Pakete behalten ihre bisherigen Kaufwege.
@@ -49,3 +49,16 @@ und kein Produktions-Deploy für diese Änderung.
 
 TAFEL-Pflege war nicht möglich: vorhandener Zugang antwortete mit HTTP 401.
 Dieser Übergabezettel hält Auftrag, Umsetzung, Grafik und Prüfung als Ersatz fest.
+
+Nachtrag: Kategorien prüfen auch gespeicherte Tagesangebote auf Spielzugehörigkeit.
+Zauberwald steht nicht mehr im Doppelkopf-/Skat-Shop, BroChess enthält nur
+Figuren und keine Filztische. Reguläre Verteilung: 3 Doppelkopf, 3 Skat,
+1 BroChess, 3 Pinguin. Bereits gekaufte Inhalte gehen dadurch nicht verloren.
+Vor dem Spielstart zeigt die Spielseite drei echte Kartenflächen und den
+ausgewählten Rücken auf dem gewählten Tisch. Textkarten und defekte Bilddateien
+nutzen denselben lesbaren Rückfall wie am Spieltisch; Zauberer erhält passende
+Kartenwerte statt einer dort nicht vorhandenen Dame.
+
+Prüfung des Nachtrags: vollständiger Build, 1.989 Client-Tests sowie neun
+Tagesmarkt-Servertests erfolgreich. Die Auswahländerung und die Textkarten-
+Vorschau vor dem Doppelkopf-Start zusätzlich im iPhone-Layout bedient.
