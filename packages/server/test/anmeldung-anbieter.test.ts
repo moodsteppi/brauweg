@@ -58,6 +58,8 @@ import type { Db } from '../src/db/types.js';
 import { createTestContext, createVerifiedAccount, schema as s, seedInvite } from './helpers.js';
 
 const APPLE_ID = 'de.brauweg-spielen.web';
+/** Bundle-ID der iOS-App: `aud` der nativen Apple-Anmeldung. */
+const APP_ID = 'de.brauweg-spielen';
 const GOOGLE_ID = '1234-test.apps.googleusercontent.com';
 
 // ---------------------------------------------------------------------------
@@ -205,6 +207,23 @@ test('ein erfundenes Token verbrennt keine fremde Nonce', async () => {
   );
   // Die echte Anmeldung mit derselben Nonce geht danach noch.
   await pruefeAppleToken(jwt(appleRumpf(nonce)), optionen);
+});
+
+test('Apple: Token der iOS-App (aud = Bundle-ID) gilt neben der Services ID, fremde nicht', async () => {
+  const nonces = new NonceSpeicher();
+  const optionen = { clientId: [APPLE_ID, APP_ID], nonces, quelle: QUELLE };
+  const ausDerApp = await pruefeAppleToken(jwt(appleRumpf(nonces.ausgeben(), { aud: APP_ID })), optionen);
+  assert.equal(ausDerApp.anbieter, 'apple');
+  await pruefeAppleToken(jwt(appleRumpf(nonces.ausgeben())), optionen);
+  await abgewiesen(
+    pruefeAppleToken(jwt(appleRumpf(nonces.ausgeben(), { aud: 'de.fremd.app' })), optionen),
+    'credentialsInvalid',
+  );
+  // Nur die Services ID eingerichtet: Das App-Token passt nicht.
+  await abgewiesen(
+    pruefeAppleToken(jwt(appleRumpf(nonces.ausgeben(), { aud: APP_ID })), { clientId: APPLE_ID, nonces, quelle: QUELLE }),
+    'credentialsInvalid',
+  );
 });
 
 test('Signatur, Verfahren und Schluesselkennung werden wirklich geprueft', async () => {
@@ -686,7 +705,7 @@ test('ein Gast sichert nur mit Geburtsdatum, und nicht unter 18', async (t) => {
 // 3. HTTP
 // ---------------------------------------------------------------------------
 
-async function app(an: { google?: boolean; apple?: boolean; nachweis?: string } = {}) {
+async function app(an: { google?: boolean; apple?: boolean; appApple?: boolean; nachweis?: string } = {}) {
   const ctx = await createTestContext();
   await seedInvite(ctx.db);
   const runtime = new PartyRuntime(ctx.db, { botDelayMs: 0 });
@@ -698,6 +717,7 @@ async function app(an: { google?: boolean; apple?: boolean; nachweis?: string } 
     sessionTtlDays: 30,
     googleClientId: an.google ? GOOGLE_ID : null,
     appleClientId: an.apple ? APPLE_ID : null,
+    appleAppId: an.appApple ? APP_ID : null,
     appleRedirectUri: an.apple ? 'https://www.brauweg-spielen.de/api/auth/apple/rueckweg' : null,
     appleDomainVerknuepfung: an.nachweis ?? null,
     anbieterSchluessel: { google: QUELLE, apple: QUELLE },
@@ -737,6 +757,31 @@ test('ohne Client-ID gibt es keinen Knopf und keine Anmeldung', async (t) => {
 
   const nachweis = await a.server.inject({ url: '/.well-known/apple-developer-domain-association.txt' });
   assert.equal(nachweis.statusCode, 404);
+});
+
+test('nur die Bundle-ID: Anmeldung aus der App geht, im Web gibt es keinen Knopf', async (t) => {
+  const a = await app({ appApple: true });
+  t.after(() => a.close());
+
+  assert.deepEqual((await a.server.inject({ url: '/api/auth/apple/config' })).json(), {
+    clientId: null,
+    redirectUri: null,
+  });
+  const ausDerApp = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/apple',
+    payload: { idToken: jwt(appleRumpf(await a.nonce(), { aud: APP_ID })), vorname: 'Anna' },
+  });
+  assert.equal(ausDerApp.statusCode, 200, ausDerApp.body);
+  assert.equal(ausDerApp.json().geburtstagNoetig, true);
+
+  const webToken = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/apple',
+    payload: { idToken: jwt(appleRumpf(await a.nonce())) },
+  });
+  assert.equal(webToken.statusCode, 401);
+  assert.equal(webToken.json().code, 'credentialsInvalid');
 });
 
 test('mit Client-ID: Konfiguration, Anmeldung per Cookie, Wiederholung abgewiesen', async (t) => {

@@ -184,8 +184,9 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
             </svg>
             Mit E-Mail weiter
           </button>
-          {/* Nur, wenn der Server Client-IDs nennt, und nie in der App
-              (siehe AnbieterKnoepfe). Fehlen beide, faellt die Reihe weg. */}
+          {/* Im Web nur, wenn der Server Client-IDs nennt; in der App nur
+              Apple ueber den Systemdialog (siehe AnbieterKnoepfe). Fehlen
+              beide, faellt die Reihe weg. */}
           <AnbieterKnoepfe
             zweck="anmelden"
             form="kacheln"

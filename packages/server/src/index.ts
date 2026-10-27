@@ -176,6 +176,7 @@ async function main(): Promise<void> {
     umfang,
     appVerknuepfung: appVerknuepfungAusUmgebung(),
     appleClientId: config.appleClientId,
+    appleAppId: config.appleAppId,
     appleRedirectUri: config.appleRedirectUri,
     appleDomainVerknuepfung: config.appleDomainVerknuepfung,
     feedbackZielUrl: config.feedbackZielUrl,

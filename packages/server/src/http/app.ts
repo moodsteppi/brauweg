@@ -374,6 +374,8 @@ export interface AppDeps {
    * eingetragene Return-URL. Fehlt eins davon, gibt es den Knopf nicht.
    */
   readonly appleClientId?: string | null;
+  /** Bundle-ID der iOS-App (APPLE_APP_ID) — `aud` der nativen Apple-Anmeldung. */
+  readonly appleAppId?: string | null;
   readonly appleRedirectUri?: string | null;
   /** Inhalt der Apple-Domain-Nachweisdatei (APPLE_DOMAIN_ASSOCIATION), falls verlangt. */
   readonly appleDomainVerknuepfung?: string | null;
@@ -933,6 +935,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     auth: deps.auth,
     googleClientId: deps.googleClientId ?? null,
     appleClientId: deps.appleClientId ?? null,
+    appleAppId: deps.appleAppId ?? null,
     appleRedirectUri: deps.appleRedirectUri ?? null,
     appleDomainVerknuepfung: deps.appleDomainVerknuepfung ?? null,
     schluessel: deps.anbieterSchluessel,

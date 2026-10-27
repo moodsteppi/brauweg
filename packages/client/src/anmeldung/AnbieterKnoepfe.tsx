@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ApiError, api } from '../api';
 import { inApp } from '../laufzeit';
 import { ladeAnbieterConfig, ladeApple, ladeGoogle, type Anbieter, type AnbieterConfig } from './anbieter';
+import { appleNativAnmelden, kannAppleNativ } from './apple-nativ';
 
 /**
  * Die Knoepfe "Mit Apple anmelden" und "Mit Google anmelden".
@@ -15,11 +16,12 @@ import { ladeAnbieterConfig, ladeApple, ladeGoogle, type Anbieter, type Anbieter
  * nennt. Scheitert das Nachladen (kein Netz zum Anbieter, Werbeblocker), bleibt
  * er weg bzw. gesperrt — die Passwort-Anmeldung daneben steht unveraendert.
  *
- * **In der iOS-Huelle gibt es beide nicht.** Google lehnt eingebettete
- * WebViews ab ("disallowed_useragent"), und Apples Web-Popup kommt dort nicht
- * zuverlaessig zum oeffnenden Fenster zurueck. Wer das in der App will, braucht
- * die nativen Wege — und dann gilt App-Store-Regel 4.8: Wer Google anbietet,
- * muss Apple mit anbieten.
+ * **In der iOS-Huelle gibt es nur Apple, und das nativ.** Google lehnt
+ * eingebettete WebViews ab ("disallowed_useragent"), und Apples Web-Popup
+ * kommt dort nicht zuverlaessig zum oeffnenden Fenster zurueck. Den
+ * Apple-Dialog oeffnet deshalb die Huelle (apple-nativ.ts); der Knopf und
+ * alles danach (Geburtstag, Fehler) bleiben hier. Kommt Google einmal nativ
+ * dazu, ist Apple schon da — App-Store-Regel 4.8.
  *
  * **Markenrichtlinien:** Googles Knopf zeichnet Googles Bibliothek selbst —
  * ein nachgebauter muesste Logo, Abstaende und Schrift genau treffen und den
@@ -85,8 +87,10 @@ export function AnbieterKnoepfe({
   /** Erstanmeldung: Der Server will erst das Geburtsdatum (auth/anbieter.ts, Regel 5). */
   const [nachfrage, setNachfrage] = useState<{ anbieter: Anbieter; schein: string } | null>(null);
 
+  /** In der App: der Systemdialog statt des Web-SDK (nur Huellen, die ihn melden). */
+  const appleNativ = inApp && kannAppleNativ();
   const zeigeGoogle = Boolean(config?.google) && (!nur || nur.includes('google'));
-  const zeigeApple = Boolean(config?.apple) && (!nur || nur.includes('apple'));
+  const zeigeApple = (appleNativ || Boolean(config?.apple)) && (!nur || nur.includes('apple'));
 
   useEffect(() => {
     if (inApp) return;
@@ -209,7 +213,44 @@ export function AnbieterKnoepfe({
     };
   }, [config?.apple?.clientId, config?.apple?.redirectUri, zeigeApple]);
 
+  /** Das gepruefte Token weiterreichen — im Web wie in der App derselbe Weg. */
+  const mitAppleToken = async (idToken: string, vorname: string | undefined): Promise<void> => {
+    if (zweck === 'anmelden') {
+      const ergebnis = await api.appleLogin(idToken, vorname);
+      if ('schein' in ergebnis) {
+        setNachfrage({ anbieter: 'apple', schein: ergebnis.schein });
+        return;
+      }
+      rueckruf.current.onErfolg({ anbieter: 'apple', neu: ergebnis.neu });
+    } else {
+      const ergebnis = await api.verknuepfeApple(idToken, rueckruf.current.geburtstag);
+      rueckruf.current.onErfolg({ anbieter: 'apple', gesichert: ergebnis.gesichert });
+    }
+  };
+
+  /** App: Nonce holen, Systemdialog, Token weiter. Kein Popup, also kein Zeitdruck im Klick. */
+  const mitAppleNativ = (): void => {
+    if (laeuft) return;
+    setLaeuft(true);
+    void (async () => {
+      try {
+        const { nonce } = await api.anbieterNonce();
+        const antwort = await appleNativAnmelden(nonce);
+        if (!antwort) return;
+        await mitAppleToken(antwort.idToken, antwort.vorname ?? undefined);
+      } catch (fehler) {
+        rueckruf.current.onFehler(fehler);
+      } finally {
+        setLaeuft(false);
+      }
+    })();
+  };
+
   const mitApple = (): void => {
+    if (appleNativ) {
+      mitAppleNativ();
+      return;
+    }
     const sdk = window.AppleID;
     if (!sdk || !appleBereit) return;
     // `signIn()` SOFORT im Klick aufrufen, vor jedem await — sonst blockiert
@@ -226,18 +267,7 @@ export function AnbieterKnoepfe({
           throw fehler;
         });
         if (!antwort) return;
-        const idToken = antwort.authorization.id_token;
-        if (zweck === 'anmelden') {
-          const ergebnis = await api.appleLogin(idToken, antwort.user?.name?.firstName);
-          if ('schein' in ergebnis) {
-            setNachfrage({ anbieter: 'apple', schein: ergebnis.schein });
-            return;
-          }
-          rueckruf.current.onErfolg({ anbieter: 'apple', neu: ergebnis.neu });
-        } else {
-          const ergebnis = await api.verknuepfeApple(idToken, rueckruf.current.geburtstag);
-          rueckruf.current.onErfolg({ anbieter: 'apple', gesichert: ergebnis.gesichert });
-        }
+        await mitAppleToken(antwort.authorization.id_token, antwort.user?.name?.firstName);
       } catch (fehler) {
         rueckruf.current.onFehler(fehler);
       } finally {
@@ -288,7 +318,7 @@ export function AnbieterKnoepfe({
               type="button"
               className="anbieter-kachel anbieter-kachel-apple"
               onClick={mitApple}
-              disabled={!appleBereit || laeuft || gesperrt}
+              disabled={!(appleBereit || appleNativ) || laeuft || gesperrt}
               aria-label={zweck === 'anmelden' ? 'Mit Apple anmelden' : 'Weiter mit Apple'}
             >
               <svg className="anbieter-kachel-zeichen" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -305,7 +335,7 @@ export function AnbieterKnoepfe({
           className="anbieter-apple"
           style={{ width: BREITE }}
           onClick={mitApple}
-          disabled={!appleBereit || laeuft || gesperrt}
+          disabled={!(appleBereit || appleNativ) || laeuft || gesperrt}
         >
           <svg className="anbieter-apple-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d={APPLE_LOGO} fill="currentColor" />

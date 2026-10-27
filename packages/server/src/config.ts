@@ -8,6 +8,13 @@
 
 import { parseStaffEmails } from './staff.js';
 
+/**
+ * Bundle-ID der iOS-App (`PRODUCT_BUNDLE_IDENTIFIER` in apps/ios/project.yml).
+ * Wer sie dort aendert, aendert sie hier — sonst weist der Server jede
+ * Apple-Anmeldung aus der App als fremd ab.
+ */
+export const APPLE_APP_ID_VORGABE = 'de.broweg.brauweg-spielen';
+
 export interface Config {
   readonly env: 'development' | 'test' | 'production';
   /**
@@ -56,6 +63,13 @@ export interface Config {
    * (APPLE_CLIENT_ID). Ohne sie gibt es den Knopf nicht.
    */
   readonly appleClientId: string | null;
+  /**
+   * "Mit Apple anmelden" in der iOS-App: deren Bundle-ID (APPLE_APP_ID). Der
+   * native Dialog stellt das Token fuer sie aus, nicht fuer die Services ID.
+   * Vorbelegt, weil sie kein Geheimnis ist und in apps/ios/project.yml fest
+   * steht; leer gesetzt schaltet es den Weg aus der App ab.
+   */
+  readonly appleAppId: string | null;
   /**
    * Bei Apple eingetragene Return-URL (APPLE_REDIRECT_URI). Ohne Angabe
    * `${PUBLIC_URL}/api/auth/apple/rueckweg` — Apple verlangt sie auch im
@@ -132,6 +146,7 @@ export function loadConfig(): Config {
         : null,
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? null,
     appleClientId: process.env.APPLE_CLIENT_ID || null,
+    appleAppId: (process.env.APPLE_APP_ID ?? APPLE_APP_ID_VORGABE) || null,
     appleRedirectUri:
       process.env.APPLE_REDIRECT_URI ||
       (process.env.APPLE_CLIENT_ID ? `${publicUrl.replace(/\/+$/, '')}/api/auth/apple/rueckweg` : null),

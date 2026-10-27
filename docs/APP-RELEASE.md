@@ -74,12 +74,22 @@ Der Shop-Reiter und die Plus-Knöpfe an Münzen und Edelsteinen fehlen in der
 App (`zeigeKaufbares` in `GameSelect.tsx`, seit August). Kein Link zu einem
 Kauf auf der Webseite (Apple 3.1.1).
 
-### Kein Google-/Apple-Login in der App
+### In der App: Mit Apple anmelden (nativ), kein Google
 
-Die Anbieter-Knöpfe erscheinen in der App nicht (`AnbieterKnoepfe.tsx`,
-Release #228): Google lehnt Anmeldungen aus eingebetteten WebViews ab, und
-ohne fremden Login entfällt auch Apples Pflicht, „Mit Apple anmelden"
-anzubieten (4.8). Anmeldung in der App: E-Mail + Passwort oder als Gast.
+Seit Oktober 2026 bietet die iOS-App „Mit Apple anmelden" über den
+Systemdialog an (`apps/ios/Brauweg/AppleAnmeldung.swift`, Client
+`anmeldung/apple-nativ.ts`). Das Web-Popup taugt im WKWebView nicht, deshalb
+öffnet die Hülle den Dialog und reicht nur das ID-Token an den Client; der
+schickt es wie im Web an `/api/auth/apple`. Der Server nimmt dafür neben der
+Services ID (`APPLE_CLIENT_ID`, Web) die Bundle-ID als `aud` an
+(`APPLE_APP_ID`, vorbelegt mit `de.broweg.brauweg-spielen`).
+
+Voraussetzungen: die Berechtigung `com.apple.developer.applesignin` (steht in
+beiden `Push-*.entitlements`; die automatische Signierung legt die Fähigkeit
+an der App-ID an). Google gibt es in der App weiter nicht — Google lehnt
+eingebettete WebViews ab. Anmeldung in der App also: Apple, E-Mail + Passwort
+oder als Gast. Ältere App-Builds ohne den Dialog melden ihn nicht
+(`BRAUWEG_APP.apple`) und zeigen den Knopf deshalb auch nicht.
 
 ### Partykiste: Trinkmodus — und der Rückweg
 

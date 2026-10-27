@@ -16,6 +16,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
 
     private var ansicht: WKWebView!
     private var bruecke: Bruecke!
+    private var appleAnmeldung: AppleAnmeldung?
     private let fehlerschirm = Fehlerschirm()
     private var prueftGerade = false
     /// Meldet, wenn das Netz zurueckkommt — dann verschwindet die Fehlermeldung
@@ -361,6 +362,20 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
             antwort.geben(dialog?.textFields?.first?.text ?? "")
         })
         zeigeDialog(dialog) { antwort.geben(nil) }
+    }
+
+    // MARK: - Mit Apple anmelden
+
+    /// Der Systemdialog liegt ueber dem WebView; das Ergebnis geht an den
+    /// Client, der es wie im Web an den Server schickt (AppleAnmeldung.swift).
+    func appleAnmelden(nonce: String) {
+        if appleAnmeldung == nil {
+            appleAnmeldung = AppleAnmeldung(fenster: view.window) { [weak self] ergebnis in
+                guard let self, self.isViewLoaded else { return }
+                self.ansicht.evaluateJavaScript(Huelle.appleSkript(ergebnis), completionHandler: nil)
+            }
+        }
+        appleAnmeldung?.starten(nonce: nonce)
     }
 
     // MARK: - Push

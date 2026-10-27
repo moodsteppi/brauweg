@@ -34,7 +34,7 @@ struct Teilgut: Equatable {
 /// Die Handgriffe, die der Client nativ braucht (siehe `Huelle.vorspann`) —
 /// dieselben Namen wie `Bruecke.kt` der Android-Huelle: `teilen` und
 /// `wachHalten`, dazu `summen` (Android nimmt dafuer `navigator.vibrate` des
-/// WebViews, WebKit kennt es nicht) und `pushErlauben`.
+/// WebViews, WebKit kennt es nicht), `pushErlauben` und — nur iOS — `appleAnmelden`.
 ///
 /// Bewusst nur das. Alles, was die Oberflaeche ausmacht, bleibt im Client —
 /// eine zweite Oberflaeche in Swift waere eine zweite Wahrheit.
@@ -83,6 +83,10 @@ final class Bruecke: NSObject, WKScriptMessageHandler {
             haptik.spielen(Haptik.pulse(aus: daten))
         case "pushErlauben":
             Mitteilungen.shared.erlauben()
+        case "appleAnmelden":
+            // Die Nonce des Servers; ohne sie gaebe es nur ein Token, das er abweist.
+            guard let nonce = daten as? String, !nonce.isEmpty, nonce.count <= 200 else { return }
+            controller?.appleAnmelden(nonce: nonce)
         default:
             break
         }
