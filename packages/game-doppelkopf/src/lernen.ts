@@ -586,7 +586,12 @@ function lektionParteien(): Lektion {
       },
       erklaerung(
         'Vor dem Spiel: „gesund"',
-        'Bevor es losgeht, fragt das Spiel, ob du etwas Besonderes hast. Mit einer normalen Hand sagst du einfach „gesund". Wer beide Kreuz-Damen hat, kann eine „Hochzeit" ansagen — die lernst du später am Tisch kennen.',
+        'Bevor es losgeht, fragt das Spiel, ob du etwas Besonderes hast. Mit einer normalen Hand sagst du einfach „gesund".',
+      ),
+      erklaerung(
+        'Hochzeit: zwei Kreuz-Damen',
+        `Hast du beide Kreuz-Damen, kannst du vor dem Spiel „Hochzeit" ansagen. Wer außer dir innerhalb der ersten ${DEFAULT_RULESET.hochzeitClarifyTricks} Stiche als Erster einen Stich gewinnt, wird dein Partner. Ihr spielt zusammen als Re. Gewinnst du diese ${DEFAULT_RULESET.hochzeitClarifyTricks} Stiche alle selbst, spielst du allein gegen die anderen drei.`,
+        karten('CQ', 'CQ'),
       ),
       erklaerung(
         'Ein Tipp',
@@ -698,7 +703,7 @@ function lektionAnsagen(): Lektion {
       ),
       erklaerung(
         'Merke',
-        'Lieber einmal zu wenig ansagen als einmal zu viel. Hochzeit, Armut und Soli gibt es auch — die lernst du am echten Tisch kennen.',
+        'Lieber einmal zu wenig ansagen als einmal zu viel. Die Hochzeit mit beiden Kreuz-Damen kennst du schon. Armut und Soli lernst du am echten Tisch kennen.',
       ),
     ],
   };

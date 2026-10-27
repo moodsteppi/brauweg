@@ -108,7 +108,7 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
           <div className="reise-landschaft-schatten" />
           <div className="reise-ortschild"><small>REGION {String(i + 1).padStart(2, '0')}</small><h2>{s.name}</h2><span>{s.ab.toLocaleString('de-DE')} Trophäen</span></div>
         </section>)}
-        {zusatz > 0 && <div className="reise-sterne" style={{ height: zusatz + 60 }} aria-hidden="true" />}
+        {zusatz > 0 && <div className="reise-sterne" style={{ height: zusatz }} aria-hidden="true" />}
         <svg className="reise-linie" viewBox={`0 0 400 ${hoehe}`} preserveAspectRatio="none" aria-hidden="true">
           <defs><clipPath id={schnitt}><rect x="0" y={ichY} width="400" height={hoehe - ichY} /></clipPath></defs>
           <path d={linie} className="reise-linie-rand" /><path d={linie} className="reise-linie-innen" />

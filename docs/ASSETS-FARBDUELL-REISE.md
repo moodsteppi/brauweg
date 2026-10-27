@@ -39,3 +39,26 @@ Vorschau: `/?dev=hub&weg&iphone`, Farbduell `/?dev=hub&tab=spiele&spiel=filler&f
 Der eingerichtete Tafelzugang antwortet bereits in dieser Sitzung mit 401.
 Nachzutragen: Hub → Trophäenreise → serverseitiger Weg; Truhenöffnung →
 Grundklang mit den beiden neuen MP3; Spielbanner → Farbduell statt Filler-Tetris.
+
+## Fortsetzung ab 1.250 Trophäen (27.10.2026)
+
+Neuer Bildauftrag „Sterneninseln“: schwebende Inseln, zentraler Trittsteinpfad,
+Holzbrücken, warme Laternen und eine kleine Sternwarte. Gemalter Stil passend
+zum Sternenhafen, Nachtblau und Gold. Keine Figuren, Truhen, Schrift, Zahlen,
+Wasserzeichen oder Schachbrett-Transparenz. Zentrale Freihaltezone für
+Belohnungen. Eigenständige Landschaft statt leerem Verlauf oberhalb 1.000.
+
+Original: `brauweg-art/hub/trophaeenreise/sterneninseln-original.png`.
+Auslieferung: `hub/weg-sterneninseln.webp`, 960 × 960, Profil `szene`.
+Wiederholung mit fester Kachelhöhe verhindert aufgeblasene Bildgrößen bei
+vielen Folgetruhen. Keine neue Belohnungs- oder Regionsschwelle.
+
+Tutorial: Die vorhandene Parteien-Lektion erläutert nun die angesagte
+Hochzeit mit beiden Kreuz-Damen und zeigt die Karten. Die Klärungsfrist
+kommt aus `DEFAULT_RULESET.hochzeitClarifyTricks`. Der erste fremde
+Stichgewinner innerhalb der Frist spielt mit dem Ansager Re; anderenfalls
+spielt dieser allein. Der spätere Merksatz verschiebt die Hochzeit nicht
+mehr auf den echten Tisch.
+
+TAFEL: Trophäenreise → Sterneninseln für Folgetruhen; Lernpfad → Parteien
+mit Erklärung der Hochzeit aus den Standardregeln. Tafelzugang weiter 401.
