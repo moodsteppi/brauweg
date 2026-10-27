@@ -10,13 +10,18 @@
     intern tut, deckt Apples eigenes Manifest ab.
     packages/server/test/app-ios.test.ts sucht die Swift-Quellen nach solchen
     APIs ab — wer eine einbaut, muss sie hier mit Grund eintragen.
-  - Erhobene Daten: dieselbe Liste wie in docs/APP-RELEASE.md (Abschnitt
-    „App-Datenschutz"), alle nur fuer die App-Funktion und mit dem Konto
-    verknuepft. Das Geburtsdatum steht unter „Sonstige Daten". Profilbilder
-    fehlen, weil das Hochladen in der App aus ist.
-  - Kommt Push dazu (BRAUWEG_PUSH=YES), ist das Token eine Geraete-Kennung
-    (NSPrivacyCollectedDataTypeDeviceID, App-Funktion, verknuepft) — dann hier
-    und in App Store Connect nachtragen, wie bei Android in Data Safety.
+  - Erhobene Daten: Eintrag fuer Eintrag die Apple-Tabelle in
+    docs/store/DATENSCHUTZ-ANGABEN.md (Abschnitt „Apple App Privacy"), alle
+    nur fuer die App-Funktion und mit dem Konto verknuepft. Der Test
+    app-ios.test.ts haelt beide Listen gleich — wer hier etwas aendert, aendert
+    die Tabelle mit, sonst widersprechen sich Manifest und App Store Connect.
+    · Anzeigename und Konto-ID stehen unter Nutzer-ID, NICHT unter Name: der
+      Anzeigename ist ein Spielername, kein Vor-/Nachname.
+    · Das Geburtsdatum steht unter „Andere Datentypen".
+    · Produktinteraktion: Tagesaufgaben, Stufe/XP, Lernpfad- und
+      Browort-Fortschritt (Apple zaehlt „saved place in a game" dazu).
+    · Geraete-ID: das APNs-Token am Konto (Push ist seit 13.10.2026 an).
+    · Profilbilder fehlen, weil das Hochladen in der App aus ist.
 -->
 <plist version="1.0">
 <dict>
@@ -31,18 +36,6 @@
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-			</array>
-		</dict>
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeName</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>
@@ -91,6 +84,30 @@
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherDataTypes</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>
