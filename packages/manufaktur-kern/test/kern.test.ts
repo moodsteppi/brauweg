@@ -56,9 +56,10 @@ function abgelehnt(code: string) {
 function mitMeistern(stand: ManufakturStand): ManufakturStand {
   return {
     ...stand,
-    pressen: stand.pressen.map((p) => ({ ...p, meister: true })),
-    paternoster: { ...stand.paternoster, meister: true },
-    versand: { ...stand.versand, meister: true },
+    // Jungmeister mit Tempo, wie sie aus der Uebernahme alter Staende kommen.
+    pressen: stand.pressen.map((p) => ({ ...p, meister: true, rang: 'jung' as const, art: 'tempo' as const })),
+    paternoster: { ...stand.paternoster, meister: true, rang: 'jung' as const, art: 'tempo' as const },
+    versand: { ...stand.versand, meister: true, rang: 'jung' as const, art: 'tempo' as const },
   };
 }
 
@@ -168,15 +169,16 @@ test('Offline: nur die Meister-Kette, hoechstens eine Stunde zum halben Tempo �
   assert.equal(leerlaufErtrag(neuerStand(T0)), null, 'ohne jeden Meister zeigt das HUD nichts');
 });
 
-test('Meister-Faehigkeit: doppeltes Tempo fuer 30 s, dann fuenf Minuten Pause', () => {
+test('Meister-Faehigkeit: Jungmeister dreifaches Tempo fuer 1 min, danach 5 min Pause', () => {
   const start = mitMeistern(neuerStand(T0));
   const normal = vorspulen(start, T0 + 30_000);
   const mitBoost = vorspulen(handle(start, { typ: 'faehigkeit', ziel: presse }, T0).stand, T0 + 30_000);
   const zyklen = (s: ManufakturStand) => s.pressen[0]!.kiste + s.paternoster.ladung + s.packtisch + s.taler;
-  assert.ok(zyklen(mitBoost) > zyklen(normal) * 1.5, 'die Presse schafft fast doppelt so viel');
+  assert.ok(zyklen(mitBoost) > zyklen(normal) * 2.5, 'die Presse schafft fast dreimal so viel');
   const nachher = handle(start, { typ: 'faehigkeit', ziel: presse }, T0).stand;
-  assert.throws(() => handle(nachher, { typ: 'faehigkeit', ziel: presse }, T0 + 60_000), abgelehnt('manufakturAbklingen'));
-  assert.doesNotThrow(() => handle(nachher, { typ: 'faehigkeit', ziel: presse }, T0 + 5 * 60_000));
+  // Die Pause beginnt, wenn die Wirkung endet: 1 min + 5 min.
+  assert.throws(() => handle(nachher, { typ: 'faehigkeit', ziel: presse }, T0 + 5 * 60_000), abgelehnt('manufakturAbklingen'));
+  assert.doesNotThrow(() => handle(nachher, { typ: 'faehigkeit', ziel: presse }, T0 + 6 * 60_000));
   assert.throws(() => handle(neuerStand(T0), { typ: 'boost' }, T0), abgelehnt('manufakturAbklingen'));
 });
 
@@ -197,8 +199,10 @@ test('Upgrade-Vorschau: vorher → nachher und der Weg zum naechsten Meilenstein
   assert.equal(arm.leistbar, false);
 });
 
-test('Umzug erst mit allen acht Pressen, dann alles neu mit Muenzen und doppelter Leistung', () => {
-  const stand = { ...neuerStand(T0), taler: 1e30 };
+test('Umzug erst mit allen acht Pressen und einer Renovierung, dann alles neu mit Muenzen und doppelter Leistung', () => {
+  // Renoviert ist hier schon — wann das geht, prueft renovieren.test.ts.
+  // Renoviert und die Baustellen geraeumt — beides pruefen eigene Dateien.
+  const stand = { ...neuerStand(T0, 1, { orte: { '1': { renovierung: 1, geraeumt: [4, 7] } } }), taler: 1e30 };
   assert.throws(() => handle(stand, { typ: 'umziehen' }, T0), abgelehnt('manufakturUmzugZuFrueh'));
   let voll: ManufakturStand = stand;
   while (voll.pressen.length < MAX_PRESSEN) voll = handle(voll, { typ: 'freischalten' }, T0).stand;
@@ -294,34 +298,3 @@ test('Der Versand-Meister ist der guenstigste', async () => {
   assert.ok(meisterKosten({ art: 'paternoster' }, 1) < meisterKosten(presse, 1));
 });
 
-test('Jubilaeum im Kartenpalast: neu anfangen, ein Siegel mehr, +10 % Kartenwert fuer immer', async () => {
-  const { kannJubilaeum, siegelFaktor } = await import('../src/index.js');
-  const palast = { ...neuerStand(T0, 5), taler: 1e60 };
-  assert.throws(() => handle(palast, { typ: 'jubilaeum' }, T0), abgelehnt('manufakturJubilaeumZuFrueh'));
-  let voll: ManufakturStand = palast;
-  while (voll.pressen.length < MAX_PRESSEN) voll = handle(voll, { typ: 'freischalten' }, T0).stand;
-  assert.equal(kannJubilaeum(voll), true);
-  assert.throws(() => handle(voll, { typ: 'umziehen' }, T0), abgelehnt('manufakturLetzte'));
-  const fest = handle(voll, { typ: 'jubilaeum' }, T0);
-  assert.equal(fest.stand.manufaktur, 5);
-  assert.equal(fest.stand.jubilaeen, 1);
-  assert.equal(fest.stand.pressen.length, 1);
-  assert.equal(fest.stand.taler, 0);
-  assert.deepEqual(fest.meilensteine, [{ kennung: 'jubilaeum-1', muenzen: 100 }]);
-  assert.equal(siegelFaktor(3), 1.3);
-  assert.ok(Math.abs(presseLeistung(0, 1, 5, 2) / presseLeistung(0, 1, 5, 0) - 1.2) < 1e-12);
-  // Ab dem elften gibt es keine Muenzen mehr — sonst eine endlose Muenzquelle.
-  let elf: ManufakturStand = { ...voll, jubilaeen: 10 };
-  elf = handle(elf, { typ: 'jubilaeum' }, T0).stand;
-  assert.equal(elf.jubilaeen, 11);
-});
-
-test('Staende der Fassung 2 bekommen 0 Siegel und behalten alles andere', () => {
-  const v2 = { ...neuerStand(T0, 3), taler: 77, fassung: 2 } as unknown as Record<string, unknown>;
-  delete v2.jubilaeen;
-  const neu = migriere(v2);
-  assert.equal(neu.fassung, FASSUNG);
-  assert.equal(neu.jubilaeen, 0);
-  assert.equal(neu.manufaktur, 3);
-  assert.equal(neu.taler, 77);
-});

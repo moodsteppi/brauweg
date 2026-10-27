@@ -24,15 +24,36 @@
  * ueber die Uhr nach, nicht die Szene.
  */
 
+/**
+ * Muss VOR der ersten Pixi-Anwendung geladen sein, sonst bleibt die Leinwand
+ * im Web schwarz. PixiJS v8 baut Shader-Abgleich und Uniform-Pakete zur
+ * Laufzeit ueber `new Function`; unsere CSP (`script-src 'self'`, ohne
+ * `'unsafe-eval'`) verbietet das, und Pixi bricht beim Start mit "Current
+ * environment does not allow unsafe-eval" ab. Dieses Modul ersetzt die
+ * erzeugten Funktionen durch fertige — der Name taeuscht: Es ist der Weg
+ * OHNE eval. In der iOS-App fiel das nie auf, weil dort keine Kopfzeile des
+ * Servers gilt; auf dem Entwicklungsserver auch nicht, weil Vite keine setzt.
+ */
+import 'pixi.js/unsafe-eval';
 import { Application, Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
 
 import {
-  FAEHIGKEIT_MS,
   type ManufakturStand,
   type Presse,
+  type FaehigkeitArt,
+  type Rang,
+  type Station,
   MAX_PRESSEN,
+  VERSAND_ABFAHRT,
   arbeiter,
+  kartenwertBonus,
+  hatBaustelle,
+  laufenderBau,
+  naechsteBaustelle,
+  renovierung,
+  tempoFaktor,
   versandKapazitaet,
+  versandZyklus,
 } from '@brauweg/manufaktur-kern';
 
 import type { Getragen } from '../../api';
@@ -44,16 +65,20 @@ import {
   arbeiterOrt,
   kistenStapel,
   packtischKartons,
+  LAUFEN_TEMPO_MAX,
   paternosterOrt,
+  phasenTempo,
   pressenPhase,
+  pressenPhaseMs,
   schlagZwischen,
   traegtStapel,
   wagenOrt,
 } from './abbild';
+import { CLIPS } from './clips';
 import { type Figur, RigFigur } from './figur';
 import { BREITE, ETAGE_HOEHE, HALLE_HOEHE, KULISSE, SCHACHT, etage, gesamtHoehe, haltY, halle } from './layout';
 import { PresseBild, maschinenDateien } from './maschine';
-import { type Ausstattung, ausstattungAus, berufsAusstattung, rigDatei, rigDateien } from './rig';
+import { type Ausstattung, ausstattungAus, berufsAusstattung, meisterAusstattung, rigDatei, rigDateien } from './rig';
 import { schachtRoehre } from './zeichnen';
 
 export interface Quelle {
@@ -113,6 +138,15 @@ const DATEIEN = [
   R('fx-glanz.png'),
   R('fx-karte.png'),
   R('req-paket.png'),
+  // Zweite Lieferung (outputs/rig2/): Deko ab Renovierung 2, Baustelle vor Etage 5 und 8.
+  R('rig2/deko-girlande.png'),
+  R('rig2/deko-lampe.png'),
+  R('rig2/deko-lampe-licht.png'),
+  R('rig2/barriere-schutt.png'),
+  R('rig2/barriere-geruest.png'),
+  R('rig2/barriere-brocken-1.png'),
+  R('rig2/barriere-brocken-2.png'),
+  R('rig2/barriere-brocken-3.png'),
   ...Array.from({ length: MAX_PRESSEN }, (_, i) => stapelBild(i)),
   ...rigDateien(),
   ...maschinenDateien(),
@@ -214,6 +248,33 @@ class Teilchenwolke {
     }
   }
 
+  /** Die Schuttwand bricht weg: Brocken fliegen, Staub steigt auf. */
+  truemmer(x: number, y: number, breite: number): void {
+    for (let i = 0; i < 9; i += 1) {
+      const g = this.neu(`rig2/barriere-brocken-${1 + (i % 3)}.png`, x + (Math.random() - 0.5) * breite * 0.7, y + Math.random() * 30, 22);
+      this.dazu({ g, vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 80, dreh: (Math.random() - 0.5) * 6, leben: 0, dauer: 900, von: 22, bis: 16 });
+    }
+    for (let i = 0; i < 6; i += 1) this.staub(x + (Math.random() - 0.5) * breite * 0.6, y + 30);
+  }
+
+  /** Konfetti beim Renovieren: Karten in Festfarben regnen ueber die Halle. */
+  konfetti(breite: number, oben: number): void {
+    const farben = [0xffd65a, 0xe85a5a, 0x5aa0ff, 0x6fe08d, 0xffffff];
+    for (let i = 0; i < 46; i += 1) {
+      const g = this.neu('fx-karte.png', Math.random() * breite, oben - Math.random() * 40, 10);
+      g.tint = farben[i % farben.length]!;
+      this.dazu({ g, vx: (Math.random() - 0.5) * 50, vy: 60 + Math.random() * 90, dreh: (Math.random() - 0.5) * 8, leben: 0, dauer: 1800 + Math.random() * 600, von: 10, bis: 9 });
+    }
+  }
+
+  /** Die Station leuchtet kurz in der Farbe der Faehigkeit (Phase 1: Meister loest aus). */
+  leuchten(x: number, y: number, groesse: number, farbe: number): void {
+    const g = this.neu('fx-glanz.png', x, y, groesse * 0.5);
+    g.tint = farbe;
+    g.blendMode = 'add';
+    this.dazu({ g, vx: 0, vy: 0, dreh: 0.6, leben: 0, dauer: 900, von: groesse * 0.5, bis: groesse });
+  }
+
   glanz(x: number, y: number): void {
     const g = this.neu('fx-glanz.png', x, y, 18);
     this.dazu({ g, vx: 0, vy: -8, dreh: 2, leben: 0, dauer: 500, von: 10, bis: 34 });
@@ -250,15 +311,67 @@ class Teilchenwolke {
   }
 }
 
+/** Farbe, in der eine Station beim Ausloesen leuchtet. */
+const FAEHIGKEIT_FARBE: Record<FaehigkeitArt, number> = { tempo: 0xffd65a, ladung: 0x5aa0ff, rabatt: 0x48d56b };
+
+/**
+ * Der Platz eines Meisters in der Welt: Die Figur traegt die Kleidung ihres
+ * Rangs (Muetze, Weste, Zylinder) und wird neu angezogen, wenn ein anderer
+ * zugewiesen wird. Beim Ausloesen pfeift sie, und die Station leuchtet.
+ */
+class MeisterStelle {
+  readonly wurzel = new Container();
+  private figur: Figur | null = null;
+  private rang: Rang | null | undefined = undefined;
+  /** Zuletzt gesehenes Ende der Faehigkeit; 0 = noch nichts gesehen (beim Oeffnen nicht leuchten). */
+  private letzteBis = -1;
+  private pfeifenSeit = 0;
+
+  constructor(
+    private readonly t: Record<string, Texture>,
+    private readonly wolke: Teilchenwolke,
+  ) {}
+
+  zeige(s: Station, jetzt: number, dt: number, leuchtOrt: { x: number; y: number; groesse: number }): void {
+    this.wurzel.visible = s.meister;
+    if (!s.meister) return;
+    if (s.rang !== this.rang) {
+      this.rang = s.rang;
+      this.figur?.wurzel.destroy({ children: true });
+      this.figur = new RigFigur(this.t, ARBEITER_HOEHE, meisterAusstattung(s.rang));
+      this.wurzel.addChild(this.figur.wurzel);
+    }
+    // Neu ausgeloest: Das Ende der Faehigkeit ist nach vorn gesprungen.
+    if (this.letzteBis >= 0 && s.faehigkeitBis > this.letzteBis && s.faehigkeitBis > jetzt) {
+      this.pfeifenSeit = jetzt;
+      if (s.art) this.wolke.leuchten(leuchtOrt.x, leuchtOrt.y, leuchtOrt.groesse, FAEHIGKEIT_FARBE[s.art]);
+    }
+    this.letzteBis = s.faehigkeitBis;
+    const f = this.figur!;
+    f.spiele(this.pfeifenSeit > 0 && jetzt - this.pfeifenSeit < 900 ? 'pfeifen' : 'idle');
+    f.traegt(null);
+    f.aktualisiere(dt);
+  }
+
+  punkte(): { x: number; y: number }[] {
+    if (!this.wurzel.visible || !this.figur) return [];
+    return this.figur.punkte().map((q) => ({ x: this.wurzel.x + q.x, y: this.wurzel.y + q.y }));
+  }
+}
+
 /** Eine Etage: Bodenbalken, Kiste mit Stapeln, Presse, Arbeiter, Meister — oder die gesperrte Wand. */
 class EtageBild {
   readonly wurzel = new Container();
   private readonly gebaut = new Container();
   private readonly gesperrt = new Container();
+  /** Schutt mit Geruest vor Etage 5 und 8 (Phase 4), solange er nicht geraeumt ist. */
+  private readonly baustelle = new Container();
+  private readonly bauarbeiter: Figur[] = [];
+  private hatteSchutt: boolean | null = null;
   private readonly stapel: Sprite[] = [];
   private readonly presse: PresseBild;
   private readonly arbeiter: Figur[] = [];
-  private readonly meister: Figur;
+  private readonly meister: MeisterStelle;
   /** Merkzettel vom letzten Bild — daraus entstehen Schlaege, Jubel und Einlauf. */
   private letzteStufe = 0;
   private letzteAnzahl = 0;
@@ -266,7 +379,6 @@ class EtageBild {
   private letztePhase: string[] = [];
   private einlauf: number[] = [];
   private jubelBis = 0;
-  private pfeifenSeit = 0;
 
   constructor(
     private readonly index: number,
@@ -320,7 +432,7 @@ class EtageBild {
     }
     // Wie im Vorbild steht der Meister vorn an der Kiste, vor den Arbeitern —
     // sonst verschwindet er hinter der Kolonne, und nur sein ⚡ bleibt sichtbar.
-    this.meister = new RigFigur(t, ARBEITER_HOEHE, berufsAusstattung('meister'));
+    this.meister = new MeisterStelle(t, wolke);
     this.meister.wurzel.position.set(e.meisterFigur.x + e.meisterFigur.b / 2, e.boden);
     this.gebaut.addChild(this.meister.wurzel);
 
@@ -331,6 +443,24 @@ class EtageBild {
     wand.height = (breite * 320) / 1024;
     wand.position.set(SCHACHT.x + SCHACHT.b + 4, e.boden - wand.height - 1);
     this.gesperrt.addChild(wand);
+
+    // Baustelle (baustelle.json): Schutt und Geruest im selben Rahmen, Bodenlinie y 312 von 320.
+    for (const datei of ['rig2/barriere-schutt.png', 'rig2/barriere-geruest.png']) {
+      const teil = new Sprite(t[R(datei)]);
+      teil.width = breite;
+      teil.height = (breite * 320) / 1024;
+      teil.position.set(SCHACHT.x + SCHACHT.b + 4, e.boden - (teil.height * 312) / 320);
+      this.baustelle.addChild(teil);
+    }
+    // Zwei Bauarbeiter (Fuss bei x 300 von 1024): einer haemmert, einer schaufelt.
+    for (const [werkzeug, x] of [['hammer', 0.26], ['schaufel', 0.4]] as const) {
+      const ausstattung = { ...berufsAusstattung('bauarbeiter'), hand: werkzeug };
+      const figur = new RigFigur(t, ARBEITER_HOEHE, ausstattung);
+      figur.wurzel.position.set(SCHACHT.x + SCHACHT.b + 4 + breite * x, e.boden);
+      this.bauarbeiter.push(figur);
+      this.baustelle.addChild(figur.wurzel);
+    }
+    this.wurzel.addChild(this.baustelle);
   }
 
   zeige(stand: ManufakturStand, jetzt: number, rest: number, dt: number): void {
@@ -339,8 +469,29 @@ class EtageBild {
     // Die naechste Etage ist die vernagelte Wand, die zwei danach nur dunkle
     // Umrisse — man sieht, dass es weitergeht, ohne Laerm.
     const abstand = this.index - stand.pressen.length;
-    this.gesperrt.visible = !p && abstand >= 0 && abstand < 3;
+    const schutt = !p && hatBaustelle(stand, this.index);
+    const bau = laufenderBau(stand);
+    const hierWirdGebaut = !!bau && bau.etage === this.index;
+    const sichtbar = !p && abstand >= 0 && abstand < 3;
+    this.gesperrt.visible = sichtbar && !schutt;
     this.gesperrt.alpha = abstand === 0 ? 1 : 0.28;
+    // Die Baustelle ist ganz zu sehen, sobald man dort bauen kann oder baut — sonst wie die Umrisse.
+    this.baustelle.visible = sichtbar && schutt;
+    this.baustelle.alpha = abstand === 0 || hierWirdGebaut || naechsteBaustelle(stand) === this.index ? 1 : 0.28;
+    this.bauarbeiter.forEach((a, k) => {
+      a.wurzel.visible = hierWirdGebaut;
+      if (!hierWirdGebaut) return;
+      a.spiele('arbeiten', 1 + k * 0.15);
+      a.schaue(k === 0 ? 1 : -1);
+      a.aktualisiere(dt);
+    });
+    // Fertig: Die Wand bricht mit Staub und Brocken weg.
+    if (this.hatteSchutt === true && !schutt && sichtbar) {
+      const mitte = SCHACHT.x + SCHACHT.b + (BREITE - SCHACHT.x - SCHACHT.b) / 2;
+      this.wolke.truemmer(mitte, etage(this.index).boden - 40, BREITE - SCHACHT.x - SCHACHT.b);
+      ton('hupe', 0.3);
+    }
+    this.hatteSchutt = schutt;
     if (!p) {
       this.letzteStufe = 0;
       this.letzteAnzahl = 0;
@@ -355,7 +506,7 @@ class EtageBild {
     }
     this.letzteStufe = p.stufe;
 
-    const { anzahl } = kistenStapel(p, this.index, stand.manufaktur, stand.jubilaeen);
+    const { anzahl } = kistenStapel(p, this.index, stand.manufaktur, kartenwertBonus(stand));
     this.stapel.forEach((s, i) => (s.visible = i < anzahl));
     this.presse.setzeFassung(p.stufe >= 100 ? 3 : p.stufe >= 25 ? 2 : 1);
 
@@ -392,7 +543,8 @@ class EtageBild {
       } else if (jetzt < this.jubelBis) {
         a.spiele('jubeln');
       } else {
-        a.spiele(arbeiterAblauf(ph.phase), tempo);
+        const ablauf = arbeiterAblauf(ph.phase);
+        a.spiele(ablauf, phasenTempo(CLIPS[ablauf], ablauf, pressenPhaseMs(p, ph.phase, jetzt), tempo));
         a.schaue(ph.phase === 'zurueck' ? -1 : 1);
       }
       a.traegt(traegtStapel(ph.phase) ? this.t[stapelBild(this.index)]! : null);
@@ -427,14 +579,12 @@ class EtageBild {
     this.presse.aktualisiere(dt, arbeitet, tempo);
 
     // Eingestellt steht der Meister an der Kiste und pfeift, wenn er die Faehigkeit ausloest.
-    this.meister.wurzel.visible = p.meister;
-    if (p.meister) {
-      if (jetzt < p.faehigkeitBis && this.pfeifenSeit === 0) this.pfeifenSeit = jetzt;
-      if (jetzt >= p.faehigkeitBis) this.pfeifenSeit = 0;
-      this.meister.spiele(this.pfeifenSeit > 0 && jetzt - this.pfeifenSeit < 900 ? 'pfeifen' : 'idle');
-      this.meister.traegt(null);
-      this.meister.aktualisiere(dt);
-    }
+    this.meister.zeige(p, jetzt, dt, { x: this.presse.wurzel.x, y: e.boden - 50, groesse: 150 });
+  }
+
+  /** Festmoment (Renovierung): alle Arbeiter dieser Etage jubeln. */
+  jubel(bis: number): void {
+    this.jubelBis = Math.max(this.jubelBis, bis);
   }
 
   /** Debug: Rig-Anker der Arbeiter und die Punkte der Presse. */
@@ -444,10 +594,11 @@ class EtageBild {
     const liste = [this.presse.bedienPunkt(), this.presse.ausgabePunkt()];
     const dampf = this.presse.dampfPunkt();
     if (dampf) liste.push(dampf);
-    for (const a of [...this.arbeiter, this.meister]) {
+    for (const a of this.arbeiter) {
       if (!a.wurzel.visible) continue;
       for (const q of a.punkte()) liste.push({ x: a.wurzel.x + q.x, y: a.wurzel.y + q.y });
     }
+    liste.push(...this.meister.punkte());
     return liste;
   }
 }
@@ -467,14 +618,19 @@ export class Szene {
   private readonly raeder: Sprite[] = [];
   private readonly traeger: Figur;
   private readonly kurbler: Figur;
-  private readonly paternosterMeister: Figur;
-  private readonly versandMeister: Figur;
+  private readonly paternosterMeister: MeisterStelle;
+  private readonly versandMeister: MeisterStelle;
   private direktor: Figur | null = null;
   private direktorSchluessel = '';
   private direktorJubel = 0;
   private direktorWinken = 0;
   private stufenSumme = -1;
   private readonly direktorHalter = new Container();
+  /** Deko ab Renovierung 2 (Girlande) und 3 (Lampen) — renovierung.json. */
+  private readonly girlande: TilingSprite;
+  private readonly lampen = new Container();
+  private feierAnfrage = false;
+  private feierBis = 0;
   private readonly wand: TilingSprite;
   private readonly abdunkeln = new Graphics();
   private readonly paket: Texture;
@@ -519,6 +675,25 @@ export class Szene {
     );
     halleBild.width = BREITE;
     halleBild.height = HALLE_HOEHE;
+
+    // Deko: Girlande oben quer (1024 × 128, waagrecht kachelbar), zwei Lampen mit Licht.
+    this.girlande = new TilingSprite({ texture: t[R('rig2/deko-girlande.png')]!, width: BREITE, height: 32 });
+    this.girlande.tileScale.set(32 / 128);
+    this.girlande.position.set(0, 2);
+    for (const x of [128, 300]) {
+      const lampe = new Container();
+      const licht = new Sprite(t[R('rig2/deko-lampe-licht.png')]);
+      licht.anchor.set(128 / 256, 16 / 384);
+      licht.position.set(0, (239 - 8) * 0.3);
+      licht.scale.set(0.3);
+      licht.blendMode = 'screen';
+      const koerper = new Sprite(t[R('rig2/deko-lampe.png')]);
+      koerper.anchor.set(64 / 128, 8 / 256);
+      koerper.scale.set(0.3);
+      lampe.addChild(licht, koerper);
+      lampe.position.set(x, 0);
+      this.lampen.addChild(lampe);
+    }
 
     // Keller: Ziegelwand, gekachelt, etwas abgedunkelt fuer die Schilder.
     this.wand = new TilingSprite({ texture: t['/manufaktur/wand-keller.webp']!, width: BREITE, height: 100 });
@@ -590,9 +765,9 @@ export class Szene {
     this.kurbler = new RigFigur(t, ARBEITER_HOEHE, berufsAusstattung('traeger'));
     this.kurbler.schaue(-1);
     this.kurbler.wurzel.position.set(h.kurbler.x, h.boden);
-    this.paternosterMeister = new RigFigur(t, ARBEITER_HOEHE, berufsAusstattung('meister'));
+    this.paternosterMeister = new MeisterStelle(t, this.wolke);
     this.paternosterMeister.wurzel.position.set(h.paternosterMeisterFigur.x + h.paternosterMeisterFigur.b / 2, h.boden);
-    this.versandMeister = new RigFigur(t, ARBEITER_HOEHE, berufsAusstattung('meister'));
+    this.versandMeister = new MeisterStelle(t, this.wolke);
     this.versandMeister.wurzel.position.set(h.versandMeisterFigur.x + h.versandMeisterFigur.b / 2, h.boden);
 
     // Der Direktor steht auf diesem Podest vor dem Fenster — ausserhalb der Laufwege.
@@ -603,7 +778,7 @@ export class Szene {
       .fill(0xc9a24a);
     this.direktorHalter.position.set(h.podest.x + h.podest.b / 2, h.podest.y);
 
-    this.welt.addChild(halleBild, this.wand, this.roehre, this.band, this.bandLadung, this.fuss);
+    this.welt.addChild(halleBild, this.lampen, this.girlande, this.wand, this.roehre, this.band, this.bandLadung, this.fuss);
     for (let i = 0; i < MAX_PRESSEN; i += 1) {
       const e = new EtageBild(i, t, this.wolke);
       this.etagen.push(e);
@@ -688,6 +863,17 @@ export class Szene {
     this.app.render();
   }
 
+  /** Der Packer — beim Festmoment jubelt er statt zu arbeiten (ein Ablauf je Bild, sonst beginnt er immer neu). */
+  private spieleTraeger(jetzt: number, name: Parameters<Figur['spiele']>[0], tempo?: number): void {
+    if (jetzt < this.feierBis) this.traeger.spiele('jubeln');
+    else this.traeger.spiele(name, tempo);
+  }
+
+  /** Festmoment nach dem Renovieren: Konfetti, alle Pinguine und der Direktor jubeln. */
+  feiere(): void {
+    this.feierAnfrage = true;
+  }
+
   /** Bilder je Sekunde, gemittelt ueber die letzte Sekunde (Debug-Ansicht). */
   fps(): number {
     return this.bildrate;
@@ -747,6 +933,16 @@ export class Szene {
       if (sichtbar) e.zeige(stand, jetzt, rest, dt);
     });
 
+    if (this.feierAnfrage) {
+      this.feierAnfrage = false;
+      this.feierBis = jetzt + 1800;
+      this.direktorJubel = 1800;
+      for (const e of this.etagen) e.jubel(this.feierBis);
+      this.wolke.konfetti(BREITE, oben / faktor);
+    }
+    const stufe = renovierung(stand);
+    this.girlande.visible = stufe >= 2;
+    this.lampen.visible = stufe >= 3;
     this.zeigePaternoster(stand, jetzt, rest, dt);
     this.zeigeVersand(stand, jetzt, rest, dt);
     this.zeigeDirektor(stand, dt);
@@ -788,7 +984,9 @@ export class Szene {
     if (Math.abs(weg) < 200) {
       this.bandWeg += weg;
       this.band.tilePosition.y = this.bandWeg;
-      this.antrieb.rotation += weg / 9;
+      // Hoechstens rund 20° je Bild: Schneller wirkt ein Speichenrad, als
+      // drehte es rueckwaerts (Wagenrad-Effekt), sobald der Paternoster flott ist.
+      this.antrieb.rotation += Math.max(-0.35, Math.min(0.35, weg / 9));
     }
     // Ladung nur auf den Tabletts, die gerade Ware hinauftragen: auf der
     // Rueckfahrt nach oben, zwischen der Etage, an der die Kabine ist, und dem Kopf.
@@ -804,9 +1002,9 @@ export class Szene {
     // Der Kurbler dreht das Rad, solange die Kabine faehrt; ohne Meister und
     // mit Ware in den Kisten schlaeft er.
     const schlaeft = !f.meister && !f.laeuft && stand.pressen.some((p) => p.kiste > 0);
-    this.kurbler.spiele(f.laeuft ? 'kurbeln' : schlaeft ? 'schlafen' : 'idle');
+    this.kurbler.spiele(jetzt < this.feierBis ? 'jubeln' : f.laeuft ? 'kurbeln' : schlaeft ? 'schlafen' : 'idle');
     this.kurbler.aktualisiere(dt);
-    this.zeigeMeister(this.paternosterMeister, f, jetzt, dt);
+    this.paternosterMeister.zeige(f, jetzt, dt, { x: this.kopf.x, y: this.kopf.y - 50, groesse: 130 });
   }
 
   /** Hoehe der Fahrt: 0 = oben in der Halle, k = an Etage k, dazwischen gleichmaessig. */
@@ -815,21 +1013,6 @@ export class Szene {
     const an = (e: number): number => (e <= 0 ? oben : haltY(Math.min(e, etagen) - 1));
     const unten = Math.floor(k);
     return an(unten) + (an(unten + 1) - an(unten)) * (k - unten);
-  }
-
-  /** Ein Hallen-Meister: steht, wenn eingestellt, und pfeift beim Ausloesen der Faehigkeit. */
-  private zeigeMeister(
-    figur: Figur,
-    s: { meister: boolean; faehigkeitBis: number; abklingenBis: number },
-    jetzt: number,
-    dt: number,
-  ): void {
-    figur.wurzel.visible = s.meister;
-    if (!s.meister) return;
-    const seit = jetzt - (s.faehigkeitBis - FAEHIGKEIT_MS);
-    figur.spiele(jetzt < s.faehigkeitBis && seit < 900 ? 'pfeifen' : 'idle');
-    figur.traegt(null);
-    figur.aktualisiere(dt);
   }
 
   private zeigeVersand(stand: ManufakturStand, jetzt: number, rest: number, dt: number): void {
@@ -846,7 +1029,10 @@ export class Szene {
     this.wagen.x = h.wagen.x + wagen.weg * strecke;
     // Raeder: Drehwinkel aus Strecke durch Radius (in Wagen-Pixeln).
     const gefahren = (this.wagen.x - vorher) / wm;
-    if (Math.abs(gefahren) < 400) for (const r of this.raeder) r.rotation += gefahren / WAGEN.radRadius;
+    if (Math.abs(gefahren) < 400) {
+      const dreh = Math.max(-0.35, Math.min(0.35, gefahren / WAGEN.radRadius));
+      for (const r of this.raeder) r.rotation += dreh;
+    }
     // Tuer offen am Tor, zu unterwegs — als Zustandswechsel mit kurzem Squash.
     const offen = wagen.phase === 'steht' || wagen.phase === 'laden';
     const korpus = this.t[R(offen ? 'versand-korpus-offen.png' : 'versand-korpus-zu.png')]!;
@@ -889,23 +1075,29 @@ export class Szene {
     if (wagen.phase === 'laden') {
       const a = Math.min(1, wagen.anteil / 0.7);
       x = von + (bis - von) * a;
-      this.traeger.spiele(wagen.anteil < 0.7 ? 'laufen_tragen' : 'einladen');
+      // Laden dauert bei vollem Tempo nur noch Sekundenbruchteile — die
+      // Ablaeufe muessen in ihren Abschnitt passen (phasenTempo).
+      const ladenMs = (VERSAND_ABFAHRT * versandZyklus(v.stufe)) / tempoFaktor('versand', v, jetzt);
+      const grund = (versandZyklus(1) / versandZyklus(v.stufe)) * tempoFaktor('versand', v, jetzt);
+      const name = wagen.anteil < 0.7 ? 'laufen_tragen' : 'einladen';
+      this.spieleTraeger(jetzt, name, phasenTempo(CLIPS[name], name, ladenMs * (name === 'einladen' ? 0.3 : 0.7), grund));
       this.traeger.schaue(1);
       this.traeger.traegt(wagen.anteil < 0.85 ? this.paket : null);
     } else if (wagen.phase === 'weg') {
       const a = Math.min(1, wagen.anteil / 0.6);
       x = bis - (bis - von) * a;
-      this.traeger.spiele(a < 1 ? 'laufen' : 'winken');
+      const grund = (versandZyklus(1) / versandZyklus(v.stufe)) * tempoFaktor('versand', v, jetzt);
+      this.spieleTraeger(jetzt, a < 1 ? 'laufen' : 'winken', a < 1 ? Math.min(LAUFEN_TEMPO_MAX, grund) : 1);
       this.traeger.schaue(a < 1 ? -1 : 1);
       this.traeger.traegt(null);
     } else {
-      this.traeger.spiele(!v.meister && !v.laeuft && stand.packtisch > 0 ? 'schlafen' : 'idle');
+      this.spieleTraeger(jetzt, !v.meister && !v.laeuft && stand.packtisch > 0 ? 'schlafen' : 'idle');
       this.traeger.schaue(1);
       this.traeger.traegt(null);
     }
     this.traeger.wurzel.position.set(x, h.boden);
     this.traeger.aktualisiere(dt);
-    this.zeigeMeister(this.versandMeister, v, jetzt, dt);
+    this.versandMeister.zeige(v, jetzt, dt, { x: this.wagen.x + 75, y: halle().boden - 40, groesse: 170 });
   }
 
   /** Der Direktor: dein Pinguin mit deinem Outfit; winkt bei Verkaeufen, jubelt bei Upgrades. */
@@ -937,10 +1129,11 @@ export class Szene {
       g.moveTo(x - 4, y).lineTo(x + 4, y).moveTo(x, y - 4).lineTo(x, y + 4).stroke({ width: 1.2, color: farbe });
     };
     for (const e of this.etagen) if (e.wurzel.visible) for (const q of e.punkte()) kreuz(q.x, q.y, 0xff3355);
-    for (const f of [this.traeger, this.kurbler, this.paternosterMeister, this.versandMeister]) {
+    for (const f of [this.traeger, this.kurbler]) {
       if (!f.wurzel.visible) continue;
       for (const q of f.punkte()) kreuz(f.wurzel.x + q.x, f.wurzel.y + q.y, 0x33ff88);
     }
+    for (const m of [this.paternosterMeister, this.versandMeister]) for (const q of m.punkte()) kreuz(q.x, q.y, 0x33ff88);
     kreuz(this.wagen.x, this.wagen.y, 0x33aaff);
     kreuz(this.antrieb.x, this.antrieb.y, 0xffcc00);
     kreuz(this.band.x + BAND.breite / 2, this.kabinenY, 0xffcc00);

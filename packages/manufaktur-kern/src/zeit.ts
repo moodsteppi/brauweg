@@ -9,9 +9,7 @@
  */
 
 import {
-  FAEHIGKEIT_TEMPO,
   ABWESEND_AB_MS,
-  OFFLINE_MS,
   OFFLINE_TEMPO,
   TAKT_MS,
   VERSAND_ABFAHRT,
@@ -24,12 +22,12 @@ import {
   versandKapazitaet,
   versandZyklus,
 } from './formeln.js';
-import { type ManufakturStand, type Station, kopiere } from './stand.js';
-
-/** Tempo einer Station zum Zeitpunkt `t`: doppelt, solange die Meister-Faehigkeit wirkt. */
-export function tempo(s: Station, t: number): number {
-  return s.meister && t < s.faehigkeitBis ? FAEHIGKEIT_TEMPO : 1;
-}
+import { ladungFaktor, tempoFaktor } from './meister.js';
+import { ortFaktor, presseBonus } from './renovieren.js';
+import { offlineMs } from './werkstattbuch.js';
+import { liefereAuftrag } from './auftraege.js';
+import { raeumeAuf } from './baustelle.js';
+import { type ManufakturStand, kopiere } from './stand.js';
 
 /** Liegt in irgendeiner Kiste etwas fuer den Paternoster? */
 export function kistenVoll(stand: ManufakturStand): boolean {
@@ -62,7 +60,9 @@ export function starte(stand: ManufakturStand, ziel: { art: 'presse'; index: num
   }
   // Der Traeger nimmt beim Start vom Packtisch, was in den Wagen passt.
   const v = stand.versand;
-  const ladung = Math.min(versandKapazitaet(v.stufe, stand.manufaktur), stand.packtisch);
+  // Ladungs-Meister: Der Wagen nimmt mehr, wenn die Faehigkeit beim Beladen wirkt.
+  const kapazitaet = versandKapazitaet(v.stufe, stand.manufaktur, ortFaktor(stand)) * ladungFaktor('versand', v, stand.zeit);
+  const ladung = Math.min(kapazitaet, stand.packtisch);
   stand.packtisch -= ladung;
   v.ladung = ladung;
   v.laeuft = true;
@@ -77,9 +77,9 @@ function takt(stand: ManufakturStand): void {
   stand.pressen.forEach((p, index) => {
     if (!p.laeuft && p.meister) starte(stand, { art: 'presse', index });
     if (!p.laeuft) return;
-    p.fortschritt += (TAKT_MS * tempo(p, t)) / presseZyklus(p.stufe);
+    p.fortschritt += (TAKT_MS * tempoFaktor('presse', p, t)) / presseZyklus(p.stufe);
     if (p.fortschritt >= 1) {
-      p.kiste += presseErtrag(index, p.stufe, stand.manufaktur, stand.jubilaeen);
+      p.kiste += presseErtrag(index, p.stufe, stand.manufaktur, presseBonus(stand));
       p.laeuft = false;
       p.fortschritt = 0;
     }
@@ -88,8 +88,8 @@ function takt(stand: ManufakturStand): void {
   const f = stand.paternoster;
   if (!f.laeuft && f.meister && kistenVoll(stand)) starte(stand, { art: 'paternoster' });
   if (f.laeuft) {
-    f.fortschritt += (TAKT_MS * tempo(f, t)) / paternosterFahrt(f.etagen, f.stufe);
-    const kapazitaet = paternosterKapazitaet(f.stufe, stand.manufaktur);
+    f.fortschritt += (TAKT_MS * tempoFaktor('paternoster', f, t)) / paternosterFahrt(f.etagen, f.stufe);
+    const kapazitaet = paternosterKapazitaet(f.stufe, stand.manufaktur, ortFaktor(stand)) * ladungFaktor('paternoster', f, t);
     while (f.geholt < f.etagen && f.fortschritt >= paternosterHalt(f.geholt + 1, f.etagen).ab) {
       const presse = stand.pressen[f.geholt];
       if (presse) {
@@ -110,10 +110,11 @@ function takt(stand: ManufakturStand): void {
   const v = stand.versand;
   if (!v.laeuft && v.meister && stand.packtisch > 0) starte(stand, { art: 'versand' });
   if (v.laeuft) {
-    v.fortschritt += (TAKT_MS * tempo(v, t)) / versandZyklus(v.stufe);
+    v.fortschritt += (TAKT_MS * tempoFaktor('versand', v, t)) / versandZyklus(v.stufe);
     if (!v.verkauft && v.fortschritt >= VERSAND_VERKAUF) {
       stand.taler += v.ladung;
       stand.verdient += v.ladung;
+      liefereAuftrag(stand, v.ladung);
       v.ladung = 0;
       v.verkauft = true;
     }
@@ -151,12 +152,14 @@ export function vorspulen(alt: ManufakturStand, bis: number): ManufakturStand {
   const ende = alt.zeit + takte * TAKT_MS;
   const luecke = takte * TAKT_MS;
   const rechnen =
-    luecke > ABWESEND_AB_MS ? Math.floor((Math.min(luecke, OFFLINE_MS) * OFFLINE_TEMPO) / TAKT_MS) : takte;
+    luecke > ABWESEND_AB_MS ? Math.floor((Math.min(luecke, offlineMs(alt)) * OFFLINE_TEMPO) / TAKT_MS) : takte;
   for (let i = 0; i < rechnen; i += 1) {
     if (ruhig(stand)) break;
     takt(stand);
   }
   stand.zeit = ende;
+  // Baustellen haengen nur an der Uhr: Sie werden auch offline fertig.
+  raeumeAuf(stand);
   return stand;
 }
 

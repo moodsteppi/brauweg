@@ -108,7 +108,7 @@ test('Jeder Gegenstand des Weges steht im Katalog und kostet dort etwas', () => 
   }
 });
 
-test('Checkpoints alle 100 bis 1000, darueber alle 250 eine Silbertruhe', () => {
+test('Checkpoints alle 100, Diamantauftakt bei 1250 und danach Silbertruhen', () => {
   assert.deepEqual(
     wegStufenBis(1000).filter((s) => s.art === 'checkpoint').map((s) => s.schwelle),
     [200, 300, 400, 600, 700, 800, 900],
@@ -120,7 +120,7 @@ test('Checkpoints alle 100 bis 1000, darueber alle 250 eine Silbertruhe', () => 
   assert.deepEqual(
     wegStufenBis(2000).filter((s) => s.art === 'weiter').map((s) => [s.schwelle, s.truhe]),
     [
-      [1250, 'silber'],
+      [1250, 'diamant'],
       [1500, 'silber'],
       [1750, 'silber'],
       [2000, 'silber'],
@@ -286,7 +286,7 @@ test('Ueber 1000 gibt es alle 250 eine Silbertruhe, die naechste steht schon da'
         [1750, false],
       ],
     );
-    // 5 Stationen + 7 Checkpoints + 2 Silbertruhen
+    // 5 Stationen + 7 Checkpoints + Diamantauftakt und Silbertruhe
     assert.equal(weg.bereit, 14);
     assert.equal(await offeneWegBelohnungen(ctx.db, accountId, 1600), 14);
 
@@ -387,4 +387,30 @@ test('Ueber die Leitung: Weg lesen, holen, /api/me zaehlt mit', async () => {
     await a.app.close();
     await a.ctx.close();
   }
+});
+
+
+test('1250 gibt Diamantinhalt plus 100 Muenzen und zahlt das Paket nur einmal', async () => {
+  const { ctx, accountId } = await konto(1250);
+  try {
+    const vorher = await wegFuer(ctx.db, accountId);
+    const stufe = vorher.stufen.find(s => s.schwelle === 1250)!;
+    assert.equal(stufe.truhe?.grad, 'diamant');
+    assert.equal(stufe.muenzen, 100);
+    const ergebnisse = await Promise.allSettled([
+      wegHolen(ctx.db, accountId, 1250), wegHolen(ctx.db, accountId, 1250),
+    ]);
+    const erfolge = ergebnisse.filter(e => e.status === 'fulfilled');
+    assert.equal(erfolge.length, 1);
+    const fund = (erfolge[0] as PromiseFulfilledResult<Awaited<ReturnType<typeof wegHolen>>>).value;
+    assert.equal(fund.grad, 'diamant');
+    assert.ok(fund.coins >= SPANNE.diamant.von + 100 && fund.coins <= SPANNE.diamant.bis + 100);
+    assert.equal(fund.stand, fund.coins);
+    assert.equal((await standVon(ctx.db, accountId)).coins, fund.coins);
+    const nachher = await wegFuer(ctx.db, accountId);
+    assert.equal(nachher.stufen.find(s => s.schwelle === 1250)?.coins, fund.coins);
+    assert.equal(nachher.stufen.find(s => s.schwelle === 1250)?.geholt, true);
+    await assert.rejects(() => wegHolen(ctx.db, accountId, 1250), istFehler('wegSchonGeholt', 409));
+    assert.equal((await standVon(ctx.db, accountId)).coins, fund.coins);
+  } finally { await ctx.close(); }
 });

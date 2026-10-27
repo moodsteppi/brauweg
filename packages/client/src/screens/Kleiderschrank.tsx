@@ -79,11 +79,13 @@ export function Kleiderschrank({
   onGetragen,
   onGuthaben,
   neu = false,
+  onShop,
 }: {
   /** Neues Hub: Vollbild in Nachtblau & Gold, dieselben Käufe und Rückfragen. */
   neu?: boolean;
   /** Was gerade sitzt — kommt aus /api/me, damit es nur eine Wahrheit gibt. */
   getragen: Getragen;
+  onShop?: (artikel: string) => void;
   onClose: () => void;
   /** Nach dem Anziehen: /api/me neu laden. */
   onGetragen: () => void;
@@ -191,6 +193,7 @@ export function Kleiderschrank({
   const belegt = getragen[slot] !== undefined;
 
   if (neu) {
+    const edelsteine = mitEdelsteinen();
     return (
       <div className="hb-voll hb-schrank sp" role="dialog" aria-modal="true" aria-label="Kleiderschrank">
         <header className="hb-voll-kopf">
@@ -286,7 +289,7 @@ export function Kleiderschrank({
                         }
                         // Anprobieren darf man immer; kaufen braucht ein Ja.
                         setProbe({ [slot]: stueck.id });
-                        if (!stueck.geschenk) setKaufen(stueck);
+                        if (!stueck.geschenk) { if (onShop) onShop(stueck.id); else setKaufen(stueck); }
                       }}
                     >
                       <span className="sp-fach-bild">
@@ -334,11 +337,11 @@ export function Kleiderschrank({
               </div>
               {/* Gold ist der eine Hauptknopf: die Münzen, die kein echtes Geld
                   gekostet haben (dieselbe Überlegung wie bei der Eingabetaste). */}
-              {mitEdelsteinen && <p className="hb-klein hb-ohne-rand hb-mitte-text">Womit bezahlen?</p>}
+              {edelsteine && <p className="hb-klein hb-ohne-rand hb-mitte-text">Womit bezahlen?</p>}
               {/* Ohne Edelsteine bleibt EIN Knopf — er steht dann mittig über die
                   ganze Breite statt allein in der linken Spalte (Emile, 22.10.2026). */}
-              <div className={`hb-knopfreihe${mitEdelsteinen ? '' : ' is-einzeln'}`}>
-                <button type="submit" className={`hb-kn is-gold is-haupt${mitEdelsteinen ? '' : ' is-breit'}`} disabled={laeuft !== null}>
+              <div className={`hb-knopfreihe${edelsteine ? '' : ' is-einzeln'}`}>
+                <button type="submit" className={`hb-kn is-gold is-haupt${edelsteine ? '' : ' is-breit'}`} disabled={laeuft !== null}>
                   {kauftMit === 'coins' ? (
                     'Kauft…'
                   ) : (
@@ -348,8 +351,8 @@ export function Kleiderschrank({
                     </>
                   )}
                 </button>
-                {/* In der App nur Münzen (laufzeit.ts, `mitEdelsteinen`). */}
-                {mitEdelsteinen && (
+                {/* In der App nur Münzen (laufzeit.ts, `mitEdelsteinen`), auf der Webseite ohne Shop im Umfang ebenso. */}
+                {edelsteine && (
                 <button
                   type="button"
                   className="hb-kn is-zweit is-haupt"
@@ -450,7 +453,7 @@ export function Kleiderschrank({
                       }
                       // Erst anprobieren, dann fragen. Der Kauf braucht ein Ja.
                       setProbe({ [slot]: stueck.id });
-                      setKaufen(stueck);
+                      if (onShop) onShop(stueck.id); else setKaufen(stueck);
                     }}
                   >
                     <StueckBild itemId={stueck.id} slot={slot} />

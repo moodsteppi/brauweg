@@ -206,7 +206,7 @@ export function useWortEingabe<T extends Runde>({
           .catch((err: unknown) => {
             // Eine abgebrochene Rueckfrage (Clanwort-Wahl) ist keine Stoerung.
             if (err instanceof Error && err.name === 'Abgebrochen') return;
-            melde(err instanceof ApiError ? t(err.messageKey) : 'Keine Verbindung — nochmal versuchen.');
+            melde(err instanceof ApiError ? t(err.messageKey) : 'Keine Verbindung - nochmal versuchen.');
           })
           .finally(() => setLaeuft(false));
         return;
@@ -254,7 +254,7 @@ export function BrowortFlamme({
     <span className="bw-flamme" style={{ width: `${(groesse * 48) / 60}rem`, height: `${groesse}rem` }}>
       <Flamme aus={!an} groesse={groesse} />
       <span className="bw-flamme-zahl" aria-hidden="true">
-        {schnitt === null ? '–' : schnitt.toLocaleString('de-DE', { maximumFractionDigits: 1 })}
+        {schnitt === null ? '-' : schnitt.toLocaleString('de-DE', { maximumFractionDigits: 1 })}
       </span>
     </span>
   );

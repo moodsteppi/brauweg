@@ -8,7 +8,6 @@ import type { FillerSicht, Variante } from '../minispiele/filler/sicht';
 import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { serverAdresse } from '../laufzeit';
-import { hubNeu } from '../hubNeu';
 import { HelleKopfzeile } from '../kopfzeile';
 import { GastHinweis } from '../tisch/GastHinweis';
 import { HbBlatt } from './HbBlatt';
@@ -16,7 +15,7 @@ import { SpielAbschnitt, SpielRahmen } from './SpielEinstieg';
 import './spiel-einstieg-mini.css';
 
 /**
- * Die Farbe von Filler im neuen Hub: das Blau des Bretts (FARBEN[3]) — der
+ * Die Farbe von Filler im Hub: das Blau des Bretts (FARBEN[3]) — der
  * alte Suchknopf trug es schon. Es toent die gewaehlte Spielart und den Kopf;
  * der Hauptknopf bleibt gold (DESIGN.md, „Spieleinstieg").
  */
@@ -84,11 +83,11 @@ const SUCH_TAKT_MS = 1000;
  */
 const SPIELARTEN = [
   { kennung: 'nebel', name: 'Nebel', text: 'Du siehst nur dein Gebiet und dessen Rand.' },
-  { kennung: 'klar', name: 'Normal', text: 'Das ganze Brett liegt offen — wie im Original.' },
+  { kennung: 'klar', name: 'Normal', text: 'Das ganze Brett liegt offen - wie im Original.' },
   {
     kennung: 'build',
     name: 'Build',
-    text: 'Offenes Brett, dazu zehn Mauern je Spieler — eine je Zug, färben darfst du danach trotzdem.',
+    text: 'Offenes Brett, dazu zehn Mauern je Spieler - eine je Zug, färben darfst du danach trotzdem.',
   },
   {
     kennung: 'extreme',
@@ -550,74 +549,45 @@ export function Filler({
   // Mitspieler suchen
   // -------------------------------------------------------------------------
 
-  /** Im neuen Hub unter den Knoepfen im Fuss — dieselbe Zahl wie im alten Menue. */
+  /** Unter den Knoepfen im Fuss: wie viele gerade spielen. */
   const spielerZeile = <p className="hb-klein">{aktiv ?? '…'} Spieler gerade in {t('game.filler')}</p>;
 
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
     const gefunden = suchstand.suchende;
-    if (hubNeu) {
-      return (
-        <SpielRahmen
-          gameId="filler"
-          titel="Gegner suchen"
-          unter={`${t('game.filler')} · ${VARIANTE_NAME[variante]}`}
-          akzent={AKZENT}
-          onBack={brichSucheAb}
-          zurueckText="Suche abbrechen"
-          fuss={
-            <>
-              <button type="button" className="hb-kn is-blau is-breit" onClick={brichSucheAb}>
-                Abbrechen
-              </button>
-              {spielerZeile}
-            </>
-          }
-        >
-          <div className="spe-warten">
-            <p className="spe-countdown" aria-live="polite">
-              {sekunden}
-            </p>
-            <p className="spe-text">
-              {gefunden === 1
-                ? 'Noch niemand sonst — bleibt es dabei, spielst du gegen einen Bot.'
-                : `${gefunden} Spieler gefunden`}
-            </p>
-            <div className="spe-lauf" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-          </div>
-        </SpielRahmen>
-      );
-    }
     return (
-      <main className="fl-seite fl-menue">
-        <HelleKopfzeile />
-        <button className="fl-zurueck" type="button" onClick={brichSucheAb}>
-          ← Abbrechen
-        </button>
-        <div className="fl-menue-mitte">
-          <h1 className="fl-titel">Gegner suchen</h1>
-          {/* Die Zahl gross und ohne Einheit: Sie zaehlt sichtbar herunter und
-              beantwortet damit die einzige Frage, die man hier hat. */}
-          <p className="fl-countdown" aria-live="polite">
+      <SpielRahmen
+        gameId="filler"
+        titel="Gegner suchen"
+        unter={`${t('game.filler')} · ${VARIANTE_NAME[variante]}`}
+        akzent={AKZENT}
+        onBack={brichSucheAb}
+        zurueckText="Suche abbrechen"
+        fuss={
+          <>
+            <button type="button" className="hb-kn is-blau is-breit" onClick={brichSucheAb}>
+              Abbrechen
+            </button>
+            {spielerZeile}
+          </>
+        }
+      >
+        <div className="spe-warten">
+          <p className="spe-countdown" aria-live="polite">
             {sekunden}
           </p>
-          <p className="fl-untertitel">
+          <p className="spe-text">
             {gefunden === 1
-              ? 'Noch niemand sonst — bleibt es dabei, spielst du gegen einen Bot.'
+              ? 'Noch niemand sonst - bleibt es dabei, spielst du gegen einen Bot.'
               : `${gefunden} Spieler gefunden`}
           </p>
-          <div className="fl-punkte-lauf" aria-hidden="true">
+          <div className="spe-lauf" aria-hidden="true">
             <span />
             <span />
             <span />
           </div>
-          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in {t('game.filler')}</p>
         </div>
-      </main>
+      </SpielRahmen>
     );
   }
 
@@ -625,12 +595,11 @@ export function Filler({
   // Menue
   // -------------------------------------------------------------------------
 
-  if (!tischId && hubNeu) {
+  if (!tischId) {
     /*
-     * Neues Hub: dieselben Zustaende und Aufrufe im Spieleinstieg-Baukasten.
-     * Die Spielart steht ueber beiden Knoepfen, weil sie fuer beide gilt
+     * Der Spieleinstieg-Baukasten. Die Spielart steht ueber beiden Knoepfen, weil sie fuer beide gilt
      * (siehe `variante`); beide liegen deshalb im Fuss, die Suche in Gold.
-     * Gewischt wird ueber dem ganzen Inhalt, wie im alten Menue.
+     * Gewischt wird ueber dem ganzen Inhalt.
      */
     return (
       <SpielRahmen
@@ -703,142 +672,46 @@ export function Filler({
     );
   }
 
-  if (!tischId) {
-    return (
-      <main className="fl-seite fl-menue">
-        <HelleKopfzeile />
-        <button className="fl-zurueck" type="button" onClick={onBack} aria-label="Zurück">
-          ←
-        </button>
-        <div className="fl-menue-mitte" data-wischbar="" {...wischen}>
-          <h1 className="fl-titel">{t('game.filler')}</h1>
-          {/*
-            * Nur der Satz, der fuer ALLE vier Spielarten gilt. Der Nebel-Zusatz
-            * stand hier bis zum 19.09.2026 fest drin — aus der Zeit, als Nebel
-            * die einzige Spielart war — und widersprach zwei Fingerbreit
-            * darunter der Schalterbeschreibung ("Offenes Brett …"). Was pro
-            * Spielart gilt, sagt allein VARIANTE_TEXT; eine zweite Stelle
-            * daneben laeuft beim naechsten neuen Modus wieder auseinander.
-            */}
-          <p className="fl-untertitel">
-            Färbe dein Gebiet um und schlucke, was daran grenzt.
-          </p>
-          <div className="fl-probe" aria-hidden="true">
-            {FARBEN.slice(0, farbzahlAus(vorgabe, variante)).map((farbe, i) => (
-              <span key={i} style={{ background: farbe }} />
-            ))}
-          </div>
-          {/*
-            * Der Schalter steht ÜBER beiden Knoepfen, weil er entscheidet, WAS
-            * beide aufmachen — seit dem 06.09.2026 abends auch die Suche: Die
-            * Schlange des Servers fuehrt je Spielart einen Topf. Zwischendurch
-            * stand er beim Bot-Knopf, als die Schlange die Spielart noch nicht
-            * kannte.
-            */}
-          <Spielartwahl
-            wert={variante}
-            onWahl={waehleVariante}
-            richtung={wischRichtung}
-            vorgabe={vorgabe}
-          />
-          <button
-            className="fl-suchen"
-            type="button"
-            onClick={() => void starteSuche()}
-            disabled={sucht}
-          >
-            Online Match suchen…
-          </button>
-          <div className="fl-botblock">
-            {/* Ruhiger gefaerbt als die Match-Suche: Der Mensch bleibt das
-                Angebot, gegen das man zuerst spielt. Dieselbe Staffelung wie
-                bei Mememory. */}
-            <button
-              className="fl-botknopf"
-              type="button"
-              onClick={() => void starteBot()}
-              disabled={sucht}
-            >
-              Gegen Bot spielen
-            </button>
-          </div>
-          <button className="fl-regelknopf" type="button" onClick={() => setRegelnOffen(true)}>
-            So spielt man {t('game.filler')}
-          </button>
-          {fehler && <p className="fl-fehler">{fehler}</p>}
-          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in {t('game.filler')}</p>
-        </div>
-        {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
-      </main>
-    );
-  }
-
   // -------------------------------------------------------------------------
   // Tisch wird aufgebaut
   // -------------------------------------------------------------------------
 
   if (!sicht) {
     const besetzt = (tisch.table?.seats ?? []).filter((platz) => platz.accountId).length;
-    if (hubNeu) {
-      // Ohne Spielart im Kopf, aus demselben Grund wie unten im alten Aufbau.
-      return (
-        <SpielRahmen
-          gameId="filler"
-          titel="Tisch wird aufgebaut"
-          unter={t('game.filler')}
-          akzent={AKZENT}
-          onBack={brichAb}
-          zurueckText="Abbrechen"
-          fuss={
-            <>
-              <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
-                Abbrechen
-              </button>
-              {spielerZeile}
-            </>
-          }
-        >
-          <div className="spe-warten">
-            <p className="spe-text">
-              {tisch.status === 'open'
-                ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
-                : 'Verbindung wird aufgebaut…'}
-            </p>
-            <div className="spe-lauf" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-            <GastHinweis sitze={tisch.table?.seats ?? []} className="spe-text" />
-          </div>
-        </SpielRahmen>
-      );
-    }
+    // Ohne Spielart im Kopf: Der Tisch aus der Schlange traegt den Regelsatz
+    // des Moduls, nicht den Schalter aus dem Menue — die Zeile haette dort
+    // schlicht gelogen. Was gilt, steht am Brett (`sicht.variante`).
     return (
-      <main className="fl-seite fl-menue">
-        <HelleKopfzeile />
-        <button className="fl-zurueck" type="button" onClick={brichAb}>
-          ← Abbrechen
-        </button>
-        <div className="fl-menue-mitte">
-          <h1 className="fl-titel">Tisch wird aufgebaut</h1>
-          <p className="fl-untertitel">
+      <SpielRahmen
+        gameId="filler"
+        titel="Tisch wird aufgebaut"
+        unter={t('game.filler')}
+        akzent={AKZENT}
+        onBack={brichAb}
+        zurueckText="Abbrechen"
+        fuss={
+          <>
+            <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
+              Abbrechen
+            </button>
+            {spielerZeile}
+          </>
+        }
+      >
+        <div className="spe-warten">
+          <p className="spe-text">
             {tisch.status === 'open'
               ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
               : 'Verbindung wird aufgebaut…'}
           </p>
-          <div className="fl-punkte-lauf" aria-hidden="true">
+          <div className="spe-lauf" aria-hidden="true">
             <span />
             <span />
             <span />
           </div>
-          {/* Ohne Spielart: Der Tisch aus der Schlange traegt den Regelsatz
-              des Moduls, nicht den Schalter aus dem Menue — die Zeile haette
-              dort schlicht gelogen. Was gilt, steht am Brett (`sicht.variante`). */}
-          <GastHinweis sitze={tisch.table?.seats ?? []} className="fl-untertitel fl-klein" />
-          <p className="fl-untertitel fl-klein">{aktiv ?? '…'} Spieler gerade in {t('game.filler')}</p>
+          <GastHinweis sitze={tisch.table?.seats ?? []} className="spe-text" />
         </div>
-      </main>
+      </SpielRahmen>
     );
   }
 
@@ -1597,25 +1470,7 @@ function Vorschaubrett({
   );
 }
 
-/**
- * Das Regelblatt.
- *
- * Wortlaut nach dem Vorbild, plus die eine Zeile, die dieses Spiel davon
- * unterscheidet — sonst haelt der erste Spieler den Nebel fuer einen Fehler.
- */
-function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
-  return (
-    <div className="fl-blatt" role="dialog" aria-label={`So spielt man ${t('game.filler')}`}>
-      <button className="fl-blatt-zu" type="button" onClick={onClose} aria-label="Schließen">
-        ✕
-      </button>
-      <h2>So spielt man {t('game.filler')}</h2>
-      <Regeltext />
-    </div>
-  );
-}
-
-/** Der Wortlaut der Anleitung — im alten Blatt und im Blatt des neuen Hubs derselbe. */
+/** Der Wortlaut der Anleitung im Regelblatt. */
 function Regeltext(): React.JSX.Element {
   return (
     <>
@@ -1635,18 +1490,18 @@ function Regeltext(): React.JSX.Element {
       </p>
       <p>
         <strong>Nebel</strong> zeigt dir nur dein eigenes Gebiet und die Felder,
-        die direkt daran grenzen. Alles andere liegt grau — auch für den Gegner.
+        die direkt daran grenzen. Alles andere liegt grau - auch für den Gegner.
         Wo ein aufgedecktes Feld an sein Gebiet stößt, steht eine weiße Kante.
       </p>
       <p>
         <strong>Build</strong> spielt auf offenem Brett, gibt aber jedem zehn
         Mauern. Eine Mauer steht zwischen zwei Feldern und hält beide Seiten
-        auf — auch dich. Du darfst pro Zug eine setzen und danach ganz normal
+        auf - auch dich. Du darfst pro Zug eine setzen und danach ganz normal
         färben; erst das Färben gibt ab. Die ersten drei Züge der Partie sind
-        mauerfrei — das Schloss auf dem Knopf zählt sie herunter; ab dem
+        mauerfrei - das Schloss auf dem Knopf zählt sie herunter; ab dem
         zweiten Zug des zweiten Spielers darf gebaut werden. Und du darfst
         kein Feld einmauern: Eine Kante, nach der ein freies Feld für niemanden
-        mehr erreichbar wäre, lässt sich nicht bebauen — jedes Feld bleibt bis
+        mehr erreichbar wäre, lässt sich nicht bebauen - jedes Feld bleibt bis
         zum Ende zu holen. Auch den Gegner kannst du nicht einsperren.
       </p>
       <p>
@@ -1656,7 +1511,7 @@ function Regeltext(): React.JSX.Element {
         Mauer dazu.
       </p>
       <h3>Ziel</h3>
-      <p>Wer am Ende die meisten Felder hält, gewinnt — in Extreme die meisten Punkte.</p>
+      <p>Wer am Ende die meisten Felder hält, gewinnt - in Extreme die meisten Punkte.</p>
     </>
   );
 }

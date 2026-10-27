@@ -1,4 +1,5 @@
-import type { RefObject } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useHubWischen } from './hub-wischen';
 import type { Me } from '../api';
 import { mitEdelsteinen, serverAdresse } from '../laufzeit';
 import { kompakteZahl } from '../i18n';
@@ -61,9 +62,8 @@ export function NeuerRahmen<T extends Reiter>({
   trophies,
   kaufbar,
   onTab,
-  fenster,
-  trackRef,
   renderTab,
+  zurueck,
   children,
 }: {
   me: Me;
@@ -71,20 +71,37 @@ export function NeuerRahmen<T extends Reiter>({
   tabFolge: T[];
   online: number | null;
   trophies: number;
-  /** Im App-Paket gibt es keinen Shop; die Pillen sind dann reine Anzeigen. */
+  /** Der Münz-Shop ist erreichbar; Echtgeldpakete gehören nicht in diesen Reiter. */
   kaufbar: boolean;
   onTab: (tab: T) => void;
-  fenster: T[];
-  trackRef: RefObject<HTMLDivElement | null>;
   renderTab: (tab: T) => React.JSX.Element | null;
+  /** Unterseite im offenen Reiter: Wisch nach rechts führt zurück statt zum Nachbarn (hub-wischen.ts). */
+  zurueck?: () => void;
   children: React.ReactNode;
 }): React.JSX.Element {
+  const inhalt = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  // Jeder Reiter hat seinen festen Platz im Track, damit beim Ziehen die
+  // Nachbarseite schon daneben liegt. Der offene Reiter steht nicht in der
+  // Leiste (Profil auf der Webseite)? Dann bekommt er einen Platz am Ende.
+  const seiten = tabFolge.includes(tab) ? tabFolge : [...tabFolge, tab];
+  // Gerendert wird nur, was schon offen war oder gerade angefasst wird —
+  // sonst lüde der Start alle Reiter auf einmal. Was einmal hing, bleibt
+  // hängen: Wer zurückwischt, sieht die Seite, nicht „wird geladen…".
+  const [geladen, setGeladen] = useState<ReadonlySet<T>>(() => new Set([tab]));
+  const vorbereiten = useCallback((tabs: T[]) => {
+    setGeladen((alt) => (tabs.every((t) => alt.has(t)) ? alt : new Set([...alt, ...tabs])));
+  }, []);
+  const zeigt = geladen.has(tab) ? geladen : new Set([...geladen, tab]);
+  if (zeigt !== geladen) setGeladen(zeigt);
+  useHubWischen(inhalt, trackRef, tab, tabFolge, seiten, onTab, vorbereiten, zurueck);
   const zumShop = kaufbar ? () => onTab('shop' as T) : undefined;
-  return (
-    <div className={`hb${tab === 'spielen' ? '' : ' is-ohne-kopf'}`}>
-      {/* Der Kopf mit Spieler und Guthaben steht nur auf dem Start (Bauplan);
-          die anderen Reiter haben ihre eigene Überschrift. */}
-      {tab === 'spielen' && (
+  // Der Kopf mit Spieler und Guthaben steht nur auf dem Start (Bauplan); die
+  // anderen Reiter haben ihre eigene Überschrift. Er hängt im Platz des
+  // Starts und zieht mit ihm zur Seite — stünde er über dem Track, spränge
+  // der Inhalt beim Wechsel um seine Höhe.
+  const kopf = (
+    <>
       <header className="hb-kopf">
         <button type="button" className="hb-spieler" onClick={() => onTab('profil' as T)} aria-label={`${me.displayName}, Stufe ${me.level.stufe}, zum Profil`}>
           {me.avatarUrl ? (
@@ -109,7 +126,7 @@ export function NeuerRahmen<T extends Reiter>({
           </span>
           {[
             { wert: me.coins, bild: '/hub/symbol-muenze.webp', name: 'Münzen' },
-            ...(mitEdelsteinen ? [{ wert: me.gems, bild: '/hub/symbol-edelstein.webp', name: 'Edelsteine' }] : []),
+            ...(mitEdelsteinen() ? [{ wert: me.gems, bild: '/hub/symbol-edelstein.webp', name: 'Edelsteine' }] : []),
           ].map(({ wert, bild, name }) =>
             zumShop ? (
               <button type="button" key={name} className="hb-pill" onClick={zumShop} aria-label={`${wert} ${name}, zum Shop`}>
@@ -125,28 +142,36 @@ export function NeuerRahmen<T extends Reiter>({
           )}
         </div>
       </header>
-      )}
       {/* Gezaehlt wird, wer gerade an einem Tisch sitzt (`/api/aktiv`), nicht
           wer die App offen hat — „online" hiess es trotzdem, und wer sie
           oeffnete, las „0 Spieler online", waehrend er selbst online war. Bei
           null steht die Zeile gar nicht da: Eine Null ist keine Auskunft,
           sondern sieht nach leerem Laden aus. */}
-      {tab === 'spielen' && online !== null && online > 0 && (
+      {online !== null && online > 0 && (
         <div className="hb-online">
           <span className="hb-punkt" aria-hidden="true" />
           {online.toLocaleString('de-DE')} Spieler gerade am Tisch
         </div>
       )}
-
-      {/* Kein Wischen zwischen den Reitern (Robin, 26.09.2026): Im neuen Hub
-          rollen Spielreihen und Filter selbst waagerecht, und ein Wisch darin
-          sprang auf den Nachbarreiter, statt die Reihe weiterzuschieben.
-          Gewechselt wird über die Leiste unten — so hält es auch Apple. */}
-      <div className="hb-inhalt">
+    </>
+  );
+  return (
+    <div className="hb">
+      {/* Wischen zieht die Hauptseiten mit (hub-wischen.ts); horizontale
+          Spielreihen behalten ihre Geste. */}
+      <div className="hb-inhalt" ref={inhalt}>
         <div className="front-track hb-track" ref={trackRef}>
-          {fenster.map((tt) => (
-            <div className="hb-seite" key={tt}>
-              {renderTab(tt)}
+          {seiten.map((tt) => (
+            // Die Seiten daneben sind nur Vorschau: weder antippbar noch
+            // per Tab oder Vorlesen erreichbar, bis sie offen sind.
+            <div
+              className={`hb-reiterplatz${tt === 'spielen' ? ' is-start' : ''}`}
+              key={tt}
+              inert={tt !== tab}
+              aria-hidden={tt !== tab || undefined}
+            >
+              {tt === 'spielen' && kopf}
+              <div className="hb-seite">{zeigt.has(tt) && renderTab(tt)}</div>
             </div>
           ))}
         </div>

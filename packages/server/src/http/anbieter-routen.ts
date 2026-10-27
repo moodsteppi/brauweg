@@ -40,6 +40,8 @@ export interface AnbieterRoutenDeps {
   readonly auth: AuthDeps;
   readonly googleClientId: string | null;
   readonly appleClientId: string | null;
+  /** Bundle-ID der iOS-App — die native Anmeldung stellt das Token fuer sie aus. */
+  readonly appleAppId?: string | null;
   readonly appleRedirectUri: string | null;
   /** Inhalt von apple-developer-domain-association.txt, falls Apple ihn verlangt. */
   readonly appleDomainVerknuepfung: string | null;
@@ -81,13 +83,20 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
     });
   };
 
+  // Web (Services ID) und iOS-App (Bundle-ID) — wer eins von beiden
+  // eingerichtet hat, kann sich mit Apple anmelden. Der Knopf im Web haengt
+  // weiter allein an der Services ID (/api/auth/apple/config).
+  const appleZielgruppen = [deps.appleClientId, deps.appleAppId].filter(
+    (wert): wert is string => Boolean(wert),
+  );
+
   const appleProfil = async (
     idToken: string,
     vorname: string | null,
   ): Promise<AnbieterProfil> => {
-    if (!deps.appleClientId) throw badRequest('appleLoginDisabled');
+    if (appleZielgruppen.length === 0) throw badRequest('appleLoginDisabled');
     return pruefeAppleToken(idToken, {
-      clientId: deps.appleClientId,
+      clientId: appleZielgruppen,
       nonces,
       vorname,
       quelle: deps.schluessel?.apple,
@@ -161,7 +170,7 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
   });
 
   app.post('/api/auth/apple', { config: { rateLimit: deps.limitAuth } }, async (request, reply) => {
-    if (!deps.appleClientId) throw badRequest('appleLoginDisabled');
+    if (appleZielgruppen.length === 0) throw badRequest('appleLoginDisabled');
     const body = z
       .object({
         idToken: z.string().min(1).max(8192),
@@ -184,9 +193,17 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
         .object({
           schein: z.string().min(1).max(100),
           birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          // Wie bei der Registrierung (registerSchema in app.ts).
+          displayName: z.string().min(2).max(30).optional(),
         })
         .parse(request.body);
-      const ergebnis = await schliesseAnmeldungAb(deps.auth, scheine, body.schein, body.birthday);
+      const ergebnis = await schliesseAnmeldungAb(
+        deps.auth,
+        scheine,
+        body.schein,
+        body.birthday,
+        body.displayName,
+      );
       return sitzung(request, reply, ergebnis);
     },
   );

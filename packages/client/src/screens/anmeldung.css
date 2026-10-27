@@ -21,6 +21,7 @@
   position: fixed;
   inset: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -36,6 +37,8 @@
 
 /* Eine Spalte in Telefonbreite, auch am grossen Bildschirm. */
 .anmeldung > * {
+  flex-shrink: 0;
+  min-width: 0;
   width: 100%;
   max-width: 21.5rem;
 }
@@ -243,6 +246,7 @@
   gap: 0.25rem;
 }
 .anm-formular label {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -256,6 +260,9 @@
   font-size: 0.78rem;
 }
 .anm-formular input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   height: 3.1rem;
   padding: 0 0.9rem;
   border-radius: 0.85rem;
@@ -338,4 +345,19 @@
   .anmeldung .anm-formular button.primary:active {
     transform: none;
   }
+}
+
+/* WebKit gibt Datumsfeldern sonst eine intrinsische Mindestbreite, die
+   auf schmalen iPhones ueber das Formular hinausragt. Der Picker bleibt nativ. */
+.anmeldung input[type='date'] {
+  box-sizing: border-box;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.anmeldung input[type='date']::-webkit-date-and-time-value {
+  min-height: 1.5em;
+  text-align: left;
 }

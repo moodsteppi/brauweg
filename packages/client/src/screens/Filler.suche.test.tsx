@@ -179,7 +179,7 @@ describe('Filler: Mitspieler suchen', () => {
     sucheStand.mockResolvedValue({ sucht: true, suchende: 2, restMs: 20_000, tischId: null });
 
     await suchen();
-    fireEvent.click(screen.getByRole('button', { name: '← Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     await durchatmen();
 
     expect(sucheAbbrechen).toHaveBeenCalledWith('filler');

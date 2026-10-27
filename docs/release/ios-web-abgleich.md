@@ -85,7 +85,7 @@ Kategorie-Chips in der App nur mit spielbaren Spielen plus „Kommt bald"
 | Doppelkopf lernen | **fehlt** (Lernpfad nicht erreichbar, Übungstipps aus) | GameSelect.tsx:215, Table.tsx:639 |
 | Clan | Chat, Clankrieg, Wappen-Shop; **ohne Clanwort** | Clan.tsx (s. o.) |
 | Mitteilungen | keine (kein Web-Push) | Mitteilungen.tsx:45, 73 |
-| Altes Hub | per `?hub=alt` noch erreichbar | hubNeu.ts:13-30 |
+| Altes Hub | per `?hub=alt` noch erreichbar — **entfernt am 23.10.2026** | (hubNeu.ts gelöscht) |
 
 ## 3. Tabelle
 
@@ -96,11 +96,11 @@ haben es, verschieden · **nur Web** = Kandidat zum Ausblenden auf `main`
 | Punkt | iOS | Web | Lücke |
 | --- | --- | --- | --- |
 | Doppelkopf, Skat, Filler | spielbar | spielbar | anders in Web: Filler heißt in der App „Farbduell" |
-| BroChess | spielbar | bald | **fehlt in Web** (eine Zeile `registry.ts:183`) |
-| Kartenmanufaktur (neu) | spielbar | kein Einstieg | **fehlt in Web** |
-| Browort | spielbar + Startkarte + Profilstatistik | kein Einstieg | **fehlt in Web** |
-| Clanwort | im Clan | kein Einstieg | **fehlt in Web** |
-| Doppelkopf lernen / Übungsrunde | ja | nein | **fehlt in Web** |
+| BroChess | spielbar | ~~bald~~ spielbar seit 23.10.2026 | erledigt (`registry.ts:187`) |
+| Kartenmanufaktur (neu) | spielbar | ~~kein Einstieg~~ „Allein" seit 23.10.2026 | erledigt |
+| Browort | spielbar + Startkarte + Profilstatistik | ~~kein Einstieg~~ wie App seit 23.10.2026 | erledigt |
+| Clanwort | im Clan | ~~kein Einstieg~~ im Clan seit 23.10.2026 | erledigt |
+| Doppelkopf lernen / Übungsrunde | ja | ~~nein~~ ja seit 23.10.2026 | erledigt |
 | Mitteilungen | Push | „Bald" | anders in Web (Web-Push gibt es nicht; „Bald" ist ehrlich) |
 | Partykiste | bald + ausgeblendet | spielbar (Trinkmodus) | nur Web → ausblenden? |
 | Zauberer, Cambio, Poker, Mememory, Eiland, Feldherr, Tafelrunde, Golf, BroCooked | bald | spielbar | nur Web → ausblenden? |
@@ -112,7 +112,7 @@ haben es, verschieden · **nur Web** = Kandidat zum Ausblenden auf `main`
 | Clankrieg | aus | ja | nur Web → ausblenden? |
 | 3D-Figur, Werkstatt, Pinguin-Karte | aus | ja | nur Web → ausblenden? |
 | Geburtstag im Profil | aus | ja | nur Web |
-| Altes Hub `?hub=alt` | — | ja | nur Web → entfernen |
+| Altes Hub `?hub=alt` | — | ~~ja~~ entfernt 23.10.2026 | erledigt |
 | Kleiderschrank, Klanghalle, Rangliste, Aufgaben, Trophäenweg, Freunde, Melden, Löschen | ja | ja | keine |
 
 ## 4. Offene Zweige mit App-/iOS-Teilen
@@ -162,7 +162,7 @@ haben es, verschieden · **nur Web** = Kandidat zum Ausblenden auf `main`
   Lernpfad-Routen (`http/browort-routen.ts`, `manufaktur-routen.ts`,
   `lernpfad-routen.ts`) prüfen keine Plattform. Für die Webseite heißt das: Der
   Server ist bereit, es fehlt nur die Weiche im Client.
-- **Hub-Schalter:** `hubNeu` (Standard neu, `?hub=alt` im Browser speicherbar).
+- **Hub-Schalter:** `hubNeu` (Standard neu, `?hub=alt` im Browser speicherbar). Seit dem 23.10.2026 entfernt; es gibt nur noch das neue Hub.
 
 ## 6. Befunde nebenbei
 
@@ -172,7 +172,8 @@ haben es, verschieden · **nur Web** = Kandidat zum Ausblenden auf `main`
   Edelsteinen, Clankrieg und Figur in der App.
 - Drei Weichen fragen `inApp && hubNeu`, eine nur `inApp`: Im alten Hub gäbe es
   Lernpfad/Browort auch in der App nicht. Unkritisch, solange die App das alte
-  Hub nie zeigt.
+  Hub nie zeigt. (Erledigt 23.10.2026: Mit dem alten Hub ist `hubNeu` weg, die
+  Weichen fragen nur noch `inApp`.)
 
 ## 7. Vorschlag für den Aufgabenschnitt
 

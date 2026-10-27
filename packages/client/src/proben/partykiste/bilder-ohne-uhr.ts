@@ -36,8 +36,8 @@ const REGEL: RegelKarteSicht = {
 export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
   return [
     {
-      titel: 'Kategorien-Battle — du bist dran',
-      text: 'Reihum im Kreis, bis einer stockt. Wer dran ist, nennt laut etwas und tippt „Genannt" — oder gibt zu, dass nichts mehr kommt.',
+      titel: 'Kategorien-Battle - du bist dran',
+      text: 'Reihum im Kreis, bis einer stockt. Wer dran ist, nennt laut etwas und tippt „Genannt" - oder gibt zu, dass nichts mehr kommt.',
       sicht: sicht({
         art: 'kategorien',
         gehandelt: [],
@@ -56,7 +56,7 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Kategorien-Battle — Einspruch läuft',
+      titel: 'Kategorien-Battle - Einspruch läuft',
       text: 'Tom ist dran, Jan hat eben genannt. Gegen beide geht Einspruch („Stockt!" / „Doppelt!"); es zählen nur die Menschen, Bots hören ja nicht mit.',
       sicht: sicht({
         art: 'kategorien',
@@ -77,7 +77,7 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Kategorien-Battle — von der Runde benannt',
+      titel: 'Kategorien-Battle - von der Runde benannt',
       text: 'Die Mehrheit hat entschieden: Jan hat gedoppelt. Er trinkt, alle anderen bekommen einen Punkt.',
       zusatz: 'abrechnung',
       sicht: sicht({
@@ -101,7 +101,7 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Kategorien-Battle — leergespielt',
+      titel: 'Kategorien-Battle - leergespielt',
       text: 'Vier Runden um den Tisch, niemand ist gestockt: Die Kategorie ist erledigt, alle bekommen den Punkt, keiner trinkt.',
       zusatz: 'abrechnung',
       sicht: sicht({
@@ -125,7 +125,7 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Mehrheitsraten — antworten',
+      titel: 'Mehrheitsraten - antworten',
       text: 'Schritt 1: die eigene Antwort. Schritt 2 (nach dem Tippen): was sagt die Mehrheit? Beides geht zusammen raus.',
       sicht: sicht({
         art: 'mehrheit',
@@ -145,7 +145,7 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Mehrheitsraten — abgegeben',
+      titel: 'Mehrheitsraten - abgegeben',
       text: 'Die eigene Wahl steht da, fremde nicht: Vor der Abrechnung sähe man sonst, wohin die Mehrheit kippt.',
       sicht: sicht({
         art: 'mehrheit',
@@ -165,7 +165,7 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Mehrheitsraten — Abrechnung',
+      titel: 'Mehrheitsraten - Abrechnung',
       text: 'Vier sagen „Ohne Urlaub", zwei „Ohne Handy". Gewertet wird der Tipp: Wer auf die Mehrheit getippt hat, bekommt zwei Punkte.',
       zusatz: 'abrechnung',
       sicht: sicht({
@@ -189,8 +189,8 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Mehrheitsraten — Gleichstand, alkoholfrei',
-      text: 'Drei zu drei: Es gibt keine Mehrheit, also lag jeder Tipp daneben — ein Strafpunkt für alle.',
+      titel: 'Mehrheitsraten - Gleichstand, alkoholfrei',
+      text: 'Drei zu drei: Es gibt keine Mehrheit, also lag jeder Tipp daneben - ein Strafpunkt für alle.',
       zusatz: 'abrechnung',
       sicht: sicht({
         art: 'mehrheit',
@@ -214,7 +214,7 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Regel-Karte — neue Regel',
+      titel: 'Regel-Karte - neue Regel',
       text: 'Die Karte wird vorgelesen und bestätigt. Gelten tut sie ab jetzt bis zum Ende der übernächsten Runde.',
       sicht: sicht({
         art: 'regelkarte',
@@ -225,8 +225,8 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Regel-Karte — ab jetzt gilt',
-      text: 'Nach dem Lesen: die Abrechnung der Karte (keine Punkte) — und oben steht die Regel jetzt als Leiste, die in den nächsten Runden bleibt.',
+      titel: 'Regel-Karte - ab jetzt gilt',
+      text: 'Nach dem Lesen: die Abrechnung der Karte (keine Punkte) - und oben steht die Regel jetzt als Leiste, die in den nächsten Runden bleibt.',
       zusatz: 'abrechnung',
       sicht: sicht({
         art: 'regelkarte',
@@ -240,8 +240,8 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Regel gilt — mitten im Quiz',
-      text: 'Die Regel wird während ANDERER Minispiele gebrochen. Selbst melden zählt sofort, jemanden melden erst mit der Mehrheit — Jan hat Tom schon gemeldet.',
+      titel: 'Regel gilt - mitten im Quiz',
+      text: 'Die Regel wird während ANDERER Minispiele gebrochen. Selbst melden zählt sofort, jemanden melden erst mit der Mehrheit - Jan hat Tom schon gemeldet.',
       sicht: sicht({
         art: 'quiz',
         rundeNr: 2,
@@ -258,7 +258,7 @@ export function bilderOhneUhr(sicht: Geruest): OhneUhrBild[] {
       }),
     },
     {
-      titel: 'Regel gilt — Verstöße in der Abrechnung',
+      titel: 'Regel gilt - Verstöße in der Abrechnung',
       text: 'Abgerechnet wird in der Runde, in der gemeldet wurde: Die Verstöße stehen als Schlücke neben den Quizpunkten. In der letzten Runde der Regel gibt es einen Punkt für jeden ohne Verstoß; danach ist Melden gesperrt, weil keine Abrechnung mehr käme.',
       zusatz: 'abrechnung',
       sicht: sicht({

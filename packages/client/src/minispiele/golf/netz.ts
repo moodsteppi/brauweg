@@ -341,7 +341,7 @@ export class Golfnetz {
    */
   abgewiesen(): void {
     this.heilung = true;
-    this.umg.melde?.('Schlag kam nicht durch — wird abgeglichen …');
+    this.umg.melde?.('Schlag kam nicht durch - wird abgeglichen …');
     this.umg.neuVerbinden();
   }
 
@@ -370,7 +370,7 @@ export class Golfnetz {
       // Nur beim ersten Mal melden: Jede weitere Sicht landet wieder hier.
       if (this.fehlend.length === 0) {
         this.umg.melde?.(
-          `Diese Fassung kennt ${aufgeloest.unbekannt.length === 1 ? 'eine Bahn' : 'mehrere Bahnen'} der Partie nicht — bitte die Seite neu laden.`,
+          `Diese Fassung kennt ${aufgeloest.unbekannt.length === 1 ? 'eine Bahn' : 'mehrere Bahnen'} der Partie nicht - bitte die Seite neu laden.`,
         );
       }
       this.fehlend = aufgeloest.unbekannt;

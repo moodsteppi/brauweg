@@ -163,7 +163,7 @@ function stufenText(stufen: readonly number[]): string {
   const s = [...new Set(stufen)].sort((a, b) => a - b);
   if (s.length === 1) return `Stufe ${s[0]}`;
   const zusammenhaengend = s.every((wert, i) => i === 0 || wert === s[i - 1]! + 1);
-  return zusammenhaengend ? `Stufe ${s[0]}–${s[s.length - 1]}` : `Stufe ${s.join(', ')}`;
+  return zusammenhaengend ? `Stufe ${s[0]}-${s[s.length - 1]}` : `Stufe ${s.join(', ')}`;
 }
 
 /**

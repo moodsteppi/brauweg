@@ -26,7 +26,7 @@ export const bahn: Karte = {
     { art: 'sand', x: 15, y: 8, w: 3, h: 16 },
   ],
   dekor: 'wueste',
-  beschreibung: 'Ein kleiner, kräftiger Strudel liegt genau auf der Linie zum Loch und dreht jeden Ball ab, der ihn streift. Links oder rechts vorbei — aber nicht in den Sand am Rand.',
+  beschreibung: 'Ein kleiner, kräftiger Strudel liegt genau auf der Linie zum Loch und dreht jeden Ball ab, der ihn streift. Links oder rechts vorbei - aber nicht in den Sand am Rand.',
   thema: 'Strudel',
   autor: 'Aufsicht (Nachtlauf 22.09.2026)',
   tags: ['strudel', 'sand', 'einstieg'],

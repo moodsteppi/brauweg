@@ -39,9 +39,57 @@ Das langsamste Glied ist der Engpass und wird an der Station gezeigt.
 
 - **Ohne Meister** läuft eine Station genau **einen Zyklus je Tipp**, danach
   schläft der Pinguin.
-- Ein **Meister** (einmal kaufen, je Station) lässt sie ohne Pause arbeiten.
-  Jeder Meister hat eine **Fähigkeit**: doppeltes Tempo für 30 s, danach 5 min
-  Pause. „Boost" löst alle bereiten Fähigkeiten auf einmal aus.
+- Ein **Meister** lässt sie ohne Pause arbeiten. Seit dem 24.10.2026 mit Tiefe
+  (`packages/manufaktur-kern/src/meister.ts`):
+
+| Rang | Wirkung | danach Pause | Ring |
+| --- | --- | --- | --- |
+| Jungmeister | 1 min | 5 min | Bronze |
+| Meister | 3 min | 15 min | Silber |
+| Obermeister | 10 min | 50 min | Gold |
+
+  Fähigkeiten (Jung / Meister / Ober): Presse Tempo ×3/5/7 oder Rabatt
+  40/70/80 %; Paternoster Bandtempo ×2/4/6, Ladung ×3/5/7 oder Rabatt;
+  Versand Lauftempo ×3/5/7, Wagenladung ×3/5/8 oder Rabatt. Der Rabatt gilt
+  nur für den Ausbau der eigenen Station und nur, solange er wirkt; Max rechnet
+  mit ihm.
+
+- **Einstellen:** Die ersten drei je Station sind fest (Jung/Tempo,
+  Jung/Rabatt, Meister/Ladung — an der Presse Meister/Tempo), danach Zufall
+  70/25/5 % mit dem Zustand `zufall` im Stand (den Anfang setzt der Server;
+  Neuladen zieht denselben). Jede Einstellung kostet ×1,6 mehr.
+- **Pool:** höchstens 5 je Station, genau einer zugewiesen. Tauschen kostet
+  nichts; eine laufende Fähigkeit endet, jeder Meister behält seine eigene
+  Pause. Verkaufen bringt die Hälfte zurück. Die Pools bleiben über den Umzug.
+- „**Alle aktivieren**" löst alle bereiten Fähigkeiten aus und zeigt, wie
+  viele bereit sind; sonst den kürzesten Countdown als Ring.
+
+Simulation (24.10.2026): erster Obermeister nach 21 min, erster
+Rabatt-Kauf nach 5:33, erster Umzug 77 min. Belastungsprobe „jede zufällige
+Einstellung ein Obermeister" (`sim -- --ober`): erster Umzug nur 3,5 min
+früher — die langen Pausen und der Engpass der Kette deckeln die starken
+Kombinationen. Gelegenheitsspieler: erster Umzug nach 1,9 Tagen (vorher 1,5;
+der Sim-Spieler gibt jetzt auch Geld für weitere Meister aus).
+
+## Werkstattbuch (dauerhaft)
+
+Eigene Währung **Siegel** — für jede Renovierung (3 / 5 / 8 / 12 je Stufe)
+und jeden Umzug (5), **nie Hub-Münzen**. Das Buch wird nie zurückgesetzt
+(`packages/manufaktur-kern/src/werkstattbuch.ts`):
+
+| Eintrag | je Stufe | Stufen | Preise (Siegel) |
+| --- | --- | --- | --- |
+| Längere Nachtschicht | Offline-Deckel +1 h (1 → 4 h) | 3 | 3 / 6 / 10 |
+| Guter Ruf | Kartenwert +10 % | 5 | 2 / 4 / 6 / 9 / 13 |
+| Erfahrene Meister | Fähigkeitsdauer +15 % | 3 | 4 / 7 / 11 |
+| Kurze Pausen | Abklingzeit −10 % | 3 | 4 / 7 / 11 |
+| Feilschen | Ausbau −5 % | 3 | 3 / 6 / 10 |
+| Gute Bewerber | Obermeister 5 → 8 → 12 % | 2 | 6 / 12 |
+| Flinke Bautrupps | Bauzeit −25 % | 2 | 4 / 8 |
+| Großes Lager | Pool +2 | 1 | 8 |
+
+Zusammen 154 Siegel = fünf voll renovierte Orte plus vier Umzüge. Die
+Nachtschicht geht bewusst von 1 h aus, nicht von 2 h (siehe Offline-Verdienst).
 
 ## Zahlen
 
@@ -106,23 +154,77 @@ Presse 5 nach 0,9 Tagen, erster Umzug nach 1,5 Tagen. Vor der Halbierung
 waren es 0,8 und 1,3 Tage — der Hebel für ein längeres Spiel ist nicht der
 Offline-Deckel, sondern der Preis der späteren Manufakturen.
 
-## Neue Manufaktur (Prestige)
+## Renovieren, Umzug und Orte (seit 24.10.2026)
 
-Mit **allen acht Pressen** kann man umziehen: alles beginnt von vorn
-(Pressen, Stufen, Meister, Taler), dafür leistet jede weitere Manufaktur
-**dauerhaft ×2** (die zweite ×2, die dritte ×4 …) und kostet ×1,8. Neuer
-Name, neue Kulisse. Höchstens 5. Wer umzieht, bekommt den **Kartenrücken**
-der verlassenen Manufaktur (nur erspielbar, am Tisch wählbar; Bilder:
-`docs/ASSETS-KARTENMANUFAKTUR-RUECKEN.md`).
+`packages/manufaktur-kern/src/renovieren.ts`. Mit **allen acht Pressen**
+kann man den Ort **renovieren**: Stufen, Etagen und Taler beginnen neu,
+Meister-Pools, Werkstattbuch, Siegel und die Sterne bleiben. Jede Stufe
+(1–4) gibt dem Ort dauerhaft **×4 / ×10 / ×25 / ×60** (Gesamtwert, für die
+ganze Kette) und **3 / 5 / 8 / 12 Siegel**, keine Hub-Münzen. Preis: 0,5 /
+15 / 300 / 6000 × die achte Presse dieses Orts.
 
-## Jubiläum (nach Manufaktur 5)
+- **Umziehen** in einen neuen Ort geht erst nach Stufe 1 (und mit acht
+  Pressen): doppelte Leistung, Preise ×2,6, 300 Münzen fürs Hub, 5 Siegel,
+  der Kartenrücken des alten Orts.
+- **Wechseln**: An jeden schon erreichten Ort kann man zurück, um ihn
+  weiter zu renovieren — es läuft immer nur einer, die Halle beginnt dort
+  neu, seine Sterne gelten. Keine Münzen, keine Siegel.
+- **Im Kartenpalast** geht es nach Stufe 4 als **Jubiläum** weiter: ×1,5 je
+  Stufe, Preis ×3 je Stufe, 100 Münzen für die ersten zehn. Den Rücken des
+  Palasts gibt es für die erste Renovierung dort.
+- Sichtbar: Messingschild mit 0–4 Sternen oben in der Halle, Girlande ab
+  Stufe 2, Lampen ab Stufe 3; beim Renovieren Konfetti und alle Pinguine
+  jubeln. Alte Gildensiegel (Fassung 5) zählen als Renovierungsstufen des
+  Palasts.
 
-Im Kartenpalast mit allen acht Pressen: **Jubiläum feiern** — der Palast
-beginnt neu, und es gibt ein **Gildensiegel**, dauerhaft **+10 %
-Kartenwert** je Siegel (aufaddiert). So endet das Spiel nicht. Das erste
-Jubiläum schenkt den Kartenrücken „Kartenpalast". Münzen fürs Hub: 100 je
-Jubiläum, aber nur für die ersten zehn — sonst wäre es eine endlose
-Münzquelle.
+Simulation, 24.10.2026 (`npm run sim --workspace @brauweg/manufaktur-kern`):
+
+| | aktiver Spieler | Gelegenheit (4 × 3 min/Tag) |
+| --- | --- | --- |
+| erste Renovierung | 1,3 h | — |
+| erster Umzug | 1,5 h | 3,3 Tage |
+| Manufaktur 3 / 4 / 5 | 3,4 / 5,8 / 9,1 h | Palast nach 12,9 Tagen |
+| alles renoviert | 28,9 h | 16,5 Tage |
+| Siegel | 5 je Stunde | 1,9 je Tag |
+
+Vorschlag neue Zielzeiten (die alten „erster Umzug 60–90 min" passen nicht
+mehr, weil davor renoviert wird): erste Renovierung 60–90 min, erster Umzug
+75–100 min. Die längste Strecke ohne Kauf: in den ersten drei Stunden 1 min,
+über den ganzen Bogen 6,4 min — bei 28 h, beim Sparen auf die letzte, teure
+Stufe eines alten Orts (6000 × die achte Presse). Wer das kürzer will, senkt
+den letzten Wert von `RENOV_KOSTEN`; dann ist „alles renoviert" früher.
+
+## Baustellen vor Etage 5 und 8 (seit 24.10.2026)
+
+`packages/manufaktur-kern/src/baustelle.ts`. Vor Etage 5 und 8 liegt Schutt:
+erst Bauarbeiten (¼ des Etagenpreises), dann **10 min bzw. 30 min** warten —
+auch offline. Kein Sofort-Fertigstellen; kürzer nur mit „Flinke Bautrupps"
+(−25 % je Stufe). Beginnen darf man **zwei Etagen vorher**: Ab der Etage
+davor zu bauen, liess den aktiven Spieler vor Etage 8 eine halbe Stunde
+warten (erster Umzug 119 statt 99 min). Geräumt wird **einmal je Ort** —
+Renovieren setzt die Etagen zurück, aber nicht den Schutt. Sichtbar: Schutt
+mit Gerüst, Countdown-Schild, zwei Bauarbeiter mit Helm; fertig bricht die
+Wand mit Staub und Brocken weg.
+
+Simulation: aktiv Presse 5 nach 35:41 (0,7 min über dem Fenster), erster
+Umzug 99:43; Gelegenheitsspieler kaum betroffen (Presse 5 nach 1,5 statt 1,3
+Tagen) — die Wartezeit fällt in die Offline-Phasen.
+
+## Zielkette (seit 24.10.2026)
+
+`packages/manufaktur-kern/src/ziele.ts`. Immer genau ein Ziel unten links
+über der Leiste, mit Fortschritt; erreicht wird es zum Abholen-Knopf (5 %
+des Preises der nächsten Etage in Talern — nie Siegel oder Hub-Münzen). Die
+Kette: zweiten Meister einstellen, eine Fähigkeit auslösen, einen Meister
+tauschen, eine Stufe mit Rabatt, 3 Fähigkeiten, 10 Stufen mit Rabatt, alle 8
+Pressen, erste Renovierung, erster Eintrag im Werkstattbuch, erster Umzug.
+Gezählt wird über `stand.zaehler` (Fähigkeiten, Tausche, Stufen mit Rabatt).
+Neben der Fingeranleitung erscheint sie nicht.
+
+Die Tagesaufgaben des Hubs (`server/src/quests.ts`) sind bewusst nicht
+erweitert: Sie zahlen Hub-Münzen, und „Löse 3 Fähigkeiten aus" täglich wäre
+die Brücke zwischen den Wirtschaften, die das Werkstattbuch vermeidet. Die
+beiden vorgeschlagenen Vorlagen stehen deshalb in der Kette.
 
 **Münzen fürs Hub (Meilensteine, eigene Währung bleibt getrennt):**
 

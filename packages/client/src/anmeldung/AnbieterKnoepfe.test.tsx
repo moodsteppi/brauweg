@@ -32,7 +32,8 @@ vi.mock('../api', async () => {
       appleConfig: () => appleConfig(),
       anbieterNonce: () => anbieterNonce(),
       appleLogin: (idToken: string, vorname?: string) => appleLogin(idToken, vorname),
-      anbieterAbschliessen: (schein: string, birthday: string) => anbieterAbschliessen(schein, birthday),
+      anbieterAbschliessen: (schein: string, birthday: string, displayName?: string) =>
+        anbieterAbschliessen(schein, birthday, displayName),
     },
   };
 });
@@ -196,11 +197,11 @@ describe('AnbieterKnoepfe', () => {
    * Neues Konto ueber Apple: Erst das Geburtsdatum — dieselbe Frage wie beim
    * Registrieren —, und angemeldet ist man erst danach.
    */
-  it('ein neues Konto fragt erst nach dem Geburtsdatum', async () => {
+  it('ein neues Konto fragt erst nach Spielername und Geburtsdatum, der Vorschlag steht schon drin', async () => {
     googleConfig.mockResolvedValue({ clientId: null });
     appleConfig.mockResolvedValue({ clientId: 'de.brauweg-spielen.web', redirectUri: 'https://x/r' });
     appleSdk({ authorization: { id_token: 'id-token-neu', code: 'c' } });
-    appleLogin.mockResolvedValue({ geburtstagNoetig: true, schein: 'schein-1' });
+    appleLogin.mockResolvedValue({ geburtstagNoetig: true, schein: 'schein-1', namensvorschlag: 'Anna' });
     anbieterAbschliessen.mockResolvedValue({ ok: true, neu: true });
     const onErfolg = vi.fn();
 
@@ -211,22 +212,25 @@ describe('AnbieterKnoepfe', () => {
     await leerlaufen();
 
     expect(onErfolg).not.toHaveBeenCalled();
+    const name = screen.getByRole('textbox', { name: /^Spielername/ }) as HTMLInputElement;
+    expect(name.value).toBe('Anna');
+    fireEvent.change(name, { target: { value: ' Herzdame ' } });
     const feld = screen.getByLabelText(/^Geburtstag/);
     expect(screen.getByText(/Mindestens 18 Jahre/)).toBeInTheDocument();
     fireEvent.change(feld, { target: { value: '1990-06-15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Konto anlegen' }));
     await leerlaufen();
 
-    expect(anbieterAbschliessen).toHaveBeenCalledWith('schein-1', '1990-06-15');
+    expect(anbieterAbschliessen).toHaveBeenCalledWith('schein-1', '1990-06-15', 'Herzdame');
     expect(onErfolg).toHaveBeenCalledWith({ anbieter: 'apple', neu: true });
-    expect(screen.queryByRole('group', { name: 'Geburtsdatum nachtragen' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Spielername und Geburtsdatum' })).toBeNull();
   });
 
   it('unter 18: Absage, und zurueck zu den Knoepfen', async () => {
     googleConfig.mockResolvedValue({ clientId: null });
     appleConfig.mockResolvedValue({ clientId: 'de.brauweg-spielen.web', redirectUri: 'https://x/r' });
     appleSdk({ authorization: { id_token: 'id-token-jung', code: 'c' } });
-    appleLogin.mockResolvedValue({ geburtstagNoetig: true, schein: 'schein-2' });
+    appleLogin.mockResolvedValue({ geburtstagNoetig: true, schein: 'schein-2', namensvorschlag: 'Spieler' });
     anbieterAbschliessen.mockRejectedValue(new ApiError('birthdayTooYoung', 'error.birthdayTooYoung', 400));
     const onErfolg = vi.fn();
     const onFehler = vi.fn();
@@ -237,12 +241,17 @@ describe('AnbieterKnoepfe', () => {
     fireEvent.click(knopf);
     await leerlaufen();
     fireEvent.change(screen.getByLabelText(/^Geburtstag/), { target: { value: '2015-01-01' } });
+    // „Spieler" ist kein Vorschlag: Feld leer, Knopf gesperrt, bis ein Name dasteht.
+    const name = screen.getByRole('textbox', { name: /^Spielername/ }) as HTMLInputElement;
+    expect(name.value).toBe('');
+    expect(screen.getByRole('button', { name: 'Konto anlegen' })).toBeDisabled();
+    fireEvent.change(name, { target: { value: 'Jung' } });
     fireEvent.click(screen.getByRole('button', { name: 'Konto anlegen' }));
     await leerlaufen();
 
     expect(onErfolg).not.toHaveBeenCalled();
     expect((onFehler.mock.calls[0]![0] as ApiError).code).toBe('birthdayTooYoung');
-    expect(screen.queryByRole('group', { name: 'Geburtsdatum nachtragen' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Spielername und Geburtsdatum' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Mit Apple anmelden' })).toBeVisible();
   });
 });

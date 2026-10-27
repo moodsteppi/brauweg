@@ -416,7 +416,7 @@ export function vorratLaden(optionen: Optionen = {}): Promise<Ladestand> {
            schon. */
         console.warn(
           durchFrist
-            ? `[Tafelrunde] Vorladen abgebrochen, seit ${fristMs} ms kam nichts mehr — ${fehlend.length} von ${posten.length} Posten fehlen:`
+            ? `[Tafelrunde] Vorladen abgebrochen, seit ${fristMs} ms kam nichts mehr - ${fehlend.length} von ${posten.length} Posten fehlen:`
             : `[Tafelrunde] Vorladen fertig, ${fehlend.length} von ${posten.length} Posten fehlen:`,
           fehlend.join(', '),
         );

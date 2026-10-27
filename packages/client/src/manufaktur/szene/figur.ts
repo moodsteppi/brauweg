@@ -62,7 +62,9 @@ class Ablauf {
 
   weiter(dt: number): void {
     this.zeit += dt * this.tempo;
-    if (this.blende < 1) this.blende = Math.min(1, this.blende + dt / UEBERBLENDUNG_MS);
+    // Schneller Ablauf, kuerzere Blende: Bei vollem Tempo sind ganze Phasen
+    // kuerzer als 120 ms, und die Figur erreichte nie eine saubere Haltung.
+    if (this.blende < 1) this.blende = Math.min(1, this.blende + (dt * Math.max(1, this.tempo)) / UEBERBLENDUNG_MS);
     this.blinzelt = Math.max(0, this.blinzelt - dt);
     this.blinzelIn -= dt;
     if (this.blinzelIn <= 0) {

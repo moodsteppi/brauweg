@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * Die Bahnrekord-Zeile im Zwischenstand von Golf (seit 22.09.2026).
  *
  * `api.bestenliste` ist ersetzt: Geprueft wird, dass die Zeile so aussieht,
- * wie die Karte sie verlangt, und dass der Haken je Bahn EINMAL fragt —
+ * wie die Karte sie verlangt, und dass der Haken je Bahn EINMAL fragt -
  * auch wenn die Tafel jede Sekunde neu gezeichnet wird.
  */
 
@@ -56,7 +56,7 @@ describe('Bahnrekord', () => {
     expect(screen.getByText('Neues persönliches Bestes!')).toBeTruthy();
   });
 
-  it('am Gasttisch leuchtet nichts — der Server traegt dort nichts ein', () => {
+  it('am Gasttisch leuchtet nichts - der Server traegt dort nichts ein', () => {
     const { container } = render(<Bahnrekord stand={stand} schlaege={1} zaehlt={false} />);
     expect(container.querySelector('[data-grek-neu]')).toBeNull();
     expect(container.querySelector('.grek-zeile')).not.toBeNull();
@@ -69,7 +69,7 @@ describe('Bahnrekord', () => {
     expect(container.querySelector('.grek-zeile')?.textContent).toBe('Bahnrekord: 2 (du) · dein Bestes: 2');
     rerender(<Bahnrekord stand={{ rekord: null, eigenes: null }} schlaege={null} zaehlt />);
     expect(container.querySelector('.grek-zeile')?.textContent).toBe(
-      'Bahnrekord: noch keiner · dein Bestes: –',
+      'Bahnrekord: noch keiner · dein Bestes: -',
     );
   });
 

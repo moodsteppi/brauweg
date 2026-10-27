@@ -8,8 +8,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * Minispielwahl, und die Online-Suche findet nur Tische mit genau diesem Spiel.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const VORGABE = {
   minispiele: ['imposter', 'quiz', 'busfahrer', 'niemals', 'wereher'],
   trinkmodus: true,

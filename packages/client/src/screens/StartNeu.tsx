@@ -8,7 +8,7 @@ import { BIOME } from './Pfad';
 /**
  * Der Start im neuen Hub (Entwurf „Nachtblau & Gold", Fassung 4 vom 26.09.2026).
  *
- * Eine Viewport-Höhe, wie DESIGN.md es für Hub-Seiten verlangt: der
+ * Die Startseite scrollt innerhalb des Hub-Rahmens: der
  * Trophäenweg als Held, darunter „Weiterspielen", die eigenen Spiele und der
  * Knopf „Heute", hinter dem Aufgaben und Truhen als Blatt liegen. Maße und
  * Farben kommen 1:1 aus dem Bauplan (`hub-neu.css`), damit die Seite aussieht
@@ -17,7 +17,7 @@ import { BIOME } from './Pfad';
 
 /** Banner je Spiel. Drei Spiele heißen im Bild anders als im Code. */
 export function bannerFuer(gameId: string): string {
-  const name: Record<string, string> = { wizard: 'zauberer', easypoker: 'poker', golf: 'minigolf' };
+  const name: Record<string, string> = { wizard: 'zauberer', easypoker: 'poker', golf: 'minigolf', filler: 'farbduell' };
   return `/hub/banner-${name[gameId] ?? gameId}.webp`;
 }
 
@@ -59,9 +59,9 @@ export function StartNeu({
   onHeute: () => void;
   /** Öffnet den Trophäenweg als Vollbild. */
   onWeg: () => void;
-  /** „Doppelkopf lernen" — nur in der App gesetzt; ohne steht keine Lernkarte da. */
+  /** „Doppelkopf lernen" — fehlt es im Umfang, steht keine Lernkarte da. */
   onLernen?: () => void;
-  /** Browort — nur in der App gesetzt (wie `onLernen`). */
+  /** Browort — wie `onLernen` nur gesetzt, wenn es im Umfang steht. */
   onBrowort?: () => void;
 }): React.JSX.Element {
   const stufe = [...BIOME].reverse().find((b) => trophies >= b.cp) ?? BIOME[0]!;

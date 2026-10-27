@@ -58,12 +58,11 @@ import { anzeigeVerdeckt, kastenAus, type Kasten } from '../minispiele/golf/verd
 import { Zeichner, type Zielbild } from '../minispiele/golf/zeichnen';
 import type { BotLevel, SeatInfo, TaktMessage, ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
-import { hubNeu } from '../hubNeu';
 import { GastHinweis } from '../tisch/GastHinweis';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import './golf-einstieg.css';
 
-/** Farbe von Golf im neuen Hub: das Grün der Bahn im Banner. */
+/** Farbe von Golf im Hub: das Grün der Bahn im Banner. */
 const AKZENT = '#6fd65a';
 
 /**
@@ -479,10 +478,9 @@ export function Golf({
   /* Menü                                                              */
   /* ---------------------------------------------------------------- */
 
-  if (!tischId && hubNeu) {
+  if (!tischId) {
     /*
-     * Neues Hub (Spieleinstieg-Baukasten, 26.09.2026): dieselben Zustände und
-     * Aufrufe wie im alten Menü. „Gegen Bots" klappt hier nichts auf, sondern
+     * Spieleinstieg-Baukasten (seit 26.09.2026). „Gegen Bots" klappt hier nichts auf, sondern
      * öffnet eine eigene Ansicht wie „Tisch erstellen" in der Kartenlobby —
      * Regler, Stärke, Spielart und Bahnen passen nicht unter einen Knopf.
      */
@@ -572,7 +570,7 @@ export function Golf({
       <SpielRahmen
         gameId="golf"
         titel="Golf"
-        unter="1–8 Spieler · alle gleichzeitig"
+        unter="1-8 Spieler · alle gleichzeitig"
         akzent={AKZENT}
         onBack={onBack}
         fuss={
@@ -599,7 +597,7 @@ export function Golf({
       >
         <p className="spe-text">
           Minigolf von oben, alle gleichzeitig auf derselben Bahn. Zieh deinen Ball zurück wie
-          einen Flitzebogen, lass los — und wer nach allen Löchern die wenigsten Schläge hat,
+          einen Flitzebogen, lass los - und wer nach allen Löchern die wenigsten Schläge hat,
           gewinnt.
         </p>
         <div className="gf-probe" aria-hidden="true">
@@ -608,127 +606,10 @@ export function Golf({
           ))}
         </div>
         {KARTEN.length === 0 && (
-          <p className="hb-fehler">Es sind noch keine Bahnen eingebaut — spielen lässt sich noch nicht.</p>
+          <p className="hb-fehler">Es sind noch keine Bahnen eingebaut - spielen lässt sich noch nicht.</p>
         )}
         {fehler && <p className="hb-fehler">{fehler}</p>}
       </SpielRahmen>
-    );
-  }
-
-  if (!tischId) {
-    return (
-      <main className="gf-seite gf-menue">
-        <button className="gf-zurueck" type="button" onClick={onBack} aria-label="Zurück">
-          ←
-        </button>
-        <div className="gf-menue-mitte">
-          <h1 className="gf-titel">Golf</h1>
-          <p className="gf-untertitel">
-            Minigolf von oben, alle gleichzeitig auf derselben Bahn. Zieh deinen
-            Ball zurück wie einen Flitzebogen, lass los — und wer nach allen
-            Löchern die wenigsten Schläge hat, gewinnt.
-          </p>
-          <div className="gf-probe" aria-hidden="true">
-            {menueFarben.map((farbe, i) => (
-              <Golfball key={i} farbe={farbe} groesse={30} />
-            ))}
-          </div>
-          <button
-            className="gf-knopf gf-knopf-haupt"
-            type="button"
-            data-golf-online=""
-            onClick={() => void spieleOnline()}
-            disabled={laedt}
-          >
-            Online spielen
-          </button>
-          <div className="gf-botblock">
-            <button
-              className="gf-knopf gf-knopf-neben"
-              type="button"
-              data-golf-bots=""
-              aria-expanded={botsOffen}
-              onClick={() => setBotsOffen((an) => !an)}
-            >
-              Gegen Bots
-            </button>
-            {botsOffen && (
-              <div className="gf-regler">
-                <Regler
-                  titel="Bots"
-                  wert={bots}
-                  min={1}
-                  max={7}
-                  onWahl={(w) => {
-                    setBots(w);
-                    merke(SCHLUESSEL_BOTS, w);
-                  }}
-                />
-                {festeLochzahl(botWahl, lobby.daten) === null && (
-                  <Regler
-                    titel="Löcher"
-                    wert={loecher}
-                    min={2}
-                    max={15}
-                    onWahl={(w) => {
-                      setLoecher(w);
-                      merke(SCHLUESSEL_LOECHER, w);
-                    }}
-                  />
-                )}
-                <div className="gf-stufen" role="group" aria-label="Spielstärke der Bots">
-                  {STUFEN.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      data-an={stufe === s ? '' : undefined}
-                      aria-pressed={stufe === s}
-                      onClick={() => {
-                        setStufe(s);
-                        merke(SCHLUESSEL_STUFE, s);
-                      }}
-                    >
-                      {STUFE_NAME[s]}
-                    </button>
-                  ))}
-                </div>
-                <ModusWahl
-                  modus={modus}
-                  onWahl={(m) => {
-                    setModus(m);
-                    merke(SCHLUESSEL_MODUS, m);
-                  }}
-                />
-                <Bahnauswahl
-                  daten={lobby.daten}
-                  wahl={botWahl}
-                  onWahl={(w) => {
-                    setBotWahl(w);
-                    merkeWahl(w);
-                  }}
-                  karten={KARTEN}
-                  kursSperre={kursSperre}
-                />
-                <button
-                  className="gf-knopf gf-knopf-haupt"
-                  type="button"
-                  data-golf-los=""
-                  onClick={() => void spieleGegenBots()}
-                  disabled={laedt || wahlUnfertig(botWahl) !== null}
-                >
-                  Los
-                </button>
-              </div>
-            )}
-          </div>
-          {KARTEN.length === 0 && (
-            <p className="gf-fehler">
-              Es sind noch keine Bahnen eingebaut — spielen lässt sich noch nicht.
-            </p>
-          )}
-          {fehler && <p className="gf-fehler">{fehler}</p>}
-        </div>
-      </main>
     );
   }
 
@@ -782,13 +663,9 @@ export function Golf({
         bahnwahl={
           <>
             {/* Die Spielart der Gruppe (seit 23.09.2026) — Sitz 0 wählt, alle sehen sie. */}
-            {hubNeu ? (
-              <SpielAbschnitt titel="Spielart">
-                <ModusWahl modus={tischWahl.modus} onWahl={tischWahl.setzeModus} />
-              </SpielAbschnitt>
-            ) : (
+            <SpielAbschnitt titel="Spielart">
               <ModusWahl modus={tischWahl.modus} onWahl={tischWahl.setzeModus} />
-            )}
+            </SpielAbschnitt>
             <Bahnauswahl daten={lobby.daten} wahl={tischWahl.wahl} onWahl={tischWahl.setzeWahl} karten={KARTEN} kursSperre={kursSperre} />
           </>
         }
@@ -806,30 +683,14 @@ export function Golf({
   /* Partie                                                            */
   /* ---------------------------------------------------------------- */
 
-  if (KARTEN.length === 0 && hubNeu) {
+  if (KARTEN.length === 0) {
     return (
       <SpielRahmen gameId="golf" titel="Bahnen fehlen" akzent={AKZENT} onBack={verlasseUndZurueck}>
         <p className="spe-text">
-          Dieser Stand bringt noch keine Bahnen mit. Ohne sie lässt sich die Partie nicht rechnen —
+          Dieser Stand bringt noch keine Bahnen mit. Ohne sie lässt sich die Partie nicht rechnen -
           der Tisch bleibt bestehen.
         </p>
       </SpielRahmen>
-    );
-  }
-  if (KARTEN.length === 0) {
-    return (
-      <main className="gf-seite gf-menue">
-        <button className="gf-zurueck" type="button" onClick={verlasseUndZurueck} aria-label="Zurück">
-          ←
-        </button>
-        <div className="gf-menue-mitte">
-          <h1 className="gf-titel">Bahnen fehlen</h1>
-          <p className="gf-untertitel">
-            Dieser Stand bringt noch keine Bahnen mit. Ohne sie lässt sich die
-            Partie nicht rechnen — der Tisch bleibt bestehen.
-          </p>
-        </div>
-      </main>
     );
   }
 
@@ -840,31 +701,14 @@ export function Golf({
    * Bühne ein Satz dasteht, der sagt, was zu tun ist.
    */
   const fehlendeBahnen = loeseBahnen(sicht.bahnen ?? [], KARTEN).unbekannt;
-  if (fehlendeBahnen.length > 0 && hubNeu) {
+  if (fehlendeBahnen.length > 0) {
     return (
       <SpielRahmen gameId="golf" titel="Neue Bahnen" akzent={AKZENT} onBack={verlasseUndZurueck}>
         <p className="spe-text" data-golf-bahnen-fehlen="">
           Diese Partie spielt {fehlendeBahnen.length === 1 ? 'eine Bahn' : `${fehlendeBahnen.length} Bahnen`},
-          die diese Fassung noch nicht kennt. Bitte die Seite neu laden — der Tisch bleibt bestehen.
+          die diese Fassung noch nicht kennt. Bitte die Seite neu laden - der Tisch bleibt bestehen.
         </p>
       </SpielRahmen>
-    );
-  }
-  if (fehlendeBahnen.length > 0) {
-    return (
-      <main className="gf-seite gf-menue">
-        <button className="gf-zurueck" type="button" onClick={verlasseUndZurueck} aria-label="Zurück">
-          ←
-        </button>
-        <div className="gf-menue-mitte">
-          <h1 className="gf-titel">Neue Bahnen</h1>
-          <p className="gf-untertitel" data-golf-bahnen-fehlen="">
-            Diese Partie spielt {fehlendeBahnen.length === 1 ? 'eine Bahn' : `${fehlendeBahnen.length} Bahnen`},
-            die diese Fassung noch nicht kennt. Bitte die Seite neu laden — der
-            Tisch bleibt bestehen.
-          </p>
-        </div>
-      </main>
     );
   }
 
@@ -1021,121 +865,62 @@ function Lobby({
     );
   });
 
-  // Neues Hub: die Gruppe im Spieleinstieg-Rahmen, Startknopf unten fest.
-  if (hubNeu) {
-    return (
-      <SpielRahmen
-        gameId="golf"
-        titel="Gruppe"
-        unter={`${anwesend.length}/${plaetze} in der Gruppe`}
-        akzent={AKZENT}
-        onBack={onZurueck}
-        fuss={
-          binHost ? (
-            <button
-              className="hb-kn is-gold is-haupt is-breit"
-              type="button"
-              data-golf-start=""
-              onClick={onStart}
-              disabled={!verbunden || startSperre !== null}
-              title={startSperre ?? undefined}
-            >
-              Starten
-            </button>
-          ) : (
-            <p className="gf-warten" aria-live="polite">
-              <span>Warten, bis {host?.displayName ?? 'der Erste'} startet</span>
-              <span className="gf-lauf" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-              </span>
-            </p>
-          )
-        }
-      >
-        {!verbunden && <p className="hb-fehler">Keine Verbindung — es wird neu aufgebaut …</p>}
-        <SpielAbschnitt titel="Spieler">
-          <ul className="hb-liste gf-neu-gruppe">{zeilen}</ul>
-        </SpielAbschnitt>
-        <GastHinweis sitze={sitze} className="hb-klein" />
-        {binHost ? (
-          <>
-            {bahnwahl}
-            <section className="hb-blk">
-              {loecherFest === null ? (
-                <div className="hb-liste gf-neu-regler">
-                  <Regler titel="Löcher" wert={loecher} min={2} max={15} onWahl={onLoecher} />
-                </div>
-              ) : (
-                <p className="gf-bw-hinweis" data-golf-loecher-fest={loecherFest}>
-                  {loecherFest} Löcher
-                </p>
-              )}
-            </section>
-          </>
-        ) : (
-          bahnanzeige
-        )}
-      </SpielRahmen>
-    );
-  }
-
+  // Die Gruppe im Spieleinstieg-Rahmen, Startknopf unten fest.
   return (
-    <main className="gf-seite gf-menue">
-      <button className="gf-zurueck" type="button" onClick={onZurueck} aria-label="Zurück">
-        ←
-      </button>
-      <div className="gf-menue-mitte">
-        <h1 className="gf-titel">Gruppe</h1>
-        <p className="gf-untertitel">
-          {anwesend.length}/{plaetze} in der Gruppe
-        </p>
-        {!verbunden && <p className="gf-fehler">Keine Verbindung — es wird neu aufgebaut …</p>}
-
-        <ul className="gf-gruppe">
-          {zeilen}
-        </ul>
-        <GastHinweis sitze={sitze} className="gf-bw-hinweis" />
-
-        {binHost ? (
-          <div className="gf-regler">
-            {bahnwahl}
-            {loecherFest === null ? (
-              <Regler titel="Löcher" wert={loecher} min={2} max={15} onWahl={onLoecher} />
-            ) : (
-              <p className="gf-bw-hinweis" data-golf-loecher-fest={loecherFest}>
-                {loecherFest} Löcher
-              </p>
-            )}
-            <button
-              className="gf-knopf gf-knopf-haupt"
-              type="button"
-              data-golf-start=""
-              onClick={onStart}
-              disabled={!verbunden || startSperre !== null}
-              title={startSperre ?? undefined}
-            >
-              Starten
-            </button>
-          </div>
+    <SpielRahmen
+      gameId="golf"
+      titel="Gruppe"
+      unter={`${anwesend.length}/${plaetze} in der Gruppe`}
+      akzent={AKZENT}
+      onBack={onZurueck}
+      fuss={
+        binHost ? (
+          <button
+            className="hb-kn is-gold is-haupt is-breit"
+            type="button"
+            data-golf-start=""
+            onClick={onStart}
+            disabled={!verbunden || startSperre !== null}
+            title={startSperre ?? undefined}
+          >
+            Starten
+          </button>
         ) : (
-          <>
-          {bahnanzeige}
           <p className="gf-warten" aria-live="polite">
-            <span>
-              Warten, bis {host?.displayName ?? 'der Erste'} startet
-            </span>
+            <span>Warten, bis {host?.displayName ?? 'der Erste'} startet</span>
             <span className="gf-lauf" aria-hidden="true">
               <i />
               <i />
               <i />
             </span>
           </p>
-          </>
-        )}
-      </div>
-    </main>
+        )
+      }
+    >
+      {!verbunden && <p className="hb-fehler">Keine Verbindung - es wird neu aufgebaut …</p>}
+      <SpielAbschnitt titel="Spieler">
+        <ul className="hb-liste gf-neu-gruppe">{zeilen}</ul>
+      </SpielAbschnitt>
+      <GastHinweis sitze={sitze} className="hb-klein" />
+      {binHost ? (
+        <>
+          {bahnwahl}
+          <section className="hb-blk">
+            {loecherFest === null ? (
+              <div className="hb-liste gf-neu-regler">
+                <Regler titel="Löcher" wert={loecher} min={2} max={15} onWahl={onLoecher} />
+              </div>
+            ) : (
+              <p className="gf-bw-hinweis" data-golf-loecher-fest={loecherFest}>
+                {loecherFest} Löcher
+              </p>
+            )}
+          </section>
+        </>
+      ) : (
+        bahnanzeige
+      )}
+    </SpielRahmen>
   );
 }
 
@@ -1688,7 +1473,7 @@ function Partie({
             >
               <strong>{schlaege}</strong>
               <em>
-                {hud.eingelocht[sitz] ? '✓' : hud.fertig[sitz] ? '–' : ''}
+                {hud.eingelocht[sitz] ? '✓' : hud.fertig[sitz] ? '-' : ''}
                 {hud.gesamt[sitz]}
               </em>
               <i>{name(sitz).slice(0, 3)}</i>
@@ -1719,7 +1504,7 @@ function Partie({
 
       {hud.pause && (
         <div className="gf-pause">
-          <h2>Loch {hud.loch + 1} — Zwischenstand</h2>
+          <h2>Loch {hud.loch + 1} - Zwischenstand</h2>
           <table className="gf-tafel">
             <thead>
               <tr>
@@ -1787,7 +1572,7 @@ function Partie({
       >
         <Kartenzeichen />
       </button>
-      {uebersicht && <p className="gf-uebersichthinweis">Übersicht — tippe zum Zurück</p>}
+      {uebersicht && <p className="gf-uebersichthinweis">Übersicht - tippe zum Zurück</p>}
     </main>
   );
 }
@@ -1988,7 +1773,7 @@ export function Abschluss({
           <span className="gf-rangname">{name(zeile.sitz)}</span>
           <span className="gf-rangloecher">
             {daten.ergebnis.map((reihe, loch) => (
-              <i key={loch}>{reihe[zeile.sitz] ?? '–'}</i>
+              <i key={loch}>{reihe[zeile.sitz] ?? '-'}</i>
             ))}
           </span>
           <strong className="gf-rangsumme">{zeile.schlaege}</strong>
@@ -2002,7 +1787,7 @@ export function Abschluss({
       <p className="gf-untertitel gf-klein">Ergebnis wird bestätigt …</p>
     ) : ausgang.strittig ? (
       <p className="gf-fehler">
-        Die Geräte sind auf verschiedene Ergebnisse gekommen — die Partie
+        Die Geräte sind auf verschiedene Ergebnisse gekommen - die Partie
         zählt als strittig, alle stehen auf Platz 1.
       </p>
     ) : null;
@@ -2024,44 +1809,27 @@ export function Abschluss({
       </nav>
     ) : null;
 
-  // Neues Hub: Ergebnis im Spieleinstieg-Rahmen, derselbe Inhalt.
-  if (hubNeu) {
-    return (
-      <SpielRahmen
-        gameId="golf"
-        titel="Ergebnis"
-        unter={`Golf · ${daten.ergebnis.length} ${daten.ergebnis.length === 1 ? 'Loch' : 'Löcher'}`}
-        akzent={AKZENT}
-        onBack={onZurueck}
-        zurueckText="Zurück ins Menü"
-        fuss={
-          <button className="hb-kn is-gold is-haupt is-breit" type="button" onClick={onZurueck}>
-            Zurück ins Menü
-          </button>
-        }
-      >
-        <div className="gf-neu-ergebnis">
-          <ParKopf />
-          {rangliste}
-          {bestaetigung}
-        </div>
-        {replayKnoepfe}
-      </SpielRahmen>
-    );
-  }
-
+  // Ergebnis im Spieleinstieg-Rahmen.
   return (
-    <main className="gf-seite gf-menue">
-      <div className="gf-menue-mitte gf-breit">
-        <h1 className="gf-titel">Ergebnis</h1>
+    <SpielRahmen
+      gameId="golf"
+      titel="Ergebnis"
+      unter={`Golf · ${daten.ergebnis.length} ${daten.ergebnis.length === 1 ? 'Loch' : 'Löcher'}`}
+      akzent={AKZENT}
+      onBack={onZurueck}
+      zurueckText="Zurück ins Menü"
+      fuss={
+        <button className="hb-kn is-gold is-haupt is-breit" type="button" onClick={onZurueck}>
+          Zurück ins Menü
+        </button>
+      }
+    >
+      <div className="gf-neu-ergebnis">
         <ParKopf />
         {rangliste}
         {bestaetigung}
-        {replayKnoepfe}
-        <button className="gf-knopf gf-knopf-haupt" type="button" onClick={onZurueck}>
-          Zurück ins Menü
-        </button>
       </div>
-    </main>
+      {replayKnoepfe}
+    </SpielRahmen>
   );
 }

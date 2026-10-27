@@ -1263,7 +1263,7 @@ export function Werkstatt(): React.JSX.Element {
           </div>
           <h3>Angaben</h3>
           <p className="bw-leise">
-            Stehen als Felder an der Bahn (seit #206). Die Beschreibung steht zusätzlich als Kommentar über ihr — so
+            Stehen als Felder an der Bahn (seit #206). Die Beschreibung steht zusätzlich als Kommentar über ihr - so
             wie bei allen 40 Katalogbahnen.
           </p>
           <div className="bw-gitter">
@@ -1306,7 +1306,7 @@ export function Werkstatt(): React.JSX.Element {
             <p className="bw-leise">
               Als Datei <code>{dateiname(bahn)}</code> anlegen (wird per <code>import.meta.glob</code> eingesammelt).
               {KARTEN.some((k) => k.id === bahn.id) ? (
-                <> Die Kennung steht schon in <code>BAHNEN_KATALOG</code> — keine neue Zeile.</>
+                <> Die Kennung steht schon in <code>BAHNEN_KATALOG</code> - keine neue Zeile.</>
               ) : (
                 <>
                   {' '}
@@ -1318,7 +1318,7 @@ export function Werkstatt(): React.JSX.Element {
             </p>
           ) : (
             <p className="bw-leise">
-              Nur zum Vergleichen mit alten Kopien — der Katalog nimmt seit #206 eine Datei je Bahn.
+              Nur zum Vergleichen mit alten Kopien - der Katalog nimmt seit #206 eine Datei je Bahn.
             </p>
           )}
           <textarea className="bw-quelltext" readOnly value={quelltext} rows={10} spellCheck={false} />
@@ -1326,7 +1326,7 @@ export function Werkstatt(): React.JSX.Element {
             <button
               type="button"
               onClick={() => {
-                void kopiereText(quelltext).then((ok) => setMeldung(ok ? 'Quelltext kopiert.' : 'Kopieren verweigert — bitte von Hand markieren.'));
+                void kopiereText(quelltext).then((ok) => setMeldung(ok ? 'Quelltext kopiert.' : 'Kopieren verweigert - bitte von Hand markieren.'));
               }}
             >
               Quelltext kopieren
@@ -1671,7 +1671,7 @@ function AuswahlPanel(props: {
   if (z.art === 'drehkreuz') {
     felder.push(
       feld('laenge', 'Länge'),
-      feld('gradJeTakt', 'Grad je Takt', { ganz: true, titel: 'Ganze Grad — die Winkeltabellen kennen nur ganze' }),
+      feld('gradJeTakt', 'Grad je Takt', { ganz: true, titel: 'Ganze Grad - die Winkeltabellen kennen nur ganze' }),
       feld('phase', 'Startwinkel', { ganz: true }),
     );
   } else if ('r' in z) felder.push(feld('r', 'Radius'));

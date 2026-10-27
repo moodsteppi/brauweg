@@ -183,10 +183,16 @@
   min-height: 0;
   overflow: hidden;
   position: relative;
+  /* Senkrecht rollt der Browser selbst, waagerecht gehört der Finger dem
+     Zieh-Pager (hub-wischen.ts). Ohne das entscheidet iOS beim ersten
+     touchmove fürs Rollen, und die Seite rollte schräg mit. Eigene
+     waagerechte Reihen rollen weiter: Dort endet die Suche beim Scroller. */
+  touch-action: pan-y pinch-zoom;
 }
 .hb .hb-start {
-  height: 100%;
-  overflow: hidden;
+  /* Die hb-seite scrollt. Der Start darf mit seinen Karten hoeher werden. */
+  min-height: 100%;
+  height: auto;
   /* Unten Luft für den erhöhten Start-Knopf der Reiterleiste */
   padding: 4px 16px 32px;
   display: flex;
@@ -586,21 +592,32 @@
   }
 }
 
-/* Zieh-Pager: dieselbe Mechanik wie im alten Hub (front-track), eigene Seiten */
+/* Zieh-Pager (hub-wischen.ts): ein Platz je Reiter nebeneinander, der Track
+   wird per transform verschoben. Der Platz rollt nicht selbst — so bleiben
+   Abstand und Streifen oben stehen, während die hb-seite darin rollt. */
 .hb .hb-track {
   display: flex;
   height: 100%;
   will-change: transform;
 }
-.hb .hb-seite {
+.hb .hb-reiterplatz {
   flex: 0 0 100%;
   min-width: 0;
   height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.hb .hb-seite {
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-.hb .hb-seite:has(> .hb-start) {
-  overflow: hidden;
+.hb .hb-start > * {
+  /* Kleine Displays und grosse Schrift duerfen Karten nicht zusammenquetschen. */
+  flex-shrink: 0;
 }
 
 /* ---------- Gemeinsame Bausteine der Unterseiten ---------- */
@@ -1081,11 +1098,13 @@
 :is(.hb, .spe) {
   --hb-oben: max(env(safe-area-inset-top, 0px), var(--hb-probe-oben, 0px));
 }
-.hb.is-ohne-kopf .hb-inhalt {
+/* Je Platz, nicht am ganzen Inhalt: Beim Ziehen stehen zwei Reiter
+   nebeneinander, und jeder bringt seinen eigenen Abstand mit. */
+.hb .hb-reiterplatz:not(.is-start) {
   padding-top: var(--hb-oben);
 }
 /* Die Spielseite läuft mit dem Banner bis unter die Statusleiste */
-.hb.is-ohne-kopf .hb-inhalt:has(.hb-spielseite) {
+.hb .hb-reiterplatz:has(.hb-spielseite) {
   padding-top: 0;
 }
 :is(.hb, .spe) .hb-sp-kopf .hb-rund {
@@ -1778,15 +1797,15 @@
   height: 100%;
   overflow-y: auto;
 }
-.hb.is-ohne-kopf .hb-inhalt:has(.hb-clan) {
+.hb .hb-reiterplatz:has(.hb-clan) {
   padding-top: 0;
 }
 /* Clanhalle und Spielseite laufen mit dem Bild bis unter die Statusleiste.
    Beim Scrollen lief aber auch der Inhalt darunter, und „Name" stand neben
    der Uhrzeit. Ein dunkler Streifen in Höhe der Statusleiste deckt ab, was
    darunter rollt; ungescrollt geht er im dunklen oberen Bildrand unter. */
-.hb.is-ohne-kopf .hb-inhalt:has(.hb-clan)::before,
-.hb.is-ohne-kopf .hb-inhalt:has(.hb-spielseite)::before {
+.hb .hb-reiterplatz:has(.hb-clan)::before,
+.hb .hb-reiterplatz:has(.hb-spielseite)::before {
   content: '';
   position: absolute;
   top: 0;
@@ -3183,20 +3202,6 @@
   color: #ffb3b9;
 }
 
-/* Die Truhenöffnung (Fundblatt): Grund und Schrift des neuen Hubs */
-:is(.hb, .spe) .truhe-oeffnung {
-  position: absolute;
-  background: radial-gradient(circle at 50% 42%, rgba(27, 47, 110, 0.6), rgba(5, 11, 29, 0.95));
-}
-:is(.hb, .spe) .truhe-belohnung strong {
-  font: 400 34px var(--hb-anz);
-  color: var(--hb-gold);
-}
-:is(.hb, .spe) .truhe-hinweis {
-  font: 700 13px var(--hb-txt);
-  color: var(--hb-leise);
-}
-
 /* Rückfrage (useRueckfrage in HbBlatt.tsx) */
 :is(.hb, .spe) .hb-rueckfrage {
   display: flex;
@@ -3624,11 +3629,94 @@
 
 /* Solo-Banner in der App (SpieleNeu.tsx): Manufaktur gemalt, Browort noch gezeichnet. */
 :is(.hb, .spe) .hb-quer.hb-quer-manufaktur {
-  /* Die erste Manufaktur; unten links ist das Bild ruhig, dort steht der Text. */
-  background: #1b2f6e url('/manufaktur/manufaktur-1.webp') center 40% / cover no-repeat;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: auto;
+  padding: 0;
+  text-align: left;
+  background: #102345;
+  border: 1px solid rgba(255, 195, 65, 0.32);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+:is(.hb, .spe) .hb-quer.hb-quer-manufaktur::after {
+  display: none;
+}
+:is(.hb, .spe) .hb-manufaktur-bild {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+:is(.hb, .spe) .hb-manufaktur-inhalt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: linear-gradient(145deg, #173359, #0c1b38);
+}
+:is(.hb, .spe) .hb-manufaktur-marke {
+  color: #ffd57a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+:is(.hb, .spe) .hb-quer-manufaktur .hb-quer-text {
+  gap: 7px;
+}
+:is(.hb, .spe) .hb-quer-manufaktur .hb-quer-text strong {
+  font-size: clamp(23px, 6vw, 30px);
+  overflow-wrap: anywhere;
+}
+:is(.hb, .spe) .hb-quer-manufaktur .hb-quer-text > span {
+  color: #d4dff1;
+  font-size: 14px;
+  line-height: 1.5;
+}
+:is(.hb, .spe) .hb-manufaktur-fuss {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 5px;
+}
+:is(.hb, .spe) .hb-manufaktur-hinweis {
+  color: #b7c9e5;
+  font-size: 12px;
+}
+:is(.hb, .spe) .hb-quer-manufaktur .hb-kn {
+  min-height: 44px;
+  gap: 10px;
+}
+:is(.hb, .spe) .hb-quer-manufaktur:focus-visible {
+  outline: 3px solid #ffd57a;
+  outline-offset: 4px;
 }
 :is(.hb, .spe) .hb-quer.hb-quer-browort {
   background:
     radial-gradient(60% 90% at 85% 20%, rgba(63, 164, 90, 0.35), transparent 70%),
     linear-gradient(135deg, #17324a, #1b2f6e);
 }
+
+/* Das Motiv sitzt rechts; die dunkle Fläche hält Titel und Beschreibung lesbar. */
+:is(.hb, .spe) .hb-quer-browort { position: relative; isolation: isolate; min-height: 158px; }
+:is(.hb, .spe) .hb-quer-browort > .hb-browort-bild {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  object-position: center; z-index: -2; pointer-events: none;
+}
+:is(.hb, .spe) .hb-quer-browort::after {
+  background: linear-gradient(90deg, rgba(5, 19, 43, .96), rgba(5, 19, 43, .68) 48%, rgba(5, 19, 43, .08));
+  z-index: -1;
+}
+:is(.hb, .spe) .hb-quer-browort .hb-quer-text { max-width: 66%; text-shadow: 0 2px 8px #05132b; }
+
+/* Die Vorschau verwendet dieselben Kartenflächen wie der Tisch, auch ohne Bilddatei. */
+:is(.hb, .spe) .hb-sp-kartenvorschau { border-radius: 18px; padding: 24px 12px 12px; background-size: cover; background-position: center; border: 1px solid var(--hb-kontur); margin-bottom: 12px; }
+:is(.hb, .spe) .hb-sp-probekarten { display: flex; align-items: center; justify-content: center; gap: 8px; }
+:is(.hb, .spe) .hb-sp-probekarten .pc { position: relative; flex: 0 1 64px; min-width: 0; width: 64px; height: auto; aspect-ratio: 100 / 145; }
+:is(.hb, .spe) .hb-sp-probekarten .ist-ruecken { margin-left: 5px; transform: rotate(5deg); }
+:is(.hb, .spe) .hb-sp-probetext { display: block; padding-top: 15px; text-align: center; font-size: 12px; color: #fff; text-shadow: 0 1px 3px #000; }
+:is(.hb, .spe) .hb-mn-karte { display: flex; align-items: flex-start; justify-content: flex-end; padding: 8px 14px; }
+:is(.hb, .spe) .hb-mn-karte .pc { position: relative; width: 46px; height: 67px; }

@@ -1,0 +1,254 @@
+[
+  {
+    "id": "sonder-gewoehnlich",
+    "spiel": "alle",
+    "stufe": "gewoehnlich",
+    "rabatt": 15,
+    "aufgedeckt": false,
+    "leer": false,
+    "artikel": {
+      "id": "hand-wanderstab",
+      "art": "pinguin",
+      "wert": "hand-wanderstab",
+      "nameKey": "kosmetik.hand-wanderstab",
+      "seltenheit": "gewoehnlich",
+      "normalpreis": 220,
+      "slot": "hand"
+    },
+    "preis": 187,
+    "normalpreis": 220,
+    "besessen": false
+  },
+  {
+    "id": "sonder-selten",
+    "spiel": "alle",
+    "stufe": "selten",
+    "rabatt": 25,
+    "aufgedeckt": false,
+    "leer": false,
+    "artikel": {
+      "id": "blatt-sommerwiese",
+      "art": "blatt",
+      "wert": "sommerwiese",
+      "nameKey": "blatt.sommerwiese",
+      "seltenheit": "gewoehnlich",
+      "normalpreis": 600
+    },
+    "preis": 450,
+    "normalpreis": 600,
+    "besessen": false
+  },
+  {
+    "id": "sonder-episch",
+    "spiel": "alle",
+    "stufe": "episch",
+    "rabatt": 35,
+    "aufgedeckt": false,
+    "leer": false,
+    "artikel": {
+      "id": "aura-sterne",
+      "art": "pinguin",
+      "wert": "aura-sterne",
+      "nameKey": "kosmetik.aura-sterne",
+      "seltenheit": "legendaer",
+      "normalpreis": 1050,
+      "slot": "aura"
+    },
+    "preis": 682,
+    "normalpreis": 1050,
+    "besessen": false
+  },
+  {
+    "id": "doppelkopf-1",
+    "spiel": "doppelkopf",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "szene-marmor",
+      "art": "szene",
+      "wert": "marmor",
+      "nameKey": "szene.marmor",
+      "seltenheit": "episch",
+      "normalpreis": 600
+    },
+    "preis": 600,
+    "normalpreis": 600,
+    "besessen": false
+  },
+  {
+    "id": "doppelkopf-2",
+    "spiel": "doppelkopf",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "szene-berghuette",
+      "art": "szene",
+      "wert": "berghuette",
+      "nameKey": "szene.berghuette",
+      "seltenheit": "selten",
+      "normalpreis": 350
+    },
+    "preis": 350,
+    "normalpreis": 350,
+    "besessen": false
+  },
+  {
+    "id": "doppelkopf-3",
+    "spiel": "doppelkopf",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "szene-basar",
+      "art": "szene",
+      "wert": "basar",
+      "nameKey": "szene.basar",
+      "seltenheit": "legendaer",
+      "normalpreis": 900
+    },
+    "preis": 900,
+    "normalpreis": 900,
+    "besessen": false
+  },
+  {
+    "id": "skat-1",
+    "spiel": "skat",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "ruecken-nachthimmel",
+      "art": "ruecken",
+      "wert": "nachthimmel",
+      "nameKey": "ruecken.nachthimmel",
+      "seltenheit": "selten",
+      "normalpreis": 400
+    },
+    "preis": 400,
+    "normalpreis": 400,
+    "besessen": false
+  },
+  {
+    "id": "skat-2",
+    "spiel": "skat",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "szene-gartenlaube",
+      "art": "szene",
+      "wert": "gartenlaube",
+      "nameKey": "szene.gartenlaube",
+      "seltenheit": "selten",
+      "normalpreis": 350
+    },
+    "preis": 350,
+    "normalpreis": 350,
+    "besessen": false
+  },
+  {
+    "id": "skat-3",
+    "spiel": "skat",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "ruecken-eiche",
+      "art": "ruecken",
+      "wert": "eiche",
+      "nameKey": "ruecken.eiche",
+      "seltenheit": "gewoehnlich",
+      "normalpreis": 200
+    },
+    "preis": 200,
+    "normalpreis": 200,
+    "besessen": false
+  },
+  {
+    "id": "brochess-1",
+    "spiel": "brochess",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "blatt-schach-pinguin",
+      "art": "blatt",
+      "wert": "schach-pinguin",
+      "nameKey": "blatt.schach-pinguin",
+      "seltenheit": "episch",
+      "normalpreis": 1600
+    },
+    "preis": 1600,
+    "normalpreis": 1600,
+    "besessen": false
+  },
+  {
+    "id": "allgemein-1",
+    "spiel": "allgemein",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "schuhe-goldstiefel",
+      "art": "pinguin",
+      "wert": "schuhe-goldstiefel",
+      "nameKey": "kosmetik.schuhe-goldstiefel",
+      "seltenheit": "legendaer",
+      "normalpreis": 750,
+      "slot": "schuhe"
+    },
+    "preis": 750,
+    "normalpreis": 750,
+    "besessen": false
+  },
+  {
+    "id": "allgemein-2",
+    "spiel": "allgemein",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "brille-monokel",
+      "art": "pinguin",
+      "wert": "brille-monokel",
+      "nameKey": "kosmetik.brille-monokel",
+      "seltenheit": "legendaer",
+      "normalpreis": 675,
+      "slot": "brille"
+    },
+    "preis": 675,
+    "normalpreis": 675,
+    "besessen": false
+  },
+  {
+    "id": "allgemein-3",
+    "spiel": "allgemein",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "brille-taucherbrille",
+      "art": "pinguin",
+      "wert": "brille-taucherbrille",
+      "nameKey": "kosmetik.brille-taucherbrille",
+      "seltenheit": "selten",
+      "normalpreis": 220,
+      "slot": "brille"
+    },
+    "preis": 220,
+    "normalpreis": 220,
+    "besessen": false
+  }
+]

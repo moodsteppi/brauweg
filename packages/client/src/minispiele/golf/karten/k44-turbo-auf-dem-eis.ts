@@ -27,7 +27,7 @@ export const bahn: Karte = {
     { art: 'sand', x: 2, y: 9, w: 16, h: 2 },
   ],
   dekor: 'eis',
-  beschreibung: 'Ein Schubfeld am Anfang der Eisfläche beschleunigt den Ball, und auf dem Eis bremst ihn fast nichts mehr — erst der Sandstreifen vor dem Loch. Der Pilz in der Mitte lenkt ab, wer genau auf der Mittellinie rutscht.',
+  beschreibung: 'Ein Schubfeld am Anfang der Eisfläche beschleunigt den Ball, und auf dem Eis bremst ihn fast nichts mehr - erst der Sandstreifen vor dem Loch. Der Pilz in der Mitte lenkt ab, wer genau auf der Mittellinie rutscht.',
   thema: 'Eis',
   autor: 'Aufsicht (Nachtlauf 22.09.2026)',
   tags: ['eis', 'beschleuniger', 'bumper', 'sand'],

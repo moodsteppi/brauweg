@@ -8,18 +8,20 @@
  * Taler bleiben Taler (Wirtschaftsmodell, docs/SPEZIFIKATION-KARTENMANUFAKTUR.md).
  */
 
+import { randomInt } from 'node:crypto';
+
 import { and, eq } from 'drizzle-orm';
 
 import {
   type Aktion,
   AktionAbgelehnt,
   type ManufakturStand,
-  OFFLINE_MS,
   type Meilenstein,
   handle,
   migriere,
   neueMeilensteine,
   neuerStand,
+  offlineMs,
   stationVon,
   vorspulen,
 } from '@brauweg/manufaktur-kern';
@@ -112,7 +114,7 @@ export async function manufakturHeute(db: Db, accountId: string, jetzt = new Dat
   const ms = jetzt.getTime();
   for (let versuch = 0; versuch < 3; versuch += 1) {
     const geladen = await lade(db, accountId);
-    const alt = geladen?.stand ?? neuerStand(ms);
+    const alt = geladen?.stand ?? frischerStand(ms);
     const weg = ms - alt.zeit;
     const vorgespult = vorspulen(alt, ms);
     const meilensteine = neueMeilensteine(vorgespult);
@@ -128,7 +130,7 @@ export async function manufakturHeute(db: Db, accountId: string, jetzt = new Dat
       zeit: ms,
       offline:
         geladen && weg >= OFFLINE_MELDUNG_AB_MS && (gewonnen > 0 || produziert > 0)
-          ? { sekunden: Math.round(Math.min(weg, OFFLINE_MS) / 1000), taler: gewonnen, produziert }
+          ? { sekunden: Math.round(Math.min(weg, offlineMs(alt)) / 1000), taler: gewonnen, produziert }
           : null,
       muenzen,
     };
@@ -137,6 +139,15 @@ export async function manufakturHeute(db: Db, accountId: string, jetzt = new Dat
 }
 
 /** Eine Aktion: arbeiten, ausbauen, Meister, Faehigkeit, Boost, freischalten, umziehen. */
+/**
+ * Ein neuer Stand mit echtem Zufall als Anfang. Der Kern zieht danach
+ * deterministisch weiter — der Anfang muss vom Server kommen, sonst koennte
+ * der Client ihn waehlen und sich seine Obermeister aussuchen.
+ */
+function frischerStand(ms: number): ManufakturStand {
+  return neuerStand(ms, 1, { zufall: randomInt(1, 2 ** 32 - 1) });
+}
+
 /**
  * So weit darf der Zeitpunkt, den der Client fuer einen Tipp nennt, zurueck
  * liegen. Der Client zeigt die Aktion sofort; rechnete der Server ab
@@ -159,7 +170,7 @@ export async function manufakturAktion(
   const getippt = bei === undefined ? ms : Math.min(ms, Math.max(ms - NACHSICHT_MS, bei));
   for (let versuch = 0; versuch < 3; versuch += 1) {
     const geladen = await lade(db, accountId);
-    const alt = geladen?.stand ?? neuerStand(ms);
+    const alt = geladen?.stand ?? frischerStand(ms);
     let ergebnis: ReturnType<typeof handle>;
     try {
       ergebnis = handle(alt, aktion, getippt);

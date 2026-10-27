@@ -53,9 +53,13 @@ import { AppError } from '../src/errors.js';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
 import { PartyRuntime } from '../src/runtime/party.js';
 import { berlinToday } from '../src/birthday.js';
+import { statistikSchreiben } from '../src/statistik.js';
+import type { Db } from '../src/db/types.js';
 import { createTestContext, createVerifiedAccount, schema as s, seedInvite } from './helpers.js';
 
 const APPLE_ID = 'de.brauweg-spielen.web';
+/** Bundle-ID der iOS-App: `aud` der nativen Apple-Anmeldung. */
+const APP_ID = 'de.brauweg-spielen';
 const GOOGLE_ID = '1234-test.apps.googleusercontent.com';
 
 // ---------------------------------------------------------------------------
@@ -203,6 +207,23 @@ test('ein erfundenes Token verbrennt keine fremde Nonce', async () => {
   );
   // Die echte Anmeldung mit derselben Nonce geht danach noch.
   await pruefeAppleToken(jwt(appleRumpf(nonce)), optionen);
+});
+
+test('Apple: Token der iOS-App (aud = Bundle-ID) gilt neben der Services ID, fremde nicht', async () => {
+  const nonces = new NonceSpeicher();
+  const optionen = { clientId: [APPLE_ID, APP_ID], nonces, quelle: QUELLE };
+  const ausDerApp = await pruefeAppleToken(jwt(appleRumpf(nonces.ausgeben(), { aud: APP_ID })), optionen);
+  assert.equal(ausDerApp.anbieter, 'apple');
+  await pruefeAppleToken(jwt(appleRumpf(nonces.ausgeben())), optionen);
+  await abgewiesen(
+    pruefeAppleToken(jwt(appleRumpf(nonces.ausgeben(), { aud: 'de.fremd.app' })), optionen),
+    'credentialsInvalid',
+  );
+  // Nur die Services ID eingerichtet: Das App-Token passt nicht.
+  await abgewiesen(
+    pruefeAppleToken(jwt(appleRumpf(nonces.ausgeben(), { aud: APP_ID })), { clientId: APPLE_ID, nonces, quelle: QUELLE }),
+    'credentialsInvalid',
+  );
 });
 
 test('Signatur, Verfahren und Schluesselkennung werden wirklich geprueft', async () => {
@@ -684,7 +705,7 @@ test('ein Gast sichert nur mit Geburtsdatum, und nicht unter 18', async (t) => {
 // 3. HTTP
 // ---------------------------------------------------------------------------
 
-async function app(an: { google?: boolean; apple?: boolean; nachweis?: string } = {}) {
+async function app(an: { google?: boolean; apple?: boolean; appApple?: boolean; nachweis?: string } = {}) {
   const ctx = await createTestContext();
   await seedInvite(ctx.db);
   const runtime = new PartyRuntime(ctx.db, { botDelayMs: 0 });
@@ -696,6 +717,7 @@ async function app(an: { google?: boolean; apple?: boolean; nachweis?: string } 
     sessionTtlDays: 30,
     googleClientId: an.google ? GOOGLE_ID : null,
     appleClientId: an.apple ? APPLE_ID : null,
+    appleAppId: an.appApple ? APP_ID : null,
     appleRedirectUri: an.apple ? 'https://www.brauweg-spielen.de/api/auth/apple/rueckweg' : null,
     appleDomainVerknuepfung: an.nachweis ?? null,
     anbieterSchluessel: { google: QUELLE, apple: QUELLE },
@@ -735,6 +757,87 @@ test('ohne Client-ID gibt es keinen Knopf und keine Anmeldung', async (t) => {
 
   const nachweis = await a.server.inject({ url: '/.well-known/apple-developer-domain-association.txt' });
   assert.equal(nachweis.statusCode, 404);
+});
+
+test('nur die Bundle-ID: Anmeldung aus der App geht, im Web gibt es keinen Knopf', async (t) => {
+  const a = await app({ appApple: true });
+  t.after(() => a.close());
+
+  assert.deepEqual((await a.server.inject({ url: '/api/auth/apple/config' })).json(), {
+    clientId: null,
+    redirectUri: null,
+  });
+  const ausDerApp = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/apple',
+    payload: { idToken: jwt(appleRumpf(await a.nonce(), { aud: APP_ID })), vorname: 'Anna' },
+  });
+  assert.equal(ausDerApp.statusCode, 200, ausDerApp.body);
+  assert.equal(ausDerApp.json().geburtstagNoetig, true);
+
+  const webToken = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/apple',
+    payload: { idToken: jwt(appleRumpf(await a.nonce())) },
+  });
+  assert.equal(webToken.statusCode, 401);
+  assert.equal(webToken.json().code, 'credentialsInvalid');
+});
+
+test('Erstanmeldung: Namensvorschlag kommt mit, selbst gewaehlter Name gilt, vergebener laesst den Schein liegen', async (t) => {
+  const a = await app({ apple: true });
+  t.after(() => a.close());
+
+  // Erstes Konto: Anna, mit eigenem Namen.
+  const anna = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/apple',
+    payload: { idToken: jwt(appleRumpf(await a.nonce())), vorname: 'Anna' },
+  });
+  assert.equal(anna.json().namensvorschlag, 'Anna', 'der Vorname fuellt das Feld vor');
+  const annaFertig = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/anbieter/abschliessen',
+    payload: { schein: anna.json().schein, birthday: ERWACHSEN, displayName: '  Kartenkoenigin ' },
+  });
+  assert.equal(annaFertig.statusCode, 200, annaFertig.body);
+
+  // Zweites Apple-Konto mit verborgener Mail will denselben Namen.
+  const zweite = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/apple',
+    payload: {
+      idToken: jwt(
+        appleRumpf(await a.nonce(), {
+          sub: '009999.birne',
+          email: 'xyz123@privaterelay.appleid.com',
+          is_private_email: 'true',
+        }),
+      ),
+    },
+  });
+  assert.equal(zweite.json().namensvorschlag, 'Spieler', 'ohne Namen und mit Weiterleitungsadresse');
+  const vergeben = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/anbieter/abschliessen',
+    payload: { schein: zweite.json().schein, birthday: ERWACHSEN, displayName: 'Kartenkoenigin' },
+  });
+  assert.equal(vergeben.statusCode, 409);
+  assert.equal(vergeben.json().code, 'displayNameTaken');
+
+  // Derselbe Schein, anderer Name: geht — kein zweiter Anbieter-Dialog noetig.
+  const zweiterName = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/anbieter/abschliessen',
+    payload: { schein: zweite.json().schein, birthday: ERWACHSEN, displayName: 'Herzdame' },
+  });
+  assert.equal(zweiterName.statusCode, 200, zweiterName.body);
+
+  const namen = await a.ctx.db.execute(
+    sql`select display_name from account where display_name in ('Kartenkoenigin', 'Herzdame') order by display_name`,
+  );
+  const zeilen = (namen as unknown as { rows?: { display_name: string }[] }).rows ?? (namen as unknown as { display_name: string }[]);
+  assert.deepEqual(zeilen.map((z) => z.display_name), ['Herzdame', 'Kartenkoenigin']);
 });
 
 test('mit Client-ID: Konfiguration, Anmeldung per Cookie, Wiederholung abgewiesen', async (t) => {
@@ -834,4 +937,45 @@ test('die Kopfzeilen lassen die Anbieter-Popups zu, und nur diese', async (t) =>
   // Die ganze Herkunft stand frueher drin — jetzt nur noch die Pfade.
   assert.doesNotMatch(csp, /https:\/\/accounts\.google\.com(?!\/gsi\/)/);
   assert.doesNotMatch(csp, /appleid\.apple\.com/, 'der Popup-Modus braucht Apples Anmeldeseite nicht in der CSP');
+});
+
+test('die CSP erlaubt kein eval, auch keins fuer WebAssembly', async (t) => {
+  const a = await app();
+  t.after(() => a.close());
+
+  const res = await a.server.inject({ url: '/api/auth/google/config' });
+  const csp = String(res.headers['content-security-policy']);
+  const direktive = (name: string) =>
+    csp.split(';').map((d) => d.trim()).find((d) => d.startsWith(`${name} `)) ?? '';
+  // Pixi (Kartenmanufaktur) laeuft ueber `pixi.js/unsafe-eval` ohne eval.
+  // Rutscht eine dieser Quellen hier hinein, ist der Schutz gegen
+  // eingeschleustes Skript fuer die ganze Seite weg — nicht nur fuer Pixi.
+  assert.notEqual(direktive('script-src'), '', 'script-src fehlt in der Kopfzeile');
+  assert.doesNotMatch(csp, /'unsafe-eval'/);
+  assert.doesNotMatch(csp, /'wasm-unsafe-eval'/);
+});
+
+test('Tagesstatistik: Erstanmeldung zaehlt als neues Konto, Sichern ueber den Anbieter als Upgrade', async (t) => {
+  // Was andere Tests dieses Prozesses gezaehlt haben, gehoert nicht hierher
+  // (src/statistik.ts puffert je Prozess).
+  const schlucker = {
+    insert: () => ({ values: () => ({ onConflictDoUpdate: async () => undefined }) }),
+  } as unknown as Db;
+  await statistikSchreiben(schlucker);
+
+  const ctx = await createTestContext();
+  await seedInvite(ctx.db);
+  t.after(() => ctx.close());
+
+  await anmelden(ctx, profil());
+  await anmelden(ctx, profil()); // die zweite findet das Konto nur wieder
+  const gast = await gastKonto(ctx.auth, 'Laufkunde');
+  await verknuepfeAnbieter(ctx.db, gast.accountId, profil({ anbieter: 'apple', sub: 'a-gast', email: 'lauf@example.org' }), ERWACHSEN);
+
+  await statistikSchreiben(ctx.db);
+  const zeilen = await ctx.db.select().from(s.statsTag);
+  assert.deepEqual(
+    zeilen.map((z) => `${z.metrik}|${z.modus}=${z.wert}`).sort(),
+    ['konto_erstellt|gast=1', 'konto_erstellt|registriert=1', 'konto_upgrade|=1'],
+  );
 });

@@ -48,7 +48,7 @@ export function AnsageLetzter({
         {wurf.trinkt ? '🎲' : '🍀'}
       </span>
       <span>
-        {wer} Letzter – {wurf.trinkt ? `${zahl} ${zaehlerWort(trinkmodus, wurf.schlucke)}!` : 'Glück gehabt!'}
+        {wer} Letzter - {wurf.trinkt ? `${zahl} ${zaehlerWort(trinkmodus, wurf.schlucke)}!` : 'Glück gehabt!'}
       </span>
     </button>
   );

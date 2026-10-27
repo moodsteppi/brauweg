@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ApiError, api } from '../api';
 import { inApp } from '../laufzeit';
 import { ladeAnbieterConfig, ladeApple, ladeGoogle, type Anbieter, type AnbieterConfig } from './anbieter';
+import { appleNativAnmelden, kannAppleNativ } from './apple-nativ';
 
 /**
  * Die Knoepfe "Mit Apple anmelden" und "Mit Google anmelden".
@@ -15,11 +16,12 @@ import { ladeAnbieterConfig, ladeApple, ladeGoogle, type Anbieter, type Anbieter
  * nennt. Scheitert das Nachladen (kein Netz zum Anbieter, Werbeblocker), bleibt
  * er weg bzw. gesperrt — die Passwort-Anmeldung daneben steht unveraendert.
  *
- * **In der iOS-Huelle gibt es beide nicht.** Google lehnt eingebettete
- * WebViews ab ("disallowed_useragent"), und Apples Web-Popup kommt dort nicht
- * zuverlaessig zum oeffnenden Fenster zurueck. Wer das in der App will, braucht
- * die nativen Wege — und dann gilt App-Store-Regel 4.8: Wer Google anbietet,
- * muss Apple mit anbieten.
+ * **In der iOS-Huelle gibt es nur Apple, und das nativ.** Google lehnt
+ * eingebettete WebViews ab ("disallowed_useragent"), und Apples Web-Popup
+ * kommt dort nicht zuverlaessig zum oeffnenden Fenster zurueck. Den
+ * Apple-Dialog oeffnet deshalb die Huelle (apple-nativ.ts); der Knopf und
+ * alles danach (Geburtstag, Fehler) bleiben hier. Kommt Google einmal nativ
+ * dazu, ist Apple schon da — App-Store-Regel 4.8.
  *
  * **Markenrichtlinien:** Googles Knopf zeichnet Googles Bibliothek selbst —
  * ein nachgebauter muesste Logo, Abstaende und Schrift genau treffen und den
@@ -83,10 +85,16 @@ export function AnbieterKnoepfe({
   const rueckruf = useRef({ onErfolg, onFehler, geburtstag });
   rueckruf.current = { onErfolg, onFehler, geburtstag };
   /** Erstanmeldung: Der Server will erst das Geburtsdatum (auth/anbieter.ts, Regel 5). */
-  const [nachfrage, setNachfrage] = useState<{ anbieter: Anbieter; schein: string } | null>(null);
+  const [nachfrage, setNachfrage] = useState<{
+    anbieter: Anbieter;
+    schein: string;
+    namensvorschlag: string;
+  } | null>(null);
 
+  /** In der App: der Systemdialog statt des Web-SDK (nur Huellen, die ihn melden). */
+  const appleNativ = inApp && kannAppleNativ();
   const zeigeGoogle = Boolean(config?.google) && (!nur || nur.includes('google'));
-  const zeigeApple = Boolean(config?.apple) && (!nur || nur.includes('apple'));
+  const zeigeApple = (appleNativ || Boolean(config?.apple)) && (!nur || nur.includes('apple'));
 
   useEffect(() => {
     if (inApp) return;
@@ -127,7 +135,7 @@ export function AnbieterKnoepfe({
                 if (zweck === 'anmelden') {
                   const antwort = await api.googleLogin(credential);
                   if ('schein' in antwort) {
-                    setNachfrage({ anbieter: 'google', schein: antwort.schein });
+                    setNachfrage({ anbieter: 'google', schein: antwort.schein, namensvorschlag: antwort.namensvorschlag ?? '' });
                     return;
                   }
                   rueckruf.current.onErfolg({ anbieter: 'google', neu: antwort.neu });
@@ -209,7 +217,44 @@ export function AnbieterKnoepfe({
     };
   }, [config?.apple?.clientId, config?.apple?.redirectUri, zeigeApple]);
 
+  /** Das gepruefte Token weiterreichen — im Web wie in der App derselbe Weg. */
+  const mitAppleToken = async (idToken: string, vorname: string | undefined): Promise<void> => {
+    if (zweck === 'anmelden') {
+      const ergebnis = await api.appleLogin(idToken, vorname);
+      if ('schein' in ergebnis) {
+        setNachfrage({ anbieter: 'apple', schein: ergebnis.schein, namensvorschlag: ergebnis.namensvorschlag ?? '' });
+        return;
+      }
+      rueckruf.current.onErfolg({ anbieter: 'apple', neu: ergebnis.neu });
+    } else {
+      const ergebnis = await api.verknuepfeApple(idToken, rueckruf.current.geburtstag);
+      rueckruf.current.onErfolg({ anbieter: 'apple', gesichert: ergebnis.gesichert });
+    }
+  };
+
+  /** App: Nonce holen, Systemdialog, Token weiter. Kein Popup, also kein Zeitdruck im Klick. */
+  const mitAppleNativ = (): void => {
+    if (laeuft) return;
+    setLaeuft(true);
+    void (async () => {
+      try {
+        const { nonce } = await api.anbieterNonce();
+        const antwort = await appleNativAnmelden(nonce);
+        if (!antwort) return;
+        await mitAppleToken(antwort.idToken, antwort.vorname ?? undefined);
+      } catch (fehler) {
+        rueckruf.current.onFehler(fehler);
+      } finally {
+        setLaeuft(false);
+      }
+    })();
+  };
+
   const mitApple = (): void => {
+    if (appleNativ) {
+      mitAppleNativ();
+      return;
+    }
     const sdk = window.AppleID;
     if (!sdk || !appleBereit) return;
     // `signIn()` SOFORT im Klick aufrufen, vor jedem await — sonst blockiert
@@ -226,18 +271,7 @@ export function AnbieterKnoepfe({
           throw fehler;
         });
         if (!antwort) return;
-        const idToken = antwort.authorization.id_token;
-        if (zweck === 'anmelden') {
-          const ergebnis = await api.appleLogin(idToken, antwort.user?.name?.firstName);
-          if ('schein' in ergebnis) {
-            setNachfrage({ anbieter: 'apple', schein: ergebnis.schein });
-            return;
-          }
-          rueckruf.current.onErfolg({ anbieter: 'apple', neu: ergebnis.neu });
-        } else {
-          const ergebnis = await api.verknuepfeApple(idToken, rueckruf.current.geburtstag);
-          rueckruf.current.onErfolg({ anbieter: 'apple', gesichert: ergebnis.gesichert });
-        }
+        await mitAppleToken(antwort.authorization.id_token, antwort.user?.name?.firstName);
       } catch (fehler) {
         rueckruf.current.onFehler(fehler);
       } finally {
@@ -256,6 +290,7 @@ export function AnbieterKnoepfe({
         <GeburtstagNachfrage
           anbieter={nachfrage.anbieter}
           schein={nachfrage.schein}
+          namensvorschlag={nachfrage.namensvorschlag}
           onErfolg={(ergebnis) => {
             setNachfrage(null);
             rueckruf.current.onErfolg(ergebnis);
@@ -288,7 +323,7 @@ export function AnbieterKnoepfe({
               type="button"
               className="anbieter-kachel anbieter-kachel-apple"
               onClick={mitApple}
-              disabled={!appleBereit || laeuft || gesperrt}
+              disabled={!(appleBereit || appleNativ) || laeuft || gesperrt}
               aria-label={zweck === 'anmelden' ? 'Mit Apple anmelden' : 'Weiter mit Apple'}
             >
               <svg className="anbieter-kachel-zeichen" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -305,7 +340,7 @@ export function AnbieterKnoepfe({
           className="anbieter-apple"
           style={{ width: BREITE }}
           onClick={mitApple}
-          disabled={!appleBereit || laeuft || gesperrt}
+          disabled={!(appleBereit || appleNativ) || laeuft || gesperrt}
         >
           <svg className="anbieter-apple-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d={APPLE_LOGO} fill="currentColor" />
@@ -329,7 +364,12 @@ export function AnbieterKnoepfe({
 }
 
 /**
- * Erstanmeldung ueber einen Anbieter: das Geburtsdatum, bevor es das Konto gibt.
+ * Erstanmeldung ueber einen Anbieter: Anzeigename und Geburtsdatum, bevor es
+ * das Konto gibt.
+ *
+ * Der Name ist mit dem Vorschlag des Servers vorbelegt (Vorname bei Apple,
+ * sonst Mailanfang) und frei aenderbar — wie bei der Registrierung. Vorher gab
+ * es kein Feld, und ein Apple-Konto mit verborgener Mail hiess „Spieler".
  *
  * Dieselbe Frage und derselbe Hinweis wie im Registrierungsformular — die
  * Pruefung macht der Server mit derselben Funktion. Unter 16 verwirft er die
@@ -344,24 +384,29 @@ export function AnbieterKnoepfe({
 function GeburtstagNachfrage({
   anbieter,
   schein,
+  namensvorschlag,
   onErfolg,
   onVerworfen,
   onFehler,
 }: {
   anbieter: Anbieter;
   schein: string;
+  namensvorschlag: string;
   onErfolg: (ergebnis: AnbieterErgebnis) => void;
   onVerworfen: () => void;
   onFehler: (fehler: unknown) => void;
 }): React.JSX.Element {
   const [datum, setDatum] = useState('');
+  // „Spieler" ist der Notbehelf des Servers, kein Vorschlag — dann leer lassen.
+  const [name, setName] = useState(namensvorschlag === 'Spieler' ? '' : namensvorschlag);
   const [busy, setBusy] = useState(false);
+  const nameOk = name.trim().length >= 2 && name.trim().length <= 30;
 
   const absenden = async (): Promise<void> => {
-    if (!datum || busy) return;
+    if (!datum || !nameOk || busy) return;
     setBusy(true);
     try {
-      const antwort = await api.anbieterAbschliessen(schein, datum);
+      const antwort = await api.anbieterAbschliessen(schein, datum, name.trim());
       onErfolg({ anbieter, neu: antwort.neu });
     } catch (fehler) {
       // Zu jung oder abgelaufen: Der Server hat den Schein verworfen, hier
@@ -374,8 +419,27 @@ function GeburtstagNachfrage({
   };
 
   return (
-    <div className="anbieter-nachfrage" role="group" aria-label="Geburtsdatum nachtragen">
-      <p>Fast geschafft — noch eine Frage, dann legen wir dein Konto an.</p>
+    <div className="anbieter-nachfrage" role="group" aria-label="Spielername und Geburtsdatum">
+      <p>Fast geschafft - noch zwei Angaben, dann legen wir dein Konto an.</p>
+      <label>
+        Spielername
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              void absenden();
+            }
+          }}
+          minLength={2}
+          maxLength={30}
+          autoComplete="nickname"
+          required
+        />
+        <span className="muted">So sehen dich die anderen am Tisch und in den Ranglisten.</span>
+      </label>
       <label>
         Geburtstag
         <input
@@ -394,7 +458,7 @@ function GeburtstagNachfrage({
         <span className="muted">Mindestens 18 Jahre. Für Countdown und Belohnung.</span>
       </label>
       <div className="row">
-        <button type="button" className="primary" onClick={() => void absenden()} disabled={!datum || busy}>
+        <button type="button" className="primary" onClick={() => void absenden()} disabled={!datum || !nameOk || busy}>
           Konto anlegen
         </button>
         <button type="button" onClick={onVerworfen} disabled={busy}>

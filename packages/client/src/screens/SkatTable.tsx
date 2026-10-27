@@ -1019,7 +1019,7 @@ function Rundenblatt({
                 verdoppelte Betrag wie ein Rechenfehler. */}
             {r.jungfrauen.length > 0 && (
               <p className="muted">
-                Jungfrau: {r.jungfrauen.map(nameOf).join(', ')} — ohne einen Stich, das verdoppelt.
+                Jungfrau: {r.jungfrauen.map(nameOf).join(', ')} - ohne einen Stich, das verdoppelt.
               </p>
             )}
             {round.ramschFaktor > 1 && (

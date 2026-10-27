@@ -2,7 +2,7 @@ import type { BrowortKurz } from './sicht';
 import { BrowortFlamme, schnittText } from './Spielfeld';
 
 /**
- * Browort auf dem Start (nur in der App): Flamme mit dem Schnitt der
+ * Browort auf dem Start (App und Webseite): Flamme mit dem Schnitt der
  * Versuche, darunter die Serie. Ein Tipp oeffnet das Wort des Tages.
  *
  * Ohne `stand` (ein Server, der das Feld noch nicht kennt) steht die Karte
@@ -12,7 +12,7 @@ export function BrowortKarte({ stand, onOeffnen }: { stand: BrowortKurz | undefi
   const serie = stand?.serie ?? 0;
   const heute = stand?.heuteGespielt ?? false;
   const unter = heute
-    ? 'Für heute erledigt — morgen kommt ein neues Wort.'
+    ? 'Für heute erledigt - morgen kommt ein neues Wort.'
     : serie > 0
       ? 'Das Wort von heute wartet, sonst erlischt die Flamme.'
       : 'Fünf Buchstaben, sechs Versuche, jeden Tag ein neues Wort.';

@@ -1,0 +1,63 @@
+.trophaeenreise { color: #f8f5e9; }
+.trophaeenreise .hb-voll-kopf { background: #0a1734; gap: 9px; }
+.trophaeenreise .hb-voll-titel h1 { font-size: 22px; }
+.trophaeenreise .hb-voll-titel span { font-size: 11px; }
+.trophaeenreise .reise-ziel { flex: none; padding: 3px 20px 13px; background: #0a1734; z-index: 2; box-shadow: 0 8px 20px #0003; }
+.trophaeenreise .reise-ziel > span { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; font-size: 12px; }
+.trophaeenreise .reise-ziel b { color: #ffd56b; margin-left: 5px; }
+.trophaeenreise .reise-ziel small { color: #a9bad8; font-size: 11px; }
+.trophaeenreise .reise-fortschritt { height: 6px; background: #20365a; border-radius: 20px; margin-top: 9px; overflow: hidden; }
+.trophaeenreise .reise-fortschritt i { display: block; height: 100%; background: linear-gradient(90deg,#e59e21,#ffe18a); border-radius: inherit; }
+.trophaeenreise .reise-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: #b99854 #101d33; }
+.trophaeenreise .reise-karte { position: relative; max-width: 560px; margin: auto; isolation: isolate; background: #142541; }
+.trophaeenreise .reise-land { position: absolute; width: 100%; overflow: hidden; }
+.trophaeenreise .reise-landschaft { width: 100%; height: 100%; object-fit: cover; }
+.trophaeenreise .reise-landschaft-schatten { position: absolute; inset: 0; background: linear-gradient(#091831b3,transparent 28%,#07152b14 65%,#081830c7); }
+.trophaeenreise .reise-land.ist-voraus .reise-landschaft { filter: saturate(.75) brightness(.82); }
+.trophaeenreise .reise-ortschild { position: absolute; top: 25px; left: 22px; text-shadow: 0 2px 8px #000; }
+.trophaeenreise .reise-ortschild > small { letter-spacing: 2px; color: #ffe0a0; font-size: 10px; font-weight: 800; }
+.trophaeenreise .reise-ortschild h2 { font-size: 28px; margin: 3px 0 4px; line-height: 1.1; }
+.trophaeenreise .reise-ortschild > span { font-size: 11px; background: #0a1734b3; border: 1px solid #ffffff2a; padding: 4px 10px; border-radius: 20px; }
+.trophaeenreise .reise-linie { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.trophaeenreise .reise-linie path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.trophaeenreise .reise-linie-rand { stroke: #0b193cb3; stroke-width: 18px; }
+.trophaeenreise .reise-linie-innen { stroke: #a8bbce; stroke-opacity: .65; stroke-width: 8px; stroke-dasharray: 2 16; }
+.trophaeenreise .reise-linie-gold { stroke: #ffe09c; stroke-width: 8px; stroke-dasharray: 2 16; filter: drop-shadow(0 0 3px #e7a832); }
+.trophaeenreise .reise-station { position: absolute; display: flex; align-items: center; gap: 10px; transform: translate(-26px,-50%); width: min(240px,58%); }
+.trophaeenreise .reise-marke { width: 52px; height: 52px; flex: none; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(#244163,#10243d); border: 3px solid #b7c8d2; box-shadow: 0 5px 0 #07182b,0 9px 22px #0008; font-weight: 900; font-size: 15px; }
+.trophaeenreise .reise-marke.ist-erreicht { color: #14294a; background: linear-gradient(#ffe6a1,#eba731); border-color: #fff0b9; font-size: 24px; }
+.trophaeenreise .reise-lohn { display: flex; flex-direction: column; align-items: center; width: 154px; max-width: 100%; min-width: 0; padding: 8px 8px 10px; border-radius: 18px; background: linear-gradient(145deg,#173358ed,#0a1a32f2); border: 1px solid #8ca8c45c; box-shadow: 0 8px 22px #0005; color: #fff; text-align: center; font: inherit; }
+.trophaeenreise .reise-truhe { width: 82px; height: 72px; object-fit: contain; margin: -34px 0 0; filter: drop-shadow(0 6px 6px #0006); }
+.trophaeenreise .reise-lohntext { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.trophaeenreise .reise-lohn strong { font-size: 14px; }
+.trophaeenreise .reise-lohn small { font-size: 10px; line-height: 1.3; color: #cad7ed; }
+.trophaeenreise .reise-lohn em { font-size: 11px; font-weight: 800; font-style: normal; margin-top: 3px; color: #bdcde4; }
+.trophaeenreise .reise-lohn.ist-bereit { cursor: pointer; border-color: #ffd36f; background: linear-gradient(145deg,#694823f5,#28324bf5); box-shadow: 0 0 24px #f5bf4652,0 7px 16px #0005; }
+.trophaeenreise .reise-lohn.ist-bereit em { color: #152847; background: #ffd35e; border-radius: 9px; padding: 5px 12px; }
+.trophaeenreise .reise-lohn.ist-geholt em { color: #a9e6c3; }
+.trophaeenreise .reise-start { background: #10213ad9; border: 1px solid #e5c68175; border-radius: 14px; padding: 12px; text-align: center; font-size: 12px; }
+.trophaeenreise .reise-start small { display: block; font-size: 10px; color: #bccbe3; margin-top: 5px; }
+.trophaeenreise .reise-checkpunkt { position: absolute; width: clamp(106px,34vw,134px); transform: translate(calc(-100% - 30px),-50%); }
+.trophaeenreise .reise-checkpunkt > :is(button,span) { display: flex; align-items: center; gap: 7px; background: #102443ee; color: white; border: 1px solid #8fa5bf; border-radius: 14px; min-height: 48px; width: 100%; padding: 8px; font: inherit; box-shadow: 0 5px 12px #0004; white-space: nowrap; }
+.trophaeenreise .reise-checkpunkt img { width: 27px; height: 27px; object-fit: contain; }
+.trophaeenreise .reise-checkpunkt strong { display: block; font-size: 12px; }
+.trophaeenreise .reise-checkpunkt small { display: block; font-size: 9px; color: #bbcee7; margin-top: 3px; }
+.trophaeenreise .reise-checkpunkt .ist-bereit { border-color: #ffdc88; background: #674b24f0; cursor: pointer; }
+.trophaeenreise .reise-checkpunkt .ist-geholt { background: #143c3aeb; }
+.trophaeenreise .reise-ich { position: absolute; transform: translate(-50%,-100%); z-index: 2; display: flex; flex-direction: column; align-items: center; pointer-events: none; filter: drop-shadow(0 4px 6px #0008); }
+.trophaeenreise .reise-ich > .pinguin { flex: none; }
+.trophaeenreise .reise-ich > span { position: absolute; right: calc(100% + 7px); bottom: -24px; width: 80px; background: #ffe194; color: #132b4b; padding: 5px 9px; border: 2px solid #fff0bd; border-radius: 10px; font-size: 10px; font-weight: 900; text-align: center; }
+.trophaeenreise .reise-ich small { display: block; font-size: 12px; margin-top: 2px; }
+.trophaeenreise .reise-navigation { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 16px calc(10px + var(--hb-unten,0px)); background: #0a1734; z-index: 3; border-top: 1px solid #354b6d; }
+.trophaeenreise .reise-navigation > span { font-size: 11px; color: #d2ddf1; }
+.trophaeenreise .reise-navigation small { display: block; font-size: 10px; color: #93a8c9; margin-top: 3px; }
+.trophaeenreise .reise-navigation button { border: 1px solid #ffe3a1; background: #f4c15b; color: #112747; border-radius: 13px; padding: 11px 17px; min-height: 44px; font: inherit; font-size: 13px; font-weight: 900; cursor: pointer; }
+.trophaeenreise .reise-anfang { position: absolute; bottom: 45px; width: 100%; text-align: center; color: #fff2c9; font-size: 13px; text-shadow: 0 2px 6px #000; }
+.trophaeenreise .reise-sterne { position: absolute; top: 0; width: 100%; background-color: #102443; background-image: linear-gradient(#09183135,#09183115 70%,#10244360),url(/hub/weg-sterneninseln.webp); background-size: 100% 540px; background-position: center bottom; background-repeat: repeat-y; }
+.trophaeenreise .reise-fehler, .trophaeenreise .reise-laden { margin: 0; padding: 8px 16px; font-size: 13px; background: #14294c; }
+.trophaeenreise .reise-fehler button { margin-left: 10px; background: none; color: #ffdd93; border: 0; text-decoration: underline; min-height: 44px; }
+.trophaeenreise button:focus-visible, .trophaeenreise .reise-scroll:focus-visible { outline: 3px solid #fff0ac; outline-offset: -3px; }
+@media (min-width: 600px) { .trophaeenreise .reise-lohn { width: 176px; } .trophaeenreise .reise-truhe { width: 96px; height: 83px; } }
+
+.trophaeenreise .reise-lohn .reise-bonus { display: flex; align-items: center; gap: 4px; color: #ffe08b; font-weight: 800; }
+.trophaeenreise .reise-bonus img { width: 16px; height: 16px; object-fit: contain; }

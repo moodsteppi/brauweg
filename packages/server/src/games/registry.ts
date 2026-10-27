@@ -32,6 +32,7 @@ import { skat } from '@brauweg/game-skat';
 import { tafelrunde } from '@brauweg/game-tafelrunde';
 import { wizard } from '@brauweg/game-wizard';
 import { notFound } from '../errors.js';
+import { ALLES, imUmfang, type Umfang } from '../umfang.js';
 
 const MODULES: readonly AnyGameModule[] = [
   doppelkopf as unknown as AnyGameModule,
@@ -85,6 +86,44 @@ const byId = new Map<GameId, AnyGameModule>(
   MODULES.map((m) => [m.meta.id, m]),
 );
 
+/**
+ * Angekündigte Modi bleiben außerhalb der Tisch-Registry: Sie haben kein Spielmodul.
+ *
+ * Der Mehrkampf ist auf beiden Plattformen angekündigt (bis zum 26.10.2026
+ * nur in der App, die Webseite hatte dafür nur eine Marke ohne Stimme).
+ * Pro-Subway dagegen nur in der App: Auf der Webseite läuft der Runner schon
+ * (`/api/runner/lauf` sperrt nur die App), dort gibt es nichts abzustimmen.
+ */
+export function abstimmModiFuer(plattform: Plattform, umfang: Umfang = ALLES): (Omit<GameMeta, 'id'> & { id: string })[] {
+  if (!imUmfang(umfang, 'abstimmung')) return [];
+  return [
+    { id: 'prosubway', nameKey: 'modus.prosubway', seatCounts: [1] },
+    { id: 'mehrkampf', nameKey: 'modus.mehrkampf', seatCounts: [2, 3, 4, 5, 6, 7, 8] },
+  ]
+    // Jeder Modus braucht seine eigene Kennung im Umfang, wie jedes
+    // Vorschau-Spiel auch: Bis zum 27.10.2026 kam der Mehrkampf allein mit
+    // `abstimmung` mit — und `UMFANG=…,mehrkampf` meldete der Start als
+    // unbekannt, obwohl die Zeile genau das Gewollte sagte.
+    .filter(m => imUmfang(umfang, m.id) && (m.id === 'mehrkampf' || plattform === 'app'))
+    .map(m => ({
+      ...m, availability: 'preview' as const,
+      rotationSize: (sitze: number) => sitze, suggestedRounds: () => [],
+    }));
+}
+
+/**
+ * Alle Kennungen, die `UMFANG` ausser den Funktionen versteht: die Spiele
+ * der Registry samt Vorschau und die angekuendigten Modi. Fuer die Meldung
+ * unbekannter Namen beim Start (index.ts) — wer hier einen Modus vergisst,
+ * bekommt eine Warnung fuer eine Zeile, die stimmt.
+ */
+export function umfangKennungen(): string[] {
+  return [
+    ...registry.all().map((meta) => meta.id as string),
+    ...abstimmModiFuer('app').map((modus) => modus.id),
+  ];
+}
+
 export const registry: GameRegistry = {
   all: () => [...MODULES.map((m) => m.meta), ...PREVIEW],
   get: (id) => byId.get(id),
@@ -126,7 +165,10 @@ export type Plattform = 'web' | 'app';
  *   starten. Dieselbe Darstellung wie ein Vorschau-Spiel ohne Modul, nur
  *   ohne Abstimmung: Das Spiel gibt es ja, man muss niemanden danach fragen.
  * - `aus` — gar nicht zu sehen. Nur fuer die App: Auf der Webseite zeigt
- *   Brauweg nach DESIGN.md auch, was es noch nicht gibt.
+ *   Brauweg nach DESIGN.md auch, was es noch nicht gibt. Ausnahme: Was
+ *   nicht im Umfang der Ausgabe steht (`UMFANG`, src/umfang.ts), ist auf
+ *   beiden Plattformen `aus` — das ist nicht „noch nicht", sondern „nicht
+ *   in diesem Release".
  */
 export type Freigabe = 'spielbar' | 'bald' | 'aus';
 
@@ -178,16 +220,26 @@ export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
   brocooked: { web: 'spielbar', app: 'bald' },
   /* Seit dem 25.09.2026 im Code. Auf der Webseite erst „Bald", bis es
      jemand gespielt hat (Robin, 26.09.2026, vor dem Release). In der App
-     dagegen schon spielbar: Es gehoert zur ersten iOS-Fassung (Emile,
-     13.10.2026), die Webseite bleibt davon unberuehrt. */
-  brochess: { web: 'bald', app: 'spielbar' },
+     schon spielbar: Es gehoert zur ersten iOS-Fassung (Emile, 13.10.2026).
+     Seit dem 23.10.2026 auch auf der Webseite spielbar — Web und App sollen
+     dasselbe anbieten (docs/release/ios-web-abgleich.md); fuer die Produktion
+     bleibt UMFANG die Obergrenze. */
+  brochess: { web: 'spielbar', app: 'spielbar' },
   /* Vorschau-Spiel mit Moderationsbedarf (freier Text zwischen Sitzen, siehe
      PREVIEW) — in der App gar nicht erst ankuendigen. */
   werwolf: { web: 'bald', app: 'aus' },
 };
 
-/** Was ein Spiel auf dieser Plattform ist (siehe `Freigabe`). */
-export function freigabeAuf(id: GameId, plattform: Plattform): Freigabe {
+/**
+ * Was ein Spiel auf dieser Plattform ist (siehe `Freigabe`).
+ *
+ * `umfang` ist die Obergrenze der Ausgabe (`UMFANG`, src/umfang.ts): Was
+ * dort nicht steht, ist `aus` — auch auf der Webseite, die sonst nur
+ * `spielbar` und `bald` kennt. Die Vorgabe `ALLES` laesst `FREIGABE` allein
+ * entscheiden, wie vor dem Schalter.
+ */
+export function freigabeAuf(id: GameId, plattform: Plattform, umfang: Umfang = ALLES): Freigabe {
+  if (!imUmfang(umfang, id)) return 'aus';
   const eintrag = FREIGABE[id];
   if (!byId.has(id)) {
     // Ohne Modul bleibt es Vorschau; nur die App darf es ganz ausblenden.
@@ -197,8 +249,8 @@ export function freigabeAuf(id: GameId, plattform: Plattform): Freigabe {
 }
 
 /** Laesst sich das Spiel auf dieser Plattform starten und betreten? */
-export function spielbarAuf(id: GameId, plattform: Plattform): boolean {
-  return byId.has(id) && freigabeAuf(id, plattform) === 'spielbar';
+export function spielbarAuf(id: GameId, plattform: Plattform, umfang: Umfang = ALLES): boolean {
+  return byId.has(id) && freigabeAuf(id, plattform, umfang) === 'spielbar';
 }
 
 /**
@@ -210,29 +262,29 @@ export function spielbarAuf(id: GameId, plattform: Plattform): boolean {
  * waere keine: Ueber einen Einladungslink oder einen alten Lesezeichen-
  * Aufruf kaeme man sonst doch an den Tisch.
  */
-export function requireSpielbar(id: GameId, plattform: Plattform): void {
-  if (!spielbarAuf(id, plattform)) throw notFound('gameNotPlayable');
+export function requireSpielbar(id: GameId, plattform: Plattform, umfang: Umfang = ALLES): void {
+  if (!spielbarAuf(id, plattform, umfang)) throw notFound('gameNotPlayable');
 }
 
 /**
  * Die Spielauswahl, wie sie diese Plattform sieht.
  *
  * `bald` wird zur Vorschau (`availability: 'preview'`), `aus` faellt heraus.
- * `abstimmbar` trennt die echten Vorschau-Spiele (ohne Modul, dort wird
- * abgestimmt) von denen, die es gibt und die hier nur noch nicht freigegeben
- * sind — fuer die gibt es keine Stimme, siehe `/api/games/:gameId/vote`.
+ * Jedes sichtbare `bald`-Spiel ist abstimmbar. Entscheidend ist die Freigabe
+ * dieser Plattform, auch wenn es auf einer anderen schon spielbar ist.
  */
 export function spieleFuer(
   plattform: Plattform,
+  umfang: Umfang = ALLES,
 ): { meta: GameMeta; availability: GameMeta['availability']; abstimmbar: boolean }[] {
   return registry.all().flatMap((meta) => {
-    const freigabe = freigabeAuf(meta.id, plattform);
+    const freigabe = freigabeAuf(meta.id, plattform, umfang);
     if (freigabe === 'aus') return [];
     return [
       {
         meta,
         availability: freigabe === 'spielbar' ? ('playable' as const) : ('preview' as const),
-        abstimmbar: !byId.has(meta.id),
+        abstimmbar: freigabe === 'bald',
       },
     ];
   });

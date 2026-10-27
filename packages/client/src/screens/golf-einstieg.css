@@ -1,8 +1,8 @@
 /*
- * Golf im Spieleinstieg des neuen Hubs (Golf.tsx, `hubNeu`).
+ * Golf im Spieleinstieg des Hubs (Golf.tsx).
  *
- * Menü, „Gegen Bots", Gruppe und Ergebnis benutzen dieselben Bauteile wie im
- * alten Hub (Regler, ModusWahl, Bahnauswahl, Rangliste) — hier bekommen sie
+ * Menü, „Gegen Bots", Gruppe und Ergebnis benutzen gemeinsame Bauteile mit
+ * eigenen Grundstilen (Regler, ModusWahl, Bahnauswahl, Rangliste) — hier bekommen sie
  * unter `.spe` die Farben und Schriften des Hubs. Der Grund, warum so viel
  * neu gesetzt wird: `:is(.hb, .spe) button` nimmt jedem Knopf Rand, Grund
  * und Innenabstand (hub-neu.css), und das trifft auch die Kacheln der

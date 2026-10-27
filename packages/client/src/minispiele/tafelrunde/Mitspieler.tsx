@@ -166,7 +166,7 @@ export function Mitspielerleiste({
     <section
       className={stil.leiste}
       role="group"
-      aria-label={`Mitspieler — noch ${lebend} von ${plaetze.length}`}
+      aria-label={`Mitspieler - noch ${lebend} von ${plaetze.length}`}
     >
       <ul className={stil.liste}>
         {plaetze.map((p) => {

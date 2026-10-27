@@ -244,7 +244,7 @@ export function CambioTable({
           <div className="cambio-ruf">
             <strong>Cambio!</strong>
             <span>
-              {nameOf(round.caller)} hat gerufen — noch{' '}
+              {nameOf(round.caller)} hat gerufen - noch{' '}
               {offeneZuege(round) === 1 ? 'ein Zug' : `${offeneZuege(round)} Züge`}
             </span>
           </div>

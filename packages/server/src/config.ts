@@ -6,7 +6,15 @@
  * als einer, der gar nicht startet.
  */
 
+import { leseZugang } from './http/zugangsschutz.js';
 import { parseStaffEmails } from './staff.js';
+
+/**
+ * Bundle-ID der iOS-App (`PRODUCT_BUNDLE_IDENTIFIER` in apps/ios/project.yml).
+ * Wer sie dort aendert, aendert sie hier — sonst weist der Server jede
+ * Apple-Anmeldung aus der App als fremd ab.
+ */
+export const APPLE_APP_ID_VORGABE = 'de.broweg.brauweg-spielen';
 
 export interface Config {
   readonly env: 'development' | 'test' | 'production';
@@ -47,6 +55,13 @@ export interface Config {
    */
   readonly herkunftSchluessel: string | null;
   /**
+   * Schluessel, mit dem der bro-server das brotool-Dashboard fuellt und
+   * Muenz-Codes erzeugt (`TEAM_SCHLUESSEL`, http/team-routen.ts). Wie der
+   * Herkunftsschluessel erst ab 20 Zeichen gueltig; ohne ihn sind die
+   * Team-Routen zu.
+   */
+  readonly teamSchluessel: string | null;
+  /**
    * OAuth-Client-ID fuer "Mit Google anmelden" (GOOGLE_CLIENT_ID). Ohne sie
    * gibt es den Knopf nicht; E-Mail+Passwort geht immer.
    */
@@ -56,6 +71,13 @@ export interface Config {
    * (APPLE_CLIENT_ID). Ohne sie gibt es den Knopf nicht.
    */
   readonly appleClientId: string | null;
+  /**
+   * "Mit Apple anmelden" in der iOS-App: deren Bundle-ID (APPLE_APP_ID). Der
+   * native Dialog stellt das Token fuer sie aus, nicht fuer die Services ID.
+   * Vorbelegt, weil sie kein Geheimnis ist und in apps/ios/project.yml fest
+   * steht; leer gesetzt schaltet es den Weg aus der App ab.
+   */
+  readonly appleAppId: string | null;
   /**
    * Bei Apple eingetragene Return-URL (APPLE_REDIRECT_URI). Ohne Angabe
    * `${PUBLIC_URL}/api/auth/apple/rueckweg` — Apple verlangt sie auch im
@@ -77,6 +99,13 @@ export interface Config {
    * verschwinden.
    */
   readonly feedbackZielUrl: string | null;
+  /**
+   * Zugangsschutz fuer staging (STAGING_ZUGANG=name:passwort): Die Webseite
+   * fragt nach Name und Passwort; App, Gesundheitspruefung und
+   * Verknuepfungsdateien bleiben frei (http/zugangsschutz.ts). Ungesetzt:
+   * offen, wie in Produktion.
+   */
+  readonly stagingZugang: string | null;
   /** `Authorization: Bearer …` fuer obige URL — dort `FEEDBACK_SCHLUESSEL`. */
   readonly feedbackZielToken: string | null;
 }
@@ -130,13 +159,17 @@ export function loadConfig(): Config {
       (process.env.HERKUNFT_SCHLUESSEL ?? '').length >= 20
         ? (process.env.HERKUNFT_SCHLUESSEL as string)
         : null,
+    teamSchluessel:
+      (process.env.TEAM_SCHLUESSEL ?? '').length >= 20 ? (process.env.TEAM_SCHLUESSEL as string) : null,
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? null,
     appleClientId: process.env.APPLE_CLIENT_ID || null,
+    appleAppId: (process.env.APPLE_APP_ID ?? APPLE_APP_ID_VORGABE) || null,
     appleRedirectUri:
       process.env.APPLE_REDIRECT_URI ||
       (process.env.APPLE_CLIENT_ID ? `${publicUrl.replace(/\/+$/, '')}/api/auth/apple/rueckweg` : null),
     appleDomainVerknuepfung: process.env.APPLE_DOMAIN_ASSOCIATION || null,
     feedbackZielUrl: process.env.FEEDBACK_ZIEL_URL ?? null,
+    stagingZugang: leseZugang(process.env.STAGING_ZUGANG),
     feedbackZielToken: process.env.FEEDBACK_ZIEL_TOKEN ?? null,
   };
 }

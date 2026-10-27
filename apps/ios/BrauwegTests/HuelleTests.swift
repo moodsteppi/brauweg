@@ -73,7 +73,8 @@ final class HuelleTests: XCTestCase {
         XCTAssertTrue(js.contains("push: false"))
         XCTAssertTrue(Huelle.vorspann(apiBasis: "https://x.de", push: true).contains("push: true"))
         // Dieselben Namen wie unter Android (Bruecke.kt).
-        for name in ["teilen:", "wachHalten:", "pushErlauben:", "messageHandlers.\(Bruecke.name)"] {
+        XCTAssertTrue(js.contains("apple: true"))
+        for name in ["teilen:", "wachHalten:", "pushErlauben:", "appleAnmelden:", "messageHandlers.\(Bruecke.name)"] {
             XCTAssertTrue(js.contains(name), name)
         }
     }
@@ -100,6 +101,17 @@ final class HuelleTests: XCTestCase {
         XCTAssertTrue(skript.contains("window.BRAUWEG_APP.pushTisch = d"))
         XCTAssertTrue(skript.contains("new CustomEvent('brauweg:push-tisch', { detail: d })"))
         XCTAssertTrue(Huelle.tischSkript(tableId: "a\"b", gameId: "g").contains("\"a\\\"b\""))
+    }
+
+    /// Antwort auf `appleAnmelden`: Token und Vorname maskiert, Abbruch und
+    /// Fehler als feste Worte (packages/client/src/anmeldung/apple-nativ.ts).
+    func testAppleSkriptMeldetTokenOderFehler() {
+        let mitToken = Huelle.appleSkript(.token(idToken: "a.b\"c", vorname: "Anna"))
+        XCTAssertTrue(mitToken.contains("new CustomEvent('brauweg:apple-anmeldung'"), mitToken)
+        XCTAssertTrue(mitToken.contains("{ idToken: \"a.b\\\"c\", vorname: \"Anna\" }"), mitToken)
+        XCTAssertTrue(Huelle.appleSkript(.token(idToken: "t", vorname: nil)).contains("vorname: null"))
+        XCTAssertTrue(Huelle.appleSkript(.abgebrochen).contains("{ fehler: 'abgebrochen' }"))
+        XCTAssertTrue(Huelle.appleSkript(.fehlgeschlagen).contains("{ fehler: 'fehlgeschlagen' }"))
     }
 
     func testJsTextSchuetztZeilenumbrueche() {

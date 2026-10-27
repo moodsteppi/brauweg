@@ -529,7 +529,7 @@ export function Bankreihe({
           ueber dem Laden. */}
       {leerAlle && (
         <p className="tr-leer-satz tr-leer-bank">
-          Deine Bank ist leer — kauf dir unten im Laden einen Recken.
+          Deine Bank ist leer - kauf dir unten im Laden einen Recken.
         </p>
       )}
     </div>

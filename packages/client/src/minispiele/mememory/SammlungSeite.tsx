@@ -394,7 +394,7 @@ export function SammlungSeite({
           */}
         {hilfe && (
           <span className="mm-schalter-hilfe" role="tooltip">
-            Jede Partie zieht drei andere Memes aus deiner Sammlung — festgehaltene Fächer
+            Jede Partie zieht drei andere Memes aus deiner Sammlung - festgehaltene Fächer
             bleiben.
           </span>
         )}
@@ -403,7 +403,7 @@ export function SammlungSeite({
       <p className="mm-gurt-satz">
         {habe === 0
           ? 'Noch nichts gefunden. Jedes Paar, das du selbst aufdeckst, landet hier.'
-          : `Wähle bis zu ${GURT_MAX} aus — die wirfst du im Spiel über den Tisch.`}
+          : `Wähle bis zu ${GURT_MAX} aus - die wirfst du im Spiel über den Tisch.`}
       </p>
 
       {fehler && <p className="mm-kasten-fehler">{fehler}</p>}

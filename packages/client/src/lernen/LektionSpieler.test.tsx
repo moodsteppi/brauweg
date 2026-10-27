@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DECKS } from '../decks';
+import { setzeUmfang } from '../umfang';
 import type { Lektion, Spieltag } from './sicht';
 
 /*
@@ -76,6 +77,7 @@ describe('LektionSpieler', () => {
     lektion.mockResolvedValue(LEKTION);
     lektionFertig.mockResolvedValue(TAG);
   });
+  afterEach(() => setzeUmfang(null));
 
   it('fuehrt durch die Schritte, laesst nach einem Fehler nochmal versuchen und meldet einmal', async () => {
     const onGeschafft = vi.fn();
@@ -135,6 +137,32 @@ describe('LektionSpieler', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Runde starten' }));
     expect(onUebung).toHaveBeenCalledTimes(1);
     expect(lektionFertig).not.toHaveBeenCalled();
+  });
+
+  it('ohne Doppelkopf im Umfang endet die Uebungslektion ohne Tisch', async () => {
+    // Die Uebungsrunde ist ein Doppelkopf-Tisch; der Server lehnt sie dann
+    // ab (`/api/lernpfad/uebung` haengt an `doppelkopf`). Ein Knopf, der nur
+    // eine Fehlermeldung bringt, waere eine Sackgasse.
+    setzeUmfang(['lernpfad']);
+    lektion.mockResolvedValue({ ...LEKTION, uebung: true, schritte: [LEKTION.schritte[0]!] });
+    const onUebung = vi.fn(() => Promise.resolve());
+    const onClose = vi.fn();
+    render(
+      <LektionSpieler
+        lektionId="erste-runde"
+        deck={DECKS[0]!}
+        onClose={onClose}
+        onGeschafft={vi.fn()}
+        onUebung={onUebung}
+        onAnziehen={vi.fn()}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }));
+    expect(screen.queryByRole('button', { name: 'Runde starten' })).toBeNull();
+    expect(screen.getByText('Die Übungsrunde am Tisch gibt es hier nicht.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onUebung).not.toHaveBeenCalled();
   });
 
   it('eine Lektion ohne Schritte meldet sich nicht als geschafft', async () => {

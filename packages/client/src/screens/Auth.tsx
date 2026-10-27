@@ -64,7 +64,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
       const antwort = await api.resendVerification(email);
       setNote(
         antwort.mailVersand === 'log'
-          ? 'Der Mailversand ist gerade nicht eingerichtet — es geht keine Mail hinaus. Melde dich bitte bei uns.'
+          ? 'Der Mailversand ist gerade nicht eingerichtet - es geht keine Mail hinaus. Melde dich bitte bei uns.'
           : 'Falls es die Adresse gibt und sie noch nicht bestätigt ist, ist eine neue E-Mail unterwegs.',
       );
     });
@@ -138,7 +138,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         // Verzeichnis registrierter Konten.
         setNote(
           antwort.mailVersand === 'log'
-            ? 'Der Mailversand ist gerade nicht eingerichtet — es geht keine Mail hinaus. Melde dich bitte bei uns.'
+            ? 'Der Mailversand ist gerade nicht eingerichtet - es geht keine Mail hinaus. Melde dich bitte bei uns.'
             : 'Falls es ein Konto mit dieser Adresse gibt, ist ein Link zum neuen Passwort unterwegs. Er gilt zwei Stunden.',
         );
         return;
@@ -184,8 +184,9 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
             </svg>
             Mit E-Mail weiter
           </button>
-          {/* Nur, wenn der Server Client-IDs nennt, und nie in der App
-              (siehe AnbieterKnoepfe). Fehlen beide, faellt die Reihe weg. */}
+          {/* Im Web nur, wenn der Server Client-IDs nennt; in der App nur
+              Apple ueber den Systemdialog (siehe AnbieterKnoepfe). Fehlen
+              beide, faellt die Reihe weg. */}
           <AnbieterKnoepfe
             zweck="anmelden"
             form="kacheln"

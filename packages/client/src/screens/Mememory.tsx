@@ -23,7 +23,6 @@ import type { ReaktionMessage } from '../protocol';
 import { PfeilLinks } from '../zeichen';
 import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
-import { hubNeu } from '../hubNeu';
 import { GastHinweis } from '../tisch/GastHinweis';
 import { SpielAbschnitt, SpielRahmen } from './SpielEinstieg';
 import './spiel-einstieg-mini.css';
@@ -1199,8 +1198,8 @@ export function Mememory({
    */
   const einstellungsKnopf = (
     <button
-      // Im neuen Hub der runde Knopf des Kopfes (44 pt), dasselbe Zahnrad darin.
-      className={hubNeu ? 'hb-rund mm-zahnrad-neu' : 'mm-zahnrad'}
+      // Der runde Knopf des Kopfes (44 pt), das Zahnrad darin.
+      className="hb-rund mm-zahnrad-neu"
       type="button"
       onClick={() => setEinstellungenOffen(true)}
       aria-label="Einstellungen öffnen"
@@ -1244,7 +1243,6 @@ export function Mememory({
   if (!tischId && kiOffen) {
     return (
       <KiMatch
-        neu={hubNeu}
         laeuft={sucht}
         fehler={fehler}
         onStart={(stufen) => void starteKi(stufen)}
@@ -1256,73 +1254,45 @@ export function Mememory({
     );
   }
 
-  /** Im neuen Hub unter dem Knopf im Fuss — dieselbe Zahl wie im alten Menue. */
+  /** Unter dem Knopf im Fuss: wie viele gerade in Mememory sind. */
   const spielerZeile = <p className="hb-klein">{aktiv ?? '…'} Spieler gerade in Mememory</p>;
 
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
     const gefunden = suchstand.suchende;
-    if (hubNeu) {
-      return (
-        <SpielRahmen
-          gameId="mememory"
-          titel="Mitspieler suchen"
-          unter="Mememory · Online Match"
-          akzent={AKZENT}
-          onBack={brichSucheAb}
-          zurueckText="Suche abbrechen"
-          fuss={
-            <>
-              <button type="button" className="hb-kn is-blau is-breit" onClick={brichSucheAb}>
-                Abbrechen
-              </button>
-              {spielerZeile}
-            </>
-          }
-        >
-          <div className="spe-warten">
-            <p className="spe-countdown" aria-live="polite">
-              {sekunden}
-            </p>
-            <p className="spe-text">
-              {gefunden === 1
-                ? 'Noch niemand sonst — bleibt es dabei, wird mit Bots aufgefüllt.'
-                : `${gefunden} Spieler gefunden`}
-            </p>
-            <div className="spe-lauf" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-          </div>
-        </SpielRahmen>
-      );
-    }
     return (
-      <main className="mm-menue">
-        <button className="mm-zurueck" type="button" onClick={brichSucheAb}>
-          ← Abbrechen
-        </button>
-        <div className="mm-menue-mitte">
-          <h1 className="mm-titel mm-titel-klein">Mitspieler suchen</h1>
-          {/* Die Zahl gross und ohne Einheit: Sie zaehlt sichtbar herunter und
-              beantwortet damit die einzige Frage, die man hier hat. */}
-          <p className="mm-countdown" aria-live="polite">
+      <SpielRahmen
+        gameId="mememory"
+        titel="Mitspieler suchen"
+        unter="Mememory · Online Match"
+        akzent={AKZENT}
+        onBack={brichSucheAb}
+        zurueckText="Suche abbrechen"
+        fuss={
+          <>
+            <button type="button" className="hb-kn is-blau is-breit" onClick={brichSucheAb}>
+              Abbrechen
+            </button>
+            {spielerZeile}
+          </>
+        }
+      >
+        <div className="spe-warten">
+          <p className="spe-countdown" aria-live="polite">
             {sekunden}
           </p>
-          <p className="mm-untertitel">
+          <p className="spe-text">
             {gefunden === 1
-              ? 'Noch niemand sonst — bleibt es dabei, wird mit Bots aufgefüllt.'
+              ? 'Noch niemand sonst - bleibt es dabei, wird mit Bots aufgefüllt.'
               : `${gefunden} Spieler gefunden`}
           </p>
-          <div className="mm-punkte-lauf" aria-hidden="true">
+          <div className="spe-lauf" aria-hidden="true">
             <span />
             <span />
             <span />
           </div>
-          <p className="mm-untertitel">{aktiv ?? '…'} Spieler gerade in Mememory</p>
         </div>
-      </main>
+      </SpielRahmen>
     );
   }
 
@@ -1340,7 +1310,6 @@ export function Mememory({
           * alles Weitere dazukommen, ohne dass der Rand voller Knoepfe wird.
           */}
         <Heim
-          neu={hubNeu}
           sammlung={
             <SammlungSeite
               grund={katalog.grund}
@@ -1351,7 +1320,7 @@ export function Mememory({
           }
           mehr={<MehrSeite wartende={warten} onKasten={() => setKastenOffen(true)} />}
           menue={
-            hubNeu ? (geheZu) => (
+            (geheZu) => (
               /*
                * Neues Hub: Die mittlere Seite des Heims ist ein Spieleinstieg.
                * Streifen, Leiste unten und Zahnrad bleiben; nur `.spe` fuellt
@@ -1374,7 +1343,10 @@ export function Mememory({
                       disabled={sucht}
                     >
                       <span>Online Match suchen…</span>
-                      {/* Die Zahl in Klammern daneben, wie im alten Menue. */}
+                      {/* Die Zahl steht in Klammern daneben und nicht im Satz:
+                          Sie aendert sich alle fuenf Sekunden, und ein
+                          springendes Wort mitten im Text liest sich wie ein
+                          Fehler. */}
                       <em className="spe-kn-zahl">({aktiv ?? '…'})</em>
                     </button>
                     {spielerZeile}
@@ -1420,55 +1392,6 @@ export function Mememory({
                   </div>
                 </SpielAbschnitt>
               </SpielRahmen>
-            ) : (
-            <div className="mm-menue">
-              {/* Der Zurueck-Knopf sitzt bewusst nicht ganz oben: Auf iPhones
-                  mit Notch liegt die obere Ecke unter der Statusleiste. */}
-              <button className="mm-zurueck" type="button" onClick={onBack}>
-                ← Zurück
-              </button>
-              {einstellungsKnopf}
-
-              <div className="mm-menue-mitte">
-                <h1 className="mm-titel">Mememory</h1>
-                <p className="mm-untertitel">Zwei Bilder, ein Paar, zwei bis vier Spieler.</p>
-
-                {/* Der Knopf sucht seit dem 06.09.2026 wieder selbst. Der
-                    Zwischenschritt "gegen wie viele?" hing an den drei
-                    getrennten Toepfen der alten Suche; die Schlange hat nur
-                    einen und setzt alle Gefundenen an einen Vierertisch. */}
-                <button
-                  className="mm-suchen"
-                  type="button"
-                  onClick={() => void starteSuche()}
-                  disabled={sucht}
-                >
-                  <span>Online Match suchen…</span>
-                  {/* Die Zahl steht in Klammern daneben und nicht im Satz:
-                      Sie aendert sich alle fuenf Sekunden, und ein
-                      springendes Wort mitten im Text liest sich wie ein
-                      Fehler. */}
-                  <em>({aktiv ?? '…'})</em>
-                </button>
-
-                {/* Mit Abstand unter der Match-Suche: Es sind zwei
-                    verschiedene Entscheidungen, und der Zwischenraum sagt das
-                    ohne Worte. */}
-                <button
-                  className="mm-ki-knopf"
-                  type="button"
-                  onClick={() => {
-                    setFehler(null);
-                    setKiOffen(true);
-                  }}
-                  disabled={sucht}
-                >
-                  <span>Gegen die KI spielen</span>
-                </button>
-
-                {fehler && <p className="mm-fehler">{fehler}</p>}
-              </div>
-            </div>
             )
           }
         />
@@ -1480,7 +1403,7 @@ export function Mememory({
           <Vorschlagskasten istAufsicht={istAufsicht} onFertig={() => setKastenOffen(false)} />
         )}
         {einstellungenOffen && (
-          <Einstellungsfenster neu={hubNeu} onFertig={() => setEinstellungenOffen(false)} />
+          <Einstellungsfenster onFertig={() => setEinstellungenOffen(false)} />
         )}
       </>
     );
@@ -1496,115 +1419,55 @@ export function Mememory({
     const freiePlaetze = (tisch.table?.seats ?? []).filter(
       (platz) => !platz.accountId && !platz.isBot,
     );
-    /** Auffuellen wie unten im alten Wartebereich: erst die Stufe, dann die Bots. */
+    /**
+     * Auffuellen: erst die Stufe, dann die Bots — sie liegt danach am Tisch
+     * und gilt fuer die Partie, die gleich startet.
+     */
     const fuelleAuf = (): void => {
       tisch.setBotLevel(botLevelAus(fuellStufe));
       for (const platz of freiePlaetze) tisch.addBot(platz.seat);
     };
     const kannFuellen = freiePlaetze.length > 0 && (tisch.table?.seats.length ?? 2) > 2;
-    if (hubNeu) {
-      return (
-        <SpielRahmen
-          gameId="mememory"
-          titel="Tisch wird aufgebaut"
-          unter="Mememory"
-          akzent={AKZENT}
-          onBack={brichAb}
-          zurueckText="Abbrechen"
-          fuss={
-            <>
-              {/* Auffuellen ist hier das, was los geht — deshalb gold. Ohne
-                  freie Plaetze bleibt nur das Abbrechen. */}
-              {kannFuellen && (
-                <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={fuelleAuf}>
-                  Mit Bots auffüllen ({freiePlaetze.length})
-                </button>
-              )}
-              <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
-                Abbrechen
-              </button>
-              {spielerZeile}
-            </>
-          }
-        >
-          <div className="spe-warten">
-            <p className="spe-text">
-              {tisch.status === 'open'
-                ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
-                : 'Verbindung wird aufgebaut…'}
-            </p>
-            <div className="spe-lauf" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-            <GastHinweis sitze={tisch.table?.seats ?? []} className="spe-text" />
-          </div>
-          {kannFuellen && (
-            <SpielAbschnitt titel="Spielstärke der Bots">
-              <div className="mm-gegner">
-                <Stufenregler
-                  wert={fuellStufe}
-                  onWert={(stufe) => {
-                    setFuellStufe(stufe);
-                    tisch.setBotLevel(botLevelAus(stufe));
-                  }}
-                  beschriftung="Spielstärke der Bots"
-                />
-                <p className="mm-stufensatz">{STUFEN.find((eintrag) => eintrag.stufe === fuellStufe)?.satz}</p>
-              </div>
-            </SpielAbschnitt>
-          )}
-        </SpielRahmen>
-      );
-    }
     return (
-      <main className="mm-menue">
-        <button className="mm-zurueck" type="button" onClick={brichAb}>
-          ← Abbrechen
-        </button>
-        <div className="mm-menue-mitte">
-          <h1 className="mm-titel">Tisch wird aufgebaut</h1>
-          <p className="mm-untertitel">
-            {/* Die Platzzahl kommt vom Tisch und steht nicht als 2 im Text:
-                Sobald es Tische zu dritt und zu viert gibt, stimmt eine
-                festgeschriebene Zwei nur noch manchmal. */}
+      <SpielRahmen
+        gameId="mememory"
+        titel="Tisch wird aufgebaut"
+        unter="Mememory"
+        akzent={AKZENT}
+        onBack={brichAb}
+        zurueckText="Abbrechen"
+        fuss={
+          <>
+            {/* Auffuellen ist hier das, was los geht — deshalb gold. Ohne
+                freie Plaetze bleibt nur das Abbrechen. */}
+            {kannFuellen && (
+              <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={fuelleAuf}>
+                Mit Bots auffüllen ({freiePlaetze.length})
+              </button>
+            )}
+            <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
+              Abbrechen
+            </button>
+            {spielerZeile}
+          </>
+        }
+      >
+        <div className="spe-warten">
+          <p className="spe-text">
             {tisch.status === 'open'
               ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
               : 'Verbindung wird aufgebaut…'}
           </p>
-          <div className="mm-punkte-lauf" aria-hidden="true">
+          <div className="spe-lauf" aria-hidden="true">
             <span />
             <span />
             <span />
           </div>
-          <GastHinweis sitze={tisch.table?.seats ?? []} className="mm-untertitel" />
-          <p className="mm-untertitel">{aktiv ?? '…'} Spieler gerade in Mememory</p>
-
-          {/*
-            * "Mit Bots auffuellen" — nur an Tischen fuer drei oder vier.
-            *
-            * Zu zweit gibt es dafuer schon "Gegen die KI spielen" im Menue.
-            * An einem Vierertisch dagegen ist das Warten der Regelfall,
-            * solange nicht gerade vier Leute gleichzeitig dasselbe wollen —
-            * und ohne diesen Knopf saehe man nur zu, wie nichts passiert.
-            *
-            * Aufgefuellt wird ueber `addBot` je freiem Platz, denselben Weg
-            * nimmt der Wartebereich der anderen Spiele auch.
-            */}
-          {freiePlaetze.length > 0 && (tisch.table?.seats.length ?? 2) > 2 && (
-            <div className="mm-fuellblock">
-              {/*
-                * Die Staerke steht ÜBER dem Knopf und nicht dahinter: Sie
-                * gilt fuer alle Bots dieses Tisches, und wer sie erst nach
-                * dem Auffuellen sieht, hat sie zu spaet gesehen.
-                *
-                * Gesetzt wird sie ueber `setBotLevel` — das ist eine
-                * TISCHeinstellung und keine Regel, sie laesst sich also
-                * aendern, solange gewartet wird. Der Regelsatz des Tisches
-                * steht dagegen seit dem Erstellen fest; ihm eine Stufe
-                * nachzureichen ginge gar nicht.
-                */}
+          <GastHinweis sitze={tisch.table?.seats ?? []} className="spe-text" />
+        </div>
+        {kannFuellen && (
+          <SpielAbschnitt titel="Spielstärke der Bots">
+            <div className="mm-gegner">
               <Stufenregler
                 wert={fuellStufe}
                 onWert={(stufe) => {
@@ -1613,22 +1476,11 @@ export function Mememory({
                 }}
                 beschriftung="Spielstärke der Bots"
               />
-              <button
-                className="mm-zweitknopf mm-fuellen"
-                type="button"
-                onClick={() => {
-                  // Erst die Stufe, dann die Bots: Sie liegt danach am Tisch
-                  // und gilt fuer die Partie, die gleich startet.
-                  tisch.setBotLevel(botLevelAus(fuellStufe));
-                  for (const platz of freiePlaetze) tisch.addBot(platz.seat);
-                }}
-              >
-                Mit Bots auffüllen ({freiePlaetze.length})
-              </button>
+              <p className="mm-stufensatz">{STUFEN.find((eintrag) => eintrag.stufe === fuellStufe)?.satz}</p>
             </div>
-          )}
-        </div>
-      </main>
+          </SpielAbschnitt>
+        )}
+      </SpielRahmen>
     );
   }
 

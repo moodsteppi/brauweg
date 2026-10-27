@@ -129,10 +129,10 @@ Hub ist Gold der Hauptknopf — siehe „Das neue Hub“ weiter unten.
 Robin hat am 26.09.2026 entschieden, das Hub vor dem App-Start neu zu
 gestalten: im Stil der Anmeldung (#272), aufgeräumt wie Apple, mit dem
 Spielgefühl von Clash Royale. **Seit dem 26.09.2026 abends ist das neue Hub
-der Standard** (Robin). Das alte bleibt über einen Schalter erreichbar, bis
-es entfernt wird (`src/hubNeu.ts`: `?hub=alt` merkt sich die Wahl, `?hub=neu`
-nimmt sie zurück); für das alte gilt alles oben Stehende. Für das neue Hub
-gilt dieser Abschnitt, und wo er dem Rest widerspricht, gewinnt er.
+der Standard** (Robin), seit dem 23.10.2026 das einzige: Das alte Hub samt
+seinem Schalter ist entfernt (Robin, Projekt #9). Was oben über das alte Hub
+steht, ist Geschichte; es gilt dieser Abschnitt, und wo er dem Rest
+widerspricht, gewinnt er.
 
 **Wo es steht:** `screens/hub-neu.css` (Wurzel `.hb`, nichts wirkt nach
 draußen), Rahmen `HubRahmen.tsx`, Seiten `StartNeu`, `SpieleNeu`,
@@ -259,8 +259,7 @@ Baukasten: `screens/SpielEinstieg.tsx` (`SpielRahmen`, `SpielAbschnitt`,
 genauso. Aufbau: oben das **Spielbanner als Kopf** mit Zurück-Knopf, Titel und
 einer Zeile; darunter Abschnitte; unten fest der **goldene Hauptknopf** (Tisch
 erstellen, Online spielen …). Jedes Spiel behält seine Farbe über
-`--spe-akzent` (Auswahlrahmen, Glanz im Kopf), der Hauptknopf bleibt gold. Nur
-im neuen Hub; mit `?hub=alt` bleibt der alte Einstieg.
+`--spe-akzent` (Auswahlrahmen, Glanz im Kopf), der Hauptknopf bleibt gold.
 
 Umgezogen (26./27.09.2026): Kartenlobby (Doppelkopf, Skat, Zauberer, Cambio,
 BroChess), BroCooked, Golf, Poker, Eiland, Filler, Mememory, Tafelrunde,

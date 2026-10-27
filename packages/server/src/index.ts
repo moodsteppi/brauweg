@@ -15,7 +15,8 @@ import { connect } from './db/connect.js';
 import * as s from './db/schema.js';
 import { waehleMailer } from './mail/index.js';
 import { APP_ORIGINS, buildApp } from './http/app.js';
-import { appInhaltAusUmgebung } from './games/registry.js';
+import { appInhaltAusUmgebung, umfangKennungen } from './games/registry.js';
+import { umfangAusUmgebung, umfangZeile } from './umfang.js';
 import { appVerknuepfungAusUmgebung } from './http/app-verknuepfung.js';
 import { Gateway } from './realtime/gateway.js';
 import { PartyRuntime } from './runtime/party.js';
@@ -24,6 +25,7 @@ import { applyStaffEmails } from './staff.js';
 import { aufraeumen } from './diagnose.js';
 import { faelligeErinnerungen } from './lernpfad.js';
 import { faelligeBrowortErinnerungen } from './browort/dienst.js';
+import { statistikSchreiben } from './statistik.js';
 import { expireStaleTables } from './tables/service.js';
 import { PushAnlaesse } from './push/anlaesse.js';
 import { leseAbgeschaltet } from './push/kennungen.js';
@@ -121,6 +123,15 @@ async function main(): Promise<void> {
       `App-Rueckweg aktiv: Partykiste ${appInhalt.trinkmodusAus ? 'ohne Trinkmodus' : 'mit Trinkmodus'}, Textschaerfe hoechstens ${appInhalt.haerteMax}`,
     );
   }
+  /* Was diese Ausgabe anbietet (src/umfang.ts) — ohne UMFANG alles. Immer
+     eine Zeile: Fehlt auf der Produktion ein Spiel, ist das die erste Stelle,
+     an der man nachsieht, und ein vertippter Name steht gleich mit da. */
+  const { umfang, unbekannt: umfangUnbekannt } = umfangAusUmgebung(
+    process.env.UMFANG,
+    umfangKennungen(),
+  );
+  // eslint-disable-next-line no-console
+  (umfangUnbekannt.length > 0 ? console.warn : console.info)(umfangZeile(umfang, umfangUnbekannt));
   const vermittlung = new Vermittlung(db, runtime, {
     beiFehler: (gameId, fehler) =>
       // eslint-disable-next-line no-console
@@ -160,13 +171,17 @@ async function main(): Promise<void> {
     stage: config.stage,
     diagnoseSchluessel: config.diagnoseSchluessel,
     herkunftSchluessel: config.herkunftSchluessel,
+    teamSchluessel: config.teamSchluessel,
     googleClientId: config.googleClientId,
     appInhalt,
+    umfang,
     appVerknuepfung: appVerknuepfungAusUmgebung(),
     appleClientId: config.appleClientId,
+    appleAppId: config.appleAppId,
     appleRedirectUri: config.appleRedirectUri,
     appleDomainVerknuepfung: config.appleDomainVerknuepfung,
     feedbackZielUrl: config.feedbackZielUrl,
+    stagingZugang: config.stagingZugang,
     feedbackZielToken: config.feedbackZielToken,
     // In der Entwicklung liefert Vite den Client aus, dann gibt es hier nichts
     // auszuliefern und der Server bleibt reine API.
@@ -193,31 +208,48 @@ async function main(): Promise<void> {
   // nach zwei Wochen (docs/FELDHERR-DIAGNOSE.md). Beides im selben Takt: Es
   // ist dieselbe Art Aufraeumen, und ein zweiter Timer waere nur ein
   // zweiter Ort, an dem man ihn vergessen kann.
+  //
+  // Fehler per console.error wie im 500er-Weg (http/app.ts): `app.log` ist
+  // bei `logger: false` stumm, und ein Aufraeumen, das stundenlang scheitert,
+  // fiel so niemandem auf.
   const sweeper = setInterval(() => {
-    void expireStaleTables(db).catch((err) => app.log.error(err));
-    void aufraeumen(db).catch((err) => app.log.error(err));
+    // eslint-disable-next-line no-console
+    void expireStaleTables(db).catch((err) => console.error('Aufraeumen (Tische):', err));
+    // eslint-disable-next-line no-console
+    void aufraeumen(db).catch((err) => console.error('Aufraeumen (Feldherr-Diagnose):', err));
   }, HOUR);
 
   // Abend-Erinnerung an die Lernserie (lernpfad.ts). Eigener, kurzer Takt:
   // Im Stundentakt des Aufraeumens kaeme sie je nach Startzeit erst um kurz
   // vor acht. Wer schon erinnert wurde, steht in `erinnert_tag` — ein
-  // Neustart schickt also nichts doppelt.
+  // Neustart schickt also nichts doppelt. Fehler wie beim Aufraeumen per
+  // console.error — `app.log` schweigt hier ebenso.
   const serienWecker = setInterval(() => {
     void faelligeErinnerungen(db)
       .then((konten) => push.serieErinnern(konten))
-      .catch((err) => app.log.error(err));
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error('Erinnerung (Lernserie):', err));
     // Browort im selben Takt und nach derselben Regel (browort/dienst.ts).
     void faelligeBrowortErinnerungen(db)
       .then((konten) => push.browortErinnern(konten))
-      .catch((err) => app.log.error(err));
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error('Erinnerung (Browort):', err));
   }, 15 * MINUTE);
+
+  // Tagesstatistik (statistik.ts): Gezaehlt wird im Speicher, abgelegt im
+  // Minutentakt. Ein Absturz kostet so hoechstens eine Minute Zaehlung.
+  const statistikTakt = setInterval(() => void statistikSchreiben(db), MINUTE);
 
   const stop = async (): Promise<void> => {
     clearInterval(sweeper);
     clearInterval(serienWecker);
+    clearInterval(statistikTakt);
     runtime.shutdown();
     pushVersand.schliessen();
     await app.close();
+    // Nach `app.close`, damit auch die letzten Anfragen noch mitzaehlen, und
+    // vor der Datenbank. Wirft nie, haelt das Herunterfahren also nicht auf.
+    await statistikSchreiben(db);
     await connection.close();
     process.exit(0);
   };

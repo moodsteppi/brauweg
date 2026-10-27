@@ -276,6 +276,12 @@ export const account = pgTable(
      * — wer aus dem Gast ein Konto macht, ist erst recht ein Geworbener.
      */
     herkunft: text(),
+    /**
+     * Letzter Kalendertag (Berlin) mit einer angemeldeten Anfrage — nur das
+     * Datum, keine Historie. Einziger Zweck: das Konto je Tag EINMAL in
+     * `aktive_konten` zu zaehlen (src/statistik.ts).
+     */
+    zuletztAktiv: date(),
   },
   (t) => [
     uniqueIndex('account_email_key').on(t.email),
@@ -665,7 +671,8 @@ export const gameVote = pgTable(
     accountId: uuid()
       .notNull()
       .references(() => account.id, { onDelete: 'cascade' }),
-    gameId: gameId(),
+    // Auch angekündigte Solo-Modi haben Stimmen, aber kein Tisch-Spielmodul.
+    gameId: text().notNull(),
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.accountId, t.gameId] })],
@@ -1531,6 +1538,61 @@ export const herkunftZaehler = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Tagesstatistik (Tracking Stufe 0) — src/statistik.ts
+// ---------------------------------------------------------------------------
+
+/**
+ * Summen je Kalendertag (Europe/Berlin) und Metrik. Wie `herkunft_zaehler`
+ * ohne jeden Bezug auf Konto, Tisch oder Geraet. Nicht belegte Dimensionen
+ * sind `''`, nicht NULL: Sie stehen im Primaerschluessel.
+ */
+export const statsTag = pgTable(
+  'stats_tag',
+  {
+    datum: date().notNull(),
+    metrik: text().notNull(),
+    spiel: text().notNull().default(''),
+    modus: text().notNull().default(''),
+    ergebnis: text().notNull().default(''),
+    wert: bigint({ mode: 'number' }).notNull().default(0),
+  },
+  (t) => [
+    primaryKey({
+      name: 'stats_tag_pk',
+      columns: [t.datum, t.metrik, t.spiel, t.modus, t.ergebnis],
+    }),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Muenz-Codes (27.10.2026) — src/muenzcodes.ts, Migration 0039
+// ---------------------------------------------------------------------------
+
+/**
+ * Einmal-Codes fuer Muenzen. Erzeugt im brotool (Tab „Spielen"), eingeloest
+ * auf der Webseite. Verbraucht ist ein Code, sobald `eingeloestVon` steht.
+ */
+export const muenzCode = pgTable(
+  'muenz_code',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    code: text().notNull(),
+    muenzen: integer().notNull(),
+    notiz: text(),
+    erstellt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    gueltigBis: timestamp({ withTimezone: true }),
+    gesperrt: boolean().notNull().default(false),
+    eingeloestVon: uuid().references(() => account.id),
+    eingeloestAm: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('muenz_code_code_key').on(t.code),
+    index('muenz_code_erstellt_idx').on(t.erstellt),
+    check('muenz_code_muenzen_check', sql`${t.muenzen} > 0`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Browort und Clanwort (Emile, 23.10.2026) — src/browort.ts
 // ---------------------------------------------------------------------------
 
@@ -1625,3 +1687,15 @@ export const manufaktur = pgTable('manufaktur', {
   version: integer().notNull().default(0),
   aktualisiert: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Die erste Auswahl des Berliner Tages bleibt auch auf einem zweiten Gerät unverändert. */
+export interface MarktPlatz {
+  id: string; spiel: string; stufe: string | null; rabatt: number;
+  artikelId: string | null; normalpreis: number; preis: number; aufgedeckt: boolean;
+}
+export const tagesmarkt = pgTable('tagesmarkt', {
+  accountId: uuid().notNull().references(() => account.id, { onDelete: 'cascade' }),
+  tag: date().notNull(),
+  angebote: jsonb().$type<MarktPlatz[]>().notNull(),
+  muenzenGeholt: boolean().notNull().default(false),
+}, t => [primaryKey({ columns: [t.accountId, t.tag] })]);

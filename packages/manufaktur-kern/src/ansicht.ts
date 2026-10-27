@@ -10,7 +10,6 @@ import {
   arbeiter,
   ausbauKostenFuer,
   meilensteinBalken,
-  meisterKosten,
   paternosterFahrt,
   paternosterKapazitaet,
   presseErtrag,
@@ -19,7 +18,10 @@ import {
   versandKapazitaet,
   versandZyklus,
 } from './formeln.js';
-import { type Menge, stationVon, stufenFuer } from './aktionen.js';
+import { type Menge, ausbauRabatt, stationVon, stufenFuer } from './aktionen.js';
+import { einstellPreis, platzVon } from './meister.js';
+import { ortFaktor, presseBonus } from './renovieren.js';
+import { feilschenFaktor, poolGroesse } from './werkstattbuch.js';
 import type { ManufakturStand } from './stand.js';
 
 export type Kettenglied = 'pressen' | 'paternoster' | 'versand';
@@ -27,7 +29,7 @@ export type Kettenglied = 'pressen' | 'paternoster' | 'versand';
 /** Was die Kettenglieder je Sekunde schaffen, wenn alle arbeiten. */
 export function durchsatz(stand: ManufakturStand, nurMeister = false): Record<Kettenglied, number> {
   const pressen = stand.pressen.reduce(
-    (summe, p, i) => summe + (nurMeister && !p.meister ? 0 : presseLeistung(i, p.stufe, stand.manufaktur, stand.jubilaeen)),
+    (summe, p, i) => summe + (nurMeister && !p.meister ? 0 : presseLeistung(i, p.stufe, stand.manufaktur, presseBonus(stand))),
     0,
   );
   const f = stand.paternoster;
@@ -35,9 +37,9 @@ export function durchsatz(stand: ManufakturStand, nurMeister = false): Record<Ke
   const paternoster =
     nurMeister && !f.meister
       ? 0
-      : paternosterKapazitaet(f.stufe, stand.manufaktur) / (paternosterFahrt(stand.pressen.length, f.stufe) / 1000);
+      : paternosterKapazitaet(f.stufe, stand.manufaktur, ortFaktor(stand)) / (paternosterFahrt(stand.pressen.length, f.stufe) / 1000);
   const versand =
-    nurMeister && !v.meister ? 0 : versandKapazitaet(v.stufe, stand.manufaktur) / (versandZyklus(v.stufe) / 1000);
+    nurMeister && !v.meister ? 0 : versandKapazitaet(v.stufe, stand.manufaktur, ortFaktor(stand)) / (versandZyklus(v.stufe) / 1000);
   return { pressen, paternoster, versand };
 }
 
@@ -88,9 +90,9 @@ export function engpassSichtbar(stand: ManufakturStand): Kettenglied | null {
 /** Leistung einer Station je Sekunde auf Stufe `stufe` — die Hauptzeile im Upgrade-Blatt. */
 export function leistungJeSekunde(stand: ManufakturStand, ziel: Ziel, stufe: number): number {
   const m = stand.manufaktur;
-  if (ziel.art === 'presse') return presseLeistung(ziel.index, stufe, m, stand.jubilaeen);
-  if (ziel.art === 'paternoster') return paternosterKapazitaet(stufe, m) / (paternosterFahrt(stand.pressen.length, stufe) / 1000);
-  return versandKapazitaet(stufe, m) / (versandZyklus(stufe) / 1000);
+  if (ziel.art === 'presse') return presseLeistung(ziel.index, stufe, m, presseBonus(stand));
+  if (ziel.art === 'paternoster') return paternosterKapazitaet(stufe, m, ortFaktor(stand)) / (paternosterFahrt(stand.pressen.length, stufe) / 1000);
+  return versandKapazitaet(stufe, m, ortFaktor(stand)) / (versandZyklus(stufe) / 1000);
 }
 
 /** Das langsamste Glied — dort lohnt der Ausbau. null, wenn es noch keine Kette gibt. */
@@ -118,19 +120,19 @@ function kennzahlenBei(stand: ManufakturStand, ziel: Ziel, stufe: number): Omit<
     return [
       // Namen, wie sie im Upgrade-Blatt stehen — „Zyklus" und „Kapazität"
       // verstand beim ersten Spielen niemand (Rueckmeldung 23.10.2026).
-      { name: 'Wert pro Druckgang', vorher: presseErtrag(ziel.index, stufe, m, stand.jubilaeen), einheit: 'wert' },
+      { name: 'Wert pro Druckgang', vorher: presseErtrag(ziel.index, stufe, m, presseBonus(stand)), einheit: 'wert' },
       { name: 'Dauer pro Druckgang', vorher: presseZyklus(stufe) / 1000, einheit: 'sekunden' },
       { name: 'Arbeiter', vorher: arbeiter(stufe), einheit: 'anzahl' },
     ];
   }
   if (ziel.art === 'paternoster') {
     return [
-      { name: 'Ladung pro Fahrt', vorher: paternosterKapazitaet(stufe, m), einheit: 'wert' },
+      { name: 'Ladung pro Fahrt', vorher: paternosterKapazitaet(stufe, m, ortFaktor(stand)), einheit: 'wert' },
       { name: 'Dauer pro Fahrt', vorher: paternosterFahrt(stand.pressen.length, stufe) / 1000, einheit: 'sekunden' },
     ];
   }
   return [
-    { name: 'Ladung pro Lieferung', vorher: versandKapazitaet(stufe, m), einheit: 'wert' },
+    { name: 'Ladung pro Lieferung', vorher: versandKapazitaet(stufe, m, ortFaktor(stand)), einheit: 'wert' },
     { name: 'Dauer pro Lieferung', vorher: versandZyklus(stufe) / 1000, einheit: 'sekunden' },
   ];
 }
@@ -143,7 +145,13 @@ export interface AusbauVorschau {
   bezahlbar: number;
   /** Stufe nach dem Kauf; gleich `stufe`, wenn `menge` gerade nichts kauft. */
   neueStufe: number;
+  /** Was es kostet — mit Rabatt, wenn er gerade wirkt. */
   kosten: number;
+  /** Der Preis ohne Rabatt (im Blatt durchgestrichen); gleich `kosten`, wenn keiner wirkt. */
+  kostenOhneRabatt: number;
+  /** Anteil Rabatt (0 … 1) und bis wann er wirkt (ms) — 0, wenn keiner. */
+  rabatt: number;
+  rabattBis: number;
   leistbar: boolean;
   kennzahlen: Kennzahl[];
   meilenstein: { von: number; bis: number } | null;
@@ -157,7 +165,10 @@ export function ausbauVorschau(stand: ManufakturStand, ziel: Ziel, menge: Menge)
   // worauf man spart.
   const zeigen = Math.max(anzahl, menge === 'max' ? 1 : 0);
   const neueStufe = s.stufe + zeigen;
-  const kosten = ausbauKostenFuer(ziel, s.stufe, zeigen, stand.manufaktur);
+  // „Ohne Rabatt" heisst ohne Meister-Rabatt; Feilschen aus dem Buch gilt immer.
+  const kostenOhneRabatt = ausbauKostenFuer(ziel, s.stufe, zeigen, stand.manufaktur) * feilschenFaktor(stand);
+  const rabatt = ausbauRabatt(stand, ziel);
+  const kosten = kostenOhneRabatt * (1 - rabatt);
   const vorher = kennzahlenBei(stand, ziel, s.stufe);
   const nachher = kennzahlenBei(stand, ziel, neueStufe);
   return {
@@ -166,6 +177,9 @@ export function ausbauVorschau(stand: ManufakturStand, ziel: Ziel, menge: Menge)
     bezahlbar: stufenFuer(stand, ziel, 'max'),
     neueStufe,
     kosten,
+    kostenOhneRabatt,
+    rabatt,
+    rabattBis: rabatt > 0 ? s.faehigkeitBis : 0,
     leistbar: zeigen > 0 && stand.taler + 1e-9 >= kosten,
     kennzahlen: vorher.map((k, i) => ({ ...k, nachher: nachher[i]!.vorher })),
     meilenstein: meilensteinBalken(s.stufe),
@@ -177,7 +191,14 @@ export function ausbauLeistbar(stand: ManufakturStand, ziel: Ziel): boolean {
   return stufenFuer(stand, ziel, 'max') > 0;
 }
 
+/** Kann man an dieser Station gerade einen Meister einstellen (Platz im Pool, genug Taler)? */
+export function einstellenLeistbar(stand: ManufakturStand, ziel: Ziel): boolean {
+  const s = stationVon(stand, ziel);
+  return !!s && platzVon(stand, ziel).pool.length < poolGroesse(stand) && stand.taler + 1e-9 >= einstellPreis(stand, ziel);
+}
+
+/** Fuer den leeren Platz in der Welt: noch kein Meister, und der erste ist bezahlbar. */
 export function meisterLeistbar(stand: ManufakturStand, ziel: Ziel): boolean {
   const s = stationVon(stand, ziel);
-  return !!s && !s.meister && stand.taler + 1e-9 >= meisterKosten(ziel, stand.manufaktur);
+  return !!s && !s.meister && einstellenLeistbar(stand, ziel);
 }

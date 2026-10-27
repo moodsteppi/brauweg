@@ -8,8 +8,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * Wege gehen: Suche, KI-Match mit Stufen, Einstellungen, die Leiste.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { sucheStarten, createTable, defaults } = vi.hoisted(() => ({
   sucheStarten: vi.fn(),
   createTable: vi.fn(),

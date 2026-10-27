@@ -7,8 +7,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * Suche je Spielart, Bot-Tisch mit `config.variante`, Wischen, Anleitung.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { sucheStarten, createTable, defaults } = vi.hoisted(() => ({
   sucheStarten: vi.fn(),
   createTable: vi.fn(),

@@ -31,7 +31,7 @@ export const bahn: Karte = {
     { art: 'sand', x: 4, y: 2, w: 5, h: 10 },
   ],
   dekor: 'wueste',
-  beschreibung: 'Ein See trennt Abschlag und Loch. Links nimmt ein Schubfeld Anlauf für ein Sprungfeld, das mit vollem Tempo über das ganze Wasser trägt — zu zaghaft, und der Ball landet im See. Der sichere Weg führt rechts am Ufer entlang durch den Sand.',
+  beschreibung: 'Ein See trennt Abschlag und Loch. Links nimmt ein Schubfeld Anlauf für ein Sprungfeld, das mit vollem Tempo über das ganze Wasser trägt - zu zaghaft, und der Ball landet im See. Der sichere Weg führt rechts am Ufer entlang durch den Sand.',
   thema: 'Sprungfeld',
   autor: 'Aufsicht (Nachtlauf 22.09.2026)',
   tags: ['sprungfeld', 'wasser', 'beschleuniger', 'abkuerzung'],

@@ -5,7 +5,16 @@ import {
   type Ziel,
   faehigkeitBereit,
   freischaltKosten,
-  meisterKosten,
+  einstellPreis,
+  bauDauer,
+  bauKosten,
+  hatBaustelle,
+  kannBauen,
+  laufenderBau,
+  naechsteBaustelle,
+  MAX_RENOVIERUNG,
+  renovierung,
+  einstellenLeistbar,
   stufenFuer,
 } from '@brauweg/manufaktur-kern';
 
@@ -42,6 +51,7 @@ export function Ueberlagerung({
   onSchild,
   onMeister,
   onFreischalten,
+  onBauen,
 }: {
   stand: ManufakturStand;
   jetzt: number;
@@ -53,10 +63,16 @@ export function Ueberlagerung({
   onSchild: (ziel: Ziel) => void;
   onMeister: (ziel: Ziel) => void;
   onFreischalten: () => void;
+  onBauen: () => void;
 }): React.JSX.Element {
   const h = halle();
   const anzahl = stand.pressen.length;
   const gesperrt = anzahl < KARTENARTEN.length ? anzahl : null;
+  // Welche Baustellen ein Schild bekommen: die laufende, die startbare, und Schutt direkt vor der naechsten Etage.
+  const laeuft = laufenderBau(stand)?.etage ?? null;
+  const baustellen = [...new Set([laeuft, naechsteBaustelle(stand), gesperrt !== null && hatBaustelle(stand, gesperrt) ? gesperrt : null])].filter(
+    (b): b is number => b !== null,
+  );
   const paternosterSchlaeft = schlaeft(stand.paternoster, stand.pressen.some((p) => p.kiste > 0));
   const versandSchlaeft = schlaeft(stand.versand, stand.packtisch > 0);
 
@@ -80,6 +96,13 @@ export function Ueberlagerung({
       <Bestand x={h.packtisch.x + 8} y={h.packtisch.y - 22} wert={stand.packtisch} bild={stapelBild(0)} name="Packtisch" />
       {versandSchlaeft && <Zzz x={h.traegerWeg.von + 6} y={h.boden - 56} />}
       {paternosterSchlaeft && <Zzz x={h.kurbler.x + 6} y={h.boden - 56} />}
+      {/* Messingschild mit 0–4 Sternen (renovierung.json: Sterne bei x 178/228/278/328, y 94 von 384 × 160). */}
+      <span className="mf-sternschild" style={lage(h.sternSchild)} aria-label={`Renoviert: ${Math.min(renovierung(stand), MAX_RENOVIERUNG)} von ${MAX_RENOVIERUNG} Sternen`}>
+        {[178, 228, 278, 328].map((x, i) => (
+          <i key={x} className={i < renovierung(stand) ? 'is-voll' : undefined} style={{ left: `${(x / 384) * 100}%` }} />
+        ))}
+        {renovierung(stand) > MAX_RENOVIERUNG && <b>+{renovierung(stand) - MAX_RENOVIERUNG}</b>}
+      </span>
       {/* Der Direktor: dein eigener Pinguin auf seinem Podest, mit allem, was du traegst. */}
       {getragen && (
         <span className={`mf-direktor is-${direktor}`} style={lage(h.direktor)} aria-hidden="true">
@@ -106,7 +129,11 @@ export function Ueberlagerung({
         );
       })}
 
-      {gesperrt !== null && (
+      {/* Baustellen (Phase 4): Schutt vor Etage 5 und 8 — Bau starten oder Countdown. */}
+      {baustellen.map((b) => (
+        <BauSchild key={b} etage={b} stand={stand} jetzt={jetzt} onBauen={onBauen} />
+      ))}
+      {gesperrt !== null && !hatBaustelle(stand, gesperrt) && (
         <GesperrteEtage
           index={gesperrt}
           kosten={freischaltKosten(anzahl, stand.manufaktur)}
@@ -186,9 +213,13 @@ function Schild({
   );
 }
 
-function countdown(ms: number): string {
+/**
+ * Fuer die Muenze ueber dem Meister: hoechstens drei Zeichen, sie ist nur
+ * 26 pt breit — „1m 05s" lief ueber den Rand.
+ */
+function kurzeZeit(ms: number): string {
   const s = Math.max(0, Math.ceil(ms / 1000));
-  return s >= 60 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s` : `${s}s`;
+  return s >= 60 ? `${Math.ceil(s / 60)}m` : `${s}s`;
 }
 
 /**
@@ -216,8 +247,8 @@ function MeisterPlatz({
 }): React.JSX.Element {
   const s = ziel.art === 'presse' ? stand.pressen[ziel.index]! : ziel.art === 'paternoster' ? stand.paternoster : stand.versand;
   if (!s.meister) {
-    const kosten = meisterKosten(ziel, stand.manufaktur);
-    const leistbar = stand.taler + 1e-9 >= kosten;
+    const kosten = einstellPreis(stand, ziel);
+    const leistbar = einstellenLeistbar(stand, ziel);
     return (
       <button
         type="button"
@@ -240,7 +271,8 @@ function MeisterPlatz({
         style={{ left: figur.x + figur.b / 2, top: figur.y - 18 }}
         aria-hidden="true"
       >
-        {wirkt ? countdown(s.faehigkeitBis - jetzt) : bereit ? '⚡' : countdown(s.abklingenBis - jetzt)}
+        {/* Bereit: das gemalte Blitz-Zeichen allein (CSS); sonst die Zeit auf der leeren Muenze. */}
+        {wirkt ? kurzeZeit(s.faehigkeitBis - jetzt) : bereit ? '' : kurzeZeit(s.abklingenBis - jetzt)}
       </span>
       <button
         type="button"
@@ -251,6 +283,64 @@ function MeisterPlatz({
       />
     </>
   );
+}
+
+/**
+ * Das Schild an einer Baustelle: Bau starten (Preis und Dauer), oder der
+ * Countdown, solange gebaut wird. Sofort-Fertigstellen gibt es nicht.
+ */
+function BauSchild({
+  etage: index,
+  stand,
+  jetzt,
+  onBauen,
+}: {
+  etage: number;
+  stand: ManufakturStand;
+  jetzt: number;
+  onBauen: () => void;
+}): React.JSX.Element {
+  const e = etage(index);
+  const bau = laufenderBau(stand);
+  if (bau && bau.etage === index) {
+    const rest = Math.max(0, bau.bis - jetzt);
+    return (
+      <span className="mf-bauschild is-laeuft" style={lage(e.sperrSchild)} role="status" aria-label={`Bauarbeiten vor Etage ${index + 1}, noch ${uhrzeit(rest)}`}>
+        <small>Bauarbeiten</small>
+        <b>{uhrzeit(rest)}</b>
+      </span>
+    );
+  }
+  const kosten = bauKosten(index, stand.manufaktur);
+  const startbar = kannBauen(stand) && naechsteBaustelle(stand) === index;
+  const leistbar = startbar && stand.taler + 1e-9 >= kosten;
+  return (
+    <button
+      type="button"
+      className={`mf-bauschild${leistbar ? ' is-leistbar' : ''}`}
+      style={lage(e.sperrSchild)}
+      disabled={!startbar}
+      onClick={onBauen}
+      aria-label={startbar ? `Schutt räumen vor Etage ${index + 1}, ${kurz(kosten)} Taler, ${uhrzeit(bauDauer(stand, index))}` : 'Baustelle'}
+    >
+      <small>{startbar ? `Schutt räumen · ${uhrzeit(bauDauer(stand, index))}` : bau ? 'Bautrupp ist beschäftigt' : `Ab Etage ${index - 1}`}</small>
+      {startbar && (
+        <b>
+          <i className="mf-taler" aria-hidden="true" />
+          {kurz(kosten)}
+        </b>
+      )}
+    </button>
+  );
+}
+
+/** „7:42" bzw. „1:05:00" fuer Bauzeiten. */
+function uhrzeit(ms: number): string {
+  const s = Math.ceil(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sek = String(s % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sek}` : `${m}:${sek}`;
 }
 
 function GesperrteEtage({

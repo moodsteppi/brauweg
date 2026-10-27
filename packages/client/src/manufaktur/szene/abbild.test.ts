@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type ManufakturStand,
   handle,
+  neuePresse,
   neuerStand,
   paternosterFahrt,
   presseZyklus,
@@ -10,7 +11,19 @@ import {
   vorspulen,
 } from '@brauweg/manufaktur-kern';
 
-import { arbeiterOrt, kistenStapel, paternosterOrt, pressenPhase, traegtStapel, wagenOrt } from './abbild';
+import {
+  LAUFEN_TEMPO_MAX,
+  SCHLAEGE,
+  arbeiterOrt,
+  kistenStapel,
+  paternosterOrt,
+  phasenTempo,
+  pressenPhase,
+  pressenPhaseMs,
+  traegtStapel,
+  wagenOrt,
+} from './abbild';
+import { CLIPS } from './clips';
 
 /*
  * „Die Bilder lügen nie": Was die Szene zeigt, folgt aus dem Stand — der
@@ -96,5 +109,28 @@ describe('Zustandsautomat der Arbeiter', () => {
     const { ablaufTempo } = await import('./abbild');
     const p = neuerStand(T0).pressen[0]!;
     expect(ablaufTempo({ ...p, stufe: 40 }, T0)).toBeGreaterThan(ablaufTempo(p, T0));
+  });
+});
+
+describe('Ablaeufe bei hohem Tempo', () => {
+  // Stufe 100 mit Meister-Faehigkeit: ein Zyklus dauert eine Sekunde.
+  const schnell = { ...neuePresse(), stufe: 100, laeuft: true, meister: true, rang: 'jung' as const, art: 'tempo' as const, faehigkeitBis: T0 + 60_000 };
+
+  it('ein einmaliger Ablauf endet mit seiner Phase, statt mittendrin abzubrechen', () => {
+    const phaseMs = pressenPhaseMs(schnell, 'ablegen', T0);
+    expect(phaseMs).toBeLessThan(100);
+    const t = phasenTempo(CLIPS.ablegen, 'ablegen', phaseMs, 4);
+    expect(CLIPS.ablegen.dauer / t).toBeCloseTo(phaseMs, 6);
+  });
+
+  it('an der Presse eine Bewegung je Schlag', () => {
+    const phaseMs = pressenPhaseMs(schnell, 'arbeiten', T0);
+    const t = phasenTempo(CLIPS.arbeiten, 'arbeiten', phaseMs, 4);
+    expect((CLIPS.arbeiten.dauer / t) * SCHLAEGE.length).toBeCloseTo(phaseMs, 6);
+  });
+
+  it('Laufschritte bleiben gedeckelt, auf Stufe 1 aendert sich nichts', () => {
+    expect(phasenTempo(CLIPS.laufen, 'laufen', 200, 4)).toBe(LAUFEN_TEMPO_MAX);
+    expect(phasenTempo(CLIPS.laufen, 'laufen', 800, 1)).toBe(1);
   });
 });

@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
-  ABKLINGEN_MS,
+  auftragFertig,
+  abklingMs,
+  aktuellesZiel,
+  zielBelohnung,
+  zielErreicht,
+  MAX_RENOVIERUNG,
+  istJubilaeum,
+  renovierFaktor,
+  renovierVorschau,
+  EINTRAEGE,
+  buchPreis,
+  wirkMs,
+  bereiteMeister,
   type Aktion,
   type Menge,
   type Ziel,
@@ -16,8 +28,10 @@ import { t } from '../i18n';
 import { spiele } from '../klang';
 import { HbBlatt, Schliessen, useEscape, useRueckfrage } from '../screens/HbBlatt';
 import { type AnleitungsZiel, anleitungsSchritt } from './anleitung';
-import { LeerlaufBlatt, ManufakturBlatt, MeisterBlatt, UpgradeBlatt, WillkommenBlatt } from './Blaetter';
-import { manufakturBild } from './bilder';
+import { BuchBlatt, LeerlaufBlatt, ManufakturBlatt, MeisterBlatt, UpgradeBlatt, WillkommenBlatt } from './Blaetter';
+import { Meisterschule, ChronikBlatt } from './Meisterschule';
+import { AuftraegeBlatt } from './AuftraegeBlatt';
+import { FINGER, RIG2_ORDNER, TIPP_RING, UI_ORDNER, manufakturBild } from './bilder';
 import { manufakturName } from './namen';
 import type { Ausschnitt, Szene, SzenenEreignis } from './szene/Szene';
 import { type Rechteck, BREITE, ETAGE_HOEHE, etage, gesamtHoehe, halle } from './szene/layout';
@@ -37,7 +51,11 @@ type Blatt =
   | { art: 'upgrade'; ziel: Ziel }
   | { art: 'meister'; ziel?: Ziel }
   | { art: 'leerlauf' }
-  | { art: 'manufaktur' };
+  | { art: 'manufaktur' }
+  | { art: 'buch' }
+  | { art: 'auftraege' }
+  | { art: 'schule' }
+  | { art: 'chronik' };
 
 function fingerOrt(ziel: AnleitungsZiel): Rechteck {
   const h = halle();
@@ -57,7 +75,7 @@ function fingerOrt(ziel: AnleitungsZiel): Rechteck {
 
 /**
  * Die Kartenmanufaktur (Emile, 23.10.2026): Idle-Spiel wie Idle Miner
- * Tycoon, nur in der App. Spielentwurf: docs/SPEZIFIKATION-KARTENMANUFAKTUR.md.
+ * Tycoon, in App und Web (Web seit 23.10.2026). Spielentwurf: docs/SPEZIFIKATION-KARTENMANUFAKTUR.md.
  *
  * Aufbau wie im Vorbild, von oben nach unten: Versandhalle, Schacht links
  * durch alle Etagen, je Etage Kiste, Meister-Platz, Presse und Stufen-Schild.
@@ -180,6 +198,11 @@ export function Kartenmanufaktur({
     szene.current?.groesse(masse.breite, weltHoehe);
   }, [masse.breite, weltHoehe]);
 
+  // Renoviert: Festmoment in der Szene. An der Stufe (Zahl) haengen, nicht am Stand.
+  useEffect(() => {
+    if (m.gefeiert !== null) szene.current?.feiere();
+  }, [m.gefeiert]);
+
   useEffect(() => {
     szene.current?.zeigeDebug(debug);
   }, [debug]);
@@ -231,12 +254,25 @@ export function Kartenmanufaktur({
   const leerlauf = leerlaufErtrag(stand);
   const glied = engpassSichtbar(stand);
   const finger = anleitungsSchritt(stand);
+  const kettenziel = aktuellesZiel(stand);
+  const zielStand = kettenziel?.messe(stand) ?? { ist: 0, soll: 1 };
+  const zielFertig = zielErreicht(stand);
   const stationen = [stand.versand, stand.paternoster, ...stand.pressen];
   const mitMeister = stationen.filter((s) => s.meister);
-  const boostBereit = mitMeister.some((s) => faehigkeitBereit(s, jetzt));
-  // Ring im Boost-Knopf: wie weit die naechste Faehigkeit wieder bereit ist.
-  const naechsteBereit = mitMeister.length === 0 ? null : Math.min(...mitMeister.map((s) => Math.max(0, s.abklingenBis - jetzt)));
-  const boostAnteil = naechsteBereit === null ? 0 : 1 - naechsteBereit / ABKLINGEN_MS;
+  // „Alle aktivieren": wie viele bereit sind; sonst der kuerzeste Countdown als Ring.
+  const bereitZahl = bereiteMeister(stand, jetzt);
+  const boostBereit = bereitZahl > 0;
+  const pausierend = mitMeister.filter((s) => !faehigkeitBereit(s, jetzt));
+  const naechster = pausierend.reduce<(typeof pausierend)[number] | null>((a, s) => (!a || s.abklingenBis < a.abklingenBis ? s : a), null);
+  const naechsteBereit = naechster ? Math.max(0, naechster.abklingenBis - jetzt) : null;
+  // Die ganze Pause dieses Meisters: Wirkung plus Abklingen, je nach Rang.
+  const ganzePause = naechster ? wirkMs(stand, naechster.rang ?? 'jung') + abklingMs(stand, naechster.rang ?? 'jung') : 1;
+  const boostAnteil = naechsteBereit === null ? 0 : 1 - naechsteBereit / ganzePause;
+  // Leuchtet, sobald die Siegel fuer irgendeinen Eintrag reichen.
+  const buchLeistbar = EINTRAEGE.some((e) => {
+    const preis = buchPreis(stand, e);
+    return preis !== null && stand.siegel >= preis;
+  });
   const rolle = (richtung: 1 | -1): void =>
     feld.current?.scrollBy({ top: richtung * ETAGE_HOEHE * faktor, behavior: 'smooth' });
   const bildrate = debug ? szene.current?.fps() ?? 0 : 0;
@@ -268,7 +304,43 @@ export function Kartenmanufaktur({
         </span>
       </header>
       <Verkaeufe liste={verkaeufe} />
+      {/* Zielkette (Phase 5): immer ein Ziel; erreicht wird es zum Abholen-Knopf. Nicht neben der Fingeranleitung. */}
+      {kettenziel && !finger && (
+        <button
+          type="button"
+          className={`mf-ziel${zielFertig ? ' is-fertig' : ''}`}
+          disabled={!zielFertig}
+          onClick={() => tue({ typ: 'ziel' }, 'kauf')}
+          aria-label={zielFertig ? `Ziel erreicht: ${kettenziel.text}. Abholen, ${kurz(zielBelohnung(stand))} Taler` : `Ziel: ${kettenziel.text}, ${zielStand.ist} von ${zielStand.soll}`}
+        >
+          <small>{zielFertig ? 'Ziel erreicht' : 'Ziel'}</small>
+          <span>{kettenziel.text}</span>
+          {zielFertig ? (
+            <b>
+              Abholen · <i className="mf-taler" aria-hidden="true" /> {kurz(zielBelohnung(stand))}
+            </b>
+          ) : (
+            zielStand.soll > 1 && (
+              <span className="mf-ziel-balken" aria-hidden="true">
+                <i style={{ width: `${(zielStand.ist / zielStand.soll) * 100}%` }} />
+              </span>
+            )
+          )}
+        </button>
+      )}
 
+      {!finger && (stand.pressen.length >= 3 || stand.auftraege.aktiv || stand.auftraege.erledigt > 0) && (
+        <button type="button" className={`mf-auftragszugang${auftragFertig(stand) ? ' is-fertig' : ''}`} onClick={() => setBlatt({ art: 'auftraege' })}>
+          <span aria-hidden="true">✉</span>
+          <span><strong>{auftragFertig(stand) ? 'Lieferung fertig · Prämie abholen' : 'Auftragsbrett'}</strong>
+            <small>{stand.auftraege.aktiv ? `${kurz(stand.auftraege.aktiv.geliefert)} / ${kurz(stand.auftraege.aktiv.ziel)} Taler geliefert` : 'Neue Kunden warten auf deine Karten'}</small>
+          </span><span aria-hidden="true">›</span>
+        </button>
+      )}
+      {blatt?.art === 'auftraege' && <AuftraegeBlatt stand={stand} onSchule={() => setBlatt({ art: 'schule' })} onChronik={() => setBlatt({ art: 'chronik' })} onAktion={(aktion) => tue(aktion, 'kauf')} onClose={() => setBlatt(null)} />}
+
+      {blatt?.art === 'schule' && <Meisterschule stand={stand} jetzt={jetzt} onAktion={(a) => tue(a, 'kauf')} onClose={() => setBlatt(null)} />}
+      {blatt?.art === 'chronik' && <ChronikBlatt stand={stand} onClose={() => setBlatt(null)} />}
       {m.meldung && (
         <p className="mf-meldung" role="status">
           {m.meldung}
@@ -304,10 +376,20 @@ export function Kartenmanufaktur({
                 else setBlatt({ art: 'meister', ziel });
               }}
               onFreischalten={() => tue({ typ: 'freischalten' }, 'kauf')}
+              onBauen={() => tue({ typ: 'bauen' }, 'kauf')}
             />
+            {/* Der Punkt liegt auf dem Ziel; Ring und Hand richten sich daran aus —
+                die Hand mit ihrer gemessenen Fingerspitze, nicht mit ihrer Mitte. */}
             {finger && (
               <span className="mf-finger" style={mitte(fingerOrt(finger))} aria-hidden="true">
-                👆
+                <img className="mf-finger-ring" src={TIPP_RING} alt="" draggable={false} />
+                <img
+                  className="mf-finger-hand"
+                  src={FINGER.bild}
+                  alt=""
+                  draggable={false}
+                  style={{ '--spitze-x': FINGER.spitze[0], '--spitze-y': FINGER.spitze[1] } as React.CSSProperties}
+                />
               </span>
             )}
           </div>
@@ -327,14 +409,23 @@ export function Kartenmanufaktur({
           style={{ '--anteil': boostAnteil } as React.CSSProperties}
           aria-label={
             boostBereit
-              ? 'Boost: alle bereiten Meister-Fähigkeiten auslösen'
+              ? `Alle aktivieren: ${bereitZahl} Fähigkeiten auslösen`
               : naechsteBereit === null
-                ? 'Boost: braucht einen Meister'
-                : `Boost bereit in ${Math.ceil(naechsteBereit / 1000)} Sekunden`
+                ? 'Alle aktivieren: braucht einen Meister'
+                : `Nächste Fähigkeit bereit in ${Math.ceil(naechsteBereit / 1000)} Sekunden`
           }
         >
           <Symbol art="boost" />
-          <span>Boost</span>
+          <span>{boostBereit ? `Alle ×${bereitZahl}` : naechsteBereit !== null ? kurzeDauer(naechsteBereit) : 'Alle'}</span>
+        </button>
+        <button
+          type="button"
+          className={`mf-unten-knopf mf-buch-knopf${buchLeistbar ? ' is-bereit' : ''}`}
+          onClick={() => setBlatt({ art: 'buch' })}
+          aria-label={`Werkstattbuch, ${stand.siegel} Siegel`}
+        >
+          <img className="mf-symbol" src={buchSymbol} alt="" aria-hidden="true" draggable={false} />
+          <span>Buch</span>
         </button>
         <button type="button" className="mf-unten-knopf mf-ort" onClick={() => setBlatt({ art: 'manufaktur' })}>
           <Symbol art="haus" />
@@ -366,11 +457,14 @@ export function Kartenmanufaktur({
       )}
       {blatt?.art === 'meister' && (
         <MeisterBlatt
+          onSchule={() => setBlatt({ art: 'schule' })}
           stand={stand}
           jetzt={jetzt}
           markiert={blatt.ziel}
-          onEinstellen={(ziel) => tue({ typ: 'meister', ziel }, 'kauf')}
+          onEinstellen={(ziel) => tue({ typ: 'einstellen', ziel }, 'kauf')}
           onFaehigkeit={(ziel) => tue({ typ: 'faehigkeit', ziel }, 'kauf')}
+          onZuweisen={(ziel, id) => tue({ typ: 'zuweisen', ziel, id })}
+          onVerkaufen={(ziel, id) => tue({ typ: 'verkaufen', ziel, id }, 'kauf')}
           onClose={() => setBlatt(null)}
         />
       )}
@@ -382,22 +476,38 @@ export function Kartenmanufaktur({
           onClose={() => setBlatt(null)}
         />
       )}
+      {blatt?.art === 'buch' && (
+        <BuchBlatt stand={stand} onKaufen={(eintrag) => tue({ typ: 'buch', eintrag }, 'kauf')} onClose={() => setBlatt(null)} />
+      )}
       {blatt?.art === 'manufaktur' && (
         <ManufakturBlatt
           stand={stand}
           debug={debug}
           onDebug={setDebug}
           onClose={() => setBlatt(null)}
-          onJubilaeum={() =>
+          onRenovieren={() =>
             frage(
               {
-                titel: 'Jubiläum feiern?',
-                text: 'Pressen, Stufen, Meister und Taler beginnen neu. Dafür bekommst du ein Gildensiegel: für immer 10 % mehr Kartenwert.',
-                ja: 'Feiern',
+                titel: istJubilaeum(stand) ? 'Jubiläum feiern?' : 'Renovieren?',
+                text: `Stufen, Etagen und Taler beginnen neu - Meister, Werkstattbuch und Sterne bleiben. Danach leistet alles hier ×${kurz(renovierVorschau(stand).faktorNachher)}.`,
+                ja: istJubilaeum(stand) ? 'Feiern' : 'Renovieren',
               },
               () => {
                 setBlatt(null);
-                tue({ typ: 'jubilaeum' }, 'kauf');
+                tue({ typ: 'renovieren' }, 'kauf');
+              },
+            )
+          }
+          onWechseln={(nach) =>
+            frage(
+              {
+                titel: `Nach ${manufakturName(nach)}?`,
+                text: 'Die Halle dort beginnt neu (Stufen, Etagen, Taler). Meister, Werkstattbuch und die Sterne jedes Orts bleiben.',
+                ja: 'Wechseln',
+              },
+              () => {
+                setBlatt(null);
+                tue({ typ: 'wechseln', nach });
               },
             )
           }
@@ -405,7 +515,7 @@ export function Kartenmanufaktur({
             frage(
               {
                 titel: 'Umziehen?',
-                text: 'Pressen, Stufen, Meister und Taler beginnen neu. Die neue Manufaktur leistet doppelt so viel.',
+                text: 'Stufen, Etagen und Taler beginnen neu - Meister, Werkstattbuch und Sterne bleiben. Der neue Ort leistet doppelt so viel.',
                 ja: 'Umziehen',
               },
               () => {
@@ -432,7 +542,7 @@ export function Kartenmanufaktur({
         <HbBlatt titel={manufakturName(m.umgezogen)} onClose={m.schliesseUmzug} klasse="is-klein">
           <div className="hb-rueckfrage">
             <img className="mf-umzug-gross" src={manufakturBild(m.umgezogen)} alt="" draggable={false} />
-            <p className="hb-text">Neue Manufaktur, alles beginnt von vorn — und jede Station leistet doppelt so viel.</p>
+            <p className="hb-text">Neue Manufaktur, alles beginnt von vorn - und jede Station leistet doppelt so viel.</p>
             <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={m.schliesseUmzug}>
               Loslegen
             </button>
@@ -440,12 +550,16 @@ export function Kartenmanufaktur({
         </HbBlatt>
       )}
       {m.gefeiert !== null && (
-        <HbBlatt titel={`${m.gefeiert}. Jubiläum`} onClose={m.schliesseFeier} klasse="is-klein">
+        <HbBlatt
+          titel={m.gefeiert > MAX_RENOVIERUNG ? `${m.gefeiert - MAX_RENOVIERUNG}. Jubiläum` : `Renoviert · ${m.gefeiert} ${m.gefeiert === 1 ? 'Stern' : 'Sterne'}`}
+          onClose={m.schliesseFeier}
+          klasse="is-klein"
+        >
           <div className="hb-rueckfrage">
-            <img className="mf-umzug-gross" src={manufakturBild(5)} alt="" draggable={false} />
+            <img className="mf-umzug-gross" src={manufakturBild(stand.manufaktur)} alt="" draggable={false} />
             <p className="hb-text">
-              Der Kartenpalast beginnt neu — mit {m.gefeiert} {m.gefeiert === 1 ? 'Gildensiegel' : 'Gildensiegeln'}: Alle Karten sind
-              jetzt {m.gefeiert * 10} % mehr wert, für immer.
+              {manufakturName(stand.manufaktur)} beginnt neu - und leistet jetzt für immer ×{kurz(renovierFaktor(m.gefeiert))}.
+              {m.gefeiert <= MAX_RENOVIERUNG && ' Die Siegel liegen im Werkstattbuch.'}
             </p>
             <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={m.schliesseFeier}>
               Weiter
@@ -459,19 +573,18 @@ export function Kartenmanufaktur({
 }
 
 /** Symbole der unteren Leiste — gezeichnet, im Holz-Messing-Stil der Leiste. */
+/** Die gemalten Zeichen der unteren Leiste (Lieferung 24.10.2026). */
 function Symbol({ art }: { art: 'meister' | 'boost' | 'haus' | 'hoch' | 'runter' }): React.JSX.Element {
-  const pfad = {
-    meister: 'M12 3a4 4 0 0 1 4 4v1H8V7a4 4 0 0 1 4-4zM6 9h12l-1 2H7zM8 12h8v2a4 4 0 0 1-8 0zM5 21c0-3 3-5 7-5s7 2 7 5z',
-    boost: 'M13 2 4 14h6l-1 8 9-12h-6z',
-    haus: 'M3 11 12 4l9 7v9h-6v-6H9v6H3z',
-    hoch: 'M12 6l7 9H5z',
-    runter: 'M12 18 5 9h14z',
-  }[art];
-  return (
-    <svg className="mf-symbol" viewBox="0 0 24 24" aria-hidden="true">
-      <path d={pfad} />
-    </svg>
-  );
+  const datei = { meister: 'icon-meister', boost: 'icon-boost', haus: 'icon-manufaktur', hoch: 'icon-hoch', runter: 'icon-runter' }[art];
+  return <img className="mf-symbol" src={`${UI_ORDNER}/${datei}.webp`} alt="" aria-hidden="true" draggable={false} />;
+}
+
+const buchSymbol = `${RIG2_ORDNER}/werkstattbuch.webp`;
+
+/** „4:12" bzw. „38s" unter dem Knopf. */
+function kurzeDauer(ms: number): string {
+  const s = Math.ceil(ms / 1000);
+  return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}s`;
 }
 
 function mitte(r: Rechteck): React.CSSProperties {

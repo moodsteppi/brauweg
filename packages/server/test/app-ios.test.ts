@@ -123,7 +123,7 @@ test('Info.plist: hochkant, Ausfuhrangabe, keine Berechtigungstexte, kein offene
   assert.ok(existsSync(join(IOS, 'Ressourcen', 'Assets.xcassets', 'Startfarbe.colorset', 'Contents.json')));
 });
 
-test('Berechtigungen: Associated Domains fuer beide Hosts, Push nur mit Schalter', () => {
+test('Berechtigungen: Associated Domains fuer beide Hosts, Apple-Anmeldung, Push nur mit Schalter', () => {
   const hosts = new Set<string>();
   for (const [datei, mitPush] of [['Push-NO.entitlements', false], ['Push-YES.entitlements', true]] as const) {
     const plist = ohneKommentare(lies('Konfiguration', datei));
@@ -131,6 +131,8 @@ test('Berechtigungen: Associated Domains fuer beide Hosts, Push nur mit Schalter
     assert.deepEqual(domains, ['applinks:www.brauweg-spielen.de', 'applinks:staging.brauweg-spielen.de'], datei);
     for (const d of domains!) hosts.add(d.replace(/^applinks:/, ''));
     assert.equal(plist.includes('<key>aps-environment</key>'), mitPush, datei);
+    // Mit Apple anmelden (AppleAnmeldung.swift) — mit und ohne Push.
+    assert.deepEqual(plistListe(plist, 'com.apple.developer.applesignin'), ['Default'], datei);
   }
   // Dieselben Hosts oeffnet die Huelle (Huelle.linkHosts).
   const huelle = lies('Brauweg', 'Huelle.swift');
@@ -167,6 +169,64 @@ test('Privacy Manifest: kein Tracking, Required-Reason-APIs nur mit Grund', () =
     .join('\n');
   for (const [kategorie, muster] of Object.entries(kategorien)) {
     assert.equal(manifest.includes(kategorie), muster.test(quellen), kategorie);
+  }
+});
+
+/**
+ * Die Apple-Typen der Tabelle in docs/store/DATENSCHUTZ-ANGABEN.md, wie sie im
+ * Manifest heissen. Steht dort ein neuer Typ auf „ja", der hier fehlt, schlaegt
+ * der Test fehl, statt ihn still zu uebergehen — genau so lief es schon einmal
+ * auseinander (Produktinteraktion und Geraete-ID fehlten im Manifest, „Name"
+ * stand drin, obwohl die Tabelle ihn ausschliesst).
+ */
+const APPLE_TYPEN: Record<string, string> = {
+  'E-Mail-Adresse': 'NSPrivacyCollectedDataTypeEmailAddress',
+  Name: 'NSPrivacyCollectedDataTypeName',
+  'Nutzer-ID': 'NSPrivacyCollectedDataTypeUserID',
+  'Geräte-ID': 'NSPrivacyCollectedDataTypeDeviceID',
+  'Andere Datentypen': 'NSPrivacyCollectedDataTypeOtherDataTypes',
+  'Gameplay-Inhalt': 'NSPrivacyCollectedDataTypeGameplayContent',
+  'Andere Nutzerinhalte': 'NSPrivacyCollectedDataTypeOtherUserContent',
+  'Fotos oder Videos': 'NSPrivacyCollectedDataTypePhotosorVideos',
+  Produktinteraktion: 'NSPrivacyCollectedDataTypeProductInteraction',
+};
+
+test('Privacy Manifest: erhobene Datentypen genau wie die Apple-Tabelle', () => {
+  const doku = roh(join(WURZEL, 'docs', 'store', 'DATENSCHUTZ-ANGABEN.md')).replace(/\r\n/g, '\n');
+  const start = doku.indexOf('## Apple „App Privacy"');
+  assert.ok(start >= 0, 'Abschnitt Apple „App Privacy"');
+  const abschnitt = doku.slice(start, doku.indexOf('\n## ', start + 1));
+
+  // Zeilen der Form `| Kategorie → Typ | ja/nein/(wie oben) | Warum |`.
+  const erwartet = new Set<string>();
+  for (const m of abschnitt.matchAll(/^\|\s*[^|]*→\s*(?:\*\*)?([^|*]+?)(?:\*\*)?\s*\|\s*([^|]*?)\s*\|/gm)) {
+    const typ = m[1]!.trim();
+    const erhoben = m[2]!.replace(/\*/g, '').trim();
+    // Der Tabellenkopf (`Apple-Kategorie → Typ | Erhoben`) und Verweise auf eine Zeile weiter oben.
+    if (erhoben === 'Erhoben' || erhoben.startsWith('(wie oben)')) continue;
+    const schluessel = APPLE_TYPEN[typ];
+    assert.ok(schluessel, `Apple-Typ „${typ}" fehlt in APPLE_TYPEN`);
+    if (erhoben.startsWith('ja')) erwartet.add(schluessel);
+    else assert.ok(erhoben.startsWith('nein'), `„${typ}": erhoben „${erhoben}"`);
+  }
+  assert.ok(erwartet.size >= 5, `nur ${erwartet.size} Typen aus der Tabelle gelesen`);
+
+  const manifest = ohneKommentare(lies('Ressourcen', 'PrivacyInfo.xcprivacy'));
+  const liste = /<key>NSPrivacyCollectedDataTypes<\/key>\s*<array>([\s\S]*)<\/array>\s*<\/dict>\s*<\/plist>/.exec(manifest);
+  assert.ok(liste, 'NSPrivacyCollectedDataTypes');
+  const eintraege = [...liste[1]!.matchAll(/<dict>([\s\S]*?)<\/dict>/g)].map((e) => e[1]!);
+  const imManifest = eintraege.map((e) => plistWert(e, 'NSPrivacyCollectedDataType')!);
+  assert.deepEqual([...imManifest].sort(), [...erwartet].sort());
+  // Die Tabelle sagt fuer jeden Typ: verknuepft ja, Tracking nein, nur App-Funktion.
+  for (const e of eintraege) {
+    const typ = plistWert(e, 'NSPrivacyCollectedDataType');
+    assert.equal(plistWert(e, 'NSPrivacyCollectedDataTypeLinked'), 'true', `${typ} verknuepft`);
+    assert.equal(plistWert(e, 'NSPrivacyCollectedDataTypeTracking'), 'false', `${typ} Tracking`);
+    assert.deepEqual(
+      plistListe(e, 'NSPrivacyCollectedDataTypePurposes'),
+      ['NSPrivacyCollectedDataTypePurposeAppFunctionality'],
+      `${typ} Zweck`,
+    );
   }
 });
 

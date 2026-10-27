@@ -152,7 +152,7 @@ export function pruefe(bahn: Karte, katalog: readonly Karte[], herkunft: string 
 export function botZeile(bahn: Karte, bot: Botbefund | null): string {
   if (bot === null) return 'Bot wartet, bis die Geometrie stimmt';
   if (!bot.geloest) return `Genie-Bot locht NICHT ein (${bot.schlaege} Schläge, ${bot.takte} Takte)`;
-  const zuViel = bot.schlaege > bahn.schlagLimit ? ` — über dem Schlaglimit ${bahn.schlagLimit}` : '';
+  const zuViel = bot.schlaege > bahn.schlagLimit ? ` - über dem Schlaglimit ${bahn.schlagLimit}` : '';
   return `Genie-Bot löst in ${bot.schlaege} ${bot.schlaege === 1 ? 'Schlag' : 'Schlägen'} (par ${bahn.par})${zuViel}`;
 }
 

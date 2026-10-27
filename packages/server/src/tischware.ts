@@ -185,6 +185,7 @@ export const WAREN: readonly Ware[] = [
   blatt('minimal2', 0),
   blatt('minimal4', 0),
   blatt('klassisch', 0),
+  blatt('schach-pinguin', 1600, 'episch'),
   blatt('zauberwald', 0),
   blatt('eiche', 600),
   blatt('winterhof', 600),

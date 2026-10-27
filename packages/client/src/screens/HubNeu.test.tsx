@@ -1,3 +1,4 @@
+import { probeTagesmarkt } from './probe-tagesmarkt';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,8 +10,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * dass Weiterspielen an den Tisch führt, dass „Heute" Aufgaben abholen lässt
  * und dass im Shop auch Kartenblätter und Tische zu haben sind.
  */
-
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
 
 const { claimQuest, vote, wegHolen, wegStand } = vi.hoisted(() => {
   // Der Weg ist zustandsbehaftet: Nach dem Holen liefert /api/weg die Stufe
@@ -42,6 +41,7 @@ vi.mock('../api', async () => {
     ...echt,
     api: {
       ...echt.api,
+      tagesmarkt: () => Promise.resolve(probeTagesmarkt()),
       aktiveGesamt: () => Promise.resolve({ aktiv: 214 }),
       games: () =>
         Promise.resolve([
@@ -184,16 +184,24 @@ describe('Neues Hub', () => {
     expect(within(reiter()).getByRole('button', { name: /^Start/ })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('wechselt beim waagerechten Wischen über den Inhalt nicht den Reiter', async () => {
-    // Robin, 26.09.2026: Spielreihen rollen selbst waagerecht; ein Wisch darin
-    // sprang vorher auf den Nachbarreiter.
+  it('zieht beim waagerechten Wischen über den Inhalt den Nachbarreiter herein', async () => {
+    // Seit dem 26.10.2026 wird wieder gewischt (docs/APP-ABSTIMMUNG-NAVIGATION.md).
+    // Spielreihen behalten ihre eigene Geste — das prüft hub-wischen.test.tsx.
     await zeige();
-    const inhalt = document.querySelector('.hb-inhalt')!;
+    const inhalt = document.querySelector<HTMLElement>('.hb-inhalt')!;
+    Object.defineProperty(inhalt, 'clientWidth', { value: 390, configurable: true });
     fireEvent.touchStart(inhalt, { touches: [{ clientX: 300, clientY: 400 }] });
     fireEvent.touchMove(inhalt, { touches: [{ clientX: 60, clientY: 405 }] });
+    // Beim Ziehen liegt die Sammlung schon neben dem Start, nur noch nicht offen.
+    await act(async () => {});
+    const plaetze = [...document.querySelectorAll('.hb-reiterplatz')];
+    const sammlung = plaetze[3]!;
+    expect(sammlung.hasAttribute('inert')).toBe(true);
+    expect(sammlung.querySelector('.hb-seite')!.childElementCount).toBeGreaterThan(0);
     fireEvent.touchEnd(inhalt);
     await act(async () => {});
-    expect(within(reiter()).getByRole('button', { name: /^Start/ })).toHaveAttribute('aria-current', 'page');
+    expect(within(reiter()).getByRole('button', { name: 'Sammlung' })).toHaveAttribute('aria-current', 'page');
+    expect(sammlung.hasAttribute('inert')).toBe(false);
   });
 
   it('zeigt am Start-Reiter, dass unter „Heute" etwas bereitliegt', async () => {
@@ -232,6 +240,20 @@ describe('Neues Hub', () => {
     expect(vote).toHaveBeenCalledWith('schafkopf');
   });
 
+  it('zeigt auch auf der Webseite Lernpfad, Browort und die Solo-Spiele — in einem Abschnitt „Allein"', async () => {
+    // Bis zum 23.10.2026 hingen diese Einstiege an `inApp` und fehlten hier
+    // (docs/release/ios-web-abgleich.md). Diese Datei laeuft ohne Huelle.
+    await zeige();
+    expect(screen.getByRole('button', { name: /^Doppelkopf lernen\./ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Browort\./ })).toBeInTheDocument();
+    fireEvent.click(within(reiter()).getByRole('button', { name: 'Spiele' }));
+    await act(async () => {});
+    expect(screen.getAllByText('Allein')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Kartenmanufaktur/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Jeden Tag ein Wort/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pro-Subway/ })).toBeInTheDocument();
+  });
+
   it('holt in „Heute" eine fertige Aufgabe ab, Abholbares steht oben', async () => {
     await zeige();
     fireEvent.click(screen.getByRole('button', { name: /^Heute/ }));
@@ -243,12 +265,12 @@ describe('Neues Hub', () => {
     expect(claimQuest).toHaveBeenCalledWith('partie-spielen');
   });
 
-  it('verkauft im Shop auch Kartenblätter und Tische', async () => {
+  it('zeigt im persönlichen Shop Sonderangebote und tägliche Geschenke', async () => {
     await zeige();
     fireEvent.click(within(reiter()).getByRole('button', { name: 'Shop' }));
     await act(async () => {});
-    expect(screen.getByRole('heading', { name: 'Kartenblätter' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Tische' })).toBeInTheDocument();
-    expect(screen.getByText('Empfohlen · Tisch')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Deine drei Sonderangebote' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Gewöhnliches Angebot aufdecken' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Dein tägliches Geschenk' })).toBeInTheDocument();
   });
 });

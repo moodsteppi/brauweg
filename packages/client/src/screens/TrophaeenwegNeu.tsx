@@ -1,294 +1,137 @@
-import { useEffect, useState } from 'react';
-import { ApiError, api, type Weg, type WegFund, type WegStufe } from '../api';
+import { useEffect, useId, useRef, useState } from 'react';
+import { ApiError, api, type Getragen, type Weg, type WegFund, type WegStufe } from '../api';
 import { t } from '../i18n';
-import { holbar, stationenMit, type Station } from '../trophaeenweg';
+import { holbar, stationenMit } from '../trophaeenweg';
 import { FundBlatt } from './Aufgaben';
 import { truhenBild } from '../truhenbild';
 import { sicherAb } from './StartNeu';
+import { Schliessen, useEscape } from './HbBlatt';
+import { Pinguin } from '../pinguin';
+import './trophaeenreise.css';
 
-/**
- * Der Trophäenweg als Vollbild (Layout von ChatGPT, 26.09.2026): alle sechs
- * Stationen auf einem Bildschirm, links die Station, rechts die Belohnung,
- * dazwischen die Checkpoints. Der Pinguin steht an der eigenen Stelle.
- *
- * Als Modal über allem, mit Schließen-Knopf und Escape (Apple: ein Vollbild
- * verdeckt die Reiterleiste, braucht dann aber einen klaren Ausgang).
- *
- * Belohnungen und ihr Zustand kommen vom Server (`/api/weg`). Abgeholt wird
- * von Hand wie bei Truhen und Tagesaufgaben: Erreichtes trägt einen goldenen
- * Knopf „Holen", danach öffnet sich die Truhe im selben Fundblatt wie unter
- * „Heute".
- */
+const LAND_HOEHE = 540;
 
-
-/** Höhe eines Bioms auf dem Bildschirm; sechs davon füllen ein iPhone. */
-const BAND = 118;
-
-export function TrophaeenwegNeu({
-  trophies,
-  onClose,
-  onGuthaben,
-}: {
-  trophies: number;
-  onClose: () => void;
-  /** Meldet dem Hub, dass Guthaben und Bereitschaft neu zu laden sind. */
-  onGuthaben: () => void;
+/** Eine Reise durch sechs Landschaften. Nur der Server entscheidet über Belohnungen. */
+export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
+  trophies: number; getragen: Getragen; onClose: () => void; onGuthaben: () => void;
 }): React.JSX.Element {
   const [weg, setWeg] = useState<Weg | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
-  /** Schwelle, die gerade abgeholt wird — gegen den Doppeltipp. */
   const [laeuft, setLaeuft] = useState<number | null>(null);
   const [fund, setFund] = useState<WegFund | null>(null);
+  const sperre = useRef(false);
+  const rolle = useRef<HTMLDivElement>(null);
+  const anfang = useRef(false);
+  const schnitt = useId().replace(/:/g, '');
+  useEscape(() => { if (!fund) onClose(); });
 
   const laden = (): void => {
-    void api
-      .weg()
-      .then(setWeg)
-      .catch(() => setFehler('Der Trophäenweg ließ sich nicht laden.'));
+    setFehler(null);
+    void api.weg().then(setWeg).catch(() => setFehler('Der Trophäenweg ließ sich nicht laden.'));
   };
   useEffect(laden, []);
-
-  useEffect(() => {
-    const taste = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', taste);
-    return () => window.removeEventListener('keydown', taste);
-  }, [onClose]);
-
   const holen = (stufe: WegStufe): void => {
-    if (laeuft !== null || !holbar(stufe)) return;
+    if (sperre.current || !holbar(stufe)) return;
+    sperre.current = true;
     setLaeuft(stufe.schwelle);
     setFehler(null);
-    void api
-      .wegHolen(stufe.schwelle)
-      .then((ergebnis) => {
-        // Eine Truhe geht im Fundblatt auf; feste Münzen brauchen keine Bühne,
-        // der Checkpoint zeigt nach dem Laden selbst, was er gab.
-        if (ergebnis.grad) setFund(ergebnis);
-        laden();
-        onGuthaben();
-      })
-      .catch((err: unknown) =>
-        setFehler(err instanceof ApiError ? t(err.messageKey) : 'Die Belohnung ließ sich nicht holen.'),
-      )
-      .finally(() => setLaeuft(null));
+    void api.wegHolen(stufe.schwelle).then(ergebnis => {
+      if (ergebnis.grad) setFund(ergebnis);
+      laden();
+      onGuthaben();
+    }).catch((err: unknown) => setFehler(err instanceof ApiError ? t(err.messageKey) : 'Die Belohnung ließ sich nicht holen.'))
+      .finally(() => { sperre.current = false; setLaeuft(null); });
   };
 
-  // Der Stand vom Server, sobald er da ist: Er entscheidet, was holbar ist,
-  // und die Anzeige soll dazu passen, auch wenn /api/me einen Augenblick
-  // älter ist.
   const stand = weg?.trophaeen ?? trophies;
   const stationen = stationenMit(weg);
-  const hoehe = BAND * stationen.length;
-  // Stationen in der Mitte ihres Bandes, von unten nach oben.
-  const stationY = (i: number): number => hoehe - BAND * i - BAND / 2;
-  // Checkpoints gleichmäßig in die Lücke zwischen zwei Stationen verteilt,
-  // nicht nach Wert — sonst fielen sie auf die Karten der Stationen.
-  const checkpoints = weg?.stufen.filter((s) => s.art === 'checkpoint') ?? [];
-  const marken: { wert: number; y: number; stufe: WegStufe | null; station: number | null }[] = [];
-  stationen.forEach((s, i) => {
-    marken.push({ wert: s.ab, y: stationY(i), stufe: s.stufe, station: i });
-    const naechste = stationen[i + 1];
-    if (!naechste) return;
-    const dazwischen = checkpoints.filter((c) => c.schwelle > s.ab && c.schwelle < naechste.ab);
-    dazwischen.forEach((c, j) => {
-      // Nur im freien Raum zwischen den Karten (40 bis 88 pt über der Station),
-      // sonst streifen die Schilder die Marke „Erhalten".
-      const abstand = 40 + (48 * (j + 0.5)) / dazwischen.length;
-      marken.push({ wert: c.schwelle, y: stationY(i) - abstand, stufe: c, station: null });
-    });
-  });
-  marken.sort((a, b) => a.wert - b.wert);
-  // Pinguin: zwischen den beiden Marken, zwischen denen die Trophäenzahl liegt.
-  const obenMarke = marken.find((m) => m.wert > stand);
-  const untenMarke = [...marken].reverse().find((m) => m.wert <= stand) ?? marken[0]!;
-  const ichY = obenMarke
-    ? untenMarke.y + (obenMarke.y - untenMarke.y) * ((stand - untenMarke.wert) / (obenMarke.wert - untenMarke.wert))
-    : stationY(stationen.length - 1) - BAND * 0.3;
-  const naechste = stationen.find((s) => s.ab > stand) ?? null;
+  const weiter = weg?.stufen.filter(s => s.art === 'weiter') ?? [];
+  const zusatz = weiter.length * 180;
+  const hoehe = stationen.length * LAND_HOEHE + zusatz;
+  const stationY = (i: number): number => hoehe - LAND_HOEHE * i - LAND_HOEHE / 2;
+  const punktY = (wert: number): number => {
+    if (wert > 1000) return zusatz - 100 - (wert - 1250) / 250 * 180;
+    const i = Math.max(0, stationen.length - 1 - [...stationen].reverse().findIndex(s => s.ab <= wert));
+    const danach = stationen[i + 1];
+    return stationY(i) - (danach ? (wert - stationen[i]!.ab) / (danach.ab - stationen[i]!.ab) * LAND_HOEHE : 0);
+  };
+  const punktX = (y: number): number => 175 + Math.sin((hoehe - y) / LAND_HOEHE * Math.PI) * 15;
+  const ichY = Math.max(100, punktY(stand));
+  const naechste = weg?.stufen.find(s => s.schwelle > stand) ?? null;
+  const ziel = naechste?.schwelle ?? stand;
+  const vorher = Math.max(0, ...(weg?.stufen.filter(s => s.schwelle <= stand).map(s => s.schwelle) ?? []));
+  const fortschritt = ziel > vorher ? Math.round((stand - vorher) / (ziel - vorher) * 100) : 100;
+  const zuMir = (sanft = true): void => {
+    const element = rolle.current;
+    if (!element) return;
+    const ruhig = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    element.scrollTo?.({ top: Math.max(0, ichY - element.clientHeight * 0.58), behavior: sanft && !ruhig ? 'smooth' : 'instant' });
+  };
+  // Nach dem Abholen bleibt die betrachtete Landschaft stehen.
+  useEffect(() => {
+    if (!weg || anfang.current) return;
+    anfang.current = true;
+    zuMir(false);
+  }, [weg]);
+  const linie = Array.from({ length: Math.ceil(hoehe / 30) + 1 }, (_, i) => {
+    const y = Math.min(hoehe, i * 30);
+    return `${i === 0 ? 'M' : 'L'}${punktX(y)},${y}`;
+  }).join(' ');
 
-  // Über 1.000: alle 250 eine Silbertruhe. Die kleinste holbare zuerst, sonst
-  // die nächste als Ziel — eine Zeile statt einer Liste, die bei 3.000
-  // Trophäen den Himmel füllen würde.
-  const weiter = weg?.stufen.filter((s) => s.art === 'weiter') ?? [];
-  const weiterHolbar = weiter.filter(holbar);
-  const weiterNaechste = weiter.find((s) => !s.erreicht) ?? null;
+  const belohnung = (stufe: WegStufe, name: string): React.JSX.Element => {
+    const bereit = holbar(stufe);
+    const inhalt = <>
+      {stufe.truhe && <img className="reise-truhe" src={truhenBild(stufe.truhe.grad)} alt="" />}
+      <span className="reise-lohntext"><strong>{stufe.truhe ? t(`truhe.${stufe.truhe.grad}`) : 'Belohnung'}</strong>
+        {stufe.gegenstand && <small>{t(`weg.${stufe.gegenstand}`)}</small>}
+        {stufe.truhe && (stufe.muenzen ?? 0) > 0 && <small className="reise-bonus"><img src="/hub/muenze.png" alt="" />+{stufe.muenzen!.toLocaleString('de-DE')} Münzen extra</small>}
+        <em>{stufe.geholt ? 'Erhalten' : bereit ? laeuft === stufe.schwelle ? 'Wird geholt…' : 'Jetzt holen' : `Noch ${(stufe.schwelle - stand).toLocaleString('de-DE')} Trophäen`}</em>
+      </span>
+    </>;
+    return bereit ? <button type="button" className="reise-lohn ist-bereit" disabled={laeuft !== null} onClick={() => holen(stufe)}
+      aria-label={`${name}: ${stufe.truhe ? t(`truhe.${stufe.truhe.grad}`) : 'Belohnung'}${stufe.gegenstand ? ` und ${t(`weg.${stufe.gegenstand}`)}` : ''}${stufe.truhe && stufe.muenzen ? ` und ${stufe.muenzen} Münzen extra` : ''} holen`}>{inhalt}</button>
+      : <div className={`reise-lohn${stufe.geholt ? ' ist-geholt' : ''}`}>{inhalt}</div>;
+  };
 
-  return (
-    <div className="hb-voll" role="dialog" aria-modal="true" aria-label="Trophäenweg">
-      <header className="hb-voll-kopf">
-        <button type="button" className="hb-rund" onClick={onClose} aria-label="Schließen">
-          <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
-        <div className="hb-voll-titel">
-          <h1>Trophäenweg</h1>
-          <span>alle Spiele zusammen</span>
-        </div>
-        <span className="hb-pill is-pk is-gross" aria-label={`${stand} Trophäen`}>
-          <img src="/hub/symbol-pokal.webp" alt="" />
-          {stand.toLocaleString('de-DE')}
-        </span>
-      </header>
-      {fehler && (
-        <p className="hb-fehler hb-weg-fehler" role="alert">
-          {fehler}
-        </p>
-      )}
-
-      <div className="hb-weg-karte" style={{ height: hoehe }}>
-        {stationen.map((s, i) => (
-          <div
-            key={s.name}
-            className="hb-weg-band"
-            style={{ top: hoehe - BAND * (i + 1) - 24, height: BAND + 48, backgroundImage: `url(/hub/${s.biom}.webp)` }}
-            aria-hidden="true"
-          />
-        ))}
-        <div className="hb-weg-nebel" aria-hidden="true" />
-
-        {weiterHolbar[0] ? (
-          <button
-            type="button"
-            className="hb-weg-weiter is-holbar"
-            disabled={laeuft !== null}
-            onClick={() => holen(weiterHolbar[0]!)}
-            aria-label={`Silbertruhe bei ${weiterHolbar[0].schwelle} Trophäen holen${weiterHolbar.length > 1 ? `, ${weiterHolbar.length - 1} weitere bereit` : ''}`}
-          >
-            <img src={truhenBild('silber')} alt="" />
-            <span>
-              Holen · {weiterHolbar[0].schwelle.toLocaleString('de-DE')}
-              {weiterHolbar.length > 1 && <small>+{weiterHolbar.length - 1} weitere</small>}
-            </span>
-          </button>
-        ) : (
-          // Unter 1.000 ist der Sternenhafen das Ziel; der Hinweis auf die
-          // Truhen dahinter käme dort nur den Schildern in die Quere.
-          stand >= 1000 &&
-          weiterNaechste && (
-            <span className="hb-weg-weiter">
-              <img src={truhenBild('silber')} alt="" />
-              <span>
-                Alle 250 eine Silbertruhe
-                <small>nächste bei {weiterNaechste.schwelle.toLocaleString('de-DE')}</small>
-              </span>
-            </span>
-          )
-        )}
-
-        {marken
-          .filter((m) => m.station === null && m.stufe)
-          .map(({ wert, y, stufe }) => {
-            const muenzen = stufe!.muenzen ?? 0;
-            const schild = (
-              <>
-                <i aria-hidden="true" />
-                <small>
-                  {wert.toLocaleString('de-DE')} · {stufe!.geholt ? `✓ ${stufe!.coins ?? muenzen}` : `+${muenzen}`} Münzen
-                  {holbar(stufe) && <b> holen</b>}
-                </small>
-              </>
-            );
-            // Holbar ist das ganze Schild der Knopf (Punkt und Beschriftung), mit
-            // 44 pt Trefferfläche — ein eigener kleiner Knopf daneben fände
-            // zwischen zwei Checkpoints mit 24 pt Abstand keinen Platz.
-            return holbar(stufe) ? (
-              <button
-                type="button"
-                key={wert}
-                className="hb-cp is-ok is-holbar"
-                style={{ top: y }}
-                disabled={laeuft !== null}
-                onClick={() => holen(stufe!)}
-                aria-label={`Checkpoint ${wert}: ${muenzen} Münzen holen`}
-              >
-                {schild}
-              </button>
-            ) : (
-              <span key={wert} className={`hb-cp${wert <= stand ? ' is-ok' : ''}${stufe!.geholt ? ' is-geholt' : ''}`} style={{ top: y }}>
-                {schild}
-              </span>
-            );
-          })}
-
-        {stationen.map((s, i) => {
-          const erreicht = stand >= s.ab;
-          const bereit = holbar(s.stufe);
-          const lohnText = s.truhe && (
-            <>
-              <img src={truhenBild(s.truhe.grad)} alt="" />
-              <span>
-                <b>{t(`truhe.${s.truhe.grad}`)}</b>
-                {s.gegenstand && <small>{t(`weg.${s.gegenstand}`)}</small>}
-              </span>
-            </>
-          );
-          return (
-            <div key={s.name} className={`hb-station${erreicht ? ' is-ok' : ' is-zu'}`} style={{ top: stationY(i) }}>
-              <div className="hb-st-schild">
-                <strong>{s.name}</strong>
-                <span className="hb-pk">
-                  <img src="/hub/symbol-pokal.webp" alt="" />
-                  {s.ab.toLocaleString('de-DE')}
-                </span>
-              </div>
-              <span className="hb-st-punkt" aria-label={erreicht ? 'erreicht' : 'noch nicht erreicht'}>
-                {erreicht ? (
-                  <svg viewBox="0 0 24 24" className="hb-ic" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M5 12.5l4.5 4.5L19 7.5" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" className="hb-ic" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <rect x="5" y="11" width="14" height="9" rx="2" />
-                    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-                  </svg>
-                )}
-              </span>
-              {s.truhe &&
-                (bereit ? (
-                  // Die ganze Karte ist der Knopf (DESIGN.md: wo eine Karte als
-                  // Ganzes antippbar ist, ist sie das Ziel) — 150 × 54 pt.
-                  <button
-                    type="button"
-                    className="hb-st-lohn is-holbar"
-                    disabled={laeuft !== null}
-                    onClick={() => holen(s.stufe!)}
-                    aria-label={`${s.name}: ${t(`truhe.${s.truhe.grad}`)}${s.gegenstand ? ` und ${t(`weg.${s.gegenstand}`)}` : ''} holen`}
-                  >
-                    {lohnText}
-                    <em className="is-holen" aria-hidden="true">
-                      Holen
-                    </em>
-                  </button>
-                ) : (
-                  <div className="hb-st-lohn">
-                    {lohnText}
-                    {s.stufe?.geholt ? (
-                      <em className="is-ok">Erhalten</em>
-                    ) : s === naechste ? (
-                      <em>noch {(s.ab - stand).toLocaleString('de-DE')}</em>
-                    ) : null}
-                  </div>
-                ))}
-            </div>
-          );
-        })}
-
-        <div className="hb-ich" style={{ top: ichY }}>
-          <img src="/hub/pinguin-held.webp" alt="" />
-          <span className="hb-ich-podest" aria-hidden="true" />
-          <span className="hb-ich-zahl">
-            <span className="hb-pk">
-              <img src="/hub/symbol-pokal.webp" alt="" />
-              {stand.toLocaleString('de-DE')}
-            </span>
-            {stand >= 100 && <small>Sicher ab {sicherAb(stand).toLocaleString('de-DE')}</small>}
-          </span>
-        </div>
-      </div>
-      {fund?.grad && <FundBlatt fund={{ grad: fund.grad, coins: fund.coins }} onClose={() => setFund(null)} />}
+  return <div className="hb-voll trophaeenreise" role="dialog" aria-modal="true" aria-label="Trophäenweg">
+    <header className="hb-voll-kopf"><Schliessen onClick={onClose} /><div className="hb-voll-titel"><h1>Trophäenweg</h1><span>Deine Reise durch Brauweg</span></div>
+      <span className="hb-pill is-pk is-gross" aria-label={`${stand} Trophäen`}><img src="/hub/symbol-pokal.webp" alt="" />{stand.toLocaleString('de-DE')}</span>
+    </header>
+    <div className="reise-ziel"><span>{naechste ? <>Nächste Belohnung <b>{ziel.toLocaleString('de-DE')} 🏆</b></> : 'Deine Reise geht weiter'}<small>{naechste ? `Noch ${(ziel - stand).toLocaleString('de-DE')} Trophäen` : 'Spiele und entdecke neue Belohnungen'}</small></span>
+      <div className="reise-fortschritt" role="progressbar" aria-label="Fortschritt zur nächsten Belohnung" aria-valuenow={stand} aria-valuemin={vorher} aria-valuemax={ziel || 1}><i style={{ width: `${fortschritt}%` }} /></div>
     </div>
-  );
+    {fehler && <div className="reise-fehler" role="alert">{fehler}<button onClick={laden}>Erneut versuchen</button></div>}
+    {!weg && !fehler && <p className="reise-laden" role="status">Deine Reise wird geladen…</p>}
+    <div ref={rolle} className="reise-scroll" tabIndex={0} aria-label="Trophäenpfad entlangscrollen">
+      <div className="reise-karte" style={{ height: hoehe }}>
+        {stationen.map((s, i) => <section key={s.name} className={`reise-land${stand < s.ab ? ' ist-voraus' : ''}`} style={{ top: hoehe - LAND_HOEHE * (i + 1), height: LAND_HOEHE }}>
+          <img className="reise-landschaft" src={`/hub/${s.biom}.webp`} alt="" loading="lazy" draggable={false} />
+          <div className="reise-landschaft-schatten" />
+          <div className="reise-ortschild"><small>REGION {String(i + 1).padStart(2, '0')}</small><h2>{s.name}</h2><span>{s.ab.toLocaleString('de-DE')} Trophäen</span></div>
+        </section>)}
+        {zusatz > 0 && <div className="reise-sterne" style={{ height: zusatz }} aria-hidden="true" />}
+        <svg className="reise-linie" viewBox={`0 0 400 ${hoehe}`} preserveAspectRatio="none" aria-hidden="true">
+          <defs><clipPath id={schnitt}><rect x="0" y={ichY} width="400" height={hoehe - ichY} /></clipPath></defs>
+          <path d={linie} className="reise-linie-rand" /><path d={linie} className="reise-linie-innen" />
+          <path d={linie} className="reise-linie-gold" clipPath={`url(#${schnitt})`} />
+        </svg>
+        {stationen.map((s, i) => <div className={`reise-station${holbar(s.stufe) ? ' ist-bereit' : ''}`} key={s.name} style={{ top: stationY(i), left: `${punktX(stationY(i)) / 4}%` }}>
+          <span className={`reise-marke${stand >= s.ab ? ' ist-erreicht' : ''}`} aria-label={stand >= s.ab ? 'erreicht' : 'noch nicht erreicht'}>{stand >= s.ab ? '✓' : '🔒'}</span>
+          {s.stufe ? belohnung(s.stufe, s.name) : <div className="reise-start"><strong>Hier beginnt deine Reise</strong><small>Jedes Spiel bringt dich weiter</small></div>}
+        </div>)}
+        {weg?.stufen.filter(s => s.art === 'checkpoint').map(s => {
+          const y = punktY(s.schwelle);
+          const text = <><img src="/hub/muenze.png" alt="" /><span><strong>{s.geholt ? '✓ ' : '+'}{s.geholt ? (s.coins ?? s.muenzen) : s.muenzen} Münzen</strong><small>{s.schwelle.toLocaleString('de-DE')} Trophäen{holbar(s) ? ' · Holen' : ''}</small></span></>;
+          return <div className="reise-checkpunkt" key={s.schwelle} style={{ top: y, left: `${punktX(y) / 4}%` }}>{holbar(s)
+            ? <button className="ist-bereit" disabled={laeuft !== null} onClick={() => holen(s)} aria-label={`Checkpoint ${s.schwelle}: ${s.muenzen ?? 0} Münzen holen`}>{text}</button>
+            : <span className={s.geholt ? 'ist-geholt' : ''}>{text}</span>}</div>;
+        })}
+        {weiter.map(s => <div className="reise-station" key={s.schwelle} style={{ top: punktY(s.schwelle), left: `${punktX(punktY(s.schwelle)) / 4}%` }}><span className="reise-marke">{s.schwelle.toLocaleString('de-DE')}</span>{belohnung(s, `Belohnung bei ${s.schwelle} Trophäen`)}</div>)}
+        <div className="reise-ich" style={{ top: ichY, left: `${punktX(ichY) / 4}%` }} aria-label={`Du bist hier: ${stand} Trophäen`}><Pinguin getragen={getragen} groesse={5} titel="Dein Pinguin aus dem Kleiderschrank" /><span>Du bist hier<small>{stand.toLocaleString('de-DE')} 🏆</small></span></div>
+        <div className="reise-anfang">Spiele. Gewinne. Entdecke.</div>
+      </div>
+    </div>
+    <div className="reise-navigation"><span>↕ Entlang des Pfades scrollen<small>Sicher ab {sicherAb(stand).toLocaleString('de-DE')} Trophäen</small></span><button onClick={() => zuMir()}>◎ Zu mir</button></div>
+    {fund?.grad && <FundBlatt fund={{ grad: fund.grad, coins: fund.coins }} onClose={() => setFund(null)} />}
+  </div>;
 }

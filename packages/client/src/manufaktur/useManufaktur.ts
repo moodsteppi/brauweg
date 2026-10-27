@@ -26,6 +26,7 @@ export function useManufaktur(
   schliesseOffline: () => void;
   umgezogen: number | null;
   schliesseUmzug: () => void;
+  /** Gerade renoviert: die neue Stufe (ab 5 im Palast ein Jubilaeum). */
   gefeiert: number | null;
   schliesseFeier: () => void;
 } {
@@ -57,7 +58,7 @@ export function useManufaktur(
           },
           offline: setOffline,
           umzug: setUmgezogen,
-          jubilaeum: setGefeiert,
+          renoviert: setGefeiert,
           fehler: (schluessel) => {
             spiele('fehler');
             melde(schluessel ? t(schluessel) : 'Keine Verbindung.');

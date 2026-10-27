@@ -11,8 +11,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * bekommen den Knopf nicht.
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { createTable } = vi.hoisted(() => ({
   createTable: vi.fn(() => Promise.resolve({ id: 'bot-1' })),
 }));

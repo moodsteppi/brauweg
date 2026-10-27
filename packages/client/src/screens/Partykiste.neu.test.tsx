@@ -9,8 +9,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * gesperrt (Schloss, Preis, nicht wählbar).
  */
 
-vi.mock('../hubNeu', () => ({ hubNeu: true }));
-
 const { tables, createTable, shop } = vi.hoisted(() => ({
   tables: vi.fn(() => Promise.resolve([])),
   createTable: vi.fn(() => Promise.resolve({ id: 'pk-1' })),

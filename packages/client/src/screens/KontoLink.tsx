@@ -50,7 +50,7 @@ function fehlertext(err: unknown): string {
 /** Was nach "Neuen Link anfordern" dasteht. Ehrlich, wenn nichts hinausgeht. */
 function unterwegsText(mailVersand: MailVersand | undefined): string {
   return mailVersand === 'log'
-    ? 'Der Mailversand ist gerade nicht eingerichtet — es geht keine Mail hinaus. Melde dich bitte bei uns.'
+    ? 'Der Mailversand ist gerade nicht eingerichtet - es geht keine Mail hinaus. Melde dich bitte bei uns.'
     : 'Falls es ein Konto mit dieser Adresse gibt, ist eine neue E-Mail unterwegs. Sieh auch im Spam nach.';
 }
 
@@ -323,7 +323,7 @@ function MailDiagnose({
             {PROBE_FELDER.map(([feld, name]) => (
               <div key={feld}>
                 <dt>{name}</dt>
-                <dd>{String(probe[feld] ?? '—')}</dd>
+                <dd>{String(probe[feld] ?? '-')}</dd>
               </div>
             ))}
             {probe.letzterFehler && (
@@ -331,7 +331,7 @@ function MailDiagnose({
                 <dt>Letzter Fehlschlag seit Start</dt>
                 <dd>
                   {probe.letzterFehler.zeit}: {probe.letzterFehler.status ?? 'kein Netz'}{' '}
-                  {probe.letzterFehler.name ?? ''} — {probe.letzterFehler.text} (an{' '}
+                  {probe.letzterFehler.name ?? ''} - {probe.letzterFehler.text} (an{' '}
                   {probe.letzterFehler.empfaengerDomain})
                 </dd>
               </div>

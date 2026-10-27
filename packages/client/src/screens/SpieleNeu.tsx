@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, type GameSummary, type Me, type RankingEntry } from '../api';
-import { cardImage, deckForGame } from '../decks';
+import { deckForGame, rueckenBild } from '../decks';
+import { CardFront, CardBack } from '../CardFace';
 import { t } from '../i18n';
 import { inApp } from '../laufzeit';
 import { inAppSichtbar } from '../app-sichtbar';
+import { imUmfang } from '../umfang';
 import { EINZELSPIELE, einzelKennung, einzelName } from '../minispiele/partykiste/einzelspiele';
 import { sitzSpanne } from '../sitzspanne';
 import { SZENEN, szeneBild } from '../szenen';
@@ -77,7 +79,10 @@ const ZUSATZ: Record<string, string> = {
 };
 
 /** Spiele mit Kartenblatt und Tisch aus der Sammlung. */
-const MIT_THEMEN = new Set(['doppelkopf', 'skat', 'wizard', 'cambio']);
+const BALD_BILDER = new Set(['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10', 'drecksau']);
+const BESTEHENDE_BANNER = new Set(KATEGORIEN.flatMap(k => k.spiele));
+
+const MIT_THEMEN = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'easypoker']);
 
 function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
@@ -85,6 +90,27 @@ function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element 
       {children}
     </svg>
   );
+}
+
+/**
+ * Die Chips über der Spielliste (ohne „Alle", das immer davor steht).
+ *
+ * Ein Chip, hinter dem nichts Spielbares steht, wäre ein leerer Bildschirm.
+ * In der App ist nur ein Teil der Spiele freigegeben (FREIGABE im Server):
+ * Dort zählen deshalb nur Kategorien mit spielbaren Spielen, und alles
+ * Übrige sammelt der Chip „Kommt bald" (Emile, 13.10.2026). Auf der Webseite
+ * passiert dasselbe, seit `UMFANG` dort ganze Kategorien leeren kann
+ * (Abnahme-Probe 3d2e54c6, 24.10.2026: „Trinkspiele" und „Echtzeit" führten
+ * ins Leere) — aber ohne „Kommt bald": Das Bald steht dort unter „Modi".
+ * Ohne `UMFANG` ist auf der Webseite jede Kategorie spielbar, die Leiste
+ * also dieselbe wie vorher.
+ *
+ * Herausgezogen, damit die Proben sie ohne Bildschirm und ohne `inApp`-Mock
+ * für beide Plattformen fragen können.
+ */
+export function chipsFuer(spielbar: readonly string[], app: boolean): readonly { id: string; titel: string }[] {
+  const belegt = KATEGORIEN.filter((k) => spielbar.some((id) => k.spiele.includes(id)));
+  return app ? [...belegt, { id: 'bald', titel: 'Kommt bald' }] : belegt;
 }
 
 function kategorieVon(gameId: string): Kategorie | null {
@@ -109,11 +135,14 @@ export function SpieleNeu({
   onSolo: (modusId: string) => void;
   onBald: (name: string) => void;
   onSammlung: () => void;
-  /** „Doppelkopf lernen" auf der Doppelkopf-Seite — nur in der App gesetzt. */
+  /** „Doppelkopf lernen" auf der Doppelkopf-Seite — nur gesetzt, wenn es im Umfang steht. */
   onLernen?: () => void;
 }): React.JSX.Element {
   const [games, setGames] = useState<GameSummary[] | null>(null);
   const [voted, setVoted] = useState<Set<string>>(new Set());
+  const [abstimmFehler, setAbstimmFehler] = useState<string | null>(null);
+  const unterwegs = useRef(new Set<string>());
+  const [sendet, setSendet] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<string>('alle');
   /** „Kommt bald" in der App: zu, bis jemand hineinsieht. */
   const [baldOffen, setBaldOffen] = useState(false);
@@ -122,7 +151,11 @@ export function SpieleNeu({
     let lebt = true;
     void api
       .games()
-      .then((liste) => lebt && setGames(liste))
+      .then((liste) => {
+        if (!lebt) return;
+        setGames(liste);
+        setVoted(new Set(liste.filter(g => g.meineStimme).map(g => g.id)));
+      })
       .catch(() => lebt && setGames([]));
     return () => {
       lebt = false;
@@ -130,9 +163,20 @@ export function SpieleNeu({
   }, []);
 
   const abstimmen = async (gameId: string): Promise<void> => {
-    await api.vote(gameId);
-    setVoted((alt) => new Set(alt).add(gameId));
-    setGames(await api.games());
+    if (unterwegs.current.has(gameId) || voted.has(gameId)) return;
+    unterwegs.current.add(gameId);
+    setSendet(new Set(unterwegs.current));
+    setAbstimmFehler(null);
+    try {
+      await api.vote(gameId);
+      setVoted((alt) => new Set(alt).add(gameId));
+      setGames(alt => alt?.map(g => g.id === gameId ? { ...g, meineStimme: true, votes: g.votes + 1 } : g) ?? null);
+    } catch {
+      setAbstimmFehler('Deine Stimme konnte nicht gespeichert werden. Bitte versuche es erneut.');
+    } finally {
+      unterwegs.current.delete(gameId);
+      setSendet(new Set(unterwegs.current));
+    }
   };
 
   // Vor dem frühen Rückgabewert unten: Hooks immer in derselben Reihenfolge.
@@ -149,7 +193,7 @@ export function SpieleNeu({
 
   const spielbar = games.filter((g) => g.availability === 'playable');
   // Die Partykiste steht in der App nicht einmal unter „Kommt bald“ (app-sichtbar.ts).
-  const bald = games.filter((g) => g.availability === 'preview' && inAppSichtbar(g.id));
+  const bald = games.filter((g) => g.availability === 'preview' && inAppSichtbar(g.id)).sort((a, b) => b.votes - a.votes);
   // Nur Spielbares hat eine Spielseite. Ein „Bald"-Spiel kann trotzdem
   // ankommen — vom Start aus „Deine Spiele", wenn man es früher gespielt hat
   // (Partykiste in der App, seit 21.10.2026 „Kommt bald").
@@ -171,62 +215,48 @@ export function SpieleNeu({
   const bekannt = new Set(KATEGORIEN.flatMap((k) => k.spiele));
   const weitere = spielbar.filter((g) => !bekannt.has(g.id));
   const zeige = (id: string): boolean => filter === 'alle' || filter === id;
-  // In der App ist nur ein Teil der Spiele freigegeben (FREIGABE im Server).
-  // Ein Chip, hinter dem nichts Spielbares steht, wäre ein leerer Bildschirm —
-  // dort zählen deshalb nur Kategorien mit spielbaren Spielen, und alles
-  // Übrige sammelt der Chip „Kommt bald" (Emile, 13.10.2026).
-  const chips: readonly { id: string; titel: string }[] = inApp
-    ? [...KATEGORIEN.filter((k) => spielbar.some((g) => k.spiele.includes(g.id))), { id: 'bald', titel: 'Kommt bald' }]
-    : KATEGORIEN;
+  const chips = chipsFuer(spielbar.map((g) => g.id), inApp);
 
   // Spiele, ueber die erst abgestimmt wird, gibt es noch nicht — also auch
   // kein Banner. `bannerFuer` zeigte auf eine fehlende Datei, und statt des
   // Bildes stand ein leeres Feld (CLAUDE.md: kein <img> auf eine Datei, die es
   // nicht gibt). Sie bekommen das gemeinsame Bald-Bild.
   const baldBild = (g: GameSummary): string =>
-    g.abstimmbar !== false ? '/hub/spielwahl-bald.webp' : bannerFuer(g.id);
+    g.id === 'prosubway' || g.id === 'mehrkampf' ? `/hub/banner-${g.id}.webp` : BALD_BILDER.has(g.id) ? `/hub/bald-${g.id}.webp` : g.abstimmbar !== false && !BESTEHENDE_BANNER.has(g.id) ? '/hub/spielwahl-bald.webp' : bannerFuer(g.id);
+
+  // Was der Umfang der Ausgabe nicht enthält, verschwindet ganz — auch aus
+  // „Kommt bald": Es kommt in diesem Release ja nicht (umfang.ts).
+  const mitManufaktur = imUmfang('kartenmanufaktur');
+  const mitBrowort = imUmfang('browort');
+  const mitProSubway = imUmfang('prosubway');
+  // Auf beiden Plattformen abstimmen, soweit der Releaseumfang es erlaubt.
+  const mitAbstimmung = imUmfang('abstimmung');
 
   const baldZeile = (g: GameSummary): React.JSX.Element => (
-    <div className="hb-bald" key={g.id}>
+    <div className="hb-bald" key={g.id} role="group" aria-label={t(g.nameKey)}>
       <button type="button" className="hb-bald-flaeche" onClick={() => onBald(t(g.nameKey))}>
         <span className="hb-bald-bild" style={{ backgroundImage: `url(${baldBild(g)})` }} />
         <span className="hb-bald-text">
           <strong>{t(g.nameKey)}</strong>
           <small>
-            {sitzSpanne(g.seatCounts)} Spieler
-            {g.abstimmbar !== false && !inApp ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
+            {g.id === 'prosubway' ? 'Allein · Münzen fürs Hub' : g.id === 'mehrkampf' ? 'Runden aus mehreren Spielen' : `${sitzSpanne(g.seatCounts)} Spieler`}
+            {g.abstimmbar !== false && mitAbstimmung ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
           </small>
         </span>
       </button>
-      {/* Ohne Stimme, was es schon gibt und nur noch nicht freigegeben ist. In
-          der App steht die ganze Liste ausgegraut und einheitlich auf „Bald":
-          Ein leuchtender Knopf mitten darin las sich wie „hier geht's los". */}
-      {g.abstimmbar !== false && !inApp ? (
+      {/* Eine Stimme je Konto und angekuendigtem Spiel, vom Server bestaetigt. */}
+      {g.abstimmbar !== false && mitAbstimmung ? (
         <button
           type="button"
           className="hb-kn is-stimme"
-          disabled={voted.has(g.id)}
+          disabled={voted.has(g.id) || sendet.has(g.id)}
           onClick={() => void abstimmen(g.id)}
         >
-          {voted.has(g.id) ? 'Abgestimmt' : 'Dafür'}
+          {voted.has(g.id) ? 'Abgestimmt' : sendet.has(g.id) ? 'Speichert…' : 'Dafür'}
         </button>
       ) : (
         <span className="hb-bald-marke">Bald</span>
       )}
-    </div>
-  );
-
-  /** Pro-Subway und Mehrkampf: in der App ebenfalls noch nicht da. */
-  const modusZeile = (id: string, name: string, bild: string, unter: string): React.JSX.Element => (
-    <div className="hb-bald" key={id}>
-      <button type="button" className="hb-bald-flaeche" onClick={() => onBald(name)}>
-        <span className="hb-bald-bild" style={{ backgroundImage: `url(${bild})` }} />
-        <span className="hb-bald-text">
-          <strong>{name}</strong>
-          <small>{unter}</small>
-        </span>
-      </button>
-      <span className="hb-bald-marke">Bald</span>
     </div>
   );
 
@@ -250,6 +280,7 @@ export function SpieleNeu({
       <header className="hb-kopfzeile">
         <h1 className="hb-titel">Spiele</h1>
       </header>
+      {abstimmFehler && <p role="alert" className="hb-text">{abstimmFehler}</p>}
       <div className="hb-chips" role="tablist" aria-label="Kategorien">
         {[{ id: 'alle', titel: 'Alle' }, ...chips].map((k) => (
           <button
@@ -343,10 +374,13 @@ export function SpieleNeu({
           </section>
         )}
 
-        {/* In der App: die beiden Solo-Spiele (Emile, 23.10.2026). Die
-            Manufaktur hat ihr Bild (docs/ASSETS-KARTENMANUFAKTUR.md), Browort
-            bis zu einer Bestellung ein gezeichnetes Feld statt eines fehlenden Bildes. */}
-        {filter === 'alle' && inApp && (
+        {/* Die Solo-Spiele (Emile, 23.10.2026; seit demselben Tag auch auf der
+            Webseite, vorher nur `inApp`). Die Manufaktur hat ihr Bild
+            (docs/ASSETS-KARTENMANUFAKTUR.md), Browort bis zu einer Bestellung
+            ein gezeichnetes Feld statt eines fehlenden Bildes. Pro-Subway steht
+            im selben Abschnitt — zwei Überschriften „Allein" untereinander
+            sähen nach einem Fehler aus. */}
+        {filter === 'alle' && (mitManufaktur || mitBrowort || (!inApp && mitProSubway)) && (
           <section className="hb-blk">
             <h2 className="hb-ab">
               <Symbol>
@@ -355,35 +389,9 @@ export function SpieleNeu({
               </Symbol>
               Allein
             </h2>
-            <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
-              <span className="hb-quer-text">
-                <strong>Kartenmanufaktur</strong>
-                <span>Pressen, Laufband, Meister — sie druckt auch, wenn du weg bist</span>
-              </span>
-              <span className="hb-kn is-gold">Los</span>
-            </button>
-            <button type="button" className="hb-quer hb-quer-browort" onClick={() => onSolo('browort')}>
-              <span className="hb-quer-text">
-                <strong>Browort</strong>
-                <span>Jeden Tag ein Wort, sechs Versuche</span>
-              </span>
-              <span className="hb-kn is-gold">Los</span>
-            </button>
-          </section>
-        )}
-
-        {filter === 'alle' && !inApp && (
-          <>
-            <section className="hb-blk">
-              <h2 className="hb-ab">
-                <Symbol>
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-                </Symbol>
-                Allein
-              </h2>
-              {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
-                  dort steht es unter „Kommt bald". */}
+            {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
+                dort steht es unter „Kommt bald". */}
+            {!inApp && mitProSubway && (
               <button
                 type="button"
                 className="hb-quer"
@@ -396,8 +404,46 @@ export function SpieleNeu({
                 </span>
                 <span className="hb-kn is-gold">Los</span>
               </button>
-            </section>
+            )}
+            {mitManufaktur && (
+              <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
+                <img className="hb-manufaktur-bild" src="/manufaktur/werkstatt-hero.webp" alt="" />
+                <span className="hb-manufaktur-inhalt">
+                  <span className="hb-manufaktur-marke">Deine eigene Kartenwerkstatt</span>
+                  <span className="hb-quer-text">
+                    <strong>Kartenmanufaktur</strong>
+                    <span>Drucke Karten, baue deine Werkstatt aus und stelle fleißige Meister ein.</span>
+                  </span>
+                  <span className="hb-manufaktur-fuss">
+                    <span className="hb-manufaktur-hinweis">Produziert auch in deiner Pause</span>
+                    <span className="hb-kn is-gold">Werkstatt öffnen <span aria-hidden="true">→</span></span>
+                  </span>
+                </span>
+              </button>
+            )}
+            {mitBrowort && (
+              <button type="button" className="hb-quer hb-quer-browort" onClick={() => onSolo('browort')}>
+                <img className="hb-browort-bild" src="/hub/browort-hero.webp" alt="" />
+                <span className="hb-quer-text">
+                  <strong>Browort</strong>
+                  <span>Jeden Tag ein Wort, sechs Versuche</span>
+                </span>
+                <span className="hb-kn is-gold">Los</span>
+              </button>
+            )}
+          </section>
+        )}
 
+        {filter === 'alle' && !inApp && (
+          <>
+            {/* Der Mehrkampf ist noch nicht gebaut: ehrliche „Bald"-Marke (DESIGN.md).
+                Kündigt der Server ihn an (seit 26.10.2026 auch auf der Webseite,
+                abstimmModiFuer in registry.ts), steht er wie in der App unter
+                „Kommt bald" mit Stimme — die feste Marke bleibt nur, wenn die
+                Abstimmung nicht im Umfang ist, sonst stünde er doppelt da.
+                Ohne `mehrkampf` im Umfang fehlt auch die Marke: Was dort nicht
+                steht, ist auf der Webseite weg (server/src/umfang.ts). */}
+            {imUmfang('mehrkampf') && !bald.some((g) => g.id === 'mehrkampf') && (
             <section className="hb-blk">
               <h2 className="hb-ab">
                 <Symbol>
@@ -405,7 +451,6 @@ export function SpieleNeu({
                 </Symbol>
                 Modi
               </h2>
-              {/* Der Mehrkampf ist noch nicht gebaut: ehrliche „Bald"-Marke (DESIGN.md). */}
               <button
                 type="button"
                 className="hb-quer"
@@ -419,6 +464,7 @@ export function SpieleNeu({
                 <span className="hb-bald-marke">Bald</span>
               </button>
             </section>
+            )}
 
             {bald.length > 0 && (
               <section className="hb-blk">
@@ -454,16 +500,14 @@ export function SpieleNeu({
                 <path d="M12 8v4l3 2" />
               </Symbol>
               Kommt bald
-              <span className="hb-ab-zusatz">{bald.length + 2}</span>
+              <span className="hb-ab-zusatz">{bald.length}</span>
               <Symbol>
                 <path d="m6 9 6 6 6-6" />
               </Symbol>
             </button>
             {baldOffen && (
-              <div className="hb-liste is-grau">
+              <div className="hb-liste">
                 {bald.map(baldZeile)}
-                {modusZeile('prosubway', t('modus.prosubway'), '/hub/banner-prosubway.webp', 'Allein · Münzen fürs Hub')}
-                {modusZeile('mehrkampf', t('modus.mehrkampf'), '/hub/banner-mehrkampf.webp', 'Runden aus mehreren Spielen')}
               </div>
             )}
           </section>
@@ -524,7 +568,12 @@ function SpielSeite({
   const quote = stat && stat.parties > 0 ? Math.round((stat.wins / stat.parties) * 100) : null;
   const thema = me.themes[game.id];
   const deck = deckForGame(game.id, thema?.cardDeck);
-  const blattBild = cardImage(deck, { suit: 'H', rank: 'Q' });
+  const vorschaukarten = game.id === 'wizard'
+    ? [{ id: 1, suit: 'Z', rank: '1' }, { id: 2, suit: 'H', rank: '13' }, { id: 3, suit: 'C', rank: '7' }]
+    : game.id === 'cambio' ? [{ id: 1, suit: 'H', rank: '13' }, { id: 2, suit: 'C', rank: '7' }, { id: 3, suit: 'D', rank: '1' }]
+    : [{ id: 1, suit: 'C', rank: 'Q' }, { id: 2, suit: 'H', rank: 'T' }, { id: 3, suit: 'D', rank: 'A' }];
+  // Dieselbe persönliche Rückseite wie am Spieltisch, statt immer der Standardrückseite.
+  const rueckenDeck = { ...deck, ...(thema?.cardBack && thema.cardBack !== 'standard' ? { backSrc: rueckenBild(thema.cardBack) ?? undefined } : {}) };
   const szene = SZENEN.find((s) => s.id === thema?.tableScene) ?? SZENEN[0]!;
 
   return (
@@ -569,7 +618,7 @@ function SpielSeite({
                   Dein Beitrag zum Trophäenweg: <b>{eigene.toLocaleString('de-DE')} von {gesamt.toLocaleString('de-DE')}</b>
                 </>
               ) : (
-                'Gewinn eine Partie — jede Trophäe bringt dich auf dem Trophäenweg weiter.'
+                'Gewinn eine Partie - jede Trophäe bringt dich auf dem Trophäenweg weiter.'
               )}
             </span>
             <span className="hb-balken" aria-hidden="true">
@@ -584,19 +633,10 @@ function SpielSeite({
               <b>{(stat?.wins ?? 0).toLocaleString('de-DE')}</b>Siege
             </span>
             <span>
-              <b>{quote === null ? '–' : `${quote} %`}</b>Quote
+              <b>{quote === null ? '-' : `${quote} %`}</b>Quote
             </span>
           </div>
         </div>
-
-        <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onZumSpiel}>
-          Zum Spiel
-        </button>
-        {onLernen && (
-          <button type="button" className="hb-kn is-stimme is-haupt is-breit" onClick={onLernen}>
-            Doppelkopf lernen
-          </button>
-        )}
 
         {MIT_THEMEN.has(game.id) && (
           <section className="hb-blk">
@@ -606,9 +646,13 @@ function SpielSeite({
                 Sammlung ›
               </button>
             </h2>
+            <div className="hb-sp-kartenvorschau" role="group" aria-label="Vorschau deiner gewählten Karten" style={{ backgroundImage: `linear-gradient(#08162f33,#08162f44),url(${szeneBild(szene.id)})` }}>
+              <span className="hb-sp-probekarten">{vorschaukarten.map(karte => <span className="pc" key={karte.id}><CardFront card={karte} deck={deck} /></span>)}<span className="pc ist-ruecken" aria-label="Gewählte Kartenrückseite"><CardBack deck={rueckenDeck} /></span></span>
+              <span className="hb-sp-probetext">{t(deck.nameKey)} · {szene.name}</span>
+            </div>
             <div className="hb-mein">
               <button type="button" className="hb-mn is-blatt" onClick={onSammlung}>
-                <span className="hb-mn-bild" style={blattBild ? { backgroundImage: `url(${blattBild})` } : undefined} />
+                <span className="hb-mn-bild hb-mn-karte"><span className="pc"><CardFront card={vorschaukarten[0]!} deck={deck} /></span></span>
                 <span className="hb-mn-text">
                   <small>Blatt</small>
                   <strong>{t(deck.nameKey)}</strong>
@@ -624,6 +668,17 @@ function SpielSeite({
             </div>
           </section>
         )}
+
+        <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onZumSpiel}>
+          Zum Spiel
+        </button>
+        {onLernen && (
+          <button type="button" className="hb-kn is-stimme is-haupt is-breit" onClick={onLernen}>
+            Doppelkopf lernen
+          </button>
+        )}
+
+
 
         <section className="hb-blk">
           <h2 className="hb-ab">

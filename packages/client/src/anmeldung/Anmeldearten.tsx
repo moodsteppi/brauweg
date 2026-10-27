@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
 import { inApp } from '../laufzeit';
+import { kannAppleNativ } from './apple-nativ';
 import { AnbieterKnoepfe, type AnbieterErgebnis } from './AnbieterKnoepfe';
 import { ladeAnbieterConfig, type Anbieter } from './anbieter';
 
@@ -34,15 +35,24 @@ export function Anmeldearten(): React.JSX.Element | null {
   const [geburtstag, setGeburtstag] = useState('');
 
   const laden = useCallback(async () => {
-    const [arten, config] = await Promise.all([api.anmeldearten(), ladeAnbieterConfig()]);
+    // In der App kennt nur die Huelle den Weg: Apple ueber den Systemdialog,
+    // Google gar nicht (AnbieterKnoepfe). Die Web-Konfiguration gilt dort nicht.
+    const [arten, config] = await Promise.all([
+      api.anmeldearten(),
+      inApp ? Promise.resolve(null) : ladeAnbieterConfig(),
+    ]);
     setStand(arten);
     setAngeboten(
-      (['apple', 'google'] as const).filter((a) => (a === 'apple' ? config.apple : config.google)),
+      config
+        ? (['apple', 'google'] as const).filter((a) => (a === 'apple' ? config.apple : config.google))
+        : kannAppleNativ()
+          ? ['apple']
+          : [],
     );
   }, []);
 
   useEffect(() => {
-    if (inApp) return;
+    if (inApp && !kannAppleNativ()) return;
     laden().catch(() => setStand(null));
   }, [laden]);
 
@@ -115,7 +125,7 @@ export function Anmeldearten(): React.JSX.Element | null {
             <span className="muted">
               {stand.passwort
                 ? stand.email
-                : 'Kein Passwort gesetzt — über „Passwort vergessen“ legst du eins an.'}
+                : 'Kein Passwort gesetzt - über „Passwort vergessen“ legst du eins an.'}
             </span>
           </div>
         </div>

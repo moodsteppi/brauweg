@@ -17,6 +17,7 @@ import type { Belohnung, BrowortAnsicht, BrowortKurz, BrowortProfil, ClanwortAns
 import type { ManufakturAktion, ManufakturAntwort } from './manufaktur/sicht';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
 import { herkunft } from './herkunft';
+import { setzeUmfang } from './umfang';
 
 export class ApiError extends Error {
   constructor(
@@ -72,11 +73,11 @@ export interface GameSummary {
   availability: 'playable' | 'preview';
   seatCounts: number[];
   votes: number;
+  /** Eigene gespeicherte Stimme; fehlt nur bei aelteren Servern. */
+  meineStimme?: boolean;
   /**
-   * Nur Vorschau-Spiele ohne Modul sind abstimmbar. Ein Spiel, das es gibt
-   * und das hier nur noch nicht freigegeben ist (App-Schalter, siehe
-   * `FREIGABE` im Server), steht als „Bald" da, aber ohne Stimme. Fehlt das
-   * Feld (aelterer Server), gilt es wie bisher als abstimmbar.
+   * Ob das Spiel auf dieser Plattform noch angekuendigt und abstimmbar ist.
+   * Fehlt das Feld bei aelteren Servern, bleibt die Vorschau abstimmbar.
    */
   abstimmbar?: boolean;
 }
@@ -214,6 +215,12 @@ export interface Me {
   };
   /** Welche Ausgabe läuft: `production`, `staging` oder `development`. */
   stage: 'production' | 'staging' | 'development';
+  /**
+   * Was diese Ausgabe anbietet (`UMFANG` im Server, siehe umfang.ts):
+   * `null` heißt alles. Optional wie `lernen` — ein älterer Server kennt es
+   * nicht, und dann ist ebenfalls alles an.
+   */
+  umfang?: string[] | null;
 }
 
 export interface RankingEntry {
@@ -331,7 +338,7 @@ export interface WegStufe {
   /** Station (Truhe + Gegenstand), Checkpoint (feste Münzen), weiter (über 1.000). */
   art: 'station' | 'checkpoint' | 'weiter';
   truhe: { grad: WegGrad; von: number; bis: number } | null;
-  /** Feste Münzen am Checkpoint, sonst null. */
+  /** Feste Münzen am Checkpoint oder zusätzlicher Bonus zur Truhe. */
   muenzen: number | null;
   /** Kennung des Gegenstands (`account_cosmetic`), sonst null. Name: `weg.<kennung>` in i18n. */
   gegenstand: string | null;
@@ -432,6 +439,18 @@ export interface RegalWare {
    * Spiels genau diese Kachel, ohne die Kennung zu zerlegen.
    */
   inhalt?: { spiel: string; feld: string };
+}
+
+export interface MarktArtikel {
+  id: string; art: string; wert: string; nameKey: string; seltenheit: string; normalpreis: number; slot?: Slot;
+}
+export interface MarktAngebot {
+  id: string; spiel: string; stufe: string | null; rabatt: number; aufgedeckt: boolean;
+  leer: boolean; artikel: MarktArtikel | null; preis: number | null; normalpreis: number | null; besessen: boolean;
+}
+export interface Tagesmarkt {
+  tag: string; wechseltAm: string; serverZeit: string;
+  gratisMuenzen: { betrag: number; geholt: boolean }; angebote: MarktAngebot[];
 }
 
 export interface Shop {
@@ -693,11 +712,14 @@ export interface WarState {
 /** Antwort der Anbieter-Anmeldung: Sitzung — oder erst noch das Geburtsdatum. */
 export type AnbieterAnmeldung =
   | { ok: true; neu: boolean; token?: string }
-  | { geburtstagNoetig: true; schein: string };
+  /** `namensvorschlag` fehlt bei Servern vor dem 27.10.2026. */
+  | { geburtstagNoetig: true; schein: string; namensvorschlag?: string };
 
 export const api = {
   /** Ein Aufruf ueber einen Werbelink `?q=` (herkunft.ts). */
   herkunftBesuch: (kennung: string) => post<{ ok: true }>('/herkunft/besuch', { kennung }),
+  /** Muenz-Code einloesen — nur auf der Webseite (server/src/muenzcodes.ts). */
+  codeEinloesen: (code: string) => post<{ ok: true; muenzen: number; stand: number }>('/me/code', { code }),
 
   register: (body: {
     email: string;
@@ -750,11 +772,11 @@ export const api = {
     if ('token' in antwort && antwort.token) setSessionToken(antwort.token);
     return antwort;
   },
-  /** Zweiter Schritt einer Erstanmeldung: Geburtsdatum zum Schein. */
-  anbieterAbschliessen: async (schein: string, birthday: string) => {
+  /** Zweiter Schritt einer Erstanmeldung: Geburtsdatum und Anzeigename zum Schein. */
+  anbieterAbschliessen: async (schein: string, birthday: string, displayName?: string) => {
     const antwort = await post<{ ok: true; neu: boolean; token?: string }>(
       '/auth/anbieter/abschliessen',
-      { schein, birthday },
+      { schein, birthday, ...(displayName ? { displayName } : {}) },
     );
     if (antwort.token) setSessionToken(antwort.token);
     return antwort;
@@ -851,7 +873,12 @@ export const api = {
       setSessionToken(null);
     }
   },
-  me: () => request<Me>('/me'),
+  // Der Umfang kommt mit /api/me und gilt ab da fuer jeden Bildschirm (umfang.ts).
+  me: () =>
+    request<Me>('/me').then((me) => {
+      setzeUmfang(me.umfang);
+      return me;
+    }),
   /** Kartenblatt oder Szenerie eines Spiels setzen. */
   setTheme: (
     gameId: string,
@@ -943,16 +970,19 @@ export const api = {
   // --- Shop und Kleiderschrank ---------------------------------------------
 
   shop: () => request<Shop>('/shop'),
+  tagesmarkt: () => request<Tagesmarkt>('/tagesmarkt'),
+  marktAufdecken: (id: string, tag: string) => post<Tagesmarkt>(`/tagesmarkt/${id}/aufdecken`, { tag }),
+  marktGratis: (tag: string) => post<{ coins: number; stand: number }>('/tagesmarkt/gratis', { tag }),
   /**
    * Kosmetik kaufen — gegen Münzen oder Edelsteine.
    *
    * Mit geht nur, **welche** Währung es sein soll. Der Betrag kommt vom Server;
    * ihn mitzuschicken wäre die Einladung, ihn zu ändern.
    */
-  buyItem: (itemId: string, waehrung: Waehrung) =>
+  buyItem: (itemId: string, waehrung: Waehrung, tag?: string) =>
     post<{ itemId: string; bezahlt: number; waehrung: Waehrung; stand: number }>(
       `/shop/${itemId}/buy`,
-      { waehrung },
+      { waehrung, ...(tag ? { tag } : {}) },
     ),
   /** Ein Paket gegen Edelsteine kaufen — heute die drei Münzpakete. */
   buyPack: (paketId: string) => post<Paketkauf>(`/shop/pakete/${paketId}/buy`),

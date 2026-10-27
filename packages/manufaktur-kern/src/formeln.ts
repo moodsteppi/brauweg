@@ -37,16 +37,9 @@ export const OFFLINE_TEMPO = 0.5;
 /** Ab dieser Luecke zwischen zwei Rechnungen gilt jemand als weg. */
 export const ABWESEND_AB_MS = 60_000;
 
-/** Jubilaeum: Jedes Gildensiegel gibt dauerhaft so viel mehr Kartenwert. */
-export const SIEGEL_BONUS = 0.1;
-/** Muenzen fuers Hub je Jubilaeum — nur fuer die ersten, sonst waere es eine endlose Muenzquelle. */
+/** Muenzen fuers Hub je Jubilaeum (Renovierung im Palast ab Stufe 5) — nur fuer die ersten zehn, sonst eine endlose Muenzquelle. */
 export const MUENZEN_JUBILAEUM = 100;
 export const JUBILAEEN_MIT_MUENZEN = 10;
-
-/** Meister-Faehigkeit: doppeltes Tempo fuer 30 s, danach 5 min Pause. */
-export const FAEHIGKEIT_MS = 30_000;
-export const ABKLINGEN_MS = 5 * 60_000;
-export const FAEHIGKEIT_TEMPO = 2;
 
 /** Meilensteine fuers Hub: Muenzen, nicht Taler. */
 export const MUENZEN_MILLION = 50;
@@ -121,12 +114,29 @@ export const STELLSCHRAUBEN = {
   MEISTER_PATERNOSTER: 90,
 
   /**
+   * Jede weitere Manufaktur ist teurer — seit dem Renovieren (24.10.2026)
+   * 2,6 statt 1,8: Meister-Pools, Werkstattbuch und Renovierung tragen jetzt
+   * mit, und mit 1,8 war der Palast nach 3,8 h aktivem Spiel erreicht, alles
+   * renoviert nach 7 h (Simulation, langer Bogen). Mit 2,6: Palast 9 h, alles
+   * renoviert 29 h, die Orte dauern 1,9 / 2,4 / 3,3 h.
+   *
    * Jede weitere Manufaktur ist teurer. Ohne das machte der doppelte Ertrag
    * (`faktor`) jeden Umzug zur Abkuerzung: In der ersten Simulation dauerten die
    * Manufakturen 2 bis 5 nur noch 31, 18, 13 und 9 min — nach gut zwei Stunden
    * waere das Spiel zu Ende gewesen.
    */
-  PREIS_JE_MANUFAKTUR: 1.8,
+  PREIS_JE_MANUFAKTUR: 2.6,
+
+  /** Renovieren (renovieren.ts): Gesamt-Multiplikator je Stufe 0 … 4. */
+  RENOV_FAKTOR: [1, 4, 10, 25, 60] as number[],
+  /** Preis der Renovierung auf Stufe 1 … 4, als Vielfaches der achten Presse dieses Orts. */
+  RENOV_KOSTEN: [0.5, 15, 300, 6000] as number[],
+  /** Jubilaeum im Palast (Stufe 5 und hoeher): flacher, damit es nie davonlaeuft. */
+  JUBILAEUM_WACHSTUM: 1.5,
+  JUBILAEUM_KOSTEN: 3,
+
+  /** Bauarbeiten vor Etage 5 und 8 (baustelle.ts) kosten diesen Teil der Etage selbst. */
+  BAU_KOSTEN: 0.25,
 };
 const W = STELLSCHRAUBEN;
 
@@ -167,13 +177,9 @@ export function kartenwert(index: number): number {
 }
 
 /** Warenwert je Sekunde, den die Presse liefert, solange sie arbeitet. */
-/** Dauerhafter Bonus aus Gildensiegeln (Jubilaeum im Kartenpalast). */
-export function siegelFaktor(jubilaeen: number): number {
-  return 1 + SIEGEL_BONUS * jubilaeen;
-}
-
-export function presseLeistung(index: number, stufe: number, manufaktur: number, jubilaeen = 0): number {
-  return W.PRESSE_GRUND * kartenwert(index) * stufe * sprung(stufe) * faktor(manufaktur) * siegelFaktor(jubilaeen);
+/** `bonus`: dauerhafter Faktor aus Renovierung und Gutem Ruf — `presseBonus(stand)`. */
+export function presseLeistung(index: number, stufe: number, manufaktur: number, bonus = 1): number {
+  return W.PRESSE_GRUND * kartenwert(index) * stufe * sprung(stufe) * faktor(manufaktur) * bonus;
 }
 
 /** Dauer eines Arbeitszyklus (ms): Ein Upgrade macht die Presse sichtbar schneller. */
@@ -182,16 +188,17 @@ export function presseZyklus(stufe: number): number {
 }
 
 /** Warenwert, den ein Zyklus in die Ablage-Kiste legt. */
-export function presseErtrag(index: number, stufe: number, manufaktur: number, jubilaeen = 0): number {
-  return (presseLeistung(index, stufe, manufaktur, jubilaeen) * presseZyklus(stufe)) / 1000;
+export function presseErtrag(index: number, stufe: number, manufaktur: number, bonus = 1): number {
+  return (presseLeistung(index, stufe, manufaktur, bonus) * presseZyklus(stufe)) / 1000;
 }
 
 function transportTempo(stufe: number): number {
   return Math.min(W.TRANSPORT_TEMPO_MAX, 1 + (stufe - 1) * W.TRANSPORT_TEMPO_JE_STUFE);
 }
 
-export function paternosterKapazitaet(stufe: number, manufaktur: number): number {
-  return W.PATERNOSTER_GRUND * W.TRANSPORT_WACHSTUM ** (stufe - 1) * sprung(stufe) * faktor(manufaktur);
+/** `bonus`: Renovierung des Orts (`ortFaktor(stand)`) — der Transport waechst mit, sonst waere er die Mauer. */
+export function paternosterKapazitaet(stufe: number, manufaktur: number, bonus = 1): number {
+  return W.PATERNOSTER_GRUND * W.TRANSPORT_WACHSTUM ** (stufe - 1) * sprung(stufe) * faktor(manufaktur) * bonus;
 }
 
 /** Eine ganze Fahrt (ms): hinunter bis zur tiefsten Etage, an jeder halten, hinauf, entladen. */
@@ -222,8 +229,8 @@ export function paternosterEntladen(etagen: number): number {
   return (roh - W.PATERNOSTER_ENTLADEN_MS) / roh;
 }
 
-export function versandKapazitaet(stufe: number, manufaktur: number): number {
-  return W.VERSAND_GRUND * W.TRANSPORT_WACHSTUM ** (stufe - 1) * sprung(stufe) * faktor(manufaktur);
+export function versandKapazitaet(stufe: number, manufaktur: number, bonus = 1): number {
+  return W.VERSAND_GRUND * W.TRANSPORT_WACHSTUM ** (stufe - 1) * sprung(stufe) * faktor(manufaktur) * bonus;
 }
 
 /** Laden, wegfahren, zurueckfahren (ms). */

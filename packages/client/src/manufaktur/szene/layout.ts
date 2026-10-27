@@ -114,6 +114,8 @@ export function halle(): {
   paternosterMeisterFigur: Rechteck;
   podest: Rechteck;
   direktor: Rechteck;
+  /** Messingschild mit den Renovierungssternen, oben an der Hallenwand (384 × 160 auf 96 × 40). */
+  sternSchild: Rechteck;
   traegerWeg: { von: number; bis: number };
 } {
   const boden = HALLE_HOEHE * HALLE_BODEN;
@@ -139,6 +141,7 @@ export function halle(): {
     paternosterMeisterFigur: { x: kopf.x + kopf.b + 36, y: boden - 60, b: 34, h: 60 },
     podest: { x: 70, y: boden - 100, b: 36, h: 10 },
     direktor: { x: 70, y: boden - 150, b: 36, h: 50 },
+    sternSchild: { x: 170, y: 4, b: 96, h: 40 },
     traegerWeg: { von: 214, bis: 250 },
   };
 }

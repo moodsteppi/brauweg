@@ -54,13 +54,13 @@ unverändert**, und nichts davon braucht einen neuen App-Build.
 - `bald` — steht mit „Bald"-Marke da, lässt sich nicht starten, ohne Abstimmung.
 - `aus` — gar nicht zu sehen (nur App).
 
-**Stand (Emile, 13.10.2026):** In der App spielbar **Doppelkopf, Skat,
-Partykiste, Filler (in der App „Farbduell", `APP_NAMEN` in
+**Stand (Emile, 13.10.2026; Partykiste seit 21.10. „Bald"):** In der App spielbar **Doppelkopf, Skat,
+Filler (in der App „Farbduell", `APP_NAMEN` in
 `packages/client/src/i18n.ts`) und BroChess**; auf „Bald" alle anderen
-(Zauberer, Cambio, Poker, Mememory, Eiland, Feldherr, Tafelrunde, Golf,
+(Partykiste, Zauberer, Cambio, Poker, Mememory, Eiland, Feldherr, Tafelrunde, Golf,
 BroCooked); Werwolf in der App `aus`. Die App zeigt die Bald-Spiele
 zugeklappt in einer eigenen Kategorie „Kommt bald" (`SpieleNeu.tsx`). Auf
-der Webseite alles wie bisher, BroChess dort weiter „Bald". **Ein Spiel wechselt mit einer
+der Webseite alles spielbar, BroChess seit #325 auch. **Ein Spiel wechselt mit einer
 Zeile und einem Deploy in die App** — die installierten Apps richten sich
 beim nächsten Öffnen danach.
 
@@ -74,12 +74,22 @@ Der Shop-Reiter und die Plus-Knöpfe an Münzen und Edelsteinen fehlen in der
 App (`zeigeKaufbares` in `GameSelect.tsx`, seit August). Kein Link zu einem
 Kauf auf der Webseite (Apple 3.1.1).
 
-### Kein Google-/Apple-Login in der App
+### In der App: Mit Apple anmelden (nativ), kein Google
 
-Die Anbieter-Knöpfe erscheinen in der App nicht (`AnbieterKnoepfe.tsx`,
-Release #228): Google lehnt Anmeldungen aus eingebetteten WebViews ab, und
-ohne fremden Login entfällt auch Apples Pflicht, „Mit Apple anmelden"
-anzubieten (4.8). Anmeldung in der App: E-Mail + Passwort oder als Gast.
+Seit Oktober 2026 bietet die iOS-App „Mit Apple anmelden" über den
+Systemdialog an (`apps/ios/Brauweg/AppleAnmeldung.swift`, Client
+`anmeldung/apple-nativ.ts`). Das Web-Popup taugt im WKWebView nicht, deshalb
+öffnet die Hülle den Dialog und reicht nur das ID-Token an den Client; der
+schickt es wie im Web an `/api/auth/apple`. Der Server nimmt dafür neben der
+Services ID (`APPLE_CLIENT_ID`, Web) die Bundle-ID als `aud` an
+(`APPLE_APP_ID`, vorbelegt mit `de.broweg.brauweg-spielen`).
+
+Voraussetzungen: die Berechtigung `com.apple.developer.applesignin` (steht in
+beiden `Push-*.entitlements`; die automatische Signierung legt die Fähigkeit
+an der App-ID an). Google gibt es in der App weiter nicht — Google lehnt
+eingebettete WebViews ab. Anmeldung in der App also: Apple, E-Mail + Passwort
+oder als Gast. Ältere App-Builds ohne den Dialog melden ihn nicht
+(`BRAUWEG_APP.apple`) und zeigen den Knopf deshalb auch nicht.
 
 ### Partykiste: Trinkmodus — und der Rückweg
 
@@ -95,6 +105,84 @@ Deploy mit einer Umgebungsvariablen — kein neuer Build:
 
 Vorgabe: beide nicht gesetzt = App wie Web. Der Server sagt beim Start eine
 Zeile, wenn der Rückweg aktiv ist.
+
+### Umfang der Ausgabe: `UMFANG`
+
+Welche Spiele und Funktionen eine Ausgabe überhaupt anbietet — für Webseite
+und App aus **einer** Liste (`packages/server/src/umfang.ts`). Kommagetrennt:
+Spielkennungen der Registry (auch die Vorschau-Spiele ohne Modul wie
+`schafkopf`), die angekündigten Modi `mehrkampf` und `prosubway` und diese
+Funktionen: `kartenmanufaktur`, `browort`, `clanwort`, `lernpfad`,
+`prosubway`, `clankrieg`, `clanchat`, `shop`, `abstimmung`, `profilbild`,
+`figur`, `geburtstag`.
+
+**Zeile für die Produktion (Board-Karte b75320d0, 27.10.2026): die Webseite
+zeigt genau den Umfang der App, samt Spielabstimmung.**
+
+```
+UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau
+```
+
+Damit **an**:
+
+- die vier Spiele, die in der App `spielbar` sind — Doppelkopf, Skat, Filler,
+  BroChess (`FREIGABE` in `registry.ts`);
+- die Solo-Funktionen der App: Kartenmanufaktur, Browort, Clanwort,
+  Lernpfad samt Übungsrunde (hängt an `doppelkopf`);
+- die **Spielabstimmung** (`abstimmung`) unter „Kommt bald" mit neun
+  Titeln: Mehrkampf und die acht Vorschau-Spiele Schafkopf, Rommé, Mau-Mau,
+  Schwimmen, Backgammon, Bauernskat, Phase 10, Drecksau
+  (`docs/APP-ABSTIMMUNG-NAVIGATION.md`). Jeder Titel braucht dafür seine
+  eigene Kennung UND `abstimmung`: Ohne seine Kennung fehlt er ganz, ohne
+  `abstimmung` stehen die Vorschau-Spiele ohne Stimme da und der Mehrkampf
+  fehlt (bis zum 27.10.2026 kam er allein mit `abstimmung` mit). Gesperrt
+  wird ohne `abstimmung` die Route `POST /api/games/:gameId/vote`, im Client
+  verschwinden Stimmenzahl und „Dafür" (`SpieleNeu.tsx`).
+
+Damit **weg**, auf beiden Plattformen: alle übrigen Spiele — auch als
+„Kommt bald" (Partykiste, Zauberer, Cambio, Poker, Mememory, Eiland,
+Feldherr, Tafelrunde, Golf, BroCooked) und die Vorschau Werwolf —,
+Pro-Subway (Runner und seine Ankündigung), Clankrieg und Clan-Chat sowie
+alles, was es in der App nicht gibt:
+
+| Funktion | gesperrte Route(n) | Einstieg im Client |
+| --- | --- | --- |
+| `shop` | `/api/shop/pakete…`, `/api/shop/truhen…`, `POST /api/shop/:itemId/buy` mit Edelsteinen | Shop-Reiter und Plus-Knöpfe (`GameSelect.tsx`), Edelsteinpreise (`mitEdelsteinen` in `laufzeit.ts`), Shop-Verweis an gesperrten Paketen (`inhaltspakete.ts`), Kaufwappen (`Clan.tsx`) |
+| `profilbild` | `PATCH /api/me` | Hochladen am Profilbild (`GameSelect.tsx`, `ProfilBild`) |
+| `figur` | `/api/me/figur` | 3D-Figur und Werkstatt im Profil (`GameSelect.tsx`), Pinguin-Karte (`SammlungNeu.tsx`) |
+| `geburtstag` | `POST /api/me/birthday-reward` | Geburtstagsabschnitte im Profil (`GameSelect.tsx`); `/api/me` meldet `birthdayRewardClaimable: false` |
+
+Der Kauf mit **Münzen** bleibt ohne `shop` möglich — Kleiderschrank, Sammlung
+und Blattwahl hängen daran, und `GET /api/shop` liefert weiter das Regal.
+Die Pinguin-Karte führt nur in die Werkstatt und hängt deshalb an `figur`.
+**Die Anmeldung mit Apple und Google ist bewusst KEIN Teil des Umfangs** —
+sie bleibt auf der Webseite an.
+
+- **Nicht gesetzt (oder leer) = alles an.** So läuft `staging`.
+- Was fehlt, ist auf **beiden** Plattformen weg: nicht in der Auswahl, nicht
+  unter „Kommt bald", und der Server weist jeden direkten Aufruf ab (Tisch
+  anlegen, Beitritt per Code oder Link, Suche, Abstimmung:
+  `gameNotPlayable`; Routen der Funktionen: `nichtImUmfang`). Wer schon an
+  einem Tisch sitzt, kommt weiter zurück.
+- Auch die **Nebenrouten** eines Spiels sind zu, sobald es fehlt: alles mit
+  `:gameId` in der Route (Ranglisten je Spiel, Bestleistungen, Vorgaben,
+  Tischthemen), dazu `SPIEL_ZU_ROUTE` in `app.ts` — die Mememory-Motive
+  und die Übungsrunde im Lernpfad (`/api/lernpfad/uebung`, hängt an
+  `doppelkopf`). Die Spielwerte im Profil (`/api/me`, `/api/players/:id`)
+  zeigen nur Spiele im Umfang; Trophäensumme und Gesamtrangliste zählen
+  weiter alles, was jemand je gespielt hat.
+- **BroCooked** sperrt nur der Client: Allein und zu zweit läuft es ohne
+  Tisch, also ohne Route, die der Server sperren könnte.
+- Der Umfang ist eine **Obergrenze**: Er nimmt nur weg. Was drinsteht, ist so
+  frei, wie `FREIGABE` und die `inApp`-Weichen es heute sagen.
+- Der Client bekommt die Liste mit `/api/me` (`umfang`, `null` = alles); ein
+  Deploy genügt, installierte Apps folgen beim nächsten Öffnen.
+- Beim Start schreibt der Server eine Zeile in die Railway-Logs: `Umfang
+  (18): abstimmung, backgammon, …` mit der Zahl der Einträge, ohne Variable
+  `Umfang: alles an (UMFANG nicht gesetzt, wie staging)` — steht das auf der
+  Produktion, greift die Variable nicht. Vertippte Namen kommen als Warnung
+  `UMFANG unbekannt: …` dazu.
+- Bewusst kein Schalter in der Oberfläche und keine Einstellung je Konto.
 
 ### Moderation
 
