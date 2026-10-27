@@ -80,6 +80,11 @@ test('mit STAGING_ZUGANG frei: Gesundheit, Verknuepfungsdateien, App, Bearer', a
   const app = await s.app.inject({ url: '/api/games', headers: { origin: APP_ORIGIN } });
   assert.equal(app.statusCode, 200, 'die TestFlight-Fassung kann keine Passwortabfrage beantworten');
 
+  // bro-server mit Dienstschluessel: am Schutz vorbei, die Route sagt dann selbst nein.
+  const dienst = await s.app.inject({ url: '/api/herkunft/auswertung', headers: { 'x-herkunft-schluessel': 'falsch' } });
+  assert.notEqual(dienst.statusCode, 401);
+  assert.equal(dienst.headers['www-authenticate'], undefined);
+
   // Ein Bearer kommt am Schutz vorbei — die Route prueft ihn dann selbst.
   const bearer = await s.app.inject({ url: '/api/me', headers: { authorization: 'Bearer kein-echtes-token' } });
   assert.equal(bearer.statusCode, 401);

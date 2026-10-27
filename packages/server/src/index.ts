@@ -171,6 +171,7 @@ async function main(): Promise<void> {
     stage: config.stage,
     diagnoseSchluessel: config.diagnoseSchluessel,
     herkunftSchluessel: config.herkunftSchluessel,
+    teamSchluessel: config.teamSchluessel,
     googleClientId: config.googleClientId,
     appInhalt,
     umfang,

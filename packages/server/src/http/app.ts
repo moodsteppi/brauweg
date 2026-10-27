@@ -60,6 +60,7 @@ import { browortRouten } from './browort-routen.js';
 import { manufakturRouten } from './manufaktur-routen.js';
 import { browortKurz, browortProfil } from '../browort/dienst.js';
 import { herkunftRouten } from './herkunft-routen.js';
+import { teamRouten } from './team-routen.js';
 import { gastkontoZaehlen } from '../herkunft.js';
 import { zaehle } from '../statistik.js';
 import { lernserieKurz } from '../lernpfad.js';
@@ -365,6 +366,8 @@ export interface AppDeps {
    * src/herkunft.ts). Fehlt er, ist `/api/herkunft/auswertung` zu.
    */
   readonly herkunftSchluessel?: string | null;
+  /** Schluessel fuer die Team-Schnittstelle des brotool (`TEAM_SCHLUESSEL`, http/team-routen.ts). */
+  readonly teamSchluessel?: string | null;
   /**
    * OAuth-Client-ID fuer "Mit Google anmelden" (GOOGLE_CLIENT_ID). Fehlt
    * sie, gibt es den Knopf nicht — der Rest der Anmeldung laeuft unveraendert.
@@ -991,6 +994,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   herkunftRouten(app, {
     db: deps.db,
     schluessel: deps.herkunftSchluessel ?? null,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // brotool-Dashboard und Muenz-Codes — siehe dort.
+  teamRouten(app, {
+    db: deps.db,
+    schluessel: deps.teamSchluessel ?? null,
+    requireAccount,
+    istApp: istAppHerkunft,
     limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
