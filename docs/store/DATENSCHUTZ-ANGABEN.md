@@ -1,13 +1,19 @@
 # Datenschutz-Angaben: Apple „App Privacy" und Google „Data safety"
 
-Stand 23.09.2026, Version 1.0. Abgeleitet aus dem, was Server und Client
+Stand 27.10.2026, Version 1.0 (zuerst 23.09.2026; nachgezogen: Push, Mit
+Apple anmelden in der App, Tagesstatistik, Werbekennung, neue Spiele). Abgeleitet aus dem, was Server und Client
 **wirklich speichern** — jede Zeile mit Beleg. Zeilennummern gelten für den
 Stand dieses Zweigs; wer sie nach einer Änderung nachschlägt, sucht den
 genannten Bezeichner.
 
 Grundsätze, die für beide Formulare gelten:
 
-- **Kein Tracking, keine Werbung, keine Analyse von Dritten.** Im Client
+- **Kein Tracking, keine Werbung, keine Analyse von Dritten.** Die
+  Tagesstatistik des Servers (`stats_tag`, `packages/server/src/statistik.ts`,
+  PR #328) zählt nur Summen je Tag und Merkmal, ohne Konto-, Tisch- oder
+  Gerätekennung — für Apple keine erhobene Datenart „verknüpft", für Google
+  keine Datenerhebung im Sinne des Formulars (anonym, nicht einem Nutzer
+  zuordenbar). Sie steht trotzdem in der Datenschutzerklärung. Im Client
   steckt kein SDK dieser Art; die einzige Telemetrie (`aufzeichnung.ts`)
   läuft nur am Feldherr-Tisch (`FeldherrTisch.tsx:774`), und Feldherr steht
   in der App auf „Bald". Der Feedback-Knopf erscheint nur auf staging
@@ -31,7 +37,7 @@ Grundsätze, die für beide Formulare gelten:
 | Anzeigename | alle, auch Gäste | `account.displayName`, `schema.ts:136`; Gast: `app.ts:831–842` | ja |
 | Geburtsdatum | Konten mit Mail (Pflicht, ab 18) | `account.birthday`, `schema.ts:228`; `assertValidBirthday`, `packages/server/src/birthday.ts:11,47` | Konto ja, Gast nein |
 | Konto-ID | alle | `account.id`, `schema.ts:130` | ja |
-| Bindung an Google/Apple | nur Webseite (in der App aus, `AnbieterKnoepfe.tsx:83`) | `account_identity`, `schema.ts:295` | — |
+| Bindung an Apple (App und Web) bzw. Google (nur Web): Anbieter-Kennung `sub`, E-Mail (bei Apple ggf. Weiterleitungsadresse) | wer sich so anmeldet | `account_identity`; App-Weg `apps/ios/Brauweg/AppleAnmeldung.swift`, Server `auth/apple.ts` (PR #330) | nein |
 | Sitzungen (nur Hash, **keine IP, kein Gerät**) | alle | `session`, `schema.ts:346–364` | ja |
 | Profilbild | nur wer es **auf der Webseite** hochlädt; in der App aus (`GameSelect.tsx:3410`) | `account.avatar` (data-URL), `schema.ts:207`; ausgeliefert `app.ts:1366` | nein |
 | Figurbemalung (Striche, kein Bild) | wer bemalt | `account.figurBemalung`, `schema.ts:223` | nein |
@@ -45,7 +51,12 @@ Grundsätze, die für beide Formulare gelten:
 | Clan-Nachrichten | **nur Webseite** (Chat in der App aus, `Clan.tsx:280,338`) | `club_message` `:722` | nein |
 | Meldungen (Grund + optional Freitext bis 500 Zeichen) | wer meldet | `report` `:1108`; `melden-routen.ts:127` | nein |
 | Server-Protokolle (IP, Zeit, Adresse) | alle | Railway-Logs, Aufbewahrung **offen** (rote Lücke in der Datenschutzerklärung) | technisch |
-| **Geräte-Token für Push** | **ja, iOS seit 13.10.2026** (`BRAUWEG_PUSH = YES`) — Apple-Formular vor der nächsten Einreichung anpassen (Checkliste F3) | — | — |
+| **Geräte-Token für Push** (Token, Plattform, Zeitpunkte, Bezug zur Sitzung) | wer Mitteilungen erlaubt (iOS seit 13.10.2026, `BRAUWEG_PUSH = YES`) | `geraet_push`; Löschen beim Abmelden (`loescheGeraeteDerSitzung`) und bei der Kontolöschung (`loescheGeraeteDesKontos`, `push/geraete.ts`) | nein (Systemabfrage) |
+| Abgeschaltete Mitteilungsarten | wer etwas abschaltet | `push_einstellung` | nein |
+| Fortschritt Lernpfad, Browort/Clanwort, Kartenmanufaktur | wer spielt | `lernpfad`, `browort_stand`, `browort_runde`, `clanwort_tag`, `clanwort_runde`, `manufaktur` (Migrationen 0034, 0036, 0037) | ja (Spielbetrieb) |
+| Werbekennung (`?q=`) eines Gastkontos | nur über einen Werbelink entstandene Konten | `account.herkunft`; Summen ohne Personenbezug in `herkunft_zaehler` (`src/herkunft.ts`); bei Löschung `null` | — |
+| Letzter aktiver Tag (nur Datum) | alle angemeldeten | `account.zuletztAktiv`, nur für die Tageszahl „aktive Konten" | technisch |
+| Beitrittsanfragen an Tischen | wer anfragt | `tisch_anfrage` (Migration 0033), verschwindet nach Antwort | nein |
 
 Nicht erhoben: Standort, Kontakte, Fotos/Kamera in der App, Telefonnummer,
 Anschrift, Zahlungsdaten (keine Käufe in der App), Werbe-ID,
@@ -69,7 +80,8 @@ keine Werbung, keine Analyse, keine Personalisierung durch Dritte).
 | Nutzerinhalte → **Andere Nutzerinhalte** | ja | Clan-Name und -Motto, Figurbemalung, Meldetext |
 | Nutzungsdaten → **Produktinteraktion** | ja | Tagesaufgaben-Fortschritt, Stufe/XP — vorsichtshalber; Apple zählt „saved place in a game" dazu |
 | Nutzerinhalte → Fotos oder Videos | **nein** | In der App gibt es keinen Upload (`GameSelect.tsx:3410`). **Geht der Upload in der App an: ja, verknüpft, App-Funktion.** |
-| Kennungen → Geräte-ID | **nein** | Heute keine. **Mit Push:** das APNs-Token ist nach Apples Definition keine Geräte-ID im Werbesinn — trotzdem beim Einbau entscheiden und hier nachtragen. |
+| Kennungen → **Geräte-ID** | **ja** (Vorschlag) | Das APNs-Token ist keine Werbe-ID, aber eine gerätebezogene Kennung am Konto. Angeben: verknüpft ja, Tracking nein, Zweck App-Funktionalität. Weglassen wäre vertretbar, Angeben kostet nichts. |
+| Kontaktinformationen → E-Mail-Adresse | (wie oben) | Gilt auch für „Mit Apple anmelden": Apple liefert die Adresse oder eine Weiterleitungsadresse. Kein eigener Eintrag nötig. |
 | Diagnose | **nein** | siehe Grundsätze |
 | Standort, Kontakte, Käufe, Finanzdaten, Gesundheit, Browserverlauf, Suchverlauf | **nein** | |
 
@@ -108,7 +120,7 @@ Play Console → *App-Inhalte → Datensicherheit*.
 | Fotos und Videos → Fotos | **nein** | kein Upload in der App |
 | Nachrichten → Sonstige In-App-Nachrichten | **nein** | Clan-Chat in der App aus |
 | App-Info und -Leistung | **nein** | |
-| Geräte- oder sonstige IDs | **nein** | **mit Push: Firebase-Token → „Geräte- oder sonstige IDs", Zweck App-Funktionalität** |
+| Geräte- oder sonstige IDs | **ja**, optional | Firebase-Token für Mitteilungen, Zweck App-Funktionalität (erst mit der Android-App) |
 | Standort, Finanzen, Kontakte, Gesundheit, Dateien, Kalender, Audio | **nein** | |
 
 Keine Sicherung des App-Speichers (`allowBackup=false`, `docs/APP-RELEASE.md` 4.4).
@@ -147,10 +159,17 @@ Moderation. So steht es auch auf der Löschseite.
 
 ---
 
-## Vorschlag für die Datenschutzerklärung (Robin gibt frei)
+## Datenschutzerklärung — Entwurf vom 27.10.2026 (Robin gibt frei)
 
-Die Erklärung unter `packages/client/public/rechtliches/datenschutz.html`
-ist **nicht** angefasst. Beim Abgleich mit dem Code und den Store-Angaben
+Die Vorschläge 1–5, 7 und 8 unten sind seit dem 27.10.2026 **als Entwurf in
+`packages/client/public/rechtliches/datenschutz.html` eingearbeitet**, dazu
+die Tagesstatistik, die Werbekennung, die neuen Spiele und Apple/Google als
+Empfänger. Die roten Lücken (Name, Anschrift, Support-Adresse,
+Datenbankanbieter, Regionen, Protokoll-Aufbewahrung, Datum) sind bewusst
+offen. Vor der Veröffentlichung: Robin liest gegen, idealerweise jemand mit
+juristischer Ausbildung.
+
+Ursprünglich (23.09.2026) war die Erklärung nicht angefasst. Beim Abgleich mit dem Code und den Store-Angaben
 fällt auf, was vor der Einreichung nachgezogen werden sollte:
 
 1. **Gastkonten fehlen.** Ein Gast hat nur Anzeigenamen und Spielstand,

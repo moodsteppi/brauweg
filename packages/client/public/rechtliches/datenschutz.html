@@ -73,7 +73,8 @@
 
       <div class="hinweis">
         <strong>Noch auszufüllen.</strong> Die rot markierten Stellen brauchen die echten
-        Angaben. Der beschriebene Umgang mit Daten entspricht dem, was die Anwendung
+        Angaben. Stand des Entwurfs: 27.10.2026 (Anmeldung mit Apple/Google, Mitteilungen,
+        Nutzungsstatistik, Werbekennung, neue Spiele ergänzt). Der beschriebene Umgang mit Daten entspricht dem, was die Anwendung
         tatsächlich tut — geprüft am Code, nicht abgeschrieben. Vor dem öffentlichen Start
         sollte trotzdem jemand mit juristischer Ausbildung darüberschauen; diese Datei ist
         keine Rechtsberatung.
@@ -81,9 +82,9 @@
 
       <h2>1. Verantwortlicher</h2>
       <p>
-        <span class="luecke">NAME</span><br />
-        <span class="luecke">ANSCHRIFT</span><br />
-        E-Mail: <span class="luecke">SUPPORT-ADRESSE</span>
+        Tom Justus Tiedtke<br />
+        Brauweg 23, 37075 Göttingen<br />
+        E-Mail: <a href="mailto:tom@broweg.de">tom@broweg.de</a>
       </p>
       <p>
         Ein Datenschutzbeauftragter ist nicht bestellt; die gesetzlichen Schwellen dafür
@@ -121,11 +122,33 @@
           <td>Art. 6 Abs. 1 lit. b und lit. c DSGVO</td>
         </tr>
         <tr>
-          <td>Einladungscode</td>
-          <td>Zugangsbeschränkung während der geschlossenen Testphase</td>
+          <td>Einladungscode, falls angegeben</td>
+          <td>Zuordnung zu einer Einladung; seit der Öffnung freiwillig</td>
           <td>Art. 6 Abs. 1 lit. f DSGVO (Missbrauchsvermeidung)</td>
         </tr>
       </table>
+
+      <h3>Ohne Konto (als Gast)</h3>
+      <p>
+        Als Gast speichern wir nur den gewählten Anzeigenamen und was du spielst — keine
+        E-Mail-Adresse, kein Geburtsdatum. Verlierst du die Sitzung, kommst du nicht wieder
+        hinein; du kannst ein Gastkonto jederzeit mit E-Mail und Passwort oder über Apple
+        bzw. Google sichern.
+      </p>
+
+      <h3>Anmeldung mit Apple oder Google</h3>
+      <p>
+        Statt mit E-Mail und Passwort kannst du dich mit deiner Apple-ID anmelden (in der
+        iOS-App und auf der Webseite) oder mit deinem Google-Konto (nur auf der Webseite).
+        Dabei öffnet sich ein Fenster des jeweiligen Anbieters; dort meldest du dich an,
+        nicht bei uns. Wir erhalten vom Anbieter eine Kennung, die dich bei diesem Anbieter
+        für Brauweg eindeutig bezeichnet, und deine E-Mail-Adresse — bei Apple auf Wunsch
+        eine Weiterleitungsadresse von Apple („E-Mail-Adresse verbergen"), beim ersten
+        Mal auch deinen Vornamen als Vorschlag für den Anzeigenamen. Wir speichern die
+        Kennung und die E-Mail-Adresse, um dich wiederzuerkennen. Ein Passwort des
+        Anbieters erhalten wir nie. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
+        Für die Verarbeitung beim Anbieter gelten dessen Datenschutzbestimmungen.
+      </p>
 
       <h3>Während der Nutzung</h3>
       <table>
@@ -151,17 +174,68 @@
           <td>Art. 6 Abs. 1 lit. b DSGVO</td>
         </tr>
         <tr>
+          <td>Fortschritt in Doppelkopf lernen, Browort und Clanwort (Versuche, Serie), Kartenmanufaktur, Figur und Kleidung</td>
+          <td>Spielstand, Serien und Belohnungen; im Clanwort sehen die Clanmitglieder deine Versuche und, an deinem Tag, das von dir gewählte Wort</td>
+          <td>Art. 6 Abs. 1 lit. b DSGVO</td>
+        </tr>
+        <tr>
+          <td>Meldungen (Grund, optionaler Text, meldende und gemeldete Person) und Blockierungen</td>
+          <td>Schutz der Mitspieler; Meldungen gehen an das Betreiberteam</td>
+          <td>Art. 6 Abs. 1 lit. f DSGVO</td>
+        </tr>
+        <tr>
+          <td>Werbekennung im Link (<code>?q=…</code>), über den ein Gastkonto entstanden ist</td>
+          <td>
+            Zu sehen, welche unserer Anzeigen Spieler bringen. Am Konto steht nur die
+            Kennung der Anzeige; ausgewertet werden ausschließlich Summen je Anzeige und
+            Tag, ohne Bezug zu einer Person.
+          </td>
+          <td>Art. 6 Abs. 1 lit. f DSGVO</td>
+        </tr>
+        <tr>
+          <td>Letzter Tag mit Nutzung (nur das Datum)</td>
+          <td>Zählen, wie viele Konten an einem Tag aktiv waren</td>
+          <td>Art. 6 Abs. 1 lit. f DSGVO</td>
+        </tr>
+        <tr>
           <td>Server-Protokolle (IP-Adresse, Zeitpunkt, aufgerufene Adresse)</td>
           <td>Betrieb, Fehlersuche, Abwehr von Überlastung und Missbrauch</td>
           <td>Art. 6 Abs. 1 lit. f DSGVO</td>
         </tr>
       </table>
 
+      <h3>Mitteilungen auf dem Handy (Push)</h3>
+      <p>
+        In der App kannst du Mitteilungen erlauben, etwa wenn du am Zug bist, eine Partie
+        startet, dich jemand einlädt oder deine Serie zu reißen droht. Erlaubst du sie, speichern wir das Geräte-Token,
+        das uns Apple (iOS) bzw. Google (Android) dafür gibt, zusammen mit deinem Konto,
+        der Plattform und dem Zeitpunkt der letzten Nutzung, sowie welche Arten von
+        Mitteilungen du abgeschaltet hast. Zum Zustellen schicken wir Token und Text der
+        Mitteilung an Apple (Apple Push Notification Service) bzw. Google (Firebase Cloud
+        Messaging). Beim Abmelden werden die Token dieser Anmeldung gelöscht, beim Löschen
+        des Kontos alle. Abschalten kannst du Mitteilungen jederzeit in der App oder in den
+        Einstellungen deines Geräts. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1
+        lit. a DSGVO, § 25 Abs. 1 TDDDG), die du über die Abfrage des Geräts erteilst.
+      </p>
+
+      <h3>Nutzungsstatistik ohne Personenbezug</h3>
+      <p>
+        Um zu verstehen, was gespielt wird, zählt unser Server Summen je Kalendertag —
+        etwa wie viele Tische angelegt, Partien gestartet und beendet, Konten angelegt
+        oder Lektionen abgeschlossen wurden, welche Spiele und Regelvarianten dabei
+        gewählt waren. Gespeichert wird nur die Zahl je Tag und Merkmal, ohne Konto-,
+        Tisch- oder Gerätekennung; es wird nichts auf deinem Gerät gespeichert oder
+        ausgelesen und kein Dienst eines Dritten eingebunden. Rechtsgrundlage ist unser
+        berechtigtes Interesse an der Verbesserung des Angebots (Art. 6 Abs. 1 lit. f
+        DSGVO).
+      </p>
+
       <div class="kasten">
-        <strong>Was wir nicht tun:</strong> Es gibt keine Werbung, kein Tracking, keine
-        Analysedienste, keine Weitergabe an Dritte zu Werbezwecken und keine
-        Profilbildung über die Spielstatistik hinaus. Es werden keine Cookies zu
-        Werbe- oder Analysezwecken gesetzt.
+        <strong>Was wir nicht tun:</strong> Es gibt keine Werbung in der Anwendung, kein
+        Tracking über Apps und Webseiten anderer Anbieter hinweg, keine Analysedienste
+        Dritter, keine Weitergabe an Dritte zu Werbezwecken und keine Profilbildung über
+        die Spielstatistik hinaus. Es werden keine Cookies zu Werbe- oder Analysezwecken
+        gesetzt.
       </div>
 
       <h2>3. Cookies</h2>
@@ -172,20 +246,24 @@
         und wird nur über HTTPS übertragen. Eine Einwilligung ist dafür nach § 25 Abs. 2
         TDDDG nicht erforderlich, deshalb gibt es auch keinen Cookie-Banner.
       </p>
+      <p>
+        In der App gibt es kein Cookie: Dort liegt das Sitzungstoken im Speicher der App auf
+        deinem Gerät, aus demselben Grund und mit derselben Gültigkeit.
+      </p>
 
       <h2>4. Empfänger und Auftragsverarbeiter</h2>
       <p>Zum Betrieb setzen wir folgende Dienstleister ein:</p>
       <table>
         <tr><th>Dienst</th><th>Zweck</th><th>Ort</th></tr>
         <tr>
-          <td>Railway</td>
+          <td>Railway Corporation</td>
           <td>Betrieb des Servers und Auslieferung der Anwendung</td>
-          <td>Rechenzentrum in der EU</td>
+          <td><span class="luecke">REGION IN RAILWAY NACHSEHEN</span></td>
         </tr>
         <tr>
-          <td><span class="luecke">DATENBANKANBIETER</span></td>
+          <td>Railway Corporation (PostgreSQL-Datenbank)</td>
           <td>Speicherung von Konten, Partien und Statistiken</td>
-          <td><span class="luecke">REGION EINTRAGEN</span></td>
+          <td><span class="luecke">REGION IN RAILWAY NACHSEHEN</span></td>
         </tr>
         <tr>
           <td>Resend</td>
@@ -193,9 +271,34 @@
             Versand der Bestätigungs- und Passwortmails. Übertragen wird die
             E-Mail-Adresse und der Inhalt der jeweiligen Mail.
           </td>
-          <td><span class="luecke">REGION EINTRAGEN</span></td>
+          <td>EU (Irland); Resend, Inc. hat ihren Sitz in den USA</td>
         </tr>
       </table>
+      <p>
+        Nur wenn du die jeweilige Funktion nutzt, sind außerdem beteiligt. Ausnahme auf der
+        Webseite: Sobald dort der Anmeldeschirm erscheint, lädt dein Browser die Anmeldeskripte
+        von Google (accounts.google.com) und Apple (appleid.cdn-apple.com), damit die Knöpfe
+        „Mit Google anmelden" und „Mit Apple anmelden" funktionieren. Dabei erhalten Google
+        und Apple deine IP-Adresse und übliche Browserangaben, auch wenn du keinen der Knöpfe
+        benutzt. In der App geschieht das nicht.
+      </p>
+      <table>
+        <tr><th>Empfänger</th><th>Zweck</th><th>Ort</th></tr>
+        <tr>
+          <td>Apple Distribution International Ltd. / Apple Inc.</td>
+          <td>„Mit Apple anmelden"; Zustellung von Mitteilungen auf iOS</td>
+          <td>Irland / USA</td>
+        </tr>
+        <tr>
+          <td>Google Ireland Ltd. / Google LLC</td>
+          <td>„Mit Google anmelden" (nur Webseite); Zustellung von Mitteilungen auf Android</td>
+          <td>Irland / USA</td>
+        </tr>
+      </table>
+      <p>
+        Apple und Google verarbeiten diese Daten als eigene Verantwortliche. Für die
+        Übermittlung in die USA stützen sie sich auf das EU-US Data Privacy Framework.
+      </p>
       <p>
         Mit allen Dienstleistern besteht ein Vertrag zur Auftragsverarbeitung nach
         Art. 28 DSGVO. Soweit ein Dienst außerhalb der EU verarbeitet, geschieht dies auf
@@ -205,17 +308,24 @@
       <h2>5. Speicherdauer und Löschung</h2>
       <p>
         Kontodaten werden gespeichert, solange das Konto besteht. Du kannst dein Konto
-        jederzeit selbst löschen: im Profil-Tab unter <em>Konto löschen</em>. Zur
-        Bestätigung wird das Passwort erneut abgefragt.
+        jederzeit selbst löschen: im Profil-Tab unter <em>Konto löschen</em>, ohne App
+        unter <a href="/konto-loeschen">www.brauweg-spielen.de/konto-loeschen</a>. Zur
+        Bestätigung fragen wir das Passwort ab; hast du keins (Anmeldung mit Apple oder
+        Google), schicken wir einen Code per E-Mail; als Gast bestätigst du mit dem Wort
+        LÖSCHEN.
       </p>
       <div class="kasten">
         <strong>Wie die Löschung wirkt.</strong> Beim Löschen werden E-Mail-Adresse,
-        Passwort, Anzeigename und Geburtsdatum entfernt und das Konto anonymisiert. Die
+        Passwort, Anzeigename, Geburtsdatum, Profilbild und Figurbemalung entfernt, die
+        Verbindung zu Apple oder Google, Freundschaften, Blockierungen, eigene
+        Clan-Nachrichten, Geräte-Token für Mitteilungen und die Werbekennung gelöscht und
+        das Konto anonymisiert. Die
         Zeile selbst bleibt bestehen, weil an ihr die Abrechnungen gemeinsam gespielter
         Partien hängen — würde sie verschwinden, wären auch die Partiehistorien aller
         Mitspieler zerstört. Nach der Anonymisierung lässt sich aus den verbleibenden
         Einträgen kein Bezug mehr zu einer Person herstellen. Aus einem Clan wirst du
-        ausgetragen; führst du ihn, rückt das älteste Mitglied nach.
+        ausgetragen; führst du ihn, rückt das älteste Mitglied nach. Meldungen gegen dein
+        Konto bleiben für die Moderation erhalten.
       </div>
       <p>
         Server-Protokolle werden nach spätestens
@@ -235,7 +345,7 @@
         </li>
       </ul>
       <p>
-        Wende dich dafür an <span class="luecke">SUPPORT-ADRESSE</span>. Außerdem steht dir
+        Wende dich dafür an <a href="mailto:tom@broweg.de">tom@broweg.de</a>. Außerdem steht dir
         ein Beschwerderecht bei einer Datenschutz-Aufsichtsbehörde zu, üblicherweise der
         deines Wohnsitzlandes.
       </p>
