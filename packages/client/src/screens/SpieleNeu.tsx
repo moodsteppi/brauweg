@@ -439,8 +439,10 @@ export function SpieleNeu({
                 Kündigt der Server ihn an (seit 26.10.2026 auch auf der Webseite,
                 abstimmModiFuer in registry.ts), steht er wie in der App unter
                 „Kommt bald" mit Stimme — die feste Marke bleibt nur, wenn die
-                Abstimmung nicht im Umfang ist, sonst stünde er doppelt da. */}
-            {!bald.some((g) => g.id === 'mehrkampf') && (
+                Abstimmung nicht im Umfang ist, sonst stünde er doppelt da.
+                Ohne `mehrkampf` im Umfang fehlt auch die Marke: Was dort nicht
+                steht, ist auf der Webseite weg (server/src/umfang.ts). */}
+            {imUmfang('mehrkampf') && !bald.some((g) => g.id === 'mehrkampf') && (
             <section className="hb-blk">
               <h2 className="hb-ab">
                 <Symbol>

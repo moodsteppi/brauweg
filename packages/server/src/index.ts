@@ -15,7 +15,7 @@ import { connect } from './db/connect.js';
 import * as s from './db/schema.js';
 import { waehleMailer } from './mail/index.js';
 import { APP_ORIGINS, buildApp } from './http/app.js';
-import { appInhaltAusUmgebung, registry } from './games/registry.js';
+import { appInhaltAusUmgebung, umfangKennungen } from './games/registry.js';
 import { umfangAusUmgebung, umfangZeile } from './umfang.js';
 import { appVerknuepfungAusUmgebung } from './http/app-verknuepfung.js';
 import { Gateway } from './realtime/gateway.js';
@@ -128,7 +128,7 @@ async function main(): Promise<void> {
      an der man nachsieht, und ein vertippter Name steht gleich mit da. */
   const { umfang, unbekannt: umfangUnbekannt } = umfangAusUmgebung(
     process.env.UMFANG,
-    registry.all().map((meta) => meta.id),
+    umfangKennungen(),
   );
   // eslint-disable-next-line no-console
   (umfangUnbekannt.length > 0 ? console.warn : console.info)(umfangZeile(umfang, umfangUnbekannt));

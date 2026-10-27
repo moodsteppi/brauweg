@@ -550,6 +550,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
          *
          * Auf dem Entwicklungsserver faellt ein fehlender Eintrag nie auf,
          * Vite setzt keine Richtlinie (dieselbe Falle wie beim Runner-Worker).
+         *
+         * `'unsafe-eval'` und `'wasm-unsafe-eval'` fehlen mit Absicht. Die
+         * Kartenmanufaktur (PixiJS v8) wollte `new Function` und blieb
+         * deshalb im Web schwarz; geloest ist das im Client ueber
+         * `pixi.js/unsafe-eval` (Szene.ts), nicht hier. Wer eine Bibliothek
+         * einbaut, die eval verlangt, sucht zuerst deren Weg ohne eval —
+         * `test/anmeldung-anbieter.test.ts` haelt die Kopfzeile fest.
          */
         scriptSrc: [
           "'self'",
@@ -1972,7 +1979,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/games/:gameId/vote', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { gameId } = z.object({ gameId: z.union([gameIdSchema, z.enum(['prosubway', 'mehrkampf'])]) }).parse(request.params);
-    if (gameId !== 'mehrkampf' && !imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
+    // Auch die Modi (Pro-Subway, Mehrkampf) brauchen ihre Kennung im Umfang.
+    if (!imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
     const modus = gameId === 'prosubway' || gameId === 'mehrkampf';
     const abstimmbar = modus
       ? abstimmModiFuer(plattformVon(request), umfang).some(m => m.id === gameId)
