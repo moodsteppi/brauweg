@@ -80,7 +80,7 @@ Zahlen trägt niemand mehr von Hand nach").
 ## Vorgeschlagene UMFANG-Zeile für die Produktion
 
 ```
-UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad
+UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau
 ```
 
 Begründung in `docs/APP-RELEASE.md`. Gesetzt wird sie erst mit dem Release;

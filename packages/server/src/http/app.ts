@@ -1972,7 +1972,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/games/:gameId/vote', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { gameId } = z.object({ gameId: z.union([gameIdSchema, z.enum(['prosubway', 'mehrkampf'])]) }).parse(request.params);
-    if (gameId !== 'mehrkampf' && !imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
+    // Auch die Modi (Pro-Subway, Mehrkampf) brauchen ihre Kennung im Umfang.
+    if (!imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
     const modus = gameId === 'prosubway' || gameId === 'mehrkampf';
     const abstimmbar = modus
       ? abstimmModiFuer(plattformVon(request), umfang).some(m => m.id === gameId)
