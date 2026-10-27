@@ -26,6 +26,16 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); });
 const zeige = () => render(<TagesShop me={probeKonto({ coins: 5000 })} ziel={{ spiel: 'alle' }} onGuthaben={vi.fn()} onSammlung={vi.fn()} />);
 
 describe('Persönlicher Tages-Shop', () => {
+  it('zeigt Angebote auch dann, wenn nur der Truhenabruf fehlschlägt', async () => {
+    vi.mocked(api.chests).mockRejectedValue(new Error('Truhen vorübergehend nicht erreichbar'));
+    zeige();
+    expect(await screen.findByRole('heading', { name: 'Deine drei Sonderangebote' })).toBeInTheDocument();
+    expect(await screen.findByText(/Die Tagestruhe ist gerade nicht verfügbar/)).toBeInTheDocument();
+    expect(screen.queryByText(/Dein Shop ließ sich nicht laden/)).not.toBeInTheDocument();
+    vi.mocked(api.chests).mockResolvedValue(truhen);
+    fireEvent.click(screen.getByRole('button', { name: 'Erneut laden' }));
+    await waitFor(() => expect(screen.queryByText(/Die Tagestruhe ist gerade nicht verfügbar/)).not.toBeInTheDocument());
+  });
   it('verdeckt alle drei Sonderangebote und deckt genau das gewählte ohne Kauf auf', async () => {
     zeige();
     const episch = await screen.findByRole('button', { name: 'Episches Angebot aufdecken' });
