@@ -55,6 +55,13 @@ export interface Config {
    */
   readonly herkunftSchluessel: string | null;
   /**
+   * Schluessel, mit dem der bro-server das brotool-Dashboard fuellt und
+   * Muenz-Codes erzeugt (`TEAM_SCHLUESSEL`, http/team-routen.ts). Wie der
+   * Herkunftsschluessel erst ab 20 Zeichen gueltig; ohne ihn sind die
+   * Team-Routen zu.
+   */
+  readonly teamSchluessel: string | null;
+  /**
    * OAuth-Client-ID fuer "Mit Google anmelden" (GOOGLE_CLIENT_ID). Ohne sie
    * gibt es den Knopf nicht; E-Mail+Passwort geht immer.
    */
@@ -152,6 +159,8 @@ export function loadConfig(): Config {
       (process.env.HERKUNFT_SCHLUESSEL ?? '').length >= 20
         ? (process.env.HERKUNFT_SCHLUESSEL as string)
         : null,
+    teamSchluessel:
+      (process.env.TEAM_SCHLUESSEL ?? '').length >= 20 ? (process.env.TEAM_SCHLUESSEL as string) : null,
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? null,
     appleClientId: process.env.APPLE_CLIENT_ID || null,
     appleAppId: (process.env.APPLE_APP_ID ?? APPLE_APP_ID_VORGABE) || null,

@@ -66,6 +66,8 @@ export const METRIKEN = [
   'wortspiel_runde',
   /** Kartenmanufaktur, `modus` = Aktionstyp aus dem festen Verzeichnis der Route. */
   'manufaktur_aktion',
+  /** Ein Muenz-Code ist eingeloest (src/muenzcodes.ts) — ohne Code, ohne Betrag. */
+  'code_eingeloest',
 ] as const;
 export type Metrik = (typeof METRIKEN)[number];
 

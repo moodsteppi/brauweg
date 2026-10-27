@@ -857,6 +857,7 @@ function ProfilTab({
         <ImHub>
           <EinstellungenBlatt
             neu
+            onGuthaben={onMeChange}
             onClose={() => {
               spiele('blatt-zu');
               setEinstellungenOffen(false);

@@ -718,6 +718,8 @@ export type AnbieterAnmeldung =
 export const api = {
   /** Ein Aufruf ueber einen Werbelink `?q=` (herkunft.ts). */
   herkunftBesuch: (kennung: string) => post<{ ok: true }>('/herkunft/besuch', { kennung }),
+  /** Muenz-Code einloesen — nur auf der Webseite (server/src/muenzcodes.ts). */
+  codeEinloesen: (code: string) => post<{ ok: true; muenzen: number; stand: number }>('/me/code', { code }),
 
   register: (body: {
     email: string;

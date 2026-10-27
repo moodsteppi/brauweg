@@ -23,7 +23,7 @@ Aufdecken, Preis und Kauf werden serverseitig geprüft. Keine Echtgeldkäufe.
 - Original: separates lokales Archiv `brauweg-art/hub/tagesmarkt/original.png`.
 - Datenbank: Tabelle `tagesmarkt`, Schlüssel `(account_id, tag)`. JSONB enthält
   die festen Tagesplätze, Preise und Aufdeckstatus; `muenzen_geholt` den Bonus.
-  Migration `0039_tagesmarkt.sql`. Kein zusätzlicher Zeitplan nötig: Der Server
+  Migration `0040_tagesmarkt.sql`. Kein zusätzlicher Zeitplan nötig: Der Server
   ermittelt bei jedem Abruf den Berliner Kalendertag.
 - Aufdecken verrät vorher weder Artikel noch Preis und kauft nichts. Kauf und
   Guthaben laufen gemeinsam in einer Transaktion, der Server bestimmt den Preis.
