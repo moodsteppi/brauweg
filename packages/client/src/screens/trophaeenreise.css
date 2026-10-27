@@ -37,16 +37,16 @@
 .trophaeenreise .reise-lohn.ist-geholt em { color: #a9e6c3; }
 .trophaeenreise .reise-start { background: #10213ad9; border: 1px solid #e5c68175; border-radius: 14px; padding: 12px; text-align: center; font-size: 12px; }
 .trophaeenreise .reise-start small { display: block; font-size: 10px; color: #bccbe3; margin-top: 5px; }
-.trophaeenreise .reise-checkpunkt { position: absolute; transform: translate(-50%,-50%); }
-.trophaeenreise .reise-checkpunkt > :is(button,span) { display: flex; align-items: center; gap: 7px; background: #102443ee; color: white; border: 1px solid #8fa5bf; border-radius: 14px; min-height: 48px; padding: 8px 12px; font: inherit; box-shadow: 0 5px 12px #0004; white-space: nowrap; }
+.trophaeenreise .reise-checkpunkt { position: absolute; width: clamp(106px,34vw,134px); transform: translate(calc(-100% - 30px),-50%); }
+.trophaeenreise .reise-checkpunkt > :is(button,span) { display: flex; align-items: center; gap: 7px; background: #102443ee; color: white; border: 1px solid #8fa5bf; border-radius: 14px; min-height: 48px; width: 100%; padding: 8px; font: inherit; box-shadow: 0 5px 12px #0004; white-space: nowrap; }
 .trophaeenreise .reise-checkpunkt img { width: 27px; height: 27px; object-fit: contain; }
-.trophaeenreise .reise-checkpunkt strong { display: block; font-size: 13px; }
-.trophaeenreise .reise-checkpunkt small { display: block; font-size: 10px; color: #bbcee7; margin-top: 3px; }
+.trophaeenreise .reise-checkpunkt strong { display: block; font-size: 12px; }
+.trophaeenreise .reise-checkpunkt small { display: block; font-size: 9px; color: #bbcee7; margin-top: 3px; }
 .trophaeenreise .reise-checkpunkt .ist-bereit { border-color: #ffdc88; background: #674b24f0; cursor: pointer; }
 .trophaeenreise .reise-checkpunkt .ist-geholt { background: #143c3aeb; }
-.trophaeenreise .reise-ich { position: absolute; transform: translate(-100%,-50%); margin-left: -38px; display: flex; flex-direction: column; align-items: center; pointer-events: none; filter: drop-shadow(0 4px 6px #0008); }
+.trophaeenreise .reise-ich { position: absolute; transform: translate(-50%,-100%); z-index: 2; display: flex; flex-direction: column; align-items: center; pointer-events: none; filter: drop-shadow(0 4px 6px #0008); }
 .trophaeenreise .reise-ich > .pinguin { flex: none; }
-.trophaeenreise .reise-ich > span { background: #ffe194; color: #132b4b; padding: 5px 9px; border: 2px solid #fff0bd; border-radius: 10px; font-size: 10px; font-weight: 900; text-align: center; }
+.trophaeenreise .reise-ich > span { position: absolute; right: calc(100% + 7px); bottom: -24px; width: 80px; background: #ffe194; color: #132b4b; padding: 5px 9px; border: 2px solid #fff0bd; border-radius: 10px; font-size: 10px; font-weight: 900; text-align: center; }
 .trophaeenreise .reise-ich small { display: block; font-size: 12px; margin-top: 2px; }
 .trophaeenreise .reise-navigation { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 16px calc(10px + var(--hb-unten,0px)); background: #0a1734; z-index: 3; border-top: 1px solid #354b6d; }
 .trophaeenreise .reise-navigation > span { font-size: 11px; color: #d2ddf1; }
