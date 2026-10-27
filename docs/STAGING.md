@@ -49,6 +49,7 @@ Gesetzt sind (Stand 4. August 2026): `NODE_ENV`, `MIGRATE_ON_BOOT`,
 | --- | --- | --- |
 | `STAGE` | `staging` | Das kleine graue Schild in der Kopfzeile |
 | `STAFF_EMAILS` | `robin.hellmut+staging@gmail.com` | Testkonten, siehe Abschnitt 3 |
+| `STAGING_ZUGANG` | `name:passwort` (im Passwortmanager) | Webseite nur fürs Team, siehe unten (seit 27.10.2026) |
 
 **Warum eine Plus-Adresse und nicht die normale?** Nötig wäre es nicht —
 staging hat eine eigene Datenbank, dieselbe Adresse dort wäre ohnehin ein
@@ -69,6 +70,18 @@ Fach, für Brauweg ist es aber eine andere Adresse und damit ein anderes Konto.
 wirklich raus, über dieselbe verifizierte Domain wie in der Produktion. Wer
 das nicht will, entfernt die Variable in der Staging-Umgebung; dann steht der
 Bestätigungslink im Log des Dienstes (Suche: `MAIL`).
+
+**Zugangsschutz (`STAGING_ZUGANG`).** Seit dem 27.10.2026 fragt die
+Webseite auf staging nach Name und Passwort (HTTP Basic,
+`packages/server/src/http/zugangsschutz.ts`), damit niemand außerhalb des
+Teams in Unfertiges läuft. Der Browser merkt sich die Angabe. Frei bleiben:
+`/api/health` (Railways Gesundheitsprüfung), `/.well-known/*` (Apple, Google),
+die App — also auch die TestFlight-Fassung „Brauweg Test" — und Aufrufe mit
+eigenem Bearer-Schlüssel. Die Werkzeuge `werkzeug/store/screenshots.mjs` und
+`clips.mjs` lesen dieselbe Variable und schicken die Angabe mit. Ein
+unbrauchbarer Wert (kein Name, Passwort unter 8 Zeichen) lässt den Server
+nicht starten — lieber laut als still offen. Variable entfernen = wieder
+offen.
 
 **Watch Paths leer lassen.** Das Feld erwartet Glob-Muster, eine Zeile je
 Pfad. Steht dort etwas anderes (schon einmal passiert: der Inhalt von

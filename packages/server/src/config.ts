@@ -6,6 +6,7 @@
  * als einer, der gar nicht startet.
  */
 
+import { leseZugang } from './http/zugangsschutz.js';
 import { parseStaffEmails } from './staff.js';
 
 /**
@@ -91,6 +92,13 @@ export interface Config {
    * verschwinden.
    */
   readonly feedbackZielUrl: string | null;
+  /**
+   * Zugangsschutz fuer staging (STAGING_ZUGANG=name:passwort): Die Webseite
+   * fragt nach Name und Passwort; App, Gesundheitspruefung und
+   * Verknuepfungsdateien bleiben frei (http/zugangsschutz.ts). Ungesetzt:
+   * offen, wie in Produktion.
+   */
+  readonly stagingZugang: string | null;
   /** `Authorization: Bearer …` fuer obige URL — dort `FEEDBACK_SCHLUESSEL`. */
   readonly feedbackZielToken: string | null;
 }
@@ -152,6 +160,7 @@ export function loadConfig(): Config {
       (process.env.APPLE_CLIENT_ID ? `${publicUrl.replace(/\/+$/, '')}/api/auth/apple/rueckweg` : null),
     appleDomainVerknuepfung: process.env.APPLE_DOMAIN_ASSOCIATION || null,
     feedbackZielUrl: process.env.FEEDBACK_ZIEL_URL ?? null,
+    stagingZugang: leseZugang(process.env.STAGING_ZUGANG),
     feedbackZielToken: process.env.FEEDBACK_ZIEL_TOKEN ?? null,
   };
 }
