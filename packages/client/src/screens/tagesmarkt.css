@@ -33,10 +33,10 @@
 .tages-shop .stufe-selten .markt-verdeckt svg { stroke: #83c5ff; }.tages-shop .stufe-episch .markt-verdeckt svg { stroke: #d7adff; }
 .tages-shop .markt-verdeckt text { fill: #ffdf93; stroke: none; font: 900 36px 'Nunito Variable',sans-serif; }
 .tages-shop .markt-verdeckt strong { font-size: 12px; line-height: 1.25; }.tages-shop .markt-verdeckt small { font-size: 10px; color: #aebfdb; }
-:is(.tages-shop,.sammlung-neu) .markt-bild { display: grid; place-items: center; height: 100px; width: 100%; overflow: hidden; margin: 8px 0; border-radius: 10px; background: #08162f55; }
-:is(.tages-shop,.sammlung-neu) .markt-bild img { width: 100%; height: 100%; object-fit: contain; }
-:is(.tages-shop,.sammlung-neu) .markt-bild.art-szene img { object-fit: cover; }
-:is(.tages-shop,.sammlung-neu) .markt-bild.ist-schach img { width: 80%; height: 90%; }
+:is(.tages-shop,.sammlung-neu) .markt-bild { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 100px; height: 100px; width: 100%; overflow: hidden; margin: 8px 0; border-radius: 10px; background: #08162f55; }
+:is(.tages-shop,.sammlung-neu) .markt-bild img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; object-position: center; }
+:is(.tages-shop,.sammlung-neu) .markt-bild.art-szene img { object-fit: cover; object-position: center top; }
+:is(.tages-shop,.sammlung-neu) .markt-bild.ist-schach img { inset: 5% 10%; width: 80%; height: 90%; }
 :is(.tages-shop,.sammlung-neu) .markt-stueck { display: flex; justify-content: center; align-items: center; height: 100px; overflow: hidden; }
 .tages-shop .markt-artikelname { text-align: center; font-size: 12px; line-height: 1.25; min-height: 30px; margin: 6px 0; }
 .tages-shop .markt-preis { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-items: center; min-height: 35px; color: #ffe296; font-size: 13px; font-weight: 900; }
@@ -73,3 +73,12 @@
 
 /* Ein einzelner Figurensatz soll nicht in einer schmalen Dreierspalte verschwinden. */
 .tages-shop .markt-regulaer:has(> :only-child) { grid-template-columns: minmax(0, 200px); justify-content: center; }
+
+/* WebKit darf die Bildhöhe nicht aus einer impliziten Grid-Zeile ableiten:
+   sonst wächst das Bild über den festen Ausschnitt und wird unten abgeschnitten. */
+.sammlung-neu .sam-design > .markt-bild { height: 132px; flex-basis: 132px; margin: 0 0 5px; background: linear-gradient(145deg,#152b48,#0a1930); }
+.sammlung-neu .sam-design > .markt-bild:not(.art-szene) img { padding: 8px; box-sizing: border-box; }
+.sammlung-neu .sam-design > .markt-bild.art-szene { height: 104px; flex-basis: 104px; }
+.sammlung-neu .sam-design { padding: 9px; border-radius: 17px; }
+.sammlung-neu .sam-design > strong { padding: 2px 3px; font-size: 13px; }
+.sammlung-neu .sam-design > small { padding: 1px 3px; font-size: 11px; }

@@ -15,6 +15,7 @@ export function TagesShop({ me, ziel, onGuthaben, onSammlung }: {
 }) {
   const [markt, setMarkt] = useState<Tagesmarkt | null>(null);
   const [truhen, setTruhen] = useState<Truhen | null>(null);
+  const [truhenFehler, setTruhenFehler] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [fund, setFund] = useState<Fund | null>(null);
@@ -27,8 +28,12 @@ export function TagesShop({ me, ziel, onGuthaben, onSammlung }: {
     offset.current = Date.parse(m.serverZeit) - Date.now(); setMarkt(m); erneuert.current = false;
   }, []);
   const laden = useCallback(async () => {
-    try { const [m, k] = await Promise.all([api.tagesmarkt(), api.chests()]); uebernehmen(m); setTruhen(k); setFehler(null); }
-    catch { setFehler('Dein Shop ließ sich nicht laden. Bitte versuche es erneut.'); }
+    // Die Tagestruhe ist unabhängig vom Angebot: ihr Ausfall darf den Shop nicht verstecken.
+    const [m, k] = await Promise.allSettled([api.tagesmarkt(), api.chests()]);
+    if (m.status === 'fulfilled') { uebernehmen(m.value); setFehler(null); }
+    else setFehler('Dein Shop ließ sich nicht laden. Bitte versuche es erneut.');
+    if (k.status === 'fulfilled') { setTruhen(k.value); setTruhenFehler(false); }
+    else { setTruhen(null); setTruhenFehler(true); }
   }, [uebernehmen]);
   useEffect(() => { void laden(); }, [laden, me.coins]);
   useEffect(() => { setFilter(ziel.spiel); }, [ziel]);
@@ -87,7 +92,7 @@ export function TagesShop({ me, ziel, onGuthaben, onSammlung }: {
       {markt && <>
         <section className="markt-bereich"><h2>Dein tägliches Geschenk</h2><div className="markt-geschenke">
           <div><img src="/hub/muenze.png" alt="" /><strong>{markt.gratisMuenzen.betrag} Münzen</strong><small>Jeden Tag gratis</small><button className="markt-knopf" disabled={!!busy || markt.gratisMuenzen.geholt} onClick={() => void ausfuehren('gratis', () => api.marktGratis(markt.tag))}>{markt.gratisMuenzen.geholt ? 'Heute abgeholt ✓' : 'Gratis abholen'}</button></div>
-          <div><img src={truhenBild('holz')} alt="" /><strong>Tages-Holztruhe</strong><small>Eine Truhe pro Tag</small><button className="markt-knopf" disabled={!!busy || !truhen?.tag.offen || truhen.tag.geholt} onClick={() => { if (truhen) void ausfuehren('truhe', async () => setFund(await api.openChest(truhen.tag.id))); }}>{truhen?.tag.geholt ? 'Heute geöffnet ✓' : 'Gratis öffnen'}</button></div>
+          <div><img src={truhenBild('holz')} alt="" /><strong>Tages-Holztruhe</strong><small>Eine Truhe pro Tag</small><button className="markt-knopf" disabled={!!busy || !truhen?.tag.offen || truhen.tag.geholt} onClick={() => { if (truhen) void ausfuehren('truhe', async () => setFund(await api.openChest(truhen.tag.id))); }}>{truhen?.tag.geholt ? 'Heute geöffnet ✓' : 'Gratis öffnen'}</button>{truhenFehler && <small role="status">Die Tagestruhe ist gerade nicht verfügbar. <button className="markt-truhen-neu" onClick={() => void laden()}>Erneut laden</button></small>}</div>
         </div></section>
         <section className="markt-bereich"><h2>Deine drei Sonderangebote</h2><p>Einmal aufdecken. Bis Mitternacht für dich reserviert.</p><div className="markt-sonder">{markt.angebote.filter(a => a.stufe).map(angebot)}</div></section>
         <section className="markt-bereich"><h2>Die heutige Auswahl</h2><p>Zehn wechselnde Plätze zum regulären Preis. Was du kaufst, bleibt in deiner Sammlung.</p>

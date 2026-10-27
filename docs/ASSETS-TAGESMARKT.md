@@ -62,3 +62,9 @@ Kartenwerte statt einer dort nicht vorhandenen Dame.
 Prüfung des Nachtrags: vollständiger Build, 1.989 Client-Tests sowie neun
 Tagesmarkt-Servertests erfolgreich. Die Auswahländerung und die Textkarten-
 Vorschau vor dem Doppelkopf-Start zusätzlich im iPhone-Layout bedient.
+
+iOS-Nachbesserung: Bildflächen haben einen festen relativen Rahmen und
+absolut eingepasste Bilder. Das verhindert WebKit-Überläufe aus impliziten
+Grid-Zeilen; Karten bleiben vollständig, Tische füllen ihre Vorschau aus.
+Tagesmarkt und Tagestruhe laden unabhängig; ein Truhenfehler versteckt
+nicht die Angebote und kann separat erneut versucht werden.
