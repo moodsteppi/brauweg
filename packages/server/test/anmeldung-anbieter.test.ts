@@ -939,6 +939,22 @@ test('die Kopfzeilen lassen die Anbieter-Popups zu, und nur diese', async (t) =>
   assert.doesNotMatch(csp, /appleid\.apple\.com/, 'der Popup-Modus braucht Apples Anmeldeseite nicht in der CSP');
 });
 
+test('die CSP erlaubt kein eval, auch keins fuer WebAssembly', async (t) => {
+  const a = await app();
+  t.after(() => a.close());
+
+  const res = await a.server.inject({ url: '/api/auth/google/config' });
+  const csp = String(res.headers['content-security-policy']);
+  const direktive = (name: string) =>
+    csp.split(';').map((d) => d.trim()).find((d) => d.startsWith(`${name} `)) ?? '';
+  // Pixi (Kartenmanufaktur) laeuft ueber `pixi.js/unsafe-eval` ohne eval.
+  // Rutscht eine dieser Quellen hier hinein, ist der Schutz gegen
+  // eingeschleustes Skript fuer die ganze Seite weg — nicht nur fuer Pixi.
+  assert.notEqual(direktive('script-src'), '', 'script-src fehlt in der Kopfzeile');
+  assert.doesNotMatch(csp, /'unsafe-eval'/);
+  assert.doesNotMatch(csp, /'wasm-unsafe-eval'/);
+});
+
 test('Tagesstatistik: Erstanmeldung zaehlt als neues Konto, Sichern ueber den Anbieter als Upgrade', async (t) => {
   // Was andere Tests dieses Prozesses gezaehlt haben, gehoert nicht hierher
   // (src/statistik.ts puffert je Prozess).

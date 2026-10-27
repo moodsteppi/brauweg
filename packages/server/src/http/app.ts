@@ -550,6 +550,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
          *
          * Auf dem Entwicklungsserver faellt ein fehlender Eintrag nie auf,
          * Vite setzt keine Richtlinie (dieselbe Falle wie beim Runner-Worker).
+         *
+         * `'unsafe-eval'` und `'wasm-unsafe-eval'` fehlen mit Absicht. Die
+         * Kartenmanufaktur (PixiJS v8) wollte `new Function` und blieb
+         * deshalb im Web schwarz; geloest ist das im Client ueber
+         * `pixi.js/unsafe-eval` (Szene.ts), nicht hier. Wer eine Bibliothek
+         * einbaut, die eval verlangt, sucht zuerst deren Weg ohne eval —
+         * `test/anmeldung-anbieter.test.ts` haelt die Kopfzeile fest.
          */
         scriptSrc: [
           "'self'",
