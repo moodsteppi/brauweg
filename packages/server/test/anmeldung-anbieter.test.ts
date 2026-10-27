@@ -784,6 +784,62 @@ test('nur die Bundle-ID: Anmeldung aus der App geht, im Web gibt es keinen Knopf
   assert.equal(webToken.json().code, 'credentialsInvalid');
 });
 
+test('Erstanmeldung: Namensvorschlag kommt mit, selbst gewaehlter Name gilt, vergebener laesst den Schein liegen', async (t) => {
+  const a = await app({ apple: true });
+  t.after(() => a.close());
+
+  // Erstes Konto: Anna, mit eigenem Namen.
+  const anna = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/apple',
+    payload: { idToken: jwt(appleRumpf(await a.nonce())), vorname: 'Anna' },
+  });
+  assert.equal(anna.json().namensvorschlag, 'Anna', 'der Vorname fuellt das Feld vor');
+  const annaFertig = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/anbieter/abschliessen',
+    payload: { schein: anna.json().schein, birthday: ERWACHSEN, displayName: '  Kartenkoenigin ' },
+  });
+  assert.equal(annaFertig.statusCode, 200, annaFertig.body);
+
+  // Zweites Apple-Konto mit verborgener Mail will denselben Namen.
+  const zweite = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/apple',
+    payload: {
+      idToken: jwt(
+        appleRumpf(await a.nonce(), {
+          sub: '009999.birne',
+          email: 'xyz123@privaterelay.appleid.com',
+          is_private_email: 'true',
+        }),
+      ),
+    },
+  });
+  assert.equal(zweite.json().namensvorschlag, 'Spieler', 'ohne Namen und mit Weiterleitungsadresse');
+  const vergeben = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/anbieter/abschliessen',
+    payload: { schein: zweite.json().schein, birthday: ERWACHSEN, displayName: 'Kartenkoenigin' },
+  });
+  assert.equal(vergeben.statusCode, 409);
+  assert.equal(vergeben.json().code, 'displayNameTaken');
+
+  // Derselbe Schein, anderer Name: geht — kein zweiter Anbieter-Dialog noetig.
+  const zweiterName = await a.server.inject({
+    method: 'POST',
+    url: '/api/auth/anbieter/abschliessen',
+    payload: { schein: zweite.json().schein, birthday: ERWACHSEN, displayName: 'Herzdame' },
+  });
+  assert.equal(zweiterName.statusCode, 200, zweiterName.body);
+
+  const namen = await a.ctx.db.execute(
+    sql`select display_name from account where display_name in ('Kartenkoenigin', 'Herzdame') order by display_name`,
+  );
+  const zeilen = (namen as unknown as { rows?: { display_name: string }[] }).rows ?? (namen as unknown as { display_name: string }[]);
+  assert.deepEqual(zeilen.map((z) => z.display_name), ['Herzdame', 'Kartenkoenigin']);
+});
+
 test('mit Client-ID: Konfiguration, Anmeldung per Cookie, Wiederholung abgewiesen', async (t) => {
   const a = await app({ apple: true, google: true, nachweis: 'NACHWEIS-INHALT' });
   t.after(() => a.close());

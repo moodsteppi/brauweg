@@ -193,9 +193,17 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
         .object({
           schein: z.string().min(1).max(100),
           birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          // Wie bei der Registrierung (registerSchema in app.ts).
+          displayName: z.string().min(2).max(30).optional(),
         })
         .parse(request.body);
-      const ergebnis = await schliesseAnmeldungAb(deps.auth, scheine, body.schein, body.birthday);
+      const ergebnis = await schliesseAnmeldungAb(
+        deps.auth,
+        scheine,
+        body.schein,
+        body.birthday,
+        body.displayName,
+      );
       return sitzung(request, reply, ergebnis);
     },
   );
