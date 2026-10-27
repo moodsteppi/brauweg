@@ -128,7 +128,9 @@ enum Huelle {
         [
             "(function () {",
             "  if (location.protocol !== '\(schema):') return;",
-            "  window.BRAUWEG_APP = { apiBase: \(jsText(apiBasis)), plattform: 'ios', push: \(push ? "true" : "false") };",
+            // `apple: true`: Diese Huelle kann „Mit Apple anmelden" nativ
+            // (AppleAnmeldung.swift); der Client zeigt den Knopf nur dann.
+            "  window.BRAUWEG_APP = { apiBase: \(jsText(apiBasis)), plattform: 'ios', push: \(push ? "true" : "false"), apple: true };",
             "  var h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.\(Bruecke.name);",
             "  if (!h) return;",
             "  function senden(art, daten) {",
@@ -138,7 +140,8 @@ enum Huelle {
             "    teilen: function (daten) { senden('teilen', String(daten)); },",
             "    wachHalten: function (an) { senden('wachHalten', !!an); },",
             "    summen: function (muster) { senden('summen', muster); },",
-            "    pushErlauben: function () { senden('pushErlauben', null); }",
+            "    pushErlauben: function () { senden('pushErlauben', null); },",
+            "    appleAnmelden: function (nonce) { senden('appleAnmelden', String(nonce)); }",
             "  };",
             // defineProperty statt Zuweisung: `wakeLock` ist in neueren WebKits
             // ein Getter ohne Setter, eine Zuweisung liefe dort stumm ins Leere.
@@ -191,6 +194,30 @@ enum Huelle {
             "  var d = { tableId: \(jsText(tableId)), gameId: \(jsText(gameId)) };",
             "  if (window.BRAUWEG_APP) window.BRAUWEG_APP.pushTisch = d;",
             "  window.dispatchEvent(new CustomEvent('\(tischEreignis)', { detail: d }));",
+            "})();",
+        ].joined(separator: "\n")
+    }
+
+    /// Antwort auf `BrauwegNativ.appleAnmelden(nonce)`:
+    /// `detail = {idToken, vorname}` oder `{fehler: 'abgebrochen' | 'fehlgeschlagen'}`.
+    static let appleEreignis = "brauweg:apple-anmeldung"
+
+    /// Meldet dem Client das Ergebnis der Apple-Anmeldung (packages/client/src/anmeldung/apple-nativ.ts).
+    /// Nur als Ereignis, nicht zusaetzlich abgelegt wie das Push-Token: Gefragt
+    /// hat der Client eben erst, er hoert also schon zu.
+    static func appleSkript(_ ergebnis: AppleAnmeldung.Ergebnis) -> String {
+        let detail: String
+        switch ergebnis {
+        case let .token(idToken, vorname):
+            detail = "{ idToken: \(jsText(idToken)), vorname: \(vorname.map(jsText) ?? "null") }"
+        case .abgebrochen:
+            detail = "{ fehler: 'abgebrochen' }"
+        case .fehlgeschlagen:
+            detail = "{ fehler: 'fehlgeschlagen' }"
+        }
+        return [
+            "(function () {",
+            "  window.dispatchEvent(new CustomEvent('\(appleEreignis)', { detail: \(detail) }));",
             "})();",
         ].joined(separator: "\n")
     }

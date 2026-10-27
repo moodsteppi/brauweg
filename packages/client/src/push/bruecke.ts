@@ -52,6 +52,8 @@ declare global {
       teilen?: (daten: string) => void;
       wachHalten?: (an: boolean) => void;
       pushErlauben?: () => void;
+      /** Nur iOS: Systemdialog „Mit Apple anmelden" (anmeldung/apple-nativ.ts). */
+      appleAnmelden?: (nonce: string) => void;
     };
     webkit?: {
       messageHandlers?: Record<string, { postMessage(nachricht: unknown): void } | undefined>;

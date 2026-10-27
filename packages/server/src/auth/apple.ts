@@ -1,9 +1,20 @@
 /**
- * Pruefung eines Apple-ID-Tokens ("Mit Apple anmelden" im Web).
+ * Pruefung eines Apple-ID-Tokens ("Mit Apple anmelden").
  *
- * Der Client holt das Token ueber Apples JS-SDK im Popup-Modus
- * (`usePopup: true`); zurueck kommen `authorization.id_token` und
- * `authorization.code`. Hier wird NUR das ID-Token geprueft.
+ * Zwei Wege fuehren hierher, mit demselben Token-Format:
+ *
+ * - **Web:** Apples JS-SDK im Popup-Modus (`usePopup: true`); zurueck kommen
+ *   `authorization.id_token` und `authorization.code`. `aud` ist die
+ *   Services ID (APPLE_CLIENT_ID).
+ * - **iOS-App:** die native Abfrage (`ASAuthorizationAppleIDProvider`,
+ *   apps/ios/Brauweg/AppleAnmeldung.swift). Das Web-Popup kommt im WKWebView
+ *   nicht zuverlaessig zurueck, und Apple verlangt in Apps ohnehin den
+ *   nativen Dialog. `aud` ist hier die Bundle-ID (APPLE_APP_ID).
+ *
+ * Die Nonce ist in beiden Faellen die des Servers, unveraendert: Die App
+ * reicht sie ungehasht an Apple, Apple schreibt sie so ins Token.
+ *
+ * Hier wird NUR das ID-Token geprueft.
  *
  * Warum der Code nicht eingeloest wird: Die Einloesung bei
  * `appleid.apple.com/auth/token` braucht ein client_secret — ein JWT, das mit
@@ -44,8 +55,11 @@ export function istRelayAdresse(email: string): boolean {
 export async function pruefeAppleToken(
   idToken: string,
   optionen: {
-    /** Die Services ID — bei Apple im Web ist sie die `aud`. */
-    clientId: string;
+    /**
+     * Die eigenen Kennungen, die als `aud` gelten: Services ID (Web) und
+     * Bundle-ID (iOS-App). Ein fremdes, echtes Apple-Token passt auf keine.
+     */
+    clientId: string | readonly string[];
     nonces: NonceSpeicher;
     /**
      * Vorname aus dem Antwortobjekt des SDK. Apple liefert den Namen NUR beim

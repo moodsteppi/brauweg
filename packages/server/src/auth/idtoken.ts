@@ -123,8 +123,12 @@ export interface Erwartung {
   readonly quelle: Schluesselquelle;
   /** Zulaessige `iss`-Werte. Google kennt zwei Schreibweisen, Apple eine. */
   readonly aussteller: readonly string[];
-  /** Die eigene Client-ID — `aud` muss sie nennen. */
-  readonly zielgruppe: string;
+  /**
+   * Die eigene Client-ID — `aud` muss sie nennen. Eine Liste, wenn mehrere
+   * eigene Kennungen gelten: Apple stellt das Token im Web fuer die Services
+   * ID aus, in der iOS-App fuer die Bundle-ID (apple.ts).
+   */
+  readonly zielgruppe: string | readonly string[];
   readonly jetzt?: () => number;
 }
 
@@ -194,7 +198,11 @@ export async function pruefeIdToken(
   // `aud` darf laut Standard eine Liste sein. Das ist die eigentliche Sicherung:
   // Ein echtes, gueltiges Token fuer eine FREMDE App darf hier nichts oeffnen.
   const aud = rumpf.aud;
-  const passt = Array.isArray(aud) ? aud.includes(erwartung.zielgruppe) : aud === erwartung.zielgruppe;
+  const eigene: readonly string[] =
+    typeof erwartung.zielgruppe === 'string' ? [erwartung.zielgruppe] : erwartung.zielgruppe;
+  const passt = Array.isArray(aud)
+    ? aud.some((wert) => eigene.includes(wert))
+    : typeof aud === 'string' && eigene.includes(aud);
   if (!passt) throw new IdTokenFehler('Zielgruppe');
 
   if (typeof rumpf.exp !== 'number' || rumpf.exp + SPIELRAUM_S <= jetztS) {

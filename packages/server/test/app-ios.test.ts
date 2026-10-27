@@ -123,7 +123,7 @@ test('Info.plist: hochkant, Ausfuhrangabe, keine Berechtigungstexte, kein offene
   assert.ok(existsSync(join(IOS, 'Ressourcen', 'Assets.xcassets', 'Startfarbe.colorset', 'Contents.json')));
 });
 
-test('Berechtigungen: Associated Domains fuer beide Hosts, Push nur mit Schalter', () => {
+test('Berechtigungen: Associated Domains fuer beide Hosts, Apple-Anmeldung, Push nur mit Schalter', () => {
   const hosts = new Set<string>();
   for (const [datei, mitPush] of [['Push-NO.entitlements', false], ['Push-YES.entitlements', true]] as const) {
     const plist = ohneKommentare(lies('Konfiguration', datei));
@@ -131,6 +131,8 @@ test('Berechtigungen: Associated Domains fuer beide Hosts, Push nur mit Schalter
     assert.deepEqual(domains, ['applinks:www.brauweg-spielen.de', 'applinks:staging.brauweg-spielen.de'], datei);
     for (const d of domains!) hosts.add(d.replace(/^applinks:/, ''));
     assert.equal(plist.includes('<key>aps-environment</key>'), mitPush, datei);
+    // Mit Apple anmelden (AppleAnmeldung.swift) — mit und ohne Push.
+    assert.deepEqual(plistListe(plist, 'com.apple.developer.applesignin'), ['Default'], datei);
   }
   // Dieselben Hosts oeffnet die Huelle (Huelle.linkHosts).
   const huelle = lies('Brauweg', 'Huelle.swift');

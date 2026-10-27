@@ -29,6 +29,8 @@ declare global {
       plattform?: 'android' | 'ios';
       /** Kann diese Huelle Push? Nur dann lohnt `BrauwegNativ.pushErlauben()`. */
       push?: boolean;
+      /** Kann diese Huelle „Mit Apple anmelden" nativ? (anmeldung/apple-nativ.ts) */
+      apple?: boolean;
       /**
        * Das letzte Push-Token — fuer den, der erst nach dem Ereignis
        * `brauweg:push-token` hinsieht (apps/android, Huelle.pushTokenSkript).
