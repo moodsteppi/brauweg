@@ -19,7 +19,49 @@ node screenshots.mjs --ziel ../../../app-store-lauf/screenshots
 node screenshots.mjs --geraet play --motiv 05   # ein einzelnes Bild neu
 ```
 
-## iOS V1 (14.10.2026) — ersetzt die Motive unten für den App Store
+## 1.0 (27.10.2026) — ersetzt alle Sätze unten für den App Store
+
+Die Bilder vom 14.10. zeigen die Partykiste, die es in der App nicht mehr
+gibt (Apple 2.3.3). Umfang 1.0: Doppelkopf (mit „Doppelkopf lernen"), Skat,
+BroChess, Farbduell, Browort/Clanwort, Kartenmanufaktur — kein Shop, keine
+Edelsteine, keine Partykiste. Der Satz entsteht wieder mit
+`werkzeug/store/screenshots.mjs` gegen **staging** (nie gegen die
+Produktion — das Skript bricht bei `--basis` auf www ab), als iOS-App
+(Herkunft `brauweg://app`, `BRAUWEG_APP.plattform = 'ios'`), Gastkonto mit
+Vogelnamen, Mitspieler Bots.
+
+Weil staging ohne `UMFANG` läuft und deshalb alles zeigt (Partykiste und
+Abstimmung unter „Kommt bald"), schreibt das Skript `/api/games` und
+`/api/me` so um, wie der Server es mit dem 1.0-Umfang aus
+`docs/APP-RELEASE.md` täte (`--umfang alles` schaltet das ab). Die
+Oberfläche bleibt die echte. **Keine Statusleiste** in allen Bildern
+(Chromium hat keine, eine nachgemalte wäre erfunden).
+
+Ablage (nicht im Repo): `~/Broweg/release-brauweg/screenshots-1-0/ios-6.9/`,
+1320 × 2868, PNG ohne Alpha (geprüft mit
+`sips -g pixelWidth -g pixelHeight -g hasAlpha`).
+
+```bash
+cd werkzeug/store
+npm ci
+node screenshots.mjs --geraet ios --ziel ~/Broweg/release-brauweg/screenshots-1-0
+node screenshots.mjs --geraet ios --motiv 05 --ziel ~/Broweg/release-brauweg/screenshots-1-0   # ein Bild neu
+```
+
+| Datei | Was zu sehen ist | Hinweis |
+| --- | --- | --- |
+| `01-spiele` | Reiter „Spiele": Kartenspiele (Doppelkopf, Skat), Denken & Strategie (BroChess, Farbduell), darunter „Allein" mit der Kartenmanufaktur | Zeigt die **Farbduell-Kachel mit dem alten Banner** — nach Emiles neuem Banner neu erzeugen. |
+| `02-doppelkopf` | Doppelkopf zu viert gegen drei Bots, zwei Karten im Stich, du bist dran | Spielart hängt an der Saat (am 27.10. ein Pik-Solo eines Bots). |
+| `03-doppelkopf-lernen` | Lektion „Bedienen & Stiche": Ole spielt Pik-Ass, beide Pik-Karten markiert und grün geprüft, „Richtig!" | Lektion 1 schließt das Skript über `/api/lernpfad/lektion/karten/fertig` ab, damit Lektion 2 frei ist. |
+| `04-skat-reizen` | Skat gegen zwei Bots: „Du bist am Reizen", „23 sagen" / „Rechner" / „Weg" | Reizwert hängt an der Saat. |
+| `05-browort` | Browort, drei Versuche (KARTE, STERN, LAUNE) mit Farben, Tastatur | Farben hängen am Tageswort. |
+| `06-kartenmanufaktur` | Werkstatt mit Versandhalle, Lieferwagen, Paternoster, drei Etagen mit Pressen und Meistern | Aus `/probe/manufaktur?fall=mitte`: die echte Manufaktur mit festem Stand (ein frisches Konto hat nur eine leere Presse). |
+| `07-brochess` | BroChess gegen den Bot, Eröffnung, eigener Läufer angewählt mit Zielpunkten, „Du bist am Zug" | Optional. Farbe entscheidet das Los. |
+
+Kein Farbduell-Motiv: Dessen Banner wird gerade neu gemalt.
+**Vorschlag für den Store:** 01–06, 07 nach Wahl.
+
+## iOS V1 (14.10.2026) — durch 1.0 ersetzt
 
 Mit der ersten iOS-Fassung (fünf Spiele, Partykiste-Szenen, Pinguin-Schach)
 stimmen die alten Bilder nicht mehr. Der neue Satz ist **im Simulator** (iPhone
