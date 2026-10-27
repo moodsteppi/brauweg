@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { spiele } from '../klang';
+import { szeneBild } from '../szenen';
 import { Ladekreis } from '../Ladekreis';
 import { Brett, ZEICHEN, ergebnis, statusText } from '../minispiele/brochess/Brett';
 import { figurensatzAus } from '../minispiele/brochess/figurensatz';
@@ -52,12 +53,15 @@ export function BroChessTable({
   onShowProfile,
   onLeave,
   figurensatz,
+  szene = 'stube',
 }: {
   tableId: string;
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
   /** Gespeichertes Aussehen (`themes.brochess.cardDeck`), siehe figurensatz.ts. */
   figurensatz?: string;
+  /** Persönlicher Tischhintergrund aus der Sammlung. Das Brett bleibt gut lesbar. */
+  szene?: string;
 }): React.JSX.Element {
   const { view, table, error, connected, send, addBot, removeBot, setBotLevel } =
     useTable<BroChessSicht>(tableId, 'brochess');
@@ -107,7 +111,7 @@ export function BroChessTable({
 
   if (!view) {
     return (
-      <div className={`spe ${stil.tisch}`}>
+      <div className={`spe ${stil.tisch}`} style={{ backgroundImage: `linear-gradient(#09152cd9,#09152ce8),url(${szeneBild(szene)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className={stil.laedt}>
           <Ladekreis text={error ?? 'Verbinde mit dem Tisch…'} />
         </div>
@@ -189,7 +193,7 @@ export function BroChessTable({
     );
 
   return (
-    <div className={`spe ${stil.tisch}`}>
+    <div className={`spe ${stil.tisch}`} style={{ backgroundImage: `linear-gradient(#09152cd9,#09152ce8),url(${szeneBild(szene)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <header className={stil.kopf}>
         <button type="button" className="hb-rund" onClick={onLeave} aria-label="Zurück">
           <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

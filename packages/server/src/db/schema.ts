@@ -1659,3 +1659,15 @@ export const manufaktur = pgTable('manufaktur', {
   version: integer().notNull().default(0),
   aktualisiert: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Die erste Auswahl des Berliner Tages bleibt auch auf einem zweiten Gerät unverändert. */
+export interface MarktPlatz {
+  id: string; spiel: string; stufe: string | null; rabatt: number;
+  artikelId: string | null; normalpreis: number; preis: number; aufgedeckt: boolean;
+}
+export const tagesmarkt = pgTable('tagesmarkt', {
+  accountId: uuid().notNull().references(() => account.id, { onDelete: 'cascade' }),
+  tag: date().notNull(),
+  angebote: jsonb().$type<MarktPlatz[]>().notNull(),
+  muenzenGeholt: boolean().notNull().default(false),
+}, t => [primaryKey({ columns: [t.accountId, t.tag] })]);

@@ -9,6 +9,14 @@
 import { inApp } from './laufzeit';
 
 const de: Record<string, string> = {
+  'blatt.schach-pinguin': 'Pinguin-Figuren',
+  'error.marktNeuerTag': 'Ein neuer Tag hat begonnen. Dein Shop wurde erneuert.',
+  'error.marktNichtImAngebot': 'Dieses Design ist heute nicht im Angebot.',
+  'error.marktNochVerdeckt': 'Decke zuerst das Angebot auf.',
+  'error.marktGratisSchonGeholt': 'Die Gratis-Münzen hast du heute schon abgeholt.',
+  'error.nurMuenzenImTagesmarkt': 'Im Tages-Shop bezahlst du mit Münzen.',
+  'error.marktAngebotUnbekannt': 'Dieses Angebot ist nicht mehr verfügbar.',
+
   'game.doppelkopf': 'Doppelkopf',
   // Das Spiel heisst international "Wizard" und ist als Marke eingetragen
   // (Ken Fisher / US Games Systems, hier Amigo). Regeln sind frei, ein

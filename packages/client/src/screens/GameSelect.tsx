@@ -105,6 +105,7 @@ import { SpieleNeu } from './SpieleNeu';
 import { TrophaeenwegNeu } from './TrophaeenwegNeu';
 import { HeuteNeu } from './HeuteNeu';
 import { SammlungNeu } from './SammlungNeu';
+import { TagesShop } from './TagesShop';
 import { HbBlatt, HbSymbol, ImHub, Schliessen, Zurueck, useEscape, useRueckfrage } from './HbBlatt';
 import { bannerFuer } from './StartNeu';
 import { truhenBild } from '../truhenbild';
@@ -178,6 +179,9 @@ export function GameSelect({
   anfangsHeute?: boolean;
 }): React.JSX.Element {
   const [tab, setTab] = useState<Tab>(anfangsTab ?? 'spielen');
+  const [sammlungSpiel, setSammlungSpiel] = useState('doppelkopf');
+  const [shopZiel, setShopZiel] = useState<{ spiel: string; artikel?: string }>({ spiel: 'alle' });
+  const zumTagesShop = (spiel: string, artikel?: string): void => { setShopZiel({ spiel: ['doppelkopf', 'skat', 'brochess', 'allgemein'].includes(spiel) ? spiel : 'alle', artikel }); setSchrankOffen(false); setTab('shop'); };
   /** Neues Hub: das Spiel, dessen Spielseite im Reiter „Spiele" offen ist. */
   const [spielseite, setSpielseite] = useState<string | null>(anfangsSpiel ?? null);
   /** Neues Hub: der Trophäenweg als Vollbild. */
@@ -249,20 +253,14 @@ export function GameSelect({
     };
   }, []);
 
-  // Shop · Spiele · Start · Sammlung · Clan, Start mittig. In der App fehlt der
-  // Shop (siehe zeigeKaufbares); dort steht das Profil an seiner Stelle, damit
-  // Start in der Mitte bleibt. Gewechselt wird über die Leiste oder per Wisch
-  // in derselben Reihenfolge (hub-wischen.ts); welche Reiter dafür am Track
-  // hängen, regelt HubRahmen.tsx.
-  const kaufbar = zeigeKaufbares();
-  const tabFolge: Tab[] = [kaufbar ? 'shop' : 'profil', 'spiele', 'spielen', 'blatt', 'clan'];
+  // Der Münz-Shop ist auf allen Plattformen ein eigener Reiter. Profil öffnet über den Startkopf.
+  const kaufbar = true;
+  const tabFolge: Tab[] = ['shop', 'spiele', 'spielen', 'blatt', 'clan'];
 
   const renderTab = (tt: Tab): React.JSX.Element | null => {
     switch (tt) {
       case 'shop':
-        return kaufbar ? (
-          <Shop coins={me.coins} gems={me.gems} onBald={setBald} onGuthaben={onAvatarChange} />
-        ) : null;
+        return <TagesShop me={me} ziel={shopZiel} onGuthaben={onAvatarChange} onSammlung={spiel => { setSammlungSpiel(['alle', 'allgemein'].includes(spiel) ? 'pinguin' : spiel); setTab('blatt'); }} />;
       case 'clan':
         return (
           <Clan
@@ -284,7 +282,7 @@ export function GameSelect({
             onPick={onPick}
             onSolo={soloStarten}
             onBald={setBald}
-            onSammlung={() => setTab('blatt')}
+            onSammlung={() => { setSammlungSpiel(spielseite ?? 'doppelkopf'); setTab('blatt'); }}
             onLernen={oeffneLernen}
           />
         );
@@ -315,6 +313,9 @@ export function GameSelect({
         return (
           <SammlungNeu
             me={me}
+            spiel={sammlungSpiel}
+            onSpiel={setSammlungSpiel}
+            onShop={zumTagesShop}
             onThemeChange={onThemeChange}
             onGekauft={onAvatarChange}
             onSchrank={() => setSchrankOffen(true)}
@@ -322,30 +323,14 @@ export function GameSelect({
               spiele('blatt-auf');
               setWerkstattOffen(true);
             }}
-            details={(gameId, zurueck) => {
-              const thema = me.themes[gameId] ?? { cardDeck: 'text', tableScene: 'stube', cardBack: 'standard' };
-              return (
-                <DeckPicker
-                  neu
-                  gameId={gameId}
-                  spielName={t(`game.${gameId}`)}
-                  onSpielWechseln={zurueck}
-                  current={thema.cardDeck}
-                  onChange={(cardDeck) => onThemeChange(gameId, { cardDeck })}
-                  szene={thema.tableScene}
-                  onSzeneChange={(tableScene) => onThemeChange(gameId, { tableScene })}
-                  ruecken={thema.cardBack}
-                  onRueckenChange={(cardBack) => onThemeChange(gameId, { cardBack })}
-                  onGekauft={onAvatarChange}
-                />
-              );
-            }}
+
           />
         );
       case 'profil':
         return (
           <ProfilTab
             me={me}
+            onZurueck={() => setTab('spielen')}
             onAvatarChange={onAvatarChange}
             onMeChange={onAvatarChange}
             onSignOut={onSignOut}
@@ -390,6 +375,7 @@ export function GameSelect({
           <Kleiderschrank
             neu
             getragen={me.avatar}
+            onShop={artikel => zumTagesShop('allgemein', artikel)}
             onClose={() => setSchrankOffen(false)}
             onGetragen={onAvatarChange}
             onGuthaben={onAvatarChange}
@@ -483,7 +469,7 @@ export function GameSelect({
       renderTab={renderTab}
       // Eine offene Spielseite ist eine Unterseite des Spiele-Reiters: Wischen
       // führt zur Übersicht zurück, nicht in den Nachbarreiter.
-      zurueck={tab === 'spiele' && spielseite ? () => setSpielseite(null) : undefined}
+      zurueck={tab === 'profil' ? () => setTab('spielen') : tab === 'spiele' && spielseite ? () => setSpielseite(null) : undefined}
     >
       {overlays}
     </NeuerRahmen>
@@ -544,8 +530,10 @@ function ProfilTab({
   onAufgaben,
   onBald,
   onShowProfile,
+  onZurueck,
 }: {
   me: Me;
+  onZurueck: () => void;
   onAvatarChange: () => void;
   /** Nach Claim u. a. /api/me neu laden. */
   onMeChange: () => void;
@@ -646,7 +634,7 @@ function ProfilTab({
   return (
     <div className="hb-profil">
       <header className="hb-kopfzeile">
-        <h1 className="hb-titel">Profil</h1>
+        <button type="button" className="hb-rund" onClick={onZurueck} aria-label="Zurück zum Start">‹</button><h1 className="hb-titel">Profil</h1>
       </header>
       <div className="hb-profil-inhalt">
         <div className="hb-karte hb-profilkopf">
