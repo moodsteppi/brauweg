@@ -13,7 +13,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe('Trophäenreise', () => {
   it('nimmt den Serverstand, springt nur beim Laden automatisch und lässt sich zu mir zurückholen', async () => {
     vi.spyOn(api, 'weg').mockResolvedValue(antwort());
-    render(<TrophaeenwegNeu trophies={1} onClose={vi.fn()} onGuthaben={vi.fn()} />);
+    render(<TrophaeenwegNeu getragen={{}} trophies={1} onClose={vi.fn()} onGuthaben={vi.fn()} />);
     await screen.findByLabelText('600 Trophäen');
     expect(screen.getByLabelText('Trophäenpfad entlangscrollen')).toBeTruthy();
     await waitFor(() => expect(scrollen).toHaveBeenCalledTimes(1));
@@ -28,7 +28,7 @@ describe('Trophäenreise', () => {
     let abschliessen!: (fund: WegFund) => void;
     const abholen = vi.spyOn(api, 'wegHolen').mockImplementation(() => new Promise(resolve => { abschliessen = resolve; }));
     const guthaben = vi.fn();
-    render(<TrophaeenwegNeu trophies={0} onClose={vi.fn()} onGuthaben={guthaben} />);
+    render(<TrophaeenwegNeu getragen={{}} trophies={0} onClose={vi.fn()} onGuthaben={guthaben} />);
     const knopf = await screen.findByRole('button', { name: 'Feuerberg: Goldtruhe und Tisch „Kaminzimmer“ holen' });
     fireEvent.click(knopf); fireEvent.click(knopf);
     expect(abholen).toHaveBeenCalledTimes(1);

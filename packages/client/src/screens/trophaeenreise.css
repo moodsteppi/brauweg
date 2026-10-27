@@ -45,7 +45,7 @@
 .trophaeenreise .reise-checkpunkt .ist-bereit { border-color: #ffdc88; background: #674b24f0; cursor: pointer; }
 .trophaeenreise .reise-checkpunkt .ist-geholt { background: #143c3aeb; }
 .trophaeenreise .reise-ich { position: absolute; transform: translate(-100%,-50%); margin-left: -38px; display: flex; flex-direction: column; align-items: center; pointer-events: none; filter: drop-shadow(0 4px 6px #0008); }
-.trophaeenreise .reise-ich > img { width: 58px; height: 76px; object-fit: contain; }
+.trophaeenreise .reise-ich > .pinguin { flex: none; }
 .trophaeenreise .reise-ich > span { background: #ffe194; color: #132b4b; padding: 5px 9px; border: 2px solid #fff0bd; border-radius: 10px; font-size: 10px; font-weight: 900; text-align: center; }
 .trophaeenreise .reise-ich small { display: block; font-size: 12px; margin-top: 2px; }
 .trophaeenreise .reise-navigation { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 16px calc(10px + var(--hb-unten,0px)); background: #0a1734; z-index: 3; border-top: 1px solid #354b6d; }

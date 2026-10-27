@@ -372,7 +372,7 @@ export function GameSelect({
   const overlays = (
     <>
       {wegOffen && (
-        <TrophaeenwegNeu trophies={trophies} onClose={() => setWegOffen(false)} onGuthaben={onAvatarChange} />
+        <TrophaeenwegNeu getragen={me.avatar} trophies={trophies} onClose={() => setWegOffen(false)} onGuthaben={onAvatarChange} />
       )}
         {stufenOffen && <Stufenleiter neu onClose={() => setStufenOffen(false)} />}
         {aufgabenOffen && (

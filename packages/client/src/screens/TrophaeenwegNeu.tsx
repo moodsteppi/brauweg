@@ -1,18 +1,19 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ApiError, api, type Weg, type WegFund, type WegStufe } from '../api';
+import { ApiError, api, type Getragen, type Weg, type WegFund, type WegStufe } from '../api';
 import { t } from '../i18n';
 import { holbar, stationenMit } from '../trophaeenweg';
 import { FundBlatt } from './Aufgaben';
 import { truhenBild } from '../truhenbild';
 import { sicherAb } from './StartNeu';
 import { Schliessen, useEscape } from './HbBlatt';
+import { Pinguin } from '../pinguin';
 import './trophaeenreise.css';
 
 const LAND_HOEHE = 540;
 
 /** Eine Reise durch sechs Landschaften. Nur der Server entscheidet über Belohnungen. */
-export function TrophaeenwegNeu({ trophies, onClose, onGuthaben }: {
-  trophies: number; onClose: () => void; onGuthaben: () => void;
+export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
+  trophies: number; getragen: Getragen; onClose: () => void; onGuthaben: () => void;
 }): React.JSX.Element {
   const [weg, setWeg] = useState<Weg | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -125,7 +126,7 @@ export function TrophaeenwegNeu({ trophies, onClose, onGuthaben }: {
             : <span className={s.geholt ? 'ist-geholt' : ''}>{text}</span>}</div>;
         })}
         {weiter.map(s => <div className="reise-station" key={s.schwelle} style={{ top: punktY(s.schwelle), left: `${punktX(punktY(s.schwelle)) / 4}%` }}><span className="reise-marke">{s.schwelle.toLocaleString('de-DE')}</span>{belohnung(s, `Silbertruhe bei ${s.schwelle} Trophäen`)}</div>)}
-        <div className="reise-ich" style={{ top: ichY, left: `${punktX(ichY) / 4}%` }} aria-label={`Du bist hier: ${stand} Trophäen`}><img src="/hub/pinguin-held.webp" alt="" /><span>Du bist hier<small>{stand.toLocaleString('de-DE')} 🏆</small></span></div>
+        <div className="reise-ich" style={{ top: ichY, left: `${punktX(ichY) / 4}%` }} aria-label={`Du bist hier: ${stand} Trophäen`}><Pinguin getragen={getragen} groesse={5} titel="Dein Pinguin aus dem Kleiderschrank" /><span>Du bist hier<small>{stand.toLocaleString('de-DE')} 🏆</small></span></div>
         <div className="reise-anfang">Spiele. Gewinne. Entdecke.</div>
       </div>
     </div>

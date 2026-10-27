@@ -23,7 +23,9 @@ Die sechs vorhandenen gemalten Biome werden wiederverwendet, jetzt mit je
 540 px Höhe statt 118 px. Eigener innerer Scrollbereich, Kartenbreite maximal
 560 px, unten Heimat und oben Sternenhafen. Goldene Spur bis zur eigenen
 Position, Pinguin, aktuelle Region, Fortschrittsanzeige zur nächsten Belohnung,
-Rücksprung „Zu mir“. Oberhalb 1.000 werden die serverseitigen Folgetruhen
+Rücksprung „Zu mir“. Die Wegfigur verwendet dieselbe `Pinguin`-Komponente
+und `me.avatar` wie der Kleiderschrank; Hut, Brille, Kleidung, Schuhe, Handstück
+und Aura werden aus der getragenen Ausstattung übernommen. Oberhalb 1.000 werden die serverseitigen Folgetruhen
 als weitere Stationen dargestellt. Abholen verschiebt die Scrollposition nicht.
 
 Schwellen, Truhen, Gegenstände, Checkpointmünzen und Abholstatus bleiben

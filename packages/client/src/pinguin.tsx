@@ -17,9 +17,8 @@
  *
  * **Der Basis-Pinguin ist bewusst nicht `pinguin.png`.** Der ist ein Ritter mit
  * Helm, Schwert, Panzer und Umhang — also mit vier der fuenf Plaetze schon
- * belegt. Ein Hut auf einem Helm sieht aus wie ein Fehler. Der Ritter bleibt,
- * wo er heute steht (Trophaeenweg, Profilbild-Vorgabe); der Kleiderschrank
- * braucht einen nackten Pinguin, und der steht hier.
+ * belegt. Ein Hut auf einem Helm sieht aus wie ein Fehler. Der Kleiderschrank und der Trophaeenweg
+ * verwenden deshalb dieselbe unbekleidete Basis mit den getragenen Stuecken.
  *
  * Die Farben sind Zeichnung und keine Bedeutung — deshalb stehen sie hier als
  * Werte und nicht als CSS-Variablen. Die Regel aus DESIGN.md („keine
