@@ -1,0 +1,84 @@
+/* Eigener Namensraum, damit die neutralen Hub-Knöpfe weder Preise noch Kaufzustände übermalen. */
+.tages-shop .hb-kopfzeile,.sammlung-neu .hb-kopfzeile { display: flex; justify-content: space-between; align-items: center; }
+.tages-shop .markt-rolle,.sammlung-neu .sam-rolle { padding: 0 16px 24px; }
+.tages-shop .markt-guthaben { display: flex; gap: 7px; align-items: center; font-weight: 900; color: #ffdc87; }
+.tages-shop .markt-guthaben img { width: 24px; height: 24px; }
+.tages-shop .markt-held { position: relative; border-radius: 22px; overflow: hidden; background: #111f3e; border: 1px solid #d4b36c65; }
+.tages-shop .markt-held > img { display: block; width: 100%; aspect-ratio: 2; object-fit: cover; }
+.tages-shop .markt-held > div { position: relative; margin-top: -22px; padding: 0 18px 18px; background: linear-gradient(transparent,#111f3e 20%); }
+.tages-shop .markt-held span { color: #eaca85; letter-spacing: 1.5px; font-size: 9px; font-weight: 900; }
+.tages-shop .markt-held h2 { margin: 7px 0; font: 400 27px/1.1 'Lilita One',sans-serif; }
+.tages-shop .markt-held p { color: #b9c9e4; font-size: 12px; margin: 0; line-height: 1.5; }
+.tages-shop .markt-wechsel { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0 22px; padding: 10px 12px; background: #142749; border: 1px solid #32496f; border-radius: 13px; }
+.tages-shop .markt-wechsel span { color: #b5c7e4; font-size: 10px; }
+.tages-shop .markt-wechsel b { display: block; color: #e5eafa; margin-top: 2px; }
+.tages-shop .markt-wechsel > strong { color: #ffdd93; font-size: 13px; font-variant-numeric: tabular-nums; }
+.tages-shop .markt-bereich { margin: 24px 0; }
+.tages-shop .markt-bereich > h2 { font: 400 22px 'Lilita One',sans-serif; margin: 0 0 6px; }
+.tages-shop .markt-bereich > p { font-size: 11px; line-height: 1.5; color: #aebfdd; margin: 0 0 14px; }
+.tages-shop .markt-geschenke { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.tages-shop .markt-geschenke > div { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 9px; background: linear-gradient(135deg,#1a3756,#112342); border: 1px solid #70ac9e80; border-radius: 18px; }
+.tages-shop .markt-geschenke > div > img { width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 6px 8px #0005); }
+.tages-shop .markt-geschenke strong { font-size: 14px; }.tages-shop .markt-geschenke small { font-size: 10px; color: #b9cce1; }
+:is(.tages-shop,.sammlung-neu) .markt-knopf { display: block; width: 100%; min-height: 44px; padding: 8px; background: linear-gradient(#ffdb79,#efb741); border: 1px solid #ffebaa; border-bottom: 3px solid #b58026; border-radius: 11px; color: #142846; font: 900 12px/1.2 'Nunito Variable',sans-serif; text-align: center; cursor: pointer; }
+.tages-shop .markt-knopf:disabled,.tages-shop .markt-knopf.ist-eigen { background: #243957; border-color: #4c6684; color: #b9d2de; cursor: default; }
+.tages-shop .markt-sonder { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.tages-shop .markt-angebot { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: stretch; padding: 8px; border: 1px solid #53647d; border-radius: 16px; background: linear-gradient(155deg,#1c304d,#101d36); box-shadow: 0 6px 16px #0003; }
+.tages-shop .markt-angebot.stufe-selten { border-color: #6098ef; background: linear-gradient(155deg,#25436b,#101d36); }
+.tages-shop .markt-angebot.stufe-episch { border-color: #be8de8; background: linear-gradient(155deg,#513267,#171e39); }
+.tages-shop .markt-seltenheit { display: flex; flex-direction: column; gap: 4px; align-items: center; color: #ccd6e6; font-size: 9px; text-align: center; }
+.tages-shop .markt-seltenheit b { color: #ffe297; font-size: 14px; }
+.tages-shop .markt-verdeckt { color: #e1e8f8; display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 184px; width: 100%; border: 0; background: none; padding: 6px 0; font: inherit; text-align: center; }
+.tages-shop .markt-verdeckt svg { width: 78px; height: 78px; fill: #132948; stroke: #e1bd69; stroke-width: 3; filter: drop-shadow(0 0 10px #b58b4b35); }
+.tages-shop .stufe-selten .markt-verdeckt svg { stroke: #83c5ff; }.tages-shop .stufe-episch .markt-verdeckt svg { stroke: #d7adff; }
+.tages-shop .markt-verdeckt text { fill: #ffdf93; stroke: none; font: 900 36px 'Nunito Variable',sans-serif; }
+.tages-shop .markt-verdeckt strong { font-size: 12px; line-height: 1.25; }.tages-shop .markt-verdeckt small { font-size: 10px; color: #aebfdb; }
+:is(.tages-shop,.sammlung-neu) .markt-bild { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 100px; height: 100px; width: 100%; overflow: hidden; margin: 8px 0; border-radius: 10px; background: #08162f55; }
+:is(.tages-shop,.sammlung-neu) .markt-bild img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; object-position: center; }
+:is(.tages-shop,.sammlung-neu) .markt-bild.art-szene img { object-fit: cover; object-position: center top; }
+:is(.tages-shop,.sammlung-neu) .markt-bild.ist-schach img { inset: 5% 10%; width: 80%; height: 90%; }
+:is(.tages-shop,.sammlung-neu) .markt-stueck { display: flex; justify-content: center; align-items: center; height: 100px; overflow: hidden; }
+.tages-shop .markt-artikelname { text-align: center; font-size: 12px; line-height: 1.25; min-height: 30px; margin: 6px 0; }
+.tages-shop .markt-preis { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-items: center; min-height: 35px; color: #ffe296; font-size: 13px; font-weight: 900; }
+.tages-shop .markt-preis img { width: 17px; height: 17px; }.tages-shop .markt-preis del { color: #91a0bc; font-size: 10px; font-weight: 600; }
+.tages-shop .markt-leer { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; min-height: 210px; text-align: center; font-size: 11px; color: #b4c7dd; }
+.tages-shop .markt-leer > span { color: #9dd5b6; font-size: 32px; }.tages-shop .markt-leer small { font-size: 10px; line-height: 1.4; }
+.tages-shop .markt-regulaer { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.tages-shop .markt-spiel h3 { font-size: 16px; margin: 22px 0 10px; }.tages-shop .markt-wunsch { padding: 10px; border: 1px solid #b99557; border-radius: 12px; }
+.tages-shop .markt-fehler { padding: 12px; background: #522b35; border-radius: 12px; font-size: 13px; }.tages-shop .markt-fehler button { min-height: 44px; color: #ffdf93; text-decoration: underline; }
+.tages-shop .markt-laden { font-size: 13px; color: #c7d4e9; padding: 20px; }
+.sammlung-neu .sam-shoplink { color: #ffdc87; padding: 8px; min-height: 44px; font-size: 13px; font-weight: 900; }
+.sammlung-neu .sam-pinguin { display: flex; align-items: center; gap: 20px; padding: 18px; background: #152b49; border-radius: 20px; margin: 16px 0; }.sammlung-neu .sam-pinguin p { font-size: 12px; color: #afc3e2; }
+.sammlung-neu .sam-spiel > h2 { margin: 24px 0 10px; font: 400 28px 'Lilita One',sans-serif; color: #ffe4a5; }
+.sammlung-neu .sam-bereich { margin: 20px 0 28px; }.sammlung-neu .sam-bereich h3 { font-size: 19px; margin: 0 0 10px; }.sammlung-neu .sam-bereich p { font-size: 12px; color: #a8bcdd; margin: -4px 0 12px; }
+.sammlung-neu .sam-raster { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,140px),1fr)); gap: 9px; }.sammlung-neu .sam-raster.ist-tische { grid-template-columns: repeat(auto-fit,minmax(min(100%,160px),1fr)); }
+.sammlung-neu .sam-design { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 8px; min-width: 0; border: 1px solid #435c83; border-radius: 14px; background: #162b4b; color: #ecf1fa; text-align: center; }
+.sammlung-neu .sam-design.ist-aktiv { border-color: #f5c866; box-shadow: inset 0 0 0 1px #f5c866; }.sammlung-neu .sam-design.ist-zu { background: #101f39; }
+.sammlung-neu .sam-design > strong { font-size: 12px; line-height: 1.3; }.sammlung-neu .sam-design > small { font-size: 10px; color: #b2c6e5; line-height: 1.4; min-height: 28px; }
+.sammlung-neu .sam-klassisch { display: grid; height: 116px; place-items: center; font-size: 75px; }
+@media (min-width: 700px) { .tages-shop .markt-rolle,.sammlung-neu .sam-rolle { width: 100%; max-width: 850px; margin: 0 auto; } .tages-shop .markt-held > img { max-height: 300px; } }
+
+.sammlung-neu .sam-unterkategorien { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.sammlung-neu .sam-unterkategorien button { border: 1px solid #5a7397; border-radius: 12px; padding: 10px 16px; min-height: 44px; background: #1b3355; color: #e1e8f7; font-size: 12px; font-weight: 800; }
+.sammlung-neu .sam-bereich { scroll-margin-top: 12px; }
+
+.hb .tages-shop .markt-rolle,.hb .sammlung-neu .sam-rolle { display: block; }
+.tages-shop .markt-art { color: #a9bddb; font-size: 9px; text-align: center; }
+
+.tages-shop .markt-angebot.ist-aufgedeckt :is(.markt-bild,.markt-stueck) { animation: markt-entdecken 450ms cubic-bezier(.2,.8,.2,1) both; }
+@keyframes markt-entdecken { from { opacity: 0; transform: translateY(8px) scale(.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tages-shop .markt-angebot.ist-aufgedeckt :is(.markt-bild,.markt-stueck) { animation: none; } }
+
+:is(.tages-shop,.sammlung-neu) .markt-textkarte { display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f8f3e9; border-radius: 7px; width: 54px; height: 80px; box-shadow: 0 4px 8px #0005; color: #b43742; font: 900 27px 'Nunito Variable',sans-serif; }
+
+/* Ein einzelner Figurensatz soll nicht in einer schmalen Dreierspalte verschwinden. */
+.tages-shop .markt-regulaer:has(> :only-child) { grid-template-columns: minmax(0, 200px); justify-content: center; }
+
+/* WebKit darf die Bildhöhe nicht aus einer impliziten Grid-Zeile ableiten:
+   sonst wächst das Bild über den festen Ausschnitt und wird unten abgeschnitten. */
+.sammlung-neu .sam-design > .markt-bild { height: 132px; flex-basis: 132px; margin: 0 0 5px; background: linear-gradient(145deg,#152b48,#0a1930); }
+.sammlung-neu .sam-design > .markt-bild:not(.art-szene) img { padding: 8px; box-sizing: border-box; }
+.sammlung-neu .sam-design > .markt-bild.art-szene { height: 104px; flex-basis: 104px; }
+.sammlung-neu .sam-design { padding: 9px; border-radius: 17px; }
+.sammlung-neu .sam-design > strong { padding: 2px 3px; font-size: 13px; }
+.sammlung-neu .sam-design > small { padding: 1px 3px; font-size: 11px; }

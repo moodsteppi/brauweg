@@ -40,7 +40,7 @@ export const STUFEN: readonly Beschreibung[] = [
   {
     stufe: 'mittel',
     name: 'Mittel',
-    satz: 'Merkt sich drei Züge — aber jede Karte nur mit halber Wahrscheinlichkeit.',
+    satz: 'Merkt sich drei Züge - aber jede Karte nur mit halber Wahrscheinlichkeit.',
   },
   {
     stufe: 'schwer',

@@ -1,8 +1,9 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, **dreizehn Spiele laufen**: Doppelkopf, Zauberer, Skat,
+Kartenspiel-Plattform, **vierzehn Spiele laufen**: Doppelkopf, Zauberer, Skat,
 Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde,
-Golf, Partykiste und BroCooked.
+Golf, Partykiste, BroCooked und BroChess (Schach zu zweit, seit dem
+25.09.2026 — hält sich an jede Annahme der Schnittstelle).
 Diese Datei ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln
 in `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
@@ -93,10 +94,30 @@ Repository [`moodsteppi/brauweg-art`](https://github.com/moodsteppi/brauweg-art)
 `packages/client/art/` steht in `.gitignore`. Ausgeliefert wird
 ausschließlich WebP unter `packages/client/public/`. **Beim Einbauen einer
 Lieferung zuerst die Dateigröße ansehen** — eine Spielkarte liegt bei 80 kB,
-nicht bei 1,7 MB. Genau das ist zweimal live gegangen. Auf diesem Mac ist
-kein WebP-Werkzeug installiert; gewandelt wird mit
+nicht bei 1,7 MB. Genau das ist zweimal live gegangen. Gewandelt wird mit
 `node ~/bildwerkzeug/wandeln.mjs <quelle> <ziel> [karten|szene|wappen]` —
 der ganze Ablauf steht in `docs/JETZT-AUSFUEHREN.md`.
+
+**Ob das Werkzeug da ist, hängt am Rechner — erst nachsehen:**
+
+```bash
+ls ~/bildwerkzeug/wandeln.mjs ~/bildwerkzeug/node_modules/sharp ~/klangwerkzeug/wandeln.mjs
+```
+
+Bis zum 23.09.2026 stand hier „Auf diesem Mac ist kein WebP-Werkzeug
+installiert", als gelte das für jeden — dieselbe Mac-Zeit-Falle wie die
+`gh`-Zeile weiter unten. Eingerichtet ist `~/bildwerkzeug` nur auf dem Mac;
+auf dem Mood-XPS (Windows) fehlen beide Ordner, ebenso `cwebp` und `ffmpeg`.
+**Fehlt das Bildwerkzeug:** Die Vorlage liegt im Archivrepo als
+`brauweg-art/wandeln.mjs`, die Einrichtung (`sharp` in `~/bildwerkzeug`)
+steht in `docs/JETZT-AUSFUEHREN.md` unter „Einmalige Einrichtung" — auf
+Windows in Git Bash aufrufen, weil das Skript `sharp` über `$HOME` sucht.
+**Fehlt das Klangwerkzeug** (ebenso `naht-heilen.mjs` und `vergolden.mjs`):
+Davon gibt es keine Vorlage in einem Repo, es liegt nur auf dem Mac. Dann
+nicht mit eigenen Zahlen nachbauen — die Profile sind die Norm, an der die
+Dateigrößen hängen —, sondern melden bzw. als Worker mit `===BRAUCHT BRO===`
+fragen. Ein selbst ausgedachtes Wandelskript ist genau der stille
+Konventionsbruch, vor dem `docs/MEMEMORY-TICKETS.md` (T-01) warnt.
 
 **Für Klänge gilt dasselbe** mit `node ~/klangwerkzeug/wandeln.mjs <quelle>
 <ziel.mp3> [sfx|musik]`. MP3, nicht Ogg — Safari spielt kein Ogg, und dort
@@ -179,8 +200,27 @@ steht im Kopf des Skripts — getestet wird aus `dist/test/*.js`, und eine
 kompilierte Testdatei ohne `.ts` bleibt sonst liegen und färbt den Lauf rot,
 obwohl die Quelle sauber ist.
 
-`gh` ist **nicht** installiert, das Remote läuft über SSH — Pull Requests
-gehen aus einer Sitzung heraus nicht. Gemerged wird direkt.
+**Ob `gh` geht, hängt am Rechner — erst fragen, dann entscheiden.** Bis zum
+07.09.2026 stand hier als Tatsache des Repos, `gh` sei nicht installiert und
+das Remote laufe über SSH. Beides stammt aus der Mac-Zeit dieser Datei — Regel 4
+sagte bis zum 23.09.2026 „Auf diesem Mac ist kein WebP-Werkzeug installiert" — und gilt
+nicht überall: Auf dem Mood-XPS liegt `gh` 2.97.0, angemeldet als
+`moodsteppi`, das Remote ist HTTPS, und `gh pr view`, `gh pr checks` sowie
+`gh pr comment` laufen anstandslos. Also nicht raten, sondern nachsehen:
+
+```bash
+gh auth status && git remote -v     # geht es hier — und über welches Protokoll?
+```
+
+Meldet das ein angemeldetes Konto, gehen Pull Requests aus der Sitzung heraus:
+lesen, prüfen, kommentieren, anlegen. Fehlt `gh` oder ist es nicht angemeldet,
+geht davon nichts — **und das ist kein Freibrief zum Durchmergen.** Wer dann
+was darf, hängt daran, wer arbeitet: Ein Mensch am eigenen Rechner führt selbst
+nach `staging` zusammen (`ARBEITSREGELN.md`, Regel 1). Ein Worker im
+Orchestrator **nicht** — er pusht seinen `aufgabe/…`-Zweig und hört dort auf,
+ob mit `gh` oder ohne. Genau diese Verwechslung hat die alte Zeile angerichtet:
+Ein Prüfauftrag zu PR #125 nahm sie ernst, versuchte den PR gar nicht erst zu
+öffnen und fiel auf „gemerged wird direkt" zurück.
 
 ---
 
@@ -209,7 +249,7 @@ nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
 Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
 Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
 Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
-Feld auch wirklich liefern). Gedeckt sind alle dreizehn Spiele. Ein neues Spiel
+Feld auch wirklich liefern). Gedeckt sind alle vierzehn Spiele. Ein neues Spiel
 bekommt eine Datei nach demselben Muster — und beschreibt seine Sicht **nicht
 im Bildschirm**, sondern in `src/minispiele/<spiel>/sicht.ts`: Ein Vertrag,
 der aus einer `.tsx` importiert, zieht React in den Test.
@@ -258,7 +298,8 @@ Wirtschaftsmodell.
 - **Kachelbare Texturen vor dem Einbau auf Nähte messen.** Kantenabstand
   gegen Innenvarianz; über Faktor 3 sieht man die Linie, über 8 ist sie ein
   Balken. Von zwölf gelieferten Runner-Kacheln hatten drei echte Nähte
-  (Schneefeld: Faktor 25). Heilen mit `~/bildwerkzeug/naht-heilen.mjs`.
+  (Schneefeld: Faktor 25). Heilen mit `~/bildwerkzeug/naht-heilen.mjs` (liegt nur auf dem Mac, siehe
+  Regel 4).
 - **In `<Canvas>` nichts laden, was anhalten kann, ohne es zu prüfen.**
   `useTexture` löste im Runner nie auf, obwohl alle Dateien mit 200 kamen —
   die äußere Suspense hängte die ganze Leinwand ab, Dauerladetext. Für

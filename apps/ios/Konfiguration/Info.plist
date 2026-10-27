@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Info.plist der iOS-Huelle, von Hand gepflegt (GENERATE_INFOPLIST_FILE = NO in
+  project.yml). Die $(…)-Werte ersetzt Xcode beim Bauen aus den
+  Build-Einstellungen.
+
+  Bewusst NICHT hier: jede NS…UsageDescription. Die App fragt weder nach
+  Kamera noch Fotos noch Standort; ein Berechtigungstext ohne Anlass ist fuer
+  Apples Pruefung eine Frage mehr (packages/server/test/app-ios.test.ts
+  haelt das fest).
+-->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>de</string>
+	<key>CFBundleDisplayName</key>
+	<string>$(BRAUWEG_ANZEIGENAME)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- Verschluesselt wird nur ueber HTTPS/WSS der Systembibliotheken, keine
+	     eigene Kryptografie: Die Ausfuhrfrage beim Upload entfaellt. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
+	<!-- Klartext nur zu lokalen Adressen, damit ein Entwicklungsserver
+	     (BRAUWEG_API_BASE = http://127.0.0.1:3000 im Simulator) erreichbar ist.
+	     Der echte Server ist HTTPS und davon unberuehrt. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+
+	<!-- Nur hochkant, wie das Web-Manifest (orientation: portrait). -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+
+	<!-- Helle Statusleiste auf dem Brauweg-Blau, schon waehrend des Starts. -->
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleLightContent</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+
+	<!-- Startbildschirm ohne Storyboard: nur die Farbe, dieselbe wie hinter
+	     dem WebView. Kein Bild: Ein Logo, das nach einer halben Sekunde einem
+	     anderen Bild weicht, wirkt wie ein Ruckler. -->
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>Startfarbe</string>
+	</dict>
+
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Standard</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SzenenDelegat</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+
+	<!-- Eigene Angaben der Huelle (Huelle.swift). -->
+	<key>BrauwegApiBasis</key>
+	<string>$(BRAUWEG_API_BASE)</string>
+	<key>BrauwegPush</key>
+	<string>$(BRAUWEG_PUSH)</string>
+</dict>
+</plist>

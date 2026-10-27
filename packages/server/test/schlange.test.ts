@@ -171,3 +171,109 @@ test('Ein anderes Konto derselben Runde bleibt vom Austritt eines Kontos unberue
   assert.equal(schlange.stand('filler', 'bert').tischId, 'tisch-filler');
   assert.deepEqual(schlange.stand('filler', 'anna'), NIEMAND, 'Anna bekommt den Tisch nicht genannt');
 });
+
+/**
+ * Abbrechen mitten im Tischbau: Die Schlange kann den Sitz nicht raeumen,
+ * also vermerkt sie den Absprung fuer die Vermittlung (seit dem 22.09.2026).
+ *
+ * Vorher loeschte `verlaesst` nur den Bau-Eintrag, und niemand erfuhr davon:
+ * Der Sitz stand schon in der Datenbank, der Client hatte die Suche verlassen
+ * und fragte nicht mehr nach — der Stuhl blieb leer, und die Partie lief nach
+ * der Abwesenheitsfrist aus. Die Probe mit Datenbank steht in suche.test.ts.
+ */
+test('Abbrechen im Bau wird vermerkt, und das Ende des Baus loescht den Vermerk wieder', () => {
+  const { schlange, vor } = aufbau();
+  schlange.betritt('filler', 'anna');
+  schlange.betritt('filler', 'bert');
+  vor(FENSTER_MS);
+  schlange.faellig(NIE_VOLL);
+  assert.equal(schlange.imBauAbgesprungen('filler', 'anna'), false, 'noch ist niemand abgesprungen');
+
+  schlange.verlaesst('filler', 'anna');
+  assert.equal(schlange.imBauAbgesprungen('filler', 'anna'), true);
+  assert.equal(schlange.imBauAbgesprungen('filler', 'bert'), false, 'Bert wartet weiter auf seinen Tisch');
+  assert.deepEqual(schlange.stand('filler', 'anna'), NIEMAND, 'und "sucht noch" hoert sie nicht mehr');
+
+  // Das Ende des Baus: Die Vermittlung hat den Vermerk ausgewertet. Bliebe er
+  // stehen, laese der naechste Bau desselben Kontos ihn als Absprung.
+  schlange.vermittelt('filler', ['bert'], 'tisch-filler');
+  schlange.bauBeendet('filler', ['anna', 'bert']);
+  assert.equal(schlange.imBauAbgesprungen('filler', 'anna'), false);
+});
+
+test('Ohne laufenden Bau vermerkt Abbrechen nichts — es gibt keinen Sitz zu raeumen', () => {
+  const { schlange } = aufbau();
+  schlange.betritt('filler', 'anna');
+  schlange.verlaesst('filler', 'anna');
+  assert.equal(schlange.imBauAbgesprungen('filler', 'anna'), false);
+});
+
+test('Der Vermerk gilt nur fuer das Spiel, in dem abgebrochen wurde', () => {
+  const { schlange, vor } = aufbau();
+  schlange.betritt('filler', 'anna');
+  schlange.betritt('eiland', 'anna');
+  vor(FENSTER_MS);
+  schlange.faellig(NIE_VOLL);
+
+  schlange.verlaesst('filler', 'anna');
+  assert.equal(schlange.imBauAbgesprungen('filler', 'anna'), true);
+  assert.equal(schlange.imBauAbgesprungen('eiland', 'anna'), false, 'der Eiland-Tisch wird noch gebaut');
+  assert.equal(schlange.stand('eiland', 'anna').sucht, true);
+});
+
+test('Vom Tisch her (verlaesstUeberall) ist der Absprung in jedem Spiel vermerkt', () => {
+  const { schlange, vor } = aufbau();
+  schlange.betritt('filler', 'anna');
+  schlange.betritt('eiland', 'anna');
+  vor(FENSTER_MS);
+  schlange.faellig(NIE_VOLL);
+
+  // Anna setzt sich an einen Freundestisch: Sitze in den beiden entstehenden
+  // Suchtischen darf sie deshalb nicht behalten.
+  schlange.verlaesstUeberall('anna');
+  assert.equal(schlange.imBauAbgesprungen('filler', 'anna'), true);
+  assert.equal(schlange.imBauAbgesprungen('eiland', 'anna'), true);
+});
+
+test('Ergebnis in Spiel A erscheint nicht in stand() fuer Spiel B', () => {
+  const { schlange, vor } = aufbau();
+  schlange.betritt('filler', 'anna');
+  vor(FENSTER_MS);
+  schlange.faellig(NIE_VOLL);
+  schlange.vermittelt('filler', ['anna'], 'tisch-filler');
+
+  // Der zweite Reiter fragt fuer Eiland nach, ohne dort je gesucht zu haben.
+  assert.deepEqual(
+    schlange.stand('eiland', 'anna'),
+    NIEMAND,
+    'vorher stand hier tischId "tisch-filler" — der Eiland-Reiter ging an den Filler-Tisch',
+  );
+  assert.equal(schlange.stand('filler', 'anna').tischId, 'tisch-filler');
+
+  // Auch mitten in einer eigenen Eiland-Suche: Die Antwort ist das Fenster.
+  schlange.betritt('eiland', 'anna');
+  const eiland = schlange.stand('eiland', 'anna');
+  assert.equal(eiland.tischId, null);
+  assert.equal(eiland.sucht, true);
+});
+
+test('Eine neue Suche in Spiel B laesst das Ergebnis von Spiel A liegen, eine in Spiel A raeumt es', () => {
+  const { schlange, vor } = aufbau();
+  schlange.betritt('filler', 'anna');
+  vor(FENSTER_MS);
+  schlange.faellig(NIE_VOLL);
+  schlange.vermittelt('filler', ['anna'], 'tisch-filler');
+
+  schlange.betritt('eiland', 'anna');
+  assert.equal(
+    schlange.stand('filler', 'anna').tischId,
+    'tisch-filler',
+    'der Filler-Reiter holt seinen Tisch trotzdem ab',
+  );
+
+  // Dieselbe Suche noch einmal: Das alte Ergebnis waere sonst die Antwort
+  // auf die neue Suche.
+  schlange.betritt('filler', 'anna');
+  assert.equal(schlange.stand('filler', 'anna').tischId, null);
+  assert.equal(schlange.stand('filler', 'anna').sucht, true);
+});

@@ -178,7 +178,13 @@ nächsten roten Lauf nicht zum zweiten Mal gesucht werden soll.
 > Siege und kostet Kampfdauer (Zahlen, drei weitere Kandidaten und die Probe
 > auf beiden Saatbasen in der **zehnten Messung** des Konzepts). Neue unterste
 > Zeile ist **Meuchler** mit ×0,64 — mit deutlich mehr Luft, als Naturwesen
-> hatte.
+> hatte. **Seit dem 25.09.2026 mit mehr Leben** (Gassendieb 585,
+> Schattenklinge 745, Knochenspäher 950): Marke ×0,86, in der Tauschprobe
+> keiner mehr in der letzten Zeile seiner Stufe. Tempo und Markenbonus sind
+> gemessen und verworfen (`docs/TAFELRUNDE-MEUCHLER-WERTE.md`). **Dorfwache
+> seit dem 25.09.2026 mit 550 statt 650 Leben** (Tauschprobe ×1,38 → ×1,12,
+> rohe Markenspanne ×1,28–0,80 → ×1,11–0,77). Der Schildknappe (×1,34) bleibt,
+> bis Untot einen weiteren Träger hat (`docs/TAFELRUNDE-WACHEN-WERTE.md`).
 >
 > **Die Tauschprobe (21.09.2026):**
 > `packages/game-tafelrunde/werkzeug/tauschprobe.mjs` (Kern
@@ -1245,9 +1251,14 @@ an einer einzigen Stelle: `src/entitlements.ts`.
 Vor dem Mergen immer `git fetch` — auf den Zweigen landen auch Commits aus
 Cursor.
 
-**`gh` ist nicht installiert**, und das Remote läuft über SSH. Pull
-Requests lassen sich deshalb aus der Sitzung heraus nicht anlegen; gemerged
-wird mit `git merge --ff-only`.
+**Ob `gh` geht, hängt am Rechner.** Bis zum 07.09.2026 stand hier, `gh` sei
+nicht installiert und das Remote laufe über SSH — beides gilt nicht überall
+(auf dem Mood-XPS liegt `gh` 2.97.0, angemeldet, Remote über HTTPS). Erst
+`gh auth status && git remote -v` fragen, dann entscheiden: Meldet das ein
+angemeldetes Konto, gehen Pull Requests aus der Sitzung heraus. Sonst nicht —
+zusammengeführt wird trotzdem nicht am Menschen vorbei, und ein Worker im
+Orchestrator merged ohnehin nie. Einzelheiten in `CLAUDE.md` unter „Bauen und
+prüfen".
 
 **Fragen vorab bündeln**, dann bis fertig durchbauen — nicht mittendrin
 nachfragen.
@@ -2370,10 +2381,13 @@ Wechsel, Rand-Gummiband, Guard in der Spielauswahl.
 
 ## iOS
 
-**Die App steht und läuft im Simulator.** Eigenes Repository
-`Brauweg-spiel-ios` neben diesem: eine SwiftUI-Hülle um einen `WKWebView`,
-die den gebauten Client aus dem App-Paket ausliefert. **Kein Capacitor** —
-die Begründung und alle Einzelheiten stehen in `docs/APPSTORE.md`.
+**Berichtigt am 23.09.2026:** Hier stand, die App stehe in einem eigenen
+Repository `Brauweg-spiel-ios` und laufe im Simulator. Das Repository gab es
+nie (Robin). Seit dem 23.09.2026 liegt die Hülle in **`apps/ios` dieses
+Repos** — Swift, ein `WKWebView`, der den gebauten Client aus dem App-Paket
+ausliefert, das Xcode-Projekt per XcodeGen. **Geschrieben, noch nie
+übersetzt**; der erste Build auf Toms Mac steht in `docs/APP-RELEASE.md`,
+Abschnitt 7. **Kein Capacitor** — die Begründung steht in `docs/APPSTORE.md`.
 
 Der eine Eingriff hier im Repository ist die **Anmeldung**: Für den Server ist
 die App eine fremde Herkunft und bekommt kein Cookie. Sie trägt ihr Token
@@ -2389,9 +2403,10 @@ fällt ohne `window.BRAUWEG_APP` auf das bisherige Verhalten zurück.
 `GameSelect.tsx`) — im Browser bleibt er sichtbar, dort gilt weiter die Regel
 aus `DESIGN.md`.
 
-**Vor jedem Bauen der App einmal `./scripts/web-uebernehmen.sh` im
-iOS-Repository laufen lassen.** Ohne das liegt kein Client im Paket; die App
-sagt das dann im Klartext, statt weiß zu bleiben.
+**Vor jedem Bauen der App einmal `npm run build --workspace @brauweg/client`
+laufen lassen**; die Build-Phase „Client ins Paket" (`apps/ios/werkzeug/web-einbauen.sh`)
+legt ihn dann ins App-Paket. Ohne das zeigt ein Debug-Bau den Hinweis im
+Klartext, statt weiß zu bleiben, und ein Release-Bau bricht ab.
 
 **Prüfstand jetzt: 118 Engine-Tests, 125 Servertests** (acht neue für die
 Token-Anmeldung, `test/app-huelle.test.ts`).
@@ -2406,7 +2421,11 @@ Token-Anmeldung, `test/app-huelle.test.ts`).
    unten, kleiner Textknopf unter „Abmelden", dann ein Blatt mit Warnung
    und Passwortabfrage. Das Passwort ist Absicht: Die Sitzung hält dreißig
    Tage, ohne die Frage genügte ein kurz aus der Hand gelegtes Handy.
-2. ~~Versanddienst für E-Mail~~ — **erledigt, läuft.** Resend über die
+2. Versanddienst für E-Mail — **eingerichtet, aber in der Produktion
+   vermutlich nicht aktiv** (23.09.2026: Bestätigungsmails kamen nicht an,
+   Robin holte die Codes aus dem Log; der Wert von `RESEND_API_KEY` ist dort
+   wohl leer). Klärt die Startzeile bzw. die Diagnose, Schritte in
+   `docs/MAIL.md`. Resend über die
    verifizierte Domain `brauweg-spielen.de`, DKIM und SPF als TXT bei
    Strato, der MX für den Return-Path auf der eigens angelegten Subdomain
    `send`.
@@ -2421,9 +2440,12 @@ Token-Anmeldung, `test/app-huelle.test.ts`).
    selbst, sobald der MX propagiert war.
 
    **Merke fürs nächste Mal:** Steht im Log `=== MAIL an …`, läuft der
-   Server ohne Versanddienst — das ist der `ConsoleMailer`. Fehlt
-   `RESEND_API_KEY`, schreibt der Start außerdem eine Zeile mit `ACHTUNG`.
-   Diese beiden Suchen beantworten die Frage in einer Sekunde.
+   Server ohne Versanddienst — das ist der `ConsoleMailer`. Seit dem
+   23.09.2026 sagt die Startzeile `Mailversand: …`, welcher Mailer läuft und
+   warum („gesetzt, aber leer" war der Fall in der Produktion — die alte
+   Warnung sagte dort „fehlt"), jeder Resend-Fehlschlag steht als
+   `MAILFEHLER` im Log, und Testkonten haben die Mail-Diagnose unter
+   `/aufsicht/mail`. Alles in `docs/MAIL.md`.
 3. **Rechtstexte: Gerüst steht, Angaben fehlen.** `/rechtliches/impressum.html`
    und `/rechtliches/datenschutz.html` sind angelegt und aus Anmeldung und
    Profil verlinkt. Die offenen Stellen sind **rot umrandet** — Name,

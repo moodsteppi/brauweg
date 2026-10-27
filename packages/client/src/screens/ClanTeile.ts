@@ -6,6 +6,8 @@
  * Dateien im Kreis aufeinander.
  */
 
+import { serverAdresse } from '../laufzeit';
+
 /** Laenge einer Chatnachricht. Muss zum Server passen (`chat.ts`). */
 export const MAX_NACHRICHT = 500;
 
@@ -18,7 +20,7 @@ export const MAX_NACHRICHT = 500;
  * wechselt, sieht nach einer zweiten Person aus.
  */
 export function avatarBild(accountId: string | null, hasAvatar: boolean): string {
-  if (accountId && hasAvatar) return `/api/avatars/${accountId}`;
+  if (accountId && hasAvatar) return serverAdresse(`/api/avatars/${accountId}`);
   const nummer = accountId ? (zahlAus(accountId) % 4) + 1 : 1;
   return `/hub/pinguin-${nummer}.png`;
 }

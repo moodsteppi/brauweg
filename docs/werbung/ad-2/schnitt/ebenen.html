@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Lilita One"; src: url("schrift/lilita-one-latin-400-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Nunito"; src: url("schrift/nunito-latin-wght-normal.woff2") format("woff2"); font-weight: 200 1000; }
+  html, body { margin: 0; width: 1080px; height: 1920px; background: transparent; overflow: hidden; }
+  .ebene { position: absolute; inset: 0; display: none; }
+  /* Einblendung: Titelschrift der App, weiss auf halbdurchsichtigem Nachtblau — lesbar auf Foto, Kueche und Tisch */
+  .zeile {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font: 400 86px/1.1 "Lilita One"; color: #fff; text-align: center; white-space: nowrap;
+    padding: 22px 44px 26px; border-radius: 28px;
+    background: rgba(14, 26, 61, 0.72);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  }
+  .zeile.klein { font-size: 70px; }
+  /* Ortsmarke: klein, oben links — oben rechts brennt der Server „KI-generiert" ein */
+  .ort {
+    position: absolute; left: 48px; top: 150px;
+    font: 800 44px/1 "Nunito"; color: #fff; letter-spacing: 0.5px;
+    padding: 14px 24px 16px; border-radius: 18px;
+    background: rgba(14, 26, 61, 0.72);
+  }
+  .ort b { color: #f5c02e; font-weight: 800; }
+  /* Endkarte */
+  #endkarte { display: none; background: radial-gradient(120% 80% at 50% 30%, #1d2f66 0%, #0e1a3d 55%, #081028 100%); }
+  #endkarte .logo { position: absolute; left: 50%; top: 210px; width: 820px; transform: translateX(-50%); }
+  #endkarte .spiele { position: absolute; left: 0; right: 0; top: 800px; text-align: center;
+    font: 400 64px/1.1 "Lilita One"; color: #fff; }
+  #endkarte .spiele span { color: #f5c02e; }
+  #endkarte .kacheln { position: absolute; left: 60px; right: 60px; top: 910px; display: flex; gap: 24px; }
+  #endkarte .kacheln img { width: 304px; height: 203px; object-fit: cover; border-radius: 22px;
+    border: 4px solid rgba(245, 192, 46, 0.85); box-shadow: 0 10px 30px rgba(0,0,0,0.45); }
+  #endkarte .aufruf { position: absolute; left: 0; right: 0; top: 1190px; text-align: center;
+    font: 700 50px/1.2 "Nunito"; color: #dfe6ff; }
+  #endkarte .link { position: absolute; left: 0; right: 0; top: 1262px; text-align: center;
+    font: 400 104px/1.1 "Lilita One"; color: #f5c02e; text-shadow: 0 6px 24px rgba(0,0,0,0.45); }
+  #endkarte .store { position: absolute; left: 50%; top: 1440px; transform: translateX(-50%); white-space: nowrap;
+    font: 700 42px/1 "Nunito"; color: #fff; padding: 22px 40px; border-radius: 999px;
+    border: 3px solid rgba(255,255,255,0.85); }
+</style>
+</head>
+<body>
+  <div class="ebene" id="t1"><div class="zeile" style="top:1290px">Früher: jeden Sonntag.</div></div>
+  <div class="ebene" id="t2"><div class="zeile" style="top:1290px">Dann kam das Leben.</div></div>
+  <div class="ebene" id="t3"><div class="zeile" style="top:1290px">Heute: immer noch Sonntag.</div></div>
+  <div class="ebene" id="o-hamburg"><div class="ort">Hamburg · <b>So 19:00</b></div></div>
+  <div class="ebene" id="o-koeln"><div class="ort">Köln</div></div>
+  <div class="ebene" id="o-leipzig"><div class="ort">Leipzig</div></div>
+  <div class="ebene" id="t4"><div class="zeile klein" style="top:1160px">Doppelkopf. Wie früher.<br>Nur weiter weg.</div></div>
+  <div class="ebene" id="streifen">
+    <div class="ort" style="top:40px; font-size:38px">Hamburg</div>
+    <div class="ort" style="top:680px; font-size:38px">Köln</div>
+    <div class="ort" style="top:1320px; font-size:38px">Leipzig</div>
+  </div>
+  <div class="ebene" id="endkarte">
+    <img class="logo" src="quelle/logo.png" alt="">
+    <div class="spiele">Doppelkopf <span>·</span> Skat <span>·</span> Partykiste</div>
+    <div class="kacheln">
+      <img src="quelle/banner-doppelkopf.webp" alt=""><img src="quelle/banner-skat.webp" alt=""><img src="quelle/banner-partykiste.webp" alt="">
+    </div>
+    <div class="aufruf">Jetzt im Browser spielen:</div>
+    <div class="link">brauweg-spielen.de</div>
+    <div class="store">App bald im App Store und bei Google Play</div>
+  </div>
+<script>
+  const art = new URLSearchParams(location.search).get("art");
+  document.getElementById(art).style.display = "block";
+</script>
+</body>
+</html>

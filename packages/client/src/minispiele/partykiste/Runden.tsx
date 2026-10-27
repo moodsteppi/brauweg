@@ -21,6 +21,7 @@ import {
   FARBZEICHEN,
   istRoteKarte,
   rangName,
+  zaehlerWort,
   type BusSicht,
   type EntwederSicht,
   type ImposterSicht,
@@ -34,11 +35,20 @@ import {
   type WerBinIchSicht,
   type WerEherSicht,
 } from './sicht';
+import { Buslinie } from './Buslinie';
+import { KategorienRunde, MehrheitRunde, RegelkartenRunde } from './RundenOhneUhr';
+import { BombeRunde, KoenigsbecherRunde, ZehnSekundenRunde } from './RundenZeitdruck';
 
 export interface RundenProps {
   sicht: PartykisteSicht;
   sitze: SeatInfo[];
   sende: (aktion: PartyAktion) => void;
+  /**
+   * Die Phasenfrist, die der SERVER mitschickt (`phaseDeadline`), oder null —
+   * nur zum Anzeigen (10 Sekunden, RundenZeitdruck.tsx). Geschaltet wird auf
+   * dem Server; bei der Bombe schickt er sie absichtlich nicht.
+   */
+  frist?: number | null;
 }
 
 /* --------------------------------------------------------------------------
@@ -53,7 +63,7 @@ export function namenFuer(sitze: SeatInfo[], sitz: number): string {
 }
 
 /** Die Buehne: eine Karte, auf der das Wesentliche steht. */
-function Buehne({
+export function Buehne({
   oben,
   gross,
   unten,
@@ -74,7 +84,7 @@ function Buehne({
 }
 
 /** Eine Reihe grosser Schaltflaechen — die einzige Eingabe, die es hier gibt. */
-function Wahl({
+export function Wahl({
   weit,
   children,
 }: {
@@ -88,8 +98,41 @@ function Wahl({
   );
 }
 
+/**
+ * Wer beim „Weiter" aller noch fehlt — mit Namen, auf jedem Bildschirm, auch
+ * bei dem, der schon getippt hat. Die Liste kommt fertig aus der Sicht
+ * (`weiterFehlen`); steht dort null, wartet der Tisch gerade nicht auf ein
+ * „Weiter", und es steht nichts da.
+ */
+export function FehlenNoch({ sicht, sitze }: { sicht: PartykisteSicht; sitze: SeatInfo[] }): React.JSX.Element | null {
+  /* `?? null`: Ein Server von vor dem 07.10.2026 schickt das Feld nicht. */
+  const fehlen = sicht.weiterFehlen ?? null;
+  if (!fehlen || fehlen.length === 0) return null;
+  return (
+    <p className="pk-wartet pk-fehlen" aria-live="polite" data-pk-fehlen="">
+      Es fehlen noch:{' '}
+      {fehlen.map((s, i) => (
+        <span key={s}>
+          {i > 0 ? ', ' : null}
+          <strong data-ich={s === sicht.sitz ? '' : undefined}>{s === sicht.sitz ? 'du' : namenFuer(sitze, s)}</strong>
+        </span>
+      ))}
+    </p>
+  );
+}
+
 /** Warten auf die anderen — mit Zahl, damit man weiss, ob es hakt. */
-export function Wartet({ sicht }: { sicht: PartykisteSicht }): React.JSX.Element {
+export function Wartet({ sicht, sitze }: { sicht: PartykisteSicht; sitze?: SeatInfo[] }): React.JSX.Element {
+  /* An den drei „Weiter"-Stellen nennt die Sicht die Fehlenden selbst — dann
+     stehen hier Namen statt einer Zahl. */
+  const fehlen = sicht.weiterFehlen ?? null;
+  if (sitze && fehlen !== null) {
+    return fehlen.length > 0 ? (
+      <FehlenNoch sicht={sicht} sitze={sitze} />
+    ) : (
+      <p className="pk-wartet">Gleich geht es weiter …</p>
+    );
+  }
   /* In der Abrechnung tippen Bots kein "Weiter" — sie zaehlen als fertig,
      sonst stuende hier "Noch 3 Leute", die es nie gibt. */
   const bots = sicht.phase === 'ergebnis' ? sicht.botSitze.filter((b) => !sicht.gehandelt.includes(b)).length : 0;
@@ -114,7 +157,7 @@ export function Karte({ karte, zu }: { karte?: PartyKarte; zu?: boolean }): Reac
 }
 
 /** Schaltflaechen mit den Namen der Mitspieler — zum Zeigen und Verdaechtigen. */
-function Leute({
+export function Leute({
   sicht,
   sitze,
   gewaehlt,
@@ -164,10 +207,10 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
   const karte = daten.binImposter ? (
     <>
       <span className="pk-wort">IMPOSTER</span>
-      <span className="pk-hinweis">Hinweis: {daten.hinweis ?? '—'}</span>
+      <span className="pk-hinweis">Hinweis: {daten.hinweis ?? '-'}</span>
     </>
   ) : (
-    <span className="pk-wort">{daten.meinWort ?? '—'}</span>
+    <span className="pk-wort">{daten.meinWort ?? '-'}</span>
   );
   const reihe = (
     <ol className="pk-reihe" aria-label="Redereihenfolge">
@@ -184,20 +227,23 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
     return (
       <>
         <Buehne
-          oben={daten.binImposter ? 'Du bist es — zeig es niemandem' : 'Dein Wort — zeig es niemandem'}
+          oben={daten.binImposter ? 'Du bist es - zeig es niemandem' : 'Dein Wort - zeig es niemandem'}
           gross={<span className="pk-karte-inhalt">{karte}</span>}
           ton={daten.binImposter ? 'schlecht' : 'geheim'}
         />
-        <p className="pk-ansage">Redereihenfolge — jeder sagt einen Satz zum Wort:</p>
+        <p className="pk-ansage">Redereihenfolge - jeder sagt einen Satz zum Wort:</p>
         {reihe}
         {gesehen ? (
-          <Wartet sicht={sicht} />
+          <Wartet sicht={sicht} sitze={sitze} />
         ) : (
-          <Wahl>
-            <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
-              Gesehen
-            </button>
-          </Wahl>
+          <>
+            <Wahl>
+              <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
+                Gesehen
+              </button>
+            </Wahl>
+            <FehlenNoch sicht={sicht} sitze={sitze} />
+          </>
         )}
       </>
     );
@@ -211,12 +257,12 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
           oben={daten.binImposter ? 'Du bist der Imposter' : 'Dein Wort'}
           gross={
             <span className="pk-wort is-klein">
-              {daten.binImposter ? `Hinweis: ${daten.hinweis ?? '—'}` : (daten.meinWort ?? '—')}
+              {daten.binImposter ? `Hinweis: ${daten.hinweis ?? '-'}` : (daten.meinWort ?? '-')}
             </span>
           }
           unten={
             <span>
-              {daten.redeRunde > 1 ? `${daten.redeRunde}. Rederunde — ` : ''}
+              {daten.redeRunde > 1 ? `${daten.redeRunde}. Rederunde - ` : ''}
               Reihum ein Satz, in dieser Reihenfolge. Dann: Wer passt nicht?
             </span>
           }
@@ -322,7 +368,7 @@ function QuizRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
               <li key={sitz} data-gut={wahl === daten.richtig ? '' : undefined}>
                 <span>{namenFuer(sitze, sitz)}</span>
                 <span className="muted">
-                  {wahl < 0 ? 'keine Antwort' : (daten.antworten[wahl] ?? '—')}
+                  {wahl < 0 ? 'keine Antwort' : (daten.antworten[wahl] ?? '-')}
                 </span>
               </li>
             ),
@@ -504,24 +550,38 @@ function BusRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
   const binDran = sicht.amZug === sicht.sitz;
   const auf = sicht.phase === 'ergebnis';
   const stufe = Math.min(2, Math.max(0, daten.stufe));
+  // Am Ende der Runde steht der Bus dort, wo die letzte Fahrt aufhörte.
+  const station = auf && daten.letzter ? (daten.letzter.richtig ? 3 : daten.letzter.stufe) : daten.stufe;
+  const panne = daten.letzter !== null && !daten.letzter.richtig && (auf || daten.letzter.sitz === daten.amZug);
 
   return (
     <>
       <Buehne
         oben={auf ? 'Ausgefahren' : binDran ? 'Du fährst' : `${namenFuer(sitze, daten.amZug)} fährt`}
         gross={
-          <div className="pk-kartenreihe">
-            <Karte karte={daten.offen[0]} zu={daten.offen.length < 1} />
-            <Karte karte={daten.offen[1]} zu={daten.offen.length < 2} />
-            <Karte karte={daten.offen[2]} zu={daten.offen.length < 3} />
+          <div className="pk-busfahrt">
+            {/* Die Strecke: Station = richtige Tipps der laufenden Fahrt;
+                nach dem Ende der Runde das Ergebnis der letzten Fahrt. */}
+            <Buslinie station={station} panne={panne} />
+            <div className="pk-kartenreihe">
+              <Karte karte={daten.offen[0]} zu={daten.offen.length < 1} />
+              <Karte karte={daten.offen[1]} zu={daten.offen.length < 2} />
+              <Karte karte={daten.offen[2]} zu={daten.offen.length < 3} />
+            </div>
           </div>
         }
         unten={
           daten.letzter ? (
-            <span data-gut={daten.letzter.richtig ? '' : undefined}>
+            <span className="pk-letzter-tipp" data-gut={daten.letzter.richtig ? '' : undefined}>
+              {/* Die Karte, die den Tipp entschieden hat. Nach einem Fehlgriff
+                  ist die Fahrt vorbei und die Reihe oben wieder leer — ohne
+                  sie sähe niemand, was eigentlich gekommen ist. */}
+              <span className="pk-mini-karte">
+                <Karte karte={daten.letzter.karte} />
+              </span>
               {namenFuer(sitze, daten.letzter.sitz)}:{' '}
-              {BUS_WAHL[daten.letzter.stufe]?.[daten.letzter.wahl] ?? '?'} —{' '}
-              {daten.letzter.richtig ? 'richtig' : 'daneben, ein Schluck'}
+              {BUS_WAHL[daten.letzter.stufe]?.[daten.letzter.wahl] ?? '?'} -{' '}
+              {daten.letzter.richtig ? 'richtig' : `daneben, ein ${zaehlerWort(sicht.trinkmodus, 1)}`}
             </span>
           ) : (
             <span>Drei richtige Tipps, dann ist der Nächste dran.</span>
@@ -655,7 +715,7 @@ function EntwederRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
             {daten.a} <span className="muted">oder</span> {daten.b}?
           </span>
         }
-        unten={auf ? <span>{zaehlA === zaehlB ? 'Gleichstand — alle trinken.' : 'Die Minderheit trinkt.'}</span> : undefined}
+        unten={auf ? <span>{zaehlA === zaehlB ? 'Gleichstand - alle trinken.' : 'Die Minderheit trinkt.'}</span> : undefined}
       />
       <Wahl>
         <button
@@ -722,7 +782,7 @@ function WahrheitPflichtRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
         <Buehne
           oben={`${wer} · ${wahl === 1 ? 'Pflicht' : 'Wahrheit'}`}
           gross={<span className="pk-frage">{text}</span>}
-          unten={binDran ? <span>Mach es vor der Runde. Dann ehrlich tippen.</span> : <span>Zuschauen — und dann entscheiden, ob das zählt.</span>}
+          unten={binDran ? <span>Mach es vor der Runde. Dann ehrlich tippen.</span> : <span>Zuschauen - und dann entscheiden, ob das zählt.</span>}
           ton={binDran ? 'geheim' : undefined}
         />
       )}
@@ -787,5 +847,20 @@ export function Runde(props: RundenProps): React.JSX.Element {
       return <EntwederRunde {...props} />;
     case 'wahrheitpflicht':
       return <WahrheitPflichtRunde {...props} />;
+    /* Die drei ohne Uhr (RundenOhneUhr.tsx). Mehrheitsraten merkt sich die
+       eigene Antwort im Zustand — der Schluessel wirft ihn je Runde weg. */
+    case 'kategorien':
+      return <KategorienRunde {...props} />;
+    case 'mehrheit':
+      return <MehrheitRunde key={props.sicht.rundeNr} {...props} />;
+    case 'regelkarte':
+      return <RegelkartenRunde {...props} />;
+    /* Die drei mit Uhr (RundenZeitdruck.tsx) — die Uhr selbst laeuft auf dem Server. */
+    case 'bombe':
+      return <BombeRunde {...props} />;
+    case 'zehnsekunden':
+      return <ZehnSekundenRunde {...props} />;
+    case 'koenigsbecher':
+      return <KoenigsbecherRunde {...props} />;
   }
 }

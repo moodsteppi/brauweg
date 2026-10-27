@@ -80,6 +80,13 @@ fünf vorhandenen Blätter:
 | Knochenspäher (2 Gold) | meuchler | `Skeleton_Rogue` | `Skeleton_Dagger` (beidhändig) |
 | Grabfürstin (3 Gold) | magier | `Skeleton_Mage` | `Skeleton_Staff` |
 
+**Nachtrag 25.09.2026:** Seit dem Tag trägt auch das **Irrlicht** (1 Gold,
+wache) die Marke Untot (`katalog.ts`, beim Irrlicht). Am Blatt ändert das
+nichts: Es ist eine zweite Wache und bekommt dasselbe untote Wachenblatt wie
+der Schildknappe. Wer das Blatt baut, sieht dann eine Knochenwache, wo heute
+der Ritter und im Rückfall die Kugel steht — das folgt dem Katalog, wie oben
+gewollt. Bleiben es drei Rollen, bleiben es drei Blätter.
+
 Das Paket liegt in demselben Spiegel wie der Druide
 (`SY227/kaykit-complete-v6-1-assets`, Ordner `KayKit Skeletons 1.1`;
 `characters/gltf`, `assets/gltf`, `Animations/gltf/Rig_Medium`), unter

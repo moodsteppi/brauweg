@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "canvas": [
+    512,
+    512
+  ],
+  "boden": [
+    256,
+    490
+  ],
+  "anker": {
+    "schulter_vorn": [
+      145,
+      257
+    ],
+    "schulter_hinten": [
+      359,
+      258
+    ],
+    "huefte_vorn": [
+      158,
+      442
+    ],
+    "huefte_hinten": [
+      314,
+      442
+    ],
+    "kopf_oben": [
+      244,
+      55
+    ],
+    "augen_mitte": [
+      256,
+      149
+    ],
+    "brust_mitte": [
+      270,
+      298
+    ]
+  },
+  "teile": {
+    "koerper": {
+      "datei": "pinguin-koerper.png",
+      "drehpunkt": [
+        256,
+        490
+      ],
+      "an": null
+    },
+    "flosse_hinten": {
+      "datei": "pinguin-flosse-hinten.png",
+      "drehpunkt": [
+        97,
+        68
+      ],
+      "an": "schulter_hinten"
+    },
+    "flosse_vorn": {
+      "datei": "pinguin-flosse-vorn.png",
+      "drehpunkt": [
+        140,
+        70
+      ],
+      "an": "schulter_vorn"
+    },
+    "fuss_hinten": {
+      "datei": "pinguin-fuss.png",
+      "drehpunkt": [
+        43,
+        46
+      ],
+      "an": "huefte_hinten",
+      "abdunkeln": 0.15
+    },
+    "fuss_vorn": {
+      "datei": "pinguin-fuss.png",
+      "drehpunkt": [
+        43,
+        46
+      ],
+      "an": "huefte_vorn"
+    },
+    "lider": {
+      "datei": "pinguin-lider.png",
+      "drehpunkt": [
+        64,
+        64
+      ],
+      "an": "augen_mitte",
+      "sichtbar": false,
+      "skala": [
+        1.125,
+        1
+      ]
+    }
+  },
+  "reihenfolge": [
+    "flosse_hinten",
+    "fuss_hinten",
+    "koerper",
+    "lider",
+    "fuss_vorn",
+    "flosse_vorn"
+  ],
+  "griffpunkt_flosse_vorn": [
+    77,
+    197
+  ]
+}

@@ -16,7 +16,14 @@
  * entsteht ausschliesslich in viewFor, der Client blendet nichts selbst aus.
  */
 
-import { type FillerRegeln, istVariante, mitBarrieren, mitSternen } from './regeln.js';
+import {
+  type FillerRegeln,
+  type FillerRegelnFest,
+  farbzahl,
+  istVariante,
+  mitBarrieren,
+  mitSternen,
+} from './regeln.js';
 
 // ---------------------------------------------------------------------------
 // Zufall
@@ -142,7 +149,7 @@ export const STERN_BONUS = 1;
 export const STERN_MAUERN = 1;
 
 export interface FillerPartie {
-  readonly regeln: FillerRegeln;
+  readonly regeln: FillerRegelnFest;
   /**
    * Farbnummer je Platz, 0 bis regeln.farben-1.
    *
@@ -285,7 +292,7 @@ export function startEcke(sitz: number, spalten: number, zeilen: number): number
  * ausgeschlossen; alle anderen Nachbarn kommen erst spaeter dran und sehen
  * ihrerseits nach oben und nach links.
  */
-function baueBrett(regeln: FillerRegeln, zufall: () => number): number[] {
+function baueBrett(regeln: FillerRegelnFest, zufall: () => number): number[] {
   const { spalten, zeilen, farben } = regeln;
   const feld: number[] = new Array(spalten * zeilen).fill(0);
   for (let platz = 0; platz < feld.length; platz++) {
@@ -316,13 +323,20 @@ export function erstellePartie(
    * 1. September keine Barrierenzahl — stuende beides als `undefined` im
    * Snapshot, muesste jede spaetere Stelle raten, was es bedeutet.
    */
-  const gueltigeRegeln: FillerRegeln = {
-    ...regeln,
+  const { farbenJeSpielart: _jeSpielart, ...ohneTabelle } = regeln;
+  const gueltigeRegeln: FillerRegelnFest = {
+    ...ohneTabelle,
+    /*
+     * Die Farbzahl steht ab hier fest in der Partie, die Tabelle je Spielart
+     * nicht: Sie beschreibt nur, womit ein Tisch AUFGEMACHT wird, und stuende
+     * sonst in jedem Snapshot als zweite, ungenutzte Wahrheit.
+     */
+    farben: farbzahl(regeln),
     variante: istVariante(regeln.variante) ? regeln.variante : 'nebel',
     barrieren: typeof regeln.barrieren === 'number' ? regeln.barrieren : 0,
   };
-  const { spalten, zeilen, farben } = regeln;
-  const feld = baueBrett(regeln, zufall);
+  const { spalten, zeilen, farben } = gueltigeRegeln;
+  const feld = baueBrett(gueltigeRegeln, zufall);
 
   /*
    * Die Grautoene NACH dem Brett und aus demselben Generator, aber als eigene

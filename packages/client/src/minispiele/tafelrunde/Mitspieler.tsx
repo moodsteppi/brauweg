@@ -26,6 +26,8 @@
 
 import { useState } from 'react';
 
+import { serverAdresse } from '../../laufzeit';
+
 import { type Leistenplatz, leistenplaetze, nochDabei } from './platzierung';
 import stil from './Mitspieler.module.css';
 
@@ -164,7 +166,7 @@ export function Mitspielerleiste({
     <section
       className={stil.leiste}
       role="group"
-      aria-label={`Mitspieler — noch ${lebend} von ${plaetze.length}`}
+      aria-label={`Mitspieler - noch ${lebend} von ${plaetze.length}`}
     >
       <ul className={stil.liste}>
         {plaetze.map((p) => {
@@ -174,7 +176,7 @@ export function Mitspielerleiste({
               key={p.sitz}
               platz={p}
               name={sitzname(zeile, p.sitz)}
-              bild={zeile?.avatarUrl ?? null}
+              bild={serverAdresse(zeile?.avatarUrl)}
               anteil={lebensanteil(p.leben, hoechstes)}
               gezeigt={p.sitz === gezeigt}
               onWahl={onWahl}

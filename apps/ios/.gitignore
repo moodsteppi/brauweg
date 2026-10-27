@@ -1,0 +1,11 @@
+# Das Xcode-Projekt ist ein Erzeugnis von `xcodegen generate` (Quelle:
+# project.yml). Eingecheckt waere es eine zweite Wahrheit, die bei jedem
+# Merge in der pbxproj-Datei kollidiert.
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+build/
+
+# Toms Team-ID und lokale Umstellungen (Vorlage: Lokal.xcconfig.beispiel).
+Konfiguration/Lokal.xcconfig

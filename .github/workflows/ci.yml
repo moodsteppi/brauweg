@@ -178,11 +178,25 @@ jobs:
             exit 1
           fi
 
+          # Bei einem Pull Request scannen wir NUR die Commits dieses PR, nicht
+          # die ganze Historie. Wer einen Zweig aus einem älteren Commit abzweigt,
+          # kriegt sonst alle Funde aus den dazwischenliegenden Commits aufs
+          # Dach, auch wenn der PR selbst sauber ist.
+          # Bei Push (auf main) bleibt der Scan uneingeschränkt.
+          log_opts=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Bereich: von der Verzweigung bis zum PR-Kopf
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+            log_opts="--log-opts=${base}..${head}"
+          fi
+
           # --exit-code 2 trennt den Fund vom Werkzeugfehler: Ohne das Flag
           # meldet gitleaks BEIDES als 1 (nachgemessen an 8.18.4 am 06.09.2026:
           # 0 sauber, 1 Fund, 1 auch bei unlesbarer Quelle).
           gitleaks detect --source . --redact --no-banner --verbose \
-            --report-path gitleaks-bericht.json --exit-code 2
+            --report-path gitleaks-bericht.json --exit-code 2 \
+            $log_opts
           code=$?
 
           if [ "$code" -eq 0 ]; then
@@ -342,11 +356,18 @@ jobs:
       - name: Bauen
         run: npm run build
 
+      # Das Zählwerkzeug selbst zuerst: Zählt es falsch, ist die
+      # Zusammenfassung unten wertlos — am 23.09.2026 meldete es unter Node 24
+      # jedes Paket mit 0 Tests und trotzdem „Alle grün".
+      - name: Prüfstand-Werkzeug prüfen
+        run: npm run test:werkzeug
+
       # `shell: bash` ist hier kein Beiwerk. Nur damit läuft der Schritt mit
       # `-o pipefail`; sonst wäre der Exit-Code der von `tee`, also immer 0,
       # und ein roter Test käme als grüner Haken durch. Das ist die teuerste
       # Art, eine Prüfstrecke kaputtzumachen: Sie sieht weiter aus wie eine.
       - name: Tests
+        id: tests
         shell: bash
         run: npm test 2>&1 | tee pruefstand.log
 
@@ -374,4 +395,11 @@ jobs:
           # der Kommandozeile (`gh run view --log`) — und wenn die Zählung
           # selbst einmal falsch aussieht, will man sie neben der Ausgabe
           # lesen, aus der sie stammt.
-          node werkzeug/pruefstand.mjs pruefstand.log | tee -a "$GITHUB_STEP_SUMMARY"
+          #
+          # Zählt das Werkzeug nichts, endet es mit 1 — „grün" ohne Zählung
+          # ist genau der Fehler vom 23.09.2026. Rot wird der Schritt dafür
+          # aber nur, wenn die Tests selbst durchliefen: Starb der Lauf
+          # vorher, fehlt die Zählung zwangsläufig, und das zweite rote Kreuz
+          # lenkte nur vom ersten ab.
+          node werkzeug/pruefstand.mjs pruefstand.log | tee -a "$GITHUB_STEP_SUMMARY" \
+            || [ "${{ steps.tests.outcome }}" != "success" ]

@@ -14,6 +14,18 @@ import { kameraFuer, zeichne } from '../minispiele/brocooked/zeichnen';
 import stil from '../minispiele/brocooked/BroCooked.module.css';
 import type { ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
+import { HbBlatt } from './HbBlatt';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+import './brocooked-einstieg.css';
+
+/** Farbe von BroCooked im Hub: das Feuer unter der Pfanne im Banner. */
+const AKZENT = '#ff8a3d';
+const RUNDEN_WAHL = [1, 2, 3, 4, 5, 6].map((n) => ({ wert: n, text: String(n) }));
+
+/** Sterne als Zeichen, gleich für Menü und Feierabend. */
+function sternZeichen(sterne: number): string {
+  return '★'.repeat(sterne) + '☆'.repeat(3 - sterne);
+}
 
 /**
  * BroCooked — hektische Küche für 1 bis 4 Köche, miteinander statt
@@ -424,6 +436,8 @@ export function BroCooked({
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [abschluss, setAbschluss] = useState<Lauf | null>(null);
+  /** Die Rezeptkarte liegt als Blatt hinter einer Zeile statt im Aufklapper. */
+  const [rezepteOffen, setRezepteOffen] = useState(false);
 
   /* --- Lokal: der Motor steht hier ---------------------------------- */
 
@@ -578,148 +592,212 @@ export function BroCooked({
 
   /* --- Anzeige ------------------------------------------------------- */
 
+  /*
+   * Spieleinstieg-Baukasten (seit 26.09.2026): Menü, Gruppe und Feierabend im
+   * Nachtblau-Rahmen; die Küche selbst bleibt, wie sie ist.
+   */
   if (modus.art === 'menue') {
     const sterne = gemerkteSterne();
     return (
-      <div className={stil.seite}>
-        <header>
-          <button type="button" className="ghost" onClick={onBack}>
-            Zurück
-          </button>
-          <h1>BroCooked</h1>
-          <p>
-            Bestellungen kommen herein, ihr schneidet, kocht, richtet an und gebt durch. Gekocht
-            wird miteinander: Es gibt eine Punktzahl für alle.
-          </p>
-        </header>
-
-        <label className={stil.regler}>
-          Runden: <strong>{runden}</strong>
-          <input
-            type="range"
-            min={1}
-            max={6}
-            value={runden}
-            onChange={(e) => setRunden(Number(e.target.value))}
-          />
-        </label>
-
-        <div className={stil.wahl}>
-          <button type="button" onClick={() => starteLokal(1)}>
-            Allein kochen
-          </button>
-          <button type="button" onClick={() => starteLokal(2)}>
-            Zu zweit an diesem Gerät
-          </button>
-          <button type="button" disabled={laedt} onClick={() => void offenenTischSuchen()}>
-            {laedt ? 'Tisch wird gesucht …' : 'Am Tisch (2–4 Geräte)'}
-          </button>
-        </div>
-
-        {fehler !== null && <p className={stil.fehler}>{fehler}</p>}
-
-        <ul className={stil.kuechen}>
-          {KUECHEN.map((k) => (
-            <li key={k.id}>
-              <span>{k.name}</span>
-              <span aria-label={`${sterne[k.id] ?? 0} von 3 Sternen`}>
-                {'★'.repeat(sterne[k.id] ?? 0)}
-                {'☆'.repeat(3 - (sterne[k.id] ?? 0))}
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        {/*
-          * Die Rezeptkarte: was in welcher Küche bestellt wird und was dafür
-          * nötig ist. Sie steht im Menü und nicht in einem Hilfefenster —
-          * wer mitten in der Schicht nachschlagen muss, hat schon verloren.
-          */}
-        <details className={stil.rezeptblock}>
-          <summary>Rezepte</summary>
-          {KUECHEN.map((k) => (
-            <div key={k.id} className={stil.rezeptkueche}>
-              <h2>{k.name}</h2>
-              <ul className={stil.rezepte}>
-                {k.rezepte.map((id) => (
-                  <Rezeptkarte key={id} rezeptId={id} />
-                ))}
-              </ul>
+      <SpielRahmen
+        gameId="brocooked"
+        titel="BroCooked"
+        unter="1-4 Köche · miteinander"
+        akzent={AKZENT}
+        onBack={onBack}
+        fuss={
+          <>
+            <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => starteLokal(1)}>
+              Allein kochen
+            </button>
+            <div className="hb-knopfreihe">
+              <button type="button" className="hb-kn is-blau spe-kn-unter" onClick={() => starteLokal(2)}>
+                Zu zweit an diesem Gerät
+              </button>
+              <button
+                type="button"
+                className="hb-kn is-blau spe-kn-unter"
+                disabled={laedt}
+                onClick={() => void offenenTischSuchen()}
+              >
+                {laedt ? 'Tisch wird gesucht …' : 'Am Tisch (2-4 Geräte)'}
+              </button>
             </div>
-          ))}
-          <p className={stil.hinweis}>
-            Eine Marke mit Schnitt muss geschnitten werden, eine runde Marke gegart. Roh kommt
-            nichts auf den Teller.
-          </p>
-        </details>
-
-        <p className={stil.hinweis}>
+          </>
+        }
+      >
+        <p className="spe-text">
+          Bestellungen kommen herein, ihr schneidet, kocht, richtet an und gebt durch. Gekocht wird
+          miteinander: Es gibt eine Punktzahl für alle.
+        </p>
+        {fehler !== null && <p className="hb-fehler">{fehler}</p>}
+        <SpielAbschnitt titel="Runden">
+          <div className="bc-runden">
+            <SpielWahl name="Runden" werte={RUNDEN_WAHL} wert={runden} onWahl={setRunden} />
+          </div>
+        </SpielAbschnitt>
+        <SpielAbschnitt titel="Küchen" zusatz="beste Sterne">
+          <ul className="hb-liste">
+            {KUECHEN.map((k) => (
+              <li key={k.id} className="spe-zeile">
+                <span>
+                  <strong>{k.name}</strong>
+                </span>
+                <span className="bc-sterne" aria-label={`${sterne[k.id] ?? 0} von 3 Sternen`}>
+                  {sternZeichen(sterne[k.id] ?? 0)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </SpielAbschnitt>
+        <SpielAbschnitt titel="Zum Nachlesen">
+          <div className="hb-liste">
+            <button type="button" className="spe-zeile" onClick={() => setRezepteOffen(true)}>
+              <span>
+                <strong>Rezepte</strong>
+                <small>Was in welcher Küche bestellt wird</small>
+              </span>
+              <span className="hb-pf" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          </div>
+        </SpielAbschnitt>
+        <p className="hb-klein">
           Am Rechner: WASD und Leertaste/E für den ersten Koch, Pfeiltasten und Enter/Null für den
           zweiten. Am Handy erscheinen Stick und Knöpfe auf dem Bild.
         </p>
-      </div>
+        {rezepteOffen && (
+          <HbBlatt titel="Rezepte" onClose={() => setRezepteOffen(false)}>
+            {KUECHEN.map((k) => (
+              <SpielAbschnitt key={k.id} titel={k.name}>
+                <ul className="bc-rezepte">
+                  {k.rezepte.map((id) => (
+                    <Rezeptkarte key={id} rezeptId={id} />
+                  ))}
+                </ul>
+              </SpielAbschnitt>
+            ))}
+            <p className="hb-klein">
+              Eine Marke mit Schnitt muss geschnitten werden, eine runde Marke gegart. Roh kommt
+              nichts auf den Teller.
+            </p>
+            <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => setRezepteOffen(false)}>
+              Fertig
+            </button>
+          </HbBlatt>
+        )}
+      </SpielRahmen>
     );
   }
 
   if (abschluss !== null) {
     return (
-      <div className={stil.seite}>
-        <h2>Feierabend</h2>
-        <p className={stil.endpunkte}>{abschluss.punkte} Punkte</p>
-        <ul>
-          {abschluss.sterne.map((s, i) => (
-            <li key={i}>
-              {kuechenplan(KUECHEN[i % KUECHEN.length].id).name}: {'★'.repeat(s)}
-              {'☆'.repeat(3 - s)}
-            </li>
-          ))}
-        </ul>
-        <div className={stil.wahl}>
-          {modus.art === 'lokal' && (
-            <button type="button" onClick={() => starteLokal(modus.koeche)}>
-              Noch einmal
+      <SpielRahmen
+        gameId="brocooked"
+        titel="Feierabend"
+        unter={`BroCooked · ${abschluss.sterne.length} ${abschluss.sterne.length === 1 ? 'Runde' : 'Runden'}`}
+        akzent={AKZENT}
+        onBack={verlassen}
+        zurueckText="Zurück ins Menü"
+        fuss={
+          modus.art === 'lokal' ? (
+            <>
+              <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => starteLokal(modus.koeche)}>
+                Noch einmal
+              </button>
+              <button type="button" className="hb-kn is-blau is-breit" onClick={verlassen}>
+                Zurück ins Menü
+              </button>
+            </>
+          ) : (
+            <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={verlassen}>
+              Zurück ins Menü
             </button>
-          )}
-          <button type="button" onClick={verlassen}>
-            Zurück ins Menü
-          </button>
-        </div>
-      </div>
+          )
+        }
+      >
+        <p className="bc-endpunkte">
+          <strong>{abschluss.punkte}</strong> Punkte
+        </p>
+        <SpielAbschnitt titel="Küchen">
+          <ul className="hb-liste">
+            {abschluss.sterne.map((s, i) => (
+              <li key={i} className="spe-zeile">
+                <span>
+                  <strong>{kuechenplan(KUECHEN[i % KUECHEN.length].id).name}</strong>
+                  <small>Runde {i + 1}</small>
+                </span>
+                <span className="bc-sterne" aria-label={`${s} von 3 Sternen`}>
+                  {sternZeichen(s)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </SpielAbschnitt>
+      </SpielRahmen>
     );
   }
 
   if (modus.art === 'tisch' && tisch.view === null) {
     const plaetze = tisch.table?.seats ?? [];
-    // Der erste freie Platz — `null`, wenn alle besetzt sind.
-    const freierPlatz =
-      plaetze.find((p) => p.displayName === null && !p.isBot)?.seat ?? null;
+    const freierPlatz = plaetze.find((p) => p.displayName === null && !p.isBot)?.seat ?? null;
+    const besetzt = plaetze.filter((s) => s.displayName !== null).length;
     return (
-      <div className={stil.seite}>
-        <h2>Küche füllt sich</h2>
-        <p>
-          {plaetze.filter((s) => s.displayName !== null).length} von {Math.max(plaetze.length, 2)}{' '}
-          Plätzen besetzt. Ihr könnt jederzeit loslegen — leere Plätze fallen dann weg. Wer eine
-          Hand mehr in der Küche will, setzt vorher einen Hilfskoch dazu.
+      <SpielRahmen
+        gameId="brocooked"
+        titel="Küche füllt sich"
+        unter={`${besetzt} von ${Math.max(plaetze.length, 2)} Plätzen besetzt`}
+        akzent={AKZENT}
+        onBack={verlassen}
+        zurueckText="Tisch verlassen"
+        fuss={
+          <>
+            <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => tisch.startNow(runden)}>
+              Jetzt anfangen
+            </button>
+            <div className="hb-knopfreihe">
+              <button
+                type="button"
+                className="hb-kn is-blau"
+                disabled={freierPlatz === null}
+                onClick={() => {
+                  if (freierPlatz !== null) tisch.addBot(freierPlatz);
+                }}
+              >
+                Hilfskoch dazu
+              </button>
+              <button type="button" className="hb-kn is-blau" onClick={verlassen}>
+                Tisch verlassen
+              </button>
+            </div>
+          </>
+        }
+      >
+        <p className="spe-text">
+          Ihr könnt jederzeit loslegen - leere Plätze fallen dann weg. Wer eine Hand mehr in der
+          Küche will, setzt vorher einen Hilfskoch dazu.
         </p>
-        <div className={stil.wahl}>
-          <button type="button" onClick={() => tisch.startNow(runden)}>
-            Jetzt anfangen
-          </button>
-          <button
-            type="button"
-            disabled={freierPlatz === null}
-            onClick={() => {
-              if (freierPlatz !== null) tisch.addBot(freierPlatz);
-            }}
-          >
-            Hilfskoch dazu
-          </button>
-          <button type="button" className="ghost" onClick={verlassen}>
-            Tisch verlassen
-          </button>
-        </div>
-        {tisch.error !== null && <p className={stil.fehler}>{tisch.error}</p>}
-      </div>
+        {tisch.error !== null && <p className="hb-fehler">{tisch.error}</p>}
+        {plaetze.length > 0 && (
+          <SpielAbschnitt titel="Köche" zusatz={`${besetzt}/${plaetze.length}`}>
+            <ul className="hb-liste">
+              {plaetze.map((p) => {
+                const leer = p.displayName === null && !p.isBot;
+                return (
+                  <li key={p.seat} className={`spe-zeile${leer ? ' is-leer' : ''}`}>
+                    <i className="bc-koch" style={{ background: leer ? undefined : sitzfarbe(p.seat) }} aria-hidden="true" />
+                    <span>
+                      <strong>{leer ? 'frei' : (p.displayName ?? 'Hilfskoch')}</strong>
+                      {p.isBot && <small>Hilfskoch</small>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </SpielAbschnitt>
+        )}
+      </SpielRahmen>
     );
   }
 

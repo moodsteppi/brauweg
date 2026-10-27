@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { filler } from '../src/adapter.js';
-import { DEFAULT_REGELN } from '../src/regeln.js';
+import { DEFAULT_REGELN, FARBEN_HOECHSTENS, FARBEN_JE_SPIELART } from '../src/regeln.js';
 
 function partie() {
   return filler.createParty({
@@ -34,10 +34,51 @@ describe('Adapter', () => {
     assert.ok(filler.validateConfig(DEFAULT_REGELN, 3, 1).length > 0);
   });
 
+  describe('Farbzahl', () => {
+    const tisch = (config: object) =>
+      filler.createParty({ config: config as typeof DEFAULT_REGELN, seats: 2, rounds: 1, seed: 7 });
+
+    it('kommt aus der Spielart, wenn der Regelsatz keine nennt', () => {
+      // Genau so macht der Bildschirm einen Tisch auf: Vorgabe plus Spielart.
+      assert.equal(DEFAULT_REGELN.farben, undefined);
+      for (const variante of ['nebel', 'klar', 'build', 'extreme'] as const) {
+        const config = { ...DEFAULT_REGELN, variante };
+        assert.deepEqual(filler.validateConfig(config, 2, 1), []);
+        assert.equal(tisch(config).regeln.farben, FARBEN_JE_SPIELART[variante]);
+      }
+      assert.equal(FARBEN_JE_SPIELART.extreme, 7);
+    });
+
+    it('nimmt eine ausdrueckliche Zahl ernst — ein alter Tisch behaelt seine', () => {
+      const config = { ...DEFAULT_REGELN, variante: 'extreme', farben: 6 };
+      assert.deepEqual(filler.validateConfig(config, 2, 1), []);
+      assert.equal(tisch(config).regeln.farben, 6);
+    });
+
+    it('schreibt die Tabelle je Spielart nicht in die Partie', () => {
+      assert.equal('farbenJeSpielart' in tisch(DEFAULT_REGELN).regeln, false);
+    });
+
+    it('laesst nicht mehr Farben zu, als der Bildschirm zeichnen kann', () => {
+      const zuViele = FARBEN_HOECHSTENS + 1;
+      assert.ok(filler.validateConfig({ ...DEFAULT_REGELN, farben: zuViele }, 2, 1).length > 0);
+      assert.ok(
+        filler.validateConfig(
+          { ...DEFAULT_REGELN, farbenJeSpielart: { ...FARBEN_JE_SPIELART, klar: zuViele } },
+          2,
+          1,
+        ).length > 0,
+      );
+      assert.ok(
+        filler.validateConfig({ ...DEFAULT_REGELN, farbenJeSpielart: 'viele' }, 2, 1).length > 0,
+      );
+    });
+  });
+
   it('kennt den Sitz am Zug und seine Zuege', () => {
     const p = partie();
     assert.equal(filler.currentActor(p), 0);
-    assert.equal(filler.legalActions(p, 0).length, DEFAULT_REGELN.farben - 2);
+    assert.equal(filler.legalActions(p, 0).length, FARBEN_JE_SPIELART.nebel - 2);
     assert.equal(filler.legalActions(p, 1).length, 0);
     assert.equal(filler.isFinished(p), false);
   });

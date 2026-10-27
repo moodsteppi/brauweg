@@ -17,6 +17,7 @@ import type {
   GameMeta,
   GameRegistry,
 } from '@brauweg/game-api';
+import { brochess } from '@brauweg/game-brochess';
 import { brocooked } from '@brauweg/game-brocooked';
 import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
@@ -31,6 +32,7 @@ import { skat } from '@brauweg/game-skat';
 import { tafelrunde } from '@brauweg/game-tafelrunde';
 import { wizard } from '@brauweg/game-wizard';
 import { notFound } from '../errors.js';
+import { ALLES, imUmfang, type Umfang } from '../umfang.js';
 
 const MODULES: readonly AnyGameModule[] = [
   doppelkopf as unknown as AnyGameModule,
@@ -46,6 +48,7 @@ const MODULES: readonly AnyGameModule[] = [
   golf as unknown as AnyGameModule,
   partykiste as unknown as AnyGameModule,
   brocooked as unknown as AnyGameModule,
+  brochess as unknown as AnyGameModule,
 ];
 
 /**
@@ -83,6 +86,44 @@ const byId = new Map<GameId, AnyGameModule>(
   MODULES.map((m) => [m.meta.id, m]),
 );
 
+/**
+ * Angekündigte Modi bleiben außerhalb der Tisch-Registry: Sie haben kein Spielmodul.
+ *
+ * Der Mehrkampf ist auf beiden Plattformen angekündigt (bis zum 26.10.2026
+ * nur in der App, die Webseite hatte dafür nur eine Marke ohne Stimme).
+ * Pro-Subway dagegen nur in der App: Auf der Webseite läuft der Runner schon
+ * (`/api/runner/lauf` sperrt nur die App), dort gibt es nichts abzustimmen.
+ */
+export function abstimmModiFuer(plattform: Plattform, umfang: Umfang = ALLES): (Omit<GameMeta, 'id'> & { id: string })[] {
+  if (!imUmfang(umfang, 'abstimmung')) return [];
+  return [
+    { id: 'prosubway', nameKey: 'modus.prosubway', seatCounts: [1] },
+    { id: 'mehrkampf', nameKey: 'modus.mehrkampf', seatCounts: [2, 3, 4, 5, 6, 7, 8] },
+  ]
+    // Jeder Modus braucht seine eigene Kennung im Umfang, wie jedes
+    // Vorschau-Spiel auch: Bis zum 27.10.2026 kam der Mehrkampf allein mit
+    // `abstimmung` mit — und `UMFANG=…,mehrkampf` meldete der Start als
+    // unbekannt, obwohl die Zeile genau das Gewollte sagte.
+    .filter(m => imUmfang(umfang, m.id) && (m.id === 'mehrkampf' || plattform === 'app'))
+    .map(m => ({
+      ...m, availability: 'preview' as const,
+      rotationSize: (sitze: number) => sitze, suggestedRounds: () => [],
+    }));
+}
+
+/**
+ * Alle Kennungen, die `UMFANG` ausser den Funktionen versteht: die Spiele
+ * der Registry samt Vorschau und die angekuendigten Modi. Fuer die Meldung
+ * unbekannter Namen beim Start (index.ts) — wer hier einen Modus vergisst,
+ * bekommt eine Warnung fuer eine Zeile, die stimmt.
+ */
+export function umfangKennungen(): string[] {
+  return [
+    ...registry.all().map((meta) => meta.id as string),
+    ...abstimmModiFuer('app').map((modus) => modus.id),
+  ];
+}
+
 export const registry: GameRegistry = {
   all: () => [...MODULES.map((m) => m.meta), ...PREVIEW],
   get: (id) => byId.get(id),
@@ -104,4 +145,236 @@ export function requireModule(id: GameId): AnyGameModule {
 
 export function isPlayable(id: GameId): boolean {
   return byId.has(id);
+}
+
+// ---------------------------------------------------------------------------
+// Freigabe je Plattform: Webseite und App
+// ---------------------------------------------------------------------------
+
+/**
+ * Wo eine Anfrage herkommt. Die App erkennt der Server an ihrer Herkunft
+ * (`APP_ORIGINS` in http/app.ts), alles andere ist die Webseite.
+ */
+export type Plattform = 'web' | 'app';
+
+/**
+ * Was ein Spiel auf einer Plattform ist.
+ *
+ * - `spielbar` — wie heute.
+ * - `bald` — steht in der Auswahl mit „Bald"-Marke, laesst sich aber nicht
+ *   starten. Dieselbe Darstellung wie ein Vorschau-Spiel ohne Modul, nur
+ *   ohne Abstimmung: Das Spiel gibt es ja, man muss niemanden danach fragen.
+ * - `aus` — gar nicht zu sehen. Nur fuer die App: Auf der Webseite zeigt
+ *   Brauweg nach DESIGN.md auch, was es noch nicht gibt. Ausnahme: Was
+ *   nicht im Umfang der Ausgabe steht (`UMFANG`, src/umfang.ts), ist auf
+ *   beiden Plattformen `aus` — das ist nicht „noch nicht", sondern „nicht
+ *   in diesem Release".
+ */
+export type Freigabe = 'spielbar' | 'bald' | 'aus';
+
+export interface SpielFreigabe {
+  readonly web: 'spielbar' | 'bald';
+  readonly app: Freigabe;
+}
+
+/**
+ * DIE Liste. Stand: Robins Entscheidung vom 23.09.2026 — in der App zuerst
+ * Doppelkopf, Skat und die Partykiste, alle anderen stehen dort auf „Bald";
+ * auf der Webseite bleibt alles spielbar. Seine Leitidee: „am besten kriegen
+ * wir alle fertig, aber Schritt fuer Schritt und die dann richtig". Ein Spiel
+ * wechselt also mit EINER Zeile hier in die App, sobald es dort taugt.
+ *
+ * Serverseitig und nicht im Client, weil eine App im Store ist und dort
+ * bleibt: Ein Wert, der im gebauten Paket steht, liesse sich nur mit einem
+ * neuen Build und einer neuen Pruefung bei Apple aendern. Hier genuegt ein
+ * Deploy — und die gerade installierten Apps richten sich beim naechsten
+ * Oeffnen danach.
+ *
+ * Jedes Modul steht ausdruecklich drin (`test/spielfreigabe.test.ts`
+ * prueft das): Ein neues Spiel soll bei der Aufnahme entscheiden, ob es in
+ * die App gehoert, statt still durchzurutschen. Vorschau-Spiele ohne Modul
+ * duerfen stehen, um sie in der App auf `aus` zu setzen; `spielbar` hat bei
+ * ihnen keine Wirkung, es gibt ja nichts zu spielen.
+ */
+export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
+  doppelkopf: { web: 'spielbar', app: 'spielbar' },
+  skat: { web: 'spielbar', app: 'spielbar' },
+  /* In der App seit dem 21.10.2026 „Kommt bald" (Emile): Die erste
+     iOS-Fassung geht ohne Trinkspiele an den Start. Vorher lief sie dort wie
+     auf der Webseite mit Trinkmodus (Robins Entscheidung, Risiko Apple
+     1.4.3). Zurueck in die App ist es diese eine Zeile; fuer eine Fassung
+     ohne Trinkmodus steht APP_OHNE_TRINKMODUS bereit (games/app-inhalt.ts). */
+  partykiste: { web: 'spielbar', app: 'bald' },
+  wizard: { web: 'spielbar', app: 'bald' },
+  cambio: { web: 'spielbar', app: 'bald' },
+  easypoker: { web: 'spielbar', app: 'bald' },
+  mememory: { web: 'spielbar', app: 'bald' },
+  /* In der App unter dem Namen „Farbduell" (i18n.ts im Client, Emile,
+     13.10.2026) — die erste iOS-Fassung: Doppelkopf, Skat, Partykiste,
+     Farbduell und BroChess. */
+  filler: { web: 'spielbar', app: 'spielbar' },
+  eiland: { web: 'spielbar', app: 'bald' },
+  feldherr: { web: 'spielbar', app: 'bald' },
+  tafelrunde: { web: 'spielbar', app: 'bald' },
+  golf: { web: 'spielbar', app: 'bald' },
+  brocooked: { web: 'spielbar', app: 'bald' },
+  /* Seit dem 25.09.2026 im Code. Auf der Webseite erst „Bald", bis es
+     jemand gespielt hat (Robin, 26.09.2026, vor dem Release). In der App
+     schon spielbar: Es gehoert zur ersten iOS-Fassung (Emile, 13.10.2026).
+     Seit dem 23.10.2026 auch auf der Webseite spielbar — Web und App sollen
+     dasselbe anbieten (docs/release/ios-web-abgleich.md); fuer die Produktion
+     bleibt UMFANG die Obergrenze. */
+  brochess: { web: 'spielbar', app: 'spielbar' },
+  /* Vorschau-Spiel mit Moderationsbedarf (freier Text zwischen Sitzen, siehe
+     PREVIEW) — in der App gar nicht erst ankuendigen. */
+  werwolf: { web: 'bald', app: 'aus' },
+};
+
+/**
+ * Was ein Spiel auf dieser Plattform ist (siehe `Freigabe`).
+ *
+ * `umfang` ist die Obergrenze der Ausgabe (`UMFANG`, src/umfang.ts): Was
+ * dort nicht steht, ist `aus` — auch auf der Webseite, die sonst nur
+ * `spielbar` und `bald` kennt. Die Vorgabe `ALLES` laesst `FREIGABE` allein
+ * entscheiden, wie vor dem Schalter.
+ */
+export function freigabeAuf(id: GameId, plattform: Plattform, umfang: Umfang = ALLES): Freigabe {
+  if (!imUmfang(umfang, id)) return 'aus';
+  const eintrag = FREIGABE[id];
+  if (!byId.has(id)) {
+    // Ohne Modul bleibt es Vorschau; nur die App darf es ganz ausblenden.
+    return plattform === 'app' && eintrag?.app === 'aus' ? 'aus' : 'bald';
+  }
+  return eintrag?.[plattform] ?? 'spielbar';
+}
+
+/** Laesst sich das Spiel auf dieser Plattform starten und betreten? */
+export function spielbarAuf(id: GameId, plattform: Plattform, umfang: Umfang = ALLES): boolean {
+  return byId.has(id) && freigabeAuf(id, plattform, umfang) === 'spielbar';
+}
+
+/**
+ * Wirft wie `requireModule`, wenn das Spiel auf dieser Plattform nicht
+ * spielbar ist — derselbe Fehler, damit der Client nichts Neues lernen muss.
+ *
+ * Gebraucht an JEDEM Einstieg (Tisch anlegen, Tischliste, Beitritt per
+ * Kennung und per Code, Mitspielersuche). Eine Sperre nur in der Auswahl
+ * waere keine: Ueber einen Einladungslink oder einen alten Lesezeichen-
+ * Aufruf kaeme man sonst doch an den Tisch.
+ */
+export function requireSpielbar(id: GameId, plattform: Plattform, umfang: Umfang = ALLES): void {
+  if (!spielbarAuf(id, plattform, umfang)) throw notFound('gameNotPlayable');
+}
+
+/**
+ * Die Spielauswahl, wie sie diese Plattform sieht.
+ *
+ * `bald` wird zur Vorschau (`availability: 'preview'`), `aus` faellt heraus.
+ * Jedes sichtbare `bald`-Spiel ist abstimmbar. Entscheidend ist die Freigabe
+ * dieser Plattform, auch wenn es auf einer anderen schon spielbar ist.
+ */
+export function spieleFuer(
+  plattform: Plattform,
+  umfang: Umfang = ALLES,
+): { meta: GameMeta; availability: GameMeta['availability']; abstimmbar: boolean }[] {
+  return registry.all().flatMap((meta) => {
+    const freigabe = freigabeAuf(meta.id, plattform, umfang);
+    if (freigabe === 'aus') return [];
+    return [
+      {
+        meta,
+        availability: freigabe === 'spielbar' ? ('playable' as const) : ('preview' as const),
+        abstimmbar: freigabe === 'bald',
+      },
+    ];
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Rueckweg fuer die App: Partykiste ohne Trinkmodus, ohne neuen Build
+// ---------------------------------------------------------------------------
+
+/**
+ * Wie zahm Inhalte in der App sein muessen.
+ *
+ * Robin hat am 23.09.2026 entschieden: Die Partykiste laeuft in der App wie
+ * auf der Webseite, MIT Trinkmodus — das Risiko bei Apple (Richtlinie 1.4.3,
+ * "Foerderung uebermaessigen Alkoholkonsums") kennt er. Lehnt Apple deshalb
+ * ab, soll die Antwort ein Deploy sein und kein neuer Build samt neuer
+ * Pruefung. Dafuer steht dieser Schalter bereit, VORGABE AUS (App = Web):
+ *
+ * - `APP_PARTYKISTE_TRINKMODUS=aus` — Tische, die aus der App angelegt oder
+ *   umgestellt werden, zaehlen Strafpunkte statt Schlucke. Das Modul kennt
+ *   das schon (`trinkmodus: false`: kein Glas, kein Schluck-Text, derselbe
+ *   Ablauf).
+ * - `APP_PARTYKISTE_HAERTE_MAX=2` bzw. `=1` — Obergrenze der Textschaerfe.
+ *   `2` ist pikant; `1` (harmlos) nimmt auch alle 16 Kiffer-Eintraege
+ *   heraus, denn die stehen alle auf pikant (niemals n101–n110,
+ *   wereher w101–w108). Ein eigener Filter NUR fuer diese Eintraege
+ *   braeuchte eine Marke am Inhalt und eine Aenderung im Modul — das ist
+ *   hier bewusst nicht geschehen (docs/APP-RELEASE.md, offene Punkte).
+ *
+ * Und in die andere Richtung: An einen Tisch, der diese Grenzen
+ * ueberschreitet (auf der Webseite angelegt, mit Trinkmodus), kommt aus der
+ * App niemand dazu. Sonst saesse der App-Nutzer doch wieder vor den
+ * Schlucken.
+ */
+export interface AppInhalt {
+  readonly trinkmodusAus: boolean;
+  readonly haerteMax: 1 | 2 | 3;
+}
+
+/** Vorgabe: Die App sieht dasselbe wie die Webseite. */
+export const APP_INHALT_WIE_WEB: AppInhalt = { trinkmodusAus: false, haerteMax: 3 };
+
+export function appInhaltAusUmgebung(env: NodeJS.ProcessEnv = process.env): AppInhalt {
+  const haerte = Number(env.APP_PARTYKISTE_HAERTE_MAX);
+  return {
+    trinkmodusAus: (env.APP_PARTYKISTE_TRINKMODUS ?? '').trim().toLowerCase() === 'aus',
+    haerteMax: haerte === 1 || haerte === 2 ? haerte : 3,
+  };
+}
+
+type Regelsatz = Record<string, unknown>;
+
+/**
+ * Je Spiel: was an einem Regelsatz fuer die App gezaehmt wird. Steht hier,
+ * weil diese Datei die einzige im Server ist, die konkrete Spiele kennt —
+ * die Feldnamen sind die aus `PartykisteRegeln` (game-partykiste/regeln.ts).
+ */
+const APP_ZAEHMUNG: Readonly<Partial<Record<GameId, (r: Regelsatz, s: AppInhalt) => Regelsatz>>> = {
+  partykiste: (r, s) => {
+    const neu: Regelsatz = { ...r };
+    if (s.trinkmodusAus) neu.trinkmodus = false;
+    // Fehlt die Stufe (Tische von vor dem 22.09.2026), gilt im Modul die
+    // Vorgabe 1 — die liegt unter jeder Grenze.
+    if (typeof r.inhaltsHaerte === 'number' && r.inhaltsHaerte > s.haerteMax) {
+      neu.inhaltsHaerte = s.haerteMax;
+    }
+    return neu;
+  },
+};
+
+const istRegelsatz = (x: unknown): x is Regelsatz =>
+  typeof x === 'object' && x !== null && !Array.isArray(x);
+
+/**
+ * Der Regelsatz, mit dem ein Tisch aus der App angelegt oder umgestellt
+ * wird. Ohne Schalter oder fuer ein anderes Spiel: unveraendert, auch ein
+ * fehlender Regelsatz bleibt fehlend (dann gilt die Vorgabe des Moduls).
+ */
+export function appRegeln(gameId: GameId, config: unknown, s: AppInhalt): unknown {
+  const zaehmung = APP_ZAEHMUNG[gameId];
+  if (!zaehmung || (!s.trinkmodusAus && s.haerteMax === 3)) return config;
+  const basis = istRegelsatz(config)
+    ? config
+    : (requireModule(gameId).defaultConfig() as Regelsatz);
+  return zaehmung(basis, s);
+}
+
+/** Darf ein App-Nutzer an einen Tisch mit diesem Regelsatz? */
+export function taugtFuerApp(gameId: GameId, config: unknown, s: AppInhalt): boolean {
+  if (!istRegelsatz(config)) return true;
+  const gezaehmt = appRegeln(gameId, config, s);
+  return JSON.stringify(gezaehmt) === JSON.stringify(config);
 }

@@ -14,7 +14,7 @@
  */
 
 import { randomBytes, randomInt } from 'node:crypto';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { AnyGameModule, BotLevel, GameId, PartyStanding } from '@brauweg/game-api';
 import { ZUGZEIT_HOECHST_MS } from '@brauweg/game-api';
 
@@ -27,6 +27,7 @@ import {
   isReadyToStart,
   pauseTable,
   resumeTable,
+  istUebungstisch,
   tableBotLevel,
   tableWithSeats,
   touch,
@@ -40,7 +41,11 @@ import {
 import { xpFuerPartie } from '../level.js';
 import { recordPartyResult } from '../clubs/war.js';
 import { fortschreiben } from '../quests.js';
+import { uebungGespielt } from '../lernpfad.js';
 import { einsatzVon, zahleAus, zieheEinsatz } from '../brojetons.js';
+import { verbucheBestleistungen } from '../bestleistung.js';
+import { spielZaehlen } from '../herkunft.js';
+import { type Ausgang, partieBeginnZaehlen, tischart, zaehle } from '../statistik.js';
 
 export interface RuntimeOptions {
   /** 60 Sekunden je Zug, serverseitig gemessen. */
@@ -111,6 +116,11 @@ export interface LiveParty {
   readonly online: Set<number>;
   segmentsWritten: number;
   /**
+   * Uebungstisch aus dem Lernpfad (`istUebungstisch`): endet nach der ersten
+   * Runde, und die zaehlt fuer die Lernserie der Menschen am Tisch.
+   */
+  readonly uebung: boolean;
+  /**
    * Diese Partie endet, sobald die laufende Runde durch ist.
    *
    * Nur ein reiner Vierertisch kommt hierher: Sitzt ohnehin ein Bot mit, wird
@@ -143,6 +153,19 @@ export interface LiveParty {
    * Merkmal.
    */
   phaseMarke: string | number | null;
+  /**
+   * Schachuhr (`schachuhr` in game-api): welcher Sitz gerade Zeit verbraucht
+   * und seit wann. Gesetzt nur beim Wechsel des Sitzes am Zug — `schedule`
+   * kommt auch nach Wiederverbinden oder einer Botpause, und dabei darf die
+   * Uhr nicht von vorn anfangen.
+   *
+   * Nur im Speicher, nicht im Snapshot: Nach einem Neustart laeuft die Uhr
+   * ab dem Wiederanlauf weiter. Die Ausfallzeit geht so keinem Spieler
+   * verloren; gebucht ist ohnehin alles bis zum letzten Zug (im Zustand des
+   * Moduls).
+   */
+  uhrSitz: number | null;
+  uhrSeit: number;
   timer: NodeJS.Timeout | null;
   offlineTimer: NodeJS.Timeout | null;
   /** Gesetzt, solange der Clantisch pausiert ist. */
@@ -341,6 +364,29 @@ export class PartyRuntime {
     const seed = randomInt(2 ** 31);
     const seedHex = randomBytes(16).toString('hex');
 
+    /*
+     * Welche Plaetze ein GASTKONTO haben, erfaehrt das Modul beim Aufbau.
+     * Dieselbe Abfrage wie in `countsForRanking`, nur je Sitz statt ja/nein:
+     * Die Partykiste kappt damit ihre Inhaltsstufe (kein "derb" fuer Leute
+     * ohne Altersangabe, siehe docs/PARTYKISTE.md). Hier und nicht in der
+     * `config`, weil die beim Anlegen eingefroren wird und der Gast oft erst
+     * danach dazukommt.
+     */
+    const kontoIds = seats
+      .map((seat) => seat.accountId)
+      .filter((id): id is string => id !== null);
+    const gastKonten =
+      kontoIds.length > 0
+        ? await this.db
+            .select({ id: s.account.id })
+            .from(s.account)
+            .where(and(inArray(s.account.id, kontoIds), isNotNull(s.account.gastSeit)))
+        : [];
+    const gastIds = new Set(gastKonten.map((konto) => konto.id));
+    const gastSeats = seats
+      .filter((seat) => seat.accountId !== null && gastIds.has(seat.accountId))
+      .map((seat) => seat.seatIndex);
+
     const state = module.createParty({
       config: rs.config,
       seats: table.seats,
@@ -357,6 +403,7 @@ export class PartyRuntime {
        */
       botSeats: seats.filter((seat) => !seat.accountId).map((seat) => seat.seatIndex),
       botLevel: tableBotLevel(table.filters),
+      gastSeats,
     });
 
     const [party] = await this.db
@@ -407,11 +454,16 @@ export class PartyRuntime {
       absentSince: new Map(),
       online: new Set(),
       segmentsWritten: 0,
-      endAfterRound: false,
+      uebung: istUebungstisch(table.filters),
+      // Eine Uebungsrunde ist EINE Runde — die Rotation verlangt vier, gespielt
+      // wird bis zur ersten Abrechnung (dieselbe Regel wie beim Aufloesen).
+      endAfterRound: istUebungstisch(table.filters),
       turnDeadline: null,
       interludeDeadline: null,
       phaseDeadline: null,
       phaseMarke: null,
+      uhrSitz: null,
+      uhrSeit: 0,
       timer: null,
       offlineTimer: null,
       paused: false,
@@ -421,6 +473,16 @@ export class PartyRuntime {
     };
 
     this.live.set(tableId, liveParty);
+    // Nur hier, nicht in `resume`: Eine nach dem Neustart zurueckgeholte
+    // Partie ist dieselbe Partie und keine neue (statistik.ts).
+    partieBeginnZaehlen({
+      spiel: liveParty.gameId,
+      tischart: this.tischart(liveParty),
+      menschen: seats.filter((seat) => seat.accountId).length,
+      botStufe: emptySeats.length > 0 ? liveParty.botLevel : null,
+      config: rs.config,
+      vorgabe: module.defaultConfig(),
+    });
     await this.persist(liveParty);
     this.schedule(liveParty);
     this.emit(tableId);
@@ -484,11 +546,14 @@ export class PartyRuntime {
       absentSince: new Map(),
       online: new Set(),
       segmentsWritten: (module.completedSegments?.(state) ?? []).length,
-      endAfterRound: false,
+      uebung: istUebungstisch(table.filters),
+      endAfterRound: istUebungstisch(table.filters),
       turnDeadline: null,
       interludeDeadline: null,
       phaseDeadline: null,
       phaseMarke: null,
+      uhrSitz: null,
+      uhrSeit: 0,
       timer: null,
       offlineTimer: null,
       paused: table.pausedAt !== null,
@@ -514,6 +579,13 @@ export class PartyRuntime {
       if (party.timer) {
         clearTimeout(party.timer);
         party.timer = null;
+      }
+      // Die Schachuhr steht in der Pause: bis hierher buchen, danach laeuft
+      // sie beim Fortsetzen neu an (`uhrSitz` null erzwingt den Neubeginn).
+      if (party.uhrSitz !== null) {
+        const gebucht = this.bucheUhr(party, party.uhrSitz);
+        if (!party.module.isFinished(gebucht)) party.state = gebucht;
+        party.uhrSitz = null;
       }
       party.turnDeadline = null;
       if (party.offlineTimer) {
@@ -568,7 +640,9 @@ export class PartyRuntime {
       currentActor: party.module.currentActor(party.state),
       turnDeadline: party.turnDeadline,
       interludeDeadline: party.interludeDeadline,
-      phaseDeadline: party.phaseDeadline,
+      // Gemessen wird sie trotzdem — nur ihre Restzeit bleibt hier, wenn das
+      // Modul es verlangt (Bombe der Partykiste, `phaseHidden` in game-api).
+      phaseDeadline: party.module.phaseHidden?.(party.state) === true ? null : party.phaseDeadline,
       botSeats: [...party.botControlled],
       leftSeats: [...party.leftSeats],
       // Erst gemeldet, wenn auch das Ergebnis steht - siehe abrechnungLaeuft.
@@ -621,7 +695,7 @@ export class PartyRuntime {
        * ist kein Rennen, sondern ein Fehler, und sie soll auch so heissen.
        */
       const sitz = this.seatOf(party, accountId);
-      if (sitz !== null && this.wirkungslos(party, sitz, action)) return;
+      if (sitz !== null && this.wirkungslos(party, sitz, this.vomGeraet(party, action))) return;
       throw conflict('partyFinished');
     }
     if (party.paused) throw conflict('partyPaused');
@@ -634,7 +708,17 @@ export class PartyRuntime {
       party.botControlled.delete(seat);
     }
 
-    const next = party.module.act(party.state, seat, action);
+    // Schachuhr: erst die verbrauchte Zeit buchen, dann den Zug. War das
+    // Konto schon leer, bevor der Zug ankam, entscheidet die Uhr — der Zug
+    // zaehlt nicht (FIDE 6.9: wer die Zeit ueberschreitet, hat verloren).
+    const gebucht = this.bucheUhr(party, seat);
+    if (gebucht !== party.state && party.module.isFinished(gebucht)) {
+      party.state = gebucht;
+      await this.afterAction(party);
+      return;
+    }
+
+    const next = party.module.act(gebucht, seat, this.vomGeraet(party, action));
     // Wer selbst handelt, ist zurueck: Die Abwesenheitsuhr faengt beim
     // naechsten Mal wieder bei null an und nicht dort, wo sie stehen blieb.
     party.absentSince.delete(seat);
@@ -642,11 +726,21 @@ export class PartyRuntime {
     // Eine Aktion ohne Wirkung - etwa ein doppeltes oder knapp zu spaetes
     // "Weiter" - wird nicht verbucht: kein Snapshot, kein Rundruf. Sonst
     // bekaeme jeder Client denselben Stand unter neuer Revision noch einmal
-    // und hielte ihn fuer eine Aenderung.
-    if (next === party.state) return;
+    // und hielte ihn fuer eine Aenderung. Gegen `gebucht` verglichen: Ohne
+    // Wirkung faellt auch die Buchung weg, und die Uhr laeuft einfach weiter.
+    if (next === gebucht) return;
     party.state = next;
 
     await this.afterAction(party);
+  }
+
+  /**
+   * Die Aktion eines Geraets so, wie das Modul sie annimmt (`vomGeraet` in
+   * game-api). Nur hier und nie in `playBot`: Felder, die allein der Bot-Weg
+   * setzen darf, haette sonst jedes Geraet in der Hand.
+   */
+  private vomGeraet(party: LiveParty, action: unknown): unknown {
+    return party.module.vomGeraet ? party.module.vomGeraet(action) : action;
   }
 
   /**
@@ -668,9 +762,10 @@ export class PartyRuntime {
   private async afterAction(party: LiveParty): Promise<void> {
     const rundeVorbei = await this.persist(party);
     await touch(this.db, party.tableId);
+    if (rundeVorbei && party.uebung) await this.uebungZaehlen(party);
 
     if (party.module.isFinished(party.state)) {
-      await this.finish(party);
+      await this.finish(party, 'abgeschlossen');
       return;
     }
 
@@ -678,7 +773,9 @@ export class PartyRuntime {
     // trotzdem erst an der Rundengrenze: Wer mitten im Solo abbricht, nimmt
     // den anderen drei eine Runde weg, die sie schon halb gespielt haben.
     if (party.endAfterRound && rundeVorbei) {
-      await this.finish(party);
+      // Die Uebungsrunde endet so planmaessig; jeder andere Tisch, weil
+      // jemand gegangen ist.
+      await this.finish(party, party.uebung ? 'abgeschlossen' : 'abgebrochen');
       return;
     }
 
@@ -715,6 +812,11 @@ export class PartyRuntime {
     party.turnDeadline = null;
 
     const actor = party.module.currentActor(party.state);
+    // Die Schachuhr faengt nur bei einem Wechsel neu an (siehe `uhrSitz`).
+    if (party.uhrSitz !== actor) {
+      party.uhrSitz = actor;
+      party.uhrSeit = Date.now();
+    }
     if (actor === null) {
       // Niemand am Zug heisst Schaupause, und die hat ihre eigene Frist. Zwei
       // Uhren nebeneinander waeren zwei Antworten auf dieselbe Frage.
@@ -734,6 +836,29 @@ export class PartyRuntime {
     // die Verlassen-Regel liefe ins Leere. `botControlled` ist deshalb nur
     // eine Anzeige, kein Steuerflag.
     const isBot = !seat || !seat.accountId || party.leftSeats.has(actor);
+
+    /*
+     * Schachuhr statt Zugzeit. Die Frist ist das Ende des Zeitkontos, und
+     * nach ihr zieht kein Bot, sondern die Uhr entscheidet. Auch ein Botsitz
+     * hat eine Uhr — seine Frist geht deshalb ebenfalls mit, damit beide
+     * Uhren am Brett laufen. Zusammen mit `phaseMs` gibt es das nicht: Eine
+     * Phase gilt fuer den ganzen Tisch, eine Schachuhr fuer einen Sitz.
+     */
+    const rest = this.uhrRest(party, actor);
+    if (rest !== null) {
+      party.turnDeadline = party.uhrSeit + rest;
+      const bisAblauf = Math.max(0, party.turnDeadline - Date.now());
+      if (isBot && this.botTakt(party) < bisAblauf) {
+        party.timer = setTimeout(() => {
+          void this.playBot(party, actor);
+        }, this.botTakt(party));
+        return;
+      }
+      party.timer = setTimeout(() => {
+        void this.onUhrAbgelaufen(party, actor);
+      }, bisAblauf);
+      return;
+    }
 
     /*
      * Ein Timer fuer zwei Fristen: Der naechste Weckruf ist der fruehere von
@@ -920,15 +1045,52 @@ export class PartyRuntime {
         party.module.viewFor(party.state, seat),
         party.botLevel,
       );
-      party.state = party.module.act(party.state, seat, action);
+      // Auch der Bot zahlt mit seiner Uhr (siehe `act`).
+      const gebucht = this.bucheUhr(party, seat);
+      party.state = party.module.isFinished(gebucht)
+        ? gebucht
+        : party.module.act(gebucht, seat, action);
       await this.afterAction(party);
     } catch (err) {
       // Ein Botfehler darf den Tisch nicht einfrieren. Er wird protokolliert,
       // die Partie mit Wertung beendet.
       // eslint-disable-next-line no-console
       console.error(`Bot an Tisch ${party.tableId}, Sitz ${seat}:`, err);
-      await this.finish(party);
+      await this.finish(party, 'abgebrochen');
     }
+  }
+
+  /** Restzeit des Sitzes vor seinem laufenden Zug, null = ohne Schachuhr. */
+  private uhrRest(party: LiveParty, seat: number): number | null {
+    return party.module.schachuhr?.restMs(party.state, seat) ?? null;
+  }
+
+  /**
+   * Bucht die Zeit, die der Sitz am Zug seit `uhrSeit` verbraucht hat.
+   * Liefert den Zustand danach und aendert `party.state` NICHT — der Aufrufer
+   * entscheidet, ob die Buchung gilt (bei einem abgewiesenen Zug nicht).
+   * Fuer jeden anderen Sitz und ohne Uhr kommt der Zustand unveraendert
+   * zurueck: Wer nicht am Zug ist, verbraucht keine Zeit (Aufgeben geht
+   * jederzeit).
+   */
+  private bucheUhr(party: LiveParty, seat: number, mindestens = 0): unknown {
+    const uhr = party.module.schachuhr;
+    if (!uhr || party.uhrSitz !== seat || uhr.restMs(party.state, seat) === null) return party.state;
+    return uhr.verbrauche(party.state, seat, Math.max(mindestens, Date.now() - party.uhrSeit));
+  }
+
+  /**
+   * Zeitkonto leer. `mindestens = rest`, weil der Timer ein paar
+   * Millisekunden zu frueh feuern darf — dann gaebe die Buchung sonst einen
+   * Rest von 1 ms, und die Partie liefe weiter, ohne dass je wieder ein
+   * Wecker kaeme.
+   */
+  private async onUhrAbgelaufen(party: LiveParty, seat: number): Promise<void> {
+    if (party.finished || !this.live.has(party.tableId)) return;
+    const gebucht = this.bucheUhr(party, seat, this.uhrRest(party, seat) ?? 0);
+    if (gebucht === party.state) return;
+    party.state = gebucht;
+    await this.afterAction(party);
   }
 
   /**
@@ -1001,6 +1163,11 @@ export class PartyRuntime {
     party.turnDeadline = null;
     party.phaseDeadline = null;
     this.live.delete(tableId);
+    zaehle('online_runde_beendet', {
+      spiel: party.gameId,
+      modus: this.tischart(party),
+      ergebnis: 'abgebrochen',
+    });
 
     await this.db
       .update(s.party)
@@ -1056,7 +1223,7 @@ export class PartyRuntime {
     );
     if (!humansOnline && !party.offlineTimer && !party.finished) {
       party.offlineTimer = setTimeout(() => {
-        void this.finish(party);
+        void this.finish(party, 'verbindung_verloren');
       }, this.opts.absenceMs);
     }
   }
@@ -1095,16 +1262,72 @@ export class PartyRuntime {
       })),
     );
     party.segmentsWritten = segments.length;
+    await this.herkunftZaehlen(party, 'runden', fresh.length);
     return true;
+  }
+
+  /**
+   * Runden und Partien fuer die Werbelinks (src/herkunft.ts). Wie bei
+   * `uebungZaehlen`: Ein Fehler hier darf die Partie nicht aufhalten, eine
+   * fehlende Zaehlung ist ein Aergernis, ein haengender Tisch ein Ausfall.
+   * Dauerhafte Bots sitzen ohne Konto da und fallen von selbst heraus.
+   */
+  private async herkunftZaehlen(
+    party: LiveParty,
+    art: 'runden' | 'partien',
+    anzahl: number,
+  ): Promise<void> {
+    const konten = party.seats.flatMap((platz) =>
+      platz.accountId && !platz.permanentBot ? [platz.accountId] : [],
+    );
+    try {
+      await spielZaehlen(this.db, konten, art, anzahl);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`Herkunft (${art}) an Tisch ${party.tableId}:`, err);
+    }
+  }
+
+  /** Tischart fuer die Tagesstatistik. Bots = Sitze, die nie ein Mensch hatte. */
+  private tischart(party: LiveParty) {
+    return tischart({
+      visibility: party.visibility,
+      uebung: party.uebung,
+      mitBots: party.seats.some((platz) => platz.permanentBot),
+    });
+  }
+
+  /**
+   * Eine Uebungsrunde ist abgerechnet: Spieltag fuer jeden Menschen am Tisch
+   * (lernpfad.ts). Ein Fehler hier darf die Partie nicht aufhalten — er landet
+   * im Log, die Runde ist trotzdem gespielt.
+   */
+  private async uebungZaehlen(party: LiveParty): Promise<void> {
+    for (const platz of party.seats) {
+      if (!platz.accountId || platz.permanentBot) continue;
+      try {
+        await uebungGespielt(this.db, platz.accountId);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(`Lernserie an Tisch ${party.tableId}, Sitz ${platz.index}:`, err);
+      }
+    }
   }
 
   // -------------------------------------------------------------------------
   // Partie-Ende
   // -------------------------------------------------------------------------
 
-  private async finish(party: LiveParty): Promise<void> {
+  private async finish(party: LiveParty, ausgang: Ausgang): Promise<void> {
     if (party.finished) return;
     party.finished = true;
+    // Vor allem anderen: Scheitert unten die Abrechnung, ist die Partie
+    // trotzdem zu Ende (statistik.ts).
+    zaehle('online_runde_beendet', {
+      spiel: party.gameId,
+      modus: this.tischart(party),
+      ergebnis: ausgang,
+    });
     // Nach aussen bleibt die Partie bis zum Rundruf am Ende dieser Methode
     // ungemeldet; nach innen ist ab hier zu.
     party.abrechnungLaeuft = true;
@@ -1148,6 +1371,8 @@ export class PartyRuntime {
       await this.countStats(party, standings);
       await this.recordWar(party, standings);
       await this.countQuests(party, standings);
+      await this.recordBestleistungen(party, standings);
+      await this.herkunftZaehlen(party, 'partien', 1);
     } finally {
       party.abrechnungLaeuft = false;
     }
@@ -1211,6 +1436,43 @@ export class PartyRuntime {
     });
 
     await recordPartyResult(this.db, placements, menschen);
+  }
+
+  /**
+   * Bestleistung je Inhalt (Bahn, Kurs, Paket) eintragen — seit dem 22.09.2026.
+   *
+   * Spielunkundig: Was eingetragen wird, meldet das Modul selbst in
+   * `standings` oder `completedSegments` (Form und Regeln in
+   * src/bestleistung.ts). Liefert es nichts, passiert hier nichts. Ob der
+   * Tisch zaehlt, entscheidet dieselbe Regel wie bei den Trophaeen
+   * (`countsForRanking`), nicht eine zweite Fassung davon.
+   *
+   * Hier und nicht in tables/service.ts, weil das Partie-Ende hier
+   * verarbeitet wird und die Laufzeit die Sitz-Konto-Zuordnung sowie die
+   * Abschnitte des Moduls ohnehin in der Hand hat.
+   *
+   * Fehler werden protokolliert und verschluckt, aus dem Grund von
+   * `countQuests`: Eine verpasste Bestleistung ist ein Aergernis, ein am
+   * Partie-Ende haengender Tisch ein Ausfall. Deshalb auch der Platz ganz
+   * zuletzt.
+   */
+  private async recordBestleistungen(
+    party: LiveParty,
+    standings: readonly PartyStanding[],
+  ): Promise<void> {
+    try {
+      await verbucheBestleistungen(this.db, {
+        tableId: party.tableId,
+        gameId: party.gameId,
+        partyId: party.partyId,
+        seats: party.seats,
+        standings,
+        segments: party.module.completedSegments?.(party.state) ?? [],
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`Bestleistungen an Tisch ${party.tableId}:`, err);
+    }
   }
 
   /**

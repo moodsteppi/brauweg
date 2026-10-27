@@ -95,6 +95,17 @@ export type ClientMessage =
       readonly v: number;
       readonly game: GameId;
       /**
+       * Den Regelsatz des wartenden Tisches ersetzen — nur Sitz 0, nur Module
+       * mit `meta.regelnInDerLobby` (Golf: Bahnauswahl). Seit dem 22.09.2026.
+       */
+      readonly type: 'setRules';
+      readonly tableId: string;
+      readonly config: Readonly<Record<string, unknown>>;
+    }
+  | {
+      readonly v: number;
+      readonly game: GameId;
+      /**
        * Sofort starten: Der Tisch schrumpft auf die besetzten Plaetze
        * (mindestens zwei) und die Partie geht los — ohne Bot-Auffuellen.
        */
@@ -146,6 +157,17 @@ export type ClientMessage =
       readonly zeichen: number;
       /** Statt des Emojis ein gesammeltes Motiv. Siehe ReaktionMessage. */
       readonly motiv?: string;
+    }
+  | {
+      readonly v: number;
+      readonly game?: GameId;
+      /**
+       * Die App ist vom Bildschirm verschwunden. Nur die App schickt das
+       * (useTable.ts); danach darf der Server Push-Mitteilungen schicken.
+       * Zurueck im Vordergrund ist, wer das naechste `join` schickt.
+       */
+      readonly type: 'hintergrund';
+      readonly tableId?: string;
     };
 
 // ---------------------------------------------------------------------------
@@ -243,6 +265,21 @@ export interface TableMessage {
    * ausgewertet).
    */
   readonly botLevel: BotLevel;
+  /**
+   * Kennung und Version des Regelsatzes, `<id>:<version>` (seit dem
+   * 22.09.2026). Aendert er sich in der Lobby (`setRules`), sehen die anderen
+   * es hieran und holen ihn neu — der Regelsatz selbst geht nicht mit jedem
+   * Rundruf ueber die Leitung. Additiv: Aeltere Clients lesen es nicht.
+   */
+  readonly regelstand: string;
+  /**
+   * Uebungstisch aus dem Lernpfad (`istUebungstisch`, seit dem 17.10.2026).
+   * Der Doppelkopftisch blendet daran die Tipps und die Kopfzeile
+   * „Uebungsrunde" ein. Steht hier und nicht in einem Merkzettel des
+   * Geraets, das den Tisch angelegt hat: Sonst sah ein zweites Geraet
+   * desselben Kontos eine gewoehnliche Runde ohne jede Hilfe.
+   */
+  readonly uebung: boolean;
 }
 
 export interface PartyMessage {

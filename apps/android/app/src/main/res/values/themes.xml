@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ohne Titelleiste; der Hintergrund steht blau, bis der Client zeichnet —
+         kein weisser Blitz beim Start. -->
+    <style name="Brauweg" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/brauweg_blau</item>
+        <item name="android:statusBarColor">@color/brauweg_blau</item>
+        <item name="android:navigationBarColor">@color/brauweg_blau</item>
+    </style>
+</resources>

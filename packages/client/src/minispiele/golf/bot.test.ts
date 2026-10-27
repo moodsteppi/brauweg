@@ -5,6 +5,7 @@ import {
   kraftFuerDistanz,
   kraftFuerStrecke,
   maximaleRollweite,
+  RASTER,
   sichtFrei,
   wegfeld,
 } from './bot';
@@ -245,5 +246,111 @@ describe('Portale im Wegfeld', () => {
       expect(r.geloest).toBe(true);
       expect(r.schlaege).toBeLessThanOrEqual(k23.par + 2);
     }
+  });
+});
+
+/* --------------------------------------------------------------------------
+ * Die fünf Zonenarten, die der Bot bis zum 22.09.2026 für Rasen hielt —
+ * Beschleuniger, Bumper, Strudel, Sprungfeld, Drehkreuz. Er rechnet sie
+ * nicht nach, er probt sie (`PROBE_ARTEN` in bot.ts). Jede Prüfung hier hält
+ * eine Bahn fest, auf der die Probe gemessen etwas gebracht hat, und die
+ * Grenze liegt unter dem, was der Bot VOR der Änderung schaffte.
+ * ----------------------------------------------------------------------- */
+
+function karteMit(id: string): Karte {
+  const karte = KARTEN.find((k) => k.id.startsWith(id));
+  if (karte === undefined) throw new Error(`${id} fehlt im Katalog`);
+  return karte;
+}
+
+/** Mittel der Schläge über zwanzig Saaten, ungelöste zählen wie in der Partie. */
+function mittelSchlaege(karte: Karte, stufe: 'genie' | 'experte' | 'standard'): number {
+  let summe = 0;
+  for (let saat = 1; saat <= 20; saat += 1) {
+    const r = botLoestKarte(karte, stufe, saat * 7919);
+    summe += r.geloest ? r.schlaege : karte.schlagLimit + 1;
+  }
+  return summe / 20;
+}
+
+describe('Beschleuniger', () => {
+  it('spielt k12 durch beide Schübe in zwei Schlägen (vorher 2,90)', () => {
+    // Der Genie probt die Kraft, statt sie für Rasen zu halten: Er findet den
+    // Schlag, den beide Beschleuniger zusammen bis vors Loch tragen.
+    expect(mittelSchlaege(karteMit('k12-'), 'genie')).toBeLessThanOrEqual(2);
+  });
+
+  it('bleibt auf k04 beim Ass — der Schlag über die Rückwand bleibt der geplante', () => {
+    // Der Befund, mit dem es anfing: Eine „genauere" Rechnung ohne Wände
+    // spielte hier 2,75 statt 1,00. Die Probe kennt die Rückwand und behält
+    // den Plan, weil keine Abweichung besser ist.
+    expect(mittelSchlaege(karteMit('k04-'), 'genie')).toBe(1);
+  });
+
+  it('nimmt auf k22 die Linie mit freiem Blick aufs Loch (Experte, vorher 2,55)', () => {
+    expect(mittelSchlaege(karteMit('k22-'), 'experte')).toBeLessThanOrEqual(2.1);
+  });
+});
+
+describe('Drehkreuz', () => {
+  const k39 = karteMit('k39-');
+
+  it('macht den Kreis im Wegfeld teurer, sperrt ihn aber nicht', () => {
+    const kundig = wegfeld(k39);
+    const schlicht = wegfeld(k39, false);
+    const nabe = Math.floor(26 / RASTER) * kundig.spalten + Math.floor(14 / RASTER);
+    expect(kundig.kosten[nabe]).toBeGreaterThan(1);
+    expect(schlicht.kosten[nabe]).toBe(1);
+    // Kosten sperren nichts: Erreichbar ist in beiden Feldern dasselbe.
+    for (let i = 0; i < kundig.entfernung.length; i += 1) {
+      expect(kundig.entfernung[i] >= 0).toBe(schlicht.entfernung[i] >= 0);
+    }
+  });
+
+  it('spielt die Drehkreuzgasse k39 an den Kreuzen vorbei (vorher 6,10 und 80 %)', () => {
+    // Die Probe sieht das Kreuz in genau der Stellung dieses Takts, das
+    // Wegfeld führt am Rand der Gasse entlang statt durch die Nabe.
+    for (let saat = 1; saat <= 20; saat += 1) {
+      expect(botLoestKarte(k39, 'genie', saat * 7919).geloest).toBe(true);
+    }
+    expect(mittelSchlaege(k39, 'genie')).toBeLessThanOrEqual(3.2);
+  });
+});
+
+describe('Strudel', () => {
+  it('nutzt auf k08 den Auswurf vors Loch (vorher 2,30 und 95 %)', () => {
+    expect(mittelSchlaege(karteMit('k08-'), 'genie')).toBeLessThanOrEqual(1.3);
+  });
+
+  it('spielt an einer Falle auf der Linie vorbei, statt hineinzurollen', () => {
+    // Kunstbahn: ein Strudel ohne Auswurf knapp neben der geraden Linie vom
+    // Abschlag zum Loch. Ohne Probe zog er jeden Schlag des Genies zur Seite
+    // (2,00 in allen zwanzig Läufen), der Standard-Bot blieb zweimal ganz
+    // darin hängen.
+    const falle = freiMit({ art: 'strudel', x: 5.2, y: 8, r: 2, staerke: 15 });
+    expect(mittelSchlaege(falle, 'genie')).toBe(1);
+    for (let saat = 1; saat <= 20; saat += 1) {
+      expect(botLoestKarte(falle, 'standard', saat * 7919).geloest).toBe(true);
+    }
+  });
+});
+
+describe('Bumper', () => {
+  const pilz = freiMit({ art: 'bumper', x: 5, y: 9, r: 1.2 });
+
+  it('versperrt die Sichtlinie wie eine runde Wand', () => {
+    expect(sichtFrei(pilz, 5, 17, 5, 3)).toBe(false);
+    // Einen Ballradius plus Luft daneben ist der Weg frei.
+    expect(sichtFrei(pilz, 7, 17, 7, 3)).toBe(true);
+  });
+
+  it('spielt um einen Pilz auf der Linie herum statt hinein (vorher 3,00)', () => {
+    expect(mittelSchlaege(pilz, 'genie')).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('Sprungfeld', () => {
+  it('trifft auf k38 den Sprung, der vors Loch trägt (vorher 2,00)', () => {
+    expect(mittelSchlaege(karteMit('k38-'), 'genie')).toBeLessThanOrEqual(1.3);
   });
 });

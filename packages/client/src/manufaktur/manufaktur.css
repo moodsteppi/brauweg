@@ -1,0 +1,1300 @@
+/*
+ * Kartenmanufaktur (Kartenmanufaktur.tsx) — Emile, 23.10.2026.
+ *
+ * Die Welt zeichnet Pixi (szene/Szene.ts); hier steht nur, was DOM ist: HUD,
+ * die Knoepfe ueber der Szene (Ueberlagerung.tsx), die untere Leiste und die
+ * Blaetter. Die Knoepfe liegen in Welt-Einheiten (390 breit) und werden mit
+ * der Szene skaliert — Lage und Groesse kommen aus szene/layout.ts.
+ *
+ * Gold heisst nur „Geld" oder „kannst du dir leisten". Alles andere ist
+ * Nachtblau, Holz oder Weiss.
+ */
+
+.mf {
+  background: #0d1530;
+}
+
+.mf .mf-mitte {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --- HUD: links der Leerlauf-Ertrag, rechts die Taler. Mehr nicht. --------- */
+
+.mf .mf-hud {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(var(--hb-oben) + 4px) 12px 8px;
+}
+.mf .mf-kasse {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 8px;
+  border-radius: 999px;
+  background: var(--hb-grund-tief);
+  border: 1px solid var(--hb-kontur);
+  font: 400 20px var(--hb-anz);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Taler: Muenze mit Pik — anders als die Hub-Muenze mit Stern. */
+.mf-taler {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background: url('/manufaktur/taler.webp') center / contain no-repeat;
+  flex: none;
+  vertical-align: -2px;
+}
+.mf-taler.is-gross {
+  width: 24px;
+  height: 24px;
+}
+
+.mf .mf-meldung {
+  position: absolute;
+  top: calc(var(--hb-oben) + 64px);
+  left: 50%;
+  z-index: 20;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--hb-tinte);
+  color: var(--hb-grund);
+  font: 800 14px var(--hb-txt);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* --- Spielfeld: klebende Leinwand, Knoepfe darueber ------------------------- */
+
+.mf .mf-feld {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.mf .mf-welt {
+  position: relative;
+  /* Ohne Szene (kein WebGL) bleibt wenigstens der Keller-Grund. */
+  background: #1a1410;
+}
+/* So hoch wie die Welt und mit ihr gerollt — nicht `sticky`: Dann verschob
+   die Szene das Bild selbst, und am iPhone hinkte es beim Schwungrollen den
+   Schildern hinterher (Szene.ts, bild()). */
+.mf .mf-buehne {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mf .mf-buehne .mf-leinwand {
+  display: block;
+}
+.mf .mf-ueber-huelle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 390px;
+  transform-origin: 0 0;
+}
+.mf .mf-ueber {
+  position: relative;
+}
+.mf .mf-ueber > *,
+.mf .mf-etage-ueber > * {
+  position: absolute;
+}
+
+/* Tippflaechen ueber Figur und Maschine: unsichtbar, aber gross genug. */
+.mf .mf-ueber .mf-tipp {
+  border-radius: 14px;
+}
+.mf .mf-ueber .mf-tipp:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mf .mf-zzz {
+  /* Das gemalte Schlafzeichen; der Text „Zzz" bleibt im DOM (Tests), unsichtbar. */
+  width: 26px;
+  height: 26px;
+  background: url(/manufaktur/ui/ui-schlaf.webp) center / contain no-repeat;
+  font-size: 0;
+  color: transparent;
+  pointer-events: none;
+  animation: mf-zzz 2.4s ease-in-out infinite;
+}
+@keyframes mf-zzz {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Fingeranleitung: zeigt beim ersten Start, wohin man tippt. */
+.mf .mf-finger {
+  /* Liegt neben der Knopf-Ebene, nicht in ihr — deshalb selbst absolut. Der
+     Punkt (0, 0) ist das Ziel; Ring und Hand haengen daran. */
+  position: absolute;
+  z-index: 5;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.mf .mf-finger-ring {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  animation: mf-ring 1.1s ease-out infinite;
+}
+.mf .mf-finger-hand {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  /* Fingerspitze genau aufs Ziel (gemessen in ui.json, siehe bilder.ts). */
+  left: calc(var(--spitze-x) * -44px);
+  top: calc(var(--spitze-y) * -44px);
+  transform-origin: calc(var(--spitze-x) * 100%) calc(var(--spitze-y) * 100%);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  animation: mf-finger 1.1s ease-in-out infinite;
+}
+@keyframes mf-finger {
+  0%, 100% { transform: translate(6px, 10px); }
+  50% { transform: translate(0, 0) scale(0.94); }
+}
+@keyframes mf-ring {
+  0%, 40% { transform: scale(0.4); opacity: 0; }
+  55% { opacity: 1; }
+  100% { transform: scale(1.1); opacity: 0; }
+}
+
+/* --- Blaetter ------------------------------------------------------------ */
+
+.mf-blatt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mf-blatt-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.mf-medaillon {
+  width: 48px;
+  height: 48px;
+  flex: none;
+}
+.mf-blatt-stufe {
+  margin: 0;
+  font: 400 20px var(--hb-anz);
+  text-align: center;
+}
+.mf-umzug-bild {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  aspect-ratio: 2 / 1;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background-size: cover;
+  background-position: center;
+}
+.mf-umzug-bild strong {
+  font: 400 20px var(--hb-anz);
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.mf-umzug-gross {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.mf-offline-betrag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  font: 400 30px var(--hb-anz);
+  color: var(--hb-gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mf .mf-zzz,
+  .mf .mf-finger,
+  .mf .mf-direktor,
+  .mf .mf-ueber .mf-meisterplatz.is-wirkt {
+    animation: none;
+  }
+  .mf .mf-ueber .mf-schild-stufe.is-engpass {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(230, 70, 70, 0.6);
+  }
+}
+
+/* --- Rueckmeldung: Muenzflug, Popup, Glanz -------------------------------- */
+
+.mf .mf-effekte {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  overflow: hidden;
+}
+.mf .mf-effekte > span > * {
+  position: absolute;
+}
+.mf .mf-flug {
+  width: 22px;
+  height: 22px;
+  animation: mf-flug 0.8s cubic-bezier(0.5, 0, 0.75, 0.4) both;
+}
+@keyframes mf-flug {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  15% { transform: translate(-10px, -24px) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.8); opacity: 0.9; }
+}
+.mf .mf-popup {
+  transform: translate(-100%, 0);
+  font: 400 20px var(--hb-anz);
+  color: var(--hb-gold);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  animation: mf-popup 1s ease-out both;
+}
+@keyframes mf-popup {
+  0% { transform: translate(-100%, 0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(-100%, -40px); opacity: 0; }
+}
+/* Aufgestiegen: ein Glanz laeuft ueber das Schild. */
+.mf .mf-ueber .mf-schild-stufe.is-glanz {
+  animation: mf-glanz 0.7s ease-out;
+}
+@keyframes mf-glanz {
+  0% { filter: brightness(1); transform: scale(1); }
+  30% { filter: brightness(1.6); transform: scale(1.1); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
+.mf-debug {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mf .mf-flug,
+  .mf .mf-popup,
+  .mf .mf-ueber .mf-schild-stufe.is-glanz {
+    animation-duration: 1ms;
+  }
+}
+
+/* === Rueckmeldung 23.10.2026: Schilder und Meister in der Welt ============= */
+
+/* Leerlauf: gruen, wenn die Meister-Kette etwas abwirft; grau bei 0. Antippen erklaert. */
+.mf .mf-hud .mf-leerlauf {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(72, 213, 107, 0.14);
+  border: 1px solid rgba(72, 213, 107, 0.5);
+  font: 400 15px var(--hb-anz);
+  color: var(--hb-gruen);
+  font-variant-numeric: tabular-nums;
+}
+.mf .mf-hud .mf-leerlauf.is-null {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--hb-leise);
+}
+.mf .mf-bildrate {
+  font: 400 13px var(--hb-anz);
+  color: #ffcc00;
+}
+
+/* Etagennummer: Messingschild am Schacht. */
+.mf .mf-nummer {
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #f0d27a, #b8892c);
+  border: 1px solid #6e4e14;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 2px 2px rgba(0, 0, 0, 0.5);
+  font: 400 15px var(--hb-anz);
+  color: #3a2608;
+  pointer-events: none;
+}
+
+/* Bestand: kleines Kartensymbol und die Zahl, ueber der Kiste. */
+.mf .mf-bestand {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px 1px 4px;
+  /* Dreiteiler: Kappen je 32 von 192 px, nur die Mitte wird gestreckt (ui.json). */
+  border: solid transparent;
+  border-width: 0 9px;
+  border-image: url(/manufaktur/ui/ui-bestand.webp) 0 32 fill / 0 9px stretch;
+  font: 400 12px var(--hb-anz);
+  color: #f3e6c4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.mf .mf-bestand img {
+  width: 14px;
+  height: 14px;
+}
+
+/* Stufen-Schild: kleines Holzschild, nur Zahl; der Pfeil darueber wird gold, wenn bezahlbar. */
+.mf .mf-ueber .mf-schild-stufe {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  /* Das Motiv belegt 228 von 256 px — leicht vergroessert fuellt es das Schild. */
+  background: url(/manufaktur/ui/ui-schild-stufe.webp) center / 112% 112% no-repeat;
+  color: #fff6df;
+}
+.mf .mf-ueber .mf-schild-stufe.is-leistbar {
+  background-image: url(/manufaktur/ui/ui-schild-stufe-gold.webp);
+}
+.mf .mf-schild-stufe b {
+  font: 400 20px/1 var(--hb-anz);
+  /* Helle Zahl auf hellem Holz: dunkle Kontur, wie in der Lesbarkeitsprobe. */
+  -webkit-text-stroke: 3px #3a2414;
+  paint-order: stroke fill;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.mf .mf-schild-stufe .mf-pfeil {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  transform: translateX(-50%);
+  background: url(/manufaktur/ui/ui-pfeil-hoch-grau.webp) center / contain no-repeat;
+  opacity: 0.7;
+}
+.mf .mf-schild-stufe.is-leistbar .mf-pfeil {
+  background-image: url(/manufaktur/ui/ui-pfeil-hoch.webp);
+  opacity: 1;
+  filter: drop-shadow(0 0 3px rgba(255, 200, 60, 0.9));
+  animation: mf-pfeil 1.2s ease-in-out infinite;
+}
+@keyframes mf-pfeil {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -3px); }
+}
+.mf .mf-schild-stufe .mf-anzahl {
+  position: absolute;
+  right: -9px;
+  bottom: -9px;
+  min-width: 24px;
+  padding: 2px 5px;
+  background: url(/manufaktur/ui/ui-plakette.webp) center / 100% 100% no-repeat;
+  color: #2a1a05;
+  font: 400 11px/14px var(--hb-anz);
+  text-align: center;
+}
+/* Engpass: Die Kette laeuft, diese Station ist die langsamste — roter Puls. */
+.mf .mf-ueber .mf-schild-stufe.is-engpass {
+  animation: mf-engpass 1.6s ease-in-out infinite;
+}
+@keyframes mf-engpass {
+  0%, 100% { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 0 0 rgba(230, 70, 70, 0); }
+  50% { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 0 5px rgba(230, 70, 70, 0.65); }
+}
+
+/* Leerer Meister-Platz: Rahmen mit „+" und Preis. Eingestellt verschwindet er. */
+.mf .mf-ueber .mf-meisterplatz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: url(/manufaktur/ui/ui-meisterplatz.webp) center / 100% 100% no-repeat;
+  color: rgba(243, 230, 196, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.mf .mf-meisterplatz span {
+  font: 400 24px/1 var(--hb-anz);
+}
+.mf .mf-meisterplatz small {
+  font: 400 11px var(--hb-anz);
+}
+.mf .mf-ueber .mf-meisterplatz.is-leistbar {
+  color: var(--hb-gold);
+  filter: drop-shadow(0 0 4px rgba(255, 200, 60, 0.6));
+}
+/* Ueber dem eingestellten Meister: Faehigkeit bereit (⚡) oder Countdown. */
+.mf .mf-faehigkeit {
+  /* Leere Muenze mit der Zeit darauf; bereit die Muenze mit Blitz, ohne Text. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  transform: translate(-50%, -100%);
+  background: url(/manufaktur/ui/ui-faehigkeit-wartet.webp) center / contain no-repeat;
+  font: 400 10px/1 var(--hb-anz);
+  color: #fff6df;
+  -webkit-text-stroke: 2px #3a2408;
+  paint-order: stroke fill;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.mf .mf-faehigkeit.is-bereit {
+  background-image: url(/manufaktur/ui/ui-faehigkeit-bereit.webp);
+  animation: mf-pfeil 1.2s ease-in-out infinite;
+}
+/* Waehrend die Faehigkeit wirkt: gruener Schein um die Muenze. */
+.mf .mf-faehigkeit.is-wirkt {
+  filter: drop-shadow(0 0 4px rgba(72, 213, 107, 0.95));
+}
+
+/* Gesperrte Etage: kleines Holzschild an der Bretterwand. */
+.mf .mf-ueber .mf-sperrschild {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #8a5a30, #5e3a1c);
+  border: 2px solid #3a2414;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+  color: #f3e6c4;
+  text-align: left;
+}
+.mf .mf-sperrschild img {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.mf .mf-sperrschild span {
+  display: flex;
+  flex-direction: column;
+}
+.mf .mf-sperrschild strong {
+  font: 400 16px var(--hb-anz);
+}
+.mf .mf-sperrschild b {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 15px var(--hb-anz);
+}
+.mf .mf-ueber .mf-sperrschild.is-leistbar {
+  border-color: var(--hb-gold);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 10px rgba(255, 200, 60, 0.6);
+}
+.mf .mf-ueber .mf-sperrschild.is-leistbar b {
+  color: var(--hb-gold);
+}
+
+/* Der Direktor auf seinem Podest: steht still, winkt bei Verkaeufen, jubelt bei Upgrades. */
+.mf .mf-direktor {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+}
+.mf .mf-direktor.is-winkt {
+  animation: mf-winkt 0.4s ease-in-out 3;
+}
+.mf .mf-direktor.is-jubelt {
+  animation: mf-jubelt 0.5s ease-out 2;
+}
+@keyframes mf-winkt {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(-8deg); }
+}
+@keyframes mf-jubelt {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(-10px) scale(0.95, 1.05); }
+  70% { transform: translateY(0) scale(1.06, 0.94); }
+}
+
+/* --- Untere Leiste: Holz und Messing, mit Symbolen ------------------------ */
+
+.mf .mf-unten {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, #4a2e17, #2e1b0c);
+  border-top: 2px solid #c9a24a;
+}
+.mf .mf-unten .mf-unten-knopf {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 50px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #8a5a30, #5e3a1c);
+  border: 1px solid #c9a24a;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.25), 0 2px 0 rgba(0, 0, 0, 0.45);
+  color: #f3e6c4;
+  font: 400 12px var(--hb-anz);
+}
+.mf .mf-unten .mf-unten-knopf:disabled {
+  opacity: 0.55;
+}
+.mf .mf-symbol {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.mf .mf-unten .is-pfeil .mf-symbol {
+  width: 22px;
+  height: 22px;
+}
+.mf .mf-unten .mf-ort {
+  flex: 1.6;
+}
+.mf .mf-ort span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  text-align: center;
+}
+.mf .mf-ort small {
+  font: 400 10px var(--hb-anz);
+  color: #f0d27a;
+}
+/* Boost: Ring zeigt, wie weit die naechste Faehigkeit wieder bereit ist. */
+.mf .mf-unten .mf-boost::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: conic-gradient(#f0d27a calc(var(--anteil, 0) * 360deg), rgba(255, 255, 255, 0.12) 0);
+  -webkit-mask: radial-gradient(circle, transparent 10px, #000 11px);
+  mask: radial-gradient(circle, transparent 10px, #000 11px);
+}
+.mf .mf-unten .mf-boost.is-bereit::before {
+  background: #ffd65a;
+  box-shadow: 0 0 8px rgba(255, 200, 60, 0.8);
+}
+.mf .mf-pfeile {
+  display: flex;
+  gap: 4px;
+}
+.mf .mf-unten .mf-unten-knopf.is-pfeil {
+  flex: none;
+  width: 44px;
+}
+
+/* --- Upgrade-Blatt ------------------------------------------------------ */
+
+.mf-hauptzeile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.mf-hauptzeile small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.mf-hauptzeile span {
+  font: 400 24px var(--hb-anz);
+  font-variant-numeric: tabular-nums;
+}
+.mf-hauptzeile b {
+  color: #48d56b;
+}
+.mf-hauptzeile em {
+  font: 400 12px var(--hb-txt);
+  font-style: normal;
+  color: var(--hb-leise);
+  text-align: center;
+}
+.mf-kennzahlen {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mf-kennzahlen div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.mf-kennzahlen dt {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.mf-kennzahlen dd {
+  margin: 0;
+  font: 400 15px var(--hb-anz);
+  font-variant-numeric: tabular-nums;
+}
+.mf-meilenstein {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.mf-fortschritt {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.mf-fortschritt i {
+  display: block;
+  height: 100%;
+  background: #48d56b;
+}
+/* Rabatt im Upgrade-Blatt: gruene Zeile, alter Preis durchgestrichen. */
+.mf-rabatt {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(72, 213, 107, 0.16);
+  color: #6fe08d;
+  font: 400 14px var(--hb-anz);
+  text-align: center;
+}
+.mf-alter-preis {
+  opacity: 0.6;
+  font-size: 0.8em;
+  margin-right: 4px;
+}
+.mf-mengen {
+  display: flex;
+  gap: 6px;
+}
+:is(.hb, .spe) .mf-mengen .mf-menge {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 56px;
+  /* Holzplatte als Neunteiler: Ecken 28 von 192 × 112 px bleiben unverzerrt. */
+  border: solid transparent;
+  border-width: 10px;
+  border-image: url(/manufaktur/ui/ui-menge.webp) 28 fill / 10px stretch;
+  background: none;
+  color: #fff6df;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  text-align: center;
+}
+:is(.hb, .spe) .mf-mengen .mf-menge b {
+  font: 400 17px var(--hb-anz);
+}
+:is(.hb, .spe) .mf-mengen .mf-menge b,
+:is(.hb, .spe) .mf-mengen .mf-menge small {
+  /* Helle Schrift auf hellem Holz: nur mit dunkler Kontur lesbar. */
+  -webkit-text-stroke: 3px #3a2414;
+  paint-order: stroke fill;
+}
+:is(.hb, .spe) .mf-mengen .mf-menge small {
+  font: 400 12px var(--hb-anz);
+  color: #e9dcc0;
+}
+:is(.hb, .spe) .mf-mengen .mf-menge.is-leistbar small {
+  color: #ffd65a;
+}
+/* Auswahl: Messingrand. */
+:is(.hb, .spe) .mf-mengen .mf-menge.is-an {
+  border-image-source: url(/manufaktur/ui/ui-menge-an.webp);
+}
+:is(.hb, .spe) .mf-kaufen {
+  min-height: 56px;
+  font: 400 19px var(--hb-anz);
+}
+:is(.hb, .spe) .hb-kn.mf-kaufen.is-gedaempft,
+:is(.hb, .spe) .hb-kn.mf-kaufen:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--hb-leise);
+  box-shadow: none;
+  opacity: 1;
+}
+
+/* --- Meister-Blatt ------------------------------------------------------ */
+
+.mf-blatt-hinweis {
+  margin: 0;
+  font-size: 13px;
+  color: var(--hb-leise);
+}
+.mf-blatt-warnung {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(230, 70, 70, 0.12);
+  border: 1px solid rgba(230, 70, 70, 0.45);
+}
+.mf-meisterliste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mf-meisterliste li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.mf-meisterliste li.is-markiert {
+  outline: 2px solid #c9a24a;
+}
+.mf-meisterliste-bild {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+/* Noch kein Meister: das Medaillon der Station, gedaempft. */
+.mf-meisterliste-bild.is-leer {
+  filter: grayscale(0.7) brightness(0.75);
+  opacity: 0.8;
+}
+.mf-meisterliste-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.mf-meisterliste-text strong {
+  font: 700 14px var(--hb-txt);
+}
+.mf-meisterliste-text small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+:is(.hb, .spe) .mf-meisterliste .hb-kn {
+  flex: none;
+  min-width: 96px;
+}
+
+/* --- Meister-Blatt mit Pools (Phase 1) --------------------------------- */
+.mf-meister-abschnitt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.mf-meister-abschnitt h3 {
+  margin: 0 0 2px;
+  font: 400 15px var(--hb-anz);
+  color: #f0d27a;
+}
+.mf-meister-karte {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.mf-meister-karte.is-zugewiesen {
+  background: rgba(201, 162, 74, 0.12);
+  outline: 1px solid rgba(201, 162, 74, 0.5);
+}
+.mf-meister-karte.is-wirkt {
+  outline-color: #48d56b;
+  box-shadow: 0 0 10px rgba(72, 213, 107, 0.35);
+}
+.mf-meister-karte small.is-wirkt {
+  color: #6fe08d;
+}
+.mf-meister-pool {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mf-meister-knoepfe {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+:is(.hb, .spe) .mf-meister-karte .hb-kn {
+  flex: none;
+  min-width: 92px;
+  min-height: 34px;
+  font-size: 13px;
+}
+:is(.hb, .spe) .mf-orte .hb-kn,
+:is(.hb, .spe) .mf-meister-karte .hb-kn:not(.is-gold):not(.is-leise) {
+  /* Zuweisen: dieselbe Holzplatte wie die Mengen-Knoepfe, sonst stand dort nur Text. */
+  border: solid transparent;
+  border-width: 8px;
+  border-image: url(/manufaktur/ui/ui-menge.webp) 28 fill / 8px stretch;
+  background: none;
+  color: #fff6df;
+  -webkit-text-stroke: 3px #3a2414;
+  paint-order: stroke fill;
+}
+:is(.hb, .spe) .mf-meister-karte .hb-kn.is-leise {
+  opacity: 0.75;
+  font-size: 11px;
+}
+.mf-meister-leer {
+  margin: 0;
+  font-size: 13px;
+}
+/* Rang am Portraet: Ring in Bronze, Silber oder Gold, das Abzeichen unten rechts. */
+.mf-meister-bild {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--rang);
+}
+.mf-meister-bild.is-jung {
+  --rang: #c4834a;
+}
+.mf-meister-bild.is-meister {
+  --rang: #c8d0da;
+}
+.mf-meister-bild.is-ober {
+  --rang: #f2c94c;
+  box-shadow: 0 0 0 3px var(--rang), 0 0 10px rgba(242, 201, 76, 0.7);
+}
+.mf-meister-bild img {
+  width: 100%;
+  height: 100%;
+}
+.mf-meister-bild .mf-abzeichen {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 20px;
+  height: 20px;
+}
+.mf-faehigkeit-zeichen {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mf .mf-schild-stufe.is-leistbar .mf-pfeil,
+  .mf .mf-faehigkeit.is-bereit,
+  .mf .mf-direktor.is-winkt,
+  .mf .mf-direktor.is-jubelt {
+    animation: none;
+  }
+  .mf .mf-ueber .mf-schild-stufe.is-engpass {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(230, 70, 70, 0.6);
+  }
+}
+
+/* Das Hub-Stylesheet zieht Eingabefelder auf volle Breite — hier nicht. */
+:is(.hb, .spe) .mf-debug input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}
+
+/* --- Werkstattbuch (Phase 3) ------------------------------------------- */
+/* Buchoptik: die Pergamentseite als Grund, dunkle Tinte darauf. */
+.mf-buch {
+  padding: 12px;
+  border-radius: 14px;
+  background: url(/manufaktur/rig2/werkstattbuch-seite.webp) center / 100% 100% no-repeat;
+  color: #3a2608;
+}
+.mf-buch-siegel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font: 400 22px var(--hb-anz);
+}
+.mf-buch-siegel img {
+  width: 28px;
+  height: 28px;
+}
+.mf-buch-siegel small {
+  flex-basis: 100%;
+  font: 700 12px var(--hb-txt);
+  color: #6b4a20;
+}
+.mf-buch-liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mf-buch-liste li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(107, 74, 32, 0.25);
+}
+.mf-buch-zeichen {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.mf-buch-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.mf-buch-text strong {
+  font: 700 14px var(--hb-txt);
+}
+.mf-buch-text small {
+  font: 700 12px var(--hb-txt);
+  color: #6b4a20;
+}
+.mf-buch-text small b {
+  color: #1f6b3a;
+}
+.mf-buch-stufen {
+  display: flex;
+  gap: 3px;
+  margin-top: 3px;
+}
+.mf-buch-stufen i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #8a6a30;
+}
+.mf-buch-stufen i.is-voll {
+  background: #b3262c;
+  border-color: #6a1014;
+}
+:is(.hb, .spe) .mf-buch-liste .hb-kn {
+  flex: none;
+  min-width: 70px;
+  min-height: 36px;
+}
+.mf-buch-preis {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+}
+.mf .mf-unten .mf-buch-knopf.is-bereit {
+  box-shadow: 0 0 8px rgba(255, 200, 60, 0.8), inset 0 1px 0 rgba(255, 220, 160, 0.25);
+}
+
+/* --- Renovieren (Phase 2) ---------------------------------------------- */
+/* Das Messingschild in der Halle: leere Vertiefungen gedaempft, eingesetzte Sterne voll. */
+.mf .mf-sternschild {
+  background: url(/manufaktur/rig2/renovierung-schild.webp) center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.mf .mf-sternschild i {
+  position: absolute;
+  top: 58.75%;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  background: url(/manufaktur/rig2/renovierung-stern.webp) center / contain no-repeat;
+  filter: grayscale(1) brightness(0.45);
+  opacity: 0.55;
+}
+.mf .mf-sternschild i.is-voll {
+  filter: drop-shadow(0 0 3px rgba(255, 210, 90, 0.9));
+  opacity: 1;
+}
+.mf .mf-sternschild b {
+  position: absolute;
+  left: 18%;
+  top: 58%;
+  transform: translate(-50%, -50%);
+  font: 400 12px var(--hb-anz);
+  color: #fff6df;
+  -webkit-text-stroke: 3px #5a3a10;
+  paint-order: stroke fill;
+}
+.mf-sterne {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.mf-sterne img {
+  width: 16px;
+  height: 16px;
+  filter: grayscale(1) brightness(0.5);
+  opacity: 0.6;
+}
+.mf-sterne img.is-voll {
+  filter: none;
+  opacity: 1;
+}
+.mf-jubilaeen {
+  margin-left: 4px;
+  font: 400 13px var(--hb-anz);
+  color: #f0d27a;
+}
+.mf-warnung {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(230, 120, 60, 0.14);
+  color: #f0b48a;
+  font: 700 12px var(--hb-txt);
+  text-align: center;
+}
+.mf-renovieren,
+.mf-umziehen,
+.mf-orte {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mf-umzug-bild .mf-sterne {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+}
+.mf-orte h3 {
+  margin: 0;
+  font: 400 15px var(--hb-anz);
+  color: #f0d27a;
+}
+.mf-orte ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mf-orte li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.mf-orte li.is-hier {
+  outline: 1px solid rgba(201, 162, 74, 0.6);
+}
+.mf-orte-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mf-orte-text strong {
+  font: 700 14px var(--hb-txt);
+}
+
+/* --- Baustellen (Phase 4) ---------------------------------------------- */
+/* Das Countdown-Schild der Lieferung (320 × 160, Textflaeche 40/65/240/65). */
+.mf .mf-ueber .mf-bauschild {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding-top: 14px;
+  background: url(/manufaktur/rig2/countdown-schild.webp) center / contain no-repeat;
+  color: #fff6df;
+  -webkit-text-stroke: 3px #3a2414;
+  paint-order: stroke fill;
+}
+.mf .mf-bauschild small {
+  font: 400 11px var(--hb-anz);
+}
+.mf .mf-bauschild b {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font: 400 16px var(--hb-anz);
+}
+.mf .mf-ueber .mf-bauschild.is-leistbar {
+  filter: drop-shadow(0 0 6px rgba(255, 200, 60, 0.8));
+}
+.mf .mf-ueber .mf-bauschild:disabled {
+  opacity: 0.85;
+}
+
+/* --- Zielkette (Phase 5) ----------------------------------------------- */
+/* Unten links ueber der Leiste: Oben stehen die Schilder von Paternoster und Versand. */
+.mf .mf-ziel {
+  position: absolute;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  left: 10px;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: 56%;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(7, 19, 47, 0.86);
+  border: 1px solid rgba(201, 162, 74, 0.55);
+  color: #f3e6c4;
+  text-align: left;
+}
+.mf .mf-ziel:disabled {
+  opacity: 1;
+}
+.mf .mf-ziel small {
+  font: 400 10px var(--hb-anz);
+  color: #f0d27a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.mf .mf-ziel span {
+  font: 700 12px/1.25 var(--hb-txt);
+}
+.mf .mf-ziel b {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font: 400 13px var(--hb-anz);
+}
+.mf .mf-ziel.is-fertig {
+  background: linear-gradient(180deg, #f3c84a, #c9952c);
+  border-color: #7a5410;
+  color: #2a1a05;
+  /* Eigener Wipp-Ablauf: mf-pfeil verschiebt um -50 % (fuer mittige Dinge) und schob das Ziel aus dem Bild. */
+  animation: mf-ziel 1.2s ease-in-out infinite;
+}
+@keyframes mf-ziel {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.mf .mf-ziel.is-fertig small {
+  color: #5a3a10;
+}
+.mf .mf-ziel-balken {
+  display: block;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+.mf .mf-ziel-balken i {
+  display: block;
+  height: 100%;
+  background: #48d56b;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mf .mf-ziel.is-fertig {
+    animation: none;
+  }
+}
+
+/* Auftragsbrett: kompakter Einstieg, Karten auf Papier, dauerhafte Sammlung. */
+.mf .mf-auftragszugang {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  margin: 0 10px 6px; padding: 8px 12px; min-height: 48px;
+  border: 1px solid #a98140; border-radius: 12px;
+  background: linear-gradient(100deg, #253957, #182a43); color: #ffe2a0;
+  text-align: left;
+}
+.mf .mf-auftragszugang > span:first-child { font-size: 26px; }
+.mf .mf-auftragszugang > span:nth-child(2) { flex: 1; display: grid; gap: 2px; }
+.mf .mf-auftragszugang strong { font-size: 13px; }
+.mf .mf-auftragszugang small { color: #d7dfeb; font-size: 11px; }
+.mf .mf-auftragszugang.is-fertig { background: #365335; border-color: #f5c02e; }
+.mf-auftraege { display: grid; gap: 16px; padding-bottom: 16px; }
+.mf-auftrag-hero { display: block; width: 100%; aspect-ratio: 2 / 1; object-fit: cover; border-radius: 14px; }
+.mf-auftraege p { margin: 0; line-height: 1.5; }
+.mf-auftrag-angebote { display: grid; gap: 12px; }
+.mf-auftrag-karte {
+  display: grid; gap: 10px; padding: 16px; border-radius: 14px;
+  background: #f3e5c5; border: 1px solid #c59a4b; color: #342617;
+}
+.mf-auftrag-karte > small { color: #795020; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.mf-auftraege h3 { margin: 0; font: 400 22px var(--hb-anz); }
+.mf-auftrag-karte dl { display: grid; gap: 6px; margin: 0; font-size: 13px; }
+.mf-auftrag-karte dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+.mf-auftrag-karte dd { margin: 0; font-weight: 800; }
+.mf-auftrag-karte progress { width: 100%; height: 14px; accent-color: #398048; }
+.mf-auftrag-karte .hb-kn { min-height: 44px; height: auto; padding: 12px; white-space: normal; }
+.mf-auftrag-leise { font-size: 12px; opacity: .8; }
+.mf-auftrag-sammlung { display: grid; gap: 10px; }
+.mf-auftrag-abzeichen { display: grid; gap: 8px; }
+.mf-auftrag-abzeichen > div { display: grid; grid-template-columns: 32px 1fr; gap: 2px 8px; padding: 10px; border: 1px solid #425477; border-radius: 10px; color: #a3b3dd; }
+.mf-auftrag-abzeichen > .is-erreicht { color: #ffe2a0; border-color: #bf9347; background: #293750; }
+.mf-auftrag-abzeichen span { grid-row: span 2; font-size: 28px; align-self: center; }
+.mf-auftrag-abzeichen small { grid-column: 2; }
+.mf-auftrag-abzeichen img { width: 16px; height: 16px; vertical-align: middle; }
+
+/* Meisterschule und Erinnerungen: dieselben Papier- und Messingtoene wie Auftraege. */
+.mf-schule { display: grid; gap: 16px; padding-bottom: 16px; }
+.mf-schule p { margin: 0; line-height: 1.5; }
+.mf-schule h3 { margin: 0; font: 400 20px var(--hb-anz); }
+.mf-schule-konto { display: grid; gap: 6px; padding: 14px; border: 1px solid #b68d42; border-radius: 14px; background: #243653; }
+.mf-schule-konto strong { color: #ffe2a0; font-size: 22px; }
+.mf-schule-konto span { font-size: 13px; }
+.mf-schule-station { display: grid; gap: 10px; }
+.mf-schule-karte { display: grid; gap: 10px; padding: 14px; background: #f3e5c5; color: #342617; border: 1px solid #c59a4b; border-radius: 14px; }
+.mf-schule-rang { display: flex; align-items: center; gap: 10px; }
+.mf-schule-rang img { width: 36px; height: 36px; object-fit: contain; }
+.mf-schule-danach { color: #286037; font-weight: 800; }
+.mf-schule .hb-kn { min-height: 44px; height: auto; white-space: normal; padding: 12px; }
+.mf-werkstatt-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.mf-werkstatt-links .hb-kn { flex: 1; min-height: 44px; height: auto; padding: 12px; white-space: normal; }
+.mf-chronik-liste { display: grid; gap: 10px; }
+.mf-chronik-eintrag { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid #435377; border-radius: 14px; color: #b8c6e1; }
+.mf-chronik-eintrag.is-erreicht { color: #ffe2a0; background: #253550; border-color: #a98140; }
+.mf-chronik-eintrag > span { font-size: 26px; }
+.mf-chronik-eintrag > div { display: grid; flex: 1; gap: 6px; }
+.mf-chronik-eintrag p { font-size: 13px; }
+.mf-chronik-eintrag progress { width: 100%; height: 8px; accent-color: #f5c02e; }

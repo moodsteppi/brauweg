@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -9,6 +11,18 @@ import react from '@vitejs/plugin-react';
  */
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      /*
+       * Die Simulation der Kartenmanufaktur kommt aus ihrer QUELLE: Der
+       * Client rechnet sie in jedem Bild mit, und `npm run build` im
+       * Wurzelverzeichnis baut `client` vor `manufaktur-kern` — ein `dist`
+       * gaebe es auf einer frischen Kopie noch nicht. Gleiche Zuordnung in
+       * `tsconfig.json` (paths) und `vitest.config.ts`.
+       */
+      '@brauweg/manufaktur-kern': fileURLToPath(new URL('../manufaktur-kern/src/index.ts', import.meta.url)),
+    },
+  },
   server: {
     port: 5173,
     proxy: {

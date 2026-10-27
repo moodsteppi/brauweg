@@ -41,6 +41,7 @@ function sicht(teile: Partial<GolfSicht> = {}): GolfSicht {
     saat: 4711,
     sitze: 2,
     loecher: 2,
+    bahnen: ['test-netz', 'test-netz'],
     botSitze: [],
     zuege: [],
     abIndex: 0,
@@ -309,5 +310,58 @@ describe('Golfnetz: ohne Bahnen', () => {
     netz.nimmSicht(sicht({ zuege: [{ sitz: 0, takt: 4, nr: 0, rx: 0, ry: -1, kraft: 0.5 }] }));
     expect(netz.kern).toBeNull();
     expect(netz.schlage(0, 0, -1, 0.5)).toBe(false);
+  });
+});
+
+/*
+ * Seit dem 22.09.2026 nennt die Sicht die Bahnen per Kennung (`bahnen`), und
+ * das Netz löst sie gegen den Katalog dieses Stands auf. Geprüft wird, dass
+ * die Folge des Servers gilt und nicht die des Katalogs — und dass ein zu
+ * alter Stand es sagt, statt eine andere Partie zu rechnen.
+ */
+describe('Golfnetz: Bahnen per Kennung', () => {
+  const ZWEITE: Karte = { ...BAHN, id: 'test-zweite', name: 'Zweite Prüfbahn', par: 3 };
+
+  function mitMeldung(karten: readonly Karte[]) {
+    const meldungen: string[] = [];
+    const netz = new Golfnetz({
+      sende: () => {},
+      sendeTakt: () => {},
+      neuVerbinden: () => {},
+      jetzt: () => 0,
+      karten,
+      melde: (text) => meldungen.push(text),
+    });
+    return { netz, meldungen };
+  }
+
+  it('spielt die Folge der Sicht, nicht die des Katalogs', () => {
+    const { netz } = mitMeldung([BAHN, ZWEITE]);
+    netz.nimmSicht(sicht({ bahnen: ['test-zweite', 'test-netz'] }));
+    expect(netz.karten.map((k) => k.id)).toEqual(['test-zweite', 'test-netz']);
+    const z = netz.kern?.zustand();
+    expect(z && netz.karten[z.aktuell.karte].id).toBe('test-zweite');
+  });
+
+  it('meldet eine unbekannte Kennung einmal, baut keinen Kern und stuerzt nicht ab', () => {
+    const { netz, meldungen } = mitMeldung([BAHN]);
+    const zu = sicht({
+      bahnen: ['test-netz', 'k99-gibt-es-noch-nicht'],
+      zuege: [{ sitz: 0, takt: 4, nr: 0, rx: 0, ry: -1, kraft: 0.5 }],
+    });
+    netz.nimmSicht(zu);
+    netz.nimmSicht(zu);
+    expect(netz.kern).toBeNull();
+    expect(netz.unbekannteBahnen).toEqual(['k99-gibt-es-noch-nicht']);
+    expect(netz.karten).toEqual([]);
+    expect(meldungen.length).toBe(1);
+    expect(meldungen[0]).toContain('neu laden');
+    expect(netz.schlage(0, 0, -1, 0.5)).toBe(false);
+  });
+
+  it('baut keinen Kern, wenn die Sicht gar keine Bahnen nennt', () => {
+    const { netz } = mitMeldung([BAHN]);
+    netz.nimmSicht(sicht({ bahnen: [] }));
+    expect(netz.kern).toBeNull();
   });
 });

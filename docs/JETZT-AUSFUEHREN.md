@@ -4,8 +4,22 @@ Diese Datei ist zum Nachmachen gedacht. Sie erklärt zuerst, **warum** es den
 Umweg über ein zweites Repository gibt, und dann Schritt für Schritt, was zu
 tun ist, wenn neue Bilder geliefert werden.
 
-Stand: 4. August 2026. Auf diesem Rechner ist alles eingerichtet und einmal
-durchgespielt worden.
+Stand: 4. August 2026, auf dem Mac. **Dort** ist alles eingerichtet und
+einmal durchgespielt worden — „dieser Rechner" meinte bis zum 23.09.2026
+stillschweigend den Mac, und die Datei wird auf jedem gelesen. Die Pfade
+(`~/Desktop/BroCode/…`) sind die des Macs; auf einem anderen Rechner liegen
+die Repos, wo sie eben liegen (auf dem Mood-XPS etwa
+`~/Broweg/repos/brauweg` und `~/Broweg/repos/brauweg-art`).
+
+**Bevor du anfängst, sieh nach, ob das Werkzeug auf deinem Rechner da ist:**
+
+```bash
+ls ~/bildwerkzeug/wandeln.mjs ~/bildwerkzeug/node_modules/sharp
+```
+
+Meldet das „No such file or directory", ist der Rechner nicht eingerichtet —
+dann zuerst „Einmalige Einrichtung" unten. Auf dem Mood-XPS (Windows) war das
+am 23.09.2026 so.
 
 ---
 
@@ -48,20 +62,36 @@ bringt 75 MB. Vorher waren es 977 MB.
 
 ## Einmalige Einrichtung
 
-**Auf diesem Rechner ist das schon erledigt.** Der Abschnitt steht hier für
-einen neuen Rechner oder wenn `~/bildwerkzeug` verlorengeht.
+**Auf dem Mac ist das schon erledigt.** Der Abschnitt steht hier für jeden
+anderen Rechner oder wenn `~/bildwerkzeug` verlorengeht.
 
 Auf dem Mac ist **kein WebP-Werkzeug installiert** — weder `cwebp` noch
 `magick`; `sips` liest WebP, kann es aber nicht schreiben. Deshalb läuft es
-über `sharp`, bewusst **außerhalb** beider Repositories:
+über `sharp`, bewusst **außerhalb** beider Repositories. Auf anderen
+Rechnern mag `magick` da sein (auf dem Mood-XPS ist es das) — trotzdem
+denselben Weg gehen: Die Profile `karten`, `szene` und `wappen` im Skript
+sind die Norm, an der die Dateigrößen hängen, und ein Aufruf mit eigenen
+Zahlen bricht sie still.
 
 ```bash
 mkdir -p ~/bildwerkzeug && cd ~/bildwerkzeug && npm init -y && npm i sharp
+cp <pfad-zu>/brauweg-art/wandeln.mjs ~/bildwerkzeug/
 ```
 
-Dazu gehört das Skript `~/bildwerkzeug/wandeln.mjs`. Es liegt nicht in einem
-Repository, weil es zum Rechner gehört und nicht zum Projekt. Geht es
-verloren, steht es in der README von `brauweg-art`.
+Das Skript `~/bildwerkzeug/wandeln.mjs` liegt nicht in diesem Repository,
+weil es zum Rechner gehört und nicht zum Projekt. **Die Vorlage liegt im
+Archivrepo als `brauweg-art/wandeln.mjs`** — von dort kopieren.
+
+**Auf Windows in Git Bash aufrufen, nicht in PowerShell.** Das Skript sucht
+`sharp` unter `$HOME/bildwerkzeug/node_modules`; Git Bash setzt `HOME`,
+PowerShell in der Regel nicht, und dann bricht es schon beim Laden ab.
+
+**Nur auf dem Mac, ohne Vorlage in einem Repo:** der Klangwandler
+`~/klangwerkzeug/wandeln.mjs` (siehe `docs/KLANG.md`) sowie
+`~/bildwerkzeug/naht-heilen.mjs` und `~/bildwerkzeug/vergolden.mjs`. Fehlen
+sie, gibt es nichts zu kopieren. Dann nicht nachbauen, sondern melden — wer
+als Worker läuft, fragt mit `===BRAUCHT BRO===`. Dauerhaft hilft nur, die
+drei vom Mac ins Archivrepo zu legen, so wie `wandeln.mjs` schon dort liegt.
 
 Beide Repositories nebeneinander:
 

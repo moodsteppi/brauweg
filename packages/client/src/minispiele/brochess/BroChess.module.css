@@ -1,0 +1,559 @@
+/*
+ * Aussehen von BroChess (Brett.tsx, Uhr.tsx, ZeitWahl.tsx,
+ * screens/BroChessTable.tsx).
+ *
+ * Eigenes Modul wie bei BroCooked, damit die Klassennamen nirgends sonst
+ * greifen und die grosse `styles.css` unberuehrt bleibt.
+ *
+ * Seit dem 22.10.2026 im neuen Hub: Der Tisch traegt die Wurzel `.spe`
+ * (spiel-einstieg.css) und damit die Farben `--hb-*` aus hub-neu.css. Das
+ * Brett selbst bleibt Holz — hell und dunkel wie ein echtes Turnierbrett,
+ * das liest sich am Handy am besten.
+ */
+
+/* --- Der Tisch ----------------------------------------------------------- */
+
+.tisch {
+  /* Kante des Bretts: so breit wie moeglich, aber nie hoeher, als neben
+     Kopf, zwei Spielerleisten, Zugliste und Fuss Platz bleibt. */
+  --bc-brett: min(calc(100vw - 16px), calc(100dvh - 330px), 30rem - 16px);
+}
+
+.laedt {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kopf {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(var(--hb-oben) + 6px) 12px 6px;
+}
+
+.kopfTitel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kopfTitel h1 {
+  margin: 0;
+  font: 400 22px/1.1 var(--hb-anz);
+}
+
+.kopfTitel span {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+.mitte {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+/* Spielerleiste: Bild, Name, geschlagene Figuren, Uhr. */
+.leiste {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: var(--bc-brett);
+  min-height: 52px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  border-radius: 14px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+
+.leisteDran {
+  border-color: var(--hb-gold);
+}
+
+.leisteBild {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.leisteBildWeiss {
+  background: #e9e2d0;
+}
+
+.leisteBildSchwarz {
+  background: #3a3f4d;
+}
+
+.leisteBild img {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  object-position: bottom;
+}
+
+.leisteText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.leisteText strong {
+  font: 800 15px var(--hb-txt);
+  color: var(--hb-tinte);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leisteText strong small {
+  font-weight: 700;
+  color: var(--hb-leise);
+}
+
+.leisteText :global(.spielername) {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.gefangen {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-height: 16px;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.gefangen b {
+  margin-left: 6px;
+  letter-spacing: 0;
+  font: 800 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* Uhr: stehend dunkel, laufend hell — wie an einer echten Schachuhr sieht
+   man auf einen Blick, wessen Zeit gerade weggeht. */
+.uhr {
+  flex: none;
+  min-width: 84px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--hb-grund-tief);
+  color: var(--hb-leise);
+  font: 800 20px/1.1 var(--hb-txt);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.uhrLaeuft {
+  background: #f3f5ff;
+  color: #0e1a3d;
+}
+
+.uhrLaeuft.uhrKnapp {
+  background: var(--hb-rot);
+  color: #fff;
+}
+
+.zugliste {
+  display: flex;
+  gap: 12px;
+  width: var(--bc-brett);
+  margin: 0;
+  padding: 4px 2px;
+  box-sizing: border-box;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  font: 700 14px var(--hb-txt);
+  color: var(--hb-leise);
+  white-space: nowrap;
+}
+
+.zugliste::-webkit-scrollbar {
+  display: none;
+}
+
+.zugliste li {
+  display: flex;
+  gap: 6px;
+}
+
+.zugNr {
+  color: var(--hb-gesperrt);
+}
+
+.zugLetzter {
+  color: var(--hb-tinte);
+  border-bottom: 2px solid var(--hb-gold);
+}
+
+.zuglisteLeer {
+  color: var(--hb-gesperrt);
+}
+
+.fuss {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+.status {
+  margin: 0;
+  min-height: 1.4em;
+  font: 800 15px var(--hb-txt);
+  color: var(--hb-tinte);
+  text-align: center;
+}
+
+.statusSchach {
+  color: #ff8a8f;
+}
+
+.ergebnis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border-radius: 14px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+
+.ergebnis strong {
+  font: 400 24px/1.1 var(--hb-anz);
+  color: var(--hb-tinte);
+}
+
+.ergebnis span {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+.ergebnis_sieg {
+  border-color: var(--hb-gold);
+}
+
+.ergebnis_sieg strong {
+  color: var(--hb-gold);
+}
+
+/* --- Das Brett ----------------------------------------------------------- */
+
+.brett {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: var(--bc-brett, min(94vw, 72dvh, 640px));
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Ziehen mit dem Finger: Das Brett gehoert dem Finger, nicht dem Rollen. */
+  touch-action: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* `.brett .feld` statt `.feld`: Im Hub setzt `:is(.hb, .spe) button` jeden
+   Knopf auf durchsichtig zurueck und wiegt mehr als eine einzelne Klasse —
+   die Felder waeren sonst farblos. */
+.brett .feld {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  /* Die Felder sind Knoepfe; ohne diese Zeilen erben sie Rand und runde
+     Ecken des allgemeinen `button`-Stils, und zwischen den Feldern stehen
+     dunkle Zwickel. */
+  border: 0;
+  border-radius: 0;
+  min-width: 0;
+  min-height: 0;
+  font: inherit;
+  /* Die Figur ist ein Schriftzeichen; so skaliert sie mit dem Feld. */
+  font-size: calc(var(--bc-brett, min(94vw, 72dvh, 640px)) / 8 * 0.78);
+  line-height: 1;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.brett .hell {
+  background: #eed9b5;
+}
+
+.brett .dunkel {
+  background: #b58863;
+}
+
+.brett .klickbar {
+  cursor: pointer;
+}
+
+.brett .gewaehlt {
+  background-image: linear-gradient(rgba(245, 192, 46, 0.55), rgba(245, 192, 46, 0.55));
+}
+
+/* Der letzte Zug bleibt sichtbar — sonst sieht man nach dem Wegschauen nicht,
+   was der Gegner gezogen hat. */
+.brett .zuletzt {
+  background-image: linear-gradient(rgba(226, 182, 79, 0.42), rgba(226, 182, 79, 0.42));
+}
+
+/* Vorgemerkter Zug: kuehl statt warm, damit man ihn nicht fuer den
+   letzten Zug haelt. */
+.brett .vorab {
+  background-image: linear-gradient(rgba(64, 110, 214, 0.55), rgba(64, 110, 214, 0.55));
+}
+
+.brett .koenigImSchach {
+  background-image: radial-gradient(circle, rgba(217, 75, 85, 0.95) 0%, rgba(217, 75, 85, 0) 72%);
+}
+
+/* Leeres Zielfeld: Punkt. Zielfeld mit Figur (Schlagen): Ring. */
+.ziel::after {
+  content: '';
+  position: absolute;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: rgba(20, 30, 50, 0.3);
+  pointer-events: none;
+}
+
+.zielSchlag::after {
+  content: '';
+  position: absolute;
+  inset: 5%;
+  border-radius: 50%;
+  border: 5px solid rgba(20, 30, 50, 0.3);
+  pointer-events: none;
+}
+
+.zielVorab::after {
+  background: rgba(64, 110, 214, 0.45);
+  border-color: rgba(64, 110, 214, 0.55);
+}
+
+/* Die Figur sitzt in einem Halter von Feldgroesse: So heisst „100 %" beim
+   Gleiten genau ein Feld. */
+.figurHalter {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.figurGleitet {
+  z-index: 4;
+}
+
+.figurAngehoben {
+  opacity: 0.3;
+}
+
+.schwebend {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -60%) scale(1.18);
+  font-size: calc(var(--bc-brett, min(94vw, 72dvh, 640px)) / 8 * 0.78);
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35));
+}
+
+.figur {
+  position: relative;
+  pointer-events: none;
+}
+
+/* Pinguin-Figuren (figurensatz.ts): Bild statt Zeichen, ganz im Feld, nach
+   unten ausgerichtet wie eine Figur, die auf dem Feld steht. */
+.figurBild {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  /* Etwas Abstand nach oben: Der König füllt sonst das Feld bis an die Kante. */
+  padding-top: 4%;
+  box-sizing: border-box;
+}
+
+.figurWeiss {
+  color: #fdfbf6;
+  text-shadow:
+    0 0 1px #000,
+    0 0 1px #000,
+    0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.figurSchwarz {
+  color: #1d1a17;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+.koordinate {
+  position: absolute;
+  z-index: 1;
+  font: 800 10px var(--hb-txt, system-ui);
+  pointer-events: none;
+}
+
+.koordinateLinie {
+  right: 3px;
+  bottom: 2px;
+}
+
+.koordinateZeile {
+  left: 3px;
+  top: 2px;
+}
+
+.brett .hell .koordinate {
+  color: #b58863;
+}
+
+.brett .dunkel .koordinate {
+  color: #eed9b5;
+}
+
+/* --- Umwandlung ---------------------------------------------------------- */
+
+.umwandlung {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(7, 19, 47, 0.82);
+  color: var(--hb-tinte, #fff);
+  font-family: var(--hb-txt, system-ui);
+}
+
+.umwandlungWahl {
+  display: flex;
+  gap: 8px;
+}
+
+.brett .umwandlungWahl button {
+  width: calc(var(--bc-brett, min(94vw, 72dvh, 640px)) / 5.5);
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 12px;
+  background: #eed9b5;
+  font-size: calc(var(--bc-brett, min(94vw, 72dvh, 640px)) / 8);
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* --- Zeit wählen (ZeitWahl.tsx) ----------------------------------------- */
+
+.zeitwahl {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.zeitart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zeitartKopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 800 15px var(--hb-txt);
+  color: var(--hb-tinte);
+}
+
+.artZeichen {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.art_bullet {
+  color: #e0b45a;
+}
+
+.art_blitz {
+  color: var(--hb-gold);
+  fill: var(--hb-gold);
+}
+
+.art_rapid {
+  color: var(--hb-gruen);
+}
+
+.zeitraster {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.zeitraster .zeitKachel {
+  min-height: 48px;
+  border-radius: 12px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+  font: 800 16px var(--hb-txt);
+  color: var(--hb-tinte);
+  text-align: center;
+}
+
+.zeitraster .zeitKachelAn {
+  border: 2px solid var(--hb-gold);
+  background: var(--hb-karte-hoch);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figurGleitet {
+    transition: none !important;
+    transform: none !important;
+  }
+}

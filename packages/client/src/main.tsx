@@ -2,6 +2,8 @@ import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
+import { api } from './api';
+import { merkeHerkunft } from './herkunft';
 import { installiereDruckabbruch } from './druckabbruch';
 import { FeedbackWidget } from './FeedbackWidget';
 import { starteKlang } from './klang';
@@ -15,6 +17,13 @@ starteKlang();
 // Ebenfalls vor dem ersten Bild und einmal fuer alles: Ein Knopf, von dem
 // der Finger weit weggezogen wurde, loest nicht aus (siehe druckabbruch.ts).
 installiereDruckabbruch();
+
+// Werbelink `?q=` lesen, bevor irgendein Schirm die Adresse anfasst (siehe
+// herkunft.ts). Scheitert die Meldung, faellt nur ein Besuch aus der Zaehlung
+// — dafuer zeigt niemand einen Fehler.
+merkeHerkunft((kennung) => {
+  api.herkunftBesuch(kennung).catch(() => undefined);
+});
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Kein Wurzelelement gefunden');
@@ -60,6 +69,13 @@ function isDevFlag(name: string): boolean {
  *   Brett, Bank und Laden mit einem aufgezeichneten Vorbereitungsstand. Auch
  *   sie bleibt, und aus demselben Grund (siehe Kopf von
  *   `proben/ruestkammer/ProbeRuestkammer.tsx`).
+ * - /probe/manufaktur?fall=neu|mitte|voll|palast — die echte Kartenmanufaktur mit
+ *   festen Staenden und einem nachgestellten Server aus demselben Kern. Fuer
+ *   Bildschirmgroessen und gelieferte Bilder, auch im Browser (das Spiel
+ *   selbst gibt es nur in der App).
+ * - /probe/brochess — das echte Schachbrett mit festen Stellungen (Grund-
+ *   stellung, Schach, Umwandlung, Matt, Patt), ohne Server. Bleibt, damit
+ *   man das Brett ansehen kann, ohne zwei Konten an einen Tisch zu setzen.
  *
  * `/probe/arena-3d` (Probe B, dieselbe Szene live mit Three.js) gab es bis zum
  * 06.09.2026. Robin hat am 05.09.2026 gegen sie entschieden: Die Figuren sollen
@@ -77,6 +93,8 @@ function istProbe(name: string): boolean {
 const probeArena2d = istProbe('arena-2d');
 const probeKampf = istProbe('kampf');
 const probeRuestkammer = istProbe('ruestkammer');
+const probeBroChess = istProbe('brochess');
+const probeManufaktur = istProbe('manufaktur');
 
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
@@ -90,6 +108,10 @@ const devRunner = isDevFlag('runner');
  * sonst nur ueber Anmeldung, Datenbank und eine tatsaechlich offene Truhe.
  */
 const devTruhe = isDevFlag('truhe');
+/** Das neue Hub mit dem Beispielkonto aus dem Entwurf — nur im Dev-Server. */
+const devHub = import.meta.env.DEV && isDevFlag('hub');
+/** Der Startbildschirm (Logo, Ladebild, Leiste) zum Ansehen — nur im Dev-Server. */
+const devStart = import.meta.env.DEV && isDevFlag('start');
 
 if (
   (devAvatar || devChest || devWerkstatt || devRunner || devTruhe) &&
@@ -129,8 +151,8 @@ const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.R
  * Stueck, das jeder Spieler beim Anmelden laedt.
  */
 const Arena2D = lazy(() => import('./proben/arena-2d/Arena2D').then((m) => ({ default: m.Arena2D })));
-const TruhenOeffnung = lazy(() =>
-  import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
+const ProbeTruhen = lazy(() =>
+  import('./proben/truhen/ProbeTruhen').then((m) => ({ default: m.ProbeTruhen })),
 );
 /* Aus demselben Grund `lazy` wie die Probe darueber, hier aber mit einem
    zweiten dazu: Die Probe zieht den aufgezeichneten Kampf (rund 30 kB JSON)
@@ -149,12 +171,32 @@ const ProbeRuestkammer = lazy(() =>
   })),
 );
 
-const werkzeug = probeArena2d ? (
+/* `lazy` wie die anderen Proben: Das Brett gehoert nicht in das Stueck, das
+   jeder Spieler beim Anmelden laedt. */
+const ProbeStart = lazy(() => import('./proben/start/ProbeStart').then((m) => ({ default: m.ProbeStart })));
+const ProbeHub = lazy(() => import('./proben/hub/ProbeHub').then((m) => ({ default: m.ProbeHub })));
+
+const ProbeManufaktur = lazy(() =>
+  import('./proben/manufaktur/ProbeManufaktur').then((m) => ({ default: m.ProbeManufaktur })),
+);
+const ProbeBroChess = lazy(() =>
+  import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
+);
+
+const werkzeug = devStart ? (
+  <ProbeStart />
+) : devHub ? (
+  <ProbeHub />
+) : probeArena2d ? (
   <Arena2D />
 ) : probeKampf ? (
   <ProbeKampf />
 ) : probeRuestkammer ? (
   <ProbeRuestkammer />
+) : probeBroChess ? (
+  <ProbeBroChess />
+) : probeManufaktur ? (
+  <ProbeManufaktur />
 ) : devAvatar ? (
   <AvatarAligner />
 ) : devChest ? (
@@ -170,7 +212,7 @@ const werkzeug = probeArena2d ? (
 ) : devRunner ? (
   <Runner />
 ) : devTruhe ? (
-  <TruhenOeffnung grad="gold" muenzen={120} onFertig={() => window.location.reload()} />
+  <ProbeTruhen />
 ) : null;
 
 createRoot(root).render(

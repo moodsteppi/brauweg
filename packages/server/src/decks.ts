@@ -29,6 +29,11 @@ export const CARD_DECKS = [
   'schiefer',
   'pinguin',
   'zauberwald',
+  // Kein Kartenblatt, sondern der Figurensatz von BroChess (Pinguine statt
+  // Zeichen). Er steht im selben Aussehen-Feld je Spiel, damit es dafuer
+  // keine eigene Spalte braucht (client: minispiele/brochess/figurensatz.ts).
+  // Regulär 1.600 Münzen, Besitz wird über tischware.ts geprüft.
+  'schach-pinguin',
 ] as const;
 
 export type CardDeck = (typeof CARD_DECKS)[number];
@@ -54,6 +59,13 @@ export const CARD_BACKS = [
   'pinguin',
   'koeniglich',
   'schiefer',
+  // Nur in der Kartenmanufaktur zu erspielen — je abgeschlossener
+  // Manufaktur einer (manufaktur/rueckseiten.ts), nicht im Shop.
+  'manufaktur-dorf',
+  'manufaktur-fluss',
+  'manufaktur-berg',
+  'manufaktur-hafen',
+  'manufaktur-palast',
 ] as const;
 
 export type CardBack = (typeof CARD_BACKS)[number];

@@ -10,10 +10,14 @@ import {
   type ClubRole,
   type ClubSummary,
   type JoinMode,
+  type WarState,
 } from '../api';
 import { HubBanner, HubSzene } from '../hub';
 import { ClanChat } from './ClanChat';
 import { ClanKrieg } from './ClanKrieg';
+import { HbBlatt, Zurueck, useRueckfrage } from './HbBlatt';
+import { inApp, serverAdresse } from '../laufzeit';
+import { imUmfang } from '../umfang';
 
 /**
  * Clan-Tab (Plan 9.3).
@@ -71,7 +75,7 @@ function istLeitung(rolle: string | null | undefined): boolean {
  * nicht viermal dasselbe Bild zeigen.
  */
 function bildFuer(m: { accountId: string; hasAvatar: boolean }, i: number): string {
-  return m.hasAvatar ? `/api/avatars/${m.accountId}` : `/hub/pinguin-${(i % 4) + 1}.png`;
+  return m.hasAvatar ? serverAdresse(`/api/avatars/${m.accountId}`) : `/hub/pinguin-${(i % 4) + 1}.png`;
 }
 
 /**
@@ -133,7 +137,13 @@ export function Clan({
   onBald,
   onShowProfile,
   onMeChange,
+  onClanwort,
+  neu = false,
 }: {
+  /** Neues Hub (Nachtblau & Gold): die neu angeordnete Halle. */
+  neu?: boolean;
+  /** Clanwort oeffnen (nur im Umfang gesetzt) — ohne steht die Zeile nicht da. */
+  onClanwort?: () => void;
   /** Der eine Clan des Kontos, oder `null`. */
   clanId: string | null;
   /** Eigenes Konto — im Chat stehen die eigenen Zeilen rechts. */
@@ -179,6 +189,7 @@ export function Clan({
   if (ansicht === 'gruenden') {
     return (
       <Gruenden
+        neu={neu}
         fehler={fehler}
         onFehler={setFehler}
         onAbbruch={() => {
@@ -196,6 +207,7 @@ export function Clan({
   if (ansicht === 'suche' || !clanId) {
     return (
       <Suche
+        neu={neu}
         fehler={fehler}
         onBeitreten={(id) => tue(api.joinClub(id))}
         onZuruecknehmen={(id) => tue(api.cancelClubRequest(id))}
@@ -207,14 +219,16 @@ export function Clan({
     );
   }
 
+  const HalleArt = neu ? HalleNeu : Halle;
   return (
-    <Halle
+    <HalleArt
       detail={detail}
       meId={meId}
       fehler={fehler}
       onBald={onBald}
       onShowProfile={onShowProfile}
       onAktion={tue}
+      onClanwort={onClanwort}
     />
   );
 }
@@ -275,8 +289,12 @@ function Halle({
 
   const darfVerwalten = istLeitung(detail?.myRole);
   const offen = detail?.requests.length ?? 0;
+  // Chat und Krieg nur, wenn die Ausgabe sie anbietet (umfang.ts) — die
+  // Routen sperrt der Server dann ohnehin.
+  const mitChat = !inApp && imUmfang('clanchat');
+  const mitKrieg = imUmfang('clankrieg');
 
-  if (voll === 'chat' && detail) {
+  if (voll === 'chat' && detail && mitChat) {
     return (
       <ClanChat
         clubId={detail.id}
@@ -288,7 +306,7 @@ function Halle({
     );
   }
 
-  if (voll === 'krieg' && detail) {
+  if (voll === 'krieg' && detail && mitKrieg) {
     return <ClanKrieg clubId={detail.id} onClose={() => setVoll(null)} />;
   }
 
@@ -311,7 +329,7 @@ function Halle({
           <div className="hub-clanschild-zahlen">
             <span>
               <img src="/hub/tab-clan.webp" alt="" aria-hidden="true" />
-              {detail ? `${detail.members}/${detail.maxMembers}` : '–'}
+              {detail ? `${detail.members}/${detail.maxMembers}` : '-'}
             </span>
             <span>
               <img src="/hub/pokal.png" alt="" aria-hidden="true" />
@@ -329,9 +347,14 @@ function Halle({
         bleiben der Leitung vorbehalten.
       */}
       <div className="clan-icons">
-        <IconKnopf icon="chat" label="Chat" onClick={() => setVoll('chat')} />
+        {/* Kein Chat in der App, bis es eine Moderation gibt: Apple verlangt
+            fuer freien Text zwischen Fremden (1.2) Filter, Melden und eine
+            Reaktion binnen kurzer Zeit. Melden und Blockieren gibt es jetzt,
+            einen Filter und jemanden, der die Meldungen abarbeitet, noch
+            nicht. Auf der Webseite bleibt der Chat. */}
+        {mitChat && <IconKnopf icon="chat" label="Chat" onClick={() => setVoll('chat')} />}
         <IconKnopf icon="truhe" label="Truhe" bald onClick={() => onBald('Clantruhe')} />
-        <IconKnopf icon="krieg" label="Krieg" onClick={() => setVoll('krieg')} />
+        {mitKrieg && <IconKnopf icon="krieg" label="Krieg" onClick={() => setVoll('krieg')} />}
         {/* Anfragen sind Bewerberdaten - die sieht nur die Leitung. */}
         {darfVerwalten && (
           <IconKnopf
@@ -439,7 +462,10 @@ function MitgliedBlatt({
   onClose,
   onShowProfile,
   onAktion,
+  neu = false,
 }: {
+  /** Neues Hub: Blatt von unten, dieselben Rückfragen. */
+  neu?: boolean;
   mitglied: ClubMemberView;
   clubId: string;
   onClose: () => void;
@@ -460,6 +486,63 @@ function MitgliedBlatt({
     { id: 'member', wort: 'Mitglied', hinweis: '' },
   ];
 
+  /**
+   * Rückfragen: im neuen Hub als eigenes Blatt (useRueckfrage), sonst wie
+   * bisher. `window.confirm` zeigte in der App den grauen iOS-Dialog.
+   */
+  const [frage, rueckfrage] = useRueckfrage();
+  const bestaetige = (titel: string, text: string | undefined, ja: string, gefahr: boolean, dann: () => void): void => {
+    if (neu) frage({ titel, text, ja, gefahr }, dann);
+    else if (window.confirm(text ? `${titel} ${text}` : titel)) dann();
+  };
+  const befoerdern = (r: (typeof RAENGE)[number]): void => {
+    bestaetige(
+      `${mitglied.displayName} zum ${r.wort} machen?`,
+      istLeitung(r.id) ? 'Damit darf er aufnehmen, rauswerfen und die Clanregeln ändern.' : undefined,
+      `Zum ${r.wort} machen`,
+      false,
+      () => onAktion(api.setClubRole(clubId, mitglied.accountId, r.id), onClose),
+    );
+  };
+  const rauswerfen = (): void => {
+    bestaetige(`${mitglied.displayName} aus dem Clan werfen?`, undefined, 'Rauswerfen', true, () =>
+      onAktion(api.kickClubMember(clubId, mitglied.accountId), onClose),
+    );
+  };
+
+  if (neu) {
+    return (
+      <HbBlatt titel={mitglied.displayName} onClose={onClose}>
+        <p className="hb-klein hb-ohne-rand">
+          {ROLLE[mitglied.role]} · {mitglied.trophies.toLocaleString('de-DE')} Trophäen
+        </p>
+        <button type="button" className="hb-kn is-zweit is-breit" onClick={() => onShowProfile(mitglied.accountId)}>
+          Profil ansehen
+        </button>
+        <section className="hb-blk">
+          <h3 className="hb-ab">Rang</h3>
+          <div className="hb-liste">
+            {RAENGE.filter((r) => r.id !== mitglied.role).map((r) => (
+              <button type="button" key={r.id} className="hb-mg" onClick={() => befoerdern(r)}>
+                <span className="hb-mg-name">
+                  <strong>{r.wort}</strong>
+                  {r.hinweis && <small className="is-leise">{r.hinweis}</small>}
+                </span>
+                <span className="hb-pf" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+        <button type="button" className="hb-kn is-gefahr is-breit" onClick={rauswerfen}>
+          Rauswerfen
+        </button>
+        {rueckfrage}
+      </HbBlatt>
+    );
+  }
+
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card clan-blatt" onClick={(e) => e.stopPropagation()}>
@@ -476,19 +559,7 @@ function MitgliedBlatt({
           <button
             key={r.id}
             className="clan-blattknopf"
-            onClick={() => {
-              if (
-                !window.confirm(
-                  `${mitglied.displayName} zum ${r.wort} machen?` +
-                    (istLeitung(r.id)
-                      ? ' Damit darf er aufnehmen, rauswerfen und die Clanregeln ändern.'
-                      : ''),
-                )
-              ) {
-                return;
-              }
-              onAktion(api.setClubRole(clubId, mitglied.accountId, r.id), onClose);
-            }}
+            onClick={() => befoerdern(r)}
           >
             {r.wort}
             {r.hinweis && <span className="muted"> · {r.hinweis}</span>}
@@ -497,10 +568,7 @@ function MitgliedBlatt({
 
         <button
           className="clan-blattknopf is-gefahr"
-          onClick={() => {
-            if (!window.confirm(`${mitglied.displayName} aus dem Clan werfen?`)) return;
-            onAktion(api.kickClubMember(clubId, mitglied.accountId), onClose);
-          }}
+          onClick={rauswerfen}
         >
           Rauswerfen
         </button>
@@ -517,12 +585,57 @@ function AnfragenBlatt({
   onClose,
   onShowProfile,
   onAktion,
+  neu = false,
 }: {
   detail: ClubDetail;
   onClose: () => void;
   onShowProfile: (accountId: string) => void;
   onAktion: (aktion: Promise<unknown>, danach?: () => void) => void;
+  /** Neues Hub: Blatt von unten. */
+  neu?: boolean;
 }): React.JSX.Element {
+  if (neu) {
+    return (
+      <HbBlatt titel="Anfragen" onClose={onClose}>
+        {detail.requests.length === 0 ? (
+          <p className="hb-klein hb-ohne-rand">Gerade will niemand rein.</p>
+        ) : (
+          <div className="hb-liste">
+            {detail.requests.map((r, i) => (
+              <div className="hb-mg" key={r.accountId}>
+                <img src={bildFuer(r, i)} alt="" draggable={false} />
+                <button type="button" className="hb-mg-name hb-mg-knopf" onClick={() => onShowProfile(r.accountId)}>
+                  <strong>{r.displayName}</strong>
+                  <span className="hb-pk">
+                    <img src="/hub/symbol-pokal.webp" alt="" />
+                    {r.trophies.toLocaleString('de-DE')}
+                  </span>
+                </button>
+                <span className="hb-mg-knoepfe">
+                  <button
+                    type="button"
+                    className="hb-kn is-kontur is-klein"
+                    onClick={() => onAktion(api.acceptClubRequest(detail.id, r.accountId))}
+                    aria-label={`${r.displayName} aufnehmen`}
+                  >
+                    Aufnehmen
+                  </button>
+                  <button
+                    type="button"
+                    className="hb-kn is-zweit is-klein"
+                    onClick={() => onAktion(api.rejectClubRequest(detail.id, r.accountId))}
+                    aria-label={`${r.displayName} ablehnen`}
+                  >
+                    Nein
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </HbBlatt>
+    );
+  }
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card clan-blatt" onClick={(e) => e.stopPropagation()}>
@@ -565,6 +678,7 @@ function EinstellungenBlatt({
   detail,
   onClose,
   onAktion,
+  neu = false,
 }: {
   detail: ClubDetail;
   /**
@@ -577,6 +691,8 @@ function EinstellungenBlatt({
   darfAendern: boolean;
   onClose: () => void;
   onAktion: (aktion: Promise<unknown>, danach?: () => void) => void;
+  /** Neues Hub: Blatt von unten mit den neuen Feldern. */
+  neu?: boolean;
 }): React.JSX.Element {
   const meineWappen = useMeineWappen();
   const [name, setName] = useState(detail.name);
@@ -584,6 +700,50 @@ function EinstellungenBlatt({
   const [crest, setCrest] = useState(detail.crest);
   const [joinMode, setJoinMode] = useState<JoinMode>(detail.joinMode);
   const [minTrophies, setMinTrophies] = useState(String(detail.minTrophies));
+
+  const speichern = (): void =>
+    onAktion(
+      api.updateClub(detail.id, {
+        name,
+        motto: motto.trim() === '' ? null : motto,
+        crest,
+        joinMode,
+        minTrophies: Number(minTrophies) || 0,
+      }),
+      onClose,
+    );
+  const felder = (mitNeu: boolean): React.JSX.Element => (
+    <ClanFelder
+      neu={mitNeu}
+      gesperrt={!darfAendern}
+      name={name}
+      setName={setName}
+      motto={motto}
+      setMotto={setMotto}
+      crest={crest}
+      setCrest={setCrest}
+      joinMode={joinMode}
+      setJoinMode={setJoinMode}
+      minTrophies={minTrophies}
+      setMinTrophies={setMinTrophies}
+      meineWappen={meineWappen}
+    />
+  );
+
+  if (neu) {
+    return (
+      <HbBlatt titel="Clanregeln" onClose={onClose}>
+        {felder(true)}
+        {darfAendern ? (
+          <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={speichern}>
+            Speichern
+          </button>
+        ) : (
+          <p className="hb-klein hb-ohne-rand">Ändern dürfen das nur Anführer und Vize.</p>
+        )}
+      </HbBlatt>
+    );
+  }
 
   return (
     <div className="doko-sheet" onClick={onClose}>
@@ -607,21 +767,7 @@ function EinstellungenBlatt({
           <p className="muted">Ändern dürfen das nur Anführer und Vize.</p>
         )}
         {darfAendern && (
-        <button
-          className="primary"
-          onClick={() =>
-            onAktion(
-              api.updateClub(detail.id, {
-                name,
-                motto: motto.trim() === '' ? null : motto,
-                crest,
-                joinMode,
-                minTrophies: Number(minTrophies) || 0,
-              }),
-              onClose,
-            )
-          }
-        >
+        <button className="primary" onClick={speichern}>
           Speichern
         </button>
         )}
@@ -642,7 +788,10 @@ function Suche({
   onBeitreten,
   onZuruecknehmen,
   onGruenden,
+  neu = false,
 }: {
+  /** Neues Hub: Burghalle als Kopf, Liste und Gold-Hauptknopf „Clan gründen". */
+  neu?: boolean;
   fehler: string | null;
   onBeitreten: (clubId: string) => void;
   onZuruecknehmen: (clubId: string) => void;
@@ -666,6 +815,79 @@ function Suche({
     }, 250);
     return () => window.clearTimeout(handle);
   }, [suche]);
+
+  if (neu) {
+    return (
+      <div className="hb-clan">
+        <div className="hb-clan-held is-kurz" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
+          <h1>Clans</h1>
+          <small>Such dir einen Clan - oder gründe deinen eigenen.</small>
+        </div>
+        <div className="hb-clan-inhalt">
+          <input
+            className="hb-feld is-suche"
+            value={suche}
+            onChange={(e) => setSuche(e.target.value)}
+            placeholder="Clan suchen…"
+            aria-label="Clan suchen"
+          />
+          {fehler && <p className="hb-fehler">{fehler}</p>}
+
+          <div className="hb-liste">
+            {clubs === null && <p className="hb-klein hb-liste-leer">Wird geladen…</p>}
+            {clubs?.length === 0 && (
+              <p className="hb-klein hb-liste-leer">
+                {suche.trim() ? 'Kein Clan mit diesem Namen.' : 'Noch kein Clan da. Gründe den ersten.'}
+              </p>
+            )}
+            {clubs?.map((c) => {
+              const angefragt = pending.includes(c.id);
+              return (
+                <div className="hb-mg" key={c.id}>
+                  <img className="hb-mg-wappen" src={wappenBild(c.crest)} alt="" draggable={false} />
+                  <span className="hb-mg-name">
+                    <strong>{c.name}</strong>
+                    <small className="is-leise">
+                      {c.members}/{c.maxMembers} · {c.joinMode === 'open' ? 'Offen' : 'Auf Anfrage'}
+                      {c.minTrophies > 0 ? ` · ab ${c.minTrophies.toLocaleString('de-DE')}` : ''}
+                    </small>
+                    {angefragt && <small>Angefragt</small>}
+                  </span>
+                  {/* Goldkontur statt Goldfläche: Gefüllt ist nur der eine
+                      Hauptknopf der Seite, hier „Clan gründen" (DESIGN.md). */}
+                  {angefragt ? (
+                    <button
+                      type="button"
+                      className="hb-kn is-zweit is-klein"
+                      onClick={() => onZuruecknehmen(c.id)}
+                      aria-label={`Anfrage an ${c.name} zurücknehmen`}
+                    >
+                      Zurücknehmen
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="hb-kn is-kontur is-klein"
+                      onClick={() => onBeitreten(c.id)}
+                      aria-label={`${c.name}: ${c.joinMode === 'open' ? 'beitreten' : 'Beitritt anfragen'}`}
+                    >
+                      {c.joinMode === 'open' ? 'Beitreten' : 'Anfragen'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hb-fuss-haftend">
+            <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onGruenden}>
+              Clan gründen
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <HubSzene bg="/hub/bg-clan-suche.webp" className="front-clan">
@@ -738,7 +960,10 @@ function Gruenden({
   onFehler,
   onAbbruch,
   onFertig,
+  neu = false,
 }: {
+  /** Neues Hub: Vorschau von Wappen und Name auf der Burghalle, Felder darunter. */
+  neu?: boolean;
   fehler: string | null;
   onFehler: (text: string | null) => void;
   onAbbruch: () => void;
@@ -767,6 +992,51 @@ function Gruenden({
       .catch((e: unknown) => onFehler(fehlertext(e)))
       .finally(() => setLaeuft(false));
   };
+
+  if (neu) {
+    return (
+      <div className="hb-clan">
+        {/* Oben steht schon, wie der Clan aussehen wird: Wappen, Name,
+            Wahlspruch wandern beim Tippen mit — wie die Halle danach. */}
+        <div className="hb-clan-held is-kurz" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
+          <div className="hb-clan-zurueck">
+            <Zurueck onClick={onAbbruch} label="Zurück zur Clansuche" />
+          </div>
+          <img className="hb-wappen" src={wappenBild(crest)} alt="" draggable={false} />
+          <h1>{name.trim() || 'Clan gründen'}</h1>
+          <small>{motto.trim() ? `„${motto.trim()}"` : 'Name, Wahlspruch und Wappen'}</small>
+        </div>
+        <div className="hb-clan-inhalt">
+          <ClanFelder
+            neu
+            name={name}
+            setName={setName}
+            motto={motto}
+            setMotto={setMotto}
+            crest={crest}
+            setCrest={setCrest}
+            joinMode={joinMode}
+            setJoinMode={setJoinMode}
+            minTrophies={minTrophies}
+            setMinTrophies={setMinTrophies}
+            meineWappen={meineWappen}
+          />
+          {fehler && <p className="hb-fehler">{fehler}</p>}
+          <button
+            type="button"
+            className="hb-kn is-gold is-haupt is-breit"
+            disabled={laeuft || name.trim().length < 3}
+            onClick={gruenden}
+          >
+            {laeuft ? 'Wird gegründet…' : 'Gründen'}
+          </button>
+          <button type="button" className="hb-leise-knopf" onClick={onAbbruch}>
+            Zurück
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <HubSzene bg="/hub/bg-clan-gruenden.webp" className="front-clan">
@@ -821,7 +1091,10 @@ function ClanFelder({
   minTrophies,
   setMinTrophies,
   meineWappen,
+  neu = false,
 }: {
+  /** Neues Hub: dieselben Felder als dunkle Eingaben und Chips. */
+  neu?: boolean;
   /** Nur-Lesen-Ansicht: Felder stehen da, lassen sich aber nicht aendern. */
   gesperrt?: boolean;
   name: string;
@@ -837,6 +1110,113 @@ function ClanFelder({
   /** Wappen, die dem Konto gehoeren. `null` = noch nicht geladen. */
   meineWappen: Set<string> | null;
 }): React.JSX.Element {
+  // Gesperrte Wappen stehen trotzdem da — sonst erfaehrt niemand, dass es sie
+  // gibt. Antippen fuehrt nicht ins Leere, sondern sagt, wo man sie bekommt.
+  const waehleWappen = (w: string, mein: boolean): void => {
+    if (!mein) {
+      window.alert('Dieses Wappen gibt es im Shop unter „Clanwappen".');
+      return;
+    }
+    setCrest(w);
+  };
+
+  if (neu) {
+    return (
+      <div className="hb-felder">
+        <label className="hb-feldzeile">
+          <span>Name</span>
+          <input
+            className="hb-feld"
+            disabled={gesperrt}
+            value={name}
+            maxLength={24}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Kegelclub Nord"
+          />
+          <small>3 bis 24 Zeichen</small>
+        </label>
+        <label className="hb-feldzeile">
+          <span>Wahlspruch</span>
+          <input
+            className="hb-feld"
+            disabled={gesperrt}
+            value={motto}
+            maxLength={120}
+            onChange={(e) => setMotto(e.target.value)}
+            placeholder="Optional"
+          />
+        </label>
+        <fieldset className="hb-feldzeile hb-wappenwahl">
+          <legend>Wappen</legend>
+          <div className="hb-wappenraster">
+            {/* In der App gibt es den Wappen-Shop nicht — dort nur, was dem
+                Konto gehört, statt Schlösser, die nirgendwohin führen. Auf
+                der Webseite ebenso ohne Shop im Umfang. */}
+            {WAPPEN.filter((w) => (!inApp && imUmfang('shop')) || meineWappen === null || meineWappen.has(w)).map((w) => {
+              const mein = meineWappen === null || meineWappen.has(w);
+              return (
+                <button
+                  key={w}
+                  type="button"
+                  className={`hb-wappenknopf${crest === w ? ' is-an' : ''}${mein ? '' : ' is-zu'}`}
+                  disabled={gesperrt}
+                  aria-pressed={crest === w}
+                  aria-label={`Wappen ${w.replace('wappen-', '')}${mein ? '' : ', im Shop erhältlich'}`}
+                  onClick={() => waehleWappen(w, mein)}
+                >
+                  <img src={wappenBild(w)} alt="" draggable={false} />
+                  {!mein && (
+                    <span className="hb-wappen-schloss" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" className="hb-ic" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="5" y="11" width="14" height="9" rx="2" />
+                        <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                      </svg>
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+        <div className="hb-feldzeile">
+          <span>Beitritt</span>
+          <div className="hb-chips is-innen">
+            {(
+              [
+                ['open', 'Offen'],
+                ['on_request', 'Auf Anfrage'],
+              ] as const
+            ).map(([modus, wort]) => (
+              <button
+                key={modus}
+                type="button"
+                disabled={gesperrt}
+                className={`hb-chip${joinMode === modus ? ' is-an' : ''}`}
+                aria-pressed={joinMode === modus}
+                onClick={() => setJoinMode(modus)}
+              >
+                {wort}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="hb-feldzeile">
+          <span>Ab Trophäen</span>
+          <input
+            className="hb-feld"
+            type="number"
+            disabled={gesperrt}
+            min={0}
+            inputMode="numeric"
+            value={minTrophies}
+            onChange={(e) => setMinTrophies(e.target.value)}
+          />
+          <small>0 heißt: keine Schwelle</small>
+        </label>
+      </div>
+    );
+  }
+
   return (
     <>
       <label className="clan-feld">
@@ -865,9 +1245,6 @@ function ClanFelder({
         <legend>Wappen</legend>
         <div className="clan-wappenraster">
           {WAPPEN.map((w) => {
-            // Gesperrte Wappen stehen trotzdem da — sonst erfaehrt niemand,
-            // dass es sie gibt. Antippen fuehrt nicht ins Leere, sondern
-            // sagt, wo man sie bekommt.
             const mein = meineWappen === null || meineWappen.has(w);
             return (
               <button
@@ -877,13 +1254,7 @@ function ClanFelder({
                 disabled={gesperrt}
                 aria-pressed={crest === w}
                 title={mein ? undefined : 'Im Shop erhältlich'}
-                onClick={() => {
-                  if (!mein) {
-                    window.alert('Dieses Wappen gibt es im Shop unter „Clanwappen".');
-                    return;
-                  }
-                  setCrest(w);
-                }}
+                onClick={() => waehleWappen(w, mein)}
               >
                 <img src={wappenBild(w)} alt="" draggable={false} />
                 {!mein && <span className="clan-wappen-schloss">🔒</span>}
@@ -929,5 +1300,275 @@ function ClanFelder({
         />
       </label>
     </>
+  );
+}
+
+/**
+ * Die Clanhalle im neuen Hub (Entwurf „Nachtblau & Gold", Fassung 4).
+ *
+ * Dieselben Funktionen wie `Halle`, nur neu angeordnet: Wappen und Name auf
+ * der Burghalle, oben rechts Chat (nur Web), Anfragen (Leitung) und die
+ * Clanregeln, darunter der Clankrieg mit Stand, dann die Mitglieder.
+ * Mitglieds-, Anfragen- und Regelblatt sind dieselben wie in der alten Halle
+ * (dieselben Aufrufe und Rückfragen), nur als Blatt des neuen Hubs (`neu`).
+ *
+ * „Clantisch starten" und „Einladen" aus dem Entwurf gibt es im Code nicht —
+ * sie stehen deshalb hier nicht (FAKTENBLATT.md: nichts erfinden).
+ */
+function HalleNeu({
+  detail,
+  meId,
+  fehler,
+  onBald,
+  onShowProfile,
+  onAktion,
+  onClanwort,
+}: {
+  detail: ClubDetail | null;
+  meId: string | null;
+  fehler: string | null;
+  onBald: (name: string) => void;
+  onShowProfile: (accountId: string) => void;
+  onAktion: (aktion: Promise<unknown>, danach?: () => void) => void;
+  onClanwort?: () => void;
+}): React.JSX.Element {
+  const [gewaehlt, setGewaehlt] = useState<ClubMemberView | null>(null);
+  const [blatt, setBlatt] = useState<'anfragen' | 'einstellungen' | null>(null);
+  const [voll, setVoll] = useState<'chat' | 'krieg' | null>(null);
+  const [krieg, setKrieg] = useState<WarState | null>(null);
+  const [frage, rueckfrage] = useRueckfrage();
+
+  useEffect(() => {
+    // Clankrieg in der App vorerst raus (Emile, 22.10.2026) — dann auch nicht
+    // laden. Ebenso, wenn er nicht im Umfang der Ausgabe steht (umfang.ts).
+    if (!detail || inApp || !imUmfang('clankrieg')) return;
+    let lebt = true;
+    void api
+      .clubWar(detail.id)
+      .then((k) => lebt && setKrieg(k))
+      .catch(() => lebt && setKrieg(null));
+    return () => {
+      lebt = false;
+    };
+  }, [detail?.id]);
+
+  const darfVerwalten = istLeitung(detail?.myRole);
+  const offen = detail?.requests.length ?? 0;
+  // Chat und Krieg nur, wenn die Ausgabe sie anbietet (umfang.ts) — die
+  // Routen sperrt der Server dann ohnehin.
+  const mitChat = !inApp && imUmfang('clanchat');
+  const mitKrieg = imUmfang('clankrieg');
+
+  if (voll === 'chat' && detail && mitChat) {
+    return (
+      <ClanChat clubId={detail.id} meId={meId} darfLoeschen={darfVerwalten} onClose={() => setVoll(null)} onShowProfile={onShowProfile} />
+    );
+  }
+  if (voll === 'krieg' && detail && mitKrieg) {
+    return <ClanKrieg neu clubId={detail.id} onClose={() => setVoll(null)} />;
+  }
+
+  const k = krieg?.aktuell ?? null;
+  const laeuft = k?.status === 'laeuft' && k.gegner;
+  const restStunden = k?.endsAt ? Math.max(0, Math.round((new Date(k.endsAt).getTime() - Date.now()) / 3600000)) : null;
+  const summe = laeuft ? Math.max(1, k.wir.score + k.gegner!.score) : 1;
+
+  const symbol = (d: React.ReactNode): React.JSX.Element => (
+    <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {d}
+    </svg>
+  );
+
+  return (
+    <div className="hb-clan">
+      <div className="hb-clan-held" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
+        <div className="hb-clan-knoepfe">
+          {mitChat && (
+            <button type="button" className="hb-rund" onClick={() => setVoll('chat')} aria-label="Clanchat">
+              {symbol(<path d="M4 5h16v11H9l-5 4z" />)}
+            </button>
+          )}
+          {darfVerwalten && (
+            <button type="button" className="hb-rund" onClick={() => setBlatt('anfragen')} aria-label={offen > 0 ? `Anfragen, ${offen} offen` : 'Anfragen'}>
+              {symbol(
+                <>
+                  <circle cx="9" cy="8" r="3.5" />
+                  <path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6" />
+                  <circle cx="17" cy="9" r="2.5" />
+                  <path d="M16 14c3 0 5 2 5 5" />
+                </>,
+              )}
+              {offen > 0 && (
+                <span className="hb-badge" aria-hidden="true">
+                  {offen}
+                </span>
+              )}
+            </button>
+          )}
+          <button type="button" className="hb-rund" onClick={() => setBlatt('einstellungen')} aria-label="Clanregeln und Einstellungen">
+            {symbol(
+              <>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" />
+              </>,
+            )}
+          </button>
+        </div>
+        <img className="hb-wappen" src={wappenBild(detail?.crest)} alt="" draggable={false} />
+        <h1>{detail?.name ?? '…'}</h1>
+        <small>{detail?.motto ? `„${detail.motto}"` : detail ? 'Für alle Spiele' : 'Wird geladen…'}</small>
+        {detail && (
+          <div className="hb-kz">
+            <span>
+              <b>
+                {detail.members} / {detail.maxMembers}
+              </b>
+              Mitglieder
+            </span>
+            {/* Beitrittsart oben, Schwelle darunter. Vorher stand hier nur die
+                Schwelle, bei 0 als „offen / für alle" — und ein Clan „auf
+                Anfrage" sah damit aus wie ein offener. */}
+            <span>
+              <b>{detail.joinMode === 'open' ? 'offen' : 'auf Anfrage'}</b>
+              {detail.minTrophies > 0 ? `ab ${detail.minTrophies.toLocaleString('de-DE')} Trophäen` : 'ohne Schwelle'}
+            </span>
+            <span>
+              <b>{detail.trophies.toLocaleString('de-DE')}</b>
+              Clan-Trophäen
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="hb-clan-inhalt">
+        {fehler && <p className="hb-fehler">{fehler}</p>}
+
+        {!inApp && mitKrieg && (
+        <button type="button" className="hb-krieg" onClick={() => setVoll('krieg')}>
+          <span className="hb-kr-kopf">
+            <strong>Clankrieg</strong>
+            <small>
+              {laeuft
+                ? `${restStunden !== null ? `noch ${restStunden} h · ` : ''}alle Spiele zählen`
+                : k?.status === 'suche'
+                  ? 'Gegner wird gesucht'
+                  : k?.status === 'angefragt'
+                    ? 'Herausforderung offen'
+                    : '48 Stunden, alle Spiele zählen'}
+            </small>
+          </span>
+          {laeuft ? (
+            <>
+              <span className="hb-kr-vs">
+                <span className="hb-kr-seite">
+                  <img src={wappenBild(k.wir.crest)} alt="" />
+                  <b>{k.wir.score}</b>
+                  <small>Wir</small>
+                </span>
+                <span className="hb-vs">VS</span>
+                <span className="hb-kr-seite is-gegner">
+                  <img src={wappenBild(k.gegner!.crest)} alt="" />
+                  <b>{k.gegner!.score}</b>
+                  <small>{k.gegner!.name}</small>
+                </span>
+              </span>
+              <span className="hb-kr-balken" aria-hidden="true">
+                <span style={{ width: `${Math.round((k.wir.score / summe) * 100)}%` }} />
+              </span>
+              <small className="hb-kr-regel">Platz 1 = 3 Punkte, Platz 2 = 1 · je Mitglied bis 10 Partien</small>
+            </>
+          ) : (
+            <span className="hb-kr-leer">
+              {krieg?.letzter?.ergebnis
+                ? `Letzter Krieg: ${krieg.letzter.ergebnis === 'wir' ? 'gewonnen' : krieg.letzter.ergebnis === 'gegner' ? 'verloren' : 'unentschieden'}`
+                : 'Gerade läuft kein Krieg.'}
+              <span className="hb-kn is-gold">{krieg?.darfFuehren ? 'Krieg starten' : 'Ansehen'}</span>
+            </span>
+          )}
+        </button>
+        )}
+
+        {/* Clanwort (Emile, 23.10.2026): ein ausgelostes Mitglied waehlt, alle raten. */}
+        {onClanwort && (
+          <button type="button" className="hb-zeile hb-clanwort-zeile" onClick={onClanwort}>
+            <span className="hb-zeile-bild hb-clanwort-bild" aria-hidden="true">
+              <i>W</i>
+              <i>O</i>
+              <i>R</i>
+            </span>
+            <span>
+              <strong>Clanwort</strong>
+              <small>Ein Mitglied wählt, alle raten - heute</small>
+            </span>
+            <span className="hb-pf" aria-hidden="true">
+              ›
+            </span>
+          </button>
+        )}
+
+        <button type="button" className="hb-zeile" onClick={() => onBald('Clantruhe')}>
+          <img className="hb-zeile-bild" src="/hub/truhe-gold.webp" alt="" />
+          <span>
+            <strong>Clantruhe</strong>
+            <small>Gemeinsam füllen, gemeinsam öffnen</small>
+          </span>
+          <span className="hb-bald-marke">Bald</span>
+        </button>
+
+        <section className="hb-blk">
+          <h2 className="hb-ab">
+            Mitglieder
+            {detail && <span className="hb-ab-zusatz">{detail.members}</span>}
+          </h2>
+          <div className="hb-liste">
+            {detail === null && <p className="hb-klein hb-liste-leer">Wird geladen…</p>}
+            {detail?.memberList.map((m, i) => (
+              <button
+                type="button"
+                key={m.accountId}
+                className={`hb-mg${m.accountId === meId ? ' is-du' : ''}`}
+                onClick={() => (darfVerwalten ? setGewaehlt(m) : onShowProfile(m.accountId))}
+              >
+                <span className="hb-rl-rang">{i + 1}</span>
+                <img src={bildFuer(m, i)} alt="" draggable={false} />
+                <span className="hb-mg-name">
+                  <strong>{m.displayName}</strong>
+                  <small>{ROLLE[m.role]}</small>
+                </span>
+                <span className="hb-pk">
+                  <img src="/hub/symbol-pokal.webp" alt="" />
+                  {m.trophies.toLocaleString('de-DE')}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {detail && (
+          <button
+            type="button"
+            className="hb-leise-knopf"
+            onClick={() =>
+              frage({ titel: `„${detail.name}“ verlassen?`, text: 'Du kannst danach einem anderen Clan beitreten oder selbst einen gründen.', ja: 'Clan verlassen', gefahr: true }, () =>
+                onAktion(api.leaveClub(detail.id)),
+              )
+            }
+          >
+            Clan verlassen
+          </button>
+        )}
+      </div>
+      {rueckfrage}
+
+      {gewaehlt && detail && (
+        <MitgliedBlatt neu mitglied={gewaehlt} clubId={detail.id} onClose={() => setGewaehlt(null)} onShowProfile={onShowProfile} onAktion={onAktion} />
+      )}
+      {blatt === 'anfragen' && detail && (
+        <AnfragenBlatt neu detail={detail} onClose={() => setBlatt(null)} onShowProfile={onShowProfile} onAktion={onAktion} />
+      )}
+      {blatt === 'einstellungen' && detail && (
+        <EinstellungenBlatt neu darfAendern={darfVerwalten} detail={detail} onClose={() => setBlatt(null)} onAktion={onAktion} />
+      )}
+    </div>
   );
 }

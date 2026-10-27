@@ -3,14 +3,12 @@ import {
   lazy,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
 } from 'react';
 
 import { Ladekreis } from '../Ladekreis';
-import { CardFront } from '../CardFace';
 
 import {
   ApiError,
@@ -28,13 +26,17 @@ import {
   type Waehrung,
   type Shop as ShopDaten,
 } from '../api';
-import { inApp } from '../laufzeit';
+import { inApp, serverAdresse } from '../laufzeit';
+import { inAppSichtbar } from '../app-sichtbar';
+import { imUmfang } from '../umfang';
+import { schonGefeiert } from '../lernen/gefeiert';
 import {
-  DECKS,
   RUECKEN,
   cardImage,
   deckBack,
   deckById,
+  deckForGame,
+  deckMitRuecken,
   decksFor,
   rueckenBild,
   type Deck,
@@ -50,30 +52,20 @@ import {
   probePaket,
   spiele,
 } from '../klang';
-import { EinstellungenBlatt } from './Einstellungen';
+import { EinstellungenBlatt, MitteilungenBlatt } from './Einstellungen';
 import {
   EdelsteinIcon,
   HubBanner,
   HubSzene,
-  StatHero,
-  StatKachel,
-  StatSpiel,
   Tafel,
-  spielBanner,
 } from '../hub';
-import { BroCookedBanner } from '../minispiele/brocooked/Banner';
-import { EilandBanner } from '../minispiele/eiland/Banner';
-import { FillerBanner } from '../minispiele/filler/Banner';
-import { GolfBanner } from '../minispiele/golf/Banner';
-import { PartykisteBanner } from '../minispiele/partykiste/Banner';
-import { TafelrundeBanner } from '../minispiele/tafelrunde/Banner';
-import { MememoryBanner } from '../minispiele/mememory/Banner';
 import { Pinguin } from '../pinguin';
-import { Kreuz, Note, Spieler } from '../zeichen';
-import { sitzSpanne } from '../sitzspanne';
+import { Kreuz, Note, Wuerfel } from '../zeichen';
 import { Clan } from './Clan';
-import { Aufgabenblatt, FundBlatt, TruhenBild } from './Aufgaben';
+import { FundBlatt } from './Aufgaben';
 import { Kleiderschrank } from './Kleiderschrank';
+import { KontoSichern } from './KontoSichern';
+import { BrowortImProfil } from '../browort/BrowortImProfil';
 import { Klanghalle } from './Klanghalle';
 import { LEERE_BEMALUNG } from '../bemalung';
 
@@ -95,10 +87,31 @@ const Avatar3D = lazy(() => import('../Avatar3D'));
 const Avatarwerkstatt = lazy(() =>
   import('./Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
 );
+/** „Doppelkopf lernen" — nur in der App und erst beim Oeffnen nachgeladen. */
+const Lernpfad = lazy(() => import('../lernen/Lernpfad').then((m) => ({ default: m.Lernpfad })));
+const Browort = lazy(() => import('../browort/Browort').then((m) => ({ default: m.Browort })));
+const Clanwort = lazy(() => import('../browort/Clanwort').then((m) => ({ default: m.Clanwort })));
+const Kartenmanufaktur = lazy(() =>
+  import('../manufaktur/Kartenmanufaktur').then((m) => ({ default: m.Kartenmanufaktur })),
+);
+const MeisterFeier = lazy(() => import('../lernen/Feier').then((m) => ({ default: m.MeisterFeier })));
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
-import { cardLabel, cardName, isRed, kompakteZahl, t } from '../i18n';
-import { Trophaeenpfad } from './Pfad';
+import { cardLabel, cardName, isRed, t } from '../i18n';
+import { SHOP_RUBRIK } from '../inhaltspakete';
+import { StartNeu } from './StartNeu';
+import { NeuerRahmen } from './HubRahmen';
+import { SpieleNeu } from './SpieleNeu';
+import { TrophaeenwegNeu } from './TrophaeenwegNeu';
+import { HeuteNeu } from './HeuteNeu';
+import { SammlungNeu } from './SammlungNeu';
+import { TagesShop } from './TagesShop';
+import { HbBlatt, HbSymbol, ImHub, Schliessen, Zurueck, useEscape, useRueckfrage } from './HbBlatt';
+import { bannerFuer } from './StartNeu';
+import { truhenBild } from '../truhenbild';
+import '@fontsource/lilita-one';
+import '@fontsource-variable/nunito';
+import './hub-neu.css';
 
 /**
  * Startbildschirm im Stil eines Handyspiels: unten die Tab-Leiste mit
@@ -109,7 +122,8 @@ import { Trophaeenpfad } from './Pfad';
  * Massstab - im breiten Browser bleibt die Flaeche auf Handybreite begrenzt.
  */
 
-type Tab = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil';
+/** `spiele` gibt es nur im neuen Hub (dort ist die Spielauswahl ein Reiter). */
+export type Tab = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil' | 'spiele';
 
 /**
  * Im App-Store-Paket bleibt alles Kaufbare draussen.
@@ -123,8 +137,11 @@ type Tab = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil';
  * Im Browser bleibt er sichtbar. Dort gilt DESIGN.md: Was es noch nicht
  * gibt, steht trotzdem da, mit ehrlicher Null und "Bald"-Marke.
  * Siehe docs/APPSTORE.md.
+ *
+ * Auf der Webseite haengt er am Umfang (`shop`, umfang.ts). Eine Funktion,
+ * weil der Umfang erst mit `/api/me` kommt — nach dem Laden dieser Datei.
  */
-const zeigeKaufbares = !inApp;
+const zeigeKaufbares = (): boolean => !inApp && imUmfang('shop');
 
 export function GameSelect({
   me,
@@ -136,6 +153,10 @@ export function GameSelect({
   onShowProfile,
   onSignOut,
   onDeleted,
+  anfangsTab,
+  anfangsSpiel,
+  anfangsWeg,
+  anfangsHeute,
 }: {
   me: Me;
   onPick: (gameId: string) => void;
@@ -151,8 +172,20 @@ export function GameSelect({
   onSignOut: () => void;
   /** Nach der Kontoloeschung: zurueck zur Anmeldung. */
   onDeleted: () => void;
+  /** Nur für die Probe `?dev=hub`: mit welchem Reiter und welcher Spielseite sie öffnet. */
+  anfangsTab?: Tab;
+  anfangsSpiel?: string;
+  anfangsWeg?: boolean;
+  anfangsHeute?: boolean;
 }): React.JSX.Element {
-  const [tab, setTab] = useState<Tab>('spielen');
+  const [tab, setTab] = useState<Tab>(anfangsTab ?? 'spielen');
+  const [sammlungSpiel, setSammlungSpiel] = useState('doppelkopf');
+  const [shopZiel, setShopZiel] = useState<{ spiel: string; artikel?: string }>({ spiel: 'alle' });
+  const zumTagesShop = (spiel: string, artikel?: string): void => { setShopZiel({ spiel: ['doppelkopf', 'skat', 'brochess', 'allgemein'].includes(spiel) ? spiel : 'alle', artikel }); setSchrankOffen(false); setTab('shop'); };
+  /** Neues Hub: das Spiel, dessen Spielseite im Reiter „Spiele" offen ist. */
+  const [spielseite, setSpielseite] = useState<string | null>(anfangsSpiel ?? null);
+  /** Neues Hub: der Trophäenweg als Vollbild. */
+  const [wegOffen, setWegOffen] = useState(anfangsWeg ?? false);
   /** Name des angetippten Noch-nicht-Bereichs, fuer das "Kommt bald"-Blatt. */
   const [bald, setBald] = useState<string | null>(null);
   const [ranglisteOffen, setRanglisteOffen] = useState(false);
@@ -164,10 +197,33 @@ export function GameSelect({
    * fuenf Plaetze mit "Spielen" mittig und groesser — ein sechster nimmt die
    * Mitte weg, und damit die einzige Stelle, die man ohne Hinsehen trifft.
    */
-  const [aufgabenOffen, setAufgabenOffen] = useState(false);
+  const [aufgabenOffen, setAufgabenOffen] = useState(anfangsHeute ?? false);
   const [schrankOffen, setSchrankOffen] = useState(false);
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
   const [werkstattOffen, setWerkstattOffen] = useState(false);
+  /** Doppelkopf lernen: Lernpfad als Vollbild. */
+  const [lernenOffen, setLernenOffen] = useState(false);
+  // Allein der Umfang der Ausgabe entscheidet (umfang.ts): Fehlt der Teil
+  // dort, fehlt sein Einstieg — die Route sperrt der Server ohnehin. Bis zum
+  // 23.10.2026 stand davor `inApp`, und die Webseite hing der App hinterher
+  // (docs/release/ios-web-abgleich.md); die Routen fragen keine Plattform,
+  // gefehlt hat nur der Einstieg.
+  const oeffneLernen = imUmfang('lernpfad') ? () => setLernenOffen(true) : undefined;
+  /** Browort und Clanwort: Vollbilder wie der Lernpfad. */
+  const [browortOffen, setBrowortOffen] = useState(false);
+  const [clanwortOffen, setClanwortOffen] = useState(false);
+  const oeffneBrowort = imUmfang('browort') ? () => setBrowortOffen(true) : undefined;
+  const oeffneClanwort = imUmfang('clanwort') ? () => setClanwortOffen(true) : undefined;
+  /** Kartenmanufaktur: das Idle-Spiel als Vollbild. */
+  const [manufakturOffen, setManufakturOffen] = useState(false);
+  const soloStarten = (modusId: string): void => {
+    if (modusId === 'kartenmanufaktur') setManufakturOffen(true);
+    else if (modusId === 'browort') setBrowortOffen(true);
+    else onSolo(modusId);
+  };
+  /** Das Outfit kam ueber die Uebungsrunde: einmal feiern (lernen/Feier.tsx). */
+  const [feierZu, setFeierZu] = useState(false);
+  const zeigeFeier = Boolean(oeffneLernen) && me.lernen?.belohnt === true && !feierZu && !lernenOffen && !schonGefeiert();
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
   /**
@@ -197,182 +253,84 @@ export function GameSelect({
     };
   }, []);
 
-  /**
-   * Zwischen den Tabs wird gezogen, nicht nur getippt.
-   *
-   * Beim waagerechten Ziehen folgt der Inhalt dem Finger, und die Nachbarseite
-   * schaut schon herein — man zieht ein Stueck, haelt, sieht die naechste, und
-   * beim Loslassen rastet sie ein oder federt zurueck. Die Reihenfolge ist die
-   * der Leiste unten (im App-Paket ohne Shop), damit Ziehen und Tippen zum
-   * selben Ort fuehren.
-   *
-   * Der laufende Zug steuert den Track direkt ueber `trackRef` (kein Rendern je
-   * Fingerbewegung, sonst ruckelt es); React rendert nur bei Zugbeginn (um die
-   * Nachbarn zu haengen) und beim Einrasten.
-   */
-  const tabFolge: Tab[] = [
-    ...(zeigeKaufbares ? (['shop'] as const) : []),
-    'clan',
-    'spielen',
-    'blatt',
-    'profil',
-  ];
-  const [ziehen, setZiehen] = useState(false);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const geste = useRef<{
-    x: number;
-    y: number;
-    achse: '?' | 'h' | 'v';
-    dx: number;
-    breite: number;
-    mitte: number;
-    hatPrev: boolean;
-    hatNext: boolean;
-  } | null>(null);
-  const schnappRef = useRef<number | undefined>(undefined);
-
-  const idx = tabFolge.indexOf(tab);
-  const prevTab = idx > 0 ? tabFolge[idx - 1]! : null;
-  const nextTab = idx < tabFolge.length - 1 ? tabFolge[idx + 1]! : null;
-  // Nachbarn haengen nur waehrend eines Zugs am Baum - sonst laedt der
-  // Startbildschirm alle Tabs auf einmal.
-  const fenster: Tab[] = ziehen
-    ? ([prevTab, tab, nextTab].filter(Boolean) as Tab[])
-    : [tab];
-  const mitteIdx = fenster.indexOf(tab);
-
-  // Grundstand des Tracks, wenn gerade nicht gezogen oder eingerastet wird.
-  // Der Zug selbst setzt den transform direkt; deshalb hier ausgespart.
-  useLayoutEffect(() => {
-    const el = trackRef.current;
-    if (!el || geste.current || schnappRef.current) return;
-    el.style.transition = 'none';
-    el.style.transform = `translateX(${-mitteIdx * 100}%)`;
-  }, [ziehen, tab, mitteIdx]);
-
-  const onZiehStart = (e: React.TouchEvent): void => {
-    if (geste.current || schnappRef.current) return;
-    // In einer Vollbild-Auswahl steuert der Zug die Auswahl, nicht den Tab.
-    if (
-      (e.target as HTMLElement).closest(
-        '.spielwahl, .hub-vorschau, .doko-sheet, .front-bald, .pfad-voll',
-      )
-    ) {
-      return;
-    }
-    const t = e.touches[0]!;
-    geste.current = {
-      x: t.clientX,
-      y: t.clientY,
-      achse: '?',
-      dx: 0,
-      breite: e.currentTarget.clientWidth || window.innerWidth,
-      mitte: idx > 0 ? 1 : 0,
-      hatPrev: idx > 0,
-      hatNext: idx < tabFolge.length - 1,
-    };
-  };
-
-  const onZiehen = (e: React.TouchEvent): void => {
-    const g = geste.current;
-    if (!g) return;
-    const t = e.touches[0]!;
-    let dx = t.clientX - g.x;
-    const dy = t.clientY - g.y;
-    if (g.achse === '?') {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      // Klar waagerecht? Sonst ist es ein senkrechtes Rollen und wird in Ruhe
-      // gelassen.
-      g.achse = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'h' : 'v';
-      if (g.achse === 'h') setZiehen(true);
-    }
-    if (g.achse !== 'h') return;
-    // Am Rand ohne Nachbarseite: Gummiband, damit man nicht ins Leere zieht.
-    if ((dx < 0 && !g.hatNext) || (dx > 0 && !g.hatPrev)) dx *= 0.32;
-    g.dx = dx;
-    const el = trackRef.current;
-    if (el) {
-      el.style.transition = 'none';
-      el.style.transform = `translateX(calc(${-g.mitte * 100}% + ${dx}px))`;
-    }
-  };
-
-  const onZiehEnde = (): void => {
-    const g = geste.current;
-    geste.current = null;
-    if (!g || g.achse !== 'h') {
-      if (g) setZiehen(false);
-      return;
-    }
-    const schwelle = Math.min(72, g.breite * 0.22);
-    let richtung = 0;
-    if (g.dx <= -schwelle && g.hatNext) richtung = 1;
-    else if (g.dx >= schwelle && g.hatPrev) richtung = -1;
-    schnappen(g.mitte, richtung);
-  };
-
-  const schnappen = (mitte: number, richtung: number): void => {
-    const el = trackRef.current;
-    const fertig = (): void => {
-      schnappRef.current = undefined;
-      if (el) el.style.transition = 'none';
-      setZiehen(false);
-      if (richtung !== 0) {
-        const jetzt = tabFolge.indexOf(tab);
-        const ziel = jetzt + richtung;
-        if (ziel >= 0 && ziel < tabFolge.length) setTab(tabFolge[ziel]!);
-      }
-    };
-    const wenigerBewegung =
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (!el || wenigerBewegung) {
-      fertig();
-      return;
-    }
-    el.style.transition = 'transform 0.24s cubic-bezier(0.22, 0.61, 0.36, 1)';
-    el.style.transform = `translateX(${-(mitte + richtung) * 100}%)`;
-    schnappRef.current = window.setTimeout(fertig, 250);
-  };
+  // Der Münz-Shop ist auf allen Plattformen ein eigener Reiter. Profil öffnet über den Startkopf.
+  const kaufbar = true;
+  const tabFolge: Tab[] = ['shop', 'spiele', 'spielen', 'blatt', 'clan'];
 
   const renderTab = (tt: Tab): React.JSX.Element | null => {
     switch (tt) {
       case 'shop':
-        return zeigeKaufbares ? (
-          <Shop coins={me.coins} gems={me.gems} onBald={setBald} onGuthaben={onAvatarChange} />
-        ) : null;
+        return <TagesShop me={me} ziel={shopZiel} onGuthaben={onAvatarChange} onSammlung={spiel => { setSammlungSpiel(['alle', 'allgemein'].includes(spiel) ? 'pinguin' : spiel); setTab('blatt'); }} />;
       case 'clan':
         return (
           <Clan
+            neu
             clanId={me.clubs[0]?.id ?? null}
             meId={me.id}
             onBald={setBald}
             onShowProfile={onShowProfile}
             onMeChange={onAvatarChange}
+            onClanwort={oeffneClanwort}
+          />
+        );
+      case 'spiele':
+        return (
+          <SpieleNeu
+            me={me}
+            offen={spielseite}
+            onOeffne={setSpielseite}
+            onPick={onPick}
+            onSolo={soloStarten}
+            onBald={setBald}
+            onSammlung={() => { setSammlungSpiel(spielseite ?? 'doppelkopf'); setTab('blatt'); }}
+            onLernen={oeffneLernen}
           />
         );
       case 'spielen':
         return (
-          <Spielen
+          <StartNeu
+            me={me}
             trophies={trophies}
-            getragen={me.avatar}
-            bemalung={me.figur ?? null}
             activeTable={me.activeTable}
-            onPick={onPick}
-            onSolo={onSolo}
-            onResume={onResume}
-            onBald={setBald}
-            onRangliste={() => setRanglisteOffen(true)}
-            onAufgaben={() => setAufgabenOffen(true)}
             bereit={me.bereit.truhen + me.bereit.aufgaben}
+            wegBereit={me.bereit.weg ?? 0}
+            onResume={onResume}
+            onPick={(gameId) => {
+              setSpielseite(gameId);
+              setTab('spiele');
+            }}
+            onAlleSpiele={() => {
+              setSpielseite(null);
+              setTab('spiele');
+            }}
+            onHeute={() => setAufgabenOffen(true)}
+            onWeg={() => setWegOffen(true)}
+            onLernen={oeffneLernen}
+            onBrowort={oeffneBrowort}
           />
         );
       case 'blatt':
-        return <ThemenTab me={me} onThemeChange={onThemeChange} onGekauft={onAvatarChange} />;
+        return (
+          <SammlungNeu
+            me={me}
+            spiel={sammlungSpiel}
+            onSpiel={setSammlungSpiel}
+            onShop={zumTagesShop}
+            onThemeChange={onThemeChange}
+            onGekauft={onAvatarChange}
+            onSchrank={() => setSchrankOffen(true)}
+            onWerkstatt={() => {
+              spiele('blatt-auf');
+              setWerkstattOffen(true);
+            }}
+
+          />
+        );
       case 'profil':
         return (
           <ProfilTab
             me={me}
+            onZurueck={() => setTab('spielen')}
             onAvatarChange={onAvatarChange}
             onMeChange={onAvatarChange}
             onSignOut={onSignOut}
@@ -395,244 +353,140 @@ export function GameSelect({
     }
   };
 
-  return (
-    <div className="front front--hub">
-      <header className="front-top">
-        {/* Level und Name fuehren zum Profil-Tab. Das Level ist ehrlich Null -
-            das System dahinter kommt noch, der Platz dafuer steht schon. */}
-        <button className="front-spieler" onClick={() => setTab('profil')}>
-          {/*
-            Oben links das Profilbild. Die Figur steht schon vorne auf dem
-            Pfad — sie ein zweites Mal ins Kopfband zu setzen war dieselbe
-            Figur zweimal. Ist ein Bild hochgeladen, steht es hier.
-
-            Ohne hochgeladenes Bild der gemalte Pinguin als Rueckfall, NICHT
-            der 3D-Avatar: Das Kopfband ist auf jedem Tab zu sehen, ein zweiter
-            WebGL-Bereich nur fuer den Rueckfall waere teuer — und der 3D-Avatar
-            braucht WASM, das die Content-Security-Policy am ausgelieferten
-            Stand blockiert (scriptSrc 'self', ohne 'wasm-unsafe-eval'). Der
-            gemalte Pinguin laedt nichts nach und kann nicht scheitern. */}
-          {me.avatarUrl ? (
-            <img className="front-avatar" src={me.avatarUrl} alt="" draggable={false} />
-          ) : (
-            <Pinguin getragen={me.avatar} groesse={2.6} className="front-avatar" />
-          )}
-          <span className="front-spieler-info">
-            <strong>{me.displayName}</strong>
-            {/* Der Balken zeigt den Fortschritt IN der Stufe, nicht die
-                Gesamtpunkte — sonst stuende er ab Stufe zehn dauerhaft
-                fast am Anschlag. */}
-            <span className="front-xp" aria-hidden="true">
-              <span
-                style={{
-                  width: `${Math.min(100, Math.round((me.level.imLevel / Math.max(1, me.level.fuerLevel)) * 100))}%`,
-                }}
-              />
-            </span>
-          </span>
-          <span
-            className="front-level front-level--hub"
-            aria-label={`Stufe ${me.level.stufe}, ${me.level.imLevel} von ${me.level.fuerLevel} Punkten`}
-          >
-            {me.level.stufe}
-          </span>
-        </button>
-        <div className="front-waehrungen">
-          {/* Nur noch das Testkonto in der Produktion bekommt ein Schild —
-              das braucht die App-Store-Prüfung, damit die Prüfer sehen, dass
-              sie auf einem Demokonto sitzen.
-
-              Auf staging hing es dauerhaft im Bild und stand beim Prüfen der
-              Optik im Weg. Wer dort ist, weiß es an der Adresse. */}
-          {me.stage === 'production' && me.entitlements.staff && (
-            <span className="front-stufe" title="Testkonto, hier wird nichts gewertet">
-              Test
-            </span>
-          )}
-          {/* Oben rechts zuerst: wie viele gerade an Tischen sitzen. Nur wenn
-              die Zahl je geladen wurde — siehe Kommentar am Zustand. */}
-          {online !== null && (
-            <span
-              className="front-waehrung front-online"
-              aria-label={`${online} Spieler gerade online`}
-              title="Spieler gerade an Tischen"
-            >
-              <span className="front-online-punkt" aria-hidden="true" />
-              {kompakteZahl(online)}
-            </span>
-          )}
-          <span className="front-waehrung front-waehrung--cups">
-            {/* `pokal-zeile` statt `pokal.png`: derselbe Pokal, aber fuer
-                Zeilenhoehe gemalt — der alte war ein Bild fuer grosse Flaechen
-                und wurde in der Kopfleiste matschig. */}
-            <img className="front-waehrung-icon" src="/hub/pokal-zeile.webp" alt="" />
-            {kompakteZahl(trophies)}
-          </span>
-          {/*
-            Die beiden Waehrungen. Der VIP-Platz mit der Krone stand hier als
-            Attrappe und ist jetzt der Edelstein: VIP ist kein Guthaben, sondern
-            ein Zeitraum, und gehoert damit ins Shop-Regal und nicht in die
-            Ressourcen-Leiste. So bleiben es drei Pillen wie bisher — vier waeren
-            auf einem Hochkant-Handy eine zu viel.
-
-            Das Plus fuehrt in den Shop, wo Pakete mit Preis stehen und beim
-            Antippen "Kommt bald" sagen. Ohne Kaufbares (App-Paket) bleiben es
-            reine Anzeigen: Ein Plus, das nirgendwohin fuehrt, ist ein Versprechen.
-          */}
-          {zeigeKaufbares ? (
-            <>
-              <button
-                className="front-waehrung front-waehrung--muenzen"
-                onClick={() => setTab('shop')}
-                aria-label={`${me.coins} Münzen, zum Shop`}
-              >
-                <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
-                {kompakteZahl(me.coins)}
-                <span className="front-plus" aria-hidden="true">
-                  +
-                </span>
-              </button>
-              <button
-                className="front-waehrung front-waehrung--edelsteine"
-                onClick={() => setTab('shop')}
-                aria-label={`${me.gems} Edelsteine, zum Shop`}
-              >
-                <EdelsteinIcon />
-                {kompakteZahl(me.gems)}
-                <span className="front-plus" aria-hidden="true">
-                  +
-                </span>
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="front-waehrung front-waehrung--muenzen">
-                <img className="front-waehrung-icon" src="/hub/muenze.png" alt="" />
-                {kompakteZahl(me.coins)}
-              </span>
-              <span className="front-waehrung front-waehrung--edelsteine">
-                <EdelsteinIcon />
-                {kompakteZahl(me.gems)}
-              </span>
-            </>
-          )}
-        </div>
-      </header>
-
-      <div
-        className="front-viewport"
-        onTouchStart={onZiehStart}
-        onTouchMove={onZiehen}
-        onTouchEnd={onZiehEnde}
-        onTouchCancel={onZiehEnde}
-      >
-        <div className="front-track" ref={trackRef}>
-          {fenster.map((tt) => (
-            <div
-              className={`front-body${tt === 'spielen' ? '' : ' front-body--szene'}`}
-              key={tt}
-            >
-              {renderTab(tt)}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <nav className="front-tabs" aria-label="Bereiche">
-        {zeigeKaufbares && (
-          <TabButton
-            label="Shop"
-            farbe="shop"
-            active={tab === 'shop'}
-            onClick={() => setTab('shop')}
-            iconSrc="/hub/tab-shop.webp"
+  // Blätter und Vollbilder über dem Rahmen.
+  const overlays = (
+    <>
+      {wegOffen && (
+        <TrophaeenwegNeu getragen={me.avatar} trophies={trophies} onClose={() => setWegOffen(false)} onGuthaben={onAvatarChange} />
+      )}
+        {stufenOffen && <Stufenleiter neu onClose={() => setStufenOffen(false)} />}
+        {aufgabenOffen && (
+          <HeuteNeu
+            onClose={() => setAufgabenOffen(false)}
+            onGuthaben={onAvatarChange}
+            onRangliste={() => {
+              // Ein Blatt zugleich: Heute schließt, die Rangliste öffnet.
+              setAufgabenOffen(false);
+              setRanglisteOffen(true);
+            }}
           />
         )}
-        <TabButton
-          label="Clan"
-          farbe="clan"
-          active={tab === 'clan'}
-          onClick={() => setTab('clan')}
-          iconSrc="/hub/tab-clan.webp"
-        />
-        <TabButton
-          label="Spielen"
-          haupt
-          farbe="spielen"
-          active={tab === 'spielen'}
-          onClick={() => setTab('spielen')}
-          iconSrc="/hub/tab-spielen.webp"
-        />
-        <TabButton
-          label="Themen"
-          farbe="blatt"
-          active={tab === 'blatt'}
-          onClick={() => setTab('blatt')}
-          iconSrc="/hub/tab-blatt.webp"
-        />
-        {/*
-          Der Punkt am Profil-Reiter zeigt auf das Geburtstagsgeschenk.
-
-          Das Geschenk gibt es an genau einem Tag im Jahr, und es liegt
-          hinter einem Reiter, den an diesem Tag niemand von sich aus
-          aufmacht: Wer nicht hineinsieht, erfaehrt nie davon und hat die
-          naechste Gelegenheit ein Jahr spaeter. Deshalb dieselbe Bauform wie
-          an der Truhe — ein Punkt, keine Zahl.
-        */}
-        <TabButton
-          label="Profil"
-          farbe="profil"
-          active={tab === 'profil'}
-          onClick={() => setTab('profil')}
-          iconSrc="/hub/tab-profil.webp"
-          punkt={me.birthdayRewardClaimable ? 'Geschenk liegt bereit' : null}
-        />
-      </nav>
-
-      {stufenOffen && <Stufenleiter onClose={() => setStufenOffen(false)} />}
-      {aufgabenOffen && (
-        <Aufgabenblatt onClose={() => setAufgabenOffen(false)} onGuthaben={onAvatarChange} />
-      )}
-      {schrankOffen && (
-        <Kleiderschrank
-          getragen={me.avatar}
-          onClose={() => setSchrankOffen(false)}
-          onGetragen={onAvatarChange}
-          onGuthaben={onAvatarChange}
-        />
-      )}
-      {klanghalleOffen && <Klanghalle onClose={() => setKlanghalleOffen(false)} />}
-      {werkstattOffen && (
-        // Der Rueckfall traegt dieselbe Blatthuelle wie die Werkstatt selbst:
-        // Der Tipp verdunkelt sofort den Hintergrund, statt bis zum
-        // nachgeladenen Stueck so auszusehen, als sei nichts passiert.
-        <Suspense
-          fallback={
-            <div className="doko-sheet doko-sheet--mitte">
-              <Ladekreis text="Werkstatt wird geladen…" />
-            </div>
-          }
-        >
-          <Avatarwerkstatt
-            bemalung={me.figur ?? null}
+        {schrankOffen && (
+          <Kleiderschrank
+            neu
             getragen={me.avatar}
-            onClose={() => setWerkstattOffen(false)}
-            // Neu laden, damit die Figur im Profil sofort so aussieht wie
-            // gerade gespeichert.
-            onGespeichert={() => onAvatarChange()}
+            onShop={artikel => zumTagesShop('allgemein', artikel)}
+            onClose={() => setSchrankOffen(false)}
+            onGetragen={onAvatarChange}
+            onGuthaben={onAvatarChange}
           />
-        </Suspense>
-      )}
-      {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
-      {ranglisteOffen && (
-        <RanglisteBlatt meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
-      )}
-    </div>
+        )}
+        {klanghalleOffen && <Klanghalle neu onClose={() => setKlanghalleOffen(false)} />}
+        {werkstattOffen && (
+          // Der Rueckfall traegt dieselbe Blatthuelle wie die Werkstatt selbst:
+          // Der Tipp verdunkelt sofort den Hintergrund, statt bis zum
+          // nachgeladenen Stueck so auszusehen, als sei nichts passiert.
+          <Suspense
+            fallback={
+              <div className="doko-sheet doko-sheet--mitte">
+                <Ladekreis text="Werkstatt wird geladen…" />
+              </div>
+            }
+          >
+            <Avatarwerkstatt
+              neu
+              bemalung={me.figur ?? null}
+              getragen={me.avatar}
+              onClose={() => setWerkstattOffen(false)}
+              // Neu laden, damit die Figur im Profil sofort so aussieht wie
+              // gerade gespeichert.
+              onGespeichert={() => onAvatarChange()}
+            />
+          </Suspense>
+        )}
+        {lernenOffen && (
+          <Suspense
+            fallback={
+              <div className="doko-sheet doko-sheet--mitte">
+                <Ladekreis text="Lernpfad wird geladen…" />
+              </div>
+            }
+          >
+            <Lernpfad
+              deck={deckMitRuecken(
+                deckForGame('doppelkopf', me.themes.doppelkopf?.cardDeck),
+                me.themes.doppelkopf?.cardBack,
+              )}
+              onClose={() => setLernenOffen(false)}
+              onUebung={(tableId) => {
+                setLernenOffen(false);
+                onResume('doppelkopf', tableId);
+              }}
+              onGeaendert={onAvatarChange}
+            />
+          </Suspense>
+        )}
+        {browortOffen && (
+          <Suspense fallback={<SoloLaedt name="Browort" onClose={() => setBrowortOffen(false)} />}>
+            <Browort onClose={() => setBrowortOffen(false)} onGeaendert={onAvatarChange} />
+          </Suspense>
+        )}
+        {clanwortOffen && (
+          <Suspense fallback={<SoloLaedt name="Clanwort" onClose={() => setClanwortOffen(false)} />}>
+            <Clanwort onClose={() => setClanwortOffen(false)} onGeaendert={onAvatarChange} />
+          </Suspense>
+        )}
+        {manufakturOffen && (
+          <Suspense fallback={<SoloLaedt name="Kartenmanufaktur" onClose={() => setManufakturOffen(false)} />}>
+            <Kartenmanufaktur onClose={() => setManufakturOffen(false)} onGeaendert={onAvatarChange} getragen={me.avatar} />
+          </Suspense>
+        )}
+        {zeigeFeier && (
+          <Suspense fallback={null}>
+            <MeisterFeier
+              outfit={['hut-doktorhut', 'oberteil-meisterrobe']}
+              onClose={() => setFeierZu(true)}
+              onAngezogen={onAvatarChange}
+            />
+          </Suspense>
+        )}
+        {bald && <BaldBlatt name={bald} onClose={() => setBald(null)} />}
+        {ranglisteOffen && (
+          <RanglisteBlatt neu meId={me.id} onClose={() => setRanglisteOffen(false)} onShowProfile={onShowProfile} />
+        )}
+      </>
+  );
+
+  return (
+    <NeuerRahmen
+      me={me}
+      tab={tab}
+      tabFolge={tabFolge}
+      online={online}
+      trophies={trophies}
+      kaufbar={kaufbar}
+      onTab={setTab}
+      renderTab={renderTab}
+      // Eine offene Spielseite ist eine Unterseite des Spiele-Reiters: Wischen
+      // führt zur Übersicht zurück, nicht in den Nachbarreiter.
+      zurueck={tab === 'profil' ? () => setTab('spielen') : tab === 'spiele' && spielseite ? () => setSpielseite(null) : undefined}
+    >
+      {overlays}
+    </NeuerRahmen>
   );
 }
 
+/** Sofortige Rückmeldung beim ersten Laden eines Spielpakets, auch bei langsamer Verbindung. */
+function SoloLaedt({ name, onClose }: { name: string; onClose: () => void }): React.JSX.Element {
+  useEscape(onClose);
+  return <div className="hb-voll" role="dialog" aria-modal="true" aria-label={`${name} wird geladen`}>
+    <header className="hb-voll-kopf"><Schliessen onClick={onClose} /></header>
+    <Ladekreis text={`${name} wird geladen…`} />
+  </div>;
+}
+
 /**
- * "Kommt bald"-Blatt (Entwurf A): schlicht — Zeichen, Titel, ein Satz, CTA.
+ * "Kommt bald"-Blatt: schlicht — Zeichen, Titel, ein Satz, CTA.
  * Kein Fortschritt, keine Feature-Liste. Tip auf Hintergrund schließt.
  */
 function BaldBlatt({
@@ -643,18 +497,17 @@ function BaldBlatt({
   onClose: () => void;
 }): React.JSX.Element {
   return (
-    <div className="doko-sheet" onClick={onClose}>
-      <div className="doko-sheet-card front-bald" onClick={(event) => event.stopPropagation()}>
-        <span className="front-bald-zeichen" aria-hidden="true">
+    <HbBlatt titel="Kommt bald!" label={`Kommt bald: ${name}`} onClose={onClose} klasse="is-klein">
+      <div className="hb-mitte">
+        <span className="hb-bald-zeichen" aria-hidden="true">
           🔨
         </span>
-        <h2>Kommt bald!</h2>
-        <p className="muted">Daran bauen wir gerade: {name}.</p>
-        <button className="primary" onClick={onClose}>
-          Alles klar
-        </button>
+        <p className="hb-text">Daran bauen wir gerade: {name}.</p>
       </div>
-    </div>
+      <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onClose}>
+        Alles klar
+      </button>
+    </HbBlatt>
   );
 }
 
@@ -677,8 +530,10 @@ function ProfilTab({
   onAufgaben,
   onBald,
   onShowProfile,
+  onZurueck,
 }: {
   me: Me;
+  onZurueck: () => void;
   onAvatarChange: () => void;
   /** Nach Claim u. a. /api/me neu laden. */
   onMeChange: () => void;
@@ -701,19 +556,26 @@ function ProfilTab({
   const partien = me.stats.reduce((sum, s) => sum + s.parties, 0);
   const siege = me.stats.reduce((sum, s) => sum + s.wins, 0);
   const trophaeen = me.stats.reduce((sum, s) => sum + s.trophies, 0);
-  const quote = partien > 0 ? `${Math.round((siege / partien) * 100)} %` : '–';
+  const quote = partien > 0 ? `${Math.round((siege / partien) * 100)} %` : '-';
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [loeschenOffen, setLoeschenOffen] = useState(false);
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
+  const [mitteilungenOffen, setMitteilungenOffen] = useState(false);
+  const [sichernOffen, setSichernOffen] = useState(false);
 
   const kacheln = [
     { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: partien },
     { icon: '/hub/krone.png', name: 'Siege', wert: siege },
     { icon: '/hub/muenze.png', name: 'Siegquote', wert: quote },
-    { icon: '/hub/tab-blatt.webp', name: 'Blätter', wert: DECKS.length },
+    // Hier stand `DECKS.length` als „Blätter" — die Zahl aller Blätter im
+    // Katalog, also bei jedem Spieler dieselbe 15. Die eigenen kennt erst die
+    // Sammlung (sie braucht den Shop); hier steht, was das Profil weiß.
+    { icon: '/hub/tab-blatt.webp', name: 'Spiele', wert: me.stats.filter((s) => s.parties > 0).length },
   ];
 
+  // Geburtstag und Geschenk: nicht in der App (Emile, 22.10.2026) und nur im Umfang.
+  const mitGeburtstag = !inApp && imUmfang('geburtstag');
   const geburtstagText = (() => {
     if (me.daysUntilBirthday === null) return 'Geburtstag noch nicht hinterlegt';
     if (me.daysUntilBirthday === 0) return 'Heute ist dein Geburtstag!';
@@ -736,285 +598,299 @@ function ProfilTab({
       .finally(() => setClaimBusy(false));
   };
 
-  /*
-    Die Geburtstagstafel steht an zwei moeglichen Plaetzen — sie wandert.
-
-    An 364 Tagen im Jahr ist sie eine Ankuendigung ("noch 87 Tage") und stand
-    trotzdem mitten im Profil, oberhalb von Trophaeen und Freunden. Das ist die
-    Rangfolge, die der Kommentar weiter unten selbst aufschreibt, und sie ist
-    genau andersherum: Was man selten braucht, gehoert nach unten.
-
-    An dem einen Tag, an dem es etwas abzuholen gibt, ist es umgekehrt richtig:
-    Dann steht sie ganz oben unter dem Namensschild — waere sie an diesem Tag
-    unten, muesste man am Geburtstag durch das ganze Profil rollen, um sein
-    Geschenk zu finden. Hergeschickt wird man inzwischen vom Punkt am
-    Profil-Reiter (`TabButton` in der Tab-Leiste); die Wanderung bleibt
-    trotzdem, denn der Punkt bringt einen nur bis zum Tab, nicht bis zur
-    Tafel.
-
-    Der Zusatz sagt beim Warten nicht mehr den Countdown: Der steht wortgleich
-    unter dem Namen im Schild darueber, und zweimal derselbe Satz auf einem
-    Bildschirm liest sich wie ein Fehler.
-  */
-  const geburtstagTafel = (
-    <Tafel titel="Geburtstag" zusatz={me.birthdayRewardClaimable ? 'Heute!' : 'Einmal im Jahr'}>
-      <section
-        className={`hub-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}${me.hasBirthdayOutfit ? ' is-besitz' : ''}`}
-      >
-        <div className="hub-geburtstag-art">
-          <img
-            src="/hub/pinguin-geburtstag.png"
-            alt="Geburtstags-Pinguin"
-            draggable={false}
-          />
-        </div>
-        <div className="hub-geburtstag-text">
+  const bereit = me.bereit.truhen + me.bereit.aufgaben;
+  const geburtstag = (
+    <section className="hb-blk">
+      <h2 className="hb-ab">
+        Geburtstag
+        <span className="hb-ab-zusatz">{me.birthdayRewardClaimable ? 'Heute!' : 'Einmal im Jahr'}</span>
+      </h2>
+      <div className={`hb-karte hb-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}`}>
+        <img src="/hub/pinguin-geburtstag.png" alt="Geburtstags-Pinguin" draggable={false} />
+        <span className="hb-geburtstag-text">
           <strong>Geburtstags-Pinguin</strong>
-          {me.birthdayRewardClaimable ? (
-            <span className="muted">Heute abholen: Outfit mit Partyhüten.</span>
-          ) : me.hasBirthdayOutfit ? (
-            <span className="muted">In deiner Sammlung · nächstes Mal am Geburtstag.</span>
-          ) : (
-            <span className="muted">Am Geburtstag einmal im Jahr einsammeln.</span>
-          )}
-          {me.birthdayRewardClaimable ? (
-            <button
-              className="hub-knopf hub-knopf--a-gold"
-              disabled={claimBusy}
-              onClick={claimReward}
-            >
+          <small>
+            {me.birthdayRewardClaimable
+              ? 'Heute abholen: Outfit mit Partyhüten.'
+              : me.hasBirthdayOutfit
+                ? 'In deiner Sammlung · nächstes Mal am Geburtstag.'
+                : 'Am Geburtstag einmal im Jahr einsammeln.'}
+          </small>
+          {me.birthdayRewardClaimable && (
+            <button type="button" className="hb-kn is-gold" disabled={claimBusy} onClick={claimReward}>
               {claimBusy ? 'Wird geholt…' : 'Belohnung holen'}
             </button>
-          ) : null}
-          {claimError && <p className="error">{claimError}</p>}
-        </div>
-      </section>
-    </Tafel>
-  );
-
-  return (
-    <HubSzene bg="/hub/bg-profil.webp" className="front-profil front-profil--a">
-      <HubBanner />
-
-      {/*
-        Als Erstes das Namensschild, dann der Stufenbalken.
-
-        Vorher stand der Balken oben und das Schild darunter. Damit war das
-        Erste im eigenen Profil ein Fortschrittsbalken — und die Zahl, die er
-        erklaert, stand als Stufenplakette erst darunter im Schild. Beides
-        gehoert zusammen, also stehen sie jetzt beieinander: Schild mit Bild,
-        Name und Plakette, direkt darunter der Balken zu genau dieser Plakette.
-
-        Der Fortschritt geht dabei nicht verloren: Die Kopfleiste zeigt ihn auf
-        JEDEM Tab (`front-xp`), das Profil muss ihn nicht als Erstes wiederholen.
-      */}
-      <div className="hub-profilkopf hub-profilkopf--a">
-        <ProfilBild me={me} onChanged={onAvatarChange} />
-        <div className="hub-profilkopf-text">
-          <strong>{me.displayName}</strong>
-          <span className="muted">{geburtstagText}</span>
-        </div>
-        <span
-          className="front-level front-level--hub"
-          aria-label={`Stufe ${me.level.stufe}`}
-        >
-          {me.level.stufe}
+          )}
+          {claimError && <span className="hb-fehler">{claimError}</span>}
         </span>
       </div>
-
-      {/* Angetippt oeffnet sich die ganze Leiter. */}
-      <Stufenbalken
-        stufe={me.level.stufe}
-        imLevel={me.level.imLevel}
-        fuerLevel={me.level.fuerLevel}
-        onClick={onStufen}
-      />
-
-      {/* Nur am Geburtstag, dann aber als Erstes — siehe oben. */}
-      {me.birthdayRewardClaimable && geburtstagTafel}
-
-      {/*
-        Ab hier: Tafeln, und zwar durchgehend.
-
-        Der Profil-Tab war der einzige, der den Tafel-Baustein NICHT benutzt
-        hat — jeder Abschnitt war ein eigener Kasten aus CSS-Verlauf mit
-        goldenem Rand. Genau daran sah man, dass er nicht dazugehoert:
-        DESIGN.md sagt seit jeher "Neue Hub-Inhalte gehoeren in eine Tafel,
-        nicht in einen eigenen Kasten", und der Shop haelt sich daran.
-
-        Die Tafeln geben zugleich die Rangfolge, die vorher fehlte: erst wer
-        ich bin, dann was mir gehoert, dann was ich geleistet habe, dann meine
-        Leute — und ganz zum Schluss die Sachen, die man ein Mal im Jahr
-        braucht (Geburtstag, Konto).
-      */}
-      {/*
-        Die Figur bekommt eine eigene Tafel ueber die volle Breite.
-
-        Vorher stand sie neben dem Text in derselben Tafel — und ragte dort
-        oben heraus, quer ueber das Namensschild. Der Grund war die Hoehe: Ein
-        WebGL-Bereich hat keine Inhaltsgroesse, an der sich die Zeile
-        ausrichten koennte, und die Tafel laesst Ueberstand durch (`overflow:
-        visible`, noetig fuer die Messingnieten). Ueber die volle Breite kann
-        das nicht passieren.
-      */}
-      <Tafel titel="Deine Figur" zusatz={me.figur?.design === 'bemalt' ? 'Selbst angemalt' : 'Antippen zum Bearbeiten'}>
-        <button className="hub-figur-buehne" onClick={onWerkstatt} title="Figur bearbeiten">
-          <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel="Deine Figur" />}>
-            {/* `me.avatar` ist genau das, was der Kleiderschrank anzieht —
-                dieselbe Quelle wie beim gemalten Rückfall darüber. */}
-            <Avatar3D
-              getragen={me.avatar}
-              bemalung={me.figur ?? LEERE_BEMALUNG}
-              drehbar={false}
-            />
-          </Suspense>
-          <span className="hub-profilbild-stift" aria-hidden="true">
-            ✎
+    </section>
+  );
+  const einstiege = [
+    { icon: '/hub/icon-kleiderschrank.webp', name: 'Kleiderschrank', punkt: null, onClick: onSchrank },
+    { icon: '/hub/icon-klanghalle.webp', name: 'Klanghalle', punkt: null, onClick: onKlanghalle },
+    { icon: '/hub/icon-aufgaben.webp', name: 'Aufgaben', punkt: bereit > 0 ? `${bereit} bereit` : null, onClick: onAufgaben },
+  ];
+  return (
+    <div className="hb-profil">
+      <header className="hb-kopfzeile">
+        <button type="button" className="hb-rund" onClick={onZurueck} aria-label="Zurück zum Start">‹</button><h1 className="hb-titel">Profil</h1>
+      </header>
+      <div className="hb-profil-inhalt">
+        <div className="hb-karte hb-profilkopf">
+          <ProfilBild me={me} onChanged={onAvatarChange} />
+          <span className="hb-profilkopf-text">
+            <strong>{me.displayName}</strong>
+            {/* In der App ohne Geburtstag (Emile, 22.10.2026) — dort steht
+                stattdessen die Stufe in Worten. Auf der Webseite ebenso, wenn
+                der Geburtstag nicht im Umfang steht. */}
+            <small>{mitGeburtstag ? geburtstagText : `Stufe ${me.level.stufe}`}</small>
           </span>
-        </button>
-        <p className="muted hub-figur-hinweis">
-          Drehen, anmalen, Mütze aufsetzen — antippen.
-        </p>
-      </Tafel>
-
-      <Tafel titel="Deine Sachen" zusatz={`${Object.keys(me.avatar).length} von ${SLOTS.length} Plätzen`}>
-        {/* Drei Einstiege in das, was einem gehoert: anziehen, hoeren,
-            verdienen. Als Kachelreihe mit Symbol, nicht als Textknopfreihe —
-            drei Woerter nebeneinander sind auf einem Handy zu schmal, um
-            lesbar zu bleiben. */}
-        <div className="hub-reihe hub-reihe--drei profil-einstiege">
-          <ProfilKachel
-            icon="/hub/icon-kleiderschrank.webp"
-            name="Kleiderschrank"
-            onClick={onSchrank}
-          />
-          <ProfilKachel
-            icon="/hub/icon-klanghalle.webp"
-            name="Klanghalle"
-            onClick={onKlanghalle}
-          />
-          <ProfilKachel
-            icon="/hub/icon-aufgaben.webp"
-            name="Aufgaben"
-            gold
-            punkt={me.bereit.truhen + me.bereit.aufgaben > 0}
-            onClick={onAufgaben}
-          />
-        </div>
-      </Tafel>
-
-      <Tafel titel="Trophäen" zusatz={`${partien} Partien`}>
-        <StatHero wert={trophaeen} />
-
-        <div className="hub-stat-raster">
-          {kacheln.map((k) => (
-            <StatKachel key={k.name} icon={k.icon} wert={k.wert} name={k.name} />
-          ))}
+          <span className="hb-stufe" aria-label={`Stufe ${me.level.stufe}`}>
+            {me.level.stufe}
+          </span>
         </div>
 
-        {me.stats.length === 0 ? (
-          <p className="muted hub-stat-leer">Noch keine Partie gespielt.</p>
-        ) : (
-          me.stats.map((row) => (
-            <StatSpiel
-              key={row.gameId}
-              name={t(`game.${row.gameId}`)}
-              meta={`${row.parties} Partien · ${row.wins} Siege`}
-              cups={row.trophies}
-            />
-          ))
+        <Stufenbalken
+          neu
+          stufe={me.level.stufe}
+          imLevel={me.level.imLevel}
+          fuerLevel={me.level.fuerLevel}
+          onClick={onStufen}
+        />
+
+        {mitGeburtstag && me.birthdayRewardClaimable && geburtstag}
+
+        {/* In der App ohne 3D-Figur: Für die erste Fassung gibt es dort den
+            Kleiderschrank (Emile, 22.10.2026). Auf der Webseite hängt sie
+            am Umfang (`figur`). */}
+        {!inApp && imUmfang('figur') && (
+        <section className="hb-blk">
+          <h2 className="hb-ab">
+            Deine Figur
+            <span className="hb-ab-zusatz">{me.figur?.design === 'bemalt' ? 'Selbst angemalt' : 'Antippen zum Bearbeiten'}</span>
+          </h2>
+          {/* Über die volle Breite, aus demselben Grund wie im alten
+              Profil: Ein WebGL-Bereich hat keine eigene Höhe. */}
+          <button type="button" className="hb-figur" onClick={onWerkstatt} aria-label="Figur bearbeiten">
+            <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel="Deine Figur" />}>
+              <Avatar3D getragen={me.avatar} bemalung={me.figur ?? LEERE_BEMALUNG} drehbar={false} />
+            </Suspense>
+            <span className="hb-figur-stift" aria-hidden="true">
+              <HbSymbol>
+                <path d="M14 4l6 6-8 8H6v-6z M12 6l6 6" />
+              </HbSymbol>
+            </span>
+          </button>
+          <p className="hb-klein hb-ohne-rand">Drehen, anmalen, Mütze aufsetzen - antippen.</p>
+        </section>
         )}
 
-        {/* „zählen alles" war eine Verkürzung, die niemand so sagt — und sie
-            liess offen, was denn alles. Gemeint ist der Gegensatz zur Zeile
-            davor: Trophäen sind an Tische ohne Bots gebunden, die Zählung von
-            Partien und Siegen ist es nicht. Wortgleich mit dem fremden Profil
-            (`Profile.tsx`) — dieselbe Regel, dieselbe Erklärung. */}
-        <p className="hub-statistik-hinweis">
-          Trophäen gibt es nur an Tischen ohne Bots. Partien und Siege werden
-          überall gezählt, auch gegen Bots.
-        </p>
-      </Tafel>
+        <section className="hb-blk">
+          <h2 className="hb-ab">
+            Deine Sachen
+            <span className="hb-ab-zusatz">
+              {/* Die Plätze der Figur, nicht die Kacheln darunter: „0 von 6
+                  Plätzen" über drei Kacheln las sich wie fehlende Kacheln. */}
+              {Object.keys(me.avatar).length} von {SLOTS.length} angezogen
+            </span>
+          </h2>
+          <div className="hb-einstiege">
+            {einstiege.map((e) => (
+              <button
+                type="button"
+                key={e.name}
+                className="hb-einstieg"
+                aria-label={mitPunkt(e.name, e.punkt)}
+                onClick={() => {
+                  spiele('tipp');
+                  e.onClick();
+                }}
+              >
+                <img src={e.icon} alt="" draggable={false} />
+                <span>{e.name}</span>
+                {e.punkt !== null && <span className="hb-tab-punkt" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </section>
 
-      {/* Freunde standen frueher im Clan-Tab. Dort fuellt jetzt die
-          Mitgliederliste den Bildschirm, und Freunde sind ohnehin kein
-          Clan: Sie gehoeren zum eigenen Konto. */}
-      <Freunde onShowProfile={onShowProfile} />
+        <section className="hb-blk">
+          <h2 className="hb-ab">
+            Trophäen
+            <span className="hb-ab-zusatz">{partien} Partien</span>
+          </h2>
+          <div className="hb-karte hb-trophaeen">
+            <span className="hb-trophaeen-zahl">
+              <img src="/hub/symbol-pokal.webp" alt="" />
+              {trophaeen.toLocaleString('de-DE')}
+            </span>
+            <span className="hb-klein">alle Spiele zusammen</span>
+            <span className="hb-sp-werte is-vier">
+              {kacheln.map((k) => (
+                <span key={k.name}>
+                  <b>{typeof k.wert === 'number' ? k.wert.toLocaleString('de-DE') : k.wert}</b>
+                  {k.name}
+                </span>
+              ))}
+            </span>
+          </div>
+          <div className="hb-liste">
+            {me.stats.length === 0 ? (
+              <p className="hb-klein hb-liste-leer">Noch keine Partie gespielt.</p>
+            ) : (
+              me.stats.filter((row) => inAppSichtbar(row.gameId)).map((row) => (
+                <div className="hb-mg" key={row.gameId}>
+                  <img className="hb-mg-spiel" src={bannerFuer(row.gameId)} alt="" />
+                  <span className="hb-mg-name">
+                    <strong>{t(`game.${row.gameId}`)}</strong>
+                    <small className="is-leise">
+                      {row.parties} Partien · {row.wins} Siege
+                    </small>
+                  </span>
+                  <span className="hb-pk">
+                    <img src="/hub/symbol-pokal.webp" alt="" />
+                    {row.trophies.toLocaleString('de-DE')}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+          {/* Bis zum 13.10.2026 stand hier „nur an Tischen ohne Bots". Der
+              Server zählt Bot-Tische aber seit dem 04.08.2026 mit
+              (`countsForRanking` in tables/service.ts); ausgenommen sind nur
+              Gäste am Tisch und Training. */}
+          <p className="hb-klein hb-ohne-rand">
+            Trophäen gibt es auch gegen Bots - nur nicht, wenn ein Gast mitspielt oder Training an ist.
+          </p>
+        </section>
 
-      {/* Der andere Platz der wandernden Tafel: das Jahr ueber hier unten. */}
-      {!me.birthdayRewardClaimable && geburtstagTafel}
+        {/* Browort wie der Lernpfad, Zahlen aus `/api/me`. */}
+        {imUmfang('browort') && (
+          <BrowortImProfil
+            du
+            serie={me.browort?.serie ?? 0}
+            schnitt={me.browort?.schnitt ?? null}
+            geloest={me.browort?.geloest ?? 0}
+          />
+        )}
 
-      {/*
-        Konto — alles, was man selten braucht, an einem Ort und als richtige
-        Knoepfe.
+        <Freunde neu onShowProfile={onShowProfile} />
 
-        Vorher lagen Einstellungen ganz oben allein, Benachrichtigungen und
-        Abmelden irgendwo unter der Freundesliste, und "Konto loeschen" war
-        eine nackte Textzeile darunter. Drei verschiedene Bauformen fuer
-        dieselbe Art Sache.
+        {mitGeburtstag && !me.birthdayRewardClaimable && geburtstag}
 
-        Die Reihenfolge ist Absicht: harmlos nach oben, endgueltig nach unten.
-        Loeschen bleibt rot und steht allein in der letzten Zeile — nicht
-        neben "Abmelden", sonst erwischt man es im Vorbeitippen.
-      */}
-      <Tafel titel="Konto" zusatz={me.displayName}>
-        <div className="profil-konto">
-          <button
-            className="hub-knopf hub-knopf--a profil-konto-knopf"
-            onClick={() => {
-              spiele('blatt-auf');
-              setEinstellungenOffen(true);
-            }}
-          >
-            <img src="/hub/icon-einstellungen.webp" alt="" aria-hidden="true" />
-            Einstellungen
-          </button>
-
-          <button
-            className="hub-knopf hub-knopf--a profil-konto-knopf"
-            onClick={() => onBald('Benachrichtigungen')}
-          >
-            <img src="/hub/icon-benachrichtigung.webp" alt="" aria-hidden="true" />
-            Benachrichtigungen
-            <span className="front-bald-tag">Bald</span>
-          </button>
-
-          <button
-            className="hub-knopf hub-knopf--a-raus profil-konto-knopf"
-            onClick={onSignOut}
-          >
-            <img src="/hub/icon-abmelden.webp" alt="" aria-hidden="true" />
-            Abmelden
-          </button>
-
+        {/* Harmlos nach oben, endgültig nach unten — Löschen steht allein
+            und rot am Schluss, nicht neben „Abmelden" (siehe oben). */}
+        <section className="hb-blk">
+          <h2 className="hb-ab">
+            Konto
+            <span className="hb-ab-zusatz">{me.displayName}</span>
+          </h2>
+          <div className="hb-liste">
+            {me.gast && (
+              <button type="button" className="hb-mg is-du" onClick={() => setSichernOffen(true)}>
+                <span className="hb-mg-symbol hb-mg-symbol-ic" aria-hidden="true">
+                  <HbSymbol>
+                    <rect x="5" y="11" width="14" height="9" rx="2" />
+                    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                  </HbSymbol>
+                </span>
+                <span className="hb-mg-name">
+                  <strong>Konto sichern</strong>
+                  <small>Du spielst als Gast</small>
+                </span>
+                <span className="hb-pf" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            )}
+            <button
+              type="button"
+              className="hb-mg"
+              onClick={() => {
+                spiele('blatt-auf');
+                setEinstellungenOffen(true);
+              }}
+            >
+              <img className="hb-mg-symbol" src="/hub/icon-einstellungen.webp" alt="" />
+              <span className="hb-mg-name">
+                <strong>Einstellungen</strong>
+              </span>
+              <span className="hb-pf" aria-hidden="true">
+                ›
+              </span>
+            </button>
+            {/* In der App gibt es Mitteilungen (docs/PUSH.md), auf der
+                Webseite nicht — dort bleibt es „Bald". */}
+            <button
+              type="button"
+              className="hb-mg"
+              onClick={() => (inApp ? setMitteilungenOffen(true) : onBald('Benachrichtigungen'))}
+            >
+              <img className="hb-mg-symbol" src="/hub/icon-benachrichtigung.webp" alt="" />
+              <span className="hb-mg-name">
+                <strong>Benachrichtigungen</strong>
+              </span>
+              {inApp ? (
+                <span className="hb-pf" aria-hidden="true">
+                  ›
+                </span>
+              ) : (
+                <span className="hb-bald-marke">Bald</span>
+              )}
+            </button>
+            <button type="button" className="hb-mg" onClick={onSignOut}>
+              <img className="hb-mg-symbol" src="/hub/icon-abmelden.webp" alt="" />
+              <span className="hb-mg-name">
+                <strong>Abmelden</strong>
+              </span>
+            </button>
+          </div>
           <Rechtliches />
-
-          {/* Klein, aber vorhanden: Apple lehnt Apps mit Konten ohne diesen
-              Weg zuverlaessig ab, und die DSGVO verlangt ihn ohnehin. */}
-          <button className="hub-konto-loeschen" onClick={() => setLoeschenOffen(true)}>
-            <img src="/hub/icon-konto-loeschen.webp" alt="" aria-hidden="true" />
+          <button type="button" className="hb-kn is-gefahr is-breit" onClick={() => setLoeschenOffen(true)}>
             Konto löschen
           </button>
-        </div>
-      </Tafel>
+        </section>
+      </div>
 
       {einstellungenOffen && (
-        <EinstellungenBlatt
-          onClose={() => {
-            spiele('blatt-zu');
-            setEinstellungenOffen(false);
+        <ImHub>
+          <EinstellungenBlatt
+            neu
+            onGuthaben={onMeChange}
+            onClose={() => {
+              spiele('blatt-zu');
+              setEinstellungenOffen(false);
+            }}
+          />
+        </ImHub>
+      )}
+      {mitteilungenOffen && (
+        <ImHub>
+          <MitteilungenBlatt neu onClose={() => setMitteilungenOffen(false)} />
+        </ImHub>
+      )}
+      {sichernOffen && (
+        <KontoSichern
+          neu
+          onClose={() => setSichernOffen(false)}
+          onGesichert={() => {
+            setSichernOffen(false);
+            onMeChange();
           }}
         />
       )}
-
       {loeschenOffen && (
-        <KontoLoeschenBlatt
-          name={me.displayName}
-          onClose={() => setLoeschenOffen(false)}
-          onDeleted={onDeleted}
-        />
+        <ImHub>
+          <KontoLoeschenBlatt
+            name={me.displayName}
+            weg={me.loeschenPer ?? 'passwort'}
+            onClose={() => setLoeschenOffen(false)}
+            onDeleted={onDeleted}
+          />
+        </ImHub>
       )}
-    </HubSzene>
+    </div>
   );
 }
 
@@ -1028,26 +904,56 @@ function ProfilTab({
  *
  * Das Passwort wird erneut verlangt, weil die Sitzung dreissig Tage haelt:
  * Sonst genuegte ein kurz aus der Hand gelegtes Handy.
+ *
+ * Konten ohne Passwort (seit dem 23.09.2026, Apple 5.1.1(v)): Wer nur ueber
+ * Google oder Apple hereinkam, fordert einen Code an die eigene Adresse an;
+ * ein Gast tippt LÖSCHEN. Welcher Weg gilt, sagt der Server (`loeschenPer`).
  */
-function KontoLoeschenBlatt({
+export function KontoLoeschenBlatt({
   name,
+  weg,
   onClose,
   onDeleted,
 }: {
   name: string;
+  weg: 'passwort' | 'code' | 'bestaetigung';
   onClose: () => void;
   onDeleted: () => void;
 }): React.JSX.Element {
+  /** Passwort, Code oder das Wort — je nach `weg` genau eins davon. */
   const [passwort, setPasswort] = useState('');
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  /** Nur beim Code: ob er angefordert ist, und was der Server dazu sagte. */
+  const [codeHinweis, setCodeHinweis] = useState<string | null>(null);
+
+  const codeAnfordern = (): void => {
+    if (busy) return;
+    setBusy(true);
+    setFehler(null);
+    void api
+      .loeschcodeAnfordern()
+      .then((antwort) =>
+        setCodeHinweis(
+          antwort.versandt
+            ? 'Der Code ist unterwegs. Er gilt 15 Minuten.'
+            : 'Eben kam schon ein Code - er gilt weiter. Einen neuen gibt es in einer Minute.',
+        ),
+      )
+      .catch((err: unknown) =>
+        setFehler(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.'),
+      )
+      .finally(() => setBusy(false));
+  };
 
   const loeschen = (event: React.FormEvent): void => {
     event.preventDefault();
     if (busy) return;
     setBusy(true);
     setFehler(null);
-    void api.deleteMe(passwort).then(onDeleted, (err: unknown) => {
+    const nachweis =
+      weg === 'code' ? { code: passwort } : weg === 'bestaetigung' ? { bestaetigung: passwort } : passwort;
+    void api.deleteMe(nachweis).then(onDeleted, (err: unknown) => {
       // Der allgemeine Schluessel nennt E-Mail und Passwort. Hier wurde nur
       // ein Passwort eingegeben - also auch nur davon sprechen.
       setFehler(
@@ -1073,7 +979,7 @@ function KontoLoeschenBlatt({
         <h2>Konto löschen</h2>
         <p className="muted">
           Das lässt sich nicht rückgängig machen. Dein Name, deine E-Mail-Adresse und dein
-          Geburtstag werden entfernt, du wirst aus deinem Clan ausgetragen — führst du ihn,
+          Geburtstag werden entfernt, du wirst aus deinem Clan ausgetragen - führst du ihn,
           rückt das älteste Mitglied nach.
         </p>
         <p className="muted">
@@ -1082,16 +988,50 @@ function KontoLoeschenBlatt({
           Verlassen.
         </p>
 
-        <label>
-          Passwort von {name}
-          <input
-            type="password"
-            value={passwort}
-            onChange={(event) => setPasswort(event.target.value)}
-            autoFocus
-            required
-          />
-        </label>
+        {weg === 'passwort' ? (
+          <label>
+            Passwort von {name}
+            <input
+              type="password"
+              value={passwort}
+              onChange={(event) => setPasswort(event.target.value)}
+              autoFocus
+              required
+            />
+          </label>
+        ) : weg === 'code' ? (
+          <>
+            <p className="muted">
+              Dein Konto hat kein Passwort. Zur Bestätigung schicken wir dir einen Code an deine
+              E-Mail-Adresse.
+            </p>
+            <button type="button" className="hub-knopf hub-knopf--a" onClick={codeAnfordern} disabled={busy}>
+              {codeHinweis ? 'Neuen Code schicken' : 'Code schicken'}
+            </button>
+            {codeHinweis && <p className="muted" role="status">{codeHinweis}</p>}
+            <label>
+              Code aus der Mail
+              <input
+                value={passwort}
+                onChange={(event) => setPasswort(event.target.value)}
+                autoComplete="one-time-code"
+                autoCapitalize="characters"
+                required
+              />
+            </label>
+          </>
+        ) : (
+          <label>
+            Tippe LÖSCHEN ein, um zu bestätigen
+            <input
+              value={passwort}
+              onChange={(event) => setPasswort(event.target.value)}
+              autoFocus
+              autoCapitalize="characters"
+              required
+            />
+          </label>
+        )}
 
         {fehler && <p className="error">{fehler}</p>}
 
@@ -1209,7 +1149,7 @@ function preisSchild(paket: Paket): React.JSX.Element | string {
       </>
     );
   }
-  if (paket.gems === null) return '—';
+  if (paket.gems === null) return '-';
   return (
     <>
       {paket.gems}
@@ -1236,9 +1176,10 @@ function TruheKachel({
 }): React.JSX.Element {
   return (
     <button className="hub-angebot shop-truhe" disabled={laeuft} onClick={() => onKaufen(truhe)}>
-      {/* Dieselbe gezeichnete Truhe wie im Aufgaben-Vollbild — eine zweite waere
-          eine, die sich ab der ersten Bildlieferung unterscheidet. */}
-      <TruhenBild grad={truhe.grad} offen={false} />
+      {/* Dieselbe Truhe wie in „Heute" und am Trophäenweg — das gemalte Bild
+          aus `truhenBild()`. Eine zweite waere eine, die sich ab der ersten
+          Bildlieferung unterscheidet. */}
+      <img className="hub-angebot-art" src={truhenBild(truhe.grad)} alt="" draggable={false} />
       <strong>{t(truhe.nameKey)}</strong>
       {/* Ohne Tausenderpunkt, wie die Truhenzeile im Aufgaben-Vollbild: zwei
           Schreibweisen fuer dieselbe Zahl waeren zwei Zahlen. */}
@@ -1290,107 +1231,102 @@ function KaufFrage({
         : (frage.paket.gems ?? 0);
   const muenzen = frage.art === 'paket' ? frage.paket.coins : null;
 
+  const titel =
+    frage.art === 'ware' ? frage.name : frage.art === 'truhe' ? t(frage.truhe.nameKey) : t(frage.paket.nameKey);
+  // Das Paketbild zeigt, was man bekommt: Münzen, BroJetons oder Edelsteine.
+  const paketBild =
+    frage.art === 'paket'
+      ? frage.paket.gibt?.waehrung === 'broJetons'
+        ? '/hub/symbol-brojeton.webp'
+        : frage.paket.gibt?.waehrung === 'gems'
+          ? '/hub/symbol-edelstein.webp'
+          : '/hub/symbol-muenze.webp'
+      : null;
+  const bild = frage.art === 'ware' ? frage.bild : frage.art === 'truhe' ? truhenBild(frage.truhe.grad) : paketBild;
   return (
-    <div className="doko-sheet" onClick={onAbbrechen} role="presentation">
-      <div
-        className="doko-sheet-card ks-kauf"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-label="Kauf bestätigen"
-      >
-        {frage.art === 'ware' ? (
-          <>
-            {/* Ware ohne Grafik (Klang, Musik) zeigt hier nichts statt eines
-                kaputten Bildes — der Name darunter traegt die Rueckfrage. */}
-            {frage.bild && (
-              <img className="ks-kauf-ware" src={frage.bild} alt="" draggable={false} />
-            )}
-            <h2>{frage.name}</h2>
-            {/* Klang und Musik kauft man nach Gehör, nicht nach Namen. Der
-                Knopf steht deshalb VOR der Waehrungsfrage — erst hoeren,
-                dann entscheiden. */}
-            <Vorhoeren ware={frage.ware} />
-          </>
-        ) : frage.art === 'truhe' ? (
-          <>
-            <TruhenBild grad={frage.truhe.grad} offen={false} />
-            <h2>{t(frage.truhe.nameKey)}</h2>
-            <p className="muted">
-              {frage.truhe.von} bis {frage.truhe.bis} Münzen, ausgewürfelt beim Öffnen
-            </p>
-          </>
-        ) : (
-          <>
-            <img className="hub-angebot-art" src="/hub/muenze.png" alt="" draggable={false} />
-            <h2>{t(frage.paket.nameKey)}</h2>
-            <p className="muted">
-              {frage.paket.gibt
-                ? `${frage.paket.gibt.betrag} ${t(`waehrung.${frage.paket.gibt.waehrung}`)}`
-                : 'Ohne Guthaben'}
-            </p>
-          </>
+    <HbBlatt titel={titel} label="Kauf bestätigen" onClose={onAbbrechen} klasse="is-klein">
+      <div className="hb-mitte">
+        {/* Ware ohne Grafik (Klang, Musik) zeigt hier nichts statt eines
+            kaputten Bildes — der Name im Kopf trägt die Rückfrage. */}
+        {bild && <img className={`hb-kauf-bild${frage.art === 'ware' ? ' is-ware' : ''}`} src={bild} alt="" draggable={false} />}
+        {frage.art === 'truhe' && (
+          <p className="hb-text">
+            {frage.truhe.von} bis {frage.truhe.bis} Münzen, ausgewürfelt beim Öffnen
+          </p>
         )}
-        {frage.art === 'ware' ? (
-          <>
-            {/* Zwei Wege, wie im Kleiderschrank: Der Kaeufer waehlt die
-                Waehrung, nicht der Shop. */}
-            <p className="muted ks-kauf-womit">Womit?</p>
-            <div className="hub-knopfreihe hub-knopfreihe--a ks-kauf-waehl">
-              <button
-                type="button"
-                className="hub-knopf hub-knopf--a-gold"
-                disabled={laeuft}
-                onClick={() => onWare(frage.ware, 'coins')}
-              >
-                <img className="ks-kauf-icon" src="/hub/muenze.png" alt="" />
-                {frage.ware.preis.coins}
-              </button>
-              <button
-                type="button"
-                className="hub-knopf hub-knopf--a-gold"
-                disabled={laeuft}
-                onClick={() => onWare(frage.ware, 'gems')}
-              >
-                <EdelsteinIcon className="ks-kauf-icon" />
-                {frage.ware.preis.gems}
-              </button>
-            </div>
-            <button type="button" className="hub-knopf hub-knopf--a" onClick={onAbbrechen}>
+        {frage.art === 'paket' && (
+          <p className="hb-text">
+            {frage.paket.gibt
+              ? `${frage.paket.gibt.betrag} ${t(`waehrung.${frage.paket.gibt.waehrung}`)}`
+              : 'Ohne Guthaben'}
+          </p>
+        )}
+        {/* Erst hören, dann entscheiden — der Knopf steht vor der Frage. */}
+        {frage.art === 'ware' && <Vorhoeren neu ware={frage.ware} />}
+      </div>
+      {frage.art === 'ware' ? (
+        <>
+          {/* Zwei Wege wie im Kleiderschrank. Gold ist der eine Hauptknopf
+              (DESIGN.md) — also die Münzen: Sie kosten kein echtes Geld,
+              ein versehentliches Ja tut dort am wenigsten weh. */}
+          <p className="hb-klein hb-ohne-rand hb-mitte-text">Womit bezahlen?</p>
+          <div className="hb-knopfreihe">
+            <button
+              type="button"
+              className="hb-kn is-gold is-haupt"
+              disabled={laeuft}
+              onClick={() => onWare(frage.ware, 'coins')}
+              aria-label={`${frage.ware.preis.coins} Münzen zahlen`}
+            >
+              <img className="hb-kn-bild" src="/hub/symbol-muenze.webp" alt="" />
+              {frage.ware.preis.coins.toLocaleString('de-DE')}
+            </button>
+            <button
+              type="button"
+              className="hb-kn is-zweit is-haupt"
+              disabled={laeuft}
+              onClick={() => onWare(frage.ware, 'gems')}
+              aria-label={`${frage.ware.preis.gems} Edelsteine zahlen`}
+            >
+              <img className="hb-kn-bild" src="/hub/symbol-edelstein.webp" alt="" />
+              {frage.ware.preis.gems.toLocaleString('de-DE')}
+            </button>
+          </div>
+          <button type="button" className="hb-leise-knopf" onClick={onAbbrechen}>
+            Später
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="hb-kauf-preis">
+            {muenzen !== null ? (
+              <>
+                <img src="/hub/symbol-muenze.webp" alt="" />
+                {muenzen} {muenzen === 1 ? t('waehrung.coins.eins') : t('waehrung.coins')}
+              </>
+            ) : (
+              <>
+                <img src="/hub/symbol-edelstein.webp" alt="" />
+                {gems} {gems === 1 ? t('waehrung.gems.eins') : t('waehrung.gems')}
+              </>
+            )}
+          </p>
+          <div className="hb-knopfreihe">
+            <button type="button" className="hb-kn is-zweit is-haupt" onClick={onAbbrechen}>
               Später
             </button>
-          </>
-        ) : (
-          <>
-            <p className="ks-kauf-preis">
-              {muenzen !== null ? (
-                <>
-                  {muenzen} {muenzen === 1 ? t('waehrung.coins.eins') : t('waehrung.coins')}
-                </>
-              ) : (
-                <>
-                  {gems} {gems === 1 ? t('waehrung.gems.eins') : t('waehrung.gems')}
-                </>
-              )}
-            </p>
-            <div className="hub-knopfreihe hub-knopfreihe--a">
-              <button type="button" className="hub-knopf hub-knopf--a" onClick={onAbbrechen}>
-                Später
-              </button>
-              <button
-                type="button"
-                className="hub-knopf hub-knopf--a-gold"
-                disabled={laeuft}
-                onClick={() =>
-                  frage.art === 'truhe' ? onTruhe(frage.truhe) : onPaket(frage.paket)
-                }
-              >
-                {laeuft ? 'Kauft…' : frage.art === 'truhe' ? 'Öffnen' : 'Kaufen'}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+            <button
+              type="button"
+              className="hb-kn is-gold is-haupt"
+              disabled={laeuft}
+              onClick={() => (frage.art === 'truhe' ? onTruhe(frage.truhe) : onPaket(frage.paket))}
+            >
+              {laeuft ? 'Kauft…' : frage.art === 'truhe' ? 'Öffnen' : 'Kaufen'}
+            </button>
+          </div>
+        </>
+      )}
+    </HbBlatt>
   );
 }
 
@@ -1489,7 +1425,6 @@ function Shop({
     void api
       .buyChest(truhe.id)
       .then((ergebnis) => {
-        spiele('truhe');
         setFrage(null);
         setFund(ergebnis);
         onGuthaben();
@@ -1540,8 +1475,37 @@ function Shop({
   };
 
   return (
-    <HubSzene bg="/hub/bg-shop.webp" className="front-shop front-shop--b">
-      <HubBanner />
+    <ShopRahmen coins={coins} gems={gems}>
+      {/* Oben ein Tisch, den man noch nicht hat — jeden Tag ein anderer.
+          Gekauft wird über dieselbe Rückfrage wie jede Ware. */}
+      {(() => {
+          const angebote = ware('szene').filter((w) => !w.besessen && w.preis.coins > 0);
+          if (angebote.length === 0) return null;
+          const tag = Math.floor(Date.now() / 86_400_000);
+          const w = angebote[tag % angebote.length]!;
+          const name = SZENEN.find((sz) => sz.id === w.wert)?.name ?? w.wert;
+          return (
+            <button
+              type="button"
+              className="hb-held hb-empfohlen"
+              style={{ backgroundImage: `url(${szeneBild(w.wert)})` }}
+              disabled={kauft !== null}
+              onClick={() => setFrage({ art: 'ware', ware: w, name, bild: szeneBild(w.wert) })}
+            >
+              <span className="hb-held-unten hb-held-zeile">
+                <span>
+                  <span className="hb-label">Empfohlen · Tisch</span>
+                  <strong className="hb-held-titel">{name}</strong>
+                  <span>für alle Kartenspiele</span>
+                </span>
+                <span className="hb-kn is-gold">
+                  <img src="/hub/symbol-muenze.webp" alt="" />
+                  {w.preis.coins.toLocaleString('de-DE')}
+                </span>
+              </span>
+            </button>
+          );
+        })()}
 
       {fehler && <p className="error">{fehler}</p>}
 
@@ -1578,7 +1542,7 @@ function Shop({
           ))}
         </div>
         <p className="shop-hinweis muted">
-          BroJetons setzt du am Pokertisch. Zurück in Münzen oder Edelsteine gehen sie nicht —
+          BroJetons setzt du am Pokertisch. Zurück in Münzen oder Edelsteine gehen sie nicht -
           wer gewinnt, hat mehr Chips für die nächste Runde.
         </p>
       </Tafel>
@@ -1595,7 +1559,7 @@ function Shop({
           ))}
         </div>
         <p className="shop-hinweis muted">
-          Die Spanne steht dran und wird beim Kauf ausgewürfelt. Ihre Mitte ist genau der Kurs —
+          Die Spanne steht dran und wird beim Kauf ausgewürfelt. Ihre Mitte ist genau der Kurs -
           das Würfeln kostet im Schnitt nichts, es verteilt nur. Wer die feste Zahl will, nimmt
           ein Paket.
         </p>
@@ -1614,18 +1578,36 @@ function Shop({
           ))}
         </div>
         <p className="shop-hinweis muted">
-          Edelsteine fallen nicht aus Truhen und nicht aus Aufgaben — sie sind das Einzige, was
+          Edelsteine fallen nicht aus Truhen und nicht aus Aufgaben - sie sind das Einzige, was
           echtes Geld kostet. Dafür ist mit ihnen alles andere hier zu haben.
         </p>
       </Tafel>
 
-      {/*
-        Drei Regale, drei Sorten. Szenerien stehen bewusst NICHT hier: Sie
-        wollen in Tischgroesse gesehen werden, mit Karten darauf — das kann
-        nur die Themenauswahl, und dort wird auch gekauft. Ein zweiter
-        Kaufweg fuer dieselbe Ware waere eine Stelle mehr, die auseinander
-        laufen kann.
-      */}
+      {/* Kartenblätter und Tische: seit dem 26.09.2026 auch hier (Robin), nicht
+          mehr nur in der Sammlung. Dort bleibt die große Vorschau; gekauft wird
+          über denselben Aufruf (buyItem), also läuft nichts auseinander. */}
+      <WareRegal
+        titel="Kartenblätter"
+        zusatz="Für Doppelkopf, Skat und Zauberer"
+        waren={ware('blatt').filter((w) => w.preis.coins > 0)}
+        bild={(w) => {
+          const deck = deckById(w.wert);
+          return cardImage(deck, { suit: 'H', rank: 'Q' }) ?? deckBack(deck);
+        }}
+        name={(w) => t(`deck.${w.wert}`)}
+        kauft={kauft}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
+      />
+      <WareRegal
+        titel="Tische"
+        zusatz="Für alle Kartenspiele"
+        waren={ware('szene').filter((w) => w.preis.coins > 0)}
+        bild={(w) => szeneBild(w.wert)}
+        name={(w) => SZENEN.find((sz) => sz.id === w.wert)?.name ?? w.wert}
+        kauft={kauft}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
+      />
+
       <WareRegal
         titel="Zurufe"
         zusatz="Gelten an jedem Tisch"
@@ -1680,6 +1662,22 @@ function Shop({
         onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
 
+      {/* Spielpakete (22.09.2026, Robins Entscheidung S3): die erste Ware mit
+          Spielinhalt — Golf-Kurse und Partykiste-Themen. Gebraucht werden sie
+          nur von dem, der den Tisch aufmacht; wer mitspielt, braucht nichts.
+          Der Titel ist derselbe, auf den die gesperrte Kachel in der Auswahl
+          verweist (SHOP_RUBRIK in inhaltspakete.ts). */}
+      <WareRegal
+        titel={SHOP_RUBRIK}
+        zusatz="Neue Kurse und Themen"
+        waren={ware('inhaltspaket')}
+        bild={() => null}
+        glyph="wuerfel"
+        name={(w) => t(w.nameKey)}
+        kauft={kauft}
+        onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
+      />
+
       <Tafel titel="Pässe" zusatz="Kommt bald">
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.paesse ?? []).map((paket) => (
@@ -1706,9 +1704,15 @@ function Shop({
       )}
 
       {/* Derselbe Fund-Moment wie im Aufgaben-Vollbild. Eine gekaufte Truhe, die
-          nur den Muenzstand aendert, ist eine Zahl ohne Erklaerung. */}
-      {fund && <FundBlatt fund={fund} onClose={() => setFund(null)} />}
-    </HubSzene>
+          nur den Muenzstand aendert, ist eine Zahl ohne Erklaerung. An der
+          Wurzel des Hubs, sonst deckte die Oeffnung nur die Seite ab
+          (siehe `ImHub`). */}
+      {fund && (
+        <ImHub>
+          <FundBlatt fund={fund} onClose={() => setFund(null)} />
+        </ImHub>
+      )}
+    </ShopRahmen>
   );
 }
 
@@ -1750,7 +1754,7 @@ function WareRegal({
    * zentriert nach Vorschubbreite, nicht nach Tinte (siehe src/zeichen.tsx).
    * Jetzt ist es ein Name und dahinter eine Zeichnung, die mittig sitzt.
    */
-  glyph?: 'note' | 'noten';
+  glyph?: 'note' | 'noten' | 'wuerfel';
   name: (w: RegalWare) => string;
   /** Kennung, die gerade gekauft wird — der Knopf sperrt sich so lange. */
   kauft: string | null;
@@ -1777,7 +1781,13 @@ function WareRegal({
               <img src={bild(w) ?? undefined} alt="" draggable={false} />
             ) : (
               <span className="shop-ware-glyph" aria-hidden="true">
-                {glyph === 'note' || glyph === 'noten' ? <Note doppelt={glyph === 'noten'} /> : '?'}
+                {glyph === 'note' || glyph === 'noten' ? (
+                  <Note doppelt={glyph === 'noten'} />
+                ) : glyph === 'wuerfel' ? (
+                  <Wuerfel />
+                ) : (
+                  '?'
+                )}
               </span>
             )}
             <span className="shop-ware-name">{name(w)}</span>
@@ -1797,45 +1807,16 @@ function WareRegal({
 }
 
 /**
- * Ein Einstieg im Profil: Symbol oben, ein Wort darunter.
+ * Name eines Knopfes, an dem ein Bereitschaftspunkt haengen kann.
  *
- * Bewusst eine Kachel und kein breiter Knopf mit Text: Drei Woerter
- * nebeneinander in einer Knopfreihe sind auf einem Handy so schmal, dass
- * "Kleiderschrank" umbricht oder abgeschnitten wird. Ein Symbol traegt die
- * halbe Bedeutung, dann reicht der Platz.
- *
- * Die Symbole sind gemalte Gegenstaende, keine Piktogramme: ein offener
- * Schrank, ein Grammofon, eine Schriftrolle. Bestellt in
- * `docs/ASSETS-PROFIL.md`, Bedingung war, dass jedes bei 32 px noch
- * erkennbar ist — bei einer Strichzeichnung waere es das nicht.
+ * Der Vorlesetext gehoert in den Namen des KNOPFES, nicht an den Punkt: Ein
+ * aria-label am Punkt zaehlt nicht mit, sobald der Knopf selbst eins traegt
+ * (so war die Truhe bis zum 23.09.2026 stumm), und ohne eins klebt der Name
+ * aus dem Inhalt ohne Trennung zusammen (der Reiter hiess
+ * "ProfilGeschenk liegt bereit"). Das Komma ist die Pause beim Vorlesen.
  */
-function ProfilKachel({
-  icon,
-  name,
-  gold = false,
-  punkt = false,
-  onClick,
-}: {
-  icon: string;
-  name: string;
-  gold?: boolean;
-  /** Roter Punkt: dahinter ist etwas zu holen. Nie eine Zahl — siehe DESIGN.md. */
-  punkt?: boolean;
-  onClick: () => void;
-}): React.JSX.Element {
-  return (
-    <button
-      className={`profil-kachel${gold ? ' is-gold' : ''}`}
-      onClick={() => {
-        spiele('tipp');
-        onClick();
-      }}
-    >
-      <img src={icon} alt="" aria-hidden="true" draggable={false} />
-      <span>{name}</span>
-      {punkt && <span className="hub-punkt hub-punkt--klein" aria-hidden="true" />}
-    </button>
-  );
+function mitPunkt(name: string, punkt: string | null): string {
+  return punkt === null ? name : `${name}, ${punkt}`;
 }
 
 /**
@@ -1849,7 +1830,7 @@ function ProfilKachel({
  * Der Aufraeumer haengt am Element: Wer die Rueckfrage schliesst, waehrend
  * die Probe laeuft, soll nicht mit der Musik im Ruecken weitergehen.
  */
-function Vorhoeren({ ware }: { ware: RegalWare }): React.JSX.Element | null {
+function Vorhoeren({ ware, neu = false }: { ware: RegalWare; neu?: boolean }): React.JSX.Element | null {
   const laeuftProbe = useSyncExternalStore(abonniere, laufendeProbe, laufendeProbe);
   useEffect(() => () => probeMusik(null), []);
 
@@ -1860,388 +1841,11 @@ function Vorhoeren({ ware }: { ware: RegalWare }): React.JSX.Element | null {
   return (
     <button
       type="button"
-      className="hub-knopf hub-knopf--a ks-kauf-hoeren"
+      className={neu ? 'hb-kn is-zweit' : 'hub-knopf hub-knopf--a ks-kauf-hoeren'}
       onClick={() => (istMusik ? probeMusik(ware.wert) : probePaket(ware.wert))}
     >
       {an ? '■ Stopp' : '▶ Anhören'}
     </button>
-  );
-}
-
-function TabButton({
-  label,
-  iconSrc,
-  active,
-  haupt = false,
-  farbe,
-  punkt = null,
-  onClick,
-}: {
-  label: string;
-  iconSrc: string;
-  active: boolean;
-  haupt?: boolean;
-  /** Jeder Bereich hat seine eigene Leuchtfarbe, wenn er gewaehlt ist. */
-  farbe: string;
-  /**
-   * Roter Punkt am Reiter: hinter diesem Bereich liegt etwas bereit. Der Text
-   * ist das, was ein Vorlesegeraet daraus macht — ohne ihn waere der Hinweis
-   * nur fuer Sehende da, und er zeigt auf etwas, das man sonst gar nicht
-   * findet. Nie eine Zahl, aus demselben Grund wie an der Truhe: Eine Ziffer
-   * auf einem Reiter dieser Groesse ist am Handy nicht lesbar.
-   */
-  punkt?: string | null;
-  onClick: () => void;
-}): React.JSX.Element {
-  return (
-    <button
-      className={`front-tab front-tab--${farbe}${haupt ? ' front-tab--haupt' : ''}${active ? ' is-active' : ''}`}
-      aria-current={active ? 'page' : undefined}
-      // Der Klang haengt an der Leiste und nicht an jedem einzelnen Knopf im
-      // Haus: Das hier ist die Bewegung, die man hundertmal am Abend macht.
-      // Wer jeden Knopf verklanglicht, baut eine Klapperkiste.
-      onClick={() => {
-        if (!active) spiele('tipp');
-        onClick();
-      }}
-    >
-      <img className="front-tab-icon" src={iconSrc} alt="" draggable={false} />
-      <span>{label}</span>
-      {punkt !== null && <span className="hub-punkt" aria-label={punkt} />}
-    </button>
-  );
-}
-
-/**
- * Hauptschirm: der Trophaeenpfad.
- *
- * Die Trophaeen sind eine Reise von Insel zu Insel - jede ein Checkpoint,
- * jede eine eigene Welt. Der Spielauswahl-Knopf klebt am unteren Rand und
- * oeffnet das Vollbild mit allen Spielen samt Bildern; abgestimmt wird
- * dort, nicht mehr auf dem Startschirm.
- */
-function Spielen({
-  trophies,
-  getragen,
-  bemalung,
-  activeTable,
-  onPick,
-  onSolo,
-  onResume,
-  onBald,
-  onRangliste,
-  onAufgaben,
-  bereit,
-}: {
-  trophies: number;
-  getragen: Me['avatar'];
-  /** Bemalung der 3D-Figur, fuer den Pfad. */
-  bemalung: Me['figur'];
-  activeTable: Me['activeTable'];
-  /** Wie viel bereitliegt (Truhen plus fertige Aufgaben). 0 = kein Punkt. */
-  bereit: number;
-  onPick: (gameId: string) => void;
-  onSolo: (modusId: string) => void;
-  onResume: (gameId: string, tableId: string) => void;
-  onBald: (name: string) => void;
-  onRangliste: () => void;
-  /** Oeffnet Tagesaufgaben und Truhen. */
-  onAufgaben: () => void;
-}): React.JSX.Element {
-  const [games, setGames] = useState<GameSummary[]>([]);
-  const [voted, setVoted] = useState<Set<string>>(new Set());
-  const [wahlOffen, setWahlOffen] = useState(false);
-  const [anleitungOffen, setAnleitungOffen] = useState(false);
-
-  useEffect(() => {
-    void api.games().then(setGames);
-  }, []);
-
-  const vote = async (gameId: string): Promise<void> => {
-    await api.vote(gameId).catch(() => undefined);
-    setVoted(new Set([...voted, gameId]));
-    setGames(await api.games());
-  };
-
-  return (
-    <div className="front-hub">
-      {/* Karte füllt die Bühne; Logo und Seiten-UI liegen als Overlay drauf,
-          damit kein blauer Streifen die oberen Arenen verdeckt. */}
-      <div className="hub-buehne">
-          <Trophaeenpfad trophies={trophies} getragen={getragen} bemalung={bemalung} />
-
-        {/* Nur der Schriftzug, dafuer gross und mittig. Der Slogan
-            "Doppelkopf. Dein Weg." stand als zweites Bild darunter und
-            machte beide klein - dabei ist oben ueber der Karte Platz, und
-            eine Startseite darf ihren Namen deutlich zeigen. */}
-        <header className="hub-logo" aria-label="Brauweg">
-          <img className="hub-logo-mark" src="/hub/logo.png" alt="Brauweg" draggable={false} />
-        </header>
-
-        <aside className="hub-seite hub-seite--links">
-          <button
-            type="button"
-            className="hub-side-btn"
-            aria-label="Spielauswahl"
-            onClick={() => setWahlOffen(true)}
-          >
-            <img src="/hub/side-icon-spielwahl.webp" alt="" draggable={false} />
-          </button>
-          <button
-            type="button"
-            className="hub-side-btn"
-            aria-label="Rangliste"
-            onClick={onRangliste}
-          >
-            <img src="/hub/side-icon-rangliste.webp" alt="" draggable={false} />
-          </button>
-          <button
-            type="button"
-            className="hub-side-btn"
-            aria-label="Bald"
-            onClick={() => onBald('Mehr Features')}
-          >
-            <img src="/hub/side-icon-bald.webp" alt="" draggable={false} />
-          </button>
-        </aside>
-
-        {/*
-          Die Truhe ist der Weg zu Tagesaufgaben und Truhen. Sie stand hier
-          schon als "Bald"-Attrappe — jetzt fuehrt sie irgendwohin.
-
-          Der Punkt daran verraet, dass etwas bereitliegt; ohne ihn muesste man
-          nachsehen, um festzustellen, dass es nichts zu holen gibt. Die Zahl
-          selbst steht drinnen, nicht hier: Eine Ziffer auf einem 44-Pixel-Knopf
-          ist auf einem Handy nicht lesbar.
-        */}
-        <aside className="hub-seite hub-seite--rechts">
-          <button
-            type="button"
-            className="hub-truhe"
-            aria-label="Tagesaufgaben und Truhen"
-            onClick={onAufgaben}
-          >
-            <img src="/hub/truhe.png" alt="" draggable={false} />
-            {bereit > 0 && <span className="hub-punkt" aria-label={`${bereit} bereit`} />}
-          </button>
-        </aside>
-
-        {/* Einstieg fuer Neue, unten rechts. Oeffnet die Anleitung: was Brauweg
-            ist und woran man die Spiele erkennt. Spielneutral — mit mehreren
-            Spielen waere ein fester Spielname hier falsch. */}
-        <button
-          type="button"
-          className="hub-neuhier"
-          onClick={() => setAnleitungOffen(true)}
-        >
-          <span className="hub-neuhier-text">
-            <strong>Neu hier?</strong>
-            <span>So funktioniert Brauweg</span>
-          </span>
-          <img src="/hub/pinguin/pinguin-basis.webp" alt="" draggable={false} />
-        </button>
-      </div>
-
-      <div className={`front-play-stack${activeTable ? ' has-resume' : ''}`}>
-        {activeTable && (
-          <button
-            className="front-play"
-            onClick={() => onResume(activeTable.gameId, activeTable.tableId)}
-          >
-            {activeTable.paused
-              ? 'Weiterspielen · pausiert'
-              : activeTable.status === 'waiting'
-                ? 'Zurück zum Tisch'
-                : 'Weiterspielen'}
-          </button>
-        )}
-        {!activeTable && (
-          <button className="front-play" onClick={() => setWahlOffen(true)}>
-            Spielauswahl
-          </button>
-        )}
-        {activeTable && (
-          <button className="front-play-neben" onClick={() => setWahlOffen(true)}>
-            Spielauswahl
-          </button>
-        )}
-      </div>
-
-      {wahlOffen && (
-        <Spielwahl
-          games={games}
-          voted={voted}
-          onVote={(gameId) => void vote(gameId)}
-          onPick={(gameId) => {
-            setWahlOffen(false);
-            onPick(gameId);
-          }}
-          onSolo={(modusId) => {
-            setWahlOffen(false);
-            onSolo(modusId);
-          }}
-          onBald={onBald}
-          onClose={() => setWahlOffen(false)}
-        />
-      )}
-
-      {anleitungOffen && (
-        <Anleitung
-          games={games}
-          onSpielauswahl={() => {
-            setAnleitungOffen(false);
-            setWahlOffen(true);
-          }}
-          onClose={() => setAnleitungOffen(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-/**
- * Anleitung fuer Neue — hinter dem "Neu hier?"-Knopf.
- *
- * Zwei Teile: erst was Brauweg ueberhaupt ist (viele Spiele, Trophaeen, eigenes
- * Aussehen, Truhen), dann je spielbarem Spiel eine Beispielhand aus ECHTEN
- * Karten. Die Hand ist der Kern: Anfaenger sehen, was sie halten, und wer die
- * Spiele kennt, erkennt am Blatt sofort, welches es ist — auch ohne den Namen.
- *
- * Die Karten sind echt gerendert (kein gemaltes Beispielbild): So stimmt die
- * Hand mit dem Tisch ueberein, und es haengt nichts an einer Lieferung. Das
- * grosse Held-Bild und die drei Symbole kommen aus der Bestellung
- * (docs/ASSETS-ANLEITUNG.md); bis dahin stehen vorhandene Icons und ein
- * gemalter Verlauf als Platzhalter — nie ein <img> auf eine fehlende Datei.
- */
-const ERKENNUNG: Record<string, { blatt: string; wieViele: string; text: string }> = {
-  doppelkopf: {
-    blatt: 'eiche',
-    wieViele: '3 bis 5 Spieler, meist zu viert',
-    text: 'Neun bis Ass, jede Karte doppelt. Die zwei Kreuz-Damen sind das stärkste Paar. Wer sie hält, spielt verdeckt zusammen. Punkte bringen Ass und Zehn.',
-  },
-  wizard: {
-    blatt: 'zauberwald',
-    wieViele: '3 bis 6 Spieler',
-    text: 'Vor jeder Runde sagst du an, wie viele Stiche du machst. Genau treffen zählt. Ein Zauberer sticht alles, ein Narr verliert jeden Stich.',
-  },
-};
-
-function Anleitung({
-  games,
-  onSpielauswahl,
-  onClose,
-}: {
-  games: GameSummary[];
-  onSpielauswahl: () => void;
-  onClose: () => void;
-}): React.JSX.Element {
-  const spielbar = games.filter((g) => g.availability === 'playable');
-  const bald = games.filter((g) => g.availability === 'preview');
-
-  return (
-    <div className="anleitung" onClick={onClose} role="presentation">
-      <div
-        className="anleitung-blatt"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-label="So funktioniert Brauweg"
-      >
-        <header className="anleitung-kopf">
-          <h2>Willkommen bei Brauweg</h2>
-          <button className="spielwahl-zu" onClick={onClose} aria-label="Schließen">
-            <Kreuz />
-          </button>
-        </header>
-
-        {/* Held-Bild. Platzhalter ist der Logo-Verlauf; die Bestellung liefert
-            /hub/anleitung-held.webp, das dann als <img> hier steht. */}
-        <div className="anleitung-held" aria-hidden="true">
-          <img className="anleitung-held-logo" src="/hub/logo.png" alt="" draggable={false} />
-        </div>
-
-        <p className="anleitung-lauf">
-          Brauweg ist eine Stube voller Spiele. Du spielst, sammelst Trophäen und richtest
-          dir deinen Tisch ein, allein gegen Bots oder mit anderen.
-        </p>
-
-        {/* Die drei Versprechen. Symbole sind vorhandene Icons als Platzhalter;
-            die Bestellung ersetzt sie durch gemalte anleitung-*.webp. */}
-        <div className="anleitung-punkte">
-          <div className="anleitung-punkt">
-            <img src="/hub/pokal.png" alt="" draggable={false} />
-            <strong>Trophäen sammeln</strong>
-            <span className="muted">
-              Jede Partie bringt Trophäen. Sie tragen dich den Pfad hinauf, von der Heimat bis zum
-              Sternenhafen.
-            </span>
-          </div>
-          <div className="anleitung-punkt">
-            <img src="/hub/tab-blatt.webp" alt="" draggable={false} />
-            <strong>Aussehen ändern</strong>
-            <span className="muted">
-              Kartenblatt, Rückseite, Tischszene und deinen Pinguin stellst du frei ein. Jeder am
-              Tisch sieht sein eigenes.
-            </span>
-          </div>
-          <div className="anleitung-punkt">
-            <img src="/hub/truhe.png" alt="" draggable={false} />
-            <strong>Truhen erspielen</strong>
-            <span className="muted">
-              Beim Spielen füllst du Truhen und Aufgaben. Daraus gibt es Münzen, mit denen du neue
-              Designs freischaltest.
-            </span>
-          </div>
-        </div>
-
-        <h3 className="anleitung-abschnitt">Woran du die Spiele erkennst</h3>
-        <p className="muted anleitung-abschnitt-hint">
-          So sieht ein Blatt aus. Wer ein Spiel kennt, erkennt es hier sofort an den Karten, auch
-          ohne den Namen.
-        </p>
-
-        {/* Nur Spiele mit echter Beispielhand. Ein Eintrag in ERKENNUNG ist
-            die Bedingung: So bekommt ein neues Kartenspiel hier eine Hand,
-            sobald jemand seine Karten und einen Satz dazuschreibt. Spiele ohne
-            Blatt (z. B. Feldherr, ein Echtzeit-Duell) haben keine Hand und
-            gehoeren nicht in einen Abschnitt ueber Karten - eine erfundene
-            Fallback-Hand waere schlicht falsch. */}
-        {spielbar
-          .filter((spiel) => ERKENNUNG[spiel.id])
-          .map((spiel) => {
-            const info = ERKENNUNG[spiel.id]!;
-            const deck = deckById(info.blatt);
-            const hand = handFuer(spiel.id);
-            return (
-              <section className="anleitung-spiel" key={spiel.id}>
-                <div className="anleitung-spiel-kopf">
-                  <strong>{t(spiel.nameKey)}</strong>
-                  <span className="muted">{info.wieViele}</span>
-                </div>
-                {/* Die Beispielhand aus echten Karten des passenden Blatts. */}
-                <div className="anleitung-hand">
-                  {hand.map((card) => (
-                    <span className="pc pc--hand anleitung-karte" key={card.id}>
-                      <CardFront card={card} deck={deck} />
-                    </span>
-                  ))}
-                </div>
-                <p className="anleitung-spiel-text">{info.text}</p>
-              </section>
-            );
-          })}
-
-        {bald.length > 0 && (
-          <p className="muted anleitung-bald">
-            In Arbeit: {bald.map((g) => t(g.nameKey)).join(', ')}. In der Spielauswahl kannst du
-            dafür abstimmen, was als Nächstes kommt.
-          </p>
-        )}
-
-        <button className="primary anleitung-los" onClick={onSpielauswahl}>
-          Los geht’s
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -2259,10 +1863,13 @@ function RanglisteBlatt({
   meId,
   onClose,
   onShowProfile,
+  neu = false,
 }: {
   meId: string;
   onClose: () => void;
   onShowProfile: (accountId: string) => void;
+  /** Neues Hub: Blatt von unten mit Chips statt Reitern, dieselben Abrufe. */
+  neu?: boolean;
 }): React.JSX.Element {
   const [spiele, setSpiele] = useState<GameSummary[]>([]);
   const [wahl, setWahl] = useState<RangWahl>('gesamt');
@@ -2303,6 +1910,56 @@ function RanglisteBlatt({
   }, [wahl]);
 
   const titel = wahl === 'gesamt' ? 'Gesamt' : t(`game.${wahl}`);
+
+  if (neu) {
+    return (
+      <HbBlatt titel="Rangliste" label={`Rangliste ${titel}`} onClose={onClose}>
+        {spiele.length > 1 && (
+          <div className="hb-chips hb-chips--blatt" role="tablist" aria-label="Wertung wählen">
+            {[{ id: 'gesamt', name: 'Gesamt' }, ...spiele.map((g) => ({ id: g.id, name: t(g.nameKey) }))].map((r) => (
+              <button
+                type="button"
+                key={r.id}
+                role="tab"
+                aria-selected={wahl === r.id}
+                className={`hb-chip${wahl === r.id ? ' is-an' : ''}`}
+                onClick={() => setWahl(r.id)}
+              >
+                {r.name}
+              </button>
+            ))}
+          </div>
+        )}
+        {error && <p className="hb-fehler">{error}</p>}
+        {!error && laedt && <p className="hb-laden">Wird geladen…</p>}
+        {!error && !laedt && rows.length === 0 && <p className="hb-klein hb-ohne-rand">Noch niemand auf der Liste.</p>}
+        {!laedt && rows.length > 0 && (
+          <ol className="hb-liste hb-rangliste">
+            {rows.map((row) => (
+              <li key={row.accountId} className={`hb-rl${row.accountId === meId ? ' is-du' : ''}`}>
+                <span className="hb-rl-rang">{row.rank}</span>
+                <button
+                  type="button"
+                  className="hb-rl-name"
+                  onClick={() => {
+                    onClose();
+                    onShowProfile(row.accountId);
+                  }}
+                >
+                  {row.displayName}
+                  {row.accountId === meId ? ' · du' : ''}
+                </button>
+                <span className="hb-pk">
+                  <img src="/hub/symbol-pokal.webp" alt="" />
+                  {row.trophies.toLocaleString('de-DE')}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </HbBlatt>
+    );
+  }
 
   return (
     <div className="doko-sheet" onClick={onClose} role="presentation">
@@ -2377,233 +2034,6 @@ function RanglisteBlatt({
 }
 
 /**
- * Spielauswahl im Vollbild: ein gemaltes Banner je Spiel.
- *
- * Doppelkopf und Zauberer sind offen und fuehren ins Tisch-Menue; die anderen
- * tragen die Bald-Marke, lassen sich anstimmen, und ein Tipp aufs Bild oeffnet
- * das "Kommt bald"-Blatt.
- *
- * **Sie sieht aus wie der Themen-Tab, und das ist der Punkt.** Vorher war sie
- * der einzige Bildschirm im Haus mit lila Flaeche und gezeichneten
- * SVG-Stillleben — daneben der Themen-Tab, der dieselbe Frage stellt
- * ("welches Spiel?") und sie mit gemalten Bannern auf einer Holztafel in
- * einer Szene stellt. Zwei Antworten auf dieselbe Frage, zwei Gestaltungen.
- *
- * Deshalb sind es hier dieselben Bausteine und nicht nachgebaute: `HubSzene`,
- * `Tafel`, `.hub-themenspiel` und `spielBanner()`. Wer den Themen-Tab
- * umgestaltet, gestaltet diesen Bildschirm mit — genau das soll so sein.
- */
-function Spielwahl({
-  games,
-  voted,
-  onVote,
-  onPick,
-  onSolo,
-  onBald,
-  onClose,
-}: {
-  games: GameSummary[];
-  voted: Set<string>;
-  onVote: (gameId: string) => void;
-  onPick: (gameId: string) => void;
-  onSolo: (modusId: string) => void;
-  onBald: (name: string) => void;
-  onClose: () => void;
-}): React.JSX.Element {
-  const playable = games.filter((game) => game.availability === 'playable');
-  const preview = games.filter((game) => game.availability === 'preview');
-
-  return (
-    <div className="spielwahl">
-      {/* Die gemalte Szene wie in jedem Hub-Tab. Sie liegt als Bild und nicht
-          als CSS-Hintergrund darin, damit `object-fit: cover` sie auf jedem
-          Seitenverhaeltnis fuellt statt sie zu stauchen — dieselbe Bauart wie
-          `HubSzene`. */}
-      <img className="spielwahl-bg" src="/hub/bg-blatt.webp" alt="" draggable={false} />
-
-      <header className="spielwahl-kopf">
-        <h2>Spielauswahl</h2>
-        <button className="spielwahl-zu" onClick={onClose} aria-label="Schließen">
-          <Kreuz />
-        </button>
-      </header>
-
-      <div className="spielwahl-rolle">
-        <Tafel titel="Alleine" zusatz="Minispiel">
-          <div className="hub-themenwahl kachelraster">
-            <button
-              type="button"
-              className="hub-themenspiel"
-              onClick={() => onSolo('prosubway')}
-            >
-              <span className="hub-themenspiel-bild" aria-hidden="true">
-                <img src={spielBanner('prosubway')} alt="" draggable={false} />
-              </span>
-              <span className="hub-themenspiel-text">
-                <strong>{t('modus.prosubway')}</strong>
-                <span className="muted">{t('modus.prosubway.hint')}</span>
-              </span>
-              <span className="spielwahl-spielen">Spielen</span>
-            </button>
-          </div>
-        </Tafel>
-
-        <Tafel titel="Jetzt spielbar" zusatz={`${playable.length} von ${games.length}`}>
-          <div className="hub-themenwahl kachelraster">
-            {playable.map((game) => (
-              <button
-                key={game.id}
-                className="hub-themenspiel"
-                onClick={() => onPick(game.id)}
-              >
-                <span className="hub-themenspiel-bild" aria-hidden="true">
-                  {/* Mememory zeigt echte Memes aus dem Vorschlagskasten
-                      statt eines gemalten Stilllebens — was auf dem Banner
-                      haengt, liegt im Spiel auch auf den Karten. Faellt der
-                      Abruf aus, faellt es auf das gemalte Bild zurueck. */}
-                  {game.id === 'mememory' ? (
-                    <MememoryBanner />
-                  ) : game.id === 'eiland' ? (
-                    /* Eiland spielt sich im Banner selbst: zwei Gebiete
-                       wachsen aus ihren Ecken, der Nebel weicht. Wer weniger
-                       Bewegung will, bekommt das gezeichnete Bild. */
-                    <EilandBanner />
-                  ) : game.id === 'filler' ? (
-                    /* Filler ebenso (seit 04.09.): zwei Gebiete faerben sich
-                       Feld um Feld ueber das Brett, der Nebel weicht. */
-                    <FillerBanner />
-                  ) : game.id === 'golf' ? (
-                    /* Golf spielt sich im Banner selbst — und zwar mit dem
-                       echten Kern: Physik, Bots und Zeichner liegen im
-                       Client, das Banner darf sie also einfach benutzen.
-                       Auch hier gibt es noch kein gemaltes Bild, das
-                       bewegte ist deshalb der Rueckfall bei "weniger
-                       Bewegung" (dann steht es still). */
-                    <GolfBanner />
-                  ) : game.id === 'tafelrunde' ? (
-                    /* Tafelrunde stellt sich selbst auf: Recken erscheinen
-                       auf den Waben, drei gleiche werden golden zu einem
-                       staerkeren. Fuer dieses Spiel gibt es noch kein
-                       gemaltes Banner — das bewegte ist deshalb auch der
-                       Rueckfall bei "weniger Bewegung". */
-                    <TafelrundeBanner />
-                  ) : game.id === 'partykiste' ? (
-                    /* Partykiste hat noch kein gemaltes Banner. Ohne eigenes
-                       fiele `spielBanner` auf "kommt bald" zurueck — genau das
-                       Bild, das sagt, man koenne es noch nicht spielen. */
-                    <PartykisteBanner />
-                  ) : game.id === 'brocooked' ? (
-                    /* BroCooked kocht sich im Banner selbst — mit dem echten
-                       Kern: Kueche, Hilfskoch und Zeichner liegen im Client.
-                       Auch hier gibt es noch kein gemaltes Bild; ohne eigenes
-                       fiele `spielBanner` auf "kommt bald" zurueck, und bei
-                       "weniger Bewegung" steht die Kueche einfach still. */
-                    <BroCookedBanner />
-                  ) : (
-                    <img src={spielBanner(game.id)} alt="" draggable={false} />
-                  )}
-                </span>
-                <span className="hub-themenspiel-text">
-                  <strong>{t(game.nameKey)}</strong>
-                  {/* Nur der Untertitel weiss mehr als der Server: Welche
-                      Spiele keine Kartenspiele sind, steht in keiner
-                      Modulbeschreibung, gehoert aber aufs Banner. */}
-                  <span className="muted">
-                    {/* Sitzzahlen als Spanne und das Wort durch das Zeichen
-                        ersetzt (07.09.2026): Bei Golf standen hier acht Zahlen
-                        mit Kommas, die ganze Zeile war Laerm. Das Zeichen traegt
-                        seine Beschriftung selbst. */}
-                    <span className="hub-themenspiel-sitze">
-                      <Spieler />
-                      {sitzSpanne(game.seatCounts)}
-                    </span>
-                    {game.id === 'feldherr' ? ' · Echtzeit' : ''}
-                    {game.id === 'mememory' ? ' · Meme-Memory' : ''}
-                    {game.id === 'easypoker' ? ' · Hold’em' : ''}
-                    {game.id === 'filler' ? ' · Flächen im Nebel' : ''}
-                    {game.id === 'eiland' ? ' · Landnahme im Nebel' : ''}
-                    {game.id === 'golf' ? ' · Minigolf in Echtzeit' : ''}
-                    {game.id === 'brocooked' ? ' · Küche in Echtzeit' : ''}
-                    {game.id === 'tafelrunde' ? ' · Auto-Battler' : ''}
-                    {game.id === 'partykiste' ? ' · 9 Minispiele, ein Turnier' : ''}
-                  </span>
-                </span>
-                <span className="spielwahl-spielen">Spielen</span>
-              </button>
-            ))}
-          </div>
-        </Tafel>
-
-        {preview.length > 0 && (
-          <Tafel titel="Kommt bald" zusatz="Stimm ab, was zuerst kommt">
-            <div className="hub-themenwahl kachelraster">
-              {preview.map((game) => (
-                <div key={game.id} className="hub-themenspiel is-bald">
-                  <button className="spielwahl-flaeche" onClick={() => onBald(t(game.nameKey))}>
-                    <span className="hub-themenspiel-bild" aria-hidden="true">
-                      <img src={spielBanner(game.id)} alt="" draggable={false} />
-                    </span>
-                    <span className="hub-themenspiel-text">
-                      <strong>{t(game.nameKey)}</strong>
-                    </span>
-                  </button>
-                  <span className="front-bald-tag">Bald</span>
-                  <button
-                    className="spielwahl-stimme"
-                    disabled={voted.has(game.id)}
-                    onClick={() => onVote(game.id)}
-                  >
-                    {voted.has(game.id) ? 'Abgestimmt' : 'Dafür stimmen'} · {game.votes}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </Tafel>
-        )}
-
-        {/*
-          Der Mehrkampf steht unter den Spielen, weil er keines ist: Eine
-          Partie besteht aus Runden verschiedener Spiele, gewertet wird die
-          Platzierung ueber alles. Er braucht kein eigenes Spielmodul,
-          sondern nur die Regel, dass Module Platzierungen liefern und die
-          Plattform daraus die Wertung rechnet — genau dafuer ist die
-          Trennung gebaut.
-
-          Deshalb steht er auch nicht in der Spielregistrierung des Servers
-          und bekommt keine Abstimmung: Er konkurriert nicht mit den
-          Spielen, er benutzt sie. Eine eigene Tafel sagt das, ohne dass es
-          jemand lesen muss.
-        */}
-        <Tafel titel="Modus" zusatz="Über mehrere Spiele">
-          <div className="hub-themenwahl kachelraster">
-            <div className="hub-themenspiel is-bald">
-              <button
-                className="spielwahl-flaeche"
-                onClick={() =>
-                  onBald(`${t('modus.mehrkampf')}: der Mehrkampf über mehrere Spiele`)
-                }
-              >
-                <span className="hub-themenspiel-bild" aria-hidden="true">
-                  <img src={spielBanner('mehrkampf')} alt="" draggable={false} />
-                </span>
-                <span className="hub-themenspiel-text">
-                  <strong>{t('modus.mehrkampf')}</strong>
-                </span>
-              </button>
-              <span className="front-bald-tag">Bald</span>
-            </div>
-            <p className="spielwahl-modus-text">
-              Eine Partie aus Runden verschiedener Spiele. Gewertet wird, wer über alles am besten
-              durchkommt — nicht, wer die meisten Punkte macht.
-            </p>
-          </div>
-        </Tafel>
-      </div>
-    </div>
-  );
-}
-
-/**
  * Freundesliste im Profil-Tab.
  *
  * Anfragen stehen zuoberst, weil sie eine Antwort verlangen. Die Suche
@@ -2612,25 +2042,149 @@ function Spielwahl({
  */
 function Freunde({
   onShowProfile,
+  neu = false,
 }: {
   onShowProfile: (accountId: string) => void;
+  /** Neues Hub: Abschnitt mit Liste statt Holztafel, dieselben Aufrufe. */
+  neu?: boolean;
 }): React.JSX.Element {
   const [lists, setLists] = useState<FriendLists | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlayerRef[] | null>(null);
+  /*
+    Bis zum 22.10.2026 schluckte die Liste jeden Fehler: Ging `/friends`
+    schief, stand für immer „Wird geladen…", und ein Tipp auf Annehmen,
+    Suchen oder Anfragen tat ohne Netz einfach nichts. Jetzt steht da, was
+    nicht ging (CLAUDE.md: „Am Tisch nichts stumm verwerfen").
+  */
+  const [fehler, setFehler] = useState<string | null>(null);
+  const fang = (err: unknown): void =>
+    setFehler(err instanceof ApiError ? t(err.messageKey) : 'Das hat nicht geklappt. Prüf die Verbindung.');
 
   const reload = (): void => {
-    void api.friends().then(setLists);
+    void api
+      .friends()
+      .then((l) => {
+        setLists(l);
+        setFehler(null);
+      })
+      .catch(fang);
   };
   useEffect(reload, []);
 
   const search = (event: React.FormEvent): void => {
     event.preventDefault();
     if (query.trim().length < 2) return;
-    void api.searchPlayers(query).then(setResults);
+    setFehler(null);
+    void api.searchPlayers(query).then(setResults).catch(fang);
   };
 
   const anzahl = lists ? lists.friends.length : 0;
+
+  const anfragen = (player: PlayerRef): void =>
+    void api
+      .requestFriend(player.id)
+      .then(() => {
+        setResults((alt) => (alt ?? []).filter((entry) => entry.id !== player.id));
+        reload();
+      })
+      .catch(fang);
+
+  if (neu) {
+    /* Die ganze Zeile ist der Weg zum Profil, nicht nur der Name: Vorher
+       traf ein Tipp auf den Pfeil oder die freie Fläche daneben nichts. */
+    const zeile = (player: PlayerRef, rechts?: React.ReactNode): React.JSX.Element =>
+      rechts === undefined ? (
+        <button type="button" className="hb-mg hb-mg-ganz" key={player.id} onClick={() => onShowProfile(player.id)}>
+          <span className="hb-mg-name">
+            <strong>{player.displayName}</strong>
+          </span>
+          <span className="hb-pf" aria-hidden="true">›</span>
+        </button>
+      ) : (
+        <div className="hb-mg" key={player.id}>
+          <button type="button" className="hb-mg-name hb-mg-knopf" onClick={() => onShowProfile(player.id)}>
+            <strong>{player.displayName}</strong>
+          </button>
+          {rechts}
+        </div>
+      );
+    return (
+      <section className="hb-blk">
+        <h2 className="hb-ab">
+          Freunde
+          <span className="hb-ab-zusatz">{lists ? anzahl : '…'}</span>
+        </h2>
+        {/* Anfragen zuoberst: sie verlangen eine Antwort. */}
+        {(lists === null || lists.incoming.length > 0 || lists.friends.length > 0) && (
+          <div className="hb-liste">
+            {lists === null && (
+              <p className="hb-klein hb-liste-leer">{fehler ? 'Freunde ließen sich nicht laden.' : 'Wird geladen…'}</p>
+            )}
+            {lists?.incoming.map((player) =>
+              zeile(
+                player,
+                <span className="hb-mg-knoepfe">
+                  <button type="button" className="hb-kn is-gold is-klein" onClick={() => void api.acceptFriend(player.id).then(reload).catch(fang)}>
+                    Annehmen
+                  </button>
+                  <button type="button" className="hb-kn is-zweit is-klein" onClick={() => void api.removeFriend(player.id).then(reload).catch(fang)}>
+                    Nein
+                  </button>
+                </span>,
+              ),
+            )}
+            {lists?.friends.map((player) => zeile(player))}
+          </div>
+        )}
+        {fehler && (
+          <span className="hb-fehler">
+            {fehler}{' '}
+            {lists === null && (
+              <button type="button" className="hb-link" onClick={reload}>
+                Nochmal
+              </button>
+            )}
+          </span>
+        )}
+        {lists !== null && lists.friends.length === 0 && lists.incoming.length === 0 && (
+          <p className="hb-klein hb-ohne-rand">Noch keine Freunde. Such unten nach einem Namen.</p>
+        )}
+        {lists !== null && lists.outgoing.length > 0 && (
+          <p className="hb-klein hb-ohne-rand">
+            Angefragt: {lists.outgoing.map((player) => player.displayName).join(', ')}
+          </p>
+        )}
+        <form className="hb-suchzeile" onSubmit={search}>
+          <input
+            className="hb-feld"
+            placeholder="Spieler suchen…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label="Spieler suchen"
+          />
+          <button className="hb-kn is-zweit" type="submit" disabled={query.trim().length < 2}>
+            Suchen
+          </button>
+        </form>
+        {results !== null && results.length === 0 && (
+          <p className="hb-klein hb-ohne-rand">Niemand mit diesem Namen gefunden.</p>
+        )}
+        {results !== null && results.length > 0 && (
+          <div className="hb-liste">
+            {results.map((player) =>
+              zeile(
+                player,
+                <button type="button" className="hb-kn is-zweit is-klein" onClick={() => anfragen(player)}>
+                  Anfragen
+                </button>,
+              ),
+            )}
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     /*
@@ -2774,107 +2328,6 @@ function handFuer(gameId: string): { id: number; suit: string; rank: string }[] 
   return VORSCHAU_HAND[gameId] ?? VORSCHAU_HAND.doppelkopf!;
 }
 
-/**
- * Kartenblatt waehlen.
- *
- * Mit Vorschau statt nur mit Namen: Welches Blatt einem liegt, entscheidet
- * niemand nach einer Beschreibung, sondern nach dem Hinsehen.
- */
-/**
- * Themen-Tab: erst das Spiel, dann sein Aussehen.
- *
- * Der Schritt davor ist noetig, weil ein Kartenblatt nur zu seinem Spiel
- * passt — ein Doppelkopfblatt hat keine Acht, ein Rommeblatt zwei Joker.
- * Was danach kommt, ist unveraendert die bisherige Ansicht.
- *
- * Auch die noch nicht spielbaren Spiele lassen sich einstellen. Das kostet
- * nichts, geht nicht verloren, und wer sich sein Skat-Blatt vorab
- * zurechtlegt, soll das duerfen.
- */
-function ThemenTab({
-  me,
-  onThemeChange,
-  onGekauft,
-}: {
-  me: Me;
-  onThemeChange: (
-    gameId: string,
-    teil: { cardDeck?: string; tableScene?: string; cardBack?: string },
-  ) => void;
-  /** Nach einem Kauf muss der Muenzstand oben neu geladen werden. */
-  onGekauft: () => void;
-}): React.JSX.Element {
-  const [spiele, setSpiele] = useState<GameSummary[] | null>(null);
-  const [gewaehlt, setGewaehlt] = useState<string | null>(null);
-
-  useEffect(() => {
-    void api.games().then(setSpiele).catch(() => setSpiele([]));
-  }, []);
-
-  const thema = gewaehlt
-    ? (me.themes[gewaehlt] ?? { cardDeck: 'text', tableScene: 'stube', cardBack: 'standard' })
-    : null;
-
-  return (
-    <>
-      {gewaehlt && thema ? (
-        <DeckPicker
-          gameId={gewaehlt}
-          spielName={t(`game.${gewaehlt}`)}
-          onSpielWechseln={() => setGewaehlt(null)}
-          current={thema.cardDeck}
-          onChange={(cardDeck) => onThemeChange(gewaehlt, { cardDeck })}
-          szene={thema.tableScene}
-          onSzeneChange={(tableScene) => onThemeChange(gewaehlt, { tableScene })}
-          ruecken={thema.cardBack}
-          onRueckenChange={(cardBack) => onThemeChange(gewaehlt, { cardBack })}
-          onGekauft={onGekauft}
-        />
-      ) : (
-        <HubSzene bg="/hub/bg-blatt.webp" className="front-blatt front-blatt--b">
-          <HubBanner />
-          <Tafel titel="Für welches Spiel?" zusatz="Jedes Spiel hat sein eigenes Aussehen" weit>
-            <div className="hub-themenwahl">
-              {(spiele ?? []).map((spiel) => {
-                const t2 = me.themes[spiel.id];
-                const bald = spiel.availability !== 'playable';
-                return (
-                  <button
-                    key={spiel.id}
-                    className={`hub-themenspiel${bald ? ' is-bald' : ''}`}
-                    onClick={() => setGewaehlt(spiel.id)}
-                  >
-                    {/* Dasselbe Banner wie in der Spielauswahl unter
-                        „Spielen" — die Zuordnung steht in `spielBanner()`,
-                        damit beide Bildschirme nicht auseinanderlaufen. */}
-                    <span className="hub-themenspiel-bild" aria-hidden="true">
-                      <img src={spielBanner(spiel.id)} alt="" draggable={false} />
-                    </span>
-                    {/* Name und was eingestellt ist, auf einem Verlauf unten -
-                        sonst muesste man jedes Spiel oeffnen, um seine Wahl zu
-                        sehen. Der Verlauf haelt den Text lesbar, egal wie hell
-                        das Banner an der Stelle ist. */}
-                    <span className="hub-themenspiel-text">
-                      <strong>{t(spiel.nameKey)}</strong>
-                      <span className="muted">
-                        {t(`deck.${t2?.cardDeck ?? 'text'}`)}
-                        {' · '}
-                        {SZENEN.find((s) => s.id === (t2?.tableScene ?? 'stube'))?.name ?? 'Stube'}
-                      </span>
-                    </span>
-                    {bald && <span className="front-bald-tag">Bald</span>}
-                  </button>
-                );
-              })}
-              {spiele === null && <Ladekreis text="Spiele werden geladen…" />}
-            </div>
-          </Tafel>
-        </HubSzene>
-      )}
-    </>
-  );
-}
-
 function DeckPicker({
   gameId,
   spielName,
@@ -2886,7 +2339,10 @@ function DeckPicker({
   ruecken,
   onRueckenChange,
   onGekauft,
+  neu = false,
 }: {
+  /** Neues Hub: dieselbe Auswahl mit denselben Käufen, in Nachtblau & Gold. */
+  neu?: boolean;
   gameId: string;
   spielName: string;
   onSpielWechseln: () => void;
@@ -2898,6 +2354,7 @@ function DeckPicker({
   onRueckenChange: (cardBack: string) => void;
   onGekauft: () => void;
 }): React.JSX.Element {
+  const [frage, rueckfrage] = useRueckfrage();
   /**
    * Angetippt wird die Wahl sofort übernommen UND groß gezeigt: Ein Blatt in
    * Daumennagelgröße sagt nichts darüber, wie es am Tisch aussieht — und
@@ -2952,6 +2409,210 @@ function DeckPicker({
       .finally(() => setKauft(null));
   };
 
+  /**
+   * Ein Tipp auf Blatt, Rückseite oder Tisch.
+   *
+   * Was mir gehört, wird sofort eingestellt. Was nicht, wird nach der
+   * Rückfrage gekauft — und danach eingestellt, denn genau das war die Absicht
+   * des Tipps. Eine Stelle für altes und neues Hub, damit die beiden nicht
+   * unterschiedlich kaufen.
+   */
+  const waehle = (art: RegalWare['art'], id: string, name: string, setzen: () => void): void => {
+    if (gehoert(art, id)) {
+      setzen();
+      return;
+    }
+    const w = wareZu(art, id);
+    if (!w) return;
+    // Erspielt, nicht gekauft (Kartenruecken der Manufaktur): kein Kaufangebot.
+    if (w.nurErspielt) {
+      setKaufFehler(t('error.itemNurErspielt'));
+      return;
+    }
+    // Im neuen Hub die eigene Rückfrage statt des grauen iOS-Dialogs.
+    if (neu) {
+      frage(
+        { titel: `„${name}“ kaufen?`, text: `Kostet ${w.preis.coins.toLocaleString('de-DE')} Münzen.`, ja: `Für ${w.preis.coins.toLocaleString('de-DE')} Münzen kaufen` },
+        () => kaufen(w, setzen),
+      );
+      return;
+    }
+    if (!window.confirm(`„${name}" für ${w.preis.coins} Münzen kaufen?`)) return;
+    kaufen(w, setzen);
+  };
+  const waehleBlatt = (deck: Deck): void =>
+    waehle('blatt', deck.id, t(deck.nameKey), () => {
+      onChange(deck.id);
+      setVorschau(true);
+    });
+  const waehleRuecken = (r: (typeof RUECKEN)[number]): void =>
+    waehle('ruecken', r.id, r.name, () => onRueckenChange(r.id));
+  const waehleSzene = (s: (typeof SZENEN)[number]): void =>
+    waehle('szene', s.id, s.name, () => {
+      onSzeneChange(s.id);
+      setVorschau(true);
+    });
+
+  if (neu) {
+    /** Unterzeile einer Kachel: aktiv, gehört dir oder der Preis. */
+    const stand = (art: RegalWare['art'], id: string, aktiv: boolean): string => {
+      if (!gehoert(art, id)) {
+        const w = wareZu(art, id);
+        if (w?.nurErspielt) return 'In der Kartenmanufaktur erspielen';
+        return `${(w?.preis.coins ?? 0).toLocaleString('de-DE')} Münzen`;
+      }
+      return aktiv ? 'aktiv' : 'gehört dir';
+    };
+    const marke = (aktiv: boolean, mein: boolean): React.JSX.Element | null =>
+      aktiv && mein ? (
+        <span className="hb-ding-ok" aria-hidden="true">
+          ✓
+        </span>
+      ) : !mein ? (
+        <span className="hb-ding-schloss" aria-hidden="true">
+          <HbSymbol>
+            <rect x="5" y="11" width="14" height="9" rx="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+          </HbSymbol>
+        </span>
+      ) : null;
+    return (
+      <div className="hb-spiele hb-details">
+        <header className="hb-kopfzeile is-zurueck">
+          <Zurueck onClick={onSpielWechseln} label="Zurück zur Sammlung" />
+          {/* Welches Spiel gerade eingestellt wird, muss dabeistehen. */}
+          <span className="hb-kopf-titel">
+            <h1 className="hb-titel">{spielName}</h1>
+            <small>Blatt, Rückseite und Tisch · gilt auf allen Geräten</small>
+          </span>
+        </header>
+        <div className="hb-spiele-rolle">
+          {kaufFehler && <p className="hb-fehler">{kaufFehler}</p>}
+
+          <section className="hb-blk">
+            <h2 className="hb-ab">
+              Kartenblatt
+              <span className="hb-ab-zusatz">Antippen zeigt den Tisch</span>
+            </h2>
+            {/* Nur Blätter, die zu diesem Spiel passen: Ein Zauberblatt hat
+                keine Dame, ein Doppelkopfblatt keine Sieben. */}
+            <div className="hb-raster">
+              {decksFor(gameId).map((deck) => {
+                const mein = gehoert('blatt', deck.id);
+                const aktiv = deck.id === current;
+                return (
+                  <button
+                    type="button"
+                    key={deck.id}
+                    className={`hb-wahl${aktiv ? ' is-aktiv' : ''}${mein ? '' : ' is-zu'}`}
+                    aria-pressed={aktiv}
+                    disabled={kauft === wareZu('blatt', deck.id)?.id}
+                    onClick={() => waehleBlatt(deck)}
+                  >
+                    <span className="hb-wahl-bild is-blatt">
+                      <span className="hb-wahl-karten">
+                        {proben.map((card) => (
+                          <DeckSample card={card} deck={deck} key={card.id} />
+                        ))}
+                      </span>
+                      {marke(aktiv, mein)}
+                    </span>
+                    <strong>{t(deck.nameKey)}</strong>
+                    <small>{stand('blatt', deck.id, aktiv)}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Die Rückseite ist das, was die anderen sehen — deshalb steht sie
+              beim Blatt und nicht beim Tisch. */}
+          <section className="hb-blk">
+            <h2 className="hb-ab">
+              Rückseite
+              <span className="hb-ab-zusatz">Was die anderen sehen</span>
+            </h2>
+            <div className="hb-reihe">
+              {RUECKEN.map((r) => {
+                const mein = gehoert('ruecken', r.id);
+                const aktiv = r.id === ruecken;
+                return (
+                  <button
+                    type="button"
+                    key={r.id}
+                    className={`hb-ding${aktiv ? ' is-aktiv' : ''}${mein ? '' : ' is-zu'}`}
+                    aria-pressed={aktiv}
+                    disabled={kauft === wareZu('ruecken', r.id)?.id}
+                    onClick={() => waehleRuecken(r)}
+                  >
+                    <span
+                      className="hb-ding-bild is-ruecken"
+                      style={{
+                        backgroundImage: `url(${rueckenBild(r.id) ?? deckBack(deckById(current)) ?? '/hub/tab-blatt.webp'})`,
+                      }}
+                    >
+                      {marke(aktiv, mein)}
+                    </span>
+                    <strong>{r.name}</strong>
+                    <small>{stand('ruecken', r.id, aktiv)}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Der Tisch zeigt echte Karten: Auf einem zu dunklen Untergrund
+              verschwinden Kreuz und Pik, das soll man vorher sehen. */}
+          <section className="hb-blk">
+            <h2 className="hb-ab">
+              Tisch
+              <span className="hb-ab-zusatz">Nur du siehst ihn</span>
+            </h2>
+            <div className="hb-raster">
+              {SZENEN.map((s) => {
+                const mein = gehoert('szene', s.id);
+                const aktiv = s.id === szene;
+                return (
+                  <button
+                    type="button"
+                    key={s.id}
+                    className={`hb-wahl${aktiv ? ' is-aktiv' : ''}${mein ? '' : ' is-zu'}`}
+                    aria-pressed={aktiv}
+                    disabled={kauft === wareZu('szene', s.id)?.id}
+                    onClick={() => waehleSzene(s)}
+                  >
+                    <span className="hb-wahl-bild" style={{ backgroundImage: `url(${szeneBild(s.id)})` }}>
+                      <span className="hb-wahl-karten is-tisch">
+                        {proben.slice(0, 2).map((card) => (
+                          <DeckSample card={card} deck={deckById(current)} key={card.id} />
+                        ))}
+                      </span>
+                      {marke(aktiv, mein)}
+                    </span>
+                    <strong>{s.name}</strong>
+                    <small>{mein ? s.hinweis : stand('szene', s.id, aktiv)}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+
+        {vorschau && (
+          <TischVorschau
+            neu
+            gameId={gameId}
+            spielName={spielName}
+            deck={deckById(current)}
+            szene={szene}
+            onClose={() => setVorschau(false)}
+          />
+        )}
+        {rueckfrage}
+      </div>
+    );
+  }
+
   return (
     <HubSzene bg="/hub/bg-blatt.webp" className="front-blatt front-blatt--b">
       <HubBanner />
@@ -2982,25 +2643,7 @@ function DeckPicker({
                 key={deck.id}
                 aria-pressed={deck.id === current}
                 disabled={kauft === w?.id}
-                onClick={() => {
-                  if (mein) {
-                    onChange(deck.id);
-                    setVorschau(true);
-                    return;
-                  }
-                  if (!w) return;
-                  if (
-                    !window.confirm(
-                      `„${t(deck.nameKey)}" für ${w.preis.coins} Münzen kaufen?`,
-                    )
-                  ) {
-                    return;
-                  }
-                  kaufen(w, () => {
-                    onChange(deck.id);
-                    setVorschau(true);
-                  });
-                }}
+                onClick={() => waehleBlatt(deck)}
               >
                 <div className="hub-blatt-probe">
                   {proben.map((card) => (
@@ -3044,15 +2687,7 @@ function DeckPicker({
                 key={r.id}
                 aria-pressed={r.id === ruecken}
                 disabled={kauft === w?.id}
-                onClick={() => {
-                  if (mein) {
-                    onRueckenChange(r.id);
-                    return;
-                  }
-                  if (!w) return;
-                  if (!window.confirm(`„${r.name}" für ${w.preis.coins} Münzen kaufen?`)) return;
-                  kaufen(w, () => onRueckenChange(r.id));
-                }}
+                onClick={() => waehleRuecken(r)}
               >
                 <span className="pc pc--hand">
                   {/* „Zum Blatt passend" zeigt die Rueckseite des gewaehlten
@@ -3091,22 +2726,7 @@ function DeckPicker({
                 key={s.id}
                 aria-pressed={s.id === szene}
                 disabled={kauft === w?.id}
-                onClick={() => {
-                  // Was mir gehoert, wird sofort eingestellt. Was nicht,
-                  // wird gekauft — und danach eingestellt, denn genau das
-                  // war die Absicht des Tipps.
-                  if (mein) {
-                    onSzeneChange(s.id);
-                    setVorschau(true);
-                    return;
-                  }
-                  if (!w) return;
-                  if (!window.confirm(`„${s.name}" für ${w.preis.coins} Münzen kaufen?`)) return;
-                  kaufen(w, () => {
-                    onSzeneChange(s.id);
-                    setVorschau(true);
-                  });
-                }}
+                onClick={() => waehleSzene(s)}
               >
                 <span className="hub-szene-probe">
                   <img src={szeneBild(s.id)} alt="" draggable={false} />
@@ -3162,16 +2782,21 @@ function TischVorschau({
   deck,
   szene,
   onClose,
+  neu = false,
 }: {
   gameId: string;
   spielName: string;
   deck: Deck;
   szene: string;
   onClose: () => void;
+  /** Neues Hub: über den ganzen Bildschirm, mit Schließen-Knopf und Escape. */
+  neu?: boolean;
 }): React.JSX.Element {
   const hand = handFuer(gameId);
   const stich = hand.slice(0, 3);
   const szeneName = SZENEN.find((s) => s.id === szene)?.name ?? szene;
+
+  if (neu) return <TischVorschauNeu hand={hand} stich={stich} deck={deck} szene={szene} szeneName={szeneName} spielName={spielName} onClose={onClose} />;
 
   return (
     <div className="hub-vorschau" onClick={onClose}>
@@ -3215,6 +2840,78 @@ function TischVorschau({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Die große Vorschau im neuen Hub: dieselben drei Dinge wie oben (Untergrund,
+ * Stich, eigene Hand) in Tischgröße, aber über den ganzen Bildschirm — dort
+ * sitzt man am Ende auch. Der Kopf liegt auf einer Abdeckung mit mindestens
+ * 0,85 Deckkraft (DESIGN.md), weil unter ihm jeder Tisch liegen kann.
+ */
+function TischVorschauNeu({
+  hand,
+  stich,
+  deck,
+  szene,
+  szeneName,
+  spielName,
+  onClose,
+}: {
+  hand: { id: number; suit: string; rank: string }[];
+  stich: { id: number; suit: string; rank: string }[];
+  deck: Deck;
+  szene: string;
+  szeneName: string;
+  spielName: string;
+  onClose: () => void;
+}): React.JSX.Element {
+  useEscape(onClose);
+  return (
+    <ImHub>
+      <div className="hb-vorschau" role="dialog" aria-modal="true" aria-label={`Vorschau: ${t(deck.nameKey)} · ${szeneName}`}>
+        <img className="hb-vorschau-bg" src={szeneBild(szene)} alt="" draggable={false} />
+        <header className="hb-vorschau-kopf">
+          <span className="hb-vorschau-titel">
+            <span className="hb-label">So sieht dein {spielName}-Tisch aus</span>
+            <strong>
+              {t(deck.nameKey)} · {szeneName}
+            </strong>
+          </span>
+          <Schliessen onClick={onClose} />
+        </header>
+        <div className="hb-vorschau-tisch">
+          {/* Mitspieler oben: verdeckte Karten zeigen den Rücken des Blatts. */}
+          <div className="hub-vorschau-gegner">
+            {Array.from({ length: 5 }, (_, i) => (
+              <span className="hub-vorschau-ruecken" key={i}>
+                {deckRuecken(deck)}
+              </span>
+            ))}
+          </div>
+          <div className="hub-vorschau-stich">
+            {stich.map((card, i) => (
+              <span className={`hub-vorschau-karte at-${i}`} key={card.id}>
+                <DeckSample card={card} deck={deck} />
+              </span>
+            ))}
+          </div>
+          <div className="hub-vorschau-hand">
+            {hand.map((card) => (
+              <span className="hub-vorschau-karte" key={card.id}>
+                <DeckSample card={card} deck={deck} />
+              </span>
+            ))}
+          </div>
+        </div>
+        {/* Die Wahl gilt schon; „Passt" bestätigt nichts, es schließt nur. */}
+        <div className="hb-vorschau-fuss">
+          <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onClose}>
+            Passt
+          </button>
+        </div>
+      </div>
+    </ImHub>
   );
 }
 
@@ -3306,7 +3003,26 @@ function ProfilBild({
     }
   };
 
-  const src = me.avatarUrl ? `${me.avatarUrl}?v=${ver}` : null;
+  const src = me.avatarUrl ? `${serverAdresse(me.avatarUrl)}?v=${ver}` : null;
+
+  /*
+   * In der App nur anzeigen, nicht hochladen — bis es eine Moderation gibt.
+   * Ein eigenes Foto ist Nutzerinhalt, den alle am Tisch sehen, und Apple
+   * verlangt dafuer (1.2) eine Pruefung, die es noch nicht gibt. Wer auf der
+   * Webseite ein Bild gesetzt hat, sieht es hier trotzdem. Dasselbe auf der
+   * Webseite ohne `profilbild` im Umfang: Der Server nimmt dann keins an.
+   */
+  if (inApp || !imUmfang('profilbild')) {
+    return (
+      <span className="hub-profilbild">
+        {src ? (
+          <img src={src} alt="Profilbild" draggable={false} />
+        ) : (
+          <Pinguin getragen={me.avatar} groesse={3.2} titel="Profilbild" />
+        )}
+      </span>
+    );
+  }
 
   return (
     <label className={`hub-profilbild${busy ? ' is-busy' : ''}`} title="Profilbild ändern">
@@ -3331,3 +3047,32 @@ function ProfilBild({
   );
 }
 
+/** Rahmen des Shops: Überschrift und Guthaben über dem Inhalt. */
+function ShopRahmen({
+  coins,
+  gems,
+  children,
+}: {
+  coins: number;
+  gems: number;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <div className="hb-shop">
+      <header className="hb-kopfzeile">
+        <h1 className="hb-titel">Shop</h1>
+        <span className="hb-geld">
+          <span className="hb-pill" aria-label={`${coins} Münzen`}>
+            <img src="/hub/symbol-muenze.webp" alt="" />
+            {coins.toLocaleString('de-DE')}
+          </span>
+          <span className="hb-pill" aria-label={`${gems} Edelsteine`}>
+            <img src="/hub/symbol-edelstein.webp" alt="" />
+            {gems.toLocaleString('de-DE')}
+          </span>
+        </span>
+      </header>
+      <div className="hb-shop-rolle">{children}</div>
+    </div>
+  );
+}

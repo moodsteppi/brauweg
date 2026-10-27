@@ -16,6 +16,8 @@
 
 import type { BotLevel } from '@brauweg/game-api';
 
+import type { Haerte, Paket } from './inhalte/typen.js';
+
 // ---------------------------------------------------------------------------
 // Minispiele
 // ---------------------------------------------------------------------------
@@ -44,7 +46,28 @@ export type MinispielId =
   /** Entweder-oder: A oder B, die Minderheit trinkt. */
   | 'entweder'
   /** Wahrheit oder Pflicht: reihum, gemacht oder gekniffen. */
-  | 'wahrheitpflicht';
+  | 'wahrheitpflicht'
+  /*
+   * Die drei ohne Uhr (seit dem 22.09.2026, Robins Entscheidung "5+ neue
+   * Minispiele"). Ablauf und Begruendung in `ohne-uhr.ts`.
+   */
+  /** Kategorien-Battle: reihum laut etwas nennen, wer stockt, verliert. */
+  | 'kategorien'
+  /** Mehrheitsraten: selbst antworten und tippen, was die Mehrheit sagt. */
+  | 'mehrheit'
+  /** Regel-Karte: eine Regel, die zwei weitere Runden lang gilt. */
+  | 'regelkarte'
+  /*
+   * Die drei mit Uhr (seit dem 23.09.2026, Robins Entscheidung vom
+   * 22.09.2026). Die Uhr lebt auf dem SERVER (`phaseMs`), nicht im Client —
+   * Ablauf und Begruendung in `zeitdruck.ts`.
+   */
+  /** Bombe: reihum etwas nennen und weitergeben, bis sie verdeckt hochgeht. */
+  | 'bombe'
+  /** 10 Sekunden: einer nennt drei Dinge, die Runde urteilt. */
+  | 'zehnsekunden'
+  /** Koenigsbecher: reihum Karten ziehen, jede Karte ist eine Regel. */
+  | 'koenigsbecher';
 
 export const MINISPIELE: readonly MinispielId[] = [
   'imposter',
@@ -56,6 +79,12 @@ export const MINISPIELE: readonly MinispielId[] = [
   'schaetzen',
   'entweder',
   'wahrheitpflicht',
+  'kategorien',
+  'mehrheit',
+  'regelkarte',
+  'bombe',
+  'zehnsekunden',
+  'koenigsbecher',
 ];
 
 function istMinispiel(x: unknown): x is MinispielId {
@@ -70,8 +99,13 @@ export { istMinispiel };
 
 export interface PartykisteRegeln {
   /**
-   * Welche Minispiele im Turnier vorkommen duerfen, in der Reihenfolge, in der
-   * sie reihum drankommen. Mindestens eines.
+   * Welche Minispiele im Turnier vorkommen duerfen. Mindestens eines.
+   *
+   * Seit dem 27.09.2026 eine Menge, keine Reihenfolge mehr (Robin: an- und
+   * ausklicken wie die Doppelkopf-Regeln, „dann ist Zufall"): Die Runden
+   * ziehen aus einem Mischbeutel, jedes Spiel einmal je Mischung und nie
+   * dasselbe zweimal hintereinander (`minispielFolge` in partie.ts). Die
+   * Reihenfolge der Liste aendert daran nichts ausser der Saat-Mischung.
    */
   readonly minispiele: readonly MinispielId[];
   /**
@@ -88,16 +122,144 @@ export interface PartykisteRegeln {
    * 1 = gemuetlich, 2 = normal, 3 = kurzer Abend.
    */
   readonly schluckFaktor: number;
+  /**
+   * Textschaerfe der Inhalte: 1 harmlos, 2 pikant, 3 derb.
+   *
+   * Seit dem 27.09.2026 (Robin: „es soll nur die Stufen haben, oder man macht
+   * gemischt an, dann ist zufaellig aus allen") haengt die Bedeutung an
+   * `inhaltsMischung`: bei „genau" GENAU diese Stufe, bei „gemischt" alle
+   * Stufen bis hierher, bunt gemischt. Bis dahin war der Wert eine
+   * Obergrenze — ein derber Tisch bekam auch Harmloses, und weil die Kataloge
+   * zu 60 % harmlos sind, praktisch vor allem das. Ein harmloser Tisch bekommt
+   * in keiner Lesart je einen derben Spruch.
+   *
+   * Heisst absichtlich nicht einfach "Haerte": `schluckFaktor` steht im
+   * Bildschirm schon als „Härte" und meint die Schluckzahl. Zwei Regler
+   * mit derselben Beschriftung nebeneinander — einer fuer Glaeser, einer fuer
+   * Texte — stellt niemand richtig ein, und die Beschwerde kaeme erst nach
+   * dem ersten derben Spruch am Firmenabend. Der Bildschirm nennt diesen
+   * hier deshalb NICHT „Härte" (Entscheidung vom 22.09.2026: harmlos /
+   * pikant / derb).
+   *
+   * Stufe 3 gibt es nur an Tischen ohne Gast: Ein Gastkonto entsteht ohne
+   * Mail und ohne Altersangabe, und "derb" ist nichts fuer Leute, von denen
+   * niemand weiss, wie alt sie sind. Die Kappung macht `erzeugePartie`, weil
+   * erst beim Start feststeht, wer sitzt.
+   */
+  readonly inhaltsHaerte: Haerte;
+  /**
+   * Wie `inhaltsHaerte` gelesen wird (seit dem 27.09.2026):
+   *
+   *   genau     nur Inhalte genau dieser Stufe. Hat der Katalog dort zu
+   *             wenig, kommen DANACH die der naechst milderen — nie derbere
+   *             (`inhaltsStapel` in inhalte/stapel.ts).
+   *   gemischt  Zufall aus allen Stufen bis `inhaltsHaerte`, und zwar je
+   *             STUFE gleich oft, nicht je Eintrag — sonst waere „gemischt"
+   *             wieder fast nur harmlos, der Fehler von oben. Der Bildschirm
+   *             schickt dafuer `inhaltsHaerte: 3` (Gast: 2).
+   *
+   * FEHLT DAS FELD, gilt die alte Lesart: Obergrenze wie bis zum 27.09.2026,
+   * Eintrag fuer Eintrag aus allem bis zur Stufe (`inhaltsLesart` → 'bis').
+   * Das ist Absicht und keine Bequemlichkeit: Ohne das Feld kommen nur
+   * Regelsaetze, die vor der Umstellung entstanden sind — ein wartender Tisch,
+   * dessen Oeffner „derb" noch als „bis derb" eingestellt hat, und vor allem
+   * der Snapshot einer LAUFENDEN Partie. Laese man den ploetzlich als
+   * „genau", zoege die naechste Runde aus einem anderen Stapel, und eine schon
+   * gespielte Frage koennte wiederkommen. So spielt jede alte Partie genau
+   * weiter, wie sie begann; neue Tische bekommen das Feld aus
+   * `defaultConfig()` bzw. vom Bildschirm. Bei „harmlos" sind alle drei
+   * Lesarten ohnehin dasselbe.
+   *
+   * In der Eskalation zaehlt das Feld nicht: Die Kurve nimmt schon seit dem
+   * 23.09.2026 genau die Stufe ihres Drittels und weicht nur nach unten aus
+   * (`belegeStufenweise` in modi.ts).
+   */
+  readonly inhaltsMischung?: InhaltsMischung;
+  /**
+   * Themenpaket als Zielgruppe — null heisst: alles. Ein gesetztes Paket
+   * bevorzugt seine Inhalte, laesst Allgemeingut zu und blendet aus, was
+   * nur fuer ANDERE Pakete gedacht ist (Stufen in `inhalte/filter.ts`).
+   */
+  readonly paket: Paket | null;
+  /**
+   * Wie der Abend gespielt wird (seit dem 22.09.2026, Robins Entscheidung):
+   * das klassische Turnier oder einer der drei Modi aus `modi.ts`.
+   *
+   * Optional, und das ist dieselbe Nachsicht wie bei `inhaltsHaerte` und
+   * `paket`: Jeder Tisch von davor, jeder Snapshot und der Bildschirm, der
+   * die Moduswahl noch nicht kennt, schicken das Feld nicht. Fehlt = Turnier.
+   * Gelesen wird es deshalb nie direkt, sondern ueber `modusVon`.
+   */
+  readonly modus?: Spielmodus;
+}
+
+/**
+ * Die Spielmodi. Neue kommen hinten dazu, Kennungen aendern sich nie — sie
+ * stehen in abgelegten Regelsaetzen. Schnellrunde und Marathon sind bewusst
+ * NICHT dabei (Entscheidung vom 22.09.2026): Die Rundenzahl stellt man
+ * ohnehin ein, ein Modus dafuer waere ein zweiter Regler fuer dieselbe Zahl.
+ */
+export type Spielmodus =
+  /** Jeder fuer sich, Inhaltsstufe und Haerte fest — wie bis zum 22.09.2026. */
+  | 'turnier'
+  /** Inhaltsstufe und Haerte steigen ueber die Runden, in drei Dritteln. */
+  | 'eskalation'
+  /** Ein Themenpaket bestimmt Inhalte UND Minispiele. */
+  | 'themenabend'
+  /** Zwei Lager, die Punkte zaehlen fuers Lager. */
+  | 'team';
+
+export const SPIELMODI: readonly Spielmodus[] = ['turnier', 'eskalation', 'themenabend', 'team'];
+
+export function istSpielmodus(x: unknown): x is Spielmodus {
+  return typeof x === 'string' && (SPIELMODI as readonly string[]).includes(x);
+}
+
+/** Die beiden Lesarten, die ein Regelsatz ausdruecklich waehlen kann. Kennungen aendern sich nie. */
+export type InhaltsMischung = 'genau' | 'gemischt';
+export const INHALTS_MISCHUNGEN: readonly InhaltsMischung[] = ['genau', 'gemischt'];
+
+export function istInhaltsMischung(x: unknown): x is InhaltsMischung {
+  return x === 'genau' || x === 'gemischt';
+}
+
+/**
+ * Wie ein Regelsatz seine Inhaltsstufe meint — dazu die dritte, alte Lesart
+ * 'bis' (Obergrenze) fuer Regelsaetze ohne das Feld. Begruendung an
+ * `PartykisteRegeln.inhaltsMischung`. Gelesen wird das Feld nur hierueber.
+ */
+export type InhaltsLesart = InhaltsMischung | 'bis';
+
+export function inhaltsLesart(regeln: { readonly inhaltsMischung?: unknown }): InhaltsLesart {
+  const roh = regeln.inhaltsMischung;
+  return istInhaltsMischung(roh) ? roh : 'bis';
 }
 
 export const DEFAULT_REGELN: PartykisteRegeln = {
   minispiele: MINISPIELE,
   trinkmodus: true,
   schluckFaktor: 1,
+  inhaltsHaerte: 1,
+  inhaltsMischung: 'genau',
+  paket: null,
+  modus: 'turnier',
 };
 
 export const SCHLUCK_FAKTOR_MIN = 1;
 export const SCHLUCK_FAKTOR_MAX = 3;
+
+export const INHALTS_HAERTE_MIN: Haerte = 1;
+export const INHALTS_HAERTE_MAX: Haerte = 3;
+export const INHALTS_HAERTE_VORGABE: Haerte = 1;
+/**
+ * Hoechste Textschaerfe, sobald ein Gast am Tisch sitzt. Zwei, nicht eins:
+ * "pikant" ist Kneipenniveau, fuer das niemand einen Ausweis braucht.
+ */
+export const INHALTS_HAERTE_GAST_MAX: Haerte = 2;
+
+export function istHaerte(x: unknown): x is Haerte {
+  return x === 1 || x === 2 || x === 3;
+}
 
 /**
  * Zulaessige Sitzzahlen: 4 bis 12.
@@ -144,13 +306,91 @@ export const ZUGZEIT_MS = 5 * 60_000;
  */
 export const BOT_TAKT_MS = 220;
 
+/**
+ * Kategorien-Battle: Nach so vielen Runden um den Tisch ist eine Kategorie
+ * leergespielt, und die Runde endet ohne Verlierer.
+ *
+ * Ohne Deckel liefe ein Tisch, an dem niemand stockt, ewig — und ein Tisch
+ * voller Bots tut genau das, wenn der Zufall es will. Vier Runden sind zu
+ * zwoelft 48 Nennungen; eine Kategorie, die das hergibt, hat die Runde
+ * verdient gewonnen.
+ */
+export const KATEGORIEN_RUNDEN_UM_DEN_TISCH = 4;
+
+/**
+ * Regel-Karte: Die gezogene Regel gilt bis zum Ende der Runde X + 2 (X ist
+ * die Runde der Karte). Zwei Runden, weil eine Regel erst dann Spass macht,
+ * wenn man sie beim NAECHSTEN Minispiel vergisst — und nach drei haette sie
+ * jeder im Blut.
+ */
+export const REGEL_KARTE_DAUER = 2;
+
+/*
+ * Die Uhren der drei Zeitdruck-Minispiele (zeitdruck.ts). Gemessen werden sie
+ * von der PLATTFORM (`phaseMs` in game-api); hier stehen nur die Dauern. Jede
+ * liegt weit unter der Zugzeit (ZUGZEIT_MS) — die Frist ist also immer der
+ * fruehere Weckruf und nimmt dem Menschen keine Zugzeit weg, die er sonst
+ * haette: Sie gilt nur in genau den Phasen, die ohne Uhr gar kein Spiel waeren.
+ */
+
+/**
+ * Bombe: kuerzeste und laengste Zuendzeit. Gezogen aus der Saat, VERDECKT —
+ * sie steht in keiner Sicht, und die Plattform schickt die Frist nicht mit
+ * (`phaseHidden`). Acht Sekunden, damit wenigstens zwei, drei Leute
+ * drankommen; fuenfundzwanzig, damit die Runde nicht zum Warten wird.
+ */
+export const BOMBE_MIN_MS = 8_000;
+export const BOMBE_MAX_MS = 25_000;
+/** In diesen Schritten wird die Zuendzeit gezogen — eine halbe Sekunde reicht als Streuung. */
+export const BOMBE_SCHRITT_MS = 500;
+
+/**
+ * Bombe: Reissleine in Weitergaben, fuer Umgebungen OHNE Uhr (Tests,
+ * Vertrag, Schaukasten). Am echten Tisch kommt sie nie zum Zug: Bots geben im
+ * Takt von BOT_TAKT_MS weiter, das sind in fuenfundzwanzig Sekunden gut 110
+ * Weitergaben — Menschen schaffen weit weniger. Ohne sie haenge eine Partie
+ * voller Bots, die niemand mit einer Uhr treibt, fuer immer in der Bombe.
+ */
+export const BOMBE_WEITERGABEN_HOECHST = 200;
+
+/** 10 Sekunden: so lange hat der Sprecher. Der Name des Spiels ist die Zahl. */
+export const ZEHN_SEKUNDEN_MS = 10_000;
+
+/** 10 Sekunden: so viele Dinge muss der Sprecher nennen. */
+export const ZEHN_SEKUNDEN_ANZAHL = 3;
+
+/**
+ * Koenigsbecher: so lange haben alle nach einer Sieben, um „Hand hoch" zu
+ * tippen. Wer bis dahin nicht getippt hat, war zu langsam.
+ */
+export const KOENIGSBECHER_HAND_MS = 5_000;
+
+/**
+ * Koenigsbecher: so viele Karten zieht jeder Anwesende in einer Runde. Zwei
+ * Runden um den Tisch — zu zwoelft 24 Karten, fast der halbe Stapel; mehr
+ * waere eine Runde, die das ganze Turnier aufhaelt.
+ */
+export const KOENIGSBECHER_KARTEN_JE_SITZ = 2;
+
+/**
+ * Obergrenze fuer JEDE Phasenfrist der Kiste — derselbe Gedanke wie der Deckel
+ * von `meta.zugzeitMs` (ZUGZEIT_HOECHST_MS in game-api): Eine Frist, die
+ * laenger liefe als die Zugzeit, waere keine Frist mehr, sondern eine zweite
+ * Zugzeit, und die gibt es schon.
+ */
+export const PHASE_HOECHST_MS = 30_000;
+
 // ---------------------------------------------------------------------------
 // Aktionen
 // ---------------------------------------------------------------------------
 
 export type PartykisteAktion =
-  /** Karte gesehen, Ergebnis gelesen — der allgemeine "Weiter"-Tipp. */
-  | { readonly art: 'bereit' }
+  /**
+   * Karte gesehen, Ergebnis gelesen — der allgemeine "Weiter"-Tipp.
+   * `vertreten` setzt nur der Bot (bot.ts): Tippt er nach der Zugzeit fuer
+   * einen Menschen, gibt es keinen Wurf fuer den Letzten (weiter-warten.ts).
+   */
+  | { readonly art: 'bereit'; readonly vertreten?: boolean }
   /** Verdacht (Imposter) bzw. Wahl eines Mitspielers ("Wer wuerde eher"). */
   | { readonly art: 'stimme'; readonly ziel: number }
   /** Imposter: statt zu stimmen noch eine Rederunde verlangen. */
@@ -170,7 +410,50 @@ export type PartykisteAktion =
   /** Wahrheit oder Pflicht, Schritt 1: was soll es sein? */
   | { readonly art: 'wahl'; readonly pflicht: boolean }
   /** Wahrheit oder Pflicht, Schritt 2: gemacht (true) oder gekniffen. */
-  | { readonly art: 'erledigt'; readonly ja: boolean };
+  | { readonly art: 'erledigt'; readonly ja: boolean }
+  /** Kategorien-Battle: Der Sitz am Zug hat laut etwas genannt. */
+  | { readonly art: 'genannt' }
+  /** Kategorien-Battle: Der Sitz am Zug stockt oder hat gedoppelt — selbst gemeldet. */
+  | { readonly art: 'gestockt' }
+  /**
+   * Kategorien-Battle: Einspruch gegen `ziel` — den Sitz am Zug oder den, der
+   * zuletzt genannt hat. Die Mehrheit der Menschen entscheidet.
+   */
+  | { readonly art: 'einspruch'; readonly ziel: number }
+  /** Mehrheitsraten: die eigene Antwort und der Tipp auf die Mehrheit, je 0 = A, 1 = B. */
+  | { readonly art: 'mehrheitstipp'; readonly eigene: number; readonly tipp: number }
+  /**
+   * Regel-Karte: ein Verstoss gegen die geltende Regel. `ziel` = der eigene
+   * Sitz ist eine Selbstmeldung, jeder andere eine Anklage (zaehlt erst mit
+   * der Mehrheit). Geht in JEDER Runde, solange die Regel gilt.
+   */
+  | { readonly art: 'verstoss'; readonly ziel: number }
+  /**
+   * Team-Abend, vor der ersten Runde: Der Tischoeffner setzt einen Sitz ins
+   * andere Lager. Nur waehrend der Aufstellung (`partie.aufstellung`).
+   */
+  | { readonly art: 'lagerwechsel'; readonly sitz: number }
+  /*
+   * Die drei mit Uhr (zeitdruck.ts). Koenigsbecher "2 = du waehlst" nimmt die
+   * vorhandene `stimme` — es ist dieselbe Geste: auf einen Mitspieler zeigen.
+   */
+  /** Bombe: Der Sitz am Zug hat laut etwas genannt und gibt weiter. */
+  | { readonly art: 'weitergeben' }
+  /** 10 Sekunden: Der Sprecher ist durch, bevor die Uhr ablaeuft. */
+  | { readonly art: 'fertig' }
+  /** 10 Sekunden: das Urteil eines Richters — geschafft oder nicht. */
+  | { readonly art: 'urteil'; readonly geschafft: boolean }
+  /** Koenigsbecher: der Sitz am Zug zieht die naechste Karte. */
+  | { readonly art: 'ziehen' }
+  /** Koenigsbecher nach einer Sieben: Hand hoch — wer zuletzt tippt, kassiert. */
+  | { readonly art: 'hochzeigen' }
+  /**
+   * Koenigsbecher: die gezogene Karte auf die Flasche legen. `versatz` ist,
+   * wo sie landet: -1 ganz links am Flaschenhals, 0 genau mittig, 1 ganz
+   * rechts. Der Bildschirm misst ihn am Pendel beim Tippen; ob der Stapel
+   * haelt, rechnet das Modul (`flascheHaelt` in zeitdruck.ts).
+   */
+  | { readonly art: 'legen'; readonly versatz: number };
 
 // ---------------------------------------------------------------------------
 // Punkte und Schluecke
@@ -203,7 +486,40 @@ export const PUNKTE = {
   entwederMehrheit: 1,
   /** Wahrheit oder Pflicht: durchgezogen. */
   wahrheitpflichtGemacht: 2,
+  /** Kategorien-Battle: nicht gestockt. Klein, wie bei den Trinkrunden. */
+  kategorienDurch: 1,
+  /** Mehrheitsraten: die Mehrheit richtig getippt — schwerer als nur zu waehlen. */
+  mehrheitRichtig: 2,
+  /** Regel-Karte: die ganze Geltung ohne Verstoss ueberstanden. */
+  regelSauber: 1,
+  /** Bombe: nicht in der Hand gehabt, als sie hochging. Klein wie bei Kategorien. */
+  bombeUeberlebt: 1,
+  /** 10 Sekunden: in der Zeit geschafft, so hat die Runde geurteilt. */
+  zehnGeschafft: 2,
+  /** Koenigsbecher: die ganze Runde ohne Schluck. Eine Trinkrunde, also klein. */
+  koenigsbecherSauber: 1,
+  /** Koenigsbecher: die Neun, die Glueckskarte. */
+  koenigsbecherGlueck: 1,
 } as const;
+
+/**
+ * Flaschenstapel im Koenigsbecher (Emile, 13.10.2026): Jede gezogene Karte
+ * wird auf die Flasche gelegt. Wie wacklig er ist, steht hier.
+ *
+ * - FLASCHE_RAND: Liegt eine Karte weiter aussen, verfehlt sie den Hals.
+ * - Der Schwerpunkt des Stapels (Mittel aller Versaetze) darf hoechstens
+ *   FLASCHE_GRENZE_START von der Mitte weg sein; mit jeder weiteren Karte
+ *   wird das um FLASCHE_GRENZE_JE_KARTE enger, nie enger als
+ *   FLASCHE_GRENZE_MIN. Ein hoher Turm faellt also leichter.
+ * - FLASCHE_RUTSCH: Wie weit eine Karte neben der obersten liegen darf,
+ *   bevor sie abrutscht und den Stapel mitreisst.
+ */
+export const FLASCHE_RAND = 0.9;
+export const FLASCHE_GRENZE_START = 0.5;
+export const FLASCHE_GRENZE_JE_KARTE = 0.05;
+export const FLASCHE_GRENZE_MIN = 0.15;
+export const FLASCHE_RUTSCH = 0.8;
+export const FLASCHE_HOECHST_KARTEN = 6;
 
 export const SCHLUECKE = {
   /** Quiz: falsch geantwortet oder gar nicht. */
@@ -228,6 +544,28 @@ export const SCHLUECKE = {
   entwederMinderheit: 1,
   /** Wahrheit oder Pflicht: gekniffen. */
   wahrheitpflichtGekniffen: 2,
+  /** Kategorien-Battle: gestockt, gedoppelt oder von der Mehrheit benannt. */
+  kategorienVerloren: 2,
+  /** Mehrheitsraten: daneben getippt — bei Gleichstand alle. */
+  mehrheitDaneben: 1,
+  /** Regel-Karte: je Verstoss. */
+  regelVerstoss: 1,
+  /** Bombe: in der Hand gehabt, als sie hochging. */
+  bombeHochgegangen: 2,
+  /** 10 Sekunden: nicht geschafft. */
+  zehnNichtGeschafft: 2,
+  /** Koenigsbecher: je Karte, die einen trifft (Ass, 2, 3, 4, 5, 8, zu langsam bei der 7). */
+  koenigsbecherKarte: 1,
+  /** Koenigsbecher: je Koenig im Becher — ihn bekommt, wer den letzten Koenig der Runde zieht. */
+  koenigsbecherJeKoenig: 1,
+  /** Wer beim „Weiter" zuletzt tippt — mit 50 % (weiter-warten.ts). */
+  letzterBeimWeiter: 1,
+  /**
+   * Koenigsbecher: je Karte, die mit dem Flaschenstapel herunterfaellt — an
+   * den, der ihn umgeworfen hat (Emile, 13.10.2026). Gedeckelt bei
+   * FLASCHE_HOECHST_KARTEN, sonst waere ein hoher Turm ein Gelage.
+   */
+  koenigsbecherFlascheJeKarte: 1,
 } as const;
 
 // ---------------------------------------------------------------------------

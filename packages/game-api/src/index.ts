@@ -161,7 +161,14 @@ export type GameId =
    * ist deshalb immer null, `legalActions` leer, und `standings` setzt alle
    * auf Platz 1: Wer hier eine Rangfolge einzieht, baut ein anderes Spiel.
    */
-  | 'brocooked';
+  | 'brocooked'
+  /**
+   * BroChess: klassisches Schach zu zweit. Anders als die Duelle davor haelt
+   * es sich an JEDE Annahme der Schnittstelle — feste Zugfolge, und
+   * `legalActions` zaehlt jeden legalen Zug einzeln auf, auch jede
+   * Umwandlung. Der Bildschirm hebt daraus die Zielfelder hervor.
+   */
+  | 'brochess';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby
@@ -185,9 +192,11 @@ export interface GameMeta {
   suggestedRounds(seats: number): readonly number[];
   /**
    * xpBasis zaehlt gelegte Karten — nur dann speist sie die Kartenaufgaben
-   * des Tages. Fehlt das Feld, gilt ja (alle Kartenspiele). Feldherr setzt
-   * nein: Seine xpBasis ist die Partiedauer, und die als "gelegte Karten"
-   * zu zaehlen hiesse, die Kartenaufgabe mit jedem Gefecht zu fuellen.
+   * des Tages. Fehlt das Feld, gilt ja — gedacht fuer die Kartenspiele, und
+   * nur sie zaehlen Karten. Jedes andere Modul setzt ausdruecklich nein, weil
+   * seine xpBasis etwas anderes misst: bei Feldherr etwa die Partiedauer, und
+   * die als "gelegte Karten" zu zaehlen hiesse, die Kartenaufgabe mit jedem
+   * Gefecht zu fuellen. Wer ein neues Spiel ohne Karten anlegt, setzt nein.
    */
   readonly xpBasisZaehltKarten?: boolean;
   /**
@@ -224,6 +233,19 @@ export interface GameMeta {
    * (Grundsatz 4: der Regelsatz enthaelt keinen Geldbeutel).
    */
   readonly chipStackField?: string;
+  /**
+   * Der Regelsatz darf sich in der Lobby noch aendern (seit dem 22.09.2026,
+   * zuerst fuer die Bahnauswahl von Golf). Fehlt das Feld, gilt nein: Der
+   * Regelsatz steht ab dem Anlegen des Tisches fest, wie bisher.
+   *
+   * Opt-in und nicht fuer alle, weil ein Regelsatz mehr sein kann als
+   * Spielregeln — beim Poker haengt am Chip-Feld der Einsatz, den die
+   * Plattform beim Beitritt schon geprueft hat. Wer das Feld setzt, sagt zu,
+   * dass jeder gueltige Regelsatz fuer die schon Sitzenden zumutbar ist.
+   * Aendern darf nur, wer auf Sitz 0 sitzt, und nur solange der Tisch
+   * wartet (`setzeTischregeln` im Server).
+   */
+  readonly regelnInDerLobby?: boolean;
   /**
    * Obergrenze fuer die Pause der Plattform zwischen zwei Botzuegen.
    *
@@ -332,6 +354,17 @@ export interface CreatePartyOptions<TConfig> {
    * die daraus schon beim Aufbau etwas ableiten muessen.
    */
   readonly botLevel?: BotLevel;
+  /**
+   * Plaetze, auf denen ein GASTKONTO sitzt (Konto ohne Mail und ohne
+   * Altersangabe, `account.gastSeit`).
+   *
+   * Seit dem 22.09.2026 fuer die Partykiste: Ihre Inhaltsstufe "derb" gibt
+   * es nur an Tischen ohne Gast, und wer sitzt, steht erst beim Start fest —
+   * also hier, nicht in der eingefrorenen `config`. Fehlt das Feld, sitzt
+   * kein Gast am Tisch oder die Laufzeit weiss es nicht; ein Modul, das die
+   * Auskunft braucht, muss dann die strengere Seite waehlen.
+   */
+  readonly gastSeats?: readonly number[];
 }
 
 // ---------------------------------------------------------------------------
@@ -370,6 +403,18 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    */
   validateConfig(config: unknown, seats: number, rounds: number): ConfigProblem[];
 
+  /**
+   * Daten, die ein Bildschirm VOR der Partie braucht, um den Regelsatz
+   * einstellen zu lassen — bei Golf die Kurse und die Themen je Bahn. Der
+   * Server reicht sie unbesehen als `lobby` in `GET /api/games/:id/defaults`
+   * durch. Es gibt sie, damit der Client solche Listen nicht abschreibt
+   * (CLAUDE.md: „Was das Modul weiss, schreibt der Client nicht ab"); vor der
+   * Partie gibt es noch keine Sicht, in die sie gehoeren koennten.
+   *
+   * Optional; muss JSON-tauglich sein.
+   */
+  lobbyDaten?(): unknown;
+
   // -- Ablauf ---------------------------------------------------------------
 
   createParty(options: CreatePartyOptions<TConfig>): TParty;
@@ -379,6 +424,25 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    * wenn der Client sie schon geprueft hat. Wirft bei Regelverstoss.
    */
   act(party: TParty, seat: number, action: TAction): TParty;
+
+  /**
+   * Die Aktion eines GERAETS, bevor `act` sie sieht — fuer Felder, die nur
+   * der Bot-Weg setzen darf.
+   *
+   * Seit dem 13.10.2026 fuer die Partykiste: Das „Weiter" des Bots traegt
+   * `vertreten`, und daran erkennt das Modul den Zeitablauf (kein Wurf fuer
+   * den Letzten). `act` selbst sieht nicht, ob ein Mensch oder der Bot
+   * geschickt hat, und das Modul weiss nur von dauerhaften Bot-Sitzen, nicht
+   * von der Uebernahme nach der Zugzeit. Ohne diesen Schritt trank ein
+   * Geraet, das die Marke mitschickte, als Letzter nie.
+   *
+   * Die Plattform ruft es fuer jede Aktion, die ueber die Leitung kommt, und
+   * fuer keine Bot-Aktion. Weil die Aktion dort noch ungeprueft ist, muss das
+   * Modul auch Unsinn heil durchreichen — abweisen ist Sache von `act`.
+   *
+   * Optional: Fehlt es, geht die Aktion unveraendert an `act`.
+   */
+  vomGeraet?(action: TAction): TAction;
 
   /** Sitz, der am Zug ist, oder null wenn gerade niemand handeln muss. */
   currentActor(party: TParty): number | null;
@@ -458,8 +522,53 @@ export interface GameModule<TParty, TAction, TView, TConfig> {
    */
   phaseKey?(party: TParty): string | number | null;
 
+  /**
+   * Bleibt die Frist der laufenden Phase auf dem Server? true heisst: Die
+   * Plattform misst sie wie jede andere, schickt `phaseDeadline` aber als null
+   * an alle Geraete — Spieler wie Zuschauer.
+   *
+   * Seit dem 23.09.2026 fuer die Bombe der Partykiste: Dort IST die Restzeit
+   * das Spiel. Wer sie kennt, gibt kurz vor Schluss nicht mehr weiter, und die
+   * Sicht allein hilft nicht, weil die Frist neben ihr ueber die Leitung geht
+   * (`viewFor` in runtime/party.ts). Ein Modul, das sie verdecken will, muss
+   * es deshalb hier sagen, nicht in `viewFor`.
+   *
+   * Optional und nur zusammen mit `phaseMs` sinnvoll. Fehlt es, geht die
+   * Frist mit — der Normalfall, denn meist SOLL man sie sehen (Tafelrunde).
+   */
+  phaseHidden?(party: TParty): boolean;
+
   /** Beendet die laufende Phase nach Ablauf der Frist. */
   advancePhase?(party: TParty): TParty;
+
+  /**
+   * Schachuhr: ein Zeitkonto je Sitz statt einer Zugzeit, die bei jedem Zug
+   * neu anfaengt. Seit dem 22.10.2026 fuer BroChess (Bullet, Blitz, Rapid).
+   *
+   * Die Arbeit ist geteilt wie ueberall: Die Plattform MISST — sie weiss,
+   * seit wann der Sitz am Zug ist, und weckt sich, wenn sein Konto leer ist.
+   * Das Modul REGELT — wie viel Zeit es gibt, wann der Zuschlag kommt (das
+   * ist Teil von `act`) und was ein Zeitablauf heisst (Verlust, oder Remis,
+   * wenn der Gegner gar nicht mattsetzen koennte). Ein Modul hat ja keine
+   * Uhr (Grundsatz oben); es bekommt die verbrauchte Zeit als Zahl.
+   *
+   * Solange `restMs` eine Zahl liefert, gilt fuer diesen Sitz KEINE Zugzeit
+   * und keine Bot-Uebernahme nach Ablauf: Wer am Schachbrett die Zeit
+   * ueberschreitet, verliert, statt dass ein Bot fuer ihn zieht.
+   *
+   * Optional: Fehlt es oder liefert `restMs` null, laeuft die Zugzeit wie
+   * bei jedem anderen Spiel.
+   */
+  schachuhr?: {
+    /** Restzeit des Sitzes vor dem laufenden Zug in ms, null = ohne Uhr. */
+    restMs(party: TParty, seat: number): number | null;
+    /**
+     * Bucht verbrauchte Zeit ab. Ist das Konto damit leer, beendet das Modul
+     * die Partie nach seinen Regeln — die Plattform erkennt das an
+     * `isFinished` und wirft die Aktion, die zu spaet kam, weg.
+     */
+    verbrauche(party: TParty, seat: number, ms: number): TParty;
+  };
 
   standings(party: TParty): PartyStanding[];
 

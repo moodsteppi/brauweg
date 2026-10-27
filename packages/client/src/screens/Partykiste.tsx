@@ -1,10 +1,38 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, type Me } from '../api';
-import { MINISPIEL_ANSAGE, MINISPIEL_NAME, type PartyAktion, type PartykisteSicht } from '../minispiele/partykiste/sicht';
-import { Runde, Wartet, namenFuer } from '../minispiele/partykiste/Runden';
+import { tischFehler, useInhaltsSperren } from '../inhaltspakete';
+import { PartyAuswahl, usePartyAuswahl } from '../minispiele/partykiste/Auswahl';
+import { Einstellungen, OffeneRunde, Regler, type Angebot } from '../minispiele/partykiste/Einstellungen';
+import { AufstellungSeite } from '../minispiele/partykiste/Lager';
+import { LetzterSchicht, useNeuerWurf } from '../minispiele/partykiste/LetzterWurf';
+import { LobbyRegelzeile, RegelsatzKontext, Regelzeile } from '../minispiele/partykiste/Regelzeile';
+import { Runde } from '../minispiele/partykiste/Runden';
+import { Szene } from '../minispiele/partykiste/Szene';
+import { AktiveRegel } from '../minispiele/partykiste/RundenOhneUhr';
+import { PasstNicht } from '../minispiele/partykiste/PasstNicht';
+import {
+  MINISPIEL_NAME,
+  ansageFuer,
+  liesRegelsatz,
+  type PartyAktion,
+  type PartyMinispiel,
+  type PartyRegelsatz,
+  type PartykisteSicht,
+} from '../minispiele/partykiste/sicht';
+import { binReihumDran, useTischwache } from '../minispiele/partykiste/useTischwache';
+import { Abrechnung, Tabelle } from '../minispiele/partykiste/Wertung';
+import { Beitrittscode } from '../minispiele/partykiste/Beitrittscode';
+import { Einladung } from '../minispiele/partykiste/Einladung';
+import { einzelKennung, einzelName, tischPasst } from '../minispiele/partykiste/einzelspiele';
+import { MitspielerMelden } from '../melden/MeldenBlatt';
 import type { BotLevel, SeatInfo } from '../protocol';
+import { GastHinweis } from '../tisch/GastHinweis';
 import { useTable } from '../useTable';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+
+/** Das Lila der Partykiste bleibt im neuen Hub ihr Akzent (`--lila`). */
+const PARTY_AKZENT = '#a678f2';
 
 /**
  * Partykiste — ein Turnier aus Partyminispielen fuer 4 bis 12 Leute.
@@ -22,13 +50,16 @@ import { useTable } from '../useTable';
  *
  * Die Wertung läuft über das ganze Turnier (`sicht.tabelle`), die Schlücke
  * stehen daneben und zählen nicht mit — wer den Trinkmodus ausschaltet, spielt
- * sonst ein anderes Spiel.
+ * sonst ein anderes Spiel. Ausgeschaltet heißen sie Strafpunkte; gezählt wird
+ * genauso (seit dem 22.09.2026 auch sichtbar, vorher blendete der Schalter die
+ * Zahl nur aus).
  */
 
 const SCHLUESSEL_RUNDEN = 'partykiste.runden';
 const SCHLUESSEL_BOTS = 'partykiste.bots';
 const SCHLUESSEL_STUFE = 'partykiste.botstufe';
 const SCHLUESSEL_HAERTE = 'partykiste.haerte';
+const SCHLUESSEL_TRINKMODUS = 'partykiste.trinkmodus';
 
 const STUFEN: readonly BotLevel[] = ['anfaenger', 'standard', 'experte', 'genie'];
 const STUFE_NAME: Record<BotLevel, string> = {
@@ -37,7 +68,6 @@ const STUFE_NAME: Record<BotLevel, string> = {
   experte: 'Experte',
   genie: 'Profi',
 };
-const HAERTE_NAME = ['', 'gemütlich', 'normal', 'kurzer Abend'] as const;
 
 /** Aus dem Browser lesen. Gesperrte Seitendaten sind kein Fehler, nur leer. */
 function gemerkt(schluessel: string, vorgabe: number, min: number, max: number): number {
@@ -67,11 +97,31 @@ function gemerkteStufe(): BotLevel {
   }
 }
 
+/**
+ * Trinkmodus aus dem Browser. Ohne Eintrag AN — das ist die Vorgabe des
+ * Moduls (`DEFAULT_REGELN`), und wer den Schalter nie angefasst hat, soll
+ * dasselbe Spiel bekommen wie bisher.
+ */
+function gemerkterTrinkmodus(): boolean {
+  try {
+    return localStorage.getItem(SCHLUESSEL_TRINKMODUS) !== '0';
+  } catch {
+    return true;
+  }
+}
+
 export function Partykiste({
   startTisch,
+  einzel = null,
   onBack,
 }: {
   startTisch: string | null;
+  /**
+   * Ein Minispiel als Einzelspiel (minispiele/partykiste/einzelspiele.ts):
+   * dieselbe Kiste, aber der Regelsatz trägt nur dieses Spiel, und Modus und
+   * Minispielwahl entfallen im Menü.
+   */
+  einzel?: PartyMinispiel | null;
   onBack: () => void;
 }): React.JSX.Element {
   const [tischId, setTischId] = useState<string | null>(startTisch);
@@ -83,11 +133,56 @@ export function Partykiste({
   const [bots, setBots] = useState(() => gemerkt(SCHLUESSEL_BOTS, 3, 3, 11));
   const [runden, setRunden] = useState(() => gemerkt(SCHLUESSEL_RUNDEN, 6, 3, 15));
   const [haerte, setHaerte] = useState(() => gemerkt(SCHLUESSEL_HAERTE, 1, 1, 3));
+  const [trinkmodus, setTrinkmodus] = useState(gemerkterTrinkmodus);
   const [stufe, setStufe] = useState<BotLevel>(gemerkteStufe);
+  const [angebot, setAngebot] = useState<Angebot | null>(null);
+  const [tischRegeln, setTischRegeln] = useState<PartyRegelsatz | null>(null);
+  /* Minispiele, Inhalte, Themenpaket, Modus — minispiele/partykiste/Auswahl.tsx. */
+  const auswahl = usePartyAuswahl(ich?.gast === true);
+  /* Zusatzpakete (22.09.2026): Themenpakete, die dem Konto nicht gehoeren, sind gesperrt. */
+  const sperre = useInhaltsSperren('partykiste');
 
   const tisch = useTable<PartykisteSicht>(tischId, 'partykiste');
   const sicht = tisch.view?.view ?? null;
   const sitze: SeatInfo[] = tisch.table?.seats ?? tisch.party?.seats ?? [];
+
+  /*
+   * Schirm an, solange das Turnier laeuft; summen, wenn man in einem
+   * reihum-Spiel neu dran ist. Der Schluessel ist die Rundennummer: Reihum
+   * kommt jeder Sitz je Runde genau einmal dran, beim Bus auch fuer drei
+   * Tipps am Stueck — gesummt wird zum ersten, nicht zu jedem.
+   */
+  useTischwache({
+    aktiv: sicht !== null && !sicht.fertig,
+    dranSchluessel: binReihumDran(sicht) && sicht ? `${sicht.rundeNr}` : null,
+  });
+
+  /*
+   * Der Regelsatz, wie ihn dieses Menue einstellt — fuer beide Wege.
+   *
+   * Die Minispielliste hier ist nur noch Grundlage: Seit dem 22.09.2026
+   * ersetzt `auswahl.regelsatz` sie durch die Wahl im Menue bzw. die
+   * Vorgabe des Moduls (minispiele/partykiste/wahl.ts, `regelsatzAus`).
+   */
+  const regelsatz = useMemo<PartyRegelsatz>(
+    () => ({
+      minispiele: Object.keys(MINISPIEL_NAME) as PartyMinispiel[],
+      trinkmodus,
+      schluckFaktor: haerte,
+    }),
+    [trinkmodus, haerte],
+  );
+
+  /*
+   * Der Regelsatz fürs Anlegen. Beim Einzelspiel liegt das Minispiel fest und
+   * der Modus ist das Turnier — auch wenn im Browser von der gemischten Kiste
+   * noch „Team" oder eine andere Minispielwahl gemerkt ist.
+   */
+  const { regelsatz: auswahlRegelsatz } = auswahl;
+  const tischRegelsatz = useCallback(async (): Promise<Record<string, unknown>> => {
+    const config = await auswahlRegelsatz(regelsatz);
+    return einzel ? { ...config, minispiele: [einzel], modus: 'turnier' } : config;
+  }, [auswahlRegelsatz, regelsatz, einzel]);
 
   /* Wer ich bin, entscheidet in der Lobby über den Startknopf. */
   useEffect(() => {
@@ -106,31 +201,52 @@ export function Partykiste({
     };
   }, []);
 
+  /*
+   * Im Wartesaal gibt es noch keine Sicht, also auch keinen Regelsatz aus der
+   * Sicht — er kommt vom Server, festgeschrieben, wie ihn der Oeffner
+   * eingestellt hat. NICHT das eigene Menue: Wer beigetreten ist, spielt mit
+   * den Regeln des Tisches, nicht mit seinen Reglern von gestern.
+   */
+  useEffect(() => {
+    if (!tischId || sicht) return;
+    let lebt = true;
+    void api
+      .tableRules(tischId)
+      .then((antwort) => {
+        if (lebt) setTischRegeln(liesRegelsatz(antwort.config));
+      })
+      .catch(() => {
+        /* Dann steht keine Regelzeile da — besser als eine geratene. */
+      });
+    return () => {
+      lebt = false;
+    };
+  }, [tischId, sicht !== null]);
+
   /* Die Tabelle blendet sich beim Rundenwechsel von selbst wieder weg. */
   useEffect(() => {
     setTafel(false);
   }, [sicht?.rundeNr]);
 
   /**
-   * Online spielen: der offenen Runde beitreten, sonst eine aufmachen.
+   * Eine eigene Online-Runde aufmachen — MIT Regelsatz.
    *
-   * Ohne `config`: Der Server nimmt dann `defaultConfig()` des Moduls. Eine
-   * mitgeschickte Kopie des Regelsatzes überstimmte das Modul, ohne dass es
-   * irgendwo auffiele (siehe CLAUDE.md, Tafelrunde).
+   * Bis zum 22.09.2026 stand hier der Vorbehalt, ohne `config` zu schicken:
+   * Eine mitgeschickte Kopie des Regelsatzes ueberstimmte das Modul, ohne dass
+   * es irgendwo auffiele (CLAUDE.md, Tafelrunde). Der Vorbehalt galt einer
+   * ABSCHRIFT — Zahlen, die niemand eingestellt hatte und die beim naechsten
+   * Umbau des Moduls still veraltet waeren. `api.createTable` sagt selbst,
+   * wann das Mitschicken richtig ist: "solange ein Bildschirm sie auch
+   * wirklich einstellen laesst". Genau das tut das Menue jetzt fuer Haerte und
+   * Trinkmodus, und Robins Entscheidung P6 vom selben Tag verlangt es: Der
+   * Tischoeffner stellt ein, und es gilt auch online. Ohne `config` bekaeme
+   * jeder Online-Tisch Trinkmodus an und Haerte 1, egal was eingestellt war.
    */
-  const spieleOnline = useCallback(async (): Promise<void> => {
+  const oeffneRunde = useCallback(async (): Promise<void> => {
     setFehler(null);
+    setAngebot(null);
     setLaedt(true);
     try {
-      const liste = await api.tables('partykiste');
-      const offen = liste.find(
-        (zeile) => zeile.gameId === 'partykiste' && zeile.occupied < zeile.seats,
-      );
-      if (offen) {
-        await api.joinTable(offen.id);
-        setTischId(offen.id);
-        return;
-      }
       /*
        * Zwoelf Plaetze, die Obergrenze des Moduls — nicht acht. Der Tisch
        * schrumpft beim Start ohnehin auf die Anwesenden (`startNow`), ein
@@ -143,14 +259,70 @@ export function Partykiste({
         seats: 12,
         rounds: runden,
         visibility: 'public',
+        config: await tischRegelsatz(),
       });
       setTischId(id);
+    } catch (e) {
+      setFehler(tischFehler(e, 'Die Runde ließ sich nicht öffnen. Noch einmal versuchen?'));
+    } finally {
+      setLaedt(false);
+    }
+  }, [runden, tischRegelsatz]);
+
+  /**
+   * Online spielen: eine offene Runde suchen — und ZEIGEN, bevor man sitzt.
+   *
+   * Bis zum 22.09.2026 trat der Knopf der ersten offenen Runde sofort bei.
+   * Solange jeder Tisch dieselben Regeln hatte, war das egal; seit der
+   * Oeffner einstellt, saesse man sonst stumm an einem Trinktisch, obwohl man
+   * gerade "alkoholfrei" gewaehlt hat (P6: jeder sieht den Regelsatz vor dem
+   * Beitritt). `/tables/:id/rules` darf jeder Angemeldete lesen.
+   */
+  const spieleOnline = useCallback(async (): Promise<void> => {
+    setFehler(null);
+    setLaedt(true);
+    try {
+      const liste = await api.tables('partykiste');
+      const frei = liste.filter((zeile) => zeile.gameId === 'partykiste' && zeile.occupied < zeile.seats);
+      /*
+       * Seit dem 27.09.2026 gibt es Einzelspiele (einzelspiele.ts): Wer
+       * Busfahrer sucht, soll an einem Busfahrer-Tisch landen, und wer die
+       * gemischte Kiste sucht, an keinem (Robin: „nur Tische mit genau dem
+       * Spiel"). Welches Spiel ein Tisch hat, steht nur in seinen Regeln —
+       * also der Reihe nach nachsehen, höchstens acht Tische weit.
+       */
+      for (const offen of frei.slice(0, 8)) {
+        const regeln = await api
+          .tableRules(offen.id)
+          .then((antwort) => liesRegelsatz(antwort.config))
+          .catch(() => null);
+        if (!tischPasst(regeln?.minispiele ?? null, einzel)) continue;
+        setAngebot({ id: offen.id, host: offen.host, runden: offen.maxRounds, regeln });
+        return;
+      }
+      setLaedt(false);
+      await oeffneRunde();
     } catch {
       setFehler('Die Runde ließ sich nicht öffnen. Noch einmal versuchen?');
     } finally {
       setLaedt(false);
     }
-  }, [runden]);
+  }, [oeffneRunde, einzel]);
+
+  const trittBei = useCallback(async (id: string): Promise<void> => {
+    setFehler(null);
+    setLaedt(true);
+    try {
+      await api.joinTable(id);
+      setAngebot(null);
+      setTischId(id);
+    } catch {
+      setFehler('Die Runde ist inzwischen voll oder weg. Noch einmal suchen?');
+      setAngebot(null);
+    } finally {
+      setLaedt(false);
+    }
+  }, []);
 
   /**
    * Gegen Bots: eigener Tisch, `on_request` und sofort mit Bots gefüllt.
@@ -169,25 +341,17 @@ export function Partykiste({
         visibility: 'on_request',
         fillWithBots: true,
         botLevel: stufe,
-        /*
-         * Hier MUSS ein vollstaendiger Regelsatz mit: Der Server prueft ihn
-         * gegen `validateConfig`, und ein halber (nur der Haertegrad) faellt
-         * dort als "kein Minispiel dabei" durch. Die Liste steht deshalb
-         * ausgeschrieben da — sie ist dieselbe, die das Menue aufzaehlt.
-         */
-        config: {
-          minispiele: Object.keys(MINISPIEL_NAME),
-          trinkmodus: true,
-          schluckFaktor: haerte,
-        },
+        /* Derselbe Regelsatz wie online — bis zum 22.09.2026 stand hier fest
+           `trinkmodus: true`, weil es keinen Schalter gab. */
+        config: await tischRegelsatz(),
       });
       setTischId(id);
-    } catch {
-      setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
+    } catch (e) {
+      setFehler(tischFehler(e, 'Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?'));
     } finally {
       setLaedt(false);
     }
-  }, [bots, runden, stufe, haerte]);
+  }, [bots, runden, stufe, tischRegelsatz]);
 
   const verlasseUndZurueck = useCallback((): void => {
     const id = tischId;
@@ -197,6 +361,9 @@ export function Partykiste({
   }, [tischId, onBack]);
 
   const sende = useCallback((aktion: PartyAktion): void => tisch.send(aktion), [tisch]);
+  /* Die Ansage fuer den Letzten beim „Weiter" — hier oben, weil der letzte
+     Wurf des Abends mit dem Umschalten auf den Endstand zusammenfaellt. */
+  const { angesagt, schliessen } = useNeuerWurf(tischId, sicht !== null, sicht?.letzterWurf ?? null);
 
   /* ------------------------------------------------------------------ */
   /* Menü                                                                */
@@ -204,107 +371,121 @@ export function Partykiste({
 
   if (!tischId) {
     return (
-      <main className="pk-seite pk-menue">
-        <button className="pk-zurueck" type="button" onClick={onBack} aria-label="Zurück">
-          ←
-        </button>
-        <div className="pk-menue-mitte">
-          <h1 className="pk-titel">Partykiste</h1>
-          <p className="pk-untertitel">
-            Neun Minispiele, ein Turnier — für 4 bis 12 Leute, die im selben Raum
-            sitzen. Wer verliert, trinkt; wer gewinnt, steht oben.
-          </p>
-          <ul className="pk-spielliste" aria-label="Enthaltene Minispiele">
-            {(Object.keys(MINISPIEL_NAME) as (keyof typeof MINISPIEL_NAME)[]).map((id) => (
-              <li key={id}>
-                <strong>{MINISPIEL_NAME[id]}</strong>
-                <span className="muted">{MINISPIEL_ANSAGE[id]}</span>
-              </li>
-            ))}
-          </ul>
-          {fehler ? <p className="pk-fehler">{fehler}</p> : null}
-          <button
-            className="pk-knopf is-haupt"
-            type="button"
-            data-pk-online=""
-            onClick={() => void spieleOnline()}
-            disabled={laedt}
-          >
-            Online spielen
-          </button>
-          <div className="pk-botblock">
+      <SpielRahmen
+        gameId={einzel ? einzelKennung(einzel) : 'partykiste'}
+        titel={einzel ? einzelName(einzel) : 'Partykiste'}
+        unter={einzel ? 'Trinkspiel · 4 bis 12 Leute' : `${Object.keys(MINISPIEL_NAME).length} Minispiele · 4 bis 12 Leute`}
+        akzent={PARTY_AKZENT}
+        onBack={onBack}
+        zurueckText="Zurück"
+        fuss={
+          angebot ? (
+            <OffeneRunde
+              neu
+              angebot={angebot}
+              laedt={laedt}
+              onBeitreten={() => void trittBei(angebot.id)}
+              onEigene={() => void oeffneRunde()}
+              onAbbrechen={() => setAngebot(null)}
+            />
+          ) : (
             <button
-              className="pk-knopf is-neben"
+              className="hb-kn is-gold is-haupt is-breit"
               type="button"
-              data-pk-bots=""
-              aria-expanded={botsOffen}
-              onClick={() => setBotsOffen((an) => !an)}
+              data-pk-online=""
+              onClick={() => void spieleOnline()}
+              disabled={laedt}
             >
-              Gegen Bots
+              Online spielen
             </button>
-            {botsOffen ? (
-              <div className="pk-regler">
-                <Regler
-                  titel="Bots"
-                  wert={bots}
-                  min={3}
-                  max={11}
-                  onWahl={(w) => {
-                    setBots(w);
-                    merke(SCHLUESSEL_BOTS, w);
-                  }}
-                />
-                <Regler
-                  titel="Runden"
-                  wert={runden}
-                  min={3}
-                  max={15}
-                  onWahl={(w) => {
-                    setRunden(w);
-                    merke(SCHLUESSEL_RUNDEN, w);
-                  }}
-                />
-                <Regler
-                  titel="Härte"
-                  wert={haerte}
-                  min={1}
-                  max={3}
-                  zusatz={HAERTE_NAME[haerte]}
-                  onWahl={(w) => {
-                    setHaerte(w);
-                    merke(SCHLUESSEL_HAERTE, w);
-                  }}
-                />
-                <div className="pk-stufen" role="group" aria-label="Spielstärke der Bots">
-                  {STUFEN.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      data-an={stufe === s ? '' : undefined}
-                      aria-pressed={stufe === s}
-                      onClick={() => {
-                        setStufe(s);
-                        merke(SCHLUESSEL_STUFE, s);
-                      }}
-                    >
-                      {STUFE_NAME[s]}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="pk-knopf is-haupt"
-                  type="button"
-                  data-pk-los=""
-                  onClick={() => void spieleGegenBots()}
-                  disabled={laedt}
-                >
-                  Los
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </main>
+          )
+        }
+      >
+        {einzel ? (
+          <p className="spe-text">
+            {ansageFuer(einzel, trinkmodus)} Jede Runde dasselbe Spiel - für 4 bis 12 Leute, die im selben Raum sitzen.
+          </p>
+        ) : (
+          <p className="spe-text">
+            {Object.keys(MINISPIEL_NAME).length} Minispiele, ein Turnier - für 4 bis 12 Leute, die im selben Raum sitzen.{' '}
+            {trinkmodus ? 'Wer verliert, trinkt' : 'Wer verliert, sammelt Strafpunkte'}; wer gewinnt, steht oben.
+          </p>
+        )}
+        {fehler ? <p className="hb-fehler">{fehler}</p> : null}
+        <Einstellungen
+          neu
+          runden={runden}
+          haerte={haerte}
+          trinkmodus={trinkmodus}
+          onRunden={(w) => {
+            setRunden(w);
+            merke(SCHLUESSEL_RUNDEN, w);
+          }}
+          onHaerte={(w) => {
+            setHaerte(w);
+            merke(SCHLUESSEL_HAERTE, w);
+          }}
+          onTrinkmodus={(an) => {
+            setTrinkmodus(an);
+            merke(SCHLUESSEL_TRINKMODUS, an ? '1' : '0');
+          }}
+        />
+        <PartyAuswahl
+          neu
+          einzel={einzel !== null}
+          vorgabe={auswahl.vorgabe}
+          wahl={auswahl.wahl}
+          gast={auswahl.gast}
+          trinkmodus={trinkmodus}
+          onWahl={auswahl.setWahl}
+          paketSperre={(paket) => sperre('paket', paket)}
+        />
+        <SpielAbschnitt titel="Gegen Bots">
+          <button
+            className="hb-kn is-blau is-breit"
+            type="button"
+            data-pk-bots=""
+            aria-expanded={botsOffen}
+            onClick={() => setBotsOffen((an) => !an)}
+          >
+            Gegen Bots
+          </button>
+          {botsOffen ? (
+            <div className="spe-karte">
+              <Regler
+                neu
+                titel="Bots"
+                wert={bots}
+                min={3}
+                max={11}
+                onWahl={(w) => {
+                  setBots(w);
+                  merke(SCHLUESSEL_BOTS, w);
+                }}
+              />
+              <SpielWahl
+                name="Spielstärke der Bots"
+                werte={STUFEN.map((s) => ({ wert: s, text: STUFE_NAME[s] }))}
+                wert={stufe}
+                onWahl={(s) => {
+                  setStufe(s);
+                  merke(SCHLUESSEL_STUFE, s);
+                }}
+              />
+              <button
+                className="hb-kn is-blau is-breit"
+                type="button"
+                data-pk-los=""
+                onClick={() => void spieleGegenBots()}
+                disabled={laedt}
+              >
+                Los
+              </button>
+            </div>
+          ) : null}
+        </SpielAbschnitt>
+        <Beitrittscode neu spiel="partykiste" onBeigetreten={setTischId} />
+      </SpielRahmen>
     );
   }
 
@@ -313,15 +494,18 @@ export function Partykiste({
   /* ------------------------------------------------------------------ */
 
   if (!sicht) {
+    const lobbyRunden = tisch.table?.rounds ?? runden;
     return (
-      <Lobby
-        sitze={sitze}
-        meineKennung={ich?.id ?? null}
-        verbunden={tisch.connected}
-        runden={tisch.table?.rounds ?? runden}
-        onStart={() => tisch.startNow()}
-        onZurueck={verlasseUndZurueck}
-      />
+      <RegelsatzKontext.Provider value={{ regeln: tischRegeln, runden: lobbyRunden }}>
+        <Lobby
+          sitze={sitze}
+          meineKennung={ich?.id ?? null}
+          verbunden={tisch.connected}
+          runden={lobbyRunden}
+          onStart={() => tisch.startNow()}
+          onZurueck={verlasseUndZurueck}
+        />
+      </RegelsatzKontext.Provider>
     );
   }
 
@@ -335,6 +519,7 @@ export function Partykiste({
         <header className="pk-kopf">
           <span className="pk-rundenzahl">Turnier vorbei</span>
         </header>
+        <LetzterSchicht wurf={angesagt} sitze={sitze} ich={sicht.sitz} trinkmodus={sicht.trinkmodus} onZu={schliessen} />
         <h2 className="pk-endtitel">Endstand</h2>
         <Tabelle sicht={sicht} sitze={sitze} />
         <div className="pk-wahl">
@@ -346,10 +531,15 @@ export function Partykiste({
     );
   }
 
+  /* Team-Abend: Vor der ersten Runde stellt der Tischoeffner die Lager auf (Lager.tsx). */
+  if (sicht.aufstellung) return <AufstellungSeite sicht={sicht} sitze={sitze} sende={sende} onVerlassen={verlasseUndZurueck} />;
+
   const binFertig = sicht.gehandelt.includes(sicht.sitz);
 
   return (
-    <main className="pk-seite pk-tisch">
+    <main className="pk-seite pk-tisch" data-szene={sicht.art}>
+      {/* Kulisse je Minispiel (Szene.tsx) — hinter allem, nimmt keine Tipps an. */}
+      <Szene art={sicht.art} />
       <header className="pk-kopf">
         <button className="pk-zurueck is-klein" type="button" onClick={verlasseUndZurueck} aria-label="Verlassen">
           ←
@@ -367,17 +557,35 @@ export function Partykiste({
           {tafel ? 'Zurück' : 'Stand'}
         </button>
       </header>
+      <LetzterSchicht wurf={angesagt} sitze={sitze} ich={sicht.sitz} trinkmodus={sicht.trinkmodus} onZu={schliessen} />
+      {/* Die Sicht traegt den Regelsatz selbst — sie passt auf PartyRegelsatz. */}
+      <Regelzeile regeln={sicht} />
+      {/* Die geltende Regel-Karte steht ueber JEDER Runde — gebrochen wird sie in den anderen. */}
+      <AktiveRegel sicht={sicht} sitze={sitze} sende={sende} />
 
       {!tisch.connected ? (
-        <p className="pk-fehler">Keine Verbindung — es wird neu aufgebaut …</p>
+        <p className="pk-fehler">Keine Verbindung - es wird neu aufgebaut …</p>
       ) : null}
 
       {tafel ? (
         <Tabelle sicht={sicht} sitze={sitze} />
       ) : (
         <>
-          <p className="pk-ansage">{MINISPIEL_ANSAGE[sicht.art]}</p>
-          <Runde sicht={sicht} sitze={sitze} sende={sende} />
+          <p className="pk-ansage">{ansageFuer(sicht.art, sicht.trinkmodus)}</p>
+          <Runde sicht={sicht} sitze={sitze} sende={sende} frist={tisch.view?.phaseDeadline ?? null} />
+          {/*
+           * „Passt nicht" (27.09.2026): nur auf staging, wie der Bug-Knopf
+           * (`me.stage`); ob die Runde einen Eintrag zeigt, entscheidet der
+           * Knopf selbst — sein offenes Blatt soll ein Weiterschalten der
+           * Runde ueberleben.
+           */}
+          {ich?.stage === 'staging' ? (
+            <PasstNicht
+              gezeigt={sicht.gezeigt ?? []}
+              tischId={tischId}
+              stufe={sicht.eskalation?.inhaltsHaerte ?? sicht.inhaltsHaerte ?? null}
+            />
+          ) : null}
           {sicht.phase === 'ergebnis' ? (
             <Abrechnung sicht={sicht} sitze={sitze} binFertig={binFertig} sende={sende} />
           ) : null}
@@ -388,133 +596,8 @@ export function Partykiste({
 }
 
 /* --------------------------------------------------------------------------
- * Abrechnung einer Runde
+ * Lobby
  * ----------------------------------------------------------------------- */
-
-/**
- * Was diese Runde gebracht hat — und der Weiter-Knopf.
- *
- * Er ist Pflicht, keine Abkürzung: Es geht erst weiter, wenn JEDER Anwesende
- * getippt hat. Bis zum 19.09.2026 lief daneben eine Schaupause von zwölf
- * Sekunden — zu zwölft war sie vorbei, bevor die Hälfte gelesen hatte, wer
- * trinkt. Wer wegbleibt, fällt nach der Zugzeit (fünf Minuten) an den Bot,
- * der für ihn tippt. Keine eigene Uhr im Client — sie liefe der echten davon.
- */
-function Abrechnung({
-  sicht,
-  sitze,
-  binFertig,
-  sende,
-}: {
-  sicht: PartykisteSicht;
-  sitze: SeatInfo[];
-  binFertig: boolean;
-  sende: (aktion: PartyAktion) => void;
-}): React.JSX.Element {
-  const punkte = sicht.rundenPunkte ?? [];
-  const schlucke = sicht.rundenSchlucke ?? [];
-  const meinePunkte = punkte[sicht.sitz] ?? 0;
-  const meineSchlucke = schlucke[sicht.sitz] ?? 0;
-
-  return (
-    <div className="pk-abrechnung">
-      <p className="pk-ausbeute">
-        <span data-gut={meinePunkte > 0 ? '' : undefined}>
-          {meinePunkte > 0 ? `+${meinePunkte} Punkte` : 'keine Punkte'}
-        </span>
-        {sicht.trinkmodus && meineSchlucke > 0 ? (
-          <span className="pk-schluck">
-            {meineSchlucke} {meineSchlucke === 1 ? 'Schluck' : 'Schlücke'} für dich
-          </span>
-        ) : null}
-      </p>
-      {sicht.trinkmodus ? (
-        <ul className="pk-liste is-schmal">
-          {schlucke.map((zahl, sitz) =>
-            zahl > 0 && !sicht.ausgestiegen.includes(sitz) ? (
-              <li key={sitz}>
-                <span>{namenFuer(sitze, sitz)}</span>
-                <span className="pk-schluck">{zahl} 🍺</span>
-              </li>
-            ) : null,
-          )}
-        </ul>
-      ) : null}
-      <div className="pk-wahl">
-        <button
-          type="button"
-          className="pk-knopf is-haupt"
-          disabled={binFertig}
-          onClick={() => sende({ art: 'bereit' })}
-        >
-          {binFertig ? 'Warten auf die anderen …' : 'Weiter'}
-        </button>
-      </div>
-      {/* Es geht erst weiter, wenn ALLE getippt haben — keine Uhr mehr.
-          Die Zahl sagt, auf wen die Runde wartet. */}
-      {binFertig ? <Wartet sicht={sicht} /> : null}
-    </div>
-  );
-}
-
-/* --------------------------------------------------------------------------
- * Turniertabelle
- * ----------------------------------------------------------------------- */
-
-function Tabelle({ sicht, sitze }: { sicht: PartykisteSicht; sitze: SeatInfo[] }): React.JSX.Element {
-  const reihen = [...sicht.tabelle].sort((a, b) => a.platz - b.platz || a.sitz - b.sitz);
-  return (
-    <ol className="pk-tabelle">
-      {reihen.map((zeile) => (
-        <li
-          key={zeile.sitz}
-          data-ich={zeile.sitz === sicht.sitz ? '' : undefined}
-          data-weg={sicht.ausgestiegen.includes(zeile.sitz) ? '' : undefined}
-        >
-          <span className="pk-platz">{zeile.platz}</span>
-          <span className="pk-tabellenname">{namenFuer(sitze, zeile.sitz)}</span>
-          {sicht.trinkmodus ? <span className="pk-schluck">{zeile.schlucke} 🍺</span> : null}
-          <strong className="pk-punkte">{zeile.punkte}</strong>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-/* --------------------------------------------------------------------------
- * Regler und Lobby
- * ----------------------------------------------------------------------- */
-
-function Regler({
-  titel,
-  wert,
-  min,
-  max,
-  zusatz,
-  onWahl,
-}: {
-  titel: string;
-  wert: number;
-  min: number;
-  max: number;
-  zusatz?: string;
-  onWahl: (wert: number) => void;
-}): React.JSX.Element {
-  return (
-    <label className="pk-reglerzeile">
-      <span className="pk-reglertitel">{titel}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={1}
-        value={wert}
-        onChange={(e) => onWahl(Number(e.target.value))}
-      />
-      <strong className="pk-reglerwert">{zusatz ?? wert}</strong>
-    </label>
-  );
-}
 
 function Lobby({
   sitze,
@@ -542,48 +625,18 @@ function Lobby({
   const genug = anwesend.length >= 4;
 
   return (
-    <main className="pk-seite pk-menue">
-      <button className="pk-zurueck" type="button" onClick={onZurueck} aria-label="Zurück">
-        ←
-      </button>
-      <div className="pk-menue-mitte">
-        <h1 className="pk-titel">Runde</h1>
-        <p className="pk-untertitel">
-          {anwesend.length} von {sitze.length} da · {runden} Minispiele
-        </p>
-        {!verbunden ? <p className="pk-fehler">Keine Verbindung — es wird neu aufgebaut …</p> : null}
-
-        <ul className="pk-gruppe">
-          {sitze.map((platz) => {
-            const eigen = meineKennung !== null && platz.accountId === meineKennung;
-            const leer = platz.accountId === null && !platz.isBot;
-            return (
-              <li
-                key={platz.seat}
-                data-pk-sitz={platz.seat}
-                data-leer={leer ? '' : undefined}
-                data-eigen={eigen ? '' : undefined}
-              >
-                <span className="pk-gruppenname">
-                  {leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'))}
-                </span>
-                {eigen ? <em className="pk-du">du</em> : null}
-              </li>
-            );
-          })}
-        </ul>
-
-        {sitze.some((platz) => platz.gast) ? (
-          /* Vor dem Start, nicht erst an der Abrechnung: Ein Tisch mit Gast
-             zaehlt fuer niemanden (countsForRanking) — wer das nicht will,
-             geht jetzt, nicht nach sechs Runden. */
-          <p className="pk-warten">Ein Gast spielt mit — diese Runde zählt nicht für die Rangliste.</p>
-        ) : null}
-
-        {binHost ? (
+    <SpielRahmen
+      gameId="partykiste"
+      titel="Runde"
+      unter={`${anwesend.length} von ${sitze.length} da · ${runden} Minispiele`}
+      akzent={PARTY_AKZENT}
+      onBack={onZurueck}
+      zurueckText="Zurück"
+      fuss={
+        binHost ? (
           <>
             <button
-              className="pk-knopf is-haupt"
+              className="hb-kn is-gold is-haupt is-breit"
               type="button"
               data-pk-start=""
               onClick={onStart}
@@ -591,14 +644,43 @@ function Lobby({
             >
               Starten
             </button>
-            {!genug ? <p className="pk-warten">Ab vier Leuten geht es los.</p> : null}
+            {!genug ? <p className="hb-klein">Ab vier Leuten geht es los.</p> : null}
           </>
         ) : (
-          <p className="pk-warten" aria-live="polite">
+          <p className="hb-klein" aria-live="polite">
             Warten, bis {host?.displayName ?? 'der Erste'} startet …
           </p>
-        )}
-      </div>
-    </main>
+        )
+      }
+    >
+      <LobbyRegelzeile />
+      {!verbunden ? <p className="hb-fehler">Keine Verbindung - es wird neu aufgebaut …</p> : null}
+      <Einladung neu spiel="partykiste" />
+      <SpielAbschnitt titel="Am Tisch" zusatz={`${anwesend.length}/${sitze.length}`}>
+        <ul className="hb-liste spe-gruppe">
+          {sitze.map((platz) => {
+            const eigen = meineKennung !== null && platz.accountId === meineKennung;
+            const leer = platz.accountId === null && !platz.isBot;
+            return (
+              <li
+                key={platz.seat}
+                className={`spe-zeile spe-sitz${leer ? '' : ' is-besetzt'}`}
+                data-pk-sitz={platz.seat}
+                data-leer={leer ? '' : undefined}
+                data-eigen={eigen ? '' : undefined}
+              >
+                <span>
+                  <strong>{leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'))}</strong>
+                </span>
+                {eigen ? <span className="spe-marke">du</span> : null}
+              </li>
+            );
+          })}
+        </ul>
+      </SpielAbschnitt>
+      {/* Melden und Blockieren (Apple 1.2): Hier gibt es keine Profil-Links. */}
+      <MitspielerMelden sitze={sitze} ich={meineKennung} />
+      <GastHinweis sitze={sitze} className="spe-text" />
+    </SpielRahmen>
   );
 }

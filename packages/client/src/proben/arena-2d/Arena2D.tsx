@@ -86,7 +86,7 @@ export function Arena2D() {
   return (
     <div className={css.seite}>
       <div className={css.kopf}>
-        <h1 className={css.titel}>Probe A — Arena in 2D</h1>
+        <h1 className={css.titel}>Probe A - Arena in 2D</h1>
         <span className={css.uhr}>
           {sekunden(Math.min(Math.max(0, zeitMs), SZENE.dauerMs))} / {sekunden(SZENE.dauerMs)}
         </span>

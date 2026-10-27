@@ -186,6 +186,28 @@ test('eine fremde Herkunft bekommt keine Freigabe', async (t) => {
   assert.equal(app.headers['access-control-allow-credentials'], undefined);
 });
 
+test('die App darf jede Methode, die der Server anbietet - auch PUT', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  // Bis zum 22.10.2026 fehlte PUT in der Freigabe: Die Mitteilungs-Schalter
+  // scheiterten in der App bei jedem Tipp, auf der Webseite (same-origin)
+  // nie. Geprueft wird die Vorabfrage, die der WebView vor dem PUT schickt.
+  for (const methode of ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']) {
+    const vorab = await s.app.inject({
+      method: 'OPTIONS',
+      url: '/api/push/einstellungen',
+      headers: {
+        origin: APP_ORIGIN,
+        'access-control-request-method': methode,
+        'access-control-request-headers': 'content-type,authorization',
+      },
+    });
+    const erlaubt = String(vorab.headers['access-control-allow-methods'] ?? '');
+    assert.ok(erlaubt.split(',').map((m) => m.trim()).includes(methode), `${methode} fehlt: ${erlaubt}`);
+  }
+});
+
 // ---------------------------------------------------------------------------
 // WebSocket
 // ---------------------------------------------------------------------------

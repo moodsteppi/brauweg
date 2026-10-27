@@ -53,10 +53,11 @@ Ein neues Spiel heißt: ein Paket `game-<name>`, eine Zeile in
 greifen dann automatisch: Sie spielen jedes registrierte Modul mit Bots durch
 und prüfen, was Lobby, Laufzeit und Client stillschweigend voraussetzen.
 
-Die **iOS-App** liegt in einem eigenen Repository, `Brauweg-spiel-ios`. Sie
-ist eine Hülle um einen `WKWebView` und liefert genau diesen Client aus dem
-App-Paket aus — keine zweite Oberfläche. Einzelheiten in
-[docs/APPSTORE.md](docs/APPSTORE.md).
+Die **Apps** liegen in diesem Repository: iOS unter `apps/ios` (Swift,
+Projekt per XcodeGen), Android unter `apps/android` (Kotlin). Beide sind
+Hüllen um einen WebView und liefern genau diesen Client aus dem App-Paket
+aus — keine zweite Oberfläche. Einzelheiten in
+[docs/APP-RELEASE.md](docs/APP-RELEASE.md) und [docs/APPSTORE.md](docs/APPSTORE.md).
 
 **Server, Lobby und Client programmieren ausschließlich gegen
 `@brauweg/game-api`.** Im Server gibt es genau eine Ausnahme:

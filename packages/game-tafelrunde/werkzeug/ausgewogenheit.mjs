@@ -23,6 +23,12 @@
  *     --zeitraffer 1       Wie viel schneller der Kampf ablaeuft.
  *     --takt 100           Taktlaenge der Simulation in Millisekunden.
  *
+ * Und ein Vergleichsschalter fuer eine Regel, die es noch nicht gibt
+ * (docs/TAFELRUNDE-MEUCHLER-ZIELWAHL-PROBE.md):
+ *
+ *     --meuchlerziel naechster   naechster | fernkaempfer — `meuchlerZielwahl`
+ *                                im Kampfregler. Der Bot kennt ihn nicht.
+ *
  * WOZU ES DA IST: Wer am Katalog dreht — an Werten, Kosten, Marken oder den
  * Schwellen in synergien.ts —, laesst das hier vorher und nachher laufen und
  * vergleicht. Die Probe in test/ausgewogenheit.test.ts faengt nur ab, was
@@ -107,7 +113,12 @@ const REGLER = {
   schadenStufenTeiler: Number(schalter('teiler', STANDARD_REGLER.schadenStufenTeiler)),
   zeitraffer: Number(schalter('zeitraffer', STANDARD_REGLER.zeitraffer)),
   taktMs: Number(schalter('takt', STANDARD_REGLER.taktMs)),
+  meuchlerZielwahl: schalter('meuchlerziel', STANDARD_REGLER.meuchlerZielwahl),
 };
+if (!['naechster', 'fernkaempfer'].includes(REGLER.meuchlerZielwahl)) {
+  console.error('--meuchlerziel kennt nur naechster und fernkaempfer');
+  process.exit(1);
+}
 /*
  * Geprueft wird hier und nicht in kampf.ts: Der Regler ist Werkzeug und kein
  * Regelsatz, aber ueber die Kommandozeile kommt trotzdem Freitext herein. Eine
@@ -133,6 +144,9 @@ const ABWEICHUNGEN = [
     : `Schadensteiler ${REGLER.schadenStufenTeiler}`,
   REGLER.zeitraffer === STANDARD_REGLER.zeitraffer ? null : `Zeitraffer x${REGLER.zeitraffer}`,
   REGLER.taktMs === STANDARD_REGLER.taktMs ? null : `Takt ${REGLER.taktMs} ms`,
+  REGLER.meuchlerZielwahl === STANDARD_REGLER.meuchlerZielwahl
+    ? null
+    : `Meuchler-Zielwahl ${REGLER.meuchlerZielwahl}`,
 ].filter(Boolean);
 
 // ---------------------------------------------------------------------------

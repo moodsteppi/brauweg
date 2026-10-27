@@ -411,3 +411,50 @@ test('nach einem Schmeiss nennt die Sicht denselben roundIndex, aber einen neuen
   assert.equal(nachher.roundIndex, vorher.roundIndex, 'Neugabe zaehlt die Runde nicht weiter');
   assert.equal(nachher.attempt, 1, 'der neue Anlauf muss unterscheidbar sein');
 });
+
+test('Frist laeuft ab, waehrend ein Schmeiss offen steht', () => {
+  // Regelsatz mit Schmeiss ist aktiviert, aber die Vorbehaltsfrist laeuft ab,
+  // bevor alle Abfragen beantwortet sind. Ein Sitz erklaert einen Schmeiss,
+  // mindestens ein anderer bleibt offen. advanceInterlude muss finalizeRedeal
+  // und startRound aufrufen, sonst haengt der Tisch: phase 'redeal',
+  // currentActor null, interludeMs null, aber kein Timer und keine Aktion.
+  let party = doppelkopf.createParty({
+    config: makeRuleSet({ ...CONFIG, schmeiss5Luschen: true, schmeiss7Volle: true }),
+    seats: 4,
+    rounds: 8,
+    seed: 1,
+  });
+
+  // Sitze durchgehen: schmeissen, wer darf, sonst gesund. Aber nicht alle
+  // verarbeiten — mindestens einen Sitz offen lassen.
+  let schmeisstErklaert = false;
+  for (let i = 0; i < 3 && party.current?.phase === 'vorbehalt'; i++) {
+    const seat = vorbehaltOffen(party.current)[0];
+    if (seat === undefined) break;
+    const schmeiss = doppelkopf
+      .legalActions(party, seat)
+      .find((a) => a.type === 'vorbehalt' && a.kind === 'schmeiss');
+    schmeisstErklaert ||= schmeiss !== undefined;
+    party = doppelkopf.act(party, seat, schmeiss ?? { type: 'vorbehalt', seat, kind: null });
+  }
+  assert.ok(schmeisstErklaert, 'dieser Seed muss einen Schmeiss anbieten');
+  assert.equal(party.current?.phase, 'vorbehalt', 'Vorbehaltsabfrage noch offen');
+
+  // Frist abgelaufen: advanceInterlude wird aufgerufen, mit Schmeiss erklaert
+  // und mindestens ein Sitz noch offen.
+  const danach = doppelkopf.advanceInterlude!(party);
+
+  // Nach der Frist muss die Phase nicht 'redeal' bleiben — sie muss entweder
+  // 'vorbehalt' wieder starten (die Neugabe) oder 'playing' sein.
+  // Das Wichtigste: phase !== 'redeal'. Dort haengt es mit currentActor null,
+  // interludeMs null, aber ohne Timer und ohne Aktion.
+  assert.ok(
+    danach.current !== null,
+    'Nach advanceInterlude muss eine Runde laufen',
+  );
+  assert.notEqual(
+    danach.current?.phase,
+    'redeal',
+    'Phase darf nicht "redeal" bleiben (stellt den Tisch auf den Kopf)',
+  );
+});

@@ -79,6 +79,24 @@ export type ZoneBeschleuniger = Rechteckflaeche & {
   staerke: number;
 };
 
+/**
+ * Wind über der ganzen Bahn — ein flächiger Beschleuniger (seit dem
+ * 22.09.2026, Fun-Modus; siehe modifikator.ts).
+ *
+ * Anders als der Beschleuniger schiebt er nur einen ROLLENDEN Ball, und nie
+ * stärker als die Rollreibung an dieser Stelle (siehe `bewege` in
+ * physik.ts). Beides aus demselben Grund: Ein Ball, den der Wind in Ruhe
+ * weiterschiebt oder über der Reibung hält, kommt nie zur Ruhe — und wer
+ * nicht liegt, darf nicht schlagen.
+ */
+export interface Wind {
+  /** Richtung als Einheitsvektor — aus den Winkeltabellen, nie aus `Math.sin`. */
+  rx: number;
+  ry: number;
+  /** Beschleunigung in E/s², unter `ROLL` (0,9); typisch 0,4 bis 0,85. */
+  staerke: number;
+}
+
 /** Reibung mal 4. */
 export type ZoneSand = Flaeche & { art: 'sand' };
 /** Reibung mal 0,12 — der Ball läuft fast ewig. */
@@ -169,7 +187,59 @@ export interface Karte {
   loch: [number, number];
   waende: Wand[];
   zonen: Zone[];
+  /** Die Optik der Bahn (Boden, Rand). Bestimmt das Bild, nicht die Physik. */
   dekor?: 'wiese' | 'wueste' | 'eis' | 'nacht';
+  /**
+   * Fester Wind der Bahn (seit dem 22.09.2026). Keine der 40 Bahnen hat
+   * einen; im Fun-Modus bringt das Roulette ihn je Loch mit und geht vor.
+   * Physik und Bots lesen ihn nur über `physikwerte` (physik.ts).
+   */
+  wind?: Wind;
+  /*
+   * Freie Metadaten, seit dem 22.09.2026 — für den Map-Editor und die
+   * Bahnauswahl (Kurse, Filter, Einzelauswahl), die auf der Aufteilung in
+   * eine Datei je Bahn aufbauen. Alle optional, damit die 40 vorhandenen
+   * Bahnen ohne Nachtrag gültig bleiben. Deutsch, keine Übersetzungsschlüssel:
+   * Bahnen sind Inhalt, keine Oberfläche.
+   */
+  /** Ein, zwei Sätze für die Auswahl — was die Bahn verlangt, worauf man achtet. */
+  beschreibung?: string;
+  /** Thema als Wort für Filter und Kurse („Wasser", „Portale", „Einstieg"); neben `dekor`, nicht statt. */
+  thema?: string;
+  autor?: string;
+  /** Freie Schlagworte für die Filterung, z. B. `['eis', 'bumper', 'kurz']`. */
+  tags?: string[];
+}
+
+/** Ergebnis von `loeseBahnen`: alle Bahnen oder die, die fehlen — nie eine halbe Liste. */
+export type Bahnaufloesung =
+  | { karten: Karte[]; unbekannt: [] }
+  | { karten: null; unbekannt: string[] };
+
+/**
+ * Die Kennungen einer Partie (`GolfSicht.bahnen`) in Geometrie auflösen.
+ *
+ * Seit dem 22.09.2026 zieht das Modul die Bahnfolge und schickt Kennungen.
+ * Kennt dieser Stand eine davon nicht, ist er älter als der Server — dann
+ * kommt die Liste der fehlenden zurück und KEINE Karten: Mit einer anderen
+ * Bahn weiterzurechnen hieße, still eine andere Partie zu spielen als alle
+ * anderen am Tisch.
+ */
+export function loeseBahnen(
+  kennungen: readonly string[],
+  katalog: readonly Karte[],
+): Bahnaufloesung {
+  const nachId = new Map<string, Karte>();
+  for (const karte of katalog) nachId.set(karte.id, karte);
+  const karten: Karte[] = [];
+  const unbekannt: string[] = [];
+  for (const id of kennungen) {
+    const karte = nachId.get(id);
+    if (karte === undefined) unbekannt.push(id);
+    else karten.push(karte);
+  }
+  if (unbekannt.length > 0) return { karten: null, unbekannt };
+  return { karten, unbekannt: [] };
 }
 
 /* --------------------------------------------------------------------------
@@ -311,6 +381,22 @@ export function segmenteVon(karte: Karte): Segment[] {
   return segmente;
 }
 
+const randSpeicher = new Map<Karte, Segment[]>();
+
+/**
+ * Nur die Segmente des Rahmens — für den Geisterball (Fun-Modus, powerup.ts),
+ * der durch jede Wand geht, aber nicht von der Bahn. Einmal je Karte wie
+ * `segmenteVon`, geleert mit `vergissSegmente`.
+ */
+export function randSegmenteVon(karte: Karte): Segment[] {
+  const fertig = randSpeicher.get(karte);
+  if (fertig !== undefined) return fertig;
+  const segmente: Segment[] = [];
+  for (const wand of randWaende(karte)) rechteckSegmente(wand.x, wand.y, wand.w, wand.h, segmente);
+  randSpeicher.set(karte, segmente);
+  return segmente;
+}
+
 /* --------------------------------------------------------------------------
  * Zonen nach Wirkung sortiert
  * ----------------------------------------------------------------------- */
@@ -368,6 +454,7 @@ export function zonengruppen(karte: Karte): Zonengruppen {
 /** Leert die Zwischenspeicher — nur für Messungen und Tests. */
 export function vergissSegmente(): void {
   segmentSpeicher.clear();
+  randSpeicher.clear();
   gruppenSpeicher.clear();
 }
 

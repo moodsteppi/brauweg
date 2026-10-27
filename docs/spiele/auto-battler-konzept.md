@@ -397,7 +397,9 @@ behaupten.
    Messung deutlicher als vorher: Jeder Eingriff an Elementar oder Drache
    verschlechtert sie. Ihre Ursache ist seit der neunten Messung benannt (die
    Nachbarordnung je Seite kostet den Meuchler sein schnelles Ankommen) und
-   nicht mit einem Bonus zu beheben.
+   nicht mit einem Bonus zu beheben. (Nachtrag 25.09.2026: Das mit dem Bonus
+   stimmt, die Ursache nicht. Behoben über das Leben der Einheiten, siehe
+   `docs/TAFELRUNDE-MEUCHLER-WERTE.md`.)
 
 ---
 
@@ -562,9 +564,22 @@ die alte gestellt hätte:
    ×0,64, normiert ×0,65). Drei Messungen zeigen auf dieselbe Rolle; die
    Ursache ist seit der neunten Messung benannt (die Nachbarordnung je Seite
    kostet den Meuchler sein schnelles Ankommen).
+   **Nachtrag 25.09.2026:** Diese Ursache trägt nicht. Schnelleres Ankommen
+   drückt die Marke auf ×0,55 und ändert die Tauschprobe nicht. Gebaut ist
+   stattdessen mehr Leben: Gassendieb 585, Schattenklinge 745, Knochenspäher
+   950. Tauschprobe danach ×0,92 / ×0,92 / ×0,89, keiner mehr in der letzten
+   Zeile seiner Stufe, Marke ×0,86. Tempo und Markenbonus sind mitgemessen
+   und verworfen. Alle Zahlen: `docs/TAFELRUNDE-MEUCHLER-WERTE.md`.
 2. **Dorfwache ×1,37 und Schildknappe ×1,32** stehen weit über ihrer Stufe. Roh
    fallen sie nicht auf (×0,98 und ×0,83) — genau der umgekehrte Fehler: Sie
    stehen auf armen Brettern, weil sie billig sind.
+   **Nachtrag 25.09.2026:** Die Probe misst hier keinen Fehler. Auch nach
+   dem Platz aufgeschlüsselt liegen beide vorn. Gebaut ist die Dorfwache mit
+   550 statt 650 Leben: Tauschprobe ×1,12, Wächter und Krieger fallen von
+   ×1,28/×1,27 auf ×1,11/×1,10, Untot steigt in der Probe von 122 auf 175
+   Antritte. Der Schildknappe bleibt bei ×1,34, weil jede Schwächung, die ihn
+   bewegt, Untot unter die Zählschwelle fallen lässt. Alle Zahlen:
+   `docs/TAFELRUNDE-WACHEN-WERTE.md`.
 
 Beides gehört aufs Board und nicht in diese Messung: Hier ist das Verfahren
 geklärt, nicht der Katalog geändert.
@@ -924,6 +939,13 @@ Die Hälften schieben sich also eher aneinander vorbei, der Anmarsch dauert
 länger. Davon leben Wächter und Krieger, dagegen verliert der Meuchler, dessen
 ganze Rechnung am schnellen Ankommen hängt.
 
+**Nachgeprüft am 23.09.2026: Die Erklärung mit dem Ankommen trägt nicht.** Die
+Verschiebung selbst ist echt. Aber wer dem Meuchler das Ankommen erleichtert
+(halbe oder gar keine Schrittpause, eine Sekunde Startvorsprung), drückt ihn
+weiter, auf ×0,55–0,63. Was ihn hebt, ist Leben (+25 % ergibt ×1,00–1,06) oder
+die Zielwahl „Fernkämpfer" (×0,81–0,88). Zahlen und die offene Entscheidung
+stehen in `docs/TAFELRUNDE-MEUCHLER-ANKOMMEN.md`.
+
 **Die Schranke der Probe (×0,5 bis ×2) hält**, aber die Spanne geht auf beiden
 Seiten leicht auf: ×0,52 bis ×1,59 statt ×0,54 bis ×1,54. **Naturwesen bleibt
 die Wackelzeile** und steht jetzt zwei Hundertstel näher am Boden. Die Uhr
@@ -959,6 +981,16 @@ Gemessen mit `werkzeug/gangarten.mjs --schraube reichweitenGewicht=…`: Alle
 vier Sitze spielen `normal`, nur Sitz 0 rechnet mit dem Faktor. Die Saat hängt
 nicht an der Schraube — zwei Läufe spielen also **dieselben** Partien. Je 400
 Partien über sechs Saatbasen, gezählt werden die eindeutigen Siege von Sitz 0.
+
+**Diese Schraube gibt es im gebauten Stand nicht**, und wer den Aufruf oben
+abtippt, bekommt `--schraube kennt "reichweitenGewicht" nicht`. `--schraube`
+kann nur Felder von `Gangart` verstellen; für die Messung bekam `Gangart` ein
+Feld `reichweitenGewicht`, das `botZug` an `staerke` durchreichte, und
+danach ist es wieder heraus — eine Stellschraube, die niemand stellt, gehört
+nicht in den gebauten Stand. **Wer nachmisst, baut sie wieder ein.** Für
+`ZAEHIGKEIT_HOCHZAHL` (22.09.2026) gilt dasselbe, und ohne die Schraube ist
+die Frage nicht zu beantworten: Der Unterschied ist kleiner als die Streuung
+zwischen zwei Stichproben, gepaart messen ist also keine Feinheit.
 
 | Gewicht | Siege von 2.400 |
 |---|---|
@@ -1295,6 +1327,27 @@ durchschnittlich höchstens acht Minuten hält mit Abstand.
    dieser Messung: Ein zäher Körper in der Vorderreihe (×0,78) brachte mehr,
    als die Träger auf Stärkegleichstand zu heben (×0,54) — und die Wache war
    auch für Untot der Kandidat, der die Marke in die Mitte holte.
+   **ERLEDIGT am 22.09.2026, mit einem anderen Ergebnis als erwartet.** Der
+   Punkt stimmt in der Richtung: `staerke` hat seitdem eine
+   `ZAEHIGKEIT_HOCHZAHL` von 1,20 statt eines glatten Produkts, und das ist
+   rund 6 von 100 Siegen wert (zwanzig Saatbasen zu je 400 Partien zu viert,
+   gepaart). In der **Größe** stimmt er nicht: Der naheliegende quadratische
+   Griff ist der schlechteste Wert im ganzen Feld — bei 2,00 verliert der Bot
+   38 von 100 Siegen, mehr als ganz ohne Hochzahl. Getragen wird die Zahl nur
+   zwischen 1,05 und 1,35; die Kurve steht bei der Konstanten in `bot.ts`.
+   Und die **Begründung** ist verfallen: Die Rangfolge oben wurde auf dem
+   flachen Brett gemessen. Seit der Arenaumstellung vom 06.09.2026 (vier
+   Reihen je Seite, zwei leere dazwischen) steht sie fast umgekehrt — bei
+   1 Gold gewinnt der Funkenlehrling (`magier`) alle Kämpfe und das Irrlicht
+   (`wache`) keinen, bei 3 Gold führt der Sturmrufer (96 %) vor dem
+   Wurzelriesen (20 %). Es wird jetzt gelaufen, und wer läuft, kassiert dabei.
+   **Die eigentliche Falle lag woanders** und hat ein eigenes Werkzeug
+   bekommen (`werkzeug/bewertungsprobe.mjs`, siehe unten): Gegen das
+   Monokultur-Turnier sagt `staerke` die Rangfolge gut vorher (Spearman
+   +0,84) — aber nur **mit** Deckung. In der Vorgabe `KEINE_DECKUNG`, also
+   genau so, wie man die Funktion zum Vergleichen zweier Einheiten aufruft,
+   sind es **−0,29**. Die ganze Vorhersagekraft steckt im Reichweitenfaktor,
+   und der ist dort abgeschaltet.
 
 ### Nachtrag 06.09.2026: die Gangart `hart` hat ihre Tempo-Schrauben getauscht
 
@@ -1807,6 +1860,26 @@ durch, ohne Oberfläche, alles aus dem Seed. Drei Aufrufer benutzen ihn:
   (06.09.2026) gegen die zwei Extreme davor, über 11.874 Kämpfe aus 2.000
   Heeren. Herleitung, Tabelle je Heergröße und je Rolle in
   `docs/TAFELRUNDE-LAUFWEGE.md`, Abschnitt 9.
+
+- **Das Werkzeug für die Bewertung** `werkzeug/bewertungsprobe.mjs` (Kern
+  `test/bewertungsprobe.ts`, seit dem 22.09.2026) — es prüft nicht den
+  Katalog und nicht den Bot, sondern die **Zahl, mit der beide verglichen
+  werden**: Sagt `staerke` voraus, was im Monokultur-Turnier gewinnt?
+  Ausgegeben wird die Rangkorrelation nach Spearman, und zwar in zwei Zeilen,
+  weil `staerke` die Deckung als Parameter nimmt:
+
+  ```
+  node packages/game-tafelrunde/werkzeug/bewertungsprobe.mjs --tabelle
+  ```
+
+  Am 22.09.2026 steht dort **+0,84 mit Deckung** und **−0,29 ohne** — und
+  ohne ist die Vorgabe. Wer zwei Einheiten mit einem blanken
+  `staerke({ id, stufe: 1 })` vergleicht, bekommt also eine Rangfolge, die
+  der Kampfmessung widerspricht. Für den Bot ist die Vorgabe richtig (bei ihm
+  kommt die Reichweite über `umfeldGewinn` herein); für einen Menschen ist
+  sie eine Falle, und genau daran ist Befund 6 oben zwei Wochen hängen
+  geblieben. Eine **schlechte Korrelation heißt nicht, dass der Bot schlecht
+  spielt** — das beantwortet allein `werkzeug/gangarten.mjs`.
 
 - **Die Probe** `test/ausgewogenheit.test.ts` — 400 Partien zu viert, rund
   anderthalb Sekunden, läuft bei jedem Testlauf mit. Sie hält nur fest, was

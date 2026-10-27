@@ -3,7 +3,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, api, type Suchstand, type TableRow, type TischVorschau } from '../api';
 import { t } from '../i18n';
 import type { BotLevel } from '../protocol';
-import { Bankreihe, Einheitenmarke, Hexbrett } from '../minispiele/tafelrunde/Brett';
+import {
+  AufbauNeu,
+  BeitretenNeu,
+  ErstellenNeu,
+  MenueNeu,
+  SucheNeu,
+  WartesaalNeu,
+} from '../minispiele/tafelrunde/EinstiegNeu';
+import { Bankreihe, Hexbrett, Zugschatten } from '../minispiele/tafelrunde/Brett';
 import { Buehne } from '../minispiele/tafelrunde/Buehne';
 import { Einheitenblatt } from '../minispiele/tafelrunde/Einheitenblatt';
 import { Endbild } from '../minispiele/tafelrunde/Endbild';
@@ -13,12 +21,11 @@ import { Ladebildschirm } from '../minispiele/tafelrunde/Ladebildschirm';
 import { AugeZeichen, Mitspielerleiste } from '../minispiele/tafelrunde/Mitspieler';
 import { Phasenzeile } from '../minispiele/tafelrunde/Phasenzeile';
 import {
-  type Platz,
   gegnerDieseRunde,
   leistenplaetze,
 } from '../minispiele/tafelrunde/platzierung';
 import type { Einheit, Stufenwerte, TafelrundeSicht } from '../minispiele/tafelrunde/sicht';
-import { TISCH_PARAMETER, beitrittsLink } from '../minispiele/tafelrunde/tischlink';
+import { TISCH_PARAMETER } from '../minispiele/tafelrunde/tischlink';
 import { GoldZeichen, KOSTEN_FARBE, RollenZeichen } from '../minispiele/tafelrunde/Zeichen';
 import {
   KampfAnzeige,
@@ -40,12 +47,12 @@ import {
   darfSchieben,
   fehlendeKopien,
   neuVerschmolzen,
-  ortLesen,
   ortSchluessel,
   rastermass,
   tippfolge,
 } from '../minispiele/tafelrunde/zuege';
 import { useVorladen } from '../minispiele/tafelrunde/vorladen';
+import { useZiehen } from '../minispiele/tafelrunde/ziehen';
 import { useTable } from '../useTable';
 
 /**
@@ -222,7 +229,6 @@ export function Tafelrunde({
   const [startet, setStartet] = useState(false);
   const [aktiv, setAktiv] = useState<number | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
-  const [regelnOffen, setRegelnOffen] = useState(false);
 
   const tisch = useTable<TafelrundeSicht>(tischId, 'tafelrunde');
   const sicht = tisch.view?.view ?? null;
@@ -579,32 +585,7 @@ export function Tafelrunde({
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
     const gefunden = suchstand.suchende;
-    return (
-      <main className="tr-seite tr-menue">
-        <button className="tr-zurueck" type="button" onClick={brichSucheAb}>
-          ← Abbrechen
-        </button>
-        <div className="tr-menue-mitte">
-          <h1 className="tr-titel">Mitspieler suchen</h1>
-          {/* Die Zahl gross und ohne Einheit: Sie zaehlt sichtbar herunter und
-              beantwortet damit die einzige Frage, die man hier hat. */}
-          <p className="tr-countdown" aria-live="polite">
-            {sekunden}
-          </p>
-          <p className="tr-untertitel">
-            {gefunden === 1
-              ? 'Noch niemand sonst — bleibt es dabei, wird mit Bots aufgefüllt.'
-              : `${gefunden} Spieler gefunden`}
-          </p>
-          <div className="tr-punkte-lauf" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-          <p className="tr-untertitel tr-klein">{aktiv ?? '…'} Spieler gerade in Tafelrunde</p>
-        </div>
-      </main>
-    );
+    return <SucheNeu sekunden={sekunden} gefunden={gefunden} aktiv={aktiv} onAbbrechen={brichSucheAb} />;
   }
 
   // -------------------------------------------------------------------------
@@ -613,105 +594,22 @@ export function Tafelrunde({
 
   if (!tischId && menue === 'erstellen') {
     return (
-      <main className="tr-seite tr-menue">
-        <button className="tr-zurueck" type="button" onClick={() => setMenue('start')}>
-          ← Zurück
-        </button>
-        <div className="tr-menue-mitte">
-          <h1 className="tr-titel tr-titel-klein">Tisch erstellen</h1>
-
-          <h2 className="tr-feldtitel">Plätze</h2>
-          <div className="tr-chips">
-            {SITZ_WAHL.map((zahl) => (
-              <button
-                key={zahl}
-                type="button"
-                className={`tr-chip${sitze === zahl ? ' is-an' : ''}`}
-                aria-pressed={sitze === zahl}
-                onClick={() => setSitze(zahl)}
-              >
-                {zahl}
-              </button>
-            ))}
-          </div>
-
-          <h2 className="tr-feldtitel">Für wen</h2>
-          <div className="tr-chips">
-            <button
-              type="button"
-              className={`tr-chip${oeffentlich ? '' : ' is-an'}`}
-              aria-pressed={!oeffentlich}
-              onClick={() => setOeffentlich(false)}
-            >
-              Nur mit Code
-            </button>
-            <button
-              type="button"
-              className={`tr-chip${oeffentlich ? ' is-an' : ''}`}
-              aria-pressed={oeffentlich}
-              onClick={() => setOeffentlich(true)}
-            >
-              Offen für alle
-            </button>
-          </div>
-
-          <h2 className="tr-feldtitel">Freie Plätze</h2>
-          <div className="tr-chips">
-            <button
-              type="button"
-              className={`tr-chip${botsFuellen ? ' is-an' : ''}`}
-              aria-pressed={botsFuellen}
-              onClick={() => setBotsFuellen(true)}
-            >
-              Mit Bots füllen
-            </button>
-            <button
-              type="button"
-              className={`tr-chip${botsFuellen ? '' : ' is-an'}`}
-              aria-pressed={!botsFuellen}
-              onClick={() => setBotsFuellen(false)}
-            >
-              Frei lassen
-            </button>
-          </div>
-
-          {/* Die Stufe zeigt nur, wer Bots will — sonst stellt man etwas ein,
-              das an diesem Tisch nie zum Zug kommt. */}
-          {botsFuellen && (
-            <>
-              <h2 className="tr-feldtitel">Wie hart spielen die Bots</h2>
-              <div className="tr-chips">
-                {BOT_STUFEN.map((stufe) => (
-                  <button
-                    key={stufe.id}
-                    type="button"
-                    className={`tr-chip${botStufe === stufe.id ? ' is-an' : ''}`}
-                    aria-pressed={botStufe === stufe.id}
-                    onClick={() => setBotStufe(stufe.id)}
-                  >
-                    {stufe.name}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          <button
-            className="tr-suchen"
-            type="button"
-            onClick={() => void erstelleTisch()}
-            disabled={startet}
-          >
-            Tisch aufmachen
-          </button>
-          <p className="tr-untertitel tr-klein">
-            {oeffentlich
-              ? 'Der Tisch steht in der Liste und ist zusätzlich über seinen Code erreichbar.'
-              : 'Nur wer den Code hat, kommt an diesen Tisch. Du startest, wann du willst.'}
-          </p>
-          {fehler && <p className="tr-fehler">{fehler}</p>}
-        </div>
-      </main>
+      <ErstellenNeu
+        sitzWahl={SITZ_WAHL}
+        sitze={sitze}
+        oeffentlich={oeffentlich}
+        botsFuellen={botsFuellen}
+        botStufe={botStufe}
+        botStufen={BOT_STUFEN}
+        startet={startet}
+        fehler={fehler}
+        onSitze={setSitze}
+        onOeffentlich={setOeffentlich}
+        onBotsFuellen={setBotsFuellen}
+        onBotStufe={setBotStufe}
+        onErstellen={() => void erstelleTisch()}
+        onZurueck={() => setMenue('start')}
+      />
     );
   }
 
@@ -721,68 +619,18 @@ export function Tafelrunde({
 
   if (!tischId && menue === 'beitreten') {
     return (
-      <main className="tr-seite tr-menue">
-        <button className="tr-zurueck" type="button" onClick={() => setMenue('start')}>
-          ← Zurück
-        </button>
-        <div className="tr-menue-mitte">
-          <h1 className="tr-titel tr-titel-klein">Tisch beitreten</h1>
-          <p className="tr-untertitel">
-            Tippe den Code ein, den du bekommen hast — oder nimm einen offenen Tisch.
-          </p>
-
-          <input
-            className="tr-codefeld"
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="CODE"
-            aria-label="Beitrittscode"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            maxLength={12}
-          />
-          {vorschau && (
-            <p className="tr-untertitel">
-              {vorschau.host ? `Tisch von ${vorschau.host}` : 'Offener Tisch'} ·{' '}
-              {vorschau.occupied}/{vorschau.seats} Plätzen besetzt
-            </p>
-          )}
-          <button
-            className="tr-suchen"
-            type="button"
-            onClick={() => void treteBeiPerCode()}
-            disabled={startet || !codeFertig}
-          >
-            Beitreten
-          </button>
-
-          <h2 className="tr-feldtitel">Offene Tische</h2>
-          {offeneTische.length === 0 ? (
-            <p className="tr-untertitel">
-              Gerade steht kein offener Tisch. Mach selbst einen auf.
-            </p>
-          ) : (
-            <div className="tr-tischliste">
-              {offeneTische.map((zeile) => (
-                <button
-                  key={zeile.id}
-                  type="button"
-                  className="tr-tischzeile"
-                  onClick={() => void treteBeiTisch(zeile.id)}
-                  disabled={startet}
-                >
-                  <span>{zeile.host ? `Tisch von ${zeile.host}` : 'Offener Tisch'}</span>
-                  <span className="tr-tischzahl">
-                    {zeile.occupied}/{zeile.seats}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-          {fehler && <p className="tr-fehler">{fehler}</p>}
-        </div>
-      </main>
+      <BeitretenNeu
+        code={code}
+        codeFertig={codeFertig}
+        vorschau={vorschau}
+        offeneTische={offeneTische}
+        startet={startet}
+        fehler={fehler}
+        onCode={setCode}
+        onPerCode={() => void treteBeiPerCode()}
+        onTisch={(id) => void treteBeiTisch(id)}
+        onZurueck={() => setMenue('start')}
+      />
     );
   }
 
@@ -792,79 +640,23 @@ export function Tafelrunde({
 
   if (!tischId) {
     return (
-      <main className="tr-seite tr-menue">
-        <button className="tr-zurueck" type="button" onClick={onBack} aria-label="Zurück">
-          ←
-        </button>
-        <div className="tr-menue-mitte">
-          <h1 className="tr-titel">Tafelrunde</h1>
-          <p className="tr-untertitel">
-            Kaufe Recken, stelle sie aufs Feld und lege drei gleiche zusammen —
-            aus dreien wird eine stärkere. Wer am längsten steht, gewinnt.
-          </p>
-          <div className="tr-probe" aria-hidden="true">
-            {(['wache', 'schuetze', 'magier', 'meuchler', 'beistand'] as const).map((r) => (
-              <span key={r} style={{ color: KOSTEN_FARBE[2] }}>
-                <RollenZeichen rolle={r} />
-              </span>
-            ))}
-          </div>
-          <button
-            className="tr-suchen"
-            type="button"
-            onClick={() => void starteSuche()}
-            disabled={startet}
-          >
-            Mitspieler suchen
-          </button>
-          {/* Der geplante Weg neben der Schnellsuche: einen Tisch aufmachen
-              und den Code weitergeben. Zwei Knoepfe statt eines, weil
-              Aufmachen und Beitreten zwei verschiedene Rollen sind — wer den
-              Code bekommen hat, sucht keinen Erstellen-Knopf. */}
-          <div className="tr-menue-paar">
-            <button
-              className="tr-nebenknopf"
-              type="button"
-              onClick={() => {
-                setFehler(null);
-                setMenue('erstellen');
-              }}
-              disabled={startet}
-            >
-              Tisch erstellen
-            </button>
-            <button
-              className="tr-nebenknopf"
-              type="button"
-              onClick={() => {
-                setFehler(null);
-                setMenue('beitreten');
-              }}
-              disabled={startet}
-            >
-              Tisch beitreten
-            </button>
-          </div>
-          <button
-            className="tr-nebenknopf"
-            type="button"
-            onClick={() => void starteBots()}
-            disabled={startet}
-          >
-            Gegen Bots spielen
-          </button>
-          <button
-            className="tr-nebenknopf"
-            type="button"
-            onClick={() => setRegelnOffen(true)}
-          >
-            So spielt man Tafelrunde
-          </button>
-          {fehler && <p className="tr-fehler">{fehler}</p>}
-          <p className="tr-untertitel tr-klein">{aktiv ?? '…'} Spieler gerade in Tafelrunde</p>
-        </div>
-        {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
-      </main>
+      <MenueNeu
+        aktiv={aktiv}
+        startet={startet}
+        fehler={fehler}
+        regeln={<RegelText />}
+        onBack={onBack}
+        onSuche={() => void starteSuche()}
+        onErstellen={() => {
+          setFehler(null);
+          setMenue('erstellen');
+        }}
+        onBeitreten={() => {
+          setFehler(null);
+          setMenue('beitreten');
+        }}
+        onBots={() => void starteBots()}
+      />
     );
   }
 
@@ -873,56 +665,45 @@ export function Tafelrunde({
   // -------------------------------------------------------------------------
 
   if (!sicht && wartesaal) {
-    return (
-      <Wartesaal
-        wartesaal={wartesaal}
-        sitze={tisch.table?.seats ?? []}
-        botStufe={tisch.table?.botLevel ?? botStufe}
-        onBotStufe={(stufe) => {
-          setBotStufe(stufe);
-          tisch.setBotLevel(stufe);
-        }}
-        onBotsFuellen={(an) => setWartesaal({ ...wartesaal, botsFuellen: an })}
-        onStart={() => {
-          if (wartesaal.botsFuellen) {
-            // Jeden freien Platz mit einem Bot besetzen. Mit dem letzten faellt
-            // `isReadyToStart` im Server auf wahr und die Partie geht los —
-            // derselbe Weg wie im Doppelkopf-Wartebereich.
-            for (const platz of tisch.table?.seats ?? []) {
-              if (!platz.accountId && !platz.isBot) tisch.addBot(platz.seat);
-            }
-          } else {
-            // Ohne Bots: Der Tisch schrumpft serverseitig auf die Besetzten.
-            tisch.startNow();
+    const saal = {
+      wartesaal,
+      sitze: tisch.table?.seats ?? [],
+      botStufe: tisch.table?.botLevel ?? botStufe,
+      onBotStufe: (stufe: BotLevel) => {
+        setBotStufe(stufe);
+        tisch.setBotLevel(stufe);
+      },
+      onBotsFuellen: (an: boolean) => setWartesaal({ ...wartesaal, botsFuellen: an }),
+      onStart: () => {
+        if (wartesaal.botsFuellen) {
+          // Jeden freien Platz mit einem Bot besetzen. Mit dem letzten faellt
+          // `isReadyToStart` im Server auf wahr und die Partie geht los —
+          // derselbe Weg wie im Doppelkopf-Wartebereich.
+          for (const platz of tisch.table?.seats ?? []) {
+            if (!platz.accountId && !platz.isBot) tisch.addBot(platz.seat);
           }
-        }}
-        onAbbrechen={brichAb}
-      />
-    );
+        } else {
+          // Ohne Bots: Der Tisch schrumpft serverseitig auf die Besetzten.
+          tisch.startNow();
+        }
+      },
+      onAbbrechen: brichAb,
+    };
+    return <WartesaalNeu {...saal} botStufen={BOT_STUFEN} />;
   }
 
   if (!sicht) {
     const besetzt = (tisch.table?.seats ?? []).filter((platz) => platz.accountId).length;
     return (
-      <main className="tr-seite tr-menue">
-        <button className="tr-zurueck" type="button" onClick={brichAb}>
-          ← Abbrechen
-        </button>
-        <div className="tr-menue-mitte">
-          <h1 className="tr-titel">Tisch wird aufgebaut</h1>
-          <p className="tr-untertitel">
-            {tisch.status === 'open'
-              ? `${besetzt} von ${tisch.table?.seats.length ?? SITZE} Plätzen besetzt`
-              : 'Verbindung wird aufgebaut…'}
-          </p>
-          <div className="tr-punkte-lauf" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-          <p className="tr-untertitel tr-klein">{aktiv ?? '…'} Spieler gerade in Tafelrunde</p>
-        </div>
-      </main>
+      <AufbauNeu
+        text={
+          tisch.status === 'open'
+            ? `${besetzt} von ${tisch.table?.seats.length ?? SITZE} Plätzen besetzt`
+            : 'Verbindung wird aufgebaut…'
+        }
+        aktiv={aktiv}
+        onAbbrechen={brichAb}
+      />
     );
   }
 
@@ -969,167 +750,6 @@ export function Tafelrunde({
 }
 
 // ---------------------------------------------------------------------------
-// Der Wartesaal des verabredeten Tisches
-// ---------------------------------------------------------------------------
-
-/**
- * Was zwischen "Tisch aufgemacht" und "Partie laeuft" auf dem Schirm steht.
- *
- * Der Gastgeber sieht seinen Code, die Beigetretenen und den Startknopf; die
- * Gaeste sehen dasselbe ohne Knoepfe. Beide sehen dieselbe Sitzliste — sie
- * kommt aus dem Rundruf des Tisches und nicht aus einer eigenen Abfrage,
- * deshalb fuellt sie sich ohne Zutun, sobald jemand beitritt.
- *
- * Der Wartesaal bildet keine Regel nach: WANN gestartet werden darf,
- * entscheidet der Server (`isReadyToStart`, `schrumpfeAufBesetzte`). Hier
- * steht nur, wann der Knopf grau ist — und das ist dieselbe Zahl, die
- * daneben steht.
- */
-function Wartesaal({
-  wartesaal,
-  sitze,
-  botStufe,
-  onBotStufe,
-  onBotsFuellen,
-  onStart,
-  onAbbrechen,
-}: {
-  wartesaal: { code: string | null; gastgeber: boolean; botsFuellen: boolean };
-  sitze: SitzZeile[];
-  botStufe: BotLevel;
-  onBotStufe: (stufe: BotLevel) => void;
-  onBotsFuellen: (an: boolean) => void;
-  onStart: () => void;
-  onAbbrechen: () => void;
-}): React.JSX.Element {
-  const [kopiert, setKopiert] = useState<'code' | 'link' | null>(null);
-  const menschen = sitze.filter((platz) => platz.accountId).length;
-
-  const kopiere = (was: 'code' | 'link', text: string): void => {
-    // Ohne Zwischenablage (aeltere Browser, unsicherer Kontext) passiert
-    // nichts Schlimmes: Der Code steht gross daneben und laesst sich ablesen.
-    void navigator.clipboard
-      ?.writeText(text)
-      .then(() => setKopiert(was))
-      .catch(() => {});
-  };
-
-  return (
-    <main className="tr-seite tr-menue">
-      <button className="tr-zurueck" type="button" onClick={onAbbrechen}>
-        ← Verlassen
-      </button>
-      <div className="tr-menue-mitte">
-        <h1 className="tr-titel tr-titel-klein">Dein Tisch</h1>
-
-        {wartesaal.code && (
-          <>
-            <p className="tr-code" aria-label={`Beitrittscode ${wartesaal.code}`}>
-              {wartesaal.code}
-            </p>
-            <div className="tr-menue-paar">
-              <button
-                className="tr-nebenknopf"
-                type="button"
-                onClick={() => kopiere('code', wartesaal.code!)}
-              >
-                {kopiert === 'code' ? 'Code kopiert' : 'Code kopieren'}
-              </button>
-              <button
-                className="tr-nebenknopf"
-                type="button"
-                onClick={() => kopiere('link', beitrittsLink(wartesaal.code!))}
-              >
-                {kopiert === 'link' ? 'Link kopiert' : 'Link kopieren'}
-              </button>
-            </div>
-          </>
-        )}
-
-        {sitze.length === 0 ? (
-          <p className="tr-untertitel">Verbindung wird aufgebaut…</p>
-        ) : (
-          <div className="tr-sitzliste">
-            {sitze.map((platz) => (
-              <div
-                key={platz.seat}
-                className={`tr-sitz${platz.accountId || platz.isBot ? ' is-besetzt' : ''}`}
-              >
-                <span>
-                  {platz.displayName ?? (platz.isBot ? 'Bot' : 'Freier Platz')}
-                </span>
-                {platz.seat === 0 && <span className="tr-sitzmarke">Gastgeber</span>}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {wartesaal.gastgeber ? (
-          <>
-            <h2 className="tr-feldtitel">Freie Plätze beim Start</h2>
-            <div className="tr-chips">
-              <button
-                type="button"
-                className={`tr-chip${wartesaal.botsFuellen ? ' is-an' : ''}`}
-                aria-pressed={wartesaal.botsFuellen}
-                onClick={() => onBotsFuellen(true)}
-              >
-                Mit Bots füllen
-              </button>
-              <button
-                type="button"
-                className={`tr-chip${wartesaal.botsFuellen ? '' : ' is-an'}`}
-                aria-pressed={!wartesaal.botsFuellen}
-                onClick={() => onBotsFuellen(false)}
-              >
-                Weglassen
-              </button>
-            </div>
-
-            {wartesaal.botsFuellen && (
-              <div className="tr-chips">
-                {BOT_STUFEN.map((stufe) => (
-                  <button
-                    key={stufe.id}
-                    type="button"
-                    className={`tr-chip${botStufe === stufe.id ? ' is-an' : ''}`}
-                    aria-pressed={botStufe === stufe.id}
-                    onClick={() => onBotStufe(stufe.id)}
-                  >
-                    {stufe.name}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <button
-              className="tr-suchen"
-              type="button"
-              onClick={onStart}
-              disabled={!wartesaal.botsFuellen && menschen < 2}
-            >
-              Partie starten
-            </button>
-            <p className="tr-untertitel tr-klein">
-              {wartesaal.botsFuellen
-                ? 'Freie Plätze übernehmen Bots — du kannst sofort losspielen.'
-                : menschen < 2
-                  ? 'Ohne Bots braucht es mindestens einen Mitspieler.'
-                  : `Es spielen ${menschen} Menschen, die leeren Plätze fallen weg.`}
-            </p>
-          </>
-        ) : (
-          <p className="tr-untertitel">
-            {menschen} {menschen === 1 ? 'Spieler ist' : 'Spieler sind'} da. Der Gastgeber
-            startet die Partie.
-          </p>
-        )}
-      </div>
-    </main>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Die Ruestkammer
 // ---------------------------------------------------------------------------
 
@@ -1144,25 +764,8 @@ interface SitzZeile {
   accountId: string | null;
   avatarUrl: string | null;
   isBot: boolean;
-}
-
-/**
- * Der Ablegeplatz unter einem Bildschirmpunkt — als Schluessel, oder null.
- *
- * Die Trefferpruefung laeuft ueber `document.elementFromPoint`, weil das Ziel
- * unter dem FINGER liegt und nicht unter dem Ereignis (das gehoert wegen der
- * Zeigererfassung immer noch der gezogenen Einheit). Beide Aufrufer — die
- * Vorschau waehrend des Ziehens und das Ablegen am Ende — gehen durch diese
- * eine Funktion: Was leuchtet, ist damit garantiert dasselbe Feld, auf dem
- * die Einheit gleich landet.
- *
- * `elementFromPoint` gibt es in jsdom nicht. Ohne die Pruefung waere jeder
- * Test, der zieht, ein Absturz statt einer Aussage.
- */
-function zielUnter(x: number, y: number): string | null {
-  if (typeof document.elementFromPoint !== 'function') return null;
-  const unten = document.elementFromPoint(x, y);
-  return (unten?.closest('[data-ziel]') as HTMLElement | null)?.dataset.ziel ?? null;
+  /** Gastkonto — der Wartesaal sagt dann an, dass die Partie nicht zaehlt. */
+  gast?: boolean;
 }
 
 /**
@@ -1375,35 +978,6 @@ function Ruestkammer({
   // Ziehen und Antippen
   // -------------------------------------------------------------------------
 
-  /** Was gerade am Finger haengt, samt Bildschirmkoordinate fuer den Schatten. */
-  const [zug, setZug] = useState<{ von: Ort; x: number; y: number; zieht: boolean } | null>(null);
-  const startPunkt = useRef<{ x: number; y: number } | null>(null);
-  /*
-   * Ob gerade wirklich gezogen wird — dieselbe Auskunft wie `zug.zieht`, nur
-   * synchron lesbar. Der Bewegungs-Behandler hat keine Abhaengigkeiten (er
-   * soll bei jedem Zeigerereignis derselbe bleiben) und sieht den Zustand
-   * deshalb nicht. Ohne diese Merkzelle bliebe die Vorschau auf dem letzten
-   * Feld stehen, sobald der Finger in die Naehe seines Ausgangspunkts
-   * zurueckkehrt: Dort ist die Strecke wieder kurz, `weit` also falsch.
-   */
-  const zieht = useRef(false);
-
-  /**
-   * Welches Feld gerade UNTER dem Finger liegt — als Schluessel, nicht als Ort.
-   *
-   * Ohne diese Anzeige laesst man eine Einheit blind los: Der Schatten haengt
-   * am Finger und verdeckt genau die Wabe, auf die man zielt. Gesucht wird
-   * mit demselben Griff wie beim Ablegen (`elementFromPoint` auf
-   * `[data-ziel]`), damit Vorschau und Ergebnis nicht auseinanderlaufen
-   * koennen: Was hier leuchtet, ist buchstaeblich dasselbe Element, das
-   * `beiZeigerEnde` gleich findet.
-   *
-   * Als Zeichenkette gehalten und nur bei WECHSEL gesetzt: Ein neuer Ort bei
-   * jedem Zeigerereignis waere ein neues Objekt und damit ein Neuzeichnen des
-   * ganzen Bretts sechzigmal je Sekunde.
-   */
-  const [ueberZiel, setUeberZiel] = useState<string | null>(null);
-
   const darfHandeln = eigenes?.darfHandeln === true && !wartet;
 
   /**
@@ -1466,84 +1040,18 @@ function Ruestkammer({
   }, []);
 
   /**
-   * Ziehen mit dem Finger.
-   *
-   * Pointer-Ereignisse und NICHT die HTML5-Zieh-Schnittstelle: `dragstart`
-   * gibt es auf iOS und Android schlicht nicht, ein Brett, das nur mit der
-   * Maus zu bedienen ist, waere am Handy unbenutzbar — und die App wird am
-   * Handy gespielt. Die Trefferpruefung laeuft ueber
-   * `document.elementFromPoint`, weil das Ziel unter dem Finger liegt und
-   * nicht unter dem Ereignis.
+   * Ziehen mit dem Finger — die Verdrahtung steht seit dem 23.09.2026 in
+   * minispiele/tafelrunde/ziehen.ts, damit `/probe/ruestkammer` dieselbe
+   * benutzt. Ein Tipp ohne Bewegung geht dort in `tippeOrt`, ein Ablegen in
+   * `schiebe` — beide Wege enden also in denselben Pruefungen wie das
+   * Antippen.
    */
-  const beiZeigerStart = useCallback(
-    (ort: Ort, ereignis: React.PointerEvent): void => {
-      if (!darfHandeln) return;
-      startPunkt.current = { x: ereignis.clientX, y: ereignis.clientY };
-      zieht.current = false;
-      setZug({ von: ort, x: ereignis.clientX, y: ereignis.clientY, zieht: false });
-      // Ohne Zeigererfassung verliert das Element die Bewegung, sobald der
-      // Finger es verlaesst — und das tut er sofort.
-      (ereignis.currentTarget as HTMLElement).setPointerCapture?.(ereignis.pointerId);
-    },
-    [darfHandeln],
-  );
-
-  const beiZeigerBewegung = useCallback((ereignis: React.PointerEvent): void => {
-    const start = startPunkt.current;
-    if (!start) return;
-    const weit =
-      Math.abs(ereignis.clientX - start.x) > 8 || Math.abs(ereignis.clientY - start.y) > 8;
-    if (weit) zieht.current = true;
-    setZug((alt) =>
-      alt ? { ...alt, x: ereignis.clientX, y: ereignis.clientY, zieht: alt.zieht || weit } : alt,
-    );
-    if (zieht.current) setUeberZiel(zielUnter(ereignis.clientX, ereignis.clientY));
-  }, []);
-
-  /**
-   * Der Browser hat das Ziehen abgebrochen — ein Anruf, eine Geste des
-   * Betriebssystems, ein zweiter Finger. Ohne diesen Aufraeumer bliebe der
-   * Schatten am Bildschirm kleben und die Einheit blass an ihrem Platz.
-   */
-  const beiZeigerAbbruch = useCallback((): void => {
-    startPunkt.current = null;
-    zieht.current = false;
-    setZug(null);
-    setUeberZiel(null);
-  }, []);
-
-  const beiZeigerEnde = useCallback(
-    (ort: Ort, ereignis: React.PointerEvent): void => {
-      const gezogen = zug?.zieht === true;
-      startPunkt.current = null;
-      zieht.current = false;
-      setZug(null);
-      setUeberZiel(null);
-      if (!gezogen) {
-        // Ein Tipp, keine Bewegung: Auswahl statt Ziehen.
-        tippeOrt(ort);
-        return;
-      }
-      const ziel = ortLesen(zielUnter(ereignis.clientX, ereignis.clientY));
-      if (ziel) schiebe(ort, ziel);
-    },
-    [zug?.zieht, tippeOrt, schiebe],
-  );
-
-  /**
-   * Das Feld unter dem Finger — aber nur, wenn die gezogene Einheit dort auch
-   * landen DARF.
-   *
-   * Die Vorschau soll nicht mehr versprechen, als das Ablegen einloest: Ueber
-   * einem vollen Brett leuchtet nichts, und genau das ist die Auskunft.
-   * Geprueft wird mit derselben Funktion wie beim Ablegen (`zielbar`), also
-   * mit den zwei Zahlen aus der Sicht — hier wird keine Regel nachgebaut.
-   */
-  const ablegeZiel = useMemo(() => {
-    if (zug?.zieht !== true || ueberZiel === null) return null;
-    const ort = ortLesen(ueberZiel);
-    return ort && zielbar(zug.von, ort) ? ueberZiel : null;
-  }, [zug?.zieht, zug?.von, ueberZiel, zielbar]);
+  const { zug, ziehtVon, ablegeZiel, zeiger } = useZiehen({
+    darf: darfHandeln,
+    zielbar,
+    tippe: tippeOrt,
+    schiebe,
+  });
 
   // -------------------------------------------------------------------------
   // Ableitungen aus legalActions
@@ -1982,7 +1490,7 @@ function Ruestkammer({
 
 
   const gezogeneEinheit =
-    zug?.zieht === true
+    zug !== null
       ? zug.von.bereich === 'bank'
         ? eigenes.bank[zug.von.platz]
         : eigenes.brett[zug.von.platz]
@@ -2130,7 +1638,7 @@ function Ruestkammer({
                    auffordert. `belegt` kommt aus der Sicht — der Client zaehlt
                    das Brett nicht selbst ab. */
                   <p className="tr-leer-satz tr-leer-brett">
-                    Dein Feld ist leer — zieh einen Recken von der Bank auf eine Wabe oder tipp erst
+                    Dein Feld ist leer - zieh einen Recken von der Bank auf eine Wabe oder tipp erst
                     ihn, dann die Wabe an.
                   </p>
                 )}
@@ -2149,7 +1657,7 @@ function Ruestkammer({
                    erklaert. */
                   istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
                   onWaehlen={tippeOrt}
-                  ziehtVon={zug?.zieht ? zug.von : null}
+                  ziehtVon={ziehtVon}
                   /* Wo die Einheit landet, wenn der Finger jetzt loslaesst. Nur
                    waehrend eines Zuges gesetzt — sonst leuchtete das Brett
                    unter jedem Mauszeiger. */
@@ -2157,10 +1665,7 @@ function Ruestkammer({
                   fehlendeKopien={fehlen}
                   frischVerschmolzen={verschmolzen}
                   aktiv={darfHandeln}
-                  onZeigerStart={beiZeigerStart}
-                  onZeigerBewegung={beiZeigerBewegung}
-                  onZeigerEnde={beiZeigerEnde}
-                  onZeigerAbbruch={beiZeigerAbbruch}
+                  {...zeiger}
                   onLeeresZiel={tippeOrt}
                   /* Greift erst, wenn `aktiv` faellt — also nach „Bereit":
                      Dann fuehrt kein Zeiger und kein `onWaehlen` mehr zur
@@ -2196,15 +1701,12 @@ function Ruestkammer({
               gewaehlt={gewaehlt}
               istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
               onWaehlen={tippeOrt}
-              ziehtVon={zug?.zieht ? zug.von : null}
+              ziehtVon={ziehtVon}
               unterZeiger={ablegeZiel}
               fehlendeKopien={fehlen}
               frischVerschmolzen={verschmolzen}
               aktiv={darfHandeln}
-              onZeigerStart={beiZeigerStart}
-              onZeigerBewegung={beiZeigerBewegung}
-              onZeigerEnde={beiZeigerEnde}
-              onZeigerAbbruch={beiZeigerAbbruch}
+              {...zeiger}
               onNachsehen={(ort) => sieheNach(null, ort)}
             />
           </div>
@@ -2302,7 +1804,7 @@ function Ruestkammer({
         {/* ---- Was mit der Auswahl geschehen kann ------------------------- */}
         {gewaehlt && darfHandeln && (
           <div className="tr-auswahlband">
-            <span>{gewaehlteEinheit?.name ?? 'Einheit'} gewählt — Ziel antippen</span>
+            <span>{gewaehlteEinheit?.name ?? 'Einheit'} gewählt - Ziel antippen</span>
             {/* Derselbe Riegel wie im Blatt: Verkauft wird, was `legalActions`
                 anbietet. Zwei Verkaufen-Knoepfe auf einem Bildschirm, von denen
                 der eine fragt und der andere nicht, waeren zwei Antworten auf
@@ -2351,7 +1853,7 @@ function Ruestkammer({
                  erklaert, warum der Laden zu ist — und dass er von selbst
                  wieder aufgeht, denn die Dauer bestimmt der Server. */
               <p className="tr-hinweis">
-                Der Kampf läuft von selbst — danach geht der Laden wieder auf.
+                Der Kampf läuft von selbst - danach geht der Laden wieder auf.
               </p>
             ) : (
               /* Ausgeschieden: Fuer ihn geht kein Laden mehr auf, der Satz
@@ -2359,7 +1861,7 @@ function Ruestkammer({
                  einen echten Kampf statt einer Textzeile — und hier steht,
                  wessen. Ein Zurueck gibt es nicht, weil es nichts gibt, wohin. */
               <p className="tr-hinweis">
-                Du siehst {spielername(zeile(kampfSitz ?? 0), kampfSitz ?? 0)} zu — tippe oben
+                Du siehst {spielername(zeile(kampfSitz ?? 0), kampfSitz ?? 0)} zu - tippe oben
                 einen anderen Sitz an, um dessen Kampf zu sehen.
               </p>
             )
@@ -2447,7 +1949,7 @@ function Ruestkammer({
                 ändern kann. */}
             {eigenes.laden.every((id) => id === null) && (
               <p className="tr-leer-satz">
-                Der Vorrat gibt nichts mehr her — alle Recken sind im Umlauf.
+                Der Vorrat gibt nichts mehr her - alle Recken sind im Umlauf.
                 Mach dich bereit.
               </p>
             )}
@@ -2518,7 +2020,7 @@ function Ruestkammer({
               {eigenes.bereit
                 ? 'Auf die anderen warten'
                 : gewaehlt
-                  ? 'Ziel antippen — oder abbrechen'
+                  ? 'Ziel antippen - oder abbrechen'
                   : 'Karte antippen zum Kaufen · Einheit ziehen oder antippen zum Setzen'}
             </p>
           </>
@@ -2547,20 +2049,14 @@ function Ruestkammer({
       )}
 
       {/* ---- Was am Finger haengt --------------------------------------- */}
-      {zug?.zieht && gezogeneEinheit && (
-        <div
-          className="tr-schatten"
-          style={{ left: zug.x, top: zug.y }}
-          aria-hidden="true"
-        >
-          <Einheitenmarke
-            kaempfer={gezogeneEinheit}
-            katalog={katalog}
-            maxStufe={sicht.maxStufe}
-            fehlt={0}
-            aktiv={false}
-          />
-        </div>
+      {zug && gezogeneEinheit && (
+        <Zugschatten
+          kaempfer={gezogeneEinheit}
+          katalog={katalog}
+          maxStufe={sicht.maxStufe}
+          x={zug.x}
+          y={zug.y}
+        />
       )}
 
       {/* ---- Endbild ---------------------------------------------------- */}
@@ -2803,6 +2299,19 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         ✕
       </button>
       <h2>So spielt man Tafelrunde</h2>
+      <RegelText />
+    </div>
+  );
+}
+
+/**
+ * Der Text des Regelblatts, ohne Rahmen — das neue Hub zeigt ihn in einem
+ * `HbBlatt` (EinstiegNeu.tsx). Eine Stelle, damit beide Blätter nicht
+ * auseinanderlaufen.
+ */
+function RegelText(): React.JSX.Element {
+  return (
+    <>
       <h3>Regeln</h3>
       <ol>
         <li>
@@ -2811,7 +2320,7 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         </li>
         <li>
           Gekaufte Recken landen auf der Reservebank. Aufs Feld kommen sie, indem du sie auf eine
-          Wabe ziehst — oder antippst und dann die Wabe antippst.
+          Wabe ziehst - oder antippst und dann die Wabe antippst.
         </li>
         <li>
           <strong>Drei gleiche Recken derselben Stufe verschmelzen von selbst</strong> zu einem
@@ -2819,13 +2328,13 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         </li>
         <li>
           Wie viele Recken gleichzeitig auf dem Feld stehen dürfen, sagt dein Rang. Rang steigern
-          kostet Gold und bringt einen Feldplatz — und bessere Karten im Laden.
+          kostet Gold und bringt einen Feldplatz - und bessere Karten im Laden.
         </li>
         <li>
           Recken gehören Klassen an wie Krieger, Wächter oder Untot. Stehen{' '}
           <strong>zwei Träger derselben Klasse auf dem Feld</strong>, wird die Klasse stärker; ab
           drei und ab fünf noch einmal deutlicher. Der Bonus gilt nur für die Träger selbst und nur
-          auf dem Feld — was auf der Bank liegt, zählt nicht mit. Was gerade greift und wie weit es
+          auf dem Feld - was auf der Bank liegt, zählt nicht mit. Was gerade greift und wie weit es
           bis zur nächsten Stufe ist, zeigt die Synergie-Leiste. Tippe einen Zähler darin an, und du
           bekommst alle Stufen der Klasse und alle Recken, die sie tragen.
         </li>
@@ -2834,13 +2343,13 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           Serien. Was die nächste Runde bringt, steht klein neben deinem Gold.
         </li>
         <li>
-          Sind alle bereit, kämpft dein Feld gegen das eines Mitspielers — von selbst, du siehst nur
+          Sind alle bereit, kämpft dein Feld gegen das eines Mitspielers - von selbst, du siehst nur
           zu. Der Verlierer verliert Leben: je mehr Gegner noch stehen, desto mehr.
         </li>
         <li>Wer keine Lebenspunkte mehr hat, scheidet aus. Der Letzte gewinnt.</li>
       </ol>
       <h3>Ziel</h3>
       <p>Als Letzter am Tisch stehen bleiben.</p>
-    </div>
+    </>
   );
 }

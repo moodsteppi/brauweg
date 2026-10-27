@@ -12,7 +12,12 @@
 
 import type { Bemalung } from './bemalung';
 import type { BotLevel } from './protocol';
+import type { Lektion, LernpfadAnsicht, LernserieKurz, Spieltag } from './lernen/sicht';
+import type { Belohnung, BrowortAnsicht, BrowortKurz, BrowortProfil, ClanwortAnsicht } from './browort/sicht';
+import type { ManufakturAktion, ManufakturAntwort } from './manufaktur/sicht';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
+import { herkunft } from './herkunft';
+import { setzeUmfang } from './umfang';
 
 export class ApiError extends Error {
   constructor(
@@ -68,6 +73,13 @@ export interface GameSummary {
   availability: 'playable' | 'preview';
   seatCounts: number[];
   votes: number;
+  /** Eigene gespeicherte Stimme; fehlt nur bei aelteren Servern. */
+  meineStimme?: boolean;
+  /**
+   * Ob das Spiel auf dieser Plattform noch angekuendigt und abstimmbar ist.
+   * Fehlt das Feld bei aelteren Servern, bleibt die Vorschau abstimmbar.
+   */
+  abstimmbar?: boolean;
 }
 
 /** Stand der Mitspielersuche. Spiegelt `Suchstand` aus dem Server. */
@@ -113,6 +125,12 @@ export interface Me {
    */
   gast: boolean;
   /**
+   * Womit die Kontoloeschung bestaetigt wird: Passwort, Code per Mail (Konto
+   * nur ueber Google/Apple) oder beim Gast das Wort LÖSCHEN. Fehlt es (aelterer
+   * Server), gilt das Passwort wie bisher.
+   */
+  loeschenPer?: 'passwort' | 'code' | 'bestaetigung';
+  /**
    * Bemalung der 3D-Figur. `null` heißt: nie bemalt, es gilt die
    * Standardoptik. Der Server hat sie schon geprüft.
    */
@@ -137,7 +155,24 @@ export interface Me {
    * Nur die Zahlen — die Listen stehen an `/chests` und `/quests`. Sie treiben
    * den Punkt an der Truhe auf dem Startbildschirm.
    */
-  bereit: { truhen: number; aufgaben: number };
+  bereit: {
+    truhen: number;
+    aufgaben: number;
+    /**
+     * Abholbare Stufen des Trophäenwegs. Eigene Zahl, weil sie nicht unter
+     * „Heute" liegen, sondern auf dem Weg. Optional, weil die App ihren
+     * Client mitbringt und dabei an einen Server geraten kann, der das Feld
+     * noch nicht kennt — dann gilt 0.
+     */
+    weg?: number;
+  };
+  /**
+   * Die Lernserie „Doppelkopf lernen" (Server, lernpfad.ts) — fuer die Flamme
+   * auf dem Start. Optional aus demselben Grund wie `bereit.weg`.
+   */
+  lernen?: LernserieKurz;
+  /** Browort fuer seine Flamme auf dem Start (Server, browort/dienst.ts). Optional wie `lernen`. */
+  browort?: BrowortKurz;
   /**
    * Stufe und Fortschritt, fertig gerechnet vom Server.
    *
@@ -180,6 +215,12 @@ export interface Me {
   };
   /** Welche Ausgabe läuft: `production`, `staging` oder `development`. */
   stage: 'production' | 'staging' | 'development';
+  /**
+   * Was diese Ausgabe anbietet (`UMFANG` im Server, siehe umfang.ts):
+   * `null` heißt alles. Optional wie `lernen` — ein älterer Server kennt es
+   * nicht, und dann ist ebenfalls alles an.
+   */
+  umfang?: string[] | null;
 }
 
 export interface RankingEntry {
@@ -190,6 +231,43 @@ export interface RankingEntry {
   parties: number;
   wins: number;
   highestCheckpoint: number;
+}
+
+/**
+ * Bestleistung je Inhalt (Bahn, Kurs, Paket) — seit dem 22.09.2026.
+ *
+ * `richtung` kommt mit, weil der Client sonst raten muesste, ob 27 gut oder
+ * schlecht ist: Bei Golf gewinnt die kleinste Zahl, anderswo die groesste.
+ * Die Reihenfolge der Liste ist fertig vom Server; hier wird nichts sortiert.
+ * Zeitpunkte kommen als ISO-Zeichenkette ueber die Leitung.
+ */
+export type BestleistungRichtung = 'hoch' | 'tief';
+
+export interface BestenlisteEintrag {
+  rang: number;
+  accountId: string;
+  displayName: string;
+  wert: number;
+  richtung: BestleistungRichtung;
+  erzieltAm: string;
+  du: boolean;
+}
+
+export interface Bestenliste {
+  gameId: string;
+  inhaltId: string;
+  eintraege: BestenlisteEintrag[];
+  /** Null, solange man fuer diesen Inhalt nichts eingetragen hat. */
+  eigene: { rang: number; wert: number; richtung: BestleistungRichtung; erzieltAm: string } | null;
+  anzahl: number;
+}
+
+export interface EigeneBestleistung {
+  inhaltId: string;
+  wert: number;
+  richtung: BestleistungRichtung;
+  partyId: string | null;
+  erzieltAm: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -248,6 +326,48 @@ export interface Aufgaben {
   offeneBelohnung: number;
 }
 
+/** Die Truhengrade, die der Trophäenweg vergibt — Holz gibt es dort nicht. */
+export type WegGrad = Exclude<Grad, 'holz'>;
+
+/**
+ * Eine Stufe des Trophäenwegs, wie `/api/weg` sie liefert
+ * (`server/src/trophaeenweg.ts`). Was es wo gibt, sagt allein der Server.
+ */
+export interface WegStufe {
+  schwelle: number;
+  /** Station (Truhe + Gegenstand), Checkpoint (feste Münzen), weiter (über 1.000). */
+  art: 'station' | 'checkpoint' | 'weiter';
+  truhe: { grad: WegGrad; von: number; bis: number } | null;
+  /** Feste Münzen am Checkpoint oder zusätzlicher Bonus zur Truhe. */
+  muenzen: number | null;
+  /** Kennung des Gegenstands (`account_cosmetic`), sonst null. Name: `weg.<kennung>` in i18n. */
+  gegenstand: string | null;
+  erreicht: boolean;
+  geholt: boolean;
+  /** Was gutgeschrieben wurde — erst gesetzt, wenn `geholt`. */
+  coins: number | null;
+}
+
+export interface Weg {
+  /** Summe der Trophäen über alle Spiele, am Server gezählt. */
+  trophaeen: number;
+  stufen: WegStufe[];
+  /** Wie viele Stufen jetzt abgeholt werden können. */
+  bereit: number;
+}
+
+export interface WegFund {
+  schwelle: number;
+  /** Grad der Truhe; null bei festen Münzen (Checkpoint). */
+  grad: WegGrad | null;
+  coins: number;
+  gegenstand: string | null;
+  /** Nein, wenn der Gegenstand schon im Besitz war. */
+  gegenstandNeu: boolean;
+  /** Münzstand danach. */
+  stand: number;
+}
+
 export type Seltenheit = 'gewoehnlich' | 'selten' | 'episch' | 'legendaer';
 
 /** Was ein Stück kostet — in beiden Währungen, bezahlt wird mit einer. */
@@ -300,7 +420,7 @@ export interface Kauftruhe {
  * `wert` ist die Kennung ohne Praefix — so heisst sie in den Themen-
  * Einstellungen. `id` traegt das Praefix und ist die Kennung fuer den Kauf.
  */
-export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen' | 'klang' | 'musik';
+export type WareArt = 'szene' | 'blatt' | 'ruecken' | 'emote' | 'wappen' | 'klang' | 'musik' | 'inhaltspaket';
 
 export interface RegalWare {
   id: string;
@@ -311,6 +431,26 @@ export interface RegalWare {
   /** Beide Preise — der Käufer wählt, wie bei der Kosmetik. */
   preis: Preis;
   besessen: boolean;
+  /** Nur zu erspielen (Kartenruecken der Kartenmanufaktur), nicht zu kaufen. */
+  nurErspielt?: true;
+  /**
+   * Nur bei `inhaltspaket` (Golf-Kurs, Partykiste-Themenpaket): Spiel und
+   * Regelsatzfeld. Der Wert steht in `wert` — so sperrt die Auswahl des
+   * Spiels genau diese Kachel, ohne die Kennung zu zerlegen.
+   */
+  inhalt?: { spiel: string; feld: string };
+}
+
+export interface MarktArtikel {
+  id: string; art: string; wert: string; nameKey: string; seltenheit: string; normalpreis: number; slot?: Slot;
+}
+export interface MarktAngebot {
+  id: string; spiel: string; stufe: string | null; rabatt: number; aufgedeckt: boolean;
+  leer: boolean; artikel: MarktArtikel | null; preis: number | null; normalpreis: number | null; besessen: boolean;
+}
+export interface Tagesmarkt {
+  tag: string; wechseltAm: string; serverZeit: string;
+  gratisMuenzen: { betrag: number; geholt: boolean }; angebote: MarktAngebot[];
 }
 
 export interface Shop {
@@ -382,6 +522,14 @@ export interface GameDefaults {
   protocolVersion: number;
   seatCounts: number[];
   rounds: Record<string, number[]>;
+  /**
+   * Was das Modul dem Bildschirm VOR der Partie mitgibt (Golf: Kurse und
+   * Themen der Bahnauswahl), unbesehen durchgereicht — seit dem 22.09.2026.
+   * Der Bildschirm prüft die Form selbst; ältere Server schicken nichts.
+   */
+  lobby?: unknown;
+  /** Ob Sitz 0 den Regelsatz in der Lobby noch ändern darf (`setRules`). */
+  regelnInDerLobby?: boolean;
 }
 
 export interface PlayerRef {
@@ -391,12 +539,17 @@ export interface PlayerRef {
 
 export type Relationship = 'self' | 'friends' | 'incoming' | 'outgoing' | 'none';
 
+/** Gruende einer Meldung — muessen zu MELDEGRUENDE im Server passen. */
+export type Meldegrund = 'beleidigung' | 'betrug' | 'unangemessen' | 'spam' | 'anderes';
+
 export interface PlayerProfile {
   id: string;
   displayName: string;
   /** Jahr-Monat, mehr gibt ein fremdes Konto nicht preis. */
   memberSince: string;
   relationship: Relationship;
+  /** Hat man diesen Spieler selbst blockiert? Fehlt bei aelteren Servern. */
+  blockiert?: boolean;
   ranking: {
     gameId: string;
     trophies: number;
@@ -405,6 +558,8 @@ export interface PlayerProfile {
     wins: number;
   }[];
   totals: { parties: number; wins: number; trophies: number };
+  /** Browort-Serie und Schnitt; null, wenn nie gespielt. Fehlt bei aelteren Servern. */
+  browort?: BrowortProfil | null;
 }
 
 export interface FriendLists {
@@ -507,6 +662,35 @@ export interface WarContributor {
   games: number;
 }
 
+/** `resend` stellt zu, `log` schreibt nur ins Betriebslog (kein Versanddienst). */
+export type MailVersand = 'resend' | 'log';
+
+export interface Versandauskunft {
+  /** Hat der Versanddienst die Mail angenommen? */
+  mailVersandt: boolean;
+  /** Muss der Link angeklickt werden, bevor die Anmeldung geht? */
+  bestaetigungNoetig: boolean;
+  mailVersand: MailVersand;
+}
+
+/** Antwort der Mail-Diagnose — Spiegel von `MailProbe` in server/src/mail/probe.ts. */
+export interface MailProbe {
+  mailer: MailVersand;
+  absenderDomain: string | null;
+  domainStatus: string;
+  versandt: boolean;
+  fehler: string | null;
+  diagnose: string;
+  linkBasis: string;
+  letzterFehler: {
+    zeit: string;
+    status: number | null;
+    name: string | null;
+    text: string;
+    empfaengerDomain: string;
+  } | null;
+}
+
 export interface WarView {
   id: string;
   status: 'suche' | 'angefragt' | 'laeuft' | 'beendet' | 'abgesagt';
@@ -525,28 +709,104 @@ export interface WarState {
   darfFuehren: boolean;
 }
 
+/** Antwort der Anbieter-Anmeldung: Sitzung — oder erst noch das Geburtsdatum. */
+export type AnbieterAnmeldung =
+  | { ok: true; neu: boolean; token?: string }
+  /** `namensvorschlag` fehlt bei Servern vor dem 27.10.2026. */
+  | { geburtstagNoetig: true; schein: string; namensvorschlag?: string };
+
 export const api = {
+  /** Ein Aufruf ueber einen Werbelink `?q=` (herkunft.ts). */
+  herkunftBesuch: (kennung: string) => post<{ ok: true }>('/herkunft/besuch', { kennung }),
+  /** Muenz-Code einloesen — nur auf der Webseite (server/src/muenzcodes.ts). */
+  codeEinloesen: (code: string) => post<{ ok: true; muenzen: number; stand: number }>('/me/code', { code }),
+
   register: (body: {
     email: string;
     password: string;
     displayName: string;
     birthday: string;
-  }) => post<{ ok: true }>('/auth/register', body),
+  }) =>
+    /*
+     * Seit dem 23.09.2026 mit Auskunft ueber den Versand. `angemeldet` heisst:
+     * Der Server verlangt keine Bestaetigung, weil kein Versanddienst haengt
+     * — dann gibt es auch nichts abzuwarten.
+     */
+    post<
+      { ok: true; angemeldet: boolean; token?: string } & Omit<Versandauskunft, 'bestaetigungNoetig'>
+    >('/auth/register', body).then((antwort) => {
+      if (antwort.token) setSessionToken(antwort.token);
+      return antwort;
+    }),
 
   /** Ob "Mit Google anmelden" auf dieser Ausgabe eingerichtet ist. */
   googleConfig: () => request<{ clientId: string | null }>('/auth/google/config'),
-  /** Anmeldung mit dem ID-Token aus dem Google-Knopf. Cookie wie beim Login. */
+  /** Ob "Mit Apple anmelden" eingerichtet ist — samt der bei Apple eingetragenen Return-URL. */
+  appleConfig: () =>
+    request<{ clientId: string | null; redirectUri: string | null }>('/auth/apple/config'),
+  /**
+   * Einmal-Nonce fuer den naechsten Anbieter-Dialog. Der Anbieter schreibt sie
+   * ins Token, der Server loest sie genau einmal ein — ein abgefangenes Token
+   * oeffnet so kein zweites Mal etwas.
+   */
+  anbieterNonce: () => post<{ nonce: string }>('/auth/nonce'),
+  /**
+   * Anmeldung mit dem ID-Token aus dem Google-Knopf. Cookie wie beim Login.
+   * Entstuende ein NEUES Konto, kommt statt der Sitzung ein Schein zurueck:
+   * erst das Geburtsdatum, dann `anbieterAbschliessen`.
+   */
   googleLogin: async (credential: string) => {
-    const antwort = await post<{ ok: true; token?: string }>('/auth/google', {
-      credential,
+    const antwort = await post<AnbieterAnmeldung>('/auth/google', { credential });
+    if ('token' in antwort && antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+  /**
+   * Anmeldung mit dem ID-Token aus Apples Popup. Der Vorname kommt nur beim
+   * allerersten Mal mit — dann wird er Vorschlag fuer den Anzeigenamen.
+   */
+  appleLogin: async (idToken: string, vorname?: string) => {
+    const antwort = await post<AnbieterAnmeldung>('/auth/apple', {
+      idToken,
+      ...(vorname ? { vorname } : {}),
     });
+    if ('token' in antwort && antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+  /** Zweiter Schritt einer Erstanmeldung: Geburtsdatum und Anzeigename zum Schein. */
+  anbieterAbschliessen: async (schein: string, birthday: string, displayName?: string) => {
+    const antwort = await post<{ ok: true; neu: boolean; token?: string }>(
+      '/auth/anbieter/abschliessen',
+      { schein, birthday, ...(displayName ? { displayName } : {}) },
+    );
     if (antwort.token) setSessionToken(antwort.token);
     return antwort;
   },
+  /** Wie man in dieses Konto kommt: Passwort ja/nein, verknuepfte Anbieter. */
+  anmeldearten: () =>
+    request<{
+      passwort: boolean;
+      email: string | null;
+      gast: boolean;
+      anbieter: { anbieter: 'google' | 'apple'; email: string | null; seit: string }[];
+    }>('/me/anmeldung'),
+  /** Anbieter an das angemeldete Konto haengen — fuer einen Gast zugleich das Sichern. */
+  verknuepfeGoogle: (credential: string, birthday?: string) =>
+    post<{ ok: true; gesichert: boolean }>('/me/anmeldung/google', {
+      credential,
+      ...(birthday ? { birthday } : {}),
+    }),
+  verknuepfeApple: (idToken: string, birthday?: string) =>
+    post<{ ok: true; gesichert: boolean }>('/me/anmeldung/apple', {
+      idToken,
+      ...(birthday ? { birthday } : {}),
+    }),
+  /** Trennen. Die letzte Anmeldeart lehnt der Server ab. */
+  trenneAnbieter: (anbieter: 'google' | 'apple') =>
+    request<{ ok: true }>(`/me/anmeldung/${anbieter}`, { method: 'DELETE' }),
 
   verify: (token: string) => post<{ ok: true }>('/auth/verify', { token }),
   resendVerification: (email: string) =>
-    post<{ ok: true }>('/auth/verification/resend', { email }),
+    post<{ ok: true; mailVersand?: MailVersand }>('/auth/verification/resend', { email }),
   /**
    * Anmelden. Der Browser bekommt sein Cookie, die App zusaetzlich das
    * Token im Rumpf — sie hat keinen anderen Weg, ihre Sitzung zu halten.
@@ -565,14 +825,18 @@ export const api = {
    * einem Anzeigenamen. Cookie und Token laufen wie bei `login` — die App
    * braucht das Token, weil sie kein Cookie ueber die Herkunftsgrenze
    * bekommt.
+   *
+   * Kam der Aufruf ueber einen Werbelink, geht dessen Kennung mit
+   * (herkunft.ts) — nur hier, weil nur das Gastkonto gezaehlt wird.
    */
   gastLogin: async (name: string) => {
+    const kennung = herkunft();
     const antwort = await post<{
       ok: true;
       accountId: string;
       displayName: string;
       token?: string;
-    }>('/auth/gast', { name });
+    }>('/auth/gast', kennung ? { name, herkunft: kennung } : { name });
     if (antwort.token) setSessionToken(antwort.token);
     return antwort;
   },
@@ -583,7 +847,19 @@ export const api = {
    * bestehende Gast-Sitzung — dafuer sorgt der Server, nicht dieser Aufruf.
    */
   gastSichern: (email: string, password: string, birthday: string) =>
-    post<{ ok: true }>('/auth/gast/sichern', { email, password, birthday }),
+    post<{ ok: true } & Versandauskunft>('/auth/gast/sichern', { email, password, birthday }),
+
+  /** Antwortet immer gleich, ob es die Adresse gibt oder nicht. */
+  passwortVergessen: (email: string) =>
+    post<{ ok: true; mailVersand: MailVersand }>('/auth/reset-request', { email }),
+  /** Neues Passwort mit dem Token aus der Mail. Danach ist man angemeldet. */
+  passwortNeu: async (token: string, password: string) => {
+    const antwort = await post<{ ok: true; token?: string }>('/auth/reset', { token, password });
+    if (antwort.token) setSessionToken(antwort.token);
+    return antwort;
+  },
+  /** Mail-Diagnose, nur fuer Testkonten (docs/MAIL.md). */
+  mailProbe: () => post<MailProbe>('/staff/mail-probe'),
 
   /**
    * Abmelden. Das Token faellt hier auch dann, wenn der Server nicht
@@ -597,7 +873,12 @@ export const api = {
       setSessionToken(null);
     }
   },
-  me: () => request<Me>('/me'),
+  // Der Umfang kommt mit /api/me und gilt ab da fuer jeden Bildschirm (umfang.ts).
+  me: () =>
+    request<Me>('/me').then((me) => {
+      setzeUmfang(me.umfang);
+      return me;
+    }),
   /** Kartenblatt oder Szenerie eines Spiels setzen. */
   setTheme: (
     gameId: string,
@@ -635,6 +916,13 @@ export const api = {
   quests: () => request<Aufgaben>('/quests'),
   claimQuest: (questId: string) =>
     post<{ betrag: number; waehrung: Waehrung; stand: number }>(`/quests/${questId}/claim`),
+
+  // --- Trophäenweg ----------------------------------------------------------
+
+  /** Alle Stufen bis zur nächsten über 1.000, mit Zustand. */
+  weg: () => request<Weg>('/weg'),
+  /** Eine Stufe abholen. Gewürfelt wird am Server, genau einmal. */
+  wegHolen: (schwelle: number) => post<WegFund>(`/weg/${schwelle}/holen`),
 
   // --- Pro-Subway -----------------------------------------------------------
 
@@ -682,16 +970,19 @@ export const api = {
   // --- Shop und Kleiderschrank ---------------------------------------------
 
   shop: () => request<Shop>('/shop'),
+  tagesmarkt: () => request<Tagesmarkt>('/tagesmarkt'),
+  marktAufdecken: (id: string, tag: string) => post<Tagesmarkt>(`/tagesmarkt/${id}/aufdecken`, { tag }),
+  marktGratis: (tag: string) => post<{ coins: number; stand: number }>('/tagesmarkt/gratis', { tag }),
   /**
    * Kosmetik kaufen — gegen Münzen oder Edelsteine.
    *
    * Mit geht nur, **welche** Währung es sein soll. Der Betrag kommt vom Server;
    * ihn mitzuschicken wäre die Einladung, ihn zu ändern.
    */
-  buyItem: (itemId: string, waehrung: Waehrung) =>
+  buyItem: (itemId: string, waehrung: Waehrung, tag?: string) =>
     post<{ itemId: string; bezahlt: number; waehrung: Waehrung; stand: number }>(
       `/shop/${itemId}/buy`,
-      { waehrung },
+      { waehrung, ...(tag ? { tag } : {}) },
     ),
   /** Ein Paket gegen Edelsteine kaufen — heute die drei Münzpakete. */
   buyPack: (paketId: string) => post<Paketkauf>(`/shop/pakete/${paketId}/buy`),
@@ -712,16 +1003,27 @@ export const api = {
 
   claimBirthdayReward: () => post<{ ok: true; item: string }>('/me/birthday-reward'),
   /** Unumkehrbar. Das Passwort schuetzt vor dem offen liegengelassenen Geraet. */
-  deleteMe: async (password: string) => {
+  /**
+   * Konto loeschen. Der Nachweis haengt am Konto (`Me.loeschenPer`): das
+   * Passwort, der Code aus der Mail oder beim Gast das Wort LÖSCHEN. Ein
+   * blosser Text ist das Passwort — so rufen es die bisherigen Stellen auf.
+   */
+  deleteMe: async (
+    nachweis: string | { password?: string; code?: string; bestaetigung?: string },
+  ) => {
     const antwort = await request<{ ok: true }>('/me', {
       method: 'DELETE',
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(typeof nachweis === 'string' ? { password: nachweis } : nachweis),
     });
     // Die Loeschung hat die Sitzung schon widerrufen. Bliebe das Token
     // liegen, liefe jeder Start in ein 401 statt auf die Anmeldung.
     setSessionToken(null);
     return antwort;
   },
+
+  /** Loeschcode an die Adresse eines Kontos ohne Passwort. */
+  loeschcodeAnfordern: () =>
+    post<{ ok: true; versandt: boolean; mailVersand: 'resend' | 'log' }>('/me/loeschcode'),
 
   games: () => request<GameSummary[]>('/games'),
   vote: (gameId: string) => post<{ ok: true }>(`/games/${gameId}/vote`),
@@ -770,7 +1072,44 @@ export const api = {
        `/tables/:id` nachzuholen waere ein zweiter Ruf fuer eine Zeile, die
        schon vorliegt. */
   }) => post<{ id: string; joinCode: string | null }>('/tables', body),
-  joinTable: (id: string) => post<{ ok: true }>(`/tables/${id}/join`),
+  /**
+   * `angefragt`: Der Tisch ist nicht öffentlich, man sitzt noch nicht, der
+   * Gastgeber muss zusagen (Server: tables/anfragen.ts). Dann wartet der
+   * Bildschirm mit `anfrageStand` auf die Antwort.
+   */
+  joinTable: (id: string) => post<{ ok: true; angefragt?: boolean }>(`/tables/${id}/join`),
+  /** Offene Beitrittsanfragen; nur der Gastgeber bekommt sie (sonst 403). */
+  anfragen: (id: string) =>
+    request<{ anfragen: { accountId: string; displayName: string }[] }>(`/tables/${id}/anfragen`),
+  entscheideAnfrage: (id: string, accountId: string, annehmen: boolean) =>
+    post<{ ok: true }>(`/tables/${id}/anfragen/${accountId}`, { annehmen }),
+  anfrageStand: (id: string) =>
+    request<{ stand: 'offen' | 'angenommen' | 'abgelehnt' }>(`/tables/${id}/anfrage`),
+  zieheAnfrageZurueck: (id: string) =>
+    request<{ ok: true }>(`/tables/${id}/anfrage`, { method: 'DELETE' }),
+  /** Doppelkopf lernen: Pfad, erledigte Lektionen und Serie (lernen/sicht.ts). */
+  lernpfad: () => request<LernpfadAnsicht>('/lernpfad'),
+  lektion: (id: string) => request<Lektion>(`/lernpfad/lektion/${encodeURIComponent(id)}`),
+  /** Lektion geschafft — zaehlt als Spieltag der Serie. */
+  lektionFertig: (id: string) => post<Spieltag>(`/lernpfad/lektion/${encodeURIComponent(id)}/fertig`),
+  /** Uebungsrunde gegen drei Anfaenger-Bots; endet nach einer Runde. */
+  lernUebung: () => post<{ tableId: string }>('/lernpfad/uebung'),
+  /** Browort: heutige Runde, Serie, Zahlen (browort/sicht.ts). */
+  browort: () => request<BrowortAnsicht>('/browort'),
+  /** Ein Versuch. Unbekannte Woerter kommen als `browortUnbekannt` zurueck und kosten nichts. */
+  browortVersuch: (wort: string) =>
+    post<BrowortAnsicht & { belohnung: Belohnung | null; geschuetzt: boolean }>('/browort/versuch', { wort }),
+  /** Heutiges Clanwort; null ohne Clan. */
+  clanwort: () => request<{ clanwort: ClanwortAnsicht | null }>('/clanwort'),
+  clanwortWahl: (wort: string) => post<{ clanwort: ClanwortAnsicht }>('/clanwort/wahl', { wort }),
+  clanwortVersuch: (wort: string) =>
+    post<{ clanwort: ClanwortAnsicht; belohnung: Belohnung | null }>('/clanwort/versuch', { wort }),
+  /** Kartenmanufaktur: bis jetzt nachrechnen und zeigen (manufaktur/sicht.ts). */
+  manufaktur: () => request<ManufakturAntwort>('/manufaktur'),
+  /** Ausbauen, Meister, Schicht, Presse freischalten, Umziehen. */
+  /** `bei`: wann getippt wurde, in Server-Zeit — sonst rechnet der Server ab Eingang, und der Tipp springt zurueck. */
+  manufakturAktion: (aktion: ManufakturAktion, bei?: number) =>
+    post<ManufakturAntwort>('/manufaktur/aktion', { ...aktion, bei }),
   /**
    * Der Tisch hinter einem Beitrittscode — zum Ansehen, ohne beizutreten.
    *
@@ -780,7 +1119,19 @@ export const api = {
   tischPerCode: (code: string) =>
     request<TischVorschau>(`/tables/code/${encodeURIComponent(code)}`),
   beitretenPerCode: (code: string) =>
-    post<{ tableId: string }>(`/tables/code/${encodeURIComponent(code)}/join`),
+    post<{ tableId: string; angefragt?: boolean }>(`/tables/code/${encodeURIComponent(code)}/join`),
+  /**
+   * Ein Tisch mit seinem Beitrittscode — fuer die Einladung im Wartesaal.
+   *
+   * Seit dem 22.09.2026. Die Route gab es schon (`GET /api/tables/:tableId`,
+   * sie schickt die ganze Tischzeile); gefehlt hat nur der Aufruf. Nur die
+   * drei Felder, die die Einladung liest — der Rest der Zeile ist Server-
+   * Innenleben und soll hier nicht als Vertrag erscheinen.
+   */
+  tischMitCode: (id: string) =>
+    request<{
+      table: { id: string; gameId: string; status: string; joinCode: string | null };
+    }>(`/tables/${encodeURIComponent(id)}`),
   leaveTable: (id: string) => post<{ ok: true }>(`/tables/${id}/leave`),
   pauseTable: (id: string) => post<{ ok: true }>(`/tables/${id}/pause`),
   resumeTable: (id: string) => post<{ ok: true }>(`/tables/${id}/resume`),
@@ -790,10 +1141,24 @@ export const api = {
 
   ranking: (gameId: string) => request<RankingEntry[]>(`/rankings/${gameId}`),
   overallRanking: () => request<RankingEntry[]>('/rankings'),
+  /** Top 20 fuer einen Inhalt (bei Golf: eine Bahn) plus der eigene Platz. */
+  bestenliste: (gameId: string, inhaltId: string) =>
+    request<Bestenliste>(
+      `/games/${encodeURIComponent(gameId)}/bestleistungen/${encodeURIComponent(inhaltId)}`,
+    ),
+  eigeneBestleistungen: (gameId: string) =>
+    request<EigeneBestleistung[]>(`/me/bestleistungen/${encodeURIComponent(gameId)}`),
 
   profile: (accountId: string) => request<PlayerProfile>(`/players/${accountId}`),
   searchPlayers: (q: string) => request<PlayerRef[]>(`/players?q=${encodeURIComponent(q)}`),
   friends: () => request<FriendLists>('/friends'),
+  /** Blockieren und Melden (melden/MeldenBlatt.tsx, Server melden-routen.ts). */
+  blockieren: (accountId: string) => post<{ ok: true; blockiert: true }>(`/players/${accountId}/block`),
+  entblocken: (accountId: string) =>
+    request<{ ok: true; blockiert: false }>(`/players/${accountId}/block`, { method: 'DELETE' }),
+  melden: (accountId: string, grund: Meldegrund, text?: string) =>
+    post<{ ok: true }>(`/players/${accountId}/report`, { grund, ...(text ? { text } : {}) }),
+
   requestFriend: (accountId: string) =>
     post<{ status: 'pending' | 'accepted' }>(`/friends/${accountId}/request`),
   acceptFriend: (accountId: string) => post<{ ok: true }>(`/friends/${accountId}/accept`),
@@ -905,6 +1270,19 @@ export const api = {
   feedbackSenden: (daten: { beschreibung: string; screenshot?: string; seite: string }) =>
     post<{ ok: true }>('/feedback', daten),
 
+  /**
+   * „Passt nicht" zu einem Inhalt der Partykiste — nur auf staging, wie das
+   * Feedback (minispiele/partykiste/PasstNicht.tsx, Server partykiste-routen.ts).
+   */
+  partykisteMelden: (daten: {
+    katalog: string;
+    kennung: string;
+    grund: string;
+    freitext?: string;
+    tischId?: string;
+    stufe?: number;
+  }) => post<{ ok: true }>('/partykiste/meldung', daten),
+
   /** Was im Kasten liegt, plus der freigegebene Bestand. Nur Aufsicht. */
   mememoryVorschlaege: () =>
     request<{
@@ -1003,4 +1381,33 @@ export const api = {
     post<{ ok: true }>(`/clubs/${clubId}/war/${warId}/accept`),
   cancelWar: (clubId: string, warId: string) =>
     request<{ ok: true }>(`/clubs/${clubId}/war/${warId}`, { method: 'DELETE' }),
+};
+
+// ---------------------------------------------------------------------------
+// Push-Mitteilungen (docs/PUSH.md) — nur die App ruft das auf.
+// ---------------------------------------------------------------------------
+
+/** Kennungen wie im Server (push/kennungen.ts). Nie umbenennen. */
+export type PushAnlass = 'dran' | 'start' | 'einladung' | 'anfrage' | 'serie' | 'browort' | 'clanwort';
+
+export interface PushEinstellungen {
+  anlaesse: Record<PushAnlass, boolean>;
+  /** Wie viele Geraete dieses Kontos gerade Mitteilungen bekommen koennen. */
+  geraete: number;
+}
+
+export const pushApi = {
+  geraetAnmelden: (plattform: 'ios' | 'android', token: string) =>
+    post<{ ok: true }>('/push/geraet', { plattform, token }),
+  geraetAbmelden: (token: string) =>
+    request<{ ok: true; entfernt: boolean }>('/push/geraet', {
+      method: 'DELETE',
+      body: JSON.stringify({ token }),
+    }),
+  einstellungen: () => request<PushEinstellungen>('/push/einstellungen'),
+  setzeEinstellungen: (aenderung: Partial<Record<PushAnlass, boolean>>) =>
+    request<PushEinstellungen>('/push/einstellungen', {
+      method: 'PUT',
+      body: JSON.stringify(aenderung),
+    }),
 };

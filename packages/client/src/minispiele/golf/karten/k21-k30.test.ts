@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { botLoestKarte, pruefeKarte } from '../karten-pruefen';
-import { KARTEN_K21_K30 } from './k21-k30';
+import { KARTEN, bahnenImBereich } from './index';
+
+/** Seit dem 22.09.2026 eine Datei je Bahn — der Bereich wird über die Nummer gebildet. */
+const KARTEN_K21_K30 = bahnenImBereich(21, 30);
 
 /**
  * Prüft den Bereich k21–k30: zehn Bahnen, geometrisch sauber und für den
@@ -63,7 +66,7 @@ describe('Karten k21-k30', () => {
   for (const karte of KARTEN_K21_K30) {
     describe(karte.id, () => {
       it('besteht die geometrische Pruefung ohne Befund', () => {
-        expect(pruefeKarte(karte, KARTEN_K21_K30)).toEqual([]);
+        expect(pruefeKarte(karte, KARTEN)).toEqual([]);
       });
 
       it('wird vom Bot "genie" innerhalb von Schlaglimit und par+2 geloest', () => {

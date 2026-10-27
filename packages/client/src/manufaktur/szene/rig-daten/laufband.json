@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "canvas": [
+    256,
+    512
+  ],
+  "segment": "laufband-leer.png",
+  "schienen": [
+    {
+      "x": 96,
+      "breite": 12
+    },
+    {
+      "x": 160,
+      "breite": 12
+    }
+  ],
+  "tablett_abstand": 128,
+  "tablett_y": [
+    64,
+    192,
+    320,
+    448
+  ],
+  "ladepunkt_tablett": [
+    128,
+    87
+  ],
+  "ladung": {
+    "datei": "laufband-ladung.png",
+    "drehpunkt": [
+      48,
+      60
+    ]
+  },
+  "kopf": {
+    "datei": "laufband-kopf.png",
+    "canvas": [
+      256,
+      256
+    ],
+    "anschluss": [
+      128,
+      256
+    ],
+    "radmittelpunkt": [
+      128,
+      97
+    ]
+  },
+  "antriebsrad": {
+    "datei": "laufband-antriebsrad.png",
+    "drehpunkt": [
+      64,
+      64
+    ],
+    "position": [
+      128,
+      97
+    ],
+    "skala": 0.6071428571428571
+  },
+  "fuss": {
+    "datei": "laufband-fuss.png",
+    "canvas": [
+      256,
+      128
+    ],
+    "anschluss": [
+      128,
+      0
+    ]
+  }
+}

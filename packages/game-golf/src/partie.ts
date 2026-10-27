@@ -12,7 +12,9 @@ import type { BotLevel } from '@brauweg/game-api';
 
 import { DEFAULT_BOT_LEVEL } from '@brauweg/game-api';
 
-import type { GolfAktion, GolfRegeln, Zug } from './regeln.js';
+import { BAHNEN_KATALOG, waehleBahnen } from './bahnen.js';
+import { modusVon } from './modus.js';
+import { type GolfAktion, type GolfRegeln, type Zug, ZUG_ARTEN } from './regeln.js';
 
 export class RegelverstossError extends Error {}
 
@@ -25,6 +27,26 @@ export interface GolfAusstieg {
 export interface GolfMeldung {
   readonly schlaege: readonly number[];
   readonly pruef: string;
+  /**
+   * Die Tafel `[loch][sitz]`, aus der `pruef` gerechnet ist — seit dem
+   * 22.09.2026 fuer die Bestleistung je Bahn (bestleistung.ts). Fehlt bei
+   * Geraeten von davor und bei kaputter Form; die Meldung zaehlt dann fuer
+   * den Platz wie immer, nur ohne Bestleistung.
+   *
+   * Steht damit auch in der Sicht (`meldungen`), und trotzdem ohne Sprung
+   * von `protocolVersion`: Die Versionsgrenze trennt Geraete, die aus
+   * derselben Zugliste verschiedene Partien rechnen. Dieses Feld rechnet
+   * niemand nach; ein alter Client liest daran vorbei, ein alter Sender
+   * laesst es weg.
+   */
+  readonly jeLoch?: readonly (readonly number[])[];
+  /**
+   * `[loch][sitz]` ob der Ball gefallen ist (seit dem 22.09.2026). Nur fuer
+   * die Bestleistung: Ein nicht eingelochtes Loch meldet keine. Nicht in
+   * `pruef`, deshalb nimmt bestleistung.ts ein Loch nur als eingelocht, wenn
+   * JEDE Meldung der Mehrheitsgruppe, die das Feld traegt, es so sagt.
+   */
+  readonly eingelocht?: readonly (readonly boolean[])[];
 }
 
 export interface GolfAusgang {
@@ -38,6 +60,14 @@ export interface GolfPartie {
   readonly saat: number;
   readonly sitze: number;
   readonly loecher: number;
+  /**
+   * Die Bahnen der Partie als Kennungen, ein Eintrag je Loch in Spielfolge.
+   * Seit dem 22.09.2026 hier EINMAL beim Start gezogen (`waehleBahnen`) statt
+   * auf jedem Geraet gegen dessen eigenen Katalog — so kann eine neue Bahn
+   * dazukommen, ohne dass zwei Geraete aus derselben Saat Verschiedenes
+   * spielen. Siehe bahnen.ts.
+   */
+  readonly bahnen: readonly string[];
   readonly botSitze: readonly number[];
   /**
    * Gewuenschte Bot-Spielstaerke des Tisches. Steht hier und nicht nur in
@@ -62,14 +92,19 @@ export interface ErzeugePartieOptionen {
 }
 
 export function erzeugePartie(opts: ErzeugePartieOptionen): GolfPartie {
+  // >>> 0 erzwingt eine vorzeichenlose Ganzzahl; || 1 faengt die 0 ab, denn
+  // mulberry32 (Client) mit Saat 0 liefert eine gueltige, aber unbrauchbar
+  // eintoenige Folge.
+  const saat = opts.saat >>> 0 || 1;
   return {
     regeln: opts.regeln,
-    // >>> 0 erzwingt eine vorzeichenlose Ganzzahl; || 1 faengt die 0 ab, denn
-    // mulberry32 (Client) mit Saat 0 liefert eine gueltige, aber unbrauchbar
-    // eintoenige Folge.
-    saat: opts.saat >>> 0 || 1,
+    saat,
     sitze: opts.sitze,
     loecher: opts.loecher,
+    // Aus der NORMIERTEN Saat — dieselbe, die in der Sicht steht und aus der
+    // die Geraete bis zum 22.09.2026 selbst gezogen haben. Mit dem Regelsatz,
+    // weil er seit demselben Tag die Bahnauswahl des Tisches traegt.
+    bahnen: waehleBahnen(saat, opts.loecher, BAHNEN_KATALOG, opts.regeln),
     botSitze: opts.botSitze ? [...opts.botSitze] : [],
     botStufe: opts.botStufe ?? DEFAULT_BOT_LEVEL,
     zuege: [],
@@ -116,6 +151,12 @@ function pruefeZugForm(zug: unknown): asserts zug is Zug {
   if (!istEndlicheZahl(z.kraft) || z.kraft <= 0 || z.kraft > 1) {
     throw new RegelverstossError('kraftUngueltig');
   }
+  // Fehlt `art`, ist es ein Schlag. Sonst nur ein bekannter Zugtyp — ein
+  // unbekannter liefe auf jedem Geraet anders (ein alter Kern nähme ihn als
+  // Schlag), und `null` oder eine Zahl ist schlicht kaputt.
+  if (z.art !== undefined && !(ZUG_ARTEN as readonly unknown[]).includes(z.art)) {
+    throw new RegelverstossError('zugArtUnbekannt');
+  }
 }
 
 function pruefeErgebnisForm(
@@ -131,6 +172,66 @@ function pruefeErgebnisForm(
   if (typeof aktion.pruef !== 'string') {
     throw new RegelverstossError('ergebnisUngueltig');
   }
+}
+
+/**
+ * Obergrenze fuer eine einzelne Schlagzahl in `jeLoch`. Das Schlaglimit einer
+ * Bahn liegt bei hoechstens 12 (karten-pruefen.ts im Client), nicht
+ * Eingelochtes zaehlt Limit + 1 — alles darueber ist keine Golfpartie,
+ * sondern eine kaputte oder erfundene Meldung.
+ */
+const TAFEL_SCHLAEGE_MAX = 99;
+
+/**
+ * Nimmt die mitgeschickte Tafel `[loch][sitz]` an — oder nicht. Gibt eine
+ * Kopie zurueck, wenn die Form stimmt, sonst `undefined`.
+ *
+ * Wirft absichtlich NICHT, anders als `pruefeErgebnisForm`: Die Tafel ist ein
+ * Zusatz zur Ergebnismeldung. Ein Geraet von vor dem 22.09.2026 schickt sie
+ * gar nicht, ein kaputtes schickt Unsinn — in beiden Faellen zaehlt seine
+ * Meldung fuer den Platz weiter, nur eben ohne Bestleistung.
+ */
+export function tafelAusMeldung(
+  roh: unknown,
+  loecher: number,
+  sitze: number,
+): readonly (readonly number[])[] | undefined {
+  if (!Array.isArray(roh) || roh.length !== loecher) return undefined;
+  const tafel: number[][] = [];
+  for (const reihe of roh) {
+    if (!Array.isArray(reihe) || reihe.length !== sitze) return undefined;
+    for (const wert of reihe) {
+      if (
+        typeof wert !== 'number' ||
+        !Number.isInteger(wert) ||
+        wert < 0 ||
+        wert > TAFEL_SCHLAEGE_MAX
+      ) {
+        return undefined;
+      }
+    }
+    tafel.push([...(reihe as number[])]);
+  }
+  return tafel;
+}
+
+/**
+ * Wie `tafelAusMeldung`, fuer die Eingelocht-Kennzeichen `[loch][sitz]`:
+ * dieselbe Form oder `undefined`, nie ein Wurf.
+ */
+export function kennzeichenAusMeldung(
+  roh: unknown,
+  loecher: number,
+  sitze: number,
+): readonly (readonly boolean[])[] | undefined {
+  if (!Array.isArray(roh) || roh.length !== loecher) return undefined;
+  const tafel: boolean[][] = [];
+  for (const reihe of roh) {
+    if (!Array.isArray(reihe) || reihe.length !== sitze) return undefined;
+    if (!reihe.every((wert) => typeof wert === 'boolean')) return undefined;
+    tafel.push([...(reihe as boolean[])]);
+  }
+  return tafel;
 }
 
 /** Letzter Takt, den dieser Sitz schon belegt hat — Aktionen muessen aufsteigen. */
@@ -162,14 +263,35 @@ function ausgangAusMeldungen(
   meldungen: Readonly<Record<number, GolfMeldung>>,
   sitze: number,
 ): GolfAusgang {
+  const groesste = mehrheitsgruppe(meldungen);
+  if (groesste === null) {
+    return { schlaege: Array(sitze).fill(0), strittig: true };
+  }
+
+  // Innerhalb der siegreichen Gruppe zaehlt der niedrigste Sitz — deterministisch,
+  // und weil gleiche Pruefsumme ohnehin gleiche Schlaegen bedeuten sollte.
+  const gewinner = groesste.reduce((a, b) => (a.sitz < b.sitz ? a : b));
+  return { schlaege: [...gewinner.schlaege], strittig: false };
+}
+
+/**
+ * Die Meldungen mit derselben Pruefsumme, die mehr als die Haelfte aller
+ * Meldungen stellen — oder `null` ohne Meldung oder ohne Mehrheit. Eine
+ * zweite Gruppe dieser Groesse kann es nicht geben, die Antwort ist also
+ * eindeutig.
+ *
+ * Herausgeloest am 22.09.2026, damit die Bestleistung je Bahn
+ * (bestleistung.ts) ihre Tafel aus GENAU der Gruppe nimmt, die den Ausgang
+ * gestellt hat, statt die Mehrheitsregel ein zweites Mal aufzuschreiben.
+ */
+export function mehrheitsgruppe(
+  meldungen: Readonly<Record<number, GolfMeldung>>,
+): (GolfMeldung & { readonly sitz: number })[] | null {
   const eintraege = Object.entries(meldungen).map(([sitz, m]) => ({
     sitz: Number(sitz),
     ...m,
   }));
-
-  if (eintraege.length === 0) {
-    return { schlaege: Array(sitze).fill(0), strittig: true };
-  }
+  if (eintraege.length === 0) return null;
 
   const gruppen = new Map<string, typeof eintraege>();
   for (const eintrag of eintraege) {
@@ -183,15 +305,7 @@ function ausgangAusMeldungen(
     if (liste.length > groesste.length) groesste = liste;
   }
 
-  const mehrheit = groesste.length > eintraege.length / 2;
-  if (!mehrheit) {
-    return { schlaege: Array(sitze).fill(0), strittig: true };
-  }
-
-  // Innerhalb der siegreichen Gruppe zaehlt der niedrigste Sitz — deterministisch,
-  // und weil gleiche Pruefsumme ohnehin gleiche Schlaegen bedeuten sollte.
-  const gewinner = groesste.reduce((a, b) => (a.sitz < b.sitz ? a : b));
-  return { schlaege: [...gewinner.schlaege], strittig: false };
+  return groesste.length > eintraege.length / 2 ? groesste : null;
 }
 
 /**
@@ -254,6 +368,13 @@ export function verarbeite(partie: GolfPartie, sitz: number, aktion: GolfAktion)
     if (zug.takt <= letzterTakt(partie, sitz)) {
       throw new RegelverstossError('taktNichtAufsteigend');
     }
+    // Stoerschlaege gibt es nur im Fun-Modus. Klassisch haelt niemand einen,
+    // der Kern verwuerfe den Zug ohnehin — aber er stuende dann fuer immer in
+    // der Zugliste eines fairen Tisches, und das ist Unsinn, den der Server
+    // schon an der Tuer abweist.
+    if (zug.art === 'ausloesen' && modusVon(partie.regeln) !== 'fun') {
+      throw new RegelverstossError('ausloesenNurImFunModus');
+    }
     return { ...partie, zuege: [...partie.zuege, { ...zug, sitz }] };
   }
 
@@ -274,9 +395,18 @@ export function verarbeite(partie: GolfPartie, sitz: number, aktion: GolfAktion)
   // Abschnitt 5: "idempotent").
   if (partie.meldungen[sitz] !== undefined) return partie;
 
+  const jeLoch = tafelAusMeldung(aktion.jeLoch, partie.loecher, partie.sitze);
+  const eingelocht = kennzeichenAusMeldung(aktion.eingelocht, partie.loecher, partie.sitze);
   const meldungen = {
     ...partie.meldungen,
-    [sitz]: { schlaege: [...aktion.schlaege], pruef: aktion.pruef },
+    [sitz]: {
+      schlaege: [...aktion.schlaege],
+      pruef: aktion.pruef,
+      // Nur wenn da und wohlgeformt — ohne das Feld sieht die Meldung aus
+      // wie vor dem 22.09.2026, und alte Schnappschuesse bleiben gleich.
+      ...(jeLoch === undefined ? {} : { jeLoch }),
+      ...(eingelocht === undefined ? {} : { eingelocht }),
+    },
   };
   return pruefeAbschluss({ ...partie, meldungen });
 }

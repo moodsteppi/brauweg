@@ -17,9 +17,8 @@
  *
  * **Der Basis-Pinguin ist bewusst nicht `pinguin.png`.** Der ist ein Ritter mit
  * Helm, Schwert, Panzer und Umhang — also mit vier der fuenf Plaetze schon
- * belegt. Ein Hut auf einem Helm sieht aus wie ein Fehler. Der Ritter bleibt,
- * wo er heute steht (Trophaeenweg, Profilbild-Vorgabe); der Kleiderschrank
- * braucht einen nackten Pinguin, und der steht hier.
+ * belegt. Ein Hut auf einem Helm sieht aus wie ein Fehler. Der Kleiderschrank und der Trophaeenweg
+ * verwenden deshalb dieselbe unbekleidete Basis mit den getragenen Stuecken.
  *
  * Die Farben sind Zeichnung und keine Bedeutung — deshalb stehen sie hier als
  * Werte und nicht als CSS-Variablen. Die Regel aus DESIGN.md („keine
@@ -268,6 +267,46 @@ const AUSSEHEN: Record<string, Aussehen> = {
     ),
   },
 
+  /*
+   * Doko-Meister (Lernserie, 17.10.2026). Gemalt seit dem 21.10.2026 „am
+   * Pinguin anprobiert" (docs/ASSETS-PINGUIN-ANPROBE.md); die Zeichnung
+   * bleibt als Rueckfall, falls das Bild nicht laedt.
+   */
+  'hut-doktorhut': {
+    bild: '/hub/pinguin/hut-doktorhut.webp',
+    zeichnung: (
+      <g>
+        <defs>
+          <linearGradient id="dh-kappe" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#363c49" />
+            <stop offset="1" stopColor="#14171e" />
+          </linearGradient>
+          <linearGradient id="dh-brett" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#4a5162" />
+            <stop offset="0.55" stopColor="#262b36" />
+            <stop offset="1" stopColor="#15181f" />
+          </linearGradient>
+        </defs>
+        <path d="M78 42 Q120 34 162 42 L160 66 Q120 75 80 66 Z" fill="url(#dh-kappe)" />
+        <path d="M48 30 L120 52 L192 30 L192 36 L120 58 L48 36 Z" fill="#0d1016" />
+        <path d="M120 8 L192 30 L120 52 L48 30 Z" fill="url(#dh-brett)" />
+        <path d="M120 13 L180 30 L120 47 L60 30 Z" fill="none" stroke="#6a7286" strokeWidth="1.4" opacity="0.5" />
+        <path d="M120 30 Q156 33 176 37 L177 62" stroke={goldDunkel} strokeWidth="3.2" fill="none" strokeLinecap="round" />
+        <circle cx="120" cy="30" r="5.5" fill={gold} />
+        <circle cx="118.5" cy="28.5" r="2" fill="#fff3c4" />
+        <path d="M170 62 L184 62 L189 88 L165 88 Z" fill={gold} />
+        <path d="M172 66 L174 88 M177 66 L177 88 M182 66 L180 88" stroke={goldDunkel} strokeWidth="1.4" />
+        <rect x="169" y="58" width="16" height="7" rx="3" fill="#f5d27a" />
+        <g fill={gold} transform="translate(120 57)">
+          <circle cx="0" cy="-4.5" r="3.6" />
+          <circle cx="-4.3" cy="1.4" r="3.6" />
+          <circle cx="4.3" cy="1.4" r="3.6" />
+          <path d="M-1.4 2 L1.4 2 L3 8 L-3 8 Z" />
+        </g>
+      </g>
+    ),
+  },
+
   // --- Rumpf: Bauchflaeche, y 104..214, x 54..186 -------------------------
   'oberteil-pulli': {
     bild: '/hub/pinguin/oberteil-pulli.webp',
@@ -333,6 +372,41 @@ const AUSSEHEN: Record<string, Aussehen> = {
         <path d="M120 122 L106 114 L106 130 Z" fill="#2b3a45" />
         <path d="M120 122 L134 114 L134 130 Z" fill="#2b3a45" />
         <circle cx="120" cy="122" r="4" fill="#1e2a33" />
+      </g>
+    ),
+  },
+
+  // Doko-Meister, siehe Doktorhut.
+  'oberteil-meisterrobe': {
+    bild: '/hub/pinguin/oberteil-meisterrobe.webp',
+    zeichnung: (
+      <g>
+        <defs>
+          <linearGradient id="mr-stoff" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#3a6fe0" />
+            <stop offset="1" stopColor="#163684" />
+          </linearGradient>
+        </defs>
+        <path d="M72 122 Q56 140 53 170 L70 175 Q73 150 82 134 Z" fill="#2349a6" />
+        <path d="M168 122 Q184 140 187 170 L170 175 Q167 150 158 134 Z" fill="#2349a6" />
+        <path d="M52 166 L71 171 L69 180 L50 175 Z" fill={gold} />
+        <path d="M188 166 L169 171 L171 180 L190 175 Z" fill={gold} />
+        <path d="M72 120 Q120 104 168 120 L176 206 Q120 221 64 206 Z" fill="url(#mr-stoff)" />
+        <path d="M104 114 L120 170 L136 114 Q120 109 104 114 Z" fill="#f4f7f8" />
+        <path d="M102 113 L120 172 L138 113" fill="none" stroke={gold} strokeWidth="5" strokeLinejoin="round" />
+        <path d="M120 172 L120 214" stroke={gold} strokeWidth="5" />
+        <path d="M64 206 Q120 221 176 206" fill="none" stroke={goldDunkel} strokeWidth="5" />
+        <path d="M94 111 L110 111 L115 129 Z" fill="#f4f7f8" />
+        <path d="M146 111 L130 111 L125 129 Z" fill="#f4f7f8" />
+        <circle cx="129" cy="186" r="3.6" fill="#f5d27a" />
+        <circle cx="129" cy="200" r="3.6" fill="#f5d27a" />
+        <g fill={gold} transform="translate(150 150)">
+          <circle cx="0" cy="-5" r="4.2" />
+          <circle cx="-5" cy="1.8" r="4.2" />
+          <circle cx="5" cy="1.8" r="4.2" />
+          <path d="M-1.6 2.5 L1.6 2.5 L3.5 9.5 L-3.5 9.5 Z" />
+        </g>
+        <path d="M80 128 Q78 160 76 196" stroke="#5d8ff0" strokeWidth="2.5" fill="none" opacity="0.45" strokeLinecap="round" />
       </g>
     ),
   },
@@ -651,6 +725,7 @@ export function Pinguin({
   groesse = 3,
   className,
   titel,
+  anziehen = false,
 }: {
   getragen: Getragen;
   /** Hoehe in rem. */
@@ -658,6 +733,13 @@ export function Pinguin({
   className?: string;
   /** Beschriftung fuer Vorlesegeraete. Fehlt sie, ist der Pinguin Zierde. */
   titel?: string;
+  /**
+   * Anzieh-Animation (Spind): Jede Ebene haengt an ihrer Kennung, wechselt
+   * das Stueck, entsteht sie neu und spielt `pg-anziehen` (screens/spind.css).
+   * Ohne den Schalter bleibt alles ruhig — der Pinguin oben in
+   * der Kopfzeile soll nicht bei jedem Neuladen zappeln.
+   */
+  anziehen?: boolean;
 }): React.JSX.Element {
   const breite = (groesse * RAHMEN.breite) / RAHMEN.hoehe;
 
@@ -671,12 +753,58 @@ export function Pinguin({
       aria-hidden={titel ? undefined : true}
     >
       {HINTEN.map((slot) => (
-        <Ebene key={slot} itemId={getragen[slot]} />
+        <EbeneMitPlatz key={`${slot}-${anziehen ? getragen[slot] ?? '' : ''}`} slot={slot} itemId={getragen[slot]} bewegt={anziehen} />
       ))}
       <PinguinBasis />
       {VORN.map((slot) => (
-        <Ebene key={slot} itemId={getragen[slot]} />
+        <EbeneMitPlatz key={`${slot}-${anziehen ? getragen[slot] ?? '' : ''}`} slot={slot} itemId={getragen[slot]} bewegt={anziehen} />
       ))}
+    </svg>
+  );
+}
+
+/** Eine Ebene mit ihrem Platz als Klasse — daran haengt die Anzieh-Animation. */
+function EbeneMitPlatz({ slot, itemId, bewegt }: { slot: Slot; itemId: string | undefined; bewegt: boolean }): React.JSX.Element | null {
+  if (!itemId) return null;
+  if (!bewegt) return <Ebene itemId={itemId} />;
+  return (
+    <g className={`pg-ebene pg-ebene--${slot}`}>
+      <Ebene itemId={itemId} />
+    </g>
+  );
+}
+
+/**
+ * Wo die Stuecke eines Platzes im Rahmen sitzen (x, y, Breite, Hoehe) —
+ * gemessen am Alphakanal aller Ebenen je Platz, mit etwas Luft. Daraus
+ * schneidet `StueckAllein` das Stueck fuer die Faecher im Spind aus.
+ */
+const AUSSCHNITT: Readonly<Record<Slot, string>> = {
+  // Nachgemessen am 21.10.2026 für die angezogenen Stücke: Ärmel reichen
+  // weiter, Wanderstab und Monokelkette tiefer als die alten Einzelbilder.
+  hut: '34 -6 171 80',
+  brille: '58 44 123 94',
+  oberteil: '25 97 189 138',
+  schuhe: '54 206 131 54',
+  hand: '130 84 101 172',
+  aura: '-6 -5 251 261',
+};
+
+/**
+ * Nur das Stueck, ohne Pinguin — so wie es im Spind im Fach liegt oder am
+ * Buegel haengt. Ein Mini-Pinguin je Kachel war auf 40 Pixeln vor allem
+ * Pinguin; das Stueck selbst war kaum zu sehen.
+ */
+export function StueckAllein({ itemId, slot, groesse = 4 }: { itemId: string; slot: Slot; groesse?: number }): React.JSX.Element {
+  return (
+    <svg
+      className="pinguin pinguin--stueck"
+      viewBox={AUSSCHNITT[slot]}
+      style={{ height: `${groesse}rem`, width: `${groesse}rem` }}
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+    >
+      <Ebene itemId={itemId} />
     </svg>
   );
 }

@@ -1,0 +1,1069 @@
+{
+  "katalog": "regelkarten",
+  "geprueft": 49,
+  "raus": [
+    {
+      "id": "r019",
+      "text": "Das Wort „ich\" ist verboten.",
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "arbeit"
+      ],
+      "grund": "Dublette dem Sinn nach zu r018 (nur in der dritten Person von sich reden = kein „ich\")."
+    }
+  ],
+  "umstufen": [
+    {
+      "id": "r048",
+      "text": "Jeder Satz braucht ein Schimpfwort. Wer eins vergisst, hat verstoßen.",
+      "von": 3,
+      "nach": 2,
+      "grund": "Fluchen fällt an einem pikanten Tisch nicht auf — Kneipenniveau, nicht derb."
+    }
+  ],
+  "umschreiben": [
+    {
+      "id": "r016",
+      "text": "Die Beine nicht übereinanderschlagen.",
+      "neu": "Wer die Arme verschränkt, hat verstoßen.",
+      "grund": "Beine sind unter dem Tisch nicht zu sehen — der Verstoß lässt sich nicht prüfen. Gleiche Idee (Körperhaltung), sichtbar."
+    },
+    {
+      "id": "r033",
+      "text": "Wer sich beschwert, hat verstoßen.",
+      "neu": "Wer seufzt, hat verstoßen.",
+      "grund": "Was als Beschwerde zählt, ist Auslegung — unklar, wann die Regel greift. Seufzen hört man."
+    },
+    {
+      "id": "r049",
+      "text": "Zweideutigkeiten sind Pflicht: Wer etwas Eindeutiges sagt, hat verstoßen.",
+      "neu": "Jede Antwort muss versaut zweideutig sein — wer sauber antwortet, hat verstoßen.",
+      "grund": "„Etwas Eindeutiges sagen\" ist unklar und kaum derb; so ist klar, wann sie greift, und die Stufe stimmt."
+    }
+  ],
+  "neu": [
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "arbeit",
+        "jga",
+        "weihnachten"
+      ],
+      "text": "Das Wort „genau\" ist verboten."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "studenten",
+        "jga",
+        "weihnachten"
+      ],
+      "text": "Wer lacht, hält sich dabei die Hand vor den Mund."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "studenten",
+        "wg-abend"
+      ],
+      "text": "Jede Antwort beginnt mit „Gute Frage!\"."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "weihnachten",
+        "wg-abend"
+      ],
+      "text": "Alle siezen sich — wer jemanden duzt, hat verstoßen."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "weihnachten",
+        "wg-abend",
+        "studenten"
+      ],
+      "text": "Wer niest oder hustet, sagt sich selbst laut „Gesundheit\"."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "wg-abend",
+        "studenten",
+        "jga"
+      ],
+      "text": "Nach jedem Satz ein Daumen hoch."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "arbeit",
+        "wg-abend"
+      ],
+      "text": "Das Wort „und\" ist verboten."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "weihnachten",
+        "jga",
+        "wg-abend"
+      ],
+      "text": "Wer etwas vom Tisch nimmt, sagt laut „Danke, Tisch\"."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer spricht, macht dabei die Augen zu."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "studenten",
+        "wg-abend",
+        "jga"
+      ],
+      "text": "Die Wörter „krass\" und „mega\" sind verboten."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "weihnachten"
+      ],
+      "text": "Wer lacht, grunzt dabei wie ein Schwein."
+    },
+    {
+      "haerte": 1,
+      "paket": [
+        "arbeit",
+        "weihnachten",
+        "jga"
+      ],
+      "text": "Wer die Runde unterbricht, entschuldigt sich mit einer Verbeugung."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… Baby\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer lacht, wirft der Person gegenüber einen Luftkuss zu."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer aufsteht, macht vorher einen Hüftschwung."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Das Wort „Single\" ist verboten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer über Dating-Apps redet, hat verstoßen."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… aber nur, wenn du mich küsst\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Die Wörter „betrunken\", „besoffen\" und „dicht\" sind verboten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jede Frage beginnt mit einem Anmachspruch."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Die Wörter „süß\", „heiß\" und „sexy\" sind verboten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Nach jedem Satz einmal mit den Augenbrauen wackeln."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… sagte mein Ex\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz beginnt mit „Unter uns Singles …\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer aufs Handy schaut, sagt laut, wem er zuletzt geschrieben hat."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Du und die Person rechts seid jetzt ein Paar: Ihr redet nur noch in der Wir-Form."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer jemanden anspricht, beginnt mit „Hey, Hübsche\" oder „Hey, Hübscher\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jede Antwort endet mit einem Kussgeräusch."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… aber psst, nicht meiner Mutter sagen\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer „Sorry\" oder „Entschuldigung\" sagt, hängt „Liebling\" dran."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „ich\" sagt jeder „ich Sexbombe\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Alle reden nur noch mit Schlafzimmerstimme."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer etwas abstellt, stöhnt dabei leise."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer eine Zahl sagt, sagt stattdessen „neunundsechzig\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer einen Namen sagt, hängt „der Hengst\" oder „die Stute\" dran."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Die Wörter „Kater\" und „Absturz\" sind verboten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer jemandem etwas reicht, zwinkert dabei."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jede Antwort beginnt mit „Das verrate ich nur beim zweiten Date:\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… wie bei unserem ersten Date\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer etwas vom Tisch nimmt, streichelt es vorher zärtlich."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Das Wort „Date\" ist verboten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Beim Reden auf die Lippen der Person schauen, mit der man spricht."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer lacht, legt die Hand aufs Herz und seufzt „Ach\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Die Wörter „Kuss\" und „küssen\" sind verboten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… wenn du weißt, was ich meine\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jede Frage wird mit tiefem Blick in die Augen gestellt."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Die Wörter „Nacht\" und „Bett\" sind verboten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer auf dem Handy tippt, liest laut vor, was er tippt."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz muss ein Kompliment an die angesprochene Person enthalten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Die Wörter „Party\", „Club\" und „Bar\" sind verboten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer lacht, himmelt dabei die Person rechts von sich an."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Alle Handys liegen mit dem Bildschirm nach oben — wer seins umdreht, hat verstoßen."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer eine Nachricht bekommt, sagt laut, von wem."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer gähnt, sagt „Ich bin nicht müde, nur verliebt\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz beginnt mit „Nach Mitternacht würde ich sagen …\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer sich durch die Haare fährt, hat verstoßen — das gilt als Flirtsignal."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Die Wörter „verliebt\", „Liebe\" und „Herz\" sind verboten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Das Wort „geil\" ist verboten."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „Tisch\" heißt es „Bett\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „essen\" heißt es „vernaschen\"."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer vom Tisch aufsteht, wackelt beim Weggehen mit dem Hintern."
+    },
+    {
+      "haerte": 2,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Das Wort „Sex\" ist verboten — es heißt „Matratzensport\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… und dann haben wir gevögelt\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „ja\" heißt es „Oh ja, härter\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „nein\" heißt es „Nicht ohne Gummi\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Die Wörter „hart\", „feucht\", „tief\" und „kommen\" sind verboten."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… sagte die Domina\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer lacht, lacht wie beim Orgasmus."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder heißt nach seiner Lieblingsstellung. Wer einen echten Namen sagt, hat verstoßen."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer aufs Handy schaut, sagt laut „Ich such nur Nudes\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer die Hände unter dem Tisch hat, sagt laut, was sie da machen."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer vom Klo zurückkommt, meldet laut „groß\" oder „klein\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer niest, hustet oder sich schnäuzt, stöhnt danach."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer auf etwas zeigt, zeigt mit dem Mittelfinger."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer etwas in den Mund steckt, sagt vorher „Mmh, so groß\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer lacht, sagt danach „Das war fast so gut wie Sex\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Alle sprechen sich mit „Luder\" oder „Lümmel\" an."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jede Frage wird mit Porno-Synchronstimme gestellt."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „Entschuldigung\" heißt es „Bestraf mich\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer gähnt, sagt „Du langweilst mich mehr als mein letzter Sex\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer einen Satz mit „Ich\" beginnt, beendet ihn mit „… und zwar nackt\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "In jedem Satz muss ein Körperteil unterhalb der Gürtellinie vorkommen."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer rülpst oder pupst, widmet es laut jemandem am Tisch."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer aufsteht, ruft dabei „Ich komme!\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… und das war erst das Vorspiel\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „Hallo\" und „Tschüss\" heißt es „Na, du geiles Stück\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer einen Gegenstand in die Hand nimmt, befummelt ihn erst lasziv."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jede Antwort beginnt mit „Beim letzten Dreier …\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer sich bückt oder etwas aufhebt, fragt „Gefällt dir die Aussicht?\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… aber nur mit Handschellen\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer die Person neben sich anspricht, nennt sie „Sexgott\" oder „Sexgöttin\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… im Swingerclub\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer lacht, wackelt dabei obszön mit der Zunge."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz beginnt mit „Als ich letztens high war …\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Nur dreckige Witze erlaubt — wer einen sauberen erzählt, hat verstoßen."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer sich kratzt, sagt laut, ob es Filzläuse sind."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „Handy\" heißt es „Dildo\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „Glas\" heißt es „Gleitgel\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „Stuhl\" heißt es „Sexschaukel\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „machen\" heißt es „es treiben\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer jemandem in die Augen schaut, leckt sich dabei über die Lippen."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit „… und dann hab ich gekotzt\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „Danke\" heißt es „Danke, du geile Sau\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „Bitte\" heißt es „Bitte, fester\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz endet mit dem Namen einer Körperflüssigkeit."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jeder Satz beginnt mit „Alter …\" und klingt, als wärst du high."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer aufsteht, sagt laut, welche Unterwäsche er trägt."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer lacht, nennt danach eine Stellung, die er mag."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer die Arme hebt, riecht danach an der eigenen Achsel."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer hustet, sagt „Das kommt vom Gras\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Statt „toll\", „super\" oder „schön\" heißt es „orgastisch\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Wer sich hinsetzt, sagt „Ah, da sitz ich gern drauf\"."
+    },
+    {
+      "haerte": 3,
+      "paket": [
+        "wg-abend",
+        "jga",
+        "studenten"
+      ],
+      "text": "Jede Frage beginnt mit „Mal ganz unter uns Perversen:\"."
+    }
+  ]
+}

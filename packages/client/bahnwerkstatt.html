@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Golf — Bahnwerkstatt</title>
+    <!--
+      Die Bahnwerkstatt fuer Golf (seit 22.09.2026): Bahnen bauen, mit der
+      echten Physik anspielen, mit pruefeKarte und dem Genie-Bot pruefen, als
+      Quelltext fuer den Katalog ausgeben. Aufruf ueber `npm run dev:client`
+      -> http://localhost:5173/bahnwerkstatt.html
+
+      Sie wird beim `vite build` bewusst NICHT mitgebaut (die Rollup-Eingabe
+      ist nur index.html), geht also nicht mit ins Betriebspaket. Drei Gruende:
+      Was sie am Ende liefert, ist Quelltext fuer einen Pull Request — wer ihn
+      einbaut, hat ohnehin eine Arbeitskopie und damit `npm run dev:client`.
+      Der Server liefert dist/ ohne Anmeldung aus, ein Editor dort waere fuer
+      jeden Spieler offen. Und ein zweiter Einstieg aendert, wie Rollup die
+      gemeinsamen Stuecke (Physik, Zeichner) schneidet — das Hauptpaket soll
+      sich wegen eines Werkzeugs nicht verschieben. Wer sie doch ausliefern
+      will: `build.rollupOptions.input` in vite.config.ts um diese Datei
+      ergaenzen und die Paketgroessen vorher und nachher vergleichen.
+    -->
+  </head>
+  <body>
+    <div id="wurzel"></div>
+    <script type="module" src="/src/werkstatt/golf/einstieg.tsx"></script>
+  </body>
+</html>

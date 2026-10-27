@@ -1,3 +1,4 @@
+import { tagesmarktFuer, marktAufdecken, marktKaufen, marktGratis } from '../tagesmarkt.js';
 /**
  * HTTP-Schnittstelle.
  *
@@ -25,13 +26,12 @@ import { MOTIVE } from '@brauweg/game-mememory';
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { AppError, RuleSetInvalidError, badRequest, conflict, forbidden, notFound, unauthorized } from '../errors.js';
-import { darfBenutzen } from '../tischware.js';
+import { darfBenutzen, wareMit } from '../tischware.js';
 import { leseBemalung, pruefeBemalung } from '../bemalung.js';
 import {
   type AuthDeps,
   anonymizeAccount,
   login,
-  loginMitGoogle,
   logout,
   register,
   requestPasswordReset,
@@ -44,7 +44,29 @@ import {
   gastKonto,
   gastSichern,
 } from '../auth/service.js';
-import { pruefeGoogleToken } from '../auth/google.js';
+// Eigene Zeile statt in der Liste darueber: Bestaetigung, Reset und
+// Mail-Diagnose (23.09.2026) kamen parallel zu anderen Anmeldewegen dazu.
+import { createSession } from '../auth/service.js';
+import { loeschCodeEinloesen, loeschCodeSenden, loeschWeg, wortBestaetigt } from '../auth/loeschen.js';
+import { mailProbe } from '../mail/probe.js';
+import type { Schluesselquelle } from '../auth/idtoken.js';
+import type { NonceSpeicher } from '../auth/nonce.js';
+import { anbieterRouten } from './anbieter-routen.js';
+import { type AppVerknuepfung, appVerknuepfungRouten } from './app-verknuepfung.js';
+import { zugangsschutz } from './zugangsschutz.js';
+import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
+import { partykisteRouten } from './partykiste-routen.js';
+import { lernpfadRouten } from './lernpfad-routen.js';
+import { browortRouten } from './browort-routen.js';
+import { manufakturRouten } from './manufaktur-routen.js';
+import { browortKurz, browortProfil } from '../browort/dienst.js';
+import { herkunftRouten } from './herkunft-routen.js';
+import { teamRouten } from './team-routen.js';
+import { gastkontoZaehlen } from '../herkunft.js';
+import { zaehle } from '../statistik.js';
+import { lernserieKurz } from '../lernpfad.js';
+import { pushRouten } from './push-routen.js';
+import type { PushAnlaesse } from '../push/anlaesse.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
   berlinToday,
@@ -60,9 +82,24 @@ import { GEBURTSTAGS_OUTFIT, SLOTS, istSlot, schenken } from '../kosmetik.js';
 import { anziehen, getragenVon, kaufen, paketKaufen, shopFuer } from '../shop.js';
 import { offeneTruhen, truheKaufen, truheOeffnen, truhenFuer } from '../truhen.js';
 import { aufgabeAbholen, aufgabenFuer, offeneBelohnungen } from '../quests.js';
+import { offeneWegBelohnungen, wegFuer, wegHolen } from '../trophaeenweg.js';
 import { runnerCashout, runnerLauf, runnerRangliste, runnerTagesstand } from '../runner.js';
 import { TABLE_SCENES, DEFAULT_TABLE_SCENE } from '../scenes.js';
-import { isPlayable, registry, requireModule } from '../games/registry.js';
+import {
+  APP_INHALT_WIE_WEB,
+  type AppInhalt,
+  appRegeln,
+  isPlayable,
+  registry,
+  requireModule,
+  requireSpielbar,
+  freigabeAuf,
+  spieleFuer,
+  abstimmModiFuer,
+  taugtFuerApp,
+  type Plattform,
+} from '../games/registry.js';
+import { ALLES, imUmfang, umfangFuerClient, type Funktion, type Umfang } from '../umfang.js';
 import {
   acceptFriendship,
   listFriendships,
@@ -106,6 +143,7 @@ import {
   warState,
 } from '../clubs/war.js';
 import { overallRanking, rankingForGame } from '../rankings/service.js';
+import { bestenlisteFuer, eigeneBestleistungen, istInhaltId } from '../bestleistung.js';
 import { lies, nimmAuf, uebersicht } from '../diagnose.js';
 import {
   GURT_MAX,
@@ -149,6 +187,15 @@ import {
   tischPerCode,
   verlasseKiTisch,
 } from '../tables/service.js';
+import {
+  anfrageStand,
+  brauchtZusage,
+  entscheide,
+  gastgeberVon,
+  offeneAnfragen,
+  stelleAnfrage,
+  zieheAnfrageZurueck,
+} from '../tables/anfragen.js';
 import type { Vermittlung } from '../suche/vermittlung.js';
 import type { PartyRuntime } from '../runtime/party.js';
 
@@ -172,6 +219,106 @@ export const SESSION_COOKIE = 'brauweg_session';
  */
 export const APP_ORIGIN = 'brauweg://app';
 
+/**
+ * Profilbilder, Meme-Motive und ihre Toene darf auch die App laden.
+ *
+ * Helmet setzt auf jede Antwort `Cross-Origin-Resource-Policy: same-origin`.
+ * Im Browser merkt das niemand, der Client liegt auf derselben Herkunft. Die
+ * App aber laedt `<img src="https://www.brauweg-spielen.de/api/avatars/…">`
+ * aus `brauweg://app` — und WebKit verwirft das Bild dann stumm, obwohl es
+ * mit 200 ankommt. Die Dateien sind ohnehin oeffentlich (ohne Anmeldung
+ * abrufbar), die Freigabe verraet also nichts.
+ */
+const BILD_FUER_ALLE = 'cross-origin';
+
+/**
+ * Herkunft der Android-Huelle (apps/android).
+ *
+ * Nicht `brauweg://app` wie unter iOS, und das ist kein Versehen: Der
+ * Android-WebView kennt keine eigenen Schemata als richtige Herkunft. Eine
+ * Seite unter `brauweg://…` bekaeme dort die Herkunft `null` — ohne
+ * localStorage, und jeder Abruf ginge mit `Origin: null` hinaus, was jede
+ * beliebige Sandbox-Seite genauso schicken kann. Google sieht fuer gebuendelte
+ * Inhalte deshalb `WebViewAssetLoader` unter genau dieser Adresse vor. Sie
+ * gehoert Google und liefert nie eine Webseite aus; faelschen kann sie also
+ * keine Seite im Browser — dieselbe Eigenschaft, derentwegen der Server das
+ * Token an `brauweg://app` herausgibt.
+ */
+export const APP_ORIGIN_ANDROID = 'https://appassets.androidplatform.net';
+
+/** Alle Herkuenfte der App: iOS und Android. */
+export const APP_ORIGINS: readonly string[] = [APP_ORIGIN, APP_ORIGIN_ANDROID];
+
+/** Kommt diese Herkunft aus der App? */
+export function istAppHerkunft(origin: string | undefined): boolean {
+  return origin !== undefined && APP_ORIGINS.includes(origin);
+}
+
+/**
+ * Webseite oder App — fuer die Freigabe je Spiel (`FREIGABE` in
+ * games/registry.ts).
+ *
+ * Hier genuegt die Herkunft, obwohl eine Kopfzeile von einem eigenen
+ * Programm aus beliebig zu setzen ist: Die Freigabe ist eine
+ * Produktentscheidung, kein Schutz. Wer sich mit einem Werkzeug als App
+ * ausgibt, sieht die App-Auswahl — und wer sich als Webseite ausgibt, die
+ * der Webseite, die ohnehin jeder oeffnen kann.
+ */
+export function plattformVon(request: FastifyRequest): Plattform {
+  return istAppHerkunft(request.headers.origin) ? 'app' : 'web';
+}
+
+/**
+ * Welche Routen zu welcher Funktion des Umfangs gehoeren (src/umfang.ts).
+ *
+ * Gegen das Routenmuster, wie Fastify es meldet (`/api/clubs/:clubId/war`),
+ * nicht gegen die Adresse: Eine Kennung in der Adresse kann aussehen wie
+ * ein Pfadteil, ein Muster nicht. Die Spiele der Registry stehen hier nicht —
+ * die sperrt `requireSpielbar` an jedem Tisch-Einstieg, ihre Nebenrouten
+ * `SPIEL_ZU_ROUTE` darunter.
+ *
+ * Die dritte Angabe ist die Methode, wo das Muster allein zu viel traefe:
+ * Das Profilbild geht ueber `PATCH /api/me`, und `GET /api/me` ist der
+ * Ladeweg jedes Bildschirms.
+ *
+ * Bezahlen mit Edelsteinen (`shop`) steht nicht hier, weil es dieselbe
+ * Kaufroute ist wie das Bezahlen mit Muenzen — das sperrt der Kaufweg selbst.
+ */
+export const FUNKTION_ZU_ROUTE: readonly (readonly [Funktion, RegExp, string?])[] = [
+  ['kartenmanufaktur', /^\/api\/manufaktur(\/|$)/],
+  ['browort', /^\/api\/browort(\/|$)/],
+  ['clanwort', /^\/api\/clanwort(\/|$)/],
+  ['lernpfad', /^\/api\/lernpfad(\/|$)/],
+  ['prosubway', /^\/api\/runner(\/|$)/],
+  ['clankrieg', /^\/api\/clubs\/:clubId\/war(\/|$)/],
+  ['clanchat', /^\/api\/clubs\/:clubId\/messages(\/|$)/],
+  ['shop', /^\/api\/shop\/(pakete|truhen)(\/|$)/],
+  ['abstimmung', /^\/api\/games\/:gameId\/vote$/],
+  ['profilbild', /^\/api\/me$/, 'PATCH'],
+  ['figur', /^\/api\/me\/figur$/],
+  ['geburtstag', /^\/api\/me\/birthday-reward$/],
+];
+
+/**
+ * Nebenrouten eines Spiels, die keine Spielkennung im Pfad tragen. Was ein
+ * `:gameId` hat (Ranglisten, Bestleistungen, Vorgaben, Aussehen), prueft der
+ * Haken unten ohnehin an der Kennung — hier steht nur, was er daran nicht
+ * erkennt.
+ *
+ * Die Uebungsrunde des Lernpfads gehoert zu Doppelkopf, nicht zum Lernpfad:
+ * Sie legt einen Doppelkopf-Tisch an, und ohne Doppelkopf im Umfang gaebe es
+ * sonst genau einen Weg an einen Tisch des Spiels.
+ *
+ * Bewusst NICHT hier: die Partykiste-Meldung (`/api/partykiste/meldung`) und
+ * die Feldherr-Diagnose. Beide gehoeren zu einer laufenden Partie, und die
+ * stirbt nicht am Umfang (siehe den Beitritt in test/umfang.test.ts) — wer
+ * dort einen Text melden will, soll es koennen.
+ */
+export const SPIEL_ZU_ROUTE: readonly (readonly [GameId, RegExp])[] = [
+  ['mememory', /^\/api\/mememory(\/|$)/],
+  ['doppelkopf', /^\/api\/lernpfad\/uebung$/],
+];
+
 export interface AppDeps {
   readonly db: Db;
   readonly auth: AuthDeps;
@@ -192,6 +339,22 @@ export interface AppDeps {
    */
   readonly stage?: 'production' | 'staging' | 'development';
   /**
+   * Rueckweg fuer die App (`AppInhalt` in games/registry.ts): Partykiste
+   * ohne Trinkmodus bzw. mit gedeckelter Textschaerfe, nur fuer Anfragen aus
+   * der App. Fehlt es, sieht die App dasselbe wie die Webseite.
+   */
+  readonly appInhalt?: AppInhalt;
+  /**
+   * Was diese Ausgabe anbietet (`UMFANG`, src/umfang.ts). Fehlt es, ist
+   * alles an — wie auf `staging` und in jedem Test, der es nicht setzt.
+   */
+  readonly umfang?: Umfang;
+  /**
+   * Universal Links und App Links fuer `/beitritt/*` (app-verknuepfung.ts).
+   * Fehlt es, liefert der Server beide Dateien nicht aus.
+   */
+  readonly appVerknuepfung?: AppVerknuepfung;
+  /**
    * Schluessel fuer den Abruf der Feldherr-Mitschnitte, aus
    * `DIAGNOSE_SCHLUESSEL`. Fehlt er, geht der Abruf ausschliesslich ueber
    * ein angemeldetes Testkonto — was der uebliche Weg ist. Der Schluessel
@@ -200,14 +363,45 @@ export interface AppDeps {
    */
   readonly diagnoseSchluessel?: string | null;
   /**
+   * Schluessel fuer die Auswertung der Werbelinks (`HERKUNFT_SCHLUESSEL`,
+   * src/herkunft.ts). Fehlt er, ist `/api/herkunft/auswertung` zu.
+   */
+  readonly herkunftSchluessel?: string | null;
+  /** Schluessel fuer die Team-Schnittstelle des brotool (`TEAM_SCHLUESSEL`, http/team-routen.ts). */
+  readonly teamSchluessel?: string | null;
+  /**
    * OAuth-Client-ID fuer "Mit Google anmelden" (GOOGLE_CLIENT_ID). Fehlt
    * sie, gibt es den Knopf nicht — der Rest der Anmeldung laeuft unveraendert.
    */
   readonly googleClientId?: string | null;
+  /**
+   * "Mit Apple anmelden": Services ID (APPLE_CLIENT_ID) und die bei Apple
+   * eingetragene Return-URL. Fehlt eins davon, gibt es den Knopf nicht.
+   */
+  readonly appleClientId?: string | null;
+  /** Bundle-ID der iOS-App (APPLE_APP_ID) — `aud` der nativen Apple-Anmeldung. */
+  readonly appleAppId?: string | null;
+  readonly appleRedirectUri?: string | null;
+  /** Inhalt der Apple-Domain-Nachweisdatei (APPLE_DOMAIN_ASSOCIATION), falls verlangt. */
+  readonly appleDomainVerknuepfung?: string | null;
+  /** Nur Tests: eigene Schluessel statt Googles und Apples JWKS. */
+  readonly anbieterSchluessel?: {
+    readonly google?: Schluesselquelle;
+    readonly apple?: Schluesselquelle;
+  };
+  /** Nur Tests: ein Nonce-Speicher, in den der Test selbst hineinsieht. */
+  readonly anbieterNonces?: NonceSpeicher;
   /** Ziel-URL des bro-server-Endpunkts fuers Feedback-Widget, siehe config.ts. */
   readonly feedbackZielUrl?: string | null;
+  /** `name:passwort` fuer den Zugangsschutz von staging (STAGING_ZUGANG, http/zugangsschutz.ts). */
+  readonly stagingZugang?: string | null;
   /** Bearer-Schluessel fuer obige URL. */
   readonly feedbackZielToken?: string | null;
+  /**
+   * Push-Mitteilungen (docs/PUSH.md). Fehlt es, gibt es die Routen trotzdem
+   * — nur der Anlass "Einladung angenommen" entfaellt.
+   */
+  readonly push?: PushAnlaesse;
 }
 
 /**
@@ -324,8 +518,18 @@ const FEEDBACK_BODY_LIMIT = 3_200_000;
  */
 const BODY_LIMIT = 128 * 1024;
 
+/**
+ * Wie eine Anfrage im Log heisst: Methode plus Routen-Muster (`/api/tables/code/:code`),
+ * nie die URL mit Werten. Ohne Route (404-Weg) nur ein Platzhalter.
+ */
+export function routenMuster(request: FastifyRequest): string {
+  return request.routeOptions?.url ?? '(ohne Route)';
+}
+
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({ logger: false, bodyLimit: BODY_LIMIT });
+  const appInhalt = deps.appInhalt ?? APP_INHALT_WIE_WEB;
+  const umfang = deps.umfang ?? ALLES;
   await app.register(cookie);
 
   // Sicherheits-Kopfzeilen. Ohne frame-ancestors laesst sich die Seite in
@@ -336,16 +540,38 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       directives: {
         defaultSrc: ["'self'"],
         /**
-         * accounts.google.com ist fuer "Mit Google anmelden" (GIS-Knopf):
-         * Das Skript kommt von dort, der Knopf selbst ist ein iframe
-         * derselben Herkunft, und die Bibliothek funkt dorthin. Ohne die
-         * drei Eintraege laedt der Knopf auf Produktion nicht — auf dem
-         * Entwicklungsserver faellt das nie auf, Vite setzt keine
-         * Richtlinie (dieselbe Falle wie beim Runner-Worker).
+         * Anmeldung mit Google und Apple — so eng, wie die Anbieter es zulassen.
+         *
+         * Google (GIS-Knopf): Das Skript kommt von /gsi/client, der Knopf ist
+         * ein iframe unter /gsi/, seine Schrift liegt unter /gsi/style, und
+         * die Bibliothek funkt nach /gsi/. Genau diese Pfade nennt Googles
+         * Einrichtungsanleitung; bis zum 23.09.2026 stand hier die ganze
+         * Herkunft accounts.google.com.
+         *
+         * Apple: nur das SDK-Skript. Im Popup-Modus oeffnet es ein eigenes
+         * Fenster auf appleid.apple.com (ein Fenster ist keine Frage der
+         * Richtlinie) und bekommt die Antwort per postMessage — kein iframe,
+         * kein fetch. appleid.apple.com steht deshalb bewusst NIRGENDS hier;
+         * wer auf den Umleitungsmodus umstellt, braucht es auch dann nicht,
+         * weil eine Seitennavigation keine CSP-Frage ist.
+         *
+         * Auf dem Entwicklungsserver faellt ein fehlender Eintrag nie auf,
+         * Vite setzt keine Richtlinie (dieselbe Falle wie beim Runner-Worker).
+         *
+         * `'unsafe-eval'` und `'wasm-unsafe-eval'` fehlen mit Absicht. Die
+         * Kartenmanufaktur (PixiJS v8) wollte `new Function` und blieb
+         * deshalb im Web schwarz; geloest ist das im Client ueber
+         * `pixi.js/unsafe-eval` (Szene.ts), nicht hier. Wer eine Bibliothek
+         * einbaut, die eval verlangt, sucht zuerst deren Weg ohne eval —
+         * `test/anmeldung-anbieter.test.ts` haelt die Kopfzeile fest.
          */
-        scriptSrc: ["'self'", 'https://accounts.google.com'],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
-        frameSrc: ['https://accounts.google.com'],
+        scriptSrc: [
+          "'self'",
+          'https://accounts.google.com/gsi/client',
+          'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/',
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com/gsi/style'],
+        frameSrc: ['https://accounts.google.com/gsi/'],
         /**
          * `blob:` ist fuer die 3D-Figur noetig, und der Fehler war teuer zu
          * finden: Die Texturen stecken als JPEG **im** GLB. Der Lader von
@@ -374,7 +600,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
          * Entwicklungsserver faellt das nie auf: Dort liefert Vite aus, und
          * Vite setzt gar keine Inhaltsrichtlinie.
          */
-        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:', 'https://accounts.google.com'],
+        connectSrc: ["'self'", 'ws:', 'wss:', 'blob:', 'https://accounts.google.com/gsi/'],
         /**
          * DER Fehler, der Feldherr auf Produktion strittig gemacht hat —
          * und der in keiner Testfassung auftrat.
@@ -409,6 +635,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // Die Seite laeuft ausschliesslich ueber HTTPS.
     hsts: { maxAge: 31_536_000, includeSubDomains: true },
     crossOriginEmbedderPolicy: false,
+    /**
+     * Die Anbieter-Dialoge sind Popups, und beide melden ihr Ergebnis per
+     * postMessage an das oeffnende Fenster zurueck. Helmets Vorgabe
+     * `same-origin` kappt genau diese Verbindung: Das Popup verliert
+     * `window.opener`, der Dialog bleibt leer oder schliesst sich ohne
+     * Ergebnis. `same-origin-allow-popups` behaelt die Trennung gegen
+     * fremde Fenster, die UNS oeffnen, und laesst nur unsere eigenen Popups
+     * zurueckfunken — so verlangen es Google und Apple.
+     */
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    /**
+     * Helmets Vorgabe `no-referrer` laesst Googles Knopf-iframe nicht
+     * erkennen, von welcher Seite er geladen wird — er meldet dann "origin
+     * not allowed", obwohl der Ursprung eingetragen ist. Google empfiehlt
+     * `strict-origin-when-cross-origin`: Fremde Herkuenfte sehen nur den
+     * Ursprung (https://www.brauweg-spielen.de), nie Pfad oder Suchteil —
+     * ein Einladungscode in der Adresse bleibt also hier.
+     */
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   });
 
   /**
@@ -420,12 +665,20 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * Herkunftsgrenze erlaubt, oeffnet CSRF - genau das soll nicht passieren.
    */
   await app.register(cors, {
-    origin: [APP_ORIGIN],
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    origin: [...APP_ORIGINS],
+    // PUT fehlte bis zum 22.10.2026: Der Browser auf der Webseite merkt das
+    // nie (same-origin), die App aber scheitert schon an der Vorabfrage.
+    // Getroffen hat es die Mitteilungs-Schalter („Das hat nicht geklappt")
+    // und den Mememory-Gurt — jede Route mit `app.put` gehört hierher.
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['content-type', 'authorization'],
     credentials: false,
     maxAge: 86_400,
   });
+
+  // Nach CORS, damit die Vorabfrage der App beantwortet ist, bevor hier
+  // jemand nach einem Passwort fragt — und vor allen Routen und Dateien.
+  zugangsschutz(app, deps.stagingZugang ?? null, istAppHerkunft);
 
   /**
    * Ratengrenzen.
@@ -550,6 +803,39 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!konto?.isStaff) throw forbidden('nurAufsicht');
   };
 
+  /**
+   * Funktionen ausserhalb des Umfangs sind auch am Server zu — nicht nur in
+   * der Auswahl. Sonst kaeme ein alter App-Build, ein Lesezeichen oder ein
+   * Aufruf von Hand doch an Browort oder den Clankrieg, obwohl die Ausgabe
+   * sie nicht anbietet.
+   *
+   * Als EIN Haken ueber die Routenmuster statt einer Zeile je Route: Die
+   * Liste unten ist die ganze Sperre auf einen Blick, und eine neue Route
+   * unter `/api/browort/…` ist von selbst mitgesperrt. `preHandler`, damit
+   * die Ratengrenze (onRequest) vorher zaehlt.
+   *
+   * Dasselbe fuer die Nebenrouten der Spiele: Ein ausgeblendetes Spiel hat
+   * keine Rangliste, keine Bestleistungen und keine Mememory-Motive mehr,
+   * auch nicht per direktem Aufruf. Geprueft wird nur der Umfang, nicht
+   * `FREIGABE` — die Rangliste eines Spiels, das in der App auf „Bald" steht,
+   * war dort schon immer lesbar. Das Spiel zuerst: Eine Abstimmung ueber ein
+   * Spiel ausserhalb des Umfangs ist `gameNotPlayable`, wie bisher.
+   */
+  app.addHook('preHandler', async (request) => {
+    if (umfang.alles) return;
+    const muster = request.routeOptions.url;
+    if (!muster) return;
+    const { gameId } = (request.params ?? {}) as { gameId?: unknown };
+    if (typeof gameId === 'string' && !imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
+    for (const [spiel, route] of SPIEL_ZU_ROUTE) {
+      if (route.test(muster) && !imUmfang(umfang, spiel)) throw notFound('gameNotPlayable');
+    }
+    for (const [funktion, route, methode] of FUNKTION_ZU_ROUTE) {
+      if (methode !== undefined && request.method !== methode) continue;
+      if (route.test(muster) && !imUmfang(umfang, funktion)) throw notFound('nichtImUmfang');
+    }
+  });
+
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof RuleSetInvalidError) {
       return reply
@@ -594,8 +880,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
     // Hierher kommt nur, was wirklich unerwartet ist. Es MUSS im Log landen,
     // sonst sucht man es spaeter vergeblich.
+    //
+    // Das Routen-Muster und nicht `request.url`: Die URL traegt Pfadparameter
+    // (Beitrittscodes unter /api/tables/code/:code) und die Query (?q=,
+    // ?search=) mit ins Betriebslog. Fuer die Fehlersuche reicht, welche
+    // Route es war; der Fehler selbst steht daneben.
     // eslint-disable-next-line no-console
-    console.error(`500 bei ${request.method} ${request.url}:`, error);
+    console.error(`500 bei ${request.method} ${routenMuster(request)}:`, error);
     return reply.status(500).send({ code: 'internal', messageKey: 'error.internal' });
   });
 
@@ -605,9 +896,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.post('/api/auth/register', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const body = registerSchema.parse(request.body);
-    await register(deps.auth, body);
-    // Bewusst ohne Sitzung: Erst bestaetigen, dann anmelden.
-    return reply.status(201).send({ ok: true });
+    const { accountId, mailVersandt, bestaetigungNoetig } = await register(deps.auth, body);
+    const mailVersand = deps.auth.mailer.art;
+    if (bestaetigungNoetig) {
+      // Ohne Sitzung: Erst bestaetigen, dann anmelden. `mailVersandt` sagt dem
+      // Client, ob er "Mail ist unterwegs" schreiben darf oder den neuen Link
+      // anbieten muss.
+      return reply.status(201).send({ ok: true, angemeldet: false, mailVersandt, mailVersand });
+    }
+    // Keine Bestaetigung verlangt (kein Versanddienst, siehe index.ts): dann
+    // auch nicht so tun, als muesse man auf eine Mail warten — gleich anmelden.
+    const token = await createSession(deps.auth, accountId);
+    setSession(reply, token);
+    return reply.status(201).send({
+      ok: true,
+      angemeldet: true,
+      mailVersandt,
+      mailVersand,
+      ...(istAppHerkunft(request.headers.origin) ? { token } : {}),
+    });
   });
 
   app.post('/api/auth/verify', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
@@ -620,7 +927,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/auth/verification/resend', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const { email } = z.object({ email: z.string().email() }).parse(request.body);
     await requestVerification(deps.auth, email);
-    return reply.send({ ok: true });
+    // `mailVersand` gilt fuer den ganzen Server, nicht fuer diese Adresse —
+    // er verraet also nichts ueber Konten, sagt dem Client aber, ob er
+    // "Mail ist unterwegs" schreiben darf.
+    return reply.send({ ok: true, mailVersand: deps.auth.mailer.art });
   });
 
   app.post('/api/auth/login', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
@@ -631,33 +941,106 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     setSession(reply, token);
     // Nur die App bekommt das Token in die Hand, und nur, weil ihre Herkunft
     // sich nicht faelschen laesst. Siehe APP_ORIGIN.
-    if (request.headers.origin === APP_ORIGIN) {
+    if (istAppHerkunft(request.headers.origin)) {
       return reply.send({ ok: true, accountId, token });
     }
     return reply.send({ ok: true, accountId });
   });
 
-  /**
-   * Ob "Mit Google anmelden" moeglich ist, entscheidet allein der Server —
-   * der Client fragt hier VOR der Anmeldung nach. Bewusst ein eigener kleiner
-   * Endpunkt statt einer Build-Variablen: Die Client-ID haengt an der
-   * Umgebung, nicht am gebauten Buendel.
-   */
-  app.get('/api/auth/google/config', async (_request, reply) => {
-    return reply.send({ clientId: deps.googleClientId ?? null });
+  // Mit Google und mit Apple anmelden, verknuepfen, trennen — siehe dort.
+  anbieterRouten(app, {
+    db: deps.db,
+    auth: deps.auth,
+    googleClientId: deps.googleClientId ?? null,
+    appleClientId: deps.appleClientId ?? null,
+    appleAppId: deps.appleAppId ?? null,
+    appleRedirectUri: deps.appleRedirectUri ?? null,
+    appleDomainVerknuepfung: deps.appleDomainVerknuepfung ?? null,
+    schluessel: deps.anbieterSchluessel,
+    nonces: deps.anbieterNonces,
+    istApp: istAppHerkunft,
+    setSession,
+    requireAccount,
+    limitAuth: LIMIT_AUTH,
+    limitSchreiben: LIMIT_SCHREIBEN,
   });
 
-  app.post('/api/auth/google', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
-    if (!deps.googleClientId) throw badRequest('googleLoginDisabled');
-    const { credential } = z.object({ credential: z.string().min(1) }).parse(request.body);
-    const profil = await pruefeGoogleToken(credential, deps.googleClientId);
-    const { token, accountId } = await loginMitGoogle(deps.auth, profil);
-    setSession(reply, token);
-    // Wie beim Passwort-Login: Nur die iOS-Huelle bekommt das Token selbst.
-    if (request.headers.origin === APP_ORIGIN) {
-      return reply.send({ ok: true, accountId, token });
-    }
-    return reply.send({ ok: true, accountId });
+  // Einladungslinks direkt in der App oeffnen (iOS und Android) — siehe dort.
+  appVerknuepfungRouten(app, deps.appVerknuepfung ?? {
+    appleTeamId: null,
+    bundleId: 'de.broweg.brauweg-spielen',
+    androidPaket: 'de.brauweg.app',
+    androidFingerabdruecke: [],
+  });
+
+  // Blockieren und Melden (Apple 1.2) — siehe dort.
+  meldenRouten(app, {
+    db: deps.db,
+    auth: deps.auth,
+    requireAccount,
+    limitSchreiben: LIMIT_SCHREIBEN,
+  });
+
+  // „Passt nicht" zu Inhalten der Partykiste — nur auf staging, siehe dort.
+  // Dieselbe Stufe wie in `me` (unten), aus der das Feedback-Widget liest.
+  partykisteRouten(app, {
+    db: deps.db,
+    stage: deps.stage ?? 'production',
+    requireAccount,
+    requireAufsicht,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // Werbelinks `?q=`: Besuch zaehlen, Summen fuer den bro-server — siehe dort.
+  herkunftRouten(app, {
+    db: deps.db,
+    schluessel: deps.herkunftSchluessel ?? null,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // brotool-Dashboard und Muenz-Codes — siehe dort.
+  teamRouten(app, {
+    db: deps.db,
+    schluessel: deps.teamSchluessel ?? null,
+    requireAccount,
+    istApp: istAppHerkunft,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // Doppelkopf lernen: Lernpfad, Lektionen, Uebungstisch — siehe dort.
+  lernpfadRouten(app, {
+    db: deps.db,
+    requireAccount,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // Kartenmanufaktur: das Idle-Spiel — siehe dort.
+  manufakturRouten(app, {
+    db: deps.db,
+    requireAccount,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // Browort und Clanwort: das taegliche Wortraetsel — siehe dort.
+  browortRouten(app, {
+    db: deps.db,
+    requireAccount,
+    push: deps.push,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  pushRouten(app, {
+    db: deps.db,
+    requireSitzung: async (request) => {
+      const sitzung = await sessionFromToken(deps.db, sessionToken(request));
+      if (!sitzung) throw unauthorized();
+      return sitzung;
+    },
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
   /**
@@ -670,13 +1053,19 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * nichts.
    */
   app.post('/api/auth/gast', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
-    const { name } = z
-      .object({ name: z.string().min(GAST_NAME_MIN).max(GAST_NAME_MAX) })
+    const { name, herkunft } = z
+      .object({
+        name: z.string().min(GAST_NAME_MIN).max(GAST_NAME_MAX),
+        // Kennung aus `?q=` (src/herkunft.ts). Ungueltig heisst: ohne
+        // Herkunft anlegen, nicht abweisen.
+        herkunft: z.string().max(100).optional(),
+      })
       .parse(request.body);
     const { token, accountId, displayName } = await gastKonto(deps.auth, name);
+    if (herkunft !== undefined) await gastkontoZaehlen(deps.db, accountId, herkunft);
     setSession(reply, token);
     // Wie beim Passwort-Login: Nur die iOS-Huelle bekommt das Token selbst.
-    if (request.headers.origin === APP_ORIGIN) {
+    if (istAppHerkunft(request.headers.origin)) {
       return reply.send({ ok: true, accountId, displayName, token });
     }
     return reply.send({ ok: true, accountId, displayName });
@@ -696,8 +1085,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       })
       .parse(request.body);
-    await gastSichern(deps.auth, accountId, body);
-    return reply.send({ ok: true });
+    const versand = await gastSichern(deps.auth, accountId, body);
+    return reply.send({ ok: true, ...versand, mailVersand: deps.auth.mailer.art });
   });
 
   app.post('/api/auth/logout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
@@ -711,16 +1100,45 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const { email } = z.object({ email: z.string().email() }).parse(request.body);
     await requestPasswordReset(deps.auth, email);
     // Immer dieselbe Antwort, damit sich registrierte Adressen nicht abfragen
-    // lassen.
-    return reply.send({ ok: true });
+    // lassen. `mailVersand` ist serverweit, siehe verification/resend.
+    return reply.send({ ok: true, mailVersand: deps.auth.mailer.art });
   });
 
   app.post('/api/auth/reset', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const body = z
       .object({ token: z.string(), password: z.string().min(12).max(200) })
       .parse(request.body);
-    await resetPassword(deps.db, body.token, body.password);
-    return reply.send({ ok: true });
+    const accountId = await resetPassword(deps.db, body.token, body.password);
+    // Gleich angemeldet: Der Reset hat eben alle Sitzungen beendet, und wer
+    // den Link aus dem Postfach hat, muesste das neue Passwort sonst sofort
+    // ein zweites Mal eintippen.
+    const token = await createSession(deps.auth, accountId);
+    setSession(reply, token);
+    return reply.send({
+      ok: true,
+      accountId,
+      ...(istAppHerkunft(request.headers.origin) ? { token } : {}),
+    });
+  });
+
+  /**
+   * Mail-Diagnose: Warum kommt die Bestaetigungsmail nicht an?
+   *
+   * NUR fuer Testkonten (STAFF_EMAILS, bestaetigt) — bewusst ohne den Weg
+   * ueber DIAGNOSE_SCHLUESSEL wie bei `requireAufsicht`: Die Probe schickt
+   * eine Testmail an die Adresse des angemeldeten Kontos, und ohne Konto
+   * gaebe es keine. Die Antwort nennt Mailer, Absender-Domain, Resends
+   * Domain-Status und ob die Testmail angenommen wurde — nie den Schluessel.
+   * Ablauf und Deutung: docs/MAIL.md.
+   */
+  app.post('/api/staff/mail-probe', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const [konto] = await deps.db
+      .select({ isStaff: s.account.isStaff, email: s.account.email })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    if (!konto?.isStaff || !konto.email) throw forbidden('nurAufsicht');
+    return reply.send(await mailProbe(deps.auth.mailer, deps.auth.publicUrl, konto.email));
   });
 
   app.get('/api/me', async (request, reply) => {
@@ -739,6 +1157,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         hasBirthdayOutfit: s.account.hasBirthdayOutfit,
         birthdayRewardYear: s.account.birthdayRewardYear,
         gastSeit: s.account.gastSeit,
+        // Nur fuer `loeschenPer` — weder Hash noch Adresse gehen hinaus.
+        loeschPasswort: sql<boolean>`${s.account.passwordHash} is not null`,
+        loeschMail: sql<boolean>`${s.account.email} is not null`,
         // Nur, OB ein Bild vorliegt — die Bytes gehen nie mit /api/me raus,
         // sondern nur ueber die eigene URL, die der Browser zwischenspeichert.
         hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
@@ -770,13 +1191,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .select()
       .from(s.accountGameTheme)
       .where(eq(s.accountGameTheme.accountId, accountId));
+    const schachPinguinErlaubt = await darfBenutzen(deps.db, accountId, 'blatt', 'schach-pinguin', entitlementsFor(account).ownsEverything);
     const themes = Object.fromEntries(
       registry.all().map((meta) => {
         const zeile = gespeicherte.find((z) => z.gameId === meta.id);
         return [
           meta.id,
           {
-            cardDeck: zeile?.cardDeck ?? DEFAULT_CARD_DECK,
+            cardDeck: zeile?.cardDeck === 'schach-pinguin' && !schachPinguinErlaubt ? DEFAULT_CARD_DECK : zeile?.cardDeck ?? DEFAULT_CARD_DECK,
             tableScene: zeile?.tableScene ?? DEFAULT_TABLE_SCENE,
             cardBack: zeile?.cardBack ?? DEFAULT_CARD_BACK,
           },
@@ -784,8 +1206,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       }),
     );
 
-    const { hasAvatar, birthdayRewardYear, isStaff, gems, figurBemalung, gastSeit, ...rest } =
-      account;
+    const {
+      hasAvatar,
+      birthdayRewardYear,
+      isStaff,
+      gems,
+      figurBemalung,
+      gastSeit,
+      loeschPasswort,
+      loeschMail,
+      ...rest
+    } = account;
     const birthday = account.birthday ?? null;
     // Rechte kommen aus einer einzigen Stelle (entitlements.ts). Der Client
     // rechnet nichts aus Ablaufdaten aus - er zeigt, was hier steht.
@@ -799,14 +1230,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const getragen = await getragenVon(deps.db, accountId);
 
     /*
-     * Was bereitliegt — zwei Zahlen, damit der Startbildschirm einen Punkt an
+     * Was bereitliegt — drei Zahlen, damit der Startbildschirm einen Punkt an
      * die Truhe haengen kann. Bewusst nur die Zaehler und nicht die ganzen
-     * Listen: Die stehen an /api/chests und /api/quests, und die ruft nur auf,
-     * wer den Bildschirm wirklich oeffnet.
+     * Listen: Die stehen an /api/chests, /api/quests und /api/weg, und die
+     * ruft nur auf, wer den Bildschirm wirklich oeffnet.
+     *
+     * Der Weg ist eine eigene Zahl und nicht in `truhen` mitgezaehlt: Der
+     * Knopf "Heute" zeigt Truhen und Aufgaben, und eine Weg-Truhe liegt dort
+     * nicht. Die Trophaeensumme kommt aus der schon geladenen Statistik.
      */
-    const [truhenOffen, belohnungenOffen] = await Promise.all([
+    const trophaeen = stats.reduce((summe, zeile) => summe + zeile.trophies, 0);
+    const [truhenOffen, belohnungenOffen, wegOffen, lernen, browort] = await Promise.all([
       offeneTruhen(deps.db, accountId, account.xp),
       offeneBelohnungen(deps.db, accountId),
+      offeneWegBelohnungen(deps.db, accountId, trophaeen),
+      lernserieKurz(deps.db, accountId),
+      browortKurz(deps.db, accountId),
     ]);
     return reply.send({
       ...rest,
@@ -817,6 +1256,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
        * seit wann jemand Gast ist, geht niemanden im Browser etwas an.
        */
       gast: gastSeit != null,
+      /** Womit die Kontoloeschung bestaetigt wird (auth/loeschen.ts). */
+      loeschenPer: loeschWeg({
+        passwordHash: loeschPasswort ? 'ja' : null,
+        email: loeschMail ? 'ja' : null,
+      }),
       coins: stand.coins,
       gems: stand.gems,
       broJetons: stand.broJetons,
@@ -827,7 +1271,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
        * einmal falsch geschriebene Zeile darf nicht das ganze Profil sperren.
        */
       figur: leseBemalung(figurBemalung),
-      bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen },
+      bereit: { truhen: truhenOffen, aufgaben: belohnungenOffen, weg: wegOffen },
+      /** Die Lernserie fuer die Flamme auf dem Start (lernpfad.ts) — nur die Zahlen. */
+      lernen,
+      /** Browort fuer seine Flamme auf dem Start: Serie und Schnitt (browort/dienst.ts). */
+      browort,
       /*
        * Stufe und Fortschritt fertig gerechnet. Der Client bekommt die
        * Zahlen, nicht die Kurve: Wird sie je nachjustiert, gilt das
@@ -842,13 +1290,28 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
        * fehlen lassen.
        */
       stage: deps.stage ?? 'production',
+      /**
+       * Was diese Ausgabe anbietet (src/umfang.ts): `null` heisst alles,
+       * sonst die Kennungen. Der Client blendet danach aus — gesperrt ist es
+       * trotzdem hier, siehe den preHandler-Haken oben.
+       */
+      umfang: umfangFuerClient(umfang),
       themes,
       birthday,
       daysUntilBirthday: birthday ? daysUntilBirthday(birthday) : null,
       birthdayToday: birthday ? isBirthdayToday(birthday) : false,
-      birthdayRewardClaimable: birthdayRewardClaimable(birthday, birthdayRewardYear),
+      // Ohne Geburtstag im Umfang liegt auch kein Geschenk bereit — sonst
+      // haengt der Punkt am Profil-Reiter, und dahinter ist nichts.
+      birthdayRewardClaimable:
+        imUmfang(umfang, 'geburtstag') && birthdayRewardClaimable(birthday, birthdayRewardYear),
       avatarUrl: hasAvatar ? `/api/avatars/${account.id}` : null,
-      stats,
+      /*
+       * Nur die Spiele im Umfang: Die Statistik fuellt „Deine Spiele" und den
+       * Start, und ein ausgeblendetes Spiel stuende dort sonst mit seinem
+       * Banner. Die Trophaeensumme oben (Trophaeenweg) rechnet bewusst ueber
+       * alle — erspielt ist erspielt, auch in einem Spiel, das heute fehlt.
+       */
+      stats: stats.filter((zeile) => imUmfang(umfang, zeile.gameId)),
       clubs,
       activeTable,
     });
@@ -974,8 +1437,48 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   );
 
   // -------------------------------------------------------------------------
+  // Trophaeenweg
+  // -------------------------------------------------------------------------
+
+  /**
+   * Der ganze Weg: alle Stufen bis zur naechsten ueber 1000, auch die
+   * gesperrten, mit Zustand (erreicht, geholt, was drin war).
+   */
+  app.get('/api/weg', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    return reply.send(await wegFuer(deps.db, accountId));
+  });
+
+  /**
+   * Eine Stufe abholen. Ob es sie gibt und ob sie erreicht ist, entscheidet
+   * `wegHolen` gegen den Katalog und die Trophaeen am Server; hier wird nur die
+   * Form geprueft. Ein zweiter Aufruf bekommt einen Konflikt, keinen zweiten
+   * Wurf.
+   */
+  app.post(
+    '/api/weg/:schwelle/holen',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const { schwelle } = z
+        .object({ schwelle: z.string().regex(/^[1-9][0-9]{0,6}$/).transform(Number) })
+        .parse(request.params);
+      return reply.send(await wegHolen(deps.db, accountId, schwelle));
+    },
+  );
+
+  // -------------------------------------------------------------------------
   // Pro-Subway (Solo-Runner)
   // -------------------------------------------------------------------------
+
+  /**
+   * In der App kommt Pro-Subway erst spaeter (Robin, 23.09.2026). Die Kachel
+   * steht dort auf "Bald"; hier wird jeder Lauf abgewiesen, der doch ankommt,
+   * mit demselben Fehler wie ein nicht freigegebenes Spiel.
+   */
+  const runnerNurImWeb = (request: FastifyRequest): void => {
+    if (plattformVon(request) === 'app') throw notFound('gameNotPlayable');
+  };
 
   /** Wie viele Hub-Muenzen heute noch aus dem Runner kommen koennen. */
   app.get('/api/runner/today', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
@@ -989,6 +1492,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    */
   app.post('/api/runner/cashout', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
+    runnerNurImWeb(request);
     const body = z
       .object({
         coins: z.number().int().min(0).max(500),
@@ -1005,6 +1509,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    */
   app.post('/api/runner/lauf', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
+    runnerNurImWeb(request);
     const body = z
       .object({
         muenzen: z.number().int().min(0).max(500),
@@ -1012,7 +1517,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         meter: z.number().int().min(0).max(100_000),
       })
       .parse(request.body);
-    return reply.send(await runnerLauf(deps.db, accountId, body));
+    const antwort = await runnerLauf(deps.db, accountId, body);
+    // Erst nach Pruefung und Verbuchung; ohne die Zahlen des Laufs (statistik.ts).
+    zaehle('runner_lauf');
+    return reply.send(antwort);
   });
 
   /** Die heutige Tagesliste: beste zehn plus eigener Platz. */
@@ -1029,6 +1537,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * Der Shop: Paesse, Pakete, Kauftruhen und die Kosmetikregale mit beiden
    * Preisen, dem Kurs und dem Besitzstand des Kontos.
    */
+  app.get('/api/tagesmarkt', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    return reply.send(await tagesmarktFuer(deps.db, await requireAccount(request)));
+  });
+  app.post('/api/tagesmarkt/:angebotId/aufdecken', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { angebotId } = z.object({ angebotId: z.string().max(60) }).parse(request.params);
+    const { tag } = z.object({ tag: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).parse(request.body);
+    return reply.send(await marktAufdecken(deps.db, accountId, angebotId, tag));
+  });
+  app.post('/api/tagesmarkt/gratis', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tag } = z.object({ tag: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).parse(request.body);
+    return reply.send(await marktGratis(deps.db, accountId, tag));
+  });
+
   app.get('/api/shop', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     return reply.send(await shopFuer(deps.db, accountId));
@@ -1051,10 +1574,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .parse(request.params);
       // Der Rumpf darf ganz fehlen: Ein Kauf ohne Angabe ist ein Kauf in
       // Muenzen, und die alten Aufrufe ohne Rumpf bleiben damit gueltig.
-      const { waehrung } = z
-        .object({ waehrung: z.enum(WAEHRUNGEN).default('coins') })
+      const { waehrung, tag } = z
+        .object({ waehrung: z.enum(WAEHRUNGEN).default('coins'), tag: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() })
         .parse(request.body ?? {});
-      return reply.send(await kaufen(deps.db, accountId, itemId, waehrung));
+      // In der App vorerst nur Muenzen (Emile, 22.10.2026): Edelsteine stehen
+      // dort nirgends mehr, also wird auch nicht mit ihnen gekauft.
+      // Ohne Shop im Umfang gibt es keine Edelsteine zu sehen, also wird auch
+      // nicht mit ihnen bezahlt — auf beiden Plattformen. Muenzen gehen
+      // weiter: Der Tages-Shop kauft ueber genau diese Route.
+      if (waehrung === 'gems' && !imUmfang(umfang, 'shop')) throw notFound('nichtImUmfang');
+      if (waehrung === 'gems' && plattformVon(request) === 'app') throw forbidden('nurMuenzenInApp');
+      // Klanghalle, Wappen und eigenständige Spielinhalte behalten ihren bisherigen Kaufweg.
+      const ware = wareMit(itemId);
+      if (ware && !['blatt', 'ruecken', 'szene'].includes(ware.art)) return reply.send(await kaufen(deps.db, accountId, itemId, waehrung));
+      if (waehrung !== 'coins') throw forbidden('nurMuenzenImTagesmarkt');
+      return reply.send(await marktKaufen(deps.db, accountId, itemId, tag));
     },
   );
 
@@ -1171,6 +1705,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply
       .header('content-type', match[1]!)
       .header('cache-control', 'public, max-age=120')
+      .header('cross-origin-resource-policy', BILD_FUER_ALLE)
       .send(Buffer.from(match[2]!, 'base64'));
   });
 
@@ -1318,19 +1853,56 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * Das Passwort wird erneut verlangt. Der Schritt ist unumkehrbar, und die
    * Sitzung haelt dreissig Tage: Ohne diese Frage genuegt ein kurz aus der
    * Hand gelegtes Handy, um ein fremdes Konto endgueltig zu loeschen.
+   *
+   * Konten OHNE Passwort (nur Google/Apple, Gaeste) konnten sich damit bis zum
+   * 23.09.2026 gar nicht loeschen — ein sicherer Ablehnungsgrund bei Apple
+   * (5.1.1(v)). Sie weisen sich jetzt mit einem Code per Mail bzw. dem Wort
+   * LÖSCHEN aus; welcher Weg gilt, sagt `loeschenPer` in /api/me
+   * (auth/loeschen.ts).
    */
-  app.delete('/api/me', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+  /** Loeschcode fuer ein Konto ohne Passwort anfordern (auth/loeschen.ts). */
+  app.post('/api/me/loeschcode', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
     const accountId = await requireAccount(request);
-    const { password } = z.object({ password: z.string().min(1) }).parse(request.body);
-
     const [acc] = await deps.db
-      .select({ passwordHash: s.account.passwordHash })
+      .select({ passwordHash: s.account.passwordHash, email: s.account.email })
       .from(s.account)
       .where(eq(s.account.id, accountId));
-    // Derselbe Schluessel wie bei der Anmeldung: Wer das Passwort nicht kennt,
-    // erfaehrt hier nichts, was er nicht schon wusste.
-    if (!acc || !(await verifyPassword(acc.passwordHash, password))) {
-      throw unauthorized('credentialsInvalid');
+    if (!acc || loeschWeg(acc) !== 'code') throw badRequest('loeschcodeUnnoetig');
+    const versandt = await loeschCodeSenden(deps.auth, accountId);
+    return reply.send({ ok: true, versandt, mailVersand: deps.auth.mailer.art });
+  });
+
+  app.delete('/api/me', { config: { rateLimit: LIMIT_AUTH } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const nachweis = z
+      .object({
+        password: z.string().min(1).optional(),
+        code: z.string().max(40).optional(),
+        bestaetigung: z.string().max(40).optional(),
+      })
+      .parse(request.body ?? {});
+
+    const [acc] = await deps.db
+      .select({ passwordHash: s.account.passwordHash, email: s.account.email })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    if (!acc) throw unauthorized('credentialsInvalid');
+    const weg = loeschWeg(acc);
+    if (weg === 'passwort') {
+      // Ohne Passwort im Rumpf ist es eine kaputte Anfrage (400), wie vor dem
+      // 23.09.2026, als Zod das Feld noch verlangte — kein falsches Passwort.
+      if (!nachweis.password) throw badRequest('invalidRequest');
+      // Derselbe Schluessel wie bei der Anmeldung: Wer das Passwort nicht
+      // kennt, erfaehrt hier nichts, was er nicht schon wusste.
+      if (!(await verifyPassword(acc.passwordHash, nachweis.password ?? ''))) {
+        throw unauthorized('credentialsInvalid');
+      }
+    } else if (weg === 'code') {
+      if (!(await loeschCodeEinloesen(deps.db, accountId, nachweis.code))) {
+        throw unauthorized('loeschcodeFalsch');
+      }
+    } else if (!wortBestaetigt(nachweis.bestaetigung)) {
+      throw badRequest('loeschBestaetigungFehlt');
     }
 
     // Waehrend laufender Partie gilt die Loeschung als Verlassen.
@@ -1366,7 +1938,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.get('/api/players/:accountId', async (request, reply) => {
     const viewerId = await requireAccount(request);
     const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
-    return reply.send(await playerProfile(deps.db, viewerId, accountId));
+    const profil = await playerProfile(deps.db, viewerId, accountId);
+    return reply.send({
+      ...profil,
+      // Wie `stats` an /api/me: je Spiel nur, was im Umfang steht. Die Summen
+      // (`totals`) bleiben ueber alle Spiele — siehe dort.
+      ranking: profil.ranking.filter((zeile) => imUmfang(umfang, zeile.gameId)),
+      // Hat der Betrachter diesen Spieler blockiert? (melden-routen.ts)
+      blockiert: await hatBlockiert(deps.db, viewerId, accountId),
+      // Browort-Serie und Schnitt — Emile: „steht im Profil des jeweiligen Spielers".
+      browort: await browortProfil(deps.db, accountId),
+    });
   });
 
   app.get('/api/friends', async (request, reply) => {
@@ -1377,6 +1959,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/friends/:accountId/request', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const meId = await requireAccount(request);
     const { accountId } = z.object({ accountId: z.string().uuid() }).parse(request.params);
+    // Wer blockiert ist oder blockiert hat, stellt keine Anfrage.
+    if (await blockiertZwischen(deps.db, meId, accountId)) throw forbidden('blockiert');
     return reply.send(await requestFriendship(deps.db, meId, accountId));
   });
 
@@ -1399,20 +1983,34 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // Spielauswahl
   // -------------------------------------------------------------------------
 
-  app.get('/api/games', async (_request, reply) => {
+  app.get('/api/games', async (request, reply) => {
     const votes = await deps.db
       .select({ gameId: s.gameVote.gameId, count: sql<number>`count(*)::int` })
       .from(s.gameVote)
       .groupBy(s.gameVote.gameId);
     const countOf = new Map(votes.map((row) => [row.gameId, row.count]));
+    const sitzung = await sessionFromToken(deps.db, sessionToken(request));
+    const eigene = sitzung
+      ? await deps.db.select({ gameId: s.gameVote.gameId }).from(s.gameVote).where(eq(s.gameVote.accountId, sitzung.accountId))
+      : [];
+    const meineStimmen = new Set(eigene.map(v => v.gameId));
+    // Kontobezogene Antworten duerfen nicht zwischen Konten zwischengespeichert werden.
+    reply.header('Cache-Control', 'private, no-store');
 
+    // Je Plattform: In der App kann ein Spiel `bald` oder ganz weg sein,
+    // obwohl es auf der Webseite laeuft (siehe FREIGABE in registry.ts).
     return reply.send(
-      registry.all().map((meta) => ({
+      [
+        ...spieleFuer(plattformVon(request), umfang),
+        ...abstimmModiFuer(plattformVon(request), umfang).map(meta => ({ meta, availability: 'preview' as const, abstimmbar: true })),
+      ].map(({ meta, availability, abstimmbar }) => ({
         id: meta.id,
         nameKey: meta.nameKey,
-        availability: meta.availability,
+        availability,
         seatCounts: meta.seatCounts,
         votes: countOf.get(meta.id) ?? 0,
+        meineStimme: meineStimmen.has(meta.id),
+        abstimmbar,
       })),
     );
   });
@@ -1420,8 +2018,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   /** Vorschau-Spiele: Abstimmung, welches zuerst kommt. */
   app.post('/api/games/:gameId/vote', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
-    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
-    if (isPlayable(gameId)) {
+    const { gameId } = z.object({ gameId: z.union([gameIdSchema, z.enum(['prosubway', 'mehrkampf'])]) }).parse(request.params);
+    // Auch die Modi (Pro-Subway, Mehrkampf) brauchen ihre Kennung im Umfang.
+    if (!imUmfang(umfang, gameId)) throw notFound('gameNotPlayable');
+    const modus = gameId === 'prosubway' || gameId === 'mehrkampf';
+    const abstimmbar = modus
+      ? abstimmModiFuer(plattformVon(request), umfang).some(m => m.id === gameId)
+      : freigabeAuf(gameId, plattformVon(request), umfang) === 'bald';
+    if (!abstimmbar) {
       return reply.status(400).send({ code: 'alreadyPlayable', messageKey: 'error.alreadyPlayable' });
     }
     await deps.db.insert(s.gameVote).values({ accountId, gameId }).onConflictDoNothing();
@@ -1487,6 +2091,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       rounds: Object.fromEntries(
         seatCounts.map((seats) => [seats, module.meta.suggestedRounds(seats)]),
       ),
+      /*
+       * Seit dem 22.09.2026: Daten, mit denen ein Bildschirm den Regelsatz vor
+       * der Partie einstellen laesst (Golf: Kurse und Themen), und ob er das
+       * in der Lobby noch darf. Unbesehen aus dem Modul, siehe game-api.
+       */
+      lobby: module.lobbyDaten?.() ?? null,
+      regelnInDerLobby: module.meta.regelnInDerLobby === true,
     });
   });
 
@@ -1721,6 +2332,41 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // Lobby und Tische
   // -------------------------------------------------------------------------
 
+  /**
+   * Beitritt nur zu einem Spiel, das auf dieser Plattform freigegeben ist.
+   *
+   * Wer schon sitzt, darf immer zurueck: `joinTable` gibt ihm seinen Platz
+   * unveraendert, und eine laufende Partie soll nicht daran sterben, dass
+   * das Spiel inzwischen auf `bald` steht.
+   */
+  const pruefeBeitritt = async (
+    request: FastifyRequest,
+    tableId: string,
+    accountId: string,
+  ): Promise<void> => {
+    const { table, seats } = await tableWithSeats(deps.db, tableId);
+    if (seats.some((seat) => seat.accountId === accountId)) return;
+    requireSpielbar(table.gameId, plattformVon(request), umfang);
+    await pruefeAppTisch(request, table.gameId, tableId);
+  };
+
+  /**
+   * Ist der Rueckweg fuer die App eingeschaltet (`appInhalt`), kommt aus der
+   * App niemand an einen Tisch, dessen Regeln ueber die Grenze gehen — sonst
+   * saesse er an einem auf der Webseite angelegten Tisch doch vor den
+   * Schlucken.
+   */
+  const pruefeAppTisch = async (
+    request: FastifyRequest,
+    gameId: GameId,
+    tableId: string,
+  ): Promise<void> => {
+    if (plattformVon(request) !== 'app' || appInhalt === APP_INHALT_WIE_WEB) return;
+    if (!taugtFuerApp(gameId, await tableRules(deps.db, tableId), appInhalt)) {
+      throw conflict('tischNichtInDerApp');
+    }
+  };
+
   app.get('/api/tables', async (request, reply) => {
     const accountId = await requireAccount(request);
     const query = z
@@ -1730,6 +2376,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         rounds: z.coerce.number().int().optional(),
       })
       .parse(request.query);
+    requireSpielbar(query.game, plattformVon(request), umfang);
 
     const clubs = await clubsFor(deps.db, accountId);
     return reply.send(
@@ -1745,6 +2392,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/tables', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const body = createTableSchema.parse(request.body);
+    requireSpielbar(body.gameId, plattformVon(request), umfang);
+    if (plattformVon(request) === 'app') {
+      body.config = appRegeln(body.gameId, body.config, appInhalt);
+    }
     // Clantisch ohne clubId: den ersten (und in der Beta einzigen) Clan nehmen.
     let clubId = body.clubId;
     if (body.visibility === 'club_only' && !clubId) {
@@ -1767,10 +2418,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * ohnehin auf einer anderen Segmentzahl.
    */
   app.get('/api/tables/code/:code', async (request, reply) => {
-    await requireAccount(request);
+    const accountId = await requireAccount(request);
     const { code } = z.object({ code: z.string().min(1).max(24) }).parse(request.params);
     const table = await tischPerCode(deps.db, code);
     const { seats } = await tableWithSeats(deps.db, table.id);
+    // Wer schon sitzt, kommt immer an seinen Platz zurueck — auch wenn das
+    // Spiel hier inzwischen nicht mehr freigegeben ist. Neu dazu nicht.
+    if (!seats.some((seat) => seat.accountId === accountId)) {
+      requireSpielbar(table.gameId, plattformVon(request), umfang);
+      await pruefeAppTisch(request, table.gameId, table.id);
+    }
     const gastgeber = seats.find((seat) => seat.accountId)?.accountId ?? null;
     const [konto] = gastgeber
       ? await deps.db
@@ -1796,9 +2453,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       const accountId = await requireAccount(request);
       const { code } = z.object({ code: z.string().min(1).max(24) }).parse(request.params);
       const table = await tischPerCode(deps.db, code);
+      await pruefeBeitritt(request, table.id, accountId);
+      // Nicht-oeffentlich: erst die Zusage des Gastgebers (tables/anfragen.ts).
+      if (await stelltAnfrage(table.id, accountId)) {
+        return reply.send({ tableId: table.id, angefragt: true });
+      }
       await joinTable(deps.db, table.id, accountId);
       deps.vermittlung?.verlaesstAlle(accountId);
       deps.runtime.notify(table.id);
+      // Der Code ist die Einladung: Wer ihn einloest, hat sie angenommen.
+      deps.push?.einladungAngenommen(table.id, accountId);
       return reply.send({ tableId: table.id });
     },
   );
@@ -1845,9 +2509,75 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply.send({ config: await tableRules(deps.db, tableId) });
   });
 
+  /**
+   * Braucht dieser Beitritt die Zusage des Gastgebers? Dann wird statt des
+   * Hinsetzens eine Anfrage gestellt, der Gastgeber bekommt eine Mitteilung,
+   * und die Antwort sagt `angefragt` — der Bildschirm wartet dann auf die
+   * Zusage (GET …/anfrage). Wer schon sitzt, kommt wie immer an seinen Platz.
+   */
+  async function stelltAnfrage(tableId: string, accountId: string): Promise<boolean> {
+    const { table, seats } = await tableWithSeats(deps.db, tableId);
+    if (!brauchtZusage(table)) return false;
+    if (seats.some((seat) => seat.accountId === accountId)) return false;
+    await stelleAnfrage(deps.db, tableId, accountId);
+    const gastgeber = gastgeberVon(seats);
+    if (gastgeber) deps.push?.anfrageGestellt(tableId, gastgeber, accountId);
+    return true;
+  }
+
+  /** Offene Beitrittsanfragen — nur der Gastgeber sieht sie. */
+  app.get('/api/tables/:tableId/anfragen', async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    const anfragen = await offeneAnfragen(deps.db, tableId, accountId);
+    return reply.send({
+      anfragen: anfragen.map((a) => ({ accountId: a.accountId, displayName: a.displayName })),
+    });
+  });
+
+  /** Der Gastgeber nimmt eine Anfrage an oder lehnt sie ab. */
+  app.post(
+    '/api/tables/:tableId/anfragen/:accountId',
+    { config: { rateLimit: LIMIT_SCHREIBEN } },
+    async (request, reply) => {
+      const gastgeber = await requireAccount(request);
+      const { tableId, accountId } = z
+        .object({ tableId: z.string().uuid(), accountId: z.string().uuid() })
+        .parse(request.params);
+      const { annehmen } = z.object({ annehmen: z.boolean() }).parse(request.body);
+      await entscheide(deps.db, tableId, gastgeber, accountId, annehmen);
+      if (annehmen) {
+        deps.vermittlung?.verlaesstAlle(accountId);
+        // Der neue Sitz geht an alle Verbundenen, und ist der Tisch damit
+        // voll, startet die Partie von selbst — wie beim direkten Beitritt.
+        deps.runtime.notify(tableId);
+      }
+      return reply.send({ ok: true });
+    },
+  );
+
+  /** Was aus der eigenen Anfrage wurde: offen, angenommen oder abgelehnt. */
+  app.get('/api/tables/:tableId/anfrage', async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    return reply.send({ stand: await anfrageStand(deps.db, tableId, accountId) });
+  });
+
+  /** Eigene Anfrage zuruecknehmen. */
+  app.delete('/api/tables/:tableId/anfrage', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    await zieheAnfrageZurueck(deps.db, tableId, accountId);
+    return reply.send({ ok: true });
+  });
+
   app.post('/api/tables/:tableId/join', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    await pruefeBeitritt(request, tableId, accountId);
+    if (await stelltAnfrage(tableId, accountId)) {
+      return reply.send({ ok: true, angefragt: true });
+    }
     await joinTable(deps.db, tableId, accountId);
     // Wer sich an einen Tisch setzt, steht nicht mehr in der Schnellsuche.
     deps.vermittlung?.verlaesstAlle(accountId);
@@ -1899,6 +2629,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.post('/api/suche/:gameId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    requireSpielbar(gameId, plattformVon(request), umfang);
     // Optionaler Regelsatz (Spielart); ohne Rumpf gilt die Vorgabe des Moduls.
     const { config } = z
       .object({ config: z.unknown().optional() })
@@ -1950,6 +2681,44 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       })
       .parse(request.query);
     return reply.send(await overallRanking(deps.db, query.limit, query.offset));
+  });
+
+  // -------------------------------------------------------------------------
+  // Bestleistungen je Inhalt (Bahn, Kurs, Paket) — seit dem 22.09.2026
+  // -------------------------------------------------------------------------
+
+  /**
+   * Eine eigene Pruefung fuer die Inhaltskennung statt nur eines Zod-Fehlers:
+   * `invalidInput` sagte dem Bildschirm nur "irgendetwas stimmt nicht", und
+   * eine falsch zusammengesetzte Bahnkennung ist genau der Fehler, den man beim
+   * Einbau im Client sucht. Das Muster ist dasselbe wie im Schreibweg
+   * (`istInhaltId`), damit keine Zeile entsteht, die hier nicht abrufbar ist.
+   */
+  const inhaltIdSchema = z.string().refine(istInhaltId);
+
+  /** Die besten zwanzig fuer einen Inhalt plus der eigene Platz. */
+  app.get(
+    '/api/games/:gameId/bestleistungen/:inhaltId',
+    { config: { rateLimit: LIMIT_ALLGEMEIN } },
+    async (request, reply) => {
+      const accountId = await requireAccount(request);
+      const params = z
+        .object({ gameId: gameIdSchema, inhaltId: z.string() })
+        .parse(request.params);
+      if (!inhaltIdSchema.safeParse(params.inhaltId).success) {
+        throw badRequest('inhaltUngueltig');
+      }
+      return reply.send(
+        await bestenlisteFuer(deps.db, params.gameId, params.inhaltId, accountId),
+      );
+    },
+  );
+
+  /** Alle eigenen Bestleistungen eines Spiels, juengste zuerst. */
+  app.get('/api/me/bestleistungen/:gameId', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    return reply.send(await eigeneBestleistungen(deps.db, accountId, gameId));
   });
 
   // -------------------------------------------------------------------------
@@ -2106,6 +2875,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       return reply
         .header('etag', marke)
         .header('cache-control', 'public, max-age=30, must-revalidate')
+        .header('cross-origin-resource-policy', BILD_FUER_ALLE)
         .status(304)
         .send();
     }
@@ -2113,6 +2883,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .header('content-type', typ)
       .header('etag', marke)
       .header('cache-control', 'public, max-age=30, must-revalidate')
+      .header('cross-origin-resource-policy', BILD_FUER_ALLE)
       .send(bytes);
   });
 
@@ -2140,6 +2911,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         return reply
           .header('etag', marke)
           .header('cache-control', 'public, max-age=30, must-revalidate')
+          .header('cross-origin-resource-policy', BILD_FUER_ALLE)
           .status(304)
           .send();
       }
@@ -2147,6 +2919,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .header('content-type', typ)
         .header('etag', marke)
         .header('cache-control', 'public, max-age=30, must-revalidate')
+        .header('cross-origin-resource-policy', BILD_FUER_ALLE)
         .send(bytes);
     },
   );
@@ -2483,6 +3256,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         reply.header('cache-control', 'no-cache');
       }
     });
+
+    // Die Loesch-Anleitung, die Google Play als Web-Link verlangt — unter einer
+    // Adresse, die man auch vorlesen kann. Die Datei liegt neben den
+    // Rechtstexten (client/public/rechtliches/konto-loeschen.html); ohne diese
+    // Route bekaeme /konto-loeschen die index.html der App.
+    app.get('/konto-loeschen', async (_request, reply) =>
+      reply.header('cache-control', 'no-cache').sendFile('rechtliches/konto-loeschen.html'),
+    );
 
     app.setNotFoundHandler((request, reply) => {
       const path = request.url.split('?')[0] ?? '';

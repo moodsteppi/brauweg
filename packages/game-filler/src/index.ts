@@ -2,9 +2,13 @@ export { filler } from './adapter.js';
 export {
   DEFAULT_REGELN,
   SEAT_COUNTS,
+  FARBEN_HOECHSTENS,
+  FARBEN_JE_SPIELART,
   type FillerRegeln,
+  type FillerRegelnFest,
   type FillerVariante,
   VARIANTEN,
+  farbzahl,
   liegtOffen,
   mitBarrieren,
   mitSternen,

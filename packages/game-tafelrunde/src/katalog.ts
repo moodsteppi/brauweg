@@ -182,19 +182,58 @@ export type EinheitId =
  */
 export const KATALOG: readonly Einheit[] = [
   // --- 1 Gold: Grundwerte rund 550 Leben / 40 Angriff ---------------------
+  /**
+   * LEBEN AM 25.09.2026 GESENKT (vorher 650). In der Tauschprobe stand sie
+   * bei x1,38, der groesste Abstand nach oben im ganzen Katalog, und mit ihr
+   * standen ihre beiden Marken an der Spitze (Waechter x1,28, Krieger x1,27,
+   * alle anderen unter x1,0). Mit 550 steht sie bei x1,12, immer noch in der
+   * oberen Haelfte ihrer Stufe, und die rohe Markenspanne schrumpft von
+   * x1,28–0,80 auf x1,11–0,77. Alle Zahlen: docs/TAFELRUNDE-WACHEN-WERTE.md.
+   *
+   * KEIN MESSFEHLER DER PROBE. Der Tauschplatz ist oft der vorderste, und dort
+   * verliert jeder Schuetze gegen jede Wache. Aufgeschluesselt nach der Rolle,
+   * die vorher auf dem Platz stand, liegt sie aber ueberall vorn, auch auf
+   * Meuchlerplaetzen und auf Brettern, die schon eine zweite Wache haben
+   * (x1,35 bis x1,52). Das Irrlicht ist ebenfalls eine Wache und steht auf
+   * denselben Brettern mit zweiter Wache bei x0,60, auf Meuchlerplaetzen bei
+   * x0,92. Es liegt an den Werten und nicht an der Rolle.
+   *
+   * WARUM NICHT AUCH DER SCHILDKNAPPE (x1,33). Solange er der einzige billige
+   * Untot-Traeger war, liess jede Schwaechung die Marke in der Probe unter
+   * hundert Antritte fallen. Das Irrlicht traegt sie seitdem mit, und daran
+   * scheitert es nicht mehr; was ihn noch haelt, steht beim Knappen.
+   */
   {
     id: 'dorfwache',
     name: 'Dorfwache',
     kosten: 1,
     rolle: 'wache',
     marken: ['krieger', 'waechter'],
-    leben: 650,
+    leben: 550,
     angriff: 30,
     tempo: 0.65,
     reichweite: 1,
     ruestung: 40,
   },
   /**
+   * STEHT ALLEIN OBEN IN SEINER STUFE (25.09.2026): Tauschprobe x1,39 /
+   * x1,37, die naechste Zeile x1,08. Lange ging es nicht anders, weil er der
+   * einzige billige Untot-Traeger war: Jede Schwaechung (630 oder 665 Leben,
+   * Ruestung, Angriff) liess den Bot ihn so viel seltener kaufen, dass Untot
+   * in test/ausgewogenheit.test.ts unter hundert Antritte fiel (51 bis 99).
+   * Seit das Irrlicht die Marke mittraegt (siehe dort), haelt sie auch mit
+   * einem schwaecheren Knappen rund 350 Antritte. Gemessen waere 570 Leben die
+   * Zahl (x1,12 / x1,13, gleichauf mit Dorfwache und Irrlicht).
+   *
+   * WARUM ER TROTZDEM NOCH 700 HAT: Jede Schwaechung, die ihn bewegt, kuerzt
+   * die Kaempfe so weit, dass in test/spielzeit.test.ts die Vorbereitung den
+   * Kampf ueberholt ("steckt seine Zeit vor allem in die Kaempfe"). Die Probe
+   * stand nach der Dorfwache ohnehin auf der Kante (Kampf 149 s gegen 148 s
+   * Vorbereitung), mit 570 sind es 139 gegen 146 s. Die Probe verlangt fuer
+   * diesen Fall ausdruecklich eine Neumessung von
+   * docs/TAFELRUNDE-SPIELZEIT.md, Abschnitt 4 — das entscheidet ein Mensch,
+   * nicht eine Katalogzeile. Alle Zahlen: docs/TAFELRUNDE-WACHEN-WERTE.md.
+   *
    * DRITTER TRAEGER DER MARKE UNTOT, dafuer Ruestung 42 statt 45
    * (beides am 05.09.2026).
    *
@@ -374,26 +413,83 @@ export const KATALOG: readonly Einheit[] = [
    * ist ein Licht, das schwer zu treffen ist. Naturwesen ist weggefallen —
    * ein Flammengeist gehoert nicht in den Wald, und Naturwesen hat mit
    * Hainwaechterin und Wurzelriese seine Vorderreihe laengst.
+   *
+   * VIERTER TRAEGER DER MARKE UNTOT (seit dem 25.09.2026), Werte
+   * unveraendert. Anlass war der Schildknappe: Er stand in der Tauschprobe
+   * allein oben in seiner Stufe, liess sich aber nicht schwaechen, weil
+   * Untot als billigen Traeger nur ihn hatte (siehe dort). Zwoelf Einheiten
+   * mit nur einer Marke wurden als vierter Traeger gegengemessen, je in der
+   * 400er-Probe mit dem Knappen auf 630, die aussichtsreichen dazu ueber
+   * 5.000 Partien. Das Irrlicht kann als einziges beides: Untot haelt die
+   * Zaehlschwelle mit Abstand (Probe 372 statt 70 Antritte), und die Marke
+   * bleibt nahe der Mitte (x1,09). Gassendieb und Steinschleuderer tragen sie
+   * auch, reissen aber Meuchler bzw. Waechter nach oben (x1,26 und x1,46);
+   * die Zwei- und Drei-Gold-Kandidaten ziehen Untot selbst auf x1,16 bis
+   * x1,38, und mit Grimmbart steht die Marke in der Probe auf der Kante
+   * (100 Antritte).
+   *
+   * Es ist zugleich der Traeger nach dem Muster des Knappen: eine billige
+   * Wache, die "zaeh und unerbittlich" eine Front gibt. Und es passt: Ein
+   * Irrlicht ist in der Sage die Seele eines Toten, die Wanderer ins Moor
+   * lockt. Die Figur bleibt die Kugel (Rueckfall) bzw. das Ritterblatt der
+   * Rolle Wache; wer das Blatt je Gestalt baut, bekommt es hier mit
+   * (docs/ASSETS-TAFELRUNDE-UNTOT.md).
+   *
+   * Gebaut, mit dem Knappen auf 700: Untot x0,94 -> x1,08 ueber 5.000
+   * Partien, in der Probe 175 -> 451 Antritte; die rohe Markenspanne wird
+   * enger (x1,11–0,77 -> x1,09–0,74). Sein eigener Index steigt von x0,98 auf
+   * x1,07 (Tauschprobe v1), Elementar bleibt in der Mitte (x1,07 -> x1,03).
+   * Der Knappe steigt dabei mit (x1,34 -> x1,39), weil er oefter neben einem
+   * zweiten Untoten steht.
    */
   {
     id: 'irrlicht',
     name: 'Irrlicht',
     kosten: 1,
     rolle: 'wache',
-    marken: ['elementar'],
+    marken: ['elementar', 'untot'],
     leben: 560,
     angriff: 34,
     tempo: 0.7,
     reichweite: 1,
     ruestung: 35,
   },
+  /**
+   * LEBEN AM 25.09.2026 ANGEHOBEN (vorher 520), ebenso Schattenklinge und
+   * Knochenspaeher. Die drei standen in der Tauschprobe jeweils in der letzten
+   * Zeile ihrer Kostenstufe (x0,74 / x0,81 / x0,68), die Marke Meuchler bei
+   * x0,63.
+   *
+   * WARUM LEBEN UND NICHT TEMPO ODER MARKENBONUS. Meuchler teilen schon am
+   * meisten Schaden je Sekunde aus, fallen aber nach 6 bis 8 s, weil sie mit
+   * Schuetzenleben in der Front stehen (docs/TAFELRUNDE-MEUCHLER-KAMPFBILD.md).
+   * Alle drei Wege sind gemessen, je mit Tauschprobe und Ausgewogenheit auf
+   * zwei Saatbasen (docs/TAFELRUNDE-MEUCHLER-WERTE.md):
+   *
+   *   - Schnelleres Ankommen (halbe Schrittpause) drueckt die Marke auf
+   *     x0,55. Wer frueher ankommt, steht frueher allein vorn.
+   *   - Doppeltes Markentempo oder ein Lebensbonus auf der Marke heben vor
+   *     allem den Nachtpfeil (Tauschprobe x1,03 auf x1,30 bzw. x1,35), einen
+   *     Schuetzen. Der Knochenspaeher traegt die Marke Untot und faellt dabei
+   *     auf x0,63 bzw. x0,59.
+   *   - Mehr Leben auf genau diesen drei Einheiten holt jede aus der letzten
+   *     Zeile ihrer Stufe.
+   *
+   * WARUM GESTAFFELT. +25 % fuer alle drei setzt die Schattenklinge mit x1,15
+   * an die Spitze ihrer Stufe; +12,5 % fuer alle drei laesst den
+   * Knochenspaeher bei x0,73 unten. Gebaut ist deshalb +12,5 % fuer
+   * Gassendieb und Schattenklinge und +36 % fuer den Knochenspaeher, der keinen
+   * Meuchlerbonus bekommt. Tauschprobe danach x0,92 / x0,92 / x0,89, Marke
+   * Meuchler x0,86. Die Klingentaenzerin bleibt, sie steht mit x0,95 in der
+   * Mitte ihrer Stufe.
+   */
   {
     id: 'gassendieb',
     name: 'Gassendieb',
     kosten: 1,
     rolle: 'meuchler',
     marken: ['meuchler'],
-    leben: 520,
+    leben: 585,
     angriff: 48,
     tempo: 0.95,
     reichweite: 1,
@@ -532,25 +628,32 @@ export const KATALOG: readonly Einheit[] = [
     reichweite: 3,
     ruestung: 20,
   },
+  /** Leben am 25.09.2026 angehoben (vorher 660) — warum: siehe Gassendieb. */
   {
     id: 'schattenklinge',
     name: 'Schattenklinge',
     kosten: 2,
     rolle: 'meuchler',
     marken: ['meuchler'],
-    leben: 660,
+    leben: 745,
     angriff: 68,
     tempo: 1,
     reichweite: 1,
     ruestung: 15,
   },
+  /**
+   * Leben am 25.09.2026 angehoben (vorher 700) — warum: siehe Gassendieb.
+   * Staerker als die beiden anderen, weil der Meuchlerbonus ihn nicht
+   * erreicht: Mit 875 (+25 %) blieb er in der Tauschprobe bei x0,81 die
+   * letzte Zeile seiner Stufe, mit 950 steht er bei x0,89 vor Grimmbart.
+   */
   {
     id: 'knochenspaeher',
     name: 'Knochenspäher',
     kosten: 2,
     rolle: 'meuchler',
     marken: ['untot'],
-    leben: 700,
+    leben: 950,
     angriff: 60,
     tempo: 0.9,
     reichweite: 1,

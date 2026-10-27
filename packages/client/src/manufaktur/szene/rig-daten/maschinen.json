@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "presse-1": {
+    "korpus": "presse-1-korpus.png",
+    "teile": {
+      "griff": {
+        "datei": "presse-1-griff.png",
+        "drehpunkt": [
+          267,
+          90
+        ],
+        "position": [
+          267,
+          90
+        ],
+        "bewegung": "schwingen_x"
+      }
+    },
+    "punkte": {
+      "ausgabe": [
+        348,
+        338
+      ],
+      "bedienposition": [
+        68,
+        450
+      ],
+      "dampf_austritt": null
+    },
+    "reihenfolge": [
+      "griff",
+      "korpus"
+    ]
+  },
+  "presse-2": {
+    "korpus": "presse-2-korpus.png",
+    "teile": {
+      "griff": {
+        "datei": "presse-2-griff.png",
+        "drehpunkt": [
+          255,
+          90
+        ],
+        "position": [
+          255,
+          90
+        ],
+        "bewegung": "schwingen_x"
+      },
+      "rad": {
+        "datei": "presse-2-rad.png",
+        "drehpunkt": [
+          128,
+          128
+        ],
+        "position": [
+          394,
+          217
+        ],
+        "bewegung": "drehen",
+        "ellipse": {
+          "skala_x": 0.445,
+          "skala_y": 0.84,
+          "neigung_grad": -7
+        }
+      }
+    },
+    "punkte": {
+      "ausgabe": [
+        346,
+        337
+      ],
+      "bedienposition": [
+        53,
+        450
+      ],
+      "dampf_austritt": null
+    },
+    "reihenfolge": [
+      "rad",
+      "griff",
+      "korpus"
+    ]
+  },
+  "presse-3": {
+    "korpus": "presse-3-korpus.png",
+    "teile": {
+      "griff": {
+        "datei": "presse-3-griff.png",
+        "drehpunkt": [
+          272,
+          140
+        ],
+        "position": [
+          272,
+          140
+        ],
+        "bewegung": "schwingen_x"
+      },
+      "zeiger": {
+        "datei": "presse-3-zeiger.png",
+        "drehpunkt": [
+          32,
+          40
+        ],
+        "position": [
+          105,
+          206
+        ],
+        "bewegung": "zittern"
+      }
+    },
+    "punkte": {
+      "ausgabe": [
+        351,
+        353
+      ],
+      "bedienposition": [
+        72,
+        450
+      ],
+      "dampf_austritt": [
+        160,
+        104
+      ]
+    },
+    "reihenfolge": [
+      "griff",
+      "korpus",
+      "zeiger"
+    ]
+  }
+}

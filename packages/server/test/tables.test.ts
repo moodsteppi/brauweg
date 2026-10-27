@@ -55,6 +55,7 @@ test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind dreizehn', () =
       'golf',
       'partykiste',
       'brocooked',
+      'brochess',
     ],
   );
   assert.deepEqual(

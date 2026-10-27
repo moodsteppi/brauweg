@@ -27,7 +27,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { wsProtokolle, wsUrl } from './laufzeit';
+import { inApp, wsProtokolle, wsUrl } from './laufzeit';
 /**
  * Die Verbindung schreibt mit, solange eine Partie aufgezeichnet wird
  * (heute nur Feldherr, siehe aufzeichnung.ts). Ohne laufende Aufzeichnung
@@ -92,6 +92,13 @@ export interface TableConnection<V = GameView> {
    * an dem inzwischen jemand anderes sitzt.
    */
   setSeatColor(farbe: number): void;
+  /**
+   * Den Regelsatz des wartenden Tisches ersetzen — nur Sitz 0, nur Spiele,
+   * die es erlauben (Golf: Bahnauswahl, seit dem 22.09.2026). Der GANZE
+   * Regelsatz, kein Unterschied. Ohne Warteschlange, aus demselben Grund wie
+   * die Farbe: Nach dem Wiederverbinden sitzt vielleicht ein anderer auf 0.
+   */
+  setRules(config: Record<string, unknown>): void;
   /**
    * Takt-Herzschlag eines Echtzeitspiels absetzen. Ohne Warteschlange: Ein
    * Puls, der erst nach dem Wiederverbinden ankaeme, beschriebe einen Stand,
@@ -292,6 +299,11 @@ export function useTable<V = GameView>(
       attemptRef.current = 0;
       setStatus('open');
       socket.send(joinPayload());
+      // In der App: "Wir sitzen an einem Tisch" - erst dann fragt der
+      // Push-Begleiter einmal, ob er Bescheid sagen darf (push/dienst.ts,
+      // TISCH_EREIGNIS). Als Ereignis statt Import, damit kein Push-Code in
+      // das Tischpaket der Webseite rutscht.
+      if (inApp) window.dispatchEvent(new Event('brauweg:tisch'));
       // Waehrend der Funkstille getippte Aktionen nachreichen. Veraltete
       // verfallen; was der Server nicht mehr brauchen kann, lehnt er ab -
       // das ist sichtbar, ein stilles Verschlucken war es nicht.
@@ -478,6 +490,17 @@ export function useTable<V = GameView>(
     if (!tableId) return;
     const onVisible = (): void => {
       if (document.visibilityState === 'visible') resync();
+      // Nur die App: dem Server sagen, dass niemand mehr hinsieht. Ab da
+      // darf er "Du bist dran" als Push schicken (docs/PUSH.md); zurueck
+      // meldet das join aus resync(). Die Webseite schickt das nie.
+      else if (inApp) {
+        const socket = socketRef.current;
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(
+            JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'hintergrund', tableId }),
+          );
+        }
+      }
     };
     const onPageShow = (): void => resync();
     const onFocus = (): void => resync();
@@ -495,7 +518,7 @@ export function useTable<V = GameView>(
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('online', onOnline);
     };
-  }, [tableId, resync]);
+  }, [tableId, gameId, resync]);
 
   const send = useCallback(
     (action: unknown) => {
@@ -633,6 +656,17 @@ export function useTable<V = GameView>(
     [tableId, gameId],
   );
 
+  const setRules = useCallback(
+    (config: Record<string, unknown>) => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+      socket.send(
+        JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'setRules', tableId, config }),
+      );
+    },
+    [tableId, gameId],
+  );
+
   const setBotLevel = useCallback(
     (level: BotLevel) => {
       const socket = socketRef.current;
@@ -659,6 +693,7 @@ export function useTable<V = GameView>(
     startNow,
     setBotLevel,
     setSeatColor,
+    setRules,
     sendTakt,
     sendeReaktion,
     reconnect,

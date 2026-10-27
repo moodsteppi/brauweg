@@ -14,3 +14,10 @@ packages/game-feldherr/quelle/feldherr.html linguist-generated=true
 # bewusst NICHT hier: Sie ist von Hand gewachsen und damit selbst die Quelle
 # (siehe werkzeug/gamedesk/README.md).
 werkzeug/gamedesk/boards/brauweg-funktionsweise.gamedesk.json linguist-generated=true
+
+# Shell-Skripte laufen auf dem Mac bzw. in der CI: Mit CRLF bricht `bash` an
+# der ersten Zeile ab ("bad interpreter"). Die Batch-Datei will CRLF.
+*.sh text eol=lf
+apps/android/gradlew text eol=lf
+apps/android/gradlew.bat text eol=crlf
+*.jar binary

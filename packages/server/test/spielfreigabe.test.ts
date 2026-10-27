@@ -1,0 +1,438 @@
+/**
+ * Freigabe je Plattform: welches Spiel auf der Webseite und in der App
+ * spielbar, „bald" oder gar nicht zu sehen ist.
+ *
+ * Geprueft werden zwei Dinge. Erstens die Liste selbst: Jedes Modul steht
+ * darin, die Webseite sieht alles wie bisher, und die App sieht genau das,
+ * was die Liste sagt. Zweitens die Sperre an JEDEM Einstieg — eine
+ * Sperre nur in der Spielauswahl waere keine, denn ueber einen
+ * Einladungslink oder die Tischliste kaeme man sonst doch an den Tisch.
+ *
+ * Die Liste ist eine Konstante. Fuer die Faelle `bald` und `aus` wird sie
+ * hier voruebergehend umgestellt; `node --test` fuehrt jede Datei in einem
+ * eigenen Prozess aus, die Umstellung erreicht also keine andere Datei.
+ */
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+import type { GameId } from '@brauweg/game-api';
+
+import { APP_ORIGIN, buildApp } from '../src/http/app.js';
+import {
+  FREIGABE,
+  freigabeAuf,
+  abstimmModiFuer,
+  registry,
+  isPlayable,
+  type SpielFreigabe,
+} from '../src/games/registry.js';
+import { PartyRuntime } from '../src/runtime/party.js';
+import { createSession } from '../src/auth/service.js';
+import { createTestContext, createVerifiedAccount, seedInvite } from './helpers.js';
+
+const liste = FREIGABE as Record<string, SpielFreigabe | undefined>;
+
+/** Stellt ein Spiel fuer die Dauer eines Tests um. */
+function stelle(t: { after(fn: () => void): void }, id: GameId, wert: SpielFreigabe): void {
+  const vorher = liste[id];
+  liste[id] = wert;
+  t.after(() => {
+    liste[id] = vorher;
+  });
+}
+
+async function setup() {
+  const ctx = await createTestContext();
+  await seedInvite(ctx.db);
+  const runtime = new PartyRuntime(ctx.db, { botDelayMs: 0 });
+  const app = await buildApp({
+    db: ctx.db,
+    runtime,
+    auth: ctx.auth,
+    cookieSecure: false,
+    sessionTtlDays: 30,
+  });
+  const anna = await createVerifiedAccount(ctx, 'Anna');
+  const ben = await createVerifiedAccount(ctx, 'Ben');
+  const annaToken = await createSession(ctx.auth, anna.accountId);
+  const benToken = await createSession(ctx.auth, ben.accountId);
+
+  const kopf = (token: string, plattform: 'web' | 'app') => ({
+    authorization: `Bearer ${token}`,
+    ...(plattform === 'app' ? { origin: APP_ORIGIN } : {}),
+  });
+
+  return {
+    app,
+    runtime,
+    anna: (plattform: 'web' | 'app') => kopf(annaToken, plattform),
+    ben: (plattform: 'web' | 'app') => kopf(benToken, plattform),
+    async close() {
+      runtime.shutdown();
+      await app.close();
+      await ctx.close();
+    },
+  };
+}
+
+type Setup = Awaited<ReturnType<typeof setup>>;
+
+async function spiele(s: Setup, plattform: 'web' | 'app') {
+  const res = await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna(plattform) });
+  assert.equal(res.statusCode, 200);
+  return res.json() as { id: string; availability: string; abstimmbar: boolean }[];
+}
+
+/** Anna macht auf der Webseite einen Doppelkopftisch auf. */
+async function tischImWeb(s: Setup): Promise<{ id: string; joinCode: string }> {
+  const res = await s.app.inject({
+    method: 'POST',
+    url: '/api/tables',
+    headers: s.anna('web'),
+    payload: { gameId: 'doppelkopf', seats: 4, rounds: 4 },
+  });
+  assert.equal(res.statusCode, 201, res.body);
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Die Liste
+// ---------------------------------------------------------------------------
+
+test('jedes Modul steht in der Freigabeliste, und nur bekannte Spiele', () => {
+  const bekannt = new Set(registry.all().map((meta) => meta.id as string));
+  for (const meta of registry.all()) {
+    if (!isPlayable(meta.id)) continue;
+    assert.ok(liste[meta.id], `${meta.id} fehlt in FREIGABE — ein neues Spiel entscheidet, ob es in die App gehoert`);
+  }
+  for (const id of Object.keys(liste)) {
+    assert.ok(bekannt.has(id), `${id} steht in FREIGABE, ist aber kein Spiel`);
+  }
+});
+
+test('die Webseite sieht alles wie bisher, die App genau das, was die Liste sagt', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  // Robins Entscheidung vom 23.09.2026: Auf der Webseite aendert sich nichts.
+  // BroChess war dort vom 26.09. bis zum 23.10.2026 erst „Bald"; seitdem ist
+  // jedes Modul auf der Webseite spielbar. Die Webseite folgt dafuer
+  // derselben Liste wie die App.
+  const web = await spiele(s, 'web');
+  assert.deepEqual(
+    web.map((g) => [g.id, g.availability]),
+    [...registry.all().map((m) => [m.id, freigabeAuf(m.id, 'web') === 'spielbar' ? m.availability : 'preview']),
+      ...abstimmModiFuer('web').map(m => [m.id, 'preview'])],
+  );
+  const imWebBald = registry.all().filter((m) => freigabeAuf(m.id, 'web') !== 'spielbar' && m.availability === 'playable');
+  assert.deepEqual(imWebBald.map((m) => m.id), [], 'auf der Webseite ist kein Modul zurueckgehalten');
+
+  // Die App folgt der Liste — hier nicht abgeschrieben, sondern je Spiel
+  // gegen `freigabeAuf` gehalten, damit eine geaenderte Zeile keinen Test
+  // umschreiben muss.
+  const app = await spiele(s, 'app');
+  for (const meta of registry.all()) {
+    const freigabe = freigabeAuf(meta.id, 'app');
+    const eintrag = app.find((g) => g.id === meta.id);
+    if (freigabe === 'aus') {
+      assert.equal(eintrag, undefined, meta.id);
+      continue;
+    }
+    assert.equal(eintrag?.availability, freigabe === 'spielbar' ? 'playable' : 'preview', meta.id);
+  }
+
+  // Jede sichtbare Vorschau auf der jeweiligen Plattform ist abstimmbar.
+  for (const spiel of [...web, ...app]) {
+    assert.equal(spiel.abstimmbar, spiel.availability === 'preview', spiel.id);
+  }
+});
+
+test('ein Vorschau-Spiel bleibt Vorschau, auch wenn es als spielbar eingetragen wird', (t) => {
+  stelle(t, 'schafkopf' as GameId, { web: 'spielbar', app: 'spielbar' });
+  assert.equal(freigabeAuf('schafkopf' as GameId, 'web'), 'bald');
+  assert.equal(freigabeAuf('schafkopf' as GameId, 'app'), 'bald');
+});
+
+test('app: bald zeigt das Spiel in der App als Vorschau mit Abstimmung, die Webseite bleibt', async (t) => {
+  stelle(t, 'doppelkopf' as GameId, { web: 'spielbar', app: 'bald' });
+  const s = await setup();
+  t.after(() => s.close());
+
+  const imWeb = (await spiele(s, 'web')).find((g) => g.id === 'doppelkopf');
+  const inApp = (await spiele(s, 'app')).find((g) => g.id === 'doppelkopf');
+  assert.equal(imWeb?.availability, 'playable');
+  assert.equal(inApp?.availability, 'preview');
+  assert.equal(inApp?.abstimmbar, true);
+
+  // Die Stimme gilt fuer die Plattform, auf der es noch angekuendigt ist.
+  const stimme = await s.app.inject({
+    method: 'POST',
+    url: '/api/games/doppelkopf/vote',
+    headers: s.anna('app'),
+  });
+  assert.equal(stimme.statusCode, 200);
+});
+
+test('app: aus nimmt das Spiel aus der App-Auswahl, auch ein Vorschau-Spiel', async (t) => {
+  stelle(t, 'doppelkopf' as GameId, { web: 'spielbar', app: 'aus' });
+  stelle(t, 'werwolf' as GameId, { web: 'bald', app: 'aus' });
+  const s = await setup();
+  t.after(() => s.close());
+
+  const inApp = (await spiele(s, 'app')).map((g) => g.id);
+  const imWeb = (await spiele(s, 'web')).map((g) => g.id);
+  assert.ok(!inApp.includes('doppelkopf'));
+  assert.ok(!inApp.includes('werwolf'));
+  assert.ok(imWeb.includes('doppelkopf'));
+  assert.ok(imWeb.includes('werwolf'), 'auf der Webseite gibt es kein aus');
+});
+
+test('web: bald setzt ein Spiel auch auf der Webseite auf Bald', async (t) => {
+  stelle(t, 'doppelkopf' as GameId, { web: 'bald', app: 'spielbar' });
+  const s = await setup();
+  t.after(() => s.close());
+
+  const imWeb = (await spiele(s, 'web')).find((g) => g.id === 'doppelkopf');
+  assert.equal(imWeb?.availability, 'preview');
+  const anlegen = await s.app.inject({
+    method: 'POST',
+    url: '/api/tables',
+    headers: s.anna('web'),
+    payload: { gameId: 'doppelkopf', seats: 4, rounds: 4 },
+  });
+  assert.equal(anlegen.statusCode, 404);
+  assert.equal(anlegen.json().code, 'gameNotPlayable');
+});
+
+// ---------------------------------------------------------------------------
+// Die Sperre an jedem Einstieg
+// ---------------------------------------------------------------------------
+
+test('in der App gesperrt: anlegen, Tischliste und Mitspielersuche', async (t) => {
+  stelle(t, 'doppelkopf' as GameId, { web: 'spielbar', app: 'bald' });
+  const s = await setup();
+  t.after(() => s.close());
+
+  const anlegen = await s.app.inject({
+    method: 'POST',
+    url: '/api/tables',
+    headers: s.anna('app'),
+    payload: { gameId: 'doppelkopf', seats: 4, rounds: 4 },
+  });
+  const tischliste = await s.app.inject({
+    method: 'GET',
+    url: '/api/tables?game=doppelkopf',
+    headers: s.anna('app'),
+  });
+  const suche = await s.app.inject({
+    method: 'POST',
+    url: '/api/suche/doppelkopf',
+    headers: s.anna('app'),
+  });
+  for (const [name, res] of [
+    ['anlegen', anlegen],
+    ['Tischliste', tischliste],
+    ['Suche', suche],
+  ] as const) {
+    assert.equal(res.statusCode, 404, name);
+    // Nicht "Suche nicht verfuegbar" — die Sperre greift vor allem anderen.
+    assert.equal(res.json().code, 'gameNotPlayable', name);
+  }
+
+  // Dieselben Wege von der Webseite aus sind offen.
+  const imWeb = await s.app.inject({
+    method: 'GET',
+    url: '/api/tables?game=doppelkopf',
+    headers: s.anna('web'),
+  });
+  assert.equal(imWeb.statusCode, 200);
+});
+
+test('in der App gesperrt: Beitritt per Kennung, per Code und die Code-Vorschau', async (t) => {
+  stelle(t, 'doppelkopf' as GameId, { web: 'spielbar', app: 'bald' });
+  const s = await setup();
+  t.after(() => s.close());
+  const tisch = await tischImWeb(s);
+
+  const vorschau = await s.app.inject({
+    method: 'GET',
+    url: `/api/tables/code/${tisch.joinCode}`,
+    headers: s.ben('app'),
+  });
+  const perCode = await s.app.inject({
+    method: 'POST',
+    url: `/api/tables/code/${tisch.joinCode}/join`,
+    headers: s.ben('app'),
+  });
+  const perKennung = await s.app.inject({
+    method: 'POST',
+    url: `/api/tables/${tisch.id}/join`,
+    headers: s.ben('app'),
+  });
+  for (const [name, res] of [
+    ['Vorschau', vorschau],
+    ['per Code', perCode],
+    ['per Kennung', perKennung],
+  ] as const) {
+    assert.equal(res.statusCode, 404, name);
+    assert.equal(res.json().code, 'gameNotPlayable', name);
+  }
+
+  // Von der Webseite aus kommt Ben an denselben Tisch.
+  const imWeb = await s.app.inject({
+    method: 'POST',
+    url: `/api/tables/code/${tisch.joinCode}/join`,
+    headers: s.ben('web'),
+  });
+  assert.equal(imWeb.statusCode, 200);
+});
+
+test('wer schon sitzt, kommt auch in der App an seinen Platz zurueck', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const tisch = await tischImWeb(s);
+
+  // Erst nach dem Hinsetzen wird das Spiel in der App gesperrt.
+  stelle(t, 'doppelkopf' as GameId, { web: 'spielbar', app: 'bald' });
+  const zurueck = await s.app.inject({
+    method: 'POST',
+    url: `/api/tables/${tisch.id}/join`,
+    headers: s.anna('app'),
+  });
+  const vorschau = await s.app.inject({
+    method: 'GET',
+    url: `/api/tables/code/${tisch.joinCode}`,
+    headers: s.anna('app'),
+  });
+  assert.equal(zurueck.statusCode, 200);
+  assert.equal(vorschau.statusCode, 200);
+});
+
+test('Pro-Subway: in der App kein Lauf und keine Auszahlung, auf der Webseite wie bisher', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const lauf = { muenzen: 5, punkte: 120, meter: 90 };
+
+  for (const url of ['/api/runner/lauf', '/api/runner/cashout']) {
+    const payload = url.endsWith('lauf') ? lauf : { coins: 5 };
+    const app = await s.app.inject({ method: 'POST', url, headers: s.anna('app'), payload });
+    assert.equal(app.statusCode, 404, `${url} aus der App`);
+    assert.equal(app.json().code, 'gameNotPlayable');
+  }
+
+  const web = await s.app.inject({ method: 'POST', url: '/api/runner/lauf', headers: s.anna('web'), payload: lauf });
+  assert.equal(web.statusCode, 200);
+});
+
+
+test('Abstimmung: eine Stimme pro Konto und Spiel, nach neuem Abruf erhalten', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const vote = (headers: Record<string, string>, gameId = 'schafkopf') => s.app.inject({ method: 'POST', url: `/api/games/${gameId}/vote`, headers });
+  const list = async (headers: Record<string, string>) => {
+    const res = await s.app.inject({ method: 'GET', url: '/api/games', headers });
+    assert.match(String(res.headers['cache-control']), /no-store/);
+    return res.json() as { id: string; votes: number; meineStimme: boolean }[];
+  };
+  assert.equal((await vote(s.anna('app'))).statusCode, 200);
+  assert.equal((await vote(s.anna('app'))).statusCode, 200);
+  const anna = (await list(s.anna('app'))).find(g => g.id === 'schafkopf')!;
+  assert.equal(anna.votes, 1);
+  assert.equal(anna.meineStimme, true);
+  const ben = (await list(s.ben('app'))).find(g => g.id === 'schafkopf')!;
+  assert.equal(ben.votes, 1);
+  assert.equal(ben.meineStimme, false);
+  assert.equal((await vote(s.ben('app'))).statusCode, 200);
+  assert.equal((await list(s.anna('app'))).find(g => g.id === 'schafkopf')!.votes, 2);
+  assert.equal((await vote(s.anna('app'), 'skat')).statusCode, 400);
+  assert.equal((await vote({})).statusCode, 401);
+  const offen = await s.app.inject({ method: 'GET', url: '/api/games' });
+  assert.ok(offen.json().every((g: { meineStimme: boolean }) => !g.meineStimme));
+});
+
+test('alle 19 sichtbaren Bald-Einträge der App sind kontogebunden abstimmbar', async t => {
+  const s = await setup(); t.after(() => s.close());
+  const bald = (await spiele(s, 'app')).filter(g => g.availability === 'preview' && g.id !== 'partykiste');
+  assert.equal(bald.length, 19);
+  for (const spiel of bald) {
+    assert.equal(spiel.abstimmbar, true, spiel.id);
+    const res = await s.app.inject({ method: 'POST', url: `/api/games/${spiel.id}/vote`, headers: s.anna('app') });
+    assert.equal(res.statusCode, 200, `${spiel.id}: ${res.body}`);
+  }
+  const anna = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna('app') })).json();
+  const ben = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.ben('app') })).json();
+  for (const spiel of bald) {
+    assert.equal(anna.find((g: {id: string}) => g.id === spiel.id).meineStimme, true, spiel.id);
+    assert.equal(ben.find((g: {id: string}) => g.id === spiel.id).meineStimme, false, spiel.id);
+  }
+  for (const id of ['prosubway', 'mehrkampf']) {
+    const res = await s.app.inject({ method: 'POST', url: `/api/games/${id}/vote`, headers: s.anna('app') });
+    assert.equal(res.statusCode, 200);
+    const liste = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna('app') })).json();
+    assert.equal(liste.find((g: {id: string}) => g.id === id).votes, 1);
+  }
+  const web = await s.app.inject({ method: 'POST', url: '/api/games/prosubway/vote', headers: s.anna('web') });
+  assert.equal(web.statusCode, 400, 'Im Web ist der Runner schon spielbar');
+});
+
+test('jedes in der App freigegebene Tischspiel startet mit Bots', async () => {
+  for (const meta of registry.all().filter(m => freigabeAuf(m.id, 'app') === 'spielbar')) {
+    const s = await setup();
+    try {
+      const res = await s.app.inject({ method: 'POST', url: '/api/tables', headers: s.anna('app'),
+        payload: { gameId: meta.id, seats: meta.seatCounts[0], rounds: meta.rotationSize(meta.seatCounts[0]!), fillWithBots: true } });
+      assert.equal(res.statusCode, 201, `${meta.id}: ${res.body}`);
+      const partie = await s.runtime.start(res.json().id);
+      assert.equal(partie.gameId, meta.id);
+      assert.ok(partie.state, `${meta.id}: initialer Spielstand fehlt`);
+      assert.equal(partie.seats.length, meta.seatCounts[0]);
+    } finally { await s.close(); }
+  }
+});
+
+test('Webseite: jede sichtbare Vorschau samt Mehrkampf ist kontogebunden abstimmbar, Pro-Subway nicht', async t => {
+  const s = await setup(); t.after(() => s.close());
+  const web = await spiele(s, 'web');
+  const bald = web.filter(g => g.availability === 'preview');
+  assert.ok(bald.some(g => g.id === 'mehrkampf'), 'Mehrkampf fehlt auf der Webseite');
+  // Pro-Subway laeuft auf der Webseite schon, es steht dort nicht zur Wahl.
+  assert.equal(web.find(g => g.id === 'prosubway'), undefined);
+  for (const spiel of bald) {
+    assert.equal(spiel.abstimmbar, true, spiel.id);
+    const res = await s.app.inject({ method: 'POST', url: `/api/games/${spiel.id}/vote`, headers: s.anna('web') });
+    assert.equal(res.statusCode, 200, `${spiel.id}: ${res.body}`);
+  }
+  const anna = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna('web') })).json();
+  const ben = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.ben('web') })).json();
+  for (const spiel of bald) {
+    const eigen = anna.find((g: { id: string }) => g.id === spiel.id);
+    assert.equal(eigen.meineStimme, true, spiel.id);
+    assert.equal(eigen.votes, 1, spiel.id);
+    assert.equal(ben.find((g: { id: string }) => g.id === spiel.id).meineStimme, false, spiel.id);
+  }
+  // Was auf der Webseite spielbar ist, nimmt dort keine Stimme an.
+  assert.equal((await s.app.inject({ method: 'POST', url: '/api/games/skat/vote', headers: s.anna('web') })).statusCode, 400);
+});
+
+test('Webseite: eine Stimme fuer ein Spiel, das in der App noch angekuendigt ist, gibt es dort nicht', async t => {
+  stelle(t, 'wizard' as GameId, { web: 'spielbar', app: 'bald' });
+  const s = await setup(); t.after(() => s.close());
+  assert.equal((await spiele(s, 'web')).find(g => g.id === 'wizard')?.abstimmbar, false);
+  assert.equal((await s.app.inject({ method: 'POST', url: '/api/games/wizard/vote', headers: s.anna('web') })).statusCode, 400);
+});
+
+test('abstimmModiFuer: der Umfang wirkt auf beiden Plattformen', () => {
+  const nur = (...frei: string[]) => ({ alles: false, frei: new Set(frei) });
+  assert.deepEqual(abstimmModiFuer('web').map(m => m.id), ['mehrkampf']);
+  assert.deepEqual(abstimmModiFuer('app').map(m => m.id), ['prosubway', 'mehrkampf']);
+  // Ohne Abstimmung im Umfang ist nichts angekuendigt, weder hier noch dort.
+  assert.deepEqual(abstimmModiFuer('web', nur('doppelkopf', 'prosubway')), []);
+  assert.deepEqual(abstimmModiFuer('app', nur('doppelkopf', 'prosubway')), []);
+  // Jeder Modus braucht seine eigene Kennung, wie jedes Vorschau-Spiel.
+  assert.deepEqual(abstimmModiFuer('app', nur('abstimmung')), []);
+  assert.deepEqual(abstimmModiFuer('app', nur('abstimmung', 'mehrkampf')).map(m => m.id), ['mehrkampf']);
+  assert.deepEqual(abstimmModiFuer('app', nur('abstimmung', 'prosubway')).map(m => m.id), ['prosubway']);
+  // Pro-Subway laeuft auf der Webseite schon — dort nie angekuendigt.
+  assert.deepEqual(abstimmModiFuer('web', nur('abstimmung', 'prosubway', 'mehrkampf')).map(m => m.id), ['mehrkampf']);
+});

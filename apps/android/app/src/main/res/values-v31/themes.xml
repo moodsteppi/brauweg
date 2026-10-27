@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+: Das System zeigt beim Start das App-Symbol auf dieser
+         Farbe. Ein eigenes Startbild braucht es damit nicht. -->
+    <style name="Brauweg" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/brauweg_blau</item>
+        <item name="android:statusBarColor">@color/brauweg_blau</item>
+        <item name="android:navigationBarColor">@color/brauweg_blau</item>
+        <item name="android:windowSplashScreenBackground">@color/brauweg_blau</item>
+    </style>
+</resources>

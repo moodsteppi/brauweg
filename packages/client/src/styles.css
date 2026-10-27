@@ -1980,6 +1980,36 @@ td {
   color: #9fe0c1;
 }
 
+/* Beitrittsanfragen im Wartebereich (tisch/Anfragen.tsx): nur beim
+   Gastgeber eines privaten Tisches, über der Sitzreihe. */
+.tisch-anfragen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 1rem 0.8rem;
+  padding: 0.8rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 200, 70, 0.55);
+  background: rgba(255, 200, 70, 0.1);
+}
+.tisch-anfrage {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tisch-anfrage > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doko-seat-btn.is-ja {
+  background: #f2c14e;
+  border-color: #f2c14e;
+  color: #1d1a17;
+}
+
 /* Kreisel im Bot-Knopf, solange die Antwort des Tisches aussteht. */
 .doko-btn-spinner {
   display: inline-block;
@@ -5562,7 +5592,7 @@ main.auth > .muted {
 
    Neue Bilder braucht das nicht. Formular, Felder und Knoepfe erben den
    gemalten Satz aus den Menueblaettern; der gemalte Schriftzug lag schon
-   als logo.png vor. Fehlt nur der Hintergrund - bis er geliefert ist,
+   als logo.webp vor. Fehlt nur der Hintergrund - bis er geliefert ist,
    bleibt der dunkle Verlauf. Absichtlich kein Platzhalterbild.
    ========================================================================= */
 .auth {
@@ -5619,14 +5649,6 @@ main.auth > .muted {
   border-radius: 0;
   padding: 0.4rem 0.6rem 0.7rem;
 }
-/* Der Google-Knopf: Google zeichnet ihn selbst, hier nur die Buehne. Leer
-   (keine Client-ID, Google blockiert) faellt er auf Hoehe null zusammen. */
-.auth-google {
-  display: flex;
-  justify-content: center;
-  margin-top: 0.6rem;
-}
-.auth-google:empty { margin-top: 0; }
 .auth .panel label {
   display: block;
   margin: 0.5rem 0 0;
@@ -8200,228 +8222,6 @@ span.hub-angebot-art.poker-jeton-stapel {
   filter: saturate(0.5) brightness(0.72);
 }
 
-/* -------------------------------------------------------------------------
-   Truhen-Öffnung
-   -------------------------------------------------------------------------
-   Eine Choreografie für alle Truhen (TruhenOeffnung.tsx). Das Aussehen liegt in
-   zwei Ebenen (Körper + Deckel); hier steht nur die Bewegung: die Truhe wackelt,
-   dreht sich leicht im Raum und der Deckel klappt dreidimensional auf. Farbe des
-   Lichts kommt je Grad über --glut. */
-.truhe-oeffnung {
-  position: fixed;
-  inset: 0;
-  z-index: 300;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.4rem;
-  background: radial-gradient(circle at 50% 42%, rgba(22, 32, 26, 0.55), rgba(8, 12, 10, 0.93));
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
-}
-/*
-  Die Buehne fuellt den Bildschirm, die Truhe steht in der Mitte.
-
-  Vorher waren es feste 220 x 240 px in einem sonst leeren Vollbild — auf
-  einem Handy ein Briefmarkenbild mitten in viel Schwarz. Jetzt bemisst sie
-  sich am Bildschirm und deckelt bei 30 rem, damit sie auf einem Tablet nicht
-  ins Absurde waechst.
-*/
-.truhe-buehne {
-  position: relative;
-  width: min(88vw, 30rem);
-  height: min(62vh, 32rem);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  perspective: 900px;
-}
-
-/* Zwei Wrapper, damit Drehung (rotateY) und Wackeln (rotateZ) sich nicht
-   überschreiben — beide setzen sonst dieselbe transform-Eigenschaft. */
-/*
-  Mittig statt am unteren Rand: Die Truhe IST der Bildschirm, sie steht nicht
-  auf einem Sockel darunter.
-
-  Zentriert wird ueber das Flex der Buehne und NICHT ueber `translate` — die
-  Drehung (`truhe-drehen`) setzt `transform` und wuerde ein `translate` hier
-  einfach ueberschreiben. Die Truhe spraenge dann beim Start der Bewegung in
-  die linke obere Ecke.
-*/
-.truhe-dreh {
-  position: relative;
-  z-index: 2;
-  width: min(72vw, 22rem);
-  height: min(40vh, 18rem);
-  transform-style: preserve-3d;
-  animation: truhe-drehen 1.5s ease-in-out 0.85s both;
-}
-.truhe-schuettel {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-  animation: truhe-wackeln 0.85s ease-in-out;
-}
-/* Die Leinwand fuellt den Wackel-Wrapper. Ein WebGL-Bereich hat keine eigene
-   Groesse — ohne diese Zeile ist er null hoch und man sieht nichts. */
-.truhe-schuettel canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-}
-.truhe-koerper {
-  position: absolute;
-  bottom: 0;
-  left: 8px;
-  width: 160px;
-  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5));
-}
-.truhe-deckel {
-  position: absolute;
-  bottom: 88px;
-  left: 0;
-  width: 176px;
-  transform-origin: 50% 100%;
-  animation: truhe-deckel-auf 0.7s cubic-bezier(0.34, 1.5, 0.5, 1) 0.9s both;
-  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.4));
-}
-
-/*
-  Gluehen und Strahlen sind am Bildschirm bemessen, nicht in festen Pixeln.
-
-  Die alten 170 bzw. 330 px stammen aus der Zeit, als die Buehne 220 x 240 px
-  gross war — im Vollbild war davon nur noch ein Fleckchen unter der Truhe zu
-  sehen. Und die Verzoegerungen (0,9 s) galten fuer den festen Ablauf; jetzt
-  loest der Tipp aus, also fangen beide sofort an.
-*/
-.truhe-glut {
-  position: absolute;
-  top: 45%;
-  left: 50%;
-  width: min(80vw, 26rem);
-  height: min(80vw, 26rem);
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--glut, #ffe0a0) 0%, transparent 66%);
-  opacity: 0;
-  animation: truhe-glut 2.2s ease-out forwards;
-  /* Hinter der Truhe, aber vor dem Hintergrund. */
-  z-index: 0;
-}
-.truhe-strahlen {
-  position: absolute;
-  top: 45%;
-  left: 50%;
-  width: min(150vw, 44rem);
-  height: min(150vw, 44rem);
-  transform: translate(-50%, -50%) scale(0.3);
-  border-radius: 50%;
-  background: repeating-conic-gradient(
-    from 0deg,
-    var(--glut, #ffe0a0) 0deg 5deg,
-    transparent 5deg 17deg
-  );
-  -webkit-mask: radial-gradient(circle, transparent 22%, #000 32%, #000 54%, transparent 68%);
-  mask: radial-gradient(circle, transparent 22%, #000 32%, #000 54%, transparent 68%);
-  opacity: 0;
-  animation: truhe-strahlen 2.4s ease-out forwards;
-  z-index: 0;
-}
-
-/* Die Belohnung schwebt UEBER der Truhe.
-   Die 22 % stammten aus der Zeit des flachen SVG, das den Platz anders
-   ausfuellte — mit dem 3D-Modell lag die Muenze mitten auf dem Deckel.
-   Muenze UND Zahl muessen frei liegen, nicht nur die Muenze.
-
-   UNTER der Truhe und nicht darueber: Gemessen bleiben ueber der Truhe 71 px,
-   die Belohnung braucht 94 — sie lag deshalb auf dem Deckel. Darunter sind
-   112 px frei. Und es liest sich ohnehin natuerlicher: Die Truhe geht auf,
-   der Betrag steigt darunter herauf. */
-.truhe-belohnung {
-  position: absolute;
-  top: auto;
-  bottom: 2%;
-  left: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-  opacity: 0;
-  transform: translate(-50%, 30px) scale(0.4);
-  animation: truhe-belohnung 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) 1.2s forwards;
-}
-.truhe-belohnung img {
-  width: 3rem;
-  height: 3rem;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
-}
-.truhe-belohnung strong {
-  font-size: 1.7rem;
-  color: #fff;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
-}
-.truhe-hinweis {
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 0.85rem;
-  min-height: 1.2em;
-  margin: 0;
-}
-
-@keyframes truhe-wackeln {
-  0%, 100% { transform: rotate(0) translateY(0); }
-  15% { transform: rotate(-3deg); }
-  30% { transform: rotate(3deg) translateY(-2px); }
-  45% { transform: rotate(-3deg); }
-  60% { transform: rotate(2deg) translateY(-3px); }
-  75% { transform: rotate(-1deg); }
-}
-@keyframes truhe-drehen {
-  0% { transform: rotateY(0); }
-  35% { transform: rotateY(16deg); }
-  70% { transform: rotateY(-8deg); }
-  100% { transform: rotateY(0); }
-}
-@keyframes truhe-deckel-auf {
-  0% { transform: rotateX(0); }
-  100% { transform: rotateX(-118deg); }
-}
-@keyframes truhe-glut {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-  22% { opacity: 0.95; transform: translate(-50%, -50%) scale(1.08); }
-  100% { opacity: 0.45; transform: translate(-50%, -50%) scale(1); }
-}
-@keyframes truhe-strahlen {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0); }
-  30% { opacity: 0.7; }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1) rotate(38deg); }
-}
-@keyframes truhe-belohnung {
-  0% { opacity: 0; transform: translate(-50%, 30px) scale(0.4); }
-  100% { opacity: 1; transform: translate(-50%, -12px) scale(1); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .truhe-dreh,
-  .truhe-schuettel,
-  .truhe-glut,
-  .truhe-strahlen {
-    animation: none;
-  }
-  .truhe-deckel {
-    animation: none;
-    transform: rotateX(-118deg);
-  }
-  .truhe-glut {
-    opacity: 0.3;
-  }
-  .truhe-belohnung {
-    animation: none;
-    opacity: 1;
-    transform: translate(-50%, -12px) scale(1);
-  }
-}
-
 /* =========================================================================
    Einstellungen.
 
@@ -9398,116 +9198,6 @@ span.hub-angebot-art.poker-jeton-stapel {
   width: 1rem;
   height: 1rem;
   object-fit: contain;
-}
-
-/* =========================================================================
-   Truhenoeffnung, zweiter Anlauf: Antippen oeffnet.
-
-   Vorher lief alles nach einer Zeitschaltung ab. Jetzt steht die Truhe
-   geschlossen da und wartet — und alles, was zum Oeffnen gehoert, haengt an
-   der Phase. Der Grund ist nicht technisch: Das Oeffnen ist der Moment, um
-   den es geht, und der gehoert dem Spieler.
-   ========================================================================= */
-
-/* Geschlossen: kein Gluehen, keine Strahlen, keine Zahl. Nur die Truhe, die
-   leise atmet und darauf wartet, angetippt zu werden. */
-.truhe-oeffnung.ist-zu .truhe-glut,
-.truhe-oeffnung.ist-zu .truhe-strahlen,
-.truhe-oeffnung.ist-zu .truhe-belohnung {
-  opacity: 0;
-  animation: none;
-}
-/* Das Wackeln beim Aufbau gehoert zum Oeffnen und nicht zum Warten. */
-.truhe-oeffnung.ist-zu .truhe-schuettel,
-.truhe-oeffnung.ist-zu .truhe-dreh {
-  animation: none;
-}
-/* Stattdessen ein ruhiges Heben und Senken — die Truhe lebt, ohne zu
-   zappeln. Wer eine Sekunde zoegert, soll nicht auf ein Standbild sehen. */
-.truhe-oeffnung.ist-zu .truhe-dreh {
-  animation: truhe-atmen 2.6s ease-in-out infinite;
-}
-@keyframes truhe-atmen {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-6px) scale(1.012); }
-}
-
-/* Der Hinweis lockt, solange zu ist. */
-.truhe-oeffnung.ist-zu .truhe-hinweis {
-  animation: truhe-locken 1.8s ease-in-out infinite;
-}
-@keyframes truhe-locken {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
-}
-
-/* -------------------------------------------------------------------------
-   Der Muenzschwall.
-
-   Liegt UEBER der Truhe (z-index) und ueber dem Gluehen: Die Muenzen kommen
-   aus ihr heraus, sie liegen nicht dahinter. Ausgangspunkt ist der obere
-   Rand der Truhe, nicht ihre Mitte — dort ist die Oeffnung.
-   ------------------------------------------------------------------------- */
-.truhe-schwall {
-  position: absolute;
-  top: 30%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-.truhe-schwall img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 2rem;
-  height: 2rem;
-  margin: -1rem 0 0 -1rem;
-  opacity: 0;
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
-  animation: truhe-muenze-fliegt 1.5s cubic-bezier(0.22, 0.7, 0.3, 1) both;
-}
-/*
-  Steigen, auffaechern, fallen — in einer Bewegung.
-
-  Die Kurve macht den Bogen: schnell hoch, oben langsam, dann faellt sie
-  wieder. Ohne den Abfall am Ende schweben zwoelf Muenzen aus dem Bild und es
-  sieht aus, als waeren sie weggezaubert worden.
-*/
-@keyframes truhe-muenze-fliegt {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) rotate(0) scale(0.4);
-  }
-  12% { opacity: 1; }
-  60% {
-    opacity: 1;
-    transform: translate(var(--weite), var(--hoehe)) rotate(var(--dreh)) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(calc(var(--weite) * 1.6), calc(var(--hoehe) * 0.25))
-      rotate(calc(var(--dreh) * 1.4)) scale(0.85);
-  }
-}
-
-/* Das Gluehen kraeftiger und warm in der Farbe des Grades — es soll aus der
-   Truhe kommen und nicht wie ein Nebel darueber liegen. */
-.truhe-oeffnung.ist-auf .truhe-glut,
-.truhe-oeffnung.ist-fertig .truhe-glut {
-  filter: blur(6px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .truhe-oeffnung.ist-zu .truhe-dreh,
-  .truhe-oeffnung.ist-zu .truhe-hinweis,
-  .truhe-schwall img {
-    animation: none;
-  }
-  /* Ohne Bewegung bleiben die Muenzen ganz weg — ein Standbild aus zwoelf
-     uebereinanderliegenden Muenzen waere nur ein Klumpen. */
-  .truhe-schwall { display: none; }
 }
 
 /* -------------------------------------------------------------------------
@@ -15410,48 +15100,96 @@ span.hub-angebot-art.poker-jeton-stapel {
   }
 }
 
+/* == Auswahl-Kachel (hub.tsx: AuswahlRaster, AuswahlKachel, AuswahlFilter) ==
+   Seit dem 22.09.2026 DAS Muster fuer „waehle eines oder mehrere aus einer
+   Liste mit Bildern": Filler-Spielart, Golf-Bahn, Partykiste, Themenpakete.
+   Mobile-first, weil `.kachelraster` oben erst ab 60rem greift und am Handy
+   jede Liste zur Einzelspalte wurde. Zwei Spalten am Handy, drei ab 40rem,
+   ab 60rem so viele wie `--aw-min` zulaesst. `.is-fest` (Prop `spalten`)
+   haelt eine feste Zahl — fuer schmale Behaelter wie das Filler-Menue.
+   Farben ueber `--aw-*`, damit ein heller Bildschirm sie umstellt, ohne
+   die Regeln zu kopieren. */
+.aw-raster {
+  display: grid;
+  grid-template-columns: repeat(var(--aw-spalten, 2), minmax(0, 1fr));
+  gap: 0.5rem;
+  align-content: start;
+}
+@media (min-width: 40rem) {
+  .aw-raster:not(.is-fest) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 60rem) {
+  .aw-raster:not(.is-fest) { grid-template-columns: repeat(auto-fill, minmax(var(--aw-min, 14rem), 1fr)); }
+}
+.aw-kachel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.4rem 0.4rem 0.5rem;
+  border: 2px solid var(--aw-line, var(--line));
+  border-radius: 0.7rem;
+  background: var(--aw-panel, var(--panel));
+  color: var(--aw-text, var(--text));
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* Rahmen UND Innenring: Nur die Rahmenfarbe zu tauschen ist auf einem hellen
+   Grund zu leise, um es aus dem Augenwinkel zu sehen. */
+.aw-kachel.is-an { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.aw-kachel[aria-disabled] { opacity: 0.5; cursor: not-allowed; }
+.aw-kachel:focus-visible { outline: 3px solid var(--blau); outline-offset: 2px; }
+.aw-bild img { display: block; width: 100%; height: auto; border-radius: 0.45rem; }
+.aw-titel { font-weight: 800; font-size: 0.95rem; line-height: 1.2; }
+.aw-text { font-size: 0.75rem; line-height: 1.3; color: var(--aw-muted, var(--muted)); }
+.aw-badge {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  display: flex;
+  gap: 2px;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.aw-badge i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.3); }
+.aw-badge i.is-an { background: var(--gold); }
+.aw-leer { grid-column: 1 / -1; margin: 0; color: var(--aw-muted, var(--muted)); text-align: center; }
+.aw-filter { display: grid; gap: 0.4rem; margin-bottom: 0.5rem; }
+.aw-suche,
+.aw-chip {
+  border: 1.5px solid var(--aw-line, var(--line));
+  background: var(--aw-panel, var(--panel));
+  color: var(--aw-text, var(--text));
+  font: inherit;
+}
+.aw-suche { width: 100%; padding: 0.5rem 0.7rem; border-radius: 0.5rem; }
+.aw-chips { display: flex; gap: 0.3rem; overflow-x: auto; scrollbar-width: none; }
+.aw-chip { flex: 0 0 auto; padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+.aw-chip[aria-pressed='true'] { border-color: var(--accent); background: var(--accent); color: #fff; }
+@media (prefers-reduced-motion: no-preference) {
+  .aw-kachel { transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+  .aw-kachel:active:not([aria-disabled]) { transform: scale(0.97); }
+}
+
 /* -- Filler: Spielart, Bot-Knopf, Warteband (Nachtrag 31.08.) ------------- */
 
-/* Der Schalter zwischen Nebel und Normal. Zwei Knoepfe in einer Rinne, der
-   gewaehlte liegt als heller Reiter darin — dieselbe Form, die auf jedem
-   Handy "eins von zweien" bedeutet. */
-.fl-schalter {
-  width: 100%;
+/* Die Wahl der Spielart (seit 22.09.2026 das Auswahl-Raster). Filler ist hell,
+   das Raster bringt die dunklen Plattformfarben mit — hier umgestellt. */
+.fl-spielart {
   margin: 0 0 16px;
-  display: grid;
-  /* Vier Spielarten seit dem 6. September. Ausgeschrieben und nicht
-     auto-fit: Es sollen gleiche Viertel sein, nicht nach Inhalt bemessene
-     Streifen. */
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  padding: 4px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.09);
+  --aw-panel: #ffffff;
+  --aw-line: rgba(0, 0, 0, 0.1);
+  --aw-text: #2b2b2b;
+  --aw-muted: #7a7a7a;
 }
-.fl-schalter button {
-  padding: 11px 4px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: #6d6d6d;
-  font: 800 13px/1 system-ui;
-  cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
-}
-.fl-schalter button[data-an] {
-  background: #ffffff;
-  color: #2b2b2b;
-  box-shadow: 0 3px 8px -4px rgba(0, 0, 0, 0.55);
-}
-/* Der erklaerende Satz sitzt UNTER beiden Knoepfen und ueber die volle
-   Breite: Er gehoert zur Wahl, nicht zu einem der beiden Knoepfe. */
-.fl-schalter-text {
-  grid-column: 1 / -1;
-  padding: 2px 6px 4px;
-  color: #7a7a7a;
-  font: 600 12px/1.35 system-ui;
-  text-align: center;
-}
+.fl-spielart .aw-titel { text-align: center; font-size: 13px; }
+.fl-spielart-text { margin: 8px 0 0; padding: 0 6px; color: #7a7a7a; font: 600 12px/1.35 system-ui; }
 
 /* Der Block um Spielartschalter und Bot-Knopf.
    Er fasst zusammen, was zusammengehoert: Der Schalter wirkt seit dem
@@ -15470,10 +15208,6 @@ span.hub-angebot-art.poker-jeton-stapel {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-/* Im Block sitzt der Knopf direkt unter dem Schalter — dessen eigener
-   Abstand nach unten genuegt. */
-.fl-botblock .fl-schalter { margin-bottom: 10px; }
-
 .fl-botknopf {
   width: 100%;
   margin-top: 10px;
@@ -16494,20 +16228,15 @@ span.hub-angebot-art.poker-jeton-stapel {
 
 /* -- Vorschau im Menue ---------------------------------------------------- */
 
-.fl-vorschau {
-  margin: 22px auto 0;
-  width: min(72vw, 264px);
-}
 .fl-vorschau-brett {
   position: relative;
   display: grid;
   gap: 2px;
   /* Rand statt Innenabstand: Die Waende sitzen absolut in Prozent, und ein
      Innenabstand verschoebe sie gegenueber dem Raster. */
-  border: 4px solid #2a2a2a;
-  border-radius: 10px;
+  border: 3px solid #2a2a2a;
+  border-radius: 8px;
   background: #2a2a2a;
-  box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.8);
 }
 /* Eigene Klasse und nicht `> span`: Die Waende sind ebenfalls Kinder des
    Rasters, und eine Regel auf alle Kinder machte aus ihrem `absolute` ein
@@ -16524,13 +16253,6 @@ span.hub-angebot-art.poker-jeton-stapel {
 .fl-vorschau-brett .fl-wand { width: 5px; height: 5px; margin-left: -2.5px; margin-top: -2.5px; }
 .fl-vorschau-brett .fl-wand:not([data-quer]) { margin-top: 0; }
 .fl-vorschau-brett .fl-wand[data-quer] { margin-left: 0; }
-.fl-vorschau-text {
-  margin: 6px 0 0;
-  color: #8a8a8a;
-  font: 700 11px/1.3 system-ui;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
 .fl-wischhinweis {
   display: block;
   margin-top: 3px;
@@ -16561,13 +16283,9 @@ span.hub-angebot-art.poker-jeton-stapel {
   from { opacity: 0; transform: translateX(-28px); }
   to { opacity: 1; transform: none; }
 }
-.fl-vorschau[data-richtung='links'],
-.fl-schalter-text[data-richtung='links'] { animation: fl-einwisch-links 220ms ease-out; }
-.fl-vorschau[data-richtung='rechts'],
-.fl-schalter-text[data-richtung='rechts'] { animation: fl-einwisch-rechts 220ms ease-out; }
-@media (prefers-reduced-motion: reduce) {
-  .fl-vorschau[data-richtung],
-  .fl-schalter-text[data-richtung] { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .fl-spielart-text[data-richtung='links'] { animation: fl-einwisch-links 220ms ease-out; }
+  .fl-spielart-text[data-richtung='rechts'] { animation: fl-einwisch-rechts 220ms ease-out; }
 }
 
 
@@ -19017,6 +18735,90 @@ span.hub-angebot-art.poker-jeton-stapel {
 .gf-tafel tr[data-eigen] td { color: #8ee0a3; font-weight: 800; }
 .gf-pausezeit { margin: 10px 0 0; color: #a9c4ad; font: 700 13px/1 system-ui; }
 
+/* Replay eines Lochs (22.09.2026). Der Knopf in der Pausentafel fängt als
+   einziges dort Zeiger ab — die Tafel selbst bleibt durchlässig (siehe oben). */
+.grp-pauseknopf {
+  pointer-events: auto;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #2f6b45;
+  color: #eaf7ee;
+  font: 800 13px/1 system-ui;
+  cursor: pointer;
+}
+.grp-loecher { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 4px 0 14px; }
+.grp-loecher h2 { flex-basis: 100%; margin: 0 0 2px; color: #a9c4ad; font: 700 12px/1.2 system-ui; }
+.grp-lochknopf {
+  min-width: 40px;
+  padding: 8px 10px;
+  border: 1px solid rgba(143, 174, 148, 0.45);
+  border-radius: 10px;
+  background: rgba(10, 24, 16, 0.6);
+  color: #eaf7ee;
+  font: 800 13px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+/* Die Ansicht liegt ÜBER der Partie, die dahinter weiterrechnet. */
+.grp-seite { position: fixed; inset: 0; z-index: 40; background: #141c17; color: #eaf7ee; }
+.grp-leinwand { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.grp-kopf {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 14px;
+  background: rgba(10, 24, 16, 0.78);
+}
+.grp-zu { position: static; }
+.grp-titel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 13px/1.2 system-ui; }
+.grp-schlag { font: 800 15px/1 system-ui; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.grp-hinweis {
+  position: absolute;
+  top: calc(max(10px, env(safe-area-inset-top)) + 58px);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.78);
+  color: #ffd9a0;
+  font: 700 12px/1 system-ui;
+  white-space: nowrap;
+}
+.grp-leiste {
+  position: absolute;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(92vw, 360px);
+  padding: 10px 12px 12px;
+  border-radius: 18px;
+  background: rgba(10, 24, 16, 0.85);
+}
+.grp-balken { display: block; height: 4px; margin-bottom: 10px; border-radius: 2px; background: rgba(143, 174, 148, 0.3); overflow: hidden; }
+.grp-balken > span { display: block; height: 100%; background: #8ee0a3; transform: scaleX(0); transform-origin: left; }
+.grp-knoepfe { display: flex; justify-content: center; gap: 12px; }
+.grp-knopf {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: #24402f;
+  color: #eaf7ee;
+  font: 800 16px/1 system-ui;
+  cursor: pointer;
+}
+.grp-knopf[aria-pressed='true'] { background: #2f6b45; }
+.grp-knopf-haupt { width: 64px; background: #2f6b45; }
+.grp-leer { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(88vw, 340px); text-align: center; }
+
 .gf-uebersicht {
   position: absolute;
   z-index: 5;
@@ -19047,6 +18849,80 @@ span.hub-angebot-art.poker-jeton-stapel {
   pointer-events: none;
 }
 
+/* -- Par in der Anzeige (minispiele/golf/ParAnzeige.tsx) ------------------ */
+
+/* Unter Par gruen, ueber Par gedaempft rot: dieselben Toene wie der eigene
+   Name in der Tafel und die Troedel-Mahnung, damit keine dritte Farbsprache
+   dazukommt. */
+.gpar-name { font: 700 12px/1 system-ui; color: #cfe3d1; white-space: nowrap; }
+.gpar-name[data-gpar='hio'],
+.gpar-name[data-gpar='unter'] { color: #8ee0a3; }
+.gpar-name[data-gpar='ueber'],
+.gpar-name[data-gpar='ohne'] { color: #f0a0a8; }
+
+/* Der Ruf beim Einlochen. Er faellt aus dem HUD-Fluss (absolute), damit
+   Troedel-Mahnung und Hinweis darunter nicht fuer anderthalb Sekunden
+   nach unten springen. */
+.gpar-ruf {
+  position: absolute;
+  top: calc(100% + 10px);
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.82);
+  font: 900 20px/1 system-ui;
+  color: #8ee0a3;
+  animation: gpar-auf 1600ms ease-out both;
+}
+.gpar-ruf[data-hio] { padding: 12px 24px; font-size: 34px; color: #f4b400; }
+@keyframes gpar-auf {
+  0% { opacity: 0; transform: scale(0.7); }
+  15% { opacity: 1; transform: scale(1.08); }
+  25% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Ohne Bewegung heisst ohne Skalieren und ohne Ausblenden: Der Ruf steht
+   einfach, bis ParRuf ihn nach 1,6 s wieder abnimmt. */
+@media (prefers-reduced-motion: reduce) {
+  .gpar-ruf { animation: none; }
+}
+
+/* Endtafel: Kopf ueber Summe und „zu Par". Die Breiten muessen zu
+   .gf-rangsumme und .gpar-zupar passen, sonst steht der Kopf daneben. */
+.gpar-kopf {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin: 0 0 4px;
+  padding: 0 12px;
+  font: 700 11px/1 system-ui;
+  color: #8fae94;
+}
+.gpar-kopf span { min-width: 28px; text-align: right; }
+.gpar-kopf span:last-child { width: 38px; }
+.gpar-zupar {
+  flex: none;
+  width: 38px;
+  text-align: right;
+  font: 800 14px/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  color: #cfe3d1;
+}
+.gpar-zupar[data-gpar='unter'] { color: #8ee0a3; }
+.gpar-zupar[data-gpar='ueber'] { color: #f0a0a8; }
+
+/* -- Bahnrekord im Zwischenstand (minispiele/golf/Bahnrekord.tsx) --------- */
+
+/* Eine Zeile unter der Tafel, gedaempft wie die Kopfzeile der Tafel; nur
+   ein neuer Rekord bekommt Farbe — Gold wie der Hole-in-one-Ruf, weil es
+   dieselbe Sorte Nachricht ist: Das war besonders. */
+.grek { margin: 10px 0 0; }
+.grek-zeile { margin: 0; color: #a9c4ad; font: 600 12px/1.35 system-ui; }
+.grek-zeile strong { color: #e8f0e6; font-weight: 800; font-variant-numeric: tabular-nums; }
+.grek-neu { margin: 6px 0 0; font: 900 15px/1.2 system-ui; color: #8ee0a3; }
+.grek-neu[data-grek-art='bahn'] { color: #f4b400; }
+
 /* -- Banner der Spielauswahl ---------------------------------------------- */
 
 /* Dasselbe Verhaeltnis wie die gemalten Banner (1200 x 300) und wie die
@@ -19058,6 +18934,163 @@ span.hub-angebot-art.poker-jeton-stapel {
   width: 100%;
   aspect-ratio: 4 / 1;
   background: #101d16;
+}
+
+/* -- Bahnauswahl (minispiele/golf/Bahnauswahl.tsx, 22.09.2026) ------------ */
+
+/* Das Auswahl-Raster bringt die Plattformfarben mit; hier auf das Gruen der
+   Golfseiten gestellt, wie Filler es auf Weiss stellt. */
+.gf-bw {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  --aw-panel: rgba(0, 0, 0, 0.28);
+  --aw-line: rgba(255, 255, 255, 0.12);
+  --aw-text: #e8f0e6;
+  --aw-muted: #a9c4ad;
+}
+.gf-bw-titel { margin: 0; font: 800 15px/1.2 system-ui; }
+.gf-bw-hinweis { margin: 0; color: #a9c4ad; font: 600 12px/1.4 system-ui; }
+.gf-bw-hinweis strong { color: #e8f0e6; }
+.gf-bw-zeilentitel { color: #a9c4ad; font: 700 11px/1 system-ui; text-transform: uppercase; letter-spacing: 0.04em; }
+.gf-bw-filter { display: flex; flex-direction: column; gap: 6px; }
+.gf-bw .aw-chips { flex-wrap: wrap; }
+/* Quadratisch und mit fester Form: Ein <canvas> ohne Hoehe ist null Pixel
+   hoch, und der Zeichner misst clientWidth/clientHeight. */
+.gf-bw-miniatur {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 0.45rem;
+  background: #101d16;
+}
+.gf-bw-folgekopf { display: flex; align-items: center; justify-content: space-between; font: 700 12px/1 system-ui; }
+.gf-bw-leeren {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #cadfca;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 12px/1 system-ui;
+  cursor: pointer;
+}
+.gf-bw-folge {
+  margin: 0;
+  padding-left: 1.4em;
+  color: #cadfca;
+  font: 600 12px/1.5 system-ui;
+  columns: 2;
+}
+.gf-bw-anzeige { margin-bottom: 12px; }
+
+/* Golf Fun-Modus (seit 23.09.2026, minispiele/golf/FunAnsage.tsx): die Wahl
+   im Bot-Menü, das Schild im HUD, die Roulette-Ansage am Lochbeginn und der
+   Blick aufs nächste Loch in der Pause. `fixed`, weil .gf-hud keine Höhe
+   hat, an der sich eine Mitte messen ließe. Die Ansage liegt über der Bahn, aber
+   nimmt keinen Tipp weg — gezielt wird auch während sie steht. */
+.gf-fun-wahl { display: flex; flex-direction: column; gap: 4px; }
+.gf-fun-wahl small { color: #a9c4ad; font: 600 12px/1.35 system-ui; }
+.gf-fun-schild {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px auto 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.78);
+  color: #e8f0e6;
+  font: 700 12px/1 system-ui;
+  pointer-events: none;
+}
+.gf-fun-schild em { font-style: normal; color: #a9c4ad; }
+.gf-fun-pfeil { display: inline-block; color: #8ee0a3; font-size: 14px; line-height: 1; }
+.gf-fun-ansage {
+  position: fixed;
+  z-index: 6;
+  top: 38vh;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(80vw, 320px);
+  padding: 14px 18px 16px;
+  border-radius: 20px;
+  background: rgba(10, 24, 16, 0.9);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.9);
+  color: #e8f0e6;
+  text-align: center;
+  pointer-events: none;
+  animation: gf-fun-auf 220ms ease-out;
+}
+.gf-fun-ansage small { display: block; color: #a9c4ad; font: 700 11px/1 system-ui; letter-spacing: 0.08em; text-transform: uppercase; }
+.gf-fun-ansage .gf-fun-zeichen { display: block; margin: 6px 0 2px; font-size: clamp(40px, 12vw, 56px); line-height: 1.1; }
+.gf-fun-ansage strong { display: block; font: 800 clamp(20px, 6vw, 26px)/1.15 system-ui; }
+.gf-fun-ansage p { margin: 8px 0 0; color: #cfe0cf; font: 600 13px/1.35 system-ui; }
+.gf-fun-ansage[data-dreht] .gf-fun-zeichen { filter: blur(0.5px); opacity: 0.85; }
+.gf-fun-naechstes {
+  position: fixed;
+  z-index: 6;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(10, 24, 16, 0.9);
+  color: #e8f0e6;
+  font: 600 13px/1.2 system-ui;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@keyframes gf-fun-auf {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gf-fun-ansage { animation: none; }
+}
+/* Power-ups im Fun-Modus (PowerupAnzeige.tsx, seit 23.09.2026) */
+.gf-pu { align-self: center; display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 4px auto 0; pointer-events: none; }
+.gf-pu-schild {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(20, 28, 23, 0.82); color: #f3f7ef;
+  font: 700 13px/1.2 system-ui;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 14px rgba(255, 209, 102, 0.35);
+  animation: gf-pu-auf 360ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.gf-pu-schild em { font-style: normal; font-weight: 600; color: #a9c4ad; }
+.gf-pu-schild[data-golf-pu-wirkt] { box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.6), 0 0 18px rgba(255, 209, 102, 0.55); }
+@keyframes gf-pu-auf {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gf-pu-schild { animation: none; }
+}
+/* Störschläge im Fun-Modus (StoerschlagKnopf.tsx, seit 23.09.2026) — unten rechts, wo der Daumen ist */
+.gf-stoer {
+  position: fixed; z-index: 6;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(64px, calc(env(safe-area-inset-bottom) + 52px));
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  max-width: min(70vw, 260px);
+  pointer-events: none;
+}
+.gf-stoer-knopf {
+  pointer-events: auto;
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 48px; padding: 8px 16px; border-radius: 999px; border: 0;
+  background: rgba(40, 22, 14, 0.9); color: #fff3e6;
+  font: 800 15px/1.1 system-ui;
+  box-shadow: 0 0 0 2px rgba(255, 138, 76, 0.75), 0 0 18px rgba(255, 138, 76, 0.45);
+  cursor: pointer;
+}
+.gf-stoer-knopf[data-aktiv] { background: #ff8a4c; color: #1c1008; }
+.gf-stoer-knopf:disabled { opacity: 0.5; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2); cursor: default; }
+.gf-stoer em {
+  font: 600 12px/1.25 system-ui; font-style: normal; text-align: right;
+  padding: 3px 8px; border-radius: 8px; background: rgba(10, 24, 16, 0.8); color: #e8f0e6;
 }
 
 /* ==========================================================================
@@ -19197,6 +19230,70 @@ span.hub-angebot-art.poker-jeton-stapel {
 .pk-warten { margin: 0; color: var(--muted); font-size: 13px; }
 .pk-fehler { margin: 0; color: var(--danger); font-size: 14px; }
 
+/*
+ * „Passt nicht" (27.09.2026, nur auf staging — PasstNicht.tsx). Leise, weil er
+ * neben dem Spiel steht und nicht darin, aber mit voller Trefferflaeche
+ * (44 pt) und ausgeschrieben. Das Blatt nimmt die Grundform von .doko-sheet.
+ */
+.pk-passtnicht {
+  align-self: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: 600 13px/1 system-ui;
+  cursor: pointer;
+}
+.pk-passtnicht:hover,
+.pk-passtnicht:focus-visible { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+/* Mit doppelter Klasse: Das Holzblatt von .doko-sheet-card (weiter unten, Hub-Holz) passt nicht an den lila Tisch. */
+.doko-sheet-card.pk-pn-blatt {
+  text-align: left;
+  color: var(--text);
+  background: #1d1629;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-image: none;
+  border-radius: 20px;
+  padding: 18px 16px max(16px, env(safe-area-inset-bottom));
+}
+.pk-pn-blatt h2 { margin: 0 0 8px; font: 800 18px/1.2 system-ui; }
+.pk-pn-eintrag { margin: 0 0 12px; color: var(--muted); font-size: 14px; line-height: 1.4; }
+.pk-pn-gruppe { border: 0; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.pk-pn-gruppe legend { margin-bottom: 6px; padding: 0; color: var(--muted); font: 700 13px/1.2 system-ui; }
+.pk-pn-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 15px;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.pk-pn-option:has(input:checked) { background: rgba(166, 120, 242, 0.2); box-shadow: inset 0 0 0 2px rgba(166, 120, 242, 0.6); }
+.pk-pn-option input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--lila); }
+.pk-pn-frei { display: grid; gap: 6px; margin-bottom: 12px; color: var(--muted); font: 700 13px/1.2 system-ui; }
+.pk-pn-frei textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 64px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font: 400 15px/1.4 system-ui;
+  resize: vertical;
+}
+.pk-pn-knoepfe { display: flex; gap: 8px; }
+.pk-pn-knoepfe .pk-knopf { flex: 1; }
+.pk-pn-danke { margin: 0 0 12px; font-size: 15px; line-height: 1.4; }
+
 /* -- Schaltflaechen ------------------------------------------------------- */
 
 .pk-knopf {
@@ -19305,6 +19402,48 @@ span.hub-angebot-art.poker-jeton-stapel {
 .pk-frage { font: 700 clamp(18px, 5.2vw, 26px)/1.3 system-ui; }
 .pk-busfrage { margin: 0; text-align: center; font: 700 16px/1 system-ui; }
 .pk-wartet { margin: 0; text-align: center; color: var(--muted); font-size: 13px; }
+/* Wer beim „Weiter" noch fehlt (seit 07.10.2026): Namen hell, man selbst in Gold. */
+.pk-fehlen strong { color: var(--text); font-weight: 700; }
+.pk-fehlen strong[data-ich] { color: var(--gold); }
+
+/*
+ * Die Ansage fuer den Letzten. Fest oben ueber dem Tisch, damit sie die
+ * naechste Runde nicht verschiebt — sie steht nur dreieinhalb Sekunden.
+ * Im Schaukasten (`data-fest`) im Fluss, sonst laege sie ueber der Seite.
+ */
+.pk-letzter-schicht {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  pointer-events: none;
+}
+.pk-letzter-schicht[data-fest] { position: static; padding: 0; }
+.pk-letzter {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: #2a2140;
+  color: var(--text);
+  font: 700 15px/1.3 system-ui;
+  text-align: left;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  animation: pk-letzter-rein 220ms ease-out;
+}
+.pk-letzter[data-trinkt] { background: #5a2f2a; border-color: rgba(255, 196, 120, 0.45); }
+.pk-letzter-zeichen { font-size: 22px; line-height: 1; }
+@keyframes pk-letzter-rein { from { transform: translateY(-12px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pk-letzter { animation: none; } }
 
 /* -- Listen und Tabellen -------------------------------------------------- */
 
@@ -19424,6 +19563,75 @@ span.hub-angebot-art.poker-jeton-stapel {
    haette das SVG in der Kachel keine Hoehe. */
 .pk-banner { display: block; width: 100%; aspect-ratio: 4 / 1; background: #151021; }
 
+/* -- Einstellungen, Regelzeile, offene Runde (22.09.2026) ----------------- */
+
+/* Die Einstellungen gelten fuer beide Wege und stehen deshalb offen im Menue,
+   nicht im aufklappbaren Bot-Block. Mobile-first: eine Spalte, volle Breite. */
+.pk-einstellungen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-einstellungen-titel {
+  margin: 0;
+  font: 800 12px/1 system-ui;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pk-einstellungen-hinweis { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+/* Eine Zeile Chips, die umbricht statt zu scrollen — am Handy stehen sie
+   dann zweizeilig, und niemand muss seitwaerts wischen, um die Haerte zu lesen. */
+.pk-regelzeile {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+}
+.pk-regelchip {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 700 12px/1 system-ui;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* Alkoholfrei faellt auf: Wer beitritt, soll es sehen, ohne zu lesen. */
+.pk-regelchip[data-alkoholfrei] { background: rgba(63, 143, 102, 0.28); color: #bff0cf; }
+/* Im Spielkopf links buendig und kleiner — dort ist sie Auskunft, keine Wahl. */
+.pk-tisch > .pk-regelzeile { justify-content: flex-start; }
+
+.pk-angebot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  background: rgba(166, 120, 242, 0.14);
+  box-shadow: inset 0 0 0 2px rgba(166, 120, 242, 0.45);
+}
+.pk-angebot-titel { margin: 0; font: 800 16px/1.2 system-ui; }
+.pk-textknopf {
+  align-self: center;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: 600 13px/1 system-ui;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (min-width: 600px) {
+  .pk-regelchip { font-size: 13px; }
+}
+
 /* =========================================================================
    Gast-Einstieg auf der Anmeldeseite (Auth.tsx)
    -------------------------------------------------------------------------
@@ -19513,3 +19721,427 @@ span.hub-angebot-art.poker-jeton-stapel {
   color: var(--gold);
 }
 .pk-reihe li[data-ich] { box-shadow: inset 0 0 0 2px var(--lila); }
+
+/* -- Partykiste: Kategorien, Mehrheitsraten, Regel-Karte (pk-ou-*) -------- */
+
+/* Einspruch beim Kategorien-Battle: zwei schmale Knoepfe nebeneinander,
+   bewusst leiser als "Genannt"/"Gestockt" — wer dran ist, soll zuerst seine
+   eigenen Knoepfe sehen. */
+.pk-ou-einspruch { display: flex; flex-wrap: wrap; gap: 8px; }
+.pk-ou-einspruch .pk-knopf { flex: 1 1 140px; }
+
+/* Die Leiste der geltenden Regel. Gold statt Lila: Sie ist kein Teil der
+   laufenden Runde, sondern steht quer darueber — und muss auffallen, gerade
+   wenn man in ein anderes Minispiel vertieft ist. */
+.pk-ou-regel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(240, 190, 80, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(240, 190, 80, 0.45);
+}
+.pk-ou-regel-kopf { display: flex; justify-content: space-between; align-items: center; margin: 0; font: 600 12px/1 system-ui; }
+.pk-ou-regel-marke { color: var(--gold); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.pk-ou-regel-text { margin: 0; font: 700 clamp(14px, 4vw, 17px)/1.3 system-ui; }
+.pk-ou-regel-ertappt,
+.pk-ou-regel-hinweis { margin: 0; font: 600 12px/1.3 system-ui; }
+.pk-ou-regel .pk-knopf { padding: 10px 12px; font-size: 14px; }
+
+/* -- Partykiste: Bombe, 10 Sekunden, Koenigsbecher (pk-zd-*) --------------- */
+
+/* Die Bombe tickt GLEICHMAESSIG. Schneller werden darf sie nicht: Das waere
+   eine Auskunft ueber die Restzeit, und die hat der Bildschirm gar nicht
+   (phaseHidden) — ein Ticken, das schneller wird, waere geraten und damit
+   eine Luege. */
+.pk-zd-bombe {
+  display: block;
+  font-size: clamp(48px, 16vw, 72px);
+  line-height: 1;
+  animation: pk-zd-ticken 1s steps(2, jump-none) infinite;
+}
+.pk-zd-bombe[data-hoch] { animation: pk-zd-knall 0.5s ease-out 1; }
+@keyframes pk-zd-ticken {
+  from { transform: scale(1) rotate(-4deg); }
+  to { transform: scale(1.08) rotate(4deg); }
+}
+@keyframes pk-zd-knall {
+  from { transform: scale(0.6); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}
+.pk-zd-weiter { min-height: 72px; font-size: 20px; }
+
+/* Die Restzeit der zehn Sekunden — die Frist des Servers, nur angezeigt. */
+.pk-zd-restzeit {
+  display: block;
+  font: 800 clamp(44px, 14vw, 64px)/1 system-ui;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.pk-zd-restzeit[data-knapp] { color: #ff6b6b; }
+
+/* Koenigsbecher: die gezogene Karte mit ihrer Regel darunter. */
+.pk-zd-karte { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pk-zd-kartentitel { font: 800 clamp(16px, 5vw, 20px)/1.2 system-ui; }
+.pk-zd-kartentext { font: 600 14px/1.35 system-ui; text-align: center; max-width: 28ch; }
+.pk-zd-hand { min-height: 80px; font-size: 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-zd-bombe,
+  .pk-zd-bombe[data-hoch] { animation: none; }
+}
+
+/* ==========================================================================
+ * Einladung an den Tisch (22.09.2026): Code, Link teilen, QR-Code — und die
+ * Eingabe dazu. Eigene Praefixe `.einladung-*` / `.beitrittscode-*` statt
+ * `.pk-*`, weil beide Bausteine in weitere Lobbys wandern sollen und der
+ * pk-Block gerade in einem anderen Zweig umgebaut wird.
+ *
+ * Mobile-first und gross: Der Code wird im Halbdunkel am Tisch vorgelesen und
+ * abgetippt, oft mit einem Glas in der anderen Hand. Tippflaechen mindestens
+ * 52 px hoch, der Code in Tabellenziffern und weit gesperrt, damit 2 und Z,
+ * 5 und S nicht verschwimmen (0/O/1/I/L vergibt der Server gar nicht erst).
+ * ======================================================================== */
+
+.einladung {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(166, 120, 242, 0.35);
+  text-align: center;
+}
+.einladung-titel { margin: 0; font: 800 17px/1.2 system-ui; }
+.einladung-code {
+  margin: 0;
+  font: 800 clamp(34px, 11vw, 46px)/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.24em;
+  /* Die Sperrung haengt hinter dem letzten Zeichen an; ohne Ausgleich steht
+     der Code sichtbar links von der Mitte. */
+  margin-right: -0.24em;
+  color: var(--gold);
+  user-select: all;
+}
+/* Weisser Grund, schwarze Felder, feste Groesse: Der Code muss auch mit einer
+   schwachen Handykamera von der anderen Tischseite lesbar sein. */
+.einladung-qr {
+  display: block;
+  width: min(62vw, 240px);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 10px;
+}
+.einladung-teilen,
+.beitrittscode-knopf {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--lila);
+  color: #180f28;
+  font: 700 17px/1.2 system-ui;
+  cursor: pointer;
+  transition: transform 90ms ease;
+}
+.einladung-teilen:active,
+.beitrittscode-knopf:active:not(:disabled) { transform: scale(0.97); }
+.beitrittscode-knopf:disabled { opacity: 0.5; cursor: default; }
+.einladung-hinweis { margin: 0; color: #8ee0a3; font-size: 14px; }
+.einladung-link {
+  margin: 0;
+  max-width: 100%;
+  color: var(--muted);
+  font: 500 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.einladung-unter { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+/* Hinweis ueber der Anmeldung: `.auth` liegt fest ueber dem ganzen Schirm,
+   also liegt der Hinweis fest darueber. */
+.einladung-vorgemerkt {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 20;
+  width: min(92vw, 420px);
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  transform: translateX(-50%);
+  background: rgba(24, 15, 40, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(166, 120, 242, 0.6);
+  color: var(--text);
+  font: 500 14px/1.4 system-ui;
+  text-align: center;
+}
+.einladung-vorgemerkt strong { color: var(--gold); letter-spacing: 0.12em; }
+
+.beitrittscode {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 0 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.beitrittscode-titel { margin: 0; font: 700 15px/1.2 system-ui; text-align: center; }
+.beitrittscode-feld {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  font: 800 30px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.22em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.beitrittscode-feld::placeholder { color: var(--muted); opacity: 0.5; }
+.beitrittscode-vorschau { margin: 0; color: var(--muted); font-size: 14px; text-align: center; }
+.beitrittscode-fehler { margin: 0; color: var(--danger); font-size: 14px; text-align: center; }
+
+/* -- Partykiste: Auswahl im Menue (22.09.2026) ----------------------------- */
+
+/* Minispiele, Inhalte, Themenpaket, Modus — die Kacheln sind `.aw-*` aus
+   hub.tsx, hier nur auf den dunklen Kistengrund umgestellt und mit Lila als
+   Wahlfarbe wie die Stufenknoepfe darueber. Eigenes Praefix `pk-aw-`, weil
+   an den uebrigen `pk-`-Regeln parallel gearbeitet wird. */
+.pk-aw {
+  --aw-panel: rgba(255, 255, 255, 0.05);
+  --aw-line: rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.pk-aw .aw-kachel.is-an { border-color: var(--lila); box-shadow: 0 0 0 2px var(--lila); }
+.pk-aw-block { display: flex; flex-direction: column; gap: 8px; }
+.pk-aw-kopf { display: flex; align-items: baseline; gap: 8px; }
+.pk-aw-titel { margin: 0; font: 800 15px/1.2 system-ui; }
+.pk-aw-zahl { color: var(--muted); font-size: 12px; }
+.pk-aw-kopf .pk-textknopf { margin-left: auto; }
+.pk-aw-hinweis { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.pk-aw-zeichen { display: block; font-size: 26px; line-height: 1.1; }
+.pk-aw-an { min-width: 1.4em; text-align: center; font-weight: 800; }
+.pk-aw .aw-kachel.is-an .aw-badge { background: var(--lila); color: #180f28; }
+
+/* -- Partykiste: Spielmodi (Team-Abend, Eskalation) ----------------------- */
+
+.pk-regelhinweis {
+  flex-basis: 100%;
+  color: var(--muted);
+  font: 600 12px/1.35 system-ui;
+}
+.pk-lagerspalten {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pk-lagerspalte {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.pk-lagerspalte[data-lager='0'] { box-shadow: inset 0 3px 0 var(--lila); }
+.pk-lagerspalte[data-lager='1'] { box-shadow: inset 0 3px 0 var(--gold); }
+.pk-lagerspalte ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pk-lagerspalte li[data-weg] { opacity: 0.45; }
+.pk-lagerspalte li[data-ich] .pk-person { box-shadow: inset 0 0 0 2px var(--lila); }
+.pk-lagerspalte .pk-person { width: 100%; }
+.pk-person.is-still { display: block; cursor: default; text-align: center; }
+.pk-lagertitel { margin: 0; font: 800 14px/1.2 system-ui; text-align: center; }
+.pk-lagertafel { display: grid; gap: 6px; margin-bottom: 12px; }
+.pk-lagertabelle li[data-lager='0'] { border-left: 4px solid var(--lila); }
+.pk-lagertabelle li[data-lager='1'] { border-left: 4px solid var(--gold); }
+.pk-lagerleute {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font: 600 12px/1.3 system-ui;
+}
+.pk-lagerzeichen {
+  min-width: 22px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font: 800 11px/1 system-ui;
+  text-align: center;
+  color: #180f28;
+  background: var(--lila);
+}
+.pk-lagerzeichen[data-lager='1'] { background: var(--gold); }
+
+/* -- Konto: Mail-Links, Passwort vergessen, Gast sichern (23.09.2026) ------ */
+
+/* Wie der Gast-Knopf darunter: ein Textlink, kein dritter grosser Knopf. */
+.auth button.auth-vergessen {
+  display: block;
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.2rem 0;
+  border: none;
+  border-image: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 400;
+  text-decoration: underline;
+  text-align: center;
+}
+.auth button.auth-vergessen:active {
+  transform: none;
+  color: var(--lila);
+}
+
+.kontolink .panel + .panel { margin-top: 0.75rem; }
+.kontolink .panel h2 { margin: 0 0 0.6rem; font-size: 1.15rem; }
+
+.kontolink-probe { max-width: 34rem; }
+.kontolink-felder { margin: 0.5rem 0 1rem; }
+.kontolink-felder > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 40%) 1fr;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.kontolink-felder dt { color: var(--muted); }
+.kontolink-felder dd { margin: 0; word-break: break-word; }
+
+/* Schmal und ueber der Spielauswahl, nicht darin: Die Auswahl gehoert
+   anderen, und ein Gast soll die Leiste sehen, ohne dass sie das Spiel
+   verdeckt. */
+.gastsichern-leiste {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 1rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.gastsichern-leiste > button {
+  padding: 0.25rem 0.8rem;
+  font-size: 0.9rem;
+}
+.kontosichern form label { display: block; margin-bottom: 0.7rem; }
+.kontosichern form input { display: block; width: 100%; margin-top: 0.25rem; }
+
+/* ---------------------------------------------------------------------------
+   Anmeldung mit Apple und Google (anmeldung/AnbieterKnoepfe.tsx)
+
+   Beide Knoepfe gleich breit (280 px, im Code) und gleich hoch (40 px — so
+   hoch zeichnet Google seinen "large"-Knopf), damit keiner als Nebenweg
+   aussieht. Googles Knopf zeichnet Googles Bibliothek; hier steht nur die
+   Buehne. Apples Knopf folgt den Human Interface Guidelines: schwarz, weisse
+   Schrift und weisses Logo, Logo links, keine eigene Farbe, keine Schatten.
+   --------------------------------------------------------------------------- */
+.anbieter-knoepfe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+/* `hidden` allein reicht nicht: display:flex oben schlaegt das Attribut. */
+.anbieter-knoepfe[hidden] { display: none; }
+/* Geburtsdatum bei der Erstanmeldung — sieht aus wie das Feld im Formular. */
+.anbieter-nachfrage { margin-top: 0.75rem; }
+.anbieter-nachfrage p { margin: 0 0 0.4rem; }
+.anbieter-google {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+}
+.anbieter-google[aria-disabled='true'] { opacity: 0.6; pointer-events: none; }
+.anbieter-apple {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  margin: 0;
+  border: 1px solid #000;
+  border-radius: 4px;
+  background: #000;
+  color: #fff;
+  font: 500 15px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  /* Geerbte Knopf-Platten der Seite (border-image) gehoeren nicht auf einen
+     Markenknopf. */
+  border-image: none;
+  box-shadow: none;
+}
+.anbieter-apple:disabled { opacity: 0.6; cursor: default; }
+.anbieter-apple:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.anbieter-apple-logo { width: 16px; height: 16px; flex: none; margin-top: -2px; }
+
+/* Einstellungen: Abschnitt "Anmeldung" (anmeldung/Anmeldearten.tsx) */
+.anbieter-arten { margin-top: 1rem; }
+.anbieter-arten h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.anbieter-arten-zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+}
+.anbieter-arten-zeile .muted { display: block; font-size: 0.8rem; overflow-wrap: anywhere; }
+
+/* ==========================================================================
+   Melden und Blockieren (melden/MeldenBlatt.tsx, seit dem 23.09.2026)
+   ========================================================================== */
+.melden-knopf {
+  margin-top: 0.9rem;
+  background: none;
+  border: none;
+  border-image: none;
+  box-shadow: none;
+  color: inherit;
+  opacity: 0.75;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.melden-leiste { margin-top: 0.6rem; text-align: center; }
+.melden-liste { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; }
+.melden-liste button { font-size: 0.85rem; }
+.melden-blatt { text-align: left; }
+.melden-gruende { border: none; margin: 0.8rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
+.melden-gruende legend { font-weight: 700; margin-bottom: 0.3rem; }
+.melden-gruende label { display: flex; gap: 0.5rem; align-items: center; }
+.melden-gruende textarea { width: 100%; min-height: 4rem; margin-top: 0.3rem; }
+.melden-gruende label:has(textarea) { display: block; }
+
+/* ==========================================================================
+   Push-Mitteilungen (push/Mitteilungen.tsx, push/PushBegleiter.tsx) — nur App
+   ========================================================================== */
+.push-mitteilungen { margin-top: 1rem; }
+.push-mitteilungen h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.push-mitteilungen .push-erlauben { width: 100%; margin-top: 0.5rem; font-size: 0.85rem; }
+.push-frage .doko-sheet-card p { margin: 0 0 0.6rem; line-height: 1.4; }
+.push-frage .hub-knopfreihe { margin-top: 0.8rem; }
+.push-frage .hub-knopf { font-size: 0.85rem; padding: 0.6rem 0.4rem; }

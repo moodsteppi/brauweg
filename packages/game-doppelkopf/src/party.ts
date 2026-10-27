@@ -246,7 +246,7 @@ export function endeRundenpause(party: PartyState): PartyState {
 }
 
 /** Neugabe: gleiche Runde, gleicher Geber, neuer Seed. */
-function finalizeRedeal(party: PartyState): PartyState {
+export function finalizeRedeal(party: PartyState): PartyState {
   const round = party.current!;
   const bock = party.bock;
   if (round.triggersBock && party.rs.bockTriggers.includes('schmeiss')) {

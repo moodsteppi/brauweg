@@ -102,7 +102,7 @@ test('/api/me bringt beide Waehrungen, das Getragene und die Bereitschaft mit', 
     // Nichts an: ein leeres Objekt, nicht null - der Client greift darauf zu.
     assert.deepEqual(me.avatar, {});
     // Die Tagestruhe steht bereit, Aufgaben noch nicht.
-    assert.deepEqual(me.bereit, { truhen: 1, aufgaben: 0 });
+    assert.deepEqual(me.bereit, { truhen: 1, aufgaben: 0, weg: 0 });
   } finally {
     await abbauen(a);
   }
@@ -125,7 +125,7 @@ test('/api/me zaehlt, was bereitliegt', async () => {
     });
 
     const me = (await a.app.inject({ method: 'GET', url: '/api/me', cookies: a.cookie })).json();
-    assert.deepEqual(me.bereit, { truhen: 4, aufgaben: 3 });
+    assert.deepEqual(me.bereit, { truhen: 4, aufgaben: 3, weg: 0 });
 
     // Nach dem Abholen einer Belohnung sinkt der Zaehler.
     await a.app.inject({
@@ -134,7 +134,7 @@ test('/api/me zaehlt, was bereitliegt', async () => {
       cookies: a.cookie,
     });
     const danach = (await a.app.inject({ method: 'GET', url: '/api/me', cookies: a.cookie })).json();
-    assert.deepEqual(danach.bereit, { truhen: 4, aufgaben: 2 });
+    assert.deepEqual(danach.bereit, { truhen: 4, aufgaben: 2, weg: 0 });
     assert.equal(danach.coins, 5);
   } finally {
     await abbauen(a);
@@ -227,37 +227,41 @@ test('Der Shop liefert Regale, Pakete und den Besitzstand', async () => {
 test('Kaufen und Anziehen laufen ueber die Leitung durch', async () => {
   const a = await aufbau();
   try {
-    await gutschreiben(a.ctx.db, a.accountId, 'coins', 200);
+    await gutschreiben(a.ctx.db, a.accountId, 'coins', 5000);
+    const markt = (await a.app.inject({ method: 'GET', url: '/api/tagesmarkt', cookies: a.cookie })).json();
+    const angebot = markt.angebote.find((o: { aufgedeckt: boolean; artikel: { art: string } | null }) => o.aufgedeckt && o.artikel?.art === 'pinguin');
+    assert.ok(angebot);
+    const itemId = angebot.artikel.id, slot = angebot.artikel.slot;
 
     const kauf = await a.app.inject({
       method: 'POST',
-      url: '/api/shop/hut-strohhut/buy',
+      url: `/api/shop/${itemId}/buy`,
       cookies: a.cookie,
     });
     assert.equal(kauf.statusCode, 200);
-    assert.equal(kauf.json().bezahlt, 120);
-    assert.equal(kauf.json().stand, 80);
+    assert.equal(kauf.json().bezahlt, angebot.preis);
+    assert.equal(kauf.json().stand, 5000 - angebot.preis);
 
     const an = await a.app.inject({
       method: 'PATCH',
       url: '/api/me/avatar',
       cookies: a.cookie,
-      payload: { slot: 'hut', itemId: 'hut-strohhut' },
+      payload: { slot, itemId },
     });
     assert.equal(an.statusCode, 200);
-    assert.deepEqual(an.json().avatar, { hut: 'hut-strohhut' });
+    assert.deepEqual(an.json().avatar, { [slot]: itemId });
 
     // /api/me sagt dasselbe.
     const me = (await a.app.inject({ method: 'GET', url: '/api/me', cookies: a.cookie })).json();
-    assert.deepEqual(me.avatar, { hut: 'hut-strohhut' });
-    assert.equal(me.coins, 80);
+    assert.deepEqual(me.avatar, { [slot]: itemId });
+    assert.equal(me.coins, 5000 - angebot.preis);
 
     // Ausziehen mit null.
     const aus = await a.app.inject({
       method: 'PATCH',
       url: '/api/me/avatar',
       cookies: a.cookie,
-      payload: { slot: 'hut', itemId: null },
+      payload: { slot, itemId: null },
     });
     assert.deepEqual(aus.json().avatar, {});
   } finally {

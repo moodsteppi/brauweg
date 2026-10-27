@@ -282,7 +282,7 @@ export function SkatTable({
         <button className="doko-icon" onClick={onLeave} aria-label="Zurück">
           ‹
         </button>
-        <div className="doko-titel">
+        <div className="doko-top-mid">
           <strong>
             Gabe {view.view.roundIndex + 1} / {view.view.totalRounds}
             {view.view.bock > 1 && <span className="doko-bock"> · Bock ×{view.view.bock}</span>}
@@ -1019,7 +1019,7 @@ function Rundenblatt({
                 verdoppelte Betrag wie ein Rechenfehler. */}
             {r.jungfrauen.length > 0 && (
               <p className="muted">
-                Jungfrau: {r.jungfrauen.map(nameOf).join(', ')} — ohne einen Stich, das verdoppelt.
+                Jungfrau: {r.jungfrauen.map(nameOf).join(', ')} - ohne einen Stich, das verdoppelt.
               </p>
             )}
             {round.ramschFaktor > 1 && (

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "halle": {
+    "datei": "kulisse-halle-oben.png",
+    "quelle": "outputs/manufaktur/png/kulisse-halle.png",
+    "quellgroesse": [
+      1024,
+      1536
+    ],
+    "ausschnitt": [
+      0,
+      0,
+      1024,
+      1042
+    ],
+    "schnitt_y_exklusiv": 1042
+  },
+  "boden": {
+    "datei": "etage-boden.png",
+    "canvas": [
+      512,
+      64
+    ],
+    "kachelachse": "x"
+  },
+  "gesperrt": {
+    "datei": "etage-gesperrt.png",
+    "canvas": [
+      1024,
+      320
+    ],
+    "preisbereich": [
+      360,
+      192,
+      304,
+      72
+    ]
+  },
+  "ablage": {
+    "canvas": [
+      256,
+      256
+    ],
+    "hinten": "ablage-kiste.png",
+    "vorn": "ablage-kiste-vorn.png",
+    "drehpunkt": [
+      128,
+      240
+    ],
+    "ablagepunkt": [
+      126,
+      180
+    ],
+    "stapel_drehpunkt": [
+      128,
+      234
+    ],
+    "stapel_skala": 0.43,
+    "reihenfolge": [
+      "hinten",
+      "stapel",
+      "vorn"
+    ]
+  }
+}

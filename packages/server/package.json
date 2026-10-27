@@ -14,6 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@brauweg/game-api": "*",
+    "@brauweg/game-brochess": "*",
     "@brauweg/game-brocooked": "*",
     "@brauweg/game-cambio": "*",
     "@brauweg/game-doppelkopf": "*",
@@ -27,6 +28,7 @@
     "@brauweg/game-skat": "*",
     "@brauweg/game-tafelrunde": "*",
     "@brauweg/game-wizard": "*",
+    "@brauweg/manufaktur-kern": "*",
     "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
     "@fastify/helmet": "^13.1.0",

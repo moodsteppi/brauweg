@@ -83,8 +83,41 @@ export const TAFELRUNDE_MODULE_VERSION = 1;
  * 3 seit dem 21.09.2026 (Bots: Sand und Eis, Portalpaare, Tempo ins Portal).
  * Die Bots laufen auf jedem Geraet — mit verschiedenem Bot laufen zwei Geraete
  * aus derselben Zugliste auseinander, genau wie bei der Physik.
+ *
+ * 4 seit dem 22.09.2026: Die Sicht traegt die Bahnfolge als Kennungen
+ * (`bahnen`), das Modul zieht sie einmal beim Start. Ein Client von davor
+ * zoege sie weiter selbst aus seinem Katalog und liefe mit der ersten neuen
+ * Bahn still auseinander.
+ *
+ * 5 seit dem 22.09.2026 nachts: Die Bots proben Beschleuniger, Drehkreuze,
+ * Strudel und Sprungfelder mit der echten Physik, Bumper versperren Sicht
+ * und Wegfeld. Ein alter und ein neuer Bot spielen aus derselben Saat
+ * verschiedene Schlaege.
+ *
+ * 6 seit dem 23.09.2026: Fun-Modus. Die Sicht traegt `modus`, und im
+ * Fun-Modus zieht jedes Geraet je Loch einen Modifikator (Wind, Regen,
+ * Riesenball …), den Physik und Bots mitrechnen. Ein Client von davor
+ * spielte einen Fun-Tisch klassisch.
+ *
+ * 7 seit dem 23.09.2026: Strudel halten keinen Ball mehr auf einer Dauerbahn
+ * fest (Drall lenkt nur, Energiebilanz im Trichter, Rasenreibung im
+ * Strudel, Auswurf legt den Ball ab). Dieselbe Zugliste rollt anders.
+ *
+ * 8 seit dem 23.09.2026: Power-ups im Fun-Modus (Turbo, Magnet, Geist,
+ * Schild). Felder je Loch aus Saat und Bahn, Einsammeln und Wirkung in der
+ * Physik, Bots planen damit. Ein Client von davor rechnete ein Fun-Loch
+ * ohne Felder — eine andere Partie aus derselben Zugliste.
+ *
+ * 9 seit dem 23.09.2026: Störschläge im Fun-Modus (Bombe, Klebefeld,
+ * Tausch). Die Zugliste kennt einen zweiten Zugtyp (`art: 'ausloesen'`),
+ * die Felder eines Fun-Lochs werden aus sieben statt vier Arten gezogen, und
+ * die Bots lösen aus. Ein Client von davor läse einen Auslöse-Zug als Schlag.
+ *
+ * 10 seit dem 23.09.2026: Die Bots holen Störfelder auch mit einem kleinen
+ * Umweg, zielen Bombe und Klebefeld anders und warten auf einen rollenden
+ * Führenden (bot-stoer.ts). Dieselbe Zugliste spielt am Bot-Tisch anders.
  */
-export const GOLF_MODULE_VERSION = 3;
+export const GOLF_MODULE_VERSION = 10;
 
 /**
  * 1 seit dem 18. September 2026 — die erste Fassung. Die Partykiste ist das
@@ -92,8 +125,20 @@ export const GOLF_MODULE_VERSION = 3;
  * dem 19.09.2026), 4 bis 12 Sitze.
  * Steht ausgeschrieben da, damit die naechste Aenderung eine Zahl zum
  * Hochsetzen findet und nicht die stille 1 aus `moduleVersionFor`.
+ *
+ * 2 seit dem 22.09.2026: Kategorien-Battle, Mehrheitsraten und Regel-Karte,
+ * dazu `regelKarte` in jeder Sicht. Ein Client der Fassung 1 kennt die
+ * neuen Runden nicht — die Weiche in Runden.tsx liefe ins Leere.
+ *
+ * 3 seit dem 22.09.2026: die Spielmodi — Aufstellung des Team-Abends
+ * (Aktion `lagerwechsel`), dazu `modus`, `paket`, `eskalation`, `lager`,
+ * `lagerTabelle`, `aufstellung` in der Sicht. Ein Client der Fassung 2
+ * zeigte im Team-Abend die erste Runde, die noch nichts annimmt.
+ *
+ * 4 seit dem 23.09.2026: Bombe, 10 Sekunden und Koenigsbecher mit ihren
+ * Aktionen. Ein Client der Fassung 3 kennt die Runden nicht.
  */
-export const PARTYKISTE_MODULE_VERSION = 1;
+export const PARTYKISTE_MODULE_VERSION = 4;
 
 /**
  * 1 seit dem 22. September 2026 — die erste Fassung. BroCooked ist wie Golf
@@ -104,6 +149,16 @@ export const PARTYKISTE_MODULE_VERSION = 1;
  * Partien, und genau das haelt die Versionsgrenze des Gateways auseinander.
  */
 export const BROCOOKED_MODULE_VERSION = 1;
+
+/**
+ * 1 seit dem 25. September 2026 — die erste Fassung. Klassisches Schach zu
+ * zweit; die Zuege kommen vollstaendig als `legalActions`.
+ *
+ * 2 seit dem 22.10.2026: Schachuhr, Zugliste, geschlagene Figuren und
+ * Vorab-Ziele in der Sicht, dazu die Aktion `aufgeben`. Ein Client der
+ * Fassung 1 zeigte an einem Tisch mit Uhr keine Zeit und verloere still.
+ */
+export const BROCHESS_MODULE_VERSION = 2;
 
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
@@ -117,6 +172,7 @@ const MODULE_VERSIONS: Record<string, number> = {
   golf: GOLF_MODULE_VERSION,
   partykiste: PARTYKISTE_MODULE_VERSION,
   brocooked: BROCOOKED_MODULE_VERSION,
+  brochess: BROCHESS_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */
@@ -546,6 +602,19 @@ export interface TableMessage {
   paused: boolean;
   /** Eingestellte Bot-Spielstärke (derzeit nur beim Doppelkopf ausgewertet). */
   botLevel: BotLevel;
+  /**
+   * Kennung und Version des Regelsatzes (seit dem 22.09.2026). Ändert Sitz 0
+   * ihn in der Lobby (`setRules`), ändert sich dieser Wert, und der
+   * Bildschirm holt den Regelsatz neu. Fehlt bei älteren Servern.
+   */
+  regelstand?: string;
+  /**
+   * Übungstisch aus dem Lernpfad (seit dem 17.10.2026): Der Doppelkopftisch
+   * zeigt dann Tipps und „Übungsrunde". Kommt vom Server, damit es auf jedem
+   * Gerät gilt und nicht nur auf dem, das den Tisch angelegt hat. Fehlt bei
+   * älteren Servern — dann eben ein gewöhnlicher Tisch.
+   */
+  uebung?: boolean;
 }
 
 export interface PartyMessage {

@@ -21,7 +21,7 @@
  *
  * Gezaehlt werden EINHEITEN, nicht verschiedene Einheiten: Zwei Dorfwachen
  * sind zwei Krieger. Andere Spiele zaehlen nur Verschiedene; hier ginge das
- * nicht auf, weil der Katalog fuer Drache nur zwei und fuer Untot nur drei
+ * nicht auf, weil der Katalog fuer Drache nur zwei und fuer Untot nur vier
  * Einheiten kennt — die oberen Schwellen waeren dort unerreichbar, die Marke
  * tot. Kopien zaehlen zu lassen hat ausserdem einen Preis, den der Spieler
  * abwaegen muss: Drei Kopien verschmelzen zu einer, und die zaehlt einfach.

@@ -1,0 +1,214 @@
+
+> @brauweg/game-mememory@1.0.0 test
+> npm run build && node --test "dist/test/**/*.test.js"
+
+
+> @brauweg/game-mememory@1.0.0 build
+> node ../../werkzeug/dist-raeumen.mjs && tsc
+
+✔ das Modul meldet sich als spielbar, zu zweit bis zu viert (1.3544ms)
+✔ die Sicht verraet KEIN verdecktes Motiv (0.658ms)
+✔ beide Sitze sehen dieselbe Anordnung (0.2041ms)
+✔ eine aufgedeckte Karte steht in der Sicht, die uebrigen nicht (0.9802ms)
+✔ die Schaupause meldet eine Dauer und raeumt danach ab (0.4581ms)
+✔ ein Treffer bleibt in der Sicht sichtbar und traegt seinen Besitzer (0.2259ms)
+✔ legalActions liefert genau die verdeckten Plaetze des Spielers am Zug (0.1848ms)
+✔ der Bot deckt nur auf, was auch offen sein darf (0.3162ms)
+✔ der Bot laeuft nicht auf einer Zuschauersicht (0.3224ms)
+✔ serialize und deserialize sind verlustfrei (0.3644ms)
+✔ ein Snapshot mit falscher Version wird abgewiesen, nicht falsch gedeutet (0.1492ms)
+✔ validateConfig winkt keinen Unsinn durch (0.2549ms)
+✔ xpBasis zaehlt die aufgedeckten Karten je Sitz (0.1329ms)
+✔ markLeft merkt sich den Aussteiger, ohne die Partie zu kippen (0.2017ms)
+✔ aus Bot-Sitzen und Tischstufe werden botStufen (2.0861ms)
+✔ die vier Stufen der Plattform gehen auf die vier des Spiels (0.1664ms)
+✔ was in der config steht, schlaegt die Tischeinstellung (0.2007ms)
+✔ ohne Bot-Sitze bleibt alles wie vorher (0.1616ms)
+✔ ein Mensch bekommt kein Gedaechtnis in seine Sicht (0.5905ms)
+✔ die Stufen aller Bots stehen in jeder Sicht (0.2021ms)
+✔ ohne Bots traegt die Sicht gar kein Stufenfeld (0.6982ms)
+✔ dieselbe Saat und dieselben Bot-Sitze ergeben dieselbe Partie (0.247ms)
+✔ Zu zweit gibt es keinen Stapel (1.2518ms)
+✔ Jeder Spieler ab dem dritten bringt acht Karten mit (0.2515ms)
+✔ Auf einem winzigen Brett gibt es keinen Nachschub (0.0924ms)
+✔ Jedes Motiv liegt genau zweimal im Spiel (0.3716ms)
+✔ Nach vier geholten Paaren wird gemischt, und das Brett ist wieder voll (2.1211ms)
+✔ Das Mischen leert das Gedaechtnis der Bots (0.7612ms)
+✔ Die Partie ist erst zu Ende, wenn auch der Stapel leer ist (0.4252ms)
+✔ Der Zug geht reihum, nicht hin und her (0.3683ms)
+✔ Die Sicht nennt Stapel und Mischzahl, aber nicht die Karten darauf (0.2817ms)
+✔ Dieselbe Saat mischt gleich, eine andere nicht (0.3608ms)
+✔ das Brett hat 24 Plaetze und jedes Motiv genau zweimal (1.0547ms)
+✔ die gezogenen Motive stammen aus dem Katalog und sind sortiert (0.6881ms)
+✔ dieselbe Saat ergibt dasselbe Brett, eine andere ein anderes (0.4347ms)
+✔ zwei Partien ziehen unterschiedliche Motive - der Katalog wird durchgewechselt (0.2242ms)
+✔ ein Treffer gibt einen Punkt, faerbt beide Plaetze und behaelt das Zugrecht (1.3247ms)
+✔ ein Fehlgriff dreht zurueck und gibt das Zugrecht ab (0.2537ms)
+✔ ohne Schaupause meldet pauseDauerMs null - sonst liefe der Timer dauernd (0.1384ms)
+✔ wer nicht am Zug ist, deckt nicht auf (0.2423ms)
+✔ waehrend der Schaupause geht kein Zug (0.1772ms)
+✔ derselbe Platz laesst sich nicht zweimal aufdecken (0.201ms)
+✔ ein bereits gewonnener Platz ist tabu (0.2084ms)
+✔ ein leeres Brett beendet die Partie und kuert den Sieger (0.3157ms)
+✔ Gleichstand ergibt zweimal Platz 1 (0.1003ms)
+✔ der Name wird gesaeubert und gekuerzt (0.1245ms)
+✔ der Name ist kein Spielzug: er geht auch, wenn man nicht dran ist (0.1644ms)
+✔ der Regelsatz weist ungerade Kartenzahlen und Unsinn ab (0.2236ms)
+✔ ein Brett, fuer das der Katalog nicht reicht, wird gar nicht erst gebaut (0.1075ms)
+✔ Ohne botStufen merkt sich niemand etwas (2.8477ms)
+✔ Nur der Bot-Sitz bekommt Stufe und Gedaechtnis in seiner Sicht (0.5628ms)
+✔ Was einem Spieler gehoert, faellt aus der Sicht des Bots (0.2495ms)
+✔ leicht vergisst nach zwei Zuegen (1.397ms)
+✔ experte vergisst nie (0.5517ms)
+✔ mittel behaelt nur einen Teil des Gesehenen (1.1672ms)
+✔ schwer wuerfelt beim Herausfallen genau einmal und bleibt dann dabei (0.286ms)
+✔ Kennt der Bot den Partner der offenen Karte, nimmt er ihn (0.3043ms)
+✔ Kennt der Bot ein ganzes Paar, faengt er damit an (0.2702ms)
+✔ schwer meidet Plaetze, die er schon kennt (0.7331ms)
+✔ leicht meidet nichts — er waehlt aus allem (0.8625ms)
+✔ Ohne Stufe bleibt es der alte Zufallsbot (0.1621ms)
+✔ Eine unbekannte Stufe kommt nicht an den Tisch (0.4645ms)
+✔ Dieselbe Saat ergibt dasselbe Gedaechtnis (0.2177ms)
+✔ Ohne zusatz bleibt alles beim festen Katalog (1.0145ms)
+✔ Zusatzmotive werden gezogen (2.0757ms)
+✔ Zusatzmotive ergaenzen den Katalog, sie ersetzen ihn nicht (0.7377ms)
+✔ Ein Motiv, das schon im Katalog steht, wird nicht doppelt gezogen (0.412ms)
+✔ Dieselbe Saat und derselbe Topf ergeben dasselbe Brett (0.6905ms)
+✔ Eine kaputte Zusatzliste weist pruefeRegeln ab (0.5427ms)
+✔ Eine leere Zusatzliste ist kein Fehler (0.1538ms)
+✔ validateConfig nimmt einen Tisch mit Zusatzmotiven an (0.1584ms)
+ℹ tests 71
+ℹ suites 0
+ℹ pass 71
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 155.3259
+
+> @brauweg/game-filler@1.0.0 test
+> npm run build && node --test "dist/test/**/*.test.js"
+
+
+> @brauweg/game-filler@1.0.0 build
+> node ../../werkzeug/dist-raeumen.mjs && tsc
+
+▶ Adapter
+  ✔ meldet sich als spielbares Zweierspiel (1.0127ms)
+  ✔ nimmt den Vorgabe-Regelsatz an (0.2334ms)
+  ✔ weist Unsinn im Regelsatz ab (0.1635ms)
+  ▶ Farbzahl
+    ✔ kommt aus der Spielart, wenn der Regelsatz keine nennt (1.3517ms)
+    ✔ nimmt eine ausdrueckliche Zahl ernst — ein alter Tisch behaelt seine (0.2919ms)
+    ✔ schreibt die Tabelle je Spielart nicht in die Partie (0.1551ms)
+    ✔ laesst nicht mehr Farben zu, als der Bildschirm zeichnen kann (0.1253ms)
+  ✔ Farbzahl (2.1217ms)
+  ✔ kennt den Sitz am Zug und seine Zuege (1.1255ms)
+  ✔ ueberlebt Speichern und Laden (1.024ms)
+  ✔ weist einen Snapshot aus einer anderen Fassung ab (0.2532ms)
+  ✔ ruestet einen Snapshot der Fassung 1 auf die Nebel-Spielart nach (0.2891ms)
+  ✔ nimmt beide Spielarten im Regelsatz an und weist Unsinn ab (0.1384ms)
+  ✔ liefert Platzierungen und markiert Aussteiger (0.2747ms)
+  ✔ laesst den Bot nicht auf die Zuschauersicht (0.2774ms)
+  ✔ spielt gegen sich selbst bis zum Schluss (3.3906ms)
+✔ Adapter (11.3365ms)
+▶ Build: Aufbau
+  ✔ gibt jedem Sitz seine Barrieren und legt das Brett offen (14.511ms)
+  ✔ gibt in den anderen Spielarten keine Barrieren aus (0.4932ms)
+✔ Build: Aufbau (15.7513ms)
+▶ Build: Eroeffnung
+  ✔ sperrt die ersten drei Zuege, danach darf gebaut werden (9.054ms)
+  ✔ meldet ohne Mauern keine Sperre (0.2099ms)
+✔ Build: Eroeffnung (9.4041ms)
+▶ Build: Setzen
+  ✔ kostet eine Barriere, aber nicht den Zug (11.744ms)
+  ✔ laesst nach der Mauer noch faerben, und das gibt ab (14.4828ms)
+  ✔ laesst nur EINE Mauer je Zug zu (14.9932ms)
+  ✔ zaehlt einen Mauerzug nicht als Leerzug (14.3999ms)
+  ✔ geht aus, wenn der Vorrat leer ist (52.4272ms)
+  ✔ weist dieselbe Kante ein zweites Mal ab (21.2487ms)
+  ✔ weist eine Kante zwischen nicht benachbarten Feldern ab (7.7623ms)
+✔ Build: Setzen (137.4204ms)
+▶ Build: Die Wand haelt
+  ✔ haelt das Schlucken an der Barriere an (0.2878ms)
+  ✔ sperrt fuer beide Seiten, nicht nur fuer den Gegner (0.1192ms)
+  ✔ rechnet der Bot die Wand mit (4.2888ms)
+✔ Build: Die Wand haelt (4.859ms)
+▶ Build: Einsperren ist verboten
+  ✔ laesst die erste der beiden Kanten zu (0.7333ms)
+  ✔ verbietet die letzte Kante zum Gegner (1.3745ms)
+  ✔ schuetzt auch den eigenen Sitz (0.7493ms)
+  ✔ blockiert nicht das ganze Brett, wenn jemand schon eingeschlossen ist (0.5568ms)
+✔ Build: Einsperren ist verboten (3.6385ms)
+▶ Build: Einmauern ist verboten
+  ✔ laesst die erste Kante an einem freien Eckfeld zu, die zweite nicht (2.0645ms)
+  ✔ haelt in jeder Saat jedes freie Feld erreichbar, auch wenn Bots alles verbauen (4896.2787ms)
+✔ Build: Einmauern ist verboten (4898.6044ms)
+▶ Build: Sicht
+  ✔ nennt dem Sitz am Zug seine moeglichen Barrieren (28.1905ms)
+  ✔ zeigt gesetzte Barrieren in JEDER Sicht (38.36ms)
+✔ Build: Sicht (66.8687ms)
+▶ Build: Eine ganze Partie
+  ✔ kommt mit Bots zu Ende, und die Bots mauern dabei (795.4125ms)
+  ✔ mauert in jeder von mehreren Saaten mindestens einmal (2662.9838ms)
+✔ Build: Eine ganze Partie (3458.7362ms)
+▶ Build: Der Bot und die Wand
+  ✔ riegelt dem Gegner die grosse Flaeche ab, wenn ihn das nichts kostet (2.9433ms)
+  ✔ laesst die Waende liegen, wenn keine etwas bewegt (1.4482ms)
+  ✔ mauert ausserhalb der Spielart Build nie (9.877ms)
+✔ Build: Der Bot und die Wand (14.7435ms)
+▶ Extreme: Aufbau
+  ✔ ist Build mit Sternen (1.0564ms)
+  ✔ legt drei Sterne, keinen auf oder neben einer Startecke, keine zwei nah beieinander (2.7782ms)
+  ✔ spielt mit sieben Farben und zehn Mauern (0.4134ms)
+  ✔ laesst die anderen Spielarten unberuehrt: keine Sterne, gleiches Brett aus gleicher Saat (0.6295ms)
+  ✔ traegt die Sterne in JEDE Sicht (0.6084ms)
+✔ Extreme: Aufbau (6.4281ms)
+▶ Extreme: Ein Stern faellt
+  ✔ bringt zwei Punkte und eine Mauer (0.5854ms)
+  ✔ bringt ohne Stern nur das Feld (0.1797ms)
+  ✔ nimmt der Bot den Stern, wenn beide Farben gleich viel Flaeche bringen (2.8362ms)
+  ✔ entscheidet der Bonus die Wertung: mehr Punkte, nicht mehr Felder (0.2516ms)
+✔ Extreme: Ein Stern faellt (4.1256ms)
+▶ Extreme: Snapshot
+  ✔ ueberlebt Speichern und Laden, und Fassung 4 bekommt eine leere Sternliste (0.4684ms)
+✔ Extreme: Snapshot (0.5422ms)
+▶ Brett
+  ✔ hat nirgends zwei gleichfarbige Nachbarn (3.2333ms)
+  ✔ gibt jedem Sitz genau ein Feld in seiner Ecke (0.3318ms)
+  ✔ gibt den beiden Ecken verschiedene Farben (0.9509ms)
+  ✔ zieht die Grautoene unabhaengig von der Farbe (0.2697ms)
+✔ Brett (6.3551ms)
+▶ Zuege
+  ✔ sperrt die Farben beider Sitze (0.4833ms)
+  ✔ gibt nur dem Sitz Zuege, der dran ist (0.1345ms)
+  ✔ weist eine gesperrte Farbe ab (0.455ms)
+  ✔ weist einen Zug ausserhalb der Reihe ab (0.1922ms)
+  ✔ schluckt zusammenhaengende Flaechen ueber mehrere Ringe (0.9269ms)
+  ✔ beendet die Partie, wenn kein Feld mehr frei ist (0.3564ms)
+  ✔ bricht ab, wenn niemand mehr etwas erobert (0.3151ms)
+✔ Zuege (3.1445ms)
+▶ Sicht
+  ✔ zeigt nur das eigene Gebiet und dessen Rand (0.3793ms)
+  ✔ verraet die Zugehoerigkeit fremder Felder nicht (0.1308ms)
+  ✔ gibt die Grautoene und die Gebietsfarben heraus (0.1304ms)
+  ✔ haelt dem Zuschauer jede freie Farbe vor (0.154ms)
+✔ Sicht (0.9297ms)
+▶ Offene Spielart
+  ✔ zeigt jedem das ganze Brett (0.1918ms)
+  ✔ haelt dem Zuschauer nichts vor (0.4191ms)
+  ✔ aendert an den Regeln nichts ausser der Sicht (0.196ms)
+  ✔ laesst den Bot den grossen Zug sehen (0.549ms)
+✔ Offene Spielart (1.46ms)
+▶ Bot
+  ✔ waehlt nur erlaubte Farben und spielt eine Partie zu Ende (2.7394ms)
+  ✔ nimmt die Farbe, die am meisten einbringt (0.1113ms)
+✔ Bot (2.9219ms)
+ℹ tests 73
+ℹ suites 19
+ℹ pass 73
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8772.8026

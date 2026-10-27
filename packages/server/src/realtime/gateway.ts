@@ -21,15 +21,22 @@ import { type SessionInfo, sessionFromToken } from '../auth/service.js';
 import { PartyRuntime } from '../runtime/party.js';
 import {
   isReadyToStart,
+  istUebungstisch,
   schrumpfeAufBesetzte,
   setSeatBot,
   setSeatColor,
   setTableBotLevel,
+  setzeTischregeln,
   sitzfarbWuensche,
   tableBotLevel,
   tableWithSeats,
 } from '../tables/service.js';
-import { requireModule } from '../games/registry.js';
+import {
+  APP_INHALT_WIE_WEB,
+  type AppInhalt,
+  appRegeln,
+  requireModule,
+} from '../games/registry.js';
 import { requireClubMember } from '../clubs/service.js';
 import {
   ENVELOPE_VERSION,
@@ -65,6 +72,8 @@ const MOTIV_AB_MODULVERSION = 3;
 interface Connection {
   readonly socket: WebSocket;
   readonly accountId: string;
+  /** Kam der Handshake aus der App? Siehe `GatewayOptions.appOrigins`. */
+  readonly ausApp: boolean;
   tableId: string | null;
   /** Beginn des laufenden Ratenfensters. */
   fensterStart: number;
@@ -116,6 +125,13 @@ interface Connection {
    * rechnen. Siehe die Kette in `accept`.
    */
   kette: Promise<void>;
+  /**
+   * Sieht der Spieler gerade hin? Wahr ab dem Verbinden und nach jedem
+   * `join`, falsch nach `hintergrund` — das schickt nur die App, wenn sie
+   * vom Bildschirm verschwindet. Danach richten sich die Push-Mitteilungen
+   * (`imVordergrund`, push/anlaesse.ts).
+   */
+  vordergrund: boolean;
 }
 
 /** Hoechstens so viele offene Verbindungen je Konto. */
@@ -180,6 +196,17 @@ const clientMessageSchema = z.discriminatedUnion('type', [
   z.object({
     v: z.literal(ENVELOPE_VERSION),
     game: z.string().max(40).optional(),
+    type: z.literal('setRules'),
+    tableId: z.string().uuid(),
+    /*
+     * Der ganze neue Regelsatz, nicht ein Unterschied: Was er bedeutet, prueft
+     * das Modul (`validateConfig` in `setzeTischregeln`), nicht dieses Schema.
+     */
+    config: z.record(z.string(), z.unknown()),
+  }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
     type: z.literal('startNow'),
     tableId: z.string().uuid(),
     /** Rundenzahl, die der Startende erst in der Lobby waehlt (Golf: Loecher). */
@@ -236,6 +263,18 @@ const clientMessageSchema = z.discriminatedUnion('type', [
      */
     zuege: z.number().int().min(0).max(10_000_000).optional(),
   }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    /*
+     * Die App ist vom Bildschirm verschwunden (visibilitychange). Kein Tisch
+     * noetig: Die Aussage gilt fuer die Verbindung. Zurueck in den
+     * Vordergrund meldet das `join`, das der Client beim Zurueckkommen
+     * ohnehin schickt (useTable.ts, `resync`).
+     */
+    type: z.literal('hintergrund'),
+    tableId: z.string().uuid().optional(),
+  }),
 ]);
 
 /** Liest das Sitzungs-Cookie aus dem Handshake. */
@@ -287,6 +326,24 @@ export interface GatewayOptions {
    * der eingehende Nachrichten verloren gingen.
    */
   readonly lookupSession?: (token: string | undefined) => Promise<SessionInfo | null>;
+  /**
+   * Herkuenfte der App (`APP_ORIGINS` in http/app.ts). Nur damit weiss der
+   * Gateway, welche Verbindung aus der App kommt — fuer `appInhalt`.
+   */
+  readonly appOrigins?: readonly string[];
+  /**
+   * Rueckweg fuer die App (`AppInhalt` in games/registry.ts): Stellt jemand
+   * aus der App die Regeln eines wartenden Tisches um, wird der Regelsatz
+   * gezaehmt. Vorgabe: App = Web.
+   */
+  readonly appInhalt?: AppInhalt;
+  /**
+   * Push-Mitteilungen (push/anlaesse.ts): Der Gateway meldet, wenn eine
+   * Partie anlaeuft — nur er startet sie (`ensureStarted`).
+   */
+  readonly push?: {
+    partieGestartet(laufzeit: Pick<PartyRuntime, 'get'>, tableId: string): void;
+  };
 }
 
 export class Gateway {
@@ -295,6 +352,9 @@ export class Gateway {
   private readonly byTable = new Map<string, Set<Connection>>();
   private readonly cookieName: string;
   private readonly lookupSession: (token: string | undefined) => Promise<SessionInfo | null>;
+  private readonly appOrigins: readonly string[];
+  private readonly appInhalt: AppInhalt;
+  private readonly push: GatewayOptions['push'];
 
   constructor(
     server: Server,
@@ -303,6 +363,9 @@ export class Gateway {
     options: GatewayOptions = {},
   ) {
     this.cookieName = options.cookieName ?? 'brauweg_session';
+    this.appOrigins = options.appOrigins ?? [];
+    this.appInhalt = options.appInhalt ?? APP_INHALT_WIE_WEB;
+    this.push = options.push;
     this.lookupSession =
       options.lookupSession ?? ((token) => sessionFromToken(this.db, token));
     // maxPayload: ohne Grenze nimmt ws bis 100 MiB je Nachricht an - ein
@@ -366,11 +429,27 @@ export class Gateway {
       const token =
         cookieValue(request.headers.cookie, this.cookieName) ??
         protokollToken(request.headers['sec-websocket-protocol']);
-      this.accept(socket, token);
+      this.accept(socket, token, herkunft !== undefined && this.appOrigins.includes(herkunft));
     });
     this.runtime.onUpdate((tableId, nurSicht) => {
       void this.broadcast(tableId, nurSicht);
     });
+  }
+
+  /**
+   * Hat dieses Konto gerade eine Tischverbindung, die hinsieht?
+   *
+   * Grundlage fuer "keine Mitteilung, wenn man ohnehin in der App ist"
+   * (push/anlaesse.ts). Eine offene Webseite zaehlt mit: Sie meldet nie
+   * `hintergrund`, und wer am Rechner am Tisch sitzt, braucht auf dem
+   * Telefon keinen Stups. Ohne jede Verbindung — App geschlossen, Telefon
+   * gesperrt und die Leitung gekappt — ist die Antwort nein.
+   */
+  imVordergrund(accountId: string): boolean {
+    for (const connection of this.connections) {
+      if (connection.accountId === accountId && connection.vordergrund) return true;
+    }
+    return false;
   }
 
   async close(): Promise<void> {
@@ -392,7 +471,7 @@ export class Gateway {
    * Nachrichten aus der Luecke werden gepuffert und in Reihenfolge
    * nachgeholt, sobald die Sitzung steht.
    */
-  private accept(socket: WebSocket, sessionToken?: string): void {
+  private accept(socket: WebSocket, sessionToken?: string, ausApp = false): void {
     const queued: string[] = [];
     let connection: Connection | null = null;
     let rejected = false;
@@ -472,6 +551,8 @@ export class Gateway {
         /* Bis zum `join` gilt die vorsichtigste Annahme: alles vollstaendig. */
         moduleVersion: 1,
         kette: Promise.resolve(),
+        ausApp,
+        vordergrund: true,
       };
       this.connections.add(accepted);
       connection = accepted;
@@ -580,6 +661,12 @@ export class Gateway {
         case 'startNow':
           await this.startNow(connection, message.tableId, message.rounds);
           break;
+        case 'setRules':
+          await this.setRules(connection, message.tableId, message.config);
+          break;
+        case 'hintergrund':
+          connection.vordergrund = false;
+          break;
         default:
           send(connection.socket, errorMessage('unknownMessageType'));
       }
@@ -651,6 +738,8 @@ export class Gateway {
     connection.sichtStand = null;
     /* Was dieser Client versteht, sagt er hier — und nur hier. */
     connection.moduleVersion = message.moduleVersion;
+    /* Wer (wieder) beitritt, sieht hin — siehe `hintergrund`. */
+    connection.vordergrund = true;
     let room = this.byTable.get(message.tableId);
     if (!room) {
       room = new Set();
@@ -685,6 +774,7 @@ export class Gateway {
     if (!isReadyToStart(table, seats)) return;
 
     await this.runtime.start(tableId);
+    this.push?.partieGestartet(this.runtime, tableId);
   }
 
   private leave(connection: Connection): void {
@@ -919,6 +1009,23 @@ export class Gateway {
   }
 
   /**
+   * Regelsatz des wartenden Tisches ersetzen (Golf: Bahnauswahl in der Lobby).
+   * Der Rundruf danach traegt den neuen `regelstand` an alle im Wartebereich;
+   * wer ihn noch nicht kennt, holt den Regelsatz ueber `/api/tables/:id/rules`.
+   */
+  private async setRules(
+    connection: Connection,
+    tableId: string,
+    config: Record<string, unknown>,
+  ): Promise<void> {
+    const regeln = connection.ausApp
+      ? appRegeln((await tableWithSeats(this.db, tableId)).table.gameId, config, this.appInhalt)
+      : config;
+    await setzeTischregeln(this.db, tableId, regeln, connection.accountId);
+    await this.broadcast(tableId);
+  }
+
+  /**
    * Sofort losspielen, ohne die leeren Plaetze mit Bots zu fuellen: Der Tisch
    * schrumpft auf die Besetzten, danach startet der uebliche Rundruf die
    * Partie (nach dem Schrumpfen ist kein Platz mehr frei).
@@ -1073,6 +1180,8 @@ export class Gateway {
       visibility: table.visibility,
       paused: table.pausedAt !== null || (party?.paused ?? false),
       botLevel: tableBotLevel(table.filters),
+      regelstand: `${table.ruleSetId}:${table.ruleSetVersion}`,
+      uebung: istUebungstisch(table.filters),
     };
 
     /**

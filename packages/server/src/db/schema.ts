@@ -23,6 +23,7 @@ import { relations, sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  check,
   date,
   foreignKey,
   index,
@@ -102,6 +103,8 @@ export const clubWarStatus = pgEnum('club_war_status', [
 export const authTokenPurpose = pgEnum('auth_token_purpose', [
   'email_verify',
   'password_reset',
+  /** Loeschcode fuer Konten ohne Passwort (0029, auth/loeschen.ts). */
+  'account_delete',
 ]);
 
 export const purchaseProvider = pgEnum('purchase_provider', [
@@ -239,13 +242,12 @@ export const account = pgTable(
     mememoryZufall: boolean().notNull().default(false),
     /** Kalenderjahr, in dem die Geburtstagsbelohnung zuletzt eingesammelt wurde. */
     birthdayRewardYear: integer(),
-    /**
-     * Google-Kennung (`sub` aus dem ID-Token). Stabil, waehrend die E-Mail
-     * beim selben Google-Konto wechseln kann — deshalb haengt die Verknuepfung
-     * an dieser Spalte und nicht an der Adresse. null: nie mit Google
-     * angemeldet.
+    /*
+     * `google_sub` steht noch in der Datenbank, aber nicht mehr hier: Seit
+     * 0028 haengen Google und Apple an `account_identity`. Die Spalte ist
+     * leer und bleibt nur, damit ein zurueckgerollter Deploy nicht an einer
+     * fehlenden Spalte scheitert.
      */
-    googleSub: text(),
     anonymizedAt: timestamp({ withTimezone: true }),
     /**
      * Gastkonto: mitspielen ohne Anmeldung. NULL heisst "kein Gast".
@@ -267,11 +269,57 @@ export const account = pgTable(
      * der Geduld.
      */
     gastSeit: timestamp({ withTimezone: true }),
+    /**
+     * Werbelink, ueber den das Konto entstanden ist (`?q=`, src/herkunft.ts).
+     * Nur gesetzt, wenn ein Gastkonto mit Kennung angelegt wurde; danach
+     * zaehlen seine Runden in `herkunft_zaehler`. Bleibt beim Sichern stehen
+     * — wer aus dem Gast ein Konto macht, ist erst recht ein Geworbener.
+     */
+    herkunft: text(),
+    /**
+     * Letzter Kalendertag (Berlin) mit einer angemeldeten Anfrage — nur das
+     * Datum, keine Historie. Einziger Zweck: das Konto je Tag EINMAL in
+     * `aktive_konten` zu zaehlen (src/statistik.ts).
+     */
+    zuletztAktiv: date(),
   },
   (t) => [
     uniqueIndex('account_email_key').on(t.email),
     uniqueIndex('account_display_name_key').on(t.displayName),
-    uniqueIndex('account_google_sub_key').on(t.googleSub),
+  ],
+);
+
+/**
+ * Anmeldung ueber einen fremden Anbieter (Google, Apple): wer dort wer ist.
+ *
+ * Gebunden wird ueber `subject` (das `sub` des ID-Tokens) und NIE ueber die
+ * Mail: Die kann beim Anbieter wechseln, und bei Apple ist sie oft eine
+ * Weiterleitungsadresse, die nichts ueber die Person sagt. `email` ist nur die
+ * zuletzt gemeldete Adresse, fuer die Anzeige in den Einstellungen.
+ *
+ * Ein Konto hat je Anbieter hoechstens eine Bindung, aber beliebig viele
+ * Anbieter. Ob die letzte Anmeldeart getrennt werden darf, entscheidet
+ * `auth/anbieter.ts`, nicht die Datenbank.
+ *
+ * Kontoloeschung anonymisiert und loescht dabei diese Zeilen
+ * (`anonymizeAccount`) — sonst fuehrte dieselbe Apple-ID wieder ins
+ * geloeschte Konto.
+ */
+export const accountIdentity = pgTable(
+  'account_identity',
+  {
+    provider: text().$type<'google' | 'apple'>().notNull(),
+    subject: text().notNull(),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    email: text(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ name: 'account_identity_pkey', columns: [t.provider, t.subject] }),
+    uniqueIndex('account_identity_konto_anbieter_key').on(t.accountId, t.provider),
+    check('account_identity_provider_check', sql`${t.provider} in ('google', 'apple')`),
   ],
 );
 
@@ -438,6 +486,38 @@ export const chestClaim = pgTable(
 );
 
 /**
+ * Abgeholte Belohnungen des Trophaeenwegs (0031, `src/trophaeenweg.ts`).
+ *
+ * Eine Zeile je Konto und Schwelle, und der Primaerschluessel IST die Sperre
+ * gegen das zweite Abholen — wie bei `chest_claim`. Eine eigene Tabelle und
+ * nicht `chest_claim`, weil dort zwei Dinge nicht hineinpassen: Ein
+ * Checkpoint gibt feste Muenzen und hat keinen Truhengrad (`grade` ist dort
+ * Pflicht), und eine Station gibt Truhe UND Gegenstand in einem Zug — beides
+ * gehoert an dieselbe Zeile, sonst koennte ein halb abgeholter Stand
+ * entstehen, den keine der beiden Tabellen erklaert.
+ *
+ * `coins` ist, was gutgeschrieben wurde (bei einer Truhe der Wurf, der nur
+ * einmal faellt — Begruendung in `truhen.ts`). `item_id` ist der Gegenstand,
+ * der mitkam, auch wenn er schon im Besitz war: Die Zeile sagt, was die Stufe
+ * gab, nicht, was neu war.
+ */
+export const wegAbholung = pgTable(
+  'weg_abholung',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    schwelle: integer().notNull(),
+    /** Truhengrad; null bei Checkpoints mit festen Muenzen. */
+    grade: chestGrade(),
+    coins: integer().notNull(),
+    itemId: text(),
+    abgeholtAm: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.schwelle] })],
+);
+
+/**
  * Fortschritt der Tagesaufgaben.
  *
  * Je Konto, Aufgabe und Kalendertag. Der Tag steht als Spalte und nicht als
@@ -591,7 +671,8 @@ export const gameVote = pgTable(
     accountId: uuid()
       .notNull()
       .references(() => account.id, { onDelete: 'cascade' }),
-    gameId: gameId(),
+    // Auch angekündigte Solo-Modi haben Stimmen, aber kein Tisch-Spielmodul.
+    gameId: text().notNull(),
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.accountId, t.gameId] })],
@@ -945,6 +1026,114 @@ export const roundSummary = pgTable(
   (t) => [primaryKey({ columns: [t.partyId, t.roundIndex] })],
 );
 
+/** Wohin eine Bestleistung zeigt: `tief` = die kleinste Zahl gewinnt (Golf). */
+export type BestleistungRichtung = 'hoch' | 'tief';
+
+/**
+ * Bestleistung je Inhalt (seit dem 22.09.2026, zuerst fuer die Golf-Bahnen).
+ *
+ * Eine Zeile je Konto, Spiel und Inhaltskennung, ueberschrieben nur von einer
+ * besseren Zahl — dasselbe Muster wie runner_best. NICHT in account_game_stat:
+ * Dort haengt der Schluessel am Spiel, und die Zeile traegt Trophaeen, die
+ * aus der Platzierung entstehen und regelunabhaengig sind (trophy_ledger
+ * unten). Eine Bestleistung dagegen ist eine Spielzahl fuer genau ein Stueck
+ * des Spiels, und 27 Schlaege auf einer Bahn sagen nichts ueber eine andere.
+ *
+ * `inhaltId` vergibt das Modul; der Server kennt die Bedeutung nicht und
+ * nimmt jede Kennung (Bahn, Kurs, Paket — CLAUDE.md, "Der Server kennt kein
+ * einzelnes Kartenspiel"). `richtung` steht am Datensatz, weil Punkte nichts
+ * ueber die Rangfolge sagen (plattform-invarianten.test.ts, Falle 3) und der
+ * Server die Antwort nicht je Spiel wissen darf: Das Modul sagt sie bei jeder
+ * Meldung mit, Schreib- und Leseweg richten sich danach (src/bestleistung.ts).
+ */
+export const bestleistung = pgTable(
+  'bestleistung',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    gameId: gameId(),
+    inhaltId: text().notNull(),
+    wert: integer().notNull(),
+    richtung: text().$type<BestleistungRichtung>().notNull(),
+    /** Herkunftsnachweis, keine Abhaengigkeit: ueberlebt das Aufraeumen alter Partien. */
+    partyId: uuid().references(() => party.id, { onDelete: 'set null' }),
+    erzieltAm: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.accountId, t.gameId, t.inhaltId] }),
+    /** Fuer die Liste je Inhalt: ein Spiel, ein Inhalt, sortiert nach Wert. */
+    index('bestleistung_liste_idx').on(t.gameId, t.inhaltId, t.wert),
+    check('bestleistung_richtung_check', sql`${t.richtung} in ('hoch', 'tief')`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Push-Mitteilungen (0030, docs/PUSH.md)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ein Geraet, das Mitteilungen bekommen darf.
+ *
+ * Das Token gehoert dem Geraet, nicht dem Konto — deshalb eindeutig ueber
+ * alle Konten: Meldet sich auf demselben Telefon jemand anderes an, zieht die
+ * Zeile um, statt dass zwei Konten dasselbe Geraet beschicken. `sitzungId`
+ * haengt an der Anmeldung, aus der das Token kam; beim Abmelden verschwinden
+ * genau diese Zeilen (auth/service.ts). `aktiv` faellt, wenn APNs oder FCM
+ * das Token fuer ungueltig erklaeren.
+ */
+export const geraetPush = pgTable(
+  'geraet_push',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    sitzungId: uuid().references(() => session.id, { onDelete: 'set null' }),
+    plattform: text().$type<'ios' | 'android'>().notNull(),
+    token: text().notNull(),
+    erstellt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    zuletztGesehen: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    aktiv: boolean().notNull().default(true),
+  },
+  (t) => [
+    uniqueIndex('geraet_push_token_key').on(t.token),
+    index('geraet_push_konto_idx').on(t.accountId),
+    check('geraet_push_plattform_check', sql`${t.plattform} in ('ios', 'android')`),
+  ],
+);
+
+/**
+ * Welche Anlaesse ein Konto NICHT will. Ausschlussliste, damit ein neuer
+ * Anlass ohne Migration fuer alle an ist (Kennungen: push/anlaesse.ts).
+ */
+export const pushEinstellung = pgTable('push_einstellung', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  aus: text().array().notNull().default(sql`'{}'::text[]`),
+  geaendert: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Offene Beitrittsanfragen an Tischen, die nicht oeffentlich sind (Migration
+ * 0033). Angenommen oder abgelehnt, verschwindet die Zeile; was daraus wurde,
+ * zeigt der Sitz. Regeln in tables/anfragen.ts.
+ */
+export const tischAnfrage = pgTable(
+  'tisch_anfrage',
+  {
+    tischId: uuid()
+      .notNull()
+      .references(() => gameTable.id, { onDelete: 'cascade' }),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    erstellt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.tischId, t.accountId] })],
+);
+
 // ---------------------------------------------------------------------------
 // Trophaeen
 // ---------------------------------------------------------------------------
@@ -1043,6 +1232,31 @@ export const report = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('report_target_idx').on(t.targetId, t.createdAt)],
+);
+
+/**
+ * „Passt nicht" zu einem Inhalt der Partykiste (seit dem 27.09.2026, nur auf
+ * staging — Migration 0032, Routen in http/partykiste-routen.ts). Gemeldet
+ * wird ein EINTRAG (Katalog + Kennung), kein Mensch; deshalb nicht `report`.
+ * Der Text des Eintrags steht im Katalog, nicht hier.
+ */
+export const partykisteMeldung = pgTable(
+  'partykiste_meldung',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    tischId: uuid().references(() => gameTable.id, { onDelete: 'set null' }),
+    katalog: text().notNull(),
+    kennung: text().notNull(),
+    grund: text().notNull(),
+    freitext: text(),
+    /** Die Inhaltsstufe des Tisches beim Melden (1 bis 3) — „zu zahm" sagt ohne sie nichts. */
+    stufe: smallint(),
+    erstelltAm: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('partykiste_meldung_eintrag_idx').on(t.katalog, t.kennung)],
 );
 
 // ---------------------------------------------------------------------------
@@ -1275,3 +1489,213 @@ export const clubRelations = relations(club, ({ many, one }) => ({
     references: [account.id],
   }),
 }));
+
+// ---------------------------------------------------------------------------
+// Doppelkopf lernen
+// ---------------------------------------------------------------------------
+
+/**
+ * Lernpfad und Tagesserie, eine Zeile je Konto (lernpfad.ts). Die Zeile
+ * entsteht beim ersten Fortschritt, nicht mit dem Konto.
+ */
+export const lernpfad = pgTable('lernpfad', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  /** Kennungen der erledigten Lektionen (`LEKTIONEN` in game-doppelkopf). */
+  lektionen: jsonb().$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  serie: integer().notNull().default(0),
+  beste: integer().notNull().default(0),
+  /** Kalendertage in Europe/Berlin, wie bei den Tagesaufgaben. */
+  letzterTag: date(),
+  schutzTag: date(),
+  belohntAm: timestamp({ withTimezone: true }),
+  erinnertTag: date(),
+});
+
+// ---------------------------------------------------------------------------
+// Herkunft je Werbelink
+// ---------------------------------------------------------------------------
+
+/**
+ * Summen je Werbekennung und Kalendertag (Europe/Berlin), src/herkunft.ts.
+ * Bewusst KEINE Zeile je Besuch und kein Bezug aufs Konto: Gezaehlt wird,
+ * nicht protokolliert, und ein geloeschtes Konto nimmt seine Runden nicht
+ * aus der Summe mit.
+ */
+export const herkunftZaehler = pgTable(
+  'herkunft_zaehler',
+  {
+    kennung: text().notNull(),
+    tag: date().notNull(),
+    besuche: integer().notNull().default(0),
+    gastkonten: integer().notNull().default(0),
+    /** Je Konto: zwei Geworbene an einem Tisch sind zwei Runden. */
+    runden: integer().notNull().default(0),
+    partien: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.kennung, t.tag] }), index('herkunft_zaehler_tag_idx').on(t.tag)],
+);
+
+// ---------------------------------------------------------------------------
+// Tagesstatistik (Tracking Stufe 0) — src/statistik.ts
+// ---------------------------------------------------------------------------
+
+/**
+ * Summen je Kalendertag (Europe/Berlin) und Metrik. Wie `herkunft_zaehler`
+ * ohne jeden Bezug auf Konto, Tisch oder Geraet. Nicht belegte Dimensionen
+ * sind `''`, nicht NULL: Sie stehen im Primaerschluessel.
+ */
+export const statsTag = pgTable(
+  'stats_tag',
+  {
+    datum: date().notNull(),
+    metrik: text().notNull(),
+    spiel: text().notNull().default(''),
+    modus: text().notNull().default(''),
+    ergebnis: text().notNull().default(''),
+    wert: bigint({ mode: 'number' }).notNull().default(0),
+  },
+  (t) => [
+    primaryKey({
+      name: 'stats_tag_pk',
+      columns: [t.datum, t.metrik, t.spiel, t.modus, t.ergebnis],
+    }),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Muenz-Codes (27.10.2026) — src/muenzcodes.ts, Migration 0039
+// ---------------------------------------------------------------------------
+
+/**
+ * Einmal-Codes fuer Muenzen. Erzeugt im brotool (Tab „Spielen"), eingeloest
+ * auf der Webseite. Verbraucht ist ein Code, sobald `eingeloestVon` steht.
+ */
+export const muenzCode = pgTable(
+  'muenz_code',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    code: text().notNull(),
+    muenzen: integer().notNull(),
+    notiz: text(),
+    erstellt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    gueltigBis: timestamp({ withTimezone: true }),
+    gesperrt: boolean().notNull().default(false),
+    eingeloestVon: uuid().references(() => account.id),
+    eingeloestAm: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('muenz_code_code_key').on(t.code),
+    index('muenz_code_erstellt_idx').on(t.erstellt),
+    check('muenz_code_muenzen_check', sql`${t.muenzen} > 0`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Browort und Clanwort (Emile, 23.10.2026) — src/browort.ts
+// ---------------------------------------------------------------------------
+
+/** Eine Browort-Runde je Konto und Kalendertag (Europe/Berlin). */
+export const browortRunde = pgTable(
+  'browort_runde',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    tag: date().notNull(),
+    /** Geratene Woerter in Grossbuchstaben, in Reihenfolge. Farben rechnet browort.ts. */
+    versuche: jsonb().$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    geloest: boolean().notNull().default(false),
+    fertig: boolean().notNull().default(false),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.tag] })],
+);
+
+/** Serien und Zahlen je Konto — Browort und Clanwort getrennt. */
+export const browortStand = pgTable('browort_stand', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  serie: integer().notNull().default(0),
+  beste: integer().notNull().default(0),
+  letzterTag: date(),
+  schutzTag: date(),
+  erinnertTag: date(),
+  gespielt: integer().notNull().default(0),
+  geloest: integer().notNull().default(0),
+  /** Summe der Versuche geloester Woerter; der Schnitt ist Summe durch `geloest`. */
+  versucheSumme: integer().notNull().default(0),
+  /** Wie oft mit 1, 2, … 6 Versuchen geloest. */
+  verteilung: jsonb().$type<number[]>().notNull().default(sql`'[0,0,0,0,0,0]'::jsonb`),
+  clanSerie: integer().notNull().default(0),
+  clanBeste: integer().notNull().default(0),
+  clanLetzterTag: date(),
+  clanSchutzTag: date(),
+});
+
+/** Das Clanwort eines Tages: wer waehlt, was gewaehlt ist. */
+export const clanwortTag = pgTable(
+  'clanwort_tag',
+  {
+    clubId: uuid()
+      .notNull()
+      .references(() => club.id, { onDelete: 'cascade' }),
+    tag: date().notNull(),
+    waehlerId: uuid().references(() => account.id, { onDelete: 'set null' }),
+    /** Null, solange niemand gewaehlt hat. */
+    wort: text(),
+    /** Der Server hat gewaehlt, weil bis Mittag nichts kam. */
+    zufall: boolean().notNull().default(false),
+    gewaehltAm: timestamp({ withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.clubId, t.tag] })],
+);
+
+/** Eine Clanwort-Runde je Mitglied und Tag. */
+export const clanwortRunde = pgTable(
+  'clanwort_runde',
+  {
+    clubId: uuid()
+      .notNull()
+      .references(() => club.id, { onDelete: 'cascade' }),
+    tag: date().notNull(),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    versuche: jsonb().$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    geloest: boolean().notNull().default(false),
+    fertig: boolean().notNull().default(false),
+  },
+  (t) => [primaryKey({ columns: [t.clubId, t.tag, t.accountId] })],
+);
+
+// ---------------------------------------------------------------------------
+// Kartenmanufaktur (Emile, 23.10.2026) — src/manufaktur/dienst.ts
+// ---------------------------------------------------------------------------
+
+/**
+ * Der Stand der Kartenmanufaktur je Konto, als Ganzes (@brauweg/manufaktur-kern).
+ * `unknown`, weil hier auch aeltere Fassungen liegen koennen — gelesen wird
+ * nur ueber `migriere`.
+ */
+export const manufaktur = pgTable('manufaktur', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  stand: jsonb().$type<unknown>().notNull(),
+  version: integer().notNull().default(0),
+  aktualisiert: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Die erste Auswahl des Berliner Tages bleibt auch auf einem zweiten Gerät unverändert. */
+export interface MarktPlatz {
+  id: string; spiel: string; stufe: string | null; rabatt: number;
+  artikelId: string | null; normalpreis: number; preis: number; aufgedeckt: boolean;
+}
+export const tagesmarkt = pgTable('tagesmarkt', {
+  accountId: uuid().notNull().references(() => account.id, { onDelete: 'cascade' }),
+  tag: date().notNull(),
+  angebote: jsonb().$type<MarktPlatz[]>().notNull(),
+  muenzenGeholt: boolean().notNull().default(false),
+}, t => [primaryKey({ columns: [t.accountId, t.tag] })]);

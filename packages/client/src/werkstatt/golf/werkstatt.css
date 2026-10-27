@@ -1,0 +1,451 @@
+/*
+ * Die Bahnwerkstatt (seit 22.09.2026) — eigene, kleine Gestaltung.
+ *
+ * Bewusst NICHT styles.css der App: Die bringt 18.000 Zeilen mit, setzt den
+ * ganzen Körper auf Handybreite und färbt jeden Knopf als Spielknopf. Die
+ * Werkstatt ist ein Schreibtischwerkzeug mit drei Spalten; die Farben sind
+ * dieselben Werte wie in der App (--bg, --panel, --accent), damit sie
+ * trotzdem nach Brauweg aussieht.
+ */
+
+:root {
+  --bg: #12181c;
+  --panel: #1b2429;
+  --line: #2c383f;
+  --text: #e8eef1;
+  --muted: #8fa3ad;
+  --accent: #4a9c78;
+  --gold: #e2b64f;
+  --danger: #c2564c;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+#wurzel {
+  height: 100%;
+}
+
+button,
+select,
+input,
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+button {
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button[data-aktiv] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+input,
+select,
+textarea {
+  padding: 4px 6px;
+  min-width: 0;
+}
+
+code {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+  color: #cfe3d8;
+}
+
+.bw-seite {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 380px;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    'kopf kopf kopf'
+    'werkzeuge buehne panel';
+  height: 100%;
+}
+
+.bw-kopf {
+  grid-area: kopf;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bw-kopf h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.bw-kopf-bahn {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bw-kopf-status {
+  padding: 2px 10px;
+  border-radius: 99px;
+  background: rgba(194, 86, 76, 0.25);
+  color: #ffb3ab;
+  white-space: nowrap;
+}
+
+.bw-kopf-status[data-gut] {
+  background: rgba(74, 156, 120, 0.25);
+  color: #a6e3c4;
+}
+
+.bw-kopf-knoepfe {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.bw-werkzeuge {
+  grid-area: werkzeuge;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px;
+  border-right: 1px solid var(--line);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.bw-werkzeuge > * {
+  /* Sonst quetscht die Spalte die Knöpfe zusammen, statt zu rollen. */
+  flex: none;
+}
+
+.bw-werkzeuge button {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bw-werkzeug {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+}
+
+.bw-werkzeug i {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+}
+
+.bw-trenner {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bw-raster {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.bw-buehne {
+  grid-area: buehne;
+  position: relative;
+  min-height: 0;
+  background: #141c17;
+}
+
+.bw-leinwand {
+  position: absolute;
+  inset: 0 0 44px 0;
+  width: 100%;
+  height: calc(100% - 44px);
+  display: block;
+}
+
+.bw-ober {
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.bw-ober[data-werkzeug='auswahl'] {
+  cursor: default;
+}
+
+.bw-ober[data-werkzeug='probe'] {
+  cursor: grab;
+}
+
+.bw-fuss {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.bw-fuss button {
+  flex: none;
+}
+
+/* Text darf schrumpfen, Knöpfe nicht — sonst schiebt die Anzeige „Zurück zum
+   Bauen" aus dem Bild. */
+.bw-fuss > span,
+.bw-fuss > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bw-fuss button:first-of-type {
+  margin-left: auto;
+}
+
+.bw-panel {
+  grid-area: panel;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  padding: 10px 12px 40px;
+}
+
+.bw-block {
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bw-block h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.bw-block h3 {
+  margin: 12px 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.bw-block p {
+  margin: 6px 0;
+}
+
+.bw-auswahl {
+  border-left: 3px solid var(--gold);
+  padding-left: 10px;
+  margin-left: -12px;
+}
+
+.bw-gitter {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin: 6px 0;
+}
+
+.bw-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bw-feld input,
+.bw-feld select,
+.bw-feld textarea {
+  color: var(--text);
+  width: 100%;
+}
+
+.bw-feld-breit {
+  grid-column: 1 / -1;
+}
+
+.bw-reihe {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 6px 0;
+}
+
+.bw-reihe > select,
+.bw-reihe > input {
+  flex: 1;
+}
+
+.bw-reihe-kopf h2 {
+  margin: 0;
+  flex: 1;
+}
+
+.bw-loeschen:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: #ffb3ab;
+}
+
+.bw-richtungen {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 3px;
+  margin: 8px 0 4px;
+}
+
+.bw-haken {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.bw-befunde {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bw-befunde li {
+  padding: 4px 8px;
+  margin: 3px 0;
+  border-left: 3px solid var(--danger);
+  background: rgba(194, 86, 76, 0.12);
+  border-radius: 0 4px 4px 0;
+}
+
+.bw-befunde li[data-ziel] {
+  cursor: pointer;
+}
+
+.bw-befunde li[data-ziel]:hover {
+  background: rgba(194, 86, 76, 0.28);
+}
+
+.bw-gut {
+  color: #a6e3c4;
+}
+
+.bw-schlecht {
+  color: #ffb3ab;
+}
+
+.bw-leise {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.bw-hinweis {
+  color: var(--gold);
+  font-size: 12px;
+}
+
+.bw-quelltext {
+  width: 100%;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+  white-space: pre;
+  resize: vertical;
+}
+
+.bw-meldung {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  background: rgba(74, 156, 120, 0.18);
+}
+
+.bw-meldung button {
+  padding: 0 6px;
+}
+
+@media (max-width: 1100px) {
+  .bw-seite {
+    grid-template-columns: 120px minmax(0, 1fr) 320px;
+  }
+}
+
+/* Schmales Fenster: Das Panel rutscht unter die Bühne, sonst bliebe für die
+   Bahn ein Streifen von der Breite eines Daumens. */
+@media (max-width: 900px) {
+  html,
+  body,
+  #wurzel {
+    height: auto;
+  }
+  .bw-seite {
+    height: auto;
+    grid-template-columns: 110px minmax(0, 1fr);
+    grid-template-rows: auto 70vh auto;
+    grid-template-areas:
+      'kopf kopf'
+      'werkzeuge buehne'
+      'panel panel';
+  }
+  .bw-panel {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .bw-kopf-bahn {
+    display: none;
+  }
+}
+
+/* Die Warnung vor dem Geometriebruch (seit 22.09.2026, nach #206) steht über
+   allen Befunden: Sie ist der eine Fehler, den weder pruefeKarte noch der Bot
+   finden — die Bahn ist ja spielbar, nur nicht dieselbe wie auf den anderen
+   Geräten. */
+.bw-bruch {
+  padding: 8px 10px;
+  margin: 0 0 8px;
+  border-left: 3px solid var(--gold);
+  border-radius: 0 6px 6px 0;
+  background: rgba(226, 182, 79, 0.14);
+  color: #f3dc9f;
+}
+
+.bw-bruch p {
+  margin: 0 0 6px;
+}

@@ -25,7 +25,55 @@ import type {
   PartykistePartie,
   RundenPhase,
 } from './partie.js';
-import { amZug, platzierungen, type Platzierung } from './partie.js';
+import { amZug, mitSchluck, platzierungen, type Platzierung } from './partie.js';
+import { meldenMoeglich, noetigJeSitz } from './ohne-uhr.js';
+import { wartepunkt, type LetzterWurf } from './weiter-warten.js';
+import type { Haerte, Paket } from './inhalte/typen.js';
+import {
+  TISCHOEFFNER,
+  eskalationsStufe,
+  lagerWertung,
+  modusVon,
+  regelnDerRunde,
+  wechselbareSitze,
+  type LagerPlatzierung,
+} from './modi.js';
+import { inhaltsLesart, type InhaltsLesart, type Spielmodus } from './regeln.js';
+
+/** Eskalation: wo die Kurve in der laufenden Runde steht. */
+export interface EskalationsSicht {
+  /** Stufe der Kurve, 1 bis 3 — erstes, zweites, letztes Drittel. */
+  readonly stufe: Haerte;
+  /** Die Inhaltsstufe dieser Runde: die Stufe, hoechstens die Decke des Tisches. */
+  readonly inhaltsHaerte: Haerte;
+  /** Die Haerte (Schluckfaktor) dieser Runde — steigt mit der Stufe. */
+  readonly schluckFaktor: number;
+  /**
+   * Wollte die Kurve derber, als der Tisch darf? Dann sitzt ein Gast, und der
+   * Bildschirm sagt "derb erst ohne Gast" statt still weniger zu zeigen.
+   */
+  readonly gekappt: boolean;
+}
+
+/** Team-Abend vor der ersten Runde. */
+export interface AufstellungsSicht {
+  /** Wer aufstellt — der Tischoeffner. */
+  readonly aufsteller: number;
+  /**
+   * Die Sitze, die DIESER Sitz gerade ins andere Lager setzen darf — leer fuer
+   * alle ausser dem Aufsteller. Steht in der Sicht, damit der Bildschirm die
+   * Regel "kein Lager ohne Anwesenden" nicht nachbauen muss.
+   */
+  readonly wechselbar: readonly number[];
+}
+import {
+  zeitdruckSicht,
+  type BombeSicht,
+  type KoenigsbecherSicht,
+  type ZehnSekundenSicht,
+} from './zeitdruck.js';
+
+export type { BombeSicht, KoenigsbecherSicht, ZehnSekundenSicht } from './zeitdruck.js';
 
 // ---------------------------------------------------------------------------
 // Die Daten des laufenden Minispiels
@@ -143,6 +191,69 @@ export interface WahrheitPflichtSicht {
   readonly erfolg: readonly number[];
 }
 
+/**
+ * Kategorien-Battle. Nichts daran ist geheim — genannt wird laut, und wer
+ * Einspruch erhebt, tut es vor allen.
+ */
+export interface KategorienSicht {
+  readonly art: 'kategorien';
+  readonly kategorie: string;
+  readonly amZug: number;
+  readonly nennungen: number;
+  /** Ab so vielen Nennungen ist die Kategorie leergespielt. */
+  readonly grenze: number;
+  /** Wer zuletzt genannt hat — gegen ihn geht noch Einspruch. -1 = noch keiner. */
+  readonly letzter: number;
+  /** Je Sitz: gegen wen er Einspruch erhebt, -1 = niemanden. */
+  readonly einspruch: readonly number[];
+  /** Je Sitz: wie viele Einsprueche es braucht, um ihn zu benennen (0 = geht nicht). */
+  readonly noetig: readonly number[];
+  readonly verlierer: number;
+  readonly wie: 'selbst' | 'mehrheit' | null;
+}
+
+export interface MehrheitSicht {
+  readonly art: 'mehrheit';
+  readonly frage: string;
+  readonly a: string;
+  readonly b: string;
+  /** Die eigene Antwort und der eigene Tipp, -1 solange nicht abgegeben. */
+  readonly meine: number;
+  readonly meinTipp: number;
+  /** Wer schon abgegeben hat — nicht, was. */
+  readonly gewaehlt: readonly number[];
+  /** Erst im Ergebnis — vorher wuesste man, wohin die Mehrheit kippt. */
+  readonly eigene: readonly number[] | null;
+  readonly tipp: readonly number[] | null;
+  /** Erst im Ergebnis: 0 A, 1 B, -1 Gleichstand. */
+  readonly mehrheit: number | null;
+}
+
+export interface RegelkartenSicht {
+  readonly art: 'regelkarte';
+  readonly text: string;
+  /** Bis zum Ende welcher Runde (0-basiert) die Regel gelten wird, aufs Turnierende gekappt. */
+  readonly bis: number;
+}
+
+/**
+ * Die Regel-Karte, die gerade gilt — in JEDER Sicht, auch waehrend ganz
+ * anderer Minispiele, weil sie genau dort gebrochen wird.
+ */
+export interface RegelKarteSicht {
+  readonly text: string;
+  readonly ab: number;
+  readonly bis: number;
+  /** Je Sitz: Verstoesse, seit die Regel gilt. Am Tisch ohnehin laut. */
+  readonly verstoesse: readonly number[];
+  /** Je Sitz: wen er gerade anklagt, -1 = niemanden. */
+  readonly anklage: readonly number[];
+  /** Je Sitz: wie viele Anklagen es braucht (0 = geht nicht, kein Mensch da, der abstimmen koennte). */
+  readonly noetig: readonly number[];
+  /** Darf jetzt gemeldet werden? Nein in einer Abrechnung, nach der keine mehr kommt. */
+  readonly meldenMoeglich: boolean;
+}
+
 export type MinispielSicht =
   | ImposterSicht
   | QuizSicht
@@ -152,7 +263,14 @@ export type MinispielSicht =
   | BusSicht
   | SchaetzSicht
   | EntwederSicht
-  | WahrheitPflichtSicht;
+  | WahrheitPflichtSicht
+  | KategorienSicht
+  | MehrheitSicht
+  | RegelkartenSicht
+  /* Die drei mit Uhr — beschrieben in zeitdruck.ts. */
+  | BombeSicht
+  | ZehnSekundenSicht
+  | KoenigsbecherSicht;
 
 // ---------------------------------------------------------------------------
 // Die ganze Sicht
@@ -166,7 +284,19 @@ export interface PartykisteSicht {
   readonly runden: number;
   readonly art: MinispielId;
   readonly phase: RundenPhase;
+  /**
+   * Der Regelsatz des Tisches, wie er festgeschrieben ist — in JEDER Sicht.
+   *
+   * Bis zum 22.09.2026 fuhr nur `trinkmodus` mit, und der auch nur, damit der
+   * Bildschirm das Glas ausblenden konnte. Haerte und Minispielliste sah am
+   * Tisch niemand; wer online einem Tisch beitrat, spielte mit Regeln, die er
+   * erst an der ersten Abrechnung erriet. Die drei Felder sind kein Geheimnis
+   * (der Server gibt sie ohnehin ueber `/tables/:id/rules` heraus), deshalb
+   * stehen sie auch in der Zuschauersicht.
+   */
   readonly trinkmodus: boolean;
+  readonly schluckFaktor: number;
+  readonly minispiele: readonly MinispielId[];
   readonly botSitze: readonly number[];
   readonly ausgestiegen: readonly number[];
   /** Turnierstand ueber alle bisherigen Runden. */
@@ -181,6 +311,89 @@ export interface PartykisteSicht {
   readonly fertig: boolean;
   readonly tabelle: readonly Platzierung[];
   readonly daten: MinispielSicht;
+  /** Die geltende Regel-Karte oder null — seit dem 22.09.2026. */
+  readonly regelKarte: RegelKarteSicht | null;
+  /*
+   * Der Spielmodus (seit dem 22.09.2026) — kein Geheimnis, er steht auch im
+   * Regelsatz des Tisches. Die Regelzeile zeigt ihn.
+   */
+  readonly modus: Spielmodus;
+  /** Das Themenpaket des Tisches, null = alles. Beim Themenabend das Thema. */
+  readonly paket: Paket | null;
+  /** Nur in der Eskalation, sonst null. */
+  readonly eskalation: EskalationsSicht | null;
+  /** Team-Abend: je Sitz das Lager (0/1), sonst null. */
+  readonly lager: readonly number[] | null;
+  /** Team-Abend: die Tabelle je Lager — die Endtafel. Sonst null. */
+  readonly lagerTabelle: readonly LagerPlatzierung[] | null;
+  /** Team-Abend, solange die Lager aufgestellt werden; sonst null. */
+  readonly aufstellung: AufstellungsSicht | null;
+  /*
+   * Die Inhaltsstufe des Tisches (seit dem 27.09.2026) — kein Geheimnis, sie
+   * steht im Regelsatz. Bis dahin trug die Sicht sie nicht, und die
+   * Regelzeile konnte sie nicht nennen (PARTYKISTE.md).
+   */
+  /** Die WIRKSAME Stufe, nach der Gast-Kappung (in der Eskalation die Decke). */
+  readonly inhaltsHaerte: Haerte;
+  /** Wie die Stufe gemeint ist: genau, gemischt oder — Tisch von davor — 'bis'. */
+  readonly inhaltsMischung: InhaltsLesart;
+  /** Was eingestellt war, wenn ein Gast es kappte — sonst null. */
+  readonly inhaltsHaerteGewollt: Haerte | null;
+  /**
+   * Welche Katalog-Eintraege DIESER Sitz gerade vor sich hat — fuer den
+   * Knopf „Passt nicht" (seit dem 27.09.2026, nur auf staging), der sonst
+   * nicht wuesste, welchen Eintrag er meldet.
+   *
+   * Abgeleitet aus dem, was die Sicht ohnehin zeigt, und nie mehr: Der
+   * Imposter bekommt die Kennung des Wortes erst im Ergebnis (sie fuehrte
+   * sonst ueber den Katalog zum Wort), bei „Wer bin ich" fehlt der eigene
+   * Name samt Kennung, bei „10 Sekunden" die Aufgabe vor dem „Los". Gleiches
+   * Mass wie der Test `das Imposter-Wort steht in keiner fremden Sicht`.
+   */
+  readonly gezeigt: readonly GezeigterInhalt[];
+  /**
+   * Wartet der Tisch gerade auf das „Weiter" aller (Abrechnung, „Gesehen",
+   * „Verstanden"), stehen hier die Sitze, die noch nicht getippt haben — sonst
+   * null. Seit dem 07.10.2026; bis dahin zaehlte der Bildschirm selbst und
+   * konnte nur „Noch 2 Leute" sagen, nicht wer (weiter-warten.ts).
+   */
+  readonly weiterFehlen: readonly number[] | null;
+  /**
+   * Der letzte Wurf fuer den, der zuletzt „Weiter" tippte — oder null. Bleibt
+   * stehen, bis der naechste kommt; der Bildschirm sagt ihn an, wenn `nr` neu
+   * ist. Kein Geheimnis, also auch beim Zuschauer.
+   */
+  readonly letzterWurf: LetzterWurf | null;
+}
+
+/**
+ * Die Kataloge, aus denen ein gezeigter Eintrag stammen kann — die Namen der
+ * Dateien unter `inhalte/`. Der Server prueft eine Meldung dagegen
+ * (`/api/partykiste/meldung`); neue kommen hinten dazu, keiner wird umbenannt,
+ * weil sie in abgelegten Meldungen stehen.
+ */
+export const INHALTS_KATALOGE = [
+  'imposter',
+  'quiz',
+  'identitaeten',
+  'niemals',
+  'wereher',
+  'schaetzen',
+  'entweder',
+  'wahrheitpflicht',
+  'kategorien',
+  'mehrheit',
+  'regelkarten',
+  'zehnsekunden',
+  'koenigsbecher',
+] as const;
+export type InhaltsKatalog = (typeof INHALTS_KATALOGE)[number];
+
+/** Ein Eintrag, den ein Sitz gerade sieht: woher, welche Kennung, und der Text zum Wiedererkennen. */
+export interface GezeigterInhalt {
+  readonly katalog: InhaltsKatalog;
+  readonly kennung: string;
+  readonly text: string;
 }
 
 function imErgebnis(partie: PartykistePartie): boolean {
@@ -286,7 +499,61 @@ function minispielSicht(partie: PartykistePartie, sitz: number): MinispielSicht 
         text: runde.text,
         erfolg: runde.erfolg,
       };
+    case 'kategorien':
+      return {
+        art: 'kategorien',
+        kategorie: runde.kategorie,
+        amZug: runde.amZug,
+        nennungen: runde.nennungen,
+        grenze: runde.grenze,
+        letzter: runde.letzter,
+        einspruch: runde.einspruch,
+        noetig: noetigJeSitz(partie),
+        verlierer: runde.verlierer,
+        wie: runde.wie,
+      };
+    case 'mehrheit':
+      return {
+        art: 'mehrheit',
+        frage: runde.frage,
+        a: runde.a,
+        b: runde.b,
+        meine: zuschauer ? -1 : (runde.eigene[sitz] ?? -1),
+        meinTipp: zuschauer ? -1 : (runde.tipp[sitz] ?? -1),
+        gewaehlt: runde.fertig,
+        eigene: auf ? runde.eigene : null,
+        tipp: auf ? runde.tipp : null,
+        mehrheit: auf ? runde.mehrheit : null,
+      };
+    case 'regelkarte':
+      return {
+        art: 'regelkarte',
+        text: runde.text,
+        bis: Math.min(runde.bis, partie.runden - 1),
+      };
+    /*
+     * Die drei mit Uhr. Was dort NICHT mitfaehrt: die Zuendzeit der Bombe und
+     * die Aufgabe von „10 Sekunden", bevor der Sprecher „Los" tippt.
+     */
+    case 'bombe':
+    case 'zehnsekunden':
+    case 'koenigsbecher':
+      return zeitdruckSicht(partie, runde, sitz, (w) => mitSchluck(partie.regeln.schluckFaktor, w));
   }
+}
+
+function regelKarteSicht(partie: PartykistePartie): RegelKarteSicht | null {
+  const regel = partie.regelKarte;
+  if (!regel) return null;
+  return {
+    text: regel.text,
+    ab: regel.ab,
+    bis: regel.bis,
+    verstoesse: regel.verstoesse,
+    anklage: regel.anklage,
+    noetig: noetigJeSitz(partie),
+    meldenMoeglich: meldenMoeglich(partie),
+  };
 }
 
 /**
@@ -295,6 +562,7 @@ function minispielSicht(partie: PartykistePartie, sitz: number): MinispielSicht 
 export function sichtFuer(partie: PartykistePartie, sitz: number): PartykisteSicht {
   const runde = partie.runde;
   const auf = imErgebnis(partie);
+  const daten = minispielSicht(partie, sitz);
   return {
     sitz,
     sitze: partie.sitze,
@@ -303,6 +571,8 @@ export function sichtFuer(partie: PartykistePartie, sitz: number): PartykisteSic
     art: runde.art,
     phase: runde.phase,
     trinkmodus: partie.regeln.trinkmodus,
+    schluckFaktor: partie.regeln.schluckFaktor,
+    minispiele: partie.regeln.minispiele,
     botSitze: partie.botSitze,
     ausgestiegen: partie.ausgestiegen,
     punkte: partie.punkte,
@@ -313,6 +583,104 @@ export function sichtFuer(partie: PartykistePartie, sitz: number): PartykisteSic
     gehandelt: runde.fertig,
     fertig: partie.fertig,
     tabelle: platzierungen(partie),
-    daten: minispielSicht(partie, sitz),
+    daten,
+    regelKarte: regelKarteSicht(partie),
+    modus: modusVon(partie.regeln),
+    paket: partie.regeln.paket ?? null,
+    eskalation: eskalationsSicht(partie),
+    lager: partie.lager ?? null,
+    lagerTabelle: partie.lager ? lagerWertung(partie.lager, partie.punkte, partie.schlucke) : null,
+    aufstellung: partie.aufstellung
+      ? {
+          aufsteller: TISCHOEFFNER,
+          wechselbar: sitz === TISCHOEFFNER ? wechselbareSitze(partie.lager ?? [], partie.ausgestiegen) : [],
+        }
+      : null,
+    inhaltsHaerte: partie.regeln.inhaltsHaerte,
+    inhaltsMischung: inhaltsLesart(partie.regeln),
+    inhaltsHaerteGewollt: partie.inhaltsHaerteGewollt ?? null,
+    gezeigt: gezeigteInhalte(partie, daten),
+    weiterFehlen: wartepunkt(partie)?.fehlen ?? null,
+    letzterWurf: partie.letzterWurf ?? null,
+  };
+}
+
+/**
+ * Was `daten` gerade zeigt, als Katalog + Kennung. Liest bewusst die fertige
+ * Sicht und nicht nur die Runde: Was dort null ist (das Wort des Imposters,
+ * der eigene Name, die Aufgabe vor dem „Los"), fehlt hier samt Kennung —
+ * die Sichtbarkeit wird nicht ein zweites Mal entschieden.
+ */
+function gezeigteInhalte(partie: PartykistePartie, daten: MinispielSicht): GezeigterInhalt[] {
+  const runde = partie.runde;
+  const liste: GezeigterInhalt[] = [];
+  const dazu = (katalog: InhaltsKatalog, kennung: string, text: string | null | undefined): void => {
+    if (!kennung || !text) return;
+    if (liste.some((e) => e.katalog === katalog && e.kennung === kennung)) return;
+    liste.push({ katalog, kennung, text });
+  };
+  switch (runde.art) {
+    case 'imposter':
+      if (daten.art === 'imposter') dazu('imposter', runde.wortId, daten.meinWort ?? daten.echtesWort);
+      break;
+    case 'quiz':
+      dazu('quiz', runde.frageId, runde.frage);
+      break;
+    case 'werbinich':
+      if (daten.art === 'werbinich') daten.namen.forEach((name, s) => dazu('identitaeten', runde.identitaeten[s] ?? '', name));
+      break;
+    case 'niemals':
+      dazu('niemals', runde.spruchId, runde.text);
+      break;
+    case 'wereher':
+      dazu('wereher', runde.spruchId, runde.text);
+      break;
+    case 'busfahrer':
+      break;
+    case 'schaetzen':
+      dazu('schaetzen', runde.frageId, runde.frage);
+      break;
+    case 'entweder':
+      dazu('entweder', runde.paarId, `${runde.a} oder ${runde.b}`);
+      break;
+    case 'wahrheitpflicht':
+      if (daten.art === 'wahrheitpflicht') daten.text.forEach((text, s) => dazu('wahrheitpflicht', runde.aufgabeId[s] ?? '', text));
+      break;
+    case 'kategorien':
+      dazu('kategorien', runde.kategorieId, runde.kategorie);
+      break;
+    case 'mehrheit':
+      dazu('mehrheit', runde.frageId, runde.frage);
+      break;
+    case 'regelkarte':
+      dazu('regelkarten', runde.karteId, runde.text);
+      break;
+    case 'bombe':
+      dazu('kategorien', runde.kategorieId, runde.kategorie);
+      break;
+    case 'zehnsekunden':
+      if (daten.art === 'zehnsekunden') dazu('zehnsekunden', runde.aufgabeId, daten.aufgabe);
+      break;
+    case 'koenigsbecher':
+      if (daten.art === 'koenigsbecher' && daten.letzte) {
+        dazu('koenigsbecher', daten.letzte.kartenId, `${daten.letzte.titel}: ${daten.letzte.text}`);
+      }
+      if (runde.neueRegel) dazu('regelkarten', runde.neueRegel.karteId, runde.neueRegel.text);
+      break;
+  }
+  /* Die geltende Regel-Karte steht ueber jeder Runde — auch sie kann man melden. */
+  if (partie.regelKarte) dazu('regelkarten', partie.regelKarte.karteId, partie.regelKarte.text);
+  return liste;
+}
+
+function eskalationsSicht(partie: PartykistePartie): EskalationsSicht | null {
+  const regeln = regelnDerRunde(partie.regeln, partie.rundeNr, partie.runden);
+  if (!regeln.eskalation) return null;
+  const stufe = eskalationsStufe(partie.rundeNr, partie.runden);
+  return {
+    stufe,
+    inhaltsHaerte: regeln.inhaltsHaerte,
+    schluckFaktor: regeln.schluckFaktor,
+    gekappt: regeln.inhaltsHaerte < stufe,
   };
 }

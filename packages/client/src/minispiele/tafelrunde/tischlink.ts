@@ -9,6 +9,8 @@
  * hebt die Aufteilung fuer Tafelrunde wieder auf.
  */
 
+import { apiBase, inApp } from '../../laufzeit';
+
 /**
  * Der Name des Suchparameters im geteilten Link.
  *
@@ -19,7 +21,14 @@
  */
 export const TISCH_PARAMETER = 'tisch';
 
-/** Der Link, den der Gastgeber weitergibt. */
+/**
+ * Der Link, den der Gastgeber weitergibt.
+ *
+ * In der App ist `location.origin` `brauweg://app` — ein Link, den kein anderes
+ * Handy oeffnen kann. Dort steht der Server unter `apiBase`, und der liefert
+ * auch den Web-Client aus (dasselbe wie `einladungsLink` der Partykiste).
+ */
 export function beitrittsLink(code: string): string {
-  return `${window.location.origin}/?${TISCH_PARAMETER}=${code}`;
+  const basis = inApp && apiBase ? apiBase : window.location.origin;
+  return `${basis}/?${TISCH_PARAMETER}=${code}`;
 }

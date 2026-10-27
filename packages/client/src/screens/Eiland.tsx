@@ -16,6 +16,17 @@ import { Ornamentbild } from '../minispiele/eiland/Ornament';
 import type { EilandSicht, EilandVariante } from '../minispiele/eiland/sicht';
 import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
+import { serverAdresse } from '../laufzeit';
+import { GastHinweis } from '../tisch/GastHinweis';
+import { HbBlatt } from './HbBlatt';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+import './spiel-einstieg-mini.css';
+
+/**
+ * Die Farbe von Eiland im Hub: das Gras der Karte (`.ei-feld[data-art='gras']`).
+ * Sie toent Auswahl und Kopf; der Hauptknopf bleibt gold (DESIGN.md, „Spieleinstieg").
+ */
+const AKZENT = '#a9c46c';
 
 /**
  * Eiland — Landnahme zu zweit, gleichzeitig gezogen.
@@ -370,34 +381,45 @@ export function Eiland({
   // Mitspieler suchen
   // -------------------------------------------------------------------------
 
+  /** Unter jedem Knopf im Fuss: wie viele gerade Eiland spielen. */
+  const spielerZeile = <p className="hb-klein">{aktiv ?? '…'} Spieler gerade in Eiland</p>;
+
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
     const gefunden = suchstand.suchende;
     return (
-      <main className="ei-seite ei-menue">
-        <button className="ei-zurueck" type="button" onClick={brichSucheAb}>
-          ← Abbrechen
-        </button>
-        <div className="ei-menue-mitte">
-          <h1 className="ei-titel">Gegner suchen</h1>
-          {/* Die Zahl gross und ohne Einheit: Sie zaehlt sichtbar herunter und
-              beantwortet damit die einzige Frage, die man hier hat. */}
-          <p className="ei-countdown" aria-live="polite">
+      <SpielRahmen
+        gameId="eiland"
+        titel="Gegner suchen"
+        unter="Eiland · Online Match"
+        akzent={AKZENT}
+        onBack={brichSucheAb}
+        zurueckText="Suche abbrechen"
+        fuss={
+          <>
+            <button type="button" className="hb-kn is-blau is-breit" onClick={brichSucheAb}>
+              Abbrechen
+            </button>
+            {spielerZeile}
+          </>
+        }
+      >
+        <div className="spe-warten">
+          <p className="spe-countdown" aria-live="polite">
             {sekunden}
           </p>
-          <p className="ei-untertitel">
+          <p className="spe-text">
             {gefunden === 1
-              ? 'Noch niemand sonst — bleibt es dabei, spielst du gegen die KI.'
+              ? 'Noch niemand sonst - bleibt es dabei, spielst du gegen die KI.'
               : `${gefunden} Spieler gefunden`}
           </p>
-          <div className="ei-punkte-lauf" aria-hidden="true">
+          <div className="spe-lauf" aria-hidden="true">
             <span />
             <span />
             <span />
           </div>
-          <p className="ei-untertitel ei-klein">{aktiv ?? '…'} Spieler gerade in Eiland</p>
         </div>
-      </main>
+      </SpielRahmen>
     );
   }
 
@@ -406,87 +428,93 @@ export function Eiland({
   // -------------------------------------------------------------------------
 
   if (!tischId) {
+    /*
+     * Der Spieleinstieg-Baukasten. Die Suche ist der Hauptknopf im Fuss; die
+     * Spielart steht im Block des KI-Knopfes, weil sie nur dort wirkt (siehe
+     * `variante`).
+     */
     return (
-      <main className="ei-seite ei-menue">
-        <button className="ei-zurueck" type="button" onClick={onBack} aria-label="Zurück">
-          ←
-        </button>
-        <div className="ei-menue-mitte">
-          <h1 className="ei-titel">Eiland</h1>
-          <p className="ei-untertitel">
-            Nimm Land, sammle Ornamente und komm dem anderen zuvor. Ihr zieht
-            gleichzeitig — und wer dasselbe Feld will, muss darum kämpfen.
-          </p>
-          <div className="ei-probe" aria-hidden="true">
-            <span data-art="gras" />
-            <span data-art="gras">
-              <Ornamentbild art={0} />
-            </span>
-            <span data-art="wasser" />
-            <span data-art="berg" />
-            {variante === 'nebel' && <span data-art="nebel" />}
-          </div>
-          <button
-            className="ei-suchen"
-            type="button"
-            onClick={() => void starteSuche()}
-            disabled={sucht}
-          >
-            Online Match suchen…
-          </button>
-          {/*
-            Der Schalter zwischen den beiden Spielarten. Er gehoert ins Menue
-            und nicht an den Tisch: Die Spielart steht im Regelsatz und damit
-            seit dem Aufmachen fest — mitten in der Partie den Nebel
-            abzuschalten waere kein Knopf, sondern ein Schummelzettel.
-
-            Seit dem 06.09.2026 sitzt er UNTER der Suche, im Block des
-            KI-Knopfes: Die Suchschlange nimmt den Regelsatz des Moduls, der
-            Schalter wirkt also nur noch auf den Knopf darunter. Ueber beiden
-            stehend waere er eine Beschriftung, die nicht stimmt.
-          */}
-          <div className="ei-kiblock">
-            <p className="ei-blocktitel">Gegen die KI — hier wählst du die Spielart</p>
-            <div className="ei-schalter">
-              {/* Die offene Karte links, weil sie die Vorgabe ist — der Reiter
-                  sitzt beim Oeffnen dort, wo der Blick zuerst hinfaellt. */}
-              <button
-                type="button"
-                data-an={variante === 'klar' ? '' : undefined}
-                onClick={() => setVariante('klar')}
-              >
-                Offene Karte
-              </button>
-              <button
-                type="button"
-                data-an={variante === 'nebel' ? '' : undefined}
-                onClick={() => setVariante('nebel')}
-              >
-                Im Nebel
-              </button>
-              <p className="ei-schalter-text">
-                {variante === 'nebel'
-                  ? 'Du siehst dein Gebiet und drei Felder darüber hinaus.'
-                  : 'Die ganze Insel liegt offen — für euch beide.'}
-              </p>
-            </div>
+      <SpielRahmen
+        gameId="eiland"
+        titel="Eiland"
+        unter="2 Spieler · ihr zieht gleichzeitig"
+        akzent={AKZENT}
+        onBack={onBack}
+        zurueckText="Zurück zur Spielseite"
+        fuss={
+          <>
             <button
-              className="ei-botknopf"
               type="button"
-              onClick={() => void gegenKi()}
+              className="hb-kn is-gold is-haupt is-breit"
+              onClick={() => void starteSuche()}
               disabled={sucht}
             >
-              Gegen die KI spielen
+              Online Match suchen…
+            </button>
+            {spielerZeile}
+          </>
+        }
+      >
+        <p className="spe-text">
+          Nimm Land, sammle Ornamente und komm dem anderen zuvor. Ihr zieht
+          gleichzeitig - und wer dasselbe Feld will, muss darum kämpfen.
+        </p>
+        <div className="ei-probe spe-motiv" aria-hidden="true">
+          <span data-art="gras" />
+          <span data-art="gras">
+            <Ornamentbild art={0} />
+          </span>
+          <span data-art="wasser" />
+          <span data-art="berg" />
+          {variante === 'nebel' && <span data-art="nebel" />}
+        </div>
+        {fehler && <p className="hb-fehler">{fehler}</p>}
+        <SpielAbschnitt titel="Gegen die KI">
+          <p className="hb-klein">Hier wählst du die Spielart.</p>
+          <SpielWahl
+            name="Spielart"
+            werte={[
+              { wert: 'klar' as const, text: 'Offene Karte' },
+              { wert: 'nebel' as const, text: 'Im Nebel' },
+            ]}
+            wert={variante}
+            onWahl={setVariante}
+          />
+          <p className="hb-klein">
+            {variante === 'nebel'
+              ? 'Du siehst dein Gebiet und drei Felder darüber hinaus.'
+              : 'Die ganze Insel liegt offen - für euch beide.'}
+          </p>
+          <button
+            type="button"
+            className="hb-kn is-blau is-breit"
+            onClick={() => void gegenKi()}
+            disabled={sucht}
+          >
+            Gegen die KI spielen
+          </button>
+        </SpielAbschnitt>
+        <SpielAbschnitt titel="Anleitung">
+          <div className="hb-liste">
+            <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
+              <span>
+                <strong>So spielt man Eiland</strong>
+                <small>Regeln, Ornamente, zwei Spielarten</small>
+              </span>
+              <span className="hb-pf" aria-hidden="true">
+                ›
+              </span>
             </button>
           </div>
-          <button className="ei-regelknopf" type="button" onClick={() => setRegelnOffen(true)}>
-            So spielt man Eiland
-          </button>
-          {fehler && <p className="ei-fehler">{fehler}</p>}
-          <p className="ei-untertitel ei-klein">{aktiv ?? '…'} Spieler gerade in Eiland</p>
-        </div>
-        {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
-      </main>
+        </SpielAbschnitt>
+        {regelnOffen && (
+          <HbBlatt titel="So spielt man Eiland" onClose={() => setRegelnOffen(false)}>
+            <div className="spe-regeltext">
+              <Regeltext />
+            </div>
+          </HbBlatt>
+        )}
+      </SpielRahmen>
     );
   }
 
@@ -497,25 +525,36 @@ export function Eiland({
   if (!sicht) {
     const besetzt = (tisch.table?.seats ?? []).filter((platz) => platz.accountId).length;
     return (
-      <main className="ei-seite ei-menue">
-        <button className="ei-zurueck" type="button" onClick={brichAb}>
-          ← Abbrechen
-        </button>
-        <div className="ei-menue-mitte">
-          <h1 className="ei-titel">Tisch wird aufgebaut</h1>
-          <p className="ei-untertitel">
+      <SpielRahmen
+        gameId="eiland"
+        titel="Tisch wird aufgebaut"
+        unter="Eiland"
+        akzent={AKZENT}
+        onBack={brichAb}
+        zurueckText="Abbrechen"
+        fuss={
+          <>
+            <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
+              Abbrechen
+            </button>
+            {spielerZeile}
+          </>
+        }
+      >
+        <div className="spe-warten">
+          <p className="spe-text">
             {tisch.status === 'open'
               ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
               : 'Verbindung wird aufgebaut…'}
           </p>
-          <div className="ei-punkte-lauf" aria-hidden="true">
+          <div className="spe-lauf" aria-hidden="true">
             <span />
             <span />
             <span />
           </div>
-          <p className="ei-untertitel ei-klein">{aktiv ?? '…'} Spieler gerade in Eiland</p>
+          <GastHinweis sitze={tisch.table?.seats ?? []} className="spe-text" />
         </div>
-      </main>
+      </SpielRahmen>
     );
   }
 
@@ -1198,7 +1237,7 @@ function Spielerstand({
         {/* Kein <img> auf eine Datei, die es nicht gibt: Ohne Bild steht der
             Anfangsbuchstabe da. Ein weisser Kasten saehe nach Fehler aus. */}
         {zeile?.avatarUrl ? (
-          <img src={zeile.avatarUrl} alt="" draggable={false} />
+          <img src={serverAdresse(zeile.avatarUrl)} alt="" draggable={false} />
         ) : (
           <strong>{(name[0] ?? '?').toUpperCase()}</strong>
         )}
@@ -1244,26 +1283,15 @@ function Abschluss({
   );
 }
 
-/**
- * Das Regelblatt.
- *
- * Es erklaert vier Dinge, die man dem Brett nicht ansieht: dass gleichzeitig
- * gezogen wird, was bei einem Streitfeld passiert, was Ornamente bringen und
- * wie weit man sieht. Ohne den letzten Punkt haelt der erste Spieler den Nebel
- * fuer einen Fehler.
- */
-function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
+/** Der Wortlaut der Anleitung im Regelblatt. */
+function Regeltext(): React.JSX.Element {
   return (
-    <div className="ei-blatt" role="dialog" aria-label="So spielt man Eiland">
-      <button className="ei-blatt-zu" type="button" onClick={onClose} aria-label="Schließen">
-        ✕
-      </button>
-      <h2>So spielt man Eiland</h2>
+    <>
       <h3>Regeln</h3>
       <ol>
         <li>Jeder startet mit einem Feld in seiner Ecke der Insel.</li>
         <li>
-          Pro Runde nimmst du ein freies Wiesenfeld, das an dein Gebiet grenzt —
+          Pro Runde nimmst du ein freies Wiesenfeld, das an dein Gebiet grenzt -
           und ein Feld mehr für jedes Ornament, das du eingesammelt hast.
         </li>
         <li>
@@ -1272,7 +1300,7 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
         </li>
         <li>
           Ihr wählt <strong>gleichzeitig</strong>, ohne die Wahl des anderen zu
-          sehen. Wollen beide dasselbe Feld, wird darum gekämpft — der Ausgang
+          sehen. Wollen beide dasselbe Feld, wird darum gekämpft - der Ausgang
           steht fünfzig zu fünfzig. Wer verliert, kommt an dieser Stelle nicht
           weiter; Felder dahinter bleiben frei.
         </li>
@@ -1281,7 +1309,7 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
           Einsatz: Bei jedem Streitfeld fliegt einer aufs Feld. Hat nur einer
           von euch einen, gewinnt er das Feld sicher; haben beide einen,
           entscheidet wieder der Münzwurf. Die Streitfelder kommen in
-          zufälliger Reihenfolge dran, bis die Einsätze verbraucht sind — der
+          zufälliger Reihenfolge dran, bis die Einsätze verbraucht sind - der
           Rest bleibt fünfzig zu fünfzig.
         </li>
         <li>Die Partie endet, wenn keiner mehr irgendwohin kann.</li>
@@ -1290,17 +1318,17 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
       <p>
         Städte und Brunnen liegen verstreut auf der Insel. Wer das Feld nimmt,
         auf dem eines steht, nimmt von da an ein Feld mehr pro Runde. Es liegen
-        immer vier auf der Karte — für jedes eingesammelte rückt eines nach.
+        immer vier auf der Karte - für jedes eingesammelte rückt eines nach.
       </p>
       <h3>Zwei Spielarten</h3>
       <p>
         <strong>Im Nebel</strong> siehst du dein Gebiet und drei Felder darüber
-        hinaus; alles andere liegt grau — auch für den Gegner. Auf der{' '}
+        hinaus; alles andere liegt grau - auch für den Gegner. Auf der{' '}
         <strong>offenen Karte</strong> seht ihr beide die ganze Insel. Was auf
         dem Zettel des anderen steht, bleibt in beiden Fällen geheim.
       </p>
       <h3>Ziel</h3>
       <p>Wer am Ende die meisten Felder hält, gewinnt.</p>
-    </div>
+    </>
   );
 }

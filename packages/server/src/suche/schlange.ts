@@ -102,7 +102,8 @@ function schluessel(gameId: GameId, config: unknown): string {
 }
 
 /**
- * Schluessel der Karte `imBau`: Spiel UND Konto (seit dem 09.09.2026).
+ * Schluessel der Karten `imBau` und `ergebnisse`: Spiel UND Konto (seit dem
+ * 09.09.2026, `ergebnisse` seit dem 24.09.2026).
  *
  * Ein Konto kann in zwei Fenstern fuer zwei verschiedene Spiele zugleich
  * stehen — zwei Reiter oder zwei Geraete am selben Konto; die Fenster sind
@@ -113,8 +114,9 @@ function schluessel(gameId: GameId, config: unknown): string {
  * A hiess es wieder "sucht nicht" — genau die Antwort, gegen die `imBau`
  * gebaut ist, nur im Randfall.
  *
- * `ergebnisse` haengt weiter am Konto allein — Bestand seit der ersten
- * Fassung der Schlange und bewusst nicht mit umgestellt.
+ * `ergebnisse` hing bis zum 24.09.2026 weiter am Konto allein: Wer in Spiel
+ * A vermittelt wurde und binnen `ERGEBNIS_FRIST_MS` fuer Spiel B nachfragte,
+ * bekam die tischId des A-Tisches — der B-Reiter ging an den falschen Tisch.
  */
 function kontoSchluessel(gameId: GameId, accountId: string): string {
   return `${gameId}#${accountId}`;
@@ -148,8 +150,16 @@ export class Suchschlange {
 
   /** Schluessel: `schluessel(gameId, config)`. */
   private readonly fenster = new Map<string, Fenster>();
-  /** Fertig vermittelt: Konto -> Tisch, bis der Spieler es abgeholt hat. */
-  private readonly ergebnisse = new Map<string, { tischId: string; seit: number }>();
+  /**
+   * Fertig vermittelt: Spiel+Konto -> Tisch, bis der Spieler es abgeholt hat.
+   *
+   * Schluessel: `kontoSchluessel`; das Konto steht auch im Wert, damit
+   * `verlaesstUeberall` es ohne Spiel wiederfindet (wie bei `imBau`).
+   */
+  private readonly ergebnisse = new Map<
+    string,
+    { accountId: string; tischId: string; seit: number }
+  >();
   /**
    * Konten, deren Runde gerade zu einem Tisch wird (seit dem 07.09.2026).
    *
@@ -164,14 +174,35 @@ export class Suchschlange {
    * Abwesenheitsfrist aus, und wer noch einmal suchte, bekam einen Bot.
    * Solange ein Konto hier steht, lautet die Antwort deshalb "sucht noch".
    *
-   * Schluessel: `kontoSchluessel` — je Spiel ein Eintrag, anders als bei
-   * `ergebnisse`; das Konto steht auch im Wert, damit `verlaesstUeberall`
-   * es ohne Spiel wiederfindet.
+   * Schluessel: `kontoSchluessel` — je Spiel ein Eintrag; das Konto steht
+   * auch im Wert, damit `verlaesstUeberall` es ohne Spiel wiederfindet.
    */
   private readonly imBau = new Map<
     string,
     { accountId: string; suchende: number; seit: number }
   >();
+  /**
+   * Konten, die waehrend des Tischbaus abgesprungen sind (seit dem
+   * 22.09.2026). Schluessel wie bei `imBau`, Wert ist der Zeitpunkt.
+   *
+   * `faellig` nimmt die Runde aus dem Fenster, danach laeuft der Tischbau —
+   * in der Produktion gut eine Sekunde. Wer in dieser Zeit Abbrechen
+   * drueckt, verschwindet zwar aus `imBau`, sein Sitz steht aber schon per
+   * `createTable`/`joinTable` in der Datenbank: Der Client hat die Suche
+   * verlassen und fragt nie wieder nach, der Sitz bleibt leer, und die
+   * Partie laeuft nach der Abwesenheitsfrist aus — genau das Symptom, gegen
+   * das `imBau` gebaut ist, nur ueber den Abbrechen-Knopf.
+   *
+   * Raeumen kann die Schlange den Sitz nicht: Sie ist reine Buchhaltung und
+   * kennt keinen Tisch. Sie merkt sich den Absprung deshalb nur; die
+   * Vermittlung fragt nach dem Bau danach (`imBauAbgesprungen`), nimmt den
+   * Abspringer wieder vom Tisch und schreibt ihm kein Ergebnis.
+   *
+   * Der Vermerk verfaellt mit `bauBeendet`, also am Ende genau des Baus, um
+   * den es geht. Eine neue Suche loescht ihn bewusst NICHT — sonst bliebe
+   * sein Sitz im alten Tisch stehen, waehrend er laengst woanders sucht.
+   */
+  private readonly abgesprungen = new Map<string, number>();
 
   constructor(optionen: SchlangeOptionen = {}) {
     this.fensterMs = optionen.fensterMs ?? FENSTER_MS;
@@ -186,12 +217,17 @@ export class Suchschlange {
   betritt(gameId: GameId, accountId: string, config: unknown = null): void {
     const jetzt = this.jetzt();
     // Ein altes Ergebnis waere sonst die Antwort auf die NEUE Suche und
-    // schickte den Spieler an den Tisch von vorhin.
-    this.ergebnisse.delete(accountId);
+    // schickte den Spieler an den Tisch von vorhin. Nur fuer DIESES Spiel,
+    // wie beim Bau-Eintrag: Das Ergebnis eines anderen Spiels holt dort der
+    // andere Reiter ab, und diese Suche kann es nie mehr beantworten.
+    this.ergebnisse.delete(kontoSchluessel(gameId, accountId));
     // Den Bau-Eintrag nur fuer DIESES Spiel: Was das Konto in einem anderen
     // Spiel gerade gebaut bekommt, geht diese Suche nichts an — dort steht es
     // in einem eigenen Fenster, und der andere Reiter fragt weiter nach.
-    this.imBau.delete(kontoSchluessel(gameId, accountId));
+    // Lief fuer dieses Spiel gerade ein Bau (zweiter Reiter, zweites Geraet),
+    // ist die neue Suche ein Absprung wie jeder andere: Der Sitz im
+    // entstehenden Tisch gehoert geraeumt, sonst wartet er leer.
+    this.absprungVermerken(gameId, accountId);
 
     const ziel = schluessel(gameId, config);
     // Wer mit einer ANDEREN Spielart schon in diesem Spiel steht, wechselt
@@ -238,10 +274,12 @@ export class Suchschlange {
    * erbt nicht die abgelaufene Wartezeit eines Fremden.
    */
   verlaesst(gameId: GameId, accountId: string): void {
-    // Wer mitten im Tischbau abbricht, sitzt gleich trotzdem am Tisch — das
-    // laesst sich hier nicht mehr verhindern. Aber er soll nicht weiter
-    // "sucht noch" hoeren, wenn er doch noch einmal nachfragt.
-    this.imBau.delete(kontoSchluessel(gameId, accountId));
+    // Wer mitten im Tischbau abbricht, sitzt gleich trotzdem am Tisch — die
+    // Schlange kennt keinen Tisch und kann den Sitz nicht selbst raeumen.
+    // Sie vermerkt den Absprung, die Vermittlung holt ihn nach dem Bau
+    // herunter (siehe `abgesprungen`). Und "sucht noch" hoert er ab hier
+    // nicht mehr, falls er doch noch einmal nachfragt.
+    this.absprungVermerken(gameId, accountId);
     const eintrag = this.fensterVon(gameId, accountId);
     if (!eintrag) return;
     eintrag.fenster.suchende.delete(accountId);
@@ -264,18 +302,46 @@ export class Suchschlange {
       if (!fenster.suchende.delete(accountId)) continue;
       if (fenster.suchende.size === 0) this.fenster.delete(schluessel);
     }
-    // Auch ein schon vermitteltes Ergebnis: Es wuerde den Spieler beim
-    // naechsten Abruf an den Tisch von vorhin schicken.
-    this.ergebnisse.delete(accountId);
+    // Auch jedes schon vermittelte Ergebnis: Es wuerde den Spieler beim
+    // naechsten Abruf an den Tisch von vorhin schicken. Nach Spiel+Konto
+    // geschluesselt, also ueber die Werte.
+    for (const [schluessel, ergebnis] of this.ergebnisse) {
+      if (ergebnis.accountId === accountId) this.ergebnisse.delete(schluessel);
+    }
     // Und jeder Bau-Eintrag, in welchem Spiel auch immer — die Karte ist nach
-    // Spiel+Konto geschluesselt, also ueber die Werte.
+    // Spiel+Konto geschluesselt, also ueber die Werte. Auch das ist ein
+    // Absprung: Wer sich an einen anderen Tisch setzt, darf keinen Sitz im
+    // gerade entstehenden Suchtisch behalten.
     for (const [schluessel, bau] of this.imBau) {
-      if (bau.accountId === accountId) this.imBau.delete(schluessel);
+      if (bau.accountId !== accountId) continue;
+      this.imBau.delete(schluessel);
+      this.abgesprungen.set(schluessel, this.jetzt());
     }
   }
 
+  /**
+   * Den Absprung aus einem laufenden Tischbau vermerken und das Konto aus
+   * `imBau` nehmen.
+   *
+   * Nur wer ueberhaupt im Bau stand, bekommt gerade einen Sitz — steht
+   * nichts in `imBau`, gibt es auch nichts zu raeumen und nichts zu merken.
+   */
+  private absprungVermerken(gameId: GameId, accountId: string): void {
+    const schluessel = kontoSchluessel(gameId, accountId);
+    if (!this.imBau.delete(schluessel)) return;
+    this.abgesprungen.set(schluessel, this.jetzt());
+  }
+
+  /**
+   * Ist dieses Konto aus dem laufenden Tischbau abgesprungen? Fragt die
+   * Vermittlung, sobald der Tisch steht — siehe `abgesprungen`.
+   */
+  imBauAbgesprungen(gameId: GameId, accountId: string): boolean {
+    return this.abgesprungen.has(kontoSchluessel(gameId, accountId));
+  }
+
   stand(gameId: GameId, accountId: string): Suchstand {
-    const ergebnis = this.ergebnisse.get(accountId);
+    const ergebnis = this.ergebnisse.get(kontoSchluessel(gameId, accountId));
     if (ergebnis) {
       return { sucht: false, suchende: 0, restMs: 0, tischId: ergebnis.tischId };
     }
@@ -344,11 +410,17 @@ export class Suchschlange {
     }
 
     // Aufgelaufene, nie abgeholte Ergebnisse vergessen.
-    for (const [accountId, ergebnis] of this.ergebnisse) {
-      if (jetzt - ergebnis.seit > ERGEBNIS_FRIST_MS) this.ergebnisse.delete(accountId);
+    for (const [schluessel, ergebnis] of this.ergebnisse) {
+      if (jetzt - ergebnis.seit > ERGEBNIS_FRIST_MS) this.ergebnisse.delete(schluessel);
     }
     for (const [schluessel, bau] of this.imBau) {
       if (jetzt - bau.seit > BAU_FRIST_MS) this.imBau.delete(schluessel);
+    }
+    // Ein Vermerk lebt normalerweise nur so lange wie sein Tischbau
+    // (`bauBeendet`). Dieselbe Frist ist das Netz darunter, damit ein Bau
+    // ohne Ende die Karte nicht unbegrenzt wachsen laesst.
+    for (const [schluessel, seit] of this.abgesprungen) {
+      if (jetzt - seit > BAU_FRIST_MS) this.abgesprungen.delete(schluessel);
     }
 
     return runden;
@@ -357,13 +429,14 @@ export class Suchschlange {
   /**
    * Der Tisch steht: Der naechste Abruf dieser Konten nennt ihn.
    *
-   * Das Spiel braucht nur der Bau-Eintrag; das Ergebnis haengt am Konto.
+   * Bau-Eintrag und Ergebnis haengen beide an Spiel+Konto.
    */
   vermittelt(gameId: GameId, accountIds: readonly string[], tischId: string): void {
     const jetzt = this.jetzt();
     for (const accountId of accountIds) {
-      this.imBau.delete(kontoSchluessel(gameId, accountId));
-      this.ergebnisse.set(accountId, { tischId, seit: jetzt });
+      const schluessel = kontoSchluessel(gameId, accountId);
+      this.imBau.delete(schluessel);
+      this.ergebnisse.set(schluessel, { accountId, tischId, seit: jetzt });
     }
   }
 
@@ -374,8 +447,17 @@ export class Suchschlange {
    * Beitritt wurde abgewiesen), soll beim naechsten Abruf "sucht nicht"
    * hoeren und von vorn anfangen, statt endlos "sucht noch". Fuer die
    * Vermittelten ist der Eintrag schon durch `vermittelt` weg.
+   *
+   * Hier verfaellt auch der Absprung-Vermerk dieser Runde: Die Vermittlung
+   * hat ihn zu diesem Zeitpunkt bereits ausgewertet.
    */
   bauBeendet(gameId: GameId, accountIds: readonly string[]): void {
-    for (const accountId of accountIds) this.imBau.delete(kontoSchluessel(gameId, accountId));
+    for (const accountId of accountIds) {
+      const schluessel = kontoSchluessel(gameId, accountId);
+      this.imBau.delete(schluessel);
+      // Bliebe der Vermerk stehen, laese der NAECHSTE Bau desselben Kontos
+      // ihn als Absprung und setzte es gleich wieder vom Tisch.
+      this.abgesprungen.delete(schluessel);
+    }
   }
 }

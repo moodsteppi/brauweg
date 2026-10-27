@@ -18,11 +18,29 @@
  * laeuft. Fehlt es, ist dies ein Browser.
  */
 
+import { imUmfang } from './umfang';
+
 declare global {
   interface Window {
     BRAUWEG_APP?: {
       /** Basisadresse des Servers, z.B. https://www.brauweg-spielen.de */
       apiBase: string;
+      /** Welche Huelle (seit der Android-Huelle; aeltere iOS-Builds lassen es weg). */
+      plattform?: 'android' | 'ios';
+      /** Kann diese Huelle Push? Nur dann lohnt `BrauwegNativ.pushErlauben()`. */
+      push?: boolean;
+      /** Kann diese Huelle „Mit Apple anmelden" nativ? (anmeldung/apple-nativ.ts) */
+      apple?: boolean;
+      /**
+       * Das letzte Push-Token — fuer den, der erst nach dem Ereignis
+       * `brauweg:push-token` hinsieht (apps/android, Huelle.pushTokenSkript).
+       */
+      pushToken?: { plattform: 'android' | 'ios'; token: string };
+      /**
+       * Tisch einer angetippten Mitteilung, bis der Client ihn abholt
+       * (mitteilung-antippen.ts; iOS: Huelle.tischSkript).
+       */
+      pushTisch?: { tableId: string; gameId: string };
     };
   }
 }
@@ -32,8 +50,39 @@ const huelle = typeof window === 'undefined' ? undefined : window.BRAUWEG_APP;
 /** Laeuft der Client in der nativen Huelle? */
 export const inApp = huelle !== undefined;
 
+/**
+ * Edelsteine zeigen? In der App vorerst nicht (Emile, 22.10.2026): Dort wird
+ * nur mit erspielten Münzen gekauft. Der Server lehnt Edelstein-Käufe aus der
+ * App ebenfalls ab (`nurMuenzenInApp`).
+ *
+ * Auf der Webseite haengt es am Umfang (`shop`, umfang.ts). Darum eine
+ * Funktion und kein Wert: Der Umfang kommt erst mit `/api/me`, also nach dem
+ * Laden dieser Datei — ein Wert stuende fest, bevor er bekannt ist.
+ */
+export function mitEdelsteinen(): boolean {
+  return !inApp && imUmfang('shop');
+}
+
 /** Vorsatz aller API-Aufrufe. Im Browser leer, also dieselbe Herkunft. */
 export const apiBase = (huelle?.apiBase ?? '').replace(/\/+$/, '');
+
+/**
+ * Eine Adresse, die der Server liefert (`avatarUrl: '/api/avatars/…'`), als
+ * Bildquelle.
+ *
+ * Der Server schreibt seine Adressen ohne Herkunft, weil der Browser sie
+ * auf derselben aufloest. In der App zeigte `/api/…` ins App-Paket — dort
+ * liegt kein Profilbild, und statt des Gesichts stand ein leerer Kasten.
+ * Im Browser ist `apiBase` leer, die Adresse bleibt also Zeichen fuer
+ * Zeichen dieselbe. Adressen ausserhalb von `/api/` (Pinguine, Karten)
+ * liegen im Paket und bleiben, wie sie sind.
+ */
+export function serverAdresse(pfad: string): string;
+export function serverAdresse(pfad: string | null | undefined): string | null;
+export function serverAdresse(pfad: string | null | undefined): string | null {
+  if (!pfad) return pfad ?? null;
+  return apiBase && pfad.startsWith('/api/') ? `${apiBase}${pfad}` : pfad;
+}
 
 /**
  * Marke, hinter der das Token als Unterprotokoll mitgeht. Muss zu

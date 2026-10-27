@@ -1,0 +1,292 @@
+/*
+ * Wasserfall-Einlage im Königsbecher (Wasserfall.tsx).
+ *
+ * Ablauf in 3,6 s: Wasser bricht über die Kante (0–0,6 s), das Ass stürzt
+ * mit und überschlägt sich (0,3–1,6 s), schlägt ins Becken (Gischt, Ringe),
+ * das Wort fällt Buchstabe für Buchstabe nach, alles blendet aus (3,1 s).
+ */
+
+.wf {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+  background: radial-gradient(ellipse at 50% 30%, rgba(8, 30, 60, 0.92), rgba(4, 10, 24, 0.97));
+  animation: wf-ein 0.25s ease-out both, wf-aus 0.5s ease-in 3.1s both;
+  cursor: pointer;
+  overflow: hidden;
+}
+@keyframes wf-ein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes wf-aus {
+  to { opacity: 0; }
+}
+
+/* Die Bühne in Raumtiefe: alles darin steht in derselben Perspektive. */
+.wf-buehne {
+  position: absolute;
+  inset: 0;
+  perspective: 700px;
+  perspective-origin: 50% 20%;
+  transform-style: preserve-3d;
+}
+
+/* Felskante oben. */
+.wf-kante {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 40px);
+  left: -10%;
+  right: -10%;
+  height: 70px;
+  background:
+    radial-gradient(ellipse 18% 60% at 20% 100%, #3e5a3a, transparent 70%),
+    radial-gradient(ellipse 22% 70% at 75% 100%, #3a5536, transparent 70%),
+    linear-gradient(180deg, #232a33, #39424f 70%, #4b5563);
+  border-radius: 0 0 40% 40% / 0 0 30px 30px;
+  transform: translateZ(60px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Der Fall: eine nach hinten geneigte Fläche, aus der Kante herab. */
+.wf-fall {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 96px);
+  left: 50%;
+  height: 72vh;
+  overflow: hidden;
+  transform-origin: 50% 0;
+  border-radius: 0 0 50% 50% / 0 0 18% 18%;
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+  mask-image: linear-gradient(180deg, #000 70%, transparent);
+  animation: wf-brechen 0.6s cubic-bezier(0.3, 0, 0.2, 1) both;
+}
+.wf-fall.is-hinten {
+  width: 72vw;
+  margin-left: -36vw;
+  transform: rotateX(16deg) translateZ(-40px);
+  opacity: 0.7;
+}
+.wf-fall.is-vorne {
+  width: 54vw;
+  margin-left: -27vw;
+  transform: rotateX(8deg) translateZ(30px);
+  animation-delay: 0.08s;
+}
+@keyframes wf-brechen {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+/* Strömung: ein doppelt hohes Streifenband, das nach unten wandert. */
+.wf-stroemung {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -100%;
+  height: 200%;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.0) 0 6px,
+      rgba(210, 240, 255, 0.55) 6px 9px,
+      rgba(120, 190, 240, 0.2) 9px 16px,
+      rgba(255, 255, 255, 0.35) 16px 18px,
+      rgba(90, 160, 220, 0.15) 18px 27px
+    ),
+    linear-gradient(180deg, #5fb4ec, #2f7fc4 60%, #1f5f9c);
+  animation: wf-stroemen 0.5s linear infinite;
+}
+.wf-fall.is-hinten .wf-stroemung { animation-duration: 0.8s; }
+@keyframes wf-stroemen {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 50%, 0); }
+}
+
+/* Ebenen vor dem Wasser: Becken, Gischt, Nebel — und darüber die Karte. */
+.wf-vorn,
+.wf-kartenraum {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.wf-vorn {
+  z-index: 2;
+  perspective: 700px;
+}
+.wf-kartenraum {
+  z-index: 3;
+  perspective: 600px;
+  perspective-origin: 50% 30%;
+}
+
+/* Becken mit Wellenringen. */
+.wf-becken {
+  position: absolute;
+  left: 50%;
+  bottom: 18vh;
+  width: 92vw;
+  height: 22vh;
+  margin-left: -46vw;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #7cc6f5 0%, #3b8fd0 35%, #1f5f9c 60%, rgba(16, 50, 90, 0) 76%);
+  transform: rotateX(68deg);
+}
+.wf-ring {
+  position: absolute;
+  inset: 25%;
+  border: 3px solid rgba(220, 245, 255, 0.7);
+  border-radius: 50%;
+  opacity: 0;
+  animation: wf-ring 1.2s ease-out infinite;
+  animation-delay: calc(1.2s + var(--i) * 0.4s);
+}
+@keyframes wf-ring {
+  from { transform: scale(0.3); opacity: 0.9; }
+  to { transform: scale(1.9); opacity: 0; }
+}
+
+/* Gischt: Tropfen springen im Bogen aus dem Aufprall. */
+.wf-gischt {
+  position: absolute;
+  left: 50%;
+  bottom: 28vh;
+}
+.wf-tropfen {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50% 50% 50% 0;
+  background: #d8f1ff;
+  box-shadow: 0 0 6px rgba(200, 235, 255, 0.8);
+  opacity: 0;
+  animation: wf-spritzen 0.9s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+  animation-delay: calc(1.1s + var(--i) * 0.06s);
+}
+@keyframes wf-spritzen {
+  0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translate3d(calc(var(--dx) * 0.6), calc(var(--h) * -1), 0) scale(1); opacity: 1; }
+  100% { transform: translate3d(var(--dx), 20px, 0) scale(0.4); opacity: 0; }
+}
+
+/* Nebel über dem Becken. */
+.wf-nebel {
+  position: absolute;
+  left: 50%;
+  bottom: 16vh;
+  width: 120vw;
+  height: 30vh;
+  margin-left: -60vw;
+  background: radial-gradient(ellipse, rgba(220, 240, 255, 0.35), transparent 65%);
+  filter: blur(6px);
+  animation: wf-nebel 2.4s ease-in-out infinite alternate;
+}
+.wf-nebel.is-zwei { bottom: 26vh; animation-duration: 3s; animation-direction: alternate-reverse; opacity: 0.7; }
+@keyframes wf-nebel {
+  from { transform: translate3d(-4%, 0, 0) scale(1); opacity: 0.6; }
+  to { transform: translate3d(4%, -10px, 0) scale(1.08); opacity: 1; }
+}
+
+/* Das Ass: fällt durch den Wasserfall, überschlägt sich, landet und glüht. */
+.wf-karte {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 108px;
+  height: 152px;
+  margin-left: -54px;
+  transform-style: preserve-3d;
+  animation: wf-sturz 1.4s cubic-bezier(0.5, 0, 0.6, 1) 0.3s both;
+}
+@keyframes wf-sturz {
+  0% { transform: translate3d(0, 10vh, 0) rotateX(0deg) rotateZ(-8deg); opacity: 0; }
+  10% { opacity: 1; }
+  78% { transform: translate3d(0, 40vh, 60px) rotateX(-540deg) rotateZ(6deg); }
+  90% { transform: translate3d(0, 34vh, 80px) rotateX(-720deg) rotateZ(0deg) scale(1.15); }
+  100% { transform: translate3d(0, 36vh, 80px) rotateX(-720deg) rotateZ(0deg) scale(1.1); opacity: 1; }
+}
+.wf-karte-innen {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: wf-drehen 1.4s ease-in-out 0.3s both;
+}
+@keyframes wf-drehen {
+  from { transform: rotateY(-180deg); }
+  to { transform: rotateY(0deg); }
+}
+.wf-karte-vorne,
+.wf-karte-hinten {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+.wf-karte-vorne {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: linear-gradient(160deg, #fffaf0, #f1e6cf);
+  color: #1d1a17;
+  font: 900 52px/1 system-ui;
+  box-shadow: 0 0 0 3px #f0c75e, 0 14px 30px rgba(0, 0, 0, 0.45);
+  animation: wf-gluehen 1.2s ease-in-out 1.7s infinite alternate;
+}
+.wf-karte-farbe { font-size: 40px; }
+.wf-karte-vorne[data-rot] { color: #b3261e; }
+.wf-karte-hinten {
+  transform: rotateY(180deg);
+  background:
+    repeating-linear-gradient(45deg, #2f2352 0 10px, #3d2d6b 10px 20px);
+  box-shadow: 0 0 0 3px #a678f2;
+}
+@keyframes wf-gluehen {
+  from { box-shadow: 0 0 0 3px #f0c75e, 0 0 10px rgba(240, 199, 94, 0.3); }
+  to { box-shadow: 0 0 0 3px #f0c75e, 0 0 34px rgba(240, 199, 94, 0.85); }
+}
+
+/* Das Wort fällt Buchstabe für Buchstabe ins Becken. */
+.wf-wort {
+  position: relative;
+  margin: 0;
+  display: flex;
+  gap: 2px;
+  font: 900 clamp(30px, 10vw, 52px)/1 system-ui;
+  letter-spacing: 0.02em;
+  color: #e9f7ff;
+  text-shadow: 0 3px 0 #1f5f9c, 0 0 18px rgba(120, 200, 255, 0.8);
+}
+.wf-wort span {
+  display: inline-block;
+  animation: wf-buchstabe 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  animation-delay: calc(1.4s + var(--i) * 0.06s);
+}
+@keyframes wf-buchstabe {
+  from { transform: translate3d(0, -60vh, 0) rotate(-20deg); opacity: 0; }
+  to { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+}
+.wf-text {
+  position: relative;
+  margin: 12px 0 0;
+  font: 700 17px/1.3 system-ui;
+  color: #cfe8ff;
+  animation: wf-ein 0.4s ease-out 2s both;
+}
+
+/* Bewegung reduzieren: Karte und Wort stehen, nur ein kurzes Einblenden. */
+@media (prefers-reduced-motion: reduce) {
+  .wf *,
+  .wf *::before {
+    animation: none !important;
+  }
+  .wf-karte { transform: translate3d(0, 40vh, 0); }
+}

@@ -43,7 +43,11 @@ export function Heim({
   onSeite,
 }: {
   sammlung: React.ReactNode;
-  menue: React.ReactNode;
+  /**
+   * Die mittlere Seite. Als Funktion bekommt sie den Weg zu den anderen
+   * beiden mit — das neue Hub fuehrt von dort mit einer Zeile hinueber.
+   */
+  menue: React.ReactNode | ((geheZu: (ziel: Seite) => void) => React.ReactNode);
   mehr: React.ReactNode;
   /** Welche Seite gerade vorne liegt. */
   onSeite?: (seite: Seite) => void;
@@ -119,13 +123,16 @@ export function Heim({
     });
   }, []);
 
+  // `is-neu`: Grund und Leiste in Nachtblau & Gold (spiel-einstieg-mini.css).
   return (
-    <main className="mm-heim">
+    <main className="mm-heim is-neu">
       <div className="mm-streifen" ref={streifenRef}>
         <section className="mm-blatt" aria-label="Sammlung">
           {sammlung}
         </section>
-        <section className="mm-blatt" aria-label="Mememory">{menue}</section>
+        <section className="mm-blatt" aria-label="Mememory">
+          {typeof menue === 'function' ? menue(geheZu) : menue}
+        </section>
         <section className="mm-blatt" aria-label="Mehr">
           {mehr}
         </section>

@@ -12,6 +12,27 @@
  * schlicht nicht.
  */
 
+import type {
+  KategorienSicht,
+  MehrheitSicht,
+  OhneUhrAktion,
+  RegelKarteSicht,
+  RegelkartenSicht,
+} from './sicht-ohne-uhr';
+
+export type { KategorienSicht, MehrheitSicht, OhneUhrAktion, RegelKarteSicht, RegelkartenSicht } from './sicht-ohne-uhr';
+
+import type { BombeSicht, KoenigsbecherSicht, ZehnSekundenSicht, ZeitdruckAktion } from './sicht-zeitdruck';
+
+export type {
+  BombeSicht,
+  KoenigsbecherSicht,
+  PartyGezogeneKarte,
+  PartyKartenFolge,
+  ZehnSekundenSicht,
+  ZeitdruckAktion,
+} from './sicht-zeitdruck';
+
 /** Spielstaerke der Bots — Spiegelbild von game-api BotLevel (protocol.ts). */
 export type PartyBotStufe = 'anfaenger' | 'standard' | 'experte' | 'genie';
 
@@ -24,7 +45,13 @@ export type PartyMinispiel =
   | 'busfahrer'
   | 'schaetzen'
   | 'entweder'
-  | 'wahrheitpflicht';
+  | 'wahrheitpflicht'
+  | 'kategorien'
+  | 'mehrheit'
+  | 'regelkarte'
+  | 'bombe'
+  | 'zehnsekunden'
+  | 'koenigsbecher';
 
 export type PartyPhase = 'sehen' | 'spiel' | 'ergebnis';
 
@@ -143,7 +170,13 @@ export type PartyMinispielSicht =
   | BusSicht
   | SchaetzSicht
   | EntwederSicht
-  | WahrheitPflichtSicht;
+  | WahrheitPflichtSicht
+  | KategorienSicht
+  | MehrheitSicht
+  | RegelkartenSicht
+  | BombeSicht
+  | ZehnSekundenSicht
+  | KoenigsbecherSicht;
 
 export interface PartyPlatzierung {
   sitz: number;
@@ -160,7 +193,11 @@ export interface PartykisteSicht {
   runden: number;
   art: PartyMinispiel;
   phase: PartyPhase;
+  /* Der Regelsatz des Tisches (seit 22.09.2026 vollstaendig, nicht nur der
+     Trinkmodus) — die `Regelzeile` liest ihn direkt aus der Sicht. */
   trinkmodus: boolean;
+  schluckFaktor: number;
+  minispiele: PartyMinispiel[];
   botSitze: number[];
   ausgestiegen: number[];
   punkte: number[];
@@ -172,6 +209,90 @@ export interface PartykisteSicht {
   fertig: boolean;
   tabelle: PartyPlatzierung[];
   daten: PartyMinispielSicht;
+  /** Die geltende Regel-Karte oder null (seit 22.09.2026). */
+  regelKarte: RegelKarteSicht | null;
+  /* Die Spielmodi (seit 22.09.2026) — Spiegel von packages/game-partykiste/src/modi.ts. */
+  modus: PartyModus;
+  /** Themenpaket des Tisches, null = alles. */
+  paket: PartyPaket | null;
+  /** Nur in der Eskalation: wo die Kurve in dieser Runde steht. */
+  eskalation: PartyEskalation | null;
+  /** Team-Abend: je Sitz das Lager, 0 oder 1. */
+  lager: number[] | null;
+  /** Team-Abend: die Tabelle je Lager. */
+  lagerTabelle: PartyLagerPlatzierung[] | null;
+  /** Team-Abend, solange der Tischoeffner die Lager aufstellt. */
+  aufstellung: PartyAufstellung | null;
+  /* Die Inhaltsstufe (seit 27.09.2026) — die Regelzeile nennt sie. */
+  /** Die wirksame Stufe, nach der Gast-Kappung. */
+  inhaltsHaerte: 1 | 2 | 3;
+  /** genau, gemischt — oder 'bis' fuer einen Tisch von vor dem 27.09.2026 (Obergrenze). */
+  inhaltsMischung: PartyInhaltsMischung;
+  /** Was eingestellt war, wenn ein Gast es kappte. */
+  inhaltsHaerteGewollt: 1 | 2 | 3 | null;
+  /** Welche Katalog-Eintraege ich gerade sehe — fuer „Passt nicht" (PasstNicht.tsx). */
+  gezeigt: PartyGezeigterInhalt[];
+  /**
+   * Wer beim „Weiter" aller noch nicht getippt hat (Abrechnung, „Gesehen",
+   * „Verstanden") — sonst null. Seit 07.10.2026; die Liste kommt vom Modul,
+   * der Bildschirm zaehlt nicht selbst nach (weiter-warten.ts im Modul).
+   */
+  weiterFehlen: number[] | null;
+  /** Der letzte Wurf fuer den, der zuletzt tippte — angesagt, wenn `nr` neu ist. */
+  letzterWurf: PartyLetzterWurf | null;
+}
+
+/** Spiegel von `LetzterWurf` (weiter-warten.ts im Modul). */
+export interface PartyLetzterWurf {
+  nr: number;
+  rundeNr: number;
+  sitz: number;
+  trinkt: boolean;
+  schlucke: number;
+}
+
+/** Lesart der Inhaltsstufe — Spiegel von `InhaltsLesart` (regeln.ts im Modul). */
+export type PartyInhaltsMischung = 'genau' | 'gemischt' | 'bis';
+
+/**
+ * Ein Eintrag, den dieser Sitz gerade vor sich hat. Die Kennung kommt nur mit,
+ * wenn auch der Text mitkommt — das entscheidet das Modul (sicht.ts dort),
+ * nicht dieser Bildschirm.
+ */
+export interface PartyGezeigterInhalt {
+  katalog: string;
+  kennung: string;
+  text: string;
+}
+
+/** Die Spielmodi. Schnellrunde und Marathon gibt es bewusst nicht. */
+export type PartyModus = 'turnier' | 'eskalation' | 'themenabend' | 'team';
+
+/** Die Themenpakete — Spiegel von `PAKETE` (inhalte/typen.ts). */
+export type PartyPaket = 'wg-abend' | 'jga' | 'weihnachten' | 'studenten' | 'arbeit';
+
+export interface PartyEskalation {
+  /** 1 bis 3: erstes, zweites, letztes Drittel des Abends. */
+  stufe: 1 | 2 | 3;
+  /** Inhaltsstufe dieser Runde — hoechstens die Decke des Tisches. */
+  inhaltsHaerte: 1 | 2 | 3;
+  schluckFaktor: number;
+  /** Wollte die Kurve derber, als ein Tisch mit Gast darf? */
+  gekappt: boolean;
+}
+
+export interface PartyLagerPlatzierung {
+  lager: number;
+  sitze: number[];
+  punkte: number;
+  schlucke: number;
+  platz: number;
+}
+
+export interface PartyAufstellung {
+  aufsteller: number;
+  /** Wen ICH gerade ins andere Lager setzen darf — leer, wenn ich nicht aufstelle. */
+  wechselbar: number[];
 }
 
 /** Aktionen, die der Bildschirm absetzt. */
@@ -186,7 +307,10 @@ export type PartyAktion =
   | { art: 'schaetzung'; wert: number }
   | { art: 'seite'; wahl: number }
   | { art: 'wahl'; pflicht: boolean }
-  | { art: 'erledigt'; ja: boolean };
+  | { art: 'erledigt'; ja: boolean }
+  | OhneUhrAktion
+  | { art: 'lagerwechsel'; sitz: number }
+  | ZeitdruckAktion;
 
 // ---------------------------------------------------------------------------
 // Anzeigetexte — an einer Stelle, weil sie an drei Stellen gebraucht werden
@@ -200,21 +324,153 @@ export const MINISPIEL_NAME: Record<PartyMinispiel, string> = {
   wereher: 'Wer würde eher?',
   busfahrer: 'Bus fahren',
   schaetzen: 'Schätzen',
-  entweder: 'Entweder – oder',
+  entweder: 'Entweder - oder',
   wahrheitpflicht: 'Wahrheit oder Pflicht',
+  kategorien: 'Kategorien-Battle',
+  mehrheit: 'Mehrheitsraten',
+  regelkarte: 'Regel-Karte',
+  bombe: 'Bombe',
+  zehnsekunden: '10 Sekunden',
+  koenigsbecher: 'Königsbecher',
 };
 
 export const MINISPIEL_ANSAGE: Record<PartyMinispiel, string> = {
-  imposter: 'Einer hat ein anderes Wort. Reihum ein Satz — dann wird gezeigt.',
+  imposter: 'Einer hat ein anderes Wort. Reihum ein Satz - dann wird gezeigt.',
   quiz: 'Eine Frage, vier Antworten. Falsch heißt trinken.',
   werbinich: 'Du siehst alle Namen außer deinem. Frag die Runde aus.',
   niemals: 'Wer es doch getan hat, trinkt. Ehrlich bleiben ist billiger.',
   wereher: 'Zeig auf einen. Jede Stimme ist ein Schluck.',
   busfahrer: 'Rot oder Schwarz, höher oder tiefer, innen oder außen.',
-  schaetzen: 'Eine Zahl. Wer am nächsten liegt, gewinnt — wer am weitesten weg ist, trinkt.',
+  schaetzen: 'Eine Zahl. Wer am nächsten liegt, gewinnt - wer am weitesten weg ist, trinkt.',
   entweder: 'A oder B. Die Minderheit trinkt, bei Gleichstand alle.',
-  wahrheitpflicht: 'Reihum: wählen, machen — oder kneifen und trinken.',
+  wahrheitpflicht: 'Reihum: wählen, machen - oder kneifen und trinken.',
+  kategorien: 'Reihum laut etwas nennen. Wer stockt oder doppelt, trinkt.',
+  mehrheit: 'Selbst antworten - und tippen, was die Mehrheit sagt. Daneben heißt trinken.',
+  regelkarte: 'Eine Regel für die nächsten zwei Runden. Jeder Verstoß ist ein Schluck.',
+  bombe: 'Nenn etwas und gib weiter. Sie tickt - wer sie hält, wenn sie hochgeht, trinkt.',
+  zehnsekunden: 'Drei Dinge in zehn Sekunden. Die Runde urteilt - nicht geschafft heißt trinken.',
+  koenigsbecher: 'Reihum eine Karte ziehen, jede Karte ist eine Regel. Wen sie trifft, der trinkt.',
 };
+
+/**
+ * Dieselben Ansagen ohne Alkohol. Nur die Saetze, die vom Trinken reden, sind
+ * anders — der Ablauf ist derselbe, und das soll man den Texten ansehen.
+ */
+const MINISPIEL_ANSAGE_OHNE: Partial<Record<PartyMinispiel, string>> = {
+  quiz: 'Eine Frage, vier Antworten. Falsch gibt einen Strafpunkt.',
+  niemals: 'Wer es doch getan hat, kassiert einen Strafpunkt. Ehrlich bleiben ist billiger.',
+  wereher: 'Zeig auf einen. Jede Stimme ist ein Strafpunkt.',
+  schaetzen: 'Eine Zahl. Wer am nächsten liegt, gewinnt - wer am weitesten weg ist, kassiert.',
+  entweder: 'A oder B. Die Minderheit kassiert, bei Gleichstand alle.',
+  wahrheitpflicht: 'Reihum: wählen, machen - oder kneifen und kassieren.',
+  kategorien: 'Reihum laut etwas nennen. Wer stockt oder doppelt, kassiert.',
+  mehrheit: 'Selbst antworten - und tippen, was die Mehrheit sagt. Daneben gibt einen Strafpunkt.',
+  regelkarte: 'Eine Regel für die nächsten zwei Runden. Jeder Verstoß ist ein Strafpunkt.',
+  bombe: 'Nenn etwas und gib weiter. Sie tickt - wer sie hält, wenn sie hochgeht, kassiert.',
+  zehnsekunden: 'Drei Dinge in zehn Sekunden. Die Runde urteilt - nicht geschafft gibt Strafpunkte.',
+  koenigsbecher: 'Reihum eine Karte ziehen, jede Karte ist eine Regel. Wen sie trifft, der kassiert.',
+};
+
+/**
+ * Die Ansage eines Minispiels, passend zum Trinkmodus des Tisches.
+ *
+ * Bis zum 22.09.2026 stand bei ausgeschaltetem Trinkmodus trotzdem "Falsch
+ * heißt trinken" ueber der Frage — der Schalter blendete nur das Glas aus,
+ * nicht die Worte.
+ */
+export function ansageFuer(art: PartyMinispiel, trinkmodus: boolean): string {
+  return (trinkmodus ? undefined : MINISPIEL_ANSAGE_OHNE[art]) ?? MINISPIEL_ANSAGE[art];
+}
+
+// ---------------------------------------------------------------------------
+// Der Regelsatz — wie er im Menue eingestellt und am Tisch angezeigt wird
+// ---------------------------------------------------------------------------
+
+/**
+ * Spiegelbild von `PartykisteRegeln` (regeln.ts). Die Sicht traegt dieselben
+ * drei Felder, deshalb passt eine `PartykisteSicht` ueberall hin, wo ein
+ * `PartyRegelsatz` verlangt ist — die Regelzeile im Spiel liest ihn direkt
+ * aus der Sicht, die im Wartesaal aus `/tables/:id/rules`.
+ */
+export interface PartyRegelsatz {
+  minispiele: PartyMinispiel[];
+  trinkmodus: boolean;
+  schluckFaktor: number;
+  /*
+   * Seit dem 22.09.2026, alle drei optional: Ein Regelsatz von davor kennt
+   * sie nicht (fehlt = Turnier, alle Inhalte). In der Sicht stehen sie immer,
+   * `eskalation` sogar mit der Stufe der laufenden Runde.
+   */
+  modus?: PartyModus;
+  paket?: PartyPaket | null;
+  eskalation?: PartyEskalation | null;
+  /*
+   * Seit dem 27.09.2026, ebenfalls optional (ein Regelsatz von vor dem
+   * 22.09.2026 kennt nicht einmal die Stufe). Im Wartesaal eines Tisches von
+   * vor dem 27.09.2026 fehlt `inhaltsMischung` — `liesRegelsatz` macht
+   * daraus 'bis', denn so spielt das Modul ihn auch.
+   */
+  inhaltsHaerte?: 1 | 2 | 3;
+  inhaltsMischung?: PartyInhaltsMischung;
+  inhaltsHaerteGewollt?: 1 | 2 | 3 | null;
+}
+
+/** Die Namen der Haertegrade, Stelle = `schluckFaktor` (1 bis 3). */
+export const HAERTE_NAME = ['', 'gemütlich', 'normal', 'kurzer Abend'] as const;
+
+/**
+ * Den festgeschriebenen Regelsatz eines Tisches aus der Serverantwort lesen.
+ *
+ * Kein Nachbau von `validateConfig`: Der Server hat den Regelsatz schon
+ * geprueft, bevor er ihn festschrieb. Hier wird nur die Form gelesen — und was
+ * nicht passt, ist ein `null`, keine Anzeige mit erfundenen Werten.
+ */
+export function liesRegelsatz(config: Record<string, unknown>): PartyRegelsatz | null {
+  const liste = config['minispiele'];
+  const trinkmodus = config['trinkmodus'];
+  const faktor = config['schluckFaktor'];
+  if (!Array.isArray(liste) || typeof trinkmodus !== 'boolean' || typeof faktor !== 'number') return null;
+  const minispiele = liste.filter((x): x is PartyMinispiel => typeof x === 'string' && x in MINISPIEL_NAME);
+  /* Modus und Paket nur, wenn sie da und bekannt sind — ein Regelsatz ohne
+     sie ist ein Turnier, und das sagt die Regelzeile dann auch. */
+  const modus = config['modus'];
+  const paket = config['paket'];
+  /* Die Stufe nur, wenn sie da ist; fehlt die Lesart, galt bei diesem Tisch die Obergrenze. */
+  const stufe = config['inhaltsHaerte'];
+  const mischung = config['inhaltsMischung'];
+  const inhalt =
+    stufe === 1 || stufe === 2 || stufe === 3
+      ? {
+          inhaltsHaerte: stufe as 1 | 2 | 3,
+          inhaltsMischung: (mischung === 'genau' || mischung === 'gemischt' ? mischung : 'bis') as PartyInhaltsMischung,
+        }
+      : {};
+  return {
+    ...inhalt,
+    minispiele,
+    trinkmodus,
+    schluckFaktor: faktor,
+    ...(typeof modus === 'string' && (PARTY_MODI as readonly string[]).includes(modus) ? { modus: modus as PartyModus } : {}),
+    ...(typeof paket === 'string' && (PARTY_PAKETE as readonly string[]).includes(paket) ? { paket: paket as PartyPaket } : {}),
+  };
+}
+
+/** Alle Modi und Pakete, fuer `liesRegelsatz` und das Menue. */
+export const PARTY_MODI: readonly PartyModus[] = ['turnier', 'eskalation', 'themenabend', 'team'];
+export const PARTY_PAKETE: readonly PartyPaket[] = ['wg-abend', 'jga', 'weihnachten', 'studenten', 'arbeit'];
+
+/**
+ * Wie der Zaehler heisst: "Schluck" im Trinkmodus, sonst "Strafpunkt".
+ *
+ * Gezaehlt wird in beiden Faellen dasselbe (regeln.ts: Aus ist kein anderer
+ * Ablauf), nur das Wort ist anders. Robins Entscheidung vom 22.09.2026: Das
+ * Wort und die Zahl bleiben, das Glas-Emoji geht — es stand an drei Stellen
+ * und war die einzige Ausgabe, die der Schalter bis dahin veraenderte.
+ */
+export function zaehlerWort(trinkmodus: boolean, zahl: number): string {
+  if (trinkmodus) return zahl === 1 ? 'Schluck' : 'Schlücke';
+  return zahl === 1 ? 'Strafpunkt' : 'Strafpunkte';
+}
 
 /** Die vier Kartenfarben als Zeichen. Rot zuerst, wie auf dem Blatt. */
 export const FARBZEICHEN = ['♥', '♦', '♠', '♣'] as const;

@@ -6,7 +6,17 @@
  * zweites Woerterbuch und kein Umbau.
  */
 
+import { inApp } from './laufzeit';
+
 const de: Record<string, string> = {
+  'blatt.schach-pinguin': 'Pinguin-Figuren',
+  'error.marktNeuerTag': 'Ein neuer Tag hat begonnen. Dein Shop wurde erneuert.',
+  'error.marktNichtImAngebot': 'Dieses Design ist heute nicht im Angebot.',
+  'error.marktNochVerdeckt': 'Decke zuerst das Angebot auf.',
+  'error.marktGratisSchonGeholt': 'Die Gratis-Münzen hast du heute schon abgeholt.',
+  'error.nurMuenzenImTagesmarkt': 'Im Tages-Shop bezahlst du mit Münzen.',
+  'error.marktAngebotUnbekannt': 'Dieses Angebot ist nicht mehr verfügbar.',
+
   'game.doppelkopf': 'Doppelkopf',
   // Das Spiel heisst international "Wizard" und ist als Marke eingetragen
   // (Ken Fisher / US Games Systems, hier Amigo). Regeln sind frei, ein
@@ -41,6 +51,9 @@ const de: Record<string, string> = {
   // Hektische Kueche fuer 1 bis 4 Koeche, miteinander statt gegeneinander.
   // Der Name kommt vom Auftraggeber; die Oberflaeche bleibt sonst deutsch.
   'game.brocooked': 'BroCooked',
+  // Klassisches Schach zu zweit. Der Name kommt wie bei BroCooked vom
+  // Auftraggeber.
+  'game.brochess': 'BroChess',
   'game.skat': 'Skat',
   'game.schafkopf': 'Schafkopf',
   'game.romme': 'Rommé',
@@ -86,6 +99,8 @@ const de: Record<string, string> = {
   'error.seatCountUnsupported': 'Diese Spielerzahl gibt es bei diesem Spiel nicht.',
   'error.roundsTooFew': 'Das ist weniger als eine volle Geberrunde.',
   'error.notSeated': 'Du sitzt nicht an diesem Tisch.',
+  'error.nurErsterSitz': 'Die Regeln stellt ein, wer den ersten Platz hat.',
+  'error.regelnNichtAenderbar': 'Bei diesem Spiel stehen die Regeln ab dem Anlegen fest.',
   'error.partyFinished': 'Die Partie ist beendet.',
   'error.partyNotRunning': 'An diesem Tisch läuft gerade keine Partie.',
   'error.partyUnknown': 'Diese Partie gibt es nicht.',
@@ -108,7 +123,7 @@ const de: Record<string, string> = {
   'error.notClubAdmin': 'Das darf nur die Clanleitung.',
   'error.memberUnknown': 'Dieses Mitglied gibt es nicht.',
   'error.joinRequestUnknown': 'Diese Anfrage gibt es nicht mehr.',
-  'error.lastAdmin': 'Der letzte Leiter kann den Clan nicht verlassen — gib die Leitung vorher ab.',
+  'error.lastAdmin': 'Der letzte Leiter kann den Clan nicht verlassen - gib die Leitung vorher ab.',
   'error.cannotChangeOwnRole': 'Die eigene Rolle kannst du nicht ändern.',
   'error.cannotKickSelf': 'Dich selbst kannst du nicht ausschließen.',
   'error.warUnknown': 'Diesen Clankampf gibt es nicht.',
@@ -124,13 +139,29 @@ const de: Record<string, string> = {
   'error.tonUngueltig': 'Diese Tondatei lässt sich nicht lesen.',
   'error.tonZuGross': 'Diese Tondatei ist zu groß.',
   'error.motivUnbekannt': 'Dieses Motiv gibt es nicht.',
-  'error.zuVieleVorschlaege': 'Du hast schon genug offene Vorschläge — warte, bis sie geprüft sind.',
+  'error.zuVieleVorschlaege': 'Du hast schon genug offene Vorschläge - warte, bis sie geprüft sind.',
   'error.nichtGesammelt': 'Das hast du noch nicht gesammelt.',
   'error.gurtZuVoll': 'Am Gürtel ist kein Platz mehr.',
   'error.botLevelUnknown': 'Diese Spielstärke gibt es nicht.',
   'error.seatColorUnknown': 'Diese Farbe gibt es nicht.',
   'error.googleLoginDisabled': 'Die Anmeldung mit Google ist gerade abgeschaltet.',
+  'error.appleLoginDisabled': 'Die Anmeldung mit Apple ist gerade abgeschaltet.',
+  'error.nonceUngueltig': 'Die Anmeldung ist abgelaufen. Bitte versuch es noch einmal.',
+  'error.anbieterMailVergeben': 'Zu dieser Adresse gibt es schon ein Konto. Melde dich dort an und verknüpfe den Anbieter in den Einstellungen.',
+  'error.anbieterSchonVerknuepft': 'Mit diesem Konto ist schon ein anderes Konto dieses Anbieters verknüpft.',
+  'error.anbieterFremdVerknuepft': 'Dieses Anbieter-Konto gehört schon zu einem anderen Brauweg-Konto.',
+  'error.anbieterNichtVerknuepft': 'Dieser Anbieter ist nicht verknüpft.',
+  'error.anmeldescheinUngueltig': 'Die Anmeldung ist abgelaufen. Bitte melde dich noch einmal an.',
+  'error.geburtstagFehlt': 'Bitte gib dein Geburtsdatum an.',
+  'error.letzteAnmeldeart': 'Das ist deine letzte Anmeldeart. Verknüpfe erst eine andere oder setze ein Passwort.',
   'error.nurAufsicht': 'Das darf nur die Aufsicht.',
+  'error.codeUngueltig': 'Dieser Code gilt nicht (mehr). Tippfehler? Jeder Code geht nur einmal.',
+  'error.codeNurImWeb': 'Codes löst du auf www.brauweg-spielen.de ein.',
+  'error.codeUnbekannt': 'Diesen Code gibt es nicht, oder er ist schon eingelöst.',
+  // Partykiste „Passt nicht“ (27.09.2026, nur auf staging)
+  'error.nurAufStaging': 'Das gibt es nur auf dem Testsystem.',
+  'error.inhaltUnbekannt': 'Diesen Eintrag gibt es nicht (mehr).',
+  'error.tischUnbekannt': 'Diesen Tisch gibt es nicht (mehr).',
   'error.snapshotMissing': 'Der Spielstand ließ sich nicht laden.',
   'error.ruleSetUnknown': 'Diesen Regelsatz gibt es nicht.',
   'error.accountUnknown': 'Dieses Konto gibt es nicht.',
@@ -151,22 +182,60 @@ const de: Record<string, string> = {
   'error.protocolVersionUnsupported': 'Bitte lade die Seite neu.',
   'error.actionRejected': 'Dieser Zug ist nicht möglich.',
   'error.invalidInput': 'Bitte prüfe deine Eingaben.',
+  'error.inhaltUngueltig': 'Diese Bestenliste gibt es so nicht.',
   'error.invalidRequest': 'Diese Anfrage konnte der Server nicht verarbeiten.',
   'error.tooManyRequests': 'Zu viele Anfragen. Warte einen Moment.',
   'error.tooManyMessages': 'Zu viele Anfragen. Lade die Seite neu.',
   'error.tooManyConnections': 'Zu viele offene Verbindungen. Schließe andere Fenster.',
   'error.gameNotPlayable': 'Dieses Spiel gibt es noch nicht.',
+  'error.nichtImUmfang': 'Das gibt es hier nicht.',
+  'error.tischNichtInDerApp': 'An diesen Tisch kommst du in der App nicht.',
+  'error.loeschcodeFalsch': 'Der Code stimmt nicht oder ist abgelaufen.',
+  'error.loeschcodeUnnoetig': 'Für dieses Konto gibt es keinen Löschcode.',
+  'error.loeschBestaetigungFehlt': 'Tippe LÖSCHEN ein, um zu bestätigen.',
+  'error.selbstBlockieren': 'Dich selbst kannst du nicht blockieren.',
+  'error.selbstMelden': 'Dich selbst kannst du nicht melden.',
+  'error.blockiert': 'Zwischen euch geht das nicht - einer von euch hat den anderen blockiert.',
   'error.matchmakingUnavailable': 'Die Mitspielersuche ist gerade nicht verfügbar.',
   'error.avatarInvalid': 'Das ist kein Bild, das wir speichern können.',
   'error.avatarUnknown': 'Dieses Profilbild gibt es nicht.',
   'error.birthdayInvalid': 'Bitte gib ein gültiges Geburtsdatum ein.',
-  'error.birthdayTooYoung': 'Du musst mindestens 16 Jahre alt sein.',
+  'error.birthdayTooYoung': 'Du musst mindestens 18 Jahre alt sein.',
   'error.birthdayMissing': 'Für die Belohnung fehlt noch dein Geburtstag.',
   'error.birthdayNotToday': 'Die Belohnung kannst du nur an deinem Geburtstag holen.',
   'error.birthdayAlreadyClaimed': 'Die Belohnung für dieses Jahr hast du schon.',
   'error.internal': 'Da ist etwas schiefgelaufen.',
   'error.clubRequired': 'Für einen Clantisch brauchst du einen Clan.',
   'error.notClubMember': 'Diesen Tisch sehen nur Clanmitglieder.',
+  // Beitritt mit Zusage (tables/anfragen.ts im Server).
+  'error.notHost': 'Über Anfragen entscheidet nur, wer den Tisch aufgemacht hat.',
+  'error.anfrageUnbekannt': 'Diese Anfrage gibt es nicht mehr.',
+  'error.nurMuenzenInApp': 'In der App wird mit Münzen bezahlt.',
+  'error.browortForm': 'Fünf Buchstaben, bitte.',
+  'error.browortUnbekannt': 'Das Wort kenne ich nicht.',
+  'error.browortFertig': 'Für heute ist die Runde schon vorbei.',
+  'error.browortDoppelt': 'Gerade kam schon ein Versuch an - lade kurz neu.',
+  'error.clanwortNichtDran': 'Heute wählt jemand anderes das Clanwort.',
+  'error.clanwortGewaehlt': 'Das Clanwort ist schon gewählt.',
+  'error.clanwortNochNicht': 'Das Clanwort ist noch nicht gewählt.',
+  'error.clanwortEigenes': 'Dein eigenes Wort kannst du nicht raten.',
+  'error.notInClub': 'Dafür brauchst du einen Clan.',
+  'error.manufakturZuTeuer': 'Dafür reichen die Taler noch nicht.',
+  'error.manufakturHoechststufe': 'Höher geht es nicht.',
+  'error.manufakturHatMeister': 'Dort arbeitet schon ein Meister.',
+  'error.manufakturVoll': 'Mehr Pressen passen nicht in die Halle.',
+  'error.manufakturUmzugZuFrueh': 'Für den Umzug brauchst du alle acht Pressen.',
+  'error.manufakturKeinMeister': 'Dafür braucht es erst einen Meister.',
+  'error.manufakturAbklingen': 'Der Meister ruht sich noch aus.',
+  'error.manufakturLetzte': 'Das ist schon die größte Manufaktur.',
+  'error.manufakturJubilaeumZuFrueh': 'Für das Jubiläum braucht der Kartenpalast alle acht Pressen.',
+  'error.manufakturAuftragGesperrt': 'Dieser Auftrag ist noch nicht verfügbar oder es läuft bereits einer.',
+  'error.manufakturZuWenigLehrbriefe': 'Dafür fehlen noch Lehrbriefe. Du erhältst sie für Kundenaufträge.',
+  'error.manufakturAusbildungWirkt': 'Warte, bis die laufende Fähigkeit beendet ist.',
+  'error.manufakturAuftragOffen': 'Die Lieferung ist noch nicht vollständig.',
+  'error.manufakturUnbekannt': 'Diese Station gibt es nicht.',
+  'error.manufakturBeschaeftigt': 'Gerade viel los - versuch es gleich noch einmal.',
+  'error.lektionUnbekannt': 'Diese Lektion gibt es nicht.',
   'error.pauseClubOnly': 'Pausieren geht nur an Clantischen.',
   'error.partyPaused': 'Der Tisch ist pausiert. Erst fortsetzen.',
   'error.clubUnknown': 'Diesen Clan gibt es nicht.',
@@ -183,13 +252,21 @@ const de: Record<string, string> = {
   'error.questUnknown': 'Diese Aufgabe gibt es nicht.',
   'error.questNotDone': 'Diese Aufgabe ist noch nicht fertig.',
   'error.questAlreadyClaimed': 'Die Belohnung hast du schon geholt.',
+  // Trophäenweg (26.09.2026, server/src/trophaeenweg.ts)
+  'error.wegStufeUnbekannt': 'Diese Stufe gibt es auf dem Trophäenweg nicht.',
+  'error.wegNichtErreicht': 'Dafür fehlen dir noch Trophäen.',
+  'error.wegSchonGeholt': 'Diese Belohnung hast du schon geholt.',
   'error.itemUnknown': 'Dieses Stück gibt es nicht.',
   'error.itemNotForSale': 'Das gibt es nicht zu kaufen, nur zu bekommen.',
   'error.itemAlreadyOwned': 'Das hast du schon.',
+  'error.itemNurErspielt': 'Diesen Kartenrücken gibt es nur in der Kartenmanufaktur.',
   'error.itemNotOwned': 'Das gehört dir noch nicht.',
   'error.itemWrongSlot': 'Das gehört an eine andere Stelle.',
   'error.packUnknown': 'Dieses Angebot gibt es nicht.',
   'error.packNotForSale': 'Das ist noch nicht zu kaufen.',
+  // Zusatzpakete (22.09.2026, server/src/inhaltspakete.ts): Wer den Tisch
+  // aufmacht, braucht das Paket — wer mitspielt, nicht.
+  'error.inhaltspaketFehlt': 'Dieses Spielpaket gehört dir noch nicht. Du findest es im Shop unter „Spielpakete“ - mitspielen können alle ohne Kauf.',
 
   // --- Waehrungen ---------------------------------------------------------
   'waehrung.coins': 'Münzen',
@@ -206,6 +283,17 @@ const de: Record<string, string> = {
   'truhe.silber': 'Silbertruhe',
   'truhe.gold': 'Goldtruhe',
   'truhe.diamant': 'Diamanttruhe',
+
+  // --- Gegenstände des Trophäenwegs ----------------------------------------
+  // Je Kennung aus WEG_STATIONEN (server/src/trophaeenweg-katalog.ts). Eigene
+  // Schlüssel statt `kosmetik.*`/`deck.*`: Auf dem Weg steht dazu, WAS es ist
+  // („Kartenrücken"), weil ein Name allein bei vier Warenarten nichts sagt.
+  // trophaeenweg.test.ts prüft, dass jede Kennung hier einen Text hat.
+  'weg.hut-strohhut': 'Pinguin-Kopf „Strohhut“',
+  'weg.ruecken-sommerwiese': 'Kartenrücken „Sommerwiese“',
+  'weg.szene-kaminzimmer': 'Tisch „Kaminzimmer“',
+  'weg.blatt-winterhof': 'Kartenblatt „Winterhof“',
+  'weg.aura-sterne': 'Pinguin-Aura „Sternenkranz“',
 
   // --- Plaetze der Pinguin-Ausstattung ------------------------------------
   'slot.hut': 'Kopf',
@@ -227,6 +315,7 @@ const de: Record<string, string> = {
   'kosmetik.hut-bergsteiger': 'Bergsteigerhelm',
   'kosmetik.hut-krone': 'Krone',
   'kosmetik.hut-partyhut': 'Partyhut',
+  'kosmetik.hut-doktorhut': 'Doko-Doktorhut',
   'kosmetik.brille-keine': 'Ohne Brille',
   'kosmetik.brille-sonnenbrille': 'Sonnenbrille',
   'kosmetik.brille-lesebrille': 'Lesebrille',
@@ -238,6 +327,7 @@ const de: Record<string, string> = {
   'kosmetik.oberteil-weste': 'Lederweste',
   'kosmetik.oberteil-regenjacke': 'Regenjacke',
   'kosmetik.oberteil-frack': 'Frack',
+  'kosmetik.oberteil-meisterrobe': 'Meisterrobe',
   'kosmetik.schuhe-flossen': 'Barfuß',
   'kosmetik.schuhe-gummistiefel': 'Gummistiefel',
   'kosmetik.schuhe-turnschuhe': 'Turnschuhe',
@@ -285,6 +375,12 @@ const de: Record<string, string> = {
   'shop.edelsteine-gross': 'Kiste Edelsteine',
   'shop.vip-pass': 'VIP-Pass',
   'shop.season-pass': 'Season Pass',
+  // --- Spielpakete: Namen der Ware (inhaltspakete.ts). Der Kursname selbst
+  // kommt in der Golf-Lobby vom Modul; hier steht er nur fuer das Regal.
+  'golf-kurs.flipperhalle': 'Golf-Kurs Flipperhalle',
+  'golf-kurs.profi': 'Golf-Kurs Profi',
+  'party-paket.weihnachten': 'Partykiste: Weihnachten',
+  'party-paket.jga': 'Partykiste: JGA',
 
   'deck.text': 'Text',
   'deck.text.hint': 'Farbe und Wert als Zeichen. Lädt nichts nach und bleibt auf dem Handy am kompaktesten.',
@@ -410,6 +506,8 @@ const de: Record<string, string> = {
   'ruleset.noTrumpVsDealerPicks': 'Ohne Trumpf gibt es nichts zu wählen.',
   'ruleset.hiddenBidsVsBidSum': 'Verdeckt angesagt gibt es keinen letzten Ansager.',
   'ruleset.roundsOutOfRange': 'So viele Runden gibt das Blatt nicht her.',
+  'ruleset.bedenkzeit': 'Die Bedenkzeit muss zwischen 20 Sekunden und 3 Stunden liegen.',
+  'ruleset.zuschlag': 'Der Zuschlag braucht eine Bedenkzeit und darf höchstens 60 Sekunden betragen.',
   'ruleset.tableSizeUnsupported': 'Diese Spielerzahl gibt es bei diesem Spiel nicht.',
 
   // Meldungen des Cambio-Regelsatzes.
@@ -464,7 +562,7 @@ const de: Record<string, string> = {
   'ruleset.TRAINING': 'Trainingstisch: keine Trophäen, keine Ranglistenwertung.',
   'ruleset.blindZuKlein': 'Der kleine Blind muss mindestens 1 betragen.',
   'ruleset.grosserBlindZuKlein': 'Der große Blind muss über dem kleinen liegen.',
-  'ruleset.stapelZuKlein': 'Zu wenig Jetons — es braucht mindestens zehn große Blinds.',
+  'ruleset.stapelZuKlein': 'Zu wenig Jetons - es braucht mindestens zehn große Blinds.',
   'ruleset.stapelZuGross': 'So viele Jetons vergibt der Tisch nicht (höchstens 100.000).',
   'ruleset.spaltenAusserhalb': 'Zwischen 4 und 12 Spalten.',
   'ruleset.zeilenAusserhalb': 'Zwischen 4 und 12 Zeilen.',
@@ -472,7 +570,7 @@ const de: Record<string, string> = {
   'ruleset.zuWenigFarben': 'So wenige Farben reichen für dieses Feld nicht.',
   'ruleset.varianteUnbekannt': 'Diese Spielart gibt es nicht.',
   'ruleset.barrierenzahlAusserhalb': 'Zwischen 0 und 20 Mauern je Spieler.',
-  'ruleset.ungeradeKartenzahl': 'Das Feld braucht eine gerade Kartenzahl — sonst bleibt eine Karte ohne Paar.',
+  'ruleset.ungeradeKartenzahl': 'Das Feld braucht eine gerade Kartenzahl - sonst bleibt eine Karte ohne Paar.',
   'ruleset.merkzeitAusserhalb': 'Die Merkzeit liegt zwischen 0,3 und 5 Sekunden.',
   'ruleset.zuWenigMotive': 'Für dieses Feld gibt es zu wenige Motive.',
   'ruleset.zusatzUngueltig': 'Die Liste eigener Motive ist nicht lesbar.',
@@ -481,20 +579,122 @@ const de: Record<string, string> = {
   // Eiland. Die Zahlen stehen ausgeschrieben statt eingesetzt: Der Regelsatz
   // ist die einzige Stelle, an der sie sich ändern können, und ein Text, der
   // sie selbst ausrechnet, kann nicht falsch werden — er wird nur nie gelesen.
-  'ruleset.feldzahlUngerade': 'Die Karte braucht eine gerade Feldzahl — sonst lässt sie sich nicht spiegeln.',
+  'ruleset.feldzahlUngerade': 'Die Karte braucht eine gerade Feldzahl - sonst lässt sie sich nicht spiegeln.',
   'ruleset.seenAusserhalb': 'Zwischen 0 und 6 Seen je Kartenhälfte.',
   'ruleset.bergeAusserhalb': 'Zwischen 0 und 12 Bergen je Kartenhälfte.',
   'ruleset.ornamenteAusserhalb': 'Zwischen 1 und 8 Ornamenten auf der Karte.',
-  'ruleset.sichtweiteAusserhalb': 'So weit sieht hier niemand — die Sichtweite passt nicht zur Kartengröße.',
+  'ruleset.sichtweiteAusserhalb': 'So weit sieht hier niemand - die Sichtweite passt nicht zur Kartengröße.',
   'ruleset.kontingentAusserhalb': 'Zwischen 1 und 20 Feldern je Runde.',
   'ruleset.zuVieleHindernisse': 'So viel Wasser und Fels lässt kein Land mehr übrig.',
   'ruleset.rundenfristAusserhalb': 'Eine Runde dauert zwischen 10 Sekunden und 5 Minuten.',
   'feldherr.feldUnbekannt': 'Diese Feldgröße gibt es nicht.',
   'feldherr.nurZuZweit': 'Feldherr wird zu zweit gespielt.',
-  'feldherr.eineRunde': 'Feldherr kennt keine Runden — ein Gefecht entscheidet.',
+  'feldherr.eineRunde': 'Feldherr kennt keine Runden - ein Gefecht entscheidet.',
   'golf.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'golf.sitzzahl': 'Golf spielt zwischen einem und acht Bällen.',
   'golf.loecher': 'Zwischen 2 und 15 Löchern je Match.',
+  // Par in der Anzeige (seit 22.09.2026, minispiele/golf/par.ts). Die
+  // Golfwörter bleiben englisch, wie auf jedem deutschen Platz: „Vogel"
+  // statt Birdie sagt niemand. „E" ist die Tafelschreibweise für even.
+  'golf.par.holeInOne': 'Hole-in-one',
+  'golf.par.condor': 'Condor',
+  'golf.par.albatros': 'Albatros',
+  'golf.par.eagle': 'Eagle',
+  'golf.par.birdie': 'Birdie',
+  'golf.par.par': 'Par',
+  'golf.par.bogey': 'Bogey',
+  'golf.par.doppelBogey': 'Doppel-Bogey',
+  'golf.par.tripleBogey': 'Triple-Bogey',
+  'golf.par.ohne': 'nicht eingelocht',
+  'golf.par.gleich': 'E',
+  'golf.par.summe': 'Summe',
+  'golf.par.spalte': 'zu Par',
+  // Replay eines Lochs (22.09.2026, Robins Entscheidung: der eigene Lauf,
+  // keine Zuschauersicht). `t()` setzt nichts ein — Zahlen hängt die Ansicht
+  // hinten an, deshalb enden diese Texte ohne Platzhalter.
+  'golf.replay.knopf': 'Nochmal ansehen',
+  'golf.replay.titel': 'Nochmal ansehen',
+  'golf.replay.loch': 'Loch',
+  'golf.replay.schlag': 'Schlag',
+  'golf.replay.amAbschlag': 'Am Abschlag',
+  'golf.replay.eingelocht': 'Eingelocht',
+  'golf.replay.abspielen': 'Abspielen',
+  'golf.replay.pause': 'Anhalten',
+  'golf.replay.abschlag': 'Zurück an den Abschlag',
+  'golf.replay.tempo': 'Tempo 1× oder 2×',
+  'golf.replay.schliessen': 'Zurück',
+  'golf.replay.laeuftWeiter': 'Das Spiel läuft im Hintergrund weiter.',
+  'golf.replay.nichtDa': 'Dieses Loch lässt sich nicht nachrechnen.',
+  'golf.replay.loecher': 'Löcher nochmal ansehen',
+  // Bahnauswahl (seit 22.09.2026, packages/game-golf/src/bahnwahl.ts): Kurs,
+  // Filter oder Einzelauswahl stehen im Regelsatz des Tisches.
+  'ruleset.golf.auswahlDoppelt': 'Kurs, Filter und eigene Auswahl schließen einander aus - nur eines davon.',
+  'ruleset.golf.kursUnbekannt': 'Diesen Kurs gibt es nicht.',
+  'ruleset.golf.filterUngueltig': 'Der Filter kennt nur die Stufen 1 bis 5 und die Themen der Bahnen.',
+  'ruleset.golf.filterLeer': 'Keine Bahn passt zum Filter - gezogen wird aus allen.',
+  'ruleset.golf.bahnenUngueltig': 'Die Auswahl enthält eine unbekannte oder doppelte Bahn.',
+  'ruleset.golf.bahnenAnzahl': 'Eine eigene Auswahl hat 2 bis 15 Bahnen.',
+  'ruleset.golf.varianteUngueltig': 'Der Name der Spielart ist zu lang.',
+  // Bahnrekord im Zwischenstand (seit 22.09.2026, minispiele/golf/Bahnrekord.tsx).
+  'golf.rekord.bahn': 'Bahnrekord',
+  'golf.rekord.eigenes': 'dein Bestes',
+  'golf.rekord.keiner': 'noch keiner',
+  'golf.rekord.du': 'du',
+  'golf.rekord.neuBahn': 'Neuer Bahnrekord!',
+  'golf.rekord.neuEigen': 'Neues persönliches Bestes!',
+  // Fun-Modus (seit 23.09.2026, packages/game-golf/src/modus.ts und
+  // minispiele/golf/modifikator.ts): Roulette je Loch, Wind und Wetter.
+  'ruleset.golf.modusUnbekannt': 'Golf spielt klassisch oder im Fun-Modus.',
+  'golf.fun.modus': 'Spielart',
+  'golf.fun.klassisch': 'Klassisch',
+  'golf.fun.fun': 'Fun',
+  'golf.fun.klassischText': 'Faires Golf, jede Bahn wie gebaut.',
+  'golf.fun.funText': 'Jedes Loch dreht das Roulette: Wind, Regen, Riesenball und mehr.',
+  'golf.fun.roulette': 'Roulette',
+  'golf.fun.naechstes': 'Nächstes Loch',
+  'golf.fun.wind': 'Wind',
+  'golf.fun.regen': 'Regen',
+  'golf.fun.riesenball': 'Riesenball',
+  'golf.fun.miniball': 'Miniball',
+  'golf.fun.gummiwaende': 'Gummiwände',
+  'golf.fun.zeitlupe': 'Zeitlupe',
+  'golf.fun.schwerelos': 'Schwerelos',
+  'golf.fun.windText': 'Der Wind schiebt jeden rollenden Ball.',
+  'golf.fun.regenText': 'Nasser Rasen: halbe Reibung, der Ball rollt weiter.',
+  'golf.fun.riesenballText': 'Anderthalbmal so groß - enge Gassen werden eng.',
+  'golf.fun.miniballText': 'Klein und flink, passt durch jede Lücke.',
+  'golf.fun.gummiwaendeText': 'Die Wände federn, der Ball verliert keine Fahrt.',
+  'golf.fun.zeitlupeText': 'Alles rollt mit halbem Tempo - doppelte Zeit.',
+  'golf.fun.schwerelosText': 'Kaum Reibung, Sprungfelder tragen weiter.',
+  'golf.fun.windLeicht': 'leicht',
+  'golf.fun.windFrisch': 'frisch',
+  'golf.fun.windStark': 'stark',
+  'golf.fun.pu.turbo': 'Turbo',
+  'golf.fun.pu.magnet': 'Magnet',
+  'golf.fun.pu.geist': 'Geisterball',
+  'golf.fun.pu.schild': 'Schild',
+  'golf.fun.pu.turboText': 'Nächster Schlag mit 1,6-facher Kraft.',
+  'golf.fun.pu.magnetText': 'Beim nächsten Schlag zieht das Loch den Ball im letzten Drittel an.',
+  'golf.fun.pu.geistText': 'Der nächste Schlag geht durch Wände - nicht durchs Wasser.',
+  'golf.fun.pu.schildText': 'Der nächste Stoß eines fremden Balls prallt ab.',
+  'golf.fun.pu.naechster': 'für den nächsten Schlag',
+  'golf.fun.pu.bereit': 'bereit',
+  'golf.fun.pu.wirkt': 'wirkt',
+  'golf.fun.pu.bombe': 'Bombe',
+  'golf.fun.pu.klebefeld': 'Klebefeld',
+  'golf.fun.pu.tausch': 'Tausch',
+  'golf.fun.pu.bombeText': 'Statt eines Schlags auslösen: stößt im Umkreis alle Bälle weg.',
+  'golf.fun.pu.klebefeldText': 'Statt eines Schlags auslösen: 8 Sekunden ein Sandfleck an der Zielstelle.',
+  'golf.fun.pu.tauschText': 'Statt eines Schlags auslösen: dein Ball tauscht den Platz mit dem des Führenden.',
+  'golf.fun.pu.ausloesen': 'statt eines Schlags auslösen',
+  'golf.fun.stoer.bombeKnopf': 'Tippen, dann zielen wie beim Schlag',
+  'golf.fun.stoer.klebefeldKnopf': 'Tippen, dann zielen wie beim Schlag',
+  'golf.fun.stoer.tauschKnopf': 'Tippen tauscht mit dem Führenden',
+  'golf.fun.stoer.zielen': 'Zielen - loslassen löst aus, Knopf bricht ab',
+  'golf.fun.stoer.gesperrt.fuehrt': 'Du führst - Störschläge sind für die Verfolger',
+  'golf.fun.stoer.gesperrt.genutzt': 'Einer je Loch - deiner ist schon raus',
+  'golf.fun.stoer.gesperrt.keinZiel': 'Gerade kein Führender, mit dem du tauschen kannst',
+  'golf.fun.stoer.gesperrt.nichtJetzt': 'Erst wenn dein Ball liegt',
   // Meldungen des BroCooked-Regelsatzes.
   'brocooked.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'brocooked.kuechenLeer': 'Mindestens eine Küche muss dabei sein.',
@@ -510,6 +710,37 @@ const de: Record<string, string> = {
   'partykiste.schluckFaktor': 'Der Härtegrad liegt zwischen 1 und 3.',
   'partykiste.sitzzahl': 'Die Partykiste spielt zu viert bis zu zwölft.',
   'partykiste.rundenzahl': 'Zwischen 3 und 15 Minispielen je Turnier.',
+  'ruleset.partykiste.inhaltsHaerte': 'Die Inhalte sind harmlos (1), pikant (2) oder derb (3).',
+  'ruleset.partykiste.inhaltsMischung': 'Die Inhalte kommen genau aus einer Stufe oder gemischt aus allen.',
+  'ruleset.partykiste.paket': 'Dieses Themenpaket gibt es nicht.',
+  // Einladung an den Tisch (22.09.2026): Code, Link, QR — und die Eingabe dazu.
+  'einladung.titel': 'Leute dazuholen',
+  'einladung.hinweis': 'Code vorlesen, Link teilen oder den QR-Code scannen lassen.',
+  'einladung.codeAria': 'Beitrittscode',
+  'einladung.teilen': 'Link teilen',
+  // Davor steht der Spielname (Einladung.tsx) — bis zum 21.10.2026 hiess es
+  // hier fest „Partykiste bei Brauweg", auch am privaten Doppelkopftisch.
+  'einladung.teilenTitel': 'bei Brauweg',
+  'einladung.teilenText': 'Komm an meinen Tisch. Code:',
+  'einladung.kopiert': 'Link kopiert - jetzt in den Gruppenchat einfügen.',
+  'einladung.nichtKopiert': 'Kopieren ging nicht. Der Link steht unter dem QR-Code.',
+  'einladung.qrAria': 'QR-Code des Einladungslinks',
+  // „sitzt du direkt dort" stimmte nicht mehr, seit private Kartentische eine
+  // Zusage des Gastgebers verlangen (tables/anfragen.ts, 13.10.2026).
+  'einladung.vorgemerkt': 'Du bist an einen Tisch eingeladen. Melde dich an oder spiel als Gast - danach geht es zum Tisch.',
+  'einladung.laeuft': 'Du wirst an den Tisch gesetzt …',
+  'einladung.eingabeTitel': 'Mit Code beitreten',
+  'einladung.eingabeAria': 'Beitrittscode eingeben',
+  'einladung.beitreten': 'Beitreten',
+  'einladung.tischVon': 'Tisch von',
+  'einladung.offenerTisch': 'Offener Tisch',
+  'einladung.besetzt': 'Plätze besetzt',
+  'einladung.anderesSpiel': 'Dieser Code gehört zu einem Tisch für',
+  'einladung.fehlgeschlagen': 'Beitreten fehlgeschlagen.',
+
+  // Spielmodi der Partykiste (22.09.2026).
+  'ruleset.partykiste.modus': 'Diesen Spielmodus gibt es nicht.',
+  'ruleset.partykiste.themenOhnePaket': 'Ein Themenabend braucht ein Themenpaket.',
   'ruleset.noWayToLearnOwnCards': 'So sieht niemand je seine eigenen Karten.',
   'ruleset.freeCall': 'Ohne Strafe ruft man immer sofort.',
   'ruleset.failPenaltyOutOfRange': 'So viele Strafpunkte gehen nicht.',
@@ -546,8 +777,21 @@ export function gameTypeLabel(gameType: { kind: string; solo?: string }): string
   return t(`spielart.${gameType.kind}`);
 }
 
+/**
+ * Was in der App anders heisst als auf der Webseite.
+ *
+ * Filler heisst in der App „Farbduell" (Emile, 13.10.2026, erste
+ * iOS-Fassung): Unter „Filler" steht im App Store schon ein bekanntes Spiel.
+ * Die Kennung `filler` bleibt, sie steht in Datenbankzeilen und Nachrichten.
+ * Hier und nicht am Bildschirm, damit Auswahl, Rangliste, Profil und Tisch
+ * denselben Namen zeigen; den Push-Text fuehrt `SPIELNAMEN` im Server.
+ */
+const APP_NAMEN: Record<string, string> = {
+  'game.filler': 'Farbduell',
+};
+
 export function t(key: string): string {
-  return de[key] ?? key;
+  return (inApp ? APP_NAMEN[key] : undefined) ?? de[key] ?? key;
 }
 
 const SUITS: Record<string, string> = { C: '♣', S: '♠', H: '♥', D: '♦' };

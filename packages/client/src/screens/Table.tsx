@@ -33,6 +33,7 @@ import {
 import { aktionenAufteilen, armutKartenwahl } from '../tisch-armut';
 import { useTischklang } from '../tisch/klangtisch';
 import { type ConnectionStatus, useCountdown, useTable } from '../useTable';
+import { LernTipp } from '../lernen/LernTipp';
 
 /** Grenzen der Tischgroesse: klein genug fuer die Uebersicht, gross genug,
     dass die Karten nicht aus dem Faecher wachsen. */
@@ -629,6 +630,15 @@ export function Table({
   }
 
   const round = view.view.round;
+  /**
+   * Uebungsrunde aus dem Lernpfad. Das Merkmal kommt mit der Tischnachricht
+   * vom Server; bis zum 17.10.2026 stand es in einem Merkzettel des Geraets,
+   * das den Tisch angelegt hatte — auf jedem anderen fehlten Tipps und Kopfzeile.
+   * Seit dem 23.10.2026 auch auf der Webseite (vorher `inApp &&`): Der
+   * Lernpfad ist dort erreichbar, und ohne Tipps waere seine Uebung eine
+   * gewoehnliche Botrunde.
+   */
+  const uebung = table?.uebung === true;
 
   const seatList = party?.seats ?? [];
   const seatCount = seatList.length || Object.keys(round?.handCounts ?? {}).length || 4;
@@ -760,7 +770,12 @@ export function Table({
         </button>
         <div className="doko-top-mid">
           <strong>
-            Runde {view.view.roundIndex + 1} / {view.view.totalRounds}
+            {/* Am Uebungstisch wird EINE Runde gespielt (Server: `uebung`) —
+                „1 / 4" stimmte zwar mit der Tischregel, aber nicht mit dem,
+                was gleich passiert. */}
+            {uebung
+              ? 'Übungsrunde'
+              : `Runde ${view.view.roundIndex + 1} / ${view.view.totalRounds}`}
           </strong>
           <span className="muted">{gameLine}</span>
         </div>
@@ -1031,7 +1046,7 @@ export function Table({
           <div className="doko-sheet-card">
             <h2>Tisch pausiert</h2>
             <p className="muted">
-              Der Zugtimer steht still. Jeder am Tisch kann fortsetzen — ideal für
+              Der Zugtimer steht still. Jeder am Tisch kann fortsetzen - ideal für
               Clantische über mehrere Abende.
             </p>
             {view.seat !== null && (
@@ -1083,6 +1098,19 @@ export function Table({
           <TurnClock deadline={view.turnDeadline} />
         )}
       </div>
+
+      {/* Uebungsrunde aus dem Lernpfad: ein Satz zur Lage (lernen/LernTipp.tsx). */}
+      {view.seat !== null && uebung && (
+        <LernTipp
+          phase={round?.phase ?? null}
+          amZug={view.currentActor === view.seat}
+          vorbehaltGefragt={vorbehaltActions.length > 0}
+          erlaubt={playable.size}
+          handGroesse={hand.length}
+          stichLeer={liveTrick.length === 0 || liveTrick.length === seatCount}
+          partei={round?.myParty ?? null}
+        />
+      )}
 
       {view.seat !== null && (
         <div className={`doko-hand${dealing ? ' is-dealing' : ''}${handJustDealt ? ' is-dealt' : ''}`}>
@@ -1724,7 +1752,7 @@ function ArmutEntscheidung({
       <div className="doko-sheet-card">
         <h2>Armut</h2>
         <p>
-          {ansager ? `${ansager} hat Armut angesagt` : 'Ein Mitspieler hat Armut angesagt'} — er
+          {ansager ? `${ansager} hat Armut angesagt` : 'Ein Mitspieler hat Armut angesagt'} - er
           hält höchstens drei Trümpfe. Nimmst du an, wirst du sein Partner: Du
           bekommst seine Trümpfe und gibst dafür gleich viele Karten zurück.
           Lehnst du ab, wird der Nächste gefragt.
@@ -1914,7 +1942,7 @@ function RundenAbrechnung({
         {result.feigling && (
           <p className="doko-feigling">
             <strong>Feigling.</strong> {reGewinnt ? 'Kontra' : 'Re'} hatte die
-            Augen, aber zu niedrig angesagt — die Punkte gehen an die
+            Augen, aber zu niedrig angesagt - die Punkte gehen an die
             Gegenpartei. Sonderpunkte bleiben, wo sie erspielt wurden.
           </p>
         )}

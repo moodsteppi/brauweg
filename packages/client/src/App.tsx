@@ -1,16 +1,37 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 
-import { api, type Me } from './api';
+import { ApiError, api, type Me } from './api';
+import { t } from './i18n';
 import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
+import { inApp } from './laufzeit';
+import { imUmfang } from './umfang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
 import { GameSelect } from './screens/GameSelect';
 import { Lobby } from './screens/Lobby';
+import { AnfrageWarten } from './tisch/Anfragen';
+import { horcheAufAntippen } from './mitteilung-antippen';
+import { Startbildschirm } from './screens/Startbildschirm';
 import { Ladevorhang } from './minispiele/tafelrunde/Ladevorhang';
 import { TISCH_PARAMETER } from './minispiele/tafelrunde/tischlink';
+import {
+  fehlschlagMerken,
+  vorgemerkterCode,
+  vormerkungLoeschen,
+} from './minispiele/partykiste/einladungslink';
+import { einzelVon } from './minispiele/partykiste/einzelspiele';
+import type { PartyMinispiel } from './minispiele/partykiste/sicht';
+
+import { leseKontoLink, type KontoLinkZiel } from './kontolink';
+import { istSpielbar } from './spielfreigabe';
+import { useZuruecktaste } from './zuruecktaste';
 
 const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.Runner })));
+/** Landeseiten der Mail-Links und die Mail-Diagnose (seit dem 23.09.2026). */
+const KontoLink = lazy(() =>
+  import('./screens/KontoLink').then((m) => ({ default: m.KontoLink })),
+);
 
 /**
  * Die Spielschirme kommen einzeln nach.
@@ -24,6 +45,9 @@ const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.R
  */
 const Tafelrunde = lazy(() =>
   import('./screens/Tafelrunde').then((m) => ({ default: m.Tafelrunde })),
+);
+const BroChessTable = lazy(() =>
+  import('./screens/BroChessTable').then((m) => ({ default: m.BroChessTable })),
 );
 const CambioTable = lazy(() =>
   import('./screens/CambioTable').then((m) => ({ default: m.CambioTable })),
@@ -52,6 +76,14 @@ const Partykiste = lazy(() =>
   import('./screens/Partykiste').then((m) => ({ default: m.Partykiste })),
 );
 const Profile = lazy(() => import('./screens/Profile').then((m) => ({ default: m.Profile })));
+/**
+ * Push-Mitteilungen (docs/PUSH.md): meldet das Geraetetoken und fragt beim
+ * ersten Tisch einmal nach. Nur in der App — auf der Webseite wird die Datei
+ * nie geladen.
+ */
+const PushBegleiter = lazy(() =>
+  import('./push/PushBegleiter').then((m) => ({ default: m.PushBegleiter })),
+);
 const SkatTable = lazy(() =>
   import('./screens/SkatTable').then((m) => ({ default: m.SkatTable })),
 );
@@ -99,7 +131,7 @@ type Screen =
    * einem Bildschirm. Es ist kein Kartenspiel und braucht keine Kartenlobby —
    * gewaehlt wird die Rundenzahl, kein Regelsatz.
    */
-  | { name: 'partykiste'; tisch?: string | null }
+  | { name: 'partykiste'; tisch?: string | null; einzel?: PartyMinispiel | null }
   /**
    * Tafelrunde ebenso: eigenes Hauptmenue, eigene Match-Suche, Ruestkammer
    * auf einem Bildschirm. Es ist kein Kartenspiel und braucht keine
@@ -108,6 +140,8 @@ type Screen =
   | { name: 'tafelrunde'; tisch?: string | null }
   | { name: 'lobby'; gameId: string }
   | { name: 'table'; gameId: string; tableId: string }
+  /** Per Einladungslink an einen privaten Tisch: Warten auf die Zusage. */
+  | { name: 'anfrage'; gameId: string; tableId: string; host: string | null }
   /** Solo-Endless-Runner aus der Spielauswahl. */
   | { name: 'prosubway' }
   /**
@@ -117,6 +151,9 @@ type Screen =
    * aufgebaut; der Server schickt ohnehin immer die volle Sicht.
    */
   | { name: 'profil'; accountId: string; vorher: Screen };
+
+/** Spiele, deren `lobby` die gewoehnliche Kartenlobby ist (siehe useZuruecktaste unten). */
+const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess']);
 
 /**
  * Der Lade-Zustand des Clients.
@@ -136,6 +173,8 @@ function AppLaedt({ text = 'Einen Moment…' }: { text?: string }): React.JSX.El
 export function App(): React.JSX.Element {
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Der Startbildschirm (Logo, Ladebild) ist durch — gezeigt wird er einmal je Start. */
+  const [startFertig, setStartFertig] = useState(false);
   /**
    * `/?tisch=KX7M9Q` fuehrt direkt zu Tafelrunde.
    *
@@ -149,6 +188,28 @@ export function App(): React.JSX.Element {
       ? { name: 'tafelrunde' }
       : { name: 'games' },
   );
+  /**
+   * `/beitritt/K7X9MQ` setzt einen an den Tisch hinter dem Code (seit dem
+   * 22.09.2026, Einladung am Partykiste-Tisch).
+   *
+   * Anders als `/?tisch=` bei Tafelrunde tritt dieser Link SELBST bei — so
+   * hat Robin es entschieden: Er wird am selben Tisch vom Gastgeber
+   * weitergegeben, meist als QR-Code ueber den Tisch, und wer ihn scannt,
+   * will genau dorthin. Ein zweiter Tipp auf „Beitreten" waere dort nur eine
+   * Huerde, und wer doch nicht will, steht im Wartesaal wieder auf.
+   *
+   * Wer noch nicht angemeldet ist, meldet sich erst an (oder spielt als Gast);
+   * der Code wartet solange im Tab-Speicher (siehe einladungslink.ts).
+   */
+  const [einladung, setEinladung] = useState<string | null>(() => vorgemerkterCode());
+  /**
+   * `/verify`, `/reset` und `/aufsicht/mail` (siehe kontolink.ts) — gelesen
+   * vor dem ersten Bild und unabhaengig von der Anmeldung: Der Gast, der
+   * eben sein Konto gesichert hat, oeffnet den Bestaetigungslink angemeldet.
+   */
+  const [kontoLink, setKontoLink] = useState<KontoLinkZiel | null>(() => leseKontoLink());
+  /** Kam der Start ueber den Tafelrunde-Link `/?tisch=`? Nur dann wird nachgefragt. */
+  const [tischLinkPruefen] = useState(() => screen.name === 'tafelrunde');
 
   const reload = async (): Promise<void> => {
     setMe(await api.me().catch(() => null));
@@ -158,6 +219,86 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     void reload();
   }, []);
+
+  /**
+   * Die Einladung einloesen, sobald jemand angemeldet ist.
+   *
+   * Erst ansehen, dann beitreten: Die Vorschau nennt das Spiel, und nur damit
+   * landet man im richtigen Schirm — der Beitritt selbst antwortet nur mit der
+   * Tischkennung. Beide Routen gab es schon; neu ist nur, dass sie hier von
+   * selbst laufen.
+   *
+   * Scheitert es (Partie laeuft schon, Tisch voll, Code vertippt), geht es in
+   * die Partykiste mit dem Code in der Eingabe und dem Grund darunter — nicht
+   * stumm auf die Startseite, wo niemand erfaehrt, warum der Link nichts tat.
+   * Die Partykiste, weil nur sie solche Links verteilt.
+   *
+   * Am Konto als Kennung, nicht an `me`: `reload()` ersetzt das Objekt nach
+   * jeder Partie, und der Effekt liefe dann erneut los. Unter `StrictMode`
+   * laeuft er im Entwicklungsbetrieb trotzdem zweimal; das ist harmlos, weil
+   * `joinTable` im Server einen schon Sitzenden unveraendert zurueckgibt.
+   */
+  const kontoId = me?.id ?? null;
+
+  /**
+   * Der Tafelrunde-Link fuehrt am Server vorbei in den Schirm. Ist Tafelrunde
+   * hier nicht freigegeben (App-Schalter, siehe spielfreigabe.ts), geht es
+   * stattdessen auf die Startseite — sonst stuende man vor einem Beitritt,
+   * den der Server ablehnt.
+   */
+  useEffect(() => {
+    if (!kontoId || !tischLinkPruefen) return;
+    let lebt = true;
+    void istSpielbar('tafelrunde').then((ja) => {
+      if (lebt && !ja) setScreen((jetzt) => (jetzt.name === 'tafelrunde' ? { name: 'games' } : jetzt));
+    });
+    return () => {
+      lebt = false;
+    };
+  }, [kontoId, tischLinkPruefen]);
+
+  useEffect(() => {
+    if (!kontoId || !einladung) return;
+    let lebt = true;
+    void (async () => {
+      try {
+        const vorschau = await api.tischPerCode(einladung);
+        const { tableId, angefragt } = await api.beitretenPerCode(einladung);
+        if (!lebt) return;
+        // Privater Tisch: Der Gastgeber muss zusagen (tisch/Anfragen.tsx).
+        setScreen(
+          angefragt
+            ? { name: 'anfrage', gameId: vorschau.gameId, tableId, host: vorschau.host }
+            : { name: 'table', gameId: vorschau.gameId, tableId },
+        );
+      } catch (err) {
+        if (!lebt) return;
+        fehlschlagMerken(einladung, err instanceof ApiError ? err.messageKey : 'error.internal');
+        // Die Code-Eingabe steht in der Partykiste. Ist die hier nicht
+        // freigegeben (App-Schalter), bleibt nur die Startseite.
+        const partykiste = await istSpielbar('partykiste');
+        if (lebt) setScreen(partykiste ? { name: 'partykiste' } : { name: 'games' });
+      } finally {
+        if (lebt) {
+          vormerkungLoeschen();
+          setEinladung(null);
+        }
+      }
+    })();
+    return () => {
+      lebt = false;
+    };
+  }, [kontoId, einladung]);
+
+  /*
+   * Angetippte Mitteilung → an den Tisch (mitteilung-antippen.ts). Erst mit Konto:
+   * Vorher gibt es keinen Platz, an den man zurückkönnte. Am Schlüssel
+   * `kontoId`, nicht am Objekt `me` — das kommt nach jedem Neuladen neu.
+   */
+  useEffect(() => {
+    if (!kontoId || !inApp) return;
+    return horcheAufAntippen(({ tableId, gameId }) => setScreen({ name: 'table', gameId, tableId }));
+  }, [kontoId]);
 
   /**
    * Musik laeuft, solange jemand angemeldet ist.
@@ -172,9 +313,72 @@ export function App(): React.JSX.Element {
     return () => musikAn(false);
   }, [me !== null]);
 
+  /**
+   * Die Zurueck-Taste der Android-App (zuruecktaste.ts). Nur die zwei
+   * Schritte, deren Ziel hier feststeht: aus einem Profil dorthin, wo es
+   * geoeffnet wurde, und aus der Kartenlobby in die Spielauswahl — genau
+   * das, was die Zurueck-Knoepfe dieser Schirme tun. Am Tisch und in den
+   * Spielen mit eigenem Menue blaettert die Taste nicht: Dort weiss nur der
+   * Schirm selbst, was „zurueck" heisst (die Partykiste steht auch im
+   * Wartesaal noch auf `lobby`), und die App geht in den Hintergrund, statt
+   * die Partie zu verlassen. Darum eine Liste der Spiele MIT Kartenlobby
+   * statt einer ohne: Ein neues Spiel faellt so auf „nicht blaettern"
+   * zurueck, nicht auf „aus dem Spiel werfen".
+   */
+  useZuruecktaste(() => {
+    if (!me) return false;
+    if (screen.name === 'profil') {
+      setScreen(screen.vorher);
+      return true;
+    }
+    if (screen.name === 'lobby' && MIT_KARTENLOBBY.has(screen.gameId)) {
+      setScreen({ name: 'games' });
+      void reload();
+      return true;
+    }
+    return false;
+  });
+
+  // Logo und Ladebild mit Prozentzahl, bis Konto und Startbilder da sind.
+  if (!startFertig) return <Startbildschirm geladen={!loading} onFertig={() => setStartFertig(true)} />;
   if (loading) return <AppLaedt />;
 
-  if (!me) return <Auth onSignedIn={() => void reload()} />;
+  // Die Diagnose braucht ein angemeldetes Testkonto; ohne Anmeldung geht es
+  // erst durch den Anmeldeschirm, und die Adresse wartet solange.
+  if (kontoLink && (me || kontoLink.art !== 'mailprobe')) {
+    return (
+      <Suspense fallback={<AppLaedt />}>
+        <KontoLink
+          ziel={kontoLink}
+          angemeldet={me !== null}
+          onFertig={() => {
+            setKontoLink(null);
+            void reload();
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (!me) {
+    return (
+      <>
+        {/* Die Anmeldung selbst bleibt unberuehrt (sie gehoert zum
+            Sofort-Paket); der Hinweis liegt nur darueber, damit niemand
+            glaubt, der Link habe ins Leere gefuehrt. */}
+        {einladung ? (
+          <p className="einladung-vorgemerkt" role="status">
+            {t('einladung.vorgemerkt')} <strong>{einladung}</strong>
+          </p>
+        ) : null}
+        <Auth onSignedIn={() => void reload()} />
+      </>
+    );
+  }
+
+  /* Zwischen Anmeldung und Tisch: kurz warten statt die Startseite zu zeigen,
+     die gleich wieder verschwindet. */
+  if (einladung) return <AppLaedt text={t('einladung.laeuft')} />;
 
   /**
    * Aussehen eines Spiels. Der Server liefert alle bekannten Spiele mit;
@@ -443,6 +647,7 @@ export function App(): React.JSX.Element {
       return (
         <Partykiste
           startTisch={screen.tisch ?? null}
+          einzel={screen.einzel ?? null}
           onBack={() => {
             setScreen({ name: 'games' });
             void reload();
@@ -508,6 +713,24 @@ export function App(): React.JSX.Element {
         cambio: CambioTable as unknown as typeof Table,
         skat: SkatTable as unknown as typeof Table,
       };
+      // Schach braucht weder Blatt noch Szene, aber seinen Figurensatz — der
+      // steht im selben Aussehen-Feld wie das Blatt (figurensatz.ts) und darf
+      // nicht durch `deckForGame` laufen, das ihn als unbekanntes Blatt auf
+      // „Text" zuruecksetzen wuerde.
+      if (screen.gameId === 'brochess') {
+        return (
+          <BroChessTable
+            tableId={screen.tableId}
+            figurensatz={themeFuer('brochess').cardDeck}
+            szene={themeFuer('brochess').tableScene}
+            onShowProfile={zeigeProfil}
+            onLeave={() => {
+              setScreen({ name: 'games' });
+              void reload();
+            }}
+          />
+        );
+      }
       const Spieltisch = TISCHE[screen.gameId] ?? Table;
       return (
         <Spieltisch
@@ -527,6 +750,18 @@ export function App(): React.JSX.Element {
             setScreen({ name: 'games' });
             void reload();
           }}
+        />
+      );
+    }
+
+    if (screen.name === 'anfrage') {
+      return (
+        <AnfrageWarten
+          gameId={screen.gameId}
+          tableId={screen.tableId}
+          gastgeber={screen.host}
+          onAngenommen={() => setScreen({ name: 'table', gameId: screen.gameId, tableId: screen.tableId })}
+          onZurueck={() => setScreen({ name: 'games' })}
         />
       );
     }
@@ -566,13 +801,19 @@ export function App(): React.JSX.Element {
           if (gameId === 'filler') return setScreen({ name: 'filler' });
           if (gameId === 'eiland') return setScreen({ name: 'eiland' });
           if (gameId === 'golf') return setScreen({ name: 'golf' });
-          if (gameId === 'brocooked') return setScreen({ name: 'brocooked' });
+          // BroCooked läuft allein und zu zweit ohne Tisch, also ohne eine
+          // Route, die der Server sperren könnte — der Umfang greift nur hier.
+          if (gameId === 'brocooked') return imUmfang('brocooked') ? setScreen({ name: 'brocooked' }) : undefined;
           if (gameId === 'partykiste') return setScreen({ name: 'partykiste' });
+          // Einzelspiele der Partykiste (`pk-busfahrer` …): dieselbe Kiste, ein Minispiel.
+          const einzel = einzelVon(gameId);
+          if (einzel) return setScreen({ name: 'partykiste', einzel });
           if (gameId === 'tafelrunde') return setScreen({ name: 'tafelrunde' });
           return setScreen({ name: 'lobby', gameId });
         }}
         onSolo={(modusId) => {
-          if (modusId === 'prosubway') setScreen({ name: 'prosubway' });
+          // In der App kommt Pro-Subway erst spaeter (GameSelect zeigt "Bald").
+          if (modusId === 'prosubway' && !inApp && imUmfang('prosubway')) setScreen({ name: 'prosubway' });
         }}
         onResume={(gameId, tableId) => setScreen({ name: 'table', gameId, tableId })}
         onShowProfile={zeigeProfil}
@@ -594,5 +835,16 @@ export function App(): React.JSX.Element {
     );
   };
 
-  return <Suspense fallback={<AppLaedt />}>{bildschirm()}</Suspense>;
+  return (
+    <>
+      <Suspense fallback={<AppLaedt />}>{bildschirm()}</Suspense>
+      {/* Eigene Grenze: Waehrend der Begleiter nachlaedt, soll der Bildschirm
+          nicht auf den Ladevorhang zurueckfallen. */}
+      {inApp && (
+        <Suspense fallback={null}>
+          <PushBegleiter kontoId={me.id} />
+        </Suspense>
+      )}
+    </>
+  );
 }

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { botLoestKarte, pruefeKarte } from '../karten-pruefen';
-import { KARTEN_K11_K20 } from './k11-k20';
+import { KARTEN, bahnenImBereich } from './index';
+
+/** Seit dem 22.09.2026 eine Datei je Bahn — der Bereich wird über die Nummer gebildet. */
+const KARTEN_K11_K20 = bahnenImBereich(11, 20);
 
 describe('KARTEN_K11_K20', () => {
   it('enthaelt genau zehn Karten k11..k20', () => {
@@ -45,7 +48,7 @@ describe('KARTEN_K11_K20', () => {
   for (const karte of KARTEN_K11_K20) {
     describe(karte.id, () => {
       it('besteht die geometrische Pruefung', () => {
-        expect(pruefeKarte(karte, KARTEN_K11_K20)).toEqual([]);
+        expect(pruefeKarte(karte, KARTEN)).toEqual([]);
       });
 
       it('wird vom Bot (genie) im Limit geloest', () => {

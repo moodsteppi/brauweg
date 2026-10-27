@@ -1,0 +1,684 @@
+import { useState } from 'react';
+
+import {
+  BUCH,
+  EINTRAEGE,
+  type Eintrag,
+  buchPreis,
+  buchStufe,
+  type FaehigkeitArt,
+  poolGroesse,
+  type Rang,
+  VERKAUF_ANTEIL,
+  type Kennzahl,
+  type ManufakturStand,
+  type Menge,
+  type Ziel,
+  ausbauVorschau,
+  arbeiter,
+  faehigkeitBereit,
+  MAX_PRESSEN,
+  MAX_RENOVIERUNG,
+  hoechsterOrt,
+  renovierVorschau,
+  renovierung,
+  kannUmziehen,
+  einstellPreis,
+  einstellenLeistbar,
+  platzVon,
+  stationVon,
+} from '@brauweg/manufaktur-kern';
+
+import { HbBlatt } from '../screens/HbBlatt';
+import { abzeichenBild, buchBild, faehigkeitBild, siegelBild, sternBild, manufakturBild, medaillonBild, meisterBild } from './bilder';
+import { MANUFAKTUREN, RANG_NAME, faehigkeitText, manufakturName, stationName } from './namen';
+import { dauer, kurz, proSekunde, sekunden } from './zahlen';
+
+const MENGEN: Menge[] = [1, 10, 50, 'max'];
+
+function zahl(k: Pick<Kennzahl, 'einheit'>, wert: number): string {
+  return k.einheit === 'sekunden' ? sekunden(wert) : kurz(wert);
+}
+
+/** Alle Stationen in der Reihenfolge der Kette, von oben nach unten. */
+export function alleZiele(stand: ManufakturStand): Ziel[] {
+  return [{ art: 'versand' }, { art: 'paternoster' }, ...stand.pressen.map((_, index) => ({ art: 'presse' as const, index }))];
+}
+
+/**
+ * Was die Hauptzeile je Station misst. „Leistung pro Sekunde" sagte nicht,
+ * was da gezaehlt wird (Rueckmeldung 23.10.2026): Gemeint ist immer der
+ * Warenwert in Talern, aber er entsteht an der Presse, faehrt im Paternoster
+ * und wird am Wagen verkauft.
+ */
+const HAUPTZEILE: Record<Ziel['art'], { titel: string; erklaerung: string; meilenstein: string }> = {
+  presse: {
+    titel: 'Druckt pro Sekunde',
+    erklaerung: 'Karten im Wert von so vielen Talern, solange die Presse läuft',
+    meilenstein: 'doppelt so viel pro Sekunde',
+  },
+  paternoster: {
+    titel: 'Bringt pro Sekunde nach oben',
+    erklaerung: 'Karten im Wert von so vielen Talern, aus allen Etagen zum Packtisch',
+    meilenstein: 'doppelt so viel pro Sekunde',
+  },
+  versand: {
+    titel: 'Verkauft pro Sekunde',
+    erklaerung: 'So viele Taler bringt der Wagen ein, wenn genug am Packtisch liegt',
+    meilenstein: 'doppelt so viel pro Sekunde',
+  },
+};
+
+/**
+ * Das Upgrade-Blatt: oeffnet sich beim Tipp auf ein Schild. Hauptzeile ist
+ * die Leistung pro Sekunde vorher → nachher; darunter nur, was sich sonst noch
+ * aendert. Die Kaufmengen zeigen ihren Preis, und es gibt genau einen
+ * Kaufen-Knopf — gold, wenn bezahlbar, sonst mit dem, was noch fehlt.
+ */
+export function UpgradeBlatt({
+  stand,
+  ziel,
+  onKaufen,
+  onClose,
+}: {
+  stand: ManufakturStand;
+  ziel: Ziel;
+  onKaufen: (menge: Menge) => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const [menge, setMenge] = useState<Menge>(1);
+  const v = ausbauVorschau(stand, ziel, menge);
+  const balken = v.meilenstein;
+  // Nur Zeilen, die sich sichtbar aendern — eine Zeile „4 → 4" ist Laerm.
+  const zeilen = v.kennzahlen.filter((k) => zahl(k, k.vorher) !== zahl(k, k.nachher));
+  const fehlt = Math.max(0, v.kosten - stand.taler);
+  const amEnde = v.neueStufe <= v.stufe;
+  return (
+    <HbBlatt titel={stationName(ziel)} onClose={onClose} klasse="is-klein">
+      <div className="mf-blatt">
+        <div className="mf-blatt-kopf">
+          <img className="mf-medaillon" src={medaillonBild(ziel.art)} alt="" draggable={false} />
+          <p className="mf-blatt-stufe" aria-label={`Stufe ${v.stufe} auf ${v.neueStufe}`}>
+            Stufe {v.stufe} → <b>{v.neueStufe}</b>
+          </p>
+        </div>
+        <div className="mf-hauptzeile">
+          <small>{HAUPTZEILE[ziel.art].titel}</small>
+          <span>
+            {proSekunde(v.leistung.vorher)} → <b>{proSekunde(v.leistung.nachher)}</b>
+          </span>
+          <em>{HAUPTZEILE[ziel.art].erklaerung}</em>
+        </div>
+        {zeilen.length > 0 && (
+          <dl className="mf-kennzahlen">
+            {zeilen.map((k) => (
+              <div key={k.name}>
+                <dt>{k.name}</dt>
+                <dd>
+                  {zahl(k, k.vorher)} → <b>{zahl(k, k.nachher)}</b>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        {balken && (
+          <div className="mf-meilenstein">
+            <span>
+              Ab Stufe {balken.bis}: {HAUPTZEILE[ziel.art].meilenstein}
+              {/* Neue Arbeiter gibt es nur bis Stufe 100 — danach waere der Satz gelogen. */}
+              {ziel.art === 'presse' && arbeiter(balken.bis) > arbeiter(v.stufe) ? ', ein Arbeiter mehr' : ''}
+            </span>
+            <span className="mf-fortschritt" aria-label={`Stufe ${v.stufe} von ${balken.bis}`}>
+              <i style={{ width: `${((v.stufe - balken.von) / (balken.bis - balken.von)) * 100}%` }} />
+            </span>
+          </div>
+        )}
+        {/* Rabatt-Meister wirkt: der Kniff „rein, viel kaufen, zuruecktauschen" soll man sehen. */}
+        {v.rabatt > 0 && (
+          <p className="mf-rabatt" role="status">
+            Rabatt −{Math.round(v.rabatt * 100)} % · noch {bereitIn(v.rabattBis - (stand.zeit ?? 0))}
+          </p>
+        )}
+        <div className="mf-mengen" role="radiogroup" aria-label="Kaufmenge">
+          {MENGEN.map((m) => {
+            const option = ausbauVorschau(stand, ziel, m);
+            return (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={menge === m}
+                className={`mf-menge${menge === m ? ' is-an' : ''}${option.leistbar ? ' is-leistbar' : ''}`}
+                onClick={() => setMenge(m)}
+              >
+                <b>{m === 'max' ? `Max${option.neueStufe > option.stufe ? ` +${option.neueStufe - option.stufe}` : ''}` : `x${m}`}</b>
+                <small>{option.neueStufe > option.stufe ? kurz(option.kosten) : '-'}</small>
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          className={`hb-kn is-haupt is-breit mf-kaufen${v.leistbar ? ' is-gold' : ' is-gedaempft'}`}
+          disabled={!v.leistbar}
+          onClick={() => onKaufen(menge)}
+        >
+          {amEnde ? (
+            'Höchststufe'
+          ) : v.leistbar ? (
+            <>
+              Kaufen · <i className="mf-taler" aria-hidden="true" />{' '}
+              {v.rabatt > 0 && <s className="mf-alter-preis">{kurz(v.kostenOhneRabatt)}</s>} {kurz(v.kosten)}
+            </>
+          ) : (
+            `Es fehlen ${kurz(fehlt)} Taler`
+          )}
+        </button>
+      </div>
+    </HbBlatt>
+  );
+}
+
+function bereitIn(ms: number): string {
+  const rest = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(rest / 60)}:${String(rest % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Das Meister-Blatt (Phase 1, 24.10.2026): je Station der zugewiesene Meister
+ * mit Rang, Faehigkeit, Countdown und Ausloesen, darunter der Pool mit
+ * Zuweisen und Verkaufen, zuletzt Einstellen mit Preis. Aus der Welt (Tipp
+ * auf einen Platz) zeigt es nur die eine Station, aus der Leiste alle.
+ */
+export function MeisterBlatt({
+  onSchule,
+  stand,
+  jetzt,
+  markiert,
+  onEinstellen,
+  onFaehigkeit,
+  onZuweisen,
+  onVerkaufen,
+  onClose,
+}: {
+  stand: ManufakturStand;
+  jetzt: number;
+  markiert?: Ziel;
+  onEinstellen: (ziel: Ziel) => void;
+  onFaehigkeit: (ziel: Ziel) => void;
+  onZuweisen: (ziel: Ziel, id: number) => void;
+  onVerkaufen: (ziel: Ziel, id: number) => void;
+  onSchule: () => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const ziele = markiert ? [markiert] : alleZiele(stand);
+  return (
+    <HbBlatt titel={markiert ? stationName(markiert) : 'Meister'} onClose={onClose} klasse="is-klein">
+      <div className="mf-blatt">
+        <button type="button" className="hb-kn is-gold is-breit" onClick={onSchule}>Meisterschule öffnen</button>
+        {!markiert && (
+          <p className="hb-text mf-blatt-hinweis">
+            Ein Meister arbeitet ohne Tippen, auch wenn du weg bist. Tauschen kostet nichts - eine laufende Fähigkeit endet
+            dabei, jeder Meister behält seine eigene Pause.
+          </p>
+        )}
+        {ziele.map((z) => (
+          <MeisterAbschnitt
+            key={stationName(z)}
+            stand={stand}
+            ziel={z}
+            jetzt={jetzt}
+            mitTitel={!markiert}
+            onEinstellen={onEinstellen}
+            onFaehigkeit={onFaehigkeit}
+            onZuweisen={onZuweisen}
+            onVerkaufen={onVerkaufen}
+          />
+        ))}
+      </div>
+    </HbBlatt>
+  );
+}
+
+function MeisterAbschnitt({
+  stand,
+  ziel,
+  jetzt,
+  mitTitel,
+  onEinstellen,
+  onFaehigkeit,
+  onZuweisen,
+  onVerkaufen,
+}: {
+  stand: ManufakturStand;
+  ziel: Ziel;
+  jetzt: number;
+  mitTitel: boolean;
+  onEinstellen: (ziel: Ziel) => void;
+  onFaehigkeit: (ziel: Ziel) => void;
+  onZuweisen: (ziel: Ziel, id: number) => void;
+  onVerkaufen: (ziel: Ziel, id: number) => void;
+}): React.JSX.Element {
+  const s = stationVon(stand, ziel)!;
+  const platz = platzVon(stand, ziel);
+  const zugewiesen = platz.pool.find((m) => m.id === platz.zugewiesen);
+  const andere = platz.pool.filter((m) => m.id !== platz.zugewiesen);
+  const preis = einstellPreis(stand, ziel);
+  const voll = platz.pool.length >= poolGroesse(stand);
+  const leistbar = einstellenLeistbar(stand, ziel);
+  const wirkt = jetzt < s.faehigkeitBis;
+  const bereit = faehigkeitBereit(s, jetzt);
+  return (
+    <section className="mf-meister-abschnitt" aria-label={stationName(ziel)}>
+      {mitTitel && <h3>{stationName(ziel)}</h3>}
+      {zugewiesen ? (
+        <div className={`mf-meister-karte is-zugewiesen${wirkt ? ' is-wirkt' : ''}`}>
+          <MeisterBild ziel={ziel} rang={zugewiesen.rang} />
+          <span className="mf-meisterliste-text">
+            <strong>
+              {RANG_NAME[zugewiesen.rang]} <FaehigkeitZeichen art={zugewiesen.art} />
+            </strong>
+            <small>{faehigkeitText(stand, ziel.art, zugewiesen.rang, zugewiesen.art)}</small>
+            <small className={wirkt ? 'is-wirkt' : undefined}>
+              {wirkt ? `Wirkt noch ${bereitIn(s.faehigkeitBis - jetzt)}` : bereit ? 'Bereit' : `Bereit in ${bereitIn(s.abklingenBis - jetzt)}`}
+            </small>
+          </span>
+          <button type="button" className={`hb-kn${bereit ? ' is-gold' : ''}`} disabled={!bereit} onClick={() => onFaehigkeit(ziel)}>
+            Auslösen
+          </button>
+        </div>
+      ) : (
+        <p className="hb-text mf-meister-leer">Kein Meister zugewiesen - die Station schläft nach jedem Durchgang ein.</p>
+      )}
+      {andere.length > 0 && (
+        <ul className="mf-meister-pool">
+          {andere.map((m) => {
+            const pausiert = jetzt < m.abklingenBis;
+            return (
+              <li key={m.id} className="mf-meister-karte">
+                <MeisterBild ziel={ziel} rang={m.rang} />
+                <span className="mf-meisterliste-text">
+                  <strong>
+                    {RANG_NAME[m.rang]} <FaehigkeitZeichen art={m.art} />
+                  </strong>
+                  <small>{faehigkeitText(stand, ziel.art, m.rang, m.art)}</small>
+                  {pausiert && <small>Bereit in {bereitIn(m.abklingenBis - jetzt)}</small>}
+                </span>
+                <span className="mf-meister-knoepfe">
+                  <button type="button" className="hb-kn" onClick={() => onZuweisen(ziel, m.id)}>
+                    Zuweisen
+                  </button>
+                  <button
+                    type="button"
+                    className="hb-kn is-leise"
+                    onClick={() => onVerkaufen(ziel, m.id)}
+                    aria-label={`${RANG_NAME[m.rang]} verkaufen, ${kurz(m.preis * VERKAUF_ANTEIL)} Taler zurück`}
+                  >
+                    Verkaufen +{kurz(m.preis * VERKAUF_ANTEIL)}
+                  </button>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <button
+        type="button"
+        className={`hb-kn is-breit mf-einstellen${leistbar ? ' is-gold' : ''}`}
+        disabled={!leistbar}
+        onClick={() => onEinstellen(ziel)}
+        aria-label={voll ? 'Pool voll' : `Meister einstellen, ${kurz(preis)} Taler`}
+      >
+        {voll ? (
+          `Pool voll (${poolGroesse(stand)})`
+        ) : (
+          <>
+            Einstellen · <i className="mf-taler" aria-hidden="true" /> {kurz(preis)}
+          </>
+        )}
+      </button>
+    </section>
+  );
+}
+
+/**
+ * Bruststueck mit Rang-Ring (Bronze, Silber, Gold). Der Ring steht da, bis
+ * die Abzeichen aus outputs/rig2/ kommen (docs/ASSETS-KARTENMANUFAKTUR-RIG2.md).
+ */
+function MeisterBild({ ziel, rang }: { ziel: Ziel; rang: Rang }): React.JSX.Element {
+  return (
+    <span className={`mf-meister-bild is-${rang}`}>
+      <img src={meisterBild(ziel.art)} alt="" draggable={false} />
+      <img className="mf-abzeichen" src={abzeichenBild(rang)} alt="" draggable={false} />
+    </span>
+  );
+}
+
+function FaehigkeitZeichen({ art }: { art: FaehigkeitArt }): React.JSX.Element {
+  return <img className="mf-faehigkeit-zeichen" src={faehigkeitBild(art)} alt={art} draggable={false} />;
+}
+
+/** Tipp auf die Leerlauf-Anzeige: was offline laeuft und welche Meister fehlen. */
+export function LeerlaufBlatt({
+  stand,
+  ertrag,
+  onMeister,
+  onClose,
+}: {
+  stand: ManufakturStand;
+  ertrag: number;
+  onMeister: () => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const fehlen = alleZiele(stand).filter((z) => !stationVon(stand, z)!.meister);
+  // Ohne Versand- oder Paternoster-Meister kommt offline nichts an;
+  // fehlende Pressen-Meister senken den Ertrag nur.
+  const kette = fehlen.filter((z) => z.art !== 'presse');
+  return (
+    <HbBlatt titel="Leerlauf-Ertrag" onClose={onClose} klasse="is-klein">
+      <div className="mf-blatt">
+        <p className="mf-blatt-stufe">{kurz(ertrag)} Taler pro Sekunde</p>
+        <p className="hb-text">
+          So viel verdient deine Manufaktur, während du weg bist: zum halben Tempo und höchstens eine Stunde lang. Es zählt nur, was
+          Meister von selbst erledigen.
+        </p>
+        {kette.length > 0 && (
+          <p className="hb-text mf-blatt-warnung">
+            Ohne Meister an {kette.map(stationName).join(' und ')} kommt nichts beim Kunden an - die Pressen produzieren dann in einen
+            Stau.
+          </p>
+        )}
+        {fehlen.length > 0 ? (
+          <>
+            <p className="hb-text">Es fehlen Meister an: {fehlen.map(stationName).join(', ')}.</p>
+            <button type="button" className="hb-kn is-haupt is-breit" onClick={onMeister}>
+              Meister ansehen
+            </button>
+          </>
+        ) : (
+          <p className="hb-text">Alle Stationen haben einen Meister.</p>
+        )}
+      </div>
+    </HbBlatt>
+  );
+}
+
+/**
+ * Willkommen zurueck: was in der Abwesenheit passiert ist. Liegt das
+ * Produzierte weit ueber dem Verkauften, steht die Ware im Stau — dann sagt
+ * das Blatt, wo, und fuehrt zu den fehlenden Meistern.
+ */
+export function WillkommenBlatt({
+  stand,
+  offline,
+  onMeister,
+  onClose,
+}: {
+  stand: ManufakturStand;
+  offline: { sekunden: number; taler: number; produziert?: number };
+  onMeister: () => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const produziert = offline.produziert ?? offline.taler;
+  const schlafend = [stand.paternoster.meister ? null : 'Paternoster', stand.versand.meister ? null : 'Versand'].filter(
+    (n): n is string => n !== null,
+  );
+  const stau = produziert > offline.taler * 1.5 && schlafend.length > 0;
+  return (
+    <HbBlatt titel="Willkommen zurück" onClose={onClose} klasse="is-klein">
+      <div className="hb-rueckfrage">
+        <p className="hb-text">Du warst {dauer(offline.sekunden)} weg.</p>
+        <p className="mf-offline-betrag">
+          <i className="mf-taler is-gross" aria-hidden="true" />+{kurz(offline.taler)} Taler
+        </p>
+        {stau ? (
+          <>
+            <p className="hb-text mf-blatt-warnung">
+              Deine Pressen haben {kurz(produziert)} produziert, aber {schlafend.join(' und ')} {schlafend.length > 1 ? 'schlafen' : 'schläft'}{' '}
+              - die Ware wartet in den Kisten.
+            </p>
+            <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={onMeister}>
+              Meister einstellen
+            </button>
+            <button type="button" className="hb-leise-knopf" onClick={onClose}>
+              Später
+            </button>
+          </>
+        ) : (
+          <button type="button" className="hb-kn is-haupt is-breit is-gold" onClick={onClose}>
+            Weiter
+          </button>
+        )}
+      </div>
+    </HbBlatt>
+  );
+}
+
+/** Sterne einer Renovierung: gefuellt bis `stufe`, von vier (im Palast darueber eine Zahl). */
+function Sterne({ stufe }: { stufe: number }): React.JSX.Element {
+  return (
+    <span className="mf-sterne" aria-label={`${Math.min(stufe, MAX_RENOVIERUNG)} von ${MAX_RENOVIERUNG} Sternen`}>
+      {Array.from({ length: MAX_RENOVIERUNG }, (_, i) => (
+        <img key={i} className={i < stufe ? 'is-voll' : undefined} src={sternBild()} alt="" draggable={false} />
+      ))}
+      {stufe > MAX_RENOVIERUNG && <b className="mf-jubilaeen">+{stufe - MAX_RENOVIERUNG}</b>}
+    </span>
+  );
+}
+
+/**
+ * Das Manufaktur-Blatt (Phase 2): Renovieren mit Stufe, Multiplikator,
+ * Preis und Bedingung; Umziehen in einen neuen Ort; Wechseln an einen schon
+ * erreichten. Die Warnung „Stufen werden zurueckgesetzt, Meister bleiben"
+ * steht direkt am Knopf, die Rueckfrage kommt danach.
+ */
+export function ManufakturBlatt({
+  stand,
+  debug,
+  onDebug,
+  onRenovieren,
+  onUmziehen,
+  onWechseln,
+  onClose,
+}: {
+  stand: ManufakturStand;
+  /** Debug-Ansicht: Anker, Drehpunkte und Bildrate — zum Pruefen gelieferter Teile. */
+  debug: boolean;
+  onDebug: (an: boolean) => void;
+  onRenovieren: () => void;
+  onUmziehen: () => void;
+  onWechseln: (nach: number) => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const r = renovierVorschau(stand);
+  const voll = !r.istJubilaeum && r.stufe >= MAX_RENOVIERUNG;
+  const naechste = stand.manufaktur < MANUFAKTUREN.length ? stand.manufaktur + 1 : null;
+  const neuerOrt = naechste !== null && hoechsterOrt(stand) === stand.manufaktur;
+  const fehltPressen = Math.max(0, MAX_PRESSEN - stand.pressen.length);
+  const orte = Array.from({ length: hoechsterOrt(stand) }, (_, i) => i + 1);
+  return (
+    <HbBlatt titel={`${manufakturName(stand.manufaktur)} · ${stand.manufaktur}/${MANUFAKTUREN.length}`} onClose={onClose} klasse="is-klein">
+      <div className="mf-blatt">
+        <section className="mf-renovieren" aria-label={r.istJubilaeum ? 'Jubiläum' : 'Renovieren'}>
+          <span className="mf-umzug-bild" style={{ backgroundImage: `url(${manufakturBild(stand.manufaktur)})` }}>
+            <strong>{r.istJubilaeum ? `${r.neueStufe - MAX_RENOVIERUNG}. Jubiläum` : 'Renovieren'}</strong>
+            <Sterne stufe={r.stufe} />
+          </span>
+          {voll ? (
+            <p className="hb-text">Ganz renoviert - dieser Ort leistet für immer ×{kurz(r.faktorVorher)}.</p>
+          ) : (
+            <>
+              <div className="mf-hauptzeile">
+                <small>Alles hier leistet dauerhaft</small>
+                <span>
+                  ×{kurz(r.faktorVorher)} → <b>×{kurz(r.faktorNachher)}</b>
+                </span>
+                <em>
+                  {r.siegel > 0 ? (
+                    <>
+                      und es gibt <img className="mf-buch-preis" src={siegelBild()} alt="" /> {r.siegel} Siegel fürs Werkstattbuch
+                    </>
+                  ) : (
+                    'Im Palast geht es als Jubiläum weiter - flacher, aber ohne Ende.'
+                  )}
+                </em>
+              </div>
+              <p className="mf-warnung">Stufen, Etagen und Taler werden zurückgesetzt. Meister, Werkstattbuch und Sterne bleiben.</p>
+              <button
+                type="button"
+                className={`hb-kn is-haupt is-breit${r.leistbar ? ' is-gold' : ' is-gedaempft'}`}
+                disabled={!r.leistbar}
+                onClick={onRenovieren}
+              >
+                {!r.moeglich ? (
+                  `Erst alle 8 Pressen (${fehltPressen} fehlen)`
+                ) : r.leistbar ? (
+                  <>
+                    {r.istJubilaeum ? 'Jubiläum feiern' : 'Renovieren'} · <i className="mf-taler" aria-hidden="true" /> {kurz(r.kosten)}
+                  </>
+                ) : (
+                  `Es fehlen ${kurz(r.kosten - stand.taler)} Taler`
+                )}
+              </button>
+            </>
+          )}
+        </section>
+
+        {neuerOrt && (
+          <section className="mf-umziehen" aria-label="Umziehen">
+            <span className="mf-umzug-bild" style={{ backgroundImage: `url(${manufakturBild(naechste)})` }}>
+              <strong>{manufakturName(naechste)}</strong>
+            </span>
+            <p className="hb-text">
+              Ein neuer Ort: alles leistet doppelt so viel, kostet aber auch mehr. Es gibt 300 Münzen fürs Hub und 5 Siegel - die
+              Sterne hier bleiben dem Ort.
+            </p>
+            <button
+              type="button"
+              className={`hb-kn is-haupt is-breit${kannUmziehen(stand) ? ' is-gold' : ''}`}
+              disabled={!kannUmziehen(stand)}
+              onClick={onUmziehen}
+            >
+              {kannUmziehen(stand)
+                ? 'Umziehen'
+                : r.stufe < 1
+                  ? 'Erst einmal renovieren'
+                  : `Erst alle 8 Pressen (${fehltPressen} fehlen)`}
+            </button>
+          </section>
+        )}
+
+        {orte.length > 1 && (
+          <section className="mf-orte" aria-label="Orte">
+            <h3>Deine Orte</h3>
+            <p className="hb-text">Zurück an einen Ort, um ihn weiter zu renovieren. Es läuft immer nur einer; die Halle beginnt dort neu.</p>
+            <ul>
+              {orte.map((o) => (
+                <li key={o} className={o === stand.manufaktur ? 'is-hier' : undefined}>
+                  <span className="mf-orte-text">
+                    <strong>{manufakturName(o)}</strong>
+                    <Sterne stufe={renovierung(stand, o)} />
+                  </span>
+                  {o === stand.manufaktur ? (
+                    <small>hier</small>
+                  ) : (
+                    <button type="button" className="hb-kn" onClick={() => onWechseln(o)}>
+                      Hierher
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <label className="mf-debug">
+          <input type="checkbox" checked={debug} onChange={(e) => onDebug(e.target.checked)} /> Anker, Drehpunkte und Bildrate zeigen
+        </label>
+      </div>
+    </HbBlatt>
+  );
+}
+
+/** Name und Wirkung je Eintrag — die Zahlen kommen aus dem Kern (werkstattbuch.ts). */
+const BUCH_TEXT: Record<Eintrag, { name: string; wirkung: (stufe: number) => string }> = {
+  nachtschicht: { name: 'Längere Nachtschicht', wirkung: (s) => `Offline bis ${1 + s} h` },
+  ruf: { name: 'Guter Ruf', wirkung: (s) => `Kartenwert +${10 * s} %` },
+  erfahrene: { name: 'Erfahrene Meister', wirkung: (s) => `Fähigkeiten +${15 * s} % länger` },
+  pausen: { name: 'Kurze Pausen', wirkung: (s) => `Pausen −${10 * s} %` },
+  feilschen: { name: 'Feilschen', wirkung: (s) => `Ausbau −${5 * s} %` },
+  bewerber: { name: 'Gute Bewerber', wirkung: (s) => `Obermeister ${[5, 8, 12][s]} %` },
+  bautrupps: { name: 'Flinke Bautrupps', wirkung: (s) => `Bauzeit −${25 * s} %` },
+  lager: { name: 'Großes Lager', wirkung: (s) => `${5 + 2 * s} Meister je Station` },
+};
+
+/**
+ * Das Werkstattbuch (Phase 3): dauerhafte Verbesserungen fuer Siegel. Wird
+ * nie zurueckgesetzt — deshalb steht oben, woher Siegel kommen.
+ */
+export function BuchBlatt({
+  stand,
+  onKaufen,
+  onClose,
+}: {
+  stand: ManufakturStand;
+  onKaufen: (eintrag: Eintrag) => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  return (
+    <HbBlatt titel="Werkstattbuch" onClose={onClose} klasse="is-klein">
+      <div className="mf-blatt mf-buch">
+        <p className="mf-buch-siegel" aria-label={`${stand.siegel} Siegel`}>
+          <img src={siegelBild()} alt="" draggable={false} /> {stand.siegel}
+          <small>Siegel gibt es fürs Renovieren und für jeden Umzug. Was hier steht, bleibt für immer.</small>
+        </p>
+        <ul className="mf-buch-liste">
+          {EINTRAEGE.map((e) => {
+            const stufe = buchStufe(stand, e);
+            const max = BUCH[e].length;
+            const preis = buchPreis(stand, e);
+            const text = BUCH_TEXT[e];
+            const leistbar = preis !== null && stand.siegel >= preis;
+            return (
+              <li key={e}>
+                <img className="mf-buch-zeichen" src={buchBild(e)} alt="" draggable={false} />
+                <span className="mf-buch-text">
+                  <strong>{text.name}</strong>
+                  <small>
+                    {stufe > 0 ? text.wirkung(stufe) : 'noch nicht'}
+                    {preis !== null && (
+                      <>
+                        {' → '}
+                        <b>{text.wirkung(stufe + 1)}</b>
+                      </>
+                    )}
+                  </small>
+                  <span className="mf-buch-stufen" aria-label={`Stufe ${stufe} von ${max}`}>
+                    {Array.from({ length: max }, (_, i) => (
+                      <i key={i} className={i < stufe ? 'is-voll' : undefined} />
+                    ))}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  className={`hb-kn${leistbar ? ' is-gold' : ''}`}
+                  disabled={!leistbar}
+                  onClick={() => onKaufen(e)}
+                  aria-label={preis === null ? `${text.name}: voll` : `${text.name} kaufen, ${preis} Siegel`}
+                >
+                  {preis === null ? (
+                    'Voll'
+                  ) : (
+                    <>
+                      <img className="mf-buch-preis" src={siegelBild()} alt="" draggable={false} /> {preis}
+                    </>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </HbBlatt>
+  );
+}

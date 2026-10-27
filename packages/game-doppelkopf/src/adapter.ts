@@ -35,6 +35,7 @@ import {
   BockState,
   DEFAULT_RULESET,
   endeRundenpause,
+  finalizeRedeal,
   inRundenpause,
   isTrump,
   mayAnnounce,
@@ -346,7 +347,16 @@ export const doppelkopf: GameModule<PartyState, PartyAction, DokoView, RuleSet> 
 
   advanceInterlude(party) {
     if (offeneVorbehalte(party)) {
-      return { ...party, current: vorbehalteAblaufen(party.current!) };
+      const round = vorbehalteAblaufen(party.current!);
+      const updated = { ...party, current: round };
+      // Schmeiss führt zu phase 'redeal'; wie in act() müssen wir finalizeRedeal
+      // und startRound nachziehen, sonst hängt der Tisch (currentActor null,
+      // interludeMs null, aber kein Timer und keine Aktion).
+      if (round.phase === 'redeal') {
+        const finalized = finalizeRedeal(updated);
+        return finalized.finished ? finalized : startRound(finalized);
+      }
+      return updated;
     }
     if (!inRundenpause(party)) return party;
     const next = endeRundenpause(party);

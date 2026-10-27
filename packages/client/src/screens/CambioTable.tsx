@@ -184,7 +184,7 @@ export function CambioTable({
         <button className="doko-icon" onClick={onLeave} aria-label="Zurück">
           ‹
         </button>
-        <div className="doko-titel">
+        <div className="doko-top-mid">
           <strong>
             Runde {view.view.roundIndex + 1} / {view.view.totalRounds}
           </strong>
@@ -244,7 +244,7 @@ export function CambioTable({
           <div className="cambio-ruf">
             <strong>Cambio!</strong>
             <span>
-              {nameOf(round.caller)} hat gerufen — noch{' '}
+              {nameOf(round.caller)} hat gerufen - noch{' '}
               {offeneZuege(round) === 1 ? 'ein Zug' : `${offeneZuege(round)} Züge`}
             </span>
           </div>
