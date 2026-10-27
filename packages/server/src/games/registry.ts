@@ -99,10 +99,29 @@ export function abstimmModiFuer(plattform: Plattform, umfang: Umfang = ALLES): (
   return [
     { id: 'prosubway', nameKey: 'modus.prosubway', seatCounts: [1] },
     { id: 'mehrkampf', nameKey: 'modus.mehrkampf', seatCounts: [2, 3, 4, 5, 6, 7, 8] },
-  ].filter(m => m.id === 'mehrkampf' || (plattform === 'app' && imUmfang(umfang, m.id))).map(m => ({
-    ...m, availability: 'preview' as const,
-    rotationSize: (sitze: number) => sitze, suggestedRounds: () => [],
-  }));
+  ]
+    // Jeder Modus braucht seine eigene Kennung im Umfang, wie jedes
+    // Vorschau-Spiel auch: Bis zum 27.10.2026 kam der Mehrkampf allein mit
+    // `abstimmung` mit — und `UMFANG=…,mehrkampf` meldete der Start als
+    // unbekannt, obwohl die Zeile genau das Gewollte sagte.
+    .filter(m => imUmfang(umfang, m.id) && (m.id === 'mehrkampf' || plattform === 'app'))
+    .map(m => ({
+      ...m, availability: 'preview' as const,
+      rotationSize: (sitze: number) => sitze, suggestedRounds: () => [],
+    }));
+}
+
+/**
+ * Alle Kennungen, die `UMFANG` ausser den Funktionen versteht: die Spiele
+ * der Registry samt Vorschau und die angekuendigten Modi. Fuer die Meldung
+ * unbekannter Namen beim Start (index.ts) — wer hier einen Modus vergisst,
+ * bekommt eine Warnung fuer eine Zeile, die stimmt.
+ */
+export function umfangKennungen(): string[] {
+  return [
+    ...registry.all().map((meta) => meta.id as string),
+    ...abstimmModiFuer('app').map((modus) => modus.id),
+  ];
 }
 
 export const registry: GameRegistry = {

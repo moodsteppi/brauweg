@@ -429,7 +429,10 @@ test('abstimmModiFuer: der Umfang wirkt auf beiden Plattformen', () => {
   // Ohne Abstimmung im Umfang ist nichts angekuendigt, weder hier noch dort.
   assert.deepEqual(abstimmModiFuer('web', nur('doppelkopf', 'prosubway')), []);
   assert.deepEqual(abstimmModiFuer('app', nur('doppelkopf', 'prosubway')), []);
-  // Ohne Pro-Subway im Umfang kuendigt auch die App es nicht an.
-  assert.deepEqual(abstimmModiFuer('app', nur('abstimmung')).map(m => m.id), ['mehrkampf']);
-  assert.deepEqual(abstimmModiFuer('web', nur('abstimmung', 'prosubway')).map(m => m.id), ['mehrkampf']);
+  // Jeder Modus braucht seine eigene Kennung, wie jedes Vorschau-Spiel.
+  assert.deepEqual(abstimmModiFuer('app', nur('abstimmung')), []);
+  assert.deepEqual(abstimmModiFuer('app', nur('abstimmung', 'mehrkampf')).map(m => m.id), ['mehrkampf']);
+  assert.deepEqual(abstimmModiFuer('app', nur('abstimmung', 'prosubway')).map(m => m.id), ['prosubway']);
+  // Pro-Subway laeuft auf der Webseite schon — dort nie angekuendigt.
+  assert.deepEqual(abstimmModiFuer('web', nur('abstimmung', 'prosubway', 'mehrkampf')).map(m => m.id), ['mehrkampf']);
 });
