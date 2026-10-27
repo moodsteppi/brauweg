@@ -17,6 +17,8 @@ const MIN_WISCH = 30;
 const SCHWUNG_MS = 200;
 /** Am Rand ohne Nachbarn: Gummiband, damit man nicht ins Leere zieht. */
 const GUMMI = 0.32;
+/** Auf einer Unterseite: so weit (Anteil der Breite, mit Schwung) nach rechts heißt „zurück". */
+const ZURUECK_ANTEIL = 0.25;
 
 function wenigerBewegung(): boolean {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
@@ -42,6 +44,10 @@ type Geste<T> = {
   breite: number;
   achse: '?' | 'h' | 'v';
   dx: number;
+  /** Fingerweg ohne Gummiband — für „zurück" auf einer Unterseite. */
+  roh: number;
+  /** Unterseite offen: Wischen nach rechts schließt sie, kein Reiterwechsel. */
+  zurueck: (() => void) | undefined;
   tab: T;
   vor: T | undefined;
   nach: T | undefined;
@@ -74,6 +80,12 @@ function tempo(proben: { x: number; t: number }[]): number {
  * `seiten` ist die Reihenfolge der Plätze im Track, `folge` die, zwischen der
  * gewischt wird. Steht der offene Reiter nicht in der Leiste (Profil auf der
  * Webseite), wird nicht gewischt.
+ *
+ * `zurueck`: Ist im Reiter eine Unterseite offen (eine Spielseite im
+ * Spiele-Reiter), führt ein Wisch nach rechts dorthin zurück, wie die
+ * Zurück-Geste unter iOS — statt zum Nachbarreiter (Niklas, 27.10.2026: man
+ * wischte aus der Spielseite heraus in einen anderen Reiter). Nach links
+ * passiert dann nichts außer dem Gummiband.
  */
 export function useHubWischen<T extends string>(
   ref: RefObject<HTMLDivElement | null>,
@@ -83,9 +95,10 @@ export function useHubWischen<T extends string>(
   seiten: T[],
   wechseln: (tab: T) => void,
   vorbereiten: (tabs: T[]) => void = () => {},
+  zurueck?: () => void,
 ): void {
-  const aktuell = useRef({ tab, folge, seiten, wechseln, vorbereiten });
-  aktuell.current = { tab, folge, seiten, wechseln, vorbereiten };
+  const aktuell = useRef({ tab, folge, seiten, wechseln, vorbereiten, zurueck });
+  aktuell.current = { tab, folge, seiten, wechseln, vorbereiten, zurueck };
   /** Läuft ein Zug oder ein Einrasten, setzt der Grundstand unten nichts zurück. */
   const beschaeftigt = useRef({ zieht: false, schnappt: undefined as number | undefined });
 
@@ -127,7 +140,7 @@ export function useHubWischen<T extends string>(
     const beginne = (e: TouchEvent): void => {
       geste = null;
       if (e.touches.length !== 1 || eigenesWischen(e.target, el)) return;
-      const { tab: jetzt, folge, seiten } = aktuell.current;
+      const { tab: jetzt, folge, seiten, zurueck } = aktuell.current;
       const i = folge.indexOf(jetzt);
       if (i < 0) return;
       const breite = el.clientWidth || window.innerWidth;
@@ -143,10 +156,12 @@ export function useHubWischen<T extends string>(
           setze(x);
         }
       }
-      const vor = folge[i - 1];
-      const nach = folge[i + 1];
+      // Unterseite offen: keine Nachbarn — der Zug federt nur, und „zurück"
+      // entscheidet sich beim Loslassen.
+      const vor = zurueck ? undefined : folge[i - 1];
+      const nach = zurueck ? undefined : folge[i + 1];
       const t = e.touches[0]!;
-      geste = { x: t.clientX, y: t.clientY, x0, basis, breite, achse: '?', dx: x0, tab: jetzt, vor, nach, proben: [] };
+      geste = { x: t.clientX, y: t.clientY, x0, basis, breite, achse: '?', dx: x0, roh: 0, zurueck, tab: jetzt, vor, nach, proben: [] };
       // Die Nachbarn schon beim Anfassen anhängen: Bis der Finger weit genug
       // für einen Wisch ist, steht ihr Inhalt, und man zieht keine leere
       // Fläche herein. Danach bleiben sie hängen (siehe HubRahmen).
@@ -176,6 +191,7 @@ export function useHubWischen<T extends string>(
       }
       if (e.cancelable) e.preventDefault();
       let dx = g.x0 + roh;
+      g.roh = roh;
       if ((dx < 0 && !g.nach) || (dx > 0 && !g.vor)) dx *= GUMMI;
       g.dx = dx;
       const jetzt = performance.now();
@@ -197,6 +213,14 @@ export function useHubWischen<T extends string>(
         return;
       }
       const v = tempo(g.proben);
+      if (g.zurueck) {
+        // Unterseite: weit genug nach rechts (mit Schwung) schließt sie, die
+        // Seite federt an ihren Platz, und darin steht wieder die Übersicht.
+        const weg = g.roh >= MIN_WISCH ? g.roh + v * SCHWUNG_MS : 0;
+        ruhe();
+        if (weg >= g.breite * ZURUECK_ANTEIL) g.zurueck();
+        return;
+      }
       // Wohin die Seite mit ihrem Schwung käme; ab der halben Breite rastet
       // die Nachbarseite ein. Ein schneller kurzer Wisch reicht so, ein
       // langsames Hin- und Zurückziehen nicht.

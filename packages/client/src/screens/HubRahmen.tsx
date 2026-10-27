@@ -63,6 +63,7 @@ export function NeuerRahmen<T extends Reiter>({
   kaufbar,
   onTab,
   renderTab,
+  zurueck,
   children,
 }: {
   me: Me;
@@ -74,6 +75,8 @@ export function NeuerRahmen<T extends Reiter>({
   kaufbar: boolean;
   onTab: (tab: T) => void;
   renderTab: (tab: T) => React.JSX.Element | null;
+  /** Unterseite im offenen Reiter: Wisch nach rechts führt zurück statt zum Nachbarn (hub-wischen.ts). */
+  zurueck?: () => void;
   children: React.ReactNode;
 }): React.JSX.Element {
   const inhalt = useRef<HTMLDivElement>(null);
@@ -91,7 +94,7 @@ export function NeuerRahmen<T extends Reiter>({
   }, []);
   const zeigt = geladen.has(tab) ? geladen : new Set([...geladen, tab]);
   if (zeigt !== geladen) setGeladen(zeigt);
-  useHubWischen(inhalt, trackRef, tab, tabFolge, seiten, onTab, vorbereiten);
+  useHubWischen(inhalt, trackRef, tab, tabFolge, seiten, onTab, vorbereiten, zurueck);
   const zumShop = kaufbar ? () => onTab('shop' as T) : undefined;
   // Der Kopf mit Spieler und Guthaben steht nur auf dem Start (Bauplan); die
   // anderen Reiter haben ihre eigene Überschrift. Er hängt im Platz des

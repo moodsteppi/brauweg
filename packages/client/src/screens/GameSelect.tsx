@@ -481,6 +481,9 @@ export function GameSelect({
       kaufbar={kaufbar}
       onTab={setTab}
       renderTab={renderTab}
+      // Eine offene Spielseite ist eine Unterseite des Spiele-Reiters: Wischen
+      // führt zur Übersicht zurück, nicht in den Nachbarreiter.
+      zurueck={tab === 'spiele' && spielseite ? () => setSpielseite(null) : undefined}
     >
       {overlays}
     </NeuerRahmen>
