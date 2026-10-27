@@ -11,7 +11,7 @@ Gebaut: 5. August 2026. Code: `packages/client/src/klang.ts` (das System),
 
 ## Herkunft und Lizenz
 
-**Alles steht unter CC0** — gemeinfrei, für kommerzielle Nutzung frei,
+**Die unten aufgeführten Kenney- und OpenGameArt-Klänge stehen unter CC0** — gemeinfrei, für kommerzielle Nutzung frei,
 **keine Namensnennung verpflichtend**. Bei den Kenney-Paketen liegt der
 Lizenztext bei; bei den Musikstücken wurde die Lizenz auf jeder einzelnen
 Seite nachgesehen, nicht der Sammlung geglaubt, in der sie stehen.
@@ -248,3 +248,15 @@ zuerst den Ablageort einrichten.
   die Naht hörbar. Bei einem Stück, das eine Minute läuft, fällt das selten
   auf — bei einem kurzen Motiv würde es. Wer das loswerden will, braucht
   entschlüsselte Puffer statt `<audio>` und zahlt es mit Arbeitsspeicher.
+
+## Truhenklänge (27.10.2026)
+
+`truhe-auf.mp3` und `muenzenregen.mp3` wurden mit dem verbundenen ElevenLabs-Konto
+(Modell `eleven_text_to_sound_v2`) eigens für Brauweg erzeugt. Sie gehören nicht
+zu den CC0-Paketen oben. Herkunft: Flow `CwbJGKD3QHA9TnrncRLN`; Öffnung
+`U1fSbxRpeGQvOY88xQV0`, Münzen `a4TcDcyT3OzQPLQxLeGj`.
+Originale: `brauweg-art/klang/truhen/`. Auslieferung: je 24 kB, 3,03 Sekunden,
+Mono-MP3 nach dem vorhandenen Profil `sfx`. Öffnung beim Tipp mit 75 %,
+Münzen nach 850 ms mit 60 % der eingestellten Lautstärke. Bei reduzierter
+Bewegung beginnt der Münzklang nach 80 ms. Die vorhandene Stummschaltung
+und Klangpaket-Rückfalllogik gelten weiter.

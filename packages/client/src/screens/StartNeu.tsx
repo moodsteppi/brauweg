@@ -17,7 +17,7 @@ import { BIOME } from './Pfad';
 
 /** Banner je Spiel. Drei Spiele heißen im Bild anders als im Code. */
 export function bannerFuer(gameId: string): string {
-  const name: Record<string, string> = { wizard: 'zauberer', easypoker: 'poker', golf: 'minigolf' };
+  const name: Record<string, string> = { wizard: 'zauberer', easypoker: 'poker', golf: 'minigolf', filler: 'farbduell' };
   return `/hub/banner-${name[gameId] ?? gameId}.webp`;
 }
 

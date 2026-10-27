@@ -212,6 +212,10 @@ if (PROBE.has('abstimmung')) {
   api.vote = async id => { gewaehlt.add(id); return { ok: true }; };
 }
 
+if (PROBE.has('farbduell')) {
+  api.games = async () => [{ id: 'filler', nameKey: 'game.filler', availability: 'playable', seatCounts: [2], votes: 0, abstimmbar: false }];
+}
+
 const WIR = { clubId: 'probe-clan', name: 'Die Stichhaltigen', crest: 'wappen-12', score: 31 };
 const ASSE = { clubId: 'gegner', name: 'Die Asse', crest: 'wappen-7', score: 24 };
 const KRIEG = (status: 'laeuft' | 'suche' | 'angefragt' | 'beendet', mehr: Partial<WarView> = {}) => ({

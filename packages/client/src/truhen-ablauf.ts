@@ -1,7 +1,7 @@
 import type { Grad } from './api';
 
 /** Gemeinsame Zeitachse für Deckel, Licht, Münzen und die Anzeige der Belohnung. */
-export const TRUHEN_ZEIT = { spannen: 0.6, offen: 1.35, belohnung: 1.65, fertig: 3.2 } as const;
+export const TRUHEN_ZEIT = { spannen: 0.6, offen: 1.35, muenzen: 0.85, belohnung: 1.65, fertig: 3.2 } as const;
 export const TRUHEN_STIL: Record<Grad, { name: string; panel: string; innen: string; metall: string; akzent: string; licht: string; metallisch: number; funken: number }> = {
   holz: { name: 'Holztruhe', panel: '#a5632e', innen: '#291b18', metall: '#69778d', akzent: '#edb84e', licht: '#ffd58c', metallisch: 0.35, funken: 6 },
   bronze: { name: 'Bronzetruhe', panel: '#633c29', innen: '#2c1a17', metall: '#d58b4c', akzent: '#ffcf82', licht: '#ffc08a', metallisch: 0.65, funken: 9 },

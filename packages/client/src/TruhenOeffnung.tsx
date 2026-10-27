@@ -73,12 +73,13 @@ export function TruhenOeffnung({ grad, muenzen, onFertig }: { grad: Grad; muenze
   useEffect(() => {
     if (phase !== 'auf') return;
     const timer = window.setTimeout(() => setPhase('fertig'), weniger ? 350 : TRUHE_DAUER_MS);
-    return () => window.clearTimeout(timer);
+    const klang = window.setTimeout(() => spiele('muenzenregen', 0.6), weniger ? 80 : TRUHEN_ZEIT.muenzen * 1000);
+    return () => { window.clearTimeout(timer); window.clearTimeout(klang); };
   }, [phase, weniger]);
 
   const tippen = (): void => {
     if (!bereit) return;
-    if (phase === 'zu') { spiele('truhe'); setPhase('auf'); }
+    if (phase === 'zu') { spiele('truhe-auf', 0.75); setPhase('auf'); }
     else if (phase === 'fertig' && !einmal.current) { einmal.current = true; onFertig(); }
   };
   const bild = <img className="truhe-ersatz" src={truhenBild(grad)} alt="" draggable={false} />;

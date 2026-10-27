@@ -54,6 +54,8 @@ const DATEIEN = {
   // Belohnung.
   kauf: ['kauf'],
   truhe: ['truhe'],
+  'truhe-auf': ['truhe-auf'],
+  muenzenregen: ['muenzenregen'],
   stufe: ['stufe'],
   sieg: ['sieg'],
   niederlage: ['niederlage'],

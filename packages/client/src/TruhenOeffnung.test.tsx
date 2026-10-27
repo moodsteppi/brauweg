@@ -26,14 +26,21 @@ describe('Truhenöffnung', () => {
     expect(screen.getByTestId('3d').dataset.offen).toBe('true');
     fireEvent.click(screen.getByRole('dialog'));
     expect(fertig).not.toHaveBeenCalled();
-    act(() => vi.advanceTimersByTime(TRUHE_DAUER_MS - 1));
+    expect(spiele).toHaveBeenCalledExactlyOnceWith('truhe-auf', 0.75);
+    act(() => vi.advanceTimersByTime(849));
+    expect(spiele).toHaveBeenCalledTimes(1);
+    act(() => vi.advanceTimersByTime(1));
+    expect(spiele).toHaveBeenLastCalledWith('muenzenregen', 0.6);
+    act(() => vi.advanceTimersByTime(TRUHE_DAUER_MS - 851));
     expect(screen.queryByRole('button', { name: 'Weiter' })).toBeNull();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.getByRole('status').textContent).toContain('37 Münzen erhalten');
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
     fireEvent.click(screen.getByRole('dialog'));
     expect(fertig).toHaveBeenCalledTimes(1);
-    expect(spiele).toHaveBeenCalledExactlyOnceWith('truhe');
+    expect(spiele).toHaveBeenCalledTimes(2);
+    expect(spiele).toHaveBeenNthCalledWith(1, 'truhe-auf', 0.75);
+    expect(spiele).toHaveBeenNthCalledWith(2, 'muenzenregen', 0.6);
   });
   it('führt auch ohne WebGL zuverlässig zur Belohnung', async () => {
     defekt.wert = true;

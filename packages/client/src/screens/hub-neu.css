@@ -3202,20 +3202,6 @@
   color: #ffb3b9;
 }
 
-/* Die Truhenöffnung (Fundblatt): Grund und Schrift des neuen Hubs */
-:is(.hb, .spe) .truhe-oeffnung {
-  position: absolute;
-  background: radial-gradient(circle at 50% 42%, rgba(27, 47, 110, 0.6), rgba(5, 11, 29, 0.95));
-}
-:is(.hb, .spe) .truhe-belohnung strong {
-  font: 400 34px var(--hb-anz);
-  color: var(--hb-gold);
-}
-:is(.hb, .spe) .truhe-hinweis {
-  font: 700 13px var(--hb-txt);
-  color: var(--hb-leise);
-}
-
 /* Rückfrage (useRueckfrage in HbBlatt.tsx) */
 :is(.hb, .spe) .hb-rueckfrage {
   display: flex;
