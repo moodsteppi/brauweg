@@ -151,8 +151,8 @@ const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.R
  * Stueck, das jeder Spieler beim Anmelden laedt.
  */
 const Arena2D = lazy(() => import('./proben/arena-2d/Arena2D').then((m) => ({ default: m.Arena2D })));
-const TruhenOeffnung = lazy(() =>
-  import('./TruhenOeffnung').then((m) => ({ default: m.TruhenOeffnung })),
+const ProbeTruhen = lazy(() =>
+  import('./proben/truhen/ProbeTruhen').then((m) => ({ default: m.ProbeTruhen })),
 );
 /* Aus demselben Grund `lazy` wie die Probe darueber, hier aber mit einem
    zweiten dazu: Die Probe zieht den aufgezeichneten Kampf (rund 30 kB JSON)
@@ -212,7 +212,7 @@ const werkzeug = devStart ? (
 ) : devRunner ? (
   <Runner />
 ) : devTruhe ? (
-  <TruhenOeffnung grad="gold" muenzen={120} onFertig={() => window.location.reload()} />
+  <ProbeTruhen />
 ) : null;
 
 createRoot(root).render(

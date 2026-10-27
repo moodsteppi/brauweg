@@ -1433,7 +1433,6 @@ function Shop({
     void api
       .buyChest(truhe.id)
       .then((ergebnis) => {
-        spiele('truhe');
         setFrage(null);
         setFund(ergebnis);
         onGuthaben();
