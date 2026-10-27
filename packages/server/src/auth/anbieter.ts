@@ -94,8 +94,11 @@ async function bindungVon(db: Db, anbieter: Anbieter, sub: string) {
  */
 export type AnmeldeErgebnis =
   | { readonly token: string; readonly accountId: string; readonly neu: boolean }
-  /** Es entstuende ein neues Konto — erst das Geburtsdatum, siehe `Anmeldescheine`. */
-  | { readonly geburtstagNoetig: true; readonly schein: string };
+  /**
+   * Es entstuende ein neues Konto — erst Geburtsdatum und Anzeigename, siehe
+   * `Anmeldescheine`. `namensvorschlag` fuellt das Namensfeld vor.
+   */
+  | { readonly geburtstagNoetig: true; readonly schein: string; readonly namensvorschlag: string };
 
 /**
  * Wie oben — aber ein NEUES Konto entsteht hier noch nicht.
@@ -119,7 +122,11 @@ export async function anmeldenMitAnbieter(
 }
 
 /**
- * Zweiter Schritt einer Erstanmeldung: das Geburtsdatum.
+ * Zweiter Schritt einer Erstanmeldung: das Geburtsdatum und — seit dem
+ * 27.10.2026 — der Anzeigename. Vorher bekam ein Apple-Konto still den
+ * Vornamen oder „Spieler-1234" (bei „E-Mail verbergen" ohne Namen), und wer
+ * sich so anmeldete, konnte sich keinen Namen aussuchen (Tom, TestFlight).
+ * Ohne `displayName` bleibt es beim Vorschlag, wie bisher.
  *
  * Unter 18 fliegt der Schein weg — dieselbe Absage wie bei der Registrierung
  * (`birthdayTooYoung`), und es bleibt nichts zurueck, weder Konto noch
@@ -131,9 +138,21 @@ export async function schliesseAnmeldungAb(
   scheine: Anmeldescheine,
   schein: string,
   birthday: string,
+  displayName?: string,
 ): Promise<{ token: string; accountId: string; neu: boolean }> {
   const profil = scheine.ansehen(schein);
   if (!profil) throw badRequest('anmeldescheinUngueltig');
+  const gewaehlt = displayName?.trim() || null;
+  // Vor dem Einloesen: Ein vergebener Name ist ein Tippfehler wie ein
+  // falsches Datum — dafuer soll niemand noch einmal durch den Anbieter-Dialog.
+  if (gewaehlt) {
+    if (gewaehlt.length < 2 || gewaehlt.length > 30) throw badRequest('invalidInput');
+    const [belegt] = await deps.db
+      .select({ id: s.account.id })
+      .from(s.account)
+      .where(eq(s.account.displayName, gewaehlt));
+    if (belegt) throw conflict('displayNameTaken');
+  }
   let geburtstag: string;
   try {
     geburtstag = assertValidBirthday(birthday);
@@ -144,7 +163,7 @@ export async function schliesseAnmeldungAb(
   // Einloesen nach der Pruefung, aber vor dem Anlegen: Zwei Klicks auf
   // "Konto anlegen" duerfen nicht zwei Konten machen.
   if (!scheine.einloesen(schein)) throw badRequest('anmeldescheinUngueltig');
-  const ergebnis = await anmelden(deps, profil, { geburtstag });
+  const ergebnis = await anmelden(deps, profil, { geburtstag, displayName: gewaehlt });
   if ('schein' in ergebnis) throw badRequest('anmeldescheinUngueltig');
   return ergebnis;
 }
@@ -152,7 +171,7 @@ export async function schliesseAnmeldungAb(
 async function anmelden(
   deps: AuthDeps,
   profil: AnbieterProfil,
-  weiter: { scheine: Anmeldescheine } | { geburtstag: string },
+  weiter: { scheine: Anmeldescheine } | { geburtstag: string; displayName?: string | null },
 ): Promise<AnmeldeErgebnis> {
   const { db } = deps;
 
@@ -246,11 +265,15 @@ async function anmelden(
 
   // 3. Neues Konto — erst mit Geburtsdatum.
   if (!('geburtstag' in weiter)) {
-    return { geburtstagNoetig: true, schein: weiter.scheine.ausstellen(profil) };
+    return {
+      geburtstagNoetig: true,
+      schein: weiter.scheine.ausstellen(profil),
+      namensvorschlag: namensvorschlag(profil, email),
+    };
   }
   let accountId: string;
   try {
-    accountId = await legeKontoAn(db, profil, email, weiter.geburtstag);
+    accountId = await legeKontoAn(db, profil, email, weiter.geburtstag, weiter.displayName ?? null);
   } catch (err) {
     // Zwei Klicks gleichzeitig beim allerersten Mal: Der erste hat die
     // Bindung angelegt, der zweite landet hier und nimmt dessen Konto.
@@ -295,8 +318,9 @@ export function namensvorschlag(profil: AnbieterProfil, email: string): string {
  * an das niemand mehr herankommt — kein Passwort, und der Anbieter fuehrt
  * nicht hin.
  *
- * Ein belegter Anzeigename bekommt eine Zahl angehaengt, statt zu scheitern;
- * aendern laesst er sich spaeter im Profil. Kein Passwort: `verifyPassword`
+ * Ein belegter VORSCHLAG bekommt eine Zahl angehaengt, statt zu scheitern —
+ * ein selbst gewaehlter Name nicht (siehe unten). Aendern laesst sich der Name
+ * im Profil bisher nicht, deshalb fragt die Erstanmeldung danach. Kein Passwort: `verifyPassword`
  * lehnt bei `passwordHash null` jede Eingabe ab, das Konto ist also nicht ueber
  * das Formular zu uebernehmen. Ein Passwort laesst sich jederzeit ueber
  * "Passwort vergessen" setzen.
@@ -306,9 +330,14 @@ async function legeKontoAn(
   profil: AnbieterProfil,
   email: string,
   birthday: string,
+  gewaehlt: string | null,
 ): Promise<string> {
-  const basis = namensvorschlag(profil, email);
-  for (let versuch = 0; versuch < 6; versuch++) {
+  const basis = gewaehlt ?? namensvorschlag(profil, email);
+  // Einen selbst gewaehlten Namen nie still mit einer Zahl versehen: Wer
+  // „Anna" eintippt und „Anna-4821" bekommt, haelt das fuer einen Fehler.
+  // Belegt ihn jemand zwischen Pruefung und Anlegen, kommt `displayNameTaken`.
+  const versuche = gewaehlt ? 1 : 6;
+  for (let versuch = 0; versuch < versuche; versuch++) {
     const displayName =
       versuch === 0 ? basis : `${basis}-${Math.floor(Math.random() * 9000) + 1000}`;
     try {

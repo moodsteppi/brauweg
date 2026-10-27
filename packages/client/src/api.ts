@@ -700,7 +700,8 @@ export interface WarState {
 /** Antwort der Anbieter-Anmeldung: Sitzung — oder erst noch das Geburtsdatum. */
 export type AnbieterAnmeldung =
   | { ok: true; neu: boolean; token?: string }
-  | { geburtstagNoetig: true; schein: string };
+  /** `namensvorschlag` fehlt bei Servern vor dem 27.10.2026. */
+  | { geburtstagNoetig: true; schein: string; namensvorschlag?: string };
 
 export const api = {
   /** Ein Aufruf ueber einen Werbelink `?q=` (herkunft.ts). */
@@ -757,11 +758,11 @@ export const api = {
     if ('token' in antwort && antwort.token) setSessionToken(antwort.token);
     return antwort;
   },
-  /** Zweiter Schritt einer Erstanmeldung: Geburtsdatum zum Schein. */
-  anbieterAbschliessen: async (schein: string, birthday: string) => {
+  /** Zweiter Schritt einer Erstanmeldung: Geburtsdatum und Anzeigename zum Schein. */
+  anbieterAbschliessen: async (schein: string, birthday: string, displayName?: string) => {
     const antwort = await post<{ ok: true; neu: boolean; token?: string }>(
       '/auth/anbieter/abschliessen',
-      { schein, birthday },
+      { schein, birthday, ...(displayName ? { displayName } : {}) },
     );
     if (antwort.token) setSessionToken(antwort.token);
     return antwort;

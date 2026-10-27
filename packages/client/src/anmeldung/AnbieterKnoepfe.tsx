@@ -85,7 +85,11 @@ export function AnbieterKnoepfe({
   const rueckruf = useRef({ onErfolg, onFehler, geburtstag });
   rueckruf.current = { onErfolg, onFehler, geburtstag };
   /** Erstanmeldung: Der Server will erst das Geburtsdatum (auth/anbieter.ts, Regel 5). */
-  const [nachfrage, setNachfrage] = useState<{ anbieter: Anbieter; schein: string } | null>(null);
+  const [nachfrage, setNachfrage] = useState<{
+    anbieter: Anbieter;
+    schein: string;
+    namensvorschlag: string;
+  } | null>(null);
 
   /** In der App: der Systemdialog statt des Web-SDK (nur Huellen, die ihn melden). */
   const appleNativ = inApp && kannAppleNativ();
@@ -131,7 +135,7 @@ export function AnbieterKnoepfe({
                 if (zweck === 'anmelden') {
                   const antwort = await api.googleLogin(credential);
                   if ('schein' in antwort) {
-                    setNachfrage({ anbieter: 'google', schein: antwort.schein });
+                    setNachfrage({ anbieter: 'google', schein: antwort.schein, namensvorschlag: antwort.namensvorschlag ?? '' });
                     return;
                   }
                   rueckruf.current.onErfolg({ anbieter: 'google', neu: antwort.neu });
@@ -218,7 +222,7 @@ export function AnbieterKnoepfe({
     if (zweck === 'anmelden') {
       const ergebnis = await api.appleLogin(idToken, vorname);
       if ('schein' in ergebnis) {
-        setNachfrage({ anbieter: 'apple', schein: ergebnis.schein });
+        setNachfrage({ anbieter: 'apple', schein: ergebnis.schein, namensvorschlag: ergebnis.namensvorschlag ?? '' });
         return;
       }
       rueckruf.current.onErfolg({ anbieter: 'apple', neu: ergebnis.neu });
@@ -286,6 +290,7 @@ export function AnbieterKnoepfe({
         <GeburtstagNachfrage
           anbieter={nachfrage.anbieter}
           schein={nachfrage.schein}
+          namensvorschlag={nachfrage.namensvorschlag}
           onErfolg={(ergebnis) => {
             setNachfrage(null);
             rueckruf.current.onErfolg(ergebnis);
@@ -359,7 +364,12 @@ export function AnbieterKnoepfe({
 }
 
 /**
- * Erstanmeldung ueber einen Anbieter: das Geburtsdatum, bevor es das Konto gibt.
+ * Erstanmeldung ueber einen Anbieter: Anzeigename und Geburtsdatum, bevor es
+ * das Konto gibt.
+ *
+ * Der Name ist mit dem Vorschlag des Servers vorbelegt (Vorname bei Apple,
+ * sonst Mailanfang) und frei aenderbar — wie bei der Registrierung. Vorher gab
+ * es kein Feld, und ein Apple-Konto mit verborgener Mail hiess „Spieler".
  *
  * Dieselbe Frage und derselbe Hinweis wie im Registrierungsformular — die
  * Pruefung macht der Server mit derselben Funktion. Unter 16 verwirft er die
@@ -374,24 +384,29 @@ export function AnbieterKnoepfe({
 function GeburtstagNachfrage({
   anbieter,
   schein,
+  namensvorschlag,
   onErfolg,
   onVerworfen,
   onFehler,
 }: {
   anbieter: Anbieter;
   schein: string;
+  namensvorschlag: string;
   onErfolg: (ergebnis: AnbieterErgebnis) => void;
   onVerworfen: () => void;
   onFehler: (fehler: unknown) => void;
 }): React.JSX.Element {
   const [datum, setDatum] = useState('');
+  // „Spieler" ist der Notbehelf des Servers, kein Vorschlag — dann leer lassen.
+  const [name, setName] = useState(namensvorschlag === 'Spieler' ? '' : namensvorschlag);
   const [busy, setBusy] = useState(false);
+  const nameOk = name.trim().length >= 2 && name.trim().length <= 30;
 
   const absenden = async (): Promise<void> => {
-    if (!datum || busy) return;
+    if (!datum || !nameOk || busy) return;
     setBusy(true);
     try {
-      const antwort = await api.anbieterAbschliessen(schein, datum);
+      const antwort = await api.anbieterAbschliessen(schein, datum, name.trim());
       onErfolg({ anbieter, neu: antwort.neu });
     } catch (fehler) {
       // Zu jung oder abgelaufen: Der Server hat den Schein verworfen, hier
@@ -404,8 +419,27 @@ function GeburtstagNachfrage({
   };
 
   return (
-    <div className="anbieter-nachfrage" role="group" aria-label="Geburtsdatum nachtragen">
-      <p>Fast geschafft - noch eine Frage, dann legen wir dein Konto an.</p>
+    <div className="anbieter-nachfrage" role="group" aria-label="Spielername und Geburtsdatum">
+      <p>Fast geschafft - noch zwei Angaben, dann legen wir dein Konto an.</p>
+      <label>
+        Spielername
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              void absenden();
+            }
+          }}
+          minLength={2}
+          maxLength={30}
+          autoComplete="nickname"
+          required
+        />
+        <span className="muted">So sehen dich die anderen am Tisch und in den Ranglisten.</span>
+      </label>
       <label>
         Geburtstag
         <input
@@ -424,7 +458,7 @@ function GeburtstagNachfrage({
         <span className="muted">Mindestens 18 Jahre. Für Countdown und Belohnung.</span>
       </label>
       <div className="row">
-        <button type="button" className="primary" onClick={() => void absenden()} disabled={!datum || busy}>
+        <button type="button" className="primary" onClick={() => void absenden()} disabled={!datum || !nameOk || busy}>
           Konto anlegen
         </button>
         <button type="button" onClick={onVerworfen} disabled={busy}>
