@@ -180,6 +180,7 @@ async function main(): Promise<void> {
     appleRedirectUri: config.appleRedirectUri,
     appleDomainVerknuepfung: config.appleDomainVerknuepfung,
     feedbackZielUrl: config.feedbackZielUrl,
+    stagingZugang: config.stagingZugang,
     feedbackZielToken: config.feedbackZielToken,
     // In der Entwicklung liefert Vite den Client aus, dann gibt es hier nichts
     // auszuliefern und der Server bleibt reine API.

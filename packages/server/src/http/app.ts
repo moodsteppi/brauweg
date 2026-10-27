@@ -52,6 +52,7 @@ import type { Schluesselquelle } from '../auth/idtoken.js';
 import type { NonceSpeicher } from '../auth/nonce.js';
 import { anbieterRouten } from './anbieter-routen.js';
 import { type AppVerknuepfung, appVerknuepfungRouten } from './app-verknuepfung.js';
+import { zugangsschutz } from './zugangsschutz.js';
 import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.js';
 import { partykisteRouten } from './partykiste-routen.js';
 import { lernpfadRouten } from './lernpfad-routen.js';
@@ -388,6 +389,8 @@ export interface AppDeps {
   readonly anbieterNonces?: NonceSpeicher;
   /** Ziel-URL des bro-server-Endpunkts fuers Feedback-Widget, siehe config.ts. */
   readonly feedbackZielUrl?: string | null;
+  /** `name:passwort` fuer den Zugangsschutz von staging (STAGING_ZUGANG, http/zugangsschutz.ts). */
+  readonly stagingZugang?: string | null;
   /** Bearer-Schluessel fuer obige URL. */
   readonly feedbackZielToken?: string | null;
   /**
@@ -668,6 +671,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     credentials: false,
     maxAge: 86_400,
   });
+
+  // Nach CORS, damit die Vorabfrage der App beantwortet ist, bevor hier
+  // jemand nach einem Passwort fragt — und vor allen Routen und Dateien.
+  zugangsschutz(app, deps.stagingZugang ?? null, istAppHerkunft);
 
   /**
    * Ratengrenzen.
