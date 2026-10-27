@@ -173,8 +173,20 @@ function umfangAnwenden(pfad, methode, text) {
   return null;
 }
 
+/**
+ * staging fragt nach einem Passwort (STAGING_ZUGANG, packages/server/src/http/zugangsschutz.ts).
+ * Dieselbe Variable hier gesetzt, schickt der Browser die Angabe mit.
+ */
+function stagingZugang() {
+  const roh = process.env.STAGING_ZUGANG?.trim();
+  if (!roh || !roh.includes(':')) return {};
+  const i = roh.indexOf(':');
+  return { httpCredentials: { username: roh.slice(0, i), password: roh.slice(i + 1) } };
+}
+
 async function appSeite(browser, geraet, { pfad = '/', lokal = {} } = {}) {
   const ctx = await browser.newContext({
+    ...stagingZugang(),
     viewport: geraet.viewport,
     deviceScaleFactor: geraet.faktor,
     isMobile: true,
