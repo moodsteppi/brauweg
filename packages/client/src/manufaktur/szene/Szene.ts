@@ -24,6 +24,17 @@
  * ueber die Uhr nach, nicht die Szene.
  */
 
+/**
+ * Muss VOR der ersten Pixi-Anwendung geladen sein, sonst bleibt die Leinwand
+ * im Web schwarz. PixiJS v8 baut Shader-Abgleich und Uniform-Pakete zur
+ * Laufzeit ueber `new Function`; unsere CSP (`script-src 'self'`, ohne
+ * `'unsafe-eval'`) verbietet das, und Pixi bricht beim Start mit "Current
+ * environment does not allow unsafe-eval" ab. Dieses Modul ersetzt die
+ * erzeugten Funktionen durch fertige — der Name taeuscht: Es ist der Weg
+ * OHNE eval. In der iOS-App fiel das nie auf, weil dort keine Kopfzeile des
+ * Servers gilt; auf dem Entwicklungsserver auch nicht, weil Vite keine setzt.
+ */
+import 'pixi.js/unsafe-eval';
 import { Application, Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
 
 import {
