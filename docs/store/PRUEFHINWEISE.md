@@ -35,42 +35,51 @@ Passwortmanager und in den Store-Formularen.
 | Anmeldung erforderlich | Ja (oder „Ohne Konto spielen", siehe unten) |
 | Benutzername | `<PRUEFKONTO-ADRESSE>` |
 | Passwort | `<AUS DEM PASSWORTMANAGER>` |
-| Kontakt (Apple) | Vorname, Name, Telefon, Mail von **Tom** (Kontoinhaber) |
+| Kontakt (Apple) | **Tom** (Kontoinhaber): Tom Justus Tiedtke, 0175 8508411, tom@broweg.de |
 
 ---
 
 ## Notes (zum Einfügen)
 
+Stand 27.10.2026, belegt am Code auf staging `7599bdd` (nach #330). Wege und
+Beschriftungen sind wörtlich aus dem Client; vor dem Einreichen einmal in
+TestFlight nachklicken.
+
 ```text
 Thank you for reviewing Brauweg.
 
 SIGN-IN
-Use the demo account above. Alternatively tap "Ohne Konto spielen" (play without an account) on the sign-in screen – a guest account is created with one tap, no e-mail needed. The app needs an internet connection; it talks to our own server at www.brauweg-spielen.de.
+Use the demo account above ("Mit E-Mail weiter"). Alternatively tap "Ohne Konto spielen" (play without an account) on the sign-in screen, enter any display name and tap "Spielen" – a guest account is created, no e-mail needed. Sign in with Apple is the black tile with the Apple logo on the same screen; on first use we only ask for the date of birth. The app needs an internet connection; it talks to our own server at www.brauweg-spielen.de.
 
-The app is in German. Version 1.0 contains three games: Doppelkopf, Skat and the Partykiste (party box). All other tiles in the game list are marked "Bald" (coming soon) and cannot be started. There are no in-app purchases and no ads.
+The app is in German. Tabs at the bottom: Profil, Spiele, Start, Sammlung, Clan. Version 1.0 contains the card games Doppelkopf and Skat, the board games Farbduell and BroChess, and three solo games: "Doppelkopf lernen" (a tutorial), Browort (word of the day) and Kartenmanufaktur (a small building game). There are no in-app purchases and no ads.
 
 PLAYING WITHOUT OTHER PEOPLE
 Every game can be played alone against bots:
-- Doppelkopf: "Spielauswahl" > Doppelkopf > "Tisch erstellen" > "Tisch erstellen", then tap "+ Bot" on each free seat. The game starts when all four seats are filled.
-- Skat: same way; choose "3 Spieler" and add two bots.
-- Partykiste: "Spielauswahl" > Partykiste > "Gegen Bots" > "Los". The party box is meant for 4–12 people in the same room, each on their own phone; bots fill the seats so you can see every mini-game alone.
+- Doppelkopf: tab "Spiele" > "Kartenspiele" > Doppelkopf > "Zum Spiel" > "Tisch erstellen". Choose "Privat" under "Für wen" so nobody else joins, then "Tisch erstellen". At the table tap "+ Bot" on each free seat; the game starts when all four seats are filled. Shortcut: "Doppelkopf lernen" > "Übungsrunde spielen" starts a round against three bots.
+- Skat: same way (Skat is always played by three; "3 Spieler" is preselected). Fill both free seats with "+ Bot".
+- Farbduell: tab "Spiele" > "Denken" > Farbduell > "Zum Spiel" > "Gegen Bot spielen".
+- BroChess: tab "Spiele" > "Denken" > BroChess > "Zum Spiel" > "Gegen Bot spielen" > "Partie starten".
+- Browort and Kartenmanufaktur: cards on the "Start" tab, or tab "Spiele" > section "Allein".
 
-PARTYKISTE – A PARTY GAME FOR ADULTS
-The party box has a drinking-game mode. At the top of its menu there is a switch "Trinkspiel / Alkoholfrei" (drinking game / alcohol-free). Alcohol-free counts penalty points instead of sips and removes all drinking references from the instructions. No content text tells players to drink; sips only come from the score. Content intensity is chosen separately ("harmlos / pikant / derb" = mild / spicy / crude); "derb" is only available when no guest account is at the table. The app is rated 18+.
+COMING SOON
+Under "Spiele" > "Kommt bald" we list card games we are working on. They cannot be started; players can vote for them ("Dafür"). Nothing there is sold or unlocked.
+
+CLANS
+Tab "Clan": search and join a clan or tap "Clan gründen". Inside a clan there is "Clanwort", a daily word puzzle: one member picks a word from our server's word list, everybody else guesses. There is no chat in clans in the app.
 
 REPORT AND BLOCK
-Tap a player's name at the table to open their profile; there you find "Melden" (report) and "Blockieren" (block). In the Partykiste waiting room the same sheet opens from each player. Reports reach our moderation by e-mail and are reviewed within 24 hours. Blocking takes effect immediately: the two players are no longer seated together at public tables and any friendship ends. There is no free-text chat in the app.
+Tap a player's name at a Doppelkopf, Skat or BroChess table (or find them via "Profil" > "Freunde" > "Spieler suchen…") to open their profile. At the very bottom: "Melden oder blockieren". The sheet offers "Blockieren" and reporting with a reason. Reports reach our moderation by e-mail and are reviewed within 24 hours. Blocking takes effect immediately: the two players are no longer seated together at public tables and any friendship ends. There is no free-text chat in the app; at card tables players can only send fixed reactions ("Zuruf").
 
 ACCOUNT DELETION
-Profile tab ("Profil"), scroll to the very bottom: "Konto löschen". Confirmation by password; accounts without a password get a code by e-mail; guests type the word LÖSCHEN. Deletion is immediate. Without the app: https://www.brauweg-spielen.de/konto-loeschen
+Tab "Profil", scroll to the very bottom, section "Konto": "Konto löschen". Confirmation by password; accounts without a password (e.g. Sign in with Apple) get a code by e-mail; guests type the word LÖSCHEN. Then "Endgültig löschen". Deletion is immediate. Without the app: https://www.brauweg-spielen.de/konto-loeschen
 
 VIRTUAL CURRENCY
-Coins and gems are in-game currency without real-money value. They are earned by playing (daily quests, chests) and cannot be bought in the app.
+Coins ("Münzen") are earned by playing (daily quests, chests, Browort) and can only be spent on cosmetics such as card designs, table designs and clothes for the penguin avatar. They have no real-money value and cannot be bought.
 ```
 
 Die Zeile **„reviewed within 24 hours"** bleibt: Tom, Inhaber des
 Developer-Kontos, bearbeitet die Meldungen binnen 24 Stunden (Robin,
-23.09.2026, CHECKLISTE C8). Fällt das weg, die Zeile streichen — eine falsche
+23.09.2026, CHECKLISTE C7). Fällt das weg, die Zeile streichen — eine falsche
 Zusage ist schlimmer als keine.
 
 ---
@@ -79,17 +88,19 @@ Zusage ist schlimmer als keine.
 
 - **Bots zuerst.** Kartenspiele scheitern in der Prüfung am häufigsten
   daran, dass der Prüfer allein in einer leeren Lobby steht und „App
-  funktioniert nicht" meldet (`docs/APPSTORE.md`, Testzugang).
-- **„3 Spieler" bei Skat ausdrücklich.** Ohne diese Wahl scheitert heute das
-  Anlegen des ersten Skat-Tischs („Diese Spielerzahl gibt es bei diesem Spiel
-  nicht", CHECKLISTE Punkt A1). Ist das behoben, darf der Satz bleiben — er
-  schadet nicht.
-- **Alkoholfrei-Schalter und 18+ in einem Absatz.** Apple 1.4.3 verbietet
-  Apps, die zu übermäßigem Alkoholkonsum anstiften. Wir sagen deshalb
-  zuerst, was es gibt, dann, wie man es abschaltet, und dass kein Text zum
-  Trinken auffordert (`test/inhalte.test.ts` im Paket `game-partykiste`
-  hält das fest). Robin kennt das Risiko; der Rückweg ohne neuen Build steht
-  in `docs/APP-RELEASE.md` Abschnitt 2.
+  funktioniert nicht" meldet (`docs/APPSTORE.md`, Testzugang). „Privat"
+  verhindert, dass ein Fremder den Prüfertisch betritt.
+- **„Kommt bald" erklärt.** Apple lehnt Platzhalter ab (2.1, 2.2). Die Liste
+  ist eine Abstimmung, kein unfertiger Inhalt, und das sagen wir vorher.
+- **Clanwort mit Wortliste.** Die Wahl ist nur aus der Wortliste des Servers
+  möglich (`ERLAUBT`, `packages/server/src/browort/woerter.ts`), kein
+  freier Text. Dass darunter Wörter wie BIERE sind, steht in der
+  Altersfreigabe (13+).
 - **Melden/Blockieren mit Ort.** Apple 1.2 verlangt beides und einen
   Menschen, der reagiert. Der Ort muss so beschrieben sein, dass ein Prüfer
-  ihn ohne Suchen findet.
+  ihn ohne Suchen findet. Am Farbduell-Tisch gibt es keinen Profil-Link,
+  deshalb ist er nicht genannt.
+- **Partykiste, Trinkmodus, 18+ und Edelsteine sind raus** (Stand 1.0): Die
+  Partykiste ist in der App nicht erreichbar (seit 22.10.2026), Edelsteine
+  sind in der App ausgeblendet (`laufzeit.ts`). Die alten Absätze dazu
+  gehören nicht mehr in die Hinweise.
