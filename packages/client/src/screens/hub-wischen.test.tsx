@@ -6,15 +6,25 @@ import { useHubWischen } from './hub-wischen';
 const FOLGE = ['profil', 'spiele', 'start'];
 const BREITE = 300;
 
-function Probe({ onKlick = () => {}, vorbereiten = () => {} }: { onKlick?: () => void; vorbereiten?: (t: string[]) => void }) {
+function Probe({
+  onKlick = () => {},
+  vorbereiten = () => {},
+  start = 'profil',
+  zurueck,
+}: {
+  onKlick?: () => void;
+  vorbereiten?: (t: string[]) => void;
+  start?: string;
+  zurueck?: () => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState('profil');
+  const [tab, setTab] = useState(start);
   // jsdom misst nichts: Die Breite des Wischbereichs von Hand setzen.
   useLayoutEffect(() => {
     Object.defineProperty(ref.current!, 'clientWidth', { value: BREITE, configurable: true });
   }, []);
-  useHubWischen(ref, track, tab, FOLGE, FOLGE, setTab, vorbereiten);
+  useHubWischen(ref, track, tab, FOLGE, FOLGE, setTab, vorbereiten, zurueck);
   return (
     <div ref={ref} data-testid="inhalt">
       <div ref={track} data-testid="track">
@@ -45,6 +55,29 @@ function wisch(el: Element, dx = 200, dy = 0, zeiten?: number[]) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('Hub-Wischen', () => {
+  /*
+   * Niklas, 27.10.2026: Aus einer offenen Spielseite wischte man in den
+   * Nachbarreiter. Auf einer Unterseite heißt Wischen nach rechts „zurück".
+   */
+  it('Unterseite offen: nach rechts zurück, nach links nichts, kein Reiterwechsel', () => {
+    const zurueck = vi.fn();
+    const vorbereiten = vi.fn();
+    render(<Probe start="spiele" zurueck={zurueck} vorbereiten={vorbereiten} />);
+
+    wisch(screen.getByTestId('inhalt'), -200);
+    expect(screen.getByText('spiele')).toBeTruthy();
+    expect(zurueck).not.toHaveBeenCalled();
+
+    wisch(screen.getByTestId('inhalt'), 40);
+    expect(zurueck).not.toHaveBeenCalled();
+
+    wisch(screen.getByTestId('inhalt'), 200);
+    expect(screen.getByText('spiele')).toBeTruthy();
+    expect(zurueck).toHaveBeenCalledTimes(1);
+    // Keine Nachbarseiten anhängen: Es wird ja nicht zu ihnen gewischt.
+    expect(vorbereiten).toHaveBeenCalledWith([]);
+  });
+
   it('Profil nach links zu Spiele, rechts zurück; kein versehentlicher Klick', () => {
     const klick = vi.fn();
     render(<Probe onKlick={klick} />);
