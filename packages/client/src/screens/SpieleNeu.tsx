@@ -435,6 +435,12 @@ export function SpieleNeu({
 
         {filter === 'alle' && !inApp && (
           <>
+            {/* Der Mehrkampf ist noch nicht gebaut: ehrliche „Bald"-Marke (DESIGN.md).
+                Kündigt der Server ihn an (seit 26.10.2026 auch auf der Webseite,
+                abstimmModiFuer in registry.ts), steht er wie in der App unter
+                „Kommt bald" mit Stimme — die feste Marke bleibt nur, wenn die
+                Abstimmung nicht im Umfang ist, sonst stünde er doppelt da. */}
+            {!bald.some((g) => g.id === 'mehrkampf') && (
             <section className="hb-blk">
               <h2 className="hb-ab">
                 <Symbol>
@@ -442,7 +448,6 @@ export function SpieleNeu({
                 </Symbol>
                 Modi
               </h2>
-              {/* Der Mehrkampf ist noch nicht gebaut: ehrliche „Bald"-Marke (DESIGN.md). */}
               <button
                 type="button"
                 className="hb-quer"
@@ -456,6 +461,7 @@ export function SpieleNeu({
                 <span className="hb-bald-marke">Bald</span>
               </button>
             </section>
+            )}
 
             {bald.length > 0 && (
               <section className="hb-blk">

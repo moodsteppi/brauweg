@@ -205,6 +205,9 @@ if (PROBE.has('abstimmung')) {
     ...['doppelkopf', 'skat'].map(id => ({ id, nameKey: `game.${id}`, availability: 'playable' as const, seatCounts: [4], votes: 0, abstimmbar: false })),
     ...geplant.map((id, i) => ({ id, nameKey: `game.${id}`, availability: 'preview' as const, seatCounts: [2, 3, 4],
       votes: 32 - i * 3 + (gewaehlt.has(id) ? 1 : 0), meineStimme: gewaehlt.has(id), abstimmbar: true })),
+    // Den Mehrkampf kuendigt der Server auf beiden Plattformen an (abstimmModiFuer).
+    { id: 'mehrkampf', nameKey: 'modus.mehrkampf', availability: 'preview' as const, seatCounts: [2, 8],
+      votes: 12 + (gewaehlt.has('mehrkampf') ? 1 : 0), meineStimme: gewaehlt.has('mehrkampf'), abstimmbar: true },
   ];
   api.vote = async id => { gewaehlt.add(id); return { ok: true }; };
 }
