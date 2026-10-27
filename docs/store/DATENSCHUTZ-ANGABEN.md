@@ -78,7 +78,7 @@ keine Werbung, keine Analyse, keine Personalisierung durch Dritte).
 | Sonstige Daten → **Andere Datentypen** | ja | Geburtsdatum. Apple nennt es in keiner Kategorie; „Other Data" ist der ehrliche Ort. |
 | Nutzerinhalte → **Gameplay-Inhalt** | ja | Partien, Spielstände, Mitspielersuche (Apple: „saved games, multiplayer matching or gameplay logic") |
 | Nutzerinhalte → **Andere Nutzerinhalte** | ja | Clan-Name und -Motto, Figurbemalung, Meldetext |
-| Nutzungsdaten → **Produktinteraktion** | ja | Tagesaufgaben-Fortschritt, Stufe/XP — vorsichtshalber; Apple zählt „saved place in a game" dazu |
+| Nutzungsdaten → **Produktinteraktion** | ja | Tagesaufgaben-Fortschritt, Stufe/XP, Lernpfad-/Browort-Fortschritt — vorsichtshalber; Apple zählt „saved place in a game" dazu |
 | Nutzerinhalte → Fotos oder Videos | **nein** | In der App gibt es keinen Upload (`GameSelect.tsx:3410`). **Geht der Upload in der App an: ja, verknüpft, App-Funktion.** |
 | Kennungen → **Geräte-ID** | **ja** (Vorschlag) | Das APNs-Token ist keine Werbe-ID, aber eine gerätebezogene Kennung am Konto. Angeben: verknüpft ja, Tracking nein, Zweck App-Funktionalität. Weglassen wäre vertretbar, Angeben kostet nichts. |
 | Kontaktinformationen → E-Mail-Adresse | (wie oben) | Gilt auch für „Mit Apple anmelden": Apple liefert die Adresse oder eine Weiterleitungsadresse. Kein eigener Eintrag nötig. |
