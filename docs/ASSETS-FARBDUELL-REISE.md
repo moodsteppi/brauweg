@@ -4,17 +4,22 @@ Stand: 27.10.2026. Kein TestFlight-Upload; ausdrücklich erst nach Freigabe des 
 
 ## Bildauftrag Farbduell
 
-Quadratisches Spielicon: isometrisches, zusammenhängendes Farbfeld mit blauer
-und roter Ecke, zwei kleinen Fahnen, dazwischen bunten neutralen Feldern.
-Nachtblau, Gold, freundliche plastische Spielzeugoberflächen. Kein Tetris.
-Keine Schrift, kein Logo, kein Wasserzeichen, kein Schachbrett als Transparenz.
-Vollflächig und ohne äußeren App-Rahmen. Motiv zentral, Rand als Beschnittreserve.
-Abnahme: auch klein als Duell um Farbgebiete erkennbar.
+Aktuelle Fassung: zwei freundliche Pinguine beim Farbduell in einer warm
+beleuchteten Taverne, links mit blauem Ritterhelm, rechts mit roter Kappe
+und Schal. Die Figuren und das Licht folgen dem vorhandenen Doppelkopf-Banner.
+Das bunte Spielfeld ist ein kleinerer Gegenstand auf dem Tisch mit sichtbarem
+Rand und Luft um das Motiv; keine extreme Nahaufnahme mehr. Die Gesichter
+bleiben auch beim fast quadratischen Beschnitt der Spielauswahl erkennbar.
 
-Erzeugt mit eingebauter Bildgenerierung. Original im separaten Archiv
-`brauweg-art/hub/farbduell/original.png`. Auslieferung ausschließlich WebP:
+Keine Schrift, kein Logo, kein Wasserzeichen, kein Schachbrett als Transparenz.
+Keine Karten, Würfel oder Tetris-Steine. Vollflächig ohne äußeren App-Rahmen.
+Abnahme: Pinguine und Farbgebiete klein erkennbar, passend zu den anderen Spielen.
+
+Erzeugt mit eingebauter Bildgenerierung anhand des Doppelkopf-Banners. Original
+im separaten Archiv `brauweg-art/hub/farbduell/pinguine-original.png`; die
+vorherige Fassung bleibt dort als `original.png` erhalten. Auslieferung WebP:
 `hub/spielwahl-farbduell.webp` 512 × 512 und `hub/banner-farbduell.webp`
-960 × 640 (zentraler Beschnitt); Profil `szene`. Keine Originalauflösung unter public.
+960 × 640; Profil `szene`. Keine Originalauflösung unter public.
 `bannerFuer('filler')` verbindet Spieleliste, Favoriten und Spielseite mit dem neuen Bild.
 
 ## Trophäenreise
