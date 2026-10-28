@@ -68,3 +68,20 @@ it('zeichnet alle sechs Würfelseiten mit richtiger Augenzahl', () => {
   const { container } = render(<Wuerfel wert={6} index={0} />);
   for (let n = 1; n <= 6; n++) expect(container.querySelectorAll(`.s-${n} .punkt`)).toHaveLength(n);
 });
+
+it('verdeckt die Würfel vor jedem ersten Wurf und zeigt erst danach echte Augen', () => {
+  const start = erstelle(1, 88);
+  const props = { namen: ['Du'], onAktion: vi.fn(), onBack: vi.fn() };
+  const { rerender } = render(<WuerfelglanzPartie {...props} sicht={sicht(start, 0)} aktionen={erlaubt(start, 0)} />);
+  expect(screen.getByRole('img', { name: 'Würfelbecher mit fünf verdeckten Würfeln' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Würfel 1:/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Würfeln' })).toBeEnabled();
+  const wurf = handeln(start, 0, { art: 'wuerfeln' });
+  rerender(<WuerfelglanzPartie {...props} sicht={sicht(wurf, 0)} aktionen={erlaubt(wurf, 0)} />);
+  expect(screen.queryByRole('img', { name: 'Würfelbecher mit fünf verdeckten Würfeln' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Würfel 1:/ })).toBeInTheDocument();
+  const neuerZug = handeln(wurf, 0, { art: 'eintragen', kategorie: 'chance' });
+  rerender(<WuerfelglanzPartie {...props} sicht={sicht(neuerZug, 0)} aktionen={erlaubt(neuerZug, 0)} />);
+  expect(screen.getByRole('img', { name: 'Würfelbecher mit fünf verdeckten Würfeln' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Würfel 1:/ })).not.toBeInTheDocument();
+});

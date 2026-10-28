@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { Aktion, Kategorie, Sicht } from '@brauweg/game-wuerfelglanz';
 import { api, ApiError, type TableRow, type GameDefaults } from '../api';
 import { t } from '../i18n';
@@ -20,6 +20,27 @@ export function Wuerfel({ wert, gehalten = false, rollt = false, disabled = fals
       {[1, 2, 3, 4, 5, 6].map(seite => <span key={seite} className={`wg-seite s-${seite}`} aria-hidden="true">{Array.from({ length: 9 }, (_, punkt) => <i key={punkt} className={AUGEN[seite]!.includes(punkt) ? 'punkt' : ''} />)}</span>)}
     </span></span><span className="wg-halten">{gehalten ? 'Gehalten ✓' : wert ? 'Halten' : 'Bereit'}</span>
   </button>;
+}
+/** Vor jedem ersten Wurf bleiben die Würfel vollständig unter dem Becher. */
+function Wuerfelbecher() {
+  const id = useId();
+  return <div className="wg-becher" role="img" aria-label="Würfelbecher mit fünf verdeckten Würfeln">
+    <svg viewBox="0 0 180 132" aria-hidden="true">
+      <defs>
+        <linearGradient id={`${id}-leder`} x1="0" y1="0" x2="1" y2="0"><stop stopColor="#361b21" /><stop offset=".3" stopColor="#995340" /><stop offset=".55" stopColor="#754035" /><stop offset="1" stopColor="#2d1922" /></linearGradient>
+        <linearGradient id={`${id}-gold`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#fff0ad" /><stop offset=".45" stopColor="#d5a44c" /><stop offset="1" stopColor="#80501f" /></linearGradient>
+      </defs>
+      <ellipse cx="90" cy="119" rx="70" ry="10" fill="#031b18" opacity=".6" />
+      <path d="M53 25 Q90 12 127 25 L148 110 Q90 132 32 110 Z" fill={`url(#${id}-leder)`} stroke="#b38248" strokeWidth="2" />
+      <path d="M58 35 L43 104 M122 35 L137 104" fill="none" stroke="#e1b875" strokeWidth="1.5" strokeDasharray="3 4" opacity=".65" />
+      <ellipse cx="90" cy="25" rx="37" ry="11" fill={`url(#${id}-gold)`} />
+      <ellipse cx="90" cy="23" rx="31" ry="6" fill="#754337" stroke="#e6c17b" />
+      <path d="M33 102 Q90 122 147 102 L149 112 Q90 135 31 112 Z" fill={`url(#${id}-gold)`} stroke="#a16e2f" />
+      <path d="m90 48 5 17 17 5-17 5-5 17-5-17-17-5 17-5Z" fill={`url(#${id}-gold)`} stroke="#f9d78a" strokeWidth=".7" />
+      <path d="M90 53 V87 M75 70 H105" stroke="#fff2b1" opacity=".5" />
+    </svg>
+    <span>5 Würfel im Becher</span>
+  </div>;
 }
 function Kopf({ onBack, unter = 'FÜNF WÜRFEL. DEIN MOMENT.' }: { onBack: () => void; unter?: string }) {
   return <header className="wg-kopf"><button className="wg-zurueck" onClick={onBack} aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg></button><div><small>{unter}</small><h1>Würfelglanz</h1></div><span className="wg-stern" aria-hidden="true">✦</span></header>;
@@ -120,7 +141,7 @@ export function WuerfelglanzPartie({ sicht: s, namen, aktionen, verbunden = true
     {!verbunden && <p role="status" className="wg-fehler">Verbindung wird wiederhergestellt. Dein Bogen bleibt gespeichert. <button onClick={onNeuVerbinden}>Neu verbinden</button></p>}{fehler && <p role="alert" className="wg-fehler">{fehler}</p>}
     {s.fertig && <section className="wg-ergebnis"><span>✦</span><small>PARTIE BEENDET</small><h2>{s.ich === null ? 'Die Würfel sind gefallen' : s.sitze === 1 ? 'Dein Bogen glänzt' : s.verlassen.includes(s.ich) ? 'Runde verlassen' : platz === 1 ? 'Ganz vorne mit dabei!' : `Platz ${platz} für dich`}</h2><strong>{eigenerStand.gesamt}<small>Punkte{eigenerStand.bonus ? ' · inklusive 35 Bonuspunkten' : ''}</small></strong><button className="wg-gold" onClick={onBack}>Zurück zu Würfelglanz</button></section>}
     {!s.fertig && <><div className="wg-zugstatus" role="status"><span className={dran ? 'wg-leuchtet' : ''} />{dran ? 'Du bist am Zug' : `${name(s.amZug)} würfelt`}<b>Wurf {s.wurf}/3</b></div>
-      <section className="wg-wuerfeltablett" aria-label="Deine fünf Würfel"><div className="wg-wuerfelreihe">{s.wuerfel.map((wert, index) => <Wuerfel key={index} wert={wert} index={index} gehalten={s.gehalten[index]} rollt={rollt} disabled={!dran || gesperrt || !aktionen.some(a => a.art === 'halten' && a.index === index)} onHalten={() => { spiele('tipp'); onAktion({ art: 'halten', index }); }} />)}</div>
+      <section className="wg-wuerfeltablett" aria-label="Deine fünf Würfel">{s.wurf === 0 ? <Wuerfelbecher /> : <div className="wg-wuerfelreihe">{s.wuerfel.map((wert, index) => <Wuerfel key={index} wert={wert} index={index} gehalten={s.gehalten[index]} rollt={rollt} disabled={!dran || gesperrt || !aktionen.some(a => a.art === 'halten' && a.index === index)} onHalten={() => { spiele('tipp'); onAktion({ art: 'halten', index }); }} />)}</div>}
         <p>{!dran ? `${name(s.amZug)} ist am Zug. Du kannst die Bögen ansehen.` : s.wurf === 0 ? 'Dein erster Wurf wartet auf dich.' : s.wuerfel.every(w => w === s.wuerfel[0]) ? '✦ Fünferglanz! Fünf gleiche Würfel.' : s.wurf < 3 ? 'Tippe auf die Würfel, die du behalten möchtest.' : 'Drei Würfe geschafft. Wähle dein Wertungsfeld.'}</p>
         <button className="wg-gold wg-wurfknopf" disabled={!dran || gesperrt || !darfWurf} onClick={() => onAktion({ art: 'wuerfeln' })}>{busy ? 'Wird bestätigt…' : rollt ? 'Die Würfel rollen…' : !dran ? 'Mitspieler am Zug' : s.wurf === 0 ? 'Würfeln' : s.wurf >= 3 ? 'Jetzt Punkte eintragen' : s.gehalten.every(Boolean) ? 'Alle Würfel gehalten' : `Noch einmal würfeln · ${3 - s.wurf} übrig`}</button>
       </section></>}
