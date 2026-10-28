@@ -5,7 +5,7 @@ import { WuerfelglanzMenue, WuerfelglanzPartie } from '../../screens/Wuerfelglan
 import { api } from '../../api';
 let sitze = 1;
 api.tables = async () => [];
-api.defaults = async () => ({ config: {}, protocolVersion: 1, seatCounts: [...wuerfelglanz.meta.seatCounts], rounds: Object.fromEntries(wuerfelglanz.meta.seatCounts.map(s => [s, wuerfelglanz.meta.suggestedRounds(s)])) });
+api.defaults = async () => ({ config: {}, protocolVersion: 1, seatCounts: [...wuerfelglanz.meta.seatCounts], rounds: Object.fromEntries(wuerfelglanz.meta.seatCounts.map(s => [s, [...wuerfelglanz.meta.suggestedRounds(s)]])) });
 api.eigeneBestleistungen = async () => [{ inhaltId: 'klassisch', wert: 246, richtung: 'hoch', partyId: null, erzieltAm: new Date().toISOString() }];
 api.createTable = async body => { sitze = body.seats; return { id: 'wuerfelglanz-probe', joinCode: 'GLANZ5' }; };
 function start(anzahl: number, ende = false): Partie {
