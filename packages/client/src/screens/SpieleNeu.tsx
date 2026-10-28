@@ -34,6 +34,7 @@ interface Kategorie {
 }
 
 const KATEGORIEN: readonly Kategorie[] = [
+  { id: 'wuerfel', titel: 'Würfelspiele', einzahl: 'Würfelspiel', spiele: ['wuerfelglanz'], icon: <><rect x="4" y="4" width="16" height="16" rx="4" /><circle cx="8" cy="8" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="16" cy="16" r="1" /></> },
   {
     id: 'karten',
     titel: 'Kartenspiele',

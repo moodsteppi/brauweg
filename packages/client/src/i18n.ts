@@ -9,6 +9,7 @@
 import { inApp } from './laufzeit';
 
 const de: Record<string, string> = {
+  'game.wuerfelglanz': 'Würfelglanz',
   'blatt.schach-pinguin': 'Pinguin-Figuren',
   'error.marktNeuerTag': 'Ein neuer Tag hat begonnen. Dein Shop wurde erneuert.',
   'error.marktNichtImAngebot': 'Dieses Design ist heute nicht im Angebot.',

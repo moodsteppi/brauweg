@@ -49,6 +49,7 @@ export const ZUGSPIELE: ReadonlySet<string> = new Set([
   // Schach wartet auf den Gegner, und ein Zug darf dauern — genau dafuer
   // ist die Mitteilung da.
   'brochess',
+  'wuerfelglanz',
 ]);
 
 /**

@@ -74,6 +74,7 @@ interface Connection {
   readonly accountId: string;
   /** Kam der Handshake aus der App? Siehe `GatewayOptions.appOrigins`. */
   readonly ausApp: boolean;
+  readonly ios: boolean;
   tableId: string | null;
   /** Beginn des laufenden Ratenfensters. */
   fensterStart: number;
@@ -331,6 +332,7 @@ export interface GatewayOptions {
    * Gateway, welche Verbindung aus der App kommt — fuer `appInhalt`.
    */
   readonly appOrigins?: readonly string[];
+  readonly iosOrigin?: string;
   /**
    * Rueckweg fuer die App (`AppInhalt` in games/registry.ts): Stellt jemand
    * aus der App die Regeln eines wartenden Tisches um, wird der Regelsatz
@@ -353,6 +355,7 @@ export class Gateway {
   private readonly cookieName: string;
   private readonly lookupSession: (token: string | undefined) => Promise<SessionInfo | null>;
   private readonly appOrigins: readonly string[];
+  private readonly iosOrigin: string | undefined;
   private readonly appInhalt: AppInhalt;
   private readonly push: GatewayOptions['push'];
 
@@ -364,6 +367,7 @@ export class Gateway {
   ) {
     this.cookieName = options.cookieName ?? 'brauweg_session';
     this.appOrigins = options.appOrigins ?? [];
+    this.iosOrigin = options.iosOrigin;
     this.appInhalt = options.appInhalt ?? APP_INHALT_WIE_WEB;
     this.push = options.push;
     this.lookupSession =
@@ -429,7 +433,7 @@ export class Gateway {
       const token =
         cookieValue(request.headers.cookie, this.cookieName) ??
         protokollToken(request.headers['sec-websocket-protocol']);
-      this.accept(socket, token, herkunft !== undefined && this.appOrigins.includes(herkunft));
+      this.accept(socket, token, herkunft !== undefined && this.appOrigins.includes(herkunft), herkunft !== undefined && herkunft === this.iosOrigin);
     });
     this.runtime.onUpdate((tableId, nurSicht) => {
       void this.broadcast(tableId, nurSicht);
@@ -471,7 +475,7 @@ export class Gateway {
    * Nachrichten aus der Luecke werden gepuffert und in Reihenfolge
    * nachgeholt, sobald die Sitzung steht.
    */
-  private accept(socket: WebSocket, sessionToken?: string, ausApp = false): void {
+  private accept(socket: WebSocket, sessionToken?: string, ausApp = false, ios = false): void {
     const queued: string[] = [];
     let connection: Connection | null = null;
     let rejected = false;
@@ -552,6 +556,7 @@ export class Gateway {
         moduleVersion: 1,
         kette: Promise.resolve(),
         ausApp,
+        ios,
         vordergrund: true,
       };
       this.connections.add(accepted);
@@ -688,7 +693,9 @@ export class Gateway {
     const { table, seats } = await tableWithSeats(this.db, message.tableId);
 
     // Mindestversion wird beim Beitritt erzwungen, nicht mitten in der Partie.
-    const expected = requireModule(table.gameId).protocolVersion;
+    const module = requireModule(table.gameId);
+    if (module.meta.nurIos && !connection.ios) throw forbidden('gameNotPlayable');
+    const expected = module.protocolVersion;
     if (!moduleVersionAccepted(message.moduleVersion, expected)) {
       send(connection.socket, errorMessage('clientTooOld'));
       connection.socket.close();

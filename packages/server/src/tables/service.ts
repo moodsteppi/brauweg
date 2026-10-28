@@ -722,8 +722,8 @@ export async function schrumpfeAufBesetzte(
   /**
    * Zwei ist die Untergrenze der Kartenspiele; ein Modul, das laut
    * `seatCounts` auch allein spielbar ist (Golf), darf mit einem einzigen
-   * Besetzten losgehen — ein Tisch laesst sich nur mit >= 2 Plaetzen anlegen,
-   * also fuehrt fuer den Alleinspieler nur dieser Weg zur Partie.
+   * Besetzten losgehen. Solo-fähige Module dürfen seit Würfelglanz auch
+   * direkt mit einem Platz angelegt werden; andere Module prüfen ihre Sitzzahl selbst.
    */
   const mindestens = module.meta.seatCounts.includes(1) ? 1 : 2;
   if (bleiben.length < mindestens) throw conflict('tableNotFull');

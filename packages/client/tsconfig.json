@@ -42,6 +42,7 @@
      */
     "baseUrl": ".",
     "paths": {
+      "@brauweg/game-wuerfelglanz": ["../game-wuerfelglanz/src/index.ts"],
       "@brauweg/game-api": ["../game-api/src/index.ts"],
       "@brauweg/game-brochess": ["../game-brochess/src/index.ts"],
       "@brauweg/game-brocooked": ["../game-brocooked/src/index.ts"],

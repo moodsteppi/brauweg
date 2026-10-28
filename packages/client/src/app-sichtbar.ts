@@ -12,5 +12,6 @@ import { inApp } from './laufzeit';
 const IN_APP_AUSGEBLENDET: ReadonlySet<string> = new Set(['partykiste']);
 
 export function inAppSichtbar(gameId: string): boolean {
+  if (gameId === 'wuerfelglanz') return inApp && window.BRAUWEG_APP?.plattform !== 'android';
   return !inApp || !IN_APP_AUSGEBLENDET.has(gameId);
 }

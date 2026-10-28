@@ -35,6 +35,7 @@ export const SPIELNAMEN: Readonly<Record<string, string>> = {
   partykiste: 'Partykiste',
   brocooked: 'BroCooked',
   brochess: 'BroChess',
+  wuerfelglanz: 'Würfelglanz',
   browort: 'Browort',
 };
 

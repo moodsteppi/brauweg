@@ -122,10 +122,10 @@ test('die Webseite sieht alles wie bisher, die App genau das, was die Liste sagt
   const web = await spiele(s, 'web');
   assert.deepEqual(
     web.map((g) => [g.id, g.availability]),
-    [...registry.all().map((m) => [m.id, freigabeAuf(m.id, 'web') === 'spielbar' ? m.availability : 'preview']),
+    [...registry.all().filter(m => freigabeAuf(m.id, 'web') !== 'aus').map((m) => [m.id, freigabeAuf(m.id, 'web') === 'spielbar' ? m.availability : 'preview']),
       ...abstimmModiFuer('web').map(m => [m.id, 'preview'])],
   );
-  const imWebBald = registry.all().filter((m) => freigabeAuf(m.id, 'web') !== 'spielbar' && m.availability === 'playable');
+  const imWebBald = registry.all().filter((m) => freigabeAuf(m.id, 'web') === 'bald' && m.availability === 'playable');
   assert.deepEqual(imWebBald.map((m) => m.id), [], 'auf der Webseite ist kein Modul zurueckgehalten');
 
   // Die App folgt der Liste — hier nicht abgeschrieben, sondern je Spiel

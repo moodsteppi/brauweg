@@ -53,6 +53,7 @@ const pakete = [
   'skat',
   'tafelrunde',
   'wizard',
+  'wuerfelglanz',
 ];
 const alias = Object.fromEntries(
   pakete.map((name) => [

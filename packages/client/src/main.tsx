@@ -109,6 +109,8 @@ const devRunner = isDevFlag('runner');
  */
 const devTruhe = isDevFlag('truhe');
 /** Das neue Hub mit dem Beispielkonto aus dem Entwurf — nur im Dev-Server. */
+const devWuerfelglanz = import.meta.env.DEV && istProbe('wuerfelglanz');
+const ProbeWuerfelglanz = lazy(() => import('./proben/wuerfelglanz/ProbeWuerfelglanz').then(m => ({ default: m.ProbeWuerfelglanz })));
 const devHub = import.meta.env.DEV && isDevFlag('hub');
 /** Der Startbildschirm (Logo, Ladebild, Leiste) zum Ansehen — nur im Dev-Server. */
 const devStart = import.meta.env.DEV && isDevFlag('start');
@@ -183,7 +185,7 @@ const ProbeBroChess = lazy(() =>
   import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
 );
 
-const werkzeug = devStart ? (
+const werkzeug = devWuerfelglanz ? <ProbeWuerfelglanz /> : devStart ? (
   <ProbeStart />
 ) : devHub ? (
   <ProbeHub />

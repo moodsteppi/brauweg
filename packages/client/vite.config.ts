@@ -13,6 +13,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      '@brauweg/game-wuerfelglanz': fileURLToPath(new URL('../game-wuerfelglanz/src/index.ts', import.meta.url)),
+      '@brauweg/game-api': fileURLToPath(new URL('../game-api/src/index.ts', import.meta.url)),
       /*
        * Die Simulation der Kartenmanufaktur kommt aus ihrer QUELLE: Der
        * Client rechnet sie in jedem Bild mit, und `npm run build` im
