@@ -2,4 +2,8 @@
 <resources>
     <!-- Dieselbe Farbe wie theme-color in packages/client/index.html. -->
     <color name="brauweg_blau">#1A3F7A</color>
+    <!-- Grund des adaptiven Symbols: Creme der BroweGGames-Marke. Auf dem
+         Brauweg-Blau ginge die Navy-Kontur der Marke unter (LIESMICH der
+         Logo-Ablage); brauweg_blau bleibt fuer Themes und Statusleiste. -->
+    <color name="logo_creme">#FBF3E3</color>
 </resources>
