@@ -19,31 +19,48 @@ Kennungen.
 
 ---
 
-## Stand der Erzeugung — Weg geändert, Einzelbilder eingestellt
+## Stand der Erzeugung — TEILSTAND, nicht abnahmefähig
 
-> **Entscheidung vom 02.11.2026 (Tom, Team-Raum):** Es werden **keine
-> VerseIn-Münzen** mehr verbraucht, also auch keine weiteren
-> Nano-Banana-Bilder. Die angefragten 650 Münzen für die übrigen 19 Bilder
-> und den Kontaktbogen sind **nicht freigegeben**. Benutzt wird nur noch das
-> unlimitierte **Seedance**. Statt 19 Einzelbildern und eines Kontaktbogens
-> entsteht ein **Vorstellungsvideo mit den Figuren**; der Auftrag dazu kommt
-> als Nachbesserung dieser Aufgabe.
-
-Damit gilt die ursprüngliche Lieferliste (20 Bilder, Kontaktbogen,
-Varianten je Figur) nicht mehr. Was diese Stufe jetzt liefert:
+**Diese Stufe ist nicht erfüllt.** Verlangt sind laut ursprünglichem Auftrag ein
+Creative „TikTok-Figuren“, 20 Bilder als Varianten, ein Kontaktbogen und das
+verbrauchte Kontingent. Geliefert sind die Steckbriefe und **ein** Bild. Der
+Rest hängt an einer offenen Entscheidung über Münzen (siehe unten). Diese
+Datei hält fest, was es gibt und woran es hängt, und ersetzt keinen Teil
+des Auftrags.
 
 | Lieferung | Stand |
 |---|---|
 | Steckbriefe (Name, Art, Charakter, Rolle, Stimme) | **fertig**, `figuren.md` |
-| Bild Nr. 1 Pelle (Grundform) | **erzeugt**, bleibt als Referenz für das Video |
-| Bilder Nr. 2–20 und Kontaktbogen | **entfallen** (Entscheidung oben) |
-| Vorstellungsvideo der Figuren (Seedance) | **offen**, kommt als Nachbesserung |
-| Creative „TikTok-Figuren" | **fehlt**: als Worker nicht anlegbar, siehe unten; für das Video weiter nötig |
-| Verbrauchtes Kontingent | **30 VerseIn-Münzen** für Bild 1 (Guthaben danach 14.210), danach keine mehr |
+| Bild Nr. 1 Pelle (Grundform) | **erzeugt**, nur mit Wasserzeichen abrufbar (s. u.) |
+| Bilder Nr. 2–20 | **offen**: kosten Münzen, nicht freigegeben |
+| Kontaktbogen | **offen**: braucht die 20 Bilder |
+| Creative „TikTok-Figuren“ | angelegt vom Orchestrator: `bb5cd6da-9b44-47c2-902b-3c8bf71f1a63`; noch ohne Varianten |
+| Verbrauchtes Kontingent | **30 VerseIn-Münzen** (Bild 1), Guthaben 14.210 vor und nach dem Lauf vom 02.11. nachmittags |
 
-Die Bildvorgaben in `figuren.md` bleiben stehen: Sie beschreiben Aussehen und
-Stil jeder Figur und sind genauso der Ausgangspunkt für die Prompts des
-Videos.
+### Woran es hängt (Verlauf am 02.11.2026)
+
+1. **Nachmittags, Nachbesserung 4 dieser Aufgabe** (Auftragstext, 15:08 UTC):
+   „KEINE Muenzen verbrauchen. Nur Seedance (unlimitiert) über den
+   versein-MCP; kein Nano Banana Pro, keine weiteren Bilder gegen Münzen. […]
+   Kostet ein Seedance-Aufruf Münzen […], SOFORT aufhören und melden.“ Statt
+   der Einzelbilder sollte ein Vorstellungsvideo der 20 Figuren entstehen.
+   Das ist die Quelle für „keine Münzen“; der ursprüngliche Auftrag selbst
+   (der Videos ausschließt) ist nicht geändert worden.
+2. **Prüfung im Folgelauf (Mood-XPS, DESKTOP-VL852RM):** Seedance kostet über
+   den MCP sehr wohl Münzen. `estimate_cost`, 9:16, 4 s:
+   - `kie-seedance-2.5` (Seedance 2.5): **520 Münzen**
+   - `byteplus-seedance-2-mini` (Seedance 2.0 Mini): 80 Münzen
+
+   VerseIn schreibt dazu: „Generating through an AI assistant is charged in
+   VerseIn coins. Unlimited-plan allowances do not apply here.“ Die
+   Unlimitiert-Regel gilt also **nur im VerseIn-Web**: In der Taskliste steht
+   ein Seedance-2.5-Clip vom selben Tag, im Web erzeugt
+   (`video_5af26cb6-…`, `via_assistant: false`), mit 0 Münzen. Nach der
+   Vorgabe wurde deshalb **nichts erzeugt**, auch kein Video.
+3. Damit sind beide Wege über den Worker gesperrt: Einzelbilder (Nano Banana
+   Pro, 30 Münzen je 4K-Bild, zusammen 570, mit Kontaktbogen bis 650) und
+   Video (Seedance über MCP, ab 520 je Clip). Ohne Münzen geht es nur über
+   das VerseIn-Web, und dort muss ein Mensch klicken.
 
 ### Was bisher erzeugt ist (VerseIn, 02.11.2026)
 
@@ -59,39 +76,43 @@ Videos.
   Mangel: Die Karten tragen Buchstaben (Q, K, A), obwohl nur Farbsymbole
   verlangt waren. Ab Nr. 2 deshalb im Prompt: „card faces show only suit
   symbols, no letters or numbers".
+- **Auflösung:** 4K (3392 × 5056) statt der Beispielgröße 1024 × 1536 unter
+  „Bildmaße“, weil der Auftrag „beste Qualität“ verlangt. Das Seitenverhältnis
+  2:3 stimmt.
 - **Wasserzeichen:** Über das MCP gibt VerseIn nur
   `…/generation-display/<aufgabe>/watermarked_v1.png` heraus, mit
   „VerseIn"-Zeichen unten rechts; andere Pfade antworten mit 403. Die Fassung
-  ohne Wasserzeichen muss jemand im VerseIn-Web aus der Bibliothek laden.
-  Für Steckbrief und Kontaktbogen reicht die Fassung mit Zeichen; für Werbung
-  nicht.
+  ohne Zeichen kann nur ein Mensch mit VerseIn-Zugang im Web aus der
+  Bibliothek laden. Für Steckbrief und Kontaktbogen reicht die Fassung mit
+  Zeichen, für Werbung nicht.
+- **Modell:** Nano Banana Pro statt Seedance 2.5, weil Seedance ein reines
+  Videomodell ist und keine Standbilder erzeugt (siehe „Bildmaße“).
 - **Kosten:** VerseIn fragt je Aufruf ab 50 Münzen nach Bestätigung
-  (`confirm_above_coins`). Die übrigen 19 Bilder hätten bei 4K 570 Münzen
-  gekostet (mit Kontaktbogen bis 650); diese Freigabe ist am 02.11.2026
-  abgelehnt worden (siehe oben).
+  (`confirm_above_coins`).
 
-**Warum noch nicht vollständig:** Der versein-MCP läuft seit diesem Lauf auch
-auf DESKTOP-VL852RM. Ein Creative in brotool kann ein Worker aber nicht
-anlegen (`steuerung.mjs creative …` meldet „Creative-Werkzeuge sind dem
-Orchestrator vorbehalten"). Varianten kann er auch nicht anlegen, und
-`creative datei hochladen` nimmt ohnehin nur Videos (mp4, webm, mov).
+### Was ein Worker nicht kann
 
-### Für die Nachbesserung (Vorstellungsvideo)
+- Varianten im Creative anlegen: `steuerung.mjs creative …` meldet
+  „Creative-Werkzeuge sind dem Orchestrator vorbehalten“.
+  `creative datei hochladen` nimmt nur Videos (mp4, webm, mov).
+- Im VerseIn-Web erzeugen, wo Seedance unlimitiert ist: Der MCP rechnet
+  immer in Münzen ab.
 
-1. **Nur Seedance**, keine münzpflichtigen Modelle. Vor jedem Aufruf
-   `estimate_cost` ansehen: Steht dort ein Münzpreis über 0, nicht
-   erzeugen, sondern melden.
-2. Bild Nr. 1 (Pelle) liegt schon bei VerseIn und kann als Referenzbild
-   dienen; das App-Icon ebenfalls.
-3. Aussehen und Stil der übrigen Figuren aus `figuren.md` (Stilblock +
-   Figuren-Prompt, Negativliste) in die Video-Prompts übernehmen.
-4. Das Creative „TikTok-Figuren" muss der Orchestrator oder ein Mensch
-   anlegen; `creative datei hochladen` nimmt mp4, webm und mov, das Video
-   passt also hinein.
+### Weiter geht es auf einem dieser Wege (Entscheidung offen)
+
+- **A — Münzen freigeben:** 19 Bilder Nano Banana Pro 4K (570 Münzen) plus
+  Kontaktbogen per ffmpeg aus den Bildern (0 Münzen). Ein Worker kann das
+  vollständig erledigen, dazu die Varianten über den Orchestrator.
+- **B — Ein Mensch erzeugt im VerseIn-Web** mit Seedance 2.5 unlimitiert
+  (Prompts aus `figuren.md`, Pelle und App-Icon als Referenz). Das ergibt
+  Clips statt Standbilder, Einzelbilder und Kontaktbogen zieht danach ein
+  Worker mit ffmpeg aus den Clips.
+- **C — Auftrag ändern:** Stufe 1 wird förmlich auf „Steckbriefe + Bild 1“
+  verkleinert, Bilder kommen in einer eigenen Aufgabe.
 
 ---
 
-## Stil (gilt für alle 20 Bilder)
+## Stil (gilt für alle Bilder und Clips der Figuren)
 
 **Angelehnt an** den Look erwachsener US-Zeichentrickserien im Stil von Rick
 and Morty, **aber nicht nachgebaut**:
@@ -132,17 +153,16 @@ stehen stattdessen als Stilblock in jedem Prompt (siehe `figuren.md`).
 - Pelle (Nr. 1) zuerst erzeugen und abnehmen; die Auslegungen 2–5 als
   Bild-zu-Bild von der abgenommenen Grundform, damit es dieselbe Figur bleibt
 
-## Kontaktbogen (entfallen am 02.11.2026)
+## Kontaktbogen (offen)
 
-Gilt nicht mehr, steht nur zur Nachvollziehbarkeit hier: Ein Bild, **5 Spalten × 4 Zeilen**, Reihenfolge wie in `figuren.md`
+Ein Bild, **5 Spalten × 4 Zeilen**, Reihenfolge wie in `figuren.md`
 (Zeile 1 = die fünf Pelle-Auslegungen). Je Kachel das Bild auf 2:3, darunter
 **im Kontaktbogen** Nummer und Name (der Bogen ist ein Arbeitsblatt, kein
 Werbebild — dort ist Schrift erlaubt). Abgelegt im Creative, nicht im Repo.
 
 ## Was ausdrücklich nicht zu dieser Stufe gehört
 
-Ausnahme seit 02.11.2026: das Vorstellungsvideo der Figuren (siehe oben).
-
+- keine Videos (Ausnahme nur, wenn Weg B oben gewählt wird)
 - keine Stimmen (die Stimmbeschreibungen in `figuren.md` sind
   nur Vorgaben für ElevenLabs in einer späteren Stufe)
 - nichts aus Ad 3, Variante 1 „Fehlt noch einer" (Basti, Nele, Kalle, die

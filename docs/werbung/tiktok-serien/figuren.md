@@ -12,9 +12,9 @@ Stil, Bildmaße und Auflagen stehen in `README.md`.
 
 ## Übersicht
 
-| Nr. | Name | Art | Rolle in der Serie | Variante (Kennung) |
+| Nr. | Name | Art | Rolle in der Serie | Bild (VerseIn-Aufgabe) |
 |---:|---|---|---|---|
-| 1 | Pelle | Pinguin | Hauptfigur, Grundform | offen |
+| 1 | Pelle | Pinguin | Hauptfigur, Grundform | `image_ea6a43d3-1835-44eb-b039-6eca19fed2bd` (mit Wasserzeichen) |
 | 2 | Pelle als Ritter | Pinguin | Hauptfigur, Turnier-Auslegung | offen |
 | 3 | Pelle auf dem Sofa | Pinguin | Hauptfigur, Alltag | offen |
 | 4 | Pelle als Gastgeber | Pinguin | Hauptfigur, Spieleabend | offen |
