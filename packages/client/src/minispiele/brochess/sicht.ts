@@ -22,7 +22,9 @@ export type Ausgang =
   | 'wiederholung'
   | 'material'
   | 'zeit'
-  | 'aufgabe';
+  | 'aufgabe'
+  /** Secret Dame, Regel A: die verdeckte Dame hat den König geschlagen. */
+  | 'koenigGeschlagen';
 
 /** Sicht des Moduls, siehe packages/game-brochess/src/sicht.ts. */
 export interface BroChessSicht {

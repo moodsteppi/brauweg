@@ -24,7 +24,22 @@ import {
   ungenuegendesMaterial,
   wendeAn,
 } from './brett.js';
-import { type BroChessRegeln, zeitkontrolle } from './regeln.js';
+import {
+  type GeheimZug,
+  type SecretDameStand,
+  aktiv,
+  imSchachGeheim,
+  legaleZuegeGeheim,
+  neuerStand,
+  notationGeheim,
+  schlaegtKoenig,
+  standNachZug,
+  waehlbar,
+  waehle,
+  wahlFertig,
+  wendeAnGeheim,
+} from './geheim.js';
+import { type BroChessRegeln, modusVon, schachRegelVon, zeitkontrolle } from './regeln.js';
 
 export interface BroChessZug {
   readonly type: 'zug';
@@ -47,7 +62,20 @@ export interface BroChessAufgabe {
   readonly type: 'aufgeben';
 }
 
-export type BroChessAktion = BroChessZug | BroChessAufgabe;
+/**
+ * Secret Dame: Wahl der geheimen Dame, seit dem 02.11.2026. Je Seite genau
+ * einmal, vor dem ersten Zug, und beide Seiten waehlen GLEICHZEITIG —
+ * `currentActor` nennt trotzdem einen Sitz (den ersten, der noch waehlen
+ * muss), damit Zugzeit und Bot-Uebernahme greifen; geprueft wird beim
+ * Waehlen nur, ob dieser Sitz schon gewaehlt hat (wie Eiland, CLAUDE.md).
+ */
+export interface BroChessWahl {
+  readonly type: 'wahl';
+  /** Feld einer eigenen Figur ausser dem König, etwa "b1". */
+  readonly feld: string;
+}
+
+export type BroChessAktion = BroChessZug | BroChessAufgabe | BroChessWahl;
 
 /**
  * Wie die Partie endete.
@@ -65,7 +93,13 @@ export type Ausgang =
   | 'material'
   /** Zeit ueberschritten. Mit Sieger null: Remis, weil der Gegner nicht mattsetzen koennte. */
   | 'zeit'
-  | 'aufgabe';
+  | 'aufgabe'
+  /**
+   * Secret Dame, Regel A: Die verdeckte Dame hat den König geschlagen. Unter
+   * Regel A zaehlt ihre Drohung nicht als Schach, der Gegner durfte seinen
+   * König also in ihrer Reichweite stehen lassen — und hat verloren.
+   */
+  | 'koenigGeschlagen';
 
 export interface Ende {
   readonly ausgang: Ausgang;
@@ -96,6 +130,12 @@ export interface BroChessPartie {
    * Zug gilt.
    */
   readonly uhr: { readonly restMs: readonly number[] } | null;
+  /**
+   * Nur im Modus 'secretDame': die beiden geheimen Damen und was mit ihnen
+   * geschah (geheim.ts). Fehlt im normalen Modus ganz — dann bleibt die
+   * Partie, was sie vorher war, auch im Snapshot.
+   */
+  readonly secretDame?: SecretDameStand;
 }
 
 /**
@@ -126,7 +166,13 @@ export function erstellePartie(
       const kontrolle = zeitkontrolle(regeln);
       return kontrolle ? { restMs: [kontrolle.bedenkzeitMs, kontrolle.bedenkzeitMs] } : null;
     })(),
+    ...(modusVon(regeln) === 'secretDame' ? { secretDame: neuerStand(schachRegelVon(regeln)) } : {}),
   };
+}
+
+/** Laeuft noch die Wahl der geheimen Damen? Im normalen Modus nie. */
+export function wahlLaeuft(partie: BroChessPartie): boolean {
+  return partie.secretDame !== undefined && !wahlFertig(partie.secretDame);
 }
 
 export function farbeVonSitz(partie: BroChessPartie, sitz: number): Farbe {
@@ -139,7 +185,45 @@ export function sitzVonFarbe(partie: BroChessPartie, farbe: Farbe): number {
 
 export function amZug(partie: BroChessPartie): number | null {
   if (partie.ende) return null;
+  const stand = partie.secretDame;
+  if (stand && !wahlFertig(stand)) {
+    // Beide waehlen gleichzeitig; genannt wird Weiss, solange Weiss noch offen ist.
+    return sitzVonFarbe(partie, stand.w.zustand === 'offen' ? 'w' : 'b');
+  }
   return sitzVonFarbe(partie, partie.stellung.amZug);
+}
+
+/** Alle legalen Zuege der Seite am Zug, im Secret-Dame-Modus mit den Damenzuegen. */
+function legaleZuegeDerPartie(partie: BroChessPartie): GeheimZug[] {
+  if (partie.secretDame) return legaleZuegeGeheim(partie.stellung, partie.secretDame);
+  return legaleZuege(partie.stellung).map((z) => ({ ...z, dame: false }));
+}
+
+/** Steht die Seite am Zug im Schach — im Secret-Dame-Modus nach der Regel des Tisches? */
+export function schachInPartie(partie: BroChessPartie): boolean {
+  return partie.secretDame
+    ? imSchachGeheim(partie.stellung, partie.secretDame)
+    : imSchach(partie.stellung);
+}
+
+/**
+ * Alles, was `legalActions` anbietet: waehrend der Wahl die Figuren, die der
+ * Sitz waehlen darf (jeder Sitz, der noch nicht gewaehlt hat — gleichzeitig),
+ * danach die Zuege wie `erlaubteZuege`.
+ */
+export function erlaubteAktionen(partie: BroChessPartie, sitz: number): (BroChessZug | BroChessWahl)[] {
+  const stand = partie.secretDame;
+  if (stand && !wahlFertig(stand)) {
+    if (partie.ende || (sitz !== 0 && sitz !== 1)) return [];
+    const farbe = farbeVonSitz(partie, sitz);
+    if (stand[farbe].zustand !== 'offen') return [];
+    const wahl: BroChessWahl[] = [];
+    for (let feld = 0; feld < 64; feld += 1) {
+      if (waehlbar(partie.stellung, farbe, feld)) wahl.push({ type: 'wahl', feld: feldName(feld) });
+    }
+    return wahl;
+  }
+  return erlaubteZuege(partie, sitz);
 }
 
 /**
@@ -151,8 +235,8 @@ export function amZug(partie: BroChessPartie): number | null {
  * und Aufgeben geht immer, das muss niemand nachschlagen.
  */
 export function erlaubteZuege(partie: BroChessPartie, sitz: number): BroChessZug[] {
-  if (amZug(partie) !== sitz) return [];
-  return legaleZuege(partie.stellung).map((zug) => ({
+  if (amZug(partie) !== sitz || wahlLaeuft(partie)) return [];
+  return legaleZuegeDerPartie(partie).map((zug) => ({
     type: 'zug',
     von: feldName(zug.von),
     nach: feldName(zug.nach),
@@ -188,6 +272,8 @@ export function fuehreAus(
     if (sitz !== 0 && sitz !== 1) throw new Error('Sitz gibt es nicht');
     return { ...partie, ende: { ausgang: 'aufgabe', sieger: 1 - sitz } };
   }
+  if (aktion.type === 'wahl') return waehleGeheimeDame(partie, sitz, aktion);
+  if (partie.secretDame) return zieheGeheim(partie, sitz, aktion);
   if (amZug(partie) !== sitz) throw new Error('Nicht am Zug');
   if (aktion.type !== 'zug') throw new Error('Unbekannte Aktion');
   const von = feldIndex(aktion.von);
@@ -231,6 +317,95 @@ export function fuehreAus(
   };
 }
 
+function waehleGeheimeDame(partie: BroChessPartie, sitz: number, aktion: BroChessWahl): BroChessPartie {
+  const stand = partie.secretDame;
+  if (!stand) throw new Error('Unbekannte Aktion');
+  if (sitz !== 0 && sitz !== 1) throw new Error('Sitz gibt es nicht');
+  const farbe = farbeVonSitz(partie, sitz);
+  if (stand[farbe].zustand !== 'offen') throw new Error('Schon gewaehlt');
+  const feld = feldIndex(aktion.feld);
+  if (feld < 0) throw new Error('Feld gibt es nicht');
+  if (!waehlbar(partie.stellung, farbe, feld)) throw new Error('Diese Figur ist nicht waehlbar');
+  return { ...partie, secretDame: waehle(stand, partie.stellung, farbe, feld) };
+}
+
+/** Ein Zug im Secret-Dame-Modus. Der normale Modus bleibt in `fuehreAus` selbst. */
+function zieheGeheim(partie: BroChessPartie, sitz: number, aktion: BroChessAktion): BroChessPartie {
+  const stand = partie.secretDame!;
+  if (!wahlFertig(stand)) throw new Error('Erst waehlen beide ihre geheime Dame');
+  if (amZug(partie) !== sitz) throw new Error('Nicht am Zug');
+  if (aktion.type !== 'zug') throw new Error('Unbekannte Aktion');
+  const von = feldIndex(aktion.von);
+  const nach = feldIndex(aktion.nach);
+  if (von < 0 || nach < 0) throw new Error('Feld gibt es nicht');
+  if (aktion.umwandlung !== undefined && !UMWANDLUNGEN.includes(aktion.umwandlung)) {
+    throw new Error('Umwandlung gibt es nicht');
+  }
+  // Wie im normalen Modus: dieselbe Liste wie `legalActions`, damit beide nicht auseinanderlaufen.
+  const zug = legaleZuegeGeheim(partie.stellung, stand).find(
+    (z) => z.von === von && z.nach === nach && z.umwandlung === aktion.umwandlung,
+  );
+  if (!zug) throw new Error('Zug nicht erlaubt');
+
+  const stellung = wendeAnGeheim(partie.stellung, zug);
+  const halbzug = partie.verlauf.length + 1;
+  const standDanach = standNachZug(stand, partie.stellung, zug, halbzug);
+  const schluessel = stellungsSchluessel(stellung);
+  const wiederholt = (partie.wiederholungen[schluessel] ?? 0) + 1;
+
+  const kontrolle = zeitkontrolle(partie.regeln);
+  const uhr =
+    partie.uhr && kontrolle
+      ? { restMs: partie.uhr.restMs.map((ms, s) => (s === sitz ? ms + kontrolle.zuschlagMs : ms)) }
+      : partie.uhr;
+
+  const ende: Ende | null = schlaegtKoenig(partie.stellung, zug)
+    ? { ausgang: 'koenigGeschlagen', sieger: sitz }
+    : endeNachGeheim(stellung, standDanach, wiederholt, sitz);
+  /*
+   * Das Schachzeichen nach der Regel des Tisches, nicht nach `sanVon`: Unter
+   * Regel A zaehlt die verdeckte Dame nicht, und ein „+" in der Zugliste,
+   * die beide sehen, verriete sie.
+   */
+  const zeichen =
+    ende?.ausgang === 'matt' ? '#' : !ende && imSchachGeheim(stellung, standDanach) ? '+' : '';
+
+  return {
+    ...partie,
+    stellung,
+    wiederholungen: { ...partie.wiederholungen, [schluessel]: wiederholt },
+    letzterZug: { von: aktion.von, nach: aktion.nach },
+    ende,
+    verlauf: [...partie.verlauf, notationGeheim(partie.stellung, zug) + zeichen],
+    uhr,
+    secretDame: standDanach,
+  };
+}
+
+/**
+ * Wie `endeNach`, aber mit den Zuegen und dem Schach der geheimen Damen.
+ * Ungenuegendes Material gibt es nicht, solange noch eine geheime Dame auf
+ * dem Brett steht: Ein einsamer Laeufer, der heimlich Dame ist, setzt matt.
+ */
+function endeNachGeheim(
+  stellung: Stellung,
+  stand: SecretDameStand,
+  wiederholt: number,
+  zieher: number,
+): Ende | null {
+  if (legaleZuegeGeheim(stellung, stand).length === 0) {
+    return imSchachGeheim(stellung, stand)
+      ? { ausgang: 'matt', sieger: zieher }
+      : { ausgang: 'patt', sieger: null };
+  }
+  if (wiederholt >= 3) return { ausgang: 'wiederholung', sieger: null };
+  if (stellung.halbzugUhr >= 100) return { ausgang: 'fuenfzigZuege', sieger: null };
+  if (!aktiv(stand.w) && !aktiv(stand.b) && ungenuegendesMaterial(stellung.brett)) {
+    return { ausgang: 'material', sieger: null };
+  }
+  return null;
+}
+
 /** Restzeit des Sitzes vor seinem laufenden Zug, null ohne Schachuhr oder nach dem Ende. */
 export function restzeit(partie: BroChessPartie, sitz: number): number | null {
   if (!partie.uhr || partie.ende) return null;
@@ -254,7 +429,11 @@ export function verbraucheZeit(partie: BroChessPartie, sitz: number, ms: number)
     uhr,
     ende: {
       ausgang: 'zeit',
-      sieger: kannMattsetzen(partie.stellung.brett, gegnerFarbe) ? gegner : null,
+      sieger:
+        kannMattsetzen(partie.stellung.brett, gegnerFarbe) ||
+        (partie.secretDame !== undefined && aktiv(partie.secretDame[gegnerFarbe]))
+          ? gegner
+          : null,
     },
   };
 }

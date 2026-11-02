@@ -16,6 +16,12 @@
  *
  * Eine Ausnahme von „legalActions ist vollstaendig" gibt es seitdem doch:
  * Aufgeben steht nicht darin (Begruendung an `erlaubteZuege`).
+ *
+ * Secret Dame (seit dem 02.11.2026, `modus` im Regelsatz) beginnt mit einer
+ * Wahl, die beide Seiten GLEICHZEITIG treffen: `currentActor` nennt dann den
+ * ersten Sitz, der noch waehlen muss, `legalActions` bietet aber jedem
+ * Sitz, der noch nicht gewaehlt hat, seine Wahl-Aktionen an (vollstaendig —
+ * eine je waehlbarer Figur). Danach gilt wieder alles oben.
  */
 
 import {
@@ -28,11 +34,12 @@ import {
 } from '@brauweg/game-api';
 
 import { botZug } from './bot.js';
+import { feldName } from './brett.js';
 import {
   type BroChessAktion,
   type BroChessPartie,
   amZug,
-  erlaubteZuege,
+  erlaubteAktionen,
   erstellePartie,
   fuehreAus,
   markiereVerlassen,
@@ -73,6 +80,15 @@ function ladeSnapshot(raw: unknown): BroChessPartie {
   return codec.deserialize(raw);
 }
 
+function ersatzWahl(brett: readonly string[], farbe: 'w' | 'b'): BroChessAktion | null {
+  for (const art of ['n', 'b', 'r', 'p', 'q']) {
+    const figur = farbe === 'w' ? art.toUpperCase() : art;
+    const feld = brett.indexOf(figur);
+    if (feld >= 0) return { type: 'wahl', feld: feldName(feld) };
+  }
+  return null;
+}
+
 const meta: GameMeta = {
   id: 'brochess',
   nameKey: 'game.brochess',
@@ -104,7 +120,7 @@ export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht,
 
   currentActor: (partie) => amZug(partie),
 
-  legalActions: (partie, sitz) => erlaubteZuege(partie, sitz),
+  legalActions: (partie, sitz) => erlaubteAktionen(partie, sitz),
 
   schachuhr: {
     restMs: (partie, sitz) => restzeit(partie, sitz),
@@ -123,6 +139,18 @@ export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht,
 
   botAction(sicht, level) {
     if (sicht.zuschauer) throw new Error('Bot darf nicht auf Zuschauersicht laufen');
+    /*
+     * Secret Dame hat noch keinen eigenen Bot. Damit ein Tisch, an dem
+     * jemand die Wahl verschlaeft, nicht mit einem Botfehler abbricht (der
+     * Server beendet die Partie dann), waehlt der Ersatzzug wenigstens: den
+     * ersten Springer, sonst die erste Figur in fester Reihenfolge.
+     * Gezogen wird danach wie im normalen Modus — die Damenzuege kennt der
+     * Bot nicht.
+     */
+    if (sicht.secretDame?.wahlLaeuft && sicht.secretDame.meine === null && sicht.meineFarbe) {
+      const wahl = ersatzWahl(sicht.brett, sicht.meineFarbe);
+      if (wahl) return wahl;
+    }
     return botZug(sicht, level);
   },
 
