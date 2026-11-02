@@ -66,6 +66,12 @@ keine Münzen) lassen sich beide nicht ohne Münzen erfüllen. Welche gilt und o
 Münzen freigegeben werden, entscheidet ein Mensch in brotool. Bis dahin ist
 dieser Zweig ein **Teilstand**: Steckbriefe, Bild 1 und diese Belege.
 
+**Nachtrag:** Die jüngere Anweisung aus dem Chat (Abschnitt 3: Bilder mit
+kling.ai, keine Videos, keine VerseIn-Münzen) hat den Widerspruch inzwischen
+entschieden, und zwar zugunsten von **Bildern**. Das Vorstellungsvideo ist
+damit überholt. Offen bleibt nur, dass der Auftragstext in brotool noch
+„versien.ai-MCP mit Seedance 2.5“ nennt.
+
 ## 3. Kling-Zugang (Anweisung aus dem Chat, 02.11.2026)
 
 Geprüft am 02.11.2026 um 17:31 UTC auf `DESKTOP-VL852RM`. Kein einziger

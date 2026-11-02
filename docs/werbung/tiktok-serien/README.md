@@ -11,166 +11,132 @@ Drehbücher kommen in späteren Stufen.
 | Datei | Inhalt |
 |---|---|
 | `figuren.md` | 20 Steckbriefe mit Bildvorgabe (Prompt) je Figur |
-| `README.md` | Stil, Bildmaße, Stand der Erzeugung |
-| `belege.md` | Werkzeugantworten (Preis, Guthaben) und Vorgaben, wörtlich |
+| `README.md` | geltende Vorgabe, Stand, Abweichungen, Stil, Bildmaße |
+| `belege.md` | Werkzeugantworten (Preise, Guthaben, Kling-Prüfung) und Vorgaben, wörtlich |
 
-Bilder und Videos kommen **nicht** ins Repo. Sie liegen im Creative
-„TikTok-Figuren" (brotool → Creatives). Im Repo stehen nur Texte und die
-Kennungen.
+Bilder kommen **nicht** ins Repo. Sie liegen außerhalb, im Creative
+„TikTok-Figuren" (brotool → Creatives) bzw. als lokaler Pfad. Im Repo stehen
+nur Texte und die Kennungen.
 
 ---
 
 ## Stand der Erzeugung — TEILSTAND, nicht abnahmefähig
 
-**Diese Stufe ist nicht erfüllt.** Verlangt sind laut ursprünglichem Auftrag ein
-Creative „TikTok-Figuren“, 20 Bilder als Varianten, ein Kontaktbogen und das
-verbrauchte Kontingent. Geliefert sind die Steckbriefe und **ein** Bild. Der
-Rest hängt an einer offenen Entscheidung über Münzen (siehe unten). Diese
-Datei hält fest, was es gibt und woran es hängt, und ersetzt keinen Teil
-des Auftrags. **Freigabe nur als Teilstand (Steckbriefe, Bild 1, Preisbeleg),
-nicht als erledigte Stufe.**
-
-### Neuester Stand (02.11.2026, 17:31 UTC): Kling statt VerseIn, aber kein Zugang
-
-Neue Anweisung aus dem Chat: Die Bilder 2–20 (und Bild 1 neu, falls das
-Wasserzeichen stört) entstehen mit **kling.ai** statt VerseIn, als **Bilder**,
-nicht als Video. Das löst den Widerspruch weiter unten zugunsten des
-ursprünglichen Auftrags (Bilder, keine Videos).
-
-**Auf DESKTOP-VL852RM ist kein Kling-Zugang angebunden.** Deshalb ist nichts
-erzeugt worden und kein Guthaben verbraucht. Der Beleg steht in `belege.md`,
-Abschnitt 3. Die Kling-Modelle in der VerseIn-Liste (`kling-v4-reference`,
-`kling-v3-video`, …) sind Videomodelle und kosten VerseIn-Münzen. Sie sind kein
-Kling-Zugang im Sinne der Anweisung und wurden nicht benutzt.
-
-Weiter geht es erst, wenn ein Mensch einen Kling-Zugang einrichtet: einen
-Kling-MCP in `~/.claude.json` oder einen Dienst `kling` in brotool (dann sichtbar
-mit `dienste.mjs liste`). Danach kommen Preisabfrage für ein 2:3-Bild, Erzeugung
-mit Stilblock, Negativ-Prompt und Kartensatz aus `figuren.md`, Sichtprüfung je
-Bild und Kontaktbogen mit sharp, wie in der Anweisung beschrieben.
-
-### Auftrag und Entscheidung widersprechen sich, und das ist bekannt
-
-Der ursprüngliche Auftrag verlangt 20 **Bilder** und schließt Videos aus.
-Die Nachbesserung vom 02.11.2026 (16:08 UTC, Entscheidung von Tom) verlangt
-das Gegenteil: „Statt 20 Einzelbildern entsteht EIN Vorstellungsvideo der 20
-Figuren, nur mit Seedance 2.5 […] KEINE Münzen ausgeben.“ Der
-Auftragstext der Aufgabe ist dabei **nicht** angepasst worden; ein Worker kann
-ihn auch nicht ändern. Beleg ist der Nachbesserungstext an der Aufgabe in
-brotool (Projekt #15, Stufe 1, Aufgabe 1, Liste der Nachbesserungen). Die
-maßgeblichen Sätze stehen wörtlich in `belege.md`, ebenso die
-Werkzeugantworten zu Preis und Guthaben (Abfrage 02.11.2026, 17:04 UTC). Die Datei folgt der jüngeren Vorgabe. Wer abnimmt,
-entscheidet, welche gilt. Am besten wird der Auftragstext in brotool an die
-Entscheidung angeglichen, dann misst der Zweitleser gegen dieselbe Vorgabe.
+**Diese Stufe ist nicht erfüllt.** Geliefert sind die 20 Steckbriefe und **ein**
+Bild (Nr. 1 Pelle, mit Wasserzeichen). Bilder 2–20, der Kontaktbogen und die
+Varianten im Creative fehlen. **Freigabe nur als Teilstand (Steckbriefe,
+Bild 1, Belege), nicht als erledigte Stufe.**
 
 | Lieferung | Stand |
 |---|---|
 | Steckbriefe (Name, Art, Charakter, Rolle, Stimme) | **fertig**, `figuren.md` |
-| Bild Nr. 1 Pelle (Grundform) | **erzeugt**, nur mit Wasserzeichen abrufbar (s. u.) |
-| Bilder Nr. 2–20 | **entfallen** (Entscheidung 02.11., 16:08 UTC), ersetzt durch das Vorstellungsvideo |
-| Vorstellungsvideo (20 Clips) | **nicht erzeugt**: Seedance 2.5 kostet über den MCP 234–520 Münzen je Clip |
-| Kontaktbogen | **offen**: soll aus Standbildern der Clips entstehen |
-| Creative „TikTok-Figuren“ | angelegt vom Orchestrator: `bb5cd6da-9b44-47c2-902b-3c8bf71f1a63`; noch ohne Varianten |
-| Verbrauchtes Kontingent | **30 VerseIn-Münzen**, alle für Bild 1 (14:38 UTC, also **vor** der Vorgabe „keine Münzen“ um 15:08 UTC). Guthaben unmittelbar danach 14.210; seitdem unverändert 14.210 (geprüft mit `get_balance` am Anfang und Ende jedes späteren Laufs) |
+| Bild Nr. 1 Pelle (Grundform) | **erzeugt** (VerseIn, Nano Banana Pro), nur mit Wasserzeichen abrufbar. Wird mit Kling neu erzeugt, falls das Wasserzeichen stört |
+| Bilder Nr. 2–20 | **offen**: sollen mit Kling entstehen. Auf diesem Rechner gibt es keinen Kling-Zugang (`belege.md`, Abschnitt 3) |
+| Kontaktbogen 5 × 4 | **offen**: braucht die 20 Bilder |
+| Creative „TikTok-Figuren“ | angelegt vom Orchestrator: `bb5cd6da-9b44-47c2-902b-3c8bf71f1a63`, noch ohne Varianten |
+| Verbrauchtes Kontingent | **30 VerseIn-Münzen**, alle für Bild 1 (14:38 UTC). Guthaben danach 14.210 und seitdem unverändert (`belege.md`, Abschnitt 1). Kling: nichts verbraucht, kein Zugang |
 
-### Woran es hängt (Zeitleiste 02.11.2026, UTC)
+## Geltende Vorgabe (jüngste Anweisung, 02.11.2026)
 
-Die Zeiten der Aufträge stammen aus dem Auftragstext des Orchestrators (Liste
-„Frühere Nachbesserungen“), die Zeit von Bild 1 aus VerseIn
-(`list_recent_tasks`, `created_at`). Die Nachbesserungen selbst stehen
-nicht im Repo; wer sie prüfen will, findet sie an der Aufgabe in brotool
-(Projekt #15, Stufe 1, Aufgabe 1).
+Es gilt **nur diese Vorgabe**. Was im Abschnitt „Verlauf“ weiter unten steht,
+ist überholt und bleibt nur als Geschichte stehen.
 
-| Zeit | Was | Wirkung |
-|---|---|---|
-| — | Ursprünglicher Auftrag: „NUR AUF Mood XPS (versien.ai-MCP mit Seedance 2.5)“, 20 **Bilder**, keine Videos | Seedance 2.5 ist ein reines Videomodell; `list_models media=image` führt es nicht. Für Standbilder muss also ein Bildmodell her, und **jedes** Bildmodell bei VerseIn kostet Münzen (billigstes: Z-Image, ab 5 je Bild) |
-| 14:37 | Nachbesserung 3: MCP eingerichtet, „Auftrag vollständig erledigen“ | Freigabe zum Erzeugen; keine Münzgrenze genannt |
-| 14:38 | Bild 1 (Pelle) mit Nano Banana Pro 4K | **30 Münzen**, Guthaben danach 14.210 |
-| danach | Der Worker fragt nach 570–650 Münzen für den Rest | VerseIn verlangt ab 50 Münzen je Aufruf eine Bestätigung |
-| 15:08 | Nachbesserung 4 (Tom): „KEINE Münzen verbrauchen. Nur Seedance (unlimitiert) über den versein-MCP […] Kostet ein Seedance-Aufruf Münzen, SOFORT aufhören und melden.“ Statt Einzelbildern ein Vorstellungsvideo | Bilder 2–20 gesperrt. Der ursprüngliche Auftrag (keine Videos) ist dabei nicht geändert worden: Vorgaben widersprechen sich |
-| Folgelauf | `estimate_cost` 9:16, 4 s: Seedance 2.5 **520**, Seedance 2.0 Mini 80 Münzen. VerseIn: „Generating through an AI assistant is charged in VerseIn coins. Unlimited-plan allowances do not apply here.“ | Nach Nachbesserung 4 **nichts erzeugt**. Unlimitiert ist Seedance nur im VerseIn-Web: ein Web-Clip vom selben Tag (`video_5af26cb6-…`, `via_assistant: false`) kostete 0 Münzen |
-| 16:08 | Entscheidung Tom: keine Münzen, ein Vorstellungsvideo aus 20 Seedance-2.5-Clips (2–3 s, 9:16); Pflichtschritt 1: Preis prüfen, bei mehr als 0 Münzen nichts erzeugen | Wege A und B unten entfallen |
-| Lauf danach | Auf DESKTOP-VL852RM: `get_balance` **14.210**. `get_model kie-seedance-2.5`: Dauer **4–30 s** (2–3 s gibt es nicht), 480p/720p/1080p. `estimate_cost` 9:16, 4 s, ohne Ton: **480p 234**, **1080p 520 Münzen**, `requires_confirmation: true`, gleicher Hinweis „Unlimited-plan allowances do not apply here“. `get_balance` danach **14.210** | **Nichts erzeugt**, kein Clip, kein Video, kein Kontaktbogen. 20 Clips kosteten über den MCP mindestens 20 × 234 = 4.680 Münzen |
+- **20 Bilder**, keine Videos, so wie im ursprünglichen Auftrag
+- Werkzeug: **kling.ai**, nicht VerseIn. Keine VerseIn-Münzen.
+- Pflichtreihenfolge:
+  1. Kling-Zugang und Credits prüfen.
+  2. Preis für **ein** Bild (2:3, beste Qualität) abfragen.
+  3. Nur erzeugen, wenn ein Abo es ohne Extrakosten deckt. Sonst den Preis je
+     Bild und für 19 Bilder plus Kontaktbogen melden.
+- Prompts aus `figuren.md` mit Stilblock, Negativ-Prompt und Kartensatz (nur
+  Herz und Pik, keine Buchstaben). Für Nr. 2–5 dient Bild 1 als Referenz.
+- Jedes Bild selbst ansehen: Buchstaben, Text, Wasserzeichen, Nähe zu bekannten
+  Figuren
+- Kontaktbogen 5 × 4 mit sharp. Upload ins Creative versuchen, sonst lokale
+  Pfade nennen.
 
-**Ergebnis:** Über den Worker (MCP) kostet jeder Weg Münzen, Bilder ab 5,
-in der verlangten Qualität 30 je Bild, Seedance-Video ab 520 je Clip. Unter
-der geltenden Vorgabe „keine Münzen“ ist die Stufe vom Worker aus nicht zu
-Ende zu bringen. Das ist der Grund für den Teilstand, nicht ein ausgelassener
-Arbeitsschritt.
+**Wo es hängt:** Auf DESKTOP-VL852RM (Mood XPS) gibt es weder einen Kling-MCP
+noch einen Kling-Dienst in brotool (Prüfung 17:31 UTC, `belege.md` Abschnitt 3).
+Die Kling-Modelle in der VerseIn-Modellliste sind Videomodelle und kosten
+VerseIn-Münzen. Sie sind kein Kling-Zugang und wurden nicht benutzt. Weiter
+geht es, sobald ein Mensch Kling anbindet: als MCP in `~/.claude.json` oder als
+Dienst `kling` in brotool (dann sichtbar mit `dienste.mjs liste`).
 
-### Was bisher erzeugt ist (VerseIn, 02.11.2026)
+## Abweichungen vom ursprünglichen Auftrag
+
+Der ursprüngliche Auftrag lautet „NUR AUF Mood XPS (versien.ai-MCP mit
+Seedance 2.5)“. Davon weicht der Zweig an zwei Stellen ab. Beide Abweichungen
+bleiben bestehen und sind **keine** Erfüllung des Auftrags:
+
+1. **Bild 1 mit Nano Banana Pro für 30 Münzen.** Seedance 2.5 ist ein reines
+   Videomodell (`list_models media=image` führt es nicht), Standbilder gehen
+   damit nicht. Der Worker hat deshalb von sich aus ein Bildmodell gewählt.
+   Das war **nicht freigegeben**, und es lässt sich nicht mehr rückgängig
+   machen. Erzeugt wurde es um 14:38 UTC, vor der Vorgabe „keine Münzen“
+   (15:08 UTC). Ob die 30 Münzen in Ordnung gehen, entscheidet der Abnehmer.
+2. **Kling statt VerseIn/Seedance.** Das kommt aus der jüngsten Anweisung im
+   Chat, nicht vom Worker. Der Auftragstext in brotool ist dabei nicht
+   angeglichen worden; ein Worker kann ihn nicht ändern. Solange er
+   „versien.ai-MCP mit Seedance 2.5“ sagt, wird ein Zweitleser auch diese
+   Abweichung melden. Abhilfe: den Auftragstext in brotool auf die geltende
+   Vorgabe oben angleichen.
+
+## Rechner
+
+DESKTOP-VL852RM ist Mood XPS. Auf diesem Rechner ist der versein-MCP
+eingerichtet, Kling nicht. Von dort stammen alle Prüfungen in `belege.md`.
+
+## Bild 1 (VerseIn, 02.11.2026)
 
 | Nr. | Figur | VerseIn-Aufgabe | Modell | Münzen |
 |---:|---|---|---|---:|
 | 1 | Pelle (Grundform) | `image_ea6a43d3-1835-44eb-b039-6eca19fed2bd` | Nano Banana Pro, 4K, 2:3 (3392 × 5056) | 30 |
 
-- **Referenzbild:** das App-Icon `packages/client/public/icon-1024.png` (Logo
-  mit den drei Pinguinen und der Giraffe), hochgeladen zu VerseIn. Pelle Nr. 1
-  ist ebenfalls hochgeladen, als Referenz für die Auslegungen Nr. 2–5.
-- **Ergebnis Nr. 1:** Der Stil trifft die Vorgabe (dicke Outlines, flache
-  Farben, Glubschaugen), Farben und Steuerkreuz kommen aus dem Logo. Ein
-  Mangel: Die Karten tragen Buchstaben (Q, K, A), obwohl nur Farbsymbole
-  verlangt waren. Ab Nr. 2 deshalb im Prompt: „card faces show only suit
-  symbols, no letters or numbers".
-- **Auflösung:** 4K (3392 × 5056) statt der Beispielgröße 1024 × 1536 unter
-  den früheren Bildmaßen (siehe „Maße der Clips und Standbilder“), weil der
-  Auftrag „beste Qualität“ verlangt. Das Seitenverhältnis
-  2:3 stimmt.
-- **Wasserzeichen:** Über das MCP gibt VerseIn nur
-  `…/generation-display/<aufgabe>/watermarked_v1.png` heraus, mit
-  „VerseIn"-Zeichen unten rechts; andere Pfade antworten mit 403. Die Fassung
-  ohne Zeichen kann nur ein Mensch mit VerseIn-Zugang im Web aus der
-  Bibliothek laden. Für Steckbrief und Kontaktbogen reicht die Fassung mit
-  Zeichen, für Werbung nicht.
-- **Modell:** Nano Banana Pro statt Seedance 2.5, weil Seedance ein reines
-  Videomodell ist und keine Standbilder erzeugt (siehe Zeitleiste).
-- **Kosten:** VerseIn fragt je Aufruf ab 50 Münzen nach Bestätigung
-  (`confirm_above_coins`).
+- **Referenz beim Erzeugen:** das App-Icon `packages/client/public/icon-1024.png`
+  (Logo mit den drei Pinguinen und der Giraffe), hochgeladen zu VerseIn
+- **Sichtbefund:**
+  - Der Stil trifft die Vorgabe: dicke Outlines, flache Farben, Glubschaugen.
+  - Farben und Steuerkreuz kommen aus dem Logo.
+  - **Mangel:** Die Karten tragen Buchstaben (Q, K, A). Seitdem verbietet der
+    Kartensatz im Stilblock (`figuren.md`) das ausdrücklich.
+  - Bild 1 ist damit **nicht abgenommen**. Wer es als Referenz für Nr. 2–5
+    nimmt, achtet darauf, dass die Auslegungen den Mangel nicht erben.
+- **Wasserzeichen:**
+  - Über das MCP gibt VerseIn nur
+    `…/generation-display/<aufgabe>/watermarked_v1.png` heraus, mit
+    „VerseIn"-Zeichen unten rechts. Andere Pfade antworten mit 403.
+  - Die Fassung ohne Zeichen kann nur ein Mensch im VerseIn-Web laden.
+  - Für den Kontaktbogen reicht die Fassung mit Zeichen, für Werbung nicht.
+    Das ist der Grund für die Neuerzeugung mit Kling.
 
-### Was ein Worker nicht kann
+## Was ein Worker nicht kann
 
 - Varianten im Creative anlegen: `steuerung.mjs creative …` meldet
-  „Creative-Werkzeuge sind dem Orchestrator vorbehalten“.
-  `creative datei hochladen` nimmt nur Videos (mp4, webm, mov).
-- Im VerseIn-Web erzeugen, wo Seedance unlimitiert ist: Der MCP rechnet
-  immer in Münzen ab.
+  „Creative-Werkzeuge sind dem Orchestrator vorbehalten“
+- Bilder hochladen: `creative datei hochladen` nimmt nur Videos (mp4, webm,
+  mov). Für Bilder werden deshalb voraussichtlich nur die lokalen Pfade
+  gemeldet.
+- Einen Kling-Zugang einrichten (Anmeldung bzw. Schlüssel liegt bei einem
+  Menschen)
 
-### Rechner
+## Verlauf (überholt, nur Geschichte)
 
-DESKTOP-VL852RM ist Mood XPS. Auf diesem Rechner ist der versein-MCP
-eingerichtet, und von dort stammen alle Preisprüfungen oben.
+Alle Zeiten 02.11.2026, UTC. Die Nachbesserungen stehen an der Aufgabe in
+brotool (Projekt #15, Stufe 1, Aufgabe 1). Die maßgeblichen Sätze stehen
+wörtlich in `belege.md`, Abschnitt 2.
 
-### Weiter geht es (Stand nach der Entscheidung vom 02.11., 16:08 UTC)
-
-Die Wege A und B unten **entfallen**: A kostet Münzen, und B ist durch das
-Vorstellungsvideo ersetzt. Das Video lässt sich vom Worker aus nicht ohne
-Münzen bauen, weil der MCP Seedance 2.5 ab 234 Münzen je Clip abrechnet. Offen
-ist deshalb nur eine der folgenden Möglichkeiten:
-
-- **Ein Mensch erzeugt die 20 Clips im VerseIn-Web** (unlimitiert, 0 Münzen):
-  Stilblock und Prompt aus `figuren.md`, 9:16, kürzeste Dauer (4 s), Bild 1
-  `image_ea6a43d3` als Referenz für Nr. 1–5. Danach schneidet ein Worker mit
-  ffmpeg. Dazu gehören der Zuschnitt auf 2–3 s, die Einblendung von Nummer und
-  Name, die Prüfung auf Schwarzbilder, die Standbilder und der Kontaktbogen.
-  Anschließend lädt er das Video ins Creative hoch.
-- **Münzen freigeben**: Dann ist das eine neue Entscheidung, die über die
-  vom 02.11. hinausgeht.
-
-Frühere Wege, nur noch als Geschichte:
-
-- **A — Münzen freigeben:** 19 Bilder Nano Banana Pro 4K (570 Münzen) plus
-  Kontaktbogen per ffmpeg aus den Bildern (0 Münzen). Ein Worker kann das
-  vollständig erledigen, dazu die Varianten über den Orchestrator.
-- **B — Ein Mensch erzeugt im VerseIn-Web** mit Seedance 2.5 unlimitiert
-  (Prompts aus `figuren.md`, Pelle und App-Icon als Referenz). Das ergibt
-  Clips statt Standbilder, Einzelbilder und Kontaktbogen zieht danach ein
-  Worker mit ffmpeg aus den Clips.
-- **C — Auftrag ändern:** Stufe 1 wird förmlich auf „Steckbriefe + Bild 1“
-  verkleinert, Bilder kommen in einer eigenen Aufgabe.
+| Zeit | Was | Wirkung |
+|---|---|---|
+| — | Ursprünglicher Auftrag: versien.ai-MCP mit Seedance 2.5, 20 **Bilder**, keine Videos | Seedance kann keine Bilder; jedes VerseIn-Bildmodell kostet Münzen |
+| 14:37 | Nachbesserung 3: „Auftrag vollständig erledigen“ | keine Münzgrenze genannt |
+| 14:38 | Bild 1 mit Nano Banana Pro 4K | 30 Münzen (siehe Abweichung 1) |
+| 15:08 | Nachbesserung 4 (Tom): keine Münzen, nur Seedance, Vorstellungsvideo statt Bilder | Bilder 2–20 gesperrt |
+| 16:08 | Entscheidung Tom: ein Vorstellungsvideo aus 20 Seedance-2.5-Clips, keine Münzen | Preisprüfung: 234 (480p) bzw. 520 (1080p) Münzen je 4-s-Clip über den MCP, der unbegrenzte Plan gilt dort nicht. **Nichts erzeugt** |
+| vor 17:31 | Anweisung aus dem Chat: **Kling-Bilder** statt Video (geprüft 17:31) | **überholt das Vorstellungsvideo**, gilt jetzt (siehe „Geltende Vorgabe“). Kein Kling-Zugang, nichts erzeugt |
 
 ---
 
-## Stil (gilt für alle Bilder und Clips der Figuren)
+## Stil (gilt für alle Bilder der Figuren)
 
 **Angelehnt an** den Look erwachsener US-Zeichentrickserien im Stil von Rick
 and Morty, **aber nicht nachgebaut**:
@@ -189,8 +155,8 @@ stehen stattdessen als Stilblock in jedem Prompt (siehe `figuren.md`).
 **Was nicht ins Bild gehört** (Regel 5 aus `CLAUDE.md`, plus Werbeauflagen aus
 `docs/werbung/ad-3/konzept.md`):
 
-- kein Text, kein Schriftzug, kein Logo im Bild, keine Spielkartenwerte mit
-  Schrift (Herz-, Pik-Symbole sind erlaubt)
+- kein Text, kein Schriftzug, kein Logo, kein Wasserzeichen im Bild. Auf
+  Spielkarten nur Herz- und Pik-Symbole, keine Buchstaben, keine Zahlen.
 - kein Schachbrett als Hintergrund; Hintergrund ist eine ruhige, einfarbige
   Fläche (helles Grau-Beige `#EDE6DA`), damit sich die Figuren später
   freistellen lassen
@@ -201,42 +167,29 @@ stehen stattdessen als Stilblock in jedem Prompt (siehe `figuren.md`).
   kein gelber Pulli mit Hemdkragen, keine Portale, keine bekannten
   Pinguin-Figuren aus Film und Fernsehen
 
-## Maße der Clips und Standbilder (gilt seit der Entscheidung vom 02.11., 16:08 UTC)
+## Bildmaße
 
-Die Bildmaße 2:3 (z. B. 1024 × 1536) galten für die Einzelbilder, die nicht mehr
-entstehen. Nur Bild 1 (Pelle) ist in diesem Format erzeugt (3392 × 5056).
-Für das Vorstellungsvideo gilt Folgendes:
-
-- je Figur ein Clip **9:16** hochkant, Seedance 2.5. Das Modell erzeugt
-  mindestens 4 s (`get_model`: 4–30 s). Die verlangten 2–3 s entstehen erst
-  beim Schnitt mit ffmpeg.
-- Figur ganz im Bild, mittig, Blick leicht zur Kamera, eine typische Geste,
-  Kartenspiel-Umfeld. Stil und Verbote wie oben, Karten nur mit Herz und Pik.
-- Unten bleibt Platz für die Einblendung „Nummer Name“, die erst beim Schnitt
-  dazukommt und **nicht** im Prompt steht.
-- Bild 1 (`image_ea6a43d3`) ist die Referenz für Nr. 1–5. Es ist **nicht
-  abgenommen** und trägt Buchstaben auf den Karten. Der Kartensatz im
-  Stilblock (`figuren.md`) soll verhindern, dass die Auslegungen das erben.
-  Wer die Clips abnimmt, achtet darauf.
-- Standbild je Figur: ein Bild aus der Mitte des Clips (ffmpeg), daraus
-  entsteht der Kontaktbogen.
+- je Figur ein **Ganzkörperbild**, **2:3 hochkant**, beste verfügbare Qualität
+  des Kling-Bildmodells (welches, wird hier vermerkt). Figur mittig, rundum
+  Luft, Blick leicht zur Kamera.
+- Bild 1 (VerseIn) hat 3392 × 5056, also ebenfalls 2:3
+- die Auslegungen Nr. 2–5 mit Bild 1 als Referenz, damit es dieselbe Figur
+  bleibt
 
 ## Kontaktbogen (offen)
 
-Ein Bild, **5 Spalten × 4 Zeilen**, Reihenfolge wie in `figuren.md`
-(Zeile 1 = die fünf Pelle-Auslegungen). Je Kachel das Standbild aus der Mitte
-des Clips (9:16), darunter
-**im Kontaktbogen** Nummer und Name (der Bogen ist ein Arbeitsblatt, kein
-Werbebild — dort ist Schrift erlaubt). Abgelegt im Creative, nicht im Repo.
+Ein Bild, **5 Spalten × 4 Zeilen**, gebaut mit sharp, Reihenfolge wie in
+`figuren.md` (Zeile 1 = die fünf Pelle-Auslegungen). Je Kachel das Bild auf
+2:3, darunter **im Kontaktbogen** Nummer und Name. Der Bogen ist ein
+Arbeitsblatt, kein Werbebild, deshalb ist dort Schrift erlaubt. Abgelegt
+außerhalb des Repos (Creative oder lokaler Pfad).
 
 ## Was ausdrücklich nicht zu dieser Stufe gehört
 
-- keine Videos **außer** dem einen Vorstellungsvideo der 20 Figuren
-  (Entscheidung vom 02.11., 16:08 UTC, siehe oben): keine Szenen, keine
-  Folgen, keine Drehbücher
-- keine Musik und keine Stimme im Vorstellungsvideo, höchstens leise Geräusche
-- keine Bildmodelle mehr und nichts, was Münzen kostet
+- keine Videos (auch kein Vorstellungsvideo mehr, siehe „Verlauf“)
+- keine VerseIn-Münzen. Kling nur, wenn ein Abo es ohne Extrakosten deckt.
 - keine Stimmen (die Stimmbeschreibungen in `figuren.md` sind
   nur Vorgaben für ElevenLabs in einer späteren Stufe)
+- keine Medien im Repo
 - nichts aus Ad 3, Variante 1 „Fehlt noch einer" (Basti, Nele, Kalle, die
   Handlung mit dem leeren vierten Platz)
