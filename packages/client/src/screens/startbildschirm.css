@@ -28,7 +28,7 @@
 }
 .start-logo-bild {
   position: relative;
-  width: min(72vw, 340px);
+  width: min(48vw, 190px); /* Hochformat, Höhe wie vorher (~220 px) */
   height: auto;
   filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.6));
 }
@@ -82,7 +82,7 @@
   position: absolute;
   left: 50%;
   top: max(6vh, calc(env(safe-area-inset-top, 0px) + 20px));
-  width: min(64vw, 300px);
+  width: min(72vw, 320px);
   transform: translateX(-50%);
   filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.55));
 }

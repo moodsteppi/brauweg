@@ -94,7 +94,7 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
   };
 
   return <div className="hb-voll trophaeenreise" role="dialog" aria-modal="true" aria-label="Trophäenweg">
-    <header className="hb-voll-kopf"><Schliessen onClick={onClose} /><div className="hb-voll-titel"><h1>Trophäenweg</h1><span>Deine Reise durch Brauweg</span></div>
+    <header className="hb-voll-kopf"><Schliessen onClick={onClose} /><div className="hb-voll-titel"><h1>Trophäenweg</h1><span>Deine Reise durch BroweGGames</span></div>
       <span className="hb-pill is-pk is-gross" aria-label={`${stand} Trophäen`}><img src="/hub/symbol-pokal.webp" alt="" />{stand.toLocaleString('de-DE')}</span>
     </header>
     <div className="reise-ziel"><span>{naechste ? <>Nächste Belohnung <b>{ziel.toLocaleString('de-DE')} 🏆</b></> : 'Deine Reise geht weiter'}<small>{naechste ? `Noch ${(ziel - stand).toLocaleString('de-DE')} Trophäen` : 'Spiele und entdecke neue Belohnungen'}</small></span>

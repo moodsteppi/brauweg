@@ -44,10 +44,10 @@ describe('Startbildschirm', () => {
 
   it('zeigt erst das Logo, dann das Ladebild mit Leiste', async () => {
     render(<Startbildschirm geladen={false} onFertig={vi.fn()} />);
-    expect(screen.getByRole('main', { name: 'Brauweg wird gestartet' })).toBeInTheDocument();
+    expect(screen.getByRole('main', { name: 'BroweGGames wird gestartet' })).toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     await lauf(1300);
-    expect(screen.getByRole('progressbar', { name: 'Brauweg lädt' })).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'BroweGGames lädt' })).toBeInTheDocument();
   });
 
   it('zählt nie über das, was wirklich geladen ist', async () => {

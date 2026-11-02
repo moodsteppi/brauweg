@@ -85,3 +85,5 @@ Saum, und der Helm ist in beiden Fällen gleich hell.
 - Kein Rahmen, kein Hintergrund, kein Schlagschatten nach außen — den
   setzt die App.
 - Kein Alkohol.
+
+> **Umbenennung zu BroweGGames (02.11.2026):** Startseite (`HubBanner`), Anmeldung, Konto-Link und Startbildschirm zeigen nicht mehr `logo.webp`, sondern die neuen Schriftzüge. Quelle: `BroweGGames-Logo-horizontal-dunkel.png` (3000 × 1305) und `-vertikal-dunkel.png` (3000 × 3438) aus der Logo-Ablage vom 28.10.2026 (Original bleibt dort bzw. im Archivrepo, nicht in `art/`). Gewandelt mit Pillow (LANCZOS, Qualität 88, volles Alpha), weil `~/bildwerkzeug` auf diesem Rechner fehlte: `public/hub/broweggames-horizontal-dunkel.webp` (560 × 244, 24 kB, Kopfzeile Startseite, Anmeldekopf, Ladebild) und `public/hub/broweggames-vertikal-dunkel.webp` (420 × 481, 41 kB, Anmeldung, Konto-Link, Startlogo). `logo.webp` bleibt liegen: `public/hub-entwuerfe/statistiken.html` zeigt noch darauf.

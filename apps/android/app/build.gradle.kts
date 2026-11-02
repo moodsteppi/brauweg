@@ -100,11 +100,11 @@ android {
             // und niemand soll aus Versehen Produktionsdaten anlegen.
             buildConfigField("String", "API_BASE", "\"${apiBase("https://staging.brauweg-spielen.de")}\"")
             applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "Brauweg Test")
+            resValue("string", "app_name", "BroweGGames Test")
         }
         release {
             buildConfigField("String", "API_BASE", "\"${apiBase("https://www.brauweg-spielen.de")}\"")
-            resValue("string", "app_name", "Brauweg")
+            resValue("string", "app_name", "BroweGGames")
             isMinifyEnabled = false
             if (schluessel.isNotEmpty()) signingConfig = signingConfigs.getByName("release")
         }
