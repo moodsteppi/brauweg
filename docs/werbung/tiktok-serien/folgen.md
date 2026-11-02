@@ -13,6 +13,24 @@ Die Videos liegen **nicht** im Repo, sondern als Dateien mit der Herkunft SCHNIT
 
 Alle: H.264 High, 1080 × 1920, 30 fps, AAC 48 kHz. **Keine Musik.**
 
+## Kontaktbögen (Beleg)
+
+Für jede Folge gibt es einen Kontaktbogen der fertigen Datei: zwei Bilder je Sekunde, jedes mit
+Zeitstempel. Darauf sind Schnittfolge, Untertitel und Abspann zu sehen. Die Bögen hängen als
+Artefakte (JPEG) an der Aufgabe und sind im Team zu öffnen unter
+`brotool → /dashboard/orchestrator?artefakt=<Kennung>`. Bilder kommen bei dieser Serie nicht ins
+Repo (`README.md`).
+
+| Folge | Artefakt | Größe |
+|---|---|---:|
+| F1 Heute gewinn ich | `d0d2b8c9-7241-4eb3-b848-9ae43d82cf64` | 330 kB |
+| F2 Ich schau nicht | `0afe08bd-2a1d-4855-ba0a-5369e8ee04a6` | 386 kB |
+| F3 Re | `37bd19ff-7f75-4ffe-9c75-a308f1857a96` | 332 kB |
+| F4 Die Runde | `ea70ef31-fc50-4444-88bc-8aa0667faa00` | 403 kB |
+
+Erzeugt aus der hochgeladenen MP4 mit
+`ffmpeg -i <folge>.mp4 -vf "fps=2,scale=216:-1,drawtext=…%{pts\:hms}…,tile=8x6" -frames:v 1`.
+
 ## Stimme
 
 **Keine Stimmen.** Auf dem Rechner (Mood XPS) gibt es keinen ElevenLabs-Zugang
