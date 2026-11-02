@@ -11,7 +11,7 @@ Drehbücher kommen in späteren Stufen.
 | Datei | Inhalt |
 |---|---|
 | `figuren.md` | 20 Steckbriefe mit Bildvorgabe (Prompt) je Figur |
-| `README.md` | Stil, Bildmaße, Kontaktbogen, Stand der Erzeugung |
+| `README.md` | Stil, Bildmaße, Stand der Erzeugung |
 
 Bilder und Videos kommen **nicht** ins Repo. Sie liegen im Creative
 „TikTok-Figuren" (brotool → Creatives). Im Repo stehen nur Texte und die
@@ -19,24 +19,31 @@ Kennungen.
 
 ---
 
-## Stand der Erzeugung — TEILSTAND, Auftrag nicht erfüllt
+## Stand der Erzeugung — Weg geändert, Einzelbilder eingestellt
 
-> **Dieser Stand erfüllt die Aufgabe „20 Figuren mit Steckbrief" nicht.**
-> Er liefert die Steckbriefe und Bild Nr. 1. Verlangt waren außerdem ein
-> angelegtes Creative, 20 erzeugte Bilder, ein Kontaktbogen und die
-> Kennungen. Davon fehlt noch **fast alles**. Wer diesen Zweig freigibt,
-> gibt einen Teilstand frei; die Aufgabe bleibt offen, bis die Liste unten
-> abgehakt ist.
+> **Entscheidung vom 02.11.2026 (Tom, Team-Raum):** Es werden **keine
+> VerseIn-Münzen** mehr verbraucht, also auch keine weiteren
+> Nano-Banana-Bilder. Die angefragten 650 Münzen für die übrigen 19 Bilder
+> und den Kontaktbogen sind **nicht freigegeben**. Benutzt wird nur noch das
+> unlimitierte **Seedance**. Statt 19 Einzelbildern und eines Kontaktbogens
+> entsteht ein **Vorstellungsvideo mit den Figuren**; der Auftrag dazu kommt
+> als Nachbesserung dieser Aufgabe.
 
-| Lieferung laut Auftrag | Stand |
+Damit gilt die ursprüngliche Lieferliste (20 Bilder, Kontaktbogen,
+Varianten je Figur) nicht mehr. Was diese Stufe jetzt liefert:
+
+| Lieferung | Stand |
 |---|---|
 | Steckbriefe (Name, Art, Charakter, Rolle, Stimme) | **fertig**, `figuren.md` |
-| Creative „TikTok-Figuren" angelegt | **fehlt**: als Worker nicht anlegbar, siehe unten |
-| 20 Bilder in bester Qualität | **1 von 20**: Nr. 1 Pelle (Grundform) erzeugt, Abnahme offen |
-| Kontaktbogen aller 20 | **fehlt** |
-| Creative-Kennung | **fehlt** |
-| Varianten-Kennung je Figur | **fehlt** (Spalte „Variante" in `figuren.md` steht auf „offen") |
-| Verbrauchtes Kontingent | **30 VerseIn-Münzen** (Guthaben danach 14.210) |
+| Bild Nr. 1 Pelle (Grundform) | **erzeugt**, bleibt als Referenz für das Video |
+| Bilder Nr. 2–20 und Kontaktbogen | **entfallen** (Entscheidung oben) |
+| Vorstellungsvideo der Figuren (Seedance) | **offen**, kommt als Nachbesserung |
+| Creative „TikTok-Figuren" | **fehlt**: als Worker nicht anlegbar, siehe unten; für das Video weiter nötig |
+| Verbrauchtes Kontingent | **30 VerseIn-Münzen** für Bild 1 (Guthaben danach 14.210), danach keine mehr |
+
+Die Bildvorgaben in `figuren.md` bleiben stehen: Sie beschreiben Aussehen und
+Stil jeder Figur und sind genauso der Ausgangspunkt für die Prompts des
+Videos.
 
 ### Was bisher erzeugt ist (VerseIn, 02.11.2026)
 
@@ -59,8 +66,9 @@ Kennungen.
   Für Steckbrief und Kontaktbogen reicht die Fassung mit Zeichen; für Werbung
   nicht.
 - **Kosten:** VerseIn fragt je Aufruf ab 50 Münzen nach Bestätigung
-  (`confirm_above_coins`). Die übrigen 19 Bilder kosten bei 4K 570 Münzen. Sie
-  sind nicht erzeugt, weil die Freigabe dafür noch fehlt.
+  (`confirm_above_coins`). Die übrigen 19 Bilder hätten bei 4K 570 Münzen
+  gekostet (mit Kontaktbogen bis 650); diese Freigabe ist am 02.11.2026
+  abgelehnt worden (siehe oben).
 
 **Warum noch nicht vollständig:** Der versein-MCP läuft seit diesem Lauf auch
 auf DESKTOP-VL852RM. Ein Creative in brotool kann ein Worker aber nicht
@@ -68,19 +76,18 @@ anlegen (`steuerung.mjs creative …` meldet „Creative-Werkzeuge sind dem
 Orchestrator vorbehalten"). Varianten kann er auch nicht anlegen, und
 `creative datei hochladen` nimmt ohnehin nur Videos (mp4, webm, mov).
 
-### Übergabe an den Lauf auf dem Mood-XPS
+### Für die Nachbesserung (Vorstellungsvideo)
 
-1. Creative „TikTok-Figuren" anlegen, Kennung oben eintragen.
-2. Je Figur eine Variante anlegen; die **volle UUID** in die Spalte
-   „Variante" von `figuren.md` eintragen (die achtstellige Kurzform wird beim
-   Hochladen mit `--variante` abgelehnt).
-3. Bild Nr. 1 (Pelle, Grundform) erzeugen und ansehen, bevor die übrigen
-   laufen; Nr. 2–5 als Bild-zu-Bild von Nr. 1.
-4. Prompt = Stilblock + Figuren-Prompt aus `figuren.md`, Negativ-Prompt
-   ebenfalls von dort. Verwendetes Bildmodell hier vermerken.
-5. Kontaktbogen (5 × 4) zusammensetzen und ins Creative laden.
-6. Verbrauch in die Tabelle oben eintragen, die Überschrift „TEILSTAND"
-   entfernen.
+1. **Nur Seedance**, keine münzpflichtigen Modelle. Vor jedem Aufruf
+   `estimate_cost` ansehen: Steht dort ein Münzpreis über 0, nicht
+   erzeugen, sondern melden.
+2. Bild Nr. 1 (Pelle) liegt schon bei VerseIn und kann als Referenzbild
+   dienen; das App-Icon ebenfalls.
+3. Aussehen und Stil der übrigen Figuren aus `figuren.md` (Stilblock +
+   Figuren-Prompt, Negativliste) in die Video-Prompts übernehmen.
+4. Das Creative „TikTok-Figuren" muss der Orchestrator oder ein Mensch
+   anlegen; `creative datei hochladen` nimmt mp4, webm und mov, das Video
+   passt also hinein.
 
 ---
 
@@ -125,16 +132,18 @@ stehen stattdessen als Stilblock in jedem Prompt (siehe `figuren.md`).
 - Pelle (Nr. 1) zuerst erzeugen und abnehmen; die Auslegungen 2–5 als
   Bild-zu-Bild von der abgenommenen Grundform, damit es dieselbe Figur bleibt
 
-## Kontaktbogen
+## Kontaktbogen (entfallen am 02.11.2026)
 
-Ein Bild, **5 Spalten × 4 Zeilen**, Reihenfolge wie in `figuren.md`
+Gilt nicht mehr, steht nur zur Nachvollziehbarkeit hier: Ein Bild, **5 Spalten × 4 Zeilen**, Reihenfolge wie in `figuren.md`
 (Zeile 1 = die fünf Pelle-Auslegungen). Je Kachel das Bild auf 2:3, darunter
 **im Kontaktbogen** Nummer und Name (der Bogen ist ein Arbeitsblatt, kein
 Werbebild — dort ist Schrift erlaubt). Abgelegt im Creative, nicht im Repo.
 
 ## Was ausdrücklich nicht zu dieser Stufe gehört
 
-- keine Videos, keine Stimmen (die Stimmbeschreibungen in `figuren.md` sind
+Ausnahme seit 02.11.2026: das Vorstellungsvideo der Figuren (siehe oben).
+
+- keine Stimmen (die Stimmbeschreibungen in `figuren.md` sind
   nur Vorgaben für ElevenLabs in einer späteren Stufe)
 - nichts aus Ad 3, Variante 1 „Fehlt noch einer" (Basti, Nele, Kalle, die
   Handlung mit dem leeren vierten Platz)
