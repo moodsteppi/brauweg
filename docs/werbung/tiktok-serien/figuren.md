@@ -48,7 +48,14 @@ damit verlässlicher arbeiten):
 > uneven, exaggerated proportions, large head, thin limbs. Full-body
 > character, centered, three-quarter view facing the viewer, plain flat
 > warm light grey background (#EDE6DA), no text, no letters, no logo, no
-> watermark. Original character design.
+> watermark. Original character design. Playing cards, wherever they
+> appear, show only heart and spade symbols — no letters, no numbers, no
+> other suits.
+
+Der Kartensatz steht seit der Nachbesserung vom 02.11.2026 im Stilblock:
+Bild 1 (Pelle) trägt Q, K und A auf den Karten, obwohl nur Farbsymbole
+verlangt waren, und ein Modell erbt das von der Referenz, wenn der Prompt
+es nicht ausdrücklich verbietet.
 
 Negativ-Prompt (wo das Modell einen hat):
 

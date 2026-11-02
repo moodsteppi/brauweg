@@ -32,8 +32,9 @@ des Auftrags.
 |---|---|
 | Steckbriefe (Name, Art, Charakter, Rolle, Stimme) | **fertig**, `figuren.md` |
 | Bild Nr. 1 Pelle (Grundform) | **erzeugt**, nur mit Wasserzeichen abrufbar (s. u.) |
-| Bilder Nr. 2–20 | **offen**: kosten Münzen, nicht freigegeben |
-| Kontaktbogen | **offen**: braucht die 20 Bilder |
+| Bilder Nr. 2–20 | **entfallen** (Entscheidung 02.11., 16:08 UTC), ersetzt durch das Vorstellungsvideo |
+| Vorstellungsvideo (20 Clips) | **nicht erzeugt**: Seedance 2.5 kostet über den MCP 234–520 Münzen je Clip |
+| Kontaktbogen | **offen**: soll aus Standbildern der Clips entstehen |
 | Creative „TikTok-Figuren“ | angelegt vom Orchestrator: `bb5cd6da-9b44-47c2-902b-3c8bf71f1a63`; noch ohne Varianten |
 | Verbrauchtes Kontingent | **30 VerseIn-Münzen**, alle für Bild 1 (14:38 UTC, also **vor** der Vorgabe „keine Münzen“ um 15:08 UTC). Guthaben unmittelbar danach 14.210; seitdem unverändert 14.210 (geprüft mit `get_balance` am Anfang und Ende jedes späteren Laufs) |
 
@@ -53,6 +54,8 @@ nicht im Repo; wer sie prüfen will, findet sie an der Aufgabe in brotool
 | danach | Der Worker fragt nach 570–650 Münzen für den Rest | VerseIn verlangt ab 50 Münzen je Aufruf eine Bestätigung |
 | 15:08 | Nachbesserung 4 (Tom): „KEINE Münzen verbrauchen. Nur Seedance (unlimitiert) über den versein-MCP […] Kostet ein Seedance-Aufruf Münzen, SOFORT aufhören und melden.“ Statt Einzelbildern ein Vorstellungsvideo | Bilder 2–20 gesperrt. Der ursprüngliche Auftrag (keine Videos) ist dabei nicht geändert worden: Vorgaben widersprechen sich |
 | Folgelauf | `estimate_cost` 9:16, 4 s: Seedance 2.5 **520**, Seedance 2.0 Mini 80 Münzen. VerseIn: „Generating through an AI assistant is charged in VerseIn coins. Unlimited-plan allowances do not apply here.“ | Nach Nachbesserung 4 **nichts erzeugt**. Unlimitiert ist Seedance nur im VerseIn-Web: ein Web-Clip vom selben Tag (`video_5af26cb6-…`, `via_assistant: false`) kostete 0 Münzen |
+| 16:08 | Entscheidung Tom: keine Münzen, ein Vorstellungsvideo aus 20 Seedance-2.5-Clips (2–3 s, 9:16); Pflichtschritt 1: Preis prüfen, bei mehr als 0 Münzen nichts erzeugen | Wege A und B unten entfallen |
+| Lauf danach | Auf DESKTOP-VL852RM: `get_balance` **14.210**. `get_model kie-seedance-2.5`: Dauer **4–30 s** (2–3 s gibt es nicht), 480p/720p/1080p. `estimate_cost` 9:16, 4 s, ohne Ton: **480p 234**, **1080p 520 Münzen**, `requires_confirmation: true`, gleicher Hinweis „Unlimited-plan allowances do not apply here“. `get_balance` danach **14.210** | **Nichts erzeugt**, kein Clip, kein Video, kein Kontaktbogen. 20 Clips kosteten über den MCP mindestens 20 × 234 = 4.680 Münzen |
 
 **Ergebnis:** Über den Worker (MCP) kostet jeder Weg Münzen, Bilder ab 5,
 in der verlangten Qualität 30 je Bild, Seedance-Video ab 520 je Clip. Unter
@@ -96,7 +99,28 @@ Arbeitsschritt.
 - Im VerseIn-Web erzeugen, wo Seedance unlimitiert ist: Der MCP rechnet
   immer in Münzen ab.
 
-### Weiter geht es auf einem dieser Wege (Entscheidung offen)
+### Rechner
+
+DESKTOP-VL852RM ist Mood XPS. Auf diesem Rechner ist der versein-MCP
+eingerichtet, und von dort stammen alle Preisprüfungen oben.
+
+### Weiter geht es (Stand nach der Entscheidung vom 02.11., 16:08 UTC)
+
+Die Wege A und B unten **entfallen**: A kostet Münzen, und B ist durch das
+Vorstellungsvideo ersetzt. Das Video lässt sich vom Worker aus nicht ohne
+Münzen bauen, weil der MCP Seedance 2.5 ab 234 Münzen je Clip abrechnet. Offen
+ist deshalb nur eine der folgenden Möglichkeiten:
+
+- **Ein Mensch erzeugt die 20 Clips im VerseIn-Web** (unlimitiert, 0 Münzen):
+  Stilblock und Prompt aus `figuren.md`, 9:16, kürzeste Dauer (4 s), Bild 1
+  `image_ea6a43d3` als Referenz für Nr. 1–5. Danach schneidet ein Worker mit
+  ffmpeg. Dazu gehören der Zuschnitt auf 2–3 s, die Einblendung von Nummer und
+  Name, die Prüfung auf Schwarzbilder, die Standbilder und der Kontaktbogen.
+  Anschließend lädt er das Video ins Creative hoch.
+- **Münzen freigeben**: Dann ist das eine neue Entscheidung, die über die
+  vom 02.11. hinausgeht.
+
+Frühere Wege, nur noch als Geschichte:
 
 - **A — Münzen freigeben:** 19 Bilder Nano Banana Pro 4K (570 Münzen) plus
   Kontaktbogen per ffmpeg aus den Bildern (0 Münzen). Ein Worker kann das
