@@ -30,6 +30,25 @@ Datei hält fest, was es gibt und woran es hängt, und ersetzt keinen Teil
 des Auftrags. **Freigabe nur als Teilstand (Steckbriefe, Bild 1, Preisbeleg),
 nicht als erledigte Stufe.**
 
+### Neuester Stand (02.11.2026, 17:31 UTC): Kling statt VerseIn, aber kein Zugang
+
+Neue Anweisung aus dem Chat: Die Bilder 2–20 (und Bild 1 neu, falls das
+Wasserzeichen stört) entstehen mit **kling.ai** statt VerseIn, als **Bilder**,
+nicht als Video. Das löst den Widerspruch weiter unten zugunsten des
+ursprünglichen Auftrags (Bilder, keine Videos).
+
+**Auf DESKTOP-VL852RM ist kein Kling-Zugang angebunden.** Deshalb ist nichts
+erzeugt worden und kein Guthaben verbraucht. Der Beleg steht in `belege.md`,
+Abschnitt 3. Die Kling-Modelle in der VerseIn-Liste (`kling-v4-reference`,
+`kling-v3-video`, …) sind Videomodelle und kosten VerseIn-Münzen. Sie sind kein
+Kling-Zugang im Sinne der Anweisung und wurden nicht benutzt.
+
+Weiter geht es erst, wenn ein Mensch einen Kling-Zugang einrichtet: einen
+Kling-MCP in `~/.claude.json` oder einen Dienst `kling` in brotool (dann sichtbar
+mit `dienste.mjs liste`). Danach kommen Preisabfrage für ein 2:3-Bild, Erzeugung
+mit Stilblock, Negativ-Prompt und Kartensatz aus `figuren.md`, Sichtprüfung je
+Bild und Kontaktbogen mit sharp, wie in der Anweisung beschrieben.
+
 ### Auftrag und Entscheidung widersprechen sich, und das ist bekannt
 
 Der ursprüngliche Auftrag verlangt 20 **Bilder** und schließt Videos aus.

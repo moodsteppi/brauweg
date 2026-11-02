@@ -65,3 +65,18 @@ ursprüngliche Auftrag (Bilder, keine Videos) und die Entscheidung (Video,
 keine Münzen) lassen sich beide nicht ohne Münzen erfüllen. Welche gilt und ob
 Münzen freigegeben werden, entscheidet ein Mensch in brotool. Bis dahin ist
 dieser Zweig ein **Teilstand**: Steckbriefe, Bild 1 und diese Belege.
+
+## 3. Kling-Zugang (Anweisung aus dem Chat, 02.11.2026)
+
+Geprüft am 02.11.2026 um 17:31 UTC auf `DESKTOP-VL852RM`. Kein einziger
+Weg führt zu Kling:
+
+| Weg | Befehl | Ergebnis |
+|---|---|---|
+| Werkzeuge der Sitzung | Werkzeugsuche nach `kling` | „No matching deferred tools found“ |
+| MCP-Server, angemeldet | `claude mcp list` | nur `versein: https://mcp.versein.ai/mcp (HTTP) - ✔ Connected` |
+| `~/.claude.json` | `mcpServers` oben und je Projekt | nur `versein`; die vier Treffer für „kling“ im Text sind Feature-Schalter `tengu_twinkling_*` (kein Zugang) |
+| Dienste über den eigenen Server | `node …/worker/dienste.mjs liste` | „Kein Dienstzugang eingerichtet. Anlegen kann ihn ein Admin in brotool.“ |
+
+Ein Guthaben bzw. Credits gibt es deshalb weder vorher noch nachher abzulesen.
+Erzeugt wurde nichts, VerseIn-Münzen sind keine geflossen.
