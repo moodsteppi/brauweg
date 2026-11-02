@@ -19,21 +19,43 @@ Kennungen.
 
 ---
 
-## Stand der Erzeugung
+## Stand der Erzeugung — TEILSTAND, Auftrag nicht erfüllt
 
-| Schritt | Stand |
+> **Dieser Stand erfüllt die Aufgabe „20 Figuren mit Steckbrief" nicht.**
+> Er liefert nur die Steckbriefe (Text). Verlangt waren außerdem ein
+> angelegtes Creative, 20 erzeugte Bilder, ein Kontaktbogen und die
+> Kennungen. Davon existiert noch **nichts**. Wer diesen Zweig freigibt,
+> gibt einen Teilstand frei; die Aufgabe bleibt offen, bis die Liste unten
+> abgehakt ist.
+
+| Lieferung laut Auftrag | Stand |
 |---|---|
-| Steckbriefe (Text) | **fertig**, `figuren.md` |
-| Creative „TikTok-Figuren" anlegen | **offen**: braucht den Mood-XPS mit versien.ai-MCP |
-| 20 Bilder erzeugen | **offen**: wie oben |
-| Kontaktbogen | **offen**: entsteht aus den 20 Bildern |
-| Creative-Kennung | — |
-| Verbrauchtes Kontingent | 0 (noch nichts erzeugt) |
+| Steckbriefe (Name, Art, Charakter, Rolle, Stimme) | **fertig**, `figuren.md` |
+| Creative „TikTok-Figuren" angelegt | **fehlt** |
+| 20 Bilder in bester Qualität | **fehlt** |
+| Kontaktbogen aller 20 | **fehlt** |
+| Creative-Kennung | **fehlt** |
+| Varianten-Kennung je Figur | **fehlt** (Spalte „Variante" in `figuren.md` steht auf „offen") |
+| Verbrauchtes Kontingent | 0 — es wurde nichts erzeugt |
 
-Der erste Lauf (02.11.2026) landete auf einem Rechner ohne versien.ai-MCP
-(DESKTOP-VL852RM, nicht Mood-XPS). Deshalb gibt es bisher nur die Texte. Wer
-die Bilder erzeugt, trägt die Varianten-Kennungen in die Spalte „Variante" der
-Übersicht in `figuren.md` ein und füllt die Tabelle oben aus.
+**Warum:** Beide bisherigen Läufe (02.11.2026, Erstlauf und Nachbesserung)
+liefen auf DESKTOP-VL852RM. Dort gibt es weder den versien.ai-MCP noch
+Creative-Werkzeuge (`creative …` in `steuerung.mjs` ist dem Orchestrator
+vorbehalten). Der Auftrag verlangt ausdrücklich den Mood-XPS.
+
+### Übergabe an den Lauf auf dem Mood-XPS
+
+1. Creative „TikTok-Figuren" anlegen, Kennung oben eintragen.
+2. Je Figur eine Variante anlegen; die **volle UUID** in die Spalte
+   „Variante" von `figuren.md` eintragen (die achtstellige Kurzform wird beim
+   Hochladen mit `--variante` abgelehnt).
+3. Bild Nr. 1 (Pelle, Grundform) erzeugen und ansehen, bevor die übrigen
+   laufen; Nr. 2–5 als Bild-zu-Bild von Nr. 1.
+4. Prompt = Stilblock + Figuren-Prompt aus `figuren.md`, Negativ-Prompt
+   ebenfalls von dort. Verwendetes Bildmodell hier vermerken.
+5. Kontaktbogen (5 × 4) zusammensetzen und ins Creative laden.
+6. Verbrauch in die Tabelle oben eintragen, die Überschrift „TEILSTAND"
+   entfernen.
 
 ---
 
