@@ -108,7 +108,7 @@ export function Mitteilungen({
     stand.geraete === 0
       ? kannPush()
         ? gefragt
-          ? 'Kommt nichts an? Dann sind Mitteilungen für Brauweg in den Systemeinstellungen deines Telefons aus.'
+          ? 'Kommt nichts an? Dann sind Mitteilungen für BroweGGames in den Systemeinstellungen deines Telefons aus.'
           : 'Dieses Telefon bekommt noch keine Mitteilungen.'
         : 'Diese Fassung der App kann noch keine Mitteilungen - das kommt mit dem nächsten Update.'
       : null;

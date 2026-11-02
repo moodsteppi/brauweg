@@ -43,10 +43,10 @@ settings:
     # startet, soll nicht aus Versehen Produktionsdaten anlegen.
     Debug:
       BRAUWEG_API_BASE: https://staging.brauweg-spielen.de
-      BRAUWEG_ANZEIGENAME: Brauweg Test
+      BRAUWEG_ANZEIGENAME: BroweGGames Test
     Release:
       BRAUWEG_API_BASE: https://www.brauweg-spielen.de
-      BRAUWEG_ANZEIGENAME: Brauweg
+      BRAUWEG_ANZEIGENAME: BroweGGames
 
 targets:
   Brauweg:

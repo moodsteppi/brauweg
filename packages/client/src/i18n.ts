@@ -149,7 +149,7 @@ const de: Record<string, string> = {
   'error.nonceUngueltig': 'Die Anmeldung ist abgelaufen. Bitte versuch es noch einmal.',
   'error.anbieterMailVergeben': 'Zu dieser Adresse gibt es schon ein Konto. Melde dich dort an und verknüpfe den Anbieter in den Einstellungen.',
   'error.anbieterSchonVerknuepft': 'Mit diesem Konto ist schon ein anderes Konto dieses Anbieters verknüpft.',
-  'error.anbieterFremdVerknuepft': 'Dieses Anbieter-Konto gehört schon zu einem anderen Brauweg-Konto.',
+  'error.anbieterFremdVerknuepft': 'Dieses Anbieter-Konto gehört schon zu einem anderen BroweGGames-Konto.',
   'error.anbieterNichtVerknuepft': 'Dieser Anbieter ist nicht verknüpft.',
   'error.anmeldescheinUngueltig': 'Die Anmeldung ist abgelaufen. Bitte melde dich noch einmal an.',
   'error.geburtstagFehlt': 'Bitte gib dein Geburtsdatum an.',
@@ -719,8 +719,8 @@ const de: Record<string, string> = {
   'einladung.codeAria': 'Beitrittscode',
   'einladung.teilen': 'Link teilen',
   // Davor steht der Spielname (Einladung.tsx) — bis zum 21.10.2026 hiess es
-  // hier fest „Partykiste bei Brauweg", auch am privaten Doppelkopftisch.
-  'einladung.teilenTitel': 'bei Brauweg',
+  // hier fest „Partykiste bei BroweGGames", auch am privaten Doppelkopftisch.
+  'einladung.teilenTitel': 'bei BroweGGames',
   'einladung.teilenText': 'Komm an meinen Tisch. Code:',
   'einladung.kopiert': 'Link kopiert - jetzt in den Gruppenchat einfügen.',
   'einladung.nichtKopiert': 'Kopieren ging nicht. Der Link steht unter dem QR-Code.',
