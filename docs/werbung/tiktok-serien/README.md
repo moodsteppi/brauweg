@@ -26,7 +26,21 @@ Creative „TikTok-Figuren“, 20 Bilder als Varianten, ein Kontaktbogen und das
 verbrauchte Kontingent. Geliefert sind die Steckbriefe und **ein** Bild. Der
 Rest hängt an einer offenen Entscheidung über Münzen (siehe unten). Diese
 Datei hält fest, was es gibt und woran es hängt, und ersetzt keinen Teil
-des Auftrags.
+des Auftrags. **Freigabe nur als Teilstand (Steckbriefe, Bild 1, Preisbeleg),
+nicht als erledigte Stufe.**
+
+### Auftrag und Entscheidung widersprechen sich, und das ist bekannt
+
+Der ursprüngliche Auftrag verlangt 20 **Bilder** und schließt Videos aus.
+Die Nachbesserung vom 02.11.2026 (16:08 UTC, Entscheidung von Tom) verlangt
+das Gegenteil: „Statt 20 Einzelbildern entsteht EIN Vorstellungsvideo der 20
+Figuren, nur mit Seedance 2.5 […] KEINE Münzen ausgeben.“ Der
+Auftragstext der Aufgabe ist dabei **nicht** angepasst worden; ein Worker kann
+ihn auch nicht ändern. Beleg ist allein der Nachbesserungstext an der Aufgabe
+in brotool (Projekt #15, Stufe 1, Aufgabe 1, Liste der Nachbesserungen). Im
+Repo steht er nicht. Die Datei folgt der jüngeren Vorgabe. Wer abnimmt,
+entscheidet, welche gilt. Am besten wird der Auftragstext in brotool an die
+Entscheidung angeglichen, dann misst der Zweitleser gegen dieselbe Vorgabe.
 
 | Lieferung | Stand |
 |---|---|
@@ -78,7 +92,8 @@ Arbeitsschritt.
   verlangt waren. Ab Nr. 2 deshalb im Prompt: „card faces show only suit
   symbols, no letters or numbers".
 - **Auflösung:** 4K (3392 × 5056) statt der Beispielgröße 1024 × 1536 unter
-  „Bildmaße“, weil der Auftrag „beste Qualität“ verlangt. Das Seitenverhältnis
+  den früheren Bildmaßen (siehe „Maße der Clips und Standbilder“), weil der
+  Auftrag „beste Qualität“ verlangt. Das Seitenverhältnis
   2:3 stimmt.
 - **Wasserzeichen:** Über das MCP gibt VerseIn nur
   `…/generation-display/<aufgabe>/watermarked_v1.png` heraus, mit
@@ -165,26 +180,41 @@ stehen stattdessen als Stilblock in jedem Prompt (siehe `figuren.md`).
   kein gelber Pulli mit Hemdkragen, keine Portale, keine bekannten
   Pinguin-Figuren aus Film und Fernsehen
 
-## Bildmaße
+## Maße der Clips und Standbilder (gilt seit der Entscheidung vom 02.11., 16:08 UTC)
 
-- je Figur ein **Ganzkörperbild**, 2:3 hochkant (z. B. 1024 × 1536), Figur
-  mittig, rundum Luft, Blick leicht zur Kamera
-- beste verfügbare Qualität des Bildmodells; Seedance 2.5 ist ein
-  Videomodell — für die Standbilder das Bildmodell nehmen, das versien.ai
-  daneben anbietet, und hier vermerken, welches es war
-- Pelle (Nr. 1) zuerst erzeugen und abnehmen; die Auslegungen 2–5 als
-  Bild-zu-Bild von der abgenommenen Grundform, damit es dieselbe Figur bleibt
+Die Bildmaße 2:3 (z. B. 1024 × 1536) galten für die Einzelbilder, die nicht mehr
+entstehen. Nur Bild 1 (Pelle) ist in diesem Format erzeugt (3392 × 5056).
+Für das Vorstellungsvideo gilt Folgendes:
+
+- je Figur ein Clip **9:16** hochkant, Seedance 2.5. Das Modell erzeugt
+  mindestens 4 s (`get_model`: 4–30 s). Die verlangten 2–3 s entstehen erst
+  beim Schnitt mit ffmpeg.
+- Figur ganz im Bild, mittig, Blick leicht zur Kamera, eine typische Geste,
+  Kartenspiel-Umfeld. Stil und Verbote wie oben, Karten nur mit Herz und Pik.
+- Unten bleibt Platz für die Einblendung „Nummer Name“, die erst beim Schnitt
+  dazukommt und **nicht** im Prompt steht.
+- Bild 1 (`image_ea6a43d3`) ist die Referenz für Nr. 1–5. Es ist **nicht
+  abgenommen** und trägt Buchstaben auf den Karten. Der Kartensatz im
+  Stilblock (`figuren.md`) soll verhindern, dass die Auslegungen das erben.
+  Wer die Clips abnimmt, achtet darauf.
+- Standbild je Figur: ein Bild aus der Mitte des Clips (ffmpeg), daraus
+  entsteht der Kontaktbogen.
 
 ## Kontaktbogen (offen)
 
 Ein Bild, **5 Spalten × 4 Zeilen**, Reihenfolge wie in `figuren.md`
-(Zeile 1 = die fünf Pelle-Auslegungen). Je Kachel das Bild auf 2:3, darunter
+(Zeile 1 = die fünf Pelle-Auslegungen). Je Kachel das Standbild aus der Mitte
+des Clips (9:16), darunter
 **im Kontaktbogen** Nummer und Name (der Bogen ist ein Arbeitsblatt, kein
 Werbebild — dort ist Schrift erlaubt). Abgelegt im Creative, nicht im Repo.
 
 ## Was ausdrücklich nicht zu dieser Stufe gehört
 
-- keine Videos (Ausnahme nur, wenn Weg B oben gewählt wird)
+- keine Videos **außer** dem einen Vorstellungsvideo der 20 Figuren
+  (Entscheidung vom 02.11., 16:08 UTC, siehe oben): keine Szenen, keine
+  Folgen, keine Drehbücher
+- keine Musik und keine Stimme im Vorstellungsvideo, höchstens leise Geräusche
+- keine Bildmodelle mehr und nichts, was Münzen kostet
 - keine Stimmen (die Stimmbeschreibungen in `figuren.md` sind
   nur Vorgaben für ElevenLabs in einer späteren Stufe)
 - nichts aus Ad 3, Variante 1 „Fehlt noch einer" (Basti, Nele, Kalle, die
