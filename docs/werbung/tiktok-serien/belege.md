@@ -74,6 +74,38 @@ damit überholt. Offen bleibt nur, dass der Auftragstext in brotool noch
 
 ## 3. Kling-Zugang (Anweisung aus dem Chat, 02.11.2026)
 
+**Die Anweisung im Wortlaut.** Sie kam als Nachbesserung des Orchestrators mit
+dem Vermerk „Neue Anweisung aus dem Chat (02.11.)“. Zitiert ist sie aus dem
+Auftragstext dieses Laufs, ungekürzt:
+
+> Neue Anweisung aus dem Chat (02.11.): Die Bilder entstehen mit kling.ai statt
+> VerseIn. Kling soll auf diesem Rechner ebenfalls angebunden sein. SCHRITT 1,
+> PFLICHT: Pruefe, ob ein Kling-Zugang da ist (MCP in ~/.claude.json oder
+> Werkzeuge mcp__kling*/aehnlich, sonst dienste.mjs liste). Nenne den Namen des
+> Zugangs und das Guthaben bzw. die Credits VORHER. Ist kein Kling-Zugang da,
+> erzeugst du nichts und meldest genau das mit Beleg. SCHRITT 2: Frag den Preis
+> fuer EIN Bild ab (2:3 hochkant, beste Qualitaet). Kostet ein Bild Credits oder
+> Geld, das NICHT durch ein Abo abgedeckt ist, erzeugst du NICHTS und meldest
+> den Preis je Bild und fuer 19 Bilder plus Kontaktbogen, mit Beleg; wir
+> entscheiden dann. SCHRITT 3, nur wenn es nichts extra kostet: Bilder 2 bis 20
+> aus den Prompts in figuren.md erzeugen, mit Stilblock und Negativ-Prompt, auf
+> den Karten nur Herz- und Pik-Symbole, keine Buchstaben. Fuer Nr. 2 bis 5
+> nimmst du Bild 1 (Pelle) als Referenz. Bild 1 neu mit Kling erzeugen, falls
+> die VerseIn-Fassung wegen Wasserzeichen nicht taugt. Jedes Bild selbst
+> ansehen: Buchstaben, Text, Wasserzeichen, Naehe zu bekannten Figuren.
+> Kontaktbogen 5x4 mit sharp. Ablage ausserhalb des Repos; nenne die lokalen
+> Pfade. Versuche den Upload ins Creative bb5cd6da-9b44-47c2-902b-3c8bf71f1a63
+> mit 'creative datei hochladen'; nimmt es keine Bilder, nur die Pfade nennen.
+> NICHT: keine VerseIn-Muenzen, keine Videos, keine Medien ins Repo.
+> FERTIGMELDUNG: Kling-Zugang, Credits vorher und nachher, Kling-Kennung je
+> Bild, Pfade bzw. Asset-Kennungen, eigene Sichtbefunde je Bild, README
+> nachgezogen.
+
+Wer die Anweisung im Chat gegeben hat, steht nicht im Text. Belegen lässt sie
+sich nur über die Nachbesserungsliste an der Aufgabe in brotool, so wie die
+übrigen Vorgaben in Abschnitt 2. **Der Abnehmer sollte sie bestätigen** und den
+Auftragstext daran angleichen.
+
 Geprüft am 02.11.2026 um 17:31 UTC auf `DESKTOP-VL852RM`. Kein einziger
 Weg führt zu Kling:
 
@@ -86,3 +118,7 @@ Weg führt zu Kling:
 
 Ein Guthaben bzw. Credits gibt es deshalb weder vorher noch nachher abzulesen.
 Erzeugt wurde nichts, VerseIn-Münzen sind keine geflossen.
+
+Nachgeprüft am 02.11.2026 um 17:39 UTC, unverändert: `claude mcp list` zeigt
+nur `versein`, `dienste.mjs liste` meldet „Kein Dienstzugang eingerichtet.
+Anlegen kann ihn ein Admin in brotool.“

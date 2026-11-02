@@ -36,10 +36,28 @@ Bild 1, Belege), nicht als erledigte Stufe.**
 | Creative „TikTok-Figuren“ | angelegt vom Orchestrator: `bb5cd6da-9b44-47c2-902b-3c8bf71f1a63`, noch ohne Varianten |
 | Verbrauchtes Kontingent | **30 VerseIn-Münzen**, alle für Bild 1 (14:38 UTC). Guthaben danach 14.210 und seitdem unverändert (`belege.md`, Abschnitt 1). Kling: nichts verbraucht, kein Zugang |
 
-## Geltende Vorgabe (jüngste Anweisung, 02.11.2026)
+## Vor der Freigabe zu entscheiden (nur durch einen Menschen)
 
-Es gilt **nur diese Vorgabe**. Was im Abschnitt „Verlauf“ weiter unten steht,
-ist überholt und bleibt nur als Geschichte stehen.
+Der Zweig kann diese Punkte nicht selbst klären. Jeder braucht eine
+ausdrückliche Entscheidung des Abnehmers:
+
+1. **Die 30 VerseIn-Münzen für Bild 1 genehmigen oder beanstanden.** Ein
+   früherer Lauf hat sie mit Nano Banana Pro ausgegeben, ohne Freigabe und
+   gegen die Modellangabe „Seedance 2.5“ im Auftrag. Rückgängig machen lässt
+   sich das nicht. Einzelheiten unter „Abweichungen vom ursprünglichen Auftrag“.
+2. **Die Kling-Vorgabe bestätigen.** Sie steht im Wortlaut in `belege.md`,
+   Abschnitt 3. Wer sie im Chat gegeben hat, steht dort nicht. Nach der
+   Bestätigung sollte der Auftragstext in brotool angeglichen werden, sonst
+   misst jeder Zweitleser gegen „versien.ai-MCP mit Seedance 2.5“.
+3. **Kling anbinden** (MCP oder Dienst in brotool). Ohne Zugang entstehen keine
+   Bilder 2–20, kein Kontaktbogen und keine Varianten.
+4. **Freigabe als Teilstand**, nicht als erledigte Stufe (siehe oben).
+
+## Geltende Vorgabe (jüngste Anweisung, 02.11.2026, noch unbestätigt)
+
+Es gilt **nur diese Vorgabe**, sobald Punkt 2 oben bestätigt ist. Der
+Wortlaut steht in `belege.md`, Abschnitt 3. Was im Abschnitt „Verlauf“ weiter
+unten steht, ist überholt und bleibt nur als Geschichte stehen.
 
 - **20 Bilder**, keine Videos, so wie im ursprünglichen Auftrag
 - Werkzeug: **kling.ai**, nicht VerseIn. Keine VerseIn-Münzen.
