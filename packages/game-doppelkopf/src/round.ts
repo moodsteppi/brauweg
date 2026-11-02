@@ -62,12 +62,18 @@ export interface VorbehaltEntry {
 }
 
 /**
- * Wie ein Vorbehalt fremden Sitzen WAEHREND der Abfrage gezeigt wird: Ob
- * jemand "gesund" ist oder einen Vorbehalt hat, hoert man am Tisch sofort —
- * WELCHEN aber nicht. `'verdeckt'` steht fuer "hat einen Vorbehalt, Art noch
- * geheim". Erst wenn alle erklaert haben, wird die Art offengelegt. Ohne das
- * verriete ein frueh angesagtes Solo/Hochzeit einem noch unentschlossenen
- * Solisten, wer was auf der Hand hat.
+ * Wie ein Vorbehalt fremden Sitzen gezeigt wird.
+ *
+ * WAEHREND der Abfrage steht dort `'geheim'`: Dass jemand geantwortet hat,
+ * sieht man, WAS er gesagt hat nicht. Ohne das verriete ein frueh angesagtes
+ * Solo/Hochzeit einem noch unentschlossenen Solisten, wer was auf der Hand hat.
+ *
+ * NACH der Abfrage liegt nur der Vorbehalt offen, der zum Zuge kam. Ein
+ * unterlegener steht als `'verdeckt'` da — "hatte einen Vorbehalt, Art bleibt
+ * geheim" —, wie am echten Tisch, wo nach einem Solo niemand mehr seine Armut
+ * nennt. Bis zum 02.11.2026 lag jede Art offen; der Tisch rief die Armut eines
+ * Bots dann als Sprechblase aus, obwohl ein Solo gespielt wurde, und das sah
+ * aus, als sei sie automatisch angesagt worden (Meldung von Tom).
  */
 export interface SichtbarerVorbehalt {
   readonly seat: number;
@@ -1246,6 +1252,27 @@ export interface PlayerView {
   };
 }
 
+/**
+ * Die Vorbehalte nach der Abfrage: der Gewinner und jedes "gesund" offen, jeder
+ * unterlegene Vorbehalt verdeckt — ausser fuer den, der ihn gesagt hat.
+ *
+ * Der Gewinner kommt aus derselben Funktion wie in `resolveVorbehaltPhase`,
+ * nicht aus einer Nachbildung: Eine zweite Rangfolge liefe beim ersten
+ * Regelwechsel auseinander, und der Tisch zeigte einen anderen Vorbehalt als
+ * den gespielten.
+ */
+function sichtbareVorbehalte(state: RoundState, seat: number): SichtbarerVorbehalt[] {
+  const claims = state.vorbehalte
+    .filter((v): v is VorbehaltEntry & { kind: VorbehaltKind } => v.kind !== null)
+    .map((v) => ({ seat: v.seat, kind: v.kind }));
+  const winner = resolveVorbehalte(claims, state.seats, state.vorhand);
+  return state.vorbehalte.map((v) =>
+    v.kind === null || v.seat === seat || v.seat === winner?.seat
+      ? v
+      : { seat: v.seat, kind: 'verdeckt' as const },
+  );
+}
+
 export function viewFor(state: RoundState, seat: number): PlayerView {
   const hand = state.hands[seat] ?? [];
   const leadCard = state.currentTrick[0]?.card ?? null;
@@ -1382,7 +1409,7 @@ export function viewFor(state: RoundState, seat: number): PlayerView {
         ? state.vorbehalte.map((v) =>
             v.seat === seat ? v : { seat: v.seat, kind: 'geheim' as const },
           )
-        : state.vorbehalte,
+        : sichtbareVorbehalte(state, seat),
     ansagen: state.ansagen,
     myParty,
     knownParties,
