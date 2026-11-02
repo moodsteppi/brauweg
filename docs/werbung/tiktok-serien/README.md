@@ -22,26 +22,51 @@ Kennungen.
 ## Stand der Erzeugung — TEILSTAND, Auftrag nicht erfüllt
 
 > **Dieser Stand erfüllt die Aufgabe „20 Figuren mit Steckbrief" nicht.**
-> Er liefert nur die Steckbriefe (Text). Verlangt waren außerdem ein
+> Er liefert die Steckbriefe und Bild Nr. 1. Verlangt waren außerdem ein
 > angelegtes Creative, 20 erzeugte Bilder, ein Kontaktbogen und die
-> Kennungen. Davon existiert noch **nichts**. Wer diesen Zweig freigibt,
+> Kennungen. Davon fehlt noch **fast alles**. Wer diesen Zweig freigibt,
 > gibt einen Teilstand frei; die Aufgabe bleibt offen, bis die Liste unten
 > abgehakt ist.
 
 | Lieferung laut Auftrag | Stand |
 |---|---|
 | Steckbriefe (Name, Art, Charakter, Rolle, Stimme) | **fertig**, `figuren.md` |
-| Creative „TikTok-Figuren" angelegt | **fehlt** |
-| 20 Bilder in bester Qualität | **fehlt** |
+| Creative „TikTok-Figuren" angelegt | **fehlt**: als Worker nicht anlegbar, siehe unten |
+| 20 Bilder in bester Qualität | **1 von 20**: Nr. 1 Pelle (Grundform) erzeugt, Abnahme offen |
 | Kontaktbogen aller 20 | **fehlt** |
 | Creative-Kennung | **fehlt** |
 | Varianten-Kennung je Figur | **fehlt** (Spalte „Variante" in `figuren.md` steht auf „offen") |
-| Verbrauchtes Kontingent | 0 — es wurde nichts erzeugt |
+| Verbrauchtes Kontingent | **30 VerseIn-Münzen** (Guthaben danach 14.210) |
 
-**Warum:** Beide bisherigen Läufe (02.11.2026, Erstlauf und Nachbesserung)
-liefen auf DESKTOP-VL852RM. Dort gibt es weder den versien.ai-MCP noch
-Creative-Werkzeuge (`creative …` in `steuerung.mjs` ist dem Orchestrator
-vorbehalten). Der Auftrag verlangt ausdrücklich den Mood-XPS.
+### Was bisher erzeugt ist (VerseIn, 02.11.2026)
+
+| Nr. | Figur | VerseIn-Aufgabe | Modell | Münzen |
+|---:|---|---|---|---:|
+| 1 | Pelle (Grundform) | `image_ea6a43d3-1835-44eb-b039-6eca19fed2bd` | Nano Banana Pro, 4K, 2:3 (3392 × 5056) | 30 |
+
+- **Referenzbild:** das App-Icon `packages/client/public/icon-1024.png` (Logo
+  mit den drei Pinguinen und der Giraffe), hochgeladen zu VerseIn. Pelle Nr. 1
+  ist ebenfalls hochgeladen, als Referenz für die Auslegungen Nr. 2–5.
+- **Ergebnis Nr. 1:** Der Stil trifft die Vorgabe (dicke Outlines, flache
+  Farben, Glubschaugen), Farben und Steuerkreuz kommen aus dem Logo. Ein
+  Mangel: Die Karten tragen Buchstaben (Q, K, A), obwohl nur Farbsymbole
+  verlangt waren. Ab Nr. 2 deshalb im Prompt: „card faces show only suit
+  symbols, no letters or numbers".
+- **Wasserzeichen:** Über das MCP gibt VerseIn nur
+  `…/generation-display/<aufgabe>/watermarked_v1.png` heraus, mit
+  „VerseIn"-Zeichen unten rechts; andere Pfade antworten mit 403. Die Fassung
+  ohne Wasserzeichen muss jemand im VerseIn-Web aus der Bibliothek laden.
+  Für Steckbrief und Kontaktbogen reicht die Fassung mit Zeichen; für Werbung
+  nicht.
+- **Kosten:** VerseIn fragt je Aufruf ab 50 Münzen nach Bestätigung
+  (`confirm_above_coins`). Die übrigen 19 Bilder kosten bei 4K 570 Münzen. Sie
+  sind nicht erzeugt, weil die Freigabe dafür noch fehlt.
+
+**Warum noch nicht vollständig:** Der versein-MCP läuft seit diesem Lauf auch
+auf DESKTOP-VL852RM. Ein Creative in brotool kann ein Worker aber nicht
+anlegen (`steuerung.mjs creative …` meldet „Creative-Werkzeuge sind dem
+Orchestrator vorbehalten"). Varianten kann er auch nicht anlegen, und
+`creative datei hochladen` nimmt ohnehin nur Videos (mp4, webm, mov).
 
 ### Übergabe an den Lauf auf dem Mood-XPS
 
