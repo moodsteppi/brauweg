@@ -35,32 +35,30 @@ des Auftrags.
 | Bilder Nr. 2–20 | **offen**: kosten Münzen, nicht freigegeben |
 | Kontaktbogen | **offen**: braucht die 20 Bilder |
 | Creative „TikTok-Figuren“ | angelegt vom Orchestrator: `bb5cd6da-9b44-47c2-902b-3c8bf71f1a63`; noch ohne Varianten |
-| Verbrauchtes Kontingent | **30 VerseIn-Münzen** (Bild 1), Guthaben 14.210 vor und nach dem Lauf vom 02.11. nachmittags |
+| Verbrauchtes Kontingent | **30 VerseIn-Münzen**, alle für Bild 1 (14:38 UTC, also **vor** der Vorgabe „keine Münzen“ um 15:08 UTC). Guthaben unmittelbar danach 14.210; seitdem unverändert 14.210 (geprüft mit `get_balance` am Anfang und Ende jedes späteren Laufs) |
 
-### Woran es hängt (Verlauf am 02.11.2026)
+### Woran es hängt (Zeitleiste 02.11.2026, UTC)
 
-1. **Nachmittags, Nachbesserung 4 dieser Aufgabe** (Auftragstext, 15:08 UTC):
-   „KEINE Muenzen verbrauchen. Nur Seedance (unlimitiert) über den
-   versein-MCP; kein Nano Banana Pro, keine weiteren Bilder gegen Münzen. […]
-   Kostet ein Seedance-Aufruf Münzen […], SOFORT aufhören und melden.“ Statt
-   der Einzelbilder sollte ein Vorstellungsvideo der 20 Figuren entstehen.
-   Das ist die Quelle für „keine Münzen“; der ursprüngliche Auftrag selbst
-   (der Videos ausschließt) ist nicht geändert worden.
-2. **Prüfung im Folgelauf (Mood-XPS, DESKTOP-VL852RM):** Seedance kostet über
-   den MCP sehr wohl Münzen. `estimate_cost`, 9:16, 4 s:
-   - `kie-seedance-2.5` (Seedance 2.5): **520 Münzen**
-   - `byteplus-seedance-2-mini` (Seedance 2.0 Mini): 80 Münzen
+Die Zeiten der Aufträge stammen aus dem Auftragstext des Orchestrators (Liste
+„Frühere Nachbesserungen“), die Zeit von Bild 1 aus VerseIn
+(`list_recent_tasks`, `created_at`). Die Nachbesserungen selbst stehen
+nicht im Repo; wer sie prüfen will, findet sie an der Aufgabe in brotool
+(Projekt #15, Stufe 1, Aufgabe 1).
 
-   VerseIn schreibt dazu: „Generating through an AI assistant is charged in
-   VerseIn coins. Unlimited-plan allowances do not apply here.“ Die
-   Unlimitiert-Regel gilt also **nur im VerseIn-Web**: In der Taskliste steht
-   ein Seedance-2.5-Clip vom selben Tag, im Web erzeugt
-   (`video_5af26cb6-…`, `via_assistant: false`), mit 0 Münzen. Nach der
-   Vorgabe wurde deshalb **nichts erzeugt**, auch kein Video.
-3. Damit sind beide Wege über den Worker gesperrt: Einzelbilder (Nano Banana
-   Pro, 30 Münzen je 4K-Bild, zusammen 570, mit Kontaktbogen bis 650) und
-   Video (Seedance über MCP, ab 520 je Clip). Ohne Münzen geht es nur über
-   das VerseIn-Web, und dort muss ein Mensch klicken.
+| Zeit | Was | Wirkung |
+|---|---|---|
+| — | Ursprünglicher Auftrag: „NUR AUF Mood XPS (versien.ai-MCP mit Seedance 2.5)“, 20 **Bilder**, keine Videos | Seedance 2.5 ist ein reines Videomodell; `list_models media=image` führt es nicht. Für Standbilder muss also ein Bildmodell her, und **jedes** Bildmodell bei VerseIn kostet Münzen (billigstes: Z-Image, ab 5 je Bild) |
+| 14:37 | Nachbesserung 3: MCP eingerichtet, „Auftrag vollständig erledigen“ | Freigabe zum Erzeugen; keine Münzgrenze genannt |
+| 14:38 | Bild 1 (Pelle) mit Nano Banana Pro 4K | **30 Münzen**, Guthaben danach 14.210 |
+| danach | Der Worker fragt nach 570–650 Münzen für den Rest | VerseIn verlangt ab 50 Münzen je Aufruf eine Bestätigung |
+| 15:08 | Nachbesserung 4 (Tom): „KEINE Münzen verbrauchen. Nur Seedance (unlimitiert) über den versein-MCP […] Kostet ein Seedance-Aufruf Münzen, SOFORT aufhören und melden.“ Statt Einzelbildern ein Vorstellungsvideo | Bilder 2–20 gesperrt. Der ursprüngliche Auftrag (keine Videos) ist dabei nicht geändert worden: Vorgaben widersprechen sich |
+| Folgelauf | `estimate_cost` 9:16, 4 s: Seedance 2.5 **520**, Seedance 2.0 Mini 80 Münzen. VerseIn: „Generating through an AI assistant is charged in VerseIn coins. Unlimited-plan allowances do not apply here.“ | Nach Nachbesserung 4 **nichts erzeugt**. Unlimitiert ist Seedance nur im VerseIn-Web: ein Web-Clip vom selben Tag (`video_5af26cb6-…`, `via_assistant: false`) kostete 0 Münzen |
+
+**Ergebnis:** Über den Worker (MCP) kostet jeder Weg Münzen, Bilder ab 5,
+in der verlangten Qualität 30 je Bild, Seedance-Video ab 520 je Clip. Unter
+der geltenden Vorgabe „keine Münzen“ ist die Stufe vom Worker aus nicht zu
+Ende zu bringen. Das ist der Grund für den Teilstand, nicht ein ausgelassener
+Arbeitsschritt.
 
 ### Was bisher erzeugt ist (VerseIn, 02.11.2026)
 
@@ -86,7 +84,7 @@ des Auftrags.
   Bibliothek laden. Für Steckbrief und Kontaktbogen reicht die Fassung mit
   Zeichen, für Werbung nicht.
 - **Modell:** Nano Banana Pro statt Seedance 2.5, weil Seedance ein reines
-  Videomodell ist und keine Standbilder erzeugt (siehe „Bildmaße“).
+  Videomodell ist und keine Standbilder erzeugt (siehe Zeitleiste).
 - **Kosten:** VerseIn fragt je Aufruf ab 50 Münzen nach Bestätigung
   (`confirm_above_coins`).
 
