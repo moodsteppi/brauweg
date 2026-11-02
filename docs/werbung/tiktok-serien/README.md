@@ -12,6 +12,7 @@ Drehbücher kommen in späteren Stufen.
 |---|---|
 | `figuren.md` | 20 Steckbriefe mit Bildvorgabe (Prompt) je Figur |
 | `README.md` | Stil, Bildmaße, Stand der Erzeugung |
+| `belege.md` | Werkzeugantworten (Preis, Guthaben) und Vorgaben, wörtlich |
 
 Bilder und Videos kommen **nicht** ins Repo. Sie liegen im Creative
 „TikTok-Figuren" (brotool → Creatives). Im Repo stehen nur Texte und die
@@ -36,9 +37,10 @@ Die Nachbesserung vom 02.11.2026 (16:08 UTC, Entscheidung von Tom) verlangt
 das Gegenteil: „Statt 20 Einzelbildern entsteht EIN Vorstellungsvideo der 20
 Figuren, nur mit Seedance 2.5 […] KEINE Münzen ausgeben.“ Der
 Auftragstext der Aufgabe ist dabei **nicht** angepasst worden; ein Worker kann
-ihn auch nicht ändern. Beleg ist allein der Nachbesserungstext an der Aufgabe
-in brotool (Projekt #15, Stufe 1, Aufgabe 1, Liste der Nachbesserungen). Im
-Repo steht er nicht. Die Datei folgt der jüngeren Vorgabe. Wer abnimmt,
+ihn auch nicht ändern. Beleg ist der Nachbesserungstext an der Aufgabe in
+brotool (Projekt #15, Stufe 1, Aufgabe 1, Liste der Nachbesserungen). Die
+maßgeblichen Sätze stehen wörtlich in `belege.md`, ebenso die
+Werkzeugantworten zu Preis und Guthaben (Abfrage 02.11.2026, 17:04 UTC). Die Datei folgt der jüngeren Vorgabe. Wer abnimmt,
 entscheidet, welche gilt. Am besten wird der Auftragstext in brotool an die
 Entscheidung angeglichen, dann misst der Zweitleser gegen dieselbe Vorgabe.
 
