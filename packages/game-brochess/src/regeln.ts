@@ -23,6 +23,38 @@ export interface BroChessRegeln {
   readonly bedenkzeitMs?: number;
   /** Zuschlag je Zug (Fischer-Modus), gutgeschrieben nach dem eigenen Zug. */
   readonly zuschlagMs?: number;
+  /**
+   * Spielart, seit dem 02.11.2026. Fehlt das Feld, ist es 'normal' — so
+   * spielen alte Tische und Tests unveraendert weiter. 'secretDame': Jede
+   * Seite bestimmt vor dem ersten Zug heimlich eine eigene Figur (nicht den
+   * König), die zusaetzlich wie eine Dame ziehen darf (geheim.ts).
+   */
+  readonly modus?: Modus;
+  /**
+   * Nur bei 'secretDame': Zaehlt die Drohung einer noch VERDECKTEN Dame als
+   * Schach? 'A' (Vorgabe): nein — der Gegner weiss ja nichts von ihr; laesst
+   * er seinen König in ihrer Reichweite stehen, darf sie ihn schlagen, und
+   * die Partie ist aus. 'B': ja, sie zaehlt wie eine offene Dame (fuer
+   * Schach, Matt und die erlaubten Zuege des Gegners) — dafuer verraten
+   * dessen erlaubte Zuege, wo sie stehen koennte.
+   */
+  readonly schachDurchVerdeckte?: SchachDurchVerdeckte;
+}
+
+export type Modus = 'normal' | 'secretDame';
+export type SchachDurchVerdeckte = 'A' | 'B';
+
+export const MODI: readonly Modus[] = ['normal', 'secretDame'];
+export const SCHACH_DURCH_VERDECKTE: readonly SchachDurchVerdeckte[] = ['A', 'B'];
+
+/** Spielart des Regelsatzes; ein fehlendes Feld heisst 'normal'. */
+export function modusVon(regeln: BroChessRegeln): Modus {
+  return regeln.modus ?? 'normal';
+}
+
+/** Regel fuer die Drohung der verdeckten Dame; ein fehlendes Feld heisst 'A'. */
+export function schachRegelVon(regeln: BroChessRegeln): SchachDurchVerdeckte {
+  return regeln.schachDurchVerdeckte ?? 'A';
 }
 
 export const DEFAULT_REGELN: BroChessRegeln = {};
@@ -65,7 +97,25 @@ export function pruefeRegeln(config: unknown, seats: number, rounds: number): Co
   if (rounds !== 1) {
     probleme.push({ path: 'rounds', messageKey: 'ruleset.roundsOutOfRange', severity: 'error' });
   }
-  const regeln = config as { bedenkzeitMs?: unknown; zuschlagMs?: unknown };
+  const regeln = config as {
+    bedenkzeitMs?: unknown;
+    zuschlagMs?: unknown;
+    modus?: unknown;
+    schachDurchVerdeckte?: unknown;
+  };
+  if (regeln.modus !== undefined && !MODI.includes(regeln.modus as Modus)) {
+    probleme.push({ path: 'modus', messageKey: 'ruleset.modus', severity: 'error' });
+  }
+  if (
+    regeln.schachDurchVerdeckte !== undefined &&
+    !SCHACH_DURCH_VERDECKTE.includes(regeln.schachDurchVerdeckte as SchachDurchVerdeckte)
+  ) {
+    probleme.push({
+      path: 'schachDurchVerdeckte',
+      messageKey: 'ruleset.schachDurchVerdeckte',
+      severity: 'error',
+    });
+  }
   if (
     regeln.bedenkzeitMs !== undefined &&
     !ganzzahlImBereich(regeln.bedenkzeitMs, BEDENKZEIT_MIN_MS, BEDENKZEIT_MAX_MS)

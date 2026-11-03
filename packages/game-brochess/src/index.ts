@@ -26,10 +26,12 @@ export {
   type Ausgang,
   type BroChessAktion,
   type BroChessAufgabe,
+  type BroChessWahl,
   type BroChessPartie,
   type BroChessZug,
   type Ende,
   amZug,
+  erlaubteAktionen,
   erlaubteZuege,
   erstellePartie,
   farbeVonSitz,
@@ -39,13 +41,30 @@ export {
   restzeit,
   sitzVonFarbe,
   verbraucheZeit,
+  schachInPartie,
+  wahlLaeuft,
 } from './partie.js';
+export {
+  type GeheimEreignis,
+  type GeheimZustand,
+  type GeheimeDame,
+  type SecretDameStand,
+  legaleZuegeGeheim,
+} from './geheim.js';
 export {
   type BroChessRegeln,
   DEFAULT_REGELN,
+  type Modus,
+  type SchachDurchVerdeckte,
   SEAT_COUNTS,
   pruefeRegeln,
   zeitkontrolle,
 } from './regeln.js';
-export { type BroChessSicht, sichtFuer, zuschauerSicht } from './sicht.js';
+export {
+  type BroChessSicht,
+  type GeheimeDameSicht,
+  type SecretDameSicht,
+  sichtFuer,
+  zuschauerSicht,
+} from './sicht.js';
 export { botZug } from './bot.js';
