@@ -6,7 +6,7 @@ import { Startbildschirm } from '../../screens/Startbildschirm';
  *
  * Das Konto gilt nach 1,5 s als geladen (wie ein langsamer erster Abruf);
  * danach beginnt der Durchlauf von vorn, damit man ihn mehrfach sieht.
- * `&halt=laden` bleibt beim Ladebild stehen (für Bildschirmfotos).
+ * `&halt=laden` bleibt bei der fertigen Marke mit Ladeanzeige stehen (für Bildschirmfotos).
  */
 export function ProbeStart(): React.JSX.Element {
   const halt = new URLSearchParams(window.location.search).get('halt');

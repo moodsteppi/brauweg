@@ -1,129 +1,49 @@
-/*
- * Start der App: Logo auf dunklem Grund, dann Ladebild mit Leiste
- * (Startbildschirm.tsx). Farben wie im neuen Hub (Nachtblau & Gold).
- */
-.start-logo,
-.start-laden {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  overflow: hidden;
-  background: #050b1d;
-  font-family: 'Lilita One', system-ui, sans-serif;
-  color: #f3f5ff;
-}
-
-/* 1. Das Logo springt auf, dahinter ein weicher Schein */
+/* Die farbige neue Marke steht auf ruhigem Nachtblau statt auf dem alten Ladebild. */
 .start-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position:fixed; inset:0; z-index:100; overflow:hidden;
+  display:grid; place-items:center; isolation:isolate;
+  background:#050b1d; color:#f8f2e4;
+  padding:env(safe-area-inset-top,0px) 24px env(safe-area-inset-bottom,0px);
+  transition:opacity .35s ease,visibility .35s;
 }
+.start-logo.is-weg { opacity:0; visibility:hidden; pointer-events:none; }
 .start-logo-schein {
-  position: absolute;
-  width: 120vmin;
-  height: 120vmin;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(245, 192, 46, 0.22) 0%, rgba(43, 102, 217, 0.12) 38%, rgba(5, 11, 29, 0) 68%);
+  position:absolute; width:min(130vw,620px); aspect-ratio:1; border-radius:50%;
+  background:radial-gradient(circle,#4b36592b 0%,#087b8a18 38%,transparent 69%);
+  pointer-events:none; animation:start-schein 1.3s ease-out both;
 }
-.start-logo-bild {
-  position: relative;
-  width: min(48vw, 190px); /* Hochformat, Höhe wie vorher (~220 px) */
-  height: auto;
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.6));
+.start-marke {
+  position:relative; width:min(69vw,290px,49svh); aspect-ratio:421/488;
+  transform:translateY(-18px); filter:drop-shadow(0 12px 28px #0005);
 }
-.start-logo-bild.is-springt {
-  animation: start-springt 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+.start-marke img { display:block; position:absolute; inset:0; width:100%; height:100%; object-fit:contain; user-select:none; -webkit-user-select:none; }
+.start-marke-ganz { opacity:0; animation:start-ganz .06s 1.14s both; }
+.start-marke-teile { position:absolute; inset:0; animation:start-teile-weg .01s 1.22s forwards; }
+.start-marke-teil { will-change:transform,opacity; animation:start-zusammen .72s cubic-bezier(.16,.8,.25,1) both; }
+.teil-links-oben { clip-path:polygon(0 0,50% 0,50% 42%,0 42%); --x:-42px;--y:-32px;--r:-14deg; }
+.teil-rechts-oben { clip-path:polygon(50% 0,100% 0,100% 42%,50% 42%); --x:42px;--y:-32px;--r:14deg; animation-delay:.1s; }
+.teil-links-unten { clip-path:polygon(0 42%,50% 42%,50% 84%,0 84%); --x:-38px;--y:30px;--r:12deg; animation-delay:.2s; }
+.teil-rechts-unten { clip-path:polygon(50% 42%,100% 42%,100% 84%,50% 84%); --x:38px;--y:30px;--r:-12deg; animation-delay:.3s; }
+.start-marke .teil-schrift { clip-path:inset(84% 0 0); animation:start-schrift .45s .68s both; }
+.start-marke-ersatz { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font:900 clamp(26px,7vw,38px)/1.2 'Nunito Variable',sans-serif; }
+.start-marke-ersatz em { display:contents; font-style:normal; color:#ffc84e; }
+.start-status { position:absolute; width:min(calc(100% - 64px),320px); left:50%; bottom:max(9svh,calc(env(safe-area-inset-bottom,0px) + 32px)); transform:translateX(-50%); animation:start-status .2s ease-out both; }
+.start-laden-leiste { position:relative; height:5px; border-radius:3px; background:#ffffff17; overflow:hidden; }
+.start-laden-fuellung { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#1ba6a4,#f4c656); transition:width .12s linear; }
+.start-status-text { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:12px; font:600 11px/1.5 'Nunito Variable',sans-serif; color:#aebcd1; }
+.start-status-text b { font-variant-numeric:tabular-nums; color:#efe5cf; }
+@keyframes start-zusammen { from { opacity:0; transform:translate(var(--x),var(--y)) rotate(var(--r)) scale(.87); } 35% { opacity:1; } to { opacity:1; transform:translate(0,0) rotate(0) scale(1); } }
+@keyframes start-schrift { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+@keyframes start-ganz { to { opacity:1; } }
+@keyframes start-teile-weg { to { opacity:0; visibility:hidden; } }
+@keyframes start-schein { from { opacity:0; transform:scale(.7); } to { opacity:1; transform:scale(1); } }
+@keyframes start-status { from { opacity:0; } to { opacity:1; } }
+/* Auch der erste Frame bleibt bei reduzierter Bewegung vollständig sichtbar. */
+.start-logo.ist-ruhig,.start-logo.ist-ruhig * { animation:none!important; transition:none!important; }
+.start-logo.ist-ruhig .start-marke-ganz { opacity:1; }
+.start-logo.ist-ruhig .start-marke-teile { display:none; }
+@media (prefers-reduced-motion:reduce) {
+  .start-logo,.start-logo * { animation:none!important; transition:none!important; }
+  .start-marke-ganz { opacity:1; }.start-marke-teile { display:none; }
 }
-@keyframes start-springt {
-  0% {
-    transform: scale(0.4);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.08);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* 2. Ladebild: unten bündig in voller Breite, darüber Nachtblau wie der Himmel */
-.start-laden {
-  background: linear-gradient(180deg, #0a1433 0%, #0e1a3d 45%, #0e1a3d 100%);
-  animation: start-einblenden 0.35s ease-out both;
-  transition: opacity 0.35s ease-in;
-}
-.start-laden.is-weg {
-  opacity: 0;
-}
-@keyframes start-einblenden {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-.start-laden-bild {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: 100%;
-  max-width: 34rem;
-  transform: translateX(-50%);
-  /* Oben weich in den Himmel verlaufen, damit keine Kante entsteht */
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 12%);
-}
-.start-laden-logo {
-  position: absolute;
-  left: 50%;
-  top: max(6vh, calc(env(safe-area-inset-top, 0px) + 20px));
-  width: min(72vw, 320px);
-  transform: translateX(-50%);
-  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.55));
-}
-/* Die Leiste unten, mit der Prozentzahl in der Mitte */
-.start-laden-leiste {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: max(28px, calc(env(safe-area-inset-bottom, 0px) + 16px));
-  max-width: 30rem;
-  margin: 0 auto;
-  height: 30px;
-  border-radius: 15px;
-  background: rgba(5, 11, 29, 0.78);
-  border: 2px solid rgba(245, 192, 46, 0.55);
-  overflow: hidden;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
-}
-.start-laden-fuellung {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: linear-gradient(180deg, #ffd75a, #e9a91a);
-  box-shadow: inset 0 -4px 0 rgba(120, 70, 0, 0.35);
-  transition: width 0.12s linear;
-}
-.start-laden-leiste strong {
-  position: relative;
-  display: block;
-  font: 400 18px/26px 'Lilita One', system-ui, sans-serif;
-  text-align: center;
-  color: #f3f5ff;
-  text-shadow: 0 1px 0 #07132f, 0 0 6px rgba(7, 19, 47, 0.8);
-  font-variant-numeric: tabular-nums;
-}
-@media (prefers-reduced-motion: reduce) {
-  .start-logo-bild.is-springt,
-  .start-laden {
-    animation: none;
-  }
-  .start-laden,
-  .start-laden-fuellung {
-    transition: none;
-  }
-}
+@media (max-height:540px) { .start-marke { width:min(45vw,220px,52svh); }.start-status { bottom:max(18px,env(safe-area-inset-bottom,0px)); } }

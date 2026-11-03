@@ -2185,8 +2185,8 @@ td {
 }
 .hub-banner img {
   display: block;
-  height: 2.6rem;
-  width: auto;
+  height: auto;
+  width: min(62vw, 230px);
   max-width: 78%;
   object-fit: contain;
   filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.45));
