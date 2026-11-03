@@ -196,7 +196,7 @@ test('Regel A: die verdeckte Dame gibt kein Schach — schlaegt sie den König, 
   const danach = fuehreAus(p, SCHWARZ, zug('a7', 'a6'));
   assert.ok(hat(danach, WEISS, 'd4', 'd8'));
   const ende = fuehreAus(danach, WEISS, zug('d4', 'd8'));
-  assert.deepEqual(ende.ende, { ausgang: 'koenigGeschlagen', sieger: WEISS });
+  assert.deepEqual(ende.ende, { ausgang: 'matt', sieger: WEISS });
   assert.equal(ende.secretDame!.w.zustand, 'aufgedeckt');
   assert.deepEqual(brochess.standings(ende).map((s) => s.place), [1, 2]);
   assert.equal(brochess.currentActor(ende), null);
@@ -246,7 +246,7 @@ test('Regel A: dieselbe Stellung ist kein Matt — der König faellt einen Zug s
   assert.equal(sichtFuer(p, SCHWARZ).schach, false);
   p = fuehreAus(p, SCHWARZ, zug('g7', 'g6'));
   p = fuehreAus(p, WEISS, zug('a8', 'h8'));
-  assert.deepEqual(p.ende, { ausgang: 'koenigGeschlagen', sieger: WEISS });
+  assert.deepEqual(p.ende, { ausgang: 'matt', sieger: WEISS });
 });
 
 // ---------------------------------------------------------------------------

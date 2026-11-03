@@ -93,13 +93,7 @@ export type Ausgang =
   | 'material'
   /** Zeit ueberschritten. Mit Sieger null: Remis, weil der Gegner nicht mattsetzen koennte. */
   | 'zeit'
-  | 'aufgabe'
-  /**
-   * Secret Dame, Regel A: Die verdeckte Dame hat den König geschlagen. Unter
-   * Regel A zaehlt ihre Drohung nicht als Schach, der Gegner durfte seinen
-   * König also in ihrer Reichweite stehen lassen — und hat verloren.
-   */
-  | 'koenigGeschlagen';
+  | 'aufgabe';
 
 export interface Ende {
   readonly ausgang: Ausgang;
@@ -359,8 +353,16 @@ function zieheGeheim(partie: BroChessPartie, sitz: number, aktion: BroChessAktio
       ? { restMs: partie.uhr.restMs.map((ms, s) => (s === sitz ? ms + kontrolle.zuschlagMs : ms)) }
       : partie.uhr;
 
+  /*
+   * Secret Dame, Regel A: Die verdeckte Dame hat den König geschlagen. Das ist
+   * kein eigener Ausgang (Entscheidung Tom, 03.11.2026 — der Client kennt nur
+   * die vorhandenen), sondern 'matt': Der Gegner stand im Schach, das unter
+   * Regel A nur nicht gemeldet wurde, und hat es nicht abgewehrt. Sieger ist,
+   * wer den König schlägt. 'aufgabe' oder 'zeit' würden eine Handlung bzw.
+   * die Uhr behaupten, die es nicht gab.
+   */
   const ende: Ende | null = schlaegtKoenig(partie.stellung, zug)
-    ? { ausgang: 'koenigGeschlagen', sieger: sitz }
+    ? { ausgang: 'matt', sieger: sitz }
     : endeNachGeheim(stellung, standDanach, wiederholt, sitz);
   /*
    * Das Schachzeichen nach der Regel des Tisches, nicht nach `sanVon`: Unter
