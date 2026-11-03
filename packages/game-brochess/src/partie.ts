@@ -66,7 +66,8 @@ export interface BroChessAufgabe {
  * Secret Dame: Wahl der geheimen Dame, seit dem 02.11.2026. Je Seite genau
  * einmal, vor dem ersten Zug, und beide Seiten waehlen GLEICHZEITIG —
  * `currentActor` nennt trotzdem einen Sitz (den ersten, der noch waehlen
- * muss), damit Zugzeit und Bot-Uebernahme greifen; geprueft wird beim
+ * muss), damit Zugzeit und Verlassen-Regel greifen (eine Bot-Uebernahme gibt es im
+ * Modus noch nicht, `botAction` wirft); geprueft wird beim
  * Waehlen nur, ob dieser Sitz schon gewaehlt hat (wie Eiland, CLAUDE.md).
  */
 export interface BroChessWahl {
@@ -355,13 +356,24 @@ function zieheGeheim(partie: BroChessPartie, sitz: number, aktion: BroChessAktio
 
   /*
    * Secret Dame, Regel A: Die verdeckte Dame hat den König geschlagen. Das ist
-   * kein eigener Ausgang (Entscheidung Tom, 03.11.2026 — der Client kennt nur
+   * kein eigener Ausgang (Entscheidung B im Team-Raum 03.11.2026, e81180e0 — der Client kennt nur
    * die vorhandenen), sondern 'matt': Der Gegner stand im Schach, das unter
    * Regel A nur nicht gemeldet wurde, und hat es nicht abgewehrt. Sieger ist,
    * wer den König schlägt. 'aufgabe' oder 'zeit' würden eine Handlung bzw.
    * die Uhr behaupten, die es nicht gab.
    */
-  const ende: Ende | null = schlaegtKoenig(partie.stellung, zug)
+  const koenigFaellt = schlaegtKoenig(partie.stellung, zug);
+  // Das Ereignis macht den Königsschlag am Tisch lesbar, ohne dass es dafür einen eigenen Ausgang gibt.
+  const standEnde: SecretDameStand = koenigFaellt
+    ? {
+        ...standDanach,
+        ereignisse: [
+          ...standDanach.ereignisse,
+          { art: 'koenigGeschlagen', farbe: partie.stellung.amZug, feld: feldName(zug.nach), halbzug },
+        ],
+      }
+    : standDanach;
+  const ende: Ende | null = koenigFaellt
     ? { ausgang: 'matt', sieger: sitz }
     : endeNachGeheim(stellung, standDanach, wiederholt, sitz);
   /*
@@ -380,7 +392,7 @@ function zieheGeheim(partie: BroChessPartie, sitz: number, aktion: BroChessAktio
     ende,
     verlauf: [...partie.verlauf, notationGeheim(partie.stellung, zug) + zeichen],
     uhr,
-    secretDame: standDanach,
+    secretDame: standEnde,
   };
 }
 

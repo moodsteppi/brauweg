@@ -88,6 +88,15 @@ export type GeheimEreignis =
       /** War die Dame beim Umwandeln noch verdeckt? Dann sieht das Ereignis nur ihr Besitzer. */
       readonly verdeckt: boolean;
       readonly halbzug: number;
+    }
+  | {
+      /** Regel A: Die Dame hat den König geschlagen. Fuer beide Sitze sichtbar. */
+      readonly art: 'koenigGeschlagen';
+      /** Farbe des Schlagenden. */
+      readonly farbe: Farbe;
+      /** Feld des geschlagenen Königs. */
+      readonly feld: string;
+      readonly halbzug: number;
     };
 
 export interface SecretDameStand {

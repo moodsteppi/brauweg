@@ -130,7 +130,8 @@ export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht,
   botAction(sicht, level) {
     if (sicht.zuschauer) throw new Error('Bot darf nicht auf Zuschauersicht laufen');
     // Secret Dame: bewusst KEIN Bot (Auftrag, 02.11.2026) — er kennt weder die Wahl noch die Damenzuege.
-    // Ein Tisch im Modus secretDame darf daher noch keine Bots/Ersatzzuege bekommen (offen, naechste Stufe).
+    // Statt eines Zuges, den `act` spaeter verwirft, ein klarer Fehler (offen, naechste Stufe).
+    if (sicht.secretDame) throw new Error('Secret Dame hat noch keinen Bot');
     return botZug(sicht, level);
   },
 

@@ -200,6 +200,15 @@ test('Regel A: die verdeckte Dame gibt kein Schach — schlaegt sie den König, 
   assert.equal(ende.secretDame!.w.zustand, 'aufgedeckt');
   assert.deepEqual(brochess.standings(ende).map((s) => s.place), [1, 2]);
   assert.equal(brochess.currentActor(ende), null);
+  const schlag = { art: 'koenigGeschlagen', farbe: 'w', feld: 'd8', halbzug: 2 };
+  assert.deepEqual(ende.secretDame!.ereignisse.at(-1), schlag);
+  for (const sitz of [WEISS, SCHWARZ]) assert.deepEqual(sichtFuer(ende, sitz).secretDame!.ereignisse.at(-1), schlag);
+  assert.deepEqual(zuschauerSicht(ende).secretDame!.ereignisse.at(-1), schlag);
+});
+
+test('Bot: im Modus Secret Dame gibt es noch keinen — klarer Fehler statt Zug', () => {
+  const p = partie('A');
+  assert.throws(() => brochess.botAction(sichtFuer(p, WEISS)), /Secret Dame hat noch keinen Bot/);
 });
 
 test('Regel A: eine AUFGEDECKTE Dame gibt Schach wie jede Dame', () => {
@@ -247,6 +256,9 @@ test('Regel A: dieselbe Stellung ist kein Matt — der König faellt einen Zug s
   p = fuehreAus(p, SCHWARZ, zug('g7', 'g6'));
   p = fuehreAus(p, WEISS, zug('a8', 'h8'));
   assert.deepEqual(p.ende, { ausgang: 'matt', sieger: WEISS });
+  const schlag = { art: 'koenigGeschlagen', farbe: 'w', feld: 'h8', halbzug: 3 };
+  assert.deepEqual(p.secretDame!.ereignisse.at(-1), schlag);
+  for (const sitz of [WEISS, SCHWARZ]) assert.deepEqual(sichtFuer(p, sitz).secretDame!.ereignisse.at(-1), schlag);
 });
 
 // ---------------------------------------------------------------------------
