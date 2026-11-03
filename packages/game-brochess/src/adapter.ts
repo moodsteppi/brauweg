@@ -16,6 +16,12 @@
  *
  * Eine Ausnahme von „legalActions ist vollstaendig" gibt es seitdem doch:
  * Aufgeben steht nicht darin (Begruendung an `erlaubteZuege`).
+ *
+ * Secret Dame (seit dem 02.11.2026, `modus` im Regelsatz) beginnt mit einer
+ * Wahl, die beide Seiten GLEICHZEITIG treffen: `currentActor` nennt dann den
+ * ersten Sitz, der noch waehlen muss, `legalActions` bietet aber jedem
+ * Sitz, der noch nicht gewaehlt hat, seine Wahl-Aktionen an (vollstaendig —
+ * eine je waehlbarer Figur). Danach gilt wieder alles oben.
  */
 
 import {
@@ -32,7 +38,7 @@ import {
   type BroChessAktion,
   type BroChessPartie,
   amZug,
-  erlaubteZuege,
+  erlaubteAktionen,
   erstellePartie,
   fuehreAus,
   markiereVerlassen,
@@ -104,7 +110,7 @@ export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht,
 
   currentActor: (partie) => amZug(partie),
 
-  legalActions: (partie, sitz) => erlaubteZuege(partie, sitz),
+  legalActions: (partie, sitz) => erlaubteAktionen(partie, sitz),
 
   schachuhr: {
     restMs: (partie, sitz) => restzeit(partie, sitz),
@@ -123,6 +129,9 @@ export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht,
 
   botAction(sicht, level) {
     if (sicht.zuschauer) throw new Error('Bot darf nicht auf Zuschauersicht laufen');
+    // Secret Dame: bewusst KEIN Bot (Auftrag, 02.11.2026) — er kennt weder die Wahl noch die Damenzuege.
+    // Statt eines Zuges, den `act` spaeter verwirft, ein klarer Fehler (offen, naechste Stufe).
+    if (sicht.secretDame) throw new Error('Secret Dame hat noch keinen Bot');
     return botZug(sicht, level);
   },
 

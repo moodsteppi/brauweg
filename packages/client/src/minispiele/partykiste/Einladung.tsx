@@ -169,10 +169,10 @@ export function Einladung({
  * auch an privaten Doppelkopf- und Skattischen steht (tisch/index.tsx) — mit
  * festem „Partykiste" lud man dort zum falschen Spiel ein. Kennt `t` eine
  * Kennung nicht, gibt es den Schluessel selbst zurueck; dann lieber nur
- * „Brauweg" als „game.xyz bei Brauweg".
+ * „BroweGGames" als „game.xyz bei BroweGGames".
  */
 function teilenTitel(spiel: string): string {
   const schluessel = `game.${spiel}`;
   const name = t(schluessel);
-  return name === schluessel ? 'Brauweg' : `${name} ${t('einladung.teilenTitel')}`;
+  return name === schluessel ? 'BroweGGames' : `${name} ${t('einladung.teilenTitel')}`;
 }

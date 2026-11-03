@@ -16,19 +16,21 @@
       content="Kartenspiele nach euren Regeln — über alle Spiele hinweg gewertet."
     />
 
-    <!-- Vom Homescreen gestartet laeuft Brauweg ohne Browserleiste. Beide
+    <!-- Vom Homescreen gestartet laeuft BroweGGames ohne Browserleiste. Beide
          Angaben stehen da: die zweite versteht aelteres iOS, die erste ist
          die heutige Schreibweise. -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Brauweg" />
+    <meta name="apple-mobile-web-app-title" content="BroweGGames" />
     <!-- black-translucent: Die Statusleiste liegt ueber unserer dunklen
          Kopfzeile. Der Platz dafuer kommt aus safe-area-inset-top. -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/icon-180.png" />
+    <meta property="og:image" content="/og-image-1200x630.png" />
 
     <!-- Startbilder. Ohne sie zeigt iOS beim Oeffnen kurz eine weisse Flaeche;
          jede Zeile gilt fuer genau eine Bildschirmgroesse. -->
@@ -78,7 +80,7 @@
       media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)"
     />
 
-    <title>Brauweg</title>
+    <title>BroweGGames</title>
   </head>
   <body>
     <div id="root"></div>

@@ -64,7 +64,7 @@ final class Fehlerschirm: UIView {
         titel.accessibilityTraits.insert(.header)
 
         let text = UILabel()
-        text.text = "Brauweg erreicht den Server gerade nicht. Prüf deine Internetverbindung und versuch es noch einmal."
+        text.text = "BroweGGames erreicht den Server gerade nicht. Prüf deine Internetverbindung und versuch es noch einmal."
         text.font = .preferredFont(forTextStyle: .body)
         text.adjustsFontForContentSizeCategory = true
         text.textColor = UIColor.white.withAlphaComponent(0.85)

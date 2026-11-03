@@ -110,7 +110,7 @@ describe('Einladung', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Link teilen' }));
     await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
     expect(share.mock.calls[0]![0]).toMatchObject({
-      title: 'Partykiste bei Brauweg',
+      title: 'Partykiste bei BroweGGames',
       url: `${window.location.origin}/beitritt/K7X9MQ`,
       text: expect.stringContaining('K7X9MQ'),
     });
@@ -127,7 +127,7 @@ describe('Einladung', () => {
     render(<Einladung spiel="doppelkopf" tischId={TISCH} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Link teilen' }));
     await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
-    expect(share.mock.calls[0]![0]).toMatchObject({ title: 'Doppelkopf bei Brauweg' });
+    expect(share.mock.calls[0]![0]).toMatchObject({ title: 'Doppelkopf bei BroweGGames' });
   });
 
   it('kopiert nicht, wenn jemand das Teilen abbricht', async () => {

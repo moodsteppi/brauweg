@@ -5629,7 +5629,7 @@ main.auth > .muted {
 }
 .auth-marke img {
   display: block;
-  width: min(62vw, 15rem);
+  width: min(38vw, 8.5rem); /* Hochformat, Höhe wie die alte Marke (~9,8 rem) */
   height: auto;
 }
 .auth-spruch {

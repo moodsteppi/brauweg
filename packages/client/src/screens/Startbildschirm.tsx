@@ -20,7 +20,8 @@ import './startbildschirm.css';
 /** Was der Start gleich braucht; alles davon zählt in die Prozentzahl. */
 const BILDER = [
   '/hub/ladebild.webp',
-  '/hub/logo.webp',
+  '/hub/broweggames-vertikal-dunkel.webp',
+  '/hub/broweggames-horizontal-dunkel.webp',
   '/hub/symbol-pokal.webp',
   '/hub/symbol-muenze.webp',
   '/hub/symbol-edelstein.webp',
@@ -105,9 +106,9 @@ export function Startbildschirm({
 
   if (phase === 'logo') {
     return (
-      <main className="start-logo" aria-label="Brauweg wird gestartet">
+      <main className="start-logo" aria-label="BroweGGames wird gestartet">
         <span className="start-logo-schein" aria-hidden="true" />
-        <img className={`start-logo-bild${wenigerBewegung ? '' : ' is-springt'}`} src="/hub/logo.webp" alt="Brauweg" draggable={false} />
+        <img className={`start-logo-bild${wenigerBewegung ? '' : ' is-springt'}`} src="/hub/broweggames-vertikal-dunkel.webp" alt="BroweGGames" draggable={false} />
       </main>
     );
   }
@@ -115,8 +116,8 @@ export function Startbildschirm({
   return (
     <main className={`start-laden${phase === 'weg' ? ' is-weg' : ''}`} aria-busy={phase !== 'weg'}>
       <img className="start-laden-bild" src="/hub/ladebild.webp" alt="" draggable={false} />
-      <img className="start-laden-logo" src="/hub/logo.webp" alt="Brauweg" draggable={false} />
-      <div className="start-laden-leiste" role="progressbar" aria-label="Brauweg lädt" aria-valuemin={0} aria-valuemax={100} aria-valuenow={anzeige}>
+      <img className="start-laden-logo" src="/hub/broweggames-horizontal-dunkel.webp" alt="BroweGGames" draggable={false} />
+      <div className="start-laden-leiste" role="progressbar" aria-label="BroweGGames lädt" aria-valuemin={0} aria-valuemax={100} aria-valuenow={anzeige}>
         <span className="start-laden-fuellung" style={{ width: `${anzeige}%` }} />
         <strong>{anzeige} %</strong>
       </div>

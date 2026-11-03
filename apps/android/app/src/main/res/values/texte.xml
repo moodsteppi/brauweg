@@ -3,6 +3,6 @@
     <!-- Die einzigen Texte der Huelle selbst: die Meldung ohne Netz
          (MainActivity). Alles andere sagt der Client. -->
     <string name="offline_titel">Keine Verbindung</string>
-    <string name="offline_text">Brauweg braucht Internet. Sobald das Netz wieder da ist, geht es hier von selbst weiter.</string>
+    <string name="offline_text">BroweGGames braucht Internet. Sobald das Netz wieder da ist, geht es hier von selbst weiter.</string>
     <string name="offline_nochmal">Nochmal versuchen</string>
 </resources>

@@ -52,7 +52,8 @@
 }
 .anm-marke img {
   display: block;
-  width: min(64vw, 15.6rem);
+  /* Hochformat (Lockup 420 x 481): Breite so, dass die Höhe der alten 15,6-rem-Marke (~10,2 rem) bleibt und der Held darunter nicht rutscht. */
+  width: min(40vw, 9rem);
   height: auto;
 }
 
