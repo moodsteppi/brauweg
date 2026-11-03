@@ -316,19 +316,11 @@ test('Gegnersicht verraet die Wahl nicht: sie ist gleich, egal welche Figur gewa
 });
 
 // ---------------------------------------------------------------------------
-// Modul: Snapshot und Ersatzzug
+// Modul: Snapshot
 // ---------------------------------------------------------------------------
 
 test('Snapshot traegt die geheimen Damen mit', () => {
   const p = gewaehlt('b1', 'g8');
   const zurueck = brochess.deserialize(brochess.serialize(p));
   assert.deepEqual(zurueck, p);
-});
-
-test('Ersatzzug waehrend der Wahl: waehlt eine Figur statt eines Zuges', () => {
-  const regeln: BroChessRegeln = { modus: 'secretDame' };
-  const p = brochess.createParty({ config: regeln, seats: 2, rounds: 1, seed: 0 });
-  const aktion = brochess.botAction(brochess.viewFor(p, WEISS), 'standard');
-  assert.deepEqual(aktion, { type: 'wahl', feld: 'b1' });
-  assert.doesNotThrow(() => brochess.act(p, WEISS, aktion));
 });

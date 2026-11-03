@@ -34,7 +34,6 @@ import {
 } from '@brauweg/game-api';
 
 import { botZug } from './bot.js';
-import { feldName } from './brett.js';
 import {
   type BroChessAktion,
   type BroChessPartie,
@@ -78,15 +77,6 @@ function ladeSnapshot(raw: unknown): BroChessPartie {
     return { ...alt, verlauf: alt.verlauf ?? [], uhr: alt.uhr ?? null };
   }
   return codec.deserialize(raw);
-}
-
-function ersatzWahl(brett: readonly string[], farbe: 'w' | 'b'): BroChessAktion | null {
-  for (const art of ['n', 'b', 'r', 'p', 'q']) {
-    const figur = farbe === 'w' ? art.toUpperCase() : art;
-    const feld = brett.indexOf(figur);
-    if (feld >= 0) return { type: 'wahl', feld: feldName(feld) };
-  }
-  return null;
 }
 
 const meta: GameMeta = {
@@ -139,18 +129,8 @@ export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht,
 
   botAction(sicht, level) {
     if (sicht.zuschauer) throw new Error('Bot darf nicht auf Zuschauersicht laufen');
-    /*
-     * Secret Dame hat noch keinen eigenen Bot. Damit ein Tisch, an dem
-     * jemand die Wahl verschlaeft, nicht mit einem Botfehler abbricht (der
-     * Server beendet die Partie dann), waehlt der Ersatzzug wenigstens: den
-     * ersten Springer, sonst die erste Figur in fester Reihenfolge.
-     * Gezogen wird danach wie im normalen Modus — die Damenzuege kennt der
-     * Bot nicht.
-     */
-    if (sicht.secretDame?.wahlLaeuft && sicht.secretDame.meine === null && sicht.meineFarbe) {
-      const wahl = ersatzWahl(sicht.brett, sicht.meineFarbe);
-      if (wahl) return wahl;
-    }
+    // Secret Dame: bewusst KEIN Bot (Auftrag, 02.11.2026) — er kennt weder die Wahl noch die Damenzuege.
+    // Ein Tisch im Modus secretDame darf daher noch keine Bots/Ersatzzuege bekommen (offen, naechste Stufe).
     return botZug(sicht, level);
   },
 
