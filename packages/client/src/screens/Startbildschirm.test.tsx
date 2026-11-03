@@ -46,25 +46,25 @@ describe('Startbildschirm', () => {
     render(<Startbildschirm geladen={false} onFertig={vi.fn()} />);
     expect(screen.getByRole('main', { name: 'BroweGGames wird gestartet' })).toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-    await lauf(1300);
+    await lauf(2450);
     expect(screen.getByRole('progressbar', { name: 'BroweGGames lädt' })).toBeInTheDocument();
   });
 
   it('zählt nie über das, was wirklich geladen ist', async () => {
     const onFertig = vi.fn();
     render(<Startbildschirm geladen={false} onFertig={onFertig} />);
-    await lauf(1300);
-    // Nur die Schrift ist da (jsdom hat keine document.fonts): 1 von 15.
+    await lauf(2450);
+    // Nur die Schrift ist da (jsdom hat keine document.fonts): 1 von 16.
     await lauf(2000);
-    expect(zahl()).toBe(7);
-    // Alle Bilder da, das Konto fehlt noch: 12 von 15 = 80 %, nicht mehr.
+    expect(zahl()).toBe(6);
+    // Alle Bilder da, das Konto fehlt noch: 13 von 16 = 81 %, nicht mehr.
     await act(async () => {
       offen.splice(0).forEach((fertig) => fertig());
     });
     await lauf(2000);
-    expect(zahl()).toBe(80);
+    expect(zahl()).toBe(81);
     await lauf(5000);
-    expect(zahl()).toBe(80);
+    expect(zahl()).toBe(81);
     expect(onFertig).not.toHaveBeenCalled();
   });
 
@@ -86,8 +86,8 @@ describe('Startbildschirm', () => {
     render(<Startbildschirm geladen={false} onFertig={vi.fn()} />);
     const logo = screen.getByRole('img', { name: 'BroweGGames' });
     expect(logo).toHaveAttribute('src', '/hub/broweggames-vertikal-dunkel.webp');
-    expect(document.querySelectorAll('.start-marke-teil')).toHaveLength(5);
-    await lauf(1300);
+    expect(document.querySelectorAll('.start-tier')).toHaveLength(4);
+    await lauf(2450);
     expect(screen.getByRole('img', { name: 'BroweGGames' })).toBe(logo);
     expect(document.querySelector('.start-laden-bild')).not.toBeInTheDocument();
   });

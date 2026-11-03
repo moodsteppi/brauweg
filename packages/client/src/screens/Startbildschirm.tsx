@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import '@fontsource/lilita-one';
 import './startbildschirm.css';
 
-/** Das neue Logo entsteht aus vier Bildteilen und dem Schriftzug. Die fertige
+/** Das neue Logo entsteht aus vier eigenständigen Tieren und dem Schriftzug. Die fertige
  * Marke bleibt beim Laden an derselben Stelle; kein Wechsel zum alten Ladebild.
  * Fortschritt zählt weiterhin echte Ressourcen und den ersten Kontoabruf.
  */
@@ -10,6 +10,7 @@ import './startbildschirm.css';
 const BILDER = [
   '/hub/broweggames-vertikal-dunkel.webp',
   '/hub/broweggames-horizontal-dunkel.webp',
+  '/hub/start-tiere.webp',
   '/hub/symbol-pokal.webp',
   '/hub/symbol-muenze.webp',
   '/hub/symbol-edelstein.webp',
@@ -24,7 +25,7 @@ const BILDER = [
 const KONTO_GEWICHT = 3;
 const SCHRIFT_GEWICHT = 1;
 /** Kurzer Aufbau der Marke; Laden läuft währenddessen parallel. */
-const LOGO_DAUER = 1300;
+const LOGO_DAUER = 2450;
 
 function ladeBild(src: string): Promise<void> {
   return new Promise((fertig) => {
@@ -100,10 +101,12 @@ export function Startbildschirm({
       <div className="start-marke">
         {logoFehlt ? <strong className="start-marke-ersatz">Browe<em>GG</em>ames</strong> : <>
           <img className="start-marke-ganz" src="/hub/broweggames-vertikal-dunkel.webp" alt="BroweGGames" draggable={false} onError={() => setLogoFehlt(true)} />
-          <div className="start-marke-teile" aria-hidden="true">
-            {['links-oben', 'rechts-oben', 'links-unten', 'rechts-unten', 'schrift'].map(teil =>
-              <img key={teil} className={`start-marke-teil teil-${teil}`} src="/hub/broweggames-vertikal-dunkel.webp" alt="" draggable={false} />)}
+          <div className="start-tiere" aria-hidden="true">
+            {['lila', 'giraffe', 'orange', 'tuerkis'].map(tier =>
+              <span key={tier} className={`start-tier tier-${tier}`} />)}
           </div>
+          <span className="start-verschmelzung" aria-hidden="true" />
+          <img className="start-marke-schrift" src="/hub/broweggames-vertikal-dunkel.webp" alt="" aria-hidden="true" draggable={false} />
         </>}
       </div>
       {phase !== 'logo' && <div className="start-status">
