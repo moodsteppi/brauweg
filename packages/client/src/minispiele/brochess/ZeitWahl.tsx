@@ -1,7 +1,9 @@
+import { useState } from 'react';
+
 import { HbBlatt } from '../../screens/HbBlatt';
 import { SpielAbschnitt, SpielWahl } from '../../screens/SpielEinstieg';
 import stil from './BroChess.module.css';
-import { REGEL_TEXT, type Spielart } from './geheim';
+import { NORMALE_SPIELART, REGEL_TEXT, type Spielart, spielartRegeln } from './geheim';
 import { ARTNAME, type Zeitart, ZEITKONTROLLEN, zeitText } from './zeit';
 
 /** Gezeichnete Zeichen je Art — Patrone, Blitz, Stoppuhr. Kein Bild, das fehlen könnte. */
@@ -133,6 +135,31 @@ export function SpielartWahl({
       )}
     </>
   );
+}
+
+/**
+ * Die Spielart-Wahl samt Zustand für die Lobby — hier statt in Lobby.tsx,
+ * damit alles Wissen über Secret Dame bei BroChess bleibt und die Lobby nur
+ * zwei Dinge verdrahtet: `felder` in die `config` von `createTable`,
+ * `wahl` in den Bildschirm „Tisch erstellen".
+ *
+ * Nur für den Tisch mit Menschen gedacht: `botAction` des Moduls wirft bei
+ * Secret Dame noch, ein Bot-Tisch bliebe in der Wahl stehen. Darum gehört
+ * `wahl` nicht in die Bot-Ansicht der Lobby.
+ *
+ * Bei `aktiv = false` (jedes andere Spiel) liefert der Hook leere Felder und
+ * nichts zum Anzeigen — so entsteht dort derselbe Tisch wie bisher.
+ */
+export function useSpielartWahl(aktiv: boolean): {
+  felder: ReturnType<typeof spielartRegeln>;
+  wahl: React.JSX.Element | null;
+} {
+  const [spielart, setSpielart] = useState<Spielart>(NORMALE_SPIELART);
+  if (!aktiv) return { felder: {}, wahl: null };
+  return {
+    felder: spielartRegeln(spielart),
+    wahl: <SpielartWahl wert={spielart} onWahl={setSpielart} />,
+  };
 }
 
 export { ArtZeichen };

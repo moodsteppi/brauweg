@@ -8,8 +8,7 @@ import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import { AnfrageWarten } from '../tisch/Anfragen';
 import { ARTNAME, VORGABE_ZEIT, regelnFuer, zeitText, zeitkontrolle } from '../minispiele/brochess/zeit';
-import { ArtZeichen, SpielartWahl, ZeitWahlBlatt } from '../minispiele/brochess/ZeitWahl';
-import { NORMALE_SPIELART, type Spielart, spielartRegeln } from '../minispiele/brochess/geheim';
+import { ArtZeichen, ZeitWahlBlatt, useSpielartWahl } from '../minispiele/brochess/ZeitWahl';
 
 /**
  * Gemerkte Zeitkontrolle fuer BroChess. Eigener Schluessel statt im
@@ -166,13 +165,8 @@ export function Lobby({
   const [zeitId, setZeitId] = useState(gemerkteZeit);
   const [zeitOffen, setZeitOffen] = useState(false);
   const zeitRegeln = istSchach ? regelnFuer(zeitkontrolle(zeitId)) : {};
-  /**
-   * Spielart (BroChess, Secret Dame seit dem 04.11.2026). Nur beim Tisch für
-   * Menschen: Der Bot kann Secret Dame noch nicht (`botAction` des Moduls
-   * wirft dort), ein Bot-Tisch bliebe in der Wahl stehen.
-   */
-  const [spielart, setSpielart] = useState<Spielart>(NORMALE_SPIELART);
-  const spielartFelder = istSchach ? spielartRegeln(spielart) : {};
+  /** Spielart (BroChess: Normal oder Secret Dame) — Warum nur ohne Bot: siehe `useSpielartWahl`. */
+  const spielart = useSpielartWahl(istSchach);
   /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
   const [ansicht, setAnsicht] = useState<'liste' | 'erstellen' | 'bot'>('liste');
   /** Gestellte Beitrittsanfrage an einen privaten Tisch, solange sie läuft. */
@@ -259,7 +253,7 @@ export function Lobby({
     try {
       const table = await api.createTable({
         gameId,
-        config: { ...config, tableSize: seats, rounds, ...zeitRegeln, ...spielartFelder },
+        config: { ...config, tableSize: seats, rounds, ...zeitRegeln, ...spielart.felder },
         seats,
         rounds,
         visibility,
@@ -451,7 +445,7 @@ export function Lobby({
       >
         {error && <p className="hb-fehler">{error}</p>}
         {zeitAbschnitt}
-        {istSchach && <SpielartWahl wert={spielart} onWahl={setSpielart} />}
+        {spielart.wahl}
         {/* Schach kennt nur zwei Spieler und eine Partie — zwei Wahlen mit
             je einer Möglichkeit wären keine Wahl. */}
         {!istSchach && (
