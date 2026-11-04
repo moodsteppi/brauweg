@@ -351,7 +351,7 @@ export function ProbeBroChess(): React.JSX.Element {
             <span className={stil.kopfModus}>Secret Dame · {REGEL_TEXT[sd.regel].kurz}</span>
           )}
         </div>
-        <select
+        <select style={{ maxWidth: '45%', marginLeft: 'auto' }}
           value={schluessel}
           onChange={(e) => {
             const neu = e.target.value;
