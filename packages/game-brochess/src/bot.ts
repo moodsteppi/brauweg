@@ -482,6 +482,21 @@ function zugAusNotation(stellung: Stellung, text: string): GeheimZug | null {
 }
 
 /**
+ * Die Kandidaten nach der Zugliste — aber nie weniger als einer.
+ *
+ * Laeuft die Eingrenzung leer, hat sie sich verrechnet oder die Dame hat sich
+ * verdeckt umgewandelt (dann hat die neue Figur keine Damenkraft und kann
+ * ohne „+" auf den König sehen). Beides weiss der Bot nicht sicher. Leer
+ * hiesse in `wurzelZuege` „keine verdeckte Dame" und gaebe jeden Zug frei —
+ * auch einen, der fuer einen Kandidaten illegal ist; `act` wirft dann, und
+ * der Server bricht den ganzen Tisch ab. Also zurueck auf alle Kandidaten:
+ * vorsichtiger, nie falsch. Gefunden vom Zweitleser am 04.11.2026.
+ */
+export function eingegrenzt(alle: readonly number[], ausVerlauf: readonly number[] | null): number[] {
+  return ausVerlauf && ausVerlauf.length > 0 ? [...ausVerlauf] : [...alle];
+}
+
+/**
  * Felder der fremden Figuren, die nach der Zugliste noch die verdeckte Dame
  * sein koennen; null, wenn sich die Partie nicht nachspielen liess.
  */
@@ -771,11 +786,12 @@ function wurzelZuege(
   const fremd = andere(farbe);
   const basis = legaleZuegeGeheim(stellung, modell);
   let alle = kandidaten(stellung, sd, farbe);
-  if (alle.length > 0 && sd.regel === 'B') alle = kandidatenAusVerlauf(sicht, farbe) ?? alle;
+  if (alle.length > 0 && sd.regel === 'B') alle = eingegrenzt(alle, kandidatenAusVerlauf(sicht, farbe));
   /*
-   * Leer heisst hier: Es gibt keine aktive verdeckte Dame mehr (sie wurde
-   * verdeckt umgewandelt) — die echte Figur faellt beim Eingrenzen nie heraus,
-   * solange sie Damenkraft hat. Dann gilt jeder Zug des Modells.
+   * Leer heisst hier nur: Die fremde Dame ist bekannt oder vom Brett (die
+   * Sicht nennt sie in `bekannt`), es gibt nichts Verdecktes mehr. Dann gilt
+   * jeder Zug des Modells. Eine leer gelaufene Eingrenzung kommt hier nicht
+   * an, siehe `eingegrenzt`.
    */
   if (alle.length === 0) return basis.map((zug) => ({ zug, risiko: 0 }));
 

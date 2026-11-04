@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import type { BotLevel } from '@brauweg/game-api';
 
 import { brochess } from '../src/adapter.js';
-import { botZug } from '../src/bot.js';
+import { botZug, eingegrenzt } from '../src/bot.js';
 import { angegriffen, ausFen, feldIndex, wendeAn } from '../src/brett.js';
 import {
   type BroChessAktion,
@@ -297,3 +297,12 @@ for (const regel of ['A', 'B'] as const) {
     );
   });
 }
+
+test('Secret Dame, Regel B: eine leer gelaufene Eingrenzung faellt auf alle Kandidaten zurueck', () => {
+  // Leer darf nie „keine verdeckte Dame" heissen: Das gaebe Zuege frei, die fuer
+  // einen Kandidaten illegal sind, und der Server bricht dann den Tisch ab.
+  const alle = [48, 49, 57];
+  assert.deepEqual(eingegrenzt(alle, []), alle);
+  assert.deepEqual(eingegrenzt(alle, null), alle);
+  assert.deepEqual(eingegrenzt(alle, [49]), [49]);
+});
