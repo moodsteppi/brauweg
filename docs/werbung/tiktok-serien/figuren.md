@@ -32,6 +32,22 @@ Ihre Steckbriefe stehen unten unter „Entfallen", damit Prompts und
 Stimmen nachlesbar bleiben. Die vier Plüsch-Folgen in `folgen.md`
 enthalten Tjark (7) noch in F2–F4; dort ist bewusst nichts geändert.
 
+**Quelle:** Toms Antwort auf den Ruf der Orchestrator-Aufgabe „Tom sieht
+die 20 Figuren im Creative an und nennt im Chat, welche bleiben"
+(Projekt #15 „TikTok Ads für BrowegGames", Stufe 1, Aufgabe 2; Zweig
+`aufgabe/tom-figuren-auswaehlen-81029826`), vom Menschen am 04.11.2026 in
+den Auftrag übernommen. Wortlaut dort:
+
+> Tom hat entschieden (Ruf-Antwort 04.11.2026): Es BLEIBEN die Figuren
+> 1 Pelle (Grundform), 4 Pelle als Gastgeber, 5 Klein-Pelle, 6 Malve,
+> 8 Gundi, 13 Hinnerk, 14 Puk, 19 Paco, 20 Oktavia. Es ENTFALLEN 2, 3,
+> 7 (Tjark), 9, 10, 11, 12, 15, 16, 17, 18. Keine Aenderungswuensche je
+> Figur.
+
+Der Wortlaut steht im Repo nur hier, die Antwort selbst liegt in der
+Aufgabe im Bro-Dashboard. Wer die Liste ändert, trägt die neue Quelle
+mit ein.
+
 ## Übersicht
 
 | Nr. | Name | Art | Rolle in der Serie | Bild (VerseIn-Aufgabe) |
