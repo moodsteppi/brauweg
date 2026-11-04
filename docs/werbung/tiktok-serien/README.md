@@ -12,6 +12,7 @@ Drehbücher kommen in späteren Stufen.
 |---|---|
 | `figuren.md` | 20 Steckbriefe mit Bildvorgabe (Prompt) je Figur |
 | `README.md` | geltende Vorgabe, Stand, Abweichungen, Stil, Bildmaße |
+| `stile.md` | Stufe 2: sechs Stilrichtungen, Szenen- und Referenz-Prompts, Stand der Erzeugung |
 | `belege.md` | Werkzeugantworten (Preise, Guthaben, Kling-Prüfung) und Vorgaben, wörtlich |
 
 Bilder kommen **nicht** ins Repo. Sie liegen außerhalb, im Creative
