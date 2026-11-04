@@ -346,6 +346,10 @@ export function botZug(sicht: BroChessSicht, level: BotLevel = 'standard'): BroC
  *   sind Kb1 und Kc2 verboten. Schliessen liesse sich die Luecke nur mit den
  *   eigenen erlaubten Zuegen in der Sicht (ein Feld im Spielkern, sicht.ts);
  *   die stehen dort (Stand 04.11.2026) nicht.
+ *   OFFEN: Aufgeben statt raten ist eine Produktentscheidung, die noch kein
+ *   Mensch getroffen hat (Zweitleser, 04.11.2026). Wie oft es vorkommt, zaehlt
+ *   der Test „Regel B: Stichprobe" in test/bot.test.ts; die Zahl steht bewusst
+ *   nicht hier, damit sie nicht veraltet.
  *
  * In der Suche selbst kommt die verdeckte fremde Dame nicht vor: Was er nicht
  * weiss, rechnet er nicht. Die eigene Dame und eine bekannte fremde rechnet
@@ -425,10 +429,10 @@ function kandidaten(stellung: Stellung, sd: SecretDameSicht, farbe: Farbe): numb
  * sein MUSS. Der Bot liest dieselbe Zugliste aus seiner Sicht und folgt jeder
  * fremden Figur ueber die Partie.
  *
- * Ohne das gab er in einer Probe (363 Partien unter B, 04.11.2026) in 32
- * Partien auf, weil kein Zug fuer alle Kandidaten sicher legal war; mit ihr
- * in 20. Die uebrigen sind echte Mehrdeutigkeiten (geprueft: die echte Dame
- * fiel in 6253 Aufrufen nie heraus, nachspielen scheiterte nie).
+ * Ohne das gab er in einer Probe (363 Partien unter B, 04.11.2026) gut ein
+ * Drittel oefter auf, weil kein Zug fuer alle Kandidaten sicher legal war. Die
+ * uebrigen Aufgaben sind echte Mehrdeutigkeiten (geprueft: die echte Dame fiel
+ * nie heraus, nachspielen scheiterte nie); gezaehlt im Test „Regel B: Stichprobe".
  *
  * Nachgespielt wird ab der Grundstellung; stimmt das Ergebnis nicht genau mit
  * der FEN der Sicht ueberein (eine Partie aus einer anderen Stellung, eine

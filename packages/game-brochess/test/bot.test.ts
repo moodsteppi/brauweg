@@ -306,3 +306,48 @@ test('Secret Dame, Regel B: eine leer gelaufene Eingrenzung faellt auf alle Kand
   assert.deepEqual(eingegrenzt(alle, null), alle);
   assert.deepEqual(eingegrenzt(alle, [49]), [49]);
 });
+
+test('Secret Dame, Regel B: Stichprobe — jeder Zug legal, Aufgaben gezaehlt', () => {
+  /*
+   * Belegt die Zahl, die im Kopf von bot.ts zur Aufgabe unter B steht, statt
+   * sie nur zu behaupten: jede elfte der 363 Paarungen aus der Probe vom
+   * 04.11.2026 (11 Wahlen Weiss × 11 Wahlen Schwarz × 3 Stufenpaare). Die
+   * Zahl der Aufgaben wird ausgegeben, nicht festgeschrieben — sie ist eine
+   * offene Produktentscheidung (aufgeben oder raten), kein Sollwert.
+   * Festgeschrieben ist nur, was nie passieren darf: ein Zug, den `act`
+   * verwirft (der Server bricht dann den Tisch ab).
+   */
+  const weiss = ['a2', 'd2', 'e2', 'h2', 'b1', 'g1', 'c1', 'f1', 'a1', 'h1', 'd1'];
+  const schwarz = ['a7', 'd7', 'e7', 'h7', 'b8', 'g8', 'c8', 'f8', 'a8', 'h8', 'd8'];
+  const paare: readonly (readonly [BotLevel, BotLevel])[] = [
+    ['standard', 'anfaenger'],
+    ['anfaenger', 'standard'],
+    ['anfaenger', 'anfaenger'],
+  ];
+  let partien = 0;
+  let aufgaben = 0;
+  let index = 0;
+  for (const [stufeW, stufeS] of paare) {
+    for (const w of weiss) {
+      for (const s of schwarz) {
+        index += 1;
+        if (index % 11 !== 0) continue;
+        let p = gewaehlt('B', w, s);
+        partien += 1;
+        for (let i = 0; i < 300 && !p.ende; i += 1) {
+          const sitz = amZug(p)!;
+          const aktion = botZug(sichtFuer(p, sitz), sitz === 0 ? stufeW : stufeS);
+          if (aktion.type === 'aufgeben') aufgaben += 1;
+          else {
+            const erlaubt = erlaubteAktionen(p, sitz).some((a) => JSON.stringify(a) === JSON.stringify(aktion));
+            assert.ok(erlaubt, `illegal: ${JSON.stringify(aktion)} bei ${w}/${s}, ${p.verlauf.join(' ')}`);
+          }
+          p = fuehreAus(p, sitz, aktion);
+        }
+        assert.ok(p.ende, `Partie ${w}/${s} kam nicht zu Ende`);
+      }
+    }
+  }
+  console.log(`Stichprobe Regel B: ${aufgaben} Aufgaben in ${partien} Partien, kein illegaler Zug`);
+  assert.equal(partien, 33);
+});
