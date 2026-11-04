@@ -1,5 +1,7 @@
 import { HbBlatt } from '../../screens/HbBlatt';
+import { SpielAbschnitt, SpielWahl } from '../../screens/SpielEinstieg';
 import stil from './BroChess.module.css';
+import { REGEL_TEXT, type Spielart } from './geheim';
 import { ARTNAME, type Zeitart, ZEITKONTROLLEN, zeitText } from './zeit';
 
 /** Gezeichnete Zeichen je Art — Patrone, Blitz, Stoppuhr. Kein Bild, das fehlen könnte. */
@@ -71,6 +73,65 @@ export function ZeitWahlBlatt({
         </p>
       </div>
     </HbBlatt>
+  );
+}
+
+/**
+ * Spielart vor der Partie (Projekt „Secret Dame", 04.11.2026): Normal oder
+ * Secret Dame, bei Secret Dame dazu die Regel für die verdeckte Dame. Jede
+ * Regel steht mit ihrem Satz da, weil „A" und „B" allein nichts sagen.
+ *
+ * Wählt nur; was davon an den Tisch geht, steht in `spielartRegeln`
+ * (geheim.ts), und ob es gilt, prüft das Modul.
+ */
+export function SpielartWahl({
+  wert,
+  onWahl,
+}: {
+  wert: Spielart;
+  onWahl: (wert: Spielart) => void;
+}): React.JSX.Element {
+  return (
+    <>
+      <SpielAbschnitt titel="Spielart">
+        <SpielWahl
+          name="Spielart"
+          werte={[
+            { wert: 'normal', text: 'Normal', unter: 'Klassisches Schach' },
+            { wert: 'secretDame', text: 'Secret Dame', unter: 'Eine Figur ist heimlich Dame' },
+          ]}
+          wert={wert.modus}
+          onWahl={(modus) => onWahl({ ...wert, modus })}
+        />
+        {wert.modus === 'secretDame' && (
+          <p className="hb-klein">
+            Vor dem ersten Zug wählt jeder heimlich eine eigene Figur außer dem König. Sie darf
+            zusätzlich wie eine Dame ziehen – erst dann sieht der Gegner, welche es war.
+          </p>
+        )}
+      </SpielAbschnitt>
+      {wert.modus === 'secretDame' && (
+        <SpielAbschnitt titel="Schach durch die verdeckte Dame">
+          <div className={`spe-wahl ${stil.regelWahl}`} role="group" aria-label="Regel">
+            {(['A', 'B'] as const).map((regel) => (
+              <button
+                type="button"
+                key={regel}
+                className={`spe-wahl-knopf${wert.regel === regel ? ' is-an' : ''}`}
+                aria-pressed={wert.regel === regel}
+                onClick={() => onWahl({ ...wert, regel })}
+              >
+                <strong>
+                  {REGEL_TEXT[regel].kurz}
+                  {regel === 'A' && <span className={stil.regelVorgabe}> · Vorgabe</span>}
+                </strong>
+                <small>{REGEL_TEXT[regel].satz}</small>
+              </button>
+            ))}
+          </div>
+        </SpielAbschnitt>
+      )}
+    </>
   );
 }
 
