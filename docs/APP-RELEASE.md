@@ -120,18 +120,20 @@ Funktionen: `kartenmanufaktur`, `browort`, `clanwort`, `lernpfad`,
 zeigt genau den Umfang der App, samt Spielabstimmung.**
 
 ```
-UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau
+UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,dreckbro
 ```
 
 Damit **an**:
 
-- die vier Spiele, die in der App `spielbar` sind — Doppelkopf, Skat, Filler,
-  BroChess (`FREIGABE` in `registry.ts`);
+- die fünf Spiele, die in der App `spielbar` sind — Doppelkopf, Skat, Filler,
+  BroChess und DreckBro (`FREIGABE` in `registry.ts`; DreckBro seit dem
+  04.11.2026, es löst die Vorschau „Drecksau" ab — wer noch eine alte Zeile
+  mit `drecksau` gesetzt hat, sieht das Spiel nicht);
 - die Solo-Funktionen der App: Kartenmanufaktur, Browort, Clanwort,
   Lernpfad samt Übungsrunde (hängt an `doppelkopf`);
-- die **Spielabstimmung** (`abstimmung`) unter „Kommt bald" mit neun
-  Titeln: Mehrkampf und die acht Vorschau-Spiele Schafkopf, Rommé, Mau-Mau,
-  Schwimmen, Backgammon, Bauernskat, Phase 10, Drecksau
+- die **Spielabstimmung** (`abstimmung`) unter „Kommt bald" mit acht
+  Titeln: Mehrkampf und die sieben Vorschau-Spiele Schafkopf, Rommé, Mau-Mau,
+  Schwimmen, Backgammon, Bauernskat, Phase 10
   (`docs/APP-ABSTIMMUNG-NAVIGATION.md`). Jeder Titel braucht dafür seine
   eigene Kennung UND `abstimmung`: Ohne seine Kennung fehlt er ganz, ohne
   `abstimmung` stehen die Vorschau-Spiele ohne Stimme da und der Mehrkampf

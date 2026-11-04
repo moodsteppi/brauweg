@@ -8,7 +8,7 @@
  *
  *   UMFANG=doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,
  *          abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,
- *          bauernskat,phase10,drecksau
+ *          bauernskat,phase10,dreckbro
  *
  * (In einer Zeile ohne Leerzeichen; begruendet in docs/APP-RELEASE.md.)
  * Eine Ankuendigung, fuer die man unter „Kommt bald" stimmen kann, braucht
