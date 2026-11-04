@@ -30,6 +30,14 @@ export function PinguinBild({ dreck, iglu }: { dreck: number; iglu: boolean }): 
       {/* Fuesse */}
       <ellipse cx="38" cy="98" rx="9" ry="4" fill="#f39c1f" />
       <ellipse cx="62" cy="98" rx="9" ry="4" fill="#f39c1f" />
+      {/* Heller Rand um Fluegel, Koerper und Kopf: Der Ruecken ist so dunkel
+          wie der Tisch (--hb-grund) und verschwand dort sonst ganz. */}
+      <g stroke="#cfe0ff" strokeOpacity="0.55" strokeWidth="3">
+        <path d="M22 52 Q8 72 18 86 Q26 74 28 58 Z" />
+        <path d="M78 52 Q92 72 82 86 Q74 74 72 58 Z" />
+        <ellipse cx="50" cy="62" rx="29" ry="36" />
+        <ellipse cx="50" cy="34" rx="22" ry="18" />
+      </g>
       {/* Fluegel */}
       <path d="M22 52 Q8 72 18 86 Q26 74 28 58 Z" fill="#1d2747" />
       <path d="M78 52 Q92 72 82 86 Q74 74 72 58 Z" fill="#1d2747" />
