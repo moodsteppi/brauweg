@@ -351,10 +351,11 @@ test('Abstimmung: eine Stimme pro Konto und Spiel, nach neuem Abruf erhalten', a
   assert.ok(offen.json().every((g: { meineStimme: boolean }) => !g.meineStimme));
 });
 
-test('alle 19 sichtbaren Bald-Einträge der App sind kontogebunden abstimmbar', async t => {
+test('alle 18 sichtbaren Bald-Einträge der App sind kontogebunden abstimmbar', async t => {
   const s = await setup(); t.after(() => s.close());
   const bald = (await spiele(s, 'app')).filter(g => g.availability === 'preview' && g.id !== 'partykiste');
-  assert.equal(bald.length, 19);
+  // 18 seit dem 04.11.2026: Die Vorschau „Drecksau“ ist als DreckBro spielbar geworden.
+  assert.equal(bald.length, 18);
   for (const spiel of bald) {
     assert.equal(spiel.abstimmbar, true, spiel.id);
     const res = await s.app.inject({ method: 'POST', url: `/api/games/${spiel.id}/vote`, headers: s.anna('app') });
