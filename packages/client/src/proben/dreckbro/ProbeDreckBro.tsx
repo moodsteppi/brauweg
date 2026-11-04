@@ -164,6 +164,12 @@ export function ProbeDreckBro(): React.JSX.Element {
   const f = FAELLE[fall]!;
 
   return (
+    // Ein Rahmen ueber den ganzen Bildschirm, im normalen Fluss: `.spe` ist wie
+    // jeder Spielbildschirm `position: fixed` mit hoechstens 30rem, `body` hat
+    // dadurch die Hoehe 0, und am Desktop gaebe es kein Element ueber die volle
+    // Breite. Die Sichtprobe bei 1400 px braucht aber genau das (Selektor
+    // `[data-probe-seite]`). Nur die Probeseite, die App bleibt unberuehrt.
+    <div data-probe-seite="" style={{ minHeight: '100dvh', background: '#0b1428' }}>
     <div
       className={`spe ${stil.tisch}`}
       style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'linear-gradient(#09152c,#13254a)' }}
@@ -204,6 +210,7 @@ export function ProbeDreckBro(): React.JSX.Element {
       <p style={{ textAlign: 'center', color: 'var(--hb-leise)', font: '700 12px var(--hb-txt)' }}>
         {gesendet ? `Ginge an den Server: ${gesendet}` : 'Karte antippen, dann Pinguin.'}
       </p>
+    </div>
     </div>
   );
 }
