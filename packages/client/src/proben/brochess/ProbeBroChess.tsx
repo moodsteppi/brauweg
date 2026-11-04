@@ -343,6 +343,9 @@ export function ProbeBroChess(): React.JSX.Element {
   const sd = fall.sicht.secretDame;
 
   return (
+    // Rahmen über die volle Seitenbreite nur für die Sichtprobe: Der Tisch ist fest
+    // positioniert (#root hat 0 px Höhe) und bei 1400 px nur 480 px breit.
+    <div data-probe-seite style={{ width: "100%", minHeight: "100vh" }}>
     <div className={`spe ${stil.tisch}`}>
       <header className={stil.kopf}>
         <div className={stil.kopfTitel}>
@@ -420,6 +423,7 @@ export function ProbeBroChess(): React.JSX.Element {
           </footer>
         </>
       )}
+    </div>
     </div>
   );
 }
