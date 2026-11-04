@@ -76,6 +76,8 @@ function isDevFlag(name: string): boolean {
  * - /probe/brochess — das echte Schachbrett mit festen Stellungen (Grund-
  *   stellung, Schach, Umwandlung, Matt, Patt), ohne Server. Bleibt, damit
  *   man das Brett ansehen kann, ohne zwei Konten an einen Tisch zu setzen.
+ * - /probe/dreckbro?fall=… — der echte DreckBro-Tisch mit festen Staenden
+ *   (Anfang, Schneeball zielen, Robbenklau, Ende, fuenf Spieler), ohne Server.
  *
  * `/probe/arena-3d` (Probe B, dieselbe Szene live mit Three.js) gab es bis zum
  * 06.09.2026. Robin hat am 05.09.2026 gegen sie entschieden: Die Figuren sollen
@@ -94,6 +96,7 @@ const probeArena2d = istProbe('arena-2d');
 const probeKampf = istProbe('kampf');
 const probeRuestkammer = istProbe('ruestkammer');
 const probeBroChess = istProbe('brochess');
+const probeDreckBro = istProbe('dreckbro');
 const probeManufaktur = istProbe('manufaktur');
 
 const devAvatar = isDevFlag('avatar');
@@ -179,6 +182,9 @@ const ProbeHub = lazy(() => import('./proben/hub/ProbeHub').then((m) => ({ defau
 const ProbeManufaktur = lazy(() =>
   import('./proben/manufaktur/ProbeManufaktur').then((m) => ({ default: m.ProbeManufaktur })),
 );
+const ProbeDreckBro = lazy(() =>
+  import('./proben/dreckbro/ProbeDreckBro').then((m) => ({ default: m.ProbeDreckBro })),
+);
 const ProbeBroChess = lazy(() =>
   import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
 );
@@ -195,6 +201,8 @@ const werkzeug = devStart ? (
   <ProbeRuestkammer />
 ) : probeBroChess ? (
   <ProbeBroChess />
+) : probeDreckBro ? (
+  <ProbeDreckBro />
 ) : probeManufaktur ? (
   <ProbeManufaktur />
 ) : devAvatar ? (

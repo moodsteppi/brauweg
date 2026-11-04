@@ -46,6 +46,9 @@ const KontoLink = lazy(() =>
 const Tafelrunde = lazy(() =>
   import('./screens/Tafelrunde').then((m) => ({ default: m.Tafelrunde })),
 );
+const DreckBroTable = lazy(() =>
+  import('./screens/DreckBroTable').then((m) => ({ default: m.DreckBroTable })),
+);
 const BroChessTable = lazy(() =>
   import('./screens/BroChessTable').then((m) => ({ default: m.BroChessTable })),
 );
@@ -153,7 +156,7 @@ type Screen =
   | { name: 'profil'; accountId: string; vorher: Screen };
 
 /** Spiele, deren `lobby` die gewoehnliche Kartenlobby ist (siehe useZuruecktaste unten). */
-const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess']);
+const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess', 'dreckbro']);
 
 /**
  * Der Lade-Zustand des Clients.
@@ -717,6 +720,21 @@ export function App(): React.JSX.Element {
       // steht im selben Aussehen-Feld wie das Blatt (figurensatz.ts) und darf
       // nicht durch `deckForGame` laufen, das ihn als unbekanntes Blatt auf
       // „Text" zuruecksetzen wuerde.
+      // DreckBro zeichnet Pinguine und Karten selbst (minispiele/dreckbro),
+      // ein Kartenblatt aus der Sammlung gibt es dafuer nicht.
+      if (screen.gameId === 'dreckbro') {
+        return (
+          <DreckBroTable
+            tableId={screen.tableId}
+            szene={themeFuer('dreckbro').tableScene}
+            onShowProfile={zeigeProfil}
+            onLeave={() => {
+              setScreen({ name: 'games' });
+              void reload();
+            }}
+          />
+        );
+      }
       if (screen.gameId === 'brochess') {
         return (
           <BroChessTable

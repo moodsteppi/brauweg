@@ -71,7 +71,9 @@ const de: Record<string, string> = {
   // "Phase 10" ist eine Marke (Mattel/Fundex). Stufenrommé beschreibt
   // dieselbe Spielfamilie ohne den Produktnamen.
   'game.phase10': 'Stufenrommé',
-  'game.drecksau': 'Drecksau',
+  // Pinguine einsauen, 2 bis 5 Spieler. Der Name kommt wie bei BroChess vom
+  // Auftraggeber (04.11.2026) und loest die Vorschau „Drecksau“ ab.
+  'game.dreckbro': 'DreckBro',
   // Mehrkampf ueber mehrere Spiele. Kein Spielmodul, sondern ein Modus -
   // deshalb steht er nicht in der Registrierung.
   'modus.mehrkampf': 'Brauweg-Bock',
