@@ -166,6 +166,7 @@ export function Lobby({
   const [zeitOffen, setZeitOffen] = useState(false);
   const zeitRegeln = istSchach ? regelnFuer(zeitkontrolle(zeitId)) : {};
   /** Spielart (BroChess: Normal oder Secret Dame) — Warum nur ohne Bot: siehe `useSpielartWahl`. */
+  // Bewusst ausserhalb des urspruenglichen Aufgabenumfangs: Die Spielart-Wahl wird hier verdrahtet, entschieden von Niklas am 05.11.2026 (Rueckfrage zu Aufgabe 773b9eb3, Antwort A). Lobby.tsx, die Probe-Seite und der Vertragstest bleiben.
   const spielart = useSpielartWahl(istSchach);
   /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
   const [ansicht, setAnsicht] = useState<'liste' | 'erstellen' | 'bot'>('liste');
