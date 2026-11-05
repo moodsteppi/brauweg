@@ -44,9 +44,16 @@ import { type FillerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 5;
+const SNAPSHOT_VERSION = 6;
 
-type GespeichertePartie = FillerPartie & { readonly v: number };
+/**
+ * Was ein Snapshot bis Fassung 5 trug und heute anders heisst: das Ja/Nein
+ * "in diesem Zug schon gemauert" statt der Zahl `mauernDiesenZug`.
+ */
+type GespeichertePartie = FillerPartie & {
+  readonly v: number;
+  readonly mauerDiesenZug?: boolean;
+};
 
 const meta: GameMeta = {
   id: 'filler',
@@ -86,6 +93,14 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
    * Sternfelder (`sterne`) in der Sicht. Ein Client der Version 4 zeichnete
    * keinen Stern und wuesste nicht, warum der Gegner ploetzlich zwei Punkte
    * und eine Mauer mehr hat.
+   *
+   * Seit dem 5. November 2026 (Extreme auf 12 x 11, bis zu zwei Mauern je
+   * Zug, Pause danach) bewusst NICHT hochgesetzt: Ein Client der Version 5
+   * spielt richtig weiter — die Mauerziele kommen fertig aus
+   * `barrierenMoeglich`, das Brett aus `spalten`/`zeilen` —, er erklaert die
+   * Pause nur nicht. Hochsetzen gehoert zu dem Bildschirm, der
+   * `mauernJeZug`, `mauernDiesenZug` und `mauerPause` anzeigt; sonst laege
+   * der Client eine Version zurueck, ohne dass ihm etwas fehlt.
    */
   protocolVersion: 5,
 
@@ -154,12 +169,12 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
 
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 4 && snap.v !== 3 && snap.v !== 2 && snap.v !== 1) {
+    if (![SNAPSHOT_VERSION, 5, 4, 3, 2, 1].includes(snap.v)) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
     }
-    const { v, ...rest } = snap;
+    const { v, mauerDiesenZug: altesJaNein, ...rest } = snap;
     const alt = rest as FillerPartie;
     /**
      * Version 1 kannte die Spielart nicht — es gab nur eine. Sie hier
@@ -177,9 +192,13 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
       /*
        * `mauerDiesenZug` gab es bis Fassung 3 nicht — dort beendete eine
        * Mauer den Zug, es konnte also nie einen halb fertigen Zug geben.
-       * Die Null ist deshalb die Wahrheit und kein Notbehelf.
+       * Die Null ist deshalb die Wahrheit und kein Notbehelf. Fassung 4 und 5
+       * trugen es als Ja/Nein; bei hoechstens einer Mauer je Zug ist "ja"
+       * genau eine.
        */
-      mauerDiesenZug: alt.mauerDiesenZug ?? false,
+      mauernDiesenZug: alt.mauernDiesenZug ?? (altesJaNein ? 1 : 0),
+      // Bis Fassung 5 gab es nur eine Mauer je Zug und damit nie eine Pause.
+      mauerPause: alt.mauerPause ?? [],
       // Fassung 4 kannte keine Sterne; keine dieser Partien hatte welche.
       sterne: alt.sterne ?? [],
       barrieren: alt.barrieren ?? [],

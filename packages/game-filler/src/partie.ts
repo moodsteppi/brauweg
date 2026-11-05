@@ -19,10 +19,12 @@
 import {
   type FillerRegeln,
   type FillerRegelnFest,
+  aufbauFuer,
   farbzahl,
   istVariante,
   mitBarrieren,
   mitSternen,
+  mauernJeZug,
 } from './regeln.js';
 
 // ---------------------------------------------------------------------------
@@ -143,6 +145,10 @@ export function mauerSperre(partie: FillerPartie): number {
  * Drei auf 56 Feldern: genug, dass sich ein Umweg lohnt, zu wenige, um das
  * Spiel zu einer Sternjagd zu machen. Ein Stern ist ZWEI Punkte wert (das
  * Feld selbst plus STERN_BONUS) und bringt STERN_MAUERN Mauern in den Vorrat.
+ *
+ * Seit dem 05.11.2026 gilt die Drei nur noch fuer Tische, die ohne
+ * `aufbauJeSpielart` aufgemacht wurden. Neue Extreme-Tische legen auf 12 x 11
+ * acht Sterne als vier Spiegelpaare (`sternPaare`, siehe zieheSternPaare).
  */
 export const STERNE_ANZAHL = 3;
 export const STERN_BONUS = 1;
@@ -195,18 +201,39 @@ export interface FillerPartie {
   /** Wie viele Barrieren einem Sitz noch bleiben. */
   readonly barrierenUebrig: Readonly<Record<number, number>>;
   /**
-   * Hat der Sitz, der gerade am Zug ist, in DIESEM Zug schon gemauert?
+   * Wie viele Mauern der Sitz, der gerade am Zug ist, in DIESEM Zug schon
+   * gesetzt hat.
    *
    * Eine Mauer beendet den Zug nicht — man baut und faerbt danach trotzdem.
-   * Ohne diesen Merker liesse sich in einem einzigen Zug der ganze Vorrat
-   * verbauen, und die Spielart waere nach dem ersten Zug entschieden.
+   * Ohne diesen Zaehler liesse sich in einem einzigen Zug der ganze Vorrat
+   * verbauen, und die Spielart waere nach dem ersten Zug entschieden. Wie
+   * viele erlaubt sind, sagt `mauernJeZug` im Regelsatz (eine; in Extreme
+   * seit dem 05.11.2026 zwei).
    *
    * Er gehoert an den ZUG und nicht an den Sitz: Mit dem Faerben geht der Zug
-   * weiter, und der Merker faellt dabei zurueck. Ein Verzeichnis je Sitz
+   * weiter, und der Zaehler faellt dabei auf null. Ein Verzeichnis je Sitz
    * muesste an derselben Stelle geleert werden und koennte dabei
    * auseinanderlaufen.
+   *
+   * Bis Snapshot-Fassung 5 hiess das Feld `mauerDiesenZug` und war ein
+   * Ja/Nein — bei hoechstens einer Mauer je Zug dasselbe (siehe adapter.ts).
    */
-  readonly mauerDiesenZug: boolean;
+  readonly mauernDiesenZug: number;
+  /**
+   * Sitze, die in ihrem naechsten (bzw. gerade laufenden) Zug KEINE Mauer
+   * setzen duerfen, weil sie im Zug davor die volle Zahl `mauernJeZug`
+   * gebaut haben — nur dort, wo die ueber eins liegt.
+   *
+   * Ohne die Pause waeren zwei Mauern je Zug schlicht doppelt so viele: Wer
+   * jeden Zug zwei setzt, riegelt ein 12er-Brett in sechs Zuegen ab. Mit ihr
+   * ist die zweite Mauer ein Vorgriff auf den naechsten Zug — man darf die
+   * Wand schneller hochziehen, aber nicht oefter.
+   *
+   * An den SITZ und nicht an den Zug, anders als `mauernDiesenZug`: Die
+   * Pause ueberdauert den Zug des Gegners. Sie faellt, sobald der Sitz seinen
+   * naechsten Zug mit dem Faerben beendet.
+   */
+  readonly mauerPause: readonly number[];
   /**
    * Plaetze der Sternfelder. Leer in jeder Spielart ausser `extreme`.
    *
@@ -323,7 +350,17 @@ export function erstellePartie(
    * 1. September keine Barrierenzahl — stuende beides als `undefined` im
    * Snapshot, muesste jede spaetere Stelle raten, was es bedeutet.
    */
-  const { farbenJeSpielart: _jeSpielart, ...ohneTabelle } = regeln;
+  /*
+   * Erst den Aufbau der Spielart einsetzen (Extreme: 12 x 11, zwanzig Mauern,
+   * zwei je Zug, gespiegelte Sterne), dann die Tabellen weglassen. Ohne
+   * Eintrag fuer die Spielart aendert sich hier nichts — auch kein neuer
+   * Schluessel im Snapshot.
+   */
+  const {
+    farbenJeSpielart: _jeSpielart,
+    aufbauJeSpielart: _aufbau,
+    ...ohneTabelle
+  } = aufbauFuer(regeln);
   const gueltigeRegeln: FillerRegelnFest = {
     ...ohneTabelle,
     /*
@@ -333,7 +370,8 @@ export function erstellePartie(
      */
     farben: farbzahl(regeln),
     variante: istVariante(regeln.variante) ? regeln.variante : 'nebel',
-    barrieren: typeof regeln.barrieren === 'number' ? regeln.barrieren : 0,
+    // Aus dem Aufbau, nicht aus `regeln`: Extreme ueberstimmt die Zehn mit zwanzig.
+    barrieren: typeof ohneTabelle.barrieren === 'number' ? ohneTabelle.barrieren : 0,
   };
   const { spalten, zeilen, farben } = gueltigeRegeln;
   const feld = baueBrett(gueltigeRegeln, zufall);
@@ -352,9 +390,12 @@ export function erstellePartie(
    * nichts gezogen, und jede gespeicherte Partie sieht nach dem Deploy aus
    * wie davor.
    */
-  const sterne = mitSternen(gueltigeRegeln.variante)
-    ? zieheSterne(spalten, zeilen, sitze, zufall)
-    : [];
+  const paare = gueltigeRegeln.sternPaare ?? 0;
+  const sterne = !mitSternen(gueltigeRegeln.variante)
+    ? []
+    : paare > 0
+      ? zieheSternPaare(spalten, zeilen, sitze, paare, zufall)
+      : zieheSterne(spalten, zeilen, sitze, zufall);
 
   const besitzer: (number | null)[] = new Array(feld.length).fill(null);
   const farbe: Record<number, number> = {};
@@ -413,7 +454,8 @@ export function erstellePartie(
     fertig: false,
     barrieren: [],
     barrierenUebrig,
-    mauerDiesenZug: false,
+    mauernDiesenZug: 0,
+    mauerPause: [],
     sterne,
   };
 }
@@ -433,15 +475,8 @@ function zieheSterne(
   sitze: readonly number[],
   zufall: () => number,
 ): number[] {
-  const verboten = new Set<number>();
-  for (const sitz of sitze) {
-    const ecke = startEcke(sitz, spalten, zeilen);
-    verboten.add(ecke);
-    for (const n of nachbarn(ecke, spalten, zeilen)) verboten.add(n);
-  }
-  const abstand = (a: number, b: number): number =>
-    Math.abs((a % spalten) - (b % spalten)) +
-    Math.abs(Math.floor(a / spalten) - Math.floor(b / spalten));
+  const verboten = eckenUndNachbarn(spalten, zeilen, sitze);
+  const abstand = (a: number, b: number): number => schritte(a, b, spalten);
 
   const sterne: number[] = [];
   let kandidaten = Array.from({ length: spalten * zeilen }, (_, p) => p).filter(
@@ -451,6 +486,77 @@ function zieheSterne(
     const stern = kandidaten[Math.floor(zufall() * kandidaten.length)]!;
     sterne.push(stern);
     kandidaten = kandidaten.filter((p) => abstand(p, stern) >= 3);
+  }
+  return sterne.sort((a, b) => a - b);
+}
+
+/** Startecken der Sitze und ihre Nachbarn — dort liegt kein Stern. */
+function eckenUndNachbarn(spalten: number, zeilen: number, sitze: readonly number[]): Set<number> {
+  const verboten = new Set<number>();
+  for (const sitz of sitze) {
+    const ecke = startEcke(sitz, spalten, zeilen);
+    verboten.add(ecke);
+    for (const n of nachbarn(ecke, spalten, zeilen)) verboten.add(n);
+  }
+  return verboten;
+}
+
+/** Schritte zwischen zwei Plaetzen, nur waagrecht und senkrecht. */
+function schritte(a: number, b: number, spalten: number): number {
+  return (
+    Math.abs((a % spalten) - (b % spalten)) +
+    Math.abs(Math.floor(a / spalten) - Math.floor(b / spalten))
+  );
+}
+
+/** Der an der Brettmitte punktgespiegelte Platz. */
+export function spiegelPlatz(platz: number, spalten: number, zeilen: number): number {
+  return spalten * zeilen - 1 - platz;
+}
+
+/**
+ * Sterne als punktgespiegelte Paare: zu jedem Platz p auch
+ * spalten*zeilen-1-p (seit dem 05.11.2026 in Extreme).
+ *
+ * Gespiegelt, weil die Startecken es auch sind — unten links und oben rechts
+ * gehen durch dieselbe Spiegelung ineinander ueber. Damit hat jeder Sitz zu
+ * jedem Stern genau den Weg, den der andere zu dessen Gegenstueck hat. Bei
+ * freien Sternen konnte einer drei Schritte vor der eigenen Ecke liegen und
+ * alle anderen am fremden Rand.
+ *
+ * Die alten Bedingungen bleiben und gelten fuer BEIDE Haelften eines Paares:
+ * nicht auf oder neben einer Startecke, Abstand mindestens drei — auch
+ * zwischen den zwei Sternen eines Paares. Das geht auf, weil beides selbst
+ * spiegelgleich ist: Die verbotenen Eckfelder sind es (Ecke geht auf Ecke),
+ * und der Abstand zwischen p und q ist derselbe wie zwischen ihren
+ * Spiegelbildern. Wer p gegen alle bisherigen Sterne prueft, hat damit auch
+ * das Gegenstueck geprueft. Nur das Paar selbst braucht eine eigene
+ * Pruefung: Felder nahe der Mitte liegen naeher als drei an ihrem
+ * Spiegelbild und fallen deshalb von vornherein weg (auf 12 x 11 genau
+ * sechs). Danach bleiben weit ueber hundert Plaetze, und ein Paar nimmt
+ * hoechstens zweimal 13 weg (die Raute mit Radius zwei) — vier Paare passen
+ * immer.
+ */
+function zieheSternPaare(
+  spalten: number,
+  zeilen: number,
+  sitze: readonly number[],
+  paare: number,
+  zufall: () => number,
+): number[] {
+  const verboten = eckenUndNachbarn(spalten, zeilen, sitze);
+  const spiegel = (p: number): number => spiegelPlatz(p, spalten, zeilen);
+  const sterne: number[] = [];
+  let kandidaten = Array.from({ length: spalten * zeilen }, (_, p) => p).filter(
+    (p) => !verboten.has(p) && !verboten.has(spiegel(p)) && schritte(p, spiegel(p), spalten) >= 3,
+  );
+  while (sterne.length < paare * 2 && kandidaten.length > 0) {
+    const stern = kandidaten[Math.floor(zufall() * kandidaten.length)]!;
+    const gegenstueck = spiegel(stern);
+    sterne.push(stern, gegenstueck);
+    kandidaten = kandidaten.filter(
+      (p) => schritte(p, stern, spalten) >= 3 && schritte(p, gegenstueck, spalten) >= 3,
+    );
   }
   return sterne.sort((a, b) => a - b);
 }
@@ -590,9 +696,11 @@ export function moeglicheBarrieren(
 ): [number, number][] {
   if (!mitBarrieren(partie.regeln.variante)) return [];
   if ((partie.barrierenUebrig[sitz] ?? 0) <= 0) return [];
-  // Eine je Zug. Wer schon gemauert hat, faerbt jetzt — mehr ist dieser Zug
-  // nicht mehr.
-  if (partie.mauerDiesenZug && partie.dran === sitz) return [];
+  // Hoechstens `mauernJeZug` je Zug. Wer sie gesetzt hat, faerbt jetzt —
+  // mehr ist dieser Zug nicht mehr.
+  if (partie.dran === sitz && partie.mauernDiesenZug >= mauernJeZug(partie.regeln)) return [];
+  // Wer im letzten eigenen Zug die volle Zahl gebaut hat, setzt diesmal aus.
+  if (partie.mauerPause.includes(sitz)) return [];
   // Die Eroeffnung ist mauerfrei, siehe MAUERFREIE_ZUEGE.
   if (mauerSperre(partie) > 0) return [];
 
@@ -689,9 +797,12 @@ export function fuehreAus(
      * Der Zug geht WEITER: `dran` bleibt stehen, `zug` zaehlt nicht hoch.
      *
      * Eine Mauer ist keine Alternative zum Faerben, sondern etwas, das man
-     * davor tun darf — einmal je Zug. Wer baut, faerbt danach trotzdem; erst
-     * das Faerben gibt ab. Genau deshalb braucht es `mauerDiesenZug`: Sonst
-     * liesse sich der ganze Vorrat in einem einzigen Zug verbauen.
+     * davor tun darf — `mauernJeZug`-mal je Zug. Wer baut, faerbt danach
+     * trotzdem; erst das Faerben gibt ab. Genau deshalb braucht es
+     * `mauernDiesenZug`: Sonst liesse sich der ganze Vorrat in einem
+     * einzigen Zug verbauen. Einmauer- und Einsperr-Regel prueft
+     * `moeglicheBarrieren` fuer jede Mauer einzeln, gegen den Stand mit
+     * allen schon gesetzten.
      *
      * `leerzuege` bleibt ebenfalls, wie es ist. Ob der Zug etwas eingebracht
      * hat, entscheidet sich beim Faerben gleich danach.
@@ -703,7 +814,7 @@ export function fuehreAus(
         ...partie.barrierenUebrig,
         [sitz]: (partie.barrierenUebrig[sitz] ?? 0) - 1,
       },
-      mauerDiesenZug: true,
+      mauernDiesenZug: partie.mauernDiesenZug + 1,
     };
   }
 
@@ -737,6 +848,17 @@ export function fuehreAus(
         }
       : partie.barrierenUebrig;
   const frei = besitzer.some((b) => b === null);
+  /*
+   * Die Pause fuer den naechsten eigenen Zug. Sie faellt fuer diesen Sitz
+   * erst einmal weg (wer pausiert hat, hat damit abgesessen) und kommt nur
+   * zurueck, wenn er in diesem Zug die volle Zahl gebaut hat — und nur, wo
+   * mehr als eine erlaubt ist: Bei einer Mauer je Zug gab es nie eine Pause,
+   * und Build soll bleiben, wie es ist.
+   */
+  const jeZug = mauernJeZug(partie.regeln);
+  const ohneMich = partie.mauerPause.filter((s) => s !== sitz);
+  const mauerPause =
+    jeZug > 1 && partie.mauernDiesenZug >= jeZug ? [...ohneMich, sitz] : ohneMich;
   const leerzuege = gewonnen > 0 ? 0 : partie.leerzuege + 1;
 
   return {
@@ -750,8 +872,9 @@ export function fuehreAus(
     zug: partie.zug + 1,
     leerzuege,
     fertig: !frei || leerzuege >= LEERZUEGE_MAX,
-    // Der Zug ist vorbei, der naechste darf wieder einmal mauern.
-    mauerDiesenZug: false,
+    // Der Zug ist vorbei, der naechste faengt wieder bei null an.
+    mauernDiesenZug: 0,
+    mauerPause,
   };
 }
 
