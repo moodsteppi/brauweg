@@ -264,16 +264,30 @@ Sorte):
 
 **Zierde** (dauerhaft, ändert nichts am Spiel):
 
-| Artikel | Preis |
-| --- | ---: |
-| Schleuderband in 6 Farben | je 150 |
-| Flugspur: Funken, Seifenblasen, Schneeflocken | je 250 |
-| Siegerpose der Bros (Tanz, Flossenklatschen) | je 200 |
-| Kistenmotiv der Schleuder (3 Kartenrücken) | je 300 |
+| Artikel | Stück | Preis | zusammen |
+| --- | ---: | ---: | ---: |
+| Schleuderband in 6 Farben | 6 | je 400 | 2 400 |
+| Flugspur: Funken, Seifenblasen, Schneeflocken | 3 | je 800 | 2 400 |
+| Siegerpose der Bros (Tanz, Flossenklatschen) | 2 | je 1 200 | 2 400 |
+| Kistenmotiv der Schleuder (3 Kartenrücken) | 3 | je 1 200 | 3 600 |
+| **alle Zierde** | 14 | | **10 800** |
 
-Zum Start bekommt jeder 2 Fernrohre und 1 Ersatz-Pelle geschenkt. Mit den
-3 600 Meilen eines Durchlaufs ist rund ein Drittel der Zierde zu haben —
-der Rest bleibt Grund zum Wiederholen.
+Zum Start bekommt jeder 2 Fernrohre und 1 Ersatz-Pelle geschenkt.
+
+**Rechnung, an der die Preise hängen:** Ein Durchlauf bringt 3 600 Meilen
+(Abschnitt Flugmeilen), die ganze Zierde kostet 10 800 — genau das
+Dreifache. Ein Durchlauf reicht also für **höchstens ein Drittel** der
+Zierde, und nur, wer gar keine Hilfsmittel kauft. Die ersten Preise (150 /
+250 / 200 / 300, zusammen 2 950) lagen **unter** den Einnahmen eines
+Durchlaufs: Alles wäre zu haben gewesen, und nach dem letzten Level hätte es
+nichts mehr zu sparen gegeben.
+
+Den Rest (7 200 Meilen) bringen danach nur noch die Wiederholungsmeilen,
+höchstens 50 am Tag — das sind **144 Tage**. Das ist bewusst lang und nicht
+ausbalanciert: Wer es kürzer will, hebt die Wiederholungskappe (10 Level je
+Tag) oder senkt die Kistenmotive, die den größten Posten ausmachen. Wer die
+Preise oder die Einnahmen ändert, rechnet diesen Absatz nach (siehe offene
+Entscheidung 9).
 
 ## Hub-Münzen (gekappt wie beim Runner)
 
@@ -551,4 +565,6 @@ Schachbrett statt Alphakanal, eingebrannter Text, Originalauflösung unter
    Produktion für TestFlight (braucht Toms MacBook für den Build)?
 9. **Zahlen.** Meilen-, Münz- und Shoppreise oben sind ein erster Satz ohne
    Simulation — eine Abstimmung wie bei der Kartenmanufaktur folgt erst mit
-   spielbaren Leveln.
+   spielbaren Leveln. Festgelegt ist nur das Verhältnis: Die Zierde kostet
+   das Dreifache eines Durchlaufs (10 800 gegen 3 600 Meilen). Offen ist, ob
+   die 144 Tage für den Rest zu lang sind.
