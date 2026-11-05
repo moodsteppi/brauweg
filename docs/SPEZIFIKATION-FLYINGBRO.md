@@ -124,9 +124,23 @@ gleich — Abwechslung kommt aus der Form, nicht aus Ausnahmen.
 
 **Schaden** je Kontakt = max(0, Normalimpuls − 2) × 10 × Faktor des Bros
 (Tabelle oben; 1 für Bauteil gegen Bauteil). Die Schwelle 2 sorgt dafür,
-dass ein ruhig liegender Stapel sich nicht selbst zerreibt. Jeder Treffer
-über 5 Schaden gibt 10 Punkte, auch wenn das Teil hält — sonst zählt ein
-Schuss, der alles verschiebt, aber nichts bricht, null.
+dass ein ruhig liegender Stapel sich nicht selbst zerreibt.
+
+**Trefferpunkte.** Ein Treffer über 5 Schaden gibt 10 Punkte, auch wenn das
+Teil hält — sonst zählt ein Schuss, der alles verschiebt, aber nichts
+bricht, null. Gedeckelt ist das **je Ziel**: Jedes Bauteil und jede Giraffe
+bringt in einem Versuch **höchstens 5 Treffer = 50 Punkte**, danach zählen
+weitere Treffer auf dasselbe Ziel nichts mehr (Schaden nehmen sie weiter).
+Ein Treffer ist der **Beginn** eines Kontakts, nicht jeder Rechenschritt, in
+dem er anliegt. Splitter und Brocken haben keine Kollision (unten), es gibt
+also keine Trümmerkontakte, die mitzählen könnten.
+
+Der Deckel ist nötig, weil der Server Punkte über den Höchstpunkten ablehnt
+(Plausibilität Nr. 2): Ohne ihn hinge die Summe an der Zahl der Kontakte,
+und die ist nicht beschränkt — ein Teil, das in einem einstürzenden Stapel
+zwanzigmal anschlägt, hätte einen ehrlichen Lauf über jede Schätzung heben
+und ihm Sterne, Münzen und Trophäen nehmen können. Mit dem Deckel ist die
+Obergrenze eine Rechnung aus der Leveldatei, keine Schätzung (Levelformat).
 
 Die Risse kommen als drei Bildstufen je Stoff und Form (bei 66 %, 33 %,
 0 %), nicht als Physik — ein Bruch zerlegt den Körper nicht, er verschwindet
@@ -194,7 +208,7 @@ Freischaltung, Höchstpunkte und Sternschwellen.
   "boden": 0,
   "schleuder": { "x": 2.0, "y": 1.2 },
   "bros": ["pelle", "malve", "pelle"],
-  "sterne": [0, 18000, 26000],
+  "sterne": [0, 8000, 11000],
   "teile": [
     { "stoff": "holz",  "form": "quader",  "x": 16.0, "y": 0.6,  "b": 0.2, "h": 1.2 },
     { "stoff": "holz",  "form": "quader",  "x": 18.0, "y": 0.6,  "b": 0.2, "h": 1.2 },
@@ -213,9 +227,30 @@ Freischaltung, Höchstpunkte und Sternschwellen.
 - Maße in **Metern**, y nach oben, `x`/`y` ist der Mittelpunkt (Giraffen:
   Fußpunkt). `winkel` in Grad, Vorgabe 0.
 - `sterne[0]` ist immer 0 (geschafft genügt).
-- Höchstpunkte rechnet der Kern aus der Datei: alle Teile + alle Giraffen +
-  (Anzahl Bros − 1) × 3 000 + ein Zuschlag von 20 % für Trefferpunkte. Mehr
-  meldet niemand ehrlich.
+- **Höchstpunkte** rechnet der Kern aus der Datei, ohne Schätzung:
+
+  ```
+  Höchstpunkte = Σ Bruchpunkte aller Teile
+               + Σ Punkte aller Giraffen
+               + (Anzahl Teile + Anzahl Giraffen) × 50     // Trefferdeckel
+               + (Anzahl Bros − 1) × 3 000                // übrige Bros
+  ```
+
+  Jeder Summand ist eine harte Grenze: Ein Teil bricht höchstens einmal,
+  eine Giraffe fällt höchstens einmal, Treffer sind je Ziel auf 50 gedeckelt
+  (Bauteile wie Giraffen), und mindestens ein Bro muss fliegen. Eine andere Punktquelle
+  gibt es nicht — wer eine einführt, ergänzt sie hier, sonst lehnt der
+  Server ehrliche Läufe ab. Mit **Ersatz-Pelle** zählt der zusätzliche Bro
+  mit (Anzahl Bros + 1); der Server liest das aus dem Feld `hilfsmittel`.
+  Eine früher erwogene Fassung mit „+ 20 % Zuschlag für Trefferpunkte" war
+  unbelegt: Treffer waren nicht gedeckelt, ihre Summe also nicht durch einen
+  festen Anteil beschränkt.
+- Für das Beispiel oben: Teile 3 × 200 + 100 + 400 = 1 100, Giraffen
+  3 500 + 2 000 = 5 500, Treffer (5 + 2) × 50 = 350, übrige Bros
+  2 × 3 000 = 6 000 — zusammen **12 950**. Die Schwellen `[0, 8000, 11000]`
+  liegen darunter.
+- Die **Levelprüfung** (nächster Punkt) prüft zusätzlich `sterne[2]` ≤
+  Höchstpunkte ohne Hilfsmittel — sonst wäre der dritte Stern unerreichbar.
 - **Levelprüfung** (Test im Kern, läuft in der CI): Jede Datei muss sich
   laden lassen, jedes Teil muss auf etwas stehen (keine Überlappung über
   1 cm), und **5 s ohne Schuss** darf sich nichts mehr als 5 cm bewegen und
@@ -320,7 +355,8 @@ export const FLYINGBRO_WELT_MUENZEN = 50;
 Client meldet nur Punkte):
 
 1. Das Level ist freigeschaltet (Vorgänger geschafft, Welt offen).
-2. Punkte ≤ Höchstpunkte des Levels (aus der Datei, siehe Levelformat).
+2. Punkte ≤ Höchstpunkte des Levels (aus der Datei, siehe Levelformat —
+   exakt gerechnet, Trefferpunkte gedeckelt, kein Schätzzuschlag).
 3. Zwischen `start` (der Server gibt beim Levelstart einen Zeitstempel aus)
    und Meldung liegen mindestens 4 s je verschossenem Bro.
 4. Die Sterne rechnet der Server aus Punkten, Schwellen und dem Feld
