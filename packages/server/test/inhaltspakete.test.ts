@@ -11,9 +11,6 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { eq } from 'drizzle-orm';
 import { KURSE, golf } from '@brauweg/game-golf';
@@ -30,6 +27,7 @@ import { WAREN, verlangeInhaltspakete, wareMit } from '../src/tischware.js';
 import { inEdelsteine } from '../src/waehrung.js';
 import * as s from '../src/db/schema.js';
 import { createTestContext, createVerifiedAccount, seedInvite } from './helpers.js';
+import { woerterbuchSchluessel } from './woerterbuch.js';
 
 async function ctx(t: { after(fn: () => unknown): void }) {
   const c = await createTestContext();
@@ -287,12 +285,9 @@ test('POST /api/tables mit Bezahlkurs ohne Besitz antwortet 403 mit Schluessel',
 });
 
 test('das Woerterbuch kennt die Absage und jeden Paketnamen', () => {
-  const hier = dirname(fileURLToPath(import.meta.url));
-  // Der Test laeuft aus dist/test/, die Quelle liegt vier Ebenen hoeher.
-  const text = readFileSync(join(hier, '..', '..', '..', 'client', 'src', 'i18n.ts'), 'utf8');
-  const schluessel = new Set([...text.matchAll(/^\s*'([^']+)':\s*['"`]/gm)].map((m) => m[1]!));
-  assert.ok(schluessel.has('error.inhaltspaketFehlt'), 'error.inhaltspaketFehlt fehlt in i18n.ts');
+  const schluessel = woerterbuchSchluessel();
+  assert.ok(schluessel.has('error.inhaltspaketFehlt'), 'error.inhaltspaketFehlt fehlt im Wörterbuch');
   for (const ware of WAREN.filter((w) => w.art === 'inhaltspaket')) {
-    assert.ok(schluessel.has(ware.nameKey), `${ware.nameKey} fehlt in i18n.ts`);
+    assert.ok(schluessel.has(ware.nameKey), `${ware.nameKey} fehlt im Wörterbuch`);
   }
 });

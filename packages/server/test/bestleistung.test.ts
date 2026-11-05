@@ -17,9 +17,6 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
@@ -46,6 +43,7 @@ import {
 } from './helpers.js';
 import { startHarness, tableWithTwoHumans } from './harness.js';
 import { TestClient } from './client.js';
+import { woerterbuchText } from './woerterbuch.js';
 
 async function ctx(): Promise<TestContext> {
   const c = await createTestContext();
@@ -304,9 +302,7 @@ async function aufbau(): Promise<Aufbau> {
 }
 
 function woerterbuch(): string {
-  const hier = dirname(fileURLToPath(import.meta.url));
-  // dist/test -> packages/client/src/i18n.ts
-  return readFileSync(join(hier, '..', '..', '..', 'client', 'src', 'i18n.ts'), 'utf8');
+  return woerterbuchText();
 }
 
 test('HTTP: Liste und eigene Bestleistungen, nur angemeldet, Unsinn gibt 400 mit Text', async (t) => {
