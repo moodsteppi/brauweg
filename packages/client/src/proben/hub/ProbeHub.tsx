@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api, SLOTS, WAPPEN, type Kauftruhe, type Slot, type WarView, type WegGrad, type WegStufe } from '../../api';
 import { GameSelect, type Tab } from '../../screens/GameSelect';
+import { useSprache } from '../../i18n/useSprache';
 import { probeKonto } from '../../screens/probe-konto';
 import MARKT_PROBE from './markt-probe.json';
 import type { Tagesmarkt, MarktAngebot } from '../../api';
@@ -365,7 +366,12 @@ if (typeof window !== 'undefined' && PROBE.get('tipp')) {
   tippeNacheinander(PROBE.get('tipp')!.split('|'));
 }
 
+/* Sprachwahl ohne Server: Speichern gelingt immer, sonst stuende der Fehlersatz im Bild. */
+api.setSprache = async () => ({ ok: true });
+
 export function ProbeHub(): React.JSX.Element {
+  // Wie die Wurzel App: Umschalten zeichnet das ganze Hub neu.
+  useSprache();
   const [me, setMe] = useState(() => probeKonto({
     displayName: 'Eisvogel',
     coins: 2480,
@@ -413,7 +419,11 @@ export function ProbeHub(): React.JSX.Element {
       document.head.appendChild(stil);
     }
   }
+  // Rahmen ueber die volle Breite: Das Hub ist fest positioniert und auf dem
+  // Desktop schmal — ohne ihn findet die Sichtprobe bei 1400 px kein Objekt
+  // mit voller Breite (wie bei ProbeBroChess).
   return (
+    <div data-probe-seite style={{ width: '100%', minHeight: '100vh' }}>
     <GameSelect
       me={me}
       onPick={nichts}
@@ -429,5 +439,6 @@ export function ProbeHub(): React.JSX.Element {
       anfangsWeg={anfangsWeg}
       anfangsHeute={anfangsHeute}
     />
+    </div>
   );
 }

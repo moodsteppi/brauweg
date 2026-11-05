@@ -1,5 +1,8 @@
-import { Suspense, lazy, useSyncExternalStore } from 'react';
+import { Suspense, lazy, useState, useSyncExternalStore } from 'react';
 
+import { api } from '../api';
+import { SPRACHEN, setzeSprachwahl, t, type Sprachwahl } from '../i18n';
+import { useSprachwahl } from '../i18n/useSprache';
 import {
   abonniere,
   holeEinstellungen,
@@ -130,6 +133,13 @@ export function EinstellungenBlatt({
             </p>
           </section>
 
+          <section className="hb-blk">
+            <h2 className="hb-ab">{t('sprache.titel')}</h2>
+            <div className="hb-karte hb-einst-karte">
+              <SprachWahl neu />
+            </div>
+          </section>
+
           {inApp && (
             <Suspense fallback={null}>
               <Mitteilungen neu />
@@ -198,6 +208,9 @@ export function EinstellungenBlatt({
           Klingelschalter auch uns stumm.
         </p>
 
+        <h3>{t('sprache.titel')}</h3>
+        <SprachWahl />
+
         {inApp && (
           <Suspense fallback={null}>
             <Mitteilungen />
@@ -214,6 +227,65 @@ export function EinstellungenBlatt({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Sprache: Automatisch oder eine feste aus `SPRACHEN`.
+ *
+ * Die Knöpfe entstehen aus der Liste — eine neue Sprache braucht hier keine
+ * Zeile. Umgestellt wird sofort und ohne Neuladen (`setzeSprachwahl`, die
+ * Wurzel zeichnet neu); gespeichert am Konto danach. Scheitert das, bleibt
+ * die Wahl an diesem Gerät stehen und ein Satz sagt, dass sie am Konto fehlt
+ * — still verwerfen hieße, dass das zweite Gerät wieder Deutsch zeigt, ohne
+ * dass jemand weiß, warum.
+ */
+function SprachWahl({ neu = false }: { neu?: boolean }): React.JSX.Element {
+  const wahl = useSprachwahl();
+  const [fehlgeschlagen, setFehlgeschlagen] = useState(false);
+  const optionen: Sprachwahl[] = ['auto', ...SPRACHEN];
+
+  const waehle = (neueWahl: Sprachwahl): void => {
+    if (neueWahl === wahl) return;
+    spiele('tipp');
+    setzeSprachwahl(neueWahl);
+    setFehlgeschlagen(false);
+    api.setSprache(neueWahl === 'auto' ? null : neueWahl).catch(() => setFehlgeschlagen(true));
+  };
+
+  const name = (o: Sprachwahl): string => (o === 'auto' ? t('sprache.auto') : t(`sprache.name.${o}`));
+
+  return (
+    <div className={neu ? 'hb-sprache' : 'einstellungen-sprache'}>
+      <div
+        className={neu ? 'hb-sprachwahl' : 'hub-knopfreihe hub-knopfreihe--a'}
+        role="radiogroup"
+        aria-label={t('sprache.titel')}
+      >
+        {optionen.map((o) => (
+          <button
+            key={o}
+            type="button"
+            role="radio"
+            aria-checked={o === wahl}
+            // Sprachname in seiner eigenen Sprache auszeichnen: Ein Vorleser
+            // auf Englisch spräche „Deutsch" sonst englisch aus.
+            lang={o === 'auto' ? undefined : o}
+            className={
+              neu
+                ? `hb-kn is-klein ${o === wahl ? 'is-gold' : 'is-zweit'}`
+                : `hub-knopf hub-knopf--a${o === wahl ? ' is-gewaehlt' : ''}`
+            }
+            onClick={() => waehle(o)}
+          >
+            {name(o)}
+          </button>
+        ))}
+      </div>
+      <p className={neu ? 'hb-klein hb-ohne-rand' : 'einstellungen-fussnote muted'}>
+        {fehlgeschlagen ? t('sprache.speichernFehlgeschlagen') : t('sprache.hinweis')}
+      </p>
     </div>
   );
 }
