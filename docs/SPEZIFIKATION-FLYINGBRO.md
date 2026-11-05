@@ -6,8 +6,9 @@ Aufgabe 1). **Arbeitstitel** — der Name ist offen (siehe letzter Abschnitt).
 Ein Physik-Wurfspiel für eine Person im Hub: Die drei Bros aus dem Logo
 werden mit einer Schleuder auf Bauwerke geschossen, in denen sich Giraffen
 verschanzt haben. Fällt jede Giraffe um, ist das Level geschafft. Allein
-gespielt, im Web **und** in der App, eigene Währung, Sterne geben
-Trophäen, und ein paar Hub-Münzen gibt es — gekappt wie beim Runner.
+gespielt, im **Querformat**, im Web **und** in der App, eigene Währung, und
+ein paar Hub-Münzen gibt es — gekappt wie beim Runner. Trophäen gibt es zum
+Start **keine** (Entscheidung 06.11.2026, Abschnitt Trophäen).
 
 Vorbilder im Repo: `docs/SPEZIFIKATION-KARTENMANUFAKTUR.md` (Aufbau,
 Wirtschaft getrennt vom Hub), `docs/PRO-SUBWAY.md` (Solo-Spiel mit
@@ -50,7 +51,8 @@ Levelwahl ─► Aufbau (Bauwerk steht, Kamera schwenkt einmal drüber)
    nächste Bro sitzt im Band, die übrigen warten sichtbar daneben in der
    Reihenfolge aus dem Level.
 2. **Zielen.** Ziehen irgendwo auf der linken Bildhälfte (nicht nur am Bro —
-   auf 390 px ist der Bro 10 px groß). Zugweg bis 2,4 m in Weltmaßen, Winkel
+   bei 390 px Bildhöhe ist der Bro bei voller Levelbreite nur rund 17 px
+   groß, siehe Bildschirm und Format). Zugweg bis 2,4 m in Weltmaßen, Winkel
    frei. Die Vorschau zeigt die ersten **0,6 s** der Flugbahn als Punkte;
    das Hilfsmittel „Fernrohr" verlängert sie auf 1,5 s. Loslassen unter
    0,3 m Zugweg bricht ab (kein Versehensschuss).
@@ -76,12 +78,47 @@ Levelwahl ─► Aufbau (Bauwerk steht, Kamera schwenkt einmal drüber)
 Ein Level dauert im Ziel 40–90 s. „Nochmal" geht jederzeit über den
 Pausenknopf und kostet nichts.
 
+## Bildschirm und Format
+
+**Querformat** (entschieden 06.11.2026). Bezugsmaß ist ein Handy quer:
+**844 × 390** CSS-Pixel. Bei 30 m Levelbreite sind das rund 28 px je Meter,
+ein Bro (0,6 m) ist also etwa 17 px groß, wenn die Kamera das ganze Level
+zeigt; im Flug folgt sie dem Bro (Spielablauf, Schritt 3).
+
+- **Hochkant gehalten:** Das Spiel legt eine Einblendung über alles —
+  ein gezeichnetes Handy-Symbol mit Drehpfeil (CSS/SVG, keine Bilddatei, die
+  es noch nicht gibt) und darunter **„Bitte Handy drehen"** — und
+  **pausiert**: Die Physik macht keinen Schritt mehr, ein Bro im Flug bleibt
+  in der Luft stehen, die 6-s-Frist der Ruhe läuft nicht weiter.
+- **Wieder quer:** Die Einblendung verschwindet, das Spiel bleibt im
+  Pausenmenü stehen und läuft erst mit einem Tipp auf „Weiter" weiter. Sonst
+  setzt sich ein Flug fort, während die Hand noch das Gerät dreht.
+- **Erkannt** wird am Seitenverhältnis (Höhe > Breite), nicht am Gerät —
+  ein hochkantes Browserfenster am Rechner bekommt dieselbe Einblendung. Auf
+  Größenänderungen und `orientationchange` hören, wie es `Golf.tsx` schon
+  tut.
+- **Der Hub bleibt hochkant.** Quer ist nur der Flying-Bro-Bildschirm;
+  Levelwahl und Shop sind Teil davon und deshalb auch quer.
+- **App (iOS):** Die Hülle erlaubt heute **nur** Hochformat —
+  `apps/ios/Konfiguration/Info.plist` (`UISupportedInterfaceOrientations`
+  = `UIInterfaceOrientationPortrait`), festgeschrieben in
+  `packages/server/test/app-ios.test.ts`. So bliebe die Dreh-Einblendung in
+  der App für immer stehen. Für TestFlight braucht es deshalb eine spätere
+  Aufgabe an der Hülle: Querformat erlauben, aber nur für diesen Bildschirm
+  (die Web-Seite meldet ihn der Hülle), den Test mitziehen, auf dem Mac
+  bauen.
+- Gemessen wurde die Physik hochkant (390 × 844, Abschnitt Physik). Die
+  Fläche ist quer dieselbe, die Zahl der Körper auch — die Rechenzeiten
+  gelten unverändert.
+
 ## Die drei Bros
 
-Die drei Pinguine aus dem Logo. Zwei haben schon einen Namen
-(`docs/werbung/tiktok-serien/figuren.md`), der dritte nicht.
+Die drei Pinguine aus dem Logo. Pelle und Malve haben ihren Namen aus
+`docs/werbung/tiktok-serien/figuren.md`, der türkise heißt **Tjark**
+(entschieden 06.11.2026; der Name war dort für die Serie entfallen und damit frei).
+Die drei Fähigkeiten unten gelten so (bestätigt 06.11.2026).
 
-| | Pelle | Malve | türkiser Bro (Name offen) |
+| | Pelle | Malve | Tjark |
 | --- | --- | --- | --- |
 | Farbe | rot-orange, Steuerkreuz auf der Flosse | lila, runde Brille | türkis, Spielknöpfe auf der Flosse |
 | Rolle | Grund-Bro, kommt in jedem Level | Weite und Glas | Stein |
@@ -100,12 +137,12 @@ Die drei Pinguine aus dem Logo. Zwei haben schon einen Namen
   hinweg. Loslassen beendet den Gleitflug, höchstens 2,5 s. Als einzige geht
   ihre Fähigkeit auch nach einem Streifkontakt noch, solange sie nicht lag.
   Schaden an Glas ×2.
-- **Eisblock (türkis).** Tipp: Er gefriert zu einem Würfel 0,6 × 0,6 m,
+- **Eisblock (Tjark).** Tipp: Er gefriert zu einem Würfel 0,6 × 0,6 m,
   Masse ×3, Abprall 0. Schaden an Stein ×2,5; an Glas nur ×0,5 (er rutscht
   ab, statt zu schneiden).
 
 Der Schaden eines Bros ohne Fähigkeit ist an allen Stoffen ×1. Freigeschaltet
-werden Malve ab Welt 1 Level 6 und der türkise Bro ab Welt 2 Level 1; davor
+werden Malve ab Welt 1 Level 6 und Tjark ab Welt 2 Level 1; davor
 kommt er in keiner Reihenfolge vor. **Welcher Bro kommt, legt das Level
 fest** — der Spieler wählt nicht, sonst wäre jedes Level mit drei
 Eisblöcken zu lösen.
@@ -139,7 +176,7 @@ Der Deckel ist nötig, weil der Server Punkte über den Höchstpunkten ablehnt
 (Plausibilität Nr. 2): Ohne ihn hinge die Summe an der Zahl der Kontakte,
 und die ist nicht beschränkt — ein Teil, das in einem einstürzenden Stapel
 zwanzigmal anschlägt, hätte einen ehrlichen Lauf über jede Schätzung heben
-und ihm Sterne, Münzen und Trophäen nehmen können. Mit dem Deckel ist die
+und ihm Sterne und Münzen nehmen können. Mit dem Deckel ist die
 Obergrenze eine Rechnung aus der Leveldatei, keine Schätzung (Levelformat).
 
 Die Risse kommen als drei Bildstufen je Stoff und Form (bei 66 %, 33 %,
@@ -180,8 +217,9 @@ muss nichts zerplatzen, Umwerfen genügt — darum zählt die Kopflastigkeit.
 
 Ein Versuch mit Hilfsmittel endet höchstens mit zwei Sternen, egal wie viele
 Punkte. Das ist die eine Regel, die den Shop von den Sternen trennt: Sterne
-werden zu Trophäen und über den Trophäenweg zu Truhen und Münzen — ein
-gekaufter dritter Stern wäre gekaufter Fortschritt auf dem Hub.
+bringen Hub-Münzen und am Ende den Goldhelm (Kosmetik) — ein gekaufter
+dritter Stern wäre gekaufter Fortschritt auf dem Hub. Kommen später
+Trophäen dazu (Abschnitt Trophäen), gilt das doppelt.
 
 Je Level zählt das **beste** Ergebnis. Sterne gehen nie verloren.
 
@@ -259,7 +297,8 @@ Freischaltung, Höchstpunkte und Sternschwellen.
   fallen und speichert die gesetzten Lagen. Sonst sackt der Turm beim
   Laden sichtbar zusammen (bis 7 cm bei planck, siehe Messung).
 
-Umfang zum Start: **3 Welten à 15 Level** = 45 Level, 135 Sterne. Die Welten
+Umfang zum Start: **3 Welten à 15 Level** = 45 Level, 135 Sterne (bestätigt
+06.11.2026). Die Welten
 folgen den ersten drei Zonen des Trophäenwegs (Heimat, Wiesen, Strand), damit
 Kulissen und Töne wiederverwendet werden können.
 
@@ -363,15 +402,22 @@ Client meldet nur Punkte):
    `hilfsmittel` — der Client meldet keine Sterne.
 
 Das hält ein manipuliertes Gerät nicht auf, deckelt aber, was es holen kann:
-höchstens 420 Münzen und 135 Trophäen, und das nicht schneller als 40
+höchstens 420 Münzen, und das nicht schneller als 40
 Münzen am Tag. Wer mehr will, muss die Physik auf dem Server nachrechnen —
 siehe offene Entscheidungen.
 
-## Trophäen über `accountGameStat`
+## Trophäen über `accountGameStat` — später, nicht zum Start
+
+**Zum Start gibt es keine Trophäen** (Entscheidung 06.11.2026). Flying Bro
+schreibt nichts in `account_game_stat` und nichts in `trophy_ledger`;
+`'flyingbro'` kommt **nicht** in die Union `GameId`, es gibt **keinen** Wert
+`solo_stern` in `trophy_reason` und keine Migration dafür. Hub-Münzen,
+Flugmeilen und beide Shops bleiben. Was hier folgt, ist der Plan für den
+Fall, dass Trophäen später dazukommen — **nicht umsetzen**:
 
 Trophäen entstehen sonst nur aus Platzierungen (`packages/server/src/
 trophies.ts`, Nullsumme, ±3 bis ±33). Ein Solospiel hat keine Platzierung.
-Vorschlag: **1 Trophäe je Stern**, geschrieben in `account_game_stat` mit
+Späterer Vorschlag: **1 Trophäe je Stern**, geschrieben in `account_game_stat` mit
 `gameId = 'flyingbro'` und je Zuwachs eine Zeile im `trophy_ledger`.
 
 - Damit zählt Flying Bro automatisch in die Summe des Trophäenwegs
@@ -380,7 +426,7 @@ Vorschlag: **1 Trophäe je Stern**, geschrieben in `account_game_stat` mit
 - Trophäen aus Flying Bro **sinken nie** (Sterne gehen nicht verloren) und
   sind auf 135 gedeckelt. Zum Vergleich: Ein Sieg zu viert gibt +9; das ganze
   Spiel entspricht also etwa 15 Siegen am Vierertisch.
-- Nötig dafür (spätere Aufgabe): `'flyingbro'` in die Union `GameId`
+- Nötig dafür (erst wenn Trophäen kommen): `'flyingbro'` in die Union `GameId`
   (`packages/game-api/src/index.ts:58`) — ohne Spielmodul, wie heute nur
   Kennungen mit Modul darin stehen; ein neuer Wert `solo_stern` im Enum
   `trophy_reason` (Migration von Hand, Nummer auf `origin/staging` prüfen —
@@ -433,7 +479,7 @@ Wie die Kartenmanufaktur:
 - **Server:** Routen `GET /api/flyingbro` (Stand: Sterne je Level, Meilen,
   Vorrat, Zierde, offene Münzen), `POST /api/flyingbro/start` (Zeitstempel
   für die Plausibilität), `POST /api/flyingbro/ergebnis` (Punkte, Bros,
-  Hilfsmittel → Sterne, Meilen, Münzen, Trophäen in einem Aufruf, wie
+  Hilfsmittel → Sterne, Meilen, Münzen in einem Aufruf, wie
   `/api/runner/lauf`), `POST /api/flyingbro/kauf`. Tabellen
   `flyingbro_stand` (eine Zeile je Konto: Meilen, Vorrat, Zierde als JSON,
   `muenzen_offen`) und `flyingbro_level` (Konto, Level, Sterne, Bestpunkte,
@@ -577,24 +623,28 @@ Schachbrett statt Alphakanal, eingebrannter Text, Originalauflösung unter
 
 ## Offene Entscheidungen (für einen Menschen)
 
+Am 06.11.2026 hat Niklas entschieden: Umfang 3 Welten à 15 Level bleibt, die
+Fähigkeiten Bauchrutscher, Gleitflug und Eisblock gelten — dazu die Punkte
+2, 3, 4 und 6 unten. Die Nummern bleiben stehen, weil der Text oben auf sie
+verweist.
+
 1. **Name.** Arbeitstitel „Flying Bro". Im Auftrag stand „Angry Bro" mit dem
    Zusatz „beim Namen müssen wir nochmal schauen" — „Angry" lehnt sich an
    das Vorbild an; davon rät diese Spezifikation ab.
-2. **Name des türkisen Bros.** In `figuren.md` hat nur er keinen Namen;
-   „Tjark" ist dort für die Serie entfallen und wäre frei.
-3. **Giraffen als Ziel.** Die Giraffe ist eine Logofigur. Passt „Giraffen
-   umwerfen" zur Marke, oder sollen die Ziele etwas anderes sein (z. B.
-   Pappfiguren von Giraffen auf einem Jahrmarkt)?
-4. **Hochformat oder Querformat.** Gemessen ist bei 390 × 844 (Hochformat).
-   Bei 30 m Levelbreite ist ein Bro dort rund 10 px groß. Querformat ist im
-   Genre üblich, die App ist aber bisher hochkant gebaut.
+2. ~~**Name des türkisen Bros.**~~ **Entschieden 06.11.2026: Tjark.** (In
+   `figuren.md` war der Name für die Serie entfallen und damit frei.)
+3. ~~**Giraffen als Ziel.**~~ **Entschieden 06.11.2026: Giraffen bleiben das
+   Ziel**, die Logofigur ist dafür in Ordnung (Abgrenzung oben gilt: sie
+   fallen um, platzen nicht).
+4. ~~**Hochformat oder Querformat.**~~ **Entschieden 06.11.2026: Querformat**,
+   hochkant erscheint „Bitte Handy drehen" und das Spiel pausiert
+   (Abschnitt Bildschirm und Format; dort auch, was die App dafür braucht).
 5. **Server prüft nach oder vertraut der Kappe?** Heute: Kappe und
-   Plausibilität wie beim Runner (Schaden höchstens 420 Münzen und 135
-   Trophäen je Konto). Nachrechnen hieße: Schusseingaben melden, Server
+   Plausibilität wie beim Runner (Schaden höchstens 420 Münzen je Konto). Nachrechnen hieße: Schusseingaben melden, Server
    simuliert mit rapier-deterministic nach.
-6. **Trophäen für ein Solospiel.** 1 Trophäe je Stern, nie sinkend, und das
-   bricht die bisherige Regel „Trophäen nur aus Platzierungen"
-   (`trophies.ts`). Alternative: keine Trophäen, nur Münzen und Kosmetik.
+6. ~~**Trophäen für ein Solospiel.**~~ **Entschieden 06.11.2026: erstmal keine
+   Trophäen**, nur Hub-Münzen, Flugmeilen und die beiden Shops. Der Plan
+   für später steht im Abschnitt Trophäen.
 7. **Web-Ladegröße.** rapier mit 1,25 MB gzip auf der Webseite in Ordnung,
    oder planck (45 KB) mit sichtbarem Einsacken und mehr Ruckeln unter Last?
 8. **Freigabe für die App.** Nur Staging, oder auch in die `UMFANG`-Zeile der
