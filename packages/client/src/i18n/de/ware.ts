@@ -1,7 +1,7 @@
 import type { Woerterbuch } from '../woerterbuch';
 
 /** Deutsche Texte, Bereich „ware". Umgezogen aus dem alten i18n.ts, Wortlaut unverändert. */
-export const ware: Woerterbuch = {
+export default {
   // --- Waehrungen ---------------------------------------------------------
   'waehrung.coins': 'Münzen',
   'waehrung.gems': 'Edelsteine',
@@ -147,4 +147,4 @@ export const ware: Woerterbuch = {
   'deck.zauberwald': 'Zauberwald',
   'deck.zauberwald.hint':
     'Gemalt, vier Reiche: Kreuz im Wald, Pik am Berg, Herz im Feuer, Karo im Wasser. Jeder Zauberer und jeder Narr hat ein eigenes Bild.',
-};
+} satisfies Woerterbuch;

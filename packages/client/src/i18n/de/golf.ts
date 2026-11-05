@@ -1,7 +1,7 @@
 import type { Woerterbuch } from '../woerterbuch';
 
 /** Deutsche Texte, Bereich „golf". Umgezogen aus dem alten i18n.ts, Wortlaut unverändert. */
-export const golf: Woerterbuch = {
+export default {
   'golf.regelnUnbekannt': 'Der Regelsatz fehlt oder ist beschädigt.',
   'golf.sitzzahl': 'Golf spielt zwischen einem und acht Bällen.',
   'golf.loecher': 'Zwischen 2 und 15 Löchern je Match.',
@@ -95,4 +95,4 @@ export const golf: Woerterbuch = {
   'golf.fun.stoer.gesperrt.genutzt': 'Einer je Loch - deiner ist schon raus',
   'golf.fun.stoer.gesperrt.keinZiel': 'Gerade kein Führender, mit dem du tauschen kannst',
   'golf.fun.stoer.gesperrt.nichtJetzt': 'Erst wenn dein Ball liegt',
-};
+} satisfies Woerterbuch;

@@ -56,7 +56,7 @@ unverändert**, und nichts davon braucht einen neuen App-Build.
 
 **Stand (Emile, 13.10.2026; Partykiste seit 21.10. „Bald"):** In der App spielbar **Doppelkopf, Skat,
 Filler (in der App „Farbduell", `APP_NAMEN` in
-`packages/client/src/i18n.ts`) und BroChess**; auf „Bald" alle anderen
+`packages/client/src/i18n/index.ts`) und BroChess**; auf „Bald" alle anderen
 (Partykiste, Zauberer, Cambio, Poker, Mememory, Eiland, Feldherr, Tafelrunde, Golf,
 BroCooked); Werwolf in der App `aus`. Die App zeigt die Bald-Spiele
 zugeklappt in einer eigenen Kategorie „Kommt bald" (`SpieleNeu.tsx`). Auf

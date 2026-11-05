@@ -416,7 +416,7 @@ Der Weg für neue Bilder, in dieser Reihenfolge:
   „Tisch erstellen", „Reinkommen!") — nie nur einen Zustand.
 - Fehlermeldungen sagen, was los ist und was zu tun ist, ohne
   Entschuldigungsfloskeln.
-- Alle Texte laufen über `i18n.ts` (`t()`), der Server liefert nur
+- Alle Texte laufen über `t()` aus `client/src/i18n/` (Wörterbuch je Sprache und Bereich, `i18n/de/*.ts`), der Server liefert nur
   Schlüssel. Fehlt eine Übersetzung, erscheint der rohe Schlüssel —
   sichtbar hässlich statt unsichtbar kaputt. Dieses Prinzip gilt überall.
 

@@ -1,7 +1,7 @@
 import type { Woerterbuch } from '../woerterbuch';
 
 /** Deutsche Texte, Bereich „tisch". Umgezogen aus dem alten i18n.ts, Wortlaut unverändert. */
-export const tisch: Woerterbuch = {
+export default {
   'phase.vorbehalt': 'Vorbehalte',
   'phase.armutExchange': 'Armut',
   'phase.playing': 'Stiche',
@@ -21,4 +21,4 @@ export const tisch: Woerterbuch = {
   'spielart.solo.queens': 'Damensolo',
   'spielart.solo.jacks': 'Bubensolo',
   'spielart.solo.fleshless': 'Fleischlos',
-};
+} satisfies Woerterbuch;

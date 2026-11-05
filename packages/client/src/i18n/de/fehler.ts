@@ -1,7 +1,7 @@
 import type { Woerterbuch } from '../woerterbuch';
 
 /** Deutsche Texte, Bereich „fehler". Umgezogen aus dem alten i18n.ts, Wortlaut unverändert. */
-export const fehler: Woerterbuch = {
+export default {
   'error.marktNeuerTag': 'Ein neuer Tag hat begonnen. Dein Shop wurde erneuert.',
   'error.marktNichtImAngebot': 'Dieses Design ist heute nicht im Angebot.',
   'error.marktNochVerdeckt': 'Decke zuerst das Angebot auf.',
@@ -198,4 +198,4 @@ export const fehler: Woerterbuch = {
   // Zusatzpakete (22.09.2026, server/src/inhaltspakete.ts): Wer den Tisch
   // aufmacht, braucht das Paket — wer mitspielt, nicht.
   'error.inhaltspaketFehlt': 'Dieses Spielpaket gehört dir noch nicht. Du findest es im Shop unter „Spielpakete“ - mitspielen können alle ohne Kauf.',
-};
+} satisfies Woerterbuch;

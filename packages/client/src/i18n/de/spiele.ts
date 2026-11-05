@@ -1,7 +1,7 @@
 import type { Woerterbuch } from '../woerterbuch';
 
 /** Deutsche Texte, Bereich „spiele". Umgezogen aus dem alten i18n.ts, Wortlaut unverändert. */
-export const spiele: Woerterbuch = {
+export default {
   'blatt.schach-pinguin': 'Pinguin-Figuren',
 
   'game.doppelkopf': 'Doppelkopf',
@@ -64,4 +64,4 @@ export const spiele: Woerterbuch = {
   'modus.mehrkampf': 'Brauweg-Bock',
   'modus.prosubway': 'Pro-Subway',
   'modus.prosubway.hint': 'Alleine · Münzen fürs Hub',
-};
+} satisfies Woerterbuch;

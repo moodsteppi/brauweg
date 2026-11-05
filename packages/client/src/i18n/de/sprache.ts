@@ -1,7 +1,7 @@
 import type { Woerterbuch } from '../woerterbuch';
 
 /** Deutsche Texte, Bereich „sprache": was die Sprachgrundlage selbst braucht. */
-export const sprache: Woerterbuch = {
+export default {
   'sprache.titel': 'Sprache',
   'sprache.auto': 'Automatisch',
   'sprache.hinweis': 'Automatisch folgt der Sprache deines Geräts.',
@@ -13,4 +13,4 @@ export const sprache: Woerterbuch = {
    */
   'sprache.name.de': 'Deutsch',
   'sprache.name.en': 'English',
-};
+} satisfies Woerterbuch;

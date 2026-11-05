@@ -1,7 +1,7 @@
 import type { Woerterbuch } from '../woerterbuch';
 
 /** Deutsche Texte, Bereich „einladung". Umgezogen aus dem alten i18n.ts, Wortlaut unverändert. */
-export const einladung: Woerterbuch = {
+export default {
   // Einladung an den Tisch (22.09.2026): Code, Link, QR — und die Eingabe dazu.
   'einladung.titel': 'Leute dazuholen',
   'einladung.hinweis': 'Code vorlesen, Link teilen oder den QR-Code scannen lassen.',
@@ -26,4 +26,4 @@ export const einladung: Woerterbuch = {
   'einladung.besetzt': 'Plätze besetzt',
   'einladung.anderesSpiel': 'Dieser Code gehört zu einem Tisch für',
   'einladung.fehlgeschlagen': 'Beitreten fehlgeschlagen.',
-};
+} satisfies Woerterbuch;

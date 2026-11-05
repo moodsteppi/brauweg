@@ -13,14 +13,28 @@
  *
  * Eine neue Sprache, z.B. Französisch:
  *   1. `'fr'` hier in `SPRACHEN` ergänzen.
- *   2. Ordner `fr/` neben `de/` und `en/` anlegen, mit `index.ts` nach dem
- *      Muster von `en/index.ts` und mindestens `fr/sprache.ts` (Schalter).
- *   3. In `index.ts` `WOERTERBUECHER` um `fr: flach(fr)` ergänzen — der Typ
- *      meldet die Lücke, bis es steht.
+ *   2. Ordner `fr/` neben `de/` und `en/` anlegen: `fr/index.ts` als Kopie
+ *      von `en/index.ts` (sammelt die Dateien selbst ein) und mindestens
+ *      `fr/sprache.ts` (Schalter).
+ *   3. In `index.ts` `WOERTERBUECHER` um `fr: flach(fr)` ergänzen und in
+ *      `i18n.test.ts` `WOERTERBUECHER` um `fr` — der Typ meldet beide
+ *      Lücken, bis sie stehen.
  *   4. `'sprache.name.fr': 'Français'` in die `sprache.ts` JEDER Sprache (Endonym).
- *   5. In `i18n.test.ts` `OFFENE_BEREICHE.fr` mit allem, was noch fehlt.
- *   6. Server: `'fr'` in `SPRACHEN` (`packages/server/src/sprache.ts`) —
+ *   5. Server: `'fr'` in `SPRACHEN` (`packages/server/src/sprache.ts`) —
  *      sonst lehnt `PATCH /api/me` die Wahl ab. Keine Migration nötig.
+ * Danach je Bereich eine Datei `fr/<bereich>.ts`, sobald er vollständig ist;
+ * fehlende Bereiche zeigt die Probe als offen an (`i18n.test.ts`).
+ *
+ * Was NICHT ins Wörterbuch gehört (aus der Bestandsaufnahme, Aufgabe
+ * 6fca75bb — hier nur festgehalten, nicht umgesetzt):
+ * - Zahlen und Daten: rund 66 Stellen mit `toLocaleString('de-DE')`, dazu
+ *   `kompakteZahl` und die Restzeit-Anzeigen. Das übernimmt die Aufgabe
+ *   „Zahlen/Push" (dc192f47) über ein eigenes `i18n/format.ts`, das der
+ *   aktiven Sprache folgt — kein Bereich mit Schlüsseln.
+ * - Spielinhalte: Partykiste-JSON, Doppelkopf-Lektionen, der
+ *   Tafelrunde-Katalog, die Golf-Kurse. Das ist eine eigene Schicht
+ *   (Inhalte je Sprache), keine Oberflächentexte, und kommt NICHT in das
+ *   Client-Wörterbuch unter `de/` und `en/`.
  */
 export const SPRACHEN = ['de', 'en'] as const;
 
