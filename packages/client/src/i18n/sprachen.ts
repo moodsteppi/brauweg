@@ -10,6 +10,17 @@
  * Der Server kennt dieselbe Liste noch einmal (`SPRACHEN` in
  * `packages/server/src/sprache.ts`), weil er sie beim Speichern prüft und den
  * Client nicht importieren kann.
+ *
+ * Eine neue Sprache, z.B. Französisch:
+ *   1. `'fr'` hier in `SPRACHEN` ergänzen.
+ *   2. Ordner `fr/` neben `de/` und `en/` anlegen, mit `index.ts` nach dem
+ *      Muster von `en/index.ts` und mindestens `fr/sprache.ts` (Schalter).
+ *   3. In `index.ts` `WOERTERBUECHER` um `fr: flach(fr)` ergänzen — der Typ
+ *      meldet die Lücke, bis es steht.
+ *   4. `'sprache.name.fr': 'Français'` in die `sprache.ts` JEDER Sprache (Endonym).
+ *   5. In `i18n.test.ts` `OFFENE_BEREICHE.fr` mit allem, was noch fehlt.
+ *   6. Server: `'fr'` in `SPRACHEN` (`packages/server/src/sprache.ts`) —
+ *      sonst lehnt `PATCH /api/me` die Wahl ab. Keine Migration nötig.
  */
 export const SPRACHEN = ['de', 'en'] as const;
 
