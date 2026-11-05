@@ -313,7 +313,7 @@ test('Secret Dame, Regel B: Stichprobe — jeder Zug legal, Aufgaben gezaehlt', 
    * sie nur zu behaupten: jede elfte der 363 Paarungen aus der Probe vom
    * 04.11.2026 (11 Wahlen Weiss × 11 Wahlen Schwarz × 3 Stufenpaare). Die
    * Zahl der Aufgaben wird ausgegeben, nicht festgeschrieben — sie ist eine
-   * offene Produktentscheidung (aufgeben oder raten), kein Sollwert.
+   * Uebergangsloesung (entschieden 05.11.2026, siehe Kopf von bot.ts), kein Sollwert.
    * Festgeschrieben ist nur, was nie passieren darf: ein Zug, den `act`
    * verwirft (der Server bricht dann den Tisch ab).
    */

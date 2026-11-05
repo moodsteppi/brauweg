@@ -346,8 +346,10 @@ export function botZug(sicht: BroChessSicht, level: BotLevel = 'standard'): BroC
  *   sind Kb1 und Kc2 verboten. Schliessen liesse sich die Luecke nur mit den
  *   eigenen erlaubten Zuegen in der Sicht (ein Feld im Spielkern, sicht.ts);
  *   die stehen dort (Stand 04.11.2026) nicht.
- *   OFFEN: Aufgeben statt raten ist eine Produktentscheidung, die noch kein
- *   Mensch getroffen hat (Zweitleser, 04.11.2026). Wie oft es vorkommt, zaehlt
+ *   ENTSCHIEDEN (Niklas, 05.11.2026): Aufgeben im Notfall bleibt, bis die
+ *   Sicht die eigenen erlaubten Zuege liefert (Folgeaufgabe am Spielkern;
+ *   dann nutzt der Bot sie, und die Sperre in adapter.ts faellt). Raten
+ *   bleibt ausgeschlossen. Wie oft das Aufgeben vorkommt, zaehlt
  *   der Test „Regel B: Stichprobe" in test/bot.test.ts; die Zahl steht bewusst
  *   nicht hier, damit sie nicht veraltet.
  *
