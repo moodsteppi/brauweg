@@ -13,6 +13,7 @@ import {
 } from './auswahl';
 import stil from './BroChess.module.css';
 import { type Figurensatz, pinguinBild } from './figurensatz';
+import { type Markierung, koenigsschlag, markierungen } from './geheim';
 import type { BroChessSicht, BroChessZug, Farbe, Umwandlung } from './sicht';
 
 /**
@@ -35,6 +36,15 @@ import type { BroChessSicht, BroChessZug, Farbe, Umwandlung } from './sicht';
  *   naechste Zug vormerken. Die Ziele dafuer kommen aus der Sicht (`vorab`,
  *   die Gangart rechnet das Modul); ob der Zug dann geht, entscheidet im
  *   Moment des eigenen Zuges `legalActions` — sonst verfaellt er still.
+ *
+ * Seit dem 04.11.2026 (Secret Dame): Waehrend der Wahl der geheimen Dame
+ * ist das Brett ein Wahlbrett — antippbar sind genau die Felder, die der
+ * Server als Wahl anbietet (`wahl.felder`), gezogen wird nichts. Bestaetigt
+ * wird ausserhalb des Bretts (BroChessTable), damit ein Fehltipp nicht schon
+ * die Partie bestimmt. Danach traegt das Brett Kronen-Marken (geheim.ts):
+ * die eigene verdeckte Dame (nur in der eigenen Sicht vorhanden), die
+ * aufgedeckten, und das Feld, auf dem eine verdeckte Dame geschlagen wurde
+ * oder einen König schlug.
  */
 
 /** Figur in FEN-Schreibweise → Schriftzeichen. Die gefuellte Form fuer beide
@@ -57,6 +67,14 @@ const FIGURNAME: Record<string, string> = {
   b: 'Läufer',
   n: 'Springer',
   p: 'Bauer',
+};
+
+/** Vorlesetext je Marke; das Zeichen selbst ist nur Schmuck. */
+const MARKE_TEXT: Record<Markierung, string> = {
+  meineVerdeckt: 'deine geheime Dame, nur für dich sichtbar',
+  aufgedeckt: 'aufgedeckte geheime Dame',
+  warDame: 'hier wurde eine geheime Dame geschlagen',
+  koenigGeschlagen: 'hier wurde der König geschlagen',
 };
 
 /** Ab dieser Strecke ist ein Druck ein Ziehen und kein Tipp. */
@@ -84,6 +102,7 @@ export function Brett({
   zuege,
   onZug,
   figurensatz = 'klassisch',
+  wahl,
 }: {
   sicht: BroChessSicht;
   /** `legalActions` des Servers; leer, wenn man nicht am Zug ist. */
@@ -91,6 +110,11 @@ export function Brett({
   onZug: (zug: BroChessZug) => void;
   /** Aussehen der Figuren (figurensatz.ts); die Regeln kennen es nicht. */
   figurensatz?: Figurensatz;
+  /**
+   * Secret Dame, solange man seine geheime Dame noch waehlt: die Felder aus
+   * `legalActions` (Typ 'wahl'), die vorgemerkte Figur und was ein Tipp tut.
+   */
+  wahl?: { felder: readonly string[]; vorgemerkt: string | null; onTipp: (feld: string) => void };
 }): React.JSX.Element {
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
   /** Offene Umwandlung: die vier (oder weniger) angebotenen Zuege. */
@@ -121,9 +145,17 @@ export function Brett({
 
   const amZug = zuege.length > 0;
   const unten = sicht.meineFarbe ?? 'w';
-  const beweglich = amZug ? beweglicheFelder(zuege) : new Set(Object.keys(sicht.vorab ?? {}));
+  // Waehrend der Wahl der geheimen Dame gibt es weder Zuege noch Vorab-Zuege.
+  const waehlt = sicht.secretDame?.wahlLaeuft === true;
+  const wahlFelder = new Set(wahl?.felder ?? []);
+  const beweglich = waehlt
+    ? new Set<string>()
+    : amZug
+      ? beweglicheFelder(zuege)
+      : new Set(Object.keys(sicht.vorab ?? {}));
   const zieleVon = (von: string | null): Set<string> =>
-    amZug ? zielfelder(zuege, von) : new Set(von ? (sicht.vorab?.[von] ?? []) : []);
+    waehlt ? new Set() : amZug ? zielfelder(zuege, von) : new Set(von ? (sicht.vorab?.[von] ?? []) : []);
+  const marken = markierungen(sicht);
   const ziele = zieleVon(gewaehlt);
 
   /*
@@ -229,6 +261,10 @@ export function Brett({
 
   /** Der Tipp-Weg (auch Tastatur): wie bisher, nur mit Vorab-Zug. */
   const tippe = (name: string): void => {
+    if (waehlt) {
+      if (wahlFelder.has(name)) wahl?.onTipp(name);
+      return;
+    }
     if (gewaehlt && ziele.has(name)) {
       ausfuehren(gewaehlt, name, false);
       return;
@@ -247,6 +283,10 @@ export function Brett({
     const { x, y, seite } = punkt(e);
     const name = feldAnPunkt(x, y, seite, unten);
     if (!name) return;
+    if (waehlt) {
+      if (wahlFelder.has(name)) wahl?.onTipp(name);
+      return;
+    }
     if (gewaehlt && ziele.has(name)) {
       ausfuehren(gewaehlt, name, false);
       return;
@@ -336,22 +376,29 @@ export function Brett({
         const name = feldName(index);
         const figur = angezeigt[index] ?? '';
         const hell = (Math.floor(index / 8) + (index % 8)) % 2 === 1;
+        const feldMarken = marken[name] ?? [];
         const klassen = [
           stil.feld,
           hell ? stil.hell : stil.dunkel,
-          beweglich.has(name) || ziele.has(name) ? stil.klickbar : '',
+          beweglich.has(name) || ziele.has(name) || (waehlt && wahlFelder.has(name)) ? stil.klickbar : '',
+          waehlt && wahlFelder.has(name) ? stil.wahlbar : '',
+          waehlt && wahl?.vorgemerkt === name ? stil.wahlVorgemerkt : '',
           gewaehlt === name ? stil.gewaehlt : '',
           sicht.letzterZug && (sicht.letzterZug.von === name || sicht.letzterZug.nach === name)
             ? stil.zuletzt
             : '',
           vorab && (vorab.von === name || vorab.nach === name) ? stil.vorab : '',
           index === koenigImSchach ? stil.koenigImSchach : '',
+          feldMarken.includes('koenigGeschlagen') ? stil.koenigFaellt : '',
           ziele.has(name) ? (figur ? stil.zielSchlag : stil.ziel) : '',
           ziele.has(name) && !amZug ? stil.zielVorab : '',
         ].filter(Boolean);
-        const beschriftung = figur
-          ? `${name}, ${farbeDer(figur) === 'w' ? 'weißer' : 'schwarzer'} ${FIGURNAME[figur.toLowerCase()]}`
-          : name;
+        const beschriftung = [
+          figur
+            ? `${name}, ${farbeDer(figur) === 'w' ? 'weißer' : 'schwarzer'} ${FIGURNAME[figur.toLowerCase()]}`
+            : name,
+          ...feldMarken.map((m) => MARKE_TEXT[m]),
+        ].join(', ');
         const gleitet = gleiten?.nach === name;
         return (
           <button
@@ -385,6 +432,11 @@ export function Brett({
                 {figurInhalt(figur)}
               </span>
             )}
+            {feldMarken.map((m) => (
+              <span key={m} className={`${stil.marke} ${stil[`marke_${m}`] ?? ''}`} aria-hidden="true">
+                {m === 'koenigGeschlagen' ? '✕' : '♛︎'}
+              </span>
+            ))}
             {/* Koordinaten am linken und unteren Rand, von der eigenen Seite aus. */}
             {position % 8 === 0 && (
               <span className={`${stil.koordinate} ${stil.koordinateZeile}`}>{name[1]}</span>
@@ -484,7 +536,11 @@ export function ergebnis(
     return { titel: 'Remis', grund: REMIS[sicht.ende.ausgang] ?? '', art: 'remis' };
   }
   const siegerFarbe: Farbe = sicht.ende.sieger === sicht.weissSitz ? 'w' : 'b';
-  const grund = GRUND[sicht.ende.ausgang] ?? '';
+  // Secret Dame, Regel A: Das Modul meldet den Königsschlag als 'matt'
+  // (Entscheidung 03.11.2026) und legt ein Ereignis daneben. „Durch
+  // Schachmatt" stimmte dann nicht — es gab ja kein angesagtes Schach.
+  const schlag = sicht.ende.ausgang === 'matt' ? koenigsschlag(sicht.secretDame) : null;
+  const grund = schlag ? 'durch Königsschlag der geheimen Dame' : (GRUND[sicht.ende.ausgang] ?? '');
   if (sicht.meineFarbe === null) return { titel: `${nameVon(siegerFarbe)} gewinnt`, grund, art: 'sieg' };
   return sicht.meineFarbe === siegerFarbe
     ? { titel: 'Du gewinnst!', grund, art: 'sieg' }
