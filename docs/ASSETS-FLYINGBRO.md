@@ -1,10 +1,11 @@
 # Bilder für Flying Bro
 
 Einzelspieler-Schleuderspiel im Hub (Projekt „Rider Modus hinzufügen", Arbeitsname
-**Flying Bro**; der endgültige Name steht noch aus). Die Bros sind Brauweg-Pinguine,
-die Gegner Giraffen, gebaut wird aus Holz, Stein und Glas.
+**Flying Bro**; der endgültige Name steht noch aus). Die Bros sind die drei
+Pinguine aus dem Logo (Pelle, Malve, Tjark), die Gegner Giraffen, gebaut wird aus Holz, Stein und Glas.
 
-**Stand: 6. November 2026, geliefert (26 Bilder).** Erzeugt mit ChatGPT-Bildern über
+**Stand: 6. November 2026, geliefert (26 Bilder; Bros und Langhals am selben Tag nach
+der geänderten Spezifikation neu erzeugt).** Erzeugt mit ChatGPT-Bildern über
 `codex exec` (ChatGPT-Anmeldung) auf dem Mood-Stand-PC, ohne Creative-KI mit
 Kosten. Es gibt noch **keinen Spielcode**, und die Bilder hängen nirgends —
 erst der Spielbau bindet sie ein.
@@ -19,14 +20,14 @@ für den Hintergrund). Zusammen **rund 700 kB**.
 
 | Datei | Maß | Größe | Alpha |
 | --- | --- | --- | --- |
-| `bro-schnell-flug.webp` | 384 × 322 | 28.6 kB | ja |
-| `bro-schnell-ruhe.webp` | 221 × 384 | 25.6 kB | ja |
-| `bro-schwer-flug.webp` | 384 × 341 | 27.2 kB | ja |
-| `bro-schwer-ruhe.webp` | 316 × 384 | 31.2 kB | ja |
-| `bro-teilt-flug.webp` | 334 × 384 | 50.3 kB | ja |
-| `bro-teilt-ruhe.webp` | 240 × 384 | 30.3 kB | ja |
-| `giraffe-gross-getroffen.webp` | 245 × 384 | 32.5 kB | ja |
-| `giraffe-gross-steht.webp` | 247 × 384 | 27.9 kB | ja |
+| `bro-malve-gleit.webp` | 384 × 234 | 18.3 kB | ja |
+| `bro-malve-ruhe.webp` | 189 × 384 | 19.0 kB | ja |
+| `bro-pelle-ruhe.webp` | 346 × 384 | 24.6 kB | ja |
+| `bro-pelle-rutsch.webp` | 384 × 198 | 18.4 kB | ja |
+| `bro-tjark-eisblock.webp` | 383 × 384 | 37.7 kB | ja |
+| `bro-tjark-ruhe.webp` | 340 × 384 | 24.4 kB | ja |
+| `giraffe-gross-getroffen.webp` | 207 × 384 | 29.8 kB | ja |
+| `giraffe-gross-steht.webp` | 181 × 384 | 20.4 kB | ja |
 | `giraffe-klein-getroffen.webp` | 330 × 384 | 50.9 kB | ja |
 | `giraffe-klein-steht.webp` | 275 × 384 | 30.6 kB | ja |
 | `giraffe-mittel-getroffen.webp` | 252 × 384 | 31.1 kB | ja |
@@ -50,69 +51,93 @@ für den Hintergrund). Zusammen **rund 700 kB**.
 
 | Gruppe | Dateien | Gedacht für |
 | --- | --- | --- |
-| **Bro „schnell"** | `bro-schnell-ruhe`, `bro-schnell-flug` | schlank, türkise Fliegerkappe mit Messingbrille und Schal — beschleunigt im Flug |
-| **Bro „schwer"** | `bro-schwer-ruhe`, `bro-schwer-flug` | rund, Stahlrüstung und Helm, im Flug als Kanonenkugel — durchschlägt Stein |
-| **Bro „teilt sich"** | `bro-teilt-ruhe`, `bro-teilt-flug` | klein, violette Bommelmütze mit drei Bommeln, gestreifter Schal; das Flugbild zeigt schon die zwei durchscheinenden Kopien |
-| **Giraffe klein / mittel / groß** | `giraffe-<größe>-steht`, `giraffe-<größe>-getroffen` | Gegner. Getroffen: Spiralaugen, Beule, Sterne, Zunge raus. Die große trägt eine Krone |
+| **Pelle** (rot-orange, Steuerkreuz auf der Flosse) | `bro-pelle-ruhe`, `bro-pelle-rutsch` | Grund-Bro. Fähigkeit **Bauchrutscher**: flach auf dem Bauch, Körper rund 2 : 1 breit wie die Kapsel 0,7 × 0,3 m |
+| **Malve** (lila, runde Brille) | `bro-malve-ruhe`, `bro-malve-gleit` | Fähigkeit **Gleitflug**: Flossen weit ausgebreitet, Körper waagerecht |
+| **Tjark** (türkis, vier Spielknöpfe auf der Flosse) | `bro-tjark-ruhe`, `bro-tjark-eisblock` | Fähigkeit **Eisblock**: im Eiswürfel eingefroren, Gesicht sichtbar; der Würfel ist quadratisch wie der Körper 0,6 × 0,6 m |
+| **Giraffe klein / mittel / groß** | `giraffe-<größe>-steht`, `giraffe-<größe>-getroffen` | Kalb, Giraffe, Langhals (Spezifikation: 0,6 / 1,3 / 2,1 m). Getroffen: Spiralaugen, Beule, Sterne, Zunge raus. Der **Langhals** hat einen Hals etwa doppelt so lang wie der Rumpf hoch und trägt eine kleine Krone |
 | **Bauteile** | `<holz\|stein\|glas>-<quadrat\|balken>-<heil\|angeknackst>` | Quadrat 1 : 1, Balken 4 : 1, reine Vorderansicht, randlos — das Bild füllt die Physikform |
-| **Schleuder** | `schleuder` | Holzgabel mit Lederwicklung und Ösen, **ohne Gummi** — das Band zeichnet das Spiel zwischen die Ösen |
-| **Hintergrund** | `hintergrund` | 3 : 2, ohne Alpha. Unten ein freier Grasstreifen (der Boden), oben ruhiger Himmel |
+| **Schleuder** | `schleuder` | Holzgabel mit Lederwicklung und Ösen, **ohne Gummi** — das Band zeichnet das Spiel zwischen die Ösen. ⚠ Widerspricht der Spezifikation (Kartenkisten statt Astgabel), siehe unten |
+| **Hintergrund** | `hintergrund` | 3 : 2 quer, ohne Alpha. Unten ein freier Grasstreifen (der Boden), oben ruhiger Himmel |
+
+Die Bros sind die drei Pinguine aus dem Logo (`packages/client/public/icon-512.png`),
+Namen und Fähigkeiten nach `docs/SPEZIFIKATION-FLYINGBRO.md` (Stand 06.11.2026).
+Pelle und Malve sind beschrieben wie in `docs/werbung/tiktok-serien/figuren.md`
+(Bild-Prompts 1 und 6), Tjark wie dort Nr. 7. Ohne Karten in der Hand, denn im Spiel
+sind sie Geschosse.
 
 **Blickrichtung:** Die Bros schauen nach **rechts** (Abschuss nach rechts), die
 Giraffen nach **links** zur Schleuder. Wer spiegelt, spiegelt per CSS/Leinwand,
 nicht als eigene Datei.
 
 **Maße:** Figuren auf höchstens 384 px an der langen Seite (die Schleuder 512 px).
-Auf dem Handy steht ein Bro bei 40–60 CSS-Pixeln, also reicht das für dreifache
-Pixeldichte. Die Rohbilder kamen in 1254 px und wurden vor dem Wandeln
-beschnitten (leerer Rand weg, 4 % Luft wieder dran) und verkleinert.
-Bauteile wurden **ohne** Luft auf exakt 256 × 256 bzw. 512 × 128 gezogen, damit
-Bild und Kollisionskasten deckungsgleich sind.
+Bei 28 px je Meter (Spezifikation) ist ein Bro im Gesamtbild nur rund 17 px groß,
+in der Flugkamera größer — 384 px reicht auch für dreifache Pixeldichte. Die
+Rohbilder kamen in 1254 bzw. 1536 px und wurden vor dem Wandeln beschnitten
+(leerer Rand weg, 4 % Luft wieder dran) und verkleinert. Bauteile wurden
+**ohne** Luft auf exakt 256 × 256 bzw. 512 × 128 gezogen, damit Bild und
+Kollisionskasten deckungsgleich sind.
 
-**Hochkant oder quer?** Steht beim Bestellen noch nicht fest. Der Hintergrund ist
-quer (1536 × 1024) und taugt hochkant als Panorama, das mit der Kamera mitläuft.
-Wird ein hochkant gefülltes Bild ohne Kamerafahrt nötig, ist das eine
-Nachbestellung (9 : 16, gleicher Prompt mit „Portrait 1024x1536").
+**Querformat:** Das Spiel läuft quer (Bezugsmaß 844 × 390, etwa 2,16 : 1). Der
+Hintergrund ist mit 1536 × 1024 bereits quer und bleibt. Er wird **unten
+bündig** eingepasst (`background-position: bottom` bzw. Unterkante an die
+Unterkante der Bühne): Dann bleiben Grasstreifen, Hügel und Berge im Bild, und
+abgeschnitten wird nur ruhiger Himmel. Mittig eingepasst fiele der Boden fast
+ganz weg.
 
-### Bekannte Schwächen (bewusst so geliefert)
+### Bekannte Schwächen und Widersprüche
 
-- **Mittlere und große Giraffe ähneln sich.** Die große unterscheidet nur die
-  Krone. Die Größe entsteht im Spiel durch Skalieren. Soll die große auch
-  breiter oder bulliger wirken, die beiden `giraffe-gross-*` neu erzeugen.
+- **Die Schleuder ist eine Astgabel.** Die Spezifikation schließt genau das aus
+  („Keine Astgabel-Schleuder … ein Gummiband zwischen zwei gestapelten
+  Kartenkisten"). Die Nachbesserung vom 06.11.2026 hat die Schleuder
+  ausdrücklich als „gut, bleibt" bezeichnet, deshalb ist sie unverändert.
+  Gilt die Spezifikation, ist `schleuder` eine Nachbestellung.
+- **Die Spezifikation bestellt mehr**, als hier liegt (Abschnitt „Bilder"): je
+  Bro auch Flug und Siegerpose, je Giraffe auch liegend und weglaufend, je
+  Stoff drei Rissstufen und die Formen Dreieck und Kreis, drei Weltkulissen.
+  Geliefert ist der Umfang dieser Aufgabe; der Rest ist eine eigene Bestellung.
+- **Getroffene Giraffen zeigen Beule und Sterne.** Die Spezifikation will
+  Giraffen, die „beleidigt" umfallen, ohne Bösewicht zu sein; Beule und Sterne
+  sind slapstickhaft und nicht böse. Wer es sanfter will, bestellt `getroffen`
+  ohne Beule nach.
 - **Glasbalken angeknackst** kam etwas länglicher als 4 : 1 und ist beim Einpassen
   um rund 10 % gestaucht. Mit bloßem Auge fällt das nicht auf.
-- `bro-teilt-flug` und `giraffe-klein-getroffen` wiegen je rund 50 kB, mehr als
-  der Rest, wegen der durchscheinenden Kopien bzw. der vielen Sterne. Unkritisch.
 
 ### Geprüft
 
-- **Echter Alphakanal** bei allen 25 freigestellten Bildern: Ecken `alpha = 0`,
-  halbtransparente Pixel nur an Kanten (unter 1 %, beim Teil-Bro 9 % wegen der
-  gewollten durchscheinenden Kopien).
+- **Echter Alphakanal** bei allen 25 freigestellten Bildern: Ecken `alpha = 0`
+  (höchstens 1), halbtransparente Pixel nur an Kanten (unter 1 %, bei den
+  getroffenen Giraffen bis 6,5 % wegen der Sterne und Bewegungsstriche).
 - **Auf knallrotem Grund angesehen** (Kontaktbogen): kein Saum, kein
   Schachbrett, kein eingebrannter Text.
 - **Keine Originalauflösung unter `public/`.** Die Originale liegen im Archivrepo
   `brauweg-art` unter `flyingbro/`, vorerst auf dem Zweig
   `flyingbro-originale`. Er wird zusammen mit diesem Zweig nach `main`
-  übernommen.
+  übernommen. Die verworfenen ersten Bros (schnell, schwer, teilt sich) und
+  die erste große Giraffe liegen dort unter `flyingbro/verworfen/`.
 
 ---
 
 ## Woher der Stil kommt — und was ausdrücklich nicht
 
-**Vorlage ist allein der Ritter-Pinguin** `packages/client/public/hub/pinguin.png`.
+**Stilvorlage ist der Ritter-Pinguin** `packages/client/public/hub/pinguin.png`.
 Er ging als erstes Bild in **jede** Erzeugung, dazu die Stilregeln aus
 `docs/ASSETS-PINGUIN.md`: gerenderte Spielfigur, Volumen, Licht von oben links,
-keine Konturlinie, kein Fotorealismus.
+keine Konturlinie, kein Fotorealismus. **Figurvorlage der Bros ist das Logo**
+`packages/client/public/icon-512.png`: Es ging als zweites Bild in die drei
+Ruhebilder, und der Prompt verlangt, die flache Logofigur in den gerenderten
+Stil zu übertragen.
 
-**Kein Bild aus einem fremden Spiel als Vorlage.** Das Spielprinzip (Schleuder,
-Türme, Gegner) ist ein Genre, der Look ist es nicht. Ein erster Probelauf mit
-„kleiner roter runder Pinguin, zusammengerollt" ergab einen roten Kugelvogel mit
-Zornesbrauen, der einer bekannten Spielfigur zu nahe kam. Er wurde verworfen.
-Seitdem steht in jedem Prompt das ausdrückliche Verbot (*no round red/yellow/blue
-birds with angry eyebrows, no green pigs*), und die Bros sind erkennbar
-**Brauweg-Pinguine** (schwarz-weiß, orange Schnabel und Füße) mit eigener
-Ausrüstung statt farbiger Kugelkörper. **Wer nachbestellt, behält das bei.**
+**Kein Bild aus einem fremden Spiel als Vorlage**, und es gilt die Abgrenzung aus
+`docs/SPEZIFIKATION-FLYINGBRO.md`: keine Vögel, keine Schweine, kein Bro, der
+sich teilt. Ein erster Probelauf mit „kleiner roter runder Pinguin,
+zusammengerollt" ergab einen roten Kugelvogel mit Zornesbrauen, der einer
+bekannten Spielfigur zu nahe kam, und wurde verworfen. Seitdem steht in jedem
+Prompt das ausdrückliche Verbot (*no round red/yellow/blue birds with angry
+eyebrows, no green pigs*). Weil Pelle rot-orange und rundlich ist, also genau
+in dieser Zone liegt, verlangt jeder Bro-Prompt zusätzlich eine
+**Pinguin-Silhouette** (aufrechter ovaler Körper, Flossen, cremeweiße
+Gesichtsmaske) und verbietet Brauen und Federschopf. **Wer nachbestellt, behält
+das bei.**
 
 ---
 
@@ -133,9 +158,10 @@ echo "<Prompt>" | codex exec --skip-git-repo-check --sandbox read-only \
   kommt der Prompt über stdin (`-`).
 - Das Bild kommt mit echtem Alpha zurück, wenn der Prompt es verlangt. Ein
   Freistellen von Hand war nicht nötig.
-- **Folgebilder mit zweiter Vorlage:** Flugpose ← Ruhepose, getroffen ← stehend,
+- **Zweite Vorlage:** Ruhebild eines Bros ← Logo, Fähigkeitspose ← Ruhebild,
+  Langhals ← mittlere Giraffe, getroffen ← stehend,
   angeknackst ← heil, Balken ← Quadrat desselben Materials. Nur so bleiben
-  Farben und Ausrüstung gleich.
+  Farben und Abzeichen gleich.
 - Die Skripte dazu (`auftraege.mjs`, `erzeugen.mjs`, `verarbeiten.mjs`,
   `bogen.mjs`) liegen mit den Originalen in `brauweg-art/flyingbro/werkzeug/`.
 
@@ -164,40 +190,40 @@ Style: match the attached Brauweg knight penguin reference in rendering — styl
 
 ### Bildzeile je Datei
 
-#### `bro-schnell-ruhe`
+#### `bro-pelle-ruhe` — zweite Vorlage: Logo `icon-512.png`
 
 ```text
-Subject: a Brauweg penguin (black back and head, white belly and face, orange beak and orange feet, big friendly eyes), slim and streamlined, wearing a turquoise leather aviator cap with brass goggles and a short turquoise scarf — the FAST one, light and agile build. Pose: standing upright and relaxed, wings at the sides, confident friendly smile, full body, three-quarter view facing right. Square 1024x1024.
+Subject: PELLE, the red-orange penguin from the attached logo (second image): a short chubby penguin with a red-orange back, head and flippers, cream-white belly and face, bright orange beak and feet, a small white plus-shaped gamepad cross printed on his left flipper, huge eager friendly eyes, wide grin — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no clothing or hat. Translate the flat logo character into the 3D-rendered style of the first image. Pose: standing upright, waving cheerfully with one flipper, the gamepad cross on the flipper clearly visible, full body, three-quarter view facing RIGHT. Square 1024x1024.
 ```
 
-#### `bro-schnell-flug` — zweite Vorlage: `bro-schnell-ruhe`
+#### `bro-pelle-rutsch` — zweite Vorlage: `bro-pelle-ruhe`
 
 ```text
-Subject: the SAME character as in the second attached image (identical colors, gear and proportions): a Brauweg penguin (black back and head, white belly and face, orange beak and orange feet, big friendly eyes), slim and streamlined, wearing a turquoise leather aviator cap with brass goggles and a short turquoise scarf — the FAST one, light and agile build. Pose: in mid-flight, launched through the air to the right, body stretched forward, wings swept back, determined focused face, goggles pulled down over the eyes, scarf streaming behind. Side view. Square 1024x1024.
+Subject: the SAME character as in the second attached image (identical colors, markings, proportions): PELLE, the red-orange penguin from the attached logo (second image): a short chubby penguin with a red-orange back, head and flippers, cream-white belly and face, bright orange beak and feet, a small white plus-shaped gamepad cross printed on his left flipper, huge eager friendly eyes, wide grin — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no clothing or hat. Pose: BELLY SLIDE: lying completely flat on his belly, sliding fast to the right like a toboggan, head forward and slightly raised, both flippers pressed back along the body, feet trailing behind, a few small snow/dust puffs under the belly, gleeful face. The body is long and flat (about 2.3 times as wide as tall). Landscape 1536x1024 canvas. Facing RIGHT.
 ```
 
-#### `bro-schwer-ruhe`
+#### `bro-malve-ruhe` — zweite Vorlage: Logo `icon-512.png`
 
 ```text
-Subject: a Brauweg penguin (black back and head, white belly and face, orange beak and orange feet, big friendly eyes), big, heavy and very round, wearing thick dark steel plate armor with rivets and a rounded steel helmet with the visor up, small bronze trims — the HEAVY one, chunky and solid. Pose: standing upright and relaxed, wings at the sides, confident friendly smile, full body, three-quarter view facing right. Square 1024x1024.
+Subject: MALVE, the purple penguin from the attached logo (second image): a tall slim penguin with a deep violet-purple back, head and flippers, cream-white belly and face, orange beak and feet, wearing round thin glasses, half-lidded clever eyes, a confident slight smile — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no hat; the glasses are her only accessory. Translate the flat logo character into the 3D-rendered style of the first image. Pose: standing upright, flippers crossed calmly over her belly, glasses glinting, full body, three-quarter view facing RIGHT. Square 1024x1024.
 ```
 
-#### `bro-schwer-flug` — zweite Vorlage: `bro-schwer-ruhe`
+#### `bro-malve-gleit` — zweite Vorlage: `bro-malve-ruhe`
 
 ```text
-Subject: the SAME character as in the second attached image (identical colors, gear and proportions): a Brauweg penguin (black back and head, white belly and face, orange beak and orange feet, big friendly eyes), big, heavy and very round, wearing thick dark steel plate armor with rivets and a rounded steel helmet with the visor up, small bronze trims — the HEAVY one, chunky and solid. Pose: in mid-flight, launched through the air to the right, body stretched forward, wings swept back, determined focused face, tucked into a compact armored cannonball shape, visor down. Side view. Square 1024x1024.
+Subject: the SAME character as in the second attached image (identical colors, markings, proportions, glasses): MALVE, the purple penguin from the attached logo (second image): a tall slim penguin with a deep violet-purple back, head and flippers, cream-white belly and face, orange beak and feet, wearing round thin glasses, half-lidded clever eyes, a confident slight smile — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no hat; the glasses are her only accessory. Pose: GLIDE: gliding through the air to the right with both flippers spread wide like wings, body horizontal and calm, feet tucked back, glasses on, focused serene expression. Seen from the side, slightly from below. Landscape 1536x1024 canvas. Facing RIGHT.
 ```
 
-#### `bro-teilt-ruhe`
+#### `bro-tjark-ruhe` — zweite Vorlage: Logo `icon-512.png`
 
 ```text
-Subject: a Brauweg penguin (black back and head, white belly and face, orange beak and orange feet, big friendly eyes), small and chubby, wearing a violet knitted bobble hat with three pom-poms and a violet-and-white striped scarf — the SPLITTING one, playful and mischievous. Pose: standing upright and relaxed, wings at the sides, confident friendly smile, full body, three-quarter view facing right. Square 1024x1024.
+Subject: TJARK, the turquoise penguin from the attached logo (second image): a stocky penguin with a bright teal-turquoise back, head and flippers, cream-white belly and face, orange beak and feet, four round white game-controller buttons printed on one flipper, wild excited eyes, cocky wide grin — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no clothing or hat. Translate the flat logo character into the 3D-rendered style of the first image. Pose: standing upright, one flipper raised in a thumbs-up-like gesture, the four controller buttons on the flipper clearly visible, full body, three-quarter view facing RIGHT. Square 1024x1024.
 ```
 
-#### `bro-teilt-flug` — zweite Vorlage: `bro-teilt-ruhe`
+#### `bro-tjark-eisblock` — zweite Vorlage: `bro-tjark-ruhe`
 
 ```text
-Subject: the SAME character as in the second attached image (identical colors, gear and proportions): a Brauweg penguin (black back and head, white belly and face, orange beak and orange feet, big friendly eyes), small and chubby, wearing a violet knitted bobble hat with three pom-poms and a violet-and-white striped scarf — the SPLITTING one, playful and mischievous. Pose: in mid-flight, launched through the air to the right, body stretched forward, wings swept back, determined focused face, with two faint translucent violet copies of itself fanning out above and below as if about to split into three. Side view. Square 1024x1024.
+Subject: the SAME character as in the second attached image (identical colors, markings, proportions): TJARK, the turquoise penguin from the attached logo (second image): a stocky penguin with a bright teal-turquoise back, head and flippers, cream-white belly and face, orange beak and feet, four round white game-controller buttons printed on one flipper, wild excited eyes, cocky wide grin — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no clothing or hat. Pose: ICE BLOCK: frozen inside a solid cube of clear light-blue ice, seen straight from the front (the cube is an exact square, edges beveled and frosty, a few frost cracks at the corners). Tjark is curled up inside, his face clearly visible through the ice, cheeky surprised grin, eyes looking right. Square 1024x1024. Facing RIGHT.
 ```
 
 #### `giraffe-klein-steht`
@@ -224,10 +250,10 @@ Subject: an adult cartoon giraffe of medium height, smug teasing grin, slightly 
 Subject: the SAME giraffe as in the second attached image (identical colors, patches, size and proportions), now just hit: dizzy swirly eyes, a red bump on the head, three small yellow stars circling the head, body tilted and wobbling, tongue sticking out, still standing, facing LEFT. Portrait 1024x1536.
 ```
 
-#### `giraffe-gross-steht`
+#### `giraffe-gross-steht` — zweite Vorlage: `giraffe-mittel-steht`
 
 ```text
-Subject: a big tall burly cartoon giraffe wearing a small golden crown, arrogant boss grin — the BIG opponent, same stylized 3D look as the penguin reference (soft fur texture, orange-brown patches, small ossicone horns). Pose: standing on all four legs, full body, three-quarter view facing LEFT, looking left and teasing. Portrait 1024x1536.
+Subject: the LONG-NECK giraffe: same species, colors and fur as the medium giraffe in the second attached image, but with an EXTREMELY long neck — the neck alone is about twice as long as the body is tall, so the head sits far above the body (total height about 2.1 times the body length); a sturdy body, a small golden crown, a proud slightly snooty smile (cheeky, not evil) — the BIG opponent, same stylized 3D look as the penguin reference (soft fur texture, orange-brown patches, small ossicone horns). Pose: standing on all four legs, full body, three-quarter view facing LEFT, looking left and teasing. Portrait 1024x1536.
 ```
 
 #### `giraffe-gross-getroffen` — zweite Vorlage: `giraffe-gross-steht`
