@@ -70,8 +70,37 @@ const GEBURTSTAG = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .optional();
 
+/**
+ * Die Return-URL fuer Apple, passend zur Adresse, unter der die Seite gerade laeuft.
+ *
+ * APPLE_REDIRECT_URI darf mehrere URLs nennen (durch Komma getrennt), je Domain
+ * eine, alle im Apple-Entwicklerkonto eingetragen. Apple schickt die Antwort an
+ * die Herkunft der Return-URL. Laeuft die Seite unter www.broweggames.de, die
+ * Return-URL zeigt aber auf www.brauweg-spielen.de, kommt die Antwort nie an,
+ * und die Anmeldung haengt ohne Fehlermeldung. Passt keine, gilt die erste:
+ * So bleibt eine einzelne URL in der Umgebung wie bisher gueltig.
+ */
+export function waehleAppleRueckweg(liste: string | null, host: string | undefined): string | null {
+  const urls = (liste ?? '')
+    .split(',')
+    .map((u) => u.trim())
+    .filter((u) => u.length > 0);
+  const h = host?.trim().toLowerCase();
+  const passend = h
+    ? urls.find((u) => {
+        try {
+          return new URL(u).host.toLowerCase() === h;
+        } catch {
+          return false;
+        }
+      })
+    : undefined;
+  return passend ?? urls[0] ?? null;
+}
+
 export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): void {
   const nonces = deps.nonces ?? new NonceSpeicher();
+  const appleRueckwegFuer = (host: string | undefined) => waehleAppleRueckweg(deps.appleRedirectUri, host);
   const scheine = new Anmeldescheine();
 
   const googleProfil = async (credential: string): Promise<AnbieterProfil> => {
@@ -144,11 +173,12 @@ export function anbieterRouten(app: FastifyInstance, deps: AnbieterRoutenDeps): 
    * jemand dorthin navigiert: Apple prueft die Angabe beim Oeffnen des
    * Dialogs und schickt die Antwort an deren Herkunft.
    */
-  app.get('/api/auth/apple/config', async (_request, reply) => {
-    const an = Boolean(deps.appleClientId && deps.appleRedirectUri);
+  app.get('/api/auth/apple/config', async (request, reply) => {
+    const rueckweg = appleRueckwegFuer(request.headers.host);
+    const an = Boolean(deps.appleClientId && rueckweg);
     return reply.send({
       clientId: an ? deps.appleClientId : null,
-      redirectUri: an ? deps.appleRedirectUri : null,
+      redirectUri: an ? rueckweg : null,
     });
   });
 
