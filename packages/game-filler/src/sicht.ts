@@ -116,6 +116,12 @@ export interface FillerSicht {
    * genau wie man seine Mauern sieht. Leer, wo es nur eine Mauer je Zug gibt.
    */
   readonly mauerPause: readonly number[];
+  /**
+   * Wer aufgegeben hat, oder null. Steht da, damit der Bildschirm das Ende
+   * BENENNEN kann ("aufgegeben" statt eines Punktestands, der zum Sieger
+   * nicht passt) — wer gewonnen hat, steht schon in `sieger`.
+   */
+  readonly aufgegeben: number | null;
 }
 
 /**
@@ -171,6 +177,7 @@ function grundsicht(
     mauernJeZug: mitBarrieren(partie.regeln.variante) ? mauernJeZug(partie.regeln) : 0,
     mauernDiesenZug: partie.mauernDiesenZug,
     mauerPause: partie.mauerPause,
+    aufgegeben: partie.aufgegeben,
   };
 }
 

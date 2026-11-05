@@ -18,6 +18,7 @@ import { botZug } from '../src/bot.js';
 import {
   type FillerPartie,
   erlaubteZuege,
+  mauerSperre,
   erstellePartie,
   fuehreAus,
   kante,
@@ -45,7 +46,7 @@ function farbzug(partie: FillerPartie): { typ: 'faerben'; farbe: number } {
 /** Eine Extreme-Partie, an der die Eroeffnung vorbei ist (Mauern frei). */
 function nachEroeffnung(saat: string | number = SAAT): FillerPartie {
   let p = erstellePartie(EXTREME, [0, 1], saat);
-  while (p.zug < 3) p = fuehreAus(p, p.dran, farbzug(p));
+  while (mauerSperre(p) > 0) p = fuehreAus(p, p.dran, farbzug(p));
   return p;
 }
 

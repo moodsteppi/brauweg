@@ -87,6 +87,12 @@ export interface FillerRegeln {
    * Extreme wie bis zum 05.11.2026 STERNE_ANZAHL freie Sterne.
    */
   readonly sternPaare?: number;
+  /**
+   * Wie viele Zuege der Eroeffnung mauerfrei sind, ueber beide Sitze gezaehlt.
+   * Fehlt die Zahl, gilt MAUERFREIE_ZUEGE (drei) — so wurde jede Partie bis
+   * zum 06.11.2026 gespielt, und deren Snapshot traegt sie nicht.
+   */
+  readonly mauerfreieZuege?: number;
 }
 
 /**
@@ -101,17 +107,30 @@ export interface SpielartAufbau {
   readonly barrieren: number;
   readonly mauernJeZug: number;
   readonly sternPaare: number;
+  readonly mauerfreieZuege: number;
 }
 
 /**
  * Der Aufbau je Spielart — nur Extreme weicht ab (Wunsch Niklas, 05.11.2026).
  *
  * 12 x 11, zwanzig Mauern, bis zu zwei je Zug, vier gespiegelte Sternpaare.
+ * Seit dem 06.11.2026 dazu eine laengere mauerfreie Eroeffnung: drei Runden
+ * JE SPIELER, also sechs Zuege — gebaut wird ab der vierten eigenen Runde.
+ * Auf dem grossen Brett und mit zwei Mauern je Zug riegelte sonst der
+ * Anfaenger schon im zweiten eigenen Zug eine Ecke ab, bevor sich die Gebiete
+ * ueberhaupt beruehren.
  * Nebel, Klar und Build stehen bewusst NICHT darin: Fuer sie bleibt alles,
  * wie es war, Saat fuer Saat.
  */
 export const AUFBAU_JE_SPIELART = {
-  extreme: { spalten: 12, zeilen: 11, barrieren: 20, mauernJeZug: 2, sternPaare: 4 },
+  extreme: {
+    spalten: 12,
+    zeilen: 11,
+    barrieren: 20,
+    mauernJeZug: 2,
+    sternPaare: 4,
+    mauerfreieZuege: 6,
+  },
 } as const satisfies Partial<Record<FillerVariante, SpielartAufbau>>;
 
 /**
@@ -133,6 +152,7 @@ export function aufbauFuer<R extends FillerRegeln>(regeln: R): R {
     barrieren: eintrag.barrieren,
     mauernJeZug: eintrag.mauernJeZug,
     sternPaare: eintrag.sternPaare,
+    mauerfreieZuege: eintrag.mauerfreieZuege,
   };
 }
 
@@ -293,6 +313,7 @@ const GRENZEN = {
   barrieren: [0, 20],
   mauernJeZug: [1, 2],
   sternPaare: [0, 6],
+  mauerfreieZuege: [0, 12],
 } as const satisfies Record<keyof SpielartAufbau, readonly [number, number]>;
 
 function ganzZwischen(wert: unknown, [von, bis]: readonly [number, number]): boolean {
@@ -361,7 +382,7 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
       }
     }
   }
-  for (const feld of ['mauernJeZug', 'sternPaare'] as const) {
+  for (const feld of ['mauernJeZug', 'sternPaare', 'mauerfreieZuege'] as const) {
     const wert = gegeben[feld];
     if (wert !== undefined && wert !== null && !ganzZwischen(wert, GRENZEN[feld])) {
       probleme.push({ path: feld, messageKey: 'ruleset.fieldWrongType', severity: 'error' });

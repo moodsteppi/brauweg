@@ -68,6 +68,14 @@ const meta: GameMeta = {
    * Treffern — dieselbe Ueberlegung wie bei Feldherr und Mememory.
    */
   xpBasisZaehltKarten: false,
+  /**
+   * 90 statt der 60 Sekunden der Plattform (Wunsch Niklas, 06.11.2026). Ein
+   * Zug in Extreme sind bis zu zwei Mauern UND eine Farbe auf 132 Feldern —
+   * die 60 Sekunden liefen mitten im Abwaegen ab, und dann zog der Bot.
+   * Fuer das ganze Spiel und nicht nur fuer Extreme, weil die Zugzeit in
+   * der Meta steht und nicht im Regelsatz.
+   */
+  zugzeitMs: 90_000,
 };
 
 export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerRegeln> = {
@@ -199,6 +207,8 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
       mauernDiesenZug: alt.mauernDiesenZug ?? (altesJaNein ? 1 : 0),
       // Bis Fassung 5 gab es nur eine Mauer je Zug und damit nie eine Pause.
       mauerPause: alt.mauerPause ?? [],
+      // Aufgeben gibt es seit dem 06.11.2026; vorher hat niemand aufgegeben.
+      aufgegeben: alt.aufgegeben ?? null,
       // Fassung 4 kannte keine Sterne; keine dieser Partien hatte welche.
       sterne: alt.sterne ?? [],
       barrieren: alt.barrieren ?? [],

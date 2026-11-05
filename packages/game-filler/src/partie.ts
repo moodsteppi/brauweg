@@ -134,9 +134,16 @@ export const LEERZUEGE_MAX = 6;
  */
 export const MAUERFREIE_ZUEGE = 3;
 
-/** Wie viele Zuege noch mauerfrei sind. 0, sobald gebaut werden darf. */
+/**
+ * Wie viele Zuege noch mauerfrei sind. 0, sobald gebaut werden darf.
+ *
+ * Die Zahl kommt aus dem Regelsatz des TISCHES (`mauerfreieZuege`, in
+ * Extreme seit dem 06.11.2026 sechs), sonst MAUERFREIE_ZUEGE. Nicht aus der
+ * Vorgabe: Ein Tisch, der mit drei angefangen hat, behaelt drei.
+ */
 export function mauerSperre(partie: FillerPartie): number {
-  return Math.max(0, MAUERFREIE_ZUEGE - partie.zug);
+  const frei = partie.regeln.mauerfreieZuege ?? MAUERFREIE_ZUEGE;
+  return Math.max(0, frei - partie.zug);
 }
 
 /**
@@ -242,6 +249,16 @@ export interface FillerPartie {
    * sieht das an seinem Gebiet — und die Punkte dafuer sind laengst verbucht.
    */
   readonly sterne: readonly number[];
+  /**
+   * Der Sitz, der aufgegeben hat — oder null.
+   *
+   * Steht im Zustand und wird nicht aus den Punkten erschlossen, weil die
+   * Aufgabe die Rangfolge UMDREHT: Wer aufgibt, verliert, auch wenn er
+   * vorne lag. `platzierungen` und `sieger` lesen deshalb dieses Feld
+   * zuerst. Fehlt es in einem aelteren Snapshot, hat niemand aufgegeben
+   * (adapter.ts).
+   */
+  readonly aufgegeben: number | null;
 }
 
 export type FillerAktion =
@@ -253,7 +270,19 @@ export type FillerAktion =
    * in dieser Runde nicht und verschenkt die Felder, die er haette holen
    * koennen. Waere die Wand gratis, setzte man alle fuenf sofort.
    */
-  | { readonly typ: 'barriere'; readonly von: number; readonly nach: number };
+  | { readonly typ: 'barriere'; readonly von: number; readonly nach: number }
+  /**
+   * Aufgeben (seit dem 06.11.2026, wie bei BroChess). Jederzeit durch den
+   * Sitz selbst, auch wenn der Gegner am Zug ist — wer aussteigen will, soll
+   * nicht erst auf seinen Zug warten muessen. Die Partie ist danach zu Ende,
+   * der Gegner hat gewonnen, unabhaengig vom Punktestand.
+   *
+   * Steht bewusst NICHT in `erlaubteZuege`: Daraus waehlt der Bot, und der
+   * gibt nie auf. Der Bildschirm bietet die Aktion von sich aus an — eine
+   * Regel bildet er damit nicht nach, erlaubt ist sie immer, solange die
+   * Partie laeuft.
+   */
+  | { readonly typ: 'aufgeben' };
 
 // ---------------------------------------------------------------------------
 // Brett
@@ -457,6 +486,7 @@ export function erstellePartie(
     mauernDiesenZug: 0,
     mauerPause: [],
     sterne,
+    aufgegeben: null,
   };
 }
 
@@ -783,6 +813,15 @@ export function fuehreAus(
   aktion: FillerAktion,
 ): FillerPartie {
   if (partie.fertig) throw new Error('Partie ist zu Ende');
+  /*
+   * Aufgeben VOR der Zugpruefung: Es geht auch, wenn der Gegner dran ist.
+   * Der Server prueft `currentActor` beim Handeln nicht (CLAUDE.md, Eiland),
+   * die Aktion kommt also an — hier entscheidet nur, ob der Sitz mitspielt.
+   */
+  if (aktion.typ === 'aufgeben') {
+    if (!(sitz in partie.punkte)) throw new Error('Sitz spielt nicht mit');
+    return { ...partie, fertig: true, aufgegeben: sitz, mauernDiesenZug: 0 };
+  }
   if (partie.dran !== sitz) throw new Error('Nicht am Zug');
 
   const sitze = sitzeVon(partie);
@@ -900,14 +939,24 @@ export function platzierungen(
       points: partie.punkte[seat] ?? 0,
       left: partie.leftSeats.includes(seat),
     }))
-    .sort((a, b) => b.points - a.points);
+    /*
+     * Wer aufgegeben hat, steht hinten — vor den Punkten sortiert, nicht
+     * danach: Die Aufgabe entscheidet die Partie, der Stand zum Zeitpunkt
+     * der Aufgabe nicht. Sonst gewaenne, wer bei Vorsprung aufgibt.
+     */
+    .sort(
+      (a, b) =>
+        Number(a.seat === partie.aufgegeben) - Number(b.seat === partie.aufgegeben) ||
+        b.points - a.points,
+    );
 
   let platz = 0;
-  let letztePunkte: number | null = null;
+  let letzter: { points: number; aufgegeben: boolean } | null = null;
   return reihe.map((eintrag, index) => {
-    if (letztePunkte === null || eintrag.points !== letztePunkte) {
+    const aufgegeben = eintrag.seat === partie.aufgegeben;
+    if (letzter === null || eintrag.points !== letzter.points || aufgegeben !== letzter.aufgegeben) {
       platz = index + 1;
-      letztePunkte = eintrag.points;
+      letzter = { points: eintrag.points, aufgegeben };
     }
     return { ...eintrag, place: platz };
   });
@@ -918,5 +967,6 @@ export function sieger(partie: FillerPartie): number | null {
   if (!partie.fertig) return null;
   const [erster, zweiter] = platzierungen(partie);
   if (!erster || !zweiter) return null;
-  return erster.points === zweiter.points ? null : erster.seat;
+  // Nach dem Platz, nicht nach den Punkten — sonst zaehlte die Aufgabe nicht.
+  return erster.place === zweiter.place ? null : erster.seat;
 }
