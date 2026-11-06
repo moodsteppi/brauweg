@@ -46,6 +46,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../../api';
+import { aktiveSprache, t } from '../../i18n';
+import { tf, tn } from '../../i18n/einsetzen';
 import { Kreuz, Note } from '../../zeichen';
 import { motivBildPfad, motivTonPfad } from './bildpfad';
 import { spieleTonProbe, spieleTonProbeVon } from './klaenge';
@@ -424,7 +426,7 @@ export function Vorschlagskasten({
       setVorschlaege(antwort.vorschlaege);
       setBestand(antwort.freigegeben);
     } catch {
-      setFehler('Die Liste ließ sich nicht laden.');
+      setFehler(t('mememory.kasten.listeFehler'));
     } finally {
       setLaedt(false);
     }
@@ -482,25 +484,23 @@ export function Vorschlagskasten({
     if (eingereicht === 1) {
       teile.push(
         istAufsicht
-          ? 'Aufgenommen. Ab der nächsten Partie kann es auf dem Brett liegen.'
-          : 'Danke! Dein Meme liegt jetzt im Kasten und wartet auf Freigabe.',
+          ? t('mememory.kasten.schluss.aufsichtEins')
+          : t('mememory.kasten.schluss.nutzerEins'),
       );
     } else if (eingereicht > 1) {
       teile.push(
         istAufsicht
-          ? `${eingereicht} Bilder aufgenommen. Ab der nächsten Partie können sie auf dem Brett liegen.`
-          : `Danke! ${eingereicht} Memes liegen jetzt im Kasten und warten auf Freigabe.`,
+          ? tf('mememory.kasten.schluss.aufsichtMehr', { n: eingereicht })
+          : tf('mememory.kasten.schluss.nutzerMehr', { n: eingereicht }),
       );
     }
     if (unlesbar > 0) {
       teile.push(
-        unlesbar === 1
-          ? 'Eine Datei ließ sich nicht öffnen und wurde übergangen.'
-          : `${unlesbar} Dateien ließen sich nicht öffnen und wurden übergangen.`,
+        tn('mememory.kasten.schluss.unlesbar', unlesbar),
       );
     }
     if (uebersprungen > 0) {
-      teile.push(uebersprungen === 1 ? 'Eines hast du übersprungen.' : `${uebersprungen} hast du übersprungen.`);
+      teile.push(tn('mememory.kasten.schluss.uebersprungen', uebersprungen));
     }
     return teile.join(' ');
   }, [istAufsicht]);
@@ -597,7 +597,7 @@ export function Vorschlagskasten({
         setFrei(jetzt.frei);
         platz = jetzt.frei === null ? STAPEL_MAX : Math.min(STAPEL_MAX, jetzt.frei);
       } else {
-        setFehler('Es warten schon fünf Bilder von dir. Warte, bis sie geprüft sind.');
+        setFehler(t('mememory.kasten.grenze'));
         return;
       }
     }
@@ -605,8 +605,8 @@ export function Vorschlagskasten({
     if (genommen.length < gewaehlt.length) {
       setStapelhinweis(
         typeof frei === 'number' && frei <= STAPEL_MAX
-          ? `Von ${gewaehlt.length} Bildern nimmst du ${genommen.length}: mehr Vorschläge darfst du gerade nicht offen haben.`
-          : `Von ${gewaehlt.length} Bildern nimmst du die ersten ${genommen.length}.`,
+          ? tf('mememory.kasten.stapel.begrenzt', { von: gewaehlt.length, n: genommen.length })
+          : tf('mememory.kasten.stapel.erste', { von: gewaehlt.length, n: genommen.length }),
       );
     }
 
@@ -712,7 +712,7 @@ export function Vorschlagskasten({
     try {
       const dataUrl = alsDataUrl(bild, zoom, versatz, grund);
       if (dataUrl.length > MAX_ZEICHEN) {
-        setFehler('Das Bild ist zu groß. Etwas näher heranzoomen hilft.');
+        setFehler(t('mememory.kasten.bildZuGross'));
         return;
       }
       const antwort = await api.mememoryEinreichen(dataUrl, titel.trim() || null, direkt);
@@ -738,16 +738,16 @@ export function Vorschlagskasten({
         setFrei(0);
         setFehler(
           uebrig > 1
-            ? `Es warten schon fünf Bilder von dir. Die restlichen ${uebrig} sind nicht eingereicht - warte, bis die anderen geprüft sind.`
-            : 'Es warten schon fünf Bilder von dir. Warte, bis sie geprüft sind.',
+            ? tf('mememory.kasten.grenzeRest', { n: uebrig })
+            : t('mememory.kasten.grenze'),
         );
         setMeldung(schlussmeldung());
         return;
       }
       setFehler(
         code === 'bildUngueltig' || code === 'bildZuGross'
-          ? 'Dieses Bild hat der Server nicht angenommen.'
-          : 'Das Einreichen ist fehlgeschlagen.',
+          ? t('mememory.kasten.einreichenAbgelehnt')
+          : t('mememory.kasten.einreichenFehler'),
       );
     } finally {
       setBusy(false);
@@ -778,7 +778,7 @@ export function Vorschlagskasten({
       setTitel(eintrag.titel ?? '');
       setTonlage({ art: 'unveraendert', hatTon: eintrag.hatTon });
     } catch {
-      setFehler('Das Bild ließ sich nicht zum Bearbeiten öffnen.');
+      setFehler(t('mememory.kasten.bearbeitenFehler'));
     } finally {
       setBusy(false);
     }
@@ -811,7 +811,7 @@ export function Vorschlagskasten({
         // Kann bei 0,8 s Mono eigentlich nicht passieren; steht hier, damit
         // ein spaeter geaenderter Schnitt nicht am Server scheitert, ohne dass
         // jemand sagt, warum.
-        setFehler('Der Ton ist zu groß geworden.');
+        setFehler(t('mememory.kasten.tonZuGross'));
         return;
       }
       setTonlage({ art: 'neu', daten });
@@ -820,7 +820,7 @@ export function Vorschlagskasten({
       // speichert, und nicht erst mitten in einer Partie.
       await spieleTonProbe(daten);
     } catch {
-      setFehler('Diese Tondatei ließ sich nicht öffnen.');
+      setFehler(t('mememory.kasten.tonOeffnenFehler'));
     } finally {
       setTonLaedt(false);
     }
@@ -829,11 +829,11 @@ export function Vorschlagskasten({
   /** Den Ton anhoeren — den neu gewaehlten oder den, der beim Server liegt. */
   const tonProbe = (): void => {
     if (tonlage.art === 'neu') {
-      void spieleTonProbe(tonlage.daten).catch(() => setFehler('Der Ton ließ sich nicht abspielen.'));
+      void spieleTonProbe(tonlage.daten).catch(() => setFehler(t('mememory.kasten.tonSpielFehler')));
       return;
     }
     const pfad = bearbeitet ? motivTonPfad(bearbeitet.kennung) : null;
-    if (pfad) void spieleTonProbeVon(pfad).catch(() => setFehler('Der Ton ließ sich nicht abspielen.'));
+    if (pfad) void spieleTonProbeVon(pfad).catch(() => setFehler(t('mememory.kasten.tonSpielFehler')));
   };
 
   /** Namen und Zuschnitt eines Motivs ersetzen. Die Kennung bleibt. */
@@ -844,7 +844,7 @@ export function Vorschlagskasten({
     try {
       const dataUrl = alsDataUrl(bild, zoom, versatz, grund);
       if (dataUrl.length > MAX_ZEICHEN) {
-        setFehler('Das Bild ist zu groß. Etwas näher heranzoomen hilft.');
+        setFehler(t('mememory.kasten.bildZuGross'));
         return;
       }
       await api.mememoryAendern(bearbeitet.kennung, {
@@ -867,10 +867,10 @@ export function Vorschlagskasten({
       // Die Kennung bleibt gleich — ohne neue Zahl in der Adresse zeigte die
       // Kachel daneben noch den alten Zuschnitt.
       setStand((z) => z + 1);
-      setMeldung('Geändert. Neue Partien zeigen den neuen Zuschnitt.');
+      setMeldung(t('mememory.kasten.aenderungGut'));
       await listenHolen();
     } catch {
-      setFehler('Das Ändern hat nicht geklappt.');
+      setFehler(t('mememory.kasten.aenderungFehler'));
     } finally {
       setBusy(false);
     }
@@ -884,7 +884,7 @@ export function Vorschlagskasten({
       else await api.mememoryLoeschen(kennung);
       await listenHolen();
     } catch {
-      setFehler('Das hat nicht geklappt.');
+      setFehler(t('mememory.kasten.allgemeinFehler'));
     } finally {
       setBusy(false);
     }
@@ -893,21 +893,21 @@ export function Vorschlagskasten({
   // --- Anzeige -------------------------------------------------------------
 
   const blaetter: { id: Blatt; text: string }[] = [
-    { id: 'einreichen', text: istAufsicht ? 'Hochladen' : 'Meme vorschlagen' },
+    { id: 'einreichen', text: istAufsicht ? t('mememory.kasten.reiter.hochladen') : t('mememory.kasten.reiter.vorschlagen') },
     ...(istAufsicht
       ? ([
-          { id: 'kasten' as Blatt, text: `Kasten${vorschlaege.length ? ` (${vorschlaege.length})` : ''}` },
-          { id: 'bestand' as Blatt, text: 'Bestand' },
+          { id: 'kasten' as Blatt, text: `${t('mememory.kasten.reiter.kasten')}${vorschlaege.length ? ` (${vorschlaege.length})` : ''}` },
+          { id: 'bestand' as Blatt, text: t('mememory.kasten.reiter.bestand') },
         ] satisfies { id: Blatt; text: string }[])
       : []),
   ];
 
   return (
-    <div className="mm-kasten-schicht" role="dialog" aria-modal="true" aria-label="Vorschlagskasten">
+    <div className="mm-kasten-schicht" role="dialog" aria-modal="true" aria-label={t('mememory.kasten.titel')}>
       <div className="mm-kasten-blatt">
         <div className="mm-kasten-kopf">
-          <h2>Vorschlagskasten</h2>
-          <button type="button" className="mm-kasten-zu" onClick={onFertig} aria-label="Schließen">
+          <h2>{t('mememory.kasten.titel')}</h2>
+          <button type="button" className="mm-kasten-zu" onClick={onFertig} aria-label={t('mememory.kasten.schliessen')}>
             <Kreuz />
           </button>
         </div>
@@ -941,7 +941,7 @@ export function Vorschlagskasten({
                 {gesamt > 1 && (
                   <div className="mm-kasten-fortschritt" role="status">
                     <strong>
-                      Bild {gesamt - schlange.length} von {gesamt}
+                      {tf('mememory.kasten.fortschritt', { i: gesamt - schlange.length, n: gesamt })}
                     </strong>
                     <span className="mm-kasten-perlen" aria-hidden="true">
                       {Array.from({ length: gesamt }, (_, i) => (
@@ -952,8 +952,8 @@ export function Vorschlagskasten({
                 )}
                 <p className="mm-kasten-hinweis">
                   {bearbeitet
-                    ? 'Neuer Ausschnitt, neuer Name - die Kennung bleibt, laufende Tische behalten das Motiv.'
-                    : 'Schieben zum Verrücken, zwei Finger oder der Regler zum Zoomen. Was im Rahmen steht, kommt auf die Karte.'}
+                    ? t('mememory.kasten.hinweisBearbeiten')
+                    : t('mememory.kasten.hinweisZuschnitt')}
                 </p>
                 {stapelhinweis && <p className="mm-kasten-hinweis">{stapelhinweis}</p>}
                 <canvas
@@ -999,17 +999,17 @@ export function Vorschlagskasten({
                   <div className="mm-tonzeile">
                     <span className="mm-tonzeile-kopf">
                       <Note />
-                      <b>Ton</b>
+                      <b>{t('mememory.kasten.ton')}</b>
                       <em>
                         {tonLaedt
-                          ? 'wird geschnitten…'
+                          ? t('mememory.kasten.ton.schneidet')
                           : tonlage.art === 'neu'
-                            ? 'neu gewählt'
+                            ? t('mememory.kasten.ton.neu')
                             : tonlage.art === 'weg'
-                              ? 'wird entfernt'
+                              ? t('mememory.kasten.ton.weg')
                               : tonlage.hatTon
-                                ? 'vorhanden'
-                                : 'keiner'}
+                                ? t('mememory.kasten.ton.da')
+                                : t('mememory.kasten.ton.keiner')}
                       </em>
                     </span>
                     <div className="mm-tonzeile-knoepfe">
@@ -1020,11 +1020,11 @@ export function Vorschlagskasten({
                       {(tonlage.art === 'neu' ||
                         (tonlage.art === 'unveraendert' && tonlage.hatTon)) && (
                         <button type="button" onClick={tonProbe} disabled={busy}>
-                          Anhören
+                          {t('mememory.kasten.anhoeren')}
                         </button>
                       )}
                       <label className="mm-tonzeile-waehlen">
-                        <span>{tonlage.art === 'neu' ? 'Andere Datei' : 'Datei wählen'}</span>
+                        <span>{tonlage.art === 'neu' ? t('mememory.kasten.dateiAndere') : t('mememory.kasten.dateiWaehlen')}</span>
                         <input
                           type="file"
                           accept="audio/*"
@@ -1045,13 +1045,12 @@ export function Vorschlagskasten({
                           onClick={() => setTonlage({ art: 'weg' })}
                           disabled={busy}
                         >
-                          Entfernen
+                          {t('mememory.kasten.entfernen')}
                         </button>
                       )}
                     </div>
                     <p className="mm-tonzeile-satz">
-                      Höchstens {String(TON_SEKUNDEN).replace('.', ',')} Sekunden - was länger ist,
-                      wird abgeschnitten. Er spielt, sobald jemand dieses Meme über den Tisch wirft.
+                      {tf('mememory.kasten.tonGrenze', { s: TON_SEKUNDEN.toLocaleString(aktiveSprache()) })}
                     </p>
                   </div>
                 )}
@@ -1066,7 +1065,7 @@ export function Vorschlagskasten({
                     onClick={bearbeitet ? bearbeitenWeg : ueberspringen}
                     disabled={busy}
                   >
-                    {bearbeitet ? 'Abbrechen' : schlange.length > 0 ? 'Überspringen' : 'Verwerfen'}
+                    {bearbeitet ? t('mememory.abbrechen') : schlange.length > 0 ? t('mememory.kasten.ueberspringen') : t('mememory.kasten.verwerfen')}
                   </button>
                   <button
                     type="button"
@@ -1074,7 +1073,7 @@ export function Vorschlagskasten({
                     onClick={() => void (bearbeitet ? speichern() : einreichen(istAufsicht))}
                     disabled={busy}
                   >
-                    {bearbeitet ? 'Speichern' : istAufsicht ? 'Aufnehmen' : 'Einreichen'}
+                    {bearbeitet ? t('mememory.kasten.speichern') : istAufsicht ? t('mememory.kasten.aufnehmen') : t('mememory.kasten.einreichen')}
                   </button>
                 </div>
                 {!bearbeitet && schlange.length > 0 && (
@@ -1084,7 +1083,7 @@ export function Vorschlagskasten({
                     onClick={stapelWeg}
                     disabled={busy}
                   >
-                    Dieses und die {schlange.length} übrigen verwerfen
+                    {tf('mememory.kasten.stapelWeg', { n: schlange.length })}
                   </button>
                 )}
               </>
@@ -1092,7 +1091,7 @@ export function Vorschlagskasten({
               /* Zwischen zwei Bildern. Die Flaeche behaelt die Groesse des
                  Rahmens, damit der Kasten nicht bei jedem Bild springt. */
               <div className="mm-kasten-warten" role="status">
-                Nächstes Bild wird geöffnet…
+                {t('mememory.kasten.naechstes')}
               </div>
             )}
             {meldung && <p className="mm-kasten-gut">{meldung}</p>}
@@ -1104,18 +1103,18 @@ export function Vorschlagskasten({
               <>
                 <p className="mm-kasten-hinweis">
                   {istAufsicht
-                    ? 'Bilder aussuchen - auch mehrere auf einmal. Du schneidest sie nacheinander zu, jedes ist sofort im Spiel.'
-                    : 'Such dir Memes aus deiner Galerie aus, gern mehrere auf einmal. Du schneidest sie nacheinander selbst zurecht - was auf dem Brett landet, entscheidet die Aufsicht.'}
+                    ? t('mememory.kasten.hinweisHochladen')
+                    : t('mememory.kasten.hinweisVorschlagen')}
                 </p>
                 {typeof frei === 'number' && (
                   <p className="mm-kasten-hinweis">
                     {frei > 0
-                      ? `Du kannst gerade noch ${frei === 1 ? 'ein Bild' : `${frei} Bilder`} einreichen.`
-                      : 'Es warten schon fünf Bilder von dir. Sobald eines geprüft ist, geht wieder etwas.'}
+                      ? tn('mememory.kasten.frei', frei)
+                      : t('mememory.kasten.grenzeWarten')}
                   </p>
                 )}
                 <label className="mm-kasten-waehlen">
-                  <span>{istAufsicht ? 'Bilder auswählen' : 'Memes auswählen'}</span>
+                  <span>{istAufsicht ? t('mememory.kasten.auswaehlenBilder') : t('mememory.kasten.auswaehlenMemes')}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -1136,13 +1135,13 @@ export function Vorschlagskasten({
 
         {blatt === 'kasten' && (
           <div className="mm-kasten-inhalt">
-            {laedt && <p className="mm-kasten-hinweis">Wird geladen…</p>}
+            {laedt && <p className="mm-kasten-hinweis">{t('mememory.kasten.laedt')}</p>}
             {!laedt && vorschlaege.length === 0 && (
-              <p className="mm-kasten-hinweis">Der Kasten ist leer.</p>
+              <p className="mm-kasten-hinweis">{t('mememory.kasten.leer')}</p>
             )}
             {vorschlaege.map((eintrag) => (
               <div className="mm-kasten-zeile" key={eintrag.kennung}>
-                <img src={eintrag.bild} alt={eintrag.titel ?? 'Vorschlag'} />
+                <img src={eintrag.bild} alt={eintrag.titel ?? t('mememory.kasten.vorschlag')} />
                 <div className="mm-kasten-zeile-text">
                   <strong>{eintrag.titel ?? 'ohne Namen'}</strong>
                   <span>{eintrag.einreicher ?? 'unbekannt'}</span>
@@ -1153,7 +1152,7 @@ export function Vorschlagskasten({
                     className="mm-kasten-ja"
                     onClick={() => void entscheiden(eintrag.kennung, true)}
                     disabled={busy}
-                    aria-label="Freigeben"
+                    aria-label={t('mememory.kasten.freigeben')}
                   >
                     ✓
                   </button>
@@ -1162,7 +1161,7 @@ export function Vorschlagskasten({
                     className="mm-kasten-nein"
                     onClick={() => void entscheiden(eintrag.kennung, false)}
                     disabled={busy}
-                    aria-label="Ablehnen"
+                    aria-label={t('mememory.kasten.ablehnen')}
                   >
                     <Kreuz />
                   </button>
@@ -1186,19 +1185,17 @@ export function Vorschlagskasten({
         {blatt === 'bestand' && (
           <div className="mm-kasten-inhalt">
             <p className="mm-kasten-hinweis">
-              Alles, was zusätzlich zu den 88 Grundmotiven im Spiel ist. ✎ ändert Name,
-              Zuschnitt und Ton, ✕ nimmt heraus - beides wirkt sofort für neue Partien. Der
-              Name steht im Spiel groß über dem Brett, sobald jemand das Paar findet.
+              {t('mememory.kasten.bestandHinweis')}
             </p>
             {!laedt && bestand.length === 0 && (
-              <p className="mm-kasten-hinweis">Noch nichts hochgeladen.</p>
+              <p className="mm-kasten-hinweis">{t('mememory.kasten.bestandLeer')}</p>
             )}
             {bestand.length > 0 && (
               <section className="mm-gruppe">
                 <h3>
-                  Im Spiel
+                  {t('mememory.kasten.imSpiel')}
                   <em>
-                    {bestand.filter((eintrag) => eintrag.hatTon).length}/{bestand.length} mit Ton
+                    {tf('mememory.kasten.mitTon', { n: bestand.filter((eintrag) => eintrag.hatTon).length, von: bestand.length })}
                   </em>
                 </h3>
                 <div className="mm-sammelgitter">
@@ -1217,7 +1214,7 @@ export function Vorschlagskasten({
                         className="mm-bestand-knopf mm-bestand-stift"
                         onClick={() => void bearbeiten(eintrag)}
                         disabled={busy}
-                        aria-label={`${eintrag.titel ?? 'Motiv'} bearbeiten`}
+                        aria-label={tf('mememory.kasten.bearbeiten', { name: eintrag.titel ?? t('mememory.kasten.motiv') })}
                       >
                         ✎
                       </button>
@@ -1236,7 +1233,7 @@ export function Vorschlagskasten({
                             const pfad = motivTonPfad(eintrag.kennung);
                             if (pfad) void spieleTonProbeVon(pfad).catch(() => undefined);
                           }}
-                          aria-label={`Ton von ${eintrag.titel ?? 'Motiv'} anhören`}
+                          aria-label={tf('mememory.kasten.tonAnhoeren', { name: eintrag.titel ?? t('mememory.kasten.motiv') })}
                         >
                           <Note />
                         </button>
@@ -1246,7 +1243,7 @@ export function Vorschlagskasten({
                         className="mm-bestand-knopf mm-bestand-raus"
                         onClick={() => void entscheiden(eintrag.kennung, false)}
                         disabled={busy}
-                        aria-label={`${eintrag.titel ?? 'Motiv'} herausnehmen`}
+                        aria-label={tf('mememory.kasten.herausnehmen', { name: eintrag.titel ?? t('mememory.kasten.motiv') })}
                       >
                         <Kreuz />
                       </button>

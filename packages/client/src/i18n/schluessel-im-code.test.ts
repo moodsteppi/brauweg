@@ -78,18 +78,17 @@ const FERTIGE_BEREICHE = [
   'mememory',
   'mememory-kasten',
   'regeln-mememory',
-  'golf',
-  'golf-tisch',
-  'regeln-golf',
   'eiland',
   'regeln-eiland',
   'feldherr',
   'regeln-feldherr',
-  'brochess',
-  'regeln-brochess',
 ] as const;
 
-const FERTIGE_PRAEFIXE = ['mememory.', 'golf.', 'eiland.', 'feldherr.', 'brochess.'] as const;
+/**
+ * Golf und BroChess haben eigene Karten (Umfang dieser Aufgabe verkleinert):
+ * Ihre Bereiche und Schlüssel-Präfixe trägt deren Zweig hier nach.
+ */
+const FERTIGE_PRAEFIXE = ['mememory.', 'eiland.', 'feldherr.'] as const;
 
 describe('Schlüssel im Code', () => {
   afterEach(() => setzeSprachwahl('de'));
