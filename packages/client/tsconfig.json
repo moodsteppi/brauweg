@@ -39,6 +39,8 @@
      * rechnet sie zur Laufzeit mit (sonst stuende jede Regel ein zweites Mal
      * hier). Deshalb steht sie zusaetzlich als `resolve.alias` in
      * `vite.config.ts` — aus demselben Reihenfolge-Grund wie oben.
+     * Dasselbe gilt fuer `@brauweg/flyingbro-kern` (Level und Sternregel von
+     * Flying Bro), seit dem 06.11.2026.
      */
     "baseUrl": ".",
     "paths": {
@@ -57,7 +59,8 @@
       "@brauweg/game-skat": ["../game-skat/src/index.ts"],
       "@brauweg/game-tafelrunde": ["../game-tafelrunde/src/index.ts"],
       "@brauweg/game-wizard": ["../game-wizard/src/index.ts"],
-      "@brauweg/manufaktur-kern": ["../manufaktur-kern/src/index.ts"]
+      "@brauweg/manufaktur-kern": ["../manufaktur-kern/src/index.ts"],
+      "@brauweg/flyingbro-kern": ["../flyingbro-kern/src/index.ts"]
     }
   },
   /*

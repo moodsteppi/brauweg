@@ -51,6 +51,7 @@ export default {
   'spielwahl.weitere': 'Weitere',
   'spielwahl.allein': 'Allein',
   'spielwahl.prosubway.unter': 'Münzen fürs Hub · bis 40 am Tag',
+  'spielwahl.flyingbro.unter': 'Bros schleudern, Giraffen umwerfen · Münzen fürs Hub',
   'spielwahl.los': 'Los',
   'spielwahl.manufaktur.marke': 'Deine eigene Kartenwerkstatt',
   'spielwahl.manufaktur.text': 'Drucke Karten, baue deine Werkstatt aus und stelle fleißige Meister ein.',

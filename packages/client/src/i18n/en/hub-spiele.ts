@@ -45,6 +45,7 @@ export default {
   'spielwahl.weitere': 'More',
   'spielwahl.allein': 'Solo',
   'spielwahl.prosubway.unter': 'Coins for the hub · up to 40 a day',
+  'spielwahl.flyingbro.unter': 'Fling bros, topple giraffes · coins for the hub',
   'spielwahl.los': 'Go',
   'spielwahl.manufaktur.marke': 'Your very own card workshop',
   'spielwahl.manufaktur.text': 'Print cards, expand your workshop and hire hard-working masters.',

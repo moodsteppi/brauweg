@@ -94,6 +94,8 @@ const Clanwort = lazy(() => import('../browort/Clanwort').then((m) => ({ default
 const Kartenmanufaktur = lazy(() =>
   import('../manufaktur/Kartenmanufaktur').then((m) => ({ default: m.Kartenmanufaktur })),
 );
+/** Flying Bro: eigenes Bündel, rapier (WebAssembly) lädt erst darin nach. */
+const FlyingBro = lazy(() => import('../flyingbro/FlyingBro').then((m) => ({ default: m.FlyingBro })));
 const MeisterFeier = lazy(() => import('../lernen/Feier').then((m) => ({ default: m.MeisterFeier })));
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
@@ -217,8 +219,11 @@ export function GameSelect({
   const oeffneClanwort = imUmfang('clanwort') ? () => setClanwortOffen(true) : undefined;
   /** Kartenmanufaktur: das Idle-Spiel als Vollbild. */
   const [manufakturOffen, setManufakturOffen] = useState(false);
+  /** Flying Bro: Schleuderspiel als Vollbild, quer. */
+  const [flyingbroOffen, setFlyingbroOffen] = useState(false);
   const soloStarten = (modusId: string): void => {
     if (modusId === 'kartenmanufaktur') setManufakturOffen(true);
+    else if (modusId === 'flyingbro') setFlyingbroOffen(true);
     else if (modusId === 'browort') setBrowortOffen(true);
     else onSolo(modusId);
   };
@@ -440,6 +445,11 @@ export function GameSelect({
         {manufakturOffen && (
           <Suspense fallback={<SoloLaedt name="Kartenmanufaktur" onClose={() => setManufakturOffen(false)} />}>
             <Kartenmanufaktur onClose={() => setManufakturOffen(false)} onGeaendert={onAvatarChange} getragen={me.avatar} />
+          </Suspense>
+        )}
+        {flyingbroOffen && (
+          <Suspense fallback={<SoloLaedt name="Flying Bro" onClose={() => setFlyingbroOffen(false)} />}>
+            <FlyingBro onClose={() => setFlyingbroOffen(false)} onGeaendert={onAvatarChange} />
           </Suspense>
         )}
         {zeigeFeier && (

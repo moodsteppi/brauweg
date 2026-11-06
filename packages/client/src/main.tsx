@@ -73,6 +73,10 @@ function isDevFlag(name: string): boolean {
  *   festen Staenden und einem nachgestellten Server aus demselben Kern. Fuer
  *   Bildschirmgroessen und gelieferte Bilder, auch im Browser (das Spiel
  *   selbst gibt es nur in der App).
+ * - /probe/flyingbro?fall=levelwahl|zielen|einsturz|levelende — der echte
+ *   Flying-Bro-Bildschirm mit nachgestelltem Server aus dem Kern; die Fälle
+ *   frieren Zustände ein, die man sonst nur mit dem Finger erreicht. Ohne
+ *   `fall` spielt man normal (so wird die Bildrate gemessen, mit `?bildrate`).
  * - /probe/brochess — das echte Schachbrett mit festen Stellungen (Grund-
  *   stellung, Schach, Umwandlung, Matt, Patt), ohne Server. Bleibt, damit
  *   man das Brett ansehen kann, ohne zwei Konten an einen Tisch zu setzen.
@@ -95,6 +99,7 @@ const probeKampf = istProbe('kampf');
 const probeRuestkammer = istProbe('ruestkammer');
 const probeBroChess = istProbe('brochess');
 const probeManufaktur = istProbe('manufaktur');
+const probeFlyingbro = istProbe('flyingbro');
 
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
@@ -179,6 +184,9 @@ const ProbeHub = lazy(() => import('./proben/hub/ProbeHub').then((m) => ({ defau
 const ProbeManufaktur = lazy(() =>
   import('./proben/manufaktur/ProbeManufaktur').then((m) => ({ default: m.ProbeManufaktur })),
 );
+const ProbeFlyingbro = lazy(() =>
+  import('./proben/flyingbro/ProbeFlyingbro').then((m) => ({ default: m.ProbeFlyingbro })),
+);
 const ProbeBroChess = lazy(() =>
   import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
 );
@@ -197,6 +205,8 @@ const werkzeug = devStart ? (
   <ProbeBroChess />
 ) : probeManufaktur ? (
   <ProbeManufaktur />
+) : probeFlyingbro ? (
+  <ProbeFlyingbro />
 ) : devAvatar ? (
   <AvatarAligner />
 ) : devChest ? (
