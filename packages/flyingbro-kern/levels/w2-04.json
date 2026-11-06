@@ -1,0 +1,135 @@
+{
+  "fassung": 1,
+  "id": "w2-04",
+  "welt": 2,
+  "nr": 4,
+  "titel": "Findlinge",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "tjark",
+    "pelle",
+    "tjark",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    15000,
+    21000
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 12,
+      "y": 0.5,
+      "b": 1,
+      "h": 1
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 12,
+      "y": 1.4,
+      "b": 0.8,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 13.2,
+      "y": 0.5,
+      "b": 1,
+      "h": 1
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 16.8,
+      "y": 1.1,
+      "b": 0.4,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 19.2,
+      "y": 1.1,
+      "b": 0.4,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18,
+      "y": 2.3,
+      "b": 3.2,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18,
+      "y": 2.7,
+      "b": 0.6,
+      "h": 0.6
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 22,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 24,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 23,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 23,
+      "y": 1.95,
+      "b": 0.8,
+      "h": 0.7
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "langhals",
+      "x": 18,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 18.9,
+      "y": 2.4,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 23,
+      "y": 0,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}

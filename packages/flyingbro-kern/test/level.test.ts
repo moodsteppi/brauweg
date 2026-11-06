@@ -10,7 +10,19 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { GIRAFFEN_WERTE, hoechstpunkte, LEVELS, LevelFehler, levelIndex, levelsDerWelt, naechstesLevel, pruefeLevel, SPIELABLAUF } from '../src/index.js';
+import {
+  GIRAFFEN_WERTE,
+  hoechstpunkte,
+  LEVEL_JE_WELT,
+  LEVELS,
+  LevelFehler,
+  levelIndex,
+  levelNach,
+  levelsDerWelt,
+  naechstesLevel,
+  pruefeLevel,
+  SPIELABLAUF,
+} from '../src/index.js';
 
 // dist/test → Paketwurzel: Die JSON-Dateien liegen im Quellbaum, nicht nur in dist.
 const LEVEL_ORDNER = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'levels');
@@ -59,7 +71,7 @@ function fehlerVon(roh: unknown): string[] {
 
 test('alle Dateien unter levels/ sind eingetragen und gültig', () => {
   const dateien = readdirSync(LEVEL_ORDNER).filter((d) => d.endsWith('.json')).sort();
-  assert.equal(dateien.length, 10);
+  assert.equal(dateien.length, 3 * LEVEL_JE_WELT);
   assert.deepEqual(
     dateien.map((d) => d.replace('.json', '')),
     LEVELS.map((l) => l.id),
@@ -68,16 +80,18 @@ test('alle Dateien unter levels/ sind eingetragen und gültig', () => {
   for (const d of dateien) assert.deepEqual(fehlerVon(lade(d)), [], d);
 });
 
-test('Spielreihenfolge: Welt 1, Level 1 bis 10 ohne Lücke', () => {
+test('Spielreihenfolge: drei Welten, je Level 1 bis 15 ohne Lücke', () => {
   assert.deepEqual(
     LEVELS.map((l) => [l.welt, l.nr]),
-    Array.from({ length: 10 }, (_, i) => [1, i + 1]),
+    Array.from({ length: 3 * LEVEL_JE_WELT }, (_, i) => [Math.floor(i / LEVEL_JE_WELT) + 1, (i % LEVEL_JE_WELT) + 1]),
   );
   assert.equal(levelIndex('w1-01'), 0);
   assert.equal(levelIndex('w9-99'), -1);
   assert.equal(naechstesLevel('w1-01')?.id, 'w1-02');
-  assert.equal(naechstesLevel('w1-10'), undefined);
-  assert.equal(levelsDerWelt(1).length, 10);
+  // „Weiter" führt über die Weltgrenze ins erste Level der nächsten Welt.
+  assert.equal(naechstesLevel('w1-15')?.id, 'w2-01');
+  assert.equal(naechstesLevel('w3-15'), undefined);
+  for (const w of [1, 2, 3]) assert.equal(levelsDerWelt(w).length, LEVEL_JE_WELT, `Welt ${w}`);
 });
 
 test('jedes Level: Sternschwellen erreichbar, mindestens drei Bros', () => {
@@ -93,11 +107,29 @@ test('jedes Level: Sternschwellen erreichbar, mindestens drei Bros', () => {
   }
 });
 
-test('Malve erst ab w1-06, Tjark noch gar nicht, Pelle überall', () => {
+test('Malve erst ab w1-06, Tjark erst ab w2-01, Pelle überall', () => {
   for (const l of LEVELS) {
     assert.ok(l.bros.includes('pelle'), l.id);
-    assert.ok(!l.bros.includes('tjark'), `${l.id}: Tjark kommt erst ab w2-01`);
-    if (l.nr < 6) assert.ok(!l.bros.includes('malve'), `${l.id}: Malve kommt erst ab w1-06`);
+    if (l.welt === 1) assert.ok(!l.bros.includes('tjark'), `${l.id}: Tjark kommt erst ab w2-01`);
+    if (l.welt === 1 && l.nr < 6) assert.ok(!l.bros.includes('malve'), `${l.id}: Malve kommt erst ab w1-06`);
+  }
+  // Wer freigeschaltet ist, soll auch kommen — sonst wird die Freischaltung nie sichtbar.
+  assert.ok(levelNach('w1-06')!.bros.includes('malve'), 'Malve kommt in w1-06');
+  assert.ok(levelNach('w2-01')!.bros.includes('tjark'), 'Tjark kommt in w2-01');
+});
+
+test('Schwierigkeit: das letzte Level jeder Welt ist ihr schwerstes, Welt für Welt höher', () => {
+  // Grobes Maß ohne Physik: die Schätzschwelle des dritten Sterns, die mit Giraffen, Teilen und
+  // Bros wächst. Streng steigend ist sie nicht (w1-01 bis w1-10 sind anders geordnet); geprüft
+  // wird, was der Spieler merkt: Der Abschluss einer Welt ist ihr Gipfel, und jeder Gipfel liegt
+  // über dem vorigen.
+  let vorigerGipfel = 0;
+  for (const w of [1, 2, 3]) {
+    const ls = levelsDerWelt(w);
+    const gipfel = ls[ls.length - 1].sterne[2];
+    for (const l of ls) assert.ok(l.sterne[2] <= gipfel, `${l.id} (${l.sterne[2]}) schwerer als das Weltende (${gipfel})`);
+    assert.ok(gipfel > vorigerGipfel, `Welt ${w} endet nicht schwerer als Welt ${w - 1}`);
+    vorigerGipfel = gipfel;
   }
 });
 

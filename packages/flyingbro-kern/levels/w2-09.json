@@ -1,0 +1,203 @@
+{
+  "fassung": 1,
+  "id": "w2-09",
+  "welt": 2,
+  "nr": 9,
+  "titel": "Felsennest",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "tjark",
+    "pelle",
+    "malve",
+    "tjark",
+    "pelle",
+    "tjark"
+  ],
+  "sterne": [
+    0,
+    22000,
+    34000
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 11.5,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 13.5,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 12.5,
+      "y": 0.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 12.5,
+      "y": 1.35,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18,
+      "y": 0.5,
+      "b": 4,
+      "h": 1
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16.8,
+      "y": 1.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19.2,
+      "y": 1.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18,
+      "y": 2.5,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 16.8,
+      "y": 3.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 19.2,
+      "y": 3.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18,
+      "y": 4.1,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 23,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 25,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 24,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 23,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 25,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 24,
+      "y": 2.5,
+      "b": 2.4,
+      "h": 0.2
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "kalb",
+      "x": 12.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 18,
+      "y": 1,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 18,
+      "y": 2.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 18,
+      "y": 4.2,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 24,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 24,
+      "y": 1.6,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}
