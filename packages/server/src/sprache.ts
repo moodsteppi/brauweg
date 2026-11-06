@@ -11,3 +11,24 @@
 export const SPRACHEN = ['de', 'en'] as const;
 
 export type Sprache = (typeof SPRACHEN)[number];
+
+/**
+ * Die Sprache fuer Text, den der SERVER schreibt — Push-Mitteilungen und
+ * Mails. Alles andere uebersetzt der Client selbst.
+ *
+ * Ohne Angabe Deutsch, anders als im Client (dort Englisch, wenn keine
+ * Geraetesprache passt): Am Konto steht NULL fuer „Automatisch", und der
+ * Server kennt das Geraet nicht. Fast alle bisherigen Konten sind deutsch
+ * angelegt; ihnen ploetzlich englische Mails zu schicken, waere die
+ * schlechtere Vermutung.
+ */
+export const SERVER_VORGABE: Sprache = 'de';
+
+export function istSprache(wert: unknown): wert is Sprache {
+  return typeof wert === 'string' && (SPRACHEN as readonly string[]).includes(wert);
+}
+
+/** Gespeicherte Wahl (`account.sprache`) -> Sprache fuer Push und Mail. */
+export function textSprache(gespeichert: string | null | undefined): Sprache {
+  return istSprache(gespeichert) ? gespeichert : SERVER_VORGABE;
+}

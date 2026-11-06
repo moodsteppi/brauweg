@@ -56,6 +56,7 @@ import {
   type StationsArt,
   type Tragbar,
 } from './kueche';
+import { kuerzel } from './text';
 
 /** Luft um die Küche, in Kacheln. Ohne sie klebt die Randwand am Bildrand. */
 export const RAND_KACHELN = 0.4;
@@ -127,27 +128,16 @@ function flimmern(takt: number, nr: number): number {
  * Kürzel der Stationen
  * ----------------------------------------------------------------------- */
 
-/**
- * Was auf einer Station steht.
- *
- * Das sind absichtlich GENAU die Zeichen des Küchengitters (`kuechen.ts`):
- * Wer eine Küche als Text liest und dann auf dem Bildschirm sucht, findet
- * dieselben Buchstaben wieder. Kiste und Ablage bleiben leer — die Kiste
- * zeigt ihre Zutat als Farbfleck, und ein „=" auf jeder zweiten Kachel wäre
- * nur Unruhe.
+/*
+ * Was auf einer Station steht, liefert `kuerzel` (text.ts) aus dem
+ * Wörterbuch. Im Deutschen sind das absichtlich GENAU die Zeichen des
+ * Küchengitters (`kuechen.ts`): Wer eine Küche als Text liest und dann auf
+ * dem Bildschirm sucht, findet dieselben Buchstaben wieder. In anderen
+ * Sprachen gilt das nicht mehr — dort steht der Anfangsbuchstabe des
+ * Stationsnamens, je Küche eindeutig; ein „B" für das Brett sagt einem
+ * englischen Spieler nichts. Gelesen wird bei jedem Bild, damit ein
+ * Sprachwechsel ohne Neuladen greift.
  */
-const KUERZEL: Readonly<Record<StationsArt, string>> = {
-  ablage: '',
-  kiste: '',
-  brett: 'B',
-  topf: 'P',
-  pfanne: 'F',
-  fritteuse: 'G',
-  tellerstapel: 'T',
-  spuele: 'S',
-  durchreiche: 'D',
-  tonne: 'X',
-};
 
 /**
  * Wie lange die laufende Arbeit an dieser Station dauert — 0 heißt: keine.
@@ -273,13 +263,13 @@ function zeichneStationen(
     ctx.lineWidth = Math.max(1, m * 0.03);
     ctx.strokeRect(px + 0.5, py + 0.5, m - 1, m - 1);
 
-    const kuerzel = KUERZEL[s.art];
-    if (kuerzel !== '') {
+    const zeichen = kuerzel(s.art);
+    if (zeichen !== '') {
       // Das Kürzel steht unten in der Kachel: Die obersten Viertel gehören
       // dem Fortschrittsbalken und der Flamme (docs/ASSETS-BROCOOKED.md,
       // Freihalte-Zonen) — sonst schreibt die Flamme über den Buchstaben.
       ctx.fillStyle = p.schrift;
-      ctx.fillText(kuerzel, px + m / 2, py + m * 0.74);
+      ctx.fillText(zeichen, px + m / 2, py + m * 0.74);
     }
     if (s.art === 'kiste' && s.zutat !== null) {
       // Die Kiste zeigt, was sie ausgibt — ohne das sind fünf Kisten fünfmal

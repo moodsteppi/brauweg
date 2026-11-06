@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { ApiError, api, type Getragen, type Weg, type WegFund, type WegStufe } from '../api';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { tf } from '../i18n/einsetzen';
 import { holbar, stationenMit } from '../trophaeenweg';
 import { FundBlatt } from './Aufgaben';
@@ -95,8 +95,8 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
       {stufe.truhe && <img className="reise-truhe" src={truhenBild(stufe.truhe.grad)} alt="" />}
       <span className="reise-lohntext"><strong>{lohn}</strong>
         {gegenstand && <small>{gegenstand}</small>}
-        {stufe.truhe && (stufe.muenzen ?? 0) > 0 && <small className="reise-bonus"><img src="/hub/muenze.png" alt="" />{tf('trophaeenweg.extra', { n: stufe.muenzen!.toLocaleString('de-DE') })}</small>}
-        <em>{stufe.geholt ? t('trophaeenweg.erhalten') : bereit ? laeuft === stufe.schwelle ? t('trophaeenweg.wirdGeholt') : t('trophaeenweg.jetztHolen') : tf('trophaeenweg.noch', { n: (stufe.schwelle - stand).toLocaleString('de-DE') })}</em>
+        {stufe.truhe && (stufe.muenzen ?? 0) > 0 && <small className="reise-bonus"><img src="/hub/muenze.png" alt="" />{tf('trophaeenweg.extra', { n: zahl(stufe.muenzen!) })}</small>}
+        <em>{stufe.geholt ? t('trophaeenweg.erhalten') : bereit ? laeuft === stufe.schwelle ? t('trophaeenweg.wirdGeholt') : t('trophaeenweg.jetztHolen') : tf('trophaeenweg.noch', { n: zahl(stufe.schwelle - stand) })}</em>
       </span>
     </>;
     return bereit ? <button type="button" className="reise-lohn ist-bereit" disabled={laeuft !== null} onClick={() => holen(stufe)}
@@ -106,9 +106,9 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
 
   return <div className="hb-voll trophaeenreise" role="dialog" aria-modal="true" aria-label={t('trophaeenweg.titel')}>
     <header className="hb-voll-kopf"><Schliessen onClick={onClose} /><div className="hb-voll-titel"><h1>{t('trophaeenweg.titel')}</h1><span>{t('trophaeenweg.untertitel')}</span></div>
-      <span className="hb-pill is-pk is-gross" aria-label={tf('trophaeenweg.trophaeen', { n: stand })}><img src="/hub/symbol-pokal.webp" alt="" />{stand.toLocaleString('de-DE')}</span>
+      <span className="hb-pill is-pk is-gross" aria-label={tf('trophaeenweg.trophaeen', { n: stand })}><img src="/hub/symbol-pokal.webp" alt="" />{zahl(stand)}</span>
     </header>
-    <div className="reise-ziel"><span>{naechste ? <>{t('trophaeenweg.naechste')} <b>{ziel.toLocaleString('de-DE')} 🏆</b></> : t('trophaeenweg.weiter')}<small>{naechste ? tf('trophaeenweg.noch', { n: (ziel - stand).toLocaleString('de-DE') }) : t('trophaeenweg.entdecke')}</small></span>
+    <div className="reise-ziel"><span>{naechste ? <>{t('trophaeenweg.naechste')} <b>{zahl(ziel)} 🏆</b></> : t('trophaeenweg.weiter')}<small>{naechste ? tf('trophaeenweg.noch', { n: zahl(ziel - stand) }) : t('trophaeenweg.entdecke')}</small></span>
       <div className="reise-fortschritt" role="progressbar" aria-label={t('trophaeenweg.fortschritt')} aria-valuenow={stand} aria-valuemin={vorher} aria-valuemax={ziel || 1}><i style={{ width: `${fortschritt}%` }} /></div>
     </div>
     {fehler && <div className="reise-fehler" role="alert">{fehler}<button onClick={laden}>{t('trophaeenweg.erneut')}</button></div>}
@@ -118,7 +118,7 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
         {stationen.map((s, i) => <section key={s.name} className={`reise-land${stand < s.ab ? ' ist-voraus' : ''}`} style={{ top: hoehe - LAND_HOEHE * (i + 1), height: LAND_HOEHE }}>
           <img className="reise-landschaft" src={`/hub/${s.biom}.webp`} alt="" loading="lazy" draggable={false} />
           <div className="reise-landschaft-schatten" />
-          <div className="reise-ortschild"><small>{tf('trophaeenweg.region', { nr: String(i + 1).padStart(2, '0') })}</small><h2>{s.name}</h2><span>{tf('trophaeenweg.trophaeen', { n: s.ab.toLocaleString('de-DE') })}</span></div>
+          <div className="reise-ortschild"><small>{tf('trophaeenweg.region', { nr: String(i + 1).padStart(2, '0') })}</small><h2>{s.name}</h2><span>{tf('trophaeenweg.trophaeen', { n: zahl(s.ab) })}</span></div>
         </section>)}
         {zusatz > 0 && <div className="reise-sterne" style={{ height: zusatz }} aria-hidden="true" />}
         <svg className="reise-linie" viewBox={`0 0 400 ${hoehe}`} preserveAspectRatio="none" aria-hidden="true">
@@ -132,17 +132,17 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
         </div>)}
         {weg?.stufen.filter(s => s.art === 'checkpoint').map(s => {
           const y = punktY(s.schwelle);
-          const text = <><img src="/hub/muenze.png" alt="" /><span><strong>{s.geholt ? '✓ ' : '+'}{tf('trophaeenweg.checkpoint.muenzen', { n: (s.geholt ? (s.coins ?? s.muenzen) : s.muenzen) ?? '' })}</strong><small>{tf(holbar(s) ? 'trophaeenweg.checkpoint.holen' : 'trophaeenweg.trophaeen', { n: s.schwelle.toLocaleString('de-DE') })}</small></span></>;
+          const text = <><img src="/hub/muenze.png" alt="" /><span><strong>{s.geholt ? '✓ ' : '+'}{tf('trophaeenweg.checkpoint.muenzen', { n: (s.geholt ? (s.coins ?? s.muenzen) : s.muenzen) ?? '' })}</strong><small>{tf(holbar(s) ? 'trophaeenweg.checkpoint.holen' : 'trophaeenweg.trophaeen', { n: zahl(s.schwelle) })}</small></span></>;
           return <div className="reise-checkpunkt" key={s.schwelle} style={{ top: y, left: `${punktX(y) / 4}%` }}>{holbar(s)
             ? <button className="ist-bereit" disabled={laeuft !== null} onClick={() => holen(s)} aria-label={tf('trophaeenweg.checkpoint.aria', { schwelle: s.schwelle, n: s.muenzen ?? 0 })}>{text}</button>
             : <span className={s.geholt ? 'ist-geholt' : ''}>{text}</span>}</div>;
         })}
-        {weiter.map(s => <div className="reise-station" key={s.schwelle} style={{ top: punktY(s.schwelle), left: `${punktX(punktY(s.schwelle)) / 4}%` }}><span className="reise-marke">{s.schwelle.toLocaleString('de-DE')}</span>{belohnung(s, tf('trophaeenweg.belohnungBei', { n: s.schwelle }))}</div>)}
-        <div className="reise-ich" style={{ top: ichY, left: `${punktX(ichY) / 4}%` }} aria-label={tf('trophaeenweg.ich.aria', { n: stand })}><Pinguin getragen={getragen} groesse={5} titel={t('trophaeenweg.ich.pinguin')} /><span>{t('trophaeenweg.ich')}<small>{stand.toLocaleString('de-DE')} 🏆</small></span></div>
+        {weiter.map(s => <div className="reise-station" key={s.schwelle} style={{ top: punktY(s.schwelle), left: `${punktX(punktY(s.schwelle)) / 4}%` }}><span className="reise-marke">{zahl(s.schwelle)}</span>{belohnung(s, tf('trophaeenweg.belohnungBei', { n: s.schwelle }))}</div>)}
+        <div className="reise-ich" style={{ top: ichY, left: `${punktX(ichY) / 4}%` }} aria-label={tf('trophaeenweg.ich.aria', { n: stand })}><Pinguin getragen={getragen} groesse={5} titel={t('trophaeenweg.ich.pinguin')} /><span>{t('trophaeenweg.ich')}<small>{zahl(stand)} 🏆</small></span></div>
         <div className="reise-anfang">{t('trophaeenweg.motto')}</div>
       </div>
     </div>
-    <div className="reise-navigation"><span>{t('trophaeenweg.scrollen')}<small>{tf('trophaeenweg.sicher', { n: sicherAb(stand).toLocaleString('de-DE') })}</small></span><button onClick={() => zuMir()}>{t('trophaeenweg.zuMir')}</button></div>
+    <div className="reise-navigation"><span>{t('trophaeenweg.scrollen')}<small>{tf('trophaeenweg.sicher', { n: zahl(sicherAb(stand)) })}</small></span><button onClick={() => zuMir()}>{t('trophaeenweg.zuMir')}</button></div>
     {fund?.grad && <FundBlatt fund={{ grad: fund.grad, coins: fund.coins }} onClose={() => setFund(null)} />}
   </div>;
 }

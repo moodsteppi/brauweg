@@ -16,6 +16,7 @@ import {
   ansageFuer,
   liesRegelsatz,
   type PartyAktion,
+  type PartyLetzterWurf,
   type PartyMinispiel,
   type PartyRegelsatz,
   type PartykisteSicht,
@@ -515,19 +516,7 @@ export function Partykiste({
 
   if (sicht.fertig) {
     return (
-      <main className="pk-seite pk-tisch">
-        <header className="pk-kopf">
-          <span className="pk-rundenzahl">Turnier vorbei</span>
-        </header>
-        <LetzterSchicht wurf={angesagt} sitze={sitze} ich={sicht.sitz} trinkmodus={sicht.trinkmodus} onZu={schliessen} />
-        <h2 className="pk-endtitel">Endstand</h2>
-        <Tabelle sicht={sicht} sitze={sitze} />
-        <div className="pk-wahl">
-          <button className="pk-knopf is-haupt" type="button" onClick={verlasseUndZurueck}>
-            Fertig
-          </button>
-        </div>
-      </main>
+      <Endstand sicht={sicht} sitze={sitze} wurf={angesagt} onZu={schliessen} onFertig={verlasseUndZurueck} />
     );
   }
 
@@ -540,23 +529,7 @@ export function Partykiste({
     <main className="pk-seite pk-tisch" data-szene={sicht.art}>
       {/* Kulisse je Minispiel (Szene.tsx) — hinter allem, nimmt keine Tipps an. */}
       <Szene art={sicht.art} />
-      <header className="pk-kopf">
-        <button className="pk-zurueck is-klein" type="button" onClick={verlasseUndZurueck} aria-label="Verlassen">
-          ←
-        </button>
-        <span className="pk-rundenzahl">
-          Runde {sicht.rundeNr + 1}/{sicht.runden}
-        </span>
-        <strong className="pk-spielname">{MINISPIEL_NAME[sicht.art]}</strong>
-        <button
-          className="pk-tafelknopf"
-          type="button"
-          aria-pressed={tafel}
-          onClick={() => setTafel((an) => !an)}
-        >
-          {tafel ? 'Zurück' : 'Stand'}
-        </button>
-      </header>
+      <TischKopf sicht={sicht} tafel={tafel} onTafel={() => setTafel((an) => !an)} onVerlassen={verlasseUndZurueck} />
       <LetzterSchicht wurf={angesagt} sitze={sitze} ich={sicht.sitz} trinkmodus={sicht.trinkmodus} onZu={schliessen} />
       {/* Die Sicht traegt den Regelsatz selbst — sie passt auf PartyRegelsatz. */}
       <Regelzeile regeln={sicht} />
@@ -596,10 +569,79 @@ export function Partykiste({
 }
 
 /* --------------------------------------------------------------------------
- * Lobby
+ * Kopf am Tisch und Endstand
+ *
+ * Eigene Bausteine statt Zeilen im Bildschirm, damit der Schaukasten
+ * (proben/partykiste/Schaukasten.tsx) genau das zeichnet, was am Tisch steht,
+ * statt einer Abschrift: Eine Abschrift bliebe beim Uebersetzen deutsch, und
+ * das Vorher-Nachher-Bild zeigte den Fehler nicht.
  * ----------------------------------------------------------------------- */
 
-function Lobby({
+export function TischKopf({
+  sicht,
+  tafel,
+  onTafel,
+  onVerlassen,
+}: {
+  sicht: PartykisteSicht;
+  tafel: boolean;
+  onTafel: () => void;
+  onVerlassen: () => void;
+}): React.JSX.Element {
+  return (
+    <header className="pk-kopf">
+      <button className="pk-zurueck is-klein" type="button" onClick={onVerlassen} aria-label="Verlassen">
+        ←
+      </button>
+      <span className="pk-rundenzahl">
+        Runde {sicht.rundeNr + 1}/{sicht.runden}
+      </span>
+      <strong className="pk-spielname">{MINISPIEL_NAME[sicht.art]}</strong>
+      <button className="pk-tafelknopf" type="button" aria-pressed={tafel} onClick={onTafel}>
+        {tafel ? 'Zurück' : 'Stand'}
+      </button>
+    </header>
+  );
+}
+
+export function Endstand({
+  sicht,
+  sitze,
+  wurf,
+  onZu,
+  onFertig,
+}: {
+  sicht: PartykisteSicht;
+  sitze: SeatInfo[];
+  wurf: PartyLetzterWurf | null;
+  onZu: () => void;
+  onFertig: () => void;
+}): React.JSX.Element {
+  return (
+    <main className="pk-seite pk-tisch">
+      <header className="pk-kopf">
+        <span className="pk-rundenzahl">Turnier vorbei</span>
+      </header>
+      <LetzterSchicht wurf={wurf} sitze={sitze} ich={sicht.sitz} trinkmodus={sicht.trinkmodus} onZu={onZu} />
+      <h2 className="pk-endtitel">Endstand</h2>
+      <Tabelle sicht={sicht} sitze={sitze} />
+      <div className="pk-wahl">
+        <button className="pk-knopf is-haupt" type="button" onClick={onFertig}>
+          Fertig
+        </button>
+      </div>
+    </main>
+  );
+}
+
+/* --------------------------------------------------------------------------
+ * Lobby
+ *
+ * Exportiert fuer den Schaukasten: Der Wartesaal braucht sonst einen
+ * echten Tisch mit Leitung.
+ * ----------------------------------------------------------------------- */
+
+export function Lobby({
   sitze,
   meineKennung,
   verbunden,

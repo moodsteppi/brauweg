@@ -262,6 +262,51 @@ test('der Reset bestaetigt die Adresse gleich mit', async (t) => {
   assert.equal(login.statusCode, 200, 'kein "Bestaetige zuerst" nach dem Reset');
 });
 
+test('Mails in der Sprache des Kontos: ohne Wahl Deutsch, mit Wahl Englisch', async (t) => {
+  const a = await aufbauen(t);
+  const { accountId } = await createVerifiedAccount(a.ctx, 'Anna');
+  const anfordern = () =>
+    a.app.inject({ method: 'POST', url: '/api/auth/reset-request', payload: { email: 'anna@example.org' } });
+
+  // Ohne Wahl am Konto (NULL = automatisch): Deutsch, wortgleich mit vorher.
+  await anfordern();
+  const deutsch = a.ctx.mailer.sent.at(-1)!;
+  assert.equal(deutsch.subject, 'Brauweg: Passwort zuruecksetzen');
+  assert.match(deutsch.text, /^Neues Passwort setzen: https:/);
+  assert.match(deutsch.html ?? '', /<html lang="de">/);
+  assert.match(deutsch.html ?? '', /Falls der Knopf nicht geht:/);
+
+  // Sperrfrist umgehen, dann auf Englisch stellen.
+  await a.ctx.db.delete(s.authToken).where(eq(s.authToken.accountId, accountId));
+  await a.ctx.db.update(s.account).set({ sprache: 'en' }).where(eq(s.account.id, accountId));
+  await anfordern();
+  const englisch = a.ctx.mailer.sent.at(-1)!;
+  assert.equal(englisch.subject, 'Brauweg: Reset your password');
+  assert.match(englisch.text, /^Set a new password: https:\/\/www\.brauweg-spielen\.de\/reset\?token=/);
+  assert.match(englisch.html ?? '', /<html lang="en">/);
+  assert.match(englisch.html ?? '', /Change password/);
+  assert.doesNotMatch(englisch.html ?? '', /Passwort|Knopf|Regeln/, 'kein deutsches Wort in der englischen Mail');
+  // Der Link funktioniert in jeder Sprache gleich.
+  const token = a.ctx.mailer.tokenFrom('anna@example.org');
+  const neu = await a.app.inject({ method: 'POST', url: '/api/auth/reset', payload: { token, password: 'ganz-neues-passwort-7' } });
+  assert.equal(neu.statusCode, 200);
+});
+
+test('Bestaetigungsmail erneut: folgt der inzwischen gewaehlten Sprache', async (t) => {
+  const a = await aufbauen(t);
+  await registrieren(a.app);
+  assert.equal(a.ctx.mailer.sent.at(-1)!.subject, 'Brauweg: E-Mail bestaetigen', 'bei der Registrierung noch ohne Wahl');
+  await a.ctx.db.update(s.account).set({ sprache: 'en' }).where(eq(s.account.email, 'anna@example.org'));
+  await a.ctx.db
+    .update(s.authToken)
+    .set({ createdAt: new Date(Date.now() - 5 * 60_000) })
+    .where(eq(s.authToken.purpose, 'email_verify'));
+  await a.app.inject({ method: 'POST', url: '/api/auth/verification/resend', payload: { email: 'anna@example.org' } });
+  const mail = a.ctx.mailer.sent.at(-1)!;
+  assert.equal(mail.subject, 'Brauweg: Confirm your email');
+  assert.match(mail.text, /The link is valid for \d+ hours\./);
+});
+
 test('eine unbekannte Adresse bekommt dieselbe Antwort und keine Mail', async (t) => {
   const a = await aufbauen(t);
   await createVerifiedAccount(a.ctx, 'Anna');

@@ -58,6 +58,7 @@ import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.j
 import { partykisteRouten } from './partykiste-routen.js';
 import { lernpfadRouten } from './lernpfad-routen.js';
 import { browortRouten } from './browort-routen.js';
+import { flyingbroRouten } from './flyingbro-routen.js';
 import { manufakturRouten } from './manufaktur-routen.js';
 import { browortKurz, browortProfil } from '../browort/dienst.js';
 import { herkunftRouten } from './herkunft-routen.js';
@@ -291,6 +292,7 @@ export const FUNKTION_ZU_ROUTE: readonly (readonly [Funktion, RegExp, string?])[
   ['clanwort', /^\/api\/clanwort(\/|$)/],
   ['lernpfad', /^\/api\/lernpfad(\/|$)/],
   ['prosubway', /^\/api\/runner(\/|$)/],
+  ['flyingbro', /^\/api\/flyingbro(\/|$)/],
   ['clankrieg', /^\/api\/clubs\/:clubId\/war(\/|$)/],
   ['clanchat', /^\/api\/clubs\/:clubId\/messages(\/|$)/],
   ['shop', /^\/api\/shop\/(pakete|truhen)(\/|$)/],
@@ -1018,6 +1020,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // Kartenmanufaktur: das Idle-Spiel — siehe dort.
   manufakturRouten(app, {
+    db: deps.db,
+    requireAccount,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
+  // Flying Bro: das Schleuderspiel allein — siehe dort.
+  flyingbroRouten(app, {
     db: deps.db,
     requireAccount,
     limitSchreiben: LIMIT_SCHREIBEN,

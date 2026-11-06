@@ -4,13 +4,14 @@ import { api, type Suchstand } from '../api';
 import { AuswahlRaster } from '../hub';
 import { t } from '../i18n';
 import { FARBEN, GRAUTOENE, farbeVon, farbzahlAus } from '../minispiele/filler/farben';
-import type { FillerSicht, Variante } from '../minispiele/filler/sicht';
+import type { FillerAufgabe, FillerSicht, Variante } from '../minispiele/filler/sicht';
 import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { serverAdresse } from '../laufzeit';
 import { HelleKopfzeile } from '../kopfzeile';
+import { TurnClock } from '../tisch';
 import { GastHinweis } from '../tisch/GastHinweis';
-import { HbBlatt } from './HbBlatt';
+import { HbBlatt, useRueckfrage } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen } from './SpielEinstieg';
 import './spiel-einstieg-mini.css';
 
@@ -730,6 +731,11 @@ export function Filler({
       onWaehle={waehle}
       onBarriere={setzeBarriere}
       onZurueck={verlasseUndZurueck}
+      // Die Frist kommt vom Server (Zugzeit des Moduls, `meta.zugzeitMs`);
+      // gezeigt wird sie nur am eigenen Zug — die des Gegners ist keine
+      // Auskunft, nach der jemand handeln koennte.
+      frist={binDran ? (tisch.view?.turnDeadline ?? null) : null}
+      onAufgeben={() => tisch.send({ typ: 'aufgeben' } satisfies FillerAufgabe)}
     />
   );
 }
@@ -755,6 +761,8 @@ function Brett({
   onWaehle,
   onBarriere,
   onZurueck,
+  frist,
+  onAufgeben,
 }: {
   sicht: FillerSicht;
   eigenerSitz: number;
@@ -766,7 +774,28 @@ function Brett({
   onWaehle: (farbe: number) => void;
   onBarriere: (von: number, nach: number) => void;
   onZurueck: () => void;
+  /** Frist des eigenen Zugs, sonst null — dann steht keine Restzeit da. */
+  frist: number | null;
+  onAufgeben: () => void;
 }): React.JSX.Element {
+  const [frage, rueckfrage] = useRueckfrage();
+  /*
+   * Aufgeben fragt nach, wie bei BroChess: Der Knopf liegt am Brettkopf, und
+   * ein verirrter Daumen soll keine Partie beenden. Kein Zuschauer und keine
+   * fertige Partie — dort gibt es nichts aufzugeben, und der Server wiese es
+   * ohnehin ab.
+   */
+  const kannAufgeben = !sicht.fertig && eigenerSitz >= 0 && !sicht.zuschauer;
+  const aufgeben = (): void =>
+    frage(
+      {
+        titel: 'Aufgeben?',
+        text: 'Die Partie ist dann verloren.',
+        ja: 'Aufgeben',
+        gefahr: true,
+      },
+      onAufgeben,
+    );
   /**
    * Der Bau-Knopf ist gedrueckt: Die Setzflaechen liegen ueber dem Brett.
    *
@@ -983,6 +1012,17 @@ function Brett({
         <span className="fl-art" data-klar={sicht.variante === 'klar' ? '' : undefined}>
           {VARIANTE_NAME[sicht.variante] ?? VARIANTE_NAME.nebel}
         </span>
+        {/*
+          * Aufgeben oben am Kopf und nicht im Fuss: Dort liegen Farbwahl und
+          * Bau-Knopf, und ein leiser Knopf daneben waere genau der, den man
+          * beim schnellen Tippen erwischt. Rechts auf der Hoehe der Spielart,
+          * wo sonst nichts steht. Jederzeit, auch am Zug des Gegners.
+          */}
+        {kannAufgeben && (
+          <button className="fl-aufgeben" type="button" onClick={aufgeben}>
+            Aufgeben
+          </button>
+        )}
       </div>
 
       <div className="fl-brett-huelle" data-gross={grossesBrett ? '' : undefined}>
@@ -1169,6 +1209,18 @@ function Brett({
                   : bautGerade
                     ? 'Kante antippen'
                     : 'Farbe wählen'}
+              {/*
+                * Die Restzeit hinter dem Hinweis, also dort, wohin man am Zug
+                * ohnehin schaut. Dieselbe Anzeige wie an den Kartentischen;
+                * in den letzten 15 Sekunden wird sie rot (styles.css), damit
+                * niemand vom Bot-Zug ueberrascht wird.
+                */}
+              {frist !== null && (
+                <>
+                  {' · '}
+                  <TurnClock deadline={frist} knappAb={15} />
+                </>
+              )}
             </p>
           </>
         ) : (
@@ -1179,6 +1231,15 @@ function Brett({
           />
         )}
       </div>
+      {/*
+        * Wurzel fuer die Rueckfrage. Das Blatt haengt sich an `.spe` bzw.
+        * `.hb` (ImHub in HbBlatt.tsx), und nur darunter greifen seine Stile —
+        * der Filler-Tisch ist aber keines von beiden. Ohne diese Wurzel stand
+        * das Blatt ungestylt mitten im Fuss. Leer ist sie unsichtbar
+        * (styles.css, `.fl-frage:empty`), sonst laege eine Flaeche ueber dem
+        * Brett, die jeden Tipp schluckt.
+        */}
+      <div className="spe fl-frage">{rueckfrage}</div>
     </main>
   );
 }
@@ -1371,6 +1432,9 @@ function Abschluss({
     <div className="fl-abschluss">
       <h2 data-sieg={sicht.sieger === eigenerSitz ? '' : undefined}>{wort}</h2>
       <p>
+        {/* `?? null`: Ein Server von vor dem 06.11.2026 kennt das Feld nicht. */}
+        {(sicht.aufgegeben ?? null) !== null &&
+          (sicht.aufgegeben === eigenerSitz ? 'Aufgegeben · ' : 'Gegner hat aufgegeben · ')}
         {meine} zu {seine} {sicht.variante === 'extreme' ? 'Punkten' : 'Feldern'}
       </p>
       <button className="fl-suchen" type="button" onClick={onZurueck}>

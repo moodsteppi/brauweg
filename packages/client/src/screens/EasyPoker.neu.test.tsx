@@ -38,6 +38,7 @@ vi.mock('../useTable', () => ({
   useTable: () => tischStand,
 }));
 
+import { setzeSprachwahl } from '../i18n';
 import { EasyPoker } from './EasyPoker';
 
 function stand(sitze: unknown[] | null): unknown {
@@ -153,5 +154,24 @@ describe('Poker im neuen Hub', () => {
     expect(auffuellen).toHaveClass('is-gold');
     fireEvent.click(auffuellen);
     expect(addBot.mock.calls.map((c) => c[0])).toEqual([1, 2]);
+  });
+  it('auf Englisch: Vorgabe über den übersetzten Namen wählbar, Einsatz bleibt derselbe', async () => {
+    // Die Vorgaben wurden früher über ihren deutschen Namen gewählt. Jetzt
+    // trägt jede eine feste Kennung — auf Englisch muss „Evening" denselben
+    // Regelsatz liefern wie „Abend".
+    setzeSprachwahl('en');
+    try {
+      render(<EasyPoker onBack={() => {}} />);
+      await durchatmen();
+      fireEvent.click(screen.getByRole('button', { name: /^Evening/ }));
+      expect(screen.getByText('You against the computer')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /^Play now/ }));
+      await durchatmen();
+      expect(createTable).toHaveBeenCalledWith(
+        expect.objectContaining({ config: { startJetons: 500, kleinerBlind: 5, grosserBlind: 10 } }),
+      );
+    } finally {
+      setzeSprachwahl('auto');
+    }
   });
 });

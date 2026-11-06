@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
 
 import { api } from '../api';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { tf } from '../i18n/einsetzen';
 import { Schliessen } from './HbBlatt';
 
@@ -161,7 +161,7 @@ export function Stufenleiter({
           <Schliessen onClick={onClose} />
           <div className="hb-voll-titel">
             <h1>{t('stufen.titel')}</h1>
-            <span>{daten ? tf('stufen.stand', { stufe: daten.stufe, xp: daten.xp.toLocaleString('de-DE') }) : t('stufen.laden')}</span>
+            <span>{daten ? tf('stufen.stand', { stufe: daten.stufe, xp: zahl(daten.xp) }) : t('stufen.laden')}</span>
           </div>
         </header>
         <div className="hb-voll-rolle" ref={rolle}>
@@ -180,7 +180,7 @@ export function Stufenleiter({
                     <span className="hb-mg-name">
                       <strong>{tf('stufen.stufe', { stufe: s.stufe })}</strong>
                       <small className="is-leise">
-                        {tf('stufen.zeile', { ab: s.ab.toLocaleString('de-DE'), kosten: s.kosten.toLocaleString('de-DE') })}
+                        {tf('stufen.zeile', { ab: zahl(s.ab), kosten: zahl(s.kosten) })}
                       </small>
                     </span>
                     {s.aktuell && <span className="hb-stufe-hier">{t('stufen.hier')}</span>}

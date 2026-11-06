@@ -24,6 +24,7 @@
  */
 
 import { MINISPIEL_NAME, type PartyMinispiel } from './sicht';
+import { tz } from './text';
 
 // ---------------------------------------------------------------------------
 // Anzeigenamen
@@ -91,12 +92,24 @@ export function minispielName(id: string): string {
  * da, und zwei Regler mit demselben Namen — einer fuer Glaeser, einer fuer
  * Texte — stellt niemand richtig ein (regeln.ts, Entscheidung vom 22.09.2026).
  */
-export const INHALT_TITEL = 'Inhalte';
-export const INHALT_STUFEN = [
-  { stufe: 1, titel: 'harmlos', text: 'Geht an jedem Tisch.' },
-  { stufe: 2, titel: 'pikant', text: 'Kneipenniveau, mal anzüglich.' },
-  { stufe: 3, titel: 'derb', text: 'Richtig derb, ab 18.' },
-] as const;
+export function inhaltTitel(): string {
+  return tz('inhalt.titel');
+}
+
+/*
+ * Titel und Text als Getter: Die Liste steht auf Modulebene, ihre Woerter
+ * werden aber erst beim Zeichnen nachgeschlagen — sonst bliebe die Kachel
+ * nach dem Sprachwechsel bis zum Neuladen in der alten Sprache.
+ */
+export const INHALT_STUFEN = ([1, 2, 3] as const).map((stufe) => ({
+  stufe,
+  get titel(): string {
+    return tz(`inhalt.stufe.${stufe}`);
+  },
+  get text(): string {
+    return tz(`inhalt.text.${stufe}`);
+  },
+}));
 
 /**
  * Die vierte Kachel (seit dem 27.09.2026, Robin: „oder man macht gemischt
@@ -106,12 +119,10 @@ export const INHALT_STUFEN = [
  * `inhaltsMischung: 'gemischt'` — die Kennung der Kachel ist keine Stufe.
  */
 export const INHALT_GEMISCHT = 'gemischt';
-export const INHALT_GEMISCHT_KACHEL = { titel: 'gemischt', text: 'Zufall aus allen Stufen.' } as const;
-/** Fuer einen Gast heisst „alle Stufen": ohne derb. So steht es auch auf der Kachel. */
-export const INHALT_GEMISCHT_GAST = 'Zufall aus harmlos und pikant.';
-
-/** Warum „derb“ fuer einen Gast gesperrt ist — steht als Grund in der Kachel. */
-export const DERB_GRUND_GAST = 'nur mit Konto';
+/* Die Woerter der Kachel „gemischt" stehen unter `partykiste.ui.inhalt.gemischt*`;
+   fuer einen Gast heisst „alle Stufen": ohne derb. So steht es auch auf der Kachel.
+   Warum „derb" fuer einen Gast gesperrt ist, steht als Grund in der Kachel
+   (`partykiste.ui.inhalt.derbGrundGast`). */
 
 /**
  * Die Kacheln unter „Inhalte", fuer beide Hubs gleich: harmlos · pikant ·
@@ -126,7 +137,7 @@ export function inhaltsKacheln(
     kennung: String(s.stufe),
     titel: s.titel,
     untertitel: s.text,
-    ...(gast && s.stufe === 3 ? { deaktiviert: DERB_GRUND_GAST } : {}),
+    ...(gast && s.stufe === 3 ? { deaktiviert: tz('inhalt.derbGrundGast') } : {}),
   }));
   /* Solange die Vorgabe laedt, schon da — sonst springt das Raster, wenn sie kommt. */
   if (vorgabe !== null && !mischungBekannt(vorgabe)) return stufen;
@@ -134,8 +145,8 @@ export function inhaltsKacheln(
     ...stufen,
     {
       kennung: INHALT_GEMISCHT,
-      titel: INHALT_GEMISCHT_KACHEL.titel,
-      untertitel: gast ? INHALT_GEMISCHT_GAST : INHALT_GEMISCHT_KACHEL.text,
+      titel: tz('inhalt.gemischt'),
+      untertitel: gast ? tz('inhalt.gemischtGast') : tz('inhalt.gemischtText'),
     },
   ];
 }
@@ -144,13 +155,13 @@ export function inhaltsKacheln(
  * Die Themenpakete — Spiegelbild von `PAKETE` (inhalte/typen.ts). Die
  * Reihenfolge ist die des Moduls, die Kennungen aendern sich dort nie.
  */
-export const PAKET_NAME: Record<string, string> = {
-  'wg-abend': 'WG-Abend',
-  jga: 'JGA',
-  weihnachten: 'Weihnachten',
-  studenten: 'Studenten',
-  arbeit: 'Arbeit',
-};
+export const PAKET_NAME: Record<string, string> = {};
+/* Getter statt Woertern: Die Schluessel sind die Liste der Pakete (`in`,
+   `Object.keys`), die Namen werden erst beim Lesen in der aktiven Sprache
+   nachgeschlagen. */
+for (const kennung of ['wg-abend', 'jga', 'weihnachten', 'studenten', 'arbeit']) {
+  Object.defineProperty(PAKET_NAME, kennung, { enumerable: true, get: () => tz(`paket.${kennung}`) });
+}
 
 /** Die Kachel fuer `paket: null`. Keine Paketkennung — `PAKETE` kennt sie nicht. */
 export const PAKET_ALLES = 'alles';
@@ -161,12 +172,16 @@ export const PAKET_ALLES = 'alles';
  * Menue (`modusBekannt`). Der Vertrag (vertrag/partykiste-auswahl.test.ts)
  * haelt diese Liste gegen `SPIELMODI` und `validateConfig`.
  */
-export const MODI = [
-  { kennung: 'turnier', titel: 'Turnier', text: 'Jeder für sich, die Tabelle entscheidet.' },
-  { kennung: 'eskalation', titel: 'Eskalation', text: 'Wird von Drittel zu Drittel schärfer.' },
-  { kennung: 'themenabend', titel: 'Themenabend', text: 'Ein Themenpaket bestimmt den Abend.' },
-  { kennung: 'team', titel: 'Team', text: 'Zwei Lager, gezählt wird fürs Lager.' },
-] as const;
+export const MODI = (['turnier', 'eskalation', 'themenabend', 'team'] as const).map((kennung) => ({
+  kennung,
+  /* Getter wie bei INHALT_STUFEN: nachgeschlagen beim Zeichnen, nicht beim Laden. */
+  get titel(): string {
+    return tz(`modus.${kennung}.titel`);
+  },
+  get text(): string {
+    return tz(`modus.${kennung}.text`);
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Gemerkt im Browser

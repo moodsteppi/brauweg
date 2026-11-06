@@ -10,8 +10,8 @@ import { BrowortFlamme, schnittText } from './Spielfeld';
  * Ohne `stand` (ein Server, der das Feld noch nicht kennt) steht die Karte
  * trotzdem da — als Einladung.
  *
- * `schnittText` gehoert zum Spiel selbst (Spielfeld) und bleibt bis zur
- * Uebersetzung der Spiele deutsch; die Karte setzt ihn nur ein.
+ * `schnittText` gehoert zum Spiel selbst (Spielfeld, Bereich „browort");
+ * die Karte setzt ihn nur ein.
  */
 export function BrowortKarte({ stand, onOeffnen }: { stand: BrowortKurz | undefined; onOeffnen: () => void }): React.JSX.Element {
   const serie = stand?.serie ?? 0;

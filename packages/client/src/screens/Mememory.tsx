@@ -1,6 +1,8 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { api, type Suchstand } from '../api';
+import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { motivBildPfad } from '../minispiele/mememory/bildpfad';
 import { Ecken } from '../minispiele/mememory/Ecken';
 import { eckeVon, farbeVon, sitzeAus, type Ecke } from '../minispiele/mememory/eckenplan';
@@ -12,10 +14,10 @@ import { MehrSeite } from '../minispiele/mememory/MehrSeite';
 import type { MememorySicht } from '../minispiele/mememory/sicht';
 import { SammlungSeite } from '../minispiele/mememory/SammlungSeite';
 import {
-  STUFEN,
   Stufenregler,
   botLevelAus,
   stufenName,
+  stufenSatz,
   type Stufe,
 } from '../minispiele/mememory/Stufenregler';
 import { Vorschlagskasten } from '../minispiele/mememory/Vorschlagskasten';
@@ -719,7 +721,7 @@ export function Mememory({
       if (stand.tischId) setTischId(stand.tischId);
       else setSuchstand(stand);
     } catch {
-      setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+      setFehler(t('mememory.fehler.suche'));
     } finally {
       setSucht(false);
     }
@@ -753,7 +755,7 @@ export function Mememory({
             // Die Schlange kennt uns nicht mehr — etwa nach einem Neustart des
             // Servers. Lieber ehrlich melden als stumm weiterdrehen.
             setSuchstand(null);
-            setFehler('Die Suche wurde beendet. Noch einmal versuchen?');
+            setFehler(t('mememory.fehler.sucheBeendet'));
             return;
           }
           setSuchstand(stand);
@@ -827,7 +829,7 @@ export function Mememory({
       setKiOffen(false);
       setTischId(id);
     } catch {
-      setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
+      setFehler(t('mememory.fehler.tisch'));
     } finally {
       setSucht(false);
     }
@@ -1202,8 +1204,8 @@ export function Mememory({
       className="hb-rund mm-zahnrad-neu"
       type="button"
       onClick={() => setEinstellungenOffen(true)}
-      aria-label="Einstellungen öffnen"
-      title="Einstellungen"
+      aria-label={t('mememory.einstellungen.oeffnen')}
+      title={t('mememory.einstellungen.titel')}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
         {/*
@@ -1255,7 +1257,7 @@ export function Mememory({
   }
 
   /** Unter dem Knopf im Fuss: wie viele gerade in Mememory sind. */
-  const spielerZeile = <p className="hb-klein">{aktiv ?? '…'} Spieler gerade in Mememory</p>;
+  const spielerZeile = <p className="hb-klein">{aktiv === null ? t('mememory.spielerUnbekannt') : tn('mememory.spielerGerade', aktiv)}</p>;
 
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
@@ -1263,15 +1265,15 @@ export function Mememory({
     return (
       <SpielRahmen
         gameId="mememory"
-        titel="Mitspieler suchen"
-        unter="Mememory · Online Match"
+        titel={t('mememory.suche.titel')}
+        unter={t('mememory.suche.unter')}
         akzent={AKZENT}
         onBack={brichSucheAb}
-        zurueckText="Suche abbrechen"
+        zurueckText={t('mememory.suche.abbrechen')}
         fuss={
           <>
             <button type="button" className="hb-kn is-blau is-breit" onClick={brichSucheAb}>
-              Abbrechen
+              {t('mememory.abbrechen')}
             </button>
             {spielerZeile}
           </>
@@ -1283,8 +1285,8 @@ export function Mememory({
           </p>
           <p className="spe-text">
             {gefunden === 1
-              ? 'Noch niemand sonst - bleibt es dabei, wird mit Bots aufgefüllt.'
-              : `${gefunden} Spieler gefunden`}
+              ? t('mememory.suche.allein')
+              : tn('mememory.suche.gefunden', gefunden)}
           </p>
           <div className="spe-lauf" aria-hidden="true">
             <span />
@@ -1329,10 +1331,10 @@ export function Mememory({
               <SpielRahmen
                 gameId="mememory"
                 titel="Mememory"
-                unter="Zwei Bilder, ein Paar, zwei bis vier Spieler."
+                unter={t('mememory.menue.unter')}
                 akzent={AKZENT}
                 onBack={onBack}
-                zurueckText="Zurück zur Spielseite"
+                zurueckText={t('mememory.menue.zurueck')}
                 rechts={einstellungsKnopf}
                 fuss={
                   <>
@@ -1342,7 +1344,7 @@ export function Mememory({
                       onClick={() => void starteSuche()}
                       disabled={sucht}
                     >
-                      <span>Online Match suchen…</span>
+                      <span>{t('mememory.menue.online')}</span>
                       {/* Die Zahl steht in Klammern daneben und nicht im Satz:
                           Sie aendert sich alle fuenf Sekunden, und ein
                           springendes Wort mitten im Text liest sich wie ein
@@ -1354,8 +1356,8 @@ export function Mememory({
                 }
               >
                 {fehler && <p className="hb-fehler">{fehler}</p>}
-                <SpielAbschnitt titel="Gegen die KI">
-                  <p className="hb-klein">Bis zu drei Gegner, jeder mit eigener Spielstärke.</p>
+                <SpielAbschnitt titel={t('mememory.menue.ki')}>
+                  <p className="hb-klein">{t('mememory.menue.kiText')}</p>
                   <button
                     type="button"
                     className="hb-kn is-blau is-breit"
@@ -1365,16 +1367,16 @@ export function Mememory({
                     }}
                     disabled={sucht}
                   >
-                    Gegen die KI spielen
+                    {t('mememory.menue.kiKnopf')}
                   </button>
                 </SpielAbschnitt>
                 {/* Dieselben Seiten wie ueber die Leiste unten, nur mit Namen. */}
-                <SpielAbschnitt titel="Mehr von Mememory">
+                <SpielAbschnitt titel={t('mememory.menue.mehrVon')}>
                   <div className="hb-liste">
                     <button type="button" className="spe-zeile" onClick={() => geheZu('sammlung')}>
                       <span>
-                        <strong>Sammlung</strong>
-                        <small>Deine Memes und der Gurt</small>
+                        <strong>{t('mememory.sammlung')}</strong>
+                        <small>{t('mememory.menue.sammlungText')}</small>
                       </span>
                       <span className="hb-pf" aria-hidden="true">
                         ›
@@ -1382,8 +1384,8 @@ export function Mememory({
                     </button>
                     <button type="button" className="spe-zeile" onClick={() => geheZu('mehr')}>
                       <span>
-                        <strong>Mehr</strong>
-                        <small>Vorschlagskasten und Freunde</small>
+                        <strong>{t('mememory.mehr')}</strong>
+                        <small>{t('mememory.menue.mehrText')}</small>
                       </span>
                       <span className="hb-pf" aria-hidden="true">
                         ›
@@ -1431,22 +1433,22 @@ export function Mememory({
     return (
       <SpielRahmen
         gameId="mememory"
-        titel="Tisch wird aufgebaut"
+        titel={t('mememory.warten.titel')}
         unter="Mememory"
         akzent={AKZENT}
         onBack={brichAb}
-        zurueckText="Abbrechen"
+        zurueckText={t('mememory.abbrechen')}
         fuss={
           <>
             {/* Auffuellen ist hier das, was los geht — deshalb gold. Ohne
                 freie Plaetze bleibt nur das Abbrechen. */}
             {kannFuellen && (
               <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={fuelleAuf}>
-                Mit Bots auffüllen ({freiePlaetze.length})
+                {tn('mememory.warten.auffuellen', freiePlaetze.length)}
               </button>
             )}
             <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
-              Abbrechen
+              {t('mememory.abbrechen')}
             </button>
             {spielerZeile}
           </>
@@ -1455,8 +1457,8 @@ export function Mememory({
         <div className="spe-warten">
           <p className="spe-text">
             {tisch.status === 'open'
-              ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
-              : 'Verbindung wird aufgebaut…'}
+              ? tf('mememory.warten.besetzt', { besetzt, plaetze: tisch.table?.seats.length ?? 2 })
+              : t('mememory.warten.verbindung')}
           </p>
           <div className="spe-lauf" aria-hidden="true">
             <span />
@@ -1466,7 +1468,7 @@ export function Mememory({
           <GastHinweis sitze={tisch.table?.seats ?? []} className="spe-text" />
         </div>
         {kannFuellen && (
-          <SpielAbschnitt titel="Spielstärke der Bots">
+          <SpielAbschnitt titel={t('mememory.warten.botStaerke')}>
             <div className="mm-gegner">
               <Stufenregler
                 wert={fuellStufe}
@@ -1474,9 +1476,9 @@ export function Mememory({
                   setFuellStufe(stufe);
                   tisch.setBotLevel(botLevelAus(stufe));
                 }}
-                beschriftung="Spielstärke der Bots"
+                beschriftung={t('mememory.warten.botStaerke')}
               />
-              <p className="mm-stufensatz">{STUFEN.find((eintrag) => eintrag.stufe === fuellStufe)?.satz}</p>
+              <p className="mm-stufensatz">{stufenSatz(fuellStufe)}</p>
             </div>
           </SpielAbschnitt>
         )}
@@ -1541,18 +1543,18 @@ export function Mememory({
     sitze.filter((sitz) => (sicht.punkte[sitz] ?? 0) > (sicht.punkte[eigenerSitz] ?? 0)).length + 1;
   const abschlussTitel =
     eigenerSitz < 0
-      ? 'Partie zu Ende'
+      ? t('mememory.ende.zuEnde')
       : sitze.length <= 2
         ? sicht.sieger === null
-          ? 'Unentschieden'
+          ? t('mememory.ende.unentschieden')
           : sicht.sieger === eigenerSitz
-            ? 'Gewonnen!'
-            : 'Verloren'
+            ? t('mememory.ende.gewonnen')
+            : t('mememory.ende.verloren')
         : sicht.sieger === eigenerSitz
-          ? 'Gewonnen!'
+          ? t('mememory.ende.gewonnen')
           : eigenerPlatz === 1
-            ? 'Geteilter Sieg'
-            : `${eigenerPlatz}. Platz`;
+            ? t('mememory.ende.geteilt')
+            : tf('mememory.ende.platz', { platz: eigenerPlatz });
 
   /**
    * Ein gewaehltes Motiv ueber den Tisch schicken.
@@ -1615,8 +1617,8 @@ export function Mememory({
     if (platz?.displayName) return platz.displayName;
     // Ein Bot hat keinen Anzeigenamen. "Sitz 2" waere richtig und nichtssagend
     // — an der Ecke soll stehen, gegen WEN man spielt.
-    if (platz?.isBot) return 'KI';
-    return sitz === eigenerSitz ? 'Du' : `Sitz ${sitz + 1}`;
+    if (platz?.isBot) return t('mememory.tisch.ki');
+    return sitz === eigenerSitz ? t('mememory.tisch.du') : tf('mememory.tisch.sitz', { n: sitz + 1 });
   };
 
   return (
@@ -1639,7 +1641,7 @@ export function Mememory({
         className="mm-raus"
         type="button"
         onClick={verlasseUndZurueck}
-        aria-label="Spiel verlassen"
+        aria-label={t('mememory.tisch.verlassen')}
       >
         <PfeilLinks />
       </button>
@@ -1681,7 +1683,7 @@ export function Mememory({
             <i />
           </span>
           <em>{sicht.vorrat}</em>
-          <span className="mm-verborgen">Karten warten auf dem Stapel</span>
+          <span className="mm-verborgen">{t('mememory.tisch.stapel')}</span>
         </div>
       )}
 
@@ -1722,7 +1724,11 @@ export function Mememory({
                  */
                 aria-disabled={!meinZug || gewuenscht || undefined}
                 onClick={() => tippe(platz)}
-                aria-label={gewuenscht ? `Karte ${platz + 1}, aufgedeckt` : `Karte ${platz + 1}`}
+                aria-label={
+                  gewuenscht
+                    ? tf('mememory.tisch.karteOffen', { n: platz + 1 })
+                    : tf('mememory.tisch.karte', { n: platz + 1 })
+                }
               >
                 <span className="mm-innen">
                   <span className="mm-rueck" />
@@ -1755,7 +1761,7 @@ export function Mememory({
                 derselben Animation mit — zwei getrennte Einblendungen
                 uebereinander waeren zwei Dinge, die um denselben Blick
                 streiten. */}
-            {namensblitz.neu && <em className="mm-blitz-neu">Gesammelt</em>}
+            {namensblitz.neu && <em className="mm-blitz-neu">{t('mememory.tisch.gesammelt')}</em>}
           </span>
         </div>
       )}
@@ -1783,7 +1789,7 @@ export function Mememory({
               className="mm-reaktion mm-reaktion-motiv"
               type="button"
               onClick={() => wirfMotiv(kennung)}
-              aria-label={`${motivNamen[kennung] ?? 'Meme'} werfen`}
+              aria-label={tf('mememory.tisch.werfen', { name: motivNamen[kennung] ?? t('mememory.tisch.meme') })}
               /*
                * Angezeigt, aber nicht gesperrt: `disabled` naehme dem Knopf
                * den Tastaturfokus mitten im Tippen, und der Browser haette
@@ -1825,7 +1831,7 @@ export function Mememory({
           className="mm-reaktion"
           type="button"
           onClick={reagiere}
-          aria-label={`Reaktion ${REAKTIONEN[angeboten] ?? ''} senden`}
+          aria-label={tf('mememory.tisch.reaktion', { zeichen: REAKTIONEN[angeboten] ?? '' })}
         >
           {/*
            * Das Zeichen sitzt in einem eigenen Kasten, der den Knopf ganz
@@ -1871,7 +1877,7 @@ export function Mememory({
         ))}
       </div>
 
-      {tisch.status !== 'open' && <div className="mm-funk">Verbindung…</div>}
+      {tisch.status !== 'open' && <div className="mm-funk">{t('mememory.tisch.verbindung')}</div>}
 
       {sicht.fertig && (
         <div className="mm-ende">
@@ -1906,10 +1912,10 @@ export function Mememory({
                 setSucht(false);
               }}
             >
-              <span>Noch eine Runde</span>
+              <span>{t('mememory.ende.nochEine')}</span>
             </button>
             <button className="mm-zweitknopf" type="button" onClick={verlasseUndZurueck}>
-              Zurück zur Spielauswahl
+              {t('mememory.ende.zurueck')}
             </button>
           </div>
         </div>

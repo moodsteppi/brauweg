@@ -30,8 +30,8 @@
 import type { Zutat } from './rezepte';
 
 export interface Kuechenplan {
+  /** Auch Schlüssel des Namens: `brocooked.ui.kueche.<id>` (text.ts). */
   readonly id: string;
-  readonly name: string;
   /** Zeilen gleicher Länge. */
   readonly gitter: readonly string[];
   /** Zeichen `1`…`9` → Zutat der Kiste. */
@@ -46,7 +46,6 @@ export interface Kuechenplan {
 export const KUECHEN: readonly Kuechenplan[] = [
   {
     id: 'wiese',
-    name: 'Gartenküche',
     gitter: [
       '###############',
       '#T===B===B===D#',
@@ -64,7 +63,6 @@ export const KUECHEN: readonly Kuechenplan[] = [
   },
   {
     id: 'kantine',
-    name: 'Werkskantine',
     gitter: [
       '#################',
       '#T==B==P==P==B=D#',
@@ -82,7 +80,6 @@ export const KUECHEN: readonly Kuechenplan[] = [
   },
   {
     id: 'insel',
-    name: 'Inselküche',
     gitter: [
       '#################',
       '#T==B==D==B==X=S#',
@@ -100,7 +97,6 @@ export const KUECHEN: readonly Kuechenplan[] = [
   },
   {
     id: 'brandwache',
-    name: 'Brandwache',
     gitter: [
       '#################',
       '#T==G==F==B==B=D#',

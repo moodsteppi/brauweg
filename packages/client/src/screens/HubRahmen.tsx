@@ -2,11 +2,11 @@ import { useCallback, useRef, useState } from 'react';
 import { useHubWischen } from './hub-wischen';
 import type { Me } from '../api';
 import { mitEdelsteinen, serverAdresse } from '../laufzeit';
-import { kompakteZahl, t } from '../i18n';
+import { kompakteZahl, t, zahl } from '../i18n';
 import { tf } from '../i18n/einsetzen';
 
 /** Bis 9.999 ausgeschrieben (wie im Entwurf), darüber kurz („12K“). */
-const zahl = (n: number): string => (n < 10000 ? n.toLocaleString('de-DE') : kompakteZahl(n));
+const kopfZahl = (n: number): string => (n < 10000 ? zahl(n) : kompakteZahl(n));
 import { Pinguin } from '../pinguin';
 import { spiele } from '../klang';
 
@@ -123,7 +123,7 @@ export function NeuerRahmen<T extends Reiter>({
         <div className="hb-geld">
           <span className="hb-pill is-pk" aria-label={tf('rahmen.trophaeen', { n: trophies })}>
             <img src="/hub/symbol-pokal.webp" alt="" />
-            {zahl(trophies)}
+            {kopfZahl(trophies)}
           </span>
           {[
             { wert: me.coins, bild: '/hub/symbol-muenze.webp', name: 'muenzen' },
@@ -132,12 +132,12 @@ export function NeuerRahmen<T extends Reiter>({
             zumShop ? (
               <button type="button" key={name} className="hb-pill" onClick={zumShop} aria-label={tf(`rahmen.${name}.zumShop`, { n: wert })}>
                 <img src={bild} alt="" />
-                {zahl(wert)}
+                {kopfZahl(wert)}
               </button>
             ) : (
               <span key={name} className="hb-pill" aria-label={tf(`rahmen.${name}`, { n: wert })}>
                 <img src={bild} alt="" />
-                {zahl(wert)}
+                {kopfZahl(wert)}
               </span>
             ),
           )}
@@ -151,7 +151,7 @@ export function NeuerRahmen<T extends Reiter>({
       {online !== null && online > 0 && (
         <div className="hb-online">
           <span className="hb-punkt" aria-hidden="true" />
-          {tf('rahmen.online', { n: online.toLocaleString('de-DE') })}
+          {tf('rahmen.online', { n: zahl(online) })}
         </div>
       )}
     </>

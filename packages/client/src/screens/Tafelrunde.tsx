@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError, api, type Suchstand, type TableRow, type TischVorschau } from '../api';
 import { t } from '../i18n';
+import { einheitName, tz, tzAnzahl } from '../minispiele/tafelrunde/text';
 import type { BotLevel } from '../protocol';
 import {
   AufbauNeu,
@@ -90,8 +91,8 @@ import { useTable } from '../useTable';
  * samt aller Bauteile in einen Test, der nur Typen vergleichen will.
  */
 
-/** Aktion des Moduls, siehe partie.ts. */
-type Aktion =
+/** Aktion des Moduls, siehe partie.ts. Exportiert fuer den Schaukasten (proben/tafelrunde). */
+export type Aktion =
   | { typ: 'kaufen'; platz: number }
   | { typ: 'neuwuerfeln' }
   | { typ: 'levelAuf' }
@@ -164,11 +165,15 @@ export const SITZ_WAHL = [2, 3, 4, 6, 8] as const;
  * Knopf, der genauso spielt wie der dritte, waere eine Beschriftung ohne
  * Unterschied.
  */
-const BOT_STUFEN: readonly { id: BotLevel; name: string }[] = [
-  { id: 'anfaenger', name: 'Sanft' },
-  { id: 'standard', name: 'Normal' },
-  { id: 'experte', name: 'Hart' },
-];
+export function botStufen(): readonly { id: BotLevel; name: string }[] {
+  // Eine Funktion und keine Tabelle: Beim Zeichnen nachgeschlagen, damit die
+  // Namen nach dem Umschalten der Sprache nicht in der alten stehen bleiben.
+  return [
+    { id: 'anfaenger', name: tz('bot.sanft') },
+    { id: 'standard', name: tz('bot.normal') },
+    { id: 'experte', name: tz('bot.hart') },
+  ];
+}
 
 /**
  * Wie viele Runden ein Tisch gehen soll.
@@ -304,7 +309,7 @@ export function Tafelrunde({
       if (stand.tischId) setTischId(stand.tischId);
       else setSuchstand(stand);
     } catch {
-      setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+      setFehler(tz('fehler.suche'));
     } finally {
       setStartet(false);
     }
@@ -338,7 +343,7 @@ export function Tafelrunde({
             // Die Schlange kennt uns nicht mehr — etwa nach einem Neustart
             // des Servers. Lieber ehrlich melden als stumm weiterdrehen.
             setSuchstand(null);
-            setFehler('Die Suche wurde beendet. Noch einmal versuchen?');
+            setFehler(tz('fehler.sucheBeendet'));
             return;
           }
           setSuchstand(stand);
@@ -398,7 +403,7 @@ export function Tafelrunde({
       });
       setTischId(id);
     } catch {
-      setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
+      setFehler(tz('fehler.tischNochmal'));
     } finally {
       setStartet(false);
     }
@@ -447,7 +452,7 @@ export function Tafelrunde({
       setTischId(antwort.id);
     } catch (err) {
       setFehler(
-        err instanceof ApiError ? t(err.messageKey) : 'Der Tisch ließ sich nicht aufmachen.',
+        err instanceof ApiError ? t(err.messageKey) : tz('fehler.tisch'),
       );
     } finally {
       setStartet(false);
@@ -463,7 +468,7 @@ export function Tafelrunde({
       setWartesaal({ code: code.toUpperCase(), gastgeber: false, botsFuellen: false });
       setTischId(tableId);
     } catch (err) {
-      setFehler(err instanceof ApiError ? t(err.messageKey) : 'Beitreten fehlgeschlagen.');
+      setFehler(err instanceof ApiError ? t(err.messageKey) : tz('fehler.beitreten'));
     } finally {
       setStartet(false);
     }
@@ -478,7 +483,7 @@ export function Tafelrunde({
       setWartesaal({ code: null, gastgeber: false, botsFuellen: false });
       setTischId(id);
     } catch (err) {
-      setFehler(err instanceof ApiError ? t(err.messageKey) : 'Beitreten fehlgeschlagen.');
+      setFehler(err instanceof ApiError ? t(err.messageKey) : tz('fehler.beitreten'));
     } finally {
       setStartet(false);
     }
@@ -600,7 +605,7 @@ export function Tafelrunde({
         oeffentlich={oeffentlich}
         botsFuellen={botsFuellen}
         botStufe={botStufe}
-        botStufen={BOT_STUFEN}
+        botStufen={botStufen()}
         startet={startet}
         fehler={fehler}
         onSitze={setSitze}
@@ -689,7 +694,7 @@ export function Tafelrunde({
       },
       onAbbrechen: brichAb,
     };
-    return <WartesaalNeu {...saal} botStufen={BOT_STUFEN} />;
+    return <WartesaalNeu {...saal} botStufen={botStufen()} />;
   }
 
   if (!sicht) {
@@ -698,8 +703,8 @@ export function Tafelrunde({
       <AufbauNeu
         text={
           tisch.status === 'open'
-            ? `${besetzt} von ${tisch.table?.seats.length ?? SITZE} Plätzen besetzt`
-            : 'Verbindung wird aufgebaut…'
+            ? tz('plaetzeBesetzt', { belegt: besetzt, plaetze: tisch.table?.seats.length ?? SITZE })
+            : tz('verbindung')
         }
         aktiv={aktiv}
         onAbbrechen={brichAb}
@@ -753,7 +758,7 @@ export function Tafelrunde({
 // Die Ruestkammer
 // ---------------------------------------------------------------------------
 
-interface SitzZeile {
+export interface SitzZeile {
   seat: number;
   displayName: string | null;
   /**
@@ -787,7 +792,14 @@ function brettmass(sicht: TafelrundeSicht): React.CSSProperties {
   return { '--tr-brettverhaeltnis': mass.seitenverhaeltnis } as React.CSSProperties;
 }
 
-function Ruestkammer({
+/**
+ * Die Ruestkammer, getrennt von der Huelle oben (`useTable`, Suche, Vorladen):
+ * Sie bekommt alles als Eigenschaft herein und zeichnet deshalb auch ohne
+ * Server. Exportiert allein fuer den Schaukasten unter src/proben/tafelrunde/,
+ * der die Ansichten mit erfundenen Sichten zeigt (Projekt „BroweGGames
+ * Language" — Vorher-/Nachher-Bilder je Sprache).
+ */
+export function Ruestkammer({
   sicht,
   katalog,
   synergieTabelle,
@@ -1355,7 +1367,7 @@ function Ruestkammer({
               className="tr-zurueck-oben"
               type="button"
               onClick={onZurueck}
-              aria-label="Zurück"
+              aria-label={tz('zurueck')}
             >
               ←
             </button>
@@ -1385,7 +1397,7 @@ function Ruestkammer({
             faellt in sich zusammen (`auto` in styles.css) — das Brett steht in
             der Mitte des Schirms und nicht daneben. */}
         <div className="tr-mitte">
-          <p className="tr-hinweis">Du schaust zu</p>
+          <p className="tr-hinweis">{tz('zuschauer.hinweis')}</p>
           {arena ||
             (gegner && (
               /* Dieselbe Spielflaeche wie am Spielertisch — nur ohne Bank und
@@ -1433,7 +1445,7 @@ function Ruestkammer({
               tabelle={synergieTabelle}
               maxStufe={sicht.maxStufe}
               erloes={blattWerte?.erloes}
-              verschiebenTitel="Verschieben"
+              verschiebenTitel={tz('knopf.verschieben')}
               /* Die Marken fuehren auch hier zu ihrem Blatt — mit den Staenden
                  des gezeigten Sitzes (siehe `markengriff`). Nachschlagen ist
                  kein Handeln. */
@@ -1517,7 +1529,7 @@ function Ruestkammer({
             className="tr-zurueck-oben"
             type="button"
             onClick={onZurueck}
-            aria-label="Zurück"
+            aria-label={tz('zurueck')}
           >
             ←
           </button>
@@ -1638,8 +1650,7 @@ function Ruestkammer({
                    auffordert. `belegt` kommt aus der Sicht — der Client zaehlt
                    das Brett nicht selbst ab. */
                   <p className="tr-leer-satz tr-leer-brett">
-                    Dein Feld ist leer - zieh einen Recken von der Bank auf eine Wabe oder tipp erst
-                    ihn, dann die Wabe an.
+                    {tz('brett.leer')}
                   </p>
                 )}
                 <Hexbrett
@@ -1757,7 +1768,7 @@ function Ruestkammer({
                     setBlatt(null);
                   }
             }
-            verschiebenTitel={blatt.ort.bereich === 'bank' ? 'Aufstellen' : 'Verschieben'}
+            verschiebenTitel={tz(blatt.ort.bereich === 'bank' ? 'knopf.aufstellen' : 'knopf.verschieben')}
             /* Die Marken sind hier der Weg zu ihrem Blatt — an der Wabe selbst
                bleiben die Zeichen stumm, sonst faengt der Griff darin den
                Finger ab, mit dem man die Einheit verschieben will. Sie bleiben
@@ -1804,7 +1815,11 @@ function Ruestkammer({
         {/* ---- Was mit der Auswahl geschehen kann ------------------------- */}
         {gewaehlt && darfHandeln && (
           <div className="tr-auswahlband">
-            <span>{gewaehlteEinheit?.name ?? 'Einheit'} gewählt - Ziel antippen</span>
+            <span>
+              {tz('auswahl.gewaehlt', {
+                name: gewaehlteEinheit ? einheitName(gewaehlteEinheit) : tz('einheit'),
+              })}
+            </span>
             {/* Derselbe Riegel wie im Blatt: Verkauft wird, was `legalActions`
                 anbietet. Zwei Verkaufen-Knoepfe auf einem Bildschirm, von denen
                 der eine fragt und der andere nicht, waeren zwei Antworten auf
@@ -1815,11 +1830,11 @@ function Ruestkammer({
                 className="tr-verkaufen"
                 onClick={() => schicke({ typ: 'verkaufen', ort: gewaehlt })}
               >
-                Verkaufen
+                {tz('knopf.verkaufen')}
               </button>
             )}
             <button type="button" className="tr-abwaehlen" onClick={() => setGewaehlt(null)}>
-              Abbrechen
+              {tz('abbrechen')}
             </button>
           </div>
         )}
@@ -1846,14 +1861,14 @@ function Ruestkammer({
                 onClick={() => setGezeigterGegner(null)}
               >
                 <AugeZeichen />
-                Zurück zu deinem Kampf
+                {tz('kampf.zurueckZuDeinem')}
               </button>
             ) : eigenerKampf ? (
               /* Der Kampf laeuft oben in der Arena. Hier nur der Satz, der
                  erklaert, warum der Laden zu ist — und dass er von selbst
                  wieder aufgeht, denn die Dauer bestimmt der Server. */
               <p className="tr-hinweis">
-                Der Kampf läuft von selbst - danach geht der Laden wieder auf.
+                {tz('kampf.laeuftVonSelbst')}
               </p>
             ) : (
               /* Ausgeschieden: Fuer ihn geht kein Laden mehr auf, der Satz
@@ -1861,8 +1876,7 @@ function Ruestkammer({
                  einen echten Kampf statt einer Textzeile — und hier steht,
                  wessen. Ein Zurueck gibt es nicht, weil es nichts gibt, wohin. */
               <p className="tr-hinweis">
-                Du siehst {spielername(zeile(kampfSitz ?? 0), kampfSitz ?? 0)} zu - tippe oben
-                einen anderen Sitz an, um dessen Kampf zu sehen.
+                {tz('kampf.duSiehstZu', { name: spielername(zeile(kampfSitz ?? 0), kampfSitz ?? 0) })}
               </p>
             )
           ) : (
@@ -1870,7 +1884,7 @@ function Ruestkammer({
           )
         ) : eigenes.ausRunde !== null ? (
           <p className="tr-hinweis">
-            In Runde {eigenes.ausRunde} ausgeschieden. Du kannst weiter zusehen.
+            {tz('ausgeschieden.hinweis', { n: eigenes.ausRunde })}
           </p>
         ) : (
           <>
@@ -1879,7 +1893,7 @@ function Ruestkammer({
                 Es stand bis zum 05.09.2026 als eine von vier gleich grossen
                 Kacheln ganz oben, also weit weg von den Preisen. */}
             <div className="tr-ladenkopf">
-              <span className="tr-ladenwort">Laden</span>
+              <span className="tr-ladenwort">{tz('laden.titel')}</span>
               <span className="tr-goldstand">
                 <GoldZeichen />
                 <strong>{eigenes.gold}</strong>
@@ -1892,7 +1906,7 @@ function Ruestkammer({
             <div
               className="tr-laden"
               role="group"
-              aria-label="Laden"
+              aria-label={tz('laden.titel')}
               /*
                * Nur die ZAHL der Plaetze, nicht das ganze Raster — seit dem
                * 07.09.2026. Sie steht im Regelsatz und ist je Tisch
@@ -1949,8 +1963,7 @@ function Ruestkammer({
                 ändern kann. */}
             {eigenes.laden.every((id) => id === null) && (
               <p className="tr-leer-satz">
-                Der Vorrat gibt nichts mehr her - alle Recken sind im Umlauf.
-                Mach dich bereit.
+                {tz('laden.vorratLeer')}
               </p>
             )}
             <div className="tr-ladenknoepfe">
@@ -1960,7 +1973,7 @@ function Ruestkammer({
                 disabled={!darfWuerfeln || !darfHandeln}
                 onClick={() => schicke({ typ: 'neuwuerfeln' })}
               >
-                Neu würfeln
+                {tz('laden.neuWuerfeln')}
                 {/* Kostet das Wuerfeln nichts (Vorgabe seit dem 05.09.2026),
                     faellt die Preisangabe ganz weg. "0 Gold" waere schlechter
                     als nichts: Es liest sich wie ein Preis, den man erst
@@ -1992,7 +2005,7 @@ function Ruestkammer({
                 disabled={!darfLevel || !darfHandeln}
                 onClick={() => schicke({ typ: 'levelAuf' })}
               >
-                {eigenes.aufstiegKosten === null ? 'Höchster Rang' : 'Rang steigern'}
+                {tz(eigenes.aufstiegKosten === null ? 'laden.hoechsterRang' : 'laden.rangSteigern')}
                 {eigenes.aufstiegKosten !== null && (
                   <em
                     data-teuer={
@@ -2013,20 +2026,20 @@ function Ruestkammer({
                 disabled={eigenes.bereit || !darfHandeln}
                 onClick={() => schicke({ typ: 'bereit' })}
               >
-                {eigenes.bereit ? 'Wartet…' : 'Bereit'}
+                {tz(eigenes.bereit ? 'laden.wartet' : 'laden.bereit')}
               </button>
             </div>
             <p className="tr-hinweis">
               {eigenes.bereit
-                ? 'Auf die anderen warten'
+                ? tz('hinweis.warten')
                 : gewaehlt
-                  ? 'Ziel antippen - oder abbrechen'
-                  : 'Karte antippen zum Kaufen · Einheit ziehen oder antippen zum Setzen'}
+                  ? tz('hinweis.ziel')
+                  : tz('hinweis.ruesten')}
             </p>
           </>
         )}
         <button className="tr-regelzeile" type="button" onClick={() => setRegelnOffen(true)}>
-          So spielt man Tafelrunde
+          {tz('regeln.titel')}
         </button>
       </div>
 
@@ -2044,7 +2057,10 @@ function Ruestkammer({
           <span className="tr-sterne" aria-hidden="true">
             {'★'.repeat(verschmolzen.stufe)}
           </span>
-          {sicht.verschmelzZahl}× {katalog[verschmolzen.id]?.name ?? 'Einheit'} verschmolzen
+          {tz('verschmolzen', {
+            n: sicht.verschmelzZahl,
+            name: katalog[verschmolzen.id] ? einheitName(katalog[verschmolzen.id]!) : tz('einheit'),
+          })}
         </div>
       )}
 
@@ -2091,7 +2107,7 @@ function Ruestkammer({
  * eins kein Platz, und ein fehlendes waere ein weisser Kasten.
  */
 function spielername(zeile: SitzZeile | undefined, sitz: number): string {
-  return zeile?.displayName ?? (zeile?.isBot ? 'KI' : `Sitz ${sitz + 1}`);
+  return zeile?.displayName ?? (zeile?.isBot ? tz('sitz.ki') : tz('sitz.nummer', { n: sitz + 1 }));
 }
 
 // ---------------------------------------------------------------------------
@@ -2237,7 +2253,7 @@ function kampfSchluessel(kaempfe: readonly Kampfpaarung[]): string {
 function Kampfband(): React.JSX.Element {
   return (
     <p className="tr-hinweis tr-wartet" aria-live="polite">
-      <span>Die Heere treten an</span>
+      <span>{tz('kampf.heereTretenAn')}</span>
       <span className="tr-lauf" aria-hidden="true">
         <i />
         <i />
@@ -2256,16 +2272,20 @@ function Abschluss({
 }): React.JSX.Element {
   const ich = sicht.eigenes?.sitz ?? -1;
   const wort =
-    sicht.sieger === null ? 'Unentschieden' : sicht.sieger === ich ? 'Gewonnen!' : 'Verloren';
+    sicht.sieger === null
+      ? tz('kampf.unentschieden')
+      : sicht.sieger === ich
+        ? tz('kampf.gewonnen')
+        : tz('kampf.verloren');
   return (
     <div className="tr-abschluss">
       <h2 data-sieg={sicht.sieger === ich ? '' : undefined}>{wort}</h2>
       <p>
-        {sicht.runde} Runden gespielt
-        {sicht.eigenes?.ausRunde ? ` · ausgeschieden in Runde ${sicht.eigenes.ausRunde}` : ''}
+        {tzAnzahl('abschluss.runden', sicht.runde)}
+        {sicht.eigenes?.ausRunde ? tz('abschluss.ausgeschieden', { n: sicht.eigenes.ausRunde }) : ''}
       </p>
       <button className="tr-suchen" type="button" onClick={onZurueck}>
-        Zurück
+        {tz('zurueck')}
       </button>
     </div>
   );
@@ -2294,11 +2314,11 @@ function Abschluss({
  */
 function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
-    <div className="tr-blatt" role="dialog" aria-label="So spielt man Tafelrunde">
-      <button className="tr-blatt-zu" type="button" onClick={onClose} aria-label="Schließen">
+    <div className="tr-blatt" role="dialog" aria-label={tz('regeln.titel')}>
+      <button className="tr-blatt-zu" type="button" onClick={onClose} aria-label={tz('schliessen')}>
         ✕
       </button>
-      <h2>So spielt man Tafelrunde</h2>
+      <h2>{tz('regeln.titel')}</h2>
       <RegelText />
     </div>
   );
@@ -2309,47 +2329,31 @@ function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
  * `HbBlatt` (EinstiegNeu.tsx). Eine Stelle, damit beide Blätter nicht
  * auseinanderlaufen.
  */
-function RegelText(): React.JSX.Element {
+export function RegelText(): React.JSX.Element {
   return (
     <>
-      <h3>Regeln</h3>
+      {/* Die fetten Stellen sind eigene Schluessel, damit jede Sprache ihren
+          Satz um sie herum selbst bauen kann. */}
+      <h3>{tz('regeln.regeln')}</h3>
       <ol>
+        <li>{tz('regeln.laden')}</li>
+        <li>{tz('regeln.bank')}</li>
         <li>
-          Jede Runde legt der Laden fünf Recken aus. Kaufen kostet Gold; wer nichts findet, würfelt
-          neu.
+          <strong>{tz('regeln.verschmelzen.fett')}</strong>
+          {tz('regeln.verschmelzen.rest')}
         </li>
+        <li>{tz('regeln.rang')}</li>
         <li>
-          Gekaufte Recken landen auf der Reservebank. Aufs Feld kommen sie, indem du sie auf eine
-          Wabe ziehst - oder antippst und dann die Wabe antippst.
+          {tz('regeln.klassen.vor')}
+          <strong>{tz('regeln.klassen.fett')}</strong>
+          {tz('regeln.klassen.nach')}
         </li>
-        <li>
-          <strong>Drei gleiche Recken derselben Stufe verschmelzen von selbst</strong> zu einem
-          stärkeren. Aus drei Einsternigen wird ein Zweisterniger, aus drei davon ein Dreisterniger.
-        </li>
-        <li>
-          Wie viele Recken gleichzeitig auf dem Feld stehen dürfen, sagt dein Rang. Rang steigern
-          kostet Gold und bringt einen Feldplatz - und bessere Karten im Laden.
-        </li>
-        <li>
-          Recken gehören Klassen an wie Krieger, Wächter oder Untot. Stehen{' '}
-          <strong>zwei Träger derselben Klasse auf dem Feld</strong>, wird die Klasse stärker; ab
-          drei und ab fünf noch einmal deutlicher. Der Bonus gilt nur für die Träger selbst und nur
-          auf dem Feld - was auf der Bank liegt, zählt nicht mit. Was gerade greift und wie weit es
-          bis zur nächsten Stufe ist, zeigt die Synergie-Leiste. Tippe einen Zähler darin an, und du
-          bekommst alle Stufen der Klasse und alle Recken, die sie tragen.
-        </li>
-        <li>
-          Gold gibt es jede Runde: ein Grundbetrag, Zins auf dein Erspartes und ein Bonus für
-          Serien. Was die nächste Runde bringt, steht klein neben deinem Gold.
-        </li>
-        <li>
-          Sind alle bereit, kämpft dein Feld gegen das eines Mitspielers - von selbst, du siehst nur
-          zu. Der Verlierer verliert Leben: je mehr Gegner noch stehen, desto mehr.
-        </li>
-        <li>Wer keine Lebenspunkte mehr hat, scheidet aus. Der Letzte gewinnt.</li>
+        <li>{tz('regeln.gold')}</li>
+        <li>{tz('regeln.kampf')}</li>
+        <li>{tz('regeln.aus')}</li>
       </ol>
-      <h3>Ziel</h3>
-      <p>Als Letzter am Tisch stehen bleiben.</p>
+      <h3>{tz('regeln.ziel')}</h3>
+      <p>{tz('regeln.zielText')}</p>
     </>
   );
 }

@@ -27,6 +27,8 @@ import {
 import type { Woerterbuch } from './woerterbuch';
 
 export { SPRACHEN, erkenneSprache, type Sprache, type Sprachwahl } from './sprachen';
+// Zahlen und Zeiten folgen der aktiven Sprache, stehen aber nicht im Woerterbuch.
+export { kompakteZahl, restzeit, uhrzeit, zahl } from './format';
 
 /** Alle Bereiche einer Sprache zu einem Nachschlagewerk zusammengelegt. */
 function flach(bereiche: Partial<Record<string, Woerterbuch>>): Woerterbuch {
@@ -172,7 +174,7 @@ export function rankLabel(rank: string): string {
 }
 
 /**
- * Ausgeschriebener Name, z.B. "Kreuz Dame".
+ * Ausgeschriebener Name, z.B. "Kreuz Dame" (englisch "Queen of Clubs").
  *
  * Bei den Bildblaettern ist das der alt-Text: Wer nicht sieht, bekommt dieselbe
  * Auskunft wie alle anderen, und ein nicht geladenes Bild bleibt lesbar.
@@ -182,32 +184,15 @@ export function cardName(card: { suit: string; rank: string }): string {
   if (card.suit === 'N') return t('karte.narr');
   const suit = nachschlagen(`karte.farbe.${card.suit}`) ?? card.suit;
   const rank = nachschlagen(`karte.wert.${card.rank}`) ?? card.rank;
-  return `${suit} ${rank}`;
+  // Wortfolge aus dem Wörterbuch (Kopf von `karten.ts`). Kein `tf` aus
+  // `einsetzen.ts`: Das importiert diese Datei und hinge mit ihr im Kreis.
+  return (nachschlagen('karte.name') ?? '{farbe} {wert}')
+    .replace('{farbe}', suit)
+    .replace('{wert}', rank);
 }
 
 export function isRed(card: { suit: string }): boolean {
   return card.suit === 'H' || card.suit === 'D';
-}
-
-/**
- * Grosse Zahlen kurz: 550, 1,5K, 12K, 10M.
- *
- * Die Kopfzeile hat wenig Platz; ein siebenstelliger Muenzstand (etwa das
- * Testkonto mit 9.999.999) schiebt sonst Name und Level ineinander. Bis 1000
- * bleibt die Zahl ganz, darueber wird sie mit K und M abgekuerzt - eine
- * Nachkommastelle nur unterhalb von zehn, damit "1,5K" lesbar bleibt, aber
- * "12K" nicht "12,3K" heisst.
- */
-export function kompakteZahl(n: number): string {
-  if (n < 1000) return String(n);
-  const kurz = (wert: number, zeichen: string): string => {
-    const zahl = wert < 10 ? wert.toFixed(1).replace(/[.,]0$/, '') : String(Math.round(wert));
-    return zahl.replace('.', ',') + zeichen;
-  };
-  // Knapp unter einer Million auf M umschalten, sonst rundet 999.999 zu
-  // "1000K" statt "1M".
-  if (n < 999_950) return kurz(n / 1000, 'K');
-  return kurz(n / 1_000_000, 'M');
 }
 
 /** Name einer Trumpffarbe fuer die Kopfzeile, oder null ohne Trumpf. */

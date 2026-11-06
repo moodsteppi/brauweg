@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, type MarktAngebot, type Tagesmarkt, type Truhen, type Fund, type Me } from '../api';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { tf } from '../i18n/einsetzen';
 import { spiele } from '../klang';
 import { truhenBild } from '../truhenbild';
@@ -69,7 +69,7 @@ export function TagesShop({ me, ziel, onGuthaben, onSammlung }: {
   const kaufen = (a: MarktAngebot) => {
     if (!markt || !a.artikel || a.preis === null) return;
     const tag = markt.tag, artikel = a.artikel;
-    const preis = a.preis.toLocaleString('de-DE');
+    const preis = zahl(a.preis);
     fragen({ titel: tf('markt.kaufen.titel', { artikel: marktName(artikel) }), text: tf('markt.kaufen.text', { preis }), ja: tf('markt.kaufen.ja', { preis }) },
       () => { void ausfuehren(a.id, () => api.buyItem(artikel.id, 'coins', tag)); });
   };
@@ -81,13 +81,13 @@ export function TagesShop({ me, ziel, onGuthaben, onSammlung }: {
         <strong>{busy === a.id ? t('markt.aufdecken.laeuft') : t('markt.aufdecken')}</strong><small>{t('markt.nurFuerDich')}</small>
       </button> : a.artikel && <>
         <MarktBild artikel={a.artikel} /><small className="markt-art">{marktArt(a.artikel)}</small><strong className="markt-artikelname">{marktName(a.artikel)}</strong>
-        <span className="markt-preis">{a.rabatt > 0 && <del>{a.normalpreis?.toLocaleString('de-DE')}</del>}<img src="/hub/muenze.png" alt={t('markt.preis.alt')} />{a.preis?.toLocaleString('de-DE')}</span>
+        <span className="markt-preis">{a.rabatt > 0 && <del>{a.normalpreis !== null && zahl(a.normalpreis)}</del>}<img src="/hub/muenze.png" alt={t('markt.preis.alt')} />{a.preis !== null && zahl(a.preis)}</span>
         {a.besessen ? <button className="markt-knopf ist-eigen" onClick={() => onSammlung(a.spiel === 'alle' ? a.artikel?.art === 'pinguin' ? 'allgemein' : a.artikel?.wert === 'schach-pinguin' ? 'brochess' : 'doppelkopf' : a.spiel)}>{t('markt.zurSammlung')}</button>
           : <button className="markt-knopf" disabled={!!busy || me.coins < (a.preis ?? 0)} onClick={() => kaufen(a)}>{busy === a.id ? t('markt.kauftGerade') : me.coins < (a.preis ?? 0) ? t('markt.muenzenFehlen') : t('markt.kaufen')}</button>}
       </>}
   </article>;
   return <div className="hb-spiele tages-shop">
-    <header className="hb-kopfzeile"><h1 className="hb-titel">{t('markt.titel')}</h1><span className="markt-guthaben"><img src="/hub/muenze.png" alt="" />{me.coins.toLocaleString('de-DE')}</span></header>
+    <header className="hb-kopfzeile"><h1 className="hb-titel">{t('markt.titel')}</h1><span className="markt-guthaben"><img src="/hub/muenze.png" alt="" />{zahl(me.coins)}</span></header>
     <div className="hb-spiele-rolle markt-rolle">
       <section className="markt-held"><img src="/hub/shop-tagesmarkt.webp" alt={t('markt.held.alt')} /><div><span>{t('markt.held.label')}</span><h2>{t('markt.held.titel')}</h2><p>{t('markt.held.text')}</p></div></section>
       <div className="markt-wechsel"><span>{t('markt.wechsel.label')} <b>{tf('markt.wechsel.zeit', { zeit: '00:00' })}</b></span><strong>{markt ? tf('markt.wechsel.rest', { zeit: `${String(stunden).padStart(2, '0')}:${String(minuten).padStart(2, '0')}` }) : t('markt.laden')}</strong></div>

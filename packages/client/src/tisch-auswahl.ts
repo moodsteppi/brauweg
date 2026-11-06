@@ -13,6 +13,8 @@
  * Server abgefangen wird.
  */
 
+import { tn } from './i18n/einsetzen';
+
 /** Wie viele Karten beim Drücken und Schieben gewählt werden. */
 export const DRUECK_ANZAHL = 2;
 
@@ -44,10 +46,11 @@ export function waehleZumDruecken(
  *
  * Steht hier, weil die Beugung („1 Karte", „2 Karten") schon einmal falsch
  * war und ein Text, den niemand prüft, genau so lange falsch bleibt, bis er
- * jemandem auffällt.
+ * jemandem auffällt. Der Wortlaut steht im Bereich „skat" (`i18n/de/skat.ts`
+ * und `en/skat.ts`); die Wahl zwischen Einzahl und Mehrzahl trifft `tn`.
  */
 export function fehlenText(gewaehlt: number, hoechstens: number = DRUECK_ANZAHL): string | null {
   const fehlen = hoechstens - gewaehlt;
   if (fehlen <= 0) return null;
-  return `Noch ${fehlen} Karte${fehlen === 1 ? '' : 'n'} wählen`;
+  return tn('skat.fehlen', fehlen);
 }

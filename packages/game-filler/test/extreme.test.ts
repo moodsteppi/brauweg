@@ -145,7 +145,12 @@ describe('Extreme: Ein Stern faellt', () => {
   });
 
   it('nimmt der Bot den Stern, wenn beide Farben gleich viel Flaeche bringen', () => {
-    const zug = botZug(sichtFuer(gelegt(), 0));
+    // Geprueft wird die FARBWAHL, deshalb ohne Kandidaten fuer eine Mauer:
+    // Seit dem 06.11.2026 (Wegterm in bewerteWaende) baut der Bot in dieser
+    // engen Stellung sonst zuerst eine, und die Farbe kaeme erst danach.
+    const { barrierenMoeglich: _weg, ...sicht } = sichtFuer(gelegt(), 0);
+    void _weg;
+    const zug = botZug(sicht);
     assert.deepEqual(zug, { typ: 'faerben', farbe: 1 });
   });
 

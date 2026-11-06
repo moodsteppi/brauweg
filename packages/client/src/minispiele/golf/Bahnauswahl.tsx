@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { AuswahlFilter, AuswahlRaster, type AuswahlEintrag, passtZurSuche } from '../../hub';
 import { t } from '../../i18n';
+import { tf, tn } from '../../i18n/einsetzen';
 import { useBestmarken } from './Bahnrekord';
 import {
   EIGENE_MAX,
@@ -31,6 +32,7 @@ import { weltMasse } from './kamera';
 import type { Karte } from './karte';
 import { neuePartie } from './physik';
 import { Zeichner } from './zeichnen';
+import { zahl } from './zahl';
 
 /* --------------------------------------------------------------------------
  * Miniatur
@@ -123,10 +125,11 @@ export function Bahnminiatur({ karte }: { karte: Karte }): React.JSX.Element {
 type Modus = Bahnwahl['art'];
 
 const MODI: readonly { art: Modus; text: string }[] = [
-  { art: 'zufall', text: 'Zufall' },
-  { art: 'kurs', text: 'Kurs' },
-  { art: 'filter', text: 'Filter' },
-  { art: 'eigene', text: 'Einzeln' },
+  // Schlüssel, nicht Text: übersetzt wird beim Zeichnen, sonst sprang die Sprache nicht um.
+  { art: 'zufall', text: 'golf.bahnen.modus.zufall' },
+  { art: 'kurs', text: 'golf.bahnen.modus.kurs' },
+  { art: 'filter', text: 'golf.bahnen.modus.filter' },
+  { art: 'eigene', text: 'golf.bahnen.modus.eigene' },
 ];
 
 const STUFEN = [1, 2, 3, 4, 5] as const;
@@ -141,7 +144,7 @@ function themenText(id: string, daten: Lobbydaten): string {
   const namen = (daten.bahnThemen[id] ?? [])
     .map((k) => daten.themen.find((t) => t.kennung === k)?.name)
     .filter((n): n is string => typeof n === 'string');
-  return namen.length > 0 ? namen.join(', ') : 'ohne Zonen';
+  return namen.length > 0 ? namen.join(', ') : t('golf.bahnen.ohneZonen');
 }
 
 /** Der Wechsel in einen Modus: mit einer sinnvollen ersten Wahl statt leer. */
@@ -186,9 +189,9 @@ export function Bahnauswahl({
   const nachId = new Map(karten.map((k) => [k.id, k]));
 
   return (
-    <section className="gf-bw" aria-label="Bahnen" data-golf-bahnauswahl="">
-      <h2 className="gf-bw-titel">Bahnen</h2>
-      <div className="gf-stufen gf-bw-modus" role="group" aria-label="Bahnauswahl">
+    <section className="gf-bw" aria-label={t('golf.bahnen.titel')} data-golf-bahnauswahl="">
+      <h2 className="gf-bw-titel">{t('golf.bahnen.titel')}</h2>
+      <div className="gf-stufen gf-bw-modus" role="group" aria-label={t('golf.bahnen.auswahl')}>
         {MODI.map((m) => (
           <button
             key={m.art}
@@ -199,19 +202,19 @@ export function Bahnauswahl({
               if (wahl.art !== m.art) onWahl(ersteWahl(m.art, daten));
             }}
           >
-            {m.text}
+            {t(m.text)}
           </button>
         ))}
       </div>
 
       {wahl.art === 'zufall' && (
-        <p className="gf-bw-hinweis">Das Spiel zieht die Bahnen aus allen {karten.length}, von leicht bis schwer.</p>
+        <p className="gf-bw-hinweis">{tf('golf.bahnen.zufallHinweis', { n: zahl(karten.length) })}</p>
       )}
 
       {wahl.art === 'kurs' && (
         <>
           <AuswahlRaster
-            label="Kurs"
+            label={t('golf.bahnen.modus.kurs')}
             className="gf-bw-raster"
             spalten={2}
             eintraege={daten.kurse.map((kurs): AuswahlEintrag => {
@@ -221,10 +224,10 @@ export function Bahnauswahl({
               return {
                 kennung: kurs.kennung,
                 titel: kurs.name,
-                untertitel: `${kurs.bahnen.length} Löcher · ${kurs.beschreibung}`,
+                untertitel: `${tn('golf.anzahl.loecher', kurs.bahnen.length, { n: zahl(kurs.bahnen.length) })} · ${kurs.beschreibung}`,
                 badge: Math.max(0, ...bahnen.map((b) => b?.schwierigkeit ?? 0)),
                 vorschau: finale ? <Bahnminiatur karte={finale} /> : undefined,
-                deaktiviert: fehlt ? 'Neue Bahnen - bitte neu laden' : kursSperre?.(kurs.kennung),
+                deaktiviert: fehlt ? t('golf.bahnen.neuLaden') : kursSperre?.(kurs.kennung),
               };
             })}
             gewaehlt={wahl.kurs}
@@ -232,7 +235,7 @@ export function Bahnauswahl({
           />
           {kursSperre !== undefined && daten.kurse.some((k) => kursSperre(k.kennung) !== undefined) && (
             <p className="gf-bw-hinweis" data-golf-kurssperre="">
-              Gesperrte Kurse braucht nur, wer den Tisch aufmacht - alle anderen spielen mit.
+              {t('golf.bahnen.kurssperre')}
             </p>
           )}
           <Folge ids={daten.kurse.find((k) => k.kennung === wahl.kurs)?.bahnen ?? []} karten={nachId} />
@@ -248,26 +251,24 @@ export function Bahnauswahl({
           <AuswahlFilter
             suchtext={suche}
             onSuchtext={setSuche}
-            platzhalter="Bahn suchen…"
-            label="Bahnen durchsuchen"
+            platzhalter={t('golf.bahnen.suchen')}
+            label={t('golf.bahnen.durchsuchen')}
             chips={daten.themen.map((t) => ({ kennung: t.kennung, text: t.name }))}
             chip={themaChip}
             onChip={(k) => setThemaChip((alt) => (alt === k ? null : k))}
           />
           <div className="gf-bw-folgekopf">
-            <span>
-              Deine Folge: {wahl.bahnen.length}/{EIGENE_MAX}
-            </span>
+            <span>{tf('golf.bahnen.folge', { n: zahl(wahl.bahnen.length), max: zahl(EIGENE_MAX) })}</span>
             {wahl.bahnen.length > 0 && (
               <button type="button" className="gf-bw-leeren" onClick={() => onWahl({ art: 'eigene', bahnen: [] })}>
-                Leeren
+                {t('golf.bahnen.leeren')}
               </button>
             )}
           </div>
           <Folge ids={wahl.bahnen} karten={nachId} />
           {wahlUnfertig(wahl) !== null && <p className="gf-bw-hinweis">{wahlUnfertig(wahl)}</p>}
           <AuswahlRaster
-            label="Bahnen"
+            label={t('golf.bahnen.titel')}
             className="gf-bw-raster"
             spalten={2}
             mehrfach
@@ -278,20 +279,22 @@ export function Bahnauswahl({
                   kennung: karte.id,
                   titel: karte.name,
                   untertitel: mitBestmarke(
-                    platz >= 0 ? `Loch ${platz + 1}` : themenText(karte.id, daten),
+                    platz >= 0 ? tf('golf.bahnen.loch', { n: zahl(platz + 1) }) : themenText(karte.id, daten),
                     bestmarken.get(karte.id),
                   ),
                   badge: karte.schwierigkeit,
                   vorschau: <Bahnminiatur karte={karte} />,
                   deaktiviert:
-                    platz < 0 && wahl.bahnen.length >= EIGENE_MAX ? `Höchstens ${EIGENE_MAX} Löcher` : undefined,
+                    platz < 0 && wahl.bahnen.length >= EIGENE_MAX
+                      ? tf('golf.bahnen.hoechstens', { n: zahl(EIGENE_MAX) })
+                      : undefined,
                 };
               })
               .filter((e) => passtZurSuche(e, suche))
               .filter((e) => themaChip === null || (daten.bahnThemen[e.kennung] ?? []).includes(themaChip))}
             gewaehlt={wahl.bahnen}
             onWahl={(_kennung, auswahl) => onWahl({ art: 'eigene', bahnen: auswahl })}
-            leer="Keine Bahn passt zur Suche."
+            leer={t('golf.bahnen.keineTreffer')}
           />
         </>
       )}
@@ -322,8 +325,8 @@ function FilterWahl({
   const leer = wahl.schwierigkeit.length === 0 && wahl.thema === null;
   return (
     <div className="gf-bw-filter">
-      <span className="gf-bw-zeilentitel">Schwierigkeit</span>
-      <div className="aw-chips" role="group" aria-label="Schwierigkeit">
+      <span className="gf-bw-zeilentitel">{t('golf.bahnen.schwierigkeit')}</span>
+      <div className="aw-chips" role="group" aria-label={t('golf.bahnen.schwierigkeit')}>
         {STUFEN.map((s) => {
           const an = wahl.schwierigkeit.includes(s);
           return (
@@ -339,13 +342,13 @@ function FilterWahl({
                 })
               }
             >
-              Stufe {s}
+              {tf('golf.bahnen.stufe', { n: zahl(s) })}
             </button>
           );
         })}
       </div>
-      <span className="gf-bw-zeilentitel">Thema</span>
-      <div className="aw-chips" role="group" aria-label="Thema">
+      <span className="gf-bw-zeilentitel">{t('golf.bahnen.thema')}</span>
+      <div className="aw-chips" role="group" aria-label={t('golf.bahnen.thema')}>
         {daten.themen.map((t) => (
           <button
             key={t.kennung}
@@ -360,10 +363,10 @@ function FilterWahl({
       </div>
       <p className="gf-bw-hinweis" data-golf-treffer={treffer}>
         {leer
-          ? 'Ohne Filter zieht das Spiel aus allen Bahnen.'
+          ? t('golf.bahnen.ohneFilter')
           : treffer === 0
-            ? 'Keine Bahn passt - gezogen wird dann aus allen.'
-            : `${treffer} ${treffer === 1 ? 'Bahn passt' : 'Bahnen passen'}. Reichen sie nicht für alle Löcher, füllt das Spiel mit ähnlich schweren auf.`}
+            ? t('golf.bahnen.keinFilterTreffer')
+            : tn('golf.bahnen.treffer', treffer, { n: zahl(treffer) })}
       </p>
     </div>
   );
@@ -375,7 +378,7 @@ function Folge({ ids, karten }: { ids: readonly string[]; karten: ReadonlyMap<st
   return (
     <ol className="gf-bw-folge">
       {ids.map((id) => (
-        <li key={id}>{karten.get(id)?.name ?? 'Neue Bahn'}</li>
+        <li key={id}>{karten.get(id)?.name ?? t('golf.bahnen.neueBahn')}</li>
       ))}
     </ol>
   );
@@ -404,7 +407,7 @@ export function BahnauswahlAnzeige({
   return (
     <div className="gf-bw gf-bw-anzeige" data-golf-bahnanzeige="">
       <p className="gf-bw-hinweis">
-        <strong>Bahnen:</strong> {beschreibeWahl(wahl, daten)}
+        <strong>{t('golf.bahnen.anzeige')}</strong> {beschreibeWahl(wahl, daten)}
       </p>
       <Folge ids={ids} karten={nachId} />
     </div>

@@ -57,6 +57,8 @@ export const FUNKTIONEN = [
   'lernpfad',
   /** Der Solo-Runner. */
   'prosubway',
+  /** Flying Bro, das Schleuderspiel allein (packages/flyingbro-kern, src/flyingbro.ts). */
+  'flyingbro',
   /** Clankrieg: Suche, Herausforderung, Stand. */
   'clankrieg',
   /** Der Clan-Chat. */

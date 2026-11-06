@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sprachprobe — Golf, Mememory, Eiland, Feldherr</title>
+    <!--
+      Eigene Seite neben der App, nur fuer die Entwicklung (wie
+      sprachprobe-schaukasten.html): die ECHTEN Einstiegsbildschirme von Golf,
+      Mememory, Eiland und Feldherr, ohne Anmeldung. Daraus entstehen die
+      Vorher-/Nachher-Bilder der Uebersetzung (Projekt „BroweGGames Language").
+      BroChess hat dafuer schon /probe/brochess.
+      Aufruf: `npx vite --port 5173` in packages/client, dann
+      http://localhost:5173/sprachprobe-tische.html?spiel=golf&sprache=en
+      Wird beim `vite build` NICHT mitgebaut (die Rollup-Eingabe ist
+      index.html), geht also nicht mit ins Betriebspaket.
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/proben/sprache-tische/Probe.tsx"></script>
+  </body>
+</html>

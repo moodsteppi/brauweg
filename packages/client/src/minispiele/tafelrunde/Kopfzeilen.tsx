@@ -30,6 +30,7 @@ import {
   Fremdmarken,
   Synergieleiste,
 } from './Synergien';
+import { tz } from './text';
 import { LebenZeichen } from './Zeichen';
 
 /** Leere Staende als feste Kennung — sonst laeuft jeder Memo-Vergleich leer. */
@@ -90,15 +91,15 @@ export function Statuszeile({
           <span className="tr-wert tr-wert-leben">
             <LebenZeichen />
             <strong>{werte.leben}</strong>
-            <em>Leben</em>
+            <em>{tz('kopf.leben')}</em>
           </span>
           <span className="tr-wert tr-wert-level">
-            <em>Rang</em>
+            <em>{tz('kopf.rang')}</em>
             <strong>{werte.level}</strong>
           </span>
           <span className="tr-wert tr-wert-feld">
             <strong>
-              {werte.belegt}/{werte.feldplaetze} Feld
+              {tz('kopf.feld', { belegt: werte.belegt, plaetze: werte.feldplaetze })}
             </strong>
           </span>
         </header>
@@ -143,7 +144,7 @@ export function Brettkopf({
       <h2 className="tr-bretttitel">
         <AugeZeichen />
         {name}
-        {ausRunde !== null ? ' · ausgeschieden' : ''}
+        {ausRunde !== null ? tz('kopf.ausgeschieden') : ''}
       </h2>
       {/* Womit der Gegner antritt — dieselben Zeichen und Zaehler wie in der
           eigenen Leiste. Ohne sie muesste man seine Figuren einzeln
@@ -153,7 +154,7 @@ export function Brettkopf({
         staende={staende}
         tabelle={tabelle}
         katalog={katalog}
-        beschriftung={`Marken von ${name}`}
+        beschriftung={tz('kopf.markenVon', { name })}
       />
     </div>
   );

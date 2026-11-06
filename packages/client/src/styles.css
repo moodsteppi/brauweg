@@ -15237,6 +15237,49 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .fl-art[data-klar] { color: #4a4a4a; background: rgba(0, 0, 0, 0.06); }
 
+/* Aufgeben: leise, rechts auf der Hoehe der Spielart-Marke. Absolut, damit
+   der Kopf nicht hoeher wird und das Brett nicht schrumpft. Die Breite des
+   Kopfes folgt `.fl-stand` (hoechstens 560 px), damit der Knopf auf dem
+   breiten Schirm nicht am Fensterrand klebt. */
+.fl-aufgeben {
+  position: absolute;
+  bottom: 6px;
+  right: max(14px, calc((100% - 560px) / 2));
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 9px;
+  background: transparent;
+  color: #8a8a8a;
+  font: 800 12px/1 system-ui;
+  cursor: pointer;
+}
+.fl-aufgeben:hover { color: #c0392b; border-color: rgba(192, 57, 43, 0.4); }
+
+/* Restzeit hinter dem Hinweis (TurnClock). In der Farbe des Hinweises, in
+   den letzten 15 Sekunden rot und pochend — wer dann noch ueberlegt, soll
+   sehen, dass gleich der Bot zieht. */
+.fl-hinweis .doko-turnclock { color: inherit; }
+.fl-hinweis .doko-turnclock[data-knapp] {
+  color: #d94b55;
+  animation: fl-knapp 1s ease-in-out infinite;
+}
+@keyframes fl-knapp { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) {
+  .fl-hinweis .doko-turnclock[data-knapp] { animation: none; }
+}
+
+/* Wurzel fuer die Rueckfrage (siehe Filler.tsx). Leer gar nicht da; offen
+   eine durchsichtige Flaeche ueber dem ganzen Tisch, auf der das Blatt
+   liegt. `.spe` bringt Hintergrund, Breitengrenze und den Statusleisten-
+   Streifen mit — alle drei gehoeren hier nicht hin. */
+.spe.fl-frage { z-index: 50; max-width: none; background: none; }
+.spe.fl-frage:empty { display: none; }
+.spe.fl-frage::before { content: none; }
+/* Die Flaeche deckt den ganzen Tisch (sonst blieben die Brettraender am
+   Desktop antippbar), das Blatt selbst bleibt so schmal wie in `.spe`. */
+.spe.fl-frage .hb-blatt { width: min(100%, 30rem); margin: 0 auto; }
+
 /* -- Das Warteband -------------------------------------------------------- */
 
 .fl-wartet {

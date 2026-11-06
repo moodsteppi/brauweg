@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Zauberer — Schaukasten</title>
+    <!--
+      Eigene Seite neben der App, nur fuer die Entwicklung (wie
+      schaukasten.html der Partykiste): der ECHTE Zauberer-Tisch mit
+      erfundenen Sichten, ohne Server und ohne Anmeldung.
+      Aufruf: `npm run dev:client`, dann
+      http://localhost:5173/zauberer-schaukasten.html?fall=gebot&sprache=en
+
+      Wird beim `vite build` NICHT mitgebaut (die Rollup-Eingabe ist
+      index.html), geht also nicht mit ins Betriebspaket.
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/proben/zauberer/Schaukasten.tsx"></script>
+  </body>
+</html>

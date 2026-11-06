@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, api, type PlayerProfile, type Relationship } from '../api';
 import { inAppSichtbar } from '../app-sichtbar';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
 import { MeldenBlatt } from '../melden/MeldenBlatt';
 import { useRueckfrage, Zurueck } from './HbBlatt';
@@ -121,8 +121,8 @@ function ProfilNeu({
   // „Checkpoint" stand im alten Profil — das neue Hub kennt den Begriff
   // nirgends mehr, das eigene Profil zeigt an der Stelle die Spiele.
   const werte = [
-    { name: t('spielerprofil.wert.partien'), wert: profile.totals.parties.toLocaleString('de-DE') },
-    { name: t('spielerprofil.wert.siege'), wert: profile.totals.wins.toLocaleString('de-DE') },
+    { name: t('spielerprofil.wert.partien'), wert: zahl(profile.totals.parties) },
+    { name: t('spielerprofil.wert.siege'), wert: zahl(profile.totals.wins) },
     { name: t('spielerprofil.wert.siegquote'), wert: quote },
     { name: t('spielerprofil.wert.spiele'), wert: String(ranking.filter((row) => row.parties > 0).length) },
   ];
@@ -167,7 +167,7 @@ function ProfilNeu({
           <div className="hb-karte hb-trophaeen">
             <span className="hb-trophaeen-zahl">
               <img src="/hub/symbol-pokal.webp" alt="" />
-              {profile.totals.trophies.toLocaleString('de-DE')}
+              {zahl(profile.totals.trophies)}
             </span>
             <span className="hb-klein">{t('spielerprofil.alleSpiele')}</span>
             <span className="hb-sp-werte is-vier">
@@ -194,7 +194,7 @@ function ProfilNeu({
                   </span>
                   <span className="hb-pk">
                     <img src="/hub/symbol-pokal.webp" alt="" />
-                    {row.trophies.toLocaleString('de-DE')}
+                    {zahl(row.trophies)}
                   </span>
                 </div>
               ))

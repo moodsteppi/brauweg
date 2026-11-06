@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type Me } from '../api';
 import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { tischFehler, useInhaltsSperren } from '../inhaltspakete';
 import {
   MENUE_FARBEN,
@@ -56,6 +57,7 @@ import {
 import type { GolfSicht } from '../minispiele/golf/sicht';
 import { anzeigeVerdeckt, kastenAus, type Kasten } from '../minispiele/golf/verdeckung';
 import { Zeichner, type Zielbild } from '../minispiele/golf/zeichnen';
+import { zahl } from '../minispiele/golf/zahl';
 import type { BotLevel, SeatInfo, TaktMessage, ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
 import { GastHinweis } from '../tisch/GastHinweis';
@@ -115,11 +117,17 @@ function merke(schluessel: string, wert: string | number): void {
 }
 
 const STUFEN: readonly BotLevel[] = ['anfaenger', 'standard', 'experte', 'genie'];
+/*
+ * Schlüssel statt Text: Auf Modulebene gebildeter Text bliebe in der Sprache
+ * stehen, in der die Datei geladen wurde — übersetzt wird beim Zeichnen.
+ * Eigene Golf-Schlüssel und nicht `lobby.stufe.*`: Golf nennt die Stufen
+ * anders („Normal", „Profi") als die Kartenlobby.
+ */
 const STUFE_NAME: Record<BotLevel, string> = {
-  anfaenger: 'Anfänger',
-  standard: 'Normal',
-  experte: 'Experte',
-  genie: 'Profi',
+  anfaenger: 'golf.stufe.anfaenger',
+  standard: 'golf.stufe.standard',
+  experte: 'golf.stufe.experte',
+  genie: 'golf.stufe.genie',
 };
 
 function istStufe(wert: unknown): wert is BotLevel {
@@ -359,7 +367,7 @@ export function Golf({
       });
       setTischId(id);
     } catch {
-      setFehler('Die Gruppe ließ sich nicht öffnen. Noch einmal versuchen?');
+      setFehler(t('golf.menue.fehlerOnline'));
     } finally {
       setLaedt(false);
     }
@@ -395,7 +403,7 @@ export function Golf({
       });
       setTischId(id);
     } catch (e) {
-      setFehler(tischFehler(e, 'Der Platz ließ sich nicht aufmachen. Noch einmal versuchen?'));
+      setFehler(tischFehler(e, t('golf.menue.fehlerBots')));
     } finally {
       setLaedt(false);
     }
@@ -489,11 +497,11 @@ export function Golf({
       return (
         <SpielRahmen
           gameId="golf"
-          titel="Gegen Bots"
-          unter={`${bots} ${bots === 1 ? 'Bot' : 'Bots'} · ${lochzahl ?? loecher} Löcher`}
+          titel={t('golf.menue.gegenBots')}
+          unter={`${tn('golf.anzahl.bots', bots, { n: zahl(bots) })} · ${tn('golf.anzahl.loecher', lochzahl ?? loecher, { n: zahl(lochzahl ?? loecher) })}`}
           akzent={AKZENT}
           onBack={() => setBotsOffen(false)}
-          zurueckText="Zurück zum Golfmenü"
+          zurueckText={t('golf.menue.zurueck')}
           fuss={
             <button
               className="hb-kn is-gold is-haupt is-breit"
@@ -502,15 +510,15 @@ export function Golf({
               onClick={() => void spieleGegenBots()}
               disabled={laedt || wahlUnfertig(botWahl) !== null}
             >
-              Los
+              {t('golf.menue.los')}
             </button>
           }
         >
           {fehler && <p className="hb-fehler">{fehler}</p>}
-          <SpielAbschnitt titel="Platz">
+          <SpielAbschnitt titel={t('golf.menue.platz')}>
             <div className="hb-liste gf-neu-regler">
               <Regler
-                titel="Bots"
+                titel={t('golf.menue.bots')}
                 wert={bots}
                 min={1}
                 max={7}
@@ -521,7 +529,7 @@ export function Golf({
               />
               {lochzahl === null && (
                 <Regler
-                  titel="Löcher"
+                  titel={t('golf.menue.loecher')}
                   wert={loecher}
                   min={2}
                   max={15}
@@ -533,10 +541,10 @@ export function Golf({
               )}
             </div>
           </SpielAbschnitt>
-          <SpielAbschnitt titel="Spielstärke">
+          <SpielAbschnitt titel={t('golf.menue.spielstaerke')}>
             <SpielWahl
-              name="Spielstärke der Bots"
-              werte={STUFEN.map((s) => ({ wert: s, text: STUFE_NAME[s] }))}
+              name={t('golf.menue.spielstaerkeBots')}
+              werte={STUFEN.map((s) => ({ wert: s, text: t(STUFE_NAME[s]) }))}
               wert={stufe}
               onWahl={(s) => {
                 setStufe(s);
@@ -544,7 +552,7 @@ export function Golf({
               }}
             />
           </SpielAbschnitt>
-          <SpielAbschnitt titel="Spielart">
+          <SpielAbschnitt titel={t('golf.fun.modus')}>
             <ModusWahl
               modus={modus}
               onWahl={(m) => {
@@ -569,8 +577,8 @@ export function Golf({
     return (
       <SpielRahmen
         gameId="golf"
-        titel="Golf"
-        unter="1-8 Spieler · alle gleichzeitig"
+        titel={t('game.golf')}
+        unter={t('golf.menue.unter')}
         akzent={AKZENT}
         onBack={onBack}
         fuss={
@@ -582,7 +590,7 @@ export function Golf({
               onClick={() => void spieleOnline()}
               disabled={laedt}
             >
-              Online spielen
+              {t('golf.menue.online')}
             </button>
             <button
               className="hb-kn is-blau is-breit"
@@ -590,23 +598,19 @@ export function Golf({
               data-golf-bots=""
               onClick={() => setBotsOffen(true)}
             >
-              Gegen Bots
+              {t('golf.menue.gegenBots')}
             </button>
           </>
         }
       >
-        <p className="spe-text">
-          Minigolf von oben, alle gleichzeitig auf derselben Bahn. Zieh deinen Ball zurück wie
-          einen Flitzebogen, lass los - und wer nach allen Löchern die wenigsten Schläge hat,
-          gewinnt.
-        </p>
+        <p className="spe-text">{t('golf.menue.text')}</p>
         <div className="gf-probe" aria-hidden="true">
           {menueFarben.map((farbe, i) => (
             <Golfball key={i} farbe={farbe} groesse={34} />
           ))}
         </div>
         {KARTEN.length === 0 && (
-          <p className="hb-fehler">Es sind noch keine Bahnen eingebaut - spielen lässt sich noch nicht.</p>
+          <p className="hb-fehler">{t('golf.menue.keineBahnen')}</p>
         )}
         {fehler && <p className="hb-fehler">{fehler}</p>}
       </SpielRahmen>
@@ -663,7 +667,7 @@ export function Golf({
         bahnwahl={
           <>
             {/* Die Spielart der Gruppe (seit 23.09.2026) — Sitz 0 wählt, alle sehen sie. */}
-            <SpielAbschnitt titel="Spielart">
+            <SpielAbschnitt titel={t('golf.fun.modus')}>
               <ModusWahl modus={tischWahl.modus} onWahl={tischWahl.setzeModus} />
             </SpielAbschnitt>
             <Bahnauswahl daten={lobby.daten} wahl={tischWahl.wahl} onWahl={tischWahl.setzeWahl} karten={KARTEN} kursSperre={kursSperre} />
@@ -685,11 +689,8 @@ export function Golf({
 
   if (KARTEN.length === 0) {
     return (
-      <SpielRahmen gameId="golf" titel="Bahnen fehlen" akzent={AKZENT} onBack={verlasseUndZurueck}>
-        <p className="spe-text">
-          Dieser Stand bringt noch keine Bahnen mit. Ohne sie lässt sich die Partie nicht rechnen -
-          der Tisch bleibt bestehen.
-        </p>
+      <SpielRahmen gameId="golf" titel={t('golf.spiel.bahnenFehlen')} akzent={AKZENT} onBack={verlasseUndZurueck}>
+        <p className="spe-text">{t('golf.spiel.bahnenFehlenText')}</p>
       </SpielRahmen>
     );
   }
@@ -703,10 +704,9 @@ export function Golf({
   const fehlendeBahnen = loeseBahnen(sicht.bahnen ?? [], KARTEN).unbekannt;
   if (fehlendeBahnen.length > 0) {
     return (
-      <SpielRahmen gameId="golf" titel="Neue Bahnen" akzent={AKZENT} onBack={verlasseUndZurueck}>
+      <SpielRahmen gameId="golf" titel={t('golf.spiel.neueBahnen')} akzent={AKZENT} onBack={verlasseUndZurueck}>
         <p className="spe-text" data-golf-bahnen-fehlen="">
-          Diese Partie spielt {fehlendeBahnen.length === 1 ? 'eine Bahn' : `${fehlendeBahnen.length} Bahnen`},
-          die diese Fassung noch nicht kennt. Bitte die Seite neu laden - der Tisch bleibt bestehen.
+          {tn('golf.spiel.neueBahnenText', fehlendeBahnen.length, { n: zahl(fehlendeBahnen.length) })}
         </p>
       </SpielRahmen>
     );
@@ -824,7 +824,9 @@ function Lobby({
   const zeilen = sitze.map((platz) => {
     const eigen = meineKennung !== null && platz.accountId === meineKennung;
     const leer = platz.accountId === null && !platz.isBot;
-    const name = leer ? 'frei' : (platz.displayName ?? (platz.isBot ? 'Bot' : 'Spieler'));
+    const name = leer
+      ? t('golf.lobby.frei')
+      : (platz.displayName ?? t(platz.isBot ? 'golf.lobby.bot' : 'golf.lobby.spieler'));
     const ball = <Golfball farbe={leer ? '#5b6b5f' : (farben[platz.seat] ?? '#5b6b5f')} groesse={26} />;
     return (
       <li
@@ -848,17 +850,17 @@ function Lobby({
             data-golf-farbe={platz.seat}
             onClick={() => onFarbe(platz.seat)}
             disabled={!verbunden}
-            title="Farbe wechseln"
+            title={t('golf.lobby.farbe')}
           >
             {ball}
             <span className="gf-gruppenname">{name}</span>
-            <em className="gf-du">du</em>
+            <em className="gf-du">{t('golf.lobby.du')}</em>
           </button>
         ) : (
           <>
             {ball}
             <span className="gf-gruppenname">{name}</span>
-            {eigen && <em className="gf-du">du</em>}
+            {eigen && <em className="gf-du">{t('golf.lobby.du')}</em>}
           </>
         )}
       </li>
@@ -869,8 +871,8 @@ function Lobby({
   return (
     <SpielRahmen
       gameId="golf"
-      titel="Gruppe"
-      unter={`${anwesend.length}/${plaetze} in der Gruppe`}
+      titel={t('golf.lobby.titel')}
+      unter={tf('golf.lobby.anwesend', { n: zahl(anwesend.length), max: zahl(plaetze) })}
       akzent={AKZENT}
       onBack={onZurueck}
       fuss={
@@ -883,11 +885,11 @@ function Lobby({
             disabled={!verbunden || startSperre !== null}
             title={startSperre ?? undefined}
           >
-            Starten
+            {t('golf.lobby.starten')}
           </button>
         ) : (
           <p className="gf-warten" aria-live="polite">
-            <span>Warten, bis {host?.displayName ?? 'der Erste'} startet</span>
+            <span>{tf('golf.lobby.warten', { name: host?.displayName ?? t('golf.lobby.derErste') })}</span>
             <span className="gf-lauf" aria-hidden="true">
               <i />
               <i />
@@ -897,8 +899,8 @@ function Lobby({
         )
       }
     >
-      {!verbunden && <p className="hb-fehler">Keine Verbindung - es wird neu aufgebaut …</p>}
-      <SpielAbschnitt titel="Spieler">
+      {!verbunden && <p className="hb-fehler">{t('golf.lobby.keineVerbindung')}</p>}
+      <SpielAbschnitt titel={t('golf.lobby.spielerTitel')}>
         <ul className="hb-liste gf-neu-gruppe">{zeilen}</ul>
       </SpielAbschnitt>
       <GastHinweis sitze={sitze} className="hb-klein" />
@@ -908,11 +910,11 @@ function Lobby({
           <section className="hb-blk">
             {loecherFest === null ? (
               <div className="hb-liste gf-neu-regler">
-                <Regler titel="Löcher" wert={loecher} min={2} max={15} onWahl={onLoecher} />
+                <Regler titel={t('golf.menue.loecher')} wert={loecher} min={2} max={15} onWahl={onLoecher} />
               </div>
             ) : (
               <p className="gf-bw-hinweis" data-golf-loecher-fest={loecherFest}>
-                {loecherFest} Löcher
+                {tn('golf.anzahl.loecher', loecherFest, { n: zahl(loecherFest) })}
               </p>
             )}
           </section>
@@ -1433,7 +1435,7 @@ function Partie({
 
   const name = (sitz: number): string => {
     const zeile = sitze.find((s) => s.seat === sitz);
-    return zeile?.displayName ?? (zeile?.isBot ? 'Bot' : `P${sitz + 1}`);
+    return zeile?.displayName ?? (zeile?.isBot ? t('golf.lobby.bot') : `P${sitz + 1}`);
   };
 
   return (
@@ -1450,11 +1452,16 @@ function Partie({
 
       <div className="gf-hud" ref={hudRef}>
         <div className="gf-hudkopf" ref={kopfRef}>
-          <button className="gf-zurueck gf-zurueck-tisch" type="button" onClick={onZurueck} aria-label="Zurück">
+          <button className="gf-zurueck gf-zurueck-tisch" type="button" onClick={onZurueck} aria-label={t('golf.spiel.zurueck')}>
             ←
           </button>
           <span className="gf-bahnzeile">
-            Loch {hud.loch + 1}/{hud.loecher} · {hud.bahn} · Par {hud.par}
+            {tf('golf.spiel.bahnzeile', {
+              loch: zahl(hud.loch + 1),
+              loecher: zahl(hud.loecher),
+              bahn: hud.bahn,
+              par: zahl(hud.par),
+            })}
           </span>
           <span className="gf-zeit" data-knapp={hud.restS <= 10 ? '' : undefined}>
             {zeitText(hud.restS)}
@@ -1496,7 +1503,7 @@ function Partie({
 
         {hud.binTroedler && hud.troedel > 0 && (
           <p className="gf-troedel" aria-live="polite">
-            Alle warten auf dich: {hud.troedel}
+            {tf('golf.spiel.troedel', { n: zahl(hud.troedel) })}
           </p>
         )}
         {hinweis && <p className="gf-hinweis">{hinweis}</p>}
@@ -1504,16 +1511,16 @@ function Partie({
 
       {hud.pause && (
         <div className="gf-pause">
-          <h2>Loch {hud.loch + 1} - Zwischenstand</h2>
+          <h2>{tf('golf.spiel.zwischenstand', { n: zahl(hud.loch + 1) })}</h2>
           <table className="gf-tafel">
             <thead>
               <tr>
                 <th />
-                <th>Loch</th>
+                <th>{t('golf.replay.loch')}</th>
                 <th>
                   {t('golf.par.par')} {hud.par}
                 </th>
-                <th>Gesamt</th>
+                <th>{t('golf.spiel.gesamt')}</th>
               </tr>
             </thead>
             <tbody>
@@ -1544,8 +1551,8 @@ function Partie({
           />
           <p className="gf-pausezeit">
             {hud.loch + 1 >= hud.loecher
-              ? 'Gleich das Ergebnis …'
-              : `Loch ${hud.loch + 2} beginnt … ${hud.pauseRest}`}
+              ? t('golf.spiel.gleichErgebnis')
+              : tf('golf.spiel.naechstesLoch', { n: zahl(hud.loch + 2), rest: zahl(hud.pauseRest) })}
           </p>
           {onReplay && (
             <button className="grp-pauseknopf" type="button" onClick={() => onReplay(hud.loch)}>
@@ -1568,11 +1575,11 @@ function Partie({
           zielbildRef.current = null;
           setUebersicht(an);
         }}
-        aria-label="Übersicht"
+        aria-label={t('golf.spiel.uebersicht')}
       >
         <Kartenzeichen />
       </button>
-      {uebersicht && <p className="gf-uebersichthinweis">Übersicht - tippe zum Zurück</p>}
+      {uebersicht && <p className="gf-uebersichthinweis">{t('golf.spiel.uebersichtHinweis')}</p>}
     </main>
   );
 }
@@ -1757,7 +1764,7 @@ export function Abschluss({
   const ausgang = sicht?.ausgang ?? null;
   const name = (sitz: number): string => {
     const zeile = sitze.find((s) => s.seat === sitz);
-    return zeile?.displayName ?? (zeile?.isBot ? 'Bot' : `Spieler ${sitz + 1}`);
+    return zeile?.displayName ?? (zeile?.isBot ? t('golf.lobby.bot') : tf('golf.ergebnis.spieler', { n: zahl(sitz + 1) }));
   };
 
   const rangliste = (
@@ -1784,12 +1791,9 @@ export function Abschluss({
   );
   const bestaetigung =
     ausgang === null ? (
-      <p className="gf-untertitel gf-klein">Ergebnis wird bestätigt …</p>
+      <p className="gf-untertitel gf-klein">{t('golf.ergebnis.bestaetigen')}</p>
     ) : ausgang.strittig ? (
-      <p className="gf-fehler">
-        Die Geräte sind auf verschiedene Ergebnisse gekommen - die Partie
-        zählt als strittig, alle stehen auf Platz 1.
-      </p>
+      <p className="gf-fehler">{t('golf.ergebnis.strittig')}</p>
     ) : null;
   const replayKnoepfe =
     onReplay && daten.ergebnis.length > 0 ? (
@@ -1813,14 +1817,14 @@ export function Abschluss({
   return (
     <SpielRahmen
       gameId="golf"
-      titel="Ergebnis"
-      unter={`Golf · ${daten.ergebnis.length} ${daten.ergebnis.length === 1 ? 'Loch' : 'Löcher'}`}
+      titel={t('golf.ergebnis.titel')}
+      unter={`${t('game.golf')} · ${tn('golf.anzahl.loecher', daten.ergebnis.length, { n: zahl(daten.ergebnis.length) })}`}
       akzent={AKZENT}
       onBack={onZurueck}
-      zurueckText="Zurück ins Menü"
+      zurueckText={t('golf.ergebnis.zurueck')}
       fuss={
         <button className="hb-kn is-gold is-haupt is-breit" type="button" onClick={onZurueck}>
-          Zurück ins Menü
+          {t('golf.ergebnis.zurueck')}
         </button>
       }
     >
