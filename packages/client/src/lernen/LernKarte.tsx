@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { Flamme } from './Flamme';
 import type { LernserieKurz } from './sicht';
 import './lernen.css';
@@ -15,25 +17,25 @@ export function LernKarte({ serie, onOeffnen }: { serie: LernserieKurz | undefin
   const heute = serie?.heuteGespielt ?? false;
   const unter = serie?.belohnt
     ? heute
-      ? 'Heute geschafft. Doko-Meister bist du schon.'
-      : 'Halte deine Flamme am Brennen.'
+      ? t('startkarte.lernen.meisterHeute')
+      : t('startkarte.lernen.brennen')
     : heute
-      ? `Heute geschafft - noch ${Math.max(0, ziel - tage)} bis zum Doko-Meister.`
+      ? tf('startkarte.lernen.heuteNoch', { rest: Math.max(0, ziel - tage) })
       : tage > 0
-        ? 'Heute noch eine Lektion, sonst erlischt die Flamme.'
-        : `${ziel} Tage am Stück, dann gibt es ein Pinguin-Outfit.`;
+        ? t('startkarte.lernen.lektion')
+        : tf('startkarte.lernen.einladung', { ziel });
 
   return (
     <button
       type="button"
       className="ln-startkarte"
       onClick={onOeffnen}
-      aria-label={`Doppelkopf lernen. Serie: ${tage} ${tage === 1 ? 'Tag' : 'Tage'}. ${unter}`}
+      aria-label={tn('startkarte.lernen.aria', tage, { unter })}
     >
       <Flamme aus={!heute} groesse={2.6} />
       <span className="ln-startkarte-text">
-        <span className="hb-label">Doppelkopf lernen</span>
-        <strong>{tage > 0 ? `${tage} ${tage === 1 ? 'Tag' : 'Tage'} Serie` : 'Starte deine Serie'}</strong>
+        <span className="hb-label">{t('startkarte.lernen.label')}</span>
+        <strong>{tage > 0 ? tn('startkarte.serie', tage) : t('startkarte.lernen.starten')}</strong>
         <span className="ln-startkarte-punkte" aria-hidden="true">
           {Array.from({ length: ziel }, (_, i) => (
             <i key={i} className={i < Math.min(tage, ziel) ? 'is-voll' : undefined} />

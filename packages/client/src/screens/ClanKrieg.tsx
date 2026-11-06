@@ -12,7 +12,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
 
 import { type ClubSummary, type WarState, type WarView, api } from '../api';
-import { restzeit } from './ClanTeile';
+import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
+import { mitFett, restzeit } from './ClanTeile';
 import { HbBlatt, Zurueck } from './HbBlatt';
 
 const WAPPEN_UNBEKANNT = '/hub/clan-wappen.png';
@@ -40,7 +42,7 @@ export function ClanKrieg({
     void api
       .clubWar(clubId)
       .then(setStand)
-      .catch(() => setFehler('Der Kriegsstand ließ sich nicht laden.'));
+      .catch(() => setFehler(t('clankrieg.fehler.laden')));
   }, [clubId]);
 
   useEffect(laden, [laden]);
@@ -71,14 +73,14 @@ export function ClanKrieg({
     return (
       <div className="hb-spiele hb-krieg-voll">
         <header className="hb-kopfzeile is-zurueck">
-          <Zurueck onClick={onClose} label="Zurück zur Clanhalle" />
+          <Zurueck onClick={onClose} label={t('clankrieg.zurueckAria')} />
           <span className="hb-kopf-titel">
-            <h1 className="hb-titel">Clankrieg</h1>
-            <small>Zwei Clans, 48 Stunden, alle Spiele zählen</small>
+            <h1 className="hb-titel">{t('clankrieg.titel')}</h1>
+            <small>{t('clankrieg.untertitel')}</small>
           </span>
         </header>
         <div className="hb-spiele-rolle">
-          {stand === null && !fehler && <p className="hb-laden">Wird geladen…</p>}
+          {stand === null && !fehler && <p className="hb-laden">{t('clan.laden')}</p>}
           {fehler && <p className="hb-fehler">{fehler}</p>}
 
           {aktuell?.status === 'laeuft' && <SchlachtNeu krieg={aktuell} />}
@@ -88,13 +90,13 @@ export function ClanKrieg({
               <span className="hb-warten-punkt" aria-hidden="true" />
               <h2 className="hb-ab">
                 {aktuell.status === 'suche'
-                  ? 'Wir suchen einen Gegner'
-                  : `Herausforderung an ${aktuell.gegner?.name ?? 'einen Clan'}`}
+                  ? t('clankrieg.suche.titel')
+                  : tf('clankrieg.angefragt.titel', { name: aktuell.gegner?.name ?? t('clankrieg.einenClan') })}
               </h2>
               <p className="hb-text">
                 {aktuell.status === 'suche'
-                  ? 'Sobald ein anderer Clan ebenfalls sucht, geht es sofort los. Ihr könnt in der Zwischenzeit normal spielen.'
-                  : 'Der andere Clan muss annehmen. Nimmt er an, läuft die Uhr sofort.'}
+                  ? t('clankrieg.suche.text')
+                  : t('clankrieg.angefragt.text')}
               </p>
               {stand.darfFuehren && (
                 <button
@@ -103,7 +105,7 @@ export function ClanKrieg({
                   disabled={beschaeftigt}
                   onClick={() => tue(api.cancelWar(clubId, aktuell.id))}
                 >
-                  {aktuell.status === 'suche' ? 'Suche beenden' : 'Zurücknehmen'}
+                  {aktuell.status === 'suche' ? t('clankrieg.suche.beenden') : t('clankrieg.zuruecknehmen')}
                 </button>
               )}
             </section>
@@ -116,8 +118,8 @@ export function ClanKrieg({
               <span className="hb-kr-anfrage-kopf">
                 <img src={wappenBild(anfrage.gegner?.crest ?? '')} alt="" draggable={false} />
                 <span>
-                  <strong>{anfrage.gegner?.name ?? 'Ein Clan'}</strong>
-                  <small>fordert euch heraus</small>
+                  <strong>{anfrage.gegner?.name ?? t('clankrieg.einClan')}</strong>
+                  <small>{t('clankrieg.fordertHeraus')}</small>
                 </span>
               </span>
               {stand.darfFuehren && (
@@ -128,7 +130,7 @@ export function ClanKrieg({
                     disabled={beschaeftigt}
                     onClick={() => tue(api.cancelWar(clubId, anfrage.id))}
                   >
-                    Ablehnen
+                    {t('clankrieg.ablehnen')}
                   </button>
                   <button
                     type="button"
@@ -136,7 +138,7 @@ export function ClanKrieg({
                     disabled={beschaeftigt}
                     onClick={() => tue(api.acceptWar(clubId, anfrage.id))}
                   >
-                    Annehmen
+                    {t('clankrieg.annehmen')}
                   </button>
                 </span>
               )}
@@ -147,10 +149,9 @@ export function ClanKrieg({
           {stand && !aktuell && (
             <section className="hb-karte hb-kr-start">
               <img src="/hub/icon-krieg.webp" alt="" draggable={false} />
-              <h2 className="hb-ab">Kein Krieg im Gange</h2>
+              <h2 className="hb-ab">{t('clankrieg.start.titel')}</h2>
               <p className="hb-text">
-                Zwei Clans, 48 Stunden, Punkte aus euren Partien. Sucht euch einen Gegner - oder
-                fordert einen bestimmten Clan heraus.
+                {t('clankrieg.start.text')}
               </p>
               {stand.darfFuehren ? (
                 <>
@@ -162,7 +163,7 @@ export function ClanKrieg({
                     disabled={beschaeftigt}
                     onClick={() => tue(api.searchWar(clubId))}
                   >
-                    Gegner suchen
+                    {t('clankrieg.gegnerSuchen')}
                   </button>
                   <button
                     type="button"
@@ -170,46 +171,30 @@ export function ClanKrieg({
                     disabled={beschaeftigt}
                     onClick={() => setGegnerwahl(true)}
                   >
-                    Clan herausfordern
+                    {t('clankrieg.herausfordern')}
                   </button>
                 </>
               ) : (
-                <p className="hb-klein hb-ohne-rand">Einen Krieg starten dürfen Anführer und Vize.</p>
+                <p className="hb-klein hb-ohne-rand">{t('clankrieg.nurLeitung')}</p>
               )}
             </section>
           )}
 
           {/* Die Regel gehört auf den Bildschirm, nicht in eine Hilfe. */}
           <section className="hb-blk">
-            <h2 className="hb-ab">So zählt es</h2>
+            <h2 className="hb-ab">{t('clankrieg.regel.titel')}</h2>
             <ul className="hb-karte hb-regelliste">
-              <li>
-                <b>Platz 1</b> bringt 3 Punkte, <b>Platz 2</b> einen.
-              </li>
-              <li>
-                Je Mitglied zählen <b>höchstens 10 Partien</b>. Ein Vielspieler entscheidet den Krieg
-                nicht allein.
-              </li>
-              <li>
-                Es zählen nur Partien mit <b>mindestens zwei Menschen</b> am Tisch. Gegen Bots gibt es
-                keine Kriegspunkte.
-              </li>
+              <li>{mitFett(t('clankrieg.regel.platz'), 'b')}</li>
+              <li>{mitFett(t('clankrieg.regel.hoechstens'), 'b')}</li>
+              <li>{mitFett(t('clankrieg.regel.menschen'), 'b')}</li>
             </ul>
           </section>
 
           {stand?.letzter && (
             <section className="hb-blk">
-              <h2 className="hb-ab">Letzter Krieg</h2>
+              <h2 className="hb-ab">{t('clankrieg.letzter.titel')}</h2>
               <p className={`hb-karte hb-kr-letzter is-${stand.letzter.ergebnis ?? 'unentschieden'}`}>
-                <strong>
-                  {stand.letzter.ergebnis === 'wir'
-                    ? 'Gewonnen'
-                    : stand.letzter.ergebnis === 'gegner'
-                      ? 'Verloren'
-                      : 'Unentschieden'}
-                </strong>{' '}
-                gegen {stand.letzter.gegner?.name ?? 'einen Clan'}: {stand.letzter.wir.score} zu{' '}
-                {stand.letzter.gegner?.score ?? 0}.
+                {letzterSatz(stand.letzter)}
               </p>
             </section>
           )}
@@ -231,9 +216,9 @@ export function ClanKrieg({
     <div className="clan-voll">
       <header className="clan-voll-kopf">
         <button className="hub-zurueck" onClick={onClose} type="button">
-          ← Zurück
+          {t('clan.zurueckPfeil')}
         </button>
-        <h2>Clankrieg</h2>
+        <h2>{t('clankrieg.titel')}</h2>
       </header>
 
       <div className="clan-krieg-inhalt">
@@ -244,20 +229,20 @@ export function ClanKrieg({
 
         {stand?.aktuell?.status === 'suche' && (
           <Wartefeld
-            titel="Wir suchen einen Gegner"
-            text="Sobald ein anderer Clan ebenfalls sucht, geht es sofort los. Ihr könnt in der Zwischenzeit normal spielen."
+            titel={t('clankrieg.suche.titel')}
+            text={t('clankrieg.suche.text')}
             darfFuehren={stand.darfFuehren}
-            knopf="Suche beenden"
+            knopf={t('clankrieg.suche.beenden')}
             onKnopf={() => tue(api.cancelWar(clubId, stand.aktuell!.id))}
           />
         )}
 
         {stand?.aktuell?.status === 'angefragt' && (
           <Wartefeld
-            titel={`Herausforderung an ${stand.aktuell.gegner?.name ?? 'einen Clan'}`}
-            text="Der andere Clan muss annehmen. Nimmt er an, läuft die Uhr sofort."
+            titel={tf('clankrieg.angefragt.titel', { name: stand.aktuell.gegner?.name ?? t('clankrieg.einenClan') })}
+            text={t('clankrieg.angefragt.text')}
             darfFuehren={stand.darfFuehren}
-            knopf="Zurücknehmen"
+            knopf={t('clankrieg.zuruecknehmen')}
             onKnopf={() => tue(api.cancelWar(clubId, stand.aktuell!.id))}
           />
         )}
@@ -268,8 +253,8 @@ export function ClanKrieg({
           <section className="clan-krieg-anfrage" key={anfrage.id}>
             <img src={wappenBild(anfrage.gegner?.crest ?? '')} alt="" draggable={false} />
             <div>
-              <strong>{anfrage.gegner?.name ?? 'Ein Clan'}</strong>
-              <span className="muted">fordert euch heraus</span>
+              <strong>{anfrage.gegner?.name ?? t('clankrieg.einClan')}</strong>
+              <span className="muted">{t('clankrieg.fordertHeraus')}</span>
             </div>
             {stand.darfFuehren && (
               <div className="clan-krieg-anfrage-knoepfe">
@@ -278,13 +263,13 @@ export function ClanKrieg({
                   disabled={beschaeftigt}
                   onClick={() => tue(api.acceptWar(clubId, anfrage.id))}
                 >
-                  Annehmen
+                  {t('clankrieg.annehmen')}
                 </button>
                 <button
                   disabled={beschaeftigt}
                   onClick={() => tue(api.cancelWar(clubId, anfrage.id))}
                 >
-                  Ablehnen
+                  {t('clankrieg.ablehnen')}
                 </button>
               </div>
             )}
@@ -298,10 +283,9 @@ export function ClanKrieg({
                 .webp, so heisst die Datei. Ein .png-Verweis darauf war ein
                 weisser Kasten. */}
             <img className="clan-krieg-bild" src="/hub/icon-krieg.webp" alt="" draggable={false} />
-            <h3>Kein Krieg im Gange</h3>
+            <h3>{t('clankrieg.start.titel')}</h3>
             <p className="muted">
-              Zwei Clans, 48 Stunden, Punkte aus euren Partien. Sucht euch einen Gegner -
-              oder fordert einen bestimmten Clan heraus.
+              {t('clankrieg.start.text')}
             </p>
             {stand.darfFuehren ? (
               <div className="clan-krieg-startknoepfe">
@@ -310,15 +294,15 @@ export function ClanKrieg({
                   disabled={beschaeftigt}
                   onClick={() => tue(api.searchWar(clubId))}
                 >
-                  Gegner suchen
+                  {t('clankrieg.gegnerSuchen')}
                 </button>
                 <button disabled={beschaeftigt} onClick={() => setGegnerwahl(true)}>
-                  Clan herausfordern
+                  {t('clankrieg.herausfordern')}
                 </button>
               </div>
             ) : (
               <p className="muted">
-                Einen Krieg starten dürfen Anführer und Vize.
+                {t('clankrieg.nurLeitung')}
               </p>
             )}
           </section>
@@ -359,25 +343,25 @@ function Schlacht({ krieg }: { krieg: WarView }): React.JSX.Element {
 
       <div className="clan-krieg-seiten">
         <Seite seite={krieg.wir} eigen fuehrt={fuehrend === 'wir'} />
-        <span className="clan-krieg-gegen">gegen</span>
+        <span className="clan-krieg-gegen">{t('clankrieg.gegen')}</span>
         {krieg.gegner && <Seite seite={krieg.gegner} fuehrt={fuehrend === 'gegner'} />}
       </div>
 
-      <div className="clan-krieg-balken" role="img" aria-label={`${krieg.wir.score} zu ${krieg.gegner?.score ?? 0}`}>
+      <div className="clan-krieg-balken" role="img" aria-label={tf('clankrieg.stand', { wir: krieg.wir.score, gegner: krieg.gegner?.score ?? 0 })}>
         <span className="clan-krieg-balken-wir" style={{ width: `${anteil}%` }} />
       </div>
 
-      <h3 className="clan-krieg-untertitel">Wer hat gepunktet</h3>
+      <h3 className="clan-krieg-untertitel">{t('clankrieg.gepunktet')}</h3>
       {krieg.beitraege.length === 0 && (
         <p className="muted">
-          Noch keine Punkte. Spielt eine Partie - mindestens zwei Menschen am Tisch.
+          {t('clankrieg.keinePunkte')}
         </p>
       )}
       <ul className="clan-krieg-beitraege">
         {krieg.beitraege.map((b) => (
           <li key={b.accountId}>
             <span className="clan-krieg-beitrag-name">{b.displayName}</span>
-            <span className="muted">{b.games} von 10 Partien</span>
+            <span className="muted">{tf('clankrieg.partien', { n: b.games })}</span>
             <strong>{b.points}</strong>
           </li>
         ))}
@@ -396,7 +380,7 @@ function SchlachtNeu({ krieg }: { krieg: WarView }): React.JSX.Element {
     <>
       <section className="hb-krieg is-gross">
         <span className="hb-kr-kopf">
-          <strong>Krieg läuft</strong>
+          <strong>{t('clankrieg.laeuft')}</strong>
           <small>{restzeit(krieg.endsAt)}</small>
         </span>
         <span className="hb-kr-vs">
@@ -414,19 +398,19 @@ function SchlachtNeu({ krieg }: { krieg: WarView }): React.JSX.Element {
             </span>
           )}
         </span>
-        <span className="hb-kr-balken" role="img" aria-label={`${krieg.wir.score} zu ${gegner}`}>
+        <span className="hb-kr-balken" role="img" aria-label={tf('clankrieg.stand', { wir: krieg.wir.score, gegner })}>
           <span style={{ width: `${anteil}%` }} />
         </span>
       </section>
 
       <section className="hb-blk">
         <h2 className="hb-ab">
-          Wer hat gepunktet
+          {t('clankrieg.gepunktet')}
           {krieg.beitraege.length > 0 && <span className="hb-ab-zusatz">{krieg.beitraege.length}</span>}
         </h2>
         {krieg.beitraege.length === 0 ? (
           <p className="hb-klein hb-ohne-rand">
-            Noch keine Punkte. Spielt eine Partie - mindestens zwei Menschen am Tisch.
+            {t('clankrieg.keinePunkte')}
           </p>
         ) : (
           <ul className="hb-liste">
@@ -435,7 +419,7 @@ function SchlachtNeu({ krieg }: { krieg: WarView }): React.JSX.Element {
                 <span className="hb-rl-rang">{i + 1}</span>
                 <span className="hb-mg-name">
                   <strong>{b.displayName}</strong>
-                  <small className="is-leise">{b.games} von 10 Partien</small>
+                  <small className="is-leise">{tf('clankrieg.partien', { n: b.games })}</small>
                 </span>
                 <b className="hb-kr-punkte">{b.points}</b>
               </li>
@@ -492,38 +476,34 @@ function Wartefeld({
 function Spielregel(): React.JSX.Element {
   return (
     <section className="clan-krieg-regel">
-      <h3>So zählt es</h3>
+      <h3>{t('clankrieg.regel.titel')}</h3>
       <ul>
-        <li>
-          <strong>Platz 1</strong> bringt 3 Punkte, <strong>Platz 2</strong> einen.
-        </li>
-        <li>
-          Je Mitglied zählen <strong>höchstens 10 Partien</strong>. Ein Vielspieler
-          entscheidet den Krieg nicht allein.
-        </li>
-        <li>
-          Es zählen nur Partien mit <strong>mindestens zwei Menschen</strong> am Tisch.
-          Gegen Bots gibt es keine Kriegspunkte.
-        </li>
+        <li>{mitFett(t('clankrieg.regel.platz'), 'strong')}</li>
+        <li>{mitFett(t('clankrieg.regel.hoechstens'), 'strong')}</li>
+        <li>{mitFett(t('clankrieg.regel.menschen'), 'strong')}</li>
       </ul>
     </section>
   );
 }
 
+/** Ausgang des letzten Kriegs als ganzer Satz, das Ergebniswort fett. */
+function letzterSatz(krieg: WarView): React.ReactNode[] {
+  const ausgang = krieg.ergebnis === 'wir' ? 'wir' : krieg.ergebnis === 'gegner' ? 'gegner' : 'gleich';
+  return mitFett(
+    tf(`clankrieg.letzter.${ausgang}`, {
+      name: krieg.gegner?.name ?? t('clankrieg.einenClan'),
+      wir: krieg.wir.score,
+      gegner: krieg.gegner?.score ?? 0,
+    }),
+    'strong',
+  );
+}
+
 function LetzterKrieg({ krieg }: { krieg: WarView }): React.JSX.Element {
-  const wort =
-    krieg.ergebnis === 'wir'
-      ? 'Gewonnen'
-      : krieg.ergebnis === 'gegner'
-        ? 'Verloren'
-        : 'Unentschieden';
   return (
     <section className={`clan-krieg-letzter is-${krieg.ergebnis ?? 'unentschieden'}`}>
-      <h3>Letzter Krieg</h3>
-      <p>
-        <strong>{wort}</strong> gegen {krieg.gegner?.name ?? 'einen Clan'}:{' '}
-        {krieg.wir.score} zu {krieg.gegner?.score ?? 0}.
-      </p>
+      <h3>{t('clankrieg.letzter.titel')}</h3>
+      <p>{letzterSatz(krieg)}</p>
     </section>
   );
 }
@@ -553,24 +533,24 @@ function Gegnerwahl({
 
   if (neu) {
     return (
-      <HbBlatt titel="Clan herausfordern" onClose={onClose}>
+      <HbBlatt titel={t('clankrieg.herausfordern')} onClose={onClose}>
         <input
           className="hb-feld is-suche"
           value={suche}
           onChange={(e) => setSuche(e.target.value)}
-          placeholder="Clan suchen…"
-          aria-label="Clan suchen"
+          placeholder={t('clan.suche.platzhalter')}
+          aria-label={t('clan.suche.aria')}
         />
         <div className="hb-liste">
-          {clans === null && <p className="hb-klein hb-liste-leer">Wird geladen…</p>}
-          {clans?.length === 0 && <p className="hb-klein hb-liste-leer">Kein anderer Clan gefunden.</p>}
+          {clans === null && <p className="hb-klein hb-liste-leer">{t('clan.laden')}</p>}
+          {clans?.length === 0 && <p className="hb-klein hb-liste-leer">{t('clankrieg.keinGegner')}</p>}
           {clans?.map((c) => (
-            <button type="button" key={c.id} className="hb-mg" onClick={() => onWaehlen(c.id)} aria-label={`${c.name} herausfordern`}>
+            <button type="button" key={c.id} className="hb-mg" onClick={() => onWaehlen(c.id)} aria-label={tf('clankrieg.herausfordern.aria', { name: c.name })}>
               <img className="hb-mg-wappen" src={wappenBild(c.crest)} alt="" draggable={false} />
               <span className="hb-mg-name">
                 <strong>{c.name}</strong>
                 <small className="is-leise">
-                  {c.members}/{c.maxMembers} Mitglieder
+                  {tf('clankrieg.mitglieder', { n: c.members, max: c.maxMembers })}
                 </small>
               </span>
               <span className="hb-pk">
@@ -587,18 +567,18 @@ function Gegnerwahl({
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card clan-blatt" onClick={(e) => e.stopPropagation()}>
-        <h2>Clan herausfordern</h2>
+        <h2>{t('clankrieg.herausfordern')}</h2>
         <div className="lobby-suche">
           <input
             value={suche}
             onChange={(e) => setSuche(e.target.value)}
-            placeholder="Clan suchen…"
-            aria-label="Clan suchen"
+            placeholder={t('clan.suche.platzhalter')}
+            aria-label={t('clan.suche.aria')}
           />
         </div>
         <div className="clan-krieg-gegnerliste">
           {clans === null && <Ladekreis />}
-          {clans?.length === 0 && <p className="muted">Kein anderer Clan gefunden.</p>}
+          {clans?.length === 0 && <p className="muted">{t('clankrieg.keinGegner')}</p>}
           {clans?.map((c) => (
             <button key={c.id} className="clan-zeile" onClick={() => onWaehlen(c.id)}>
               <img className="clan-avatar" src={wappenBild(c.crest)} alt="" draggable={false} />
@@ -611,7 +591,7 @@ function Gegnerwahl({
           ))}
         </div>
         <button className="primary" onClick={onClose}>
-          Abbrechen
+          {t('clan.abbrechen')}
         </button>
       </div>
     </div>
@@ -622,16 +602,16 @@ function fehlertext(e: unknown): string {
   const code = (e as { code?: string })?.code ?? '';
   switch (code) {
     case 'warAlreadyActive':
-      return 'Ihr steckt schon in einem Krieg oder einer Anfrage.';
+      return t('clankrieg.fehler.warAlreadyActive');
     case 'warOpponentBusy':
-      return 'Dieser Clan ist gerade selbst im Krieg.';
+      return t('clankrieg.fehler.warOpponentBusy');
     case 'warSelfChallenge':
-      return 'Gegen euch selbst geht es nicht.';
+      return t('clankrieg.fehler.warSelfChallenge');
     case 'warRunning':
-      return 'Ein laufender Krieg lässt sich nicht absagen.';
+      return t('clankrieg.fehler.warRunning');
     case 'notClubAdmin':
-      return 'Das dürfen nur Anführer und Vize.';
+      return t('clankrieg.fehler.notClubAdmin');
     default:
-      return 'Hat nicht geklappt. Versuch es nochmal.';
+      return t('clan.fehler.sonst');
   }
 }

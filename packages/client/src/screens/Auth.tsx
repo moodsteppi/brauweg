@@ -52,7 +52,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         setError(t(err.messageKey));
         setErrorCode(err.code);
       } else {
-        setError('Verbindung fehlgeschlagen.');
+        setError(t('anmeldung.verbindungFehlgeschlagen'));
       }
     } finally {
       setBusy(false);
@@ -64,8 +64,8 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
       const antwort = await api.resendVerification(email);
       setNote(
         antwort.mailVersand === 'log'
-          ? 'Der Mailversand ist gerade nicht eingerichtet - es geht keine Mail hinaus. Melde dich bitte bei uns.'
-          : 'Falls es die Adresse gibt und sie noch nicht bestätigt ist, ist eine neue E-Mail unterwegs.',
+          ? t('anmeldung.mailversandAus')
+          : t('anmeldung.bestaetigungUnterwegs'),
       );
     });
 
@@ -83,7 +83,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
     void run(async () => {
       try {
         await api.verify(fromUrl);
-        setNote('Adresse bestätigt. Du kannst dich jetzt anmelden.');
+        setNote(t('anmeldung.adresseBestaetigt'));
         setMode('login');
       } catch (err) {
         // Abgelaufen oder schon benutzt: Formular zeigen, damit ein neuer
@@ -126,8 +126,8 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         // "Ist unterwegs" nur, wenn der Versanddienst die Mail angenommen hat.
         setNote(
           antwort.mailVersandt
-            ? 'Wir haben dir eine E-Mail geschickt. Bestätige die Adresse, dann kannst du dich anmelden. Sieh auch im Spam nach.'
-            : 'Dein Konto ist angelegt, aber die Bestätigungsmail ging nicht hinaus. Fordere unten einen neuen Link an.',
+            ? t('anmeldung.mailGeschickt')
+            : t('anmeldung.mailNichtVersandt'),
         );
         setMode('verify');
         return;
@@ -138,14 +138,14 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         // Verzeichnis registrierter Konten.
         setNote(
           antwort.mailVersand === 'log'
-            ? 'Der Mailversand ist gerade nicht eingerichtet - es geht keine Mail hinaus. Melde dich bitte bei uns.'
-            : 'Falls es ein Konto mit dieser Adresse gibt, ist ein Link zum neuen Passwort unterwegs. Er gilt zwei Stunden.',
+            ? t('anmeldung.mailversandAus')
+            : t('anmeldung.resetUnterwegs'),
         );
         return;
       }
       if (mode === 'verify') {
         await api.verify(extractToken(token));
-        setNote('Adresse bestätigt. Du kannst dich jetzt anmelden.');
+        setNote(t('anmeldung.adresseBestaetigt'));
         setMode('login');
         return;
       }
@@ -170,9 +170,9 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         </h1>
         <img className="anm-held" src="/hub/pinguin.png" alt="" draggable={false} />
         <p className="anm-spruch">
-          Karten, Party und mehr.
+          {t('anmeldung.spruch.zeile1')}
           <br />
-          Mit Freunden oder gegen Bots.
+          {t('anmeldung.spruch.zeile2')}
         </p>
         <div className="anm-knoepfe">
           {note && <p className="anm-hinweis">{note}</p>}
@@ -182,7 +182,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
               <rect x="3" y="5" width="18" height="14" rx="3" />
               <path d="M4 7l8 6 8-6" />
             </svg>
-            Mit E-Mail weiter
+            {t('anmeldung.mitEmail')}
           </button>
           {/* Im Web nur, wenn der Server Client-IDs nennt; in der App nur
               Apple ueber den Systemdialog (siehe AnbieterKnoepfe). Fehlen
@@ -195,7 +195,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
             onFehler={(fehler) => void run(() => Promise.reject(fehler))}
           />
           <button type="button" className="anm-gast" onClick={() => wechsle('gast')}>
-            Ohne Konto spielen
+            {t('anmeldung.ohneKonto')}
           </button>
           <Rechtliches />
         </div>
@@ -205,19 +205,19 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
 
   const titel =
     mode === 'register'
-      ? 'Konto anlegen'
+      ? t('anmeldung.kontoAnlegen')
       : mode === 'verify'
-        ? 'Adresse bestätigen'
+        ? t('anmeldung.adresseBestaetigen')
         : mode === 'gast'
-          ? 'Ohne Konto spielen'
+          ? t('anmeldung.ohneKonto')
           : mode === 'reset'
-            ? 'Passwort vergessen'
-            : 'Anmelden';
+            ? t('anmeldung.passwortVergessen')
+            : t('anmeldung.anmelden');
 
   return (
     <main className="anmeldung anmeldung-formular">
       <header className="anm-kopf">
-        <button type="button" className="anm-zurueck" onClick={() => wechsle('wahl')} aria-label="Zurück">
+        <button type="button" className="anm-zurueck" onClick={() => wechsle('wahl')} aria-label={t('anmeldung.zurueck')}>
           ‹
         </button>
         <img className="anm-marke-klein" src="/hub/broweggames-horizontal-dunkel.webp" alt="BroweGGames" draggable={false} />
@@ -228,7 +228,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         {mode === 'register' && (
           <>
             <label>
-              Anzeigename
+              {t('anmeldung.anzeigename')}
               <input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
@@ -237,7 +237,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
               />
             </label>
             <label>
-              Geburtstag
+              {t('anmeldung.geburtstag')}
               <input
                 type="date"
                 value={birthday}
@@ -245,7 +245,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
                 required
                 max={new Date().toISOString().slice(0, 10)}
               />
-              <span className="muted">Mindestens 18 Jahre. Für Countdown und Belohnung.</span>
+              <span className="muted">{t('anmeldung.mindestalter')}</span>
             </label>
           </>
         )}
@@ -253,20 +253,20 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         {mode === 'verify' ? (
           <>
             <label>
-              Bestätigungslink oder Code aus der E-Mail
+              {t('anmeldung.tokenFeld')}
               <input value={token} onChange={(e) => setToken(e.target.value)} required />
-              <span className="muted">Der ganze Link geht auch.</span>
+              <span className="muted">{t('anmeldung.tokenHinweis')}</span>
             </label>
             {/* Mails landen im Spam, werden geloescht, und der Link laeuft nach
                 48 Stunden ab. Ohne diesen Knopf braeuchte es dafuer den
                 Betreiber. */}
             <button type="button" onClick={resend} disabled={busy || !email}>
-              Neuen Link anfordern
+              {t('anmeldung.neuerLink')}
             </button>
           </>
         ) : mode === 'gast' ? (
           <label>
-            Anzeigename
+            {t('anmeldung.anzeigename')}
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
@@ -276,15 +276,12 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
             />
             {/* Ein Satz, keine Warnliste: Wer ohne Konto spielt, hat es eilig,
                 nicht Lust auf einen Absatz Kleingedrucktes. */}
-            <span className="muted">
-              Ohne Mail und Passwort kommst du nach dem Abmelden nicht wieder an dieses
-              Konto, und Runden mit Gästen zählen nicht für die Rangliste.
-            </span>
+            <span className="muted">{t('anmeldung.gastHinweis')}</span>
           </label>
         ) : (
           <>
             <label>
-              E-Mail
+              {t('anmeldung.email')}
               <input
                 type="email"
                 value={email}
@@ -294,7 +291,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
             </label>
             {mode !== 'reset' && (
               <label>
-                Passwort
+                {t('anmeldung.passwort')}
                 <input
                   type="password"
                   value={password}
@@ -303,12 +300,12 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
                   required
                 />
                 {mode === 'register' && (
-                  <span className="muted">Mindestens zwölf Zeichen.</span>
+                  <span className="muted">{t('anmeldung.passwortMindestlaenge')}</span>
                 )}
               </label>
             )}
             {mode === 'reset' && (
-              <span className="muted">Wir schicken dir einen Link, mit dem du ein neues Passwort setzt.</span>
+              <span className="muted">{t('anmeldung.resetHinweis')}</span>
             )}
           </>
         )}
@@ -327,7 +324,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         {(errorCode === 'emailTaken' || errorCode === 'emailNotVerified') && (
           <div style={{ marginBottom: '0.75rem' }}>
             <button type="button" onClick={resend} disabled={busy || !email}>
-              Neuen Bestätigungslink anfordern
+              {t('anmeldung.neuerBestaetigungslink')}
             </button>
           </div>
         )}
@@ -335,14 +332,14 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
         <div className="row">
           <button className="primary" type="submit" disabled={busy}>
             {mode === 'register'
-              ? 'Konto anlegen'
+              ? t('anmeldung.kontoAnlegen')
               : mode === 'verify'
-                ? 'Bestätigen'
+                ? t('anmeldung.bestaetigen')
                 : mode === 'gast'
-                  ? 'Spielen'
+                  ? t('anmeldung.spielen')
                   : mode === 'reset'
-                    ? 'Link schicken'
-                    : 'Anmelden'}
+                    ? t('anmeldung.linkSchicken')
+                    : t('anmeldung.anmelden')}
           </button>
           <button
             type="button"
@@ -358,12 +355,12 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
             }}
           >
             {mode === 'register'
-              ? 'Ich habe schon ein Konto'
+              ? t('anmeldung.schonKonto')
               : mode === 'gast'
-                ? 'Doch lieber anmelden'
+                ? t('anmeldung.dochAnmelden')
                 : mode === 'reset'
-                  ? 'Zurück zur Anmeldung'
-                  : 'Konto anlegen'}
+                  ? t('anmeldung.zurAnmeldung')
+                  : t('anmeldung.kontoAnlegen')}
           </button>
         </div>
         {/* Direkt unter dem Anmelden-Knopf: Dort merkt man, dass das Passwort
@@ -378,7 +375,7 @@ export function Auth({ onSignedIn }: { onSignedIn: () => void }): React.JSX.Elem
               setMode('reset');
             }}
           >
-            Passwort vergessen?
+            {t('anmeldung.passwortVergessenFrage')}
           </button>
         )}
       </form>
@@ -408,11 +405,11 @@ export function Rechtliches(): React.JSX.Element {
   return (
     <p className="rechtliches">
       <a href="/rechtliches/impressum.html" {...neuesFenster}>
-        Impressum
+        {t('anmeldung.impressum')}
       </a>
       <span aria-hidden="true"> · </span>
       <a href="/rechtliches/datenschutz.html" {...neuesFenster}>
-        Datenschutz
+        {t('anmeldung.datenschutz')}
       </a>
     </p>
   );
