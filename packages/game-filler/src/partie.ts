@@ -363,6 +363,56 @@ function baueBrett(regeln: FillerRegelnFest, zufall: () => number): number[] {
   return feld;
 }
 
+/**
+ * Faire Startecken: Die zwei Nachbarn jeder Startecke tragen VERSCHIEDENE
+ * Farben (seit dem 06.11.2026, Regelsatz `faireEcken`, nur Extreme).
+ *
+ * Der Fehler, den das verhindert: Tragen beide Nachbarn einer Ecke dieselbe
+ * Farbe X, waehlt der Gegner, der vorher zieht, einfach X — X ist dann
+ * gesperrt, und der Sitz hat im naechsten Zug keine einzige Farbe, die ihm
+ * ein Feld bringt. Schlimmer noch, wenn die Ecke des Gegners selbst X traegt:
+ * Dann ist X von Anfang an gesperrt, und der Sitz verliert seinen ersten Zug
+ * ganz ohne Zutun des Gegners (Messung f1: in Extreme bei rund jedem fuenften
+ * Brett moeglich, 4,3 % der Partien ohne nutzbare Farbe nach Zug 1).
+ *
+ * Warum "verschieden" genuegt: Gesperrt sind fuer einen Sitz genau zwei
+ * Farben, die eigene und die des Gegners. Kein Nachbar traegt die eigene
+ * (siehe baueBrett), also muesste der Gegner mit EINER Farbe beide Nachbarn
+ * treffen — das geht nur, wenn sie gleich sind. Gilt fuer den Nachzieher nach
+ * Zug 1 wie fuer den Anfaenger in Zug 1 (gesperrt: die Ecke des Gegners).
+ *
+ * Umgefaerbt wird der SENKRECHTE Nachbar, auf eine Farbe, die keiner seiner
+ * eigenen Nachbarn traegt und die der waagrechte nicht hat — so bleibt das
+ * Brett frei von gleichfarbigen Nachbarn. Bei sieben Farben und hoechstens
+ * vier Nachbarn bleiben immer mindestens zwei zur Wahl, gezogen wird aus der
+ * Saat. Die Ecke selbst bleibt, wie sie ist; ob zwei Ecken dieselbe Farbe
+ * tragen, regelt erstellePartie danach wie bisher (und faerbt dabei nur die
+ * Ecke, nie einen Nachbarn — das hier bleibt also gueltig).
+ */
+function entzerreEcken(
+  feld: number[],
+  spalten: number,
+  zeilen: number,
+  farben: number,
+  sitze: readonly number[],
+  zufall: () => number,
+): void {
+  for (const sitz of sitze) {
+    const ecke = startEcke(sitz, spalten, zeilen);
+    const um = nachbarn(ecke, spalten, zeilen);
+    const waagrecht = um.find((n) => Math.floor(n / spalten) === Math.floor(ecke / spalten));
+    const senkrecht = um.find((n) => n % spalten === ecke % spalten);
+    if (waagrecht === undefined || senkrecht === undefined) continue;
+    if (feld[waagrecht] !== feld[senkrecht]) continue;
+    const verboten = new Set<number>([feld[waagrecht]!]);
+    for (const n of nachbarn(senkrecht, spalten, zeilen)) verboten.add(feld[n]!);
+    const moeglich: number[] = [];
+    for (let f = 0; f < farben; f++) if (!verboten.has(f)) moeglich.push(f);
+    const neu = moeglich[Math.floor(zufall() * moeglich.length)];
+    if (neu !== undefined) feld[senkrecht] = neu;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Aufbau
 // ---------------------------------------------------------------------------
@@ -404,6 +454,13 @@ export function erstellePartie(
   };
   const { spalten, zeilen, farben } = gueltigeRegeln;
   const feld = baueBrett(gueltigeRegeln, zufall);
+  /*
+   * Faire Startecken (nur wo der Regelsatz es sagt, also Extreme ab dem
+   * 06.11.2026). VOR den Grautoenen, weil auch das Entzerren aus dem
+   * Generator zieht — fuer alle anderen Spielarten wird hier nichts gezogen,
+   * ihr Brett bleibt Saat fuer Saat dasselbe.
+   */
+  if (gueltigeRegeln.faireEcken === true) entzerreEcken(feld, spalten, zeilen, farben, sitze, zufall);
 
   /*
    * Die Grautoene NACH dem Brett und aus demselben Generator, aber als eigene
@@ -696,29 +753,77 @@ export function vonIrgendwemErreichbareFreie(
 }
 
 /**
+ * Hat ein Feld noch Platz fuer eine Mauer? (Regelsatz `mauernJeFeld`, nur
+ * Extreme seit dem 06.11.2026, Regel Niklas 05.11.2026.)
+ *
+ * Gezaehlt werden die Mauern an den vier Kanten des Feldes, und der
+ * Spielfeldrand zaehlt als Mauer: Ein Eckfeld hat damit schon zwei und kann
+ * keine mehr bekommen, ein Randfeld hoechstens eine, ein inneres zwei. Eine
+ * Mauer belegt bei BEIDEN Feldern, zwischen denen sie liegt, einen Platz.
+ *
+ * Der Sinn ist ein Abwaegen: Jede Mauer, die dem Gegner den Weg versperrt,
+ * nimmt auch Plaetze, an denen er MICH spaeter versperren koennte — und
+ * umgekehrt. Ohne Grenze liess sich ein Gang mit drei Mauern um ein einziges
+ * Feld zur Sackgasse machen.
+ */
+export function mauernAmFeld(
+  platz: number,
+  spalten: number,
+  zeilen: number,
+  sperren: ReadonlySet<string>,
+): number {
+  const x = platz % spalten;
+  const y = Math.floor(platz / spalten);
+  const rand = Number(x === 0) + Number(x === spalten - 1) + Number(y === 0) + Number(y === zeilen - 1);
+  let gesetzt = 0;
+  for (const n of nachbarn(platz, spalten, zeilen)) if (sperren.has(kante(platz, n))) gesetzt++;
+  return rand + gesetzt;
+}
+
+/**
  * Die Barrieren, die dieser Sitz gerade setzen darf.
  *
- * **Die Einmauer-Regel (seit dem 06.09.2026).** Eine Wand ist verboten, wenn
- * danach ein freies Feld fuer NIEMANDEN mehr erreichbar waere. Jedes Feld
- * muss bis zum Ende zu holen sein — ein eingemauertes Loch gehoert niemandem,
- * zaehlt fuer niemanden und laesst die Partie nur noch ueber LEERZUEGE_MAX
- * enden. Gezaehlt wird gegen den Stand VORHER: Eine Wand darf die Zahl der
- * erreichbaren freien Felder nicht verkleinern.
+ * Drei Regeln an der Kante; die ersten beiden gelten in Build und Extreme,
+ * die dritte nur an Tischen, deren Regelsatz sie traegt (Extreme ab dem
+ * 06.11.2026):
  *
- * **Die Einsperr-Regel** bleibt daneben bestehen: Eine Wand ist auch
- * verboten, wenn danach ein Sitz kein einziges freies Feld mehr erreichen
- * kann, der vorher noch eines erreichte. Ohne sie waere die Spielart in zwei
- * Zuegen entschieden: Wer den Gegner auf seiner Ecke zumauert, gewinnt mit
- * 55 zu 1. Sie folgt NICHT aus der ersten — die Felder hinter dem Gegner
- * bleiben ja fuer mich erreichbar.
+ * **1. Nur an einer Kante, die an ein freies Feld grenzt (seit dem
+ * 06.11.2026).** Zwischen zwei Feldern, die schon jemandem gehoeren, sperrt
+ * eine Mauer nichts mehr — durch fremdes Gebiet laeuft ohnehin niemand, und
+ * im eigenen Gebiet gibt es nichts zu holen. Sie kostete nur einen Stein aus
+ * dem Vorrat und stuende als Schmuck auf dem Brett (IMG_1498).
  *
- * Geprueft wird fuer JEDEN Sitz, auch den eigenen — nicht aus Fuersorge,
- * sondern weil ein Brett, auf dem niemand mehr etwas holen kann, nur noch
- * ueber LEERZUEGE_MAX endet und bis dahin wie eingefroren aussieht.
+ * **2. Eine Mauer schliesst nie den letzten Weg (seit dem 06.11.2026, Niklas
+ * 05.11.2026, IMG_1497/1500/1502/1503).** Verboten ist jede Mauer, nach der
+ * IRGENDEIN Sitz ein freies Feld nicht mehr erreicht, das er vorher noch
+ * erreichte — "erreichen" heisst: von seinem Gebiet aus ueber freie Felder,
+ * nicht durch fremdes Gebiet und nicht durch Mauern. Genau dann trennt diese
+ * eine Mauer etwas ab: ein Gebiet vom Rest des Bretts, einen Sitz von den
+ * Feldern, um die beide noch spielten. Es zaehlt dabei nicht, woraus der Rest
+ * der Umrandung besteht — sind es schon lauter Felder (Koerper), ist die
+ * Mauer trotzdem diejenige, die zumacht, und verboten (IMG_1500: Gruen macht
+ * mit zwei Feldern zu und schliesst den letzten Durchgang mit einer Mauer).
+ * Den letzten Weg mit dem eigenen KOERPER zu schliessen bleibt erlaubt, auch
+ * im selben Zug direkt nach einer Mauer (IMG_1502 -> 1503): Geprueft wird nur
+ * die Mauer, im Moment, in dem sie gesetzt wird. Eine Mauer darf also einen
+ * Weg verlaengern oder verengen, aber nicht kappen.
  *
- * Und geprueft wird gegen den Stand VORHER: Wer schon eingeschlossen ist —
- * das kann im Grundspiel ganz ohne Waende passieren —, blockiert sonst jede
- * weitere Barriere auf dem ganzen Brett.
+ * Sie enthaelt die beiden aelteren Regeln, die bis dahin einzeln standen:
+ * die Einmauer-Regel (06.09.2026: kein freies Feld darf fuer NIEMANDEN mehr
+ * erreichbar sein — dann hat es ja jemand verloren) und die Einsperr-Regel
+ * (kein Sitz darf auf null erreichbare Felder fallen). Beide liessen eine
+ * Mauer durch, die einen Sitz in zwei Spalten am Rand einschloss, solange
+ * dort noch ein freies Feld lag (IMG_1497) — das schliesst erst diese Regel.
+ *
+ * Geprueft wird fuer JEDEN Sitz, auch den eigenen, und gegen den Stand
+ * VORHER: Wer schon eingeschlossen ist — das geht im Grundspiel auch ohne
+ * Waende —, hat nichts mehr zu verlieren und blockiert deshalb keine Mauer
+ * anderswo auf dem Brett.
+ *
+ * **3. Hoechstens `mauernJeFeld` Mauern je Feld, der Rand zaehlt mit** —
+ * siehe `mauernAmFeld`. Nur, wo der Regelsatz die Zahl traegt.
+ *
+ * Dazu die Mengenregeln ganz oben: Vorrat, Mauern je Zug, Pause, Eroeffnung.
  */
 export function moeglicheBarrieren(
   partie: FillerPartie,
@@ -738,9 +843,16 @@ export function moeglicheBarrieren(
   const gesetzt = new Set(partie.barrieren);
   const sitze = sitzeVon(partie);
   const vorher = new Map(sitze.map((s) => [s, erreichbareFreie(partie, s, gesetzt)]));
-  const erreichbarVorher = vonIrgendwemErreichbareFreie(partie, gesetzt);
+  // 0 oder fehlend: keine Grenze je Feld (Build, aeltere Extreme-Tische).
+  const jeFeld = partie.regeln.mauernJeFeld ?? 0;
+  const platzFrei = (p: number): boolean =>
+    jeFeld <= 0 || mauernAmFeld(p, spalten, zeilen, gesetzt) < jeFeld;
 
   const aus: [number, number][] = [];
+  // EIN Probesatz, in den jede Kante kurz hinein- und wieder hinausgeht: Der
+  // Bot bewertet jede angebotene Kante, und eine Kopie je Kante kostete auf
+  // 12 x 11 gut 250 Mengen je Abfrage.
+  const probe = new Set(gesetzt);
   for (let platz = 0; platz < partie.feld.length; platz++) {
     // Nur nach rechts und nach unten, sonst stuende jede Kante zweimal da.
     for (const n of [platz + 1, platz + spalten]) {
@@ -748,15 +860,17 @@ export function moeglicheBarrieren(
       if (n === platz + 1 && platz % spalten === spalten - 1) continue;
       const schluessel = kante(platz, n);
       if (gesetzt.has(schluessel)) continue;
-      const probe = new Set(gesetzt);
+      // Regel 1: Mindestens eine Seite muss noch frei sein.
+      if (partie.besitzer[platz] !== null && partie.besitzer[n] !== null) continue;
+      // Regel 3: Beide Felder brauchen noch einen Platz.
+      if (!platzFrei(platz) || !platzFrei(n)) continue;
+      // Regel 2: Niemand verliert ein Feld, das er vorher erreichte. Weil
+      // eine Mauer nur Wege wegnimmt, nie welche schafft, ist "gleich viele"
+      // dasselbe wie "dieselben".
       probe.add(schluessel);
-      // Erst die billige Frage: Mauert die Wand ein Feld ein? Dann sind die
-      // Sitze gar nicht mehr dran.
-      if (vonIrgendwemErreichbareFreie(partie, probe) < erreichbarVorher) continue;
-      const sperrtJemanden = sitze.some(
-        (s) => (vorher.get(s) ?? 0) > 0 && erreichbareFreie(partie, s, probe) === 0,
-      );
-      if (!sperrtJemanden) aus.push([platz, n]);
+      const trenntAb = sitze.some((s) => erreichbareFreie(partie, s, probe) < (vorher.get(s) ?? 0));
+      probe.delete(schluessel);
+      if (!trenntAb) aus.push([platz, n]);
     }
   }
   return aus;
