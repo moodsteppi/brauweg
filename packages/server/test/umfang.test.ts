@@ -219,6 +219,8 @@ const AUFRUFE: readonly { funktion: string; method: 'GET' | 'POST' | 'PATCH'; ur
   { funktion: 'flyingbro', method: 'GET', url: '/api/flyingbro' },
   { funktion: 'flyingbro', method: 'POST', url: '/api/flyingbro/start', payload: { levelId: 'w1-01' } },
   { funktion: 'flyingbro', method: 'POST', url: '/api/flyingbro/kauf', payload: { id: 'fernrohr' } },
+  // Die Ergebnis-Route traegt die Muenzen und Meilen — ihre Sperre darf nicht ungeprueft bleiben.
+  { funktion: 'flyingbro', method: 'POST', url: '/api/flyingbro/ergebnis', payload: { levelId: 'w1-01', geschafft: true, punkte: 1000, verschossen: 1 } },
   { funktion: 'clankrieg', method: 'GET', url: '/api/clubs/00000000-0000-0000-0000-000000000000/war' },
   { funktion: 'clankrieg', method: 'POST', url: '/api/clubs/00000000-0000-0000-0000-000000000000/war/search' },
   { funktion: 'clanchat', method: 'GET', url: '/api/clubs/00000000-0000-0000-0000-000000000000/messages' },
