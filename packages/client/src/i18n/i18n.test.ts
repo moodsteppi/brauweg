@@ -190,7 +190,7 @@ describe('t() und Umschalten', () => {
   it('Automatisch folgt dem Gerät und merkt sich die Wahl im Gerät', () => {
     setzeSprachwahl('auto');
     expect(sprachwahl()).toBe('auto');
-    // jsdom meldet en-US als Gerätesprache.
+    // vitest.setup.ts stellt das Gerät auf Deutsch (jsdom selbst meldet en-US).
     expect(aktiveSprache()).toBe(erkenneSprache(navigator.languages));
     expect(localStorage.getItem('brauweg.sprache')).toBeNull();
     setzeSprachwahl('en');
