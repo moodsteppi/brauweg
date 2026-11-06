@@ -34,7 +34,7 @@ export default {
 
   'flyingbro.ende.geschafft': 'Geschafft!',
   'flyingbro.ende.verloren': 'Die Giraffen stehen noch',
-  'flyingbro.ende.bonus': 'Übrige Bros: {anzahl} × 3 000',
+  'flyingbro.ende.bonus': 'Übrige Bros: {anzahl} × 3.000',
   'flyingbro.ende.wertet': 'Wird gewertet …',
   'flyingbro.ende.nichtGewertet': 'Nicht gewertet',
   'flyingbro.ende.meilen': '+{n} Flugmeilen',
