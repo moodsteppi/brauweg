@@ -68,6 +68,8 @@ export const METRIKEN = [
   'manufaktur_aktion',
   /** Ein Muenz-Code ist eingeloest (src/muenzcodes.ts) — ohne Code, ohne Betrag. */
   'code_eingeloest',
+  /** Flying Bro: ein gemeldeter Versuch, `ergebnis` = geschafft | verloren — ohne Level, ohne Punkte. */
+  'flyingbro_versuch',
 ] as const;
 export type Metrik = (typeof METRIKEN)[number];
 

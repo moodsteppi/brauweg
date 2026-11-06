@@ -185,4 +185,18 @@ export default {
   'error.packNotForSale': "This isn't for sale yet.",
   'error.inhaltspaketFehlt':
     "You don't own this game pack yet. You'll find it in the shop under “Game Packs” - everyone can play along without buying it.",
+  // Flying Bro (packages/server/src/flyingbro.ts)
+  'error.flyingbroLevelUnbekannt': "This level doesn't exist.",
+  'error.flyingbroNichtFreigeschaltet': 'Beat the previous level first.',
+  'error.flyingbroHilfsmittelUngueltig': "These boosts don't fit this level start.",
+  'error.flyingbroNichtImVorrat': "You don't have any of those in stock right now.",
+  'error.flyingbroKeinStart': 'This attempt has already been scored. Restart the level.',
+  'error.flyingbroFalschesLevel': 'This result belongs to a different level than the one you started.',
+  'error.flyingbroBrosUngueltig': "This level doesn't have that many Bros.",
+  'error.flyingbroPunkteUngueltig': "This level doesn't offer that many points.",
+  'error.flyingbroZuSchnell': "That was too fast, the attempt wasn't scored.",
+  'error.flyingbroArtikelUnbekannt': "This item doesn't exist.",
+  'error.flyingbroZuWenigMeilen': "You don't have enough flight miles yet.",
+  'error.flyingbroSchonGekauft': 'You already have this.',
+  'error.flyingbroBeschaeftigt': 'Things are busy right now - try again in a moment.',
 } satisfies Woerterbuch;

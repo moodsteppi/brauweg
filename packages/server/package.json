@@ -13,6 +13,7 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@brauweg/flyingbro-kern": "*",
     "@brauweg/game-api": "*",
     "@brauweg/game-brochess": "*",
     "@brauweg/game-brocooked": "*",
