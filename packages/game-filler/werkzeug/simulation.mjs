@@ -33,12 +33,12 @@
  * ist in jeder Spielart dieselbe Kette (die Bretter unterscheiden sich
  * trotzdem, weil Extreme sieben Farben zieht).
  *
- * WAS DAS SKRIPT NICHT TUT: Es aendert weder Regeln noch Bot. Die Wand-
- * bewertung des Bots steht in `wandBewertung` ein ZWEITES Mal — nur zum
- * Messen, damit sich sagen laesst, WARUM er eine Wand liegen laesst. Ob die
- * Abschrift noch stimmt, prueft der Lauf selbst: Abschnitt 4 zaehlt jede
- * Stelle, an der sie anders entscheidet als `botZug` ("Abweichungen"). Steht
- * dort etwas anderes als 0, ist erst die Abschrift nachzuziehen.
+ * WAS DAS SKRIPT NICHT TUT: Es aendert weder Regeln noch Bot. Um zu sagen,
+ * WARUM der Bot eine Wand liegen laesst, liest es seine Wandrechnung samt
+ * Bestandteilen ueber `bewerteWaende` (bot.ts) — seit dem 06.11.2026 die
+ * echte, vorher eine Abschrift. Abschnitt 4 zaehlt weiter jede Stelle, an
+ * der `botZug` anders entscheidet als die Rechnung an ihrer Schwelle
+ * ("Abweichungen"); dort muss 0 stehen.
  *
  * Gemessen wird auf dem WAHREN Zustand (Zuschauerblick), entschieden wird
  * vom Bot auf seiner Sicht — wie am echten Tisch. In klar/build/extreme liegt
@@ -79,7 +79,7 @@ const {
 } = P;
 const { DEFAULT_REGELN } = R;
 const { sichtFuer } = S;
-const { botZug, WAND_SCHWELLE } = B;
+const { botZug, bewerteWaende, WAND_SCHWELLE } = B;
 
 // ---------------------------------------------------------------------------
 // Schalter
@@ -227,96 +227,28 @@ function zweiZugWert(p, s, f) {
 }
 
 // ---------------------------------------------------------------------------
-// Abschrift der Wandbewertung (bot.ts, besteWand) — nur zum Messen
+// Wandbewertung des Bots — die echte, nicht abgeschrieben
 // ---------------------------------------------------------------------------
 
 /**
- * Rechnet fuer jede erlaubte Wand dieselbe Zahl wie der Bot und gibt die
- * beste samt ihrer Bestandteile heraus. Die Formel ist bot.ts Zeile fuer
- * Zeile; weicht der Bot spaeter davon ab, meldet Abschnitt 4 Abweichungen.
+ * Die Wandrechnung des Bots samt Bestandteilen (bot.ts, `bewerteWaende`).
+ * Bis zum 06.11.2026 stand sie hier ein zweites Mal, Zeile fuer Zeile
+ * abgeschrieben; Abschnitt 4 zaehlte dann, wo die Abschrift anders
+ * entschied. Seit der Bot sie exportiert, misst das Skript dieselbe Zahl,
+ * die er auch benutzt — die Zeile "Abweichung" muss trotzdem 0 bleiben,
+ * sie prueft jetzt, dass `botZug` an der Schwelle so entscheidet, wie
+ * `bewerteWaende` es sagt.
  */
 function wandBewertung(sicht) {
-  const { spalten, zeilen, farbzahl, feld, besitzer, farbe } = sicht;
-  const ich = sicht.ich ?? 0;
-  const sperren = new Set(sicht.barrieren.map(([a, b]) => kante(a, b)));
-  const erreichbarMit = (platz, mauern) =>
-    nachbarn(platz, spalten, zeilen).filter((n) => !mauern.has(kante(platz, n)));
-  const sterne = new Set(sicht.sterne ?? []);
-  const gesperrt = new Set(Object.values(farbe));
-  const erlaubt = [];
-  for (let f = 0; f < farbzahl; f++) if (!gesperrt.has(f)) erlaubt.push(f);
-  const felderVon = (sitz) => {
-    const raus = [];
-    for (let platz = 0; platz < besitzer.length; platz++)
-      if (besitzer[platz] === sitz) raus.push(platz);
-    return raus;
-  };
-  const eigen = felderVon(ich);
-  const seine = felderVon(gegnerVon(ich));
-  const mass = (start, f, mauern) => {
-    const genommen = new Set(start);
-    const rand = [...start];
-    let m = 0;
-    while (rand.length > 0) {
-      const platz = rand.pop();
-      for (const n of erreichbarMit(platz, mauern)) {
-        if (genommen.has(n) || besitzer[n] !== null || feld[n] !== f) continue;
-        genommen.add(n);
-        rand.push(n);
-        m += sterne.has(n) ? 1 + STERN_BONUS : 1;
-      }
+  return (
+    bewerteWaende(sicht) ?? {
+      anzahl: 0,
+      beste: null,
+      besterWert: -Infinity,
+      teile: null,
+      schwelle: WAND_SCHWELLE,
     }
-    return m;
-  };
-  const freieVon = (start, mauern) => {
-    const gesehen = new Set(start);
-    const frei = new Set();
-    const rand = [...start];
-    while (rand.length > 0) {
-      const platz = rand.pop();
-      for (const n of erreichbarMit(platz, mauern)) {
-        if (gesehen.has(n) || besitzer[n] !== null) continue;
-        gesehen.add(n);
-        frei.add(n);
-        rand.push(n);
-      }
-    }
-    return frei;
-  };
-  const besterZug = (start, mauern) =>
-    erlaubt.reduce((b, f) => Math.max(b, mass(start, f, mauern)), 0);
-  const lage = (mauern) => {
-    const meine = freieVon(eigen, mauern);
-    const deine = freieVon(seine, mauern);
-    let nurMeine = 0;
-    let nurDeine = 0;
-    for (const p of meine) if (!deine.has(p)) nurMeine++;
-    for (const p of deine) if (!meine.has(p)) nurDeine++;
-    return {
-      nurMeine,
-      nurDeine,
-      meinZug: besterZug(eigen, mauern),
-      seinZug: besterZug(seine, mauern),
-    };
-  };
-  const vorher = lage(sperren);
-  let beste = null;
-  let besterWert = -Infinity;
-  let teile = null;
-  for (const kandidat of sicht.barrierenMoeglich ?? []) {
-    const probe = new Set(sperren);
-    probe.add(kante(kandidat[0], kandidat[1]));
-    const n = lage(probe);
-    const gebiet = n.nurMeine - vorher.nurMeine + (vorher.nurDeine - n.nurDeine);
-    const zuege = 0.5 * (vorher.seinZug - n.seinZug - (vorher.meinZug - n.meinZug));
-    const wert = gebiet + zuege;
-    if (wert > besterWert) {
-      besterWert = wert;
-      beste = kandidat;
-      teile = { gebiet, zuege };
-    }
-  }
-  return { anzahl: (sicht.barrierenMoeglich ?? []).length, beste, besterWert, teile };
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -485,7 +417,7 @@ function messeVorZug(m, p, s, sicht, zug) {
       m.wand.entscheidungen++;
       m.wand.werte.push(w.besterWert);
       m.wand.teile.push(w.teile);
-      const meint = w.beste !== null && w.besterWert >= WAND_SCHWELLE;
+      const meint = w.beste !== null && w.besterWert >= w.schwelle;
       if (meint !== (zug.typ === 'barriere')) m.wand.abweichung++;
       if (zug.typ === 'barriere') {
         m.wand.gebaut++;
@@ -496,7 +428,7 @@ function messeVorZug(m, p, s, sicht, zug) {
             ? 'beste Wand < 0'
             : w.besterWert === 0
               ? 'beste Wand = 0'
-              : 'beste Wand 0 < x < 2';
+              : 'beste Wand 0 < x < Schwelle';
         m.wand.gruende[g] = (m.wand.gruende[g] ?? 0) + 1;
       }
     }
@@ -710,6 +642,8 @@ function werteAus(variante, n, partien) {
   };
   r.wandTeileGebietNull = teile.filter((t) => t.gebiet === 0).length;
   r.wandTeile = teile.length;
+  r.wandWegMittel = mittel(teile.map((t) => t.weg ?? 0));
+  r.wandPlatzMittel = mittel(teile.map((t) => t.plaetze ?? 0));
   r.bspWandKnapp = beispiele(
     (x) => x.m.wand.werte.some((w) => w >= 1 && w < 2),
     (x) => `${x.m.wand.werte.filter((w) => w >= 1 && w < 2).length} Zuege mit Wert 1–1,5`,
@@ -1054,11 +988,15 @@ async function hauptlauf() {
         ...je((r) => pct(r.wandWertVerteilung[k], r.wandEntscheidungen)),
       ]),
       [
-        'beste Wand ohne Gebietsanteil (nur Zugterm)',
+        'beste Wand ohne Gebietsanteil (Zug-, Weg-, Platzterm)',
         ...je((r) => pct(r.wandTeileGebietNull, r.wandTeile)),
       ],
       ...alleGruende.map((g) => [`Grund: ${g}`, ...je((r) => String(r.wandGruende[g] ?? 0))]),
-      ['Abweichung Abschrift gegen botZug (muss 0 sein)', ...je((r) => String(r.wandAbweichung))],
+      [
+        'beste Wand: Weg- / Platzterm im Mittel',
+        ...je((r) => `${zahl(r.wandWegMittel)} / ${zahl(r.wandPlatzMittel)}`),
+      ],
+      ['Abweichung bewerteWaende gegen botZug (muss 0 sein)', ...je((r) => String(r.wandAbweichung))],
     ]);
   }
 

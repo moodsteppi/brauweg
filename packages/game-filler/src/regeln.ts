@@ -93,6 +93,21 @@ export interface FillerRegeln {
    * zum 06.11.2026 gespielt, und deren Snapshot traegt sie nicht.
    */
   readonly mauerfreieZuege?: number;
+  /**
+   * Wie viele Mauern ein Feld an seinen vier Kanten hoechstens tragen darf;
+   * der Spielfeldrand zaehlt dabei als Mauer (Regel Niklas, 05.11.2026, nur
+   * Extreme). Fehlt die Zahl oder ist sie 0, gibt es keine Grenze — so wurde
+   * jede Partie bis zum 06.11.2026 gespielt, und deren Snapshot traegt sie
+   * nicht. Siehe `mauernAmFeld` in partie.ts.
+   */
+  readonly mauernJeFeld?: number;
+  /**
+   * Startecken ohne zwei gleichfarbige Nachbarn (seit dem 06.11.2026, nur
+   * Extreme). Fehlt es, baut `erstellePartie` das Brett wie bisher — ein
+   * Tisch, der vorher aufgemacht wurde, bekommt das Brett, das er beim
+   * Aufmachen zugesagt hat. Siehe `entzerreEcken` in partie.ts.
+   */
+  readonly faireEcken?: boolean;
 }
 
 /**
@@ -108,6 +123,14 @@ export interface SpielartAufbau {
   readonly mauernJeZug: number;
   readonly sternPaare: number;
   readonly mauerfreieZuege: number;
+  /*
+   * Diese beiden sind wahlfrei und nicht Pflicht wie die Zahlen oben: Ein
+   * Extreme-Tisch, der zwischen dem 05. und dem 06.11.2026 aufgemacht wurde,
+   * traegt eine Aufbau-Tabelle OHNE sie. Waeren sie Pflicht, wiese
+   * `pruefeRegeln` genau diese Tische ab.
+   */
+  readonly mauernJeFeld?: number;
+  readonly faireEcken?: boolean;
 }
 
 /**
@@ -130,6 +153,13 @@ export const AUFBAU_JE_SPIELART = {
     mauernJeZug: 2,
     sternPaare: 4,
     mauerfreieZuege: 6,
+    /*
+     * Seit dem 06.11.2026: hoechstens zwei Mauern je Feld, der Rand zaehlt
+     * mit (Niklas, 05.11.2026), und Startecken ohne zwei gleichfarbige
+     * Nachbarn. Beides nur hier, Build bleibt ohne.
+     */
+    mauernJeFeld: 2,
+    faireEcken: true,
   },
 } as const satisfies Partial<Record<FillerVariante, SpielartAufbau>>;
 
@@ -153,6 +183,12 @@ export function aufbauFuer<R extends FillerRegeln>(regeln: R): R {
     mauernJeZug: eintrag.mauernJeZug,
     sternPaare: eintrag.sternPaare,
     mauerfreieZuege: eintrag.mauerfreieZuege,
+    /*
+     * Nur uebernehmen, was im Eintrag steht: Eine Tabelle von vor dem
+     * 06.11.2026 kennt beide nicht, und ihr Tisch spielt ohne beide Regeln.
+     */
+    ...(eintrag.mauernJeFeld !== undefined ? { mauernJeFeld: eintrag.mauernJeFeld } : {}),
+    ...(eintrag.faireEcken !== undefined ? { faireEcken: eintrag.faireEcken } : {}),
   };
 }
 
@@ -314,7 +350,41 @@ const GRENZEN = {
   mauernJeZug: [1, 2],
   sternPaare: [0, 6],
   mauerfreieZuege: [0, 12],
-} as const satisfies Record<keyof SpielartAufbau, readonly [number, number]>;
+} as const satisfies Record<PflichtAufbau, readonly [number, number]>;
+
+/** Die Zahlen, die jeder Aufbau-Eintrag tragen muss. */
+type PflichtAufbau = Exclude<keyof SpielartAufbau, 'mauernJeFeld' | 'faireEcken'>;
+
+/**
+ * Mauern je Feld: 0 heisst "keine Grenze", mehr als vier Kanten hat kein
+ * Feld. Dazwischen ist jede Zahl ein spielbares Spiel, auch wenn nur die
+ * Zwei gewollt ist.
+ */
+const MAUERN_JE_FELD_GRENZEN = [0, 4] as const;
+
+/** Prueft die wahlfreien Aufbau-Felder; `pfad` steht vor dem Feldnamen. */
+function pruefeWahlfreie(
+  quelle: Record<string, unknown>,
+  pfad: string,
+  probleme: RegelProblem[],
+): void {
+  const jeFeld = quelle['mauernJeFeld'];
+  if (jeFeld !== undefined && jeFeld !== null && !ganzZwischen(jeFeld, MAUERN_JE_FELD_GRENZEN)) {
+    probleme.push({
+      path: `${pfad}mauernJeFeld`,
+      messageKey: 'ruleset.fieldWrongType',
+      severity: 'error',
+    });
+  }
+  const ecken = quelle['faireEcken'];
+  if (ecken !== undefined && ecken !== null && typeof ecken !== 'boolean') {
+    probleme.push({
+      path: `${pfad}faireEcken`,
+      messageKey: 'ruleset.fieldWrongType',
+      severity: 'error',
+    });
+  }
+}
 
 function ganzZwischen(wert: unknown, [von, bis]: readonly [number, number]): boolean {
   return typeof wert === 'number' && Number.isInteger(wert) && wert >= von && wert <= bis;
@@ -388,6 +458,7 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
       probleme.push({ path: feld, messageKey: 'ruleset.fieldWrongType', severity: 'error' });
     }
   }
+  pruefeWahlfreie(gegeben, '', probleme);
   const aufbau = gegeben['aufbauJeSpielart'];
   if (aufbau !== undefined && aufbau !== null) {
     if (typeof aufbau !== 'object') {
@@ -412,6 +483,9 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
               severity: 'error',
             });
           }
+        }
+        if (typeof eintrag === 'object' && eintrag !== null) {
+          pruefeWahlfreie(eintrag as Record<string, unknown>, `aufbauJeSpielart.${v}.`, probleme);
         }
       }
     }
