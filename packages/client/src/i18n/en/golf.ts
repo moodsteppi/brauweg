@@ -163,4 +163,24 @@ export default {
   'golf.bahnen.zufallGefiltert': 'Random holes: {name}',
   'golf.bahnen.alle': 'all',
   'golf.bahnen.eigeneWahl': 'Custom selection',
+  'golf.spiel.bahnenFehlen': 'Holes missing',
+  'golf.spiel.bahnenFehlenText':
+    'This version has no holes yet. Without them the match cannot be computed - the table stays open.',
+  'golf.spiel.neueBahnen': 'New holes',
+  'golf.spiel.neueBahnenText.eins':
+    'This match plays a hole this version does not know yet. Please reload the page - the table stays open.',
+  'golf.spiel.neueBahnenText.mehr':
+    'This match plays {n} holes this version does not know yet. Please reload the page - the table stays open.',
+  'golf.spiel.zurueck': 'Back',
+  'golf.spiel.bahnzeile': 'Hole {loch}/{loecher} · {bahn} · Par {par}',
+  'golf.spiel.troedel': 'Everyone is waiting for you: {n}',
+  'golf.spiel.zwischenstand': 'Hole {n} - standings',
+  'golf.spiel.gesamt': 'Total',
+  'golf.spiel.gleichErgebnis': 'Results coming up …',
+  'golf.spiel.naechstesLoch': 'Hole {n} starts in … {rest}',
+  'golf.spiel.uebersicht': 'Overview',
+  'golf.spiel.uebersichtHinweis': 'Overview - tap to go back',
+  'golf.spiel.abgewiesen': 'Stroke did not go through - resyncing …',
+  'golf.spiel.fassungAlt.eins': 'This version does not know one of the holes in this match - please reload the page.',
+  'golf.spiel.fassungAlt.mehr': 'This version does not know several holes in this match - please reload the page.',
 } satisfies Woerterbuch;

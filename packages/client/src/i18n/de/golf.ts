@@ -167,4 +167,25 @@ export default {
   'golf.bahnen.zufallGefiltert': 'Zufällige Bahnen: {name}',
   'golf.bahnen.alle': 'alle',
   'golf.bahnen.eigeneWahl': 'Eigene Bahnwahl',
+  // Die Partie (screens/Golf.tsx) und Meldungen der Netzbrücke (netz.ts).
+  'golf.spiel.bahnenFehlen': 'Bahnen fehlen',
+  'golf.spiel.bahnenFehlenText':
+    'Dieser Stand bringt noch keine Bahnen mit. Ohne sie lässt sich die Partie nicht rechnen - der Tisch bleibt bestehen.',
+  'golf.spiel.neueBahnen': 'Neue Bahnen',
+  'golf.spiel.neueBahnenText.eins':
+    'Diese Partie spielt eine Bahn, die diese Fassung noch nicht kennt. Bitte die Seite neu laden - der Tisch bleibt bestehen.',
+  'golf.spiel.neueBahnenText.mehr':
+    'Diese Partie spielt {n} Bahnen, die diese Fassung noch nicht kennt. Bitte die Seite neu laden - der Tisch bleibt bestehen.',
+  'golf.spiel.zurueck': 'Zurück',
+  'golf.spiel.bahnzeile': 'Loch {loch}/{loecher} · {bahn} · Par {par}',
+  'golf.spiel.troedel': 'Alle warten auf dich: {n}',
+  'golf.spiel.zwischenstand': 'Loch {n} - Zwischenstand',
+  'golf.spiel.gesamt': 'Gesamt',
+  'golf.spiel.gleichErgebnis': 'Gleich das Ergebnis …',
+  'golf.spiel.naechstesLoch': 'Loch {n} beginnt … {rest}',
+  'golf.spiel.uebersicht': 'Übersicht',
+  'golf.spiel.uebersichtHinweis': 'Übersicht - tippe zum Zurück',
+  'golf.spiel.abgewiesen': 'Schlag kam nicht durch - wird abgeglichen …',
+  'golf.spiel.fassungAlt.eins': 'Diese Fassung kennt eine Bahn der Partie nicht - bitte die Seite neu laden.',
+  'golf.spiel.fassungAlt.mehr': 'Diese Fassung kennt mehrere Bahnen der Partie nicht - bitte die Seite neu laden.',
 } satisfies Woerterbuch;

@@ -689,11 +689,8 @@ export function Golf({
 
   if (KARTEN.length === 0) {
     return (
-      <SpielRahmen gameId="golf" titel="Bahnen fehlen" akzent={AKZENT} onBack={verlasseUndZurueck}>
-        <p className="spe-text">
-          Dieser Stand bringt noch keine Bahnen mit. Ohne sie lässt sich die Partie nicht rechnen -
-          der Tisch bleibt bestehen.
-        </p>
+      <SpielRahmen gameId="golf" titel={t('golf.spiel.bahnenFehlen')} akzent={AKZENT} onBack={verlasseUndZurueck}>
+        <p className="spe-text">{t('golf.spiel.bahnenFehlenText')}</p>
       </SpielRahmen>
     );
   }
@@ -707,10 +704,9 @@ export function Golf({
   const fehlendeBahnen = loeseBahnen(sicht.bahnen ?? [], KARTEN).unbekannt;
   if (fehlendeBahnen.length > 0) {
     return (
-      <SpielRahmen gameId="golf" titel="Neue Bahnen" akzent={AKZENT} onBack={verlasseUndZurueck}>
+      <SpielRahmen gameId="golf" titel={t('golf.spiel.neueBahnen')} akzent={AKZENT} onBack={verlasseUndZurueck}>
         <p className="spe-text" data-golf-bahnen-fehlen="">
-          Diese Partie spielt {fehlendeBahnen.length === 1 ? 'eine Bahn' : `${fehlendeBahnen.length} Bahnen`},
-          die diese Fassung noch nicht kennt. Bitte die Seite neu laden - der Tisch bleibt bestehen.
+          {tn('golf.spiel.neueBahnenText', fehlendeBahnen.length, { n: zahl(fehlendeBahnen.length) })}
         </p>
       </SpielRahmen>
     );
@@ -1456,11 +1452,16 @@ function Partie({
 
       <div className="gf-hud" ref={hudRef}>
         <div className="gf-hudkopf" ref={kopfRef}>
-          <button className="gf-zurueck gf-zurueck-tisch" type="button" onClick={onZurueck} aria-label="Zurück">
+          <button className="gf-zurueck gf-zurueck-tisch" type="button" onClick={onZurueck} aria-label={t('golf.spiel.zurueck')}>
             ←
           </button>
           <span className="gf-bahnzeile">
-            Loch {hud.loch + 1}/{hud.loecher} · {hud.bahn} · Par {hud.par}
+            {tf('golf.spiel.bahnzeile', {
+              loch: zahl(hud.loch + 1),
+              loecher: zahl(hud.loecher),
+              bahn: hud.bahn,
+              par: zahl(hud.par),
+            })}
           </span>
           <span className="gf-zeit" data-knapp={hud.restS <= 10 ? '' : undefined}>
             {zeitText(hud.restS)}
@@ -1502,7 +1503,7 @@ function Partie({
 
         {hud.binTroedler && hud.troedel > 0 && (
           <p className="gf-troedel" aria-live="polite">
-            Alle warten auf dich: {hud.troedel}
+            {tf('golf.spiel.troedel', { n: zahl(hud.troedel) })}
           </p>
         )}
         {hinweis && <p className="gf-hinweis">{hinweis}</p>}
@@ -1510,16 +1511,16 @@ function Partie({
 
       {hud.pause && (
         <div className="gf-pause">
-          <h2>Loch {hud.loch + 1} - Zwischenstand</h2>
+          <h2>{tf('golf.spiel.zwischenstand', { n: zahl(hud.loch + 1) })}</h2>
           <table className="gf-tafel">
             <thead>
               <tr>
                 <th />
-                <th>Loch</th>
+                <th>{t('golf.replay.loch')}</th>
                 <th>
                   {t('golf.par.par')} {hud.par}
                 </th>
-                <th>Gesamt</th>
+                <th>{t('golf.spiel.gesamt')}</th>
               </tr>
             </thead>
             <tbody>
@@ -1550,8 +1551,8 @@ function Partie({
           />
           <p className="gf-pausezeit">
             {hud.loch + 1 >= hud.loecher
-              ? 'Gleich das Ergebnis …'
-              : `Loch ${hud.loch + 2} beginnt … ${hud.pauseRest}`}
+              ? t('golf.spiel.gleichErgebnis')
+              : tf('golf.spiel.naechstesLoch', { n: zahl(hud.loch + 2), rest: zahl(hud.pauseRest) })}
           </p>
           {onReplay && (
             <button className="grp-pauseknopf" type="button" onClick={() => onReplay(hud.loch)}>
@@ -1574,11 +1575,11 @@ function Partie({
           zielbildRef.current = null;
           setUebersicht(an);
         }}
-        aria-label="Übersicht"
+        aria-label={t('golf.spiel.uebersicht')}
       >
         <Kartenzeichen />
       </button>
-      {uebersicht && <p className="gf-uebersichthinweis">Übersicht - tippe zum Zurück</p>}
+      {uebersicht && <p className="gf-uebersichthinweis">{t('golf.spiel.uebersichtHinweis')}</p>}
     </main>
   );
 }
