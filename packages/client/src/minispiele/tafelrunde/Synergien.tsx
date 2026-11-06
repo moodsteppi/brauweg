@@ -53,6 +53,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import stil from './Synergien.module.css';
+import { einheitName, markeName, markeWirkung, tz } from './text';
 
 // ---------------------------------------------------------------------------
 // Was das Modul liefert — Abschrift von synergien.ts
@@ -229,10 +230,10 @@ export const Markennamen = createContext<Record<string, string>>({});
 export function bonusSatz(bonus: Wertebonus | null): string {
   if (!bonus) return '';
   const teile: string[] = [];
-  if (bonus.lebenProzent > 0) teile.push(`+${bonus.lebenProzent} % Leben`);
-  if (bonus.angriffProzent > 0) teile.push(`+${bonus.angriffProzent} % Angriff`);
-  if (bonus.tempoProzent > 0) teile.push(`+${bonus.tempoProzent} % Tempo`);
-  if (bonus.ruestung > 0) teile.push(`+${bonus.ruestung} Rüstung`);
+  if (bonus.lebenProzent > 0) teile.push(tz('bonus.leben', { n: bonus.lebenProzent }));
+  if (bonus.angriffProzent > 0) teile.push(tz('bonus.angriff', { n: bonus.angriffProzent }));
+  if (bonus.tempoProzent > 0) teile.push(tz('bonus.tempo', { n: bonus.tempoProzent }));
+  if (bonus.ruestung > 0) teile.push(tz('bonus.ruestung', { n: bonus.ruestung }));
   return teile.join(' · ');
 }
 
@@ -317,7 +318,7 @@ export function standFuer(
 export function standSatz(stand: Synergiestand, synergie: Synergie | undefined): string {
   const teile: string[] = [];
   if (stand.schwelle !== null && stand.bonus) {
-    teile.push(`ab ${stand.schwelle}: ${bonusSatz(stand.bonus)}`);
+    teile.push(tz('stand.ab', { schwelle: stand.schwelle, bonus: bonusSatz(stand.bonus) }));
   }
   const naechste = stand.naechsteSchwelle;
   if (naechste !== null) {
@@ -325,8 +326,8 @@ export function standSatz(stand: Synergiestand, synergie: Synergie | undefined):
     const fehlt = naechste - stand.anzahl;
     teile.push(
       stufe
-        ? `noch ${fehlt} bis ${naechste}: ${bonusSatz(stufe.bonus)}`
-        : `noch ${fehlt} bis ${naechste}`,
+        ? tz('stand.nochBisMit', { fehlt, naechste, bonus: bonusSatz(stufe.bonus) })
+        : tz('stand.nochBis', { fehlt, naechste }),
     );
   }
   return teile.join(' · ');
@@ -377,7 +378,8 @@ export function Markenzeichen({
       aria-hidden={beschriftet ? undefined : true}
     >
       {marken.map((marke) => {
-        const name = namen[marke] ?? marke;
+        // Uebersetzt beim Zeichnen: Der Kontext traegt die Namen des Moduls.
+        const name = markeName(marke, namen[marke] ?? marke);
         return (
           <span
             key={marke}
@@ -439,6 +441,7 @@ export function Markenblatt({
 }): React.JSX.Element {
   const farbe = MARKEN_FARBE[stand.marke] ?? ERSATZFARBE;
   const traeger = traegerVon(katalog, stand.marke);
+  const name = markeName(stand.marke, stand.name);
 
   /*
    * Escape schliesst. Am Handy tippt man daneben (der Ueberblender selbst
@@ -462,7 +465,7 @@ export function Markenblatt({
         className={stil.blatt}
         role="dialog"
         aria-modal="true"
-        aria-label={`Marke ${stand.name}`}
+        aria-label={tz('marke.titel', { name })}
         style={{ '--marke': farbe } as React.CSSProperties}
         onClick={(e) => e.stopPropagation()}
       >
@@ -473,30 +476,35 @@ export function Markenblatt({
             </svg>
           </span>
           <span className={stil.blatttitel}>
-            <h2 className={stil.blattname}>{stand.name}</h2>
+            <h2 className={stil.blattname}>{name}</h2>
             {/* Der Stand in Worten. Die Subtraktion ist die aus der Leiste:
                 zwei Zahlen der Sicht, keine Schwelle aus dem Client. */}
             <p className={stil.blattstand}>
-              {stand.anzahl} auf dem Brett
+              {tz('marke.aufDemBrett', { n: stand.anzahl })}
               {stand.naechsteSchwelle !== null
-                ? ` · noch ${stand.naechsteSchwelle - stand.anzahl} bis ${stand.naechsteSchwelle}`
-                : ' · höchste Stufe'}
+                ? tz('marke.nochBis', {
+                    fehlt: stand.naechsteSchwelle - stand.anzahl,
+                    naechste: stand.naechsteSchwelle,
+                  })
+                : tz('marke.hoechsteStufe')}
             </p>
           </span>
           <button
             type="button"
             className={stil.blattzu}
             onClick={onSchliessen}
-            aria-label="Blatt schließen"
+            aria-label={tz('blattSchliessen')}
           >
             ×
           </button>
         </header>
 
-        {synergie && <p className={stil.wirkung}>{synergie.wirkung}</p>}
+        {synergie && (
+          <p className={stil.wirkung}>{markeWirkung(synergie.marke, synergie.wirkung)}</p>
+        )}
 
         {synergie && (
-          <ul className={stil.stufen} aria-label="Stufen">
+          <ul className={stil.stufen} aria-label={tz('marke.stufen')}>
             {synergie.stufen.map((stufe) => (
               <li
                 key={stufe.schwelle}
@@ -520,14 +528,14 @@ export function Markenblatt({
             kaufen". Ohne Katalog (erste Sicht) bleibt der Abschnitt weg. */}
         {traeger.length > 0 && (
           <section className={stil.traeger}>
-            <h3 className={stil.traegertitel}>Trägt diese Marke</h3>
+            <h3 className={stil.traegertitel}>{tz('marke.traeger')}</h3>
             <ul className={stil.traegerliste}>
               {traeger.map((e) => (
                 <li key={e.id} className={stil.traegereintrag}>
-                  <span className={stil.traegername}>{e.name}</span>
+                  <span className={stil.traegername}>{einheitName(e)}</span>
                   <span className={stil.traegerpreis}>
                     {e.kosten}
-                    <span className={stil.nurVorlesen}> Gold</span>
+                    <span className={stil.nurVorlesen}>{tz('marke.gold')}</span>
                   </span>
                 </li>
               ))}
@@ -569,6 +577,7 @@ function Markenchip({
 }): React.JSX.Element {
   const farbe = MARKEN_FARBE[stand.marke] ?? ERSATZFARBE;
   const satz = standSatz(stand, synergie);
+  const name = markeName(stand.marke, stand.name);
   /*
    * „2/4“, solange es eine naechste Schwelle gibt, sonst nur die Zahl:
    * Auf der hoechsten Stufe waere jeder Nenner erfunden.
@@ -586,7 +595,7 @@ function Markenchip({
       style={{ '--marke': farbe } as React.CSSProperties}
       /* Am Zeiger die ganze Auskunft. Am Handy gibt es keinen Zeiger;
          dort ist der Vorlese-Text unten dieselbe Auskunft. */
-      title={satz ? `${stand.name} · ${satz}` : stand.name}
+      title={satz ? `${name} · ${satz}` : name}
     >
       {/* Der Chip IST die Schaltflaeche, die das Blatt aufschlaegt — der
           `title` bleibt daneben stehen, ersetzt es aber nicht: Am Handy gibt
@@ -610,8 +619,8 @@ function Markenchip({
         {/* Der ganze Satz fuer das Vorlesegeraet. Sichtbar waere er
             genau die Textliste, die diese Leiste losgeworden ist. */}
         <span className={stil.nurVorlesen}>
-          {stand.name}: {stand.anzahl}
-          {stand.naechsteSchwelle !== null ? ` von ${stand.naechsteSchwelle}` : ''}
+          {name}: {stand.anzahl}
+          {stand.naechsteSchwelle !== null ? tz('chip.von', { n: stand.naechsteSchwelle }) : ''}
           {satz ? ` · ${satz}` : ''}
         </span>
       </button>
@@ -764,7 +773,7 @@ export function Synergieleiste({
   katalog?: Markenkatalog;
 }): React.JSX.Element {
   return (
-    <section className={stil.leiste} aria-label="Synergien">
+    <section className={stil.leiste} aria-label={tz('leiste.synergien')}>
       {/*
         Die Reihe ist seit #100 dieselbe wie bei den Fremdmarken: Jedes Zeichen
         ist eine Schaltflaeche und schlaegt das Blatt zu seiner Marke auf.
@@ -792,7 +801,7 @@ export function Synergieleiste({
               das ein angetipptes Zeichen aufschlaegt; hier genuegt, dass noch
               keine da ist.
             */
-            <li className={stil.leer}>Noch keine Marken</li>
+            <li className={stil.leer}>{tz('leiste.keineMarken')}</li>
           ) : undefined
         }
       />

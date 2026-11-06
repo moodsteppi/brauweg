@@ -25,7 +25,6 @@ export type Garstation = 'topf' | 'pfanne' | 'fritteuse';
 
 export interface Rezept {
   readonly id: string;
-  readonly name: string;
   /** Was auf dem Teller liegen muss. Reihenfolge egal, Menge nicht. */
   readonly braucht: readonly Zutat[];
   /** Was davon gegart wird; der Rest kommt geschnitten auf den Teller. */
@@ -39,7 +38,6 @@ export interface Rezept {
 export const REZEPTE: readonly Rezept[] = [
   {
     id: 'salat',
-    name: 'Bunter Salat',
     braucht: ['salat', 'tomate'],
     garen: [],
     station: null,
@@ -48,7 +46,6 @@ export const REZEPTE: readonly Rezept[] = [
   },
   {
     id: 'salat-gross',
-    name: 'Großer Salat',
     braucht: ['salat', 'tomate', 'zwiebel'],
     garen: [],
     station: null,
@@ -57,7 +54,6 @@ export const REZEPTE: readonly Rezept[] = [
   },
   {
     id: 'suppe',
-    name: 'Zwiebelsuppe',
     braucht: ['zwiebel', 'kartoffel'],
     garen: ['zwiebel', 'kartoffel'],
     station: 'topf',
@@ -66,7 +62,6 @@ export const REZEPTE: readonly Rezept[] = [
   },
   {
     id: 'burger',
-    name: 'Burger',
     braucht: ['teig', 'fleisch', 'salat'],
     garen: ['fleisch'],
     station: 'pfanne',
@@ -75,7 +70,6 @@ export const REZEPTE: readonly Rezept[] = [
   },
   {
     id: 'sushi',
-    name: 'Sushi',
     braucht: ['reis', 'fisch'],
     garen: ['reis'],
     station: 'topf',
@@ -84,7 +78,6 @@ export const REZEPTE: readonly Rezept[] = [
   },
   {
     id: 'pommes',
-    name: 'Pommes mit Käse',
     braucht: ['kartoffel', 'kaese'],
     garen: ['kartoffel'],
     station: 'fritteuse',
@@ -93,50 +86,12 @@ export const REZEPTE: readonly Rezept[] = [
   },
 ];
 
-/**
- * Die deutschen Namen der Zutaten — für Tickets, Rezeptkarte und für das,
- * was ein Screenreader vorliest. Die Kennungen selbst bleiben klein und ohne
- * Umlaut, weil sie auch in Gittern und Dateinamen stehen.
+/*
+ * Namen stehen hier keine: Gerichte, Zutaten, Zustände und das „im Topf"
+ * kommen aus dem Wörterbuch (`text.ts`, Bereich `brocooked`). Die Kennungen
+ * bleiben klein und ohne Umlaut, weil sie auch in Gittern und Schlüsseln
+ * stehen.
  */
-export const ZUTAT_NAMEN: Readonly<Record<Zutat, string>> = {
-  tomate: 'Tomate',
-  zwiebel: 'Zwiebel',
-  salat: 'Salat',
-  fleisch: 'Fleisch',
-  fisch: 'Fisch',
-  reis: 'Reis',
-  teig: 'Teig',
-  kaese: 'Käse',
-  kartoffel: 'Kartoffel',
-};
-
-/** Wie ein Zustand heißt, wenn man ihn vorliest. */
-export const ZUSTAND_NAMEN: Readonly<Record<Zustand, string>> = {
-  roh: 'roh',
-  geschnitten: 'geschnitten',
-  gart: 'gart gerade',
-  gar: 'gegart',
-  verkohlt: 'verkohlt',
-};
-
-export const STATION_NAMEN: Readonly<Record<Garstation, string>> = {
-  topf: 'Topf',
-  pfanne: 'Pfanne',
-  fritteuse: 'Fritteuse',
-};
-
-/**
- * Wo gegart wird, als ganze Wendung.
- *
- * Nicht `'im ' + name` zusammengesetzt: Daraus wurde „im Pfanne" und „im
- * Fritteuse". Wer eine Sprache aus Bausteinen setzt, baut irgendwann einen
- * falschen Artikel ein — also steht die Wendung ganz da.
- */
-export const STATION_WO: Readonly<Record<Garstation, string>> = {
-  topf: 'im Topf',
-  pfanne: 'in der Pfanne',
-  fritteuse: 'in der Fritteuse',
-};
 
 export function rezept(id: string): Rezept {
   const r = REZEPTE.find((x) => x.id === id);

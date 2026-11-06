@@ -6,6 +6,7 @@ import { spiele } from '../klang';
 import { Flamme } from '../lernen/Flamme';
 import type { Farbe, Runde, Versuch } from './sicht';
 import { TASTEN_REIHEN, buchstabeVon, tastenFarben } from './tasten';
+import { schnittZahl, tz } from './text';
 import '../lernen/lernen.css';
 import './browort.css';
 
@@ -33,7 +34,7 @@ export function Raster({
 }): React.JSX.Element {
   const zeilen = Array.from({ length: max }, (_, i) => i);
   return (
-    <div className="bw-raster" role="grid" aria-label="Versuche">
+    <div className="bw-raster" role="grid" aria-label={t('browort.ui.versucheAria')}>
       {zeilen.map((i) => {
         const versuch = versuche[i];
         const laufend = i === versuche.length && !versuch;
@@ -57,7 +58,13 @@ export function Raster({
                   className={klasse}
                   role="gridcell"
                   style={aufdecken === i ? { animationDelay: `${j * 160}ms` } : undefined}
-                  aria-label={buchstabe ? `${buchstabe}${farbe ? `, ${FARBNAME[farbe]}` : ''}` : 'leer'}
+                  aria-label={
+                    buchstabe
+                      ? farbe
+                        ? tz('browort.ui.feldAria', { buchstabe, farbe: t(`browort.ui.farbe.${farbe}`) })
+                        : buchstabe
+                      : t('browort.ui.leer')
+                  }
                 >
                   {buchstabe}
                 </span>
@@ -69,12 +76,6 @@ export function Raster({
     </div>
   );
 }
-
-const FARBNAME: Record<Farbe, string> = {
-  g: 'richtig',
-  v: 'im Wort, andere Stelle',
-  x: 'nicht im Wort',
-};
 
 /** Die Bildschirmtastatur, eingefaerbt nach dem, was die Versuche verraten haben. */
 export function Tastatur({
@@ -88,7 +89,7 @@ export function Tastatur({
 }): React.JSX.Element {
   const farben = tastenFarben(versuche);
   return (
-    <div className="bw-tastatur" aria-label="Tastatur">
+    <div className="bw-tastatur" aria-label={t('browort.ui.tastatur')}>
       {TASTEN_REIHEN.map((reihe, i) => (
         <div key={i} className="bw-tastenreihe">
           {reihe.map((taste) => {
@@ -112,10 +113,12 @@ export function Tastatur({
                 onClick={(e) => {
                   if (e.detail === 0) onTaste(taste);
                 }}
-                aria-label={taste === 'ENTER' ? 'Raten' : taste === 'LOESCHEN' ? 'Löschen' : taste}
+                aria-label={
+                  taste === 'ENTER' ? t('browort.ui.raten') : taste === 'LOESCHEN' ? t('browort.ui.loeschen') : taste
+                }
               >
                 {taste === 'ENTER' ? (
-                  'Raten'
+                  t('browort.ui.raten')
                 ) : taste === 'LOESCHEN' ? (
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M9 5h11v14H9l-6-7z M13 9l5 6 M18 9l-5 6" />
@@ -190,7 +193,7 @@ export function useWortEingabe<T extends Runde>({
       }
       if (taste === 'ENTER') {
         if (jetzt.length < LAENGE) {
-          melde('Fünf Buchstaben, bitte.');
+          melde(t('browort.ui.fuenfBuchstaben'));
           return;
         }
         setLaeuft(true);
@@ -206,7 +209,7 @@ export function useWortEingabe<T extends Runde>({
           .catch((err: unknown) => {
             // Eine abgebrochene Rueckfrage (Clanwort-Wahl) ist keine Stoerung.
             if (err instanceof Error && err.name === 'Abgebrochen') return;
-            melde(err instanceof ApiError ? t(err.messageKey) : 'Keine Verbindung - nochmal versuchen.');
+            melde(err instanceof ApiError ? t(err.messageKey) : t('browort.ui.keineVerbindungNochmal'));
           })
           .finally(() => setLaeuft(false));
         return;
@@ -237,6 +240,9 @@ export function useWortEingabe<T extends Runde>({
   return { eingabe, wackelt, meldung, aufdecken, laeuft, taste };
 }
 
+/** Was `useWortEingabe` liefert — die Anzeige liest daraus, die Hülle hält es. */
+export type WortEingabe = ReturnType<typeof useWortEingabe>;
+
 /**
  * Die Browort-Flamme: brennt, wenn heute geloest ist, und traegt den
  * Schnitt der Versuche (Emile: „man sieht in der Flamme den average").
@@ -254,7 +260,7 @@ export function BrowortFlamme({
     <span className="bw-flamme" style={{ width: `${(groesse * 48) / 60}rem`, height: `${groesse}rem` }}>
       <Flamme aus={!an} groesse={groesse} />
       <span className="bw-flamme-zahl" aria-hidden="true">
-        {schnitt === null ? '-' : schnitt.toLocaleString('de-DE', { maximumFractionDigits: 1 })}
+        {schnitt === null ? '-' : schnittZahl(schnitt)}
       </span>
     </span>
   );
@@ -262,5 +268,5 @@ export function BrowortFlamme({
 
 /** „Ø 3,8 Versuche" für Vorlesehilfen und Unterzeilen. */
 export function schnittText(schnitt: number | null): string {
-  return schnitt === null ? 'noch kein Schnitt' : `Ø ${schnitt.toLocaleString('de-DE', { maximumFractionDigits: 1 })} Versuche`;
+  return schnitt === null ? t('browort.ui.keinSchnitt') : tz('browort.ui.schnitt', { schnitt: schnittZahl(schnitt) });
 }

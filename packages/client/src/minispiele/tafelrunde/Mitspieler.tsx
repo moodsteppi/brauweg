@@ -30,6 +30,7 @@ import { serverAdresse } from '../../laufzeit';
 
 import { type Leistenplatz, leistenplaetze, nochDabei } from './platzierung';
 import stil from './Mitspieler.module.css';
+import { tz } from './text';
 
 export type { Leistenplatz };
 
@@ -56,7 +57,7 @@ export interface Sitzzeile {
  * fiele sofort auf — der Name steht in Leiste und Bretttitel nebeneinander.
  */
 export function sitzname(zeile: Sitzzeile | undefined, sitz: number): string {
-  return zeile?.displayName ?? (zeile?.isBot ? 'KI' : `Sitz ${sitz + 1}`);
+  return zeile?.displayName ?? (zeile?.isBot ? tz('sitz.ki') : tz('sitz.nummer', { n: sitz + 1 }));
 }
 
 /**
@@ -166,7 +167,7 @@ export function Mitspielerleiste({
     <section
       className={stil.leiste}
       role="group"
-      aria-label={`Mitspieler - noch ${lebend} von ${plaetze.length}`}
+      aria-label={tz('leiste.titel', { lebend, gesamt: plaetze.length })}
     >
       <ul className={stil.liste}>
         {plaetze.map((p) => {
@@ -249,20 +250,20 @@ function Kachel({
           allein unterscheidet sie nicht (DESIGN.md). */}
       <span className={stil.zustand}>
         {platz.gegnerJetzt ? (
-          <span className={stil.gegnerMarke}>Gegner</span>
+          <span className={stil.gegnerMarke}>{tz('leiste.gegner')}</span>
         ) : platz.ich ? (
-          <span className={stil.marke}>Du</span>
+          <span className={stil.marke}>{tz('leiste.du')}</span>
         ) : aus ? (
-          <span className={stil.raus}>raus</span>
+          <span className={stil.raus}>{tz('leiste.raus')}</span>
         ) : platz.verlassen ? (
-          <span className={stil.raus}>weg</span>
+          <span className={stil.raus}>{tz('leiste.weg')}</span>
         ) : platz.bereit ? (
           /* „bereit" nur, solange der Sitz noch spielt: Ein ausgeschiedener
              Sitz steht dauerhaft auf bereit, und ein grüner Punkt an ihm sähe
              aus, als warte der Tisch auf ihn. */
-          <span className={stil.bereit}>bereit</span>
+          <span className={stil.bereit}>{tz('leiste.bereit')}</span>
         ) : (
-          <span className={stil.rang}>Rang {platz.level}</span>
+          <span className={stil.rang}>{tz('leiste.rang', { n: platz.level })}</span>
         )}
       </span>
     </>
@@ -289,9 +290,9 @@ function Kachel({
           aria-pressed={gezeigt}
           /* Der Zustand gehört in den Namen, nicht nur in die Farbe: Wer
              vorlesen lässt, hört sonst acht gleich klingende Knöpfe. */
-          aria-label={`${name}, ${platz.leben} Leben${aus ? ', ausgeschieden' : ''}${
-            platz.gegnerJetzt ? ', dein Gegner diese Runde' : ''
-          }${gezeigt ? ', Brett liegt oben' : ''}`}
+          aria-label={`${tz('leiste.kachel', { name, leben: platz.leben })}${aus ? tz('leiste.kachelAus') : ''}${
+            platz.gegnerJetzt ? tz('leiste.kachelGegner') : ''
+          }${gezeigt ? tz('leiste.kachelOben') : ''}`}
           onClick={() => onWahl(platz.sitz)}
         >
           {inhalt}

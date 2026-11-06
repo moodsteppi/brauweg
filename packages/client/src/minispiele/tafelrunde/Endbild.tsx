@@ -27,6 +27,7 @@ import { type Einheitenbild, Figurbild } from './KampfAnzeige';
 import { type Platz, eigenerPlatz } from './platzierung';
 import { type Sitzzeile, sitzname } from './Mitspieler';
 import stil from './Endbild.module.css';
+import { einheitName, tz, tzAnzahl } from './text';
 
 /** Eine Einheit auf dem Brett — dieselbe Form wie `Kaempfer` in zuege.ts. */
 export interface Aufsteller {
@@ -44,16 +45,16 @@ export interface Aufsteller {
  * Gleichstand „Verloren".
  */
 export function abschlusswort(platz: number | null, geteilt: boolean): string {
-  if (platz === null) return 'Partie beendet';
-  if (platz === 1) return geteilt ? 'Geteilter Sieg' : 'Gewonnen!';
-  if (platz === 2) return 'Knapp vorbei';
-  return 'Ausgeschieden';
+  if (platz === null) return tz('ende.beendet');
+  if (platz === 1) return tz(geteilt ? 'ende.geteilterSieg' : 'ende.gewonnen');
+  if (platz === 2) return tz('ende.knapp');
+  return tz('ende.ausgeschieden');
 }
 
 /** „Platz 3 von 8" — ausgeschrieben, weil „3/8" nach einem Bruch aussieht. */
 export function platzsatz(platz: number | null, von: number): string {
-  if (platz === null) return `${von} Spieler am Tisch`;
-  return `Platz ${platz} von ${von}`;
+  if (platz === null) return tz('ende.spielerAmTisch', { n: von });
+  return tz('ende.platz', { platz, von });
 }
 
 /**
@@ -65,8 +66,7 @@ export function platzsatz(platz: number | null, von: number): string {
  * darunter passt: Wer bis zum Schluss stand, hat durchgestanden.
  */
 export function rundensatz(ausRunde: number | null, runden: number): string {
-  const zahl = runden === 1 ? '1 Runde' : `${runden} Runden`;
-  return ausRunde === null ? `${zahl} durchgestanden` : `${zahl} überstanden`;
+  return tzAnzahl(ausRunde === null ? 'ende.durchgestanden' : 'ende.ueberstanden', runden);
 }
 
 export function Endbild({
@@ -117,7 +117,7 @@ export function Endbild({
       className={stil.ueberblender}
       role="dialog"
       aria-modal="true"
-      aria-label={fertig ? 'Partie beendet' : 'Ausgeschieden'}
+      aria-label={tz(fertig ? 'ende.beendet' : 'ende.ausgeschieden')}
     >
       <div className={stil.tafel} data-sieg={gesiegt ? '' : undefined}>
         {/* Der Kranz: bei Platz 1 mit Schein, sonst schlicht. Gezeichnet und
@@ -141,9 +141,9 @@ export function Endbild({
             mit „Ausgeschieden" und ohne Antwort auf die erste Frage danach. */}
         {fertig && !gesiegt && <p className={stil.sieger}>{siegerzeile(platzierung, sitze)}</p>}
 
-        <h3 className={stil.titel}>Deine letzte Aufstellung</h3>
+        <h3 className={stil.titel}>{tz('ende.aufstellung')}</h3>
         {aufstellung.length === 0 ? (
-          <p className={stil.leer}>Am Ende stand kein Recke mehr auf dem Feld.</p>
+          <p className={stil.leer}>{tz('ende.keinRecke')}</p>
         ) : (
           <ul className={stil.aufstellung}>
             {aufstellung.map(({ k, feld }) => {
@@ -158,14 +158,14 @@ export function Endbild({
                         /* Ohne Bild bleibt der Anfangsbuchstabe stehen — ein
                            leerer Kasten sähe nach Fehler aus, ein Buchstabe
                            nach Absicht (CLAUDE.md). */
-                        ersatz={<span className={stil.ersatz}>{einheit.name.slice(0, 1)}</span>}
+                        ersatz={<span className={stil.ersatz}>{einheitName(einheit).slice(0, 1)}</span>}
                       />
                     ) : (
                       <span className={stil.ersatz}>?</span>
                     )}
                   </span>
-                  <span className={stil.reckenname}>{einheit?.name ?? k.id}</span>
-                  <span className={stil.sterne} aria-label={`Stufe ${k.stufe}`}>
+                  <span className={stil.reckenname}>{einheit ? einheitName(einheit) : k.id}</span>
+                  <span className={stil.sterne} aria-label={tz('ende.stufe', { n: k.stufe })}>
                     {'★'.repeat(k.stufe)}
                   </span>
                 </li>
@@ -176,11 +176,11 @@ export function Endbild({
 
         <div className={stil.knoepfe}>
           <button type="button" className={stil.hauptknopf} onClick={onZurueck}>
-            Zur Spielauswahl
+            {tz('ende.zurAuswahl')}
           </button>
           {onZusehen && (
             <button type="button" className={stil.nebenknopf} onClick={onZusehen}>
-              Weiter zusehen
+              {tz('ende.weiterZusehen')}
             </button>
           )}
         </div>
@@ -209,6 +209,6 @@ export function siegerzeile(
     ),
   );
   return erste.length === 1
-    ? `Gewonnen hat ${namen[0]}.`
-    : `Geteilter Sieg: ${namen.join(' und ')}.`;
+    ? tz('ende.siegerEiner', { name: namen[0]! })
+    : tz('ende.siegerGeteilt', { namen: namen.join(tz('ende.und')) });
 }

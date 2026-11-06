@@ -11,6 +11,17 @@
  * Aufruf in der Entwicklung: `npm run dev:client`, dann
  * http://localhost:5173/schaukasten.html
  *
+ *   ?fall=<name>    nur diesen einen Kasten (ohne Seitenkopf); jeder Kasten
+ *                   traegt `data-fall="<name>"`, ein Selektor trifft genau ihn
+ *   ?sprache=de|en  die Sprache vor dem ersten Zeichnen — fuer Vorher-Nachher-
+ *                   Bilder derselben Ansicht
+ *   ?von=&bis=      Ausschnitt der Spielrunden (wie bisher)
+ *
+ * Menue, Wartesaal und Endstand sind die echten Bausteine des Bildschirms
+ * (screens/Partykiste.tsx). Was sie vom Server holen, beantwortet hier eine
+ * Attrappe (`api` wird vor dem Zeichnen ueberschrieben) — nur auf dieser
+ * Seite, die nicht mitgebaut wird.
+ *
  * Die Sichten hier sind VON HAND geschrieben und kommen nicht aus dem Modul.
  * Das ist Absicht — der Schaukasten soll auch dann noch zeichnen, wenn das
  * Modul gerade nicht baut. Dass die Form stimmt, prueft der Typ
@@ -21,6 +32,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import '../../styles.css';
+import { api, type Me } from '../../api';
+import { setzeSprachwahl } from '../../i18n';
+import { istSprache } from '../../i18n/sprachen';
+import { RegelsatzKontext } from '../../minispiele/partykiste/Regelzeile';
+import { Endstand, Lobby, Partykiste, TischKopf } from '../../screens/Partykiste';
 import { PartyAuswahl } from '../../minispiele/partykiste/Auswahl';
 import { PartykisteBanner } from '../../minispiele/partykiste/Banner';
 import { Einstellungen, OffeneRunde } from '../../minispiele/partykiste/Einstellungen';
@@ -34,6 +50,7 @@ import {
   ansageFuer,
   type PartyLetzterWurf,
   type PartyMinispiel,
+  type PartyRegelsatz,
   type PartykisteSicht,
 } from '../../minispiele/partykiste/sicht';
 import { Abrechnung, Tabelle } from '../../minispiele/partykiste/Wertung';
@@ -42,6 +59,66 @@ import { LetzterSchicht } from '../../minispiele/partykiste/LetzterWurf';
 import type { SeatInfo } from '../../protocol';
 import { bilderOhneUhr } from './bilder-ohne-uhr';
 import { bilderZeitdruck } from './bilder-zeitdruck';
+
+const SUCHE = new URLSearchParams(window.location.search);
+
+/* Vor dem ersten Zeichnen, sonst steht das erste Bild in der falschen Sprache. */
+const SPRACHE = SUCHE.get('sprache');
+if (istSprache(SPRACHE)) setzeSprachwahl(SPRACHE);
+
+/** `?fall=…` — nur dieser Kasten. Ohne Angabe alle, wie bisher. */
+const FALL = SUCHE.get('fall');
+
+/**
+ * Der Name eines Kastens fuer `?fall=` und `data-fall`. Aus dem Titel
+ * abgeleitet, damit keiner der vielen Kaesten ohne Namen bleibt; eine
+ * vorhandene `kennung` (data-sk der Sichtprobe) geht vor.
+ */
+function fallName(titel: string): string {
+  return titel
+    .toLowerCase()
+    .replace(/ä/g, 'ae')
+    .replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue')
+    .replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function zeigen(fall: string): boolean {
+  return FALL === null || FALL === fall;
+}
+
+/*
+ * Attrappe des Servers fuer Menue und Wartesaal. Die Bausteine holen sich
+ * Konto, Vorgabe, Shop und Einladungscode selbst; ohne Antwort zeichnen sie
+ * weniger (keine Einladung, keine Inhalte-Kacheln) — und genau deren Texte
+ * fehlten dann im Bild.
+ */
+const ATTRAPPE_ME = {
+  id: 'ich',
+  gast: false,
+  displayName: 'Robin',
+  stage: 'production',
+  activeTable: { tableId: 'probe', gameId: 'partykiste', status: 'waiting' },
+} as unknown as Me;
+
+Object.assign(api, {
+  me: async () => ATTRAPPE_ME,
+  shop: async () => ({ tischware: [] }),
+  defaults: async () => ({
+    config: {
+      minispiele: Object.keys(MINISPIEL_NAME),
+      inhaltsHaerte: 1,
+      inhaltsMischung: 'genau',
+      paket: null,
+      modus: 'turnier',
+    },
+  }),
+  tableRules: async () => ({ config: {} }),
+  tischMitCode: async (id: string) => ({ table: { id, gameId: 'partykiste', status: 'waiting', joinCode: 'K7M2QX' } }),
+  tischPerCode: async () => ({ id: 'probe', gameId: 'partykiste', host: 'Robin', occupied: 3, seats: 12 }),
+});
 
 const LEUTE = ['Robin', 'Jan', 'Tom', 'Emil', 'Niklas', 'Anni'];
 
@@ -689,9 +766,11 @@ const AUFSTELLUNG = sicht({
   daten: { art: 'quiz', frage: '', antworten: [], meineWahl: -1, richtig: null, wahl: null },
 });
 
-function Kasten({ titel, text, sicht: bild, zusatz, kennung }: Bild): React.JSX.Element {
+function Kasten({ titel, text, sicht: bild, zusatz, kennung }: Bild): React.JSX.Element | null {
+  const fall = kennung ?? fallName(titel);
+  if (!zeigen(fall)) return null;
   return (
-    <figure className="sk-kasten" data-sk={kennung}>
+    <figure className="sk-kasten" data-sk={kennung} data-fall={fall}>
       <figcaption>
         <strong>{titel}</strong>
         <span>{text}</span>
@@ -699,15 +778,8 @@ function Kasten({ titel, text, sicht: bild, zusatz, kennung }: Bild): React.JSX.
       <div className="sk-rahmen">
         <main className="pk-seite pk-tisch" data-szene={bild.art}>
           <Szene art={bild.art} />
-          <header className="pk-kopf">
-            <span className="pk-rundenzahl">
-              Runde {bild.rundeNr + 1}/{bild.runden}
-            </span>
-            <strong className="pk-spielname">{titel.split(' -')[0]}</strong>
-            <button className="pk-tafelknopf" type="button">
-              Stand
-            </button>
-          </header>
+          {/* Der echte Kopf des Bildschirms statt einer Abschrift — eine Abschrift bliebe beim Uebersetzen deutsch. */}
+          <TischKopf sicht={bild} tafel={zusatz === 'tabelle'} onTafel={() => {}} onVerlassen={() => {}} />
           <Regelzeile regeln={bild} />
           <AktiveRegel sicht={bild} sitze={SITZE} sende={() => {}} />
           {zusatz === 'tabelle' ? (
@@ -727,28 +799,85 @@ function Kasten({ titel, text, sicht: bild, zusatz, kennung }: Bild): React.JSX.
   );
 }
 
-/** Ein Menue-Baustein ohne Tischkopf — im selben Handyrahmen. */
-function MenueKasten({
+/** Ein Kasten mit Beschriftung und Handyrahmen; ohne `fall` zaehlt der Titel. */
+function Figur({
   titel,
   text,
+  fall = fallName(titel),
+  kennung,
+  rahmen = 'sk-rahmen',
   children,
 }: {
   titel: string;
   text: string;
+  fall?: string;
+  kennung?: string;
+  rahmen?: string;
   children: React.ReactNode;
-}): React.JSX.Element {
+}): React.JSX.Element | null {
+  if (!zeigen(fall)) return null;
   return (
-    <figure className="sk-kasten">
+    <figure className="sk-kasten" data-sk={kennung} data-fall={fall}>
       <figcaption>
         <strong>{titel}</strong>
         <span>{text}</span>
       </figcaption>
-      <div className="sk-rahmen">
-        <main className="pk-seite pk-menue">
-          <div className="pk-menue-mitte">{children}</div>
-        </main>
-      </div>
+      <div className={rahmen}>{children}</div>
     </figure>
+  );
+}
+
+/** Ein Menue-Baustein ohne Tischkopf — im selben Handyrahmen. */
+function MenueKasten({
+  titel,
+  text,
+  fall,
+  children,
+}: {
+  titel: string;
+  text: string;
+  fall: string;
+  children: React.ReactNode;
+}): React.JSX.Element | null {
+  return (
+    <Figur titel={titel} text={text} fall={fall}>
+      <main className="pk-seite pk-menue">
+        <div className="pk-menue-mitte">{children}</div>
+      </main>
+    </Figur>
+  );
+}
+
+/** Der Regelsatz des Wartesaals — am echten Tisch kommt er vom Server. */
+const LOBBY_REGELN: PartyRegelsatz = {
+  minispiele: Object.keys(MINISPIEL_NAME) as PartyMinispiel[],
+  trinkmodus: true,
+  schluckFaktor: 2,
+};
+
+/** Zwoelf Plaetze, wie `oeffneRunde` sie anlegt; die hinteren sind frei. */
+function lobbySitze(besetzt: number): SeatInfo[] {
+  return Array.from({ length: 12 }, (_, seat) =>
+    seat < besetzt
+      ? { ...SITZE[seat % SITZE.length]!, seat, isBot: false }
+      : { seat, displayName: null, accountId: null, isBot: false, avatarUrl: null },
+  );
+}
+
+/** Endstand: dieselbe Tabelle wie im Turnier, nur `fertig`. */
+const ENDSTAND = sicht({
+  art: 'quiz',
+  rundeNr: 5,
+  fertig: true,
+  daten: { art: 'quiz', frage: '', antworten: [], meineWahl: -1, richtig: null, wahl: null },
+});
+
+/** Der Wartesaal mit dem Regelsatz, den der Bildschirm sonst vom Server liest. */
+function Wartesaal(props: Omit<React.ComponentProps<typeof Lobby>, 'onStart' | 'onZurueck'>): React.JSX.Element {
+  return (
+    <RegelsatzKontext.Provider value={{ regeln: LOBBY_REGELN, runden: props.runden }}>
+      <Lobby {...props} onStart={() => {}} onZurueck={() => {}} />
+    </RegelsatzKontext.Provider>
   );
 }
 
@@ -760,13 +889,14 @@ function MenueKasten({
  * und die ganze Reihe ist mehrere Bildschirme lang.
  */
 function ausschnitt(): { von: number; bis: number; kopf: boolean } {
-  const p = new URLSearchParams(window.location.search);
-  const von = Number(p.get('von'));
-  const bis = Number(p.get('bis'));
+  /* Mit `?fall=` zaehlt jeder Kasten, egal ob oben oder unter den Runden. */
+  if (FALL !== null) return { von: 0, bis: BILDER.length, kopf: true };
+  const von = Number(SUCHE.get('von'));
+  const bis = Number(SUCHE.get('bis'));
   return {
     von: Number.isFinite(von) && von > 0 ? von : 0,
     bis: Number.isFinite(bis) && bis > 0 ? bis : BILDER.length,
-    kopf: p.get('kopf') !== 'aus',
+    kopf: SUCHE.get('kopf') !== 'aus',
   };
 }
 
@@ -776,33 +906,83 @@ function Schaukasten(): React.JSX.Element {
     <div className="sk-seite">
       {kopf ? (
         <>
-          <h1>Partykiste - Schaukasten</h1>
-          <p className="sk-vorwort">
-            Jede Ansicht mit erfundenen Daten. Nichts davon ist mit einem Server verbunden;
-            die Knöpfe tun absichtlich nichts.
-          </p>
-          <figure className="sk-kasten">
-            <figcaption>
-              <strong>Banner der Spielauswahl</strong>
-              <span>Gezeichnet, nicht geladen - für die Kiste gibt es noch kein gemaltes Bild.</span>
-            </figcaption>
-            <div className="sk-rahmen sk-rahmen-banner">
-              <PartykisteBanner />
-            </div>
-          </figure>
+          {FALL === null ? (
+            <>
+              <h1>Partykiste - Schaukasten</h1>
+              <p className="sk-vorwort">
+                Jede Ansicht mit erfundenen Daten. Nichts davon ist mit einem Server verbunden;
+                die Knöpfe tun absichtlich nichts.
+              </p>
+            </>
+          ) : null}
+          <Figur
+            titel="Banner der Spielauswahl"
+            text="Gezeichnet, nicht geladen - für die Kiste gibt es noch kein gemaltes Bild."
+            fall="banner"
+            rahmen="sk-rahmen sk-rahmen-banner"
+          >
+            <PartykisteBanner />
+          </Figur>
+          {/* -- Der Bildschirm selbst: Menue, Wartesaal, Endstand ---------- */}
+          <Figur
+            titel="Bildschirm - Menü"
+            text="Der echte Einstieg (screens/Partykiste.tsx) ohne Tisch: Einstellungen, Auswahl, Gegen Bots, Beitrittscode."
+            fall="menue"
+            rahmen="sk-rahmen sk-rahmen-lang"
+          >
+            <Partykiste startTisch={null} onBack={() => {}} />
+          </Figur>
+          <Figur
+            titel="Bildschirm - Menü, Einzelspiel Bus fahren"
+            text="Dieselbe Kiste als Einzelspiel: Modus und Minispielwahl entfallen."
+            fall="menue-einzel"
+            rahmen="sk-rahmen sk-rahmen-lang"
+          >
+            <Partykiste startTisch={null} einzel="busfahrer" onBack={() => {}} />
+          </Figur>
+          <Figur
+            titel="Bildschirm - Wartesaal, Öffner"
+            text="Fünf von zwölf da: Regelzeile, Einladung mit Code, Link und QR, die Plätze und der Startknopf."
+            fall="lobby-oeffner"
+            rahmen="sk-rahmen sk-rahmen-schirm"
+          >
+            <Wartesaal sitze={lobbySitze(5)} meineKennung="ich" verbunden runden={6} />
+          </Figur>
+          <Figur
+            titel="Bildschirm - Wartesaal, zu wenige, ohne Verbindung"
+            text="Drei da: Der Startknopf ist aus, darunter der Grund. Dazu die Meldung der toten Leitung."
+            fall="lobby-zu-wenige"
+            rahmen="sk-rahmen sk-rahmen-schirm"
+          >
+            <Wartesaal sitze={lobbySitze(3)} meineKennung="ich" verbunden={false} runden={6} />
+          </Figur>
+          <Figur
+            titel="Bildschirm - Wartesaal, Mitspieler"
+            text="Wer nicht geöffnet hat, wartet auf den Ersten."
+            fall="lobby-wartend"
+            rahmen="sk-rahmen sk-rahmen-schirm"
+          >
+            <Wartesaal sitze={lobbySitze(6)} meineKennung="konto-2" verbunden runden={6} />
+          </Figur>
+          <Figur titel="Bildschirm - Endstand" text="Turnier vorbei: die Tabelle und „Fertig“." fall="endstand">
+            <Endstand sicht={ENDSTAND} sitze={SITZE} wurf={null} onZu={() => {}} onFertig={() => {}} />
+          </Figur>
           <MenueKasten
+            fall="einstellungen-trinkspiel"
             titel="Menü - Einstellungen, Trinkspiel"
             text="Runden, Härte und Trinkmodus stehen offen im Menü und gelten online wie gegen Bots."
           >
             <Einstellungen runden={6} haerte={2} trinkmodus onRunden={() => {}} onHaerte={() => {}} onTrinkmodus={() => {}} />
           </MenueKasten>
           <MenueKasten
+            fall="einstellungen-alkoholfrei"
             titel="Menü - Einstellungen, alkoholfrei"
             text="Ausgeschaltet heißt der Zähler Strafpunkte; der Hinweis sagt, dass die Turnierpunkte gleich bleiben."
           >
             <Einstellungen runden={8} haerte={1} trinkmodus={false} onRunden={() => {}} onHaerte={() => {}} onTrinkmodus={() => {}} />
           </MenueKasten>
           <MenueKasten
+            fall="auswahl"
             titel="Menü - Auswahl"
             text="Minispiele an/aus (die Kiste mischt), Inhaltsstufe und Themenpaket. Ohne Modus: Das Modul kennt noch keinen."
           >
@@ -815,6 +995,7 @@ function Schaukasten(): React.JSX.Element {
             />
           </MenueKasten>
           <MenueKasten
+            fall="auswahl-gast"
             titel="Menü - Auswahl als Gast, Modus bekannt, vier Inhalte-Kacheln"
             text="„derb“ gesperrt mit Grund; „gemischt“ heißt für den Gast harmlos und pikant. Die vierte Kachel und die Modus-Kacheln erscheinen erst, wenn defaultConfig() die Felder inhaltsMischung und modus hat."
           >
@@ -827,6 +1008,7 @@ function Schaukasten(): React.JSX.Element {
             />
           </MenueKasten>
           <MenueKasten
+            fall="passt-nicht"
             titel="Am Tisch - „Passt nicht“ (nur auf staging)"
             text="Leise unter der Runde, 44 pt. Zeigt die Runde mehrere Einträge, fragt das Blatt erst, welcher. Senden geht hier ins Leere - kein Server."
           >
@@ -841,6 +1023,7 @@ function Schaukasten(): React.JSX.Element {
             />
           </MenueKasten>
           <MenueKasten
+            fall="offene-runde"
             titel="Online - offene Runde gefunden"
             text="Erst ansehen, dann beitreten: Dort gilt der Regelsatz des Öffners, nicht die eigenen Einstellungen."
           >
@@ -857,32 +1040,26 @@ function Schaukasten(): React.JSX.Element {
               onAbbrechen={() => {}}
             />
           </MenueKasten>
-          <figure className="sk-kasten">
-            <figcaption>
-              <strong>Team-Abend - Lager aufstellen</strong>
-              <span>
-                Vor der ersten Runde: abwechselnd nach Sitz vorbelegt, der Öffner tippt Namen hinüber. Hier hat er
-                Emil ins Lager A geholt.
-              </span>
-            </figcaption>
-            <div className="sk-rahmen">
-              <AufstellungSeite sicht={AUFSTELLUNG} sitze={SITZE} sende={() => {}} />
-            </div>
-          </figure>
-          <figure className="sk-kasten">
-            <figcaption>
-              <strong>Team-Abend - die anderen warten</strong>
-              <span>Dieselben Spalten ohne Knöpfe, solange der Öffner aufstellt.</span>
-            </figcaption>
-            <div className="sk-rahmen">
-              <AufstellungSeite
-                sicht={{ ...AUFSTELLUNG, sitz: 2, aufstellung: { aufsteller: 0, wechselbar: [] } }}
-                sitze={SITZE}
-                sende={() => {}}
-              />
-            </div>
-          </figure>
+          <Figur
+            titel="Team-Abend - Lager aufstellen"
+            text="Vor der ersten Runde: abwechselnd nach Sitz vorbelegt, der Öffner tippt Namen hinüber. Hier hat er Emil ins Lager A geholt."
+            fall="aufstellung-oeffner"
+          >
+            <AufstellungSeite sicht={AUFSTELLUNG} sitze={SITZE} sende={() => {}} />
+          </Figur>
+          <Figur
+            titel="Team-Abend - die anderen warten"
+            text="Dieselben Spalten ohne Knöpfe, solange der Öffner aufstellt."
+            fall="aufstellung-wartend"
+          >
+            <AufstellungSeite
+              sicht={{ ...AUFSTELLUNG, sitz: 2, aufstellung: { aufsteller: 0, wechselbar: [] } }}
+              sitze={SITZE}
+              sende={() => {}}
+            />
+          </Figur>
           <MenueKasten
+            fall="regelzeile-eskalation"
             titel="Wartesaal - Regelzeile, Eskalation"
             text="Vor der ersten Runde steht nur fest, dass die Härte steigt; im Spiel nennt die Zeile die Stufe."
           >
@@ -892,6 +1069,7 @@ function Schaukasten(): React.JSX.Element {
             />
           </MenueKasten>
           <MenueKasten
+            fall="regelzeile"
             titel="Wartesaal - Regelzeile"
             text="Dieselbe Zeile steht im Wartesaal (vom Server gelesen) und im Spielkopf (aus der Sicht)."
           >
@@ -901,21 +1079,15 @@ function Schaukasten(): React.JSX.Element {
             />
           </MenueKasten>
           {ANSAGEN.map((a) => (
-            <figure key={a.kennung} className="sk-kasten" data-sk={a.kennung}>
-              <figcaption>
-                <strong>{a.titel}</strong>
-                <span>{a.text}</span>
-              </figcaption>
-              <div className="sk-rahmen">
-                <main className="pk-seite pk-tisch">
-                  <LetzterSchicht wurf={a.wurf} sitze={SITZE} ich={0} trinkmodus onZu={() => {}} fest />
-                  <header className="pk-kopf">
-                    <span className="pk-rundenzahl">Runde 4/6</span>
-                    <strong className="pk-spielname">Imposter</strong>
-                  </header>
-                </main>
-              </div>
-            </figure>
+            <Figur key={a.kennung} titel={a.titel} text={a.text} fall={a.kennung} kennung={a.kennung}>
+              <main className="pk-seite pk-tisch">
+                <LetzterSchicht wurf={a.wurf} sitze={SITZE} ich={0} trinkmodus onZu={() => {}} fest />
+                <header className="pk-kopf">
+                  <span className="pk-rundenzahl">Runde 4/6</span>
+                  <strong className="pk-spielname">Imposter</strong>
+                </header>
+              </main>
+            </Figur>
           ))}
         </>
       ) : null}
