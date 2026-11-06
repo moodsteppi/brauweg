@@ -5,6 +5,7 @@ import { t } from '../i18n';
 import { Schliessen, useEscape } from '../screens/HbBlatt';
 import type { Belohnung, BrowortAnsicht } from './sicht';
 import { BrowortFlamme, Raster, Tastatur, schnittText, useWortEingabe, type WortEingabe } from './Spielfeld';
+import { tz, zeigeSprachhinweis } from './text';
 
 /**
  * Browort (Emile, 23.10.2026): ein deutsches Wort am Tag, fuenf Buchstaben,
@@ -33,7 +34,7 @@ export function Browort({
     api
       .browort()
       .then(setRunde)
-      .catch((err: unknown) => setFehler(err instanceof ApiError ? t(err.messageKey) : 'Keine Verbindung.'));
+      .catch((err: unknown) => setFehler(err instanceof ApiError ? t(err.messageKey) : t('browort.ui.keineVerbindung')));
   }, []);
   useEffect(laden, [laden]);
 
@@ -101,10 +102,15 @@ export function BrowortBild({
         <Schliessen onClick={onClose} />
         <div className="hb-voll-titel">
           <h1>Browort</h1>
-          <span>Das Wort des Tages</span>
+          {/* Auf Englisch sonst ein Rätsel, warum „HAFEN“ gesucht ist: Das
+              Wort bleibt deutsch (Wortliste und Tastatur), also wird es gesagt. */}
+          <span>
+            {t('browort.ui.wortDesTages')}
+            {zeigeSprachhinweis() && <> · {t('browort.ui.deutschesWortspiel')}</>}
+          </span>
         </div>
         {runde && (
-          <span className="bw-kopf-flamme" aria-label={`Serie ${runde.serie.serie}, ${schnittText(statistik?.schnitt ?? null)}`}>
+          <span className="bw-kopf-flamme" aria-label={tz('browort.ui.kopfAria', { serie: runde.serie.serie, schnitt: schnittText(statistik?.schnitt ?? null) })}>
             <BrowortFlamme schnitt={statistik?.schnitt ?? null} an={runde.serie.heuteGespielt && runde.geloest} groesse={2.4} />
             <b>{runde.serie.serie}</b>
           </span>
@@ -117,11 +123,11 @@ export function BrowortBild({
             <div className="hb-fehler">
               {fehler}{' '}
               <button type="button" className="hb-link" onClick={onNochmal}>
-                Nochmal
+                {t('browort.ui.nochmal')}
               </button>
             </div>
           ) : (
-            <p className="hb-klein">Einen Moment…</p>
+            <p className="hb-klein">{t('browort.ui.einenMoment')}</p>
           )}
         </div>
       ) : (
@@ -147,37 +153,37 @@ export function BrowortBild({
                 <strong>
                   {runde.geloest
                     ? runde.versuche.length === 1
-                      ? 'Im ersten Versuch!'
-                      : `Gelöst in ${runde.versuche.length} Versuchen`
-                    : 'Heute nicht geschafft'}
+                      ? t('browort.ui.imErstenVersuch')
+                      : tz('browort.ui.geloestIn', { n: runde.versuche.length })
+                    : t('browort.ui.nichtGeschafft')}
                 </strong>
                 <span>
-                  Das Wort war <b>{runde.loesung}</b>
+                  {t('browort.ui.dasWortWar')} <b>{runde.loesung}</b>
                 </span>
                 {belohnung && (
                   <span className="bw-lohn">
-                    +{belohnung.muenzen} Münzen · +{belohnung.xp} XP
+                    {tz('browort.ui.lohn', { muenzen: belohnung.muenzen, xp: belohnung.xp })}
                   </span>
                 )}
-                {geschuetzt && <span className="hb-klein">Dein Wochenschutz hat die Serie gerettet.</span>}
+                {geschuetzt && <span className="hb-klein">{t('browort.ui.wochenschutz')}</span>}
               </div>
 
               <div className="bw-zahlen">
                 <span>
-                  <b>{statistik?.gespielt ?? 0}</b>Gespielt
+                  <b>{statistik?.gespielt ?? 0}</b>{t('browort.ui.gespielt')}
                 </span>
                 <span>
-                  <b>{quote} %</b>Gelöst
+                  <b>{quote} %</b>{t('browort.ui.geloest')}
                 </span>
                 <span>
-                  <b>{runde.serie.serie}</b>Serie
+                  <b>{runde.serie.serie}</b>{t('browort.ui.serie')}
                 </span>
                 <span>
-                  <b>{runde.serie.beste}</b>Beste
+                  <b>{runde.serie.beste}</b>{t('browort.ui.beste')}
                 </span>
               </div>
 
-              <div className="bw-verteilung" aria-label="Wie oft mit wie vielen Versuchen gelöst">
+              <div className="bw-verteilung" aria-label={t('browort.ui.verteilungAria')}>
                 {(statistik?.verteilung ?? []).map((anzahl, i) => (
                   <div key={i} className="bw-balkenzeile">
                     <span>{i + 1}</span>
@@ -190,7 +196,7 @@ export function BrowortBild({
                   </div>
                 ))}
               </div>
-              <p className="hb-klein bw-morgen">Morgen gibt es ein neues Wort.</p>
+              <p className="hb-klein bw-morgen">{t('browort.ui.morgen')}</p>
             </div>
           ) : (
             <Tastatur versuche={runde.versuche} gesperrt={spiel.laeuft} onTaste={spiel.taste} />

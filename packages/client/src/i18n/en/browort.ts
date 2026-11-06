@@ -71,17 +71,6 @@ export default {
   'browort.ui.clan.ausgelost': 'You were drawn: type a five-letter word by {uhr}:00.',
   'browort.ui.clan.geloestIn': 'Solved in {n}',
 
-  // Startkarte
-  'browort.ui.karte.erledigt': 'Done for today - a new word tomorrow.',
-  'browort.ui.karte.wartet': 'Today’s word is waiting, or the flame goes out.',
-  'browort.ui.karte.neu': 'Five letters, six tries, a new word every day.',
-  'browort.ui.karte.aria.eins': 'Browort. Streak: {n} day, {schnitt}. {unter}',
-  'browort.ui.karte.aria.mehr': 'Browort. Streak: {n} days, {schnitt}. {unter}',
-  'browort.ui.karte.label': 'Browort · Word of the day',
-  'browort.ui.karte.serie.eins': '{n} day streak',
-  'browort.ui.karte.serie.mehr': '{n} day streak',
-  'browort.ui.karte.heuteGespielt': 'Played today',
-  'browort.ui.karte.rate': 'Guess the word',
 
   // Profil
   'browort.ui.profil.schnitt': 'avg. tries',

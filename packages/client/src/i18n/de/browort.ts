@@ -1,8 +1,9 @@
 import type { Woerterbuch } from '../woerterbuch';
 
 /**
- * Deutsche Texte, Bereich „browort": Browort und Clanwort samt Startkarte und
- * Profil — alles außer den Wörtern selbst.
+ * Deutsche Texte, Bereich „browort": Browort und Clanwort samt Profil —
+ * alles außer den Wörtern selbst. Die Startkarte steht nicht hier, sondern
+ * unter `startkarte.browort.*` beim Hub (sie gehört zum Start, nicht zum Spiel).
  *
  * Das Spiel bleibt in jeder Sprache deutsch: Wortliste, Tastatur (mit Ä, Ö,
  * Ü) und Lösung stehen nicht hier, sondern auf dem Server bzw. in
@@ -85,17 +86,6 @@ export default {
   'browort.ui.clan.ausgelost': 'Du wurdest ausgelost: Tippe bis {uhr} Uhr ein Wort mit fünf Buchstaben.',
   'browort.ui.clan.geloestIn': 'Gelöst in {n}',
 
-  // Startkarte
-  'browort.ui.karte.erledigt': 'Für heute erledigt - morgen kommt ein neues Wort.',
-  'browort.ui.karte.wartet': 'Das Wort von heute wartet, sonst erlischt die Flamme.',
-  'browort.ui.karte.neu': 'Fünf Buchstaben, sechs Versuche, jeden Tag ein neues Wort.',
-  'browort.ui.karte.aria.eins': 'Browort. Serie: {n} Tag, {schnitt}. {unter}',
-  'browort.ui.karte.aria.mehr': 'Browort. Serie: {n} Tage, {schnitt}. {unter}',
-  'browort.ui.karte.label': 'Browort · Wort des Tages',
-  'browort.ui.karte.serie.eins': '{n} Tag Serie',
-  'browort.ui.karte.serie.mehr': '{n} Tage Serie',
-  'browort.ui.karte.heuteGespielt': 'Heute gespielt',
-  'browort.ui.karte.rate': 'Rate das Wort',
 
   // Profil
   'browort.ui.profil.schnitt': 'Ø Versuche',

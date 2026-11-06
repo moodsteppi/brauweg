@@ -5,6 +5,7 @@ import { t } from '../i18n';
 import { Schliessen, useEscape, useRueckfrage } from '../screens/HbBlatt';
 import type { Belohnung, ClanwortAnsicht } from './sicht';
 import { Raster, Tastatur, useWortEingabe, type WortEingabe } from './Spielfeld';
+import { anzahl, tz, zeigeSprachhinweis } from './text';
 
 /** Die Rueckfrage zur Wahl wurde abgebrochen — kein Fehler, nichts zu melden. */
 export class AbgebrochenFehler extends Error {
@@ -38,7 +39,7 @@ export function Clanwort({
     api
       .clanwort()
       .then((antwort) => setStand(antwort.clanwort))
-      .catch((err: unknown) => setFehler(err instanceof ApiError ? t(err.messageKey) : 'Keine Verbindung.'));
+      .catch((err: unknown) => setFehler(err instanceof ApiError ? t(err.messageKey) : t('browort.ui.keineVerbindung')));
   }, []);
   useEffect(laden, [laden]);
 
@@ -50,9 +51,9 @@ export function Clanwort({
         return new Promise<ClanwortAnsicht>((fertig, scheitern) => {
           frage(
             {
-              titel: `„${wort}“ als Clanwort?`,
-              text: 'Dein Clan rät es heute. Du selbst rätst nicht mit.',
-              ja: 'Wort festlegen',
+              titel: tz('browort.ui.clan.frageTitel', { wort }),
+              text: t('browort.ui.clan.frageText'),
+              ja: t('browort.ui.clan.frageJa'),
             },
             () => {
               void api
@@ -127,8 +128,8 @@ export function ClanwortBild({
   const rangliste = stand && stand.rangliste.length > 0 && (
     <section className="hb-blk bw-rangliste">
       <h2 className="hb-ab">
-        Heute im Clan
-        <span className="hb-ab-zusatz">{stand.rangliste.filter((z) => z.geloest).length} gelöst</span>
+        {t('browort.ui.clan.heuteImClan')}
+        <span className="hb-ab-zusatz">{tz('browort.ui.geloestZahl', { n: stand.rangliste.filter((z) => z.geloest).length })}</span>
       </h2>
       <div className="hb-liste">
         {stand.rangliste.map((zeile, i) => (
@@ -138,10 +139,10 @@ export function ClanwortBild({
               <strong>{zeile.name}</strong>
               <small className="is-leise">
                 {zeile.geloest
-                  ? `in ${zeile.versuche} ${zeile.versuche === 1 ? 'Versuch' : 'Versuchen'}`
+                  ? anzahl('browort.ui.clan.inVersuchen', zeile.versuche)
                   : zeile.fertig
-                    ? 'nicht geschafft'
-                    : `rät noch (${zeile.versuche}/6)`}
+                    ? t('browort.ui.clan.nichtGeschafft')
+                    : tz('browort.ui.clan.raetNoch', { n: zeile.versuche })}
               </small>
             </span>
           </div>
@@ -159,15 +160,17 @@ export function ClanwortBild({
           <span>
             {stand?.waehler
               ? stand.phase === 'waehlen'
-                ? 'Heute wählst du das Wort'
-                : `Heute gewählt von ${stand.waehler.name}`
+                ? t('browort.ui.clan.duWaehlst')
+                : tz('browort.ui.clan.gewaehltVon', { name: stand.waehler.name })
               : stand?.zufall
-                ? 'Heute vom Zufall gewählt'
-                : 'Ein Wort für den ganzen Clan'}
+                ? t('browort.ui.clan.vomZufall')
+                : t('browort.ui.clan.fuerDenClan')}
+            {/* Wie bei Browort: Geraten wird deutsch, das muss man auf Englisch wissen. */}
+            {zeigeSprachhinweis() && <> · {t('browort.ui.deutschesWortspiel')}</>}
           </span>
         </div>
         {stand && stand.serie.serie > 0 && (
-          <span className="bw-kopf-serie" aria-label={`Clanwort-Serie ${stand.serie.serie}`}>
+          <span className="bw-kopf-serie" aria-label={tz('browort.ui.clan.serieAria', { n: stand.serie.serie })}>
             🔥 {stand.serie.serie}
           </span>
         )}
@@ -179,23 +182,23 @@ export function ClanwortBild({
             <div className="hb-fehler">
               {fehler}{' '}
               <button type="button" className="hb-link" onClick={onNochmal}>
-                Nochmal
+                {t('browort.ui.nochmal')}
               </button>
             </div>
           ) : (
-            <p className="hb-klein">Einen Moment…</p>
+            <p className="hb-klein">{t('browort.ui.einenMoment')}</p>
           )}
         </div>
       ) : stand === null ? (
         <div className="bw-mitte">
-          <p className="hb-klein bw-hinweis">Das Clanwort gibt es nur im Clan. Tritt einem bei oder gründe einen.</p>
+          <p className="hb-klein bw-hinweis">{t('browort.ui.clan.ohneClan')}</p>
         </div>
       ) : stand.phase === 'warten' ? (
         <div className="bw-mitte bw-rolle">
           <div className="hb-karte bw-warten">
-            <strong>{stand.waehler?.name ?? 'Jemand'} sucht gerade das Wort aus.</strong>
+            <strong>{tz('browort.ui.clan.sucht', { name: stand.waehler?.name ?? t('browort.ui.clan.jemand') })}</strong>
             <span className="hb-klein">
-              Spätestens um {stand.wahlBis} Uhr geht es los - kommt bis dahin nichts, wählt der Zufall.
+              {tz('browort.ui.clan.spaetestens', { uhr: stand.wahlBis })}
             </span>
           </div>
           {rangliste}
@@ -203,11 +206,11 @@ export function ClanwortBild({
       ) : stand.phase === 'wortgeber' ? (
         <div className="bw-mitte bw-rolle">
           <div className="hb-karte bw-warten">
-            <span className="hb-klein">Dein Wort für heute</span>
+            <span className="hb-klein">{t('browort.ui.clan.deinWort')}</span>
             <strong className="bw-geheim">{stand.loesung}</strong>
-            <span className="hb-klein">Du rätst heute nicht mit - schau zu, wie sich dein Clan schlägt.</span>
+            <span className="hb-klein">{t('browort.ui.clan.zuschauen')}</span>
           </div>
-          {rangliste || <p className="hb-klein bw-hinweis">Noch hat niemand geraten.</p>}
+          {rangliste || <p className="hb-klein bw-hinweis">{t('browort.ui.clan.niemand')}</p>}
         </div>
       ) : stand.phase === 'waehlen' ? (
         <>
@@ -218,7 +221,7 @@ export function ClanwortBild({
               </p>
             )}
             <p className="hb-klein bw-hinweis">
-              Du wurdest ausgelost: Tippe bis {stand.wahlBis} Uhr ein Wort mit fünf Buchstaben.
+              {tz('browort.ui.clan.ausgelost', { uhr: stand.wahlBis })}
             </p>
             <Raster versuche={[]} eingabe={spiel.eingabe} max={1} wackelt={spiel.wackelt} aufdecken={null} />
           </div>
@@ -243,13 +246,13 @@ export function ClanwortBild({
           {stand.fertig ? (
             <div className="bw-ende bw-rolle">
               <div className={`bw-ergebnis${stand.geloest ? ' is-geloest' : ''}`} role="status">
-                <strong>{stand.geloest ? `Gelöst in ${stand.versuche.length}` : 'Heute nicht geschafft'}</strong>
+                <strong>{stand.geloest ? tz('browort.ui.clan.geloestIn', { n: stand.versuche.length }) : t('browort.ui.nichtGeschafft')}</strong>
                 <span>
-                  Das Wort war <b>{stand.loesung}</b>
+                  {t('browort.ui.dasWortWar')} <b>{stand.loesung}</b>
                 </span>
                 {belohnung && (
                   <span className="bw-lohn">
-                    +{belohnung.muenzen} Münzen · +{belohnung.xp} XP
+                    {tz('browort.ui.lohn', { muenzen: belohnung.muenzen, xp: belohnung.xp })}
                   </span>
                 )}
               </div>

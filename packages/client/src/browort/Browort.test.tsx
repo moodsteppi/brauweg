@@ -107,4 +107,20 @@ describe('Browort', () => {
     expect(screen.queryByRole('button', { name: 'Raten' })).toBeNull();
     expect(onGeaendert).toHaveBeenCalled();
   });
+
+  it('sagt auf Englisch, dass das Wort deutsch ist — auf Deutsch nicht', async () => {
+    // Das Wortspiel bleibt deutsch (Wortliste, Tastatur mit Ä, Ö, Ü). Ohne
+    // den Hinweis hielte ein englischer Spieler „HAFEN“ für einen Fehler.
+    browort.mockResolvedValue(stand());
+    setzeSprachwahl('en');
+    const { unmount } = render(<Browort onClose={vi.fn()} onGeaendert={vi.fn()} />);
+    expect(await screen.findByText(/German word game/)).toBeTruthy();
+    expect(screen.getByText(/Word of the day/)).toBeTruthy();
+    unmount();
+
+    setzeSprachwahl('de');
+    render(<Browort onClose={vi.fn()} onGeaendert={vi.fn()} />);
+    expect(await screen.findByText('Das Wort des Tages')).toBeTruthy();
+    expect(screen.queryByText(/Deutsches Wortspiel/)).toBeNull();
+  });
 });
