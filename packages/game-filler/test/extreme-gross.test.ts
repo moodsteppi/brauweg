@@ -23,8 +23,10 @@ import {
   erstellePartie,
   fuehreAus,
   kante,
+  mauernAmFeld,
   moeglicheBarrieren,
   nachbarn,
+  sitzeVon,
   spiegelPlatz,
   startEcke,
   erreichbareFreie,
@@ -213,6 +215,7 @@ describe('Extreme gross: Bot', () => {
   it('zieht eine ganze Partie lang nur erlaubt, auch mit Doppelmauern und Pause', () => {
     let doppel = 0;
     let pausiert = 0;
+    let volleFelder = 0;
     /*
      * Bis zum 06.11.2026 baute der Bot auf Saat 12 eine Doppelmauer. Seit eine
      * Mauer nie den letzten Weg schliessen darf, findet er keine Wand mehr
@@ -221,7 +224,16 @@ describe('Extreme gross: Bot', () => {
      * mauert in jedem Zug zuerst ein Baumeister, solange das Modul etwas
      * anbietet — immer die erste angebotene Kante —, und erst dann zieht der
      * Bot. Geprueft wird dabei jeder Zug gegen `legalActions`.
+     *
+     * Weil der Bot selbst nicht mehr mauert, ist das zugleich die einzige
+     * ganze Partie, in der Regel 2 und Regel 4 unter Last stehen (die
+     * Simulation in werkzeug/ sagt darueber nichts — dort faellt keine Mauer).
+     * Nach JEDER Mauer wird deshalb nachgerechnet: Kein Sitz erreicht weniger
+     * freie Felder als davor, und kein Feld traegt mehr als zwei Mauern, den
+     * Rand mitgezaehlt. Dass die Grenze dabei wirklich erreicht wird, zaehlt
+     * `volleFelder`.
      */
+    let mauernGesamt = 0;
     for (const saat of [SAAT, 12]) {
       let p = erstellePartie(EXTREME, [0, 1], saat);
       let n = 0;
@@ -242,16 +254,44 @@ describe('Extreme gross: Bot', () => {
           `Saat ${saat}, Zug ${p.zug}: ${JSON.stringify(zug)} ist nicht erlaubt`,
         );
         if (zug.typ === 'barriere' && p.mauernDiesenZug === 1) doppel++;
+        const vorher = sitzeVon(p).map((s) => erreichbareFreie(p, s, new Set(p.barrieren)));
         if (p.mauerPause.includes(sitz)) {
           pausiert++;
           assert.equal(zug.typ, 'faerben', `Saat ${saat}: Bot mauert in der Pause`);
         }
         p = fuehreAus(p, sitz, zug);
+        if (zug.typ === 'barriere') {
+          mauernGesamt++;
+          const gesetzt = new Set(p.barrieren);
+          sitzeVon(p).forEach((s, i) =>
+            assert.ok(
+              erreichbareFreie(p, s, gesetzt) >= vorher[i]!,
+              `Saat ${saat}, Zug ${p.zug}: Mauer ${zug.von}|${zug.nach} trennt Sitz ${s} ab (Regel 2)`,
+            ),
+          );
+          for (const platz of [zug.von, zug.nach]) {
+            assert.ok(
+              mauernAmFeld(platz, p.regeln.spalten, p.regeln.zeilen, gesetzt) <= 2,
+              `Saat ${saat}: Feld ${platz} traegt mehr als zwei Mauern (Regel 4)`,
+            );
+          }
+        }
       }
       assert.ok(p.fertig, `Saat ${saat}: Partie endet`);
+      // Felder, die durch gesetzte Mauern (nicht nur den Rand) voll sind.
+      const { spalten, zeilen } = p.regeln;
+      const gesetzt = new Set(p.barrieren);
+      const leer = new Set<string>();
+      for (let platz = 0; platz < spalten * zeilen; platz++) {
+        const voll = mauernAmFeld(platz, spalten, zeilen, gesetzt);
+        if (voll === 2 && mauernAmFeld(platz, spalten, zeilen, leer) < 2) volleFelder++;
+        assert.ok(voll <= 2, `Saat ${saat}: Feld ${platz} hat ${voll} Mauern`);
+      }
     }
     assert.ok(doppel >= 1, 'die Probe beruehrt die Doppelmauer');
     assert.ok(pausiert >= 1, 'die Probe beruehrt die Pause');
+    assert.ok(mauernGesamt >= 20, `nur ${mauernGesamt} Mauern — die Probe mauert zu wenig`);
+    assert.ok(volleFelder >= 1, 'die Probe erreicht die Grenze von zwei Mauern je Feld nie');
   });
 
   it('faerbt in der Pause, auch wenn er noch Mauern hat', () => {

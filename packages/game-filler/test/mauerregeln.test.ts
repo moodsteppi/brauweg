@@ -37,7 +37,7 @@ import {
   startEcke,
   vonIrgendwemErreichbareFreie,
 } from '../src/partie.js';
-import { AUFBAU_JE_SPIELART, DEFAULT_REGELN, pruefeRegeln } from '../src/regeln.js';
+import { AUFBAU_JE_SPIELART, DEFAULT_REGELN, type FillerRegeln, pruefeRegeln } from '../src/regeln.js';
 
 const SP = 6;
 const ZE = 5;
@@ -329,9 +329,47 @@ describe('Regel 4: zwei Mauern je Feld, Rand zaehlt mit (nur Extreme)', () => {
     assert.equal(build.regeln.mauernJeFeld, undefined);
   });
 
-  it('ein Extreme-Tisch ohne die Zahl spielt ohne Grenze', () => {
+  it('eine Stellung ohne Aufbau-Tabelle traegt keine Zahl und spielt ohne Grenze', () => {
+    // `stellung` baut ihren Regelsatz von Hand, OHNE `aufbauJeSpielart`.
+    // `aufbauFuer` (regeln.ts) setzt `mauernJeFeld` aber nur aus dieser
+    // Tabelle — ohne sie bleibt das Feld leer, auch bei Extreme. Das steht
+    // hier ausdruecklich, damit der Test nicht still etwas anderes prueft.
     const p = stellung('extreme', { 0: [24], 1: [5] });
+    assert.equal(p.regeln.mauernJeFeld, undefined);
     assert.ok(angeboten(p, 0).has(kante(0, 1)));
+  });
+
+  it('ein alter Extreme-Tisch (Tabelle ohne die Zahl) spielt ohne Grenze, ein neuer mit', () => {
+    // So sieht ein Tisch aus, der zwischen dem 05. und dem 06.11.2026
+    // aufgemacht wurde: Vorgabe plus Spielart, die Aufbau-Tabelle aber noch
+    // ohne `mauernJeFeld` — der Server hat sie beim Aufmachen festgeschrieben.
+    const { mauernJeFeld: _a, ...alterAufbau } = AUFBAU_JE_SPIELART.extreme;
+    void _a;
+    const alt = { ...DEFAULT_REGELN, variante: 'extreme' as const, aufbauJeSpielart: { extreme: alterAufbau } };
+    const neu: FillerRegeln = { ...DEFAULT_REGELN, variante: 'extreme' };
+
+    /** Nach der mauerfreien Eroeffnung: die angebotenen Kanten an einem freien Eckfeld. */
+    const anFreierEcke = (regeln: FillerRegeln, saat: string): number => {
+      let p = erstellePartie(regeln, [0, 1], saat);
+      // Faerben, bis die Eroeffnung vorbei ist und ueberhaupt gemauert werden darf.
+      for (let i = 0; i < 20 && moeglicheBarrieren(p, p.dran).length === 0; i++) {
+        const farbe = erlaubteZuege(p, p.dran).find((z) => z.typ === 'faerben')!;
+        p = fuehreAus(p, p.dran, farbe);
+      }
+      const { spalten, zeilen } = p.regeln;
+      const ecken = [0, spalten - 1, (zeilen - 1) * spalten, zeilen * spalten - 1].filter(
+        (e) => p.besitzer[e] === null,
+      );
+      assert.ok(ecken.length > 0, `Saat ${saat}: keine freie Ecke`);
+      return moeglicheBarrieren(p, p.dran).filter(([a, b]) => ecken.includes(a) || ecken.includes(b))
+        .length;
+    };
+
+    for (const saat of ['ab'.repeat(16), 'c0ffee1234567890abcdef0123456789']) {
+      assert.equal(erstellePartie(alt, [0, 1], saat).regeln.mauernJeFeld, undefined);
+      assert.ok(anFreierEcke(alt, saat) > 0, `Saat ${saat}: alter Tisch mauert an der Ecke`);
+      assert.equal(anFreierEcke(neu, saat), 0, `Saat ${saat}: neuer Tisch mauert nie an der Ecke`);
+    }
   });
 
   it('steht im Regelsatz einer neuen Extreme-Partie und ueberlebt den Snapshot', () => {
