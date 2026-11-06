@@ -63,8 +63,8 @@ export function MitteilungenBlatt({
 }): React.JSX.Element {
   if (neu) {
     return (
-      <HbBlatt titel="Benachrichtigungen" onClose={onClose}>
-        <Suspense fallback={<p className="hb-klein">Einen Moment…</p>}>
+      <HbBlatt titel={t('einstellungen.benachrichtigungen')} onClose={onClose}>
+        <Suspense fallback={<p className="hb-klein">{t('einstellungen.einenMoment')}</p>}>
           <Mitteilungen neu />
         </Suspense>
       </HbBlatt>
@@ -73,13 +73,13 @@ export function MitteilungenBlatt({
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card einstellungen" onClick={(event) => event.stopPropagation()}>
-        <h2>Benachrichtigungen</h2>
+        <h2>{t('einstellungen.benachrichtigungen')}</h2>
         <Suspense fallback={null}>
           <Mitteilungen />
         </Suspense>
         <div className="hub-knopfreihe hub-knopfreihe--a">
           <button className="hub-knopf hub-knopf--a" onClick={onClose}>
-            Fertig
+            {t('einstellungen.fertig')}
           </button>
         </div>
       </div>
@@ -102,34 +102,33 @@ export function EinstellungenBlatt({
 
   if (neu) {
     return (
-      <HbBlatt titel="Einstellungen" onClose={onClose}>
+      <HbBlatt titel={t('einstellungen.titel')} onClose={onClose}>
         <div className="hb-einst">
           <section className="hb-blk">
-            <h2 className="hb-ab">Ton</h2>
+            <h2 className="hb-ab">{t('einstellungen.ton')}</h2>
             <div className="hb-karte hb-einst-karte">
               <ReglerNeu
                 symbol="/hub/icon-einstellung-sounds.webp"
-                name="Sounds"
-                hinweis="Karten, Knöpfe, Abrechnung"
+                name={t('einstellungen.sounds')}
+                hinweis={t('einstellungen.sounds.hinweis')}
                 wert={werte.sounds}
                 onChange={(sounds) => setzeEinstellungen({ sounds })}
                 onFertig={() => spiele('karte-legen')}
               />
               <ReglerNeu
                 symbol="/hub/icon-einstellung-musik.webp"
-                name="Musik"
-                hinweis="Im Menü und am Spieltisch"
+                name={t('einstellungen.musik')}
+                hinweis={t('einstellungen.musik.hinweis')}
                 wert={werte.musik}
                 onChange={(musik) => setzeEinstellungen({ musik })}
               />
             </div>
-            {/* Beide Sätze wortgleich mit der alten Fassung, Begründung dort. */}
+            {/* Beide Sätze dieselben Schlüssel wie in der alten Fassung, Begründung dort. */}
             <p className="hb-klein hb-ohne-rand">
-              Welches Stück läuft und welches Klangpaket gilt, steht in der Klanghalle in deinem Profil.
+              {t('einstellungen.klanghalleHinweis')}
             </p>
             <p className="hb-klein hb-ohne-rand">
-              Läuft bei dir Musik in einer anderen App, spielt sie weiter - wir drängeln uns nicht davor.
-              Dafür schaltet am iPhone der Klingelschalter auch uns stumm.
+              {t('einstellungen.klingelschalter')}
             </p>
           </section>
 
@@ -169,12 +168,12 @@ export function EinstellungenBlatt({
         className="doko-sheet-card einstellungen"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2>Einstellungen</h2>
+        <h2>{t('einstellungen.titel')}</h2>
 
         <Regler
           symbol="/hub/icon-einstellung-sounds.webp"
-          name="Sounds"
-          hinweis="Karten, Knöpfe, Abrechnung"
+          name={t('einstellungen.sounds')}
+          hinweis={t('einstellungen.sounds.hinweis')}
           wert={werte.sounds}
           onChange={(sounds) => setzeEinstellungen({ sounds })}
           // Erst beim Loslassen ein Beispiel: Beim Ziehen feuert `change`
@@ -184,15 +183,14 @@ export function EinstellungenBlatt({
 
         <Regler
           symbol="/hub/icon-einstellung-musik.webp"
-          name="Musik"
-          hinweis="Im Menü und am Spieltisch"
+          name={t('einstellungen.musik')}
+          hinweis={t('einstellungen.musik.hinweis')}
           wert={werte.musik}
           onChange={(musik) => setzeEinstellungen({ musik })}
         />
 
         <p className="einstellungen-fussnote muted">
-          Welches Stück läuft und welches Klangpaket gilt, steht in der
-          Klanghalle in deinem Profil.
+          {t('einstellungen.klanghalleHinweis')}
         </p>
 
         {/*
@@ -203,9 +201,7 @@ export function EinstellungenBlatt({
           uns mit stummschaltet.
         */}
         <p className="einstellungen-fussnote muted">
-          Läuft bei dir Musik in einer anderen App, spielt sie weiter - wir
-          drängeln uns nicht davor. Dafür schaltet am iPhone der
-          Klingelschalter auch uns stumm.
+          {t('einstellungen.klingelschalter')}
         </p>
 
         <h3>{t('sprache.titel')}</h3>
@@ -223,7 +219,7 @@ export function EinstellungenBlatt({
 
         <div className="hub-knopfreihe hub-knopfreihe--a">
           <button className="hub-knopf hub-knopf--a" onClick={onClose}>
-            Fertig
+            {t('einstellungen.fertig')}
           </button>
         </div>
       </div>

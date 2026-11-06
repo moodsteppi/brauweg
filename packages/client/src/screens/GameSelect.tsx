@@ -98,6 +98,7 @@ const MeisterFeier = lazy(() => import('../lernen/Feier').then((m) => ({ default
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
 import { cardLabel, cardName, isRed, t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { SHOP_RUBRIK } from '../inhaltspakete';
 import { StartNeu } from './StartNeu';
 import { NeuerRahmen } from './HubRahmen';
@@ -389,7 +390,7 @@ export function GameSelect({
           <Suspense
             fallback={
               <div className="doko-sheet doko-sheet--mitte">
-                <Ladekreis text="Werkstatt wird geladen…" />
+                <Ladekreis text={t('hubgeruest.werkstattLaedt')} />
               </div>
             }
           >
@@ -408,7 +409,7 @@ export function GameSelect({
           <Suspense
             fallback={
               <div className="doko-sheet doko-sheet--mitte">
-                <Ladekreis text="Lernpfad wird geladen…" />
+                <Ladekreis text={t('hubgeruest.lernpfadLaedt')} />
               </div>
             }
           >
@@ -479,9 +480,9 @@ export function GameSelect({
 /** Sofortige Rückmeldung beim ersten Laden eines Spielpakets, auch bei langsamer Verbindung. */
 function SoloLaedt({ name, onClose }: { name: string; onClose: () => void }): React.JSX.Element {
   useEscape(onClose);
-  return <div className="hb-voll" role="dialog" aria-modal="true" aria-label={`${name} wird geladen`}>
+  return <div className="hb-voll" role="dialog" aria-modal="true" aria-label={tf('hubgeruest.laedtLabel', { name })}>
     <header className="hb-voll-kopf"><Schliessen onClick={onClose} /></header>
-    <Ladekreis text={`${name} wird geladen…`} />
+    <Ladekreis text={tf('hubgeruest.laedt', { name })} />
   </div>;
 }
 
@@ -497,15 +498,15 @@ function BaldBlatt({
   onClose: () => void;
 }): React.JSX.Element {
   return (
-    <HbBlatt titel="Kommt bald!" label={`Kommt bald: ${name}`} onClose={onClose} klasse="is-klein">
+    <HbBlatt titel={t('hubgeruest.bald.titel')} label={tf('hubgeruest.bald.label', { name })} onClose={onClose} klasse="is-klein">
       <div className="hb-mitte">
         <span className="hb-bald-zeichen" aria-hidden="true">
           🔨
         </span>
-        <p className="hb-text">Daran bauen wir gerade: {name}.</p>
+        <p className="hb-text">{tf('hubgeruest.bald.text', { name })}</p>
       </div>
       <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onClose}>
-        Alles klar
+        {t('hubgeruest.bald.ok')}
       </button>
     </HbBlatt>
   );
@@ -565,22 +566,21 @@ function ProfilTab({
   const [sichernOffen, setSichernOffen] = useState(false);
 
   const kacheln = [
-    { icon: '/hub/tab-spielen.webp', name: 'Partien', wert: partien },
-    { icon: '/hub/krone.png', name: 'Siege', wert: siege },
-    { icon: '/hub/muenze.png', name: 'Siegquote', wert: quote },
+    { icon: '/hub/tab-spielen.webp', name: t('profil.kachel.partien'), wert: partien },
+    { icon: '/hub/krone.png', name: t('profil.kachel.siege'), wert: siege },
+    { icon: '/hub/muenze.png', name: t('profil.kachel.siegquote'), wert: quote },
     // Hier stand `DECKS.length` als „Blätter" — die Zahl aller Blätter im
     // Katalog, also bei jedem Spieler dieselbe 15. Die eigenen kennt erst die
     // Sammlung (sie braucht den Shop); hier steht, was das Profil weiß.
-    { icon: '/hub/tab-blatt.webp', name: 'Spiele', wert: me.stats.filter((s) => s.parties > 0).length },
+    { icon: '/hub/tab-blatt.webp', name: t('profil.kachel.spiele'), wert: me.stats.filter((s) => s.parties > 0).length },
   ];
 
   // Geburtstag und Geschenk: nicht in der App (Emile, 22.10.2026) und nur im Umfang.
   const mitGeburtstag = !inApp && imUmfang('geburtstag');
   const geburtstagText = (() => {
-    if (me.daysUntilBirthday === null) return 'Geburtstag noch nicht hinterlegt';
-    if (me.daysUntilBirthday === 0) return 'Heute ist dein Geburtstag!';
-    if (me.daysUntilBirthday === 1) return 'Noch 1 Tag bis zum Geburtstag';
-    return `Noch ${me.daysUntilBirthday} Tage bis zum Geburtstag`;
+    if (me.daysUntilBirthday === null) return t('profil.geburtstag.offen');
+    if (me.daysUntilBirthday === 0) return t('profil.geburtstag.heute');
+    return tn('profil.geburtstag.noch', me.daysUntilBirthday);
   })();
 
   const claimReward = (): void => {
@@ -592,7 +592,7 @@ function ProfilTab({
       .then(() => onMeChange())
       .catch((err: unknown) => {
         setClaimError(
-          err instanceof ApiError ? t(err.messageKey) : 'Belohnung konnte nicht geholt werden.',
+          err instanceof ApiError ? t(err.messageKey) : t('profil.geburtstag.fehler'),
         );
       })
       .finally(() => setClaimBusy(false));
@@ -602,23 +602,23 @@ function ProfilTab({
   const geburtstag = (
     <section className="hb-blk">
       <h2 className="hb-ab">
-        Geburtstag
-        <span className="hb-ab-zusatz">{me.birthdayRewardClaimable ? 'Heute!' : 'Einmal im Jahr'}</span>
+        {t('profil.geburtstag.titel')}
+        <span className="hb-ab-zusatz">{me.birthdayRewardClaimable ? t('profil.geburtstag.heuteMarke') : t('profil.geburtstag.jaehrlich')}</span>
       </h2>
       <div className={`hb-karte hb-geburtstag${me.birthdayRewardClaimable ? ' is-heute' : ''}`}>
-        <img src="/hub/pinguin-geburtstag.png" alt="Geburtstags-Pinguin" draggable={false} />
+        <img src="/hub/pinguin-geburtstag.png" alt={t('profil.geburtstag.pinguin')} draggable={false} />
         <span className="hb-geburtstag-text">
-          <strong>Geburtstags-Pinguin</strong>
+          <strong>{t('profil.geburtstag.pinguin')}</strong>
           <small>
             {me.birthdayRewardClaimable
-              ? 'Heute abholen: Outfit mit Partyhüten.'
+              ? t('profil.geburtstag.abholen')
               : me.hasBirthdayOutfit
-                ? 'In deiner Sammlung · nächstes Mal am Geburtstag.'
-                : 'Am Geburtstag einmal im Jahr einsammeln.'}
+                ? t('profil.geburtstag.gesammelt')
+                : t('profil.geburtstag.hinweis')}
           </small>
           {me.birthdayRewardClaimable && (
             <button type="button" className="hb-kn is-gold" disabled={claimBusy} onClick={claimReward}>
-              {claimBusy ? 'Wird geholt…' : 'Belohnung holen'}
+              {claimBusy ? t('profil.geburtstag.holt') : t('profil.geburtstag.holen')}
             </button>
           )}
           {claimError && <span className="hb-fehler">{claimError}</span>}
@@ -627,14 +627,14 @@ function ProfilTab({
     </section>
   );
   const einstiege = [
-    { icon: '/hub/icon-kleiderschrank.webp', name: 'Kleiderschrank', punkt: null, onClick: onSchrank },
-    { icon: '/hub/icon-klanghalle.webp', name: 'Klanghalle', punkt: null, onClick: onKlanghalle },
-    { icon: '/hub/icon-aufgaben.webp', name: 'Aufgaben', punkt: bereit > 0 ? `${bereit} bereit` : null, onClick: onAufgaben },
+    { icon: '/hub/icon-kleiderschrank.webp', name: t('profil.kleiderschrank'), punkt: null, onClick: onSchrank },
+    { icon: '/hub/icon-klanghalle.webp', name: t('profil.klanghalle'), punkt: null, onClick: onKlanghalle },
+    { icon: '/hub/icon-aufgaben.webp', name: t('profil.aufgaben'), punkt: bereit > 0 ? tf('profil.bereit', { n: bereit }) : null, onClick: onAufgaben },
   ];
   return (
     <div className="hb-profil">
       <header className="hb-kopfzeile">
-        <button type="button" className="hb-rund" onClick={onZurueck} aria-label="Zurück zum Start">‹</button><h1 className="hb-titel">Profil</h1>
+        <button type="button" className="hb-rund" onClick={onZurueck} aria-label={t('profil.zurueckZumStart')}>‹</button><h1 className="hb-titel">{t('profil.titel')}</h1>
       </header>
       <div className="hb-profil-inhalt">
         <div className="hb-karte hb-profilkopf">
@@ -644,9 +644,9 @@ function ProfilTab({
             {/* In der App ohne Geburtstag (Emile, 22.10.2026) — dort steht
                 stattdessen die Stufe in Worten. Auf der Webseite ebenso, wenn
                 der Geburtstag nicht im Umfang steht. */}
-            <small>{mitGeburtstag ? geburtstagText : `Stufe ${me.level.stufe}`}</small>
+            <small>{mitGeburtstag ? geburtstagText : tf('profil.stufe', { stufe: me.level.stufe })}</small>
           </span>
-          <span className="hb-stufe" aria-label={`Stufe ${me.level.stufe}`}>
+          <span className="hb-stufe" aria-label={tf('profil.stufe', { stufe: me.level.stufe })}>
             {me.level.stufe}
           </span>
         </div>
@@ -667,13 +667,13 @@ function ProfilTab({
         {!inApp && imUmfang('figur') && (
         <section className="hb-blk">
           <h2 className="hb-ab">
-            Deine Figur
-            <span className="hb-ab-zusatz">{me.figur?.design === 'bemalt' ? 'Selbst angemalt' : 'Antippen zum Bearbeiten'}</span>
+            {t('profil.figur.titel')}
+            <span className="hb-ab-zusatz">{me.figur?.design === 'bemalt' ? t('profil.figur.bemalt') : t('profil.figur.antippen')}</span>
           </h2>
           {/* Über die volle Breite, aus demselben Grund wie im alten
               Profil: Ein WebGL-Bereich hat keine eigene Höhe. */}
-          <button type="button" className="hb-figur" onClick={onWerkstatt} aria-label="Figur bearbeiten">
-            <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel="Deine Figur" />}>
+          <button type="button" className="hb-figur" onClick={onWerkstatt} aria-label={t('profil.figur.bearbeiten')}>
+            <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel={t('profil.figur.titel')} />}>
               <Avatar3D getragen={me.avatar} bemalung={me.figur ?? LEERE_BEMALUNG} drehbar={false} />
             </Suspense>
             <span className="hb-figur-stift" aria-hidden="true">
@@ -682,17 +682,17 @@ function ProfilTab({
               </HbSymbol>
             </span>
           </button>
-          <p className="hb-klein hb-ohne-rand">Drehen, anmalen, Mütze aufsetzen - antippen.</p>
+          <p className="hb-klein hb-ohne-rand">{t('profil.figur.hinweis')}</p>
         </section>
         )}
 
         <section className="hb-blk">
           <h2 className="hb-ab">
-            Deine Sachen
+            {t('profil.sachen.titel')}
             <span className="hb-ab-zusatz">
               {/* Die Plätze der Figur, nicht die Kacheln darunter: „0 von 6
                   Plätzen" über drei Kacheln las sich wie fehlende Kacheln. */}
-              {Object.keys(me.avatar).length} von {SLOTS.length} angezogen
+              {tf('profil.sachen.angezogen', { an: Object.keys(me.avatar).length, plaetze: SLOTS.length })}
             </span>
           </h2>
           <div className="hb-einstiege">
@@ -717,15 +717,15 @@ function ProfilTab({
 
         <section className="hb-blk">
           <h2 className="hb-ab">
-            Trophäen
-            <span className="hb-ab-zusatz">{partien} Partien</span>
+            {t('profil.trophaeen.titel')}
+            <span className="hb-ab-zusatz">{tn('profil.trophaeen.partien', partien)}</span>
           </h2>
           <div className="hb-karte hb-trophaeen">
             <span className="hb-trophaeen-zahl">
               <img src="/hub/symbol-pokal.webp" alt="" />
               {trophaeen.toLocaleString('de-DE')}
             </span>
-            <span className="hb-klein">alle Spiele zusammen</span>
+            <span className="hb-klein">{t('profil.trophaeen.alle')}</span>
             <span className="hb-sp-werte is-vier">
               {kacheln.map((k) => (
                 <span key={k.name}>
@@ -737,7 +737,7 @@ function ProfilTab({
           </div>
           <div className="hb-liste">
             {me.stats.length === 0 ? (
-              <p className="hb-klein hb-liste-leer">Noch keine Partie gespielt.</p>
+              <p className="hb-klein hb-liste-leer">{t('profil.trophaeen.leer')}</p>
             ) : (
               me.stats.filter((row) => inAppSichtbar(row.gameId)).map((row) => (
                 <div className="hb-mg" key={row.gameId}>
@@ -745,7 +745,7 @@ function ProfilTab({
                   <span className="hb-mg-name">
                     <strong>{t(`game.${row.gameId}`)}</strong>
                     <small className="is-leise">
-                      {row.parties} Partien · {row.wins} Siege
+                      {tf('profil.trophaeen.zeile', { partien: row.parties, siege: row.wins })}
                     </small>
                   </span>
                   <span className="hb-pk">
@@ -761,7 +761,7 @@ function ProfilTab({
               (`countsForRanking` in tables/service.ts); ausgenommen sind nur
               Gäste am Tisch und Training. */}
           <p className="hb-klein hb-ohne-rand">
-            Trophäen gibt es auch gegen Bots - nur nicht, wenn ein Gast mitspielt oder Training an ist.
+            {t('profil.trophaeen.hinweis')}
           </p>
         </section>
 
@@ -783,7 +783,7 @@ function ProfilTab({
             und rot am Schluss, nicht neben „Abmelden" (siehe oben). */}
         <section className="hb-blk">
           <h2 className="hb-ab">
-            Konto
+            {t('profil.konto.titel')}
             <span className="hb-ab-zusatz">{me.displayName}</span>
           </h2>
           <div className="hb-liste">
@@ -796,8 +796,8 @@ function ProfilTab({
                   </HbSymbol>
                 </span>
                 <span className="hb-mg-name">
-                  <strong>Konto sichern</strong>
-                  <small>Du spielst als Gast</small>
+                  <strong>{t('profil.konto.sichern')}</strong>
+                  <small>{t('profil.konto.gast')}</small>
                 </span>
                 <span className="hb-pf" aria-hidden="true">
                   ›
@@ -814,7 +814,7 @@ function ProfilTab({
             >
               <img className="hb-mg-symbol" src="/hub/icon-einstellungen.webp" alt="" />
               <span className="hb-mg-name">
-                <strong>Einstellungen</strong>
+                <strong>{t('profil.einstellungen')}</strong>
               </span>
               <span className="hb-pf" aria-hidden="true">
                 ›
@@ -825,30 +825,30 @@ function ProfilTab({
             <button
               type="button"
               className="hb-mg"
-              onClick={() => (inApp ? setMitteilungenOffen(true) : onBald('Benachrichtigungen'))}
+              onClick={() => (inApp ? setMitteilungenOffen(true) : onBald(t('profil.benachrichtigungen')))}
             >
               <img className="hb-mg-symbol" src="/hub/icon-benachrichtigung.webp" alt="" />
               <span className="hb-mg-name">
-                <strong>Benachrichtigungen</strong>
+                <strong>{t('profil.benachrichtigungen')}</strong>
               </span>
               {inApp ? (
                 <span className="hb-pf" aria-hidden="true">
                   ›
                 </span>
               ) : (
-                <span className="hb-bald-marke">Bald</span>
+                <span className="hb-bald-marke">{t('profil.bald')}</span>
               )}
             </button>
             <button type="button" className="hb-mg" onClick={onSignOut}>
               <img className="hb-mg-symbol" src="/hub/icon-abmelden.webp" alt="" />
               <span className="hb-mg-name">
-                <strong>Abmelden</strong>
+                <strong>{t('profil.abmelden')}</strong>
               </span>
             </button>
           </div>
           <Rechtliches />
           <button type="button" className="hb-kn is-gefahr is-breit" onClick={() => setLoeschenOffen(true)}>
-            Konto löschen
+            {t('profil.loeschen.titel')}
           </button>
         </section>
       </div>
@@ -936,12 +936,12 @@ export function KontoLoeschenBlatt({
       .then((antwort) =>
         setCodeHinweis(
           antwort.versandt
-            ? 'Der Code ist unterwegs. Er gilt 15 Minuten.'
-            : 'Eben kam schon ein Code - er gilt weiter. Einen neuen gibt es in einer Minute.',
+            ? t('profil.loeschen.codeUnterwegs')
+            : t('profil.loeschen.codeSchonDa'),
         ),
       )
       .catch((err: unknown) =>
-        setFehler(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.'),
+        setFehler(err instanceof ApiError ? t(err.messageKey) : t('profil.loeschen.verbindung')),
       )
       .finally(() => setBusy(false));
   };
@@ -959,9 +959,9 @@ export function KontoLoeschenBlatt({
       setFehler(
         err instanceof ApiError
           ? err.code === 'credentialsInvalid'
-            ? 'Das Passwort stimmt nicht.'
+            ? t('profil.loeschen.passwortFalsch')
             : t(err.messageKey)
-          : 'Verbindung fehlgeschlagen.',
+          : t('profil.loeschen.verbindung'),
       );
       setBusy(false);
     });
@@ -976,21 +976,13 @@ export function KontoLoeschenBlatt({
         onClick={(event) => event.stopPropagation()}
         onSubmit={loeschen}
       >
-        <h2>Konto löschen</h2>
-        <p className="muted">
-          Das lässt sich nicht rückgängig machen. Dein Name, deine E-Mail-Adresse und dein
-          Geburtstag werden entfernt, du wirst aus deinem Clan ausgetragen - führst du ihn,
-          rückt das älteste Mitglied nach.
-        </p>
-        <p className="muted">
-          Deine gespielten Partien bleiben als anonyme Einträge stehen, damit die Abrechnungen
-          deiner Mitspieler nicht zerfallen. Läuft gerade eine Partie, zählt die Löschung als
-          Verlassen.
-        </p>
+        <h2>{t('profil.loeschen.titel')}</h2>
+        <p className="muted">{t('profil.loeschen.text1')}</p>
+        <p className="muted">{t('profil.loeschen.text2')}</p>
 
         {weg === 'passwort' ? (
           <label>
-            Passwort von {name}
+            {tf('profil.loeschen.passwortVon', { name })}
             <input
               type="password"
               value={passwort}
@@ -1001,16 +993,13 @@ export function KontoLoeschenBlatt({
           </label>
         ) : weg === 'code' ? (
           <>
-            <p className="muted">
-              Dein Konto hat kein Passwort. Zur Bestätigung schicken wir dir einen Code an deine
-              E-Mail-Adresse.
-            </p>
+            <p className="muted">{t('profil.loeschen.ohnePasswort')}</p>
             <button type="button" className="hub-knopf hub-knopf--a" onClick={codeAnfordern} disabled={busy}>
-              {codeHinweis ? 'Neuen Code schicken' : 'Code schicken'}
+              {codeHinweis ? t('profil.loeschen.neuerCode') : t('profil.loeschen.code')}
             </button>
             {codeHinweis && <p className="muted" role="status">{codeHinweis}</p>}
             <label>
-              Code aus der Mail
+              {t('profil.loeschen.codeFeld')}
               <input
                 value={passwort}
                 onChange={(event) => setPasswort(event.target.value)}
@@ -1022,7 +1011,7 @@ export function KontoLoeschenBlatt({
           </>
         ) : (
           <label>
-            Tippe LÖSCHEN ein, um zu bestätigen
+            {t('profil.loeschen.wort')}
             <input
               value={passwort}
               onChange={(event) => setPasswort(event.target.value)}
@@ -1037,14 +1026,14 @@ export function KontoLoeschenBlatt({
 
         <div className="hub-knopfreihe hub-knopfreihe--a">
           <button type="button" className="hub-knopf hub-knopf--a" onClick={onClose}>
-            Behalten
+            {t('profil.loeschen.behalten')}
           </button>
           <button
             type="submit"
             className="hub-knopf hub-knopf--a-raus"
             disabled={busy || passwort.length === 0}
           >
-            {busy ? 'Wird gelöscht…' : 'Endgültig löschen'}
+            {busy ? t('profil.loeschen.laeuft') : t('profil.loeschen.endgueltig')}
           </button>
         </div>
       </form>
@@ -1127,7 +1116,7 @@ function PaketKachel({
       )}
       <span className="hub-preis">{preisSchild(paket)}</span>
       {paket.bonus !== null && <span className="shop-bonus">+{paket.bonus} %</span>}
-      {!paket.kaufbar && <span className="front-bald-tag">Bald</span>}
+      {!paket.kaufbar && <span className="front-bald-tag">{t('laden.bald')}</span>}
     </button>
   );
 }
@@ -1184,7 +1173,7 @@ function TruheKachel({
       {/* Ohne Tausenderpunkt, wie die Truhenzeile im Aufgaben-Vollbild: zwei
           Schreibweisen fuer dieselbe Zahl waeren zwei Zahlen. */}
       <span className="shop-paket-inhalt">
-        {truhe.von} bis {truhe.bis} Münzen
+        {tf('laden.truhe.spanne', { von: truhe.von, bis: truhe.bis })}
       </span>
       <span className="hub-preis">
         {truhe.gems}
@@ -1244,21 +1233,21 @@ function KaufFrage({
       : null;
   const bild = frage.art === 'ware' ? frage.bild : frage.art === 'truhe' ? truhenBild(frage.truhe.grad) : paketBild;
   return (
-    <HbBlatt titel={titel} label="Kauf bestätigen" onClose={onAbbrechen} klasse="is-klein">
+    <HbBlatt titel={titel} label={t('laden.kauf.label')} onClose={onAbbrechen} klasse="is-klein">
       <div className="hb-mitte">
         {/* Ware ohne Grafik (Klang, Musik) zeigt hier nichts statt eines
             kaputten Bildes — der Name im Kopf trägt die Rückfrage. */}
         {bild && <img className={`hb-kauf-bild${frage.art === 'ware' ? ' is-ware' : ''}`} src={bild} alt="" draggable={false} />}
         {frage.art === 'truhe' && (
           <p className="hb-text">
-            {frage.truhe.von} bis {frage.truhe.bis} Münzen, ausgewürfelt beim Öffnen
+            {tf('laden.kauf.truhe', { von: frage.truhe.von, bis: frage.truhe.bis })}
           </p>
         )}
         {frage.art === 'paket' && (
           <p className="hb-text">
             {frage.paket.gibt
               ? `${frage.paket.gibt.betrag} ${t(`waehrung.${frage.paket.gibt.waehrung}`)}`
-              : 'Ohne Guthaben'}
+              : t('laden.kauf.ohneGuthaben')}
           </p>
         )}
         {/* Erst hören, dann entscheiden — der Knopf steht vor der Frage. */}
@@ -1269,14 +1258,14 @@ function KaufFrage({
           {/* Zwei Wege wie im Kleiderschrank. Gold ist der eine Hauptknopf
               (DESIGN.md) — also die Münzen: Sie kosten kein echtes Geld,
               ein versehentliches Ja tut dort am wenigsten weh. */}
-          <p className="hb-klein hb-ohne-rand hb-mitte-text">Womit bezahlen?</p>
+          <p className="hb-klein hb-ohne-rand hb-mitte-text">{t('laden.kauf.womit')}</p>
           <div className="hb-knopfreihe">
             <button
               type="button"
               className="hb-kn is-gold is-haupt"
               disabled={laeuft}
               onClick={() => onWare(frage.ware, 'coins')}
-              aria-label={`${frage.ware.preis.coins} Münzen zahlen`}
+              aria-label={tf('laden.kauf.muenzenZahlen', { n: frage.ware.preis.coins })}
             >
               <img className="hb-kn-bild" src="/hub/symbol-muenze.webp" alt="" />
               {frage.ware.preis.coins.toLocaleString('de-DE')}
@@ -1286,14 +1275,14 @@ function KaufFrage({
               className="hb-kn is-zweit is-haupt"
               disabled={laeuft}
               onClick={() => onWare(frage.ware, 'gems')}
-              aria-label={`${frage.ware.preis.gems} Edelsteine zahlen`}
+              aria-label={tf('laden.kauf.edelsteineZahlen', { n: frage.ware.preis.gems })}
             >
               <img className="hb-kn-bild" src="/hub/symbol-edelstein.webp" alt="" />
               {frage.ware.preis.gems.toLocaleString('de-DE')}
             </button>
           </div>
           <button type="button" className="hb-leise-knopf" onClick={onAbbrechen}>
-            Später
+            {t('laden.spaeter')}
           </button>
         </>
       ) : (
@@ -1313,7 +1302,7 @@ function KaufFrage({
           </p>
           <div className="hb-knopfreihe">
             <button type="button" className="hb-kn is-zweit is-haupt" onClick={onAbbrechen}>
-              Später
+              {t('laden.spaeter')}
             </button>
             <button
               type="button"
@@ -1321,7 +1310,7 @@ function KaufFrage({
               disabled={laeuft}
               onClick={() => (frage.art === 'truhe' ? onTruhe(frage.truhe) : onPaket(frage.paket))}
             >
-              {laeuft ? 'Kauft…' : frage.art === 'truhe' ? 'Öffnen' : 'Kaufen'}
+              {laeuft ? t('laden.kauft') : frage.art === 'truhe' ? t('laden.oeffnen') : t('laden.kaufen')}
             </button>
           </div>
         </>
@@ -1390,7 +1379,7 @@ function Shop({
     void api
       .shop()
       .then(setShop)
-      .catch(() => setFehler('Der Shop ließ sich nicht laden.'));
+      .catch(() => setFehler(t('laden.ladeFehler')));
   }, [
     // Nach einem Kauf muss das Regal neu geladen werden, sonst steht dort
     // weiter ein Preis auf etwas, das schon gehoert.
@@ -1399,7 +1388,7 @@ function Shop({
   ]);
 
   const meldung = (err: unknown): void => {
-    setFehler(err instanceof ApiError ? t(err.messageKey) : 'Der Kauf ging nicht durch.');
+    setFehler(err instanceof ApiError ? t(err.messageKey) : t('laden.kaufFehler'));
   };
 
   const kaufePaket = (paket: Paket): void => {
@@ -1465,10 +1454,10 @@ function Shop({
         setFrage(null);
         setFehler(
           code === 'coinsInsufficient'
-            ? 'Dafür fehlen dir Münzen.'
+            ? t('laden.fehltMuenzen')
             : code === 'gemsInsufficient'
-              ? 'Dafür fehlen dir Edelsteine.'
-              : 'Der Kauf hat nicht geklappt.',
+              ? t('laden.fehltEdelsteine')
+              : t('laden.kaufNichtGeklappt'),
         );
       })
       .finally(() => setKauft(null));
@@ -1494,9 +1483,9 @@ function Shop({
             >
               <span className="hb-held-unten hb-held-zeile">
                 <span>
-                  <span className="hb-label">Empfohlen · Tisch</span>
+                  <span className="hb-label">{t('laden.empfohlen')}</span>
                   <strong className="hb-held-titel">{name}</strong>
-                  <span>für alle Kartenspiele</span>
+                  <span>{t('laden.fuerAlleKartenspiele')}</span>
                 </span>
                 <span className="hb-kn is-gold">
                   <img src="/hub/symbol-muenze.webp" alt="" />
@@ -1511,7 +1500,7 @@ function Shop({
 
       {/* Der eigene Pinguin steht im Shop, weil hier seine Sachen liegen. Ein
           Tipp fuehrt in den Kleiderschrank, wo gekauft und angezogen wird. */}
-      <Tafel titel="Münzen" zusatz={shop ? `${shop.kurs} je Edelstein` : '…'}>
+      <Tafel titel={t('laden.muenzen.titel')} zusatz={shop ? tf('laden.muenzen.kurs', { kurs: shop.kurs }) : '…'}>
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.muenzpakete ?? []).map((paket) => (
             <PaketKachel
@@ -1523,13 +1512,10 @@ function Shop({
             />
           ))}
         </div>
-        <p className="shop-hinweis muted">
-          Münzen gibt es auch fürs Spielen: aus der Tagestruhe, den Stufentruhen und den
-          Tagesaufgaben. Gekaufte sind derselbe Stand, nur früher da.
-        </p>
+        <p className="shop-hinweis muted">{t('laden.muenzen.hinweis')}</p>
       </Tafel>
 
-      <Tafel titel="BroJetons" zusatz="Für Poker">
+      <Tafel titel={t('waehrung.broJetons')} zusatz={t('laden.jetons.zusatz')}>
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.jetonpakete ?? []).map((paket) => (
             <PaketKachel
@@ -1541,13 +1527,10 @@ function Shop({
             />
           ))}
         </div>
-        <p className="shop-hinweis muted">
-          BroJetons setzt du am Pokertisch. Zurück in Münzen oder Edelsteine gehen sie nicht -
-          wer gewinnt, hat mehr Chips für die nächste Runde.
-        </p>
+        <p className="shop-hinweis muted">{t('laden.jetons.hinweis')}</p>
       </Tafel>
 
-      <Tafel titel="Truhen" zusatz="Gegen Edelsteine">
+      <Tafel titel={t('laden.truhen.titel')} zusatz={t('laden.truhen.zusatz')}>
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.truhen ?? []).map((truhe) => (
             <TruheKachel
@@ -1558,14 +1541,10 @@ function Shop({
             />
           ))}
         </div>
-        <p className="shop-hinweis muted">
-          Die Spanne steht dran und wird beim Kauf ausgewürfelt. Ihre Mitte ist genau der Kurs -
-          das Würfeln kostet im Schnitt nichts, es verteilt nur. Wer die feste Zahl will, nimmt
-          ein Paket.
-        </p>
+        <p className="shop-hinweis muted">{t('laden.truhen.hinweis')}</p>
       </Tafel>
 
-      <Tafel titel="Edelsteine" zusatz="Kommt bald">
+      <Tafel titel={t('laden.edelsteine.titel')} zusatz={t('laden.kommtBald')}>
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.edelsteinpakete ?? []).map((paket) => (
             <PaketKachel
@@ -1577,18 +1556,15 @@ function Shop({
             />
           ))}
         </div>
-        <p className="shop-hinweis muted">
-          Edelsteine fallen nicht aus Truhen und nicht aus Aufgaben - sie sind das Einzige, was
-          echtes Geld kostet. Dafür ist mit ihnen alles andere hier zu haben.
-        </p>
+        <p className="shop-hinweis muted">{t('laden.edelsteine.hinweis')}</p>
       </Tafel>
 
       {/* Kartenblätter und Tische: seit dem 26.09.2026 auch hier (Robin), nicht
           mehr nur in der Sammlung. Dort bleibt die große Vorschau; gekauft wird
           über denselben Aufruf (buyItem), also läuft nichts auseinander. */}
       <WareRegal
-        titel="Kartenblätter"
-        zusatz="Für Doppelkopf, Skat und Zauberer"
+        titel={t('laden.blaetter.titel')}
+        zusatz={tf('laden.blaetter.zusatz', { doppelkopf: t('game.doppelkopf'), skat: t('game.skat'), zauberer: t('game.wizard') })}
         waren={ware('blatt').filter((w) => w.preis.coins > 0)}
         bild={(w) => {
           const deck = deckById(w.wert);
@@ -1599,8 +1575,8 @@ function Shop({
         onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
       <WareRegal
-        titel="Tische"
-        zusatz="Für alle Kartenspiele"
+        titel={t('laden.tische.titel')}
+        zusatz={t('laden.tische.zusatz')}
         waren={ware('szene').filter((w) => w.preis.coins > 0)}
         bild={(w) => szeneBild(w.wert)}
         name={(w) => SZENEN.find((sz) => sz.id === w.wert)?.name ?? w.wert}
@@ -1609,8 +1585,8 @@ function Shop({
       />
 
       <WareRegal
-        titel="Zurufe"
-        zusatz="Gelten an jedem Tisch"
+        titel={t('laden.zurufe.titel')}
+        zusatz={t('laden.zurufe.zusatz')}
         waren={ware('emote')}
         bild={(w) => emoteBild(w.wert)}
         name={(w) => emoteMit(w.wert)?.name ?? w.wert}
@@ -1619,8 +1595,8 @@ function Shop({
       />
 
       <WareRegal
-        titel="Kartenrückseiten"
-        zusatz="Was die anderen sehen"
+        titel={t('laden.ruecken.titel')}
+        zusatz={t('laden.ruecken.zusatz')}
         waren={ware('ruecken')}
         bild={(w) => rueckenBild(w.wert) ?? '/hub/tab-blatt.webp'}
         name={(w) => RUECKEN.find((r) => r.id === w.wert)?.name ?? w.wert}
@@ -1629,11 +1605,11 @@ function Shop({
       />
 
       <WareRegal
-        titel="Clanwappen"
-        zusatz="Für deinen Verein"
+        titel={t('laden.wappen.titel')}
+        zusatz={t('laden.wappen.zusatz')}
         waren={ware('wappen')}
         bild={(w) => `/hub/${w.wert}.webp`}
-        name={(w) => `Wappen ${w.wert.replace('wappen-', '')}`}
+        name={(w) => tf('laden.wappen.name', { n: w.wert.replace('wappen-', '') })}
         kauft={kauft}
         onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
@@ -1641,8 +1617,8 @@ function Shop({
           gewaehlt — dieselbe Trennung wie ueberall: Der Shop legt zu, das
           Einrichten passiert dort, wo man es benutzt. */}
       <WareRegal
-        titel="Klangpakete"
-        zusatz="Wie sich der Tisch anhört"
+        titel={t('laden.klang.titel')}
+        zusatz={t('laden.klang.zusatz')}
         waren={ware('klang')}
         bild={() => null}
         glyph="note"
@@ -1652,8 +1628,8 @@ function Shop({
       />
 
       <WareRegal
-        titel="Musik"
-        zusatz="Im Menü und am Tisch"
+        titel={t('laden.musik.titel')}
+        zusatz={t('laden.musik.zusatz')}
         waren={ware('musik')}
         bild={() => null}
         glyph="noten"
@@ -1669,7 +1645,7 @@ function Shop({
           verweist (SHOP_RUBRIK in inhaltspakete.ts). */}
       <WareRegal
         titel={SHOP_RUBRIK}
-        zusatz="Neue Kurse und Themen"
+        zusatz={t('laden.spielpakete.zusatz')}
         waren={ware('inhaltspaket')}
         bild={() => null}
         glyph="wuerfel"
@@ -1678,7 +1654,7 @@ function Shop({
         onKaufen={(w, name, bild) => setFrage({ art: 'ware', ware: w, name, bild })}
       />
 
-      <Tafel titel="Pässe" zusatz="Kommt bald">
+      <Tafel titel={t('laden.paesse.titel')} zusatz={t('laden.kommtBald')}>
         <div className="hub-reihe hub-reihe--drei">
           {(shop?.paesse ?? []).map((paket) => (
             <PaketKachel
@@ -1767,7 +1743,7 @@ function WareRegal({
 
   const offen = waren.filter((w) => !w.besessen).length;
   return (
-    <Tafel titel={titel} zusatz={offen > 0 ? `Noch ${offen}` : zusatz}>
+    <Tafel titel={titel} zusatz={offen > 0 ? tf('laden.regal.noch', { n: offen }) : zusatz}>
       <div className="shop-ware">
         {waren.map((w) => (
           <button
@@ -1844,7 +1820,7 @@ function Vorhoeren({ ware, neu = false }: { ware: RegalWare; neu?: boolean }): R
       className={neu ? 'hb-kn is-zweit' : 'hub-knopf hub-knopf--a ks-kauf-hoeren'}
       onClick={() => (istMusik ? probeMusik(ware.wert) : probePaket(ware.wert))}
     >
-      {an ? '■ Stopp' : '▶ Anhören'}
+      {an ? t('laden.stopp') : t('laden.anhoeren')}
     </button>
   );
 }
@@ -1900,7 +1876,7 @@ function RanglisteBlatt({
       })
       .catch((err: unknown) => {
         if (!aktuell) return;
-        setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+        setError(err instanceof ApiError ? t(err.messageKey) : t('rangliste.verbindung'));
         setRows([]);
         setLaedt(false);
       });
@@ -1909,14 +1885,14 @@ function RanglisteBlatt({
     };
   }, [wahl]);
 
-  const titel = wahl === 'gesamt' ? 'Gesamt' : t(`game.${wahl}`);
+  const titel = wahl === 'gesamt' ? t('rangliste.gesamt') : t(`game.${wahl}`);
 
   if (neu) {
     return (
-      <HbBlatt titel="Rangliste" label={`Rangliste ${titel}`} onClose={onClose}>
+      <HbBlatt titel={t('rangliste.titel')} label={tf('rangliste.label', { titel })} onClose={onClose}>
         {spiele.length > 1 && (
-          <div className="hb-chips hb-chips--blatt" role="tablist" aria-label="Wertung wählen">
-            {[{ id: 'gesamt', name: 'Gesamt' }, ...spiele.map((g) => ({ id: g.id, name: t(g.nameKey) }))].map((r) => (
+          <div className="hb-chips hb-chips--blatt" role="tablist" aria-label={t('rangliste.wertungWaehlen')}>
+            {[{ id: 'gesamt', name: t('rangliste.gesamt') }, ...spiele.map((g) => ({ id: g.id, name: t(g.nameKey) }))].map((r) => (
               <button
                 type="button"
                 key={r.id}
@@ -1931,8 +1907,8 @@ function RanglisteBlatt({
           </div>
         )}
         {error && <p className="hb-fehler">{error}</p>}
-        {!error && laedt && <p className="hb-laden">Wird geladen…</p>}
-        {!error && !laedt && rows.length === 0 && <p className="hb-klein hb-ohne-rand">Noch niemand auf der Liste.</p>}
+        {!error && laedt && <p className="hb-laden">{t('rangliste.laedt')}</p>}
+        {!error && !laedt && rows.length === 0 && <p className="hb-klein hb-ohne-rand">{t('rangliste.leer')}</p>}
         {!laedt && rows.length > 0 && (
           <ol className="hb-liste hb-rangliste">
             {rows.map((row) => (
@@ -1946,8 +1922,7 @@ function RanglisteBlatt({
                     onShowProfile(row.accountId);
                   }}
                 >
-                  {row.displayName}
-                  {row.accountId === meId ? ' · du' : ''}
+                  {row.accountId === meId ? tf('rangliste.du', { name: row.displayName }) : row.displayName}
                 </button>
                 <span className="hb-pk">
                   <img src="/hub/symbol-pokal.webp" alt="" />
@@ -1967,24 +1942,24 @@ function RanglisteBlatt({
         className="doko-sheet-card front-ranking"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label={`Rangliste ${titel}`}
+        aria-label={tf('rangliste.label', { titel })}
       >
         <header className="front-ranking-head">
-          <strong>Rangliste · {titel}</strong>
-          <button className="doko-icon" onClick={onClose} aria-label="Schließen">
+          <strong>{tf('rangliste.kopf', { titel })}</strong>
+          <button className="doko-icon" onClick={onClose} aria-label={t('rangliste.schliessen')}>
             <Kreuz />
           </button>
         </header>
 
         {spiele.length > 1 && (
-          <div className="front-ranking-tabs" role="tablist" aria-label="Wertung wählen">
+          <div className="front-ranking-tabs" role="tablist" aria-label={t('rangliste.wertungWaehlen')}>
             <button
               role="tab"
               aria-selected={wahl === 'gesamt'}
               className={`front-ranking-tab${wahl === 'gesamt' ? ' is-active' : ''}`}
               onClick={() => setWahl('gesamt')}
             >
-              Gesamt
+              {t('rangliste.gesamt')}
             </button>
             {spiele.map((g) => (
               <button
@@ -2003,7 +1978,7 @@ function RanglisteBlatt({
         {error && <p className="error">{error}</p>}
         {!error && laedt && <Ladekreis />}
         {!error && !laedt && rows.length === 0 && (
-          <p className="muted">Noch niemand auf der Liste.</p>
+          <p className="muted">{t('rangliste.leer')}</p>
         )}
         {!laedt && rows.length > 0 && (
           <ol className="front-ranking-list">
@@ -2017,8 +1992,7 @@ function RanglisteBlatt({
                     onShowProfile(row.accountId);
                   }}
                 >
-                  {row.displayName}
-                  {row.accountId === meId ? ' · du' : ''}
+                  {row.accountId === meId ? tf('rangliste.du', { name: row.displayName }) : row.displayName}
                 </button>
                 <span className="front-ranking-cups">
                   <img src="/hub/pokal.png" alt="" aria-hidden="true" />
@@ -2059,7 +2033,7 @@ function Freunde({
   */
   const [fehler, setFehler] = useState<string | null>(null);
   const fang = (err: unknown): void =>
-    setFehler(err instanceof ApiError ? t(err.messageKey) : 'Das hat nicht geklappt. Prüf die Verbindung.');
+    setFehler(err instanceof ApiError ? t(err.messageKey) : t('freunde.fehler'));
 
   const reload = (): void => {
     void api
@@ -2112,24 +2086,24 @@ function Freunde({
     return (
       <section className="hb-blk">
         <h2 className="hb-ab">
-          Freunde
+          {t('freunde.titel')}
           <span className="hb-ab-zusatz">{lists ? anzahl : '…'}</span>
         </h2>
         {/* Anfragen zuoberst: sie verlangen eine Antwort. */}
         {(lists === null || lists.incoming.length > 0 || lists.friends.length > 0) && (
           <div className="hb-liste">
             {lists === null && (
-              <p className="hb-klein hb-liste-leer">{fehler ? 'Freunde ließen sich nicht laden.' : 'Wird geladen…'}</p>
+              <p className="hb-klein hb-liste-leer">{fehler ? t('freunde.ladeFehler') : t('freunde.laedt')}</p>
             )}
             {lists?.incoming.map((player) =>
               zeile(
                 player,
                 <span className="hb-mg-knoepfe">
                   <button type="button" className="hb-kn is-gold is-klein" onClick={() => void api.acceptFriend(player.id).then(reload).catch(fang)}>
-                    Annehmen
+                    {t('freunde.annehmen')}
                   </button>
                   <button type="button" className="hb-kn is-zweit is-klein" onClick={() => void api.removeFriend(player.id).then(reload).catch(fang)}>
-                    Nein
+                    {t('freunde.nein')}
                   </button>
                 </span>,
               ),
@@ -2142,33 +2116,33 @@ function Freunde({
             {fehler}{' '}
             {lists === null && (
               <button type="button" className="hb-link" onClick={reload}>
-                Nochmal
+                {t('freunde.nochmal')}
               </button>
             )}
           </span>
         )}
         {lists !== null && lists.friends.length === 0 && lists.incoming.length === 0 && (
-          <p className="hb-klein hb-ohne-rand">Noch keine Freunde. Such unten nach einem Namen.</p>
+          <p className="hb-klein hb-ohne-rand">{t('freunde.leer')}</p>
         )}
         {lists !== null && lists.outgoing.length > 0 && (
           <p className="hb-klein hb-ohne-rand">
-            Angefragt: {lists.outgoing.map((player) => player.displayName).join(', ')}
+            {tf('freunde.angefragt', { namen: lists.outgoing.map((player) => player.displayName).join(', ') })}
           </p>
         )}
         <form className="hb-suchzeile" onSubmit={search}>
           <input
             className="hb-feld"
-            placeholder="Spieler suchen…"
+            placeholder={t('freunde.suchenFeld')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            aria-label="Spieler suchen"
+            aria-label={t('freunde.suchenLabel')}
           />
           <button className="hb-kn is-zweit" type="submit" disabled={query.trim().length < 2}>
-            Suchen
+            {t('freunde.suchen')}
           </button>
         </form>
         {results !== null && results.length === 0 && (
-          <p className="hb-klein hb-ohne-rand">Niemand mit diesem Namen gefunden.</p>
+          <p className="hb-klein hb-ohne-rand">{t('freunde.nichtGefunden')}</p>
         )}
         {results !== null && results.length > 0 && (
           <div className="hb-liste">
@@ -2176,7 +2150,7 @@ function Freunde({
               zeile(
                 player,
                 <button type="button" className="hb-kn is-zweit is-klein" onClick={() => anfragen(player)}>
-                  Anfragen
+                  {t('freunde.anfragen')}
                 </button>,
               ),
             )}
@@ -2199,7 +2173,7 @@ function Freunde({
       und Suchfeld unsichtbar, und weil der Tafelrahmen ueberstehen darf
       (`overflow: visible`), schob sich die Konto-Tafel sichtbar darueber.
     */
-    <Tafel titel="Freunde" zusatz={lists ? `${anzahl}` : '…'}>
+    <Tafel titel={t('freunde.titel')} zusatz={lists ? `${anzahl}` : '…'}>
       {/* Anfragen zuoberst: sie verlangen eine Antwort. */}
       {lists?.incoming.map((player) => (
         <div className="hub-freund is-anfrage" key={player.id}>
@@ -2210,20 +2184,20 @@ function Freunde({
             className="hub-mini hub-mini--ja"
             onClick={() => void api.acceptFriend(player.id).then(reload)}
           >
-            Annehmen
+            {t('freunde.annehmen')}
           </button>
           <button
             className="hub-mini"
             onClick={() => void api.removeFriend(player.id).then(reload)}
           >
-            Nein
+            {t('freunde.nein')}
           </button>
         </div>
       ))}
 
       {lists === null && <Ladekreis />}
       {lists !== null && lists.friends.length === 0 && lists.incoming.length === 0 && (
-        <p className="muted">Noch keine Freunde. Such unten nach einem Namen.</p>
+        <p className="muted">{t('freunde.leer')}</p>
       )}
 
       {lists?.friends.map((player) => (
@@ -2236,24 +2210,24 @@ function Freunde({
 
       {lists !== null && lists.outgoing.length > 0 && (
         <p className="muted">
-          Angefragt: {lists.outgoing.map((player) => player.displayName).join(', ')}
+          {tf('freunde.angefragt', { namen: lists.outgoing.map((player) => player.displayName).join(', ') })}
         </p>
       )}
 
       <form className="hub-suche" onSubmit={search}>
         <input
-          placeholder="Spieler suchen…"
+          placeholder={t('freunde.suchenFeld')}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          aria-label="Spieler suchen"
+          aria-label={t('freunde.suchenLabel')}
         />
         <button className="hub-mini" type="submit" disabled={query.trim().length < 2}>
-          Suchen
+          {t('freunde.suchen')}
         </button>
       </form>
 
       {results !== null && results.length === 0 && (
-        <p className="muted">Niemand mit diesem Namen gefunden.</p>
+        <p className="muted">{t('freunde.nichtGefunden')}</p>
       )}
       {results?.map((player) => (
         <div className="hub-freund" key={player.id}>
@@ -2272,7 +2246,7 @@ function Freunde({
                 .catch(() => undefined)
             }
           >
-            Anfragen
+            {t('freunde.anfragen')}
           </button>
         </div>
       ))}
@@ -2402,8 +2376,8 @@ function DeckPicker({
       .catch((e: unknown) =>
         setKaufFehler(
           (e as { code?: string })?.code === 'coinsInsufficient'
-            ? 'Dafür fehlen dir Münzen.'
-            : 'Der Kauf hat nicht geklappt.',
+            ? t('blattwahl.fehltMuenzen')
+            : t('blattwahl.kaufNichtGeklappt'),
         ),
       )
       .finally(() => setKauft(null));
@@ -2432,12 +2406,16 @@ function DeckPicker({
     // Im neuen Hub die eigene Rückfrage statt des grauen iOS-Dialogs.
     if (neu) {
       frage(
-        { titel: `„${name}“ kaufen?`, text: `Kostet ${w.preis.coins.toLocaleString('de-DE')} Münzen.`, ja: `Für ${w.preis.coins.toLocaleString('de-DE')} Münzen kaufen` },
+        {
+          titel: tf('blattwahl.frage.titel', { name }),
+          text: tf('blattwahl.frage.text', { preis: w.preis.coins.toLocaleString('de-DE') }),
+          ja: tf('blattwahl.frage.ja', { preis: w.preis.coins.toLocaleString('de-DE') }),
+        },
         () => kaufen(w, setzen),
       );
       return;
     }
-    if (!window.confirm(`„${name}" für ${w.preis.coins} Münzen kaufen?`)) return;
+    if (!window.confirm(tf('blattwahl.frage.bestaetigen', { name, preis: w.preis.coins }))) return;
     kaufen(w, setzen);
   };
   const waehleBlatt = (deck: Deck): void =>
@@ -2458,10 +2436,10 @@ function DeckPicker({
     const stand = (art: RegalWare['art'], id: string, aktiv: boolean): string => {
       if (!gehoert(art, id)) {
         const w = wareZu(art, id);
-        if (w?.nurErspielt) return 'In der Kartenmanufaktur erspielen';
-        return `${(w?.preis.coins ?? 0).toLocaleString('de-DE')} Münzen`;
+        if (w?.nurErspielt) return t('blattwahl.manufaktur');
+        return tf('blattwahl.preis', { preis: (w?.preis.coins ?? 0).toLocaleString('de-DE') });
       }
-      return aktiv ? 'aktiv' : 'gehört dir';
+      return aktiv ? t('blattwahl.aktiv') : t('blattwahl.gehoertDir');
     };
     const marke = (aktiv: boolean, mein: boolean): React.JSX.Element | null =>
       aktiv && mein ? (
@@ -2479,11 +2457,11 @@ function DeckPicker({
     return (
       <div className="hb-spiele hb-details">
         <header className="hb-kopfzeile is-zurueck">
-          <Zurueck onClick={onSpielWechseln} label="Zurück zur Sammlung" />
+          <Zurueck onClick={onSpielWechseln} label={t('blattwahl.zurueck')} />
           {/* Welches Spiel gerade eingestellt wird, muss dabeistehen. */}
           <span className="hb-kopf-titel">
             <h1 className="hb-titel">{spielName}</h1>
-            <small>Blatt, Rückseite und Tisch · gilt auf allen Geräten</small>
+            <small>{t('blattwahl.untertitel')}</small>
           </span>
         </header>
         <div className="hb-spiele-rolle">
@@ -2491,8 +2469,8 @@ function DeckPicker({
 
           <section className="hb-blk">
             <h2 className="hb-ab">
-              Kartenblatt
-              <span className="hb-ab-zusatz">Antippen zeigt den Tisch</span>
+              {t('blattwahl.blatt')}
+              <span className="hb-ab-zusatz">{t('blattwahl.blatt.zusatz')}</span>
             </h2>
             {/* Nur Blätter, die zu diesem Spiel passen: Ein Zauberblatt hat
                 keine Dame, ein Doppelkopfblatt keine Sieben. */}
@@ -2529,8 +2507,8 @@ function DeckPicker({
               beim Blatt und nicht beim Tisch. */}
           <section className="hb-blk">
             <h2 className="hb-ab">
-              Rückseite
-              <span className="hb-ab-zusatz">Was die anderen sehen</span>
+              {t('blattwahl.ruecken')}
+              <span className="hb-ab-zusatz">{t('blattwahl.ruecken.zusatz')}</span>
             </h2>
             <div className="hb-reihe">
               {RUECKEN.map((r) => {
@@ -2565,8 +2543,8 @@ function DeckPicker({
               verschwinden Kreuz und Pik, das soll man vorher sehen. */}
           <section className="hb-blk">
             <h2 className="hb-ab">
-              Tisch
-              <span className="hb-ab-zusatz">Nur du siehst ihn</span>
+              {t('blattwahl.tisch')}
+              <span className="hb-ab-zusatz">{t('blattwahl.tisch.zusatz')}</span>
             </h2>
             <div className="hb-raster">
               {SZENEN.map((s) => {
@@ -2624,8 +2602,8 @@ function DeckPicker({
       </button>
 
       <Tafel
-        titel="Kartenblatt"
-        zusatz="Gilt auf allen Geräten"
+        titel={t('blattwahl.blatt')}
+        zusatz={t('blattwahl.alleGeraete')}
         weit
         className="hub-tafel--blatt"
       >
@@ -2674,7 +2652,7 @@ function DeckPicker({
         */}
         {/* Die Rueckseite ist das, was die anderen sehen — deshalb steht sie
             beim Blatt und nicht bei der Szenerie. */}
-        <h3 className="hub-abschnitt">Rückseite</h3>
+        <h3 className="hub-abschnitt">{t('blattwahl.ruecken')}</h3>
         <div className="hub-ruecken">
           {RUECKEN.map((r) => {
             const w = wareZu('ruecken', r.id);
@@ -2712,7 +2690,7 @@ function DeckPicker({
           })}
         </div>
 
-        <h3 className="hub-abschnitt">Tisch</h3>
+        <h3 className="hub-abschnitt">{t('blattwahl.tisch')}</h3>
         {kaufFehler && <p className="clan-fehler">{kaufFehler}</p>}
         <div className="hub-szenen">
           {SZENEN.map((s) => {
@@ -2807,7 +2785,7 @@ function TischVorschau({
           <strong>
             {t(deck.nameKey)} · {szeneName}
           </strong>
-          <span className="muted">So sieht dein {spielName}-Tisch aus</span>
+          <span className="muted">{tf('blattwahl.soSiehtEsAus', { spiel: spielName })}</span>
         </div>
 
         {/* Mitspieler oben: verdeckte Karten zeigen den Rücken des Blatts. */}
@@ -2836,7 +2814,7 @@ function TischVorschau({
         </div>
 
         <button className="primary hub-vorschau-fertig" onClick={onClose}>
-          Passt
+          {t('blattwahl.passt')}
         </button>
       </div>
     </div>
@@ -2869,11 +2847,11 @@ function TischVorschauNeu({
   useEscape(onClose);
   return (
     <ImHub>
-      <div className="hb-vorschau" role="dialog" aria-modal="true" aria-label={`Vorschau: ${t(deck.nameKey)} · ${szeneName}`}>
+      <div className="hb-vorschau" role="dialog" aria-modal="true" aria-label={tf('blattwahl.vorschau', { blatt: t(deck.nameKey), szene: szeneName })}>
         <img className="hb-vorschau-bg" src={szeneBild(szene)} alt="" draggable={false} />
         <header className="hb-vorschau-kopf">
           <span className="hb-vorschau-titel">
-            <span className="hb-label">So sieht dein {spielName}-Tisch aus</span>
+            <span className="hb-label">{tf('blattwahl.soSiehtEsAus', { spiel: spielName })}</span>
             <strong>
               {t(deck.nameKey)} · {szeneName}
             </strong>
@@ -2907,7 +2885,7 @@ function TischVorschauNeu({
         {/* Die Wahl gilt schon; „Passt" bestätigt nichts, es schließt nur. */}
         <div className="hb-vorschau-fuss">
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onClose}>
-            Passt
+            {t('blattwahl.passt')}
           </button>
         </div>
       </div>
@@ -2997,7 +2975,7 @@ function ProfilBild({
       setVer((v) => v + 1);
       onChanged();
     } catch {
-      setErr('Bild ließ sich nicht speichern.');
+      setErr(t('profil.bild.fehler'));
     } finally {
       setBusy(false);
     }
@@ -3016,20 +2994,20 @@ function ProfilBild({
     return (
       <span className="hub-profilbild">
         {src ? (
-          <img src={src} alt="Profilbild" draggable={false} />
+          <img src={src} alt={t('profil.bild')} draggable={false} />
         ) : (
-          <Pinguin getragen={me.avatar} groesse={3.2} titel="Profilbild" />
+          <Pinguin getragen={me.avatar} groesse={3.2} titel={t('profil.bild')} />
         )}
       </span>
     );
   }
 
   return (
-    <label className={`hub-profilbild${busy ? ' is-busy' : ''}`} title="Profilbild ändern">
+    <label className={`hub-profilbild${busy ? ' is-busy' : ''}`} title={t('profil.bild.aendern')}>
       {src ? (
-        <img src={src} alt="Profilbild" draggable={false} />
+        <img src={src} alt={t('profil.bild')} draggable={false} />
       ) : (
-        <Pinguin getragen={me.avatar} groesse={3.2} titel="Profilbild" />
+        <Pinguin getragen={me.avatar} groesse={3.2} titel={t('profil.bild')} />
       )}
       <span className="hub-profilbild-stift" aria-hidden="true">
         ✎
@@ -3040,7 +3018,7 @@ function ProfilBild({
         hidden
         disabled={busy}
         onChange={(e) => void pick(e.target.files?.[0])}
-        aria-label="Profilbild ändern"
+        aria-label={t('profil.bild.aendern')}
       />
       {err && <span className="error">{err}</span>}
     </label>
@@ -3060,13 +3038,13 @@ function ShopRahmen({
   return (
     <div className="hb-shop">
       <header className="hb-kopfzeile">
-        <h1 className="hb-titel">Shop</h1>
+        <h1 className="hb-titel">{t('laden.titel')}</h1>
         <span className="hb-geld">
-          <span className="hb-pill" aria-label={`${coins} Münzen`}>
+          <span className="hb-pill" aria-label={tf('laden.guthaben.muenzen', { n: coins })}>
             <img src="/hub/symbol-muenze.webp" alt="" />
             {coins.toLocaleString('de-DE')}
           </span>
-          <span className="hb-pill" aria-label={`${gems} Edelsteine`}>
+          <span className="hb-pill" aria-label={tf('laden.guthaben.edelsteine', { n: gems })}>
             <img src="/hub/symbol-edelstein.webp" alt="" />
             {gems.toLocaleString('de-DE')}
           </span>

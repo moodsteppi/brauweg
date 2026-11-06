@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { ApiError, api } from '../api';
+import { aktiveSprache, t } from '../i18n';
 import { inApp } from '../laufzeit';
 import { ladeAnbieterConfig, ladeApple, ladeGoogle, type Anbieter, type AnbieterConfig } from './anbieter';
 import { appleNativAnmelden, kannAppleNativ } from './apple-nativ';
@@ -167,7 +168,8 @@ export function AnbieterKnoepfe({
           // Als Kachel spannt ihn das CSS ueber die ganze Flaeche; die
           // groesste Breite, die GIS zeichnet, laesst dafuer am wenigsten aus.
           width: form === 'kacheln' ? 400 : BREITE,
-          locale: 'de',
+          // Googles Knopf schreibt seinen Text selbst — in der Sprache der Seite.
+          locale: aktiveSprache(),
         });
       } catch {
         /* Ohne Google-Knopf geht die Anmeldung normal weiter. */
@@ -314,7 +316,7 @@ export function AnbieterKnoepfe({
                 className="anbieter-kachel-google-knopf"
                 ref={googleZiel}
                 data-anbieter="google"
-                aria-label={zweck === 'anmelden' ? 'Mit Google anmelden' : 'Weiter mit Google'}
+                aria-label={t(zweck === 'anmelden' ? 'anmeldung.anbieter.google' : 'anmeldung.anbieter.googleWeiter')}
               />
             </div>
           )}
@@ -324,7 +326,7 @@ export function AnbieterKnoepfe({
               className="anbieter-kachel anbieter-kachel-apple"
               onClick={mitApple}
               disabled={!(appleBereit || appleNativ) || laeuft || gesperrt}
-              aria-label={zweck === 'anmelden' ? 'Mit Apple anmelden' : 'Weiter mit Apple'}
+              aria-label={t(zweck === 'anmelden' ? 'anmeldung.anbieter.apple' : 'anmeldung.anbieter.appleWeiter')}
             >
               <svg className="anbieter-kachel-zeichen" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d={APPLE_LOGO} fill="currentColor" />
@@ -345,7 +347,7 @@ export function AnbieterKnoepfe({
           <svg className="anbieter-apple-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d={APPLE_LOGO} fill="currentColor" />
           </svg>
-          <span>{zweck === 'anmelden' ? 'Mit Apple anmelden' : 'Weiter mit Apple'}</span>
+          <span>{t(zweck === 'anmelden' ? 'anmeldung.anbieter.apple' : 'anmeldung.anbieter.appleWeiter')}</span>
         </button>
       )}
       {zeigeGoogle && (
@@ -353,7 +355,7 @@ export function AnbieterKnoepfe({
           className="anbieter-google"
           ref={googleZiel}
           data-anbieter="google"
-          aria-label={zweck === 'anmelden' ? 'Mit Google anmelden' : 'Weiter mit Google'}
+          aria-label={t(zweck === 'anmelden' ? 'anmeldung.anbieter.google' : 'anmeldung.anbieter.googleWeiter')}
           aria-disabled={laeuft || gesperrt}
         />
       )}
@@ -419,10 +421,10 @@ function GeburtstagNachfrage({
   };
 
   return (
-    <div className="anbieter-nachfrage" role="group" aria-label="Spielername und Geburtsdatum">
-      <p>Fast geschafft - noch zwei Angaben, dann legen wir dein Konto an.</p>
+    <div className="anbieter-nachfrage" role="group" aria-label={t('anmeldung.nachfrage.titel')}>
+      <p>{t('anmeldung.nachfrage.text')}</p>
       <label>
-        Spielername
+        {t('anmeldung.nachfrage.spielername')}
         <input
           type="text"
           value={name}
@@ -438,10 +440,10 @@ function GeburtstagNachfrage({
           autoComplete="nickname"
           required
         />
-        <span className="muted">So sehen dich die anderen am Tisch und in den Ranglisten.</span>
+        <span className="muted">{t('anmeldung.nachfrage.spielernameHinweis')}</span>
       </label>
       <label>
-        Geburtstag
+        {t('anmeldung.geburtstag')}
         <input
           type="date"
           value={datum}
@@ -455,14 +457,14 @@ function GeburtstagNachfrage({
           max={new Date().toISOString().slice(0, 10)}
           required
         />
-        <span className="muted">Mindestens 18 Jahre. Für Countdown und Belohnung.</span>
+        <span className="muted">{t('anmeldung.mindestalter')}</span>
       </label>
       <div className="row">
         <button type="button" className="primary" onClick={() => void absenden()} disabled={!datum || !nameOk || busy}>
-          Konto anlegen
+          {t('anmeldung.kontoAnlegen')}
         </button>
         <button type="button" onClick={onVerworfen} disabled={busy}>
-          Abbrechen
+          {t('anmeldung.nachfrage.abbrechen')}
         </button>
       </div>
     </div>

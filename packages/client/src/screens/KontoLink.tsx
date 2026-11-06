@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ApiError, api, type MailProbe, type MailVersand } from '../api';
 import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 import { kontoLinkAufraeumen, type KontoLinkZiel } from '../kontolink';
 
 /**
@@ -44,14 +45,14 @@ export function KontoLink({
 
 /** Fehlertext aus einer Serverantwort — oder die Verbindung war weg. */
 function fehlertext(err: unknown): string {
-  return err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.';
+  return err instanceof ApiError ? t(err.messageKey) : t('kontolink.verbindungFehlgeschlagen');
 }
 
 /** Was nach "Neuen Link anfordern" dasteht. Ehrlich, wenn nichts hinausgeht. */
 function unterwegsText(mailVersand: MailVersand | undefined): string {
   return mailVersand === 'log'
-    ? 'Der Mailversand ist gerade nicht eingerichtet - es geht keine Mail hinaus. Melde dich bitte bei uns.'
-    : 'Falls es ein Konto mit dieser Adresse gibt, ist eine neue E-Mail unterwegs. Sieh auch im Spam nach.';
+    ? t('kontolink.mailversandAus')
+    : t('kontolink.mailUnterwegs');
 }
 
 /**
@@ -83,17 +84,17 @@ function NeuerLink({
   return (
     <form className="panel" onSubmit={anfordern}>
       <label>
-        E-Mail
+        {t('kontolink.email')}
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </label>
       {note && <p className="muted">{note}</p>}
       {error && <p className="error">{error}</p>}
       <div className="row">
         <button className="primary" type="submit" disabled={busy}>
-          Neuen Link anfordern
+          {t('kontolink.neuerLink')}
         </button>
         <button type="button" onClick={onZurAnmeldung}>
-          Zur Anmeldung
+          {t('kontolink.zurAnmeldung')}
         </button>
       </div>
     </form>
@@ -111,7 +112,7 @@ function Bestaetigen({
 }): React.JSX.Element {
   const [stand, setStand] = useState<'laeuft' | 'ok' | 'fehler'>(token ? 'laeuft' : 'fehler');
   const [error, setError] = useState<string | null>(
-    token ? null : 'In diesem Link fehlt der Code. Öffne ihn direkt aus der E-Mail.',
+    token ? null : t('kontolink.codeFehlt'),
   );
 
   /*
@@ -134,20 +135,20 @@ function Bestaetigen({
       });
   }, [token]);
 
-  if (stand === 'laeuft') return <p className="muted">Adresse wird bestätigt…</p>;
+  if (stand === 'laeuft') return <p className="muted">{t('kontolink.wirdBestaetigt')}</p>;
 
   if (stand === 'ok') {
     return (
       <div className="panel">
-        <h2>Adresse bestätigt</h2>
+        <h2>{t('kontolink.bestaetigt')}</h2>
         <p className="muted">
           {angemeldet
-            ? 'Danke! Dein Konto ist gesichert.'
-            : 'Danke! Du kannst dich jetzt mit Adresse und Passwort anmelden.'}
+            ? t('kontolink.dankeGesichert')
+            : t('kontolink.dankeAnmelden')}
         </p>
         <div className="row">
           <button className="primary" type="button" onClick={onFertig}>
-            {angemeldet ? 'Weiter zum Spiel' : 'Zur Anmeldung'}
+            {angemeldet ? t('kontolink.weiterZumSpiel') : t('kontolink.zurAnmeldung')}
           </button>
         </div>
       </div>
@@ -157,9 +158,9 @@ function Bestaetigen({
   return (
     <>
       <div className="panel">
-        <h2>Das hat nicht geklappt</h2>
+        <h2>{t('kontolink.nichtGeklappt')}</h2>
         <p className="error">{error}</p>
-        <p className="muted">Gib deine Adresse ein, dann schicken wir einen neuen Link.</p>
+        <p className="muted">{t('kontolink.neuerLinkHinweis')}</p>
       </div>
       <NeuerLink art="verify" onZurAnmeldung={onFertig} />
     </>
@@ -190,7 +191,7 @@ function NeuesPasswort({
     // Vorab im Client, weil ein Tippfehler im neuen Passwort sonst erst beim
     // naechsten Anmelden auffiele — und dann ginge es wieder von vorn los.
     if (passwort !== wiederholung) {
-      setError('Die beiden Passwörter stimmen nicht überein.');
+      setError(t('kontolink.passwortUngleich'));
       return;
     }
     setBusy(true);
@@ -208,11 +209,11 @@ function NeuesPasswort({
   if (fertig) {
     return (
       <div className="panel">
-        <h2>Neues Passwort gesetzt</h2>
-        <p className="muted">Du bist angemeldet. Auf anderen Geräten meldest du dich neu an.</p>
+        <h2>{t('kontolink.passwortGesetzt')}</h2>
+        <p className="muted">{t('kontolink.angemeldetHinweis')}</p>
         <div className="row">
           <button className="primary" type="button" onClick={onFertig}>
-            Weiter zum Spiel
+            {t('kontolink.weiterZumSpiel')}
           </button>
         </div>
       </div>
@@ -223,11 +224,11 @@ function NeuesPasswort({
     return (
       <>
         <div className="panel">
-          <h2>Link gilt nicht mehr</h2>
+          <h2>{t('kontolink.linkUngueltig')}</h2>
           <p className="error">
-            {error ?? 'In diesem Link fehlt der Code. Öffne ihn direkt aus der E-Mail.'}
+            {error ?? t('kontolink.codeFehlt')}
           </p>
-          <p className="muted">Der Link gilt zwei Stunden und nur einmal. Fordere einfach einen neuen an.</p>
+          <p className="muted">{t('kontolink.linkGueltigkeit')}</p>
         </div>
         <NeuerLink art="reset" onZurAnmeldung={onFertig} />
       </>
@@ -236,9 +237,9 @@ function NeuesPasswort({
 
   return (
     <form className="panel" onSubmit={setzen}>
-      <h2>Neues Passwort</h2>
+      <h2>{t('kontolink.neuesPasswort')}</h2>
       <label>
-        Neues Passwort
+        {t('kontolink.neuesPasswort')}
         <input
           type="password"
           autoComplete="new-password"
@@ -247,10 +248,10 @@ function NeuesPasswort({
           minLength={12}
           required
         />
-        <span className="muted">Mindestens zwölf Zeichen.</span>
+        <span className="muted">{t('kontolink.passwortMindestlaenge')}</span>
       </label>
       <label>
-        Noch einmal
+        {t('kontolink.nochEinmal')}
         <input
           type="password"
           autoComplete="new-password"
@@ -263,21 +264,25 @@ function NeuesPasswort({
       {error && <p className="error">{error}</p>}
       <div className="row">
         <button className="primary" type="submit" disabled={busy}>
-          Passwort setzen
+          {t('kontolink.passwortSetzen')}
         </button>
       </div>
     </form>
   );
 }
 
-/** Beschriftung der Diagnosefelder, in der Reihenfolge der Anzeige. */
-const PROBE_FELDER: readonly [keyof MailProbe, string][] = [
-  ['mailer', 'Mailer'],
-  ['absenderDomain', 'Absender-Domain'],
-  ['domainStatus', 'Domain-Status bei Resend'],
-  ['versandt', 'Testmail angenommen'],
-  ['fehler', 'Fehler'],
-  ['linkBasis', 'Links zeigen auf'],
+/**
+ * Die Diagnosefelder, in der Reihenfolge der Anzeige. Die Beschriftung kommt
+ * erst beim Zeichnen aus `kontolink.probe.feld.<feld>` — auf Modulebene stünde
+ * sie fest in der Sprache, die beim Laden galt.
+ */
+const PROBE_FELDER: readonly (keyof MailProbe)[] = [
+  'mailer',
+  'absenderDomain',
+  'domainStatus',
+  'versandt',
+  'fehler',
+  'linkBasis',
 ];
 
 /**
@@ -307,12 +312,9 @@ function MailDiagnose({
 
   return (
     <div className="panel kontolink-probe">
-      <h2>Mail-Diagnose</h2>
-      <p className="muted">
-        Fragt bei Resend den Stand der Absender-Domain ab und schickt eine Testmail an die Adresse
-        deines Kontos. Schlüssel werden nie angezeigt.
-      </p>
-      {!angemeldet && <p className="error">Erst mit dem Testkonto anmelden.</p>}
+      <h2>{t('kontolink.probe.titel')}</h2>
+      <p className="muted">{t('kontolink.probe.text')}</p>
+      {!angemeldet && <p className="error">{t('kontolink.probe.erstAnmelden')}</p>}
       {error && <p className="error">{error}</p>}
       {probe && (
         <>
@@ -320,19 +322,23 @@ function MailDiagnose({
             {probe.diagnose}
           </p>
           <dl className="kontolink-felder">
-            {PROBE_FELDER.map(([feld, name]) => (
+            {PROBE_FELDER.map((feld) => (
               <div key={feld}>
-                <dt>{name}</dt>
+                <dt>{t(`kontolink.probe.feld.${feld}`)}</dt>
                 <dd>{String(probe[feld] ?? '-')}</dd>
               </div>
             ))}
             {probe.letzterFehler && (
               <div>
-                <dt>Letzter Fehlschlag seit Start</dt>
+                <dt>{t('kontolink.probe.letzterFehler')}</dt>
                 <dd>
-                  {probe.letzterFehler.zeit}: {probe.letzterFehler.status ?? 'kein Netz'}{' '}
-                  {probe.letzterFehler.name ?? ''} - {probe.letzterFehler.text} (an{' '}
-                  {probe.letzterFehler.empfaengerDomain})
+                  {tf('kontolink.probe.letzterFehlerZeile', {
+                    zeit: probe.letzterFehler.zeit,
+                    status: probe.letzterFehler.status ?? t('kontolink.probe.keinNetz'),
+                    name: probe.letzterFehler.name ?? '',
+                    text: probe.letzterFehler.text,
+                    domain: probe.letzterFehler.empfaengerDomain,
+                  })}
                 </dd>
               </div>
             )}
@@ -341,7 +347,7 @@ function MailDiagnose({
       )}
       <div className="row">
         <button className="primary" type="button" onClick={pruefen} disabled={busy || !angemeldet}>
-          {busy ? 'Prüfe…' : 'Jetzt prüfen'}
+          {busy ? t('kontolink.probe.laeuft') : t('kontolink.probe.pruefen')}
         </button>
         <button
           type="button"
@@ -350,7 +356,7 @@ function MailDiagnose({
             onFertig();
           }}
         >
-          Zurück
+          {t('kontolink.zurueck')}
         </button>
       </div>
     </div>
