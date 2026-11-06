@@ -1,7 +1,11 @@
 export { filler } from './adapter.js';
 export {
+  AUFBAU_JE_SPIELART,
   DEFAULT_REGELN,
   SEAT_COUNTS,
+  type SpielartAufbau,
+  aufbauFuer,
+  mauernJeZug,
   FARBEN_HOECHSTENS,
   FARBEN_JE_SPIELART,
   type FillerRegeln,
@@ -34,6 +38,7 @@ export {
   offeneNachbarn,
   platzierungen,
   sieger,
+  spiegelPlatz,
   startEcke,
   vonIrgendwemErreichbareFreie,
 } from './partie.js';
