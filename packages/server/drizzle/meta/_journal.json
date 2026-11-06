@@ -288,6 +288,13 @@
       "when": 1793109970954,
       "tag": "0040_tagesmarkt",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793200000000,
+      "tag": "0041_flyingbro",
+      "breakpoints": true
     }
   ]
 }
