@@ -2,7 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 import { useHubWischen } from './hub-wischen';
 import type { Me } from '../api';
 import { mitEdelsteinen, serverAdresse } from '../laufzeit';
-import { kompakteZahl } from '../i18n';
+import { kompakteZahl, t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 
 /** Bis 9.999 ausgeschrieben (wie im Entwurf), darüber kurz („12K“). */
 const zahl = (n: number): string => (n < 10000 ? n.toLocaleString('de-DE') : kompakteZahl(n));
@@ -19,10 +20,11 @@ import { spiele } from '../klang';
 
 type Reiter = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil' | 'spiele';
 
-const REITER: Record<Reiter, { label: string; icon: React.JSX.Element }> = {
-  shop: { label: 'Shop', icon: <path d="M5 8h14l-1 12H6z M9 8a3 3 0 0 1 6 0" /> },
+// Nur Symbole: Die Beschriftung kommt beim Zeichnen aus `rahmen.reiter.<reiter>`,
+// sonst bliebe sie in der Sprache stehen, in der das Modul geladen wurde.
+const REITER: Record<Reiter, { icon: React.JSX.Element }> = {
+  shop: { icon: <path d="M5 8h14l-1 12H6z M9 8a3 3 0 0 1 6 0" /> },
   spiele: {
-    label: 'Spiele',
     icon: (
       <>
         <rect x="4" y="4" width="7" height="7" rx="2" />
@@ -32,11 +34,10 @@ const REITER: Record<Reiter, { label: string; icon: React.JSX.Element }> = {
       </>
     ),
   },
-  spielen: { label: 'Start', icon: <path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" /> },
-  blatt: { label: 'Sammlung', icon: <path d="M5 7l7-3 7 3v10l-7 3-7-3z M5 7l7 3 7-3M12 10v10" /> },
-  clan: { label: 'Clan', icon: <path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z" /> },
+  spielen: { icon: <path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" /> },
+  blatt: { icon: <path d="M5 7l7-3 7 3v10l-7 3-7-3z M5 7l7 3 7-3M12 10v10" /> },
+  clan: { icon: <path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z" /> },
   profil: {
-    label: 'Profil',
     icon: (
       <>
         <circle cx="12" cy="8" r="4" />
@@ -103,7 +104,7 @@ export function NeuerRahmen<T extends Reiter>({
   const kopf = (
     <>
       <header className="hb-kopf">
-        <button type="button" className="hb-spieler" onClick={() => onTab('profil' as T)} aria-label={`${me.displayName}, Stufe ${me.level.stufe}, zum Profil`}>
+        <button type="button" className="hb-spieler" onClick={() => onTab('profil' as T)} aria-label={tf('rahmen.spieler.aria', { name: me.displayName, stufe: me.level.stufe })}>
           {me.avatarUrl ? (
             <img className="hb-ava" src={serverAdresse(me.avatarUrl)} alt="" draggable={false} />
           ) : (
@@ -113,28 +114,28 @@ export function NeuerRahmen<T extends Reiter>({
           )}
           <span className="hb-wer">
             <strong>{me.displayName}</strong>
-            <span>Stufe {me.level.stufe}</span>
+            <span>{tf('rahmen.stufe', { stufe: me.level.stufe })}</span>
             <span className="hb-balken is-xp" aria-hidden="true">
               <span style={{ width: `${Math.min(100, Math.round((me.level.imLevel / Math.max(1, me.level.fuerLevel)) * 100))}%` }} />
             </span>
           </span>
         </button>
         <div className="hb-geld">
-          <span className="hb-pill is-pk" aria-label={`${trophies} Trophäen`}>
+          <span className="hb-pill is-pk" aria-label={tf('rahmen.trophaeen', { n: trophies })}>
             <img src="/hub/symbol-pokal.webp" alt="" />
             {zahl(trophies)}
           </span>
           {[
-            { wert: me.coins, bild: '/hub/symbol-muenze.webp', name: 'Münzen' },
-            ...(mitEdelsteinen() ? [{ wert: me.gems, bild: '/hub/symbol-edelstein.webp', name: 'Edelsteine' }] : []),
+            { wert: me.coins, bild: '/hub/symbol-muenze.webp', name: 'muenzen' },
+            ...(mitEdelsteinen() ? [{ wert: me.gems, bild: '/hub/symbol-edelstein.webp', name: 'edelsteine' }] : []),
           ].map(({ wert, bild, name }) =>
             zumShop ? (
-              <button type="button" key={name} className="hb-pill" onClick={zumShop} aria-label={`${wert} ${name}, zum Shop`}>
+              <button type="button" key={name} className="hb-pill" onClick={zumShop} aria-label={tf(`rahmen.${name}.zumShop`, { n: wert })}>
                 <img src={bild} alt="" />
                 {zahl(wert)}
               </button>
             ) : (
-              <span key={name} className="hb-pill" aria-label={`${wert} ${name}`}>
+              <span key={name} className="hb-pill" aria-label={tf(`rahmen.${name}`, { n: wert })}>
                 <img src={bild} alt="" />
                 {zahl(wert)}
               </span>
@@ -150,7 +151,7 @@ export function NeuerRahmen<T extends Reiter>({
       {online !== null && online > 0 && (
         <div className="hb-online">
           <span className="hb-punkt" aria-hidden="true" />
-          {online.toLocaleString('de-DE')} Spieler gerade am Tisch
+          {tf('rahmen.online', { n: online.toLocaleString('de-DE') })}
         </div>
       )}
     </>
@@ -177,9 +178,10 @@ export function NeuerRahmen<T extends Reiter>({
         </div>
       </div>
 
-      <nav className="hb-tabs" aria-label="Bereiche">
+      <nav className="hb-tabs" aria-label={t('rahmen.bereiche')}>
         {tabFolge.map((r) => {
-          const { label, icon } = REITER[r];
+          const { icon } = REITER[r];
+          const label = t(`rahmen.reiter.${r}`);
           const haupt = r === 'spielen';
           // Punkt am Profil: Geburtstagsgeschenk. Punkt am Start: unter „Heute"
           // oder auf dem Trophäenweg liegt etwas bereit — beides erreicht man
@@ -192,7 +194,13 @@ export function NeuerRahmen<T extends Reiter>({
               key={r}
               className={`hb-tab${haupt ? ' is-haupt' : ''}${tab === r ? ' is-an' : ''}`}
               aria-current={tab === r ? 'page' : undefined}
-              aria-label={punkt ? (haupt ? `${label}, ${bereit} bereit` : `${label}, Geschenk liegt bereit`) : label}
+              aria-label={
+                punkt
+                  ? haupt
+                    ? tf('rahmen.reiter.bereit', { reiter: label, n: bereit })
+                    : tf('rahmen.reiter.geschenk', { reiter: label })
+                  : label
+              }
               onClick={() => {
                 spiele('tipp');
                 onTab(r);

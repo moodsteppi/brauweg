@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 import { inApp } from '../laufzeit';
 import { kannAppleNativ } from './apple-nativ';
 import { AnbieterKnoepfe, type AnbieterErgebnis } from './AnbieterKnoepfe';
@@ -58,15 +59,15 @@ export function Anmeldearten(): React.JSX.Element | null {
 
   const zeigeFehler = (err: unknown): void => {
     setMeldung(null);
-    setFehler(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+    setFehler(err instanceof ApiError ? t(err.messageKey) : t('anmeldung.verbindungFehlgeschlagen'));
   };
 
   const verknuepft = (ergebnis: AnbieterErgebnis): void => {
     setFehler(null);
     setMeldung(
       ergebnis.gesichert
-        ? `Dein Konto ist gesichert. Ab jetzt meldest du dich mit ${NAME[ergebnis.anbieter]} an.`
-        : `${NAME[ergebnis.anbieter]} ist verknüpft.`,
+        ? tf('anmeldung.arten.gesichert', { anbieter: NAME[ergebnis.anbieter] })
+        : tf('anmeldung.arten.verknuepft', { anbieter: NAME[ergebnis.anbieter] }),
     );
     void laden();
   };
@@ -77,7 +78,7 @@ export function Anmeldearten(): React.JSX.Element | null {
     setMeldung(null);
     try {
       await api.trenneAnbieter(anbieter);
-      setMeldung(`${NAME[anbieter]} ist getrennt.`);
+      setMeldung(tf('anmeldung.arten.getrennt', { anbieter: NAME[anbieter] }));
       await laden();
     } catch (err) {
       zeigeFehler(err);
@@ -95,37 +96,34 @@ export function Anmeldearten(): React.JSX.Element | null {
   const wege = stand.anbieter.length + (stand.passwort ? 1 : 0);
 
   return (
-    <section className="anbieter-arten" aria-label="Anmeldung">
-      <h3>Anmeldung</h3>
+    <section className="anbieter-arten" aria-label={t('anmeldung.arten.titel')}>
+      <h3>{t('anmeldung.arten.titel')}</h3>
 
       {stand.gast ? (
         <>
-          <p className="muted">
-            Du spielst als Gast. Verknüpfe Apple oder Google, dann kommst du auch nach dem
-            Abmelden wieder an dieses Konto.
-          </p>
+          <p className="muted">{t('anmeldung.arten.gast')}</p>
           {/* Aus dem Gast wird ein richtiges Konto — dieselbe Altersgrenze wie
               beim Registrieren. Erst fragen, dann den Anbieter-Dialog: Die
               Antwort des Anbieters laesst sich nur einmal einloesen. */}
           <label>
-            Geburtstag
+            {t('anmeldung.geburtstag')}
             <input
               type="date"
               value={geburtstag}
               onChange={(e) => setGeburtstag(e.target.value)}
               max={new Date().toISOString().slice(0, 10)}
             />
-            <span className="muted">Mindestens 18 Jahre. Für Countdown und Belohnung.</span>
+            <span className="muted">{t('anmeldung.mindestalter')}</span>
           </label>
         </>
       ) : (
         <div className="anbieter-arten-zeile">
           <div>
-            <strong>E-Mail und Passwort</strong>
+            <strong>{t('anmeldung.arten.mailPasswort')}</strong>
             <span className="muted">
               {stand.passwort
                 ? stand.email
-                : 'Kein Passwort gesetzt - über „Passwort vergessen“ legst du eins an.'}
+                : t('anmeldung.arten.keinPasswort')}
             </span>
           </div>
         </div>
@@ -144,7 +142,7 @@ export function Anmeldearten(): React.JSX.Element | null {
               disabled={busy}
               onClick={() => void trennen(bindung.anbieter)}
             >
-              Trennen
+              {t('anmeldung.arten.trennen')}
             </button>
           )}
         </div>

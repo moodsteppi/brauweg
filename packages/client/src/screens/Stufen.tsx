@@ -15,6 +15,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
 
 import { api } from '../api';
+import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 import { Schliessen } from './HbBlatt';
 
 interface Stufe {
@@ -55,15 +57,14 @@ export function Stufenbalken({
 }): React.JSX.Element {
   const anteil = Math.min(100, Math.round((imLevel / Math.max(1, fuerLevel)) * 100));
   const fehlt = Math.max(0, fuerLevel - imLevel);
+  const aria = tf('stufen.aria', { stufe, fehlt, naechste: stufe + 1 });
 
   if (neu) {
     const neuInhalt = (
       <>
         <span className="hb-stufenbalken-kopf">
-          <strong>Stufe {stufe}</strong>
-          <small>
-            noch {fehlt} XP bis Stufe {stufe + 1}
-          </small>
+          <strong>{tf('stufen.stufe', { stufe })}</strong>
+          <small>{tf('stufen.fehlt', { fehlt, naechste: stufe + 1 })}</small>
         </span>
         <span className="hb-balken" aria-hidden="true">
           <span style={{ width: `${anteil}%` }} />
@@ -84,7 +85,7 @@ export function Stufenbalken({
         type="button"
         className="hb-karte hb-stufenbalken is-knopf"
         onClick={onClick}
-        aria-label={`Stufe ${stufe}, noch ${fehlt} Punkte bis Stufe ${stufe + 1}. Leiter ansehen.`}
+        aria-label={aria}
       >
         {neuInhalt}
       </button>
@@ -94,10 +95,8 @@ export function Stufenbalken({
   const inhalt = (
     <>
       <span className="stufe-kopf">
-        <strong>Stufe {stufe}</strong>
-        <span className="muted">
-          noch {fehlt} XP bis Stufe {stufe + 1}
-        </span>
+        <strong>{tf('stufen.stufe', { stufe })}</strong>
+        <span className="muted">{tf('stufen.fehlt', { fehlt, naechste: stufe + 1 })}</span>
       </span>
       <span className="stufe-balken" aria-hidden="true">
         <span style={{ width: `${anteil}%` }} />
@@ -113,7 +112,7 @@ export function Stufenbalken({
     <button
       className="stufe-block stufe-block--knopf"
       onClick={onClick}
-      aria-label={`Stufe ${stufe}, noch ${fehlt} Punkte bis Stufe ${stufe + 1}. Leiter ansehen.`}
+      aria-label={aria}
     >
       {inhalt}
     </button>
@@ -157,23 +156,20 @@ export function Stufenleiter({
 
   if (neu) {
     return (
-      <div className="hb-voll hb-stufenleiter" role="dialog" aria-modal="true" aria-label="Stufenleiter">
+      <div className="hb-voll hb-stufenleiter" role="dialog" aria-modal="true" aria-label={t('stufen.leiter')}>
         <header className="hb-voll-kopf">
           <Schliessen onClick={onClose} />
           <div className="hb-voll-titel">
-            <h1>Stufen</h1>
-            <span>{daten ? `Stufe ${daten.stufe} · ${daten.xp.toLocaleString('de-DE')} XP` : 'Wird geladen…'}</span>
+            <h1>{t('stufen.titel')}</h1>
+            <span>{daten ? tf('stufen.stand', { stufe: daten.stufe, xp: daten.xp.toLocaleString('de-DE') }) : t('stufen.laden')}</span>
           </div>
         </header>
         <div className="hb-voll-rolle" ref={rolle}>
-          {fehler && <p className="hb-fehler">Die Stufen ließen sich nicht laden.</p>}
+          {fehler && <p className="hb-fehler">{t('stufen.fehler')}</p>}
           {daten && (
             <>
               <Stufenbalken neu stufe={daten.stufe} imLevel={daten.imLevel} fuerLevel={daten.fuerLevel} />
-              <p className="hb-klein hb-ohne-rand">
-                Jede gelegte Karte gibt einen Punkt. Wer am Ende Trophäen gewinnt, bekommt das
-                Doppelte. Die Stufen werden nach oben hin bewusst träger.
-              </p>
+              <p className="hb-klein hb-ohne-rand">{t('stufen.hinweis')}</p>
               <ol className="hb-liste">
                 {daten.leiter.map((s) => (
                   <li
@@ -182,12 +178,12 @@ export function Stufenleiter({
                   >
                     <span className="hb-stufe-marke">{s.stufe}</span>
                     <span className="hb-mg-name">
-                      <strong>Stufe {s.stufe}</strong>
+                      <strong>{tf('stufen.stufe', { stufe: s.stufe })}</strong>
                       <small className="is-leise">
-                        ab {s.ab.toLocaleString('de-DE')} XP · kostet {s.kosten.toLocaleString('de-DE')}
+                        {tf('stufen.zeile', { ab: s.ab.toLocaleString('de-DE'), kosten: s.kosten.toLocaleString('de-DE') })}
                       </small>
                     </span>
-                    {s.aktuell && <span className="hb-stufe-hier">du bist hier</span>}
+                    {s.aktuell && <span className="hb-stufe-hier">{t('stufen.hier')}</span>}
                   </li>
                 ))}
               </ol>
@@ -202,15 +198,15 @@ export function Stufenleiter({
     <div className="pfad-voll">
       <header className="pfad-voll-kopf">
         <button className="hub-zurueck" onClick={onClose} type="button">
-          ← Zurück
+          {t('stufen.zurueck')}
         </button>
         {daten && (
-          <span className="pfad-voll-stand">Stufe {daten.stufe} · {daten.xp} XP</span>
+          <span className="pfad-voll-stand">{tf('stufen.stand', { stufe: daten.stufe, xp: daten.xp })}</span>
         )}
       </header>
 
       <div className="pfad-voll-rolle stufe-rolle" ref={rolle}>
-        {fehler && <p className="error">Die Stufen ließen sich nicht laden.</p>}
+        {fehler && <p className="error">{t('stufen.fehler')}</p>}
         {!daten && !fehler && <Ladekreis />}
 
         {daten && (
@@ -221,10 +217,7 @@ export function Stufenleiter({
               fuerLevel={daten.fuerLevel}
             />
 
-            <p className="stufe-hinweis muted">
-              Jede gelegte Karte gibt einen Punkt. Wer am Ende Trophäen gewinnt, bekommt das
-              Doppelte. Die Stufen werden nach oben hin bewusst träger.
-            </p>
+            <p className="stufe-hinweis muted">{t('stufen.hinweis')}</p>
 
             <ol className="stufe-liste">
               {daten.leiter.map((s) => (
@@ -234,12 +227,10 @@ export function Stufenleiter({
                 >
                   <span className="stufe-marke">{s.stufe}</span>
                   <span className="stufe-text">
-                    <strong>Stufe {s.stufe}</strong>
-                    <span className="muted">
-                      ab {s.ab} XP · kostet {s.kosten}
-                    </span>
+                    <strong>{tf('stufen.stufe', { stufe: s.stufe })}</strong>
+                    <span className="muted">{tf('stufen.zeile', { ab: s.ab, kosten: s.kosten })}</span>
                   </span>
-                  {s.aktuell && <span className="stufe-hier">du bist hier</span>}
+                  {s.aktuell && <span className="stufe-hier">{t('stufen.hier')}</span>}
                 </li>
               ))}
             </ol>
