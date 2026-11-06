@@ -92,7 +92,7 @@ export default {
   'brochess.wahl.anleitung': 'Choose your secret queen: tap one of your pieces, then confirm.',
   'brochess.wahl.warten': '{name} is still choosing a secret queen …',
   'brochess.wahl.erstAntippen': 'Tap a piece first',
-  'brochess.wahl.bestaetigen': '{figur} on {feld} as secret queen',
+  'brochess.wahl.bestaetigen': 'Make the {figur} on {feld} your secret queen',
 
   'brochess.regel.A.kurz': 'Rule A',
   'brochess.regel.A.satz': 'A hidden queen gives no check – if you leave your king within its reach, you lose it.',

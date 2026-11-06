@@ -140,6 +140,10 @@ describe('BroChess auf Englisch', () => {
     expect(tf('brochess.figurAufFeld.b.q', { feld: 'd8' })).toBe('d8, schwarze Dame');
     setzeSprachwahl('en');
     expect(tf('brochess.figurAufFeld.w.q', { feld: 'd1' })).toBe('d1, white queen');
+    // Der Figurenname steht klein in der Mitte, nicht am Satzanfang.
+    expect(tf('brochess.wahl.bestaetigen', { figur: t('brochess.figur.n'), feld: 'g1' })).toBe(
+      'Make the knight on g1 your secret queen',
+    );
   });
 
   it('lässt keinen Schlüssel auf Deutsch zurückfallen', () => {
