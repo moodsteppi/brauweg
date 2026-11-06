@@ -82,7 +82,10 @@ export interface Config {
    * Bei Apple eingetragene Return-URL (APPLE_REDIRECT_URI). Ohne Angabe
    * `${PUBLIC_URL}/api/auth/apple/rueckweg` — Apple verlangt sie auch im
    * Popup-Modus und schickt die Antwort an ihre Herkunft, sie muss also zur
-   * Adresse passen, unter der die Seite laeuft.
+   * Adresse passen, unter der die Seite laeuft. Laeuft sie unter mehreren
+   * Domains (brauweg-spielen.de und broweggames.de), nennt die Variable je
+   * Domain eine URL, durch Komma getrennt; `/api/auth/apple/config` waehlt
+   * die zur Anfrage passende (siehe `waehleAppleRueckweg`).
    */
   readonly appleRedirectUri: string | null;
   /**

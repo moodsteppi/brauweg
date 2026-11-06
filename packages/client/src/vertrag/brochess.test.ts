@@ -1,13 +1,22 @@
 import {
   type BroChessAufgabe as ModulAufgabe,
   type BroChessSicht as ModulSicht,
+  type BroChessWahl as ModulWahl,
   type BroChessZug as ModulZug,
   brochess,
   pruefeRegeln,
 } from '@brauweg/game-brochess';
 import { describe, expect, it } from 'vitest';
 
-import type { BroChessAufgabe, BroChessSicht, BroChessZug } from '../minispiele/brochess/sicht';
+import { type Spielart, spielartRegeln, trenneAktionen } from '../minispiele/brochess/geheim';
+import type {
+  BroChessAufgabe,
+  BroChessSicht,
+  BroChessWahl,
+  BroChessZug,
+  GeheimeDameSicht,
+  SecretDameSicht,
+} from '../minispiele/brochess/sicht';
 import { ZEITKONTROLLEN, regelnFuer } from '../minispiele/brochess/zeit';
 import {
   type Beweglich,
@@ -46,6 +55,14 @@ type _zugPasst = PasstAuf<BroChessZug, Beweglich<ModulZug>>;
 type _keinZugfeldNurImClient = Leer<Exclude<keyof BroChessZug, keyof ModulZug>>;
 /** Aufgeben baut der Bildschirm selbst — es steht nicht in `legalActions`. */
 type _aufgabePasst = PasstAuf<BroChessAufgabe, Beweglich<ModulAufgabe>>;
+/** Die Wahl der geheimen Dame steht in `legalActions`; der Bildschirm liest `feld`. */
+type _wahlPasst = PasstAuf<BroChessWahl, Beweglich<ModulWahl>>;
+type _keinWahlfeldNurImClient = Leer<Exclude<keyof BroChessWahl, keyof ModulWahl>>;
+type ModulSecretDame = NonNullable<EchteSicht['secretDame']>;
+type _keinSecretDameFeldNurImClient = Leer<Exclude<keyof SecretDameSicht, keyof ModulSecretDame>>;
+type _keinDamenfeldNurImClient = Leer<
+  Exclude<keyof GeheimeDameSicht, keyof NonNullable<ModulSecretDame['meine']>>
+>;
 
 // ---------------------------------------------------------------------------
 // Beim Prüfen: Liefert eine echte Partie die Felder auch wirklich?
@@ -66,6 +83,7 @@ const FELDER = [
   'geschlagen',
   'vorsprung',
   'vorab',
+  'secretDame',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof BroChessSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof BroChessSicht>>;
@@ -96,5 +114,73 @@ describe('Vertrag BroChess: Zeitauswahl', () => {
     for (const z of ZEITKONTROLLEN) {
       expect(pruefeRegeln({ tableSize: 2, rounds: 1, ...regelnFuer(z) }, 2, 1), z.id).toEqual([]);
     }
+  });
+});
+
+describe('Vertrag BroChess: Secret Dame', () => {
+  /*
+   * Der Bot kann Secret Dame noch nicht (`botAction` wirft), darum spielt
+   * hier kein `felderEinerPartie`, sondern eine Handvoll Aktionen von Hand —
+   * jede aus `legalActions`, wie der Bildschirm sie auch nimmt.
+   */
+  const SECRET_DAME = ['regel', 'wahlLaeuft', 'gewaehlt', 'meine', 'bekannt', 'ereignisse'] as const;
+  type _secretListe = Leer<Exclude<keyof SecretDameSicht, (typeof SECRET_DAME)[number]>>;
+
+  it('jede angebotene Spielart nimmt das Modul auch an', () => {
+    const arten: Spielart[] = [
+      { modus: 'normal', regel: 'A' },
+      { modus: 'secretDame', regel: 'A' },
+      { modus: 'secretDame', regel: 'B' },
+    ];
+    for (const art of arten) {
+      expect(pruefeRegeln({ tableSize: 2, rounds: 1, ...spielartRegeln(art) }, 2, 1), JSON.stringify(art)).toEqual(
+        [],
+      );
+    }
+    // Normal schickt nichts mit: derselbe Tisch wie vor dem Modus.
+    expect(spielartRegeln({ modus: 'normal', regel: 'B' })).toEqual({});
+  });
+
+  it('liefert Wahl, Sicht und Aufdecken mit genau den Feldern, die der Bildschirm liest', () => {
+    let partie = brochess.createParty({
+      config: { modus: 'secretDame', schachDurchVerdeckte: 'A' },
+      seats: 2,
+      rounds: 1,
+      seed: 0,
+    });
+    const sicht = (sitz: number): BroChessSicht => brochess.viewFor(partie, sitz) as unknown as BroChessSicht;
+    const weiss = sicht(0).weissSitz;
+    const schwarz = 1 - weiss;
+
+    // Waehrend der Wahl: nur Wahl-Aktionen, beide Sitze gleichzeitig.
+    for (const sitz of [weiss, schwarz]) {
+      const { zuege, wahl } = trenneAktionen(brochess.legalActions(partie, sitz));
+      expect(zuege).toEqual([]);
+      expect(wahl).toHaveLength(15);
+      expect(Object.keys(sicht(sitz).secretDame ?? {}).sort()).toEqual([...SECRET_DAME].sort());
+    }
+    partie = brochess.act(partie, weiss, { type: 'wahl', feld: 'g1' });
+    partie = brochess.act(partie, schwarz, { type: 'wahl', feld: 'b8' });
+    expect(sicht(weiss).secretDame?.meine).toEqual({ zustand: 'verdeckt', feld: 'g1', grundfigur: 'n' });
+    // Der Gegner sieht nicht, was gewaehlt wurde — nur, dass.
+    expect(sicht(schwarz).secretDame?.bekannt.w).toBeNull();
+
+    // 1.e4 e5 2.Nf3 Nc6 3.Nf3xf7 — der Springer zieht wie eine Dame.
+    const zug = (sitz: number, von: string, nach: string): void => {
+      const angebot = trenneAktionen(brochess.legalActions(partie, sitz)).zuege;
+      const passt = angebot.find((z) => z.von === von && z.nach === nach);
+      expect(passt, `${von}-${nach}`).toBeDefined();
+      partie = brochess.act(partie, sitz, passt!);
+    };
+    zug(weiss, 'e2', 'e4');
+    zug(schwarz, 'e7', 'e5');
+    zug(weiss, 'g1', 'f3');
+    zug(schwarz, 'b8', 'c6');
+    zug(weiss, 'f3', 'f7');
+
+    const gegner = sicht(schwarz).secretDame!;
+    expect(gegner.bekannt.w).toEqual({ zustand: 'aufgedeckt', feld: 'f7', grundfigur: 'n' });
+    expect(gegner.ereignisse).toEqual([{ art: 'aufgedeckt', farbe: 'w', feld: 'f7', grundfigur: 'n', halbzug: 5 }]);
+    expect(Object.keys(gegner.bekannt.w!).sort()).toEqual(['feld', 'grundfigur', 'zustand']);
   });
 });

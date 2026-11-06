@@ -50,6 +50,45 @@ export interface BroChessSicht {
   vorsprung: number;
   /** Ziele fuer einen Vorab-Zug, nur solange man NICHT am Zug ist. */
   vorab: Record<string, string[]>;
+  /** Modus 'secretDame', sonst null (normaler Modus). */
+  secretDame: SecretDameSicht | null;
+}
+
+/** Muss zu `SchachDurchVerdeckte` in packages/game-brochess/src/regeln.ts passen. */
+export type SecretDameRegel = 'A' | 'B';
+
+/** Muss zu `GeheimZustand` in packages/game-brochess/src/geheim.ts passen. */
+export type GeheimZustand = 'offen' | 'verdeckt' | 'aufgedeckt' | 'geschlagen' | 'erloschen';
+
+/** Eine geheime Dame, soweit der Betrachter sie kennen darf. */
+export interface GeheimeDameSicht {
+  zustand: GeheimZustand;
+  /** Aktuelles Feld, null wenn sie nicht mehr auf dem Brett steht. */
+  feld: string | null;
+  /** Grundfigur in Kleinbuchstaben ('p', 'n', 'b', 'r', 'q'). */
+  grundfigur: string;
+}
+
+/** Was mit den geheimen Damen geschah; `halbzug` zaehlt wie `verlauf` ab 1. */
+export type GeheimEreignis =
+  | { art: 'aufgedeckt'; farbe: Farbe; feld: string; grundfigur: string; halbzug: number }
+  | { art: 'verdecktGeschlagen'; farbe: Farbe; feld: string; grundfigur: string; halbzug: number }
+  | { art: 'umgewandelt'; farbe: Farbe; feld: string; grundfigur: 'p'; verdeckt: boolean; halbzug: number }
+  /** Regel A: Die verdeckte Dame von `farbe` hat den König auf `feld` geschlagen. */
+  | { art: 'koenigGeschlagen'; farbe: Farbe; feld: string; halbzug: number };
+
+/** Secret Dame aus der Sicht, siehe `SecretDameSicht` im Modul. */
+export interface SecretDameSicht {
+  regel: SecretDameRegel;
+  /** Laeuft noch die Wahl? Dann stehen Wahl-Aktionen statt Zuegen in `legalActions`. */
+  wahlLaeuft: boolean;
+  /** Wer schon gewaehlt hat — ob, nicht was. */
+  gewaehlt: { w: boolean; b: boolean };
+  /** Die eigene geheime Dame; null vor der eigenen Wahl und fuer Zuschauer. */
+  meine: GeheimeDameSicht | null;
+  /** Geheime Damen, die beide kennen (aufgedeckt oder verdeckt geschlagen). */
+  bekannt: { w: GeheimeDameSicht | null; b: GeheimeDameSicht | null };
+  ereignisse: GeheimEreignis[];
 }
 
 /**
@@ -62,6 +101,12 @@ export interface BroChessZug {
   von: string;
   nach: string;
   umwandlung?: Umwandlung;
+}
+
+/** Die Wahl der geheimen Dame; steht waehrend der Wahl in `legalActions`. */
+export interface BroChessWahl {
+  type: 'wahl';
+  feld: string;
 }
 
 /** Aufgeben — geht jederzeit und steht nicht in `legalActions`. */
