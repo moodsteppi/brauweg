@@ -9,6 +9,11 @@ vi.mock('../api', async () => {
 
 import { ApiError } from '../api';
 import { CodeEinloesen } from './CodeEinloesen';
+import { setzeSprachwahl } from '../i18n';
+
+// Der Bildschirm ist noch deutsch, die Zahlen folgen aber schon der Sprache —
+// und jsdom meldet en-US. Ohne feste Wahl stuende hier „2,500 Münzen".
+setzeSprachwahl('de');
 
 describe('CodeEinloesen', () => {
   beforeEach(() => vi.clearAllMocks());

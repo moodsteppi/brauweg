@@ -2,7 +2,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { api, type Shop } from '../api';
 import { SammlungNeu } from './SammlungNeu';
+import { setzeSprachwahl } from '../i18n';
 import { probeKonto } from './probe-konto';
+
+// Der Bildschirm ist noch deutsch, die Zahlen folgen aber schon der Sprache —
+// und jsdom meldet en-US. Ohne feste Wahl stuende hier „2,500 Münzen".
+setzeSprachwahl('de');
 let shop: Shop;
 beforeEach(() => {
   shop = { paesse: [], muenzpakete: [], edelsteinpakete: [], jetonpakete: [], truhen: [], kurs: 15, regale: [], tischware: [
