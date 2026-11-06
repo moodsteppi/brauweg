@@ -31,7 +31,27 @@ import { Mememory } from '../../screens/Mememory';
 // Vor dem ersten Zeichnen: Die Bildschirme lesen die Sprache beim Zeichnen.
 const suche = new URLSearchParams(location.search);
 const sprache = suche.get('sprache');
-if (istSprache(sprache)) setzeSprachwahl(sprache);
+if (istSprache(sprache)) {
+  // `setzeSprachwahl` merkt sich die Wahl im Geraet (`brauweg.sprache`, siehe
+  // `i18n/index.ts`). Die Probe laeuft auf derselben Herkunft wie die App —
+  // ohne das Zuruecklegen stellte ein Aufruf mit `?sprache=en` die App im
+  // selben Browser dauerhaft auf Englisch um. Die Wahl gilt deshalb nur fuer
+  // diese Seite, der gespeicherte Wert bleibt, wie er war.
+  const SPEICHER = 'brauweg.sprache';
+  let vorher: string | null = null;
+  try {
+    vorher = localStorage.getItem(SPEICHER);
+  } catch {
+    // Gesperrter Speicher: dann gibt es auch nichts zu verstellen.
+  }
+  setzeSprachwahl(sprache);
+  try {
+    if (vorher === null) localStorage.removeItem(SPEICHER);
+    else localStorage.setItem(SPEICHER, vorher);
+  } catch {
+    // s. o.
+  }
+}
 
 const zurueck = (): void => {};
 

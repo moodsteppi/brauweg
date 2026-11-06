@@ -19,7 +19,7 @@ import { SpielAbschnitt, SpielRahmen } from '../../screens/SpielEinstieg';
 import { Kreuz } from '../../zeichen';
 import { AKZENT } from './akzent';
 import { t } from '../../i18n';
-import { tf } from '../../i18n/einsetzen';
+import { tf, tn } from '../../i18n/einsetzen';
 import { Stufenregler, stufenSatz, type Stufe } from './Stufenregler';
 
 /**
@@ -52,7 +52,7 @@ export function KiMatch({
   const unter =
     gegner.length === 1
       ? t('mememory.ki.unterEins')
-      : tf('mememory.ki.unterMehr', { n: gegner.length });
+      : tn('mememory.ki.unterMehr', gegner.length);
 
   return (
     <SpielRahmen

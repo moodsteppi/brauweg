@@ -131,10 +131,10 @@ export function MehrSeite({
               </svg>
             </span>
             <span className="mm-zeile-text">
-              <b>Freunde</b>
-              <em>Direkt zusammen spielen</em>
+              <b>{t('mememory.mehrSeite.freunde')}</b>
+              <em>{t('mememory.mehrSeite.freundeText')}</em>
             </span>
-            <span className="mm-zeile-bald">bald</span>
+            <span className="mm-zeile-bald">{t('mememory.mehrSeite.bald')}</span>
           </button>
         </li>
       </ul>

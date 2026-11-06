@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } f
 
 import { api, type Suchstand } from '../api';
 import { t } from '../i18n';
-import { tf } from '../i18n/einsetzen';
+import { tf, tn } from '../i18n/einsetzen';
 import { motivBildPfad } from '../minispiele/mememory/bildpfad';
 import { Ecken } from '../minispiele/mememory/Ecken';
 import { eckeVon, farbeVon, sitzeAus, type Ecke } from '../minispiele/mememory/eckenplan';
@@ -1257,7 +1257,7 @@ export function Mememory({
   }
 
   /** Unter dem Knopf im Fuss: wie viele gerade in Mememory sind. */
-  const spielerZeile = <p className="hb-klein">{tf('mememory.spielerGerade', { n: aktiv ?? '…' })}</p>;
+  const spielerZeile = <p className="hb-klein">{aktiv === null ? t('mememory.spielerUnbekannt') : tn('mememory.spielerGerade', aktiv)}</p>;
 
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
@@ -1286,7 +1286,7 @@ export function Mememory({
           <p className="spe-text">
             {gefunden === 1
               ? t('mememory.suche.allein')
-              : tf('mememory.suche.gefunden', { n: gefunden })}
+              : tn('mememory.suche.gefunden', gefunden)}
           </p>
           <div className="spe-lauf" aria-hidden="true">
             <span />
@@ -1444,7 +1444,7 @@ export function Mememory({
                 freie Plaetze bleibt nur das Abbrechen. */}
             {kannFuellen && (
               <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={fuelleAuf}>
-                {tf('mememory.warten.auffuellen', { n: freiePlaetze.length })}
+                {tn('mememory.warten.auffuellen', freiePlaetze.length)}
               </button>
             )}
             <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
@@ -1789,7 +1789,7 @@ export function Mememory({
               className="mm-reaktion mm-reaktion-motiv"
               type="button"
               onClick={() => wirfMotiv(kennung)}
-              aria-label={tf('mememory.tisch.werfen', { name: motivNamen[kennung] ?? 'Meme' })}
+              aria-label={tf('mememory.tisch.werfen', { name: motivNamen[kennung] ?? t('mememory.tisch.meme') })}
               /*
                * Angezeigt, aber nicht gesperrt: `disabled` naehme dem Knopf
                * den Tastaturfokus mitten im Tippen, und der Browser haette
