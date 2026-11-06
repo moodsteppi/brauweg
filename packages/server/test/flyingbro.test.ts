@@ -263,7 +263,9 @@ test('Kauf: nur mit Meilen, Preise aus dem Katalog, Zierde einmal — das Hub-Gu
   await assert.rejects(() => flyingbroKauf(c.db, id, 'fernrohr'), mitCode('flyingbroZuWenigMeilen', 409));
   await assert.rejects(() => flyingbroKauf(c.db, id, 'goldbarren'), mitCode('flyingbroArtikelUnbekannt', 400));
 
-  // Genug Meilen fuer ein Fernrohr und ein Schleuderband, direkt gesetzt.
+  // Genug Meilen fuer ein Fernrohr und ein Schleuderband, direkt gesetzt. Die
+  // abgelehnten Kaeufe oben haben die Zeile mit zurueckgerollt — erst anlegen.
+  await flyingbroStand(c.db, id);
   await c.db
     .update(s.flyingbroStand)
     .set({ meilen: fernrohr.preis + band.preis })
