@@ -15,6 +15,7 @@ import { eq } from 'drizzle-orm';
 import {
   FLYINGBRO_MAX_PRO_LEVEL,
   FLYINGBRO_MAX_PRO_TAG,
+  FLYINGBRO_WELT_MUENZEN,
   HILFSMITTEL_KATALOG,
   LEVELS,
   MEILEN,
@@ -221,6 +222,16 @@ test('Wiederholungen: Meilen nur fuer die ersten zehn am Tag, Muenzen nie', asyn
   // Am naechsten Berliner Tag zaehlt es wieder.
   const morgen = await spiele(c, id, T0 + TAG, { levelId: L1.id, punkte: L1.sterne[2] });
   assert.equal(morgen.meilen.summe, MEILEN.erneutGeschafft);
+});
+
+test('Kappen: die Zahlen aus der Spezifikation stehen fest — wer sie aendert, aendert die Wirtschaft', () => {
+  // Der Server rechnet mit dem Kern (@brauweg/flyingbro-kern, Workspace-Paket);
+  // diese Zahlen haelt hier ein Test fest, damit eine stille Aenderung dort auffaellt.
+  assert.equal(FLYINGBRO_MAX_PRO_LEVEL, 6);
+  assert.equal(FLYINGBRO_MAX_PRO_TAG, 40);
+  assert.equal(FLYINGBRO_WELT_MUENZEN, 50);
+  assert.equal(MEILEN.wiederholungenJeTag, 10);
+  assert.equal(MELDUNG.msJeBro, 4000);
 });
 
 test('Tageskappe: hoechstens 40 Hub-Muenzen am Tag, der Rest kommt am naechsten Tag', async (t) => {
