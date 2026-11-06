@@ -227,16 +227,20 @@ test('Tageskappe: hoechstens 40 Hub-Muenzen am Tag, der Rest kommt am naechsten 
   const { c, id } = await konto(t);
   const vorher = (await standVon(c.db, id)).coins;
 
-  // Alle zehn Level mit drei Sternen an einem Abend: 60 Muenzen Anspruch.
+  // Die ersten zehn Level (alle aus Welt 1, die Welt bleibt unvollendet) mit
+  // drei Sternen an einem Abend: 60 Muenzen Anspruch. Ein Durchspielen aller
+  // LEVELS schlosse Welten ab und brachte den Weltbonus, der ausserhalb der
+  // Tageskappe liegt und diese Zahl verfaelschte.
+  const gespielt = LEVELS.slice(0, 10);
   let gutgeschrieben = 0;
   let ab = T0;
-  for (const level of LEVELS) {
+  for (const level of gespielt) {
     const r = await spiele(c, id, ab, { levelId: level.id, punkte: level.sterne[2] });
     assert.equal(r.sterne, 3, level.id);
     gutgeschrieben += r.muenzen.gutschrift;
     ab += 60_000;
   }
-  const anspruch = LEVELS.length * FLYINGBRO_MAX_PRO_LEVEL;
+  const anspruch = gespielt.length * FLYINGBRO_MAX_PRO_LEVEL;
   assert.equal(gutgeschrieben, FLYINGBRO_MAX_PRO_TAG);
   const abends = await flyingbroStand(c.db, id, new Date(ab));
   assert.equal(abends.muenzenOffen, anspruch - FLYINGBRO_MAX_PRO_TAG);
