@@ -6,6 +6,8 @@
  * Dateien im Kreis aufeinander.
  */
 
+import { createElement, type ReactNode } from 'react';
+
 import { serverAdresse } from '../laufzeit';
 
 /** Laenge einer Chatnachricht. Muss zum Server passen (`chat.ts`). */
@@ -30,4 +32,17 @@ function zahlAus(text: string): number {
   let summe = 0;
   for (let i = 0; i < text.length; i++) summe = (summe + text.charCodeAt(i)) % 997;
   return summe;
+}
+
+/**
+ * Text mit `<b>…</b>` als Fettschrift zeichnen.
+ *
+ * Steht ein Teil eines Satzes fett, bleibt der Satz trotzdem EIN Schlüssel —
+ * in Bruchstücke zerlegt, legte er die deutsche Wortstellung über jede
+ * Sprache. Die Markierung im Wörterbuch ist deshalb Teil des Textes.
+ */
+export function mitFett(text: string, tag: 'b' | 'strong'): ReactNode[] {
+  return text
+    .split(/<b>(.*?)<\/b>/)
+    .map((teil, i) => (i % 2 === 1 ? createElement(tag, { key: i }, teil) : teil));
 }

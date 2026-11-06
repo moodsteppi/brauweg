@@ -176,7 +176,16 @@ describe('t() und Umschalten', () => {
 
   it('Rückfall je Schlüssel: fehlt er im Englischen, gilt Deutsch, sonst der Schlüssel', () => {
     setzeSprachwahl('en');
-    expect(t('error.tableFull')).toBe('Der Tisch ist voll.');
+    // Ein Schlüssel, den es (noch) nur auf Deutsch gibt — gesucht statt fest
+    // genannt: Bis zur Hub-Übersetzung stand hier `error.tableFull`, und die
+    // Probe wurde rot, sobald der Bereich `fehler` Englisch bekam. Ist alles
+    // übersetzt, gibt es keinen solchen Schlüssel mehr; dann bleibt der
+    // Rückfall auf den Schlüssel selbst.
+    const englisch = Object.assign({}, ...Object.values(en)) as Record<string, string>;
+    const nurDeutsch = Object.values(de)
+      .flatMap((woerter) => Object.entries(woerter))
+      .find(([k]) => !(k in englisch));
+    if (nurDeutsch) expect(t(nurDeutsch[0])).toBe(nurDeutsch[1]);
     expect(t('gibt.es.nicht')).toBe('gibt.es.nicht');
   });
 
@@ -190,7 +199,7 @@ describe('t() und Umschalten', () => {
   it('Automatisch folgt dem Gerät und merkt sich die Wahl im Gerät', () => {
     setzeSprachwahl('auto');
     expect(sprachwahl()).toBe('auto');
-    // jsdom meldet en-US als Gerätesprache.
+    // vitest.setup.ts stellt das Gerät auf Deutsch (jsdom selbst meldet en-US).
     expect(aktiveSprache()).toBe(erkenneSprache(navigator.languages));
     expect(localStorage.getItem('brauweg.sprache')).toBeNull();
     setzeSprachwahl('en');

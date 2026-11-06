@@ -1,5 +1,6 @@
 import type { ActiveTable, Me } from '../api';
 import { t, zahl } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { inAppSichtbar } from '../app-sichtbar';
 import { LernKarte } from '../lernen/LernKarte';
 import { BrowortKarte } from '../browort/BrowortKarte';
@@ -82,20 +83,22 @@ export function StartNeu({
         className="hb-held hb-weg"
         style={{ backgroundImage: `url(${wegBild(stufe.datei)})` }}
         onClick={onWeg}
-        aria-label={`Trophäenweg öffnen. Du bist in ${stufe.name} mit ${trophies} Trophäen.${
-          wegBereit > 0 ? ` ${belohnungen(wegBereit)} bereit.` : ''
-        }`}
+        aria-label={
+          wegBereit > 0
+            ? tn('start.weg.ariaBereit', wegBereit, { biom: stufe.name, trophaeen: trophies })
+            : tf('start.weg.aria', { biom: stufe.name, trophaeen: trophies })
+        }
       >
         <img className="hb-weg-marke" src="/hub/pinguin-marke.webp" alt="" />
         {wegBereit > 0 && (
           // Nur fürs Auge; der Vorlesetext steht im Namen des Knopfes
           // (DESIGN.md, Bereitschaftspunkt: nicht als aria-label am Kind).
           <span className="hb-weg-bereit" aria-hidden="true">
-            {belohnungen(wegBereit)}
+            {tn('start.belohnungen', wegBereit)}
           </span>
         )}
         <span className="hb-held-unten">
-          <span className="hb-label">Dein Trophäenweg · alle Spiele</span>
+          <span className="hb-label">{t('start.weg.label')}</span>
           <strong className="hb-weg-biom">{stufe.name}</strong>
           <span className="hb-weg-zeile">
             <span className="hb-pk">
@@ -104,11 +107,13 @@ export function StartNeu({
             </span>
             {naechstes ? (
               <span>
-                von {zahl(naechstes.cp)} bis {naechstes.name === 'Sternenhafen' ? 'zum' : 'nach'}{' '}
-                {naechstes.name}
+                {tf(naechstes.name === 'Sternenhafen' ? 'start.weg.bisZielZum' : 'start.weg.bisZiel', {
+                  zahl: zahl(naechstes.cp),
+                  ziel: naechstes.name,
+                })}
               </span>
             ) : (
-              <span>am Ziel des Weges</span>
+              <span>{t('start.weg.amZiel')}</span>
             )}
           </span>
           <span className="hb-balken" aria-hidden="true">
@@ -117,7 +122,7 @@ export function StartNeu({
           {trophies >= 100 && (
             <span className="hb-weg-sicher">
               <Haken />
-              Sicher ab {zahl(sicherAb(trophies))}: darunter fällst du nicht mehr
+              {tf('start.weg.sicher', { zahl: zahl(sicherAb(trophies)) })}
             </span>
           )}
         </span>
@@ -131,14 +136,14 @@ export function StartNeu({
         >
           <span className="hb-weiter-bild" style={{ backgroundImage: `url(${bannerFuer(activeTable.gameId)})` }} />
           <span className="hb-weiter-text">
-            <span className="hb-label">Weiterspielen</span>
+            <span className="hb-label">{t('start.weiter.label')}</span>
             <strong>{t(`game.${activeTable.gameId}`)}</strong>
             <span>
               {activeTable.paused
-                ? 'Pausiert · zurück an den Tisch'
+                ? t('start.weiter.pausiert')
                 : activeTable.status === 'waiting'
-                  ? 'Wartet auf Mitspieler'
-                  : 'Läuft · zurück an den Tisch'}
+                  ? t('start.weiter.wartet')
+                  : t('start.weiter.laeuft')}
             </span>
           </span>
           <span className="hb-weiter-los" aria-hidden="true">
@@ -152,15 +157,15 @@ export function StartNeu({
 
       <section className="hb-blk">
         <h2 className="hb-ab">
-          Deine Spiele
+          {t('start.spiele.titel')}
           <button type="button" className="hb-ab-mehr" onClick={onAlleSpiele}>
-            Alle ›
+            {t('start.spiele.alle')}
           </button>
         </h2>
         <div className="hb-reihe">
           {eigene.length === 0 ? (
             <button type="button" className="hb-leer" onClick={onAlleSpiele}>
-              Noch keine Partie gespielt. Such dir ein Spiel aus.
+              {t('start.spiele.leer')}
             </button>
           ) : (
             eigene.map((s) => (
@@ -181,16 +186,16 @@ export function StartNeu({
         type="button"
         className="hb-heute"
         onClick={onHeute}
-        aria-label={bereit > 0 ? `Heute: Aufgaben und Truhen, ${bereit} bereit` : 'Heute: Aufgaben und Truhen'}
+        aria-label={bereit > 0 ? tf('start.heute.ariaBereit', { n: bereit }) : t('start.heute.aria')}
       >
         <img src="/hub/truhe-holz.webp" alt="" />
         <span className="hb-heute-text">
-          <strong>Heute</strong>
-          <span>Tagesaufgaben und Truhen</span>
+          <strong>{t('start.heute.titel')}</strong>
+          <span>{t('start.heute.text')}</span>
         </span>
         {bereit > 0 && (
           <span className="hb-heute-bereit" aria-hidden="true">
-            {bereit} bereit
+            {tf('start.heute.bereit', { n: bereit })}
           </span>
         )}
         <span className="hb-pf" aria-hidden="true">
@@ -200,11 +205,6 @@ export function StartNeu({
 
     </div>
   );
-}
-
-/** „1 Belohnung", „2 Belohnungen". */
-function belohnungen(anzahl: number): string {
-  return `${anzahl} ${anzahl === 1 ? 'Belohnung' : 'Belohnungen'}`;
 }
 
 export function Haken(): React.JSX.Element {

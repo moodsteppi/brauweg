@@ -2,6 +2,7 @@ import '@fontsource/lilita-one';
 import '@fontsource-variable/nunito';
 import './hub-neu.css';
 import './spiel-einstieg.css';
+import { t } from '../i18n';
 import { bannerFuer } from './StartNeu';
 
 /**
@@ -24,7 +25,7 @@ export function SpielRahmen({
   unter,
   akzent,
   onBack,
-  zurueckText = 'Zurück',
+  zurueckText = t('einstieg.zurueck'),
   rechts,
   fuss,
   children,

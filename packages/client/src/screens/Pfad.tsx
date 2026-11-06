@@ -21,6 +21,8 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 
 import type { Getragen } from '../api';
+import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 import { Pinguin } from '../pinguin';
 import { LEERE_BEMALUNG, type Bemalung } from '../bemalung';
 
@@ -158,7 +160,7 @@ export function Trophaeenpfad({
         type="button"
         className="hub-karte hub-karte--klein"
         onClick={() => setVoll(true)}
-        aria-label={`Trophäenpfad öffnen. Du bist in ${hier.name} mit ${trophies} Trophäen.`}
+        aria-label={tf('trophaeenweg.pfad.aria', { biom: hier.name, n: trophies })}
       >
         {/* Eigener Rollbereich, auch wenn man ihn nicht mit dem Finger
             bewegen kann: Nur so begrenzt der Browser die Ansicht auf das
@@ -167,7 +169,7 @@ export function Trophaeenpfad({
           <Stapel trophies={trophies} stelle={stelle} getragen={getragen} bemalung={bemalung} />
         </div>
         <span className="pfad-lupe" aria-hidden="true">
-          {hier.name} · Pfad ansehen
+          {tf('trophaeenweg.pfad.lupe', { biom: hier.name })}
         </span>
       </button>
 
@@ -315,7 +317,7 @@ function PfadVollbild({
     <div className="pfad-voll">
       <header className="pfad-voll-kopf">
         <button className="hub-zurueck" onClick={onClose} type="button">
-          ← Zurück
+          {t('trophaeenweg.pfad.zurueck')}
         </button>
         <span className="pfad-voll-stand">
           <img src="/hub/pokal.png" alt="" aria-hidden="true" />

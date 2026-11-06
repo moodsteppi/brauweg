@@ -34,6 +34,7 @@ import { mitEdelsteinen } from '../laufzeit';
 import { Pinguin, StueckAllein, StueckBild } from '../pinguin';
 import { EdelsteinIcon, Tafel } from '../hub';
 import { t, zahl } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { HbBlatt, Schliessen } from './HbBlatt';
 import './spind.css';
 
@@ -68,9 +69,12 @@ function betragText(betrag: number, waehrung: Waehrung): string {
  * halbe Regal für gesperrt.
  */
 function preisText(stueck: RegalStueck): string {
-  if (stueck.besessen) return 'Gehört dir';
-  if (stueck.geschenk) return 'Nur zu bekommen';
-  return `${betragText(stueck.preis.coins, 'coins')} oder ${betragText(stueck.preis.gems, 'gems')}`;
+  if (stueck.besessen) return t('schrank.gehoertDir');
+  if (stueck.geschenk) return t('schrank.nurZuBekommen');
+  return tf('schrank.preisOder', {
+    muenzen: betragText(stueck.preis.coins, 'coins'),
+    edelsteine: betragText(stueck.preis.gems, 'gems'),
+  });
 }
 
 export function Kleiderschrank({
@@ -123,7 +127,7 @@ export function Kleiderschrank({
     void api
       .shop()
       .then(setShop)
-      .catch(() => setFehler('Der Kleiderschrank ließ sich nicht laden.'));
+      .catch(() => setFehler(t('schrank.fehler.laden')));
   };
   useEffect(laden, []);
 
@@ -147,7 +151,7 @@ export function Kleiderschrank({
     void api
       .wear(stueck.slot, stueck.id)
       .then(() => onGetragen())
-      .catch((err: unknown) => meldung(err, 'Das ließ sich nicht anziehen.'))
+      .catch((err: unknown) => meldung(err, t('schrank.fehler.anziehen')))
       .finally(() => setLaeuft(null));
   };
 
@@ -159,7 +163,7 @@ export function Kleiderschrank({
     void api
       .wear(slot, null)
       .then(() => onGetragen())
-      .catch((err: unknown) => meldung(err, 'Das ließ sich nicht ausziehen.'))
+      .catch((err: unknown) => meldung(err, t('schrank.fehler.ausziehen')))
       .finally(() => setLaeuft(null));
   };
 
@@ -179,7 +183,7 @@ export function Kleiderschrank({
       })
       .catch((err: unknown) => {
         setKaufen(null);
-        meldung(err, 'Der Kauf ging nicht durch.');
+        meldung(err, t('schrank.fehler.kauf'));
       })
       .finally(() => {
         setLaeuft(null);
@@ -195,12 +199,12 @@ export function Kleiderschrank({
   if (neu) {
     const edelsteine = mitEdelsteinen();
     return (
-      <div className="hb-voll hb-schrank sp" role="dialog" aria-modal="true" aria-label="Kleiderschrank">
+      <div className="hb-voll hb-schrank sp" role="dialog" aria-modal="true" aria-label={t('schrank.titel')}>
         <header className="hb-voll-kopf">
           <Schliessen onClick={onClose} />
           <div className="hb-voll-titel">
-            <h1>Dein Spind</h1>
-            <span>Dein Pinguin · für alle Spiele</span>
+            <h1>{t('schrank.deinSpind')}</h1>
+            <span>{t('schrank.untertitel')}</span>
           </div>
         </header>
 
@@ -231,12 +235,12 @@ export function Kleiderschrank({
           </div>
           <span className="sp-teppich" aria-hidden="true" />
           <div className="sp-pinguin">
-            <Pinguin getragen={gezeigt} groesse={10.5} titel="Dein Pinguin" anziehen />
+            <Pinguin getragen={gezeigt} groesse={10.5} titel={t('schrank.deinPinguin')} anziehen />
           </div>
-          {Object.keys(probe).length > 0 && <span className="hb-schrank-probe">Anprobe</span>}
+          {Object.keys(probe).length > 0 && <span className="hb-schrank-probe">{t('schrank.anprobe')}</span>}
         </div>
 
-        <nav className="sp-schubladen" aria-label="Plätze">
+        <nav className="sp-schubladen" aria-label={t('schrank.plaetze')}>
           {SLOTS.map((s) => (
             <button
               type="button"
@@ -259,17 +263,17 @@ export function Kleiderschrank({
 
         <div className="hb-voll-rolle sp-rolle">
           {fehler && <p className="hb-fehler">{fehler}</p>}
-          {!shop && !fehler && <p className="hb-laden">Wird geladen…</p>}
+          {!shop && !fehler && <p className="hb-laden">{t('schrank.laedt')}</p>}
           {regal && (
             <section className="hb-blk">
               <h2 className="hb-ab">
                 {t(`slot.${slot}`)}
                 {belegt ? (
                   <button type="button" className="hb-ab-mehr sp-ausziehen" onClick={ausziehen} disabled={laeuft !== null}>
-                    Ausziehen
+                    {t('schrank.ausziehen')}
                   </button>
                 ) : (
-                  <span className="hb-ab-zusatz">Nichts an</span>
+                  <span className="hb-ab-zusatz">{t('schrank.nichtsAn')}</span>
                 )}
               </h2>
               <div className={`hb-raster is-drei sp-faecher${AM_BUEGEL.has(slot) ? ' is-buegel' : ''}`}>
@@ -297,7 +301,7 @@ export function Kleiderschrank({
                         <StueckAllein itemId={stueck.id} slot={slot} groesse={4.6} />
                       </span>
                       <strong>{t(stueck.nameKey)}</strong>
-                      <small>{stueck.besessen ? (sitzt ? 'trägst du' : 'gehört dir') : stueck.geschenk ? 'Geschenk' : `${zahl(stueck.preis.coins)} Münzen`}</small>
+                      <small>{stueck.besessen ? (sitzt ? t('schrank.fach.traegstDu') : t('schrank.fach.gehoertDir')) : stueck.geschenk ? t('schrank.geschenk') : tn('schrank.fach.preis', stueck.preis.coins, { betrag: zahl(stueck.preis.coins) })}</small>
                       {sitzt && (
                         <span className="hb-ding-ok" aria-hidden="true">
                           ✓
@@ -320,7 +324,7 @@ export function Kleiderschrank({
         </div>
 
         {kaufen && (
-          <HbBlatt titel={t(kaufen.nameKey)} label="Kauf bestätigen" onClose={() => setKaufen(null)} klasse="is-klein">
+          <HbBlatt titel={t(kaufen.nameKey)} label={t('schrank.kaufBestaetigen')} onClose={() => setKaufen(null)} klasse="is-klein">
             <form
               className="hb-kauf-form"
               onSubmit={(e) => {
@@ -337,13 +341,13 @@ export function Kleiderschrank({
               </div>
               {/* Gold ist der eine Hauptknopf: die Münzen, die kein echtes Geld
                   gekostet haben (dieselbe Überlegung wie bei der Eingabetaste). */}
-              {edelsteine && <p className="hb-klein hb-ohne-rand hb-mitte-text">Womit bezahlen?</p>}
+              {edelsteine && <p className="hb-klein hb-ohne-rand hb-mitte-text">{t('schrank.womit')}</p>}
               {/* Ohne Edelsteine bleibt EIN Knopf — er steht dann mittig über die
                   ganze Breite statt allein in der linken Spalte (Emile, 22.10.2026). */}
               <div className={`hb-knopfreihe${edelsteine ? '' : ' is-einzeln'}`}>
                 <button type="submit" className={`hb-kn is-gold is-haupt${edelsteine ? '' : ' is-breit'}`} disabled={laeuft !== null}>
                   {kauftMit === 'coins' ? (
-                    'Kauft…'
+                    t('schrank.kauft')
                   ) : (
                     <>
                       <img className="hb-kn-bild" src="/hub/symbol-muenze.webp" alt="" draggable={false} />
@@ -360,7 +364,7 @@ export function Kleiderschrank({
                   onClick={() => jetztKaufen(kaufen, 'gems')}
                 >
                   {kauftMit === 'gems' ? (
-                    'Kauft…'
+                    t('schrank.kauft')
                   ) : (
                     <>
                       <img className="hb-kn-bild" src="/hub/symbol-edelstein.webp" alt="" draggable={false} />
@@ -371,7 +375,7 @@ export function Kleiderschrank({
                 )}
               </div>
               <button type="button" className="hb-leise-knopf" onClick={() => setKaufen(null)}>
-                Später
+                {t('schrank.spaeter')}
               </button>
             </form>
           </HbBlatt>
@@ -384,20 +388,20 @@ export function Kleiderschrank({
     <div className="pfad-voll kleiderschrank">
       <header className="pfad-voll-kopf">
         <button className="hub-zurueck" onClick={onClose} type="button">
-          ← Zurück
+          {t('schrank.zurueck')}
         </button>
-        <span className="pfad-voll-stand">Dein Pinguin</span>
+        <span className="pfad-voll-stand">{t('schrank.deinPinguin')}</span>
       </header>
 
       {/* Die Buehne bleibt stehen, nur die Liste darunter rollt. Sonst waere
           der Pinguin beim Blaettern durch die Aura nicht mehr zu sehen —
           also genau dann nicht, wenn man ihn braucht. */}
       <div className="ks-buehne">
-        <Pinguin getragen={gezeigt} groesse={11} titel="Dein Pinguin" />
-        {Object.keys(probe).length > 0 && <span className="ks-probe-marke">Anprobe</span>}
+        <Pinguin getragen={gezeigt} groesse={11} titel={t('schrank.deinPinguin')} />
+        {Object.keys(probe).length > 0 && <span className="ks-probe-marke">{t('schrank.anprobe')}</span>}
       </div>
 
-      <nav className="ks-plaetze" aria-label="Plätze">
+      <nav className="ks-plaetze" aria-label={t('schrank.plaetze')}>
         {SLOTS.map((s) => (
           <button
             key={s}
@@ -423,10 +427,10 @@ export function Kleiderschrank({
             zusatz={
               belegt ? (
                 <button className="hub-mini" onClick={ausziehen} disabled={laeuft !== null}>
-                  Ausziehen
+                  {t('schrank.ausziehen')}
                 </button>
               ) : (
-                'Nichts an'
+                t('schrank.nichtsAn')
               )
             }
           >
@@ -466,7 +470,7 @@ export function Kleiderschrank({
                       </span>
                     )}
                     {!stueck.besessen && stueck.geschenk && (
-                      <span className="front-bald-tag">Geschenk</span>
+                      <span className="front-bald-tag">{t('schrank.geschenk')}</span>
                     )}
                   </button>
                 );
@@ -494,7 +498,7 @@ export function Kleiderschrank({
             <p className="muted">
               {t(`seltenheit.${kaufen.seltenheit}`)} · {t(`slot.${kaufen.slot}`)}
             </p>
-            <p className="ks-kauf-womit muted">Womit bezahlen?</p>
+            <p className="ks-kauf-womit muted">{t('schrank.womit')}</p>
             {/*
               Zwei Knoepfe statt eines Umschalters: Ein Umschalter waere ein
               Zustand, den man erst setzt und dann bestaetigt — zwei Tipps fuer
@@ -513,7 +517,7 @@ export function Kleiderschrank({
                 disabled={laeuft !== null}
               >
                 {kauftMit === 'coins' ? (
-                  'Kauft…'
+                  t('schrank.kauft')
                 ) : (
                   <>
                     <img className="ks-kauf-icon" src="/hub/muenze.png" alt="" draggable={false} />
@@ -528,7 +532,7 @@ export function Kleiderschrank({
                 onClick={() => jetztKaufen(kaufen, 'gems')}
               >
                 {kauftMit === 'gems' ? (
-                  'Kauft…'
+                  t('schrank.kauft')
                 ) : (
                   <>
                     <EdelsteinIcon className="ks-kauf-icon" />
@@ -538,7 +542,7 @@ export function Kleiderschrank({
               </button>
             </div>
             <button type="button" className="hub-knopf hub-knopf--a" onClick={() => setKaufen(null)}>
-              Später
+              {t('schrank.spaeter')}
             </button>
           </form>
         </div>

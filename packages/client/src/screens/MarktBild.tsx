@@ -17,13 +17,14 @@ export function MarktBild({ artikel }: { artikel: Pick<MarktArtikel, 'id' | 'art
 
 /** Anzeigenamen folgen derselben Gestaltungsliste wie die Sammlung, nie rohen Katalogschlüsseln. */
 export function marktName(artikel: Pick<MarktArtikel, 'art' | 'wert' | 'nameKey'>): string {
-  if (artikel.wert === 'schach-pinguin') return 'Pinguin-Figuren';
-  if (artikel.art === 'szene') return SZENEN.find(s => s.id === artikel.wert)?.name ?? 'Tischdesign';
-  if (artikel.art === 'ruecken') return RUECKEN.find(r => r.id === artikel.wert)?.name ?? 'Kartenrückseite';
+  if (artikel.wert === 'schach-pinguin') return t('markt.name.schachPinguin');
+  if (artikel.art === 'szene') return SZENEN.find(s => s.id === artikel.wert)?.name ?? t('markt.name.szene');
+  if (artikel.art === 'ruecken') return RUECKEN.find(r => r.id === artikel.wert)?.name ?? t('markt.name.ruecken');
   const schluessel = artikel.art === 'blatt' ? deckById(artikel.wert).nameKey : artikel.nameKey;
   const name = t(schluessel);
-  return name === schluessel ? 'Pinguin-Outfit' : name;
+  return name === schluessel ? t('markt.name.outfit') : name;
 }
 export function marktArt(artikel: Pick<MarktArtikel, 'art' | 'wert'>): string {
-  return artikel.wert === 'schach-pinguin' ? 'Figurensatz' : ({ blatt: 'Kartenblatt', ruecken: 'Rückseite', szene: 'Tischdesign', pinguin: 'Outfit' }[artikel.art] ?? 'Design');
+  if (artikel.wert === 'schach-pinguin') return t('markt.art.figurensatz');
+  return ['blatt', 'ruecken', 'szene', 'pinguin'].includes(artikel.art) ? t(`markt.art.${artikel.art}`) : t('markt.art.design');
 }
