@@ -91,10 +91,10 @@ describe('BroChess auf Englisch', () => {
 
   it('setzt Figur und Name in die Meldungen, ohne offene Lücken', () => {
     setzeSprachwahl('en');
-    expect(meldung(auf, 'b', name)).toBe('Revealed! The knight on f7 is the secret queen of Anna.');
+    expect(meldung(auf, 'b', name)).toBe("Revealed! The knight on f7 is Anna's secret queen.");
     expect(meldung(auf, 'w', name)).toBe('Revealed! Your knight on f7 is now known as the secret queen.');
     expect(meldung(koenig, 'b', name)).toBe(
-      'King capture! The secret queen of Anna captured your king on e8.',
+      "King capture! Anna's secret queen captured your king on e8.",
     );
     expect(meldung(koenig, null, name)).toContain('captured the king on e8');
     const umgewandelt = { art: 'umgewandelt', farbe: 'b', feld: 'a1', grundfigur: 'p', verdeckt: true, halbzug: 9 } as const;
@@ -129,7 +129,17 @@ describe('BroChess auf Englisch', () => {
     expect(regelText('B').kurz).toBe('Rule B');
     expect(tn('brochess.geschlagenAria', 1)).toBe('1 piece captured');
     expect(tn('brochess.geschlagenAria', 3)).toBe('3 pieces captured');
-    expect(tf('brochess.uhr', { name: 'Anna', zeit: uhrText(65_000) })).toBe('Clock of Anna: 1:05');
+    expect(tf('brochess.uhr', { name: 'Anna', zeit: uhrText(65_000) })).toBe("Anna's clock: 1:05");
+  });
+
+  it('beugt die Vorlesebeschriftung der Felder je Figur', () => {
+    // Eine Farb-Lücke vor dem Figurennamen ergäbe „weißer Dame"; deshalb ein
+    // ganzer Satz je Farbe und Figur.
+    setzeSprachwahl('de');
+    expect(tf('brochess.figurAufFeld.w.n', { feld: 'e4' })).toBe('e4, weißer Springer');
+    expect(tf('brochess.figurAufFeld.b.q', { feld: 'd8' })).toBe('d8, schwarze Dame');
+    setzeSprachwahl('en');
+    expect(tf('brochess.figurAufFeld.w.q', { feld: 'd1' })).toBe('d1, white queen');
   });
 
   it('lässt keinen Schlüssel auf Deutsch zurückfallen', () => {

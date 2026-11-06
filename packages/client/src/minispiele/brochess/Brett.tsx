@@ -383,7 +383,7 @@ export function Brett({
         ].filter(Boolean);
         const beschriftung = [
           figur
-            ? tf(`brochess.figurAufFeld.${farbeDer(figur)}`, { feld: name, figur: figurName(figur) })
+            ? tf(`brochess.figurAufFeld.${farbeDer(figur)}.${figur.toLowerCase()}`, { feld: name })
             : name,
           ...feldMarken.map((m) => t(`brochess.marke.${m}`)),
         ].join(', ');

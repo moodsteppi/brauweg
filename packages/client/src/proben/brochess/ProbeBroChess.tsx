@@ -1,9 +1,13 @@
 import { useState } from 'react';
 
+import { setzeSprachwahl, t } from '../../i18n';
+import { tf } from '../../i18n/einsetzen';
+import { istSprache } from '../../i18n/sprachen';
 import { Brett, ergebnis, statusText } from '../../minispiele/brochess/Brett';
 import stil from '../../minispiele/brochess/BroChess.module.css';
 import {
   NORMALE_SPIELART,
+  figurName,
   regelText,
   type Spielart,
   frischesEreignis,
@@ -32,7 +36,37 @@ import '../../screens/spiel-einstieg.css';
  * Rahmen, Meldung und Fuss sind hier nachgestellt, weil der echte Tisch
  * einen Server braucht — die Bausteine darin (Brett, SpielartWahl, Saetze
  * aus geheim.ts) sind die echten.
+ *
+ * `?sprache=de|en` stellt die Sprache vor dem ersten Zeichnen um — fuer
+ * Vorher-Nachher-Bilder der Uebersetzung. Ohne die Angabe lief die Probe
+ * immer in der eingestellten Sprache, und am 06.11.2026 belegten beide
+ * Sichtproben der englischen Fassung deshalb nur das Deutsche. Die festen
+ * Texte der Probe selbst (Titel, Auswahl, „Ginge an den Server") bleiben
+ * deutsch: Sie gehoeren nicht zum Spiel.
  */
+
+// Auf Modulebene, also beim Laden der Probe und vor ihrem ersten Zeichnen.
+// `setzeSprachwahl` merkt sich die Wahl im Geraet (`brauweg.sprache`) und
+// setzt `lang` am Dokument. Die Probe laeuft auf derselben Herkunft wie die
+// App — ohne das Zuruecklegen stellte ein Aufruf mit `?sprache=en` die App im
+// selben Browser dauerhaft auf Englisch um (wie in proben/sprache-tische).
+const SPRACHE = new URLSearchParams(window.location.search).get('sprache');
+if (istSprache(SPRACHE)) {
+  const SPEICHER = 'brauweg.sprache';
+  let vorher: string | null = null;
+  try {
+    vorher = localStorage.getItem(SPEICHER);
+  } catch {
+    // Gesperrter Speicher: dann gibt es auch nichts zu verstellen.
+  }
+  setzeSprachwahl(SPRACHE);
+  try {
+    if (vorher === null) localStorage.removeItem(SPEICHER);
+    else localStorage.setItem(SPEICHER, vorher);
+  } catch {
+    // s. o.
+  }
+}
 
 /** Figurenteil einer FEN → 64 Felder, a1 zuerst (wie `brett` in der Sicht). */
 function brettAus(figuren: string): string[] {
@@ -322,6 +356,9 @@ const FAELLE: Fall[] = [
   },
 ];
 
+/** „b1" → 1: Feldnummer wie im `brett` der Sicht (a1 zuerst). */
+const feldNr = (name: string): number => (Number(name[1]) - 1) * 8 + (name.charCodeAt(0) - 97);
+
 /** Kein Brett, sondern die Wahl vor der Partie. */
 const SPIELART = 'spielart';
 
@@ -351,7 +388,9 @@ export function ProbeBroChess(): React.JSX.Element {
         <div className={stil.kopfTitel}>
           <h1>BroChess - Probe</h1>
           {sd && schluessel !== SPIELART && (
-            <span className={stil.kopfModus}>Secret Dame · {regelText(sd.regel).kurz}</span>
+            <span className={stil.kopfModus}>
+              {tf('brochess.kopfModus', { modus: t('brochess.secretDame'), regel: regelText(sd.regel).kurz })}
+            </span>
           )}
         </div>
         <select style={{ maxWidth: '45%', marginLeft: 'auto' }}
@@ -413,7 +452,9 @@ export function ProbeBroChess(): React.JSX.Element {
                 disabled={!vorgemerkt}
                 onClick={() => setGesendet(`wahl ${vorgemerkt}`)}
               >
-                {vorgemerkt ? `♛︎ Figur auf ${vorgemerkt} als geheime Dame` : 'Erst eine Figur antippen'}
+                {vorgemerkt
+                  ? `♛︎ ${tf('brochess.wahl.bestaetigen', { figur: figurName(fall.sicht.brett[feldNr(vorgemerkt)] ?? ''), feld: vorgemerkt })}`
+                  : t('brochess.wahl.erstAntippen')}
               </button>
             ) : (
               <p className="hb-klein">

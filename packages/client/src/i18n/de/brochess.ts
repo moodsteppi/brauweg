@@ -51,8 +51,20 @@ export default {
 
   // Brett
   'brochess.brett': 'Schachbrett',
-  'brochess.figurAufFeld.w': '{feld}, weiß: {figur}',
-  'brochess.figurAufFeld.b': '{feld}, schwarz: {figur}',
+  // Je Farbe und Figur ein ganzer Satz: „weißer Springer“, aber „weiße Dame“ —
+  // eine Lücke für die Farbe kann die Endung nicht beugen.
+  'brochess.figurAufFeld.w.p': '{feld}, weißer Bauer',
+  'brochess.figurAufFeld.w.n': '{feld}, weißer Springer',
+  'brochess.figurAufFeld.w.b': '{feld}, weißer Läufer',
+  'brochess.figurAufFeld.w.r': '{feld}, weißer Turm',
+  'brochess.figurAufFeld.w.q': '{feld}, weiße Dame',
+  'brochess.figurAufFeld.w.k': '{feld}, weißer König',
+  'brochess.figurAufFeld.b.p': '{feld}, schwarzer Bauer',
+  'brochess.figurAufFeld.b.n': '{feld}, schwarzer Springer',
+  'brochess.figurAufFeld.b.b': '{feld}, schwarzer Läufer',
+  'brochess.figurAufFeld.b.r': '{feld}, schwarzer Turm',
+  'brochess.figurAufFeld.b.q': '{feld}, schwarze Dame',
+  'brochess.figurAufFeld.b.k': '{feld}, schwarzer König',
   'brochess.marke.meineVerdeckt': 'deine geheime Dame, nur für dich sichtbar',
   'brochess.marke.aufgedeckt': 'aufgedeckte geheime Dame',
   'brochess.marke.warDame': 'hier wurde eine geheime Dame geschlagen',

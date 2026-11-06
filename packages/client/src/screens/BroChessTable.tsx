@@ -7,7 +7,7 @@ import { szeneBild } from '../szenen';
 import { Ladekreis } from '../Ladekreis';
 import { Brett, ZEICHEN, ergebnis, statusText } from '../minispiele/brochess/Brett';
 import { figurensatzAus } from '../minispiele/brochess/figurensatz';
-import { frischesEreignis, meldung, regelText, trenneAktionen, wahlHinweis } from '../minispiele/brochess/geheim';
+import { figurName, frischesEreignis, meldung, regelText, trenneAktionen, wahlHinweis } from '../minispiele/brochess/geheim';
 import stil from '../minispiele/brochess/BroChess.module.css';
 import type { BroChessAufgabe, BroChessSicht, BroChessWahl, Farbe } from '../minispiele/brochess/sicht';
 import { Uhr } from '../minispiele/brochess/Uhr';
@@ -344,12 +344,6 @@ export function BroChessTable({
       {rueckfrage}
     </div>
   );
-}
-
-/** Schlichter Figurenname; ein Feld ohne bekannte Figur heißt „Figur". */
-function figurName(feldInhalt: string): string {
-  const art = feldInhalt.toLowerCase();
-  return t(`brochess.figur.${'pnbrq'.includes(art) && art.length === 1 ? art : 'x'}`);
 }
 
 /** „b1" → 1: Feldnummer wie im `brett` der Sicht (a1 zuerst). */

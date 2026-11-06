@@ -35,6 +35,15 @@ export type Markierung = 'meineVerdeckt' | 'aufgedeckt' | 'warDame' | 'koenigGes
 /** Schlüsselendung zur Figur; Unbekanntes heißt schlicht „Figur". */
 const figurKey = (art: string): string => ('pnbrq'.includes(art) && art.length === 1 ? art : 'x');
 
+/**
+ * Schlichter Name der Figur auf einem Feld (`brett`-Eintrag, Groß- oder
+ * Kleinbuchstabe) — für den Knopf der Damenwahl am Tisch und in der Probe.
+ * Steht hier einmal, weil Tisch und Probe ihn sonst je abschreiben.
+ */
+export function figurName(feldInhalt: string): string {
+  return t(`brochess.figur.${figurKey(feldInhalt.toLowerCase())}`);
+}
+
 /** Die zwei Regeln mit je einem Satz — für die Wahl vor der Partie und die Kopfzeile. */
 export function regelText(regel: 'A' | 'B'): { kurz: string; satz: string } {
   return { kurz: t(`brochess.regel.${regel}.kurz`), satz: t(`brochess.regel.${regel}.satz`) };
