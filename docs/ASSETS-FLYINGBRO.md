@@ -4,13 +4,23 @@ Einzelspieler-Schleuderspiel im Hub (Projekt „Rider Modus hinzufügen", Arbeit
 **Flying Bro**; der endgültige Name steht noch aus). Die Bros sind die drei
 Pinguine aus dem Logo (Pelle, Malve, Tjark), die Gegner Giraffen, gebaut wird aus Holz, Stein und Glas.
 
-**Stand: 6. November 2026, geliefert (26 Bilder; Bros und Langhals am selben Tag nach
-der geänderten Spezifikation neu erzeugt, die Schleuder aus Kartenkisten danach).** Erzeugt mit ChatGPT-Bildern über
+**Stand: 6. November 2026, geliefert (29 Bilder; Bros und Langhals am selben Tag nach
+der geänderten Spezifikation neu erzeugt, danach die Schleuder aus Kartenkisten und die drei Flugposen).** Erzeugt mit ChatGPT-Bildern über
 `codex exec` (ChatGPT-Anmeldung) auf dem Mood-Stand-PC, ohne Creative-KI mit
 Kosten. Es gibt noch **keinen Spielcode**, und die Bilder hängen nirgends —
 erst der Spielbau bindet sie ein.
 
 ### Abweichung vom ursprünglichen Auftrag — und woher sie kommt
+
+> **Vor der Freigabe zu bestätigen:** Diese Lieferung folgt nicht mehr dem
+> ursprünglichen Auftragstext, sondern der Spezifikation und der Nachbesserung
+> vom 06.11.2026 (beides unten belegt). Die Spezifikation liegt **nicht** in
+> diesem Diff und ist noch nicht auf `staging`, also lässt sich hier nur der
+> Verweis prüfen, nicht die Quelle selbst. Wer freigibt, bestätigt damit, dass
+> Pelle, Malve, Tjark und die Kartenkisten-Schleuder gelten sollen. Am
+> sichersten wird der Spezifikationszweig **vor** diesem Zweig nach `staging`
+> geführt. Gilt doch der alte Auftrag, liegen die alten Bilder im Archiv
+> (siehe unten) und lassen sich zurückholen.
 
 Der Auftrag (Projekt #18, Aufgabe 2) bestellte drei Bros „je eine Farbe/Form
 für **schnell, schwer, teilt sich**" und eine Schleuder ohne nähere Angabe. Die
@@ -40,8 +50,11 @@ maßgeblichen Stellen wörtlich:
 
 Dort steht außerdem: „Am 06.11.2026 hat Niklas entschieden: […] die Fähigkeiten
 Bauchrutscher, Gleitflug und Eisblock gelten". Die Nachbesserung vom selben Tag
-hat das für diese Bilder übernommen („Die DREI BROS passen NICHT mehr" → Pelle,
-Malve, Tjark; ein sich teilender Bro ist ausdrücklich ausgeschlossen).
+hat das für diese Bilder übernommen. Ihr Wortlaut: „Giraffen, Bauteile, Schleuder
+und Hintergrund sind gut und bleiben. Die DREI BROS passen NICHT mehr." Danach
+bestellt sie je Bro ein Ruhe- und ein Fähigkeitsbild (`bro-pelle-ruhe`,
+`bro-pelle-rutsch`, `bro-malve-ruhe`, `bro-malve-gleit`, `bro-tjark-ruhe`,
+`bro-tjark-eisblock`) und schließt einen sich teilenden Bro ausdrücklich aus.
 
 Was aus den alten Rollen wurde:
 
@@ -51,6 +64,16 @@ Was aus den alten Rollen wurde:
 | schwer | **Tjark**: Eisblock, Masse ×3, stark gegen Stein | `bro-tjark-*` |
 | teilt sich | **gestrichen** (Fähigkeit des Vorbilds). An ihre Stelle tritt Pelle als Grund-Bro mit Bauchrutscher | `bro-pelle-*` |
 | Schleuder | zwei gestapelte Kartenkisten statt Astgabel | `schleuder` (neu erzeugt) |
+| je Bro **Ruhe + Flug** | je Bro **Ruhe, Flug, Fähigkeit** und Siegerpose | `bro-<name>-ruhe`, `bro-<name>-flug` und die Fähigkeitspose; die Siegerpose fehlt noch |
+
+**Zu den Posen:** Der Auftrag wollte je Bro Ruhe und Flug, die Nachbesserung
+Ruhe und Fähigkeit. Die Fähigkeitsposen sind **keine** Flugposen: Pelle liegt
+beim Bauchrutscher am Boden, Tjark steckt im Eiswürfel, nur Malves Gleitflug
+ist ein Flug. Deshalb gibt es zusätzlich je Bro eine eigene **Flugpose**
+(`bro-<name>-flug`: gestreckt wie ein Torpedo, Flossen angelegt). Sie zeigt den
+Bro zwischen Abschuss und Fähigkeit, also in dem Zustand, in dem er die meiste
+Zeit zu sehen ist. Malves Flug unterscheidet sich vom Gleitflug durch angelegte
+statt ausgebreitete Flossen.
 
 Die verworfenen Bilder liegen im Archivrepo unter `flyingbro/verworfen/`.
 
@@ -60,15 +83,18 @@ Die verworfenen Bilder liegen im Archivrepo unter `flyingbro/verworfen/`.
 
 Alles unter `packages/client/public/flyingbro/`, WebP, gewandelt mit
 `~/bildwerkzeug/wandeln.mjs` (Profil `wappen` für alles Freigestellte, `szene`
-für den Hintergrund). Zusammen **rund 620 kB**.
+für den Hintergrund). Zusammen **rund 680 kB**.
 
 | Datei | Maß | Größe | Alpha |
 | --- | --- | --- | --- |
+| `bro-malve-flug.webp` | 384 × 244 | 17.0 kB | ja |
 | `bro-malve-gleit.webp` | 384 × 234 | 18.3 kB | ja |
 | `bro-malve-ruhe.webp` | 189 × 384 | 19.0 kB | ja |
+| `bro-pelle-flug.webp` | 384 × 312 | 21.4 kB | ja |
 | `bro-pelle-ruhe.webp` | 346 × 384 | 24.6 kB | ja |
 | `bro-pelle-rutsch.webp` | 384 × 198 | 18.4 kB | ja |
 | `bro-tjark-eisblock.webp` | 383 × 384 | 37.7 kB | ja |
+| `bro-tjark-flug.webp` | 384 × 288 | 19.9 kB | ja |
 | `bro-tjark-ruhe.webp` | 340 × 384 | 24.4 kB | ja |
 | `giraffe-gross-getroffen.webp` | 207 × 384 | 29.8 kB | ja |
 | `giraffe-gross-steht.webp` | 181 × 384 | 20.4 kB | ja |
@@ -95,9 +121,9 @@ für den Hintergrund). Zusammen **rund 620 kB**.
 
 | Gruppe | Dateien | Gedacht für |
 | --- | --- | --- |
-| **Pelle** (rot-orange, Steuerkreuz auf der Flosse) | `bro-pelle-ruhe`, `bro-pelle-rutsch` | Grund-Bro. Fähigkeit **Bauchrutscher**: flach auf dem Bauch, Körper rund 2 : 1 breit wie die Kapsel 0,7 × 0,3 m |
-| **Malve** (lila, runde Brille) | `bro-malve-ruhe`, `bro-malve-gleit` | Fähigkeit **Gleitflug**: Flossen weit ausgebreitet, Körper waagerecht |
-| **Tjark** (türkis, vier Spielknöpfe auf der Flosse) | `bro-tjark-ruhe`, `bro-tjark-eisblock` | Fähigkeit **Eisblock**: im Eiswürfel eingefroren, Gesicht sichtbar; der Würfel ist quadratisch wie der Körper 0,6 × 0,6 m |
+| **Pelle** (rot-orange, Steuerkreuz auf der Flosse) | `bro-pelle-ruhe`, `bro-pelle-flug`, `bro-pelle-rutsch` | Grund-Bro. Flug: gestreckt, Flossen angelegt. Fähigkeit **Bauchrutscher**: flach auf dem Bauch, Körper rund 2 : 1 breit wie die Kapsel 0,7 × 0,3 m |
+| **Malve** (lila, runde Brille) | `bro-malve-ruhe`, `bro-malve-flug`, `bro-malve-gleit` | Flug: gestreckt, Flossen angelegt. Fähigkeit **Gleitflug**: Flossen weit ausgebreitet, Körper waagerecht |
+| **Tjark** (türkis, vier Spielknöpfe auf der Flosse) | `bro-tjark-ruhe`, `bro-tjark-flug`, `bro-tjark-eisblock` | Flug: gestreckt, Flossen angelegt. Fähigkeit **Eisblock**: im Eiswürfel eingefroren, Gesicht sichtbar; der Würfel ist quadratisch wie der Körper 0,6 × 0,6 m |
 | **Giraffe klein / mittel / groß** | `giraffe-<größe>-steht`, `giraffe-<größe>-getroffen` | Kalb, Giraffe, Langhals (Spezifikation: 0,6 / 1,3 / 2,1 m). Getroffen: Spiralaugen, Beule, Sterne, Zunge raus. Der **Langhals** hat einen Hals etwa doppelt so lang wie der Rumpf hoch und trägt eine kleine Krone |
 | **Bauteile** | `<holz\|stein\|glas>-<quadrat\|balken>-<heil\|angeknackst>` | Quadrat 1 : 1, Balken 4 : 1, reine Vorderansicht, randlos — das Bild füllt die Physikform |
 | **Schleuder** | `schleuder` | Nach Spezifikation **zwei Stapel aus je zwei Kartenkisten** (Herz über Pik, Karo über Kreuz), **ohne Gummi**. Das Band zeichnet das Spiel zwischen die beiden Eisenringe oben innen, im Bild 512 × 468 etwa bei (215, 65) und (298, 65), also bei 42 % und 58 % der Breite und 14 % der Höhe. Die erste Astgabel ist verworfen, siehe unten |
@@ -131,7 +157,7 @@ ganz weg.
 ### Bekannte Schwächen und Widersprüche
 
 - **Die Spezifikation bestellt mehr**, als hier liegt (Abschnitt „Bilder"): je
-  Bro auch Flug und Siegerpose, je Giraffe auch liegend und weglaufend, je
+  Bro auch die Siegerpose (Flug ist inzwischen geliefert), je Giraffe auch liegend und weglaufend, je
   Stoff drei Rissstufen und die Formen Dreieck und Kreis, drei Weltkulissen.
   Geliefert ist der Umfang dieser Aufgabe; der Rest ist eine eigene Bestellung.
 - **Getroffene Giraffen zeigen Beule und Sterne.** Die Spezifikation will
@@ -143,11 +169,13 @@ ganz weg.
 
 ### Geprüft
 
-- **Echter Alphakanal** bei allen 25 freigestellten Bildern: Ecken `alpha = 0`
+- **Echter Alphakanal** bei allen 28 freigestellten Bildern: Ecken `alpha = 0`
   (höchstens 1), halbtransparente Pixel nur an Kanten (unter 1 %, bei den
   getroffenen Giraffen bis 6,5 % wegen der Sterne und Bewegungsstriche).
 - **Auf knallrotem Grund angesehen** (Kontaktbogen): kein Saum, kein
-  Schachbrett, kein eingebrannter Text.
+  Schachbrett, kein eingebrannter Text. Die erste `bro-pelle-flug` hatte einen
+  hellen Schleier (alpha 16–31 rund um die Figur, 6 % halbtransparent) und
+  wurde neu erzeugt, statt sie mit einem eigenen Schwellwert zu beschneiden.
 - **Keine Originalauflösung unter `public/`.** Die Originale liegen im Archivrepo
   `brauweg-art` unter `flyingbro/`, vorerst auf dem Zweig
   `flyingbro-originale`. Er wird zusammen mit diesem Zweig nach `main`
@@ -198,7 +226,7 @@ echo "<Prompt>" | codex exec --skip-git-repo-check --sandbox read-only \
   kommt der Prompt über stdin (`-`).
 - Das Bild kommt mit echtem Alpha zurück, wenn der Prompt es verlangt. Ein
   Freistellen von Hand war nicht nötig.
-- **Zweite Vorlage:** Ruhebild eines Bros ← Logo, Fähigkeitspose ← Ruhebild,
+- **Zweite Vorlage:** Ruhebild eines Bros ← Logo, Flug- und Fähigkeitspose ← Ruhebild,
   Langhals ← mittlere Giraffe, getroffen ← stehend,
   angeknackst ← heil, Balken ← Quadrat desselben Materials. Nur so bleiben
   Farben und Abzeichen gleich.
@@ -236,6 +264,12 @@ Style: match the attached Brauweg knight penguin reference in rendering — styl
 Subject: PELLE, the red-orange penguin from the attached logo (second image): a short chubby penguin with a red-orange back, head and flippers, cream-white belly and face, bright orange beak and feet, a small white plus-shaped gamepad cross printed on his left flipper, huge eager friendly eyes, wide grin — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no clothing or hat. Translate the flat logo character into the 3D-rendered style of the first image. Pose: standing upright, waving cheerfully with one flipper, the gamepad cross on the flipper clearly visible, full body, three-quarter view facing RIGHT. Square 1024x1024.
 ```
 
+#### `bro-pelle-flug` — zweite Vorlage: `bro-pelle-ruhe`
+
+```text
+Subject: the SAME character as in the second attached image (identical colors, markings, proportions): PELLE, the red-orange penguin from the attached logo (second image): a short chubby penguin with a red-orange back, head and flippers, cream-white belly and face, bright orange beak and feet, a small white plus-shaped gamepad cross printed on his left flipper, huge eager friendly eyes, wide grin — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no clothing or hat. Pose: FLIGHT right after being launched: flying through the air to the right, body stretched out horizontally and slightly tilted upward like a little torpedo, head forward, both flippers pressed back along the body (NOT spread like wings), feet trailing behind, an excited determined face. No motion lines, no dust, no background. Facing RIGHT. Landscape 1536x1024 canvas.
+```
+
 #### `bro-pelle-rutsch` — zweite Vorlage: `bro-pelle-ruhe`
 
 ```text
@@ -248,6 +282,12 @@ Subject: the SAME character as in the second attached image (identical colors, m
 Subject: MALVE, the purple penguin from the attached logo (second image): a tall slim penguin with a deep violet-purple back, head and flippers, cream-white belly and face, orange beak and feet, wearing round thin glasses, half-lidded clever eyes, a confident slight smile — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no hat; the glasses are her only accessory. Translate the flat logo character into the 3D-rendered style of the first image. Pose: standing upright, flippers crossed calmly over her belly, glasses glinting, full body, three-quarter view facing RIGHT. Square 1024x1024.
 ```
 
+#### `bro-malve-flug` — zweite Vorlage: `bro-malve-ruhe`
+
+```text
+Subject: the SAME character as in the second attached image (identical colors, markings, proportions, glasses): MALVE, the purple penguin from the attached logo (second image): a tall slim penguin with a deep violet-purple back, head and flippers, cream-white belly and face, orange beak and feet, wearing round thin glasses, half-lidded clever eyes, a confident slight smile — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no hat; the glasses are her only accessory. Pose: FLIGHT right after being launched: flying through the air to the right, body stretched out horizontally and slightly tilted upward like a little torpedo, head forward, both flippers pressed back along the body (NOT spread like wings), feet trailing behind, an excited determined face. No motion lines, no dust, no background. Facing RIGHT. Landscape 1536x1024 canvas.
+```
+
 #### `bro-malve-gleit` — zweite Vorlage: `bro-malve-ruhe`
 
 ```text
@@ -258,6 +298,12 @@ Subject: the SAME character as in the second attached image (identical colors, m
 
 ```text
 Subject: TJARK, the turquoise penguin from the attached logo (second image): a stocky penguin with a bright teal-turquoise back, head and flippers, cream-white belly and face, orange beak and feet, four round white game-controller buttons printed on one flipper, wild excited eyes, cocky wide grin — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no clothing or hat. Translate the flat logo character into the 3D-rendered style of the first image. Pose: standing upright, one flipper raised in a thumbs-up-like gesture, the four controller buttons on the flipper clearly visible, full body, three-quarter view facing RIGHT. Square 1024x1024.
+```
+
+#### `bro-tjark-flug` — zweite Vorlage: `bro-tjark-ruhe`
+
+```text
+Subject: the SAME character as in the second attached image (identical colors, markings, proportions): TJARK, the turquoise penguin from the attached logo (second image): a stocky penguin with a bright teal-turquoise back, head and flippers, cream-white belly and face, orange beak and feet, four round white game-controller buttons printed on one flipper, wild excited eyes, cocky wide grin — clearly a penguin silhouette (upright oval body, two flippers, orange feet, cream-white face mask and belly), NOT a round ball-shaped bird, no eyebrows, no feather tuft on the head, no clothing or hat. Pose: FLIGHT right after being launched: flying through the air to the right, body stretched out horizontally and slightly tilted upward like a little torpedo, head forward, both flippers pressed back along the body (NOT spread like wings), feet trailing behind, an excited determined face. No motion lines, no dust, no background. Facing RIGHT. Landscape 1536x1024 canvas.
 ```
 
 #### `bro-tjark-eisblock` — zweite Vorlage: `bro-tjark-ruhe`
