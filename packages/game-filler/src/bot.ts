@@ -38,9 +38,15 @@
  *
  * Gedaempft (seit dem 06.11.2026): Er baut keine Mauer, nach der ein
  * einziger Farbzug — seiner oder der des Gegners — den Gegner einsperrt.
- * Vorher verengte er mit Mauern und schloss mit einer Farbe, in mehr als
- * der Haelfte der Partien (Messung und Zahlen: werkzeug/MESSUNG-2026-11-06-
- * bot-gedaempft.md; Rechnung: "Die Daempfung" in `waendeAuf`).
+ * Das schliesst nur die Falle im Zug direkt nach der Mauer (vorher 12 von
+ * 105 in Build, jetzt 0). Eingesperrt wird trotzdem fast so oft wie vorher
+ * (Build 54,0 -> 52,5 %, Extreme 66,5 -> 62,0 %, beides im Rahmen eines
+ * Standardfehlers), weil die Falle ueber mehrere Zuege entsteht und das
+ * Opfer sie in rund der Haelfte der Faelle mit seiner eigenen Farbe
+ * zuzieht. In Extreme spielt der gedaempfte Bot schwaecher als der alte
+ * (42,0 : 55,5 %). Wer hier weiter daempft, liest zuerst
+ * werkzeug/MESSUNG-2026-11-06-bot-gedaempft.md (Rechnung: "Die Daempfung"
+ * in `waendeAuf`) — eine weitere Mauerregel trifft den Rest nicht.
  *
  * Die Spielstaerke (`level`) wertet er nicht aus. Das ist ausdruecklich
  * erlaubt (siehe BotLevel in game-api) und hier auch ehrlich: Ein schwaecherer

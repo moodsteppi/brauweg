@@ -28,6 +28,32 @@ Bots. Damit gingen genau die Fallen durch, die das Opfer gleich nach Wand und
 Farbe selbst zuzieht: 12 von 105 in Build, die Gesamtrate fiel nur auf
 52,5 / 62,5 %. Die Zahlen unten gelten für die zweite Fassung.
 
+## Kurz: offene Entscheidung vor der Freigabe
+
+Das Ziel des Auftrags wird **kaum erreicht**, und in Extreme wird der Bot
+**schwächer**:
+
+| | Build | Extreme |
+|---|---|---|
+| eingesperrt vorher → nachher | 54,0 → 52,5 % (SE ≈ 3,5) | 66,5 → 62,0 % (SE ≈ 3,4) |
+| gedämpft gegen alt (400 Partien) | 46,3 : 51,3 % — z ≈ −1,0, Rauschen | 42,0 : 55,5 % — z ≈ −2,7, p ≈ 0,006 |
+
+Beide Rückgänge liegen innerhalb eines Standardfehlers. Gesichert ist nur:
+Unmittelbar nach einer Mauer schnappt keine Falle mehr zu (12 → 0 von 105
+in Build). Die Fallen verlagern sich nach hinten, und in rund der Hälfte
+läuft das Opfer mit dem eigenen Farbzug hinein (Befund unten).
+
+Ob dieser Stand trotzdem nach `staging` soll, ist **nicht** durch die
+Messung entschieden, sondern gehört zur Freigabe. Die Wege:
+
+- **Übernehmen.** Die gemeinsame Schwelle `istEingesperrt`, der Prüftest und
+  die Werkzeugspalte kommen mit; Preis ist der schwächere Bot in Extreme.
+- **Nicht übernehmen, Zweig als Messung behalten.** Der Bot bleibt, wie er
+  ist; als nächster Schritt eine Farbwahl, die sich nicht selbst einsperrt
+  (eigene Karte), und erst mit ihr zusammen erneut messen.
+- **Nur für Build.** Dort kostet die Dämpfung keine messbare Stärke, bringt
+  aber auch keinen messbaren Nutzen — also kaum ein Grund dafür.
+
 ## Messaufbau
 
 Saaten 0–199 je Spielart (`saatHex`, wie simulation.mjs). „Vorher“ ist der
