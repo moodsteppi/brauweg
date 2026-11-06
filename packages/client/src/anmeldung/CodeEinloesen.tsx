@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { ApiError, api } from '../api';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 
 /**
  * Muenz-Code einloesen — nur auf der Webseite.
@@ -26,7 +26,7 @@ export function CodeEinloesen({ onEingeloest }: { onEingeloest?: () => void }): 
     setMeldung(null);
     try {
       const antwort = await api.codeEinloesen(code.trim());
-      setMeldung(`${antwort.muenzen.toLocaleString('de-DE')} Münzen gutgeschrieben.`);
+      setMeldung(`${zahl(antwort.muenzen)} Münzen gutgeschrieben.`);
       setCode('');
       onEingeloest?.();
     } catch (err) {

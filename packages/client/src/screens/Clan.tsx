@@ -18,6 +18,7 @@ import { ClanKrieg } from './ClanKrieg';
 import { HbBlatt, Zurueck, useRueckfrage } from './HbBlatt';
 import { inApp, serverAdresse } from '../laufzeit';
 import { imUmfang } from '../umfang';
+import { zahl } from '../i18n';
 
 /**
  * Clan-Tab (Plan 9.3).
@@ -514,7 +515,7 @@ function MitgliedBlatt({
     return (
       <HbBlatt titel={mitglied.displayName} onClose={onClose}>
         <p className="hb-klein hb-ohne-rand">
-          {ROLLE[mitglied.role]} · {mitglied.trophies.toLocaleString('de-DE')} Trophäen
+          {ROLLE[mitglied.role]} · {zahl(mitglied.trophies)} Trophäen
         </p>
         <button type="button" className="hb-kn is-zweit is-breit" onClick={() => onShowProfile(mitglied.accountId)}>
           Profil ansehen
@@ -608,7 +609,7 @@ function AnfragenBlatt({
                   <strong>{r.displayName}</strong>
                   <span className="hb-pk">
                     <img src="/hub/symbol-pokal.webp" alt="" />
-                    {r.trophies.toLocaleString('de-DE')}
+                    {zahl(r.trophies)}
                   </span>
                 </button>
                 <span className="hb-mg-knoepfe">
@@ -849,7 +850,7 @@ function Suche({
                     <strong>{c.name}</strong>
                     <small className="is-leise">
                       {c.members}/{c.maxMembers} · {c.joinMode === 'open' ? 'Offen' : 'Auf Anfrage'}
-                      {c.minTrophies > 0 ? ` · ab ${c.minTrophies.toLocaleString('de-DE')}` : ''}
+                      {c.minTrophies > 0 ? ` · ab ${zahl(c.minTrophies)}` : ''}
                     </small>
                     {angefragt && <small>Angefragt</small>}
                   </span>
@@ -1430,10 +1431,10 @@ function HalleNeu({
                 Anfrage" sah damit aus wie ein offener. */}
             <span>
               <b>{detail.joinMode === 'open' ? 'offen' : 'auf Anfrage'}</b>
-              {detail.minTrophies > 0 ? `ab ${detail.minTrophies.toLocaleString('de-DE')} Trophäen` : 'ohne Schwelle'}
+              {detail.minTrophies > 0 ? `ab ${zahl(detail.minTrophies)} Trophäen` : 'ohne Schwelle'}
             </span>
             <span>
-              <b>{detail.trophies.toLocaleString('de-DE')}</b>
+              <b>{zahl(detail.trophies)}</b>
               Clan-Trophäen
             </span>
           </div>
@@ -1537,7 +1538,7 @@ function HalleNeu({
                 </span>
                 <span className="hb-pk">
                   <img src="/hub/symbol-pokal.webp" alt="" />
-                  {m.trophies.toLocaleString('de-DE')}
+                  {zahl(m.trophies)}
                 </span>
               </button>
             ))}

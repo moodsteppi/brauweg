@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, type MarktAngebot, type Tagesmarkt, type Truhen, type Fund, type Me } from '../api';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { spiele } from '../klang';
 import { truhenBild } from '../truhenbild';
 import { FundBlatt } from './Aufgaben';
@@ -67,7 +67,7 @@ export function TagesShop({ me, ziel, onGuthaben, onSammlung }: {
   const kaufen = (a: MarktAngebot) => {
     if (!markt || !a.artikel || a.preis === null) return;
     const tag = markt.tag, artikel = a.artikel;
-    fragen({ titel: `${marktName(artikel)} kaufen?`, text: `Kostet ${a.preis.toLocaleString('de-DE')} Münzen. Das Design gehört danach dauerhaft dir.`, ja: `Für ${a.preis.toLocaleString('de-DE')} Münzen kaufen` },
+    fragen({ titel: `${marktName(artikel)} kaufen?`, text: `Kostet ${zahl(a.preis)} Münzen. Das Design gehört danach dauerhaft dir.`, ja: `Für ${zahl(a.preis)} Münzen kaufen` },
       () => { void ausfuehren(a.id, () => api.buyItem(artikel.id, 'coins', tag)); });
   };
   const angebot = (a: MarktAngebot) => <article id={`markt-${a.id}`} key={a.id} className={`markt-angebot${a.stufe ? ` stufe-${a.stufe}${a.aufgedeckt ? ' ist-aufgedeckt' : ''}` : ''}${a.besessen ? ' ist-eigen' : ''}`}>
@@ -78,13 +78,13 @@ export function TagesShop({ me, ziel, onGuthaben, onSammlung }: {
         <strong>{busy === a.id ? 'Wird aufgedeckt…' : 'Angebot aufdecken'}</strong><small>Nur für dich</small>
       </button> : a.artikel && <>
         <MarktBild artikel={a.artikel} /><small className="markt-art">{marktArt(a.artikel)}</small><strong className="markt-artikelname">{marktName(a.artikel)}</strong>
-        <span className="markt-preis">{a.rabatt > 0 && <del>{a.normalpreis?.toLocaleString('de-DE')}</del>}<img src="/hub/muenze.png" alt="Münzen" />{a.preis?.toLocaleString('de-DE')}</span>
+        <span className="markt-preis">{a.rabatt > 0 && <del>{a.normalpreis !== null && zahl(a.normalpreis)}</del>}<img src="/hub/muenze.png" alt="Münzen" />{a.preis !== null && zahl(a.preis)}</span>
         {a.besessen ? <button className="markt-knopf ist-eigen" onClick={() => onSammlung(a.spiel === 'alle' ? a.artikel?.art === 'pinguin' ? 'allgemein' : a.artikel?.wert === 'schach-pinguin' ? 'brochess' : 'doppelkopf' : a.spiel)}>Zur Sammlung ✓</button>
           : <button className="markt-knopf" disabled={!!busy || me.coins < (a.preis ?? 0)} onClick={() => kaufen(a)}>{busy === a.id ? 'Wird gekauft…' : me.coins < (a.preis ?? 0) ? 'Münzen fehlen' : 'Kaufen'}</button>}
       </>}
   </article>;
   return <div className="hb-spiele tages-shop">
-    <header className="hb-kopfzeile"><h1 className="hb-titel">Shop</h1><span className="markt-guthaben"><img src="/hub/muenze.png" alt="" />{me.coins.toLocaleString('de-DE')}</span></header>
+    <header className="hb-kopfzeile"><h1 className="hb-titel">Shop</h1><span className="markt-guthaben"><img src="/hub/muenze.png" alt="" />{zahl(me.coins)}</span></header>
     <div className="hb-spiele-rolle markt-rolle">
       <section className="markt-held"><img src="/hub/shop-tagesmarkt.webp" alt="Pinguin-Händler an seinem nächtlichen Marktstand" /><div><span>DEIN PERSÖNLICHER TAGES-SHOP</span><h2>Jeden Tag etwas Neues</h2><p>Decke deine Angebote auf und entdecke neue Lieblingsstücke.</p></div></section>
       <div className="markt-wechsel"><span>Nächster Wechsel <b>00:00 Uhr · deutsche Zeit</b></span><strong>{markt ? `${String(stunden).padStart(2, '0')}:${String(minuten).padStart(2, '0')} Std.` : 'Wird geladen…'}</strong></div>

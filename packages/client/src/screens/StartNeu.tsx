@@ -1,5 +1,5 @@
 import type { ActiveTable, Me } from '../api';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { inAppSichtbar } from '../app-sichtbar';
 import { LernKarte } from '../lernen/LernKarte';
 import { BrowortKarte } from '../browort/BrowortKarte';
@@ -100,11 +100,11 @@ export function StartNeu({
           <span className="hb-weg-zeile">
             <span className="hb-pk">
               <img src="/hub/symbol-pokal.webp" alt="" />
-              {trophies.toLocaleString('de-DE')}
+              {zahl(trophies)}
             </span>
             {naechstes ? (
               <span>
-                von {naechstes.cp.toLocaleString('de-DE')} bis {naechstes.name === 'Sternenhafen' ? 'zum' : 'nach'}{' '}
+                von {zahl(naechstes.cp)} bis {naechstes.name === 'Sternenhafen' ? 'zum' : 'nach'}{' '}
                 {naechstes.name}
               </span>
             ) : (
@@ -117,7 +117,7 @@ export function StartNeu({
           {trophies >= 100 && (
             <span className="hb-weg-sicher">
               <Haken />
-              Sicher ab {sicherAb(trophies).toLocaleString('de-DE')}: darunter fällst du nicht mehr
+              Sicher ab {zahl(sicherAb(trophies))}: darunter fällst du nicht mehr
             </span>
           )}
         </span>
@@ -169,7 +169,7 @@ export function StartNeu({
                 <strong>{t(`game.${s.gameId}`)}</strong>
                 <span className="hb-pk">
                   <img src="/hub/symbol-pokal.webp" alt="" />
-                  {s.trophies.toLocaleString('de-DE')}
+                  {zahl(s.trophies)}
                 </span>
               </button>
             ))

@@ -33,7 +33,7 @@ import {
 import { mitEdelsteinen } from '../laufzeit';
 import { Pinguin, StueckAllein, StueckBild } from '../pinguin';
 import { EdelsteinIcon, Tafel } from '../hub';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { HbBlatt, Schliessen } from './HbBlatt';
 import './spind.css';
 
@@ -297,7 +297,7 @@ export function Kleiderschrank({
                         <StueckAllein itemId={stueck.id} slot={slot} groesse={4.6} />
                       </span>
                       <strong>{t(stueck.nameKey)}</strong>
-                      <small>{stueck.besessen ? (sitzt ? 'trägst du' : 'gehört dir') : stueck.geschenk ? 'Geschenk' : `${stueck.preis.coins.toLocaleString('de-DE')} Münzen`}</small>
+                      <small>{stueck.besessen ? (sitzt ? 'trägst du' : 'gehört dir') : stueck.geschenk ? 'Geschenk' : `${zahl(stueck.preis.coins)} Münzen`}</small>
                       {sitzt && (
                         <span className="hb-ding-ok" aria-hidden="true">
                           ✓

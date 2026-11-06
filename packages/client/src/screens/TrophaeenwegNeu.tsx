@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { ApiError, api, type Getragen, type Weg, type WegFund, type WegStufe } from '../api';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { holbar, stationenMit } from '../trophaeenweg';
 import { FundBlatt } from './Aufgaben';
 import { truhenBild } from '../truhenbild';
@@ -84,8 +84,8 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
       {stufe.truhe && <img className="reise-truhe" src={truhenBild(stufe.truhe.grad)} alt="" />}
       <span className="reise-lohntext"><strong>{stufe.truhe ? t(`truhe.${stufe.truhe.grad}`) : 'Belohnung'}</strong>
         {stufe.gegenstand && <small>{t(`weg.${stufe.gegenstand}`)}</small>}
-        {stufe.truhe && (stufe.muenzen ?? 0) > 0 && <small className="reise-bonus"><img src="/hub/muenze.png" alt="" />+{stufe.muenzen!.toLocaleString('de-DE')} Münzen extra</small>}
-        <em>{stufe.geholt ? 'Erhalten' : bereit ? laeuft === stufe.schwelle ? 'Wird geholt…' : 'Jetzt holen' : `Noch ${(stufe.schwelle - stand).toLocaleString('de-DE')} Trophäen`}</em>
+        {stufe.truhe && (stufe.muenzen ?? 0) > 0 && <small className="reise-bonus"><img src="/hub/muenze.png" alt="" />+{zahl(stufe.muenzen!)} Münzen extra</small>}
+        <em>{stufe.geholt ? 'Erhalten' : bereit ? laeuft === stufe.schwelle ? 'Wird geholt…' : 'Jetzt holen' : `Noch ${zahl(stufe.schwelle - stand)} Trophäen`}</em>
       </span>
     </>;
     return bereit ? <button type="button" className="reise-lohn ist-bereit" disabled={laeuft !== null} onClick={() => holen(stufe)}
@@ -95,9 +95,9 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
 
   return <div className="hb-voll trophaeenreise" role="dialog" aria-modal="true" aria-label="Trophäenweg">
     <header className="hb-voll-kopf"><Schliessen onClick={onClose} /><div className="hb-voll-titel"><h1>Trophäenweg</h1><span>Deine Reise durch BroweGGames</span></div>
-      <span className="hb-pill is-pk is-gross" aria-label={`${stand} Trophäen`}><img src="/hub/symbol-pokal.webp" alt="" />{stand.toLocaleString('de-DE')}</span>
+      <span className="hb-pill is-pk is-gross" aria-label={`${stand} Trophäen`}><img src="/hub/symbol-pokal.webp" alt="" />{zahl(stand)}</span>
     </header>
-    <div className="reise-ziel"><span>{naechste ? <>Nächste Belohnung <b>{ziel.toLocaleString('de-DE')} 🏆</b></> : 'Deine Reise geht weiter'}<small>{naechste ? `Noch ${(ziel - stand).toLocaleString('de-DE')} Trophäen` : 'Spiele und entdecke neue Belohnungen'}</small></span>
+    <div className="reise-ziel"><span>{naechste ? <>Nächste Belohnung <b>{zahl(ziel)} 🏆</b></> : 'Deine Reise geht weiter'}<small>{naechste ? `Noch ${zahl(ziel - stand)} Trophäen` : 'Spiele und entdecke neue Belohnungen'}</small></span>
       <div className="reise-fortschritt" role="progressbar" aria-label="Fortschritt zur nächsten Belohnung" aria-valuenow={stand} aria-valuemin={vorher} aria-valuemax={ziel || 1}><i style={{ width: `${fortschritt}%` }} /></div>
     </div>
     {fehler && <div className="reise-fehler" role="alert">{fehler}<button onClick={laden}>Erneut versuchen</button></div>}
@@ -107,7 +107,7 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
         {stationen.map((s, i) => <section key={s.name} className={`reise-land${stand < s.ab ? ' ist-voraus' : ''}`} style={{ top: hoehe - LAND_HOEHE * (i + 1), height: LAND_HOEHE }}>
           <img className="reise-landschaft" src={`/hub/${s.biom}.webp`} alt="" loading="lazy" draggable={false} />
           <div className="reise-landschaft-schatten" />
-          <div className="reise-ortschild"><small>REGION {String(i + 1).padStart(2, '0')}</small><h2>{s.name}</h2><span>{s.ab.toLocaleString('de-DE')} Trophäen</span></div>
+          <div className="reise-ortschild"><small>REGION {String(i + 1).padStart(2, '0')}</small><h2>{s.name}</h2><span>{zahl(s.ab)} Trophäen</span></div>
         </section>)}
         {zusatz > 0 && <div className="reise-sterne" style={{ height: zusatz }} aria-hidden="true" />}
         <svg className="reise-linie" viewBox={`0 0 400 ${hoehe}`} preserveAspectRatio="none" aria-hidden="true">
@@ -121,17 +121,17 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
         </div>)}
         {weg?.stufen.filter(s => s.art === 'checkpoint').map(s => {
           const y = punktY(s.schwelle);
-          const text = <><img src="/hub/muenze.png" alt="" /><span><strong>{s.geholt ? '✓ ' : '+'}{s.geholt ? (s.coins ?? s.muenzen) : s.muenzen} Münzen</strong><small>{s.schwelle.toLocaleString('de-DE')} Trophäen{holbar(s) ? ' · Holen' : ''}</small></span></>;
+          const text = <><img src="/hub/muenze.png" alt="" /><span><strong>{s.geholt ? '✓ ' : '+'}{s.geholt ? (s.coins ?? s.muenzen) : s.muenzen} Münzen</strong><small>{zahl(s.schwelle)} Trophäen{holbar(s) ? ' · Holen' : ''}</small></span></>;
           return <div className="reise-checkpunkt" key={s.schwelle} style={{ top: y, left: `${punktX(y) / 4}%` }}>{holbar(s)
             ? <button className="ist-bereit" disabled={laeuft !== null} onClick={() => holen(s)} aria-label={`Checkpoint ${s.schwelle}: ${s.muenzen ?? 0} Münzen holen`}>{text}</button>
             : <span className={s.geholt ? 'ist-geholt' : ''}>{text}</span>}</div>;
         })}
-        {weiter.map(s => <div className="reise-station" key={s.schwelle} style={{ top: punktY(s.schwelle), left: `${punktX(punktY(s.schwelle)) / 4}%` }}><span className="reise-marke">{s.schwelle.toLocaleString('de-DE')}</span>{belohnung(s, `Belohnung bei ${s.schwelle} Trophäen`)}</div>)}
-        <div className="reise-ich" style={{ top: ichY, left: `${punktX(ichY) / 4}%` }} aria-label={`Du bist hier: ${stand} Trophäen`}><Pinguin getragen={getragen} groesse={5} titel="Dein Pinguin aus dem Kleiderschrank" /><span>Du bist hier<small>{stand.toLocaleString('de-DE')} 🏆</small></span></div>
+        {weiter.map(s => <div className="reise-station" key={s.schwelle} style={{ top: punktY(s.schwelle), left: `${punktX(punktY(s.schwelle)) / 4}%` }}><span className="reise-marke">{zahl(s.schwelle)}</span>{belohnung(s, `Belohnung bei ${s.schwelle} Trophäen`)}</div>)}
+        <div className="reise-ich" style={{ top: ichY, left: `${punktX(ichY) / 4}%` }} aria-label={`Du bist hier: ${stand} Trophäen`}><Pinguin getragen={getragen} groesse={5} titel="Dein Pinguin aus dem Kleiderschrank" /><span>Du bist hier<small>{zahl(stand)} 🏆</small></span></div>
         <div className="reise-anfang">Spiele. Gewinne. Entdecke.</div>
       </div>
     </div>
-    <div className="reise-navigation"><span>↕ Entlang des Pfades scrollen<small>Sicher ab {sicherAb(stand).toLocaleString('de-DE')} Trophäen</small></span><button onClick={() => zuMir()}>◎ Zu mir</button></div>
+    <div className="reise-navigation"><span>↕ Entlang des Pfades scrollen<small>Sicher ab {zahl(sicherAb(stand))} Trophäen</small></span><button onClick={() => zuMir()}>◎ Zu mir</button></div>
     {fund?.grad && <FundBlatt fund={{ grad: fund.grad, coins: fund.coins }} onClose={() => setFund(null)} />}
   </div>;
 }

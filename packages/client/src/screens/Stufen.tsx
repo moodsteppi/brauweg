@@ -16,6 +16,7 @@ import { Ladekreis } from '../Ladekreis';
 
 import { api } from '../api';
 import { Schliessen } from './HbBlatt';
+import { zahl } from '../i18n';
 
 interface Stufe {
   stufe: number;
@@ -162,7 +163,7 @@ export function Stufenleiter({
           <Schliessen onClick={onClose} />
           <div className="hb-voll-titel">
             <h1>Stufen</h1>
-            <span>{daten ? `Stufe ${daten.stufe} · ${daten.xp.toLocaleString('de-DE')} XP` : 'Wird geladen…'}</span>
+            <span>{daten ? `Stufe ${daten.stufe} · ${zahl(daten.xp)} XP` : 'Wird geladen…'}</span>
           </div>
         </header>
         <div className="hb-voll-rolle" ref={rolle}>
@@ -184,7 +185,7 @@ export function Stufenleiter({
                     <span className="hb-mg-name">
                       <strong>Stufe {s.stufe}</strong>
                       <small className="is-leise">
-                        ab {s.ab.toLocaleString('de-DE')} XP · kostet {s.kosten.toLocaleString('de-DE')}
+                        ab {zahl(s.ab)} XP · kostet {zahl(s.kosten)}
                       </small>
                     </span>
                     {s.aktuell && <span className="hb-stufe-hier">du bist hier</span>}

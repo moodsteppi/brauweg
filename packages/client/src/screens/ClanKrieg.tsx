@@ -12,7 +12,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
 
 import { type ClubSummary, type WarState, type WarView, api } from '../api';
-import { restzeit } from './ClanTeile';
+// Restzeit in der aktiven Sprache („noch 12 Std.“ / „12 hr left“).
+import { restzeit, zahl } from '../i18n';
 import { HbBlatt, Zurueck } from './HbBlatt';
 
 const WAPPEN_UNBEKANNT = '/hub/clan-wappen.png';
@@ -575,7 +576,7 @@ function Gegnerwahl({
               </span>
               <span className="hb-pk">
                 <img src="/hub/symbol-pokal.webp" alt="" />
-                {c.trophies.toLocaleString('de-DE')}
+                {zahl(c.trophies)}
               </span>
             </button>
           ))}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, type GameSummary, type Me, type RankingEntry } from '../api';
 import { deckForGame, rueckenBild } from '../decks';
 import { CardFront, CardBack } from '../CardFace';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { inApp } from '../laufzeit';
 import { inAppSichtbar } from '../app-sichtbar';
 import { imUmfang } from '../umfang';
@@ -240,7 +240,7 @@ export function SpieleNeu({
           <strong>{t(g.nameKey)}</strong>
           <small>
             {g.id === 'prosubway' ? 'Allein · Münzen fürs Hub' : g.id === 'mehrkampf' ? 'Runden aus mehreren Spielen' : `${sitzSpanne(g.seatCounts)} Spieler`}
-            {g.abstimmbar !== false && mitAbstimmung ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
+            {g.abstimmbar !== false && mitAbstimmung ? ` · ${zahl(g.votes)} Stimmen` : ''}
           </small>
         </span>
       </button>
@@ -267,7 +267,7 @@ export function SpieleNeu({
       {trophaeen(g.id) > 0 ? (
         <span className="hb-pk">
           <img src="/hub/symbol-pokal.webp" alt="" />
-          {trophaeen(g.id).toLocaleString('de-DE')}
+          {zahl(trophaeen(g.id))}
         </span>
       ) : (
         <small>{sitzSpanne(g.seatCounts)} Spieler</small>
@@ -595,12 +595,12 @@ function SpielSeite({
           <div className="hb-sp-zahl">
             <span className="hb-sp-pokal">
               <img src="/hub/symbol-pokal.webp" alt="" />
-              {eigene.toLocaleString('de-DE')}
+              {zahl(eigene)}
             </span>
             <span className="hb-klein">
               {ich ? (
                 <>
-                  Platz {ich.rank.toLocaleString('de-DE')}
+                  Platz {zahl(ich.rank)}
                   <br />
                   in Deutschland
                 </>
@@ -615,7 +615,7 @@ function SpielSeite({
                   Trophäe gibt es noch keinen Anteil, nur eine Einladung. */}
               {gesamt > 0 ? (
                 <>
-                  Dein Beitrag zum Trophäenweg: <b>{eigene.toLocaleString('de-DE')} von {gesamt.toLocaleString('de-DE')}</b>
+                  Dein Beitrag zum Trophäenweg: <b>{zahl(eigene)} von {zahl(gesamt)}</b>
                 </>
               ) : (
                 'Gewinn eine Partie - jede Trophäe bringt dich auf dem Trophäenweg weiter.'
@@ -627,10 +627,10 @@ function SpielSeite({
           </div>
           <div className="hb-sp-werte">
             <span>
-              <b>{(stat?.parties ?? 0).toLocaleString('de-DE')}</b>Partien
+              <b>{zahl(stat?.parties ?? 0)}</b>Partien
             </span>
             <span>
-              <b>{(stat?.wins ?? 0).toLocaleString('de-DE')}</b>Siege
+              <b>{zahl(stat?.wins ?? 0)}</b>Siege
             </span>
             <span>
               <b>{quote === null ? '-' : `${quote} %`}</b>Quote
@@ -697,7 +697,7 @@ function SpielSeite({
                   <strong>{e.accountId === me.id ? 'Du' : e.displayName}</strong>
                   <span className="hb-pk">
                     <img src="/hub/symbol-pokal.webp" alt="" />
-                    {e.trophies.toLocaleString('de-DE')}
+                    {zahl(e.trophies)}
                   </span>
                 </div>
               ))

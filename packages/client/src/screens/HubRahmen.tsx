@@ -2,10 +2,10 @@ import { useCallback, useRef, useState } from 'react';
 import { useHubWischen } from './hub-wischen';
 import type { Me } from '../api';
 import { mitEdelsteinen, serverAdresse } from '../laufzeit';
-import { kompakteZahl } from '../i18n';
+import { kompakteZahl, zahl } from '../i18n';
 
 /** Bis 9.999 ausgeschrieben (wie im Entwurf), darüber kurz („12K“). */
-const zahl = (n: number): string => (n < 10000 ? n.toLocaleString('de-DE') : kompakteZahl(n));
+const kopfZahl = (n: number): string => (n < 10000 ? zahl(n) : kompakteZahl(n));
 import { Pinguin } from '../pinguin';
 import { spiele } from '../klang';
 
@@ -122,7 +122,7 @@ export function NeuerRahmen<T extends Reiter>({
         <div className="hb-geld">
           <span className="hb-pill is-pk" aria-label={`${trophies} Trophäen`}>
             <img src="/hub/symbol-pokal.webp" alt="" />
-            {zahl(trophies)}
+            {kopfZahl(trophies)}
           </span>
           {[
             { wert: me.coins, bild: '/hub/symbol-muenze.webp', name: 'Münzen' },
@@ -131,12 +131,12 @@ export function NeuerRahmen<T extends Reiter>({
             zumShop ? (
               <button type="button" key={name} className="hb-pill" onClick={zumShop} aria-label={`${wert} ${name}, zum Shop`}>
                 <img src={bild} alt="" />
-                {zahl(wert)}
+                {kopfZahl(wert)}
               </button>
             ) : (
               <span key={name} className="hb-pill" aria-label={`${wert} ${name}`}>
                 <img src={bild} alt="" />
-                {zahl(wert)}
+                {kopfZahl(wert)}
               </span>
             ),
           )}
@@ -150,7 +150,7 @@ export function NeuerRahmen<T extends Reiter>({
       {online !== null && online > 0 && (
         <div className="hb-online">
           <span className="hb-punkt" aria-hidden="true" />
-          {online.toLocaleString('de-DE')} Spieler gerade am Tisch
+          {zahl(online)} Spieler gerade am Tisch
         </div>
       )}
     </>

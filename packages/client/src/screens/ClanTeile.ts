@@ -31,15 +31,3 @@ function zahlAus(text: string): number {
   for (let i = 0; i < text.length; i++) summe = (summe + text.charCodeAt(i)) % 997;
   return summe;
 }
-
-/** Verbleibende Zeit als kurzer Satz: „noch 12 Std“, „noch 40 Min“. */
-export function restzeit(endsAt: string | null): string {
-  if (!endsAt) return '';
-  const ms = new Date(endsAt).getTime() - Date.now();
-  if (ms <= 0) return 'gleich vorbei';
-  const minuten = Math.floor(ms / 60_000);
-  if (minuten < 60) return `noch ${minuten} Min`;
-  const stunden = Math.floor(minuten / 60);
-  if (stunden < 24) return `noch ${stunden} Std`;
-  return `noch ${Math.floor(stunden / 24)} Tg ${stunden % 24} Std`;
-}

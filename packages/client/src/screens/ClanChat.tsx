@@ -16,6 +16,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
 
 import { type ChatMessage, api } from '../api';
+// Nur die Uhrzeit — das Datum steht ohnehin in der Reihenfolge.
+import { uhrzeit } from '../i18n';
 import { Kreuz } from '../zeichen';
 import { MAX_NACHRICHT, avatarBild } from './ClanTeile';
 
@@ -228,9 +230,4 @@ function Blase({
       <time className="clan-chat-zeit">{uhrzeit(zeile.createdAt)}</time>
     </div>
   );
-}
-
-/** Nur die Uhrzeit — das Datum steht ohnehin in der Reihenfolge. */
-function uhrzeit(iso: string): string {
-  return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }
