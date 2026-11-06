@@ -15,6 +15,10 @@
  * alle Filter.
  */
 
+import { t } from '../../i18n';
+import { tf } from '../../i18n/einsetzen';
+import { zahl } from './zahl';
+
 /** Ein Kurs, wie das Modul ihn liefert. */
 export interface Kurs {
   kennung: string;
@@ -201,7 +205,7 @@ export function festeLochzahl(wahl: Bahnwahl, daten: Lobbydaten | null): number 
  */
 export function wahlUnfertig(wahl: Bahnwahl): string | null {
   if (wahl.art === 'eigene' && wahl.bahnen.length < EIGENE_MIN) {
-    return `Mindestens ${EIGENE_MIN} Bahnen wählen.`;
+    return tf('golf.bahnen.mindestens', { n: zahl(EIGENE_MIN) });
   }
   return null;
 }
@@ -211,13 +215,19 @@ export function gleicheWahl(a: Bahnwahl, b: Bahnwahl): boolean {
   return JSON.stringify(wahlfelder(a)) === JSON.stringify(wahlfelder(b));
 }
 
-/** Die Wahl in einem Satz für alle, die nicht einstellen. */
+/**
+ * Die Wahl in einem Satz für alle, die nicht einstellen.
+ *
+ * Übersetzt wird nur der Rahmen. Der Name aus `varianteFuer` bleibt, wie das
+ * Modul ihn bildet: Er steht als Regelwert am Tisch und in der Tischliste,
+ * und `vertrag/golf-kurse.test.ts` hält ihn gegen die Rechnung im Modul.
+ */
 export function beschreibeWahl(wahl: Bahnwahl, daten: Lobbydaten | null): string {
-  if (wahl.art === 'zufall') return 'Zufällige Bahnen aus allen, leicht bis schwer';
-  if (daten === null) return 'Eigene Bahnwahl';
+  if (wahl.art === 'zufall') return t('golf.bahnen.zufallSatz');
+  if (daten === null) return t('golf.bahnen.eigeneWahl');
   const name = varianteFuer(wahlfelder(wahl), daten);
-  if (wahl.art === 'filter') return `Zufällige Bahnen: ${name ?? 'alle'}`;
-  return name ?? 'Eigene Bahnwahl';
+  if (wahl.art === 'filter') return tf('golf.bahnen.zufallGefiltert', { name: name ?? t('golf.bahnen.alle') });
+  return name ?? t('golf.bahnen.eigeneWahl');
 }
 
 /* --------------------------------------------------------------------------
