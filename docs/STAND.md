@@ -1278,22 +1278,21 @@ Originalauflösung unter `public/`.
 Breite.** Jeder Bildschirm ist `position: fixed` und höchstens 30rem breit
 (`.hb`, `.spe`, die Anmeldung 60rem). Dadurch haben `html`, `body` und
 `#root` die Höhe 0, und das Sichtprobe-Werkzeug meldet für sie „Kein Element
-gefunden“. Alles Schmalere gilt bei 1400 als Ausschnitt und zählt nicht. Ein
-Worker kann ein Vorher-Bild bei 1400 deshalb gar nicht aufnehmen, und der
-Server schickt die Fertigmeldung zurück. Bei DreckBro ist das am 04.11.2026
-zweimal passiert. Entschieden am 06.11.2026 (Nachbesserung „A“): Für Brauweg
-genügen bei einer neuen Seite **vorher 390, nachher 390 und nachher 1400**.
-Für das Nachher bei 1400 bekommt die **Probeseite** (`/probe/<spiel>`) einen
-Rahmen im normalen Fluss mit `data-probe-seite` und `minHeight: 100dvh`, um
-die `.spe` herum. Aufgenommen wird mit `--selektor '[data-probe-seite]'`.
-Vorbild ist `packages/client/src/proben/dreckbro/ProbeDreckBro.tsx`. Die App
-selbst bekommt keinen solchen Rahmen: Dort würde er an jedem Bildschirm das
-Festlegen auf 30rem durchbrechen. Wer an einer Probeseite **mit** Rahmen
-weiterarbeitet, nimmt vorher 1400 ganz normal auf, die Ausnahme gilt nur, wo
-der Ausgangsstand keinen Rahmen hat. Die Sperre des Servers hebt nur eine Zeile
-„Sichtprobe-Ausnahme: …“ im **Auftrag** auf. Ein Worker kann sie nicht selbst
-setzen, er nennt die fehlende Vorher-Probe in seiner Meldung samt Grund und
-verweist auf diesen Absatz.
+gefunden“. Alles Schmalere gilt bei 1400 als Ausschnitt und zählt nicht, und
+der Server schickt die Fertigmeldung zurück. Bei DreckBro ist das im November
+2026 dreimal passiert. **Der Weg, der funktioniert:** In beiden Arbeitsbäumen
+(Ausgangsstand und eigener Zweig) vor `</head>` von
+`packages/client/index.html` eine Messhilfe einfügen, **nicht committen**:
+`<style data-messhilfe>html,body{min-height:100dvh}</style>`. Dann ist `body`
+so groß wie das Fenster (1400 × 900). Fixed-Bildschirme malen ohnehin in das
+Fenster, das Bild zeigt also genau, was ein Nutzer sieht. Alle vier Proben
+mit `--selektor body` auf derselben Seite aufnehmen und die Messhilfe danach
+mit `git checkout -- packages/client/index.html` zurücknehmen. In die App
+gehört sie nicht: Dort ändert sie nichts Sichtbares, wäre aber eine Zeile, die
+nur für ein Werkzeug da ist. Die Probeseite von DreckBro hat zusätzlich einen
+eigenen Rahmen `[data-probe-seite]` (Vorbild
+`packages/client/src/proben/dreckbro/ProbeDreckBro.tsx`); er ersetzt die
+Messhilfe aber nicht für das Vorher, weil der Ausgangsstand ihn nicht kennt.
 
 **Migrationen** laufen in der Produktion automatisch (`MIGRATE_ON_BOOT` ist
 gesetzt). Die Drizzle-Snapshots sind nicht durchgängig gepflegt —

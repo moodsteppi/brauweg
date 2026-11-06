@@ -348,10 +348,10 @@ Wirtschaftsmodell.
   eigenen Zweig. Arbeitskopien bekommen einen eigenen Pfad.
 - **Sichtprobe bei 1400 px findet kein Element voller Breite.** Alle
   Bildschirme sind `position: fixed` und 30rem breit; `body` hat die Höhe 0.
-  Für das Nachher bekommt die Probeseite einen Rahmen `[data-probe-seite]`
-  im Fluss (Vorbild `proben/dreckbro/ProbeDreckBro.tsx`), für ein Vorher ohne
-  diesen Rahmen gilt die Ausnahme vom 06.11.2026 — beides in `docs/STAND.md`
-  unter „Wie hier gearbeitet wird".
+  Abhilfe: in beiden Arbeitsbäumen (vorher und nachher) eine Messhilfe
+  `html,body{min-height:100dvh}` in `packages/client/index.html` setzen, nicht
+  committen, mit `--selektor body` aufnehmen — Einzelheiten in
+  `docs/STAND.md` unter „Wie hier gearbeitet wird".
 - **Was das Modul weiß, schreibt der Client nicht ab.** Die Regel selbst steht
   oben unter „Wie der Code gebaut ist"; hier stehen die Fälle, an denen sie
   geschärft wurde — drei an einem Tag, dem 05.09.2026, alle drei in
