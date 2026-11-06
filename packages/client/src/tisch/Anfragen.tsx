@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
-import { tw } from '../i18n/einsetzen';
+import { tf } from '../i18n/einsetzen';
 import { SpielAbschnitt, SpielRahmen } from '../screens/SpielEinstieg';
 
 /**
@@ -158,7 +158,7 @@ export function AnfrageWarten({
     <SpielRahmen
       gameId={gameId}
       titel={stand === 'abgelehnt' ? t('tisch.anfrage.leiderNicht') : t('tisch.anfrage.gesendet')}
-      unter={tw('tisch.anfrage.privat', { spiel: t(`game.${gameId}`) })}
+      unter={tf('tisch.anfrage.privat', { spiel: t(`game.${gameId}`) })}
       onBack={zurueck}
       zurueckText={t('tisch.zurueck')}
       fuss={
@@ -170,8 +170,8 @@ export function AnfrageWarten({
       <SpielAbschnitt titel={stand === 'abgelehnt' ? t('tisch.anfrage.abgelehnt') : t('tisch.anfrage.warte')}>
         <p className="hb-klein">
           {stand === 'abgelehnt'
-            ? tw('tisch.anfrage.abgelehntText', { wer })
-            : tw('tisch.anfrage.warteText', { wer })}
+            ? tf('tisch.anfrage.abgelehntText', { wer })
+            : tf('tisch.anfrage.warteText', { wer })}
         </p>
       </SpielAbschnitt>
     </SpielRahmen>

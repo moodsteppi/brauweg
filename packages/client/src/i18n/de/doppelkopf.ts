@@ -6,7 +6,7 @@ import type { Woerterbuch } from '../woerterbuch';
  * Pflichtansage, Abrechnung. Stand bis zur englischen Fassung fest im
  * Bildschirm; der Wortlaut ist unverändert.
  *
- * Platzhalter in geschweiften Klammern füllt `tw()` (`../einsetzen.ts`).
+ * Platzhalter in geschweiften Klammern füllt `tf()` (`../einsetzen.ts`).
  * Spielarten und Phasen stehen in `tisch.ts`, Regelnamen in
  * `regeln-doppelkopf.ts`.
  */

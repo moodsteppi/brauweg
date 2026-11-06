@@ -13,6 +13,8 @@ import {
   type WarState,
 } from '../api';
 import { HubBanner, HubSzene } from '../hub';
+import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 import { ClanChat } from './ClanChat';
 import { ClanKrieg } from './ClanKrieg';
 import { HbBlatt, Zurueck, useRueckfrage } from './HbBlatt';
@@ -49,17 +51,16 @@ function wappenBild(crest: string | null | undefined): string {
 /**
  * Rangstufen im Clan.
  *
- * Die Kennungen bleiben englisch wie im Schema; hier stehen die Woerter,
- * die am Tisch fallen. "Aeltester" ist bisher eine Auszeichnung ohne
- * Sonderrechte — vergeben laesst sie sich trotzdem.
+ * Die Kennungen bleiben englisch wie im Schema; die Woerter, die am Tisch
+ * fallen, stehen im Woerterbuch (`clan.rolle.*`). "Aeltester" ist bisher
+ * eine Auszeichnung ohne Sonderrechte — vergeben laesst sie sich trotzdem.
+ * Eine unbekannte Kennung bleibt leer, wie zuvor ohne Eintrag.
  */
-const ROLLE: Record<string, string> = {
-  admin: 'Anführer',
-  vize: 'Vizeanführer',
-  elder: 'Ältester',
-  member: 'Mitglied',
-  guest: 'Gast',
-};
+const ROLLEN = new Set(['admin', 'vize', 'elder', 'member', 'guest']);
+
+function rolle(kennung: string): string {
+  return ROLLEN.has(kennung) ? t(`clan.rolle.${kennung}`) : '';
+}
 
 /** Anfuehrer und Vize duerfen dasselbe. */
 function istLeitung(rolle: string | null | undefined): boolean {
@@ -124,7 +125,7 @@ function IconKnopf({
         {zaehler !== undefined && zaehler > 0 && (
           <span className="clan-zaehler">{zaehler}</span>
         )}
-        {bald && <span className="front-bald-tag">Bald</span>}
+        {bald && <span className="front-bald-tag">{t('clan.bald')}</span>}
       </span>
       <span className="clan-icon-wort">{label}</span>
     </button>
@@ -238,27 +239,27 @@ function fehlertext(e: unknown): string {
   const code = e instanceof ApiError ? e.code : '';
   switch (code) {
     case 'alreadyInClub':
-      return 'Du bist schon in einem Clan. Tritt erst aus.';
+      return t('clan.fehler.alreadyInClub');
     case 'clubNameTaken':
-      return 'Diesen Namen gibt es schon.';
+      return t('clan.fehler.clubNameTaken');
     case 'clubNameLength':
-      return 'Der Name braucht 3 bis 24 Zeichen.';
+      return t('clan.fehler.clubNameLength');
     case 'clubMottoLength':
-      return 'Der Spruch ist zu lang.';
+      return t('clan.fehler.clubMottoLength');
     case 'clubFull':
-      return 'Der Clan ist voll.';
+      return t('clan.fehler.clubFull');
     case 'clubTrophiesTooLow':
-      return 'Dafür fehlen dir noch Trophäen.';
+      return t('clan.fehler.clubTrophiesTooLow');
     case 'notClubAdmin':
-      return 'Das darf nur der Admin.';
+      return t('clan.fehler.notClubAdmin');
     case 'lastAdmin':
-      return 'Das ist der letzte Admin. Der Clan braucht mindestens einen.';
+      return t('clan.fehler.lastAdmin');
     case 'cannotChangeOwnRole':
-      return 'Die eigene Rolle kann man nicht ändern. Lass es einen anderen Admin tun.';
+      return t('clan.fehler.cannotChangeOwnRole');
     case 'cannotKickSelf':
-      return 'Dich selbst wirfst du nicht raus. Dafür gibt es „Clan verlassen“.';
+      return t('clan.fehler.cannotKickSelf');
     default:
-      return 'Hat nicht geklappt. Versuch es nochmal.';
+      return t('clan.fehler.sonst');
   }
 }
 
@@ -324,7 +325,7 @@ function Halle({
         <div className="hub-clanschild-text">
           <strong>{detail?.name ?? '…'}</strong>
           <span className="muted">
-            {detail?.motto ?? (detail ? 'Für alle Spiele' : 'Wird geladen…')}
+            {detail?.motto ?? (detail ? t('clan.mottoLeer') : t('clan.laden'))}
           </span>
           <div className="hub-clanschild-zahlen">
             <span>
@@ -352,14 +353,14 @@ function Halle({
             Reaktion binnen kurzer Zeit. Melden und Blockieren gibt es jetzt,
             einen Filter und jemanden, der die Meldungen abarbeitet, noch
             nicht. Auf der Webseite bleibt der Chat. */}
-        {mitChat && <IconKnopf icon="chat" label="Chat" onClick={() => setVoll('chat')} />}
-        <IconKnopf icon="truhe" label="Truhe" bald onClick={() => onBald('Clantruhe')} />
-        {mitKrieg && <IconKnopf icon="krieg" label="Krieg" onClick={() => setVoll('krieg')} />}
+        {mitChat && <IconKnopf icon="chat" label={t('clan.icon.chat')} onClick={() => setVoll('chat')} />}
+        <IconKnopf icon="truhe" label={t('clan.icon.truhe')} bald onClick={() => onBald(t('clan.truhe'))} />
+        {mitKrieg && <IconKnopf icon="krieg" label={t('clan.icon.krieg')} onClick={() => setVoll('krieg')} />}
         {/* Anfragen sind Bewerberdaten - die sieht nur die Leitung. */}
         {darfVerwalten && (
           <IconKnopf
             icon="anfragen"
-            label="Anfragen"
+            label={t('clan.anfragen')}
             zaehler={offen}
             onClick={() => setBlatt('anfragen')}
           />
@@ -368,7 +369,7 @@ function Halle({
             was hier gilt. Aendern duerfen sie nur Anfuehrer und Vize. */}
         <IconKnopf
           icon="einstellungen"
-          label="Clan"
+          label={t('clan.icon.clan')}
           onClick={() => setBlatt('einstellungen')}
         />
       </div>
@@ -377,7 +378,7 @@ function Halle({
 
       <section className="clan-liste">
         <header className="clan-liste-kopf">
-          <h2>Mitglieder</h2>
+          <h2>{t('clan.mitglieder')}</h2>
           {detail && (
             <span className="clan-liste-zahl">
               {detail.members}/{detail.maxMembers}
@@ -403,7 +404,7 @@ function Halle({
                 draggable={false}
               />
               <span className="clan-zeile-name">{m.displayName}</span>
-              <span className={`clan-rolle is-${m.role}`}>{ROLLE[m.role]}</span>
+              <span className={`clan-rolle is-${m.role}`}>{rolle(m.role)}</span>
               <span className="clan-zeile-trophaeen">
                 <img src="/hub/pokal.png" alt="" aria-hidden="true" />
                 {m.trophies}
@@ -418,11 +419,11 @@ function Halle({
         <button
           className="clan-austritt"
           onClick={() => {
-            if (!window.confirm(`Den Clan „${detail.name}" wirklich verlassen?`)) return;
+            if (!window.confirm(tf('clan.verlassen.frage', { name: detail.name }))) return;
             onAktion(api.leaveClub(detail.id));
           }}
         >
-          Clan verlassen
+          {t('clan.verlassen')}
         </button>
       )}
 
@@ -480,10 +481,10 @@ function MitgliedBlatt({
    * waehlt einen anderen, nicht denselben.
    */
   const RAENGE: { id: ClubRole; wort: string; hinweis: string }[] = [
-    { id: 'admin', wort: 'Anführer', hinweis: 'Darf alles' },
-    { id: 'vize', wort: 'Vizeanführer', hinweis: 'Darf alles' },
-    { id: 'elder', wort: 'Ältester', hinweis: 'Auszeichnung, keine Rechte' },
-    { id: 'member', wort: 'Mitglied', hinweis: '' },
+    { id: 'admin', wort: rolle('admin'), hinweis: t('clan.rang.hinweis.leitung') },
+    { id: 'vize', wort: rolle('vize'), hinweis: t('clan.rang.hinweis.leitung') },
+    { id: 'elder', wort: rolle('elder'), hinweis: t('clan.rang.hinweis.elder') },
+    { id: 'member', wort: rolle('member'), hinweis: '' },
   ];
 
   /**
@@ -497,15 +498,15 @@ function MitgliedBlatt({
   };
   const befoerdern = (r: (typeof RAENGE)[number]): void => {
     bestaetige(
-      `${mitglied.displayName} zum ${r.wort} machen?`,
-      istLeitung(r.id) ? 'Damit darf er aufnehmen, rauswerfen und die Clanregeln ändern.' : undefined,
-      `Zum ${r.wort} machen`,
+      tf('clan.befoerdern.frage', { name: mitglied.displayName, rang: r.wort }),
+      istLeitung(r.id) ? t('clan.befoerdern.leitung') : undefined,
+      tf('clan.befoerdern.ja', { rang: r.wort }),
       false,
       () => onAktion(api.setClubRole(clubId, mitglied.accountId, r.id), onClose),
     );
   };
   const rauswerfen = (): void => {
-    bestaetige(`${mitglied.displayName} aus dem Clan werfen?`, undefined, 'Rauswerfen', true, () =>
+    bestaetige(tf('clan.rauswerfen.frage', { name: mitglied.displayName }), undefined, t('clan.rauswerfen'), true, () =>
       onAktion(api.kickClubMember(clubId, mitglied.accountId), onClose),
     );
   };
@@ -514,13 +515,13 @@ function MitgliedBlatt({
     return (
       <HbBlatt titel={mitglied.displayName} onClose={onClose}>
         <p className="hb-klein hb-ohne-rand">
-          {ROLLE[mitglied.role]} · {mitglied.trophies.toLocaleString('de-DE')} Trophäen
+          {tf('clan.mitglied.zeile', { rolle: rolle(mitglied.role), trophaeen: mitglied.trophies.toLocaleString('de-DE') })}
         </p>
         <button type="button" className="hb-kn is-zweit is-breit" onClick={() => onShowProfile(mitglied.accountId)}>
-          Profil ansehen
+          {t('clan.profilAnsehen')}
         </button>
         <section className="hb-blk">
-          <h3 className="hb-ab">Rang</h3>
+          <h3 className="hb-ab">{t('clan.rang')}</h3>
           <div className="hb-liste">
             {RAENGE.filter((r) => r.id !== mitglied.role).map((r) => (
               <button type="button" key={r.id} className="hb-mg" onClick={() => befoerdern(r)}>
@@ -536,7 +537,7 @@ function MitgliedBlatt({
           </div>
         </section>
         <button type="button" className="hb-kn is-gefahr is-breit" onClick={rauswerfen}>
-          Rauswerfen
+          {t('clan.rauswerfen')}
         </button>
         {rueckfrage}
       </HbBlatt>
@@ -548,13 +549,13 @@ function MitgliedBlatt({
       <div className="doko-sheet-card clan-blatt" onClick={(e) => e.stopPropagation()}>
         <h2>{mitglied.displayName}</h2>
         <p className="muted">
-          {ROLLE[mitglied.role]} · {mitglied.trophies} Trophäen
+          {tf('clan.mitglied.zeile', { rolle: rolle(mitglied.role), trophaeen: mitglied.trophies })}
         </p>
         <button className="clan-blattknopf" onClick={() => onShowProfile(mitglied.accountId)}>
-          Profil ansehen
+          {t('clan.profilAnsehen')}
         </button>
 
-        <h3 className="hub-abschnitt">Rang</h3>
+        <h3 className="hub-abschnitt">{t('clan.rang')}</h3>
         {RAENGE.filter((r) => r.id !== mitglied.role).map((r) => (
           <button
             key={r.id}
@@ -570,10 +571,10 @@ function MitgliedBlatt({
           className="clan-blattknopf is-gefahr"
           onClick={rauswerfen}
         >
-          Rauswerfen
+          {t('clan.rauswerfen')}
         </button>
         <button className="hub-mini" onClick={onClose}>
-          Abbrechen
+          {t('clan.abbrechen')}
         </button>
       </div>
     </div>
@@ -596,9 +597,9 @@ function AnfragenBlatt({
 }): React.JSX.Element {
   if (neu) {
     return (
-      <HbBlatt titel="Anfragen" onClose={onClose}>
+      <HbBlatt titel={t('clan.anfragen')} onClose={onClose}>
         {detail.requests.length === 0 ? (
-          <p className="hb-klein hb-ohne-rand">Gerade will niemand rein.</p>
+          <p className="hb-klein hb-ohne-rand">{t('clan.anfragen.leer')}</p>
         ) : (
           <div className="hb-liste">
             {detail.requests.map((r, i) => (
@@ -616,17 +617,17 @@ function AnfragenBlatt({
                     type="button"
                     className="hb-kn is-kontur is-klein"
                     onClick={() => onAktion(api.acceptClubRequest(detail.id, r.accountId))}
-                    aria-label={`${r.displayName} aufnehmen`}
+                    aria-label={tf('clan.aufnehmen.aria', { name: r.displayName })}
                   >
-                    Aufnehmen
+                    {t('clan.aufnehmen')}
                   </button>
                   <button
                     type="button"
                     className="hb-kn is-zweit is-klein"
                     onClick={() => onAktion(api.rejectClubRequest(detail.id, r.accountId))}
-                    aria-label={`${r.displayName} ablehnen`}
+                    aria-label={tf('clan.ablehnen.aria', { name: r.displayName })}
                   >
-                    Nein
+                    {t('clan.nein')}
                   </button>
                 </span>
               </div>
@@ -639,8 +640,8 @@ function AnfragenBlatt({
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card clan-blatt" onClick={(e) => e.stopPropagation()}>
-        <h2>Anfragen</h2>
-        {detail.requests.length === 0 && <p className="muted">Gerade will niemand rein.</p>}
+        <h2>{t('clan.anfragen')}</h2>
+        {detail.requests.length === 0 && <p className="muted">{t('clan.anfragen.leer')}</p>}
         {detail.requests.map((r, i) => (
           <div className="clan-anfrage" key={r.accountId}>
             <img className="clan-avatar" src={bildFuer(r, i)} alt="" draggable={false} />
@@ -655,18 +656,18 @@ function AnfragenBlatt({
               className="hub-mini hub-mini--ja"
               onClick={() => onAktion(api.acceptClubRequest(detail.id, r.accountId))}
             >
-              Aufnehmen
+              {t('clan.aufnehmen')}
             </button>
             <button
               className="hub-mini"
               onClick={() => onAktion(api.rejectClubRequest(detail.id, r.accountId))}
             >
-              Nein
+              {t('clan.nein')}
             </button>
           </div>
         ))}
         <button className="hub-mini" onClick={onClose}>
-          Fertig
+          {t('clan.fertig')}
         </button>
       </div>
     </div>
@@ -732,14 +733,14 @@ function EinstellungenBlatt({
 
   if (neu) {
     return (
-      <HbBlatt titel="Clanregeln" onClose={onClose}>
+      <HbBlatt titel={t('clan.regeln')} onClose={onClose}>
         {felder(true)}
         {darfAendern ? (
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={speichern}>
-            Speichern
+            {t('clan.speichern')}
           </button>
         ) : (
-          <p className="hb-klein hb-ohne-rand">Ändern dürfen das nur Anführer und Vize.</p>
+          <p className="hb-klein hb-ohne-rand">{t('clan.nurLeitung')}</p>
         )}
       </HbBlatt>
     );
@@ -748,7 +749,7 @@ function EinstellungenBlatt({
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card clan-blatt" onClick={(e) => e.stopPropagation()}>
-        <h2>Einstellungen</h2>
+        <h2>{t('clan.einstellungen')}</h2>
         <ClanFelder
           gesperrt={!darfAendern}
           name={name}
@@ -764,15 +765,15 @@ function EinstellungenBlatt({
           meineWappen={meineWappen}
         />
         {!darfAendern && (
-          <p className="muted">Ändern dürfen das nur Anführer und Vize.</p>
+          <p className="muted">{t('clan.nurLeitung')}</p>
         )}
         {darfAendern && (
         <button className="primary" onClick={speichern}>
-          Speichern
+          {t('clan.speichern')}
         </button>
         )}
         <button className="hub-mini" onClick={onClose}>
-          Abbrechen
+          {t('clan.abbrechen')}
         </button>
       </div>
     </div>
@@ -820,24 +821,24 @@ function Suche({
     return (
       <div className="hb-clan">
         <div className="hb-clan-held is-kurz" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
-          <h1>Clans</h1>
-          <small>Such dir einen Clan - oder gründe deinen eigenen.</small>
+          <h1>{t('clan.clans')}</h1>
+          <small>{t('clan.suche.untertitel')}</small>
         </div>
         <div className="hb-clan-inhalt">
           <input
             className="hb-feld is-suche"
             value={suche}
             onChange={(e) => setSuche(e.target.value)}
-            placeholder="Clan suchen…"
-            aria-label="Clan suchen"
+            placeholder={t('clan.suche.platzhalter')}
+            aria-label={t('clan.suche.aria')}
           />
           {fehler && <p className="hb-fehler">{fehler}</p>}
 
           <div className="hb-liste">
-            {clubs === null && <p className="hb-klein hb-liste-leer">Wird geladen…</p>}
+            {clubs === null && <p className="hb-klein hb-liste-leer">{t('clan.laden')}</p>}
             {clubs?.length === 0 && (
               <p className="hb-klein hb-liste-leer">
-                {suche.trim() ? 'Kein Clan mit diesem Namen.' : 'Noch kein Clan da. Gründe den ersten.'}
+                {suche.trim() ? t('clan.suche.keinTreffer') : t('clan.suche.leer')}
               </p>
             )}
             {clubs?.map((c) => {
@@ -848,10 +849,10 @@ function Suche({
                   <span className="hb-mg-name">
                     <strong>{c.name}</strong>
                     <small className="is-leise">
-                      {c.members}/{c.maxMembers} · {c.joinMode === 'open' ? 'Offen' : 'Auf Anfrage'}
-                      {c.minTrophies > 0 ? ` · ab ${c.minTrophies.toLocaleString('de-DE')}` : ''}
+                      {c.members}/{c.maxMembers} · {c.joinMode === 'open' ? t('clan.beitritt.offen') : t('clan.beitritt.aufAnfrage')}
+                      {c.minTrophies > 0 ? ` · ${tf('clan.ab', { n: c.minTrophies.toLocaleString('de-DE') })}` : ''}
                     </small>
-                    {angefragt && <small>Angefragt</small>}
+                    {angefragt && <small>{t('clan.angefragt')}</small>}
                   </span>
                   {/* Goldkontur statt Goldfläche: Gefüllt ist nur der eine
                       Hauptknopf der Seite, hier „Clan gründen" (DESIGN.md). */}
@@ -860,18 +861,18 @@ function Suche({
                       type="button"
                       className="hb-kn is-zweit is-klein"
                       onClick={() => onZuruecknehmen(c.id)}
-                      aria-label={`Anfrage an ${c.name} zurücknehmen`}
+                      aria-label={tf('clan.zuruecknehmen.aria', { name: c.name })}
                     >
-                      Zurücknehmen
+                      {t('clan.zuruecknehmen')}
                     </button>
                   ) : (
                     <button
                       type="button"
                       className="hb-kn is-kontur is-klein"
                       onClick={() => onBeitreten(c.id)}
-                      aria-label={`${c.name}: ${c.joinMode === 'open' ? 'beitreten' : 'Beitritt anfragen'}`}
+                      aria-label={tf(c.joinMode === 'open' ? 'clan.beitreten.aria' : 'clan.beitrittAnfragen.aria', { name: c.name })}
                     >
-                      {c.joinMode === 'open' ? 'Beitreten' : 'Anfragen'}
+                      {c.joinMode === 'open' ? t('clan.beitreten') : t('clan.beitrittAnfragen')}
                     </button>
                   )}
                 </div>
@@ -881,7 +882,7 @@ function Suche({
 
           <div className="hb-fuss-haftend">
             <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onGruenden}>
-              Clan gründen
+              {t('clan.gruenden')}
             </button>
           </div>
         </div>
@@ -893,14 +894,14 @@ function Suche({
     <HubSzene bg="/hub/bg-clan-suche.webp" className="front-clan">
       <HubBanner />
 
-      <h1 className="lobby-schild">Clans</h1>
+      <h1 className="lobby-schild">{t('clan.clans')}</h1>
 
       <div className="lobby-suche">
         <input
           value={suche}
           onChange={(e) => setSuche(e.target.value)}
-          placeholder="Clan suchen…"
-          aria-label="Clan suchen"
+          placeholder={t('clan.suche.platzhalter')}
+          aria-label={t('clan.suche.aria')}
         />
       </div>
 
@@ -911,8 +912,8 @@ function Suche({
         {clubs?.length === 0 && (
           <p className="muted">
             {suche.trim()
-              ? 'Kein Clan mit diesem Namen.'
-              : 'Noch kein Clan da. Gründe den ersten.'}
+              ? t('clan.suche.keinTreffer')
+              : t('clan.suche.leer')}
           </p>
         )}
         {clubs?.map((c) => {
@@ -924,17 +925,17 @@ function Suche({
                 <strong>{c.name}</strong>
                 <span className="muted">
                   {c.members}/{c.maxMembers} ·{' '}
-                  {c.joinMode === 'open' ? 'Offen' : 'Auf Anfrage'}
-                  {c.minTrophies > 0 ? ` · ab ${c.minTrophies} Trophäen` : ''}
+                  {c.joinMode === 'open' ? t('clan.beitritt.offen') : t('clan.beitritt.aufAnfrage')}
+                  {c.minTrophies > 0 ? ` · ${tf('clan.abTrophaeen', { n: c.minTrophies })}` : ''}
                 </span>
               </span>
               {angefragt ? (
                 <button className="hub-mini" onClick={() => onZuruecknehmen(c.id)}>
-                  Angefragt
+                  {t('clan.angefragt')}
                 </button>
               ) : (
                 <button className="hub-mini hub-mini--ja" onClick={() => onBeitreten(c.id)}>
-                  {c.joinMode === 'open' ? 'Beitreten' : 'Anfragen'}
+                  {c.joinMode === 'open' ? t('clan.beitreten') : t('clan.beitrittAnfragen')}
                 </button>
               )}
             </div>
@@ -944,7 +945,7 @@ function Suche({
 
       <div className="lobby-fuss">
         <button className="lobby-grossknopf" onClick={onGruenden}>
-          Clan gründen
+          {t('clan.gruenden')}
         </button>
       </div>
     </HubSzene>
@@ -1000,11 +1001,11 @@ function Gruenden({
             Wahlspruch wandern beim Tippen mit — wie die Halle danach. */}
         <div className="hb-clan-held is-kurz" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
           <div className="hb-clan-zurueck">
-            <Zurueck onClick={onAbbruch} label="Zurück zur Clansuche" />
+            <Zurueck onClick={onAbbruch} label={t('clan.gruenden.zurueckAria')} />
           </div>
           <img className="hb-wappen" src={wappenBild(crest)} alt="" draggable={false} />
-          <h1>{name.trim() || 'Clan gründen'}</h1>
-          <small>{motto.trim() ? `„${motto.trim()}"` : 'Name, Wahlspruch und Wappen'}</small>
+          <h1>{name.trim() || t('clan.gruenden')}</h1>
+          <small>{motto.trim() ? tf('clan.motto.zitat', { motto: motto.trim() }) : t('clan.gruenden.vorschau')}</small>
         </div>
         <div className="hb-clan-inhalt">
           <ClanFelder
@@ -1028,10 +1029,10 @@ function Gruenden({
             disabled={laeuft || name.trim().length < 3}
             onClick={gruenden}
           >
-            {laeuft ? 'Wird gegründet…' : 'Gründen'}
+            {laeuft ? t('clan.gruenden.laeuft') : t('clan.gruenden.knopf')}
           </button>
           <button type="button" className="hb-leise-knopf" onClick={onAbbruch}>
-            Zurück
+            {t('clan.zurueck')}
           </button>
         </div>
       </div>
@@ -1042,7 +1043,7 @@ function Gruenden({
     <HubSzene bg="/hub/bg-clan-gruenden.webp" className="front-clan">
       <HubBanner />
 
-      <h1 className="lobby-schild">Clan gründen</h1>
+      <h1 className="lobby-schild">{t('clan.gruenden')}</h1>
 
       <div className="lobby-tafel clan-tafel">
         <ClanFelder
@@ -1063,14 +1064,14 @@ function Gruenden({
 
       <div className="lobby-fuss">
         <button className="hub-mini" onClick={onAbbruch}>
-          Zurück
+          {t('clan.zurueck')}
         </button>
         <button
           className="lobby-grossknopf"
           disabled={laeuft || name.trim().length < 3}
           onClick={gruenden}
         >
-          Gründen
+          {t('clan.gruenden.knopf')}
         </button>
       </div>
     </HubSzene>
@@ -1114,7 +1115,7 @@ function ClanFelder({
   // gibt. Antippen fuehrt nicht ins Leere, sondern sagt, wo man sie bekommt.
   const waehleWappen = (w: string, mein: boolean): void => {
     if (!mein) {
-      window.alert('Dieses Wappen gibt es im Shop unter „Clanwappen".');
+      window.alert(t('clan.wappen.imShopHinweis'));
       return;
     }
     setCrest(w);
@@ -1124,30 +1125,30 @@ function ClanFelder({
     return (
       <div className="hb-felder">
         <label className="hb-feldzeile">
-          <span>Name</span>
+          <span>{t('clan.feld.name')}</span>
           <input
             className="hb-feld"
             disabled={gesperrt}
             value={name}
             maxLength={24}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Kegelclub Nord"
+            placeholder={t('clan.feld.nameBeispiel')}
           />
-          <small>3 bis 24 Zeichen</small>
+          <small>{t('clan.feld.nameHinweis')}</small>
         </label>
         <label className="hb-feldzeile">
-          <span>Wahlspruch</span>
+          <span>{t('clan.feld.wahlspruch')}</span>
           <input
             className="hb-feld"
             disabled={gesperrt}
             value={motto}
             maxLength={120}
             onChange={(e) => setMotto(e.target.value)}
-            placeholder="Optional"
+            placeholder={t('clan.feld.optional')}
           />
         </label>
         <fieldset className="hb-feldzeile hb-wappenwahl">
-          <legend>Wappen</legend>
+          <legend>{t('clan.feld.wappen')}</legend>
           <div className="hb-wappenraster">
             {/* In der App gibt es den Wappen-Shop nicht — dort nur, was dem
                 Konto gehört, statt Schlösser, die nirgendwohin führen. Auf
@@ -1161,7 +1162,7 @@ function ClanFelder({
                   className={`hb-wappenknopf${crest === w ? ' is-an' : ''}${mein ? '' : ' is-zu'}`}
                   disabled={gesperrt}
                   aria-pressed={crest === w}
-                  aria-label={`Wappen ${w.replace('wappen-', '')}${mein ? '' : ', im Shop erhältlich'}`}
+                  aria-label={tf(mein ? 'clan.wappen.aria' : 'clan.wappen.ariaShop', { n: w.replace('wappen-', '') })}
                   onClick={() => waehleWappen(w, mein)}
                 >
                   <img src={wappenBild(w)} alt="" draggable={false} />
@@ -1179,12 +1180,12 @@ function ClanFelder({
           </div>
         </fieldset>
         <div className="hb-feldzeile">
-          <span>Beitritt</span>
+          <span>{t('clan.feld.beitritt')}</span>
           <div className="hb-chips is-innen">
             {(
               [
-                ['open', 'Offen'],
-                ['on_request', 'Auf Anfrage'],
+                ['open', 'clan.beitritt.offen'],
+                ['on_request', 'clan.beitritt.aufAnfrage'],
               ] as const
             ).map(([modus, wort]) => (
               <button
@@ -1195,13 +1196,13 @@ function ClanFelder({
                 aria-pressed={joinMode === modus}
                 onClick={() => setJoinMode(modus)}
               >
-                {wort}
+                {t(wort)}
               </button>
             ))}
           </div>
         </div>
         <label className="hb-feldzeile">
-          <span>Ab Trophäen</span>
+          <span>{t('clan.feld.abTrophaeen')}</span>
           <input
             className="hb-feld"
             type="number"
@@ -1211,7 +1212,7 @@ function ClanFelder({
             value={minTrophies}
             onChange={(e) => setMinTrophies(e.target.value)}
           />
-          <small>0 heißt: keine Schwelle</small>
+          <small>{t('clan.feld.schwelleHinweis')}</small>
         </label>
       </div>
     );
@@ -1220,29 +1221,29 @@ function ClanFelder({
   return (
     <>
       <label className="clan-feld">
-        <span>Name</span>
+        <span>{t('clan.feld.name')}</span>
         <input
           disabled={gesperrt}
           value={name}
           maxLength={24}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Kegelclub Nord"
+          placeholder={t('clan.feld.nameBeispiel')}
         />
       </label>
 
       <label className="clan-feld">
-        <span>Spruch</span>
+        <span>{t('clan.feld.spruch')}</span>
         <input
           disabled={gesperrt}
           value={motto}
           maxLength={120}
           onChange={(e) => setMotto(e.target.value)}
-          placeholder="Optional"
+          placeholder={t('clan.feld.optional')}
         />
       </label>
 
       <fieldset className="clan-wappenwahl">
-        <legend>Wappen</legend>
+        <legend>{t('clan.feld.wappen')}</legend>
         <div className="clan-wappenraster">
           {WAPPEN.map((w) => {
             const mein = meineWappen === null || meineWappen.has(w);
@@ -1253,7 +1254,7 @@ function ClanFelder({
                 className={`clan-wappen${crest === w ? ' is-an' : ''}${mein ? '' : ' is-zu'}`}
                 disabled={gesperrt}
                 aria-pressed={crest === w}
-                title={mein ? undefined : 'Im Shop erhältlich'}
+                title={mein ? undefined : t('clan.wappen.imShop')}
                 onClick={() => waehleWappen(w, mein)}
               >
                 <img src={wappenBild(w)} alt="" draggable={false} />
@@ -1265,7 +1266,7 @@ function ClanFelder({
       </fieldset>
 
       <div className="clan-feld">
-        <span>Beitritt</span>
+        <span>{t('clan.feld.beitritt')}</span>
         <div className="lobby-chips">
           <button
             type="button"
@@ -1274,7 +1275,7 @@ function ClanFelder({
             aria-pressed={joinMode === 'open'}
             onClick={() => setJoinMode('open')}
           >
-            Offen
+            {t('clan.beitritt.offen')}
           </button>
           <button
             type="button"
@@ -1283,13 +1284,13 @@ function ClanFelder({
             aria-pressed={joinMode === 'on_request'}
             onClick={() => setJoinMode('on_request')}
           >
-            Auf Anfrage
+            {t('clan.beitritt.aufAnfrage')}
           </button>
         </div>
       </div>
 
       <label className="clan-feld">
-        <span>Ab Trophäen</span>
+        <span>{t('clan.feld.abTrophaeen')}</span>
         <input
           type="number"
           disabled={gesperrt}
@@ -1384,12 +1385,12 @@ function HalleNeu({
       <div className="hb-clan-held" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
         <div className="hb-clan-knoepfe">
           {mitChat && (
-            <button type="button" className="hb-rund" onClick={() => setVoll('chat')} aria-label="Clanchat">
+            <button type="button" className="hb-rund" onClick={() => setVoll('chat')} aria-label={t('clan.chatAria')}>
               {symbol(<path d="M4 5h16v11H9l-5 4z" />)}
             </button>
           )}
           {darfVerwalten && (
-            <button type="button" className="hb-rund" onClick={() => setBlatt('anfragen')} aria-label={offen > 0 ? `Anfragen, ${offen} offen` : 'Anfragen'}>
+            <button type="button" className="hb-rund" onClick={() => setBlatt('anfragen')} aria-label={offen > 0 ? tf('clan.anfragen.offen', { n: offen }) : t('clan.anfragen')}>
               {symbol(
                 <>
                   <circle cx="9" cy="8" r="3.5" />
@@ -1405,7 +1406,7 @@ function HalleNeu({
               )}
             </button>
           )}
-          <button type="button" className="hb-rund" onClick={() => setBlatt('einstellungen')} aria-label="Clanregeln und Einstellungen">
+          <button type="button" className="hb-rund" onClick={() => setBlatt('einstellungen')} aria-label={t('clan.einstellungenAria')}>
             {symbol(
               <>
                 <circle cx="12" cy="12" r="3" />
@@ -1416,25 +1417,27 @@ function HalleNeu({
         </div>
         <img className="hb-wappen" src={wappenBild(detail?.crest)} alt="" draggable={false} />
         <h1>{detail?.name ?? '…'}</h1>
-        <small>{detail?.motto ? `„${detail.motto}"` : detail ? 'Für alle Spiele' : 'Wird geladen…'}</small>
+        <small>{detail?.motto ? tf('clan.motto.zitat', { motto: detail.motto }) : detail ? t('clan.mottoLeer') : t('clan.laden')}</small>
         {detail && (
           <div className="hb-kz">
             <span>
               <b>
                 {detail.members} / {detail.maxMembers}
               </b>
-              Mitglieder
+              {t('clan.mitglieder')}
             </span>
             {/* Beitrittsart oben, Schwelle darunter. Vorher stand hier nur die
                 Schwelle, bei 0 als „offen / für alle" — und ein Clan „auf
                 Anfrage" sah damit aus wie ein offener. */}
             <span>
-              <b>{detail.joinMode === 'open' ? 'offen' : 'auf Anfrage'}</b>
-              {detail.minTrophies > 0 ? `ab ${detail.minTrophies.toLocaleString('de-DE')} Trophäen` : 'ohne Schwelle'}
+              <b>{detail.joinMode === 'open' ? t('clan.kz.offen') : t('clan.kz.aufAnfrage')}</b>
+              {detail.minTrophies > 0
+                ? tf('clan.abTrophaeen', { n: detail.minTrophies.toLocaleString('de-DE') })
+                : t('clan.kz.ohneSchwelle')}
             </span>
             <span>
               <b>{detail.trophies.toLocaleString('de-DE')}</b>
-              Clan-Trophäen
+              {t('clan.kz.clanTrophaeen')}
             </span>
           </div>
         )}
@@ -1446,15 +1449,17 @@ function HalleNeu({
         {!inApp && mitKrieg && (
         <button type="button" className="hb-krieg" onClick={() => setVoll('krieg')}>
           <span className="hb-kr-kopf">
-            <strong>Clankrieg</strong>
+            <strong>{t('clankrieg.titel')}</strong>
             <small>
               {laeuft
-                ? `${restStunden !== null ? `noch ${restStunden} h · ` : ''}alle Spiele zählen`
+                ? restStunden !== null
+                  ? tf('clan.krieg.restUndZaehlen', { n: restStunden })
+                  : t('clan.krieg.alleZaehlen')
                 : k?.status === 'suche'
-                  ? 'Gegner wird gesucht'
+                  ? t('clan.krieg.suche')
                   : k?.status === 'angefragt'
-                    ? 'Herausforderung offen'
-                    : '48 Stunden, alle Spiele zählen'}
+                    ? t('clan.krieg.angefragt')
+                    : t('clan.krieg.einstieg')}
             </small>
           </span>
           {laeuft ? (
@@ -1463,7 +1468,7 @@ function HalleNeu({
                 <span className="hb-kr-seite">
                   <img src={wappenBild(k.wir.crest)} alt="" />
                   <b>{k.wir.score}</b>
-                  <small>Wir</small>
+                  <small>{t('clan.krieg.wir')}</small>
                 </span>
                 <span className="hb-vs">VS</span>
                 <span className="hb-kr-seite is-gegner">
@@ -1475,14 +1480,20 @@ function HalleNeu({
               <span className="hb-kr-balken" aria-hidden="true">
                 <span style={{ width: `${Math.round((k.wir.score / summe) * 100)}%` }} />
               </span>
-              <small className="hb-kr-regel">Platz 1 = 3 Punkte, Platz 2 = 1 · je Mitglied bis 10 Partien</small>
+              <small className="hb-kr-regel">{t('clan.krieg.regel')}</small>
             </>
           ) : (
             <span className="hb-kr-leer">
               {krieg?.letzter?.ergebnis
-                ? `Letzter Krieg: ${krieg.letzter.ergebnis === 'wir' ? 'gewonnen' : krieg.letzter.ergebnis === 'gegner' ? 'verloren' : 'unentschieden'}`
-                : 'Gerade läuft kein Krieg.'}
-              <span className="hb-kn is-gold">{krieg?.darfFuehren ? 'Krieg starten' : 'Ansehen'}</span>
+                ? t(
+                    krieg.letzter.ergebnis === 'wir'
+                      ? 'clan.krieg.letzter.wir'
+                      : krieg.letzter.ergebnis === 'gegner'
+                        ? 'clan.krieg.letzter.gegner'
+                        : 'clan.krieg.letzter.gleich',
+                  )
+                : t('clan.krieg.keiner')}
+              <span className="hb-kn is-gold">{krieg?.darfFuehren ? t('clan.krieg.starten') : t('clan.krieg.ansehen')}</span>
             </span>
           )}
         </button>
@@ -1498,7 +1509,7 @@ function HalleNeu({
             </span>
             <span>
               <strong>Clanwort</strong>
-              <small>Ein Mitglied wählt, alle raten - heute</small>
+              <small>{t('clan.clanwort.text')}</small>
             </span>
             <span className="hb-pf" aria-hidden="true">
               ›
@@ -1506,22 +1517,22 @@ function HalleNeu({
           </button>
         )}
 
-        <button type="button" className="hb-zeile" onClick={() => onBald('Clantruhe')}>
+        <button type="button" className="hb-zeile" onClick={() => onBald(t('clan.truhe'))}>
           <img className="hb-zeile-bild" src="/hub/truhe-gold.webp" alt="" />
           <span>
-            <strong>Clantruhe</strong>
-            <small>Gemeinsam füllen, gemeinsam öffnen</small>
+            <strong>{t('clan.truhe')}</strong>
+            <small>{t('clan.truhe.text')}</small>
           </span>
-          <span className="hb-bald-marke">Bald</span>
+          <span className="hb-bald-marke">{t('clan.bald')}</span>
         </button>
 
         <section className="hb-blk">
           <h2 className="hb-ab">
-            Mitglieder
+            {t('clan.mitglieder')}
             {detail && <span className="hb-ab-zusatz">{detail.members}</span>}
           </h2>
           <div className="hb-liste">
-            {detail === null && <p className="hb-klein hb-liste-leer">Wird geladen…</p>}
+            {detail === null && <p className="hb-klein hb-liste-leer">{t('clan.laden')}</p>}
             {detail?.memberList.map((m, i) => (
               <button
                 type="button"
@@ -1533,7 +1544,7 @@ function HalleNeu({
                 <img src={bildFuer(m, i)} alt="" draggable={false} />
                 <span className="hb-mg-name">
                   <strong>{m.displayName}</strong>
-                  <small>{ROLLE[m.role]}</small>
+                  <small>{rolle(m.role)}</small>
                 </span>
                 <span className="hb-pk">
                   <img src="/hub/symbol-pokal.webp" alt="" />
@@ -1549,12 +1560,12 @@ function HalleNeu({
             type="button"
             className="hb-leise-knopf"
             onClick={() =>
-              frage({ titel: `„${detail.name}“ verlassen?`, text: 'Du kannst danach einem anderen Clan beitreten oder selbst einen gründen.', ja: 'Clan verlassen', gefahr: true }, () =>
+              frage({ titel: tf('clan.verlassen.titel', { name: detail.name }), text: t('clan.verlassen.text'), ja: t('clan.verlassen'), gefahr: true }, () =>
                 onAktion(api.leaveClub(detail.id)),
               )
             }
           >
-            Clan verlassen
+            {t('clan.verlassen')}
           </button>
         )}
       </div>

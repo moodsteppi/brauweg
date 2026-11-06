@@ -26,7 +26,7 @@ export default {
    * Die gemeinsamen Bausteine des Spieltisches (`tisch/`): Wartebereich,
    * Letzter Stich, Regelblatt, Partie-Ende, Beitrittsanfragen. Sie gelten für
    * JEDES Kartenspiel; standen bis zur englischen Fassung fest im Bildschirm.
-   * Platzhalter in geschweiften Klammern füllt `tw()` (`../einsetzen.ts`).
+   * Platzhalter in geschweiften Klammern füllt `tf()` (`../einsetzen.ts`).
    */
   'tisch.verbindung.stellt': 'Verbindung wird wiederhergestellt…',
   'tisch.verbindung.keine': 'Keine Verbindung',

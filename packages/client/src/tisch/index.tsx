@@ -26,7 +26,7 @@ import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
 import type { Deck } from '../decks';
 import { t } from '../i18n';
-import { tw } from '../i18n/einsetzen';
+import { tf } from '../i18n/einsetzen';
 import type {
   BaseGameView,
   BotLevel,
@@ -150,7 +150,7 @@ export function StichStapel({ count }: { count: number }): React.JSX.Element | n
   if (count <= 0) return null;
   const shown = Math.min(count, 3);
   return (
-    <span className="doko-stiche" aria-label={tw('tisch.stichzahl', { anzahl: count })}>
+    <span className="doko-stiche" aria-label={tf('tisch.stichzahl', { anzahl: count })}>
       {Array.from({ length: shown }, (_, i) => (
         <i key={i} />
       ))}
@@ -311,7 +311,7 @@ export function LetzterStich({
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card" onClick={(e) => e.stopPropagation()}>
         <h2>{t('tisch.letzterStich')}</h2>
-        <p className="muted">{tw('tisch.letzterStich.an', { name: nameOf(winnerSeat) })}</p>
+        <p className="muted">{tf('tisch.letzterStich.an', { name: nameOf(winnerSeat) })}</p>
         <div className="doko-lasttrick">
           {played.map((p) => (
             <figure key={p.card.id} className={p.seat === winnerSeat ? 'is-winner' : undefined}>
@@ -377,7 +377,7 @@ export function RegelBlatt({
             <p className="muted">
               {an === 0
                 ? t('tisch.regeln.keine')
-                : tw('tisch.regeln.an', { an, gesamt })}
+                : tf('tisch.regeln.an', { an, gesamt })}
             </p>
             <div className="regeln">
               {hatBlattwahl && (
@@ -539,8 +539,8 @@ export function Wartebereich({
             {table.missing === 0
               ? t('tisch.warten.voll')
               : table.missing === 1
-                ? tw('tisch.warten.nochEiner', { runden: table.rounds })
-                : tw('tisch.warten.nochMehr', { anzahl: table.missing, runden: table.rounds })}
+                ? tf('tisch.warten.nochEiner', { runden: table.rounds })
+                : tf('tisch.warten.nochMehr', { anzahl: table.missing, runden: table.rounds })}
           </span>
         </div>
         <div className="doko-top-right">
@@ -594,7 +594,7 @@ export function Wartebereich({
               {seat.displayName
                 ? spielerName(seat.displayName, seat.accountId)
                 : seat.isBot
-                  ? tw('tisch.botNummer', { nummer: seat.seat + 1 })
+                  ? tf('tisch.botNummer', { nummer: seat.seat + 1 })
                   : t('tisch.frei')}
             </div>
             {!seat.displayName && !seat.isBot && (
@@ -691,7 +691,7 @@ export function PartyEnd({
       <img className="doko-bg" src="/hub/bg-abschluss.webp" alt="" draggable={false} />
       <div className="doko-end-card">
         <h1>{t('tisch.ende.titel')}</h1>
-        <p className="muted">{tw('tisch.ende.runden', { runden: view.view.totalRounds })}</p>
+        <p className="muted">{tf('tisch.ende.runden', { runden: view.view.totalRounds })}</p>
         <ol className="doko-standings">
           {standings.map((s, i) => {
             const delta = trophiesOf(s.seat);
@@ -705,7 +705,7 @@ export function PartyEnd({
                     <img
                       className="doko-medaille"
                       src={`/hub/medaille-${s.place}.webp`}
-                      alt={tw('tisch.ende.platz', { platz: s.place })}
+                      alt={tf('tisch.ende.platz', { platz: s.place })}
                       draggable={false}
                     />
                   ) : (

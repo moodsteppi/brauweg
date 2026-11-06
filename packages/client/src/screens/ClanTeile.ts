@@ -6,6 +6,10 @@
  * Dateien im Kreis aufeinander.
  */
 
+import { createElement, type ReactNode } from 'react';
+
+import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 import { serverAdresse } from '../laufzeit';
 
 /** Laenge einer Chatnachricht. Muss zum Server passen (`chat.ts`). */
@@ -36,10 +40,23 @@ function zahlAus(text: string): number {
 export function restzeit(endsAt: string | null): string {
   if (!endsAt) return '';
   const ms = new Date(endsAt).getTime() - Date.now();
-  if (ms <= 0) return 'gleich vorbei';
+  if (ms <= 0) return t('clan.rest.vorbei');
   const minuten = Math.floor(ms / 60_000);
-  if (minuten < 60) return `noch ${minuten} Min`;
+  if (minuten < 60) return tf('clan.rest.min', { n: minuten });
   const stunden = Math.floor(minuten / 60);
-  if (stunden < 24) return `noch ${stunden} Std`;
-  return `noch ${Math.floor(stunden / 24)} Tg ${stunden % 24} Std`;
+  if (stunden < 24) return tf('clan.rest.std', { n: stunden });
+  return tf('clan.rest.tage', { tage: Math.floor(stunden / 24), std: stunden % 24 });
+}
+
+/**
+ * Text mit `<b>…</b>` als Fettschrift zeichnen.
+ *
+ * Steht ein Teil eines Satzes fett, bleibt der Satz trotzdem EIN Schlüssel —
+ * in Bruchstücke zerlegt, legte er die deutsche Wortstellung über jede
+ * Sprache. Die Markierung im Wörterbuch ist deshalb Teil des Textes.
+ */
+export function mitFett(text: string, tag: 'b' | 'strong'): ReactNode[] {
+  return text
+    .split(/<b>(.*?)<\/b>/)
+    .map((teil, i) => (i % 2 === 1 ? createElement(tag, { key: i }, teil) : teil));
 }

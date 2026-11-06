@@ -182,7 +182,7 @@ export function cardName(card: { suit: string; rank: string }): string {
   if (card.suit === 'N') return t('karte.narr');
   const suit = nachschlagen(`karte.farbe.${card.suit}`) ?? card.suit;
   const rank = nachschlagen(`karte.wert.${card.rank}`) ?? card.rank;
-  // Wortfolge aus dem Wörterbuch (Kopf von `karten.ts`). Kein `tw` aus
+  // Wortfolge aus dem Wörterbuch (Kopf von `karten.ts`). Kein `tf` aus
   // `einsetzen.ts`: Das importiert diese Datei und hinge mit ihr im Kreis.
   return (nachschlagen('karte.name') ?? '{farbe} {wert}')
     .replace('{farbe}', suit)

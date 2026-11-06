@@ -57,12 +57,15 @@ if (typeof (globalThis as { localStorage?: Storage }).localStorage?.clear !== 'f
 }
 
 /*
- * Tests laufen auf Deutsch. jsdom meldet `navigator.language` = en-US, und
- * die Spracherkennung (`i18n/index.ts`) liest die Wahl beim Laden des Moduls
- * aus dem Speicher — ohne diesen Eintrag zeichnete jeder Bildschirm englisch,
- * sobald sein Bereich eine `en/`-Datei bekommt, und jeder Test, der nach
- * deutschem Wortlaut sucht, fiele um, ohne dass am Geprüften etwas falsch
- * wäre. Wer Englisch prüfen will, stellt es im Test mit `setzeSprachwahl('en')`
- * um (siehe `i18n.test.ts`).
+ * Tests laufen auf Deutsch. jsdom meldet `en-US` als Gerätesprache, und die
+ * Sprachwahl „Automatisch" (die Vorgabe) folgt dem Gerät — sobald ein Bereich
+ * ins Englische übersetzt war, fanden die vielen Tests, die nach deutschem
+ * Text suchen („Neues Konto", „Beitreten"), ihn nicht mehr, obwohl am
+ * Bildschirm nichts kaputt war. Wer Englisch prüfen will, stellt es im Test
+ * ausdrücklich ein (`setzeSprachwahl('en')`).
+ *
+ * Hier und nicht erst im Test: `i18n/index.ts` liest die Gerätesprache beim
+ * Laden, und die Einrichtung läuft vor jedem Import der Testdatei.
  */
-globalThis.localStorage?.setItem('brauweg.sprache', 'de');
+Object.defineProperty(navigator, 'languages', { value: ['de-DE', 'de'], configurable: true });
+Object.defineProperty(navigator, 'language', { value: 'de-DE', configurable: true });

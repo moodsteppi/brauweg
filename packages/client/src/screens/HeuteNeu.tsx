@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, api, type Aufgabe, type Aufgaben, type Fund, type Truhe, type Truhen } from '../api';
 import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { truhenBild } from '../truhenbild';
 import { FundBlatt } from './Aufgaben';
 
@@ -14,13 +15,8 @@ import { FundBlatt } from './Aufgaben';
  * und Knopf).
  */
 
-const GRAD_NAME: Record<Truhe['grad'], string> = {
-  holz: 'Holz',
-  bronze: 'Bronze',
-  silber: 'Silber',
-  gold: 'Gold',
-  diamant: 'Diamant',
-};
+/** Name des Grades — beim Zeichnen nachgeschlagen, damit die Sprache umspringt. */
+const gradName = (grad: Truhe['grad']): string => t(`heute.grad.${grad}`);
 
 export function HeuteNeu({
   onClose,
@@ -47,7 +43,7 @@ export function HeuteNeu({
         setTruhen(tr);
         setAufgaben(q);
       })
-      .catch(() => setFehler('Aufgaben und Truhen ließen sich nicht laden.'));
+      .catch(() => setFehler(t('heute.fehler.laden')));
   };
   useEffect(laden, []);
 
@@ -73,7 +69,7 @@ export function HeuteNeu({
         laden();
         onGuthaben();
       })
-      .catch((err: unknown) => meldung(err, 'Die Truhe ließ sich nicht öffnen.'))
+      .catch((err: unknown) => meldung(err, t('heute.fehler.oeffnen')))
       .finally(() => setLaeuft(null));
   };
   const abholen = (aufgabe: Aufgabe): void => {
@@ -86,7 +82,7 @@ export function HeuteNeu({
         laden();
         onGuthaben();
       })
-      .catch((err: unknown) => meldung(err, 'Die Belohnung ließ sich nicht holen.'))
+      .catch((err: unknown) => meldung(err, t('heute.fehler.holen')))
       .finally(() => setLaeuft(null));
   };
 
@@ -121,15 +117,15 @@ export function HeuteNeu({
         ref={blatt}
         role="dialog"
         aria-modal="true"
-        aria-label="Heute: Aufgaben und Truhen"
+        aria-label={t('heute.aria')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="hb-blatt-griff" onTouchStart={ziehStart} onTouchMove={ziehen} onTouchEnd={ziehEnde}>
           <span aria-hidden="true" />
         </div>
         <header className="hb-blatt-kopf">
-          <h1 className="hb-titel">Heute</h1>
-          <button type="button" className="hb-rund" onClick={onClose} aria-label="Schließen">
+          <h1 className="hb-titel">{t('heute.titel')}</h1>
+          <button type="button" className="hb-rund" onClick={onClose} aria-label={t('heute.schliessen')}>
             <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
@@ -138,7 +134,7 @@ export function HeuteNeu({
 
         <div className="hb-blatt-rolle">
           {fehler && <p className="hb-fehler">{fehler}</p>}
-          {!truhen && !aufgaben && !fehler && <p className="hb-laden">Wird geladen…</p>}
+          {!truhen && !aufgaben && !fehler && <p className="hb-laden">{t('heute.laden')}</p>}
 
           {aufgaben && (
             <section className="hb-blk">
@@ -147,15 +143,18 @@ export function HeuteNeu({
                   <rect x="4" y="4" width="16" height="16" rx="4" />
                   <path d="M8 12l3 3 5-6" />
                 </svg>
-                Tagesaufgaben
+                {t('heute.aufgaben.titel')}
                 {sortiert.length > 5 && (
                   <button type="button" className="hb-ab-mehr" onClick={() => setAlleZeigen((a) => !a)} aria-expanded={alleZeigen}>
-                    {alleZeigen ? 'Weniger' : `Alle ${sortiert.length} ›`}
+                    {alleZeigen ? t('heute.aufgaben.weniger') : tf('heute.aufgaben.alle', { n: sortiert.length })}
                   </button>
                 )}
               </h2>
               <p className="hb-klein">
-                Jeden Tag alle {aufgaben.aufgaben.length === 8 ? 'acht' : aufgaben.aufgaben.length}, zusammen {summe} Münzen. Neu um Mitternacht.
+                {tf('heute.aufgaben.hinweis', {
+                  anzahl: aufgaben.aufgaben.length === 8 ? t('heute.aufgaben.acht') : aufgaben.aufgaben.length,
+                  summe,
+                })}
               </p>
               <div className="hb-liste">
                 {liste.map((a) => {
@@ -179,14 +178,14 @@ export function HeuteNeu({
                           className="hb-kn is-gold hb-abholen"
                           disabled={laeuft === a.id}
                           onClick={() => abholen(a)}
-                          aria-label={`${t(a.nameKey)}: ${a.belohnung.betrag} Münzen abholen`}
+                          aria-label={tf('heute.aufgabe.abholen', { aufgabe: t(a.nameKey), betrag: a.belohnung.betrag })}
                         >
                           <img src="/hub/symbol-muenze.webp" alt="" />+{a.belohnung.betrag}
                         </button>
                       ) : (
                         <span className="hb-auf-lohn">
                           {a.abgeholt ? (
-                            'geholt'
+                            t('heute.aufgabe.geholt')
                           ) : (
                             <>
                               <img src="/hub/symbol-muenze.webp" alt="" />
@@ -200,7 +199,7 @@ export function HeuteNeu({
                 })}
               </div>
               <p className="hb-klein">
-                Gezählt wird am Ende einer Partie, auch an Tischen mit Bots. Abgebrochene Partien zählen nicht.
+                {t('heute.aufgaben.zaehlt')}
               </p>
             </section>
           )}
@@ -208,13 +207,14 @@ export function HeuteNeu({
           {truhen && (
             <section className="hb-blk">
               <h2 className="hb-ab">
-                Truhen
-                <span className="hb-ab-zusatz">nur Münzen drin</span>
+                {t('heute.truhen.titel')}
+                <span className="hb-ab-zusatz">{t('heute.truhen.zusatz')}</span>
               </h2>
               <div className="hb-truhen">
                 {alleTruhen.map((tr) => {
                   const offen = tr.offen && !tr.geholt;
-                  const titel = tr.art === 'tag' ? 'Tagestruhe' : `Stufe ${tr.abStufe ?? ''}`;
+                  const titel = tr.art === 'tag' ? t('heute.truhe.tag') : tf('heute.truhe.stufe', { stufe: tr.abStufe ?? '' });
+                  const ariaWerte = { titel, grad: gradName(tr.grad), von: tr.von, bis: tr.bis };
                   return (
                     <button
                       type="button"
@@ -222,17 +222,20 @@ export function HeuteNeu({
                       className={`hb-tr${offen ? ' is-offen' : ''}${tr.geholt ? ' is-geholt' : ''}${!tr.offen && !tr.geholt ? ' is-zu' : ''}`}
                       disabled={!offen || laeuft === tr.id}
                       onClick={() => oeffnen(tr)}
-                      aria-label={`${titel}, ${GRAD_NAME[tr.grad]}, ${tr.von} bis ${tr.bis} Münzen${offen ? ', öffnen' : tr.geholt ? ', schon geholt' : ''}`}
+                      aria-label={tf(
+                        offen ? 'heute.truhe.ariaOeffnen' : tr.geholt ? 'heute.truhe.ariaGeholt' : 'heute.truhe.aria',
+                        ariaWerte,
+                      )}
                     >
                       <img src={truhenBild(tr.grad)} alt="" />
                       <strong>{titel}</strong>
                       <small>
                         {!tr.offen && !tr.geholt && tr.fehltStufen !== null
-                          ? `noch ${tr.fehltStufen} ${tr.fehltStufen === 1 ? 'Stufe' : 'Stufen'}`
-                          : `${GRAD_NAME[tr.grad]} · ${tr.von}-${tr.bis}`}
+                          ? tn('heute.truhe.fehlt', tr.fehltStufen)
+                          : `${gradName(tr.grad)} · ${tr.von}-${tr.bis}`}
                       </small>
                       {offen ? (
-                        <span className="hb-tr-knopf">Öffnen</span>
+                        <span className="hb-tr-knopf">{t('heute.truhe.oeffnen')}</span>
                       ) : tr.geholt ? (
                         <span className="hb-tr-ok">✓ {tr.coins ?? ''}</span>
                       ) : (
@@ -248,7 +251,7 @@ export function HeuteNeu({
                 })}
               </div>
               <p className="hb-klein">
-                Die Tagestruhe steht jeden Tag einmal bereit. Die anderen kommen mit den Stufen, erreicht ist erreicht.
+                {t('heute.truhen.hinweis')}
               </p>
             </section>
           )}
@@ -258,8 +261,8 @@ export function HeuteNeu({
               <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" />
             </svg>
             <span>
-              <strong>Rangliste</strong>
-              <small>Gesamt und je Spiel</small>
+              <strong>{t('heute.rangliste.titel')}</strong>
+              <small>{t('heute.rangliste.text')}</small>
             </span>
             <span className="hb-pf" aria-hidden="true">
               ›

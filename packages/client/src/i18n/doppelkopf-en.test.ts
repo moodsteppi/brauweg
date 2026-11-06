@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cardName, gameTypeLabel, rankLabel, setzeSprachwahl, t } from '.';
-import { tw } from './einsetzen';
+import { tf } from './einsetzen';
 
 /*
  * Doppelkopf auf Englisch. Eigene Datei statt `i18n.test.ts`: Daran arbeiten
@@ -28,15 +28,15 @@ describe('Doppelkopf englisch', () => {
     expect(gameTypeLabel({ kind: 'hochzeit' })).toBe('Hochzeit (marriage)');
     expect(t('doko.partei.re')).toBe('Re');
     expect(t('doko.partei.kontra')).toBe('Kontra');
-    expect(tw('doko.parteiAnsagen', { partei: 'Re' })).toBe('Call Re');
+    expect(tf('doko.parteiAnsagen', { partei: 'Re' })).toBe('Call Re');
     expect(t('regel.schweinchen')).toMatch(/^Schweinchen \(/);
   });
 
   it('Platzhalter: deutsche und englische Satzstellung aus demselben Aufruf', () => {
     setzeSprachwahl('de');
-    expect(tw('doko.parteiAnsagen', { partei: 'Re' })).toBe('Re ansagen');
-    expect(tw('doko.runde', { nummer: 2, gesamt: 8 })).toBe('Runde 2 / 8');
+    expect(tf('doko.parteiAnsagen', { partei: 'Re' })).toBe('Re ansagen');
+    expect(tf('doko.runde', { nummer: 2, gesamt: 8 })).toBe('Runde 2 / 8');
     // Ein fehlender Wert bleibt sichtbar stehen.
-    expect(tw('doko.runde', { nummer: 2 })).toBe('Runde 2 / {gesamt}');
+    expect(tf('doko.runde', { nummer: 2 })).toBe('Runde 2 / {gesamt}');
   });
 });
