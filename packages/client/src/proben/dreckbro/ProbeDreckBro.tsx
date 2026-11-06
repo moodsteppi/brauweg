@@ -53,6 +53,7 @@ const FAELLE: Record<string, Fall> = {
       letzterZug: null,
       ende: null,
       zuege: 0,
+      zugGrenze: 400,
     },
     zuege: [
       { type: 'spielen', karte: 4, eigen: 0 },
@@ -89,6 +90,7 @@ const FAELLE: Record<string, Fall> = {
       letzterZug: { sitz: 3, art: 'eisregen' },
       ende: null,
       zuege: 23,
+      zugGrenze: 400,
     },
     zuege: [
       { type: 'spielen', karte: 9, ziel: { sitz: 1, pinguin: 0 } },
@@ -127,6 +129,7 @@ const FAELLE: Record<string, Fall> = {
       letzterZug: { sitz: 2, art: 'schneeball', ziel: { sitz: 1, pinguin: 0 } },
       ende: null,
       zuege: 31,
+      zugGrenze: 400,
     },
     zuege: [],
   },
@@ -152,6 +155,7 @@ const FAELLE: Record<string, Fall> = {
       letzterZug: { sitz: 1, art: 'pfuetze', eigen: 2 },
       ende: { sieger: 1, grund: 'dreckbro' },
       zuege: 26,
+      zugGrenze: 400,
     },
     zuege: [],
   },

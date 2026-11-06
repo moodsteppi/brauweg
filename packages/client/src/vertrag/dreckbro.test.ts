@@ -56,6 +56,7 @@ const FELDER = [
   'letzterZug',
   'ende',
   'zuege',
+  'zugGrenze',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof DreckBroSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof DreckBroSicht>>;

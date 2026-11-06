@@ -8,6 +8,7 @@
 
 import type { Karte, KartenArt } from './karten.js';
 import { type DreckBroPartie, type Ende, type LetzterZug, type Pinguin, amZug } from './partie.js';
+import { ZUG_GRENZE } from './regeln.js';
 
 export interface DreckBroSicht {
   readonly zuschauer: boolean;
@@ -26,6 +27,12 @@ export interface DreckBroSicht {
   readonly letzterZug: LetzterZug | null;
   readonly ende: Ende | null;
   readonly zuege: number;
+  /**
+   * Nach so vielen Zuegen pfeift die Partie ab (`ZUG_GRENZE`). Steht in der
+   * Sicht, damit der Tisch die Zahl im Abpfiff-Text nicht abschreibt — eine
+   * feste 400 im Client stimmte nach der ersten geaenderten Konstante nicht mehr.
+   */
+  readonly zugGrenze: number;
 }
 
 function sicht(partie: DreckBroPartie, sitz: number | null): DreckBroSicht {
@@ -42,6 +49,7 @@ function sicht(partie: DreckBroPartie, sitz: number | null): DreckBroSicht {
     letzterZug: partie.letzterZug,
     ende: partie.ende,
     zuege: partie.zuege,
+    zugGrenze: ZUG_GRENZE,
   };
 }
 

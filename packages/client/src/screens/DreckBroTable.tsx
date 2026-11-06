@@ -96,7 +96,7 @@ export function DreckBroTable({
   if (ende) {
     const grund =
       ende.grund === 'zuggrenze'
-        ? 'Nach 400 Zügen abgepfiffen – es zählt, wer am dreckigsten ist.'
+        ? `Nach ${sicht.zugGrenze} Zügen abgepfiffen – es zählt, wer am dreckigsten ist.`
         : 'Alle drei Pinguine voll eingesaut.';
     if (ende.sieger === null) ergebnis = { titel: 'Unentschieden', grund };
     else if (ende.sieger === sicht.meinSitz) ergebnis = { titel: 'Du bist der DreckBro!', grund };

@@ -67,4 +67,6 @@ export interface DreckBroSicht {
   letzterZug: LetzterZug | null;
   ende: Ende | null;
   zuege: number;
+  /** Abpfiff nach so vielen Zuegen (`ZUG_GRENZE` im Modul). */
+  zugGrenze: number;
 }
