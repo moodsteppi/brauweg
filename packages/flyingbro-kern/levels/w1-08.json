@@ -1,0 +1,87 @@
+{
+  "fassung": 1,
+  "id": "w1-08",
+  "welt": 1,
+  "nr": 8,
+  "titel": "Steinbruch",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "pelle",
+    "malve",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    13000,
+    19000
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 15,
+      "y": 0.4,
+      "b": 0.8,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 15,
+      "y": 1.2,
+      "b": 0.8,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 17.5,
+      "y": 0.7,
+      "b": 0.4,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 22,
+      "y": 0.3,
+      "b": 1.2,
+      "h": 0.6
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 25,
+      "y": 0.4,
+      "b": 0.8,
+      "h": 0.8
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "kalb",
+      "x": 15,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 19.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 22,
+      "y": 0.6,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}

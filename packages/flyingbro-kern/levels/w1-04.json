@@ -1,0 +1,88 @@
+{
+  "fassung": 1,
+  "id": "w1-04",
+  "welt": 1,
+  "nr": 4,
+  "titel": "Der Holzturm",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "pelle",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    9000,
+    12000
+  ],
+  "teile": [
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18,
+      "y": 0.6,
+      "b": 0.2,
+      "h": 1.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 20,
+      "y": 0.6,
+      "b": 0.2,
+      "h": 1.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19,
+      "y": 1.3,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18,
+      "y": 2,
+      "b": 0.2,
+      "h": 1.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 20,
+      "y": 2,
+      "b": 0.2,
+      "h": 1.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19,
+      "y": 2.7,
+      "b": 2.4,
+      "h": 0.2
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "kalb",
+      "x": 19,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 19,
+      "y": 2.8,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}
