@@ -26,6 +26,7 @@ import { api } from '../api';
 import { CardBack, CardFront } from '../CardFace';
 import type { Deck } from '../decks';
 import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 import type {
   BaseGameView,
   BotLevel,
@@ -168,7 +169,7 @@ export function StichStapel({ count }: { count: number }): React.JSX.Element | n
   if (count <= 0) return null;
   const shown = Math.min(count, 3);
   return (
-    <span className="doko-stiche" aria-label={`${count} Stiche gewonnen`}>
+    <span className="doko-stiche" aria-label={tf('tisch.stichzahl', { anzahl: count })}>
       {Array.from({ length: shown }, (_, i) => (
         <i key={i} />
       ))}
@@ -297,7 +298,7 @@ export const HandCard = memo(function HandCard({
         setShaking(true);
       }}
       onAnimationEnd={() => setShaking(false)}
-      aria-label={marked ? 'Vorgemerkt' : trump ? 'Sticht' : undefined}
+      aria-label={marked ? t('tisch.vorgemerkt') : trump ? t('tisch.sticht') : undefined}
     >
       <div className="pc pc--hand">
         <CardFront card={card} deck={deck} />
@@ -328,8 +329,8 @@ export function LetzterStich({
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card" onClick={(e) => e.stopPropagation()}>
-        <h2>Letzter Stich</h2>
-        <p className="muted">Ging an {nameOf(winnerSeat)}.</p>
+        <h2>{t('tisch.letzterStich')}</h2>
+        <p className="muted">{tf('tisch.letzterStich.an', { name: nameOf(winnerSeat) })}</p>
         <div className="doko-lasttrick">
           {played.map((p) => (
             <figure key={p.card.id} className={p.seat === winnerSeat ? 'is-winner' : undefined}>
@@ -341,7 +342,7 @@ export function LetzterStich({
           ))}
         </div>
         <button className="primary" onClick={onClose}>
-          Schließen
+          {t('tisch.schliessen')}
         </button>
       </div>
     </div>
@@ -387,15 +388,15 @@ export function RegelBlatt({
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card" onClick={(event) => event.stopPropagation()}>
-        <h2>Regeln an diesem Tisch</h2>
-        {fehler && <p className="error">Die Regeln ließen sich nicht laden.</p>}
+        <h2>{t('tisch.regeln.titel')}</h2>
+        {fehler && <p className="error">{t('tisch.regeln.fehler')}</p>}
         {!config && !fehler && <Ladekreis />}
         {config && (
           <>
             <p className="muted">
               {an === 0
-                ? 'Keine Sonderregeln. Es gilt das Grundspiel.'
-                : `${an} von ${gesamt} Regeln an.`}
+                ? t('tisch.regeln.keine')
+                : tf('tisch.regeln.an', { an, gesamt })}
             </p>
             <div className="regeln">
               {hatBlattwahl && (
@@ -424,7 +425,7 @@ export function RegelBlatt({
           </>
         )}
         <button className="primary" onClick={onClose}>
-          Schließen
+          {t('tisch.schliessen')}
         </button>
       </div>
     </div>
@@ -432,35 +433,16 @@ export function RegelBlatt({
 }
 
 /** Kurzname je Bot-Stufe, fuer den Knopf im Wartebereich. */
-const STUFEN_NAME: Record<BotLevel, string> = {
-  anfaenger: 'Anfänger',
-  standard: 'Standard',
-  experte: 'Experte',
-  genie: 'Genie',
-};
+function stufenName(level: BotLevel): string {
+  return t(`tisch.botStufe.${level}`);
+}
 
 /**
  * Die drei Bot-Stufen mit je einem Satz, was sie ausmacht. Der Text steht hier
  * und nicht im Bot: Der Spieler waehlt nach dieser Beschreibung, der Bot spielt
  * danach — beide muessen zusammenpassen, aber nur einer davon ist Text.
  */
-const STUFEN: readonly { id: BotLevel; name: string; text: string }[] = [
-  {
-    id: 'standard',
-    name: 'Standard',
-    text: 'Solider Vereinsspieler: spielt Ässe früh, hält Trümpfe, schmiert dem Partner. Sagt nichts an.',
-  },
-  {
-    id: 'experte',
-    name: 'Experte',
-    text: 'Zieht bei starkem Blatt die Trümpfe und sagt Re oder Kontra an, wenn die Hand es trägt.',
-  },
-  {
-    id: 'genie',
-    name: 'Genie',
-    text: 'Zählt mit, was schon gespielt wurde, und wählt die Karte mit dem sichersten Gewinn. Richtig stark.',
-  },
-];
+const STUFEN: readonly BotLevel[] = ['standard', 'experte', 'genie'];
 
 /**
  * Zwischenschirm zur Wahl der Bot-Spielstärke — nach der doko-sheet-Vorlage
@@ -481,19 +463,17 @@ function BotStufenBlatt({
         className="doko-sheet-card doko-botstufe"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2>Bot-Stärke</h2>
-        <p className="muted doko-botstufe-hint">
-          Gilt für alle Bots an diesem Tisch.
-        </p>
+        <h2>{t('tisch.botStaerke')}</h2>
+        <p className="muted doko-botstufe-hint">{t('tisch.botStaerke.hinweis')}</p>
         {STUFEN.map((stufe) => (
           <button
-            key={stufe.id}
+            key={stufe}
             type="button"
-            className={`doko-botstufe-wahl${stufe.id === aktuell ? ' is-aktiv' : ''}`}
-            onClick={() => onWahl(stufe.id)}
+            className={`doko-botstufe-wahl${stufe === aktuell ? ' is-aktiv' : ''}`}
+            onClick={() => onWahl(stufe)}
           >
-            <strong>{stufe.name}</strong>
-            <span className="muted">{stufe.text}</span>
+            <strong>{stufenName(stufe)}</strong>
+            <span className="muted">{t(`tisch.botStufe.${stufe}.text`)}</span>
           </button>
         ))}
       </div>
@@ -568,23 +548,25 @@ export function Wartebereich({
             void api.leaveTable(tableId).catch(() => undefined);
             onLeave();
           }}
-          aria-label="Zurück"
+          aria-label={t('tisch.zurueck')}
         >
           ‹
         </button>
         <div className="doko-top-mid">
-          <strong>Wartet auf Mitspieler</strong>
+          <strong>{t('tisch.warten.titel')}</strong>
           <span className="muted">
             {table.missing === 0
-              ? 'Alle Plätze belegt, es geht gleich los…'
-              : `${table.missing === 1 ? 'Noch ein Spieler' : `Noch ${table.missing} Spieler`} · ${table.rounds} Runden`}
+              ? t('tisch.warten.voll')
+              : table.missing === 1
+                ? tf('tisch.warten.nochEiner', { runden: table.rounds })
+                : tf('tisch.warten.nochMehr', { anzahl: table.missing, runden: table.rounds })}
           </span>
         </div>
         <div className="doko-top-right">
           <button
             className="doko-icon"
             onClick={() => setZeigeRegeln(true)}
-            aria-label="Tischregeln ansehen"
+            aria-label={t('tisch.regelnAnsehen')}
           >
             §
           </button>
@@ -600,8 +582,8 @@ export function Wartebereich({
           className="doko-botstufe-knopf"
           onClick={() => setStufenOffen(true)}
         >
-          <span className="muted">Bot-Stärke</span>
-          <strong>{STUFEN_NAME[table.botLevel] ?? 'Standard'}</strong>
+          <span className="muted">{t('tisch.botStaerke')}</span>
+          <strong>{stufenName(table.botLevel ?? 'standard')}</strong>
           <span className="doko-botstufe-pfeil" aria-hidden="true">›</span>
         </button>
       )}
@@ -620,7 +602,7 @@ export function Wartebereich({
             key={seat.seat}
           >
             <Avatar
-              name={seat.displayName ?? (seat.isBot ? 'Bot' : 'frei')}
+              name={seat.displayName ?? (seat.isBot ? t('tisch.bot') : t('tisch.frei'))}
               seatIndex={seat.seat}
               active={false}
               deadline={null}
@@ -631,8 +613,8 @@ export function Wartebereich({
               {seat.displayName
                 ? spielerName(seat.displayName, seat.accountId)
                 : seat.isBot
-                  ? `Bot ${seat.seat + 1}`
-                  : 'frei'}
+                  ? tf('tisch.botNummer', { nummer: seat.seat + 1 })
+                  : t('tisch.frei')}
             </div>
             {!seat.displayName && !seat.isBot && (
               <button
@@ -644,9 +626,9 @@ export function Wartebereich({
                 }}
               >
                 {botBusy[seat.seat] ? (
-                  <span className="doko-btn-spinner" aria-label="Bot setzt sich…" />
+                  <span className="doko-btn-spinner" aria-label={t('tisch.warten.botSetztSich')} />
                 ) : (
-                  '+ Bot'
+                  t('tisch.warten.botSetzen')
                 )}
               </button>
             )}
@@ -660,9 +642,9 @@ export function Wartebereich({
                 }}
               >
                 {botBusy[seat.seat] ? (
-                  <span className="doko-btn-spinner" aria-label="Bot steht auf…" />
+                  <span className="doko-btn-spinner" aria-label={t('tisch.warten.botStehtAuf')} />
                 ) : (
-                  'entfernen'
+                  t('tisch.warten.botEntfernen')
                 )}
               </button>
             )}
@@ -671,8 +653,8 @@ export function Wartebereich({
       </div>
       <p className="muted doko-wait-hint">
         {table.visibility === 'public'
-          ? 'Andere finden den Tisch in der Lobby - oder fülle freie Plätze mit Bots. Sobald alle Plätze belegt sind, geht es los.'
-          : 'Wer beitreten will, lässt der Gastgeber herein - freie Plätze lassen sich auch mit Bots füllen. Sobald alle Plätze belegt sind, geht es los.'}
+          ? t('tisch.warten.hinweisOeffentlich')
+          : t('tisch.warten.hinweisPrivat')}
       </p>
       <GastHinweis sitze={table.seats} className="muted doko-wait-hint" />
 
@@ -727,8 +709,8 @@ export function PartyEnd({
     <div className="doko doko--end">
       <img className="doko-bg" src="/hub/bg-abschluss.webp" alt="" draggable={false} />
       <div className="doko-end-card">
-        <h1>Partie beendet</h1>
-        <p className="muted">{view.view.totalRounds} Runden gespielt.</p>
+        <h1>{t('tisch.ende.titel')}</h1>
+        <p className="muted">{tf('tisch.ende.runden', { runden: view.view.totalRounds })}</p>
         <ol className="doko-standings">
           {standings.map((s, i) => {
             const delta = trophiesOf(s.seat);
@@ -742,7 +724,7 @@ export function PartyEnd({
                     <img
                       className="doko-medaille"
                       src={`/hub/medaille-${s.place}.webp`}
-                      alt={`Platz ${s.place}`}
+                      alt={tf('tisch.ende.platz', { platz: s.place })}
                       draggable={false}
                     />
                   ) : (
@@ -751,13 +733,13 @@ export function PartyEnd({
                 </span>
                 <span className="doko-standing-name">
                   {spielerName(nameOf(s.seat), accountOf(s.seat))}
-                  {s.left && <em className="doko-tag">ausgestiegen</em>}
+                  {s.left && <em className="doko-tag">{t('tisch.ausgestiegen')}</em>}
                   {/* Das Vorzeichen ist die Information: +9 ist ein Gewinn,
                       -9 ein Verlust, 0 ehrlich eine Null. */}
                   {gewertet && (
                     <em className="doko-tag">
                       {delta > 0 ? `+${delta}` : delta}
-                      <img src="/hub/pokal.png" alt="Trophäen" className="doko-tag-icon" />
+                      <img src="/hub/pokal.png" alt={t('tisch.ende.trophaeen')} className="doko-tag-icon" />
                     </em>
                   )}
                 </span>
@@ -768,11 +750,11 @@ export function PartyEnd({
         </ol>
         <p className="muted doko-fineprint">
           {gewertet
-            ? 'Trophäen sind gutgeschrieben. Dein Stand steht im Profil.'
-            : 'Keine Trophäen: An Tischen mit Bots wird nicht gewertet.'}
+            ? t('tisch.ende.gewertet')
+            : t('tisch.ende.ungewertet')}
         </p>
         <button className="primary" onClick={onLeave}>
-          Zurück zur Lobby
+          {t('tisch.ende.zurLobby')}
         </button>
       </div>
     </div>
