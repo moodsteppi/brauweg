@@ -13,7 +13,7 @@ import {
   type WarState,
 } from '../api';
 import { HubBanner, HubSzene } from '../hub';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { tf } from '../i18n/einsetzen';
 import { ClanChat } from './ClanChat';
 import { ClanKrieg } from './ClanKrieg';
@@ -515,7 +515,7 @@ function MitgliedBlatt({
     return (
       <HbBlatt titel={mitglied.displayName} onClose={onClose}>
         <p className="hb-klein hb-ohne-rand">
-          {tf('clan.mitglied.zeile', { rolle: rolle(mitglied.role), trophaeen: mitglied.trophies.toLocaleString('de-DE') })}
+          {tf('clan.mitglied.zeile', { rolle: rolle(mitglied.role), trophaeen: zahl(mitglied.trophies) })}
         </p>
         <button type="button" className="hb-kn is-zweit is-breit" onClick={() => onShowProfile(mitglied.accountId)}>
           {t('clan.profilAnsehen')}
@@ -609,7 +609,7 @@ function AnfragenBlatt({
                   <strong>{r.displayName}</strong>
                   <span className="hb-pk">
                     <img src="/hub/symbol-pokal.webp" alt="" />
-                    {r.trophies.toLocaleString('de-DE')}
+                    {zahl(r.trophies)}
                   </span>
                 </button>
                 <span className="hb-mg-knoepfe">
@@ -850,7 +850,7 @@ function Suche({
                     <strong>{c.name}</strong>
                     <small className="is-leise">
                       {c.members}/{c.maxMembers} · {c.joinMode === 'open' ? t('clan.beitritt.offen') : t('clan.beitritt.aufAnfrage')}
-                      {c.minTrophies > 0 ? ` · ${tf('clan.ab', { n: c.minTrophies.toLocaleString('de-DE') })}` : ''}
+                      {c.minTrophies > 0 ? ` · ${tf('clan.ab', { n: zahl(c.minTrophies) })}` : ''}
                     </small>
                     {angefragt && <small>{t('clan.angefragt')}</small>}
                   </span>
@@ -1432,11 +1432,11 @@ function HalleNeu({
             <span>
               <b>{detail.joinMode === 'open' ? t('clan.kz.offen') : t('clan.kz.aufAnfrage')}</b>
               {detail.minTrophies > 0
-                ? tf('clan.abTrophaeen', { n: detail.minTrophies.toLocaleString('de-DE') })
+                ? tf('clan.abTrophaeen', { n: zahl(detail.minTrophies) })
                 : t('clan.kz.ohneSchwelle')}
             </span>
             <span>
-              <b>{detail.trophies.toLocaleString('de-DE')}</b>
+              <b>{zahl(detail.trophies)}</b>
               {t('clan.kz.clanTrophaeen')}
             </span>
           </div>
@@ -1548,7 +1548,7 @@ function HalleNeu({
                 </span>
                 <span className="hb-pk">
                   <img src="/hub/symbol-pokal.webp" alt="" />
-                  {m.trophies.toLocaleString('de-DE')}
+                  {zahl(m.trophies)}
                 </span>
               </button>
             ))}

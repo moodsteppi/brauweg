@@ -27,10 +27,11 @@
  *
  * Was NICHT ins Wörterbuch gehört (aus der Bestandsaufnahme, Aufgabe
  * 6fca75bb — hier nur festgehalten, nicht umgesetzt):
- * - Zahlen und Daten: rund 66 Stellen mit `toLocaleString('de-DE')`, dazu
- *   `kompakteZahl` und die Restzeit-Anzeigen. Das übernimmt die Aufgabe
- *   „Zahlen/Push" (dc192f47) über ein eigenes `i18n/format.ts`, das der
- *   aktiven Sprache folgt — kein Bereich mit Schlüsseln.
+ * - Zahlen und Daten: stehen in `format.ts` (`zahl`, `kompakteZahl`,
+ *   `uhrzeit`, `restzeit`) und folgen der aktiven Sprache über `Intl` — kein
+ *   Bereich mit Schlüsseln, bis auf den Rahmen „noch …" (`format.*`).
+ *   Spielbildschirme (Kartenmanufaktur, Partykiste, Browort) formatieren
+ *   noch selbst mit `'de-DE'`; sie gehören zur Schicht der Spielinhalte.
  * - Spielinhalte: Partykiste-JSON, Doppelkopf-Lektionen, der
  *   Tafelrunde-Katalog, die Golf-Kurse. Das ist eine eigene Schicht
  *   (Inhalte je Sprache), keine Oberflächentexte, und kommt NICHT in das

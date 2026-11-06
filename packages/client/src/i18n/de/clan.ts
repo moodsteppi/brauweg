@@ -138,12 +138,6 @@ export default {
   'clan.wappen.aria': 'Wappen {n}',
   'clan.wappen.ariaShop': 'Wappen {n}, im Shop erhältlich',
 
-  // Restzeit (ClanTeile.ts)
-  'clan.rest.vorbei': 'gleich vorbei',
-  'clan.rest.min': 'noch {n} Min',
-  'clan.rest.std': 'noch {n} Std',
-  'clan.rest.tage': 'noch {tage} Tg {std} Std',
-
   // Chat
   'clanchat.titel': 'Clanchat',
   'clanchat.fehler.laden': 'Der Chat ließ sich nicht laden.',

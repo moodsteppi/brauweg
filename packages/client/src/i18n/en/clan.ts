@@ -124,10 +124,6 @@ export default {
   'clan.wappen.aria': 'Crest {n}',
   'clan.wappen.ariaShop': 'Crest {n}, available in the shop',
 
-  'clan.rest.vorbei': 'almost over',
-  'clan.rest.min': '{n} min left',
-  'clan.rest.std': '{n} h left',
-  'clan.rest.tage': '{tage}d {std}h left',
 
   'clanchat.titel': 'Clan chat',
   'clanchat.fehler.laden': "Couldn't load the chat.",

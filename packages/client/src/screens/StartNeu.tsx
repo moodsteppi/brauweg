@@ -1,5 +1,5 @@
 import type { ActiveTable, Me } from '../api';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
 import { inAppSichtbar } from '../app-sichtbar';
 import { LernKarte } from '../lernen/LernKarte';
@@ -103,12 +103,12 @@ export function StartNeu({
           <span className="hb-weg-zeile">
             <span className="hb-pk">
               <img src="/hub/symbol-pokal.webp" alt="" />
-              {trophies.toLocaleString('de-DE')}
+              {zahl(trophies)}
             </span>
             {naechstes ? (
               <span>
                 {tf(naechstes.name === 'Sternenhafen' ? 'start.weg.bisZielZum' : 'start.weg.bisZiel', {
-                  zahl: naechstes.cp.toLocaleString('de-DE'),
+                  zahl: zahl(naechstes.cp),
                   ziel: naechstes.name,
                 })}
               </span>
@@ -122,7 +122,7 @@ export function StartNeu({
           {trophies >= 100 && (
             <span className="hb-weg-sicher">
               <Haken />
-              {tf('start.weg.sicher', { zahl: sicherAb(trophies).toLocaleString('de-DE') })}
+              {tf('start.weg.sicher', { zahl: zahl(sicherAb(trophies)) })}
             </span>
           )}
         </span>
@@ -174,7 +174,7 @@ export function StartNeu({
                 <strong>{t(`game.${s.gameId}`)}</strong>
                 <span className="hb-pk">
                   <img src="/hub/symbol-pokal.webp" alt="" />
-                  {s.trophies.toLocaleString('de-DE')}
+                  {zahl(s.trophies)}
                 </span>
               </button>
             ))

@@ -12,7 +12,8 @@ import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
 import { badRequest, conflict, forbidden, unauthorized } from '../errors.js';
 import type { Mailer } from '../mail/index.js';
-import { baueHtml } from '../mail/vorlage.js';
+import { bestaetigungsMail, passwortMail } from '../mail/texte.js';
+import { type Sprache, textSprache } from '../sprache.js';
 import { loescheGeraeteDerSitzung, loescheGeraeteDesKontos } from '../push/geraete.js';
 import { aktivVermerken, zaehle } from '../statistik.js';
 import {
@@ -283,23 +284,15 @@ async function sendVerification(
 
   try {
     const link = `${deps.publicUrl}/verify?token=${token}`;
+    // Sprache des Kontos — bei der Registrierung noch leer, also Deutsch;
+    // beim erneuten Anfordern gilt, was inzwischen im Profil steht.
+    const [konto] = await deps.db
+      .select({ sprache: s.account.sprache })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
     await deps.mailer.send({
       to: email,
-      subject: 'Brauweg: E-Mail bestaetigen',
-      text:
-        `Willkommen bei Brauweg.\n\n` +
-        `Bestaetige deine Adresse: ${link}\n\n` +
-        `Der Link gilt ${VERIFY_TTL_HOURS} Stunden.`,
-      html: baueHtml({
-        publicUrl: deps.publicUrl,
-        ueberschrift: 'Willkommen bei Brauweg',
-        absaetze: [
-          'Schön, dass du dabei bist. Bestätige einmal kurz deine Adresse, dann kann es losgehen.',
-        ],
-        knopfText: 'Adresse bestätigen',
-        knopfLink: link,
-        fussnote: `Der Link gilt ${VERIFY_TTL_HOURS} Stunden. Hast du dich nicht angemeldet, ignoriere diese Mail einfach.`,
-      }),
+      ...bestaetigungsMail(textSprache(konto?.sprache), deps.publicUrl, link, VERIFY_TTL_HOURS),
     });
   } catch (err) {
     // Ein Token, dessen Mail nie hinausging, ist wertlos - und schlimmer:
@@ -621,7 +614,9 @@ export async function requestPasswordReset(
     .returning({ id: s.authToken.id });
 
   const link = `${deps.publicUrl}/reset?token=${token}`;
-  const versandt = await versuche(deps, 'Passwort-Mail', acc.email!, () => sendeResetMail(deps, acc.email!, link));
+  const versandt = await versuche(deps, 'Passwort-Mail', acc.email!, () =>
+    sendeResetMail(deps, acc.email!, link, textSprache(acc.sprache)),
+  );
   // Wie beim Bestaetigungslink: Ein Token, dessen Mail nie hinausging, loest
   // sonst die Sperrfrist aus und blockiert genau den zweiten Versuch. Beim
   // Log-Mailer bleibt es — dort IST das Log der Zustellweg.
@@ -630,23 +625,8 @@ export async function requestPasswordReset(
   }
 }
 
-async function sendeResetMail(deps: AuthDeps, email: string, link: string): Promise<void> {
-  await deps.mailer.send({
-    to: email,
-    subject: 'Brauweg: Passwort zuruecksetzen',
-    text:
-      `Neues Passwort setzen: ${link}\n\n` +
-      `Der Link gilt ${RESET_TTL_HOURS} Stunden. Warst du das nicht, ` +
-      `ignoriere diese Mail.`,
-    html: baueHtml({
-      publicUrl: deps.publicUrl,
-      ueberschrift: 'Neues Passwort setzen',
-      absaetze: ['Du hast ein neues Passwort angefordert. Mit dem Knopf unten setzt du es.'],
-      knopfText: 'Passwort ändern',
-      knopfLink: link,
-      fussnote: `Der Link gilt ${RESET_TTL_HOURS} Stunden. Warst du das nicht, ignoriere diese Mail — dein Passwort bleibt dann unverändert.`,
-    }),
-  });
+async function sendeResetMail(deps: AuthDeps, email: string, link: string, sprache: Sprache): Promise<void> {
+  await deps.mailer.send({ to: email, ...passwortMail(sprache, deps.publicUrl, link, RESET_TTL_HOURS) });
 }
 
 /**

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { ApiError, api } from '../api';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { tf } from '../i18n/einsetzen';
 
 /**
@@ -27,7 +27,7 @@ export function CodeEinloesen({ onEingeloest }: { onEingeloest?: () => void }): 
     setMeldung(null);
     try {
       const antwort = await api.codeEinloesen(code.trim());
-      setMeldung(tf('anmeldung.code.gutgeschrieben', { muenzen: antwort.muenzen.toLocaleString('de-DE') }));
+      setMeldung(tf('anmeldung.code.gutgeschrieben', { muenzen: zahl(antwort.muenzen) }));
       setCode('');
       onEingeloest?.();
     } catch (err) {
