@@ -14,6 +14,7 @@ import { useState } from 'react';
 
 import { Buehne, FehlenNoch, Leute, Wahl, Wartet, namenFuer, type RundenProps } from './Runden';
 import { zaehlerWort, type KategorienSicht, type MehrheitSicht, type RegelkartenSicht } from './sicht';
+import { tz } from './text';
 
 /** Wie viele Sitze gegen `ziel` stimmen — nur abgezaehlt, entschieden hat der Server. */
 function stimmenGegen(liste: readonly number[], ziel: number): number {
@@ -37,19 +38,19 @@ export function KategorienRunde({ sicht, sitze, sende }: RundenProps): React.JSX
     const verloren = daten.verlierer >= 0;
     return (
       <Buehne
-        oben={verloren ? (daten.wie === 'mehrheit' ? 'Von der Runde benannt' : 'Gestockt') : 'Leergespielt'}
+        oben={verloren ? (daten.wie === 'mehrheit' ? tz('kat.benannt') : tz('kat.gestockt')) : tz('kat.leergespielt')}
         gross={
           <span className="pk-wort is-klein">
             {verloren
               ? daten.verlierer === sicht.sitz
-                ? 'Du hast verloren'
-                : `${namenFuer(sitze, daten.verlierer)} hat verloren`
-              : 'Niemand ist gestockt'}
+                ? tz('kat.duVerloren')
+                : tz('kat.verloren', { name: namenFuer(sitze, daten.verlierer) })
+              : tz('kat.niemand')}
           </span>
         }
         unten={
           <span>
-            {daten.nennungen} Nennungen zu „{daten.kategorie}"
+            {tz('kat.nennungen', { n: daten.nennungen, kategorie: daten.kategorie })}
           </span>
         }
         ton={verloren ? 'schlecht' : 'gut'}
@@ -70,11 +71,11 @@ export function KategorienRunde({ sicht, sitze, sende }: RundenProps): React.JSX
   return (
     <>
       <Buehne
-        oben={binDran ? 'Du bist dran - nenn etwas' : `${namenFuer(sitze, daten.amZug)} ist dran`}
+        oben={binDran ? tz('kat.duNenn') : tz('istDran', { name: namenFuer(sitze, daten.amZug) })}
         gross={<span className="pk-frage">{daten.kategorie}</span>}
         unten={
           <span>
-            {daten.nennungen} genannt · Runde {umDenTisch} von {rundenGesamt} um den Tisch
+            {tz('kat.stand', { n: daten.nennungen, runde: umDenTisch, gesamt: rundenGesamt })}
           </span>
         }
         ton={binDran ? 'geheim' : undefined}
@@ -82,15 +83,15 @@ export function KategorienRunde({ sicht, sitze, sende }: RundenProps): React.JSX
       {binDran ? (
         <Wahl>
           <button type="button" className="pk-knopf is-gut" onClick={() => sende({ art: 'genannt' })}>
-            Genannt
+            {tz('kat.genannt')}
           </button>
           <button type="button" className="pk-knopf is-weg" onClick={() => sende({ art: 'gestockt' })}>
-            Gestockt
+            {tz('kat.gestocktKnopf')}
           </button>
         </Wahl>
       ) : null}
       {sicht.sitz >= 0 && ziele.length > 0 ? (
-        <div className="pk-ou-einspruch" aria-label="Einspruch">
+        <div className="pk-ou-einspruch" aria-label={tz('kat.einspruch')}>
           {ziele.map((ziel) => {
             const noetig = daten.noetig[ziel] ?? 0;
             return (
@@ -102,9 +103,9 @@ export function KategorienRunde({ sicht, sitze, sende }: RundenProps): React.JSX
                 disabled={noetig === 0}
                 onClick={() => sende({ art: 'einspruch', ziel })}
               >
-                {ziel === daten.amZug ? 'Stockt!' : 'Doppelt!'} - {namenFuer(sitze, ziel)}
+                {ziel === daten.amZug ? tz('kat.stockt') : tz('kat.doppelt')} - {namenFuer(sitze, ziel)}
                 <small className="pk-zaehler">
-                  {stimmenGegen(daten.einspruch, ziel)} von {noetig} nötig
+                  {tz('imposter.noetig', { ist: stimmenGegen(daten.einspruch, ziel), soll: noetig })}
                 </small>
               </button>
             );
@@ -135,7 +136,7 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
       <>
         <Buehne
           gross={<span className="pk-frage">{daten.frage}</span>}
-          unten={<span>{mehrheit < 0 ? 'Gleichstand - keine Mehrheit, alle lagen daneben.' : `Die Mehrheit: ${seiten[mehrheit]}`}</span>}
+          unten={<span>{mehrheit < 0 ? tz('mehrheit.gleichstand') : tz('mehrheit.ergebnis', { seite: seiten[mehrheit] ?? '-' })}</span>}
           ton={mehrheit < 0 ? 'schlecht' : 'gut'}
         />
         <Wahl>
@@ -152,7 +153,9 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
               <li key={sitz} data-gut={mehrheit >= 0 && tipp === mehrheit ? '' : undefined}>
                 <span>{namenFuer(sitze, sitz)}</span>
                 <span className="muted">
-                  {tipp < 0 ? 'kein Tipp' : `sagt ${seiten[daten.eigene?.[sitz] ?? -1] ?? '-'}, tippt ${seiten[tipp]}`}
+                  {tipp < 0
+                    ? tz('mehrheit.keinTipp')
+                    : tz('mehrheit.sagtTippt', { sagt: seiten[daten.eigene?.[sitz] ?? -1] ?? '-', tippt: seiten[tipp] ?? '-' })}
                 </span>
               </li>
             ),
@@ -168,7 +171,7 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
         <Buehne gross={<span className="pk-frage">{daten.frage}</span>} />
         {abgegeben ? (
           <p className="pk-busfrage">
-            Du: {seiten[daten.meine]} · Dein Tipp: {seiten[daten.meinTipp] ?? '-'}
+            {tz('mehrheit.deinStand', { eigene: seiten[daten.meine] ?? '-', tipp: seiten[daten.meinTipp] ?? '-' })}
           </p>
         ) : null}
         <Wartet sicht={sicht} />
@@ -179,9 +182,9 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
   return (
     <>
       <Buehne
-        oben={eigene < 0 ? 'Schritt 1 - was sagst du?' : 'Schritt 2 - was sagt die Mehrheit?'}
+        oben={eigene < 0 ? tz('mehrheit.schritt1') : tz('mehrheit.schritt2')}
         gross={<span className="pk-frage">{daten.frage}</span>}
-        unten={eigene < 0 ? undefined : <span>Du: {seiten[eigene]}</span>}
+        unten={eigene < 0 ? undefined : <span>{tz('mehrheit.du', { eigene: seiten[eigene] ?? '-' })}</span>}
       />
       {eigene < 0 ? (
         <Wahl>
@@ -193,7 +196,7 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
         </Wahl>
       ) : (
         <>
-          <p className="pk-busfrage">Die Mehrheit sagt …</p>
+          <p className="pk-busfrage">{tz('mehrheit.sagt')}</p>
           <Wahl>
             {seiten.map((text, seite) => (
               <button
@@ -207,7 +210,7 @@ export function MehrheitRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
             ))}
           </Wahl>
           <button type="button" className="pk-textknopf" onClick={() => setEigene(-1)}>
-            Eigene Antwort ändern
+            {tz('mehrheit.aendern')}
           </button>
         </>
       )}
@@ -228,12 +231,11 @@ export function RegelkartenRunde({ sicht, sitze, sende }: RundenProps): React.JS
   return (
     <>
       <Buehne
-        oben={auf ? 'Ab jetzt gilt' : 'Neue Regel'}
+        oben={auf ? tz('regel.abJetzt') : tz('regel.neu')}
         gross={<span className="pk-frage">{daten.text}</span>}
         unten={
           <span>
-            {bis <= sicht.rundeNr + 1 ? 'Gilt bis zum Schluss.' : `Gilt bis zum Ende von Runde ${bis}.`} Wer
-            verstößt, meldet sich selbst - oder die Runde meldet ihn.
+            {bis <= sicht.rundeNr + 1 ? tz('regel.bisSchluss') : tz('regel.bisRunde', { n: bis })} {tz('regel.melden')}
           </span>
         }
         ton="geheim"
@@ -244,7 +246,7 @@ export function RegelkartenRunde({ sicht, sitze, sende }: RundenProps): React.JS
         <>
           <Wahl>
             <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
-              Verstanden
+              {tz('regel.verstanden')}
             </button>
           </Wahl>
           <FehlenNoch sicht={sicht} sitze={sitze} />
@@ -274,15 +276,15 @@ export function AktiveRegel({ sicht, sitze, sende }: RundenProps): React.JSX.Ele
   const meineAnklage = sicht.sitz >= 0 ? (regel.anklage[sicht.sitz] ?? -1) : -1;
 
   return (
-    <section className="pk-ou-regel" aria-label="Geltende Regel" data-pk-regel="">
+    <section className="pk-ou-regel" aria-label={tz('regel.geltend')} data-pk-regel="">
       <p className="pk-ou-regel-kopf">
-        <span className="pk-ou-regel-marke">Regel</span>
-        <span className="muted">bis Runde {regel.bis + 1}</span>
+        <span className="pk-ou-regel-marke">{tz('regel.marke')}</span>
+        <span className="muted">{tz('regel.bisRundeKurz', { n: regel.bis + 1 })}</span>
       </p>
       <p className="pk-ou-regel-text">{regel.text}</p>
       {ertappt.length > 0 ? (
         <p className="pk-ou-regel-ertappt">
-          Verstöße:{' '}
+          {tz('regel.verstoesse')}{' '}
           {ertappt.map(({ zahl, sitz }) => `${namenFuer(sitze, sitz)} ${zahl}×`).join(', ')}
         </p>
       ) : null}
@@ -290,10 +292,10 @@ export function AktiveRegel({ sicht, sitze, sende }: RundenProps): React.JSX.Ele
         <>
           <div className="pk-wahl">
             <button type="button" className="pk-knopf is-weg" onClick={() => sende({ art: 'verstoss', ziel: sicht.sitz })}>
-              Ich hab verstoßen
+              {tz('regel.ichVerstoss')}
             </button>
             <button type="button" className="pk-knopf is-neben" aria-expanded={offen} onClick={() => setOffen((an) => !an)}>
-              {offen ? 'Doch nicht' : 'Jemanden melden'}
+              {offen ? tz('regel.dochNicht') : tz('regel.melde')}
             </button>
           </div>
           {offen ? (
@@ -307,8 +309,13 @@ export function AktiveRegel({ sicht, sitze, sende }: RundenProps): React.JSX.Ele
               />
               <p className="pk-ou-regel-hinweis muted">
                 {meineAnklage >= 0
-                  ? `${namenFuer(sitze, meineAnklage)}: ${stimmenGegen(regel.anklage, meineAnklage)} von ${regel.noetig[meineAnklage] ?? 0} Stimmen - dann ist es ein ${zaehlerWort(sicht.trinkmodus, 1)}.`
-                  : 'Es zählt, wenn die Mehrheit denselben meldet.'}
+                  ? tz('regel.anklage', {
+                      name: namenFuer(sitze, meineAnklage),
+                      ist: stimmenGegen(regel.anklage, meineAnklage),
+                      soll: regel.noetig[meineAnklage] ?? 0,
+                      wort: zaehlerWort(sicht.trinkmodus, 1),
+                    })
+                  : tz('regel.mehrheitZaehlt')}
               </p>
             </>
           ) : null}

@@ -33,6 +33,8 @@ export type {
   ZeitdruckAktion,
 } from './sicht-zeitdruck';
 
+import { tz, tzAnzahl } from './text';
+
 /** Spielstaerke der Bots — Spiegelbild von game-api BotLevel (protocol.ts). */
 export type PartyBotStufe = 'anfaenger' | 'standard' | 'experte' | 'genie';
 
@@ -316,60 +318,63 @@ export type PartyAktion =
 // Anzeigetexte — an einer Stelle, weil sie an drei Stellen gebraucht werden
 // ---------------------------------------------------------------------------
 
-export const MINISPIEL_NAME: Record<PartyMinispiel, string> = {
-  imposter: 'Imposter',
-  quiz: 'Allgemeinwissen',
-  werbinich: 'Wer bin ich?',
-  niemals: 'Ich hab noch nie',
-  wereher: 'Wer würde eher?',
-  busfahrer: 'Bus fahren',
-  schaetzen: 'Schätzen',
-  entweder: 'Entweder - oder',
-  wahrheitpflicht: 'Wahrheit oder Pflicht',
-  kategorien: 'Kategorien-Battle',
-  mehrheit: 'Mehrheitsraten',
-  regelkarte: 'Regel-Karte',
-  bombe: 'Bombe',
-  zehnsekunden: '10 Sekunden',
-  koenigsbecher: 'Königsbecher',
-};
-
-export const MINISPIEL_ANSAGE: Record<PartyMinispiel, string> = {
-  imposter: 'Einer hat ein anderes Wort. Reihum ein Satz - dann wird gezeigt.',
-  quiz: 'Eine Frage, vier Antworten. Falsch heißt trinken.',
-  werbinich: 'Du siehst alle Namen außer deinem. Frag die Runde aus.',
-  niemals: 'Wer es doch getan hat, trinkt. Ehrlich bleiben ist billiger.',
-  wereher: 'Zeig auf einen. Jede Stimme ist ein Schluck.',
-  busfahrer: 'Rot oder Schwarz, höher oder tiefer, innen oder außen.',
-  schaetzen: 'Eine Zahl. Wer am nächsten liegt, gewinnt - wer am weitesten weg ist, trinkt.',
-  entweder: 'A oder B. Die Minderheit trinkt, bei Gleichstand alle.',
-  wahrheitpflicht: 'Reihum: wählen, machen - oder kneifen und trinken.',
-  kategorien: 'Reihum laut etwas nennen. Wer stockt oder doppelt, trinkt.',
-  mehrheit: 'Selbst antworten - und tippen, was die Mehrheit sagt. Daneben heißt trinken.',
-  regelkarte: 'Eine Regel für die nächsten zwei Runden. Jeder Verstoß ist ein Schluck.',
-  bombe: 'Nenn etwas und gib weiter. Sie tickt - wer sie hält, wenn sie hochgeht, trinkt.',
-  zehnsekunden: 'Drei Dinge in zehn Sekunden. Die Runde urteilt - nicht geschafft heißt trinken.',
-  koenigsbecher: 'Reihum eine Karte ziehen, jede Karte ist eine Regel. Wen sie trifft, der trinkt.',
-};
+/** Alle Minispiele in der Reihenfolge, in der sie im Menue stehen. */
+const MINISPIEL_ARTEN: readonly PartyMinispiel[] = [
+  'imposter',
+  'quiz',
+  'werbinich',
+  'niemals',
+  'wereher',
+  'busfahrer',
+  'schaetzen',
+  'entweder',
+  'wahrheitpflicht',
+  'kategorien',
+  'mehrheit',
+  'regelkarte',
+  'bombe',
+  'zehnsekunden',
+  'koenigsbecher',
+];
 
 /**
- * Dieselben Ansagen ohne Alkohol. Nur die Saetze, die vom Trinken reden, sind
- * anders — der Ablauf ist derselbe, und das soll man den Texten ansehen.
+ * Ein Nachschlagewerk je Minispiel, dessen Eintraege beim LESEN uebersetzt
+ * werden. Kein Funktionsaufruf statt des Objekts, weil die Aufrufer es als
+ * Liste der Minispiele benutzen (`Object.keys`, `x in MINISPIEL_NAME`); kein
+ * fertiges Objekt, weil es dann beim Laden in einer Sprache einfroere und die
+ * Umstellung im Profil erst nach dem Neuladen wirkte.
  */
-const MINISPIEL_ANSAGE_OHNE: Partial<Record<PartyMinispiel, string>> = {
-  quiz: 'Eine Frage, vier Antworten. Falsch gibt einen Strafpunkt.',
-  niemals: 'Wer es doch getan hat, kassiert einen Strafpunkt. Ehrlich bleiben ist billiger.',
-  wereher: 'Zeig auf einen. Jede Stimme ist ein Strafpunkt.',
-  schaetzen: 'Eine Zahl. Wer am nächsten liegt, gewinnt - wer am weitesten weg ist, kassiert.',
-  entweder: 'A oder B. Die Minderheit kassiert, bei Gleichstand alle.',
-  wahrheitpflicht: 'Reihum: wählen, machen - oder kneifen und kassieren.',
-  kategorien: 'Reihum laut etwas nennen. Wer stockt oder doppelt, kassiert.',
-  mehrheit: 'Selbst antworten - und tippen, was die Mehrheit sagt. Daneben gibt einen Strafpunkt.',
-  regelkarte: 'Eine Regel für die nächsten zwei Runden. Jeder Verstoß ist ein Strafpunkt.',
-  bombe: 'Nenn etwas und gib weiter. Sie tickt - wer sie hält, wenn sie hochgeht, kassiert.',
-  zehnsekunden: 'Drei Dinge in zehn Sekunden. Die Runde urteilt - nicht geschafft gibt Strafpunkte.',
-  koenigsbecher: 'Reihum eine Karte ziehen, jede Karte ist eine Regel. Wen sie trifft, der kassiert.',
-};
+function nachschlagewerk(stamm: string): Record<PartyMinispiel, string> {
+  const werk = {} as Record<PartyMinispiel, string>;
+  for (const art of MINISPIEL_ARTEN) {
+    Object.defineProperty(werk, art, { enumerable: true, get: () => tz(`${stamm}.${art}`) });
+  }
+  return werk;
+}
+
+export const MINISPIEL_NAME: Record<PartyMinispiel, string> = nachschlagewerk('minispiel.name');
+
+export const MINISPIEL_ANSAGE: Record<PartyMinispiel, string> = nachschlagewerk('minispiel.ansage');
+
+/**
+ * Welche Ansagen es ohne Alkohol eigens gibt. Nur die Saetze, die vom Trinken
+ * reden, sind anders — der Ablauf ist derselbe, und das soll man den Texten
+ * ansehen. Die Saetze selbst stehen unter `partykiste.ui.minispiel.ansageOhne.*`.
+ */
+const MIT_ANSAGE_OHNE: ReadonlySet<PartyMinispiel> = new Set<PartyMinispiel>([
+  'quiz',
+  'niemals',
+  'wereher',
+  'schaetzen',
+  'entweder',
+  'wahrheitpflicht',
+  'kategorien',
+  'mehrheit',
+  'regelkarte',
+  'bombe',
+  'zehnsekunden',
+  'koenigsbecher',
+]);
 
 /**
  * Die Ansage eines Minispiels, passend zum Trinkmodus des Tisches.
@@ -379,7 +384,8 @@ const MINISPIEL_ANSAGE_OHNE: Partial<Record<PartyMinispiel, string>> = {
  * nicht die Worte.
  */
 export function ansageFuer(art: PartyMinispiel, trinkmodus: boolean): string {
-  return (trinkmodus ? undefined : MINISPIEL_ANSAGE_OHNE[art]) ?? MINISPIEL_ANSAGE[art];
+  if (!trinkmodus && MIT_ANSAGE_OHNE.has(art)) return tz(`minispiel.ansageOhne.${art}`);
+  return MINISPIEL_ANSAGE[art];
 }
 
 // ---------------------------------------------------------------------------
@@ -415,8 +421,14 @@ export interface PartyRegelsatz {
   inhaltsHaerteGewollt?: 1 | 2 | 3 | null;
 }
 
-/** Die Namen der Haertegrade, Stelle = `schluckFaktor` (1 bis 3). */
-export const HAERTE_NAME = ['', 'gemütlich', 'normal', 'kurzer Abend'] as const;
+/**
+ * Der Name eines Haertegrads (`schluckFaktor` 1 bis 3), sonst undefined.
+ * Eine Funktion und keine Liste mehr, damit er beim Zeichnen nachgeschlagen
+ * wird und der Sprachwechsel ohne Neuladen greift.
+ */
+export function haerteName(stufe: number): string | undefined {
+  return stufe === 1 || stufe === 2 || stufe === 3 ? tz(`haerte.${stufe}`) : undefined;
+}
 
 /**
  * Den festgeschriebenen Regelsatz eines Tisches aus der Serverantwort lesen.
@@ -468,18 +480,15 @@ export const PARTY_PAKETE: readonly PartyPaket[] = ['wg-abend', 'jga', 'weihnach
  * und war die einzige Ausgabe, die der Schalter bis dahin veraenderte.
  */
 export function zaehlerWort(trinkmodus: boolean, zahl: number): string {
-  if (trinkmodus) return zahl === 1 ? 'Schluck' : 'Schlücke';
-  return zahl === 1 ? 'Strafpunkt' : 'Strafpunkte';
+  return tzAnzahl(trinkmodus ? 'zaehler.schluck' : 'zaehler.strafpunkt', zahl);
 }
 
 /** Die vier Kartenfarben als Zeichen. Rot zuerst, wie auf dem Blatt. */
 export const FARBZEICHEN = ['♥', '♦', '♠', '♣'] as const;
 
+/** Das Rangzeichen der Karte — Dame und Bube heissen auf Englisch Q und J. */
 export function rangName(rang: number): string {
-  if (rang === 14) return 'A';
-  if (rang === 13) return 'K';
-  if (rang === 12) return 'D';
-  if (rang === 11) return 'B';
+  if (rang >= 11 && rang <= 14) return tz(`rang.${rang}`);
   return String(rang);
 }
 

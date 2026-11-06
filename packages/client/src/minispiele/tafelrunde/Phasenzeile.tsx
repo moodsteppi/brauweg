@@ -33,6 +33,7 @@
 import { useEffect, useState } from 'react';
 
 import stil from './Phasenzeile.module.css';
+import { tz, tzAnzahl } from './text';
 
 /** Die Phasen des Moduls (partie.ts). */
 export type Phase = 'vorbereitung' | 'kampf' | 'ende';
@@ -46,11 +47,11 @@ export type Phase = 'vorbereitung' | 'kampf' | 'ende';
 export function phasenName(phase: Phase): string {
   switch (phase) {
     case 'vorbereitung':
-      return 'Platzierungsphase';
+      return tz('phase.vorbereitung');
     case 'kampf':
-      return 'Kampfphase';
+      return tz('phase.kampf');
     default:
-      return 'Partie vorbei';
+      return tz('phase.ende');
   }
 }
 
@@ -124,7 +125,7 @@ export function Phasenzeile({
   return (
     <div className={stil.zeile}>
       <p className={stil.lage}>
-        <strong>Runde {runde}</strong>
+        <strong>{tz('runde', { n: runde })}</strong>
         <span className={stil.trenner} aria-hidden="true">
           /
         </span>
@@ -141,14 +142,14 @@ export function Phasenzeile({
           <Uhrzeichen />
           <span aria-hidden="true">{uhrText(rest)}</span>
           <span className={stil.nurVorlesen}>
-            Noch {rest} Sekunden in dieser Phase
+            {tzAnzahl('phase.restSekunden', rest)}
           </span>
         </p>
       ) : phase === 'vorbereitung' && offen > 0 ? (
         /* Kein Uhrzeichen: Hier läuft keine Uhr, und ein Zifferblatt neben
            einer Zahl, die keine Zeit ist, verspricht genau das Falsche. */
         <p className={stil.bereit} data-voll={bereit >= offen ? '' : undefined}>
-          {bereit} von {offen} bereit
+          {tz('phase.bereitZaehler', { bereit, offen })}
         </p>
       ) : null}
     </div>

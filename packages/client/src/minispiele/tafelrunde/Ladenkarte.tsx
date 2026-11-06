@@ -28,7 +28,8 @@
 import { useEffect, useRef } from 'react';
 
 import { KARTE_TRIFFT, Markenzeichen } from './Synergien';
-import { EinheitenFigur, GoldZeichen, ROLLE_NAME, kostenFarbe } from './Zeichen';
+import { einheitName, rollenName, tz } from './text';
+import { EinheitenFigur, GoldZeichen, kostenFarbe } from './Zeichen';
 import type { Einheit } from './sicht';
 
 /**
@@ -202,8 +203,8 @@ export function Ladenkarte({
         <span className="tr-karte-kopf">
           <EinheitenFigur einheit={einheit} klasse="tr-figur3d-karte" />
         </span>
-        <strong className="tr-karte-name">{einheit.name}</strong>
-        <span className="tr-karte-rolle">{ROLLE_NAME[einheit.rolle]}</span>
+        <strong className="tr-karte-name">{einheitName(einheit)}</strong>
+        <span className="tr-karte-rolle">{rollenName(einheit.rolle)}</span>
         {/* Beschriftet, weil die Karte eine Schaltflaeche ist und ihren Namen
             aus dem Inhalt bezieht: "Dorfwache, Wache, Krieger" ist genau die
             Auskunft, die ein Vorlesegeraet fuer den Kauf braucht. */}
@@ -219,13 +220,13 @@ export function Ladenkarte({
             verschmilzt. */}
         {grund !== null ? (
           <span className="tr-karte-marke tr-karte-marke-hindernis">
-            {grund === 'gold' ? 'Zu wenig Gold' : 'Bank voll'}
+            {tz(grund === 'gold' ? 'laden.zuWenigGold' : 'laden.bankVoll')}
           </span>
         ) : verschmilzt ? (
-          <span className="tr-karte-marke">verschmilzt!</span>
+          <span className="tr-karte-marke">{tz('laden.verschmilzt')}</span>
         ) : fehlt < verschmelzZahl ? (
           <span className="tr-karte-marke tr-karte-marke-leise">
-            {verschmelzZahl - fehlt} von {verschmelzZahl}
+            {tz('laden.kopien', { hat: verschmelzZahl - fehlt, von: verschmelzZahl })}
           </span>
         ) : null}
       </button>
@@ -239,7 +240,7 @@ export function Ladenkarte({
           type="button"
           className="tr-karte-info"
           aria-haspopup="dialog"
-          aria-label={`${einheit.name} ansehen`}
+          aria-label={tz('laden.ansehen', { name: einheitName(einheit) })}
           onClick={onBlatt}
         >
           {/* Gezeichnet und nicht geladen — dieselbe Bauart wie alle Zeichen

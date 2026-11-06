@@ -72,6 +72,7 @@ import {
 import { Figur3D } from './Figur3D';
 import { type EinheitId, FIGUREN, UNTERGRUND } from './figuren';
 import stil from './KampfAnzeige.module.css';
+import { einheitName, tz } from './text';
 import { type Rastermass, rastermass, wabenLage } from './zuege';
 
 // ---------------------------------------------------------------------------
@@ -339,17 +340,19 @@ export function ergebniszeile(
   nameVon: (sitz: number) => string,
   zeitMs: number,
 ): string {
-  const gegen = `${nameVon(k.a)} gegen ${k.geist ? `das Abbild von ${nameVon(k.b)}` : nameVon(k.b)}`;
-  if (k.dauerMs > zeitMs) return `${gegen} · läuft…`;
-  if (k.sieger === null) return `${gegen} · unentschieden`;
+  const gegen = k.geist
+    ? tz('kampf.gegenAbbild', { a: nameVon(k.a), b: nameVon(k.b) })
+    : tz('kampf.gegen', { a: nameVon(k.a), b: nameVon(k.b) });
+  if (k.dauerMs > zeitMs) return tz('kampf.zeileLaeuft', { gegen });
+  if (k.sieger === null) return tz('kampf.zeileUnentschieden', { gegen });
   if (k.sieger === 0) {
     // Verloren hat `b`. Ist das ein Abbild, kostet es niemanden etwas.
-    if (k.geist) return `${gegen} · ${nameVon(k.a)} gewinnt`;
-    return `${gegen} · ${nameVon(k.a)} gewinnt, ${nameVon(k.b)} verliert ${k.schaden} Leben`;
+    if (k.geist) return tz('kampf.zeileGewinnt', { gegen, sieger: nameVon(k.a) });
+    return tz('kampf.zeileVerliert', { gegen, sieger: nameVon(k.a), verlierer: nameVon(k.b), n: k.schaden });
   }
   // Umgekehrt gilt das nicht: Wer gegen ein Abbild verliert, zahlt.
-  const sieger = k.geist ? 'das Abbild' : nameVon(k.b);
-  return `${gegen} · ${sieger} gewinnt, ${nameVon(k.a)} verliert ${k.schaden} Leben`;
+  const sieger = k.geist ? tz('kampf.dasAbbild') : nameVon(k.b);
+  return tz('kampf.zeileVerliert', { gegen, sieger, verlierer: nameVon(k.a), n: k.schaden });
 }
 
 /**
@@ -844,8 +847,8 @@ export function KampfAnzeige<E extends Einheitenbild>({
   const oben: Seite = unten === 0 ? 1 : 0;
   const sitzVon = (s: Seite): number => (s === 0 ? kampf.a : kampf.b);
   const beschriftung = (s: Seite): string => {
-    const name = s === ichSeite ? 'Du' : nameVon(sitzVon(s));
-    return s === 1 && kampf.geist ? `Abbild von ${name}` : name;
+    const name = s === ichSeite ? tz('leiste.du') : nameVon(sitzVon(s));
+    return s === 1 && kampf.geist ? tz('kampf.abbildVon', { name }) : name;
   };
   const stehende = (s: Seite): number =>
     anzeige.stand.figuren.filter((f) => f.seite === s && !f.tot).length;
@@ -861,7 +864,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
          die Waben legt — im Stylesheet steht keine zweite Geometrie. */
       style={{ '--tr-arenaverhaeltnis': mass.seitenverhaeltnis } as React.CSSProperties}
       role="group"
-      aria-label="Kampf"
+      aria-label={tz('kampf.titel')}
     >
       <Seitenzeile
         name={beschriftung(oben)}
@@ -981,7 +984,13 @@ export function KampfAnzeige<E extends Einheitenbild>({
                   zIndex: Math.floor(platz / brettSpalten),
                 } as React.CSSProperties
               }
-              aria-label={`${einheit?.name ?? f.einheitId}, Stufe ${f.stufe}, ${f.tot ? 'gefallen' : `${f.leben} von ${f.hoechstesLeben} Leben`}`}
+              aria-label={tz('kampf.figur', {
+                name: einheit ? einheitName(einheit) : f.einheitId,
+                stufe: f.stufe,
+                zustand: f.tot
+                  ? tz('kampf.gefallen')
+                  : tz('kampf.leben', { leben: f.leben, hoechstes: f.hoechstesLeben }),
+              })}
             >
               {/* Der Schatten liegt UNTER dem Koerper und damit auch im
                   Baum vor ihm. Er haelt sich mit einer Gegenbewegung am
@@ -1139,7 +1148,7 @@ export function KampfAnzeige<E extends Einheitenbild>({
       <Seitenzeile name={beschriftung(unten)} stehen={stehende(unten)} gesamt={gesamt(unten)} />
 
       {andere.length > 0 && (
-        <ul className={stil.andere} aria-label="Weitere Kämpfe">
+        <ul className={stil.andere} aria-label={tz('kampf.weitere')}>
           {andere.map((k) => (
             <li key={`${k.a}:${k.b}`}>{ergebniszeile(k, nameVon, anzeige.zeitMs)}</li>
           ))}
@@ -1164,7 +1173,7 @@ function Seitenzeile({
     <p className={stil.zeile}>
       <strong>{name}</strong>
       <span>
-        {gesamt === 0 ? 'nichts aufgestellt' : `${stehen} von ${gesamt} stehen`}
+        {gesamt === 0 ? tz('kampf.nichtsAufgestellt') : tz('kampf.stehen', { stehen, gesamt })}
         {rechts ? ` · ${rechts}` : ''}
       </span>
     </p>
@@ -1192,32 +1201,33 @@ function Ergebnis({
 }): React.JSX.Element {
   const { bericht } = kampf;
   const verlierer: Seite | null = ende.sieger === null ? null : ende.sieger === 0 ? 1 : 0;
-  const nameSeite = (s: Seite): string => (s === seite ? 'Du' : nameVon(s === 0 ? kampf.a : kampf.b));
+  const nameSeite = (s: Seite): string =>
+    s === seite ? tz('leiste.du') : nameVon(s === 0 ? kampf.a : kampf.b);
 
   let ausgang: 'sieg' | 'niederlage' | 'offen';
   let wort: string;
   if (ende.sieger === null) {
     ausgang = 'offen';
-    wort = 'Unentschieden';
+    wort = tz('kampf.unentschieden');
   } else if (seite === null) {
     ausgang = 'offen';
-    wort = `${nameSeite(ende.sieger)} gewinnt`;
+    wort = tz('kampf.gewinnt', { name: nameSeite(ende.sieger) });
   } else {
     ausgang = ende.sieger === seite ? 'sieg' : 'niederlage';
-    wort = ausgang === 'sieg' ? 'Gewonnen!' : 'Verloren';
+    wort = tz(ausgang === 'sieg' ? 'kampf.gewonnen' : 'kampf.verloren');
   }
 
   let einzelheit: string;
   if (verlierer === null) {
-    einzelheit = 'Niemand verliert Leben';
+    einzelheit = tz('kampf.niemandVerliert');
   } else if (verlierer === 1 && kampf.geist) {
-    einzelheit = 'Ein Abbild verliert nichts';
+    einzelheit = tz('kampf.abbildVerliertNichts');
   } else if (verlierer === seite) {
-    einzelheit = `Du verlierst ${bericht.schaden} Leben`;
+    einzelheit = tz('kampf.duVerlierst', { n: bericht.schaden });
   } else {
-    einzelheit = `${nameSeite(verlierer)} verliert ${bericht.schaden} Leben`;
+    einzelheit = tz('kampf.verliert', { name: nameSeite(verlierer), n: bericht.schaden });
   }
-  if (ende.grund === 'zeit') einzelheit += ' · Zeit abgelaufen';
+  if (ende.grund === 'zeit') einzelheit += tz('kampf.zeitAbgelaufen');
 
   return (
     <div className={stil.ergebnis} data-ausgang={ausgang} role="status">

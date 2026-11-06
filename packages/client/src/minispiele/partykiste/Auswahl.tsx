@@ -16,7 +16,6 @@ import { AuswahlRaster, type AuswahlEintrag } from '../../hub';
 import { useSpielVorgabe } from '../../spiel-vorgabe';
 import {
   INHALT_GEMISCHT,
-  INHALT_TITEL,
   MINDESTENS_MINISPIELE,
   MINISPIEL_ABLAUF,
   MINISPIEL_ZEICHEN,
@@ -24,6 +23,7 @@ import {
   PAKET_ALLES,
   PAKET_NAME,
   alleMinispiele,
+  inhaltTitel,
   inhaltsKacheln,
   gemerkteWahl,
   merkeWahl,
@@ -39,6 +39,7 @@ import {
 } from './wahl';
 import { SpielAbschnitt } from '../../screens/SpielEinstieg';
 import { ansageFuer, type PartyMinispiel } from './sicht';
+import { tz } from './text';
 
 export interface PartyAuswahlStand {
   /** Regelsatz des Moduls, sobald er da ist — vorher `null`. */
@@ -123,30 +124,30 @@ export function PartyAuswahl({
     return (
       <>
         {modusBekannt(vorgabe) && !einzel ? (
-          <SpielAbschnitt titel="Modus">
+          <SpielAbschnitt titel={tz('auswahl.modus')}>
             <AuswahlRaster
-              label="Modus"
+              label={tz('auswahl.modus')}
               spalten={2}
               eintraege={MODI.map((m) => ({ kennung: m.kennung, titel: m.titel, untertitel: m.text }))}
               gewaehlt={modus}
               onWahl={(kennung) => onWahl({ ...wahl, modus: kennung })}
             />
             {modus === 'themenabend' && paket === PAKET_ALLES ? (
-              <p className="hb-klein">Für den Themenabend unten ein Themenpaket wählen.</p>
+              <p className="hb-klein">{tz('auswahl.themenabendOhnePaket')}</p>
             ) : null}
           </SpielAbschnitt>
         ) : null}
 
-        <SpielAbschnitt titel="Themenpakete">
+        <SpielAbschnitt titel={tz('auswahl.themenpakete')}>
           <AuswahlRaster
-            label="Themenpaket"
+            label={tz('auswahl.themenpaket')}
             spalten={3}
             className="spe-pakete"
             eintraege={[
               {
                 kennung: PAKET_ALLES,
-                titel: 'alles',
-                untertitel: 'Ohne Thema',
+                titel: tz('auswahl.paketAlles'),
+                untertitel: tz('auswahl.paketAllesText'),
                 vorschau: <span className="spe-paket-alles">✦</span>,
               },
               ...Object.entries(PAKET_NAME).map(([kennung, titel]) => {
@@ -164,18 +165,18 @@ export function PartyAuswahl({
             gewaehlt={paket}
             onWahl={(kennung) => onWahl({ ...wahl, paket: kennung })}
           />
-          <p className="hb-klein">Hat ein Paket zu wenig eigene Inhalte, mischt die Kiste allgemeine dazu.</p>
+          <p className="hb-klein">{tz('auswahl.paketMischt')}</p>
           {irgendeinPaketGesperrt ? (
             <p className="hb-klein" data-pk-paketsperre="">
-              Gesperrte Pakete braucht nur, wer die Runde aufmacht - alle anderen spielen mit.
+              {tz('auswahl.paketGesperrt')}
             </p>
           ) : null}
         </SpielAbschnitt>
 
         {/* „Inhalte“, nicht „Härte“ — die Härte ist der Schluck-Regler in den Einstellungen. */}
-        <SpielAbschnitt titel={INHALT_TITEL}>
+        <SpielAbschnitt titel={inhaltTitel()}>
           <AuswahlRaster
-            label={INHALT_TITEL}
+            label={inhaltTitel()}
             spalten={2}
             eintraege={inhaltsKacheln(vorgabe, gast)}
             gewaehlt={kachel}
@@ -193,21 +194,21 @@ export function PartyAuswahl({
   return (
     <section className="pk-aw" aria-labelledby="pk-aw-titel" data-pk-auswahl="">
       <h2 id="pk-aw-titel" className="pk-einstellungen-titel">
-        Auswahl
+        {tz('auswahl.titel')}
       </h2>
 
       {modusBekannt(vorgabe) ? (
         <div className="pk-aw-block" data-pk-modus="">
-          <h3 className="pk-aw-titel">Modus</h3>
+          <h3 className="pk-aw-titel">{tz('auswahl.modus')}</h3>
           <AuswahlRaster
-            label="Modus"
+            label={tz('auswahl.modus')}
             spalten={2}
             eintraege={MODI.map((m) => ({ kennung: m.kennung, titel: m.titel, untertitel: m.text }))}
             gewaehlt={modus}
             onWahl={(kennung) => onWahl({ ...wahl, modus: kennung })}
           />
           {modus === 'themenabend' && paket === PAKET_ALLES ? (
-            <p className="pk-aw-hinweis">Für den Themenabend unten ein Themenpaket wählen.</p>
+            <p className="pk-aw-hinweis">{tz('auswahl.themenabendOhnePaket')}</p>
           ) : null}
         </div>
       ) : null}
@@ -216,9 +217,9 @@ export function PartyAuswahl({
 
       <div className="pk-aw-block" data-pk-inhalt="">
         {/* „Inhalte“, nicht „Härte“ — die Härte ist der Schluck-Regler darueber. */}
-        <h3 className="pk-aw-titel">{INHALT_TITEL}</h3>
+        <h3 className="pk-aw-titel">{inhaltTitel()}</h3>
         <AuswahlRaster
-          label={INHALT_TITEL}
+          label={inhaltTitel()}
           spalten={2}
           eintraege={inhaltsKacheln(vorgabe, gast)}
           gewaehlt={kachel}
@@ -227,12 +228,12 @@ export function PartyAuswahl({
       </div>
 
       <div className="pk-aw-block" data-pk-paket="">
-        <h3 className="pk-aw-titel">Themenpaket</h3>
+        <h3 className="pk-aw-titel">{tz('auswahl.themenpaket')}</h3>
         <AuswahlRaster
-          label="Themenpaket"
+          label={tz('auswahl.themenpaket')}
           spalten={3}
           eintraege={[
-            { kennung: PAKET_ALLES, titel: 'alles', untertitel: 'Ohne Thema' },
+            { kennung: PAKET_ALLES, titel: tz('auswahl.paketAlles'), untertitel: tz('auswahl.paketAllesText') },
             ...Object.entries(PAKET_NAME).map(([kennung, titel]) => ({
               kennung,
               titel,
@@ -242,12 +243,10 @@ export function PartyAuswahl({
           gewaehlt={paket}
           onWahl={(kennung) => onWahl({ ...wahl, paket: kennung })}
         />
-        <p className="pk-aw-hinweis">
-          Hat ein Paket zu wenig eigene Inhalte, mischt die Kiste allgemeine dazu.
-        </p>
+        <p className="pk-aw-hinweis">{tz('auswahl.paketMischt')}</p>
         {irgendeinPaketGesperrt ? (
           <p className="pk-aw-hinweis" data-pk-paketsperre="">
-            Gesperrte Pakete braucht nur, wer die Runde aufmacht - alle anderen spielen mit.
+            {tz('auswahl.paketGesperrt')}
           </p>
         ) : null}
       </div>
@@ -294,17 +293,17 @@ function MinispielAuswahl({
   if (!alle || !gewaehlt) {
     if (neu) {
       return (
-        <SpielAbschnitt titel="Minispiele">
+        <SpielAbschnitt titel={tz('auswahl.minispiele')}>
           <p className="spe-leer" data-pk-minispiele="">
-            Minispiele werden geladen …
+            {tz('auswahl.minispieleLaden')}
           </p>
         </SpielAbschnitt>
       );
     }
     return (
       <div className="pk-aw-block" data-pk-minispiele="">
-        <h3 className="pk-aw-titel">Minispiele</h3>
-        <p className="pk-warten">Minispiele werden geladen …</p>
+        <h3 className="pk-aw-titel">{tz('auswahl.minispiele')}</h3>
+        <p className="pk-warten">{tz('auswahl.minispieleLaden')}</p>
       </div>
     );
   }
@@ -332,24 +331,20 @@ function MinispielAuswahl({
 
   const zuWenigHinweis = zuWenig ? (
     <p className={hinweis} role="status">
-      Mindestens {mindestens} Minispiele - sonst kommt dasselbe ständig wieder.
+      {tz('auswahl.zuWenig', { n: mindestens })}
     </p>
   ) : null;
-  const mischHinweis = <p className={hinweis}>Die angeklickten Spiele kommen gemischt dran, keins zweimal hintereinander.</p>;
+  const mischHinweis = <p className={hinweis}>{tz('auswahl.gemischt')}</p>;
   const nichtAlle = gewaehlt.length < alle.length;
 
   if (neu) {
     return (
       <SpielAbschnitt
-        titel="Minispiele"
-        zusatz={
-          <>
-            {gewaehlt.length} von {alle.length} an
-          </>
-        }
+        titel={tz('auswahl.minispiele')}
+        zusatz={<>{tz('auswahl.vonAn', { an: gewaehlt.length, alle: alle.length })}</>}
       >
         <div className="spe-minispiele" data-pk-minispiele="">
-          <div className="regeln spe-pk-regeln" role="group" aria-label="Minispiele">
+          <div className="regeln spe-pk-regeln" role="group" aria-label={tz('auswahl.minispiele')}>
             {alle.map((id) => {
               const an = gewaehlt.includes(id);
               return (
@@ -376,7 +371,7 @@ function MinispielAuswahl({
           {mischHinweis}
           {nichtAlle ? (
             <button type="button" className="hb-kn is-blau is-klein spe-pk-alle" data-pk-alle="" onClick={alleAn}>
-              Alle an
+              {tz('auswahl.alleAn')}
             </button>
           ) : null}
         </div>
@@ -387,10 +382,12 @@ function MinispielAuswahl({
   const eintraege: AuswahlEintrag[] = alle.map((id) => {
     const ablauf = MINISPIEL_ABLAUF[id as PartyMinispiel];
     const regel = ansageFuer(id as PartyMinispiel, trinkmodus) as string | undefined;
+    /* Der Ablauf ist eine Kennung ('gleichzeitig'/'reihum') — angezeigt wird ihr Wort. */
+    const ablaufText = ablauf ? tz(`auswahl.ablauf.${ablauf}`) : undefined;
     return {
       kennung: id,
       titel: minispielName(id),
-      untertitel: [ablauf, regel].filter(Boolean).join(' · ') || undefined,
+      untertitel: [ablaufText, regel].filter(Boolean).join(' · ') || undefined,
       vorschau: <span className="pk-aw-zeichen">{MINISPIEL_ZEICHEN[id as PartyMinispiel] ?? minispielName(id).slice(0, 1)}</span>,
       // An heisst Rand UND Haken — nicht nur die Farbe.
       badge: gewaehlt.includes(id) ? <span className="pk-aw-an">✓</span> : undefined,
@@ -400,18 +397,18 @@ function MinispielAuswahl({
   return (
     <div className="pk-aw-block" data-pk-minispiele="">
       <div className="pk-aw-kopf">
-        <h3 className="pk-aw-titel">Minispiele</h3>
+        <h3 className="pk-aw-titel">{tz('auswahl.minispiele')}</h3>
         <span className="pk-aw-zahl">
-          {gewaehlt.length} von {alle.length} an
+          {tz('auswahl.vonAn', { an: gewaehlt.length, alle: alle.length })}
         </span>
         {nichtAlle ? (
           <button type="button" className="pk-textknopf" data-pk-alle="" onClick={alleAn}>
-            Alle an
+            {tz('auswahl.alleAn')}
           </button>
         ) : null}
       </div>
       <AuswahlRaster
-        label="Minispiele"
+        label={tz('auswahl.minispiele')}
         mehrfach
         eintraege={eintraege}
         gewaehlt={gewaehlt}
@@ -431,7 +428,7 @@ function inhaltsWahlAus(kennung: string): PartyWahl['inhaltsHaerte'] {
 /** Schloss an einer gesperrten Kachel — gesperrt heißt Schloss plus leise Schrift. */
 function SchlossZeichen(): React.JSX.Element {
   return (
-    <svg viewBox="0 0 24 24" width="14" height="14" aria-label="gesperrt" role="img" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width="14" height="14" aria-label={tz('auswahl.gesperrt')} role="img" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="5" y="11" width="14" height="9" rx="2" />
       <path d="M8 11V8a4 4 0 0 1 8 0v3" />
     </svg>

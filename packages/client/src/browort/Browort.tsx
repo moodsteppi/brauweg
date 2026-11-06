@@ -4,7 +4,7 @@ import { ApiError, api } from '../api';
 import { t } from '../i18n';
 import { Schliessen, useEscape } from '../screens/HbBlatt';
 import type { Belohnung, BrowortAnsicht } from './sicht';
-import { BrowortFlamme, Raster, Tastatur, schnittText, useWortEingabe } from './Spielfeld';
+import { BrowortFlamme, Raster, Tastatur, schnittText, useWortEingabe, type WortEingabe } from './Spielfeld';
 
 /**
  * Browort (Emile, 23.10.2026): ein deutsches Wort am Tag, fuenf Buchstaben,
@@ -52,6 +52,45 @@ export function Browort({
   );
   const spiel = useWortEingabe({ runde, schicke, onNeu, aktiv: runde !== null && !runde.fertig });
 
+  return (
+    <BrowortBild
+      runde={runde}
+      fehler={fehler}
+      belohnung={belohnung}
+      geschuetzt={geschuetzt}
+      spiel={spiel}
+      onClose={onClose}
+      onNochmal={laden}
+    />
+  );
+}
+
+/**
+ * Die Anzeige von Browort, ohne Server und ohne eigenen Zustand.
+ *
+ * Getrennt von der Hülle, damit der Sprach-Schaukasten
+ * (sprachprobe-schaukasten.html) die laufende und die fertige Runde mit
+ * erfundenen Daten zeichnen kann — die fertige Runde samt Statistik sieht man
+ * sonst nur einmal am Tag.
+ */
+export function BrowortBild({
+  runde,
+  fehler,
+  belohnung,
+  geschuetzt,
+  spiel,
+  onClose,
+  onNochmal,
+}: {
+  /** null: wird noch geladen (oder `fehler`). */
+  runde: BrowortAnsicht | null;
+  fehler: string | null;
+  belohnung: Belohnung | null;
+  geschuetzt: boolean;
+  spiel: WortEingabe;
+  onClose: () => void;
+  onNochmal: () => void;
+}): React.JSX.Element {
   const statistik = runde?.statistik;
   const quote = statistik && statistik.gespielt > 0 ? Math.round((statistik.geloest / statistik.gespielt) * 100) : 0;
   const hoechste = Math.max(1, ...(statistik?.verteilung ?? [1]));
@@ -77,7 +116,7 @@ export function Browort({
           {fehler ? (
             <div className="hb-fehler">
               {fehler}{' '}
-              <button type="button" className="hb-link" onClick={laden}>
+              <button type="button" className="hb-link" onClick={onNochmal}>
                 Nochmal
               </button>
             </div>

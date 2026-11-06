@@ -36,6 +36,7 @@ import {
   type WerEherSicht,
 } from './sicht';
 import { Buslinie } from './Buslinie';
+import { tz, tzAnzahl, zahl } from './text';
 import { KategorienRunde, MehrheitRunde, RegelkartenRunde } from './RundenOhneUhr';
 import { BombeRunde, KoenigsbecherRunde, ZehnSekundenRunde } from './RundenZeitdruck';
 
@@ -57,9 +58,9 @@ export interface RundenProps {
 
 export function namenFuer(sitze: SeatInfo[], sitz: number): string {
   const eintrag = sitze.find((s) => s.seat === sitz);
-  if (!eintrag) return `Platz ${sitz + 1}`;
-  if (eintrag.isBot) return eintrag.displayName ?? `Bot ${sitz + 1}`;
-  return eintrag.displayName ?? `Platz ${sitz + 1}`;
+  if (!eintrag) return tz('platz', { n: sitz + 1 });
+  if (eintrag.isBot) return eintrag.displayName ?? tz('bot', { n: sitz + 1 });
+  return eintrag.displayName ?? tz('platz', { n: sitz + 1 });
 }
 
 /** Die Buehne: eine Karte, auf der das Wesentliche steht. */
@@ -110,11 +111,11 @@ export function FehlenNoch({ sicht, sitze }: { sicht: PartykisteSicht; sitze: Se
   if (!fehlen || fehlen.length === 0) return null;
   return (
     <p className="pk-wartet pk-fehlen" aria-live="polite" data-pk-fehlen="">
-      Es fehlen noch:{' '}
+      {tz('fehlenNoch')}{' '}
       {fehlen.map((s, i) => (
         <span key={s}>
           {i > 0 ? ', ' : null}
-          <strong data-ich={s === sicht.sitz ? '' : undefined}>{s === sicht.sitz ? 'du' : namenFuer(sitze, s)}</strong>
+          <strong data-ich={s === sicht.sitz ? '' : undefined}>{s === sicht.sitz ? tz('du') : namenFuer(sitze, s)}</strong>
         </span>
       ))}
     </p>
@@ -130,7 +131,7 @@ export function Wartet({ sicht, sitze }: { sicht: PartykisteSicht; sitze?: SeatI
     return fehlen.length > 0 ? (
       <FehlenNoch sicht={sicht} sitze={sitze} />
     ) : (
-      <p className="pk-wartet">Gleich geht es weiter …</p>
+      <p className="pk-wartet">{tz('gleichWeiter')}</p>
     );
   }
   /* In der Abrechnung tippen Bots kein "Weiter" — sie zaehlen als fertig,
@@ -139,14 +140,14 @@ export function Wartet({ sicht, sitze }: { sicht: PartykisteSicht; sitze?: SeatI
   const offen = sicht.sitze - sicht.ausgestiegen.length - sicht.gehandelt.length - bots;
   return (
     <p className="pk-wartet">
-      {offen > 0 ? `Noch ${offen} ${offen === 1 ? 'Person' : 'Leute'} …` : 'Gleich geht es weiter …'}
+      {offen > 0 ? tzAnzahl('nochOffen', offen) : tz('gleichWeiter')}
     </p>
   );
 }
 
 /** Eine Spielkarte. Gezeichnet und nicht geladen — vier Zeichen reichen. */
 export function Karte({ karte, zu }: { karte?: PartyKarte; zu?: boolean }): React.JSX.Element {
-  if (zu || !karte) return <div className="pk-karte is-zu" aria-label="verdeckte Karte" />;
+  if (zu || !karte) return <div className="pk-karte is-zu" aria-label={tz('verdeckteKarte')} />;
   const rot = istRoteKarte(karte);
   return (
     <div className="pk-karte" data-rot={rot ? '' : undefined}>
@@ -207,13 +208,13 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
   const karte = daten.binImposter ? (
     <>
       <span className="pk-wort">IMPOSTER</span>
-      <span className="pk-hinweis">Hinweis: {daten.hinweis ?? '-'}</span>
+      <span className="pk-hinweis">{tz('imposter.hinweis', { hinweis: daten.hinweis ?? '-' })}</span>
     </>
   ) : (
     <span className="pk-wort">{daten.meinWort ?? '-'}</span>
   );
   const reihe = (
-    <ol className="pk-reihe" aria-label="Redereihenfolge">
+    <ol className="pk-reihe" aria-label={tz('imposter.reihenfolge')}>
       {daten.reihenfolge.map((s) => (
         <li key={s} data-ich={s === sicht.sitz ? '' : undefined}>
           {namenFuer(sitze, s)}
@@ -227,11 +228,11 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
     return (
       <>
         <Buehne
-          oben={daten.binImposter ? 'Du bist es - zeig es niemandem' : 'Dein Wort - zeig es niemandem'}
+          oben={daten.binImposter ? tz('imposter.duBistEs') : tz('imposter.deinWortGeheim')}
           gross={<span className="pk-karte-inhalt">{karte}</span>}
           ton={daten.binImposter ? 'schlecht' : 'geheim'}
         />
-        <p className="pk-ansage">Redereihenfolge - jeder sagt einen Satz zum Wort:</p>
+        <p className="pk-ansage">{tz('imposter.reiheAnsage')}</p>
         {reihe}
         {gesehen ? (
           <Wartet sicht={sicht} sitze={sitze} />
@@ -239,7 +240,7 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
           <>
             <Wahl>
               <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
-                Gesehen
+                {tz('imposter.gesehen')}
               </button>
             </Wahl>
             <FehlenNoch sicht={sicht} sitze={sitze} />
@@ -254,16 +255,16 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
     return (
       <>
         <Buehne
-          oben={daten.binImposter ? 'Du bist der Imposter' : 'Dein Wort'}
+          oben={daten.binImposter ? tz('imposter.duBistImposter') : tz('imposter.deinWort')}
           gross={
             <span className="pk-wort is-klein">
-              {daten.binImposter ? `Hinweis: ${daten.hinweis ?? '-'}` : (daten.meinWort ?? '-')}
+              {daten.binImposter ? tz('imposter.hinweis', { hinweis: daten.hinweis ?? '-' }) : (daten.meinWort ?? '-')}
             </span>
           }
           unten={
             <span>
-              {daten.redeRunde > 1 ? `${daten.redeRunde}. Rederunde - ` : ''}
-              Reihum ein Satz, in dieser Reihenfolge. Dann: Wer passt nicht?
+              {daten.redeRunde > 1 ? tz('imposter.rederunde', { n: daten.redeRunde }) : ''}
+              {tz('imposter.reihum')}
             </span>
           }
         />
@@ -289,9 +290,12 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
             data-gewaehlt={daten.nochmal.includes(sicht.sitz) ? '' : undefined}
             onClick={() => sende({ art: 'nochmal' })}
           >
-            Noch eine Runde reden
+            {tz('imposter.nochmal')}
             <small className="pk-zaehler">
-              {daten.nochmal.length} von {Math.floor((sicht.sitze - sicht.ausgestiegen.length) / 2) + 1} nötig
+              {tz('imposter.noetig', {
+                ist: daten.nochmal.length,
+                soll: Math.floor((sicht.sitze - sicht.ausgestiegen.length) / 2) + 1,
+              })}
             </small>
           </button>
         ) : null}
@@ -305,15 +309,15 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
   return (
     <>
       <Buehne
-        oben={ertappt ? 'Ertappt!' : 'Durchgekommen'}
+        oben={ertappt ? tz('imposter.ertappt') : tz('imposter.durchgekommen')}
         gross={
           <span className="pk-wort is-klein">
-            {taeter === sicht.sitz ? 'Du warst es' : `${namenFuer(sitze, taeter)} war es`}
+            {taeter === sicht.sitz ? tz('imposter.duWarstEs') : tz('imposter.warEs', { name: namenFuer(sitze, taeter) })}
           </span>
         }
         unten={
           <span>
-            Wort der Runde: <strong>{daten.echtesWort}</strong>
+            {tz('imposter.wortDerRunde')} <strong>{daten.echtesWort}</strong>
           </span>
         }
         ton={ertappt ? 'gut' : 'schlecht'}
@@ -323,7 +327,7 @@ function ImposterRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
           ziel < 0 ? null : (
             <li key={sitz}>
               <span>{namenFuer(sitze, sitz)}</span>
-              <span className="muted">zeigte auf {namenFuer(sitze, ziel)}</span>
+              <span className="muted">{tz('imposter.zeigteAuf', { name: namenFuer(sitze, ziel) })}</span>
             </li>
           ),
         )}
@@ -368,7 +372,7 @@ function QuizRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
               <li key={sitz} data-gut={wahl === daten.richtig ? '' : undefined}>
                 <span>{namenFuer(sitze, sitz)}</span>
                 <span className="muted">
-                  {wahl < 0 ? 'keine Antwort' : (daten.antworten[wahl] ?? '-')}
+                  {wahl < 0 ? tz('quiz.keineAntwort') : (daten.antworten[wahl] ?? '-')}
                 </span>
               </li>
             ),
@@ -391,17 +395,17 @@ function WerBinIchRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element
   return (
     <>
       <Buehne
-        oben={binDran ? 'Du bist dran' : `${namenFuer(sitze, daten.amZug)} ist dran`}
+        oben={binDran ? tz('duBistDran') : tz('istDran', { name: namenFuer(sitze, daten.amZug) })}
         gross={
           <span className="pk-wort is-klein">
-            {binDran ? 'Frag die Runde aus' : (daten.namen[daten.amZug] ?? '?')}
+            {binDran ? tz('werbinich.fragAus') : (daten.namen[daten.amZug] ?? '?')}
           </span>
         }
         unten={
           binDran ? (
-            <span>Nur Ja-Nein-Fragen. Die Runde antwortet laut.</span>
+            <span>{tz('werbinich.nurJaNein')}</span>
           ) : (
-            <span>Antwortet nur mit Ja oder Nein.</span>
+            <span>{tz('werbinich.antwortet')}</span>
           )
         }
         ton={binDran ? 'geheim' : undefined}
@@ -425,10 +429,10 @@ function WerBinIchRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element
       {binDran && !auf ? (
         <Wahl>
           <button type="button" className="pk-knopf is-gut" onClick={() => sende({ art: 'geraten', erfolg: true })}>
-            Erraten!
+            {tz('werbinich.erraten')}
           </button>
           <button type="button" className="pk-knopf is-weg" onClick={() => sende({ art: 'geraten', erfolg: false })}>
-            Aufgeben
+            {tz('werbinich.aufgeben')}
           </button>
         </Wahl>
       ) : null}
@@ -453,7 +457,7 @@ function NiemalsRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
             sicht.ausgestiegen.includes(sitz) ? null : (
               <li key={sitz} data-gut={wert !== 1 ? '' : undefined}>
                 <span>{namenFuer(sitze, sitz)}</span>
-                <span className="muted">{wert === 1 ? 'hat es getan' : 'noch nie'}</span>
+                <span className="muted">{wert === 1 ? tz('niemals.getan') : tz('niemals.nochNie')}</span>
               </li>
             ),
           )}
@@ -468,7 +472,7 @@ function NiemalsRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
               disabled={daten.meine >= 0}
               onClick={() => sende({ art: 'gestehen', ja: true })}
             >
-              Hab ich
+              {tz('niemals.habIch')}
             </button>
             <button
               type="button"
@@ -477,7 +481,7 @@ function NiemalsRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
               disabled={daten.meine >= 0}
               onClick={() => sende({ art: 'gestehen', ja: false })}
             >
-              Noch nie
+              {tz('niemals.nochNieKnopf')}
             </button>
           </Wahl>
           {daten.meine >= 0 ? <Wartet sicht={sicht} /> : null}
@@ -538,12 +542,14 @@ function WerEherRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
  * Bus fahren
  * ----------------------------------------------------------------------- */
 
-const BUS_FRAGE = ['Rot oder Schwarz?', 'Höher oder tiefer?', 'Innen oder außen?'] as const;
-const BUS_WAHL: readonly (readonly [string, string])[] = [
-  ['Rot', 'Schwarz'],
-  ['Höher', 'Tiefer'],
-  ['Innen', 'Außen'],
-];
+/* Frage und die beiden Knoepfe je Stufe. Funktionen statt Listen, damit die
+   Woerter beim Zeichnen in der aktiven Sprache nachgeschlagen werden. */
+function busFrage(stufe: number): string {
+  return tz(`bus.frage.${stufe}`);
+}
+function busWahl(stufe: number, wahl: number): string | undefined {
+  return stufe >= 0 && stufe <= 2 && (wahl === 0 || wahl === 1) ? tz(`bus.wahl.${stufe}.${wahl}`) : undefined;
+}
 
 function BusRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
   const daten = sicht.daten as BusSicht;
@@ -557,7 +563,7 @@ function BusRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
   return (
     <>
       <Buehne
-        oben={auf ? 'Ausgefahren' : binDran ? 'Du fährst' : `${namenFuer(sitze, daten.amZug)} fährt`}
+        oben={auf ? tz('bus.ausgefahren') : binDran ? tz('bus.duFaehrst') : tz('bus.faehrt', { name: namenFuer(sitze, daten.amZug) })}
         gross={
           <div className="pk-busfahrt">
             {/* Die Strecke: Station = richtige Tipps der laufenden Fahrt;
@@ -580,23 +586,23 @@ function BusRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
                 <Karte karte={daten.letzter.karte} />
               </span>
               {namenFuer(sitze, daten.letzter.sitz)}:{' '}
-              {BUS_WAHL[daten.letzter.stufe]?.[daten.letzter.wahl] ?? '?'} -{' '}
-              {daten.letzter.richtig ? 'richtig' : `daneben, ein ${zaehlerWort(sicht.trinkmodus, 1)}`}
+              {busWahl(daten.letzter.stufe, daten.letzter.wahl) ?? '?'} -{' '}
+              {daten.letzter.richtig ? tz('bus.richtig') : tz('bus.daneben', { wort: zaehlerWort(sicht.trinkmodus, 1) })}
             </span>
           ) : (
-            <span>Drei richtige Tipps, dann ist der Nächste dran.</span>
+            <span>{tz('bus.dreiTipps')}</span>
           )
         }
       />
       {binDran && !auf ? (
         <>
-          <p className="pk-busfrage">{BUS_FRAGE[stufe]}</p>
+          <p className="pk-busfrage">{busFrage(stufe)}</p>
           <Wahl>
             <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'tipp', wahl: 0 })}>
-              {BUS_WAHL[stufe]?.[0]}
+              {busWahl(stufe, 0)}
             </button>
             <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'tipp', wahl: 1 })}>
-              {BUS_WAHL[stufe]?.[1]}
+              {busWahl(stufe, 1)}
             </button>
           </Wahl>
         </>
@@ -606,7 +612,7 @@ function BusRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
           sicht.ausgestiegen.includes(sitz) || treffer < 0 ? null : (
             <li key={sitz} data-gut={treffer === 3 ? '' : undefined}>
               <span>{namenFuer(sitze, sitz)}</span>
-              <span className="muted">{treffer} von 3</span>
+              <span className="muted">{tz('bus.treffer', { n: treffer })}</span>
             </li>
           ),
         )}
@@ -640,10 +646,10 @@ function SchaetzRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
     return (
       <>
         <Buehne
-          oben="Die Antwort"
+          oben={tz('schaetzen.antwort')}
           gross={
             <span className="pk-wort is-klein">
-              {antwort.toLocaleString('de-DE')} {daten.einheit}
+              {zahl(antwort)} {daten.einheit}
             </span>
           }
           unten={<span>{daten.frage}</span>}
@@ -653,7 +659,7 @@ function SchaetzRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
           {reihen.map(({ sitz, s }, i) => (
             <li key={sitz} data-gut={i === 0 && s !== null ? '' : undefined}>
               <span>{namenFuer(sitze, sitz)}</span>
-              <span className="muted">{s === null ? 'keine Schätzung' : `${s.toLocaleString('de-DE')} ${daten.einheit}`}</span>
+              <span className="muted">{s === null ? tz('schaetzen.keine') : `${zahl(s)} ${daten.einheit}`}</span>
             </li>
           ))}
         </ul>
@@ -663,11 +669,11 @@ function SchaetzRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
 
   return (
     <>
-      <Buehne gross={<span className="pk-frage">{daten.frage}</span>} unten={<span>Antwort in {daten.einheit}</span>} />
+      <Buehne gross={<span className="pk-frage">{daten.frage}</span>} unten={<span>{tz('schaetzen.antwortIn', { einheit: daten.einheit })}</span>} />
       {abgegeben ? (
         <>
           <p className="pk-busfrage">
-            Deine Schätzung: {daten.meine?.toLocaleString('de-DE')} {daten.einheit}
+            {tz('schaetzen.deine')} {daten.meine === null ? '' : zahl(daten.meine)} {daten.einheit}
           </p>
           <Wartet sicht={sicht} />
         </>
@@ -683,13 +689,13 @@ function SchaetzRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element {
             className="pk-zahl"
             type="text"
             inputMode="decimal"
-            placeholder="Zahl"
+            placeholder={tz('schaetzen.zahl')}
             value={eingabe}
             onChange={(e) => setEingabe(e.target.value)}
-            aria-label={`Schätzung in ${daten.einheit}`}
+            aria-label={tz('schaetzen.schaetzungIn', { einheit: daten.einheit })}
           />
           <button type="submit" className="pk-knopf is-haupt" disabled={!gueltig}>
-            Tippen
+            {tz('schaetzen.tippen')}
           </button>
         </form>
       )}
@@ -712,10 +718,10 @@ function EntwederRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
       <Buehne
         gross={
           <span className="pk-frage">
-            {daten.a} <span className="muted">oder</span> {daten.b}?
+            {daten.a} <span className="muted">{tz('entweder.oder')}</span> {daten.b}?
           </span>
         }
-        unten={auf ? <span>{zaehlA === zaehlB ? 'Gleichstand - alle trinken.' : 'Die Minderheit trinkt.'}</span> : undefined}
+        unten={auf ? <span>{zaehlA === zaehlB ? tz('entweder.gleichstand') : tz('entweder.minderheit')}</span> : undefined}
       />
       <Wahl>
         <button
@@ -748,7 +754,7 @@ function EntwederRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Element 
             sicht.ausgestiegen.includes(sitz) ? null : (
               <li key={sitz}>
                 <span>{namenFuer(sitze, sitz)}</span>
-                <span className="muted">{s === 0 ? daten.a : s === 1 ? daten.b : 'keine Wahl'}</span>
+                <span className="muted">{s === 0 ? daten.a : s === 1 ? daten.b : tz('entweder.keineWahl')}</span>
               </li>
             ),
           )}
@@ -768,21 +774,21 @@ function WahrheitPflichtRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
   const auf = sicht.phase === 'ergebnis';
   const wahl = daten.gewaehlt[daten.amZug] ?? -1;
   const text = daten.text[daten.amZug] ?? '';
-  const wer = binDran ? 'Du bist dran' : `${namenFuer(sitze, daten.amZug)} ist dran`;
+  const wer = binDran ? tz('duBistDran') : tz('istDran', { name: namenFuer(sitze, daten.amZug) });
 
   return (
     <>
       {wahl < 0 ? (
         <Buehne
-          oben={auf ? 'Vorbei' : wer}
-          gross={<span className="pk-wort is-klein">{auf ? 'Alle durch' : 'Wahrheit oder Pflicht?'}</span>}
+          oben={auf ? tz('wp.vorbei') : wer}
+          gross={<span className="pk-wort is-klein">{auf ? tz('wp.alleDurch') : tz('wp.frage')}</span>}
           ton={binDran && !auf ? 'geheim' : undefined}
         />
       ) : (
         <Buehne
-          oben={`${wer} · ${wahl === 1 ? 'Pflicht' : 'Wahrheit'}`}
+          oben={`${wer} · ${wahl === 1 ? tz('wp.pflicht') : tz('wp.wahrheit')}`}
           gross={<span className="pk-frage">{text}</span>}
-          unten={binDran ? <span>Mach es vor der Runde. Dann ehrlich tippen.</span> : <span>Zuschauen - und dann entscheiden, ob das zählt.</span>}
+          unten={binDran ? <span>{tz('wp.machEs')}</span> : <span>{tz('wp.zuschauen')}</span>}
           ton={binDran ? 'geheim' : undefined}
         />
       )}
@@ -790,19 +796,19 @@ function WahrheitPflichtRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
         wahl < 0 ? (
           <Wahl>
             <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'wahl', pflicht: false })}>
-              Wahrheit
+              {tz('wp.wahrheit')}
             </button>
             <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'wahl', pflicht: true })}>
-              Pflicht
+              {tz('wp.pflicht')}
             </button>
           </Wahl>
         ) : (
           <Wahl>
             <button type="button" className="pk-knopf is-gut" onClick={() => sende({ art: 'erledigt', ja: true })}>
-              Gemacht
+              {tz('wp.gemacht')}
             </button>
             <button type="button" className="pk-knopf is-weg" onClick={() => sende({ art: 'erledigt', ja: false })}>
-              Gekniffen
+              {tz('wp.gekniffen')}
             </button>
           </Wahl>
         )
@@ -812,9 +818,9 @@ function WahrheitPflichtRunde({ sicht, sitze, sende }: RundenProps): React.JSX.E
           sicht.ausgestiegen.includes(sitz) || e < 0 ? null : (
             <li key={sitz} data-gut={e === 1 ? '' : undefined}>
               <span>
-                {namenFuer(sitze, sitz)} <span className="muted">· {daten.gewaehlt[sitz] === 1 ? 'Pflicht' : 'Wahrheit'}</span>
+                {namenFuer(sitze, sitz)} <span className="muted">· {daten.gewaehlt[sitz] === 1 ? tz('wp.pflicht') : tz('wp.wahrheit')}</span>
               </span>
-              <span className="muted">{e === 1 ? 'gemacht' : 'gekniffen'}</span>
+              <span className="muted">{e === 1 ? tz('wp.gemachtKlein') : tz('wp.gekniffenKlein')}</span>
             </li>
           ),
         )}

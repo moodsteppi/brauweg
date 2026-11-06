@@ -1,4 +1,6 @@
-import { STATION_WO, ZUSTAND_NAMEN, ZUTAT_NAMEN, rezept, stuecke } from './rezepte';
+import { rezept, stuecke } from './rezepte';
+import { rezeptName, stationWo, tz, zustandName, zutatName } from './text';
+import { t } from '../../i18n';
 import { zustandFarbe } from './farben';
 import stil from './Rezeptzeile.module.css';
 
@@ -30,7 +32,10 @@ export function Rezeptzeile({
   return (
     <ul className={`${stil.kette} ${klein ? stil.klein : ''}`}>
       {stuecke(r).map((stueck, i) => {
-        const name = `${ZUTAT_NAMEN[stueck.zutat]}, ${ZUSTAND_NAMEN[stueck.zustand]}`;
+        const name = tz('brocooked.ui.marke', {
+          zutat: zutatName(stueck.zutat),
+          zustand: zustandName(stueck.zustand),
+        });
         return (
           <li
             key={`${stueck.zutat}-${i}`}
@@ -51,10 +56,10 @@ export function Rezeptkarte({ rezeptId }: { rezeptId: string }): React.JSX.Eleme
   const r = rezept(rezeptId);
   return (
     <li className={stil.karte}>
-      <span className={stil.name}>{r.name}</span>
+      <span className={stil.name}>{rezeptName(r.id)}</span>
       <Rezeptzeile rezeptId={rezeptId} />
       <span className={stil.station}>
-        {r.station === null ? 'ohne Garen' : STATION_WO[r.station]}
+        {r.station === null ? t('brocooked.ui.ohneGaren') : stationWo(r.station)}
       </span>
     </li>
   );

@@ -19,6 +19,7 @@ vi.mock('../api', async () => {
 vi.mock('../klang', () => ({ spiele: vi.fn() }));
 
 import { Browort } from './Browort';
+import { setzeSprachwahl } from '../i18n';
 
 function stand(teil: Partial<BrowortAnsicht> = {}): BrowortAnsicht {
   return {
@@ -39,7 +40,11 @@ function tippe(wort: string): void {
 }
 
 describe('Browort', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Die Erwartungen sind deutsch; der Testlauf spricht Englisch (jsdom meldet en-US).
+    setzeSprachwahl('de');
+  });
 
   it('zeigt Serie und Schnitt in der Flamme und lässt tippen und löschen', async () => {
     browort.mockResolvedValue(stand());

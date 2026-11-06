@@ -4,7 +4,7 @@ import { ApiError, api } from '../api';
 import { t } from '../i18n';
 import { Schliessen, useEscape, useRueckfrage } from '../screens/HbBlatt';
 import type { Belohnung, ClanwortAnsicht } from './sicht';
-import { Raster, Tastatur, useWortEingabe } from './Spielfeld';
+import { Raster, Tastatur, useWortEingabe, type WortEingabe } from './Spielfeld';
 
 /** Die Rueckfrage zur Wahl wurde abgebrochen — kein Fehler, nichts zu melden. */
 export class AbgebrochenFehler extends Error {
@@ -85,6 +85,45 @@ export function Clanwort({
     aktiv: Boolean(stand && ((stand.phase === 'raten' && !stand.fertig) || stand.phase === 'waehlen')),
   });
 
+  return (
+    <ClanwortBild
+      stand={stand}
+      fehler={fehler}
+      belohnung={belohnung}
+      spiel={spiel}
+      rueckfrage={rueckfrage}
+      onClose={onClose}
+      onNochmal={laden}
+    />
+  );
+}
+
+/**
+ * Die Anzeige von Clanwort, ohne Server und ohne eigenen Zustand.
+ *
+ * Getrennt von der Hülle wie bei Browort: Die vier Lagen hängen daran, wer
+ * heute ausgelost wurde — der Sprach-Schaukasten
+ * (sprachprobe-schaukasten.html) zeichnet jede mit erfundenen Daten.
+ */
+export function ClanwortBild({
+  stand,
+  fehler,
+  belohnung,
+  spiel,
+  rueckfrage,
+  onClose,
+  onNochmal,
+}: {
+  /** undefined: wird geladen; null: ohne Clan. */
+  stand: ClanwortAnsicht | null | undefined;
+  fehler: string | null;
+  belohnung: Belohnung | null;
+  spiel: WortEingabe;
+  /** Die offene Rückfrage zur Wahl (aus `useRueckfrage`), sonst null. */
+  rueckfrage: React.ReactNode;
+  onClose: () => void;
+  onNochmal: () => void;
+}): React.JSX.Element {
   const rangliste = stand && stand.rangliste.length > 0 && (
     <section className="hb-blk bw-rangliste">
       <h2 className="hb-ab">
@@ -139,7 +178,7 @@ export function Clanwort({
           {fehler ? (
             <div className="hb-fehler">
               {fehler}{' '}
-              <button type="button" className="hb-link" onClick={laden}>
+              <button type="button" className="hb-link" onClick={onNochmal}>
                 Nochmal
               </button>
             </div>

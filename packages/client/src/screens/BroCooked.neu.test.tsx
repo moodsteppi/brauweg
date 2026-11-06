@@ -30,6 +30,7 @@ vi.mock('../useTable', () => ({
 }));
 
 import { BroCooked } from './BroCooked';
+import { setzeSprachwahl } from '../i18n';
 
 function stand(sitze: { seat: number; displayName: string | null; isBot: boolean }[] = []): unknown {
   return {
@@ -57,6 +58,8 @@ describe('BroCooked im neuen Hub', () => {
     leaveTable.mockResolvedValue({ ok: true });
     tischStand = stand();
     localStorage.clear();
+    // Die Erwartungen sind deutsch; der Testlauf spricht Englisch (jsdom meldet en-US).
+    setzeSprachwahl('de');
   });
 
   afterEach(() => {

@@ -22,6 +22,7 @@ import { Buehne, Karte, Leute, Wahl, Wartet, namenFuer, type RundenProps } from 
 import { Flasche } from './Flasche';
 import { Wasserfall } from './Wasserfall';
 import { zaehlerWort, type BombeSicht, type KoenigsbecherSicht, type ZehnSekundenSicht } from './sicht';
+import { tz, tzAnzahl } from './text';
 
 /* --------------------------------------------------------------------------
  * Bombe
@@ -34,7 +35,7 @@ import { zaehlerWort, type BombeSicht, type KoenigsbecherSicht, type ZehnSekunde
  */
 function TickendeBombe({ hoch }: { hoch: boolean }): React.JSX.Element {
   return (
-    <span className="pk-zd-bombe" data-hoch={hoch ? '' : undefined} aria-label={hoch ? 'Die Bombe ist hochgegangen' : 'Die Bombe tickt'}>
+    <span className="pk-zd-bombe" data-hoch={hoch ? '' : undefined} aria-label={hoch ? tz('bombe.hoch') : tz('bombe.tickt')}>
       {hoch ? '💥' : '💣'}
     </span>
   );
@@ -49,22 +50,22 @@ export function BombeRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Elem
     const verloren = daten.verlierer >= 0;
     return (
       <Buehne
-        oben={verloren ? 'BUMM' : 'Entschärft'}
+        oben={verloren ? tz('bombe.bumm') : tz('bombe.entschaerft')}
         gross={
           <>
             <TickendeBombe hoch={verloren} />
             <span className="pk-wort is-klein">
               {verloren
                 ? daten.verlierer === sicht.sitz
-                  ? 'Du hattest sie'
-                  : `${namenFuer(sitze, daten.verlierer)} hatte sie`
-                : 'Niemand mehr da, dem man sie geben könnte'}
+                  ? tz('bombe.duHattest')
+                  : tz('bombe.hatte', { name: namenFuer(sitze, daten.verlierer) })
+                : tz('bombe.niemand')}
             </span>
           </>
         }
         unten={
           <span>
-            {daten.weitergaben} {daten.weitergaben === 1 ? 'Weitergabe' : 'Weitergaben'} zu „{daten.kategorie}"
+            {tzAnzahl('bombe.weitergaben', daten.weitergaben, { kategorie: daten.kategorie })}
           </span>
         }
         ton={verloren ? 'schlecht' : 'gut'}
@@ -75,20 +76,20 @@ export function BombeRunde({ sicht, sitze, sende }: RundenProps): React.JSX.Elem
   return (
     <>
       <Buehne
-        oben={binDran ? 'Du hast die Bombe - nenn etwas und gib weiter!' : `${namenFuer(sitze, daten.amZug)} hat die Bombe`}
+        oben={binDran ? tz('bombe.duHast') : tz('bombe.hat', { name: namenFuer(sitze, daten.amZug) })}
         gross={
           <>
             <TickendeBombe hoch={false} />
             <span className="pk-frage">{daten.kategorie}</span>
           </>
         }
-        unten={<span>Wann sie hochgeht, weiß nur der Server.</span>}
+        unten={<span>{tz('bombe.server')}</span>}
         ton={binDran ? 'schlecht' : undefined}
       />
       {binDran ? (
         <Wahl>
           <button type="button" className="pk-knopf is-gross is-gut pk-zd-weiter" onClick={() => sende({ art: 'weitergeben' })}>
-            Genannt - weiter!
+            {tz('bombe.weiter')}
           </button>
         </Wahl>
       ) : null}
@@ -126,16 +127,16 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
   const daten = sicht.daten as ZehnSekundenSicht;
   const auf = sicht.phase === 'ergebnis';
   const binSprecher = daten.sprecher === sicht.sitz;
-  const sprecherName = binSprecher ? 'Du' : namenFuer(sitze, daten.sprecher);
+  const sprecherName = binSprecher ? tz('zehn.du') : namenFuer(sitze, daten.sprecher);
 
   if (auf) {
     const urteile = daten.urteile ?? [];
     return (
       <>
         <Buehne
-          oben={daten.geschafft ? 'Geschafft' : 'Nicht geschafft'}
-          gross={<span className="pk-frage">Drei: {daten.aufgabe ?? '-'}</span>}
-          unten={<span>{binSprecher ? 'Du hast gesprochen.' : `${sprecherName} hat gesprochen.`}</span>}
+          oben={daten.geschafft ? tz('zehn.geschafft') : tz('zehn.nichtGeschafft')}
+          gross={<span className="pk-frage">{tz('zehn.drei', { aufgabe: daten.aufgabe ?? '-' })}</span>}
+          unten={<span>{binSprecher ? tz('zehn.duGesprochen') : tz('zehn.gesprochen', { name: sprecherName })}</span>}
           ton={daten.geschafft ? 'gut' : 'schlecht'}
         />
         <ul className="pk-liste">
@@ -143,7 +144,11 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
             <li key={richter} data-gut={urteile[richter] === 1 ? '' : undefined}>
               <span>{namenFuer(sitze, richter)}</span>
               <span className="muted">
-                {urteile[richter] === 1 ? 'geschafft' : urteile[richter] === 0 ? 'nicht geschafft' : 'kein Urteil'}
+                {urteile[richter] === 1
+                  ? tz('zehn.geschafftKlein')
+                  : urteile[richter] === 0
+                    ? tz('zehn.nichtGeschafftKlein')
+                    : tz('zehn.keinUrteil')}
               </span>
             </li>
           ))}
@@ -156,19 +161,19 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
     return (
       <>
         <Buehne
-          oben={binSprecher ? 'Du bist dran' : `${sprecherName} ist dran`}
-          gross={<span className="pk-wort is-klein">{daten.anzahl} Dinge in zehn Sekunden</span>}
-          unten={<span>Die Aufgabe kommt mit „Los" - für alle gleichzeitig, und die Uhr läuft auf dem Server.</span>}
+          oben={binSprecher ? tz('duBistDran') : tz('istDran', { name: sprecherName })}
+          gross={<span className="pk-wort is-klein">{tz('zehn.dinge', { n: daten.anzahl })}</span>}
+          unten={<span>{tz('zehn.aufgabeKommt')}</span>}
           ton={binSprecher ? 'geheim' : undefined}
         />
         {binSprecher ? (
           <Wahl>
             <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'bereit' })}>
-              Los
+              {tz('zehn.los')}
             </button>
           </Wahl>
         ) : (
-          <p className="pk-wartet">Gleich geht die Uhr los …</p>
+          <p className="pk-wartet">{tz('zehn.gleichUhr')}</p>
         )}
       </>
     );
@@ -178,7 +183,7 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
     return (
       <>
         <Buehne
-          oben={binSprecher ? `Nenne ${daten.anzahl}!` : `${sprecherName} nennt ${daten.anzahl}`}
+          oben={binSprecher ? tz('zehn.nenne', { n: daten.anzahl }) : tz('zehn.nennt', { name: sprecherName, n: daten.anzahl })}
           gross={
             <>
               <Restzeit frist={frist ?? null} />
@@ -190,11 +195,11 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
         {binSprecher ? (
           <Wahl>
             <button type="button" className="pk-knopf is-gross is-gut" onClick={() => sende({ art: 'fertig' })}>
-              Fertig
+              {tz('zehn.fertig')}
             </button>
           </Wahl>
         ) : (
-          <p className="pk-wartet">Zuhören - gleich wird geurteilt.</p>
+          <p className="pk-wartet">{tz('zehn.zuhoeren')}</p>
         )}
       </>
     );
@@ -209,24 +214,24 @@ export function ZehnSekundenRunde({ sicht, sitze, sende, frist }: RundenProps): 
         oben={
           binSprecher
             ? binRichter
-              ? `Hast du ${daten.anzahl} geschafft? Ehrlich sein - niemand sonst hat zugehört.`
-              : 'Die Runde urteilt'
-            : `Hat ${sprecherName} ${daten.anzahl} geschafft?`
+              ? tz('zehn.hastDu', { n: daten.anzahl })
+              : tz('zehn.rundeUrteilt')
+            : tz('zehn.hat', { name: sprecherName, n: daten.anzahl })
         }
         gross={<span className="pk-frage">{daten.aufgabe ?? '-'}</span>}
         unten={
           <span>
-            {daten.abgegeben.length} von {daten.richter.length} geurteilt
+            {tz('zehn.geurteilt', { ist: daten.abgegeben.length, soll: daten.richter.length })}
           </span>
         }
       />
       {binRichter && !geurteilt ? (
         <Wahl>
           <button type="button" className="pk-knopf is-gut" onClick={() => sende({ art: 'urteil', geschafft: true })}>
-            Geschafft
+            {tz('zehn.geschafft')}
           </button>
           <button type="button" className="pk-knopf is-weg" onClick={() => sende({ art: 'urteil', geschafft: false })}>
-            Nicht geschafft
+            {tz('zehn.nichtGeschafft')}
           </button>
         </Wahl>
       ) : (
@@ -250,7 +255,7 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
 
   const getroffen =
     letzte && letzte.ziele.length > 0
-      ? letzte.ziele.map((z) => (z === sicht.sitz ? 'dich' : namenFuer(sitze, z))).join(', ')
+      ? letzte.ziele.map((z) => (z === sicht.sitz ? tz('becher.dich') : namenFuer(sitze, z))).join(', ')
       : null;
 
   /*
@@ -272,7 +277,7 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
   ) : (
     <div className="pk-zd-karte">
       <Karte zu />
-      <span className="pk-zd-kartentext">{daten.restKarten} Karten im Stapel</span>
+      <span className="pk-zd-kartentext">{tz('becher.stapel', { n: daten.restKarten })}</span>
     </div>
   );
 
@@ -281,30 +286,41 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
       <Wasserfall
         kennung={wasserfallKennung}
         karte={letzte?.karte ?? null}
-        getroffen={`${letzte && letzte.sitz === sicht.sitz ? 'Du hast' : `${letzte ? namenFuer(sitze, letzte.sitz) : 'Jemand'} hat`} das Ass gezogen - ${sicht.trinkmodus ? 'alle trinken' : 'alle kassieren'}!`}
+        getroffen={
+          letzte && letzte.sitz === sicht.sitz
+            ? tz(sicht.trinkmodus ? 'becher.assDu' : 'becher.assDuOhne')
+            : tz(sicht.trinkmodus ? 'becher.ass' : 'becher.assOhne', {
+                name: letzte ? namenFuer(sitze, letzte.sitz) : tz('becher.jemand'),
+              })
+        }
       />
       <Buehne
         oben={
           auf
-            ? 'Die Runde ist um'
+            ? tz('becher.um')
             : handOffen
-              ? 'Hand hoch!'
+              ? tz('becher.handHoch')
               : legenOffen
                 ? binDran
-                  ? 'Leg deine Karte auf die Flasche'
-                  : `${namenFuer(sitze, daten.amZug)} legt die Karte auf die Flasche`
+                  ? tz('becher.leg')
+                  : tz('becher.legt', { name: namenFuer(sitze, daten.amZug) })
                 : binDran
                   ? daten.wahlOffen
-                    ? 'Zeig auf jemanden'
-                    : 'Du ziehst'
-                  : `${namenFuer(sitze, daten.amZug)} ${daten.wahlOffen ? 'zeigt auf jemanden' : 'zieht'}`
+                    ? tz('becher.zeig')
+                    : tz('becher.duZiehst')
+                  : tz(daten.wahlOffen ? 'becher.zeigt' : 'becher.zieht', { name: namenFuer(sitze, daten.amZug) })
         }
         gross={karte}
         unten={
           <span>
-            {letzte ? `${letzte.sitz === sicht.sitz ? 'Deine' : `${namenFuer(sitze, letzte.sitz)}s`} Karte` : 'Noch keine Karte'}
-            {getroffen ? ` - trifft ${getroffen}` : ''}
-            {' · '}Becher: {daten.becher} {daten.becher === 1 ? 'König' : 'Könige'}
+            {letzte
+              ? letzte.sitz === sicht.sitz
+                ? tz('becher.deineKarte')
+                : tz('becher.karteVon', { name: namenFuer(sitze, letzte.sitz) })
+              : tz('becher.keineKarte')}
+            {getroffen ? tz('becher.trifft', { wen: getroffen }) : ''}
+            {' · '}
+            {tzAnzahl('becher.koenige', daten.becher)}
           </span>
         }
         ton={handOffen ? 'schlecht' : undefined}
@@ -313,11 +329,11 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
       {handOffen && sicht.sitz >= 0 && !hochGezeigt ? (
         <Wahl>
           <button type="button" className="pk-knopf is-gross is-weg pk-zd-hand" onClick={() => sende({ art: 'hochzeigen' })}>
-            ✋ Hand hoch
+            ✋ {tz('becher.handHochKnopf')}
           </button>
         </Wahl>
       ) : null}
-      {handOffen && hochGezeigt ? <p className="pk-wartet">Oben! Wer als Letzter tippt, kassiert.</p> : null}
+      {handOffen && hochGezeigt ? <p className="pk-wartet">{tz('becher.oben')}</p> : null}
 
       {binDran && !handOffen && daten.wahlOffen ? (
         <Leute sicht={sicht} sitze={sitze} gewaehlt={-1} gesperrt={false} beiWahl={(ziel) => sende({ art: 'stimme', ziel })} />
@@ -327,7 +343,7 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
       {binDran && !handOffen && !daten.wahlOffen && !legenOffen ? (
         <Wahl>
           <button type="button" className="pk-knopf is-gross" onClick={() => sende({ art: 'ziehen' })}>
-            Karte ziehen
+            {tz('becher.ziehen')}
           </button>
         </Wahl>
       ) : null}
@@ -339,7 +355,13 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
         binDran={binDran}
         gelegt={daten.gelegt}
         sturz={daten.sturz}
-        sturzName={daten.sturz ? (daten.sturz.sitz === sicht.sitz ? 'Du trinkst' : `${namenFuer(sitze, daten.sturz.sitz)} trinkt`) : ''}
+        sturzName={
+          daten.sturz
+            ? daten.sturz.sitz === sicht.sitz
+              ? tz('becher.duTrinkst')
+              : tz('becher.trinkt', { name: namenFuer(sitze, daten.sturz.sitz) })
+            : ''
+        }
         trinkWort={(zahl) => `${zahl} ${zaehlerWort(sicht.trinkmodus, zahl)}`}
         onLegen={(versatz) => sende({ art: 'legen', versatz })}
       />
@@ -347,7 +369,7 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
 
       {daten.neueRegel ? (
         <p className="pk-ansage">
-          {auf ? 'Ab jetzt gilt' : 'Nach dieser Runde gilt'}: {daten.neueRegel}
+          {auf ? tz('regel.abJetzt') : tz('becher.nachRunde')}: {daten.neueRegel}
         </p>
       ) : null}
 
@@ -357,10 +379,10 @@ export function KoenigsbecherRunde({ sicht, sitze, sende }: RundenProps): React.
             <li key={sitz} data-gut={zahl === 0 ? '' : undefined}>
               <span>
                 {namenFuer(sitze, sitz)}
-                {sitz === daten.koenigSitz ? <span className="muted"> · hat den letzten König</span> : null}
+                {sitz === daten.koenigSitz ? <span className="muted"> · {tz('becher.letzterKoenig')}</span> : null}
               </span>
               <span className="muted">
-                {daten.gezogen[sitz] ?? 0}/{daten.kartenJeSitz} gezogen
+                {tz('becher.gezogen', { ist: daten.gezogen[sitz] ?? 0, soll: daten.kartenJeSitz })}
                 {zahl > 0 ? ` · ${zahl} ${zaehlerWort(sicht.trinkmodus, zahl)}` : ''}
               </span>
             </li>
