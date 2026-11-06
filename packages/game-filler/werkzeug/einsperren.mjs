@@ -160,8 +160,8 @@ if (isMainThread) {
 
   if (teile.includes(2)) {
     console.log('## 2. Vorsichtig gegen Bot (jede Saat auf beiden Sitzen)\n');
-    console.log('| Spielart | Partien | V eingesperrt | Bot eingesperrt | V Sieg als S0 | V Sieg als S1 | V Sieg gesamt / remis | Punkte V / Bot | Punkte V als S0 / S1 (Bot dort in Teil 1) | V weicht ab je Partie | ausweglos je Partie | Rechenzeit |');
-    console.log('|---|---|---|---|---|---|---|---|---|---|---|---|');
+    console.log('| Spielart | Partien | V eingesperrt | davon nach "ausweglos" | Bot eingesperrt | V Sieg als S0 | V Sieg als S1 | V Sieg gesamt / remis | Punkte V / Bot | Punkte V als S0 / S1 (Bot dort in Teil 1) | V weicht ab je Partie | ausweglos je Partie | Rechenzeit |');
+    console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|');
     for (const variante of Object.keys(anzahl)) {
       const ps = ergebnisse.filter((r) => r.teil === 2 && r.variante === variante).flatMap((r) => r.partien);
       if (ps.length === 0) continue;
@@ -176,7 +176,7 @@ if (isMainThread) {
         ? `${vPkt(als(0)).toFixed(1)} (${g.p0.toFixed(1)}) / ${vPkt(als(1)).toFixed(1)} (${g.p1.toFixed(1)})`
         : `${vPkt(als(0)).toFixed(1)} / ${vPkt(als(1)).toFixed(1)}`;
       console.log(
-        `| ${variante} | ${n} | ${anteil(ps.filter((p) => p.eingesperrt === p.vSitz).length, n)} | ${anteil(ps.filter((p) => p.eingesperrt === 1 - p.vSitz).length, n)}` +
+        `| ${variante} | ${n} | ${anteil(ps.filter((p) => p.eingesperrt === p.vSitz).length, n)} | ${ps.filter((p) => p.eingesperrt === p.vSitz && p.ausweglos > 0).length} | ${anteil(ps.filter((p) => p.eingesperrt === 1 - p.vSitz).length, n)}` +
           ` | ${pct(vSieg(als(0)), als(0).length)} | ${pct(vSieg(als(1)), als(1).length)} | ${pct(vSieg(ps), n)} / ${pct(remis, n)}` +
           ` | ${vPkt(ps).toFixed(1)} / ${bPkt.toFixed(1)} | ${vergleich}` +
           ` | ${(ps.reduce((a, p) => a + p.abweichungen, 0) / n).toFixed(2)} | ${(ps.reduce((a, p) => a + p.ausweglos, 0) / n).toFixed(2)} | ${sek(ps.reduce((a, p) => a + p.ms, 0))} |`,
