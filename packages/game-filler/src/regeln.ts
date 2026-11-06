@@ -63,6 +63,102 @@ export interface FillerRegeln {
    * Tisch, der sie einmal gesetzt hat, sie behaelt.
    */
   readonly barrieren: number;
+  /**
+   * Brett, Mauervorrat, Mauern je Zug und Sternpaare je Spielart; wo eine
+   * Spielart einen Eintrag hat, gilt er statt `spalten`, `zeilen` und
+   * `barrieren` (siehe `aufbauFuer`).
+   *
+   * Eine Tabelle in der Vorgabe und keine Konstante, aus demselben Grund wie
+   * bei `farbenJeSpielart`: Der Bildschirm schickt die Vorgabe als `config`
+   * mit und legt nur die Spielart obendrauf. Stuende 12 x 11 als Konstante im
+   * Modul, haette ein vor dem 05.11.2026 aufgemachter Extreme-Tisch beim
+   * Anpfiff ein anderes Brett, als er beim Aufmachen zugesagt hat. Fehlt die
+   * Tabelle, ist es genau so ein Tisch — er behaelt 8 x 7 und zehn Mauern.
+   */
+  readonly aufbauJeSpielart?: Readonly<Partial<Record<FillerVariante, SpielartAufbau>>>;
+  /**
+   * Wie viele Mauern hoechstens in einem Zug. Fehlt sie, gilt eine — so wurde
+   * jede Partie bis zum 05.11.2026 gespielt, und deren Snapshot traegt die
+   * Zahl nicht. Bei mehr als einer gilt die Pause `mauerPause` (partie.ts).
+   */
+  readonly mauernJeZug?: number;
+  /**
+   * Sterne als punktgespiegelte Paare. Fehlt die Zahl oder ist sie 0, zieht
+   * Extreme wie bis zum 05.11.2026 STERNE_ANZAHL freie Sterne.
+   */
+  readonly sternPaare?: number;
+  /**
+   * Wie viele Zuege der Eroeffnung mauerfrei sind, ueber beide Sitze gezaehlt.
+   * Fehlt die Zahl, gilt MAUERFREIE_ZUEGE (drei) — so wurde jede Partie bis
+   * zum 06.11.2026 gespielt, und deren Snapshot traegt sie nicht.
+   */
+  readonly mauerfreieZuege?: number;
+}
+
+/**
+ * Was eine Spielart am Aufbau anders macht als die Vorgabe.
+ *
+ * Alles in EINEM Eintrag, weil die Zahlen zusammengehoeren: Zwanzig Mauern
+ * auf 8 x 7 teilten das Brett, acht Sterne laegen dort fast nebeneinander.
+ */
+export interface SpielartAufbau {
+  readonly spalten: number;
+  readonly zeilen: number;
+  readonly barrieren: number;
+  readonly mauernJeZug: number;
+  readonly sternPaare: number;
+  readonly mauerfreieZuege: number;
+}
+
+/**
+ * Der Aufbau je Spielart — nur Extreme weicht ab (Wunsch Niklas, 05.11.2026).
+ *
+ * 12 x 11, zwanzig Mauern, bis zu zwei je Zug, vier gespiegelte Sternpaare.
+ * Seit dem 06.11.2026 dazu eine laengere mauerfreie Eroeffnung: drei Runden
+ * JE SPIELER, also sechs Zuege — gebaut wird ab der vierten eigenen Runde.
+ * Auf dem grossen Brett und mit zwei Mauern je Zug riegelte sonst der
+ * Anfaenger schon im zweiten eigenen Zug eine Ecke ab, bevor sich die Gebiete
+ * ueberhaupt beruehren.
+ * Nebel, Klar und Build stehen bewusst NICHT darin: Fuer sie bleibt alles,
+ * wie es war, Saat fuer Saat.
+ */
+export const AUFBAU_JE_SPIELART = {
+  extreme: {
+    spalten: 12,
+    zeilen: 11,
+    barrieren: 20,
+    mauernJeZug: 2,
+    sternPaare: 4,
+    mauerfreieZuege: 6,
+  },
+} as const satisfies Partial<Record<FillerVariante, SpielartAufbau>>;
+
+/**
+ * Der Regelsatz mit dem Aufbau seiner Spielart — an EINER Stelle, damit
+ * Pruefung und Partie dasselbe Brett sehen.
+ *
+ * Ohne Eintrag fuer die Spielart kommt der Regelsatz unveraendert zurueck,
+ * auch ohne neue Schluessel: Eine Nebel-Partie soll im Snapshot genau so
+ * aussehen wie vor dem 05.11.2026.
+ */
+export function aufbauFuer<R extends FillerRegeln>(regeln: R): R {
+  const variante = istVariante(regeln.variante) ? regeln.variante : 'nebel';
+  const eintrag = regeln.aufbauJeSpielart?.[variante];
+  if (!eintrag) return regeln;
+  return {
+    ...regeln,
+    spalten: eintrag.spalten,
+    zeilen: eintrag.zeilen,
+    barrieren: eintrag.barrieren,
+    mauernJeZug: eintrag.mauernJeZug,
+    sternPaare: eintrag.sternPaare,
+    mauerfreieZuege: eintrag.mauerfreieZuege,
+  };
+}
+
+/** Mauern je Zug eines Regelsatzes; fehlt die Zahl, ist es eine. */
+export function mauernJeZug(regeln: Pick<FillerRegeln, 'mauernJeZug'>): number {
+  return typeof regeln.mauernJeZug === 'number' ? regeln.mauernJeZug : 1;
 }
 
 /** Der Regelsatz, wie er in der Partie steht: mit fester Farbzahl. */
@@ -94,7 +190,8 @@ export function mitBarrieren(variante: FillerVariante): boolean {
 /**
  * Spielarten mit Sternfeldern.
  *
- * `extreme` (seit dem 06.09.2026) ist Build plus drei Sterne: Felder mit
+ * `extreme` (seit dem 06.09.2026) ist Build plus Sterne (drei, seit dem
+ * 05.11.2026 acht auf dem grossen Brett, siehe AUFBAU_JE_SPIELART): Felder mit
  * normaler Farbe, aber einem weissen Stern darauf. Wer eines schluckt,
  * bekommt dafuer zwei Punkte statt einem und eine Mauer dazu. Gespielt wird
  * mit sieben Farben statt sechs — die Zahl steht in `FARBEN_JE_SPIELART`,
@@ -177,6 +274,12 @@ export const DEFAULT_REGELN: FillerRegeln = {
    * weiterhin, dass der Gegner dadurch komplett abgeschnitten wird.
    */
   barrieren: 10,
+  /*
+   * Extreme spielt auf 12 x 11 mit zwanzig Mauern (seit dem 05.11.2026). Die
+   * drei Zahlen oben bleiben die der anderen Spielarten — und die jedes
+   * Tisches, der ohne diese Tabelle aufgemacht wurde.
+   */
+  aufbauJeSpielart: AUFBAU_JE_SPIELART,
 };
 
 /**
@@ -196,6 +299,25 @@ export function rotationSize(): number {
 
 export function suggestedRounds(): readonly number[] {
   return [1];
+}
+
+/**
+ * Erlaubte Bereiche der Aufbau-Zahlen. Brett und Mauern wie bei `spalten`,
+ * `zeilen` und `barrieren`. Mehr als zwei Mauern je Zug hat niemand
+ * durchgespielt, auch der Bot nicht; sechs Sternpaare passen auf ein
+ * 12er-Brett noch mit Abstand drei.
+ */
+const GRENZEN = {
+  spalten: [4, 12],
+  zeilen: [4, 12],
+  barrieren: [0, 20],
+  mauernJeZug: [1, 2],
+  sternPaare: [0, 6],
+  mauerfreieZuege: [0, 12],
+} as const satisfies Record<keyof SpielartAufbau, readonly [number, number]>;
+
+function ganzZwischen(wert: unknown, [von, bis]: readonly [number, number]): boolean {
+  return typeof wert === 'number' && Number.isInteger(wert) && wert >= von && wert <= bis;
 }
 
 export interface RegelProblem {
@@ -260,9 +382,47 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
       }
     }
   }
+  for (const feld of ['mauernJeZug', 'sternPaare', 'mauerfreieZuege'] as const) {
+    const wert = gegeben[feld];
+    if (wert !== undefined && wert !== null && !ganzZwischen(wert, GRENZEN[feld])) {
+      probleme.push({ path: feld, messageKey: 'ruleset.fieldWrongType', severity: 'error' });
+    }
+  }
+  const aufbau = gegeben['aufbauJeSpielart'];
+  if (aufbau !== undefined && aufbau !== null) {
+    if (typeof aufbau !== 'object') {
+      probleme.push({
+        path: 'aufbauJeSpielart',
+        messageKey: 'ruleset.fieldWrongType',
+        severity: 'error',
+      });
+    } else {
+      for (const v of VARIANTEN) {
+        const eintrag = (aufbau as Record<string, unknown>)[v];
+        if (eintrag === undefined) continue;
+        for (const feld of Object.keys(GRENZEN) as (keyof typeof GRENZEN)[]) {
+          const wert =
+            typeof eintrag === 'object' && eintrag !== null
+              ? (eintrag as Record<string, unknown>)[feld]
+              : undefined;
+          if (!ganzZwischen(wert, GRENZEN[feld])) {
+            probleme.push({
+              path: `aufbauJeSpielart.${v}.${feld}`,
+              messageKey: 'ruleset.fieldWrongType',
+              severity: 'error',
+            });
+          }
+        }
+      }
+    }
+  }
   if (probleme.length > 0) return probleme;
 
-  const { spalten, zeilen } = gegeben as unknown as FillerRegeln;
+  /*
+   * Geprueft wird das Brett, auf dem wirklich gespielt wird — mit dem Aufbau
+   * der Spielart, nicht die Zahlen, die er ueberstimmt.
+   */
+  const { spalten, zeilen } = aufbauFuer(gegeben as unknown as FillerRegeln);
   const farben = farbzahl(gegeben as unknown as FillerRegeln);
 
   if (spalten < 4 || spalten > 12) {

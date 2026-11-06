@@ -65,6 +65,14 @@ function kante(a: number, b: number): string {
  */
 export const WAND_SCHWELLE = 2;
 
+/**
+ * Ab diesem Vorteil baut der Bot eine ZWEITE Mauer im selben Zug (Extreme,
+ * seit dem 05.11.2026). Doppelt so hoch wie die erste, weil sie ihm das
+ * Bauen im naechsten eigenen Zug nimmt — eine Wand, die nur knapp lohnt,
+ * ist das nicht wert.
+ */
+export const WAND_SCHWELLE_ZWEITE = 2 * WAND_SCHWELLE;
+
 export function botZug(sicht: FillerSicht): FillerAktion {
   const { spalten, zeilen, farbzahl, feld, besitzer, farbe } = sicht;
   const ich = sicht.ich ?? 0;
@@ -115,7 +123,7 @@ export function botZug(sicht: FillerSicht): FillerAktion {
     start: readonly number[],
     f: number,
     mauern: ReadonlySet<string>,
-  ): { mass: number; tiefe: number } {
+  ): { mass: number; tiefe: number; genommen: ReadonlySet<number> } {
     const genommen = new Set(start);
     const rand = [...start];
     let mass = 0;
@@ -137,7 +145,7 @@ export function botZug(sicht: FillerSicht): FillerAktion {
         if (!genommen.has(n) && feld[n] === null) tiefe++;
       }
     }
-    return { mass, tiefe };
+    return { mass, tiefe, genommen };
   }
 
   const wand = besteWand();
@@ -180,8 +188,15 @@ export function botZug(sicht: FillerSicht): FillerAktion {
     if (gegner === undefined) return null;
     const seine = felderVon(gegner);
 
-    /** Alle freien Felder, die ein Sitz ueber freie Felder noch erreicht. */
-    const freieVon = (start: readonly number[], mauern: ReadonlySet<string>): Set<number> => {
+    /**
+     * Alle freien Felder, die ein Sitz ueber freie Felder noch erreicht —
+     * dazu `gesehen`: dieselben plus sein Gebiet, also alles, an dessen Rand
+     * die Suche ueberhaupt eine Kante angefasst hat.
+     */
+    const freieVon = (
+      start: readonly number[],
+      mauern: ReadonlySet<string>,
+    ): { frei: Set<number>; gesehen: Set<number> } => {
       const gesehen = new Set(start);
       const frei = new Set<number>();
       const rand = [...start];
@@ -194,36 +209,64 @@ export function botZug(sicht: FillerSicht): FillerAktion {
           rand.push(n);
         }
       }
-      return frei;
+      return { frei, gesehen };
     };
-    /** Was der beste Farbzug eines Sitzes JETZT einbraechte. */
-    const besterZug = (start: readonly number[], mauern: ReadonlySet<string>): number =>
-      erlaubt.reduce((bisher, f) => Math.max(bisher, bewerteFuer(start, f, mauern).mass), 0);
 
     /*
-     * Die Lage auf einem Brett: Felder, die nur ich bzw. nur der Gegner noch
-     * erreicht (die anderen sind umkaempft und zaehlen fuer niemanden), und
-     * der beste naechste Zug beider. Umkaempfte Felder nicht zu werten ist
-     * Absicht — eine Wand, die eine Flaeche fuer BEIDE abschneidet, gewinnt
-     * nichts und faellt so von selbst durch.
+     * Die Lage VOR der Wand, einmal gerechnet: Felder, die nur ich bzw. nur
+     * der Gegner noch erreicht (die anderen sind umkaempft und zaehlen fuer
+     * niemanden), und je Farbe, was der naechste Zug beider einbraechte.
+     * Umkaempfte Felder nicht zu werten ist Absicht — eine Wand, die eine
+     * Flaeche fuer BEIDE abschneidet, gewinnt nichts und faellt so von selbst
+     * durch.
      */
-    const lage = (mauern: ReadonlySet<string>) => {
-      const meine = freieVon(eigen, mauern);
-      const deine = freieVon(seine, mauern);
-      let nurMeine = 0;
-      let nurDeine = 0;
-      for (const p of meine) if (!deine.has(p)) nurMeine++;
-      for (const p of deine) if (!meine.has(p)) nurDeine++;
-      return { nurMeine, nurDeine, meinZug: besterZug(eigen, mauern), seinZug: besterZug(seine, mauern) };
+    const meineVorher = freieVon(eigen, sperren);
+    const deineVorher = freieVon(seine, sperren);
+    const meineFluten = erlaubt.map((f) => bewerteFuer(eigen, f, sperren));
+    const seineFluten = erlaubt.map((f) => bewerteFuer(seine, f, sperren));
+    const nurIn = (a: ReadonlySet<number>, b: ReadonlySet<number>): number => {
+      let zahl = 0;
+      for (const p of a) if (!b.has(p)) zahl++;
+      return zahl;
     };
-    const vorher = lage(sperren);
+    const besterZug = (fluten: readonly { mass: number }[]): number =>
+      fluten.reduce((bisher, flut) => Math.max(bisher, flut.mass), 0);
+    const vorher = {
+      nurMeine: nurIn(meineVorher.frei, deineVorher.frei),
+      nurDeine: nurIn(deineVorher.frei, meineVorher.frei),
+      meinZug: besterZug(meineFluten),
+      seinZug: besterZug(seineFluten),
+    };
 
     let beste: readonly [number, number] | null = null;
     let besterWert = -Infinity;
     for (const kandidat of kandidaten) {
       const probe = new Set(sperren);
       probe.add(kante(kandidat[0], kandidat[1]));
-      const nachher = lage(probe);
+      /*
+       * Nur neu rechnen, was die Wand beruehren KANN. Eine Flutfuellung
+       * prueft eine Kante nur, wenn sie eines ihrer beiden Felder schon
+       * erreicht hat; liegt keines davon in der Flut von vorher, laeuft sie
+       * mit der Wand Schritt fuer Schritt genauso und kommt aufs selbe
+       * Ergebnis. Das spart auf 12 x 11 (Extreme) den Grossteil der Arbeit —
+       * ohne die Abkuerzung brauchte ein Botzug dort bis zu 0,4 s — und
+       * aendert keine einzige Entscheidung: Build spielt Saat fuer Saat
+       * dieselben Partien wie vorher (extreme-gross.test.ts).
+       */
+      const [a, b] = kandidat;
+      const beruehrt = (menge: ReadonlySet<number>): boolean => menge.has(a) || menge.has(b);
+      const meine = beruehrt(meineVorher.gesehen) ? freieVon(eigen, probe) : meineVorher;
+      const deine = beruehrt(deineVorher.gesehen) ? freieVon(seine, probe) : deineVorher;
+      const neuGeflutet = (start: readonly number[], fluten: typeof meineFluten) =>
+        fluten.map((flut, i) =>
+          beruehrt(flut.genommen) ? bewerteFuer(start, erlaubt[i]!, probe) : flut,
+        );
+      const nachher = {
+        nurMeine: nurIn(meine.frei, deine.frei),
+        nurDeine: nurIn(deine.frei, meine.frei),
+        meinZug: besterZug(neuGeflutet(eigen, meineFluten)),
+        seinZug: besterZug(neuGeflutet(seine, seineFluten)),
+      };
       // Erreichbarkeit zaehlt ganz, der naechste Zug halb: Ein Feld, das der
       // Gegner nie mehr bekommt, ist sicher; eines, das er in diesem Zug
       // nicht bekommt, holt er sich vielleicht im naechsten.
@@ -239,6 +282,13 @@ export function botZug(sicht: FillerSicht): FillerAktion {
         beste = kandidat;
       }
     }
-    return beste !== null && besterWert >= WAND_SCHWELLE ? beste : null;
+    /*
+     * Die zweite Mauer eines Zuges (Extreme) kostet mehr als eine Mauer aus
+     * dem Vorrat: Sie sperrt das Bauen im naechsten eigenen Zug. Erlaubt ist
+     * sie ueberhaupt nur, wenn die Sicht sie anbietet — die Pause rechnet das
+     * Modul —, aber lohnen muss sie sich doppelt.
+     */
+    const schwelle = (sicht.mauernDiesenZug ?? 0) > 0 ? WAND_SCHWELLE_ZWEITE : WAND_SCHWELLE;
+    return beste !== null && besterWert >= schwelle ? beste : null;
   }
 }

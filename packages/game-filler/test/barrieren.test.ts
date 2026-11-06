@@ -113,7 +113,7 @@ describe('Build: Setzen', () => {
     assert.equal(danach.dran, 0);
     assert.equal(danach.zug, partie.zug);
     assert.deepEqual(danach.punkte, partie.punkte);
-    assert.equal(danach.mauerDiesenZug, true);
+    assert.equal(danach.mauernDiesenZug, 1);
   });
 
   it('laesst nach der Mauer noch faerben, und das gibt ab', () => {
@@ -125,7 +125,7 @@ describe('Build: Setzen', () => {
     assert.equal(gefaerbt.dran, 1, 'erst das Faerben gibt ab');
     assert.equal(gefaerbt.zug, partie.zug + 1);
     // Und der naechste Zug darf wieder einmal mauern.
-    assert.equal(gefaerbt.mauerDiesenZug, false);
+    assert.equal(gefaerbt.mauernDiesenZug, 0);
     assert.ok(moeglicheBarrieren(gefaerbt, 1).length > 0);
   });
 
@@ -184,7 +184,7 @@ describe('Build: Setzen', () => {
       farbzugVon(fuehreAus(danach, 0, farbzugVon(danach, 0)), 1),
     );
     assert.equal(spaeter.dran, 0);
-    assert.equal(spaeter.mauerDiesenZug, false);
+    assert.equal(spaeter.mauernDiesenZug, 0);
     assert.throws(() => fuehreAus(spaeter, 0, { typ: 'barriere', von, nach }));
     // Auch andersherum benannt: Die Kante hat von beiden Seiten denselben Namen.
     assert.throws(() => fuehreAus(spaeter, 0, { typ: 'barriere', von: nach, nach: von }));
