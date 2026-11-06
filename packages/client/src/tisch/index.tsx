@@ -134,11 +134,30 @@ export function Avatar({
   );
 }
 
-/** Restzeit-Anzeige. Tickt fuer sich allein, nicht der ganze Tisch mit. */
-export function TurnClock({ deadline }: { deadline: number | null }): React.JSX.Element | null {
+/**
+ * Restzeit-Anzeige. Tickt fuer sich allein, nicht der ganze Tisch mit.
+ *
+ * `knappAb` (Sekunden) setzt in den letzten Sekunden `data-knapp`, damit ein
+ * Tisch die Anzeige dann auffaellig machen kann. Ohne die Angabe bleibt alles
+ * wie bisher — die Kartentische nutzen sie (noch) nicht. Filler war der erste
+ * Tisch, der es brauchte, und eine eigene Uhr waere dort die zweite
+ * Fassung derselben Rechnung gewesen.
+ */
+export function TurnClock({
+  deadline,
+  knappAb,
+}: {
+  deadline: number | null;
+  knappAb?: number;
+}): React.JSX.Element | null {
   const secondsLeft = useCountdown(deadline);
   if (secondsLeft === null) return null;
-  return <span className="doko-turnclock">{secondsLeft}s</span>;
+  const knapp = knappAb !== undefined && secondsLeft <= knappAb;
+  return (
+    <span className="doko-turnclock" data-knapp={knapp ? '' : undefined}>
+      {secondsLeft}s
+    </span>
+  );
 }
 
 /**
