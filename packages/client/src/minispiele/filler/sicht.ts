@@ -53,4 +53,18 @@ export interface FillerSicht {
   sterne: number[];
   /** Noch mauerfreie Zuege der Eroeffnung; 0, sobald gebaut werden darf. */
   mauerSperre: number;
+  /**
+   * Wie viele Mauern ein Zug hoechstens setzen darf: 1, in Extreme 2, ohne
+   * Mauern 0. Aus dem Regelsatz des TISCHES — ein Extreme-Tisch von vor dem
+   * 05.11.2026 bleibt bei einer, und dann zeigt der Knopf auch nur eine.
+   */
+  mauernJeZug: number;
+  /** Wie viele Mauern der Sitz am Zug in diesem Zug schon gesetzt hat. */
+  mauernDiesenZug: number;
+  /**
+   * Sitze, die im naechsten bzw. laufenden Zug keine Mauer setzen duerfen,
+   * weil sie im Zug davor die volle Zahl gebaut haben (Doppelmauer). Die
+   * Regel rechnet das Modul; der Bildschirm sagt nur, WARUM der Knopf ruht.
+   */
+  mauerPause: number[];
 }

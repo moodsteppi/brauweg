@@ -92,7 +92,7 @@ const SPIELARTEN = [
   {
     kennung: 'extreme',
     name: 'Extreme',
-    text: 'Build mit sieben Farben und drei Sternfeldern: Ein Stern bringt zwei Punkte und eine Mauer extra.',
+    text: 'Build auf großem Brett (12 × 11): sieben Farben, acht Sterne und zwanzig Mauern, bis zu zwei je Zug.',
   },
 ] as const satisfies readonly { kennung: Variante; name: string; text: string }[];
 // Fehlt eine Spielart in der Liste, ist dieser Typ nicht `never` und die Zeile uebersetzt nicht.
@@ -789,6 +789,26 @@ function Brett({
   const sterne = new Set(sicht.sterne ?? []);
   const mauerSperre = sicht.mauerSperre ?? 0;
   /*
+   * Die Doppelmauer (Extreme seit dem 05.11.2026): bis zu `mauernJeZug`
+   * Mauern in einem Zug, wer die volle Zahl baut, setzt im naechsten eigenen
+   * Zug aus. Alle drei Zahlen kommen aus der Sicht; OB gebaut werden darf,
+   * sagt weiterhin allein `barrierenMoeglich`. Die Pause wird hier nur
+   * BENANNT — sonst steht der Knopf blass da, und niemand weiss, warum.
+   * Die Rueckfallwerte gelten fuer einen Server von vor der Doppelmauer.
+   */
+  const mauernJeZug = sicht.mauernJeZug ?? 1;
+  const mauernDiesenZug = sicht.mauernDiesenZug ?? 0;
+  const inMauerPause = mauerSperre === 0 && (sicht.mauerPause ?? []).includes(eigenerSitz);
+  /** Nach der ersten von zwei Mauern: Es geht noch eine — oder gleich die Farbe. */
+  const nochEineMauer = kannMauern && mauernDiesenZug > 0;
+  /**
+   * Das grosse Brett (Extreme, 12 x 11). Daran haengen breiteres Brett,
+   * groessere Sterne und die Rauten als Trefferflaechen. Am Brett und nicht an
+   * der Spielart: Klein sind die FELDER, und ein Extreme-Tisch von vor dem
+   * 05.11.2026 spielt weiter auf 8 x 7 — der soll aussehen wie bisher.
+   */
+  const grossesBrett = sicht.spalten > 8 || sicht.zeilen > 8;
+  /*
    * Der Bau-Zustand faellt von selbst zurueck, sobald es nichts zu setzen
    * gibt — nach der gesetzten Mauer, am Ende des Zuges, beim leeren Vorrat.
    * Ohne das stuende der Knopf beim naechsten eigenen Zug wieder gedrueckt
@@ -884,11 +904,19 @@ function Brett({
    * (`min(90vw, 520px)`), und eine in Pixeln gerechnete Wand saesse auf einem
    * schmalen Handy neben ihrer Kante. Gerechnet wird auf der GEDREHTEN
    * Ansicht — sonst laege die Wand bei Sitz 1 spiegelverkehrt.
+   *
+   * `raute` ist die Trefferflaeche auf dem grossen Brett: ein Kasten von
+   * genau einer Feldgroesse, mittig auf der Kante, per `clip-path` zur Raute
+   * beschnitten (styles.css). Die Rauten aller Kanten pflastern das Brett
+   * lueckenlos — jeder Punkt gehoert der Kante, die ihm am naechsten liegt.
+   * Auf 8 x 7 reicht der 22-px-Griff; auf 12 x 11 sind die Felder am Handy
+   * keine 30 px breit, und dort trafen sich die Griffe zweier Nachbarkanten
+   * an jeder Ecke, waehrend die Feldmitte ins Leere ging.
    */
   const kantenLage = (
     a: number,
     b: number,
-  ): { stil: React.CSSProperties; quer: boolean } | null => {
+  ): { stil: React.CSSProperties; raute: React.CSSProperties; quer: boolean } | null => {
     const ia = anzeigeIndex(a);
     const ib = anzeigeIndex(b);
     const links = Math.min(ia, ib);
@@ -898,23 +926,21 @@ function Brett({
     const hoehe = 100 / sicht.zeilen;
     if (rechts - links === 1 && Math.floor(links / sp) === Math.floor(rechts / sp)) {
       // Senkrechte Wand zwischen zwei Nachbarn derselben Zeile.
+      const x = (links % sp) * breite + breite;
+      const y = Math.floor(links / sp) * hoehe;
       return {
-        stil: {
-          left: `${(links % sp) * breite + breite}%`,
-          top: `${Math.floor(links / sp) * hoehe}%`,
-          height: `${hoehe}%`,
-        },
+        stil: { left: `${x}%`, top: `${y}%`, height: `${hoehe}%` },
+        raute: { left: `${x - breite / 2}%`, top: `${y}%`, width: `${breite}%`, height: `${hoehe}%` },
         quer: false,
       };
     }
     if (rechts - links === sp) {
       // Waagerechte Wand zwischen zwei Zeilen.
+      const x = (links % sp) * breite;
+      const y = Math.floor(links / sp) * hoehe + hoehe;
       return {
-        stil: {
-          left: `${(links % sp) * breite}%`,
-          top: `${Math.floor(links / sp) * hoehe + hoehe}%`,
-          width: `${breite}%`,
-        },
+        stil: { left: `${x}%`, top: `${y}%`, width: `${breite}%` },
+        raute: { left: `${x}%`, top: `${y - hoehe / 2}%`, width: `${breite}%`, height: `${hoehe}%` },
         quer: true,
       };
     }
@@ -959,11 +985,19 @@ function Brett({
         </span>
       </div>
 
-      <div className="fl-brett-huelle">
+      <div className="fl-brett-huelle" data-gross={grossesBrett ? '' : undefined}>
         <div
           className="fl-brett"
           data-baut={bautGerade ? '' : undefined}
-          style={{ gridTemplateColumns: `repeat(${sicht.spalten}, 1fr)` }}
+          data-gross={grossesBrett ? '' : undefined}
+          style={
+            {
+              gridTemplateColumns: `repeat(${sicht.spalten}, 1fr)`,
+              // Fuer die Hoehengrenze in styles.css: Das grosse Brett ist
+              // 12 : 11 und nicht 8 : 7 wie das kleine.
+              '--fl-seiten': `${sicht.spalten} / ${sicht.zeilen}`,
+            } as React.CSSProperties
+          }
         >
           {Array.from({ length: plaetze }, (_, i) => {
             const platz = platzVon(i);
@@ -1029,7 +1063,8 @@ function Brett({
                   type="button"
                   className="fl-kantenziel"
                   data-quer={lage.quer ? '' : undefined}
-                  style={lage.stil}
+                  data-raute={grossesBrett ? '' : undefined}
+                  style={grossesBrett ? lage.raute : lage.stil}
                   onClick={() => onBarriere(a, b)}
                   aria-label={`Mauer zwischen Feld ${a + 1} und ${b + 1}`}
                 />
@@ -1061,12 +1096,17 @@ function Brett({
                 type="button"
                 data-an={bautGerade ? '' : undefined}
                 data-gesperrt={mauerSperre > 0 ? '' : undefined}
+                data-pause={inMauerPause ? '' : undefined}
                 disabled={!kannMauern || getippt !== null}
                 onClick={() => setBaut((an) => !an)}
                 aria-label={
                   mauerSperre > 0
                     ? `Mauern noch ${mauerSperre} ${mauerSperre === 1 ? 'Zug' : 'Züge'} gesperrt`
-                    : `Mauer bauen, noch ${meineBarrieren}`
+                    : inMauerPause
+                      ? `Mauerpause nach der Doppelmauer, noch ${meineBarrieren} Mauern`
+                      : mauernJeZug > 1
+                        ? `Mauer bauen, noch ${meineBarrieren}, in diesem Zug noch ${Math.max(0, mauernJeZug - mauernDiesenZug)}`
+                        : `Mauer bauen, noch ${meineBarrieren}`
                 }
               >
                 {/*
@@ -1075,13 +1115,31 @@ function Brett({
                   * Sicht (`mauerSperre`), der Client rechnet sie nicht nach.
                   */}
                 {mauerSperre > 0 ? <Schlossicon zahl={mauerSperre} /> : <Mauericon />}
-                <span>Mauer</span>
+                <span>{inMauerPause ? 'Pause' : 'Mauer'}</span>
                 <em>{meineBarrieren}</em>
+                {/*
+                  * Die Mauern DIESES Zuges als Punkte: voll = noch zu setzen,
+                  * hohl = schon gesetzt. Nur wo es mehr als eine je Zug gibt
+                  * und gerade gebaut werden darf — in der Pause und in der
+                  * Eroeffnung waeren volle Punkte eine falsche Zusage.
+                  */}
+                {mauernJeZug > 1 && mauerSperre === 0 && !inMauerPause && (
+                  <span className="fl-zugmauern" aria-hidden="true">
+                    {Array.from({ length: mauernJeZug }, (_, nr) => (
+                      <i key={nr} data-gesetzt={nr < mauernDiesenZug ? '' : undefined} />
+                    ))}
+                  </span>
+                )}
               </button>
             )}
+            {/*
+              * Nach der ersten von zwei Mauern ruht die Farbwahl NICHT mehr:
+              * Der naechste Tipp ist entweder die zweite Kante oder die Farbe,
+              * und beides soll ohne Umweg ueber den Bau-Knopf gehen.
+              */}
             <div
               className="fl-palette"
-              data-ruht={bautGerade ? '' : undefined}
+              data-ruht={bautGerade && !nochEineMauer ? '' : undefined}
               data-viele={sicht.farbzahl > 6 ? '' : undefined}
             >
               {Array.from({ length: sicht.farbzahl }, (_, nr) => (
@@ -1101,8 +1159,16 @@ function Brett({
                 />
               ))}
             </div>
-            <p className="fl-hinweis">
-              {bautGerade ? 'Kante antippen' : 'Farbe wählen'}
+            <p className="fl-hinweis" data-pause={inMauerPause ? '' : undefined}>
+              {inMauerPause
+                ? 'Nach der Doppelmauer: nur Farbe'
+                : nochEineMauer
+                  ? bautGerade
+                    ? 'Zweite Mauer oder Farbe wählen'
+                    : 'Noch eine Mauer oder Farbe'
+                  : bautGerade
+                    ? 'Kante antippen'
+                    : 'Farbe wählen'}
             </p>
           </>
         ) : (
@@ -1505,10 +1571,13 @@ function Regeltext(): React.JSX.Element {
         zum Ende zu holen. Auch den Gegner kannst du nicht einsperren.
       </p>
       <p>
-        <strong>Extreme</strong> ist Build mit sieben Farben und drei
-        Sternfeldern. Ein Stern ist ein normales Feld mit einem weißen Stern
-        darauf: Wer es schluckt, bekommt dafür zwei Punkte statt einem und eine
-        Mauer dazu.
+        <strong>Extreme</strong> ist Build auf einem großen Brett (12 × 11) mit
+        sieben Farben, acht Sternfeldern und zwanzig Mauern. Ein Stern ist ein
+        normales Feld mit einem weißen Stern darauf: Wer es schluckt, bekommt
+        dafür zwei Punkte statt einem und eine Mauer dazu. Du darfst bis zu zwei
+        Mauern in einem Zug setzen - wer zwei setzt, darf im nächsten eigenen
+        Zug keine bauen, nur färben. Mauerfrei sind hier die ersten drei Züge
+        jedes Spielers.
       </p>
       <h3>Ziel</h3>
       <p>Wer am Ende die meisten Felder hält, gewinnt - in Extreme die meisten Punkte.</p>
