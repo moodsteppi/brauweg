@@ -230,10 +230,10 @@ die Levelprüfung (unten) gegen eine Musterlösung.
 
 ## Levelformat (JSON)
 
-Ein Level ist eine Datei in einem gemeinsamen Kern (`packages/flyingbro-kern/
-levels/w1-01.json` — Paket in einer späteren Aufgabe, siehe unten). Server
-und Client lesen **dieselbe** Datei: der Client zum Spielen, der Server für
-Freischaltung, Höchstpunkte und Sternschwellen.
+Ein Level ist eine Datei im gemeinsamen Kern (`packages/flyingbro-kern/
+levels/w1-01.json`, eingesammelt und beim Laden geprüft in
+`src/levels.ts`). Server und Client lesen **dieselbe** Datei: der Client zum
+Spielen, der Server für Freischaltung, Höchstpunkte und Sternschwellen.
 
 ```json
 {
@@ -262,6 +262,10 @@ Freischaltung, Höchstpunkte und Sternschwellen.
 }
 ```
 
+- **Das Beispiel ist nur Anschauung und fällt so durch die Prüfung:** Die
+  Giraffe (1,3 m) steht unter einem Dach auf 1,2 m hohen Pfosten, ihr Kopf
+  steckt 10 cm im Glas. Das echte `w1-07.json` hat deshalb 1,6 m hohe
+  Pfosten; die Rechnung der Höchstpunkte unten gilt für beide.
 - Maße in **Metern**, y nach oben, `x`/`y` ist der Mittelpunkt (Giraffen:
   Fußpunkt). `winkel` in Grad, Vorgabe 0.
 - `sterne[0]` ist immer 0 (geschafft genügt).
@@ -293,12 +297,24 @@ Freischaltung, Höchstpunkte und Sternschwellen.
   laden lassen, jedes Teil muss auf etwas stehen (keine Überlappung über
   1 cm), und **5 s ohne Schuss** darf sich nichts mehr als 5 cm bewegen und
   keine Giraffe umfallen — die Probe A aus dem Messaufbau, je Level.
+  **Stand im Kern (`pruefeLevel`):** alles außer der Ruheprobe. Sie braucht
+  die Physik, und die gehört nicht in den Kern; geprüft wird stattdessen
+  geometrisch — Auflage innerhalb 1 cm, Schwerpunkt über der Auflage, nichts
+  auf einer Dreiecksspitze. Damit das beurteilbar bleibt, nimmt die Prüfung
+  Quader nur in 90°-Schritten und Dreiecke nur mit der Spitze nach oben.
+  Giraffen halten über ihre ganze Höhe Rumpfbreite Abstand, weil die Lage
+  des Halses das Bild festlegt, nicht das Level. Die Ruheprobe kommt mit dem
+  Client, der die Physik hat.
 - Startlagen werden **vorgesetzt**: Der Leveleditor lässt das Bauwerk 2 s
   fallen und speichert die gesetzten Lagen. Sonst sackt der Turm beim
   Laden sichtbar zusammen (bis 7 cm bei planck, siehe Messung).
 
 Umfang zum Start: **3 Welten à 15 Level** = 45 Level, 135 Sterne (bestätigt
-06.11.2026). Die Welten
+06.11.2026). Im Kern liegen bisher **w1-01 bis w1-10**; die Sternschwellen
+darin sind geschätzt (alle Giraffen, die Hälfte der Brüche, 40 % der
+Treffer, dazu 1 bzw. n−1 übrige Bros), nicht aus einer Musterlösung — die
+gibt es erst mit spielbarer Physik. Den Weltbonus zahlt der Kern erst, wenn
+eine Welt vollständig (15 Level) im Katalog steht. Die Welten
 folgen den ersten drei Zonen des Trophäenwegs (Heimat, Wiesen, Strand), damit
 Kulissen und Töne wiederverwendet werden können.
 

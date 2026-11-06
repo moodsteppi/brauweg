@@ -1,0 +1,65 @@
+{
+  "fassung": 1,
+  "id": "w1-05",
+  "welt": 1,
+  "nr": 5,
+  "titel": "Steinsockel",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "pelle",
+    "pelle",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    12000,
+    18000
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 16,
+      "y": 0.5,
+      "b": 1,
+      "h": 1
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 20,
+      "y": 1.2,
+      "b": 0.4,
+      "h": 2.4
+    },
+    {
+      "stoff": "stein",
+      "form": "dreieck",
+      "x": 26.5,
+      "y": 0.35,
+      "b": 0.8,
+      "h": 0.7
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "giraffe",
+      "x": 16,
+      "y": 1,
+      "blick": "links"
+    },
+    {
+      "groesse": "langhals",
+      "x": 22.5,
+      "y": 0,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}
