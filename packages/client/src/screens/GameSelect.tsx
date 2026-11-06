@@ -223,7 +223,12 @@ export function GameSelect({
   const [flyingbroOffen, setFlyingbroOffen] = useState(false);
   const soloStarten = (modusId: string): void => {
     if (modusId === 'kartenmanufaktur') setManufakturOffen(true);
-    else if (modusId === 'flyingbro') setFlyingbroOffen(true);
+    // Wie in SpieleNeu.tsx (`mitFlyingbro`): Die iOS-Hülle läuft nur hochkant,
+    // das Spiel quer — beide Einstiege sperren die App gleich. Die Sperre
+    // steht IM Zweig, damit „flyingbro" nicht bis zu onSolo durchfällt.
+    else if (modusId === 'flyingbro') {
+      if (!inApp) setFlyingbroOffen(true);
+    }
     else if (modusId === 'browort') setBrowortOffen(true);
     else onSolo(modusId);
   };

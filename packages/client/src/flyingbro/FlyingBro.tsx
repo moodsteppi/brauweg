@@ -41,6 +41,18 @@ import { zeichne, type Zielbild } from './zeichnen';
 import { SCHRITT_S, abschuss, vollerZugPx, vorschau, zugAus } from './zielen';
 import './flyingbro.css';
 
+/**
+ * Bildzeiten nach `window.__flyingbroBildrate` nur, wenn jemand misst: auf
+ * der Probe-Seite (alle drei Schreibweisen aus main.tsx `istProbe`) oder mit
+ * `?bildrate` in der Adresse. Im echten Spiel hinge sonst ein globales Feld.
+ */
+function bildrateMessen(probe: ProbeFall | undefined): boolean {
+  if (probe) return true;
+  const { pathname, hash, search } = window.location;
+  const q = new URLSearchParams(search);
+  return q.has('bildrate') || q.get('probe') === 'flyingbro' || pathname === '/probe/flyingbro' || hash === '#/probe/flyingbro';
+}
+
 /** Für die Proben (proben/flyingbro): ein fester Zustand statt eines Spielverlaufs. */
 export type ProbeFall = 'levelwahl' | 'zielen' | 'einsturz' | 'levelende';
 
@@ -281,7 +293,9 @@ function Spiel({
     endeSeit.current = null;
     kamera.current = null;
     const zeiten: number[] = [];
-    (window as unknown as { __flyingbroBildrate?: number[] }).__flyingbroBildrate = zeiten;
+    if (bildrateMessen(probe)) {
+      (window as unknown as { __flyingbroBildrate?: number[] }).__flyingbroBildrate = zeiten;
+    }
 
     const groesse = (): void => {
       const c = leinwand.current;
@@ -329,6 +343,11 @@ function Spiel({
       const ctx = c?.getContext('2d');
       if (!p || !c || !ctx) return;
       const dt = letzte ? Math.min(0.1, (jetzt - letzte) / 1000) : SCHRITT_S;
+      // Die Nachlaufuhr steht in der Pause still: Sonst schlösse das Level
+      // hinter dem Pausenmenü ab, und die Abrechnung erschiene beim „Weiter".
+      if (letzte && pausiert.current && endeSeit.current !== null && Number.isFinite(endeSeit.current)) {
+        endeSeit.current += jetzt - letzte;
+      }
       if (letzte) {
         zeiten.push(jetzt - letzte);
         if (zeiten.length > 1200) zeiten.splice(0, zeiten.length - 1200);
