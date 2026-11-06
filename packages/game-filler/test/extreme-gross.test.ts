@@ -67,7 +67,8 @@ describe('Extreme gross: Aufbau', () => {
     assert.equal(partie.regeln.zeilen, 11);
     assert.equal(partie.feld.length, 132);
     assert.equal(partie.barrierenUebrig[0], 20);
-    assert.equal(partie.barrierenUebrig[1], 20);
+    // Der Nachziehende bekommt drei dazu (AUSGLEICH_JE_SPIELART, 07.11.2026).
+    assert.equal(partie.barrierenUebrig[1], 23);
     assert.equal(partie.regeln.mauernJeZug, 2);
     // Die Tabelle steht nicht im Snapshot, nur das, was sie festgelegt hat.
     assert.equal('aufbauJeSpielart' in partie.regeln, false);
@@ -482,7 +483,15 @@ describe('Andere Spielarten unveraendert', () => {
   function spiele(schluessel: string, wahl: Wahl): { anfang: string; ende: string } {
     const [variante, saatText] = schluessel.split('/') as ['nebel' | 'klar' | 'build', string];
     const saat = /^\d+$/.test(saatText) ? Number(saatText) : saatText;
-    let p = erstellePartie({ ...DEFAULT_REGELN, variante }, [0, 1], saat);
+    /*
+     * Ohne `ausgleichJeSpielart`: Gemeint ist der Tisch von vorher (siehe
+     * oben). Mit Ausgleich aendern sich Klar (Regelfeld im Snapshot) und
+     * Build (eine Mauer mehr fuer Sitz 1) gewollt — das haelt
+     * ausgleich.test.ts fest.
+     */
+    const { ausgleichJeSpielart: _ausgleich, ...ohneAusgleich } = DEFAULT_REGELN;
+    void _ausgleich;
+    let p = erstellePartie({ ...ohneAusgleich, variante }, [0, 1], saat);
     assert.equal(p.regeln.spalten, 8);
     assert.equal(p.regeln.zeilen, 7);
     const anfang = hash(kern(p));

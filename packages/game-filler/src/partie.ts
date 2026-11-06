@@ -20,6 +20,8 @@ import {
   type FillerRegeln,
   type FillerRegelnFest,
   aufbauFuer,
+  ausgleichFuer,
+  barrierenZuschlagSitz1,
   farbzahl,
   istVariante,
   mitBarrieren,
@@ -435,11 +437,17 @@ export function erstellePartie(
    * Eintrag fuer die Spielart aendert sich hier nichts — auch kein neuer
    * Schluessel im Snapshot.
    */
+  /*
+   * Ebenso den Ausgleich fuer den Nachziehenden (seit dem 07.11.2026): Ab
+   * hier stehen nur noch die beiden Felder im Snapshot, und nur in den
+   * Spielarten, die einen haben — eine Nebel-Partie sieht aus wie vorher.
+   */
   const {
     farbenJeSpielart: _jeSpielart,
     aufbauJeSpielart: _aufbau,
+    ausgleichJeSpielart: _ausgleich,
     ...ohneTabelle
-  } = aufbauFuer(regeln);
+  } = ausgleichFuer(aufbauFuer(regeln));
   const gueltigeRegeln: FillerRegelnFest = {
     ...ohneTabelle,
     /*
@@ -513,8 +521,15 @@ export function erstellePartie(
     besitzer[ecke] = sitz;
     farbe[sitz] = feld[ecke]!;
     punkte[sitz] = 1;
+    /*
+     * Der Nachziehende (`sitze[1]`, am Tisch Sitz 1) bekommt den Zuschlag:
+     * Der Anfaenger hat meist auch den letzten Farbzug, und der entscheidet
+     * mit Mauern fast jede Partie (MESSUNG-2026-11-07-anzug.md). Ohne
+     * Mauern gibt es keinen Vorrat, also auch keinen Zuschlag.
+     */
     barrierenUebrig[sitz] = mitBarrieren(gueltigeRegeln.variante)
-      ? (gueltigeRegeln.barrieren ?? 0)
+      ? (gueltigeRegeln.barrieren ?? 0) +
+        (sitz === sitze[1] ? barrierenZuschlagSitz1(gueltigeRegeln) : 0)
       : 0;
   }
 
@@ -1041,13 +1056,25 @@ export function markiereVerlassen(partie: FillerPartie, sitz: number): FillerPar
  *
  * Gleichstand ergibt zweimal Platz 1. Bei 56 Feldern und zwei Spielern kann
  * das vorkommen — 56 ist gerade, 28 zu 28 ist also moeglich —, und dann ist
- * es ein echtes Unentschieden und keine Verlegenheitsloesung. In `extreme`
- * zaehlen die Sternboni mit: Dort gewinnt, wer mehr PUNKTE hat, nicht Felder.
+ * es ein echtes Unentschieden und keine Verlegenheitsloesung. Ausnahme seit
+ * dem 07.11.2026: Mit `gleichstandFuerSitz1` (Klar) gewinnt ihn Sitz 1.
+ * In `extreme` zaehlen die Sternboni mit: Dort gewinnt, wer mehr PUNKTE hat,
+ * nicht Felder.
  */
 export function platzierungen(
   partie: FillerPartie,
 ): { seat: number; points: number; place: number; left: boolean }[] {
-  const reihe = sitzeVon(partie)
+  const sitze = sitzeVon(partie);
+  /*
+   * Bei Gleichstand gewinnt Sitz 1, wo der Regelsatz es sagt (Klar seit dem
+   * 07.11.2026, siehe `gleichstandFuerSitz1`). "Sitz 1" ist der zweite Sitz
+   * der Partie: `createParty` vergibt 0 und 1, und Sitz 0 zieht zuerst.
+   * Ohne die Regel hat niemand Vorrang, und Gleichstand bleibt zweimal
+   * Platz 1 wie bisher.
+   */
+  const vorrang = (seat: number): number =>
+    partie.regeln.gleichstandFuerSitz1 === true && seat === sitze[1] ? 1 : 0;
+  const reihe = sitze
     .map((seat) => ({
       seat,
       points: partie.punkte[seat] ?? 0,
@@ -1061,18 +1088,23 @@ export function platzierungen(
     .sort(
       (a, b) =>
         Number(a.seat === partie.aufgegeben) - Number(b.seat === partie.aufgegeben) ||
-        b.points - a.points,
+        b.points - a.points ||
+        vorrang(b.seat) - vorrang(a.seat),
     );
 
   let platz = 0;
-  let letzter: { points: number; aufgegeben: boolean } | null = null;
+  let letzter: { points: number; aufgegeben: boolean; vorrang: number } | null = null;
   return reihe.map((eintrag, index) => {
     const aufgegeben = eintrag.seat === partie.aufgegeben;
+    const vor = vorrang(eintrag.seat);
     const neuerPlatz =
-      letzter === null || eintrag.points !== letzter.points || aufgegeben !== letzter.aufgegeben;
+      letzter === null ||
+      eintrag.points !== letzter.points ||
+      aufgegeben !== letzter.aufgegeben ||
+      vor !== letzter.vorrang;
     if (neuerPlatz) {
       platz = index + 1;
-      letzter = { points: eintrag.points, aufgegeben };
+      letzter = { points: eintrag.points, aufgegeben, vorrang: vor };
     }
     return { ...eintrag, place: platz };
   });
