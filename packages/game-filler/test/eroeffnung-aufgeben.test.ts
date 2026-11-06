@@ -292,29 +292,36 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
     'build/2': '5870b297ef3bd8af',
     'build/42': '72930456d12c8b2c',
     'extreme/c0ffee1234567890abcdef0123456789': '279a3f3bf4c35bc5',
-    'extreme/1': '9887fd71c933322f',
+    'extreme/1': '7d4e1bff70299002',
     'extreme/2': '92a6a9a9a62f6864',
     'extreme/42': '88007534d2a7061f',
   };
   /**
-   * Schicht 3, Herkunft je Schluessel: [staging, Regelfix fae4a420, heute].
+   * Schicht 3, Herkunft je Schluessel: [staging, Regelfix fae4a420,
+   * Wegterm eac0ba11, gedaempft (heute)].
    * Auf `staging` mauerte der alte Bot. Nach dem Regelfix fand er keine
    * Mauer mehr ueber seiner Schwelle (0,00 je Partie), und sein Abdruck
    * wurde GLEICH dem aus Schicht 1 — der Regelfix hat die Bot-Partie also
    * nur ueber "keine Mauer mehr" verschoben, sonst nirgends (in Build damit
    * auch gleich Klar). Seit dem Wegterm (eac0ba11, Niklas' Entscheidung
-   * "b+") mauert er wieder: der dritte Wert. Der Test darunter haelt fest,
-   * dass die Spalten zu Schicht 1 und zu VORHER passen.
+   * "b+") mauert er wieder: der dritte Wert. Seit der Daempfung (bot.ts,
+   * "Die Daempfung" — keine Mauer, nach der ein Farbzug den Gegner
+   * einsperrt) der vierte: Verschoben hat sie allein extreme/1, dort meidet
+   * der Bot unterwegs eine Mauer, die er vorher baute; in den anderen sieben
+   * Partien kam keine solche Mauer vor. Schicht 1 und 2 sind unberuehrt
+   * (abdruck-schichten.mjs, Stand vor und nach der Daempfung verglichen).
+   * Der Test darunter haelt fest, dass die Spalten zu Schicht 1 und zu
+   * VORHER passen.
    */
-  const GESCHICHTE: Record<string, readonly [string, string, string]> = {
-    'build/c0ffee1234567890abcdef0123456789': ['1c40e73814c92fd7', '8104d2b97ca72716', 'a068382ec2df87b3'],
-    'build/1': ['75e3b62f22a74a7c', 'a90acdce8d15a3f3', '82c9b8e15086d1cf'],
-    'build/2': ['97e9edaf8f9c890b', '97e9edaf8f9c890b', '5870b297ef3bd8af'],
-    'build/42': ['8c7576325e11b054', '157116fa79996aef', '72930456d12c8b2c'],
-    'extreme/c0ffee1234567890abcdef0123456789': ['b254099775891d59', 'd03a4ec4c491db26', '279a3f3bf4c35bc5'],
-    'extreme/1': ['1f6de6c7af3ffcb5', '2b66a70e78e73566', '9887fd71c933322f'],
-    'extreme/2': ['8ebaf1fc12ede263', '8ebaf1fc12ede263', '92a6a9a9a62f6864'],
-    'extreme/42': ['c1f2140e93ae66b8', '69407c0d0e279bfe', '88007534d2a7061f'],
+  const GESCHICHTE: Record<string, readonly [string, string, string, string]> = {
+    'build/c0ffee1234567890abcdef0123456789': ['1c40e73814c92fd7', '8104d2b97ca72716', 'a068382ec2df87b3', 'a068382ec2df87b3'],
+    'build/1': ['75e3b62f22a74a7c', 'a90acdce8d15a3f3', '82c9b8e15086d1cf', '82c9b8e15086d1cf'],
+    'build/2': ['97e9edaf8f9c890b', '97e9edaf8f9c890b', '5870b297ef3bd8af', '5870b297ef3bd8af'],
+    'build/42': ['8c7576325e11b054', '157116fa79996aef', '72930456d12c8b2c', '72930456d12c8b2c'],
+    'extreme/c0ffee1234567890abcdef0123456789': ['b254099775891d59', 'd03a4ec4c491db26', '279a3f3bf4c35bc5', '279a3f3bf4c35bc5'],
+    'extreme/1': ['1f6de6c7af3ffcb5', '2b66a70e78e73566', '9887fd71c933322f', '7d4e1bff70299002'],
+    'extreme/2': ['8ebaf1fc12ede263', '8ebaf1fc12ede263', '92a6a9a9a62f6864', '92a6a9a9a62f6864'],
+    'extreme/42': ['c1f2140e93ae66b8', '69407c0d0e279bfe', '88007534d2a7061f', '88007534d2a7061f'],
   };
   /** Schicht 1: auf `staging` und hier gleich. */
   const OHNE_MAUERN: Record<string, string> = {
@@ -400,7 +407,7 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
     });
   }
   it('Geschichte: der Regelfix verschob die Bot-Partie nur ueber "keine Mauer mehr"', () => {
-    for (const [schluessel, [, regelfix, heute]] of Object.entries(GESCHICHTE)) {
+    for (const [schluessel, [, regelfix, , heute]] of Object.entries(GESCHICHTE)) {
       assert.equal(regelfix, OHNE_MAUERN[schluessel], schluessel);
       assert.equal(heute, VORHER[schluessel], schluessel);
     }

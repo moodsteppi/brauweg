@@ -38,7 +38,9 @@
  * "EINGESPERRT" heisst wie in simulation.mjs (Abschnitt 2): Das erste Mal,
  * dass kein freies Feld mehr fuer beide erreichbar ist, liegen mindestens
  * zehn freie Felder auf dem Brett, und einer der beiden erreicht davon
- * hoechstens ein Viertel. Dieselbe Schwelle prueft der Vorsichtige.
+ * hoechstens ein Viertel. Dieselbe Schwelle prueft der Vorsichtige — und
+ * seit dem 06.11.2026 auch der Bot vor jeder Mauer (`istEingesperrt` in
+ * bot.ts, von dort liest sie dieses Skript).
  *
  * Der Vorsichtige entscheidet auf dem WAHREN Zustand. In Build und Extreme
  * liegt das Brett offen, die Sicht enthaelt dasselbe — er sieht also nicht
@@ -46,6 +48,9 @@
  * ruft er `botZug` auf der Sicht, wie am Tisch.
  *
  * Aendert weder Regeln noch Bot noch die beiden anderen Skripte.
+ *
+ * Fuer einen Stand VOR der Daempfung (bot.js ohne `istEingesperrt`) das
+ * Skript aus jenem Stand nehmen.
  */
 
 import { existsSync } from 'node:fs';
@@ -126,6 +131,13 @@ if (isMainThread) {
   const pct = (z, n) => (n === 0 ? '–' : `${((100 * z) / n).toFixed(1)} %`);
   const anteil = (z, n) => `${z}/${n} (${pct(z, n)})`;
   const sek = (ms) => `${(ms / 1000).toFixed(0)} s`;
+  /** Mittelwert ± Standardfehler (Stichprobenvarianz, n − 1). */
+  const mittelSe = (xs) => {
+    const n = xs.length;
+    const m = xs.reduce((a, x) => a + x, 0) / n;
+    const v = n > 1 ? xs.reduce((a, x) => a + (x - m) ** 2, 0) / (n - 1) : 0;
+    return `${m.toFixed(2)} ± ${Math.sqrt(v / n).toFixed(2)}`;
+  };
 
   console.log(`# Einsperren — Saaten ${start} bis ${start + Math.max(...Object.values(anzahl)) - 1}, ${faeden} Faeden, Wanduhr ${wand.toFixed(0)} s\n`);
 
@@ -134,8 +146,8 @@ if (isMainThread) {
 
   if (teile.includes(1)) {
     console.log('## 1. Bot gegen Bot: wer wird eingesperrt\n');
-    console.log('| Spielart | Partien | eingesperrt | davon Sitz 0 / Sitz 1 | Sieg S0 / S1 / remis (alle) | mit Einsperren: Sieg S0 / S1 | ohne Einsperren: Sieg S0 / S1 / remis | Punkte S0 / S1 | Rechenzeit |');
-    console.log('|---|---|---|---|---|---|---|---|---|');
+    console.log('| Spielart | Partien | eingesperrt | davon Sitz 0 / Sitz 1 | Sieg S0 / S1 / remis (alle) | mit Einsperren: Sieg S0 / S1 | ohne Einsperren: Sieg S0 / S1 / remis | Punkte S0 / S1 | Mauern je Partie (± SE) | Rechenzeit |');
+    console.log('|---|---|---|---|---|---|---|---|---|---|');
     for (const variante of Object.keys(anzahl)) {
       const ps = ergebnisse.filter((r) => r.teil === 1 && r.variante === variante).flatMap((r) => r.partien);
       if (ps.length === 0) continue;
@@ -150,10 +162,10 @@ if (isMainThread) {
           ` | ${pct(sieg(ps, 0), n)} / ${pct(sieg(ps, 1), n)} / ${pct(sieg(ps, null), n)}` +
           ` | ${pct(sieg(mit, 0), mit.length)} / ${pct(sieg(mit, 1), mit.length)}` +
           ` | ${pct(sieg(ohne, 0), ohne.length)} / ${pct(sieg(ohne, 1), ohne.length)} / ${pct(sieg(ohne, null), ohne.length)}` +
-          ` | ${pkt(0).toFixed(1)} / ${pkt(1).toFixed(1)} | ${sek(ps.reduce((a, p) => a + p.ms, 0))} |`,
+          ` | ${pkt(0).toFixed(1)} / ${pkt(1).toFixed(1)} | ${mittelSe(ps.map((p) => p.mauern))} | ${sek(ps.reduce((a, p) => a + p.ms, 0))} |`,
       );
       const eingesperrteGewinnen = mit.filter((p) => p.sieger === p.eingesperrt).length;
-      console.log(`|  | davon gewinnt der Eingesperrte | ${eingesperrteGewinnen} von ${mit.length} |  |  |  |  |  |  |`);
+      console.log(`|  | davon gewinnt der Eingesperrte | ${eingesperrteGewinnen} von ${mit.length} |  |  |  |  |  |  |  |`);
     }
     console.log('');
   }
@@ -216,7 +228,9 @@ if (isMainThread) {
   const P = await laden('partie.js');
   const R = await laden('regeln.js');
   const S = await laden('sicht.js');
-  const { botZug } = await laden('bot.js');
+  // Die Einsperr-Schwelle kommt aus dem Bot, der sie seit dem 06.11.2026 auch
+  // selbst meidet: Messung und Bot sollen dieselbe Falle meinen.
+  const { botZug, istEingesperrt: eingesperrtBei, EINSPERR_TEIL } = await laden('bot.js');
   const { erstellePartie, fuehreAus, gesperrteFarben, moeglicheBarrieren, offeneNachbarn, kante, sieger } = P;
 
   const freieZahl = (p) => p.besitzer.reduce((a, b) => a + (b === null), 0);
@@ -248,7 +262,7 @@ if (isMainThread) {
   }
 
   /** Dieselbe Schwelle wie "EINGESPERRT" in simulation.mjs: >= 10 frei, einer hat <= 1/4. */
-  const istEingesperrt = (g) => g !== null && g[0] + g[1] >= 10 && Math.min(g[0], g[1]) * 4 <= g[0] + g[1];
+  const istEingesperrt = (g) => g !== null && eingesperrtBei(Math.min(g[0], g[1]), Math.max(g[0], g[1]));
 
   /**
    * Ist s auf dem Brett r eingesperrt? Mit Abkuerzung: Erreicht s mehr als
@@ -259,10 +273,10 @@ if (isMainThread) {
     const frei = freieZahl(r);
     if (frei < 10) return false;
     const a = freieMenge(r, s);
-    if (a.size * 4 > frei) return false;
+    if (a.size * EINSPERR_TEIL > frei) return false;
     const b = freieMenge(r, 1 - s);
     for (const x of a) if (b.has(x)) return false;
-    return a.size + b.size >= 10 && a.size * 4 <= a.size + b.size;
+    return eingesperrtBei(a.size, b.size);
   }
 
   const erlaubteFarben = (p) => {
@@ -388,6 +402,7 @@ if (isMainThread) {
     let trennung = null;
     let eingesperrt = null;
     let durchMauer = false;
+    let mauern = 0;
     let zuege = 0;
     while (!p.fertig) {
       if (++zuege > 400) throw new Error(`${variante}:${i} endet nicht`);
@@ -395,6 +410,7 @@ if (isMainThread) {
       const folge = vorsichtig[s] ? vorsichtigeFolge(p, s, zaehler) : botFolge(p, s);
       for (const z of folge) {
         p = fuehreAus(p, s, z);
+        if (z.typ === 'barriere') mauern++;
         // Wie simulation.mjs: nach jeder Aktion, das erste Mal zaehlt.
         if (trennung === null && p.besitzer.some((b) => b === null)) {
           const g = getrennt(p);
@@ -414,6 +430,7 @@ if (isMainThread) {
       punkte: [p.punkte[0], p.punkte[1]],
       eingesperrt,
       durchMauer,
+      mauern,
       falle: eingesperrt !== null && vorsichtig[eingesperrt] ? falleNach(protokoll, eingesperrt, trennZug) : null,
       ...zahlen,
       ms: performance.now() - beginn,

@@ -13,7 +13,8 @@ import {
   moeglicheBarrieren,
   vonIrgendwemErreichbareFreie,
 } from '../src/index.js';
-import { PLATZ_WERT, WAND_SCHWELLE, bewerteWaende, botZug } from '../src/bot.js';
+import { PLATZ_WERT, WAND_SCHWELLE, bewerteWaende, botZug, istEingesperrt } from '../src/bot.js';
+import { type FillerPartie, gesperrteFarben, offeneNachbarn } from '../src/partie.js';
 import { sichtFuer } from '../src/sicht.js';
 
 const SAAT = 'b17e4c9a2f5083d6e1c7a4b90d2f6853';
@@ -651,4 +652,78 @@ describe('Build: Der Bot und die Wand', () => {
       }
     }
   });
+});
+
+describe('Build: der Bot sperrt nicht mit Mauer plus Farbe ein (Daempfung)', () => {
+  /*
+   * Gegenprobe auf dem WAHREN Zustand, mit den Funktionen des Moduls statt
+   * der Rechnung im Bot: Nach jeder Mauer, die der Bot baut, darf weder sein
+   * eigener Farbzug noch einer des Gegners den Gegner einsperren. Prueft der
+   * Bot auf seiner Sicht etwas anderes als das, was danach auf dem Brett
+   * passiert (etwa weil eine Flut anders schluckt als `schlucke`), faellt es
+   * hier auf.
+   *
+   * Die Saaten sind so gewaehlt, dass der Bot unterwegs mindestens einmal
+   * eine Wand meidet (`gemieden`) — sonst prueft der Test eine Daempfung, die
+   * nie greift.
+   */
+  function freie(p: FillerPartie, sitz: number): Set<number> {
+    const { spalten, zeilen } = p.regeln;
+    const sperren = new Set(p.barrieren);
+    const gesehen = new Set<number>();
+    const rand: number[] = [];
+    p.besitzer.forEach((b, platz) => {
+      if (b === sitz) rand.push(platz);
+    });
+    while (rand.length > 0) {
+      const platz = rand.pop()!;
+      for (const n of offeneNachbarn(platz, spalten, zeilen, sperren)) {
+        if (p.besitzer[n] !== null || gesehen.has(n)) continue;
+        gesehen.add(n);
+        rand.push(n);
+      }
+    }
+    return gesehen;
+  }
+  const eingesperrt = (p: FillerPartie, sitz: number): boolean => {
+    const seine = freie(p, sitz);
+    const andere = freie(p, 1 - sitz);
+    for (const platz of seine) if (andere.has(platz)) return false;
+    return istEingesperrt(seine.size, andere.size);
+  };
+
+  for (const saat of [9, 16, 26]) {
+    it(`Saat ${saat}: keine gebaute Mauer oeffnet eine Ein-Zug-Falle`, () => {
+      let p = erstellePartie({ ...DEFAULT_REGELN, variante: 'build' }, [0, 1], saat);
+      let gemieden = 0;
+      let gebaut = 0;
+      while (!p.fertig) {
+        const s = p.dran;
+        const sicht = sichtFuer(p, s);
+        gemieden += bewerteWaende(sicht)?.gemieden ?? 0;
+        const zug = botZug(sicht);
+        p = fuehreAus(p, s, zug);
+        if (zug.typ !== 'barriere') continue;
+        gebaut++;
+        const gegner = 1 - s;
+        for (let f = 0; f < p.regeln.farben; f++) {
+          if (!gesperrteFarben(p).includes(f)) {
+            const r = fuehreAus(p, s, { typ: 'faerben', farbe: f });
+            assert.ok(!eingesperrt(r, gegner), `Zug ${p.zug}: Mauer, dann eigene Farbe ${f}`);
+          }
+          if (f !== p.farbe[gegner]) {
+            // Der Gegner darf im naechsten Zug jede Farbe ausser seiner —
+            // welche der Bot ihm gleich sperrt, steht noch nicht fest.
+            const r = fuehreAus({ ...p, dran: gegner, farbe: { ...p.farbe, [s]: -1 } }, gegner, {
+              typ: 'faerben',
+              farbe: f,
+            });
+            assert.ok(!eingesperrt(r, gegner), `Zug ${p.zug}: Mauer, dann Gegnerfarbe ${f}`);
+          }
+        }
+      }
+      assert.ok(gebaut > 0, 'der Bot hat gemauert');
+      assert.ok(gemieden > 0, 'die Daempfung hat gegriffen');
+    });
+  }
 });

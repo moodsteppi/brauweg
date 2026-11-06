@@ -424,7 +424,9 @@ function messeVorZug(m, p, s, sicht, zug) {
         m.wand.gruende['gebaut'] = (m.wand.gruende['gebaut'] ?? 0) + 1;
       } else {
         const g =
-          w.besterWert < 0
+          (w.gemieden ?? 0) > 0
+            ? 'Falle gemieden (Daempfung)'
+            : w.besterWert < 0
             ? 'beste Wand < 0'
             : w.besterWert === 0
               ? 'beste Wand = 0'

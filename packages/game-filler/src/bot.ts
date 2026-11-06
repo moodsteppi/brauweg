@@ -36,6 +36,12 @@
  * dieselbe Wand ein Riegel und keine Geste. Was der Gegner VORHAT, steht
  * weiterhin in keiner Sicht; der Bot rechnet mit dem, was er tun KOENNTE.
  *
+ * Gedaempft (seit dem 06.11.2026): Er baut keine Mauer, nach der ein
+ * einziger Farbzug — seiner oder der des Gegners — den Gegner einsperrt.
+ * Vorher verengte er mit Mauern und schloss mit einer Farbe, in mehr als
+ * der Haelfte der Partien (Messung und Zahlen: werkzeug/MESSUNG-2026-11-06-
+ * bot-gedaempft.md; Rechnung: "Die Daempfung" in `waendeAuf`).
+ *
  * Die Spielstaerke (`level`) wertet er nicht aus. Das ist ausdruecklich
  * erlaubt (siehe BotLevel in game-api) und hier auch ehrlich: Ein schwaecherer
  * Bot muesste absichtlich schlechter ziehen, und "nimm die zweitbeste Farbe"
@@ -107,6 +113,30 @@ export const WEG_GEWICHT = 0.5;
  * genommen.
  */
 export const PLATZ_WERT = 0.5;
+
+/**
+ * Ab wie vielen freien Feldern auf dem getrennten Brett ueberhaupt von
+ * "eingesperrt" die Rede ist — und welcher Teil davon (1/EINSPERR_TEIL)
+ * hoechstens noch auf der kleinen Seite liegen darf.
+ *
+ * Dieselbe Schwelle wie "EINGESPERRT" in werkzeug/simulation.mjs und wie der
+ * Vorsichtige in werkzeug/einsperren.mjs: Das Skript liest sie seit dem
+ * 06.11.2026 von hier (`istEingesperrt`), statt sie ein zweites Mal
+ * hinzuschreiben. Misst die Messung eine andere Falle als die, die der Bot
+ * meidet, sagt die Messung nichts mehr ueber den Bot.
+ */
+export const EINSPERR_MINDEST_FREI = 10;
+export const EINSPERR_TEIL = 4;
+
+/**
+ * Ist ein Sitz eingesperrt, der nach der Trennung noch `seine` freie Felder
+ * erreicht, waehrend der andere `andere` erreicht? Nur sinnvoll, wenn die
+ * beiden Mengen kein Feld teilen — das prueft der Aufrufer.
+ */
+export function istEingesperrt(seine: number, andere: number): boolean {
+  const frei = seine + andere;
+  return frei >= EINSPERR_MINDEST_FREI && seine * EINSPERR_TEIL <= frei;
+}
 
 /** Bis zu wie vielen Zuegen der Wegterm vorausschaut (1 bis 3). */
 const WEG_TIEFE = 3;
@@ -240,7 +270,12 @@ export interface WandTeile {
 }
 
 export interface WandBewertung {
-  /** Die Wand mit dem hoechsten Wert, oder null ohne Kandidaten. */
+  /**
+   * Die Wand mit dem hoechsten Wert, die keine Falle oeffnet (siehe
+   * "Die Daempfung" an `bewerteWaende`) — oder null ohne Kandidaten bzw.
+   * wenn jede Wand ueber der Schwelle eine Falle oeffnete und keine darunter
+   * liegt.
+   */
   readonly beste: readonly [number, number] | null;
   readonly besterWert: number;
   readonly teile: WandTeile | null;
@@ -248,6 +283,8 @@ export interface WandBewertung {
   readonly schwelle: number;
   /** Wie viele Kanten bewertet wurden. */
   readonly anzahl: number;
+  /** Wie viele Waende ueber der Schwelle der Bot gemieden hat, weil sie eine Falle oeffneten. */
+  readonly gemieden: number;
 }
 
 /**
@@ -315,10 +352,14 @@ function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): Wand
    * Alle freien Felder, die ein Sitz ueber freie Felder noch erreicht —
    * dazu `gesehen`: dieselben plus sein Gebiet, also alles, an dessen Rand
    * die Suche ueberhaupt eine Kante angefasst hat.
+   *
+   * `belegt`: Felder, die zusaetzlich als vergeben gelten — die ein
+   * gedachter Farbzug gerade geschluckt hat (Daempfung, siehe unten).
    */
   const freieVon = (
     start: readonly number[],
     mauern: ReadonlySet<string>,
+    belegt: ReadonlySet<number> = new Set(),
   ): { frei: Set<number>; gesehen: Set<number> } => {
     const gesehen = new Set(start);
     const frei = new Set<number>();
@@ -326,7 +367,7 @@ function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): Wand
     while (rand.length > 0) {
       const platz = rand.pop()!;
       for (const n of erreichbarMit(platz, mauern)) {
-        if (gesehen.has(n) || besitzer[n] !== null) continue;
+        if (gesehen.has(n) || besitzer[n] !== null || belegt.has(n)) continue;
         gesehen.add(n);
         frei.add(n);
         rand.push(n);
@@ -433,9 +474,7 @@ function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): Wand
     return wert;
   };
 
-  let beste: readonly [number, number] | null = null;
-  let besterWert = -Infinity;
-  let besteTeile: WandTeile | null = null;
+  const bewertet: { kandidat: readonly [number, number]; wert: number; teile: WandTeile }[] = [];
   for (const kandidat of kandidaten) {
     const probe = new Set(sperren);
     probe.add(kante(kandidat[0], kandidat[1]));
@@ -478,14 +517,7 @@ function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): Wand
       weg: WEG_GEWICHT * (vorher.seinWeg - nachher.seinWeg - (vorher.meinWeg - nachher.meinWeg)),
       plaetze: platzWert(a, c, probe),
     };
-    const wert = teile.gebiet + teile.zuege + teile.weg + teile.plaetze;
-    // Strikt groesser: Bei Gleichstand bleibt die erste Wand, damit der Bot
-    // aus derselben Sicht immer denselben Zug macht.
-    if (wert > besterWert) {
-      besterWert = wert;
-      beste = kandidat;
-      besteTeile = teile;
-    }
+    bewertet.push({ kandidat, wert: teile.gebiet + teile.zuege + teile.weg + teile.plaetze, teile });
   }
   /*
    * Die zweite Mauer eines Zuges (Extreme) kostet mehr als eine Mauer aus
@@ -494,5 +526,85 @@ function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): Wand
    * Modul —, aber lohnen muss sie sich doppelt.
    */
   const schwelle = (sicht.mauernDiesenZug ?? 0) > 0 ? WAND_SCHWELLE_ZWEITE : WAND_SCHWELLE;
-  return { beste, besterWert, teile: besteTeile, schwelle, anzahl: kandidaten.length };
+
+  /*
+   * Die Daempfung (seit dem 06.11.2026): Der Bot baut keine Wand, nach der
+   * ein einziger Farbzug — sein eigener gleich danach oder der des Gegners
+   * im naechsten Zug — den Gegner einsperrt (`istEingesperrt`). Ohne sie
+   * verengte er den Weg Mauer um Mauer und schloss ihn dann mit einer
+   * Farbe: eingesperrt in 54 % (Build) bzw. 66,5 % (Extreme) der Partien
+   * Bot gegen Bot, und wer eingesperrt war, verlor fast immer
+   * (werkzeug/MESSUNG-2026-11-07-einsperren.md). Die Regel verbietet nur die
+   * Mauer, die den letzten Weg SELBST schliesst; das Verengen bis kurz
+   * davor bleibt erlaubt — der Bot laesst es jetzt freiwillig.
+   *
+   * Absolut, nicht als Unterschied: Eine Wand faellt auch dann durch, wenn
+   * die Falle schon ohne sie offen stand. Sie hielte sie offen, und genau
+   * diese Stellungen verengt der Bot sonst weiter.
+   *
+   * Bewusst nur der Gegner: Dass der Bot sich selbst einsperrt, verhindert
+   * eine Wand nicht, die ihm den Weg verengt — die bewertet der Wegterm
+   * ohnehin als Preis.
+   *
+   * Geprueft wird erst hier und nur, solange es noetig ist: der Reihe nach
+   * vom hoechsten Wert abwaerts, bis eine Wand sicher ist oder unter die
+   * Schwelle faellt (unter der Schwelle baut der Bot ohnehin nicht). Die
+   * Farben des Gegners sind alle ausser seiner eigenen — welche der Bot
+   * gleich nimmt und ihm damit sperrt, steht noch nicht fest.
+   */
+  const gegnerFarbe = brett.farbe[gegner];
+  const seineFarben: number[] = [];
+  for (let f = 0; f < sicht.farbzahl; f++) if (f !== gegnerFarbe) seineFarben.push(f);
+  const freiGesamt = besitzer.reduce<number>((zahl, b) => zahl + (b === null ? 1 : 0), 0);
+  /** Ist der Gegner eingesperrt, nachdem `zieher` die Felder `genommen` geschluckt hat? */
+  const gegnerEingesperrt = (
+    probe: ReadonlySet<string>,
+    zieher: 'ich' | 'er',
+    genommen: ReadonlySet<number>,
+  ): boolean => {
+    const neu = new Set<number>();
+    for (const platz of genommen) if (besitzer[platz] === null) neu.add(platz);
+    const frei = freiGesamt - neu.size;
+    if (frei < EINSPERR_MINDEST_FREI) return false;
+    const seinStart = zieher === 'er' ? [...genommen] : seine;
+    const meinStart = zieher === 'ich' ? [...genommen] : eigen;
+    const seinFrei = freieVon(seinStart, probe, neu).frei;
+    // Abkuerzung: Wer mehr als ein Viertel ALLER freien Felder erreicht,
+    // kann es nicht sein — das spart die zweite Flut fast immer.
+    if (seinFrei.size * EINSPERR_TEIL > frei) return false;
+    const meinFrei = freieVon(meinStart, probe, neu).frei;
+    for (const platz of seinFrei) if (meinFrei.has(platz)) return false;
+    return istEingesperrt(seinFrei.size, meinFrei.size);
+  };
+  const oeffnetFalle = (kandidat: readonly [number, number]): boolean => {
+    const probe = new Set(sperren);
+    probe.add(kante(kandidat[0], kandidat[1]));
+    for (const f of erlaubt) {
+      if (gegnerEingesperrt(probe, 'ich', bewerteFuer(eigen, f, probe).genommen)) return true;
+    }
+    for (const g of seineFarben) {
+      if (gegnerEingesperrt(probe, 'er', bewerteFuer(seine, g, probe).genommen)) return true;
+    }
+    return false;
+  };
+
+  // Stabil absteigend: Bei Gleichstand bleibt die erste Wand vorn, damit der
+  // Bot aus derselben Sicht immer denselben Zug macht.
+  const reihe = [...bewertet].sort((x, y) => y.wert - x.wert);
+  let gemieden = 0;
+  for (const eintrag of reihe) {
+    if (eintrag.wert >= schwelle && oeffnetFalle(eintrag.kandidat)) {
+      gemieden++;
+      continue;
+    }
+    return {
+      beste: eintrag.kandidat,
+      besterWert: eintrag.wert,
+      teile: eintrag.teile,
+      schwelle,
+      anzahl: kandidaten.length,
+      gemieden,
+    };
+  }
+  return { beste: null, besterWert: -Infinity, teile: null, schwelle, anzahl: kandidaten.length, gemieden };
 }

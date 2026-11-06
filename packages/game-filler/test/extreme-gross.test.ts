@@ -417,7 +417,11 @@ describe('Andere Spielarten unveraendert', () => {
    * - VORHER (zweiter Wert): der echte Bot. Auf `staging` 29546ff352efc2ea,
    *   daec5b1bbc50b669, b42532c7d1c2b279, 1ed530456700461b; nach dem
    *   Regelfix mauerte der alte Bot nicht mehr und landete GENAU auf
-   *   BUILD_OHNE_MAUERN; seit dem Wegterm mauert er wieder.
+   *   BUILD_OHNE_MAUERN; seit dem Wegterm mauert er wieder. Die Daempfung
+   *   (bot.ts, "Die Daempfung", 06.11.2026) laesst alle vier Werte stehen:
+   *   In diesen vier Partien baut der Bot keine Mauer, nach der ein Farbzug
+   *   den Gegner einsperrt — vor und nach der Daempfung mit
+   *   abdruck-schichten.mjs nachgerechnet, alle drei Schichten gleich.
    *
    * Alle staging-Werte rechnet `node werkzeug/abdruck-schichten.mjs <dist>`
    * nach (Zeilen "gross-ende").
