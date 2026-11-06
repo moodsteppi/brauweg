@@ -20,6 +20,12 @@
  *                         (Spielart:Saatindex). Dafuer sind die Beispiel-
  *                         Saaten in den Tabellen da.
  *
+ * LAUFZEIT: Mit allen Vorgaben rund 32 Minuten auf 6 Faeden (Stand
+ * 07.11.2026) — fast alles davon sind die Gegenproben in Extreme, weil der
+ * Bot jede erlaubte Wand bewertet. Ohne Gegenproben ein Viertel davon. Die
+ * Grundmessung dieses Stands liegt in `MESSUNG-2026-11-07.md` daneben; wer
+ * Regeln oder Bot aendert, misst auf denselben Saaten nach und vergleicht.
+ *
  * WARUM HEXSAATEN UND KEINE ZAHLEN: Der Server eroeffnet jeden Tisch mit
  * `seedHex` (adapter.ts, createParty), also mit sfc32. Mit Zahlensaaten liefe
  * mulberry32, und gemessen waeren Bretter, die so nie gespielt werden.
