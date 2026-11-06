@@ -17,6 +17,12 @@
  *   - Trophaeen gibt es zum Start KEINE (Entscheidung 06.11.2026, Abschnitt
  *     „Trophaeen" der Spezifikation): nichts in `account_game_stat`, nichts im
  *     `trophy_ledger`, `'flyingbro'` steht nicht in `GameId`.
+ *     Der Auftrag der Aufgabe verlangte Trophaeen ueber accountGameStat; die
+ *     Abweichung ist bewusst und von Robin am 06.11.2026 freigegeben worden
+ *     („Spezifikation gilt, keine Trophaeen, Stand bleibt"). Gleiches gilt fuer
+ *     die Fehlertexte `error.flyingbro*` in packages/client/src/i18n/{de,en}/
+ *     fehler.ts: Der Auftrag sagte „nur Server", die Invariante
+ *     `plattform-invarianten` verlangt sie aber, Robin gab sie als Ausnahme frei.
  *
  * Gegen Client-Tricks hilft dasselbe wie beim Runner: Der Client darf luegen,
  * die Kappen halten den Schaden klein. Dazu kommt der Levelstart — jede
