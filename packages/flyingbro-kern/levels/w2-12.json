@@ -1,0 +1,219 @@
+{
+  "fassung": 1,
+  "id": "w2-12",
+  "welt": 2,
+  "nr": 12,
+  "titel": "Der Kornspeicher",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "tjark",
+    "malve",
+    "tjark",
+    "pelle",
+    "tjark"
+  ],
+  "sterne": [
+    0,
+    25500,
+    37500
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 11,
+      "y": 0.3,
+      "b": 0.6,
+      "h": 0.6
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 11,
+      "y": 0.9,
+      "b": 0.6,
+      "h": 0.6
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 14.5,
+      "y": 0.7,
+      "b": 0.4,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 17.5,
+      "y": 0.7,
+      "b": 0.4,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 16,
+      "y": 1.5,
+      "b": 3.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 14.5,
+      "y": 2.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 17.5,
+      "y": 2.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16,
+      "y": 3.1,
+      "b": 3.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 14.5,
+      "y": 3.9,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 17.5,
+      "y": 3.9,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16,
+      "y": 4.7,
+      "b": 3.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "dreieck",
+      "x": 16,
+      "y": 5.15,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 21.8,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 24.2,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 23,
+      "y": 1.5,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 21.8,
+      "y": 2.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 24.2,
+      "y": 2.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 23,
+      "y": 3.1,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 23,
+      "y": 3.5,
+      "b": 0.6,
+      "h": 0.6
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "kalb",
+      "x": 16.9,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 16,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 16,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 16,
+      "y": 3.2,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 23,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 23,
+      "y": 1.6,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}
