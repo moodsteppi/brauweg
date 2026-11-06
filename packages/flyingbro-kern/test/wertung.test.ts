@@ -123,20 +123,33 @@ test('Meilen: nur die ersten zehn Wiederholungen am Tag', () => {
   assert.equal(elfte.zaehltAlsWiederholung, false);
 });
 
-/** Eine gedachte vollständige Welt 2 aus 15 Kopien von w1-01 — der Katalog hat noch keine. */
+/** Eine gedachte vollständige Welt 2 aus 15 Kopien von w1-01 — unabhängig vom echten Katalog. */
 function vollWelt(): Level[] {
   return Array.from({ length: 15 }, (_, i) => ({ ...w1, welt: 2, nr: i + 1, id: `w2-${String(i + 1).padStart(2, '0')}` }));
 }
 
 test('Weltbonus: eine erst teilweise gelieferte Welt gilt nie als geschafft', () => {
-  // Welt 1 hat 10 von 15 Leveln — alle mit drei Sternen bringt trotzdem keinen Bonus,
-  // sonst gäbe es ihn jetzt und für die fünf nachgelieferten nichts mehr.
-  const alleDrei = Object.fromEntries(LEVELS.map((l) => [l.id, 3]));
-  assert.equal(weltErfuellt(1, alleDrei, 1), false);
+  // Ein Katalog, in dem Welt 1 nur 10 von 15 Leveln hat (so lag er bis zur Aufgabe 8e3c72af vor):
+  // alle mit drei Sternen bringt trotzdem keinen Bonus, sonst gäbe es ihn dann und für die fünf
+  // nachgelieferten nichts mehr.
+  const teilweise = LEVELS.filter((l) => l.welt === 1 && l.nr <= 10);
+  const alleDrei = Object.fromEntries(teilweise.map((l) => [l.id, 3]));
+  assert.equal(weltErfuellt(1, alleDrei, 1, teilweise), false);
   const ohneLetztes = { ...alleDrei, 'w1-10': 0 };
-  const m = meilenFuer(levelNach('w1-10')!, 3, ohneLetztes, 0);
+  const m = meilenFuer(levelNach('w1-10')!, 3, ohneLetztes, 0, teilweise);
   assert.equal(m.welt, 0);
   assert.equal(m.weltAlleSterne, 0);
+});
+
+test('Weltbonus: der echte Katalog hat drei vollständige Welten', () => {
+  const alleDrei = Object.fromEntries(LEVELS.map((l) => [l.id, 3]));
+  for (const w of [1, 2, 3]) assert.equal(weltErfuellt(w, alleDrei, 3), true, `Welt ${w}`);
+  // Fehlt ein einziges Level, gibt es den Bonus nicht.
+  assert.equal(weltErfuellt(2, { ...alleDrei, 'w2-15': 0 }, 1), false);
+  // Das letzte Level von Welt 1 löst den Bonus aus, wenn die vierzehn davor geschafft sind.
+  const m = meilenFuer(levelNach('w1-15')!, 3, { ...alleDrei, 'w1-15': 0 }, 0);
+  assert.equal(m.welt, MEILEN.weltGeschafft);
+  assert.equal(m.weltAlleSterne, MEILEN.weltAlleSterne);
 });
 
 test('Weltbonus: letztes Level einer vollständigen Welt bringt 100 Meilen und 50 Münzen, alle 45 Sterne 200', () => {

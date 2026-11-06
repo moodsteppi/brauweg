@@ -1,0 +1,148 @@
+{
+  "fassung": 1,
+  "id": "w2-02",
+  "welt": 2,
+  "nr": 2,
+  "titel": "Heuballen",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "tjark",
+    "pelle",
+    "tjark"
+  ],
+  "sterne": [
+    0,
+    12500,
+    18500
+  ],
+  "teile": [
+    {
+      "stoff": "holz",
+      "form": "kreis",
+      "x": 11,
+      "y": 0.5,
+      "r": 0.5
+    },
+    {
+      "stoff": "holz",
+      "form": "kreis",
+      "x": 12.1,
+      "y": 0.5,
+      "r": 0.5
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 14.8,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 17.2,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16,
+      "y": 1.5,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "kreis",
+      "x": 16,
+      "y": 2,
+      "r": 0.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 20.5,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 22.5,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 21.5,
+      "y": 0.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 20.5,
+      "y": 1.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 22.5,
+      "y": 1.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 21.5,
+      "y": 1.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "dreieck",
+      "x": 21.5,
+      "y": 2.35,
+      "b": 0.8,
+      "h": 0.7
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "giraffe",
+      "x": 16,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 21.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 21.5,
+      "y": 1,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}

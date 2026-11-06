@@ -310,10 +310,14 @@ Spielen, der Server für Freischaltung, Höchstpunkte und Sternschwellen.
   Laden sichtbar zusammen (bis 7 cm bei planck, siehe Messung).
 
 Umfang zum Start: **3 Welten à 15 Level** = 45 Level, 135 Sterne (bestätigt
-06.11.2026). Im Kern liegen bisher **w1-01 bis w1-10**; die Sternschwellen
-darin sind geschätzt (alle Giraffen, die Hälfte der Brüche, 40 % der
-Treffer, dazu 1 bzw. n−1 übrige Bros), nicht aus einer Musterlösung — die
-gibt es erst mit spielbarer Physik. Den Weltbonus zahlt der Kern erst, wenn
+06.11.2026). Im Kern liegen **alle 45** (w1-01 bis w3-15); die
+Sternschwellen darin sind geschätzt (alle Giraffen, die Hälfte der Brüche,
+40 % der Treffer, dazu 1 bzw. n−1 übrige Bros, auf 500 abgerundet), nicht
+aus einer Musterlösung — die gibt es erst mit spielbarer Physik. Ebenso ist
+die Reihenfolge innerhalb einer Welt nach dieser Schätzschwelle gesetzt,
+nicht erspielt. Stoffe je Welt: **Heimat** überwiegend Holz, **Wiesen**
+(ab hier Tjark) mit Stein als größtem Anteil, **Strand** überwiegend Glas;
+Malve kommt ab w1-06, Tjark ab w2-01, Pelle in jedem Level. Den Weltbonus zahlt der Kern erst, wenn
 eine Welt vollständig (15 Level) im Katalog steht. Die Welten
 folgen den ersten drei Zonen des Trophäenwegs (Heimat, Wiesen, Strand), damit
 Kulissen und Töne wiederverwendet werden können.

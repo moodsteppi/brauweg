@@ -1,0 +1,250 @@
+{
+  "fassung": 1,
+  "id": "w3-12",
+  "welt": 3,
+  "nr": 12,
+  "titel": "Die Hafenmole",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "tjark",
+    "malve",
+    "pelle",
+    "tjark",
+    "malve",
+    "pelle",
+    "tjark"
+  ],
+  "sterne": [
+    0,
+    30000,
+    45000
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 12.5,
+      "y": 1.2,
+      "b": 0.4,
+      "h": 2.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 16.5,
+      "y": 1.2,
+      "b": 0.4,
+      "h": 2.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 20.5,
+      "y": 1.2,
+      "b": 0.4,
+      "h": 2.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 24.5,
+      "y": 1.2,
+      "b": 0.4,
+      "h": 2.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 14.4,
+      "y": 2.5,
+      "b": 4.2,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18.5,
+      "y": 2.5,
+      "b": 4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 22.6,
+      "y": 2.5,
+      "b": 4.2,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 13.5,
+      "y": 3,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 15.5,
+      "y": 3,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 14.5,
+      "y": 3.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 14.5,
+      "y": 3.95,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 17.5,
+      "y": 3.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 19.5,
+      "y": 3.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18.5,
+      "y": 4.1,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 17.5,
+      "y": 4.6,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 19.5,
+      "y": 4.6,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 18.5,
+      "y": 5.1,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 18.5,
+      "y": 5.55,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 21.5,
+      "y": 3.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 23.5,
+      "y": 3.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 22.5,
+      "y": 4.1,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "dreieck",
+      "x": 22.5,
+      "y": 4.55,
+      "b": 0.8,
+      "h": 0.7
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "langhals",
+      "x": 14.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 18.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "langhals",
+      "x": 22.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 14.5,
+      "y": 2.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 18.5,
+      "y": 2.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 18.5,
+      "y": 4.2,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 22.5,
+      "y": 2.6,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}
