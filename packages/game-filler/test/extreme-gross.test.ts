@@ -402,12 +402,22 @@ describe('Andere Spielarten unveraendert', () => {
    * dem grossen Extreme-Brett. Gleiche Saat muss dasselbe Brett, dieselben
    * Regeln und dieselbe Partie ergeben.
    *
-   * Ausnahme seit dem 06.11.2026: der ENDSTAND in Build. Die Mauerregeln
-   * "nur an einem freien Feld" und "nie den letzten Weg schliessen" gelten
-   * auch dort; erst setzte der Bot darunter keine Mauer mehr, seit dem
-   * Wegterm in bewerteWaende (bot.ts, ebenfalls 06.11.2026) mauert er wieder
-   * — anders als vor dem Regelfix. Das Brett (der erste Abdruck) ist
-   * unveraendert, die Partie eine andere.
+   * Ausnahme seit dem 06.11.2026: der ENDSTAND in Build. Dort haben sich die
+   * Mauerregeln (Regel 2 und 3 gelten auch in Build, fae4a420) UND die
+   * Mauerwahl des Bots (eac0ba11) geaendert. Damit ein neuer Abdruck nicht
+   * offenlaesst, was ihn verschoben hat, steht der Build-Endstand in drei
+   * Schichten — dieselbe Aufteilung wie in eroeffnung-aufgeben.test.ts:
+   *
+   * - BUILD_OHNE_MAUERN: Der Bot faerbt nur. Auf `staging` (bc73140f) und
+   *   hier gemessen, gleich — Brett und Farbwahl sind unberuehrt.
+   * - BUILD_BAUMEISTER: Jede angebotene Mauer wird gebaut. Haengt nur an den
+   *   Mauerregeln; auf `staging` waren es 257e798944492321,
+   *   1b6d416e6b9414dc, c84c3ebf59971ab7, 3b0943faaab76099 (Reihenfolge wie
+   *   unten), verschoben allein durch Regel 2 und 3.
+   * - VORHER (zweiter Wert): der echte Bot. Auf `staging` 29546ff352efc2ea,
+   *   daec5b1bbc50b669, b42532c7d1c2b279, 1ed530456700461b; nach dem
+   *   Regelfix mauerte der alte Bot nicht mehr und landete GENAU auf
+   *   BUILD_OHNE_MAUERN; seit dem Wegterm mauert er wieder.
    */
   const VORHER: Record<string, readonly [string, string]> = {
     'nebel/c0ffee1234567890abcdef0123456789': ['b99a18adf10e9de9', '98e749e08f84d18f'],
@@ -422,6 +432,18 @@ describe('Andere Spielarten unveraendert', () => {
     'build/1': ['3fbf3266569e124c', '7a26d141e9121b74'],
     'build/2': ['ea5de89035bc8107', '455d6b589aac310c'],
     'build/42': ['736271c48db7a257', '9501469822898af3'],
+  };
+  const BUILD_OHNE_MAUERN: Record<string, string> = {
+    'build/c0ffee1234567890abcdef0123456789': '3859712d06eaf6a7',
+    'build/1': 'e3af59053946588d',
+    'build/2': '23e13cffeee5ac48',
+    'build/42': 'f1f155f7b35480b7',
+  };
+  const BUILD_BAUMEISTER: Record<string, string> = {
+    'build/c0ffee1234567890abcdef0123456789': 'c7c8c4252572cd2e',
+    'build/1': '99542da1bbe15441',
+    'build/2': '5471b6a80cbc5ff2',
+    'build/42': 'ac1bb2abfc527721',
   };
   const hash = (x: unknown): string =>
     createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);
@@ -440,18 +462,48 @@ describe('Andere Spielarten unveraendert', () => {
     sterne: p.sterne,
   });
 
+  type Wahl = (p: FillerPartie) => FillerAktion;
+  const echterBot: Wahl = (p) => botZug(sichtFuer(p, p.dran));
+  const nurFarbe: Wahl = (p) => {
+    const { barrierenMoeglich: _weg, ...sicht } = sichtFuer(p, p.dran);
+    void _weg;
+    return botZug(sicht);
+  };
+  const baumeister: Wahl = (p) => {
+    const angebot = moeglicheBarrieren(p, p.dran);
+    return angebot.length > 0
+      ? { typ: 'barriere', von: angebot[0]![0], nach: angebot[0]![1] }
+      : nurFarbe(p);
+  };
+
+  function spiele(schluessel: string, wahl: Wahl): { anfang: string; ende: string } {
+    const [variante, saatText] = schluessel.split('/') as ['nebel' | 'klar' | 'build', string];
+    const saat = /^\d+$/.test(saatText) ? Number(saatText) : saatText;
+    let p = erstellePartie({ ...DEFAULT_REGELN, variante }, [0, 1], saat);
+    assert.equal(p.regeln.spalten, 8);
+    assert.equal(p.regeln.zeilen, 7);
+    const anfang = hash(kern(p));
+    let n = 0;
+    while (!p.fertig && n++ < 400) p = fuehreAus(p, p.dran, wahl(p));
+    assert.deepEqual([...p.mauerPause], [], 'bei einer Mauer je Zug gibt es keine Pause');
+    return { anfang, ende: hash(kern(p)) };
+  }
+
   for (const [schluessel, [anfang, ende]] of Object.entries(VORHER)) {
     it(`${schluessel}: gleiches Brett, gleiche Regeln, gleiche Bot-Partie`, () => {
-      const [variante, saatText] = schluessel.split('/') as ['nebel' | 'klar' | 'build', string];
-      const saat = /^\d+$/.test(saatText) ? Number(saatText) : saatText;
-      let p = erstellePartie({ ...DEFAULT_REGELN, variante }, [0, 1], saat);
-      assert.equal(p.regeln.spalten, 8);
-      assert.equal(p.regeln.zeilen, 7);
-      assert.equal(hash(kern(p)), anfang);
-      let n = 0;
-      while (!p.fertig && n++ < 400) p = fuehreAus(p, p.dran, botZug(sichtFuer(p, p.dran)));
-      assert.equal(hash(kern(p)), ende);
-      assert.deepEqual([...p.mauerPause], [], 'bei einer Mauer je Zug gibt es keine Pause');
+      const ist = spiele(schluessel, echterBot);
+      assert.equal(ist.anfang, anfang);
+      assert.equal(ist.ende, ende);
+    });
+  }
+  for (const [schluessel, ende] of Object.entries(BUILD_OHNE_MAUERN)) {
+    it(`${schluessel} ohne Mauern: Endstand wie auf staging`, () => {
+      assert.equal(spiele(schluessel, nurFarbe).ende, ende);
+    });
+  }
+  for (const [schluessel, ende] of Object.entries(BUILD_BAUMEISTER)) {
+    it(`${schluessel} mit Baumeister: Mauerregeln ohne Mauerwahl des Bots`, () => {
+      assert.equal(spiele(schluessel, baumeister).ende, ende);
     });
   }
 });

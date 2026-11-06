@@ -26,7 +26,11 @@
  * was der beste naechste Farbzug beider einbraechte, und seit dem 06.11.2026
  * auch, wie viele Zuege beide bis zu den Feldern in ihrer Naehe brauchen
  * (Wegterm, siehe `bewerteWaende`) — seit keine Mauer mehr den letzten Weg
- * schliessen darf, ist das der Teil, der traegt. Die beste Wand wird
+ * schliessen darf, ist das der Teil, der traegt. (Der Regelfix selbst
+ * liess den Bot bewusst unangetastet — er baute danach 0,00 Mauern je
+ * Partie, und Niklas hat am 06.11.2026 entschieden ("b+"), dass er im
+ * selben Zweig wieder mauern soll. Messung: werkzeug/MESSUNG-2026-11-06-
+ * bot-mauert.md.) Die beste Wand wird
  * gebaut, wenn ihr Vorteil mindestens WAND_SCHWELLE Felder wert ist — sonst
  * bleibt sie liegen, denn spaet im Spiel, wenn das Brett eng wird, ist
  * dieselbe Wand ein Riegel und keine Geste. Was der Gegner VORHAT, steht
@@ -195,13 +199,14 @@ function brettAus(sicht: FillerSicht) {
 }
 
 export function botZug(sicht: FillerSicht): FillerAktion {
-  const { erlaubt, felderVon, bewerteFuer, sperren, ich } = brettAus(sicht);
+  const brett = brettAus(sicht);
+  const { erlaubt, felderVon, bewerteFuer, sperren, ich } = brett;
   // Kann nicht vorkommen, solange es mehr Farben als Sitze gibt (regeln.ts
   // erzwingt das) — aber ein Bot, der `undefined` zurueckgibt, reisst den
   // Tisch mit, und das waere ein teurer Weg, das zu erfahren.
   if (erlaubt.length === 0) return { typ: 'faerben', farbe: 0 };
 
-  const wand = bewerteWaende(sicht);
+  const wand = waendeAuf(sicht, brett);
   if (wand && wand.beste && wand.besterWert >= wand.schwelle) {
     return { typ: 'barriere', von: wand.beste[0], nach: wand.beste[1] };
   }
@@ -285,9 +290,18 @@ export interface WandBewertung {
  *    PLATZ_WERT.
  */
 export function bewerteWaende(sicht: FillerSicht): WandBewertung | null {
+  return waendeAuf(sicht, brettAus(sicht));
+}
+
+/**
+ * Die Rechnung hinter `bewerteWaende`, auf einem schon gelesenen Brett:
+ * `botZug` hat es fuer die Farbwahl ohnehin aufgebaut und reicht es durch,
+ * statt es je Zug ein zweites Mal aus der Sicht zu lesen (Zweitleser,
+ * 06.11.2026 — auf 12 x 11 war die Zugzeit ohnehin knapp).
+ */
+function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): WandBewertung | null {
   const kandidaten = sicht.barrierenMoeglich;
   if (!kandidaten || kandidaten.length === 0) return null;
-  const brett = brettAus(sicht);
   const { spalten, zeilen, feld, besitzer, ich, sperren, erreichbarMit, wertVon } = brett;
   const { erlaubt, felderVon, bewerteFuer } = brett;
   const gegner = Object.keys(brett.farbe)
