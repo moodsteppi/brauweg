@@ -9,6 +9,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 
 import { ZUGZEIT_HOECHST_MS } from '@brauweg/game-api';
 
@@ -240,4 +241,62 @@ describe('Aufgeben', () => {
     const geladen = filler.deserialize(JSON.parse(JSON.stringify({ v: 6, ...alt })));
     assert.equal(geladen.aufgegeben, null);
   });
+});
+
+describe('Wertung ohne Aufgabe unveraendert', () => {
+  /*
+   * `platzierungen` und `sieger` gelten fuer jede Spielart, nicht nur fuer
+   * Extreme — die Aufgabe hat sie fuer alle angefasst. Damit das ohne Aufgabe
+   * nichts verschiebt, stehen hier Fingerabdruecke der Wertung, erzeugt mit
+   * dem Stand 75dff13 (vor jeder Filler-Aenderung dieses Zweigs):
+   * Bot-Partie bis zum Ende, dazu ausgedachte Endstaende mit Gleichstand und
+   * Vorsprung fuer jede Seite, eine laufende Partie und ein ausgestiegener
+   * Sitz. Extreme ohne Aufbau-Tabelle, so wie jeder Tisch vor 8975c8e.
+   */
+  const VORHER: Record<string, string> = {
+    'nebel/c0ffee1234567890abcdef0123456789': '8104d2b97ca72716',
+    'nebel/1': '7f8fab5500e7ec1c',
+    'nebel/2': '97e9edaf8f9c890b',
+    'nebel/42': '157116fa79996aef',
+    'klar/c0ffee1234567890abcdef0123456789': '8104d2b97ca72716',
+    'klar/1': 'a90acdce8d15a3f3',
+    'klar/2': '97e9edaf8f9c890b',
+    'klar/42': '157116fa79996aef',
+    'build/c0ffee1234567890abcdef0123456789': '1c40e73814c92fd7',
+    'build/1': '75e3b62f22a74a7c',
+    'build/2': '97e9edaf8f9c890b',
+    'build/42': '8c7576325e11b054',
+    'extreme/c0ffee1234567890abcdef0123456789': 'b254099775891d59',
+    'extreme/1': '1f6de6c7af3ffcb5',
+    'extreme/2': '8ebaf1fc12ede263',
+    'extreme/42': 'c1f2140e93ae66b8',
+  };
+  const hash = (x: unknown): string =>
+    createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);
+  const wertung = (p: FillerPartie) => ({ platz: platzierungen(p), sieger: sieger(p) });
+
+  for (const [schluessel, erwartet] of Object.entries(VORHER)) {
+    it(`${schluessel}: gleiche Plaetze, gleicher Sieger`, () => {
+      const [variante, saatText] = schluessel.split('/') as [FillerVariante, string];
+      const saat = /^\d+$/.test(saatText) ? Number(saatText) : saatText;
+      const { aufbauJeSpielart: _weg, ...regeln } = { ...DEFAULT_REGELN, variante };
+      void _weg;
+      let p = erstellePartie(regeln, [0, 1], saat);
+      let mitte: FillerPartie | null = null;
+      let n = 0;
+      while (!p.fertig && n++ < 600) {
+        if (p.zug === 8 && !mitte) mitte = p;
+        p = fuehreAus(p, p.dran, botZug(sichtFuer(p, p.dran)));
+      }
+      assert.ok(mitte);
+      const gestellt = [
+        { 0: 9, 1: 9 },
+        { 0: 20, 1: 3 },
+        { 0: 3, 1: 20 },
+      ].map((punkte) => wertung({ ...mitte!, punkte, fertig: true }));
+      const laufend = wertung(mitte);
+      const verlassen = wertung({ ...p, leftSeats: [1] });
+      assert.equal(hash({ ende: wertung(p), gestellt, laufend, verlassen }), erwartet);
+    });
+  }
 });
