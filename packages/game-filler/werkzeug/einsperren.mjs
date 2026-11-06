@@ -158,10 +158,17 @@ if (isMainThread) {
     console.log('');
   }
 
+  /** "direkt / ohne Warnung / spaeter | Warnzuege" fuer die Partien, in denen ein Vorsichtiger eingesperrt wurde. */
+  const fallen = (xs) => {
+    const z = (art) => xs.filter((p) => p.falle?.art === art).length;
+    const serie = xs.length ? xs.reduce((a, p) => a + (p.falle?.serie ?? 0), 0) / xs.length : 0;
+    return `${z('direkt')} / ${z('ohneWarnung')} / ${z('spaeter')} | ${serie.toFixed(2)}`;
+  };
+
   if (teile.includes(2)) {
     console.log('## 2. Vorsichtig gegen Bot (jede Saat auf beiden Sitzen)\n');
-    console.log('| Spielart | Partien | V eingesperrt | davon nach "ausweglos" | Bot eingesperrt | V Sieg als S0 | V Sieg als S1 | V Sieg gesamt / remis | Punkte V / Bot | Punkte V als S0 / S1 (Bot dort in Teil 1) | V weicht ab je Partie | ausweglos je Partie | Rechenzeit |');
-    console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+    console.log('| Spielart | Partien | V eingesperrt | davon direkt nach ausweglosem Zug / ohne Warnung / spaeter | Warnzuege davor (Mittel) | Bot eingesperrt | V Sieg als S0 | V Sieg als S1 | V Sieg gesamt / remis | Punkte V / Bot | Punkte V als S0 / S1 (Bot dort in Teil 1) | V weicht ab je Partie | ausweglos je Partie | Rechenzeit |');
+    console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
     for (const variante of Object.keys(anzahl)) {
       const ps = ergebnisse.filter((r) => r.teil === 2 && r.variante === variante).flatMap((r) => r.partien);
       if (ps.length === 0) continue;
@@ -176,7 +183,7 @@ if (isMainThread) {
         ? `${vPkt(als(0)).toFixed(1)} (${g.p0.toFixed(1)}) / ${vPkt(als(1)).toFixed(1)} (${g.p1.toFixed(1)})`
         : `${vPkt(als(0)).toFixed(1)} / ${vPkt(als(1)).toFixed(1)}`;
       console.log(
-        `| ${variante} | ${n} | ${anteil(ps.filter((p) => p.eingesperrt === p.vSitz).length, n)} | ${ps.filter((p) => p.eingesperrt === p.vSitz && p.ausweglos > 0).length} | ${anteil(ps.filter((p) => p.eingesperrt === 1 - p.vSitz).length, n)}` +
+        `| ${variante} | ${n} | ${anteil(ps.filter((p) => p.eingesperrt === p.vSitz).length, n)} | ${fallen(ps.filter((p) => p.eingesperrt === p.vSitz))} | ${anteil(ps.filter((p) => p.eingesperrt === 1 - p.vSitz).length, n)}` +
           ` | ${pct(vSieg(als(0)), als(0).length)} | ${pct(vSieg(als(1)), als(1).length)} | ${pct(vSieg(ps), n)} / ${pct(remis, n)}` +
           ` | ${vPkt(ps).toFixed(1)} / ${bPkt.toFixed(1)} | ${vergleich}` +
           ` | ${(ps.reduce((a, p) => a + p.abweichungen, 0) / n).toFixed(2)} | ${(ps.reduce((a, p) => a + p.ausweglos, 0) / n).toFixed(2)} | ${sek(ps.reduce((a, p) => a + p.ms, 0))} |`,
@@ -187,8 +194,8 @@ if (isMainThread) {
 
   if (teile.includes(3)) {
     console.log('## 3. Vorsichtig gegen vorsichtig\n');
-    console.log('| Spielart | Partien | eingesperrt | davon Sitz 0 / Sitz 1 | Sieg S0 / S1 / remis | Punkte S0 / S1 | weicht ab je Partie | ausweglos je Partie | Rechenzeit |');
-    console.log('|---|---|---|---|---|---|---|---|---|');
+    console.log('| Spielart | Partien | eingesperrt | davon Sitz 0 / Sitz 1 | davon direkt nach ausweglosem Zug / ohne Warnung / spaeter | Warnzuege davor (Mittel) | Sieg S0 / S1 / remis | Punkte S0 / S1 | weicht ab je Partie | ausweglos je Partie | Rechenzeit |');
+    console.log('|---|---|---|---|---|---|---|---|---|---|---|');
     for (const variante of Object.keys(anzahl)) {
       const ps = ergebnisse.filter((r) => r.teil === 3 && r.variante === variante).flatMap((r) => r.partien);
       if (ps.length === 0) continue;
@@ -198,7 +205,7 @@ if (isMainThread) {
       const pkt = (s) => ps.reduce((a, p) => a + p.punkte[s], 0) / n;
       console.log(
         `| ${variante} | ${n} | ${pct(mit.length, n)} | ${mit.filter((p) => p.eingesperrt === 0).length} / ${mit.filter((p) => p.eingesperrt === 1).length}` +
-          ` | ${pct(sieg(0), n)} / ${pct(sieg(1), n)} / ${pct(sieg(null), n)} | ${pkt(0).toFixed(1)} / ${pkt(1).toFixed(1)}` +
+          ` | ${fallen(mit)} | ${pct(sieg(0), n)} / ${pct(sieg(1), n)} / ${pct(sieg(null), n)} | ${pkt(0).toFixed(1)} / ${pkt(1).toFixed(1)}` +
           ` | ${(ps.reduce((a, p) => a + p.abweichungen, 0) / n).toFixed(2)} | ${(ps.reduce((a, p) => a + p.ausweglos, 0) / n).toFixed(2)} | ${sek(ps.reduce((a, p) => a + p.ms, 0))} |`,
       );
     }
@@ -329,18 +336,55 @@ if (isMainThread) {
       gesehen.add(schluessel);
       if (!gefaehrdet(spieleFolge(p, s, k), s)) {
         if (k !== bot) zaehler.abweichungen++;
+        zaehler.protokoll.push({ sitz: s, zug: p.zug, art: k === bot ? 'ruhig' : 'ausgewichen' });
         return k;
       }
     }
     zaehler.ausweglos++;
+    zaehler.protokoll.push({ sitz: s, zug: p.zug, art: 'ausweglos' });
     return bot;
+  }
+
+  /**
+   * Wie kam der vorsichtige Sitz t in die Falle, die bei Zugnummer trennZug
+   * zuschnappte? Massgeblich ist seine LETZTE Entscheidung davor (Zugnummer
+   * z, vor seinem Zug):
+   *
+   *   direkt       sie war ausweglos, und die Falle schnappte in seinem
+   *                eigenen Zug (trennZug = z + 1) oder im Zug des Gegners
+   *                gleich danach (z + 2). Genau diese Falle hat seine
+   *                Pruefung vorhergesagt — der Gegner hat sie auch gestellt.
+   *   ohneWarnung  sie hielt den Zug fuer sicher, und die Falle kam trotzdem
+   *                gleich danach: eine Falle, die die Ein-Mauer-Pruefung
+   *                nicht sieht (etwa zwei Mauern in Extreme).
+   *   spaeter      alles andere (die Trennung kam nicht im naechsten Zug).
+   *
+   * `serie`: wie viele seiner Entscheidungen unmittelbar davor schon gewarnt
+   * hatten (ausgewichen oder ausweglos, die letzte mitgezaehlt) — wie lange er
+   * der Falle schon ausgewichen war, bevor sie zuging.
+   */
+  function falleNach(protokoll, t, trennZug) {
+    const meine = protokoll.filter((e) => e.sitz === t && e.zug < trennZug);
+    const letzte = meine.at(-1);
+    if (!letzte) return { art: 'spaeter', serie: 0 };
+    let serie = 0;
+    for (let k = meine.length - 1; k >= 0 && meine[k].art !== 'ruhig'; k--) serie++;
+    const gleichDanach = trennZug - letzte.zug <= 2;
+    if (gleichDanach && letzte.art === 'ausweglos') return { art: 'direkt', serie };
+    if (gleichDanach && letzte.art === 'ruhig') return { art: 'ohneWarnung', serie };
+    return { art: 'spaeter', serie };
   }
 
   /** Eine Partie; `vorsichtig[s]` sagt, ob Sitz s vorsichtig spielt. */
   function spiele(variante, i, vorsichtig) {
     const beginn = performance.now();
     let p = erstellePartie({ ...R.DEFAULT_REGELN, variante }, [0, 1], saatHex(i));
-    const zaehler = { abweichungen: 0, ausweglos: 0 };
+    // `protokoll`: jede Entscheidung eines vorsichtigen Sitzes mit Zugnummer
+    // VOR seinem Zug — daraus liest `falleNach`, ob die Falle zeitlich auf
+    // einen ausweglosen Zug folgte (Zweitleser 07.11.2026: "ausweglos
+    // irgendwann in der Partie" belegt keinen Zusammenhang).
+    const zaehler = { abweichungen: 0, ausweglos: 0, protokoll: [] };
+    let trennZug = null;
     let trennung = null;
     let eingesperrt = null;
     let durchMauer = false;
@@ -356,6 +400,7 @@ if (isMainThread) {
           const g = getrennt(p);
           if (g !== null) {
             trennung = g;
+            trennZug = p.zug;
             durchMauer = z.typ === 'barriere';
             if (istEingesperrt(g)) eingesperrt = g[0] < g[1] ? 0 : 1;
           }
@@ -363,12 +408,14 @@ if (isMainThread) {
         if (p.fertig) break;
       }
     }
+    const { protokoll, ...zahlen } = zaehler;
     return {
       sieger: sieger(p),
       punkte: [p.punkte[0], p.punkte[1]],
       eingesperrt,
       durchMauer,
-      ...zaehler,
+      falle: eingesperrt !== null && vorsichtig[eingesperrt] ? falleNach(protokoll, eingesperrt, trennZug) : null,
+      ...zahlen,
       ms: performance.now() - beginn,
     };
   }
