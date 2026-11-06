@@ -14,7 +14,7 @@
 import { useEffect, useState } from 'react';
 
 import { cardImage, deckBack, type Deck } from './decks';
-import { cardName, isRed, rankLabel, suitSymbol } from './i18n';
+import { cardLabel, cardName, isRed, rankLabel, suitSymbol } from './i18n';
 import type { Card } from './protocol';
 
 export function CardFront({
@@ -70,7 +70,9 @@ export function CardFront({
  */
 function TextKarte({ card }: { card: { suit: string; rank: string } }): React.JSX.Element {
   // Zauberer und Narr haben weder Farbe noch Wert — sie sind, was sie sind.
-  // Ihr Buchstabe steht deshalb allein und gross in der Mitte.
+  // Ihr Buchstabe steht deshalb allein und gross in der Mitte. Er kommt aus
+  // dem Woerterbuch (`karte.kurz.*`), weil er der Anfang des Kartennamens ist
+  // — auf Englisch heisst der Zauberer „Mage", ein Z waere dort ein Raetsel.
   if (card.suit === 'Z' || card.suit === 'N') {
     const z = card.suit === 'Z';
     return (
@@ -78,7 +80,7 @@ function TextKarte({ card }: { card: { suit: string; rank: string } }): React.JS
         <svg viewBox="0 0 100 145" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           <g className="pc-text-tinte">
             <text x="50" y="88" textAnchor="middle" fontSize="62" fontWeight="800">
-              {z ? 'Z' : 'N'}
+              {cardLabel(card)}
             </text>
             {z && (
               <text x="50" y="122" textAnchor="middle" fontSize="26">
@@ -143,7 +145,7 @@ function EckenChip({ card }: { card: Card }): React.JSX.Element {
       <span className={`pc-ecke pc-ecke--sonder${z ? ' pc-ecke--z' : ' pc-ecke--n'}`} aria-hidden="true">
         <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
           <text x="50" y={z ? '54' : '66'} textAnchor="middle" fontSize="60" fontWeight="800" className="pc-ecke-tinte">
-            {z ? 'Z' : 'N'}
+            {cardLabel(card)}
           </text>
           {z && (
             <text x="50" y="90" textAnchor="middle" fontSize="30" className="pc-ecke-tinte">
