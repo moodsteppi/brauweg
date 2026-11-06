@@ -1,0 +1,256 @@
+{
+  "fassung": 1,
+  "id": "w1-15",
+  "welt": 1,
+  "nr": 15,
+  "titel": "Die Festung",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "malve",
+    "pelle",
+    "malve",
+    "pelle",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    27500,
+    39500
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 11,
+      "y": 0.6,
+      "b": 0.6,
+      "h": 1.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 11,
+      "y": 1.5,
+      "b": 0.6,
+      "h": 0.6
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 14,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 15,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 14,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 15,
+      "y": 2.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 14,
+      "y": 3,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 16,
+      "y": 3,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 15,
+      "y": 3.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "dreieck",
+      "x": 15,
+      "y": 3.95,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18.8,
+      "y": 1.1,
+      "b": 0.2,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 21.2,
+      "y": 1.1,
+      "b": 0.2,
+      "h": 2.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 20,
+      "y": 2.3,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18.8,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 21.2,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 20,
+      "y": 3.9,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 20,
+      "y": 4.3,
+      "b": 0.6,
+      "h": 0.6
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 24,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 26,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 25,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "kreis",
+      "x": 28,
+      "y": 0.4,
+      "r": 0.4
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "giraffe",
+      "x": 15,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 15,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 15,
+      "y": 2.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "langhals",
+      "x": 20,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 20,
+      "y": 2.4,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 25,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 25,
+      "y": 1.6,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}
