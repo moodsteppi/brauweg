@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import { t } from '../../i18n';
+import { tf } from '../../i18n/einsetzen';
 import { spiele } from '../../klang';
 import {
   anzeigePosition,
@@ -13,7 +15,7 @@ import {
 } from './auswahl';
 import stil from './BroChess.module.css';
 import { type Figurensatz, pinguinBild } from './figurensatz';
-import { type Markierung, koenigsschlag, markierungen } from './geheim';
+import { koenigsschlag, markierungen } from './geheim';
 import type { BroChessSicht, BroChessZug, Farbe, Umwandlung } from './sicht';
 
 /**
@@ -60,22 +62,8 @@ export const ZEICHEN: Record<string, string> = {
   p: '♟︎',
 };
 
-const FIGURNAME: Record<string, string> = {
-  k: 'König',
-  q: 'Dame',
-  r: 'Turm',
-  b: 'Läufer',
-  n: 'Springer',
-  p: 'Bauer',
-};
-
-/** Vorlesetext je Marke; das Zeichen selbst ist nur Schmuck. */
-const MARKE_TEXT: Record<Markierung, string> = {
-  meineVerdeckt: 'deine geheime Dame, nur für dich sichtbar',
-  aufgedeckt: 'aufgedeckte geheime Dame',
-  warDame: 'hier wurde eine geheime Dame geschlagen',
-  koenigGeschlagen: 'hier wurde der König geschlagen',
-};
+/** Schlichter Figurenname in der aktiven Sprache („Springer", „knight"). */
+const figurName = (art: string): string => t(`brochess.figur.${art.toLowerCase()}`);
 
 /** Ab dieser Strecke ist ein Druck ein Ziehen und kein Tipp. */
 const ZIEH_SCHWELLE = 6;
@@ -366,7 +354,7 @@ export function Brett({
       ref={brettRef}
       className={stil.brett}
       role="group"
-      aria-label="Schachbrett"
+      aria-label={t('brochess.brett')}
       onPointerDown={druck}
       onPointerMove={bewegung}
       onPointerUp={loslassen}
@@ -395,9 +383,9 @@ export function Brett({
         ].filter(Boolean);
         const beschriftung = [
           figur
-            ? `${name}, ${farbeDer(figur) === 'w' ? 'weißer' : 'schwarzer'} ${FIGURNAME[figur.toLowerCase()]}`
+            ? tf(`brochess.figurAufFeld.${farbeDer(figur)}`, { feld: name, figur: figurName(figur) })
             : name,
-          ...feldMarken.map((m) => MARKE_TEXT[m]),
+          ...feldMarken.map((m) => t(`brochess.marke.${m}`)),
         ].join(', ');
         const gleitet = gleiten?.nach === name;
         return (
@@ -462,10 +450,10 @@ export function Brett({
         <div
           className={stil.umwandlung}
           role="dialog"
-          aria-label="Umwandlung wählen"
+          aria-label={t('brochess.umwandlung.aria')}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <strong>Umwandeln in …</strong>
+          <strong>{t('brochess.umwandlung.titel')}</strong>
           <div className={stil.umwandlungWahl}>
             {umwandlung.map((zug) => {
               const art: Umwandlung = zug.umwandlung ?? 'q';
@@ -473,7 +461,7 @@ export function Brett({
                 <button
                   key={art}
                   type="button"
-                  aria-label={FIGURNAME[art]}
+                  aria-label={figurName(art)}
                   className={sicht.amZug === 'w' ? stil.figurWeiss : stil.figurSchwarz}
                   onClick={() => {
                     setUmwandlung(null);
@@ -496,7 +484,7 @@ export function Brett({
             })}
           </div>
           <button type="button" className="hb-leise-knopf" onClick={() => setUmwandlung(null)}>
-            Abbrechen
+            {t('brochess.abbrechen')}
           </button>
         </div>
       )}
@@ -508,20 +496,13 @@ function feldIndexVon(name: string): number {
   return (Number(name[1]) - 1) * 8 + 'abcdefgh'.indexOf(name[0]!);
 }
 
-const REMIS: Record<string, string> = {
-  patt: 'Patt',
-  fuenfzigZuege: '50-Züge-Regel',
-  wiederholung: 'dreifache Stellungswiederholung',
-  material: 'zu wenig Material zum Mattsetzen',
-  zeit: 'Zeit abgelaufen, aber kein Matt mehr möglich',
-};
-
-/** Warum jemand gewonnen hat, als kurzer Nachsatz. */
-const GRUND: Record<string, string> = {
-  matt: 'durch Schachmatt',
-  zeit: 'auf Zeit',
-  aufgabe: 'durch Aufgabe',
-};
+/** Remisgrund und Siegesgrund je Ausgang; unbekannte Ausgänge bleiben ohne Nachsatz. */
+const REMIS_AUSGAENGE = ['patt', 'fuenfzigZuege', 'wiederholung', 'material', 'zeit'];
+const GRUND_AUSGAENGE = ['matt', 'zeit', 'aufgabe'];
+const remisGrund = (ausgang: string): string =>
+  REMIS_AUSGAENGE.includes(ausgang) ? t(`brochess.remis.${ausgang}`) : '';
+const siegGrund = (ausgang: string): string =>
+  GRUND_AUSGAENGE.includes(ausgang) ? t(`brochess.grund.${ausgang}`) : '';
 
 /**
  * Das Ergebnis in zwei Zeilen: wer gewonnen hat und warum. Liest nur, was
@@ -533,18 +514,18 @@ export function ergebnis(
 ): { titel: string; grund: string; art: 'sieg' | 'niederlage' | 'remis' } | null {
   if (!sicht.ende) return null;
   if (sicht.ende.sieger === null) {
-    return { titel: 'Remis', grund: REMIS[sicht.ende.ausgang] ?? '', art: 'remis' };
+    return { titel: t('brochess.remis'), grund: remisGrund(sicht.ende.ausgang), art: 'remis' };
   }
   const siegerFarbe: Farbe = sicht.ende.sieger === sicht.weissSitz ? 'w' : 'b';
   // Secret Dame, Regel A: Das Modul meldet den Königsschlag als 'matt'
   // (Entscheidung 03.11.2026) und legt ein Ereignis daneben. „Durch
   // Schachmatt" stimmte dann nicht — es gab ja kein angesagtes Schach.
   const schlag = sicht.ende.ausgang === 'matt' ? koenigsschlag(sicht.secretDame) : null;
-  const grund = schlag ? 'durch Königsschlag der geheimen Dame' : (GRUND[sicht.ende.ausgang] ?? '');
-  if (sicht.meineFarbe === null) return { titel: `${nameVon(siegerFarbe)} gewinnt`, grund, art: 'sieg' };
+  const grund = schlag ? t('brochess.grund.koenigsschlag') : siegGrund(sicht.ende.ausgang);
+  if (sicht.meineFarbe === null) return { titel: tf('brochess.gewinnt', { name: nameVon(siegerFarbe) }), grund, art: 'sieg' };
   return sicht.meineFarbe === siegerFarbe
-    ? { titel: 'Du gewinnst!', grund, art: 'sieg' }
-    : { titel: `${nameVon(siegerFarbe)} gewinnt`, grund, art: 'niederlage' };
+    ? { titel: t('brochess.duGewinnst'), grund, art: 'sieg' }
+    : { titel: tf('brochess.gewinnt', { name: nameVon(siegerFarbe) }), grund, art: 'niederlage' };
 }
 
 /**
@@ -557,8 +538,8 @@ export function statusText(
   nameVon: (farbe: Farbe) => string,
 ): { text: string; art: 'normal' | 'schach' | 'ende' } {
   const aus = ergebnis(sicht, nameVon);
-  if (aus) return { text: aus.grund ? `${aus.titel} - ${aus.grund}` : aus.titel, art: 'ende' };
+  if (aus) return { text: aus.grund ? tf('brochess.titelGrund', { titel: aus.titel, grund: aus.grund }) : aus.titel, art: 'ende' };
   const du = sicht.meineFarbe === sicht.amZug;
-  const wer = du ? 'Du bist am Zug' : `${nameVon(sicht.amZug)} ist am Zug`;
-  return sicht.schach ? { text: `Schach! ${wer}.`, art: 'schach' } : { text: wer, art: 'normal' };
+  const wer = du ? t('brochess.duAmZug') : tf('brochess.amZug', { name: nameVon(sicht.amZug) });
+  return sicht.schach ? { text: tf('brochess.schach', { zug: wer }), art: 'schach' } : { text: wer, art: 'normal' };
 }

@@ -4,7 +4,7 @@ import { Brett, ergebnis, statusText } from '../../minispiele/brochess/Brett';
 import stil from '../../minispiele/brochess/BroChess.module.css';
 import {
   NORMALE_SPIELART,
-  REGEL_TEXT,
+  regelText,
   type Spielart,
   frischesEreignis,
   meldung,
@@ -351,7 +351,7 @@ export function ProbeBroChess(): React.JSX.Element {
         <div className={stil.kopfTitel}>
           <h1>BroChess - Probe</h1>
           {sd && schluessel !== SPIELART && (
-            <span className={stil.kopfModus}>Secret Dame · {REGEL_TEXT[sd.regel].kurz}</span>
+            <span className={stil.kopfModus}>Secret Dame · {regelText(sd.regel).kurz}</span>
           )}
         </div>
         <select style={{ maxWidth: '45%', marginLeft: 'auto' }}
