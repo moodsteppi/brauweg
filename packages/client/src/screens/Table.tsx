@@ -13,7 +13,8 @@ import { sortByOrder } from '../cardsort';
 import type { Deck } from '../decks';
 import { szeneBild } from '../szenen';
 import { EmoteBlase, EmoteLeiste } from '../tisch/emote';
-import { gameTypeLabel, t } from '../i18n';
+import { gameTypeLabel, rankLabel, t } from '../i18n';
+import { tw } from '../i18n/einsetzen';
 import type { Action, Card, RoundResult } from '../protocol';
 import {
   Avatar,
@@ -57,12 +58,10 @@ function ConnectionBanner({
     <div className={`doko-conn doko-conn--${status}`} role="status" aria-live="polite">
       <span className="doko-conn-dot" aria-hidden="true" />
       <span className="doko-conn-text">
-        {status === 'reconnecting'
-          ? 'Verbindung wird wiederhergestellt…'
-          : 'Keine Verbindung'}
+        {status === 'reconnecting' ? t('tisch.verbindung.stellt') : t('tisch.verbindung.keine')}
       </span>
       <button className="doko-conn-btn" onClick={onReconnect}>
-        Neu verbinden
+        {t('tisch.verbindung.neu')}
       </button>
     </div>
   );
@@ -611,19 +610,19 @@ export function Table({
   if (!view) {
     const ladeText =
       status === 'open'
-        ? 'Tisch wird geladen…'
+        ? t('tisch.laedt')
         : status === 'reconnecting'
-          ? 'Verbindung wird wiederhergestellt…'
-          : 'Verbinde…';
+          ? t('tisch.verbindung.stellt')
+          : t('tisch.verbindung.verbinde');
     return (
       <div className="doko doko--loading">
         <Ladekreis bild="/hub/lade-pinguin.webp" text={ladeText} />
         {error && <p className="error">{t(error)}</p>}
         <div className="doko-loading-actions">
           <button className="primary" onClick={reconnect}>
-            Neu verbinden
+            {t('tisch.verbindung.neu')}
           </button>
-          <button onClick={onLeave}>Zurück</button>
+          <button onClick={onLeave}>{t('tisch.zurueck')}</button>
         </div>
       </div>
     );
@@ -647,7 +646,7 @@ export function Table({
   const seatInfo = (seat: number) => seatList.find((s) => s.seat === seat);
   const nameOf = (seat: number): string => {
     const entry = seatInfo(seat);
-    if (!entry || !entry.displayName) return `Bot ${seat + 1}`;
+    if (!entry || !entry.displayName) return tw('tisch.botNummer', { nummer: seat + 1 });
     return entry.displayName;
   };
   const isBotSeat = (seat: number): boolean => {
@@ -717,7 +716,7 @@ export function Table({
     !serverTrick.some((p) => p.card.id === pendingPlay.card.id)
       ? [...serverTrick, pendingPlay]
       : serverTrick;
-  const phaseText = round ? t(`phase.${round.phase}`) : 'Zwischen den Runden';
+  const phaseText = round ? t(`phase.${round.phase}`) : t('doko.zwischenDenRunden');
   const showHands = !dealing;
 
   // Aufspiel: wer die Runde herauskommt — die Vorhand, und zwar fest.
@@ -748,10 +747,10 @@ export function Table({
   // Trumpf, im Normalspiel eine Fehlkarte. Vor der Vorbehaltsabfrage steht sie
   // noch nicht fest.
   const gameLine = !round
-    ? 'Zwischen den Runden'
+    ? t('doko.zwischenDenRunden')
     : round.phase === 'vorbehalt'
-      ? 'Spielart wird noch bestimmt'
-      : gameTypeLabel(round.gameType) + (soloName ? ` · ${soloName} solo` : '');
+      ? t('doko.spielartOffen')
+      : gameTypeLabel(round.gameType) + (soloName ? ` · ${tw('doko.soloVon', { name: soloName })}` : '');
 
   // Welche Armut-Kartenauswahl faellig ist — die Asymmetrie steht in
   // `tisch-armut.ts`, sie ist der Grund fuer die eigene Datei.
@@ -765,7 +764,7 @@ export function Table({
       <img className="doko-bg" src={szeneBild(szene)} alt="" draggable={false} />
       {/* Kopfzeile */}
       <header className="doko-top">
-        <button className="doko-icon" onClick={onLeave} aria-label="Tisch verlassen">
+        <button className="doko-icon" onClick={onLeave} aria-label={t('doko.verlassen')}>
           ‹
         </button>
         <div className="doko-top-mid">
@@ -774,8 +773,8 @@ export function Table({
                 „1 / 4" stimmte zwar mit der Tischregel, aber nicht mit dem,
                 was gleich passiert. */}
             {uebung
-              ? 'Übungsrunde'
-              : `Runde ${view.view.roundIndex + 1} / ${view.view.totalRounds}`}
+              ? t('doko.uebungsrunde')
+              : tw('doko.runde', { nummer: view.view.roundIndex + 1, gesamt: view.view.totalRounds })}
           </strong>
           <span className="muted">{gameLine}</span>
         </div>
@@ -785,17 +784,19 @@ export function Table({
             und stand die uebrige Zeit nur im Weg. */}
         <div className="doko-top-right">
           {view.view.nextMultiplier > 1 && (
-            <span className="doko-badge doko-badge--bock">Bock ×{view.view.nextMultiplier}</span>
+            <span className="doko-badge doko-badge--bock">
+              {tw('doko.bock', { faktor: view.view.nextMultiplier })}
+            </span>
           )}
-          {table?.paused && <span className="doko-badge doko-badge--pause">Pausiert</span>}
-          {view.seat === null && <span className="doko-badge">Zuschauer</span>}
+          {table?.paused && <span className="doko-badge doko-badge--pause">{t('doko.pausiert')}</span>}
+          {view.seat === null && <span className="doko-badge">{t('doko.zuschauer')}</span>}
           {table?.visibility === 'club_only' && view.seat !== null && (
             <button
               className="doko-icon"
               onClick={togglePause}
               disabled={pauseBusy}
-              aria-label={table.paused ? 'Tisch fortsetzen' : 'Tisch pausieren'}
-              title={table.paused ? 'Fortsetzen' : 'Pausieren'}
+              aria-label={table.paused ? t('doko.tischFortsetzen') : t('doko.tischPausieren')}
+              title={table.paused ? t('doko.fortsetzen') : t('doko.pausieren')}
             >
               {table.paused ? '▶' : '❚❚'}
             </button>
@@ -813,14 +814,14 @@ export function Table({
             className="doko-icon"
             onClick={() => setZeigeLetzten(true)}
             disabled={!round?.lastTrick}
-            aria-label="Letzten Stich ansehen"
+            aria-label={t('doko.letztenStichAnsehen')}
           >
             ⟲
           </button>
           <button
             className="doko-icon"
             onClick={() => setZeigeRegeln(true)}
-            aria-label="Tischregeln ansehen"
+            aria-label={t('tisch.regelnAnsehen')}
           >
             §
           </button>
@@ -828,7 +829,7 @@ export function Table({
             className="doko-icon"
             onClick={() => changeZoom(-ZOOM_STEP)}
             disabled={zoom <= ZOOM_MIN}
-            aria-label="Karten verkleinern"
+            aria-label={t('doko.kartenKleiner')}
           >
             −
           </button>
@@ -836,7 +837,7 @@ export function Table({
             className="doko-icon"
             onClick={() => changeZoom(ZOOM_STEP)}
             disabled={zoom >= ZOOM_MAX}
-            aria-label="Karten vergrößern"
+            aria-label={t('doko.kartenGroesser')}
           >
             +
           </button>
@@ -921,7 +922,7 @@ export function Table({
 
         {round?.lastTrick && trick.length === 0 && (
           <p className="doko-last">
-            Letzter Stich an {nameOf(round.lastTrick.winnerSeat)}
+            {tw('doko.letzterStichAn', { name: nameOf(round.lastTrick.winnerSeat) })}
           </p>
         )}
       </div>
@@ -1019,13 +1020,10 @@ export function Table({
       {zeigeEmoteHinweis && (
         <div className="doko-sheet" onClick={() => setZeigeEmoteHinweis(false)}>
           <div className="doko-sheet-card" onClick={(e) => e.stopPropagation()}>
-            <h2>Diesen Zuruf hast du noch nicht</h2>
-            <p className="muted">
-              Im Shop unter „Zurufe" gibt es ihn gegen Münzen. Er steht dir dann an jedem
-              Tisch zur Verfügung.
-            </p>
+            <h2>{t('doko.zuruf.titel')}</h2>
+            <p className="muted">{t('doko.zuruf.text')}</p>
             <button className="primary" onClick={() => setZeigeEmoteHinweis(false)}>
-              Weiter spielen
+              {t('doko.weiterSpielen')}
             </button>
           </div>
         </div>
@@ -1044,14 +1042,11 @@ export function Table({
       {table?.paused && (
         <div className="doko-sheet doko-sheet--pause">
           <div className="doko-sheet-card">
-            <h2>Tisch pausiert</h2>
-            <p className="muted">
-              Der Zugtimer steht still. Jeder am Tisch kann fortsetzen - ideal für
-              Clantische über mehrere Abende.
-            </p>
+            <h2>{t('doko.pause.titel')}</h2>
+            <p className="muted">{t('doko.pause.text')}</p>
             {view.seat !== null && (
               <button className="primary" disabled={pauseBusy} onClick={togglePause}>
-                Fortsetzen
+                {t('doko.fortsetzen')}
               </button>
             )}
           </div>
@@ -1063,7 +1058,7 @@ export function Table({
         <span className="doko-me-avatar">
           {meinEmote && <EmoteBlase emote={meinEmote} />}
           <Avatar
-            name={view.seat === null ? 'Du' : nameOf(view.seat)}
+            name={view.seat === null ? t('doko.du') : nameOf(view.seat)}
             seatIndex={view.seat ?? 0}
             active={view.currentActor === view.seat}
             deadline={view.currentActor === view.seat ? view.turnDeadline : null}
@@ -1072,15 +1067,15 @@ export function Table({
           />
         </span>
         <div className="doko-me-info">
-          <strong>{view.seat === null ? 'Zuschauer' : nameOf(view.seat)}</strong>
+          <strong>{view.seat === null ? t('doko.zuschauer') : nameOf(view.seat)}</strong>
           <span className="muted">
-            {round?.myParty ? partyLabel(round.myParty) : 'Deine Karten'}
+            {round?.myParty ? partyLabel(round.myParty) : t('doko.deineKarten')}
             {/* Zaehlhilfe: eigene Augen, nur wenn die Tischregel sie erlaubt -
                 dann liefert der Server die Staende, sonst bleiben sie leer. */}
             {view.seat !== null && round?.standings[view.seat] !== undefined
-              ? ` · ${round.standings[view.seat]} Augen`
+              ? ` · ${tw('doko.augen', { augen: round.standings[view.seat] })}`
               : ''}
-            {view.seat !== null && leaderSeat === view.seat && ' · Aufspiel'}
+            {view.seat !== null && leaderSeat === view.seat && ` · ${t('doko.aufspiel')}`}
           </span>
           {/* Was ICH angesagt habe, bleibt deutlich stehen - dieselbe
               goldene Marke wie bei den Mitspielern, damit man den eigenen
@@ -1146,7 +1141,7 @@ export function Table({
               );
             })}
           {showHands && hand.length === 0 && (
-            <span className="muted">Keine Karten auf der Hand.</span>
+            <span className="muted">{t('doko.keineKarten')}</span>
           )}
         </div>
       )}
@@ -1154,7 +1149,7 @@ export function Table({
       {/* Kartenauswahl (Armut) als Overlay */}
       {round && kartenwahl === 'rueckgabe' && (
         <CardPicker
-          title={`Gib ${round.armut.handoverSize} Karten zurück`}
+          title={tw('doko.armut.zurueckgeben', { anzahl: round.armut.handoverSize })}
           hand={hand}
           deck={deck}
           count={round.armut.handoverSize}
@@ -1163,7 +1158,7 @@ export function Table({
       )}
       {round && kartenwahl === 'abgabe' && (
         <CardPicker
-          title={`Gib ${round.armut.handoverSize} Karten ab`}
+          title={tw('doko.armut.abgeben', { anzahl: round.armut.handoverSize })}
           hand={hand}
           deck={deck}
           count={round.armut.handoverSize}
@@ -1259,20 +1254,20 @@ const OpponentSeat = memo(function OpponentSeat({
             {name}
           </button>
         ) : (
-          <span>{isBot ? `Bot ${seatIndex + 1}` : name}</span>
+          <span>{isBot ? tw('tisch.botNummer', { nummer: seatIndex + 1 }) : name}</span>
         )}
-        {leader && <em className="doko-tag doko-tag--lead">Aufspiel</em>}
+        {leader && <em className="doko-tag doko-tag--lead">{t('doko.aufspiel')}</em>}
         {party && <em className={`doko-party doko-party--${party}`}>{partyLabel(party)}</em>}
         {/* Der Vermerk bleibt stehen: Wer eine Absage gesagt hat, soll
             daran auch in der zehnten Runde noch erkennbar sein. */}
         {ansage && <em className="doko-tag doko-tag--ansage">{ansage}</em>}
         {schweine && (
-          <em className="doko-tag doko-tag--schweine" title="Hält die Schweine">
-            🐷 Schweine
+          <em className="doko-tag doko-tag--schweine" title={t('doko.schweine.haelt')}>
+            🐷 {t('doko.schweine')}
           </em>
         )}
-        {hasLeft && <em className="doko-tag">ausgestiegen</em>}
-        {!hasLeft && botTakeover && !isBot && <em className="doko-tag">Bot übernimmt</em>}
+        {hasLeft && <em className="doko-tag">{t('tisch.ausgestiegen')}</em>}
+        {!hasLeft && botTakeover && !isBot && <em className="doko-tag">{t('doko.botUebernimmt')}</em>}
       </div>
       {/* Genau so viele verdeckte Karten, wie der Spieler haelt. Links und
           rechts liegen sie quer (siehe CSS is-vertical). */}
@@ -1296,27 +1291,31 @@ const OpponentSeat = memo(function OpponentSeat({
 function ansageText(round: {
   announcements: { re: boolean; kontra: boolean; reAbsage: number; kontraAbsage: number };
 }): string | null {
-  const stufen = ['Keine 90', 'Keine 60', 'Keine 30', 'Schwarz'];
   const teile: string[] = [];
-  if (round.announcements.re) {
-    const absage = round.announcements.reAbsage;
-    teile.push(absage > 0 ? `Re · ${stufen[absage - 1] ?? ''}`.trim() : 'Re');
-  }
-  if (round.announcements.kontra) {
-    const absage = round.announcements.kontraAbsage;
-    teile.push(absage > 0 ? `Kontra · ${stufen[absage - 1] ?? ''}`.trim() : 'Kontra');
-  }
+  const mitAbsage = (partei: string, absage: number): string =>
+    absage > 0 ? `${parteiName(partei)} · ${absageName(absage)}`.trim() : parteiName(partei);
+  if (round.announcements.re) teile.push(mitAbsage('re', round.announcements.reAbsage));
+  if (round.announcements.kontra) teile.push(mitAbsage('kontra', round.announcements.kontraAbsage));
   return teile.length > 0 ? teile.join('  ·  ') : null;
 }
 
 /** Teamzugehoerigkeit unter dem Namen: "Team Re" / "Team Kontra". */
 function partyLabel(party: string): string {
-  return party === 're' ? 'Team Re' : 'Team Kontra';
+  return party === 're' ? t('doko.team.re') : t('doko.team.kontra');
 }
 
 /** Der blosse Parteiname ohne "Team" - fuer Ansagen und Rufe. */
 function parteiName(party: string): string {
-  return party === 're' ? 'Re' : 'Kontra';
+  return party === 're' ? t('doko.partei.re') : t('doko.partei.kontra');
+}
+
+/**
+ * Name einer Absagestufe (1 = Keine 90 … 4 = Schwarz), leer bei unbekannter
+ * Stufe. Leer statt Schlüssel: Die Aufrufer haengen ihn an „Re · " und
+ * schneiden den Rest ab — so stand es schon vor der Uebersetzung.
+ */
+function absageName(level: number): string {
+  return level >= 1 && level <= 4 ? t(`doko.absage.${level}`) : '';
 }
 
 // ---------------------------------------------------------------------------
@@ -1326,11 +1325,11 @@ function parteiName(party: string): string {
 function actionLabel(action: Action, myParty?: string | null): string {
   switch (action.type) {
     case 'vorbehalt':
-      if (action.kind === null) return 'Gesund';
-      if (action.kind === 'solo') return `Solo: ${soloLabel(action.solo as string)}`;
-      if (action.kind === 'hochzeit') return 'Hochzeit';
-      if (action.kind === 'armut') return 'Armut';
-      if (action.kind === 'schmeiss') return 'Schmeißen';
+      if (action.kind === null) return t('doko.aktion.gesund');
+      if (action.kind === 'solo') return tw('doko.aktion.solo', { solo: soloLabel(action.solo as string) });
+      if (action.kind === 'hochzeit') return t('doko.aktion.hochzeit');
+      if (action.kind === 'armut') return t('doko.aktion.armut');
+      if (action.kind === 'schmeiss') return t('doko.aktion.schmeissen');
       return String(action.kind);
     case 'announce': {
       const level = action.level as number;
@@ -1338,35 +1337,29 @@ function actionLabel(action: Action, myParty?: string | null): string {
       // Partei - die Re-Partei sagt "Re ansagen", die Kontra-Partei
       // "Kontra ansagen". "Re / Kontra" liess offen, was man da eigentlich
       // tut.
-      if (level === 0) return myParty ? `${parteiName(myParty)} ansagen` : 'Ansagen';
-      return ['', 'Keine 90', 'Keine 60', 'Keine 30', 'Schwarz'][level] ?? 'Ansage';
+      if (level === 0) {
+        return myParty ? tw('doko.parteiAnsagen', { partei: parteiName(myParty) }) : t('doko.ansagen');
+      }
+      return absageName(level) || t('doko.ansage');
     }
     case 'armutAccept':
-      return 'Armut annehmen';
+      return t('doko.aktion.armutAnnehmen');
     case 'armutDecline':
-      return 'Armut ablehnen';
+      return t('doko.aktion.armutAblehnen');
     case 'armutHandover':
-      return 'Trümpfe abgeben';
+      return t('doko.aktion.truempfeAbgeben');
     case 'confirmPflichtansage':
-      return action.accept ? 'Bestätigen' : 'Ablehnen';
+      return action.accept ? t('doko.bestaetigen') : t('doko.ablehnen');
     default:
       return action.type;
   }
 }
 
 function soloLabel(solo: string): string {
-  const map: Record<string, string> = {
-    suitC: 'Kreuz',
-    suitS: 'Pik',
-    suitH: 'Herz',
-    suitD: 'Karo',
-    queens: 'Damen',
-    jacks: 'Buben',
-    fleshless: 'Fleischlos',
-  };
   // Unbekannte Art faellt auf das Spielart-Woerterbuch zurueck, notfalls auf
   // den rohen Schluessel - sichtbar haesslich statt unsichtbar kaputt.
-  return map[solo] ?? t(`spielart.solo.${solo}`);
+  const kurz = t(`doko.solo.${solo}`);
+  return kurz !== `doko.solo.${solo}` ? kurz : t(`spielart.solo.${solo}`);
 }
 
 /**
@@ -1413,7 +1406,8 @@ function VorbehaltIcon({ kind }: { kind: string }): React.JSX.Element {
 
 /** Damen-/Buben-/Fleischlos-Solo als Kartenpaar-Symbol. */
 function SoloIcon({ solo }: { solo: string }): React.JSX.Element {
-  const letter = solo === 'queens' ? 'D' : solo === 'jacks' ? 'B' : 'A';
+  // Kurzzeichen aus dem Woerterbuch: D und B auf Deutsch, Q und J auf Englisch.
+  const letter = rankLabel(solo === 'queens' ? 'Q' : solo === 'jacks' ? 'J' : 'A');
   return (
     <span className="vb-pair" aria-hidden="true">
       <i>{letter}</i>
@@ -1431,9 +1425,9 @@ function SoloIcon({ solo }: { solo: string }): React.JSX.Element {
  * worauf man achten muesste.
  */
 const NICHT_SOLO: readonly { kind: string; label: string; warum: string }[] = [
-  { kind: 'schmeiss', label: 'Schmeißen', warum: 'Dafür brauchst du genug Luschen oder Volle.' },
-  { kind: 'armut', label: 'Armut', warum: 'Dafür darfst du höchstens drei Trümpfe haben.' },
-  { kind: 'hochzeit', label: 'Hochzeit', warum: 'Dafür brauchst du beide Kreuz-Damen.' },
+  { kind: 'schmeiss', label: 'doko.aktion.schmeissen', warum: 'doko.vb.warum.schmeiss' },
+  { kind: 'armut', label: 'doko.aktion.armut', warum: 'doko.vb.warum.armut' },
+  { kind: 'hochzeit', label: 'doko.aktion.hochzeit', warum: 'doko.vb.warum.hochzeit' },
 ];
 
 function VorbehaltDialog({
@@ -1517,26 +1511,24 @@ function VorbehaltDialog({
         {schritt === 'frage' && gesund && (
           <>
             <h2>
-              Bist du gesund? <FristZaehler frist={frist} />
+              {t('doko.vb.frage')} <FristZaehler frist={frist} />
             </h2>
-            <p className="muted doko-vb-hinweis">
-              Alle erklären gleichzeitig. Sagst du nichts, giltst du als gesund.
-            </p>
+            <p className="muted doko-vb-hinweis">{t('doko.vb.hinweis')}</p>
             <div className="doko-sheet-row">
               <button className="primary" onClick={() => bestaetigen(gesund)}>
-                ✓ Ja, gesund
+                {t('doko.vb.jaGesund')}
               </button>
               {/* Immer anwaehlbar, auch ohne moeglichen Vorbehalt: Dahinter
                   steht jetzt die vollstaendige Liste mit Begruendungen, und
                   die darf man sich ansehen duerfen. Zurueck geht es von dort. */}
-              <button onClick={() => setSchritt('auswahl')}>Nein, Vorbehalt</button>
+              <button onClick={() => setSchritt('auswahl')}>{t('doko.vb.neinVorbehalt')}</button>
             </div>
           </>
         )}
 
         {schritt === 'auswahl' && (
           <>
-            <h2>Dein Vorbehalt</h2>
+            <h2>{t('doko.vb.titel')}</h2>
             <div className="vb-grid">
               {/*
                 Schmeissen, Armut und Hochzeit stehen immer da, auch wenn das
@@ -1552,11 +1544,11 @@ function VorbehaltDialog({
                       className="vb-tile is-aus"
                       key={eintrag.kind}
                       disabled
-                      title={eintrag.warum}
+                      title={t(eintrag.warum)}
                     >
                       <VorbehaltIcon kind={eintrag.kind} />
-                      <span>{eintrag.label}</span>
-                      <span className="vb-warum">{eintrag.warum}</span>
+                      <span>{t(eintrag.label)}</span>
+                      <span className="vb-warum">{t(eintrag.warum)}</span>
                     </button>
                   );
                 }
@@ -1583,7 +1575,9 @@ function VorbehaltDialog({
                     <b className="rot">♥</b>
                     <b className="rot">♦</b>
                   </span>
-                  <span>Farbsolo {zeigeFarben ? '▴' : '▾'}</span>
+                  <span>
+                    {t('doko.vb.farbsolo')} {zeigeFarben ? '▴' : '▾'}
+                  </span>
                 </button>
               )}
               {andereSoli.map((action, index) => (
@@ -1614,7 +1608,7 @@ function VorbehaltDialog({
             )}
             {gesund && (
               <button className="doko-sheet-zurueck" onClick={() => zurueck('frage')}>
-                Zurück
+                {t('doko.zurueck')}
               </button>
             )}
           </>
@@ -1625,23 +1619,21 @@ function VorbehaltDialog({
             darauf wartet, vorgefuehrt zu werden. */}
         {offen.length > 0 && (
           <p className="muted vb-pflichtsolo">
-            Pflichtsolo offen:{' '}
-            {offen.map((s) => (s === eigenerSitz ? 'du' : nameOf(s))).join(', ')}
-            {ichOffen ? '. Dich kann es noch treffen.' : ''}
+            {tw('doko.vb.pflichtsoloOffen', {
+              wer: offen.map((s) => (s === eigenerSitz ? t('doko.vb.pflichtsoloDu') : nameOf(s))).join(', '),
+            })}
+            {ichOffen ? `. ${t('doko.vb.pflichtsoloDich')}` : ''}
           </p>
         )}
 
         {schritt === 'bestaetigen' && wahl && (
           <>
-            <h2>{actionLabel(wahl)} ansagen?</h2>
+            <h2>{tw('doko.vb.ansagenFrage', { wahl: actionLabel(wahl) })}</h2>
             {/* Die Hand im Hintergrund liegt jetzt nach der Trumpfordnung
                 dieses Solos. Ohne diesen Hinweis wirkt die Umsortierung wie
                 ein Fehler. */}
             {wahl.kind === 'solo' && (
-              <p className="muted">
-                Deine Karten liegen zur Probe schon in der Reihenfolge dieses
-                Solos. Zurück stellt sie wieder her.
-              </p>
+              <p className="muted">{t('doko.vb.soloProbe')}</p>
             )}
             <div className="doko-sheet-row">
               <button
@@ -1652,13 +1644,13 @@ function VorbehaltDialog({
                   onSend(wahl);
                 }}
               >
-                {gesendet ? 'Wird angesagt…' : 'Bestätigen'}
+                {gesendet ? t('doko.vb.wirdAngesagt') : t('doko.bestaetigen')}
               </button>
               <button
                 disabled={gesendet}
                 onClick={() => zurueck(wahl === gesund ? 'frage' : 'auswahl')}
               >
-                Zurück
+                {t('doko.zurueck')}
               </button>
             </div>
           </>
@@ -1679,13 +1671,13 @@ function VorbehaltDialog({
 function pflichtGrund(reason: string | undefined, points: number): string {
   switch (reason) {
     case 'hochzeit':
-      return `Der Klärungsstich hatte ${points} Augen.`;
+      return tw('doko.pflicht.hochzeit', { augen: points });
     case 'schweine':
-      return 'Du hältst die Schweine.';
+      return t('doko.pflicht.schweine');
     case 'armut':
-      return 'Du spielst die Armut.';
+      return t('doko.pflicht.armut');
     default:
-      return `Der Stich hatte ${points} Augen.`;
+      return tw('doko.pflicht.stich', { augen: points });
   }
 }
 
@@ -1703,19 +1695,17 @@ function Pflichtansage({
   return (
     <div className="doko-sheet">
       <div className="doko-sheet-card">
-        <h2>Pflichtansage</h2>
+        <h2>{t('doko.pflicht.titel')}</h2>
         <p>
           {pflichtGrund(reason, points)}{' '}
-          {canDecline
-            ? 'Die Ansage ist erwartet, aber freiwillig.'
-            : 'Die Ansage erfolgt zwingend.'}
+          {canDecline ? t('doko.pflicht.freiwillig') : t('doko.pflicht.zwingend')}
         </p>
         <div className="doko-sheet-row">
           <button className="primary" onClick={() => onDecide(true)}>
-            Ansagen
+            {t('doko.ansagen')}
           </button>
           <button onClick={() => onDecide(false)} disabled={!canDecline}>
-            Ablehnen
+            {t('doko.ablehnen')}
           </button>
         </div>
       </div>
@@ -1750,18 +1740,13 @@ function ArmutEntscheidung({
   return (
     <div className="doko-sheet doko-sheet--armut">
       <div className="doko-sheet-card">
-        <h2>Armut</h2>
-        <p>
-          {ansager ? `${ansager} hat Armut angesagt` : 'Ein Mitspieler hat Armut angesagt'} - er
-          hält höchstens drei Trümpfe. Nimmst du an, wirst du sein Partner: Du
-          bekommst seine Trümpfe und gibst dafür gleich viele Karten zurück.
-          Lehnst du ab, wird der Nächste gefragt.
-        </p>
+        <h2>{t('doko.armut.titel')}</h2>
+        <p>{tw('doko.armut.text', { wer: ansager ?? t('doko.armut.einMitspieler') })}</p>
         <div className="doko-sheet-row">
           <button className="primary" onClick={onAnnehmen}>
-            Annehmen
+            {t('doko.annehmen')}
           </button>
-          <button onClick={onAblehnen}>Ablehnen</button>
+          <button onClick={onAblehnen}>{t('doko.ablehnen')}</button>
         </div>
       </div>
     </div>
@@ -1830,22 +1815,20 @@ function CardPicker({
           }}
         >
           {gesendet
-            ? 'Wird übergeben …'
+            ? t('doko.karten.wirdUebergeben')
             : picked.length === count
-              ? 'Karten übergeben'
-              : `${picked.length} von ${count} gewählt`}
+              ? t('doko.karten.uebergeben')
+              : tw('doko.karten.gewaehlt', { gewaehlt: picked.length, anzahl: count })}
         </button>
       </div>
     </div>
   );
 }
 
-const ABSAGE_NAMEN = ['Keine 90', 'Keine 60', 'Keine 30', 'Schwarz'];
-
 /** Zuruf einer Ansage. Stufe 0 ist Re oder Kontra, darueber die Absagen. */
 function ansageRuf(level: number, party: string | null): string {
-  if (level > 0) return ABSAGE_NAMEN[level - 1] ?? 'Ansage';
-  return party ? parteiName(party) : 'Ansage';
+  if (level > 0) return absageName(level) || t('doko.ansage');
+  return party ? parteiName(party) : t('doko.ansage');
 }
 
 /** Die verbleibenden Sekunden der gemeinsamen Vorbehaltsfrist. */
@@ -1863,12 +1846,10 @@ function FristZaehler({ frist }: { frist: number | null }): React.JSX.Element | 
  * was. Sonst hätte, wer sich Zeit lässt, einen Vorteil.
  */
 function vorbehaltRuf(kind: string | null): string {
-  if (kind === null) return 'Gesund';
-  if (kind === 'geheim') return 'Gesagt';
-  return (
-    { solo: 'Solo', schmeiss: 'Ich schmeiße', armut: 'Armut', hochzeit: 'Hochzeit' }[kind] ??
-    'Vorbehalt'
-  );
+  if (kind === null) return t('doko.ruf.gesund');
+  if (kind === 'geheim') return t('doko.ruf.gesagt');
+  const bekannt = ['solo', 'schmeiss', 'armut', 'hochzeit'];
+  return t(bekannt.includes(kind) ? `doko.ruf.${kind}` : 'doko.ruf.vorbehalt');
 }
 
 /**
@@ -1890,9 +1871,9 @@ function ansageVon(
   const meine = (round?.ansagen ?? []).filter((a) => a.seat === seat);
   if (meine.length === 0) return null;
   const partei = round?.knownParties?.[seat];
-  const basis = partei ? parteiName(partei) : 'Angesagt';
+  const basis = partei ? parteiName(partei) : t('doko.angesagt');
   const hoechste = meine.reduce((m, a) => Math.max(m, a.level), 0);
-  return hoechste > 0 ? `${basis} · ${ABSAGE_NAMEN[hoechste - 1] ?? ''}`.trim() : basis;
+  return hoechste > 0 ? `${basis} · ${absageName(hoechste)}`.trim() : basis;
 }
 
 type SitzInfo = { seat: number; name: string; avatarUrl: string | null };
@@ -1915,10 +1896,10 @@ function RundenAbrechnung({
   return (
     <div className="doko-sheet doko-sheet--mitte doko-sheet--abrechnung">
       <div className="doko-sheet-card doko-abrechnung">
-        <h2>Auswertung</h2>
+        <h2>{t('doko.auswertung')}</h2>
         <div className="doko-abrechnung-spalten">
           <ParteiSpalte
-            title="Re"
+            title={t('doko.partei.re')}
             klasse="re"
             members={reSeats}
             points={result.rePoints}
@@ -1927,7 +1908,7 @@ function RundenAbrechnung({
             isWinner={reGewinnt}
           />
           <ParteiSpalte
-            title="Kontra"
+            title={t('doko.partei.kontra')}
             klasse="kontra"
             members={kontraSeats}
             points={result.kontraPoints}
@@ -1941,13 +1922,12 @@ function RundenAbrechnung({
             Seite. Der Grund muss dastehen, wo das Ergebnis steht. */}
         {result.feigling && (
           <p className="doko-feigling">
-            <strong>Feigling.</strong> {reGewinnt ? 'Kontra' : 'Re'} hatte die
-            Augen, aber zu niedrig angesagt - die Punkte gehen an die
-            Gegenpartei. Sonderpunkte bleiben, wo sie erspielt wurden.
+            <strong>{t('doko.feigling')}</strong>{' '}
+            {tw('doko.feigling.text', { partei: parteiName(reGewinnt ? 'kontra' : 're') })}
           </p>
         )}
         <button className="primary" onClick={onWeiter}>
-          Weiter
+          {t('doko.weiter')}
         </button>
       </div>
     </div>
@@ -1990,7 +1970,7 @@ function ParteiSpalte({
       </div>
       <div className="doko-abr-rows">
         <div>
-          <span>Kartenpunkte</span>
+          <span>{t('doko.kartenpunkte')}</span>
           <span>{points}</span>
         </div>
         {specialRows.map((row) => (
@@ -2001,7 +1981,7 @@ function ParteiSpalte({
         ))}
       </div>
       <footer>
-        <span>Gesamt</span>
+        <span>{t('doko.gesamt')}</span>
         <strong>{total > 0 ? `+${total}` : total}</strong>
       </footer>
     </section>
@@ -2026,7 +2006,7 @@ function ZwischenstandBlatt({
   return (
     <div className="doko-sheet doko-sheet--mitte doko-sheet--zwischenstand">
       <div className="doko-sheet-card doko-zwischenstand">
-        <h2>Zwischenstand</h2>
+        <h2>{t('doko.zwischenstand')}</h2>
         <div className="doko-zwischenstand-grid">
           {sortiert.map((s) => {
             const value = scores[s.seat] ?? 0;
@@ -2047,9 +2027,11 @@ function ZwischenstandBlatt({
             );
           })}
         </div>
-        <p className="muted doko-zwischenstand-rest">Verbleibende Runden: {restRunden}</p>
+        <p className="muted doko-zwischenstand-rest">
+          {tw('doko.restRunden', { anzahl: restRunden })}
+        </p>
         <button className="primary" disabled={warten} onClick={onWeiter}>
-          {warten ? 'Warte auf die anderen …' : 'Weiter'}
+          {warten ? t('doko.warteAufAndere') : t('doko.weiter')}
         </button>
       </div>
     </div>
@@ -2068,14 +2050,8 @@ function roundValueOf(result: RoundResult, seats: SitzInfo[], isRe: boolean): nu
 }
 
 function specialRowsOf(result: RoundResult, party: 're' | 'kontra'): string[] {
-  const map: Record<string, string> = {
-    fuchs: 'Fuchs',
-    karlchen: 'Karlchen',
-    doppelkopf: 'Doppelkopf',
-    charlie: 'Charlie',
-    herzdurchlauf: 'Herzdurchlauf',
-  };
+  const bekannt = ['fuchs', 'karlchen', 'doppelkopf', 'charlie', 'herzdurchlauf'];
   return result.specials
     .filter((s) => s.party === party)
-    .map((s) => map[s.kind] ?? s.kind);
+    .map((s) => (bekannt.includes(s.kind) ? t(`doko.sonder.${s.kind}`) : s.kind));
 }

@@ -55,3 +55,14 @@ if (typeof (globalThis as { localStorage?: Storage }).localStorage?.clear !== 'f
     });
   }
 }
+
+/*
+ * Tests laufen auf Deutsch. jsdom meldet `navigator.language` = en-US, und
+ * die Spracherkennung (`i18n/index.ts`) liest die Wahl beim Laden des Moduls
+ * aus dem Speicher — ohne diesen Eintrag zeichnete jeder Bildschirm englisch,
+ * sobald sein Bereich eine `en/`-Datei bekommt, und jeder Test, der nach
+ * deutschem Wortlaut sucht, fiele um, ohne dass am Geprüften etwas falsch
+ * wäre. Wer Englisch prüfen will, stellt es im Test mit `setzeSprachwahl('en')`
+ * um (siehe `i18n.test.ts`).
+ */
+globalThis.localStorage?.setItem('brauweg.sprache', 'de');
