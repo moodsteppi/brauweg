@@ -1,0 +1,204 @@
+{
+  "fassung": 1,
+  "id": "w2-08",
+  "welt": 2,
+  "nr": 8,
+  "titel": "Das Gehöft",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "tjark",
+    "malve",
+    "tjark",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    21500,
+    30500
+  ],
+  "teile": [
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 12.8,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 15.2,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 14,
+      "y": 1.5,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 12.8,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 15.2,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 14,
+      "y": 2.5,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "dreieck",
+      "x": 14,
+      "y": 2.95,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18,
+      "y": 1.1,
+      "b": 0.4,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 21,
+      "y": 1.1,
+      "b": 0.4,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 19.5,
+      "y": 2.3,
+      "b": 3.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 21,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19.5,
+      "y": 3.9,
+      "b": 3.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "dreieck",
+      "x": 19.5,
+      "y": 4.35,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 24,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 26,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 25,
+      "y": 0.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 25,
+      "y": 1.2,
+      "b": 0.4,
+      "h": 0.4
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "giraffe",
+      "x": 14,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 14,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "langhals",
+      "x": 19.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 19.5,
+      "y": 2.4,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 25,
+      "y": 0,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}
