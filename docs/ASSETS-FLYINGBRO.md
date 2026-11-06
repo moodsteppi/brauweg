@@ -5,10 +5,54 @@ Einzelspieler-Schleuderspiel im Hub (Projekt „Rider Modus hinzufügen", Arbeit
 Pinguine aus dem Logo (Pelle, Malve, Tjark), die Gegner Giraffen, gebaut wird aus Holz, Stein und Glas.
 
 **Stand: 6. November 2026, geliefert (26 Bilder; Bros und Langhals am selben Tag nach
-der geänderten Spezifikation neu erzeugt).** Erzeugt mit ChatGPT-Bildern über
+der geänderten Spezifikation neu erzeugt, die Schleuder aus Kartenkisten danach).** Erzeugt mit ChatGPT-Bildern über
 `codex exec` (ChatGPT-Anmeldung) auf dem Mood-Stand-PC, ohne Creative-KI mit
 Kosten. Es gibt noch **keinen Spielcode**, und die Bilder hängen nirgends —
 erst der Spielbau bindet sie ein.
+
+### Abweichung vom ursprünglichen Auftrag — und woher sie kommt
+
+Der Auftrag (Projekt #18, Aufgabe 2) bestellte drei Bros „je eine Farbe/Form
+für **schnell, schwer, teilt sich**" und eine Schleuder ohne nähere Angabe. Die
+erste Lieferung (Commit `bf03349e`) hielt sich daran: `bro-schnell-*`,
+`bro-schwer-*`, `bro-teilt-*` und eine Astgabel-Schleuder. **Beides ist durch die
+Spezifikation überholt.** Sie liegt in diesem Diff nicht bei, weil sie in einer
+eigenen Aufgabe entsteht: `docs/SPEZIFIKATION-FLYINGBRO.md` auf dem Zweig
+`aufgabe/flying-bro-spezifikation-und-physik-mess-fbb7cf29`, Commit `401dbb91`
+(„Flying Bro: Entscheidungen vom 06.11.2026 in die Spezifikation"). Die
+maßgeblichen Stellen wörtlich:
+
+> **Keine Astgabel-Schleuder.** Unsere Schleuder ist ein Gummiband zwischen
+> zwei gestapelten Kartenkisten (passt zur Kartenplattform).
+>
+> **Keine Fähigkeit des Vorbilds:** kein Aufteilen in drei, kein Explodieren,
+> kein Ei-Abwurf, kein Bumerang, kein gerader Beschleunigungsstoß. Unsere drei
+> stehen unten und sind aus dem Pinguinsein abgeleitet (Bauch rutschen,
+> gleiten, gefrieren).
+>
+> Die drei Pinguine aus dem Logo. […] Die drei Fähigkeiten unten gelten so
+> (bestätigt 06.11.2026).
+>
+> | | Pelle | Malve | Tjark |
+> | --- | --- | --- | --- |
+> | Rolle | Grund-Bro, kommt in jedem Level | Weite und Glas | Stein |
+> | Fähigkeit | **Bauchrutscher** | **Gleitflug** | **Eisblock** |
+
+Dort steht außerdem: „Am 06.11.2026 hat Niklas entschieden: […] die Fähigkeiten
+Bauchrutscher, Gleitflug und Eisblock gelten". Die Nachbesserung vom selben Tag
+hat das für diese Bilder übernommen („Die DREI BROS passen NICHT mehr" → Pelle,
+Malve, Tjark; ein sich teilender Bro ist ausdrücklich ausgeschlossen).
+
+Was aus den alten Rollen wurde:
+
+| Auftrag | Spezifikation | Bild |
+| --- | --- | --- |
+| schnell | entfällt. Am weitesten trägt Malve (Gleitflug, Höchsttempo 24 m/s) | `bro-malve-*` |
+| schwer | **Tjark**: Eisblock, Masse ×3, stark gegen Stein | `bro-tjark-*` |
+| teilt sich | **gestrichen** (Fähigkeit des Vorbilds). An ihre Stelle tritt Pelle als Grund-Bro mit Bauchrutscher | `bro-pelle-*` |
+| Schleuder | zwei gestapelte Kartenkisten statt Astgabel | `schleuder` (neu erzeugt) |
+
+Die verworfenen Bilder liegen im Archivrepo unter `flyingbro/verworfen/`.
 
 ---
 
@@ -16,7 +60,7 @@ erst der Spielbau bindet sie ein.
 
 Alles unter `packages/client/public/flyingbro/`, WebP, gewandelt mit
 `~/bildwerkzeug/wandeln.mjs` (Profil `wappen` für alles Freigestellte, `szene`
-für den Hintergrund). Zusammen **rund 700 kB**.
+für den Hintergrund). Zusammen **rund 620 kB**.
 
 | Datei | Maß | Größe | Alpha |
 | --- | --- | --- | --- |
@@ -41,7 +85,7 @@ für den Hintergrund). Zusammen **rund 700 kB**.
 | `holz-balken-heil.webp` | 512 × 128 | 13.8 kB | ja |
 | `holz-quadrat-angeknackst.webp` | 256 × 256 | 22.9 kB | ja |
 | `holz-quadrat-heil.webp` | 256 × 256 | 14.8 kB | ja |
-| `schleuder.webp` | 329 × 512 | 31.4 kB | ja |
+| `schleuder.webp` | 512 × 468 | 59.6 kB | ja |
 | `stein-balken-angeknackst.webp` | 512 × 128 | 11.6 kB | ja |
 | `stein-balken-heil.webp` | 512 × 128 | 9.5 kB | ja |
 | `stein-quadrat-angeknackst.webp` | 256 × 256 | 10.9 kB | ja |
@@ -56,7 +100,7 @@ für den Hintergrund). Zusammen **rund 700 kB**.
 | **Tjark** (türkis, vier Spielknöpfe auf der Flosse) | `bro-tjark-ruhe`, `bro-tjark-eisblock` | Fähigkeit **Eisblock**: im Eiswürfel eingefroren, Gesicht sichtbar; der Würfel ist quadratisch wie der Körper 0,6 × 0,6 m |
 | **Giraffe klein / mittel / groß** | `giraffe-<größe>-steht`, `giraffe-<größe>-getroffen` | Kalb, Giraffe, Langhals (Spezifikation: 0,6 / 1,3 / 2,1 m). Getroffen: Spiralaugen, Beule, Sterne, Zunge raus. Der **Langhals** hat einen Hals etwa doppelt so lang wie der Rumpf hoch und trägt eine kleine Krone |
 | **Bauteile** | `<holz\|stein\|glas>-<quadrat\|balken>-<heil\|angeknackst>` | Quadrat 1 : 1, Balken 4 : 1, reine Vorderansicht, randlos — das Bild füllt die Physikform |
-| **Schleuder** | `schleuder` | Holzgabel mit Lederwicklung und Ösen, **ohne Gummi** — das Band zeichnet das Spiel zwischen die Ösen. ⚠ Widerspricht der Spezifikation (Kartenkisten statt Astgabel), siehe unten |
+| **Schleuder** | `schleuder` | Nach Spezifikation **zwei Stapel aus je zwei Kartenkisten** (Herz über Pik, Karo über Kreuz), **ohne Gummi**. Das Band zeichnet das Spiel zwischen die beiden Eisenringe oben innen, im Bild 512 × 468 etwa bei (215, 65) und (298, 65), also bei 42 % und 58 % der Breite und 14 % der Höhe. Die erste Astgabel ist verworfen, siehe unten |
 | **Hintergrund** | `hintergrund` | 3 : 2 quer, ohne Alpha. Unten ein freier Grasstreifen (der Boden), oben ruhiger Himmel |
 
 Die Bros sind die drei Pinguine aus dem Logo (`packages/client/public/icon-512.png`),
@@ -86,11 +130,6 @@ ganz weg.
 
 ### Bekannte Schwächen und Widersprüche
 
-- **Die Schleuder ist eine Astgabel.** Die Spezifikation schließt genau das aus
-  („Keine Astgabel-Schleuder … ein Gummiband zwischen zwei gestapelten
-  Kartenkisten"). Die Nachbesserung vom 06.11.2026 hat die Schleuder
-  ausdrücklich als „gut, bleibt" bezeichnet, deshalb ist sie unverändert.
-  Gilt die Spezifikation, ist `schleuder` eine Nachbestellung.
 - **Die Spezifikation bestellt mehr**, als hier liegt (Abschnitt „Bilder"): je
   Bro auch Flug und Siegerpose, je Giraffe auch liegend und weglaufend, je
   Stoff drei Rissstufen und die Formen Dreieck und Kreis, drei Weltkulissen.
@@ -113,7 +152,8 @@ ganz weg.
   `brauweg-art` unter `flyingbro/`, vorerst auf dem Zweig
   `flyingbro-originale`. Er wird zusammen mit diesem Zweig nach `main`
   übernommen. Die verworfenen ersten Bros (schnell, schwer, teilt sich) und
-  die erste große Giraffe liegen dort unter `flyingbro/verworfen/`.
+  die erste große Giraffe sowie die Astgabel-Schleuder liegen dort unter
+  `flyingbro/verworfen/`.
 
 ---
 
@@ -128,7 +168,7 @@ Ruhebilder, und der Prompt verlangt, die flache Logofigur in den gerenderten
 Stil zu übertragen.
 
 **Kein Bild aus einem fremden Spiel als Vorlage**, und es gilt die Abgrenzung aus
-`docs/SPEZIFIKATION-FLYINGBRO.md`: keine Vögel, keine Schweine, kein Bro, der
+`docs/SPEZIFIKATION-FLYINGBRO.md`: keine Vögel, keine Schweine, keine Astgabel-Schleuder, kein Bro, der
 sich teilt. Ein erster Probelauf mit „kleiner roter runder Pinguin,
 zusammengerollt" ergab einen roten Kugelvogel mit Zornesbrauen, der einer
 bekannten Spielfigur zu nahe kam, und wurde verworfen. Seitdem steht in jedem
@@ -337,7 +377,7 @@ Subject: the SAME beam as in the second attached image (identical shape, 4 : 1 p
 #### `schleuder`
 
 ```text
-Subject: a sturdy wooden Y-shaped slingshot standing upright, carved from a forked branch, leather wrapping at both fork tips and on the handle, small iron rings at the tips where a band would attach — WITHOUT any rubber band or pouch (the game draws the band). Front view, slightly turned. Portrait 1024x1536.
+Subject: the launcher of our game — NOT a Y-shaped forked-branch slingshot, NO forked stick, NO wooden fork. Instead: TWO separate columns standing side by side on the same baseline with a gap between them about as wide as one crate; each column is two small sturdy wooden playing-card crates stacked on top of each other (the lower crate slightly larger). The crates are made of light wooden planks with metal corner brackets; on their fronts are big embossed playing-card suit symbols (a red heart, a black spade, a red diamond, a black club — one symbol per crate, no letters, no numbers), and the top crate of each column has its lid slightly ajar with the white edges of a few playing cards peeking out. At the top INNER corner of each top crate sits one small iron ring facing the gap, where a rubber band would be tied — WITHOUT any rubber band, rope or pouch (the game draws the band). Straight front view, very slightly from above, both columns fully visible. Portrait 1024x1536.
 ```
 
 #### `hintergrund`
