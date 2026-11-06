@@ -13,7 +13,7 @@ import {
   moeglicheBarrieren,
   vonIrgendwemErreichbareFreie,
 } from '../src/index.js';
-import { botZug } from '../src/bot.js';
+import { PLATZ_WERT, WAND_SCHWELLE, bewerteWaende, botZug } from '../src/bot.js';
 import { sichtFuer } from '../src/sicht.js';
 
 const SAAT = 'b17e4c9a2f5083d6e1c7a4b90d2f6853';
@@ -251,13 +251,25 @@ describe('Build: Die Wand haelt', () => {
   });
 
   it('rechnet der Bot die Wand mit', () => {
+    /*
+     * Geprueft wird hier die FARBWAHL, deshalb ohne Kandidaten fuer eine
+     * eigene Mauer (wie in einem Zug, in dem er schon gebaut hat). Seit dem
+     * 06.11.2026 baut er in dieser Stellung sonst zuerst eine: Die Ecke des
+     * Gegners hat nur zwei Ausgaenge, und eine Mauer davor erzwingt einen
+     * Umweg (Wegterm in bewerteWaende).
+     */
+    const farbsicht = (partie: ReturnType<typeof basis>) => {
+      const { barrierenMoeglich: _weg, ...sicht } = sichtFuer(partie, 0);
+      void _weg;
+      return sicht;
+    };
     // Ohne Wand bringt Farbe 1 zwei Felder und ist damit die beste Wahl.
-    const zug = botZug(sichtFuer(basis(), 0));
+    const zug = botZug(farbsicht(basis()));
     assert.equal(zug.typ === 'faerben' ? zug.farbe : -1, 1);
     // Mit einer Wand direkt vor der Nase bringt Farbe 1 gar nichts mehr —
     // der Bot darf sie dann nicht mehr fuer die beste halten.
     const zugemauert = { ...basis(), barrieren: [kante(8, 9)] };
-    const zug2 = botZug(sichtFuer(zugemauert, 0));
+    const zug2 = botZug(farbsicht(zugemauert));
     assert.notEqual(zug2.typ === 'faerben' ? zug2.farbe : -1, 1);
   });
 });
@@ -445,16 +457,7 @@ describe('Build: Eine ganze Partie', () => {
       schritte++;
     }
     assert.equal(partie.fertig, true);
-    /*
-     * Bis zum 06.11.2026 stand hier "und die Bots mauern dabei". Seit eine
-     * Mauer nie den letzten Weg schliessen darf, findet der Bot in ganzen
-     * Partien keine Wand mehr ueber seiner Schwelle: Seine Wandrechnung
-     * lebte davon, dem Gegner Felder ganz abzuschneiden, und genau das ist
-     * jetzt verboten. Den Bot nachzuziehen ist eine eigene Aufgabe; dass er
-     * eine lohnende Wand noch findet, zeigt "Der Bot und die Wand" unten,
-     * und dass er es in ganzen Partien nicht mehr tut, haelt der offene Test
-     * "Der Bot mauert in ganzen Partien" fest.
-     */
+    // Dass die Bots dabei mauern, prueft "Der Bot mauert in ganzen Partien".
     // Seit der Bot mauert, kann eine Flaeche fuer BEIDE hinter Waenden liegen
     // bleiben — mehr als 56 Felder gehen aber nie weg, und leer bleibt keiner.
     const gesamt = (partie.punkte[0] ?? 0) + (partie.punkte[1] ?? 0);
@@ -463,9 +466,7 @@ describe('Build: Eine ganze Partie', () => {
   });
 
   it('kommt in mehreren Saaten zu Ende', () => {
-    // Bis zum 06.11.2026 musste der Bot hier in jeder Saat einmal mauern —
-    // die Erwartung steht jetzt offen (todo) unter "Der Bot mauert in ganzen
-    // Partien", Build und Extreme.
+    // Ob er dabei mauert, prueft "Der Bot mauert in ganzen Partien".
     for (const saat of ['1f3a5c7e9b0d2f4a6c8e0b1d3f5a7c9e', SAAT, '00112233445566778899aabbccddeeff']) {
       let partie = erstellePartie(BUILD, [0, 1], saat);
       let schritte = 0;
@@ -480,28 +481,25 @@ describe('Build: Eine ganze Partie', () => {
 });
 
 /*
- * OFFEN seit dem 06.11.2026 — eine Entscheidung, keine Kleinigkeit.
+ * Der Bot mauert in ganzen Partien — Pflicht, seit dem 06.11.2026 wieder.
  *
- * Bis dahin musste der Bot in jeder Saat mindestens einmal mauern ("sonst ist
- * die Schwelle zu hoch und das Feature nur auf dem Papier da"). Seit keine
- * Mauer mehr den letzten Weg schliessen darf (Regel 2, moeglicheBarrieren in
- * partie.ts), findet der unveraenderte Bot keine Wand mehr ueber seiner
- * Schwelle: Sein Wandwert lebte davon, dem Gegner Felder ganz abzuschneiden,
- * und genau das ist jetzt verboten. Uebrig bleibt der halbe Zugterm,
- * hoechstens 1 gegen WAND_SCHWELLE 2. Gemessen ueber 200 Saaten: 0,00 Mauern
- * je Partie in Build (vorher 3,65) und Extreme (vorher 9,32) — Build spielt
- * Bot gegen Bot Zug fuer Zug wie Klar (werkzeug/MESSUNG-2026-11-06-regelfix.md).
+ * Bis dahin musste er in jeder Saat mindestens einmal mauern ("sonst ist die
+ * Schwelle zu hoch und das Feature nur auf dem Papier da"). Mit Regel 2
+ * (keine Mauer schliesst den letzten Weg) baute er keine einzige mehr: Sein
+ * Wandwert lebte vom Abschneiden, und genau das ist verboten. Die Erwartung
+ * stand deshalb einen Vormittag lang als `todo` hier. Niklas hat entschieden
+ * (06.11.2026, "b+"): Der Bot soll weiter mauern. Er bewertet jetzt auch, wie
+ * sehr eine Mauer dem Gegner den Weg verengt (Wegterm, bewerteWaende in
+ * bot.ts), und die Erwartung gilt wieder.
  *
- * Die Erwartung steht deshalb weiter hier, als `todo`: Sie laeuft bei jedem
- * Lauf mit und steht in der Zusammenfassung unter "todo", faerbt die CI aber
- * nicht rot, solange niemand entschieden hat. Wer den Bot nachzieht, nimmt das
- * `todo` heraus — dann muss sie wieder halten. Wer entscheidet, dass der Bot
- * in Build nicht mehr mauern soll, loescht sie ausdruecklich und schreibt das
- * hierher. Dass die Wandrechnung an sich noch anschlaegt, zeigt "Der Bot und
- * die Wand" unten; das hier fragt, ob sie es in echten Partien auch tut.
+ * Die Untergrenzen kommen aus der Messung mit der neuen Bewertung (200 Saaten
+ * je Spielart, werkzeug/MESSUNG-2026-11-06-bot-mauert.md): Build rund 19
+ * Mauern je Partie, Extreme rund 43. Gefordert ist je Saat ein Viertel davon —
+ * genug, dass ein Bot, der nur noch ausnahmsweise mauert, hier rot wird, und
+ * weit genug weg, dass eine einzelne ruhige Saat es nicht tut.
  */
-const BOT_MAUERT_OFFEN =
-  'Bot mauert unter Regel 2 nicht mehr (0,00 je Partie) — Entscheidung offen, siehe Kommentar';
+const BUILD_MAUERN_MINDESTENS = 5;
+const EXTREME_MAUERN_MINDESTENS = 10;
 
 /** Wie viele Mauern zwei Bots in einer ganzen Partie bauen. */
 function botMauernInPartie(regeln: Parameters<typeof erstellePartie>[0], saat: string): number {
@@ -518,19 +516,21 @@ function botMauernInPartie(regeln: Parameters<typeof erstellePartie>[0], saat: s
   return waende;
 }
 
-describe('Der Bot mauert in ganzen Partien (offen seit 06.11.2026)', () => {
+describe('Der Bot mauert in ganzen Partien', () => {
   const SAATEN = ['1f3a5c7e9b0d2f4a6c8e0b1d3f5a7c9e', SAAT, '00112233445566778899aabbccddeeff'];
 
-  it('Build: mauert in jeder von mehreren Saaten mindestens einmal', { todo: BOT_MAUERT_OFFEN }, () => {
+  it(`Build: mauert in jeder von mehreren Saaten mindestens ${BUILD_MAUERN_MINDESTENS}-mal`, () => {
     for (const saat of SAATEN) {
-      assert.ok(botMauernInPartie(BUILD, saat) > 0, `Build, Saat ${saat}: keine Wand gebaut`);
+      const zahl = botMauernInPartie(BUILD, saat);
+      assert.ok(zahl >= BUILD_MAUERN_MINDESTENS, `Build, Saat ${saat}: nur ${zahl} Mauern`);
     }
   });
 
-  it('Extreme: mauert in jeder von mehreren Saaten mindestens einmal', { todo: BOT_MAUERT_OFFEN }, () => {
+  it(`Extreme: mauert in jeder von mehreren Saaten mindestens ${EXTREME_MAUERN_MINDESTENS}-mal`, () => {
     const extreme = { ...DEFAULT_REGELN, variante: 'extreme' } as const;
     for (const saat of SAATEN) {
-      assert.ok(botMauernInPartie(extreme, saat) > 0, `Extreme, Saat ${saat}: keine Wand gebaut`);
+      const zahl = botMauernInPartie(extreme, saat);
+      assert.ok(zahl >= EXTREME_MAUERN_MINDESTENS, `Extreme, Saat ${saat}: nur ${zahl} Mauern`);
     }
   });
 });
@@ -571,11 +571,42 @@ describe('Build: Der Bot und die Wand', () => {
     const partie = erstellePartie(REGELN, [0, 1], 1);
     const gelegt = {
       ...partie,
-      //  Zeile 0: 2 4 2 3
+      //  Zeile 0: 3 3 3 3   <- gehoert ganz Sitz 1
+      //  Zeile 1: 1 2 4 5   <- frei, lauter Einzelfelder
+      //  Zeile 2: 0 0 0 0   <- gehoert ganz Sitz 0
+      // Jedes freie Feld grenzt an beide Gebiete. Eine Mauer nimmt dem
+      // Gegner hoechstens EINEN Zugang zu EINEM Feld, das er ueber den
+      // Nachbarn trotzdem im zweiten Zug erreicht — ein halbes Feld im
+      // Wegterm, unter der Schwelle. (Bis zum 06.11.2026 stand hier ein
+      // Brett mit dem Gegner in der Ecke; dort zwingt ihn eine Mauer vor
+      // einem seiner zwei Ausgaenge seit dem Wegterm zu Recht zum Umweg.)
+      feld: [3, 3, 3, 3, 1, 2, 4, 5, 0, 0, 0, 0],
+      besitzer: [1, 1, 1, 1, null, null, null, null, 0, 0, 0, 0],
+      farbe: { 0: 0, 1: 3 },
+      punkte: { 0: 4, 1: 4 },
+      dran: 0,
+      zug: 8,
+    };
+    const sicht = sichtFuer(gelegt, 0);
+    assert.ok((sicht.barrierenMoeglich?.length ?? 0) > 0, 'die Sicht bietet Waende an');
+    const wert = bewerteWaende(sicht);
+    assert.ok(wert !== null && wert.besterWert < WAND_SCHWELLE, `bester Wert ${wert?.besterWert}`);
+    assert.equal(botZug(sicht).typ, 'faerben');
+  });
+
+  it('mauert, wenn eine Wand dem Gegner einen Umweg aufzwingt, ohne etwas abzutrennen', () => {
+    /*
+     * Der Fall, an dem der Bot unter Regel 2 verstummt war: Die Ecke des
+     * Gegners hat zwei Ausgaenge, keine Mauer darf ihn abtrennen — aber eine
+     * vor dem einen Ausgang laesst ihn alles dahinter erst einen Zug spaeter
+     * erreichen. Der Gebietsteil ist dabei 0; es traegt allein der Wegterm.
+     */
+    const partie = erstellePartie(REGELN, [0, 1], 1);
+    const gelegt = {
+      ...partie,
+      //  Zeile 0: 2 4 2 3   <- Ecke 3 gehoert Sitz 1
       //  Zeile 1: 1 2 4 2
-      //  Zeile 2: 0 1 2 4
-      // Lauter Einzelfelder: Keine Wand nimmt jemandem mehr als ein Feld,
-      // und ein halbes Feld liegt unter der Schwelle.
+      //  Zeile 2: 0 1 2 4   <- Ecke 8 gehoert Sitz 0
       feld: [2, 4, 2, 3, 1, 2, 4, 2, 0, 1, 2, 4],
       besitzer: [null, null, null, 1, null, null, null, null, 0, null, null, null],
       farbe: { 0: 0, 1: 3 },
@@ -584,8 +615,28 @@ describe('Build: Der Bot und die Wand', () => {
       zug: 4,
     };
     const sicht = sichtFuer(gelegt, 0);
-    assert.ok((sicht.barrierenMoeglich?.length ?? 0) > 0, 'die Sicht bietet Waende an');
-    assert.equal(botZug(sicht).typ, 'faerben');
+    const wert = bewerteWaende(sicht);
+    assert.ok(wert !== null && wert.teile !== null);
+    assert.equal(wert.teile.gebiet, 0, 'Regel 2: keine erlaubte Mauer trennt etwas ab');
+    assert.ok(wert.teile.weg >= WAND_SCHWELLE, `Wegterm ${wert.teile.weg}`);
+    const zug = botZug(sicht);
+    assert.equal(zug.typ, 'barriere');
+    // Und zwar an der Ecke des Gegners (Platz 3), nicht irgendwo.
+    assert.ok(zug.typ === 'barriere' && (zug.von === 3 || zug.nach === 3), JSON.stringify(zug));
+
+    /*
+     * Dieselbe Stellung mit der Grenze von zwei Mauern je Feld (Extreme):
+     * Beide Mauern an der Gegnerecke machen ein Randfeld voll (2 oder 7 —
+     * Rand plus Mauer), das naeher am Gegner liegt als an mir. Damit nimmt
+     * sich der Bot selbst einen Platz, an dem er den Gegner spaeter haette
+     * versperren koennen; das kostet PLATZ_WERT. Lohnen tut sie sich trotzdem.
+     */
+    const mitGrenze = { ...sicht, mauernJeFeld: 2 };
+    const begrenzt = bewerteWaende(mitGrenze);
+    assert.ok(begrenzt !== null && begrenzt.teile !== null);
+    assert.equal(begrenzt.teile.plaetze, -PLATZ_WERT);
+    assert.equal(begrenzt.besterWert, wert.besterWert - PLATZ_WERT);
+    assert.equal(botZug(mitGrenze).typ, 'barriere');
   });
 
   it('mauert ausserhalb der Spielart Build nie', () => {

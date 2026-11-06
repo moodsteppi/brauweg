@@ -253,11 +253,11 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
    * Vorsprung fuer jede Seite, eine laufende Partie und ein ausgestiegener
    * Sitz. Extreme ohne Aufbau-Tabelle, so wie jeder Tisch vor 8975c8e.
    *
-   * Build und Extreme neu erzeugt am 06.11.2026: Seit eine Mauer nie den
-   * letzten Weg schliessen darf (moeglicheBarrieren), findet der Bot in diesen
-   * Partien keine Wand mehr ueber seiner Schwelle und spielt sie ohne Mauern
-   * — Build damit Zug fuer Zug wie Klar, daher dieselben Abdruecke. Die
-   * Wertung selbst ist unveraendert; anders sind die Partien.
+   * Build und Extreme neu erzeugt am 06.11.2026, zweimal: Erst fand der Bot
+   * unter "nie den letzten Weg schliessen" (moeglicheBarrieren) keine Wand
+   * mehr ueber seiner Schwelle; seit dem Wegterm in bewerteWaende (bot.ts)
+   * mauert er wieder, Build spielt also NICHT mehr Zug fuer Zug wie Klar.
+   * Die Wertung selbst ist unveraendert; anders sind die Partien.
    */
   const VORHER: Record<string, string> = {
     'nebel/c0ffee1234567890abcdef0123456789': '8104d2b97ca72716',
@@ -268,14 +268,14 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
     'klar/1': 'a90acdce8d15a3f3',
     'klar/2': '97e9edaf8f9c890b',
     'klar/42': '157116fa79996aef',
-    'build/c0ffee1234567890abcdef0123456789': '8104d2b97ca72716',
-    'build/1': 'a90acdce8d15a3f3',
-    'build/2': '97e9edaf8f9c890b',
-    'build/42': '157116fa79996aef',
-    'extreme/c0ffee1234567890abcdef0123456789': 'd03a4ec4c491db26',
-    'extreme/1': '2b66a70e78e73566',
-    'extreme/2': '8ebaf1fc12ede263',
-    'extreme/42': '69407c0d0e279bfe',
+    'build/c0ffee1234567890abcdef0123456789': 'a068382ec2df87b3',
+    'build/1': '82c9b8e15086d1cf',
+    'build/2': '5870b297ef3bd8af',
+    'build/42': '72930456d12c8b2c',
+    'extreme/c0ffee1234567890abcdef0123456789': '279a3f3bf4c35bc5',
+    'extreme/1': '9887fd71c933322f',
+    'extreme/2': '92a6a9a9a62f6864',
+    'extreme/42': '88007534d2a7061f',
   };
   const hash = (x: unknown): string =>
     createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);

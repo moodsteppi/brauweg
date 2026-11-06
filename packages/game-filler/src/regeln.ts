@@ -98,7 +98,7 @@ export interface FillerRegeln {
    * der Spielfeldrand zaehlt dabei als Mauer (Regel Niklas, 05.11.2026, nur
    * Extreme). Fehlt die Zahl oder ist sie 0, gibt es keine Grenze — so wurde
    * jede Partie bis zum 06.11.2026 gespielt, und deren Snapshot traegt sie
-   * nicht. Siehe `mauerPlatzFrei` in partie.ts.
+   * nicht. Siehe `mauernAmFeld` in partie.ts.
    */
   readonly mauernJeFeld?: number;
   /**

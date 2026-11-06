@@ -217,21 +217,17 @@ describe('Extreme gross: Bot', () => {
     let pausiert = 0;
     let volleFelder = 0;
     /*
-     * Bis zum 06.11.2026 baute der Bot auf Saat 12 eine Doppelmauer. Seit eine
-     * Mauer nie den letzten Weg schliessen darf, findet er keine Wand mehr
-     * ueber seiner Schwelle (seine Wandrechnung lebt vom Abschneiden). Damit
-     * Doppelmauer und Pause trotzdem eine ganze Partie lang durchlaufen,
-     * mauert in jedem Zug zuerst ein Baumeister, solange das Modul etwas
+     * Der BAUMEISTER: In jedem Zug mauert zuerst er, solange das Modul etwas
      * anbietet — immer die erste angebotene Kante —, und erst dann zieht der
-     * Bot. Geprueft wird dabei jeder Zug gegen `legalActions`.
-     *
-     * Weil der Bot selbst nicht mehr mauert, ist das zugleich die einzige
-     * ganze Partie, in der Regel 2 und Regel 4 unter Last stehen (die
-     * Simulation in werkzeug/ sagt darueber nichts — dort faellt keine Mauer).
-     * Nach JEDER Mauer wird deshalb nachgerechnet: Kein Sitz erreicht weniger
-     * freie Felder als davor, und kein Feld traegt mehr als zwei Mauern, den
-     * Rand mitgezaehlt. Dass die Grenze dabei wirklich erreicht wird, zaehlt
-     * `volleFelder`.
+     * Bot. Entstanden am 06.11.2026, als der Bot unter Regel 2 gar nicht mehr
+     * mauerte; er bleibt, weil er Doppelmauer und Pause in JEDEM Zug
+     * erzwingt und Kanten nimmt, die kein Bot waehlen wuerde (die erste der
+     * Liste, oft am Rand). Geprueft wird dabei jeder Zug gegen `legalActions`.
+     * Nach JEDER Mauer wird nachgerechnet: Kein Sitz erreicht weniger freie
+     * Felder als davor (Regel 2), und kein Feld traegt mehr als zwei Mauern,
+     * den Rand mitgezaehlt (Regel 4). Dass die Grenze dabei wirklich erreicht
+     * wird, zaehlt `volleFelder`. Dieselbe Probe mit dem echten Bot steht
+     * darunter.
      */
     let mauernGesamt = 0;
     for (const saat of [SAAT, 12]) {
@@ -294,6 +290,66 @@ describe('Extreme gross: Bot', () => {
     assert.ok(volleFelder >= 1, 'die Probe erreicht die Grenze von zwei Mauern je Feld nie');
   });
 
+  /*
+   * Dieselbe Nachrechnung mit dem ECHTEN Bot auf beiden Sitzen (seit dem
+   * 06.11.2026, Niklas' Entscheidung "b+"): Der Bot mauert jetzt nach seiner
+   * eigenen Bewertung (Wegterm, Plaetze je Feld) — also an genau den Stellen,
+   * an denen Regel 2 und 4 am ehesten zuschlagen: eng am Gegner, wo eine
+   * Mauer gern den letzten Durchgang schliessen wuerde. Die Kanten nimmt er
+   * nur aus `barrierenMoeglich`; hier wird nachgerechnet, dass das Modul ihm
+   * dort nichts Verbotenes anbietet.
+   */
+  it('mauert mit dem echten Bot eine ganze Partie lang nach Regel 2 und Regel 4', () => {
+    let mauernGesamt = 0;
+    let doppel = 0;
+    let volleFelder = 0;
+    for (const saat of [SAAT, 12, 7]) {
+      let p = erstellePartie(EXTREME, [0, 1], saat);
+      let n = 0;
+      while (!p.fertig && n++ < 600) {
+        const sitz = p.dran;
+        const zug = botZug(sichtFuer(p, sitz));
+        const erlaubt = filler.legalActions(p, sitz);
+        assert.ok(
+          erlaubt.some(
+            (z) =>
+              (z.typ === 'faerben' && zug.typ === 'faerben' && z.farbe === zug.farbe) ||
+              (z.typ === 'barriere' &&
+                zug.typ === 'barriere' &&
+                kante(z.von, z.nach) === kante(zug.von, zug.nach)),
+          ),
+          `Saat ${saat}, Zug ${p.zug}: ${JSON.stringify(zug)} ist nicht erlaubt`,
+        );
+        if (zug.typ === 'barriere' && p.mauernDiesenZug === 1) doppel++;
+        const vorher = sitzeVon(p).map((s) => erreichbareFreie(p, s, new Set(p.barrieren)));
+        p = fuehreAus(p, sitz, zug);
+        if (zug.typ !== 'barriere') continue;
+        mauernGesamt++;
+        const gesetzt = new Set(p.barrieren);
+        sitzeVon(p).forEach((s, i) =>
+          assert.ok(
+            erreichbareFreie(p, s, gesetzt) >= vorher[i]!,
+            `Saat ${saat}, Zug ${p.zug}: Mauer ${zug.von}|${zug.nach} trennt Sitz ${s} ab (Regel 2)`,
+          ),
+        );
+        const { spalten, zeilen } = p.regeln;
+        for (const platz of [zug.von, zug.nach]) {
+          const zahl = mauernAmFeld(platz, spalten, zeilen, gesetzt);
+          assert.ok(zahl <= 2, `Saat ${saat}: Feld ${platz} traegt ${zahl} Mauern (Regel 4)`);
+          if (zahl === 2 && mauernAmFeld(platz, spalten, zeilen, new Set()) < 2) volleFelder++;
+        }
+      }
+      assert.ok(p.fertig, `Saat ${saat}: Partie endet`);
+    }
+    // Untergrenzen weit unter dem Gemessenen (rund 43 Mauern je Partie, siehe
+    // "Der Bot mauert in ganzen Partien" in barrieren.test.ts): Sie sollen
+    // nur sicherstellen, dass hier wirklich gemauert wird — sonst prueft die
+    // Probe Regel 2 und 4 an nichts.
+    assert.ok(mauernGesamt >= 30, `nur ${mauernGesamt} Mauern in drei Partien`);
+    assert.ok(volleFelder >= 1, 'der Bot bringt nie ein Feld an die Grenze von zwei Mauern');
+    assert.ok(doppel >= 1, 'der Bot baut nie eine zweite Mauer im selben Zug');
+  });
+
   it('faerbt in der Pause, auch wenn er noch Mauern hat', () => {
     const p0 = nachEroeffnung();
     const ich = p0.dran;
@@ -348,8 +404,10 @@ describe('Andere Spielarten unveraendert', () => {
    *
    * Ausnahme seit dem 06.11.2026: der ENDSTAND in Build. Die Mauerregeln
    * "nur an einem freien Feld" und "nie den letzten Weg schliessen" gelten
-   * auch dort, und mit ihnen setzt der Bot keine Mauer mehr. Das Brett (der
-   * erste Abdruck) ist unveraendert, die Partie eine andere.
+   * auch dort; erst setzte der Bot darunter keine Mauer mehr, seit dem
+   * Wegterm in bewerteWaende (bot.ts, ebenfalls 06.11.2026) mauert er wieder
+   * — anders als vor dem Regelfix. Das Brett (der erste Abdruck) ist
+   * unveraendert, die Partie eine andere.
    */
   const VORHER: Record<string, readonly [string, string]> = {
     'nebel/c0ffee1234567890abcdef0123456789': ['b99a18adf10e9de9', '98e749e08f84d18f'],
@@ -360,10 +418,10 @@ describe('Andere Spielarten unveraendert', () => {
     'klar/1': ['5ada94f15c79cd12', '18449abd965255ab'],
     'klar/2': ['9488e3949af834bf', 'd45b908bf92f460c'],
     'klar/42': ['a54e26fc806530fd', '9f0adb58cb89de3d'],
-    'build/c0ffee1234567890abcdef0123456789': ['8e2077a6200c183c', '3859712d06eaf6a7'],
-    'build/1': ['3fbf3266569e124c', 'e3af59053946588d'],
-    'build/2': ['ea5de89035bc8107', '23e13cffeee5ac48'],
-    'build/42': ['736271c48db7a257', 'f1f155f7b35480b7'],
+    'build/c0ffee1234567890abcdef0123456789': ['8e2077a6200c183c', '791dfe9216ff083d'],
+    'build/1': ['3fbf3266569e124c', '7a26d141e9121b74'],
+    'build/2': ['ea5de89035bc8107', '455d6b589aac310c'],
+    'build/42': ['736271c48db7a257', '9501469822898af3'],
   };
   const hash = (x: unknown): string =>
     createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);
