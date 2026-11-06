@@ -18,6 +18,8 @@
  * ankommt — wann, ist egal.
  */
 
+import { t } from '../../i18n';
+import { tn } from '../../i18n/einsetzen';
 import { Gleichschritt } from './gleichschritt';
 import { type Karte, loeseBahnen } from './karte';
 import { type Golfmodus, modusAus } from './modifikator';
@@ -341,7 +343,7 @@ export class Golfnetz {
    */
   abgewiesen(): void {
     this.heilung = true;
-    this.umg.melde?.('Schlag kam nicht durch - wird abgeglichen …');
+    this.umg.melde?.(t('golf.spiel.abgewiesen'));
     this.umg.neuVerbinden();
   }
 
@@ -369,9 +371,8 @@ export class Golfnetz {
     if (aufgeloest.karten === null) {
       // Nur beim ersten Mal melden: Jede weitere Sicht landet wieder hier.
       if (this.fehlend.length === 0) {
-        this.umg.melde?.(
-          `Diese Fassung kennt ${aufgeloest.unbekannt.length === 1 ? 'eine Bahn' : 'mehrere Bahnen'} der Partie nicht - bitte die Seite neu laden.`,
-        );
+        // Ohne Zahl im Text — „mehrere" sagt genug; `tn` wählt nur die Form.
+        this.umg.melde?.(tn('golf.spiel.fassungAlt', aufgeloest.unbekannt.length));
       }
       this.fehlend = aufgeloest.unbekannt;
       this.partieKarten = [];
