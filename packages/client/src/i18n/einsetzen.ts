@@ -2,10 +2,9 @@
  * Texte mit Lücken: `tf` setzt Werte ein, `tn` wählt dazu Einzahl oder Mehrzahl.
  *
  * Warum nicht einfach Bruchstücke aneinanderhängen (`t('a') + n + t('b')`):
- * Die Wortstellung ist je Sprache eine andere. „{besetzt} von {plaetze}
- * Plätzen besetzt" heißt im Englischen „{besetzt} of {plaetze} seats taken",
- * und „{name} werfen" wird zu „Throw {name}" — das Verb wandert nach vorn.
- * Wer Bruchstücke übersetzt, legt die deutsche Satzstellung über jede Sprache. Ein Schlüssel ist deshalb immer
+ * Die Wortstellung ist je Sprache eine andere. „von 300 bis nach Eisland"
+ * heißt im Englischen „300 to Eisland" — wer Bruchstücke übersetzt, legt die
+ * deutsche Satzstellung über jede Sprache. Ein Schlüssel ist deshalb immer
  * ein GANZER Satz, die Lücken stehen darin als `{name}`.
  *
  * Eigene Datei statt einer Ergänzung in `index.ts`: Mehrere Übersetzungs-
