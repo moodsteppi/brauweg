@@ -240,6 +240,17 @@ export const account = pgTable(
      * Geraet.
      */
     mememoryZufall: boolean().notNull().default(false),
+    /**
+     * Gewaehlte Sprache der Oberflaeche (`de`, `en`) — oder null fuer
+     * „Automatisch": Dann folgt der Client der Sprache des Geraets.
+     *
+     * Am Konto wie `mememoryZufall` und nicht nur am Geraet wie die
+     * Lautstaerke: Wer Englisch waehlt, will es auch am zweiten Geraet, ohne
+     * dort erst den Schalter zu suchen — in einer Sprache, die er nicht liest.
+     * Text und keine Aufzaehlung in der Datenbank: Eine neue Sprache ist eine
+     * Zeile in `SPRACHEN` (src/sprache.ts), keine Migration.
+     */
+    sprache: text(),
     /** Kalenderjahr, in dem die Geburtstagsbelohnung zuletzt eingesammelt wurde. */
     birthdayRewardYear: integer(),
     /*
@@ -1701,7 +1712,7 @@ export const tagesmarkt = pgTable('tagesmarkt', {
 }, t => [primaryKey({ columns: [t.accountId, t.tag] })]);
 
 // ---------------------------------------------------------------------------
-// Flying Bro (Projekt #18, 06.11.2026) — src/flyingbro.ts, Migration 0041
+// Flying Bro (Projekt #18, 06.11.2026) — src/flyingbro.ts, Migration 0042
 // ---------------------------------------------------------------------------
 
 /** Ein laufender Levelstart: wann, welches Level, welche Hilfsmittel schon bezahlt sind. */

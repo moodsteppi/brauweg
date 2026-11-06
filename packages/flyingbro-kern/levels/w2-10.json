@@ -1,0 +1,221 @@
+{
+  "fassung": 1,
+  "id": "w2-10",
+  "welt": 2,
+  "nr": 10,
+  "titel": "Steinmauer",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "tjark",
+    "pelle",
+    "tjark",
+    "malve",
+    "tjark",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    22500,
+    34500
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 12.5,
+      "y": 0.4,
+      "b": 0.8,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 12.5,
+      "y": 1.2,
+      "b": 0.8,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 12.5,
+      "y": 2,
+      "b": 0.8,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 16.3,
+      "y": 1.1,
+      "b": 0.4,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18.7,
+      "y": 1.1,
+      "b": 0.4,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 17.5,
+      "y": 2.3,
+      "b": 3.2,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16.3,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18.7,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 17.5,
+      "y": 3.9,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "dreieck",
+      "x": 17.5,
+      "y": 4.35,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 22,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 24,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 23,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 22,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 24,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 23,
+      "y": 2.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 22,
+      "y": 3,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 24,
+      "y": 3,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 23,
+      "y": 3.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 23,
+      "y": 3.9,
+      "b": 0.6,
+      "h": 0.6
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "langhals",
+      "x": 17.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 17.5,
+      "y": 2.4,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 23,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 23,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 23,
+      "y": 2.6,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}

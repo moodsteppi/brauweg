@@ -3,7 +3,7 @@
  *
  * Hier und nicht im Client, weil die Mitteilung auf dem Sperrbildschirm
  * steht, bevor irgendein Client-Code laeuft. Die Oberflaechentexte des
- * Clients (`i18n.ts`) erreicht der Server nicht, und sie zu kopieren waere
+ * Clients (`client/src/i18n/`) erreicht der Server nicht, und sie zu kopieren waere
  * eine zweite Wahrheit, die spaetestens beim ersten umbenannten Spiel
  * auseinanderlaeuft — deshalb stehen hier nur die wenigen Worte, die eine
  * Mitteilung braucht.
@@ -26,7 +26,7 @@ export const SPIELNAMEN: Readonly<Record<string, string>> = {
   cambio: 'Cambio',
   easypoker: 'Poker',
   mememory: 'Mememory',
-  // In der App heisst Filler „Farbduell" (APP_NAMEN in i18n.ts des Clients).
+  // In der App heisst Filler „Farbduell" (APP_NAMEN in client/src/i18n/index.ts).
   filler: 'Farbduell',
   eiland: 'Eiland',
   feldherr: 'Feldherr',

@@ -101,6 +101,7 @@ import {
   type Plattform,
 } from '../games/registry.js';
 import { ALLES, imUmfang, umfangFuerClient, type Funktion, type Umfang } from '../umfang.js';
+import { SPRACHEN } from '../sprache.js';
 import {
   acceptFriendship,
   listFriendships,
@@ -1174,6 +1175,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         // sondern nur ueber die eigene URL, die der Browser zwischenspeichert.
         hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
         figurBemalung: s.account.figurBemalung,
+        // Gewaehlte Sprache, null = „Automatisch" (der Client fragt das Geraet).
+        sprache: s.account.sprache,
       })
       .from(s.account)
       .where(eq(s.account.id, accountId));
@@ -1740,10 +1743,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
           .max(60_000)
           .nullable()
           .optional(),
+        // Sprache der Oberflaeche; null stellt zurueck auf „Automatisch".
+        sprache: z.enum(SPRACHEN).nullable().optional(),
       })
       .parse(request.body);
 
     const set: Record<string, unknown> = {};
+    if (body.sprache !== undefined) set.sprache = body.sprache;
     if (body.avatar !== undefined) {
       // Der Kopf einer data-URL ist nur eine Behauptung. Ohne Blick auf die
       // ersten Bytes liesse sich HTML als "image/png" ablegen und danach von

@@ -1024,7 +1024,7 @@ const AD3 = ['Bro', 'Nele', 'Kalle', 'Basti'];
 const FARBNAME = { C: 'Kreuz', S: 'Pik', H: 'Herz', D: 'Karo' };
 const WERTNAME = { A: 'Ass', T: 'Zehn', K: 'König', Q: 'Dame', J: 'Bube', 9: 'Neun' };
 
-/** Wie `cardName` im Client (i18n.ts) — so steht die Karte im `alt` ihres Bildes bzw. im `aria-label` des Textblatts (CardFace.tsx). */
+/** Wie `cardName` im Client (`client/src/i18n/index.ts`) — so steht die Karte im `alt` ihres Bildes bzw. im `aria-label` des Textblatts (CardFace.tsx). */
 const kartenName = (k) => `${FARBNAME[k.suit] ?? k.suit} ${WERTNAME[k.rank] ?? k.rank}`;
 
 /** Bedienfarbe wie `servingSuit` in game-doppelkopf/src/order.ts: Trumpf ist eine eigene Farbe. */

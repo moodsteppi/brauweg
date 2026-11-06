@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 
 import { ApiError, api, type Me } from './api';
-import { t } from './i18n';
+import { setzeSprachwahl, t } from './i18n';
+import { useSprache } from './i18n/useSprache';
 import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { inApp } from './laufzeit';
@@ -239,6 +240,25 @@ export function App(): React.JSX.Element {
    * `joinTable` im Server einen schon Sitzenden unveraendert zurueckgibt.
    */
   const kontoId = me?.id ?? null;
+
+  /*
+   * Sprache. Die Wurzel haelt sie als Zustand, damit ein Umschalten den
+   * ganzen Baum neu zeichnet — ohne Neuladen und ohne neu einzuhaengen (ein
+   * `key` an der Wurzel wuerde offene Blaetter und die Tischverbindung
+   * mitnehmen). Der Wert selbst wird hier nicht gebraucht: `t()` liest ihn.
+   */
+  useSprache();
+  /*
+   * Die Wahl am Konto gilt, sobald `/api/me` da ist — sie ist die, die auf
+   * jedem Geraet gleich sein soll. Am Wert und nicht an `me`: `reload()`
+   * ersetzt das Objekt nach jeder Partie. `undefined` heisst aelterer Server
+   * ohne das Feld; dann bleibt, was im Geraet steht.
+   */
+  const kontoSprache = me?.sprache;
+  useEffect(() => {
+    if (kontoSprache === undefined) return;
+    setzeSprachwahl(kontoSprache ?? 'auto');
+  }, [kontoSprache]);
 
   /**
    * Der Tafelrunde-Link fuehrt am Server vorbei in den Schirm. Ist Tafelrunde

@@ -1,0 +1,302 @@
+{
+  "fassung": 1,
+  "id": "w2-15",
+  "welt": 2,
+  "nr": 15,
+  "titel": "Der Gutshof",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "tjark",
+    "pelle",
+    "malve",
+    "tjark",
+    "pelle",
+    "tjark",
+    "malve"
+  ],
+  "sterne": [
+    0,
+    37500,
+    52500
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 12,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 14,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 13,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 12,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 14,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 13,
+      "y": 2.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "dreieck",
+      "x": 13,
+      "y": 2.95,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 16.5,
+      "y": 1.1,
+      "b": 0.4,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 19.5,
+      "y": 1.1,
+      "b": 0.4,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18,
+      "y": 2.3,
+      "b": 3.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 16.5,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 19.5,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18,
+      "y": 3.9,
+      "b": 3.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16.5,
+      "y": 4.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19.5,
+      "y": 4.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18,
+      "y": 5.5,
+      "b": 3.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 16.5,
+      "y": 6,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 19.5,
+      "y": 6,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 18,
+      "y": 6.5,
+      "b": 3.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "dreieck",
+      "x": 18,
+      "y": 6.95,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 22.3,
+      "y": 1.1,
+      "b": 0.2,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 24.7,
+      "y": 1.1,
+      "b": 0.2,
+      "h": 2.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 23.5,
+      "y": 2.3,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 22.3,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 24.7,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 23.5,
+      "y": 3.9,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 27.5,
+      "y": 0.6,
+      "b": 0.6,
+      "h": 1.2
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "giraffe",
+      "x": 13,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 13,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "langhals",
+      "x": 18,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 18,
+      "y": 2.4,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 18,
+      "y": 4,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 18,
+      "y": 5.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "langhals",
+      "x": 23.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 23.5,
+      "y": 2.4,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 23.5,
+      "y": 4,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}
