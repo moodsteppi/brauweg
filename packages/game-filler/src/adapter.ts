@@ -102,15 +102,15 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
    * keinen Stern und wuesste nicht, warum der Gegner ploetzlich zwei Punkte
    * und eine Mauer mehr hat.
    *
-   * Seit dem 5. November 2026 (Extreme auf 12 x 11, bis zu zwei Mauern je
-   * Zug, Pause danach) bewusst NICHT hochgesetzt: Ein Client der Version 5
-   * spielt richtig weiter — die Mauerziele kommen fertig aus
-   * `barrierenMoeglich`, das Brett aus `spalten`/`zeilen` —, er erklaert die
-   * Pause nur nicht. Hochsetzen gehoert zu dem Bildschirm, der
-   * `mauernJeZug`, `mauernDiesenZug` und `mauerPause` anzeigt; sonst laege
-   * der Client eine Version zurueck, ohne dass ihm etwas fehlt.
+   * Version 6 seit dem 06.11.2026: der Bildschirm, der `mauernJeZug`,
+   * `mauernDiesenZug` und `mauerPause` anzeigt (Extreme auf 12 x 11, bis zu
+   * zwei Mauern je Zug, Pause danach). Die Sicht selbst kam schon einen Tag
+   * vorher mit dem Spielkern; hochgesetzt wurde erst mit dem Bildschirm,
+   * sonst laege der Client eine Version zurueck, ohne dass ihm etwas fehlt.
+   * Ein Client der 5 darf weiter beitreten — er spielt richtig, erklaert
+   * nur die Pause nicht.
    */
-  protocolVersion: 5,
+  protocolVersion: 6,
 
   defaultConfig: () => DEFAULT_REGELN,
 
