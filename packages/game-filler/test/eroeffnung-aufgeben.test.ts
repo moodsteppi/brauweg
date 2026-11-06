@@ -272,6 +272,11 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
    * 3. VORHER — der echte Bot. Was hier bricht, ohne dass 1 oder 2 bricht,
    *    kommt aus der Mauerwahl in bot.ts. Herkunft je Schluessel in
    *    GESCHICHTE.
+   *
+   * Die Werte sind festgeschrieben; dass Schicht 1 auf `staging` wirklich
+   * dieselben liefert und die staging-Werte in den Kommentaren stimmen,
+   * rechnet `node werkzeug/abdruck-schichten.mjs <dist>` fuer jeden gebauten
+   * Stand nach (Ablauf im Kopf des Skripts).
    */
   const VORHER: Record<string, string> = {
     'nebel/c0ffee1234567890abcdef0123456789': '8104d2b97ca72716',

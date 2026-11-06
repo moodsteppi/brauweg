@@ -20,7 +20,14 @@ auf dem 8 x 7-Extreme und ist mit dieser nicht vergleichbar.
 | Mauern je Partie (Bot)                         | 9.32           | 0.00            | 3.65         | 0.00          | –            |
 | Sieg Sitz 0 / Sitz 1 / remis                   | 57.5/38.5/4.0  | 60.0/34.5/5.5   | 56.5/31.5/12 | 52/36/12      | 52/36/12     |
 
-Der Bot ist unveraendert. Sein Wandwert lebt vom Abtrennen (Felder, die nur
+**Stand dieser Messung: fae4a420, NICHT der Endstand des Zweigs.** Danach
+wurde der Bot auf Niklas' Entscheidung "b+" umgebaut (eac0ba11) und mauert
+wieder — mit Folgen, die hier noch nicht stehen: 42,63 / 18,92 Mauern je
+Partie und EINGESPERRT 66,5 % / 54,0 % (Extreme / Build). Diese Zahlen stehen
+in MESSUNG-2026-11-06-bot-mauert.md. Der folgende Absatz und die Spalten
+"nachher" beschreiben den Regelfix mit dem damals unveraenderten Bot.
+
+Der Bot ist (bei fae4a420) unveraendert. Sein Wandwert lebt vom Abtrennen (Felder, die nur
 einer erreicht); genau das verbietet Regel 2 jetzt. Uebrig bleibt der halbe
 Zugterm, hoechstens 1,0 gegen die Schwelle 2 — er mauert nicht mehr. Build
 spielt dadurch Zug fuer Zug wie Klar.

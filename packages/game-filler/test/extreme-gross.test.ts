@@ -418,6 +418,9 @@ describe('Andere Spielarten unveraendert', () => {
    *   daec5b1bbc50b669, b42532c7d1c2b279, 1ed530456700461b; nach dem
    *   Regelfix mauerte der alte Bot nicht mehr und landete GENAU auf
    *   BUILD_OHNE_MAUERN; seit dem Wegterm mauert er wieder.
+   *
+   * Alle staging-Werte rechnet `node werkzeug/abdruck-schichten.mjs <dist>`
+   * nach (Zeilen "gross-ende").
    */
   const VORHER: Record<string, readonly [string, string]> = {
     'nebel/c0ffee1234567890abcdef0123456789': ['b99a18adf10e9de9', '98e749e08f84d18f'],
