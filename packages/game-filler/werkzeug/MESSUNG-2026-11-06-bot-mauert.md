@@ -67,7 +67,16 @@ senkt das Einsperren also nur wenig und kostet deutlich Spielstaerke.
 
     node werkzeug/bot-duell.mjs --alt <Kopie dist/src von 0c98d5bf> --build 200 --extreme 200
 
-Siehe Nachtrag unten.
+Jede Saat zweimal (neu auf Sitz 0, dann auf Sitz 1), Regeln und Zustand vom
+neuen Stand, nur `botZug` je Sitz aus der einen oder anderen Kopie:
+
+| Spielart | Partien | Siege neu | Siege alt | remis | Punkte neu/alt | Mauern je Partie neu/alt |
+|---|---|---|---|---|---|---|
+| build | 400 | 100.0 % | 0.0 % | 0.0 % | 40.9 / 15.1 | 7.46 / 0.00 |
+| extreme | 400 | 100.0 % | 0.0 % | 0.0 % | 109.8 / 30.2 | 15.36 / 0.00 |
+
+Der alte Bot mauert unter den neuen Regeln gar nicht und wird
+eingesperrt; der neue gewinnt jede Partie.
 
 ## Befund: Einsperren entscheidet jetzt die Partie
 
