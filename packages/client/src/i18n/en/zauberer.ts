@@ -7,6 +7,11 @@ import type { Woerterbuch } from '../woerterbuch';
  * `game.wizard` in `de/spiele.ts`), die Sonderkarten deshalb „Mage" und
  * „Fool" (`en/karten-zauberer.ts`). Wo ein Text die Karte nennt, steht
  * derselbe Name.
+ *
+ * Vorschlag für den Spielnamen (`game.wizard` liegt im Bereich „spiele" der
+ * Hub-Aufgabe, deshalb nicht hier): „Mages & Fools". Er nennt beide
+ * Sonderkarten mit ihren englischen Namen, ist kein eingetragener Titel und
+ * hält Abstand zu „Mage" allein (Rollenspielreihe „Mage: The Ascension").
  */
 export default {
   'zauberer.laden': 'Loading table…',
