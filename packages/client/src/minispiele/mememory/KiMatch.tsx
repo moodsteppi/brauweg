@@ -18,7 +18,9 @@ import { useState } from 'react';
 import { SpielAbschnitt, SpielRahmen } from '../../screens/SpielEinstieg';
 import { Kreuz } from '../../zeichen';
 import { AKZENT } from './akzent';
-import { STUFEN, Stufenregler, type Stufe } from './Stufenregler';
+import { t } from '../../i18n';
+import { tf } from '../../i18n/einsetzen';
+import { Stufenregler, stufenSatz, type Stufe } from './Stufenregler';
 
 /**
  * So viele Bots passen an einen Tisch. Vier Sitze, einer ist der Mensch.
@@ -49,20 +51,20 @@ export function KiMatch({
 
   const unter =
     gegner.length === 1
-      ? 'Wie gut soll dein Gegner sich erinnern?'
-      : `${gegner.length} Gegner - jeder mit eigenem Gedächtnis.`;
+      ? t('mememory.ki.unterEins')
+      : tf('mememory.ki.unterMehr', { n: gegner.length });
 
   return (
     <SpielRahmen
       gameId="mememory"
-      titel="KI-Match erstellen"
+      titel={t('mememory.ki.titel')}
       unter={unter}
       akzent={AKZENT}
       // Gesperrt, solange der Tisch aufgeht.
       onBack={() => {
         if (!laeuft) onBack();
       }}
-      zurueckText="Zurück"
+      zurueckText={t('mememory.zurueck')}
       fuss={
         <button
           type="button"
@@ -70,7 +72,7 @@ export function KiMatch({
           onClick={() => onStart(gegner)}
           disabled={laeuft}
         >
-          {laeuft ? 'Tisch wird aufgemacht…' : 'Match starten'}
+          {laeuft ? t('mememory.ki.laeuft') : t('mememory.ki.starten')}
         </button>
       }
     >
@@ -80,7 +82,7 @@ export function KiMatch({
           key={index}
           // "Gegner 1" erst ab dem zweiten: Bei genau einem waere die Nummer
           // eine Beschriftung ohne Aussage.
-          titel={gegner.length > 1 ? `Gegner ${index + 1}` : 'Gegner'}
+          titel={gegner.length > 1 ? tf('mememory.ki.gegnerNr', { n: index + 1 }) : t('mememory.ki.gegner')}
           zusatz={
             gegner.length > 1 ? (
               <button
@@ -88,7 +90,7 @@ export function KiMatch({
                 className="hb-rund spe-weg"
                 onClick={() => setGegner((alt) => alt.filter((_, i) => i !== index))}
                 disabled={laeuft}
-                aria-label={`Gegner ${index + 1} entfernen`}
+                aria-label={tf('mememory.ki.entfernen', { n: index + 1 })}
               >
                 <Kreuz />
               </button>
@@ -100,10 +102,10 @@ export function KiMatch({
               wert={gewaehlt}
               onWert={(stufe) => setze(index, stufe)}
               gesperrt={laeuft}
-              beschriftung={`Spielstärke von Gegner ${index + 1}`}
+              beschriftung={tf('mememory.ki.staerkeVon', { n: index + 1 })}
             />
             <p className="mm-stufensatz">
-              {STUFEN.find((eintrag) => eintrag.stufe === gewaehlt)?.satz}
+              {stufenSatz(gewaehlt)}
             </p>
           </div>
         </SpielAbschnitt>
@@ -115,8 +117,8 @@ export function KiMatch({
           onClick={() => setGegner((alt) => [...alt, 'mittel'])}
           disabled={laeuft}
         >
-          <span>+ Gegner hinzufügen</span>
-          <em className="spe-kn-zahl">bis zu {GEGNER_MAX}</em>
+          <span>{t('mememory.ki.hinzu')}</span>
+          <em className="spe-kn-zahl">{tf('mememory.ki.bisZu', { n: GEGNER_MAX })}</em>
         </button>
       )}
     </SpielRahmen>

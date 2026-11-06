@@ -11,6 +11,8 @@
  * schmalen Telefon in einem Zug.
  */
 
+import { t } from '../../i18n';
+
 export function MehrSeite({
   wartende,
   onKasten,
@@ -22,7 +24,7 @@ export function MehrSeite({
   return (
     <div className="mm-seite mm-seite-mehr">
       <header className="mm-seite-kopf">
-        <h2>Mehr</h2>
+        <h2>{t('mememory.mehr')}</h2>
       </header>
 
       {/* Der Baustellenhinweis. Er steht ganz oben, weil er fuer die ganze
@@ -60,8 +62,8 @@ export function MehrSeite({
           </svg>
         </span>
         <div>
-          <b>Im Bau</b>
-          <p>Hier wird noch gewerkelt. Was schon geht, steht unten.</p>
+          <b>{t('mememory.mehrSeite.imBau')}</b>
+          <p>{t('mememory.mehrSeite.imBauText')}</p>
         </div>
       </div>
 
@@ -93,8 +95,8 @@ export function MehrSeite({
               </svg>
             </span>
             <span className="mm-zeile-text">
-              <b>Vorschlagskasten</b>
-              <em>Eigene Memes einreichen</em>
+              <b>{t('mememory.kasten.titel')}</b>
+              <em>{t('mememory.mehrSeite.kastenText')}</em>
             </span>
             {wartende > 0 && <span className="mm-zeile-punkt">{wartende}</span>}
             <span className="mm-zeile-pfeil" aria-hidden="true">
