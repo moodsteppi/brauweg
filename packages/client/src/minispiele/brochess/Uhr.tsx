@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { tf } from '../../i18n/einsetzen';
 import stil from './BroChess.module.css';
 import { uhrText } from './zeit';
 
@@ -40,7 +41,7 @@ export function Uhr({
     .filter(Boolean)
     .join(' ');
   return (
-    <span className={klassen} role="timer" aria-label={`Uhr ${name}: ${uhrText(ms)}`}>
+    <span className={klassen} role="timer" aria-label={tf('brochess.uhr', { name, zeit: uhrText(ms) })}>
       {uhrText(ms)}
     </span>
   );

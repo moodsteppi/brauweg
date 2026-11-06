@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { aktiveSprache, t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { spiele } from '../klang';
 import { szeneBild } from '../szenen';
 import { Ladekreis } from '../Ladekreis';
 import { Brett, ZEICHEN, ergebnis, statusText } from '../minispiele/brochess/Brett';
 import { figurensatzAus } from '../minispiele/brochess/figurensatz';
-import { REGEL_TEXT, frischesEreignis, meldung, trenneAktionen, wahlHinweis } from '../minispiele/brochess/geheim';
+import { figurName, frischesEreignis, meldung, regelText, trenneAktionen, wahlHinweis } from '../minispiele/brochess/geheim';
 import stil from '../minispiele/brochess/BroChess.module.css';
 import type { BroChessAufgabe, BroChessSicht, BroChessWahl, Farbe } from '../minispiele/brochess/sicht';
 import { Uhr } from '../minispiele/brochess/Uhr';
@@ -23,8 +25,6 @@ function mitFigurinen(san: string): string {
   return san.startsWith('O-O') ? san : san.replace(/[KQRBN]/g, (b) => FIGURINE[b] ?? b);
 }
 
-const FIGUR_KURZ: Record<string, string> = { p: 'Bauer', n: 'Springer', b: 'Läufer', r: 'Turm', q: 'Dame' };
-
 /** Wie lange eine Meldung zur geheimen Dame stehen bleibt. */
 const MELDUNG_MS = 5000;
 
@@ -34,9 +34,10 @@ function zeitTitel(uhr: BroChessSicht['uhr']): string | null {
   const z = ZEITKONTROLLEN.find(
     (k) => Math.round(k.minuten * 60_000) === uhr.bedenkzeitMs && k.zuschlagS * 1000 === uhr.zuschlagMs,
   );
-  if (z) return `${zeitText(z)} · ${ARTNAME[z.art]}`;
-  const min = Math.round(uhr.bedenkzeitMs / 60_000);
-  return uhr.zuschlagMs > 0 ? `${min} + ${uhr.zuschlagMs / 1000}` : `${min} min`;
+  if (z) return tf('brochess.zeit.titelArt', { zeit: zeitText(z), art: ARTNAME[z.art] });
+  const zahl = (n: number): string => n.toLocaleString(aktiveSprache());
+  const min = zahl(Math.round(uhr.bedenkzeitMs / 60_000));
+  return uhr.zuschlagMs > 0 ? `${min} + ${zahl(uhr.zuschlagMs / 1000)}` : tf('brochess.zeit.min', { n: min });
 }
 
 /**
@@ -139,7 +140,7 @@ export function BroChessTable({
     return (
       <div className={`spe ${stil.tisch}`} style={{ backgroundImage: `linear-gradient(#09152cd9,#09152ce8),url(${szeneBild(szene)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className={stil.laedt}>
-          <Ladekreis text={error ?? 'Verbinde mit dem Tisch…'} />
+          <Ladekreis text={error ?? t('brochess.verbinde')} />
         </div>
       </div>
     );
@@ -152,7 +153,7 @@ export function BroChessTable({
   // die Farbe ein Spieler.
   const nameVon = (farbe: Farbe): string =>
     platz(farbe)?.displayName ??
-    (view.botSeats.includes(sitzVon(farbe)) ? 'Bot' : farbe === 'w' ? 'Weiß' : 'Schwarz');
+    (view.botSeats.includes(sitzVon(farbe)) ? t('brochess.bot') : t(`brochess.farbe.${farbe}`));
 
   const oben: Farbe = sicht.meineFarbe === 'b' ? 'w' : 'b';
   const unten: Farbe = oben === 'w' ? 'b' : 'w';
@@ -187,11 +188,11 @@ export function BroChessTable({
         <span className={stil.leisteText}>
           <strong>
             {spielerName(nameVon(farbe), platz(farbe)?.accountId)}
-            {ich && <small> (du)</small>}
-            {istBot && <small> · {farbe === 'w' ? 'Weiß' : 'Schwarz'}</small>}
-            {view.leftSeats.includes(sitz) && <small> · weg</small>}
+            {ich && <small> {t('brochess.du')}</small>}
+            {istBot && <small> · {t(`brochess.farbe.${farbe}`)}</small>}
+            {view.leftSeats.includes(sitz) && <small> · {t('brochess.weg')}</small>}
           </strong>
-          <span className={stil.gefangen} aria-label={`${gefangen.length} Figuren geschlagen`}>
+          <span className={stil.gefangen} aria-label={tn('brochess.geschlagenAria', gefangen.length)}>
             {gefangen.map((art, i) => (
               <span key={i} className={farbe === 'w' ? stil.figurSchwarz : stil.figurWeiss}>
                 {ZEICHEN[art]}
@@ -221,9 +222,9 @@ export function BroChessTable({
   const aufgeben = (): void =>
     frage(
       {
-        titel: 'Aufgeben?',
-        text: 'Die Partie ist dann verloren.',
-        ja: 'Aufgeben',
+        titel: t('brochess.aufgeben.titel'),
+        text: t('brochess.aufgeben.text'),
+        ja: t('brochess.aufgeben'),
         gefahr: true,
       },
       () => send({ type: 'aufgeben' } satisfies BroChessAufgabe),
@@ -232,7 +233,7 @@ export function BroChessTable({
   return (
     <div className={`spe ${stil.tisch}`} style={{ backgroundImage: `linear-gradient(#09152cd9,#09152ce8),url(${szeneBild(szene)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <header className={stil.kopf}>
-        <button type="button" className="hb-rund" onClick={onLeave} aria-label="Zurück">
+        <button type="button" className="hb-rund" onClick={onLeave} aria-label={t('brochess.zurueck')}>
           <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 5l-7 7 7 7" />
           </svg>
@@ -241,8 +242,8 @@ export function BroChessTable({
           <h1>BroChess</h1>
           {titel && <span>{titel}</span>}
           {sd && (
-            <span className={stil.kopfModus} title={REGEL_TEXT[sd.regel].satz}>
-              Secret Dame · {REGEL_TEXT[sd.regel].kurz}
+            <span className={stil.kopfModus} title={regelText(sd.regel).satz}>
+              {tf('brochess.kopfModus', { modus: t('brochess.secretDame'), regel: regelText(sd.regel).kurz })}
             </span>
           )}
         </div>
@@ -272,8 +273,8 @@ export function BroChessTable({
         />
         {spielerLeiste(unten)}
 
-        <ol className={stil.zugliste} ref={zugliste} aria-label="Zugliste">
-          {paare.length === 0 && <li className={stil.zuglisteLeer}>Noch kein Zug</li>}
+        <ol className={stil.zugliste} ref={zugliste} aria-label={t('brochess.zugliste')}>
+          {paare.length === 0 && <li className={stil.zuglisteLeer}>{t('brochess.keinZug')}</li>}
           {paare.map(([nr, weiss, schwarz], i) => {
             const letzte = i === paare.length - 1;
             return (
@@ -305,11 +306,11 @@ export function BroChessTable({
             {hinweis ?? status.text}
           </p>
         )}
-        {!connected && <p className="hb-fehler">Verbindung unterbrochen - verbinde neu…</p>}
+        {!connected && <p className="hb-fehler">{t('brochess.verbindungWeg')}</p>}
         {error && connected && <p className="hb-fehler">{error}</p>}
         {view.finished || aus ? (
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onLeave}>
-            Zur Spielauswahl
+            {t('brochess.zurAuswahl')}
           </button>
         ) : wahl.length > 0 ? (
           // Die eigene Wahl steht noch aus: Bestaetigen statt Aufgeben, damit
@@ -323,17 +324,19 @@ export function BroChessTable({
             {vorgemerktGilt ? (
               <>
                 <span className={stil.wahlKrone} aria-hidden="true">♛︎ </span>
-                {FIGUR_KURZ[(sicht.brett[feldIndex(vorgemerktGilt)] ?? '').toLowerCase()] ?? 'Figur'} auf{' '}
-                {vorgemerktGilt} als geheime Dame
+                {tf('brochess.wahl.bestaetigen', {
+                  figur: figurName(sicht.brett[feldIndex(vorgemerktGilt)] ?? ''),
+                  feld: vorgemerktGilt,
+                })}
               </>
             ) : (
-              'Erst eine Figur antippen'
+              t('brochess.wahl.erstAntippen')
             )}
           </button>
         ) : (
           sicht.meineFarbe !== null && (
             <button type="button" className="hb-leise-knopf" onClick={aufgeben}>
-              Aufgeben
+              {t('brochess.aufgeben')}
             </button>
           )
         )}

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 
+import { t } from '../../i18n';
 import { HbBlatt } from '../../screens/HbBlatt';
 import { SpielAbschnitt, SpielWahl } from '../../screens/SpielEinstieg';
 import stil from './BroChess.module.css';
-import { NORMALE_SPIELART, REGEL_TEXT, type Spielart, spielartRegeln } from './geheim';
+import { NORMALE_SPIELART, regelText, type Spielart, spielartRegeln } from './geheim';
 import { ARTNAME, type Zeitart, ZEITKONTROLLEN, zeitText } from './zeit';
 
 /** Gezeichnete Zeichen je Art — Patrone, Blitz, Stoppuhr. Kein Bild, das fehlen könnte. */
@@ -43,7 +44,7 @@ export function ZeitWahlBlatt({
   onClose: () => void;
 }): React.JSX.Element {
   return (
-    <HbBlatt titel="Zeit wählen" onClose={onClose}>
+    <HbBlatt titel={t('brochess.zeitWahl.titel')} onClose={onClose}>
       <div className={stil.zeitwahl}>
         {(['bullet', 'blitz', 'rapid'] as const).map((art) => (
           <section key={art} className={stil.zeitart} aria-label={ARTNAME[art]}>
@@ -70,8 +71,7 @@ export function ZeitWahlBlatt({
           </section>
         ))}
         <p className="hb-klein">
-          Die Zeit gilt für jeden Spieler. Die Zahl hinter dem Plus sind Sekunden, die nach jedem
-          eigenen Zug dazukommen. Wer keine Zeit mehr hat, verliert.
+          {t('brochess.zeitWahl.hinweis')}
         </p>
       </div>
     </HbBlatt>
@@ -95,26 +95,25 @@ export function SpielartWahl({
 }): React.JSX.Element {
   return (
     <>
-      <SpielAbschnitt titel="Spielart">
+      <SpielAbschnitt titel={t('brochess.spielart.titel')}>
         <SpielWahl
-          name="Spielart"
+          name={t('brochess.spielart.titel')}
           werte={[
-            { wert: 'normal', text: 'Normal', unter: 'Klassisches Schach' },
-            { wert: 'secretDame', text: 'Secret Dame', unter: 'Eine Figur ist heimlich Dame' },
+            { wert: 'normal', text: t('brochess.spielart.normal'), unter: t('brochess.spielart.normal.unter') },
+            { wert: 'secretDame', text: t('brochess.secretDame'), unter: t('brochess.spielart.secret.unter') },
           ]}
           wert={wert.modus}
           onWahl={(modus) => onWahl({ ...wert, modus })}
         />
         {wert.modus === 'secretDame' && (
           <p className="hb-klein">
-            Vor dem ersten Zug wählt jeder heimlich eine eigene Figur außer dem König. Sie darf
-            zusätzlich wie eine Dame ziehen – erst dann sieht der Gegner, welche es war.
+            {t('brochess.spielart.hinweis')}
           </p>
         )}
       </SpielAbschnitt>
       {wert.modus === 'secretDame' && (
-        <SpielAbschnitt titel="Schach durch die verdeckte Dame">
-          <div className={`spe-wahl ${stil.regelWahl}`} role="group" aria-label="Regel">
+        <SpielAbschnitt titel={t('brochess.spielart.regelTitel')}>
+          <div className={`spe-wahl ${stil.regelWahl}`} role="group" aria-label={t('brochess.spielart.regelAria')}>
             {(['A', 'B'] as const).map((regel) => (
               <button
                 type="button"
@@ -124,10 +123,10 @@ export function SpielartWahl({
                 onClick={() => onWahl({ ...wert, regel })}
               >
                 <strong>
-                  {REGEL_TEXT[regel].kurz}
-                  {regel === 'A' && <span className={stil.regelVorgabe}> · Vorgabe</span>}
+                  {regelText(regel).kurz}
+                  {regel === 'A' && <span className={stil.regelVorgabe}> · {t('brochess.spielart.vorgabe')}</span>}
                 </strong>
-                <small>{REGEL_TEXT[regel].satz}</small>
+                <small>{regelText(regel).satz}</small>
               </button>
             ))}
           </div>
