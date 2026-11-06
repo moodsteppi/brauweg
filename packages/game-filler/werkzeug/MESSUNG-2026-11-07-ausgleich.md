@@ -1,5 +1,31 @@
 # Messung 07.11.2026 — der Ausgleich für Sitz 1, auf neuen Saaten
 
+> **Eingebaut ist Weg B, nicht der ursprüngliche Auftrag.** Der Auftrag
+> (Karte 03b3a41f) verlangte Klar „Gleichstand für Sitz 1“
+> (`gleichstandFuerSitz1`), Build +1 und Extreme +3 Mauern. Genau das stand
+> zuerst auf dem Zweig (Commits ac5bd8c3, 7ae2d8d9) und ist unten unter
+> „Ergebnis“ gemessen: Auf neuen Saaten blieb Klar einseitig (57,6 : 42,4),
+> und Extreme +3 kippte zu Sitz 1 (46,7 : 52,6). Der Zweitleser (Runde 1)
+> hat das als Entscheidung für einen Menschen gemeldet. Die Antwort kam als
+> Nachbesserung über den Orchestrator, nicht im Repo; ihr Wortlaut, soweit
+> er die Regeln betrifft:
+>
+> > „Niklas hat Weg B gewaehlt (06.11.). […] 1) Extreme: in
+> > AUSGLEICH_JE_SPIELART (src/regeln.ts) barrierenZuschlagSitz1 3 -> 2.
+> > […] 2) Klar: statt gleichstandFuerSitz1 bekommt Sitz 1 einen
+> > Punktvorsprung von 2 in der Wertung (neues optionales Feld
+> > punkteZuschlagSitz1, Grenzen 0..5 […]). Remis bleibt Remis.
+> > gleichstandFuerSitz1 aus der Tabelle nehmen; das Feld und seine Logik
+> > ganz entfernen, wenn kein offener Tisch es braucht (es war nie auf
+> > staging) […]“
+>
+> Deshalb gibt es `gleichstandFuerSitz1` und seine Proben nicht mehr; an
+> ihre Stelle treten `punkteZuschlagSitz1` und die Proben in
+> `test/ausgleich.test.ts` („Punktzuschlag für Sitz 1“). Die Zahlen von
+> Weg B stehen im letzten Abschnitt. **Wer freigibt, gibt damit diese
+> Abweichung vom ursprünglichen Auftrag frei** — der Diff allein kann die
+> Entscheidung nicht belegen, nur hier festhalten.
+
 Folgt auf `MESSUNG-2026-11-07-anzug.md`. Dort ergab sich auf den Saaten
 `saatHex(0..199)`: Build +1 Mauer, Extreme +3 Mauern, Klar „Gleichstand für
 Sitz 1“ gleicht den Anzug aus. Hier wird dieselbe Regel nachgemessen — mit
