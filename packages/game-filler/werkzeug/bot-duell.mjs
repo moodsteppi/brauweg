@@ -2,7 +2,12 @@
  * Filler: neuer Bot gegen bisherigen Bot, gepaart auf denselben Saaten.
  *
  *     npm run build --workspace @brauweg/game-filler
- *     node packages/game-filler/werkzeug/bot-duell.mjs --alt <ordner> [--neu <ordner>] [--build 200] [--extreme 200] [--faeden 15]
+ *     node packages/game-filler/werkzeug/bot-duell.mjs --alt <ordner> [--neu <ordner>] [--klar 0] [--build 200] [--extreme 200] [--start 0] [--faeden 15]
+ *
+ * `--start` verschiebt die Saaten (Partie i spielt auf saatHex(i), i = start
+ * .. start+n-1) — fuer eine Bestaetigung auf Saaten, an denen nicht
+ * eingestellt wurde. Der p-Wert ist der exakte zweiseitige Vorzeichentest
+ * auf Siegen neu gegen alt (Remis fallen heraus).
  *
  * `--alt` zeigt auf eine KOPIE von `dist/src` eines frueheren Stands (vor dem
  * Umbau angelegt: `cp -r dist/src <ordner>`). Gespielt wird mit Regeln und
@@ -48,11 +53,12 @@ if (isMainThread) {
     console.error('--alt <ordner> fehlt (Kopie von dist/src des frueheren Stands)');
     process.exit(2);
   }
-  const anzahl = { build: schalter('build', 200), extreme: schalter('extreme', 200) };
+  const anzahl = { klar: schalter('klar', 0), build: schalter('build', 200), extreme: schalter('extreme', 200) };
+  const start = schalter('start', 0);
   const faeden = schalter('faeden', Math.max(1, os.cpus().length - 1));
   const auftraege = [];
   for (const [variante, n] of Object.entries(anzahl)) {
-    for (let i = 0; i < n; i++) auftraege.push({ variante, i });
+    for (let i = start; i < start + n; i++) auftraege.push({ variante, i });
   }
   const ergebnisse = [];
   let naechster = 0;
@@ -75,8 +81,21 @@ if (isMainThread) {
       }),
     ),
   );
-  console.log('| Spielart | Partien | Siege neu | Siege alt | remis | Punkte neu/alt | Mauern je Partie neu/alt |');
-  console.log('|---|---|---|---|---|---|---|');
+  /** Exakter zweiseitiger Binomialtest gegen 1/2: k Erfolge aus n. */
+  const vorzeichenP = (k, n) => {
+    if (n === 0) return 1;
+    const logC = [];
+    // log C(n, i) fortlaufend, damit auch n = 400 nicht ueberlaeuft
+    logC[0] = 0;
+    for (let i = 1; i <= n; i++) logC[i] = logC[i - 1] + Math.log(n - i + 1) - Math.log(i);
+    const m = Math.max(k, n - k);
+    let summe = 0;
+    for (let i = m; i <= n; i++) summe += Math.exp(logC[i] - n * Math.LN2);
+    return Math.min(1, 2 * summe);
+  };
+  console.log(`Saaten ${start} bis ${start + Math.max(...Object.values(anzahl)) - 1}\n`);
+  console.log('| Spielart | Partien | Siege neu | Siege alt | remis | p (Vorzeichentest) | Punkte neu/alt | Mauern je Partie neu/alt |');
+  console.log('|---|---|---|---|---|---|---|---|');
   for (const variante of Object.keys(anzahl)) {
     const rs = ergebnisse.filter((r) => r.variante === variante);
     if (rs.length === 0) continue;
@@ -95,7 +114,7 @@ if (isMainThread) {
     const n = rs.length * 2;
     const q = (x) => `${((100 * x) / n).toFixed(1)} %`;
     console.log(
-      `| ${variante} | ${n} | ${q(s.neu)} | ${q(s.alt)} | ${q(s.remis)} | ${(s.pNeu / n).toFixed(1)} / ${(s.pAlt / n).toFixed(1)} | ${(s.mNeu / n).toFixed(2)} / ${(s.mAlt / n).toFixed(2)} |`,
+      `| ${variante} | ${n} | ${q(s.neu)} | ${q(s.alt)} | ${q(s.remis)} | ${vorzeichenP(s.neu, s.neu + s.alt).toFixed(3)} | ${(s.pNeu / n).toFixed(1)} / ${(s.pAlt / n).toFixed(1)} | ${(s.mNeu / n).toFixed(2)} / ${(s.mAlt / n).toFixed(2)} |`,
     );
   }
 } else {
