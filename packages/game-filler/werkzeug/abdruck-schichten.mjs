@@ -101,7 +101,8 @@ for (const variante of ['klar', 'build', 'extreme']) {
     let p = P.erstellePartie({ ...DEFAULT_REGELN, variante }, [0, 1], saat);
     let n = 0;
     while (!p.fertig && n++ < 600) p = P.fuehreAus(p, p.dran, WAHL['echter-bot'](p));
-    const abdruck = hash({ regeln: p.regeln, punkte: p.punkte, barrierenUebrig: p.barrierenUebrig, barrieren: p.barrieren, zug: p.zug, ...wertung(p) });
+    // Feldfolge wortgleich mit dem Test (platz, sieger), sonst passt der Hash nicht.
+    const abdruck = hash({ regeln: p.regeln, punkte: p.punkte, barrierenUebrig: p.barrierenUebrig, barrieren: p.barrieren, zug: p.zug, platz: P.platzierungen(p), sieger: P.sieger(p) });
     console.log(`echter-bot  ausgleich    ${variante}/${saat} ${abdruck}`);
   }
 }

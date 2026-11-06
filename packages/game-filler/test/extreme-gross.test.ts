@@ -67,8 +67,8 @@ describe('Extreme gross: Aufbau', () => {
     assert.equal(partie.regeln.zeilen, 11);
     assert.equal(partie.feld.length, 132);
     assert.equal(partie.barrierenUebrig[0], 20);
-    // Der Nachziehende bekommt drei dazu (AUSGLEICH_JE_SPIELART, 07.11.2026).
-    assert.equal(partie.barrierenUebrig[1], 23);
+    // Der Nachziehende bekommt zwei dazu (AUSGLEICH_JE_SPIELART, 07.11.2026).
+    assert.equal(partie.barrierenUebrig[1], 22);
     assert.equal(partie.regeln.mauernJeZug, 2);
     // Die Tabelle steht nicht im Snapshot, nur das, was sie festgelegt hat.
     assert.equal('aufbauJeSpielart' in partie.regeln, false);

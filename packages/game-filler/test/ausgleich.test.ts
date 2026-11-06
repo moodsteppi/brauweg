@@ -4,7 +4,7 @@
  * Sitz 0 zieht zuerst und hat meist auch den letzten Farbzug; Bot gegen Bot
  * gewann er in Klar 52 zu 36, in Build 53,5 zu 44, in Extreme 60,5 zu 37
  * (werkzeug/MESSUNG-2026-11-07-anzug.md). Ausgeglichen wird mit zwei
- * Regelfeldern: `barrierenZuschlagSitz1` (Build +1, Extreme +3) und
+ * Regelfeldern: `barrierenZuschlagSitz1` (Build +1, Extreme +2) und
  * `gleichstandFuerSitz1` (Klar). Die Nachmessung steht in
  * werkzeug/MESSUNG-2026-11-07-ausgleich.md.
  *
@@ -50,12 +50,12 @@ function endstand(p: FillerPartie, null_: number, eins: number): FillerPartie {
 }
 
 describe('Ausgleich: Vorgabe und Pruefung', () => {
-  it('steht je Spielart in der Vorgabe: Klar Gleichstand, Build +1, Extreme +3, Nebel nichts', () => {
+  it('steht je Spielart in der Vorgabe: Klar Gleichstand, Build +1, Extreme +2, Nebel nichts', () => {
     assert.deepEqual(DEFAULT_REGELN.ausgleichJeSpielart, AUSGLEICH_JE_SPIELART);
     assert.deepEqual(AUSGLEICH_JE_SPIELART, {
       klar: { gleichstandFuerSitz1: true },
       build: { barrierenZuschlagSitz1: 1 },
-      extreme: { barrierenZuschlagSitz1: 3 },
+      extreme: { barrierenZuschlagSitz1: 2 },
     });
     assert.equal('nebel' in AUSGLEICH_JE_SPIELART, false);
     // Die Einzelfelder stehen NICHT in der Vorgabe, sonst gaelten sie ueberall.
@@ -109,16 +109,16 @@ describe('Ausgleich: Mauerzuschlag fuer Sitz 1', () => {
     assert.equal('gleichstandFuerSitz1' in p.regeln, false);
   });
 
-  it('Extreme: Sitz 0 zwanzig, Sitz 1 dreiundzwanzig', () => {
+  it('Extreme: Sitz 0 zwanzig, Sitz 1 zweiundzwanzig', () => {
     const p = neu('extreme');
-    assert.deepEqual(p.barrierenUebrig, { 0: 20, 1: 23 });
-    assert.equal(p.regeln.barrierenZuschlagSitz1, 3);
+    assert.deepEqual(p.barrierenUebrig, { 0: 20, 1: 22 });
+    assert.equal(p.regeln.barrierenZuschlagSitz1, 2);
   });
 
   it('zeigt Sitz 1 seinen groesseren Vorrat — in seiner, der fremden und der Zuschauersicht', () => {
     const p = neu('extreme');
     for (const sicht of [sichtFuer(p, 1), sichtFuer(p, 0), zuschauerSicht(p)]) {
-      assert.deepEqual(sicht.barrierenUebrig, { 0: 20, 1: 23 });
+      assert.deepEqual(sicht.barrierenUebrig, { 0: 20, 1: 22 });
     }
   });
 
@@ -230,7 +230,7 @@ describe('Ausgleich: Gleichstand fuer Sitz 1', () => {
     const b = neu('extreme');
     assert.deepEqual(
       filler.deserialize(JSON.parse(JSON.stringify(filler.serialize(b)))).barrierenUebrig,
-      { 0: 20, 1: 23 },
+      { 0: 20, 1: 22 },
     );
   });
 });
@@ -252,10 +252,10 @@ describe('Ausgleich: Fingerabdruecke der Bot-Partie mit voller Vorgabe', () => {
     'build/1': 'c7b0f770aed34fbb',
     'build/2': '1c84ecc2ec0ce478',
     'build/42': 'fbd4011e7206ce47',
-    'extreme/c0ffee1234567890abcdef0123456789': '9410e45cc91509a8',
-    'extreme/1': 'cab5cf23696be08f',
-    'extreme/2': 'b4152a2224314d23',
-    'extreme/42': '43093ae2db3124e1',
+    'extreme/c0ffee1234567890abcdef0123456789': '263973f75478073b',
+    'extreme/1': 'e40edf4a84812fd7',
+    'extreme/2': '4d81a676c7f86de0',
+    'extreme/42': '618fcc8232c581d6',
   };
   const hash = (x: unknown): string =>
     createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);

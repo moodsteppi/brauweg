@@ -165,7 +165,7 @@ export interface SpielartAusgleich {
 export const AUSGLEICH_JE_SPIELART = {
   klar: { gleichstandFuerSitz1: true },
   build: { barrierenZuschlagSitz1: 1 },
-  extreme: { barrierenZuschlagSitz1: 3 },
+  extreme: { barrierenZuschlagSitz1: 2 },
 } as const satisfies Partial<Record<FillerVariante, SpielartAusgleich>>;
 
 /**
