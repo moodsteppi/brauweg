@@ -22,6 +22,8 @@ import {
   Wartebereich,
   slotFor,
 } from '../tisch';
+import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { useTable } from '../useTable';
 
 /**
@@ -147,7 +149,7 @@ export function CambioTable({
     return (
       <div className="doko">
         <img className="doko-bg" src={szeneBild(szene)} alt="" draggable={false} />
-        <Ladekreis text={error ?? 'Verbinde mit dem Tisch…'} />
+        <Ladekreis text={error ?? t('cambio.verbinde')} />
       </div>
     );
   }
@@ -168,7 +170,7 @@ export function CambioTable({
     return (
       <div className="doko">
         <img className="doko-bg" src={szeneBild(szene)} alt="" draggable={false} />
-        <Ladekreis text="Neue Runde…" />
+        <Ladekreis text={t('cambio.neueRunde')} />
       </div>
     );
   }
@@ -181,12 +183,12 @@ export function CambioTable({
       <img className="doko-bg" src={szeneBild(szene)} alt="" draggable={false} />
 
       <header className="doko-top">
-        <button className="doko-icon" onClick={onLeave} aria-label="Zurück">
+        <button className="doko-icon" onClick={onLeave} aria-label={t('cambio.zurueck')}>
           ‹
         </button>
         <div className="doko-top-mid">
           <strong>
-            Runde {view.view.roundIndex + 1} / {view.view.totalRounds}
+            {tf('cambio.runde', { nr: view.view.roundIndex + 1, von: view.view.totalRounds })}
           </strong>
           <span className="muted">{phasenText(round, meinSitz)}</span>
         </div>
@@ -221,13 +223,13 @@ export function CambioTable({
             className="cambio-stapel cambio-stapel--verdeckt"
             disabled={!erlaubt(round, 'drawStock')}
             onClick={() => sende(round, send, 'drawStock')}
-            aria-label={`Nachziehstapel, ${round.stockCount} Karten`}
+            aria-label={tn('cambio.stapel.verdeckt', round.stockCount)}
           >
             <CardBack deck={deck} />
             <span className="cambio-stapel-zahl">{round.stockCount}</span>
           </button>
 
-          <div className="cambio-stapel cambio-stapel--offen" aria-label="Ablagestapel">
+          <div className="cambio-stapel cambio-stapel--offen" aria-label={t('cambio.stapel.offen')}>
             <CardFront card={round.topDiscard} deck={deck} />
           </div>
         </div>
@@ -235,7 +237,7 @@ export function CambioTable({
         {/* Die gezogene Karte liegt gross vor einem und will eingesetzt werden. */}
         {round.drawn && (
           <div className="cambio-gezogen">
-            <span className="cambio-gezogen-hinweis">Gezogen</span>
+            <span className="cambio-gezogen-hinweis">{t('cambio.gezogen')}</span>
             <CardFront card={round.drawn} deck={deck} />
           </div>
         )}
@@ -243,10 +245,7 @@ export function CambioTable({
         {round.caller !== null && (
           <div className="cambio-ruf">
             <strong>Cambio!</strong>
-            <span>
-              {nameOf(round.caller)} hat gerufen - noch{' '}
-              {offeneZuege(round) === 1 ? 'ein Zug' : `${offeneZuege(round)} Züge`}
-            </span>
+            <span>{tn('cambio.ruf.offen', offeneZuege(round), { name: nameOf(round.caller) })}</span>
           </div>
         )}
       </div>
@@ -318,10 +317,10 @@ export function CambioTable({
       {zeigeEmoteHinweis && (
         <div className="doko-sheet" onClick={() => setZeigeEmoteHinweis(false)}>
           <div className="doko-sheet-card" onClick={(e) => e.stopPropagation()}>
-            <h2>Zurufe</h2>
-            <p className="muted">Weitere Zurufe gibt es im Shop.</p>
+            <h2>{t('cambio.zurufe.titel')}</h2>
+            <p className="muted">{t('cambio.zurufe.text')}</p>
             <button className="primary" onClick={() => setZeigeEmoteHinweis(false)}>
-              Alles klar
+              {t('cambio.allesKlar')}
             </button>
           </div>
         </div>
@@ -460,20 +459,21 @@ function offeneZuege(round: CambioRoundView): number {
 }
 
 function punkteText(scores: Record<number, number>, seat: number): string {
-  const p = scores[seat] ?? 0;
-  return `${p} Punkt${p === 1 ? '' : 'e'}`;
+  return tn('cambio.punkte', scores[seat] ?? 0);
 }
 
 /** Was gerade zu tun ist, in einem Satz. */
 function phasenText(round: CambioRoundView, meinSitz: number | null): string {
-  if (round.phase === 'finished') return 'Aufgedeckt';
-  if (!round.isMyTurn) return `${round.turn === meinSitz ? 'Du' : 'Mitspieler'} ist am Zug`;
+  if (round.phase === 'finished') return t('cambio.phase.aufgedeckt');
+  if (!round.isMyTurn) {
+    return t(round.turn === meinSitz ? 'cambio.phase.duAmZug' : 'cambio.phase.andereAmZug');
+  }
 
   switch (round.phase) {
     case 'turn':
-      return 'Ziehen, nehmen oder Cambio rufen';
+      return t('cambio.phase.turn');
     case 'decide':
-      return 'Tauschen oder abwerfen';
+      return t('cambio.phase.decide');
     case 'action':
       return aktionsText(round);
     default:
@@ -484,13 +484,13 @@ function phasenText(round: CambioRoundView, meinSitz: number | null): string {
 function aktionsText(round: CambioRoundView): string {
   switch (round.pendingAction) {
     case 'peekOwn':
-      return 'Eine eigene Karte ansehen';
+      return t('cambio.aktion.peekOwn');
     case 'peekOther':
-      return 'Eine fremde Karte ansehen';
+      return t('cambio.aktion.peekOther');
     case 'blindSwap':
-      return 'Zwei Karten blind tauschen';
+      return t('cambio.aktion.blindSwap');
     case 'lookAndSwap':
-      return round.lookedAt ? 'Tauschen oder verzichten' : 'Eine fremde Karte ansehen';
+      return t(round.lookedAt ? 'cambio.aktion.lookAndSwap.entscheiden' : 'cambio.aktion.peekOther');
     default:
       return '';
   }
@@ -522,7 +522,7 @@ function PlatzKarte({
       }`}
       disabled={!waehlbar}
       onClick={onClick}
-      aria-label={slot.card ? undefined : `Verdeckter Platz ${slot.index + 1}`}
+      aria-label={slot.card ? undefined : tf('cambio.platz.verdeckt', { nr: slot.index + 1 })}
     >
       {slot.card ? <CardFront card={slot.card} deck={deck} /> : <CardBack deck={deck} />}
     </button>
@@ -574,7 +574,7 @@ function SitzPlatz({
           <span>{name}</span>
         )}
         {round.caller === seat && <em className="doko-tag">Cambio</em>}
-        {fertig && <em className="doko-tag">fertig</em>}
+        {fertig && <em className="doko-tag">{t('cambio.tag.fertig')}</em>}
       </div>
       <div className="cambio-plaetze cambio-plaetze--fremd">
         {round.hands[seat]?.map((s) => (
@@ -618,12 +618,10 @@ function Aktionsleiste({
       <>
         {erlaubt(round, 'callCambio') && (
           <button className="cambio-knopf is-ruf" onClick={() => sende(round, send, 'callCambio')}>
-            Cambio rufen
+            {t('cambio.knopf.rufen')}
           </button>
         )}
-        <span className="cambio-hinweis">
-          Stapel antippen zum Ziehen, eigenen Platz für die offene Karte
-        </span>
+        <span className="cambio-hinweis">{t('cambio.hinweis.turn')}</span>
       </>
     );
   }
@@ -632,9 +630,9 @@ function Aktionsleiste({
     return (
       <>
         <button className="cambio-knopf" onClick={() => sende(round, send, 'discardDrawn')}>
-          Abwerfen
+          {t('cambio.knopf.abwerfen')}
         </button>
-        <span className="cambio-hinweis">oder einen eigenen Platz antippen zum Tauschen</span>
+        <span className="cambio-hinweis">{t('cambio.hinweis.decide')}</span>
       </>
     );
   }
@@ -647,7 +645,7 @@ function Aktionsleiste({
       <>
         {erlaubt(round, 'skipAction') && (
           <button className="cambio-knopf" onClick={() => sende(round, send, 'skipAction')}>
-            Nicht tauschen
+            {t('cambio.knopf.nichtTauschen')}
           </button>
         )}
         <span className="cambio-hinweis">{aktionsText(round)}</span>
@@ -674,13 +672,11 @@ function BlindtauschLeiste({
   return (
     <>
       <span className="cambio-hinweis">
-        {erster
-          ? 'Erste Karte gewählt, jetzt die zweite antippen'
-          : 'Zwei Karten antippen, die getauscht werden sollen'}
+        {t(erster ? 'cambio.blind.zweite' : 'cambio.blind.erste')}
       </span>
       {erster && (
         <button className="cambio-knopf" onClick={onZurueck}>
-          Auswahl zurücknehmen
+          {t('cambio.blind.zurueck')}
         </button>
       )}
     </>
@@ -706,11 +702,12 @@ function Rundenblatt({
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card cambio-blatt" onClick={(e) => e.stopPropagation()}>
-        <h2>Aufgedeckt</h2>
+        <h2>{t('cambio.phase.aufgedeckt')}</h2>
         {r.caller !== null && (
           <p className={r.callSucceeded ? 'cambio-ruf-gut' : 'cambio-ruf-schlecht'}>
-            {nameOf(r.caller)} rief Cambio:{' '}
-            {r.callSucceeded ? 'und lag vorn: null Punkte.' : 'daneben, plus Strafpunkte.'}
+            {tf(r.callSucceeded ? 'cambio.blatt.rufGut' : 'cambio.blatt.rufSchlecht', {
+              name: nameOf(r.caller),
+            })}
           </p>
         )}
 
@@ -729,14 +726,14 @@ function Rundenblatt({
                 <span className="cambio-abrechnung-punkte">
                   {r.scores[seat]}
                   {r.scores[seat] !== r.raw[seat] && (
-                    <em className="muted"> (statt {r.raw[seat]})</em>
+                    <em className="muted"> {tf('cambio.blatt.statt', { n: r.raw[seat] ?? 0 })}</em>
                   )}
                 </span>
               </li>
             ))}
         </ol>
 
-        <h3>Gesamtstand</h3>
+        <h3>{t('cambio.blatt.gesamt')}</h3>
         <ol className="cambio-tafel">
           {round.seats
             .slice()
@@ -748,10 +745,10 @@ function Rundenblatt({
               </li>
             ))}
         </ol>
-        <p className="muted">Wenig ist gut. Es gewinnt, wer am Ende am wenigsten hat.</p>
+        <p className="muted">{t('cambio.blatt.wenigIstGut')}</p>
 
         <button className="primary" onClick={onClose}>
-          Weiter
+          {t('cambio.weiter')}
         </button>
       </div>
     </div>
