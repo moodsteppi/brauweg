@@ -212,6 +212,30 @@ function brettAus(sicht: FillerSicht) {
     return { mass, tiefe, genommen };
   }
 
+  /**
+   * Die Farbe, die der Bot auf einem Brett mit den Mauern `mauern` nimmt:
+   * die mit den meisten Feldern, bei Gleichstand die mit mehr Nebel dahinter.
+   * Eine Stelle fuer `botZug` und die Daempfung — die muss wissen, welche
+   * Farbe er nach einer Wand WIRKLICH zieht, bevor der Gegner dran ist.
+   */
+  function besteFarbe(mauern: ReadonlySet<string>): { farbe: number; genommen: ReadonlySet<number> } {
+    const eigen = felderVon(ich);
+    let beste = erlaubt[0]!;
+    let bestesMass = -1;
+    let besteTiefe = -1;
+    let besteGenommen: ReadonlySet<number> = new Set(eigen);
+    for (const f of erlaubt) {
+      const { mass, tiefe, genommen } = bewerteFuer(eigen, f, mauern);
+      if (mass > bestesMass || (mass === bestesMass && tiefe > besteTiefe)) {
+        beste = f;
+        bestesMass = mass;
+        besteTiefe = tiefe;
+        besteGenommen = genommen;
+      }
+    }
+    return { farbe: beste, genommen: besteGenommen };
+  }
+
   return {
     spalten,
     zeilen,
@@ -225,12 +249,13 @@ function brettAus(sicht: FillerSicht) {
     erlaubt,
     felderVon,
     bewerteFuer,
+    besteFarbe,
   };
 }
 
 export function botZug(sicht: FillerSicht): FillerAktion {
   const brett = brettAus(sicht);
-  const { erlaubt, felderVon, bewerteFuer, sperren, ich } = brett;
+  const { erlaubt, besteFarbe, sperren } = brett;
   // Kann nicht vorkommen, solange es mehr Farben als Sitze gibt (regeln.ts
   // erzwingt das) — aber ein Bot, der `undefined` zurueckgibt, reisst den
   // Tisch mit, und das waere ein teurer Weg, das zu erfahren.
@@ -241,20 +266,7 @@ export function botZug(sicht: FillerSicht): FillerAktion {
     return { typ: 'barriere', von: wand.beste[0], nach: wand.beste[1] };
   }
 
-  const eigen = felderVon(ich);
-  let beste = erlaubt[0]!;
-  let bestesMass = -1;
-  let besteTiefe = -1;
-  for (const f of erlaubt) {
-    const { mass, tiefe } = bewerteFuer(eigen, f, sperren);
-    if (mass > bestesMass || (mass === bestesMass && tiefe > besteTiefe)) {
-      beste = f;
-      bestesMass = mass;
-      besteTiefe = tiefe;
-    }
-  }
-
-  return { typ: 'faerben', farbe: beste };
+  return { typ: 'faerben', farbe: besteFarbe(sperren).farbe };
 }
 
 /** Die Bestandteile eines Wandwerts — fuer Messung und Tests, nicht fuer den Zug. */
@@ -340,7 +352,7 @@ function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): Wand
   const kandidaten = sicht.barrierenMoeglich;
   if (!kandidaten || kandidaten.length === 0) return null;
   const { spalten, zeilen, feld, besitzer, ich, sperren, erreichbarMit, wertVon } = brett;
-  const { erlaubt, felderVon, bewerteFuer } = brett;
+  const { erlaubt, felderVon, bewerteFuer, besteFarbe } = brett;
   const gegner = Object.keys(brett.farbe)
     .map(Number)
     .find((s) => s !== ich);
@@ -546,28 +558,34 @@ function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): Wand
    * eine Wand nicht, die ihm den Weg verengt — die bewertet der Wegterm
    * ohnehin als Preis.
    *
+   * Der Zug des Gegners kommt erst NACH dem Farbzug des Bots. Geprueft wird
+   * er deshalb auf dem Brett nach der Farbe, die der Bot nach der Wand
+   * wirklich zieht (`besteFarbe` — dieselbe Wahl wie in `botZug`), mit
+   * allen Farben, die der Gegner dann darf. Baut der Bot in Extreme noch
+   * eine zweite Wand, wird die vor dem Bauen ebenso geprueft.
+   *
    * Geprueft wird erst hier und nur, solange es noetig ist: der Reihe nach
    * vom hoechsten Wert abwaerts, bis eine Wand sicher ist oder unter die
-   * Schwelle faellt (unter der Schwelle baut der Bot ohnehin nicht). Die
-   * Farben des Gegners sind alle ausser seiner eigenen — welche der Bot
-   * gleich nimmt und ihm damit sperrt, steht noch nicht fest.
+   * Schwelle faellt (unter der Schwelle baut der Bot ohnehin nicht).
    */
   const gegnerFarbe = brett.farbe[gegner];
-  const seineFarben: number[] = [];
-  for (let f = 0; f < sicht.farbzahl; f++) if (f !== gegnerFarbe) seineFarben.push(f);
   const freiGesamt = besitzer.reduce<number>((zahl, b) => zahl + (b === null ? 1 : 0), 0);
-  /** Ist der Gegner eingesperrt, nachdem `zieher` die Felder `genommen` geschluckt hat? */
+  /**
+   * Ist der Gegner eingesperrt, wenn mir `meinGebiet` und ihm `seinGebiet`
+   * gehoert (jeweils das alte Gebiet samt dem, was ein Farbzug geschluckt hat)?
+   */
   const gegnerEingesperrt = (
     probe: ReadonlySet<string>,
-    zieher: 'ich' | 'er',
-    genommen: ReadonlySet<number>,
+    meinGebiet: ReadonlySet<number>,
+    seinGebiet: ReadonlySet<number>,
   ): boolean => {
     const neu = new Set<number>();
-    for (const platz of genommen) if (besitzer[platz] === null) neu.add(platz);
+    for (const platz of meinGebiet) if (besitzer[platz] === null) neu.add(platz);
+    for (const platz of seinGebiet) if (besitzer[platz] === null) neu.add(platz);
     const frei = freiGesamt - neu.size;
     if (frei < EINSPERR_MINDEST_FREI) return false;
-    const seinStart = zieher === 'er' ? [...genommen] : seine;
-    const meinStart = zieher === 'ich' ? [...genommen] : eigen;
+    const seinStart = [...seinGebiet];
+    const meinStart = [...meinGebiet];
     const seinFrei = freieVon(seinStart, probe, neu).frei;
     // Abkuerzung: Wer mehr als ein Viertel ALLER freien Felder erreicht,
     // kann es nicht sein — das spart die zweite Flut fast immer.
@@ -576,14 +594,22 @@ function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): Wand
     for (const platz of seinFrei) if (meinFrei.has(platz)) return false;
     return istEingesperrt(seinFrei.size, meinFrei.size);
   };
+  const seinAltes: ReadonlySet<number> = new Set(seine);
   const oeffnetFalle = (kandidat: readonly [number, number]): boolean => {
     const probe = new Set(sperren);
     probe.add(kante(kandidat[0], kandidat[1]));
+    // Mein Farbzug gleich nach der Wand — jede erlaubte Farbe.
     for (const f of erlaubt) {
-      if (gegnerEingesperrt(probe, 'ich', bewerteFuer(eigen, f, probe).genommen)) return true;
+      if (gegnerEingesperrt(probe, bewerteFuer(eigen, f, probe).genommen, seinAltes)) return true;
     }
-    for (const g of seineFarben) {
-      if (gegnerEingesperrt(probe, 'er', bewerteFuer(seine, g, probe).genommen)) return true;
+    // Sein Farbzug danach, auf dem Brett nach meiner wirklichen Farbe.
+    // Schlucken kann er dabei nur Freies: Mein neues Gebiet traegt meine
+    // neue Farbe, und die ist ihm gesperrt.
+    const meinZug = besteFarbe(probe);
+    for (let g = 0; g < sicht.farbzahl; g++) {
+      if (g === gegnerFarbe || g === meinZug.farbe) continue;
+      const seinZug = bewerteFuer(seine, g, probe).genommen;
+      if (gegnerEingesperrt(probe, meinZug.genommen, seinZug)) return true;
     }
     return false;
   };

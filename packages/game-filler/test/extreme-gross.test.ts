@@ -418,10 +418,11 @@ describe('Andere Spielarten unveraendert', () => {
    *   daec5b1bbc50b669, b42532c7d1c2b279, 1ed530456700461b; nach dem
    *   Regelfix mauerte der alte Bot nicht mehr und landete GENAU auf
    *   BUILD_OHNE_MAUERN; seit dem Wegterm mauert er wieder. Die Daempfung
-   *   (bot.ts, "Die Daempfung", 06.11.2026) laesst alle vier Werte stehen:
-   *   In diesen vier Partien baut der Bot keine Mauer, nach der ein Farbzug
-   *   den Gegner einsperrt — vor und nach der Daempfung mit
-   *   abdruck-schichten.mjs nachgerechnet, alle drei Schichten gleich.
+   *   (bot.ts, "Die Daempfung", 06.11.2026) verschiebt allein build/1
+   *   (vorher 7a26d141e9121b74): Dort meidet der Bot eine Wand, nach der
+   *   ein Farbzug den Gegner eingesperrt haette. Die anderen drei Werte und
+   *   die Schichten BUILD_OHNE_MAUERN und BUILD_BAUMEISTER bleiben — vor und
+   *   nach der Daempfung mit abdruck-schichten.mjs nachgerechnet.
    *
    * Alle staging-Werte rechnet `node werkzeug/abdruck-schichten.mjs <dist>`
    * nach (Zeilen "gross-ende").
@@ -436,7 +437,7 @@ describe('Andere Spielarten unveraendert', () => {
     'klar/2': ['9488e3949af834bf', 'd45b908bf92f460c'],
     'klar/42': ['a54e26fc806530fd', '9f0adb58cb89de3d'],
     'build/c0ffee1234567890abcdef0123456789': ['8e2077a6200c183c', '791dfe9216ff083d'],
-    'build/1': ['3fbf3266569e124c', '7a26d141e9121b74'],
+    'build/1': ['3fbf3266569e124c', 'e8a9e8464c30a8cf'],
     'build/2': ['ea5de89035bc8107', '455d6b589aac310c'],
     'build/42': ['736271c48db7a257', '9501469822898af3'],
   };

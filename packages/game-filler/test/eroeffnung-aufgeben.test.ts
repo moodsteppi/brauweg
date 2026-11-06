@@ -306,9 +306,9 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
    * auch gleich Klar). Seit dem Wegterm (eac0ba11, Niklas' Entscheidung
    * "b+") mauert er wieder: der dritte Wert. Seit der Daempfung (bot.ts,
    * "Die Daempfung" — keine Mauer, nach der ein Farbzug den Gegner
-   * einsperrt) der vierte: Verschoben hat sie allein extreme/1, dort meidet
-   * der Bot unterwegs eine Mauer, die er vorher baute; in den anderen sieben
-   * Partien kam keine solche Mauer vor. Schicht 1 und 2 sind unberuehrt
+   * einsperrt) der vierte: Verschoben hat sie allein extreme/1 — dort
+   * meidet der Bot unterwegs eine Mauer, die er vorher baute. Die anderen
+   * sieben Wertungen bleiben gleich. Schicht 1 und 2 sind unberuehrt
    * (abdruck-schichten.mjs, Stand vor und nach der Daempfung verglichen).
    * Der Test darunter haelt fest, dass die Spalten zu Schicht 1 und zu
    * VORHER passen.

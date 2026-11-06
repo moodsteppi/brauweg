@@ -661,7 +661,9 @@ describe('Build: der Bot sperrt nicht mit Mauer plus Farbe ein (Daempfung)', () 
    * eigener Farbzug noch einer des Gegners den Gegner einsperren. Prueft der
    * Bot auf seiner Sicht etwas anderes als das, was danach auf dem Brett
    * passiert (etwa weil eine Flut anders schluckt als `schlucke`), faellt es
-   * hier auf.
+   * hier auf. Der Gegnerzug wird nach dem wirklichen Farbzug des Bots
+   * geprueft — vor dem geprueft, liess die erste Fassung die Fallen durch,
+   * die der Gegner gleich nach Wand und Farbe selbst zuzieht.
    *
    * Die Saaten sind so gewaehlt, dass der Bot unterwegs mindestens einmal
    * eine Wand meidet (`gemieden`) — sonst prueft der Test eine Daempfung, die
@@ -707,19 +709,20 @@ describe('Build: der Bot sperrt nicht mit Mauer plus Farbe ein (Daempfung)', () 
         gebaut++;
         const gegner = 1 - s;
         for (let f = 0; f < p.regeln.farben; f++) {
-          if (!gesperrteFarben(p).includes(f)) {
-            const r = fuehreAus(p, s, { typ: 'faerben', farbe: f });
-            assert.ok(!eingesperrt(r, gegner), `Zug ${p.zug}: Mauer, dann eigene Farbe ${f}`);
-          }
-          if (f !== p.farbe[gegner]) {
-            // Der Gegner darf im naechsten Zug jede Farbe ausser seiner —
-            // welche der Bot ihm gleich sperrt, steht noch nicht fest.
-            const r = fuehreAus({ ...p, dran: gegner, farbe: { ...p.farbe, [s]: -1 } }, gegner, {
-              typ: 'faerben',
-              farbe: f,
-            });
-            assert.ok(!eingesperrt(r, gegner), `Zug ${p.zug}: Mauer, dann Gegnerfarbe ${f}`);
-          }
+          if (gesperrteFarben(p).includes(f)) continue;
+          const r = fuehreAus(p, s, { typ: 'faerben', farbe: f });
+          assert.ok(!eingesperrt(r, gegner), `Zug ${p.zug}: Mauer, dann eigene Farbe ${f}`);
+        }
+        // Der Gegner zieht erst nach dem Farbzug, den der Bot wirklich macht
+        // (in Build eine Mauer je Zug, danach also stets eine Farbe).
+        const farbzug = botZug(sichtFuer(p, s));
+        assert.equal(farbzug.typ, 'faerben');
+        const danach = fuehreAus(p, s, farbzug);
+        if (danach.fertig) continue;
+        for (let g = 0; g < p.regeln.farben; g++) {
+          if (gesperrteFarben(danach).includes(g)) continue;
+          const r = fuehreAus(danach, gegner, { typ: 'faerben', farbe: g });
+          assert.ok(!eingesperrt(r, gegner), `Zug ${p.zug}: Mauer, Farbe, dann Gegnerfarbe ${g}`);
         }
       }
       assert.ok(gebaut > 0, 'der Bot hat gemauert');
