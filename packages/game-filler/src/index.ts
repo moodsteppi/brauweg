@@ -10,6 +10,7 @@ export {
   ausgleichFuer,
   barrierenZuschlagSitz1,
   mauernJeZug,
+  punkteZuschlagSitz1,
   FARBEN_HOECHSTENS,
   FARBEN_JE_SPIELART,
   type FillerRegeln,

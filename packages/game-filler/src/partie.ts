@@ -27,6 +27,7 @@ import {
   mitBarrieren,
   mitSternen,
   mauernJeZug,
+  punkteZuschlagSitz1,
 } from './regeln.js';
 
 // ---------------------------------------------------------------------------
@@ -1056,8 +1057,10 @@ export function markiereVerlassen(partie: FillerPartie, sitz: number): FillerPar
  *
  * Gleichstand ergibt zweimal Platz 1. Bei 56 Feldern und zwei Spielern kann
  * das vorkommen — 56 ist gerade, 28 zu 28 ist also moeglich —, und dann ist
- * es ein echtes Unentschieden und keine Verlegenheitsloesung. Ausnahme seit
- * dem 07.11.2026: Mit `gleichstandFuerSitz1` (Klar) gewinnt ihn Sitz 1.
+ * es ein echtes Unentschieden und keine Verlegenheitsloesung. Seit dem
+ * 07.11.2026 zaehlt dabei der Punktzuschlag fuer Sitz 1 mit
+ * (`punkteZuschlagSitz1`, Klar): `points` ist die Wertung, nicht das Brett,
+ * und ein Gleichstand NACH dem Zuschlag bleibt ein Unentschieden.
  * In `extreme` zaehlen die Sternboni mit: Dort gewinnt, wer mehr PUNKTE hat,
  * nicht Felder.
  */
@@ -1066,18 +1069,15 @@ export function platzierungen(
 ): { seat: number; points: number; place: number; left: boolean }[] {
   const sitze = sitzeVon(partie);
   /*
-   * Bei Gleichstand gewinnt Sitz 1, wo der Regelsatz es sagt (Klar seit dem
-   * 07.11.2026, siehe `gleichstandFuerSitz1`). "Sitz 1" ist der zweite Sitz
-   * der Partie: `createParty` vergibt 0 und 1, und Sitz 0 zieht zuerst.
-   * Ohne die Regel hat niemand Vorrang, und Gleichstand bleibt zweimal
-   * Platz 1 wie bisher.
+   * Der Zuschlag geht an den zweiten Sitz der Partie (`sitze[1]`):
+   * `createParty` vergibt 0 und 1, und Sitz 0 zieht zuerst. Fehlt er im
+   * Regelsatz (jeder Tisch vor dem 07.11.2026), ist er 0.
    */
-  const vorrang = (seat: number): number =>
-    partie.regeln.gleichstandFuerSitz1 === true && seat === sitze[1] ? 1 : 0;
+  const zuschlag = punkteZuschlagSitz1(partie.regeln);
   const reihe = sitze
     .map((seat) => ({
       seat,
-      points: partie.punkte[seat] ?? 0,
+      points: (partie.punkte[seat] ?? 0) + (seat === sitze[1] ? zuschlag : 0),
       left: partie.leftSeats.includes(seat),
     }))
     /*
@@ -1088,23 +1088,18 @@ export function platzierungen(
     .sort(
       (a, b) =>
         Number(a.seat === partie.aufgegeben) - Number(b.seat === partie.aufgegeben) ||
-        b.points - a.points ||
-        vorrang(b.seat) - vorrang(a.seat),
+        b.points - a.points,
     );
 
   let platz = 0;
-  let letzter: { points: number; aufgegeben: boolean; vorrang: number } | null = null;
+  let letzter: { points: number; aufgegeben: boolean } | null = null;
   return reihe.map((eintrag, index) => {
     const aufgegeben = eintrag.seat === partie.aufgegeben;
-    const vor = vorrang(eintrag.seat);
     const neuerPlatz =
-      letzter === null ||
-      eintrag.points !== letzter.points ||
-      aufgegeben !== letzter.aufgegeben ||
-      vor !== letzter.vorrang;
+      letzter === null || eintrag.points !== letzter.points || aufgegeben !== letzter.aufgegeben;
     if (neuerPlatz) {
       platz = index + 1;
-      letzter = { points: eintrag.points, aufgegeben, vorrang: vor };
+      letzter = { points: eintrag.points, aufgegeben };
     }
     return { ...eintrag, place: platz };
   });

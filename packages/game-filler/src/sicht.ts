@@ -22,7 +22,13 @@
 
 import type { FillerPartie } from './partie.js';
 import { mauerSperre, moeglicheBarrieren, nachbarn, sieger } from './partie.js';
-import { type FillerVariante, liegtOffen, mauernJeZug, mitBarrieren } from './regeln.js';
+import {
+  type FillerVariante,
+  liegtOffen,
+  mauernJeZug,
+  mitBarrieren,
+  punkteZuschlagSitz1,
+} from './regeln.js';
 
 export interface FillerSicht {
   /**
@@ -56,6 +62,15 @@ export interface FillerSicht {
   /** Gebietsfarbe je Sitz. Oeffentlich, siehe oben. */
   readonly farbe: Readonly<Record<number, number>>;
   readonly punkte: Readonly<Record<number, number>>;
+  /**
+   * So viele Punkte bekommt Sitz 1 (der Nachziehende) in der Wertung dazu —
+   * 0, wo der Regelsatz keinen Zuschlag kennt (seit dem 07.11.2026, Klar:
+   * 2). `punkte` bleibt das Brett; wer gewonnen hat, steht schon in
+   * `sieger`. Die Zahl steht trotzdem hier, damit der Bildschirm einen Stand
+   * wie 28 : 28 erklaeren KANN ("Verloren" bei Gleichstand auf dem Brett),
+   * ohne den Zuschlag aus dem Regelsatz nachzurechnen.
+   */
+  readonly punkteZuschlagSitz1: number;
   readonly dran: number;
   readonly zug: number;
   readonly fertig: boolean;
@@ -171,6 +186,7 @@ function grundsicht(
     grau: partie.grau,
     farbe: partie.farbe,
     punkte: partie.punkte,
+    punkteZuschlagSitz1: punkteZuschlagSitz1(partie.regeln),
     dran: partie.dran,
     zug: partie.zug,
     fertig: partie.fertig,

@@ -123,18 +123,23 @@ export interface FillerRegeln {
    */
   readonly barrierenZuschlagSitz1?: number;
   /**
-   * Gleichstand zaehlt als Sieg fuer Sitz 1 (seit dem 07.11.2026, Klar). Auf
-   * 56 Feldern ist die Differenz fast immer gerade, und die Remis gingen dem
-   * Nachziehenden verloren, der ohnehin seltener gewinnt — mit der Regel
-   * steht Klar bei 52 zu 48 statt 52 zu 36 (Messung wie oben). Ein
-   * groesserer Ausgleich (zwei Punkte, Doppelzug) kippt es zum Nachzieher.
+   * So viele Punkte bekommt Sitz 1 — der Nachziehende — in der Wertung dazu
+   * (seit dem 07.11.2026, Klar). Klar hat keine Mauern, also bleibt als
+   * Ausgleich nur die Wertung. Der Zuschlag zaehlt in `platzierungen`, nicht
+   * auf dem Brett: `punkte` bleibt die Zahl der Felder (und Sterne), und die
+   * Sicht nennt den Zuschlag daneben (`punkteZuschlagSitz1`), damit der
+   * Bildschirm ihn zeigen KANN, statt ihn nachzurechnen.
    *
-   * Fehlt das Feld, ist ein Gleichstand ein Unentschieden wie bisher.
+   * Gleichstand nach dem Zuschlag bleibt ein Unentschieden. Die Vorgaengerin
+   * "Gleichstand zaehlt fuer Sitz 1" konnte nur die Remis umverteilen und
+   * reichte auf neuen Saaten nicht (MESSUNG-2026-11-07-ausgleich.md).
+   *
+   * Fehlt die Zahl, ist sie 0 — so wurde jede Partie bis dahin gewertet.
    */
-  readonly gleichstandFuerSitz1?: boolean;
+  readonly punkteZuschlagSitz1?: number;
   /**
    * Der Ausgleich je Spielart; wo eine Spielart einen Eintrag hat, gilt er
-   * statt der beiden Felder oben (siehe `ausgleichFuer`).
+   * statt der beiden Zuschlagsfelder oben (siehe `ausgleichFuer`).
    *
    * Eine Tabelle in der Vorgabe aus demselben Grund wie `aufbauJeSpielart`:
    * Ein Tisch, der vor dem 07.11.2026 aufgemacht wurde, traegt sie nicht und
@@ -148,11 +153,11 @@ export interface FillerRegeln {
  *
  * Getrennt von `SpielartAufbau`, weil dort jede Zahl Pflicht ist und Klar
  * und Build keinen Aufbau haben — ein Eintrag dort schriebe ihnen Brett und
- * Mauerregeln neu in den Snapshot, nur um einen Gleichstand zu entscheiden.
+ * Mauerregeln neu in den Snapshot, nur um die Wertung zu verschieben.
  */
 export interface SpielartAusgleich {
   readonly barrierenZuschlagSitz1?: number;
-  readonly gleichstandFuerSitz1?: boolean;
+  readonly punkteZuschlagSitz1?: number;
 }
 
 /**
@@ -163,7 +168,7 @@ export interface SpielartAusgleich {
  * nicht darin: Fuer ihn gibt es keine Messung.
  */
 export const AUSGLEICH_JE_SPIELART = {
-  klar: { gleichstandFuerSitz1: true },
+  klar: { punkteZuschlagSitz1: 2 },
   build: { barrierenZuschlagSitz1: 1 },
   extreme: { barrierenZuschlagSitz1: 2 },
 } as const satisfies Partial<Record<FillerVariante, SpielartAusgleich>>;
@@ -182,8 +187,8 @@ export function ausgleichFuer<R extends FillerRegeln>(regeln: R): R {
     ...(eintrag.barrierenZuschlagSitz1 !== undefined
       ? { barrierenZuschlagSitz1: eintrag.barrierenZuschlagSitz1 }
       : {}),
-    ...(eintrag.gleichstandFuerSitz1 !== undefined
-      ? { gleichstandFuerSitz1: eintrag.gleichstandFuerSitz1 }
+    ...(eintrag.punkteZuschlagSitz1 !== undefined
+      ? { punkteZuschlagSitz1: eintrag.punkteZuschlagSitz1 }
       : {}),
   };
 }
@@ -193,6 +198,11 @@ export function barrierenZuschlagSitz1(
   regeln: Pick<FillerRegeln, 'barrierenZuschlagSitz1'>,
 ): number {
   return typeof regeln.barrierenZuschlagSitz1 === 'number' ? regeln.barrierenZuschlagSitz1 : 0;
+}
+
+/** Punktzuschlag fuer Sitz 1 eines Regelsatzes; fehlt die Zahl, ist es keiner. */
+export function punkteZuschlagSitz1(regeln: Pick<FillerRegeln, 'punkteZuschlagSitz1'>): number {
+  return typeof regeln.punkteZuschlagSitz1 === 'number' ? regeln.punkteZuschlagSitz1 : 0;
 }
 
 /**
@@ -460,6 +470,12 @@ const MAUERN_JE_FELD_GRENZEN = [0, 4] as const;
  */
 const ZUSCHLAG_GRENZEN = [0, 5] as const;
 
+/**
+ * Punktzuschlag fuer Sitz 1, dieselben Grenzen wie beim Mauerzuschlag: Ein
+ * Klar-Brett hat 56 Felder, fuenf Punkte sind schon ein Zehntel davon.
+ */
+const PUNKTE_ZUSCHLAG_GRENZEN = [0, 5] as const;
+
 /** Prueft die beiden Ausgleichsfelder; `pfad` steht vor dem Feldnamen. */
 function pruefeAusgleich(
   quelle: Record<string, unknown>,
@@ -474,10 +490,10 @@ function pruefeAusgleich(
       severity: 'error',
     });
   }
-  const gleichstand = quelle['gleichstandFuerSitz1'];
-  if (gleichstand !== undefined && gleichstand !== null && typeof gleichstand !== 'boolean') {
+  const punkte = quelle['punkteZuschlagSitz1'];
+  if (punkte !== undefined && punkte !== null && !ganzZwischen(punkte, PUNKTE_ZUSCHLAG_GRENZEN)) {
     probleme.push({
-      path: `${pfad}gleichstandFuerSitz1`,
+      path: `${pfad}punkteZuschlagSitz1`,
       messageKey: 'ruleset.fieldWrongType',
       severity: 'error',
     });
@@ -584,7 +600,7 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
   pruefeAusgleich(gegeben, '', probleme);
   const ausgleich = gegeben['ausgleichJeSpielart'];
   if (ausgleich !== undefined && ausgleich !== null) {
-    if (typeof ausgleich !== 'object') {
+    if (typeof ausgleich !== 'object' || Array.isArray(ausgleich)) {
       probleme.push({
         path: 'ausgleichJeSpielart',
         messageKey: 'ruleset.fieldWrongType',
@@ -594,7 +610,7 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
       for (const v of VARIANTEN) {
         const eintrag = (ausgleich as Record<string, unknown>)[v];
         if (eintrag === undefined) continue;
-        if (typeof eintrag !== 'object' || eintrag === null) {
+        if (typeof eintrag !== 'object' || eintrag === null || Array.isArray(eintrag)) {
           probleme.push({
             path: `ausgleichJeSpielart.${v}`,
             messageKey: 'ruleset.fieldWrongType',

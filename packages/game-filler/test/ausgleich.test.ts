@@ -5,7 +5,8 @@
  * gewann er in Klar 52 zu 36, in Build 53,5 zu 44, in Extreme 60,5 zu 37
  * (werkzeug/MESSUNG-2026-11-07-anzug.md). Ausgeglichen wird mit zwei
  * Regelfeldern: `barrierenZuschlagSitz1` (Build +1, Extreme +2) und
- * `gleichstandFuerSitz1` (Klar). Die Nachmessung steht in
+ * `punkteZuschlagSitz1` (Klar +2, Weg B vom 06.11.2026 — er ersetzt
+ * "Gleichstand zaehlt fuer Sitz 1"). Die Nachmessung steht in
  * werkzeug/MESSUNG-2026-11-07-ausgleich.md.
  *
  * Zu jeder Probe die Gegenprobe: Ein Tisch, der OHNE die Tabelle
@@ -50,26 +51,30 @@ function endstand(p: FillerPartie, null_: number, eins: number): FillerPartie {
 }
 
 describe('Ausgleich: Vorgabe und Pruefung', () => {
-  it('steht je Spielart in der Vorgabe: Klar Gleichstand, Build +1, Extreme +2, Nebel nichts', () => {
+  it('steht je Spielart in der Vorgabe: Klar +2 Punkte, Build +1 Mauer, Extreme +2, Nebel nichts', () => {
     assert.deepEqual(DEFAULT_REGELN.ausgleichJeSpielart, AUSGLEICH_JE_SPIELART);
     assert.deepEqual(AUSGLEICH_JE_SPIELART, {
-      klar: { gleichstandFuerSitz1: true },
+      klar: { punkteZuschlagSitz1: 2 },
       build: { barrierenZuschlagSitz1: 1 },
       extreme: { barrierenZuschlagSitz1: 2 },
     });
     assert.equal('nebel' in AUSGLEICH_JE_SPIELART, false);
     // Die Einzelfelder stehen NICHT in der Vorgabe, sonst gaelten sie ueberall.
     assert.equal('barrierenZuschlagSitz1' in DEFAULT_REGELN, false);
-    assert.equal('gleichstandFuerSitz1' in DEFAULT_REGELN, false);
+    assert.equal('punkteZuschlagSitz1' in DEFAULT_REGELN, false);
   });
 
   it('nimmt die Vorgabe und gueltige Felder an', () => {
     assert.deepEqual(pruefeRegeln(DEFAULT_REGELN), []);
     assert.deepEqual(pruefeRegeln(OHNE_AUSGLEICH), []);
     assert.deepEqual(
-      pruefeRegeln({ ...OHNE_AUSGLEICH, barrierenZuschlagSitz1: 5, gleichstandFuerSitz1: false }),
+      pruefeRegeln({ ...OHNE_AUSGLEICH, barrierenZuschlagSitz1: 5, punkteZuschlagSitz1: 5 }),
       [],
     );
+    // Die Grenzen selbst: 0 und 5 sind gueltig, null heisst "fehlt".
+    for (const punkte of [0, 5, null]) {
+      assert.deepEqual(pruefeRegeln({ ...OHNE_AUSGLEICH, punkteZuschlagSitz1: punkte }), [], String(punkte));
+    }
     for (const variante of ['nebel', 'klar', 'build', 'extreme'] as const) {
       assert.deepEqual(filler.validateConfig({ ...DEFAULT_REGELN, variante }, 2, 1), [], variante);
     }
@@ -82,19 +87,26 @@ describe('Ausgleich: Vorgabe und Pruefung', () => {
         'barrierenZuschlagSitz1',
       ]);
     }
-    assert.deepEqual(pfade({ ...OHNE_AUSGLEICH, gleichstandFuerSitz1: 'ja' }), [
-      'gleichstandFuerSitz1',
-    ]);
+    for (const punkte of [-1, 6, 2.5, '2', true]) {
+      assert.deepEqual(pfade({ ...OHNE_AUSGLEICH, punkteZuschlagSitz1: punkte }), [
+        'punkteZuschlagSitz1',
+      ]);
+    }
     assert.deepEqual(pfade({ ...OHNE_AUSGLEICH, ausgleichJeSpielart: 3 }), ['ausgleichJeSpielart']);
+    // Ein Array ist auch ein "object" — darf trotzdem nicht als Tabelle durchgehen.
+    assert.deepEqual(pfade({ ...OHNE_AUSGLEICH, ausgleichJeSpielart: [] }), ['ausgleichJeSpielart']);
+    assert.deepEqual(pfade({ ...OHNE_AUSGLEICH, ausgleichJeSpielart: { klar: [2] } }), [
+      'ausgleichJeSpielart.klar',
+    ]);
     assert.deepEqual(pfade({ ...OHNE_AUSGLEICH, ausgleichJeSpielart: { build: 1 } }), [
       'ausgleichJeSpielart.build',
     ]);
     assert.deepEqual(
       pfade({
         ...OHNE_AUSGLEICH,
-        ausgleichJeSpielart: { build: { barrierenZuschlagSitz1: 9 }, klar: { gleichstandFuerSitz1: 1 } },
+        ausgleichJeSpielart: { build: { barrierenZuschlagSitz1: 9 }, klar: { punkteZuschlagSitz1: 6 } },
       }),
-      ['ausgleichJeSpielart.klar.gleichstandFuerSitz1', 'ausgleichJeSpielart.build.barrierenZuschlagSitz1'],
+      ['ausgleichJeSpielart.klar.punkteZuschlagSitz1', 'ausgleichJeSpielart.build.barrierenZuschlagSitz1'],
     );
   });
 });
@@ -106,7 +118,7 @@ describe('Ausgleich: Mauerzuschlag fuer Sitz 1', () => {
     assert.equal(p.regeln.barrierenZuschlagSitz1, 1);
     // Die Tabelle steht nicht im Snapshot, nur was sie festgelegt hat.
     assert.equal('ausgleichJeSpielart' in p.regeln, false);
-    assert.equal('gleichstandFuerSitz1' in p.regeln, false);
+    assert.equal('punkteZuschlagSitz1' in p.regeln, false);
   });
 
   it('Extreme: Sitz 0 zwanzig, Sitz 1 zweiundzwanzig', () => {
@@ -166,59 +178,117 @@ describe('Ausgleich: Mauerzuschlag fuer Sitz 1', () => {
   });
 });
 
-describe('Ausgleich: Gleichstand fuer Sitz 1', () => {
-  it('Klar: Gleichstand gewinnt Sitz 1, er steht allein auf Platz 1', () => {
+describe('Ausgleich: Punktzuschlag fuer Sitz 1', () => {
+  const plaetze = (p: FillerPartie) =>
+    platzierungen(p).map(({ seat, points, place }) => [seat, points, place]);
+
+  it('Klar: Sitz 1 bekommt zwei Punkte in der Wertung, das Brett bleibt', () => {
     const p = endstand(neu('klar'), 28, 28);
-    assert.equal(p.regeln.gleichstandFuerSitz1, true);
-    assert.deepEqual(
-      platzierungen(p).map(({ seat, place }) => [seat, place]),
-      [
-        [1, 1],
-        [0, 2],
-      ],
-    );
+    assert.equal(p.regeln.punkteZuschlagSitz1, 2);
+    assert.deepEqual(p.punkte, { 0: 28, 1: 28 });
+    assert.deepEqual(plaetze(p), [
+      [1, 30, 1],
+      [0, 28, 2],
+    ]);
     assert.equal(sieger(p), 1);
-    assert.equal(sichtFuer(p, 0).sieger, 1);
     assert.deepEqual(
-      filler.standings(p).map((s) => s.place),
-      [1, 2],
-    );
-  });
-
-  it('Klar: wer mehr Punkte hat, gewinnt weiter — die Regel zaehlt nur beim Gleichstand', () => {
-    assert.equal(sieger(endstand(neu('klar'), 29, 27)), 0);
-    assert.equal(sieger(endstand(neu('klar'), 27, 29)), 1);
-  });
-
-  it('Klar: die Aufgabe geht vor — gibt Sitz 1 beim Gleichstand auf, gewinnt Sitz 0', () => {
-    const p = { ...endstand(neu('klar'), 20, 20), aufgegeben: 1 };
-    assert.equal(sieger(p), 0);
-    assert.deepEqual(
-      platzierungen(p).map(({ seat, place }) => [seat, place]),
+      filler.standings(p).map((s) => [s.seat, s.points, s.place]),
       [
-        [0, 1],
-        [1, 2],
+        [1, 30, 1],
+        [0, 28, 2],
       ],
     );
   });
 
-  it('Klar: laufende Partie hat keinen Sieger, auch bei Gleichstand', () => {
-    const p = { ...neu('klar'), punkte: { 0: 5, 1: 5 } };
+  it('Klar: Remis bleibt Remis — zwei Felder Vorsprung gleicht der Zuschlag genau aus', () => {
+    const p = endstand(neu('klar'), 29, 27);
+    assert.equal(sieger(p), null);
+    assert.deepEqual(
+      platzierungen(p).map((e) => [e.points, e.place]),
+      [
+        [29, 1],
+        [29, 1],
+      ],
+    );
+    assert.equal(sichtFuer(p, 0).sieger, null);
+  });
+
+  it('Klar: drei Felder Vorsprung reichen Sitz 0 weiter, und Sitz 1 gewinnt mit einem weniger', () => {
+    assert.equal(sieger(endstand(neu('klar'), 30, 26)), 0);
+    assert.equal(sieger(endstand(neu('klar'), 29, 26)), 0);
+    assert.equal(sieger(endstand(neu('klar'), 28, 27)), 1);
+  });
+
+  it('Klar: die Aufgabe geht vor — gibt Sitz 1 auf, gewinnt Sitz 0, auch mit weniger Punkten', () => {
+    const p = { ...endstand(neu('klar'), 20, 25), aufgegeben: 1 };
+    assert.equal(sieger(p), 0);
+    assert.deepEqual(plaetze(p), [
+      [0, 20, 1],
+      [1, 27, 2],
+    ]);
+  });
+
+  it('Klar: laufende Partie hat keinen Sieger, auch mit Zuschlag', () => {
+    const p = { ...neu('klar'), punkte: { 0: 5, 1: 9 } };
     assert.equal(sieger(p), null);
   });
 
-  it('Gegenprobe: ohne die Regel bleibt der Gleichstand ein Unentschieden', () => {
+  it('steht als Zahl in jeder Sicht — Sitz 0, Sitz 1 und Zuschauer', () => {
+    const p = endstand(neu('klar'), 28, 28);
+    for (const sicht of [sichtFuer(p, 0), sichtFuer(p, 1), zuschauerSicht(p)]) {
+      assert.equal(sicht.punkteZuschlagSitz1, 2);
+      // Die Punkte der Sicht bleiben das Brett; der Zuschlag steht daneben.
+      assert.deepEqual(sicht.punkte, { 0: 28, 1: 28 });
+      assert.equal(sicht.sieger, 1);
+    }
+  });
+
+  it('gilt auch als Einzelfeld ohne Tabelle (ein selbstgebauter Tisch)', () => {
+    const p = endstand(neu('nebel', { ...OHNE_AUSGLEICH, punkteZuschlagSitz1: 3 }), 30, 27);
+    assert.equal(sieger(p), null);
+    assert.equal(sichtFuer(p, 0).punkteZuschlagSitz1, 3);
+  });
+
+  it('Gegenprobe: ohne Zuschlag bleibt alles wie vorher — Sicht 0, Gleichstand Unentschieden', () => {
     for (const p of [
       endstand(neu('klar', OHNE_AUSGLEICH), 28, 28),
       endstand(neu('nebel'), 28, 28),
       endstand(neu('build'), 28, 28),
+      endstand(neu('extreme'), 28, 28),
     ]) {
       assert.equal(sieger(p), null, p.regeln.variante);
       assert.deepEqual(
-        platzierungen(p).map((e) => e.place),
-        [1, 1],
+        platzierungen(p).map((e) => [e.points, e.place]),
+        [
+          [28, 1],
+          [28, 1],
+        ],
         p.regeln.variante,
       );
+      assert.equal(sichtFuer(p, 0).punkteZuschlagSitz1, 0, p.regeln.variante);
+      assert.equal('punkteZuschlagSitz1' in p.regeln, false, p.regeln.variante);
+    }
+    assert.equal(sieger(endstand(neu('klar', OHNE_AUSGLEICH), 28, 27)), 0);
+  });
+
+  it('Gegenprobe: der Bot spielt in Klar mit und ohne Zuschlag dieselbe Partie', () => {
+    /*
+     * Darauf ruht die Messung aus den Punktdifferenzen
+     * (werkzeug/ausgleich-messung.mjs): Der Bot liest keine Punkte, der
+     * Zuschlag aendert also keinen Zug, nur die Wertung.
+     */
+    for (const saat of [SAAT, 1, 42]) {
+      const spiele = (regeln: FillerRegeln): FillerPartie => {
+        let p = erstellePartie({ ...regeln, variante: 'klar' }, [0, 1], saat);
+        let n = 0;
+        while (!p.fertig && n++ < 600) p = fuehreAus(p, p.dran, botZug(sichtFuer(p, p.dran)));
+        return p;
+      };
+      const mit = spiele(DEFAULT_REGELN);
+      const ohne = spiele(OHNE_AUSGLEICH);
+      assert.deepEqual(mit.besitzer, ohne.besitzer, String(saat));
+      assert.deepEqual(mit.punkte, ohne.punkte, String(saat));
+      assert.equal(mit.zug, ohne.zug, String(saat));
     }
   });
 
@@ -244,10 +314,10 @@ describe('Ausgleich: Fingerabdruecke der Bot-Partie mit voller Vorgabe', () => {
    * `node werkzeug/abdruck-schichten.mjs <dist>`, Zeilen "ausgleich".
    */
   const ERWARTET: Record<string, string> = {
-    'klar/c0ffee1234567890abcdef0123456789': '6f0f3e768b875704',
-    'klar/1': '81fff2b58048802e',
-    'klar/2': 'c212b9f7663fab28',
-    'klar/42': '415a852363d4d0af',
+    'klar/c0ffee1234567890abcdef0123456789': '34f2f10fd363dc4c',
+    'klar/1': '92633857f4b8ae7e',
+    'klar/2': '83fc314178299c10',
+    'klar/42': '1c19ae69e1432e7c',
     'build/c0ffee1234567890abcdef0123456789': '2d0d977ae1bc4954',
     'build/1': 'c7b0f770aed34fbb',
     'build/2': '1c84ecc2ec0ce478',
