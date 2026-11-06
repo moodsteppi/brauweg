@@ -451,7 +451,9 @@ describe('Build: Eine ganze Partie', () => {
      * Partien keine Wand mehr ueber seiner Schwelle: Seine Wandrechnung
      * lebte davon, dem Gegner Felder ganz abzuschneiden, und genau das ist
      * jetzt verboten. Den Bot nachzuziehen ist eine eigene Aufgabe; dass er
-     * eine lohnende Wand noch findet, zeigt "Der Bot und die Wand" unten.
+     * eine lohnende Wand noch findet, zeigt "Der Bot und die Wand" unten,
+     * und dass er es in ganzen Partien nicht mehr tut, haelt der offene Test
+     * "Der Bot mauert in ganzen Partien" fest.
      */
     // Seit der Bot mauert, kann eine Flaeche fuer BEIDE hinter Waenden liegen
     // bleiben — mehr als 56 Felder gehen aber nie weg, und leer bleibt keiner.
@@ -462,7 +464,8 @@ describe('Build: Eine ganze Partie', () => {
 
   it('kommt in mehreren Saaten zu Ende', () => {
     // Bis zum 06.11.2026 musste der Bot hier in jeder Saat einmal mauern —
-    // warum das nicht mehr gilt, steht im Test darueber.
+    // die Erwartung steht jetzt offen (todo) unter "Der Bot mauert in ganzen
+    // Partien", Build und Extreme.
     for (const saat of ['1f3a5c7e9b0d2f4a6c8e0b1d3f5a7c9e', SAAT, '00112233445566778899aabbccddeeff']) {
       let partie = erstellePartie(BUILD, [0, 1], saat);
       let schritte = 0;
@@ -472,6 +475,62 @@ describe('Build: Eine ganze Partie', () => {
         schritte++;
       }
       assert.equal(partie.fertig, true, `Saat ${saat} endet nicht`);
+    }
+  });
+});
+
+/*
+ * OFFEN seit dem 06.11.2026 — eine Entscheidung, keine Kleinigkeit.
+ *
+ * Bis dahin musste der Bot in jeder Saat mindestens einmal mauern ("sonst ist
+ * die Schwelle zu hoch und das Feature nur auf dem Papier da"). Seit keine
+ * Mauer mehr den letzten Weg schliessen darf (Regel 2, moeglicheBarrieren in
+ * partie.ts), findet der unveraenderte Bot keine Wand mehr ueber seiner
+ * Schwelle: Sein Wandwert lebte davon, dem Gegner Felder ganz abzuschneiden,
+ * und genau das ist jetzt verboten. Uebrig bleibt der halbe Zugterm,
+ * hoechstens 1 gegen WAND_SCHWELLE 2. Gemessen ueber 200 Saaten: 0,00 Mauern
+ * je Partie in Build (vorher 3,65) und Extreme (vorher 9,32) — Build spielt
+ * Bot gegen Bot Zug fuer Zug wie Klar (werkzeug/MESSUNG-2026-11-06-regelfix.md).
+ *
+ * Die Erwartung steht deshalb weiter hier, als `todo`: Sie laeuft bei jedem
+ * Lauf mit und steht in der Zusammenfassung unter "todo", faerbt die CI aber
+ * nicht rot, solange niemand entschieden hat. Wer den Bot nachzieht, nimmt das
+ * `todo` heraus — dann muss sie wieder halten. Wer entscheidet, dass der Bot
+ * in Build nicht mehr mauern soll, loescht sie ausdruecklich und schreibt das
+ * hierher. Dass die Wandrechnung an sich noch anschlaegt, zeigt "Der Bot und
+ * die Wand" unten; das hier fragt, ob sie es in echten Partien auch tut.
+ */
+const BOT_MAUERT_OFFEN =
+  'Bot mauert unter Regel 2 nicht mehr (0,00 je Partie) — Entscheidung offen, siehe Kommentar';
+
+/** Wie viele Mauern zwei Bots in einer ganzen Partie bauen. */
+function botMauernInPartie(regeln: Parameters<typeof erstellePartie>[0], saat: string): number {
+  let partie = erstellePartie(regeln, [0, 1], saat);
+  let waende = 0;
+  let schritte = 0;
+  while (!partie.fertig && schritte < 1000) {
+    const zug = botZug(sichtFuer(partie, partie.dran));
+    if (zug.typ === 'barriere') waende++;
+    partie = fuehreAus(partie, partie.dran, zug);
+    schritte++;
+  }
+  assert.equal(partie.fertig, true, `Saat ${saat} endet nicht`);
+  return waende;
+}
+
+describe('Der Bot mauert in ganzen Partien (offen seit 06.11.2026)', () => {
+  const SAATEN = ['1f3a5c7e9b0d2f4a6c8e0b1d3f5a7c9e', SAAT, '00112233445566778899aabbccddeeff'];
+
+  it('Build: mauert in jeder von mehreren Saaten mindestens einmal', { todo: BOT_MAUERT_OFFEN }, () => {
+    for (const saat of SAATEN) {
+      assert.ok(botMauernInPartie(BUILD, saat) > 0, `Build, Saat ${saat}: keine Wand gebaut`);
+    }
+  });
+
+  it('Extreme: mauert in jeder von mehreren Saaten mindestens einmal', { todo: BOT_MAUERT_OFFEN }, () => {
+    const extreme = { ...DEFAULT_REGELN, variante: 'extreme' } as const;
+    for (const saat of SAATEN) {
+      assert.ok(botMauernInPartie(extreme, saat) > 0, `Extreme, Saat ${saat}: keine Wand gebaut`);
     }
   });
 });
