@@ -954,7 +954,9 @@ export function platzierungen(
   let letzter: { points: number; aufgegeben: boolean } | null = null;
   return reihe.map((eintrag, index) => {
     const aufgegeben = eintrag.seat === partie.aufgegeben;
-    if (letzter === null || eintrag.points !== letzter.points || aufgegeben !== letzter.aufgegeben) {
+    const neuerPlatz =
+      letzter === null || eintrag.points !== letzter.points || aufgegeben !== letzter.aufgegeben;
+    if (neuerPlatz) {
       platz = index + 1;
       letzter = { points: eintrag.points, aufgegeben };
     }

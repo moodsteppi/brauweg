@@ -26,7 +26,12 @@ import {
   platzierungen,
   sieger,
 } from '../src/partie.js';
-import { AUFBAU_JE_SPIELART, DEFAULT_REGELN, type FillerVariante, pruefeRegeln } from '../src/regeln.js';
+import {
+  AUFBAU_JE_SPIELART,
+  DEFAULT_REGELN,
+  type FillerVariante,
+  pruefeRegeln,
+} from '../src/regeln.js';
 import { sichtFuer, zuschauerSicht } from '../src/sicht.js';
 
 const SAAT = 'c0ffee1234567890abcdef0123456789';
@@ -101,7 +106,8 @@ describe('Mauerfreie Eroeffnung', () => {
   });
 
   it('Gegenprobe: ein Extreme-Tisch ohne Aufbau-Tabelle behaelt drei', () => {
-    const { aufbauJeSpielart: _weg, ...damals } = { ...DEFAULT_REGELN, variante: 'extreme' as const };
+    const extreme = { ...DEFAULT_REGELN, variante: 'extreme' as const };
+    const { aufbauJeSpielart: _weg, ...damals } = extreme;
     void _weg;
     const p = erstellePartie(damals, [0, 1], SAAT);
     assert.equal(mauerSperre(p), 3);
