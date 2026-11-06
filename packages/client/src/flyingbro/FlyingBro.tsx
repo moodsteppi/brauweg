@@ -443,8 +443,10 @@ function Spiel({
         }
       }
       setBereit(true);
-      bild = requestAnimationFrame(runde);
-      // Erstes Bild sofort, auch wenn rAF (Hintergrund-Tab) wartet.
+      // Erstes Bild sofort, auch wenn rAF (Hintergrund-Tab) wartet. `runde`
+      // meldet sich selbst für das nächste Bild an — ein zusätzliches
+      // requestAnimationFrame hier startete eine ZWEITE Schleife, und jedes
+      // Bild wurde doppelt gezeichnet (gemessen: jeder zweite Abstand 0 ms).
       runde(performance.now());
     });
 

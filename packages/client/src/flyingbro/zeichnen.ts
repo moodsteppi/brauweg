@@ -11,7 +11,7 @@
 import { BRO_WERTE, type Bro, FAEHIGKEITEN, GIRAFFEN_WERTE, type GiraffenGroesse, RISS_STUFEN, type Stoff, type Teil } from '@brauweg/flyingbro-kern';
 
 import type { BildName, Bilder } from './bilder';
-import { type Kamera, aufBild, hintergrundLage } from './kamera';
+import { type Kamera, aufBild } from './kamera';
 import { ABGANG_S, type FliegenderBro, type Partie } from './partie';
 import type { Vek } from './zielen';
 
@@ -43,20 +43,6 @@ function mittig(ctx: CanvasRenderingContext2D, img: HTMLImageElement | undefined
   else {
     ctx.fillStyle = ersatz;
     ctx.fillRect(-b / 2, -h / 2, b, h);
-  }
-}
-
-export function zeichneHintergrund(ctx: CanvasRenderingContext2D, bilder: Bilder, breite: number, hoehe: number): void {
-  // Himmelsfarbe für den Streifen über dem Bild (hoher, schmaler Bildschirm).
-  ctx.fillStyle = '#9fd3f2';
-  ctx.fillRect(0, 0, breite, hoehe);
-  const h = bild(bilder, 'hintergrund');
-  if (h) {
-    const l = hintergrundLage(breite, hoehe);
-    ctx.drawImage(h, l.x, l.y, l.b, l.h);
-  } else {
-    ctx.fillStyle = '#7cbf5a';
-    ctx.fillRect(0, hoehe * 0.8, breite, hoehe * 0.2);
   }
 }
 
@@ -230,7 +216,11 @@ function zeichneFliegenden(ctx: CanvasRenderingContext2D, k: Kamera, bilder: Bil
 
 /** Das ganze Bild einer Partie. */
 export function zeichne(ctx: CanvasRenderingContext2D, partie: Partie, k: Kamera, bilder: Bilder, breite: number, hoehe: number, ziel: Zielbild | null): void {
-  zeichneHintergrund(ctx, bilder, breite, hoehe);
+  // Der Hintergrund ist KEIN Teil der Leinwand, sondern CSS darunter
+  // (.fb-spiel, dieselbe Lage wie hintergrundLage: cover, unten bündig). Das
+  // Bild steht still; es jedes Bild neu und skaliert auf die ganze Fläche zu
+  // malen, war der größte Einzelposten eines Bildes.
+  ctx.clearRect(0, 0, breite, hoehe);
   const s = k.s;
 
   // Spur des fliegenden Bros: weiße Punkte, wie man sie aus dem Genre kennt.

@@ -7,7 +7,6 @@
  */
 
 const NAMEN = [
-  'hintergrund',
   'schleuder',
   ...['pelle', 'malve', 'tjark'].flatMap((b) => [`bro-${b}-ruhe`, `bro-${b}-flug`]),
   'bro-pelle-rutsch',

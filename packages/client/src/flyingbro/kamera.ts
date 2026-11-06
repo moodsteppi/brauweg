@@ -27,7 +27,8 @@ export interface Kamera {
   boden: number;
 }
 
-/** Wie das Hintergrundbild liegt: Breite füllen, unten bündig — darüber Himmelsfarbe. */
+/** Wie das Hintergrundbild liegt: Breite füllen, unten bündig — darüber Himmelsfarbe.
+ *  Gemalt wird es als CSS unter der Leinwand (.fb-spiel, `cover` + `center bottom` ergibt genau diese Lage). */
 export function hintergrundLage(breite: number, hoehe: number): { x: number; y: number; b: number; h: number } {
   const b = Math.max(breite, hoehe / HINTERGRUND_SEITEN);
   const h = b * HINTERGRUND_SEITEN;

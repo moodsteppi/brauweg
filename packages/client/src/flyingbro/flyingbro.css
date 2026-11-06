@@ -152,7 +152,14 @@
 
 /* ---------- Spiel ---------- */
 
-.fb-spiel { position: absolute; inset: 0; }
+.fb-spiel {
+  position: absolute;
+  inset: 0;
+  /* Kulisse unter der durchsichtigen Leinwand — muss zu hintergrundLage()
+     in kamera.ts passen (Breite oder Höhe füllen, unten bündig), sonst
+     stehen die Giraffen neben der gemalten Graslinie. */
+  background: url('/flyingbro/hintergrund.webp') center bottom / cover no-repeat, #9fd3f2;
+}
 .fb-leinwand { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 .fb-laedt {
   position: absolute;
