@@ -11,6 +11,7 @@
  */
 
 import type { Bemalung } from './bemalung';
+import type { Sprache } from './i18n/sprachen';
 import type { BotLevel } from './protocol';
 import type { Lektion, LernpfadAnsicht, LernserieKurz, Spieltag } from './lernen/sicht';
 import type { Belohnung, BrowortAnsicht, BrowortKurz, BrowortProfil, ClanwortAnsicht } from './browort/sicht';
@@ -135,6 +136,11 @@ export interface Me {
    * Standardoptik. Der Server hat sie schon geprüft.
    */
   figur?: Bemalung | null;
+  /**
+   * Gewaehlte Sprache, `null` = „Automatisch" (Geraetesprache). Fehlt es
+   * (aelterer Server), gilt ebenfalls Automatisch.
+   */
+  sprache?: Sprache | null;
   displayName: string;
   coins: number;
   /**
@@ -891,6 +897,8 @@ export const api = {
     patch<{ ok: true; figur: Bemalung }>('/me/figur', bemalung),
   /** Profilbild setzen (data-URL) oder mit null entfernen. */
   setAvatar: (avatar: string | null) => patch<{ ok: true }>('/me', { avatar }),
+  /** Sprache am Konto speichern; null stellt auf „Automatisch" zurueck. */
+  setSprache: (sprache: Sprache | null) => patch<{ ok: true }>('/me', { sprache }),
   /** Die Stufenleiter um den eigenen Stand herum. Nur beim Antippen geladen. */
   levels: () =>
     request<{

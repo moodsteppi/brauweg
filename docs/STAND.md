@@ -1469,7 +1469,7 @@ Kleinigkeiten, die eine Übersetzung in Sekunden findet.
 
 **Sechs Dateien überschneiden sich mit der zweiten Sitzung dieses Tages:**
 `server/src/shop.ts`, `server/src/http/app.ts`, `client/src/api.ts`,
-`client/src/i18n.ts`, `client/src/screens/GameSelect.tsx`,
+`client/src/i18n.ts` (heute `client/src/i18n/`), `client/src/screens/GameSelect.tsx`,
 `client/src/styles.css`. Ein Merge ohne Nacharbeit gibt es hier nicht.
 
 **Die schwerste Stelle ist `tischware.ts`.** Der neue Katalog für Szenerien,
@@ -2312,7 +2312,7 @@ Regel ändern, nicht diese Dateien einzeln löschen.
 - **Der Pinguin steht im unteren Drittel, nicht mittig** (`Pfad.tsx`,
   `FIGUR_VON_OBEN = 2/3`). Er startet unten und steigt höchstens bis an die
   Grenze des unteren Drittels — gemessen 63 % von oben bei 550 Trophäen.
-- **Große Zahlen in der Kopfzeile abgekürzt** (`kompakteZahl` in `i18n.ts`):
+- **Große Zahlen in der Kopfzeile abgekürzt** (`kompakteZahl` in `client/src/i18n/index.ts`):
   `550 · 1,5K · 12K · 10M`. Der siebenstellige Testkonto-Münzstand (9.999.999)
   schob sonst Name und Level ineinander. Zusätzlich gibt der Name bei Enge
   zuerst nach (`front-spieler { flex: 1 1 auto }`), die Anzeigen rechts

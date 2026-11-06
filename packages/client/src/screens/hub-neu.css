@@ -3355,6 +3355,24 @@
   gap: 0;
   padding: 4px 14px;
 }
+/* Sprachwahl: drei gleich breite Knöpfe, der gewählte in Gold. Gleich breit,
+   damit „Automatisch" nicht die Nachbarn verdrängt — und eine dritte Sprache
+   in der Liste die Reihe nur enger macht, statt sie umzubrechen. */
+:is(.hb, .spe) .hb-sprache {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+:is(.hb, .spe) .hb-sprachwahl {
+  display: flex;
+  gap: 8px;
+}
+:is(.hb, .spe) .hb-sprachwahl .hb-kn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 8px;
+}
 :is(.hb, .spe) .hb-regler {
   display: flex;
   flex-direction: column;
