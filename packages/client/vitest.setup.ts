@@ -55,3 +55,17 @@ if (typeof (globalThis as { localStorage?: Storage }).localStorage?.clear !== 'f
     });
   }
 }
+
+/*
+ * Tests laufen auf Deutsch. jsdom meldet `en-US` als Gerätesprache, und die
+ * Sprachwahl „Automatisch" (die Vorgabe) folgt dem Gerät — sobald ein Bereich
+ * ins Englische übersetzt war, fanden die vielen Tests, die nach deutschem
+ * Text suchen („Neues Konto", „Beitreten"), ihn nicht mehr, obwohl am
+ * Bildschirm nichts kaputt war. Wer Englisch prüfen will, stellt es im Test
+ * ausdrücklich ein (`setzeSprachwahl('en')`).
+ *
+ * Hier und nicht erst im Test: `i18n/index.ts` liest die Gerätesprache beim
+ * Laden, und die Einrichtung läuft vor jedem Import der Testdatei.
+ */
+Object.defineProperty(navigator, 'languages', { value: ['de-DE', 'de'], configurable: true });
+Object.defineProperty(navigator, 'language', { value: 'de-DE', configurable: true });
