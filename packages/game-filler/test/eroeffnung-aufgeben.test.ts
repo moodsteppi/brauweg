@@ -252,6 +252,12 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
    * Bot-Partie bis zum Ende, dazu ausgedachte Endstaende mit Gleichstand und
    * Vorsprung fuer jede Seite, eine laufende Partie und ein ausgestiegener
    * Sitz. Extreme ohne Aufbau-Tabelle, so wie jeder Tisch vor 8975c8e.
+   *
+   * Build und Extreme neu erzeugt am 06.11.2026: Seit eine Mauer nie den
+   * letzten Weg schliessen darf (moeglicheBarrieren), findet der Bot in diesen
+   * Partien keine Wand mehr ueber seiner Schwelle und spielt sie ohne Mauern
+   * — Build damit Zug fuer Zug wie Klar, daher dieselben Abdruecke. Die
+   * Wertung selbst ist unveraendert; anders sind die Partien.
    */
   const VORHER: Record<string, string> = {
     'nebel/c0ffee1234567890abcdef0123456789': '8104d2b97ca72716',
@@ -262,14 +268,14 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
     'klar/1': 'a90acdce8d15a3f3',
     'klar/2': '97e9edaf8f9c890b',
     'klar/42': '157116fa79996aef',
-    'build/c0ffee1234567890abcdef0123456789': '1c40e73814c92fd7',
-    'build/1': '75e3b62f22a74a7c',
+    'build/c0ffee1234567890abcdef0123456789': '8104d2b97ca72716',
+    'build/1': 'a90acdce8d15a3f3',
     'build/2': '97e9edaf8f9c890b',
-    'build/42': '8c7576325e11b054',
-    'extreme/c0ffee1234567890abcdef0123456789': 'b254099775891d59',
-    'extreme/1': '1f6de6c7af3ffcb5',
+    'build/42': '157116fa79996aef',
+    'extreme/c0ffee1234567890abcdef0123456789': 'd03a4ec4c491db26',
+    'extreme/1': '2b66a70e78e73566',
     'extreme/2': '8ebaf1fc12ede263',
-    'extreme/42': 'c1f2140e93ae66b8',
+    'extreme/42': '69407c0d0e279bfe',
   };
   const hash = (x: unknown): string =>
     createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);

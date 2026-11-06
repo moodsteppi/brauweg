@@ -16,6 +16,7 @@ import { createHash } from 'node:crypto';
 import { filler } from '../src/adapter.js';
 import { botZug } from '../src/bot.js';
 import {
+  type FillerAktion,
   type FillerPartie,
   erlaubteZuege,
   mauerSperre,
@@ -213,16 +214,24 @@ describe('Extreme gross: Bot', () => {
     let doppel = 0;
     let pausiert = 0;
     /*
-     * Saat 12, weil der Bot dort eine Doppelmauer baut (gesucht ueber die
-     * Saaten 1 bis 20, dort die einzige) — nur so kommt die Pause in diesem
-     * Test auch wirklich vor.
+     * Bis zum 06.11.2026 baute der Bot auf Saat 12 eine Doppelmauer. Seit eine
+     * Mauer nie den letzten Weg schliessen darf, findet er keine Wand mehr
+     * ueber seiner Schwelle (seine Wandrechnung lebt vom Abschneiden). Damit
+     * Doppelmauer und Pause trotzdem eine ganze Partie lang durchlaufen,
+     * mauert in jedem Zug zuerst ein Baumeister, solange das Modul etwas
+     * anbietet — immer die erste angebotene Kante —, und erst dann zieht der
+     * Bot. Geprueft wird dabei jeder Zug gegen `legalActions`.
      */
     for (const saat of [SAAT, 12]) {
       let p = erstellePartie(EXTREME, [0, 1], saat);
       let n = 0;
       while (!p.fertig && n++ < 600) {
         const sitz = p.dran;
-        const zug = botZug(sichtFuer(p, sitz));
+        const angebot = moeglicheBarrieren(p, sitz);
+        const zug: FillerAktion =
+          angebot.length > 0
+            ? { typ: 'barriere', von: angebot[0]![0], nach: angebot[0]![1] }
+            : botZug(sichtFuer(p, sitz));
         const erlaubt = filler.legalActions(p, sitz);
         assert.ok(
           erlaubt.some((z) => JSON.stringify(z) === JSON.stringify(zug)) ||
@@ -296,6 +305,11 @@ describe('Andere Spielarten unveraendert', () => {
    * Endstands einer reinen Bot-Partie, erzeugt mit dem Stand 75dff13 — vor
    * dem grossen Extreme-Brett. Gleiche Saat muss dasselbe Brett, dieselben
    * Regeln und dieselbe Partie ergeben.
+   *
+   * Ausnahme seit dem 06.11.2026: der ENDSTAND in Build. Die Mauerregeln
+   * "nur an einem freien Feld" und "nie den letzten Weg schliessen" gelten
+   * auch dort, und mit ihnen setzt der Bot keine Mauer mehr. Das Brett (der
+   * erste Abdruck) ist unveraendert, die Partie eine andere.
    */
   const VORHER: Record<string, readonly [string, string]> = {
     'nebel/c0ffee1234567890abcdef0123456789': ['b99a18adf10e9de9', '98e749e08f84d18f'],
@@ -306,10 +320,10 @@ describe('Andere Spielarten unveraendert', () => {
     'klar/1': ['5ada94f15c79cd12', '18449abd965255ab'],
     'klar/2': ['9488e3949af834bf', 'd45b908bf92f460c'],
     'klar/42': ['a54e26fc806530fd', '9f0adb58cb89de3d'],
-    'build/c0ffee1234567890abcdef0123456789': ['8e2077a6200c183c', '29546ff352efc2ea'],
-    'build/1': ['3fbf3266569e124c', 'daec5b1bbc50b669'],
-    'build/2': ['ea5de89035bc8107', 'b42532c7d1c2b279'],
-    'build/42': ['736271c48db7a257', '1ed530456700461b'],
+    'build/c0ffee1234567890abcdef0123456789': ['8e2077a6200c183c', '3859712d06eaf6a7'],
+    'build/1': ['3fbf3266569e124c', 'e3af59053946588d'],
+    'build/2': ['ea5de89035bc8107', '23e13cffeee5ac48'],
+    'build/42': ['736271c48db7a257', 'f1f155f7b35480b7'],
   };
   const hash = (x: unknown): string =>
     createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);
