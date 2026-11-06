@@ -57,7 +57,11 @@ for (const [schicht, wahl] of Object.entries(WAHL)) {
   // eroeffnung-aufgeben.test.ts: Extreme ohne Aufbau-Tabelle, wie dort.
   for (const variante of ['build', 'extreme']) {
     for (const saat of SAATEN) {
-      const { aufbauJeSpielart: _weg, ...regeln } = { ...DEFAULT_REGELN, variante };
+      // Ohne Ausgleich (07.11.2026): Diese Abdruecke halten den Tisch von vorher fest.
+      const { aufbauJeSpielart: _weg, ausgleichJeSpielart: _ausgleich, ...regeln } = {
+        ...DEFAULT_REGELN,
+        variante,
+      };
       let p = P.erstellePartie(regeln, [0, 1], saat);
       let mitte = null;
       let n = 0;
@@ -74,7 +78,8 @@ for (const [schicht, wahl] of Object.entries(WAHL)) {
   }
   // extreme-gross.test.ts: Build-Endstand, mit Aufbau-Tabelle.
   for (const saat of SAATEN) {
-    let p = P.erstellePartie({ ...DEFAULT_REGELN, variante: 'build' }, [0, 1], saat);
+    const { ausgleichJeSpielart: _ausgleich, ...ohneAusgleich } = DEFAULT_REGELN;
+    let p = P.erstellePartie({ ...ohneAusgleich, variante: 'build' }, [0, 1], saat);
     let n = 0;
     while (!p.fertig && n++ < 400) p = P.fuehreAus(p, p.dran, wahl(p));
     const kern = {
@@ -83,5 +88,21 @@ for (const [schicht, wahl] of Object.entries(WAHL)) {
       barrierenUebrig: p.barrierenUebrig, sterne: p.sterne,
     };
     console.log(`${schicht.padEnd(11)} gross-ende   build/${saat} ${hash(kern)}`);
+  }
+}
+
+/*
+ * test/ausgleich.test.ts: die volle Vorgabe MIT Ausgleich fuer Sitz 1
+ * (07.11.2026), echter Bot, Wertung und Endstand. Auf einem Stand ohne
+ * `ausgleichJeSpielart` ergibt das die Abdruecke des Tisches ohne Ausgleich.
+ */
+for (const variante of ['klar', 'build', 'extreme']) {
+  for (const saat of SAATEN) {
+    let p = P.erstellePartie({ ...DEFAULT_REGELN, variante }, [0, 1], saat);
+    let n = 0;
+    while (!p.fertig && n++ < 600) p = P.fuehreAus(p, p.dran, WAHL['echter-bot'](p));
+    // Feldfolge wortgleich mit dem Test (platz, sieger), sonst passt der Hash nicht.
+    const abdruck = hash({ regeln: p.regeln, punkte: p.punkte, barrierenUebrig: p.barrierenUebrig, barrieren: p.barrieren, zug: p.zug, platz: P.platzierungen(p), sieger: P.sieger(p) });
+    console.log(`echter-bot  ausgleich    ${variante}/${saat} ${abdruck}`);
   }
 }

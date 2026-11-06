@@ -364,8 +364,19 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
   function abdruck(schluessel: string, wahl: Wahl): string {
     const [variante, saatText] = schluessel.split('/') as [FillerVariante, string];
     const saat = /^\d+$/.test(saatText) ? Number(saatText) : saatText;
-    const { aufbauJeSpielart: _weg, ...regeln } = { ...DEFAULT_REGELN, variante };
+    /*
+     * Auch ohne `ausgleichJeSpielart` (seit dem 07.11.2026): Diese Abdruecke
+     * halten einen Tisch von VORHER fest, und der spielt ohne Extramauern
+     * und mit echtem Unentschieden weiter. Den Stand mit Ausgleich haelt
+     * ausgleich.test.ts fest.
+     */
+    const {
+      aufbauJeSpielart: _weg,
+      ausgleichJeSpielart: _ausgleich,
+      ...regeln
+    } = { ...DEFAULT_REGELN, variante };
     void _weg;
+    void _ausgleich;
     let p = erstellePartie(regeln, [0, 1], saat);
     let mitte: FillerPartie | null = null;
     let n = 0;

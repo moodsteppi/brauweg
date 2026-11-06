@@ -47,7 +47,8 @@ describe('Build: Aufbau', () => {
   it('gibt jedem Sitz seine Barrieren und legt das Brett offen', () => {
     const partie = neu();
     assert.equal(partie.barrierenUebrig[0], 5);
-    assert.equal(partie.barrierenUebrig[1], 5);
+    // Sitz 1 zieht nach und bekommt in Build eine Mauer mehr (AUSGLEICH_JE_SPIELART).
+    assert.equal(partie.barrierenUebrig[1], 6);
     assert.deepEqual([...partie.barrieren], []);
     const sicht = sichtFuer(partie, 0);
     assert.equal(sicht.variante, 'build');
@@ -108,7 +109,7 @@ describe('Build: Setzen', () => {
     const danach = fuehreAus(partie, 0, { typ: 'barriere', von, nach });
     assert.deepEqual([...danach.barrieren], [kante(von, nach)]);
     assert.equal(danach.barrierenUebrig[0], 4);
-    assert.equal(danach.barrierenUebrig[1], 5);
+    assert.equal(danach.barrierenUebrig[1], 6);
     // Der Zug geht weiter: Wer mauert, faerbt danach trotzdem.
     assert.equal(danach.dran, 0);
     assert.equal(danach.zug, partie.zug);

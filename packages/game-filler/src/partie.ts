@@ -20,11 +20,14 @@ import {
   type FillerRegeln,
   type FillerRegelnFest,
   aufbauFuer,
+  ausgleichFuer,
+  barrierenZuschlagSitz1,
   farbzahl,
   istVariante,
   mitBarrieren,
   mitSternen,
   mauernJeZug,
+  punkteZuschlagSitz1,
 } from './regeln.js';
 
 // ---------------------------------------------------------------------------
@@ -435,11 +438,17 @@ export function erstellePartie(
    * Eintrag fuer die Spielart aendert sich hier nichts — auch kein neuer
    * Schluessel im Snapshot.
    */
+  /*
+   * Ebenso den Ausgleich fuer den Nachziehenden (seit dem 07.11.2026): Ab
+   * hier stehen nur noch die beiden Felder im Snapshot, und nur in den
+   * Spielarten, die einen haben — eine Nebel-Partie sieht aus wie vorher.
+   */
   const {
     farbenJeSpielart: _jeSpielart,
     aufbauJeSpielart: _aufbau,
+    ausgleichJeSpielart: _ausgleich,
     ...ohneTabelle
-  } = aufbauFuer(regeln);
+  } = ausgleichFuer(aufbauFuer(regeln));
   const gueltigeRegeln: FillerRegelnFest = {
     ...ohneTabelle,
     /*
@@ -513,8 +522,15 @@ export function erstellePartie(
     besitzer[ecke] = sitz;
     farbe[sitz] = feld[ecke]!;
     punkte[sitz] = 1;
+    /*
+     * Der Nachziehende (`sitze[1]`, am Tisch Sitz 1) bekommt den Zuschlag:
+     * Der Anfaenger hat meist auch den letzten Farbzug, und der entscheidet
+     * mit Mauern fast jede Partie (MESSUNG-2026-11-07-anzug.md). Ohne
+     * Mauern gibt es keinen Vorrat, also auch keinen Zuschlag.
+     */
     barrierenUebrig[sitz] = mitBarrieren(gueltigeRegeln.variante)
-      ? (gueltigeRegeln.barrieren ?? 0)
+      ? (gueltigeRegeln.barrieren ?? 0) +
+        (sitz === sitze[1] ? barrierenZuschlagSitz1(gueltigeRegeln) : 0)
       : 0;
   }
 
@@ -1041,16 +1057,27 @@ export function markiereVerlassen(partie: FillerPartie, sitz: number): FillerPar
  *
  * Gleichstand ergibt zweimal Platz 1. Bei 56 Feldern und zwei Spielern kann
  * das vorkommen — 56 ist gerade, 28 zu 28 ist also moeglich —, und dann ist
- * es ein echtes Unentschieden und keine Verlegenheitsloesung. In `extreme`
- * zaehlen die Sternboni mit: Dort gewinnt, wer mehr PUNKTE hat, nicht Felder.
+ * es ein echtes Unentschieden und keine Verlegenheitsloesung. Seit dem
+ * 07.11.2026 zaehlt dabei der Punktzuschlag fuer Sitz 1 mit
+ * (`punkteZuschlagSitz1`, Klar): `points` ist die Wertung, nicht das Brett,
+ * und ein Gleichstand NACH dem Zuschlag bleibt ein Unentschieden.
+ * In `extreme` zaehlen die Sternboni mit: Dort gewinnt, wer mehr PUNKTE hat,
+ * nicht Felder.
  */
 export function platzierungen(
   partie: FillerPartie,
 ): { seat: number; points: number; place: number; left: boolean }[] {
-  const reihe = sitzeVon(partie)
+  const sitze = sitzeVon(partie);
+  /*
+   * Der Zuschlag geht an den zweiten Sitz der Partie (`sitze[1]`):
+   * `createParty` vergibt 0 und 1, und Sitz 0 zieht zuerst. Fehlt er im
+   * Regelsatz (jeder Tisch vor dem 07.11.2026), ist er 0.
+   */
+  const zuschlag = punkteZuschlagSitz1(partie.regeln);
+  const reihe = sitze
     .map((seat) => ({
       seat,
-      points: partie.punkte[seat] ?? 0,
+      points: (partie.punkte[seat] ?? 0) + (seat === sitze[1] ? zuschlag : 0),
       left: partie.leftSeats.includes(seat),
     }))
     /*
