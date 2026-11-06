@@ -32,12 +32,34 @@ Sitz 0 53,5 / 60,5 %). Das Skript zählt also dasselbe.
 | extreme | 200 | 66.5 % | 53 / 80 | 60.5 % / 37.0 % / 2.5 % | 59.4 % / 39.8 % | 62.7 % / 31.3 % / 6.0 % | 77.4 / 62.6 | 3178 s |
 |  | davon gewinnt der Eingesperrte | 2 von 133 |  |  |  |  |  |  |
 
-Das Einsperren selbst verschiebt nichts zwischen den Sitzen. In Build trifft es
-beide Sitze gleich oft (54 : 54). In Extreme trifft es Sitz 1 öfter (80 : 53),
-aber Sitz 0 gewinnt OHNE Einsperren sogar häufiger (62,7 %) als mit (59,4 %).
-Der Vorsprung von Sitz 0 ist also der Anzug, nicht die Falle: Er steckt in
-beiden Hälften. Eingesperrt zu werden entscheidet die Partie dagegen fast
-immer: 0 von 108 bzw. 2 von 133 Eingesperrten gewinnen.
+**Build:** Das Einsperren trifft beide Sitze gleich oft (54 : 54, je Sitz
+27 %, 95-%-Intervall 21,3–33,5 %).
+
+**Extreme: Sitz 1 wird häufiger eingesperrt (offener Befund).** 80 der 133
+Eingesperrten sitzen auf Sitz 1. Je Sitz sind das 40,0 % (95-%-Intervall
+33,5–46,9 %) gegen 26,5 % (20,9–33,0 %). Bei fairer Verteilung (je 50 %)
+käme eine so schiefe Teilung mit p ≈ 0,024 vor (exakter Binomialtest,
+zweiseitig, n = 133). Das ist bei n = 200 Saaten ein deutlicher Hinweis, aber
+kein harter Beleg. Teil 3 zeigt dieselbe Richtung (65 : 46, p ≈ 0,087).
+
+Der Siegvorsprung von Sitz 0 in Extreme (121 : 74 Siege ohne Remis,
+p ≈ 0,001) ist ein **eigener** Befund. Er besteht auch in den Partien ohne
+Einsperren (62,7 % gegen 31,3 %) und erklärt deshalb nicht, warum Sitz 1 öfter
+eingesperrt wird. Ob beides dieselbe Ursache hat (Anzug, Startfelder, Sterne)
+oder ob Sitz 1 in Extreme schlechter gegen Fallen steht, trennt diese
+Messung nicht. In Build ist der Siegvorsprung (107 : 88) nicht signifikant
+(p ≈ 0,20).
+
+Eingesperrt zu werden entscheidet die Partie fast immer: 0 von 108 bzw. 2
+von 133 Eingesperrten gewinnen.
+
+*Rechenweg:* exakter Binomialtest gegen 0,5 auf der Zahl der Eingesperrten
+(bzw. der Siege ohne Remis): p = 2 · Σ_{i ≥ max(k, n−k)} C(n, i) / 2ⁿ.
+Intervalle nach Wilson mit z = 1,96: (p̂ + z²/2n ± z·√(p̂(1−p̂)/n + z²/4n²))
+/ (1 + z²/n). Der Vergleich Vorsicht gegen Bot-Duell (Abschnitt 2) ist ein
+z-Test für zwei Anteile mit gepoolter Varianz. Die Saaten sind nicht unabhängig von den Sitzen
+gewählt (dieselbe Saat stellt beiden Sitzen dasselbe Brett), der Test prüft
+also nur, ob die Teilung je Brett gleich ausfällt.
 
 ## 2. Vorsichtig gegen Bot (jede Saat auf beiden Sitzen)
 
@@ -77,24 +99,23 @@ Die Ergebnisse sind Zug für Zug gleich, weil nichts zufällig ist.
 mehr Punkte als der Bot auf demselben Sitz (Build +0,6 / +0,5, Extreme
 +4,0 / +4,5) und gewinnt das Duell knapp (51 % / 54 %).
 
-**Was sie bringt: wenig.** Er wird in 23 % (Build) bzw. 26 % (Extreme) seiner
-Partien eingesperrt, gegenüber 27 % bzw. 33 % je Sitz im Bot-Duell. **93 von
-93 bzw. 102 von 103 dieser Fallen schnappten direkt nach einem ausweglosen
-Zug zu.** Seine Prüfung hatte in dieser Stellung für jeden seiner Züge eine
-Einsperr-Antwort gefunden, und der Bot hat sie im nächsten Zug gespielt. Die
-Warnung kam im Mittel nur zwei Entscheidungen vorher (Warnzüge 1,85 bzw.
-2,00): Einmal konnte er noch ausweichen, beim nächsten Mal nicht mehr. Nur
-eine Falle (Extreme) kam ohne Warnung. Dort reichte die Ein-Mauer-Prüfung
-nicht. Warum, ist nicht untersucht; naheliegend wären zwei Mauern in einem Zug.
+**Was sie bringt: wenig.** Er wird in 23,3 % (Build, 95-%-Intervall
+19,4–27,6 %) bzw. 25,8 % (Extreme, 21,7–30,3 %) seiner Partien eingesperrt.
+Bot gegen Bot sind es je Sitz-Partie 27,0 % (108 von 400; 22,9–31,6 %) bzw.
+33,3 % (133 von 400; 28,8–38,0 %). Der Abstand ist in Build nicht
+signifikant (z ≈ 1,2), in Extreme knapp (z ≈ 2,3). Beide z-Werte sind grob:
+Es sind dieselben Saaten, die Stichproben also nicht unabhängig.
 
-Was das belegt: Für **diese Vorsichtsstufe** ist die Falle in dem Moment, in
-dem sie sichtbar wird, fast immer schon zu. Was es nicht belegt: dass sie
-überhaupt unvermeidbar ist. Ob sie zwei oder drei Züge früher noch offen war
-und mit einer Abwehrmauer oder tieferem Vorausdenken zu verhindern gewesen
-wäre, prüft das Skript nicht (siehe Grenzen).
-
-Zum Vergleich: Bot gegen Bot wird ein Sitz in Build in 27 % der Partien
-eingesperrt (108 von 400 Sitz-Partien), in Extreme in 33 % (133 von 400).
+**Die Spalte „direkt nach ausweglosem Zug“ ist kein Beleg für
+Unvermeidbarkeit.** Sie ist nahezu tautologisch: Eine Falle zählt dort, wenn
+die Ein-Zug-Prüfung sie einen Zug vorher gesehen und keinen sicheren Zug
+gefunden hat. Dass das fast immer zutrifft (93 von 93, 102 von 103), zeigt nur,
+dass die Prüfung Fallen dieser Tiefe vollständig erkennt. Das Einzige, was
+die Spalte darüber hinaus zeigt: Nur eine Falle (Extreme) kam ohne Warnung,
+die Ein-Mauer-Annahme verfehlt also fast nichts. Ob die Falle zwei oder drei
+Züge früher noch offen war und mit einer Abwehrmauer oder tieferem
+Vorausdenken zu verhindern gewesen wäre, prüft das Skript nicht (siehe
+Grenzen).
 
 ## 3. Vorsichtig gegen vorsichtig
 
@@ -105,21 +126,19 @@ eingesperrt (108 von 400 Sitz-Partien), in Extreme in 33 % (133 von 400).
 
 ## Urteil
 
-**Wer nur einen Zug voraus aufpasst, entgeht dem Einsperren kaum. Ob es
-sich mit mehr Weitsicht vermeiden lässt, ist offen. Einen Sitz benachteiligt
-es nicht.** Das Urteil zur Vermeidbarkeit ist eine Obergrenze für genau diese
-Vorsichtsstufe: eine gegnerische Mauer plus ein Farbzug voraus, Ausweichen
-nur über Farbwahl und Verzicht auf eigene Mauern, keine Abwehrmauer. Ein
-solcher Spieler wird noch in 23 % bzw. 26 % seiner Partien eingesperrt
-(Bot gegen Bot 27 % / 33 % je Sitz). Fast jede dieser Fallen schnappte direkt
-nach einer Stellung zu, in der er keinen sicheren Zug mehr fand. „Aufpassen“
-müsste also weiter reichen als einen Zug, oder eigene Gegenmauern einschließen.
-Ob ein Spieler, ob Mensch oder stärkerer Bot, das schafft, misst diese
-Datei nicht. Die naheliegende nächste Messung wäre ein Vorsichtiger mit
-Abwehrmauer und zwei Zügen Vorausschau. Den Sitzvorteil (Sitz 0 gewinnt 53,5 % bzw. 60,5 %)
-schafft das Einsperren nicht: In Build trifft es beide Sitze gleich oft,
-und in Extreme gewinnt Sitz 0 auch in den Partien ohne Einsperren
-(62,7 %). Das ist der Anzug, an dem `werkzeug/anzug.mjs` arbeitet.
+**Ein-Zug-Vorsicht (eine gegnerische Mauer plus ein Farbzug voraus, keine
+Abwehrmauer) senkt die Einsperrquote nur von 27 % auf 23 % (Build) bzw. von
+33 % auf 26 % (Extreme); ob weitere Vorsicht das Einsperren vermeidbar macht,
+ist nicht gemessen. In Extreme wird Sitz 1 häufiger eingesperrt als Sitz 0
+(80 : 53, p ≈ 0,024), die Ursache ist offen.**
+
+Zur Einordnung: In Build trifft das Einsperren beide Sitze gleich oft. Den
+Siegvorsprung von Sitz 0 (Extreme 60,5 % gegen 37 %) gibt es auch in den
+Partien ohne Einsperren. Er ist also nicht allein durch die Falle zu
+erklären, die Trefferungleichheit aber auch nicht allein durch ihn (siehe
+Abschnitt 1). Beides gehört zur Anzug-Frage, an der `werkzeug/anzug.mjs`
+arbeitet. Die naheliegende nächste Messung für die Vermeidbarkeit wäre ein
+Vorsichtiger mit Abwehrmauer und zwei Zügen Vorausschau.
 
 ## Grenzen der Messung
 
