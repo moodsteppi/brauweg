@@ -1,0 +1,65 @@
+{
+  "fassung": 1,
+  "id": "w1-01",
+  "welt": 1,
+  "nr": 1,
+  "titel": "Erster Stoß",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "pelle",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    5000,
+    8000
+  ],
+  "teile": [
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 17,
+      "y": 0.6,
+      "b": 0.2,
+      "h": 1.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19,
+      "y": 0.6,
+      "b": 0.2,
+      "h": 1.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18,
+      "y": 1.3,
+      "b": 2.4,
+      "h": 0.2
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "kalb",
+      "x": 18,
+      "y": 0,
+      "blick": "links"
+    }
+  ],
+  "deko": [
+    {
+      "bild": "busch-1",
+      "x": 24,
+      "y": 0,
+      "ebene": "hinten"
+    }
+  ]
+}

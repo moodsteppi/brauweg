@@ -1,0 +1,151 @@
+{
+  "fassung": 1,
+  "id": "w1-11",
+  "welt": 1,
+  "nr": 11,
+  "titel": "Gartenzaun",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "malve",
+    "pelle",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    12000,
+    18000
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 11,
+      "y": 0.6,
+      "b": 0.6,
+      "h": 1.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 13,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 15,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 14,
+      "y": 0.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 14,
+      "y": 1.3,
+      "b": 0.6,
+      "h": 0.6
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 17,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18,
+      "y": 0.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 18,
+      "y": 1.35,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 21,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 23,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 22,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 22,
+      "y": 1.9,
+      "b": 0.6,
+      "h": 0.6
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "kalb",
+      "x": 14,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 18,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 22,
+      "y": 0,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}

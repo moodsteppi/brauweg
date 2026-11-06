@@ -58,6 +58,7 @@ import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.j
 import { partykisteRouten } from './partykiste-routen.js';
 import { lernpfadRouten } from './lernpfad-routen.js';
 import { browortRouten } from './browort-routen.js';
+import { flyingbroRouten } from './flyingbro-routen.js';
 import { manufakturRouten } from './manufaktur-routen.js';
 import { browortKurz, browortProfil } from '../browort/dienst.js';
 import { herkunftRouten } from './herkunft-routen.js';
@@ -100,6 +101,7 @@ import {
   type Plattform,
 } from '../games/registry.js';
 import { ALLES, imUmfang, umfangFuerClient, type Funktion, type Umfang } from '../umfang.js';
+import { SPRACHEN } from '../sprache.js';
 import {
   acceptFriendship,
   listFriendships,
@@ -290,6 +292,7 @@ export const FUNKTION_ZU_ROUTE: readonly (readonly [Funktion, RegExp, string?])[
   ['clanwort', /^\/api\/clanwort(\/|$)/],
   ['lernpfad', /^\/api\/lernpfad(\/|$)/],
   ['prosubway', /^\/api\/runner(\/|$)/],
+  ['flyingbro', /^\/api\/flyingbro(\/|$)/],
   ['clankrieg', /^\/api\/clubs\/:clubId\/war(\/|$)/],
   ['clanchat', /^\/api\/clubs\/:clubId\/messages(\/|$)/],
   ['shop', /^\/api\/shop\/(pakete|truhen)(\/|$)/],
@@ -1023,6 +1026,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
+  // Flying Bro: das Schleuderspiel allein — siehe dort.
+  flyingbroRouten(app, {
+    db: deps.db,
+    requireAccount,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
   // Browort und Clanwort: das taegliche Wortraetsel — siehe dort.
   browortRouten(app, {
     db: deps.db,
@@ -1164,6 +1175,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         // sondern nur ueber die eigene URL, die der Browser zwischenspeichert.
         hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
         figurBemalung: s.account.figurBemalung,
+        // Gewaehlte Sprache, null = „Automatisch" (der Client fragt das Geraet).
+        sprache: s.account.sprache,
       })
       .from(s.account)
       .where(eq(s.account.id, accountId));
@@ -1730,10 +1743,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
           .max(60_000)
           .nullable()
           .optional(),
+        // Sprache der Oberflaeche; null stellt zurueck auf „Automatisch".
+        sprache: z.enum(SPRACHEN).nullable().optional(),
       })
       .parse(request.body);
 
     const set: Record<string, unknown> = {};
+    if (body.sprache !== undefined) set.sprache = body.sprache;
     if (body.avatar !== undefined) {
       // Der Kopf einer data-URL ist nur eine Behauptung. Ohne Blick auf die
       // ersten Bytes liesse sich HTML als "image/png" ablegen und danach von

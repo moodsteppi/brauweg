@@ -53,4 +53,37 @@ export interface FillerSicht {
   sterne: number[];
   /** Noch mauerfreie Zuege der Eroeffnung; 0, sobald gebaut werden darf. */
   mauerSperre: number;
+  /**
+   * Wie viele Mauern ein Zug hoechstens setzen darf: 1, in Extreme 2, ohne
+   * Mauern 0. Aus dem Regelsatz des TISCHES — ein Extreme-Tisch von vor dem
+   * 05.11.2026 bleibt bei einer, und dann zeigt der Knopf auch nur eine.
+   */
+  mauernJeZug: number;
+  /** Wie viele Mauern der Sitz am Zug in diesem Zug schon gesetzt hat. */
+  mauernDiesenZug: number;
+  /**
+   * Sitze, die im naechsten bzw. laufenden Zug keine Mauer setzen duerfen,
+   * weil sie im Zug davor die volle Zahl gebaut haben (Doppelmauer). Die
+   * Regel rechnet das Modul; der Bildschirm sagt nur, WARUM der Knopf ruht.
+   */
+  mauerPause: number[];
+  /**
+   * Wer aufgegeben hat, oder null. Der Abschluss sagt dann "aufgegeben"
+   * statt nur einen Punktestand, der zum Sieger nicht passt.
+   */
+  aufgegeben: number | null;
+}
+
+/**
+ * Aufgeben (Spielkern seit dem 06.11.2026). Geht jederzeit, auch wenn der
+ * Gegner am Zug ist, und steht bewusst NICHT in `legalActions` — daraus
+ * waehlt der Bot, und der gibt nie auf. Der Bildschirm bietet den Knopf
+ * deshalb von sich aus an; eine Regel baut er damit nicht nach, erlaubt ist
+ * die Aktion immer, solange die Partie laeuft.
+ *
+ * `typ` und nicht `type` wie bei BroChess: Filler-Aktionen heissen so
+ * (`faerben`, `barriere`). Der Vertrag haelt das gegen das Modul.
+ */
+export interface FillerAufgabe {
+  typ: 'aufgeben';
 }

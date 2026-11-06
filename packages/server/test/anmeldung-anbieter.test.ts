@@ -51,6 +51,7 @@ import {
 } from '../src/auth/service.js';
 import { AppError } from '../src/errors.js';
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
+import { waehleAppleRueckweg } from '../src/http/anbieter-routen.js';
 import { PartyRuntime } from '../src/runtime/party.js';
 import { berlinToday } from '../src/birthday.js';
 import { statistikSchreiben } from '../src/statistik.js';
@@ -978,4 +979,50 @@ test('Tagesstatistik: Erstanmeldung zaehlt als neues Konto, Sichern ueber den An
     zeilen.map((z) => `${z.metrik}|${z.modus}=${z.wert}`).sort(),
     ['konto_erstellt|gast=1', 'konto_erstellt|registriert=1', 'konto_upgrade|=1'],
   );
+});
+
+// ---------------------------------------------------------------------------
+// 4. Mehrere Domains (brauweg-spielen.de und broweggames.de)
+// ---------------------------------------------------------------------------
+
+test('Apple-Rueckweg: je Domain die passende Return-URL, sonst die erste', () => {
+  const liste =
+    'https://www.brauweg-spielen.de/api/auth/apple/rueckweg, https://www.broweggames.de/api/auth/apple/rueckweg,' +
+    'https://broweggames.de/api/auth/apple/rueckweg';
+  assert.equal(waehleAppleRueckweg(liste, 'www.broweggames.de'), 'https://www.broweggames.de/api/auth/apple/rueckweg');
+  assert.equal(waehleAppleRueckweg(liste, 'BrowegGames.de'), 'https://broweggames.de/api/auth/apple/rueckweg');
+  assert.equal(waehleAppleRueckweg(liste, 'www.brauweg-spielen.de'), 'https://www.brauweg-spielen.de/api/auth/apple/rueckweg');
+  // Unbekannter Host (z.B. die railway.app-Adresse): die erste bleibt die Vorgabe.
+  assert.equal(waehleAppleRueckweg(liste, 'xyz.up.railway.app'), 'https://www.brauweg-spielen.de/api/auth/apple/rueckweg');
+  assert.equal(waehleAppleRueckweg(liste, undefined), 'https://www.brauweg-spielen.de/api/auth/apple/rueckweg');
+  // Eine einzelne URL wie bisher.
+  assert.equal(waehleAppleRueckweg('https://a.de/x', 'b.de'), 'https://a.de/x');
+  assert.equal(waehleAppleRueckweg(null, 'b.de'), null);
+  assert.equal(waehleAppleRueckweg(' , ', 'b.de'), null);
+});
+
+test('Apple-Config: die Return-URL folgt dem Host der Anfrage', async (t) => {
+  const ctx = await createTestContext();
+  await seedInvite(ctx.db);
+  const runtime = new PartyRuntime(ctx.db, { botDelayMs: 0 });
+  const server = await buildApp({
+    db: ctx.db,
+    runtime,
+    auth: ctx.auth,
+    cookieSecure: false,
+    sessionTtlDays: 30,
+    appleClientId: APPLE_ID,
+    appleRedirectUri:
+      'https://www.brauweg-spielen.de/api/auth/apple/rueckweg,https://www.broweggames.de/api/auth/apple/rueckweg',
+    anbieterSchluessel: { google: QUELLE, apple: QUELLE },
+  });
+  t.after(async () => {
+    runtime.shutdown();
+    await server.close();
+    await ctx.close();
+  });
+  const neu = await server.inject({ url: '/api/auth/apple/config', headers: { host: 'www.broweggames.de' } });
+  assert.deepEqual(neu.json(), { clientId: APPLE_ID, redirectUri: 'https://www.broweggames.de/api/auth/apple/rueckweg' });
+  const alt = await server.inject({ url: '/api/auth/apple/config', headers: { host: 'www.brauweg-spielen.de' } });
+  assert.deepEqual(alt.json(), { clientId: APPLE_ID, redirectUri: 'https://www.brauweg-spielen.de/api/auth/apple/rueckweg' });
 });

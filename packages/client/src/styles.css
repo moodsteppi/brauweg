@@ -15237,6 +15237,49 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .fl-art[data-klar] { color: #4a4a4a; background: rgba(0, 0, 0, 0.06); }
 
+/* Aufgeben: leise, rechts auf der Hoehe der Spielart-Marke. Absolut, damit
+   der Kopf nicht hoeher wird und das Brett nicht schrumpft. Die Breite des
+   Kopfes folgt `.fl-stand` (hoechstens 560 px), damit der Knopf auf dem
+   breiten Schirm nicht am Fensterrand klebt. */
+.fl-aufgeben {
+  position: absolute;
+  bottom: 6px;
+  right: max(14px, calc((100% - 560px) / 2));
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 9px;
+  background: transparent;
+  color: #8a8a8a;
+  font: 800 12px/1 system-ui;
+  cursor: pointer;
+}
+.fl-aufgeben:hover { color: #c0392b; border-color: rgba(192, 57, 43, 0.4); }
+
+/* Restzeit hinter dem Hinweis (TurnClock). In der Farbe des Hinweises, in
+   den letzten 15 Sekunden rot und pochend — wer dann noch ueberlegt, soll
+   sehen, dass gleich der Bot zieht. */
+.fl-hinweis .doko-turnclock { color: inherit; }
+.fl-hinweis .doko-turnclock[data-knapp] {
+  color: #d94b55;
+  animation: fl-knapp 1s ease-in-out infinite;
+}
+@keyframes fl-knapp { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) {
+  .fl-hinweis .doko-turnclock[data-knapp] { animation: none; }
+}
+
+/* Wurzel fuer die Rueckfrage (siehe Filler.tsx). Leer gar nicht da; offen
+   eine durchsichtige Flaeche ueber dem ganzen Tisch, auf der das Blatt
+   liegt. `.spe` bringt Hintergrund, Breitengrenze und den Statusleisten-
+   Streifen mit — alle drei gehoeren hier nicht hin. */
+.spe.fl-frage { z-index: 50; max-width: none; background: none; }
+.spe.fl-frage:empty { display: none; }
+.spe.fl-frage::before { content: none; }
+/* Die Flaeche deckt den ganzen Tisch (sonst blieben die Brettraender am
+   Desktop antippbar), das Blatt selbst bleibt so schmal wie in `.spe`. */
+.spe.fl-frage .hb-blatt { width: min(100%, 30rem); margin: 0 auto; }
+
 /* -- Das Warteband -------------------------------------------------------- */
 
 .fl-wartet {
@@ -16224,6 +16267,72 @@ span.hub-angebot-art.poker-jeton-stapel {
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
   pointer-events: none;
+}
+
+/* -- Filler Extreme: das grosse Brett (12 x 11, seit dem 06.11.2026) ------ */
+
+/* Auf 12 Spalten zaehlt jedes Pixel: Am Handy waren es mit 90vw keine 30 px
+   je Feld. Das Brett nimmt deshalb fast die volle Breite (8 px Rand je
+   Seite) und am Rechner bis 600 px. Die Hoehengrenze rechnet mit dem
+   echten Seitenverhaeltnis aus `--fl-seiten` (Filler.tsx) — mit dem 8/7 des
+   kleinen Bretts waere sie fuer 12 : 11 zu grosszuegig. Das kleine Brett
+   bleibt bei den Regeln oben, Zahl fuer Zahl. */
+.fl-brett-huelle[data-gross] { padding-left: 8px; padding-right: 8px; }
+.fl-brett[data-gross] {
+  width: min(calc(100vw - 16px), 600px);
+  max-width: calc((100vh - 300px) * var(--fl-seiten, 12 / 11));
+}
+
+/* Groessere Sterne mit dunklem Saum: Auf einem 30-px-Feld war der Stern
+   15 px gross, und auf dem gelben Feld verschwand das Weiss. */
+.fl-brett[data-gross] .fl-stern {
+  inset: 13%;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
+
+/* Die Raute als Trefferflaeche: Lage und Groesse (eine Feldgroesse, mittig
+   auf der Kante) kommen inline aus `kantenLage`, hier nur die Form. Der
+   Griff von 22 px samt negativem Rand gilt dafuer nicht — `margin` in
+   Prozent rechnete senkrecht ohnehin mit der BREITE des Bretts. clip-path
+   beschneidet auch die Treffer, nicht nur das Bild: Zwei Nachbarrauten
+   stossen Spitze an Spitze und ueberlappen nirgends. */
+.fl-brett .fl-kantenziel[data-raute] {
+  margin: 0;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+/* Der Strich etwas kuerzer, damit er samt hellem Saum in die Raute passt. */
+.fl-brett .fl-kantenziel[data-raute]:not([data-quer])::after { height: 62%; }
+.fl-brett .fl-kantenziel[data-raute][data-quer]::after { width: 62%; }
+
+/* Die Mauern dieses Zuges als Punkte im Bau-Knopf (Doppelmauer). Voll =
+   noch zu setzen, hohl = schon gesetzt. Nicht hoeher als das Ziegelbild,
+   sonst wuechse der Knopf — und mit ihm der Fuss bei jedem Zugwechsel. */
+.fl-zugmauern { display: inline-flex; gap: 4px; margin-left: 2px; }
+.fl-zugmauern i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+.fl-zugmauern i[data-gesetzt] { background: transparent; opacity: 0.6; }
+
+/* Mauerpause nach der Doppelmauer: verriegelt wie in der Eroeffnung, nicht
+   blass wie "leer" — der Vorrat ist ja noch da, nur nicht in diesem Zug. */
+.fl-bauknopf[data-pause]:disabled {
+  opacity: 1;
+  color: #8a5a12;
+  background: rgba(240, 160, 40, 0.14);
+  box-shadow: inset 0 0 0 1.5px rgba(200, 120, 20, 0.35);
+}
+.fl-hinweis[data-pause] { color: #a3701f; }
+
+/* Sieben Farben: Die beiden gesperrten Gebietsfarben wieder klein. Die
+   Regel `[data-viele] .fl-farbe` steht spezifischer als `[data-gesperrt]`
+   und machte sie in Extreme so gross wie waehlbare — nur blasser. */
+.fl-palette[data-viele] .fl-farbe[data-gesperrt] {
+  width: min(5.5vw, 24px);
+  height: min(5.5vw, 24px);
 }
 
 /* -- Vorschau im Menue ---------------------------------------------------- */

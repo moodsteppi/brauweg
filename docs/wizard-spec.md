@@ -8,7 +8,7 @@ Was hier steht, ist die Wahrheit für die Engine; die Plattformregeln
 **Name.** Das Spiel heißt in der Oberfläche **Zauberer**. Die interne
 Kennung bleibt `wizard`, weil sie in Datenbankzeilen, Protokollnachrichten
 und Dateinamen steht und dort nichts zu suchen hat, was sich noch ändern
-kann. Der Anzeigename läuft wie alles andere über `i18n.ts`.
+kann. Der Anzeigename läuft wie alles andere über `t()` (`client/src/i18n/`).
 
 Der Grund für den deutschen Namen ist nicht Geschmack: „Wizard" ist eine
 eingetragene Marke (Ken Fisher / US Games Systems, in Deutschland Amigo).

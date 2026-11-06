@@ -216,6 +216,11 @@ const AUFRUFE: readonly { funktion: string; method: 'GET' | 'POST' | 'PATCH'; ur
   { funktion: 'lernpfad', method: 'POST', url: '/api/lernpfad/uebung' },
   { funktion: 'prosubway', method: 'GET', url: '/api/runner/today' },
   { funktion: 'prosubway', method: 'POST', url: '/api/runner/lauf', payload: { muenzen: 5, punkte: 1, meter: 1 } },
+  { funktion: 'flyingbro', method: 'GET', url: '/api/flyingbro' },
+  { funktion: 'flyingbro', method: 'POST', url: '/api/flyingbro/start', payload: { levelId: 'w1-01' } },
+  { funktion: 'flyingbro', method: 'POST', url: '/api/flyingbro/kauf', payload: { id: 'fernrohr' } },
+  // Die Ergebnis-Route traegt die Muenzen und Meilen — ihre Sperre darf nicht ungeprueft bleiben.
+  { funktion: 'flyingbro', method: 'POST', url: '/api/flyingbro/ergebnis', payload: { levelId: 'w1-01', geschafft: true, punkte: 1000, verschossen: 1 } },
   { funktion: 'clankrieg', method: 'GET', url: '/api/clubs/00000000-0000-0000-0000-000000000000/war' },
   { funktion: 'clankrieg', method: 'POST', url: '/api/clubs/00000000-0000-0000-0000-000000000000/war/search' },
   { funktion: 'clanchat', method: 'GET', url: '/api/clubs/00000000-0000-0000-0000-000000000000/messages' },
@@ -261,7 +266,7 @@ test('Funktionen im Umfang: die Sperre greift nicht, die Routen antworten wie oh
     const mit = await s.app.inject({ ...anfrage, headers: s.anna('web') });
     assert.notEqual(mit.json()?.code, 'nichtImUmfang', `${funktion}: ${anfrage.url}`);
   }
-  for (const url of ['/api/browort', '/api/lernpfad', '/api/manufaktur', '/api/runner/today', '/api/clanwort']) {
+  for (const url of ['/api/browort', '/api/lernpfad', '/api/manufaktur', '/api/runner/today', '/api/clanwort', '/api/flyingbro']) {
     const res = await s.app.inject({ method: 'GET', url, headers: s.anna('web') });
     assert.equal(res.statusCode, 200, `${url}: ${res.body}`);
   }

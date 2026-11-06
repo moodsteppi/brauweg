@@ -19,10 +19,12 @@
 import {
   type FillerRegeln,
   type FillerRegelnFest,
+  aufbauFuer,
   farbzahl,
   istVariante,
   mitBarrieren,
   mitSternen,
+  mauernJeZug,
 } from './regeln.js';
 
 // ---------------------------------------------------------------------------
@@ -132,9 +134,16 @@ export const LEERZUEGE_MAX = 6;
  */
 export const MAUERFREIE_ZUEGE = 3;
 
-/** Wie viele Zuege noch mauerfrei sind. 0, sobald gebaut werden darf. */
+/**
+ * Wie viele Zuege noch mauerfrei sind. 0, sobald gebaut werden darf.
+ *
+ * Die Zahl kommt aus dem Regelsatz des TISCHES (`mauerfreieZuege`, in
+ * Extreme seit dem 06.11.2026 sechs), sonst MAUERFREIE_ZUEGE. Nicht aus der
+ * Vorgabe: Ein Tisch, der mit drei angefangen hat, behaelt drei.
+ */
 export function mauerSperre(partie: FillerPartie): number {
-  return Math.max(0, MAUERFREIE_ZUEGE - partie.zug);
+  const frei = partie.regeln.mauerfreieZuege ?? MAUERFREIE_ZUEGE;
+  return Math.max(0, frei - partie.zug);
 }
 
 /**
@@ -143,6 +152,10 @@ export function mauerSperre(partie: FillerPartie): number {
  * Drei auf 56 Feldern: genug, dass sich ein Umweg lohnt, zu wenige, um das
  * Spiel zu einer Sternjagd zu machen. Ein Stern ist ZWEI Punkte wert (das
  * Feld selbst plus STERN_BONUS) und bringt STERN_MAUERN Mauern in den Vorrat.
+ *
+ * Seit dem 05.11.2026 gilt die Drei nur noch fuer Tische, die ohne
+ * `aufbauJeSpielart` aufgemacht wurden. Neue Extreme-Tische legen auf 12 x 11
+ * acht Sterne als vier Spiegelpaare (`sternPaare`, siehe zieheSternPaare).
  */
 export const STERNE_ANZAHL = 3;
 export const STERN_BONUS = 1;
@@ -195,18 +208,39 @@ export interface FillerPartie {
   /** Wie viele Barrieren einem Sitz noch bleiben. */
   readonly barrierenUebrig: Readonly<Record<number, number>>;
   /**
-   * Hat der Sitz, der gerade am Zug ist, in DIESEM Zug schon gemauert?
+   * Wie viele Mauern der Sitz, der gerade am Zug ist, in DIESEM Zug schon
+   * gesetzt hat.
    *
    * Eine Mauer beendet den Zug nicht — man baut und faerbt danach trotzdem.
-   * Ohne diesen Merker liesse sich in einem einzigen Zug der ganze Vorrat
-   * verbauen, und die Spielart waere nach dem ersten Zug entschieden.
+   * Ohne diesen Zaehler liesse sich in einem einzigen Zug der ganze Vorrat
+   * verbauen, und die Spielart waere nach dem ersten Zug entschieden. Wie
+   * viele erlaubt sind, sagt `mauernJeZug` im Regelsatz (eine; in Extreme
+   * seit dem 05.11.2026 zwei).
    *
    * Er gehoert an den ZUG und nicht an den Sitz: Mit dem Faerben geht der Zug
-   * weiter, und der Merker faellt dabei zurueck. Ein Verzeichnis je Sitz
+   * weiter, und der Zaehler faellt dabei auf null. Ein Verzeichnis je Sitz
    * muesste an derselben Stelle geleert werden und koennte dabei
    * auseinanderlaufen.
+   *
+   * Bis Snapshot-Fassung 5 hiess das Feld `mauerDiesenZug` und war ein
+   * Ja/Nein — bei hoechstens einer Mauer je Zug dasselbe (siehe adapter.ts).
    */
-  readonly mauerDiesenZug: boolean;
+  readonly mauernDiesenZug: number;
+  /**
+   * Sitze, die in ihrem naechsten (bzw. gerade laufenden) Zug KEINE Mauer
+   * setzen duerfen, weil sie im Zug davor die volle Zahl `mauernJeZug`
+   * gebaut haben — nur dort, wo die ueber eins liegt.
+   *
+   * Ohne die Pause waeren zwei Mauern je Zug schlicht doppelt so viele: Wer
+   * jeden Zug zwei setzt, riegelt ein 12er-Brett in sechs Zuegen ab. Mit ihr
+   * ist die zweite Mauer ein Vorgriff auf den naechsten Zug — man darf die
+   * Wand schneller hochziehen, aber nicht oefter.
+   *
+   * An den SITZ und nicht an den Zug, anders als `mauernDiesenZug`: Die
+   * Pause ueberdauert den Zug des Gegners. Sie faellt, sobald der Sitz seinen
+   * naechsten Zug mit dem Faerben beendet.
+   */
+  readonly mauerPause: readonly number[];
   /**
    * Plaetze der Sternfelder. Leer in jeder Spielart ausser `extreme`.
    *
@@ -215,6 +249,16 @@ export interface FillerPartie {
    * sieht das an seinem Gebiet — und die Punkte dafuer sind laengst verbucht.
    */
   readonly sterne: readonly number[];
+  /**
+   * Der Sitz, der aufgegeben hat — oder null.
+   *
+   * Steht im Zustand und wird nicht aus den Punkten erschlossen, weil die
+   * Aufgabe die Rangfolge UMDREHT: Wer aufgibt, verliert, auch wenn er
+   * vorne lag. `platzierungen` und `sieger` lesen deshalb dieses Feld
+   * zuerst. Fehlt es in einem aelteren Snapshot, hat niemand aufgegeben
+   * (adapter.ts).
+   */
+  readonly aufgegeben: number | null;
 }
 
 export type FillerAktion =
@@ -226,7 +270,19 @@ export type FillerAktion =
    * in dieser Runde nicht und verschenkt die Felder, die er haette holen
    * koennen. Waere die Wand gratis, setzte man alle fuenf sofort.
    */
-  | { readonly typ: 'barriere'; readonly von: number; readonly nach: number };
+  | { readonly typ: 'barriere'; readonly von: number; readonly nach: number }
+  /**
+   * Aufgeben (seit dem 06.11.2026, wie bei BroChess). Jederzeit durch den
+   * Sitz selbst, auch wenn der Gegner am Zug ist — wer aussteigen will, soll
+   * nicht erst auf seinen Zug warten muessen. Die Partie ist danach zu Ende,
+   * der Gegner hat gewonnen, unabhaengig vom Punktestand.
+   *
+   * Steht bewusst NICHT in `erlaubteZuege`: Daraus waehlt der Bot, und der
+   * gibt nie auf. Der Bildschirm bietet die Aktion von sich aus an — eine
+   * Regel bildet er damit nicht nach, erlaubt ist sie immer, solange die
+   * Partie laeuft.
+   */
+  | { readonly typ: 'aufgeben' };
 
 // ---------------------------------------------------------------------------
 // Brett
@@ -307,6 +363,56 @@ function baueBrett(regeln: FillerRegelnFest, zufall: () => number): number[] {
   return feld;
 }
 
+/**
+ * Faire Startecken: Die zwei Nachbarn jeder Startecke tragen VERSCHIEDENE
+ * Farben (seit dem 06.11.2026, Regelsatz `faireEcken`, nur Extreme).
+ *
+ * Der Fehler, den das verhindert: Tragen beide Nachbarn einer Ecke dieselbe
+ * Farbe X, waehlt der Gegner, der vorher zieht, einfach X — X ist dann
+ * gesperrt, und der Sitz hat im naechsten Zug keine einzige Farbe, die ihm
+ * ein Feld bringt. Schlimmer noch, wenn die Ecke des Gegners selbst X traegt:
+ * Dann ist X von Anfang an gesperrt, und der Sitz verliert seinen ersten Zug
+ * ganz ohne Zutun des Gegners (Messung f1: in Extreme bei rund jedem fuenften
+ * Brett moeglich, 4,3 % der Partien ohne nutzbare Farbe nach Zug 1).
+ *
+ * Warum "verschieden" genuegt: Gesperrt sind fuer einen Sitz genau zwei
+ * Farben, die eigene und die des Gegners. Kein Nachbar traegt die eigene
+ * (siehe baueBrett), also muesste der Gegner mit EINER Farbe beide Nachbarn
+ * treffen — das geht nur, wenn sie gleich sind. Gilt fuer den Nachzieher nach
+ * Zug 1 wie fuer den Anfaenger in Zug 1 (gesperrt: die Ecke des Gegners).
+ *
+ * Umgefaerbt wird der SENKRECHTE Nachbar, auf eine Farbe, die keiner seiner
+ * eigenen Nachbarn traegt und die der waagrechte nicht hat — so bleibt das
+ * Brett frei von gleichfarbigen Nachbarn. Bei sieben Farben und hoechstens
+ * vier Nachbarn bleiben immer mindestens zwei zur Wahl, gezogen wird aus der
+ * Saat. Die Ecke selbst bleibt, wie sie ist; ob zwei Ecken dieselbe Farbe
+ * tragen, regelt erstellePartie danach wie bisher (und faerbt dabei nur die
+ * Ecke, nie einen Nachbarn — das hier bleibt also gueltig).
+ */
+function entzerreEcken(
+  feld: number[],
+  spalten: number,
+  zeilen: number,
+  farben: number,
+  sitze: readonly number[],
+  zufall: () => number,
+): void {
+  for (const sitz of sitze) {
+    const ecke = startEcke(sitz, spalten, zeilen);
+    const um = nachbarn(ecke, spalten, zeilen);
+    const waagrecht = um.find((n) => Math.floor(n / spalten) === Math.floor(ecke / spalten));
+    const senkrecht = um.find((n) => n % spalten === ecke % spalten);
+    if (waagrecht === undefined || senkrecht === undefined) continue;
+    if (feld[waagrecht] !== feld[senkrecht]) continue;
+    const verboten = new Set<number>([feld[waagrecht]!]);
+    for (const n of nachbarn(senkrecht, spalten, zeilen)) verboten.add(feld[n]!);
+    const moeglich: number[] = [];
+    for (let f = 0; f < farben; f++) if (!verboten.has(f)) moeglich.push(f);
+    const neu = moeglich[Math.floor(zufall() * moeglich.length)];
+    if (neu !== undefined) feld[senkrecht] = neu;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Aufbau
 // ---------------------------------------------------------------------------
@@ -323,7 +429,17 @@ export function erstellePartie(
    * 1. September keine Barrierenzahl — stuende beides als `undefined` im
    * Snapshot, muesste jede spaetere Stelle raten, was es bedeutet.
    */
-  const { farbenJeSpielart: _jeSpielart, ...ohneTabelle } = regeln;
+  /*
+   * Erst den Aufbau der Spielart einsetzen (Extreme: 12 x 11, zwanzig Mauern,
+   * zwei je Zug, gespiegelte Sterne), dann die Tabellen weglassen. Ohne
+   * Eintrag fuer die Spielart aendert sich hier nichts — auch kein neuer
+   * Schluessel im Snapshot.
+   */
+  const {
+    farbenJeSpielart: _jeSpielart,
+    aufbauJeSpielart: _aufbau,
+    ...ohneTabelle
+  } = aufbauFuer(regeln);
   const gueltigeRegeln: FillerRegelnFest = {
     ...ohneTabelle,
     /*
@@ -333,10 +449,18 @@ export function erstellePartie(
      */
     farben: farbzahl(regeln),
     variante: istVariante(regeln.variante) ? regeln.variante : 'nebel',
-    barrieren: typeof regeln.barrieren === 'number' ? regeln.barrieren : 0,
+    // Aus dem Aufbau, nicht aus `regeln`: Extreme ueberstimmt die Zehn mit zwanzig.
+    barrieren: typeof ohneTabelle.barrieren === 'number' ? ohneTabelle.barrieren : 0,
   };
   const { spalten, zeilen, farben } = gueltigeRegeln;
   const feld = baueBrett(gueltigeRegeln, zufall);
+  /*
+   * Faire Startecken (nur wo der Regelsatz es sagt, also Extreme ab dem
+   * 06.11.2026). VOR den Grautoenen, weil auch das Entzerren aus dem
+   * Generator zieht — fuer alle anderen Spielarten wird hier nichts gezogen,
+   * ihr Brett bleibt Saat fuer Saat dasselbe.
+   */
+  if (gueltigeRegeln.faireEcken === true) entzerreEcken(feld, spalten, zeilen, farben, sitze, zufall);
 
   /*
    * Die Grautoene NACH dem Brett und aus demselben Generator, aber als eigene
@@ -352,9 +476,12 @@ export function erstellePartie(
    * nichts gezogen, und jede gespeicherte Partie sieht nach dem Deploy aus
    * wie davor.
    */
-  const sterne = mitSternen(gueltigeRegeln.variante)
-    ? zieheSterne(spalten, zeilen, sitze, zufall)
-    : [];
+  const paare = gueltigeRegeln.sternPaare ?? 0;
+  const sterne = !mitSternen(gueltigeRegeln.variante)
+    ? []
+    : paare > 0
+      ? zieheSternPaare(spalten, zeilen, sitze, paare, zufall)
+      : zieheSterne(spalten, zeilen, sitze, zufall);
 
   const besitzer: (number | null)[] = new Array(feld.length).fill(null);
   const farbe: Record<number, number> = {};
@@ -413,8 +540,10 @@ export function erstellePartie(
     fertig: false,
     barrieren: [],
     barrierenUebrig,
-    mauerDiesenZug: false,
+    mauernDiesenZug: 0,
+    mauerPause: [],
     sterne,
+    aufgegeben: null,
   };
 }
 
@@ -433,15 +562,8 @@ function zieheSterne(
   sitze: readonly number[],
   zufall: () => number,
 ): number[] {
-  const verboten = new Set<number>();
-  for (const sitz of sitze) {
-    const ecke = startEcke(sitz, spalten, zeilen);
-    verboten.add(ecke);
-    for (const n of nachbarn(ecke, spalten, zeilen)) verboten.add(n);
-  }
-  const abstand = (a: number, b: number): number =>
-    Math.abs((a % spalten) - (b % spalten)) +
-    Math.abs(Math.floor(a / spalten) - Math.floor(b / spalten));
+  const verboten = eckenUndNachbarn(spalten, zeilen, sitze);
+  const abstand = (a: number, b: number): number => schritte(a, b, spalten);
 
   const sterne: number[] = [];
   let kandidaten = Array.from({ length: spalten * zeilen }, (_, p) => p).filter(
@@ -451,6 +573,77 @@ function zieheSterne(
     const stern = kandidaten[Math.floor(zufall() * kandidaten.length)]!;
     sterne.push(stern);
     kandidaten = kandidaten.filter((p) => abstand(p, stern) >= 3);
+  }
+  return sterne.sort((a, b) => a - b);
+}
+
+/** Startecken der Sitze und ihre Nachbarn — dort liegt kein Stern. */
+function eckenUndNachbarn(spalten: number, zeilen: number, sitze: readonly number[]): Set<number> {
+  const verboten = new Set<number>();
+  for (const sitz of sitze) {
+    const ecke = startEcke(sitz, spalten, zeilen);
+    verboten.add(ecke);
+    for (const n of nachbarn(ecke, spalten, zeilen)) verboten.add(n);
+  }
+  return verboten;
+}
+
+/** Schritte zwischen zwei Plaetzen, nur waagrecht und senkrecht. */
+function schritte(a: number, b: number, spalten: number): number {
+  return (
+    Math.abs((a % spalten) - (b % spalten)) +
+    Math.abs(Math.floor(a / spalten) - Math.floor(b / spalten))
+  );
+}
+
+/** Der an der Brettmitte punktgespiegelte Platz. */
+export function spiegelPlatz(platz: number, spalten: number, zeilen: number): number {
+  return spalten * zeilen - 1 - platz;
+}
+
+/**
+ * Sterne als punktgespiegelte Paare: zu jedem Platz p auch
+ * spalten*zeilen-1-p (seit dem 05.11.2026 in Extreme).
+ *
+ * Gespiegelt, weil die Startecken es auch sind — unten links und oben rechts
+ * gehen durch dieselbe Spiegelung ineinander ueber. Damit hat jeder Sitz zu
+ * jedem Stern genau den Weg, den der andere zu dessen Gegenstueck hat. Bei
+ * freien Sternen konnte einer drei Schritte vor der eigenen Ecke liegen und
+ * alle anderen am fremden Rand.
+ *
+ * Die alten Bedingungen bleiben und gelten fuer BEIDE Haelften eines Paares:
+ * nicht auf oder neben einer Startecke, Abstand mindestens drei — auch
+ * zwischen den zwei Sternen eines Paares. Das geht auf, weil beides selbst
+ * spiegelgleich ist: Die verbotenen Eckfelder sind es (Ecke geht auf Ecke),
+ * und der Abstand zwischen p und q ist derselbe wie zwischen ihren
+ * Spiegelbildern. Wer p gegen alle bisherigen Sterne prueft, hat damit auch
+ * das Gegenstueck geprueft. Nur das Paar selbst braucht eine eigene
+ * Pruefung: Felder nahe der Mitte liegen naeher als drei an ihrem
+ * Spiegelbild und fallen deshalb von vornherein weg (auf 12 x 11 genau
+ * sechs). Danach bleiben weit ueber hundert Plaetze, und ein Paar nimmt
+ * hoechstens zweimal 13 weg (die Raute mit Radius zwei) — vier Paare passen
+ * immer.
+ */
+function zieheSternPaare(
+  spalten: number,
+  zeilen: number,
+  sitze: readonly number[],
+  paare: number,
+  zufall: () => number,
+): number[] {
+  const verboten = eckenUndNachbarn(spalten, zeilen, sitze);
+  const spiegel = (p: number): number => spiegelPlatz(p, spalten, zeilen);
+  const sterne: number[] = [];
+  let kandidaten = Array.from({ length: spalten * zeilen }, (_, p) => p).filter(
+    (p) => !verboten.has(p) && !verboten.has(spiegel(p)) && schritte(p, spiegel(p), spalten) >= 3,
+  );
+  while (sterne.length < paare * 2 && kandidaten.length > 0) {
+    const stern = kandidaten[Math.floor(zufall() * kandidaten.length)]!;
+    const gegenstueck = spiegel(stern);
+    sterne.push(stern, gegenstueck);
+    kandidaten = kandidaten.filter(
+      (p) => schritte(p, stern, spalten) >= 3 && schritte(p, gegenstueck, spalten) >= 3,
+    );
   }
   return sterne.sort((a, b) => a - b);
 }
@@ -560,29 +753,77 @@ export function vonIrgendwemErreichbareFreie(
 }
 
 /**
+ * Hat ein Feld noch Platz fuer eine Mauer? (Regelsatz `mauernJeFeld`, nur
+ * Extreme seit dem 06.11.2026, Regel Niklas 05.11.2026.)
+ *
+ * Gezaehlt werden die Mauern an den vier Kanten des Feldes, und der
+ * Spielfeldrand zaehlt als Mauer: Ein Eckfeld hat damit schon zwei und kann
+ * keine mehr bekommen, ein Randfeld hoechstens eine, ein inneres zwei. Eine
+ * Mauer belegt bei BEIDEN Feldern, zwischen denen sie liegt, einen Platz.
+ *
+ * Der Sinn ist ein Abwaegen: Jede Mauer, die dem Gegner den Weg versperrt,
+ * nimmt auch Plaetze, an denen er MICH spaeter versperren koennte — und
+ * umgekehrt. Ohne Grenze liess sich ein Gang mit drei Mauern um ein einziges
+ * Feld zur Sackgasse machen.
+ */
+export function mauernAmFeld(
+  platz: number,
+  spalten: number,
+  zeilen: number,
+  sperren: ReadonlySet<string>,
+): number {
+  const x = platz % spalten;
+  const y = Math.floor(platz / spalten);
+  const rand = Number(x === 0) + Number(x === spalten - 1) + Number(y === 0) + Number(y === zeilen - 1);
+  let gesetzt = 0;
+  for (const n of nachbarn(platz, spalten, zeilen)) if (sperren.has(kante(platz, n))) gesetzt++;
+  return rand + gesetzt;
+}
+
+/**
  * Die Barrieren, die dieser Sitz gerade setzen darf.
  *
- * **Die Einmauer-Regel (seit dem 06.09.2026).** Eine Wand ist verboten, wenn
- * danach ein freies Feld fuer NIEMANDEN mehr erreichbar waere. Jedes Feld
- * muss bis zum Ende zu holen sein — ein eingemauertes Loch gehoert niemandem,
- * zaehlt fuer niemanden und laesst die Partie nur noch ueber LEERZUEGE_MAX
- * enden. Gezaehlt wird gegen den Stand VORHER: Eine Wand darf die Zahl der
- * erreichbaren freien Felder nicht verkleinern.
+ * Drei Regeln an der Kante; die ersten beiden gelten in Build und Extreme,
+ * die dritte nur an Tischen, deren Regelsatz sie traegt (Extreme ab dem
+ * 06.11.2026):
  *
- * **Die Einsperr-Regel** bleibt daneben bestehen: Eine Wand ist auch
- * verboten, wenn danach ein Sitz kein einziges freies Feld mehr erreichen
- * kann, der vorher noch eines erreichte. Ohne sie waere die Spielart in zwei
- * Zuegen entschieden: Wer den Gegner auf seiner Ecke zumauert, gewinnt mit
- * 55 zu 1. Sie folgt NICHT aus der ersten — die Felder hinter dem Gegner
- * bleiben ja fuer mich erreichbar.
+ * **1. Nur an einer Kante, die an ein freies Feld grenzt (seit dem
+ * 06.11.2026).** Zwischen zwei Feldern, die schon jemandem gehoeren, sperrt
+ * eine Mauer nichts mehr — durch fremdes Gebiet laeuft ohnehin niemand, und
+ * im eigenen Gebiet gibt es nichts zu holen. Sie kostete nur einen Stein aus
+ * dem Vorrat und stuende als Schmuck auf dem Brett (IMG_1498).
  *
- * Geprueft wird fuer JEDEN Sitz, auch den eigenen — nicht aus Fuersorge,
- * sondern weil ein Brett, auf dem niemand mehr etwas holen kann, nur noch
- * ueber LEERZUEGE_MAX endet und bis dahin wie eingefroren aussieht.
+ * **2. Eine Mauer schliesst nie den letzten Weg (seit dem 06.11.2026, Niklas
+ * 05.11.2026, IMG_1497/1500/1502/1503).** Verboten ist jede Mauer, nach der
+ * IRGENDEIN Sitz ein freies Feld nicht mehr erreicht, das er vorher noch
+ * erreichte — "erreichen" heisst: von seinem Gebiet aus ueber freie Felder,
+ * nicht durch fremdes Gebiet und nicht durch Mauern. Genau dann trennt diese
+ * eine Mauer etwas ab: ein Gebiet vom Rest des Bretts, einen Sitz von den
+ * Feldern, um die beide noch spielten. Es zaehlt dabei nicht, woraus der Rest
+ * der Umrandung besteht — sind es schon lauter Felder (Koerper), ist die
+ * Mauer trotzdem diejenige, die zumacht, und verboten (IMG_1500: Gruen macht
+ * mit zwei Feldern zu und schliesst den letzten Durchgang mit einer Mauer).
+ * Den letzten Weg mit dem eigenen KOERPER zu schliessen bleibt erlaubt, auch
+ * im selben Zug direkt nach einer Mauer (IMG_1502 -> 1503): Geprueft wird nur
+ * die Mauer, im Moment, in dem sie gesetzt wird. Eine Mauer darf also einen
+ * Weg verlaengern oder verengen, aber nicht kappen.
  *
- * Und geprueft wird gegen den Stand VORHER: Wer schon eingeschlossen ist —
- * das kann im Grundspiel ganz ohne Waende passieren —, blockiert sonst jede
- * weitere Barriere auf dem ganzen Brett.
+ * Sie enthaelt die beiden aelteren Regeln, die bis dahin einzeln standen:
+ * die Einmauer-Regel (06.09.2026: kein freies Feld darf fuer NIEMANDEN mehr
+ * erreichbar sein — dann hat es ja jemand verloren) und die Einsperr-Regel
+ * (kein Sitz darf auf null erreichbare Felder fallen). Beide liessen eine
+ * Mauer durch, die einen Sitz in zwei Spalten am Rand einschloss, solange
+ * dort noch ein freies Feld lag (IMG_1497) — das schliesst erst diese Regel.
+ *
+ * Geprueft wird fuer JEDEN Sitz, auch den eigenen, und gegen den Stand
+ * VORHER: Wer schon eingeschlossen ist — das geht im Grundspiel auch ohne
+ * Waende —, hat nichts mehr zu verlieren und blockiert deshalb keine Mauer
+ * anderswo auf dem Brett.
+ *
+ * **3. Hoechstens `mauernJeFeld` Mauern je Feld, der Rand zaehlt mit** —
+ * siehe `mauernAmFeld`. Nur, wo der Regelsatz die Zahl traegt.
+ *
+ * Dazu die Mengenregeln ganz oben: Vorrat, Mauern je Zug, Pause, Eroeffnung.
  */
 export function moeglicheBarrieren(
   partie: FillerPartie,
@@ -590,9 +831,11 @@ export function moeglicheBarrieren(
 ): [number, number][] {
   if (!mitBarrieren(partie.regeln.variante)) return [];
   if ((partie.barrierenUebrig[sitz] ?? 0) <= 0) return [];
-  // Eine je Zug. Wer schon gemauert hat, faerbt jetzt — mehr ist dieser Zug
-  // nicht mehr.
-  if (partie.mauerDiesenZug && partie.dran === sitz) return [];
+  // Hoechstens `mauernJeZug` je Zug. Wer sie gesetzt hat, faerbt jetzt —
+  // mehr ist dieser Zug nicht mehr.
+  if (partie.dran === sitz && partie.mauernDiesenZug >= mauernJeZug(partie.regeln)) return [];
+  // Wer im letzten eigenen Zug die volle Zahl gebaut hat, setzt diesmal aus.
+  if (partie.mauerPause.includes(sitz)) return [];
   // Die Eroeffnung ist mauerfrei, siehe MAUERFREIE_ZUEGE.
   if (mauerSperre(partie) > 0) return [];
 
@@ -600,9 +843,16 @@ export function moeglicheBarrieren(
   const gesetzt = new Set(partie.barrieren);
   const sitze = sitzeVon(partie);
   const vorher = new Map(sitze.map((s) => [s, erreichbareFreie(partie, s, gesetzt)]));
-  const erreichbarVorher = vonIrgendwemErreichbareFreie(partie, gesetzt);
+  // 0 oder fehlend: keine Grenze je Feld (Build, aeltere Extreme-Tische).
+  const jeFeld = partie.regeln.mauernJeFeld ?? 0;
+  const platzFrei = (p: number): boolean =>
+    jeFeld <= 0 || mauernAmFeld(p, spalten, zeilen, gesetzt) < jeFeld;
 
   const aus: [number, number][] = [];
+  // EIN Probesatz, in den jede Kante kurz hinein- und wieder hinausgeht: Der
+  // Bot bewertet jede angebotene Kante, und eine Kopie je Kante kostete auf
+  // 12 x 11 gut 250 Mengen je Abfrage.
+  const probe = new Set(gesetzt);
   for (let platz = 0; platz < partie.feld.length; platz++) {
     // Nur nach rechts und nach unten, sonst stuende jede Kante zweimal da.
     for (const n of [platz + 1, platz + spalten]) {
@@ -610,15 +860,17 @@ export function moeglicheBarrieren(
       if (n === platz + 1 && platz % spalten === spalten - 1) continue;
       const schluessel = kante(platz, n);
       if (gesetzt.has(schluessel)) continue;
-      const probe = new Set(gesetzt);
+      // Regel 1: Mindestens eine Seite muss noch frei sein.
+      if (partie.besitzer[platz] !== null && partie.besitzer[n] !== null) continue;
+      // Regel 3: Beide Felder brauchen noch einen Platz.
+      if (!platzFrei(platz) || !platzFrei(n)) continue;
+      // Regel 2: Niemand verliert ein Feld, das er vorher erreichte. Weil
+      // eine Mauer nur Wege wegnimmt, nie welche schafft, ist "gleich viele"
+      // dasselbe wie "dieselben".
       probe.add(schluessel);
-      // Erst die billige Frage: Mauert die Wand ein Feld ein? Dann sind die
-      // Sitze gar nicht mehr dran.
-      if (vonIrgendwemErreichbareFreie(partie, probe) < erreichbarVorher) continue;
-      const sperrtJemanden = sitze.some(
-        (s) => (vorher.get(s) ?? 0) > 0 && erreichbareFreie(partie, s, probe) === 0,
-      );
-      if (!sperrtJemanden) aus.push([platz, n]);
+      const trenntAb = sitze.some((s) => erreichbareFreie(partie, s, probe) < (vorher.get(s) ?? 0));
+      probe.delete(schluessel);
+      if (!trenntAb) aus.push([platz, n]);
     }
   }
   return aus;
@@ -675,6 +927,15 @@ export function fuehreAus(
   aktion: FillerAktion,
 ): FillerPartie {
   if (partie.fertig) throw new Error('Partie ist zu Ende');
+  /*
+   * Aufgeben VOR der Zugpruefung: Es geht auch, wenn der Gegner dran ist.
+   * Der Server prueft `currentActor` beim Handeln nicht (CLAUDE.md, Eiland),
+   * die Aktion kommt also an — hier entscheidet nur, ob der Sitz mitspielt.
+   */
+  if (aktion.typ === 'aufgeben') {
+    if (!(sitz in partie.punkte)) throw new Error('Sitz spielt nicht mit');
+    return { ...partie, fertig: true, aufgegeben: sitz, mauernDiesenZug: 0 };
+  }
   if (partie.dran !== sitz) throw new Error('Nicht am Zug');
 
   const sitze = sitzeVon(partie);
@@ -689,9 +950,12 @@ export function fuehreAus(
      * Der Zug geht WEITER: `dran` bleibt stehen, `zug` zaehlt nicht hoch.
      *
      * Eine Mauer ist keine Alternative zum Faerben, sondern etwas, das man
-     * davor tun darf — einmal je Zug. Wer baut, faerbt danach trotzdem; erst
-     * das Faerben gibt ab. Genau deshalb braucht es `mauerDiesenZug`: Sonst
-     * liesse sich der ganze Vorrat in einem einzigen Zug verbauen.
+     * davor tun darf — `mauernJeZug`-mal je Zug. Wer baut, faerbt danach
+     * trotzdem; erst das Faerben gibt ab. Genau deshalb braucht es
+     * `mauernDiesenZug`: Sonst liesse sich der ganze Vorrat in einem
+     * einzigen Zug verbauen. Einmauer- und Einsperr-Regel prueft
+     * `moeglicheBarrieren` fuer jede Mauer einzeln, gegen den Stand mit
+     * allen schon gesetzten.
      *
      * `leerzuege` bleibt ebenfalls, wie es ist. Ob der Zug etwas eingebracht
      * hat, entscheidet sich beim Faerben gleich danach.
@@ -703,7 +967,7 @@ export function fuehreAus(
         ...partie.barrierenUebrig,
         [sitz]: (partie.barrierenUebrig[sitz] ?? 0) - 1,
       },
-      mauerDiesenZug: true,
+      mauernDiesenZug: partie.mauernDiesenZug + 1,
     };
   }
 
@@ -737,6 +1001,17 @@ export function fuehreAus(
         }
       : partie.barrierenUebrig;
   const frei = besitzer.some((b) => b === null);
+  /*
+   * Die Pause fuer den naechsten eigenen Zug. Sie faellt fuer diesen Sitz
+   * erst einmal weg (wer pausiert hat, hat damit abgesessen) und kommt nur
+   * zurueck, wenn er in diesem Zug die volle Zahl gebaut hat — und nur, wo
+   * mehr als eine erlaubt ist: Bei einer Mauer je Zug gab es nie eine Pause,
+   * und Build soll bleiben, wie es ist.
+   */
+  const jeZug = mauernJeZug(partie.regeln);
+  const ohneMich = partie.mauerPause.filter((s) => s !== sitz);
+  const mauerPause =
+    jeZug > 1 && partie.mauernDiesenZug >= jeZug ? [...ohneMich, sitz] : ohneMich;
   const leerzuege = gewonnen > 0 ? 0 : partie.leerzuege + 1;
 
   return {
@@ -750,8 +1025,9 @@ export function fuehreAus(
     zug: partie.zug + 1,
     leerzuege,
     fertig: !frei || leerzuege >= LEERZUEGE_MAX,
-    // Der Zug ist vorbei, der naechste darf wieder einmal mauern.
-    mauerDiesenZug: false,
+    // Der Zug ist vorbei, der naechste faengt wieder bei null an.
+    mauernDiesenZug: 0,
+    mauerPause,
   };
 }
 
@@ -777,14 +1053,26 @@ export function platzierungen(
       points: partie.punkte[seat] ?? 0,
       left: partie.leftSeats.includes(seat),
     }))
-    .sort((a, b) => b.points - a.points);
+    /*
+     * Wer aufgegeben hat, steht hinten — vor den Punkten sortiert, nicht
+     * danach: Die Aufgabe entscheidet die Partie, der Stand zum Zeitpunkt
+     * der Aufgabe nicht. Sonst gewaenne, wer bei Vorsprung aufgibt.
+     */
+    .sort(
+      (a, b) =>
+        Number(a.seat === partie.aufgegeben) - Number(b.seat === partie.aufgegeben) ||
+        b.points - a.points,
+    );
 
   let platz = 0;
-  let letztePunkte: number | null = null;
+  let letzter: { points: number; aufgegeben: boolean } | null = null;
   return reihe.map((eintrag, index) => {
-    if (letztePunkte === null || eintrag.points !== letztePunkte) {
+    const aufgegeben = eintrag.seat === partie.aufgegeben;
+    const neuerPlatz =
+      letzter === null || eintrag.points !== letzter.points || aufgegeben !== letzter.aufgegeben;
+    if (neuerPlatz) {
       platz = index + 1;
-      letztePunkte = eintrag.points;
+      letzter = { points: eintrag.points, aufgegeben };
     }
     return { ...eintrag, place: platz };
   });
@@ -795,5 +1083,6 @@ export function sieger(partie: FillerPartie): number | null {
   if (!partie.fertig) return null;
   const [erster, zweiter] = platzierungen(partie);
   if (!erster || !zweiter) return null;
-  return erster.points === zweiter.points ? null : erster.seat;
+  // Nach dem Platz, nicht nach den Punkten — sonst zaehlte die Aufgabe nicht.
+  return erster.place === zweiter.place ? null : erster.seat;
 }

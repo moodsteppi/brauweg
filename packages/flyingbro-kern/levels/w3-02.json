@@ -1,0 +1,190 @@
+{
+  "fassung": 1,
+  "id": "w3-02",
+  "welt": 3,
+  "nr": 2,
+  "titel": "Strandkörbe",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "malve",
+    "pelle",
+    "malve",
+    "tjark",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    15500,
+    24500
+  ],
+  "teile": [
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 12,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 14,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 13,
+      "y": 0.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 13,
+      "y": 1.35,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 15.5,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 17.5,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16.5,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 16.5,
+      "y": 1.95,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 19,
+      "y": 0.3,
+      "b": 0.6,
+      "h": 0.6
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 20.5,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 22.5,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 21.5,
+      "y": 0.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 21.5,
+      "y": 1.35,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 24,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 26,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 25,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 25,
+      "y": 1.9,
+      "b": 0.6,
+      "h": 0.6
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "kalb",
+      "x": 13,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 16.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 21.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 25,
+      "y": 0,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}

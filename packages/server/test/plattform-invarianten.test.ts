@@ -46,6 +46,7 @@ import { dirname, join } from 'node:path';
 import type { AnyGameModule } from '@brauweg/game-api';
 
 import { registry } from '../src/games/registry.js';
+import { woerterbuchSchluessel } from './woerterbuch.js';
 
 /** Partien je Modul. Klein, damit `npm test` schnell bleibt. */
 const PARTIEN = Number(process.env.INVARIANTEN_PARTIEN ?? 3);
@@ -190,15 +191,7 @@ const spielbare = registry
  * die 15 der älteren gepflegt waren. Kein Bauwerkzeug hätte das gemeldet,
  * denn beide Seiten sind für sich genommen fehlerfrei.
  */
-const WOERTERBUCH = (() => {
-  const hier = dirname(fileURLToPath(import.meta.url));
-  // Der Test läuft aus dist/test/, die Quelle liegt vier Ebenen höher.
-  const pfad = join(hier, '..', '..', '..', 'client', 'src', 'i18n.ts');
-  const text = readFileSync(pfad, 'utf8');
-  const schluessel = new Set<string>();
-  for (const treffer of text.matchAll(/^\s*'([^']+)':\s*['"`]/gm)) schluessel.add(treffer[1]!);
-  return schluessel;
-})();
+const WOERTERBUCH = woerterbuchSchluessel();
 
 test('das Wörterbuch des Clients ist überhaupt lesbar', () => {
   assert.ok(

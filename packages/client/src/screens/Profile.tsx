@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, api, type PlayerProfile, type Relationship } from '../api';
 import { inAppSichtbar } from '../app-sichtbar';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { MeldenBlatt } from '../melden/MeldenBlatt';
 import { useRueckfrage, Zurueck } from './HbBlatt';
 import { BrowortImProfil } from '../browort/BrowortImProfil';
@@ -33,7 +34,7 @@ export function Profile({
       .profile(accountId)
       .then(setProfile)
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+        setError(err instanceof ApiError ? t(err.messageKey) : t('spielerprofil.verbindungFehlgeschlagen'));
       });
   };
 
@@ -45,7 +46,7 @@ export function Profile({
     void action()
       .then(load)
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+        setError(err instanceof ApiError ? t(err.messageKey) : t('spielerprofil.verbindungFehlgeschlagen'));
       })
       .finally(() => setBusy(false));
   };
@@ -86,8 +87,8 @@ function ProfilNeu({
     <header className="hb-voll-kopf">
       <Zurueck onClick={zurueck} />
       <div className="hb-voll-titel">
-        <h1>{profile?.displayName ?? 'Profil'}</h1>
-        {profile && <span>Dabei seit {monatJahr(profile.memberSince)}</span>}
+        <h1>{profile?.displayName ?? t('spielerprofil.titel')}</h1>
+        {profile && <span>{tf('spielerprofil.dabeiSeit', { datum: monatJahr(profile.memberSince) })}</span>}
       </div>
     </header>
   );
@@ -101,11 +102,11 @@ function ProfilNeu({
             <div className="hb-karte hb-fremd-fehler">
               <span className="hb-fehler">{error}</span>
               <button type="button" className="hb-kn is-zweit" onClick={load}>
-                Nochmal versuchen
+                {t('spielerprofil.nochmal')}
               </button>
             </div>
           ) : (
-            <p className="hb-klein hb-liste-leer">Profil wird geladen…</p>
+            <p className="hb-klein hb-liste-leer">{t('spielerprofil.laedt')}</p>
           )}
         </div>
       </div>
@@ -120,18 +121,18 @@ function ProfilNeu({
   // „Checkpoint" stand im alten Profil — das neue Hub kennt den Begriff
   // nirgends mehr, das eigene Profil zeigt an der Stelle die Spiele.
   const werte = [
-    { name: 'Partien', wert: profile.totals.parties.toLocaleString('de-DE') },
-    { name: 'Siege', wert: profile.totals.wins.toLocaleString('de-DE') },
-    { name: 'Siegquote', wert: quote },
-    { name: 'Spiele', wert: String(ranking.filter((row) => row.parties > 0).length) },
+    { name: t('spielerprofil.wert.partien'), wert: zahl(profile.totals.parties) },
+    { name: t('spielerprofil.wert.siege'), wert: zahl(profile.totals.wins) },
+    { name: t('spielerprofil.wert.siegquote'), wert: quote },
+    { name: t('spielerprofil.wert.spiele'), wert: String(ranking.filter((row) => row.parties > 0).length) },
   ];
 
   const beenden = (): void =>
     frage(
       {
-        titel: 'Freundschaft beenden?',
-        text: `${profile.displayName} verschwindet aus deiner Freundesliste.`,
-        ja: 'Beenden',
+        titel: t('spielerprofil.beenden.frage'),
+        text: tf('spielerprofil.beenden.text', { name: profile.displayName }),
+        ja: t('spielerprofil.beenden.ja'),
         gefahr: true,
       },
       () => act(() => api.removeFriend(profile.id)),
@@ -160,15 +161,15 @@ function ProfilNeu({
 
         <section className="hb-blk">
           <h2 className="hb-ab">
-            Trophäen
-            <span className="hb-ab-zusatz">{profile.totals.parties} Partien</span>
+            {t('spielerprofil.trophaeen')}
+            <span className="hb-ab-zusatz">{tn('spielerprofil.partien', profile.totals.parties)}</span>
           </h2>
           <div className="hb-karte hb-trophaeen">
             <span className="hb-trophaeen-zahl">
               <img src="/hub/symbol-pokal.webp" alt="" />
-              {profile.totals.trophies.toLocaleString('de-DE')}
+              {zahl(profile.totals.trophies)}
             </span>
-            <span className="hb-klein">alle Spiele zusammen</span>
+            <span className="hb-klein">{t('spielerprofil.alleSpiele')}</span>
             <span className="hb-sp-werte is-vier">
               {werte.map((w) => (
                 <span key={w.name}>
@@ -180,7 +181,7 @@ function ProfilNeu({
           </div>
           <div className="hb-liste">
             {ranking.length === 0 ? (
-              <p className="hb-klein hb-liste-leer">Noch keine gewertete Partie gespielt.</p>
+              <p className="hb-klein hb-liste-leer">{t('spielerprofil.keinePartie')}</p>
             ) : (
               ranking.map((row) => (
                 <div className="hb-mg" key={row.gameId}>
@@ -188,12 +189,12 @@ function ProfilNeu({
                   <span className="hb-mg-name">
                     <strong>{t(`game.${row.gameId}`)}</strong>
                     <small className="is-leise">
-                      {row.parties} gewertet · {row.wins} Siege
+                      {tf('spielerprofil.zeile', { partien: row.parties, siege: row.wins })}
                     </small>
                   </span>
                   <span className="hb-pk">
                     <img src="/hub/symbol-pokal.webp" alt="" />
-                    {row.trophies.toLocaleString('de-DE')}
+                    {zahl(row.trophies)}
                   </span>
                 </div>
               ))
@@ -202,7 +203,7 @@ function ProfilNeu({
           {/* Wortgleich mit dem eigenen Profil — dieselbe Regel aus dem
               Server (`countsForRanking`). */}
           <p className="hb-klein hb-ohne-rand">
-            Trophäen gibt es auch gegen Bots - nur nicht, wenn ein Gast mitspielt oder Training an ist.
+            {t('spielerprofil.trophaeenHinweis')}
           </p>
         </section>
 
@@ -220,13 +221,13 @@ function ProfilNeu({
             eine Knopf auf dieser Seite, den man bereut. */}
         {profile.relationship === 'friends' && (
           <button type="button" className="hb-leise-knopf" onClick={beenden} disabled={busy}>
-            Freundschaft beenden
+            {t('spielerprofil.beenden.knopf')}
           </button>
         )}
         {/* Melden und Blockieren (Apple 1.2): leise am Schluss, aber immer da. */}
         {profile.relationship !== 'self' && (
           <button type="button" className="hb-leise-knopf" onClick={() => setMeldenOffen(true)}>
-            {profile.blockiert ? 'Blockiert · Melden oder aufheben' : 'Melden oder blockieren'}
+            {profile.blockiert ? t('spielerprofil.melden.blockiert') : t('spielerprofil.melden.knopf')}
           </button>
         )}
       </div>
@@ -249,13 +250,13 @@ function ProfilNeu({
 function FreundMarke({ relationship }: { relationship: Relationship }): React.JSX.Element | null {
   switch (relationship) {
     case 'self':
-      return <>Das bist du</>;
+      return <>{t('spielerprofil.marke.selbst')}</>;
     case 'friends':
-      return <>✓ Ihr seid Freunde</>;
+      return <>{t('spielerprofil.marke.freunde')}</>;
     case 'outgoing':
-      return <>Anfrage gesendet</>;
+      return <>{t('spielerprofil.marke.gesendet')}</>;
     case 'incoming':
-      return <>Möchte dein Freund sein</>;
+      return <>{t('spielerprofil.marke.eingehend')}</>;
     case 'none':
       return null;
   }
@@ -283,23 +284,23 @@ function FreundKnoepfe({
     case 'none':
       return (
         <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onRequest} disabled={busy}>
-          Freund hinzufügen
+          {t('spielerprofil.knopf.hinzufuegen')}
         </button>
       );
     case 'outgoing':
       return (
         <button type="button" className="hb-kn is-zweit is-breit" onClick={onRemove} disabled={busy}>
-          Anfrage zurückziehen
+          {t('spielerprofil.knopf.zurueckziehen')}
         </button>
       );
     case 'incoming':
       return (
         <div className="hb-knopfreihe">
           <button type="button" className="hb-kn is-gold" onClick={onAccept} disabled={busy}>
-            Annehmen
+            {t('spielerprofil.knopf.annehmen')}
           </button>
           <button type="button" className="hb-kn is-zweit" onClick={onRemove} disabled={busy}>
-            Ablehnen
+            {t('spielerprofil.knopf.ablehnen')}
           </button>
         </div>
       );

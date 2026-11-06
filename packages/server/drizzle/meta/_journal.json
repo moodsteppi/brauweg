@@ -288,6 +288,20 @@
       "when": 1793109970954,
       "tag": "0040_tagesmarkt",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793200000000,
+      "tag": "0041_konto_sprache",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793300000000,
+      "tag": "0042_flyingbro",
+      "breakpoints": true
     }
   ]
 }

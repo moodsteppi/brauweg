@@ -187,7 +187,7 @@ und keine Probe reproduzierbar.
   `src/index.ts` (Modul), `adapter.ts`, `partie.ts`, `regeln.ts`, `sicht.ts`,
   `bot.ts`, dazu Proben unter `test/`.
 - **Client**: ein Bildschirm unter `packages/client/src/screens/`, eingetragen
-  in `App.tsx`, `GameSelect.tsx`, `i18n.ts` und `protocol.ts` — genau wie
+  in `App.tsx`, `GameSelect.tsx`, `i18n/de/` (eigene Bereichsdatei) und `protocol.ts` — genau wie
   `Filler.tsx` es vormacht.
 - **Alles auf Deutsch**: Bezeichner, Kommentare, Commit-Nachrichten,
   Oberflächentexte (CLAUDE.md, Regel 2).

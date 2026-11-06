@@ -6,6 +6,7 @@ import { HbBlatt } from '../../screens/HbBlatt';
 import { GastHinweis } from '../../tisch/GastHinweis';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from '../../screens/SpielEinstieg';
 import { beitrittsLink } from './tischlink';
+import { tz, tzAnzahl } from './text';
 import { KOSTEN_FARBE, RollenZeichen } from './Zeichen';
 
 /**
@@ -22,7 +23,7 @@ export const TAFELRUNDE_AKZENT = '#5aa86a';
 const ROLLEN = ['wache', 'schuetze', 'magier', 'meuchler', 'beistand'] as const;
 
 function mitspielerzahl(aktiv: number | null): string {
-  return `${aktiv ?? '…'} Spieler gerade in Tafelrunde`;
+  return tz('einstieg.mitspielerzahl', { n: aktiv ?? '…' });
 }
 
 /** Drei hüpfende Punkte: Es wird gewartet, aber es tut sich etwas. */
@@ -67,14 +68,14 @@ export function MenueNeu({
     <SpielRahmen
       gameId="tafelrunde"
       titel="Tafelrunde"
-      unter="Auto-Battler · bis zu 8 Spieler"
+      unter={tz('einstieg.unter')}
       akzent={TAFELRUNDE_AKZENT}
       onBack={onBack}
-      zurueckText="Zurück"
+      zurueckText={tz('zurueck')}
       fuss={
         <>
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onSuche} disabled={startet}>
-            Mitspieler suchen
+            {tz('einstieg.suchen')}
           </button>
           <p className="hb-klein">{mitspielerzahl(aktiv)}</p>
         </>
@@ -82,8 +83,7 @@ export function MenueNeu({
     >
       <div className="spe-karte">
         <p className="spe-text">
-          Kaufe Recken, stelle sie aufs Feld und lege drei gleiche zusammen - aus dreien wird eine stärkere. Wer am
-          längsten steht, gewinnt.
+          {tz('einstieg.text')}
         </p>
         <div className="spe-zeichen" aria-hidden="true">
           {ROLLEN.map((r) => (
@@ -96,27 +96,27 @@ export function MenueNeu({
       {fehler && <p className="hb-fehler">{fehler}</p>}
       {/* Aufmachen und Beitreten sind zwei Rollen: Wer den Code bekommen hat,
           sucht keinen Erstellen-Knopf. Deshalb zwei gleich große Knöpfe. */}
-      <SpielAbschnitt titel="Mit Freunden">
+      <SpielAbschnitt titel={tz('einstieg.mitFreunden')}>
         <div className="hb-knopfreihe">
           <button type="button" className="hb-kn is-blau" onClick={onErstellen} disabled={startet}>
-            Tisch erstellen
+            {tz('einstieg.erstellen')}
           </button>
           <button type="button" className="hb-kn is-blau" onClick={onBeitreten} disabled={startet}>
-            Tisch beitreten
+            {tz('einstieg.beitreten')}
           </button>
         </div>
       </SpielAbschnitt>
-      <SpielAbschnitt titel="Allein">
+      <SpielAbschnitt titel={tz('einstieg.allein')}>
         <button type="button" className="hb-kn is-blau is-breit" onClick={onBots} disabled={startet}>
-          Gegen Bots spielen
+          {tz('einstieg.gegenBots')}
         </button>
       </SpielAbschnitt>
-      <SpielAbschnitt titel="Anleitung">
+      <SpielAbschnitt titel={tz('einstieg.anleitung')}>
         <div className="hb-liste">
           <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
             <span>
-              <strong>So spielt man Tafelrunde</strong>
-              <small>Laden, Verschmelzen, Klassen, Kampf</small>
+              <strong>{tz('regeln.titel')}</strong>
+              <small>{tz('einstieg.anleitungUnter')}</small>
             </span>
             <span className="hb-pf" aria-hidden="true">
               ›
@@ -125,7 +125,7 @@ export function MenueNeu({
         </div>
       </SpielAbschnitt>
       {regelnOffen && (
-        <HbBlatt titel="So spielt man Tafelrunde" onClose={() => setRegelnOffen(false)}>
+        <HbBlatt titel={tz('regeln.titel')} onClose={() => setRegelnOffen(false)}>
           <div className="spe-regeltext">{regeln}</div>
         </HbBlatt>
       )}
@@ -151,14 +151,14 @@ export function SucheNeu({
   return (
     <SpielRahmen
       gameId="tafelrunde"
-      titel="Mitspieler suchen"
+      titel={tz('einstieg.suchen')}
       unter={mitspielerzahl(aktiv)}
       akzent={TAFELRUNDE_AKZENT}
       onBack={onAbbrechen}
-      zurueckText="Suche abbrechen"
+      zurueckText={tz('suche.abbrechen')}
       fuss={
         <button type="button" className="hb-kn is-blau is-breit" onClick={onAbbrechen}>
-          Abbrechen
+          {tz('abbrechen')}
         </button>
       }
     >
@@ -170,8 +170,8 @@ export function SucheNeu({
         </p>
         <p className="spe-text">
           {gefunden === 1
-            ? 'Noch niemand sonst - bleibt es dabei, wird mit Bots aufgefüllt.'
-            : `${gefunden} Spieler gefunden`}
+            ? tz('suche.niemand')
+            : tz('suche.gefunden', { n: gefunden })}
         </p>
         <Lauf />
       </div>
@@ -217,45 +217,45 @@ export function ErstellenNeu({
   return (
     <SpielRahmen
       gameId="tafelrunde"
-      titel="Tisch erstellen"
-      unter="Tafelrunde · Tisch mit Code"
+      titel={tz('einstieg.erstellen')}
+      unter={tz('erstellen.unter')}
       akzent={TAFELRUNDE_AKZENT}
       onBack={onZurueck}
-      zurueckText="Zurück zum Menü"
+      zurueckText={tz('zurueckZumMenue')}
       fuss={
         <>
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onErstellen} disabled={startet}>
-            Tisch aufmachen
+            {tz('erstellen.aufmachen')}
           </button>
           <p className="hb-klein">
             {oeffentlich
-              ? 'Der Tisch steht in der Liste und ist zusätzlich über seinen Code erreichbar.'
-              : 'Nur wer den Code hat, kommt an diesen Tisch. Du startest, wann du willst.'}
+              ? tz('erstellen.hinweisOffen')
+              : tz('erstellen.hinweisCode')}
           </p>
         </>
       }
     >
       {fehler && <p className="hb-fehler">{fehler}</p>}
-      <SpielAbschnitt titel="Plätze">
-        <SpielWahl name="Plätze" werte={sitzWahl.map((n) => ({ wert: n, text: String(n) }))} wert={sitze} onWahl={onSitze} />
+      <SpielAbschnitt titel={tz('erstellen.plaetze')}>
+        <SpielWahl name={tz('erstellen.plaetze')} werte={sitzWahl.map((n) => ({ wert: n, text: String(n) }))} wert={sitze} onWahl={onSitze} />
       </SpielAbschnitt>
-      <SpielAbschnitt titel="Für wen">
+      <SpielAbschnitt titel={tz('erstellen.fuerWen')}>
         <SpielWahl
-          name="Für wen"
+          name={tz('erstellen.fuerWen')}
           werte={[
-            { wert: 'code' as const, text: 'Nur mit Code' },
-            { wert: 'offen' as const, text: 'Offen für alle' },
+            { wert: 'code' as const, text: tz('erstellen.nurMitCode') },
+            { wert: 'offen' as const, text: tz('erstellen.offenFuerAlle') },
           ]}
           wert={oeffentlich ? 'offen' : 'code'}
           onWahl={(w) => onOeffentlich(w === 'offen')}
         />
       </SpielAbschnitt>
-      <SpielAbschnitt titel="Freie Plätze">
+      <SpielAbschnitt titel={tz('erstellen.freiePlaetze')}>
         <SpielWahl
-          name="Freie Plätze"
+          name={tz('erstellen.freiePlaetze')}
           werte={[
-            { wert: 'bots' as const, text: 'Mit Bots füllen' },
-            { wert: 'frei' as const, text: 'Frei lassen' },
+            { wert: 'bots' as const, text: tz('erstellen.mitBotsFuellen') },
+            { wert: 'frei' as const, text: tz('erstellen.freiLassen') },
           ]}
           wert={botsFuellen ? 'bots' : 'frei'}
           onWahl={(w) => onBotsFuellen(w === 'bots')}
@@ -264,9 +264,9 @@ export function ErstellenNeu({
       {/* Die Stufe zeigt nur, wer Bots will — sonst stellt man etwas ein,
           das an diesem Tisch nie zum Zug kommt. */}
       {botsFuellen && (
-        <SpielAbschnitt titel="Wie hart spielen die Bots">
+        <SpielAbschnitt titel={tz('erstellen.botStaerke')}>
           <SpielWahl
-            name="Wie hart spielen die Bots"
+            name={tz('erstellen.botStaerke')}
             werte={botStufen.map((s) => ({ wert: s.id, text: s.name }))}
             wert={botStufe}
             onWahl={onBotStufe}
@@ -307,11 +307,11 @@ export function BeitretenNeu({
   return (
     <SpielRahmen
       gameId="tafelrunde"
-      titel="Tisch beitreten"
-      unter="Mit Code oder an einen offenen Tisch"
+      titel={tz('einstieg.beitreten')}
+      unter={tz('beitreten.unter')}
       akzent={TAFELRUNDE_AKZENT}
       onBack={onZurueck}
-      zurueckText="Zurück zum Menü"
+      zurueckText={tz('zurueckZumMenue')}
       fuss={
         <button
           type="button"
@@ -319,18 +319,18 @@ export function BeitretenNeu({
           onClick={onPerCode}
           disabled={startet || !codeFertig}
         >
-          Beitreten
+          {tz('beitreten.knopf')}
         </button>
       }
     >
-      <p className="spe-text">Tippe den Code ein, den du bekommen hast - oder nimm einen offenen Tisch.</p>
-      <SpielAbschnitt titel="Code">
+      <p className="spe-text">{tz('beitreten.text')}</p>
+      <SpielAbschnitt titel={tz('code')}>
         <input
           className="spe-feld spe-codefeld"
           value={code}
           onChange={(e) => onCode(e.target.value.toUpperCase())}
           placeholder="CODE"
-          aria-label="Beitrittscode"
+          aria-label={tz('beitreten.code')}
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}
@@ -338,16 +338,19 @@ export function BeitretenNeu({
         />
         {vorschau && (
           <p className="hb-klein">
-            {vorschau.host ? `Tisch von ${vorschau.host}` : 'Offener Tisch'} · {vorschau.occupied}/{vorschau.seats} Plätzen
-            besetzt
+            {tz('beitreten.vorschau', {
+              tisch: vorschau.host ? tz('tischVon', { name: vorschau.host }) : tz('offenerTisch'),
+              belegt: vorschau.occupied,
+              plaetze: vorschau.seats,
+            })}
           </p>
         )}
       </SpielAbschnitt>
       {fehler && <p className="hb-fehler">{fehler}</p>}
-      <SpielAbschnitt titel="Offene Tische" zusatz={offeneTische.length > 0 ? offeneTische.length : undefined}>
+      <SpielAbschnitt titel={tz('beitreten.offeneTische')} zusatz={offeneTische.length > 0 ? offeneTische.length : undefined}>
         <div className="hb-liste">
           {offeneTische.length === 0 ? (
-            <p className="spe-leer">Gerade steht kein offener Tisch. Mach selbst einen auf.</p>
+            <p className="spe-leer">{tz('beitreten.keinTisch')}</p>
           ) : (
             offeneTische.map((zeile) => (
               <button
@@ -358,14 +361,14 @@ export function BeitretenNeu({
                 disabled={startet}
               >
                 <span>
-                  <strong>{zeile.host ? `Tisch von ${zeile.host}` : 'Offener Tisch'}</strong>
+                  <strong>{zeile.host ? tz('tischVon', { name: zeile.host }) : tz('offenerTisch')}</strong>
                 </span>
                 <span className="spe-punkte" aria-hidden="true">
                   {Array.from({ length: zeile.seats }, (_, i) => (
                     <i key={i} className={i < zeile.occupied ? '' : 'is-frei'} />
                   ))}
                 </span>
-                <span className="spe-zahl" aria-label={`${zeile.occupied} von ${zeile.seats} Plätzen besetzt`}>
+                <span className="spe-zahl" aria-label={tz('plaetzeBesetzt', { belegt: zeile.occupied, plaetze: zeile.seats })}>
                   {zeile.occupied}/{zeile.seats}
                 </span>
               </button>
@@ -435,11 +438,11 @@ export function WartesaalNeu({
   return (
     <SpielRahmen
       gameId="tafelrunde"
-      titel="Dein Tisch"
-      unter="Tafelrunde · Warten auf Mitspieler"
+      titel={tz('wartesaal.titel')}
+      unter={tz('wartesaal.unter')}
       akzent={TAFELRUNDE_AKZENT}
       onBack={onAbbrechen}
-      zurueckText="Tisch verlassen"
+      zurueckText={tz('wartesaal.verlassen')}
       fuss={
         wartesaal.gastgeber ? (
           <>
@@ -449,52 +452,52 @@ export function WartesaalNeu({
               onClick={onStart}
               disabled={!wartesaal.botsFuellen && menschen < 2}
             >
-              Partie starten
+              {tz('wartesaal.starten')}
             </button>
             <p className="hb-klein">
               {wartesaal.botsFuellen
-                ? 'Freie Plätze übernehmen Bots - du kannst sofort losspielen.'
+                ? tz('wartesaal.hinweisBots')
                 : menschen < 2
-                  ? 'Ohne Bots braucht es mindestens einen Mitspieler.'
-                  : `Es spielen ${menschen} Menschen, die leeren Plätze fallen weg.`}
+                  ? tz('wartesaal.hinweisZuWenige')
+                  : tz('wartesaal.hinweisMenschen', { n: menschen })}
             </p>
           </>
         ) : undefined
       }
     >
       {wartesaal.code && (
-        <SpielAbschnitt titel="Code">
+        <SpielAbschnitt titel={tz('code')}>
           <div className="spe-karte">
-            <p className="spe-code" aria-label={`Beitrittscode ${wartesaal.code}`}>
+            <p className="spe-code" aria-label={tz('wartesaal.codeLabel', { code: wartesaal.code })}>
               {wartesaal.code}
             </p>
             <div className="hb-knopfreihe">
               <button type="button" className="hb-kn is-blau" onClick={() => kopiere('code', wartesaal.code!)}>
-                {kopiert === 'code' ? 'Code kopiert' : 'Code kopieren'}
+                {tz(kopiert === 'code' ? 'wartesaal.codeKopiert' : 'wartesaal.codeKopieren')}
               </button>
               <button
                 type="button"
                 className="hb-kn is-blau"
                 onClick={() => kopiere('link', beitrittsLink(wartesaal.code!))}
               >
-                {kopiert === 'link' ? 'Link kopiert' : 'Link kopieren'}
+                {tz(kopiert === 'link' ? 'wartesaal.linkKopiert' : 'wartesaal.linkKopieren')}
               </button>
             </div>
           </div>
         </SpielAbschnitt>
       )}
 
-      <SpielAbschnitt titel="Am Tisch" zusatz={sitze.length > 0 ? `${menschen}/${sitze.length}` : undefined}>
+      <SpielAbschnitt titel={tz('wartesaal.amTisch')} zusatz={sitze.length > 0 ? `${menschen}/${sitze.length}` : undefined}>
         <div className="hb-liste">
           {sitze.length === 0 ? (
-            <p className="spe-leer">Verbindung wird aufgebaut…</p>
+            <p className="spe-leer">{tz('verbindung')}</p>
           ) : (
             sitze.map((platz) => (
               <div key={platz.seat} className={`spe-zeile spe-sitz${platz.accountId || platz.isBot ? ' is-besetzt' : ''}`}>
                 <span>
-                  <strong>{platz.displayName ?? (platz.isBot ? 'Bot' : 'Freier Platz')}</strong>
+                  <strong>{platz.displayName ?? (platz.isBot ? tz('wartesaal.bot') : tz('wartesaal.freierPlatz'))}</strong>
                 </span>
-                {platz.seat === 0 && <span className="spe-marke">Gastgeber</span>}
+                {platz.seat === 0 && <span className="spe-marke">{tz('wartesaal.gastgeber')}</span>}
               </div>
             ))
           )}
@@ -504,21 +507,21 @@ export function WartesaalNeu({
 
       {wartesaal.gastgeber ? (
         <>
-          <SpielAbschnitt titel="Freie Plätze beim Start">
+          <SpielAbschnitt titel={tz('wartesaal.freiePlaetze')}>
             <SpielWahl
-              name="Freie Plätze beim Start"
+              name={tz('wartesaal.freiePlaetze')}
               werte={[
-                { wert: 'bots' as const, text: 'Mit Bots füllen' },
-                { wert: 'weg' as const, text: 'Weglassen' },
+                { wert: 'bots' as const, text: tz('erstellen.mitBotsFuellen') },
+                { wert: 'weg' as const, text: tz('wartesaal.weglassen') },
               ]}
               wert={wartesaal.botsFuellen ? 'bots' : 'weg'}
               onWahl={(w) => onBotsFuellen(w === 'bots')}
             />
           </SpielAbschnitt>
           {wartesaal.botsFuellen && (
-            <SpielAbschnitt titel="Wie hart spielen die Bots">
+            <SpielAbschnitt titel={tz('erstellen.botStaerke')}>
               <SpielWahl
-                name="Wie hart spielen die Bots"
+                name={tz('erstellen.botStaerke')}
                 werte={botStufen.map((s) => ({ wert: s.id, text: s.name }))}
                 wert={botStufe}
                 onWahl={onBotStufe}
@@ -528,7 +531,7 @@ export function WartesaalNeu({
         </>
       ) : (
         <p className="spe-text">
-          {menschen} {menschen === 1 ? 'Spieler ist' : 'Spieler sind'} da. Der Gastgeber startet die Partie.
+          {tzAnzahl('wartesaal.da', menschen)}
         </p>
       )}
     </SpielRahmen>
@@ -551,11 +554,11 @@ export function AufbauNeu({
   return (
     <SpielRahmen
       gameId="tafelrunde"
-      titel="Tisch wird aufgebaut"
+      titel={tz('aufbau.titel')}
       unter={mitspielerzahl(aktiv)}
       akzent={TAFELRUNDE_AKZENT}
       onBack={onAbbrechen}
-      zurueckText="Abbrechen"
+      zurueckText={tz('abbrechen')}
     >
       <div className="spe-warten">
         <p className="spe-text">{text}</p>

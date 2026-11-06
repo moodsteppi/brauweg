@@ -1,0 +1,248 @@
+{
+  "fassung": 1,
+  "id": "w3-13",
+  "welt": 3,
+  "nr": 13,
+  "titel": "Die Wellenbrecher",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "tjark",
+    "pelle",
+    "tjark",
+    "malve",
+    "pelle",
+    "tjark",
+    "malve"
+  ],
+  "sterne": [
+    0,
+    31000,
+    46000
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "dreieck",
+      "x": 11,
+      "y": 0.4,
+      "b": 1,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "dreieck",
+      "x": 12.2,
+      "y": 0.4,
+      "b": 1,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 15.3,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 17.7,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 16.5,
+      "y": 1.5,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 15.3,
+      "y": 2.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 17.7,
+      "y": 2.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 16.5,
+      "y": 3.1,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 15.3,
+      "y": 3.6,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 17.7,
+      "y": 3.6,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 16.5,
+      "y": 4.1,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 16.5,
+      "y": 4.55,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 21,
+      "y": 1.1,
+      "b": 0.4,
+      "h": 2.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 24,
+      "y": 1.1,
+      "b": 0.4,
+      "h": 2.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 22.5,
+      "y": 2.3,
+      "b": 3.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 21,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 24,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 22.5,
+      "y": 3.9,
+      "b": 3.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 21,
+      "y": 4.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 24,
+      "y": 4.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 22.5,
+      "y": 5.5,
+      "b": 3.4,
+      "h": 0.2
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "giraffe",
+      "x": 16.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 16.5,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 16.5,
+      "y": 3.2,
+      "blick": "links"
+    },
+    {
+      "groesse": "langhals",
+      "x": 22.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 22.5,
+      "y": 2.4,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 22.5,
+      "y": 4,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 22.5,
+      "y": 5.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 27.5,
+      "y": 0,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}

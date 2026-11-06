@@ -35,7 +35,7 @@ Alle Fundstellen im Client gelten, weil die App den Client ausführt.
 | --- | --- | --- |
 | Doppelkopf | spielbar | registry.ts:158 |
 | Skat | spielbar | registry.ts:159 |
-| Filler — in der App „**Farbduell**" | spielbar | registry.ts:173, Name `APP_NAMEN` packages/client/src/i18n.ts:773-779 |
+| Filler — in der App „**Farbduell**" | spielbar | registry.ts:173, Name `APP_NAMEN` packages/client/src/i18n/index.ts (bis Nov. 2026 i18n.ts:773-779) |
 | BroChess | spielbar | registry.ts:183 |
 | Partykiste | **bald** (seit 21.10.) und zusätzlich überall ausgeblendet (Statistik, „Deine Spiele") | registry.ts:165, packages/client/src/app-sichtbar.ts:12 |
 | Zauberer, Cambio, Poker, Mememory, Eiland, Feldherr, Tafelrunde, Golf, BroCooked | bald | registry.ts:166-178 |

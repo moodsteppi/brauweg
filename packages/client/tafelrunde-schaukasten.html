@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tafelrunde — Schaukasten</title>
+    <!--
+      Eigene Seite neben der App, nur fuer die Entwicklung (wie
+      schaukasten.html der Partykiste): die ECHTEN Tafelrunde-Ansichten mit
+      erfundenen Sichten, ohne Server und ohne Anmeldung.
+      Aufruf: `npm run dev:client`, dann
+      http://localhost:5173/tafelrunde-schaukasten.html?fall=ruesten&sprache=en
+      Ohne `fall`: alle Faelle untereinander, je ein 390 x 844 grosser Rahmen.
+
+      Wird beim `vite build` NICHT mitgebaut (die Rollup-Eingabe ist
+      index.html), geht also nicht mit ins Betriebspaket.
+    -->
+    <style>
+      body {
+        margin: 0;
+        background: #0c0812;
+        color: #e8eef1;
+        font-family: system-ui, sans-serif;
+      }
+      /* Ein einzelner Fall fuellt den Schirm. `transform` haelt die
+         festgehefteten Ebenen (.tr-seite, Blaetter, Endbild) in diesem
+         Kasten, damit ein Foto von [data-fall] genau den Fall zeigt. */
+      .sk-fall {
+        position: relative;
+        min-height: 100dvh;
+        transform: translateZ(0);
+      }
+      .sk-seite {
+        padding: 24px 20px 60px;
+      }
+      .sk-seite > h1 {
+        margin: 0 0 6px;
+        font-size: 28px;
+      }
+      .sk-vorwort {
+        margin: 0 0 24px;
+        color: #8fa3ad;
+      }
+      .sk-raster {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+      }
+      .sk-kasten {
+        margin: 0;
+        width: 390px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .sk-kasten a {
+        color: #f0c060;
+      }
+      .sk-kasten figcaption span {
+        color: #8fa3ad;
+        font-size: 14px;
+      }
+      .sk-kasten iframe {
+        border: 0;
+        border-radius: 18px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        background: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/proben/tafelrunde/Schaukasten.tsx"></script>
+  </body>
+</html>

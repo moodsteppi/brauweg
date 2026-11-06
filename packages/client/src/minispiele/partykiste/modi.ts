@@ -10,6 +10,7 @@
  */
 
 import type { PartyRegelsatz } from './sicht';
+import { tz } from './text';
 import { PAKET_NAME } from './wahl';
 
 /** Die beiden Lager. Buchstaben statt Farben: Die Kiste hat keine Teamfarben, und Rot/Grün sieht nicht jeder. */
@@ -21,7 +22,7 @@ export function lagerKurz(lager: number): string {
 }
 
 export function lagerName(lager: number): string {
-  return `Lager ${lagerKurz(lager)}`;
+  return tz('lager.name', { lager: lagerKurz(lager) });
 }
 
 /**
@@ -38,11 +39,13 @@ export function modusChip(regeln: PartyRegelsatz): string | null {
     case 'turnier':
       return null;
     case 'eskalation':
-      return regeln.eskalation ? `Eskalation · Stufe ${regeln.eskalation.stufe} von 3` : 'Eskalation';
+      return regeln.eskalation ? tz('chip.eskalationStufe', { stufe: regeln.eskalation.stufe }) : tz('chip.eskalation');
     case 'themenabend':
-      return regeln.paket ? `Themenabend: ${PAKET_NAME[regeln.paket] ?? regeln.paket}` : 'Themenabend';
+      return regeln.paket
+        ? tz('chip.themenabendPaket', { paket: PAKET_NAME[regeln.paket] ?? regeln.paket })
+        : tz('chip.themenabend');
     case 'team':
-      return 'Team-Abend';
+      return tz('chip.team');
   }
 }
 
@@ -52,11 +55,13 @@ export function modusChip(regeln: PartyRegelsatz): string | null {
  * zahmer ist, als "Eskalation" verspricht.
  */
 export function eskalationsHinweis(regeln: PartyRegelsatz): string | null {
-  return regeln.eskalation?.gekappt ? 'Ein Gast spielt mit - „derb“ gibt es erst ohne Gast.' : null;
+  return regeln.eskalation?.gekappt ? tz('hinweis.gastDerb') : null;
 }
 
-/** Die Namen der Inhaltsstufen, Stelle = Stufe — dieselben Woerter wie die Kacheln (wahl.ts). */
-const INHALT_NAME = ['', 'harmlos', 'pikant', 'derb'] as const;
+/** Der Name einer Inhaltsstufe — dieselben Woerter wie die Kacheln (wahl.ts). */
+function inhaltName(stufe: number): string {
+  return tz(`inhalt.stufe.${stufe}`);
+}
 
 /**
  * Der Chip „Inhalte …" in der Regelzeile (seit dem 27.09.2026) — oder null,
@@ -69,17 +74,23 @@ const INHALT_NAME = ['', 'harmlos', 'pikant', 'derb'] as const;
  */
 export function inhaltsChip(regeln: PartyRegelsatz): string | null {
   if (regeln.modus === 'eskalation') {
-    return regeln.eskalation ? `Inhalte ${INHALT_NAME[regeln.eskalation.inhaltsHaerte]}` : 'Inhalte steigen';
+    return regeln.eskalation
+      ? tz('chip.inhalte', { stufe: inhaltName(regeln.eskalation.inhaltsHaerte) })
+      : tz('chip.inhalteSteigen');
   }
   const stufe = regeln.inhaltsHaerte;
   if (stufe === undefined) return null;
   switch (regeln.inhaltsMischung ?? 'bis') {
     case 'gemischt':
-      return stufe >= 3 ? 'Inhalte gemischt' : stufe === 2 ? 'Inhalte gemischt, ohne derb' : 'Inhalte harmlos';
+      return stufe >= 3
+        ? tz('chip.inhalteGemischt')
+        : stufe === 2
+          ? tz('chip.inhalteGemischtOhneDerb')
+          : tz('chip.inhalte', { stufe: inhaltName(1) });
     case 'genau':
-      return `Inhalte ${INHALT_NAME[stufe]}`;
+      return tz('chip.inhalte', { stufe: inhaltName(stufe) });
     case 'bis':
-      return stufe === 1 ? 'Inhalte harmlos' : `Inhalte bis ${INHALT_NAME[stufe]}`;
+      return stufe === 1 ? tz('chip.inhalte', { stufe: inhaltName(1) }) : tz('chip.inhalteBis', { stufe: inhaltName(stufe) });
   }
 }
 
@@ -90,5 +101,5 @@ export function inhaltsChip(regeln: PartyRegelsatz): string | null {
 export function inhaltsHinweis(regeln: PartyRegelsatz): string | null {
   const gewollt = regeln.inhaltsHaerteGewollt;
   if (regeln.modus === 'eskalation' || !gewollt || regeln.inhaltsHaerte === undefined) return null;
-  return gewollt > regeln.inhaltsHaerte ? 'Ein Gast spielt mit - „derb“ gibt es erst ohne Gast.' : null;
+  return gewollt > regeln.inhaltsHaerte ? tz('hinweis.gastDerb') : null;
 }

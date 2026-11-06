@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { SeatInfo } from '../protocol';
 
 /**
@@ -22,7 +23,7 @@ export function GastHinweis({
   if (!sitze.some((platz) => platz.gast === true)) return null;
   return (
     <p className={className} data-gast-hinweis="">
-      Ein Gast spielt mit - diese Runde zählt nicht für die Rangliste.
+      {t('tisch.gast')}
     </p>
   );
 }

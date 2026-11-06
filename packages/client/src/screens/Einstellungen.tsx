@@ -1,5 +1,8 @@
-import { Suspense, lazy, useSyncExternalStore } from 'react';
+import { Suspense, lazy, useState, useSyncExternalStore } from 'react';
 
+import { api } from '../api';
+import { SPRACHEN, setzeSprachwahl, t, type Sprachwahl } from '../i18n';
+import { useSprachwahl } from '../i18n/useSprache';
 import {
   abonniere,
   holeEinstellungen,
@@ -60,8 +63,8 @@ export function MitteilungenBlatt({
 }): React.JSX.Element {
   if (neu) {
     return (
-      <HbBlatt titel="Benachrichtigungen" onClose={onClose}>
-        <Suspense fallback={<p className="hb-klein">Einen Moment…</p>}>
+      <HbBlatt titel={t('einstellungen.benachrichtigungen')} onClose={onClose}>
+        <Suspense fallback={<p className="hb-klein">{t('einstellungen.einenMoment')}</p>}>
           <Mitteilungen neu />
         </Suspense>
       </HbBlatt>
@@ -70,13 +73,13 @@ export function MitteilungenBlatt({
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card einstellungen" onClick={(event) => event.stopPropagation()}>
-        <h2>Benachrichtigungen</h2>
+        <h2>{t('einstellungen.benachrichtigungen')}</h2>
         <Suspense fallback={null}>
           <Mitteilungen />
         </Suspense>
         <div className="hub-knopfreihe hub-knopfreihe--a">
           <button className="hub-knopf hub-knopf--a" onClick={onClose}>
-            Fertig
+            {t('einstellungen.fertig')}
           </button>
         </div>
       </div>
@@ -99,35 +102,41 @@ export function EinstellungenBlatt({
 
   if (neu) {
     return (
-      <HbBlatt titel="Einstellungen" onClose={onClose}>
+      <HbBlatt titel={t('einstellungen.titel')} onClose={onClose}>
         <div className="hb-einst">
           <section className="hb-blk">
-            <h2 className="hb-ab">Ton</h2>
+            <h2 className="hb-ab">{t('einstellungen.ton')}</h2>
             <div className="hb-karte hb-einst-karte">
               <ReglerNeu
                 symbol="/hub/icon-einstellung-sounds.webp"
-                name="Sounds"
-                hinweis="Karten, Knöpfe, Abrechnung"
+                name={t('einstellungen.sounds')}
+                hinweis={t('einstellungen.sounds.hinweis')}
                 wert={werte.sounds}
                 onChange={(sounds) => setzeEinstellungen({ sounds })}
                 onFertig={() => spiele('karte-legen')}
               />
               <ReglerNeu
                 symbol="/hub/icon-einstellung-musik.webp"
-                name="Musik"
-                hinweis="Im Menü und am Spieltisch"
+                name={t('einstellungen.musik')}
+                hinweis={t('einstellungen.musik.hinweis')}
                 wert={werte.musik}
                 onChange={(musik) => setzeEinstellungen({ musik })}
               />
             </div>
-            {/* Beide Sätze wortgleich mit der alten Fassung, Begründung dort. */}
+            {/* Beide Sätze dieselben Schlüssel wie in der alten Fassung, Begründung dort. */}
             <p className="hb-klein hb-ohne-rand">
-              Welches Stück läuft und welches Klangpaket gilt, steht in der Klanghalle in deinem Profil.
+              {t('einstellungen.klanghalleHinweis')}
             </p>
             <p className="hb-klein hb-ohne-rand">
-              Läuft bei dir Musik in einer anderen App, spielt sie weiter - wir drängeln uns nicht davor.
-              Dafür schaltet am iPhone der Klingelschalter auch uns stumm.
+              {t('einstellungen.klingelschalter')}
             </p>
+          </section>
+
+          <section className="hb-blk">
+            <h2 className="hb-ab">{t('sprache.titel')}</h2>
+            <div className="hb-karte hb-einst-karte">
+              <SprachWahl neu />
+            </div>
           </section>
 
           {inApp && (
@@ -159,12 +168,12 @@ export function EinstellungenBlatt({
         className="doko-sheet-card einstellungen"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2>Einstellungen</h2>
+        <h2>{t('einstellungen.titel')}</h2>
 
         <Regler
           symbol="/hub/icon-einstellung-sounds.webp"
-          name="Sounds"
-          hinweis="Karten, Knöpfe, Abrechnung"
+          name={t('einstellungen.sounds')}
+          hinweis={t('einstellungen.sounds.hinweis')}
           wert={werte.sounds}
           onChange={(sounds) => setzeEinstellungen({ sounds })}
           // Erst beim Loslassen ein Beispiel: Beim Ziehen feuert `change`
@@ -174,15 +183,14 @@ export function EinstellungenBlatt({
 
         <Regler
           symbol="/hub/icon-einstellung-musik.webp"
-          name="Musik"
-          hinweis="Im Menü und am Spieltisch"
+          name={t('einstellungen.musik')}
+          hinweis={t('einstellungen.musik.hinweis')}
           wert={werte.musik}
           onChange={(musik) => setzeEinstellungen({ musik })}
         />
 
         <p className="einstellungen-fussnote muted">
-          Welches Stück läuft und welches Klangpaket gilt, steht in der
-          Klanghalle in deinem Profil.
+          {t('einstellungen.klanghalleHinweis')}
         </p>
 
         {/*
@@ -193,10 +201,11 @@ export function EinstellungenBlatt({
           uns mit stummschaltet.
         */}
         <p className="einstellungen-fussnote muted">
-          Läuft bei dir Musik in einer anderen App, spielt sie weiter - wir
-          drängeln uns nicht davor. Dafür schaltet am iPhone der
-          Klingelschalter auch uns stumm.
+          {t('einstellungen.klingelschalter')}
         </p>
+
+        <h3>{t('sprache.titel')}</h3>
+        <SprachWahl />
 
         {inApp && (
           <Suspense fallback={null}>
@@ -210,10 +219,69 @@ export function EinstellungenBlatt({
 
         <div className="hub-knopfreihe hub-knopfreihe--a">
           <button className="hub-knopf hub-knopf--a" onClick={onClose}>
-            Fertig
+            {t('einstellungen.fertig')}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Sprache: Automatisch oder eine feste aus `SPRACHEN`.
+ *
+ * Die Knöpfe entstehen aus der Liste — eine neue Sprache braucht hier keine
+ * Zeile. Umgestellt wird sofort und ohne Neuladen (`setzeSprachwahl`, die
+ * Wurzel zeichnet neu); gespeichert am Konto danach. Scheitert das, bleibt
+ * die Wahl an diesem Gerät stehen und ein Satz sagt, dass sie am Konto fehlt
+ * — still verwerfen hieße, dass das zweite Gerät wieder Deutsch zeigt, ohne
+ * dass jemand weiß, warum.
+ */
+function SprachWahl({ neu = false }: { neu?: boolean }): React.JSX.Element {
+  const wahl = useSprachwahl();
+  const [fehlgeschlagen, setFehlgeschlagen] = useState(false);
+  const optionen: Sprachwahl[] = ['auto', ...SPRACHEN];
+
+  const waehle = (neueWahl: Sprachwahl): void => {
+    if (neueWahl === wahl) return;
+    spiele('tipp');
+    setzeSprachwahl(neueWahl);
+    setFehlgeschlagen(false);
+    api.setSprache(neueWahl === 'auto' ? null : neueWahl).catch(() => setFehlgeschlagen(true));
+  };
+
+  const name = (o: Sprachwahl): string => (o === 'auto' ? t('sprache.auto') : t(`sprache.name.${o}`));
+
+  return (
+    <div className={neu ? 'hb-sprache' : 'einstellungen-sprache'}>
+      <div
+        className={neu ? 'hb-sprachwahl' : 'hub-knopfreihe hub-knopfreihe--a'}
+        role="radiogroup"
+        aria-label={t('sprache.titel')}
+      >
+        {optionen.map((o) => (
+          <button
+            key={o}
+            type="button"
+            role="radio"
+            aria-checked={o === wahl}
+            // Sprachname in seiner eigenen Sprache auszeichnen: Ein Vorleser
+            // auf Englisch spräche „Deutsch" sonst englisch aus.
+            lang={o === 'auto' ? undefined : o}
+            className={
+              neu
+                ? `hb-kn is-klein ${o === wahl ? 'is-gold' : 'is-zweit'}`
+                : `hub-knopf hub-knopf--a${o === wahl ? ' is-gewaehlt' : ''}`
+            }
+            onClick={() => waehle(o)}
+          >
+            {name(o)}
+          </button>
+        ))}
+      </div>
+      <p className={neu ? 'hb-klein hb-ohne-rand' : 'einstellungen-fussnote muted'}>
+        {fehlgeschlagen ? t('sprache.speichernFehlgeschlagen') : t('sprache.hinweis')}
+      </p>
     </div>
   );
 }

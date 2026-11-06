@@ -24,7 +24,8 @@ import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
-import { baueHtml } from '../mail/vorlage.js';
+import { loeschMail } from '../mail/texte.js';
+import { textSprache } from '../sprache.js';
 import { hashToken } from './secrets.js';
 import type { AuthDeps } from './service.js';
 
@@ -81,7 +82,7 @@ function neuerCode(): string {
  */
 export async function loeschCodeSenden(deps: AuthDeps, accountId: string): Promise<boolean> {
   const [konto] = await deps.db
-    .select({ email: s.account.email })
+    .select({ email: s.account.email, sprache: s.account.sprache })
     .from(s.account)
     .where(and(eq(s.account.id, accountId), isNull(s.account.anonymizedAt)));
   if (!konto?.email) return false;
@@ -122,22 +123,7 @@ export async function loeschCodeSenden(deps: AuthDeps, accountId: string): Promi
   const lesbar = `${code.slice(0, 4)}-${code.slice(4)}`;
   await deps.mailer.send({
     to: konto.email,
-    subject: 'Brauweg: Code zum Löschen deines Kontos',
-    text:
-      `Dein Code zum Löschen deines Brauweg-Kontos: ${lesbar}\n\n` +
-      `Er gilt ${CODE_MINUTEN} Minuten. Warst du das nicht, ignoriere diese Mail — ` +
-      `dann bleibt dein Konto, wie es ist.`,
-    html: baueHtml({
-      publicUrl: deps.publicUrl,
-      ueberschrift: 'Konto löschen',
-      absaetze: [
-        'Du hast das Löschen deines Kontos angefordert. Gib diesen Code in Brauweg ein:',
-        lesbar,
-      ],
-      knopfText: 'Brauweg öffnen',
-      knopfLink: deps.publicUrl,
-      fussnote: `Der Code gilt ${CODE_MINUTEN} Minuten. Warst du das nicht, ignoriere diese Mail — dann bleibt dein Konto, wie es ist.`,
-    }),
+    ...loeschMail(textSprache(konto.sprache), deps.publicUrl, lesbar, CODE_MINUTEN),
   });
   return true;
 }

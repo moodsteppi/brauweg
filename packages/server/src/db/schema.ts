@@ -240,6 +240,17 @@ export const account = pgTable(
      * Geraet.
      */
     mememoryZufall: boolean().notNull().default(false),
+    /**
+     * Gewaehlte Sprache der Oberflaeche (`de`, `en`) — oder null fuer
+     * „Automatisch": Dann folgt der Client der Sprache des Geraets.
+     *
+     * Am Konto wie `mememoryZufall` und nicht nur am Geraet wie die
+     * Lautstaerke: Wer Englisch waehlt, will es auch am zweiten Geraet, ohne
+     * dort erst den Schalter zu suchen — in einer Sprache, die er nicht liest.
+     * Text und keine Aufzaehlung in der Datenbank: Eine neue Sprache ist eine
+     * Zeile in `SPRACHEN` (src/sprache.ts), keine Migration.
+     */
+    sprache: text(),
     /** Kalenderjahr, in dem die Geburtstagsbelohnung zuletzt eingesammelt wurde. */
     birthdayRewardYear: integer(),
     /*
@@ -1699,3 +1710,62 @@ export const tagesmarkt = pgTable('tagesmarkt', {
   angebote: jsonb().$type<MarktPlatz[]>().notNull(),
   muenzenGeholt: boolean().notNull().default(false),
 }, t => [primaryKey({ columns: [t.accountId, t.tag] })]);
+
+// ---------------------------------------------------------------------------
+// Flying Bro (Projekt #18, 06.11.2026) — src/flyingbro.ts, Migration 0042
+// ---------------------------------------------------------------------------
+
+/** Ein laufender Levelstart: wann, welches Level, welche Hilfsmittel schon bezahlt sind. */
+export interface FlyingbroStart {
+  levelId: string;
+  /** Server-Zeit (ms) des Starts — die Plausibilitaet misst die Dauer daran. */
+  am: number;
+  hilfsmittel: string[];
+}
+
+/**
+ * Der Stand je Konto: Flugmeilen, Vorrat, Zierde, offene Hub-Muenzen. Die
+ * Meilen sind KEIN Guthaben aus waehrung.ts — sie bleiben im Spiel.
+ * `vorrat` ist `unknown`, weil ein spaeter ergaenztes Hilfsmittel in alten
+ * Zeilen fehlt; gelesen wird ueber `vorratAus` in flyingbro.ts.
+ */
+export const flyingbroStand = pgTable('flyingbro_stand', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  meilen: integer().notNull().default(0),
+  vorrat: jsonb().$type<unknown>().notNull(),
+  zierde: jsonb().$type<string[]>().notNull().default([]),
+  muenzenOffen: integer().notNull().default(0),
+  start: jsonb().$type<FlyingbroStart | null>(),
+  aktualisiert: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Bestes Ergebnis je Konto und Level — nur geschaffte Level, Sterne 1 bis 3, sinken nie. */
+export const flyingbroLevel = pgTable(
+  'flyingbro_level',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    levelId: text().notNull(),
+    sterne: smallint().notNull(),
+    bestpunkte: integer().notNull(),
+    erstmalsAm: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ name: 'flyingbro_level_pk', columns: [t.accountId, t.levelId] })],
+);
+
+/** Heute schon aus Flying Bro: Hub-Muenzen (Tageskappe) und Wiederholungen (Meilenkappe), Kalendertag Berlin. */
+export const flyingbroTag = pgTable(
+  'flyingbro_tag',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    tag: date().notNull(),
+    muenzen: integer().notNull().default(0),
+    wiederholungen: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ name: 'flyingbro_tag_pk', columns: [t.accountId, t.tag] })],
+);

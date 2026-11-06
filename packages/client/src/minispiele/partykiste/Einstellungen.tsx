@@ -8,7 +8,8 @@
 
 import { SpielAbschnitt, SpielWahl } from '../../screens/SpielEinstieg';
 import { Regelzeile } from './Regelzeile';
-import { HAERTE_NAME, type PartyRegelsatz } from './sicht';
+import { haerteName, type PartyRegelsatz } from './sicht';
+import { tz } from './text';
 
 /** Eine offene Runde, die "Online spielen" gefunden hat — noch nicht beigetreten. */
 export interface Angebot {
@@ -48,26 +49,26 @@ export function Einstellungen({
   const hinweis = (
     <>
       {trinkmodus
-        ? 'Wer verliert, trinkt - die Härte nimmt alle Schlücke mal.'
-        : 'Statt Schlücken gibt es Strafpunkte, die Härte nimmt sie mal. Die Punkte fürs Turnier bleiben gleich.'}{' '}
-      Gilt für deine eigene Runde, online wie gegen Bots.
+        ? tz('einstellungen.hinweisTrinken')
+        : tz('einstellungen.hinweisOhne')}{' '}
+      {tz('einstellungen.hinweisGilt')}
     </>
   );
   if (neu) {
     return (
-      <SpielAbschnitt titel="Einstellungen">
+      <SpielAbschnitt titel={tz('einstellungen.titel')}>
         <div className="spe-karte" data-pk-einstellungen="">
           <SpielWahl
-            name="Trinkmodus"
+            name={tz('einstellungen.trinkmodus')}
             werte={[
-              { wert: 'an' as const, text: 'Trinkspiel' },
-              { wert: 'aus' as const, text: 'Alkoholfrei' },
+              { wert: 'an' as const, text: tz('einstellungen.trinkspiel') },
+              { wert: 'aus' as const, text: tz('einstellungen.alkoholfrei') },
             ]}
             wert={trinkmodus ? 'an' : 'aus'}
             onWahl={(w) => onTrinkmodus(w === 'an')}
           />
-          <Regler neu titel="Runden" wert={runden} min={3} max={15} onWahl={onRunden} />
-          <Regler neu titel="Härte" wert={haerte} min={1} max={3} zusatz={HAERTE_NAME[haerte]} onWahl={onHaerte} />
+          <Regler neu titel={tz('einstellungen.runden')} wert={runden} min={3} max={15} onWahl={onRunden} />
+          <Regler neu titel={tz('einstellungen.haerte')} wert={haerte} min={1} max={3} zusatz={haerteName(haerte)} onWahl={onHaerte} />
           <p className="hb-klein">{hinweis}</p>
         </div>
       </SpielAbschnitt>
@@ -76,16 +77,16 @@ export function Einstellungen({
   return (
     <section className="pk-einstellungen" aria-labelledby="pk-einstellungen-titel">
       <h2 id="pk-einstellungen-titel" className="pk-einstellungen-titel">
-        Einstellungen
+        {tz('einstellungen.titel')}
       </h2>
-      <div className="pk-stufen" role="group" aria-label="Trinkmodus" data-pk-trinkmodus="">
+      <div className="pk-stufen" role="group" aria-label={tz('einstellungen.trinkmodus')} data-pk-trinkmodus="">
         <button
           type="button"
           data-an={trinkmodus ? '' : undefined}
           aria-pressed={trinkmodus}
           onClick={() => onTrinkmodus(true)}
         >
-          Trinkspiel
+          {tz('einstellungen.trinkspiel')}
         </button>
         <button
           type="button"
@@ -93,11 +94,11 @@ export function Einstellungen({
           aria-pressed={!trinkmodus}
           onClick={() => onTrinkmodus(false)}
         >
-          Alkoholfrei
+          {tz('einstellungen.alkoholfrei')}
         </button>
       </div>
-      <Regler titel="Runden" wert={runden} min={3} max={15} onWahl={onRunden} />
-      <Regler titel="Härte" wert={haerte} min={1} max={3} zusatz={HAERTE_NAME[haerte]} onWahl={onHaerte} />
+      <Regler titel={tz('einstellungen.runden')} wert={runden} min={3} max={15} onWahl={onRunden} />
+      <Regler titel={tz('einstellungen.haerte')} wert={haerte} min={1} max={3} zusatz={haerteName(haerte)} onWahl={onHaerte} />
       <p className="pk-einstellungen-hinweis">{hinweis}</p>
     </section>
   );
@@ -129,13 +130,13 @@ export function OffeneRunde({
   if (neu) {
     return (
       <div className="spe-angebot" data-pk-angebot="">
-        <p className="spe-angebot-titel">Offene Runde{angebot.host ? ` von ${angebot.host}` : ''}</p>
+        <p className="spe-angebot-titel">{angebot.host ? tz('angebot.titelVon', { host: angebot.host }) : tz('angebot.titel')}</p>
         {angebot.regeln ? (
           <Regelzeile regeln={angebot.regeln} runden={angebot.runden} />
         ) : (
-          <p className="hb-klein">Die Regeln dieser Runde ließen sich nicht lesen.</p>
+          <p className="hb-klein">{tz('angebot.unlesbar')}</p>
         )}
-        <p className="hb-klein">Dort gelten die Regeln der Runde, nicht deine Einstellungen.</p>
+        <p className="hb-klein">{tz('angebot.dortGelten')}</p>
         <button
           className="hb-kn is-gold is-haupt is-breit"
           type="button"
@@ -143,14 +144,14 @@ export function OffeneRunde({
           onClick={onBeitreten}
           disabled={laedt}
         >
-          Beitreten
+          {tz('angebot.beitreten')}
         </button>
         <div className="hb-knopfreihe">
           <button className="hb-kn is-blau" type="button" data-pk-eigene="" onClick={onEigene} disabled={laedt}>
-            Eigene aufmachen
+            {tz('angebot.eigene')}
           </button>
           <button className="hb-kn is-blau" type="button" onClick={onAbbrechen}>
-            Abbrechen
+            {tz('angebot.abbrechen')}
           </button>
         </div>
       </div>
@@ -159,24 +160,24 @@ export function OffeneRunde({
   return (
     <div className="pk-angebot" data-pk-angebot="">
       <p className="pk-angebot-titel">
-        Offene Runde{angebot.host ? ` von ${angebot.host}` : ''}
+        {angebot.host ? tz('angebot.titelVon', { host: angebot.host }) : tz('angebot.titel')}
       </p>
       {angebot.regeln ? (
         <Regelzeile regeln={angebot.regeln} runden={angebot.runden} />
       ) : (
-        <p className="pk-warten">Die Regeln dieser Runde ließen sich nicht lesen.</p>
+        <p className="pk-warten">{tz('angebot.unlesbar')}</p>
       )}
-      <p className="pk-warten">Dort gelten die Regeln der Runde, nicht deine Einstellungen.</p>
+      <p className="pk-warten">{tz('angebot.dortGelten')}</p>
       <div className="pk-wahl">
         <button className="pk-knopf is-haupt" type="button" data-pk-beitreten="" onClick={onBeitreten} disabled={laedt}>
-          Beitreten
+          {tz('angebot.beitreten')}
         </button>
         <button className="pk-knopf is-neben" type="button" data-pk-eigene="" onClick={onEigene} disabled={laedt}>
-          Eigene aufmachen
+          {tz('angebot.eigene')}
         </button>
       </div>
       <button className="pk-textknopf" type="button" onClick={onAbbrechen}>
-        Abbrechen
+        {tz('angebot.abbrechen')}
       </button>
     </div>
   );

@@ -1,12 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { aktiveSprache, t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { spiele } from '../klang';
 import { szeneBild } from '../szenen';
 import { Ladekreis } from '../Ladekreis';
 import { Brett, ZEICHEN, ergebnis, statusText } from '../minispiele/brochess/Brett';
 import { figurensatzAus } from '../minispiele/brochess/figurensatz';
+import { figurName, frischesEreignis, meldung, regelText, trenneAktionen, wahlHinweis } from '../minispiele/brochess/geheim';
 import stil from '../minispiele/brochess/BroChess.module.css';
-import type { BroChessAufgabe, BroChessSicht, BroChessZug, Farbe } from '../minispiele/brochess/sicht';
+import type { BroChessAufgabe, BroChessSicht, BroChessWahl, Farbe } from '../minispiele/brochess/sicht';
 import { Uhr } from '../minispiele/brochess/Uhr';
 import { ARTNAME, ZEITKONTROLLEN, zeitText } from '../minispiele/brochess/zeit';
 import { TurnClock, Wartebereich } from '../tisch';
@@ -22,15 +25,19 @@ function mitFigurinen(san: string): string {
   return san.startsWith('O-O') ? san : san.replace(/[KQRBN]/g, (b) => FIGURINE[b] ?? b);
 }
 
+/** Wie lange eine Meldung zur geheimen Dame stehen bleibt. */
+const MELDUNG_MS = 5000;
+
 /** „10 min · Rapid" aus der Uhr der Sicht; Unbekanntes in Minuten. */
 function zeitTitel(uhr: BroChessSicht['uhr']): string | null {
   if (!uhr) return null;
   const z = ZEITKONTROLLEN.find(
     (k) => Math.round(k.minuten * 60_000) === uhr.bedenkzeitMs && k.zuschlagS * 1000 === uhr.zuschlagMs,
   );
-  if (z) return `${zeitText(z)} · ${ARTNAME[z.art]}`;
-  const min = Math.round(uhr.bedenkzeitMs / 60_000);
-  return uhr.zuschlagMs > 0 ? `${min} + ${uhr.zuschlagMs / 1000}` : `${min} min`;
+  if (z) return tf('brochess.zeit.titelArt', { zeit: zeitText(z), art: ARTNAME[z.art] });
+  const zahl = (n: number): string => n.toLocaleString(aktiveSprache());
+  const min = zahl(Math.round(uhr.bedenkzeitMs / 60_000));
+  return uhr.zuschlagMs > 0 ? `${min} + ${zahl(uhr.zuschlagMs / 1000)}` : tf('brochess.zeit.min', { n: min });
 }
 
 /**
@@ -47,6 +54,12 @@ function zeitTitel(uhr: BroChessSicht['uhr']): string | null {
  *
  * Der Tisch bildet keine Regel nach: Die Zuege kommen als `legalActions`,
  * Schach, Matt, Patt, Zeit und Material kommen fertig in der Sicht.
+ *
+ * Secret Dame (04.11.2026): Vor dem ersten Zug waehlt jeder seine geheime
+ * Dame — antippen auf dem Brett, bestaetigen hier im Fuss. Was danach mit
+ * ihr geschieht (aufgedeckt, verdeckt geschlagen, Königsschlag), meldet die
+ * Sicht als Ereignis; der Tisch zeigt das juengste kurz als Meldung ueber
+ * dem Brett, das Brett markiert das Feld (geheim.ts).
  */
 export function BroChessTable({
   tableId,
@@ -67,6 +80,10 @@ export function BroChessTable({
     useTable<BroChessSicht>(tableId, 'brochess');
   const [frage, rueckfrage] = useRueckfrage();
   const zugliste = useRef<HTMLOListElement>(null);
+  /** Vorgemerkte Figur fuer die geheime Dame, bis sie bestaetigt ist. */
+  const [vorgemerkt, setVorgemerkt] = useState<string | null>(null);
+  /** Schluessel der gerade gezeigten Meldung; null, wenn sie abgelaufen ist. */
+  const [meldungAus, setMeldungAus] = useState<string | null>(null);
 
   const verlaufLaenge = view?.view.verlauf?.length ?? 0;
   // Der neueste Zug bleibt sichtbar — die Liste rollt nach rechts mit.
@@ -84,6 +101,16 @@ export function BroChessTable({
     else if (aus?.art === 'niederlage') spiele('niederlage');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endeSchluessel]);
+
+  // Eine neue Meldung steht MELDUNG_MS lang — am Schluessel, nicht an der Sicht.
+  const frisch = view ? frischesEreignis(view.view) : null;
+  const meldungSchluessel = frisch ? `${frisch.art}:${frisch.halbzug}:${frisch.feld}` : null;
+  useEffect(() => {
+    if (!meldungSchluessel) return;
+    setMeldungAus(null);
+    const id = setTimeout(() => setMeldungAus(meldungSchluessel), MELDUNG_MS);
+    return () => clearTimeout(id);
+  }, [meldungSchluessel]);
 
   const spielerName = (text: string, accountId: string | null | undefined): React.JSX.Element =>
     accountId ? (
@@ -113,7 +140,7 @@ export function BroChessTable({
     return (
       <div className={`spe ${stil.tisch}`} style={{ backgroundImage: `linear-gradient(#09152cd9,#09152ce8),url(${szeneBild(szene)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className={stil.laedt}>
-          <Ladekreis text={error ?? 'Verbinde mit dem Tisch…'} />
+          <Ladekreis text={error ?? t('brochess.verbinde')} />
         </div>
       </div>
     );
@@ -126,13 +153,24 @@ export function BroChessTable({
   // die Farbe ein Spieler.
   const nameVon = (farbe: Farbe): string =>
     platz(farbe)?.displayName ??
-    (view.botSeats.includes(sitzVon(farbe)) ? 'Bot' : farbe === 'w' ? 'Weiß' : 'Schwarz');
+    (view.botSeats.includes(sitzVon(farbe)) ? t('brochess.bot') : t(`brochess.farbe.${farbe}`));
 
   const oben: Farbe = sicht.meineFarbe === 'b' ? 'w' : 'b';
   const unten: Farbe = oben === 'w' ? 'b' : 'w';
   const status = statusText(sicht, nameVon);
   const aus = ergebnis(sicht, nameVon);
   const titel = zeitTitel(sicht.uhr);
+  const sd = sicht.secretDame;
+  const { zuege, wahl } = trenneAktionen(view.legalActions);
+  // Bietet der Server keine Wahl mehr an (gewaehlt, Partie aus), gilt keine Vormerkung mehr.
+  const vorgemerktGilt = vorgemerkt !== null && wahl.includes(vorgemerkt) ? vorgemerkt : null;
+  const hinweis = wahlHinweis(sicht, nameVon);
+  const zeigeMeldung = frisch && meldungSchluessel !== meldungAus ? frisch : null;
+  const bestaetigen = (): void => {
+    if (!vorgemerktGilt) return;
+    send({ type: 'wahl', feld: vorgemerktGilt } satisfies BroChessWahl);
+    setVorgemerkt(null);
+  };
 
   const spielerLeiste = (farbe: Farbe): React.JSX.Element => {
     const sitz = sitzVon(farbe);
@@ -150,11 +188,11 @@ export function BroChessTable({
         <span className={stil.leisteText}>
           <strong>
             {spielerName(nameVon(farbe), platz(farbe)?.accountId)}
-            {ich && <small> (du)</small>}
-            {istBot && <small> · {farbe === 'w' ? 'Weiß' : 'Schwarz'}</small>}
-            {view.leftSeats.includes(sitz) && <small> · weg</small>}
+            {ich && <small> {t('brochess.du')}</small>}
+            {istBot && <small> · {t(`brochess.farbe.${farbe}`)}</small>}
+            {view.leftSeats.includes(sitz) && <small> · {t('brochess.weg')}</small>}
           </strong>
-          <span className={stil.gefangen} aria-label={`${gefangen.length} Figuren geschlagen`}>
+          <span className={stil.gefangen} aria-label={tn('brochess.geschlagenAria', gefangen.length)}>
             {gefangen.map((art, i) => (
               <span key={i} className={farbe === 'w' ? stil.figurSchwarz : stil.figurWeiss}>
                 {ZEICHEN[art]}
@@ -184,9 +222,9 @@ export function BroChessTable({
   const aufgeben = (): void =>
     frage(
       {
-        titel: 'Aufgeben?',
-        text: 'Die Partie ist dann verloren.',
-        ja: 'Aufgeben',
+        titel: t('brochess.aufgeben.titel'),
+        text: t('brochess.aufgeben.text'),
+        ja: t('brochess.aufgeben'),
         gefahr: true,
       },
       () => send({ type: 'aufgeben' } satisfies BroChessAufgabe),
@@ -195,7 +233,7 @@ export function BroChessTable({
   return (
     <div className={`spe ${stil.tisch}`} style={{ backgroundImage: `linear-gradient(#09152cd9,#09152ce8),url(${szeneBild(szene)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <header className={stil.kopf}>
-        <button type="button" className="hb-rund" onClick={onLeave} aria-label="Zurück">
+        <button type="button" className="hb-rund" onClick={onLeave} aria-label={t('brochess.zurueck')}>
           <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 5l-7 7 7 7" />
           </svg>
@@ -203,21 +241,40 @@ export function BroChessTable({
         <div className={stil.kopfTitel}>
           <h1>BroChess</h1>
           {titel && <span>{titel}</span>}
+          {sd && (
+            <span className={stil.kopfModus} title={regelText(sd.regel).satz}>
+              {tf('brochess.kopfModus', { modus: t('brochess.secretDame'), regel: regelText(sd.regel).kurz })}
+            </span>
+          )}
         </div>
       </header>
 
       <div className={stil.mitte}>
+        {zeigeMeldung && (
+          <p
+            className={`${stil.meldung} ${zeigeMeldung.art === 'koenigGeschlagen' || zeigeMeldung.art === 'verdecktGeschlagen' ? stil.meldungRot : ''}`}
+            role="status"
+            onClick={() => setMeldungAus(meldungSchluessel)}
+          >
+            {meldung(zeigeMeldung, sicht.meineFarbe, nameVon)}
+          </p>
+        )}
         {spielerLeiste(oben)}
         <Brett
           sicht={sicht}
-          zuege={view.legalActions as unknown as BroChessZug[]}
+          zuege={zuege}
           onZug={(zug) => send(zug)}
           figurensatz={figurensatzAus(figurensatz)}
+          wahl={
+            wahl.length > 0
+              ? { felder: wahl, vorgemerkt: vorgemerktGilt, onTipp: (feld) => setVorgemerkt(feld) }
+              : undefined
+          }
         />
         {spielerLeiste(unten)}
 
-        <ol className={stil.zugliste} ref={zugliste} aria-label="Zugliste">
-          {paare.length === 0 && <li className={stil.zuglisteLeer}>Noch kein Zug</li>}
+        <ol className={stil.zugliste} ref={zugliste} aria-label={t('brochess.zugliste')}>
+          {paare.length === 0 && <li className={stil.zuglisteLeer}>{t('brochess.keinZug')}</li>}
           {paare.map(([nr, weiss, schwarz], i) => {
             const letzte = i === paare.length - 1;
             return (
@@ -246,19 +303,40 @@ export function BroChessTable({
             className={`${stil.status} ${status.art === 'schach' ? stil.statusSchach : ''}`}
             role="status"
           >
-            {status.text}
+            {hinweis ?? status.text}
           </p>
         )}
-        {!connected && <p className="hb-fehler">Verbindung unterbrochen - verbinde neu…</p>}
+        {!connected && <p className="hb-fehler">{t('brochess.verbindungWeg')}</p>}
         {error && connected && <p className="hb-fehler">{error}</p>}
         {view.finished || aus ? (
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onLeave}>
-            Zur Spielauswahl
+            {t('brochess.zurAuswahl')}
+          </button>
+        ) : wahl.length > 0 ? (
+          // Die eigene Wahl steht noch aus: Bestaetigen statt Aufgeben, damit
+          // der Fuss nicht waechst und das Brett nicht schrumpft.
+          <button
+            type="button"
+            className="hb-kn is-gold is-haupt is-breit"
+            disabled={!vorgemerktGilt}
+            onClick={bestaetigen}
+          >
+            {vorgemerktGilt ? (
+              <>
+                <span className={stil.wahlKrone} aria-hidden="true">♛︎ </span>
+                {tf('brochess.wahl.bestaetigen', {
+                  figur: figurName(sicht.brett[feldIndex(vorgemerktGilt)] ?? ''),
+                  feld: vorgemerktGilt,
+                })}
+              </>
+            ) : (
+              t('brochess.wahl.erstAntippen')
+            )}
           </button>
         ) : (
           sicht.meineFarbe !== null && (
             <button type="button" className="hb-leise-knopf" onClick={aufgeben}>
-              Aufgeben
+              {t('brochess.aufgeben')}
             </button>
           )
         )}
@@ -266,4 +344,9 @@ export function BroChessTable({
       {rueckfrage}
     </div>
   );
+}
+
+/** „b1" → 1: Feldnummer wie im `brett` der Sicht (a1 zuerst). */
+function feldIndex(name: string): number {
+  return (Number(name[1]) - 1) * 8 + 'abcdefgh'.indexOf(name[0]!);
 }

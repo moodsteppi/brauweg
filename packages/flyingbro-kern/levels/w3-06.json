@@ -1,0 +1,203 @@
+{
+  "fassung": 1,
+  "id": "w3-06",
+  "welt": 3,
+  "nr": 6,
+  "titel": "Die Seebrücke",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "malve",
+    "tjark",
+    "malve",
+    "pelle",
+    "tjark"
+  ],
+  "sterne": [
+    0,
+    21500,
+    33500
+  ],
+  "teile": [
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 13,
+      "y": 0.9,
+      "b": 0.4,
+      "h": 1.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 17,
+      "y": 0.9,
+      "b": 0.4,
+      "h": 1.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 21,
+      "y": 0.9,
+      "b": 0.4,
+      "h": 1.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 25,
+      "y": 0.9,
+      "b": 0.4,
+      "h": 1.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 14.9,
+      "y": 1.9,
+      "b": 4.2,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19,
+      "y": 1.9,
+      "b": 4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 23.1,
+      "y": 1.9,
+      "b": 4.2,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 14,
+      "y": 2.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 16,
+      "y": 2.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 15,
+      "y": 2.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 18,
+      "y": 2.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 20,
+      "y": 2.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19,
+      "y": 3.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 19,
+      "y": 3.95,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 22,
+      "y": 2.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 24,
+      "y": 2.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 23,
+      "y": 2.9,
+      "b": 2.4,
+      "h": 0.2
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "giraffe",
+      "x": 15,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 19,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 23,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 15,
+      "y": 2,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 19,
+      "y": 2,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 23,
+      "y": 2,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}

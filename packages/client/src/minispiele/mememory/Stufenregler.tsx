@@ -17,53 +17,42 @@
  * des Geraets mit. Ein Nachbau aus vier Feldern haette nichts davon.
  */
 
+import { t } from '../../i18n';
+
 /** Muss zu STUFEN in packages/game-mememory/src/stufen.ts passen. */
 export type Stufe = 'leicht' | 'mittel' | 'schwer' | 'experte';
 
-export interface Beschreibung {
-  readonly stufe: Stufe;
-  readonly name: string;
-  readonly satz: string;
-}
-
 /**
+ * Die Stufen in der Reihenfolge des Reglers.
+ *
  * Was die Stufen wirklich tun — in der Sprache des Spielers, nicht in der des
  * Codes. Wer "70 % Haltewahrscheinlichkeit" liest, weiss nicht, ob er
- * gewinnen kann.
+ * gewinnen kann. Name und Satz stehen im Woerterbuch
+ * (`mememory.stufe.<stufe>` und `….satz`) und werden beim Zeichnen gelesen:
+ * Eine Tabelle mit fertigem Text bliebe nach dem Umschalten der Sprache in
+ * der alten stehen, bis jemand neu laedt.
  */
-export const STUFEN: readonly Beschreibung[] = [
-  {
-    stufe: 'leicht',
-    name: 'Leicht',
-    satz: 'Merkt sich nur die letzten zwei Züge und deckt sonst blind auf.',
-  },
-  {
-    stufe: 'mittel',
-    name: 'Mittel',
-    satz: 'Merkt sich drei Züge - aber jede Karte nur mit halber Wahrscheinlichkeit.',
-  },
-  {
-    stufe: 'schwer',
-    name: 'Schwer',
-    satz: 'Vier Züge, dreht nichts unnötig zweimal um und behält manches für immer.',
-  },
-  {
-    stufe: 'experte',
-    name: 'Experte',
-    satz: 'Vergisst nichts. Was einmal offen lag, hat er.',
-  },
-];
+export const STUFEN: readonly Stufe[] = ['leicht', 'mittel', 'schwer', 'experte'];
+
+function istStufe(stufe: string | undefined): stufe is Stufe {
+  return (STUFEN as readonly (string | undefined)[]).includes(stufe);
+}
 
 /**
  * Der Anzeigename einer Stufe, oder null fuer alles Unbekannte.
  *
  * Gebraucht am Brett: Neben dem Namen eines Bots steht seine Staerke, und die
- * kommt als Kennung aus der Sicht des Moduls. Die Namen stehen hier, weil hier
- * auch die Saetze stehen — zwei Listen mit denselben vier Woertern liefen
+ * kommt als Kennung aus der Sicht des Moduls. Die Namen stehen neben den
+ * Saetzen im selben Bereich — zwei Listen mit denselben vier Woertern liefen
  * auseinander.
  */
 export function stufenName(stufe: string | undefined): string | null {
-  return STUFEN.find((eintrag) => eintrag.stufe === stufe)?.name ?? null;
+  return istStufe(stufe) ? t(`mememory.stufe.${stufe}`) : null;
+}
+
+/** Der Satz zu einer Stufe: was der Bot sich merkt. */
+export function stufenSatz(stufe: Stufe): string {
+  return t(`mememory.stufe.${stufe}.satz`);
 }
 
 /**
@@ -104,7 +93,7 @@ export function Stufenregler({
   /** Vorlesetext, wenn daneben nicht ohnehin steht, worum es geht. */
   beschriftung?: string;
 }): React.JSX.Element {
-  const nr = Math.max(0, STUFEN.findIndex((eintrag) => eintrag.stufe === wert));
+  const nr = Math.max(0, STUFEN.indexOf(wert));
 
   return (
     <div className="mm-regelzeile">
@@ -116,22 +105,22 @@ export function Stufenregler({
         step={1}
         value={nr}
         disabled={gesperrt}
-        aria-label={beschriftung ?? 'Spielstärke'}
+        aria-label={beschriftung ?? t('mememory.stufe.beschriftung')}
         /*
          * `aria-valuetext` ist hier kein Beiwerk: Ohne ihn liest ein
          * Vorleseprogramm "2" vor, und die Zahl steht nirgends auf dem
          * Bildschirm. Mit ihm liest es "Mittel".
          */
-        aria-valuetext={STUFEN[nr]?.name}
+        aria-valuetext={stufenName(STUFEN[nr]) ?? undefined}
         onChange={(e) => {
           const gewaehlt = STUFEN[Number(e.target.value)];
-          if (gewaehlt) onWert(gewaehlt.stufe);
+          if (gewaehlt) onWert(gewaehlt);
         }}
       />
       <div className="mm-stufennamen" aria-hidden="true">
         {STUFEN.map((eintrag, i) => (
           <button
-            key={eintrag.stufe}
+            key={eintrag}
             type="button"
             className="mm-stufenname"
             data-an={i === nr ? '' : undefined}
@@ -143,9 +132,9 @@ export function Stufenregler({
              * bleiben sie unsichtbar (aria-hidden am Kasten), weil der Regler
              * darueber dieselbe Auskunft schon gibt.
              */
-            onClick={() => onWert(eintrag.stufe)}
+            onClick={() => onWert(eintrag)}
           >
-            {eintrag.name}
+            {stufenName(eintrag)}
           </button>
         ))}
       </div>

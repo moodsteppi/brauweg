@@ -1,5 +1,6 @@
 import type { Ladestand } from './vorladen';
 import stil from './Ladebildschirm.module.css';
+import { tz } from './text';
 
 /**
  * „Dateien werden heruntergeladen" — der Vorhang vor der ersten Runde.
@@ -51,16 +52,16 @@ export function Ladebildschirm({
     <main className="tr-seite tr-menue">
       {onAbbrechen && (
         <button className="tr-zurueck" type="button" onClick={onAbbrechen}>
-          ← Abbrechen
+          ← {tz('abbrechen')}
         </button>
       )}
       <div className="tr-menue-mitte">
         <h1 className="tr-titel">Tafelrunde</h1>
-        <p className="tr-untertitel">Dateien werden heruntergeladen</p>
+        <p className="tr-untertitel">{tz('laden.dateien')}</p>
         <div
           className={stil.balken}
           role="progressbar"
-          aria-label="Dateien werden heruntergeladen"
+          aria-label={tz('laden.dateien')}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={prozent}
@@ -68,7 +69,7 @@ export function Ladebildschirm({
           <span className={stil.fuellung} style={{ width: `${prozent}%` }} />
         </div>
         <p className={`tr-untertitel ${stil.zaehler}`}>
-          {stand.erledigt} von {stand.gesamt} Dateien
+          {tz('laden.zaehler', { erledigt: stand.erledigt, gesamt: stand.gesamt })}
         </p>
         {/*
           Die huepfenden Punkte des Wartebereichs, und zwar aus einem

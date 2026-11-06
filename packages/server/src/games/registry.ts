@@ -212,7 +212,7 @@ export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
   cambio: { web: 'spielbar', app: 'bald' },
   easypoker: { web: 'spielbar', app: 'bald' },
   mememory: { web: 'spielbar', app: 'bald' },
-  /* In der App unter dem Namen „Farbduell" (i18n.ts im Client, Emile,
+  /* In der App unter dem Namen „Farbduell" (APP_NAMEN in client/src/i18n/index.ts, Emile,
      13.10.2026) — die erste iOS-Fassung: Doppelkopf, Skat, Partykiste,
      Farbduell und BroChess. */
   filler: { web: 'spielbar', app: 'spielbar' },
