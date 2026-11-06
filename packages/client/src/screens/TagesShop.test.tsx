@@ -2,14 +2,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, type Tagesmarkt, type Truhen } from '../api';
 import { TagesShop } from './TagesShop';
-import { setzeSprachwahl } from '../i18n';
 import { probeKonto } from './probe-konto';
 import { probeTagesmarkt } from './probe-tagesmarkt';
 import VORLAGE from '../proben/hub/markt-probe.json';
-
-// Der Bildschirm ist noch deutsch, die Zahlen folgen aber schon der Sprache —
-// und jsdom meldet en-US. Ohne feste Wahl stuende hier „2,500 Münzen".
-setzeSprachwahl('de');
 vi.mock('./Aufgaben', () => ({ FundBlatt: ({ fund }: { fund: { coins: number } }) => <div role="dialog" aria-label="Truhenfund">{fund.coins} Münzen</div> }));
 let markt: Tagesmarkt;
 let truhen: Truhen;
