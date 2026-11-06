@@ -12,7 +12,7 @@
  * Funktionen und keine Tabellen mehr.
  */
 
-import { t } from '../../i18n';
+import { aktiveSprache, t } from '../../i18n';
 import type { Rolle } from './sicht';
 
 /** Platzhalter `{name}` in einem fertigen Text durch die Werte ersetzen. */
@@ -43,6 +43,12 @@ export function tzAnzahl(stamm: string, n: number, werte: Record<string, string 
  * „tafelrunde.einheit.neuling" statt so, wie das Modul sie nennt.
  */
 function nachschlagen(key: string, rueckfall: string): string {
+  // Auf Deutsch gilt der Text des Moduls, nicht der Eintrag in
+  // `i18n/de/tafelrunde.ts`: Der steht dort nur, weil die Probe zu jedem
+  // englischen Schlüssel einen deutschen verlangt. Ändert das Modul einen
+  // Namen oder Wirkungssatz, sähe man ihn sonst auf Deutsch erst, wenn jemand
+  // auch das Wörterbuch nachzieht — eine zweite Wahrheit (CLAUDE.md).
+  if (aktiveSprache() === 'de') return rueckfall;
   const text = t(key);
   return text === key ? rueckfall : text;
 }

@@ -47,7 +47,7 @@ import {
 import { Ladebildschirm } from '../../minispiele/tafelrunde/Ladebildschirm';
 import { Markennamen, markennamen } from '../../minispiele/tafelrunde/Synergien';
 import {
-  BOT_STUFEN,
+  botStufen,
   RegelText,
   Ruestkammer,
   SITZ_WAHL,
@@ -165,7 +165,7 @@ const FAELLE: Fall[] = [
         oeffentlich={false}
         botsFuellen
         botStufe="standard"
-        botStufen={BOT_STUFEN}
+        botStufen={botStufen()}
         startet={false}
         fehler={null}
         onSitze={nichts}
@@ -215,7 +215,7 @@ const FAELLE: Fall[] = [
           { seat: 3, displayName: null, accountId: null, isBot: false },
         ]}
         botStufe="standard"
-        botStufen={BOT_STUFEN}
+        botStufen={botStufen()}
         onBotStufe={nichts}
         onBotsFuellen={nichts}
         onStart={nichts}
