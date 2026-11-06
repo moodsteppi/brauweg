@@ -174,7 +174,7 @@ export function rankLabel(rank: string): string {
 }
 
 /**
- * Ausgeschriebener Name, z.B. "Kreuz Dame".
+ * Ausgeschriebener Name, z.B. "Kreuz Dame" (englisch "Queen of Clubs").
  *
  * Bei den Bildblaettern ist das der alt-Text: Wer nicht sieht, bekommt dieselbe
  * Auskunft wie alle anderen, und ein nicht geladenes Bild bleibt lesbar.
@@ -184,7 +184,11 @@ export function cardName(card: { suit: string; rank: string }): string {
   if (card.suit === 'N') return t('karte.narr');
   const suit = nachschlagen(`karte.farbe.${card.suit}`) ?? card.suit;
   const rank = nachschlagen(`karte.wert.${card.rank}`) ?? card.rank;
-  return `${suit} ${rank}`;
+  // Wortfolge aus dem Wörterbuch (Kopf von `karten.ts`). Kein `tf` aus
+  // `einsetzen.ts`: Das importiert diese Datei und hinge mit ihr im Kreis.
+  return (nachschlagen('karte.name') ?? '{farbe} {wert}')
+    .replace('{farbe}', suit)
+    .replace('{wert}', rank);
 }
 
 export function isRed(card: { suit: string }): boolean {

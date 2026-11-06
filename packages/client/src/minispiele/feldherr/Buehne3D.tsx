@@ -27,6 +27,8 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
+import { t } from '../../i18n';
+import { tf } from '../../i18n/einsetzen';
 import type { FeldherrLeseblick, FeldherrSitzung } from './kern.js';
 
 /** Brettmasse laut Geometrie-Entscheid vom 7. August 2026. */
@@ -1715,10 +1717,22 @@ export function Buehne3D({
    */
   const [muenzText, setMuenzText] = useState<{ titel: string; zeile: string } | null>(null);
   useEffect(() => {
-    const namen = (sitz: number | null, eigen: number | null, duWort: string, erWort: string) => {
+    /*
+     * Je Fall ein ganzer Satz statt „Name + Verb": Im Englischen beugt sich
+     * das Verb anders („You choose" / „Player 2 chooses"), ein angehängtes
+     * „ wählt" ginge dort nicht auf. Der Text entsteht in jedem Takt neu und
+     * folgt damit auch einem Sprachwechsel mitten in der Partie.
+     */
+    const zeileFuer = (
+      sitz: number | null,
+      eigen: number | null,
+      du: string,
+      gegner: string,
+      spieler: string,
+    ): string => {
       if (sitz === null) return '';
-      if (eigen === null) return 'Spieler ' + (sitz + 1);
-      return sitz === eigen ? duWort : erWort;
+      if (eigen === null) return tf(spieler, { n: sitz + 1 });
+      return t(sitz === eigen ? du : gegner);
     };
     const takt = window.setInterval(() => {
       const blick = sitzungRef.current?.lesen?.();
@@ -1730,15 +1744,18 @@ export function Buehne3D({
       const eigen = blick?.eigenerSitz ?? null;
       let neu: { titel: string; zeile: string };
       if (coin.stufe === 'wahl') {
-        const wer = namen(coin.waehler, eigen, 'Du wählst', 'Der Gegner wählt');
-        neu = { titel: 'Münzwurf', zeile: eigen === null ? wer + ' wählt' : wer };
-      } else if (coin.stufe === 'flug') {
-        neu = { titel: 'Münzwurf', zeile: 'Die Münze fliegt …' };
-      } else {
-        const wer = namen(coin.sieger, eigen, 'Du setzt zuerst', 'Der Gegner setzt zuerst');
         neu = {
-          titel: coin.ergebnis === 'zahl' ? 'Zahl' : 'Kopf',
-          zeile: eigen === null ? wer + ' setzt zuerst' : wer,
+          titel: t('feldherr.muenze.titel'),
+          zeile: zeileFuer(coin.waehler, eigen, 'feldherr.muenze.duWaehlst',
+            'feldherr.muenze.gegnerWaehlt', 'feldherr.muenze.spielerWaehlt'),
+        };
+      } else if (coin.stufe === 'flug') {
+        neu = { titel: t('feldherr.muenze.titel'), zeile: t('feldherr.muenze.fliegt') };
+      } else {
+        neu = {
+          titel: t(coin.ergebnis === 'zahl' ? 'feldherr.muenze.zahl' : 'feldherr.muenze.kopf'),
+          zeile: zeileFuer(coin.sieger, eigen, 'feldherr.muenze.duZuerst',
+            'feldherr.muenze.gegnerZuerst', 'feldherr.muenze.spielerZuerst'),
         };
       }
       setMuenzText((alt) =>

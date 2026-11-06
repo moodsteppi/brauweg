@@ -32,7 +32,7 @@ import {
 } from '../tisch';
 import { useTischklang } from '../tisch/klangtisch';
 import { DealCeremony, prefersReducedMotion } from '../DealCeremony';
-import { useTable } from '../useTable';
+import { useTable, type TableConnection } from '../useTable';
 
 const ZOOM_MIN = 0.7;
 const ZOOM_MAX = 1.45;
@@ -57,21 +57,42 @@ const ABRECHNUNG_MS = 10_000;
  * Kartenreihenfolge kommt als `order` vom Server. Der Client bildet keine
  * Regel nach.
  */
-export function WizardTable({
-  tableId,
-  deck,
-  szene,
-  onShowProfile,
-  onLeave,
-}: {
+export function WizardTable(props: {
   tableId: string;
   deck: Deck;
   szene: string;
   onShowProfile: (accountId: string) => void;
   onLeave: () => void;
 }): React.JSX.Element {
+  const verbindung = useTable<WizardGameView>(props.tableId, 'wizard');
+  return <ZaubererTisch {...props} verbindung={verbindung} />;
+}
+
+/**
+ * Der Tisch ohne eigene Verbindung: Die Sicht kommt als `verbindung` herein.
+ *
+ * Getrennt von `WizardTable`, damit der Schaukasten
+ * (`proben/zauberer/Schaukasten.tsx`) den ECHTEN Tisch mit erfundenen Sichten
+ * zeichnen kann — ohne Server und ohne Anmeldung. Nur so laesst sich der Tisch
+ * in jeder Sprache ansehen, ohne eine Partie bis in die Ansage zu spielen.
+ */
+export function ZaubererTisch({
+  tableId,
+  deck,
+  szene,
+  onShowProfile,
+  onLeave,
+  verbindung,
+}: {
+  tableId: string;
+  deck: Deck;
+  szene: string;
+  onShowProfile: (accountId: string) => void;
+  onLeave: () => void;
+  verbindung: TableConnection<WizardGameView>;
+}): React.JSX.Element {
   const { view, party, table, error, connected, send, emotes, sendEmote, addBot, removeBot, setBotLevel } =
-    useTable<WizardGameView>(tableId, 'wizard');
+    verbindung;
 
   /** Welche Zurufe mir gehoeren — dieselbe Frage wie am Doppelkopftisch. */
   const [meineEmotes, setMeineEmotes] = useState<Set<string>>(new Set());
@@ -344,10 +365,10 @@ export function WizardTable({
       <div className="doko doko--loading">
         <Ladekreis
           bild="/hub/lade-pinguin.webp"
-          text={connected ? 'Tisch wird geladen…' : 'Verbinde…'}
+          text={connected ? t('zauberer.laden') : t('zauberer.verbinde')}
         />
         {error && <p className="error">{t(error)}</p>}
-        <button onClick={onLeave}>Zurück</button>
+        <button onClick={onLeave}>{t('zauberer.zurueck')}</button>
       </div>
     );
   }
@@ -417,24 +438,24 @@ export function WizardTable({
       <img className="doko-bg" src={szeneBild(szene)} alt="" draggable={false} />
 
       <header className="doko-top">
-        <button className="doko-icon" onClick={onLeave} aria-label="Tisch verlassen">
+        <button className="doko-icon" onClick={onLeave} aria-label={t('zauberer.verlassen')}>
           ‹
         </button>
         <div className="doko-top-mid">
           <strong>
-            Runde {view.view.roundIndex + 1} / {view.view.totalRounds}
+            {tz('zauberer.runde', { nr: view.view.roundIndex + 1, gesamt: view.view.totalRounds })}
           </strong>
           <span className="muted">{rundenzeile(runde)}</span>
         </div>
         <div className="doko-top-right">
-          {table?.paused && <span className="doko-badge doko-badge--pause">Pausiert</span>}
-          {view.seat === null && <span className="doko-badge">Zuschauer</span>}
+          {table?.paused && <span className="doko-badge doko-badge--pause">{t('zauberer.pausiert')}</span>}
+          {view.seat === null && <span className="doko-badge">{t('zauberer.zuschauer')}</span>}
           {table?.visibility === 'club_only' && view.seat !== null && (
             <button
               className="doko-icon"
               onClick={togglePause}
               disabled={pauseBusy}
-              aria-label={table.paused ? 'Tisch fortsetzen' : 'Tisch pausieren'}
+              aria-label={table.paused ? t('zauberer.fortsetzenKnopf') : t('zauberer.pausierenKnopf')}
             >
               {table.paused ? '▶' : '❚❚'}
             </button>
@@ -450,7 +471,7 @@ export function WizardTable({
           <button
             className="doko-icon"
             onClick={() => setZeigeTafel(true)}
-            aria-label="Punktetafel ansehen"
+            aria-label={t('zauberer.tafelKnopf')}
           >
             Σ
           </button>
@@ -458,14 +479,14 @@ export function WizardTable({
             className="doko-icon"
             onClick={() => setZeigeLetzten(true)}
             disabled={!runde?.lastTrick}
-            aria-label="Letzten Stich ansehen"
+            aria-label={t('zauberer.letzterKnopf')}
           >
             ⟲
           </button>
           <button
             className="doko-icon"
             onClick={() => setZeigeRegeln(true)}
-            aria-label="Tischregeln ansehen"
+            aria-label={t('zauberer.regelnKnopf')}
           >
             §
           </button>
@@ -473,7 +494,7 @@ export function WizardTable({
             className="doko-icon"
             onClick={() => changeZoom(-ZOOM_STEP)}
             disabled={zoom <= ZOOM_MIN}
-            aria-label="Karten verkleinern"
+            aria-label={t('zauberer.kleiner')}
           >
             −
           </button>
@@ -481,7 +502,7 @@ export function WizardTable({
             className="doko-icon"
             onClick={() => changeZoom(ZOOM_STEP)}
             disabled={zoom >= ZOOM_MAX}
-            aria-label="Karten vergrößern"
+            aria-label={t('zauberer.groesser')}
           >
             +
           </button>
@@ -556,7 +577,9 @@ export function WizardTable({
         )}
 
         {!dealing && runde?.lastTrick && trick.length === 0 && (
-          <p className="doko-last">Letzter Stich an {nameOf(runde.lastTrick.winnerSeat)}</p>
+          <p className="doko-last">
+            {tz('zauberer.letzterStichAn', { name: nameOf(runde.lastTrick.winnerSeat) })}
+          </p>
         )}
       </div>
 
@@ -567,7 +590,7 @@ export function WizardTable({
         <span className="doko-me-avatar">
           {meinEmote && <EmoteBlase emote={meinEmote} />}
           <Avatar
-            name={view.seat === null ? 'Du' : nameOf(view.seat)}
+            name={view.seat === null ? t('zauberer.du') : nameOf(view.seat)}
             seatIndex={view.seat ?? 0}
             active={view.currentActor === view.seat}
             deadline={view.currentActor === view.seat ? view.turnDeadline : null}
@@ -576,10 +599,10 @@ export function WizardTable({
           />
         </span>
         <div className="doko-me-info">
-          <strong>{view.seat === null ? 'Zuschauer' : nameOf(view.seat)}</strong>
+          <strong>{view.seat === null ? t('zauberer.zuschauer') : nameOf(view.seat)}</strong>
           <span className="muted">
             {eigeneLage(runde, view.seat)}
-            {view.seat !== null && leaderSeat === view.seat && ' · Aufspiel'}
+            {view.seat !== null && leaderSeat === view.seat && ` · ${t('zauberer.aufspiel')}`}
           </span>
         </div>
         {view.seat !== null && <StichStapel count={runde?.tricks[view.seat] ?? 0} />}
@@ -614,7 +637,7 @@ export function WizardTable({
               onMark={toggleVormerken}
             />
           ))}
-          {hand.length === 0 && <span className="muted">Keine Karten auf der Hand.</span>}
+          {hand.length === 0 && <span className="muted">{t('zauberer.keineKarten')}</span>}
         </div>
       )}
 
@@ -625,7 +648,7 @@ export function WizardTable({
       {view.seat !== null && runde?.blind && (
         <div className="doko-hand wiz-blind">
           <BlindKarte deck={deck} action={blindLegen} onPlay={send} />
-          <p className="muted">Deine Karte kennst du nicht, die der anderen schon.</p>
+          <p className="muted">{t('zauberer.blindHinweis')}</p>
         </div>
       )}
 
@@ -672,13 +695,10 @@ export function WizardTable({
       {zeigeEmoteHinweis && (
         <div className="doko-sheet" onClick={() => setZeigeEmoteHinweis(false)}>
           <div className="doko-sheet-card" onClick={(e) => e.stopPropagation()}>
-            <h2>Diesen Zuruf hast du noch nicht</h2>
-            <p className="muted">
-              Im Shop unter „Zurufe" gibt es ihn gegen Münzen. Er steht dir dann an jedem
-              Tisch zur Verfügung.
-            </p>
+            <h2>{t('zauberer.zuruf.titel')}</h2>
+            <p className="muted">{t('zauberer.zuruf.text')}</p>
             <button className="primary" onClick={() => setZeigeEmoteHinweis(false)}>
-              Weiter spielen
+              {t('zauberer.weiterSpielen')}
             </button>
           </div>
         </div>
@@ -697,14 +717,11 @@ export function WizardTable({
       {table?.paused && (
         <div className="doko-sheet doko-sheet--pause">
           <div className="doko-sheet-card">
-            <h2>Tisch pausiert</h2>
-            <p className="muted">
-              Der Zugtimer steht still. Jeder am Tisch kann fortsetzen - ideal für
-              Clantische über mehrere Abende.
-            </p>
+            <h2>{t('zauberer.pause.titel')}</h2>
+            <p className="muted">{t('zauberer.pause.text')}</p>
             {view.seat !== null && (
               <button className="primary" disabled={pauseBusy} onClick={togglePause}>
-                Fortsetzen
+                {t('zauberer.fortsetzen')}
               </button>
             )}
           </div>
@@ -718,36 +735,60 @@ export function WizardTable({
 // Kopfzeile und eigene Lage
 // ---------------------------------------------------------------------------
 
+/**
+ * Text mit Platzhaltern: `{nr}` im Woerterbuch wird durch `werte.nr` ersetzt.
+ *
+ * `t()` kennt keine Platzhalter, und vor der Sprachumstellung wurden die Saetze
+ * hier aus Stuecken zusammengeklebt („Runde " + nr + " / " + gesamt). Das geht
+ * nur in einer Sprache gut — im Englischen steht die Zahl oft anderswo. Ein
+ * unbekannter Platzhalter bleibt stehen, statt still zu verschwinden.
+ */
+function tz(key: string, werte: Record<string, string | number> = {}): string {
+  return t(key).replace(/\{(\w+)\}/g, (ganz, name: string) =>
+    name in werte ? String(werte[name]) : ganz,
+  );
+}
+
+/** Einzahl oder Mehrzahl: `<stamm>.eins` fuer 1, sonst `<stamm>.mehr`. */
+function anzahl(stamm: string, n: number): string {
+  return tz(`${stamm}.${n === 1 ? 'eins' : 'mehr'}`, { n });
+}
+
 /** Was gerade laeuft: Handgroesse, Trumpf und wie viel angesagt ist. */
 function rundenzeile(runde: WizardRoundView | null): string {
-  if (!runde) return 'Zwischen den Runden';
+  if (!runde) return t('zauberer.zwischenRunden');
 
-  const karten = `${runde.handSize} ${runde.handSize === 1 ? 'Karte' : 'Karten'}`;
+  const karten = anzahl('zauberer.karten', runde.handSize);
   // Das Farbzeichen statt des Namens: Die Zeile steht neben fuenf Knoepfen und
   // brach mit "Trumpf Karo" in die zweite Zeile. Was Trumpf ist, steht ohnehin
   // gross an der Plakette.
-  const trumpf = runde.trump ? suitSymbol(runde.trump) : 'kein Trumpf';
+  const trumpf = runde.trump ? suitSymbol(runde.trump) : t('zauberer.keinTrumpf');
 
-  if (runde.phase === 'trump') return `${karten} · Trumpf wird bestimmt`;
-  if (runde.phase === 'bidding') return `${karten} · ${trumpf} · Ansagen`;
+  // Die Phasennamen sind dieselben, die die Tischmitte zeigt (Bereich „tisch").
+  if (runde.phase === 'trump') return `${karten} · ${t('phase.trump')}`;
+  if (runde.phase === 'bidding') return `${karten} · ${trumpf} · ${t('phase.bidding')}`;
 
   // Im Spiel ist die Summe der Ansagen die wichtigste Zahl am Tisch: Sie sagt,
   // ob die Stiche knapp sind oder ueberzaehlig.
   const summe = runde.bidTotal;
-  const lage = summe === null ? '' : ` · ${summe} auf ${runde.handSize}`;
+  const lage = summe === null ? '' : ` · ${tz('zauberer.summeAuf', { summe, n: runde.handSize })}`;
   return `${karten} · ${trumpf}${lage}`;
 }
 
 function eigeneLage(runde: WizardRoundView | null, seat: number | null): string {
-  if (seat === null) return 'Zuschauer';
-  if (!runde) return 'Deine Karten';
+  if (seat === null) return t('zauberer.zuschauer');
+  if (!runde) return t('zauberer.deineKarten');
   const gebot = runde.bids[seat];
-  if (gebot === undefined) return 'Noch nicht angesagt';
+  if (gebot === undefined) return t('zauberer.nichtAngesagt');
   const stiche = runde.tricks[seat] ?? 0;
   const fehlt = gebot - stiche;
   const zusatz =
-    fehlt > 0 ? `noch ${fehlt}` : fehlt === 0 ? 'genau richtig' : `${-fehlt} zu viel`;
-  return `Gebot ${gebot} · ${stiche} ${stiche === 1 ? 'Stich' : 'Stiche'} · ${zusatz}`;
+    fehlt > 0
+      ? tz('zauberer.fehlt', { n: fehlt })
+      : fehlt === 0
+        ? t('zauberer.genau')
+        : tz('zauberer.zuViel', { n: -fehlt });
+  return `${tz('zauberer.gebot', { n: gebot })} · ${anzahl('zauberer.stiche', stiche)} · ${zusatz}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -813,10 +854,10 @@ function TrumpfPlakette({
       <span className="wiz-trumpf-text">
         {runde.trump ? (
           <>
-            Trumpf <b>{suitSymbol(runde.trump)}</b>
+            {t('zauberer.trumpf')} <b>{suitSymbol(runde.trump)}</b>
           </>
         ) : (
-          'kein Trumpf'
+          t('zauberer.keinTrumpf')
         )}
       </span>
     </div>
@@ -849,7 +890,7 @@ function BlindKarte({
       className={`doko-handcard${shaking ? ' is-shake' : ''}${legt ? ' is-legt' : ''}`}
       style={{ '--off': 0 } as React.CSSProperties}
       aria-disabled={!action}
-      aria-label="Deine verdeckte Karte legen"
+      aria-label={t('zauberer.blindLegen')}
       onClick={() => {
         // Schon unterwegs: ein zweiter Tipp darf die eine Karte nicht noch
         // einmal senden.
@@ -936,10 +977,12 @@ function GegnerSitz({
         ) : (
           <span>{isBot ? `Bot ${seatIndex + 1}` : name}</span>
         )}
-        {geber && <em className="doko-tag">Geber</em>}
-        {leader && <em className="doko-tag doko-tag--lead">Aufspiel</em>}
-        {hasLeft && <em className="doko-tag">ausgestiegen</em>}
-        {!hasLeft && botTakeover && !isBot && <em className="doko-tag">Bot übernimmt</em>}
+        {geber && <em className="doko-tag">{t('zauberer.geber')}</em>}
+        {leader && <em className="doko-tag doko-tag--lead">{t('zauberer.aufspiel')}</em>}
+        {hasLeft && <em className="doko-tag">{t('zauberer.ausgestiegen')}</em>}
+        {!hasLeft && botTakeover && !isBot && (
+          <em className="doko-tag">{t('zauberer.botUebernimmt')}</em>
+        )}
       </div>
 
       {/* Gebot und Stiche gehoeren an den Sitz. Beides ist oeffentlich, und
@@ -1011,15 +1054,18 @@ function Gebotsblatt({
   return (
     <div className="doko-sheet doko-sheet--mitte">
       <div className="doko-sheet-card wiz-knapp">
-        <h2>Wie viele Stiche machst du?</h2>
+        <h2>{t('zauberer.ansage.titel')}</h2>
         <p className="muted">
           {verdeckt
-            ? 'Verdeckt angesagt: Die anderen Zahlen siehst du erst, wenn alle angesagt haben.'
+            ? t('zauberer.ansage.verdeckt')
             : bisher.length === 0
-              ? `${handSize} ${handSize === 1 ? 'Stich' : 'Stiche'} sind zu vergeben. Du sagst zuerst an.`
-              : `Bisher angesagt: ${bisher
-                  .map(([seat, bid]) => `${nameOf(Number(seat))} ${bid}`)
-                  .join(' · ')}${bidTotal !== null ? `, Summe ${bidTotal} von ${handSize}` : ''}`}
+              ? anzahl('zauberer.ansage.zuerst', handSize)
+              : tz('zauberer.ansage.bisher', {
+                  liste: bisher.map(([seat, bid]) => `${nameOf(Number(seat))} ${bid}`).join(' · '),
+                }) +
+                (bidTotal !== null
+                  ? tz('zauberer.ansage.summe', { summe: bidTotal, n: handSize })
+                  : '')}
         </p>
 
         <div className="wiz-gebote">
@@ -1031,7 +1077,7 @@ function Gebotsblatt({
                 className={`wiz-gebot-chip${wahl === zahl ? ' is-an' : ''}${geht ? '' : ' is-aus'}`}
                 aria-pressed={wahl === zahl}
                 disabled={!geht}
-                title={geht ? undefined : 'Damit ginge die Summe auf'}
+                title={geht ? undefined : t('zauberer.ansage.gesperrt')}
                 onClick={() => setWahl(zahl)}
               >
                 {zahl}
@@ -1050,7 +1096,11 @@ function Gebotsblatt({
             onSend(action);
           }}
         >
-          {gesendet ? 'Wird angesagt…' : wahl === null ? 'Zahl wählen' : `${wahl} ansagen`}
+          {gesendet
+            ? t('zauberer.ansage.sendet')
+            : wahl === null
+              ? t('zauberer.ansage.waehlen')
+              : tz('zauberer.ansage.knopf', { n: wahl })}
         </button>
       </div>
     </div>
@@ -1076,8 +1126,8 @@ function Trumpfwahl({
   return (
     <div className="doko-sheet doko-sheet--mitte">
       <div className="doko-sheet-card wiz-knapp">
-        <h2>Du bestimmst den Trumpf</h2>
-        <p className="muted">Aufgedeckt wurde ein Zauberer, du wählst die Farbe.</p>
+        <h2>{t('zauberer.trumpfwahl.titel')}</h2>
+        <p className="muted">{t('zauberer.trumpfwahl.text')}</p>
         <div className="wiz-farben">
           {actions.map((action) => {
             const suit = String(action.suit);
@@ -1113,7 +1163,7 @@ function Trumpfwahl({
  * nachvollziehbar bleibt. Nach zehn Sekunden geht es von selbst weiter - ein
  * abgelenkter Mitspieler soll die anderen nicht aufhalten.
  */
-function Rundenblatt({
+export function Rundenblatt({
   runde,
   seats,
   nameOf,
@@ -1134,19 +1184,21 @@ function Rundenblatt({
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card" onClick={(event) => event.stopPropagation()}>
-        <h2>Runde {runde.roundNumber} abgerechnet</h2>
+        <h2>{tz('zauberer.abgerechnet', { nr: runde.roundNumber })}</h2>
         <p className="muted">
-          {runde.roundNumber} {runde.roundNumber === 1 ? 'Karte' : 'Karten'} ·{' '}
-          {runde.trump ? `Trumpf ${suitName(runde.trump)}` : 'ohne Trumpf'}
+          {anzahl('zauberer.karten', runde.roundNumber)} ·{' '}
+          {runde.trump
+            ? tz('zauberer.trumpfFarbe', { farbe: suitName(runde.trump) ?? runde.trump })
+            : t('zauberer.ohneTrumpf')}
         </p>
         <table className="wiz-tabelle">
           <thead>
             <tr>
-              <th>Spieler</th>
-              <th>Gebot</th>
-              <th>Stiche</th>
-              <th>Punkte</th>
-              <th>Gesamt</th>
+              <th>{t('zauberer.spalte.spieler')}</th>
+              <th>{t('zauberer.spalte.gebot')}</th>
+              <th>{t('zauberer.spalte.stiche')}</th>
+              <th>{t('zauberer.spalte.punkte')}</th>
+              <th>{t('zauberer.spalte.gesamt')}</th>
             </tr>
           </thead>
           <tbody>
@@ -1169,7 +1221,7 @@ function Rundenblatt({
           </tbody>
         </table>
         <button className="primary" onClick={onClose}>
-          Weiter
+          {t('zauberer.weiter')}
         </button>
       </div>
     </div>
@@ -1177,7 +1229,7 @@ function Rundenblatt({
 }
 
 /** Alle Runden auf einen Blick: Gebot/Stiche je Runde, Gesamtstand unten. */
-function Punktetafel({
+export function Punktetafel({
   history,
   seats,
   scores,
@@ -1193,15 +1245,15 @@ function Punktetafel({
   return (
     <div className="doko-sheet" onClick={onClose}>
       <div className="doko-sheet-card" onClick={(event) => event.stopPropagation()}>
-        <h2>Punktetafel</h2>
+        <h2>{t('zauberer.tafel.titel')}</h2>
         {history.length === 0 ? (
-          <p className="muted">Noch keine Runde abgerechnet.</p>
+          <p className="muted">{t('zauberer.tafel.leer')}</p>
         ) : (
           <div className="wiz-tafel-rolle">
             <table className="wiz-tabelle wiz-tafel">
               <thead>
                 <tr>
-                  <th>Rd.</th>
+                  <th>{t('zauberer.spalte.runde')}</th>
                   {seats.map((seat) => (
                     <th key={seat}>{nameOf(seat)}</th>
                   ))}
@@ -1241,7 +1293,7 @@ function Punktetafel({
           </div>
         )}
         <button className="primary" onClick={onClose}>
-          Schließen
+          {t('zauberer.schliessen')}
         </button>
       </div>
     </div>

@@ -67,4 +67,23 @@ export interface FillerSicht {
    * Regel rechnet das Modul; der Bildschirm sagt nur, WARUM der Knopf ruht.
    */
   mauerPause: number[];
+  /**
+   * Wer aufgegeben hat, oder null. Der Abschluss sagt dann "aufgegeben"
+   * statt nur einen Punktestand, der zum Sieger nicht passt.
+   */
+  aufgegeben: number | null;
+}
+
+/**
+ * Aufgeben (Spielkern seit dem 06.11.2026). Geht jederzeit, auch wenn der
+ * Gegner am Zug ist, und steht bewusst NICHT in `legalActions` — daraus
+ * waehlt der Bot, und der gibt nie auf. Der Bildschirm bietet den Knopf
+ * deshalb von sich aus an; eine Regel baut er damit nicht nach, erlaubt ist
+ * die Aktion immer, solange die Partie laeuft.
+ *
+ * `typ` und nicht `type` wie bei BroChess: Filler-Aktionen heissen so
+ * (`faerben`, `barriere`). Der Vertrag haelt das gegen das Modul.
+ */
+export interface FillerAufgabe {
+  typ: 'aufgeben';
 }

@@ -18,6 +18,7 @@
 
 import { useState } from 'react';
 
+import { t } from '../../i18n';
 import { HbBlatt } from '../../screens/HbBlatt';
 import { lautstaerke, setzeLautstaerke, spieleKlang, tonAn } from './klaenge';
 
@@ -37,8 +38,8 @@ export function Einstellungsfenster({ onFertig }: { onFertig: () => void }): Rea
   const regler = (
     <label className="mm-regler">
       <span className="mm-regler-kopf">
-        <b>Lautstärke</b>
-        <em>{stand === 0 ? 'aus' : `${stand}`}</em>
+        <b>{t('mememory.einstellungen.lautstaerke')}</b>
+        <em>{stand === 0 ? t('mememory.einstellungen.aus') : `${stand}`}</em>
       </span>
       <input
         type="range"
@@ -59,7 +60,7 @@ export function Einstellungsfenster({ onFertig }: { onFertig: () => void }): Rea
   );
 
   return (
-    <HbBlatt titel="Einstellungen" onClose={onFertig} klasse="is-klein">
+    <HbBlatt titel={t('mememory.einstellungen.titel')} onClose={onFertig} klasse="is-klein">
       {regler}
     </HbBlatt>
   );

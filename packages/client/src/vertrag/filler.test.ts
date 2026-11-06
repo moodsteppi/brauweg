@@ -1,6 +1,7 @@
 import {
   DEFAULT_REGELN,
   FARBEN_HOECHSTENS,
+  type FillerAktion as ModulAktion,
   type FillerSicht as ModulSicht,
   VARIANTEN,
   farbzahl,
@@ -9,7 +10,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { FARBEN, farbzahlAus } from '../minispiele/filler/farben';
-import type { FillerSicht } from '../minispiele/filler/sicht';
+import type { FillerAufgabe, FillerSicht } from '../minispiele/filler/sicht';
 import {
   type Beweglich,
   type Leer,
@@ -46,6 +47,14 @@ type _sichtPasst = PasstAuf<FillerSicht, EchteSicht>;
  */
 type _keinFeldNurImClient = Leer<Exclude<keyof FillerSicht, keyof EchteSicht>>;
 
+/**
+ * Die Aufgabe, die der Bildschirm von sich aus schickt, muss eine Aktion des
+ * Moduls sein. In DIESER Richtung und nicht wie bei der Sicht: Benennt das
+ * Modul sie um, faende ein `Extract` nichts und liesse `never` lautlos
+ * durch — der Knopf schickte dann etwas, das der Server abweist.
+ */
+type _aufgabeKommtAn = PasstAuf<ModulAktion, FillerAufgabe>;
+
 // ---------------------------------------------------------------------------
 // Beim Prüfen: Liefert eine echte Partie die Felder auch wirklich?
 // ---------------------------------------------------------------------------
@@ -80,6 +89,7 @@ const FELDER = [
   'mauernJeZug',
   'mauernDiesenZug',
   'mauerPause',
+  'aufgegeben',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof FillerSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof FillerSicht>>;

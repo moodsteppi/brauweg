@@ -24,6 +24,13 @@ export default {
   'karte.wert.J': 'Bube',
   'karte.wert.9': 'Neun',
 
+  /*
+   * Wie Farbe und Wert zum ganzen Namen zusammengehen. Die Wortfolge gehört
+   * der Sprache: „Kreuz Dame", aber „Queen of Clubs" — als feste Folge in
+   * `cardName` hieße es im Englischen „Clubs Queen".
+   */
+  'karte.name': '{farbe} {wert}',
+
   // Kurzzeichen im schmalen Kartenstreifen: deutsch D und B, nicht Q und J.
   'karte.kurz.A': 'A',
   'karte.kurz.T': '10',

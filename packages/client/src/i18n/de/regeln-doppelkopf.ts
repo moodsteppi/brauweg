@@ -65,4 +65,29 @@ export default {
   'ruleset.PFLICHTSOLO_ROUNDS': 'Für ein Pflichtsolo je Spieler reichen die Runden nicht.',
   'ruleset.PFLICHT_ARMUT_NEEDS_ARMUT': 'Der Armut-Auslöser setzt erlaubte Armut voraus.',
   'ruleset.SCHWEINCHEN_SOLO': 'Schweinchen im Solo setzt aktivierte Schweinchen voraus.',
+
+  /*
+   * Diese Codes meldet der Validator ebenfalls (`validator.ts` in
+   * game-doppelkopf), sie hatten aber bis zur englischen Fassung keinen
+   * Eintrag — im Regelsatz-Editor stand dann der rohe Schlüssel. Der
+   * Wortlaut ist der des Validators, mit Umlauten.
+   */
+  'ruleset.SUPERSCHWEIN_NEEDS_SCHWEINCHEN': 'Superschweine setzen Schweinchen voraus.',
+  'ruleset.ABSAGEN_NEED_ANNOUNCEMENTS': 'Absagen setzen aktivierte Ansagen voraus.',
+  'ruleset.PFLICHT_FOLGE_NEEDS_PFLICHT': 'Die Folgeansage setzt die Pflichtansage voraus.',
+  'ruleset.PFLICHT_ARMUT_NEEDS_PFLICHT': 'Der Armut-Auslöser setzt die Pflichtansage voraus.',
+  'ruleset.PFLICHT_SCHWEINE_NEEDS_PFLICHT': 'Der Schweine-Auslöser setzt die Pflichtansage voraus.',
+  'ruleset.PFLICHT_SCHWEINE_NEEDS_SCHWEINCHEN': 'Der Schweine-Auslöser setzt aktivierte Schweinchen voraus.',
+  'ruleset.PFLICHT_SOLO_NEEDS_PFLICHT': 'Pflichtansage im Solo setzt die Pflichtansage voraus.',
+  'ruleset.PFLICHTSOLO_NEEDS_SOLO': 'Pflichtsolo setzt mindestens ein aktiviertes Solospiel voraus.',
+  'ruleset.BOCK_NO_TRIGGER': 'Bockrunden sind aktiviert, aber kein Auslöser gewählt.',
+  'ruleset.BOCK_TRIGGER_LOST_RE': 'Der Auslöser „verlorenes Re" setzt Ansagen voraus.',
+  'ruleset.BOCK_TRIGGER_SOLO': 'Der Auslöser „Solo" setzt aktivierte Solospiele voraus.',
+  'ruleset.BOCK_TRIGGER_SCHMEISS': 'Der Auslöser „Schmeißen" setzt aktiviertes Schmeißen voraus.',
+  'ruleset.SCHMEISS_NEEDS_BOCK':
+    'Die Schmeiß-Konsequenz „Bockrunde auslösen" setzt aktivierte Bockrunden voraus.',
+  'ruleset.SCHMEISS_UNUSED': 'Schmeiß-Konsequenz eingestellt, aber Schmeißen ist aus.',
+  'ruleset.STILLE_HOCHZEIT': 'Stille Hochzeit setzt aktivierte Hochzeit voraus.',
+  'ruleset.HERZDURCHLAUF_SHARP':
+    'Beim Scharfen Doppelkopf gibt es nur vier Herz-Fehlkarten. Ein Herzdurchlauf ist höchstens einmal je Runde möglich.',
 } satisfies Woerterbuch;
