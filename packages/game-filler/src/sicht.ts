@@ -110,6 +110,16 @@ export interface FillerSicht {
    */
   readonly mauernDiesenZug: number;
   /**
+   * Wie viele Mauern ein Feld hoechstens tragen darf, der Spielfeldrand
+   * zaehlt mit (Regelsatz `mauernJeFeld`, Extreme seit dem 06.11.2026) — 0,
+   * wo es keine Grenze gibt. Aus dem Regelsatz des TISCHES wie `mauernJeZug`.
+   *
+   * Der Bot braucht die Zahl, um abzuwaegen, ob eine Mauer dem Gegner die
+   * Plaetze nimmt, an denen er IHN spaeter versperren koennte (bot.ts). Welche
+   * Kanten erlaubt sind, rechnet trotzdem nur das Modul (`barrierenMoeglich`).
+   */
+  readonly mauernJeFeld: number;
+  /**
    * Sitze, die in ihrem naechsten (oder gerade laufenden) Zug keine Mauer
    * setzen duerfen, weil sie im Zug davor die volle Zahl gebaut haben.
    * Oeffentlich: Man sieht dem Gegner an, dass er gerade nicht bauen kann,
@@ -176,6 +186,7 @@ function grundsicht(
     mauerSperre: mitBarrieren(partie.regeln.variante) ? mauerSperre(partie) : 0,
     mauernJeZug: mitBarrieren(partie.regeln.variante) ? mauernJeZug(partie.regeln) : 0,
     mauernDiesenZug: partie.mauernDiesenZug,
+    mauernJeFeld: mitBarrieren(partie.regeln.variante) ? (partie.regeln.mauernJeFeld ?? 0) : 0,
     mauerPause: partie.mauerPause,
     aufgegeben: partie.aufgegeben,
   };

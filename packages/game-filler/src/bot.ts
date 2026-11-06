@@ -23,7 +23,10 @@
  * Sicht ihm als erlaubt nennt (`barrierenMoeglich` — die Einsperr-Regel
  * rechnet der Server, nicht der Bot), auf dem Brett VOR und NACH ihr:
  * Felder, die nur noch er erreicht, Felder, die nur noch der Gegner erreicht,
- * und was der beste naechste Farbzug beider einbraechte. Die beste Wand wird
+ * was der beste naechste Farbzug beider einbraechte, und seit dem 06.11.2026
+ * auch, wie viele Zuege beide bis zu den Feldern in ihrer Naehe brauchen
+ * (Wegterm, siehe `bewerteWaende`) — seit keine Mauer mehr den letzten Weg
+ * schliessen darf, ist das der Teil, der traegt. Die beste Wand wird
  * gebaut, wenn ihr Vorteil mindestens WAND_SCHWELLE Felder wert ist — sonst
  * bleibt sie liegen, denn spaet im Spiel, wenn das Brett eng wird, ist
  * dieselbe Wand ein Riegel und keine Geste. Was der Gegner VORHAT, steht
@@ -35,7 +38,7 @@
  * ist kein Anfaenger, sondern ein kaputter Experte.
  */
 
-import { type FillerAktion, STERN_BONUS } from './partie.js';
+import { type FillerAktion, STERN_BONUS, mauernAmFeld } from './partie.js';
 import type { FillerSicht } from './sicht.js';
 
 /** Orthogonale Nachbarn — dieselbe Rechnung wie im Zustand, nur auf der Sicht. */
@@ -62,6 +65,14 @@ function kante(a: number, b: number): string {
  * fuenf Zuegen fuer je ein halbes Feld und stuende ohne da, wenn das Brett
  * eng wird. Bei vier baute er praktisch nie — auf 8 x 7 sind die Engstellen
  * selten so gross.
+ *
+ * Am 06.11.2026 mit dem Wegterm neu gemessen (werkzeug/bot-duell.mjs,
+ * Schwelle X gegen Schwelle 2 auf denselben Saaten, 60 Build- und 30
+ * Extreme-Saaten je Seite): Ab 3 verliert der Bot deutlich (Build 28 %,
+ * Extreme 15 % Siege), ab 4 baut er wieder fast nichts und verliert so gut
+ * wie jede Partie. 1 und 1,5 spielen gleich stark wie 2 (Siegquote 47 bis
+ * 52 %). Zwei ist also die hoechste Schwelle, die nichts kostet. Sie laesst
+ * ihm ausserdem noch ein paar Mauern fuer das spaete Spiel uebrig.
  */
 export const WAND_SCHWELLE = 2;
 
@@ -73,7 +84,31 @@ export const WAND_SCHWELLE = 2;
  */
 export const WAND_SCHWELLE_ZWEITE = 2 * WAND_SCHWELLE;
 
-export function botZug(sicht: FillerSicht): FillerAktion {
+/**
+ * Gewicht des Wegterms (siehe `bewerteWaende`): was es wert ist, dass der
+ * Gegner ein Feld einen Zug spaeter erreicht, in Feldern.
+ *
+ * Unter einem ganzen Feld, weil der Wegterm optimistisch zaehlt: Er nimmt
+ * fuer jedes Feld den kuerzesten Weg, als koennte der Gegner alle Farben
+ * zugleich ziehen. Ein Umweg um drei Felder ist deshalb weniger als drei
+ * verlorene Felder — er holt sie sich, nur spaeter.
+ */
+export const WEG_GEWICHT = 0.5;
+
+/**
+ * Was eine Mauer wert ist, die ein Feld voll macht (Regelsatz `mauernJeFeld`,
+ * Extreme): An diesem Feld kann danach NIEMAND mehr mauern. Liegt es auf
+ * meinem Weg, hat die Mauer dem Gegner einen Platz genommen, an dem er mich
+ * haette versperren koennen — liegt es auf seinem, habe ich mir selbst einen
+ * genommen.
+ */
+export const PLATZ_WERT = 0.5;
+
+/** Bis zu wie vielen Zuegen der Wegterm vorausschaut (1 bis 3). */
+const WEG_TIEFE = 3;
+
+/** Alles, was Farbwahl und Wandwahl gemeinsam aus der Sicht lesen. */
+function brettAus(sicht: FillerSicht) {
   const { spalten, zeilen, farbzahl, feld, besitzer, farbe } = sicht;
   const ich = sicht.ich ?? 0;
 
@@ -82,21 +117,17 @@ export function botZug(sicht: FillerSicht): FillerAktion {
    * Barriere zu seinem naechsten Zug — und waehlte dann eine Farbe, die ihm
    * gar nichts einbringt.
    */
-  const sperren = new Set(sicht.barrieren.map(([a, b]) => kante(a, b)));
+  const sperren: ReadonlySet<string> = new Set(sicht.barrieren.map(([a, b]) => kante(a, b)));
   const erreichbarMit = (platz: number, mauern: ReadonlySet<string>): number[] =>
     nachbarn(platz, spalten, zeilen).filter((n) => !mauern.has(kante(platz, n)));
 
-  // Ein Stern ist mehr wert als ein Feld — genau um seinen Bonus. Die Mauer
-  // dazu bewertet der Bot nicht eigens; er baut ohnehin nur, wo es sich lohnt.
+  // Ein Stern ist mehr wert als ein Feld — genau um seinen Bonus.
   const sterne = new Set(sicht.sterne ?? []);
+  const wertVon = (platz: number): number => (sterne.has(platz) ? 1 + STERN_BONUS : 1);
 
   const gesperrt = new Set(Object.values(farbe));
   const erlaubt: number[] = [];
   for (let f = 0; f < farbzahl; f++) if (!gesperrt.has(f)) erlaubt.push(f);
-  // Kann nicht vorkommen, solange es mehr Farben als Sitze gibt (regeln.ts
-  // erzwingt das) — aber ein Bot, der `undefined` zurueckgibt, reisst den
-  // Tisch mit, und das waere ein teurer Weg, das zu erfahren.
-  if (erlaubt.length === 0) return { typ: 'faerben', farbe: 0 };
 
   /** Die Felder eines Sitzes — Ausgangspunkt jeder Zaehlung. */
   const felderVon = (sitz: number): number[] => {
@@ -106,7 +137,6 @@ export function botZug(sicht: FillerSicht): FillerAktion {
     }
     return raus;
   };
-  const eigen = felderVon(ich);
 
   /**
    * Wie viele Felder Farbe `f` dem Sitz einbraechte, und wie viel Nebel danach
@@ -136,7 +166,7 @@ export function botZug(sicht: FillerSicht): FillerAktion {
         if (feld[n] !== f) continue;
         genommen.add(n);
         rand.push(n);
-        mass += sterne.has(n) ? 1 + STERN_BONUS : 1;
+        mass += wertVon(n);
       }
     }
     let tiefe = 0;
@@ -148,9 +178,35 @@ export function botZug(sicht: FillerSicht): FillerAktion {
     return { mass, tiefe, genommen };
   }
 
-  const wand = besteWand();
-  if (wand) return { typ: 'barriere', von: wand[0], nach: wand[1] };
+  return {
+    spalten,
+    zeilen,
+    feld,
+    besitzer,
+    farbe,
+    ich,
+    sperren,
+    erreichbarMit,
+    wertVon,
+    erlaubt,
+    felderVon,
+    bewerteFuer,
+  };
+}
 
+export function botZug(sicht: FillerSicht): FillerAktion {
+  const { erlaubt, felderVon, bewerteFuer, sperren, ich } = brettAus(sicht);
+  // Kann nicht vorkommen, solange es mehr Farben als Sitze gibt (regeln.ts
+  // erzwingt das) — aber ein Bot, der `undefined` zurueckgibt, reisst den
+  // Tisch mit, und das waere ein teurer Weg, das zu erfahren.
+  if (erlaubt.length === 0) return { typ: 'faerben', farbe: 0 };
+
+  const wand = bewerteWaende(sicht);
+  if (wand && wand.beste && wand.besterWert >= wand.schwelle) {
+    return { typ: 'barriere', von: wand.beste[0], nach: wand.beste[1] };
+  }
+
+  const eigen = felderVon(ich);
   let beste = erlaubt[0]!;
   let bestesMass = -1;
   let besteTiefe = -1;
@@ -164,131 +220,265 @@ export function botZug(sicht: FillerSicht): FillerAktion {
   }
 
   return { typ: 'faerben', farbe: beste };
+}
+
+/** Die Bestandteile eines Wandwerts — fuer Messung und Tests, nicht fuer den Zug. */
+export interface WandTeile {
+  /** Felder, die danach nur noch ich bzw. nicht mehr nur der Gegner erreicht. */
+  readonly gebiet: number;
+  /** Halber Unterschied im besten naechsten Farbzug beider. */
+  readonly zuege: number;
+  /** Wegterm: Verengung und Umweg fuer den Gegner minus fuer mich, schon gewichtet. */
+  readonly weg: number;
+  /** Plaetze je Feld (nur mit `mauernJeFeld`): genommene minus selbst verbaute. */
+  readonly plaetze: number;
+}
+
+export interface WandBewertung {
+  /** Die Wand mit dem hoechsten Wert, oder null ohne Kandidaten. */
+  readonly beste: readonly [number, number] | null;
+  readonly besterWert: number;
+  readonly teile: WandTeile | null;
+  /** Ab diesem Wert baut der Bot: WAND_SCHWELLE, als zweite Mauer eines Zuges WAND_SCHWELLE_ZWEITE. */
+  readonly schwelle: number;
+  /** Wie viele Kanten bewertet wurden. */
+  readonly anzahl: number;
+}
+
+/**
+ * Die Wand, die sich am meisten lohnt, samt ihrem Wert — oder null, wenn es
+ * nichts zu bauen gibt (andere Spielart, keine Wand mehr, Pause: dann fehlt
+ * `barrierenMoeglich`). Ob gebaut wird, entscheidet `botZug` an der
+ * Schwelle. Exportiert ist die Rechnung, damit Messung
+ * (werkzeug/simulation.mjs) und Tests GENAU diese Zahl sehen statt einer
+ * Abschrift, die beim naechsten Umbau still auseinanderlaeuft — bis zum
+ * 06.11.2026 stand sie im Messskript ein zweites Mal.
+ *
+ * Nur die Kandidaten aus der Sicht, nie eigene: Die Mauerregeln liegen im
+ * Modul, und ein Bot, der sie nachrechnet, ist die zweite Fassung einer
+ * Regel — bei der ersten Abweichung wirft der Server seinen Zug ab und der
+ * Tisch haengt.
+ *
+ * DER WERT hat vier Teile, alle in Feldern:
+ *
+ * 1. **Gebiet** — Felder, die nach der Wand nur noch ich erreiche bzw. nicht
+ *    mehr nur der Gegner. Das war bis zum 06.11.2026 fast der ganze Wert.
+ *    Seit eine Mauer nie den letzten Weg schliessen darf (Regel 2 in
+ *    `moeglicheBarrieren`), verliert durch eine erlaubte Mauer KEIN Sitz ein
+ *    erreichbares Feld, der Teil ist dann stets 0 — und der Bot baute keine
+ *    einzige Mauer mehr (0,00 je Partie). Er bleibt stehen, weil er nichts
+ *    kostet und an Tischen ohne die Regel noch zaehlte.
+ * 2. **Zuege** — der halbe Unterschied im besten naechsten Farbzug beider.
+ * 3. **Weg** (seit dem 06.11.2026) — wie sehr die Mauer dem Gegner den Weg
+ *    verengt oder einen Umweg aufzwingt. Je freiem Feld zaehlt der
+ *    ZUGABSTAND: wie viele Farbzuege ein Sitz mindestens braucht, bis es ihm
+ *    gehoert (ein gleichfarbiger Nachbar kommt im selben Zug mit). Jedes
+ *    Feld, das er in 1 bis 3 Zuegen erreicht, zaehlt so oft, wie es in "in
+ *    einem Zug", "in zwei", "in drei" vorkommt: bei Abstand 1 dreimal, bei 3
+ *    einmal. Sinkt die Zahl fuer den Gegner, ist das der Gewinn; sinkt sie
+ *    fuer mich, der Preis. Mal WEG_GEWICHT.
+ * 4. **Plaetze** (nur, wo die Sicht `mauernJeFeld` nennt — Extreme) — eine
+ *    Mauer belegt an beiden Feldern einen Platz. Ist ein freies Feld danach
+ *    voll, kann dort niemand mehr mauern: Liegt es naeher an mir als am
+ *    Gegner, hat die Mauer ihm einen Platz genommen, mich zu versperren (+);
+ *    liegt es naeher am Gegner, habe ich mir einen genommen (−). Je
+ *    PLATZ_WERT.
+ */
+export function bewerteWaende(sicht: FillerSicht): WandBewertung | null {
+  const kandidaten = sicht.barrierenMoeglich;
+  if (!kandidaten || kandidaten.length === 0) return null;
+  const brett = brettAus(sicht);
+  const { spalten, zeilen, feld, besitzer, ich, sperren, erreichbarMit, wertVon } = brett;
+  const { erlaubt, felderVon, bewerteFuer } = brett;
+  const gegner = Object.keys(brett.farbe)
+    .map(Number)
+    .find((s) => s !== ich);
+  if (gegner === undefined) return null;
+  const eigen = felderVon(ich);
+  const seine = felderVon(gegner);
 
   /**
-   * Die Wand, die sich am meisten lohnt — oder null, wenn keine die Schwelle
-   * erreicht oder es gar nichts zu bauen gibt (andere Spielart, keine Wand
-   * mehr, in diesem Zug schon gebaut: dann fehlt `barrierenMoeglich`).
-   *
-   * Nur die Kandidaten aus der Sicht, nie eigene: Die Einsperr-Regel liegt im
-   * Modul, und ein Bot, der sie nachrechnet, ist die zweite Fassung einer
-   * Regel — bei der ersten Abweichung wirft der Server seinen Zug ab und der
-   * Tisch haengt.
-   *
-   * Als Funktionsdeklaration NACH dem `return`, wie `bewerteFuer` davor: Sie
-   * wird gehoben und ist oben schon bekannt; so steht der Hauptweg des Bots
-   * am Stueck lesbar da und die Wandrechnung als Anhang.
+   * Alle freien Felder, die ein Sitz ueber freie Felder noch erreicht —
+   * dazu `gesehen`: dieselben plus sein Gebiet, also alles, an dessen Rand
+   * die Suche ueberhaupt eine Kante angefasst hat.
    */
-  function besteWand(): readonly [number, number] | null {
-    const kandidaten = sicht.barrierenMoeglich;
-    if (!kandidaten || kandidaten.length === 0) return null;
-    const gegner = Object.keys(farbe)
-      .map(Number)
-      .find((s) => s !== ich);
-    if (gegner === undefined) return null;
-    const seine = felderVon(gegner);
-
-    /**
-     * Alle freien Felder, die ein Sitz ueber freie Felder noch erreicht —
-     * dazu `gesehen`: dieselben plus sein Gebiet, also alles, an dessen Rand
-     * die Suche ueberhaupt eine Kante angefasst hat.
-     */
-    const freieVon = (
-      start: readonly number[],
-      mauern: ReadonlySet<string>,
-    ): { frei: Set<number>; gesehen: Set<number> } => {
-      const gesehen = new Set(start);
-      const frei = new Set<number>();
-      const rand = [...start];
-      while (rand.length > 0) {
-        const platz = rand.pop()!;
-        for (const n of erreichbarMit(platz, mauern)) {
-          if (gesehen.has(n) || besitzer[n] !== null) continue;
-          gesehen.add(n);
-          frei.add(n);
-          rand.push(n);
-        }
-      }
-      return { frei, gesehen };
-    };
-
-    /*
-     * Die Lage VOR der Wand, einmal gerechnet: Felder, die nur ich bzw. nur
-     * der Gegner noch erreicht (die anderen sind umkaempft und zaehlen fuer
-     * niemanden), und je Farbe, was der naechste Zug beider einbraechte.
-     * Umkaempfte Felder nicht zu werten ist Absicht — eine Wand, die eine
-     * Flaeche fuer BEIDE abschneidet, gewinnt nichts und faellt so von selbst
-     * durch.
-     */
-    const meineVorher = freieVon(eigen, sperren);
-    const deineVorher = freieVon(seine, sperren);
-    const meineFluten = erlaubt.map((f) => bewerteFuer(eigen, f, sperren));
-    const seineFluten = erlaubt.map((f) => bewerteFuer(seine, f, sperren));
-    const nurIn = (a: ReadonlySet<number>, b: ReadonlySet<number>): number => {
-      let zahl = 0;
-      for (const p of a) if (!b.has(p)) zahl++;
-      return zahl;
-    };
-    const besterZug = (fluten: readonly { mass: number }[]): number =>
-      fluten.reduce((bisher, flut) => Math.max(bisher, flut.mass), 0);
-    const vorher = {
-      nurMeine: nurIn(meineVorher.frei, deineVorher.frei),
-      nurDeine: nurIn(deineVorher.frei, meineVorher.frei),
-      meinZug: besterZug(meineFluten),
-      seinZug: besterZug(seineFluten),
-    };
-
-    let beste: readonly [number, number] | null = null;
-    let besterWert = -Infinity;
-    for (const kandidat of kandidaten) {
-      const probe = new Set(sperren);
-      probe.add(kante(kandidat[0], kandidat[1]));
-      /*
-       * Nur neu rechnen, was die Wand beruehren KANN. Eine Flutfuellung
-       * prueft eine Kante nur, wenn sie eines ihrer beiden Felder schon
-       * erreicht hat; liegt keines davon in der Flut von vorher, laeuft sie
-       * mit der Wand Schritt fuer Schritt genauso und kommt aufs selbe
-       * Ergebnis. Das spart auf 12 x 11 (Extreme) den Grossteil der Arbeit —
-       * ohne die Abkuerzung brauchte ein Botzug dort bis zu 0,4 s — und
-       * aendert keine einzige Entscheidung: Build spielt Saat fuer Saat
-       * dieselben Partien wie vorher (extreme-gross.test.ts).
-       */
-      const [a, b] = kandidat;
-      const beruehrt = (menge: ReadonlySet<number>): boolean => menge.has(a) || menge.has(b);
-      const meine = beruehrt(meineVorher.gesehen) ? freieVon(eigen, probe) : meineVorher;
-      const deine = beruehrt(deineVorher.gesehen) ? freieVon(seine, probe) : deineVorher;
-      const neuGeflutet = (start: readonly number[], fluten: typeof meineFluten) =>
-        fluten.map((flut, i) =>
-          beruehrt(flut.genommen) ? bewerteFuer(start, erlaubt[i]!, probe) : flut,
-        );
-      const nachher = {
-        nurMeine: nurIn(meine.frei, deine.frei),
-        nurDeine: nurIn(deine.frei, meine.frei),
-        meinZug: besterZug(neuGeflutet(eigen, meineFluten)),
-        seinZug: besterZug(neuGeflutet(seine, seineFluten)),
-      };
-      // Erreichbarkeit zaehlt ganz, der naechste Zug halb: Ein Feld, das der
-      // Gegner nie mehr bekommt, ist sicher; eines, das er in diesem Zug
-      // nicht bekommt, holt er sich vielleicht im naechsten.
-      const wert =
-        nachher.nurMeine -
-        vorher.nurMeine +
-        (vorher.nurDeine - nachher.nurDeine) +
-        0.5 * (vorher.seinZug - nachher.seinZug - (vorher.meinZug - nachher.meinZug));
-      // Strikt groesser: Bei Gleichstand bleibt die erste Wand, damit der Bot
-      // aus derselben Sicht immer denselben Zug macht.
-      if (wert > besterWert) {
-        besterWert = wert;
-        beste = kandidat;
+  const freieVon = (
+    start: readonly number[],
+    mauern: ReadonlySet<string>,
+  ): { frei: Set<number>; gesehen: Set<number> } => {
+    const gesehen = new Set(start);
+    const frei = new Set<number>();
+    const rand = [...start];
+    while (rand.length > 0) {
+      const platz = rand.pop()!;
+      for (const n of erreichbarMit(platz, mauern)) {
+        if (gesehen.has(n) || besitzer[n] !== null) continue;
+        gesehen.add(n);
+        frei.add(n);
+        rand.push(n);
       }
     }
+    return { frei, gesehen };
+  };
+
+  /**
+   * Zugabstand je Platz (Teil 3): 0 im eigenen Gebiet, sonst die kleinste
+   * Zahl Farbzuege bis dorthin, hoechstens WEG_TIEFE — weiter weg steht
+   * Infinity, so weit rechnet der Wegterm nicht. Ein Schritt auf ein freies
+   * Feld kostet einen Zug, ausser er geht von einem freien Feld derselben
+   * Farbe aus: Das kaeme im selben Zug mit. Durch fremdes Gebiet und durch
+   * Mauern fuehrt kein Schritt — dieselbe Erreichbarkeit wie beim Schlucken.
+   *
+   * Eine 0-1-Breitensuche: Schritte ohne Kosten kommen auf einen Stapel, der
+   * zuerst abgearbeitet wird, Schritte mit Kosten hinten in die Schlange.
+   * So kommt jedes Feld in der Reihenfolge seines Abstands dran.
+   */
+  const zugAbstand = (start: readonly number[], mauern: ReadonlySet<string>): number[] => {
+    const abstand: number[] = besitzer.map(() => Infinity);
+    const schlange: number[] = [];
+    for (const platz of start) {
+      abstand[platz] = 0;
+      schlange.push(platz);
+    }
+    const gratisStapel: number[] = [];
+    let kopf = 0;
+    while (gratisStapel.length > 0 || kopf < schlange.length) {
+      const platz = gratisStapel.length > 0 ? gratisStapel.pop()! : schlange[kopf++]!;
+      const d = abstand[platz]!;
+      for (const n of erreichbarMit(platz, mauern)) {
+        if (besitzer[n] !== null) continue;
+        const gratis = besitzer[platz] === null && feld[platz] !== null && feld[platz] === feld[n];
+        const neu = d + (gratis ? 0 : 1);
+        if (neu > WEG_TIEFE || neu >= abstand[n]!) continue;
+        abstand[n] = neu;
+        if (gratis) gratisStapel.push(n);
+        else schlange.push(n);
+      }
+    }
+    return abstand;
+  };
+  /** Teil 3 als Zahl: jedes freie Feld mit Abstand d <= WEG_TIEFE zaehlt (WEG_TIEFE + 1 - d)-mal. */
+  const reichweite = (abstand: readonly number[]): number => {
+    let summe = 0;
+    for (let platz = 0; platz < abstand.length; platz++) {
+      const d = abstand[platz]!;
+      if (d > 0 && d <= WEG_TIEFE) summe += (WEG_TIEFE + 1 - d) * wertVon(platz);
+    }
+    return summe;
+  };
+
+  /*
+   * Die Lage VOR der Wand, einmal gerechnet: Felder, die nur ich bzw. nur
+   * der Gegner noch erreicht (die anderen sind umkaempft und zaehlen fuer
+   * niemanden), je Farbe, was der naechste Zug beider einbraechte, und der
+   * Zugabstand beider. Umkaempfte Felder nicht zu werten ist Absicht — eine
+   * Wand, die eine Flaeche fuer BEIDE abschneidet, gewinnt nichts und faellt
+   * so von selbst durch.
+   */
+  const meineVorher = freieVon(eigen, sperren);
+  const deineVorher = freieVon(seine, sperren);
+  const meineFluten = erlaubt.map((f) => bewerteFuer(eigen, f, sperren));
+  const seineFluten = erlaubt.map((f) => bewerteFuer(seine, f, sperren));
+  const meinAbstand = zugAbstand(eigen, sperren);
+  const seinAbstand = zugAbstand(seine, sperren);
+  const nurIn = (x: ReadonlySet<number>, y: ReadonlySet<number>): number => {
+    let zahl = 0;
+    for (const p of x) if (!y.has(p)) zahl++;
+    return zahl;
+  };
+  const besterZug = (fluten: readonly { mass: number }[]): number =>
+    fluten.reduce((bisher, flut) => Math.max(bisher, flut.mass), 0);
+  const vorher = {
+    nurMeine: nurIn(meineVorher.frei, deineVorher.frei),
+    nurDeine: nurIn(deineVorher.frei, meineVorher.frei),
+    meinZug: besterZug(meineFluten),
+    seinZug: besterZug(seineFluten),
+    meinWeg: reichweite(meinAbstand),
+    seinWeg: reichweite(seinAbstand),
+  };
+
+  /*
+   * Teil 4: die Grenze je Feld. Die Zahl steht in der Sicht; GEZAEHLT wird
+   * mit derselben Funktion wie im Modul (`mauernAmFeld`, der Rand zaehlt
+   * mit). Ob die Kante erlaubt ist, hat `barrierenMoeglich` schon
+   * entschieden — hier geht es nur darum, welche Plaetze die Mauer verbraucht.
+   */
+  const jeFeld = sicht.mauernJeFeld ?? 0;
+  const platzWert = (a: number, c: number, probe: ReadonlySet<string>): number => {
+    if (jeFeld <= 0) return 0;
+    let wert = 0;
+    for (const platz of [a, c]) {
+      if (mauernAmFeld(platz, spalten, zeilen, probe) < jeFeld) continue;
+      // Ein Feld, das schon jemandem gehoert, liegt auf niemandes Weg mehr.
+      if (besitzer[platz] !== null) continue;
+      const meinD = meinAbstand[platz]!;
+      const seinD = seinAbstand[platz]!;
+      if (meinD < seinD) wert += PLATZ_WERT;
+      else if (seinD < meinD) wert -= PLATZ_WERT;
+    }
+    return wert;
+  };
+
+  let beste: readonly [number, number] | null = null;
+  let besterWert = -Infinity;
+  let besteTeile: WandTeile | null = null;
+  for (const kandidat of kandidaten) {
+    const probe = new Set(sperren);
+    probe.add(kante(kandidat[0], kandidat[1]));
     /*
-     * Die zweite Mauer eines Zuges (Extreme) kostet mehr als eine Mauer aus
-     * dem Vorrat: Sie sperrt das Bauen im naechsten eigenen Zug. Erlaubt ist
-     * sie ueberhaupt nur, wenn die Sicht sie anbietet — die Pause rechnet das
-     * Modul —, aber lohnen muss sie sich doppelt.
+     * Nur neu rechnen, was die Wand beruehren KANN. Eine Flutfuellung
+     * prueft eine Kante nur, wenn sie eines ihrer beiden Felder schon
+     * erreicht hat; liegt keines davon in der Flut von vorher, laeuft sie
+     * mit der Wand Schritt fuer Schritt genauso und kommt aufs selbe
+     * Ergebnis. Fuer den Zugabstand gilt dasselbe: Hat keines der beiden
+     * Felder einen endlichen Abstand, hat die Suche die Kante nie angefasst.
+     * Das spart auf 12 x 11 (Extreme) den Grossteil der Arbeit — ohne die
+     * Abkuerzung brauchte ein Botzug dort bis zu 0,4 s.
      */
-    const schwelle = (sicht.mauernDiesenZug ?? 0) > 0 ? WAND_SCHWELLE_ZWEITE : WAND_SCHWELLE;
-    return beste !== null && besterWert >= schwelle ? beste : null;
+    const [a, c] = kandidat;
+    const beruehrt = (menge: ReadonlySet<number>): boolean => menge.has(a) || menge.has(c);
+    const meine = beruehrt(meineVorher.gesehen) ? freieVon(eigen, probe) : meineVorher;
+    const deine = beruehrt(deineVorher.gesehen) ? freieVon(seine, probe) : deineVorher;
+    const neuGeflutet = (start: readonly number[], fluten: typeof meineFluten) =>
+      fluten.map((flut, i) =>
+        beruehrt(flut.genommen) ? bewerteFuer(start, erlaubt[i]!, probe) : flut,
+      );
+    const wegNachher = (start: readonly number[], abstand: readonly number[], bisher: number) =>
+      abstand[a] !== Infinity || abstand[c] !== Infinity
+        ? reichweite(zugAbstand(start, probe))
+        : bisher;
+    const nachher = {
+      nurMeine: nurIn(meine.frei, deine.frei),
+      nurDeine: nurIn(deine.frei, meine.frei),
+      meinZug: besterZug(neuGeflutet(eigen, meineFluten)),
+      seinZug: besterZug(neuGeflutet(seine, seineFluten)),
+      meinWeg: wegNachher(eigen, meinAbstand, vorher.meinWeg),
+      seinWeg: wegNachher(seine, seinAbstand, vorher.seinWeg),
+    };
+    // Erreichbarkeit zaehlt ganz, der naechste Zug halb: Ein Feld, das der
+    // Gegner nie mehr bekommt, ist sicher; eines, das er in diesem Zug
+    // nicht bekommt, holt er sich vielleicht im naechsten.
+    const teile: WandTeile = {
+      gebiet: nachher.nurMeine - vorher.nurMeine + (vorher.nurDeine - nachher.nurDeine),
+      zuege: 0.5 * (vorher.seinZug - nachher.seinZug - (vorher.meinZug - nachher.meinZug)),
+      weg: WEG_GEWICHT * (vorher.seinWeg - nachher.seinWeg - (vorher.meinWeg - nachher.meinWeg)),
+      plaetze: platzWert(a, c, probe),
+    };
+    const wert = teile.gebiet + teile.zuege + teile.weg + teile.plaetze;
+    // Strikt groesser: Bei Gleichstand bleibt die erste Wand, damit der Bot
+    // aus derselben Sicht immer denselben Zug macht.
+    if (wert > besterWert) {
+      besterWert = wert;
+      beste = kandidat;
+      besteTeile = teile;
+    }
   }
+  /*
+   * Die zweite Mauer eines Zuges (Extreme) kostet mehr als eine Mauer aus
+   * dem Vorrat: Sie sperrt das Bauen im naechsten eigenen Zug. Erlaubt ist
+   * sie ueberhaupt nur, wenn die Sicht sie anbietet — die Pause rechnet das
+   * Modul —, aber lohnen muss sie sich doppelt.
+   */
+  const schwelle = (sicht.mauernDiesenZug ?? 0) > 0 ? WAND_SCHWELLE_ZWEITE : WAND_SCHWELLE;
+  return { beste, besterWert, teile: besteTeile, schwelle, anzahl: kandidaten.length };
 }
