@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 
 /**
  * Muenz-Code einloesen — nur auf der Webseite.
@@ -26,11 +27,11 @@ export function CodeEinloesen({ onEingeloest }: { onEingeloest?: () => void }): 
     setMeldung(null);
     try {
       const antwort = await api.codeEinloesen(code.trim());
-      setMeldung(`${antwort.muenzen.toLocaleString('de-DE')} Münzen gutgeschrieben.`);
+      setMeldung(tf('anmeldung.code.gutgeschrieben', { muenzen: antwort.muenzen.toLocaleString('de-DE') }));
       setCode('');
       onEingeloest?.();
     } catch (err) {
-      setFehler(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+      setFehler(err instanceof ApiError ? t(err.messageKey) : t('anmeldung.verbindungFehlgeschlagen'));
     } finally {
       setBusy(false);
     }
@@ -38,10 +39,10 @@ export function CodeEinloesen({ onEingeloest }: { onEingeloest?: () => void }): 
 
   return (
     <section className="hb-blk">
-      <h2 className="hb-ab">Code einlösen</h2>
+      <h2 className="hb-ab">{t('anmeldung.code.titel')}</h2>
       <form className="hb-formular" onSubmit={(e) => void einloesen(e)}>
         <label>
-          <span>Code</span>
+          <span>{t('anmeldung.code.feld')}</span>
           <input
             className="hb-feld"
             value={code}
@@ -56,7 +57,7 @@ export function CodeEinloesen({ onEingeloest }: { onEingeloest?: () => void }): 
         {fehler && <span className="hb-fehler">{fehler}</span>}
         {meldung && <p className="hb-klein hb-ohne-rand">{meldung}</p>}
         <button type="submit" className="hb-kn is-gold is-haupt is-breit" disabled={busy || !code.trim()}>
-          {busy ? 'Wird eingelöst…' : 'Einlösen'}
+          {busy ? t('anmeldung.code.laeuft') : t('anmeldung.code.einloesen')}
         </button>
       </form>
     </section>

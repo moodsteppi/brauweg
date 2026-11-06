@@ -1,0 +1,36 @@
+import type { Woerterbuch } from '../woerterbuch';
+
+/** Deutsche Texte, Bereich „hub-blattwahl": Blatt-, Rücken- und Tischwahl samt Vorschau, dazu das Gerüst des Hubs (`hubgeruest.`, GameSelect.tsx). */
+export default {
+  'hubgeruest.werkstattLaedt': 'Werkstatt wird geladen…',
+  'hubgeruest.lernpfadLaedt': 'Lernpfad wird geladen…',
+  'hubgeruest.laedtLabel': '{name} wird geladen',
+  'hubgeruest.laedt': '{name} wird geladen…',
+  'hubgeruest.bald.titel': 'Kommt bald!',
+  'hubgeruest.bald.label': 'Kommt bald: {name}',
+  'hubgeruest.bald.text': 'Daran bauen wir gerade: {name}.',
+  'hubgeruest.bald.ok': 'Alles klar',
+  'blattwahl.fehltMuenzen': 'Dafür fehlen dir Münzen.',
+  'blattwahl.kaufNichtGeklappt': 'Der Kauf hat nicht geklappt.',
+  'blattwahl.frage.titel': '„{name}“ kaufen?',
+  'blattwahl.frage.text': 'Kostet {preis} Münzen.',
+  'blattwahl.frage.ja': 'Für {preis} Münzen kaufen',
+  'blattwahl.frage.bestaetigen': '„{name}" für {preis} Münzen kaufen?',
+  // Kartenmanufaktur ist der Name des Spiels und bleibt stehen.
+  'blattwahl.manufaktur': 'In der Kartenmanufaktur erspielen',
+  'blattwahl.preis': '{preis} Münzen',
+  'blattwahl.aktiv': 'aktiv',
+  'blattwahl.gehoertDir': 'gehört dir',
+  'blattwahl.zurueck': 'Zurück zur Sammlung',
+  'blattwahl.untertitel': 'Blatt, Rückseite und Tisch · gilt auf allen Geräten',
+  'blattwahl.blatt': 'Kartenblatt',
+  'blattwahl.blatt.zusatz': 'Antippen zeigt den Tisch',
+  'blattwahl.alleGeraete': 'Gilt auf allen Geräten',
+  'blattwahl.ruecken': 'Rückseite',
+  'blattwahl.ruecken.zusatz': 'Was die anderen sehen',
+  'blattwahl.tisch': 'Tisch',
+  'blattwahl.tisch.zusatz': 'Nur du siehst ihn',
+  'blattwahl.soSiehtEsAus': 'So sieht dein {spiel}-Tisch aus',
+  'blattwahl.vorschau': 'Vorschau: {blatt} · {szene}',
+  'blattwahl.passt': 'Passt',
+} satisfies Woerterbuch;

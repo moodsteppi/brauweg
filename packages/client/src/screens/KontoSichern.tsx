@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 import { HbBlatt } from './HbBlatt';
 
 /**
@@ -48,40 +49,39 @@ export function KontoSichern({
         // der Versanddienst sie wirklich angenommen hat.
         setErledigt(
           antwort.mailVersandt
-            ? `Gesichert! Wir haben dir eine E-Mail an ${email} geschickt. Bestätige die Adresse, damit du dich später auch auf anderen Geräten anmelden kannst.`
+            ? tf('kontosichern.gesichertMail', { email })
             : antwort.bestaetigungNoetig
-              ? 'Gesichert! Die Bestätigungsmail konnte gerade nicht verschickt werden. Beim Anmelden kannst du einen neuen Link anfordern.'
-              : 'Gesichert! Du kannst dich ab jetzt mit Adresse und Passwort anmelden.',
+              ? t('kontosichern.gesichertOhneMail')
+              : t('kontosichern.gesichertFertig'),
         );
       })
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.'),
+        setError(err instanceof ApiError ? t(err.messageKey) : t('kontosichern.verbindungFehlgeschlagen')),
       )
       .finally(() => setBusy(false));
   };
 
   if (neu) {
     return (
-      <HbBlatt titel="Konto sichern" onClose={erledigt ? onGesichert : onClose}>
+      <HbBlatt titel={t('kontosichern.titel')} onClose={erledigt ? onGesichert : onClose}>
         {erledigt ? (
           <div className="hb-formular">
             <p className="hb-klein">{erledigt}</p>
             <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onGesichert}>
-              Weiter
+              {t('kontosichern.weiter')}
             </button>
           </div>
         ) : (
           <form className="hb-formular" onSubmit={sichern}>
             <p className="hb-klein">
-              Dein Spielstand bleibt, wie er ist. Mit Adresse und Passwort kommst du auch nach dem
-              Abmelden wieder an dieses Konto.
+              {t('kontosichern.hinweis')}
             </p>
             <label>
-              <span>E-Mail</span>
+              <span>{t('kontosichern.email')}</span>
               <input className="hb-feld" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </label>
             <label>
-              <span>Passwort</span>
+              <span>{t('kontosichern.passwort')}</span>
               <input
                 className="hb-feld"
                 type="password"
@@ -91,10 +91,10 @@ export function KontoSichern({
                 minLength={12}
                 required
               />
-              <small>Mindestens zwölf Zeichen.</small>
+              <small>{t('kontosichern.passwortMindestlaenge')}</small>
             </label>
             <label>
-              <span>Geburtstag</span>
+              <span>{t('kontosichern.geburtstag')}</span>
               <input
                 className="hb-feld"
                 type="date"
@@ -106,10 +106,10 @@ export function KontoSichern({
             </label>
             {error && <span className="hb-fehler">{error}</span>}
             <button type="submit" className="hb-kn is-gold is-haupt is-breit" disabled={busy}>
-              {busy ? 'Wird gesichert…' : 'Konto sichern'}
+              {busy ? t('kontosichern.laeuft') : t('kontosichern.titel')}
             </button>
             <button type="button" className="hb-leise-knopf" onClick={onClose}>
-              Später
+              {t('kontosichern.spaeter')}
             </button>
           </form>
         )}
@@ -120,28 +120,27 @@ export function KontoSichern({
   return (
     <div className="doko-sheet" onClick={erledigt ? onGesichert : onClose}>
       <div className="doko-sheet-card kontosichern" onClick={(event) => event.stopPropagation()}>
-        <h2>Konto sichern</h2>
+        <h2>{t('kontosichern.titel')}</h2>
         {erledigt ? (
           <>
             <p className="muted">{erledigt}</p>
             <div className="row">
               <button className="primary" type="button" onClick={onGesichert}>
-                Weiter
+                {t('kontosichern.weiter')}
               </button>
             </div>
           </>
         ) : (
           <form onSubmit={sichern}>
             <p className="muted">
-              Dein Spielstand bleibt, wie er ist. Mit Adresse und Passwort kommst du auch nach dem
-              Abmelden wieder an dieses Konto.
+              {t('kontosichern.hinweis')}
             </p>
             <label>
-              E-Mail
+              {t('kontosichern.email')}
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </label>
             <label>
-              Passwort
+              {t('kontosichern.passwort')}
               <input
                 type="password"
                 autoComplete="new-password"
@@ -150,10 +149,10 @@ export function KontoSichern({
                 minLength={12}
                 required
               />
-              <span className="muted">Mindestens zwölf Zeichen.</span>
+              <span className="muted">{t('kontosichern.passwortMindestlaenge')}</span>
             </label>
             <label>
-              Geburtstag
+              {t('kontosichern.geburtstag')}
               <input
                 type="date"
                 value={birthday}
@@ -165,10 +164,10 @@ export function KontoSichern({
             {error && <p className="error">{error}</p>}
             <div className="row">
               <button className="primary" type="submit" disabled={busy}>
-                Konto sichern
+                {t('kontosichern.titel')}
               </button>
               <button type="button" onClick={onClose}>
-                Später
+                {t('kontosichern.spaeter')}
               </button>
             </div>
           </form>
