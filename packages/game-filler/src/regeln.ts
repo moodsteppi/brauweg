@@ -130,9 +130,13 @@ export interface FillerRegeln {
    * Sicht nennt den Zuschlag daneben (`punkteZuschlagSitz1`), damit der
    * Bildschirm ihn zeigen KANN, statt ihn nachzurechnen.
    *
-   * Gleichstand nach dem Zuschlag bleibt ein Unentschieden. Die Vorgaengerin
-   * "Gleichstand zaehlt fuer Sitz 1" konnte nur die Remis umverteilen und
-   * reichte auf neuen Saaten nicht (MESSUNG-2026-11-07-ausgleich.md).
+   * Gleichstand nach dem Zuschlag bleibt ein Unentschieden. Mit +2 steht
+   * Klar bei 44,1 zu 42,4 (13,5 remis) statt 57,6 zu 29,4 (Saaten
+   * 1000..1999, n = 1000, je ±1,6; MESSUNG-2026-11-07-ausgleich.md,
+   * Abschnitt "Weg B"). Die Vorgaengerin "Gleichstand zaehlt fuer Sitz 1"
+   * konnte nur die Remis umverteilen und blieb bei 57,6 zu 42,4. Eine
+   * ungerade Zahl schafft die Remis ab, kippt aber: +1 wie der Gleichstand,
+   * +3 ergibt 44,1 zu 55,9 — die Brettdifferenz ist fast immer gerade.
    *
    * Fehlt die Zahl, ist sie 0 — so wurde jede Partie bis dahin gewertet.
    */
@@ -161,11 +165,18 @@ export interface SpielartAusgleich {
 }
 
 /**
- * Der gemessene Ausgleich je Spielart (Messung 07.11.2026, Bot gegen Bot):
- * Klar ohne Mauern bekommt den Gleichstand, Build eine Mauer, Extreme drei.
- * Mehr Mauern drehen den Vorteil in Build um (zwei: 42 zu 52), weniger
- * lassen ihn in Extreme stehen (eine: 57 zu 41,5). Der Nebel steht bewusst
- * nicht darin: Fuer ihn gibt es keine Messung.
+ * Der gemessene Ausgleich je Spielart (Weg B, Bot gegen Bot auf den Saaten
+ * 1000..1999, n = 1000, Standardfehler je ±1,6; MESSUNG-2026-11-07-ausgleich.md):
+ *
+ *   Klar     +2 Punkte  44,1 zu 42,4 (vorher 57,6 zu 29,4)
+ *   Build    +1 Mauer   47,2 zu 48,4 (vorher 51,9 zu 44,3)
+ *   Extreme  +2 Mauern  51,2 zu 47,9 (vorher 59,4 zu 39,5)
+ *
+ * Extreme +3 schoss auf denselben Saaten ueber (46,7 zu 52,6); die anderen
+ * Nachbarwerte (Build +2: 42 zu 52, Extreme +1: 57 zu 41,5) stammen von
+ * den 200 Saaten aus MESSUNG-2026-11-07-anzug.md. Nachrechnen mit
+ * werkzeug/ausgleich-messung.mjs. Der Nebel steht bewusst nicht darin: Fuer
+ * ihn gibt es keine Messung.
  */
 export const AUSGLEICH_JE_SPIELART = {
   klar: { punkteZuschlagSitz1: 2 },
@@ -464,15 +475,20 @@ type PflichtAufbau = Exclude<keyof SpielartAufbau, 'mauernJeFeld' | 'faireEcken'
 const MAUERN_JE_FELD_GRENZEN = [0, 4] as const;
 
 /**
- * Mauerzuschlag fuer Sitz 1. Gemessen sind 0 bis 3; fuenf laesst Luft fuer
- * einen Tisch, der mehr probiert. Mehr hat niemand durchgespielt, und schon
- * zwei drehen Build zum Nachzieher.
+ * Mauerzuschlag fuer Sitz 1. Gemessen sind 0 bis 3 (Extreme 2 und 3 auch auf
+ * den neuen Saaten 1000..1999); fuenf laesst Luft fuer einen Tisch, der mehr
+ * probiert. Mehr hat niemand durchgespielt, und schon drei drehen Extreme
+ * zum Nachzieher (46,7 zu 52,6), zwei Build (42 zu 52, alte 200 Saaten).
  */
 const ZUSCHLAG_GRENZEN = [0, 5] as const;
 
 /**
- * Punktzuschlag fuer Sitz 1, dieselben Grenzen wie beim Mauerzuschlag: Ein
- * Klar-Brett hat 56 Felder, fuenf Punkte sind schon ein Zehntel davon.
+ * Punktzuschlag fuer Sitz 1, dieselben Grenzen wie beim Mauerzuschlag. Aus
+ * den Punktdifferenzen von Klar (1000..1999) laesst sich jede Zahl ohne
+ * neue Partien nachrechnen; schon drei kippen Klar zum Nachzieher (44,1 zu
+ * 55,9), vier erst recht (32,1 zu 55,9). Fuenf laesst Luft fuer einen Tisch,
+ * der mehr probiert — mehr als ein Zehntel der 56 Felder waere kein
+ * Ausgleich mehr, sondern eine Vorgabe.
  */
 const PUNKTE_ZUSCHLAG_GRENZEN = [0, 5] as const;
 
