@@ -183,4 +183,10 @@ export default {
   'golf.spiel.abgewiesen': 'Stroke did not go through - resyncing …',
   'golf.spiel.fassungAlt.eins': 'This version does not know one of the holes in this match - please reload the page.',
   'golf.spiel.fassungAlt.mehr': 'This version does not know several holes in this match - please reload the page.',
+  'golf.ergebnis.titel': 'Results',
+  'golf.ergebnis.spieler': 'Player {n}',
+  'golf.ergebnis.bestaetigen': 'Confirming results …',
+  'golf.ergebnis.strittig':
+    'The devices came to different results - the match counts as disputed, everyone is in 1st place.',
+  'golf.ergebnis.zurueck': 'Back to the menu',
 } satisfies Woerterbuch;

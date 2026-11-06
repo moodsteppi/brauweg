@@ -188,4 +188,11 @@ export default {
   'golf.spiel.abgewiesen': 'Schlag kam nicht durch - wird abgeglichen …',
   'golf.spiel.fassungAlt.eins': 'Diese Fassung kennt eine Bahn der Partie nicht - bitte die Seite neu laden.',
   'golf.spiel.fassungAlt.mehr': 'Diese Fassung kennt mehrere Bahnen der Partie nicht - bitte die Seite neu laden.',
+  // Ergebnis (Abschluss in screens/Golf.tsx).
+  'golf.ergebnis.titel': 'Ergebnis',
+  'golf.ergebnis.spieler': 'Spieler {n}',
+  'golf.ergebnis.bestaetigen': 'Ergebnis wird bestätigt …',
+  'golf.ergebnis.strittig':
+    'Die Geräte sind auf verschiedene Ergebnisse gekommen - die Partie zählt als strittig, alle stehen auf Platz 1.',
+  'golf.ergebnis.zurueck': 'Zurück ins Menü',
 } satisfies Woerterbuch;

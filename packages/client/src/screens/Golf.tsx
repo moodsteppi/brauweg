@@ -1435,7 +1435,7 @@ function Partie({
 
   const name = (sitz: number): string => {
     const zeile = sitze.find((s) => s.seat === sitz);
-    return zeile?.displayName ?? (zeile?.isBot ? 'Bot' : `P${sitz + 1}`);
+    return zeile?.displayName ?? (zeile?.isBot ? t('golf.lobby.bot') : `P${sitz + 1}`);
   };
 
   return (
@@ -1764,7 +1764,7 @@ export function Abschluss({
   const ausgang = sicht?.ausgang ?? null;
   const name = (sitz: number): string => {
     const zeile = sitze.find((s) => s.seat === sitz);
-    return zeile?.displayName ?? (zeile?.isBot ? 'Bot' : `Spieler ${sitz + 1}`);
+    return zeile?.displayName ?? (zeile?.isBot ? t('golf.lobby.bot') : tf('golf.ergebnis.spieler', { n: zahl(sitz + 1) }));
   };
 
   const rangliste = (
@@ -1791,12 +1791,9 @@ export function Abschluss({
   );
   const bestaetigung =
     ausgang === null ? (
-      <p className="gf-untertitel gf-klein">Ergebnis wird bestätigt …</p>
+      <p className="gf-untertitel gf-klein">{t('golf.ergebnis.bestaetigen')}</p>
     ) : ausgang.strittig ? (
-      <p className="gf-fehler">
-        Die Geräte sind auf verschiedene Ergebnisse gekommen - die Partie
-        zählt als strittig, alle stehen auf Platz 1.
-      </p>
+      <p className="gf-fehler">{t('golf.ergebnis.strittig')}</p>
     ) : null;
   const replayKnoepfe =
     onReplay && daten.ergebnis.length > 0 ? (
@@ -1820,14 +1817,14 @@ export function Abschluss({
   return (
     <SpielRahmen
       gameId="golf"
-      titel="Ergebnis"
-      unter={`Golf · ${daten.ergebnis.length} ${daten.ergebnis.length === 1 ? 'Loch' : 'Löcher'}`}
+      titel={t('golf.ergebnis.titel')}
+      unter={`${t('game.golf')} · ${tn('golf.anzahl.loecher', daten.ergebnis.length, { n: zahl(daten.ergebnis.length) })}`}
       akzent={AKZENT}
       onBack={onZurueck}
-      zurueckText="Zurück ins Menü"
+      zurueckText={t('golf.ergebnis.zurueck')}
       fuss={
         <button className="hb-kn is-gold is-haupt is-breit" type="button" onClick={onZurueck}>
-          Zurück ins Menü
+          {t('golf.ergebnis.zurueck')}
         </button>
       }
     >
