@@ -204,9 +204,10 @@ const PROBE = new URLSearchParams(typeof window === 'undefined' ? '' : window.lo
 // Eigenstaendige Vorschau fuer Bilder und Abstimmzustaende, ohne echtes Konto.
 if (PROBE.has('abstimmung')) {
   const gewaehlt = new Set<string>(['schafkopf']);
-  const geplant = ['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10', 'drecksau'];
+  const geplant = ['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10'];
   api.games = async () => [
-    ...['doppelkopf', 'skat'].map(id => ({ id, nameKey: `game.${id}`, availability: 'playable' as const, seatCounts: [4], votes: 0, abstimmbar: false })),
+    // DreckBro steht seit dem 04.11.2026 unter den spielbaren statt unter den geplanten.
+    ...['doppelkopf', 'skat', 'dreckbro'].map(id => ({ id, nameKey: `game.${id}`, availability: 'playable' as const, seatCounts: [4], votes: 0, abstimmbar: false })),
     ...geplant.map((id, i) => ({ id, nameKey: `game.${id}`, availability: 'preview' as const, seatCounts: [2, 3, 4],
       votes: 32 - i * 3 + (gewaehlt.has(id) ? 1 : 0), meineStimme: gewaehlt.has(id), abstimmbar: true })),
     // Den Mehrkampf kuendigt der Server auf beiden Plattformen an (abstimmModiFuer).

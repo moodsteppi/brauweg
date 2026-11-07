@@ -42,7 +42,7 @@ import { conflict, forbidden, notFound } from '../errors.js';
 import { joinTable, tableWithSeats } from './service.js';
 
 /** Spiele, deren private Tische eine Zusage verlangen (siehe oben). */
-const MIT_ZUSAGE: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess']);
+const MIT_ZUSAGE: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess', 'dreckbro']);
 
 type Tisch = Awaited<ReturnType<typeof tableWithSeats>>;
 

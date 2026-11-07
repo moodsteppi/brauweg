@@ -166,6 +166,12 @@ export const BROCOOKED_MODULE_VERSION = 1;
  */
 export const BROCHESS_MODULE_VERSION = 2;
 
+/**
+ * 1 seit dem 4. November 2026 — die erste Fassung. Pinguine einsauen, die
+ * Zuege kommen vollstaendig als `legalActions`.
+ */
+export const DRECKBRO_MODULE_VERSION = 1;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
@@ -179,6 +185,7 @@ const MODULE_VERSIONS: Record<string, number> = {
   partykiste: PARTYKISTE_MODULE_VERSION,
   brocooked: BROCOOKED_MODULE_VERSION,
   brochess: BROCHESS_MODULE_VERSION,
+  dreckbro: DRECKBRO_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */

@@ -43,7 +43,7 @@ const KATEGORIEN: readonly Kategorie[] = [
     id: 'karten',
     titel: 'spielwahl.kategorie.karten',
     einzahl: 'spielwahl.einzahl.karten',
-    spiele: ['doppelkopf', 'skat', 'wizard', 'cambio', 'easypoker'],
+    spiele: ['doppelkopf', 'skat', 'dreckbro', 'wizard', 'cambio', 'easypoker'],
     icon: <path d="M4 7.5 13 5l3 13-9 2.5z M11 4.5l7-1.5 3 13-3 .7" />,
   },
   {
@@ -74,11 +74,11 @@ const KATEGORIEN: readonly Kategorie[] = [
  * übernommen): die Spiele, für die `spielwahl.zusatz.<id>` existiert.
  */
 const ZUSATZ: ReadonlySet<string> = new Set([
-  'feldherr', 'mememory', 'easypoker', 'filler', 'eiland', 'golf', 'brocooked', 'tafelrunde', 'partykiste', 'brochess',
+  'feldherr', 'mememory', 'easypoker', 'filler', 'eiland', 'golf', 'brocooked', 'tafelrunde', 'partykiste', 'brochess', 'dreckbro',
 ]);
 
 /** Spiele mit Kartenblatt und Tisch aus der Sammlung. */
-const BALD_BILDER = new Set(['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10', 'drecksau']);
+const BALD_BILDER = new Set(['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10']);
 const BESTEHENDE_BANNER = new Set(KATEGORIEN.flatMap(k => k.spiele));
 
 const MIT_THEMEN = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'easypoker']);

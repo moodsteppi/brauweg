@@ -1,0 +1,404 @@
+/*
+ * Aussehen von DreckBro (Brett.tsx, Bilder.tsx, screens/DreckBroTable.tsx).
+ *
+ * Eigenes Modul wie bei BroChess, damit die Klassennamen nirgends sonst
+ * greifen. Der Tisch traegt die Wurzel `.spe` (spiel-einstieg.css) und damit
+ * die Farben `--hb-*` aus hub-neu.css.
+ */
+
+.tisch {
+  --db-schlamm: #7a4a22;
+  --db-eis: #dff1ff;
+}
+
+.laedt {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kopf {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(var(--hb-oben, 0px) + 6px) 12px 6px;
+}
+
+.kopfTitel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kopfTitel h1 {
+  margin: 0;
+  font: 400 22px/1.1 var(--hb-anz);
+}
+
+.kopfTitel span {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* --- Das Brett ----------------------------------------------------------- */
+
+.brett {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 10px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.gegner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gegnerZeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 14px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+
+.dran {
+  border-color: var(--hb-gold);
+  box-shadow: 0 0 0 1px var(--hb-gold);
+}
+
+.gegnerKopf {
+  flex: 0 0 5.5rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.gegnerKopf strong {
+  font: 800 14px var(--hb-txt);
+  color: var(--hb-tinte);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gegnerKopf span {
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+.pinguine {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.pinguin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 0 0;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  cursor: default;
+}
+
+.pinguin svg {
+  width: 100%;
+  max-width: 3.4rem;
+  height: auto;
+}
+
+.pinguineGross .pinguin svg {
+  max-width: 6.2rem;
+}
+
+.pinguin:disabled {
+  opacity: 1;
+}
+
+.stufe {
+  font: 700 10px var(--hb-txt);
+  color: var(--hb-leise);
+  line-height: 1.1;
+}
+
+.pinguineGross .stufe {
+  font-size: 12px;
+}
+
+.voll .stufe {
+  color: var(--hb-gold);
+}
+
+.waehlbar {
+  cursor: pointer;
+  border-color: var(--hb-gold);
+  background: #f5c02e22;
+  animation: pulsieren 1.2s ease-in-out infinite;
+}
+
+.gewaehlt {
+  border-color: var(--hb-gruen);
+  background: #48d56b2a;
+}
+
+@keyframes pulsieren {
+  50% {
+    background: #f5c02e44;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waehlbar {
+    animation: none;
+  }
+}
+
+/* --- Mitte: Stapel, Ablage, letzter Zug ---------------------------------- */
+
+.mitteFeld {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px;
+}
+
+.stapel {
+  position: relative;
+  flex: none;
+}
+
+.ruecken {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.4rem;
+  height: 4.8rem;
+  border-radius: 8px;
+  background: linear-gradient(160deg, #2b66d9, #1b3f8f);
+  border: 2px solid #f3f5ff;
+  box-shadow: 3px 3px 0 #0e1a3d, 5px 5px 0 #f3f5ff55;
+}
+
+.ruecken svg {
+  width: 80%;
+}
+
+.stapel b {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  min-width: 22px;
+  padding: 1px 5px;
+  border-radius: 99px;
+  background: var(--hb-gold);
+  color: #0e1a3d;
+  font: 800 12px var(--hb-txt);
+  text-align: center;
+}
+
+.ablageLeer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.4rem;
+  height: 4.8rem;
+  border-radius: 8px;
+  border: 2px dashed var(--hb-kontur);
+  color: var(--hb-leise);
+  font: 700 10px var(--hb-txt);
+}
+
+.letzter {
+  flex: 1;
+  margin: 0;
+  font: 700 13px/1.3 var(--hb-txt);
+  color: var(--hb-tinte);
+}
+
+/* --- Eigene Pinguine und Hand ------------------------------------------- */
+
+.meine {
+  padding: 6px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff10, #ffffff05);
+  border: 1px solid var(--hb-kontur);
+}
+
+.hinweis {
+  margin: 0;
+  min-height: 1.2em;
+  text-align: center;
+  font: 800 14px var(--hb-txt);
+  color: var(--hb-gold);
+}
+
+.hand {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.handKarte {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.handKarte:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.handGewaehlt {
+  transform: translateY(-10px);
+}
+
+.handGewaehlt .karte {
+  outline: 3px solid var(--hb-gold);
+  outline-offset: 1px;
+}
+
+.handMatt .karte {
+  filter: grayscale(0.55) brightness(0.85);
+}
+
+.knoepfe {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+/* --- Karte --------------------------------------------------------------- */
+
+.karte {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fffaf0;
+  border: 2px solid #fff;
+  box-shadow: 0 3px 8px #0006;
+  color: #1d2747;
+  box-sizing: border-box;
+}
+
+.karteKlein {
+  flex: none;
+  width: 3.4rem;
+  border-radius: 8px;
+}
+
+.karteName {
+  padding: 4px 4px 3px;
+  font: 400 13px/1.05 var(--hb-anz);
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.karteKlein .karteName {
+  font-size: 8px;
+  padding: 3px 2px 2px;
+}
+
+.sorte_dreck .karteName {
+  background: var(--db-schlamm);
+}
+
+.sorte_angriff .karteName {
+  background: #2b66d9;
+}
+
+.sorte_schutz .karteName {
+  background: #4a8fb8;
+}
+
+.karteMotiv {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+
+.sorte_dreck .karteMotiv {
+  background: linear-gradient(180deg, #e7f3ff, #cfe6d0);
+}
+
+.sorte_angriff .karteMotiv,
+.sorte_schutz .karteMotiv {
+  background: linear-gradient(180deg, #e7f3ff, #f8fcff);
+}
+
+.karteMotiv svg {
+  width: 80%;
+  height: 100%;
+}
+
+.karteText {
+  padding: 3px 5px 6px;
+  font: 700 10px/1.2 var(--hb-txt);
+  text-align: center;
+  min-height: 3.6em;
+}
+
+/* --- Ergebnis ------------------------------------------------------------ */
+
+.ergebnis {
+  margin: 0 10px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--hb-karte);
+  border: 2px solid var(--hb-gold);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.ergebnis strong {
+  font: 400 22px var(--hb-anz);
+  color: var(--hb-gold);
+}
+
+.ergebnis span {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+.ergebnis ol {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font: 700 14px var(--hb-txt);
+}

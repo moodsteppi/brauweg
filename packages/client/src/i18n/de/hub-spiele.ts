@@ -32,6 +32,7 @@ export default {
   'spielwahl.zusatz.tafelrunde': 'Auto-Battler',
   'spielwahl.zusatz.partykiste': '15 Minispiele, ein Turnier',
   'spielwahl.zusatz.brochess': 'Schach',
+  'spielwahl.zusatz.dreckbro': 'Pinguine einsauen',
   'spielwahl.spieler': '{spanne} Spieler',
   'spielwahl.prosubway.bald': 'Allein · Münzen fürs Hub',
   'spielwahl.mehrkampf.unter': 'Runden aus mehreren Spielen',

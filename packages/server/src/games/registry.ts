@@ -21,6 +21,7 @@ import { brochess } from '@brauweg/game-brochess';
 import { brocooked } from '@brauweg/game-brocooked';
 import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
+import { dreckbro } from '@brauweg/game-dreckbro';
 import { easypoker } from '@brauweg/game-easypoker';
 import { eiland } from '@brauweg/game-eiland';
 import { feldherr } from '@brauweg/game-feldherr';
@@ -49,6 +50,7 @@ const MODULES: readonly AnyGameModule[] = [
   partykiste as unknown as AnyGameModule,
   brocooked as unknown as AnyGameModule,
   brochess as unknown as AnyGameModule,
+  dreckbro as unknown as AnyGameModule,
 ];
 
 /**
@@ -71,7 +73,8 @@ const PREVIEW: readonly GameMeta[] = (
     // (Plan M8) und deshalb erst nach der Beta spielbar, nicht nur Vorschau.
     ['werwolf', [5, 6, 7, 8, 9, 10]],
     ['phase10', [2, 3, 4, 5, 6]],
-    ['drecksau', [2, 3, 4, 5, 6]],
+    // `drecksau` stand hier bis zum 04.11.2026 — jetzt das Modul `dreckbro`
+    // (eigene Regeln, Pinguine statt Schweine).
   ] as const
 ).map(([id, seatCounts]) => ({
   id: id as GameId,
@@ -225,6 +228,11 @@ export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
      dasselbe anbieten (docs/release/ios-web-abgleich.md); fuer die Produktion
      bleibt UMFANG die Obergrenze. */
   brochess: { web: 'spielbar', app: 'spielbar' },
+  /* Seit dem 04.11.2026 im Code, auf beiden Plattformen spielbar: Der Auftrag
+     war ausdruecklich, es in der iOS-App zu haben. Loest die Vorschau
+     `drecksau` ab — fuer die Produktion bleibt UMFANG die Obergrenze, dort
+     muss `dreckbro` statt `drecksau` stehen. */
+  dreckbro: { web: 'spielbar', app: 'spielbar' },
   /* Vorschau-Spiel mit Moderationsbedarf (freier Text zwischen Sitzen, siehe
      PREVIEW) — in der App gar nicht erst ankuendigen. */
   werwolf: { web: 'bald', app: 'aus' },

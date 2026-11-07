@@ -498,9 +498,9 @@ test('ohne Profilbild bleiben die anderen Wege an /api/me offen — Konto loesch
 /** Genau die Zeile aus docs/APP-RELEASE.md — aendert sie sich dort, hier mit. */
 const RELEASE =
   'doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,' +
-  'schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau';
+  'schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,dreckbro';
 /** Die angekuendigten Titel der Zeile — alle mit Stimme unter „Kommt bald". */
-const RELEASE_BALD = ['backgammon', 'bauernskat', 'drecksau', 'maumau', 'mehrkampf', 'phase10', 'romme', 'schafkopf', 'schwimmen'];
+const RELEASE_BALD = ['backgammon', 'bauernskat', 'maumau', 'mehrkampf', 'phase10', 'romme', 'schafkopf', 'schwimmen'];
 
 test('die Release-Zeile kennt der Start ganz — keine Kennung wird als unbekannt gemeldet', () => {
   /*
@@ -515,7 +515,7 @@ test('die Release-Zeile kennt der Start ganz — keine Kennung wird als unbekann
   assert.match(umfangZeile(lies('skat,mau-mau').umfang, ['mau-mau']), /; UMFANG unbekannt: mau-mau$/);
 });
 
-test('mit der Release-Zeile: vier Spiele spielbar, neun Titel mit Stimme — auf Webseite und App', async (t) => {
+test('mit der Release-Zeile: fuenf Spiele spielbar, acht Titel mit Stimme — auf Webseite und App', async (t) => {
   const s = await setup(RELEASE);
   t.after(() => s.close());
 
@@ -524,7 +524,7 @@ test('mit der Release-Zeile: vier Spiele spielbar, neun Titel mit Stimme — auf
       id: string; availability: string; abstimmbar: boolean;
     }[];
     const spielbar = liste.filter((g) => g.availability === 'playable').map((g) => g.id).sort();
-    assert.deepEqual(spielbar, ['brochess', 'doppelkopf', 'filler', 'skat'], plattform);
+    assert.deepEqual(spielbar, ['brochess', 'doppelkopf', 'dreckbro', 'filler', 'skat'], plattform);
     const bald = liste.filter((g) => g.availability === 'preview');
     assert.deepEqual(bald.map((g) => g.id).sort(), RELEASE_BALD, plattform);
     for (const titel of bald) {
