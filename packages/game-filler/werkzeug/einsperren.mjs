@@ -3,12 +3,7 @@
  *
  *     npm run build --workspace @brauweg/game-api
  *     npm run build --workspace @brauweg/game-filler
- *     node packages/game-filler/werkzeug/einsperren.mjs [--klar 0] [--build 200] [--extreme 200] [--teil 1,2,3] [--start 0] [--faeden 15] [--dist <ordner>]
- *
- * `--dist` zeigt auf ein anderes `dist/src` (etwa eine Kopie des Bots vor
- * einem Umbau), damit vorher und nachher mit DEMSELBEN Skript gemessen
- * werden. `--klar` (seit dem 07.11.2026): Klar hat keine Mauern, eingesperrt
- * wird dort nur durch Farbzuege — fuer die Farbwahl des Bots die Gegenprobe.
+ *     node packages/game-filler/werkzeug/einsperren.mjs [--build 200] [--extreme 200] [--teil 1,2,3] [--start 0] [--faeden 15]
  *
  * Anlass (Niklas, 06.11.2026): Der Bot mit Wegterm sperrt den Gegner in
  * 66,5 % (Extreme) bzw. 54 % (Build) der Partien ein — Mauern verengen den
@@ -60,13 +55,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 
 const hier = dirname(fileURLToPath(import.meta.url));
+const dist = resolve(hier, '..', 'dist', 'src');
 const argv = process.argv.slice(2);
 const schalter = (name, vorgabe) => {
   const i = argv.indexOf(`--${name}`);
   if (i < 0) return vorgabe;
   return typeof vorgabe === 'number' ? Number(argv[i + 1]) : argv[i + 1];
 };
-const dist = resolve(schalter('dist', resolve(hier, '..', 'dist', 'src')));
 
 /** Dieselbe Saatfolge wie simulation.mjs und bot-duell.mjs. */
 function saatHex(i) {
@@ -85,7 +80,7 @@ if (isMainThread) {
     console.error('dist fehlt. Erst bauen:\n  npm run build --workspace @brauweg/game-api\n  npm run build --workspace @brauweg/game-filler');
     process.exit(2);
   }
-  const anzahl = { klar: schalter('klar', 0), build: schalter('build', 200), extreme: schalter('extreme', 200) };
+  const anzahl = { build: schalter('build', 200), extreme: schalter('extreme', 200) };
   const teile = String(schalter('teil', '1,2,3')).split(',').map(Number);
   const start = schalter('start', 0);
   const faeden = schalter('faeden', Math.max(1, os.cpus().length - 1));
@@ -132,22 +127,15 @@ if (isMainThread) {
   const anteil = (z, n) => `${z}/${n} (${pct(z, n)})`;
   const sek = (ms) => `${(ms / 1000).toFixed(0)} s`;
 
-  /** Anteil mit Standardfehler sqrt(p(1-p)/n), in Prozentpunkten. */
-  const pctSe = (z, n) => {
-    if (n === 0) return '–';
-    const q = z / n;
-    return `${(100 * q).toFixed(1)} ± ${(100 * Math.sqrt((q * (1 - q)) / n)).toFixed(1)} %`;
-  };
-
-  console.log(`# Einsperren — ${dist}, Saaten ${start} bis ${start + Math.max(...Object.values(anzahl)) - 1}, ${faeden} Faeden, Wanduhr ${wand.toFixed(0)} s\n`);
+  console.log(`# Einsperren — Saaten ${start} bis ${start + Math.max(...Object.values(anzahl)) - 1}, ${faeden} Faeden, Wanduhr ${wand.toFixed(0)} s\n`);
 
   // Bot-Punkte je Sitz aus Teil 1 — die Vergleichsgroesse fuer "was kostet die Vorsicht".
   const grund = {};
 
   if (teile.includes(1)) {
     console.log('## 1. Bot gegen Bot: wer wird eingesperrt\n');
-    console.log('| Spielart | Partien | eingesperrt | davon Sitz 0 / Sitz 1 | Sieg S0 / S1 / remis (alle) | mit Einsperren: Sieg S0 / S1 | ohne Einsperren: Sieg S0 / S1 / remis | Punkte S0 / S1 | Mauern je Partie | ms je Botzug (Mittel / max) | Rechenzeit |');
-    console.log('|---|---|---|---|---|---|---|---|---|---|---|');
+    console.log('| Spielart | Partien | eingesperrt | davon Sitz 0 / Sitz 1 | Sieg S0 / S1 / remis (alle) | mit Einsperren: Sieg S0 / S1 | ohne Einsperren: Sieg S0 / S1 / remis | Punkte S0 / S1 | Rechenzeit |');
+    console.log('|---|---|---|---|---|---|---|---|---|');
     for (const variante of Object.keys(anzahl)) {
       const ps = ergebnisse.filter((r) => r.teil === 1 && r.variante === variante).flatMap((r) => r.partien);
       if (ps.length === 0) continue;
@@ -158,16 +146,14 @@ if (isMainThread) {
       const pkt = (s) => ps.reduce((a, p) => a + p.punkte[s], 0) / n;
       grund[variante] = { p0: pkt(0), p1: pkt(1), s0: sieg(ps, 0) / n, s1: sieg(ps, 1) / n };
       console.log(
-        `| ${variante} | ${n} | ${pctSe(mit.length, n)} | ${mit.filter((p) => p.eingesperrt === 0).length} / ${mit.filter((p) => p.eingesperrt === 1).length}` +
+        `| ${variante} | ${n} | ${pct(mit.length, n)} | ${mit.filter((p) => p.eingesperrt === 0).length} / ${mit.filter((p) => p.eingesperrt === 1).length}` +
           ` | ${pct(sieg(ps, 0), n)} / ${pct(sieg(ps, 1), n)} / ${pct(sieg(ps, null), n)}` +
           ` | ${pct(sieg(mit, 0), mit.length)} / ${pct(sieg(mit, 1), mit.length)}` +
           ` | ${pct(sieg(ohne, 0), ohne.length)} / ${pct(sieg(ohne, 1), ohne.length)} / ${pct(sieg(ohne, null), ohne.length)}` +
-          ` | ${pkt(0).toFixed(1)} / ${pkt(1).toFixed(1)} | ${(ps.reduce((a, p) => a + p.mauern, 0) / n).toFixed(2)}` +
-          ` | ${(ps.reduce((a, p) => a + p.botMs, 0) / Math.max(1, ps.reduce((a, p) => a + p.botZuege, 0))).toFixed(1)} / ${Math.max(...ps.map((p) => p.botMax)).toFixed(0)}` +
-          ` | ${sek(ps.reduce((a, p) => a + p.ms, 0))} |`,
+          ` | ${pkt(0).toFixed(1)} / ${pkt(1).toFixed(1)} | ${sek(ps.reduce((a, p) => a + p.ms, 0))} |`,
       );
       const eingesperrteGewinnen = mit.filter((p) => p.sieger === p.eingesperrt).length;
-      console.log(`|  | davon gewinnt der Eingesperrte | ${eingesperrteGewinnen} von ${mit.length} |  |  |  |  |  |  |  |  |`);
+      console.log(`|  | davon gewinnt der Eingesperrte | ${eingesperrteGewinnen} von ${mit.length} |  |  |  |  |  |  |`);
     }
     console.log('');
   }
@@ -313,28 +299,12 @@ if (isMainThread) {
   /** Wendet eine Folge von Aktionen (Mauern, dann Farbe) fuer s an. */
   const spieleFolge = (p, s, folge) => folge.reduce((t, z) => fuehreAus(t, s, z), p);
 
-  /**
-   * Zeit in `botZug` (je Aufruf, also je Mauer und je Farbe einzeln) — die
-   * Groesse, an der die Zugzeit am Tisch haengt. Die Sicht zu bauen zaehlt
-   * nicht mit, das tut der Server ohnehin.
-   */
-  const uhr = { ms: 0, zuege: 0, max: 0 };
-  const gemessen = (sicht) => {
-    const t0 = performance.now();
-    const z = botZug(sicht);
-    const d = performance.now() - t0;
-    uhr.ms += d;
-    uhr.zuege++;
-    if (d > uhr.max) uhr.max = d;
-    return z;
-  };
-
   /** Der ganze Zug des Bots: Mauern, wie botZug sie nacheinander will, dann die Farbe. */
   function botFolge(p, s) {
     const folge = [];
     let t = p;
     for (;;) {
-      const z = gemessen(S.sichtFuer(t, s));
+      const z = botZug(S.sichtFuer(t, s));
       folge.push(z);
       if (z.typ !== 'barriere') return folge;
       t = fuehreAus(t, s, z);
@@ -418,10 +388,6 @@ if (isMainThread) {
     let trennung = null;
     let eingesperrt = null;
     let durchMauer = false;
-    let mauern = 0;
-    uhr.ms = 0;
-    uhr.zuege = 0;
-    uhr.max = 0;
     let zuege = 0;
     while (!p.fertig) {
       if (++zuege > 400) throw new Error(`${variante}:${i} endet nicht`);
@@ -429,7 +395,6 @@ if (isMainThread) {
       const folge = vorsichtig[s] ? vorsichtigeFolge(p, s, zaehler) : botFolge(p, s);
       for (const z of folge) {
         p = fuehreAus(p, s, z);
-        if (z.typ === 'barriere') mauern++;
         // Wie simulation.mjs: nach jeder Aktion, das erste Mal zaehlt.
         if (trennung === null && p.besitzer.some((b) => b === null)) {
           const g = getrennt(p);
@@ -449,10 +414,6 @@ if (isMainThread) {
       punkte: [p.punkte[0], p.punkte[1]],
       eingesperrt,
       durchMauer,
-      mauern,
-      botMs: uhr.ms,
-      botZuege: uhr.zuege,
-      botMax: uhr.max,
       falle: eingesperrt !== null && vorsichtig[eingesperrt] ? falleNach(protokoll, eingesperrt, trennZug) : null,
       ...zahlen,
       ms: performance.now() - beginn,
