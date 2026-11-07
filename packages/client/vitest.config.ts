@@ -43,6 +43,7 @@ const pakete = [
   'brocooked',
   'cambio',
   'doppelkopf',
+  'dreckbro',
   'easypoker',
   'eiland',
   'feldherr',

@@ -25,7 +25,7 @@
  * laufen nebenher; ein Fehler landet im Log, nie beim Spieler am Tisch.
  */
 
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
@@ -35,6 +35,7 @@ import { type Anlass, ZUGSPIELE } from './kennungen.js';
 import type { Mitteilung } from './sender.js';
 import { mitteilungstext } from './texte.js';
 import type { PushVersand } from './versand.js';
+import { type Sprache, textSprache } from '../sprache.js';
 
 export { ANLAESSE, type Anlass, ZUGSPIELE, istAnlass } from './kennungen.js';
 
@@ -262,23 +263,39 @@ export class PushAnlaesse {
     const geraete = await geraeteFuer(this.db, empfaenger, anlass);
     if (geraete.length === 0) return;
 
-    const { titel, text } = mitteilungstext(anlass, { gameId, name });
-    const mitteilung: Mitteilung = {
-      titel,
-      text,
-      // Ohne Tisch keine Tischkennung — die Huelle springt nur mit beiden Feldern an einen Tisch.
-      daten: tableId ? { anlass, tableId, gameId } : { anlass, gameId },
-      sammelKennung: tableId ? `tisch-${tableId}` : anlass,
+    // Je Empfaenger in SEINER Sprache: An einem Tisch sitzen Deutsch und
+    // Englisch nebeneinander, und dieselbe Mitteilung geht an beide.
+    const sprachen = await this.sprachenDer([...new Set(geraete.map((g) => g.accountId))]);
+    const mitteilungIn = (sprache: Sprache): Mitteilung => {
+      const { titel, text } = mitteilungstext(anlass, { gameId, name }, sprache);
+      return {
+        titel,
+        text,
+        // Ohne Tisch keine Tischkennung — die Huelle springt nur mit beiden Feldern an einen Tisch.
+        daten: tableId ? { anlass, tableId, gameId } : { anlass, gameId },
+        sammelKennung: tableId ? `tisch-${tableId}` : anlass,
+      };
     };
 
     const tot: string[] = [];
     await Promise.all(
       geraete.map(async (geraet) => {
+        const mitteilung = mitteilungIn(textSprache(sprachen.get(geraet.accountId)));
         const ergebnis = await this.versand[geraet.plattform].senden(geraet.token, mitteilung);
         if (ergebnis === 'ungueltig') tot.push(geraet.token);
       }),
     );
     await deaktiviereGeraete(this.db, tot);
+  }
+
+  /** Gespeicherte Sprachwahl je Konto (`account.sprache`, NULL = automatisch). */
+  private async sprachenDer(konten: readonly string[]): Promise<Map<string, string | null>> {
+    if (konten.length === 0) return new Map();
+    const zeilen = await this.db
+      .select({ id: s.account.id, sprache: s.account.sprache })
+      .from(s.account)
+      .where(inArray(s.account.id, [...konten]));
+    return new Map(zeilen.map((z) => [z.id, z.sprache]));
   }
 
   /** Alte Drossel-Eintraege weg, damit die Tabelle nicht mit jedem Tisch waechst. */

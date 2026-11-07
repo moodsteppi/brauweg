@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { t } from '../i18n';
 import { EMOTES, emoteBild, emoteMit } from '../emotes';
 
 /**
@@ -66,7 +67,7 @@ export function EmoteLeiste({
       <button
         className="tisch-emote-knopf"
         onClick={() => setOffen((o) => !o)}
-        aria-label="Zuruf"
+        aria-label={t('tisch.zuruf')}
         aria-expanded={offen}
         type="button"
       >
@@ -76,7 +77,7 @@ export function EmoteLeiste({
       {offen && (
         <div className="tisch-emote-wahl" onClick={() => setOffen(false)}>
           <div className="tisch-emote-blatt" onClick={(e) => e.stopPropagation()}>
-            <h3>Zuruf</h3>
+            <h3>{t('tisch.zuruf')}</h3>
             <div className="tisch-emote-raster">
               {EMOTES.map((e) => {
                 const mein = besessen.has(e.id);
@@ -102,9 +103,7 @@ export function EmoteLeiste({
                 );
               })}
             </div>
-            <p className="muted tisch-emote-hinweis">
-              Gesperrte Zurufe gibt es im Shop.
-            </p>
+            <p className="muted tisch-emote-hinweis">{t('tisch.zuruf.gesperrt')}</p>
           </div>
         </div>
       )}

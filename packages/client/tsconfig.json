@@ -49,6 +49,7 @@
       "@brauweg/game-brocooked": ["../game-brocooked/src/index.ts"],
       "@brauweg/game-cambio": ["../game-cambio/src/index.ts"],
       "@brauweg/game-doppelkopf": ["../game-doppelkopf/src/index.ts"],
+      "@brauweg/game-dreckbro": ["../game-dreckbro/src/index.ts"],
       "@brauweg/game-easypoker": ["../game-easypoker/src/index.ts"],
       "@brauweg/game-eiland": ["../game-eiland/src/index.ts"],
       "@brauweg/game-feldherr": ["../game-feldherr/src/index.ts"],

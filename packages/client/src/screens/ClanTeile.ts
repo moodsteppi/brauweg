@@ -8,8 +8,6 @@
 
 import { createElement, type ReactNode } from 'react';
 
-import { t } from '../i18n';
-import { tf } from '../i18n/einsetzen';
 import { serverAdresse } from '../laufzeit';
 
 /** Laenge einer Chatnachricht. Muss zum Server passen (`chat.ts`). */
@@ -34,18 +32,6 @@ function zahlAus(text: string): number {
   let summe = 0;
   for (let i = 0; i < text.length; i++) summe = (summe + text.charCodeAt(i)) % 997;
   return summe;
-}
-
-/** Verbleibende Zeit als kurzer Satz: „noch 12 Std“, „noch 40 Min“. */
-export function restzeit(endsAt: string | null): string {
-  if (!endsAt) return '';
-  const ms = new Date(endsAt).getTime() - Date.now();
-  if (ms <= 0) return t('clan.rest.vorbei');
-  const minuten = Math.floor(ms / 60_000);
-  if (minuten < 60) return tf('clan.rest.min', { n: minuten });
-  const stunden = Math.floor(minuten / 60);
-  if (stunden < 24) return tf('clan.rest.std', { n: stunden });
-  return tf('clan.rest.tage', { tage: Math.floor(stunden / 24), std: stunden % 24 });
 }
 
 /**

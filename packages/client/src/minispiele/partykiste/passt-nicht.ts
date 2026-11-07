@@ -7,14 +7,17 @@
  * (vertrag/partykiste-passtnicht.test.ts) haelt beide deckungsgleich.
  */
 
-export const PASST_NICHT_GRUENDE = [
-  { wert: 'sinnlos', text: 'ergibt keinen Sinn' },
-  { wert: 'zu-zahm', text: 'zu zahm für die Stufe' },
-  { wert: 'zu-hart', text: 'zu hart für die Stufe' },
-  { wert: 'unbekannt', text: 'kennt keiner' },
-  { wert: 'falsch', text: 'falsch' },
-  { wert: 'sonstiges', text: 'sonstiges' },
-] as const;
+import { tz } from './text';
+
+export const PASST_NICHT_GRUENDE = (['sinnlos', 'zu-zahm', 'zu-hart', 'unbekannt', 'falsch', 'sonstiges'] as const).map(
+  (wert) => ({
+    wert,
+    /* Getter: Der Text wird beim Zeichnen in der aktiven Sprache nachgeschlagen. */
+    get text(): string {
+      return tz(`passtNicht.grund.${wert}`);
+    },
+  }),
+);
 
 export type PasstNichtGrund = (typeof PASST_NICHT_GRUENDE)[number]['wert'];
 

@@ -30,6 +30,7 @@ export default {
   'spielwahl.zusatz.tafelrunde': 'Auto battler',
   'spielwahl.zusatz.partykiste': '15 minigames, one tournament',
   'spielwahl.zusatz.brochess': 'Chess',
+  'spielwahl.zusatz.dreckbro': 'Muddy penguins',
   'spielwahl.spieler': '{spanne} players',
   'spielwahl.prosubway.bald': 'Solo · coins for the hub',
   'spielwahl.mehrkampf.unter': 'Rounds from several games',

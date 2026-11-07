@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type Me, type Shop, type RegalWare } from '../api';
 import { decksFor, RUECKEN } from '../decks';
 import { SZENEN } from '../szenen';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { tf } from '../i18n/einsetzen';
 import { FIGURENSAETZE } from '../minispiele/brochess/figurensatz';
 import { Pinguin } from '../pinguin';
@@ -37,7 +37,7 @@ export function SammlungNeu({ me, onThemeChange, onSchrank, onShop, spiel = 'dop
   const kachel = (gameId: string, w: RegalWare, aktiv: boolean, auswaehlen: () => void) => <button key={w.id} type="button" className={`sam-design${aktiv ? ' ist-aktiv' : ''}${w.besessen ? '' : ' ist-zu'}`}
     aria-pressed={aktiv} onClick={() => w.besessen ? auswaehlen() : imShop(gameId, w)}>
     <MarktBild artikel={{ id: w.id, art: w.art, wert: w.wert }} /><strong>{marktName(w)}</strong>
-    <small>{aktiv ? t('sammlung.ausgewaehlt') : w.besessen ? t('sammlung.auswaehlen') : w.nurErspielt ? t('sammlung.erspielen') : tf('sammlung.gesperrt', { preis: w.preis.coins.toLocaleString('de-DE') })}</small>
+    <small>{aktiv ? t('sammlung.ausgewaehlt') : w.besessen ? t('sammlung.auswaehlen') : w.nurErspielt ? t('sammlung.erspielen') : tf('sammlung.gesperrt', { preis: zahl(w.preis.coins) })}</small>
   </button>;
   const gewechselt = (id: string) => { setFilter(id); onSpiel?.(id); };
   return <div className="hb-spiele sammlung-neu">

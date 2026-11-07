@@ -16,6 +16,7 @@
     "@brauweg/flyingbro-kern": "*",
     "@brauweg/game-api": "*",
     "@brauweg/game-brochess": "*",
+    "@brauweg/game-dreckbro": "*",
     "@brauweg/game-brocooked": "*",
     "@brauweg/game-cambio": "*",
     "@brauweg/game-doppelkopf": "*",

@@ -22,7 +22,13 @@
 
 import type { FillerPartie } from './partie.js';
 import { mauerSperre, moeglicheBarrieren, nachbarn, sieger } from './partie.js';
-import { type FillerVariante, liegtOffen, mauernJeZug, mitBarrieren } from './regeln.js';
+import {
+  type FillerVariante,
+  liegtOffen,
+  mauernJeZug,
+  mitBarrieren,
+  punkteZuschlagSitz1,
+} from './regeln.js';
 
 export interface FillerSicht {
   /**
@@ -56,6 +62,15 @@ export interface FillerSicht {
   /** Gebietsfarbe je Sitz. Oeffentlich, siehe oben. */
   readonly farbe: Readonly<Record<number, number>>;
   readonly punkte: Readonly<Record<number, number>>;
+  /**
+   * So viele Punkte bekommt Sitz 1 (der Nachziehende) in der Wertung dazu —
+   * 0, wo der Regelsatz keinen Zuschlag kennt (seit dem 07.11.2026, Klar:
+   * 2). `punkte` bleibt das Brett; wer gewonnen hat, steht schon in
+   * `sieger`. Die Zahl steht trotzdem hier, damit der Bildschirm einen Stand
+   * wie 28 : 28 erklaeren KANN ("Verloren" bei Gleichstand auf dem Brett),
+   * ohne den Zuschlag aus dem Regelsatz nachzurechnen.
+   */
+  readonly punkteZuschlagSitz1: number;
   readonly dran: number;
   readonly zug: number;
   readonly fertig: boolean;
@@ -110,6 +125,16 @@ export interface FillerSicht {
    */
   readonly mauernDiesenZug: number;
   /**
+   * Wie viele Mauern ein Feld hoechstens tragen darf, der Spielfeldrand
+   * zaehlt mit (Regelsatz `mauernJeFeld`, Extreme seit dem 06.11.2026) — 0,
+   * wo es keine Grenze gibt. Aus dem Regelsatz des TISCHES wie `mauernJeZug`.
+   *
+   * Der Bot braucht die Zahl, um abzuwaegen, ob eine Mauer dem Gegner die
+   * Plaetze nimmt, an denen er IHN spaeter versperren koennte (bot.ts). Welche
+   * Kanten erlaubt sind, rechnet trotzdem nur das Modul (`barrierenMoeglich`).
+   */
+  readonly mauernJeFeld: number;
+  /**
    * Sitze, die in ihrem naechsten (oder gerade laufenden) Zug keine Mauer
    * setzen duerfen, weil sie im Zug davor die volle Zahl gebaut haben.
    * Oeffentlich: Man sieht dem Gegner an, dass er gerade nicht bauen kann,
@@ -161,6 +186,7 @@ function grundsicht(
     grau: partie.grau,
     farbe: partie.farbe,
     punkte: partie.punkte,
+    punkteZuschlagSitz1: punkteZuschlagSitz1(partie.regeln),
     dran: partie.dran,
     zug: partie.zug,
     fertig: partie.fertig,
@@ -176,6 +202,7 @@ function grundsicht(
     mauerSperre: mitBarrieren(partie.regeln.variante) ? mauerSperre(partie) : 0,
     mauernJeZug: mitBarrieren(partie.regeln.variante) ? mauernJeZug(partie.regeln) : 0,
     mauernDiesenZug: partie.mauernDiesenZug,
+    mauernJeFeld: mitBarrieren(partie.regeln.variante) ? (partie.regeln.mauernJeFeld ?? 0) : 0,
     mauerPause: partie.mauerPause,
     aufgegeben: partie.aufgegeben,
   };

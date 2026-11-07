@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, ApiError, type TableRow } from '../api';
-import { cardName, isRed, rankLabel, suitSymbol } from '../i18n';
+import { cardName, isRed, rankLabel, suitSymbol, t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 import type {
   Aktionsart,
   EasyPokerSicht,
@@ -75,11 +76,23 @@ type PokerRegeln = { startJetons: number; kleinerBlind: number; grosserBlind: nu
  * Drei fertige Einsaetze. Feiner drehen geht im Blatt darunter — Buy-in
  * und Blinds gehoeren an den Tisch, nicht fest ins Spiel.
  */
-const EINSATZ_VORGABEN: readonly { name: string; regelsatz: PokerRegeln }[] = [
-  { name: 'Locker', regelsatz: { startJetons: 200, kleinerBlind: 2, grosserBlind: 4 } },
-  { name: 'Abend', regelsatz: { startJetons: 500, kleinerBlind: 5, grosserBlind: 10 } },
-  { name: 'Hoch', regelsatz: { startJetons: 2_000, kleinerBlind: 20, grosserBlind: 40 } },
+const EINSATZ_VORGABEN: readonly { id: string; regelsatz: PokerRegeln }[] = [
+  { id: 'locker', regelsatz: { startJetons: 200, kleinerBlind: 2, grosserBlind: 4 } },
+  { id: 'abend', regelsatz: { startJetons: 500, kleinerBlind: 5, grosserBlind: 10 } },
+  { id: 'hoch', regelsatz: { startJetons: 2_000, kleinerBlind: 20, grosserBlind: 40 } },
 ];
+
+/**
+ * Die Vorgaben als Auswahl. Gewählt wird über die feste `id`, angezeigt der
+ * übersetzte Name — sonst hinge die Auswahl am Wortlaut der Sprache.
+ */
+function vorgabeWerte(): { wert: string; text: string; unter: string }[] {
+  return EINSATZ_VORGABEN.map((v) => ({
+    wert: v.id,
+    text: t(`poker.vorgabe.${v.id}`),
+    unter: tf('poker.einsatz.kurz', { einsatz: v.regelsatz.startJetons, blinds: blindsText(v.regelsatz) }),
+  }));
+}
 
 const BUY_IN_STUFEN = [200, 500, 1_000, 2_000, 5_000] as const;
 const SB_STUFEN = [1, 2, 5, 10, 25, 50, 100] as const;
@@ -121,7 +134,7 @@ function vorgabeFuer(r: PokerRegeln): (typeof EINSATZ_VORGABEN)[number] | undefi
 
 function pokerFehler(err: unknown, fallback: string): string {
   if (err instanceof ApiError && err.code === 'broJetonsInsufficient') {
-    return 'Dafür fehlen dir BroJetons. Im Shop gibt es welche gegen Münzen.';
+    return t('poker.fehler.jetons');
   }
   return fallback;
 }
@@ -142,31 +155,26 @@ function haendeFuer(sitze: number): number {
  * hier mitverschieben — deshalb steht die Herkunft in dieser Zeile und nicht
  * nur im Modul.
  */
-const KOMBINATION: Record<number, string> = {
-  1: 'Höchste Karte',
-  2: 'Ein Paar',
-  3: 'Zwei Paare',
-  4: 'Drilling',
-  5: 'Straße',
-  6: 'Flush',
-  7: 'Full House',
-  8: 'Vierling',
-  9: 'Straight Flush',
-};
+function kombination(kategorie: number): string {
+  return kategorie >= 1 && kategorie <= 9 ? t(`poker.kombi.${kategorie}`) : '';
+}
 
-/** Deutsche Beschriftung der Züge — für die Sprechblase des Gegners. */
+/**
+ * Beschriftung der Züge — für die Sprechblase des Gegners. Schlüssel statt
+ * fertiger Texte, damit die Sprache beim Zeichnen gilt und nicht beim Laden.
+ */
 const AKTIONSWORT: Record<Aktionsart, string> = {
-  passen: 'Fold',
-  schieben: 'Check',
-  mitgehen: 'Call',
-  setzen: 'Bet',
+  passen: 'poker.zug.fold',
+  schieben: 'poker.zug.check',
+  mitgehen: 'poker.zug.call',
+  setzen: 'poker.zug.bet',
 };
 
 const STRASSENWORT: Record<EasyPokerSicht['strasse'], string> = {
-  preflop: 'Vor dem Flop',
-  flop: 'Flop',
-  turn: 'Turn',
-  river: 'River',
+  preflop: 'poker.strasse.preflop',
+  flop: 'poker.strasse.flop',
+  turn: 'poker.strasse.turn',
+  river: 'poker.strasse.river',
 };
 
 type GegnerOrt = 'oben' | 'links' | 'rechts' | 'oben-links' | 'oben-rechts';
@@ -450,49 +458,39 @@ function Einsatzblatt({
     </SpielAbschnitt>
   );
   return (
-    <HbBlatt titel="Einsatz einstellen" onClose={onClose}>
-      <p className="hb-klein">
-        Wer den Tisch aufmacht, setzt den Mindest-Einsatz und die Blinds. Die anderen bringen
-        denselben Stapel mit.
-      </p>
-      <SpielAbschnitt titel="Vorgabe">
+    <HbBlatt titel={t('poker.einsatz.titel')} onClose={onClose}>
+      <p className="hb-klein">{t('poker.einsatz.erklaerung')}</p>
+      <SpielAbschnitt titel={t('poker.einsatz.vorgabe')}>
         <SpielWahl
-          name="Einsatzvorgabe"
-          werte={EINSATZ_VORGABEN.map((v) => ({
-            wert: v.name,
-            text: v.name,
-            unter: `${v.regelsatz.startJetons} · ${blindsText(v.regelsatz)}`,
-          }))}
-          wert={vorgabe?.name ?? ''}
-          onWahl={(name) => {
-            const v = EINSATZ_VORGABEN.find((x) => x.name === name);
+          name={t('poker.einsatz.vorgabeName')}
+          werte={vorgabeWerte()}
+          wert={vorgabe?.id ?? ''}
+          onWahl={(id) => {
+            const v = EINSATZ_VORGABEN.find((x) => x.id === id);
             if (v) onChange(v.regelsatz);
           }}
         />
       </SpielAbschnitt>
       {chipreihe(
-        'Mindest-Einsatz',
+        t('poker.einsatz.mindest'),
         BUY_IN_STUFEN,
         (zahl) => regelsatz.startJetons === zahl,
         (zahl) => onChange({ startJetons: zahl, ...blindsZuBuyIn(zahl) }),
       )}
       {chipreihe(
-        'Kleiner Blind',
+        t('poker.einsatz.kleinerBlind'),
         SB_STUFEN,
         (zahl) => regelsatz.kleinerBlind === zahl,
         (zahl) => onChange({ ...regelsatz, kleinerBlind: zahl, grosserBlind: zahl * 2 }),
       )}
       {chipreihe(
-        'Großer Blind',
+        t('poker.einsatz.grosserBlind'),
         bbStufen,
         (zahl) => regelsatz.grosserBlind === zahl,
         (zahl) => onChange({ ...regelsatz, grosserBlind: zahl }),
       )}
       {!regelsatzOk(regelsatz) && (
-        <p className="hb-fehler">
-          Der große Blind muss über dem kleinen liegen, und der Einsatz mindestens das Zehnfache
-          des großen Blinds sein.
-        </p>
+        <p className="hb-fehler">{t('poker.einsatz.ungueltig')}</p>
       )}
       <button
         className="hb-kn is-gold is-haupt is-breit spe-kn-unter"
@@ -500,9 +498,9 @@ function Einsatzblatt({
         onClick={onClose}
         disabled={!regelsatzOk(regelsatz)}
       >
-        So spielen
+        {t('poker.einsatz.soSpielen')}
         <small>
-          {regelsatz.startJetons} · Blinds {blindsText(regelsatz)}
+          {tf('poker.einsatz.kurz', { einsatz: regelsatz.startJetons, blinds: blindsText(regelsatz) })}
         </small>
       </button>
     </HbBlatt>
@@ -665,7 +663,7 @@ export function EasyPoker({
       setTischId(id);
     } catch (err) {
       setSucht(false);
-      setFehler(pokerFehler(err, 'Der Tisch liess sich nicht aufmachen. Noch einmal versuchen?'));
+      setFehler(pokerFehler(err, t('poker.fehler.aufmachen')));
     }
   }, [sitzeWahl, regelsatz]);
 
@@ -710,7 +708,7 @@ export function EasyPoker({
       setTischId(id);
     } catch (err) {
       setSucht(false);
-      setFehler(pokerFehler(err, 'Die Suche ist fehlgeschlagen. Noch einmal versuchen?'));
+      setFehler(pokerFehler(err, t('poker.fehler.suche')));
     }
   }, [regelsatz, broJetons]);
 
@@ -721,7 +719,7 @@ export function EasyPoker({
     try {
       setTische(await api.tables('easypoker'));
     } catch {
-      setFehler('Die Tischliste liess sich nicht laden.');
+      setFehler(t('poker.fehler.liste'));
       setTische([]);
     }
   }, []);
@@ -737,7 +735,7 @@ export function EasyPoker({
         setTischId(id);
       } catch (err) {
         setSucht(false);
-        setFehler(pokerFehler(err, 'Der Platz ist weg. Einen anderen Tisch versuchen?'));
+        setFehler(pokerFehler(err, t('poker.fehler.platzWeg')));
         void oeffneLobby();
       }
     },
@@ -759,7 +757,7 @@ export function EasyPoker({
       setTischId(id);
     } catch (err) {
       setSucht(false);
-      setFehler(pokerFehler(err, 'Der Tisch liess sich nicht aufmachen. Noch einmal versuchen?'));
+      setFehler(pokerFehler(err, t('poker.fehler.aufmachen')));
     }
   }, [regelsatz]);
 
@@ -880,15 +878,15 @@ export function EasyPoker({
       className="poker-info is-tisch"
       type="button"
       onClick={() => setRegelnOffen(true)}
-      aria-label="Regeln nachlesen"
+      aria-label={t('poker.regelnNachlesen')}
     >
       <b aria-hidden="true">i</b>
-      <span>Info</span>
+      <span>{t('poker.info')}</span>
     </button>
   );
   /** Derselbe Knopf im Kopf des Spieleinstiegs: rund, 44 pt, wie der Zurück-Knopf. */
   const infoKnopfNeu = (
-    <button className="hb-rund pk-info" type="button" onClick={() => setRegelnOffen(true)} aria-label="Regeln nachlesen">
+    <button className="hb-rund pk-info" type="button" onClick={() => setRegelnOffen(true)} aria-label={t('poker.regelnNachlesen')}>
       <b aria-hidden="true">i</b>
     </button>
   );
@@ -910,14 +908,14 @@ export function EasyPoker({
       return (
         <SpielRahmen
           gameId="easypoker"
-          titel="Online-Tisch"
-          unter={`Mindest-Einsatz ${regelsatz.startJetons} · Blinds ${blindsText(regelsatz)}`}
+          titel={t('poker.lobby.titel')}
+          unter={tf('poker.einsatz.lang', { einsatz: regelsatz.startJetons, blinds: blindsText(regelsatz) })}
           akzent={AKZENT}
           onBack={() => {
             setLobbyOffen(false);
             setFehler(null);
           }}
-          zurueckText="Zurück zum Pokermenü"
+          zurueckText={t('poker.lobby.zurueck')}
           rechts={infoKnopfNeu}
           fuss={
             <>
@@ -927,8 +925,8 @@ export function EasyPoker({
                 onClick={() => void suche()}
                 disabled={!startbar}
               >
-                Passenden Tisch suchen
-                <small>gleicher Einsatz · sonst neu aufmachen</small>
+                {t('poker.lobby.suchen')}
+                <small>{t('poker.lobby.suchenUnter')}</small>
               </button>
               <button
                 className="hb-kn is-blau is-breit spe-kn-unter"
@@ -936,19 +934,19 @@ export function EasyPoker({
                 onClick={() => void eigenenTisch()}
                 disabled={!startbar}
               >
-                Eigenen Tisch aufmachen
-                <small>6 Plätze · deine Blinds</small>
+                {t('poker.lobby.eigener')}
+                <small>{t('poker.lobby.eigenerUnter')}</small>
               </button>
             </>
           }
         >
           {fehler && <p className="hb-fehler">{fehler}</p>}
-          <SpielAbschnitt titel="Offene Tische" zusatz={tische === null ? undefined : liste.length}>
+          <SpielAbschnitt titel={t('poker.lobby.offene')} zusatz={tische === null ? undefined : liste.length}>
             <div className="hb-liste">
               {tische === null ? (
-                <p className="spe-leer">Tische werden geladen…</p>
+                <p className="spe-leer">{t('poker.lobby.laedt')}</p>
               ) : liste.length === 0 ? (
-                <p className="spe-leer">Gerade wartet niemand. Mach den ersten Tisch auf.</p>
+                <p className="spe-leer">{t('poker.lobby.leer')}</p>
               ) : (
                 liste.map((zeile) => {
                   const buyIn = zeile.stakes?.startJetons ?? regelsatz.startJetons;
@@ -962,7 +960,7 @@ export function EasyPoker({
                       onClick={() => void trittBei(zeile.id)}
                     >
                       <span>
-                        <strong>{zeile.host ?? 'Tisch'}</strong>
+                        <strong>{zeile.host ?? t('poker.lobby.tisch')}</strong>
                         <small className="pk-einsatz">
                           <span className="poker-jeton-zeichen" aria-hidden="true" />
                           {buyIn}
@@ -972,7 +970,7 @@ export function EasyPoker({
                       <span className="spe-zahl">
                         {zeile.occupied}/{zeile.seats}
                       </span>
-                      <span className={`pk-bei${zuTeuer ? ' is-zu-hoch' : ''}`}>{zuTeuer ? 'Zu hoch' : 'Beitreten'}</span>
+                      <span className={`pk-bei${zuTeuer ? ' is-zu-hoch' : ''}`}>{t(zuTeuer ? 'poker.lobby.zuHoch' : 'poker.lobby.beitreten')}</span>
                     </button>
                   );
                 })
@@ -988,8 +986,8 @@ export function EasyPoker({
     return (
       <SpielRahmen
         gameId="easypoker"
-        titel="Poker"
-        unter="Zwei Karten, bis zu sechs am Tisch, vier Knöpfe."
+        titel={t('poker.titel')}
+        unter={t('poker.unter')}
         akzent={AKZENT}
         onBack={onBack}
         rechts={infoKnopfNeu}
@@ -1001,8 +999,8 @@ export function EasyPoker({
               onClick={() => void sofortSpielen()}
               disabled={!startbar}
             >
-              Sofort spielen
-              <small>gegen den Computer · {sitzeWahl} Plätze</small>
+              {t('poker.menue.sofort')}
+              <small>{tf('poker.menue.sofortUnter', { n: sitzeWahl })}</small>
             </button>
             <button
               className="hb-kn is-blau is-breit"
@@ -1010,7 +1008,7 @@ export function EasyPoker({
               onClick={() => void oeffneLobby()}
               disabled={sucht}
             >
-              Online spielen
+              {t('poker.menue.online')}
               <span className="pk-aktiv">({aktiv ?? '…'})</span>
             </button>
           </>
@@ -1022,46 +1020,39 @@ export function EasyPoker({
           <em>BroJetons</em>
         </p>
         {!reicht && (
-          <p className="hb-fehler">
-            Für diesen Einsatz brauchst du {regelsatz.startJetons} BroJetons. Im Shop gibt es welche
-            gegen Münzen.
-          </p>
+          <p className="hb-fehler">{tf('poker.menue.fehltJetons', { n: regelsatz.startJetons })}</p>
         )}
         {fehler && <p className="hb-fehler">{fehler}</p>}
-        <SpielAbschnitt titel="Name">
+        <SpielAbschnitt titel={t('poker.menue.name')}>
           <input
             className="hb-feld"
             type="text"
             inputMode="text"
             enterKeyHint="done"
             maxLength={NAME_MAX}
-            placeholder="Name…"
-            aria-label="Name am Tisch"
+            placeholder={t('poker.menue.namePlatzhalter')}
+            aria-label={t('poker.menue.nameAmTisch')}
             value={name}
             onChange={(e) => merkeName(e.target.value)}
           />
         </SpielAbschnitt>
-        <SpielAbschnitt titel="Einsatz">
+        <SpielAbschnitt titel={t('poker.menue.einsatz')}>
           <SpielWahl
-            name="Einsatz"
-            werte={EINSATZ_VORGABEN.map((v) => ({
-              wert: v.name,
-              text: v.name,
-              unter: `${v.regelsatz.startJetons} · ${blindsText(v.regelsatz)}`,
-            }))}
-            wert={vorgabe?.name ?? ''}
-            onWahl={(n) => {
-              const v = EINSATZ_VORGABEN.find((x) => x.name === n);
+            name={t('poker.menue.einsatz')}
+            werte={vorgabeWerte()}
+            wert={vorgabe?.id ?? ''}
+            onWahl={(id) => {
+              const v = EINSATZ_VORGABEN.find((x) => x.id === id);
               if (v) setRegelsatz(v.regelsatz);
             }}
           />
           <div className="hb-liste">
             <button type="button" className="spe-zeile" onClick={() => setEinsatzOffen(true)}>
               <span>
-                <strong>{vorgabe ? 'Eigenen Einsatz…' : 'Eigener Einsatz'}</strong>
+                <strong>{t(vorgabe ? 'poker.menue.eigenenEinsatz' : 'poker.menue.eigenerEinsatz')}</strong>
                 {!vorgabe && (
                   <small>
-                    Mindest-Einsatz {regelsatz.startJetons} · Blinds {blindsText(regelsatz)}
+                    {tf('poker.einsatz.lang', { einsatz: regelsatz.startJetons, blinds: blindsText(regelsatz) })}
                   </small>
                 )}
               </span>
@@ -1072,10 +1063,14 @@ export function EasyPoker({
           </div>
         </SpielAbschnitt>
         <SpielAbschnitt
-          titel="Spieler"
-          zusatz={sitzeWahl === 2 ? 'Du gegen den Computer' : `Du und ${sitzeWahl - 1} Computer`}
+          titel={t('poker.menue.spieler')}
+          zusatz={
+            sitzeWahl === 2
+              ? t('poker.menue.gegenComputer')
+              : tf('poker.menue.mitComputern', { n: sitzeWahl - 1 })
+          }
         >
-          <SpielWahl name="Spielerzahl" werte={SITZ_WAHL} wert={sitzeWahl} onWahl={setSitzeWahl} />
+          <SpielWahl name={t('poker.menue.spielerzahl')} werte={SITZ_WAHL} wert={sitzeWahl} onWahl={setSitzeWahl} />
         </SpielAbschnitt>
         {einsatzOffen && (
           <Einsatzblatt regelsatz={regelsatz} onChange={setRegelsatz} onClose={() => setEinsatzOffen(false)} />
@@ -1100,16 +1095,21 @@ export function EasyPoker({
     return (
       <SpielRahmen
         gameId="easypoker"
-        titel="Am Tisch"
+        titel={t('poker.warten.titel')}
         unter={
-          (tisch.status === 'open' ? `${besetzt} von ${gesamt} Plätzen besetzt` : 'Verbindung wird aufgebaut…') +
+          (tisch.status === 'open'
+            ? tf('poker.warten.besetzt', { besetzt, gesamt })
+            : t('poker.warten.verbindung')) +
           (tischEinsatz
-            ? ` · Mindest-Einsatz ${tischEinsatz.startJetons} · Blinds ${blindsText(tischEinsatz)}`
+            ? tf('poker.warten.einsatz', {
+                einsatz: tischEinsatz.startJetons,
+                blinds: blindsText(tischEinsatz),
+              })
             : '')
         }
         akzent={AKZENT}
         onBack={brichAb}
-        zurueckText="Abbrechen"
+        zurueckText={t('poker.warten.abbrechen')}
         rechts={infoKnopfNeu}
         fuss={
           startKnopf || auffuellen ? (
@@ -1118,8 +1118,8 @@ export function EasyPoker({
                   schrumpft serverseitig auf die Besetzten und legt los. */}
               {startKnopf && (
                 <button className="hb-kn is-gold is-haupt is-breit spe-kn-unter" type="button" onClick={() => tisch.startNow()}>
-                  Jetzt starten
-                  <small>zu {mitspieler} · ohne Auffüllen</small>
+                  {t('poker.warten.starten')}
+                  <small>{tf('poker.warten.startenUnter', { n: mitspieler })}</small>
                 </button>
               )}
               {auffuellen && (
@@ -1129,8 +1129,8 @@ export function EasyPoker({
                   type="button"
                   onClick={() => frei.forEach((platz) => tisch.addBot(platz.seat))}
                 >
-                  Mit Computern auffüllen
-                  <small>und loslegen</small>
+                  {t('poker.warten.auffuellen')}
+                  <small>{t('poker.warten.auffuellenUnter')}</small>
                 </button>
               )}
             </>
@@ -1138,14 +1138,14 @@ export function EasyPoker({
         }
       >
         {plaetze.length > 0 && (
-          <SpielAbschnitt titel="Plätze">
+          <SpielAbschnitt titel={t('poker.warten.plaetze')}>
             <ul className="hb-liste">
               {plaetze.map((platz) => {
                 const leer = !platz.accountId && !platz.isBot;
                 return (
                   <li key={platz.seat} className={`spe-zeile${leer ? ' is-leer' : ''}`}>
                     <span>
-                      <strong>{platz.displayName || (platz.isBot ? 'Computer' : 'Frei')}</strong>
+                      <strong>{platz.displayName || t(platz.isBot ? 'poker.warten.computer' : 'poker.warten.frei')}</strong>
                     </span>
                   </li>
                 );
@@ -1159,7 +1159,7 @@ export function EasyPoker({
           <span />
           <span />
         </div>
-        <p className="hb-klein pk-mitte">{aktiv ?? '…'} Spieler gerade am Tisch</p>
+        <p className="hb-klein pk-mitte">{tf('poker.warten.aktiv', { n: aktiv ?? '…' })}</p>
         {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
       </SpielRahmen>
     );
@@ -1208,7 +1208,7 @@ export function EasyPoker({
   const namenVon = (sitz: number): string =>
     sicht.namen[sitz] ||
     tisch.table?.seats.find((platz) => platz.seat === sitz)?.displayName ||
-    (sitz === eigenerSitz ? 'Du' : `Platz ${sitz + 1}`);
+    (sitz === eigenerSitz ? t('poker.du') : tf('poker.platz', { nr: sitz + 1 }));
 
   const istBotVon = (sitz: number): boolean =>
     tisch.table?.seats.find((platz) => platz.seat === sitz)?.isBot ?? false;
@@ -1229,8 +1229,8 @@ export function EasyPoker({
     sicht.dran === null
       ? ''
       : sicht.dran === eigenerSitz
-        ? 'Du bist dran'
-        : `${namenVon(sicht.dran)} überlegt…`;
+        ? t('poker.duBistDran')
+        : tf('poker.ueberlegt', { name: namenVon(sicht.dran) });
 
   return (
     <main className="poker-buehne" data-dran={meinZug ? 'ich' : 'gegner'} data-sitze={sitzeAmTisch.length}>
@@ -1244,19 +1244,20 @@ export function EasyPoker({
           className="poker-rund"
           type="button"
           onClick={onBack}
-          aria-label="Spiel verlassen"
+          aria-label={t('poker.verlassen')}
         >
           ←
         </button>
         <div className="poker-marke">
           <strong>
-            <span>Poker</span>
+            <span>{t('poker.titel')}</span>
           </strong>
           <em>
-            Hand {sicht.handNr}/{sicht.handMax} · {STRASSENWORT[sicht.strasse]} · {sitzeAmTisch.length}
+            {tf('poker.kopf.hand', { nr: sicht.handNr, von: sicht.handMax })} · {t(STRASSENWORT[sicht.strasse])} ·{' '}
+            {sitzeAmTisch.length}
           </em>
         </div>
-        <div className="poker-kopfstand" aria-label="Dein Punktestand">
+        <div className="poker-kopfstand" aria-label={t('poker.punktestand')}>
           <span className="poker-jeton-zeichen" aria-hidden="true" />
           <Jetonzahl wert={sicht.jetons[eigenerSitz] ?? 0} />
         </div>
@@ -1296,7 +1297,7 @@ export function EasyPoker({
       {/* --- Tischmitte --------------------------------------------------- */}
       <section className="poker-mitte">
         <div className="poker-topf" data-leer={sicht.topf === 0 || undefined}>
-          <span>Topf</span>
+          <span>{t('poker.topf')}</span>
           <b>
             <Jetonzahl wert={sicht.topf} />
           </b>
@@ -1332,9 +1333,9 @@ export function EasyPoker({
           */
           <p className="poker-hinweis">
             {sicht.meineStaerke && (
-              <b>{KOMBINATION[sicht.meineStaerke.kategorie] ?? ''}</b>
+              <b>{kombination(sicht.meineStaerke.kategorie)}</b>
             )}
-            <span>{meinZug ? 'Du bist dran' : dranName || 'Es wird gezeigt…'}</span>
+            <span>{meinZug ? t('poker.duBistDran') : dranName || t('poker.wirdGezeigt')}</span>
           </p>
         )}
       </section>
@@ -1345,7 +1346,7 @@ export function EasyPoker({
         <div className="poker-sitz-text">
           <span className="poker-sitz-name">
             {namenVon(eigenerSitz)}
-            {sicht.geber === eigenerSitz && <b className="poker-knopfmarke">Geber</b>}
+            {sicht.geber === eigenerSitz && <b className="poker-knopfmarke">{t('poker.marke.geber')}</b>}
             {sicht.kleinerSitz === eigenerSitz && sitzeAmTisch.length > 2 && (
               <b className="poker-knopfmarke">SB</b>
             )}
@@ -1377,28 +1378,28 @@ export function EasyPoker({
       <footer className="poker-aktionen" data-an={meinZug && !wartet ? 'true' : undefined}>
         <Aktionsknopf
           art="fold"
-          wort="Fold"
+          wort={t('poker.zug.fold')}
           zug={findeZug('passen')}
           gesperrt={!meinZug || wartet}
           onClick={schicke}
         />
         <Aktionsknopf
           art="check"
-          wort="Check"
+          wort={t('poker.zug.check')}
           zug={findeZug('schieben')}
           gesperrt={!meinZug || wartet}
           onClick={schicke}
         />
         <Aktionsknopf
           art="call"
-          wort="Call"
+          wort={t('poker.zug.call')}
           zug={findeZug('mitgehen')}
           gesperrt={!meinZug || wartet}
           onClick={schicke}
         />
         <Aktionsknopf
           art="bet"
-          wort="Bet"
+          wort={t(sicht.zuZahlen > 0 ? 'poker.zug.erhoehen' : 'poker.zug.bet')}
           zug={setzZug}
           gesperrt={!meinZug || wartet}
           onClick={aufBet}
@@ -1419,7 +1420,7 @@ export function EasyPoker({
       )}
 
       {tisch.error && <div className="poker-fehlerpille">{tisch.error}</div>}
-      {tisch.status !== 'open' && <div className="poker-funk">Verbindung…</div>}
+      {tisch.status !== 'open' && <div className="poker-funk">{t('poker.verbindung')}</div>}
 
       {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
 
@@ -1427,11 +1428,13 @@ export function EasyPoker({
         <div className="poker-ende">
           <div className="poker-ende-blatt">
             <h2>
-              {sicht.sieger === null
-                ? 'Unentschieden'
-                : sicht.sieger === eigenerSitz
-                  ? 'Gewonnen!'
-                  : 'Verloren'}
+              {t(
+                sicht.sieger === null
+                  ? 'poker.ende.unentschieden'
+                  : sicht.sieger === eigenerSitz
+                    ? 'poker.ende.gewonnen'
+                    : 'poker.ende.verloren',
+              )}
             </h2>
             <ol className="poker-ende-liste">
               {sitzeAmTisch
@@ -1445,14 +1448,13 @@ export function EasyPoker({
                 ))}
             </ol>
             <p className="poker-ende-text">
-              {sicht.handNr} von {sicht.handMax} Händen gespielt · Start waren{' '}
-              {sicht.startJetons} Jetons
+              {tf('poker.ende.text', { nr: sicht.handNr, von: sicht.handMax, jetons: sicht.startJetons })}
             </p>
             <button className="poker-hauptknopf" type="button" onClick={nochEineRunde}>
-              <span>Noch eine Runde</span>
+              <span>{t('poker.ende.nochmal')}</span>
             </button>
             <button className="poker-textknopf" type="button" onClick={onBack}>
-              Zurück zur Spielauswahl
+              {t('poker.ende.zurueck')}
             </button>
           </div>
         </div>
@@ -1540,7 +1542,7 @@ function Fremdsitz({
         <span className="poker-sitz-name">
           {name}
           {bot && <em> · CPU</em>}
-          {geber && <b className="poker-knopfmarke">G</b>}
+          {geber && <b className="poker-knopfmarke">{t('poker.marke.geberKurz')}</b>}
           {klein && <b className="poker-knopfmarke">SB</b>}
           {gross && <b className="poker-knopfmarke">BB</b>}
         </span>
@@ -1552,7 +1554,7 @@ function Fremdsitz({
       <Einsatzmarke betrag={einsatz} />
       {aktion && (
         <span className="poker-sprechblase" key={`${handNr}-${aktion.art}-${revision}`}>
-          {AKTIONSWORT[aktion.art]}
+          {t(AKTIONSWORT[aktion.art])}
           {aktion.betrag ? ` ${aktion.betrag}` : ''}
         </span>
       )}
@@ -1621,7 +1623,7 @@ function Ergebnisband({
 }): React.JSX.Element {
   const gewonnen = ergebnis.gewinner.includes(eigenerSitz);
   const geteilt = ergebnis.gewinner.length > 1;
-  const kombination = ergebnis.bewertung[eigenerSitz]?.kategorie;
+  const kategorie = ergebnis.bewertung[eigenerSitz]?.kategorie;
 
   return (
     <p
@@ -1632,18 +1634,18 @@ function Ergebnisband({
     >
       <b>
         {geteilt
-          ? 'Geteilter Topf'
+          ? t('poker.band.geteilt')
           : gewonnen
-            ? `+${ergebnis.topf} gewonnen`
-            : 'Hand verloren'}
+            ? tf('poker.band.gewonnen', { n: ergebnis.topf })
+            : t('poker.band.verloren')}
       </b>
       <span>
         {ergebnis.durchAufgabe
           ? gewonnen
-            ? 'Die anderen sind ausgestiegen.'
-            : 'Du hast gefoldet.'
-          : kombination
-            ? `Du hattest ${KOMBINATION[kombination] ?? ''}.`
+            ? t('poker.band.ausgestiegen')
+            : t('poker.band.gefoldet')
+          : kategorie
+            ? tf('poker.band.duHattest', { kombi: kombination(kategorie) })
             : ''}
       </span>
     </p>
@@ -1687,16 +1689,16 @@ function Setzblatt({
 
   /** Schnellwahlen. "Topf" heisst: den Topf nachbauen (mitgehen + Topfgroesse). */
   const schnell: { name: string; wert: number }[] = [
-    { name: 'Min', wert: spanne.min },
-    { name: '½ Topf', wert: zuZahlen + Math.round(topf / 2) },
-    { name: 'Topf', wert: zuZahlen + topf },
-    { name: 'All-in', wert: spanne.max },
+    { name: t('poker.setzen.min'), wert: spanne.min },
+    { name: t('poker.setzen.halberTopf'), wert: zuZahlen + Math.round(topf / 2) },
+    { name: t('poker.setzen.topf'), wert: zuZahlen + topf },
+    { name: t('poker.setzen.allIn'), wert: spanne.max },
   ];
 
   return (
     <div className="poker-blatt" onClick={onClose} role="presentation">
       <div className="poker-blatt-karte is-setzen" onClick={(e) => e.stopPropagation()} role="presentation">
-        <h2>Wie viel setzen?</h2>
+        <h2>{t('poker.setzen.titel')}</h2>
         <p className="poker-setzen-betrag" aria-live="polite">
           <span className="poker-jeton-zeichen" aria-hidden="true" />
           <b>{betrag}</b>
@@ -1709,13 +1711,13 @@ function Setzblatt({
           step={1}
           value={betrag}
           onChange={(e) => waehle(Number(e.target.value))}
-          aria-label={`Einsatz, ${spanne.min} bis ${spanne.max}`}
+          aria-label={tf('poker.setzen.regler', { min: spanne.min, max: spanne.max })}
         />
         <p className="poker-regler-enden" aria-hidden="true">
           <span>{spanne.min}</span>
           <span>{spanne.max}</span>
         </p>
-        <div className="poker-schnellwahl" role="group" aria-label="Schnellwahl">
+        <div className="poker-schnellwahl" role="group" aria-label={t('poker.setzen.schnellwahl')}>
           {schnell.map(({ name, wert }) => {
             const ziel = klemme(wert);
             return (
@@ -1732,11 +1734,13 @@ function Setzblatt({
           })}
         </div>
         <button className="poker-hauptknopf" type="button" onClick={() => onSetzen(betrag)}>
-          <span>Bet {betrag}</span>
-          {betrag === spanne.max && <em>all-in</em>}
+          <span>
+            {tf(zuZahlen > 0 ? 'poker.setzen.knopfErhoehen' : 'poker.setzen.knopf', { n: betrag })}
+          </span>
+          {betrag === spanne.max && <em>{t('poker.setzen.allInKlein')}</em>}
         </button>
         <button className="poker-textknopf" type="button" onClick={onClose}>
-          Abbrechen
+          {t('poker.setzen.abbrechen')}
         </button>
       </div>
     </div>
@@ -1751,80 +1755,56 @@ function Setzblatt({
  * Hintergrund schliesst.
  */
 function Regelblatt({ onClose }: { onClose: () => void }): React.JSX.Element {
+  // Das fette „fünf" steht als Lücke im Satz, damit jede Sprache ihre eigene
+  // Wortstellung behält und das Wort trotzdem hervorgehoben bleibt.
+  const [zielVor, zielNach] = t('poker.regeln.ziel.text').split('{fuenf}');
+  const zug = (wort: string, text: string): React.JSX.Element => (
+    <li>
+      <b>{t(wort)}</b> - {t(text)}
+    </li>
+  );
   const inhalt = (
     <>
-        <h3>Ziel</h3>
+        <h3>{t('poker.regeln.ziel')}</h3>
         <p>
-          Jeder bekommt zwei verdeckte Karten. In der Mitte liegen nach und
-          nach fünf offene Karten. Wer aus seinen zwei und den fünf offenen
-          die besten <b>fünf</b> Karten bildet, gewinnt den Topf. Am Tisch
-          sitzen zwei bis sechs.
+          {zielVor}
+          <b>{t('poker.regeln.ziel.fuenf')}</b>
+          {zielNach}
         </p>
 
-        <h3>Die Blinds</h3>
-        <p>
-          Vor jeder Hand zahlen zwei Sitze einen Pflicht-Einsatz: den kleinen
-          Blind (SB) und den großen Blind (BB). Zu zweit zahlt der Geber den
-          kleinen, der andere den großen. Zu dritt und mehr sitzt der kleine
-          Blind links vom Geber, der große links davon. Der Knopf wandert jede
-          Hand weiter.
-        </p>
+        <h3>{t('poker.regeln.blinds')}</h3>
+        <p>{t('poker.regeln.blinds.text')}</p>
 
-        <h3>Die vier Knöpfe</h3>
+        <h3>{t('poker.regeln.knoepfe')}</h3>
         <ul className="poker-blatt-liste">
-          <li>
-            <b>Fold</b> - aussteigen. Du verlierst, was du schon gesetzt hast,
-            mehr nicht.
-          </li>
-          <li>
-            <b>Check</b> - weiter, ohne zu setzen. Geht nur, wenn nichts offen
-            steht.
-          </li>
-          <li>
-            <b>Call</b> - den offenen Einsatz bezahlen. Die Zahl auf dem
-            Knopf ist der Preis.
-          </li>
-          <li>
-            <b>Bet</b> - setzen oder erhöhen. Auch hier steht der Betrag auf
-            dem Knopf.
-          </li>
+          {zug('poker.zug.fold', 'poker.regeln.fold')}
+          {zug('poker.zug.check', 'poker.regeln.check')}
+          {zug('poker.zug.call', 'poker.regeln.call')}
+          {zug('poker.zug.bet', 'poker.regeln.bet')}
         </ul>
 
-        <h3>Der Ablauf</h3>
-        <p>
-          Vor dem Flop · Flop (drei Karten) · Turn (eine) · River (eine). Vor
-          jeder neuen Karte wird gesetzt. Wer als Letzter nicht gefoldet hat,
-          gewinnt ohne Zeigen. Sonst werden die Hände verglichen. Wer all-in
-          weniger setzen konnte als die anderen, spielt nur um den Topf bis zu
-          seinem Beitrag - der Rest ist ein Nebentopf.
-        </p>
+        <h3>{t('poker.regeln.ablauf')}</h3>
+        <p>{t('poker.regeln.ablauf.text')}</p>
 
-        <h3>Was schlägt was</h3>
+        <h3>{t('poker.regeln.rang')}</h3>
         <ol className="poker-blatt-rang">
-          <li>Straight Flush - fünf in Reihe, alle gleiche Farbe</li>
-          <li>Vierling - vier gleiche Werte</li>
-          <li>Full House - Drilling und Paar</li>
-          <li>Flush - fünf gleiche Farbe</li>
-          <li>Straße - fünf in Reihe</li>
-          <li>Drilling - drei gleiche Werte</li>
-          <li>Zwei Paare</li>
-          <li>Ein Paar</li>
-          <li>Höchste Karte</li>
+          {[9, 8, 7, 6, 5, 4, 3, 2, 1].map((kategorie) => (
+            <li key={kategorie}>
+              {kombination(kategorie)}
+              {kategorie >= 4 ? ` - ${t(`poker.regeln.rang.${kategorie}`)}` : ''}
+            </li>
+          ))}
         </ol>
 
-        <p className="poker-blatt-fuss">
-          Gespielt wird mit BroJetons. Die kauft man im Shop gegen Münzen; zurück
-          in Münzen gehen sie nicht. Wer den Tisch aufmacht, stellt Mindest-Einsatz
-          und die Blinds ein.
-        </p>
+        <p className="poker-blatt-fuss">{t('poker.regeln.fuss')}</p>
     </>
   );
 
   return (
-    <HbBlatt titel="So geht Poker" onClose={onClose}>
+    <HbBlatt titel={t('poker.regeln.titel')} onClose={onClose}>
       <div className="pk-regeln">{inhalt}</div>
       <button className="hb-kn is-gold is-haupt is-breit" type="button" onClick={onClose}>
-        Verstanden
+        {t('poker.regeln.verstanden')}
       </button>
     </HbBlatt>
   );

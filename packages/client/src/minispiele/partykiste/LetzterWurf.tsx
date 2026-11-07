@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { SeatInfo } from '../../protocol';
 import { namenFuer } from './Runden';
 import { zaehlerWort, type PartyLetzterWurf } from './sicht';
+import { tz } from './text';
 
 /** So lange steht die Ansage — kurz genug, dass niemand darauf wartet. */
 export const ANSAGE_MS = 3500;
@@ -33,8 +34,8 @@ export function AnsageLetzter({
   onZu?: () => void;
 }): React.JSX.Element {
   const du = wurf.sitz === ich;
-  const wer = du ? 'Du warst' : `${namenFuer(sitze, wurf.sitz)} war`;
-  const zahl = wurf.schlucke === 1 ? 'ein' : String(wurf.schlucke);
+  const zahl = wurf.schlucke === 1 ? tz('letzter.ein') : String(wurf.schlucke);
+  const folge = wurf.trinkt ? tz('letzter.trinkt', { zahl, wort: zaehlerWort(trinkmodus, wurf.schlucke) }) : tz('letzter.glueck');
   return (
     <button
       type="button"
@@ -48,7 +49,7 @@ export function AnsageLetzter({
         {wurf.trinkt ? '🎲' : '🍀'}
       </span>
       <span>
-        {wer} Letzter - {wurf.trinkt ? `${zahl} ${zaehlerWort(trinkmodus, wurf.schlucke)}!` : 'Glück gehabt!'}
+        {du ? tz('letzter.du', { folge }) : tz('letzter.wer', { name: namenFuer(sitze, wurf.sitz), folge })}
       </span>
     </button>
   );

@@ -64,7 +64,7 @@ Produktion grenzt das über `UMFANG` ein (`docs/APP-RELEASE.md`).
 | --- | --- | --- |
 | D1 | `APPLE_TEAM_ID=K772DG59JN` — ohne sie liefert `/.well-known/apple-app-site-association` 404, Einladungslinks öffnen dann nicht die App | offen (27.10.2026: 404) |
 | D2 | `BROWORT_SALZ` mit eigenem, langem Zufallswert — sonst lässt sich das Tageswort aus dem Repo vorausrechnen | offen |
-| D3 | `UMFANG` = `doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau` (Robin 27.10.2026: mit Abstimmung), **vor** dem Release-Merge setzen | offen |
+| D3 | `UMFANG` = `doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,dreckbro` (Robin 27.10.2026: mit Abstimmung), **vor** dem Release-Merge setzen | offen |
 | D4 | APNs-Schlüssel für Push (docs/PUSH.md) — ohne ihn schreibt der Server Mitteilungen nur ins Log | offen |
 | D5 | `HERKUNFT_SCHLUESSEL` (nur für die Werbeauswertung, kein Blocker) | offen |
 

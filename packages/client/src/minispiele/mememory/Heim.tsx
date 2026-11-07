@@ -23,6 +23,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import { t } from '../../i18n';
 import { Haus, Winkel } from '../../zeichen';
 
 export type Seite = 'sammlung' | 'menue' | 'mehr';
@@ -30,11 +31,10 @@ export type Seite = 'sammlung' | 'menue' | 'mehr';
 /** Die Reihenfolge auf dem Streifen — von links nach rechts. */
 export const SEITEN: readonly Seite[] = ['sammlung', 'menue', 'mehr'];
 
-const BESCHRIFTUNG: Readonly<Record<Seite, string>> = {
-  sammlung: 'Sammlung',
-  menue: 'Mememory',
-  mehr: 'Mehr',
-};
+/** Beim Zeichnen gelesen, nicht als Tabelle: sonst bliebe nach dem Umschalten der Sprache die alte stehen. */
+function beschriftung(seite: Seite): string {
+  return seite === 'menue' ? 'Mememory' : t(`mememory.${seite}`);
+}
 
 export function Heim({
   sammlung,
@@ -127,13 +127,13 @@ export function Heim({
   return (
     <main className="mm-heim is-neu">
       <div className="mm-streifen" ref={streifenRef}>
-        <section className="mm-blatt" aria-label="Sammlung">
+        <section className="mm-blatt" aria-label={t('mememory.sammlung')}>
           {sammlung}
         </section>
         <section className="mm-blatt" aria-label="Mememory">
           {typeof menue === 'function' ? menue(geheZu) : menue}
         </section>
-        <section className="mm-blatt" aria-label="Mehr">
+        <section className="mm-blatt" aria-label={t('mememory.mehr')}>
           {mehr}
         </section>
       </div>
@@ -152,7 +152,7 @@ export function Heim({
         * Angetippt fuehrt jedes Zeichen auf seine Seite. Das gelbe ist das,
         * auf dem man steht.
         */}
-      <nav className="mm-punkte" aria-label="Seiten">
+      <nav className="mm-punkte" aria-label={t('mememory.seiten')}>
         {SEITEN.map((eine) => (
           <button
             key={eine}
@@ -160,7 +160,7 @@ export function Heim({
             className="mm-punkt"
             data-an={eine === seite ? '' : undefined}
             aria-current={eine === seite ? 'page' : undefined}
-            aria-label={BESCHRIFTUNG[eine]}
+            aria-label={beschriftung(eine)}
             onClick={() => geheZu(eine)}
           >
             {eine === 'menue' ? <Haus /> : <Winkel nach={eine === 'sammlung' ? 'links' : 'rechts'} />}

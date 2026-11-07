@@ -31,6 +31,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 
 import stil from './Buehne.module.css';
+import { tz } from './text';
 
 /**
  * Wie lange die Rundenansage steht, bevor die Buehne auffaehrt.
@@ -124,8 +125,8 @@ export function Buehne({
          * belegen.
          */
         <div className={stil.vorhang} aria-live="polite">
-          <strong>Runde {runde}</strong>
-          <span>Zum Kampf</span>
+          <strong>{tz('runde', { n: runde })}</strong>
+          <span>{tz('buehne.zumKampf')}</span>
         </div>
       )}
     </div>

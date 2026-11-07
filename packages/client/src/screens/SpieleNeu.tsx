@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, type GameSummary, type Me, type RankingEntry } from '../api';
 import { deckForGame, rueckenBild } from '../decks';
 import { CardFront, CardBack } from '../CardFace';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
 import { inApp } from '../laufzeit';
 import { inAppSichtbar } from '../app-sichtbar';
@@ -43,7 +43,7 @@ const KATEGORIEN: readonly Kategorie[] = [
     id: 'karten',
     titel: 'spielwahl.kategorie.karten',
     einzahl: 'spielwahl.einzahl.karten',
-    spiele: ['doppelkopf', 'skat', 'wizard', 'cambio', 'easypoker'],
+    spiele: ['doppelkopf', 'skat', 'dreckbro', 'wizard', 'cambio', 'easypoker'],
     icon: <path d="M4 7.5 13 5l3 13-9 2.5z M11 4.5l7-1.5 3 13-3 .7" />,
   },
   {
@@ -74,11 +74,11 @@ const KATEGORIEN: readonly Kategorie[] = [
  * übernommen): die Spiele, für die `spielwahl.zusatz.<id>` existiert.
  */
 const ZUSATZ: ReadonlySet<string> = new Set([
-  'feldherr', 'mememory', 'easypoker', 'filler', 'eiland', 'golf', 'brocooked', 'tafelrunde', 'partykiste', 'brochess',
+  'feldherr', 'mememory', 'easypoker', 'filler', 'eiland', 'golf', 'brocooked', 'tafelrunde', 'partykiste', 'brochess', 'dreckbro',
 ]);
 
 /** Spiele mit Kartenblatt und Tisch aus der Sammlung. */
-const BALD_BILDER = new Set(['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10', 'drecksau']);
+const BALD_BILDER = new Set(['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10']);
 const BESTEHENDE_BANNER = new Set(KATEGORIEN.flatMap(k => k.spiele));
 
 const MIT_THEMEN = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'easypoker']);
@@ -248,7 +248,7 @@ export function SpieleNeu({
           <strong>{t(g.nameKey)}</strong>
           <small>
             {g.abstimmbar !== false && mitAbstimmung
-              ? tn('spielwahl.mitStimmen', g.votes, { zeile: baldUnter(g), n: g.votes.toLocaleString('de-DE') })
+              ? tn('spielwahl.mitStimmen', g.votes, { zeile: baldUnter(g), n: zahl(g.votes) })
               : baldUnter(g)}
           </small>
         </span>
@@ -276,7 +276,7 @@ export function SpieleNeu({
       {trophaeen(g.id) > 0 ? (
         <span className="hb-pk">
           <img src="/hub/symbol-pokal.webp" alt="" />
-          {trophaeen(g.id).toLocaleString('de-DE')}
+          {zahl(trophaeen(g.id))}
         </span>
       ) : (
         <small>{tf('spielwahl.spieler', { spanne: sitzSpanne(g.seatCounts) })}</small>
@@ -617,12 +617,12 @@ function SpielSeite({
           <div className="hb-sp-zahl">
             <span className="hb-sp-pokal">
               <img src="/hub/symbol-pokal.webp" alt="" />
-              {eigene.toLocaleString('de-DE')}
+              {zahl(eigene)}
             </span>
             <span className="hb-klein">
               {ich ? (
                 <>
-                  {tf('spielwahl.seite.platz', { rang: ich.rank.toLocaleString('de-DE') })}
+                  {tf('spielwahl.seite.platz', { rang: zahl(ich.rank) })}
                   <br />
                   {t('spielwahl.seite.inDeutschland')}
                 </>
@@ -637,7 +637,7 @@ function SpielSeite({
                   Trophäe gibt es noch keinen Anteil, nur eine Einladung. */}
               {gesamt > 0 ? (
                 <>
-                  {t('spielwahl.seite.beitrag')} <b>{tf('spielwahl.seite.beitragZahl', { eigene: eigene.toLocaleString('de-DE'), gesamt: gesamt.toLocaleString('de-DE') })}</b>
+                  {t('spielwahl.seite.beitrag')} <b>{tf('spielwahl.seite.beitragZahl', { eigene: zahl(eigene), gesamt: zahl(gesamt) })}</b>
                 </>
               ) : (
                 t('spielwahl.seite.einladung')
@@ -649,10 +649,10 @@ function SpielSeite({
           </div>
           <div className="hb-sp-werte">
             <span>
-              <b>{(stat?.parties ?? 0).toLocaleString('de-DE')}</b>{t('spielwahl.seite.partien')}
+              <b>{zahl(stat?.parties ?? 0)}</b>{t('spielwahl.seite.partien')}
             </span>
             <span>
-              <b>{(stat?.wins ?? 0).toLocaleString('de-DE')}</b>{t('spielwahl.seite.siege')}
+              <b>{zahl(stat?.wins ?? 0)}</b>{t('spielwahl.seite.siege')}
             </span>
             <span>
               <b>{quote === null ? '-' : `${quote} %`}</b>{t('spielwahl.seite.quote')}
@@ -719,7 +719,7 @@ function SpielSeite({
                   <strong>{e.accountId === me.id ? t('spielwahl.seite.du') : e.displayName}</strong>
                   <span className="hb-pk">
                     <img src="/hub/symbol-pokal.webp" alt="" />
-                    {e.trophies.toLocaleString('de-DE')}
+                    {zahl(e.trophies)}
                   </span>
                 </div>
               ))

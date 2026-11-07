@@ -1,5 +1,5 @@
 import type { ActiveTable, Me } from '../api';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
 import { inAppSichtbar } from '../app-sichtbar';
 import { LernKarte } from '../lernen/LernKarte';
@@ -18,6 +18,10 @@ import { BIOME } from './Pfad';
 
 /** Banner je Spiel. Drei Spiele heißen im Bild anders als im Code. */
 export function bannerFuer(gameId: string): string {
+  // DreckBro hat noch kein geliefertes Banner (Bestellung:
+  // docs/ASSETS-DRECKBRO.md). Bis dahin ein gezeichnetes SVG statt eines Pfads
+  // auf eine WebP, die es nicht gibt — sonst stuende ein leeres Feld da.
+  if (gameId === 'dreckbro') return '/hub/banner-dreckbro.svg';
   const name: Record<string, string> = { wizard: 'zauberer', easypoker: 'poker', golf: 'minigolf', filler: 'farbduell' };
   return `/hub/banner-${name[gameId] ?? gameId}.webp`;
 }
@@ -103,12 +107,12 @@ export function StartNeu({
           <span className="hb-weg-zeile">
             <span className="hb-pk">
               <img src="/hub/symbol-pokal.webp" alt="" />
-              {trophies.toLocaleString('de-DE')}
+              {zahl(trophies)}
             </span>
             {naechstes ? (
               <span>
                 {tf(naechstes.name === 'Sternenhafen' ? 'start.weg.bisZielZum' : 'start.weg.bisZiel', {
-                  zahl: naechstes.cp.toLocaleString('de-DE'),
+                  zahl: zahl(naechstes.cp),
                   ziel: naechstes.name,
                 })}
               </span>
@@ -122,7 +126,7 @@ export function StartNeu({
           {trophies >= 100 && (
             <span className="hb-weg-sicher">
               <Haken />
-              {tf('start.weg.sicher', { zahl: sicherAb(trophies).toLocaleString('de-DE') })}
+              {tf('start.weg.sicher', { zahl: zahl(sicherAb(trophies)) })}
             </span>
           )}
         </span>
@@ -174,7 +178,7 @@ export function StartNeu({
                 <strong>{t(`game.${s.gameId}`)}</strong>
                 <span className="hb-pk">
                   <img src="/hub/symbol-pokal.webp" alt="" />
-                  {s.trophies.toLocaleString('de-DE')}
+                  {zahl(s.trophies)}
                 </span>
               </button>
             ))

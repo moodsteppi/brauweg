@@ -16,6 +16,7 @@ import { LagerTabelle } from './Lager';
 import { lagerKurz } from './modi';
 import { FehlenNoch, Wartet, namenFuer } from './Runden';
 import { zaehlerWort, type PartyAktion, type PartykisteSicht } from './sicht';
+import { tz } from './text';
 
 /**
  * Was diese Runde gebracht hat — und der Weiter-Knopf.
@@ -46,11 +47,11 @@ export function Abrechnung({
     <div className="pk-abrechnung">
       <p className="pk-ausbeute">
         <span data-gut={meinePunkte > 0 ? '' : undefined}>
-          {meinePunkte > 0 ? `+${meinePunkte} Punkte` : 'keine Punkte'}
+          {meinePunkte > 0 ? tz('wertung.punkte', { n: meinePunkte }) : tz('wertung.keine')}
         </span>
         {meineSchlucke > 0 ? (
           <span className="pk-schluck">
-            {meineSchlucke} {zaehlerWort(sicht.trinkmodus, meineSchlucke)} für dich
+            {tz('wertung.fuerDich', { n: meineSchlucke, wort: zaehlerWort(sicht.trinkmodus, meineSchlucke) })}
           </span>
         ) : null}
       </p>
@@ -73,7 +74,7 @@ export function Abrechnung({
           disabled={binFertig}
           onClick={() => sende({ art: 'bereit' })}
         >
-          {binFertig ? 'Warten auf die anderen …' : 'Weiter'}
+          {binFertig ? tz('wertung.warten') : tz('wertung.weiter')}
         </button>
       </div>
       {/* Es geht erst weiter, wenn ALLE getippt haben — keine Uhr mehr.

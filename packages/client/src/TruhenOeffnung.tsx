@@ -1,5 +1,6 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Grad } from './api';
+import { zahl as inSprache } from './i18n';
 import { spiele } from './klang';
 import { truhenBild } from './truhenbild';
 import { TRUHEN_STIL, TRUHEN_ZEIT } from './truhen-ablauf';
@@ -46,7 +47,7 @@ function MuenzenZahl({ wert, aktiv, weniger }: { wert: number; aktiv: boolean; w
     }, TRUHEN_ZEIT.belohnung * 1000);
     return () => { window.clearTimeout(timer); cancelAnimationFrame(bild); };
   }, [wert, aktiv, weniger]);
-  return <>{zahl.toLocaleString('de-DE')}</>;
+  return <>{inSprache(zahl)}</>;
 }
 
 /** Tipp → Spannen → echter Scharnierdeckel → Münzen → bewusster nächster Tipp. */
@@ -103,7 +104,7 @@ export function TruhenOeffnung({ grad, muenzen, onFertig }: { grad: Grad; muenze
       <span className="truhe-betrag"><img src="/hub/muenze.png" alt="" /><strong>+<MuenzenZahl wert={muenzen} aktiv={phase !== 'zu'} weniger={weniger} /></strong></span>
       <span>Münzen</span>
     </div>
-    <p className="truhe-ansage" role="status">{phase === 'fertig' ? `${muenzen.toLocaleString('de-DE')} Münzen erhalten` : ''}</p>
+    <p className="truhe-ansage" role="status">{phase === 'fertig' ? `${inSprache(muenzen)} Münzen erhalten` : ''}</p>
     <button ref={knopf} className="truhe-weiter" disabled={!bereit} aria-disabled={phase === 'auf'}
       onClick={e => { e.stopPropagation(); tippen(); }}>
       {!bereit ? 'Truhe wird vorbereitet…' : phase === 'zu' ? 'Truhe öffnen' : phase === 'fertig' ? 'Weiter' : 'Wird geöffnet…'}

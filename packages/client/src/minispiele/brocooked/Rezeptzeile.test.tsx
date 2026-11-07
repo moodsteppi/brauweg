@@ -1,9 +1,11 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { Rezeptkarte, Rezeptzeile } from './Rezeptzeile';
 import { KUECHEN } from './kuechen';
-import { REZEPTE, ZUSTAND_NAMEN, ZUTAT_NAMEN, rezept, sollZustand, stuecke } from './rezepte';
+import { setzeSprachwahl } from '../../i18n';
+import { REZEPTE, rezept, sollZustand, stuecke } from './rezepte';
+import { kuechenName, rezeptName, zustandName, zutatName } from './text';
 
 /*
  * Proben für die Zutatenkette.
@@ -14,14 +16,23 @@ import { REZEPTE, ZUSTAND_NAMEN, ZUTAT_NAMEN, rezept, sollZustand, stuecke } fro
  * ein Teller angenommen wird) und ob die Kette zum Rezept passt.
  */
 
+// Die Erwartungen unten sind deutsch; der Testlauf selbst spricht Englisch
+// (jsdom meldet en-US).
+beforeEach(() => setzeSprachwahl('de'));
+
+/** Ein fehlender Schlüssel kommt von `t` als Schlüssel zurück — nie leer. */
+const fehlt = (text: string): boolean => text.startsWith('brocooked.');
+
 describe('Namen', () => {
   it('kennt jede Zutat und jeden Zustand, der vorkommt', () => {
     for (const r of REZEPTE) {
+      expect(fehlt(rezeptName(r.id)), r.id).toBe(false);
       for (const zutat of r.braucht) {
-        expect(ZUTAT_NAMEN[zutat], zutat).toBeTruthy();
-        expect(ZUSTAND_NAMEN[sollZustand(r, zutat)]).toBeTruthy();
+        expect(fehlt(zutatName(zutat)), zutat).toBe(false);
+        expect(fehlt(zustandName(sollZustand(r, zutat))), zutat).toBe(false);
       }
     }
+    for (const k of KUECHEN) expect(fehlt(kuechenName(k.id)), k.id).toBe(false);
   });
 });
 

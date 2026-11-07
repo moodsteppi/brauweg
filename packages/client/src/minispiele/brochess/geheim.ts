@@ -12,6 +12,8 @@
  * Eigene Datei statt im Brett, damit die Sätze ohne React geprüft werden.
  */
 
+import { t } from '../../i18n';
+import { tf } from '../../i18n/einsetzen';
 import type {
   BroChessSicht,
   BroChessWahl,
@@ -30,29 +32,22 @@ import type {
  */
 export type Markierung = 'meineVerdeckt' | 'aufgedeckt' | 'warDame' | 'koenigGeschlagen';
 
-/** Artikel, Name und Besitzwort je Grundfigur. Die Dame ist weiblich, der Rest nicht. */
-const FIGUR: Readonly<Record<string, { der: string; name: string; dein: string }>> = {
-  p: { der: 'Der', name: 'Bauer', dein: 'Dein' },
-  n: { der: 'Der', name: 'Springer', dein: 'Dein' },
-  b: { der: 'Der', name: 'Läufer', dein: 'Dein' },
-  r: { der: 'Der', name: 'Turm', dein: 'Dein' },
-  q: { der: 'Die', name: 'Dame', dein: 'Deine' },
-};
+/** Schlüsselendung zur Figur; Unbekanntes heißt schlicht „Figur". */
+const figurKey = (art: string): string => ('pnbrq'.includes(art) && art.length === 1 ? art : 'x');
 
-const figur = (art: string): { der: string; name: string; dein: string } =>
-  FIGUR[art] ?? { der: 'Die', name: 'Figur', dein: 'Deine' };
+/**
+ * Schlichter Name der Figur auf einem Feld (`brett`-Eintrag, Groß- oder
+ * Kleinbuchstabe) — für den Knopf der Damenwahl am Tisch und in der Probe.
+ * Steht hier einmal, weil Tisch und Probe ihn sonst je abschreiben.
+ */
+export function figurName(feldInhalt: string): string {
+  return t(`brochess.figur.${figurKey(feldInhalt.toLowerCase())}`);
+}
 
 /** Die zwei Regeln mit je einem Satz — für die Wahl vor der Partie und die Kopfzeile. */
-export const REGEL_TEXT: Readonly<Record<'A' | 'B', { kurz: string; satz: string }>> = {
-  A: {
-    kurz: 'Regel A',
-    satz: 'Eine verdeckte Dame gibt kein Schach – wer seinen König in ihrer Reichweite lässt, verliert ihn.',
-  },
-  B: {
-    kurz: 'Regel B',
-    satz: 'Eine verdeckte Dame gibt Schach wie eine echte Dame – dafür verraten die erlaubten Züge, wo sie stehen kann.',
-  },
-};
+export function regelText(regel: 'A' | 'B'): { kurz: string; satz: string } {
+  return { kurz: t(`brochess.regel.${regel}.kurz`), satz: t(`brochess.regel.${regel}.satz`) };
+}
 
 /** Was vor der Partie gewählt wird. Die Regel gilt nur bei Secret Dame. */
 export interface Spielart {
@@ -111,28 +106,29 @@ export function meldung(
   nameVon: (farbe: Farbe) => string,
 ): string {
   const meins = meineFarbe === e.farbe;
+  const name = nameVon(e.farbe);
   switch (e.art) {
     case 'aufgedeckt': {
-      const f = figur(e.grundfigur);
+      const k = figurKey(e.grundfigur);
       return meins
-        ? `Aufgedeckt! ${f.dein} ${f.name} auf ${e.feld} ist als geheime Dame bekannt.`
-        : `Aufgedeckt! ${f.der} ${f.name} auf ${e.feld} ist die geheime Dame von ${nameVon(e.farbe)}.`;
+        ? tf('brochess.meldung.aufgedeckt.meine', { figur: t(`brochess.figurDein.${k}`), feld: e.feld })
+        : tf('brochess.meldung.aufgedeckt.fremde', { figur: t(`brochess.figurDer.${k}`), feld: e.feld, name });
     }
     case 'verdecktGeschlagen': {
-      const f = figur(e.grundfigur);
+      const k = figurKey(e.grundfigur);
       return meins
-        ? `Geschlagen auf ${e.feld}: ${f.dein} ${f.name} war deine geheime Dame.`
-        : `Geschlagen auf ${e.feld}: ${f.der} ${f.name} war die geheime Dame von ${nameVon(e.farbe)}.`;
+        ? tf('brochess.meldung.geschlagen.meine', { figur: t(`brochess.figurDein.${k}`), feld: e.feld })
+        : tf('brochess.meldung.geschlagen.fremde', { figur: t(`brochess.figurDer.${k}`), feld: e.feld, name });
     }
     case 'umgewandelt':
       return meins
-        ? `Deine geheime Dame hat sich auf ${e.feld} umgewandelt und ist keine geheime Dame mehr.`
-        : `Die geheime Dame von ${nameVon(e.farbe)} hat sich auf ${e.feld} umgewandelt.`;
+        ? tf('brochess.meldung.umgewandelt.meine', { feld: e.feld })
+        : tf('brochess.meldung.umgewandelt.fremde', { feld: e.feld, name });
     case 'koenigGeschlagen':
-      if (meins) return `Königsschlag! Deine geheime Dame hat den König auf ${e.feld} geschlagen.`;
+      if (meins) return tf('brochess.meldung.koenig.meine', { feld: e.feld });
       return meineFarbe === null
-        ? `Königsschlag! Die geheime Dame von ${nameVon(e.farbe)} hat den König auf ${e.feld} geschlagen.`
-        : `Königsschlag! Die geheime Dame von ${nameVon(e.farbe)} hat deinen König auf ${e.feld} geschlagen.`;
+        ? tf('brochess.meldung.koenig.zuschauer', { feld: e.feld, name })
+        : tf('brochess.meldung.koenig.fremde', { feld: e.feld, name });
   }
 }
 
@@ -150,10 +146,10 @@ export function frischesEreignis(sicht: BroChessSicht): GeheimEreignis | null {
 export function wahlHinweis(sicht: BroChessSicht, nameVon: (farbe: Farbe) => string): string | null {
   const sd = sicht.secretDame;
   if (!sd?.wahlLaeuft || sicht.ende) return null;
-  if (sicht.meineFarbe === null) return 'Beide wählen ihre geheime Dame …';
-  if (!sd.gewaehlt[sicht.meineFarbe]) return 'Wähle deine geheime Dame: eine eigene Figur antippen, dann bestätigen.';
+  if (sicht.meineFarbe === null) return t('brochess.wahl.zuschauer');
+  if (!sd.gewaehlt[sicht.meineFarbe]) return t('brochess.wahl.anleitung');
   const gegner: Farbe = sicht.meineFarbe === 'w' ? 'b' : 'w';
-  return `${nameVon(gegner)} wählt noch die geheime Dame …`;
+  return tf('brochess.wahl.warten', { name: nameVon(gegner) });
 }
 
 /** `legalActions` getrennt: Züge fürs Brett, Felder für die Wahl der geheimen Dame. */

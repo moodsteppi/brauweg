@@ -22,7 +22,8 @@
 
 import { UNTERGRUND } from './figuren';
 import { Markenzeichen } from './Synergien';
-import { EinheitenFigur, ROLLE_NAME, kostenFarbe } from './Zeichen';
+import { einheitName, rollenName, tz } from './text';
+import { EinheitenFigur, kostenFarbe } from './Zeichen';
 import type { Einheit } from './sicht';
 import {
   type Kaempfer,
@@ -125,7 +126,7 @@ export function Einheitenmarke({
       tabIndex={antippbar ? 0 : undefined}
       aria-label={
         einheit
-          ? `${einheit.name}, ${ROLLE_NAME[einheit.rolle]}, Stufe ${kaempfer.stufe}`
+          ? tz('wabe.titel', { name: einheitName(einheit), rolle: rollenName(einheit.rolle), stufe: kaempfer.stufe })
           : kaempfer.id
       }
       onPointerDown={aktiv ? onZeigerStart : undefined}
@@ -162,7 +163,7 @@ export function Einheitenmarke({
             }
           : undefined
       }
-      title={einheit ? `${einheit.name} · ${ROLLE_NAME[einheit.rolle]}` : kaempfer.id}
+      title={einheit ? `${einheitName(einheit)} · ${rollenName(einheit.rolle)}` : kaempfer.id}
     >
       {einheit ? (
         <EinheitenFigur einheit={einheit} klasse="tr-figur3d" spiegeln={spiegeln} />
@@ -181,7 +182,7 @@ export function Einheitenmarke({
           kann. Kein Text: Auf einer Wabe ist dafuer kein Platz, und vorgelesen
           wird ohnehin das `aria-label` oben. */}
       {einheit && <Markenzeichen marken={einheit.marken} ort="einheit" />}
-      <span className="tr-einheit-name">{einheit?.name ?? kaempfer.id}</span>
+      <span className="tr-einheit-name">{einheit ? einheitName(einheit) : kaempfer.id}</span>
       {/* Der Name der Marke nennt die Stufe schon; hier waere sie doppelt. */}
       <span className="tr-sterne" aria-hidden="true">
         {'★'.repeat(kaempfer.stufe)}
@@ -193,7 +194,7 @@ export function Einheitenmarke({
         */}
       {fehlt === 1 && kaempfer.stufe < maxStufe && (
         <span className="tr-fehlt" aria-hidden="true">
-          noch 1
+          {tz('wabe.nochEine')}
         </span>
       )}
     </div>
@@ -377,7 +378,7 @@ export function Hexbrett({
                   /* Der Name sagt beim Vorlesen mit, ob dieses Feld gerade
                      ein Ziel ist — sichtbar leuchtet es, hoerbar bisher
                      nicht. */
-                  aria-label={`Feld ${platz + 1}${istZiel?.(ort) ? ' · Ziel' : ''}`}
+                  aria-label={`${tz('brett.feld', { n: platz + 1 })}${istZiel?.(ort) ? tz('brett.ziel') : ''}`}
                   /* Klick und nicht Zeiger-Loslassen: Ein abgelegtes Ziehen
                      endet dank Zeigererfassung IMMER an der gezogenen
                      Einheit, nie hier — und erzeugt deshalb auch keinen
@@ -465,7 +466,7 @@ export function Bankreihe({
     <div
       className="tr-bank"
       role="group"
-      aria-label="Reservebank"
+      aria-label={tz('bank.titel')}
       style={{ gridTemplateColumns: `repeat(${plaetze}, minmax(0, 1fr))` }}
     >
       {Array.from({ length: plaetze }, (_, platz) => {
@@ -509,7 +510,7 @@ export function Bankreihe({
                 type="button"
                 className="tr-bankplatz-ziel"
                 disabled={aktiv !== true}
-                aria-label={`Bankplatz ${platz + 1}`}
+                aria-label={tz('bank.platz', { n: platz + 1 })}
                 onClick={() => onWaehlen?.(ort)}
               />
             )}
@@ -529,7 +530,7 @@ export function Bankreihe({
           ueber dem Laden. */}
       {leerAlle && (
         <p className="tr-leer-satz tr-leer-bank">
-          Deine Bank ist leer - kauf dir unten im Laden einen Recken.
+          {tz('bank.leer')}
         </p>
       )}
     </div>

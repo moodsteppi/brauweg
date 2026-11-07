@@ -93,6 +93,127 @@ export interface FillerRegeln {
    * zum 06.11.2026 gespielt, und deren Snapshot traegt sie nicht.
    */
   readonly mauerfreieZuege?: number;
+  /**
+   * Wie viele Mauern ein Feld an seinen vier Kanten hoechstens tragen darf;
+   * der Spielfeldrand zaehlt dabei als Mauer (Regel Niklas, 05.11.2026, nur
+   * Extreme). Fehlt die Zahl oder ist sie 0, gibt es keine Grenze — so wurde
+   * jede Partie bis zum 06.11.2026 gespielt, und deren Snapshot traegt sie
+   * nicht. Siehe `mauernAmFeld` in partie.ts.
+   */
+  readonly mauernJeFeld?: number;
+  /**
+   * Startecken ohne zwei gleichfarbige Nachbarn (seit dem 06.11.2026, nur
+   * Extreme). Fehlt es, baut `erstellePartie` das Brett wie bisher — ein
+   * Tisch, der vorher aufgemacht wurde, bekommt das Brett, das er beim
+   * Aufmachen zugesagt hat. Siehe `entzerreEcken` in partie.ts.
+   */
+  readonly faireEcken?: boolean;
+  /**
+   * So viele Mauern bringt Sitz 1 — der Nachziehende — MEHR mit als Sitz 0
+   * (seit dem 07.11.2026, nur Spielarten mit Mauern). Ausgleich fuer den
+   * Anzug: Wer anfaengt, hat meist auch den letzten Farbzug, und der
+   * entscheidet in Build und Extreme fast immer die Partie
+   * (`werkzeug/MESSUNG-2026-11-07-anzug.md`). Ein groesserer Vorrat ist ein
+   * Ausgleich, den man am Zaehler sieht, statt einer Regel, die man lernen
+   * muss.
+   *
+   * Fehlt die Zahl, ist sie 0 — so wurde jede Partie bis dahin gespielt, und
+   * deren Snapshot traegt sie nicht. Fuer die Spielarten setzt sie
+   * `ausgleichJeSpielart`.
+   */
+  readonly barrierenZuschlagSitz1?: number;
+  /**
+   * So viele Punkte bekommt Sitz 1 — der Nachziehende — in der Wertung dazu
+   * (seit dem 07.11.2026, Klar). Klar hat keine Mauern, also bleibt als
+   * Ausgleich nur die Wertung. Der Zuschlag zaehlt in `platzierungen`, nicht
+   * auf dem Brett: `punkte` bleibt die Zahl der Felder (und Sterne), und die
+   * Sicht nennt den Zuschlag daneben (`punkteZuschlagSitz1`), damit der
+   * Bildschirm ihn zeigen KANN, statt ihn nachzurechnen.
+   *
+   * Gleichstand nach dem Zuschlag bleibt ein Unentschieden. Mit +2 steht
+   * Klar bei 44,1 zu 42,4 (13,5 remis) statt 57,6 zu 29,4 (Saaten
+   * 1000..1999, n = 1000, je ±1,6; MESSUNG-2026-11-07-ausgleich.md,
+   * Abschnitt "Weg B"). Die Vorgaengerin "Gleichstand zaehlt fuer Sitz 1"
+   * konnte nur die Remis umverteilen und blieb bei 57,6 zu 42,4. Eine
+   * ungerade Zahl schafft die Remis ab, kippt aber: +1 wie der Gleichstand,
+   * +3 ergibt 44,1 zu 55,9 — die Brettdifferenz ist fast immer gerade.
+   *
+   * Fehlt die Zahl, ist sie 0 — so wurde jede Partie bis dahin gewertet.
+   */
+  readonly punkteZuschlagSitz1?: number;
+  /**
+   * Der Ausgleich je Spielart; wo eine Spielart einen Eintrag hat, gilt er
+   * statt der beiden Zuschlagsfelder oben (siehe `ausgleichFuer`).
+   *
+   * Eine Tabelle in der Vorgabe aus demselben Grund wie `aufbauJeSpielart`:
+   * Ein Tisch, der vor dem 07.11.2026 aufgemacht wurde, traegt sie nicht und
+   * spielt deshalb ohne Ausgleich zu Ende — so, wie er zugesagt wurde.
+   */
+  readonly ausgleichJeSpielart?: Readonly<Partial<Record<FillerVariante, SpielartAusgleich>>>;
+}
+
+/**
+ * Der Ausgleich fuer den Nachziehenden, den eine Spielart bekommt.
+ *
+ * Getrennt von `SpielartAufbau`, weil dort jede Zahl Pflicht ist und Klar
+ * und Build keinen Aufbau haben — ein Eintrag dort schriebe ihnen Brett und
+ * Mauerregeln neu in den Snapshot, nur um die Wertung zu verschieben.
+ */
+export interface SpielartAusgleich {
+  readonly barrierenZuschlagSitz1?: number;
+  readonly punkteZuschlagSitz1?: number;
+}
+
+/**
+ * Der gemessene Ausgleich je Spielart (Weg B, Bot gegen Bot auf den Saaten
+ * 1000..1999, n = 1000, Standardfehler je ±1,6; MESSUNG-2026-11-07-ausgleich.md):
+ *
+ *   Klar     +2 Punkte  44,1 zu 42,4 (vorher 57,6 zu 29,4)
+ *   Build    +1 Mauer   47,2 zu 48,4 (vorher 51,9 zu 44,3)
+ *   Extreme  +2 Mauern  51,2 zu 47,9 (vorher 59,4 zu 39,5)
+ *
+ * Extreme +3 schoss auf denselben Saaten ueber (46,7 zu 52,6); die anderen
+ * Nachbarwerte (Build +2: 42 zu 52, Extreme +1: 57 zu 41,5) stammen von
+ * den 200 Saaten aus MESSUNG-2026-11-07-anzug.md. Nachrechnen mit
+ * werkzeug/ausgleich-messung.mjs. Der Nebel steht bewusst nicht darin: Fuer
+ * ihn gibt es keine Messung.
+ */
+export const AUSGLEICH_JE_SPIELART = {
+  klar: { punkteZuschlagSitz1: 2 },
+  build: { barrierenZuschlagSitz1: 1 },
+  extreme: { barrierenZuschlagSitz1: 2 },
+} as const satisfies Partial<Record<FillerVariante, SpielartAusgleich>>;
+
+/**
+ * Der Regelsatz mit dem Ausgleich seiner Spielart. Ohne Eintrag kommt er
+ * unveraendert zurueck — auch ohne neue Schluessel, damit eine Nebel-Partie
+ * im Snapshot so aussieht wie vor dem 07.11.2026.
+ */
+export function ausgleichFuer<R extends FillerRegeln>(regeln: R): R {
+  const variante = istVariante(regeln.variante) ? regeln.variante : 'nebel';
+  const eintrag = regeln.ausgleichJeSpielart?.[variante];
+  if (!eintrag) return regeln;
+  return {
+    ...regeln,
+    ...(eintrag.barrierenZuschlagSitz1 !== undefined
+      ? { barrierenZuschlagSitz1: eintrag.barrierenZuschlagSitz1 }
+      : {}),
+    ...(eintrag.punkteZuschlagSitz1 !== undefined
+      ? { punkteZuschlagSitz1: eintrag.punkteZuschlagSitz1 }
+      : {}),
+  };
+}
+
+/** Mauerzuschlag fuer Sitz 1 eines Regelsatzes; fehlt die Zahl, ist es keiner. */
+export function barrierenZuschlagSitz1(
+  regeln: Pick<FillerRegeln, 'barrierenZuschlagSitz1'>,
+): number {
+  return typeof regeln.barrierenZuschlagSitz1 === 'number' ? regeln.barrierenZuschlagSitz1 : 0;
+}
+
+/** Punktzuschlag fuer Sitz 1 eines Regelsatzes; fehlt die Zahl, ist es keiner. */
+export function punkteZuschlagSitz1(regeln: Pick<FillerRegeln, 'punkteZuschlagSitz1'>): number {
+  return typeof regeln.punkteZuschlagSitz1 === 'number' ? regeln.punkteZuschlagSitz1 : 0;
 }
 
 /**
@@ -108,6 +229,14 @@ export interface SpielartAufbau {
   readonly mauernJeZug: number;
   readonly sternPaare: number;
   readonly mauerfreieZuege: number;
+  /*
+   * Diese beiden sind wahlfrei und nicht Pflicht wie die Zahlen oben: Ein
+   * Extreme-Tisch, der zwischen dem 05. und dem 06.11.2026 aufgemacht wurde,
+   * traegt eine Aufbau-Tabelle OHNE sie. Waeren sie Pflicht, wiese
+   * `pruefeRegeln` genau diese Tische ab.
+   */
+  readonly mauernJeFeld?: number;
+  readonly faireEcken?: boolean;
 }
 
 /**
@@ -130,6 +259,13 @@ export const AUFBAU_JE_SPIELART = {
     mauernJeZug: 2,
     sternPaare: 4,
     mauerfreieZuege: 6,
+    /*
+     * Seit dem 06.11.2026: hoechstens zwei Mauern je Feld, der Rand zaehlt
+     * mit (Niklas, 05.11.2026), und Startecken ohne zwei gleichfarbige
+     * Nachbarn. Beides nur hier, Build bleibt ohne.
+     */
+    mauernJeFeld: 2,
+    faireEcken: true,
   },
 } as const satisfies Partial<Record<FillerVariante, SpielartAufbau>>;
 
@@ -153,6 +289,12 @@ export function aufbauFuer<R extends FillerRegeln>(regeln: R): R {
     mauernJeZug: eintrag.mauernJeZug,
     sternPaare: eintrag.sternPaare,
     mauerfreieZuege: eintrag.mauerfreieZuege,
+    /*
+     * Nur uebernehmen, was im Eintrag steht: Eine Tabelle von vor dem
+     * 06.11.2026 kennt beide nicht, und ihr Tisch spielt ohne beide Regeln.
+     */
+    ...(eintrag.mauernJeFeld !== undefined ? { mauernJeFeld: eintrag.mauernJeFeld } : {}),
+    ...(eintrag.faireEcken !== undefined ? { faireEcken: eintrag.faireEcken } : {}),
   };
 }
 
@@ -280,6 +422,12 @@ export const DEFAULT_REGELN: FillerRegeln = {
    * Tisches, der ohne diese Tabelle aufgemacht wurde.
    */
   aufbauJeSpielart: AUFBAU_JE_SPIELART,
+  /*
+   * Der Ausgleich fuer den Nachziehenden (seit dem 07.11.2026). Die beiden
+   * Einzelfelder stehen bewusst NICHT hier: Sie gaelten sonst fuer jede
+   * Spielart, auch fuer den Nebel, fuer den es keine Messung gibt.
+   */
+  ausgleichJeSpielart: AUSGLEICH_JE_SPIELART,
 };
 
 /**
@@ -314,7 +462,83 @@ const GRENZEN = {
   mauernJeZug: [1, 2],
   sternPaare: [0, 6],
   mauerfreieZuege: [0, 12],
-} as const satisfies Record<keyof SpielartAufbau, readonly [number, number]>;
+} as const satisfies Record<PflichtAufbau, readonly [number, number]>;
+
+/** Die Zahlen, die jeder Aufbau-Eintrag tragen muss. */
+type PflichtAufbau = Exclude<keyof SpielartAufbau, 'mauernJeFeld' | 'faireEcken'>;
+
+/**
+ * Mauern je Feld: 0 heisst "keine Grenze", mehr als vier Kanten hat kein
+ * Feld. Dazwischen ist jede Zahl ein spielbares Spiel, auch wenn nur die
+ * Zwei gewollt ist.
+ */
+const MAUERN_JE_FELD_GRENZEN = [0, 4] as const;
+
+/**
+ * Mauerzuschlag fuer Sitz 1. Gemessen sind 0 bis 3 (Extreme 2 und 3 auch auf
+ * den neuen Saaten 1000..1999); fuenf laesst Luft fuer einen Tisch, der mehr
+ * probiert. Mehr hat niemand durchgespielt, und schon drei drehen Extreme
+ * zum Nachzieher (46,7 zu 52,6), zwei Build (42 zu 52, alte 200 Saaten).
+ */
+const ZUSCHLAG_GRENZEN = [0, 5] as const;
+
+/**
+ * Punktzuschlag fuer Sitz 1, dieselben Grenzen wie beim Mauerzuschlag. Aus
+ * den Punktdifferenzen von Klar (1000..1999) laesst sich jede Zahl ohne
+ * neue Partien nachrechnen; schon drei kippen Klar zum Nachzieher (44,1 zu
+ * 55,9), vier erst recht (32,1 zu 55,9). Fuenf laesst Luft fuer einen Tisch,
+ * der mehr probiert — mehr als ein Zehntel der 56 Felder waere kein
+ * Ausgleich mehr, sondern eine Vorgabe.
+ */
+const PUNKTE_ZUSCHLAG_GRENZEN = [0, 5] as const;
+
+/** Prueft die beiden Ausgleichsfelder; `pfad` steht vor dem Feldnamen. */
+function pruefeAusgleich(
+  quelle: Record<string, unknown>,
+  pfad: string,
+  probleme: RegelProblem[],
+): void {
+  const zuschlag = quelle['barrierenZuschlagSitz1'];
+  if (zuschlag !== undefined && zuschlag !== null && !ganzZwischen(zuschlag, ZUSCHLAG_GRENZEN)) {
+    probleme.push({
+      path: `${pfad}barrierenZuschlagSitz1`,
+      messageKey: 'ruleset.fieldWrongType',
+      severity: 'error',
+    });
+  }
+  const punkte = quelle['punkteZuschlagSitz1'];
+  if (punkte !== undefined && punkte !== null && !ganzZwischen(punkte, PUNKTE_ZUSCHLAG_GRENZEN)) {
+    probleme.push({
+      path: `${pfad}punkteZuschlagSitz1`,
+      messageKey: 'ruleset.fieldWrongType',
+      severity: 'error',
+    });
+  }
+}
+
+/** Prueft die wahlfreien Aufbau-Felder; `pfad` steht vor dem Feldnamen. */
+function pruefeWahlfreie(
+  quelle: Record<string, unknown>,
+  pfad: string,
+  probleme: RegelProblem[],
+): void {
+  const jeFeld = quelle['mauernJeFeld'];
+  if (jeFeld !== undefined && jeFeld !== null && !ganzZwischen(jeFeld, MAUERN_JE_FELD_GRENZEN)) {
+    probleme.push({
+      path: `${pfad}mauernJeFeld`,
+      messageKey: 'ruleset.fieldWrongType',
+      severity: 'error',
+    });
+  }
+  const ecken = quelle['faireEcken'];
+  if (ecken !== undefined && ecken !== null && typeof ecken !== 'boolean') {
+    probleme.push({
+      path: `${pfad}faireEcken`,
+      messageKey: 'ruleset.fieldWrongType',
+      severity: 'error',
+    });
+  }
+}
 
 function ganzZwischen(wert: unknown, [von, bis]: readonly [number, number]): boolean {
   return typeof wert === 'number' && Number.isInteger(wert) && wert >= von && wert <= bis;
@@ -388,6 +612,32 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
       probleme.push({ path: feld, messageKey: 'ruleset.fieldWrongType', severity: 'error' });
     }
   }
+  pruefeWahlfreie(gegeben, '', probleme);
+  pruefeAusgleich(gegeben, '', probleme);
+  const ausgleich = gegeben['ausgleichJeSpielart'];
+  if (ausgleich !== undefined && ausgleich !== null) {
+    if (typeof ausgleich !== 'object' || Array.isArray(ausgleich)) {
+      probleme.push({
+        path: 'ausgleichJeSpielart',
+        messageKey: 'ruleset.fieldWrongType',
+        severity: 'error',
+      });
+    } else {
+      for (const v of VARIANTEN) {
+        const eintrag = (ausgleich as Record<string, unknown>)[v];
+        if (eintrag === undefined) continue;
+        if (typeof eintrag !== 'object' || eintrag === null || Array.isArray(eintrag)) {
+          probleme.push({
+            path: `ausgleichJeSpielart.${v}`,
+            messageKey: 'ruleset.fieldWrongType',
+            severity: 'error',
+          });
+          continue;
+        }
+        pruefeAusgleich(eintrag as Record<string, unknown>, `ausgleichJeSpielart.${v}.`, probleme);
+      }
+    }
+  }
   const aufbau = gegeben['aufbauJeSpielart'];
   if (aufbau !== undefined && aufbau !== null) {
     if (typeof aufbau !== 'object') {
@@ -412,6 +662,9 @@ export function pruefeRegeln(config: unknown): RegelProblem[] {
               severity: 'error',
             });
           }
+        }
+        if (typeof eintrag === 'object' && eintrag !== null) {
+          pruefeWahlfreie(eintrag as Record<string, unknown>, `aufbauJeSpielart.${v}.`, probleme);
         }
       }
     }

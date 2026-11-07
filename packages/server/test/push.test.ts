@@ -31,7 +31,8 @@ import { waehlePushVersand, type PushVersand } from '../src/push/versand.js';
 import { PushAnlaesse, type LaufzeitSicht } from '../src/push/anlaesse.js';
 import { leseAbgeschaltet } from '../src/push/kennungen.js';
 import { geraeteFuer, GERAETE_JE_KONTO } from '../src/push/geraete.js';
-import { mitteilungstext, sichererName } from '../src/push/texte.js';
+import { TEXTE, mitteilungstext, sichererName } from '../src/push/texte.js';
+import { textSprache } from '../src/sprache.js';
 import { requireModule } from '../src/games/registry.js';
 import { CONFIG } from './harness.js';
 import { createTestContext, createVerifiedAccount, schema, seedInvite } from './helpers.js';
@@ -734,6 +735,46 @@ test('Texte: nur der Anzeigename, gesaeubert und gekuerzt', () => {
     text: 'Bert sitzt jetzt mit an deinem Skat-Tisch.',
   });
   assert.equal(mitteilungstext('start', { gameId: 'unbekannt' }).text, 'Brauweg: Der Tisch ist voll — es geht los.');
+});
+
+test('Texte je Sprache: Englisch uebersetzt Text und Spielnamen, unbekannt bleibt Deutsch', () => {
+  assert.deepEqual(mitteilungstext('einladung', { gameId: 'wizard', name: 'Bert' }, 'en'), {
+    titel: 'Invitation accepted',
+    text: 'Bert has joined your Wizard table.',
+  });
+  assert.equal(mitteilungstext('dran', { gameId: 'wizard' }, 'de').text, 'Zauberer: Der Tisch wartet auf deinen Zug.');
+  // Eigennamen der App bleiben, auch der App-Store-Name von Filler.
+  assert.equal(mitteilungstext('start', { gameId: 'filler' }, 'en').text, 'Farbduell: The table is full — here we go.');
+  assert.equal(sichererName('', 'en'), 'Someone');
+  assert.equal(textSprache(null), 'de', 'ohne Wahl Deutsch');
+  assert.equal(textSprache('fr'), 'de', 'unbekannte Sprache: Deutsch');
+  assert.equal(textSprache('en'), 'en');
+  // Jede Sprache hat jeden Anlass — der Typ verlangt es, die Probe sieht es zur Laufzeit.
+  for (const anlass of Object.keys(TEXTE.de)) {
+    assert.ok(TEXTE.en[anlass as keyof typeof TEXTE.en]?.titel, `en: ${anlass}`);
+  }
+});
+
+test('am selben Tisch bekommt jeder die Mitteilung in der Sprache seines Kontos', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const anna = await kontoMitGeraet(s, 'Anna', IOS_TOKEN);
+  const ben = await kontoMitGeraet(s, 'Ben', IOS_TOKEN_2);
+  const cleo = await kontoMitGeraet(s, 'Cleo', 'c0ffee00'.repeat(8));
+  await s.ctx.db.update(schema.account).set({ sprache: 'en' }).where(eq(schema.account.id, ben));
+  await s.ctx.db.update(schema.account).set({ sprache: 'de' }).where(eq(schema.account.id, cleo));
+  const { versand, ios } = attrappenVersand();
+  const push = new PushAnlaesse({ db: s.ctx.db, versand, protokoll: still });
+  const lz = attrappenLaufzeit('skat', [
+    { index: 0, accountId: anna },
+    { index: 1, accountId: ben },
+    { index: 2, accountId: cleo },
+  ]);
+  push.partieGestartet(lz.laufzeit, 'tisch-1');
+  await push.ruhe();
+  const titel = ios.gesendet.map((g) => g.mitteilung.titel).sort();
+  // Anna ohne Wahl (automatisch) -> Deutsch, Ben Englisch, Cleo fest Deutsch.
+  assert.deepEqual(titel, ['Deine Runde startet', 'Deine Runde startet', 'Your round is starting']);
 });
 
 // ---------------------------------------------------------------------------

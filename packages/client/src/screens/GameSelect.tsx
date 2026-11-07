@@ -99,7 +99,7 @@ const FlyingBro = lazy(() => import('../flyingbro/FlyingBro').then((m) => ({ def
 const MeisterFeier = lazy(() => import('../lernen/Feier').then((m) => ({ default: m.MeisterFeier })));
 import { Stufenbalken, Stufenleiter } from './Stufen';
 import { Rechtliches } from './Auth';
-import { cardLabel, cardName, isRed, t } from '../i18n';
+import { cardLabel, cardName, isRed, t, zahl } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
 import { SHOP_RUBRIK } from '../inhaltspakete';
 import { StartNeu } from './StartNeu';
@@ -738,13 +738,13 @@ function ProfilTab({
           <div className="hb-karte hb-trophaeen">
             <span className="hb-trophaeen-zahl">
               <img src="/hub/symbol-pokal.webp" alt="" />
-              {trophaeen.toLocaleString('de-DE')}
+              {zahl(trophaeen)}
             </span>
             <span className="hb-klein">{t('profil.trophaeen.alle')}</span>
             <span className="hb-sp-werte is-vier">
               {kacheln.map((k) => (
                 <span key={k.name}>
-                  <b>{typeof k.wert === 'number' ? k.wert.toLocaleString('de-DE') : k.wert}</b>
+                  <b>{typeof k.wert === 'number' ? zahl(k.wert) : k.wert}</b>
                   {k.name}
                 </span>
               ))}
@@ -765,7 +765,7 @@ function ProfilTab({
                   </span>
                   <span className="hb-pk">
                     <img src="/hub/symbol-pokal.webp" alt="" />
-                    {row.trophies.toLocaleString('de-DE')}
+                    {zahl(row.trophies)}
                   </span>
                 </div>
               ))
@@ -1283,7 +1283,7 @@ function KaufFrage({
               aria-label={tf('laden.kauf.muenzenZahlen', { n: frage.ware.preis.coins })}
             >
               <img className="hb-kn-bild" src="/hub/symbol-muenze.webp" alt="" />
-              {frage.ware.preis.coins.toLocaleString('de-DE')}
+              {zahl(frage.ware.preis.coins)}
             </button>
             <button
               type="button"
@@ -1293,7 +1293,7 @@ function KaufFrage({
               aria-label={tf('laden.kauf.edelsteineZahlen', { n: frage.ware.preis.gems })}
             >
               <img className="hb-kn-bild" src="/hub/symbol-edelstein.webp" alt="" />
-              {frage.ware.preis.gems.toLocaleString('de-DE')}
+              {zahl(frage.ware.preis.gems)}
             </button>
           </div>
           <button type="button" className="hb-leise-knopf" onClick={onAbbrechen}>
@@ -1504,7 +1504,7 @@ function Shop({
                 </span>
                 <span className="hb-kn is-gold">
                   <img src="/hub/symbol-muenze.webp" alt="" />
-                  {w.preis.coins.toLocaleString('de-DE')}
+                  {zahl(w.preis.coins)}
                 </span>
               </span>
             </button>
@@ -1941,7 +1941,7 @@ function RanglisteBlatt({
                 </button>
                 <span className="hb-pk">
                   <img src="/hub/symbol-pokal.webp" alt="" />
-                  {row.trophies.toLocaleString('de-DE')}
+                  {zahl(row.trophies)}
                 </span>
               </li>
             ))}
@@ -2423,8 +2423,8 @@ function DeckPicker({
       frage(
         {
           titel: tf('blattwahl.frage.titel', { name }),
-          text: tf('blattwahl.frage.text', { preis: w.preis.coins.toLocaleString('de-DE') }),
-          ja: tf('blattwahl.frage.ja', { preis: w.preis.coins.toLocaleString('de-DE') }),
+          text: tf('blattwahl.frage.text', { preis: zahl(w.preis.coins) }),
+          ja: tf('blattwahl.frage.ja', { preis: zahl(w.preis.coins) }),
         },
         () => kaufen(w, setzen),
       );
@@ -2452,7 +2452,7 @@ function DeckPicker({
       if (!gehoert(art, id)) {
         const w = wareZu(art, id);
         if (w?.nurErspielt) return t('blattwahl.manufaktur');
-        return tf('blattwahl.preis', { preis: (w?.preis.coins ?? 0).toLocaleString('de-DE') });
+        return tf('blattwahl.preis', { preis: zahl(w?.preis.coins ?? 0) });
       }
       return aktiv ? t('blattwahl.aktiv') : t('blattwahl.gehoertDir');
     };
@@ -3057,11 +3057,11 @@ function ShopRahmen({
         <span className="hb-geld">
           <span className="hb-pill" aria-label={tf('laden.guthaben.muenzen', { n: coins })}>
             <img src="/hub/symbol-muenze.webp" alt="" />
-            {coins.toLocaleString('de-DE')}
+            {zahl(coins)}
           </span>
           <span className="hb-pill" aria-label={tf('laden.guthaben.edelsteine', { n: gems })}>
             <img src="/hub/symbol-edelstein.webp" alt="" />
-            {gems.toLocaleString('de-DE')}
+            {zahl(gems)}
           </span>
         </span>
       </header>
