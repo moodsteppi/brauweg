@@ -1,5 +1,7 @@
 # Messung 07.11.2026 — Farbwahl ohne Selbsteinsperren, Mauerprüfung zwei Züge
 
+**Bot-Änderung wegen verfehltem Ziel zurückgenommen (Revert), Code im Verlauf: 941e5d08.**
+
 Umbau auf diesem Zweig: `941e5d08` (bot.ts: Farbwahl in Stufen — selbst
 eingesperrt / Gegner sperrt in 1 bzw. 2 Farbzügen ein / sicher, gierig nur
 innerhalb der besten Stufe; Mauern über der Schwelle werden gemieden, wenn sie
