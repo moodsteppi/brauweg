@@ -21,6 +21,9 @@ export default defineConfig({
        * `tsconfig.json` (paths) und `vitest.config.ts`.
        */
       '@brauweg/manufaktur-kern': fileURLToPath(new URL('../manufaktur-kern/src/index.ts', import.meta.url)),
+      // Flying Bro: Level, Sternregel und Hoechstpunkte rechnet der Client
+      // mit demselben Kern wie der Server — aus demselben Grund aus der Quelle.
+      '@brauweg/flyingbro-kern': fileURLToPath(new URL('../flyingbro-kern/src/index.ts', import.meta.url)),
     },
   },
   server: {
