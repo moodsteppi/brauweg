@@ -16,6 +16,7 @@ import type { BotLevel } from './protocol';
 import type { Lektion, LernpfadAnsicht, LernserieKurz, Spieltag } from './lernen/sicht';
 import type { Belohnung, BrowortAnsicht, BrowortKurz, BrowortProfil, ClanwortAnsicht } from './browort/sicht';
 import type { ManufakturAktion, ManufakturAntwort } from './manufaktur/sicht';
+import type { FlyingbroAnsicht, FlyingbroErgebnisAntwort, FlyingbroMeldung, FlyingbroStartAntwort } from './flyingbro/sicht';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
 import { herkunft } from './herkunft';
 import { setzeUmfang } from './umfang';
@@ -1112,6 +1113,13 @@ export const api = {
   clanwortWahl: (wort: string) => post<{ clanwort: ClanwortAnsicht }>('/clanwort/wahl', { wort }),
   clanwortVersuch: (wort: string) =>
     post<{ clanwort: ClanwortAnsicht; belohnung: Belohnung | null }>('/clanwort/versuch', { wort }),
+  /** Flying Bro: Fortschritt, Vorrat, Tagesgrenzen (flyingbro/sicht.ts). */
+  flyingbro: () => request<FlyingbroAnsicht>('/flyingbro'),
+  /** Level beginnen — der Server merkt sich die Zeit; zu schnelle Meldungen lehnt er ab. */
+  flyingbroStart: (levelId: string, hilfsmittel: string[]) =>
+    post<FlyingbroStartAntwort>('/flyingbro/start', { levelId, hilfsmittel }),
+  /** Versuch melden: Sterne, Meilen und Münzen rechnet der Server. */
+  flyingbroErgebnis: (m: FlyingbroMeldung) => post<FlyingbroErgebnisAntwort>('/flyingbro/ergebnis', m),
   /** Kartenmanufaktur: bis jetzt nachrechnen und zeigen (manufaktur/sicht.ts). */
   manufaktur: () => request<ManufakturAntwort>('/manufaktur'),
   /** Ausbauen, Meister, Schicht, Presse freischalten, Umziehen. */

@@ -64,6 +64,8 @@ const alias = Object.fromEntries(
 
 // Die Manufaktur-Simulation rechnet der Client zur Laufzeit mit (vite.config.ts).
 alias['@brauweg/manufaktur-kern'] = fileURLToPath(new URL('../manufaktur-kern/src/index.ts', import.meta.url));
+// Flying Bro ebenso (Level und Sternregel, vite.config.ts).
+alias['@brauweg/flyingbro-kern'] = fileURLToPath(new URL('../flyingbro-kern/src/index.ts', import.meta.url));
 
 export default defineConfig({
   plugins: [react()],

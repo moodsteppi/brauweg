@@ -1,0 +1,39 @@
+import type { Woerterbuch } from '../woerterbuch';
+
+/** English texts, area "flyingbro". "Flying Bro" is the game's name and stays. */
+export default {
+  'flyingbro.titel': 'Flying Bro',
+  'flyingbro.zurueck': 'Back',
+  'flyingbro.laedt': 'Loading …',
+  'flyingbro.standFehler': 'Your progress could not be loaded.',
+  'flyingbro.nochmalLaden': 'Try again',
+  'flyingbro.meilen': 'Air miles',
+  'flyingbro.welt.1': 'Home',
+  'flyingbro.welt.2': 'Meadows',
+  'flyingbro.welt.3': 'Beach',
+  'flyingbro.gesperrt': 'Locked — beat the previous level first.',
+  'flyingbro.levelLabel': 'Level {nr}, {sterne} of 3 stars',
+  'flyingbro.sterneSumme': '{sterne} of {max} stars',
+
+  'flyingbro.pause': 'Pause',
+  'flyingbro.weiter': 'Resume',
+  'flyingbro.nochmal': 'Retry',
+  'flyingbro.levelwahl': 'Levels',
+  'flyingbro.naechstesLevel': 'Next level',
+  'flyingbro.punkte': 'Points',
+  'flyingbro.hinweis.zielen': 'Pull back and let go',
+  'flyingbro.hinweis.pelle': 'Tap: belly slide',
+  'flyingbro.hinweis.malve': 'Hold: glide',
+  'flyingbro.hinweis.tjark': 'Tap: ice block',
+  'flyingbro.drehen': 'Please rotate your phone',
+
+  'flyingbro.ende.geschafft': 'Cleared!',
+  'flyingbro.ende.verloren': 'The giraffes are still standing',
+  'flyingbro.ende.bonus': 'Bros left: {anzahl} × 3,000',
+  'flyingbro.ende.wertet': 'Scoring …',
+  'flyingbro.ende.nichtGewertet': 'Not scored',
+  'flyingbro.ende.meilen': '+{n} air miles',
+  'flyingbro.ende.muenzen': '+{n} hub coins',
+  'flyingbro.ende.offen': '{n} coins arrive tomorrow (daily limit)',
+  'flyingbro.ende.bestwert': 'Your best so far: {sterne} of 3 stars',
+} satisfies Woerterbuch;

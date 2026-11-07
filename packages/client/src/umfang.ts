@@ -9,7 +9,7 @@
  *
  * Die Spiele der Registry brauchen das nicht — die liefert der Server
  * gleich gefiltert (`/api/games`). Gefragt wird hier nach den Funktionen
- * daneben: kartenmanufaktur, browort, clanwort, lernpfad, prosubway,
+ * daneben: kartenmanufaktur, flyingbro, browort, clanwort, lernpfad, prosubway,
  * clankrieg, clanchat, shop, abstimmung, profilbild, figur, geburtstag —
  * und nach zwei Spielen, deren Einstieg nicht aus `/api/games` kommt:
  * `doppelkopf` (die Übungsrunde im Lernpfad) und `brocooked` (läuft allein

@@ -228,6 +228,11 @@ export function SpieleNeu({
   // „Kommt bald": Es kommt in diesem Release ja nicht (umfang.ts).
   const mitManufaktur = imUmfang('kartenmanufaktur');
   const mitBrowort = imUmfang('browort');
+  // Flying Bro wird quer gespielt; die iOS-Hülle erlaubt heute nur Hochformat
+  // (docs/SPEZIFIKATION-FLYINGBRO.md, Bildschirm und Format). In der App
+  // stünde deshalb für immer „Bitte Handy drehen" da — der Einstieg kommt
+  // dort erst mit der Hüllen-Aufgabe.
+  const mitFlyingbro = imUmfang('flyingbro') && !inApp;
   const mitProSubway = imUmfang('prosubway');
   // Auf beiden Plattformen abstimmen, soweit der Releaseumfang es erlaubt.
   const mitAbstimmung = imUmfang('abstimmung');
@@ -384,7 +389,7 @@ export function SpieleNeu({
             ein gezeichnetes Feld statt eines fehlenden Bildes. Pro-Subway steht
             im selben Abschnitt — zwei Überschriften „Allein" untereinander
             sähen nach einem Fehler aus. */}
-        {filter === 'alle' && (mitManufaktur || mitBrowort || (!inApp && mitProSubway)) && (
+        {filter === 'alle' && (mitManufaktur || mitFlyingbro || mitBrowort || (!inApp && mitProSubway)) && (
           <section className="hb-blk">
             <h2 className="hb-ab">
               <Symbol>
@@ -423,6 +428,16 @@ export function SpieleNeu({
                     <span className="hb-kn is-gold">{t('spielwahl.manufaktur.oeffnen')} <span aria-hidden="true">→</span></span>
                   </span>
                 </span>
+              </button>
+            )}
+            {mitFlyingbro && (
+              <button type="button" className="hb-quer hb-quer-flyingbro" onClick={() => onSolo('flyingbro')}>
+                <img className="hb-flyingbro-bro" src="/flyingbro/bro-pelle-flug.webp" alt="" />
+                <span className="hb-quer-text">
+                  <strong>Flying Bro</strong>
+                  <span>{t('spielwahl.flyingbro.unter')}</span>
+                </span>
+                <span className="hb-kn is-gold">{t('spielwahl.los')}</span>
               </button>
             )}
             {mitBrowort && (
