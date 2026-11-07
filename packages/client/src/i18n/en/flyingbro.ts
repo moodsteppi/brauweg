@@ -7,6 +7,8 @@ export default {
   'flyingbro.laedt': 'Loading …',
   'flyingbro.standFehler': 'Your progress could not be loaded.',
   'flyingbro.nochmalLaden': 'Try again',
+  'flyingbro.ladeFehler': 'The game could not be loaded.',
+  'flyingbro.nochmalLadenSpiel': 'Reload',
   'flyingbro.meilen': 'Air miles',
   'flyingbro.welt.1': 'Home',
   'flyingbro.welt.2': 'Meadows',

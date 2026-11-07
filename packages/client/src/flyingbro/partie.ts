@@ -49,11 +49,19 @@ let geladen: Promise<Rapier> | null = null;
  * 1,25 MB (gzip) nur lädt, wer Flying Bro öffnet (Spezifikation, Empfehlung).
  */
 export function ladeRapier(): Promise<Rapier> {
-  geladen ??= import('@dimforge/rapier2d-compat').then(async (m) => {
-    const r = ((m as unknown as { default?: Rapier }).default ?? m) as Rapier;
-    await r.init();
-    return r;
-  });
+  geladen ??= import('@dimforge/rapier2d-compat')
+    .then(async (m) => {
+      const r = ((m as unknown as { default?: Rapier }).default ?? m) as Rapier;
+      await r.init();
+      return r;
+    })
+    .catch((e: unknown) => {
+      // Ein gescheitertes Promise darf nicht zwischengespeichert bleiben,
+      // sonst scheitert auch "Nochmal laden" sofort wieder (z. B. nach einer
+      // CSP-Sperre fuer WebAssembly oder einem Netzabbruch).
+      geladen = null;
+      throw e;
+    });
   return geladen;
 }
 

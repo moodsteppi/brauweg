@@ -953,7 +953,9 @@ test('die CSP erlaubt kein eval, auch keins fuer WebAssembly', async (t) => {
   // eingeschleustes Skript fuer die ganze Seite weg — nicht nur fuer Pixi.
   assert.notEqual(direktive('script-src'), '', 'script-src fehlt in der Kopfzeile');
   assert.doesNotMatch(csp, /'unsafe-eval'/);
-  assert.doesNotMatch(csp, /'wasm-unsafe-eval'/);
+  // `'wasm-unsafe-eval'` erlaubt nur WebAssembly (rapier / Flying Bro); ohne
+  // ihn blieb Flying Bro auf dem ausgelieferten Stand endlos auf "Laedt".
+  assert.match(direktive('script-src'), /'wasm-unsafe-eval'/);
 });
 
 test('Tagesstatistik: Erstanmeldung zaehlt als neues Konto, Sichern ueber den Anbieter als Upgrade', async (t) => {

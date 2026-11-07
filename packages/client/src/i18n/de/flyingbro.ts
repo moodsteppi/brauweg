@@ -12,6 +12,8 @@ export default {
   'flyingbro.laedt': 'Lädt …',
   'flyingbro.standFehler': 'Dein Spielstand ließ sich nicht laden.',
   'flyingbro.nochmalLaden': 'Nochmal versuchen',
+  'flyingbro.ladeFehler': 'Das Spiel ließ sich nicht laden.',
+  'flyingbro.nochmalLadenSpiel': 'Nochmal laden',
   'flyingbro.meilen': 'Flugmeilen',
   'flyingbro.welt.1': 'Heimat',
   'flyingbro.welt.2': 'Wiesen',
