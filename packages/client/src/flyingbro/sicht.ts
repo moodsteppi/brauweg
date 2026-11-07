@@ -50,6 +50,8 @@ export interface FlyingbroErgebnisAntwort {
   meilen: MeilenErgebnis;
   muenzen: MuenzErgebnis;
   hubMuenzen: number;
+  /** Mit diesem Versuch sind alle Sterne erreicht — der Goldhelm liegt jetzt im Kleiderschrank. */
+  goldhelmNeu: boolean;
   stand: FlyingbroAnsicht;
 }
 

@@ -12,10 +12,13 @@ export interface Leitung {
   stand(): Promise<FlyingbroAnsicht>;
   start(levelId: string, hilfsmittel: Hilfsmittel[]): Promise<FlyingbroStartAntwort>;
   ergebnis(m: FlyingbroMeldung): Promise<FlyingbroErgebnisAntwort>;
+  /** Shop im Spiel: ein Hilfsmittel mit Flugmeilen kaufen; zurück kommt der neue Stand. */
+  kauf(id: string): Promise<FlyingbroAnsicht>;
 }
 
 export const echteLeitung: Leitung = {
   stand: () => api.flyingbro(),
   start: (levelId, hilfsmittel) => api.flyingbroStart(levelId, hilfsmittel),
   ergebnis: (m) => api.flyingbroErgebnis(m),
+  kauf: (id) => api.flyingbroKauf(id),
 };

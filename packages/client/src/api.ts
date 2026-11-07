@@ -1120,6 +1120,8 @@ export const api = {
     post<FlyingbroStartAntwort>('/flyingbro/start', { levelId, hilfsmittel }),
   /** Versuch melden: Sterne, Meilen und Münzen rechnet der Server. */
   flyingbroErgebnis: (m: FlyingbroMeldung) => post<FlyingbroErgebnisAntwort>('/flyingbro/ergebnis', m),
+  /** Shop im Spiel: nur mit Flugmeilen, nie mit Hub-Münzen (Spezifikation, „Shop im Spiel"). */
+  flyingbroKauf: (id: string) => post<FlyingbroAnsicht>('/flyingbro/kauf', { id }),
   /** Kartenmanufaktur: bis jetzt nachrechnen und zeigen (manufaktur/sicht.ts). */
   manufaktur: () => request<ManufakturAntwort>('/manufaktur'),
   /** Ausbauen, Meister, Schicht, Presse freischalten, Umziehen. */

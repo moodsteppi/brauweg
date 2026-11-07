@@ -32,6 +32,21 @@ export default {
   'flyingbro.hinweis.tjark': 'Tippen: Eisblock',
   'flyingbro.drehen': 'Bitte Handy drehen',
 
+  'flyingbro.shop.titel': 'Shop',
+  'flyingbro.shop.satz': 'Hilfsmittel für einen Versuch — bezahlt mit Flugmeilen, nie mit Münzen.',
+  'flyingbro.shop.vorrat': 'Vorrat: {n}',
+  'flyingbro.shop.kaufenLabel': '{name} für {preis} Flugmeilen kaufen',
+  'flyingbro.shop.zweiSterne': 'Mit Hilfsmittel gibt es höchstens 2 Sterne.',
+  'flyingbro.hilfsmittel.fernrohr': 'Fernrohr',
+  'flyingbro.hilfsmittel.fernrohr.wirkung': 'Längere Flugbahn-Vorschau für ein Level',
+  'flyingbro.hilfsmittel.bauplan': 'Bauplan',
+  'flyingbro.hilfsmittel.bauplan.wirkung': 'Zeigt für ein Level die drei tragenden Teile',
+  'flyingbro.hilfsmittel.ersatz-pelle': 'Ersatz-Pelle',
+  'flyingbro.hilfsmittel.ersatz-pelle.wirkung': 'Ein zusätzlicher Pelle am Ende der Reihe',
+  'flyingbro.vorbereitung.titel': 'Hilfsmittel einsetzen',
+  'flyingbro.vorbereitung.ohne': 'Ohne Hilfsmittel sind 3 Sterne drin.',
+  'flyingbro.vorbereitung.los': 'Los',
+
   'flyingbro.ende.geschafft': 'Geschafft!',
   'flyingbro.ende.verloren': 'Die Giraffen stehen noch',
   'flyingbro.ende.bonus': 'Übrige Bros: {anzahl} × 3.000',
@@ -41,4 +56,5 @@ export default {
   'flyingbro.ende.muenzen': '+{n} Münzen fürs Hub',
   'flyingbro.ende.offen': '{n} Münzen kommen morgen (Tagesgrenze)',
   'flyingbro.ende.bestwert': 'Bisher bestes Ergebnis: {sterne} von 3 Sternen',
+  'flyingbro.ende.goldhelm': 'Alle Sterne! Der Goldhelm liegt im Kleiderschrank.',
 } satisfies Woerterbuch;

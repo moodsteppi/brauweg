@@ -27,6 +27,21 @@ export default {
   'flyingbro.hinweis.tjark': 'Tap: ice block',
   'flyingbro.drehen': 'Please rotate your phone',
 
+  'flyingbro.shop.titel': 'Shop',
+  'flyingbro.shop.satz': 'Power-ups for one attempt — paid with air miles, never with coins.',
+  'flyingbro.shop.vorrat': 'In stock: {n}',
+  'flyingbro.shop.kaufenLabel': 'Buy {name} for {preis} air miles',
+  'flyingbro.shop.zweiSterne': 'With a power-up you can earn at most 2 stars.',
+  'flyingbro.hilfsmittel.fernrohr': 'Spyglass',
+  'flyingbro.hilfsmittel.fernrohr.wirkung': 'Longer trajectory preview for one level',
+  'flyingbro.hilfsmittel.bauplan': 'Blueprint',
+  'flyingbro.hilfsmittel.bauplan.wirkung': 'Shows the three load-bearing pieces for one level',
+  'flyingbro.hilfsmittel.ersatz-pelle': 'Spare Pelle',
+  'flyingbro.hilfsmittel.ersatz-pelle.wirkung': 'One extra Pelle at the end of the line',
+  'flyingbro.vorbereitung.titel': 'Use power-ups',
+  'flyingbro.vorbereitung.ohne': 'Without power-ups, 3 stars are possible.',
+  'flyingbro.vorbereitung.los': 'Go',
+
   'flyingbro.ende.geschafft': 'Cleared!',
   'flyingbro.ende.verloren': 'The giraffes are still standing',
   'flyingbro.ende.bonus': 'Bros left: {anzahl} × 3,000',
@@ -36,4 +51,5 @@ export default {
   'flyingbro.ende.muenzen': '+{n} hub coins',
   'flyingbro.ende.offen': '{n} coins arrive tomorrow (daily limit)',
   'flyingbro.ende.bestwert': 'Your best so far: {sterne} of 3 stars',
+  'flyingbro.ende.goldhelm': 'All stars! The Golden Helmet is in your wardrobe.',
 } satisfies Woerterbuch;

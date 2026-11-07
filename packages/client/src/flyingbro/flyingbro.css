@@ -259,6 +259,80 @@
   .fb-ende-punkte { font-size: 24px; }
 }
 
+/* ---------- Shop im Spiel und Vorbereitung ---------- */
+
+.fb-knopf.is-klein { min-height: 34px; padding: 6px 14px; font-size: 14px; }
+.fb-shop-satz { margin: 0; text-align: center; font-weight: 700; font-size: 14px; color: #3a2410; }
+.fb-shop-satz.is-leise { font-weight: 600; font-size: 13px; opacity: 0.75; }
+.fb-shop-satz.is-fehler { color: #a3260f; }
+.fb-shop {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 760px;
+}
+.fb-ware {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px;
+  border-radius: 18px;
+  text-align: center;
+  background: linear-gradient(#fffaf0, #f1dfbd);
+  box-shadow: 0 4px 0 #b8925c, 0 8px 16px rgba(40, 20, 0, 0.2);
+}
+.fb-ware-zeichen { font-size: 34px; line-height: 1; }
+.fb-ware-text { display: flex; flex-direction: column; gap: 2px; }
+.fb-ware-text strong { font-size: 16px; font-weight: 900; }
+.fb-ware-text small { font-size: 12px; font-weight: 600; opacity: 0.8; }
+.fb-ware-vorrat { font-size: 13px; font-weight: 800; color: #6b4a1f; }
+.fb-ware .fb-knopf { margin-top: auto; min-width: 96px; }
+
+.fb-schalter { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.fb-schalt {
+  appearance: none;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  min-width: 104px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font: inherit;
+  color: #3a2410;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 3px 0 #b8925c;
+  cursor: pointer;
+}
+.fb-schalt.is-an { border-color: #f5b52a; background: #fff3c4; box-shadow: 0 3px 0 #b8780c, 0 0 0 3px rgba(245, 181, 42, 0.35); }
+.fb-schalt:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+.fb-schalt-zeichen { font-size: 26px; line-height: 1; }
+.fb-schalt strong { font-size: 14px; font-weight: 900; }
+.fb-schalt small { font-size: 12px; font-weight: 600; opacity: 0.8; }
+
+.fb-hud-hilfe {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(30, 20, 10, 0.45);
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Flach quer (Handy): Waren nebeneinander, aber ohne Luft nach oben und unten. */
+@media (max-height: 430px) {
+  .fb-ware { padding: 8px; gap: 4px; }
+  .fb-ware-zeichen { font-size: 26px; }
+  .fb-ware-text small { font-size: 11px; }
+  .fb-schalt { min-width: 92px; padding: 6px 8px; }
+}
+
 /* ---------- Dreh-Einblendung ---------- */
 
 .fb-drehen {
