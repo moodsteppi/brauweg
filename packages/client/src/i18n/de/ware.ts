@@ -78,6 +78,13 @@ export default {
   'kosmetik.aura-funken': 'Funkenflug',
   'kosmetik.aura-sterne': 'Sternenkranz',
   'kosmetik.aura-konfetti': 'Konfetti',
+  // Flying Bro (Spezifikation, „Kosmetik für den Hauptshop“)
+  'kosmetik.hut-fliegerkappe': 'Fliegerkappe',
+  'kosmetik.hut-goldhelm': 'Goldhelm',
+  'kosmetik.brille-fliegerbrille': 'Fliegerbrille',
+  'kosmetik.oberteil-fliegerschal': 'Fliegerschal',
+  'kosmetik.hand-kartenkiste': 'Schleuderkiste',
+  'kosmetik.aura-kondensstreifen': 'Kondensstreifen',
 
   // --- Tagesaufgaben ------------------------------------------------------
   'quest.partie-spielen': 'Spiel eine Partie',

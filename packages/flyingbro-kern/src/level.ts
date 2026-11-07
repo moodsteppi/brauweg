@@ -236,6 +236,70 @@ function pruefeGeometrie(level: Level): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Bauplan: die tragenden Teile
+// ---------------------------------------------------------------------------
+
+/**
+ * Die Teile, die am meisten tragen — was das Hilfsmittel „Bauplan" zeigt
+ * (Spezifikation, „Shop im Spiel": „zeigt für ein Level die drei tragenden
+ * Teile"). Gerechnet aus der Startlage der Leveldatei mit derselben
+ * Auflageregel wie die Levelprüfung, also ohne Physik: Server, Client und
+ * Test sehen dieselben drei.
+ *
+ * Gewicht eines Teils ist, was über ihm ruht — mittelbar mitgezählt, wer auf
+ * einem Teil steht, das auf ihm steht. Giraffen gehen vor: Ein Teil unter
+ * einer Giraffe ist wertvoller als eins unter drei Planken, denn umgeworfen
+ * werden muss die Giraffe, nicht die Planke. Bei Gleichstand das tiefere,
+ * dann das mit der kleineren Nummer — damit die Wahl nicht von der
+ * Sortierung der Laufzeit abhängt.
+ *
+ * Teile, die nichts tragen, kommen nie in die Liste; ein Level mit weniger
+ * als `anzahl` tragenden Teilen bekommt entsprechend weniger.
+ */
+export function tragendeTeile(level: Level, anzahl = 3): number[] {
+  const teile = level.teile.map(umrissTeil);
+  const giraffen = level.giraffen.map(umrissGiraffe);
+  const alle = [...teile, ...giraffen];
+  // traeger[j] = Teile, auf denen Element j aufliegt.
+  const traeger: number[][] = alle.map((u) => {
+    if (Math.abs(u.unten - level.boden) <= LEVEL_TOLERANZ) return [];
+    const unter: number[] = [];
+    teile.forEach((s, i) => {
+      if (s === u || !s.traegt) return;
+      if (Math.abs(s.oben - u.unten) > LEVEL_TOLERANZ) return;
+      if (Math.min(s.traegt[1], u.auflage[1]) < Math.max(s.traegt[0], u.auflage[0]) - 1e-9) return;
+      unter.push(i);
+    });
+    return unter;
+  });
+  // ueber[i] = alles, was mittelbar auf Teil i ruht.
+  const ueber: Set<number>[] = teile.map(() => new Set());
+  alle.forEach((_, j) => {
+    const offen = [...traeger[j]];
+    const gesehen = new Set<number>();
+    while (offen.length > 0) {
+      const i = offen.pop()!;
+      if (gesehen.has(i)) continue;
+      gesehen.add(i);
+      ueber[i].add(j);
+      offen.push(...traeger[i]);
+    }
+  });
+  const anzahlTeile = teile.length;
+  return teile
+    .map((u, i) => ({
+      i,
+      giraffen: [...ueber[i]].filter((j) => j >= anzahlTeile).length,
+      last: ueber[i].size,
+      unten: u.unten,
+    }))
+    .filter((t) => t.last > 0)
+    .sort((a, b) => b.giraffen - a.giraffen || b.last - a.last || a.unten - b.unten || a.i - b.i)
+    .slice(0, anzahl)
+    .map((t) => t.i);
+}
+
+// ---------------------------------------------------------------------------
 // Prüfung einer Datei
 // ---------------------------------------------------------------------------
 

@@ -4,9 +4,11 @@ import {
   type Hilfsmittel,
   STARTVORRAT,
   besteSterne,
+  kaufe,
   levelNach,
   meilenFuer,
   muenzenFuer,
+  setzeEin,
   sterneFuer,
   weltErfuellt,
 } from '@brauweg/flyingbro-kern';
@@ -16,7 +18,7 @@ import type { Leitung } from '../../flyingbro/leitung';
 import type { FlyingbroAnsicht } from '../../flyingbro/sicht';
 
 /**
- * Probe unter `/probe/flyingbro?fall=levelwahl|zielen|einsturz|levelende`:
+ * Probe unter `/probe/flyingbro?fall=levelwahl|shop|vorbereitung|zielen|einsturz|levelende`:
  * der ECHTE Flying-Bro-Bildschirm ohne Server und ohne Anmeldung.
  *
  * Der „Server" rechnet mit demselben Kern wie der echte (Sterne, Meilen,
@@ -53,7 +55,20 @@ function probeLeitung(fall: ProbeFall | undefined): Leitung {
   let stand = probeStand(fall);
   return {
     stand: async () => stand,
-    start: async (levelId, hilfsmittel) => ({ levelId, start: Date.now(), hilfsmittel, vorrat: stand.vorrat }),
+    // Start und Kauf buchen mit denselben Kernfunktionen wie der Server ab —
+    // nur so zeigt die Probe, wie der Vorrat nach einem Einsatz sinkt.
+    start: async (levelId, hilfsmittel) => {
+      const einsatz = setzeEin(stand.vorrat, hilfsmittel);
+      if (!einsatz.ok) throw new Error(einsatz.grund);
+      stand = { ...stand, vorrat: einsatz.vorrat };
+      return { levelId, start: Date.now(), hilfsmittel, vorrat: stand.vorrat };
+    },
+    kauf: async (id) => {
+      const k = kaufe({ meilen: stand.meilen, vorrat: stand.vorrat, zierde: stand.zierde }, id);
+      if (!k.ok) throw new Error(k.grund);
+      stand = { ...stand, ...k.stand };
+      return stand;
+    },
     ergebnis: async (m) => {
       const level = levelNach(m.levelId)!;
       const hilfsmittel: Hilfsmittel[] = m.hilfsmittel;
@@ -87,13 +102,14 @@ function probeLeitung(fall: ProbeFall | undefined): Leitung {
         meilen,
         muenzen,
         hubMuenzen: 1234,
+        goldhelmNeu: false,
         stand,
       };
     },
   };
 }
 
-const FAELLE: readonly ProbeFall[] = ['levelwahl', 'zielen', 'einsturz', 'levelende'];
+const FAELLE: readonly ProbeFall[] = ['levelwahl', 'shop', 'vorbereitung', 'zielen', 'einsturz', 'levelende'];
 
 export function ProbeFlyingbro(): React.JSX.Element {
   const roh = new URLSearchParams(window.location.search).get('fall');

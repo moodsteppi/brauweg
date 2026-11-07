@@ -22,6 +22,7 @@ import {
   naechstesLevel,
   pruefeLevel,
   SPIELABLAUF,
+  tragendeTeile,
 } from '../src/index.js';
 
 // dist/test → Paketwurzel: Die JSON-Dateien liegen im Quellbaum, nicht nur in dist.
@@ -234,4 +235,36 @@ test('Prüfung: Quader nur in 90°-Schritten, gedrehter Quader tauscht Breite un
   const f = fehlerVon(liegend);
   assert.ok(!f.some((x) => x.includes('Teil 1 ') && x.includes('Boden')), f.join('\n'));
   assert.ok(f.some((x) => x.includes('Teil 3') && x.includes('kippt')), f.join('\n'));
+});
+
+test('Bauplan: tragende Teile sind die mit der meisten Last, Giraffen zuerst', () => {
+  // Beispiel ohne die Giraffe im Dach: zwei Pfosten tragen die Glasplatte,
+  // die Platte trägt das Steindreieck; Kreis und Kalb stehen am Boden.
+  const l = beispiel();
+  const id = tragendeTeile(l);
+  // Pfosten (Platte + Dreieck darüber, je 2) vor der Platte (nur das Dreieck).
+  assert.deepEqual(id, [0, 1, 2]);
+  assert.deepEqual(tragendeTeile(l, 1), [0]);
+});
+
+test('Bauplan: ein Teil unter einer Giraffe geht vor, auch mit weniger Last', () => {
+  const l = beispiel();
+  l.giraffen = [{ groesse: 'kalb', x: 21.0, y: 0.6, blick: 'links' }];
+  l.teile[4] = { stoff: 'holz', form: 'quader', x: 21.0, y: 0.3, b: 1.0, h: 0.6 };
+  assert.equal(tragendeTeile(l)[0], 4);
+});
+
+test('Bauplan: was nichts trägt, wird nie gezeigt', () => {
+  const l = beispiel();
+  l.teile = [{ stoff: 'holz', form: 'quader', x: 16.0, y: 0.5, b: 1, h: 1 }];
+  assert.deepEqual(tragendeTeile(l), []);
+});
+
+test('Bauplan: jedes mitgelieferte Level zeigt drei Teile, alle mit gültiger Nummer', () => {
+  for (const level of LEVELS) {
+    const id = tragendeTeile(level);
+    assert.ok(id.length > 0 && id.length <= 3, `${level.id}: ${id.length} tragende Teile`);
+    assert.equal(new Set(id).size, id.length, level.id);
+    for (const i of id) assert.ok(i >= 0 && i < level.teile.length, `${level.id}: Teil ${i}`);
+  }
 });

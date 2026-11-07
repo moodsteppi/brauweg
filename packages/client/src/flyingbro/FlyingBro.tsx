@@ -7,14 +7,19 @@
  * im Pausenmenü stehen, bis jemand „Weiter" tippt — sonst flöge ein Bro
  * weiter, während die Hand noch das Gerät dreht.
  *
- * Kein Ingame-Shop hier (eigene Aufgabe): Hilfsmittel gehen deshalb immer
- * leer an den Server.
+ * Vor jedem Level steht die Vorbereitung: Dort setzt man Hilfsmittel aus
+ * dem Vorrat ein oder kauft im Shop mit Flugmeilen nach. Was gewählt ist,
+ * geht genau so an den Start, an `sterneFuer` und an die Meldung — der
+ * Server prüft, dass alle drei übereinstimmen, und bucht beim Start ab.
+ * Zierde zeigt der Shop hier noch nicht: Sie hat im Spiel noch kein
+ * Aussehen, und ein Kauf ohne sichtbare Wirkung wäre ein Fehlkauf.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
 import {
   BRO_WERTE,
+  HILFSMITTEL_KATALOG,
   type Hilfsmittel,
   LEVELS,
   type Level,
@@ -22,10 +27,12 @@ import {
   SPIELABLAUF,
   type Sterne,
   freigeschaltet,
+  kaufe,
   levelNach,
   levelsDerWelt,
   naechstesLevel,
   sterneFuer,
+  tragendeTeile,
 } from '@brauweg/flyingbro-kern';
 
 import { ApiError } from '../api';
@@ -37,7 +44,7 @@ import { type Kamera, kameraFuer, naeher } from './kamera';
 import { type Leitung, echteLeitung } from './leitung';
 import { Partie, ladeRapier } from './partie';
 import type { FlyingbroAnsicht, FlyingbroErgebnisAntwort } from './sicht';
-import { zeichne, type Zielbild } from './zeichnen';
+import { zeichne, type ZeichenHilfe, type Zielbild } from './zeichnen';
 import { SCHRITT_S, abschuss, vollerZugPx, vorschau, zugAus } from './zielen';
 import './flyingbro.css';
 
@@ -54,9 +61,16 @@ function bildrateMessen(probe: ProbeFall | undefined): boolean {
 }
 
 /** Für die Proben (proben/flyingbro): ein fester Zustand statt eines Spielverlaufs. */
-export type ProbeFall = 'levelwahl' | 'zielen' | 'einsturz' | 'levelende';
+export type ProbeFall = 'levelwahl' | 'shop' | 'vorbereitung' | 'zielen' | 'einsturz' | 'levelende';
 
-const HILFSMITTEL_KEINE: Hilfsmittel[] = [];
+/** Die Fälle, die im laufenden Spiel stehen — die übrigen sind Tafeln davor. */
+type SpielFall = Extract<ProbeFall, 'zielen' | 'einsturz' | 'levelende'>;
+function spielFall(f: ProbeFall | undefined): SpielFall | undefined {
+  return f === 'zielen' || f === 'einsturz' || f === 'levelende' ? f : undefined;
+}
+
+/** Kurzzeichen je Hilfsmittel — für Schalter und HUD, ohne Bilddatei (es gibt noch keine). */
+const ZEICHEN: Readonly<Record<Hilfsmittel, string>> = { fernrohr: '🔭', bauplan: '📐', 'ersatz-pelle': '🐧' };
 /** Höchstens so viele Physikschritte je Bild — ein langsames Gerät läuft lieber langsamer als in Sprüngen. */
 const MAX_SCHRITTE_JE_BILD = 4;
 /** So lange stehen Splitter und Punkte noch, bevor die Wertung kommt (s). */
@@ -116,12 +130,14 @@ function Levelwahl({
   welt,
   setWelt,
   onLevel,
+  onShop,
   onClose,
 }: {
   stand: FlyingbroAnsicht;
   welt: number;
   setWelt: (w: number) => void;
   onLevel: (l: Level) => void;
+  onShop: () => void;
   onClose: () => void;
 }): React.JSX.Element {
   const geschafft = useMemo(() => new Set(Object.keys(stand.level)), [stand.level]);
@@ -141,6 +157,9 @@ function Levelwahl({
           <span className="fb-chip">
             ✈ {stand.meilen} <small>{t('flyingbro.meilen')}</small>
           </span>
+          <button type="button" className="fb-knopf is-klein" onClick={onShop}>
+            {t('flyingbro.shop.titel')}
+          </button>
         </span>
       </header>
       <nav className="fb-welten" role="tablist">
@@ -171,6 +190,160 @@ function Levelwahl({
           );
         })}
       </ol>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Shop im Spiel
+// ---------------------------------------------------------------------------
+
+/**
+ * Hilfsmittel gegen Flugmeilen. Die Preise kommen aus dem Kernkatalog, und
+ * ob es reicht, sagt `kaufe` aus demselben Kern — mit dieser Funktion bucht
+ * auch der Server. Der Knopf kann also nicht mehr erlauben als der Server.
+ */
+function Shop({
+  stand,
+  leitung,
+  onStand,
+  onZurueck,
+}: {
+  stand: FlyingbroAnsicht;
+  leitung: Leitung;
+  onStand: (s: FlyingbroAnsicht) => void;
+  onZurueck: () => void;
+}): React.JSX.Element {
+  const [laeuft, setLaeuft] = useState<string | null>(null);
+  const [fehler, setFehler] = useState<string | null>(null);
+  // Doppeltipp am Handy: Der zweite Kauf ginge sonst los, bevor der erste zurück ist.
+  const sperre = useRef(false);
+  const kaufen = (id: string): void => {
+    if (sperre.current) return;
+    sperre.current = true;
+    setLaeuft(id);
+    setFehler(null);
+    leitung
+      .kauf(id)
+      .then(onStand, (e: unknown) => setFehler(fehlerText(e)))
+      .finally(() => {
+        sperre.current = false;
+        setLaeuft(null);
+      });
+  };
+  return (
+    <div className="fb-wahl" role="region" aria-label={t('flyingbro.shop.titel')}>
+      <header className="fb-wahl-kopf">
+        <button type="button" className="fb-knopf is-rund" onClick={onZurueck} aria-label={t('flyingbro.zurueck')}>
+          ←
+        </button>
+        <h1>{t('flyingbro.shop.titel')}</h1>
+        <span className="fb-wahl-stand">
+          <span className="fb-chip is-meilen">
+            ✈ {stand.meilen} <small>{t('flyingbro.meilen')}</small>
+          </span>
+        </span>
+      </header>
+      <p className="fb-shop-satz">{t('flyingbro.shop.satz')}</p>
+      <ul className="fb-shop">
+        {HILFSMITTEL_KATALOG.map((a) => {
+          const geht = kaufe({ meilen: stand.meilen, vorrat: stand.vorrat, zierde: stand.zierde }, a.id).ok;
+          return (
+            <li key={a.id} className="fb-ware">
+              <span className="fb-ware-zeichen" aria-hidden="true">
+                {ZEICHEN[a.id]}
+              </span>
+              <span className="fb-ware-text">
+                <strong>{t(`flyingbro.hilfsmittel.${a.id}`)}</strong>
+                <small>{t(`flyingbro.hilfsmittel.${a.id}.wirkung`)}</small>
+              </span>
+              <span className="fb-ware-vorrat">{tf('flyingbro.shop.vorrat', { n: stand.vorrat[a.id] })}</span>
+              <button
+                type="button"
+                className="fb-knopf is-gold"
+                disabled={!geht || laeuft !== null}
+                aria-label={tf('flyingbro.shop.kaufenLabel', { name: t(`flyingbro.hilfsmittel.${a.id}`), preis: a.preis })}
+                onClick={() => kaufen(a.id)}
+              >
+                ✈ {a.preis}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <p className={`fb-shop-satz${fehler ? ' is-fehler' : ' is-leise'}`} aria-live="polite">
+        {fehler ?? t('flyingbro.shop.zweiSterne')}
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Vorbereitung — Hilfsmittel für den nächsten Versuch wählen
+// ---------------------------------------------------------------------------
+
+function Vorbereitung({
+  level,
+  stand,
+  gewaehlt,
+  setGewaehlt,
+  onLos,
+  onShop,
+  onZurueck,
+}: {
+  level: Level;
+  stand: FlyingbroAnsicht;
+  gewaehlt: Hilfsmittel[];
+  setGewaehlt: (h: Hilfsmittel[]) => void;
+  onLos: () => void;
+  onShop: () => void;
+  onZurueck: () => void;
+}): React.JSX.Element {
+  const umschalten = (h: Hilfsmittel): void => setGewaehlt(gewaehlt.includes(h) ? gewaehlt.filter((x) => x !== h) : [...gewaehlt, h]);
+  return (
+    <div className="fb-wahl fb-mitte">
+      <div className="fb-tafel fb-vorbereitung" role="group" aria-label={t('flyingbro.vorbereitung.titel')}>
+        <h2>
+          {level.welt}-{level.nr} · {level.titel}
+        </h2>
+        <p className="fb-ende-zeile">{t('flyingbro.vorbereitung.titel')}</p>
+        <div className="fb-schalter">
+          {HILFSMITTEL_KATALOG.map((a) => {
+            const an = gewaehlt.includes(a.id);
+            // Wählbar ist nur, was im Vorrat liegt — der Start lehnte es sonst ab.
+            const leer = stand.vorrat[a.id] <= 0;
+            return (
+              <button
+                key={a.id}
+                type="button"
+                className={`fb-schalt${an ? ' is-an' : ''}`}
+                aria-pressed={an}
+                disabled={leer && !an}
+                title={t(`flyingbro.hilfsmittel.${a.id}.wirkung`)}
+                onClick={() => umschalten(a.id)}
+              >
+                <span className="fb-schalt-zeichen" aria-hidden="true">
+                  {ZEICHEN[a.id]}
+                </span>
+                <strong>{t(`flyingbro.hilfsmittel.${a.id}`)}</strong>
+                <small>{tf('flyingbro.shop.vorrat', { n: stand.vorrat[a.id] })}</small>
+              </button>
+            );
+          })}
+        </div>
+        <p className="fb-ende-leise">{gewaehlt.length > 0 ? t('flyingbro.shop.zweiSterne') : t('flyingbro.vorbereitung.ohne')}</p>
+        <div className="fb-tafel-knoepfe">
+          <button type="button" className="fb-knopf" onClick={onZurueck}>
+            {t('flyingbro.levelwahl')}
+          </button>
+          <button type="button" className="fb-knopf" onClick={onShop}>
+            {t('flyingbro.shop.titel')}
+          </button>
+          <button type="button" className="fb-knopf is-gold" onClick={onLos}>
+            {t('flyingbro.vorbereitung.los')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -213,23 +386,32 @@ function probeSchuss(R: Awaited<ReturnType<typeof ladeRapier>>, level: Level): {
 function Spiel({
   level,
   versuch,
+  hilfsmittel,
   leitung,
   quer,
   probe,
   onNochmal,
+  onNeuVorbereiten,
   onLevelwahl,
   onWeiter,
+  onVorrat,
   onGeaendert,
 }: {
   level: Level;
   /** Schlüssel des Versuchs: Ein neuer Wert baut die Partie neu (Nochmal). */
   versuch: number;
+  /** Eingesetzt für diesen Versuch — fest, solange das Level läuft. */
+  hilfsmittel: Hilfsmittel[];
   leitung: Leitung;
   quer: boolean;
-  probe?: ProbeFall;
+  probe?: SpielFall;
   onNochmal: () => void;
+  /** Nach der Wertung mit Hilfsmitteln: neu wählen, denn der nächste Start bucht wieder ab. */
+  onNeuVorbereiten: () => void;
   onLevelwahl: () => void;
   onWeiter: ((l: Level) => void) | null;
+  /** Der Start hat abgebucht — der Vorrat im Stand zieht nach. */
+  onVorrat: (vorrat: FlyingbroAnsicht['vorrat']) => void;
   onGeaendert: (antwort: FlyingbroErgebnisAntwort) => void;
 }): React.JSX.Element {
   const leinwand = useRef<HTMLCanvasElement>(null);
@@ -253,6 +435,18 @@ function Spiel({
   // Der Bildschirm ruft zurück, ohne dass die Schleife neu startet (Effekt am Schlüssel, nicht am Objekt).
   const geaendert = useRef(onGeaendert);
   geaendert.current = onGeaendert;
+  const vorratNeu = useRef(onVorrat);
+  vorratNeu.current = onVorrat;
+  // Die Wahl ändert sich während eines Levels nicht (die Vorbereitung liegt
+  // davor); als Schlüssel für die Effekte dient deshalb die Zeichenkette —
+  // ein neues Feld mit gleichem Inhalt startete sonst den Versuch neu.
+  const einsatz = hilfsmittel.join(',');
+  const fernrohr = hilfsmittel.includes('fernrohr');
+  const hilfe = useMemo<ZeichenHilfe>(
+    () => (hilfsmittel.includes('bauplan') ? { tragend: new Set(tragendeTeile(level)) } : {}),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Schlüssel ist die Wahl, nicht das Feld.
+    [level, einsatz],
+  );
 
   pausiert.current = pause || !quer;
 
@@ -266,9 +460,11 @@ function Spiel({
     startLokal.current = null;
     startFehler.current = null;
     let aus = false;
-    leitung.start(level.id, HILFSMITTEL_KEINE).then(
-      () => {
-        if (!aus) startLokal.current = performance.now();
+    leitung.start(level.id, hilfsmittel).then(
+      (antwort) => {
+        if (aus) return;
+        startLokal.current = performance.now();
+        vorratNeu.current(antwort.vorrat);
       },
       (e: unknown) => {
         if (!aus) startFehler.current = fehlerText(e);
@@ -277,7 +473,8 @@ function Spiel({
     return () => {
       aus = true;
     };
-  }, [level.id, versuch, leitung]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `einsatz` steht für `hilfsmittel`.
+  }, [level.id, versuch, leitung, einsatz]);
 
   // Laden, Partie bauen, Schleife — einmal je Versuch.
   useEffect(() => {
@@ -335,7 +532,9 @@ function Spiel({
       const zz = zugAus(z.dx, z.dy, vollerZugPx(b, h));
       if (!zz) return null;
       const v = abschuss(art, zz);
-      return { versatz: zz.versatz, punkte: v ? vorschau(p.abschussPunkt(), v, SPIELABLAUF.vorschauS) : [] };
+      // Fernrohr: dieselbe Vorschau, nur länger (Kern, `vorschauFernrohrS`).
+      const dauer = fernrohr ? SPIELABLAUF.vorschauFernrohrS : SPIELABLAUF.vorschauS;
+      return { versatz: zz.versatz, punkte: v ? vorschau(p.abschussPunkt(), v, dauer) : [] };
     };
 
     const runde = (jetzt: number): void => {
@@ -371,7 +570,7 @@ function Spiel({
       kamera.current = kamera.current ? naeher(kamera.current, zk, dt) : zk;
       const { b, h, dpr } = masse.current;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      zeichne(ctx, p, kamera.current, bilder.current, b, h, ziel(p));
+      zeichne(ctx, p, kamera.current, bilder.current, b, h, ziel(p), hilfe);
 
       if (p.punkte !== letztePunkte) {
         letztePunkte = p.punkte;
@@ -396,7 +595,7 @@ function Spiel({
         punkte: p.punkte,
         verschossen: p.verschossen,
         uebrig: geschafft ? p.uebrigeBros() : 0,
-        sterne: sterneFuer(level, { geschafft, punkte: p.punkte, hilfsmittel: HILFSMITTEL_KEINE }),
+        sterne: sterneFuer(level, { geschafft, punkte: p.punkte, hilfsmittel }),
       };
       setEnde(e);
       melden(e);
@@ -423,7 +622,7 @@ function Spiel({
           return;
         }
         leitung
-          .ergebnis({ levelId: level.id, geschafft: e.geschafft, punkte: e.punkte, verschossen: e.verschossen, hilfsmittel: HILFSMITTEL_KEINE })
+          .ergebnis({ levelId: level.id, geschafft: e.geschafft, punkte: e.punkte, verschossen: e.verschossen, hilfsmittel })
           .then(
             (antwort) => {
               if (aus) return;
@@ -442,7 +641,8 @@ function Spiel({
       if (aus) return;
       bilder.current = b;
       partie.current?.freigeben();
-      const p = new Partie(R, level);
+      // Ersatz-Pelle: ein zusätzlicher Pelle am Ende der Reihe (die Partie zählt ihn mit).
+      const p = new Partie(R, level, { ersatzPelle: hilfsmittel.includes('ersatz-pelle') });
       partie.current = p;
       groesse();
       // Proben: feste Zustände statt eines Fingers.
@@ -488,7 +688,7 @@ function Spiel({
       zug.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Schlüssel ist der Versuch, nicht die Rückrufe.
-  }, [level.id, versuch, leitung, probe, ladeVersuch]);
+  }, [level.id, versuch, leitung, probe, einsatz, ladeVersuch]);
 
   const runter = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const p = partie.current;
@@ -563,6 +763,11 @@ function Spiel({
         <span className="fb-hud-titel">
           {level.welt}-{level.nr} · {level.titel}
         </span>
+        {hilfsmittel.length > 0 && (
+          <span className="fb-hud-hilfe" title={hilfsmittel.map((h) => t(`flyingbro.hilfsmittel.${h}`)).join(', ')}>
+            {hilfsmittel.map((h) => ZEICHEN[h]).join(' ')}
+          </span>
+        )}
         <span className="fb-hud-punkte">
           <small>{t('flyingbro.punkte')}</small> {punkte.toLocaleString()}
         </span>
@@ -612,11 +817,13 @@ function Spiel({
                   {wertung.antwort.besteSterne > wertung.antwort.sterne && (
                     <span className="fb-ende-leise">{tf('flyingbro.ende.bestwert', { sterne: wertung.antwort.besteSterne })}</span>
                   )}
+                  {hilfsmittel.length > 0 && ende.geschafft && <span className="fb-ende-leise">{t('flyingbro.shop.zweiSterne')}</span>}
+                  {wertung.antwort.goldhelmNeu && <span className="fb-chip is-muenzen">{t('flyingbro.ende.goldhelm')}</span>}
                 </>
               )}
             </div>
             <div className="fb-tafel-knoepfe">
-              <button type="button" className="fb-knopf" onClick={onNochmal}>
+              <button type="button" className="fb-knopf" onClick={hilfsmittel.length > 0 ? onNeuVorbereiten : onNochmal}>
                 {t('flyingbro.nochmal')}
               </button>
               {weiter && onWeiter && (
@@ -655,13 +862,22 @@ export function FlyingBro({
   const quer = useQuer();
   const [stand, setStand] = useState<FlyingbroAnsicht | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
-  const [level, setLevel] = useState<Level | null>(() => (fall && fall !== 'levelwahl' ? (levelNach('w1-01') ?? null) : null));
+  const [level, setLevel] = useState<Level | null>(() => (spielFall(fall) ? (levelNach('w1-01') ?? null) : null));
+  // Vor dem Level: die Vorbereitung. Die Probe zeigt das erste offene, noch nicht geschaffte Level ihres Stands.
+  const [vorbereiten, setVorbereiten] = useState<Level | null>(() => (fall === 'vorbereitung' ? (levelNach('w1-06') ?? null) : null));
+  const [shopOffen, setShopOffen] = useState(fall === 'shop');
+  const [einsatz, setEinsatz] = useState<Hilfsmittel[]>([]);
   const [versuch, setVersuch] = useState(0);
   const [welt, setWelt] = useState(1);
   const [laden, setLaden] = useState(0);
 
-  // Escape: aus dem Spiel zur Levelwahl, aus der Levelwahl zurück ins Hub.
-  useEscape(level ? () => setLevel(null) : onClose);
+  // Escape geht eine Ebene zurück: Shop → davor, Vorbereitung und Spiel → Levelwahl, Levelwahl → Hub.
+  useEscape(shopOffen ? () => setShopOffen(false) : vorbereiten ? () => setVorbereiten(null) : level ? () => setLevel(null) : onClose);
+
+  const vorbereitenFuer = (l: Level): void => {
+    setLevel(null);
+    setVorbereiten(l);
+  };
 
   useEffect(() => {
     let aus = false;
@@ -692,33 +908,61 @@ export function FlyingBro({
     [onGeaendert],
   );
 
+  const beimVorrat = useCallback((vorrat: FlyingbroAnsicht['vorrat']) => {
+    setStand((s) => (s ? { ...s, vorrat } : s));
+  }, []);
+
+  // Eine Wahl, die der Vorrat nicht mehr deckt, fällt heraus — der Start lehnte sie sonst ab.
+  const deckbar = (e: Hilfsmittel[]): Hilfsmittel[] => e.filter((h) => (stand?.vorrat[h] ?? 0) > 0);
+
   return (
     <div className="fb" role="dialog" aria-modal="true" aria-label={t('flyingbro.titel')} data-flyingbro="">
-      {level ? (
+      {shopOffen && stand ? (
+        <Shop stand={stand} leitung={leitung} onStand={setStand} onZurueck={() => setShopOffen(false)} />
+      ) : level ? (
         <Spiel
           key={level.id}
           level={level}
           versuch={versuch}
+          hilfsmittel={einsatz}
           leitung={leitung}
           quer={quer}
-          probe={fall && fall !== 'levelwahl' ? fall : undefined}
+          probe={spielFall(fall)}
           onNochmal={() => setVersuch((v) => v + 1)}
+          onNeuVorbereiten={() => vorbereitenFuer(level)}
           onLevelwahl={() => {
             setWelt(level.welt);
             setLevel(null);
           }}
-          onWeiter={(l) => setLevel(l)}
+          onWeiter={vorbereitenFuer}
+          onVorrat={beimVorrat}
           onGeaendert={beimErgebnis}
+        />
+      ) : vorbereiten && stand ? (
+        <Vorbereitung
+          level={vorbereiten}
+          stand={stand}
+          gewaehlt={deckbar(einsatz)}
+          setGewaehlt={setEinsatz}
+          onLos={() => {
+            setEinsatz(deckbar(einsatz));
+            setVersuch((v) => v + 1);
+            setLevel(vorbereiten);
+            setVorbereiten(null);
+          }}
+          onShop={() => setShopOffen(true)}
+          onZurueck={() => {
+            setWelt(vorbereiten.welt);
+            setVorbereiten(null);
+          }}
         />
       ) : stand ? (
         <Levelwahl
           stand={stand}
           welt={welt}
           setWelt={setWelt}
-          onLevel={(l) => {
-            setVersuch(0);
-            setLevel(l);
-          }}
+          onLevel={vorbereitenFuer}
+          onShop={() => setShopOffen(true)}
           onClose={onClose}
         />
       ) : (

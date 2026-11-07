@@ -156,6 +156,23 @@ export const KATALOG: readonly Stueck[] = [
   muenzen('aura-funken', 'aura', 380, 'episch'),
   edelsteine('aura-sterne', 'aura', 70, 'legendaer'),
   geschenk('aura-konfetti', 'aura', 'episch'),
+
+  // --- Flying Bro ---------------------------------------------------------
+  // Aussehen zum Schleuderspiel (docs/SPEZIFIKATION-FLYINGBRO.md, „Kosmetik
+  // fuer den Hauptshop"): in den sechs vorhandenen Plaetzen, kein eigener —
+  // ein neuer Platz waere eine neue Ebene in jedem Pinguinbild. Bezahlt wird
+  // wie ueberall mit Muenzen oder Edelsteinen, NIE mit Flugmeilen: Die bleiben
+  // im Spiel (flyingbro-kern/shop.ts), sonst fuehrte ein Weg von den Meilen
+  // ins Hub. Die Kartenkiste in der Flosse ist der Schleuder-Look — die
+  // Schleuder des Spiels ist ein Band zwischen zwei Kartenkisten.
+  muenzen('hut-fliegerkappe', 'hut', 220, 'selten'),
+  muenzen('brille-fliegerbrille', 'brille', 180),
+  muenzen('oberteil-fliegerschal', 'oberteil', 260, 'selten'),
+  muenzen('aura-kondensstreifen', 'aura', 380, 'episch'),
+  edelsteine('hand-kartenkiste', 'hand', 45, 'legendaer'),
+  // Nur fuer alle Sterne (flyingbro.ts, FLYINGBRO_GOLDHELM): kaeuflich waere
+  // der Erfolg fuer ein paar hundert Muenzen zu haben.
+  geschenk('hut-goldhelm', 'hut', 'legendaer'),
 ];
 
 function frei(id: string, slot: Slot): Stueck {
@@ -243,6 +260,13 @@ export const GEBURTSTAGS_OUTFIT = ['hut-partyhut', 'aura-konfetti'] as const;
  * die Serie belanglos (dieselbe Begruendung wie beim Geburtstag).
  */
 export const LERN_OUTFIT = ['hut-doktorhut', 'oberteil-meisterrobe'] as const;
+
+/**
+ * Der Goldhelm — fuer alle Sterne in Flying Bro (flyingbro.ts). Ein Geschenk
+ * aus demselben Grund wie das Lern-Outfit: Der Erfolg soll sich nicht kaufen
+ * lassen.
+ */
+export const FLYINGBRO_GOLDHELM = 'hut-goldhelm';
 
 // ---------------------------------------------------------------------------
 // Besitz und Getragenes
