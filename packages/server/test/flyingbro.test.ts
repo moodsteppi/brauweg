@@ -27,6 +27,7 @@ import {
 import { flyingbroErgebnis, flyingbroKauf, flyingbroStand, flyingbroStart } from '../src/flyingbro.js';
 import * as s from '../src/db/schema.js';
 import { AppError } from '../src/errors.js';
+import { FLYINGBRO_GOLDHELM, stueckMit } from '../src/kosmetik.js';
 import { standVon } from '../src/waehrung.js';
 import { createTestContext, createVerifiedAccount, seedInvite, type TestContext } from './helpers.js';
 
@@ -318,4 +319,49 @@ test('Vorrat aus einer alten Zeile: ein fehlendes Hilfsmittel zaehlt 0, nicht Na
   await c.db.insert(s.flyingbroStand).values({ accountId: id, vorrat: { fernrohr: 1 } });
   const stand = await flyingbroStand(c.db, id);
   assert.deepEqual(stand.vorrat, { fernrohr: 1, bauplan: 0, 'ersatz-pelle': 0 });
+});
+
+test('Goldhelm: erst der letzte Stern schenkt ihn, genau einmal — kaufen laesst er sich nicht', async (t) => {
+  const { c, id } = await konto(t);
+  const letztes = LEVELS[LEVELS.length - 1]!;
+  // Alle Level bis aufs letzte mit drei Sternen eintragen — 44 Level zu
+  // spielen, pruefte hier nur die Geduld, nicht den Goldhelm.
+  await c.db.insert(s.flyingbroLevel).values(
+    LEVELS.slice(0, -1).map((l) => ({ accountId: id, levelId: l.id, sterne: 3, bestpunkte: l.sterne[2], erstmalsAm: new Date(T0) })),
+  );
+  const besitz = async () =>
+    (await c.db.select().from(s.accountCosmetic).where(eq(s.accountCosmetic.accountId, id))).map((z) => z.itemId);
+
+  // Zwei Sterne im letzten Level: noch kein Helm.
+  const zwei = await spiele(c, id, T0, { levelId: letztes.id, punkte: letztes.sterne[1] });
+  assert.equal(zwei.besteSterne, 2);
+  assert.equal(zwei.goldhelmNeu, false);
+  assert.ok(!(await besitz()).includes(FLYINGBRO_GOLDHELM));
+
+  // Der dritte: Helm im Kleiderschrank.
+  const drei = await spiele(c, id, T0 + 60_000, { levelId: letztes.id, punkte: letztes.sterne[2] });
+  assert.equal(drei.goldhelmNeu, true);
+  assert.deepEqual((await besitz()).filter((i) => i === FLYINGBRO_GOLDHELM), [FLYINGBRO_GOLDHELM]);
+
+  // Noch einmal drei Sterne: nicht noch einmal neu.
+  const wieder = await spiele(c, id, T0 + 120_000, { levelId: letztes.id, punkte: letztes.sterne[2] });
+  assert.equal(wieder.goldhelmNeu, false);
+
+  assert.equal(stueckMit(FLYINGBRO_GOLDHELM)?.herkunft, 'geschenk');
+});
+
+test('Hauptshop: die Flying-Bro-Stuecke stehen im Katalog, mit Preisen aus der Spezifikation', () => {
+  const preise = Object.fromEntries(
+    ['hut-fliegerkappe', 'brille-fliegerbrille', 'oberteil-fliegerschal', 'aura-kondensstreifen', 'hand-kartenkiste'].map((k) => {
+      const st = stueckMit(k);
+      assert.ok(st, k);
+      assert.equal(st.herkunft, 'shop', k);
+      return [k, st.preis];
+    }),
+  );
+  assert.equal(preise['hut-fliegerkappe']!.coins, 220);
+  assert.equal(preise['brille-fliegerbrille']!.coins, 180);
+  assert.equal(preise['oberteil-fliegerschal']!.coins, 260);
+  assert.equal(preise['aura-kondensstreifen']!.coins, 380);
+  assert.equal(preise['hand-kartenkiste']!.gems, 45);
 });

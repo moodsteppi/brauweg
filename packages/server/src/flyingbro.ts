@@ -36,6 +36,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import {
   HILFSMITTEL,
   type Hilfsmittel,
+  LEVELS,
   type KaufAbgelehnt,
   type MeilenErgebnis,
   type MeldungAbgelehnt,
@@ -55,6 +56,7 @@ import {
 import type { Db } from './db/types.js';
 import * as s from './db/schema.js';
 import { badRequest, conflict } from './errors.js';
+import { FLYINGBRO_GOLDHELM, schenken } from './kosmetik.js';
 import { heute } from './truhen.js';
 import { gutschreiben, standVon } from './waehrung.js';
 
@@ -260,7 +262,16 @@ export interface FlyingbroErgebnisAntwort {
   muenzen: MuenzErgebnis;
   /** Sichtbarer Hub-Muenzstand danach (wie `stand` beim Runner). */
   hubMuenzen: number;
+  /** Mit diesem Versuch sind alle Sterne erreicht — der Goldhelm liegt jetzt im Kleiderschrank. */
+  goldhelmNeu: boolean;
   stand: FlyingbroAnsicht;
+}
+
+/** Alle Sterne aller Level im Katalog — die Schwelle fuer den Goldhelm (heute 135). */
+export const FLYINGBRO_ALLE_STERNE = LEVELS.length * 3;
+
+function sterneSumme(sterne: Record<string, number>): number {
+  return Object.values(sterne).reduce((a, n) => a + n, 0);
 }
 
 /** Ablehnungsgruende des Kerns als Fehlercodes — ein festes Verzeichnis, kein Freitext. */
@@ -377,6 +388,17 @@ export async function flyingbroErgebnis(
         });
     }
 
+    // Der Goldhelm, sobald der LETZTE Stern faellt (Spezifikation, „Kosmetik
+    // fuer den Hauptshop"). Nur beim Uebergang, damit nicht jede spaetere
+    // Meldung schenkt; `schenken` waere zwar idempotent, aber die Antwort
+    // meldete ihn sonst jedes Mal als neu.
+    const sterneVorher = sterneAus(levelVorher);
+    const goldhelmNeu =
+      w.neueSterne > 0 &&
+      sterneSumme(sterneVorher) < FLYINGBRO_ALLE_STERNE &&
+      sterneSumme({ ...sterneVorher, [level.id]: w.besteSterne }) >= FLYINGBRO_ALLE_STERNE;
+    if (goldhelmNeu) await schenken(tx, accountId, [FLYINGBRO_GOLDHELM]);
+
     // Der Weltbonus zaehlt nicht gegen die Tageskappe (flyingbro_tag), wird
     // aber in derselben Gutschrift ausgezahlt.
     const auszahlen = w.muenzen.gutschrift + w.muenzen.welt;
@@ -393,6 +415,7 @@ export async function flyingbroErgebnis(
       meilen: w.meilen,
       muenzen: w.muenzen,
       hubMuenzen,
+      goldhelmNeu,
       stand: await ansicht(tx, accountId, nachher!, jetzt),
     };
   });

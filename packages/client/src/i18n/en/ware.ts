@@ -68,6 +68,13 @@ export default {
   'kosmetik.aura-funken': 'Flying Sparks',
   'kosmetik.aura-sterne': 'Starry Wreath',
   'kosmetik.aura-konfetti': 'Confetti',
+  // Flying Bro (Spezifikation, „Kosmetik für den Hauptshop“)
+  'kosmetik.hut-fliegerkappe': 'Aviator Cap',
+  'kosmetik.hut-goldhelm': 'Golden Helmet',
+  'kosmetik.brille-fliegerbrille': 'Aviator Goggles',
+  'kosmetik.oberteil-fliegerschal': 'Aviator Scarf',
+  'kosmetik.hand-kartenkiste': 'Sling Crate',
+  'kosmetik.aura-kondensstreifen': 'Contrails',
 
   'quest.partie-spielen': 'Play a game',
   'quest.partie-spielen.hint': "Any game, any result.",

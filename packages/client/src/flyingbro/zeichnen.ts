@@ -214,8 +214,36 @@ function zeichneFliegenden(ctx: CanvasRenderingContext2D, k: Kamera, bilder: Bil
   ctx.restore();
 }
 
+/**
+ * Bauplan (Hilfsmittel): ein leuchtender Rahmen um ein tragendes Teil. Über
+ * dem Teil gezeichnet und in seiner Drehung, damit die Markierung mitkippt —
+ * ein fester Rahmen in der Luft zeigte nach dem ersten Treffer ins Leere.
+ */
+function markiereTragend(ctx: CanvasRenderingContext2D, k: Kamera, def: Teil, lage: { x: number; y: number; w: number }): void {
+  const p = aufBild(k, lage);
+  const b = (def.form === 'kreis' ? def.r * 2 : def.b) * k.s;
+  const h = (def.form === 'kreis' ? def.r * 2 : def.h) * k.s;
+  const rand = Math.max(2, k.s * 0.08);
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(-lage.w);
+  ctx.strokeStyle = 'rgba(255, 214, 64, 0.95)';
+  ctx.shadowColor = 'rgba(255, 196, 0, 0.9)';
+  ctx.shadowBlur = rand * 3;
+  ctx.lineWidth = rand;
+  ctx.setLineDash([rand * 2.5, rand * 1.5]);
+  ctx.strokeRect(-b / 2 - rand, -h / 2 - rand, b + rand * 2, h + rand * 2);
+  ctx.restore();
+}
+
+/** Was ein Hilfsmittel am Bild ändert; ohne Hilfsmittel leer. */
+export interface ZeichenHilfe {
+  /** Indizes in `level.teile`, deren Teil der Bauplan hervorhebt (Kern: `tragendeTeile`). */
+  tragend?: ReadonlySet<number>;
+}
+
 /** Das ganze Bild einer Partie. */
-export function zeichne(ctx: CanvasRenderingContext2D, partie: Partie, k: Kamera, bilder: Bilder, breite: number, hoehe: number, ziel: Zielbild | null): void {
+export function zeichne(ctx: CanvasRenderingContext2D, partie: Partie, k: Kamera, bilder: Bilder, breite: number, hoehe: number, ziel: Zielbild | null, hilfe: ZeichenHilfe = {}): void {
   // Der Hintergrund ist KEIN Teil der Leinwand, sondern CSS darunter
   // (.fb-spiel, dieselbe Lage wie hintergrundLage: cover, unten bündig). Das
   // Bild steht still; es jedes Bild neu und skaliert auf die ganze Fläche zu
@@ -268,11 +296,14 @@ export function zeichne(ctx: CanvasRenderingContext2D, partie: Partie, k: Kamera
     });
   }
 
-  for (const t of partie.teile) {
-    if (!t.koerper) continue;
+  partie.teile.forEach((t, i) => {
+    if (!t.koerper) return;
     const p = t.koerper.translation();
-    zeichneTeil(ctx, k, bilder, t.def, { x: p.x, y: p.y, w: t.koerper.rotation() }, t.haltbarkeit / t.max);
-  }
+    const lage = { x: p.x, y: p.y, w: t.koerper.rotation() };
+    zeichneTeil(ctx, k, bilder, t.def, lage, t.haltbarkeit / t.max);
+    // `partie.teile[i]` ist `level.teile[i]` (partie.ts, baueTeil) — darauf beruht der Bauplan.
+    if (hilfe.tragend?.has(i)) markiereTragend(ctx, k, t.def, lage);
+  });
 
   for (const g of partie.giraffen) {
     if (g.koerper) {
