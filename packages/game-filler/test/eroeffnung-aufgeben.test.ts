@@ -287,14 +287,14 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
     'klar/1': 'a90acdce8d15a3f3',
     'klar/2': '97e9edaf8f9c890b',
     'klar/42': '157116fa79996aef',
-    'build/c0ffee1234567890abcdef0123456789': 'a068382ec2df87b3',
+    'build/c0ffee1234567890abcdef0123456789': '1068896dab4bbc07',
     'build/1': '82c9b8e15086d1cf',
-    'build/2': '5870b297ef3bd8af',
-    'build/42': '72930456d12c8b2c',
-    'extreme/c0ffee1234567890abcdef0123456789': '279a3f3bf4c35bc5',
-    'extreme/1': '9887fd71c933322f',
-    'extreme/2': '92a6a9a9a62f6864',
-    'extreme/42': '88007534d2a7061f',
+    'build/2': 'f0450cd07780ac6e',
+    'build/42': 'b630f1dd3829f278',
+    'extreme/c0ffee1234567890abcdef0123456789': 'fa2f2acbd946b553',
+    'extreme/1': '7d4e1bff70299002',
+    'extreme/2': 'fe54547d71f9f87b',
+    'extreme/42': '376e34e91a416d46',
   };
   /**
    * Schicht 3, Herkunft je Schluessel: [staging, Regelfix fae4a420, heute].
@@ -305,16 +305,25 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
    * auch gleich Klar). Seit dem Wegterm (eac0ba11, Niklas' Entscheidung
    * "b+") mauert er wieder: der dritte Wert. Der Test darunter haelt fest,
    * dass die Spalten zu Schicht 1 und zu VORHER passen.
+   *
+   * Seit dem 07.11.2026 meidet der Bot Fallen (Farbwahl in Stufen,
+   * Mauerpruefung zwei Zuege voraus, MESSUNG-2026-11-07-bot-fallen.md). Der
+   * dritte Wert ist seitdem dieser Stand; der des Wegterms war, in derselben
+   * Reihenfolge: a068382ec2df87b3, 82c9b8e15086d1cf (unveraendert),
+   * 5870b297ef3bd8af, 72930456d12c8b2c, 279a3f3bf4c35bc5, 9887fd71c933322f,
+   * 92a6a9a9a62f6864, 88007534d2a7061f. Schicht 1 blieb gleich: Ohne Mauern
+   * entsteht auf diesen vier Brettern keine Falle, die Farbwahl waehlt also
+   * dieselben Farben.
    */
   const GESCHICHTE: Record<string, readonly [string, string, string]> = {
-    'build/c0ffee1234567890abcdef0123456789': ['1c40e73814c92fd7', '8104d2b97ca72716', 'a068382ec2df87b3'],
+    'build/c0ffee1234567890abcdef0123456789': ['1c40e73814c92fd7', '8104d2b97ca72716', '1068896dab4bbc07'],
     'build/1': ['75e3b62f22a74a7c', 'a90acdce8d15a3f3', '82c9b8e15086d1cf'],
-    'build/2': ['97e9edaf8f9c890b', '97e9edaf8f9c890b', '5870b297ef3bd8af'],
-    'build/42': ['8c7576325e11b054', '157116fa79996aef', '72930456d12c8b2c'],
-    'extreme/c0ffee1234567890abcdef0123456789': ['b254099775891d59', 'd03a4ec4c491db26', '279a3f3bf4c35bc5'],
-    'extreme/1': ['1f6de6c7af3ffcb5', '2b66a70e78e73566', '9887fd71c933322f'],
-    'extreme/2': ['8ebaf1fc12ede263', '8ebaf1fc12ede263', '92a6a9a9a62f6864'],
-    'extreme/42': ['c1f2140e93ae66b8', '69407c0d0e279bfe', '88007534d2a7061f'],
+    'build/2': ['97e9edaf8f9c890b', '97e9edaf8f9c890b', 'f0450cd07780ac6e'],
+    'build/42': ['8c7576325e11b054', '157116fa79996aef', 'b630f1dd3829f278'],
+    'extreme/c0ffee1234567890abcdef0123456789': ['b254099775891d59', 'd03a4ec4c491db26', 'fa2f2acbd946b553'],
+    'extreme/1': ['1f6de6c7af3ffcb5', '2b66a70e78e73566', '7d4e1bff70299002'],
+    'extreme/2': ['8ebaf1fc12ede263', '8ebaf1fc12ede263', 'fe54547d71f9f87b'],
+    'extreme/42': ['c1f2140e93ae66b8', '69407c0d0e279bfe', '376e34e91a416d46'],
   };
   /** Schicht 1: auf `staging` und hier gleich. */
   const OHNE_MAUERN: Record<string, string> = {
@@ -332,16 +341,22 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
    * derselben Reihenfolge: Build 25fb0c1a66f37d5a, 75e3b62f22a74a7c,
    * d50b999d69a908cb, 157116fa79996aef; Extreme d03a4ec4c491db26,
    * 0a379287e159e1df, f45996fa5701798e, a0ef42f041d651a3.
+   *
+   * Seit dem 07.11.2026 verschieben sich drei Werte OHNE Regelaenderung:
+   * Der Baumeister mauert nach Plan, faerbt aber mit der Farbwahl des Bots
+   * — und die meidet seitdem Farben, nach denen er eingesperrt waere. Vorher
+   * (Wegterm): Build/2 ae226ea3354683af, Extreme/1 4475cfcd7614cdd5,
+   * Extreme/42 a0ef42f041d651a3.
    */
   const BAUMEISTER: Record<string, string> = {
     'build/c0ffee1234567890abcdef0123456789': 'd5d7d56b415d4fc8',
     'build/1': 'ab09d4767eb54543',
-    'build/2': 'ae226ea3354683af',
+    'build/2': '96635de7a517994a',
     'build/42': '24b55484a17f8fa1',
     'extreme/c0ffee1234567890abcdef0123456789': '89bd73b6919553ec',
-    'extreme/1': '4475cfcd7614cdd5',
+    'extreme/1': 'b73fec6aa67592d0',
     'extreme/2': '743bc9da58f0a2ed',
-    'extreme/42': 'a0ef42f041d651a3',
+    'extreme/42': '8f781adac223308d',
   };
   const hash = (x: unknown): string =>
     createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);

@@ -312,6 +312,10 @@ describe('Ausgleich: Fingerabdruecke der Bot-Partie mit voller Vorgabe', () => {
    * Ausgleich ist unveraendert und steht weiter in eroeffnung-aufgeben.test.ts
    * und extreme-gross.test.ts. Nachrechnen fuer jeden gebauten Stand:
    * `node werkzeug/abdruck-schichten.mjs <dist>`, Zeilen "ausgleich".
+   *
+   * Build und Extreme seit dem 07.11.2026 neu: Der Bot meidet Fallen
+   * (MESSUNG-2026-11-07-bot-fallen.md), an Regeln und Ausgleich hat sich
+   * nichts geaendert. Klar und Build/c0ffee blieben gleich.
    */
   const ERWARTET: Record<string, string> = {
     'klar/c0ffee1234567890abcdef0123456789': '34f2f10fd363dc4c',
@@ -319,13 +323,13 @@ describe('Ausgleich: Fingerabdruecke der Bot-Partie mit voller Vorgabe', () => {
     'klar/2': '83fc314178299c10',
     'klar/42': '1c19ae69e1432e7c',
     'build/c0ffee1234567890abcdef0123456789': '2d0d977ae1bc4954',
-    'build/1': 'c7b0f770aed34fbb',
-    'build/2': '1c84ecc2ec0ce478',
-    'build/42': 'fbd4011e7206ce47',
-    'extreme/c0ffee1234567890abcdef0123456789': '263973f75478073b',
-    'extreme/1': 'e40edf4a84812fd7',
-    'extreme/2': '4d81a676c7f86de0',
-    'extreme/42': '618fcc8232c581d6',
+    'build/1': '2e9eff63254d1ca3',
+    'build/2': '0353ec26440bfbf2',
+    'build/42': '70cab1c4ca915d33',
+    'extreme/c0ffee1234567890abcdef0123456789': 'ede658b1fbe0d357',
+    'extreme/1': 'cfc0fdfcfe77fa10',
+    'extreme/2': '458e107503ffe995',
+    'extreme/42': '8841720fa5a71e86',
   };
   const hash = (x: unknown): string =>
     createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);

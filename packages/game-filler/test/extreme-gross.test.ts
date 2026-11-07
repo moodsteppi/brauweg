@@ -422,6 +422,13 @@ describe('Andere Spielarten unveraendert', () => {
    *
    * Alle staging-Werte rechnet `node werkzeug/abdruck-schichten.mjs <dist>`
    * nach (Zeilen "gross-ende").
+   *
+   * Build seit dem 07.11.2026 neu (der Bot meidet Fallen,
+   * MESSUNG-2026-11-07-bot-fallen.md); mit dem Wegterm waren es
+   * 791dfe9216ff083d, 7a26d141e9121b74, 455d6b589aac310c, 9501469822898af3.
+   * BUILD_OHNE_MAUERN blieb gleich; BUILD_BAUMEISTER build/2 verschob sich
+   * (vorher 5471b6a80cbc5ff2), weil der Baumeister mit der Farbwahl des Bots
+   * faerbt.
    */
   const VORHER: Record<string, readonly [string, string]> = {
     'nebel/c0ffee1234567890abcdef0123456789': ['b99a18adf10e9de9', '98e749e08f84d18f'],
@@ -432,10 +439,10 @@ describe('Andere Spielarten unveraendert', () => {
     'klar/1': ['5ada94f15c79cd12', '18449abd965255ab'],
     'klar/2': ['9488e3949af834bf', 'd45b908bf92f460c'],
     'klar/42': ['a54e26fc806530fd', '9f0adb58cb89de3d'],
-    'build/c0ffee1234567890abcdef0123456789': ['8e2077a6200c183c', '791dfe9216ff083d'],
-    'build/1': ['3fbf3266569e124c', '7a26d141e9121b74'],
-    'build/2': ['ea5de89035bc8107', '455d6b589aac310c'],
-    'build/42': ['736271c48db7a257', '9501469822898af3'],
+    'build/c0ffee1234567890abcdef0123456789': ['8e2077a6200c183c', '2abaf14264d9804e'],
+    'build/1': ['3fbf3266569e124c', 'c1c3ff5ada789cbf'],
+    'build/2': ['ea5de89035bc8107', 'c24b0a82935cbd9d'],
+    'build/42': ['736271c48db7a257', '1ac037b4e8a7fa7c'],
   };
   const BUILD_OHNE_MAUERN: Record<string, string> = {
     'build/c0ffee1234567890abcdef0123456789': '3859712d06eaf6a7',
@@ -446,7 +453,7 @@ describe('Andere Spielarten unveraendert', () => {
   const BUILD_BAUMEISTER: Record<string, string> = {
     'build/c0ffee1234567890abcdef0123456789': 'c7c8c4252572cd2e',
     'build/1': '99542da1bbe15441',
-    'build/2': '5471b6a80cbc5ff2',
+    'build/2': '7a75b2f33bac06fc',
     'build/42': 'ac1bb2abfc527721',
   };
   const hash = (x: unknown): string =>
