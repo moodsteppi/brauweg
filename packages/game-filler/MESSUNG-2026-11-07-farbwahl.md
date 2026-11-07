@@ -68,4 +68,55 @@ Rohausgabe vorher:
 
 ## 2. Neu gegen alt
 
-_läuft_
+Jede Saat zweimal (neu auf Sitz 0, dann auf Sitz 1), also 400 Partien je
+Spielart; p = exakter zweiseitiger Vorzeichentest, Remis fallen heraus.
+Wanduhr rund 7 min auf 8 Fäden.
+
+| Spielart | Partien | Siege neu | Siege alt | remis | p (Vorzeichentest) | Punkte neu/alt | Mauern je Partie neu/alt |
+|---|---|---|---|---|---|---|---|
+| klar | 400 | 44.0 % | 44.0 % | 12.0 % | 1.000 | 28.0 / 28.0 | 0.00 / 0.00 |
+| build | 400 | 44.5 % | 51.3 % | 4.3 % | 0.184 | 26.7 / 29.3 | 9.84 / 9.71 |
+| extreme | 400 | 43.3 % | 55.0 % | 1.8 % | 0.020 | 64.5 / 75.5 | 22.65 / 22.07 |
+
+- **Extreme:** Der neue Bot ist **signifikant schwächer** (43,3 : 55,0 %,
+  p = 0,020; 64,5 : 75,5 Punkte). Derselbe Befund wie beim verworfenen
+  Versuch d435ee73 (42 : 55,5 %, p = 0,006), nur etwas schwächer.
+- **Build:** neu 44,5 : 51,3 %, p = 0,18 — nicht signifikant, aber dieselbe
+  Richtung (26,7 : 29,3 Punkte).
+- **Klar:** jede Partie gleich (siehe Abschnitt 1: Die Farbwahl in Stufen
+  greift in Klar auf diesen Saaten nie).
+
+## Ergebnis: Ziel nicht erreicht
+
+| Spielart | eingesperrt vorher → nachher | Abstand | neu : alt | p |
+|---|---|---|---|---|
+| Klar | 0,0 → 0,0 % | – | 44,0 : 44,0 % | 1,000 |
+| Build | 54,0 ± 3,5 → 47,0 ± 3,5 % | 1,4 SE | 44,5 : 51,3 % | 0,184 |
+| Extreme | 66,5 ± 3,3 → 49,0 ± 3,5 % | 3,6 SE | 43,3 : 55,0 % | 0,020 |
+
+Beide Bedingungen zugleich erfüllt keine Spielart mit Mauern: In Extreme
+sinkt das Einsperren deutlich, aber der Bot verliert signifikant gegen den
+heutigen; in Build ist er nicht signifikant schwächer, sinkt aber auch nicht
+deutlich genug. Nach Auftrag nicht weitergebastelt.
+
+Lesart (nicht gemessen, nur Vermutung): Der Bot zahlt die Vorsicht mit
+Fläche — er meidet Farben und Mauern, die eine Falle öffnen, auch wenn der
+heutige Bot diese Falle als Gegner gar nicht zuschnappen ließe. Gegen sich
+selbst sinkt das Einsperren, gegen den gierigen alten verliert er Punkte
+(−11 in Extreme).
+
+## Fingerabdrücke (9f2c8402)
+
+Schicht „Ohne Mauern" (abdruck-schichten.mjs) blieb **unverändert** — auf den
+vier Prüfbrettern entsteht ohne Mauern keine Falle, die Farbwahl in Stufen
+wählt also dieselben Farben (passt zu Klar oben). Neu sind:
+
+- echter Bot in Build und Extreme (ausgleich.test.ts, eroeffnung-aufgeben.test.ts
+  Schicht 3, extreme-gross.test.ts Build): Der Bot wählt andere Farben und
+  lässt Mauern weg, die eine Falle öffnen — also eine andere Partie.
+- vier Baumeister-Werte (Build/2, Extreme/1, Extreme/42, gross-ende Build/2):
+  Der Baumeister mauert nach festem Plan, färbt aber mit der Farbwahl des Bots.
+
+Regeln, Ausgleich und Klar sind unverändert. Die Testkommentare verweisen auf
+`MESSUNG-2026-11-07-bot-fallen.md`; diese Datei hier ist gemeint (der Name
+kam mit dem zweiten Anlauf, Tests waren für diesen Lauf gesperrt).
