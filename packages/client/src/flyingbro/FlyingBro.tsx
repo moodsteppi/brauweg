@@ -425,6 +425,8 @@ function Spiel({
   const startFehler = useRef<string | null>(null);
   const endeSeit = useRef<number | null>(null);
   const [bereit, setBereit] = useState(false);
+  const [ladeFehler, setLadeFehler] = useState(false);
+  const [ladeVersuch, setLadeVersuch] = useState(0);
   const [pause, setPause] = useState(false);
   const [punkte, setPunkte] = useState(0);
   const [hinweis, setHinweis] = useState<string | null>(null);
@@ -483,6 +485,7 @@ function Spiel({
     let letzterHinweis: string | null = null;
     let letztePunkte = -1;
     setBereit(false);
+    setLadeFehler(false);
     setEnde(null);
     setWertung({ art: 'wartet' });
     setPause(false);
@@ -667,6 +670,10 @@ function Spiel({
       // requestAnimationFrame hier startete eine ZWEITE Schleife, und jedes
       // Bild wurde doppelt gezeichnet (gemessen: jeder zweite Abstand 0 ms).
       runde(performance.now());
+    }, () => {
+      // Ohne Fang blieb der Bildschirm bei einem Ladefehler (z. B. von der CSP
+      // geblocktes WebAssembly) stumm auf "Lädt …" stehen.
+      if (!aus) setLadeFehler(true);
     });
 
     window.addEventListener('resize', groesse);
@@ -681,7 +688,7 @@ function Spiel({
       zug.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Schlüssel ist der Versuch, nicht die Rückrufe.
-  }, [level.id, versuch, leitung, probe, einsatz]);
+  }, [level.id, versuch, leitung, probe, einsatz, ladeVersuch]);
 
   const runter = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const p = partie.current;
@@ -735,7 +742,17 @@ function Spiel({
         onPointerUp={hoch}
         onPointerCancel={abbrechen}
       />
-      {!bereit && <div className="fb-laedt">{t('flyingbro.laedt')}</div>}
+      {!bereit && !ladeFehler && <div className="fb-laedt">{t('flyingbro.laedt')}</div>}
+      {!bereit && ladeFehler && (
+        <div className="fb-laedt" role="alert">
+          <div>
+            <p>{t('flyingbro.ladeFehler')}</p>
+            <button type="button" className="fb-knopf" onClick={() => setLadeVersuch((n) => n + 1)}>
+              {t('flyingbro.nochmalLadenSpiel')}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="fb-hud">
         <button type="button" className="fb-knopf is-rund" aria-label={t('flyingbro.pause')} onClick={() => setPause(true)} disabled={!!ende}>
           <svg viewBox="0 0 24 24" aria-hidden="true">

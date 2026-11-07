@@ -561,15 +561,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
          * Auf dem Entwicklungsserver faellt ein fehlender Eintrag nie auf,
          * Vite setzt keine Richtlinie (dieselbe Falle wie beim Runner-Worker).
          *
-         * `'unsafe-eval'` und `'wasm-unsafe-eval'` fehlen mit Absicht. Die
-         * Kartenmanufaktur (PixiJS v8) wollte `new Function` und blieb
-         * deshalb im Web schwarz; geloest ist das im Client ueber
-         * `pixi.js/unsafe-eval` (Szene.ts), nicht hier. Wer eine Bibliothek
-         * einbaut, die eval verlangt, sucht zuerst deren Weg ohne eval —
-         * `test/anmeldung-anbieter.test.ts` haelt die Kopfzeile fest.
+         * `'unsafe-eval'` fehlt mit Absicht. Die Kartenmanufaktur (PixiJS v8)
+         * wollte `new Function` und blieb deshalb im Web schwarz; geloest ist
+         * das im Client ueber `pixi.js/unsafe-eval` (Szene.ts), nicht hier.
+         * Wer eine Bibliothek einbaut, die eval verlangt, sucht zuerst deren
+         * Weg ohne eval — `test/anmeldung-anbieter.test.ts` haelt die
+         * Kopfzeile fest.
+         *
+         * `'wasm-unsafe-eval'` steht dagegen drin: Es erlaubt NUR das
+         * Uebersetzen von WebAssembly, kein `eval`/`new Function` auf Text.
+         * Flying Bro (`@dimforge/rapier2d-compat`) startet WebAssembly; ohne
+         * den Eintrag blockte der Browser es, und der Bildschirm blieb
+         * endlos auf "Laedt" (Vite setzt keine CSP, lokal fiel es nie auf).
          */
         scriptSrc: [
           "'self'",
+          "'wasm-unsafe-eval'",
           'https://accounts.google.com/gsi/client',
           'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/',
         ],
