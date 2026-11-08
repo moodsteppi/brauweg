@@ -36,12 +36,16 @@ Abfrage vor dem Verteilen erneut laufen, verteilt in jedes Repo, das sie
 nennt, und zieht die Liste in der kanonischen Fassung nach, wenn ein Repo
 dazukommt oder wegfällt.
 
-<!-- Die Kopien-Liste kam mit 21a1f0a in die Datei. Nachbesserung 3 zur
-Orchestrator-Aufgabe 078ee03a (08.11.2026) hat tester-mobile-app ergänzt,
-nachdem diese Kopie beim Verteilen übersehen worden war, und
-Nachbesserung 5 hat entschieden, die Liste zu behalten. Wer sie streichen
-will, entscheidet das getrennt — nicht im Zuge einer Änderung an einer
-einzelnen Regel. -->
+<!-- Dieser Absatz (Kopien-Liste, Abfrage, Pflegeanweisung) geht über
+Regel 3 hinaus und kam trotzdem mit der Orchestrator-Aufgabe 078ee03a
+(Regel 3 an die Tafel-Umstellung, 08.11.2026) neu in die Datei; auf
+`master` stand er vorher nicht. Die Erweiterung ist in den Nachbesserungen
+zu dieser Aufgabe entschieden worden: Die Liste kam mit 21a1f0a dazu,
+Nachbesserung 3 hat tester-mobile-app ergänzt, nachdem diese Kopie beim
+Verteilen übersehen worden war, Nachbesserung 5 hat entschieden, sie zu
+behalten, und Nachbesserung 6 hat ausgeschlossen, sie wieder
+herauszunehmen. Wer sie später streichen will, tut das als eigene
+Aufgabe. -->
 
 
 ## 1. Git: Feature-Branch und Pull Request, sonst nichts
