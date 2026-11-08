@@ -47,15 +47,19 @@ eigenen Zweig, ein Mensch sieht den Diff in der Vorschau und gibt frei, der
 Merge wartet die Checks ab — und die Tafel-Pflege (Regel 3) passiert
 automatisch. Wer lokal arbeitet, übernimmt all das selbst.
 
-## 3. Tafel-Pflicht: Visual Building ist das Gedächtnis
+## 3. Tafel-Pflicht: Visual Building ist der Bauplan
 
-Die Visual-Building-Tafeln (brotool.broweg.de → Visual Building) sind das
-verbindliche Systemwissen beider Plattformen: je System eine Tafel plus die
+Die Visual-Building-Tafeln (brotool.broweg.de → Visual Building) sind der
+verbindliche Bauplan beider Plattformen: je System eine Tafel plus die
 Plattform-Landkarte — Bausteine, Verknüpfungen mit Wie und Warum, bekannte
-Widersprüche als ⚠-Kacheln. Der Orchestrator gibt dieses Wissen jedem
-Auftrag mit. **Veraltet es, arbeiten alle künftigen Aufgaben mit falschem
+Widersprüche als ⚠-Kacheln. Der Orchestrator gibt diesen Bauplan jedem
+Auftrag mit. **Veraltet er, arbeiten alle künftigen Aufgaben mit falschem
 Wissen — deshalb ist die Pflege Teil der Änderung, nicht Aufräumarbeit
 danach.**
+
+Was eine Aufgabe unterwegs **lernt** — eine Falle, ein Lösungsweg,
+geändertes Verhalten —, gehört seit dem 07.11.2026 nicht mehr an die Tafel,
+sondern ins **gemeinsame Gedächtnis** (siehe „Nach der Arbeit" unten).
 
 ### Das Werkzeug
 
@@ -80,39 +84,106 @@ node <pfad>/tafel.mjs lesen mystery-web    # Tafel eines Repos
 node <pfad>/tafel.mjs landkarte            # systemübergreifende Sicht
 ```
 
-### Nach der Arbeit: Tafel pflegen
+### Gibt es zu dem Repo noch keine Tafel: anlegen
 
-Ändert deine Arbeit Systemwissen — neuer Baustein, neue oder geänderte
-Verknüpfung (auch zwischen Systemen), geändertes Verhalten, behobener
-⚠-Befund —, dann **im selben Zug**:
+`lesen` antwortet dann „Keine Tafel passt zu <repo>". Das ist kein Grund,
+ohne Tafel weiterzuarbeiten — die **erste** Tafel eines Systems darf jede
+Sitzung selbst anlegen (vorher ging das nur im Browser, also nicht auf einem
+Worker-PC):
 
 ```bash
-node <pfad>/tafel.mjs eintragen eintrag.json    # oder: … eintragen -
+node <pfad>/tafel.mjs anlegen <repo> <datei> [name]
+```
+
+`<datei>` ist ein Tafeldokument (`*.gamedesk.json`) — dieselbe Datei, die der
+Import im Dashboard annimmt: ein JSON-Objekt mit `windows` (die Kacheln) und
+`connections` (die Verknüpfungen). `-` liest von der Standardeingabe. Ohne
+`[name]` gilt der Name aus dem Tafeldokument, falls es einen trägt — Dateien
+aus dem Editor tragen ihn —, und nur wenn dort keiner steht, heißt die Tafel
+wie das Repo. Wer aus dem Dashboard exportiert, gibt `[name]` deshalb besser
+ausdrücklich an oder sieht vorher im Feld `name` der Datei nach.
+
+Zwei Regeln weist der Server ab, und beide schützen den Leseweg:
+
+- **Der Name MUSS den Repo-Namen enthalten.** Eine Tafel wird ausschließlich
+  darüber gefunden, dass ihr Name den Repo-Namen enthält. Eine Tafel
+  „Systemwissen Orchestrator" zu `bro-server` wäre angelegt und für jeden
+  künftigen Auftrag unsichtbar: Der Anleger liest „angelegt", den Inhalt
+  liest niemand.
+- **Zu einem Repo darf es nur EINE Tafel geben.** Passen zwei, liefert der
+  Leseweg beide aneinandergehängt — der Auftrag wird länger, das Destillat
+  läuft in den Zeichen-Deckel, und abgeschnitten werden die neuesten
+  Änderungsmeldungen. Der zweite Anlauf ist deshalb ein Fehler, der den Namen
+  der vorhandenen Tafel nennt. Dann die vorhandene pflegen (`eintragen`) oder
+  sie im Dashboard umbenennen.
+
+Auch eine Tafel **ohne Kacheln** wird abgewiesen: Sie beantwortet „gibt es
+Wissen zu diesem Repo?" mit ja und sperrt die echte aus.
+
+### Nach der Arbeit: Gedächtnis füllen, Tafel nur bei Bauplan und Befund
+
+Seit bro-server #1172 (07.11.2026) gilt eine Trennung:
+
+- **Neues Wissen → gemeinsames Gedächtnis.** Eine Falle, ein Lösungsweg,
+  geändertes Verhalten, „was ist jetzt anders und warum": Das ist ein
+  Gedächtnis-Eintrag, keine Tafel-Notiz.
+- **An die Tafel nur noch zwei Dinge:** eine Änderung am **Bauplan** (neuer
+  Baustein, neue oder geänderte Verknüpfung, auch zwischen Systemen) und
+  **behobene ⚠-Befunde** (`erledigt`).
+
+Der Grund: Das Tafel-Destillat geht in jeden Auftrag, von den Notizen im
+Bereich „Änderungen aus Aufgaben" aber nur die neuesten 14 — jede neue
+Notiz verdrängte eine alte, nach vierzehn Läufen war ein Fund aus dem
+Auftrag verschwunden. Das Gedächtnis kommt dagegen als **Suche** in den
+Auftrag: Ein Eintrag bleibt auffindbar, solange er passt.
+
+**Als Worker im Orchestrator** meldest du neues Wissen im `===WISSEN===`-Block
+deiner Abschlussmeldung (Format steht im Auftrag). Den `===TAFEL===`-Block
+brauchst du nur bei Bauplan-Änderung oder behobenem Befund; Notizen darin
+tragen ein `Bauplan:` am Anfang des Titels. Jede Notiz **ohne** dieses
+Präfix leitet der Server ins Gedächtnis um, nicht an die Tafel.
+
+**Lokal mit `tafel.mjs`** — nur für Bauplan und Befund, **im selben Zug**:
+
+```bash
+node <pfad>/tafel.mjs eintragen eintrag.json --probe   # erst nachrechnen
+node <pfad>/tafel.mjs eintragen eintrag.json           # dann genau einmal
 ```
 
 ```json
 {
   "board": "<repo-name>",
   "anlass": "kurz: wer und was",
-  "notizen": [{ "titel": "kurz, eine Zeile", "text": "Was ist jetzt anders — und warum." }],
+  "notizen": [{ "titel": "Bauplan: kurz, eine Zeile", "text": "Welcher Baustein oder welche Verknüpfung neu ist — und warum." }],
   "erledigt": ["exakter Titel einer behobenen ⚠-Kachel"]
 }
 ```
 
-- **notizen** landen als Kacheln im Bereich „Änderungen aus Aufgaben" der
-  Tafel — was ist anders, und warum.
+- **notizen** nur bei einer Änderung am Bauplan, Titel mit `Bauplan:`
+  vorne; sonst das Feld weglassen. Achtung: `tafel.mjs eintragen` teilt
+  **nicht** auf — was du hier einträgst, landet an der Tafel, auch eine
+  Notiz ohne `Bauplan:`. Wissen gehört deshalb gar nicht erst hinein.
 - **erledigt** nennt Titel behobener ⚠-Befund-Kacheln; der Server markiert
   sie (⚠→✓, grüner Akzent, Behoben-Vermerk zuoberst — der alte Text bleibt
   als Geschichte stehen). Nur eindeutige Treffer werden markiert; Teilweise-
-  Behobenes gehört als Notiz beschrieben, nicht in `erledigt`.
-- Alternativ von Hand im Dashboard (Visual Building → Tafel → Bereich
-  „Änderungen aus Aufgaben"), nach denselben Regeln.
+  Behobenes gehört beschrieben ins Gedächtnis, nicht in `erledigt`.
+- `tafel.mjs` kann nichts löschen: `eintragen` nur einmal aufrufen, auch
+  wenn die Ausgabe abgeschnitten aussieht.
+- Alternativ von Hand im Dashboard (Visual Building → Tafel), nach
+  denselben Regeln.
 
-**Weder Worker noch Dashboard-Zugang?** Dann gehört derselbe Inhalt als
-Abschnitt `TAFEL:` in die PR-Beschreibung — wer merged, trägt ihn ein.
+**Neues Wissen ohne Worker-Lauf:** Einen Schreibweg von Hand ins
+Gedächtnis gibt es bisher **nicht** — `wissen.mjs` liest nur (`suche`,
+`lesen`, `liste`). Bis es ihn gibt, gehört die Erkenntnis als Abschnitt
+`WISSEN:` (Titel, Kurzfassung, Inhalt) in die PR-Beschreibung; wer merged,
+sorgt dafür, dass sie über einen Orchestrator-Lauf ins Gedächtnis kommt.
 
-Reine Feature-Arbeit, die kein Systemwissen berührt, löst keine
-Tafel-Pflicht aus.
+**Weder Worker noch Dashboard-Zugang** für Bauplan oder Befund? Dann gehört
+derselbe Inhalt als Abschnitt `TAFEL:` in die PR-Beschreibung — wer merged,
+trägt ihn ein.
+
+Reine Feature-Arbeit, die weder Bauplan noch Befund noch Wissen berührt,
+löst keine Pflicht aus.
 
 ## 4. Board-Pflicht: das Issueboard ist die gemeinsame Arbeitsliste
 
