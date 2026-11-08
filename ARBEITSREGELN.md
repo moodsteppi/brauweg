@@ -22,6 +22,7 @@ Eigentümer, das `ARBEITSREGELN.md` im Wurzelverzeichnis auf `staging`,
 ```bash
 for r in $(for o in orgs/step-it-team orgs/Broweg-Team users/moodsteppi; do
              gh api "$o/repos?per_page=100" --paginate -q '.[].full_name'; done); do
+  [ "$r" = step-it-team/goodFil ] && continue
   for b in staging main master; do
     gh api "repos/$r/contents/ARBEITSREGELN.md?ref=$b" -q .path >/dev/null 2>&1 \
       && { echo "$r ($b)"; break; }
@@ -35,11 +36,12 @@ Abfrage vor dem Verteilen erneut laufen, verteilt in jedes Repo, das sie
 nennt, und zieht die Liste in der kanonischen Fassung nach, wenn ein Repo
 dazukommt oder wegfällt.
 
-<!-- Die Kopien-Liste ist eine gewollte Ergänzung: aufgenommen auf
-ausdrückliche Anweisung der Nachbesserung 3 zur Orchestrator-Aufgabe
-078ee03a (08.11.2026), nachdem eine Kopie (tester-mobile-app) beim
-Verteilen übersehen worden war. Wer sie streichen will, entscheidet das
-getrennt — nicht im Zuge einer Änderung an einer einzelnen Regel. -->
+<!-- Die Kopien-Liste kam mit 21a1f0a in die Datei. Nachbesserung 3 zur
+Orchestrator-Aufgabe 078ee03a (08.11.2026) hat tester-mobile-app ergänzt,
+nachdem diese Kopie beim Verteilen übersehen worden war, und
+Nachbesserung 5 hat entschieden, die Liste zu behalten. Wer sie streichen
+will, entscheidet das getrennt — nicht im Zuge einer Änderung an einer
+einzelnen Regel. -->
 
 
 ## 1. Git: Feature-Branch und Pull Request, sonst nichts
