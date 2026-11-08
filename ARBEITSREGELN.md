@@ -8,6 +8,14 @@ Menschen, der hier arbeitet — auch und gerade außerhalb des Orchestrators.
 Änderungen zuerst dort, dann in alle Repos verteilen (am besten als
 Orchestrator-Aufgabe). Die Kopie im eigenen Repo nie einzeln umschreiben.
 
+Kopien liegen (Stand 08.11.2026) wortgleich im Wurzelverzeichnis von:
+`step-it-team/ai-service`, `step-it-team/analytics-web`,
+`step-it-team/backend`, `step-it-team/goodFil-web`,
+`step-it-team/mystery-web`, `moodsteppi/brauweg`, `Broweg-Team/bro-server`,
+`Broweg-Team/brotool` und `Broweg-Team/broweg-worker`. Wer die Regeln
+ändert, verteilt in genau diese Liste — und zieht sie hier nach, wenn ein
+Repo dazukommt oder wegfällt.
+
 ## 1. Git: Feature-Branch und Pull Request, sonst nichts
 
 - **Nie direkt auf `main`/`master` pushen.** Gearbeitet wird auf einem
@@ -146,9 +154,13 @@ Präfix leitet der Server ins Gedächtnis um, nicht an die Tafel.
 **Lokal mit `tafel.mjs`** — nur für Bauplan und Befund, **im selben Zug**:
 
 ```bash
-node <pfad>/tafel.mjs eintragen eintrag.json --probe   # erst nachrechnen
+node <pfad>/tafel.mjs eintragen eintrag.json --probe   # schreibt nichts, rechnet nur
 node <pfad>/tafel.mjs eintragen eintrag.json           # dann genau einmal
 ```
+
+`--probe` (seit bro-server #567) lässt den Server alles durchrechnen, ohne
+zu schreiben, und meldet, welche ältere Meldung durch den Eintrag aus dem
+Tafel-Wissen des Auftrags fiele.
 
 ```json
 {
