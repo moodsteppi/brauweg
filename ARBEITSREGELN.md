@@ -8,13 +8,16 @@ Menschen, der hier arbeitet — auch und gerade außerhalb des Orchestrators.
 Änderungen zuerst dort, dann in alle Repos verteilen (am besten als
 Orchestrator-Aufgabe). Die Kopie im eigenen Repo nie einzeln umschreiben.
 
-Kopien liegen (Stand 08.11.2026) wortgleich im Wurzelverzeichnis von:
+Kopien dieser Datei liegen (Stand 08.11.2026) im Wurzelverzeichnis von:
 `step-it-team/ai-service`, `step-it-team/analytics-web`,
 `step-it-team/backend`, `step-it-team/goodFil-web`,
 `step-it-team/mystery-web`, `moodsteppi/brauweg`, `Broweg-Team/bro-server`,
-`Broweg-Team/brotool` und `Broweg-Team/broweg-worker`. Wer die Regeln
-ändert, verteilt in genau diese Liste — und zieht sie hier nach, wenn ein
-Repo dazukommt oder wegfällt.
+`Broweg-Team/brotool` und `Broweg-Team/broweg-worker`. `step-it-team/goodFil`
+fehlt in der Liste, weil hier die Quelle liegt, keine Kopie. Ermittelt ist
+die Liste über `git ls-tree origin/staging` in jedem Repo, zu dem es einen
+Klon gab — ein Repo, das niemand geklont hatte, kann fehlen. Wer die Regeln
+ändert, verteilt in diese Liste und zieht sie hier nach, wenn ein Repo
+dazukommt oder wegfällt.
 
 ## 1. Git: Feature-Branch und Pull Request, sonst nichts
 
@@ -184,11 +187,12 @@ Tafel-Wissen des Auftrags fiele.
 - Alternativ von Hand im Dashboard (Visual Building → Tafel), nach
   denselben Regeln.
 
-**Neues Wissen ohne Worker-Lauf:** Einen Schreibweg von Hand ins
-Gedächtnis gibt es bisher **nicht** — `wissen.mjs` liest nur (`suche`,
-`lesen`, `liste`). Bis es ihn gibt, gehört die Erkenntnis als Abschnitt
-`WISSEN:` (Titel, Kurzfassung, Inhalt) in die PR-Beschreibung; wer merged,
-sorgt dafür, dass sie über einen Orchestrator-Lauf ins Gedächtnis kommt.
+**Neues Wissen ohne Worker-Lauf: offen.** Einen Schreibweg von Hand ins
+Gedächtnis gibt es bisher nicht — `wissen.mjs` kennt nur `bereiche`,
+`suche`, `liste` und `lesen`. Wie Menschen, die lokal arbeiten, eine
+Erkenntnis ins Gedächtnis bringen, ist noch nicht entschieden. Bis dahin
+die Erkenntnis in der PR-Beschreibung festhalten, damit sie nicht verloren
+geht — das ersetzt den Gedächtnis-Eintrag nicht.
 
 **Weder Worker noch Dashboard-Zugang** für Bauplan oder Befund? Dann gehört
 derselbe Inhalt als Abschnitt `TAFEL:` in die PR-Beschreibung — wer merged,
