@@ -11,13 +11,17 @@ Orchestrator-Aufgabe). Die Kopie im eigenen Repo nie einzeln umschreiben.
 Kopien dieser Datei liegen (Stand 08.11.2026) im Wurzelverzeichnis von:
 `step-it-team/ai-service`, `step-it-team/analytics-web`,
 `step-it-team/backend`, `step-it-team/goodFil-web`,
-`step-it-team/mystery-web`, `moodsteppi/brauweg`, `Broweg-Team/bro-server`,
-`Broweg-Team/brotool` und `Broweg-Team/broweg-worker`. `step-it-team/goodFil`
-fehlt in der Liste, weil hier die Quelle liegt, keine Kopie. Ermittelt ist
-die Liste über `git ls-tree origin/staging` in jedem Repo, zu dem es einen
-Klon gab — ein Repo, das niemand geklont hatte, kann fehlen. Wer die Regeln
-ändert, verteilt in diese Liste und zieht sie hier nach, wenn ein Repo
-dazukommt oder wegfällt.
+`step-it-team/mystery-web`, `step-it-team/tester-mobile-app`,
+`moodsteppi/brauweg`, `Broweg-Team/bro-server`, `Broweg-Team/brotool` und
+`Broweg-Team/broweg-worker`. `step-it-team/goodFil` fehlt in der Liste,
+weil hier die Quelle liegt, keine Kopie; sie wird auf `master` geführt,
+nicht auf `staging` (der goodFil-Zweig `staging` ist veraltet). Ermittelt
+ist die Liste über die GitHub-API gegen alle Repos der drei Eigentümer
+`step-it-team`, `Broweg-Team` und `moodsteppi` (`ARBEITSREGELN.md` im
+Wurzelverzeichnis auf `staging`, `main` oder `master`). Fehlen können nur
+Repos außerhalb dieser drei Eigentümer und Repos, die der abfragende Token
+nicht lesen darf. Wer die Regeln ändert, verteilt in diese Liste und zieht
+sie hier nach, wenn ein Repo dazukommt oder wegfällt.
 
 ## 1. Git: Feature-Branch und Pull Request, sonst nichts
 
