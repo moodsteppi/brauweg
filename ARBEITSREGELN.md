@@ -15,13 +15,32 @@ Kopien dieser Datei liegen (Stand 08.11.2026) im Wurzelverzeichnis von:
 `moodsteppi/brauweg`, `Broweg-Team/bro-server`, `Broweg-Team/brotool` und
 `Broweg-Team/broweg-worker`. `step-it-team/goodFil` steht nicht in der
 Liste: Dort liegt die kanonische Fassung, keine Kopie. Ermittelt ist die
-Liste über die GitHub-API gegen alle Repos der drei Eigentümer
-`step-it-team`, `Broweg-Team` und `moodsteppi` (`ARBEITSREGELN.md` im
-Wurzelverzeichnis auf `staging`, `main` oder `master`). Repos außerhalb
-dieser drei Eigentümer und Repos, die der abfragende Token nicht lesen
-durfte, erfasst diese Abfrage nicht. Wer die Regeln ändert, prüft die Liste
-vor dem Verteilen auf dieselbe Weise nach, verteilt in sie und zieht sie in
-der kanonischen Fassung nach, wenn ein Repo dazukommt oder wegfällt.
+Liste mit dieser Abfrage über die GitHub-API; sie listet jedes Repo der drei
+Eigentümer, das `ARBEITSREGELN.md` im Wurzelverzeichnis auf `staging`,
+`main` oder `master` trägt:
+
+```bash
+for r in $(for o in orgs/step-it-team orgs/Broweg-Team users/moodsteppi; do
+             gh api "$o/repos?per_page=100" --paginate -q '.[].full_name'; done); do
+  for b in staging main master; do
+    gh api "repos/$r/contents/ARBEITSREGELN.md?ref=$b" -q .path >/dev/null 2>&1 \
+      && { echo "$r ($b)"; break; }
+  done
+done
+```
+
+Repos außerhalb dieser drei Eigentümer und Repos, die der abfragende Token
+nicht lesen darf, erfasst sie nicht. Wer die Regeln ändert, lässt die
+Abfrage vor dem Verteilen erneut laufen, verteilt in jedes Repo, das sie
+nennt, und zieht die Liste in der kanonischen Fassung nach, wenn ein Repo
+dazukommt oder wegfällt.
+
+<!-- Die Kopien-Liste ist eine gewollte Ergänzung: aufgenommen auf
+ausdrückliche Anweisung der Nachbesserung 3 zur Orchestrator-Aufgabe
+078ee03a (08.11.2026), nachdem eine Kopie (tester-mobile-app) beim
+Verteilen übersehen worden war. Wer sie streichen will, entscheidet das
+getrennt — nicht im Zuge einer Änderung an einer einzelnen Regel. -->
+
 
 ## 1. Git: Feature-Branch und Pull Request, sonst nichts
 
