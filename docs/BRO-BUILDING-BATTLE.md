@@ -118,7 +118,9 @@ Gastgeberbildschirm verdient keine Münzen für fremde Controller.
 * `kamera.ts`: Der Ausschnitt beginnt bei 22 Metern und weitet sich bei Bedarf
   in Acht-Meter-Stufen sanft nach außen. Einmal gezeigter Raum bleibt bis zum
   Rundenwechsel erhalten. Fallende Teile oder Einstürze führen niemals zum
-  Zurückzoomen. Bewegung ist bildratenunabhängig und berücksichtigt die
+  Zurückzoomen. Im Höhenrennen wird oberhalb der Ziellinie kein weiterer
+  Spawn eingeplant; dadurch bleibt der Ausschnitt bei höchstens 46 Metern.
+  Bewegung ist bildratenunabhängig und berücksichtigt die
   Systemeinstellung für reduzierte Bewegung.
   Prompt, Freihaltezonen und Herkunft: `ASSETS-BRO-BUILDING-BATTLE.md`.
   Keine kopierten Originalspiel-Assets. Das Bildoriginal bleibt lokal im
@@ -173,21 +175,30 @@ iPhones. Diese Hardware-Abnahme bleibt vor einer Veröffentlichung erforderlich.
 
 ## Lokale Abnahme
 
-Am 9. November 2026 geprüft: vollständiger Build aus dem Wurzelverzeichnis,
-Client-Typprüfung, gezielte Regel-, Relay-, Controller- und Physiktests. Die
-Prüfungen umfassen echte WebSocket-Verbindungen, das Weiterreichen einer
-Handyeingabe bis in genau den eigenen Physikturm, Eingabe-Reset, Rundenwechsel,
-gleichzeitiges Ausscheiden und eine vollständige simulierte Vierpersonenrunde.
+Der Grafikausbau ist im vollständigen Build aus dem Wurzelverzeichnis geprüft.
+Gezielte Prüfungen umfassen echte WebSocket-Verbindungen, zwei unabhängige
+Controller, private Bauwerte über 30 Teile, Reconnect und Rundenwechsel,
+fortgesetzten Nachschub nach vollständigem Einsturz, drei Sekunden Zielhalten,
+Zauber, eine vollständige simulierte Vierpersonenrunde und Kontobelohnungen
+mit Tageskappe. Der Kameratest deckt Einrasten, Fallteile, Einsturz, Zieleinlauf,
+Bildratenunabhängigkeit, reduzierte Bewegung und Rundenneustart ab.
 Die gesamte Testsammlung des Monorepos wurde aus Rücksicht auf die Rechnerlast
-nicht erneut ausgeführt.
+nicht erneut ausgeführt. Gezielte Prüfungen laufen mit einem Worker, Builds
+nacheinander.
 
-Die Browserprobe zeigt Gastgeber und zwei getrennte Controller, Countdown,
-Turmbau, Zielwertung und Revanche. Desktop- und Handy-Screenshots liegen lokal
-in der Aufgaben-Vorschau. Der generische iOS-Simulator-Build mit zwei
-Arbeitsschritten ist erfolgreich; das App-Paket enthält den gebauten Webclient
-einschließlich Bauwelt. Dafür wurde kein Simulator gestartet. Dies ist ein
-unsignierter lokaler Prüfbuild, kein TestFlight-Archiv. Vorschau-Tabs und der
-zusätzliche lokale Vorschauserver wurden nach der Prüfung geschlossen.
+Browserabnahme: tatsächliche Zweipersonenpartie mit getrennten Controllern,
+1280 × 800 für den Gastgeber und 390 × 844 für den Controller. Die zwei
+Layoutgrößen wurden mit lokalen Prüfframes geöffnet, weil die Browser-
+Größenumschaltung die bereits offenen Tabs nicht zuverlässig änderte. Die
+Prüfseiten wurden anschließend gelöscht und die zusätzlichen Tabs geschlossen.
+Screenshots liegen im lokalen Aufgabenordner `bro-building-battle-v3`.
+
+Der generische, unsignierte iOS-Prüfbuild des vorigen Ausbaus war erfolgreich;
+für diesen Grafikausbau wurde kein erneuter nativer Build und kein echter
+WLAN-/Hotspot-Gerätetest durchgeführt. Die Änderungen liegen im gemeinsam
+verwendeten Webclient. Kein TestFlight-Archiv, Deploy oder Upload. Die kleine
+lokale Vorschau auf Port 5186 bleibt zum Ausprobieren verfügbar; sie besitzt
+keine Kontodatenbank und vergibt daher keine Kontomünzen.
 
 ## TAFEL
 
