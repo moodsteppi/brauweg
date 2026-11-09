@@ -21,7 +21,7 @@ export function Controller({ layout, senden }: { layout: Layout; senden(a: Aktio
   useEffect(() => {
     const verborgen = (): void => { if (document.hidden) reset(); };
     const unten = (e: KeyboardEvent): void => {
-      if ((e.target as HTMLElement)?.matches('input,textarea,select') || e.repeat) return;
+      if ((e.target instanceof HTMLElement && e.target.matches('input,textarea,select')) || e.repeat) return;
       const d = eingabe.current;
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'r', 'Enter'].includes(e.key)) e.preventDefault();
       if (e.key === 'ArrowLeft') d.x = -1;

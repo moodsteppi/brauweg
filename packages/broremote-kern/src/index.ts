@@ -130,8 +130,7 @@ export class BroRaum {
       this.leitungen.set(v, { gastgeber: true, gesehen: jetzt, fenster: jetzt, anzahl: 0 });
       this.o.senden(v, { art: 'willkommen', rolle: 'gastgeber', schluessel: this.hostSchluessel, einladung: this.einladung, raum: this.id });
       // Nach Host-Wechsel dürfen keine alten gedrückten Tasten weiterlaufen.
-      this.abschnitt++;
-      for (const s of this.sitze) this.reset(s);
+      this.neuerAbschnitt();
       this.verteilen();
       return true;
     }

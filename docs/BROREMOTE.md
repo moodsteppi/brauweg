@@ -37,6 +37,12 @@ Host-Spieladapter, nicht in die Transportvermittlung.
 Der bisherige Kartenspiel-WebSocket bleibt eigenständig. Beide Kanäle teilen
 sich den HTTP-Server mit einer ausdrücklichen Pfadzuordnung.
 
+Die iOS-Kamera liest ausschließlich QR-Codes; Bilder werden weder gespeichert
+noch übertragen. Die lokale Netzwerkberechtigung wird für den direkten
+Geräteaustausch angefragt. Die Systemlaufzeit dient nur dem örtlichen
+Nachrichtenlimit, mit dem im Privacy Manifest eingetragenen Grund 35F9.1
+([Apple: zugelassene API-Gründe](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons)).
+
 ## Tafel-Übergabe
 
 Die vorgeschriebenen Leseversuche an Visual Building und Aufgabenboard

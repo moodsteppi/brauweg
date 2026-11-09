@@ -6,7 +6,7 @@ function aufbau() {
   let zeit = 100_000, zaehler = 1;
   const post: { v: string; n: ServerNachricht }[] = [], getrennt: string[] = [];
   const raum = new BroRaum({ raum: 'A12BC345', jetzt: () => zeit,
-    zufall: () => (zaehler++).toString(16).padStart(32, '0'), senden: (v, n) => post.push({ v, n }), trennen: v => getrennt.push(v) });
+    zufall: () => (zaehler++).toString(16).padStart(8, '0').padEnd(32, '0'), senden: (v, n) => post.push({ v, n }), trennen: v => getrennt.push(v) });
   const anmelden = (v: string, n: Nachricht): boolean => raum.anmelden(v, { v: 1, ...n });
   const senden = (v: string, n: Nachricht): void => raum.empfangen(v, { v: 1, ...n });
   anmelden('h', { art: 'gastgeber', schluessel: raum.hostSchluessel });

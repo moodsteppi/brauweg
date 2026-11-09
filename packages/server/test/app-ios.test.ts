@@ -107,12 +107,14 @@ test('project.yml: Ressourcen samt Privacy Manifest, Client per Build-Phase', ()
   assert.match(ignoriert, /^Konfiguration\/Lokal\.xcconfig$/m);
 });
 
-test('Info.plist: hochkant, Ausfuhrangabe, keine Berechtigungstexte, kein offenes ATS', () => {
+test('Info.plist: hochkant, Ausfuhrangabe, nur BroRemote-Berechtigungen, kein offenes ATS', () => {
   const plist = ohneKommentare(lies('Konfiguration', 'Info.plist'));
   assert.deepEqual(plistListe(plist, 'UISupportedInterfaceOrientations'), ['UIInterfaceOrientationPortrait']);
   assert.ok(!plist.includes('UISupportedInterfaceOrientations~ipad'));
   assert.equal(plistWert(plist, 'ITSAppUsesNonExemptEncryption'), 'false');
-  assert.deepEqual([...plist.matchAll(/<key>(NS\w*UsageDescription)<\/key>/g)].map((m) => m[1]), []);
+  assert.deepEqual([...plist.matchAll(/<key>(NS\w*UsageDescription)<\/key>/g)].map((m) => m[1]).sort(), ['NSCameraUsageDescription', 'NSLocalNetworkUsageDescription']);
+  assert.match(plistWert(plist, 'NSCameraUsageDescription')!, /QR-Code.*BroRemote/);
+  assert.match(plistWert(plist, 'NSLocalNetworkUsageDescription')!, /BroRemote.*WLAN/);
   assert.ok(!plist.includes('NSAllowsArbitraryLoads'), 'nur HTTPS');
   assert.match(plist, /<key>UILaunchScreen<\/key>/);
   assert.equal(plistWert(plist, 'UISceneDelegateClassName'), '$(PRODUCT_MODULE_NAME).SzenenDelegat');
@@ -259,7 +261,10 @@ test('die Huelle spricht dieselbe Sprache wie Server und Client', () => {
   assert.equal(swiftMuster, clientMuster);
   // Und der Server leitet genau diese Pfade an die App (apple-app-site-association).
   for (const pfad of APP_LINK_PFADE) {
-    assert.ok(swiftMuster.startsWith('^' + pfad.replace(/\*$/, '')), pfad);
+    if (pfad === '/broremote') {
+      assert.ok(huelle.includes('if link.path == "/broremote"'), pfad);
+      assert.ok(huelle.includes('link.fragment.map'), 'BroRemote-Einladung im Fragment erhalten');
+    } else assert.ok(swiftMuster.startsWith('^' + pfad.replace(/\*$/, '')), pfad);
   }
 
   // Die Absprache mit dem Client (laufzeit.ts, zuruecktaste.ts) und Android (Huelle.kt).

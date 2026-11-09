@@ -31,6 +31,8 @@ export function BroRemote(): React.JSX.Element {
     try { const d = JSON.parse(sessionStorage.getItem(SPEICHER) ?? 'null'); return d?.schluessel && d?.raum ? d as Zugang : null; } catch { return null; }
   });
   const kanal = useRef<Kanal | null>(null), sichtRef = useRef<RaumSicht | null>(null), folge = useRef(0), lauf = useRef(0);
+  const seite = useRef<HTMLElement>(null);
+  useEffect(() => { seite.current?.scrollTo({ top: 0 }); }, [sicht?.phase, spiel]);
   const aktiv = status !== 'beendet';
   const senden = (n: Record<string, unknown>): void => {
     if (!kanal.current?.senden(n)) setFehler('Noch keine Verbindung. Bitte warte kurz.');
@@ -107,7 +109,7 @@ export function BroRemote(): React.JSX.Element {
   const bereit = !!sicht?.spieler.length && sicht.spieler.every(s => s.bereit && s.verbunden);
   const abgelaufen = !!sicht && zeit >= sicht.einladungBis;
 
-  return <main className="br-seite">
+  return <main className="br-seite" ref={seite}>
     <div className="br-inhalt">
       <header className="br-kopf"><a href="/" className="br-zurueck" aria-label="Zurück zur App" onClick={e => { if (aktiv && !window.confirm('BroRemote verlassen? Als Gastgeber beendest du damit die Lobby.')) e.preventDefault(); else if (aktiv) schliessen(); }}>‹</a>
         <a href="/broremote" onClick={e => { e.preventDefault(); if (!aktiv) setSpiel(false); }} className="br-marke">Bro<span>Remote</span><small>Dein Handy. Euer Controller.</small></a>
@@ -160,7 +162,7 @@ export function BroRemote(): React.JSX.Element {
             }}>Link kopieren</button><button type="button" className="br-link" disabled={!verbunden} onClick={() => senden({ art: 'einladen' })}>Neuer QR-Code</button></div>
             <details><summary>Einladungslink anzeigen</summary><input aria-label="Einladungslink zum Kopieren" readOnly value={link} onFocus={e => e.target.select()} /></details>
           </section>}
-          {(sicht.phase === 'lobby' || rolle === 'gastgeber') && <section className="br-panel br-crew"><div className="br-zeile"><h2>{rolle === 'gastgeber' ? 'Deine Crew' : 'Eure Lobby'}</h2><span>{sicht.spieler.length}/4</span></div>
+          {sicht.phase === 'lobby' && <section className="br-panel br-crew"><div className="br-zeile"><h2>{rolle === 'gastgeber' ? 'Deine Crew' : 'Eure Lobby'}</h2><span>{sicht.spieler.length}/4</span></div>
             <div className="br-plaetze">{Array.from({ length: 4 }, (_, i) => { const s = sicht.spieler[i]; return <div className={`br-platz${s ? ' belegt' : ''}`} key={s?.id ?? i} style={s ? { borderColor: `${s.farbe}66` } : undefined}>
               <div className="br-avatar" style={s ? { background: `${s.farbe}26` } : undefined}>{s ? <img src="/hub/pinguin/pinguin-basis.webp" alt="" /> : <span>+</span>}</div>
               <div><strong>{s ? `${s.name}${s.id === spieler ? ' (du)' : ''}` : `Platz ${i + 1}`}</strong><small>{s ? !s.verbunden ? 'Verbindung unterbrochen' : sicht.phase === 'test' ? 'Controller verbunden' : s.bereit ? 'Bereit ✓' : 'Noch nicht bereit' : 'Wartet auf einen Controller'}</small></div>

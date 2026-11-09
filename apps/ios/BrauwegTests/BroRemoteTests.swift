@@ -2,6 +2,31 @@ import XCTest
 @testable import Brauweg
 
 final class BroRemoteTests: XCTestCase {
+    @MainActor
+    func testLokalerWebSocketTransportInBeideRichtungen() async throws {
+        let host = BroRemoteNetz(), handy = BroRemoteNetz()
+        let empfangen = expectation(description: "Host empfängt Text"), antwort = expectation(description: "Handy empfängt Antwort")
+        var fehler: String?
+        host.melden = { d in
+            if d["art"] as? String == "bereit", let adressen = d["adressen"] as? [String], let adresse = adressen.first {
+                handy.befehl(["art": "verbinden", "id": "pruefhandy", "adresse": adresse])
+            }
+            if d["art"] as? String == "text", let id = d["id"] as? String, d["text"] as? String == "hin" {
+                empfangen.fulfill()
+                host.befehl(["art": "senden", "id": id, "text": "zurueck"])
+            }
+            if d["art"] as? String == "fehler" { fehler = d["text"] as? String }
+        }
+        handy.melden = { d in
+            if d["art"] as? String == "offen" { handy.befehl(["art": "senden", "id": "pruefhandy", "text": "hin"]) }
+            if d["art"] as? String == "text", d["text"] as? String == "zurueck" { antwort.fulfill() }
+        }
+        host.befehl(["art": "host"])
+        await fulfillment(of: [empfangen, antwort], timeout: 20)
+        host.stoppen(); handy.stoppen()
+        XCTAssertNil(fehler)
+    }
+
     func testNurLokaleWebSocketZiele() {
         for ip in ["192.168.1.4", "10.0.0.2", "172.20.10.1", "169.254.1.3"] {
             XCTAssertNotNil(BroRemoteNetz.lokaleAdresse("ws://\(ip):32145/broremote"))

@@ -25,7 +25,14 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     private let broremote = BroRemoteNetz()
 
     init(startLink: URL?) {
-        if let pfad = Huelle.pfadFuerLink(startLink, serverHost: Huelle.serverHost) {
+        #if DEBUG
+        let remoteProbe = ProcessInfo.processInfo.arguments.contains("--broremote")
+        #else
+        let remoteProbe = false
+        #endif
+        if remoteProbe && startLink == nil {
+            startPfad = "/broremote"
+        } else if let pfad = Huelle.pfadFuerLink(startLink, serverHost: Huelle.serverHost) {
             startPfad = pfad
         } else {
             startPfad = "/"
