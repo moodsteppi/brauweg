@@ -1,4 +1,12 @@
+import { REGELN, spawnHoehe } from '@brauweg/building-kern';
+
 export type BauKamera = { oben: number; ziel: number };
+
+/** Oberhalb der Ziellinie gibt es keinen neuen Spawn. Dort noch einen
+ * höheren Nachschub einzuplanen machte gerade beim Zieleinlauf alles winzig. */
+export function kameraBedarf(hoehe: number, aktiveHoehe: number | undefined, rennen: boolean): number {
+  return Math.max(spawnHoehe(rennen ? Math.min(REGELN.ziel, hoehe) : hoehe) + 3, (aktiveHoehe ?? 0) + 3);
+}
 
 /** Eine Runde wird nur weiter, nie wieder enger. Neue Fallteile und ein
  * Einsturz dürfen deshalb kein Pumpen der Kamera auslösen. Acht-Meter-Stufen

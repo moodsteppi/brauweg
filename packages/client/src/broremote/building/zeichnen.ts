@@ -1,6 +1,6 @@
-import { REGELN, spawnHoehe, zellen, type BauForm } from '@brauweg/building-kern';
+import { REGELN, zellen, type BauForm } from '@brauweg/building-kern';
 import type { BahnSicht } from './partie';
-import { kameraSchritt, type BauKamera } from './kamera';
+import { kameraBedarf, kameraSchritt, type BauKamera } from './kamera';
 
 import { BAUFARBEN } from './material';
 
@@ -45,7 +45,8 @@ export function zeichneBahn(canvas: HTMLCanvasElement, bahn: BahnSicht, ziel: bo
   if (!insel) { insel = new Image(); insel.src = '/broremote/bauinsel.webp'; }
   // Platz für den nächsten Spawn früh vorbereiten. Danach schrumpft der
   // Ausschnitt bis zur nächsten Runde nie, auch wenn der Turm ganz einstürzt.
-  const benoetigt = Math.max(spawnHoehe(bahn.hoehe) + 3, ...bahn.steine.map(s => s.y + 3));
+  const aktiv = bahn.steine.find(s => s.aktiv);
+  const benoetigt = kameraBedarf(bahn.hoehe, aktiv?.y, ziel);
   const kamera = kameraSchritt(kameras.get(canvas), benoetigt, sekunden, ruhe); kameras.set(canvas, kamera);
   const oben = kamera.oben, boden = h - 82, skala = Math.min((w - 36) / 16, (boden - 26) / oben), x = w / 2;
   const py = (y: number): number => boden - y * skala;
@@ -66,7 +67,6 @@ export function zeichneBahn(canvas: HTMLCanvasElement, bahn: BahnSicht, ziel: bo
     for (const xx of [30, w - 30]) { c.beginPath(); c.moveTo(xx, yy - 5); c.lineTo(xx + 4, yy); c.lineTo(xx, yy + 5); c.lineTo(xx - 4, yy); c.closePath(); c.fill(); }
     c.font = 'bold 11px Nunito, sans-serif'; c.textAlign = 'right'; c.fillText('ZIEL · 16 m', w - 35, yy - 9); c.textAlign = 'left';
   }
-  const aktiv = bahn.steine.find(s => s.aktiv);
   if (aktiv) {
     const xx = x + aktiv.x * skala, yy = Math.max(0, py(aktiv.y));
     const g = c.createLinearGradient(0, yy, 0, boden); g.addColorStop(0, `${bahn.farbe}22`); g.addColorStop(1, `${bahn.farbe}00`);

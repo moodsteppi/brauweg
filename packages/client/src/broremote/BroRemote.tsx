@@ -211,7 +211,7 @@ export function BroRemote(): React.JSX.Element {
             {rolle === 'gastgeber' && sicht.phase === 'lobby' && <>
               <div className="bb-moduswahl"><span className="br-kicker">EUER SPIELMODUS</span><div className="br-modus">{(['rennen', 'standfest'] as const).map(m => <button key={m} disabled={!verbunden} aria-pressed={(sicht.baumodus ?? 'rennen') === m} onClick={() => senden({ art: 'baumodus', modus: m })}>{MODI[m].name}</button>)}</div><p className="br-leise">{MODI[sicht.baumodus ?? 'rennen'].regel}</p></div>
               <label className="br-sperre"><input type="checkbox" checked={sicht.gesperrt} disabled={!verbunden} onChange={e => senden({ art: 'sperren', gesperrt: e.target.checked })} />Lobby für neue Spieler sperren</label>
-              <button type="button" className="br-knopf" disabled={!bereit || !verbunden} onClick={() => senden({ art: 'spielen' })}>Battle starten</button>
+              <button type="button" className="br-knopf" disabled={!bereit || !verbunden} onClick={() => { setHinweis(''); senden({ art: 'spielen' }); }}>Battle starten</button>
               <p className="br-leise">{bereit ? 'Eure Crew ist bereit. Nach dem Countdown geht es los!' : 'Sobald mindestens ein Handy verbunden ist und alle bereit sind, kann es losgehen.'}</p>
               <button className="br-link" disabled={!bereit || !verbunden} onClick={() => senden({ art: 'starten' })}>Nur Verbindung prüfen</button>
             </>}

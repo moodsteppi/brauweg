@@ -1,8 +1,14 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { kameraSchritt } from './kamera';
+import { kameraBedarf, kameraSchritt } from './kamera';
 
 describe('Ruhige Baukamera', () => {
+  it('plant im Ziel keinen weiteren hohen Spawn und hält das Rennen bei höchstens 46 Metern Ausschnitt', () => {
+    expect(kameraBedarf(0, 14, true)).toBe(17);
+    expect(kameraBedarf(15.9, 41.8, true)).toBeCloseTo(44.8);
+    expect(kameraSchritt(undefined, kameraBedarf(24, undefined, true), 0).oben).toBe(46);
+    expect(kameraBedarf(24, undefined, false)).toBe(61);
+  });
   it('behält nach Fallteilen und einem kompletten Einsturz den Bildausschnitt', () => {
     let k = kameraSchritt(undefined, 17, 0);
     expect(k.oben).toBe(22);
