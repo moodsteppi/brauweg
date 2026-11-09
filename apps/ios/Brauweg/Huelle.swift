@@ -78,12 +78,16 @@ enum Huelle {
         guard let link, link.scheme?.lowercased() == "https",
               let host = link.host?.lowercased(),
               linkHosts.contains(host), host == serverHost.lowercased() else { return nil }
+        if link.path == "/broremote", link.query == nil {
+            return "/broremote" + (link.fragment.map { "#" + $0 } ?? "")
+        }
         return pfadFuerPfad(link.path)
     }
 
     /// Der reine Pfadteil von [pfadFuerLink] — wie `Huelle.pfadFuerPfad` unter Android.
     static func pfadFuerPfad(_ pfad: String?) -> String? {
         guard let pfad else { return nil }
+        if pfad == "/broremote" { return pfad }
         let bereich = NSRange(pfad.startIndex..<pfad.endIndex, in: pfad)
         guard let treffer = beitritt.firstMatch(in: pfad, options: [], range: bereich),
               let code = Range(treffer.range(at: 1), in: pfad) else { return nil }
@@ -143,6 +147,7 @@ enum Huelle {
             "    pushErlauben: function () { senden('pushErlauben', null); },",
             "    appleAnmelden: function (nonce) { senden('appleAnmelden', String(nonce)); }",
             "  };",
+            "  window.BroRemoteNativ = function (daten) { senden('broremote', daten); };",
             // defineProperty statt Zuweisung: `wakeLock` ist in neueren WebKits
             // ein Getter ohne Setter, eine Zuweisung liefe dort stumm ins Leere.
             "  function setze(name, wert) {",

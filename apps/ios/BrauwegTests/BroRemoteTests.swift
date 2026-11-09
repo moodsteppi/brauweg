@@ -1,0 +1,19 @@
+import XCTest
+@testable import Brauweg
+
+final class BroRemoteTests: XCTestCase {
+    func testNurLokaleWebSocketZiele() {
+        for ip in ["192.168.1.4", "10.0.0.2", "172.20.10.1", "169.254.1.3"] {
+            XCTAssertNotNil(BroRemoteNetz.lokaleAdresse("ws://\(ip):32145/broremote"))
+        }
+        for url in ["ws://8.8.8.8:80/broremote", "ws://127.0.0.1:80/broremote", "ws://172.32.0.1:80/broremote", "https://192.168.1.1:80/broremote", "ws://192.168.1.1:80/admin", "ws://user@192.168.1.1:80/broremote", "ws://192.168.1.1:80/broremote?token=abc"] {
+            XCTAssertNil(BroRemoteNetz.lokaleAdresse(url), url)
+        }
+    }
+    func testBroRemoteLinkBehaeltEinladungImFragment() {
+        let link = URL(string: "https://staging.brauweg-spielen.de/broremote#t=relay&r=ABC12345&k=abc")!
+        XCTAssertEqual(Huelle.pfadFuerLink(link, serverHost: "staging.brauweg-spielen.de"), "/broremote#t=relay&r=ABC12345&k=abc")
+        XCTAssertNil(Huelle.pfadFuerLink(link, serverHost: "www.brauweg-spielen.de"))
+        XCTAssertTrue(Huelle.vorspann(apiBasis: "https://staging.brauweg-spielen.de", push: false).contains("window.BroRemoteNativ"))
+    }
+}

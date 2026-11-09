@@ -87,6 +87,8 @@ final class Bruecke: NSObject, WKScriptMessageHandler {
             // Die Nonce des Servers; ohne sie gaebe es nur ein Token, das er abweist.
             guard let nonce = daten as? String, !nonce.isEmpty, nonce.count <= 200 else { return }
             controller?.appleAnmelden(nonce: nonce)
+        case "broremote":
+            if let d = daten as? [String: Any] { controller?.broremoteBefehl(d) }
         default:
             break
         }
@@ -111,5 +113,6 @@ final class Bruecke: NSObject, WKScriptMessageHandler {
     func zuruecksetzen() {
         UIApplication.shared.isIdleTimerDisabled = false
         haptik.stoppen()
+        controller?.broremoteStoppen()
     }
 }

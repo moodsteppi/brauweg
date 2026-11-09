@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@brauweg/broremote-kern": "*",
     "@brauweg/flyingbro-kern": "*",
     "@brauweg/manufaktur-kern": "*",
     "@dimforge/rapier2d-compat": "0.21.0",

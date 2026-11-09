@@ -46,6 +46,7 @@ enum Erreichbarkeit {
 final class Fehlerschirm: UIView {
 
     var beimErneutVersuchen: (() -> Void)?
+    var beimBroRemote: (() -> Void)?
 
     private let knopf = UIButton(type: .system)
     private let kreisel = UIActivityIndicatorView(style: .medium)
@@ -83,7 +84,11 @@ final class Fehlerschirm: UIView {
         kreisel.color = .white
         kreisel.hidesWhenStopped = true
 
-        let stapel = UIStackView(arrangedSubviews: [titel, text, knopf, kreisel])
+        let remote = UIButton(type: .system)
+        remote.setTitle("BroRemote im lokalen Netzwerk", for: .normal)
+        remote.tintColor = .white
+        remote.addAction(UIAction { [weak self] _ in self?.beimBroRemote?() }, for: .touchUpInside)
+        let stapel = UIStackView(arrangedSubviews: [titel, text, knopf, kreisel, remote])
         stapel.axis = .vertical
         stapel.alignment = .center
         stapel.spacing = 16

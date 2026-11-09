@@ -22,6 +22,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     /// Meldet, wenn das Netz zurueckkommt — dann verschwindet die Fehlermeldung
     /// von selbst, wie unter Android.
     private let netz = NWPathMonitor()
+    private let broremote = BroRemoteNetz()
 
     init(startLink: URL?) {
         if let pfad = Huelle.pfadFuerLink(startLink, serverHost: Huelle.serverHost) {
@@ -93,6 +94,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
         ansicht.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(ansicht)
         self.ansicht = ansicht
+        broremote.melden = { [weak self] daten in self?.broremoteMelden(daten) }
         // `themeColor` folgt dem `<meta name="theme-color">` der Seite.
         kopffarbeBeobachter = ansicht.observe(\.themeColor, options: [.initial, .new]) { [weak self] wv, _ in
             self?.kopfzeileHell = wv.themeColor.map(Farben.istHell) ?? false
@@ -100,6 +102,10 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
 
         fehlerschirm.isHidden = true
         fehlerschirm.beimErneutVersuchen = { [weak self] in self?.pruefeServer() }
+        fehlerschirm.beimBroRemote = { [weak self] in
+            self?.fehlerschirm.isHidden = true
+            self?.laden(pfad: "/broremote")
+        }
         fehlerschirm.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(fehlerschirm)
 
@@ -222,6 +228,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     // MARK: - Server erreichbar?
 
     private func pruefeServer() {
+        if ansicht?.url?.path == "/broremote" { fehlerschirm.isHidden = true; return }
         guard !prueftGerade else { return }
         prueftGerade = true
         let standDa = !fehlerschirm.isHidden
@@ -230,6 +237,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
             guard let self else { return }
             self.prueftGerade = false
             self.fehlerschirm.pruefeGerade(false)
+            if self.ansicht.url?.path == "/broremote" { self.fehlerschirm.isHidden = true; return }
             if erreichbar {
                 self.fehlerschirm.isHidden = true
                 // Der Client ist ohne Server gestartet und hat seine ersten
@@ -242,6 +250,33 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     }
 
     // MARK: - Blaetter und Dialoge
+
+    func broremoteBefehl(_ daten: [String: Any]) {
+        guard ansicht.url?.path == "/broremote" else { return }
+        if daten["art"] as? String == "scannen" {
+            guard presentedViewController == nil else { return }
+            let scanner = BroRemoteScanner()
+            scanner.modalPresentationStyle = .fullScreen
+            scanner.fertig = { [weak self] text in
+                self?.broremoteMelden(["art": "scan", "text": text ?? ""])
+            }
+            present(scanner, animated: true)
+        } else { broremote.befehl(daten) }
+    }
+
+    private func broremoteMelden(_ daten: [String: Any]) {
+        guard isViewLoaded, let d = try? JSONSerialization.data(withJSONObject: daten),
+              let json = String(data: d, encoding: .utf8) else { return }
+        ansicht.evaluateJavaScript("window.dispatchEvent(new CustomEvent('brauweg:broremote',{detail:JSON.parse(\(Huelle.jsText(json)))}));", completionHandler: nil)
+    }
+
+    func broremoteStoppen() { broremote.stoppen() }
+    func imHintergrund() {
+        broremote.hintergrund()
+        if isViewLoaded {
+            ansicht.evaluateJavaScript("window.dispatchEvent(new Event('brauweg:hintergrund'));", completionHandler: nil)
+        }
+    }
 
     func zeigeBlatt(_ url: URL) {
         // SFSafariViewController nimmt nur http(s) und stirbt an allem anderen.

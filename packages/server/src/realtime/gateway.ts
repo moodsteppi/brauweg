@@ -10,6 +10,8 @@
 import { eq, inArray, sql } from 'drizzle-orm';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { Server } from 'node:http';
+import type { IncomingMessage } from 'node:http';
+import type { Duplex } from 'node:stream';
 import { z } from 'zod';
 
 import type { BotLevel } from '@brauweg/game-api';
@@ -348,6 +350,8 @@ export interface GatewayOptions {
 
 export class Gateway {
   private readonly wss: WebSocketServer;
+  private readonly upgrade: (anfrage: IncomingMessage, socket: Duplex, kopf: Buffer) => void;
+  private readonly httpServer: Server;
   private readonly connections = new Set<Connection>();
   private readonly byTable = new Map<string, Set<Connection>>();
   private readonly cookieName: string;
@@ -362,6 +366,7 @@ export class Gateway {
     private readonly runtime: PartyRuntime,
     options: GatewayOptions = {},
   ) {
+    this.httpServer = server;
     this.cookieName = options.cookieName ?? 'brauweg_session';
     this.appOrigins = options.appOrigins ?? [];
     this.appInhalt = options.appInhalt ?? APP_INHALT_WIE_WEB;
@@ -372,8 +377,7 @@ export class Gateway {
     // Dutzend davon beendet den Prozess. Der groesste echte Zug bleibt weit
     // unter einem Kilobyte.
     this.wss = new WebSocketServer({
-      server,
-      path: '/ws',
+      noServer: true,
       maxPayload: 64 * 1024,
       /**
        * Nachrichten ueber einem Kilobyte werden komprimiert (RFC 7692,
@@ -418,6 +422,13 @@ export class Gateway {
       handleProtocols: (protocols) =>
         protocols.has(TOKEN_PROTOKOLL) ? TOKEN_PROTOKOLL : false,
     });
+    // Mehrere Kanäle teilen einen HTTP-Server. Ein WSS mit `server` würde
+    // den BroRemote-Handshake schon wegen seines anderen Pfades abbrechen.
+    this.upgrade = (anfrage, socket, kopf) => {
+      if (anfrage.url?.split('?')[0] !== '/ws') return;
+      this.wss.handleUpgrade(anfrage, socket, kopf, ws => this.wss.emit('connection', ws, anfrage));
+    };
+    server.on('upgrade', this.upgrade);
     const erlaubt = options.allowedOrigins ?? [];
     this.wss.on('connection', (socket, request) => {
       const herkunft = request.headers.origin;
@@ -453,6 +464,7 @@ export class Gateway {
   }
 
   async close(): Promise<void> {
+    this.httpServer.off('upgrade', this.upgrade);
     for (const connection of this.connections) connection.socket.terminate();
     await new Promise<void>((resolve) => this.wss.close(() => resolve()));
   }

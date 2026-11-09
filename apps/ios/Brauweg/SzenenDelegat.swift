@@ -40,4 +40,5 @@ final class SzenenDelegat: UIResponder, UIWindowSceneDelegate {
     func sceneWillEnterForeground(_ scene: UIScene) {
         haupt?.imVordergrund()
     }
+    func sceneDidEnterBackground(_ scene: UIScene) { haupt?.imHintergrund() }
 }

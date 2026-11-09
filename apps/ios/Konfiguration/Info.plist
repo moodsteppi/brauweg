@@ -47,6 +47,11 @@
 		<true/>
 	</dict>
 
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>BroRemote verbindet deine Handys im selben WLAN oder Hotspot mit der lokalen Spiele-Lobby.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Scanne den QR-Code einer BroRemote-Lobby, um dein Handy als Controller zu verbinden.</string>
+
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>
