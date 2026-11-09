@@ -2,6 +2,7 @@ import type { Woerterbuch } from '../woerterbuch';
 
 /** Deutsche Texte, Bereich „fehler". Umgezogen aus dem alten i18n.ts, Wortlaut unverändert. */
 export default {
+  'error.buildingKeinStart': 'Für diese Runde fehlt der Spielstart. Das Ergebnis bleibt auf diesem Gerät.',
   'error.marktNeuerTag': 'Ein neuer Tag hat begonnen. Dein Shop wurde erneuert.',
   'error.marktNichtImAngebot': 'Dieses Design ist heute nicht im Angebot.',
   'error.marktNochVerdeckt': 'Decke zuerst das Angebot auf.',

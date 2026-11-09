@@ -63,6 +63,8 @@ const alias = Object.fromEntries(
 );
 
 // Die Manufaktur-Simulation rechnet der Client zur Laufzeit mit (vite.config.ts).
+alias['@brauweg/broremote-kern'] = fileURLToPath(new URL('../broremote-kern/src/index.ts', import.meta.url));
+alias['@brauweg/building-kern'] = fileURLToPath(new URL('../building-kern/src/index.ts', import.meta.url));
 alias['@brauweg/manufaktur-kern'] = fileURLToPath(new URL('../manufaktur-kern/src/index.ts', import.meta.url));
 // Flying Bro ebenso (Level und Sternregel, vite.config.ts).
 alias['@brauweg/flyingbro-kern'] = fileURLToPath(new URL('../flyingbro-kern/src/index.ts', import.meta.url));
@@ -71,6 +73,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: { alias },
   test: {
+    // Mehrere Physik- und DOM-Prüfungen benötigen sonst gleichzeitig mehrere GB.
+    maxWorkers: 2,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,

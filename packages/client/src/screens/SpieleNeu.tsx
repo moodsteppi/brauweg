@@ -289,6 +289,10 @@ export function SpieleNeu({
       <header className="hb-kopfzeile">
         <h1 className="hb-titel">{t('spielwahl.titel')}</h1>
       </header>
+      <a className="hb-broremote" href="/broremote">
+        <svg viewBox="0 0 40 40" aria-hidden="true" fill="none"><rect x="3" y="6" width="25" height="19" rx="4" stroke="currentColor" strokeWidth="2"/><path d="M9 30h13M15 25v5" stroke="currentColor" strokeWidth="2"/><rect x="25" y="17" width="12" height="20" rx="3" fill="#162d48" stroke="currentColor" strokeWidth="2"/><path d="M28 25h6m-3-3v6" stroke="currentColor" strokeWidth="2"/></svg>
+        <span><strong>BroRemote</strong><small>Handys verbinden. Gemeinsam spielen.</small></span><b aria-hidden="true">›</b>
+      </a>
       {abstimmFehler && <p role="alert" className="hb-text">{abstimmFehler}</p>}
       <div className="hb-chips" role="tablist" aria-label={t('spielwahl.kategorien')}>
         {[{ id: 'alle', titel: t('spielwahl.alle') }, ...chips].map((k) => (

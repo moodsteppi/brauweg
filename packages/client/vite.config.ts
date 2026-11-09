@@ -13,6 +13,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      '@brauweg/building-kern': fileURLToPath(new URL('../building-kern/src/index.ts', import.meta.url)),
+      '@brauweg/broremote-kern': fileURLToPath(new URL('../broremote-kern/src/index.ts', import.meta.url)),
       /*
        * Die Simulation der Kartenmanufaktur kommt aus ihrer QUELLE: Der
        * Client rechnet sie in jedem Bild mit, und `npm run build` im

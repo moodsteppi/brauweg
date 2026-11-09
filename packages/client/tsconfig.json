@@ -44,6 +44,8 @@
      */
     "baseUrl": ".",
     "paths": {
+      "@brauweg/building-kern": ["../building-kern/src/index.ts"],
+      "@brauweg/broremote-kern": ["../broremote-kern/src/index.ts"],
       "@brauweg/game-api": ["../game-api/src/index.ts"],
       "@brauweg/game-brochess": ["../game-brochess/src/index.ts"],
       "@brauweg/game-brocooked": ["../game-brocooked/src/index.ts"],

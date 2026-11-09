@@ -20254,3 +20254,6 @@ span.hub-angebot-art.poker-jeton-stapel {
 .push-frage .doko-sheet-card p { margin: 0 0 0.6rem; line-height: 1.4; }
 .push-frage .hub-knopfreihe { margin-top: 0.8rem; }
 .push-frage .hub-knopf { font-size: 0.85rem; padding: 0.6rem 0.4rem; }
+/* BroRemote bleibt ein eigener Einstieg, auch außerhalb der Kontositzung. */
+.hb-broremote{display:flex;align-items:center;gap:14px;text-decoration:none;color:#90ead5;padding:17px 19px;margin:0 0 22px;border:1px solid #4d817f;border-radius:20px;background:linear-gradient(110deg,#193c49,#162749)}
+.hb-broremote svg{width:40px;height:40px;flex:none}.hb-broremote strong{display:block;color:#f3f7ff;font-size:21px;font-weight:900}.hb-broremote small{display:block;color:#b0c8db;font-size:12px;margin-top:3px}.hb-broremote b{margin-left:auto;font-size:30px}

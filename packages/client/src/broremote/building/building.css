@@ -1,0 +1,117 @@
+.bb-arena { --bb-glas:#111e36e8; --bb-gold:#ffda83; border:1px solid #bc965d80; border-radius:26px; background:#101d32; overflow:hidden; box-shadow:0 22px 70px #0006,inset 0 1px #ffe4aa40 }
+.bb-werkzeug { display:flex; gap:12px; align-items:center; padding:18px 24px 8px; background:radial-gradient(ellipse at 0 0,#a57b3738,transparent 65%),linear-gradient(110deg,#1c2f43,#101d32) }
+.bb-werkzeug h2 { margin:3px 0 0!important; font:30px 'Lilita One',sans-serif; letter-spacing:.2px; color:#fff1d4; text-shadow:0 2px 2px #0005 }
+.bb-werkzeug .br-kicker { font-size:10px }
+.bb-uhr { font-family:'Lilita One',sans-serif; font-size:30px; font-variant-numeric:tabular-nums; margin-left:auto; color:var(--bb-gold); padding:5px 14px; border:1px solid #e4bb6b50; border-radius:12px; background:linear-gradient(#152238,#0d1828); box-shadow:inset 0 1px 2px #0008 }
+.bb-rund { border:1px solid #7999c455; border-radius:12px; color:white; background:#203352; width:42px; height:42px; font-size:22px!important }
+.bb-arena .bb-regel { margin:0!important; padding:4px 24px 16px; font-size:12px; line-height:1.5; color:#bccbdc; border-bottom:1px solid #b5965744 }
+.bb-buehne { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); background:linear-gradient(#0a163b38,#15384c28),url('/broremote/bauwelt.webp') center/cover }
+.bb-buehne-1 { grid-template-columns:minmax(0,1fr) }
+.bb-buehne-3 { grid-template-columns:repeat(3,minmax(0,1fr)) }
+.bb-buehne-4 { grid-template-columns:repeat(4,minmax(0,1fr)) }
+.bb-bahn { min-width:0; position:relative; border-right:1px solid #c5ddff25; background:linear-gradient(#101a3290,transparent 50%,#07162b66) }
+.bb-bahn:last-child { border:0 }
+.bb-spielerkopf { display:flex; align-items:center; gap:12px; height:96px; padding:10px 16px; border-top:2px solid var(--spielerfarbe); background:linear-gradient(100deg,#17283bf5,#09162aba); box-shadow:0 4px 16px #020b1b55 }
+.bb-portraet { position:relative; width:62px; height:72px; flex:none; border:1px solid #e5c68170; border-radius:19px; background:radial-gradient(ellipse at bottom,#d49d4055,#192c42 75%); box-shadow:inset 0 0 12px #0004 }
+.bb-portraet img { position:absolute; width:63px; height:86px; object-fit:contain; bottom:0; left:0; filter:drop-shadow(0 3px 3px #0005) }
+.bb-portraet small { position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); border:1px solid #d9bc7a; border-radius:6px; padding:1px 7px; font-size:10px; line-height:1.2; font-weight:900; background:#18273b; color:#ffe4a6 }
+.bb-spielername { display:grid; gap:5px; min-width:0; flex:1 }
+.bb-fortschritt { width:100%; max-width:150px; height:4px; background:#0005; border-radius:5px; overflow:hidden }
+.bb-fortschritt i { display:block; height:100%; background:var(--spielerfarbe); transition:width .3s ease; box-shadow:0 0 8px var(--spielerfarbe) }
+.bb-spielerkopf strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:900 }
+.bb-spielerkopf span { color:var(--spielerfarbe); font-size:13px; font-weight:900; font-variant-numeric:tabular-nums }
+.bb-naechster { margin-left:auto; width:63px; flex:none; text-align:center; color:var(--spielerfarbe); padding:5px; background:#0714259c; border:1px solid #c6ab6e40; border-radius:12px; box-shadow:inset 0 1px 6px #0004 }
+.bb-naechster small { font-size:8px; letter-spacing:1px; color:#b7c8dd }
+.bb-mini { width:100%; height:42px; display:block }
+.bb-bahn>canvas { width:100%; height:clamp(330px,calc(100dvh - 325px),720px); display:block }
+.bb-buehne-1 .bb-bahn>canvas { max-width:620px; margin:auto }
+.bb-bahnfuss { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 16px; color:#bbd5dc; font-size:11px; background:linear-gradient(transparent,#071426b3); border-bottom:1px solid #d9bc7a22 }
+.bb-bahnfuss strong { color:var(--spielerfarbe); font-size:16px; white-space:nowrap }
+.bb-fertig { background:#0c16299c }
+.bb-overlay { position:absolute; inset:0; background:#0a142c9c; display:grid; place-items:center; text-align:center; padding:25px; z-index:2 }
+.bb-overlay>div { background:radial-gradient(ellipse at top,#77532e44,transparent),#0e2038f2; padding:28px; border:1px solid #d4b16a99; border-radius:24px; max-width:430px; box-shadow:0 20px 70px #0006,inset 0 0 0 4px #bd965b15 }
+.bb-overlay strong { display:block; font-family:'Lilita One',sans-serif; font-size:clamp(32px,6vw,70px); color:var(--bb-gold); margin:8px 0 }
+.bb-overlay p { color:#c0d7eb }
+.bb-overlay .br-knopf { margin-top:10px }
+.bb-ergebnis { padding:24px; text-align:center; background:radial-gradient(ellipse at top,#55493b55,transparent),#12213a }
+.bb-ergebnis h2 { font-family:'Lilita One',sans-serif; font-size:34px; color:var(--bb-gold); margin:5px 0 }
+.bb-ergebnis ol { list-style:none; padding:0; max-width:450px; margin:16px auto }
+.bb-ergebnis li { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #c7dfff22 }
+.bb-ergebnis .br-knopf { max-width:450px; margin:18px auto 0 }
+.bb-abschluss { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 24px; font-size:12px; color:#a7bdd6 }
+.bb-training { max-width:460px; margin:auto; padding:0 15px }
+.bb-training .br-controller>.br-leise { display:none }
+.bb-training .br-bedienung { margin:10px 0; gap:15px }
+.br-seite.br-spielt .br-kopf { margin-bottom:15px }
+.br-seite.br-spielt .br-spieltitel { margin-bottom:15px; padding:0 }
+.br-seite.br-spielt .br-spieltitel h1 { font-size:25px; margin:5px 0 10px }
+.br-seite.br-spielt .br-fuss { margin-top:15px }
+.br-seite.br-spielt:has(.bb-arena) { max-width:none; width:100%; margin:0 }
+.br-spielt:has(.bb-arena) .br-inhalt { padding-top:12px; padding-bottom:12px; max-width:1500px }
+.br-spielt:has(.bb-arena) .br-spieltitel,.br-spielt:has(.bb-arena) .br-fuss,.br-spielt:has(.bb-arena) .br-verlassen { display:none }
+.bb-controllerstand { display:grid; grid-template-columns:1fr auto; align-items:center; background:linear-gradient(135deg,#24445d,#162845); border:1px solid #78d9c655; border-radius:18px; padding:15px; margin-top:15px }
+.bb-controllerstand h3 { margin:3px 0; font-family:'Lilita One',sans-serif; font-size:25px; color:#ffdb86 }
+.bb-controllerstand p { margin:5px 0; color:#c4d4e6; font-size:13px }
+.bb-controllerstand .bb-mini { color:#79e3c9; height:60px; width:82px }
+.bb-controllerstand small { color:#adc4dd; letter-spacing:1px; font-size:10px }
+.bb-moduswahl { margin:18px 0 10px }
+.bb-moduswahl .br-modus { margin-bottom:8px }
+.bb-controllerpause { padding:20px 10px; text-align:center; color:#ffdb86; font-size:20px; font-weight:900 }
+@media(min-width:1100px) { .br-spielt .br-inhalt { max-width:1400px } }
+@media(max-width:760px) {
+  .bb-buehne-3,.bb-buehne-4 { grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .bb-spielerkopf { padding:9px 7px; gap:7px; height:80px }
+  .bb-portraet { width:38px; height:50px; border-radius:12px }.bb-portraet img { width:39px; height:58px }.bb-portraet small { font-size:8px; padding:1px 5px }
+  .bb-spielerkopf strong { font-size:12px }
+  .bb-spielerkopf span { font-size:11px }
+  .bb-naechster { width:39px; padding:3px; border-radius:8px }
+  .bb-naechster small { font-size:6px }
+  .bb-bahn>canvas { height:350px }
+  .bb-werkzeug { padding:14px 12px 8px; gap:8px }
+  .bb-werkzeug h2 { font-size:21px }
+  .bb-uhr { font-size:24px; padding:5px 9px }
+  .bb-rund { width:34px; height:36px }
+  .bb-arena .bb-regel { padding:0 12px 12px; font-size:11px }
+  .bb-bahnfuss { font-size:9px; padding:8px }
+  .bb-bahnfuss strong { font-size:12px }
+  .bb-abschluss { padding:12px; font-size:11px }
+}
+@media(prefers-reduced-motion:reduce) { .bb-arena * { animation:none!important; transition:none!important } }
+
+/* Vier klar getrennte Bautasten. Keine ungenutzte Joystickfläche. */
+.bb-baubuttons { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0 }
+.bb-baubuttons .br-steuertaste { min-height:84px; width:100%; touch-action:none; user-select:none }
+.bb-zauberleiste { display:grid; grid-template-columns:1fr 1fr; gap:10px; border-top:1px solid #7c9aba44; padding-top:18px }
+.bb-zauberleiste>.br-kicker,.bb-zauberleiste>p,.bb-zauberleiste>label { grid-column:1/-1; margin:0 }
+.bb-zauber { display:grid; gap:4px; place-items:center; padding:12px 8px; min-height:92px; border:1px solid #7bcfc5; border-radius:18px; color:#d5fff2; background:linear-gradient(140deg,#255c64,#173344); cursor:pointer }
+.bb-zauber>span { font-size:27px }.bb-zauber small { font-size:10px }.bb-zauber:disabled { opacity:.45; cursor:default }.bb-schwere { color:#e2d4ff; background:linear-gradient(140deg,#563e80,#242a48); border-color:#b997ee }
+.bb-controllerziel { display:grid; place-items:center; padding:14px; margin-top:12px; border-radius:18px; background:#c6a94e22; color:#ffdf8e; font-weight:900 }
+.bb-controllerziel strong { font-size:54px; font-family:'Lilita One',sans-serif }.bb-controllerziel small { font-weight:400 }
+.bb-zielzaehler { position:absolute; inset:110px 10px auto; display:grid; place-items:center; color:#ffe59f; pointer-events:none; z-index:1; text-shadow:0 2px 10px #000 }
+.bb-zielzaehler span { font-size:12px; letter-spacing:2px }.bb-zielzaehler strong { font:80px 'Lilita One',sans-serif; animation:bb-zielpuls .9s ease-out }.bb-zielzaehler small { padding:8px 12px; border-radius:12px; background:#16243dd9 }
+.bb-geschuetzt { box-shadow:inset 0 0 55px #67ffe755 }
+.bb-geschuetzt:after { content:'⚓ TURMANKER'; position:absolute; bottom:60px; left:15%; right:15%; border:1px solid #89ffe3aa; border-radius:50%; text-align:center; padding:18px; color:#adffeb; pointer-events:none; animation:bb-ankerring 1.5s ease-in-out infinite }
+.bb-pinguin-baut { animation:bb-wippen 3.8s ease-in-out infinite; transform-origin:50% 90% }.bb-pinguin-schreck { animation:bb-schreck .65s ease-out }.bb-pinguin-sieg { animation:bb-huepfen .7s ease-in-out 6; transform-origin:50% 90% }
+.bb-absturz { pointer-events:none; position:absolute; inset:45% 0 auto; display:flex; align-items:center; justify-content:center; gap:12px; color:#ffac9d; animation:bb-verlust 1.4s both; z-index:1 }
+.bb-absturz span { font-size:34px; transform:rotate(30deg) }.bb-absturz strong { position:absolute; top:55px; max-width:90%; text-align:center; font-size:12px; padding:7px 12px; border-radius:12px; background:#441f35e8 }
+.bb-zauberblitz { pointer-events:none; position:absolute; left:8%; right:8%; top:42%; text-align:center; padding:16px 8px; border-radius:18px; border:1px solid #b9ffee; color:#d2fff0; background:#193e53ee; font-size:13px; animation:bb-zauberfunke 2.2s both; z-index:1 }
+.bb-sieger { box-shadow:inset 0 0 70px #ffd26e45 }
+.bb-siegfunken { position:absolute; inset:0; overflow:hidden; pointer-events:none }.bb-siegfunken i { position:absolute; top:10%; left:calc(var(--i)*8%); color:#ffe28f; font-size:24px; font-style:normal; animation:bb-konfetti 3s calc(var(--i)*.08s) both }
+.bb-belohnung { padding:16px 24px; color:#e5d59c; background:#15283d; text-align:center; font-size:13px }
+.bb-abzeichen { display:flex; justify-content:center; flex-wrap:wrap; gap:8px }.bb-abzeichen>span { border:1px solid #dfbc6655; border-radius:20px; padding:8px 12px; color:#ffdf8e; background:#755c282b; font-size:12px }
+.bb-album { margin-top:20px }.bb-album ol { list-style:none; padding:0; max-height:340px; overflow:auto }.bb-album li { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; border-bottom:1px solid #a8bed52b; padding:12px 0; font-size:13px }.bb-album li small { display:block; color:#a9bed7; margin-top:5px }.bb-album li>span { color:#ffdb83 }
+@keyframes bb-wippen { 0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg) translateY(-3px)} }
+@keyframes bb-schreck { 0%,100%{transform:rotate(0)}25%{transform:rotate(-18deg) translateY(-6px)}65%{transform:rotate(15deg)} }
+@keyframes bb-huepfen { 0%,100%{transform:translateY(0) rotate(-7deg)}45%{transform:translateY(-16px) rotate(8deg)} }
+@keyframes bb-zielpuls { from{transform:scale(1.35);opacity:.6}to{transform:scale(1);opacity:1} }
+@keyframes bb-ankerring { 50%{opacity:.5;transform:scale(1.04)} }
+@keyframes bb-verlust { 0%{opacity:0;transform:scale(.5)}20%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:translateY(65px) scale(1.3)} }
+@keyframes bb-zauberfunke { 0%{opacity:0;transform:scale(.7)}15%,75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.08)} }
+@keyframes bb-konfetti { from{opacity:0;transform:translateY(-20px) rotate(0)}15%{opacity:1}to{opacity:0;transform:translateY(450px) rotate(300deg)} }
+@media(prefers-reduced-motion:reduce) { .bb-arena *, .bb-controllerziel * { animation:none!important; transition:none!important }.bb-absturz,.bb-siegfunken,.bb-zauberblitz { display:none } }
+
+.bb-zauberhilfe { grid-column:1/-1; font-size:12px; color:#adc6df }.bb-zauberhilfe p { line-height:1.5 }
+.bb-zauberleiste .bb-zauberziel { grid-row:3; margin-bottom:3px }.bb-zauberleiste .bb-anker { grid-row:4 }.bb-zauberleiste .bb-schwere { grid-row:4 }
+.br-spielt:has(.br-eigener-controller) .br-spieltitel,.br-spielt:has(.br-eigener-controller) .br-fuss { display:none }
+.br-spielt:has(.br-eigener-controller) .br-kopf { margin-bottom:12px }
+@media(max-width:760px) { .br-spielt .br-eigener-controller { padding:16px }.bb-baubuttons { gap:8px; margin:10px 0 }.bb-baubuttons .br-steuertaste { min-height:72px }.bb-zauber { min-height:76px }.bb-zauberleiste { padding-top:12px }.bb-zauberleiste label { font-size:12px }.bb-zauberleiste select { padding:8px }.bb-controllerstand { margin-top:10px; padding:12px } }

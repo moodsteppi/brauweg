@@ -1769,3 +1769,13 @@ export const flyingbroTag = pgTable(
   },
   (t) => [primaryKey({ name: 'flyingbro_tag_pk', columns: [t.accountId, t.tag] })],
 );
+
+
+/** Bro Building Battle: ein Start/Ergebnis je Konto und Runde. */
+export const buildingRunde = pgTable('building_runde', {
+  accountId: uuid().notNull().references(() => account.id, { onDelete: 'cascade' }),
+  partie: text().notNull(), modus: text().notNull(), start: timestamp({ withTimezone: true }).notNull(),
+  ende: timestamp({ withTimezone: true }), tag: text(),
+  ergebnis: jsonb().$type<import('@brauweg/building-kern').BauErgebnis>(),
+  muenzen: integer().notNull().default(0),
+}, t => [primaryKey({ columns: [t.accountId, t.partie] }), index('building_runde_konto_tag_idx').on(t.accountId, t.tag)]);

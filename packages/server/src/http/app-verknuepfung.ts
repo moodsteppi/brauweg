@@ -32,8 +32,8 @@ export interface AppVerknuepfung {
   readonly androidFingerabdruecke: readonly string[];
 }
 
-/** Welche Pfade in die App gehoeren. Nur die Einladung (#203). */
-export const APP_LINK_PFADE = ['/beitritt/*'] as const;
+/** Tisch-Einladungen und BroRemote-QRs öffnen die installierte iOS-App. */
+export const APP_LINK_PFADE = ['/beitritt/*', '/broremote'] as const;
 
 const TEAM_ID = /^[A-Z0-9]{10}$/;
 const FINGERABDRUCK = /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/;
