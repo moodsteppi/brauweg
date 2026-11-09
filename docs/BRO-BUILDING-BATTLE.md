@@ -53,9 +53,11 @@ Münzen, Trophäen, Kontobuchungen oder dauerhafte Rangliste.
   Beim Verlassen werden Timer, WebAudio und alle WASM-Welten freigegeben.
 * `zeichnen.ts`: leichtgewichtige Canvas-Bühne mit facettierten schwebenden
   Inseln, plastischen Bausteinen und Zielhöhe. Kein zusätzlicher WebGL-Kontext.
-  Hintergrund und Pinguin stammen aus den vorhandenen freigegebenen Hub-Dateien
-  `weg-sterneninseln.webp` und `pinguin/pinguin-basis.webp`. Keine neuen großen
-  Rasterdateien oder kopierten Originalspiel-Assets.
+  Neue ruhige Inselkulisse aus Imagegen, als WebP unter `public/broremote/bauwelt.webp`;
+  der Pinguin stammt aus der freigegebenen Hub-Datei `pinguin/pinguin-basis.webp`.
+  Prompt, Freihaltezonen und Herkunft: `ASSETS-BRO-BUILDING-BATTLE.md`.
+  Keine kopierten Originalspiel-Assets. Das Bildoriginal bleibt lokal im
+  ignorierten Kunstordner, bis ein Archivupload ausdrücklich freigegeben ist.
 * Kurze Aufsetz-/Absturzklänge werden lokal synthetisiert, standardmäßig stumm;
   der Tonknopf aktiviert sie bewusst. Keine Audio-Downloads.
 * Rapier lädt erst beim Einstieg in die Bauwelt. Handys, die nur Controller

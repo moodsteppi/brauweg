@@ -77,7 +77,7 @@ function privatLesen(d: unknown): Privat | null {
   if (d.bau !== undefined) {
     const b = d.bau;
     if (!objekt(b) || !ganz(b.form, 0, 6) || !zahl(b.hoehe, 0, 200) || !ganz(b.restzeit, 0, 180) || !ganz(b.countdown, 0, 3) || !ganz(b.platz, 1, 4) || !ganz(b.verbraucht, 0, 30)
-      || !['countdown', 'spiel', 'pause', 'ende'].includes(String(b.phase)) || typeof b.fertig !== 'boolean' || typeof b.gewonnen !== 'boolean') return null;
+      || typeof b.phase !== 'string' || !['countdown', 'spiel', 'pause', 'ende'].includes(b.phase) || typeof b.fertig !== 'boolean' || typeof b.gewonnen !== 'boolean') return null;
   }
   const { leben, punkte, amZug, hinweis, inventar } = d;
   // Nur bekannte Felder weitergeben: keine versteckten großen Nutzlasten im Spielstatus.
