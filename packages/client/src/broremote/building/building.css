@@ -1,0 +1,72 @@
+.bb-arena { --bb-glas:#111e36e8; --bb-gold:#ffda83; border:1px solid #59759c66; border-radius:24px; background:#101d32; overflow:hidden; box-shadow:0 20px 70px #0005 }
+.bb-werkzeug { display:flex; gap:12px; align-items:center; padding:18px 24px 8px }
+.bb-werkzeug h2 { margin:3px 0 0!important; font-size:25px }
+.bb-werkzeug .br-kicker { font-size:10px }
+.bb-uhr { font-family:'Lilita One',sans-serif; font-size:30px; font-variant-numeric:tabular-nums; margin-left:auto; color:var(--bb-gold) }
+.bb-rund { border:1px solid #7999c455; border-radius:12px; color:white; background:#203352; width:42px; height:42px; font-size:22px!important }
+.bb-regel { margin:0!important; padding:0 24px 16px; font-size:13px; color:#bbcde4; max-width:850px }
+.bb-buehne { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); background:linear-gradient(#0a163bb5,#15384c80),url('/hub/weg-sterneninseln.webp') center/cover }
+.bb-buehne-1 { grid-template-columns:minmax(0,1fr) }
+.bb-buehne-3 { grid-template-columns:repeat(3,minmax(0,1fr)) }
+.bb-buehne-4 { grid-template-columns:repeat(4,minmax(0,1fr)) }
+.bb-bahn { min-width:0; position:relative; border-right:1px solid #c5ddff25; background:linear-gradient(#101a3290,transparent 50%,#07162b66) }
+.bb-bahn:last-child { border:0 }
+.bb-spielerkopf { display:flex; align-items:center; gap:10px; height:88px; padding:10px 14px; border-top:3px solid var(--spielerfarbe); background:#09162a88 }
+.bb-spielerkopf>img { width:42px; height:52px; object-fit:contain; filter:drop-shadow(0 3px 6px #0006) }
+.bb-spielerkopf>div:not(.bb-naechster) { display:grid; gap:4px; min-width:0 }
+.bb-spielerkopf strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:900 }
+.bb-spielerkopf span { color:var(--spielerfarbe); font-size:13px; font-weight:900; font-variant-numeric:tabular-nums }
+.bb-naechster { margin-left:auto; width:57px; flex:none; text-align:center; color:var(--spielerfarbe) }
+.bb-naechster small { font-size:8px; letter-spacing:1px; color:#b7c8dd }
+.bb-mini { width:100%; height:42px; display:block }
+.bb-bahn>canvas { width:100%; height:clamp(330px,49vh,550px); display:block }
+.bb-buehne-1 .bb-bahn>canvas { max-width:620px; margin:auto }
+.bb-bahnfuss { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:9px 14px 15px; color:#bad0e9; font-size:11px }
+.bb-bahnfuss strong { color:var(--spielerfarbe); font-size:16px; white-space:nowrap }
+.bb-fertig { background:#0c16299c }
+.bb-overlay { position:absolute; inset:0; background:#0a142c9c; display:grid; place-items:center; text-align:center; padding:25px; z-index:2 }
+.bb-overlay>div { background:#0e2038f2; padding:28px; border:1px solid #94ccdd66; border-radius:24px; max-width:430px; box-shadow:0 20px 70px #0006 }
+.bb-overlay strong { display:block; font-family:'Lilita One',sans-serif; font-size:clamp(32px,6vw,70px); color:var(--bb-gold); margin:8px 0 }
+.bb-overlay p { color:#c0d7eb }
+.bb-overlay .br-knopf { margin-top:10px }
+.bb-ergebnis { padding:24px; text-align:center; background:radial-gradient(ellipse at top,#55493b55,transparent),#12213a }
+.bb-ergebnis h2 { font-family:'Lilita One',sans-serif; font-size:34px; color:var(--bb-gold); margin:5px 0 }
+.bb-ergebnis ol { list-style:none; padding:0; max-width:450px; margin:16px auto }
+.bb-ergebnis li { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #c7dfff22 }
+.bb-ergebnis .br-knopf { max-width:450px; margin:18px auto 0 }
+.bb-abschluss { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 24px; font-size:12px; color:#a7bdd6 }
+.bb-training { max-width:460px; margin:auto; padding:0 15px }
+.bb-training .br-controller>.br-leise { display:none }
+.bb-training .br-bedienung { margin:10px 0; gap:15px }
+.br-seite.br-spielt .br-kopf { margin-bottom:15px }
+.br-seite.br-spielt .br-spieltitel { margin-bottom:15px; padding:0 }
+.br-seite.br-spielt .br-spieltitel h1 { font-size:25px; margin:5px 0 10px }
+.br-seite.br-spielt .br-fuss { margin-top:15px }
+.bb-controllerstand { display:grid; grid-template-columns:1fr auto; align-items:center; background:linear-gradient(135deg,#24445d,#162845); border:1px solid #78d9c655; border-radius:18px; padding:15px; margin-top:15px }
+.bb-controllerstand h3 { margin:3px 0; font-family:'Lilita One',sans-serif; font-size:25px; color:#ffdb86 }
+.bb-controllerstand p { margin:5px 0; color:#c4d4e6; font-size:13px }
+.bb-controllerstand .bb-mini { color:#79e3c9; height:60px; width:82px }
+.bb-controllerstand small { color:#adc4dd; letter-spacing:1px; font-size:10px }
+.bb-moduswahl { margin:18px 0 10px }
+.bb-moduswahl .br-modus { margin-bottom:8px }
+.bb-controllerpause { padding:20px 10px; text-align:center; color:#ffdb86; font-size:20px; font-weight:900 }
+@media(min-width:1100px) { .br-spielt .br-inhalt { max-width:1400px } }
+@media(max-width:760px) {
+  .bb-buehne-3,.bb-buehne-4 { grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .bb-spielerkopf { padding:8px; gap:6px; height:72px }
+  .bb-spielerkopf>img { width:28px; height:38px }
+  .bb-spielerkopf strong { font-size:12px }
+  .bb-spielerkopf span { font-size:11px }
+  .bb-naechster { width:35px }
+  .bb-naechster small { font-size:6px }
+  .bb-bahn>canvas { height:350px }
+  .bb-werkzeug { padding:14px 12px 8px; gap:8px }
+  .bb-werkzeug h2 { font-size:21px }
+  .bb-uhr { font-size:24px }
+  .bb-rund { width:34px; height:36px }
+  .bb-regel { padding:0 12px 12px; font-size:11px }
+  .bb-bahnfuss { font-size:9px; padding:8px }
+  .bb-bahnfuss strong { font-size:12px }
+  .bb-abschluss { padding:12px; font-size:11px }
+}
+@media(prefers-reduced-motion:reduce) { .bb-arena * { animation:none!important; transition:none!important } }

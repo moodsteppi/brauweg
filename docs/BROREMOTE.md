@@ -2,12 +2,13 @@
 
 Stand: 9. November 2026. Ausgangspunkt: staging `c303dbd6`.
 
-## Auftrag und erste Ausbaustufe
+## Auftrag und Spielausbau
 
 BroRemote wird ein eigener Einstieg in Browser und iOS. Darunter liegt Bro
-Building Battle mit einer echten Mehrgeräte-Lobby. Das Turmspiel nach der
-Tricky-Towers-Idee folgt separat. Der Start dieser Ausbaustufe öffnet einen
-ausdrücklich bezeichneten Controllertest, keine vorgetäuschte fertige Partie.
+Building Battle mit einer echten Mehrgeräte-Lobby. Der Spielausbau ergänzt
+Turmphysik, Höhenrennen und Standfest, Ergebnisse und Revanche. Einzelheiten
+stehen in [BRO-BUILDING-BATTLE.md](BRO-BUILDING-BATTLE.md). Der bisherige
+Controllertest bleibt als ausdrücklich bezeichnete Zusatzfunktion erhalten.
 
 ## Bauplan
 
@@ -53,11 +54,12 @@ Alternativ direkt `/broremote` aufrufen. Dieser Bildschirm benötigt kein Konto.
 1. **Online → Lobby eröffnen** wählen.
 2. Auf jedem Handy den QR-Code scannen oder den Einladungslink öffnen. Die
    iOS-App hat zusätzlich einen eigenen Scanner. Namen eintragen und verbinden.
-3. Alle tippen **Ich bin bereit**. Der Gastgeber startet den Controllertest.
-4. Bewegung, Drehen und Fallenlassen werden auf dem Gastgeber angezeigt.
-   **Auswahl & Zahlen** wechselt bei allen Handys das Bedienfeld.
-5. **Private Nachricht testen** sendet einen Hinweis mit Beispielwerten nur
-   an den ausgewählten Controller. Andere Controller erhalten ihn nicht.
+3. Modus wählen; alle tippen **Ich bin bereit**. **Battle starten** öffnet das
+   Spiel mit Countdown und eigener Turmbühne pro Spieler.
+4. Am Handy bewegen, drehen und fallen lassen. Nach dem Ergebnis führt
+   **Revanche vorbereiten** zur gleichen Lobby zurück.
+5. Optional: **Nur Verbindung prüfen** öffnet weiterhin die Testbühne mit
+   Auswahl-/Zahlenfeldern und privaten Beispielnachrichten.
 
 Der vorhandene Server stellt `/ws/broremote` bereit. In Entwicklung leitet
 Vite `/ws` wie bisher an Port 3000 weiter. Im Betrieb wird WSS über denselben
@@ -124,14 +126,14 @@ Spieloberfläche vom Verbindungsweg. Ein weiterer Transport kann diesen Vertrag
 implementieren, ohne die Lobby oder Steuerfelder neu zu schreiben.
 
 Der Gastgeber empfängt `eingabe` mit dem von der Autorität vergebenen Spieler.
-An dieser Stelle verarbeitet ein späterer Spieladapter die Aktionen und
-sendet `privat` an einzelne Sitze. Im aktuellen Stand übernimmt dies die
-sichtbare Testbühne. Die zwei Bedienfelder zeigen die gemeinsame Schnittstelle;
-es ist noch kein vorhandenes Spiel vollständig für BroRemote adaptiert.
+An dieser Stelle verarbeitet Bro Building Battle die Aktionen und sendet
+`privat.bau` an einzelne Sitze. Der gemeinsame Raumkern kennt dafür Modus,
+Partiekennung und Seed; die eigentliche Physik läuft ausschließlich beim Host.
+Die Testbühne mit zwei Bedienfeldern bleibt zusätzlich verfügbar.
 
-Offen für den eigentlichen Spielauftrag: Turmphysik, Spielregeln, Wertung,
-Rundenfortschritt, weitere Grafiken, Spielstandwiederherstellung und die
-Anbindung weiterer Spiele. Diese Lobby schreibt keine Münzen oder Trophäen gut.
+Offen bleiben dauerhafte Spielstandwiederherstellung nach einem Host-Neuladen
+und die Anbindung weiterer Spiele. Diese Lobby schreibt keine Münzen oder
+Trophäen gut. Ein Host-Neuladen führt deshalb ausdrücklich zur Lobby zurück.
 
 ## Verifikation
 

@@ -10,11 +10,13 @@ export function Controller({ layout, senden }: { layout: Layout; senden(a: Aktio
   const [zahl, setZahl] = useState('0');
   const [wahl, setWahl] = useState<number | null>(null);
   const letzterTakt = useRef(0);
+  const richtungTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const schicken = (): void => {
     const d = eingabe.current;
     quelle.current({ art: 'steuerung', x: d.x, y: d.y, tasten: [...new Set(d.tasten.values())] });
   };
   const reset = (): void => {
+    clearTimeout(richtungTimer.current);
     eingabe.current = { x: 0, y: 0, tasten: new Map() }; stick.current = null;
     setPosition({ x: 0, y: 0 }); quelle.current({ art: 'reset' });
   };
@@ -49,6 +51,7 @@ export function Controller({ layout, senden }: { layout: Layout; senden(a: Aktio
     }, 150);
     return () => {
       clearInterval(t); window.removeEventListener('blur', reset);
+      clearTimeout(richtungTimer.current);
       window.removeEventListener('brauweg:hintergrund', reset); document.removeEventListener('visibilitychange', verborgen);
       window.removeEventListener('keydown', unten); window.removeEventListener('keyup', oben);
       quelle.current({ art: 'reset' });
@@ -91,7 +94,9 @@ export function Controller({ layout, senden }: { layout: Layout; senden(a: Aktio
         onPointerMove={bewegen} onPointerUp={loslassen} onPointerCancel={loslassen} onLostPointerCapture={loslassen}>
         <span className="br-stick-kreuz" aria-hidden="true">✣</span><span className="br-stick-knauf" style={{ transform: `translate(${position.x * 46}px, ${position.y * 46}px)` }} />
       </div><div className="br-richtungen">{[[-1, '←'], [1, '→']].map(([x, p]) => <button type="button" key={p} aria-label={x === -1 ? 'Nach links' : 'Nach rechts'}
-        onClick={() => { senden({ art: 'steuerung', x: Number(x), y: 0, tasten: [] }); }}>{p}</button>)}</div></div>
+        onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); eingabe.current.x = Number(x); schicken(); }}
+        onPointerUp={() => { eingabe.current.x = 0; schicken(); }} onPointerCancel={() => { eingabe.current.x = 0; schicken(); }} onLostPointerCapture={() => { eingabe.current.x = 0; schicken(); }}
+        onClick={e => { if (e.detail === 0) { clearTimeout(richtungTimer.current); eingabe.current.x = Number(x); schicken(); richtungTimer.current = setTimeout(() => { eingabe.current.x = 0; schicken(); }, 150); } }}>{p}</button>)}</div></div>
       <div className="br-tasten">{taste('drehen', 'Drehen', '↻')}{taste('fallen', 'Fallen lassen', '↓')}</div>
     </div>
     <p className="br-leise br-zentriert">Dein Handy ist der Controller. Schau auf den Gastgeber-Bildschirm.</p>

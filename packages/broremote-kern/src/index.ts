@@ -11,10 +11,12 @@ export type Aktion =
   | { art: 'wahl'; wert: number }
   | { art: 'zahl'; wert: number }
   | { art: 'reset' };
-export type Privat = { leben?: number; punkte?: number; hinweis?: string; inventar?: string[]; amZug?: boolean };
+export type BauPrivat = { form: number; hoehe: number; restzeit: number; phase: 'countdown' | 'spiel' | 'pause' | 'ende'; countdown: number; platz: number; fertig: boolean; gewonnen: boolean; verbraucht: number };
+export type Privat = { leben?: number; punkte?: number; hinweis?: string; inventar?: string[]; amZug?: boolean; bau?: BauPrivat };
 export type Spieler = { id: string; name: string; farbe: string; verbunden: boolean; bereit: boolean };
 export type RaumSicht = {
-  raum: string; phase: 'lobby' | 'test'; abschnitt: number; layout: Layout;
+  raum: string; phase: 'lobby' | 'test' | 'spiel'; abschnitt: number; layout: Layout;
+  baumodus?: 'rennen' | 'standfest'; partie?: { id: string; seed: number; modus: 'rennen' | 'standfest' };
   gesperrt: boolean; gastgeberDa: boolean; spieler: Spieler[]; einladungBis: number;
 };
 export type Nachricht = Record<string, unknown>;
@@ -72,8 +74,15 @@ function privatLesen(d: unknown): Privat | null {
   if (d.amZug !== undefined && typeof d.amZug !== 'boolean') return null;
   if (d.hinweis !== undefined && (typeof d.hinweis !== 'string' || d.hinweis.length > 160)) return null;
   if (d.inventar !== undefined && (!Array.isArray(d.inventar) || d.inventar.length > 12 || !d.inventar.every(i => typeof i === 'string' && i.length <= 40))) return null;
+  if (d.bau !== undefined) {
+    const b = d.bau;
+    if (!objekt(b) || !ganz(b.form, 0, 6) || !zahl(b.hoehe, 0, 200) || !ganz(b.restzeit, 0, 180) || !ganz(b.countdown, 0, 3) || !ganz(b.platz, 1, 4) || !ganz(b.verbraucht, 0, 30)
+      || !['countdown', 'spiel', 'pause', 'ende'].includes(String(b.phase)) || typeof b.fertig !== 'boolean' || typeof b.gewonnen !== 'boolean') return null;
+  }
   const { leben, punkte, amZug, hinweis, inventar } = d;
-  return { leben, punkte, amZug, hinweis, inventar } as Privat;
+  // Nur bekannte Felder weitergeben: keine versteckten großen Nutzlasten im Spielstatus.
+  const bau = d.bau as BauPrivat | undefined;
+  return { leben, punkte, amZug, hinweis, inventar, ...(bau ? { bau: { form: bau.form, hoehe: bau.hoehe, restzeit: bau.restzeit, phase: bau.phase, countdown: bau.countdown, platz: bau.platz, fertig: bau.fertig, gewonnen: bau.gewonnen, verbraucht: bau.verbraucht } } : {}) } as Privat;
 }
 
 type Sitz = Spieler & { schluessel: string; verbindung?: string; folge: number; letzteEingabe: number; aktiv: boolean; privat?: Privat };
@@ -99,6 +108,8 @@ export class BroRaum {
   private phase: RaumSicht['phase'] = 'lobby';
   private layout: Layout = 'bauen';
   private abschnitt = 0;
+  private baumodus: 'rennen' | 'standfest' = 'rennen';
+  private partie?: RaumSicht['partie'];
   private gesperrt = false;
   beendet = false;
   constructor(private readonly o: RaumOptionen) {
@@ -111,6 +122,7 @@ export class BroRaum {
   sicht(): RaumSicht {
     return {
       raum: this.id, phase: this.phase, layout: this.layout, abschnitt: this.abschnitt,
+      baumodus: this.baumodus, partie: this.partie,
       gesperrt: this.gesperrt, gastgeberDa: !!this.host, einladungBis: this.einladungBis,
       spieler: this.sitze.map(({ id, name, farbe, verbunden, bereit }) => ({ id, name, farbe, verbunden, bereit })),
     };
@@ -182,11 +194,16 @@ export class BroRaum {
         // Ein entfernter Gast kann mit einem alten QR nicht sofort zurückkommen.
         this.einladung = this.o.zufall(); this.einladungBis = jetzt + EINLADUNG_MS;
         this.o.senden(v, { art: 'einladung', einladung: this.einladung, bis: this.einladungBis });
-      } else if (n.art === 'starten') {
+      } else if (n.art === 'baumodus' && this.phase === 'lobby' && (n.modus === 'rennen' || n.modus === 'standfest')) {
+        this.baumodus = n.modus;
+        for (const s of this.sitze) s.bereit = false;
+      } else if ((n.art === 'starten' || n.art === 'spielen') && this.phase === 'lobby') {
         if (!this.sitze.length || this.sitze.some(s => !s.bereit || !s.verbunden)) { this.fehler(v, 'Alle verbundenen Spieler müssen bereit sein.'); return; }
-        this.phase = 'test'; this.gesperrt = true; this.neuerAbschnitt();
+        this.phase = n.art === 'spielen' ? 'spiel' : 'test'; this.layout = 'bauen'; this.gesperrt = true;
+        this.partie = n.art === 'spielen' ? { id: this.o.zufall(), seed: parseInt(this.o.zufall().slice(0, 8), 16) >>> 0, modus: this.baumodus } : undefined;
+        this.neuerAbschnitt();
       } else if (n.art === 'lobby') {
-        this.phase = 'lobby'; this.gesperrt = false; this.neuerAbschnitt();
+        this.phase = 'lobby'; this.partie = undefined; this.gesperrt = false; this.neuerAbschnitt();
         for (const s of this.sitze) s.bereit = false;
       } else if (n.art === 'layout' && this.phase === 'test' && (n.layout === 'bauen' || n.layout === 'auswahl')) {
         this.layout = n.layout; this.neuerAbschnitt();
@@ -201,7 +218,7 @@ export class BroRaum {
     } else {
       const s = l.spieler!;
       if (n.art === 'bereit' && this.phase === 'lobby' && typeof n.bereit === 'boolean') { s.bereit = n.bereit; this.verteilen(); }
-      else if (n.art === 'eingabe' && this.phase === 'test' && this.host && n.abschnitt === this.abschnitt && ganz(n.folge, 0, Number.MAX_SAFE_INTEGER) && n.folge > s.folge) {
+      else if (n.art === 'eingabe' && (this.phase === 'test' || this.phase === 'spiel') && this.host && n.abschnitt === this.abschnitt && ganz(n.folge, 0, Number.MAX_SAFE_INTEGER) && n.folge > s.folge) {
         const aktion = aktionLesen(n.aktion, this.layout);
         if (!aktion) { this.fehler(v, 'Diese Eingabe passt nicht zum Controller.'); return; }
         s.folge = n.folge; s.letzteEingabe = jetzt;

@@ -61,6 +61,15 @@ test('Relay mit echten WebSockets: zwei Controller, Privatsicht, Reconnect, Spie
   const s2 = (await neu.warten('raum', n => n.sicht.layout === 'auswahl')).sicht;
   neu.senden({ art: 'eingabe', abschnitt: s2.abschnitt, folge: 1, aktion: { art: 'wahl', wert: 3 } });
   assert.equal((await h.warten('eingabe', n => n.aktion.art === 'wahl')).aktion.wert, 3);
+  h.senden({ art: 'lobby' }); await neu.warten('raum', n => n.sicht.phase === 'lobby');
+  h.senden({ art: 'baumodus', modus: 'standfest' }); await neu.warten('raum', n => n.sicht.baumodus === 'standfest');
+  neu.senden({ art: 'bereit', bereit: true }); b.senden({ art: 'bereit', bereit: true });
+  await h.warten('raum', n => n.sicht.phase === 'lobby' && n.sicht.baumodus === 'standfest' && n.sicht.spieler.every((p: any) => p.bereit));
+  h.senden({ art: 'spielen' });
+  const spiel = (await neu.warten('raum', n => n.sicht.phase === 'spiel')).sicht;
+  assert.equal(spiel.partie.modus, 'standfest');
+  neu.senden({ art: 'eingabe', abschnitt: spiel.abschnitt, folge: 2, aktion: { art: 'steuerung', x: -1, y: 0, tasten: ['fallen'] } });
+  assert.equal((await h.warten('eingabe', n => n.abschnitt === spiel.abschnitt && n.aktion.art === 'steuerung')).aktion.x, -1);
   h.senden({ art: 'verlassen' }); await b.warten('beendet');
 });
 

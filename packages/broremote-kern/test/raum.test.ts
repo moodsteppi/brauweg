@@ -20,6 +20,36 @@ function aufbau() {
   return { raum, post, getrennt, anmelden, senden, gast, start, eingabe, host, zeit: (n: number) => { zeit += n; } };
 }
 
+test('Building Battle startet nur bereit, bindet den Modus und verwirft Eingaben der vorigen Runde', () => {
+  const a = aufbau(); a.gast('1'); a.gast('2');
+  a.senden('1', { art: 'baumodus', modus: 'standfest' });
+  assert.equal(a.raum.sicht().baumodus, 'rennen');
+  a.senden('1', { art: 'bereit', bereit: true }); a.senden('2', { art: 'bereit', bereit: true });
+  a.senden('h', { art: 'baumodus', modus: 'standfest' });
+  a.senden('h', { art: 'spielen' }); assert.equal(a.raum.sicht().phase, 'lobby');
+  a.senden('1', { art: 'bereit', bereit: true }); a.senden('2', { art: 'bereit', bereit: true });
+  a.senden('h', { art: 'spielen' });
+  const alt = a.raum.sicht(); assert.equal(alt.phase, 'spiel'); assert.equal(alt.partie?.modus, 'standfest'); assert.equal(alt.layout, 'bauen');
+  a.post.length = 0; a.eingabe('1'); assert.ok(a.post.some(p => p.n.art === 'eingabe' && p.n.aktion.art === 'steuerung'));
+  a.senden('h', { art: 'layout', layout: 'auswahl' }); assert.equal(a.raum.sicht().layout, 'bauen');
+  a.senden('h', { art: 'lobby' }); assert.equal(a.raum.sicht().partie, undefined);
+  a.post.length = 0; a.senden('1', { art: 'eingabe', abschnitt: alt.abschnitt, folge: 2, aktion: { art: 'steuerung', x: 1, y: 0, tasten: [] } });
+  assert.equal(a.post.length, 0);
+});
+
+test('Bau-Status bleibt privat, ist begrenzt und wird nach Reconnect wiederhergestellt', () => {
+  const a = aufbau(), g = a.gast('1'); a.gast('2'); a.start('1', '2');
+  const bau = { form: 2, hoehe: 12.4, restzeit: 120, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 8 };
+  a.post.length = 0;
+  a.senden('h', { art: 'privat', abschnitt: a.raum.sicht().abschnitt, spieler: g.spieler, daten: { bau, leben: 3 } });
+  assert.equal(a.post.length, 1); assert.equal(a.post[0].v, '1');
+  a.post.length = 0; a.anmelden('neu', { art: 'fortsetzen', schluessel: g.schluessel });
+  assert.ok(a.post.some(p => p.v === 'neu' && p.n.art === 'privat' && p.n.daten.bau?.hoehe === 12.4));
+  a.post.length = 0;
+  a.senden('h', { art: 'privat', abschnitt: a.raum.sicht().abschnitt, spieler: g.spieler, daten: { bau: { ...bau, form: 99 } } });
+  assert.ok(a.post.every(p => p.n.art !== 'privat'));
+});
+
 test('vier unabhängige Sitze, Farben und persönliche Schlüssel; fünfter Gast abgewiesen', () => {
   const a = aufbau(); const gaeste = ['1', '2', '3', '4'].map(a.gast);
   assert.equal(new Set(gaeste.map(g => g.spieler)).size, 4);
