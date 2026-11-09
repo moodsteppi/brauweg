@@ -74,6 +74,15 @@ describe('Bro Building Battle mit echter Physik', () => {
     }
     expect(gekippt).toBe(true);
   });
+  it('gleichzeitig abgestürzte Türme bekommen keinen erfundenen Sieg', () => {
+    const p = partie('standfest', 2); start(p);
+    for (let i = 0; i < 6000 && p.sicht().phase !== 'ende'; i++) {
+      if (i % 10 === 0) for (const id of ['0', '1']) p.eingabe(id, { art: 'steuerung', x: 1, y: 0, tasten: [] });
+      p.schritt();
+    }
+    expect(p.sicht().bahnen.every(b => b.leben === 0)).toBe(true);
+    expect(p.sicht().gewinner).toEqual([]); expect(p.sicht().grund).toBe('Keine Leben mehr.');
+  });
   it('Aufgeben entscheidet das Duell und eine neue Partie beginnt ohne Restzustand', () => {
     const p = partie('standfest', 2); start(p); p.aufgeben('0'); p.schritt();
     expect(p.sicht().gewinner).toEqual(['1']);

@@ -135,14 +135,14 @@ export class BauPartie {
     const lebend = this.bahnen.filter(b => !b.aufgegeben && (this.modus === 'rennen' || b.leben > 0));
     const ziel = this.bahnen.filter(b => b.halten >= REGELN.halten && !b.aufgegeben);
     if (this.modus === 'rennen' && ziel.length) { this.gewinner = ziel.map(b => b.id); this.grund = 'Zielhöhe gehalten!'; }
-    else if (this.bahnen.length > 1 && lebend.length <= 1) { this.gewinner = lebend.map(b => b.id); this.grund = 'Der letzte Turm steht.'; }
+    else if (this.bahnen.length > 1 && lebend.length === 1) { this.gewinner = lebend.map(b => b.id); this.grund = 'Der letzte Turm steht.'; }
     else if (!lebend.length) this.grund = 'Keine Leben mehr.';
     else if (this.zeit >= REGELN.dauer) this.grund = 'Die Zeit ist um.';
     // Nach dem letzten Teil bekommt die Physik Zeit: ein fallender Turm zählt nicht als fertig.
     else if (this.bahnen.every(b => b.fertig) && this.bahnen.every(b => b.steine.every(s => s.koerper.isSleeping() || Math.hypot(s.koerper.linvel().x, s.koerper.linvel().y) < .12))) this.grund = 'Alle Bauteile verbaut.';
     if (!this.grund) return;
     this.ende = true;
-    if (!this.gewinner.length && this.bahnen.length > 1) this.gewinner = rangfolge(this.bahnen, this.modus).filter(b => b.platz === 1 && !b.aufgegeben).map(b => b.id);
+    if (!this.gewinner.length && lebend.length > 0 && this.bahnen.length > 1) this.gewinner = rangfolge(this.bahnen, this.modus).filter(b => b.platz === 1 && !b.aufgegeben).map(b => b.id);
     if (this.bahnen.length === 1 && this.modus === 'standfest' && this.bahnen[0].leben > 0 && this.bahnen[0].verbraucht === REGELN.bauteile) this.gewinner = [this.bahnen[0].id];
     this.neutralisieren();
   }

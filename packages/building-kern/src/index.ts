@@ -13,7 +13,7 @@ const raster: Record<BauForm, number[][]> = {
 export const REGELN = Object.freeze({ schritt: 1 / 60, countdown: 3, dauer: 180, ziel: 16, halten: 3, leben: 3, bauteile: 30, bodenHalb: 4.8, feldHalb: 7.5 });
 export const MODI: Record<BauModus, { name: string; kurz: string; regel: string }> = {
   rennen: { name: 'Höhenrennen', kurz: 'Hoch hinaus', regel: 'Erreiche 16 Meter und halte deinen Turm 3 Sekunden stabil. Nach 3 Minuten gewinnt der höchste Turm.' },
-  standfest: { name: 'Standfest', kurz: 'Drei Leben. Ein Turm.', regel: 'Jedes abgestürzte Bauteil kostet ein Leben. Wer zuletzt steht, gewinnt. Allein: Verbaue 30 Teile mit mindestens einem Leben.' },
+  standfest: { name: 'Standfest', kurz: 'Drei Leben. Ein Turm.', regel: 'Jedes abgestürzte Teil kostet ein Leben. Wer zuletzt steht, gewinnt. Bei Zeitablauf zählen Leben, Höhe und verbaute Teile. Soloziel: 30 Teile mit mindestens einem Leben.' },
 };
 export function zellen(form: BauForm): Punkt[] {
   const r = raster[form], mx = r.reduce((s, p) => s + p[0], 0) / r.length, my = r.reduce((s, p) => s + p[1], 0) / r.length;
