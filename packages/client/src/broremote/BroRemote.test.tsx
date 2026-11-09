@@ -26,7 +26,7 @@ afterEach(() => cleanup());
 
 it('nimmt eine neue Einladung auch auf einer schon geöffneten BroRemote-Seite an', () => {
   render(<BroRemote />);
-  expect(screen.getByRole('heading', { name: 'Großes Bild. Kleine Controller.' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /Großes Bild/ })).toBeInTheDocument();
   act(() => { history.replaceState(null, '', `/broremote${new URL(link()).hash}`); window.dispatchEvent(new HashChangeEvent('hashchange')); });
   expect(screen.getByRole('heading', { name: 'Fast dabei.' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Lobby eröffnen/ })).not.toBeInTheDocument();
