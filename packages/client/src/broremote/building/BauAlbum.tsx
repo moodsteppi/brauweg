@@ -3,7 +3,7 @@ import { api } from '../../api';
 import { MODI } from '@brauweg/building-kern';
 import { chronikLesen, chronikSchreiben, bauAbzeichen, type BauEintrag } from './chronik';
 export function BauAlbum(): React.JSX.Element {
-  const [runden, setRunden] = useState(chronikLesen), [text, setText] = useState('Letzte Runden auf diesem Gerät'), [konto, setKonto] = useState(''), [beschaeftigt, setBeschaeftigt] = useState(false);
+  const [runden, setRunden] = useState(() => chronikLesen().filter(r => !r.konto)), [text, setText] = useState('Letzte Runden auf diesem Gerät'), [konto, setKonto] = useState(''), [beschaeftigt, setBeschaeftigt] = useState(false);
   useEffect(() => {
     let aktiv = true;
     void api.bauVerlauf().then(a => { if (!aktiv) return; setKonto(a.konto); setText(`Dein Konto · Heute noch ${a.restMuenzen} von 60 Münzen möglich`);

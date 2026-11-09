@@ -86,9 +86,9 @@ export function Controller({ layout, senden, bau, gegner = [] }: { layout: Layou
       {taste('drehen', 'Drehen', '↻')}{taste('fallen', 'Fallen lassen', '↓')}
     </div>
     {bau && <div className="bb-zauberleiste"><span className="br-kicker">DEINE ZAUBER · JE EINMAL PRO RUNDE</span>
-      <p className="br-leise">Ab 3 verbauten Teilen. Turmanker beruhigt deinen Turm 4 Sekunden. Schwergewicht verdreifacht das Gewicht des nächsten gegnerischen Teils.</p>
+      <details className="bb-zauberhilfe"><summary>So wirken deine Zauber</summary><p>Ab 3 verbauten Teilen. Turmanker beruhigt deinen Turm 4 Sekunden. Schwergewicht verdreifacht das Gewicht des nächsten gegnerischen Teils.</p></details>
       <button className="bb-zauber bb-anker" disabled={!bau.ankerBereit} onClick={() => senden({ art: 'zauber', zauber: 'anker' })}><span aria-hidden="true">⚓</span><strong>Turmanker</strong><small>{bau.anker ? `${Math.ceil(bau.anker)} s aktiv` : bau.ankerBereit ? 'Jetzt stabilisieren' : (bau.gebaut ?? 0) < 3 ? 'Ab 3 verbauten Teilen' : 'Nicht mehr verfügbar'}</small></button>
-      {gegner.length > 0 && <><label className="br-feld">Ziel für Schwergewicht<select value={gegner.some(g => g.id === ziel) ? ziel : gegner[0].id} onChange={e => setZiel(e.target.value)}>{gegner.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+      {gegner.length > 0 && <><label className="br-feld bb-zauberziel">Ziel für Schwergewicht<select value={gegner.some(g => g.id === ziel) ? ziel : gegner[0].id} onChange={e => setZiel(e.target.value)}>{gegner.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
       <button className="bb-zauber bb-schwere" disabled={!bau.schwereBereit} onClick={() => senden({ art: 'zauber', zauber: 'schwere', ziel: gegner.some(g => g.id === ziel) ? ziel : gegner[0].id })}><span aria-hidden="true">◆</span><strong>Schwergewicht</strong><small>{bau.schwereBereit ? 'Gegner verzaubern' : (bau.gebaut ?? 0) < 3 ? 'Ab 3 verbauten Teilen' : 'Nicht mehr verfügbar'}</small></button></>}
     </div>}
     <p className="br-leise br-zentriert">Dein Handy ist der Controller. Schau auf den Gastgeber-Bildschirm.</p>

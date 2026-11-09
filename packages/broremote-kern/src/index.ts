@@ -12,7 +12,7 @@ export type Aktion =
   | { art: 'zahl'; wert: number }
   | { art: 'zauber'; zauber: 'anker' | 'schwere'; ziel?: string }
   | { art: 'reset' };
-export type BauPrivat = { form: number; hoehe: number; restzeit: number; phase: 'countdown' | 'spiel' | 'pause' | 'ende'; countdown: number; platz: number; fertig: boolean; gewonnen: boolean; verbraucht: number; ziele?: string[]; zielCountdown?: number; ankerBereit?: boolean; schwereBereit?: boolean; anker?: number; schwereWartet?: boolean; gebaut?: number; verloren?: number; aufgegeben?: boolean; dauer?: number };
+export type BauPrivat = { form: number; hoehe: number; restzeit: number; phase: 'countdown' | 'spiel' | 'pause' | 'ende'; countdown: number; platz: number; fertig: boolean; gewonnen: boolean; verbraucht: number; spielerzahl?: number; ziele?: string[]; zielCountdown?: number; ankerBereit?: boolean; schwereBereit?: boolean; anker?: number; schwereWartet?: boolean; gebaut?: number; verloren?: number; aufgegeben?: boolean; dauer?: number };
 export type Privat = { leben?: number; punkte?: number; hinweis?: string; inventar?: string[]; amZug?: boolean; bau?: BauPrivat };
 export type Spieler = { id: string; name: string; farbe: string; verbunden: boolean; bereit: boolean };
 export type RaumSicht = {
@@ -79,6 +79,7 @@ function privatLesen(d: unknown): Privat | null {
   if (d.bau !== undefined) {
     const b = d.bau;
     if (!objekt(b)) return null;
+    if (b.spielerzahl !== undefined && !ganz(b.spielerzahl, 1, 4)) return null;
     if (b.ziele !== undefined && (!Array.isArray(b.ziele) || b.ziele.length > 3 || !b.ziele.every(z => typeof z === 'string' && z.length <= 24))) return null;
     for (const k of ['ankerBereit', 'schwereBereit', 'schwereWartet', 'aufgegeben']) if (b[k] !== undefined && typeof b[k] !== 'boolean') return null;
     for (const [k, max] of [['zielCountdown', 3], ['anker', 4], ['gebaut', 30], ['verloren', 30], ['dauer', 181]] as const) if (b[k] !== undefined && !zahl(b[k], 0, max)) return null;
@@ -88,7 +89,7 @@ function privatLesen(d: unknown): Privat | null {
   const { leben, punkte, amZug, hinweis, inventar } = d;
   // Nur bekannte Felder weitergeben: keine versteckten großen Nutzlasten im Spielstatus.
   const bau = d.bau as BauPrivat | undefined;
-  return { leben, punkte, amZug, hinweis, inventar, ...(bau ? { bau: { form: bau.form, hoehe: bau.hoehe, restzeit: bau.restzeit, phase: bau.phase, countdown: bau.countdown, platz: bau.platz, fertig: bau.fertig, gewonnen: bau.gewonnen, verbraucht: bau.verbraucht, ziele: bau.ziele, zielCountdown: bau.zielCountdown, ankerBereit: bau.ankerBereit, schwereBereit: bau.schwereBereit, anker: bau.anker, schwereWartet: bau.schwereWartet, gebaut: bau.gebaut, verloren: bau.verloren, aufgegeben: bau.aufgegeben, dauer: bau.dauer } } : {}) } as Privat;
+  return { leben, punkte, amZug, hinweis, inventar, ...(bau ? { bau: { form: bau.form, hoehe: bau.hoehe, restzeit: bau.restzeit, phase: bau.phase, countdown: bau.countdown, platz: bau.platz, fertig: bau.fertig, gewonnen: bau.gewonnen, verbraucht: bau.verbraucht, spielerzahl: bau.spielerzahl, ziele: bau.ziele, zielCountdown: bau.zielCountdown, ankerBereit: bau.ankerBereit, schwereBereit: bau.schwereBereit, anker: bau.anker, schwereWartet: bau.schwereWartet, gebaut: bau.gebaut, verloren: bau.verloren, aufgegeben: bau.aufgegeben, dauer: bau.dauer } } : {}) } as Privat;
 }
 
 type Sitz = Spieler & { schluessel: string; verbindung?: string; folge: number; letzteEingabe: number; aktiv: boolean; privat?: Privat };

@@ -58,6 +58,8 @@ export async function buildingErgebnis(db: Db, konto: string, partie: string, ei
   });
 }
 export async function buildingVerlauf(db: Db, konto: string, jetzt = new Date()) {
+  const [account] = await db.select({ gastSeit: s.account.gastSeit }).from(s.account).where(eq(s.account.id, konto));
+  if (!account || account.gastSeit) throw forbidden();
   const runden = await db.select({ partie: s.buildingRunde.partie, am: s.buildingRunde.ende, ergebnis: s.buildingRunde.ergebnis, muenzen: s.buildingRunde.muenzen }).from(s.buildingRunde)
     .where(and(eq(s.buildingRunde.accountId, konto), isNotNull(s.buildingRunde.ergebnis))).orderBy(desc(s.buildingRunde.ende)).limit(30);
   const [summe] = await db.select({ wert: sql<number>`coalesce(sum(${s.buildingRunde.muenzen}), 0)::int` }).from(s.buildingRunde).where(and(eq(s.buildingRunde.accountId, konto), eq(s.buildingRunde.tag, heute(jetzt))));
