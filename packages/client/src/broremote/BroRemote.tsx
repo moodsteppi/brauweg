@@ -13,6 +13,7 @@ const leer = (): TestStand => ({ x: 0, y: 0, winkel: 0, gefallen: 0, tasten: [] 
 export function BroRemote(): React.JSX.Element {
   const [spiel, setSpiel] = useState(!!window.location.hash);
   const [eintrag, setEintrag] = useState(window.location.hash ? `${apiBase || window.location.origin}/broremote${window.location.hash}` : '');
+  const [nurBeitritt, setNurBeitritt] = useState(!!window.location.hash);
   const [name, setName] = useState('');
   const [fehler, setFehler] = useState('');
   const [hinweis, setHinweis] = useState('');
@@ -44,10 +45,21 @@ export function BroRemote(): React.JSX.Element {
   };
   useEffect(() => {
     // Einladungsgeheimnisse gehören weder in Verlauf noch in spätere geteilte Adressen.
-    if (window.location.hash) history.replaceState(null, '', '/broremote');
+    const einladungUebernehmen = (): void => {
+      if (!window.location.hash) return;
+      const link = `${apiBase || window.location.origin}/broremote${window.location.hash}`;
+      history.replaceState(null, '', '/broremote');
+      if (kanal.current) {
+        if (!window.confirm('Für diese Einladung die aktuelle Lobby verlassen?')) return;
+        schliessen();
+      }
+      setSpiel(true); setNurBeitritt(true); setEintrag(link);
+    };
+    einladungUebernehmen();
+    window.addEventListener('hashchange', einladungUebernehmen);
     const t = setInterval(() => setZeit(Date.now()), 1000);
-    const aus = nativLauschen(e => { if (e.art === 'scan' && e.text) { setSpiel(true); setEintrag(e.text); setFehler(''); } });
-    return () => { lauf.current++; clearInterval(t); aus(); kanal.current?.schliessen(); };
+    const aus = nativLauschen(e => { if (e.art === 'scan' && e.text) { setSpiel(true); setNurBeitritt(true); setEintrag(e.text); setFehler(''); } });
+    return () => { lauf.current++; clearInterval(t); aus(); window.removeEventListener('hashchange', einladungUebernehmen); kanal.current?.schliessen(); };
   }, []);
 
   const starten = (z: Zugang, lokalHost = false): void => {
@@ -127,18 +139,19 @@ export function BroRemote(): React.JSX.Element {
 
       {!aktiv && !sicht && spiel && <>
         <div className="br-spieltitel"><p className="br-kicker">BROREMOTE</p><h1>Bro Building Battle</h1><p>Ein Gastgeber-Bildschirm. Bis zu vier Handys. Eine gemeinsame Lobby.</p></div>
-        <div className="br-zwei">
-          <section className="br-panel"><span className="br-schritt">01</span><h2>Lobby eröffnen</h2><p>Dieses Gerät zeigt die Lobby und später das Spiel.</p>
+        <div className={nurBeitritt ? 'br-beitrittsformular' : 'br-zwei'}>
+          {!nurBeitritt && <section className="br-panel"><span className="br-schritt">01</span><h2>Lobby eröffnen</h2><p>Dieses Gerät zeigt die Lobby und später das Spiel.</p>
             <div className="br-modus"><button type="button" aria-pressed={art === 'relay'} onClick={() => setArt('relay')}>Online</button><button type="button" aria-pressed={art === 'lan'} disabled={!hatLan()} onClick={() => setArt('lan')}>WLAN / Hotspot</button></div>
             <p className="br-leise">{art === 'lan' ? 'Alle Geräte im selben WLAN oder persönlichen Hotspot. Internet ist nicht nötig. Lass die Gastgeber-App geöffnet.' : 'Browser oder App als Gastgeber. Alle Geräte brauchen Internet. Die Verbindung ist verschlüsselt.'}</p>
             {!hatLan() && <p className="br-leise">Lokale Lobbys öffnest du in der iOS-App.</p>}
             <button type="button" className="br-knopf" onClick={gastgeber}>Lobby eröffnen <span>↗</span></button>
-          </section>
-          <section className="br-panel"><span className="br-schritt">02</span><h2>Als Controller beitreten</h2><p>Scanne den Code auf dem Gastgeber-Bildschirm.</p>
+          </section>}
+          <section className="br-panel"><span className="br-schritt">DEIN HANDY ALS CONTROLLER</span><h2>{nurBeitritt ? 'Fast dabei.' : 'Als Controller beitreten'}</h2><p>{nurBeitritt ? 'Wähle deinen Spielernamen und verbinde dich mit der Lobby.' : 'Scanne den Code auf dem Gastgeber-Bildschirm.'}</p>
             {hatLan() && <button type="button" className="br-knopf br-sekundaer" onClick={() => nativ({ art: 'scannen' })}>QR-Code scannen</button>}
             <label className="br-feld">Dein Spielername<input autoComplete="nickname" maxLength={24} value={name} placeholder="Zum Beispiel Emil" onChange={e => setName(e.target.value)} /></label>
             <label className="br-feld">Einladungslink<input type="text" autoCapitalize="off" autoCorrect="off" spellCheck={false} value={eintrag} placeholder="Link einfügen oder QR-Code scannen" onChange={e => setEintrag(e.target.value)} /></label>
             <button type="button" className="br-knopf br-sekundaer" disabled={!eintrag || !name.trim()} onClick={beitreten}>Verbinden</button>
+            {nurBeitritt && <button type="button" className="br-link" onClick={() => setNurBeitritt(false)}>Zurück zur Auswahl</button>}
           </section>
         </div>
       </>}
@@ -155,7 +168,7 @@ export function BroRemote(): React.JSX.Element {
           {rolle === 'gastgeber' && sicht.phase === 'lobby' && <section className="br-panel br-einladung"><p className="br-kicker">HANDY VERBINDEN</p><h2>Scannen. Bereit. Los.</h2>
             {!sicht.gesperrt && !abgelaufen && verbunden ? <Qr text={link} /> : <div className="br-qr-pause">{abgelaufen ? 'Einladung abgelaufen' : 'Neue Beitritte gesperrt'}</div>}
             <p className="br-leise">{art === 'lan' ? 'In der iOS-App: BroRemote → Bro Building Battle → QR-Code scannen. Alle Geräte müssen im selben Netzwerk sein.' : 'Mit der Handykamera oder dem QR-Scanner in der iOS-App scannen.'}</p>
-            {!abgelaufen && <p className="br-leise">Gültig für {Math.max(0, Math.ceil((sicht.einladungBis - zeit) / 60_000))} Minuten</p>}
+            {!abgelaufen && <p className="br-leise">Gültig für {Math.min(10, Math.max(0, Math.ceil((sicht.einladungBis - zeit) / 60_000)))} Minuten</p>}
             {adressen.length > 1 && <label className="br-feld">Netzwerkadresse<select value={adresse} onChange={e => setAdresse(e.target.value)}>{adressen.map(a => <option value={a} key={a}>{a.replace('ws://', '').replace('/broremote', '')}</option>)}</select></label>}
             <div className="br-aktionen"><button type="button" className="br-link" disabled={!verbunden || abgelaufen || sicht.gesperrt} onClick={() => {
               void navigator.clipboard?.writeText(link).then(() => setHinweis('Einladungslink kopiert.')).catch(() => setHinweis('Markiere und kopiere den Link darunter.'));

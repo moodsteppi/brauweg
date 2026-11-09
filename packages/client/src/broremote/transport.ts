@@ -163,20 +163,25 @@ export function lanGastgeber(e: SitzungsEreignisse, bereit: (adressen: string[])
       }
     } else if (n.art === 'zu' && n.id) {
       clearTimeout(fristen.get(n.id)); fristen.delete(n.id); angemeldet.delete(n.id); raum?.abmelden(n.id);
-    } else if (n.art === 'fehler') { e.fehler(n.text ?? 'Lokale Lobby nicht verfügbar.'); e.status('beendet'); }
+    } else if (n.art === 'fehler') {
+      e.fehler(n.text ?? 'Lokale Lobby nicht verfügbar.'); e.status('beendet');
+      beenden();
+    }
     else if (n.art === 'hintergrund' && n.host) {
       raum?.schliessen('Die Gastgeber-App wurde in den Hintergrund gelegt. Bitte öffne eine neue Lobby.');
       e.status('beendet'); e.fehler('Die lokale Lobby wurde beendet. Lass die Gastgeber-App während des Spielens geöffnet.');
+      beenden();
     }
   });
   const takt = setInterval(() => { raum?.empfangen('host', { v: 1, art: 'ping' }); raum?.tick(); }, 200);
+  const beenden = (): void => {
+    beendet = true; clearInterval(takt); abmelden();
+    for (const t of fristen.values()) clearTimeout(t);
+    raum?.schliessen('Die lokale Lobby wurde beendet.'); nativ({ art: 'stop' });
+  };
   e.status('verbinden'); nativ({ art: 'host' });
   return {
     senden(n) { if (!raum || beendet || raum.beendet) return false; raum.empfangen('host', { ...n, v: 1 }); return true; },
-    schliessen() {
-      beendet = true; clearInterval(takt); abmelden();
-      for (const t of fristen.values()) clearTimeout(t);
-      raum?.schliessen('Die lokale Lobby wurde beendet.'); nativ({ art: 'stop' });
-    },
+    schliessen: beenden,
   };
 }

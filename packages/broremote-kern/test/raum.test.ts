@@ -126,3 +126,17 @@ test('QR enthält nur kurzlebige Einladung, erlaubte Ziele und funktioniert für
   }
   for (const url of ['ws://8.8.8.8:80/broremote', 'ws://127.0.0.1:80/broremote', 'ws://192.168.1.1:80/admin', 'ws://user@192.168.1.1:80/broremote', 'http://192.168.1.1:80/broremote']) assert.equal(lokaleAdresse(url), false, url);
 });
+
+test('vier gleichzeitig aktive Controller bleiben eine halbe Stunde stabil', () => {
+  const a = aufbau(); ['1', '2', '3', '4'].forEach(a.gast); a.start('1', '2', '3', '4');
+  for (let folge = 1; folge <= 9000; folge++) {
+    a.zeit(200); a.post.length = 0;
+    a.senden('h', { art: 'ping' });
+    for (const id of ['1', '2', '3', '4']) a.eingabe(id, folge, { art: 'steuerung', x: Math.sin(folge) * .8, y: 0, tasten: folge % 2 ? ['drehen'] : [] });
+    a.raum.tick();
+    assert.equal(a.post.filter(p => p.n.art === 'eingabe' && p.v === 'h').length, 4);
+  }
+  assert.equal(a.raum.beendet, false);
+  assert.equal(a.raum.sicht().spieler.filter(s => s.verbunden).length, 4);
+  assert.equal(a.getrennt.length, 0);
+});
