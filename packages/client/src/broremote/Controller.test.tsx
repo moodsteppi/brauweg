@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Controller } from './Controller';
-import { einladungsLink } from '@brauweg/broremote-kern';
+import { einladungsLink, type BauPrivat } from '@brauweg/broremote-kern';
 import { qrMatrix } from '../minispiele/partykiste/qr';
 
 describe('BroRemote-Controller', () => {
@@ -32,4 +32,15 @@ describe('BroRemote-Controller', () => {
       expect(qrMatrix(link).length).toBeGreaterThan(20);
     }
   });
+  it('zeigt nur Bautasten und sperrt sie während des Zielcountdowns; Zauber bleiben erreichbar', () => {
+    const senden = vi.fn();
+    const bau: BauPrivat = { form: 0, hoehe: 16, restzeit: 80, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 12, zielCountdown: 3, ankerBereit: true, schwereBereit: true };
+    const { unmount } = render(<Controller layout="bauen" bau={bau} gegner={[{ id: 'b', name: 'Bert' }]} senden={senden} />);
+    expect(screen.queryByRole('group', { name: /Joystick/ })).not.toBeInTheDocument();
+    for (const name of ['Nach links', 'Nach rechts', /Drehen/, /Fallen lassen/]) expect(screen.getByRole('button', { name })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /Turmanker/ })); expect(senden).toHaveBeenLastCalledWith({ art: 'zauber', zauber: 'anker' });
+    fireEvent.click(screen.getByRole('button', { name: /Schwergewicht/ })); expect(senden).toHaveBeenLastCalledWith({ art: 'zauber', zauber: 'schwere', ziel: 'b' });
+    unmount();
+  });
+
 });

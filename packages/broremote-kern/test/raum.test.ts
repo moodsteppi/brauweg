@@ -170,3 +170,12 @@ test('vier gleichzeitig aktive Controller bleiben eine halbe Stunde stabil', () 
   assert.equal(a.raum.sicht().spieler.filter(s => s.verbunden).length, 4);
   assert.equal(a.getrennt.length, 0);
 });
+
+test('Zauber werden einmal adressiert und nur im Baucontroller akzeptiert', () => {
+  const a = aufbau(), g = a.gast('1'), ziel = a.gast('2'); a.start('1', '2'); a.post.length = 0;
+  a.eingabe('1', 1, { art: 'zauber', zauber: 'schwere', ziel: ziel.spieler });
+  assert.ok(a.post.some(p => p.v === 'h' && p.n.art === 'eingabe' && p.n.spieler === g.spieler && p.n.aktion.art === 'zauber'));
+  assert.equal(aktionLesen({ art: 'zauber', zauber: 'unbegrenzt' }, 'bauen'), null);
+  assert.equal(aktionLesen({ art: 'zauber', zauber: 'anker' }, 'auswahl'), null);
+  assert.equal(aktionLesen({ art: 'zauber', zauber: 'schwere', ziel: 'x'.repeat(25) }, 'bauen'), null);
+});

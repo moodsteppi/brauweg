@@ -66,6 +66,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
 
+const bauAnfrage = async <T>(path: string, body?: unknown): Promise<T> => {
+  const abbruch = new AbortController(), timer = setTimeout(() => abbruch.abort(), 8000);
+  try { return await request<T>(path, { signal: abbruch.signal, ...(body ? { method: 'POST', body: JSON.stringify(body) } : {}) }); }
+  finally { clearTimeout(timer); }
+};
+
 const patch = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
 
@@ -723,6 +729,9 @@ export type AnbieterAnmeldung =
   | { geburtstagNoetig: true; schein: string; namensvorschlag?: string };
 
 export const api = {
+  bauStart: (partie: string, modus: import('@brauweg/building-kern').BauModus) => bauAnfrage<{ konto: string; partie: string }>('/building/start', { partie, modus }),
+  bauErgebnis: (partie: string, ergebnis: import('@brauweg/building-kern').BauErgebnis) => bauAnfrage<{ muenzen: number; abzeichen: string[]; wiederholt: boolean }>('/building/ergebnis', { partie, ergebnis }),
+  bauVerlauf: () => bauAnfrage<{ konto: string; restMuenzen: number; runden: { partie: string; am: string; ergebnis: import('@brauweg/building-kern').BauErgebnis; muenzen: number }[] }>('/building'),
   /** Ein Aufruf ueber einen Werbelink `?q=` (herkunft.ts). */
   herkunftBesuch: (kennung: string) => post<{ ok: true }>('/herkunft/besuch', { kennung }),
   /** Muenz-Code einloesen — nur auf der Webseite (server/src/muenzcodes.ts). */

@@ -1,5 +1,5 @@
 import type * as RapierTypen from '@dimforge/rapier2d-compat';
-import { bauteilfolge, rangfolge, REGELN, zellen, type BauForm, type BauModus, type Punkt } from '@brauweg/building-kern';
+import { bauteilfolge, rangfolge, REGELN, ZAUBER, spawnHoehe, zellen, type BauZauber, type BauForm, type BauModus, type Punkt } from '@brauweg/building-kern';
 
 type Rapier = typeof RapierTypen;
 let geladen: Promise<Rapier> | undefined;
@@ -10,16 +10,17 @@ export function ladeBauphysik(): Promise<Rapier> {
   }).catch(e => { geladen = undefined; throw e; });
   return geladen;
 }
-export type BauEingabe = { art: 'reset' } | { art: 'steuerung'; x: number; y: number; tasten: readonly string[] };
+export type BauEingabe = { art: 'zauber'; zauber: BauZauber; ziel?: string } | { art: 'reset' } | { art: 'steuerung'; x: number; y: number; tasten: readonly string[] };
 export type BauSpieler = { id: string; name: string; farbe: string };
-export type SteinSicht = { nummer: number; form: BauForm; x: number; y: number; winkel: number; aktiv: boolean };
-export type BahnSicht = BauSpieler & { steine: SteinSicht[]; naechster: BauForm; hoehe: number; leben: number; gebaut: number; verbraucht: number; verloren: number; halten: number; fertig: boolean; aufgegeben: boolean; platz: number };
-export type BauSicht = { phase: 'countdown' | 'spiel' | 'ende'; countdown: number; restzeit: number; modus: BauModus; bahnen: BahnSicht[]; gewinner: string[]; grund: string };
-type Stein = { nummer: number; form: BauForm; koerper: RapierTypen.RigidBody; zellen: Punkt[]; gelandet: boolean; };
+export type SteinSicht = { nummer: number; form: BauForm; x: number; y: number; winkel: number; aktiv: boolean; schwer: boolean };
+export type BahnSicht = BauSpieler & { steine: SteinSicht[]; naechster: BauForm; hoehe: number; leben: number; gebaut: number; verbraucht: number; verloren: number; halten: number; fertig: boolean; aufgegeben: boolean; platz: number; anker: number; ankerBereit: boolean; schwereBereit: boolean; schwereWartet: boolean; zauberHinweis: string; effekt: number };
+export type BauSicht = { phase: 'countdown' | 'spiel' | 'ende'; countdown: number; restzeit: number; modus: BauModus; bahnen: BahnSicht[]; gewinner: string[]; grund: string; dauer: number };
+type Stein = { nummer: number; form: BauForm; koerper: RapierTypen.RigidBody; zellen: Punkt[]; gelandet: boolean; schwer: boolean; };
 type Bahn = BauSpieler & {
   welt: RapierTypen.World; ereignisse: RapierTypen.EventQueue; steine: Stein[]; aktiv?: Stein;
   eingabe: { x: number; y: number; drehen: boolean; fallen: boolean }; drehenAnstehend: boolean; fallenAnstehend: boolean; eingabeAlter: number;
   verbraucht: number; gebaut: number; verloren: number; leben: number; hoehe: number; halten: number;
+  anker: number; ankerBenutzt: boolean; schwereBenutzt: boolean; schwereWartet: boolean; zauberHinweis: string; effekt: number;
   nachschub: number; fertig: boolean; aufgegeben: boolean;
 };
 
@@ -40,12 +41,13 @@ export class BauPartie {
       const boden = welt.createRigidBody(r.RigidBodyDesc.fixed().setTranslation(0, -.35));
       welt.createCollider(r.ColliderDesc.cuboid(REGELN.bodenHalb, .35).setFriction(.8), boden);
       return { ...s, welt, ereignisse: new r.EventQueue(true), steine: [], eingabe: { x: 0, y: 0, drehen: false, fallen: false }, eingabeAlter: 0, drehenAnstehend: false, fallenAnstehend: false,
-        verbraucht: 0, gebaut: 0, verloren: 0, leben: REGELN.leben, hoehe: 0, halten: 0, nachschub: 0, fertig: false, aufgegeben: false };
+        anker: 0, ankerBenutzt: false, schwereBenutzt: false, schwereWartet: false, zauberHinweis: '', effekt: 0, verbraucht: 0, gebaut: 0, verloren: 0, leben: REGELN.leben, hoehe: 0, halten: 0, nachschub: 0, fertig: false, aufgegeben: false };
     });
   }
   eingabe(id: string, a: BauEingabe): void {
     const b = this.bahnen.find(s => s.id === id);
     if (!b || this.ende || b.fertig) return;
+    if (a.art === 'zauber') { this.zaubern(b, a.zauber, a.ziel); return; }
     if (a.art === 'reset') { b.eingabe = { x: 0, y: 0, drehen: false, fallen: false }; b.drehenAnstehend = false; b.fallenAnstehend = false; return; }
     if (!Number.isFinite(a.x) || !Number.isFinite(a.y)) return;
     // Eine kurze Taste kann zwischen zwei Physikschritten drücken UND loslassen.
@@ -65,10 +67,33 @@ export class BauPartie {
   private neu(b: Bahn): void {
     if (b.verbraucht >= REGELN.bauteile) { b.fertig = true; return; }
     const form = this.folge[b.verbraucht], teile = zellen(form);
-    const koerper = b.welt.createRigidBody(this.r.RigidBodyDesc.dynamic().setTranslation(0, Math.max(7, b.hoehe + 5)).setGravityScale(0).lockRotations().setCcdEnabled(true).setLinearDamping(.15).setAngularDamping(.5));
-    for (const p of teile) b.welt.createCollider(this.r.ColliderDesc.cuboid(.49, .49).setTranslation(p.x, p.y).setFriction(.75).setRestitution(.02).setDensity(1).setActiveEvents(this.r.ActiveEvents.COLLISION_EVENTS), koerper);
-    const s = { form, nummer: b.verbraucht++, koerper, zellen: teile, gelandet: false };
+    const koerper = b.welt.createRigidBody(this.r.RigidBodyDesc.dynamic().setTranslation(0, spawnHoehe(b.hoehe)).setGravityScale(0).lockRotations().setCcdEnabled(true).setLinearDamping(.15).setAngularDamping(.5));
+    for (const p of teile) b.welt.createCollider(this.r.ColliderDesc.cuboid(.49, .49).setTranslation(p.x, p.y).setFriction(.75).setRestitution(.02).setDensity(b.schwereWartet ? ZAUBER.schwereFaktor : 1).setActiveEvents(this.r.ActiveEvents.COLLISION_EVENTS), koerper);
+    const s = { form, nummer: b.verbraucht++, koerper, zellen: teile, gelandet: false, schwer: b.schwereWartet };
+    b.schwereWartet = false;
     b.steine.push(s); b.aktiv = s; b.drehenAnstehend = false; b.fallenAnstehend = false;
+  }
+  private zaubern(b: Bahn, zauber: BauZauber, ziel?: string): void {
+    if (this.zeit < 0 || b.gebaut < ZAUBER.abTeilen) return;
+    if (zauber === 'anker' && !b.ankerBenutzt) {
+      b.ankerBenutzt = true; b.anker = ZAUBER.ankerDauer;
+      b.zauberHinweis = 'Turmanker schützt deinen Turm'; b.effekt++;
+      for (const s of b.steine) if (s.gelandet) {
+        s.koerper.setLinvel({ x: 0, y: 0 }, true); s.koerper.setAngvel(0, true);
+      }
+    } else if (zauber === 'schwere' && !b.schwereBenutzt) {
+      const gegner = this.bahnen.find(g => g.id === ziel && g !== b && !g.fertig && !g.aufgegeben && !g.schwereWartet);
+      if (!gegner) return;
+      b.schwereBenutzt = true; gegner.schwereWartet = true;
+      b.zauberHinweis = `Schwergewicht trifft ${gegner.name}`; b.effekt++;
+      gegner.zauberHinweis = `${b.name} verzaubert dein nächstes Teil`; gegner.effekt++;
+    }
+  }
+  private aktivenEntfernen(b: Bahn, zuruecklegen = false): void {
+    if (!b.aktiv) return;
+    if (zuruecklegen) { b.verbraucht--; b.schwereWartet ||= b.aktiv.schwer; }
+    b.welt.removeRigidBody(b.aktiv.koerper); b.steine = b.steine.filter(s => s !== b.aktiv); b.aktiv = undefined;
+    this.eingabe(b.id, { art: 'reset' });
   }
   private drehen(b: Bahn, s: Stein): void {
     const winkel = s.koerper.rotation() - Math.PI / 2, p = s.koerper.translation();
@@ -86,7 +111,8 @@ export class BauPartie {
     for (const b of this.bahnen) {
       b.eingabeAlter += dt;
       if (b.eingabeAlter > .6) this.eingabe(b.id, { art: 'reset' });
-      if (!b.fertig && !b.aktiv) { b.nachschub -= dt; if (b.nachschub <= 0) this.neu(b); }
+      b.anker = Math.max(0, b.anker - dt);
+      if (!b.fertig && !b.aktiv && !(this.modus === 'rennen' && b.halten > 0)) { b.nachschub -= dt; if (b.nachschub <= 0) this.neu(b); }
       const aktiv = b.aktiv;
       if (aktiv) {
         if (b.drehenAnstehend) this.drehen(b, aktiv);
@@ -98,6 +124,10 @@ export class BauPartie {
         aktiv.koerper.setLinvel({ x: (p.x < -5.5 && vx < 0) || (p.x > 5.5 && vx > 0) ? 0 : vx, y: schnell ? -18 : b.eingabe.y > .4 ? -6 : -2.4 }, true);
       }
       b.drehenAnstehend = false; b.fallenAnstehend = false;
+      for (const s of b.steine) if (s.gelandet) {
+        s.koerper.setLinearDamping(b.anker > 0 ? 10 : .15);
+        s.koerper.setAngularDamping(b.anker > 0 ? 18 : .5);
+      }
       b.welt.step(b.ereignisse);
       let beruehrt = false;
       b.ereignisse.drainCollisionEvents((a, c, an) => {
@@ -127,7 +157,10 @@ export class BauPartie {
         if (Math.hypot(v.x, v.y) > .8 || Math.abs(s.koerper.angvel()) > .8) continue;
         for (const z of s.zellen) b.hoehe = Math.max(b.hoehe, p.y + z.x * Math.sin(w) + z.y * Math.cos(w) + .49 * (Math.abs(Math.sin(w)) + Math.abs(Math.cos(w))));
       }
-      b.halten = b.hoehe >= REGELN.ziel && !b.aufgegeben ? b.halten + dt : 0;
+      b.halten = this.modus === 'rennen' && b.hoehe >= REGELN.ziel && !b.aufgegeben ? b.halten + dt : 0;
+      // Ab Zielkontakt gehört die Bühne nur dem Turm. Ein schon vorgeladenes
+      // Teil kommt zurück in den Vorrat, damit der Countdown nichts verbraucht.
+      if (b.halten > 0) this.aktivenEntfernen(b, true);
     }
     this.endePruefen();
   }
@@ -148,9 +181,9 @@ export class BauPartie {
   }
   sicht(): BauSicht {
     const rang = rangfolge(this.bahnen, this.modus, this.gewinner);
-    return { phase: this.ende ? 'ende' : this.zeit < 0 ? 'countdown' : 'spiel', countdown: Math.max(0, Math.ceil(-this.zeit)), restzeit: Math.max(0, Math.ceil(REGELN.dauer - Math.max(0, this.zeit))), modus: this.modus, gewinner: [...this.gewinner], grund: this.grund,
-      bahnen: this.bahnen.map(b => ({ id: b.id, name: b.name, farbe: b.farbe, naechster: this.folge[b.verbraucht] ?? 'quadrat', hoehe: Math.max(0, b.hoehe), leben: b.leben, gebaut: b.gebaut, verbraucht: b.verbraucht, verloren: b.verloren, halten: b.halten, fertig: b.fertig, aufgegeben: b.aufgegeben, platz: rang.find(s => s.id === b.id)!.platz,
-        steine: b.steine.map(s => ({ nummer: s.nummer, form: s.form, ...s.koerper.translation(), winkel: s.koerper.rotation(), aktiv: s === b.aktiv })) })) };
+    return { phase: this.ende ? 'ende' : this.zeit < 0 ? 'countdown' : 'spiel', countdown: Math.max(0, Math.ceil(-this.zeit)), restzeit: Math.max(0, Math.ceil(REGELN.dauer - Math.max(0, this.zeit))), modus: this.modus, gewinner: [...this.gewinner], grund: this.grund, dauer: Math.max(0, Math.round(this.zeit)),
+      bahnen: this.bahnen.map(b => ({ id: b.id, name: b.name, farbe: b.farbe, naechster: this.folge[b.verbraucht] ?? 'quadrat', hoehe: Math.max(0, b.hoehe), anker: b.anker, ankerBereit: b.gebaut >= ZAUBER.abTeilen && !b.ankerBenutzt, schwereBereit: b.gebaut >= ZAUBER.abTeilen && !b.schwereBenutzt && this.bahnen.some(g => g !== b && !g.fertig && !g.aufgegeben && !g.schwereWartet), schwereWartet: b.schwereWartet, zauberHinweis: b.zauberHinweis, effekt: b.effekt, leben: b.leben, gebaut: b.gebaut, verbraucht: b.verbraucht, verloren: b.verloren, halten: b.halten, fertig: b.fertig, aufgegeben: b.aufgegeben, platz: rang.find(s => s.id === b.id)!.platz,
+        steine: b.steine.map(s => ({ nummer: s.nummer, form: s.form, ...s.koerper.translation(), winkel: s.koerper.rotation(), aktiv: s === b.aktiv, schwer: s.schwer })) })) };
   }
   freigeben(): void { if (this.freigegeben) return; this.freigegeben = true; for (const b of this.bahnen) { b.ereignisse.free(); b.welt.free(); } }
 }

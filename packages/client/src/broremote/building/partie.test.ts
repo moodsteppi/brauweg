@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { BauPartie, ladeBauphysik } from './partie';
+import type { RigidBody } from '@dimforge/rapier2d-compat';
+import { spawnHoehe } from '@brauweg/building-kern';
 import { BroRaum, type ServerNachricht } from '@brauweg/broremote-kern';
 
 let r: Awaited<ReturnType<typeof ladeBauphysik>>;
@@ -111,4 +113,43 @@ describe('Bro Building Battle mit echter Physik', () => {
     raum.empfangen('a', { v: 1, art: 'eingabe', abschnitt: s.abschnitt, folge: ++folge, aktion: { art: 'reset' } });
     const x = b[0].steine[0].x; schritte(spiel, 5); expect(spiel.sicht().bahnen[0].steine[0].x).toBeCloseTo(x, 2);
   });
+  it('spawnt bei doppelter bisheriger Höhe, auch über einem vorhandenen Turm', () => {
+    expect(spawnHoehe(0)).toBe(14); expect(spawnHoehe(12)).toBe(34);
+    const p = partie(); start(p); expect(p.sicht().bahnen[0].steine[0].y).toBeGreaterThan(13.9);
+  });
+  it('hält den Nachschub am Ziel an, zählt drei Sekunden und setzt nach Einsturz fort', () => {
+    const p = partie('rennen', 2); start(p); taste(p, '0', 'fallen');
+    for (let i = 0; i < 160 && p.sicht().bahnen[0].gebaut === 0; i++) p.schritt();
+    // Eine reproduzierbare Hochlage statt eines zufällig gerade stehenden Turms.
+    const intern = p as unknown as { bahnen: { steine: { gelandet: boolean; koerper: RigidBody }[] }[] };
+    const oberster = intern.bahnen[0].steine.find(s => s.gelandet)!.koerper;
+    oberster.setBodyType(r.RigidBodyType.Fixed, true); oberster.setTranslation({ x: 0, y: 16 }, true);
+    schritte(p, 1); const vorrat = p.sicht().bahnen[0].verbraucht;
+    expect(p.sicht().bahnen[0].halten).toBeGreaterThan(0);
+    schritte(p, 100); expect(p.sicht().phase).toBe('spiel');
+    expect(p.sicht().bahnen[0].verbraucht).toBe(vorrat); expect(p.sicht().bahnen[0].steine.some(s => s.aktiv)).toBe(false);
+    oberster.setTranslation({ x: 0, y: 1 }, true); schritte(p, 50);
+    expect(p.sicht().bahnen[0].halten).toBe(0); expect(p.sicht().bahnen[0].steine.some(s => s.aktiv)).toBe(true);
+    oberster.setTranslation({ x: 0, y: 16 }, true); schritte(p, 1);
+    const zurueckgelegt = p.sicht().bahnen[0].verbraucht; schritte(p, 182);
+    expect(p.sicht().gewinner).toEqual(['0']); expect(p.sicht().bahnen[0].verbraucht).toBe(zurueckgelegt);
+  });
+  it('Zauber brauchen drei Teile, kosten genau eine Ladung und treffen nur das gewählte Ziel', () => {
+    const p = partie('rennen', 3); start(p);
+    p.eingabe('0', { art: 'zauber', zauber: 'anker' }); expect(p.sicht().bahnen[0].anker).toBe(0);
+    for (let i = 0; i < 2200 && p.sicht().bahnen[0].gebaut < 3; i++) { if (i % 90 === 0) for (const id of ['0', '1', '2']) taste(p, id, 'fallen'); p.schritt(); }
+    expect(p.sicht().bahnen[0].ankerBereit).toBe(true);
+    p.eingabe('0', { art: 'zauber', zauber: 'anker' }); schritte(p, 30);
+    const rest = p.sicht().bahnen[0].anker; p.eingabe('0', { art: 'zauber', zauber: 'anker' });
+    expect(p.sicht().bahnen[0].anker).toBe(rest); expect(p.sicht().bahnen[0].ankerBereit).toBe(false);
+    p.eingabe('0', { art: 'zauber', zauber: 'schwere', ziel: '0' }); expect(p.sicht().bahnen[0].schwereBereit).toBe(true);
+    p.eingabe('0', { art: 'zauber', zauber: 'schwere', ziel: '1' });
+    expect(p.sicht().bahnen[1].schwereWartet).toBe(true); expect(p.sicht().bahnen[2].schwereWartet).toBe(false);
+    expect(p.sicht().bahnen[0].schwereBereit).toBe(false);
+    for (let i = 0; i < 500 && !p.sicht().bahnen[1].steine.some(s => s.schwer); i++) { if (i % 60 === 0) taste(p, '1', 'fallen'); p.schritt(); }
+    expect(p.sicht().bahnen[1].steine.some(s => s.schwer)).toBe(true);
+    expect(p.sicht().bahnen[2].steine.some(s => s.schwer)).toBe(false);
+    schritte(p, 250); expect(p.sicht().bahnen[0].anker).toBe(0);
+  });
+
 });

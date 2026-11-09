@@ -1,4 +1,13 @@
 /** Regeln ohne Uhr, Netzwerk und Oberfläche. Ein Seed ergibt dieselbe Bauteilfolge für alle. */
+export type BauZauber = 'anker' | 'schwere';
+export const ZAUBER = Object.freeze({ abTeilen: 3, ankerDauer: 4, schwereFaktor: 3 });
+export const BELOHNUNG = Object.freeze({ runde: 5, sieg: 10, tag: 60 });
+export type BauErgebnis = { modus: BauModus; hoehe: number; gebaut: number; verloren: number; leben: number; platz: number; gewonnen: boolean; aufgegeben: boolean; dauer: number; spielerzahl: number };
+export function bauAbzeichen(e: BauErgebnis): string[] {
+  return [...(e.gebaut >= 1 ? ['Baumeister'] : []), ...(e.gewonnen ? ['Turmkönig'] : []), ...(e.hoehe >= 16 ? ['Wolkenkratzer'] : []), ...(e.modus === 'standfest' && e.gewonnen && e.verloren === 0 ? ['Standhaft'] : [])];
+}
+/** Doppelte bisherige Höhe über der Plattform. */
+export const spawnHoehe = (hoehe: number): number => 2 * Math.max(7, hoehe + 5);
 export type BauModus = 'rennen' | 'standfest';
 export type BauForm = 'balken' | 'quadrat' | 'treppe' | 'bogen' | 'haken' | 'spiegel' | 'stufe';
 export type Punkt = { x: number; y: number };

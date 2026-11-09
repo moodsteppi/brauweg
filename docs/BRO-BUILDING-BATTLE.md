@@ -1,6 +1,6 @@
 # Bro Building Battle
 
-Stand: 9. November 2026. Lokaler Ausbau auf `codex/broremote`; kein Upload,
+Stand: 9. November 2026, zweiter Ausbau. Lokaler Ausbau auf `codex/broremote`; kein Upload,
 kein TestFlight-Build und kein Deploy.
 
 ## Spielablauf
@@ -24,9 +24,10 @@ mit anderen Regeln startet. Nach „Battle starten“ folgt ein Countdown.
   Nach dem ersten Kontakt bleibt es beweglich, kippt und fällt unter Last.
   Es gibt kein Raster, das den Turm nachträglich festhält, und keine Reihenlöschung.
 
-**Handy:** Stick oder Richtungstasten bewegen links/rechts; „Drehen“ dreht
-um 90 Grad; „Fallen lassen“ beschleunigt das aktuelle Teil. Stick nach unten
-beschleunigt nur während des Haltens. Tasten und Stick funktionieren gleichzeitig.
+**Handy:** Vier große Bautasten: links, rechts, drehen, fallen lassen. Kein Joystick.
+Links/rechts halten bewegt das Teil; „Drehen“ dreht
+um 90 Grad; „Fallen lassen“ beschleunigt das aktuelle Teil. Richtung und Aktion funktionieren mit mehreren Fingern gleichzeitig.
+Die Bauknöpfe sperren während des Zielcountdowns; Zauber bleiben verfügbar.
 Der Controller zeigt das nächste Bauteil, Höhe, Platz und gegebenenfalls Leben.
 
 **Allein ausprobieren:** Vor dem Öffnen einer Lobby kann „Erst allein
@@ -36,8 +37,59 @@ demselben Gerät. Tastatur: links/rechts, R, Leertaste. Touch funktioniert ebens
 **Ende:** Ergebnis mit Rangfolge, Höhe und Leben. „Revanche vorbereiten“ führt
 in dieselbe Lobby; alle bestätigen erneut „Bereit“. Der neue Start erzeugt
 eine neue Partie und einen neuen Seed. Das Solotraining bietet „Noch eine Runde“
-mit demselben Seed zum Üben. Ergebnisse sind lokale Party-Ergebnisse, ohne
-Münzen, Trophäen, Kontobuchungen oder dauerhafte Rangliste.
+mit demselben Seed zum Üben. Ergebnisse landen im Baualbum. Angemeldete Konten erhalten 5 Münzen pro
+regulärer Runde und 10 zusätzlich für einen Sieg, höchstens 60 pro Berliner
+Kalendertag. Eine reguläre Runde braucht mindestens 15 Sekunden und drei
+verbaute Teile; Aufgabe gibt keine Münzen. Gäste/offline gestartete Runden
+speichern auf dem Gerät. Kontomünzen brauchen einen Online-Start.
+
+## Höhe, Ziel und Zauber
+
+Neue Teile erscheinen bei `2 * max(7, Turmhöhe + 5)`, also 14 statt 7 Metern
+über einer leeren Plattform. Die Kamera folgt der größeren Bühne weich.
+Sobald die stabile Höhe 16 Meter erreicht, wird über dieser Bahn ein großer
+3–2–1-Zähler angezeigt. Nachschub stoppt; ein bereits schwebendes Teil wird
+unverbraucht in den Vorrat zurückgelegt. Unterhalb des Ziels fällt der Zähler
+auf null, und die nächste Figur wird wieder freigegeben. Nach drei Sekunden
+steht der Sieg fest. Andere Bahnen laufen weiter.
+
+Ab drei gelandeten Teilen gibt es je Runde einmal:
+* **Turmanker:** bremst den eigenen Turm vier Sekunden stark ab. Schwerkraft
+  und Kollisionen bleiben wirksam; die Körper werden nicht dauerhaft fixiert.
+* **Schwergewicht:** wählbarer aktiver Gegner; dessen nächstes Teil erhält
+  die dreifache Dichte und eine violette Darstellung. Keine Stapelung zweier
+  noch ausstehender Schwergewichte. Solo wird der Angriff ausgeblendet.
+
+Pinguine wippen, erschrecken bei Abstürzen und hüpfen beim Sieg. Kurze
+Splitter-, Zauber- und Siegesfunken begleiten das Spiel; kein zusätzlicher
+Renderloop. Reduzierte Bewegung wird respektiert.
+
+## Baualbum und Kontobelohnung
+
+`building_runde` (Migration 0043, freie Nummer gegen den abgerufenen
+`origin/staging` geprüft) speichert Starts, Ergebnisse und tatsächliche
+Münzgutschriften je Konto und Partiekennung. Endpunkte: `GET /api/building`,
+`POST /api/building/start`, `POST /api/building/ergebnis`. Alle verlangen die
+bestehende Sitzung; Gastkonten erhalten keine Kontogutschrift.
+
+Ein Start ist idempotent. Abschlüsse sind höchstens 24 Stunden nachmeldbar;
+neuere Starts löschen keine ausstehenden Ergebnisse. Eine Kontosperre in
+Transaktion schützt Wiederholungsschutz, Tageskappe und Münzgutschrift gemeinsam.
+Auch parallele Meldungen bezahlen dieselbe Runde nur einmal. Berliner
+Mitternacht bestimmt den Auszahlungstag. Das Baualbum zeigt die letzten 30
+Runden sowie die daraus erhaltenen Abzeichen Baumeister, Turmkönig,
+Wolkenkratzer und Standhaft. Die Datenbank behält auch ältere Ergebnisse.
+
+Die Physik bleibt beim Gastgeber. Wie Flying Bro nimmt der Server gemeldete
+Ergebnisse mit Plausibilitäts- und Zeitprüfung an; er spielt die Physik nicht
+nach. Die tägliche Belohnung ist deshalb bewusst begrenzt. Keine Trophäen und
+keine öffentliche kompetitive Rangliste.
+
+Lokal: `brauweg.building.chronik.v1` in localStorage, höchstens 30 Runden.
+Ein erfolgreicher Online-Start bindet die ausstehende Meldung an das Konto;
+im Baualbum kann sie nach einem Verbindungsfehler erneut gesendet werden.
+Kontoverläufe werden nur für das angemeldete Konto angezeigt. Der reine
+Gastgeberbildschirm verdient keine Münzen für fremde Controller.
 
 ## Aufbau und Ressourcen
 
@@ -99,7 +151,7 @@ Die [offizielle Beschreibung von Tricky Towers](https://www.trickytowers.com/)
 nennt physikbasiertes Stapeln, bis zu vier Spieler und Race-, Survival- und
 Puzzle-Modi. Übernommen ist die Grundidee eines instabilen Turmwettbewerbs.
 Bro Building Battle verwendet eigene Oberfläche, Regeln, Pinguine und
-Handycontroller. Zauber, Rätselmodus, Kampagne, Bots und öffentliche
+Handycontroller. Rätselmodus, Kampagne, Bots und öffentliche
 Spielersuche sind in diesem Ausbau nicht enthalten.
 
 Die Physikeinbindung folgt den [Rapier-Dokumenten](https://rapier.rs/docs/user_guides/javascript/getting_started_js/).
@@ -127,7 +179,7 @@ zusätzliche lokale Vorschauserver wurden nach der Prüfung geschlossen.
 ## TAFEL
 
 Neuer Regelbaustein `building-kern` und hostseitige Rapier-Simulation ergänzen
-BroRemote. Der Relay rechnet keine Physik und wertet keine Kontobelohnungen aus.
+BroRemote. Der Relay rechnet keine Physik. Kontobelohnungen liegen im getrennten Building-Dienst mit authentifizierten HTTP-Endpunkten und Tageskappe.
 Private Controllerwerte, Pausen, Rundenwechsel und Freigabe von WASM-Welten sind
 Teil des Spiels. Der externe Tafelabruf wurde von der automatischen Prüfung
 blockiert; dieser lokale Übergabezettel bleibt bis zur autorisierten Tafelpflege

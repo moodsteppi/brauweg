@@ -2,6 +2,7 @@ import type { Woerterbuch } from '../woerterbuch';
 
 /** Englische Texte, Bereich „fehler" — Gegenstück zu `de/fehler.ts`. */
 export default {
+  'error.buildingKeinStart': 'This round has no registered start. The result stays on this device.',
   'error.marktNeuerTag': 'A new day has started. Your shop has been refreshed.',
   'error.marktNichtImAngebot': "This design isn't on offer today.",
   'error.marktNochVerdeckt': 'Reveal the offer first.',

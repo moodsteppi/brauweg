@@ -6,6 +6,8 @@ import { qrMatrix } from '../minispiele/partykiste/qr';
 import { Controller } from './Controller';
 import { Verbindung, hatLan, lanGastgeber, nativ, nativLauschen, type Kanal, type Status, type Zugang, type SitzungsEreignisse } from './transport';
 import './broremote.css';
+import { BauAlbum } from './building/BauAlbum';
+import { BauWertung } from './building/BauWertung';
 import { BauVorschau } from './building/BauVorschau';
 import type { EingabeEmpfang } from './building/BauArena';
 import './building/building.css';
@@ -156,7 +158,7 @@ export function BroRemote(): React.JSX.Element {
         <section className="br-hero"><div><p className="br-kicker">ZUSAMMEN VOR EINEM BILDSCHIRM</p><h1>Großes Bild.<br /><em>Kleine Controller.</em></h1><p>Öffne eine Lobby, scanne den QR-Code und macht eure Handys zu Controllern.</p><div className="br-tags"><span>1 bis 4 Controller</span><span>Browser & iOS</span></div></div><Turm /></section>
         <h2>Wählt euer Spiel</h2>
         <button type="button" className="br-spielkarte" onClick={() => setSpiel(true)}><div className="br-spielmotiv"><Turm klein /></div><div><span className="br-kicker">BAUT HOCH. BLEIBT STANDFEST.</span><h2>Bro Building Battle</h2><p>Schwebende Inseln, wackelige Türme und eure Handys als Controller. Wer baut bis zu den Sternen?</p><strong>Jetzt spielen <span aria-hidden="true">↗</span></strong></div></button>
-        <p className="br-leise">Zwei Spielmodi · 1 bis 4 Spieler · Gleiche Bauteile für alle</p>
+        <p className="br-leise">Zwei Spielmodi · 1 bis 4 Spieler · Gleiche Bauteile für alle</p><BauAlbum />
       </>}
 
       {!aktiv && !sicht && spiel && !training && <>
@@ -178,6 +180,7 @@ export function BroRemote(): React.JSX.Element {
           </section>
         </div>
       </>}
+      {!aktiv && !sicht && spiel && !training && <BauAlbum />}
       {!aktiv && !sicht && !training && gespeichert && <button type="button" className="br-knopf br-sekundaer br-fortsetzen" onClick={() => starten(gespeichert)}>Zur letzten Lobby zurück</button>}
       {training && <Suspense fallback={<p>Die Bauwelt wird geladen.</p>}><BauArena id={`training-${training.seed}`} seed={training.seed} modus={training.modus} spieler={TRAININGSSPIELER} verbunden eingaben={bauEingaben} privat={() => undefined} zurLobby={() => setTraining(null)} training /></Suspense>}
 
@@ -219,12 +222,14 @@ export function BroRemote(): React.JSX.Element {
         {sicht.phase === 'spiel' && rolle === 'spieler' && <section className="br-panel br-eigener-controller">
           <div className="br-zeile"><h2>{meiner?.name}</h2><span style={{ color: meiner?.farbe }}>{MODI[sicht.partie?.modus ?? 'rennen'].name}</span></div>
           {privat?.bau && <div className="bb-controllerstand"><div><small>{privat.bau.phase === 'ende' ? 'ERGEBNIS' : `PLATZ ${privat.bau.platz}`}</small><h3>{privat.bau.phase === 'ende' ? privat.bau.gewonnen ? 'Gewonnen!' : 'Gut gebaut.' : `${privat.bau.hoehe.toFixed(1).replace('.', ',')} Meter`}</h3><p>{privat.leben !== undefined ? `${'♥'.repeat(Math.min(3, privat.leben))}${'♡'.repeat(Math.max(0, 3 - privat.leben))} · ` : ''}{privat.bau.verbraucht} / 30 Teile</p></div><div><small>DANACH</small><BauVorschau form={FORMEN[privat.bau.form] ?? 'quadrat'} /></div></div>}
+          {privat?.bau?.zielCountdown && privat.bau.phase !== 'ende' ? <div className="bb-controllerziel" role="status">Turm halten <strong>{privat.bau.zielCountdown}</strong><small>Bis zum Sieg gibt es keine neuen Teile.</small></div> : null}
+          {sicht.partie && <BauWertung key={sicht.partie.id} partie={sicht.partie.id} modus={sicht.partie.modus} name={meiner?.name ?? 'Du'} ergebnis={privat?.bau?.phase === 'ende' ? { modus: sicht.partie.modus, hoehe: privat.bau.hoehe, gebaut: privat.bau.gebaut ?? 0, verloren: privat.bau.verloren ?? 0, leben: privat.leben ?? 3, platz: privat.bau.platz, gewonnen: privat.bau.gewonnen, aufgegeben: privat.bau.aufgegeben ?? false, dauer: privat.bau.dauer ?? 0, spielerzahl: Math.max(1, sicht.spieler.length) } : null} />}
           <p className="br-leise">{privat?.hinweis ?? 'Deine Bauwelt wird vorbereitet.'}</p>
-          {verbunden && sicht.gastgeberDa && privat?.bau?.phase === 'spiel' && !privat.bau.fertig ? <Controller key={`bau-${sicht.abschnitt}`} layout="bauen" senden={eingabeSenden} /> : <p className="bb-controllerpause" role="status">{!verbunden || !sicht.gastgeberDa ? 'Verbindung wird wiederhergestellt …' : privat?.bau?.phase === 'countdown' ? `Bereit? ${privat.bau.countdown}` : privat?.bau?.phase === 'ende' ? 'Der Gastgeber kann eine Revanche vorbereiten.' : privat?.bau?.phase === 'pause' ? 'Das Spiel pausiert.' : privat?.bau?.fertig ? 'Schau den anderen beim Bauen zu.' : 'Gleich geht es los.'}</p>}
+          {verbunden && sicht.gastgeberDa && privat?.bau?.phase === 'spiel' && !privat.bau.fertig ? <Controller key={`bau-${sicht.abschnitt}`} layout="bauen" bau={privat.bau} gegner={sicht.spieler.filter(s => s.id !== spieler && s.verbunden && privat.bau?.ziele?.includes(s.id))} senden={eingabeSenden} /> : <p className="bb-controllerpause" role="status">{!verbunden || !sicht.gastgeberDa ? 'Verbindung wird wiederhergestellt …' : privat?.bau?.phase === 'countdown' ? `Bereit? ${privat.bau.countdown}` : privat?.bau?.phase === 'ende' ? 'Der Gastgeber kann eine Revanche vorbereiten.' : privat?.bau?.phase === 'pause' ? 'Das Spiel pausiert.' : privat?.bau?.fertig ? 'Schau den anderen beim Bauen zu.' : 'Gleich geht es los.'}</p>}
         </section>}
         {sicht.phase === 'test' && rolle === 'gastgeber' && <section className="br-panel">
           <div className="br-zeile"><h2>Verbindungstest</h2><span className="br-plakette">KEINE SPIELWERTUNG</span></div>
-          <div className="br-modus"><button type="button" disabled={!verbunden} aria-pressed={sicht.layout === 'bauen'} onClick={() => senden({ art: 'layout', layout: 'bauen' })}>Joystick & Tasten</button><button type="button" disabled={!verbunden} aria-pressed={sicht.layout === 'auswahl'} onClick={() => senden({ art: 'layout', layout: 'auswahl' })}>Auswahl & Zahlen</button></div>
+          <div className="br-modus"><button type="button" disabled={!verbunden} aria-pressed={sicht.layout === 'bauen'} onClick={() => senden({ art: 'layout', layout: 'bauen' })}>Bautasten</button><button type="button" disabled={!verbunden} aria-pressed={sicht.layout === 'auswahl'} onClick={() => senden({ art: 'layout', layout: 'auswahl' })}>Auswahl & Zahlen</button></div>
           <div className="br-testfelder">{sicht.spieler.map(s => { const p = test[s.id] ?? leer(); return <div className="br-testfeld" key={s.id} style={{ borderColor: s.farbe }}><strong>{s.name}</strong>
             {sicht.layout === 'bauen' ? <><div className="br-testflaeche"><div className="br-teststein" style={{ background: s.farbe, transform: `translate(${p.x * 45}px, ${p.y * 25}px) rotate(${p.winkel}deg)` }}>✦</div></div><span>Drehen: {p.winkel / 90} · Fallen: {p.gefallen}</span></> : <p>Auswahl: {p.wahl === undefined ? 'offen' : ['Stern', 'Blitz', 'Mond', 'Herz'][p.wahl]}<br />Zahl: {p.zahl ?? 'offen'}<br />{p.bestaetigt ? 'Bestätigt ✓' : 'Wartet auf Bestätigung'}</p>}
             <button type="button" className="br-link" disabled={!verbunden} onClick={() => senden({ art: 'privat', abschnitt: sicht.abschnitt, spieler: s.id, daten: { leben: 3, punkte: 42, hinweis: `Hallo ${s.name}! Diese Nachricht sieht nur dein Controller.`, inventar: ['Stern'], amZug: true } })}>Private Nachricht testen</button>

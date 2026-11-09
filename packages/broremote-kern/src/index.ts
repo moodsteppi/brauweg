@@ -10,8 +10,9 @@ export type Aktion =
   | { art: 'steuerung'; x: number; y: number; tasten: Taste[] }
   | { art: 'wahl'; wert: number }
   | { art: 'zahl'; wert: number }
+  | { art: 'zauber'; zauber: 'anker' | 'schwere'; ziel?: string }
   | { art: 'reset' };
-export type BauPrivat = { form: number; hoehe: number; restzeit: number; phase: 'countdown' | 'spiel' | 'pause' | 'ende'; countdown: number; platz: number; fertig: boolean; gewonnen: boolean; verbraucht: number };
+export type BauPrivat = { form: number; hoehe: number; restzeit: number; phase: 'countdown' | 'spiel' | 'pause' | 'ende'; countdown: number; platz: number; fertig: boolean; gewonnen: boolean; verbraucht: number; ziele?: string[]; zielCountdown?: number; ankerBereit?: boolean; schwereBereit?: boolean; anker?: number; schwereWartet?: boolean; gebaut?: number; verloren?: number; aufgegeben?: boolean; dauer?: number };
 export type Privat = { leben?: number; punkte?: number; hinweis?: string; inventar?: string[]; amZug?: boolean; bau?: BauPrivat };
 export type Spieler = { id: string; name: string; farbe: string; verbunden: boolean; bereit: boolean };
 export type RaumSicht = {
@@ -57,6 +58,7 @@ function name(wert: unknown): string | null {
 }
 export function aktionLesen(a: unknown, layout: Layout): Aktion | null {
   if (!objekt(a)) return null;
+  if (layout === 'bauen' && a.art === 'zauber' && (a.zauber === 'anker' || a.zauber === 'schwere') && (a.ziel === undefined || (typeof a.ziel === 'string' && a.ziel.length <= 24))) return { art: 'zauber', zauber: a.zauber, ...(typeof a.ziel === 'string' ? { ziel: a.ziel } : {}) };
   if (a.art === 'reset') return { art: 'reset' };
   if (a.art === 'steuerung' && zahl(a.x, -1, 1) && zahl(a.y, -1, 1) && Array.isArray(a.tasten) && a.tasten.length <= 3) {
     const erlaubt = layout === 'bauen' ? ['drehen', 'fallen'] : ['bestaetigen'];
@@ -76,13 +78,17 @@ function privatLesen(d: unknown): Privat | null {
   if (d.inventar !== undefined && (!Array.isArray(d.inventar) || d.inventar.length > 12 || !d.inventar.every(i => typeof i === 'string' && i.length <= 40))) return null;
   if (d.bau !== undefined) {
     const b = d.bau;
-    if (!objekt(b) || !ganz(b.form, 0, 6) || !zahl(b.hoehe, 0, 200) || !ganz(b.restzeit, 0, 180) || !ganz(b.countdown, 0, 3) || !ganz(b.platz, 1, 4) || !ganz(b.verbraucht, 0, 30)
+    if (!objekt(b)) return null;
+    if (b.ziele !== undefined && (!Array.isArray(b.ziele) || b.ziele.length > 3 || !b.ziele.every(z => typeof z === 'string' && z.length <= 24))) return null;
+    for (const k of ['ankerBereit', 'schwereBereit', 'schwereWartet', 'aufgegeben']) if (b[k] !== undefined && typeof b[k] !== 'boolean') return null;
+    for (const [k, max] of [['zielCountdown', 3], ['anker', 4], ['gebaut', 30], ['verloren', 30], ['dauer', 181]] as const) if (b[k] !== undefined && !zahl(b[k], 0, max)) return null;
+    if ( !ganz(b.form, 0, 6) || !zahl(b.hoehe, 0, 200) || !ganz(b.restzeit, 0, 180) || !ganz(b.countdown, 0, 3) || !ganz(b.platz, 1, 4) || !ganz(b.verbraucht, 0, 30)
       || typeof b.phase !== 'string' || !['countdown', 'spiel', 'pause', 'ende'].includes(b.phase) || typeof b.fertig !== 'boolean' || typeof b.gewonnen !== 'boolean') return null;
   }
   const { leben, punkte, amZug, hinweis, inventar } = d;
   // Nur bekannte Felder weitergeben: keine versteckten großen Nutzlasten im Spielstatus.
   const bau = d.bau as BauPrivat | undefined;
-  return { leben, punkte, amZug, hinweis, inventar, ...(bau ? { bau: { form: bau.form, hoehe: bau.hoehe, restzeit: bau.restzeit, phase: bau.phase, countdown: bau.countdown, platz: bau.platz, fertig: bau.fertig, gewonnen: bau.gewonnen, verbraucht: bau.verbraucht } } : {}) } as Privat;
+  return { leben, punkte, amZug, hinweis, inventar, ...(bau ? { bau: { form: bau.form, hoehe: bau.hoehe, restzeit: bau.restzeit, phase: bau.phase, countdown: bau.countdown, platz: bau.platz, fertig: bau.fertig, gewonnen: bau.gewonnen, verbraucht: bau.verbraucht, ziele: bau.ziele, zielCountdown: bau.zielCountdown, ankerBereit: bau.ankerBereit, schwereBereit: bau.schwereBereit, anker: bau.anker, schwereWartet: bau.schwereWartet, gebaut: bau.gebaut, verloren: bau.verloren, aufgegeben: bau.aufgegeben, dauer: bau.dauer } } : {}) } as Privat;
 }
 
 type Sitz = Spieler & { schluessel: string; verbindung?: string; folge: number; letzteEingabe: number; aktiv: boolean; privat?: Privat };
