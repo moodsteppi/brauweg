@@ -106,6 +106,24 @@ Die Physikeinbindung folgt den [Rapier-Dokumenten](https://rapier.rs/docs/user_g
 Browser-/Physikprüfungen ersetzen keine echte WLAN-/Hotspot-Abnahme mit mehreren
 iPhones. Diese Hardware-Abnahme bleibt vor einer Veröffentlichung erforderlich.
 
+## Lokale Abnahme
+
+Am 9. November 2026 geprüft: vollständiger Build aus dem Wurzelverzeichnis,
+Client-Typprüfung, gezielte Regel-, Relay-, Controller- und Physiktests. Die
+Prüfungen umfassen echte WebSocket-Verbindungen, das Weiterreichen einer
+Handyeingabe bis in genau den eigenen Physikturm, Eingabe-Reset, Rundenwechsel,
+gleichzeitiges Ausscheiden und eine vollständige simulierte Vierpersonenrunde.
+Die gesamte Testsammlung des Monorepos wurde aus Rücksicht auf die Rechnerlast
+nicht erneut ausgeführt.
+
+Die Browserprobe zeigt Gastgeber und zwei getrennte Controller, Countdown,
+Turmbau, Zielwertung und Revanche. Desktop- und Handy-Screenshots liegen lokal
+in der Aufgaben-Vorschau. Der generische iOS-Simulator-Build mit zwei
+Arbeitsschritten ist erfolgreich; das App-Paket enthält den gebauten Webclient
+einschließlich Bauwelt. Dafür wurde kein Simulator gestartet. Dies ist ein
+unsignierter lokaler Prüfbuild, kein TestFlight-Archiv. Vorschau-Tabs und der
+zusätzliche lokale Vorschauserver wurden nach der Prüfung geschlossen.
+
 ## TAFEL
 
 Neuer Regelbaustein `building-kern` und hostseitige Rapier-Simulation ergänzen

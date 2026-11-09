@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { BauPartie, ladeBauphysik } from './partie';
+import { BroRaum, type ServerNachricht } from '@brauweg/broremote-kern';
 
 let r: Awaited<ReturnType<typeof ladeBauphysik>>;
 const offen: BauPartie[] = [];
@@ -88,5 +89,26 @@ describe('Bro Building Battle mit echter Physik', () => {
     expect(p.sicht().gewinner).toEqual(['1']);
     p.freigeben(); p.freigeben();
     const neu = partie('standfest', 2); expect(neu.sicht().bahnen.every(b => b.leben === 3 && b.verbraucht === 0)).toBe(true);
+  });
+  it('Raum → Spiel: ein Handy bewegt nur seinen Turm, Reset stoppt die Bewegung', () => {
+    let zaehler = 0, jetzt = 0, spiel: BauPartie | undefined;
+    const post: { v: string; n: ServerNachricht }[] = [];
+    const raum = new BroRaum({ raum: 'ABC12345', jetzt: () => jetzt, zufall: () => (++zaehler).toString(16).padStart(8, '0').padEnd(32, '0'), trennen() {}, senden(v, n) {
+      post.push({ v, n }); if (v === 'host' && n.art === 'eingabe' && (n.aktion.art === 'steuerung' || n.aktion.art === 'reset')) spiel?.eingabe(n.spieler, n.aktion);
+    } });
+    raum.anmelden('host', { v: 1, art: 'gastgeber', schluessel: raum.hostSchluessel });
+    const einladung = post.find(p => p.n.art === 'willkommen')!.n as Extract<ServerNachricht, { art: 'willkommen' }>;
+    for (const id of ['a', 'b']) { raum.anmelden(id, { v: 1, art: 'beitreten', einladung: einladung.einladung, name: id }); raum.empfangen(id, { v: 1, art: 'bereit', bereit: true }); }
+    raum.empfangen('host', { v: 1, art: 'spielen' }); const s = raum.sicht();
+    spiel = new BauPartie(r, s.spieler, 'rennen', 217); offen.push(spiel); start(spiel);
+    let folge = 0;
+    for (let i = 0; i < 40; i++) {
+      jetzt += 1000 / 60;
+      if (i % 6 === 0) raum.empfangen('a', { v: 1, art: 'eingabe', abschnitt: s.abschnitt, folge: ++folge, aktion: { art: 'steuerung', x: 1, y: 0, tasten: [] } });
+      spiel.schritt();
+    }
+    const b = spiel.sicht().bahnen; expect(b[0].steine[0].x).toBeGreaterThan(3); expect(b[1].steine[0].x).toBe(0);
+    raum.empfangen('a', { v: 1, art: 'eingabe', abschnitt: s.abschnitt, folge: ++folge, aktion: { art: 'reset' } });
+    const x = b[0].steine[0].x; schritte(spiel, 5); expect(spiel.sicht().bahnen[0].steine[0].x).toBeCloseTo(x, 2);
   });
 });

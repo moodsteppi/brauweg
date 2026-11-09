@@ -4,6 +4,8 @@ import type { RaumSicht } from '@brauweg/broremote-kern';
 import type { SitzungsEreignisse } from './transport';
 
 const draht = vi.hoisted(() => ({ e: null as SitzungsEreignisse | null, senden: vi.fn(() => true), schliessen: vi.fn() }));
+const bauEmpfang = vi.hoisted(() => vi.fn());
+vi.mock('./building/BauArena', () => ({ default: (p: { eingaben: { current: unknown } }) => { p.eingaben.current = bauEmpfang; return <div>Geprüfte Bauwelt</div>; } }));
 vi.mock('./transport', () => ({
   hatLan: () => false,
   nativLauschen: () => () => undefined,
@@ -20,6 +22,7 @@ const link = () => `https://staging.brauweg-spielen.de/broremote#t=relay&r=ABC12
 beforeEach(() => {
   sessionStorage.clear(); history.replaceState(null, '', '/broremote');
   draht.e = null; draht.senden.mockClear(); draht.schliessen.mockClear();
+  bauEmpfang.mockClear();
   Element.prototype.scrollTo = vi.fn();
 });
 afterEach(() => cleanup());
@@ -89,4 +92,18 @@ it('ein neu geladenes Gastgeberfenster setzt eine verlorene Physikrunde in die L
   act(() => draht.e!.nachricht({ art: 'raum', sicht: { raum: 'ABC12345', phase: 'spiel', abschnitt: 4, layout: 'bauen', gesperrt: true, gastgeberDa: true, einladungBis: Date.now(), spieler: [], partie: { id: 'alt', seed: 42, modus: 'rennen' } } }));
   expect(draht.senden).toHaveBeenCalledWith({ art: 'lobby' });
   expect(screen.getByText(/Gastgeberseite wurde neu geöffnet/)).toBeInTheDocument();
+});
+
+it('der Gastgeber leitet aktuelle Eingaben mit dem richtigen Spieler in die Bauwelt', async () => {
+  render(<BroRemote />);
+  fireEvent.click(screen.getByRole('button', { name: /Bro Building Battle/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Lobby eröffnen/ }));
+  const s: RaumSicht = { raum: 'ABC12345', phase: 'spiel', abschnitt: 2, layout: 'bauen', gesperrt: true, gastgeberDa: true, einladungBis: Date.now(), spieler: [{ id: 'anna', name: 'Anna', farbe: '#80e5cd', verbunden: true, bereit: true }], partie: { id: 'neu', seed: 1, modus: 'rennen' } };
+  act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'raum', sicht: s }); });
+  await screen.findByText('Geprüfte Bauwelt');
+  act(() => draht.e!.nachricht({ art: 'eingabe', spieler: 'anna', abschnitt: 2, folge: 1, aktion: { art: 'steuerung', x: 1, y: 0, tasten: ['drehen'] } }));
+  expect(bauEmpfang).toHaveBeenCalledWith('anna', { art: 'steuerung', x: 1, y: 0, tasten: ['drehen'] });
+  bauEmpfang.mockClear();
+  act(() => draht.e!.nachricht({ art: 'eingabe', spieler: 'anna', abschnitt: 1, folge: 2, aktion: { art: 'steuerung', x: -1, y: 0, tasten: [] } }));
+  expect(bauEmpfang).not.toHaveBeenCalled();
 });
