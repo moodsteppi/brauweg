@@ -82,13 +82,16 @@ const FERTIGE_BEREICHE = [
   'regeln-eiland',
   'feldherr',
   'regeln-feldherr',
+  // Farbduell (4024e380): Bildschirm und Regelsatz-Meldungen von game-filler.
+  'filler',
+  'regeln-farbduell',
 ] as const;
 
 /**
  * Golf und BroChess haben eigene Karten (Umfang dieser Aufgabe verkleinert):
  * Ihre Bereiche und Schlüssel-Präfixe trägt deren Zweig hier nach.
  */
-const FERTIGE_PRAEFIXE = ['mememory.', 'eiland.', 'feldherr.'] as const;
+const FERTIGE_PRAEFIXE = ['mememory.', 'eiland.', 'feldherr.', 'filler.'] as const;
 
 describe('Schlüssel im Code', () => {
   afterEach(() => setzeSprachwahl('de'));
