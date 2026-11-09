@@ -52,6 +52,13 @@ test('Building: kein Geschenk für Gäste, Abbruch, falsche Wertung oder zu kurz
   await buildingStart(c.db, a, { partie: 'runde-neu', modus: 'rennen' }, t0);
   // Der neue Start löscht keinen noch ausstehenden Offline-Abschluss.
   assert.equal((await buildingErgebnis(c.db, a, 'runde-alt', { ...ergebnis, modus: 'standfest', gewonnen: false }, ende())).muenzen, 5);
+  // Der Nachschub endet im Höhenrennen nicht mehr bei 30. Solche Ergebnisse
+  // müssen auch nach dem Controllertransport speicher- und belohnbar bleiben.
+  await buildingStart(c.db, a, { partie: 'runde-nachschub', modus: 'rennen' }, t0);
+  const viel = { ...ergebnis, gebaut: 42, verloren: 44, hoehe: 3, gewonnen: false, dauer: 90 };
+  assert.equal((await buildingErgebnis(c.db, a, 'runde-nachschub', viel, new Date(t0.getTime() + 95000))).muenzen, 5);
+  await buildingStart(c.db, a, { partie: 'runde-standfest', modus: 'standfest' }, t0);
+  await assert.rejects(buildingErgebnis(c.db, a, 'runde-standfest', { ...viel, modus: 'standfest' }, new Date(t0.getTime() + 95000)), /invalidInput/);
 });
 
 test('Building-Endpunkte verlangen eine Sitzung auch ohne Request-Daten', async t => {

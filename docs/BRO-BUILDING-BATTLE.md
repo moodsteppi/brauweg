@@ -1,6 +1,6 @@
 # Bro Building Battle
 
-Stand: 9. November 2026, zweiter Ausbau. Lokaler Ausbau auf `codex/broremote`; kein Upload,
+Stand: 9. November 2026, Grafikausbau und ruhige Kamera. Lokaler Ausbau auf `codex/broremote`; kein Upload,
 kein TestFlight-Build und kein Deploy.
 
 ## Spielablauf
@@ -17,8 +17,10 @@ mit anderen Regeln startet. Nach „Battle starten“ folgt ein Countdown.
   Im Mehrspielermodus gewinnt der letzte verbliebene Spieler; bei Ablauf
   entscheiden Leben, stabile Höhe und verbaute Teile. Allein lautet das Ziel,
   30 Bauteile mit mindestens einem Leben zu verbauen.
-* Beide Modi begrenzen den Vorrat auf 30 Bauteile. Am Vorratsende setzt sich
-  der Turm noch, bevor gewertet wird. Ein Gleichstand bleibt ein Gleichstand.
+* Im Höhenrennen gibt es bis zum Zeitlimit laufend Nachschub, auch nach
+  vollständigem Einsturz und über 30 Teile hinaus. Standfest behält seinen
+  Vorrat von 30 Teilen. Dort setzt sich der Turm am Vorratsende noch, bevor
+  gewertet wird. Ein Gleichstand bleibt ein Gleichstand.
 * Jede Person erhält dieselbe durchmischte Bauteilfolge, in Säcken aus sieben
   Formen. Die Zellen eines Bauteils bilden einen einzigen starren Körper.
   Nach dem ersten Kontakt bleibt es beweglich, kippt und fällt unter Last.
@@ -101,12 +103,23 @@ Gastgeberbildschirm verdient keine Münzen für fremde Controller.
 * `BauArena.tsx`: fester Physiktakt 60 Hz mit maximal sechs Nachholschritten,
   Zeichenfrequenz höchstens 30 Hz, Oberflächen-/Controllerstatus 4 Hz. In
   Hintergrund und Pause keine Physik, reduzierte Statusfrequenz. Pixeldichte
-  höchstens 1,5. Schlafende Körper und maximal 30 Teile pro Bahn begrenzen Last.
+  höchstens 1,5. Schlafende Körper, das Entfernen abgestürzter Teile und die
+  dreiminütige Rundenzeit begrenzen die Last. Die 0,65-Sekunden-Nachschubpause
+  ergibt eine natürliche Obergrenze von 278 Teilen pro Runde; sie ist eine
+  Validierungsgrenze, kein vorzeitiges Spielende.
   Beim Verlassen werden Timer, WebAudio und alle WASM-Welten freigegeben.
-* `zeichnen.ts`: leichtgewichtige Canvas-Bühne mit facettierten schwebenden
-  Inseln, plastischen Bausteinen und Zielhöhe. Kein zusätzlicher WebGL-Kontext.
-  Neue ruhige Inselkulisse aus Imagegen, als WebP unter `public/broremote/bauwelt.webp`;
-  der Pinguin stammt aus der freigegebenen Hub-Datei `pinguin/pinguin-basis.webp`.
+* `zeichnen.ts`: Canvas-Bühne mit illustrierter Werkstattinsel, Holz-/Metall-
+  Bausteinen und Zielband. Acht 96er-Materialbilder werden einmal gerastert und
+  für sämtliche Steine wiederverwendet. Kein zusätzlicher WebGL-Kontext.
+  Kulisse `bauwelt.webp`, Insel `bauinsel.webp` und Baumeister `baumeister.webp`
+  liegen als WebP unter `public/broremote/`. Die beiden neuen Motive wiegen
+  zusammen rund 166 kB. Größere Porträts, Platzplaketten, Fortschrittsleiste
+  und farblich passende Vorschauen ergänzen die Oberfläche.
+* `kamera.ts`: Der Ausschnitt beginnt bei 22 Metern und weitet sich bei Bedarf
+  in Acht-Meter-Stufen sanft nach außen. Einmal gezeigter Raum bleibt bis zum
+  Rundenwechsel erhalten. Fallende Teile oder Einstürze führen niemals zum
+  Zurückzoomen. Bewegung ist bildratenunabhängig und berücksichtigt die
+  Systemeinstellung für reduzierte Bewegung.
   Prompt, Freihaltezonen und Herkunft: `ASSETS-BRO-BUILDING-BATTLE.md`.
   Keine kopierten Originalspiel-Assets. Das Bildoriginal bleibt lokal im
   ignorierten Kunstordner, bis ein Archivupload ausdrücklich freigegeben ist.
@@ -184,3 +197,11 @@ Private Controllerwerte, Pausen, Rundenwechsel und Freigabe von WASM-Welten sind
 Teil des Spiels. Der externe Tafelabruf wurde von der automatischen Prüfung
 blockiert; dieser lokale Übergabezettel bleibt bis zur autorisierten Tafelpflege
 maßgeblich. Es wurde kein Zugriff umgangen und nichts extern geschrieben.
+
+## TAFEL: Grafikausbau und fortlaufender Nachschub
+
+Höhenrennen endet nicht mehr nach 30 Teilen. Controllerübertragung und
+Ergebnisspeicherung akzeptieren die innerhalb der drei Minuten möglichen
+Bauzahlen; Standfest bleibt begrenzt. Ruhige Kamera ohne Zurückzoomen,
+illustrierte Insel und Baumeister, zwischengespeicherte Bausteinmaterialien.
+Alle Änderungen und Bildoriginale bleiben lokal. Kein externer Schreibzugriff.

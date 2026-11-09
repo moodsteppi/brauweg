@@ -1,55 +1,101 @@
-import { REGELN, zellen, type BauForm } from '@brauweg/building-kern';
+import { REGELN, spawnHoehe, zellen, type BauForm } from '@brauweg/building-kern';
 import type { BahnSicht } from './partie';
+import { kameraSchritt, type BauKamera } from './kamera';
 
-const farben: Record<BauForm, [string, string, string]> = {
-  balken: ['#77e8d4', '#209b9e', '#bcfff0'], quadrat: ['#ffd875', '#bf7b2b', '#fff1b9'],
-  treppe: ['#ba9dff', '#7354b6', '#e9dfff'], bogen: ['#fb9eae', '#bd4a72', '#ffe1df'],
-  haken: ['#7bbcff', '#3765aa', '#cfeeff'], spiegel: ['#ffb775', '#b9682b', '#ffdfb0'], stufe: ['#a6d87b', '#5a8e4a', '#d7f6af'],
-};
-const kameras = new WeakMap<HTMLCanvasElement, number>();
-export function zeichneBahn(canvas: HTMLCanvasElement, bahn: BahnSicht, ziel: boolean): void {
+import { BAUFARBEN } from './material';
+
+const kameras = new WeakMap<HTMLCanvasElement, BauKamera>();
+const kacheln = new Map<string, HTMLCanvasElement>();
+const formen = new Map(Object.keys(BAUFARBEN).map(f => [f as BauForm, zellen(f as BauForm)]));
+let insel: HTMLImageElement | undefined;
+export function setzeBaukameraZurueck(canvas: HTMLCanvasElement): void { kameras.delete(canvas); }
+
+/** Beleuchtung, Holzmaserung und Beschläge werden einmal gerastert, nicht
+ * für jeden Baustein in jedem Bild. Acht kleine Texturen für alle vier Bahnen. */
+function kachel(form: BauForm, schwer: boolean): HTMLCanvasElement {
+  const schluessel = schwer ? 'schwer' : form;
+  const vorhanden = kacheln.get(schluessel); if (vorhanden) return vorhanden;
+  const bild = document.createElement('canvas'); bild.width = bild.height = 96;
+  const c = bild.getContext('2d')!;
+  const [hell, dunkel, glanz] = schwer ? ['#c3a1e9', '#443356', '#f0ddff'] : BAUFARBEN[form];
+  c.fillStyle = '#111c2b'; c.beginPath(); c.roundRect(1, 1, 94, 94, 9); c.fill();
+  const g = c.createLinearGradient(0, 0, 96, 96); g.addColorStop(0, glanz); g.addColorStop(.18, hell); g.addColorStop(.8, dunkel); g.addColorStop(1, '#243044');
+  c.fillStyle = g; c.beginPath(); c.roundRect(3, 3, 90, 89, 7); c.fill();
+  c.fillStyle = hell; c.beginPath(); c.roundRect(12, 13, 72, 66, 3); c.fill();
+  c.strokeStyle = '#fff4cf30'; c.lineWidth = 2;
+  for (let i = 0; i < 5; i++) {
+    c.beginPath(); c.moveTo(16, 23 + i * 11); c.bezierCurveTo(38, 17 + i * 11, 58, 28 + i * 11, 80, 22 + i * 11); c.stroke();
+  }
+  c.strokeStyle = glanz; c.lineWidth = 2; c.beginPath(); c.moveTo(10, 10); c.lineTo(86, 10); c.stroke();
+  c.strokeStyle = '#14223766'; c.lineWidth = 3; c.strokeRect(12, 13, 72, 66);
+  c.fillStyle = '#e9c785';
+  for (const [x, y] of [[8, 8], [88, 8], [8, 87], [88, 87]]) { c.beginPath(); c.arc(x, y, 2, 0, Math.PI * 2); c.fill(); }
+  c.strokeStyle = '#fff6d577'; c.lineWidth = 2; c.beginPath(); c.moveTo(48, 34); c.lineTo(58, 46); c.lineTo(48, 58); c.lineTo(38, 46); c.closePath(); c.stroke();
+  if (schwer) { c.strokeStyle = '#393146aa'; c.lineWidth = 10; c.beginPath(); c.moveTo(16, 16); c.lineTo(80, 80); c.moveTo(80, 16); c.lineTo(16, 80); c.stroke(); }
+  kacheln.set(schluessel, bild); return bild;
+}
+
+export function zeichneBahn(canvas: HTMLCanvasElement, bahn: BahnSicht, ziel: boolean, sekunden = 1 / 30, ruhe = false): void {
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (!w || !h) return;
-  // Begrenzte Pixeldichte und 30 Bilder/s halten auch vier Bühnen auf iPhones bezahlbar.
   const dpr = Math.min(1.5, window.devicePixelRatio || 1);
   if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
   const c = canvas.getContext('2d'); if (!c) return;
   c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
-  const zielOben = Math.max(28, ...bahn.steine.map(s => s.y + 3));
-  const vorher = kameras.get(canvas) ?? zielOben;
-  const oben = vorher + (zielOben - vorher) * (zielOben > vorher ? .2 : .025); kameras.set(canvas, oben);
-  const skala = Math.min(w / 16, (h - 90) / oben), x = w / 2, boden = h - 70;
+  if (!insel) { insel = new Image(); insel.src = '/broremote/bauinsel.webp'; }
+  // Platz für den nächsten Spawn früh vorbereiten. Danach schrumpft der
+  // Ausschnitt bis zur nächsten Runde nie, auch wenn der Turm ganz einstürzt.
+  const benoetigt = Math.max(spawnHoehe(bahn.hoehe) + 3, ...bahn.steine.map(s => s.y + 3));
+  const kamera = kameraSchritt(kameras.get(canvas), benoetigt, sekunden, ruhe); kameras.set(canvas, kamera);
+  const oben = kamera.oben, boden = h - 82, skala = Math.min((w - 36) / 16, (boden - 26) / oben), x = w / 2;
   const py = (y: number): number => boden - y * skala;
-  c.strokeStyle = '#bedafa15'; c.lineWidth = 1;
-  for (let y = 4; y < oben; y += 4) { c.beginPath(); c.moveTo(15, py(y)); c.lineTo(w - 15, py(y)); c.stroke(); c.fillStyle = '#b7cae087'; c.font = '10px sans-serif'; c.fillText(`${y} m`, 9, py(y) - 6); }
-  if (ziel) {
-    c.strokeStyle = '#ffdd83'; c.setLineDash([7, 6]); c.beginPath(); c.moveTo(6, py(REGELN.ziel)); c.lineTo(w - 6, py(REGELN.ziel)); c.stroke(); c.setLineDash([]);
-    c.fillStyle = '#ffdd83'; c.font = 'bold 11px sans-serif'; c.textAlign = 'right'; c.fillText('ZIEL 16 m', w - 9, py(REGELN.ziel) - 9); c.textAlign = 'left';
+
+  // Eine feine Messlatte hält das Feld frei; nur die Zielhöhe zieht sich
+  // vollständig über die Bühne. Die Höhe bleibt auch beim Zoomen eindeutig.
+  c.font = '10px Nunito, sans-serif'; c.textAlign = 'left';
+  for (let y = 4; y < oben; y += 4) {
+    c.strokeStyle = '#adcce550'; c.lineWidth = 1; c.beginPath(); c.moveTo(13, py(y)); c.lineTo(23, py(y)); c.stroke();
+    c.fillStyle = '#a4bed0'; c.fillText(`${y}`, 13, py(y) - 7);
   }
-  // Die Fallspur zeigt die Position, ohne eine sichere Landung zu versprechen.
+  if (ziel) {
+    const yy = py(REGELN.ziel);
+    const g = c.createLinearGradient(0, yy - 18, 0, yy + 22); g.addColorStop(0, '#ffd67a00'); g.addColorStop(.5, '#ffd67a16'); g.addColorStop(1, '#ffd67a00');
+    c.fillStyle = g; c.fillRect(30, yy - 18, w - 60, 40);
+    c.strokeStyle = '#ffdf88ba'; c.lineWidth = 1; c.setLineDash([4, 7]); c.beginPath(); c.moveTo(33, yy); c.lineTo(w - 33, yy); c.stroke(); c.setLineDash([]);
+    c.fillStyle = '#ffd98a';
+    for (const xx of [30, w - 30]) { c.beginPath(); c.moveTo(xx, yy - 5); c.lineTo(xx + 4, yy); c.lineTo(xx, yy + 5); c.lineTo(xx - 4, yy); c.closePath(); c.fill(); }
+    c.font = 'bold 11px Nunito, sans-serif'; c.textAlign = 'right'; c.fillText('ZIEL · 16 m', w - 35, yy - 9); c.textAlign = 'left';
+  }
   const aktiv = bahn.steine.find(s => s.aktiv);
   if (aktiv) {
-    const xx = x + aktiv.x * skala;
-    const g = c.createLinearGradient(0, py(aktiv.y), 0, boden); g.addColorStop(0, `${bahn.farbe}24`); g.addColorStop(1, `${bahn.farbe}03`);
-    c.fillStyle = g; c.fillRect(xx - skala * 1.8, py(aktiv.y), skala * 3.6, boden - py(aktiv.y));
+    const xx = x + aktiv.x * skala, yy = Math.max(0, py(aktiv.y));
+    const g = c.createLinearGradient(0, yy, 0, boden); g.addColorStop(0, `${bahn.farbe}22`); g.addColorStop(1, `${bahn.farbe}00`);
+    c.fillStyle = g; c.fillRect(xx - skala * 1.8, yy, skala * 3.6, Math.max(0, boden - yy));
+    if (py(aktiv.y) < 5) { c.fillStyle = bahn.farbe; c.font = 'bold 11px Nunito, sans-serif'; c.textAlign = 'center'; c.fillText('↓ Nachschub', Math.max(55, Math.min(w - 55, xx)), 18); c.textAlign = 'left'; }
   }
+
   const halb = REGELN.bodenHalb * skala;
-  c.save(); c.shadowColor = `${bahn.farbe}55`; c.shadowBlur = 24;
-  c.fillStyle = '#48566f'; c.beginPath(); c.moveTo(x - halb, boden); c.lineTo(x + halb, boden); c.lineTo(x + halb * .8, boden + 31); c.lineTo(x + halb * .35, boden + 42); c.lineTo(x, boden + 65); c.lineTo(x - halb * .35, boden + 37); c.lineTo(x - halb * .85, boden + 30); c.closePath(); c.fill(); c.restore();
-  c.fillStyle = '#29384e'; c.beginPath(); c.moveTo(x, boden + 9); c.lineTo(x + halb * .85, boden + 9); c.lineTo(x + halb * .35, boden + 42); c.lineTo(x, boden + 65); c.closePath(); c.fill();
-  c.fillStyle = bahn.farbe; c.fillRect(x - halb, boden, halb * 2, 5); c.fillStyle = '#d9f2d2'; c.fillRect(x - halb, boden - 2, halb * 2, 3);
+  if (insel.complete && insel.naturalWidth) {
+    // Gelieferter Balken: x=80..1456, Baukante y=366 im 1536×1024-Original.
+    const breite = halb * 2 * 1536 / 1376, hoehe = breite * 1024 / 1536;
+    c.drawImage(insel, x - breite / 2, boden - hoehe * 366 / 1024, breite, hoehe);
+  } else {
+    c.fillStyle = '#65462e'; c.fillRect(x - halb, boden, halb * 2, 12);
+  }
+  c.fillStyle = bahn.farbe; c.globalAlpha = .65; c.fillRect(x - halb + 4, boden, halb * 2 - 8, 2); c.globalAlpha = 1;
+
+  // Ein sanfter Schutzsaum bleibt unter den Bauteilen, nicht vor ihnen.
+  if (bahn.anker > 0) {
+    const g = c.createRadialGradient(x, boden - 20, 4, x, boden - 20, Math.max(1, halb * 1.8)); g.addColorStop(0, '#79ffe32c'); g.addColorStop(1, '#79ffe300');
+    c.fillStyle = g; c.fillRect(x - halb * 2, boden - halb * 2, halb * 4, halb * 3);
+  }
   for (const s of bahn.steine) {
     c.save(); c.translate(x + s.x * skala, py(s.y)); c.rotate(-s.winkel);
-    if (s.aktiv) { c.shadowColor = bahn.farbe; c.shadowBlur = 10; }
-    const [hell, dunkel, glanz] = s.schwer ? ['#c3a1e9', '#433653', '#ead9ff'] : farben[s.form];
-    if (s.schwer) { c.shadowColor = '#bb7dff'; c.shadowBlur = 14; }
-    for (const z of zellen(s.form)) {
-      const xx = (z.x - .48) * skala, yy = (-z.y - .48) * skala, breite = .96 * skala;
-      const g = c.createLinearGradient(xx, yy, xx, yy + breite); g.addColorStop(0, hell); g.addColorStop(1, dunkel);
-      c.fillStyle = g; c.beginPath(); c.roundRect(xx, yy, breite, breite, Math.max(1.2, skala * .1)); c.fill();
-      c.strokeStyle = '#112239b0'; c.lineWidth = 1; c.stroke();
-      c.shadowBlur = 0; c.strokeStyle = glanz; c.globalAlpha = .7; c.beginPath(); c.moveTo(xx + 3, yy + 3); c.lineTo(xx + breite - 3, yy + 3); c.stroke(); c.globalAlpha = 1;
-      c.fillStyle = `${glanz}66`; c.beginPath(); c.arc(xx + breite / 2, yy + breite / 2, Math.max(1, skala * .075), 0, Math.PI * 2); c.fill();
+    const bild = kachel(s.form, s.schwer);
+    for (const z of formen.get(s.form)!) c.drawImage(bild, (z.x - .49) * skala, (-z.y - .49) * skala, .98 * skala, .98 * skala);
+    if (s.aktiv) {
+      c.strokeStyle = `${bahn.farbe}bb`; c.lineWidth = 1;
+      for (const z of formen.get(s.form)!) c.strokeRect((z.x - .5) * skala, (-z.y - .5) * skala, skala, skala);
     }
     c.restore();
   }

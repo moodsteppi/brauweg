@@ -1,5 +1,5 @@
 import type * as RapierTypen from '@dimforge/rapier2d-compat';
-import { bauteilfolge, rangfolge, REGELN, ZAUBER, spawnHoehe, zellen, type BauZauber, type BauForm, type BauModus, type Punkt } from '@brauweg/building-kern';
+import { bauteilfolge, rangfolge, REGELN, MAX_BAUTEILE, ZAUBER, spawnHoehe, zellen, type BauZauber, type BauForm, type BauModus, type Punkt } from '@brauweg/building-kern';
 
 type Rapier = typeof RapierTypen;
 let geladen: Promise<Rapier> | undefined;
@@ -35,7 +35,9 @@ export class BauPartie {
   private grund = '';
   constructor(private readonly r: Rapier, spieler: readonly BauSpieler[], readonly modus: BauModus, seed: number) {
     if (!spieler.length || spieler.length > 4 || new Set(spieler.map(s => s.id)).size !== spieler.length) throw new Error('Ein bis vier verschiedene Spieler sind erforderlich.');
-    this.folge = bauteilfolge(seed);
+    // Auch der schnellste mögliche Nachschub reicht bis zum Zeitlimit, für
+    // jeden Sitz in derselben Reihenfolge. Standfest behält sein Soloziel.
+    this.folge = bauteilfolge(seed, MAX_BAUTEILE + 1);
     this.bahnen = spieler.map(s => {
       const welt = new r.World({ x: 0, y: -18 }); welt.timestep = REGELN.schritt;
       const boden = welt.createRigidBody(r.RigidBodyDesc.fixed().setTranslation(0, -.35));
@@ -65,7 +67,7 @@ export class BauPartie {
     if (b.aktiv) { b.welt.removeRigidBody(b.aktiv.koerper); b.steine = b.steine.filter(s => s !== b.aktiv); b.aktiv = undefined; }
   }
   private neu(b: Bahn): void {
-    if (b.verbraucht >= REGELN.bauteile) { b.fertig = true; return; }
+    if (this.modus === 'standfest' && b.verbraucht >= REGELN.bauteile) { b.fertig = true; return; }
     const form = this.folge[b.verbraucht], teile = zellen(form);
     const koerper = b.welt.createRigidBody(this.r.RigidBodyDesc.dynamic().setTranslation(0, spawnHoehe(b.hoehe)).setGravityScale(0).lockRotations().setCcdEnabled(true).setLinearDamping(.15).setAngularDamping(.5));
     for (const p of teile) b.welt.createCollider(this.r.ColliderDesc.cuboid(.49, .49).setTranslation(p.x, p.y).setFriction(.75).setRestitution(.02).setDensity(b.schwereWartet ? ZAUBER.schwereFaktor : 1).setActiveEvents(this.r.ActiveEvents.COLLISION_EVENTS), koerper);
@@ -137,13 +139,13 @@ export class BauPartie {
       if (aktiv && beruehrt) {
         aktiv.gelandet = true; aktiv.koerper.lockRotations(false, true); aktiv.koerper.setGravityScale(1, true);
         const v = aktiv.koerper.linvel(); aktiv.koerper.setLinvel({ x: v.x * .25, y: Math.max(-3, v.y) }, true);
-        b.aktiv = undefined; b.gebaut++; b.nachschub = .65;
+        b.aktiv = undefined; b.gebaut++; b.nachschub = REGELN.nachschubPause;
       }
       for (const s of [...b.steine]) {
         const p = s.koerper.translation();
         if (p.y < -4 || Math.abs(p.x) > 18 || !Number.isFinite(p.y)) {
           b.welt.removeRigidBody(s.koerper); b.steine.splice(b.steine.indexOf(s), 1); b.verloren++;
-          if (s === b.aktiv) { b.aktiv = undefined; b.nachschub = .65; }
+          if (s === b.aktiv) { b.aktiv = undefined; b.nachschub = REGELN.nachschubPause; }
           if (this.modus === 'standfest') b.leben = Math.max(0, b.leben - 1);
         }
       }

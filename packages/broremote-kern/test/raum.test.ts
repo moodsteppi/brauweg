@@ -39,14 +39,17 @@ test('Building Battle startet nur bereit, bindet den Modus und verwirft Eingaben
 
 test('Bau-Status bleibt privat, ist begrenzt und wird nach Reconnect wiederhergestellt', () => {
   const a = aufbau(), g = a.gast('1'); a.gast('2'); a.start('1', '2');
-  const bau = { form: 2, hoehe: 12.4, restzeit: 120, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 8 };
+  const bau = { form: 2, hoehe: 12.4, restzeit: 120, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 48, gebaut: 41, verloren: 44 };
   a.post.length = 0;
   a.senden('h', { art: 'privat', abschnitt: a.raum.sicht().abschnitt, spieler: g.spieler, daten: { bau, leben: 3 } });
   assert.equal(a.post.length, 1); assert.equal(a.post[0].v, '1');
   a.post.length = 0; a.anmelden('neu', { art: 'fortsetzen', schluessel: g.schluessel });
   assert.ok(a.post.some(p => p.v === 'neu' && p.n.art === 'privat' && p.n.daten.bau?.hoehe === 12.4));
+  assert.ok(a.post.some(p => p.v === 'neu' && p.n.art === 'privat' && p.n.daten.bau?.verbraucht === 48));
   a.post.length = 0;
   a.senden('h', { art: 'privat', abschnitt: a.raum.sicht().abschnitt, spieler: g.spieler, daten: { bau: { ...bau, form: 99 } } });
+  assert.ok(a.post.every(p => p.n.art !== 'privat'));
+  a.senden('h', { art: 'privat', abschnitt: a.raum.sicht().abschnitt, spieler: g.spieler, daten: { bau: { ...bau, verbraucht: 301 } } });
   assert.ok(a.post.every(p => p.n.art !== 'privat'));
 });
 

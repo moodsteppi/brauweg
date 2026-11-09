@@ -19,9 +19,11 @@ const raster: Record<BauForm, number[][]> = {
   haken: [[0, 0], [1, 0], [2, 0], [2, 1]], spiegel: [[0, 0], [1, 0], [2, 0], [0, 1]],
   stufe: [[1, 0], [2, 0], [0, 1], [1, 1]],
 };
-export const REGELN = Object.freeze({ schritt: 1 / 60, countdown: 3, dauer: 180, ziel: 16, halten: 3, leben: 3, bauteile: 30, bodenHalb: 4.8, feldHalb: 7.5 });
+export const REGELN = Object.freeze({ schritt: 1 / 60, countdown: 3, dauer: 180, ziel: 16, halten: 3, leben: 3, bauteile: 30, nachschubPause: .65, bodenHalb: 4.8, feldHalb: 7.5 });
+/** Plausibilitätsgrenze aus Rundenzeit und Mindestpause, kein Spielende im Rennen. */
+export const MAX_BAUTEILE = Math.ceil(REGELN.dauer / REGELN.nachschubPause) + 1;
 export const MODI: Record<BauModus, { name: string; kurz: string; regel: string }> = {
-  rennen: { name: 'Höhenrennen', kurz: 'Hoch hinaus', regel: 'Erreiche 16 Meter und halte deinen Turm 3 Sekunden stabil. Nach 3 Minuten gewinnt der höchste Turm.' },
+  rennen: { name: 'Höhenrennen', kurz: 'Hoch hinaus', regel: 'Baue auf 16 Meter und halte deinen Turm 3 Sekunden. Nachschub gibt es auch nach einem Einsturz. Nach 3 Minuten gewinnt der höchste Turm.' },
   standfest: { name: 'Standfest', kurz: 'Drei Leben. Ein Turm.', regel: 'Jedes abgestürzte Teil kostet ein Leben. Wer zuletzt steht, gewinnt. Bei Zeitablauf zählen Leben, Höhe und verbaute Teile. Soloziel: 30 Teile mit mindestens einem Leben.' },
 };
 export function zellen(form: BauForm): Punkt[] {

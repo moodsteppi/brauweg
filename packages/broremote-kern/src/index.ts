@@ -82,8 +82,10 @@ function privatLesen(d: unknown): Privat | null {
     if (b.spielerzahl !== undefined && !ganz(b.spielerzahl, 1, 4)) return null;
     if (b.ziele !== undefined && (!Array.isArray(b.ziele) || b.ziele.length > 3 || !b.ziele.every(z => typeof z === 'string' && z.length <= 24))) return null;
     for (const k of ['ankerBereit', 'schwereBereit', 'schwereWartet', 'aufgegeben']) if (b[k] !== undefined && typeof b[k] !== 'boolean') return null;
-    for (const [k, max] of [['zielCountdown', 3], ['anker', 4], ['gebaut', 30], ['verloren', 30], ['dauer', 181]] as const) if (b[k] !== undefined && !zahl(b[k], 0, max)) return null;
-    if ( !ganz(b.form, 0, 6) || !zahl(b.hoehe, 0, 200) || !ganz(b.restzeit, 0, 180) || !ganz(b.countdown, 0, 3) || !ganz(b.platz, 1, 4) || !ganz(b.verbraucht, 0, 30)
+    // Höhenrennen liefert weiter Teile. Drei Minuten mit Nachschubpause
+    // bleiben unter 300; die alte 30er-Grenze verschluckte ganze Statuspakete.
+    for (const [k, max] of [['zielCountdown', 3], ['anker', 4], ['gebaut', 300], ['verloren', 300], ['dauer', 181]] as const) if (b[k] !== undefined && !zahl(b[k], 0, max)) return null;
+    if ( !ganz(b.form, 0, 6) || !zahl(b.hoehe, 0, 200) || !ganz(b.restzeit, 0, 180) || !ganz(b.countdown, 0, 3) || !ganz(b.platz, 1, 4) || !ganz(b.verbraucht, 0, 300)
       || typeof b.phase !== 'string' || !['countdown', 'spiel', 'pause', 'ende'].includes(b.phase) || typeof b.fertig !== 'boolean' || typeof b.gewonnen !== 'boolean') return null;
   }
   const { leben, punkte, amZug, hinweis, inventar } = d;

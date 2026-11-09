@@ -2,7 +2,7 @@
  * einmalige Gutschrift und Berliner Tageskappe. Keine kompetitive Rangliste. */
 import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { BELOHNUNG, bauAbzeichen } from '@brauweg/building-kern';
+import { BELOHNUNG, MAX_BAUTEILE, REGELN, bauAbzeichen } from '@brauweg/building-kern';
 import type { Db } from './db/types.js';
 import * as s from './db/schema.js';
 import { badRequest, conflict, forbidden } from './errors.js';
@@ -11,7 +11,7 @@ import { heute } from './truhen.js';
 
 export const bauStartSchema = z.object({ partie: z.string().regex(/^[a-zA-Z0-9-]{8,80}$/), modus: z.enum(['rennen', 'standfest']) });
 export const bauErgebnisSchema = z.object({
-  modus: z.enum(['rennen', 'standfest']), hoehe: z.number().min(0).max(125), gebaut: z.number().int().min(0).max(30), verloren: z.number().int().min(0).max(30),
+  modus: z.enum(['rennen', 'standfest']), hoehe: z.number().min(0).max(125), gebaut: z.number().int().min(0).max(MAX_BAUTEILE), verloren: z.number().int().min(0).max(MAX_BAUTEILE),
   leben: z.number().int().min(0).max(3), platz: z.number().int().min(1).max(4), gewonnen: z.boolean(), aufgegeben: z.boolean(), dauer: z.number().int().min(0).max(181), spielerzahl: z.number().int().min(1).max(4),
 });
 export async function buildingStart(db: Db, konto: string, eingabe: unknown, jetzt = new Date()) {
@@ -43,7 +43,8 @@ export async function buildingErgebnis(db: Db, konto: string, partie: string, ei
     if (!runde) throw conflict('buildingKeinStart');
     if (runde.ergebnis) return { muenzen: runde.muenzen, abzeichen: bauAbzeichen(runde.ergebnis), wiederholt: true };
     const vergangen = (jetzt.getTime() - runde.start.getTime()) / 1000;
-    if (e.modus !== runde.modus || e.platz > e.spielerzahl || (e.gewonnen && (e.aufgegeben || e.platz !== 1)) || e.gebaut + e.verloren > 60
+    if (e.modus !== runde.modus || e.platz > e.spielerzahl || (e.gewonnen && (e.aufgegeben || e.platz !== 1))
+      || (e.modus === 'standfest' && (e.gebaut > REGELN.bauteile || e.verloren > REGELN.bauteile))
       || vergangen < Math.max(0, e.dauer - 5) || vergangen > 86400 || e.gebaut > e.dauer * 2 + 1
       || (e.gewonnen && e.spielerzahl === 1 && !(e.modus === 'rennen' ? e.hoehe >= 16 : e.gebaut === 30 && e.leben > 0))
       || (e.modus === 'standfest' && e.gewonnen && e.leben === 0)) throw badRequest('invalidInput');

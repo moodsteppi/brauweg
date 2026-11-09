@@ -3,7 +3,7 @@ import { FORMEN, MODI, REGELN, type BauModus } from '@brauweg/building-kern';
 import type { Aktion, Privat, Spieler } from '@brauweg/broremote-kern';
 import { Controller } from '../Controller';
 import { BauPartie, ladeBauphysik, type BauSicht } from './partie';
-import { zeichneBahn } from './zeichnen';
+import { zeichneBahn, setzeBaukameraZurueck } from './zeichnen';
 import { BauWertung } from './BauWertung';
 import { BauVorschau } from './BauVorschau';
 import './building.css';
@@ -40,6 +40,8 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
   }, []);
   useEffect(() => {
     let beendet = false, rahmen = 0, letzter = 0, puffer = 0, bildZeit = 0, statusZeit = 0, gebaut = 0, verloren = 0;
+    const bewegung = window.matchMedia('(prefers-reduced-motion: reduce)');
+    for (const c of bilder.current.values()) setzeBaukameraZurueck(c);
     setSicht(null); setFehler(''); setPause(false); setOhne([]);
     void ladeBauphysik().then(r => {
       if (beendet) return;
@@ -52,10 +54,10 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
         else { puffer += delta; let schritte = 0; while (puffer >= REGELN.schritt && schritte++ < 6) { k.schritt(); puffer -= REGELN.schritt; } }
         let ruht = false;
         if (jetzt - bildZeit >= 1000 / 30) {
-          bildZeit = jetzt;
+          const bildDelta = bildZeit ? (jetzt - bildZeit) / 1000 : 1 / 30; bildZeit = jetzt;
           const s = k.sicht();
           ruht = s.phase === 'ende';
-          for (const b of s.bahnen) { const c = bilder.current.get(b.id); if (c) zeichneBahn(c, b, s.modus === 'rennen'); }
+          for (const b of s.bahnen) { const c = bilder.current.get(b.id); if (c) zeichneBahn(c, b, s.modus === 'rennen', bildDelta, bewegung.matches); }
           if (jetzt - statusZeit >= 250) {
             statusZeit = jetzt; setSicht(s);
             const g = s.bahnen.reduce((n, b) => n + b.gebaut, 0), v = s.bahnen.reduce((n, b) => n + b.verloren, 0);
@@ -88,13 +90,13 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
     <p className="bb-regel">{MODI[p.modus].regel}</p>
     <div className={`bb-buehne bb-buehne-${sicht.bahnen.length}`}>
       {sicht.bahnen.map(b => <article className={`bb-bahn${b.fertig ? ' bb-fertig' : ''}${sicht.gewinner.includes(b.id) ? ' bb-sieger' : ''}${b.anker > 0 ? ' bb-geschuetzt' : ''}`} key={b.id} style={{ '--spielerfarbe': b.farbe } as React.CSSProperties}>
-        <div className="bb-spielerkopf"><img key={`${b.verloren}-${b.effekt}`} className={ergebnis && sicht.gewinner.includes(b.id) ? 'bb-pinguin-sieg' : b.verloren ? 'bb-pinguin-schreck' : 'bb-pinguin-baut'} src="/hub/pinguin/pinguin-basis.webp" alt="" /><div><strong>{b.name}</strong><span>{p.modus === 'standfest' ? `${'♥'.repeat(b.leben)}${'♡'.repeat(3 - b.leben)}` : `${b.hoehe.toFixed(1).replace('.', ',')} / 16 m`}</span></div><div className="bb-naechster"><small>DANACH</small><BauVorschau form={b.naechster} /></div></div>
+        <div className="bb-spielerkopf"><div className="bb-portraet"><img key={`${b.verloren}-${b.effekt}`} className={ergebnis && sicht.gewinner.includes(b.id) ? 'bb-pinguin-sieg' : b.verloren ? 'bb-pinguin-schreck' : 'bb-pinguin-baut'} src="/broremote/baumeister.webp" alt="" /><small aria-label={`Platz ${b.platz}`}>{b.platz}</small></div><div className="bb-spielername"><strong>{b.name}</strong><span>{p.modus === 'standfest' ? `${'♥'.repeat(b.leben)}${'♡'.repeat(3 - b.leben)}` : `${b.hoehe.toFixed(1).replace('.', ',')} / 16 m`}</span><div className="bb-fortschritt" aria-hidden="true"><i style={{ width: `${Math.min(100, (p.modus === 'standfest' ? b.gebaut / REGELN.bauteile : b.hoehe / REGELN.ziel) * 100)}%` }} /></div></div><div className="bb-naechster"><small>DANACH</small><BauVorschau form={b.naechster} /></div></div>
         <canvas ref={c => { if (c) bilder.current.set(b.id, c); else bilder.current.delete(b.id); }} aria-label={`${b.name}: ${b.hoehe.toFixed(1)} Meter hoher Turm`} />
         {b.halten > 0 && !ergebnis && <div className="bb-zielzaehler" role="status"><span>ZIEL ERREICHT</span><strong key={Math.ceil(3 - b.halten)}>{Math.max(1, Math.ceil(3 - b.halten))}</strong><small>{b.name}, halte deinen Turm!</small></div>}
-        {b.verloren > 0 && !ergebnis && <div className="bb-absturz" key={`verlust-${b.verloren}`} aria-hidden="true"><span>✦</span><span>◆</span><span>✧</span><strong>{p.modus === 'standfest' ? '−1 Leben' : 'Bauteil verloren'}</strong></div>}
+        {b.verloren > 0 && !ergebnis && <div className="bb-absturz" key={`verlust-${b.verloren}`} aria-hidden="true"><span>✦</span><span>◆</span><span>✧</span><strong>{p.modus === 'standfest' ? '−1 Leben' : 'Weiterbauen! Nachschub kommt.'}</strong></div>}
         {b.effekt > 0 && !ergebnis && <div key={`zauber-${b.effekt}`} className="bb-zauberblitz" role="status">✦ {b.zauberHinweis}</div>}
         {ergebnis && sicht.gewinner.includes(b.id) && <div className="bb-siegfunken" aria-hidden="true">{Array.from({ length: 12 }, (_, i) => <i key={i} style={{ '--i': i } as React.CSSProperties}>✦</i>)}</div>}
-        <div className="bb-bahnfuss"><span>{b.aufgegeben ? 'Ausgestiegen' : b.fertig ? b.leben === 0 && p.modus === 'standfest' ? 'Ausgeschieden' : 'Fertig gebaut' : `${b.verbraucht} / 30 Bauteile`}</span><strong>{b.halten > 0 && p.modus === 'rennen' ? `${Math.min(3, b.halten).toFixed(1)} / 3 s` : `${b.hoehe.toFixed(1).replace('.', ',')} m`}</strong></div>
+        <div className="bb-bahnfuss"><span>{b.aufgegeben ? 'Ausgestiegen' : b.fertig ? b.leben === 0 && p.modus === 'standfest' ? 'Ausgeschieden' : 'Fertig gebaut' : p.modus === 'standfest' ? `${b.verbraucht} / 30 Bauteile` : `∞ Nachschub · ${b.gebaut} verbaut`}</span><strong>{b.halten > 0 && p.modus === 'rennen' ? `${Math.min(3, b.halten).toFixed(1)} / 3 s` : `${b.hoehe.toFixed(1).replace('.', ',')} m`}</strong></div>
       </article>)}
       {(sicht.phase === 'countdown' || pausenGrund) && !ergebnis && <div className="bb-overlay" role="status"><div><span className="br-kicker">{pausenGrund ? 'BAUPAUSE' : 'MACHT EUCH BEREIT'}</span><strong>{pausenGrund ? 'Kurz durchatmen.' : sicht.countdown}</strong><p>{pausenGrund || 'Alle bekommen dieselben Bauteile. Baut euren höchsten Turm!'}</p>{pause && <button className="br-knopf" onClick={() => setPause(false)}>Weiterspielen</button>}{fehlen.length > 0 && p.verbunden && <button className="br-knopf br-sekundaer" onClick={() => { for (const s of fehlen) partie.current?.aufgeben(s.id); setOhne(a => [...a, ...fehlen.map(s => s.id)]); }}>Ohne fehlende Spieler weiterspielen</button>}</div></div>}
     </div>

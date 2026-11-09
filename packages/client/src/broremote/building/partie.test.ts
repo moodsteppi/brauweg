@@ -2,7 +2,7 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { BauPartie, ladeBauphysik } from './partie';
 import type { RigidBody } from '@dimforge/rapier2d-compat';
-import { spawnHoehe } from '@brauweg/building-kern';
+import { MAX_BAUTEILE, spawnHoehe } from '@brauweg/building-kern';
 import { BroRaum, type ServerNachricht } from '@brauweg/broremote-kern';
 
 let r: Awaited<ReturnType<typeof ladeBauphysik>>;
@@ -65,7 +65,7 @@ describe('Bro Building Battle mit echter Physik', () => {
       p.schritt();
     }
     const s = p.sicht(); expect(s.phase).toBe('ende');
-    expect(s.bahnen.every(b => b.verbraucht <= 30 && b.steine.length <= 30 && Number.isFinite(b.hoehe))).toBe(true);
+    expect(s.bahnen.every(b => b.verbraucht <= MAX_BAUTEILE && b.steine.length <= b.verbraucht && Number.isFinite(b.hoehe))).toBe(true);
     expect(new Set(s.bahnen.map(b => b.hoehe)).size).toBe(1);
     expect(new Set(s.bahnen.map(b => b.platz)).size).toBe(1);
   });
@@ -116,6 +116,25 @@ describe('Bro Building Battle mit echter Physik', () => {
   it('spawnt bei doppelter bisheriger Höhe, auch über einem vorhandenen Turm', () => {
     expect(spawnHoehe(0)).toBe(14); expect(spawnHoehe(12)).toBe(34);
     const p = partie(); start(p); expect(p.sicht().bahnen[0].steine[0].y).toBeGreaterThan(13.9);
+  });
+  it('liefert im Battle nach vollständigen Einstürzen auch über 30 Teile hinaus weiter', () => {
+    const p = partie('rennen', 2); start(p);
+    for (const id of ['0', '1']) taste(p, id, 'fallen');
+    schritte(p, 90);
+    expect(p.sicht().bahnen.every(b => b.gebaut > 0)).toBe(true);
+    const intern = p as unknown as { bahnen: { steine: { koerper: RigidBody }[] }[] };
+    // Auch bereits verbaute Teile stürzen ab: der ganze Turm geht verloren.
+    for (let i = 0; i < 40; i++) {
+      for (const b of intern.bahnen) for (const s of b.steine) s.koerper.setTranslation({ x: 0, y: -6 }, true);
+      schritte(p, 42);
+      const s = p.sicht();
+      expect(s.phase).toBe('spiel');
+      expect(s.bahnen.every(b => !b.fertig && b.leben === 3 && b.steine.some(t => t.aktiv))).toBe(true);
+      expect(s.bahnen.every(b => b.steine.length === 1 && b.hoehe === 0)).toBe(true);
+      expect(s.bahnen[0].naechster).toBe(s.bahnen[1].naechster);
+    }
+    expect(p.sicht().bahnen.every(b => b.verbraucht > 30 && b.verloren > 30)).toBe(true);
+    expect(p.sicht().gewinner).toEqual([]);
   });
   it('hält den Nachschub am Ziel an, zählt drei Sekunden und setzt nach Einsturz fort', () => {
     const p = partie('rennen', 2); start(p); taste(p, '0', 'fallen');
