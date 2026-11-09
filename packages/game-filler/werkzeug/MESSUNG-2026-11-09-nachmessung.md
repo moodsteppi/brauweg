@@ -237,6 +237,107 @@ stehen unten unverändert.
 - sich sperrbar gemacht: 7 (Zug 34 Sitz 0: gewaehlt 3, sicher 5); 8 (Zug 21 Sitz 1: gewaehlt 2, sicher 5); 19 (Zug 13 Sitz 1: gewaehlt 4, sicher 5); 20 (Zug 45 Sitz 1: gewaehlt 2, sicher 3); 24 (Zug 9 Sitz 1: gewaehlt 4, sicher 5)
 - groesster 2-Zug-Verlust: 85 (Zug 45 Sitz 1: gewaehlt 2, besser 5, verlust 4); 86 (Zug 39 Sitz 1: gewaehlt 0, besser 5, verlust 4); 15 (Zug 41 Sitz 1: gewaehlt 2, besser 3, verlust 3); 15 (Zug 45 Sitz 1: gewaehlt 2, besser 5, verlust 3); 24 (Zug 42 Sitz 0: gewaehlt 0, besser 5, verlust 3)
 
-### Lauf 2: `--extreme 200 --faeden 8` (mit Gegenproben)
+### Lauf 2: `--extreme 300 --klar 0 --build 0 --faeden 20` (mit Gegenproben, 2612 s)
 
-ROH_GEGEN
+# Filler: Bot gegen Bot (Saat i = saatHex(i), Mauerschwelle 2)
+
+#### 1. Eroeffnung: Sitz ohne nutzbare Farbe
+
+| Messgroesse                                               | extreme (#0–299, n=300) |
+|-----------------------------------------------------------|-------------------------|
+| Ecke Sitz 1: beide Nachbarn gleichfarbig                  | 0.0 %                   |
+| Ecke Sitz 0: beide Nachbarn gleichfarbig                  | 0.0 %                   |
+| Eckfarbe 0 = beide Nachbarn 1 (harmlos: 0 muss umfaerben) | 0.0 %                   |
+| Sitz 0 KOENNTE Sitz 1 mit Zug 1 sperren                   | 0.0 %                   |
+| ohne nutzbare Farbe nach Zug 1 (Sitz 1 am Zug)            | 0.0 %                   |
+| ohne nutzbare Farbe nach Zug 2 (Sitz 0 am Zug)            | 0.0 %                   |
+| ohne nutzbare Farbe nach Zug 3 (Sitz 1 am Zug)            | 0.0 %                   |
+| ohne nutzbare Farbe nach Zug 1 oder 2                     | 0.0 %                   |
+| Partien mit mind. einem Zug ohne nutzbare Farbe           | 95.0 %                  |
+| solche Zuege je Partie                                    | 6.12                    |
+
+#### 2. Abgetrennt und eingeschlossen (solange noch freie Felder liegen)
+
+| Messgroesse                                                 | extreme (#0–299, n=300) |
+|-------------------------------------------------------------|-------------------------|
+| Partien: kein freies Feld mehr fuer beide (Fronten zu)      | 95.7 %                  |
+|   ab Zug / freie Felder dann (Mittel)                       | 65.2 / 42.7             |
+|   davon direkt durch eine Mauer                             | 0.0 %                   |
+|   davon mit >= 10 freien Feldern                            | 74.0 %                  |
+| EINGESPERRT: >= 10 frei, einer hat <= 1/4 davon             | 68.7 %                  |
+|   davon gewinnt der Eingesperrte nicht                      | 202 von 206             |
+| Sitze ohne erreichbares Feld (von 2n), Endspiel mitgezaehlt | 47.8 %                  |
+|   davon mit >= 10 freien Feldern auf dem Brett              | 205                     |
+|   davon direkt durch eine Mauer                             | 0                       |
+| Ende ueber Leerzug-Deckel mit freien Feldern                | 0.0 %                   |
+
+#### 3. Anzug: Sitz 0 gegen Sitz 1
+
+| Messgroesse                                        | extreme (#0–299, n=300) |
+|----------------------------------------------------|-------------------------|
+| Sieg Sitz 0 (zieht zuerst)                         | 52.0 %                  |
+| Sieg Sitz 1                                        | 47.0 %                  |
+| Unentschieden                                      | 1.0 %                   |
+| Punkte Sitz 0 / Sitz 1 im Mittel                   | 74.1 / 65.9             |
+| Zuege je Partie                                    | 103.7                   |
+| Sitz 1 nach Zug 1 gesperrt: Partien / davon Sieg 0 | 0 / –                   |
+
+#### 4. Mauern des Bots
+
+| Messgroesse                                           | extreme (n=300) |
+|-------------------------------------------------------|-----------------|
+| Mauern je Partie (beide Sitze)                        | 44.27           |
+| Partien mit mind. einer Mauer                         | 100.0 %         |
+| Zuganfaenge mit Kandidaten                            | 29236           |
+| bester Wandwert im Mittel / hoechstens                | 2.53 / 8.50     |
+|   bester Wert < 0                                     | 0.1 %           |
+|   bester Wert = 0                                     | 1.4 %           |
+|   bester Wert 0,5                                     | 13.8 %          |
+|   bester Wert 1 bis 1,5                               | 25.3 %          |
+|   bester Wert >= 2                                    | 59.4 %          |
+| beste Wand ohne Gebietsanteil (Zug-, Weg-, Platzterm) | 100.0 %         |
+| Grund: Eroeffnung (mauerfrei)                         | 900             |
+| Grund: Vorrat leer                                    | 8790            |
+| Grund: beste Wand 0 < x < Schwelle                    | 15498           |
+| Grund: beste Wand < 0                                 | 35              |
+| Grund: beste Wand = 0                                 | 421             |
+| Grund: gebaut                                         | 13282           |
+| Grund: keine erlaubte Kante                           | 5454            |
+| beste Wand: Weg- / Platzterm im Mittel                | 2.42 / 0.02     |
+| Abweichung bewerteWaende gegen botZug (muss 0 sein)   | 0               |
+
+#### 5. Farbwahl des Bots gegen Alternativen
+
+| Messgroesse                                               | extreme (#0–299, n=300) |
+|-----------------------------------------------------------|-------------------------|
+| Farbentscheidungen (>= 2 erlaubte Farben)                 | 31098                   |
+| Sperre verpasst (Zuege / Partien)                         | 4901 / 100.0 %          |
+| sich sperrbar gemacht, sichere Farbe da (Zuege / Partien) | 206 / 53.7 %            |
+| 2-Zug-Verlust >= 3 Punkte (Zuege / Partien)               | 132 / 32.7 %            |
+|   Verlust im Mittel                                       | 3.2                     |
+| Gleichstand beim Gewinn (kleinste Nummer gewinnt)         | 14897                   |
+|   davon 2-Zug-Wert >= 2 schlechter                        | 662                     |
+
+#### 6. Gegenproben: eine geaenderte Entscheidung gegen den Bot (gleiche Saaten)
+
+| extreme (#0–299)  | als Sitz 0 (Bot-Bot 52.0 %) | als Sitz 1 (Bot-Bot 47.0 %) | Partien mit Abweichung 0 / 1 | gewonnene Saaten (Bsp.) |
+|-------------------|-----------------------------|-----------------------------|------------------------------|-------------------------|
+| eroeffnungssperre | 52.0 % (+0 −0)              | 47.0 % (+0 −0)              | 0.0 % / 0.0 %                |                         |
+| sperrer           | 41.7 % (+38 −69)            | 45.0 % (+42 −48)            | 98.7 % / 97.7 %              | 9@0 17@0 18@0 6@1 12@1  |
+| zweizug           | 59.3 % (+63 −41)            | 60.0 % (+81 −42)            | 95.7 % / 98.0 %              | 7@0 8@0 13@0 0@1 6@1    |
+| mauerer           | 35.7 % (+39 −88)            | 29.7 % (+43 −95)            | 87.7 % / 87.0 %              | 7@0 14@0 17@0 0@1 20@1  |
+
+#### 7. Beispiel-Saaten (Saatindex; nachspielen mit --zeige <spielart>:<index>)
+
+##### extreme
+- Sitz 0 koennte Sitz 1 mit Zug 1 sperren: —
+- Eckfarbe 0 = beide Nachbarn 1: —
+- ohne nutzbare Farbe nach Zug 1/2: —
+- Fronten zu: 0 (ab Zug 49, frei 64:0); 1 (ab Zug 62, frei 15:31); 2 (ab Zug 52, frei 68:0); 3 (ab Zug 79, frei 23:0); 4 (ab Zug 89, frei 1:1)
+- eingesperrt (>= 10 frei, <= 1/4): 0 (ab Zug 49, frei 64:0, Sieger 0); 2 (ab Zug 52, frei 68:0, Sieger 0); 3 (ab Zug 79, frei 23:0, Sieger 0); 5 (ab Zug 60, frei 0:72, Sieger 1); 6 (ab Zug 37, frei 94:0, Sieger 0)
+- Sitz eingeschlossen: 0 (Sitz 1 ab Zug 49); 1 (Sitz 0 ab Zug 85); 2 (Sitz 1 ab Zug 52); 3 (Sitz 1 ab Zug 79); 4 (Sitz 0 ab Zug 91)
+- Partie mit Mauer: 0 (Zug 6, 7, 8, 9, 10, 11, 11, 12, 12, 15, 15, 16, 16, 19, 19, 20, 20, 23, 24, 25, 26, 27, 27, 28, 30, 31, 32, 34, 35, 36, 36, 37, 40, 40, 41, 43, 44, 46, 47, 48, 51, 51, 57, 59, 63, 65); 1 (Zug 6, 7, 8, 9, 9, 10, 12, 13, 14, 15, 15, 16, 18, 19, 19, 20, 23, 24, 25, 26, 27, 29, 29, 30, 33, 34, 35, 35, 36, 38, 39, 39, 42, 42, 43, 43, 46, 46, 47, 47, 50, 50, 51, 54, 58, 63, 68, 80); 2 (Zug 6, 6, 7, 9, 9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 21, 23, 25, 26, 27, 27, 28, 30, 31, 32, 33, 33, 34, 36, 36, 37, 37, 40, 41, 43, 44, 45, 45, 49, 51); 3 (Zug 6, 6, 7, 9, 10, 11, 11, 12, 14, 15, 16, 17, 17, 18, 18, 21, 21, 22, 24, 25, 26, 27, 28, 29, 31, 33, 34, 36, 37, 38, 39, 40, 42, 43, 45, 46, 50, 53, 54, 55, 57, 58, 59, 60, 63, 68, 81); 4 (Zug 6, 7, 8, 9, 10, 11, 12, 12, 13, 15, 16, 17, 17, 18, 18, 21, 21, 22, 22, 25, 25, 26, 28, 29, 30, 31, 32, 33, 33, 34, 34, 37, 38, 39, 40, 41, 44, 47, 48, 49, 50, 51, 52, 53, 55, 59, 63, 67, 72)
+- Wand knapp unter Schwelle: 0 (20 Zuege mit Wert 1–1,5); 1 (18 Zuege mit Wert 1–1,5); 2 (28 Zuege mit Wert 1–1,5); 3 (29 Zuege mit Wert 1–1,5); 4 (15 Zuege mit Wert 1–1,5)
+- Sperre verpasst: 0 (Zug 14 Sitz 0: gewaehlt 4, sperrend 3); 1 (Zug 24 Sitz 0: gewaehlt 4, sperrend 6); 2 (Zug 20 Sitz 0: gewaehlt 5, sperrend 6); 3 (Zug 14 Sitz 0: gewaehlt 4, sperrend 6); 4 (Zug 14 Sitz 0: gewaehlt 6, sperrend 5)
+- sich sperrbar gemacht: 0 (Zug 13 Sitz 1: gewaehlt 2, sicher 3); 3 (Zug 50 Sitz 0: gewaehlt 0, sicher 4); 4 (Zug 13 Sitz 1: gewaehlt 3, sicher 5); 7 (Zug 32 Sitz 0: gewaehlt 5, sicher 6); 9 (Zug 23 Sitz 1: gewaehlt 0, sicher 6)
+- groesster 2-Zug-Verlust: 29 (Zug 63 Sitz 1: gewaehlt 1, besser 5, verlust 6); 60 (Zug 103 Sitz 1: gewaehlt 0, besser 3, verlust 5); 154 (Zug 74 Sitz 0: gewaehlt 0, besser 6, verlust 5); 213 (Zug 93 Sitz 1: gewaehlt 0, besser 4, verlust 5); 1 (Zug 60 Sitz 0: gewaehlt 1, besser 6, verlust 4)
