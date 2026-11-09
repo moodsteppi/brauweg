@@ -5,27 +5,36 @@ Gegenstück zu `MESSUNG-2026-11-07.md` (f1, Stand ad851d5). Dasselbe Skript
 (`saatHex(i)`, extreme #0–999, klar und build #0–199), alle Vorgaben. Im
 Code ist nichts geändert, diese Datei ist das einzige Ergebnis.
 
-Stand: `origin/staging` 93aba5a2, also mit f2 (#375: faire Ecken,
-Mauerregeln, Bot „b+“, der wieder mauert) und f3 (#383:
-Ausgleich für Sitz 1 — Klar +2 Punkte, Build +1 Mauer, Extreme +2 Mauern).
-Dazu kommt #364 (Extreme auf 12 × 11 mit 20 Mauern und Sternen), das f1
-noch nicht enthielt. Der Bot-Umbau aus #386 wurde zurückgenommen; `src/bot.ts` steht auf dem
-Stand von #375.
+Stand: `origin/staging` 93aba5a2 (Abschnitte 1–5) bzw. e92b2c46
+(Abschnitt 6; dazwischen nur Übersetzungen, `packages/game-filler` ist
+unverändert). Darin: der Regelfix f2 (#375: faire Ecken, Mauerregeln, dazu
+der Bot „b+“, der wieder mauert) und der Ausgleich für Sitz 1 (#383: Klar +2
+Punkte, Build +1 Mauer, Extreme +2 Mauern). Dazu kommt #364 (Extreme auf
+12 × 11 mit 20 Mauern und Sternen), das f1 noch nicht enthielt. **Der
+Bot-Umbau f3 (fc53df78, #386) wurde auf Niklas' Entscheidung nicht gebaut**;
+`src/bot.ts` steht auf dem Stand von #375. Gemessen ist also die Wirkung
+der Regeln mit dem Bot, der mit ihnen kam — nicht die eines neuen Bots.
 
     npm ci
     npm run build --workspace @brauweg/game-api
     npm run build --workspace @brauweg/game-filler
     node packages/game-filler/werkzeug/simulation.mjs --ohne-ausbeuter --faeden 16   # Abschnitte 1–5, 43 min
-    node packages/game-filler/werkzeug/simulation.mjs --extreme 200 --faeden 8       # Abschnitt 6
+    node packages/game-filler/werkzeug/simulation.mjs --extreme 300 --klar 0 --build 0 --faeden 20   # Abschnitt 6 Extreme, 43,5 min
+    node packages/game-filler/werkzeug/simulation.mjs --extreme 0 --faeden 20                        # Abschnitt 6 Klar/Build, 2,5 min
 
 **Laufzeit:** f1 brauchte für alles 32 Minuten auf 6 Fäden. Jetzt kostet
 eine Extreme-Partie rund das Zehnfache (12 × 11 statt 8 × 7, rund 104 statt
 29 Züge, 44 Mauern je Partie, und der Bot bewertet jede erlaubte Kante).
 Schon die Abschnitte 1–5 brauchten 43 Minuten auf 16 Fäden (Windows, 22
 Kerne, Rechner nebenher belegt); die Gegenproben über alle 1000
-Extreme-Saaten hätten hochgerechnet mehrere Stunden gedauert. Abschnitt 6
-läuft deshalb für Extreme nur auf #0–199. Die Spalte „Bot-Bot“ dort gehört
-zu genau diesen 200 Saaten, nicht zu den 1000 aus Abschnitt 3.
+Extreme-Saaten hätten hochgerechnet rund zweieinhalb Stunden auf 20 Fäden
+gedauert (300 Saaten: 2612 s). **Abschnitt 6 läuft deshalb für Extreme nur
+auf #0–299** (Vorgabe des Auftrags für den Fall „länger als 50 Minuten“; der
+volle Lauf über 1000 wurde wegen dieser Hochrechnung gar nicht erst
+gestartet). Die Spalte „Bot-Bot“ dort gehört zu genau diesen 300 Saaten,
+nicht zu den 1000 aus Abschnitt 3. Klar und Build laufen in Abschnitt 6 auf
+allen Saaten #0–199; ihre Abschnitte 1–5 kamen dabei Zahl für Zahl gleich
+heraus wie in Lauf 1 (das Skript ist deterministisch).
 
 **Vergleichbarkeit:** Klar ist dasselbe Brett mit demselben Bot. Build hat
 dasselbe Brett, aber neue Mauerregeln, einen anderen Bot und eine Mauer mehr
@@ -33,7 +42,8 @@ für Sitz 1. **Extreme ist ein anderes Spiel** (12 × 11 mit faire Ecken statt
 8 × 7); dort zeigt die Spalte „vorher“ nur die Richtung, Zeile gegen Zeile ist
 sie nicht vergleichbar.
 
-Standardfehler: bei n = 1000 und p um 50 % ±1,6 Punkte, bei n = 200 ±3,5.
+Standardfehler: bei n = 1000 und p um 50 % ±1,6 Punkte, bei n = 300 ±2,9,
+bei n = 200 ±3,5.
 
 ## Vorher / nachher
 
@@ -108,11 +118,122 @@ Partie-Anteile.
 
 ## Gegenproben (Abschnitt 6)
 
-GEGENPROBEN_FOLGEN
+Gewinnquote des Abweichlers gegen den echten Bot. Δ = Abweichler minus
+Bot-Bot desselben Laufs; liegt Δ deutlich über 0, ist die Schwäche teuer.
+
+| Gegenprobe | Sitz | f1: Bot-Bot → Abweichler (Δ) | jetzt: Bot-Bot → Abweichler (Δ) |
+|---|---|---|---|
+| **Extreme** (f1 #0–999, jetzt #0–299) | | | |
+| eroeffnungssperre | 0 | 61.8 → 61.6 % (−0.2) | 52.0 → 52.0 % (±0, nie abgewichen) |
+| | 1 | 38.2 → 38.2 % (±0) | 47.0 → 47.0 % (±0, nie abgewichen) |
+| sperrer | 0 | 61.8 → 61.8 % (±0) | 52.0 → **41.7 %** (**−10.3**) |
+| | 1 | 38.2 → 38.3 % (+0.1) | 47.0 → 45.0 % (−2.0) |
+| zweizug | 0 | 61.8 → 69.9 % (+8.1) | 52.0 → 59.3 % (**+7.3**) |
+| | 1 | 38.2 → 44.5 % (+6.3) | 47.0 → 60.0 % (**+13.0**) |
+| mauerer (ab Wandwert 0,5) | 0 | 61.8 → 79.3 % (+17.5) | 52.0 → **35.7 %** (**−16.3**) |
+| | 1 | 38.2 → 64.1 % (+25.9) | 47.0 → **29.7 %** (**−17.3**) |
+| **Klar** (#0–199) | | | |
+| eroeffnungssperre | 0 | 52.0 → 55.5 % (+3.5) | 35.0 → 38.5 % (+3.5) |
+| | 1 | 36.0 → 36.0 % (±0) | 48.0 → 48.0 % (±0) |
+| sperrer | 0 | 52.0 → 55.5 % (+3.5) | 35.0 → 38.5 % (+3.5) |
+| | 1 | 36.0 → 36.5 % (+0.5) | 48.0 → 48.5 % (+0.5) |
+| zweizug | 0 | 52.0 → 66.0 % (+14.0) | 35.0 → 50.0 % (**+15.0**) |
+| | 1 | 36.0 → 44.0 % (+8.0) | 48.0 → 58.0 % (**+10.0**) |
+| **Build** (#0–199) | | | |
+| eroeffnungssperre | 0 | 56.5 → 59.5 % (+3.0) | 47.0 → 51.5 % (+4.5) |
+| | 1 | 31.5 → 31.5 % (±0) | 46.5 → 47.0 % (+0.5) |
+| sperrer | 0 | 56.5 → 58.5 % (+2.0) | 47.0 → 45.0 % (−2.0) |
+| | 1 | 31.5 → 31.5 % (±0) | 46.5 → 49.5 % (+3.0) |
+| zweizug | 0 | 56.5 → 66.0 % (+9.5) | 47.0 → 57.0 % (**+10.0**) |
+| | 1 | 31.5 → 38.0 % (+6.5) | 46.5 → 54.5 % (**+8.0**) |
+| mauerer (ab Wandwert 0,5) | 0 | 56.5 → 74.0 % (+17.5) | 47.0 → 50.5 % (+3.5) |
+| | 1 | 31.5 → 53.0 % (+21.5) | 46.5 → 47.0 % (+0.5) |
+
+Partien mit Abweichung (Sitz 0 / Sitz 1), jetzt gegen f1: Extreme
+eroeffnungssperre 0.0 / 0.0 % (f1 12.7 / 0.2 %), sperrer 98.7 / 97.7 %
+(53.5 / 46.9 %), zweizug 95.7 / 98.0 % (79.9 / 81.9 %), mauerer 87.7 /
+87.0 % (100 / 100 %). Klar unverändert (17.5 / 1.0, 40.0 / 25.5, 78.5 /
+78.5 %). Build eroeffnungssperre 17.5 / 1.0 % (gleich), sperrer 92.0 /
+92.0 % (52.5 / 45.0 %), zweizug 83.0 / 88.0 % (81.0 / 81.5 %), mauerer
+76.0 / 86.0 % (100 / 100 %).
+
+Zur Einordnung der Extreme-Teilmenge: Bot-Bot auf #0–299 ergibt 52.0 / 47.0 %
+für Sitz 0 / 1, auf #0–999 49.2 / 50.0 % — der Unterschied liegt im
+Standardfehler (±2,9). Auch die übrigen Kennzahlen der Teilmenge liegen nah
+an den 1000 (eingesperrt 68.7 statt 71.5 %, Mauern 44.27 statt 44.14).
 
 ## Was die Zahlen sagen
 
-AUSWERTUNG_FOLGT
+**Was der Regelfix erreicht hat**
+
+1. **Eröffnung in Extreme ist fair.** Kein Brett mehr mit gleichfarbigen
+   Ecknachbarn, keine Sperre in Zug 1, kein Sitz ohne Farbe nach Zug 1–3
+   (f1: 19.5 % / 4.5 %). Die Gegenprobe „eroeffnungssperre“ weicht in 300
+   Partien kein einziges Mal ab — es gibt nichts mehr zu sperren.
+2. **Der Anzugsvorteil ist in Extreme und Build weg.** Extreme 49.2 : 50.0 %
+   (f1 61.8 : 38.2), Build 47.0 : 46.5 % (f1 56.5 : 31.5). Beides liegt im
+   Standardfehler.
+3. **Die Mauerschwelle des Bots stimmt jetzt.** In f1 gewann „mauerer“
+   (baut schon ab 0,5) 17–26 Punkte dazu — der Bot mauerte zu wenig. Jetzt
+   verliert dieselbe Abweichung in Extreme 16–17 Punkte und ist in Build
+   neutral (+3.5 / +0.5). Der Bot baut 44 Mauern je Extreme-Partie (f1: 3.9);
+   früher Bauen verschwendet den Vorrat.
+4. **Keine Front schließt sich mehr direkt durch eine Mauer** (Extreme
+   19.3 % → 0 %, Build 24.0 % → 0 %). Der Leerzug-Deckel greift nie.
+
+**Was offen ist oder neu auffällt**
+
+5. **Klar ist überkompensiert.** Ohne Ausgleich lag Sitz 0 vorn (52 : 36 %),
+   mit +2 Punkten liegt nun Sitz 1 vorn (35 : 48 %, 17 % Remis). Der Abstand
+   von 13 Punkten ist größer als der Standardfehler der Differenz (rund ±5).
+   Brett und Farbwahl des Bots sind in Klar unverändert (Abschnitte 1, 2 und
+   5 Zahl für Zahl gleich f1) — die Verschiebung kommt allein vom Zuschlag.
+6. **Klar und Build haben die alte Eröffnung behalten.** 28 % der Bretter
+   lassen Sitz 0 in Zug 1 sperren, 5.5 % lassen Sitz 1 nach Zug 1 ohne Farbe
+   — gleich wie f1. Die fairen Ecken wirken nur in Extreme. Die Gegenprobe
+   „eroeffnungssperre“ bringt Sitz 0 dort weiter +3.5 (Klar) bzw. +4.5
+   (Build) Punkte.
+7. **Einsperren ist in Extreme und Build zum Normalfall geworden.** Mit
+   ≥ 10 freien Feldern hat einer höchstens ein Viertel davon: Extreme 3.2 %
+   → **71.5 %**, Build 4.5 % → **55.0 %**; der Eingesperrte gewinnt fast nie
+   (701 von 715 bzw. 110 von 110 verlieren). Fronten schließen sich in
+   Extreme im Mittel bei Zug 64,5 mit 44 freien Feldern. Keine dieser
+   Schließungen ist eine einzelne Mauer — aber das Skript misst nur die
+   letzte Kante, nicht, wie viele der 44 Mauern den Kessel vorher gebaut
+   haben. Ob es an den neuen Mauerregeln, am mauernden Bot oder am größeren
+   Brett liegt, trennt diese Messung nicht.
+8. **Partien mit einem Zug ohne nutzbare Farbe:** Extreme 20.6 % → 95.4 %
+   (6.3 solche Züge je Partie), Build 21.5 % → 88.0 %. Das ist die Folge
+   von Punkt 7 (Eingesperrte haben keine Farbe mehr), kein Eröffnungsproblem.
+9. **Die Farbwahl des Bots ist die größte verbliebene Schwäche.** „zweizug“
+   (eigener Gewinn minus beste Antwort) schlägt den Bot überall: Extreme
+   +7 / +13, Klar +15 / +10, Build +10 / +8 Punkte — so viel wie in f1.
+   Die Regeländerungen haben daran nichts geändert; genau das war der Zweck
+   des nicht gebauten Bot-Umbaus f3.
+10. **Gieriges Sperren schadet jetzt.** „sperrer“ war in f1 neutral, kostet
+    in Extreme als Sitz 0 nun 10 Punkte. Die Kennzahl „Sperre verpasst“
+    (Extreme 100 % der Partien) ist darum kein Fehler des Bots, sondern eine
+    Gelegenheit, die sich meist nicht lohnt.
+
+**Vorschläge (nur Vorschlag, nichts davon ist gebaut)**
+
+- **Klar-Ausgleich auf +1 Punkt** prüfen: mit `werkzeug/ausgleich-messung.mjs`
+  auf denselben Saaten #0–199 die Quote bei +1 messen, bevor die Regel
+  geändert wird (Punkt 5).
+- **Faire Ecken auch für Klar und Build** entscheiden — oder bewusst lassen
+  und in der Regelbeschreibung nennen (Punkt 6).
+- **Einsperren aufschlüsseln** (Punkt 7): eine Zusatzmessung, die je
+  geschlossener Front zählt, wie viele Mauern auf ihrem Rand liegen, und
+  denselben Lauf einmal mit einem Bot ohne Mauern auf dem Extreme-Brett.
+  Erst dann ist klar, ob Mauerregeln oder Brett nachgeschärft gehören.
+- **Bot-Umbau f3 erneut abwägen** (Punkt 9): Die Gegenprobe „zweizug“ zeigt
+  8–15 Punkte Spielraum in jeder Spielart. Gegen Menschen heißt das: Der Bot
+  ist schlagbar, aber nicht wegen der Regeln.
+- **Skriptkopf nachziehen** (eigene Aufgabe, hier war Code verboten): Die
+  Laufzeitangabe „32 Minuten auf 6 Fäden“ gilt seit #364 nicht mehr; ein
+  voller Lauf mit Gegenproben über 1000 Extreme-Saaten dauert jetzt rund
+  zweieinhalb Stunden auf 20 Fäden. Vorschlag: Vorgabe `--extreme 300` oder
+  ein eigener Schalter für die Saaten der Gegenproben.
 
 ## Rohausgabe
 
@@ -341,3 +462,23 @@ stehen unten unverändert.
 - Sperre verpasst: 0 (Zug 14 Sitz 0: gewaehlt 4, sperrend 3); 1 (Zug 24 Sitz 0: gewaehlt 4, sperrend 6); 2 (Zug 20 Sitz 0: gewaehlt 5, sperrend 6); 3 (Zug 14 Sitz 0: gewaehlt 4, sperrend 6); 4 (Zug 14 Sitz 0: gewaehlt 6, sperrend 5)
 - sich sperrbar gemacht: 0 (Zug 13 Sitz 1: gewaehlt 2, sicher 3); 3 (Zug 50 Sitz 0: gewaehlt 0, sicher 4); 4 (Zug 13 Sitz 1: gewaehlt 3, sicher 5); 7 (Zug 32 Sitz 0: gewaehlt 5, sicher 6); 9 (Zug 23 Sitz 1: gewaehlt 0, sicher 6)
 - groesster 2-Zug-Verlust: 29 (Zug 63 Sitz 1: gewaehlt 1, besser 5, verlust 6); 60 (Zug 103 Sitz 1: gewaehlt 0, besser 3, verlust 5); 154 (Zug 74 Sitz 0: gewaehlt 0, besser 6, verlust 5); 213 (Zug 93 Sitz 1: gewaehlt 0, besser 4, verlust 5); 1 (Zug 60 Sitz 0: gewaehlt 1, besser 6, verlust 4)
+
+### Lauf 3: `--extreme 0 --klar 200 --build 200 --faeden 20` (Gegenproben Klar/Build, 152 s)
+
+Abschnitte 1–5 und 7 dieses Laufs sind Zahl für Zahl gleich Lauf 1 und
+stehen deshalb nicht noch einmal da.
+
+#### 6. Gegenproben: eine geaenderte Entscheidung gegen den Bot (gleiche Saaten)
+
+| klar (#0–199)     | als Sitz 0 (Bot-Bot 35.0 %) | als Sitz 1 (Bot-Bot 48.0 %) | Partien mit Abweichung 0 / 1 | gewonnene Saaten (Bsp.) |
+|-------------------|-----------------------------|-----------------------------|------------------------------|-------------------------|
+| eroeffnungssperre | 38.5 % (+7 −0)              | 48.0 % (+0 −0)              | 17.5 % / 1.0 %               | 28@0 62@0 143@0         |
+| sperrer           | 38.5 % (+7 −0)              | 48.5 % (+1 −0)              | 40.0 % / 25.5 %              | 28@0 62@0 143@0 140@1   |
+| zweizug           | 50.0 % (+43 −13)            | 58.0 % (+39 −19)            | 78.5 % / 78.5 %              | 1@0 8@0 11@0 1@1 3@1    |
+
+| build (#0–199)    | als Sitz 0 (Bot-Bot 47.0 %) | als Sitz 1 (Bot-Bot 46.5 %) | Partien mit Abweichung 0 / 1 | gewonnene Saaten (Bsp.)  |
+|-------------------|-----------------------------|-----------------------------|------------------------------|--------------------------|
+| eroeffnungssperre | 51.5 % (+11 −2)             | 47.0 % (+1 −0)              | 17.5 % / 1.0 %               | 8@0 16@0 18@0 194@1      |
+| sperrer           | 45.0 % (+25 −29)            | 49.5 % (+27 −21)            | 92.0 % / 92.0 %              | 16@0 24@0 28@0 2@1 14@1  |
+| zweizug           | 57.0 % (+35 −15)            | 54.5 % (+32 −16)            | 83.0 % / 88.0 %              | 5@0 16@0 18@0 9@1 10@1   |
+| mauerer           | 50.5 % (+14 −7)             | 47.0 % (+15 −14)            | 76.0 % / 86.0 %              | 13@0 22@0 33@0 32@1 35@1 |
