@@ -5,6 +5,8 @@ import type { SitzungsEreignisse } from './transport';
 
 const draht = vi.hoisted(() => ({ e: null as SitzungsEreignisse | null, senden: vi.fn(() => true), schliessen: vi.fn() }));
 const bauEmpfang = vi.hoisted(() => vi.fn());
+const tanksEmpfang = vi.hoisted(() => vi.fn());
+vi.mock('./brotanks/TanksArena', () => ({ default: (p: { eingaben: { current: unknown } }) => { p.eingaben.current = tanksEmpfang; return <div>Geprüfte Insel</div>; } }));
 vi.mock('./building/BauArena', () => ({ default: (p: { eingaben: { current: unknown } }) => { p.eingaben.current = bauEmpfang; return <div>Geprüfte Bauwelt</div>; } }));
 vi.mock('./transport', () => ({
   hatLan: () => false,
@@ -22,7 +24,7 @@ const link = () => `https://staging.brauweg-spielen.de/broremote#t=relay&r=ABC12
 beforeEach(() => {
   sessionStorage.clear(); history.replaceState(null, '', '/broremote');
   draht.e = null; draht.senden.mockClear(); draht.schliessen.mockClear();
-  bauEmpfang.mockClear();
+  bauEmpfang.mockClear(); tanksEmpfang.mockClear();
   Element.prototype.scrollTo = vi.fn();
 });
 afterEach(() => cleanup());
@@ -133,4 +135,68 @@ it('ein Abbruchdialog wartet auf die bewusste Auswahl und blockiert die Verbindu
   expect(screen.getByText('21 ms')).toBeInTheDocument();
   fireEvent.click(screen.getByText('Hier bleiben'));
   expect(draht.schliessen).not.toHaveBeenCalled();
+});
+
+// BroTanks (docs/BROREMOTE-ARTILLERIE.md, Abschnitt 8): zweite Spielkarte, Spielwahl, Mindestzahl, Weiterleitung.
+const lobby = (x: Partial<RaumSicht> = {}): RaumSicht => ({ raum: 'ABC12345', phase: 'lobby', abschnitt: 1, layout: 'bauen', gesperrt: false, gastgeberDa: true, einladungBis: Date.now() + 600_000, spieler: [], ...x });
+
+it('zeigt zwei Spielkarten; BroTanks hat kein Solotraining und wählt sein Spiel in der neuen Lobby', () => {
+  render(<BroRemote />);
+  expect(screen.getByRole('button', { name: /Bro Building Battle/ })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /BroTanks/ }));
+  expect(screen.getByRole('heading', { name: 'BroTanks' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Solotraining starten' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Lobby eröffnen/ }));
+  act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'raum', sicht: lobby() }); });
+  expect(draht.senden).toHaveBeenCalledWith({ art: 'spielwahl', spiel: 'brotanks' });
+  // Einmal je Raum: Ein weiteres Raumupdate mit noch altem Spiel schickt die Wahl nicht erneut.
+  act(() => draht.e!.nachricht({ art: 'raum', sicht: lobby({ abschnitt: 2 }) }));
+  expect(draht.senden.mock.calls.filter(c => (c as unknown as [{ art: string }])[0].art === 'spielwahl')).toHaveLength(1);
+});
+
+it('der Gastgeber schaltet in der Lobby das Spiel um; für BroTanks braucht es zwei Handys', () => {
+  render(<BroRemote />);
+  fireEvent.click(screen.getByRole('button', { name: /Bro Building Battle/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Lobby eröffnen/ }));
+  const anna = { id: 'anna', name: 'Anna', farbe: '#80e5cd', verbunden: true, bereit: true };
+  act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'building', spieler: [anna] }) }); });
+  expect(draht.senden).not.toHaveBeenCalledWith(expect.objectContaining({ art: 'spielwahl' }));
+  expect(screen.getByText('EUER SPIELMODUS')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'BroTanks' }));
+  expect(draht.senden).toHaveBeenCalledWith({ art: 'spielwahl', spiel: 'brotanks' });
+  act(() => draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'brotanks', spieler: [anna] }) }));
+  expect(screen.queryByText('EUER SPIELMODUS')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Battle starten' })).toBeDisabled();
+  expect(screen.getByText('Für BroTanks braucht ihr mindestens zwei Handys.')).toBeInTheDocument();
+  act(() => draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'brotanks', spieler: [anna, { ...anna, id: 'bert', name: 'Bert' }] }) }));
+  expect(screen.getByRole('button', { name: 'Battle starten' })).toBeEnabled();
+});
+
+it('der Gastgeber leitet BroTanks-Eingaben in die Insel, nicht in die Bauwelt', async () => {
+  render(<BroRemote />);
+  fireEvent.click(screen.getByRole('button', { name: /BroTanks/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Lobby eröffnen/ }));
+  const spieler = [{ id: 'anna', name: 'Anna', farbe: '#80e5cd', verbunden: true, bereit: true }, { id: 'bert', name: 'Bert', farbe: '#ff8a5c', verbunden: true, bereit: true }];
+  act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'raum', sicht: lobby({ phase: 'spiel', abschnitt: 2, layout: 'zielen', gesperrt: true, spiel: 'brotanks', spieler, partie: { id: 'insel', seed: 7, spiel: 'brotanks', modus: 'rennen' } }) }); });
+  await screen.findByText('Geprüfte Insel');
+  expect(screen.queryByText('Geprüfte Bauwelt')).not.toBeInTheDocument();
+  act(() => draht.e!.nachricht({ art: 'eingabe', spieler: 'bert', abschnitt: 2, folge: 1, aktion: { art: 'feuer', zug: 1, winkel: 45, staerke: 60, waffe: 0 } }));
+  expect(tanksEmpfang).toHaveBeenCalledWith('bert', { art: 'feuer', zug: 1, winkel: 45, staerke: 60, waffe: 0 });
+  expect(bauEmpfang).not.toHaveBeenCalled();
+});
+
+it('das Handy zeigt in BroTanks den Zielcontroller und schickt den Schuss mit der Zugnummer', () => {
+  render(<BroRemote />);
+  fireEvent.click(screen.getByRole('button', { name: /Bro Building Battle/ }));
+  fireEvent.change(screen.getByLabelText('Dein Spielername'), { target: { value: 'Anna' } });
+  fireEvent.change(screen.getByLabelText('Einladungslink'), { target: { value: link() } });
+  fireEvent.click(screen.getByRole('button', { name: 'Verbinden' }));
+  const s = lobby({ phase: 'spiel', abschnitt: 2, layout: 'zielen', gesperrt: true, spiel: 'brotanks', partie: { id: 'insel', seed: 7, spiel: 'brotanks', modus: 'rennen' }, spieler: [{ id: 'anna', name: 'Anna', farbe: '#80e5cd', verbunden: true, bereit: true }] });
+  act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'willkommen', rolle: 'spieler', raum: s.raum, schluessel: 'b'.repeat(32), spieler: 'anna' }); draht.e!.nachricht({ art: 'raum', sicht: s }); });
+  expect(screen.getByText('Gleich geht es los.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Drehen' })).not.toBeInTheDocument();
+  const arti = { phase: 'zielen' as const, amZug: true, zug: 2, rest: 20, inZuegen: 0, winkel: 70, staerke: 40, waffe: 0, munition: [-1, 3, 2, 2, 1, 2, 1, 1], lp: 100, tank: 100, wind: 3, runde: 1, platz: 1, raus: false, gewonnen: false };
+  act(() => draht.e!.nachricht({ art: 'privat', abschnitt: 2, daten: { arti } }));
+  fireEvent.click(screen.getByRole('button', { name: /FEUER/ }));
+  expect(draht.senden).toHaveBeenLastCalledWith(expect.objectContaining({ art: 'eingabe', abschnitt: 2, aktion: { art: 'feuer', zug: 2, winkel: 70, staerke: 40, waffe: 0 } }));
 });

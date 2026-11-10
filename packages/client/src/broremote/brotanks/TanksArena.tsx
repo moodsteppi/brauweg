@@ -4,7 +4,8 @@ import { BroIcon } from '../BroIcon';
 import { BroDialog } from '../BroDialog';
 import { REGELN } from './regeln';
 import { TanksPartie, type TanksSicht } from './partie';
-import { einschlagAnwenden, flugBerechnen, type Flugbahn } from './flug';
+import { einschlagAnwenden, type Flugbahn } from './flug';
+import { flugNachrechnen, flugZeit } from './abspiel';
 import { zeichneBuehne, type Effekt } from './zeichnen';
 import '../building/building.css';
 import './brotanks.css';
@@ -79,12 +80,9 @@ export default function TanksArena(p: Eigenschaften): React.JSX.Element {
     const verfolgen = (s: TanksSicht, jetzt: number): Abspiel | null => {
       if (s.phase === 'flug') {
         if (!abspiel || abspiel.zug !== s.zug) {
-          // FUND (an Karte 2 gemeldet): sicht() nennt den Flug erst nach dem Aufschlag. Die Bühne rechnet die
-          // Bahn deshalb mit derselben Funktion und denselben Eingaben nach, mit denen feuern() sie rechnet.
-          const b = s.bros.find(x => x.id === s.amZug)!;
-          const ziele = s.bros.filter(o => !o.raus).map(o => ({ x: o.x, y: o.y, schuetze: o.id === b.id }));
-          const gelaende = new Float32Array(s.gelaende);
-          abspiel = { zug: s.zug, bahn: flugBerechnen({ x: b.x, y: b.y }, b.winkel, b.staerke, s.wind, b.waffe, new Float32Array(s.gelaende), ziele), gelaende, angewandt: 0 };
+          // sicht() nennt den Flug erst nach dem Aufschlag; abspiel.ts rechnet ihn nach (siehe dort).
+          const bahn = flugNachrechnen(s); if (!bahn) return null;
+          abspiel = { zug: s.zug, bahn, gelaende: new Float32Array(s.gelaende), angewandt: 0 };
           klang('feuer');
         }
         return abspiel;
@@ -111,9 +109,7 @@ export default function TanksArena(p: Eigenschaften): React.JSX.Element {
       const ab = verfolgen(s, jetzt);
       let t = 0;
       if (ab) {
-        // Lange Flüge werden schneller abgespielt, damit niemand länger als flugAnzeige zuschaut (Entwurf, Abschnitt 4).
-        const anzeige = Math.max(30 * R.schritt, Math.round(Math.min(R.flugAnzeige, ab.bahn.dauer) / R.schritt) * R.schritt);
-        t = Math.min(ab.bahn.dauer, Math.max(0, anzeige - s.rest) * Math.max(1, ab.bahn.dauer / R.flugAnzeige));
+        t = flugZeit(ab.bahn, s.rest);
         while (ab.angewandt < ab.bahn.einschlaege.length && ab.bahn.einschlaege[ab.angewandt].t <= t) {
           const e = ab.bahn.einschlaege[ab.angewandt++];
           einschlagAnwenden(ab.gelaende, e);
