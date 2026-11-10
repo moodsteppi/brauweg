@@ -177,11 +177,11 @@ test('vier gleichzeitig aktive Controller bleiben eine halbe Stunde stabil', () 
 
 test('Zauber werden einmal adressiert und nur im Baucontroller akzeptiert', () => {
   const a = aufbau(), g = a.gast('1'), ziel = a.gast('2'); a.start('1', '2'); a.post.length = 0;
-  a.eingabe('1', 1, { art: 'zauber', zauber: 'schwere', ziel: ziel.spieler });
+  a.eingabe('1', 1, { art: 'zauber', zauber: 'schwere', item: 1, ziel: ziel.spieler });
   assert.ok(a.post.some(p => p.v === 'h' && p.n.art === 'eingabe' && p.n.spieler === g.spieler && p.n.aktion.art === 'zauber'));
   assert.equal(aktionLesen({ art: 'zauber', zauber: 'unbegrenzt' }, 'bauen'), null);
   assert.equal(aktionLesen({ art: 'zauber', zauber: 'anker' }, 'auswahl'), null);
-  assert.equal(aktionLesen({ art: 'zauber', zauber: 'schwere', ziel: 'x'.repeat(25) }, 'bauen'), null);
+  assert.equal(aktionLesen({ art: 'zauber', zauber: 'schwere', item: 1, ziel: 'x'.repeat(25) }, 'bauen'), null);
 });
 
 
@@ -206,4 +206,31 @@ test('längerer Host-Netzwechsel bewahrt Partie und neutralisiert gehaltene Eing
   assert.deepEqual(a.raum.sicht().partie, partie);
   assert.equal(a.raum.sicht().spieler[0].id, gast.spieler);
   assert.ok(a.post.every(p => p.n.art !== 'eingabe' || p.n.aktion.art === 'reset'));
+});
+
+
+test('Item-Aktionen brauchen bekannte Art und Kennung; Plattform sendet keine freien Koordinaten', () => {
+  for (const zauber of ['anker', 'plattform', 'stein', 'schwere', 'eis']) {
+    assert.deepEqual(aktionLesen({ art: 'zauber', zauber, item: 7, extra: 'weg' }, 'bauen'), { art: 'zauber', zauber, item: 7 });
+    for (const item of [undefined, 0, -1, 1.5, Infinity, 1001]) assert.equal(aktionLesen({ art: 'zauber', zauber, item }, 'bauen'), null);
+  }
+  assert.deepEqual(aktionLesen({ art: 'plattform', item: 4, schritt: 'platzieren', y: 999 }, 'bauen'), { art: 'plattform', item: 4, schritt: 'platzieren' });
+  assert.equal(aktionLesen({ art: 'plattform', item: 4, schritt: 'platzieren' }, 'auswahl'), null);
+  assert.equal(aktionLesen({ art: 'plattform', item: 4, schritt: 'fliegen' }, 'bauen'), null);
+});
+
+test('Vorrat und Platzierung bleiben beim Wiederverbinden erhalten, fremde Felder werden entfernt', () => {
+  const a = aufbau(), g = a.gast('1'); a.start('1');
+  const bau = { form: 5, hoehe: 8, restzeit: 110, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 9, item: { art: 'plattform', nummer: 3, extra: 'weg' }, itemIn: 0, itemBereit: false, platzierung: { x: 3, y: 5, gueltig: true, rest: 6, extra: 'weg' } };
+  a.senden('h', { art: 'privat', abschnitt: a.raum.sicht().abschnitt, spieler: g.spieler, daten: { bau } });
+  a.post.length = 0; a.anmelden('neu', { art: 'fortsetzen', schluessel: g.schluessel });
+  const status = a.post.find(p => p.v === 'neu' && p.n.art === 'privat')?.n;
+  assert.ok(status?.art === 'privat');
+  assert.deepEqual(status.daten.bau?.item, { art: 'plattform', nummer: 3 });
+  assert.deepEqual(status.daten.bau?.platzierung, { x: 3, y: 5, gueltig: true, rest: 6 });
+  for (const falsch of [{ item: { art: 'unendlich', nummer: 1 } }, { item: { art: 'eis', nummer: 1 } }, { platzierung: { x: 999, y: 5, gueltig: true, rest: 6 } }, { itemIn: NaN }]) {
+    a.post.length = 0;
+    a.senden('h', { art: 'privat', abschnitt: a.raum.sicht().abschnitt, spieler: g.spieler, daten: { bau: { ...bau, ...falsch } } });
+    assert.ok(a.post.every(p => p.n.art !== 'privat'));
+  }
 });

@@ -8,7 +8,7 @@ import { Verbindung, hatLan, lanGastgeber, nativ, nativLauschen, type Kanal, typ
 import './broremote.css';
 import { BauAlbum } from './building/BauAlbum';
 import { BauWertung } from './building/BauWertung';
-import { BauVorschau } from './building/BauVorschau';
+import { BauVorrat } from './building/BauVorrat';
 import type { EingabeEmpfang } from './building/BauArena';
 import './building/building.css';
 import { messung } from './messen';
@@ -18,6 +18,7 @@ import { Verbindungsanzeige } from './Verbindungsanzeige';
 import { BroDialog, type BroRueckfrage } from './BroDialog';
 import { useBroWache } from './useBroWache';
 import './werkstatt.css';
+import './building/vorrat.css';
 
 const BauArena = lazy(() => import('./building/BauArena'));
 const TRAININGSSPIELER = [{ id: 'training', name: 'Du', farbe: '#70dfc4', verbunden: true, bereit: true }];
@@ -240,8 +241,8 @@ export function BroRemote(): React.JSX.Element {
         {sicht.phase === 'spiel' && sicht.partie && rolle === 'gastgeber' && <Suspense fallback={<p>Die Bauwelt wird geladen.</p>}><BauArena key={sicht.partie.id} id={sicht.partie.id} seed={sicht.partie.seed} modus={sicht.partie.modus} spieler={sicht.spieler} verbunden={verbunden} eingaben={bauEingaben} privat={(id, daten) => { if (sichtRef.current?.phase === 'spiel') kanal.current?.senden({ art: 'privat', spieler: id, abschnitt: sichtRef.current.abschnitt, daten }); }} zurLobby={() => senden({ art: 'lobby' })} /></Suspense>}
         {sicht.phase === 'spiel' && rolle === 'spieler' && <section className="br-panel br-eigener-controller">
           <div className="br-zeile br-controllername"><img src="/broremote/controller-pinguin.webp" alt="" /><h2>{meiner?.name}</h2><span style={{ color: meiner?.farbe }}>{MODI[sicht.partie?.modus ?? 'rennen'].name}</span></div>
-          {privat?.bau && <div className="bb-controllerstand"><div><small>{privat.bau.phase === 'ende' ? 'ERGEBNIS' : `PLATZ ${privat.bau.platz}`}</small><h3>{privat.bau.phase === 'ende' ? privat.bau.gewonnen ? 'Gewonnen!' : 'Gut gebaut.' : `${privat.bau.hoehe.toFixed(1).replace('.', ',')} Meter`}</h3><p>{privat.leben !== undefined ? `${'♥'.repeat(Math.min(3, privat.leben))}${'♡'.repeat(Math.max(0, 3 - privat.leben))} · ` : ''}{sicht.partie?.modus === 'standfest' ? `${privat.bau.verbraucht} / 30 Teile` : `${privat.bau.gebaut ?? 0} verbaut · ∞ Nachschub`}</p></div><div><small>DANACH</small><BauVorschau form={FORMEN[privat.bau.form] ?? 'quadrat'} /></div></div>}
-          {privat?.bau?.schwereWartet && <p className="br-zauberwarnung" role="status"><BroIcon name="gewicht" /> Dein nächstes Bauteil wird schwerer!</p>}
+          {privat?.bau && <div className="bb-controllerstand"><div><small>{privat.bau.phase === 'ende' ? 'ERGEBNIS' : `PLATZ ${privat.bau.platz}`}</small><h3>{privat.bau.phase === 'ende' ? privat.bau.gewonnen ? 'Gewonnen!' : 'Gut gebaut.' : `${privat.bau.hoehe.toFixed(1).replace('.', ',')} Meter`}</h3><p>{privat.leben !== undefined ? `${'♥'.repeat(Math.min(3, privat.leben))}${'♡'.repeat(Math.max(0, 3 - privat.leben))} · ` : ''}{sicht.partie?.modus === 'standfest' ? `${privat.bau.verbraucht} / 30 Teile` : `${privat.bau.gebaut ?? 0} verbaut · ∞ Nachschub`}</p></div><BauVorrat form={FORMEN[privat.bau.form] ?? 'quadrat'} item={privat.bau.item} itemIn={privat.bau.itemIn} ende={privat.bau.phase === 'ende' || privat.bau.fertig} /></div>}
+          {(privat?.bau?.schwereWartet || privat?.bau?.eisWartet || privat?.bau?.steinWartet) && <p className="br-zauberwarnung" role="status"><BroIcon name={privat.bau.eisWartet ? 'eis' : privat.bau.steinWartet ? 'stein' : 'gewicht'} /> Nächstes Teil: {[privat.bau.schwereWartet && 'dreifaches Gewicht', privat.bau.eisWartet && 'Eisglätte', privat.bau.steinWartet && 'Steinsiegel'].filter(Boolean).join(' · ')}</p>}
           {privat?.bau?.zielCountdown && privat.bau.phase !== 'ende' ? <div className="bb-controllerziel" role="status">Turm halten <strong>{privat.bau.zielCountdown}</strong><small>Bis zum Sieg gibt es keine neuen Teile.</small></div> : null}
           {sicht.partie && <BauWertung key={sicht.partie.id} partie={sicht.partie.id} modus={sicht.partie.modus} name={meiner?.name ?? 'Du'} ergebnis={privat?.bau?.phase === 'ende' ? { modus: sicht.partie.modus, hoehe: privat.bau.hoehe, gebaut: privat.bau.gebaut ?? 0, verloren: privat.bau.verloren ?? 0, leben: privat.leben ?? 3, platz: privat.bau.platz, gewonnen: privat.bau.gewonnen, aufgegeben: privat.bau.aufgegeben ?? false, dauer: privat.bau.dauer ?? 0, spielerzahl: privat.bau.spielerzahl ?? Math.max(1, sicht.spieler.length) } : null} />}
           {privat?.bau && <div className="br-rundeninfo"><span><BroIcon name="pokal" /> Platz {privat.bau.platz}</span><span>Restzeit {Math.floor(privat.bau.restzeit / 60)}:{String(Math.max(0, Math.ceil(privat.bau.restzeit) % 60)).padStart(2, '0')}</span></div>}

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { FAHIGKEITEN } from '@brauweg/building-kern';
+import { ItemBild } from './building/BauVorrat';
 import { BroIcon, type BroSymbol } from './BroIcon';
 import type { Aktion, BauPrivat, Layout, Taste } from '@brauweg/broremote-kern';
 
@@ -7,12 +9,25 @@ export function Controller({ layout, senden, bau, gegner = [] }: { layout: Layou
   const quelle = useRef(senden); quelle.current = senden;
   const eingabe = useRef({ richtungen: new Map<number | string, { x: number; y: number }>(), tasten: new Map<number | string, Taste>() });
   const [summen, setSummen] = useState(true);
+  const haptik = useRef(summen); haptik.current = summen;
   const [gedrueckt, setGedrueckt] = useState<string[]>([]);
-  const fuehlen = (): void => { if (summen) { try { navigator.vibrate?.(12); } catch { /* Haptik ist optional. */ } } };
+  const fuehlen = (): void => { if (haptik.current) { try { navigator.vibrate?.(12); } catch { /* Haptik ist optional. */ } } };
   const [zahl, setZahl] = useState('0');
   const [ziel, setZiel] = useState('');
   const ziele = gegner.filter(g => !bau?.ziele || bau.ziele.includes(g.id));
   const zielId = ziele.some(g => g.id === ziel) ? ziel : ziele[0]?.id;
+  const item = bau?.item, platzierung = bau?.platzierung;
+  const magie = item ? FAHIGKEITEN[item.art] : undefined;
+  const aktuell = useRef({ bau, zielId }); aktuell.current = { bau, zielId };
+  const benutzen = (): void => {
+    const { bau: b, zielId: z } = aktuell.current;
+    if (!b?.item || !b.itemBereit || (FAHIGKEITEN[b.item.art].angriff && !z)) return;
+    fuehlen(); quelle.current({ art: 'zauber', zauber: b.item.art, item: b.item.nummer, ...(FAHIGKEITEN[b.item.art].angriff ? { ziel: z } : {}) });
+  };
+  const platzieren = (): void => {
+    const b = aktuell.current.bau;
+    if (b?.item && b.platzierung?.gueltig) { fuehlen(); quelle.current({ art: 'plattform', item: b.item.nummer, schritt: 'platzieren' }); }
+  };
   const blockiert = !!bau?.zielCountdown;
   const sperre = useRef(blockiert); sperre.current = blockiert;
   const [wahl, setWahl] = useState<number | null>(null);
@@ -22,7 +37,7 @@ export function Controller({ layout, senden, bau, gegner = [] }: { layout: Layou
     const d = eingabe.current;
     const richtung = [...d.richtungen.values()].at(-1) ?? { x: 0, y: 0 };
     const tasten = [...new Set(d.tasten.values())];
-    setGedrueckt([...tasten, ...(richtung.x ? [richtung.x < 0 ? 'links' : 'rechts'] : [])]);
+    setGedrueckt([...tasten, ...(richtung.x ? [richtung.x < 0 ? 'links' : 'rechts'] : richtung.y ? [richtung.y < 0 ? 'oben' : 'unten'] : [])]);
     quelle.current({ art: 'steuerung', ...richtung, tasten });
   };
   const reset = (): void => {
@@ -30,15 +45,17 @@ export function Controller({ layout, senden, bau, gegner = [] }: { layout: Layou
     eingabe.current.richtungen.clear(); eingabe.current.tasten.clear(); setGedrueckt([]);
     quelle.current({ art: 'reset' });
   };
-  useEffect(() => { if (blockiert) reset(); }, [blockiert]);
+  useEffect(() => { reset(); }, [blockiert, !!platzierung]);
   useEffect(() => {
     const verborgen = (): void => { if (document.hidden) reset(); };
     const unten = (e: KeyboardEvent): void => {
       if ((e.target instanceof HTMLElement && e.target.matches('input,textarea,select')) || e.repeat) return;
       const d = eingabe.current;
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'r', 'Enter'].includes(e.key)) e.preventDefault();
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'r', 'e', 'Enter'].includes(e.key)) e.preventDefault();
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') d.richtungen.set(e.key, { x: e.key === 'ArrowLeft' ? -1 : 1, y: 0 });
-      else if (layout === 'auswahl' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) d.richtungen.set(e.key, { x: 0, y: e.key === 'ArrowUp' ? -1 : 1 });
+      else if ((layout === 'auswahl' || aktuell.current.bau?.platzierung) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) d.richtungen.set(e.key, { x: 0, y: e.key === 'ArrowUp' ? -1 : 1 });
+      else if (layout === 'bauen' && e.key === 'e') { benutzen(); return; }
+      else if (layout === 'bauen' && aktuell.current.bau?.platzierung) { if (e.key === 'Enter' || e.key === ' ') platzieren(); return; }
       else if (layout === 'bauen' && (e.key === 'r' || e.key === ' ')) d.tasten.set(e.key, e.key === 'r' ? 'drehen' : 'fallen');
       else if (layout === 'auswahl' && e.key === 'Enter') d.tasten.set(e.key, 'bestaetigen');
       else return;
@@ -82,21 +99,31 @@ export function Controller({ layout, senden, bau, gegner = [] }: { layout: Layou
     {taste('bestaetigen', 'Bestätigen', 'haken')}
   </div>;
 
-  return <div className="br-controller bb-knopfcontroller">
-    <p className="br-leise">{blockiert ? 'Ziel erreicht. Dein Turm muss noch halten!' : 'Links und rechts halten. Drehen und Fallenlassen antippen.'}</p>
+  const richtungen: { x: number; y: number; name: string; icon: BroSymbol }[] = [
+    { x: -1, y: 0, name: 'Links', icon: 'links' }, { x: 1, y: 0, name: 'Rechts', icon: 'rechts' },
+    ...(platzierung ? [{ x: 0, y: -1, name: 'Höher', icon: 'oben' as const }, { x: 0, y: 1, name: 'Tiefer', icon: 'unten' as const }] : []),
+  ];
+  return <div className={`br-controller bb-knopfcontroller${platzierung ? ' bb-platziert' : ''}`}>
+    <p className="br-leise">{blockiert ? 'Ziel erreicht. Dein Turm muss noch halten!' : platzierung ? `Steg an eine freie Stelle bewegen. Noch ${platzierung.rest} s.` : 'Links und rechts halten. Drehen und Fallenlassen antippen.'}</p>
     <div className="bb-baubuttons">
-      {([-1, 1] as const).map(x => <button type="button" className={`br-steuertaste${gedrueckt.includes(x < 0 ? 'links' : 'rechts') ? ' br-gedrueckt' : ''}`} key={x} disabled={blockiert} aria-label={x === -1 ? 'Nach links' : 'Nach rechts'}
-        onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); fuehlen(); eingabe.current.richtungen.set(e.pointerId, { x, y: 0 }); schicken(); }}
+      {richtungen.map(({ x, y, name, icon }) => <button type="button" className={`br-steuertaste br-steuertaste-richtung${gedrueckt.includes(icon) ? ' br-gedrueckt' : ''}`} key={icon} disabled={blockiert} aria-label={x ? x === -1 ? 'Nach links' : 'Nach rechts' : name}
+        onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); fuehlen(); eingabe.current.richtungen.set(e.pointerId, { x, y }); schicken(); }}
         onPointerUp={e => { if (eingabe.current.richtungen.delete(e.pointerId)) schicken(); }} onPointerCancel={e => { if (eingabe.current.richtungen.delete(e.pointerId)) schicken(); }} onLostPointerCapture={e => { if (eingabe.current.richtungen.delete(e.pointerId)) schicken(); }}
-        onClick={e => { if (e.detail === 0) { clearTimeout(richtungTimer.current); eingabe.current.richtungen.set('a11y', { x, y: 0 }); schicken(); richtungTimer.current = setTimeout(() => { eingabe.current.richtungen.delete('a11y'); schicken(); }, 150); } }}><BroIcon name={x < 0 ? 'links' : 'rechts'} />{x === -1 ? 'Links' : 'Rechts'}</button>)}
-      {taste('drehen', 'Drehen', 'drehen')}{taste('fallen', 'Fallen lassen', 'fallen')}
+        onClick={e => { if (e.detail === 0) { clearTimeout(richtungTimer.current); eingabe.current.richtungen.set('a11y', { x, y }); schicken(); richtungTimer.current = setTimeout(() => { eingabe.current.richtungen.delete('a11y'); schicken(); }, 150); } }}><BroIcon name={icon} />{name}</button>)}
+      {!platzierung && <>{taste('drehen', 'Drehen', 'drehen')}{taste('fallen', 'Fallen lassen', 'fallen')}</>}
     </div>
-    {bau && <div className="bb-zauberleiste"><span className="br-kicker">DEINE ZAUBER · JE EINMAL PRO RUNDE</span>
-      <details className="bb-zauberhilfe"><summary>So wirken deine Zauber</summary><p>Ab 3 verbauten Teilen. Turmanker beruhigt deinen Turm 4 Sekunden. Schwergewicht verdreifacht das Gewicht des nächsten gegnerischen Teils.</p></details>
-      <button className="bb-zauber bb-anker" disabled={!bau.ankerBereit} onClick={() => { fuehlen(); senden({ art: 'zauber', zauber: 'anker' }); }}><BroIcon name="anker" /><strong>Turmanker</strong><small>{bau.anker ? `${Math.ceil(bau.anker)} s aktiv` : bau.ankerBereit ? 'Jetzt stabilisieren' : (bau.gebaut ?? 0) < 3 ? 'Ab 3 verbauten Teilen' : 'Nicht mehr verfügbar'}</small></button>
-      {gegner.length > 0 && <><div className="bb-zauberziel" role="group" aria-label="Ziel für Schwergewicht"><small>GEGNER WÄHLEN</small><div className="br-gegner">{gegner.map(g => <button type="button" key={g.id} aria-pressed={zielId === g.id} disabled={!ziele.some(z => z.id === g.id)} onClick={() => setZiel(g.id)}>{g.name}</button>)}</div></div>
-      <button className="bb-zauber bb-schwere" disabled={!bau.schwereBereit || !zielId} onClick={() => { if (zielId) { fuehlen(); senden({ art: 'zauber', zauber: 'schwere', ziel: zielId }); } }}><BroIcon name="gewicht" /><strong>Schwergewicht</strong><small>{bau.schwereBereit ? zielId ? 'Gegner verzaubern' : 'Kein Ziel verfügbar' : (bau.gebaut ?? 0) < 3 ? 'Ab 3 verbauten Teilen' : 'Nicht mehr verfügbar'}</small></button></>}
-    </div>}
-    <div className="br-controllerfuss"><span>Schau auf den großen Bildschirm.</span><button type="button" className="br-link" aria-pressed={summen} onClick={() => setSummen(s => !s)}>Haptik {summen ? 'an' : 'aus'}</button></div>
+    {bau && <section className="bb-itembedienung" aria-label="Dein zufälliges Item">
+      {platzierung ? <>
+        <button type="button" className="bb-itemnutzen bb-itemnutzen-plattform" disabled={!platzierung.gueltig || blockiert} onClick={platzieren}><ItemBild art="plattform" /><span><strong>Steg platzieren</strong><small>{platzierung.gueltig ? 'Freie Stelle gefunden' : 'Hier ist etwas im Weg'}</small></span><BroIcon name="haken" /></button>
+        <button type="button" className="br-link bb-item-zurueck" onClick={() => { if (item) senden({ art: 'plattform', item: item.nummer, schritt: 'zurueck' }); }}>Zurück zum Bauen · Item behalten</button>
+      </> : item && magie ? <>
+        {magie.angriff && <div className="bb-itemziele" role="group" aria-label="Ziel für dein Item"><small>GEGNER WÄHLEN</small><div className="br-gegner">{gegner.map(g => <button type="button" key={g.id} aria-pressed={zielId === g.id} disabled={!ziele.some(z => z.id === g.id)} onClick={() => setZiel(g.id)}>{g.name}</button>)}</div></div>}
+        <button type="button" className={`bb-itemnutzen bb-itemnutzen-${item.art}`} aria-label={`${magie.name} einsetzen`} disabled={!bau.itemBereit || (magie.angriff && !zielId)} onClick={benutzen}><ItemBild art={item.art} /><span><strong>{magie.name}</strong><small>{magie.kurz}</small></span><span className="bb-item-aktion">Einsetzen<BroIcon name="start" /></span></button>
+        <p className="bb-itembeschreibung">{magie.beschreibung}</p>
+      </> : <div className="bb-itemwartet"><ItemBild /><div><strong>Zufälliges Item in {bau.itemIn ?? 0} s</strong><small>Weiterbauen! Dein Nachschub kommt von allein.</small></div></div>}
+      {bau.anker ? <p className="bb-itemaktiv"><BroIcon name="anker" /> Turmanker aktiv · {Math.ceil(bau.anker)} s</p> : null}
+      <details className="bb-itemhilfe"><summary>Welche Items gibt es?</summary><p>Ein Platz, ein zufälliges Item. Erst einsetzen, dann kommt neuer Nachschub. Im Solotraining erhältst du nur hilfreiche Items.</p>{Object.entries(FAHIGKEITEN).map(([art, f]) => <p key={art}><strong>{f.name}: </strong>{f.beschreibung}</p>)}</details>
+    </section>}
+    <div className="br-controllerfuss"><span>{platzierung ? 'Steg auf dem großen Bildschirm ausrichten.' : 'Schau auf den großen Bildschirm.'}</span><button type="button" className="br-link" aria-pressed={summen} onClick={() => setSummen(s => !s)}>Haptik {summen ? 'an' : 'aus'}</button></div>
   </div>;
 }

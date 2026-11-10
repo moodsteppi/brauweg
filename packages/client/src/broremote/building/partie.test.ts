@@ -153,22 +153,4 @@ describe('Bro Building Battle mit echter Physik', () => {
     const zurueckgelegt = p.sicht().bahnen[0].verbraucht; schritte(p, 182);
     expect(p.sicht().gewinner).toEqual(['0']); expect(p.sicht().bahnen[0].verbraucht).toBe(zurueckgelegt);
   });
-  it('Zauber brauchen drei Teile, kosten genau eine Ladung und treffen nur das gewählte Ziel', () => {
-    const p = partie('rennen', 3); start(p);
-    p.eingabe('0', { art: 'zauber', zauber: 'anker' }); expect(p.sicht().bahnen[0].anker).toBe(0);
-    for (let i = 0; i < 2200 && p.sicht().bahnen[0].gebaut < 3; i++) { if (i % 90 === 0) for (const id of ['0', '1', '2']) taste(p, id, 'fallen'); p.schritt(); }
-    expect(p.sicht().bahnen[0].ankerBereit).toBe(true);
-    p.eingabe('0', { art: 'zauber', zauber: 'anker' }); schritte(p, 30);
-    const rest = p.sicht().bahnen[0].anker; p.eingabe('0', { art: 'zauber', zauber: 'anker' });
-    expect(p.sicht().bahnen[0].anker).toBe(rest); expect(p.sicht().bahnen[0].ankerBereit).toBe(false);
-    p.eingabe('0', { art: 'zauber', zauber: 'schwere', ziel: '0' }); expect(p.sicht().bahnen[0].schwereBereit).toBe(true);
-    p.eingabe('0', { art: 'zauber', zauber: 'schwere', ziel: '1' });
-    expect(p.sicht().bahnen[1].schwereWartet).toBe(true); expect(p.sicht().bahnen[2].schwereWartet).toBe(false);
-    expect(p.sicht().bahnen[0].schwereBereit).toBe(false);
-    for (let i = 0; i < 500 && !p.sicht().bahnen[1].steine.some(s => s.schwer); i++) { if (i % 60 === 0) taste(p, '1', 'fallen'); p.schritt(); }
-    expect(p.sicht().bahnen[1].steine.some(s => s.schwer)).toBe(true);
-    expect(p.sicht().bahnen[2].steine.some(s => s.schwer)).toBe(false);
-    schritte(p, 250); expect(p.sicht().bahnen[0].anker).toBe(0);
-  });
-
 });

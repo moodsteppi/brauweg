@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
-import { FORMEN, MODI, REGELN, type BauModus } from '@brauweg/building-kern';
+import { MODI, REGELN, type BauModus } from '@brauweg/building-kern';
 import type { Aktion, Privat, Spieler } from '@brauweg/broremote-kern';
 import { BroIcon } from '../BroIcon';
 import { BroDialog } from '../BroDialog';
@@ -7,7 +7,8 @@ import { Controller } from '../Controller';
 import { BauPartie, ladeBauphysik, type BauSicht } from './partie';
 import { zeichneBahn, setzeBaukameraZurueck } from './zeichnen';
 import { BauWertung } from './BauWertung';
-import { BauVorschau } from './BauVorschau';
+import { BauVorrat } from './BauVorrat';
+import { bauPrivat } from './privateSicht';
 import './building.css';
 import { messung } from '../messen';
 
@@ -51,7 +52,7 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
     void ladeBauphysik().then(r => {
       if (beendet) return;
       const k = new BauPartie(r, anfang.current, werte.current.modus, werte.current.seed); partie.current = k;
-      p.eingaben.current = (id, a) => { if (!pauseRef.current && (a.art === 'reset' || a.art === 'steuerung' || a.art === 'zauber')) k.eingabe(id, a); };
+      p.eingaben.current = (id, a) => { if (!pauseRef.current && (a.art === 'reset' || a.art === 'steuerung' || a.art === 'zauber' || a.art === 'plattform')) k.eingabe(id, a); };
       const tick = (jetzt: number): void => {
         if (beendet) return;
         const delta = letzter ? Math.min(.1, (jetzt - letzter) / 1000) : 0; letzter = jetzt;
@@ -71,7 +72,7 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
             for (const b of s.bahnen) werte.current.privat(b.id, {
               leben: s.modus === 'standfest' ? b.leben : undefined, punkte: Math.round(b.hoehe * 100), amZug: !b.fertig && s.phase === 'spiel' && !pauseRef.current,
               hinweis: s.phase === 'ende' ? (s.gewinner.includes(b.id) ? 'Stark gebaut! Du hast gewonnen.' : 'Nächste Runde, neuer Turm.') : pauseRef.current || (b.fertig ? 'Deine Runde ist fertig. Schau den anderen zu.' : b.halten > 0 ? 'Ziel erreicht. Halte deinen Turm 3 Sekunden!' : b.zauberHinweis || 'Links / rechts bewegen · Drehen · Fallen lassen'),
-              bau: { form: FORMEN.indexOf(b.naechster), hoehe: Math.round(b.hoehe * 10) / 10, restzeit: s.restzeit, phase: s.phase === 'ende' ? 'ende' : pauseRef.current ? 'pause' : s.phase, countdown: s.countdown, platz: b.platz, fertig: b.fertig, gewonnen: s.gewinner.includes(b.id), verbraucht: b.verbraucht, spielerzahl: s.bahnen.length, ziele: s.bahnen.filter(g => g.id !== b.id && !g.fertig && !g.aufgegeben && !g.schwereWartet).map(g => g.id), zielCountdown: b.halten > 0 ? Math.max(1, Math.ceil(REGELN.halten - b.halten)) : 0, ankerBereit: b.ankerBereit, schwereBereit: b.schwereBereit, anker: b.anker, schwereWartet: b.schwereWartet, gebaut: b.gebaut, verloren: b.verloren, aufgegeben: b.aufgegeben, dauer: s.dauer },
+              bau: bauPrivat(s, b, !!pauseRef.current),
             });
           }
         }
@@ -96,7 +97,7 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
     <p className="bb-regel">{p.modus === 'rennen' ? '16 m erreichen · 3 Sekunden halten · Nachschub bis zum Zeitlimit' : '3 Leben · Jedes abgestürzte Teil kostet ein Leben · 30 Bauteile'}</p>
     <div className={`bb-buehne bb-buehne-${sicht.bahnen.length}`}>
       {sicht.bahnen.map(b => <article className={`bb-bahn${b.fertig ? ' bb-fertig' : ''}${sicht.gewinner.includes(b.id) ? ' bb-sieger' : ''}${b.anker > 0 ? ' bb-geschuetzt' : ''}`} key={b.id} style={{ '--spielerfarbe': b.farbe } as React.CSSProperties}>
-        <div className="bb-spielerkopf"><div className="bb-portraet"><img key={`${b.verloren}-${b.effekt}`} className={ergebnis && sicht.gewinner.includes(b.id) ? 'bb-pinguin-sieg' : b.verloren ? 'bb-pinguin-schreck' : 'bb-pinguin-baut'} src="/broremote/baumeister.webp" alt="" /><small aria-label={`Platz ${b.platz}`}>{b.platz}</small></div><div className="bb-spielername"><strong>{b.name}</strong><span>{p.modus === 'standfest' ? `${'♥'.repeat(b.leben)}${'♡'.repeat(3 - b.leben)}` : `${b.hoehe.toFixed(1).replace('.', ',')} / 16 m`}</span><div className="bb-fortschritt" aria-hidden="true"><i style={{ width: `${Math.min(100, (p.modus === 'standfest' ? b.gebaut / REGELN.bauteile : b.hoehe / REGELN.ziel) * 100)}%` }} /></div></div><div className="bb-naechster"><small>DANACH</small><BauVorschau form={b.naechster} /></div></div>
+        <div className="bb-spielerkopf"><div className="bb-portraet"><img key={`${b.verloren}-${b.effekt}`} className={ergebnis && sicht.gewinner.includes(b.id) ? 'bb-pinguin-sieg' : b.verloren ? 'bb-pinguin-schreck' : 'bb-pinguin-baut'} src="/broremote/baumeister.webp" alt="" /><small aria-label={`Platz ${b.platz}`}>{b.platz}</small></div><div className="bb-spielername"><strong>{b.name}</strong><span>{p.modus === 'standfest' ? `${'♥'.repeat(b.leben)}${'♡'.repeat(3 - b.leben)}` : `${b.hoehe.toFixed(1).replace('.', ',')} / 16 m`}</span><div className="bb-fortschritt" aria-hidden="true"><i style={{ width: `${Math.min(100, (p.modus === 'standfest' ? b.gebaut / REGELN.bauteile : b.hoehe / REGELN.ziel) * 100)}%` }} /></div></div><BauVorrat form={b.naechster} item={b.item} itemIn={b.itemIn} ende={ergebnis || b.fertig} /></div>
         <canvas ref={c => { if (c) bilder.current.set(b.id, c); else bilder.current.delete(b.id); }} aria-label={`${b.name}: ${b.hoehe.toFixed(1)} Meter hoher Turm`} />
         {b.halten > 0 && !ergebnis && <div className="bb-zielzaehler" role="status"><span>ZIEL ERREICHT</span><strong key={Math.ceil(3 - b.halten)}>{Math.max(1, Math.ceil(3 - b.halten))}</strong><small>{b.name}, halte deinen Turm!</small></div>}
         {b.verloren > 0 && !ergebnis && <div className="bb-absturz" key={`verlust-${b.verloren}`} aria-hidden="true"><span>✦</span><span>◆</span><span>✧</span><strong>{p.modus === 'standfest' ? '−1 Leben' : 'Weiterbauen! Nachschub kommt.'}</strong></div>}
@@ -108,8 +109,8 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
     </div>
     {ergebnis && <div className="bb-ergebnis" role="status"><span className="br-kicker">RUNDE GESCHAFFT</span><h2>{sicht.gewinner.length ? `${sicht.bahnen.filter(b => sicht.gewinner.includes(b.id)).map(b => b.name).join(' & ')} ${sicht.gewinner.length === 1 ? 'gewinnt!' : 'gewinnen!'}` : 'Ein neuer Anlauf wartet.'}</h2><p>{sicht.grund}</p><ol>{[...sicht.bahnen].sort((a, b) => a.platz - b.platz).map(b => <li key={b.id}><span>{b.platz}. {b.name}</span><strong>{b.hoehe.toFixed(1).replace('.', ',')} m{p.modus === 'standfest' ? ` · ${b.leben} ♥` : ''}</strong></li>)}</ol><button className="br-knopf" onClick={() => p.training ? setVersuch(v => v + 1) : p.zurLobby()}>{p.training ? 'Noch eine Runde' : 'Revanche vorbereiten'}</button></div>}
     {p.training && <BauWertung key={`${lokaleKennung.current}-${versuch}`} partie={`${lokaleKennung.current}-${versuch}`} modus={p.modus} name={solo.name} ergebnis={ergebnis ? { modus: p.modus, hoehe: solo.hoehe, gebaut: solo.gebaut, verloren: solo.verloren, leben: solo.leben, platz: solo.platz, gewonnen: sicht.gewinner.includes(solo.id), aufgegeben: solo.aufgegeben, dauer: sicht.dauer, spielerzahl: 1 } : null} />}
-    {p.training && !ergebnis && !pausenGrund && sicht.phase === 'spiel' && <div className="bb-training"><Controller layout="bauen" bau={{ form: 0, hoehe: solo.hoehe, restzeit: sicht.restzeit, phase: sicht.phase, countdown: sicht.countdown, platz: solo.platz, fertig: solo.fertig, gewonnen: false, verbraucht: solo.verbraucht, gebaut: solo.gebaut, zielCountdown: solo.halten > 0 ? Math.max(1, Math.ceil(3 - solo.halten)) : 0, ankerBereit: solo.ankerBereit, schwereBereit: false, anker: solo.anker }} senden={a => p.eingaben.current?.(p.spieler[0].id, a)} /></div>}
+    {p.training && !ergebnis && !pausenGrund && sicht.phase === 'spiel' && <div className="bb-training"><Controller layout="bauen" bau={bauPrivat(sicht, solo)} senden={a => p.eingaben.current?.(p.spieler[0].id, a)} /></div>}
     {abbrechen && <BroDialog frage={{ text: 'Diese Runde abbrechen?', bestaetigen: 'Zur Lobby', ausfuehren: p.zurLobby }} schliessen={() => setAbbrechen(false)} />}
-    <div className="bb-abschluss"><span>{p.training ? '← → Bewegen · R Drehen · Leertaste Fallen lassen' : 'Handys steuern. Dieser Bildschirm zeigt eure Türme.'}</span><button className="br-link" onClick={zurueck}>Zur Lobby</button></div>
+    <div className="bb-abschluss"><span>{p.training ? '← → Bewegen · R Drehen · Leertaste Fallen · E Item' : 'Handys steuern. Dieser Bildschirm zeigt eure Türme.'}</span><button className="br-link" onClick={zurueck}>Zur Lobby</button></div>
   </section>;
 }

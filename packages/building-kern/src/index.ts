@@ -1,6 +1,24 @@
 /** Regeln ohne Uhr, Netzwerk und Oberfläche. Ein Seed ergibt dieselbe Bauteilfolge für alle. */
-export type BauZauber = 'anker' | 'schwere';
-export const ZAUBER = Object.freeze({ abTeilen: 3, ankerDauer: 4, schwereFaktor: 3 });
+export type BauZauber = 'anker' | 'plattform' | 'stein' | 'schwere' | 'eis';
+export type BauItem = { art: BauZauber; nummer: number };
+export const ZAUBER = Object.freeze({ ankerDauer: 4, schwereFaktor: 3, plattformHalb: 1.5, plattformHoehe: .2, plattformMaximum: 3, platzierZeit: 8 });
+export const FAHIGKEITEN: Record<BauZauber, { name: string; kurz: string; beschreibung: string; angriff: boolean }> = {
+  anker: { name: 'Turmanker', kurz: '4 Sekunden Schutz', beschreibung: 'Beruhigt deinen Turm für 4 Sekunden. Ideal, wenn es wackelt.', angriff: false },
+  plattform: { name: 'Wolkensteg', kurz: 'Plattform platzieren', beschreibung: 'Platziere einen festen, 3 Meter breiten Steg unterhalb deiner erreichten Turmhöhe. Maximal 3 Stege pro Runde.', angriff: false },
+  stein: { name: 'Steinsiegel', kurz: 'Nächstes Teil verankern', beschreibung: 'Dein nächstes Bauteil wird bei der Landung zu unbeweglichem Stein.', angriff: false },
+  schwere: { name: 'Schwergewicht', kurz: 'Gegner beschweren', beschreibung: 'Das nächste Bauteil des gewählten Gegners wiegt dreimal so viel.', angriff: true },
+  eis: { name: 'Eisglätte', kurz: 'Gegner aufs Eis legen', beschreibung: 'Das nächste gegnerische Bauteil wird spiegelglatt und rutscht leichter ab.', angriff: true },
+};
+/** Eigener Zufallsstrom: Item-Verbrauch verändert niemals die gemeinsame Bauteilfolge. */
+export function itemZufall(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+}
+export function itemZiehen(zufall: () => number, erlaubt: readonly BauZauber[], vorher?: BauZauber): BauZauber {
+  const auswahl = erlaubt.filter(a => a !== vorher);
+  const sack = auswahl.length ? auswahl : erlaubt;
+  return sack[Math.min(sack.length - 1, Math.floor(zufall() * sack.length))] ?? 'anker';
+}
 export const BELOHNUNG = Object.freeze({ runde: 5, sieg: 10, tag: 60 });
 export type BauErgebnis = { modus: BauModus; hoehe: number; gebaut: number; verloren: number; leben: number; platz: number; gewonnen: boolean; aufgegeben: boolean; dauer: number; spielerzahl: number };
 export function bauAbzeichen(e: BauErgebnis): string[] {

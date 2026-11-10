@@ -34,12 +34,12 @@ describe('BroRemote-Controller', () => {
   });
   it('zeigt nur Bautasten und sperrt sie während des Zielcountdowns; Zauber bleiben erreichbar', () => {
     const senden = vi.fn();
-    const bau: BauPrivat = { form: 0, hoehe: 16, restzeit: 80, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 12, zielCountdown: 3, ankerBereit: true, schwereBereit: true };
+    const bau: BauPrivat = { form: 0, hoehe: 16, restzeit: 80, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 12, zielCountdown: 3, item: { art: 'anker', nummer: 3 }, itemBereit: true };
     const { unmount } = render(<Controller layout="bauen" bau={bau} gegner={[{ id: 'b', name: 'Bert' }]} senden={senden} />);
     expect(screen.queryByRole('group', { name: /Joystick/ })).not.toBeInTheDocument();
     for (const name of ['Nach links', 'Nach rechts', /Drehen/, /Fallen lassen/]) expect(screen.getByRole('button', { name })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: /Turmanker/ })); expect(senden).toHaveBeenLastCalledWith({ art: 'zauber', zauber: 'anker' });
-    fireEvent.click(screen.getByRole('button', { name: /Schwergewicht/ })); expect(senden).toHaveBeenLastCalledWith({ art: 'zauber', zauber: 'schwere', ziel: 'b' });
+    fireEvent.click(screen.getByRole('button', { name: /Turmanker/ })); expect(senden).toHaveBeenLastCalledWith({ art: 'zauber', zauber: 'anker', item: 3 });
+    expect(screen.queryByRole('button', { name: /Schwergewicht/ })).not.toBeInTheDocument();
     unmount();
   });
 
@@ -57,11 +57,40 @@ it('beim Loslassen der jüngsten Richtung bleibt die andere gehaltene Taste akti
 });
 
 
-it('behält den verbrauchten Zauber sichtbar und deaktiviert nicht mehr erreichbare Ziele', () => {
+it('zeigt nur das erhaltene Item und deaktiviert nicht mehr erreichbare Ziele', () => {
   const senden = vi.fn();
-  const bau: BauPrivat = { form: 0, hoehe: 8, restzeit: 90, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 5, gebaut: 5, ankerBereit: true, schwereBereit: false, ziele: [] };
+  const bau: BauPrivat = { form: 0, hoehe: 8, restzeit: 90, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 5, gebaut: 5, item: { art: 'schwere', nummer: 4 }, itemBereit: false, ziele: [] };
   const { unmount } = render(<Controller layout="bauen" bau={bau} gegner={[{ id: 'b', name: 'Bert' }]} senden={senden} />);
-  expect(screen.getByRole('button', { name: /Schwergewicht.*Nicht mehr verfügbar/ })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /Schwergewicht einsetzen/ })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Bert' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: /Turmanker/ })).toBeEnabled(); unmount();
+  expect(screen.queryByRole('button', { name: /Turmanker einsetzen/ })).not.toBeInTheDocument(); unmount();
+});
+
+
+it('tauscht im Platziermodus die Bautasten und bestätigt nur freie Stellen', () => {
+  const senden = vi.fn();
+  const bau: BauPrivat = { form: 3, hoehe: 7, restzeit: 100, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 6, item: { art: 'plattform', nummer: 2 }, itemBereit: false, platzierung: { x: 0, y: 4, gueltig: false, rest: 8 } };
+  const { rerender, unmount } = render(<Controller layout="bauen" bau={bau} senden={senden} />);
+  expect(screen.queryByRole('button', { name: /Drehen/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Fallen lassen/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Steg platzieren/ })).toBeDisabled();
+  fireEvent.keyDown(window, { key: 'ArrowUp' });
+  expect(senden).toHaveBeenLastCalledWith({ art: 'steuerung', x: 0, y: -1, tasten: [] });
+  fireEvent.keyUp(window, { key: 'ArrowUp' });
+  rerender(<Controller layout="bauen" bau={{ ...bau, platzierung: { ...bau.platzierung!, gueltig: true } }} senden={senden} />);
+  fireEvent.keyDown(window, { key: 'Enter' });
+  expect(senden).toHaveBeenLastCalledWith({ art: 'plattform', item: 2, schritt: 'platzieren' });
+  fireEvent.click(screen.getByRole('button', { name: /Zurück zum Bauen/ }));
+  expect(senden).toHaveBeenLastCalledWith({ art: 'plattform', item: 2, schritt: 'zurueck' }); unmount();
+});
+
+it('benutzt nach neuer Statusnachricht das neue Item mit seiner Kennung und gewähltem Gegner', () => {
+  const senden = vi.fn(), gegner = [{ id: 'b', name: 'Bert' }, { id: 'c', name: 'Clara' }];
+  const bau: BauPrivat = { form: 2, hoehe: 5, restzeit: 90, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 5, itemIn: 3 };
+  const { rerender, unmount } = render(<Controller layout="bauen" bau={bau} senden={senden} gegner={gegner} />);
+  expect(screen.getByText('Zufälliges Item in 3 s')).toBeInTheDocument();
+  rerender(<Controller layout="bauen" bau={{ ...bau, item: { art: 'eis', nummer: 7 }, itemBereit: true, ziele: ['b', 'c'] }} senden={senden} gegner={gegner} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Clara' }));
+  fireEvent.keyDown(window, { key: 'e' });
+  expect(senden).toHaveBeenLastCalledWith({ art: 'zauber', zauber: 'eis', item: 7, ziel: 'c' }); unmount();
 });
