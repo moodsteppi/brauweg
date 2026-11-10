@@ -92,7 +92,7 @@ function privatLesen(d: unknown): Privat | null {
     if (b.item !== undefined && (!objekt(b.item) || typeof b.item.art !== 'string' || !BAUZAUBER.includes(b.item.art) || !ganz(b.item.nummer, 1, 1000))) return null;
     if (b.platzierung !== undefined) {
       const p = b.platzierung;
-      if (!objekt(p) || !zahl(p.x, -6, 6) || !zahl(p.y, .4, 12) || !ganz(p.rest, 0, 8) || typeof p.gueltig !== 'boolean' || !objekt(b.item) || b.item.art !== 'plattform') return null;
+      if (!objekt(p) || !zahl(p.x, -6, 6) || !zahl(p.y, .4, 20) || !ganz(p.rest, 0, 8) || typeof p.gueltig !== 'boolean' || !objekt(b.item) || b.item.art !== 'plattform') return null;
     }
     // Höhenrennen liefert weiter Teile. Drei Minuten mit Nachschubpause
     // bleiben unter 300; die alte 30er-Grenze verschluckte ganze Statuspakete.

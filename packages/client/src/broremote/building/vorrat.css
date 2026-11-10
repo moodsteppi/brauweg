@@ -76,3 +76,4 @@
 .bb-itempflicht .br-icon { width:16px; height:16px; flex:none }
 .br-eigener-controller .bb-knopfcontroller:has(.bb-itemnutzen)>.br-leise { display:block; font-size:12px; color:#ffe0a0 }
 @media(max-width:760px) { .bb-buehne:not(.bb-buehne-1) .bb-itempflicht { top:154px; font-size:9px; padding:5px } }
+.bb-vorrat .bb-itembild { color:var(--item-hell) }

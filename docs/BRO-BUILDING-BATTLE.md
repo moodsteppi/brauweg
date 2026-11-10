@@ -78,9 +78,10 @@ sofern mehrere geeignete Items vorhanden sind. Solo enthält nur Eigenhilfen.
 | Schwergewicht | Das nächste Teil eines gewählten aktiven Gegners bekommt dreifache Dichte. |
 | Eisglätte | Das nächste Teil eines gewählten aktiven Gegners bekommt sehr geringe Reibung. |
 
-Ein Steg darf höchstens 1 m unter der zum Beginn der Platzierung erreichten
-stabilen Höhe liegen, mit einer Bodenposition von 0,4 m und einer absoluten
-Obergrenze von 12 m. Maximal drei pro Bahn. Die Vorschau ist grün bei freier
+Ein Steg darf von 0,4 m über dem Boden bis knapp über die zum Beginn der
+Platzierung erreichte stabile Turmspitze gesetzt werden (0,4 m Abstand;
+absolute Obergrenze 20 m). Der freie Ansatz über der Spitze verhindert,
+dass ein dicht gebauter Turm den verpflichtenden Itemeinsatz blockiert. Maximal drei pro Bahn. Die Vorschau ist grün bei freier
 Stelle und rot bei einer Kollision. Der Gastgeber prüft die Stelle bei der
 Bestätigung erneut. Die Plattform selbst zählt nicht als Turmhöhe. Nur darauf
 verbaute, stabile Teile zählen. Während der maximal 8 Sekunden zum Platzieren
@@ -113,7 +114,11 @@ Gezielte Prüfungen: reale Rapier-Physik für Landung, Eisreibung, Gewicht,
 Steinversiegelung, Stegkollision und -grenzen; Zufall und Itemverbrauch;
 Bedienwechsel mit Tastatur und Touch-Absichten; privater Vorrat nach Reconnect.
 Ein Worker, keine parallelen Kompletttests und kein iOS-Simulator.
-Physische iPhone-/Hotspot-Prüfung bleibt eine anschließende Geräteabnahme.
+Lokale Browserabnahme mit zwei echten Relay-Controllern: 390-px-Layout,
+Plattform verschieben und setzen, Steinsiegel vormerken, Eis auf den gewählten
+Gegner, Baupause und erneuter Nachschub sowie Wiederverbindung geprüft.
+Keine Browserfehler. Physische iPhone-/Hotspot-Prüfung bleibt eine
+anschließende Geräteabnahme.
 
 TAFEL-Übergabe: Zufallsitems, Vorschau und kontextabhängige Controllerbuttons
 lokal umgesetzt. Externer Tafeleintrag ist in dieser Sitzung nicht zugänglich.

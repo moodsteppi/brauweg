@@ -102,7 +102,9 @@ export class BauPartie {
         s.koerper.setLinvel({ x: 0, y: 0 }, true); s.koerper.setAngvel(0, true);
       }
     } else if (zauber === 'plattform') {
-      const maxY = Math.max(.4, Math.min(REGELN.ziel - 4, b.hoehe - 1));
+      // Knapp über der Spitze bleibt auch bei einem dicht gebauten Turm eine
+      // freie Stelle: Ein verpflichtendes Plattformitem darf niemanden festsetzen.
+      const maxY = Math.max(.4, Math.min(REGELN.ziel + 4, b.hoehe + .4));
       b.platzierung = { x: 0, y: maxY, maxY, gueltig: false, rest: ZAUBER.platzierZeit };
       b.platzierung.gueltig = this.platzFrei(b);
       this.eingabe(b.id, { art: 'reset' });

@@ -149,3 +149,17 @@ it('ein gehaltenes Item stoppt den aktiven Stein, nach Verbrauch laufen Fall und
   expect(p.sicht().bahnen[0].gebaut).toBeGreaterThan(0);
   expect(p.sicht().bahnen[0].verbraucht).toBeGreaterThan(1);
 });
+
+
+it('bietet beim vollständig bebauten Querschnitt eine freie Stelle direkt über der Turmspitze', () => {
+  const p = partie(1), b = bahn(p);
+  // Ein breiter, ruhender Sockel repräsentiert einen lückenlos verbauten Querschnitt.
+  const sockel = b.welt.createRigidBody(r.RigidBodyDesc.fixed().setTranslation(0, 3));
+  b.welt.createCollider(r.ColliderDesc.cuboid(7.4, 3), sockel);
+  schritte(p, 1); b.hoehe = 6;
+  const item = fund(p, 'plattform'); nutzen(p);
+  expect(p.sicht().bahnen[0].platzierung?.gueltig).toBe(true);
+  p.eingabe('0', { art: 'plattform', item: item.nummer, schritt: 'platzieren' });
+  expect(p.sicht().bahnen[0].plattformen).toHaveLength(1);
+  expect(p.sicht().bahnen[0].item).toBeUndefined();
+});
