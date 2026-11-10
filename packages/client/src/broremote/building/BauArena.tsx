@@ -7,6 +7,7 @@ import { zeichneBahn, setzeBaukameraZurueck } from './zeichnen';
 import { BauWertung } from './BauWertung';
 import { BauVorschau } from './BauVorschau';
 import './building.css';
+import { messung } from '../messen';
 
 export type EingabeEmpfang = (id: string, a: Aktion) => void;
 type Eigenschaften = {
@@ -51,13 +52,14 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
         if (beendet) return;
         const delta = letzter ? Math.min(.1, (jetzt - letzter) / 1000) : 0; letzter = jetzt;
         if (pauseRef.current) { puffer = 0; k.neutralisieren(); }
-        else { puffer += delta; let schritte = 0; while (puffer >= REGELN.schritt && schritte++ < 6) { k.schritt(); puffer -= REGELN.schritt; } }
+        else { puffer += delta; let schritte = 0; while (puffer >= REGELN.schritt && schritte++ < 6) { k.schritt(); puffer -= REGELN.schritt; } if (schritte) messung?.angewendet(); }
         let ruht = false;
         if (jetzt - bildZeit >= 1000 / 30) {
           const bildDelta = bildZeit ? (jetzt - bildZeit) / 1000 : 1 / 30; bildZeit = jetzt;
           const s = k.sicht();
           ruht = s.phase === 'ende';
           for (const b of s.bahnen) { const c = bilder.current.get(b.id); if (c) zeichneBahn(c, b, s.modus === 'rennen', bildDelta, bewegung.matches); }
+          messung?.gezeichnet();
           if (jetzt - statusZeit >= 250) {
             statusZeit = jetzt; setSicht(s);
             const g = s.bahnen.reduce((n, b) => n + b.gebaut, 0), v = s.bahnen.reduce((n, b) => n + b.verloren, 0);
