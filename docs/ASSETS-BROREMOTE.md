@@ -10,6 +10,21 @@ Paket 1). Aufbau nach `docs/ASSETS-KARTENMANUFAKTUR-UI.md`, Stil nach
 > kB-Liste. Das Erzeugen, Wandeln und Ablegen unter
 > `packages/client/public/broremote/` ist ein eigener späterer Schritt.
 > Grundlage dafür sind die fertigen Prompts je Datei unter „Prompts je Datei“.
+>
+> **Wo die Entscheidung steht:** Sie ist kein Text im Repo, sondern die
+> Anweisung der 3. Nachbesserung an der Orchestrator-Aufgabe (brotool →
+> Orchestrator → Projekt #24 „BroRemote Design überarbeiten“, Phase „Paket 1:
+> Bilder“, Aufgabe 1 von 5, Zweig
+> `aufgabe/broremote-bestellliste-und-gezeichnete-b-d8cee7af`). Sie antwortet
+> auf die Rückfrage aus Lauf 2 (Weg A: VerseIn aufladen, Weg B: an eine
+> Imagegen-Sitzung geben). Wer freigibt, prüft das dort im Verlauf der Aufgabe.
+>
+> **Was offen bleibt:** Bilder erzeugen, auf die Sollgröße verkleinern, als
+> WebP unter `packages/client/public/broremote/` ablegen, kB-Liste und
+> Kontaktbogen. Dafür ist eine eigene Karte auf dem Issueboard beantragt
+> („BroRemote: Bilder nach ASSETS-BROREMOTE.md erzeugen“). Die Aufgabe „Paket 1:
+> Bilder“ als Ganzes ist erst danach erledigt; dieser Zweig erledigt die
+> Bestellung.
 
 ## Worum es geht
 
