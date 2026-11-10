@@ -71,7 +71,7 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
             if (g > gebaut || v > verloren) klang(v > verloren); gebaut = g; verloren = v;
             for (const b of s.bahnen) werte.current.privat(b.id, {
               leben: s.modus === 'standfest' ? b.leben : undefined, punkte: Math.round(b.hoehe * 100), amZug: !b.fertig && s.phase === 'spiel' && !pauseRef.current,
-              hinweis: s.phase === 'ende' ? (s.gewinner.includes(b.id) ? 'Stark gebaut! Du hast gewonnen.' : 'Nächste Runde, neuer Turm.') : pauseRef.current || (b.fertig ? 'Deine Runde ist fertig. Schau den anderen zu.' : b.halten > 0 ? 'Ziel erreicht. Halte deinen Turm 3 Sekunden!' : b.zauberHinweis || 'Links / rechts bewegen · Drehen · Fallen lassen'),
+              hinweis: s.phase === 'ende' ? (s.gewinner.includes(b.id) ? 'Stark gebaut! Du hast gewonnen.' : 'Nächste Runde, neuer Turm.') : pauseRef.current || (b.fertig ? 'Deine Runde ist fertig. Schau den anderen zu.' : b.halten > 0 ? 'Ziel erreicht. Halte deinen Turm 3 Sekunden!' : b.item ? 'Item einsetzen, um weiterzubauen.' : b.zauberHinweis || 'Links / rechts bewegen · Drehen · Fallen lassen'),
               bau: bauPrivat(s, b, !!pauseRef.current),
             });
           }
@@ -98,6 +98,7 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
     <div className={`bb-buehne bb-buehne-${sicht.bahnen.length}`}>
       {sicht.bahnen.map(b => <article className={`bb-bahn${b.fertig ? ' bb-fertig' : ''}${sicht.gewinner.includes(b.id) ? ' bb-sieger' : ''}${b.anker > 0 ? ' bb-geschuetzt' : ''}`} key={b.id} style={{ '--spielerfarbe': b.farbe } as React.CSSProperties}>
         <div className="bb-spielerkopf"><div className="bb-portraet"><img key={`${b.verloren}-${b.effekt}`} className={ergebnis && sicht.gewinner.includes(b.id) ? 'bb-pinguin-sieg' : b.verloren ? 'bb-pinguin-schreck' : 'bb-pinguin-baut'} src="/broremote/baumeister.webp" alt="" /><small aria-label={`Platz ${b.platz}`}>{b.platz}</small></div><div className="bb-spielername"><strong>{b.name}</strong><span>{p.modus === 'standfest' ? `${'♥'.repeat(b.leben)}${'♡'.repeat(3 - b.leben)}` : `${b.hoehe.toFixed(1).replace('.', ',')} / 16 m`}</span><div className="bb-fortschritt" aria-hidden="true"><i style={{ width: `${Math.min(100, (p.modus === 'standfest' ? b.gebaut / REGELN.bauteile : b.hoehe / REGELN.ziel) * 100)}%` }} /></div></div><BauVorrat form={b.naechster} item={b.item} itemIn={b.itemIn} ende={ergebnis || b.fertig} /></div>
+        {b.item && !b.platzierung && !ergebnis && !b.fertig && <div className="bb-itempflicht"><BroIcon name="zufall" /> Item einsetzen zum Weiterbauen</div>}
         <canvas ref={c => { if (c) bilder.current.set(b.id, c); else bilder.current.delete(b.id); }} aria-label={`${b.name}: ${b.hoehe.toFixed(1)} Meter hoher Turm`} />
         {b.halten > 0 && !ergebnis && <div className="bb-zielzaehler" role="status"><span>ZIEL ERREICHT</span><strong key={Math.ceil(3 - b.halten)}>{Math.max(1, Math.ceil(3 - b.halten))}</strong><small>{b.name}, halte deinen Turm!</small></div>}
         {b.verloren > 0 && !ergebnis && <div className="bb-absturz" key={`verlust-${b.verloren}`} aria-hidden="true"><span>✦</span><span>◆</span><span>✧</span><strong>{p.modus === 'standfest' ? '−1 Leben' : 'Weiterbauen! Nachschub kommt.'}</strong></div>}

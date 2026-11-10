@@ -11,6 +11,8 @@ beforeAll(async () => { r = await ladeBauphysik(); });
 afterEach(() => { offen.splice(0).forEach(p => p.freigeben()); });
 function partie(modus: 'rennen' | 'standfest' = 'rennen', anzahl = 1): BauPartie {
   const p = new BauPartie(r, Array.from({ length: anzahl }, (_, i) => ({ id: String(i), name: `Spieler ${i}`, farbe: '#79e3c9' })), modus, 217);
+  // Diese Szenarien isolieren die Grundphysik. Item-Pausen werden in items.test.ts geprüft.
+  for (const b of (p as unknown as { bahnen: { itemIn: number }[] }).bahnen) b.itemIn = 100000;
   offen.push(p); return p;
 }
 function schritte(p: BauPartie, n: number): void { for (let i = 0; i < n; i++) p.schritt(); }

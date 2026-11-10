@@ -80,7 +80,7 @@ it('tauscht im Platziermodus die Bautasten und bestätigt nur freie Stellen', ()
   rerender(<Controller layout="bauen" bau={{ ...bau, platzierung: { ...bau.platzierung!, gueltig: true } }} senden={senden} />);
   fireEvent.keyDown(window, { key: 'Enter' });
   expect(senden).toHaveBeenLastCalledWith({ art: 'plattform', item: 2, schritt: 'platzieren' });
-  fireEvent.click(screen.getByRole('button', { name: /Zurück zum Bauen/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Zurück zum Item/ }));
   expect(senden).toHaveBeenLastCalledWith({ art: 'plattform', item: 2, schritt: 'zurueck' }); unmount();
 });
 
@@ -93,4 +93,16 @@ it('benutzt nach neuer Statusnachricht das neue Item mit seiner Kennung und gew�
   fireEvent.click(screen.getByRole('button', { name: 'Clara' }));
   fireEvent.keyDown(window, { key: 'e' });
   expect(senden).toHaveBeenLastCalledWith({ art: 'zauber', zauber: 'eis', item: 7, ziel: 'c' }); unmount();
+});
+
+
+it('sperrt beim Fund alle Bautasten, bis das Item eingesetzt wurde', () => {
+  const senden = vi.fn();
+  const bau: BauPrivat = { form: 2, hoehe: 5, restzeit: 90, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 5, item: { art: 'stein', nummer: 2 }, itemBereit: true };
+  const { rerender, unmount } = render(<Controller layout="bauen" bau={bau} senden={senden} />);
+  for (const name of ['Nach links', 'Nach rechts', 'Drehen', 'Fallen lassen']) expect(screen.getByRole('button', { name })).toBeDisabled();
+  fireEvent.keyDown(window, { key: 'ArrowRight' }); expect(senden).toHaveBeenLastCalledWith({ art: 'reset' });
+  fireEvent.click(screen.getByRole('button', { name: 'Steinsiegel einsetzen' })); expect(senden).toHaveBeenLastCalledWith({ art: 'zauber', zauber: 'stein', item: 2 });
+  rerender(<Controller layout="bauen" bau={{ ...bau, item: undefined, itemBereit: false }} senden={senden} />);
+  expect(screen.getByRole('button', { name: 'Drehen' })).toBeEnabled(); unmount();
 });

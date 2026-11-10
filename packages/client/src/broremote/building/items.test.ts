@@ -25,7 +25,7 @@ function fallen(p: BauPartie, id = '0'): void {
   p.eingabe(id, { art: 'steuerung', x: 0, y: 0, tasten: ['fallen'] }); p.eingabe(id, { art: 'steuerung', x: 0, y: 0, tasten: [] });
 }
 
-it('liefert reproduzierbare Zufallsitems, überschreibt belegte Plätze nicht und lässt weiterbauen', () => {
+it('liefert reproduzierbare Zufallsitems, überschreibt belegte Plätze nicht und stoppt das Bauen bis zur Nutzung', () => {
   const p = partie(), q = partie();
   expect(p.sicht().bahnen.every(b => !b.item)).toBe(true);
   schritte(p, 740); schritte(q, 740);
@@ -34,7 +34,9 @@ it('liefert reproduzierbare Zufallsitems, überschreibt belegte Plätze nicht un
   const vorher = p.sicht().bahnen[0];
   for (let i = 0; i < 1200; i++) { if (i % 90 === 0) fallen(p); p.schritt(); }
   expect(p.sicht().bahnen[0].item).toEqual(vorher.item);
-  expect(p.sicht().bahnen[0].gebaut).toBeGreaterThan(vorher.gebaut);
+  expect(p.sicht().bahnen[0].gebaut).toBe(vorher.gebaut);
+  expect(p.sicht().bahnen[0].verbraucht).toBe(vorher.verbraucht);
+  expect(p.sicht().bahnen[0].steine.find(s => s.aktiv)?.y).toBeCloseTo(vorher.steine.find(s => s.aktiv)!.y);
 });
 
 it('Solo verteilt ausschließlich nützliche Items, Kennungen und Abklingzeit verhindern mehrfachen Verbrauch', () => {
@@ -128,4 +130,22 @@ it('ein echter Baustein landet auf dem Steg; Vorschau und Solo-/Handystatus stim
   const s = p.sicht(), b = s.bahnen[0], privat = bauPrivat(s, b);
   expect(FORMEN[privat.form]).toBe(b.naechster); expect(privat.itemIn).toBe(b.itemIn);
   expect(privat.item).toEqual(b.item);
+});
+
+
+it('verbraucht einen erneuten Angriff ohne Stapelung, damit ein wartendes Item niemanden festsetzt', () => {
+  const p = partie(3); fund(p, 'eis', 0); fund(p, 'eis', 2);
+  nutzen(p, 0, '1'); nutzen(p, 2, '1');
+  expect(p.sicht().bahnen[2].item).toBeUndefined();
+  expect(p.sicht().bahnen[1].eisWartet).toBe(true);
+});
+
+it('ein gehaltenes Item stoppt den aktiven Stein, nach Verbrauch laufen Fall und Nachschub weiter', () => {
+  const p = partie(1); fund(p, 'anker');
+  const y = p.sicht().bahnen[0].steine[0].y;
+  for (let i = 0; i < 120; i++) { if (i % 10 === 0) p.eingabe('0', { art: 'steuerung', x: 1, y: 0, tasten: ['fallen'] }); p.schritt(); }
+  expect(p.sicht().bahnen[0].steine[0].y).toBeCloseTo(y); expect(p.sicht().bahnen[0].steine[0].x).toBe(0);
+  nutzen(p); fallen(p); schritte(p, 90);
+  expect(p.sicht().bahnen[0].gebaut).toBeGreaterThan(0);
+  expect(p.sicht().bahnen[0].verbraucht).toBeGreaterThan(1);
 });

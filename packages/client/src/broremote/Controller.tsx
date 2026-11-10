@@ -28,7 +28,7 @@ export function Controller({ layout, senden, bau, gegner = [] }: { layout: Layou
     const b = aktuell.current.bau;
     if (b?.item && b.platzierung?.gueltig) { fuehlen(); quelle.current({ art: 'plattform', item: b.item.nummer, schritt: 'platzieren' }); }
   };
-  const blockiert = !!bau?.zielCountdown;
+  const blockiert = !!bau?.zielCountdown || (!!item && !platzierung);
   const sperre = useRef(blockiert); sperre.current = blockiert;
   const [wahl, setWahl] = useState<number | null>(null);
   const richtungTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -104,7 +104,7 @@ export function Controller({ layout, senden, bau, gegner = [] }: { layout: Layou
     ...(platzierung ? [{ x: 0, y: -1, name: 'Höher', icon: 'oben' as const }, { x: 0, y: 1, name: 'Tiefer', icon: 'unten' as const }] : []),
   ];
   return <div className={`br-controller bb-knopfcontroller${platzierung ? ' bb-platziert' : ''}`}>
-    <p className="br-leise">{blockiert ? 'Ziel erreicht. Dein Turm muss noch halten!' : platzierung ? `Steg an eine freie Stelle bewegen. Noch ${platzierung.rest} s.` : 'Links und rechts halten. Drehen und Fallenlassen antippen.'}</p>
+    <p className="br-leise">{bau?.zielCountdown ? 'Ziel erreicht. Dein Turm muss noch halten!' : item && !platzierung ? 'Item erhalten. Setze es ein, um weiterzubauen.' : platzierung ? `Steg an eine freie Stelle bewegen. Noch ${platzierung.rest} s.` : 'Links und rechts halten. Drehen und Fallenlassen antippen.'}</p>
     <div className="bb-baubuttons">
       {richtungen.map(({ x, y, name, icon }) => <button type="button" className={`br-steuertaste br-steuertaste-richtung${gedrueckt.includes(icon) ? ' br-gedrueckt' : ''}`} key={icon} disabled={blockiert} aria-label={x ? x === -1 ? 'Nach links' : 'Nach rechts' : name}
         onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); fuehlen(); eingabe.current.richtungen.set(e.pointerId, { x, y }); schicken(); }}
@@ -115,14 +115,14 @@ export function Controller({ layout, senden, bau, gegner = [] }: { layout: Layou
     {bau && <section className="bb-itembedienung" aria-label="Dein zufälliges Item">
       {platzierung ? <>
         <button type="button" className="bb-itemnutzen bb-itemnutzen-plattform" disabled={!platzierung.gueltig || blockiert} onClick={platzieren}><ItemBild art="plattform" /><span><strong>Steg platzieren</strong><small>{platzierung.gueltig ? 'Freie Stelle gefunden' : 'Hier ist etwas im Weg'}</small></span><BroIcon name="haken" /></button>
-        <button type="button" className="br-link bb-item-zurueck" onClick={() => { if (item) senden({ art: 'plattform', item: item.nummer, schritt: 'zurueck' }); }}>Zurück zum Bauen · Item behalten</button>
+        <button type="button" className="br-link bb-item-zurueck" onClick={() => { if (item) senden({ art: 'plattform', item: item.nummer, schritt: 'zurueck' }); }}>Zurück zum Item</button>
       </> : item && magie ? <>
         {magie.angriff && <div className="bb-itemziele" role="group" aria-label="Ziel für dein Item"><small>GEGNER WÄHLEN</small><div className="br-gegner">{gegner.map(g => <button type="button" key={g.id} aria-pressed={zielId === g.id} disabled={!ziele.some(z => z.id === g.id)} onClick={() => setZiel(g.id)}>{g.name}</button>)}</div></div>}
         <button type="button" className={`bb-itemnutzen bb-itemnutzen-${item.art}`} aria-label={`${magie.name} einsetzen`} disabled={!bau.itemBereit || (magie.angriff && !zielId)} onClick={benutzen}><ItemBild art={item.art} /><span><strong>{magie.name}</strong><small>{magie.kurz}</small></span><span className="bb-item-aktion">Einsetzen<BroIcon name="start" /></span></button>
         <p className="bb-itembeschreibung">{magie.beschreibung}</p>
       </> : <div className="bb-itemwartet"><ItemBild /><div><strong>Zufälliges Item in {bau.itemIn ?? 0} s</strong><small>Weiterbauen! Dein Nachschub kommt von allein.</small></div></div>}
       {bau.anker ? <p className="bb-itemaktiv"><BroIcon name="anker" /> Turmanker aktiv · {Math.ceil(bau.anker)} s</p> : null}
-      <details className="bb-itemhilfe"><summary>Welche Items gibt es?</summary><p>Ein Platz, ein zufälliges Item. Erst einsetzen, dann kommt neuer Nachschub. Im Solotraining erhältst du nur hilfreiche Items.</p>{Object.entries(FAHIGKEITEN).map(([art, f]) => <p key={art}><strong>{f.name}: </strong>{f.beschreibung}</p>)}</details>
+      <details className="bb-itemhilfe"><summary>Welche Items gibt es?</summary><p>Ein Platz, ein zufälliges Item. Das Bauen wartet, bis du es eingesetzt hast. Dein Turm und die Gegner bewegen sich weiter. Im Solotraining erhältst du nur hilfreiche Items.</p>{Object.entries(FAHIGKEITEN).map(([art, f]) => <p key={art}><strong>{f.name}: </strong>{f.beschreibung}</p>)}</details>
     </section>}
     <div className="br-controllerfuss"><span>{platzierung ? 'Steg auf dem großen Bildschirm ausrichten.' : 'Schau auf den großen Bildschirm.'}</span><button type="button" className="br-link" aria-pressed={summen} onClick={() => setSummen(s => !s)}>Haptik {summen ? 'an' : 'aus'}</button></div>
   </div>;

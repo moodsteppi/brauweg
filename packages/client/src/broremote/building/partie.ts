@@ -79,7 +79,7 @@ export class BauPartie {
     b.steine.push(s); b.aktiv = s; b.drehenAnstehend = false; b.fallenAnstehend = false;
   }
   private ziele(b: Bahn): Bahn[] {
-    return this.bahnen.filter(g => g !== b && !g.fertig && !g.aufgegeben && (b.item?.art === 'eis' ? !g.eisWartet : !g.schwereWartet));
+    return this.bahnen.filter(g => g !== b && !g.fertig && !g.aufgegeben);
   }
   private itemBereit(b: Bahn): boolean {
     if (!b.item || b.fertig || this.zeit < 0 || this.ende) return false;
@@ -145,6 +145,7 @@ export class BauPartie {
     if (this.bahnen.some(g => g !== b && !g.fertig && !g.aufgegeben && !g.eisWartet)) erlaubt.push('eis');
     const art = itemZiehen(b.zufall, erlaubt, b.letztesItem);
     b.item = { art, nummer: ++b.itemNummer }; b.letztesItem = art;
+    this.eingabe(b.id, { art: 'reset' });
     b.zauberHinweis = `${FAHIGKEITEN[art].name} erhalten!`; b.effekt++;
   }
   private aktivenEntfernen(b: Bahn, zuruecklegen = false): void {
@@ -177,10 +178,10 @@ export class BauPartie {
         p.y = Math.max(.4, Math.min(p.maxY, p.y - b.eingabe.y * 3 * dt));
         if (p.rest <= 0 || b.halten > 0) { b.platzierung = undefined; this.eingabe(b.id, { art: 'reset' }); }
       }
-      if (!b.fertig && !b.platzierung && !b.aktiv && !(this.modus === 'rennen' && b.halten > 0)) { b.nachschub -= dt; if (b.nachschub <= 0) this.neu(b); }
+      if (!b.fertig && !b.item && !b.aktiv && !(this.modus === 'rennen' && b.halten > 0)) { b.nachschub -= dt; if (b.nachschub <= 0) this.neu(b); }
       const aktiv = b.aktiv;
-      if (aktiv && b.platzierung) aktiv.koerper.setLinvel({ x: 0, y: 0 }, true);
-      if (aktiv && !b.platzierung) {
+      if (aktiv && b.item) aktiv.koerper.setLinvel({ x: 0, y: 0 }, true);
+      if (aktiv && !b.item) {
         if (b.drehenAnstehend) this.drehen(b, aktiv);
         // Der Fallknopf beschleunigt genau dieses Bauteil, nicht das nächste.
         if (b.fallenAnstehend) aktiv.koerper.userData = { schnell: true };

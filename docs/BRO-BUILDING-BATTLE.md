@@ -62,8 +62,9 @@ das **wirklich nächste Bauteil** und das **aktuell erhaltene Item**. Das
 Solotraining benutzt denselben Status wie ein verbundener Controller.
 
 Nach 8–12 Spielsekunden kommt das erste zufällige Item. Ein belegter Platz
-wird nie überschrieben. Bauen bleibt möglich; Wegwerfen und Neuwürfeln gibt
-es nicht. Erst nach Verbrauch beginnt die nächste Wartezeit von 18–28
+wird nie überschrieben. **Bauen pausiert bis zum Einsatz:** Das aktive Teil
+wartet, die Bautasten und der Bauteil-Nachschub sperren. Turmphysik, Gegner
+und Rundenuhr laufen weiter. Wegwerfen und Neuwürfeln gibt es nicht. Erst nach Verbrauch beginnt die nächste Wartezeit von 18–28
 Spielsekunden. Pausen und Verbindungsunterbrechungen halten auch diese Uhr an.
 Der Gastgeber zieht aus einem eigenen, je Sitz reproduzierbaren Zufallsstrom;
 die gemeinsame Bauteilfolge bleibt unverändert. Keine direkte Wiederholung,
@@ -84,13 +85,13 @@ Stelle und rot bei einer Kollision. Der Gastgeber prüft die Stelle bei der
 Bestätigung erneut. Die Plattform selbst zählt nicht als Turmhöhe. Nur darauf
 verbaute, stabile Teile zählen. Während der maximal 8 Sekunden zum Platzieren
 wartet das aktive Teil, die restliche Physik und die Rundenuhr laufen weiter.
-Zurück oder Zeitablauf behält das Item und setzt das Bauen fort. Am Ziel kann
+Zurück oder Zeitablauf behält das Item und kehrt zum weiterhin wartenden Item zurück. Erst eine gültige Platzierung setzt das Bauen fort. Am Ziel kann
 kein neuer Platziermodus gestartet werden; der Turmanker bleibt verfügbar.
 
 Jeder Fund trägt eine eindeutige Kennung innerhalb der Runde. Veraltete oder
 doppelte Aktivierungen können weder ein neues Item verbrauchen noch eine
 zweite Plattform erzeugen. Angriffe behalten ihr Item bei ungültigen Zielen;
-dieselbe wartende Wirkung wird nicht gestapelt. Das Zurücklegen eines aktiven
+dieselbe wartende Wirkung wird erneuert, ohne sie zu stapeln. Dadurch blockiert ein inzwischen verzauberter Gegner den zwingenden Itemverbrauch nicht. Das Zurücklegen eines aktiven
 Teils am Ziel bewahrt seine Verzauberungen. Der Relay-Filter begrenzt alle
 neuen Felder; private Vorschau und Platzierung werden bei Reconnect erneut
 zugestellt. Die bestehende Sitzungs- und Abschnittsprüfung bleibt erhalten.
