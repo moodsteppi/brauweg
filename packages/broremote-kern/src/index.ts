@@ -5,7 +5,8 @@ export const EINLADUNG_MS = 10 * 60_000;
 export const GASTGEBER_PAUSE_MS = 90_000;
 export const EINGABE_PAUSE_MS = 600;
 export const MAX_NACHRICHT = 8192;
-export type Layout = 'bauen' | 'auswahl';
+export type Spiel = 'building' | 'brotanks';
+export type Layout = 'bauen' | 'auswahl' | 'zielen';
 export type Taste = 'drehen' | 'fallen' | 'bestaetigen';
 export type BauZauber = 'anker' | 'plattform' | 'stein' | 'schwere' | 'eis';
 export type BauItem = { art: BauZauber; nummer: number };
@@ -17,13 +18,24 @@ export type Aktion =
   | { art: 'zahl'; wert: number }
   | { art: 'zauber'; zauber: BauZauber; item: number; ziel?: string }
   | { art: 'plattform'; item: number; schritt: 'platzieren' | 'zurueck' }
+  | { art: 'zielen'; winkel: number; staerke: number; waffe: number }
+  | { art: 'feuer'; zug: number; winkel: number; staerke: number; waffe: number }
   | { art: 'reset' };
 export type BauPrivat = { form: number; hoehe: number; restzeit: number; phase: 'countdown' | 'spiel' | 'pause' | 'ende'; countdown: number; platz: number; fertig: boolean; gewonnen: boolean; verbraucht: number; spielerzahl?: number; ziele?: string[]; zielCountdown?: number; item?: BauItem; itemIn?: number; itemBereit?: boolean; platzierung?: BauPlatzierung; eisWartet?: boolean; steinWartet?: boolean; anker?: number; schwereWartet?: boolean; gebaut?: number; verloren?: number; aufgegeben?: boolean; dauer?: number };
-export type Privat = { leben?: number; punkte?: number; hinweis?: string; inventar?: string[]; amZug?: boolean; bau?: BauPrivat };
+/** BroTanks: was ein einzelnes Handy über seine Partie erfährt (docs/BROREMOTE-ARTILLERIE.md, Abschnitt 6). */
+export type ArtiPrivat = {
+  phase: 'countdown' | 'zielen' | 'flug' | 'nachlauf' | 'pause' | 'ende';
+  amZug: boolean; zug: number; rest: number; inZuegen: number;
+  winkel: number; staerke: number; waffe: number; munition: number[];
+  lp: number; tank: number; wind: number; runde: number; platz: number; raus: boolean; gewonnen: boolean;
+};
+const ARTIPHASEN: readonly string[] = ['countdown', 'zielen', 'flug', 'nachlauf', 'pause', 'ende'];
+export type Privat = { leben?: number; punkte?: number; hinweis?: string; inventar?: string[]; amZug?: boolean; bau?: BauPrivat; arti?: ArtiPrivat };
 export type Spieler = { id: string; name: string; farbe: string; verbunden: boolean; bereit: boolean };
 export type RaumSicht = {
   raum: string; phase: 'lobby' | 'test' | 'spiel'; abschnitt: number; layout: Layout;
-  baumodus?: 'rennen' | 'standfest'; partie?: { id: string; seed: number; modus: 'rennen' | 'standfest' };
+  /** Der Kern setzt beides immer; optional im Typ, damit ältere Aufrufer und Tests unverändert übersetzen. */
+  spiel?: Spiel; baumodus?: 'rennen' | 'standfest'; partie?: { id: string; seed: number; spiel?: Spiel; modus: 'rennen' | 'standfest' };
   gesperrt: boolean; gastgeberDa: boolean; spieler: Spieler[]; einladungBis: number;
 };
 export type Nachricht = Record<string, unknown>;
@@ -66,9 +78,13 @@ export function aktionLesen(a: unknown, layout: Layout): Aktion | null {
   if (!objekt(a)) return null;
   if (layout === 'bauen' && a.art === 'zauber' && typeof a.zauber === 'string' && BAUZAUBER.includes(a.zauber) && ganz(a.item, 1, 1000) && (a.ziel === undefined || (typeof a.ziel === 'string' && a.ziel.length <= 24))) return { art: 'zauber', zauber: a.zauber as BauZauber, item: a.item, ...(typeof a.ziel === 'string' ? { ziel: a.ziel } : {}) };
   if (layout === 'bauen' && a.art === 'plattform' && ganz(a.item, 1, 1000) && (a.schritt === 'platzieren' || a.schritt === 'zurueck')) return { art: 'plattform', item: a.item, schritt: a.schritt };
+  if (layout === 'zielen' && a.art === 'zielen' && ganz(a.winkel, 0, 180) && ganz(a.staerke, 0, 100) && ganz(a.waffe, 0, 7)) return { art: 'zielen', winkel: a.winkel, staerke: a.staerke, waffe: a.waffe };
+  if (layout === 'zielen' && a.art === 'feuer' && ganz(a.zug, 1, 10000) && ganz(a.winkel, 0, 180) && ganz(a.staerke, 0, 100) && ganz(a.waffe, 0, 7)) return { art: 'feuer', zug: a.zug, winkel: a.winkel, staerke: a.staerke, waffe: a.waffe };
   if (a.art === 'reset') return { art: 'reset' };
   if (a.art === 'steuerung' && zahl(a.x, -1, 1) && zahl(a.y, -1, 1) && Array.isArray(a.tasten) && a.tasten.length <= 3) {
-    const erlaubt = layout === 'bauen' ? ['drehen', 'fallen'] : ['bestaetigen'];
+    // Beim Zielen gibt es nur Fahren: keine Tasten, keine Senkrechte.
+    if (layout === 'zielen' && (a.y !== 0 || a.tasten.length)) return null;
+    const erlaubt = layout === 'bauen' ? ['drehen', 'fallen'] : layout === 'zielen' ? [] : ['bestaetigen'];
     if (!a.tasten.every(t => typeof t === 'string' && erlaubt.includes(t)) || new Set(a.tasten).size !== a.tasten.length) return null;
     return { art: 'steuerung', x: a.x, y: a.y, tasten: a.tasten as Taste[] };
   }
@@ -100,10 +116,19 @@ function privatLesen(d: unknown): Privat | null {
     if ( !ganz(b.form, 0, 6) || !zahl(b.hoehe, 0, 200) || !ganz(b.restzeit, 0, 180) || !ganz(b.countdown, 0, 3) || !ganz(b.platz, 1, 4) || !ganz(b.verbraucht, 0, 300)
       || typeof b.phase !== 'string' || !['countdown', 'spiel', 'pause', 'ende'].includes(b.phase) || typeof b.fertig !== 'boolean' || typeof b.gewonnen !== 'boolean') return null;
   }
+  if (d.arti !== undefined) {
+    const t = d.arti;
+    if (!objekt(t)) return null;
+    if (typeof t.phase !== 'string' || !ARTIPHASEN.includes(t.phase) || typeof t.amZug !== 'boolean' || typeof t.raus !== 'boolean' || typeof t.gewonnen !== 'boolean') return null;
+    if (!ganz(t.zug, 1, 10000) || !ganz(t.rest, 0, 20) || !ganz(t.inZuegen, 0, 3) || !ganz(t.winkel, 0, 180) || !ganz(t.staerke, 0, 100) || !ganz(t.waffe, 0, 7)
+      || !ganz(t.lp, 0, 100) || !ganz(t.tank, 0, 100) || !ganz(t.wind, -10, 10) || !ganz(t.runde, 1, 12) || !ganz(t.platz, 1, 4)) return null;
+    if (!Array.isArray(t.munition) || t.munition.length !== 8 || !t.munition.every(m => ganz(m, -1, 3))) return null;
+  }
   const { leben, punkte, amZug, hinweis, inventar } = d;
+  const arti = d.arti as ArtiPrivat | undefined;
   // Nur bekannte Felder weitergeben: keine versteckten großen Nutzlasten im Spielstatus.
   const bau = d.bau as BauPrivat | undefined;
-  return { leben, punkte, amZug, hinweis, inventar, ...(bau ? { bau: { form: bau.form, hoehe: bau.hoehe, restzeit: bau.restzeit, phase: bau.phase, countdown: bau.countdown, platz: bau.platz, fertig: bau.fertig, gewonnen: bau.gewonnen, verbraucht: bau.verbraucht, spielerzahl: bau.spielerzahl, ziele: bau.ziele, zielCountdown: bau.zielCountdown, item: bau.item ? { art: bau.item.art, nummer: bau.item.nummer } : undefined, itemIn: bau.itemIn, itemBereit: bau.itemBereit, platzierung: bau.platzierung ? { x: bau.platzierung.x, y: bau.platzierung.y, rest: bau.platzierung.rest, gueltig: bau.platzierung.gueltig } : undefined, eisWartet: bau.eisWartet, steinWartet: bau.steinWartet, anker: bau.anker, schwereWartet: bau.schwereWartet, gebaut: bau.gebaut, verloren: bau.verloren, aufgegeben: bau.aufgegeben, dauer: bau.dauer } } : {}) } as Privat;
+  return { leben, punkte, amZug, hinweis, inventar, ...(arti ? { arti: { phase: arti.phase, amZug: arti.amZug, zug: arti.zug, rest: arti.rest, inZuegen: arti.inZuegen, winkel: arti.winkel, staerke: arti.staerke, waffe: arti.waffe, munition: [...arti.munition], lp: arti.lp, tank: arti.tank, wind: arti.wind, runde: arti.runde, platz: arti.platz, raus: arti.raus, gewonnen: arti.gewonnen } } : {}), ...(bau ? { bau: { form: bau.form, hoehe: bau.hoehe, restzeit: bau.restzeit, phase: bau.phase, countdown: bau.countdown, platz: bau.platz, fertig: bau.fertig, gewonnen: bau.gewonnen, verbraucht: bau.verbraucht, spielerzahl: bau.spielerzahl, ziele: bau.ziele, zielCountdown: bau.zielCountdown, item: bau.item ? { art: bau.item.art, nummer: bau.item.nummer } : undefined, itemIn: bau.itemIn, itemBereit: bau.itemBereit, platzierung: bau.platzierung ? { x: bau.platzierung.x, y: bau.platzierung.y, rest: bau.platzierung.rest, gueltig: bau.platzierung.gueltig } : undefined, eisWartet: bau.eisWartet, steinWartet: bau.steinWartet, anker: bau.anker, schwereWartet: bau.schwereWartet, gebaut: bau.gebaut, verloren: bau.verloren, aufgegeben: bau.aufgegeben, dauer: bau.dauer } } : {}) } as Privat;
 }
 
 type Sitz = Spieler & { schluessel: string; verbindung?: string; folge: number; letzteEingabe: number; aktiv: boolean; privat?: Privat };
@@ -130,6 +155,7 @@ export class BroRaum {
   private layout: Layout = 'bauen';
   private abschnitt = 0;
   private baumodus: 'rennen' | 'standfest' = 'rennen';
+  private spiel: Spiel = 'building';
   private partie?: RaumSicht['partie'];
   private gesperrt = false;
   beendet = false;
@@ -143,7 +169,7 @@ export class BroRaum {
   sicht(): RaumSicht {
     return {
       raum: this.id, phase: this.phase, layout: this.layout, abschnitt: this.abschnitt,
-      baumodus: this.baumodus, partie: this.partie,
+      spiel: this.spiel, baumodus: this.baumodus, partie: this.partie,
       gesperrt: this.gesperrt, gastgeberDa: !!this.host, einladungBis: this.einladungBis,
       spieler: this.sitze.map(({ id, name, farbe, verbunden, bereit }) => ({ id, name, farbe, verbunden, bereit })),
     };
@@ -223,10 +249,16 @@ export class BroRaum {
       } else if (n.art === 'baumodus' && this.phase === 'lobby' && (n.modus === 'rennen' || n.modus === 'standfest')) {
         this.baumodus = n.modus;
         for (const s of this.sitze) s.bereit = false;
+      } else if (n.art === 'spielwahl' && this.phase === 'lobby' && (n.spiel === 'building' || n.spiel === 'brotanks')) {
+        // Wie der Moduswechsel: Wer schon „bereit“ war, hat ein anderes Spiel bestätigt.
+        this.spiel = n.spiel;
+        for (const s of this.sitze) s.bereit = false;
       } else if ((n.art === 'starten' || n.art === 'spielen') && this.phase === 'lobby') {
         if (!this.sitze.length || this.sitze.some(s => !s.bereit || !s.verbunden)) { this.fehler(v, 'Alle verbundenen Spieler müssen bereit sein.'); return; }
-        this.phase = n.art === 'spielen' ? 'spiel' : 'test'; this.layout = 'bauen'; this.gesperrt = true;
-        this.partie = n.art === 'spielen' ? { id: this.o.zufall(), seed: parseInt(this.o.zufall().slice(0, 8), 16) >>> 0, modus: this.baumodus } : undefined;
+        const tanks = n.art === 'spielen' && this.spiel === 'brotanks';
+        if (tanks && this.sitze.length < 2) { this.fehler(v, 'Für BroTanks braucht ihr mindestens zwei Handys.'); return; }
+        this.phase = n.art === 'spielen' ? 'spiel' : 'test'; this.layout = tanks ? 'zielen' : 'bauen'; this.gesperrt = true;
+        this.partie = n.art === 'spielen' ? { id: this.o.zufall(), seed: parseInt(this.o.zufall().slice(0, 8), 16) >>> 0, spiel: this.spiel, modus: this.baumodus } : undefined;
         this.neuerAbschnitt();
       } else if (n.art === 'lobby') {
         this.phase = 'lobby'; this.partie = undefined; this.gesperrt = false; this.neuerAbschnitt();
