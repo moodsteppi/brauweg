@@ -4,20 +4,12 @@ Stand 10.11.2026 (Worker, Projekt #24 „BroRemote Design überarbeiten“,
 Paket 1). Aufbau nach `docs/ASSETS-KARTENMANUFAKTUR-UI.md`, Stil nach
 `docs/ASSETS-BRO-BUILDING-BATTLE.md`.
 
-> **TEILLIEFERUNG. Der Auftrag „Paket 1: Bilder“ ist damit NICHT
-> abgeschlossen.** Wer diesen Stand freigibt, gibt nur die Bestellliste frei.
->
-> | Teil des Auftrags | Stand |
-> | --- | --- |
-> | Bestellliste `docs/ASSETS-BROREMOTE.md` | erledigt |
-> | WebP-Bilder unter `packages/client/public/broremote/` | **fehlen** |
-> | Liste der Dateien mit Größe in kB | **fehlt** (es gibt keine Dateien) |
-> | Kontaktbogen aller Bilder | **fehlt** |
-> | Tatsächlich verwendeter Prompt je Bild | **fehlt**, die Bestellprompts stehen unten |
->
-> Grund und Rückfrage (Weg A oder B) stehen unter „Generierung“ am Ende. Die
-> Aufgabe gilt erst als erledigt, wenn die Bilder in einem Folgelauf geliefert
-> sind und diese Box entfernt ist.
+> **Umfang: nur die Bestellung.** Entscheidung zur Rückfrage vom 10.11.2026,
+> im Wortlaut: „ok, dann erstelle nur die Bildbestellungen“. Diese Aufgabe
+> liefert deshalb keine Bilddateien, keinen Kontaktbogen und keine
+> kB-Liste. Das Erzeugen, Wandeln und Ablegen unter
+> `packages/client/public/broremote/` ist ein eigener späterer Schritt.
+> Grundlage dafür sind die fertigen Prompts je Datei unter „Prompts je Datei“.
 
 ## Worum es geht
 
@@ -148,27 +140,67 @@ auf eine Datei, die es noch nicht gibt.
 
 ## Generierung
 
-**Stand: noch keine Bilder geliefert, die Lieferung wartet auf eine
-Entscheidung.** Diese Bestellung ist nur der erste Teil des Auftrags. Die
-Bilddateien, der Kontaktbogen und der tatsächlich verwendete Prompt je Bild
-fehlen noch.
+Noch nicht erzeugt, siehe Kasten oben. Hintergrund: Auf dem Worker-Rechner
+(Mood-XPS) gibt es kein eingebautes Bildmodell und keinen Bilddienst in
+`dienste.mjs`. VerseIn ist bezahlt und stand am 10.11.2026 auf 0 Münzen. Laut
+`estimate_cost` kostet ein Bild 10 Münzen (GPT Image 2), 20 (Nano Banana 2) oder
+35 (GPT Image 2.5 Flare). Für 15 Motive sind das mit GPT Image 2 rund 150 Münzen.
+Die bisherigen BroRemote-Bilder entstanden mit dem eingebauten Imagegen einer
+anderen Sitzung.
 
-Grund: Die früheren BroRemote-Bilder entstanden mit dem eingebauten Imagegen
-einer anderen Sitzung. Der Worker auf dem Mood-XPS hat kein eigenes
-Bildmodell, und `dienste.mjs` hat keinen Bilddienst freigegeben. Erreichbar
-ist nur VerseIn, ein bezahlter Dienst. Das Konto stand am 10.11.2026 bei
-beiden Läufen auf 0 Münzen. Der Auftrag verbietet, bezahlte Dienste ohne
-Rückfrage zu nutzen oder ersatzweise zu zeichnen. Deshalb ging die Rückfrage
-mit der Fertigmeldung der Aufgabe an das Team:
+Wer erzeugt, trägt danach hier ein: Werkzeug und Modell, Abweichungen vom
+Prompt, Maße und kB-Größen der WebP-Dateien und den Kontaktbogen (alle Bilder
+auf Rot). Erst dann wird eingebaut.
 
-- **A: VerseIn aufladen und freigeben.** Je Bild kostet GPT Image 2 10 Münzen,
-  Nano Banana 2 20 Münzen und GPT Image 2.5 Flare 35 Münzen (laut
-  `estimate_cost` vom 10.11.2026). Für die 15 Motive (`taste-rechts` wird
-  gespiegelt) sind das mit GPT Image 2 rund 150 Münzen, mit Nachbesserungen
-  eher 250.
-- **B: Die Aufgabe an eine Sitzung mit eingebautem Imagegen geben**, so wie bei
-  `bauwelt.webp`, `bauinsel.webp` und `baumeister.webp`.
+## Prompts je Datei
 
-Nach der Lieferung kommen hierher: das Werkzeug, der tatsächliche Prompt je
-Bild (gemeinsamer Teil plus Motiv), die Maße und kB-Größen der WebP-Dateien und
-der Verweis auf den Kontaktbogen.
+Jeder Prompt ist **gemeinsamer Teil + die Zeile unten**. Die Zeilen enthalten
+die Freiflächen aus den Tabellen in englischer Fassung, damit das Bildmodell
+sie auch bekommt. `taste-rechts` wird nicht erzeugt, sondern aus `taste-links`
+gespiegelt. Für ein Paar mit gleichem Umriss wird das erste Bild als Referenz
+mitgegeben und nur die Farbe geändert.
+
+**start-hintergrund** (16:9, undurchsichtig)
+> Element: wide calm night sky over a sea of soft clouds, distant floating rocky islands with tiny pine trees and warm lanterns only along the left and right edges and the bottom, a faint distant tower silhouette on the far right island, subtle stars. Keep the center and the upper third dark, calm and almost empty for bright overlay text; nothing bright in the middle. Composition must still work when cropped to a tall 9:19 phone frame, with islands staying at the bottom. Opaque full-bleed background, no transparency.
+
+**spielkarte-building** (3:2)
+> Element: a small floating workshop island with a cheerful wobbly tower of colorful rounded building blocks (teal, amber, coral, violet) rising from it, a small star sparkling above the top, one tiny penguin builder with a golden helmet waving at the tower foot, lanterns on the island edge, within a soft circular night-sky vignette. The whole motif fits inside the central square so it survives a 1:1 crop. Single object, centered, on a fully transparent background (real alpha channel).
+
+**qr-rahmen** (1:1)
+> Element: square ornate frame of dark walnut wood with polished brass corner caps and small rivets, tiny turquoise crystals at the four corners, a little lantern hanging from the top edge. The inner 72 percent of the image is completely empty and fully transparent: no glass, no shadow, no glow, no pattern inside the frame. Single object, centered, on a fully transparent background (real alpha channel).
+
+**platz-leer** (4:1)
+> Element: horizontal rounded plaque of dark slate stone with a dashed thin brass inlay border, slightly translucent dark inside, an empty round niche on the left side like a reserved seat. Everything to the right of the niche is a calm, even surface for text. The niche is empty. Single object, centered, on a fully transparent background (real alpha channel).
+
+**platz-belegt** (4:1, Referenz: platz-leer)
+> Element: exactly the same plaque outline and niche position as the reference, now solid polished walnut with a warm brass rim and a soft amber glow, the round niche lit from inside. Only materials and colors change, the silhouette stays identical. Single object, centered, on a fully transparent background (real alpha channel).
+
+**bereit-abzeichen** (1:1)
+> Element: round brass badge with a teal enamel center and a bold friendly check mark shape made of glowing light, small sparkle. Few large shapes, readable at 28 points. Single object, centered, on a fully transparent background (real alpha channel).
+
+**knopf-primaer** (4:1)
+> Element: wide rounded button plate of polished gold and warm amber enamel, thick soft bevel, darker brass bottom edge like a pressable key. Fills at least 92 percent of the image width. Left and right end caps are decorated; the long middle section is a plain even surface with no pattern, only a horizontal gradient, so it can be stretched. Calm center for dark text. Single object, centered, on a fully transparent background (real alpha channel).
+
+**knopf-sekundaer** (4:1, Referenz: knopf-primaer)
+> Element: exactly the same button outline and end caps as the reference, in deep teal enamel with a thin brass rim. Plain stretchable middle, calm center for light text. Only colors change, the silhouette stays identical. Single object, centered, on a fully transparent background (real alpha channel).
+
+**taste-links** (1:1)
+> Element: chunky rounded arrow pointing left, polished brass with a teal glow edge. Same stroke weight and lighting as the other controller symbols. Single object, centered, on a fully transparent background (real alpha channel).
+
+**taste-drehen** (1:1)
+> Element: a circular clockwise rotation arrow made of brass wrapped around a small teal building block. Same stroke weight and lighting as the other controller symbols. Single object, centered, on a fully transparent background (real alpha channel).
+
+**taste-fallen** (1:1)
+> Element: a chunky amber building block dropping downward with two soft motion streaks above it and a small brass down-chevron below. Same stroke weight and lighting as the other controller symbols. Single object, centered, on a fully transparent background (real alpha channel).
+
+**zauber-knopf** (8:3)
+> Element: rounded spell button plate of deep violet-navy enamel with a brass rim, softly glowing ornamental magic swirls along the edge (pure ornament, nothing resembling letters or runes). An empty round socket on the left for an icon; the rest of the middle is a plain stretchable surface for text. Single object, centered, on a fully transparent background (real alpha channel).
+
+**zauber-anker** (1:1)
+> Element: a glowing teal brass anchor with a small stabilizing ring of light. Readable at 32 points. Single object, centered, on a fully transparent background (real alpha channel).
+
+**zauber-schwere** (1:1)
+> Element: a heavy dark iron weight with a brass handle and a purple magic glow pressing downward. Readable at 32 points. Single object, centered, on a fully transparent background (real alpha channel).
+
+**controller-rahmen** (1:1)
+> Element: ornate rectangular frame of dark walnut with brass corners and tiny lanterns at the top corners, thin slate inner edge. Decoration only in the four corners; the straight edges between them are plain and even so they can be stretched as a nine-slice. The interior is completely empty and fully transparent. Single object, centered, on a fully transparent background (real alpha channel).
