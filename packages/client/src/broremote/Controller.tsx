@@ -11,6 +11,8 @@ export function Controller({ layout, senden, bau, gegner = [] }: { layout: Layou
   const fuehlen = (): void => { if (summen) { try { navigator.vibrate?.(12); } catch { /* Haptik ist optional. */ } } };
   const [zahl, setZahl] = useState('0');
   const [ziel, setZiel] = useState('');
+  const ziele = gegner.filter(g => !bau?.ziele || bau.ziele.includes(g.id));
+  const zielId = ziele.some(g => g.id === ziel) ? ziel : ziele[0]?.id;
   const blockiert = !!bau?.zielCountdown;
   const sperre = useRef(blockiert); sperre.current = blockiert;
   const [wahl, setWahl] = useState<number | null>(null);
@@ -92,8 +94,8 @@ export function Controller({ layout, senden, bau, gegner = [] }: { layout: Layou
     {bau && <div className="bb-zauberleiste"><span className="br-kicker">DEINE ZAUBER · JE EINMAL PRO RUNDE</span>
       <details className="bb-zauberhilfe"><summary>So wirken deine Zauber</summary><p>Ab 3 verbauten Teilen. Turmanker beruhigt deinen Turm 4 Sekunden. Schwergewicht verdreifacht das Gewicht des nächsten gegnerischen Teils.</p></details>
       <button className="bb-zauber bb-anker" disabled={!bau.ankerBereit} onClick={() => { fuehlen(); senden({ art: 'zauber', zauber: 'anker' }); }}><BroIcon name="anker" /><strong>Turmanker</strong><small>{bau.anker ? `${Math.ceil(bau.anker)} s aktiv` : bau.ankerBereit ? 'Jetzt stabilisieren' : (bau.gebaut ?? 0) < 3 ? 'Ab 3 verbauten Teilen' : 'Nicht mehr verfügbar'}</small></button>
-      {gegner.length > 0 && <><div className="bb-zauberziel" role="group" aria-label="Ziel für Schwergewicht"><small>GEGNER WÄHLEN</small><div className="br-gegner">{gegner.map(g => <button type="button" key={g.id} aria-pressed={(gegner.some(s => s.id === ziel) ? ziel : gegner[0].id) === g.id} onClick={() => setZiel(g.id)}>{g.name}</button>)}</div></div>
-      <button className="bb-zauber bb-schwere" disabled={!bau.schwereBereit} onClick={() => senden({ art: 'zauber', zauber: 'schwere', ziel: gegner.some(g => g.id === ziel) ? ziel : gegner[0].id })}><BroIcon name="gewicht" /><strong>Schwergewicht</strong><small>{bau.schwereBereit ? 'Gegner verzaubern' : (bau.gebaut ?? 0) < 3 ? 'Ab 3 verbauten Teilen' : 'Nicht mehr verfügbar'}</small></button></>}
+      {gegner.length > 0 && <><div className="bb-zauberziel" role="group" aria-label="Ziel für Schwergewicht"><small>GEGNER WÄHLEN</small><div className="br-gegner">{gegner.map(g => <button type="button" key={g.id} aria-pressed={zielId === g.id} disabled={!ziele.some(z => z.id === g.id)} onClick={() => setZiel(g.id)}>{g.name}</button>)}</div></div>
+      <button className="bb-zauber bb-schwere" disabled={!bau.schwereBereit || !zielId} onClick={() => { if (zielId) { fuehlen(); senden({ art: 'zauber', zauber: 'schwere', ziel: zielId }); } }}><BroIcon name="gewicht" /><strong>Schwergewicht</strong><small>{bau.schwereBereit ? zielId ? 'Gegner verzaubern' : 'Kein Ziel verfügbar' : (bau.gebaut ?? 0) < 3 ? 'Ab 3 verbauten Teilen' : 'Nicht mehr verfügbar'}</small></button></>}
     </div>}
     <div className="br-controllerfuss"><span>Schau auf den großen Bildschirm.</span><button type="button" className="br-link" aria-pressed={summen} onClick={() => setSummen(s => !s)}>Haptik {summen ? 'an' : 'aus'}</button></div>
   </div>;

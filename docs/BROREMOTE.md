@@ -234,3 +234,16 @@ Wachhalte-Brücke und Controller-Reset als Verbindungen ergänzen. Die Physik
 bleibt im Gastgeberfenster; ein Neuladen bzw. Serverneustart stellt keine
 laufende Physikwelt wieder her. Diese lokale Übergabe ersetzt den derzeit
 nicht freigegebenen externen Tafel-Zugriff.
+
+### Sichtprüfung dieses Ausbaus
+
+Geprüft mit dem echten lokalen Relay und zwei Browser-Controllern:
+QR-Link, Bereitschaft, Rundenstart, Bedienung, Gegnerzauber, Revanche,
+kurzer gleichzeitiger Verbindungsabbruch und Wiederaufnahme derselben Partie.
+Desktopansicht bei 1280 × 720 sowie Controller bei 390 × 844 Pixeln geprüft.
+Die große Bühne behält den Ping sichtbar. Beide Zauber passen in die kompakte
+Handyansicht; verbrauchte Zauber verschwinden nicht, und ungültige Ziele
+werden deaktiviert. Der Gesamtbau und die gezielten Raum-, Relay- und
+Client-Prüfungen liefen erfolgreich. Es wurde kein Simulator gestartet.
+Netzwechsel auf physischen iPhones und der lokale Hotspot bleiben als
+Geräteabnahme offen. Dieser Ausbau ist lokal, noch nicht veröffentlicht.

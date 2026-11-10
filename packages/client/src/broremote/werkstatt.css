@@ -86,3 +86,24 @@
 .bb-kino .bb-bahn>canvas { height:calc(100dvh - 245px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height:250px; max-height:none }
 .bb-kino .bb-buehne-1 .bb-bahn>canvas { max-width:800px }
 @media(max-width:600px) { .bb-werkzeug { padding:12px; gap:7px }.bb-werkzeug h2 { font-size:21px!important }.bb-werkzeug .br-kicker { font-size:8px!important; letter-spacing:.5px }.bb-uhr { padding:5px 8px; font-size:21px }.bb-rund { width:36px; height:38px; border-radius:10px }.bb-rund .br-icon { width:19px; height:19px }.bb-kino .bb-buehne-3 .bb-bahn>canvas,.bb-kino .bb-buehne-4 .bb-bahn>canvas { height:260px } }
+
+/* Spieltasten und beide Zauber bleiben auch auf kurzen Handydisplays nah beieinander. */
+.br-minizurueck { display:grid; place-items:center; width:36px; height:36px; flex:none; border:1px solid #7997bd44; border-radius:10px; color:#dce9f6; background:#20334b }
+.br-spielt:has(.br-eigener-controller) .br-kopf { display:none }
+.br-spielt:has(.br-eigener-controller) .br-verbindungszeile { gap:8px }
+.br-spielt:has(.br-eigener-controller) .br-verbindungszeile>span { margin-right:auto }
+.br-spielt:has(.br-eigener-controller) .br-verbindungszeile>span>.br-icon { display:none }
+.br-spielt:has(.br-eigener-controller) .br-verbindungszeile>span>small { padding-left:0 }
+.br-eigener-controller .br-controllername img { width:34px; height:38px }
+.br-eigener-controller .bb-controllerstand { margin-top:8px }
+.br-eigener-controller .bb-knopfcontroller>.br-leise { display:none }
+.br-eigener-controller .bb-baubuttons { margin-top:14px }
+.br-seite:has(.bb-kino) .br-verbindungszeile { position:fixed; top:env(safe-area-inset-top); left:env(safe-area-inset-left); right:env(safe-area-inset-right); z-index:121; height:52px; margin:0; border-radius:0; border:0; background:#102137 }
+.br-seite:has(.bb-kino):has(.br-verbindungszeile) .bb-kino { padding-top:calc(52px + env(safe-area-inset-top)) }
+.br-seite:has(.br-verbindungszeile) .bb-kino .bb-bahn>canvas { height:calc(100dvh - 297px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) }
+@media(min-width:800px) {
+ .br-raumtitel { min-height:85px; margin-bottom:18px }.br-raumtitel h1 { font-size:32px }.br-raumtitel>img { height:90px; width:90px }
+ .br-plaetze { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px }.br-platz { min-height:84px; padding:10px; gap:8px; position:relative }.br-platz strong { font-size:14px; padding-right:12px }.br-platz small { font-size:10px }.br-platz .br-avatar { width:34px; height:42px; border-radius:10px }.br-avatar img { width:32px; height:40px }.br-platz .br-entfernen { position:absolute; right:4px; top:4px; width:26px; height:26px }
+}
+
+.br-eigener-controller .br-zauberwarnung { display:flex; gap:8px; align-items:center; font-size:12px; color:#e5c5ff; background:#55346155; border:1px solid #aa80c455; padding:10px; border-radius:12px; margin:10px 0 0 }

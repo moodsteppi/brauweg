@@ -55,3 +55,13 @@ it('beim Loslassen der jüngsten Richtung bleibt die andere gehaltene Taste akti
   fireEvent.keyUp(window, { key: 'ArrowLeft' });
   expect(senden).toHaveBeenLastCalledWith({ art: 'steuerung', x: 0, y: 0, tasten: [] }); unmount();
 });
+
+
+it('behält den verbrauchten Zauber sichtbar und deaktiviert nicht mehr erreichbare Ziele', () => {
+  const senden = vi.fn();
+  const bau: BauPrivat = { form: 0, hoehe: 8, restzeit: 90, phase: 'spiel', countdown: 0, platz: 1, fertig: false, gewonnen: false, verbraucht: 5, gebaut: 5, ankerBereit: true, schwereBereit: false, ziele: [] };
+  const { unmount } = render(<Controller layout="bauen" bau={bau} gegner={[{ id: 'b', name: 'Bert' }]} senden={senden} />);
+  expect(screen.getByRole('button', { name: /Schwergewicht.*Nicht mehr verfügbar/ })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Bert' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /Turmanker/ })).toBeEnabled(); unmount();
+});
