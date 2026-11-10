@@ -755,3 +755,27 @@
   max-width:520px;
   margin:0 auto}
 
+
+/* Nur mit ?messen=1: Messanzeige der Eingabeverzögerung. Klein und am Rand,
+   damit sie die Bühne nicht verdeckt, die sie gerade vermisst. */
+.br-messung {
+  position:fixed;
+  right:8px;
+  bottom:calc(8px + env(safe-area-inset-bottom));
+  z-index:90;
+  display:grid;
+  gap:4px;
+  max-width:min(420px,calc(100vw - 16px));
+  padding:8px 10px;
+  border:1px solid #87f2da66;
+  border-radius:8px;
+  background:#0c152aee;
+  color:#f5f5ff;
+  font:12px/1.35 ui-monospace,Consolas,monospace}
+.br-messung table {
+  border-collapse:collapse}
+.br-messung th,.br-messung td {
+  padding:1px 6px 1px 0;
+  text-align:right}
+.br-messung th:first-child,.br-messung td:first-child {
+  text-align:left}

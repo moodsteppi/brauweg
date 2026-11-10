@@ -160,6 +160,32 @@ iPhone-/iPad-Host mit mehreren physischen Handys, persönlicher Hotspot,
 Netzwechsel und der vollständige Offline-Ablauf im Flugmodus mit WLAN.
 Der Simulatornachweis ersetzt diese Geräteabnahme nicht.
 
+## Eingabeverzögerung messen
+
+Schalter `?messen=1` an `/broremote` (Gastgeber). Der Einladungslink trägt
+ihn dann als `m=1` in der Raute mit, das Handy misst also ohne Zutun mit;
+`?messen=0` schaltet ihn wieder ab. Unten rechts steht danach eine kleine
+Anzeige: am Gastgeber Median und 95 % je Abschnitt, „Tabelle kopieren“ gibt
+jede Eingabe als Tabulatortext aus. Ohne Schalter ist `messung` in
+`src/broremote/messen.ts` null — kein Timer, kein Ping, kein Paket mehr.
+
+Gemessen wird: Druck am Handy, Ankunft beim Gastgeber, erster Physikschritt
+danach, gezeichnetes Bild. Die Druckzeit reist als `folge` mit (Serveruhr in
+ms, streng steigend), weil der Raum fremde Felder verwirft; beide Seiten
+gleichen ihre Uhr über Ping/Pong ab. „Beim Server angekommen“ ist **geschätzt**
+(Ankunft beim Gastgeber minus halber Ping), denn der Server stempelt nichts —
+ein Stempel wäre eine Änderung am Transport.
+
+Ohne Handy: `npx tsx werkzeug/broremote-messen.mjs --ziel lokal|staging
+--anzahl 250` misst die rohe Leitung (zwei WebSockets, eine Uhr) und danach
+den echten Client in Edge ohne Fenster. Vorher `npm run build` im Paket
+`broremote-kern`.
+
+Stand 10.11.2026 (staging, Kabel, Kante `ams1`): Druck → Bild Median 50 ms,
+p95 72 ms. Davon Leitung ≈ 1 Ping (26 ms), Relay selbst < 1 ms, Warten auf den
+Takt des Gastgebers 22 / 39 ms (`BauArena.tsx`: Physik nur im
+`setTimeout`-Takt von 33 ms).
+
 ## Tafel-Übergabe
 
 Die vorgeschriebenen Leseversuche an Visual Building und Aufgabenboard

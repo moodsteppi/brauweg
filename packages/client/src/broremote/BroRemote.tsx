@@ -11,6 +11,8 @@ import { BauWertung } from './building/BauWertung';
 import { BauVorschau } from './building/BauVorschau';
 import type { EingabeEmpfang } from './building/BauArena';
 import './building/building.css';
+import { messung } from './messen';
+import { Messanzeige } from './Messanzeige';
 
 const BauArena = lazy(() => import('./building/BauArena'));
 const TRAININGSSPIELER = [{ id: 'training', name: 'Du', farbe: '#70dfc4', verbunden: true, bereit: true }];
@@ -52,7 +54,7 @@ export function BroRemote(): React.JSX.Element {
   };
   const vergessen = (): void => { try { sessionStorage.removeItem(SPEICHER); } catch { /* Privater Modus. */ } setGespeichert(null); };
   const schliessen = (): void => {
-    kanal.current?.senden({ art: 'verlassen' }); lauf.current++; kanal.current?.schliessen(); kanal.current = null;
+    kanal.current?.senden({ art: 'verlassen' }); messung?.trennen(); lauf.current++; kanal.current?.schliessen(); kanal.current = null;
     setStatus('beendet'); setSicht(null); sichtRef.current = null; setPrivat(null); setRolle(null); setFehler(''); vergessen();
   };
   useEffect(() => {
@@ -99,9 +101,11 @@ export function BroRemote(): React.JSX.Element {
         }
         if (n.art === 'einladung') setEinladung(n.einladung);
         if (n.art === 'privat' && n.abschnitt === sichtRef.current?.abschnitt) setPrivat(n.daten);
+        if (n.art === 'pong') messung?.pong(n.zeit);
         if (n.art === 'fehler') setFehler(n.text);
         if (n.art === 'beendet') { setFehler(n.text); setStatus('beendet'); vergessen(); }
         if (n.art === 'eingabe' && sichtRef.current?.phase === 'spiel') {
+          messung?.ankunft(n.spieler, n.folge, n.aktion.art);
           if (n.abschnitt === sichtRef.current.abschnitt) bauEingaben.current?.(n.spieler, n.aktion);
           return;
         }
@@ -123,6 +127,7 @@ export function BroRemote(): React.JSX.Element {
     };
     if (lokalHost) { vergessen(); kanal.current = lanGastgeber(e, a => { setAdresse(a[0]); setAdressen(a); }); }
     else kanal.current = new Verbindung(z, e);
+    messung?.verbinden(n => lauf.current === generation && (kanal.current?.senden(n) ?? false));
   };
   const gastgeber = (): void => {
     const basis = apiBase || window.location.origin;
@@ -137,9 +142,13 @@ export function BroRemote(): React.JSX.Element {
   };
   const eingabeSenden = (aktion: Aktion): void => {
     const s = sichtRef.current;
-    if (s && status === 'verbunden' && s.gastgeberDa) kanal.current?.senden({ art: 'eingabe', abschnitt: s.abschnitt, folge: ++folge.current, aktion });
+    if (s && status === 'verbunden' && s.gastgeberDa) {
+      // Mit Messschalter trägt die Folge die Druckzeit (siehe messen.ts); sonst zählt sie wie immer.
+      folge.current = messung ? messung.folge(folge.current) : folge.current + 1;
+      kanal.current?.senden({ art: 'eingabe', abschnitt: s.abschnitt, folge: folge.current, aktion });
+    }
   };
-  const link = sicht && rolle === 'gastgeber' && adresse && einladung ? einladungsLink({ transport: art, adresse, raum: sicht.raum, schluessel: einladung, bis: sicht.einladungBis }) : '';
+  const link = sicht && rolle === 'gastgeber' && adresse && einladung ? einladungsLink({ transport: art, adresse, raum: sicht.raum, schluessel: einladung, bis: sicht.einladungBis }) + (messung ? '&m=1' : '') : '';
   const verbunden = status === 'verbunden';
   const meiner = sicht?.spieler.find(s => s.id === spieler);
   const bereit = !!sicht?.spieler.length && sicht.spieler.every(s => s.bereit && s.verbunden);
@@ -242,6 +251,7 @@ export function BroRemote(): React.JSX.Element {
         </section>}
         <button type="button" className="br-link br-verlassen" onClick={() => { if (!aktiv || window.confirm(rolle === 'gastgeber' ? 'Lobby für alle beenden?' : 'Lobby verlassen?')) schliessen(); }}>{rolle === 'gastgeber' ? 'Lobby beenden' : 'Lobby verlassen'}</button>
       </>}
+      {messung && <Messanzeige messung={messung} rolle={rolle} />}
       <footer className="br-fuss">BroRemote · Gemeinsam spielen, einfach verbinden.</footer>
     </div>
   </main>;
