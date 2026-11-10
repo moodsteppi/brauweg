@@ -71,11 +71,15 @@ eigenes Regelpaket und eine eigene Bühne.
 
 ## 1. Name
 
-Entschieden: **BroTanks** (Emil, Team-Raum `62958838`: „kannst du die aufgabe BroTanks nennen“; vorher `2fbbfbc0`: „Bro Shell Shock (BroTanks)“). Die Tabelle darunter bleibt als Geschichte der Namenssuche stehen.
+Entschieden: **BroTanks** (Emil, Team-Raum `62958838`: „kannst du die aufgabe BroTanks nennen“; vorher schon in `2fbbfbc0`). Die Entscheidung kam nach dem ersten Entwurf (`1301f3cc`) als Nachbesserung vom 10.11.2026 und steht deshalb nicht im ursprünglichen Auftrag.
+
+Herkunft und Abgrenzung: „Tanks“ ist das englische Gattungswort für Panzer und beschreibt, was die Bros fahren (Abschnitt 7) — es ist kein Name, keine Figur und kein Text aus ShellShock Live oder einem anderen Spiel. Der Titel des Vorbilds und Abwandlungen davon werden bewusst **nicht** als Name verwendet, auch nicht als Untertitel; die Regel aus der Einleitung (nur das Genre) gilt unverändert.
+
+Die Tabelle darunter bleibt als Geschichte der Namenssuche stehen: Sie enthält die drei geforderten eigenen Vorschläge, der markierte Arbeitsname galt bis zur Entscheidung und ist durch BroTanks abgelöst.
 
 | Vorschlag | Gedanke |
 | --- | --- |
-| **Bro Ballistik Battle** | **Arbeitsname.** Steht als Geschwister neben „Bro Building Battle“: gleicher Anfang, gleicher Klang, in der Spielauswahl sofort als Familie erkennbar. Kurz genug für die Spielkarte. |
+| **Bro Ballistik Battle** | **Arbeitsname bis zur Entscheidung, abgelöst durch BroTanks.** Steht als Geschwister neben „Bro Building Battle“: gleicher Anfang, gleicher Klang, in der Spielauswahl sofort als Familie erkennbar. Kurz genug für die Spielkarte. |
 | Schollenschuss | Die Bros stehen auf einer Eisscholle über dem Meer; jeder Treffer frisst ein Stück davon weg. Beschreibt das zerstörbare Gelände. |
 | Hangpolter | Lautmalerisch, verspielt, deutsch. Betont das Rollen, Rutschen und Herabpoltern nach Einschlägen. |
 
