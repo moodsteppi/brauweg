@@ -19,6 +19,13 @@ Paket 1). Aufbau nach `docs/ASSETS-KARTENMANUFAKTUR-UI.md`, Stil nach
 > auf die Rückfrage aus Lauf 2 (Weg A: VerseIn aufladen, Weg B: an eine
 > Imagegen-Sitzung geben). Wer freigibt, prüft das dort im Verlauf der Aufgabe.
 >
+> **Bestätigt am 10.11.2026:** Nach Runde 2 des Zweitlesers kam eine zweite
+> Rückfrage: A „Umfang nur Bildbestellung gilt, Befund als erledigt markieren“
+> oder B „Bilder doch hier erzeugen, VerseIn aufladen“. Die Antwort war
+> „Erledigt.“. VerseIn stand danach weiter auf 0 Münzen, B war also nicht
+> vorbereitet. Damit gilt A: Dieser Zweig liefert die Bestellung, die Bilder
+> sind eine eigene Aufgabe.
+>
 > **Was offen bleibt:** Bilder erzeugen, auf die Sollgröße verkleinern, als
 > WebP unter `packages/client/public/broremote/` ablegen, kB-Liste und
 > Kontaktbogen. Dafür ist eine eigene Karte auf dem Issueboard beantragt
