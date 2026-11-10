@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bauteilfolge, FORMEN, rangfolge, zellen } from '../src/index.js';
+import { bauteilfolge, itemZiehen, itemZufall, type BauZauber, FORMEN, rangfolge, zellen } from '../src/index.js';
 
 test('jeder Siebenersack enthält alle Formen, gleiche Seeds liefern gleiche Folgen', () => {
   const a = bauteilfolge(17, 70);
@@ -26,4 +26,19 @@ test('Rennen zählt Zielerreichung vor Höhe; Standfest zählt Leben; Gleichstan
   assert.equal(rangfolge(s, 'rennen')[0].id, 'a');
   assert.equal(rangfolge(s, 'rennen', ['b'])[0].id, 'b');
   assert.deepEqual(rangfolge(s, 'standfest').map(v => [v.id, v.platz]), [['b', 1], ['c', 1], ['a', 3], ['d', 4]]);
+});
+
+
+test('Item-Lotterie ist reproduzierbar, meidet direkte Wiederholungen und benutzt nur den erlaubten Vorrat', () => {
+  const erlaubt: BauZauber[] = ['anker', 'plattform', 'stein', 'schwere', 'eis'];
+  function folge(seed: number): BauZauber[] {
+    const zufall = itemZufall(seed), funde: BauZauber[] = [];
+    for (let i = 0; i < 50; i++) funde.push(itemZiehen(zufall, erlaubt, funde.at(-1)));
+    return funde;
+  }
+  const funde = folge(17);
+  assert.deepEqual(funde, folge(17)); assert.notDeepEqual(funde, folge(19));
+  assert.equal(new Set(funde).size, 5);
+  for (let i = 1; i < funde.length; i++) assert.notEqual(funde[i], funde[i - 1]);
+  assert.equal(itemZiehen(itemZufall(18), ['anker'], 'anker'), 'anker');
 });

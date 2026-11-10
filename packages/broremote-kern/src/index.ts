@@ -1,18 +1,24 @@
 /** Gemeinsame Raumautorität: im Relay und im gebündelten iOS-Gastgeber identisch. */
 export const VERSION = 1;
 export const EINLADUNG_MS = 10 * 60_000;
-export const GASTGEBER_PAUSE_MS = 30_000;
+// Eine kurze Netzumschaltung darf die gesamte Runde nicht verlieren.
+export const GASTGEBER_PAUSE_MS = 90_000;
 export const EINGABE_PAUSE_MS = 600;
 export const MAX_NACHRICHT = 8192;
 export type Layout = 'bauen' | 'auswahl';
 export type Taste = 'drehen' | 'fallen' | 'bestaetigen';
+export type BauZauber = 'anker' | 'plattform' | 'stein' | 'schwere' | 'eis';
+export type BauItem = { art: BauZauber; nummer: number };
+export type BauPlatzierung = { x: number; y: number; gueltig: boolean; rest: number };
+const BAUZAUBER: readonly string[] = ['anker', 'plattform', 'stein', 'schwere', 'eis'];
 export type Aktion =
   | { art: 'steuerung'; x: number; y: number; tasten: Taste[] }
   | { art: 'wahl'; wert: number }
   | { art: 'zahl'; wert: number }
-  | { art: 'zauber'; zauber: 'anker' | 'schwere'; ziel?: string }
+  | { art: 'zauber'; zauber: BauZauber; item: number; ziel?: string }
+  | { art: 'plattform'; item: number; schritt: 'platzieren' | 'zurueck' }
   | { art: 'reset' };
-export type BauPrivat = { form: number; hoehe: number; restzeit: number; phase: 'countdown' | 'spiel' | 'pause' | 'ende'; countdown: number; platz: number; fertig: boolean; gewonnen: boolean; verbraucht: number; spielerzahl?: number; ziele?: string[]; zielCountdown?: number; ankerBereit?: boolean; schwereBereit?: boolean; anker?: number; schwereWartet?: boolean; gebaut?: number; verloren?: number; aufgegeben?: boolean; dauer?: number };
+export type BauPrivat = { form: number; hoehe: number; restzeit: number; phase: 'countdown' | 'spiel' | 'pause' | 'ende'; countdown: number; platz: number; fertig: boolean; gewonnen: boolean; verbraucht: number; spielerzahl?: number; ziele?: string[]; zielCountdown?: number; item?: BauItem; itemIn?: number; itemBereit?: boolean; platzierung?: BauPlatzierung; eisWartet?: boolean; steinWartet?: boolean; anker?: number; schwereWartet?: boolean; gebaut?: number; verloren?: number; aufgegeben?: boolean; dauer?: number };
 export type Privat = { leben?: number; punkte?: number; hinweis?: string; inventar?: string[]; amZug?: boolean; bau?: BauPrivat };
 export type Spieler = { id: string; name: string; farbe: string; verbunden: boolean; bereit: boolean };
 export type RaumSicht = {
@@ -29,7 +35,7 @@ export type ServerNachricht =
   | { art: 'einladung'; einladung: string; bis: number }
   | { art: 'fehler'; text: string }
   | { art: 'beendet'; text: string }
-  | { art: 'pong'; zeit: number };
+  | { art: 'pong'; zeit: number; kennung?: string };
 
 export function objekt(wert: unknown): wert is Nachricht {
   return wert !== null && typeof wert === 'object' && !Array.isArray(wert);
@@ -58,7 +64,8 @@ function name(wert: unknown): string | null {
 }
 export function aktionLesen(a: unknown, layout: Layout): Aktion | null {
   if (!objekt(a)) return null;
-  if (layout === 'bauen' && a.art === 'zauber' && (a.zauber === 'anker' || a.zauber === 'schwere') && (a.ziel === undefined || (typeof a.ziel === 'string' && a.ziel.length <= 24))) return { art: 'zauber', zauber: a.zauber, ...(typeof a.ziel === 'string' ? { ziel: a.ziel } : {}) };
+  if (layout === 'bauen' && a.art === 'zauber' && typeof a.zauber === 'string' && BAUZAUBER.includes(a.zauber) && ganz(a.item, 1, 1000) && (a.ziel === undefined || (typeof a.ziel === 'string' && a.ziel.length <= 24))) return { art: 'zauber', zauber: a.zauber as BauZauber, item: a.item, ...(typeof a.ziel === 'string' ? { ziel: a.ziel } : {}) };
+  if (layout === 'bauen' && a.art === 'plattform' && ganz(a.item, 1, 1000) && (a.schritt === 'platzieren' || a.schritt === 'zurueck')) return { art: 'plattform', item: a.item, schritt: a.schritt };
   if (a.art === 'reset') return { art: 'reset' };
   if (a.art === 'steuerung' && zahl(a.x, -1, 1) && zahl(a.y, -1, 1) && Array.isArray(a.tasten) && a.tasten.length <= 3) {
     const erlaubt = layout === 'bauen' ? ['drehen', 'fallen'] : ['bestaetigen'];
@@ -81,17 +88,22 @@ function privatLesen(d: unknown): Privat | null {
     if (!objekt(b)) return null;
     if (b.spielerzahl !== undefined && !ganz(b.spielerzahl, 1, 4)) return null;
     if (b.ziele !== undefined && (!Array.isArray(b.ziele) || b.ziele.length > 3 || !b.ziele.every(z => typeof z === 'string' && z.length <= 24))) return null;
-    for (const k of ['ankerBereit', 'schwereBereit', 'schwereWartet', 'aufgegeben']) if (b[k] !== undefined && typeof b[k] !== 'boolean') return null;
+    for (const k of ['itemBereit', 'eisWartet', 'steinWartet', 'schwereWartet', 'aufgegeben']) if (b[k] !== undefined && typeof b[k] !== 'boolean') return null;
+    if (b.item !== undefined && (!objekt(b.item) || typeof b.item.art !== 'string' || !BAUZAUBER.includes(b.item.art) || !ganz(b.item.nummer, 1, 1000))) return null;
+    if (b.platzierung !== undefined) {
+      const p = b.platzierung;
+      if (!objekt(p) || !zahl(p.x, -6, 6) || !zahl(p.y, .4, 20) || !ganz(p.rest, 0, 8) || typeof p.gueltig !== 'boolean' || !objekt(b.item) || b.item.art !== 'plattform') return null;
+    }
     // Höhenrennen liefert weiter Teile. Drei Minuten mit Nachschubpause
     // bleiben unter 300; die alte 30er-Grenze verschluckte ganze Statuspakete.
-    for (const [k, max] of [['zielCountdown', 3], ['anker', 4], ['gebaut', 300], ['verloren', 300], ['dauer', 181]] as const) if (b[k] !== undefined && !zahl(b[k], 0, max)) return null;
+    for (const [k, max] of [['itemIn', 28], ['zielCountdown', 3], ['anker', 4], ['gebaut', 300], ['verloren', 300], ['dauer', 181]] as const) if (b[k] !== undefined && !zahl(b[k], 0, max)) return null;
     if ( !ganz(b.form, 0, 6) || !zahl(b.hoehe, 0, 200) || !ganz(b.restzeit, 0, 180) || !ganz(b.countdown, 0, 3) || !ganz(b.platz, 1, 4) || !ganz(b.verbraucht, 0, 300)
       || typeof b.phase !== 'string' || !['countdown', 'spiel', 'pause', 'ende'].includes(b.phase) || typeof b.fertig !== 'boolean' || typeof b.gewonnen !== 'boolean') return null;
   }
   const { leben, punkte, amZug, hinweis, inventar } = d;
   // Nur bekannte Felder weitergeben: keine versteckten großen Nutzlasten im Spielstatus.
   const bau = d.bau as BauPrivat | undefined;
-  return { leben, punkte, amZug, hinweis, inventar, ...(bau ? { bau: { form: bau.form, hoehe: bau.hoehe, restzeit: bau.restzeit, phase: bau.phase, countdown: bau.countdown, platz: bau.platz, fertig: bau.fertig, gewonnen: bau.gewonnen, verbraucht: bau.verbraucht, spielerzahl: bau.spielerzahl, ziele: bau.ziele, zielCountdown: bau.zielCountdown, ankerBereit: bau.ankerBereit, schwereBereit: bau.schwereBereit, anker: bau.anker, schwereWartet: bau.schwereWartet, gebaut: bau.gebaut, verloren: bau.verloren, aufgegeben: bau.aufgegeben, dauer: bau.dauer } } : {}) } as Privat;
+  return { leben, punkte, amZug, hinweis, inventar, ...(bau ? { bau: { form: bau.form, hoehe: bau.hoehe, restzeit: bau.restzeit, phase: bau.phase, countdown: bau.countdown, platz: bau.platz, fertig: bau.fertig, gewonnen: bau.gewonnen, verbraucht: bau.verbraucht, spielerzahl: bau.spielerzahl, ziele: bau.ziele, zielCountdown: bau.zielCountdown, item: bau.item ? { art: bau.item.art, nummer: bau.item.nummer } : undefined, itemIn: bau.itemIn, itemBereit: bau.itemBereit, platzierung: bau.platzierung ? { x: bau.platzierung.x, y: bau.platzierung.y, rest: bau.platzierung.rest, gueltig: bau.platzierung.gueltig } : undefined, eisWartet: bau.eisWartet, steinWartet: bau.steinWartet, anker: bau.anker, schwereWartet: bau.schwereWartet, gebaut: bau.gebaut, verloren: bau.verloren, aufgegeben: bau.aufgegeben, dauer: bau.dauer } } : {}) } as Privat;
 }
 
 type Sitz = Spieler & { schluessel: string; verbindung?: string; folge: number; letzteEingabe: number; aktiv: boolean; privat?: Privat };
@@ -183,7 +195,12 @@ export class BroRaum {
     if (jetzt - l.fenster >= 1000) { l.fenster = jetzt; l.anzahl = 0; }
     if (++l.anzahl > 80) { this.abmelden(v); this.o.trennen(v); return; }
     l.gesehen = jetzt;
-    if (n.art === 'ping') { this.o.senden(v, { art: 'pong', zeit: jetzt }); return; }
+    if (n.art === 'ping') {
+      // Korrelierte Pongs verhindern falsche Millisekundenwerte, wenn Debug-
+      // Messung und Verbindung gleichzeitig pingen. Alte Clients bleiben gültig.
+      const kennung = typeof n.kennung === 'string' && /^[a-zA-Z0-9-]{1,48}$/.test(n.kennung) ? n.kennung : undefined;
+      this.o.senden(v, { art: 'pong', zeit: jetzt, ...(kennung ? { kennung } : {}) }); return;
+    }
     if (n.art === 'verlassen') {
       if (l.gastgeber) this.schliessen('Der Gastgeber hat die Lobby beendet.');
       else { const s = l.spieler!; this.abmelden(v); this.sitze.splice(this.sitze.indexOf(s), 1); this.o.trennen(v); this.verteilen(); }

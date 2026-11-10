@@ -1,0 +1,109 @@
+/* BroRemote-Werkstatt: ruhige Flächen, klare Tasten und eine sichtbare Leitung. */
+.br-icon { width:24px; height:24px; display:inline-block; flex:none; vertical-align:middle }
+.br-seite { background:radial-gradient(ellipse at 75% 0,#28414b66,transparent 65%),#0b1528 }
+.br-inhalt { max-width:1220px }
+.br-kopf { margin-bottom:24px }
+.br-plakette { gap:6px; border-color:#d8b76944; color:#e9d4a2; background:#d8b7690b }
+.br-plakette .br-icon { width:17px; height:17px }
+.br-verbindungszeile { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 16px; margin:0 0 22px; border:1px solid #7da8c133; border-radius:18px; background:#112238e8 }
+.br-verbindungszeile>span { display:flex; align-items:center; flex-wrap:wrap; gap:10px; color:#ccdbed; font-size:13px; font-weight:800 }
+.br-verbindungszeile>span>small { font-size:10px; letter-spacing:1.6px; color:#94aeca; border-left:1px solid #7997bd44; padding-left:10px }
+.br-netz { display:flex; align-items:center; gap:8px; color:#96e5c7; flex:none; min-width:110px; font-variant-numeric:tabular-nums }
+.br-netz strong { display:block; font-size:16px; line-height:1.25 }
+.br-netz small { display:block; color:#aebfd2; font-size:10px; line-height:1.4 }
+.br-netz-wechselnd { color:#ffe08c }.br-netz-langsam { color:#ffb18c }.br-netz-wartet { color:#adc2d9 }
+.br-hero { overflow:hidden; border:1px solid #d0b37144; border-radius:28px; padding:32px 38px 0; background:linear-gradient(100deg,#13253bf5,#13253be0),url('/broremote/bauwelt.webp') center/cover; margin-bottom:30px; min-height:320px }
+.br-hero>div { padding-bottom:28px; z-index:1 }.br-hero h1 { font-size:clamp(34px,4vw,54px) }
+.br-hero-pinguin { width:100%; max-width:370px; height:auto; align-self:end; filter:drop-shadow(0 14px 18px #020c2255) }
+.br-spielkarte { background:linear-gradient(120deg,#203f4b,#142239 80%); border-color:#a39c6b66; padding:18px; gap:30px }
+.br-spielmotiv { background:url('/broremote/bauwelt.webp') center/cover; border:1px solid #bba26955 }
+.br-baumotiv { width:100%; height:100%; position:relative }
+.br-baumotiv img { position:absolute; object-fit:contain }
+.br-motiv-insel { width:94%; height:95%; bottom:-12%; left:1% }.br-motiv-meister { width:48%; height:82%; left:45%; bottom:8%; filter:drop-shadow(0 6px 4px #07102788) }
+.br-einstiege { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px }
+.br-einstiege .br-panel { display:flex; flex-direction:column; padding:24px; margin:0 }
+.br-einstiege .br-knopf:last-child { margin-top:auto }.br-einstiege .br-knopf { min-height:54px }
+.br-einstiege h2 { font-size:24px }.br-einstiege p { font-size:14px }
+.br-schritt { display:flex; align-items:center; gap:10px; font-size:9px; letter-spacing:1.1px; min-height:32px }
+.br-schritt .br-icon { width:28px; height:28px; color:#8ce7ce }
+.br-solo { background:linear-gradient(150deg,#35402c55,#152339) }
+.br-knopf { display:flex; gap:8px; align-items:center; justify-content:center; box-shadow:0 4px 0 #a4762e,0 7px 18px #0003 }
+.br-sekundaer { box-shadow:0 3px 0 #081629; border-color:#6689a566 }
+.br-panel { border-color:#6d91ae44; background:linear-gradient(145deg,#1b3047,#102139); box-shadow:0 18px 40px #0002,inset 0 1px #c2d8ee09 }
+.br-raumtitel { display:flex; align-items:center; justify-content:space-between; gap:24px; margin:0 0 20px }
+.br-raumtitel h1 { font-size:clamp(26px,3.4vw,40px); margin-bottom:10px }.br-raumtitel p { margin:0 }
+.br-raumtitel>img { width:118px; height:130px; object-fit:contain; flex:none }
+.br-lobby { grid-template-columns:minmax(280px,.85fr) minmax(0,1.25fr); gap:24px }
+.br-einladung { text-align:center; background:radial-gradient(ellipse at top,#70dfc417,transparent 60%),#12243a }
+.br-qr { padding:8px; width:min(100%,245px); height:auto; box-shadow:0 8px 30px #0004; border-radius:18px; background:white; margin:12px auto 20px }
+.br-crew>.br-zeile>span { background:#254439; color:#a6efd2; font-size:14px; padding:5px 12px; border:1px solid #80e5cd44; border-radius:20px }
+.br-platz { background:#10203899; border-radius:16px; min-height:74px }.br-platz.belegt { background:linear-gradient(100deg,#26444866,#17263d) }
+.br-platz strong { font-size:16px }.br-platz small { font-size:12px }.br-avatar { border:1px solid #accfe422; overflow:hidden }
+.br-platz:not(.belegt) .br-avatar { border-style:dashed; background:transparent }.br-platz:not(.belegt) { border-style:dashed; box-shadow:none }
+.br-crew .br-modus button[aria-pressed=true] { background:#31544d; color:#b1ffe3; border-color:#76dab688 }
+.br-wiederverbinden { display:flex; gap:14px; padding:18px; margin-bottom:20px; border:1px solid #dfb66a66; border-radius:18px; background:#3b3224; color:#ffe0a2 }
+.br-wiederverbinden p { margin:5px 0 0; font-size:13px; color:#e2d3b8 }.br-wiederverbinden .br-knopf { margin-top:12px }
+.br-eigener-controller { max-width:560px; margin:0 auto; padding:22px; border-color:#d0b37155; background:radial-gradient(ellipse at 0 0,#50797b33,transparent 60%),#122239 }
+.br-controllername { justify-content:flex-start; gap:12px }.br-controllername img { width:44px; height:48px; object-fit:contain }.br-controllername h2 { margin:0; font-size:24px; overflow:hidden; text-overflow:ellipsis }.br-controllername>span { margin-left:auto; font-size:12px; flex:none }
+.br-eigener-controller .bb-controllerstand { margin-top:16px; padding:12px 16px; background:#0b1a2de0; border-color:#93b9cb33 }
+.br-eigener-controller .bb-controllerstand h3 { font-size:26px }.br-eigener-controller .bb-controllerstand p { font-size:11px; margin-bottom:0 }
+.br-rundeninfo { display:flex; align-items:center; justify-content:space-between; color:#adc2db; font-size:11px; margin:10px 2px 0; font-variant-numeric:tabular-nums }.br-rundeninfo .br-icon { width:14px; height:14px; color:#efcf8b; margin-right:4px }
+.bb-knopfcontroller>.br-leise { font-size:11px; margin:12px 0 }
+.br-controller .bb-baubuttons { gap:12px; margin:0 0 18px }.br-controller .br-steuertaste { min-height:102px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:linear-gradient(#2a4661,#20374f); border:1px solid #6c8da9; border-bottom:5px solid #0a172c; border-radius:20px; color:#e1edff; font-weight:900; font-size:14px; box-shadow:inset 0 1px #b8d8f455,0 4px 8px #0003; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none }
+.br-controller .br-steuertaste .br-icon { width:36px; height:36px; stroke-width:2.3 }
+.br-controller .br-steuertaste-drehen { background:linear-gradient(#3b665d,#284f47); border-color:#719f8e; border-bottom-color:#122f2a; color:#b8ffe2 }
+.br-controller .br-steuertaste-fallen { background:linear-gradient(#ffdf94,#e7b65e); border-color:#ffe9af; border-bottom-color:#a47b39; color:#263041 }
+.br-controller .br-steuertaste:active,.br-controller .br-gedrueckt { transform:translateY(3px); border-bottom-width:2px; filter:brightness(1.15); box-shadow:inset 0 3px 8px #0003 }
+.br-controller .br-steuertaste:disabled { transform:none; filter:none }
+.bb-zauberleiste { border-top:1px solid #9bb7d333; padding-top:15px; gap:9px }
+.bb-zauberleiste>.br-kicker { font-size:9px!important; letter-spacing:1.2px }
+.bb-zauberleiste .bb-zauber { position:relative; text-align:left; border-radius:15px; padding:12px 14px 12px 56px; min-height:65px; background:linear-gradient(110deg,#304452,#1b3045); border:1px solid #7899a855 }
+.bb-zauberleiste .bb-zauber>.br-icon { position:absolute; left:16px; top:19px; width:27px; height:27px; color:#9ce9cf }
+.bb-zauberleiste .bb-schwere { background:linear-gradient(110deg,#3b324f,#292a42) }.bb-zauberleiste .bb-schwere>.br-icon { color:#d5b8ff }
+.bb-zauber strong { display:block; font-size:14px }.bb-zauber small { font-size:11px }.bb-zauberhilfe { font-size:11px!important; color:#b8c8db }.bb-zauberhilfe p { font-size:12px; margin:10px 0 }
+.bb-zauberziel>small { font-size:9px; letter-spacing:1px; color:#b2c4db; display:block; margin:7px 0 }
+.br-gegner { display:flex; gap:6px; flex-wrap:wrap }.br-gegner button { min-height:36px; flex:1; max-width:100%; overflow-wrap:anywhere; border:1px solid #8f7ca866; background:#192a42; color:#cdbde2; border-radius:10px; padding:6px 9px; font-size:12px }.br-gegner button[aria-pressed=true] { color:#f0e2ff; border-color:#b896e9; background:#463657 }
+.br-controllerfuss { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#94acc9; font-size:10px; margin-top:12px }.br-controllerfuss .br-link { padding:8px 0; min-height:34px; font-size:11px }
+.br-spielt:has(.br-eigener-controller) .br-raumtitel { display:none }.br-spielt:has(.br-eigener-controller) .br-inhalt { max-width:610px }
+.br-dialog { max-width:450px; width:calc(100vw - 32px); padding:28px; border:1px solid #b6a16b; border-radius:24px; background:#15283d; color:#fff2d3; box-shadow:0 25px 80px #0008; font-family:inherit }.br-dialog::backdrop { background:#040b19b8; backdrop-filter:blur(5px) }.br-dialog-aktionen { display:grid; gap:14px; margin-top:24px }
+@media(max-width:900px) { .br-einstiege { grid-template-columns:1fr 1fr }.br-solo { grid-column:1/-1 }.br-solo .br-knopf { max-width:400px } }
+@media(max-width:600px) {
+  .br-inhalt { padding:18px 16px 30px }.br-kopf { gap:12px; margin-bottom:18px }.br-marke { font-size:24px }.br-marke small { font-size:10px }.br-plakette { font-size:8px; padding:5px }.br-plakette .br-icon { display:none }
+  .br-verbindungszeile { padding:10px 12px; margin-bottom:16px; border-radius:14px }.br-verbindungszeile>span { font-size:12px; gap:7px }.br-verbindungszeile>span>small { width:100%; border:0; padding-left:31px; font-size:8px; margin-top:-6px }.br-netz { min-width:100px }.br-netz strong { font-size:14px }.br-netz small { font-size:9px }
+  .br-hero { grid-template-columns:1.2fr 1fr; padding:24px 20px 0; gap:0; min-height:290px; position:relative }.br-hero>div { width:150%; padding-bottom:24px }.br-hero h1 { font-size:33px }.br-hero p:not(.br-kicker) { font-size:13px; max-width:90% }.br-hero .br-kicker { font-size:8px!important; letter-spacing:1.1px }.br-hero-pinguin { margin-left:30%; width:125%; opacity:.65; max-width:none }.br-hero .br-tags { margin-bottom:0; gap:6px }.br-hero .br-tags span { font-size:9px; padding:5px 8px }
+  .br-spielkarte { grid-template-columns:110px 1fr; gap:16px; padding:14px; border-radius:20px }.br-spielmotiv { height:140px }.br-spielkarte h2 { font-size:22px }.br-spielkarte p { font-size:12px }.br-spielkarte .br-kicker { font-size:8px!important; letter-spacing:1px }.br-spielkarte strong { font-size:13px; margin-top:10px }
+  .br-einstiege,.br-lobby { grid-template-columns:1fr; gap:16px }.br-einstiege .br-panel { padding:22px }.br-einstiege .br-knopf:last-child { margin-top:12px }.br-solo { grid-column:auto }
+  .br-raumtitel { gap:8px }.br-raumtitel h1 { font-size:27px }.br-raumtitel p:not(.br-kicker) { font-size:12px }.br-raumtitel>img { width:90px; height:110px }.br-raumtitel .br-kicker { font-size:8px!important; letter-spacing:1.1px }
+  .br-panel { padding:22px }.br-eigener-controller { padding:16px; border-radius:22px }.br-eigener-controller .bb-controllerstand h3 { font-size:24px }.br-controller .br-steuertaste { min-height:90px; border-radius:17px; font-size:13px }.br-controller .bb-baubuttons { gap:10px }
+  .br-spielt:has(.br-eigener-controller) .br-kopf { margin-bottom:12px }.br-spielt:has(.br-eigener-controller) .br-fuss { display:none }
+}
+@media(prefers-reduced-motion:reduce) { .br-seite *, .br-seite *::before, .br-seite *::after { animation-duration:.01ms!important; transition-duration:.01ms!important } }
+
+.br-controller .bb-zauberziel { grid-column:1/-1 }
+.bb-rund { display:grid; place-items:center; flex:none }.bb-rund[aria-pressed=false] { color:#a2b4cb }.bb-rund[aria-pressed=true] { color:#ffe09e; border-color:#c9aa65 }
+.bb-kino { position:fixed; inset:0; z-index:120; border-radius:0; overflow-y:auto; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) }
+.bb-kino .bb-spielerkopf { height:72px }.bb-kino .bb-portraet { height:48px; width:42px }.bb-kino .bb-portraet img { width:43px; height:60px }
+.bb-kino .bb-bahn>canvas { height:calc(100dvh - 245px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height:250px; max-height:none }
+.bb-kino .bb-buehne-1 .bb-bahn>canvas { max-width:800px }
+@media(max-width:600px) { .bb-werkzeug { padding:12px; gap:7px }.bb-werkzeug h2 { font-size:21px!important }.bb-werkzeug .br-kicker { font-size:8px!important; letter-spacing:.5px }.bb-uhr { padding:5px 8px; font-size:21px }.bb-rund { width:36px; height:38px; border-radius:10px }.bb-rund .br-icon { width:19px; height:19px }.bb-kino .bb-buehne-3 .bb-bahn>canvas,.bb-kino .bb-buehne-4 .bb-bahn>canvas { height:260px } }
+
+/* Spieltasten und beide Zauber bleiben auch auf kurzen Handydisplays nah beieinander. */
+.br-minizurueck { display:grid; place-items:center; width:36px; height:36px; flex:none; border:1px solid #7997bd44; border-radius:10px; color:#dce9f6; background:#20334b }
+.br-spielt:has(.br-eigener-controller) .br-kopf { display:none }
+.br-spielt:has(.br-eigener-controller) .br-verbindungszeile { gap:8px }
+.br-spielt:has(.br-eigener-controller) .br-verbindungszeile>span { margin-right:auto }
+.br-spielt:has(.br-eigener-controller) .br-verbindungszeile>span>.br-icon { display:none }
+.br-spielt:has(.br-eigener-controller) .br-verbindungszeile>span>small { padding-left:0 }
+.br-eigener-controller .br-controllername img { width:34px; height:38px }
+.br-eigener-controller .bb-controllerstand { margin-top:8px }
+.br-eigener-controller .bb-knopfcontroller>.br-leise { display:none }
+.br-eigener-controller .bb-baubuttons { margin-top:14px }
+.br-seite:has(.bb-kino) .br-verbindungszeile { position:fixed; top:env(safe-area-inset-top); left:env(safe-area-inset-left); right:env(safe-area-inset-right); z-index:121; height:52px; margin:0; border-radius:0; border:0; background:#102137 }
+.br-seite:has(.bb-kino):has(.br-verbindungszeile) .bb-kino { padding-top:calc(52px + env(safe-area-inset-top)) }
+.br-seite:has(.br-verbindungszeile) .bb-kino .bb-bahn>canvas { height:calc(100dvh - 297px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) }
+@media(min-width:800px) {
+ .br-raumtitel { min-height:85px; margin-bottom:18px }.br-raumtitel h1 { font-size:32px }.br-raumtitel>img { height:90px; width:90px }
+ .br-plaetze { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px }.br-platz { min-height:84px; padding:10px; gap:8px; position:relative }.br-platz strong { font-size:14px; padding-right:12px }.br-platz small { font-size:10px }.br-platz .br-avatar { width:34px; height:42px; border-radius:10px }.br-avatar img { width:32px; height:40px }.br-platz .br-entfernen { position:absolute; right:4px; top:4px; width:26px; height:26px }
+}
+
+.br-eigener-controller .br-zauberwarnung { display:flex; gap:8px; align-items:center; font-size:12px; color:#e5c5ff; background:#55346155; border:1px solid #aa80c455; padding:10px; border-radius:12px; margin:10px 0 0 }

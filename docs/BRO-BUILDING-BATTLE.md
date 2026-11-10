@@ -55,12 +55,74 @@ unverbraucht in den Vorrat zurückgelegt. Unterhalb des Ziels fällt der Zähler
 auf null, und die nächste Figur wird wieder freigegeben. Nach drei Sekunden
 steht der Sieg fest. Andere Bahnen laufen weiter.
 
-Ab drei gelandeten Teilen gibt es je Runde einmal:
-* **Turmanker:** bremst den eigenen Turm vier Sekunden stark ab. Schwerkraft
-  und Kollisionen bleiben wirksam; die Körper werden nicht dauerhaft fixiert.
-* **Schwergewicht:** wählbarer aktiver Gegner; dessen nächstes Teil erhält
-  die dreifache Dichte und eine violette Darstellung. Keine Stapelung zweier
-  noch ausstehender Schwergewichte. Solo wird der Angriff ausgeblendet.
+### Zufälliger Item-Vorrat (lokaler Ausbau, 10.11.2026)
+
+Oben rechts jeder Bahn und auf dem Handy stehen zwei gerahmte Plätze:
+das **wirklich nächste Bauteil** und das **aktuell erhaltene Item**. Das
+Solotraining benutzt denselben Status wie ein verbundener Controller.
+
+Nach 8–12 Spielsekunden kommt das erste zufällige Item. Ein belegter Platz
+wird nie überschrieben. **Bauen pausiert bis zum Einsatz:** Das aktive Teil
+wartet, die Bautasten und der Bauteil-Nachschub sperren. Turmphysik, Gegner
+und Rundenuhr laufen weiter. Wegwerfen und Neuwürfeln gibt es nicht. Erst nach Verbrauch beginnt die nächste Wartezeit von 18–28
+Spielsekunden. Pausen und Verbindungsunterbrechungen halten auch diese Uhr an.
+Der Gastgeber zieht aus einem eigenen, je Sitz reproduzierbaren Zufallsstrom;
+die gemeinsame Bauteilfolge bleibt unverändert. Keine direkte Wiederholung,
+sofern mehrere geeignete Items vorhanden sind. Solo enthält nur Eigenhilfen.
+
+| Item | Wirkung |
+| --- | --- |
+| Turmanker | Beruhigt den eigenen Turm 4 Sekunden. Schwerkraft und Kollisionen bleiben wirksam. |
+| Wolkensteg | Feste, 3 m breite Zusatzplattform. Platzierung mit links/rechts/höher/tiefer, anschließend bestätigen. |
+| Steinsiegel | Das nächste eigene Teil wird beim ersten Kontakt unbeweglich. Das aktuell fallende Teil bleibt unverändert. |
+| Schwergewicht | Das nächste Teil eines gewählten aktiven Gegners bekommt dreifache Dichte. |
+| Eisglätte | Das nächste Teil eines gewählten aktiven Gegners bekommt sehr geringe Reibung. |
+
+Ein Steg darf von 0,4 m über dem Boden bis knapp über die zum Beginn der
+Platzierung erreichte stabile Turmspitze gesetzt werden (0,4 m Abstand;
+absolute Obergrenze 20 m). Der freie Ansatz über der Spitze verhindert,
+dass ein dicht gebauter Turm den verpflichtenden Itemeinsatz blockiert. Maximal drei pro Bahn. Die Vorschau ist grün bei freier
+Stelle und rot bei einer Kollision. Der Gastgeber prüft die Stelle bei der
+Bestätigung erneut. Die Plattform selbst zählt nicht als Turmhöhe. Nur darauf
+verbaute, stabile Teile zählen. Während der maximal 8 Sekunden zum Platzieren
+wartet das aktive Teil, die restliche Physik und die Rundenuhr laufen weiter.
+Zurück oder Zeitablauf behält das Item und kehrt zum weiterhin wartenden Item zurück. Erst eine gültige Platzierung setzt das Bauen fort. Am Ziel kann
+kein neuer Platziermodus gestartet werden; der Turmanker bleibt verfügbar.
+
+Jeder Fund trägt eine eindeutige Kennung innerhalb der Runde. Veraltete oder
+doppelte Aktivierungen können weder ein neues Item verbrauchen noch eine
+zweite Plattform erzeugen. Angriffe behalten ihr Item bei ungültigen Zielen;
+dieselbe wartende Wirkung wird erneuert, ohne sie zu stapeln. Dadurch blockiert ein inzwischen verzauberter Gegner den zwingenden Itemverbrauch nicht. Das Zurücklegen eines aktiven
+Teils am Ziel bewahrt seine Verzauberungen. Der Relay-Filter begrenzt alle
+neuen Felder; private Vorschau und Platzierung werden bei Reconnect erneut
+zugestellt. Die bestehende Sitzungs- und Abschnittsprüfung bleibt erhalten.
+
+### Referenz und eigene Umsetzung
+
+Recherche am 10.11.2026: Die [offizielle Entwickler-FAQ zu Tricky Towers](https://steamcommunity.com/app/437920/discussions/0/1739968490571088139/)
+beschreibt hilfreiche und gegnerische Magie, etwa feste Steine, verbindende
+Ranken, Eis und schwere Bauteile. Das Original bietet zwei Zauber zur Auswahl;
+der Verbrauch eines Zaubers entfernt beide. Bro Building Battle verwendet
+auf Wunsch **ein einzelnes zufälliges Item** mit eigenem Nachschubrhythmus.
+Die Zusatzplattform ist auch in der [Community-Zauberliste](https://tricky-towers.fandom.com/wiki/Spells)
+beschrieben. Namen, Gestaltung, Grenzen und Bedienung hier sind eigenständig;
+keine Originalgrafiken oder Originalparameter werden übernommen.
+
+### Prüfung und Übergabe
+
+Gezielte Prüfungen: reale Rapier-Physik für Landung, Eisreibung, Gewicht,
+Steinversiegelung, Stegkollision und -grenzen; Zufall und Itemverbrauch;
+Bedienwechsel mit Tastatur und Touch-Absichten; privater Vorrat nach Reconnect.
+Ein Worker, keine parallelen Kompletttests und kein iOS-Simulator.
+Lokale Browserabnahme mit zwei echten Relay-Controllern: 390-px-Layout,
+Plattform verschieben und setzen, Steinsiegel vormerken, Eis auf den gewählten
+Gegner, Baupause und erneuter Nachschub sowie Wiederverbindung geprüft.
+Keine Browserfehler. Physische iPhone-/Hotspot-Prüfung bleibt eine
+anschließende Geräteabnahme.
+
+TAFEL-Übergabe: Zufallsitems, Vorschau und kontextabhängige Controllerbuttons
+lokal umgesetzt. Externer Tafeleintrag ist in dieser Sitzung nicht zugänglich.
+Kein Upload auf Staging, ins Grafikarchiv oder nach TestFlight beauftragt.
 
 Pinguine wippen, erschrecken bei Abstürzen und hüpfen beim Sieg. Kurze
 Splitter-, Zauber- und Siegesfunken begleiten das Spiel; kein zusätzlicher

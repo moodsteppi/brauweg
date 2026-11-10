@@ -107,3 +107,30 @@ it('der Gastgeber leitet aktuelle Eingaben mit dem richtigen Spieler in die Bauw
   act(() => draht.e!.nachricht({ art: 'eingabe', spieler: 'anna', abschnitt: 1, folge: 2, aktion: { art: 'steuerung', x: -1, y: 0, tasten: [] } }));
   expect(bauEmpfang).not.toHaveBeenCalled();
 });
+
+it('zeigt den laufenden Ping in der Lobby und trennt ihn vom Verbindungsstatus', () => {
+  render(<BroRemote />);
+  fireEvent.click(screen.getByRole('button', { name: /Bro Building Battle/ }));
+  expect(screen.getByRole('button', { name: 'Solotraining starten' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: /Lobby eröffnen/ }));
+  act(() => { draht.e!.status('verbunden'); draht.e!.qualitaet!({ ping: 48, schwankung: 6, versuch: 0 }); });
+  expect(screen.getByLabelText('Server-Ping: 48 ms')).toBeInTheDocument();
+  act(() => draht.e!.status('wiederverbinden'));
+  expect(screen.queryByText('48 ms')).not.toBeInTheDocument();
+  expect(screen.getByText('Verbinde erneut')).toBeInTheDocument();
+});
+
+it('ein Abbruchdialog wartet auf die bewusste Auswahl und blockiert die Verbindung nicht', () => {
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); }; HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
+  render(<BroRemote />);
+  fireEvent.click(screen.getByRole('button', { name: /Bro Building Battle/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Lobby eröffnen/ }));
+  act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'raum', sicht: { raum: 'ABC12345', phase: 'lobby', abschnitt: 1, layout: 'bauen', gesperrt: false, gastgeberDa: true, einladungBis: Date.now() + 60_000, spieler: [] } }); });
+  fireEvent.click(screen.getByRole('button', { name: 'Lobby beenden' }));
+  expect(screen.getByRole('heading', { name: 'Lobby für alle beenden?' })).toBeInTheDocument();
+  expect(draht.schliessen).not.toHaveBeenCalled();
+  act(() => draht.e!.qualitaet!({ ping: 21, schwankung: 1, versuch: 0 }));
+  expect(screen.getByText('21 ms')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Hier bleiben'));
+  expect(draht.schliessen).not.toHaveBeenCalled();
+});
