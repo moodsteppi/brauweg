@@ -71,15 +71,15 @@ eigenes Regelpaket und eine eigene Bühne.
 
 ## 1. Name
 
+Entschieden: **BroTanks** (Emil, Team-Raum `62958838`: „kannst du die aufgabe BroTanks nennen“; vorher `2fbbfbc0`: „Bro Shell Shock (BroTanks)“). Die Tabelle darunter bleibt als Geschichte der Namenssuche stehen.
+
 | Vorschlag | Gedanke |
 | --- | --- |
 | **Bro Ballistik Battle** | **Arbeitsname.** Steht als Geschwister neben „Bro Building Battle“: gleicher Anfang, gleicher Klang, in der Spielauswahl sofort als Familie erkennbar. Kurz genug für die Spielkarte. |
 | Schollenschuss | Die Bros stehen auf einer Eisscholle über dem Meer; jeder Treffer frisst ein Stück davon weg. Beschreibt das zerstörbare Gelände. |
 | Hangpolter | Lautmalerisch, verspielt, deutsch. Betont das Rollen, Rutschen und Herabpoltern nach Einschlägen. |
 
-Im Folgenden heißt das Spiel **Bro Ballistik Battle**, im Code kurz
-`artillerie` (Paketname, Ordner, Bezeichner), damit eine spätere Umbenennung
-nur Oberflächentexte trifft.
+Das Spiel heißt **BroTanks**, im Code `brotanks`.
 
 ---
 
@@ -317,7 +317,7 @@ Zielwert-Anzeige.
 Anders als das Bauspiel braucht dieses Spiel **keine Physikbibliothek**: Das
 Gelände ist ein Höhenprofil, die Flugbahn eine Formel mit festem Schritt.
 Darum kann die ganze Partie als reine Funktion in einem eigenen Paket liegen
-(`packages/artillerie-kern`) und unter `node --test` laufen — ohne WASM, ohne
+(`packages/brotanks-kern`) und unter `node --test` laufen — ohne WASM, ohne
 Browser. Das Bauspiel muss seine Physik im Client halten
 (`partie.ts:1`, `:6-7`, Rapier), dieses nicht.
 
@@ -378,7 +378,7 @@ Reine Funktionen daneben, jede einzeln geprüft: `inselAusSeed(seed)`,
 ### Neue Kernfelder (`packages/broremote-kern/src/index.ts`)
 
 ```ts
-export type Spiel = 'building' | 'artillerie';
+export type Spiel = 'building' | 'brotanks';
 export type Layout = 'bauen' | 'auswahl' | 'zielen';             // heute :8
 export type Aktion = …                                            // heute :14-20
   | { art: 'zielen'; winkel: number; staerke: number; waffe: number }
@@ -413,8 +413,8 @@ Prüfung im Kern, im Stil des Vorhandenen:
   Moduswechsel den Bereitstatus auf (`index.ts:223-225`), damit niemand
   unbemerkt im anderen Spiel landet.
 * `spielen` (`index.ts:226-229`): Layout aus dem Spiel (`bauen` bzw.
-  `zielen`), `partie.spiel` gesetzt; für `artillerie` mindestens zwei
-  Sitze, sonst Fehler „Für Bro Ballistik Battle braucht ihr mindestens zwei
+  `zielen`), `partie.spiel` gesetzt; für `brotanks` mindestens zwei
+  Sitze, sonst Fehler „Für BroTanks braucht ihr mindestens zwei
   Handys.“
 * Version bleibt `1` (`index.ts:2`): Alle Erweiterungen sind neue, optionale
   Felder und Arten. Ein altes Handy bekommt im Bauspiel nichts anderes als
@@ -465,8 +465,8 @@ Teile werden **einmal gerastert** und wiederverwendet wie die Bausteinkacheln
 | Himmel | senkrechter Verlauf Nachtblau → Petrol, ein paar Sterne, ein schwaches Polarlichtband | einmal je Bühnengröße |
 | Meer | zwei Wellenlinien mit leichtem Versatz, Schaum oben; steigt mit der Flut | Wellenmuster einmal |
 | Insel | Höhenprofil als Pfad: oben 0,4 m Schneekruste (hell mit Glanz), darunter Eis (Petrol) und Fels (Schiefer), Kraterränder mit dunklem Saum | Muster einmal, Inselbild neu **nur nach Einschlag** |
-| Bro | Pinguin aus Kreisen und Ellipsen (Bauch weiß, Rücken in Nachtblau, Schal in Spielerfarbe), auf einem kleinen Holzschlitten | je Farbe einmal |
-| Mörser | kurzes Messingrohr, dreht sich mit `winkel` | gezeichnet je Bild (zwei Rechtecke) |
+| Bro | Pinguin aus Kreisen und Ellipsen (Bauch weiß, Rücken in Nachtblau, Schal in Spielerfarbe), sitzt in einem kleinen gezeichneten Panzer in Spielerfarbe (Wanne, zwei Ketten, Turm) | je Farbe einmal |
+| Panzerrohr | kurzes Messingrohr am Turm, dreht sich mit `winkel` | gezeichnet je Bild (zwei Rechtecke) |
 | Lebensbalken | abgerundeter Balken, Spielerfarbe auf Dunkel, Zahl daneben | — |
 | Am-Zug-Pfeil | goldene Raute wie die Zielmarken (`zeichnen.ts:73`) | — |
 | Zielhilfe | gestrichelter Strahl in Rohrrichtung (wie die Ziellinie, `zeichnen.ts:71`), Länge = Stärke | — |
@@ -476,7 +476,7 @@ Teile werden **einmal gerastert** und wiederverwendet wie die Bausteinkacheln
 | Einschlag | Ring, der sich weitet, Funken ✦ ◆ ✧ (Zeichen wie `BauArena.tsx:104`), Schneestaub | — |
 | Schadenszahl | aufsteigend, Spielerfarbe des Getroffenen, dunkler Umriss | — |
 | Schneewehe | drei weiße Kreise, wachsen in 0,4 s auf | — |
-| Ausgeschieden | Rettungsring auf dem Wasser bzw. umgekippter Schlitten | — |
+| Ausgeschieden | Rettungsring auf dem Wasser bzw. umgekippter Panzer | — |
 | Zugring | Kreisbogen um das Porträt, Gold → Rot | — |
 | Handy: Waffensymbole | dieselben acht Zeichnungen als kleine SVG-Pfade in `BroIcon.tsx` (eigene Symbole statt Emoji, `BroIcon.tsx:1-2`) | — |
 | Handy: neue Symbole | `winkel`, `staerke`, `feuer`, `wind`, `tank` | — |
@@ -497,17 +497,17 @@ der Raumkern trägt die neuen Nachrichten.
 
 | Datei | Was |
 | --- | --- |
-| `packages/artillerie-kern/package.json` | **neu**, Aufbau wie `packages/building-kern/package.json` (Build mit `werkzeug/dist-raeumen.mjs`, Test mit `node --test`) |
-| `packages/artillerie-kern/tsconfig.json` | **neu**, wie `building-kern` |
-| `packages/artillerie-kern/src/index.ts` | **neu**: `REGELN`, `WAFFEN` (Name, Vorrat, Kurztext — einzige Quelle für Handy und Bühne, wie `FAHIGKEITEN` in `building-kern/src/index.ts:5-11`), Zufallsströme, Ausfuhr der übrigen Dateien |
-| `packages/artillerie-kern/src/gelaende.ts` | **neu**: `inselAusSeed`, `kraterSchlagen`, `huegelSetzen`, `hoeheBei` |
-| `packages/artillerie-kern/src/flug.ts` | **neu**: `flugBerechnen` für alle acht Waffen, Grenzen 8 Teilgeschosse / 10 Einschläge / 12 s |
-| `packages/artillerie-kern/src/partie.ts` | **neu**: `ArtiPartie` mit `eingabe`, `schritt`, `neutralisieren`, `sicht`, `privatFuer`, `aufgeben`; Zugfolge, Zielzeit, Tank, Fallschaden, Meer, Flut, Rangfolge |
-| `packages/artillerie-kern/test/gelaende.test.ts` | **neu**: gleicher Seed → gleiche Insel; Krater senkt nur im Radius; Hügel hebt; Ränder bleiben endlich |
-| `packages/artillerie-kern/test/flug.test.ts` | **neu**: ohne Wind symmetrisch; Wind verschiebt in Windrichtung; jede Waffe hält ihre Grenzen; Hüpfeis prallt zweimal ab; Polterfass rollt bergab |
-| `packages/artillerie-kern/test/partie.test.ts` | **neu**: Zug nur für den Bro am Zug; doppeltes und veraltetes `feuer` wirkungslos; Zeitablauf verfällt ohne Munitionsverbrauch; Fahren stoppt nach 600 ms ohne Eingabe; Meer = raus; gleichzeitiges letztes Ausscheiden = Gleichstand; Flut ab Runde 6; Partie endet spätestens nach 12 Runden; vier Bot-Bros spielen eine ganze Partie deterministisch zu Ende |
+| `packages/brotanks-kern/package.json` | **neu**, Aufbau wie `packages/building-kern/package.json` (Build mit `werkzeug/dist-raeumen.mjs`, Test mit `node --test`) |
+| `packages/brotanks-kern/tsconfig.json` | **neu**, wie `building-kern` |
+| `packages/brotanks-kern/src/index.ts` | **neu**: `REGELN`, `WAFFEN` (Name, Vorrat, Kurztext — einzige Quelle für Handy und Bühne, wie `FAHIGKEITEN` in `building-kern/src/index.ts:5-11`), Zufallsströme, Ausfuhr der übrigen Dateien |
+| `packages/brotanks-kern/src/gelaende.ts` | **neu**: `inselAusSeed`, `kraterSchlagen`, `huegelSetzen`, `hoeheBei` |
+| `packages/brotanks-kern/src/flug.ts` | **neu**: `flugBerechnen` für alle acht Waffen, Grenzen 8 Teilgeschosse / 10 Einschläge / 12 s |
+| `packages/brotanks-kern/src/partie.ts` | **neu**: `ArtiPartie` mit `eingabe`, `schritt`, `neutralisieren`, `sicht`, `privatFuer`, `aufgeben`; Zugfolge, Zielzeit, Tank, Fallschaden, Meer, Flut, Rangfolge |
+| `packages/brotanks-kern/test/gelaende.test.ts` | **neu**: gleicher Seed → gleiche Insel; Krater senkt nur im Radius; Hügel hebt; Ränder bleiben endlich |
+| `packages/brotanks-kern/test/flug.test.ts` | **neu**: ohne Wind symmetrisch; Wind verschiebt in Windrichtung; jede Waffe hält ihre Grenzen; Hüpfeis prallt zweimal ab; Polterfass rollt bergab |
+| `packages/brotanks-kern/test/partie.test.ts` | **neu**: Zug nur für den Bro am Zug; doppeltes und veraltetes `feuer` wirkungslos; Zeitablauf verfällt ohne Munitionsverbrauch; Fahren stoppt nach 600 ms ohne Eingabe; Meer = raus; gleichzeitiges letztes Ausscheiden = Gleichstand; Flut ab Runde 6; Partie endet spätestens nach 12 Runden; vier Bot-Bros spielen eine ganze Partie deterministisch zu Ende |
 | `packages/broremote-kern/src/index.ts` | `Spiel`, Layout `zielen`, Aktionen `zielen`/`feuer`, `ArtiPrivat` in `Privat`, `aktionLesen`, `privatLesen`, `RaumSicht.spiel`, `partie.spiel`, Hostbefehl `spielwahl`, `spielen` mit Layout je Spiel und Mindestzahl 2 |
-| `packages/broremote-kern/test/raum.test.ts` | Spielwahl hebt Bereitstatus auf; `artillerie` startet nicht allein; `zielen`/`feuer` nur im Layout `zielen` und mit gültigen Bereichen; `arti` wird gefiltert und nach Reconnect erneut zugestellt; das Bauspiel verhält sich unverändert |
+| `packages/broremote-kern/test/raum.test.ts` | Spielwahl hebt Bereitstatus auf; `brotanks` startet nicht allein; `zielen`/`feuer` nur im Layout `zielen` und mit gültigen Bereichen; `arti` wird gefiltert und nach Reconnect erneut zugestellt; das Bauspiel verhält sich unverändert |
 | `packages/server/test/broremote.test.ts` | ein echter Relay-Durchlauf: `zielen` und `feuer` kommen beim Gastgeber an, `privat.arti` nur beim richtigen Handy |
 | `package-lock.json` | Workspace-Eintrag des neuen Pakets (durch `npm install`; nach CLAUDE.md „Dieselbe Meldung, andere Ursache“ ist das nach jedem neuen Paket nötig) |
 
@@ -519,12 +519,12 @@ Ergebnis: Man kann es spielen. Setzt Karte 2 voraus.
 
 | Datei | Was |
 | --- | --- |
-| `packages/client/package.json` | Abhängigkeit `@brauweg/artillerie-kern` (neben `building-kern`, `packages/client/package.json:14`) |
-| `packages/client/src/broremote/artillerie/ArtiArena.tsx` | **neu**: Gastgeberbühne nach dem Muster von `BauArena.tsx` (Takt, Pause, Hintergrund, Ton, Große Bühne, Ergebnis, Aufräumen), Eingaben über den vorhandenen Ref (`BauArena.tsx:55`) |
-| `packages/client/src/broremote/artillerie/zeichnen.ts` | **neu**: alle Zeichnungen aus Abschnitt 7, Inselpuffer |
-| `packages/client/src/broremote/artillerie/ZielController.tsx` | **neu**: Handysteuerung aus Abschnitt 3. Eigene Datei statt Ausbau von `Controller.tsx`, weil der dortige Zustand ganz am Bauspiel hängt (`Controller.tsx:17-31`); übernommen werden Muster und Klassen (`br-steuertaste`, Mehrfinger-Map, 150-ms-Takt, Reset) |
-| `packages/client/src/broremote/artillerie/ZielController.test.tsx` | **neu**: `zielen` höchstens alle 150 ms und nur bei Änderung; `feuer` trägt die gezeigten Werte und die Zugnummer; Fahren sendet `steuerung` und bei Loslassen/Hintergrund `reset`; nicht am Zug alles gesperrt außer Waffenvorwahl; Übernahme der Werte bei Zugbeginn |
-| `packages/client/src/broremote/artillerie/artillerie.css` | **neu**: Bühne, Zugleiste, Windfahne, Handylayout bei 390 px |
+| `packages/client/package.json` | Abhängigkeit `@brauweg/brotanks-kern` (neben `building-kern`, `packages/client/package.json:14`) |
+| `packages/client/src/broremote/brotanks/TanksArena.tsx` | **neu**: Gastgeberbühne nach dem Muster von `BauArena.tsx` (Takt, Pause, Hintergrund, Ton, Große Bühne, Ergebnis, Aufräumen), Eingaben über den vorhandenen Ref (`BauArena.tsx:55`) |
+| `packages/client/src/broremote/brotanks/zeichnen.ts` | **neu**: alle Zeichnungen aus Abschnitt 7, Inselpuffer |
+| `packages/client/src/broremote/brotanks/ZielController.tsx` | **neu**: Handysteuerung aus Abschnitt 3. Eigene Datei statt Ausbau von `Controller.tsx`, weil der dortige Zustand ganz am Bauspiel hängt (`Controller.tsx:17-31`); übernommen werden Muster und Klassen (`br-steuertaste`, Mehrfinger-Map, 150-ms-Takt, Reset) |
+| `packages/client/src/broremote/brotanks/ZielController.test.tsx` | **neu**: `zielen` höchstens alle 150 ms und nur bei Änderung; `feuer` trägt die gezeigten Werte und die Zugnummer; Fahren sendet `steuerung` und bei Loslassen/Hintergrund `reset`; nicht am Zug alles gesperrt außer Waffenvorwahl; Übernahme der Werte bei Zugbeginn |
+| `packages/client/src/broremote/brotanks/brotanks.css` | **neu**: Bühne, Zugleiste, Windfahne, Handylayout bei 390 px |
 | `packages/client/src/broremote/BroRemote.tsx` | Spielauswahl mit zweiter Spielkarte (`:178-181`); `spiel` als Spielname statt Wahrheitswert (`:33`); Titel und Hinweise je Spiel (`:184`, `:211`, `:216`); Lobby: Modus nur fürs Bauspiel, `spielwahl` senden (`:231-235`); Arena je Spiel (`:241`); Handy-Teil je Spiel (`:242-249`); Eingabeweiterleitung allgemein statt `bauEingaben` (`:51`, `:116-119`) |
 | `packages/client/src/broremote/BroRemote.test.tsx` | zwei Spielkarten; Spielwahl kommt in der Lobby an; Start mit einem Handy zeigt den Hinweis |
 | `packages/client/src/broremote/BroIcon.tsx` | neue Symbole aus Abschnitt 7 |
