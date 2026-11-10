@@ -148,6 +148,8 @@ Doppelkopf and Skat with friends or against bots, learn Doppelkopf in short less
 card game,trick taking,bidding,learn,word game,daily puzzle,chess,friends,bots,multiplayer,german
 ```
 
+Erst mit dem Build nach dem Release eintragen (CHECKLISTE C9)
+
 <!-- feld: apple.en.beschreibung max=4000 -->
 ```text
 Brauweg brings the German classics to your table: Doppelkopf and Skat, online with friends or against bots – plus chess, Farbduell, a daily word puzzle and your own card factory.
@@ -281,6 +283,8 @@ Brauweg – Doppelkopf & Skat
 Doppelkopf and Skat online or against bots – plus chess, word puzzles and more.
 ```
 
+Erst mit dem Build nach dem Release eintragen (CHECKLISTE C9)
+
 <!-- feld: play.en.beschreibung max=4000 gleich=apple.en.beschreibung -->
 ```text
 Brauweg brings the German classics to your table: Doppelkopf and Skat, online with friends or against bots – plus chess, Farbduell, a daily word puzzle and your own card factory.
@@ -370,7 +374,7 @@ Brauweg requires an internet connection.
     und auf Englisch zeigen Browort und Clanwort selbst den Hinweis „German
     word game" (`browort.ui.deutschesWortspiel`). Ein englischer Käufer soll
     es vorher wissen, nicht aus einer Ein-Stern-Bewertung.
-  - Am laufenden Stand gesehen am 10.11.2026 auf staging (Gerätesprache
-    en-US, Gastkonto): Die Oberfläche war englisch, unter Profile › Settings ›
+  - Eigene Probe des Workers (nicht Niklas' Abnahme), am 10.11.2026 auf
+    staging mit einem Gastkonto und Gerätesprache en-US: Die Oberfläche war englisch, unter Profile › Settings ›
     Language ließ sich auf Deutsch stellen, und das blieb nach dem Neuladen
     so (die Wahl liegt am Konto).
