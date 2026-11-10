@@ -148,7 +148,11 @@ export class TanksPartie {
 
   schritt(): void {
     if (this.phase === 'ende') return;
-    if (this.phase === 'zielen') this.fahren();
+    if (this.phase === 'zielen') {
+      this.fahren();
+      // Fahren kann den Zug beenden (Meer); dann gilt der neue Zeitgeber, nicht ein weiterer Tick.
+      if (this.phase !== 'zielen') return;
+    }
     if (--this.ticks > 0) return;
     if (this.phase === 'countdown') this.zugStarten();
     else if (this.phase === 'zielen') {
@@ -160,6 +164,8 @@ export class TanksPartie {
   }
 
   private zugStarten(): void {
+    // Wer im Countdown aufgegeben hat, darf nicht dran sein: sonst warten alle die vollen 20 s auf einen Toten.
+    if (this.amZug.raus) { this.weiter(); return; }
     this.phase = 'zielen'; this.ticks = TICKS(R.zielzeit);
     this.amZug.tank = R.tank; this.amZug.fahrt = 0;
   }
@@ -175,7 +181,12 @@ export class TanksPartie {
     if ((h - b.y) / Math.abs(dx) > R.steigungMax) return; // zu steil zum Hinauffahren
     b.tank = Math.max(0, b.tank - R.tankProSekunde * R.schritt);
     b.x = nx; b.y = h;
-    if (h <= this.meer) { b.lp = 0; b.raus = true; b.fahrt = 0; }
+    if (h <= this.meer) {
+      // Ertrunken: Der Zug endet sofort, statt bis zum Ablauf der Zielzeit auf einen Toten zu warten.
+      b.lp = 0; b.raus = true; b.fahrt = 0;
+      if (this.endePruefen()) return;
+      this.phase = 'nachlauf'; this.ticks = TICKS(R.nachlauf);
+    }
   }
 
   /** Bros sacken nach, nehmen Fallschaden oder ertrinken. Rückgabe: Fallschaden je Bro und Ausgeschiedene. */
@@ -273,7 +284,7 @@ export class TanksPartie {
   privatFuer(id: string): TanksPrivat | undefined {
     const b = this.bro(id);
     if (!b) return undefined;
-    const am = this.phase === 'zielen' && b === this.amZug;
+    const am = this.phase === 'zielen' && b === this.amZug && !b.raus;
     let inZuegen = 0;
     if (!b.raus && !am) {
       // Schritte in der Zugfolge bis zu diesem Bro, nur lebende gezählt; er selbst nach seinem Schuss: ein voller Umlauf.

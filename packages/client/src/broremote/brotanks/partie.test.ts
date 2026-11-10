@@ -267,6 +267,43 @@ describe('Spielregeln BroTanks', () => {
     p.aufgeben(rest[0]);
     expect(p.sicht().phase).toBe('ende'); expect(p.sicht().gewinner).toEqual([rest[1]]);
   });
+  it('Gibt der erste Schütze im Countdown auf, springt der Zug sofort zum Nächsten und der Tote ist nie am Zug', () => {
+    for (const n of [3, 4]) {
+      const p = new TanksPartie(leute(n), 5), erster = p.sicht().reihe[0];
+      expect(p.sicht().phase).toBe('countdown');
+      p.aufgeben(erster);
+      bis(p, () => p.sicht().phase === 'zielen');
+      const s = p.sicht();
+      expect(s.amZug).not.toBe(erster); expect(s.amZug).toBe(s.reihe[1]);
+      expect(p.privatFuer(erster)).toMatchObject({ raus: true, amZug: false });
+      expect(p.privatFuer(s.amZug)).toMatchObject({ amZug: true, rest: 20 });
+      // Der Neue kann sofort schießen, niemand wartet auf einen Toten.
+      schiessen(p, 45, 30); expect(p.sicht().phase).toBe('flug');
+    }
+  });
+  it('Fährt der Bro am Zug ins Meer, endet sein Zug sofort und er meldet nicht mehr amZug', () => {
+    const p = new TanksPartie(leute(3), 5); zielenBereit(p);
+    const m = innen(p), am = p.sicht().amZug, b = m.bros.find(x => x.id === am)!;
+    m.g.fill(5); for (let i = 0; i < m.g.length; i++) if (i * 0.125 >= 11) m.g[i] = m.meer - 1;
+    b.x = 10.9; b.y = 5;
+    p.eingabe(am, { art: 'steuerung', x: 1, y: 0, tasten: [] });
+    schritte(p, 20);
+    expect(b.raus).toBe(true);
+    expect(p.sicht().phase).toBe('nachlauf');
+    expect(p.privatFuer(am)).toMatchObject({ raus: true, amZug: false });
+    bis(p, () => p.sicht().phase === 'zielen');
+    expect(p.sicht().zug).toBe(2); expect(p.sicht().amZug).not.toBe(am);
+  });
+  it('Ertrinkt der vorletzte Bro beim Fahren, endet die Partie sofort mit dem Letzten als Sieger', () => {
+    const p = new TanksPartie(leute(2), 5); zielenBereit(p);
+    const m = innen(p), am = p.sicht().amZug, b = m.bros.find(x => x.id === am)!;
+    m.g.fill(5); for (let i = 0; i < m.g.length; i++) if (i * 0.125 >= 11) m.g[i] = m.meer - 1;
+    b.x = 10.9; b.y = 5;
+    p.eingabe(am, { art: 'steuerung', x: 1, y: 0, tasten: [] });
+    schritte(p, 20);
+    expect(p.sicht().phase).toBe('ende'); expect(p.sicht().grund).toBe('letzter');
+    expect(p.sicht().gewinner).toEqual(p.sicht().reihe.filter(i => i !== am));
+  });
   it('Gibt bei zwei Bros einer auf, gewinnt der andere sofort', () => {
     const p = new TanksPartie(leute(2), 5); p.aufgeben('s0');
     expect(p.sicht().phase).toBe('ende'); expect(p.sicht().gewinner).toEqual(['s1']); expect(p.sicht().grund).toBe('letzter');
