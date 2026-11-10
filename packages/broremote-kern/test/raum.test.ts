@@ -131,11 +131,12 @@ test('gehaltene Eingaben werden bei Timeout, Disconnect, Phasenwechsel neutralis
   assert.equal(a.raum.sicht().spieler[0].bereit, false);
 });
 
-test('Host kehrt mit demselben Raum zurück; nach 30 Sekunden ohne Host endet der Raum', () => {
+test('Host kehrt mit demselben Raum zurück; nach 90 Sekunden ohne Host endet der Raum', () => {
   const a = aufbau(); a.gast('1'); a.raum.abmelden('h'); a.zeit(1000);
   assert.equal(a.anmelden('h2', { art: 'gastgeber', schluessel: a.host.schluessel }), true);
   assert.equal(a.raum.sicht().gastgeberDa, true);
-  a.raum.abmelden('h2'); a.zeit(30_001); a.raum.tick(); assert.equal(a.raum.beendet, true);
+  a.raum.abmelden('h2'); a.zeit(60_000); a.raum.tick(); assert.equal(a.raum.beendet, false);
+  a.zeit(30_001); a.raum.tick(); assert.equal(a.raum.beendet, true);
 });
 
 test('Nachrichtenrate begrenzt, unbekannte Aktionen und riesige Nachrichten verworfen', () => {
@@ -181,4 +182,28 @@ test('Zauber werden einmal adressiert und nur im Baucontroller akzeptiert', () =
   assert.equal(aktionLesen({ art: 'zauber', zauber: 'unbegrenzt' }, 'bauen'), null);
   assert.equal(aktionLesen({ art: 'zauber', zauber: 'anker' }, 'auswahl'), null);
   assert.equal(aktionLesen({ art: 'zauber', zauber: 'schwere', ziel: 'x'.repeat(25) }, 'bauen'), null);
+});
+
+
+test('Ping-Kennung wird begrenzt gespiegelt; ältere Clients bleiben kompatibel', () => {
+  const a = aufbau(); a.post.length = 0;
+  a.senden('h', { art: 'ping', kennung: 'netz-2-43' });
+  assert.deepEqual(a.post.at(-1)?.n, { art: 'pong', zeit: 100_000, kennung: 'netz-2-43' });
+  for (const kennung of [undefined, 'x'.repeat(49), '<img>', 42]) {
+    a.senden('h', { art: 'ping', kennung });
+    assert.deepEqual(a.post.at(-1)?.n, { art: 'pong', zeit: 100_000 });
+  }
+});
+
+test('längerer Host-Netzwechsel bewahrt Partie und neutralisiert gehaltene Eingaben', () => {
+  const a = aufbau(), gast = a.gast('1');
+  a.senden('1', { art: 'bereit', bereit: true }); a.senden('h', { art: 'spielen' });
+  const partie = a.raum.sicht().partie;
+  a.eingabe('1'); a.raum.abmelden('h');
+  for (let i = 0; i < 20; i++) { a.zeit(3000); a.senden('1', { art: 'ping' }); a.raum.tick(); }
+  assert.equal(a.raum.beendet, false);
+  a.post.length = 0; assert.equal(a.anmelden('h2', { art: 'gastgeber', schluessel: a.host.schluessel }), true);
+  assert.deepEqual(a.raum.sicht().partie, partie);
+  assert.equal(a.raum.sicht().spieler[0].id, gast.spieler);
+  assert.ok(a.post.every(p => p.n.art !== 'eingabe' || p.n.aktion.art === 'reset'));
 });

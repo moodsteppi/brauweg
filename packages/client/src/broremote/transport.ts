@@ -64,7 +64,9 @@ export type Zugang = {
   raum?: string; schluessel?: string; einladung?: string; name?: string;
 };
 export type Status = 'verbinden' | 'verbunden' | 'wiederverbinden' | 'beendet';
+export type Verbindungswerte = { ping: number | null; schwankung: number; versuch: number };
 export interface SitzungsEreignisse {
+  qualitaet?(werte: Verbindungswerte): void;
   nachricht(n: ServerNachricht): void;
   status(s: Status): void;
   fehler(t: string): void;
@@ -76,24 +78,63 @@ export class Verbindung implements Kanal {
   private authentifiziert = false;
   private lauf = 0;
   private letzteNachricht = Date.now();
-  private ausfallSeit = Date.now();
+  private ausfallSeit: number | null = Date.now();
   private versuch = 0;
   private wieder?: ReturnType<typeof setTimeout>;
   private readonly takt: ReturnType<typeof setInterval>;
+  private pingOffen?: { kennung: string; seit: number };
+  private pingAntwort = Date.now();
+  private pingFolge = 0;
+  private pingZuletzt = 0;
+  private proben: number[] = [];
+  private readonly aufwachen = (): void => {
+    if (this.beendet || document.hidden || navigator.onLine === false) return;
+    // Ein schlafendes WebView kann noch OPEN melden, obwohl der Router die
+    // Leitung längst verworfen hat. Kein Warten auf den nächsten Timer.
+    if (Date.now() - this.letzteNachricht > 10_000) this.abbruch();
+    if (!this.authentifiziert) {
+      clearTimeout(this.wieder); this.wieder = undefined; this.starten();
+    } else this.pingen();
+  };
+  private readonly offline = (): void => { if (!this.beendet) this.abbruch(); };
   constructor(private zugang: Zugang, private e: SitzungsEreignisse,
     private oeffner = netzKanal) {
+    window.addEventListener('online', this.aufwachen);
+    window.addEventListener('offline', this.offline);
+    window.addEventListener('pageshow', this.aufwachen);
+    document.addEventListener('visibilitychange', this.aufwachen);
     this.takt = setInterval(() => {
       if (this.beendet) return;
-      if (this.authentifiziert) this.kanal?.senden({ art: 'ping' });
-      if (Date.now() - this.letzteNachricht > 12_000 && !this.wieder) this.abbruch();
-    }, 3000);
+      const jetzt = Date.now();
+      if (this.authentifiziert && jetzt - this.pingZuletzt >= 3000) this.pingen();
+      if (jetzt - this.letzteNachricht > 12_000 && !this.wieder) this.abbruch();
+    }, 1000);
     this.starten();
+  }
+  private melden(): void {
+    const mittel = this.proben.length ? [...this.proben].sort((a, b) => a - b)[Math.floor(this.proben.length / 2)] : null;
+    this.e.qualitaet?.({ ping: mittel, schwankung: this.proben.length > 1 ? Math.max(...this.proben) - Math.min(...this.proben) : 0, versuch: this.versuch });
+  }
+  private pingen(): void {
+    const jetzt = Date.now();
+    if (this.pingOffen && jetzt - this.pingOffen.seit < 6000) return;
+    if (this.pingOffen && jetzt - this.pingAntwort >= 8000) { this.abbruch(); return; }
+    if (this.pingOffen) { this.proben = []; this.melden(); }
+    const probe = { kennung: `netz-${this.lauf}-${++this.pingFolge}`, seit: jetzt };
+    this.pingOffen = probe; this.pingZuletzt = jetzt;
+    if (!this.kanal?.senden({ art: 'ping', kennung: probe.kennung })) this.abbruch();
   }
   private starten(): void {
     if (this.beendet) return;
+    if (this.ausfallSeit !== null && Date.now() - this.ausfallSeit > 90_000) {
+      this.schliessen(); this.e.status('beendet');
+      this.e.fehler('Die Lobby ist gerade nicht erreichbar. Du kannst die Verbindung erneut versuchen.'); return;
+    }
+    this.kanal?.schliessen();
     const lauf = ++this.lauf;
-    this.letzteNachricht = Date.now();
+    this.letzteNachricht = Date.now(); this.pingAntwort = Date.now(); this.pingOffen = undefined;
     this.e.status(this.versuch ? 'wiederverbinden' : 'verbinden');
+    if (navigator.onLine === false) { this.abbruch(); return; }
     this.kanal = this.oeffner(this.zugang.adresse, this.zugang.transport === 'lan', {
       offen: () => {
         if (lauf !== this.lauf || this.beendet) return;
@@ -106,9 +147,15 @@ export class Verbindung implements Kanal {
         if (lauf !== this.lauf || this.beendet) return;
         this.letzteNachricht = Date.now();
         if (n.art === 'willkommen') {
-          this.authentifiziert = true; this.versuch = 0; this.ausfallSeit = 0;
+          this.authentifiziert = true; this.versuch = 0; this.ausfallSeit = null;
           this.zugang = { ...this.zugang, rolle: n.rolle, raum: n.raum, schluessel: n.schluessel, einladung: undefined };
-          this.e.merken(this.zugang); this.e.status('verbunden');
+          this.e.merken(this.zugang); this.e.status('verbunden'); this.melden(); this.pingen();
+        }
+        if (n.art === 'pong' && (!n.kennung || n.kennung === this.pingOffen?.kennung)) this.pingAntwort = Date.now();
+        if (n.art === 'pong' && this.pingOffen && n.kennung === this.pingOffen.kennung) {
+          const ping = Math.max(1, Date.now() - this.pingOffen.seit);
+          this.proben.push(ping); if (this.proben.length > 5) this.proben.shift();
+          this.pingOffen = undefined; this.melden();
         }
         if (n.art === 'beendet') { this.schliessen(); this.e.status('beendet'); }
         this.e.nachricht(n);
@@ -120,19 +167,20 @@ export class Verbindung implements Kanal {
   private abbruch(): void {
     if (this.beendet || this.wieder) return;
     this.lauf++; this.kanal?.schliessen(); this.authentifiziert = false;
+    this.pingOffen = undefined; this.proben = [];
     this.e.status('wiederverbinden');
-    if (!this.ausfallSeit) this.ausfallSeit = Date.now();
-    if (Date.now() - this.ausfallSeit > 45_000) {
-      this.schliessen(); this.e.status('beendet');
-      this.e.fehler('Die Lobby ist nicht mehr erreichbar. Prüfe dein Netzwerk und verbinde dich erneut.'); return;
-    }
-    this.versuch++;
+    if (this.ausfallSeit === null) this.ausfallSeit = Date.now();
+    this.versuch++; this.melden();
     this.wieder = setTimeout(() => { this.wieder = undefined; this.starten(); }, Math.min(3000, 500 * this.versuch));
   }
   senden(n: Nachricht): boolean { return this.authentifiziert && !this.beendet && (this.kanal?.senden(n) ?? false); }
   schliessen(): void {
-    this.beendet = true; this.lauf++;
+    this.beendet = true; this.authentifiziert = false; this.lauf++;
     clearInterval(this.takt); clearTimeout(this.wieder); this.kanal?.schliessen();
+    window.removeEventListener('online', this.aufwachen);
+    window.removeEventListener('offline', this.offline);
+    window.removeEventListener('pageshow', this.aufwachen);
+    document.removeEventListener('visibilitychange', this.aufwachen);
   }
 }
 
@@ -173,7 +221,7 @@ export function lanGastgeber(e: SitzungsEreignisse, bereit: (adressen: string[])
       beenden();
     }
   });
-  const takt = setInterval(() => { raum?.empfangen('host', { v: 1, art: 'ping' }); raum?.tick(); }, 200);
+  const takt = setInterval(() => { raum?.empfangen('host', { v: 1, art: 'ping', kennung: 'lan-intern' }); raum?.tick(); }, 200);
   const beenden = (): void => {
     beendet = true; clearInterval(takt); abmelden();
     for (const t of fristen.values()) clearTimeout(t);

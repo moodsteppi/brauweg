@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { FORMEN, MODI, REGELN, type BauModus } from '@brauweg/building-kern';
 import type { Aktion, Privat, Spieler } from '@brauweg/broremote-kern';
+import { BroIcon } from '../BroIcon';
+import { BroDialog } from '../BroDialog';
 import { Controller } from '../Controller';
 import { BauPartie, ladeBauphysik, type BauSicht } from './partie';
 import { zeichneBahn, setzeBaukameraZurueck } from './zeichnen';
@@ -20,6 +22,8 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
   const partie = useRef<BauPartie | null>(null), bilder = useRef(new Map<string, HTMLCanvasElement>());
   const [sicht, setSicht] = useState<BauSicht | null>(null), [fehler, setFehler] = useState(''), [versuch, setVersuch] = useState(0);
   const [pause, setPause] = useState(false), [verborgen, setVerborgen] = useState(document.hidden);
+  const [kino, setKino] = useState(false), [abbrechen, setAbbrechen] = useState(false);
+  useEffect(() => { const ende = (e: KeyboardEvent): void => { if (e.key === 'Escape') setKino(false); }; window.addEventListener('keydown', ende); return () => window.removeEventListener('keydown', ende); }, []);
   const [ton, setTon] = useState(false);
   const lokaleKennung = useRef(crypto.randomUUID());
   const [ohne, setOhne] = useState<string[]>([]);
@@ -80,15 +84,15 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
     return () => { beendet = true; clearTimeout(rahmen); p.eingaben.current = null; partie.current?.freigeben(); partie.current = null; };
   }, [p.id, versuch]);
 
-  const zurueck = (): void => { if (sicht?.phase === 'ende' || window.confirm('Diese Runde abbrechen und zur Lobby zurückkehren?')) p.zurLobby(); };
+  const zurueck = (): void => { if (sicht?.phase === 'ende') p.zurLobby(); else setAbbrechen(true); };
   if (fehler) return <section className="br-panel"><p role="alert">{fehler}</p><button className="br-knopf" onClick={() => setVersuch(v => v + 1)}>Erneut laden</button><button className="br-link" onClick={p.zurLobby}>Zur Lobby</button></section>;
   if (!sicht) return <section className="br-panel br-zentriert"><div className="br-signal" /><h2>Die Bauwelt entsteht.</h2><p>Deine Bühne wird vorbereitet.</p></section>;
   const solo = sicht.bahnen[0];
   const ergebnis = sicht.phase === 'ende';
-  return <section className="bb-arena" aria-label="Bro Building Battle Spielbühne">
+  return <section className={`bb-arena${kino ? ' bb-kino' : ''}`} aria-label="Bro Building Battle Spielbühne">
     <div className="bb-werkzeug"><div><span className="br-kicker">{p.training ? 'SOLOTRAINING' : 'BRO BUILDING BATTLE'}</span><h2>{MODI[p.modus].name}</h2></div><span className="bb-uhr" aria-label="Verbleibende Zeit">{Math.floor(sicht.restzeit / 60)}:{String(sicht.restzeit % 60).padStart(2, '0')}</span><button className="bb-rund" aria-label={ton ? 'Ton ausschalten' : 'Ton einschalten'} aria-pressed={ton} onClick={() => {
       if (!audio.current) audio.current = new AudioContext(); void audio.current.resume(); tonAn.current = !ton; setTon(!ton);
-    }}>{ton ? '♪' : '♪̸'}</button><button className="bb-rund" disabled={ergebnis} aria-label={pause ? 'Weiterspielen' : 'Spiel pausieren'} onClick={() => setPause(!pause)}>{pause ? '▶' : 'Ⅱ'}</button></div>
+    }}><BroIcon name="ton" /></button><button className="bb-rund" disabled={ergebnis} aria-label={pause ? 'Weiterspielen' : 'Spiel pausieren'} onClick={() => setPause(!pause)}><BroIcon name={pause ? 'start' : 'pause'} /></button><button className="bb-rund" aria-label={kino ? 'Große Bühne schließen' : 'Große Bühne öffnen'} aria-pressed={kino} onClick={() => setKino(k => !k)}><BroIcon name={kino ? 'schliessen' : 'vollbild'} /></button></div>
     <p className="bb-regel">{p.modus === 'rennen' ? '16 m erreichen · 3 Sekunden halten · Nachschub bis zum Zeitlimit' : '3 Leben · Jedes abgestürzte Teil kostet ein Leben · 30 Bauteile'}</p>
     <div className={`bb-buehne bb-buehne-${sicht.bahnen.length}`}>
       {sicht.bahnen.map(b => <article className={`bb-bahn${b.fertig ? ' bb-fertig' : ''}${sicht.gewinner.includes(b.id) ? ' bb-sieger' : ''}${b.anker > 0 ? ' bb-geschuetzt' : ''}`} key={b.id} style={{ '--spielerfarbe': b.farbe } as React.CSSProperties}>
@@ -105,6 +109,7 @@ export default function BauArena(p: Eigenschaften): React.JSX.Element {
     {ergebnis && <div className="bb-ergebnis" role="status"><span className="br-kicker">RUNDE GESCHAFFT</span><h2>{sicht.gewinner.length ? `${sicht.bahnen.filter(b => sicht.gewinner.includes(b.id)).map(b => b.name).join(' & ')} ${sicht.gewinner.length === 1 ? 'gewinnt!' : 'gewinnen!'}` : 'Ein neuer Anlauf wartet.'}</h2><p>{sicht.grund}</p><ol>{[...sicht.bahnen].sort((a, b) => a.platz - b.platz).map(b => <li key={b.id}><span>{b.platz}. {b.name}</span><strong>{b.hoehe.toFixed(1).replace('.', ',')} m{p.modus === 'standfest' ? ` · ${b.leben} ♥` : ''}</strong></li>)}</ol><button className="br-knopf" onClick={() => p.training ? setVersuch(v => v + 1) : p.zurLobby()}>{p.training ? 'Noch eine Runde' : 'Revanche vorbereiten'}</button></div>}
     {p.training && <BauWertung key={`${lokaleKennung.current}-${versuch}`} partie={`${lokaleKennung.current}-${versuch}`} modus={p.modus} name={solo.name} ergebnis={ergebnis ? { modus: p.modus, hoehe: solo.hoehe, gebaut: solo.gebaut, verloren: solo.verloren, leben: solo.leben, platz: solo.platz, gewonnen: sicht.gewinner.includes(solo.id), aufgegeben: solo.aufgegeben, dauer: sicht.dauer, spielerzahl: 1 } : null} />}
     {p.training && !ergebnis && !pausenGrund && sicht.phase === 'spiel' && <div className="bb-training"><Controller layout="bauen" bau={{ form: 0, hoehe: solo.hoehe, restzeit: sicht.restzeit, phase: sicht.phase, countdown: sicht.countdown, platz: solo.platz, fertig: solo.fertig, gewonnen: false, verbraucht: solo.verbraucht, gebaut: solo.gebaut, zielCountdown: solo.halten > 0 ? Math.max(1, Math.ceil(3 - solo.halten)) : 0, ankerBereit: solo.ankerBereit, schwereBereit: false, anker: solo.anker }} senden={a => p.eingaben.current?.(p.spieler[0].id, a)} /></div>}
+    {abbrechen && <BroDialog frage={{ text: 'Diese Runde abbrechen?', bestaetigen: 'Zur Lobby', ausfuehren: p.zurLobby }} schliessen={() => setAbbrechen(false)} />}
     <div className="bb-abschluss"><span>{p.training ? '← → Bewegen · R Drehen · Leertaste Fallen lassen' : 'Handys steuern. Dieser Bildschirm zeigt eure Türme.'}</span><button className="br-link" onClick={zurueck}>Zur Lobby</button></div>
   </section>;
 }

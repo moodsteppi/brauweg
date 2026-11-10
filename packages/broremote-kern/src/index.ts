@@ -1,7 +1,8 @@
 /** Gemeinsame Raumautorität: im Relay und im gebündelten iOS-Gastgeber identisch. */
 export const VERSION = 1;
 export const EINLADUNG_MS = 10 * 60_000;
-export const GASTGEBER_PAUSE_MS = 30_000;
+// Eine kurze Netzumschaltung darf die gesamte Runde nicht verlieren.
+export const GASTGEBER_PAUSE_MS = 90_000;
 export const EINGABE_PAUSE_MS = 600;
 export const MAX_NACHRICHT = 8192;
 export type Layout = 'bauen' | 'auswahl';
@@ -29,7 +30,7 @@ export type ServerNachricht =
   | { art: 'einladung'; einladung: string; bis: number }
   | { art: 'fehler'; text: string }
   | { art: 'beendet'; text: string }
-  | { art: 'pong'; zeit: number };
+  | { art: 'pong'; zeit: number; kennung?: string };
 
 export function objekt(wert: unknown): wert is Nachricht {
   return wert !== null && typeof wert === 'object' && !Array.isArray(wert);
@@ -183,7 +184,12 @@ export class BroRaum {
     if (jetzt - l.fenster >= 1000) { l.fenster = jetzt; l.anzahl = 0; }
     if (++l.anzahl > 80) { this.abmelden(v); this.o.trennen(v); return; }
     l.gesehen = jetzt;
-    if (n.art === 'ping') { this.o.senden(v, { art: 'pong', zeit: jetzt }); return; }
+    if (n.art === 'ping') {
+      // Korrelierte Pongs verhindern falsche Millisekundenwerte, wenn Debug-
+      // Messung und Verbindung gleichzeitig pingen. Alte Clients bleiben gültig.
+      const kennung = typeof n.kennung === 'string' && /^[a-zA-Z0-9-]{1,48}$/.test(n.kennung) ? n.kennung : undefined;
+      this.o.senden(v, { art: 'pong', zeit: jetzt, ...(kennung ? { kennung } : {}) }); return;
+    }
     if (n.art === 'verlassen') {
       if (l.gastgeber) this.schliessen('Der Gastgeber hat die Lobby beendet.');
       else { const s = l.spieler!; this.abmelden(v); this.sitze.splice(this.sitze.indexOf(s), 1); this.o.trennen(v); this.verteilen(); }

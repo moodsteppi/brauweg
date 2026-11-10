@@ -44,3 +44,14 @@ describe('BroRemote-Controller', () => {
   });
 
 });
+
+
+it('beim Loslassen der jüngsten Richtung bleibt die andere gehaltene Taste aktiv', () => {
+  const senden = vi.fn(); const { unmount } = render(<Controller layout="bauen" senden={senden} />);
+  fireEvent.keyDown(window, { key: 'ArrowLeft' }); fireEvent.keyDown(window, { key: 'ArrowRight' });
+  expect(senden).toHaveBeenLastCalledWith({ art: 'steuerung', x: 1, y: 0, tasten: [] });
+  fireEvent.keyUp(window, { key: 'ArrowRight' });
+  expect(senden).toHaveBeenLastCalledWith({ art: 'steuerung', x: -1, y: 0, tasten: [] });
+  fireEvent.keyUp(window, { key: 'ArrowLeft' });
+  expect(senden).toHaveBeenLastCalledWith({ art: 'steuerung', x: 0, y: 0, tasten: [] }); unmount();
+});

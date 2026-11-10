@@ -109,7 +109,7 @@ Es wurde kein TestFlight-Archiv erstellt und nichts hochgeladen.
 * Die Handyansicht sendet Bewegungen mit höchstens etwa 30 Hz. Gehaltene
   Eingaben werden alle 150 ms bestätigt und nach 600 ms ohne Bestätigung
   neutralisiert. Loslassen, Fokusverlust und Hintergrund setzen sofort zurück.
-* Der Online-Gastgeber kann nach einem erkannten Ausfall 30 Sekunden lang in
+* Der Online-Gastgeber kann nach einem erkannten Ausfall 90 Sekunden lang in
   denselben Raum zurück. Währenddessen pausieren die Controller. Jeder neue
   Gastgeberanschluss beginnt einen neuen Abschnitt ohne alte private Daten.
 * Serverneustart beendet Online-Räume. Online-Räume enden spätestens nach
@@ -167,7 +167,7 @@ ihn dann als `m=1` in der Raute mit, das Handy misst also ohne Zutun mit;
 `?messen=0` schaltet ihn wieder ab. Unten rechts steht danach eine kleine
 Anzeige: am Gastgeber Median und 95 % je Abschnitt, „Tabelle kopieren“ gibt
 jede Eingabe als Tabulatortext aus. Ohne Schalter ist `messung` in
-`src/broremote/messen.ts` null — kein Timer, kein Ping, kein Paket mehr.
+`src/broremote/messen.ts` null. Nur der reguläre Verbindungs-Ping bleibt aktiv.
 
 Gemessen wird: Druck am Handy, Ankunft beim Gastgeber, erster Physikschritt
 danach, gezeichnetes Bild. Die Druckzeit reist als `folge` mit (Serveruhr in
@@ -193,3 +193,44 @@ antworteten mit HTTP 401 »Token ungültig«. Deshalb hier die Übergabe:
 TAFEL: BroRemote-Raumkern, Server-Vermittler, iOS-LAN-Brücke und gemeinsame
 Controlleroberfläche als neue Verbindungen ergänzen, sobald der Zugang wieder
 funktioniert. Kein Dashboard-Token wurde verändert.
+
+
+## Ausbau am 10.11.2026: Verbindung und Bedienung
+
+- Lobby, Einstieg und Handycontroller nutzen eine gemeinsame Werkstattoptik,
+  eigene SVG-Symbole und einen neuen freigestellten Controller-Pinguin.
+  Gastgeber, Beitritt und Solotraining sind direkt erreichbar.
+- Die Verbindung zeigt immer ihren Status und den Median der letzten fünf
+  Hin-und-Rückweg-Messungen in Millisekunden. Online heißt das **Server-Ping**,
+  im lokalen Netz **Host-Ping**. Es ist keine Druck-bis-Bild-Messung. Der lokale
+  Gastgeber zeigt bewusst „Lokaler Host“ statt einer erfundenen Null.
+- Reguläre Ping-Pakete tragen eine begrenzte Kennung. Nur die passende Antwort
+  zählt als Messwert. Der optionale Diagnose-Ping bleibt getrennt davon.
+  Ältere Server bleiben erreichbar; ohne Kennung erscheint kein Zahlenwert.
+- Offline, wieder online, Rückkehr aus dem Hintergrund und ausbleibende
+  Antworten lösen eine erneute Verbindung mit dem bestehenden Sitzschlüssel
+  aus. Wiederholungen enden nach 90 Sekunden, danach ist ein manueller Versuch
+  möglich. Alte Eingaben werden niemals nachgesendet.
+- Auch eine nur in einer Richtung unterbrochene Leitung wird erkannt, selbst
+  wenn noch Spielstatus beim Handy eintrifft. Alte Socket-Ereignisse haben
+  nach einem Wechsel keine Wirkung mehr.
+- Browser-Wake-Lock und vorhandene native Wachhalte-Brücke verhindern das
+  automatische Einschlafen während der Lobby und Partie, soweit das Gerät
+  dies erlaubt. Bewusstes Sperren oder Hintergrundwechsel beim **LAN-Host**
+  beendet weiterhin dessen native Lobby. Die Oberfläche erklärt das.
+- Gehaltene Richtungen werden je Finger bzw. Taste verwaltet: Loslassen der
+  zuletzt gedrückten Richtung stellt eine noch gehaltene Gegenrichtung wieder
+  her. Reset bei Fokusverlust, Hintergrund und Ausstieg bleibt erhalten.
+- Bautasten geben direkt sichtbare Rückmeldung und optional kurze Haptik,
+  wenn das Gerät sie unterstützt. Zauberziele sind direkt auswählbare Namen.
+- „Große Bühne“ vergrößert den Gastgeberbereich ohne zusätzliche Physiklast.
+  Escape schließt sie. Die bestehenden 30 Bilder pro Sekunde und die ruhige,
+  nur nach außen wechselnde Kamera bleiben erhalten.
+- Rückfragen sind Dialoge innerhalb der Oberfläche; sie blockieren keine
+  Netzwerk-Timer wie native `confirm`-Dialoge.
+
+TAFEL: Heartbeat-Kennung, permanente Ping-Anzeige, 90-Sekunden-Hostschonfrist,
+Wachhalte-Brücke und Controller-Reset als Verbindungen ergänzen. Die Physik
+bleibt im Gastgeberfenster; ein Neuladen bzw. Serverneustart stellt keine
+laufende Physikwelt wieder her. Diese lokale Übergabe ersetzt den derzeit
+nicht freigegebenen externen Tafel-Zugriff.
