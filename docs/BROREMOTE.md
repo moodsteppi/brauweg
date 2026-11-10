@@ -247,3 +247,32 @@ werden deaktiviert. Der Gesamtbau und die gezielten Raum-, Relay- und
 Client-Prüfungen liefen erfolgreich. Es wurde kein Simulator gestartet.
 Netzwechsel auf physischen iPhones und der lokale Hotspot bleiben als
 Geräteabnahme offen. Dieser Ausbau ist lokal, noch nicht veröffentlicht.
+
+## Weitere Spiele
+
+BroRemote trägt seit dem 10.11.2026 ein zweites Spiel: **BroTanks**, Artillerie
+reihum auf einer gemeinsamen Insel (Entwurf: `docs/BROREMOTE-ARTILLERIE.md`).
+Es läuft genauso wie das Bauspiel: Der Gastgeber rechnet, der Raumkern filtert
+nur, die Handys schicken Eingaben und bekommen ihre eigene Sicht.
+
+- **Wahl:** Die Startseite zeigt zwei Spielkarten. Die Karte merkt sich das
+  Spiel und schickt es der neuen Lobby einmal als `spielwahl`, weil die Lobby
+  mit dem Ausgangswert des Servers (`building`) entsteht. Danach schaltet der
+  Gastgeber in der Lobby um („Euer Spiel“). Der Spielmodus erscheint nur beim
+  Bauspiel. Fehlt `spiel` in der Raumsicht (älterer Server), ist es das Bauspiel.
+- **Mindestzahl:** Für BroTanks bleibt „Battle starten“ unter zwei Handys
+  gesperrt, mit Hinweis. Der Kern lehnt den Start ebenfalls ab. Es gibt bewusst
+  kein Solotraining.
+- **Dateien:** `packages/client/src/broremote/brotanks/`. Die Regeln liegen in
+  `regeln.ts`, `gelaende.ts`, `flug.ts` und `partie.ts` (Karte 2). Die Bühne
+  besteht aus `TanksArena.tsx` (Takt, Pause, Privatsicht), `zeichnen.ts`
+  (Canvas 2D, ohne Bilddateien) und `abspiel.ts`. Das Handy ist
+  `ZielController.tsx`, das Kartenmotiv `TanksMotiv.tsx` (SVG).
+- **Flug nachrechnen:** `TanksPartie.sicht()` liefert den Schuss erst nach dem
+  Aufschlag. Die Bühne rechnet die Bahn deshalb mit `flugBerechnen` und
+  denselben Eingaben nach. `abspiel.test.ts` prüft für jede Waffe, dass diese
+  Bahn genau der Bahn der Partie entspricht.
+- **Pause:** Die Partie hält nur an, wenn der Bro am Zug fehlt, der Gastgeber
+  getrennt ist oder das Gastgeberfenster im Hintergrund liegt. Wer nur
+  zuschaut, hält niemanden auf. `privatFuer` kennt keine Pause, deshalb setzt
+  die Bühne dort selbst `phase: 'pause'`.

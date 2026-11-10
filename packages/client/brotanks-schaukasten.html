@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BroTanks — Schaukasten</title>
+    <!--
+      Entwicklungsseite neben der App, Muster wie schaukasten.html: Bühne und
+      Handy von BroTanks ohne Server und ohne zweites Handy. Aufruf über
+      `npm run dev:client` -> http://localhost:5173/brotanks-schaukasten.html?fall=…
+
+      Wird beim `vite build` NICHT mitgebaut (Rollup-Eingabe ist index.html).
+    -->
+    <style>html, body { margin: 0; min-height: 100dvh; background: #0c0812; }</style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/broremote/brotanks/Schaukasten.tsx"></script>
+  </body>
+</html>
