@@ -25,6 +25,20 @@ const wege = {
   pause: 'M8 4v16 M16 4v16',
   ton: 'M3 9h4l5-5v16l-5-5H3z M16 8a6 6 0 0 1 0 8 M19 5a10 10 0 0 1 0 14',
   qr: 'M3 3h6v6H3z M15 3h6v6h-6z M3 15h6v6H3z M15 15h2v2h4v4h-6z M21 12v2 M12 3v1 M12 11v2 M3 12h3',
+  // BroTanks (docs/BROREMOTE-ARTILLERIE.md, Abschnitt 7): Zielwerte und die acht Waffen als eigene Zeichnungen.
+  winkel: 'M4 20h16 M4 20L17 7 M11 20a7 7 0 0 0-2-5',
+  staerke: 'M4 20h3v-4H4z M10.5 20h3v-9h-3z M17 20h3V5h-3z',
+  feuer: 'M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-4 2-7 2 1 3 3 3 5 1-3 0-7 1-10z',
+  wind: 'M3 8h11a3 3 0 1 0-3-3 M3 12h16a3 3 0 1 1-3 3 M3 16h7',
+  tank: 'M5 4h9v16H5z M14 8l4 3v7a2 2 0 0 0 4 0V9 M7 8h5',
+  waffe0: 'M6 12a6 6 0 1 0 12 0 6 6 0 1 0-12 0 M10 9.5a1.5 1.5 0 1 0 1 0',
+  waffe1: 'M3 7c3-3 8-3 11 0-3 3-8 3-11 0 M14 7l3-2v4z M3 13c3-3 8-3 11 0-3 3-8 3-11 0 M14 13l3-2v4z M6 19c3-3 8-3 11 0-3 3-8 3-11 0 M17 19l3-2v4z',
+  waffe2: 'M7 3h10c2 3 2 15 0 18H7C5 18 5 6 7 3 M6 8h12 M6 16h12',
+  waffe3: 'M4 4h16v16H4z M8 8l8 8 M16 8l-8 8',
+  waffe4: 'M12 2l4 6v12h-8V8z M8 13h8 M8 16h8',
+  waffe5: 'M4 16a4 4 0 0 1 4-5 5 5 0 0 1 9 0 4 4 0 0 1 3 5z',
+  waffe6: 'M8 9h8l-1.5 12h-5z M7 9l5-6 5 6 M12 3v6',
+  waffe7: 'M2 9c5 4 15 4 20 0 M5 11v3 M9 12.5v3 M13 12.8v3 M17 12v3 M20 10.5v3',
 } as const;
 export type BroSymbol = keyof typeof wege;
 export function BroIcon({ name }: { name: BroSymbol }): React.JSX.Element {

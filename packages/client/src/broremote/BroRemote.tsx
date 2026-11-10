@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { FORMEN, MODI, type BauModus } from '@brauweg/building-kern';
-import { einladungLesen, einladungsLink, type Aktion, type Privat, type RaumSicht, type ServerNachricht, type Taste } from '@brauweg/broremote-kern';
+import { einladungLesen, einladungsLink, type Aktion, type Privat, type RaumSicht, type ServerNachricht, type Spiel, type Taste } from '@brauweg/broremote-kern';
 import { apiBase } from '../laufzeit';
 import { qrMatrix } from '../minispiele/partykiste/qr';
 import { Controller } from './Controller';
@@ -19,8 +19,16 @@ import { BroDialog, type BroRueckfrage } from './BroDialog';
 import { useBroWache } from './useBroWache';
 import './werkstatt.css';
 import './building/vorrat.css';
+import { ZielController } from './brotanks/ZielController';
+import { TanksMotiv } from './brotanks/TanksMotiv';
 
 const BauArena = lazy(() => import('./building/BauArena'));
+const TanksArena = lazy(() => import('./brotanks/TanksArena'));
+/** Name und Kicker je Spiel. Bro Building Battle bleibt der Ausgangswert, damit alte Lobbys ohne `spiel` unverändert laufen. */
+const SPIELE: Record<Spiel, { name: string; kicker: string }> = {
+  building: { name: 'Bro Building Battle', kicker: 'BRO BUILDING BATTLE' },
+  brotanks: { name: 'BroTanks', kicker: 'BROTANKS' },
+};
 const TRAININGSSPIELER = [{ id: 'training', name: 'Du', farbe: '#70dfc4', verbunden: true, bereit: true }];
 
 const SPEICHER = 'brauweg.broremote.sitzung.v1';
@@ -31,6 +39,7 @@ export function BroRemote(): React.JSX.Element {
   const [netz, setNetz] = useState<Verbindungswerte>({ ping: null, schwankung: 0, versuch: 0 });
   const [frage, setFrage] = useState<BroRueckfrage | null>(null);
   const [spiel, setSpiel] = useState(!!window.location.hash);
+  const [gewaehlt, setGewaehlt] = useState<Spiel>('building');
   const [eintrag, setEintrag] = useState(window.location.hash ? `${apiBase || window.location.origin}/broremote${window.location.hash}` : '');
   const [nurBeitritt, setNurBeitritt] = useState(!!window.location.hash);
   const [name, setName] = useState('');
@@ -48,7 +57,8 @@ export function BroRemote(): React.JSX.Element {
   const [zeit, setZeit] = useState(Date.now());
   const [training, setTraining] = useState<{ seed: number; modus: BauModus } | null>(null);
   const [trainingsmodus, setTrainingsmodus] = useState<BauModus>('rennen');
-  const bauEingaben = useRef<EingabeEmpfang | null>(null);
+  const spielEingaben = useRef<EingabeEmpfang | null>(null);
+  const spielwahlRaum = useRef('');
   const [test, setTest] = useState<Record<string, TestStand>>({});
   const [gespeichert, setGespeichert] = useState<Zugang | null>(() => {
     try { const d = JSON.parse(sessionStorage.getItem(SPEICHER) ?? 'null'); return d?.schluessel && d?.raum ? d as Zugang : null; } catch { return null; }
@@ -115,7 +125,7 @@ export function BroRemote(): React.JSX.Element {
         if (n.art === 'beendet') { messung?.trennen(); setFehler(n.text); setStatus('beendet'); vergessen(); }
         if (n.art === 'eingabe' && sichtRef.current?.phase === 'spiel') {
           messung?.ankunft(n.spieler, n.folge, n.aktion.art);
-          if (n.abschnitt === sichtRef.current.abschnitt) bauEingaben.current?.(n.spieler, n.aktion);
+          if (n.abschnitt === sichtRef.current.abschnitt) spielEingaben.current?.(n.spieler, n.aktion);
           return;
         }
         if (n.art === 'eingabe') setTest(alt => {
@@ -162,6 +172,17 @@ export function BroRemote(): React.JSX.Element {
   const meiner = sicht?.spieler.find(s => s.id === spieler);
   const bereit = !!sicht?.spieler.length && sicht.spieler.every(s => s.bereit && s.verbunden);
   const abgelaufen = !!sicht && zeit >= sicht.einladungBis;
+  // Was in der Lobby gewählt ist bzw. gerade läuft. Fehlt `spiel` (älterer Server), ist es das Bauspiel.
+  const raumSpiel: Spiel = sicht?.partie?.spiel ?? sicht?.spiel ?? 'building';
+  const tanks = raumSpiel === 'brotanks';
+  const zuWenige = tanks && (sicht?.spieler.length ?? 0) < 2;
+  useEffect(() => {
+    // Die Karte auf der Startseite wählt das Spiel, die Lobby entsteht aber mit dem Ausgangswert des Servers:
+    // einmal je Raum nachziehen. Danach ändert nur noch der Umschalter in der Lobby das Spiel.
+    if (rolle !== 'gastgeber' || !sicht || sicht.phase !== 'lobby' || !verbunden || spielwahlRaum.current === sicht.raum) return;
+    spielwahlRaum.current = sicht.raum;
+    if ((sicht.spiel ?? 'building') !== gewaehlt) kanal.current?.senden({ art: 'spielwahl', spiel: gewaehlt });
+  }, [rolle, sicht, verbunden, gewaehlt]);
 
   return <main className={`br-seite${sicht?.phase === 'spiel' || training ? ' br-spielt' : ''}`} ref={seite}>
     <div className="br-inhalt">
@@ -176,12 +197,13 @@ export function BroRemote(): React.JSX.Element {
       {!aktiv && !sicht && !spiel && !training && <>
         <section className="br-hero"><div><p className="br-kicker">ZUSAMMEN VOR EINEM BILDSCHIRM</p><h1>Großes Bild.<br /><em>Kleine Controller.</em></h1><p>Öffne eine Lobby, scanne den QR-Code und macht eure Handys zu Controllern.</p><div className="br-tags"><span>1 bis 4 Controller</span><span>Browser & iOS</span></div></div><img className="br-hero-pinguin" src="/broremote/controller-pinguin.webp" alt="Pinguin mit Handy-Controller" /></section>
         <h2>Wählt euer Spiel</h2>
-        <button type="button" className="br-spielkarte" onClick={() => setSpiel(true)}><div className="br-spielmotiv"><Turm /></div><div><span className="br-kicker">BAUT HOCH. BLEIBT STANDFEST.</span><h2>Bro Building Battle</h2><p>Schwebende Inseln, wackelige Türme und eure Handys als Controller. Wer baut bis zu den Sternen?</p><strong>Jetzt spielen <span aria-hidden="true">↗</span></strong></div></button>
+        <button type="button" className="br-spielkarte" onClick={() => { setGewaehlt('building'); setSpiel(true); }}><div className="br-spielmotiv"><Turm /></div><div><span className="br-kicker">BAUT HOCH. BLEIBT STANDFEST.</span><h2>Bro Building Battle</h2><p>Schwebende Inseln, wackelige Türme und eure Handys als Controller. Wer baut bis zu den Sternen?</p><strong>Jetzt spielen <span aria-hidden="true">↗</span></strong></div></button>
+        <button type="button" className="br-spielkarte" onClick={() => { setGewaehlt('brotanks'); setSpiel(true); }}><div className="br-spielmotiv"><TanksMotiv /></div><div><span className="br-kicker">ZIELEN. FEUERN. EIS BRECHEN.</span><h2>BroTanks</h2><p>Eine Insel, zwei bis vier Bros im Panzer und acht verrückte Geschosse. Reihum zielen, Wind lesen, treffen.</p><strong>Jetzt spielen <span aria-hidden="true">↗</span></strong></div></button>
         <p className="br-leise">Zwei Spielmodi · 1 bis 4 Spieler · Gleiche Bauteile für alle</p><BauAlbum />
       </>}
 
       {!aktiv && !sicht && spiel && !training && <>
-        <div className="br-spieltitel"><p className="br-kicker">BROREMOTE</p><h1>Bro Building Battle</h1><p>Ein Gastgeber-Bildschirm. Bis zu vier Handys. Eine gemeinsame Lobby.</p></div>
+        <div className="br-spieltitel"><p className="br-kicker">BROREMOTE</p><h1>{nurBeitritt ? 'Bro Building Battle' : SPIELE[gewaehlt].name}</h1><p>{!nurBeitritt && gewaehlt === 'brotanks' ? 'Ein Gastgeber-Bildschirm. Zwei bis vier Handys. Eine Insel.' : 'Ein Gastgeber-Bildschirm. Bis zu vier Handys. Eine gemeinsame Lobby.'}</p></div>
         <div className={nurBeitritt ? 'br-beitrittsformular' : 'br-einstiege'}>
           {!nurBeitritt && <section className="br-panel"><span className="br-schritt"><BroIcon name="bildschirm" /> AUF DEM GROSSEN BILDSCHIRM</span><h2>Lobby eröffnen</h2><p>Dieses Gerät zeigt die Lobby und später das Spiel.</p>
             <div className="br-modus"><button type="button" aria-pressed={art === 'relay'} onClick={() => setArt('relay')}>Online</button><button type="button" aria-pressed={art === 'lan'} disabled={!hatLan()} onClick={() => setArt('lan')}>WLAN / Hotspot</button></div>
@@ -197,23 +219,23 @@ export function BroRemote(): React.JSX.Element {
             <button type="button" className="br-knopf br-sekundaer" disabled={!eintrag || !name.trim()} onClick={beitreten}>Verbinden</button>
             {nurBeitritt && <button type="button" className="br-link" onClick={() => setNurBeitritt(false)}>Zurück zur Auswahl</button>}
           </section>
-          {!nurBeitritt && <section className="br-panel br-solo"><span className="br-schritt"><BroIcon name="solo" /> EINFACH AUSPROBIEREN</span><h2>Allein losbauen</h2><p>Ohne Lobby direkt auf diesem Gerät spielen. Mit Touch oder Tastatur.</p><div className="br-modus">{(['rennen', 'standfest'] as const).map(m => <button key={m} aria-pressed={trainingsmodus === m} onClick={() => setTrainingsmodus(m)}>{MODI[m].name}</button>)}</div><p className="br-leise">{MODI[trainingsmodus].regel}</p><button className="br-knopf br-sekundaer" onClick={() => setTraining({ seed: crypto.getRandomValues(new Uint32Array(1))[0], modus: trainingsmodus })}><BroIcon name="start" /> Solotraining starten</button></section>}
+          {!nurBeitritt && gewaehlt === 'building' && <section className="br-panel br-solo"><span className="br-schritt"><BroIcon name="solo" /> EINFACH AUSPROBIEREN</span><h2>Allein losbauen</h2><p>Ohne Lobby direkt auf diesem Gerät spielen. Mit Touch oder Tastatur.</p><div className="br-modus">{(['rennen', 'standfest'] as const).map(m => <button key={m} aria-pressed={trainingsmodus === m} onClick={() => setTrainingsmodus(m)}>{MODI[m].name}</button>)}</div><p className="br-leise">{MODI[trainingsmodus].regel}</p><button className="br-knopf br-sekundaer" onClick={() => setTraining({ seed: crypto.getRandomValues(new Uint32Array(1))[0], modus: trainingsmodus })}><BroIcon name="start" /> Solotraining starten</button></section>}
 
         </div>
       </>}
-      {!aktiv && !sicht && spiel && !training && <BauAlbum />}
+      {!aktiv && !sicht && spiel && !training && gewaehlt === 'building' && <BauAlbum />}
       {!aktiv && !sicht && !training && gespeichert && <button type="button" className="br-knopf br-sekundaer br-fortsetzen" onClick={() => starten(gespeichert)}>Zur letzten Lobby zurück</button>}
-      {training && <Suspense fallback={<p>Die Bauwelt wird geladen.</p>}><BauArena id={`training-${training.seed}`} seed={training.seed} modus={training.modus} spieler={TRAININGSSPIELER} verbunden eingaben={bauEingaben} privat={() => undefined} zurLobby={() => setTraining(null)} training /></Suspense>}
+      {training && <Suspense fallback={<p>Die Bauwelt wird geladen.</p>}><BauArena id={`training-${training.seed}`} seed={training.seed} modus={training.modus} spieler={TRAININGSSPIELER} verbunden eingaben={spielEingaben} privat={() => undefined} zurLobby={() => setTraining(null)} training /></Suspense>}
 
       {aktiv && !sicht && <section className="br-panel br-zentriert"><div className="br-signal" /><h1>Verbindung wird aufgebaut</h1><p>{art === 'lan' ? 'Erlaube den Zugriff auf dein lokales Netzwerk, wenn iOS danach fragt.' : 'Deine Lobby wird vorbereitet.'}</p><button type="button" className="br-link" onClick={schliessen}>Abbrechen</button></section>}
 
       {sicht && <>
-        <div className="br-spieltitel br-raumtitel"><div><p className="br-kicker">BRO BUILDING BATTLE</p><h1>{sicht.phase === 'lobby' ? 'Eure nächste große Runde.' : sicht.phase === 'spiel' ? rolle === 'gastgeber' ? 'Auf die Türme. Fertig. Los.' : 'Dein Turm. Deine Kontrolle.' : 'Controller ausprobieren.'}</h1>{sicht.phase === 'lobby' && <p>Handys verbinden, bereit machen, gemeinsam hoch hinaus.</p>}</div>{sicht.phase === 'lobby' && <img src="/broremote/controller-pinguin.webp" alt="" />}</div>
+        <div className="br-spieltitel br-raumtitel"><div><p className="br-kicker">{SPIELE[raumSpiel].kicker}</p><h1>{sicht.phase === 'lobby' ? 'Eure nächste große Runde.' : sicht.phase === 'spiel' ? tanks ? rolle === 'gastgeber' ? 'Zielen. Feuern. Los.' : 'Dein Panzer. Dein Schuss.' : rolle === 'gastgeber' ? 'Auf die Türme. Fertig. Los.' : 'Dein Turm. Deine Kontrolle.' : 'Controller ausprobieren.'}</h1>{sicht.phase === 'lobby' && <p>{tanks ? 'Handys verbinden, bereit machen, die Insel umgraben.' : 'Handys verbinden, bereit machen, gemeinsam hoch hinaus.'}</p>}</div>{sicht.phase === 'lobby' && <img src="/broremote/controller-pinguin.webp" alt="" />}</div>
         {(!verbunden || !sicht.gastgeberDa) && <div className="br-wiederverbinden" role="status"><BroIcon name="signal" /><div><strong>{status === 'beendet' ? 'Die Verbindung wurde beendet.' : 'Wir verbinden euch wieder.'}</strong><p>{status === 'beendet' ? 'Öffne die Lobby erneut oder starte mit einer neuen Einladung.' : 'Dein Platz bleibt erhalten. Die Steuerung pausiert, bis alle wieder verbunden sind.'}</p>{status === 'beendet' && gespeichert && <button className="br-knopf br-sekundaer" onClick={() => starten(gespeichert)}>Erneut verbinden</button>}</div></div>}
         <div className={rolle === 'gastgeber' && sicht.phase === 'lobby' ? 'br-lobby' : ''}>
           {rolle === 'gastgeber' && sicht.phase === 'lobby' && <section className="br-panel br-einladung"><p className="br-kicker">HANDY VERBINDEN</p><h2>Scannen. Bereit. Los.</h2>
             {!sicht.gesperrt && !abgelaufen && verbunden ? <Qr text={link} /> : <div className="br-qr-pause">{abgelaufen ? 'Einladung abgelaufen' : 'Neue Beitritte gesperrt'}</div>}
-            <p className="br-leise">{art === 'lan' ? 'In der iOS-App: BroRemote → Bro Building Battle → QR-Code scannen. Alle Geräte müssen im selben Netzwerk sein.' : 'Mit der Handykamera oder dem QR-Scanner in der iOS-App scannen.'}</p>
+            <p className="br-leise">{art === 'lan' ? `In der iOS-App: BroRemote → ${SPIELE[raumSpiel].name} → QR-Code scannen. Alle Geräte müssen im selben Netzwerk sein.` : 'Mit der Handykamera oder dem QR-Scanner in der iOS-App scannen.'}</p>
             {!abgelaufen && <p className="br-leise">Gültig für {Math.min(10, Math.max(0, Math.ceil((sicht.einladungBis - zeit) / 60_000)))} Minuten</p>}
             {adressen.length > 1 && <label className="br-feld">Netzwerkadresse<select value={adresse} onChange={e => setAdresse(e.target.value)}>{adressen.map(a => <option value={a} key={a}>{a.replace('ws://', '').replace('/broremote', '')}</option>)}</select></label>}
             <div className="br-aktionen"><button type="button" className="br-link" disabled={!verbunden || abgelaufen || sicht.gesperrt} onClick={() => {
@@ -229,17 +251,23 @@ export function BroRemote(): React.JSX.Element {
               {s && rolle === 'gastgeber' && <button type="button" className="br-entfernen" aria-label={`${s.name} entfernen`} disabled={!verbunden} onClick={() => { setFrage({ text: `${s.name} aus der Lobby entfernen?`, bestaetigen: 'Entfernen', ausfuehren: () => senden({ art: 'entfernen', spieler: s.id }) }); }}>×</button>}
             </div>; })}</div>
             {rolle === 'gastgeber' && sicht.phase === 'lobby' && <>
-              <div className="bb-moduswahl"><span className="br-kicker">EUER SPIELMODUS</span><div className="br-modus">{(['rennen', 'standfest'] as const).map(m => <button key={m} disabled={!verbunden} aria-pressed={(sicht.baumodus ?? 'rennen') === m} onClick={() => senden({ art: 'baumodus', modus: m })}>{MODI[m].name}</button>)}</div><p className="br-leise">{MODI[sicht.baumodus ?? 'rennen'].regel}</p></div>
+              <div className="bb-moduswahl"><span className="br-kicker">EUER SPIEL</span><div className="br-modus">{(['building', 'brotanks'] as const).map(g => <button key={g} disabled={!verbunden} aria-pressed={raumSpiel === g} onClick={() => { setGewaehlt(g); senden({ art: 'spielwahl', spiel: g }); }}>{SPIELE[g].name}</button>)}</div></div>
+              {!tanks && <div className="bb-moduswahl"><span className="br-kicker">EUER SPIELMODUS</span><div className="br-modus">{(['rennen', 'standfest'] as const).map(m => <button key={m} disabled={!verbunden} aria-pressed={(sicht.baumodus ?? 'rennen') === m} onClick={() => senden({ art: 'baumodus', modus: m })}>{MODI[m].name}</button>)}</div><p className="br-leise">{MODI[sicht.baumodus ?? 'rennen'].regel}</p></div>}
               <label className="br-sperre"><input type="checkbox" checked={sicht.gesperrt} disabled={!verbunden} onChange={e => senden({ art: 'sperren', gesperrt: e.target.checked })} />Lobby für neue Spieler sperren</label>
-              <button type="button" className="br-knopf" disabled={!bereit || !verbunden} onClick={() => { setHinweis(''); senden({ art: 'spielen' }); }}>Battle starten</button>
-              <p className="br-leise">{bereit ? 'Eure Crew ist bereit. Nach dem Countdown geht es los!' : 'Sobald mindestens ein Handy verbunden ist und alle bereit sind, kann es losgehen.'}</p>
+              <button type="button" className="br-knopf" disabled={!bereit || !verbunden || zuWenige} onClick={() => { setHinweis(''); senden({ art: 'spielen' }); }}>Battle starten</button>
+              <p className="br-leise">{zuWenige ? 'Für BroTanks braucht ihr mindestens zwei Handys.' : bereit ? 'Eure Crew ist bereit. Nach dem Countdown geht es los!' : 'Sobald mindestens ein Handy verbunden ist und alle bereit sind, kann es losgehen.'}</p>
               <button className="br-link" disabled={!bereit || !verbunden} onClick={() => senden({ art: 'starten' })}>Nur Verbindung prüfen</button>
             </>}
-            {rolle === 'spieler' && sicht.phase === 'lobby' && <><p><strong>{MODI[sicht.baumodus ?? 'rennen'].name}</strong></p><p className="br-leise">{MODI[sicht.baumodus ?? 'rennen'].regel}</p><button type="button" className="br-knopf" disabled={!verbunden || !sicht.gastgeberDa} onClick={() => senden({ art: 'bereit', bereit: !meiner?.bereit })}>{meiner?.bereit ? 'Bereit ✓' : 'Ich bin bereit'}</button><p className="br-leise">Der Gastgeber startet, wenn alle bereit sind.</p></>}
+            {rolle === 'spieler' && sicht.phase === 'lobby' && <>{tanks ? <><p><strong>BroTanks</strong></p><p className="br-leise">Reihum zielen und feuern. Wer zuletzt auf der Insel steht, gewinnt.</p></> : <><p><strong>{MODI[sicht.baumodus ?? 'rennen'].name}</strong></p><p className="br-leise">{MODI[sicht.baumodus ?? 'rennen'].regel}</p></>}<button type="button" className="br-knopf" disabled={!verbunden || !sicht.gastgeberDa} onClick={() => senden({ art: 'bereit', bereit: !meiner?.bereit })}>{meiner?.bereit ? 'Bereit ✓' : 'Ich bin bereit'}</button><p className="br-leise">Der Gastgeber startet, wenn alle bereit sind.</p></>}
           </section>}
         </div>
-        {sicht.phase === 'spiel' && sicht.partie && rolle === 'gastgeber' && <Suspense fallback={<p>Die Bauwelt wird geladen.</p>}><BauArena key={sicht.partie.id} id={sicht.partie.id} seed={sicht.partie.seed} modus={sicht.partie.modus} spieler={sicht.spieler} verbunden={verbunden} eingaben={bauEingaben} privat={(id, daten) => { if (sichtRef.current?.phase === 'spiel') kanal.current?.senden({ art: 'privat', spieler: id, abschnitt: sichtRef.current.abschnitt, daten }); }} zurLobby={() => senden({ art: 'lobby' })} /></Suspense>}
-        {sicht.phase === 'spiel' && rolle === 'spieler' && <section className="br-panel br-eigener-controller">
+        {sicht.phase === 'spiel' && sicht.partie && rolle === 'gastgeber' && tanks && <Suspense fallback={<p>Die Insel wird geladen.</p>}><TanksArena key={sicht.partie.id} id={sicht.partie.id} seed={sicht.partie.seed} spieler={sicht.spieler} verbunden={verbunden} eingaben={spielEingaben} privat={(id, daten) => { if (sichtRef.current?.phase === 'spiel') kanal.current?.senden({ art: 'privat', spieler: id, abschnitt: sichtRef.current.abschnitt, daten }); }} zurLobby={() => senden({ art: 'lobby' })} /></Suspense>}
+        {sicht.phase === 'spiel' && sicht.partie && rolle === 'gastgeber' && !tanks && <Suspense fallback={<p>Die Bauwelt wird geladen.</p>}><BauArena key={sicht.partie.id} id={sicht.partie.id} seed={sicht.partie.seed} modus={sicht.partie.modus} spieler={sicht.spieler} verbunden={verbunden} eingaben={spielEingaben} privat={(id, daten) => { if (sichtRef.current?.phase === 'spiel') kanal.current?.senden({ art: 'privat', spieler: id, abschnitt: sichtRef.current.abschnitt, daten }); }} zurLobby={() => senden({ art: 'lobby' })} /></Suspense>}
+        {sicht.phase === 'spiel' && rolle === 'spieler' && tanks && <section className="br-panel br-eigener-controller">
+          <div className="br-zeile br-controllername"><img src="/broremote/controller-pinguin.webp" alt="" /><h2>{meiner?.name}</h2><span style={{ color: meiner?.farbe }}>BroTanks</span></div>
+          {verbunden && sicht.gastgeberDa && privat?.arti ? <ZielController key={`ziel-${sicht.abschnitt}`} arti={privat.arti} senden={eingabeSenden} /> : <p className="bb-controllerpause" role="status">{!verbunden || !sicht.gastgeberDa ? 'Verbindung wird wiederhergestellt …' : 'Gleich geht es los.'}</p>}
+        </section>}
+        {sicht.phase === 'spiel' && rolle === 'spieler' && !tanks && <section className="br-panel br-eigener-controller">
           <div className="br-zeile br-controllername"><img src="/broremote/controller-pinguin.webp" alt="" /><h2>{meiner?.name}</h2><span style={{ color: meiner?.farbe }}>{MODI[sicht.partie?.modus ?? 'rennen'].name}</span></div>
           {privat?.bau && <div className="bb-controllerstand"><div><small>{privat.bau.phase === 'ende' ? 'ERGEBNIS' : `PLATZ ${privat.bau.platz}`}</small><h3>{privat.bau.phase === 'ende' ? privat.bau.gewonnen ? 'Gewonnen!' : 'Gut gebaut.' : `${privat.bau.hoehe.toFixed(1).replace('.', ',')} Meter`}</h3><p>{privat.leben !== undefined ? `${'♥'.repeat(Math.min(3, privat.leben))}${'♡'.repeat(Math.max(0, 3 - privat.leben))} · ` : ''}{sicht.partie?.modus === 'standfest' ? `${privat.bau.verbraucht} / 30 Teile` : `${privat.bau.gebaut ?? 0} verbaut · ∞ Nachschub`}</p></div><BauVorrat form={FORMEN[privat.bau.form] ?? 'quadrat'} item={privat.bau.item} itemIn={privat.bau.itemIn} ende={privat.bau.phase === 'ende' || privat.bau.fertig} /></div>}
           {(privat?.bau?.schwereWartet || privat?.bau?.eisWartet || privat?.bau?.steinWartet) && <p className="br-zauberwarnung" role="status"><BroIcon name={privat.bau.eisWartet ? 'eis' : privat.bau.steinWartet ? 'stein' : 'gewicht'} /> Nächstes Teil: {[privat.bau.schwereWartet && 'dreifaches Gewicht', privat.bau.eisWartet && 'Eisglätte', privat.bau.steinWartet && 'Steinsiegel'].filter(Boolean).join(' · ')}</p>}
