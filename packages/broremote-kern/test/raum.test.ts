@@ -234,3 +234,73 @@ test('Vorrat und Platzierung bleiben beim Wiederverbinden erhalten, fremde Felde
     assert.ok(a.post.every(p => p.n.art !== 'privat'));
   }
 });
+
+const arti = { phase: 'zielen', amZug: true, zug: 3, rest: 14, inZuegen: 0, winkel: 62, staerke: 71, waffe: 2, munition: [-1, 3, 2, 2, 1, 2, 1, 1], lp: 82, tank: 100, wind: -4, runde: 2, platz: 1, raus: false, gewonnen: false };
+
+test('BroTanks: Spielwahl hebt den Bereitstatus auf, startet nicht allein und setzt das Layout', () => {
+  const a = aufbau(); a.gast('1');
+  assert.equal(a.raum.sicht().spiel, 'building');
+  a.senden('1', { art: 'bereit', bereit: true });
+  a.senden('h', { art: 'spielwahl', spiel: 'brotanks' });
+  assert.equal(a.raum.sicht().spiel, 'brotanks');
+  assert.equal(a.raum.sicht().spieler[0].bereit, false);
+  a.senden('h', { art: 'spielwahl', spiel: 'unbekannt' }); assert.equal(a.raum.sicht().spiel, 'brotanks');
+  a.senden('1', { art: 'spielwahl', spiel: 'building' }); assert.equal(a.raum.sicht().spiel, 'brotanks'); // nur der Gastgeber
+  a.senden('1', { art: 'bereit', bereit: true });
+  a.post.length = 0; a.senden('h', { art: 'spielen' });
+  assert.equal(a.raum.sicht().phase, 'lobby');
+  assert.ok(a.post.some(p => p.v === 'h' && p.n.art === 'fehler' && /mindestens zwei Handys/.test(p.n.text)));
+  a.gast('2'); a.senden('1', { art: 'bereit', bereit: true }); a.senden('2', { art: 'bereit', bereit: true });
+  a.senden('h', { art: 'spielen' });
+  const s = a.raum.sicht();
+  assert.equal(s.phase, 'spiel'); assert.equal(s.layout, 'zielen'); assert.equal(s.partie?.spiel, 'brotanks');
+  a.senden('h', { art: 'spielwahl', spiel: 'building' }); assert.equal(a.raum.sicht().spiel, 'brotanks'); // nur in der Lobby
+});
+
+test('BroTanks: zielen und feuer nur im Layout zielen und nur mit gültigen Bereichen', () => {
+  const ok = { art: 'zielen', winkel: 62, staerke: 71, waffe: 2 };
+  assert.deepEqual(aktionLesen(ok, 'zielen'), ok);
+  assert.equal(aktionLesen(ok, 'bauen'), null); assert.equal(aktionLesen(ok, 'auswahl'), null);
+  for (const falsch of [{ winkel: 181 }, { winkel: -1 }, { winkel: 10.5 }, { staerke: 101 }, { staerke: -1 }, { waffe: 8 }, { waffe: 1.5 }, { winkel: Number.NaN }, { staerke: '5' }]) assert.equal(aktionLesen({ ...ok, ...falsch }, 'zielen'), null, JSON.stringify(falsch));
+  const feuer = { art: 'feuer', zug: 4, winkel: 62, staerke: 71, waffe: 2 };
+  assert.deepEqual(aktionLesen(feuer, 'zielen'), feuer);
+  assert.equal(aktionLesen(feuer, 'bauen'), null);
+  for (const falsch of [{ zug: 0 }, { zug: 10001 }, { zug: 1.5 }, { zug: undefined }, { winkel: 200 }]) assert.equal(aktionLesen({ ...feuer, ...falsch }, 'zielen'), null, JSON.stringify(falsch));
+  // Fahren: nur waagrecht, keine Tasten; reset wie immer.
+  assert.deepEqual(aktionLesen({ art: 'steuerung', x: -1, y: 0, tasten: [] }, 'zielen'), { art: 'steuerung', x: -1, y: 0, tasten: [] });
+  assert.equal(aktionLesen({ art: 'steuerung', x: 1, y: 0.5, tasten: [] }, 'zielen'), null);
+  assert.equal(aktionLesen({ art: 'steuerung', x: 1, y: 0, tasten: ['drehen'] }, 'zielen'), null);
+  assert.deepEqual(aktionLesen({ art: 'reset' }, 'zielen'), { art: 'reset' });
+  // Das Bauspiel verhält sich unverändert.
+  assert.deepEqual(aktionLesen({ art: 'steuerung', x: 1, y: 1, tasten: ['drehen'] }, 'bauen'), { art: 'steuerung', x: 1, y: 1, tasten: ['drehen'] });
+  assert.equal(aktionLesen({ art: 'steuerung', x: 1, y: 0, tasten: ['bestaetigen'] }, 'bauen'), null);
+});
+
+test('BroTanks: Eingaben kommen im Relay nur im Layout zielen beim Gastgeber an', () => {
+  const a = aufbau(); a.gast('1'); a.gast('2'); a.senden('h', { art: 'spielwahl', spiel: 'brotanks' }); a.start('1', '2');
+  assert.equal(a.raum.sicht().phase, 'test'); // Test-Controller bleibt das Bau-Layout
+  a.senden('h', { art: 'lobby' }); a.senden('1', { art: 'bereit', bereit: true }); a.senden('2', { art: 'bereit', bereit: true }); a.senden('h', { art: 'spielen' });
+  a.post.length = 0; a.eingabe('1', 1, { art: 'feuer', zug: 1, winkel: 45, staerke: 50, waffe: 0 });
+  assert.ok(a.post.some(p => p.v === 'h' && p.n.art === 'eingabe' && p.n.aktion.art === 'feuer'));
+  a.post.length = 0; a.eingabe('1', 2, { art: 'zauber', zauber: 'anker', item: 1 });
+  assert.ok(a.post.every(p => p.n.art !== 'eingabe'));
+});
+
+test('BroTanks: arti wird gefiltert, begrenzt und nach Reconnect erneut zugestellt', () => {
+  const a = aufbau(), g = a.gast('1'); a.gast('2'); a.senden('h', { art: 'spielwahl', spiel: 'brotanks' }); a.start('1', '2');
+  a.senden('h', { art: 'lobby' }); a.senden('1', { art: 'bereit', bereit: true }); a.senden('2', { art: 'bereit', bereit: true }); a.senden('h', { art: 'spielen' });
+  const abschnitt = () => a.raum.sicht().abschnitt, gesendet = (daten: unknown) => { a.post.length = 0; a.senden('h', { art: 'privat', abschnitt: abschnitt(), spieler: g.spieler, daten }); return a.post.filter(p => p.n.art === 'privat'); };
+  const zu = gesendet({ arti: { ...arti, versteckt: 'x'.repeat(500) } });
+  assert.equal(zu.length, 1); assert.equal(zu[0].v, '1');
+  const daten = (zu[0].n as Extract<ServerNachricht, { art: 'privat' }>).daten;
+  assert.deepEqual(daten.arti, arti);
+  assert.equal('versteckt' in (daten.arti as object), false);
+  assert.ok(JSON.stringify(daten).length < 400);
+  a.post.length = 0; a.anmelden('neu', { art: 'fortsetzen', schluessel: g.schluessel });
+  assert.ok(a.post.some(p => p.v === 'neu' && p.n.art === 'privat' && p.n.daten.arti?.winkel === 62));
+  for (const falsch of [{ munition: [1, 2, 3] }, { munition: [-1, 3, 2, 2, 1, 2, 1, 4] }, { munition: [-2, 3, 2, 2, 1, 2, 1, 1] }, { phase: 'gruen' }, { wind: 11 }, { rest: 21 }, { inZuegen: 4 },
+    { waffe: 8 }, { lp: 101 }, { tank: -1 }, { runde: 13 }, { platz: 5 }, { zug: 0 }, { winkel: 181 }, { amZug: 'ja' }, { gewonnen: 1 }, { raus: undefined }]) {
+    assert.equal(gesendet({ arti: { ...arti, ...falsch } }).length, 0, JSON.stringify(falsch));
+  }
+  assert.equal(gesendet({ arti: 'x' }).length, 0);
+});
