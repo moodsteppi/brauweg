@@ -11,6 +11,14 @@
  * Text.
  */
 
+import { SERVER_VORGABE, type Sprache } from '../sprache.js';
+
+/** Die festen Worte der Vorlage selbst; der Inhalt kommt aus mail/texte.ts. */
+const RAHMENTEXT: Readonly<Record<Sprache, { readonly knopfKaputt: string; readonly fuss: string }>> = {
+  de: { knopfKaputt: 'Falls der Knopf nicht geht:', fuss: 'Brauweg. Spielt nach euren Regeln.' },
+  en: { knopfKaputt: "If the button doesn't work:", fuss: 'Brauweg. Play by your own rules.' },
+};
+
 const RAHMEN = '#12181c';
 const PAPIER = '#fbf6ec';
 const SCHRIFT = '#241a10';
@@ -36,9 +44,16 @@ export interface Vorlage {
   readonly knopfLink: string;
   /** Kleingedrucktes unter dem Knopf, etwa die Gueltigkeitsdauer. */
   readonly fussnote: string;
+  /**
+   * Sprache der festen Worte und des `lang`-Attributs (Vorleser, Silbentrennung
+   * im Mailprogramm). Ohne Angabe Deutsch.
+   */
+  readonly sprache?: Sprache;
 }
 
 export function baueHtml(v: Vorlage): string {
+  const sprache = v.sprache ?? SERVER_VORGABE;
+  const rahmen = RAHMENTEXT[sprache];
   const absaetze = v.absaetze
     .map(
       (a) =>
@@ -47,7 +62,7 @@ export function baueHtml(v: Vorlage): string {
     .join('');
 
   return `<!doctype html>
-<html lang="de"><head><meta charset="utf-8">
+<html lang="${sprache}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${sicher(v.ueberschrift)}</title></head>
 <body style="margin:0;padding:0;background:${RAHMEN}">
@@ -80,9 +95,9 @@ ${absaetze}
      nichts Klickbares, und dann waere die Mail eine Sackgasse. -->
 <tr><td style="padding:4px 28px 26px">
 <p style="margin:0;font-size:12px;line-height:1.5;color:${LEISE};word-break:break-all">
-Falls der Knopf nicht geht:<br>${sicher(v.knopfLink)}</p></td></tr>
+${sicher(rahmen.knopfKaputt)}<br>${sicher(v.knopfLink)}</p></td></tr>
 
 </table>
-<p style="margin:14px 0 0;font-size:12px;color:#7b8b95;font-family:Arial,sans-serif">Brauweg. Spielt nach euren Regeln.</p>
+<p style="margin:14px 0 0;font-size:12px;color:#7b8b95;font-family:Arial,sans-serif">${sicher(rahmen.fuss)}</p>
 </td></tr></table></body></html>`;
 }

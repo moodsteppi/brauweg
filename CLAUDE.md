@@ -1,9 +1,10 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, **vierzehn Spiele laufen**: Doppelkopf, Zauberer, Skat,
+Kartenspiel-Plattform, **fünfzehn Spiele laufen**: Doppelkopf, Zauberer, Skat,
 Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde,
-Golf, Partykiste, BroCooked und BroChess (Schach zu zweit, seit dem
-25.09.2026 — hält sich an jede Annahme der Schnittstelle).
+Golf, Partykiste, BroCooked, BroChess (Schach zu zweit, seit dem
+25.09.2026 — hält sich an jede Annahme der Schnittstelle) und DreckBro
+(Pinguine einsauen, 2–5 Spieler, seit dem 04.11.2026 — ebenso).
 Diese Datei ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln
 in `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
@@ -249,7 +250,7 @@ nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
 Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
 Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
 Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
-Feld auch wirklich liefern). Gedeckt sind alle vierzehn Spiele. Ein neues Spiel
+Feld auch wirklich liefern). Gedeckt sind alle fünfzehn Spiele. Ein neues Spiel
 bekommt eine Datei nach demselben Muster — und beschreibt seine Sicht **nicht
 im Bildschirm**, sondern in `src/minispiele/<spiel>/sicht.ts`: Ein Vertrag,
 der aus einer `.tsx` importiert, zieht React in den Test.
@@ -345,6 +346,12 @@ Wirtschaftsmodell.
   der Testlauf stirbt schon beim Laden der Konfiguration. Der Fehler zeigt dann
   auf eine Datei, die gar nicht zum Repo gehört — gesucht wird er trotzdem im
   eigenen Zweig. Arbeitskopien bekommen einen eigenen Pfad.
+- **Sichtprobe bei 1400 px findet kein Element voller Breite.** Alle
+  Bildschirme sind `position: fixed` und 30rem breit; `body` hat die Höhe 0.
+  Abhilfe: in beiden Arbeitsbäumen (vorher und nachher) eine Messhilfe
+  `html,body{min-height:100dvh}` in `packages/client/index.html` setzen, nicht
+  committen, mit `--selektor body` aufnehmen — Einzelheiten in
+  `docs/STAND.md` unter „Wie hier gearbeitet wird".
 - **Was das Modul weiß, schreibt der Client nicht ab.** Die Regel selbst steht
   oben unter „Wie der Code gebaut ist"; hier stehen die Fälle, an denen sie
   geschärft wurde — drei an einem Tag, dem 05.09.2026, alle drei in

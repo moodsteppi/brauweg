@@ -1,0 +1,50 @@
+import type { Woerterbuch } from '../woerterbuch';
+
+/** Englische Texte, Bereich „hub-einstellungen" — Gegenstück zu `de/hub-einstellungen.ts`. */
+export default {
+  'spielerprofil.titel': 'Profile',
+  'spielerprofil.verbindungFehlgeschlagen': 'Connection failed.',
+  'spielerprofil.dabeiSeit': 'Playing since {datum}',
+  'spielerprofil.nochmal': 'Try again',
+  'spielerprofil.laedt': 'Loading profile…',
+  'spielerprofil.wert.partien': 'Games',
+  'spielerprofil.wert.siege': 'Wins',
+  'spielerprofil.wert.siegquote': 'Win rate',
+  'spielerprofil.wert.spiele': 'Titles',
+  'spielerprofil.beenden.frage': 'End friendship?',
+  'spielerprofil.beenden.text': '{name} will be removed from your friends list.',
+  'spielerprofil.beenden.ja': 'End',
+  'spielerprofil.beenden.knopf': 'End friendship',
+  'spielerprofil.trophaeen': 'Trophies',
+  'spielerprofil.partien.eins': '{n} game',
+  'spielerprofil.partien.mehr': '{n} games',
+  'spielerprofil.alleSpiele': 'across all games',
+  'spielerprofil.keinePartie': 'No ranked games played yet.',
+  'spielerprofil.zeile': '{partien} ranked · {siege} wins',
+  'spielerprofil.trophaeenHinweis':
+    'You earn trophies against bots too - just not when a guest is playing or practice mode is on.',
+  'spielerprofil.melden.knopf': 'Report or block',
+  'spielerprofil.melden.blockiert': 'Blocked · Report or unblock',
+  'spielerprofil.marke.selbst': "That's you",
+  'spielerprofil.marke.freunde': "✓ You're friends",
+  'spielerprofil.marke.gesendet': 'Request sent',
+  'spielerprofil.marke.eingehend': 'Wants to be your friend',
+  'spielerprofil.knopf.hinzufuegen': 'Add friend',
+  'spielerprofil.knopf.zurueckziehen': 'Cancel request',
+  'spielerprofil.knopf.annehmen': 'Accept',
+  'spielerprofil.knopf.ablehnen': 'Decline',
+
+  'einstellungen.titel': 'Settings',
+  'einstellungen.benachrichtigungen': 'Notifications',
+  'einstellungen.einenMoment': 'One moment…',
+  'einstellungen.fertig': 'Done',
+  'einstellungen.ton': 'Sound',
+  'einstellungen.sounds': 'Sounds',
+  'einstellungen.sounds.hinweis': 'Cards, buttons, scoring',
+  'einstellungen.musik': 'Music',
+  'einstellungen.musik.hinweis': 'In menus and at the table',
+  'einstellungen.klanghalleHinweis':
+    'Which track plays and which sound pack is active is set in the Sound Hall in your profile.',
+  'einstellungen.klingelschalter':
+    "If music is playing in another app, it keeps playing - we won't cut in. In return, your iPhone's silent switch mutes us too.",
+} satisfies Woerterbuch;

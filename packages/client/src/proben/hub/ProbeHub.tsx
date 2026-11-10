@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api, SLOTS, WAPPEN, type Kauftruhe, type Slot, type WarView, type WegGrad, type WegStufe } from '../../api';
 import { GameSelect, type Tab } from '../../screens/GameSelect';
+import { useSprache } from '../../i18n/useSprache';
 import { probeKonto } from '../../screens/probe-konto';
 import MARKT_PROBE from './markt-probe.json';
 import type { Tagesmarkt, MarktAngebot } from '../../api';
@@ -131,12 +132,12 @@ const SZENEN_PREIS: [string, number][] = [
   ['berghuette', 350], ['gartenlaube', 350], ['herbst', 450], ['marmor', 600], ['samt-blau', 600], ['kapitaen', 600], ['basar', 900],
 ];
 const TEILE: [Slot, string, number, boolean][] = [
-  ['hut', 'hut-wollmuetze', 0, true], ['hut', 'hut-strohhut', 120, false], ['hut', 'hut-zylinder', 250, true], ['hut', 'hut-bergsteiger', 400, false], ['hut', 'hut-krone', 0, false], ['hut', 'hut-partyhut', 0, false],
-  ['brille', 'brille-keine', 0, true], ['brille', 'brille-sonnenbrille', 140, true], ['brille', 'brille-lesebrille', 140, false], ['brille', 'brille-taucherbrille', 220, false], ['brille', 'brille-skibrille', 320, false], ['brille', 'brille-monokel', 0, false],
-  ['oberteil', 'oberteil-pulli', 0, true], ['oberteil', 'oberteil-trikot', 120, false], ['oberteil', 'oberteil-weste', 200, false], ['oberteil', 'oberteil-regenjacke', 320, false], ['oberteil', 'oberteil-frack', 0, false],
+  ['hut', 'hut-wollmuetze', 0, true], ['hut', 'hut-strohhut', 120, false], ['hut', 'hut-zylinder', 250, true], ['hut', 'hut-bergsteiger', 400, false], ['hut', 'hut-krone', 0, false], ['hut', 'hut-partyhut', 0, false], ['hut', 'hut-fliegerkappe', 220, true], ['hut', 'hut-goldhelm', 0, false],
+  ['brille', 'brille-keine', 0, true], ['brille', 'brille-sonnenbrille', 140, true], ['brille', 'brille-lesebrille', 140, false], ['brille', 'brille-taucherbrille', 220, false], ['brille', 'brille-skibrille', 320, false], ['brille', 'brille-monokel', 0, false], ['brille', 'brille-fliegerbrille', 180, true],
+  ['oberteil', 'oberteil-pulli', 0, true], ['oberteil', 'oberteil-trikot', 120, false], ['oberteil', 'oberteil-weste', 200, false], ['oberteil', 'oberteil-regenjacke', 320, false], ['oberteil', 'oberteil-frack', 0, false], ['oberteil', 'oberteil-fliegerschal', 260, true],
   ['schuhe', 'schuhe-flossen', 0, true], ['schuhe', 'schuhe-gummistiefel', 100, false], ['schuhe', 'schuhe-turnschuhe', 180, false], ['schuhe', 'schuhe-schlittschuhe', 260, false], ['schuhe', 'schuhe-goldstiefel', 0, false],
-  ['hand', 'hand-kakao', 0, true], ['hand', 'hand-kartenfaecher', 150, true], ['hand', 'hand-wanderstab', 220, false], ['hand', 'hand-laterne', 300, false], ['hand', 'hand-zauberstab', 0, false],
-  ['aura', 'aura-glitzer', 0, true], ['aura', 'aura-blaetter', 200, false], ['aura', 'aura-schneeflocken', 280, false], ['aura', 'aura-funken', 380, false], ['aura', 'aura-sterne', 0, false], ['aura', 'aura-konfetti', 0, false],
+  ['hand', 'hand-kakao', 0, true], ['hand', 'hand-kartenfaecher', 150, true], ['hand', 'hand-wanderstab', 220, false], ['hand', 'hand-laterne', 300, false], ['hand', 'hand-zauberstab', 0, false], ['hand', 'hand-kartenkiste', 675, true],
+  ['aura', 'aura-glitzer', 0, true], ['aura', 'aura-blaetter', 200, false], ['aura', 'aura-schneeflocken', 280, false], ['aura', 'aura-funken', 380, false], ['aura', 'aura-sterne', 0, false], ['aura', 'aura-konfetti', 0, false], ['aura', 'aura-kondensstreifen', 380, true],
 ];
 const preis = (coins: number) => ({ coins, gems: Math.ceil(coins / 15) });
 api.shop = async () => ({
@@ -203,9 +204,10 @@ const PROBE = new URLSearchParams(typeof window === 'undefined' ? '' : window.lo
 // Eigenstaendige Vorschau fuer Bilder und Abstimmzustaende, ohne echtes Konto.
 if (PROBE.has('abstimmung')) {
   const gewaehlt = new Set<string>(['schafkopf']);
-  const geplant = ['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10', 'drecksau'];
+  const geplant = ['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10'];
   api.games = async () => [
-    ...['doppelkopf', 'skat'].map(id => ({ id, nameKey: `game.${id}`, availability: 'playable' as const, seatCounts: [4], votes: 0, abstimmbar: false })),
+    // DreckBro steht seit dem 04.11.2026 unter den spielbaren statt unter den geplanten.
+    ...['doppelkopf', 'skat', 'dreckbro'].map(id => ({ id, nameKey: `game.${id}`, availability: 'playable' as const, seatCounts: [4], votes: 0, abstimmbar: false })),
     ...geplant.map((id, i) => ({ id, nameKey: `game.${id}`, availability: 'preview' as const, seatCounts: [2, 3, 4],
       votes: 32 - i * 3 + (gewaehlt.has(id) ? 1 : 0), meineStimme: gewaehlt.has(id), abstimmbar: true })),
     // Den Mehrkampf kuendigt der Server auf beiden Plattformen an (abstimmModiFuer).
@@ -365,7 +367,12 @@ if (typeof window !== 'undefined' && PROBE.get('tipp')) {
   tippeNacheinander(PROBE.get('tipp')!.split('|'));
 }
 
+/* Sprachwahl ohne Server: Speichern gelingt immer, sonst stuende der Fehlersatz im Bild. */
+api.setSprache = async () => ({ ok: true });
+
 export function ProbeHub(): React.JSX.Element {
+  // Wie die Wurzel App: Umschalten zeichnet das ganze Hub neu.
+  useSprache();
   const [me, setMe] = useState(() => probeKonto({
     displayName: 'Eisvogel',
     coins: 2480,
@@ -413,7 +420,11 @@ export function ProbeHub(): React.JSX.Element {
       document.head.appendChild(stil);
     }
   }
+  // Rahmen ueber die volle Breite: Das Hub ist fest positioniert und auf dem
+  // Desktop schmal — ohne ihn findet die Sichtprobe bei 1400 px kein Objekt
+  // mit voller Breite (wie bei ProbeBroChess).
   return (
+    <div data-probe-seite style={{ width: '100%', minHeight: '100vh' }}>
     <GameSelect
       me={me}
       onPick={nichts}
@@ -429,5 +440,6 @@ export function ProbeHub(): React.JSX.Element {
       anfangsWeg={anfangsWeg}
       anfangsHeute={anfangsHeute}
     />
+    </div>
   );
 }

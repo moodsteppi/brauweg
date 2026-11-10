@@ -29,6 +29,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../../api';
+import { t } from '../../i18n';
+import { tf } from '../../i18n/einsetzen';
 import { Schloss, Wuerfel } from '../../zeichen';
 import { motivBildPfad } from './bildpfad';
 
@@ -120,7 +122,7 @@ export function SammlungSeite({
       // schickte der Zeitgeber gleich nach dem Laden dasselbe noch einmal.
       gespeichert.current = schluessel(antwort.gurt, antwort.gesperrt ?? []);
     } catch {
-      setFehler('Die Sammlung ließ sich nicht laden.');
+      setFehler(t('mememory.kasten.sammlung.ladenFehler'));
     } finally {
       setLaedt(false);
     }
@@ -143,7 +145,7 @@ export function SammlungSeite({
     } catch {
       // Zurueckgenommen, damit die naechste Aenderung es wieder versucht.
       gespeichert.current = null;
-      setFehler('Das Speichern hat nicht geklappt.');
+      setFehler(t('mememory.kasten.sammlung.speichernFehler'));
     }
   }, []);
 
@@ -193,10 +195,10 @@ export function SammlungSeite({
       [
         {
           schluessel: 'hoch',
-          titel: 'Aus dem Vorschlagskasten',
+          titel: 'mememory.kasten.sammlung.gruppeHoch',
           kennungen: hochgeladen,
         },
-        { schluessel: 'grund', titel: 'Grundstock', kennungen: grund },
+        { schluessel: 'grund', titel: 'mememory.kasten.sammlung.gruppeGrund', kennungen: grund },
       ].filter((gruppe) => gruppe.kennungen.length > 0),
     [grund, hochgeladen],
   );
@@ -297,15 +299,15 @@ export function SammlungSeite({
   return (
     <div className="mm-seite mm-seite-sammlung">
       <header className="mm-seite-kopf">
-        <h2>Sammlung</h2>
+        <h2>{t('mememory.sammlung')}</h2>
         <p>
-          {laedt ? 'Wird geladen…' : `${habe} von ${gesamt} gefunden`}
+          {laedt ? t('mememory.kasten.sammlung.laedt') : tf('mememory.kasten.sammlung.gefunden', { habe, gesamt })}
         </p>
       </header>
 
       {/* Der Gurt zuerst: Er ist das Ergebnis, das Raster darunter der Weg
           dahin. Drei feste Fächer, damit die Leiste nicht springt. */}
-      <div className="mm-gurt mm-gurt-gross" aria-label="Gewählte Memes">
+      <div className="mm-gurt mm-gurt-gross" aria-label={t('mememory.kasten.sammlung.gurtLabel')}>
         {Array.from({ length: GURT_MAX }, (_, i) => {
           const kennung = gurt[i];
           const zu = gesperrt[i] === true;
@@ -320,7 +322,7 @@ export function SammlungSeite({
                 <button
                   type="button"
                   onClick={() => umschalten(kennung)}
-                  aria-label={`${namen[kennung] ?? 'Meme'} aus dem Gurt nehmen`}
+                  aria-label={tf('mememory.kasten.sammlung.ausGurt', { name: namen[kennung] ?? t('mememory.kasten.meme') })}
                 >
                   <img src={motivBildPfad(kennung)} alt="" draggable={false} />
                 </button>
@@ -342,8 +344,8 @@ export function SammlungSeite({
                   aria-pressed={zu}
                   aria-label={
                     zu
-                      ? `${namen[kennung] ?? 'Meme'} nicht mehr festhalten`
-                      : `${namen[kennung] ?? 'Meme'} festhalten`
+                      ? tf('mememory.kasten.sammlung.loesen', { name: namen[kennung] ?? t('mememory.kasten.meme') })
+                      : tf('mememory.kasten.sammlung.festhalten', { name: namen[kennung] ?? t('mememory.kasten.meme') })
                   }
                 >
                   <Schloss zu={zu} />
@@ -394,16 +396,15 @@ export function SammlungSeite({
           */}
         {hilfe && (
           <span className="mm-schalter-hilfe" role="tooltip">
-            Jede Partie zieht drei andere Memes aus deiner Sammlung - festgehaltene Fächer
-            bleiben.
+            {t('mememory.kasten.sammlung.zufallHilfe')}
           </span>
         )}
       </div>
 
       <p className="mm-gurt-satz">
         {habe === 0
-          ? 'Noch nichts gefunden. Jedes Paar, das du selbst aufdeckst, landet hier.'
-          : `Wähle bis zu ${GURT_MAX} aus - die wirfst du im Spiel über den Tisch.`}
+          ? t('mememory.kasten.sammlung.leer')
+          : tf('mememory.kasten.sammlung.waehle', { max: GURT_MAX })}
       </p>
 
       {fehler && <p className="mm-kasten-fehler">{fehler}</p>}
@@ -411,7 +412,7 @@ export function SammlungSeite({
       {gruppen.map((gruppe) => (
         <section className="mm-gruppe" key={gruppe.schluessel}>
           <h3>
-            {gruppe.titel}
+            {t(gruppe.titel)}
             <em>
               {gruppe.kennungen.filter((k) => gesammelt.has(k)).length}/{gruppe.kennungen.length}
             </em>
@@ -429,7 +430,7 @@ export function SammlungSeite({
                   onClick={() => umschalten(kennung)}
                   aria-pressed={habeEs ? gurt.includes(kennung) : undefined}
                   disabled={!habeEs}
-                  aria-label={habeEs ? (namen[kennung] ?? kennung) : 'Noch nicht gefunden'}
+                  aria-label={habeEs ? (namen[kennung] ?? kennung) : t('mememory.kasten.sammlung.nochNicht')}
                 >
                   {habeEs ? (
                     <img src={motivBildPfad(kennung)} alt="" draggable={false} />

@@ -41,6 +41,7 @@ import {
 } from '../api';
 import { Tafel } from '../hub';
 import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 
 /**
  * Truhenbild.
@@ -98,21 +99,20 @@ function TruhenZeile({
     if (truhe.geholt) {
       return (
         <span className="muted">
-          Geholt: {truhe.coins} {truhe.coins === 1 ? 'Münze' : 'Münzen'}
+          {tn('aufgaben.truhe.geholt', truhe.coins ?? 0)}
         </span>
       );
     }
     if (truhe.offen) {
       return (
         <span className="muted">
-          {truhe.von} bis {truhe.bis} Münzen
+          {tf('aufgaben.truhe.spanne', { von: truhe.von, bis: truhe.bis })}
         </span>
       );
     }
     return (
       <span className="muted">
-        Ab Stufe {truhe.abStufe} · noch {truhe.fehltStufen}{' '}
-        {truhe.fehltStufen === 1 ? 'Stufe' : 'Stufen'}
+        {tn('aufgaben.truhe.abStufe', truhe.fehltStufen ?? 0, { stufe: truhe.abStufe ?? '' })}
       </span>
     );
   };
@@ -128,10 +128,10 @@ function TruhenZeile({
       </span>
       {truhe.offen ? (
         <button className="hub-knopf hub-knopf--a-gold" disabled={busy} onClick={onOeffnen}>
-          {busy ? 'Öffnet…' : 'Öffnen'}
+          {busy ? t('aufgaben.truhe.oeffnet') : t('aufgaben.truhe.oeffnen')}
         </button>
       ) : truhe.geholt ? (
-        <span className="truhe-haken" aria-label="schon geholt">
+        <span className="truhe-haken" aria-label={t('aufgaben.schonGeholt')}>
           ✓
         </span>
       ) : (
@@ -177,7 +177,7 @@ function AufgabenZeile({
           <span className="muted"> {t(`waehrung.${aufgabe.belohnung.waehrung}`)}</span>
         </span>
         {aufgabe.abgeholt ? (
-          <span className="truhe-haken" aria-label="schon geholt">
+          <span className="truhe-haken" aria-label={t('aufgaben.schonGeholt')}>
             ✓
           </span>
         ) : (
@@ -186,7 +186,7 @@ function AufgabenZeile({
             disabled={!aufgabe.fertig || busy}
             onClick={onAbholen}
           >
-            {aufgabe.fertig ? (busy ? 'Holt…' : 'Holen') : 'Läuft'}
+            {aufgabe.fertig ? (busy ? t('aufgaben.holt') : t('aufgaben.holen')) : t('aufgaben.laeuft')}
           </button>
         )}
       </span>
@@ -244,12 +244,12 @@ export function FundBlatt({
  * nichts angefangen ist.
  */
 function kopfstand(daten: AufgabenDaten): string {
-  if (daten.offeneBelohnung > 0) return `${daten.offeneBelohnung} Münzen liegen bereit`;
-  if (daten.aufgaben.every((a) => a.abgeholt)) return 'Heute alles geholt';
+  if (daten.offeneBelohnung > 0) return tn('aufgaben.kopf.bereit', daten.offeneBelohnung);
+  if (daten.aufgaben.every((a) => a.abgeholt)) return t('aufgaben.kopf.allesGeholt');
   const summe = daten.aufgaben
     .filter((a) => !a.abgeholt)
     .reduce((s, a) => s + a.belohnung.betrag, 0);
-  return `${summe} Münzen zu holen`;
+  return tn('aufgaben.kopf.zuHolen', summe);
 }
 
 /**
@@ -278,7 +278,7 @@ export function Aufgabenblatt({
         setTruhen(t1);
         setAufgaben(q);
       })
-      .catch(() => setFehler('Aufgaben und Truhen ließen sich nicht laden.'));
+      .catch(() => setFehler(t('aufgaben.fehler.laden')));
   };
   useEffect(laden, []);
 
@@ -307,7 +307,7 @@ export function Aufgabenblatt({
         laden();
         onGuthaben();
       })
-      .catch((err: unknown) => meldung(err, 'Die Truhe ließ sich nicht öffnen.'))
+      .catch((err: unknown) => meldung(err, t('aufgaben.fehler.oeffnen')))
       .finally(() => setLaeuft(null));
   };
 
@@ -321,7 +321,7 @@ export function Aufgabenblatt({
         laden();
         onGuthaben();
       })
-      .catch((err: unknown) => meldung(err, 'Die Belohnung ließ sich nicht holen.'))
+      .catch((err: unknown) => meldung(err, t('aufgaben.fehler.holen')))
       .finally(() => setLaeuft(null));
   };
 
@@ -332,7 +332,7 @@ export function Aufgabenblatt({
     <div className="pfad-voll">
       <header className="pfad-voll-kopf">
         <button className="hub-zurueck" onClick={onClose} type="button">
-          ← Zurück
+          {t('aufgaben.zurueck')}
         </button>
         {aufgaben && <span className="pfad-voll-stand">{kopfstand(aufgaben)}</span>}
       </header>
@@ -343,11 +343,11 @@ export function Aufgabenblatt({
 
         {aufgaben && (
           <Tafel
-            titel="Tagesaufgaben"
+            titel={t('aufgaben.tagesaufgaben')}
             zusatz={
               aufgaben.aufgaben.every((a) => a.abgeholt)
-                ? 'Heute erledigt'
-                : 'Setzt sich morgen zurück'
+                ? t('aufgaben.heuteErledigt')
+                : t('aufgaben.setztSichZurueck')
             }
           >
             {aufgaben.aufgaben.map((aufgabe) => (
@@ -359,16 +359,15 @@ export function Aufgabenblatt({
               />
             ))}
             <p className="quest-hinweis muted">
-              Gezählt wird am Ende einer Partie - auch an Tischen mit Bots. Abgebrochene Partien
-              zählen nicht.
+              {t('aufgaben.gezaehltHinweis')}
             </p>
           </Tafel>
         )}
 
         {truhen && (
           <Tafel
-            titel="Truhen"
-            zusatz={offeneTruhen > 0 ? `${offeneTruhen} offen` : 'Keine offen'}
+            titel={t('aufgaben.truhen')}
+            zusatz={offeneTruhen > 0 ? tf('aufgaben.truhenOffen', { n: offeneTruhen }) : t('aufgaben.keineOffen')}
           >
             <TruhenZeile
               truhe={truhen.tag}
@@ -376,8 +375,7 @@ export function Aufgabenblatt({
               onOeffnen={() => oeffnen(truhen.tag)}
             />
             <p className="quest-hinweis muted">
-              Die Tagestruhe steht jeden Tag einmal bereit. Die anderen kommen mit den Stufen -
-              erreicht ist erreicht, sie gehen nie wieder zu.
+              {t('aufgaben.truhenHinweis')}
             </p>
             {truhen.stufen.map((truhe) => (
               <TruhenZeile

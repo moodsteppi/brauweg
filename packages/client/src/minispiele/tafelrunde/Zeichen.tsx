@@ -36,13 +36,11 @@ export function kostenFarbe(kosten: number | undefined): string {
   return KOSTEN_FARBE[kosten ?? 1] ?? KOSTEN_FARBE[1]!;
 }
 
-export const ROLLE_NAME: Record<Rolle, string> = {
-  wache: 'Wache',
-  schuetze: 'Schütze',
-  magier: 'Magier',
-  meuchler: 'Meuchler',
-  beistand: 'Beistand',
-};
+/*
+ * Der Rollenname stand hier als Tabelle `ROLLE_NAME`. Seit der Übersetzung ist
+ * er `rollenName` in text.ts: Eine Tabelle auf Modulebene friert die Sprache
+ * beim Laden ein und bliebe nach dem Umschalten deutsch.
+ */
 
 /**
  * Das Zeichen einer Rolle — gezeichnet, nicht geladen.

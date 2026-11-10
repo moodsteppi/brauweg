@@ -678,6 +678,85 @@ const AUSSEHEN: Record<string, Aussehen> = {
       </g>
     ),
   },
+
+  /*
+   * Flying Bro (Spezifikation, „Kosmetik fuer den Hauptshop", 07.11.2026).
+   * Noch ohne gemaltes Bild und deshalb ohne `bild`: Ein Pfad auf eine Datei,
+   * die es nicht gibt, waere ein weisser Kasten (CLAUDE.md). Kommt die
+   * Lieferung, ist es je Stueck eine Zeile.
+   */
+  'hut-fliegerkappe': {
+    zeichnung: (
+      <g>
+        <path d="M68 74 Q66 24 120 20 Q174 24 172 74 L160 76 Q158 44 120 40 Q82 44 80 76 Z" fill="#7a4f2c" />
+        <path d="M68 70 L80 72 L84 104 Q72 106 66 96 Z" fill="#7a4f2c" />
+        <path d="M172 70 L160 72 L156 104 Q168 106 174 96 Z" fill="#7a4f2c" />
+        <path d="M70 72 L82 74 L84 100 Q74 100 70 94 Z" fill="#e9dcc3" opacity="0.55" />
+        <path d="M170 72 L158 74 L156 100 Q166 100 170 94 Z" fill="#e9dcc3" opacity="0.55" />
+        <path d="M120 22 L120 40" stroke="#5c3a1e" strokeWidth="3" />
+        <path d="M80 50 Q120 34 160 50" stroke="#5c3a1e" strokeWidth="2" fill="none" />
+      </g>
+    ),
+  },
+  'hut-goldhelm': {
+    zeichnung: (
+      <g>
+        <path d="M70 70 Q68 18 120 14 Q172 18 170 70 Z" fill={gold} />
+        <path d="M112 12 L128 12 L130 70 L110 70 Z" fill={goldDunkel} />
+        <rect x="66" y="64" width="108" height="12" rx="6" fill={goldDunkel} />
+        <path d="M86 32 Q100 22 112 22" stroke="#fff3c4" strokeWidth="4" fill="none" strokeLinecap="round" />
+        <path d="M120 2 L126 12 L114 12 Z" fill="#c2564c" />
+      </g>
+    ),
+  },
+  'brille-fliegerbrille': {
+    zeichnung: (
+      <g>
+        <rect x="74" y="72" width="92" height="8" rx="4" fill="#6b4426" />
+        <circle cx="101" cy="78" r="15" fill="#6b4426" />
+        <circle cx="139" cy="78" r="15" fill="#6b4426" />
+        <circle cx="101" cy="78" r="10.5" fill="#9fd3e6" />
+        <circle cx="139" cy="78" r="10.5" fill="#9fd3e6" />
+        <path d="M95 72 L101 72 L96 80 Z" fill="#ffffff" opacity="0.6" />
+        <path d="M133 72 L139 72 L134 80 Z" fill="#ffffff" opacity="0.6" />
+        <rect x="114" y="75" width="12" height="5" rx="2" fill="#4f301a" />
+      </g>
+    ),
+  },
+  'oberteil-fliegerschal': {
+    zeichnung: (
+      <g>
+        <path d="M78 116 Q120 132 162 116 L164 128 Q120 146 76 128 Z" fill="#f4f1ea" />
+        <path d="M78 116 Q120 132 162 116 L162 120 Q120 136 78 120 Z" fill="#d9d2c4" />
+        <path d="M134 128 Q142 150 136 176 L150 180 Q160 150 148 126 Z" fill="#f4f1ea" />
+        <path d="M137 172 L150 176 L148 184 L135 180 Z" fill="#c2564c" />
+        <path d="M140 146 L154 150" stroke="#d9d2c4" strokeWidth="2" />
+      </g>
+    ),
+  },
+  'hand-kartenkiste': {
+    zeichnung: (
+      <g>
+        <path d="M200 112 Q214 126 206 146" stroke="#c2564c" strokeWidth="4" fill="none" strokeLinecap="round" />
+        <rect x="180" y="142" width="44" height="44" rx="4" fill="#b07a45" />
+        <rect x="180" y="142" width="44" height="44" rx="4" fill="none" stroke="#7a5230" strokeWidth="3" />
+        <rect x="190" y="150" width="24" height="28" rx="3" fill="#2c4f7c" />
+        <rect x="193" y="153" width="18" height="22" rx="2" fill="none" stroke={gold} strokeWidth="1.6" />
+        <path d="M202 158 L207 164 L202 170 L197 164 Z" fill={gold} />
+        <path d="M180 164 L224 164" stroke="#7a5230" strokeWidth="1.2" opacity="0.35" />
+      </g>
+    ),
+  },
+  'aura-kondensstreifen': {
+    zeichnung: (
+      <g fill="none" stroke="#ffffff" strokeLinecap="round" opacity="0.85">
+        <path d="M6 236 Q60 200 70 150" strokeWidth="10" />
+        <path d="M234 236 Q180 200 170 150" strokeWidth="10" />
+        <path d="M18 250 Q70 220 84 176" strokeWidth="5" opacity="0.6" />
+        <path d="M222 250 Q170 220 156 176" strokeWidth="5" opacity="0.6" />
+      </g>
+    ),
+  },
 };
 
 /** Zeichnung eines Stuecks, oder null, wenn die Kennung unbekannt ist. */

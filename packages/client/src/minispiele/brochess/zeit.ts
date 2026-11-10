@@ -8,6 +8,9 @@
  * Server. Die Liste ist eine Auswahl aus diesen erlaubten Werten.
  */
 
+import { aktiveSprache } from '../../i18n';
+import { tf } from '../../i18n/einsetzen';
+
 export type Zeitart = 'bullet' | 'blitz' | 'rapid';
 
 export interface Zeitkontrolle {
@@ -48,6 +51,7 @@ export const ZEITKONTROLLEN: readonly Zeitkontrolle[] = [
 /** Vorgabe ohne gemerkte Wahl: zehn Minuten, die ruhigste Art zu beginnen. */
 export const VORGABE_ZEIT = '10+0';
 
+/** Bullet, Blitz und Rapid heißen im Schach in jeder Sprache so — Fachwörter, keine Übersetzung. */
 export const ARTNAME: Readonly<Record<Zeitart, string>> = {
   bullet: 'Bullet',
   blitz: 'Blitz',
@@ -65,11 +69,17 @@ export function regelnFuer(z: Zeitkontrolle): { bedenkzeitMs: number; zuschlagMs
   return { bedenkzeitMs: Math.round(z.minuten * 60_000), zuschlagMs: z.zuschlagS * 1000 };
 }
 
-/** „10 min", „3 + 2", „30 Sek", „20 Sek + 1". */
+/** Zahl im Format der aktiven Sprache (z. B. 1.5 → „1,5" bzw. „1.5"). */
+const zahl = (n: number): string => n.toLocaleString(aktiveSprache());
+
+/** „10 min", „3 + 2", „30 Sek", „20 Sek + 1" — Einheit je nach Sprache. */
 export function zeitText(z: Zeitkontrolle): string {
-  const grund = z.minuten < 1 ? `${Math.round(z.minuten * 60)} Sek` : `${z.minuten}`;
-  if (z.zuschlagS > 0) return `${grund} + ${z.zuschlagS}`;
-  return z.minuten < 1 ? grund : `${grund} min`;
+  const grund =
+    z.minuten < 1
+      ? tf('brochess.zeit.sek', { n: zahl(Math.round(z.minuten * 60)) })
+      : zahl(z.minuten);
+  if (z.zuschlagS > 0) return `${grund} + ${zahl(z.zuschlagS)}`;
+  return z.minuten < 1 ? grund : tf('brochess.zeit.min', { n: grund });
 }
 
 /**

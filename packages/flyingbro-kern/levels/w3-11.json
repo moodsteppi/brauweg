@@ -1,0 +1,274 @@
+{
+  "fassung": 1,
+  "id": "w3-11",
+  "welt": 3,
+  "nr": 11,
+  "titel": "Fischerhütten",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "malve",
+    "pelle",
+    "tjark",
+    "malve",
+    "pelle",
+    "tjark",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    27000,
+    42000
+  ],
+  "teile": [
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 11,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 13,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 12,
+      "y": 0.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 12,
+      "y": 1.35,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 15,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 17,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 16,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 15,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 17,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 16,
+      "y": 2.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 16,
+      "y": 2.95,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19.3,
+      "y": 1.1,
+      "b": 0.2,
+      "h": 2.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 21.7,
+      "y": 1.1,
+      "b": 0.2,
+      "h": 2.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 20.5,
+      "y": 2.3,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 19.3,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 21.7,
+      "y": 3.1,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 20.5,
+      "y": 3.9,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "dreieck",
+      "x": 20.5,
+      "y": 4.35,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 24.5,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 26.5,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 25.5,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 24.5,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 26.5,
+      "y": 2,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 25.5,
+      "y": 2.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 25.5,
+      "y": 2.95,
+      "b": 0.8,
+      "h": 0.7
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "kalb",
+      "x": 12,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 16,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 16,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "langhals",
+      "x": 20.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 20.5,
+      "y": 2.4,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 25.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 25.5,
+      "y": 1.6,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}

@@ -55,8 +55,14 @@ export const EASYPOKER_MODULE_VERSION = 2;
  * Mauern — und dass eine Mauer den Zug NICHT beendet. Der Sprung von 1 auf 4
  * holt nach, was am Modul laengst stand (2 Spielart, 3 Barrieren, 4 Mauer je
  * Zug); gemeldet hatte der Client bis eben die 1.
+ *
+ * 6 seit dem 06.11.2026: Dieser Client zeigt die Doppelmauer in Extreme an
+ * (`mauernJeZug`, `mauernDiesenZug`, `mauerPause`) und zeichnet das grosse
+ * 12 x 11-Brett mit eigenen Trefferflaechen. Ein Client der 5 spielt dort
+ * richtig weiter, erklaert nur die Mauerpause nicht — deshalb darf er noch
+ * beitreten (SUPPORTED_MODULE_VERSIONS im Server).
  */
-export const FILLER_MODULE_VERSION = 5;
+export const FILLER_MODULE_VERSION = 6;
 
 /**
  * 2 seit dem 1. September 2026, wenige Stunden nach der 1. Dieser Client
@@ -160,6 +166,12 @@ export const BROCOOKED_MODULE_VERSION = 1;
  */
 export const BROCHESS_MODULE_VERSION = 2;
 
+/**
+ * 1 seit dem 4. November 2026 — die erste Fassung. Pinguine einsauen, die
+ * Zuege kommen vollstaendig als `legalActions`.
+ */
+export const DRECKBRO_MODULE_VERSION = 1;
+
 const MODULE_VERSIONS: Record<string, number> = {
   doppelkopf: DOPPELKOPF_MODULE_VERSION,
   wizard: WIZARD_MODULE_VERSION,
@@ -173,6 +185,7 @@ const MODULE_VERSIONS: Record<string, number> = {
   partykiste: PARTYKISTE_MODULE_VERSION,
   brocooked: BROCOOKED_MODULE_VERSION,
   brochess: BROCHESS_MODULE_VERSION,
+  dreckbro: DRECKBRO_MODULE_VERSION,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */

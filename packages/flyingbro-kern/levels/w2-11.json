@@ -1,0 +1,200 @@
+{
+  "fassung": 1,
+  "id": "w2-11",
+  "welt": 2,
+  "nr": 11,
+  "titel": "Weidetor",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "tjark",
+    "pelle",
+    "malve",
+    "tjark",
+    "pelle",
+    "tjark"
+  ],
+  "sterne": [
+    0,
+    24000,
+    36000
+  ],
+  "teile": [
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 11,
+      "y": 0.6,
+      "b": 0.2,
+      "h": 1.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 12.5,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 14.5,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 13.5,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 17,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 19,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 17,
+      "y": 2.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 19,
+      "y": 2.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 18,
+      "y": 3.1,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "dreieck",
+      "x": 18,
+      "y": 3.55,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 21.5,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 23.5,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 22.5,
+      "y": 1.5,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 25.5,
+      "y": 0.5,
+      "b": 0.2,
+      "h": 1
+    },
+    {
+      "stoff": "holz",
+      "form": "kreis",
+      "x": 27.6,
+      "y": 0.4,
+      "r": 0.4
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "giraffe",
+      "x": 13.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 13.5,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 18,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 18,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 22.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 22.5,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 26.4,
+      "y": 0,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}

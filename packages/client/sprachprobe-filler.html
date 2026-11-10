@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sprachprobe — Farbduell</title>
+    <!--
+      Eigene Seite neben der App, nur fuer die Entwicklung (wie
+      sprachprobe-tische.html): Menue und Brett von Farbduell ohne Anmeldung,
+      fuer die Vorher-/Nachher-Bilder der Uebersetzung.
+      Aufruf: `npx vite --port 5199` in packages/client, dann
+      http://localhost:5199/sprachprobe-filler.html?ansicht=brett&sprache=en
+      Wird beim `vite build` NICHT mitgebaut (die Rollup-Eingabe ist
+      index.html), geht also nicht mit ins Betriebspaket.
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/proben/sprache-filler/Probe.tsx"></script>
+  </body>
+</html>

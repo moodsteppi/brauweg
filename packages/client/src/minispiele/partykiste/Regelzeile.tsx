@@ -15,7 +15,8 @@
 import { createContext, useContext } from 'react';
 
 import { eskalationsHinweis, inhaltsChip, inhaltsHinweis, modusChip } from './modi';
-import { HAERTE_NAME, MINISPIEL_NAME, type PartyRegelsatz } from './sicht';
+import { haerteName, MINISPIEL_NAME, type PartyRegelsatz } from './sicht';
+import { tz } from './text';
 
 export function Regelzeile({
   regeln,
@@ -29,8 +30,8 @@ export function Regelzeile({
   const anzahl = regeln.minispiele.length;
   const spiele =
     anzahl >= alle
-      ? `alle ${alle} Minispiele`
-      : `${anzahl} von ${alle} Minispielen`;
+      ? tz('regelzeile.alle', { alle })
+      : tz('regelzeile.teil', { anzahl, alle });
   const spieleTitel = regeln.minispiele.map((id) => MINISPIEL_NAME[id]).join(', ');
   /* Der Modus (seit 22.09.2026) steht vorn; das Turnier bekommt keinen Chip. */
   const modus = modusChip(regeln);
@@ -41,18 +42,18 @@ export function Regelzeile({
      Runde — und vor der ersten Runde (Wartesaal) steht nur fest, dass sie steigt. */
   const haerte = regeln.modus === 'eskalation' ? (regeln.eskalation?.schluckFaktor ?? null) : regeln.schluckFaktor;
   return (
-    <p className="pk-regelzeile" aria-label="Regelsatz dieses Tisches">
+    <p className="pk-regelzeile" aria-label={tz('regelzeile.aria')}>
       {modus ? (
         <span className="pk-regelchip" data-pk-modus={regeln.modus}>
           {modus}
         </span>
       ) : null}
-      {runden !== undefined ? <span className="pk-regelchip">{runden} Runden</span> : null}
+      {runden !== undefined ? <span className="pk-regelchip">{tz('regelzeile.runden', { n: runden })}</span> : null}
       <span className="pk-regelchip" title={spieleTitel}>
         {spiele}
       </span>
       <span className="pk-regelchip">
-        Härte {haerte === null ? 'steigt' : (HAERTE_NAME[haerte] ?? haerte)}
+        {tz('regelzeile.haerte', { wert: haerte === null ? tz('regelzeile.steigt') : (haerteName(haerte) ?? haerte) })}
       </span>
       {inhalte ? (
         <span className="pk-regelchip" data-pk-inhalte={regeln.inhaltsMischung ?? ''}>
@@ -60,7 +61,7 @@ export function Regelzeile({
         </span>
       ) : null}
       <span className="pk-regelchip" data-alkoholfrei={regeln.trinkmodus ? undefined : ''}>
-        {regeln.trinkmodus ? 'Trinkmodus' : 'alkoholfrei'}
+        {regeln.trinkmodus ? tz('regelzeile.trinkmodus') : tz('regelzeile.alkoholfrei')}
       </span>
       {hinweis ? <span className="pk-regelhinweis">{hinweis}</span> : null}
     </p>

@@ -48,9 +48,12 @@
 
 import { useEffect } from 'react';
 
+import { aktiveSprache } from '../../i18n';
+
 import { Markenzeichen } from './Synergien';
 import type { Synergie } from './Synergien';
-import { EinheitenFigur, GoldZeichen, LebenZeichen, ROLLE_NAME, kostenFarbe } from './Zeichen';
+import { einheitName, markeName, markeWirkung, rollenName, tz } from './text';
+import { EinheitenFigur, GoldZeichen, LebenZeichen, kostenFarbe } from './Zeichen';
 import type { Einheit, Stufenwerte } from './sicht';
 import type { Kaempfer } from './zuege';
 
@@ -116,12 +119,14 @@ function Wert({
  * Das Tempo als Text.
  *
  * `tempo` sind Angriffe je Sekunde und kommen als Bruchzahl (0,65). Mit
- * deutschem Komma und hoechstens zwei Stellen — die dritte gibt es im Katalog
+ * dem Dezimalzeichen der Sprache (Komma deutsch, Punkt englisch — „0,65"
+ * liest sich englisch als Aufzaehlung) und hoechstens zwei Stellen — die dritte gibt es im Katalog
  * nicht, und `toFixed(2)` machte aus 0,7 ein "0,70", was nach mehr Genauigkeit
  * aussieht, als dahintersteckt.
  */
 export function tempoText(tempo: number): string {
-  return String(Math.round(tempo * 100) / 100).replace('.', ',');
+  const text = String(Math.round(tempo * 100) / 100);
+  return aktiveSprache() === 'de' ? text.replace('.', ',') : text;
 }
 
 export function Einheitenblatt({
@@ -231,7 +236,7 @@ export function Einheitenblatt({
         className={stil.blatt}
         role="dialog"
         aria-modal="true"
-        aria-label={`${einheit.name}, Stufe ${kaempfer.stufe}`}
+        aria-label={tz('blatt.titel', { name: einheitName(einheit), stufe: kaempfer.stufe })}
         style={{ '--tr-kosten': farbe } as React.CSSProperties}
         onClick={(e) => e.stopPropagation()}
       >
@@ -258,10 +263,10 @@ export function Einheitenblatt({
           </span>
 
           <span className={stil.titel}>
-            <h2 className={stil.name}>{einheit.name}</h2>
+            <h2 className={stil.name}>{einheitName(einheit)}</h2>
             <p className={stil.rolle}>
-              {ROLLE_NAME[einheit.rolle]}
-              <span className={stil.nurVorlesen}>, Stufe {kaempfer.stufe}</span>
+              {rollenName(einheit.rolle)}
+              <span className={stil.nurVorlesen}>{tz('blatt.stufe', { stufe: kaempfer.stufe })}</span>
             </p>
             {/* Die Marken mit Namen, nicht nur als Zeichen: Auf einer Wabe ist
                 fuer ein Wort kein Platz, hier schon — und der Name ist die
@@ -269,7 +274,7 @@ export function Einheitenblatt({
             {einheit.marken.length > 0 && (
               <ul className={stil.marken}>
                 {einheit.marken.map((marke) => {
-                  const name = markeZu(marke)?.name ?? marke;
+                  const name = markeName(marke, markeZu(marke)?.name ?? marke);
                   return (
                     <li key={marke} className={stil.marke}>
                       {/* Mit Haken ein Knopf, ohne Haken Text. Die Marke traegt
@@ -281,7 +286,7 @@ export function Einheitenblatt({
                           type="button"
                           className={stil.markenknopf}
                           aria-haspopup="dialog"
-                          aria-label={`${name} nachschlagen`}
+                          aria-label={tz('blatt.nachschlagen', { name })}
                           onClick={() => onMarke(marke)}
                         >
                           <Markenzeichen marken={[marke]} />
@@ -304,7 +309,7 @@ export function Einheitenblatt({
             type="button"
             className={stil.zu}
             onClick={onSchliessen}
-            aria-label="Blatt schließen"
+            aria-label={tz('blattSchliessen')}
           >
             ×
           </button>
@@ -322,7 +327,7 @@ export function Einheitenblatt({
             <div className={stil.lebenzeile}>
               <span className={stil.lebenkopf}>
                 <LebenZeichen />
-                Leben
+                {tz('wert.leben')}
               </span>
               <span className={stil.lebenzahl}>{werte.leben}</span>
             </div>
@@ -330,23 +335,23 @@ export function Einheitenblatt({
               <b />
             </div>
 
-            <ul className={stil.werte} aria-label="Kampfwerte">
-              <Wert art="schaden" titel="Schaden" zahl={String(werte.angriff)} />
+            <ul className={stil.werte} aria-label={tz('blatt.kampfwerte')}>
+              <Wert art="schaden" titel={tz('wert.schaden')} zahl={String(werte.angriff)} />
               <Wert
                 art="tempo"
-                titel="Tempo"
+                titel={tz('wert.tempo')}
                 zahl={tempoText(werte.tempo)}
                 einheit="/s"
               />
               <Wert
                 art="reichweite"
-                titel="Reichweite"
+                titel={tz('wert.reichweite')}
                 zahl={String(werte.reichweite)}
-                einheit={werte.reichweite === 1 ? 'Feld' : 'Felder'}
+                einheit={tz(werte.reichweite === 1 ? 'wert.feld' : 'wert.felder')}
               />
               <Wert
                 art="ruestung"
-                titel="Rüstung"
+                titel={tz('wert.ruestung')}
                 zahl={String(werte.ruestung)}
                 einheit="%"
               />
@@ -364,8 +369,9 @@ export function Einheitenblatt({
         {einheit.marken.some((m) => markeZu(m) !== undefined) && (
           <section className={stil.wirkungen}>
             {einheit.marken.map((marke) => {
-              const satz = markeZu(marke)?.wirkung;
-              if (!satz) return null;
+              const roh = markeZu(marke)?.wirkung;
+              if (!roh) return null;
+              const satz = markeWirkung(marke, roh);
               return (
                 <p key={marke} className={stil.wirkung}>
                   {satz}
@@ -382,7 +388,7 @@ export function Einheitenblatt({
               Der Preis steht am Knopf wie der Erloes am Verkaufen. */}
           {onKaufen && (
             <button type="button" className={stil.knopf} onClick={onKaufen}>
-              Kaufen
+              {tz('knopf.kaufen')}
               <span className={stil.erloes}>
                 <GoldZeichen />
                 {einheit.kosten}
@@ -396,7 +402,7 @@ export function Einheitenblatt({
           )}
           {onAblegen && (
             <button type="button" className={stil.knopf} onClick={onAblegen}>
-              Ablegen
+              {tz('knopf.ablegen')}
             </button>
           )}
           {onVerkaufen && (
@@ -405,7 +411,7 @@ export function Einheitenblatt({
               className={`${stil.knopf} ${stil.verkaufen}`}
               onClick={onVerkaufen}
             >
-              Verkaufen
+              {tz('knopf.verkaufen')}
               {erloes !== undefined && (
                 <span className={stil.erloes}>
                   <GoldZeichen />

@@ -19,6 +19,7 @@ import { appInhaltAusUmgebung, umfangKennungen } from './games/registry.js';
 import { umfangAusUmgebung, umfangZeile } from './umfang.js';
 import { appVerknuepfungAusUmgebung } from './http/app-verknuepfung.js';
 import { Gateway } from './realtime/gateway.js';
+import { BroRemoteGateway } from './realtime/broremote.js';
 import { PartyRuntime } from './runtime/party.js';
 import { Vermittlung } from './suche/vermittlung.js';
 import { applyStaffEmails } from './staff.js';
@@ -189,6 +190,13 @@ async function main(): Promise<void> {
   });
 
   await app.listen({ port: config.port, host: '0.0.0.0' });
+  const broremote = new BroRemoteGateway(app.server,
+    config.env === 'development' ? [] : [config.publicUrl, ...APP_ORIGINS]);
+  app.server.on('upgrade', (anfrage, socket) => {
+    if (!['/ws', '/ws/broremote'].includes(anfrage.url?.split('?')[0] ?? '')) {
+      socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n');
+    }
+  });
   const gateway = new Gateway(app.server, db, runtime, {
     /**
      * In der Entwicklung keine Herkunftspruefung (leer = aus, wie in den
@@ -246,6 +254,8 @@ async function main(): Promise<void> {
     clearInterval(statistikTakt);
     runtime.shutdown();
     pushVersand.schliessen();
+    await broremote.close();
+    await gateway.close();
     await app.close();
     // Nach `app.close`, damit auch die letzten Anfragen noch mitzaehlen, und
     // vor der Datenbank. Wirft nie, haelt das Herunterfahren also nicht auf.

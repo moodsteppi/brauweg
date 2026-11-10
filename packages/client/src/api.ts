@@ -11,10 +11,12 @@
  */
 
 import type { Bemalung } from './bemalung';
+import type { Sprache } from './i18n/sprachen';
 import type { BotLevel } from './protocol';
 import type { Lektion, LernpfadAnsicht, LernserieKurz, Spieltag } from './lernen/sicht';
 import type { Belohnung, BrowortAnsicht, BrowortKurz, BrowortProfil, ClanwortAnsicht } from './browort/sicht';
 import type { ManufakturAktion, ManufakturAntwort } from './manufaktur/sicht';
+import type { FlyingbroAnsicht, FlyingbroErgebnisAntwort, FlyingbroMeldung, FlyingbroStartAntwort } from './flyingbro/sicht';
 import { apiBase, inApp, sessionToken, setSessionToken } from './laufzeit';
 import { herkunft } from './herkunft';
 import { setzeUmfang } from './umfang';
@@ -63,6 +65,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
+
+const bauAnfrage = async <T>(path: string, body?: unknown): Promise<T> => {
+  const abbruch = new AbortController(), timer = setTimeout(() => abbruch.abort(), 8000);
+  try { return await request<T>(path, { signal: abbruch.signal, ...(body ? { method: 'POST', body: JSON.stringify(body) } : {}) }); }
+  finally { clearTimeout(timer); }
+};
 
 const patch = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
@@ -135,6 +143,11 @@ export interface Me {
    * Standardoptik. Der Server hat sie schon geprüft.
    */
   figur?: Bemalung | null;
+  /**
+   * Gewaehlte Sprache, `null` = „Automatisch" (Geraetesprache). Fehlt es
+   * (aelterer Server), gilt ebenfalls Automatisch.
+   */
+  sprache?: Sprache | null;
   displayName: string;
   coins: number;
   /**
@@ -716,6 +729,9 @@ export type AnbieterAnmeldung =
   | { geburtstagNoetig: true; schein: string; namensvorschlag?: string };
 
 export const api = {
+  bauStart: (partie: string, modus: import('@brauweg/building-kern').BauModus) => bauAnfrage<{ konto: string; partie: string }>('/building/start', { partie, modus }),
+  bauErgebnis: (partie: string, ergebnis: import('@brauweg/building-kern').BauErgebnis) => bauAnfrage<{ muenzen: number; abzeichen: string[]; wiederholt: boolean }>('/building/ergebnis', { partie, ergebnis }),
+  bauVerlauf: () => bauAnfrage<{ konto: string; restMuenzen: number; runden: { partie: string; am: string; ergebnis: import('@brauweg/building-kern').BauErgebnis; muenzen: number }[] }>('/building'),
   /** Ein Aufruf ueber einen Werbelink `?q=` (herkunft.ts). */
   herkunftBesuch: (kennung: string) => post<{ ok: true }>('/herkunft/besuch', { kennung }),
   /** Muenz-Code einloesen — nur auf der Webseite (server/src/muenzcodes.ts). */
@@ -891,6 +907,8 @@ export const api = {
     patch<{ ok: true; figur: Bemalung }>('/me/figur', bemalung),
   /** Profilbild setzen (data-URL) oder mit null entfernen. */
   setAvatar: (avatar: string | null) => patch<{ ok: true }>('/me', { avatar }),
+  /** Sprache am Konto speichern; null stellt auf „Automatisch" zurueck. */
+  setSprache: (sprache: Sprache | null) => patch<{ ok: true }>('/me', { sprache }),
   /** Die Stufenleiter um den eigenen Stand herum. Nur beim Antippen geladen. */
   levels: () =>
     request<{
@@ -1104,6 +1122,15 @@ export const api = {
   clanwortWahl: (wort: string) => post<{ clanwort: ClanwortAnsicht }>('/clanwort/wahl', { wort }),
   clanwortVersuch: (wort: string) =>
     post<{ clanwort: ClanwortAnsicht; belohnung: Belohnung | null }>('/clanwort/versuch', { wort }),
+  /** Flying Bro: Fortschritt, Vorrat, Tagesgrenzen (flyingbro/sicht.ts). */
+  flyingbro: () => request<FlyingbroAnsicht>('/flyingbro'),
+  /** Level beginnen — der Server merkt sich die Zeit; zu schnelle Meldungen lehnt er ab. */
+  flyingbroStart: (levelId: string, hilfsmittel: string[]) =>
+    post<FlyingbroStartAntwort>('/flyingbro/start', { levelId, hilfsmittel }),
+  /** Versuch melden: Sterne, Meilen und Münzen rechnet der Server. */
+  flyingbroErgebnis: (m: FlyingbroMeldung) => post<FlyingbroErgebnisAntwort>('/flyingbro/ergebnis', m),
+  /** Shop im Spiel: nur mit Flugmeilen, nie mit Hub-Münzen (Spezifikation, „Shop im Spiel"). */
+  flyingbroKauf: (id: string) => post<FlyingbroAnsicht>('/flyingbro/kauf', { id }),
   /** Kartenmanufaktur: bis jetzt nachrechnen und zeigen (manufaktur/sicht.ts). */
   manufaktur: () => request<ManufakturAntwort>('/manufaktur'),
   /** Ausbauen, Meister, Schicht, Presse freischalten, Umziehen. */

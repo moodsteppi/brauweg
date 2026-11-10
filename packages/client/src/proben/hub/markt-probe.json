@@ -250,5 +250,45 @@
     "preis": 220,
     "normalpreis": 220,
     "besessen": false
+  },
+  {
+    "id": "allgemein-4",
+    "spiel": "allgemein",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "hut-fliegerkappe",
+      "art": "pinguin",
+      "wert": "hut-fliegerkappe",
+      "nameKey": "kosmetik.hut-fliegerkappe",
+      "seltenheit": "selten",
+      "normalpreis": 220,
+      "slot": "hut"
+    },
+    "preis": 220,
+    "normalpreis": 220,
+    "besessen": false
+  },
+  {
+    "id": "allgemein-5",
+    "spiel": "allgemein",
+    "stufe": null,
+    "rabatt": 0,
+    "aufgedeckt": true,
+    "leer": false,
+    "artikel": {
+      "id": "aura-kondensstreifen",
+      "art": "pinguin",
+      "wert": "aura-kondensstreifen",
+      "nameKey": "kosmetik.aura-kondensstreifen",
+      "seltenheit": "episch",
+      "normalpreis": 380,
+      "slot": "aura"
+    },
+    "preis": 380,
+    "normalpreis": 380,
+    "besessen": false
   }
 ]

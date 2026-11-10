@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, api, type GameDefaults, type TableRow } from '../api';
 import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import type { BotLevel } from '../protocol';
 import { regelBild } from '../regelbilder';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import { AnfrageWarten } from '../tisch/Anfragen';
 import { ARTNAME, VORGABE_ZEIT, regelnFuer, zeitText, zeitkontrolle } from '../minispiele/brochess/zeit';
-import { ArtZeichen, ZeitWahlBlatt } from '../minispiele/brochess/ZeitWahl';
+import { ArtZeichen, ZeitWahlBlatt, useSpielartWahl } from '../minispiele/brochess/ZeitWahl';
 
 /**
  * Gemerkte Zeitkontrolle fuer BroChess. Eigener Schluessel statt im
@@ -60,10 +61,12 @@ interface Gemerkt {
 // Anfänger ist bewusst nicht wählbar: zu schwach für einen ernsten Tisch. Die
 // Stufe bleibt im Modul erhalten, wird hier aber nicht angeboten — so bleiben
 // es drei Chips in einer Reihe.
+// Schlüssel statt Text, auch in SCHACH_STUFEN: t() muss beim Zeichnen
+// laufen, sonst bliebe die Sprache vom Laden des Moduls stehen.
 const BOT_STUFEN: readonly { id: BotLevel; name: string }[] = [
-  { id: 'standard', name: 'Standard' },
-  { id: 'experte', name: 'Experte' },
-  { id: 'genie', name: 'Genie' },
+  { id: 'standard', name: 'lobby.stufe.standard' },
+  { id: 'experte', name: 'lobby.stufe.experte' },
+  { id: 'genie', name: 'lobby.stufe.genie' },
 ];
 
 /**
@@ -73,10 +76,10 @@ const BOT_STUFEN: readonly { id: BotLevel; name: string }[] = [
  * Was jede Stufe rechnet, steht in packages/game-brochess/src/bot.ts.
  */
 const SCHACH_STUFEN: readonly { id: BotLevel; name: string; unter: string }[] = [
-  { id: 'anfaenger', name: 'Anfänger', unter: 'nimmt, was hängt' },
-  { id: 'standard', name: 'Standard', unter: 'denkt zwei Züge' },
-  { id: 'experte', name: 'Experte', unter: 'denkt drei Züge' },
-  { id: 'genie', name: 'Genie', unter: 'denkt vier Züge' },
+  { id: 'anfaenger', name: 'lobby.stufe.anfaenger', unter: 'lobby.stufe.anfaenger.unter' },
+  { id: 'standard', name: 'lobby.stufe.standard', unter: 'lobby.stufe.standard.unter' },
+  { id: 'experte', name: 'lobby.stufe.experte', unter: 'lobby.stufe.experte.unter' },
+  { id: 'genie', name: 'lobby.stufe.genie', unter: 'lobby.stufe.genie.unter' },
 ];
 
 /**
@@ -122,20 +125,20 @@ type Sichtbarkeit = 'public' | 'on_request' | 'club_only';
 
 function fussnote(gameId: string, seats: number, visibility: Sichtbarkeit): string {
   if (visibility === 'on_request') {
-    return 'Privater Tisch: Im Wartebereich steht der Einladungscode. Wer damit kommt, lässt du selbst herein.';
+    return t('lobby.fuss.privat');
   }
   if (visibility === 'club_only') {
-    return 'Clantisch: bis 100 Runden, pausierbar, nur für Clanmitglieder.';
+    return t('lobby.fuss.clan');
   }
   if (gameId === 'skat') {
-    return 'Skat wird zu dritt gespielt. Freie Plätze füllst du am Tisch mit Bots - der Tisch zählt trotzdem für die Rangliste.';
+    return t('lobby.fuss.skat');
   }
   if (seats === 3) {
-    return 'Am Dreiertisch spielt immer ein Bot als Vierter mit. Der Tisch zählt trotzdem für die Rangliste.';
+    return t('lobby.fuss.dreier');
   }
   // Bots zählen seit dem 04.08.2026 für die Rangliste (`countsForRanking` im
   // Server); bis zum 13.10.2026 stand hier noch das Gegenteil.
-  return 'Freie Plätze füllst du am Tisch mit Bots. Der Tisch zählt trotzdem für die Rangliste.';
+  return t('lobby.fuss.standard');
 }
 
 export function Lobby({
@@ -165,6 +168,9 @@ export function Lobby({
   const [zeitId, setZeitId] = useState(gemerkteZeit);
   const [zeitOffen, setZeitOffen] = useState(false);
   const zeitRegeln = istSchach ? regelnFuer(zeitkontrolle(zeitId)) : {};
+  /** Spielart (BroChess: Normal oder Secret Dame) — Warum nur ohne Bot: siehe `useSpielartWahl`. */
+  // Bewusst ausserhalb des urspruenglichen Aufgabenumfangs: Die Spielart-Wahl wird hier verdrahtet, entschieden von Niklas am 05.11.2026 (Rueckfrage zu Aufgabe 773b9eb3, Antwort A). Lobby.tsx, die Probe-Seite und der Vertragstest bleiben.
+  const spielart = useSpielartWahl(istSchach);
   /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
   const [ansicht, setAnsicht] = useState<'liste' | 'erstellen' | 'bot'>('liste');
   /** Gestellte Beitrittsanfrage an einen privaten Tisch, solange sie läuft. */
@@ -251,7 +257,7 @@ export function Lobby({
     try {
       const table = await api.createTable({
         gameId,
-        config: { ...config, tableSize: seats, rounds, ...zeitRegeln },
+        config: { ...config, tableSize: seats, rounds, ...zeitRegeln, ...spielart.felder },
         seats,
         rounds,
         visibility,
@@ -274,7 +280,7 @@ export function Lobby({
       }
       onEnter(table.id);
     } catch (err) {
-      setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+      setError(err instanceof ApiError ? t(err.messageKey) : t('lobby.verbindungFehlgeschlagen'));
     }
   };
 
@@ -301,7 +307,7 @@ export function Lobby({
       if (istSchach) merkeZeit(zeitId);
       onEnter(table.id);
     } catch (err) {
-      setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+      setError(err instanceof ApiError ? t(err.messageKey) : t('lobby.verbindungFehlgeschlagen'));
     }
   };
 
@@ -316,7 +322,7 @@ export function Lobby({
       }
       onEnter(id);
     } catch (err) {
-      setError(err instanceof ApiError ? t(err.messageKey) : 'Verbindung fehlgeschlagen.');
+      setError(err instanceof ApiError ? t(err.messageKey) : t('lobby.verbindungFehlgeschlagen'));
     }
   };
 
@@ -371,14 +377,14 @@ export function Lobby({
   // Neues Hub: dieselben Zustände und Aufrufe im Spieleinstieg-Baukasten.
   const zeitWahl = zeitkontrolle(zeitId);
   const zeitAbschnitt = istSchach ? (
-    <SpielAbschnitt titel="Zeit">
+    <SpielAbschnitt titel={t('lobby.zeit')}>
       <div className="hb-liste">
         <button type="button" className="spe-zeile" onClick={() => setZeitOffen(true)}>
           <span>
             <strong>
               <ArtZeichen art={zeitWahl.art} /> {zeitText(zeitWahl)}
             </strong>
-            <small>{ARTNAME[zeitWahl.art]} · antippen zum Ändern</small>
+            <small>{tf('lobby.zeit.unter', { art: ARTNAME[zeitWahl.art] })}</small>
           </span>
           <span className="hb-pf" aria-hidden="true">
             ›
@@ -399,27 +405,27 @@ export function Lobby({
     return (
       <SpielRahmen
         gameId={gameId}
-        titel="Gegen Bot spielen"
-        unter={`${name} · du gegen den Computer`}
+        titel={t('lobby.bot.titel')}
+        unter={tf('lobby.bot.unter', { spiel: name })}
         onBack={() => setAnsicht('liste')}
-        zurueckText="Zurück zur Tischauswahl"
+        zurueckText={t('lobby.zurueckZurAuswahl')}
         fuss={
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void starteGegenBot()}>
-            Partie starten
+            {t('lobby.bot.starten')}
           </button>
         }
       >
         {error && <p className="hb-fehler">{error}</p>}
         {zeitAbschnitt}
-        <SpielAbschnitt titel="Bot-Stärke">
+        <SpielAbschnitt titel={t('lobby.botStaerke')}>
           <SpielWahl
-            name="Bot-Stärke"
-            werte={SCHACH_STUFEN.map((b) => ({ wert: b.id, text: b.name, unter: b.unter }))}
+            name={t('lobby.botStaerke')}
+            werte={SCHACH_STUFEN.map((b) => ({ wert: b.id, text: t(b.name), unter: t(b.unter) }))}
             wert={botLevel}
             onWahl={setBotLevel}
           />
         </SpielAbschnitt>
-        <p className="hb-klein">Du spielst eine Partie. Wer Weiß hat, entscheidet das Los.</p>
+        <p className="hb-klein">{t('lobby.bot.los')}</p>
         {zeitBlatt}
       </SpielRahmen>
     );
@@ -428,14 +434,14 @@ export function Lobby({
     return (
       <SpielRahmen
         gameId={gameId}
-        titel="Tisch erstellen"
-        unter={`${name} · ${sitzText} Spieler`}
+        titel={t('lobby.erstellen')}
+        unter={tf('lobby.erstellen.unter', { spiel: name, spanne: sitzText })}
         onBack={() => setAnsicht('liste')}
-        zurueckText="Zurück zur Tischauswahl"
+        zurueckText={t('lobby.zurueckZurAuswahl')}
         fuss={
           <>
             <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void create()}>
-              Tisch erstellen
+              {t('lobby.erstellen')}
             </button>
             <p className="hb-klein">{fussnote(gameId, seats, visibility)}</p>
           </>
@@ -443,14 +449,15 @@ export function Lobby({
       >
         {error && <p className="hb-fehler">{error}</p>}
         {zeitAbschnitt}
+        {spielart.wahl}
         {/* Schach kennt nur zwei Spieler und eine Partie — zwei Wahlen mit
             je einer Möglichkeit wären keine Wahl. */}
         {!istSchach && (
         <>
-        <SpielAbschnitt titel="Spieler">
+        <SpielAbschnitt titel={t('lobby.spieler')}>
           <SpielWahl
-            name="Spieler"
-            werte={sitze.map((c) => ({ wert: c, text: `${c} Spieler` }))}
+            name={t('lobby.spieler')}
+            werte={sitze.map((c) => ({ wert: c, text: tf('lobby.spielerZahl', { n: c }) }))}
             wert={seats}
             onWahl={(count) => {
               setSeats(count);
@@ -459,18 +466,18 @@ export function Lobby({
             }}
           />
         </SpielAbschnitt>
-        <SpielAbschnitt titel="Runden">
-          <SpielWahl name="Runden" werte={roundOptions.map((c) => ({ wert: c, text: String(c) }))} wert={rounds} onWahl={setRounds} />
+        <SpielAbschnitt titel={t('lobby.runden')}>
+          <SpielWahl name={t('lobby.runden')} werte={roundOptions.map((c) => ({ wert: c, text: String(c) }))} wert={rounds} onWahl={setRounds} />
         </SpielAbschnitt>
         </>
         )}
-        <SpielAbschnitt titel="Für wen">
+        <SpielAbschnitt titel={t('lobby.fuerWen')}>
           <SpielWahl
-            name="Für wen"
+            name={t('lobby.fuerWen')}
             werte={[
-              { wert: 'public' as const, text: 'Offen', unter: 'für alle' },
-              { wert: 'on_request' as const, text: 'Privat', unter: 'mit Einladung' },
-              { wert: 'club_only' as const, text: 'Nur Clan', unter: 'bis 100 Runden' },
+              { wert: 'public' as const, text: t('lobby.offen'), unter: t('lobby.offen.unter') },
+              { wert: 'on_request' as const, text: t('lobby.privat'), unter: t('lobby.privat.unter') },
+              { wert: 'club_only' as const, text: t('lobby.nurClan'), unter: t('lobby.nurClan.unter') },
             ]}
             wert={visibility}
             onWahl={(v) => {
@@ -483,17 +490,17 @@ export function Lobby({
           />
         </SpielAbschnitt>
         {gameId === 'doppelkopf' && (
-          <SpielAbschnitt titel="Bot-Stärke">
-            <SpielWahl name="Bot-Stärke" werte={BOT_STUFEN.map((b) => ({ wert: b.id, text: b.name }))} wert={botLevel} onWahl={setBotLevel} />
+          <SpielAbschnitt titel={t('lobby.botStaerke')}>
+            <SpielWahl name={t('lobby.botStaerke')} werte={BOT_STUFEN.map((b) => ({ wert: b.id, text: t(b.name) }))} wert={botLevel} onWahl={setBotLevel} />
           </SpielAbschnitt>
         )}
         {!istSchach && (
-        <SpielAbschnitt titel="Regeln">
+        <SpielAbschnitt titel={t('lobby.regeln')}>
           <div className="hb-liste">
             <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
               <span>
-                <strong>{aktiveRegeln === 0 ? 'Standard' : `${aktiveRegeln} Sonderregeln`}</strong>
-                <small>Antippen zum Einstellen</small>
+                <strong>{aktiveRegeln === 0 ? t('lobby.regeln.standard') : tn('lobby.sonderregeln', aktiveRegeln)}</strong>
+                <small>{t('lobby.regeln.einstellen')}</small>
               </span>
               <span className="hb-pf" aria-hidden="true">
                 ›
@@ -508,23 +515,23 @@ export function Lobby({
     );
   }
   const filterWerte: [string, string][] = [
-    ['alle', 'Alle'],
-    ...sitze.map((c) => [`${c}er`, `${c}er`] as [string, string]),
-    ['offen', 'Offen'],
-    ['clan', 'Clan'],
+    ['alle', t('lobby.filter.alle')],
+    ...sitze.map((c) => [`${c}er`, tf('lobby.filter.sitze', { n: c })] as [string, string]),
+    ['offen', t('lobby.filter.offen')],
+    ['clan', t('lobby.filter.clan')],
   ];
   return (
     <SpielRahmen
       gameId={gameId}
       titel={name}
-      unter={`${sitzText} Spieler · Tischauswahl`}
+      unter={tf('lobby.auswahl.unter', { spanne: sitzText })}
       onBack={onBack}
-      zurueckText="Zurück zur Spielseite"
+      zurueckText={t('lobby.zurueckZurSpielseite')}
       fuss={
         <>
           {ALLEIN_GEGEN_BOT.has(gameId) && (
             <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => setAnsicht('bot')}>
-              Gegen Bot spielen
+              {t('lobby.bot.titel')}
             </button>
           )}
           <button
@@ -532,13 +539,13 @@ export function Lobby({
             className={ALLEIN_GEGEN_BOT.has(gameId) ? 'hb-kn is-breit' : 'hb-kn is-gold is-haupt is-breit'}
             onClick={() => setAnsicht('erstellen')}
           >
-            Tisch erstellen
+            {t('lobby.erstellen')}
           </button>
         </>
       }
     >
       {error && <p className="hb-fehler">{error}</p>}
-      <div className="hb-chips spe-chips" role="group" aria-label="Filter">
+      <div className="hb-chips spe-chips" role="group" aria-label={t('lobby.filter')}>
         {filterWerte.map(([wert, text]) => (
           <button
             type="button"
@@ -553,27 +560,27 @@ export function Lobby({
       </div>
       <input
         className="spe-feld"
-        placeholder="Spieler suchen…"
+        placeholder={t('lobby.suche')}
         value={suche}
         onChange={(event) => setSuche(event.target.value)}
-        aria-label="Tisch nach Gastgeber suchen"
+        aria-label={t('lobby.suche.label')}
       />
-      <SpielAbschnitt titel="Offene Tische" zusatz={tables.length > 0 ? `${gefiltert.length} von ${tables.length}` : undefined}>
+      <SpielAbschnitt titel={t('lobby.offeneTische')} zusatz={tables.length > 0 ? tf('lobby.offeneTische.zahl', { gefiltert: gefiltert.length, gesamt: tables.length }) : undefined}>
         <div className="hb-liste">
           {gefiltert.length === 0 && (
             <p className="spe-leer">
-              {tables.length === 0 ? 'Gerade ist kein Tisch offen. Mach den ersten auf.' : 'Kein Tisch passt zu diesem Filter.'}
+              {tables.length === 0 ? t('lobby.leer') : t('lobby.leerFilter')}
             </p>
           )}
           {gefiltert.map((row) => (
             <button type="button" className="spe-zeile spe-tisch" key={row.id} onClick={() => void join(row.id)}>
               <span>
                 <strong>
-                  {row.host ? `Runde von ${row.host}` : 'Offener Tisch'}
-                  {row.visibility === 'club_only' && <span className="spe-marke"> · Clan</span>}
+                  {row.host ? tf('lobby.tisch.runde', { host: row.host }) : t('lobby.tisch.offen')}
+                  {row.visibility === 'club_only' && <span className="spe-marke">{t('lobby.tisch.clan')}</span>}
                 </strong>
                 <small>
-                  {row.seats}er · {row.maxRounds} Runden · {row.ruleCount === 0 ? 'Standard' : `${row.ruleCount} Sonderregeln`}
+                  {tf('lobby.tisch.zeile', { sitze: row.seats, runden: row.maxRounds, regeln: row.ruleCount === 0 ? t('lobby.regeln.standard') : tn('lobby.sonderregeln', row.ruleCount) })}
                 </small>
               </span>
               <span className="spe-punkte" aria-hidden="true">
@@ -581,7 +588,7 @@ export function Lobby({
                   <i key={i} className={i < row.occupied ? '' : 'is-frei'} />
                 ))}
               </span>
-              <span className="spe-zahl" aria-label={`${row.occupied} von ${row.seats} Plätzen besetzt`}>
+              <span className="spe-zahl" aria-label={tf('lobby.tisch.besetzt', { belegt: row.occupied, sitze: row.seats })}>
                 {row.occupied}/{row.seats}
               </span>
             </button>
@@ -661,13 +668,13 @@ function RegelSheet({
     </div>
   );
   return (
-    <HbBlatt titel="Regeln" label="Regeln für diesen Tisch" onClose={onClose}>
+    <HbBlatt titel={t('lobby.regeln')} label={t('lobby.regelblatt.label')} onClose={onClose}>
       <p className="hb-klein">
-        {active} von {gesamt} an · Antippen schaltet um
+        {tf('lobby.regelblatt.zahl', { an: active, gesamt })}
       </p>
       {kacheln}
       <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onClose}>
-        Fertig
+        {t('lobby.fertig')}
       </button>
     </HbBlatt>
   );

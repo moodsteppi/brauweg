@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, type Suchstand } from '../api';
+import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { GRAUTOENE, auswahlton, gebietsfarbe, kampffarbe } from '../minispiele/eiland/farben';
 import {
   type Modus,
@@ -18,6 +20,7 @@ import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { serverAdresse } from '../laufzeit';
 import { GastHinweis } from '../tisch/GastHinweis';
+import { mitFett } from './ClanTeile';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import './spiel-einstieg-mini.css';
@@ -190,7 +193,7 @@ export function Eiland({
       if (stand.tischId) setTischId(stand.tischId);
       else setSuchstand(stand);
     } catch {
-      setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+      setFehler(t('eiland.fehler.suche'));
     } finally {
       setSucht(false);
     }
@@ -224,7 +227,7 @@ export function Eiland({
             // Die Schlange kennt uns nicht mehr — etwa nach einem Neustart des
             // Servers. Lieber ehrlich melden als stumm weiterdrehen.
             setSuchstand(null);
-            setFehler('Die Suche wurde beendet. Noch einmal versuchen?');
+            setFehler(t('eiland.fehler.sucheBeendet'));
             return;
           }
           setSuchstand(stand);
@@ -281,7 +284,7 @@ export function Eiland({
       });
       setTischId(id);
     } catch {
-      setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
+      setFehler(t('eiland.fehler.tisch'));
     } finally {
       setSucht(false);
     }
@@ -382,7 +385,13 @@ export function Eiland({
   // -------------------------------------------------------------------------
 
   /** Unter jedem Knopf im Fuss: wie viele gerade Eiland spielen. */
-  const spielerZeile = <p className="hb-klein">{aktiv ?? '…'} Spieler gerade in Eiland</p>;
+  const spielerZeile = (
+    <p className="hb-klein">
+      {aktiv === null
+        ? tf('eiland.spielerGerade.mehr', { n: '…' })
+        : tn('eiland.spielerGerade', aktiv)}
+    </p>
+  );
 
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
@@ -390,11 +399,11 @@ export function Eiland({
     return (
       <SpielRahmen
         gameId="eiland"
-        titel="Gegner suchen"
-        unter="Eiland · Online Match"
+        titel={t('eiland.suche.titel')}
+        unter={t('eiland.suche.unter')}
         akzent={AKZENT}
         onBack={brichSucheAb}
-        zurueckText="Suche abbrechen"
+        zurueckText={t('eiland.suche.abbrechen')}
         fuss={
           <>
             <button type="button" className="hb-kn is-blau is-breit" onClick={brichSucheAb}>
@@ -410,8 +419,8 @@ export function Eiland({
           </p>
           <p className="spe-text">
             {gefunden === 1
-              ? 'Noch niemand sonst - bleibt es dabei, spielst du gegen die KI.'
-              : `${gefunden} Spieler gefunden`}
+              ? t('eiland.suche.allein')
+              : tn('eiland.suche.gefunden', gefunden)}
           </p>
           <div className="spe-lauf" aria-hidden="true">
             <span />
@@ -437,10 +446,10 @@ export function Eiland({
       <SpielRahmen
         gameId="eiland"
         titel="Eiland"
-        unter="2 Spieler · ihr zieht gleichzeitig"
+        unter={t('eiland.menue.unter')}
         akzent={AKZENT}
         onBack={onBack}
-        zurueckText="Zurück zur Spielseite"
+        zurueckText={t('eiland.zurueckZurSpielseite')}
         fuss={
           <>
             <button
@@ -449,16 +458,13 @@ export function Eiland({
               onClick={() => void starteSuche()}
               disabled={sucht}
             >
-              Online Match suchen…
+              {t('eiland.menue.suchen')}
             </button>
             {spielerZeile}
           </>
         }
       >
-        <p className="spe-text">
-          Nimm Land, sammle Ornamente und komm dem anderen zuvor. Ihr zieht
-          gleichzeitig - und wer dasselbe Feld will, muss darum kämpfen.
-        </p>
+        <p className="spe-text">{t('eiland.menue.text')}</p>
         <div className="ei-probe spe-motiv" aria-hidden="true">
           <span data-art="gras" />
           <span data-art="gras">
@@ -469,21 +475,21 @@ export function Eiland({
           {variante === 'nebel' && <span data-art="nebel" />}
         </div>
         {fehler && <p className="hb-fehler">{fehler}</p>}
-        <SpielAbschnitt titel="Gegen die KI">
-          <p className="hb-klein">Hier wählst du die Spielart.</p>
+        <SpielAbschnitt titel={t('eiland.ki.titel')}>
+          <p className="hb-klein">{t('eiland.ki.hinweis')}</p>
           <SpielWahl
-            name="Spielart"
+            name={t('eiland.spielart')}
             werte={[
-              { wert: 'klar' as const, text: 'Offene Karte' },
-              { wert: 'nebel' as const, text: 'Im Nebel' },
+              { wert: 'klar' as const, text: t('eiland.spielart.klar') },
+              { wert: 'nebel' as const, text: t('eiland.spielart.nebel') },
             ]}
             wert={variante}
             onWahl={setVariante}
           />
           <p className="hb-klein">
             {variante === 'nebel'
-              ? 'Du siehst dein Gebiet und drei Felder darüber hinaus.'
-              : 'Die ganze Insel liegt offen - für euch beide.'}
+              ? t('eiland.spielart.nebel.text')
+              : t('eiland.spielart.klar.text')}
           </p>
           <button
             type="button"
@@ -491,15 +497,15 @@ export function Eiland({
             onClick={() => void gegenKi()}
             disabled={sucht}
           >
-            Gegen die KI spielen
+            {t('eiland.ki.spielen')}
           </button>
         </SpielAbschnitt>
-        <SpielAbschnitt titel="Anleitung">
+        <SpielAbschnitt titel={t('eiland.anleitung')}>
           <div className="hb-liste">
             <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
               <span>
-                <strong>So spielt man Eiland</strong>
-                <small>Regeln, Ornamente, zwei Spielarten</small>
+                <strong>{t('eiland.anleitung.titel')}</strong>
+                <small>{t('eiland.anleitung.unter')}</small>
               </span>
               <span className="hb-pf" aria-hidden="true">
                 ›
@@ -508,7 +514,7 @@ export function Eiland({
           </div>
         </SpielAbschnitt>
         {regelnOffen && (
-          <HbBlatt titel="So spielt man Eiland" onClose={() => setRegelnOffen(false)}>
+          <HbBlatt titel={t('eiland.anleitung.titel')} onClose={() => setRegelnOffen(false)}>
             <div className="spe-regeltext">
               <Regeltext />
             </div>
@@ -527,11 +533,11 @@ export function Eiland({
     return (
       <SpielRahmen
         gameId="eiland"
-        titel="Tisch wird aufgebaut"
+        titel={t('eiland.aufbau.titel')}
         unter="Eiland"
         akzent={AKZENT}
         onBack={brichAb}
-        zurueckText="Abbrechen"
+        zurueckText={t('eiland.abbrechen')}
         fuss={
           <>
             <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
@@ -544,8 +550,8 @@ export function Eiland({
         <div className="spe-warten">
           <p className="spe-text">
             {tisch.status === 'open'
-              ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
-              : 'Verbindung wird aufgebaut…'}
+              ? tf('eiland.aufbau.besetzt', { besetzt, plaetze: tisch.table?.seats.length ?? 2 })
+              : t('eiland.aufbau.verbindung')}
           </p>
           <div className="spe-lauf" aria-hidden="true">
             <span />
@@ -1012,7 +1018,7 @@ function Karte({
           className="ei-zurueck ei-zurueck-tisch"
           type="button"
           onClick={onVerlassen}
-          aria-label="Zurück"
+          aria-label={t('eiland.zurueck')}
         >
           ←
         </button>
@@ -1024,7 +1030,7 @@ function Karte({
             eigen
           />
           <span className="ei-runde">
-            {sicht.variante === 'nebel' ? 'Nebel · Runde' : 'Offen · Runde'}
+            {sicht.variante === 'nebel' ? t('eiland.runde.nebel') : t('eiland.runde.offen')}
             <strong>{sicht.runde}</strong>
           </span>
           <Spielerstand sitz={gegnerSitz} zeile={zeile(gegnerSitz)} sicht={sicht} />
@@ -1135,15 +1141,15 @@ function Karte({
               data-leer={einsatz === 0 ? '' : undefined}
               style={einsatz > 0 ? { background: gebietsfarbe(eigenerSitz) } : undefined}
               role="status"
-              aria-label={einsatz === 1 ? 'Ein Feld als Einsatz' : `${einsatz} Felder als Einsatz`}
+              aria-label={tn('eiland.einsatz.aria', einsatz)}
             >
               {einsatz}
             </span>
             <button type="button" className="ei-abgeben ei-wartet" data-stand="wartet" disabled>
-              Warten auf den Gegner…
+              {t('eiland.wartetAufGegner')}
             </button>
             <p className="ei-knopf ei-zuruecksetzen ei-zugsteht">
-              {einsatz > 0 ? `${einsatz} ${einsatz === 1 ? 'Feld' : 'Felder'} als Einsatz` : 'Dein Zug steht.'}
+              {einsatz > 0 ? tn('eiland.einsatz.text', einsatz) : t('eiland.zugSteht')}
             </p>
           </>
         ) : (
@@ -1159,7 +1165,7 @@ function Karte({
               data-leer={offen === 0 ? '' : undefined}
               style={offen > 0 ? { background: gebietsfarbe(eigenerSitz) } : undefined}
               role="status"
-              aria-label={offen === 1 ? 'Noch ein Feld' : `Noch ${offen} Felder`}
+              aria-label={tn('eiland.offen', offen)}
             >
               {offen}
             </span>
@@ -1176,7 +1182,7 @@ function Karte({
               disabled={wartet}
               onClick={() => onAbgeben(wahl)}
             >
-              {wartet ? 'Wird gesendet…' : wahl.length === 0 ? 'Passen' : 'Abgeben'}
+              {wartet ? t('eiland.wirdGesendet') : wahl.length === 0 ? t('eiland.passen') : t('eiland.abgeben')}
             </button>
             <button
               type="button"
@@ -1184,7 +1190,7 @@ function Karte({
               disabled={wahl.length === 0 || wartet}
               onClick={zuruecksetzen}
             >
-              Zurücksetzen
+              {t('eiland.zuruecksetzen')}
             </button>
           </>
         )}
@@ -1201,13 +1207,24 @@ function feldName(
   ornament: number | null,
   bauwerk: number | null,
 ): string {
-  if (art === null) return 'Unbekanntes Feld';
-  const grund = art === WASSER ? 'Wasser' : art === BERG ? 'Berg' : 'Wiese';
-  const wem =
-    besitzer === null ? 'frei' : besitzer === eigenerSitz ? 'dein Gebiet' : 'gegnerisches Gebiet';
-  const zier = ornament === null ? '' : ornament === 0 ? ', Stadt' : ', Brunnen';
-  const bau = bauwerk === null ? '' : bauwerk === 0 ? ', mit eingesammelter Stadt' : ', mit eingesammeltem Brunnen';
-  return `${grund}, ${wem}${zier}${bau}`;
+  if (art === null) return t('eiland.feld.unbekannt');
+  /*
+   * Eine Aufzaehlung, kein Satz: Die Teile stehen mit Komma hintereinander,
+   * und das traegt in jeder Sprache — anders als ein Satz aus Bruchstuecken.
+   */
+  const teile = [
+    t(art === WASSER ? 'eiland.feld.wasser' : art === BERG ? 'eiland.feld.berg' : 'eiland.feld.wiese'),
+    t(
+      besitzer === null
+        ? 'eiland.feld.frei'
+        : besitzer === eigenerSitz
+          ? 'eiland.feld.eigen'
+          : 'eiland.feld.fremd',
+    ),
+  ];
+  if (ornament !== null) teile.push(t(ornament === 0 ? 'eiland.feld.stadt' : 'eiland.feld.brunnen'));
+  if (bauwerk !== null) teile.push(t(bauwerk === 0 ? 'eiland.feld.bauStadt' : 'eiland.feld.bauBrunnen'));
+  return teile.join(', ');
 }
 
 /**
@@ -1229,7 +1246,7 @@ function Spielerstand({
   sicht: EilandSicht;
   eigen?: boolean;
 }): React.JSX.Element {
-  const name = eigen ? 'Du' : (zeile?.displayName ?? (zeile?.isBot ? 'KI' : 'Gegner'));
+  const name = eigen ? t('eiland.du') : (zeile?.displayName ?? (zeile?.isBot ? t('eiland.ki') : t('eiland.gegner')));
   const bereit = sicht.bereit[sitz] === true && !sicht.fertig;
   return (
     <div className="ei-spieler" data-eigen={eigen ? '' : undefined} data-bereit={bereit ? '' : undefined}>
@@ -1247,7 +1264,7 @@ function Spielerstand({
           {sicht.punkte[sitz] ?? 0}
         </span>
         <span className="ei-tempo">
-          {sicht.kontingent[sitz] ?? 1}/Runde
+          {tf('eiland.jeRunde', { n: sicht.kontingent[sitz] ?? 1 })}
           {(sicht.gesammelt[sitz] ?? 0) > 0 ? ` · ${sicht.gesammelt[sitz]} ⌂` : ''}
         </span>
       </span>
@@ -1269,66 +1286,46 @@ function Abschluss({
   const meine = sicht.punkte[eigenerSitz] ?? 0;
   const seine = sicht.punkte[gegnerSitz] ?? 0;
   const wort =
-    sicht.sieger === null ? 'Unentschieden' : sicht.sieger === eigenerSitz ? 'Gewonnen!' : 'Verloren';
+    sicht.sieger === null
+      ? t('eiland.unentschieden')
+      : sicht.sieger === eigenerSitz
+        ? t('eiland.gewonnen')
+        : t('eiland.verloren');
   return (
     <div className="ei-abschluss">
       <h2 data-sieg={sicht.sieger === eigenerSitz ? '' : undefined}>{wort}</h2>
-      <p>
-        {meine} zu {seine} Feldern
-      </p>
+      <p>{tf('eiland.ergebnis', { meine, seine })}</p>
       <button className="ei-suchen" type="button" onClick={onZurueck}>
-        Zurück
+        {t('eiland.zurueck')}
       </button>
     </div>
   );
 }
 
-/** Der Wortlaut der Anleitung im Regelblatt. */
+/**
+ * Der Wortlaut der Anleitung im Regelblatt.
+ *
+ * Fett gesetzte Woerter stehen als `<b>…</b>` im Wörterbuch (`mitFett`), damit
+ * jeder Absatz EIN Schluessel bleibt.
+ */
 function Regeltext(): React.JSX.Element {
   return (
     <>
-      <h3>Regeln</h3>
+      <h3>{t('eiland.regel.titel')}</h3>
       <ol>
-        <li>Jeder startet mit einem Feld in seiner Ecke der Insel.</li>
-        <li>
-          Pro Runde nimmst du ein freies Wiesenfeld, das an dein Gebiet grenzt -
-          und ein Feld mehr für jedes Ornament, das du eingesammelt hast.
-        </li>
-        <li>
-          Wasser und Berge gehören niemandem. Gegnerisches Gebiet kannst du
-          nicht nehmen: Dort ist deine Grenze.
-        </li>
-        <li>
-          Ihr wählt <strong>gleichzeitig</strong>, ohne die Wahl des anderen zu
-          sehen. Wollen beide dasselbe Feld, wird darum gekämpft - der Ausgang
-          steht fünfzig zu fünfzig. Wer verliert, kommt an dieser Stelle nicht
-          weiter; Felder dahinter bleiben frei.
-        </li>
-        <li>
-          Felder, die du in einer Runde <strong>nicht setzt</strong>, sind dein
-          Einsatz: Bei jedem Streitfeld fliegt einer aufs Feld. Hat nur einer
-          von euch einen, gewinnt er das Feld sicher; haben beide einen,
-          entscheidet wieder der Münzwurf. Die Streitfelder kommen in
-          zufälliger Reihenfolge dran, bis die Einsätze verbraucht sind - der
-          Rest bleibt fünfzig zu fünfzig.
-        </li>
-        <li>Die Partie endet, wenn keiner mehr irgendwohin kann.</li>
+        <li>{t('eiland.regel.start')}</li>
+        <li>{t('eiland.regel.runde')}</li>
+        <li>{t('eiland.regel.grenze')}</li>
+        <li>{mitFett(t('eiland.regel.gleichzeitig'), 'strong')}</li>
+        <li>{mitFett(t('eiland.regel.einsatz'), 'strong')}</li>
+        <li>{t('eiland.regel.ende')}</li>
       </ol>
-      <h3>Ornamente</h3>
-      <p>
-        Städte und Brunnen liegen verstreut auf der Insel. Wer das Feld nimmt,
-        auf dem eines steht, nimmt von da an ein Feld mehr pro Runde. Es liegen
-        immer vier auf der Karte - für jedes eingesammelte rückt eines nach.
-      </p>
-      <h3>Zwei Spielarten</h3>
-      <p>
-        <strong>Im Nebel</strong> siehst du dein Gebiet und drei Felder darüber
-        hinaus; alles andere liegt grau - auch für den Gegner. Auf der{' '}
-        <strong>offenen Karte</strong> seht ihr beide die ganze Insel. Was auf
-        dem Zettel des anderen steht, bleibt in beiden Fällen geheim.
-      </p>
-      <h3>Ziel</h3>
-      <p>Wer am Ende die meisten Felder hält, gewinnt.</p>
+      <h3>{t('eiland.regel.ornamente.titel')}</h3>
+      <p>{t('eiland.regel.ornamente')}</p>
+      <h3>{t('eiland.regel.spielarten.titel')}</h3>
+      <p>{mitFett(t('eiland.regel.spielarten'), 'strong')}</p>
+      <h3>{t('eiland.regel.ziel.titel')}</h3>
+      <p>{t('eiland.regel.ziel')}</p>
     </>
   );
 }

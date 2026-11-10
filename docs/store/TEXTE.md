@@ -28,6 +28,9 @@ deshalb stehen sie ohne Umlaute da.
 
 Sprachen: **Deutsch** ist die Hauptsprache, **Englisch** die zweite
 (App Store: Lokalisierung „English (U.K.)" oder „English (U.S.)"; Play: `en-US`).
+**Die englischen Blöcke erst eintragen, wenn der App-Build mit der
+Sprachumstellung eingereicht ist** — Reihenfolge Release → Build → Texte,
+entschieden von Niklas am 10.11.2026 (`CHECKLISTE.md`, C9).
 
 ---
 
@@ -44,7 +47,7 @@ Sprachen: **Deutsch** ist die Hauptsprache, **Englisch** die zweite
 | Preis | kostenlos, keine In-App-Käufe |
 | Copyright (Apple) | `2026 Tom Justus Tiedtke` — Toms Name, solange das Konto Individual ist |
 | Altersfreigabe | siehe `ALTERSFREIGABE.md`: nach Apples Fragebogen, voraussichtlich 13+ (Robin 27.10.2026, CHECKLISTE C1/C2) |
-| Verfügbarkeit | Deutschland, Österreich, Schweiz (Robin, 23.09.2026) — die Texte der App sind nur deutsch |
+| Verfügbarkeit | Deutschland, Österreich, Schweiz (Robin, 23.09.2026). Begründet war das mit „die Texte der App sind nur deutsch" — das gilt seit der Sprachumstellung (November 2026) nicht mehr; ob die Verfügbarkeit erweitert wird, ist offen und eine Entscheidung, keine Textfrage |
 
 ---
 
@@ -145,11 +148,13 @@ Doppelkopf and Skat with friends or against bots, learn Doppelkopf in short less
 card game,trick taking,bidding,learn,word game,daily puzzle,chess,friends,bots,multiplayer,german
 ```
 
+Erst mit dem Build nach dem Release eintragen (CHECKLISTE C9)
+
 <!-- feld: apple.en.beschreibung max=4000 -->
 ```text
 Brauweg brings the German classics to your table: Doppelkopf and Skat, online with friends or against bots – plus chess, Farbduell, a daily word puzzle and your own card factory.
 
-The app is in German. Rules and card names follow the German traditions.
+Play in English or German – the app follows the language of your device, and you can switch it any time under Profile › Settings. The words in Browort and Clanwort stay German; rules and card names follow the German traditions.
 
 DOPPELKOPF
 • Four or five players, with or without nines
@@ -278,11 +283,13 @@ Brauweg – Doppelkopf & Skat
 Doppelkopf and Skat online or against bots – plus chess, word puzzles and more.
 ```
 
+Erst mit dem Build nach dem Release eintragen (CHECKLISTE C9)
+
 <!-- feld: play.en.beschreibung max=4000 gleich=apple.en.beschreibung -->
 ```text
 Brauweg brings the German classics to your table: Doppelkopf and Skat, online with friends or against bots – plus chess, Farbduell, a daily word puzzle and your own card factory.
 
-The app is in German. Rules and card names follow the German traditions.
+Play in English or German – the app follows the language of your device, and you can switch it any time under Profile › Settings. The words in Browort and Clanwort stay German; rules and card names follow the German traditions.
 
 DOPPELKOPF
 • Four or five players, with or without nines
@@ -345,6 +352,29 @@ Brauweg requires an internet connection.
   heißt im Text auch nicht so.
 - **„Mit Apple anmelden" im Text.** Seit PR #330 gibt es den Weg in der
   App; erst mit diesem Build darf er in der Beschreibung stehen.
-- **„Die App ist auf Deutsch"** steht in der englischen Beschreibung, weil
-  der Client nur deutsche Texte hat — ein englischer Käufer soll das vorher
-  wissen, nicht aus einer Ein-Stern-Bewertung.
+- **„Play in English or German"** steht in der englischen Beschreibung, seit
+  das Projekt „BroweGGames Language" (November 2026) die App ins Englische
+  gebracht hat. Bis dahin stand dort „The app is in German", weil der
+  Client nur deutsche Texte hatte. Der neue Satz gilt erst für den ersten
+  App-Build nach dem Release mit der Sprachumstellung; einem älteren Build
+  darf er nicht beigelegt werden. Jede Aussage darin ist belegt — wer den
+  Satz ändert, prüft dieselben Stellen nach:
+  - **„follows the language of your device"**: Bei der Wahl „Automatisch"
+    gilt `erkenneSprache(geraeteSprachen())`
+    (`packages/client/src/i18n/index.ts`), also die erste Gerätesprache, die
+    es gibt, sonst Englisch.
+  - **„under Profile › Settings"**: Der Schalter „Language/Sprache" liegt im
+    Blatt Einstellungen (`packages/client/src/screens/Einstellungen.tsx`,
+    Abschnitt `sprache.titel`), und das öffnet man über den Eintrag
+    „Settings" im Profil (`GameSelect.tsx`, `profil.einstellungen`). Darum
+    nennt der Text beide Stufen: Wer nur „Profil" oder nur „Settings" liest,
+    sucht an der falschen Stelle.
+  - **„The words in Browort and Clanwort stay German"**: Die Wortlisten
+    liegen nur deutsch auf dem Server (`packages/server/src/browort/woerter.ts`),
+    und auf Englisch zeigen Browort und Clanwort selbst den Hinweis „German
+    word game" (`browort.ui.deutschesWortspiel`). Ein englischer Käufer soll
+    es vorher wissen, nicht aus einer Ein-Stern-Bewertung.
+  - Eigene Probe des Workers (nicht Niklas' Abnahme), am 10.11.2026 auf
+    staging mit einem Gastkonto und Gerätesprache en-US: Die Oberfläche war englisch, unter Profile › Settings ›
+    Language ließ sich auf Deutsch stellen, und das blieb nach dem Neuladen
+    so (die Wahl liegt am Konto).

@@ -25,8 +25,23 @@ import { sichtFuer, zuschauerSicht } from '../src/sicht.js';
 /*
  * Ohne `farben`, wie der Bildschirm den Tisch aufmacht: Die Sieben muss aus
  * der Spielart kommen, nicht aus dem mitgeschickten Regelsatz.
+ *
+ * Und ohne `aufbauJeSpielart`: Diese Datei prueft Extreme, wie es bis zum
+ * 05.11.2026 aufgemacht wurde (8 x 7, drei freie Sterne, zehn Mauern) — so
+ * spielt ein Tisch von damals weiter. Das grosse Brett steht in
+ * extreme-gross.test.ts.
+ *
+ * Aus demselben Grund ohne `ausgleichJeSpielart` (seit dem 07.11.2026): Ein
+ * Tisch von damals bekommt keine Extramauern fuer Sitz 1.
  */
-const EXTREME = { ...DEFAULT_REGELN, variante: 'extreme', barrieren: 10 } as const;
+const {
+  aufbauJeSpielart: _aufbau,
+  ausgleichJeSpielart: _ausgleich,
+  ...VORGABE_VON_DAMALS
+} = DEFAULT_REGELN;
+void _aufbau;
+void _ausgleich;
+const EXTREME = { ...VORGABE_VON_DAMALS, variante: 'extreme', barrieren: 10 } as const;
 const SAAT = 'c0ffee1234567890abcdef0123456789';
 
 function abstand(a: number, b: number, spalten: number): number {
@@ -138,7 +153,12 @@ describe('Extreme: Ein Stern faellt', () => {
   });
 
   it('nimmt der Bot den Stern, wenn beide Farben gleich viel Flaeche bringen', () => {
-    const zug = botZug(sichtFuer(gelegt(), 0));
+    // Geprueft wird die FARBWAHL, deshalb ohne Kandidaten fuer eine Mauer:
+    // Seit dem 06.11.2026 (Wegterm in bewerteWaende) baut der Bot in dieser
+    // engen Stellung sonst zuerst eine, und die Farbe kaeme erst danach.
+    const { barrierenMoeglich: _weg, ...sicht } = sichtFuer(gelegt(), 0);
+    void _weg;
+    const zug = botZug(sicht);
     assert.deepEqual(zug, { typ: 'faerben', farbe: 1 });
   });
 
@@ -154,7 +174,7 @@ describe('Extreme: Snapshot', () => {
   it('ueberlebt Speichern und Laden, und Fassung 4 bekommt eine leere Sternliste', () => {
     const partie = erstellePartie(EXTREME, [0, 1], SAAT);
     const roh = JSON.parse(JSON.stringify(filler.serialize(partie)));
-    assert.equal(roh.v, 5);
+    assert.equal(roh.v, 6);
     assert.deepEqual(filler.deserialize(roh), partie);
 
     const { sterne: _weg, ...ohne } = partie;

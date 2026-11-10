@@ -11,7 +11,11 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@brauweg/building-kern": "*",
+    "@brauweg/broremote-kern": "*",
+    "@brauweg/flyingbro-kern": "*",
     "@brauweg/manufaktur-kern": "*",
+    "@dimforge/rapier2d-compat": "0.21.0",
     "@fontsource-variable/nunito": "^5.3.0",
     "@fontsource/lilita-one": "^5.3.0",
     "@react-three/drei": "^10.7.7",
@@ -25,6 +29,7 @@
   },
   "devDependencies": {
     "@brauweg/game-brochess": "*",
+    "@brauweg/game-dreckbro": "*",
     "@brauweg/game-brocooked": "*",
     "@brauweg/game-cambio": "*",
     "@brauweg/game-doppelkopf": "*",

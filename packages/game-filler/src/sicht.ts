@@ -22,7 +22,13 @@
 
 import type { FillerPartie } from './partie.js';
 import { mauerSperre, moeglicheBarrieren, nachbarn, sieger } from './partie.js';
-import { type FillerVariante, liegtOffen, mitBarrieren } from './regeln.js';
+import {
+  type FillerVariante,
+  liegtOffen,
+  mauernJeZug,
+  mitBarrieren,
+  punkteZuschlagSitz1,
+} from './regeln.js';
 
 export interface FillerSicht {
   /**
@@ -56,6 +62,15 @@ export interface FillerSicht {
   /** Gebietsfarbe je Sitz. Oeffentlich, siehe oben. */
   readonly farbe: Readonly<Record<number, number>>;
   readonly punkte: Readonly<Record<number, number>>;
+  /**
+   * So viele Punkte bekommt Sitz 1 (der Nachziehende) in der Wertung dazu —
+   * 0, wo der Regelsatz keinen Zuschlag kennt (seit dem 07.11.2026, Klar:
+   * 2). `punkte` bleibt das Brett; wer gewonnen hat, steht schon in
+   * `sieger`. Die Zahl steht trotzdem hier, damit der Bildschirm einen Stand
+   * wie 28 : 28 erklaeren KANN ("Verloren" bei Gleichstand auf dem Brett),
+   * ohne den Zuschlag aus dem Regelsatz nachzurechnen.
+   */
+  readonly punkteZuschlagSitz1: number;
   readonly dran: number;
   readonly zug: number;
   readonly fertig: boolean;
@@ -97,6 +112,41 @@ export interface FillerSicht {
    * statt sie aus `zug` nachzurechnen: Die Drei ist eine Regel des Moduls.
    */
   readonly mauerSperre: number;
+  /**
+   * Wie viele Mauern ein Zug hoechstens setzen darf: 1, in Extreme seit dem
+   * 05.11.2026 2 — und 0 ohne Mauern. Aus dem Regelsatz des TISCHES, nicht
+   * aus der Vorgabe: Ein Extreme-Tisch von vorher bleibt bei einer.
+   */
+  readonly mauernJeZug: number;
+  /**
+   * Wie viele Mauern der Sitz am Zug in diesem Zug schon gesetzt hat. Mit
+   * `mauernJeZug` zusammen ergibt das die Anzeige "noch eine Mauer in diesem
+   * Zug" — gerechnet wird beides im Modul.
+   */
+  readonly mauernDiesenZug: number;
+  /**
+   * Wie viele Mauern ein Feld hoechstens tragen darf, der Spielfeldrand
+   * zaehlt mit (Regelsatz `mauernJeFeld`, Extreme seit dem 06.11.2026) — 0,
+   * wo es keine Grenze gibt. Aus dem Regelsatz des TISCHES wie `mauernJeZug`.
+   *
+   * Der Bot braucht die Zahl, um abzuwaegen, ob eine Mauer dem Gegner die
+   * Plaetze nimmt, an denen er IHN spaeter versperren koennte (bot.ts). Welche
+   * Kanten erlaubt sind, rechnet trotzdem nur das Modul (`barrierenMoeglich`).
+   */
+  readonly mauernJeFeld: number;
+  /**
+   * Sitze, die in ihrem naechsten (oder gerade laufenden) Zug keine Mauer
+   * setzen duerfen, weil sie im Zug davor die volle Zahl gebaut haben.
+   * Oeffentlich: Man sieht dem Gegner an, dass er gerade nicht bauen kann,
+   * genau wie man seine Mauern sieht. Leer, wo es nur eine Mauer je Zug gibt.
+   */
+  readonly mauerPause: readonly number[];
+  /**
+   * Wer aufgegeben hat, oder null. Steht da, damit der Bildschirm das Ende
+   * BENENNEN kann ("aufgegeben" statt eines Punktestands, der zum Sieger
+   * nicht passt) — wer gewonnen hat, steht schon in `sieger`.
+   */
+  readonly aufgegeben: number | null;
 }
 
 /**
@@ -136,6 +186,7 @@ function grundsicht(
     grau: partie.grau,
     farbe: partie.farbe,
     punkte: partie.punkte,
+    punkteZuschlagSitz1: punkteZuschlagSitz1(partie.regeln),
     dran: partie.dran,
     zug: partie.zug,
     fertig: partie.fertig,
@@ -149,6 +200,11 @@ function grundsicht(
     barrierenUebrig: partie.barrierenUebrig,
     sterne: partie.sterne,
     mauerSperre: mitBarrieren(partie.regeln.variante) ? mauerSperre(partie) : 0,
+    mauernJeZug: mitBarrieren(partie.regeln.variante) ? mauernJeZug(partie.regeln) : 0,
+    mauernDiesenZug: partie.mauernDiesenZug,
+    mauernJeFeld: mitBarrieren(partie.regeln.variante) ? (partie.regeln.mauernJeFeld ?? 0) : 0,
+    mauerPause: partie.mauerPause,
+    aufgegeben: partie.aufgegeben,
   };
 }
 

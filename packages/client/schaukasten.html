@@ -77,6 +77,16 @@
       .sk-rahmen-banner {
         width: 480px;
       }
+      /* Menue und Wartesaal (SpielRahmen) stehen `position: fixed; inset: 0`
+         und haben selbst keine Hoehe — ohne feste Rahmenhoehe bliebe der
+         Kasten leer. Beide sind laenger als ein Handy; damit Vorher-
+         Nachher-Bilder jede Zeile zeigen, bekommen sie die volle Laenge. */
+      .sk-rahmen-schirm {
+        height: 1350px;
+      }
+      .sk-rahmen-lang {
+        height: 2700px;
+      }
       @media (max-width: 860px) {
         .sk-kasten {
           grid-template-columns: 1fr;

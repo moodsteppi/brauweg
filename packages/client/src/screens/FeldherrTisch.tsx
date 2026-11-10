@@ -19,6 +19,8 @@ import {
   starteFeldherr,
 } from '../minispiele/feldherr/kern.js';
 import type { Feld, FeldherrSicht } from '../minispiele/feldherr/sicht';
+import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { GastHinweis } from '../tisch/GastHinweis';
 import { moduleVersionFor, type TaktMessage, type ViewMessage } from '../protocol';
 import { useTable } from '../useTable';
@@ -28,11 +30,15 @@ import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 /** Die Farbe des Spiels im Hub: das Rot des eigenen Heeres (`--p1`). */
 const FELDHERR_AKZENT = '#f4655c';
 
-/** Die drei Stärken der KI, für beide Looks. */
+/**
+ * Die drei Stärken der KI, für beide Looks. Die Konstante hält Schlüssel,
+ * nicht Text: Auf Modulebene übersetzt, bliebe die Sprache des ersten
+ * Ladens stehen, auch wenn jemand später umstellt.
+ */
 const STUFEN: readonly [Stufe, string][] = [
-  ['leicht', 'Leicht'],
-  ['normal', 'Normal'],
-  ['schwer', 'Schwer'],
+  ['leicht', 'feldherr.stufe.leicht'],
+  ['normal', 'feldherr.stufe.normal'],
+  ['schwer', 'feldherr.stufe.schwer'],
 ];
 
 /**
@@ -153,28 +159,28 @@ function Kartenblatt({
   const hat = (feld: keyof (typeof karte.stufen)[number]): boolean =>
     karte.stufen.some((s) => typeof s[feld] === 'number' && (s[feld] as number) > 0);
   const spalten: { kopf: string; wert: (s: (typeof karte.stufen)[number]) => string }[] = [
-    { kopf: 'Preis', wert: (s) => (s.preis === null ? '-' : String(s.preis)) },
-    { kopf: 'Leben', wert: (s) => String(s.hp) },
+    { kopf: t('feldherr.blatt.preis'), wert: (s) => (s.preis === null ? '-' : String(s.preis)) },
+    { kopf: t('feldherr.blatt.leben'), wert: (s) => String(s.hp) },
   ];
-  if (hat('dmg')) spalten.push({ kopf: 'Schaden', wert: (s) => String(s.dmg) });
-  if (hat('rng')) spalten.push({ kopf: 'Reichw.', wert: (s) => String(s.rng) });
-  if (hat('schlag')) spalten.push({ kopf: 'Schlag', wert: (s) => s.schlag + ' s' });
-  if (hat('marsch')) spalten.push({ kopf: 'Schritt', wert: (s) => s.marsch + ' s' });
-  if (hat('ertrag')) spalten.push({ kopf: 'Ertrag', wert: (s) => '+' + s.ertrag + '/s' });
-  if (hat('laufzeit')) spalten.push({ kopf: 'Laufzeit', wert: (s) => s.laufzeit + ' s' });
+  if (hat('dmg')) spalten.push({ kopf: t('feldherr.blatt.schaden'), wert: (s) => String(s.dmg) });
+  if (hat('rng')) spalten.push({ kopf: t('feldherr.blatt.reichweite'), wert: (s) => String(s.rng) });
+  if (hat('schlag')) spalten.push({ kopf: t('feldherr.blatt.schlag'), wert: (s) => s.schlag + ' s' });
+  if (hat('marsch')) spalten.push({ kopf: t('feldherr.blatt.schritt'), wert: (s) => s.marsch + ' s' });
+  if (hat('ertrag')) spalten.push({ kopf: t('feldherr.blatt.ertrag'), wert: (s) => '+' + s.ertrag + '/s' });
+  if (hat('laufzeit')) spalten.push({ kopf: t('feldherr.blatt.laufzeit'), wert: (s) => s.laufzeit + ' s' });
 
   const inhalt = (
     <>
       <div className="art">
         {karte.art} · {karte.feld}
-        {karte.kartenGrenze ? ' · ' + karte.kartenGrenze + ' je Partie' : ''}
+        {karte.kartenGrenze ? ' · ' + tf('feldherr.blatt.jePartie', { n: karte.kartenGrenze }) : ''}
       </div>
       <p className="satz">{karte.satz}</p>
       <div style={{ overflowX: 'auto' }}>
         <table>
           <thead>
             <tr>
-              <th>Stufe</th>
+              <th>{t('feldherr.blatt.stufe')}</th>
               {spalten.map((s) => (
                 <th key={s.kopf}>{s.kopf}</th>
               ))}
@@ -193,14 +199,11 @@ function Kartenblatt({
         </table>
       </div>
       {karte.beweglich && (
-        <p className="fuss">
-          Ab Stufe 2 entsteht sie nur durch Verschmelzen zweier gleicher
-          Karten - kaufen lässt sich nur Stufe 1.
-        </p>
+        <p className="fuss">{t('feldherr.blatt.verschmelzen')}</p>
       )}
       {karte.wirkt.length > 0 && (
         <>
-          <h4>Zusammenspiel</h4>
+          <h4>{t('feldherr.blatt.zusammenspiel')}</h4>
           <ul>
             {karte.wirkt.map((w) => (
               <li key={w}>{w}</li>
@@ -212,7 +215,7 @@ function Kartenblatt({
   );
 
   return (
-    <HbBlatt titel={karte.nm} label={'Werte: ' + karte.nm} onClose={onClose}>
+    <HbBlatt titel={karte.nm} label={tf('feldherr.blatt.label', { name: karte.nm })} onClose={onClose}>
       <div className="spe-werte">{inhalt}</div>
     </HbBlatt>
   );
@@ -240,9 +243,9 @@ function Handkarte({
   useEffect(() => stop, []);
   const s1 = karte.stufen[0];
   const zeile = [
-    s1.hp + ' HP',
-    s1.dmg ? s1.dmg + ' DMG' : null,
-    s1.rng > 1 ? 'RW ' + s1.rng : null,
+    tf('feldherr.hand.hp', { n: s1.hp }),
+    s1.dmg ? tf('feldherr.hand.dmg', { n: s1.dmg }) : null,
+    s1.rng > 1 ? tf('feldherr.hand.rw', { n: s1.rng }) : null,
     s1.ertrag ? '+' + s1.ertrag + '/s' : null,
   ]
     .filter(Boolean)
@@ -933,7 +936,7 @@ export function FeldherrTisch({
       });
       onEnter?.(id);
     } catch {
-      setFehler('Der Tisch ließ sich nicht erstellen.');
+      setFehler(t('feldherr.fehler.erstellen'));
     }
   };
 
@@ -943,7 +946,7 @@ export function FeldherrTisch({
       await api.joinTable(id);
       onEnter?.(id);
     } catch {
-      setFehler('Beitritt fehlgeschlagen, vielleicht ist der Tisch schon voll.');
+      setFehler(t('feldherr.fehler.beitritt'));
     }
   };
 
@@ -958,27 +961,27 @@ export function FeldherrTisch({
       return (
         <SpielRahmen
           gameId="feldherr"
-          titel="Tisch"
-          unter="Feldherr · Echtzeit · 2 Spieler"
+          titel={t('feldherr.warten.titel')}
+          unter={t('feldherr.warten.unter')}
           akzent={FELDHERR_AKZENT}
           onBack={() => {
             // Wer den Wartebereich verlaesst, gibt den Platz frei (siehe unten).
             void api.leaveTable(tableId).catch(() => {});
             onBack();
           }}
-          zurueckText="Zurück"
+          zurueckText={t('feldherr.zurueck')}
         >
           <p className={tisch.error ? 'hb-fehler' : 'spe-text'}>
-            {tisch.error ? 'Der Tisch ist nicht erreichbar.' : 'Warte auf den zweiten Feldherrn…'}
+            {tisch.error ? t('feldherr.warten.unerreichbar') : t('feldherr.warten.text')}
           </p>
-          <SpielAbschnitt titel="Sitze">
+          <SpielAbschnitt titel={t('feldherr.warten.sitze')}>
             <div className="hb-liste">
               {sitze.map((platz) => (
                 <div key={platz.seat} className={`spe-zeile spe-sitz${platz.displayName ? ' is-besetzt' : ''}`}>
                   <span>
-                    <strong>Sitz {platz.seat + 1}</strong>
+                    <strong>{tf('feldherr.warten.sitz', { n: platz.seat + 1 })}</strong>
                   </span>
-                  <span className="hb-klein">{platz.displayName ?? 'frei'}</span>
+                  <span className="hb-klein">{platz.displayName ?? t('feldherr.warten.frei')}</span>
                 </div>
               ))}
             </div>
@@ -1000,7 +1003,7 @@ export function FeldherrTisch({
     return (
       <main className="feldherr-buehne">
         <button className="feldherr-zurueck" onClick={onBack}>
-          ‹ Zurück
+          {t('feldherr.zurueckPfeil')}
         </button>
         <button
           className={'feldherr-dreid' + (dreiD ? ' an' : '')}
@@ -1011,31 +1014,23 @@ export function FeldherrTisch({
         <div ref={buehne} />
         {dreiD && <Buehne3D sitzungRef={sitzungRef} />}
         {verworfen && !fremdesEnde && !strittigLokal && (
-          <div className="feldherr-hinweis">
-            Der Zug kam nicht durch - der Tisch war gerade nicht bereit. Leg
-            noch einmal.
-          </div>
+          <div className="feldherr-hinweis">{t('feldherr.hinweis.verworfen')}</div>
         )}
         {heilt && !verworfen && !fremdesEnde && !strittigLokal && (
-          <div className="feldherr-hinweis">
-            Gleichlauf wird wiederhergestellt … die Partie spult kurz vor.
-          </div>
+          <div className="feldherr-hinweis">{t('feldherr.hinweis.heilt')}</div>
         )}
         {stockt && !heilt && !verworfen && !fremdesEnde && !strittigLokal && (
-          <div className="feldherr-hinweis">
-            Warte auf den Gegner … die Partie rechnet erst weiter, wenn sich
-            sein Gerät wieder meldet.
-          </div>
+          <div className="feldherr-hinweis">{t('feldherr.hinweis.stockt')}</div>
         )}
         {(fremdesEnde || strittigLokal) && (
           <div className="feldherr-hinweis feldherr-ende">
             {strittigLokal || (ausgang && (ausgang.strittig || ausgang.sieger === null))
-              ? 'Die Partie ist strittig: Die Geräte haben verschiedene Stände gemeldet. Niemand gewinnt.'
+              ? t('feldherr.ende.strittig')
               : ausgang && ausgang.sieger === meinSitz
-                ? 'Dein Gegner hat aufgegeben. Du gewinnst.'
-                : 'Die Partie ist beendet.'}
+                ? t('feldherr.ende.aufgegeben')
+                : t('feldherr.ende.beendet')}
             <button className="btn pri" onClick={onBack}>
-              Zurück zur Auswahl
+              {t('feldherr.ende.zurueck')}
             </button>
           </div>
         )}
@@ -1051,7 +1046,7 @@ export function FeldherrTisch({
     return (
       <main className="feldherr-buehne">
         <button className="feldherr-zurueck" onClick={() => setModus(null)}>
-          ‹ Zurück
+          {t('feldherr.zurueckPfeil')}
         </button>
         <button
           className={'feldherr-dreid' + (dreiD ? ' an' : '')}
@@ -1072,44 +1067,42 @@ export function FeldherrTisch({
     <SpielRahmen
       gameId="feldherr"
       titel="Feldherr"
-      unter="Echtzeit · 2 Spieler"
+      unter={t('feldherr.einstieg.unter')}
       akzent={FELDHERR_AKZENT}
       onBack={onBack}
-      zurueckText="Zurück"
+      zurueckText={t('feldherr.zurueck')}
       fuss={
         <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void erstelleTisch()}>
-          Tisch erstellen
+          {t('feldherr.einstieg.erstellen')}
         </button>
       }
     >
-      <p className="spe-text">
-        Zwei Feldherren, ein Brett, eine Mittellinie. Wer das gegnerische Haupthaus einreißt, gewinnt.
-      </p>
+      <p className="spe-text">{t('feldherr.einstieg.text')}</p>
 
       {/* Online steht oben — der einzige Modus, in dem jemand anderes wartet
           (siehe die alte Ansicht unten). Erstellen ist der goldene Fuß. */}
-      <SpielAbschnitt titel="Online spielen" zusatz={offene.length > 0 ? offene.length : undefined}>
+      <SpielAbschnitt titel={t('feldherr.einstieg.online')} zusatz={offene.length > 0 ? offene.length : undefined}>
         <div className="hb-liste">
           {offene.map((zeile) => (
             <button key={zeile.id} type="button" className="spe-zeile spe-tisch" onClick={() => void tretebei(zeile.id)}>
               <span>
-                <strong>{zeile.host ?? 'Unbekannt'}</strong>
+                <strong>{zeile.host ?? t('feldherr.einstieg.unbekannt')}</strong>
               </span>
-              <span className="spe-zahl" aria-label={`${zeile.occupied} von ${zeile.seats} Plätzen besetzt`}>
+              <span className="spe-zahl" aria-label={tn('feldherr.einstieg.besetzt', zeile.seats, { belegt: zeile.occupied })}>
                 {zeile.occupied}/{zeile.seats}
               </span>
-              <span className="spe-bei">Beitreten</span>
+              <span className="spe-bei">{t('feldherr.einstieg.beitreten')}</span>
             </button>
           ))}
-          {tische === null && <p className="spe-leer">Tische werden gesucht …</p>}
+          {tische === null && <p className="spe-leer">{t('feldherr.einstieg.suche')}</p>}
           {tische !== null && offene.length === 0 && (
-            <p className="spe-leer">Gerade wartet niemand. Erstell den ersten Tisch.</p>
+            <p className="spe-leer">{t('feldherr.einstieg.leer')}</p>
           )}
         </div>
         {fehler && <p className="hb-fehler">{fehler}</p>}
       </SpielAbschnitt>
 
-      <SpielAbschnitt titel="Wen spielst du?">
+      <SpielAbschnitt titel={t('feldherr.einstieg.held')}>
         <div className="spe-helden">
           {CHARAKTERE.map((c) => (
             <button
@@ -1125,28 +1118,28 @@ export function FeldherrTisch({
           ))}
           {/* Platzhalter, damit die Auswahl zeigt, dass hier noch mehr kommt. */}
           <button type="button" className="spe-held is-bald" disabled>
-            <strong>Nächster Charakter</strong>
-            <span className="hb-bald-marke">Bald</span>
+            <strong>{t('feldherr.einstieg.naechster')}</strong>
+            <span className="hb-bald-marke">{t('feldherr.einstieg.bald')}</span>
           </button>
         </div>
       </SpielAbschnitt>
 
       {/* Die Kartenhand des gewaehlten Charakters. Halten oeffnet die Werte. */}
       {gewaehlt && (
-        <SpielAbschnitt titel="Einheiten" zusatz={gewaehlt.nm}>
+        <SpielAbschnitt titel={t('feldherr.einstieg.einheiten')} zusatz={gewaehlt.nm}>
           <div className="spe-einheiten">
             {gewaehlt.karten.map((k) => (
               <Handkarte key={k.id} karte={k} onOeffnen={() => setBlatt(k)} />
             ))}
           </div>
-          <p className="hb-klein">Karte gedrückt halten für alle Werte und das Zusammenspiel.</p>
+          <p className="hb-klein">{t('feldherr.einstieg.halten')}</p>
         </SpielAbschnitt>
       )}
 
-      <SpielAbschnitt titel="Gegen die KI">
-        <SpielWahl name="Stärke der KI" werte={STUFEN.map(([wert, text]) => ({ wert, text }))} wert={stufe} onWahl={setStufe} />
+      <SpielAbschnitt titel={t('feldherr.einstieg.ki')}>
+        <SpielWahl name={t('feldherr.einstieg.staerke')} werte={STUFEN.map(([wert, schluessel]) => ({ wert, text: t(schluessel) }))} wert={stufe} onWahl={setStufe} />
         <button type="button" className="hb-kn is-blau is-breit" onClick={() => setModus('ki')}>
-          Übungspartie starten
+          {t('feldherr.einstieg.uebung')}
         </button>
       </SpielAbschnitt>
 

@@ -6,6 +6,8 @@
  * Dateien im Kreis aufeinander.
  */
 
+import { createElement, type ReactNode } from 'react';
+
 import { serverAdresse } from '../laufzeit';
 
 /** Laenge einer Chatnachricht. Muss zum Server passen (`chat.ts`). */
@@ -32,14 +34,15 @@ function zahlAus(text: string): number {
   return summe;
 }
 
-/** Verbleibende Zeit als kurzer Satz: „noch 12 Std“, „noch 40 Min“. */
-export function restzeit(endsAt: string | null): string {
-  if (!endsAt) return '';
-  const ms = new Date(endsAt).getTime() - Date.now();
-  if (ms <= 0) return 'gleich vorbei';
-  const minuten = Math.floor(ms / 60_000);
-  if (minuten < 60) return `noch ${minuten} Min`;
-  const stunden = Math.floor(minuten / 60);
-  if (stunden < 24) return `noch ${stunden} Std`;
-  return `noch ${Math.floor(stunden / 24)} Tg ${stunden % 24} Std`;
+/**
+ * Text mit `<b>…</b>` als Fettschrift zeichnen.
+ *
+ * Steht ein Teil eines Satzes fett, bleibt der Satz trotzdem EIN Schlüssel —
+ * in Bruchstücke zerlegt, legte er die deutsche Wortstellung über jede
+ * Sprache. Die Markierung im Wörterbuch ist deshalb Teil des Textes.
+ */
+export function mitFett(text: string, tag: 'b' | 'strong'): ReactNode[] {
+  return text
+    .split(/<b>(.*?)<\/b>/)
+    .map((teil, i) => (i % 2 === 1 ? createElement(tag, { key: i }, teil) : teil));
 }

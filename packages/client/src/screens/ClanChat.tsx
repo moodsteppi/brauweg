@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
 
 import { type ChatMessage, api } from '../api';
+import { t, uhrzeit } from '../i18n';
 import { Kreuz } from '../zeichen';
 import { MAX_NACHRICHT, avatarBild } from './ClanTeile';
 
@@ -70,7 +71,7 @@ export function ClanChat({
         const letzte = antwort.messages[antwort.messages.length - 1];
         if (letzte) juengste.current = letzte.createdAt;
       })
-      .catch(() => setFehler('Der Chat ließ sich nicht laden.'))
+      .catch(() => setFehler(t('clanchat.fehler.laden')))
       .finally(() => lebt && setLaedt(false));
     return () => {
       lebt = false;
@@ -106,12 +107,12 @@ export function ClanChat({
         setEntwurf('');
         dazu([nachricht]);
       })
-      .catch(() => setFehler('Die Nachricht ging nicht raus. Nochmal?'))
+      .catch(() => setFehler(t('clanchat.fehler.senden')))
       .finally(() => setSendet(false));
   };
 
   const loeschen = (id: string): void => {
-    if (!window.confirm('Diese Nachricht löschen?')) return;
+    if (!window.confirm(t('clanchat.loeschen.frage'))) return;
     void api
       .deleteClubMessage(clubId, id)
       .then(() =>
@@ -119,23 +120,23 @@ export function ClanChat({
           alt.map((z) => (z.id === id ? { ...z, deleted: true, body: null } : z)),
         ),
       )
-      .catch(() => setFehler('Löschen hat nicht geklappt.'));
+      .catch(() => setFehler(t('clanchat.fehler.loeschen')));
   };
 
   return (
     <div className="clan-voll">
       <header className="clan-voll-kopf">
         <button className="hub-zurueck" onClick={onClose} type="button">
-          ← Zurück
+          {t('clan.zurueckPfeil')}
         </button>
-        <h2>Clanchat</h2>
+        <h2>{t('clanchat.titel')}</h2>
       </header>
 
       <div className="clan-chat-spur" ref={spur}>
         {laedt && <Ladekreis />}
         {!laedt && zeilen.length === 0 && (
           <p className="muted clan-chat-hinweis">
-            Noch nichts gesagt. Fang an - die anderen sehen es sofort.
+            {t('clanchat.leer')}
           </p>
         )}
 
@@ -173,12 +174,12 @@ export function ClanChat({
         <input
           value={entwurf}
           onChange={(e) => setEntwurf(e.target.value.slice(0, MAX_NACHRICHT))}
-          placeholder="Nachricht an den Clan…"
-          aria-label="Nachricht"
+          placeholder={t('clanchat.platzhalter')}
+          aria-label={t('clanchat.nachricht')}
           enterKeyHint="send"
         />
         <button type="submit" className="primary" disabled={sendet || entwurf.trim() === ''}>
-          Senden
+          {t('clanchat.senden')}
         </button>
       </form>
     </div>
@@ -213,12 +214,12 @@ function Blase({
         </button>
       )}
       <div className={`clan-chat-blase${zeile.deleted ? ' is-geloescht' : ''}`}>
-        {zeile.deleted ? <em>Nachricht gelöscht</em> : zeile.body}
+        {zeile.deleted ? <em>{t('clanchat.geloescht')}</em> : zeile.body}
         {!zeile.deleted && darfLoeschen && (
           <button
             className="clan-chat-weg"
             onClick={onLoeschen}
-            aria-label="Nachricht löschen"
+            aria-label={t('clanchat.loeschen.aria')}
             type="button"
           >
             <Kreuz />
@@ -228,9 +229,4 @@ function Blase({
       <time className="clan-chat-zeit">{uhrzeit(zeile.createdAt)}</time>
     </div>
   );
-}
-
-/** Nur die Uhrzeit — das Datum steht ohnehin in der Reihenfolge. */
-function uhrzeit(iso: string): string {
-  return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }

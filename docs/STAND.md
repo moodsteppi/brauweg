@@ -1274,6 +1274,26 @@ Drei Fehler sind dabei schon passiert und stehen deshalb in jeder
 Bestellung: Schachbrett statt Alphakanal, eingebrannter Text, und
 Originalauflösung unter `public/`.
 
+**Sichtproben bei 1400 px: Brauweg hat dort kein Element über die volle
+Breite.** Jeder Bildschirm ist `position: fixed` und höchstens 30rem breit
+(`.hb`, `.spe`, die Anmeldung 60rem). Dadurch haben `html`, `body` und
+`#root` die Höhe 0, und das Sichtprobe-Werkzeug meldet für sie „Kein Element
+gefunden“. Alles Schmalere gilt bei 1400 als Ausschnitt und zählt nicht, und
+der Server schickt die Fertigmeldung zurück. Bei DreckBro ist das im November
+2026 dreimal passiert. **Der Weg, der funktioniert:** In beiden Arbeitsbäumen
+(Ausgangsstand und eigener Zweig) vor `</head>` von
+`packages/client/index.html` eine Messhilfe einfügen, **nicht committen**:
+`<style data-messhilfe>html,body{min-height:100dvh}</style>`. Dann ist `body`
+so groß wie das Fenster (1400 × 900). Fixed-Bildschirme malen ohnehin in das
+Fenster, das Bild zeigt also genau, was ein Nutzer sieht. Alle vier Proben
+mit `--selektor body` auf derselben Seite aufnehmen und die Messhilfe danach
+mit `git checkout -- packages/client/index.html` zurücknehmen. In die App
+gehört sie nicht: Dort ändert sie nichts Sichtbares, wäre aber eine Zeile, die
+nur für ein Werkzeug da ist. Die Probeseite von DreckBro hat zusätzlich einen
+eigenen Rahmen `[data-probe-seite]` (Vorbild
+`packages/client/src/proben/dreckbro/ProbeDreckBro.tsx`); er ersetzt die
+Messhilfe aber nicht für das Vorher, weil der Ausgangsstand ihn nicht kennt.
+
 **Migrationen** laufen in der Produktion automatisch (`MIGRATE_ON_BOOT` ist
 gesetzt). Die Drizzle-Snapshots sind nicht durchgängig gepflegt —
 `db:generate` erzeugt deshalb Anweisungen für längst vorhandene Spalten.
@@ -1469,7 +1489,7 @@ Kleinigkeiten, die eine Übersetzung in Sekunden findet.
 
 **Sechs Dateien überschneiden sich mit der zweiten Sitzung dieses Tages:**
 `server/src/shop.ts`, `server/src/http/app.ts`, `client/src/api.ts`,
-`client/src/i18n.ts`, `client/src/screens/GameSelect.tsx`,
+`client/src/i18n.ts` (heute `client/src/i18n/`), `client/src/screens/GameSelect.tsx`,
 `client/src/styles.css`. Ein Merge ohne Nacharbeit gibt es hier nicht.
 
 **Die schwerste Stelle ist `tischware.ts`.** Der neue Katalog für Szenerien,
@@ -2312,7 +2332,7 @@ Regel ändern, nicht diese Dateien einzeln löschen.
 - **Der Pinguin steht im unteren Drittel, nicht mittig** (`Pfad.tsx`,
   `FIGUR_VON_OBEN = 2/3`). Er startet unten und steigt höchstens bis an die
   Grenze des unteren Drittels — gemessen 63 % von oben bei 550 Trophäen.
-- **Große Zahlen in der Kopfzeile abgekürzt** (`kompakteZahl` in `i18n.ts`):
+- **Große Zahlen in der Kopfzeile abgekürzt** (`kompakteZahl` in `client/src/i18n/index.ts`):
   `550 · 1,5K · 12K · 10M`. Der siebenstellige Testkonto-Münzstand (9.999.999)
   schob sonst Name und Level ineinander. Zusätzlich gibt der Name bei Enge
   zuerst nach (`front-spieler { flex: 1 1 auto }`), die Anzeigen rechts

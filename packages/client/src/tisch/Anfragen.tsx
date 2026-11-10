@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, api } from '../api';
 import { t } from '../i18n';
+import { tf } from '../i18n/einsetzen';
 import { SpielAbschnitt, SpielRahmen } from '../screens/SpielEinstieg';
 
 /**
@@ -64,7 +65,7 @@ export function AnfragenLeiste({ tableId }: { tableId: string }): React.JSX.Elem
     try {
       await api.entscheideAnfrage(tableId, accountId, annehmen);
     } catch (err) {
-      setFehler(err instanceof ApiError ? t(err.messageKey) : 'Das hat nicht geklappt.');
+      setFehler(err instanceof ApiError ? t(err.messageKey) : t('tisch.anfragen.fehler'));
     } finally {
       setLaeuft(null);
       setRunde((r) => r + 1);
@@ -72,8 +73,8 @@ export function AnfragenLeiste({ tableId }: { tableId: string }): React.JSX.Elem
   };
 
   return (
-    <section className="tisch-anfragen" aria-label="Beitrittsanfragen">
-      <strong>Möchten mitspielen</strong>
+    <section className="tisch-anfragen" aria-label={t('tisch.anfragen')}>
+      <strong>{t('tisch.anfragen.titel')}</strong>
       {anfragen.map((a) => (
         <div className="tisch-anfrage" key={a.accountId}>
           <span>{a.displayName}</span>
@@ -83,7 +84,7 @@ export function AnfragenLeiste({ tableId }: { tableId: string }): React.JSX.Elem
             disabled={laeuft === a.accountId}
             onClick={() => void entscheide(a.accountId, true)}
           >
-            Zusagen
+            {t('tisch.anfragen.zusagen')}
           </button>
           <button
             type="button"
@@ -91,7 +92,7 @@ export function AnfragenLeiste({ tableId }: { tableId: string }): React.JSX.Elem
             disabled={laeuft === a.accountId}
             onClick={() => void entscheide(a.accountId, false)}
           >
-            Ablehnen
+            {t('tisch.anfragen.ablehnen')}
           </button>
         </div>
       ))}
@@ -152,25 +153,25 @@ export function AnfrageWarten({
     onZurueck();
   };
 
-  const wer = gastgeber ? gastgeber : 'Der Gastgeber';
+  const wer = gastgeber ? gastgeber : t('tisch.anfrage.gastgeber');
   return (
     <SpielRahmen
       gameId={gameId}
-      titel={stand === 'abgelehnt' ? 'Leider nicht' : 'Anfrage gesendet'}
-      unter={`${t(`game.${gameId}`)} · privater Tisch`}
+      titel={stand === 'abgelehnt' ? t('tisch.anfrage.leiderNicht') : t('tisch.anfrage.gesendet')}
+      unter={tf('tisch.anfrage.privat', { spiel: t(`game.${gameId}`) })}
       onBack={zurueck}
-      zurueckText="Zurück"
+      zurueckText={t('tisch.zurueck')}
       fuss={
         <button type="button" className="hb-kn is-breit" onClick={zurueck}>
-          {stand === 'abgelehnt' ? 'Zurück' : 'Anfrage zurückziehen'}
+          {stand === 'abgelehnt' ? t('tisch.zurueck') : t('tisch.anfrage.zurueckziehen')}
         </button>
       }
     >
-      <SpielAbschnitt titel={stand === 'abgelehnt' ? 'Abgelehnt' : 'Warte auf Zusage'}>
+      <SpielAbschnitt titel={stand === 'abgelehnt' ? t('tisch.anfrage.abgelehnt') : t('tisch.anfrage.warte')}>
         <p className="hb-klein">
           {stand === 'abgelehnt'
-            ? `${wer} hat abgelehnt - oder der Tisch ist inzwischen voll.`
-            : `${wer} muss dich hereinlassen. Sobald die Zusage kommt, geht es an den Tisch.`}
+            ? tf('tisch.anfrage.abgelehntText', { wer })
+            : tf('tisch.anfrage.warteText', { wer })}
         </p>
       </SpielAbschnitt>
     </SpielRahmen>

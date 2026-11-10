@@ -41,6 +41,11 @@ declare global {
        * (mitteilung-antippen.ts; iOS: Huelle.tischSkript).
        */
       pushTisch?: { tableId: string; gameId: string };
+      /**
+       * Bevorzugte Sprachen der App (BCP 47, wichtigste zuerst). Freiwillig:
+       * Fehlt es, gilt `navigator.languages` (geraeteSprachen unten).
+       */
+      sprachen?: string[];
     };
   }
 }
@@ -61,6 +66,24 @@ export const inApp = huelle !== undefined;
  */
 export function mitEdelsteinen(): boolean {
   return !inApp && imUmfang('shop');
+}
+
+/**
+ * Die bevorzugten Sprachen des Geräts, wichtigste zuerst (z.B. `['de-DE', 'en']`).
+ *
+ * Hier und nicht in i18n, weil es dieselbe Frage ist wie alles andere in
+ * dieser Datei: Was sagt die Umgebung, in der der Client läuft? Gibt die
+ * Hülle eine eigene Liste mit (`BRAUWEG_APP.sprachen`), gilt die — sie kennt
+ * die Spracheinstellung der App, die iOS je App getrennt vom System führt.
+ * Sonst `navigator.languages`; das liefert auch die WebView beider Hüllen.
+ * Ohne `window` (Tests im Node) ist die Liste leer, die Erkennung nimmt dann
+ * ihre Vorgabe.
+ */
+export function geraeteSprachen(): readonly string[] {
+  if (huelle?.sprachen?.length) return huelle.sprachen;
+  if (typeof navigator === 'undefined') return [];
+  if (navigator.languages?.length) return navigator.languages;
+  return navigator.language ? [navigator.language] : [];
 }
 
 /** Vorsatz aller API-Aufrufe. Im Browser leer, also dieselbe Herkunft. */

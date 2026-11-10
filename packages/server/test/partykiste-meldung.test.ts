@@ -10,9 +10,6 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { eq } from 'drizzle-orm';
 
@@ -20,6 +17,7 @@ import { buildApp } from '../src/http/app.js';
 import { PartyRuntime } from '../src/runtime/party.js';
 import { createSession } from '../src/auth/service.js';
 import { createTestContext, createVerifiedAccount, schema, seedInvite } from './helpers.js';
+import { woerterbuchText } from './woerterbuch.js';
 
 async function setup(stage?: 'production' | 'staging' | 'development') {
   const ctx = await createTestContext();
@@ -176,10 +174,8 @@ test('die Eingaben werden geprueft: Katalog, Kennung, Grund, Laengen, Stufe, Tis
 });
 
 test('das Woerterbuch kennt die neuen Fehlerschluessel', () => {
-  const hier = dirname(fileURLToPath(import.meta.url));
-  // Der Test laeuft aus dist/test/, die Quelle liegt vier Ebenen hoeher.
-  const text = readFileSync(join(hier, '..', '..', '..', 'client', 'src', 'i18n.ts'), 'utf8');
+  const text = woerterbuchText();
   for (const schluessel of ['error.nurAufStaging', 'error.inhaltUnbekannt', 'error.tischUnbekannt']) {
-    assert.ok(text.includes(`'${schluessel}'`), `${schluessel} fehlt in i18n.ts`);
+    assert.ok(text.includes(`'${schluessel}'`), `${schluessel} fehlt im Wörterbuch`);
   }
 });

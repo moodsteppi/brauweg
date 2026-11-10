@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { api, type GameSummary, type Me, type RankingEntry } from '../api';
 import { deckForGame, rueckenBild } from '../decks';
 import { CardFront, CardBack } from '../CardFace';
-import { t } from '../i18n';
+import { t, zahl } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { inApp } from '../laufzeit';
 import { inAppSichtbar } from '../app-sichtbar';
 import { imUmfang } from '../umfang';
@@ -24,6 +25,10 @@ import { bannerFuer } from './StartNeu';
  * die eigene Lobby des Spiels (Robin, 26.09.2026).
  */
 
+/*
+ * Titel stehen hier als Schlüssel, nicht als Text: t() muss beim Zeichnen
+ * laufen, sonst bliebe die Sprache vom Laden des Moduls stehen.
+ */
 interface Kategorie {
   readonly id: string;
   readonly titel: string;
@@ -36,50 +41,44 @@ interface Kategorie {
 const KATEGORIEN: readonly Kategorie[] = [
   {
     id: 'karten',
-    titel: 'Kartenspiele',
-    einzahl: 'Kartenspiel',
-    spiele: ['doppelkopf', 'skat', 'wizard', 'cambio', 'easypoker'],
+    titel: 'spielwahl.kategorie.karten',
+    einzahl: 'spielwahl.einzahl.karten',
+    spiele: ['doppelkopf', 'skat', 'dreckbro', 'wizard', 'cambio', 'easypoker'],
     icon: <path d="M4 7.5 13 5l3 13-9 2.5z M11 4.5l7-1.5 3 13-3 .7" />,
   },
   {
     id: 'trink',
-    titel: 'Trinkspiele',
-    einzahl: 'Trinkspiel',
+    titel: 'spielwahl.kategorie.trink',
+    einzahl: 'spielwahl.einzahl.trink',
     spiele: ['partykiste'],
     icon: <path d="M4 20l5-13 8 8z M14 4l1 2M19 5l-2 1.5M20 10h-2.5M11 3.5l.5 2" />,
   },
   {
     id: 'echtzeit',
-    titel: 'Echtzeit',
-    einzahl: 'Echtzeit',
+    titel: 'spielwahl.kategorie.echtzeit',
+    einzahl: 'spielwahl.einzahl.echtzeit',
     spiele: ['golf', 'brocooked', 'feldherr'],
     icon: <path d="M13 3L5 13h6l-1 8 8-10h-6z" />,
   },
   {
     id: 'denken',
-    titel: 'Denken & Strategie',
-    einzahl: 'Strategie',
+    titel: 'spielwahl.kategorie.denken',
+    einzahl: 'spielwahl.einzahl.denken',
     spiele: ['tafelrunde', 'brochess', 'eiland', 'filler', 'mememory'],
     icon: <path d="M9 4h6v3a2 2 0 1 0 0 4v3h-3a2 2 0 1 1-4 0H5v-3a2 2 0 1 0 0-4V4z" />,
   },
 ];
 
-/** Was der Server nicht weiß, aber aufs Banner gehört (aus der alten Spielwahl übernommen). */
-const ZUSATZ: Record<string, string> = {
-  feldherr: 'Echtzeit',
-  mememory: 'Meme-Memory',
-  easypoker: 'Hold’em',
-  filler: 'Flächen im Nebel',
-  eiland: 'Landnahme im Nebel',
-  golf: 'Minigolf in Echtzeit',
-  brocooked: 'Küche in Echtzeit',
-  tafelrunde: 'Auto-Battler',
-  partykiste: '15 Minispiele, ein Turnier',
-  brochess: 'Schach',
-};
+/**
+ * Was der Server nicht weiß, aber aufs Banner gehört (aus der alten Spielwahl
+ * übernommen): die Spiele, für die `spielwahl.zusatz.<id>` existiert.
+ */
+const ZUSATZ: ReadonlySet<string> = new Set([
+  'feldherr', 'mememory', 'easypoker', 'filler', 'eiland', 'golf', 'brocooked', 'tafelrunde', 'partykiste', 'brochess', 'dreckbro',
+]);
 
 /** Spiele mit Kartenblatt und Tisch aus der Sammlung. */
-const BALD_BILDER = new Set(['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10', 'drecksau']);
+const BALD_BILDER = new Set(['schafkopf', 'romme', 'maumau', 'schwimmen', 'backgammon', 'bauernskat', 'phase10']);
 const BESTEHENDE_BANNER = new Set(KATEGORIEN.flatMap(k => k.spiele));
 
 const MIT_THEMEN = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'easypoker']);
@@ -110,7 +109,8 @@ function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element 
  */
 export function chipsFuer(spielbar: readonly string[], app: boolean): readonly { id: string; titel: string }[] {
   const belegt = KATEGORIEN.filter((k) => spielbar.some((id) => k.spiele.includes(id)));
-  return app ? [...belegt, { id: 'bald', titel: 'Kommt bald' }] : belegt;
+  const chips = belegt.map((k) => ({ id: k.id, titel: t(k.titel) }));
+  return app ? [...chips, { id: 'bald', titel: t('spielwahl.kategorie.bald') }] : chips;
 }
 
 function kategorieVon(gameId: string): Kategorie | null {
@@ -172,7 +172,7 @@ export function SpieleNeu({
       setVoted((alt) => new Set(alt).add(gameId));
       setGames(alt => alt?.map(g => g.id === gameId ? { ...g, meineStimme: true, votes: g.votes + 1 } : g) ?? null);
     } catch {
-      setAbstimmFehler('Deine Stimme konnte nicht gespeichert werden. Bitte versuche es erneut.');
+      setAbstimmFehler(t('spielwahl.abstimmFehler'));
     } finally {
       unterwegs.current.delete(gameId);
       setSendet(new Set(unterwegs.current));
@@ -189,7 +189,7 @@ export function SpieleNeu({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offenBald?.id]);
 
-  if (!games) return <p className="hb-laden">Spiele werden geladen…</p>;
+  if (!games) return <p className="hb-laden">{t('spielwahl.laden')}</p>;
 
   const spielbar = games.filter((g) => g.availability === 'playable');
   // Die Partykiste steht in der App nicht einmal unter „Kommt bald“ (app-sichtbar.ts).
@@ -228,9 +228,17 @@ export function SpieleNeu({
   // „Kommt bald": Es kommt in diesem Release ja nicht (umfang.ts).
   const mitManufaktur = imUmfang('kartenmanufaktur');
   const mitBrowort = imUmfang('browort');
+  // Flying Bro wird quer gespielt; die iOS-Hülle erlaubt heute nur Hochformat
+  // (docs/SPEZIFIKATION-FLYINGBRO.md, Bildschirm und Format). In der App
+  // stünde deshalb für immer „Bitte Handy drehen" da — der Einstieg kommt
+  // dort erst mit der Hüllen-Aufgabe.
+  const mitFlyingbro = imUmfang('flyingbro') && !inApp;
   const mitProSubway = imUmfang('prosubway');
   // Auf beiden Plattformen abstimmen, soweit der Releaseumfang es erlaubt.
   const mitAbstimmung = imUmfang('abstimmung');
+
+  const baldUnter = (g: GameSummary): string =>
+    g.id === 'prosubway' ? t('spielwahl.prosubway.bald') : g.id === 'mehrkampf' ? t('spielwahl.mehrkampf.unter') : tf('spielwahl.spieler', { spanne: sitzSpanne(g.seatCounts) });
 
   const baldZeile = (g: GameSummary): React.JSX.Element => (
     <div className="hb-bald" key={g.id} role="group" aria-label={t(g.nameKey)}>
@@ -239,8 +247,9 @@ export function SpieleNeu({
         <span className="hb-bald-text">
           <strong>{t(g.nameKey)}</strong>
           <small>
-            {g.id === 'prosubway' ? 'Allein · Münzen fürs Hub' : g.id === 'mehrkampf' ? 'Runden aus mehreren Spielen' : `${sitzSpanne(g.seatCounts)} Spieler`}
-            {g.abstimmbar !== false && mitAbstimmung ? ` · ${g.votes.toLocaleString('de-DE')} Stimmen` : ''}
+            {g.abstimmbar !== false && mitAbstimmung
+              ? tn('spielwahl.mitStimmen', g.votes, { zeile: baldUnter(g), n: zahl(g.votes) })
+              : baldUnter(g)}
           </small>
         </span>
       </button>
@@ -252,10 +261,10 @@ export function SpieleNeu({
           disabled={voted.has(g.id) || sendet.has(g.id)}
           onClick={() => void abstimmen(g.id)}
         >
-          {voted.has(g.id) ? 'Abgestimmt' : sendet.has(g.id) ? 'Speichert…' : 'Dafür'}
+          {voted.has(g.id) ? t('spielwahl.abgestimmt') : sendet.has(g.id) ? t('spielwahl.speichert') : t('spielwahl.dafuer')}
         </button>
       ) : (
-        <span className="hb-bald-marke">Bald</span>
+        <span className="hb-bald-marke">{t('spielwahl.bald')}</span>
       )}
     </div>
   );
@@ -267,10 +276,10 @@ export function SpieleNeu({
       {trophaeen(g.id) > 0 ? (
         <span className="hb-pk">
           <img src="/hub/symbol-pokal.webp" alt="" />
-          {trophaeen(g.id).toLocaleString('de-DE')}
+          {zahl(trophaeen(g.id))}
         </span>
       ) : (
-        <small>{sitzSpanne(g.seatCounts)} Spieler</small>
+        <small>{tf('spielwahl.spieler', { spanne: sitzSpanne(g.seatCounts) })}</small>
       )}
     </button>
   );
@@ -278,11 +287,15 @@ export function SpieleNeu({
   return (
     <div className="hb-spiele">
       <header className="hb-kopfzeile">
-        <h1 className="hb-titel">Spiele</h1>
+        <h1 className="hb-titel">{t('spielwahl.titel')}</h1>
       </header>
+      <a className="hb-broremote" href="/broremote">
+        <svg viewBox="0 0 40 40" aria-hidden="true" fill="none"><rect x="3" y="6" width="25" height="19" rx="4" stroke="currentColor" strokeWidth="2"/><path d="M9 30h13M15 25v5" stroke="currentColor" strokeWidth="2"/><rect x="25" y="17" width="12" height="20" rx="3" fill="#162d48" stroke="currentColor" strokeWidth="2"/><path d="M28 25h6m-3-3v6" stroke="currentColor" strokeWidth="2"/></svg>
+        <span><strong>BroRemote</strong><small>Handys verbinden. Gemeinsam spielen.</small></span><b aria-hidden="true">›</b>
+      </a>
       {abstimmFehler && <p role="alert" className="hb-text">{abstimmFehler}</p>}
-      <div className="hb-chips" role="tablist" aria-label="Kategorien">
-        {[{ id: 'alle', titel: 'Alle' }, ...chips].map((k) => (
+      <div className="hb-chips" role="tablist" aria-label={t('spielwahl.kategorien')}>
+        {[{ id: 'alle', titel: t('spielwahl.alle') }, ...chips].map((k) => (
           <button
             type="button"
             role="tab"
@@ -294,7 +307,7 @@ export function SpieleNeu({
               if (k.id === 'bald') setBaldOffen(true);
             }}
           >
-            {k.id === 'denken' ? 'Denken' : k.titel}
+            {k.id === 'denken' ? t('spielwahl.chip.denken') : k.titel}
           </button>
         ))}
       </div>
@@ -312,7 +325,7 @@ export function SpieleNeu({
               <section className="hb-blk" key={k.id}>
                 <h2 className="hb-ab">
                   <Symbol>{k.icon}</Symbol>
-                  {k.titel}
+                  {t(k.titel)}
                   <span className="hb-ab-zusatz">{1 + EINZELSPIELE.length}</span>
                 </h2>
                 <button
@@ -324,9 +337,9 @@ export function SpieleNeu({
                   <span className="hb-held-unten hb-held-zeile">
                     <span>
                       <strong className="hb-held-titel">{t(party.nameKey)}</strong>
-                      <span>15 Minispiele gemischt · {sitzSpanne(party.seatCounts)} Leute · auch ohne Alkohol</span>
+                      <span>{tf('spielwahl.party.unter', { spanne: sitzSpanne(party.seatCounts) })}</span>
                     </span>
-                    <span className="hb-kn is-gold">Ansehen</span>
+                    <span className="hb-kn is-gold">{t('spielwahl.ansehen')}</span>
                   </span>
                 </button>
                 {/*
@@ -335,7 +348,7 @@ export function SpieleNeu({
                  * Spielseite (Trophäen und Rangliste zählen bei der Partykiste)
                  * direkt in den Einstieg.
                  */}
-                <div className={`hb-reihe${filter === k.id ? ' is-raster' : ''}`} aria-label="Trinkspiele einzeln">
+                <div className={`hb-reihe${filter === k.id ? ' is-raster' : ''}`} aria-label={t('spielwahl.trinkEinzeln')}>
                   {EINZELSPIELE.map((m) => (
                     <button
                       type="button"
@@ -346,7 +359,7 @@ export function SpieleNeu({
                     >
                       <span className="hb-sk-bild" style={{ backgroundImage: `url(${bannerFuer(einzelKennung(m))})` }} />
                       <strong>{einzelName(m)}</strong>
-                      <small>{sitzSpanne(party.seatCounts)} Spieler</small>
+                      <small>{tf('spielwahl.spieler', { spanne: sitzSpanne(party.seatCounts) })}</small>
                     </button>
                   ))}
                 </div>
@@ -357,7 +370,7 @@ export function SpieleNeu({
             <section className="hb-blk" key={k.id}>
               <h2 className="hb-ab">
                 <Symbol>{k.icon}</Symbol>
-                {k.titel}
+                {t(k.titel)}
                 <span className="hb-ab-zusatz">{liste.length}</span>
               </h2>
               <div className="hb-reihe">{liste.map(karte)}</div>
@@ -368,7 +381,7 @@ export function SpieleNeu({
         {weitere.length > 0 && filter === 'alle' && (
           <section className="hb-blk">
             <h2 className="hb-ab">
-              Weitere<span className="hb-ab-zusatz">{weitere.length}</span>
+              {t('spielwahl.weitere')}<span className="hb-ab-zusatz">{weitere.length}</span>
             </h2>
             <div className="hb-reihe">{weitere.map(karte)}</div>
           </section>
@@ -380,14 +393,14 @@ export function SpieleNeu({
             ein gezeichnetes Feld statt eines fehlenden Bildes. Pro-Subway steht
             im selben Abschnitt — zwei Überschriften „Allein" untereinander
             sähen nach einem Fehler aus. */}
-        {filter === 'alle' && (mitManufaktur || mitBrowort || (!inApp && mitProSubway)) && (
+        {filter === 'alle' && (mitManufaktur || mitFlyingbro || mitBrowort || (!inApp && mitProSubway)) && (
           <section className="hb-blk">
             <h2 className="hb-ab">
               <Symbol>
                 <circle cx="12" cy="8" r="4" />
                 <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
               </Symbol>
-              Allein
+              {t('spielwahl.allein')}
             </h2>
             {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
                 dort steht es unter „Kommt bald". */}
@@ -400,25 +413,35 @@ export function SpieleNeu({
               >
                 <span className="hb-quer-text">
                   <strong>{t('modus.prosubway')}</strong>
-                  <span>Münzen fürs Hub · bis 40 am Tag</span>
+                  <span>{t('spielwahl.prosubway.unter')}</span>
                 </span>
-                <span className="hb-kn is-gold">Los</span>
+                <span className="hb-kn is-gold">{t('spielwahl.los')}</span>
               </button>
             )}
             {mitManufaktur && (
               <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
                 <img className="hb-manufaktur-bild" src="/manufaktur/werkstatt-hero.webp" alt="" />
                 <span className="hb-manufaktur-inhalt">
-                  <span className="hb-manufaktur-marke">Deine eigene Kartenwerkstatt</span>
+                  <span className="hb-manufaktur-marke">{t('spielwahl.manufaktur.marke')}</span>
                   <span className="hb-quer-text">
                     <strong>Kartenmanufaktur</strong>
-                    <span>Drucke Karten, baue deine Werkstatt aus und stelle fleißige Meister ein.</span>
+                    <span>{t('spielwahl.manufaktur.text')}</span>
                   </span>
                   <span className="hb-manufaktur-fuss">
-                    <span className="hb-manufaktur-hinweis">Produziert auch in deiner Pause</span>
-                    <span className="hb-kn is-gold">Werkstatt öffnen <span aria-hidden="true">→</span></span>
+                    <span className="hb-manufaktur-hinweis">{t('spielwahl.manufaktur.hinweis')}</span>
+                    <span className="hb-kn is-gold">{t('spielwahl.manufaktur.oeffnen')} <span aria-hidden="true">→</span></span>
                   </span>
                 </span>
+              </button>
+            )}
+            {mitFlyingbro && (
+              <button type="button" className="hb-quer hb-quer-flyingbro" onClick={() => onSolo('flyingbro')}>
+                <img className="hb-flyingbro-bro" src="/flyingbro/bro-pelle-flug.webp" alt="" />
+                <span className="hb-quer-text">
+                  <strong>Flying Bro</strong>
+                  <span>{t('spielwahl.flyingbro.unter')}</span>
+                </span>
+                <span className="hb-kn is-gold">{t('spielwahl.los')}</span>
               </button>
             )}
             {mitBrowort && (
@@ -426,9 +449,9 @@ export function SpieleNeu({
                 <img className="hb-browort-bild" src="/hub/browort-hero.webp" alt="" />
                 <span className="hb-quer-text">
                   <strong>Browort</strong>
-                  <span>Jeden Tag ein Wort, sechs Versuche</span>
+                  <span>{t('spielwahl.browort.unter')}</span>
                 </span>
-                <span className="hb-kn is-gold">Los</span>
+                <span className="hb-kn is-gold">{t('spielwahl.los')}</span>
               </button>
             )}
           </section>
@@ -449,7 +472,7 @@ export function SpieleNeu({
                 <Symbol>
                   <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" />
                 </Symbol>
-                Modi
+                {t('spielwahl.modi')}
               </h2>
               <button
                 type="button"
@@ -459,9 +482,9 @@ export function SpieleNeu({
               >
                 <span className="hb-quer-text">
                   <strong>{t('modus.mehrkampf')}</strong>
-                  <span>Runden aus mehreren Spielen</span>
+                  <span>{t('spielwahl.mehrkampf.unter')}</span>
                 </span>
-                <span className="hb-bald-marke">Bald</span>
+                <span className="hb-bald-marke">{t('spielwahl.bald')}</span>
               </button>
             </section>
             )}
@@ -473,8 +496,8 @@ export function SpieleNeu({
                     <circle cx="12" cy="12" r="8" />
                     <path d="M12 8v4l3 2" />
                   </Symbol>
-                  Kommt bald
-                  <span className="hb-ab-zusatz">Stimm ab</span>
+                  {t('spielwahl.kategorie.bald')}
+                  <span className="hb-ab-zusatz">{t('spielwahl.stimmAb')}</span>
                 </h2>
                 <div className="hb-liste">{bald.map(baldZeile)}</div>
               </section>
@@ -499,7 +522,7 @@ export function SpieleNeu({
                 <circle cx="12" cy="12" r="8" />
                 <path d="M12 8v4l3 2" />
               </Symbol>
-              Kommt bald
+              {t('spielwahl.kategorie.bald')}
               <span className="hb-ab-zusatz">{bald.length}</span>
               <Symbol>
                 <path d="m6 9 6 6 6-6" />
@@ -558,10 +581,13 @@ function SpielSeite({
   const ich = rangliste?.find((e) => e.accountId === me.id) ?? null;
   const erster = rangliste?.[0] ?? null;
   const kat = kategorieVon(game.id);
+  const einzahl = kat ? t(kat.einzahl) : null;
+  // Verglichen wird der Text: Feldherr ist „Echtzeit" in „Echtzeit" — doppelt stünde es sonst da.
+  const zusatz = ZUSATZ.has(game.id) ? t(`spielwahl.zusatz.${game.id}`) : null;
   const unterzeile = [
-    `${sitzSpanne(game.seatCounts)} Spieler`,
-    kat?.einzahl,
-    ZUSATZ[game.id] && ZUSATZ[game.id] !== kat?.einzahl ? ZUSATZ[game.id] : null,
+    tf('spielwahl.spieler', { spanne: sitzSpanne(game.seatCounts) }),
+    einzahl,
+    zusatz && zusatz !== einzahl ? zusatz : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -579,7 +605,7 @@ function SpielSeite({
   return (
     <div className="hb-spielseite">
       <div className="hb-sp-kopf" style={{ backgroundImage: `url(${bannerFuer(game.id)})` }}>
-        <button type="button" className="hb-rund" onClick={onZurueck} aria-label="Zurück zu allen Spielen">
+        <button type="button" className="hb-rund" onClick={onZurueck} aria-label={t('spielwahl.seite.zurueck')}>
           <Symbol>
             <path d="M15 5l-7 7 7 7" />
           </Symbol>
@@ -595,17 +621,17 @@ function SpielSeite({
           <div className="hb-sp-zahl">
             <span className="hb-sp-pokal">
               <img src="/hub/symbol-pokal.webp" alt="" />
-              {eigene.toLocaleString('de-DE')}
+              {zahl(eigene)}
             </span>
             <span className="hb-klein">
               {ich ? (
                 <>
-                  Platz {ich.rank.toLocaleString('de-DE')}
+                  {tf('spielwahl.seite.platz', { rang: zahl(ich.rank) })}
                   <br />
-                  in Deutschland
+                  {t('spielwahl.seite.inDeutschland')}
                 </>
               ) : (
-                'Noch nicht in der Rangliste'
+                t('spielwahl.seite.nichtInRangliste')
               )}
             </span>
           </div>
@@ -615,10 +641,10 @@ function SpielSeite({
                   Trophäe gibt es noch keinen Anteil, nur eine Einladung. */}
               {gesamt > 0 ? (
                 <>
-                  Dein Beitrag zum Trophäenweg: <b>{eigene.toLocaleString('de-DE')} von {gesamt.toLocaleString('de-DE')}</b>
+                  {t('spielwahl.seite.beitrag')} <b>{tf('spielwahl.seite.beitragZahl', { eigene: zahl(eigene), gesamt: zahl(gesamt) })}</b>
                 </>
               ) : (
-                'Gewinn eine Partie - jede Trophäe bringt dich auf dem Trophäenweg weiter.'
+                t('spielwahl.seite.einladung')
               )}
             </span>
             <span className="hb-balken" aria-hidden="true">
@@ -627,13 +653,13 @@ function SpielSeite({
           </div>
           <div className="hb-sp-werte">
             <span>
-              <b>{(stat?.parties ?? 0).toLocaleString('de-DE')}</b>Partien
+              <b>{zahl(stat?.parties ?? 0)}</b>{t('spielwahl.seite.partien')}
             </span>
             <span>
-              <b>{(stat?.wins ?? 0).toLocaleString('de-DE')}</b>Siege
+              <b>{zahl(stat?.wins ?? 0)}</b>{t('spielwahl.seite.siege')}
             </span>
             <span>
-              <b>{quote === null ? '-' : `${quote} %`}</b>Quote
+              <b>{quote === null ? '-' : `${quote} %`}</b>{t('spielwahl.seite.quote')}
             </span>
           </div>
         </div>
@@ -641,27 +667,27 @@ function SpielSeite({
         {MIT_THEMEN.has(game.id) && (
           <section className="hb-blk">
             <h2 className="hb-ab">
-              Dein {t(game.nameKey)}
+              {tf('spielwahl.seite.deinSpiel', { spiel: t(game.nameKey) })}
               <button type="button" className="hb-ab-mehr" onClick={onSammlung}>
-                Sammlung ›
+                {t('spielwahl.seite.sammlung')}
               </button>
             </h2>
-            <div className="hb-sp-kartenvorschau" role="group" aria-label="Vorschau deiner gewählten Karten" style={{ backgroundImage: `linear-gradient(#08162f33,#08162f44),url(${szeneBild(szene.id)})` }}>
-              <span className="hb-sp-probekarten">{vorschaukarten.map(karte => <span className="pc" key={karte.id}><CardFront card={karte} deck={deck} /></span>)}<span className="pc ist-ruecken" aria-label="Gewählte Kartenrückseite"><CardBack deck={rueckenDeck} /></span></span>
+            <div className="hb-sp-kartenvorschau" role="group" aria-label={t('spielwahl.seite.vorschau')} style={{ backgroundImage: `linear-gradient(#08162f33,#08162f44),url(${szeneBild(szene.id)})` }}>
+              <span className="hb-sp-probekarten">{vorschaukarten.map(karte => <span className="pc" key={karte.id}><CardFront card={karte} deck={deck} /></span>)}<span className="pc ist-ruecken" aria-label={t('spielwahl.seite.ruecken')}><CardBack deck={rueckenDeck} /></span></span>
               <span className="hb-sp-probetext">{t(deck.nameKey)} · {szene.name}</span>
             </div>
             <div className="hb-mein">
               <button type="button" className="hb-mn is-blatt" onClick={onSammlung}>
                 <span className="hb-mn-bild hb-mn-karte"><span className="pc"><CardFront card={vorschaukarten[0]!} deck={deck} /></span></span>
                 <span className="hb-mn-text">
-                  <small>Blatt</small>
+                  <small>{t('spielwahl.seite.blatt')}</small>
                   <strong>{t(deck.nameKey)}</strong>
                 </span>
               </button>
               <button type="button" className="hb-mn" onClick={onSammlung}>
                 <span className="hb-mn-bild" style={{ backgroundImage: `url(${szeneBild(szene.id)})` }} />
                 <span className="hb-mn-text">
-                  <small>Tisch</small>
+                  <small>{t('spielwahl.seite.tisch')}</small>
                   <strong>{szene.name}</strong>
                 </span>
               </button>
@@ -670,11 +696,11 @@ function SpielSeite({
         )}
 
         <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onZumSpiel}>
-          Zum Spiel
+          {t('spielwahl.seite.zumSpiel')}
         </button>
         {onLernen && (
           <button type="button" className="hb-kn is-stimme is-haupt is-breit" onClick={onLernen}>
-            Doppelkopf lernen
+            {t('spielwahl.seite.lernen')}
           </button>
         )}
 
@@ -682,22 +708,22 @@ function SpielSeite({
 
         <section className="hb-blk">
           <h2 className="hb-ab">
-            Rangliste {t(game.nameKey)}
-            <span className="hb-ab-zusatz">Deutschland</span>
+            {tf('spielwahl.seite.rangliste', { spiel: t(game.nameKey) })}
+            <span className="hb-ab-zusatz">{t('spielwahl.seite.deutschland')}</span>
           </h2>
           <div className="hb-liste">
             {rangliste === null ? (
-              <p className="hb-klein hb-liste-leer">Rangliste wird geladen…</p>
+              <p className="hb-klein hb-liste-leer">{t('spielwahl.seite.ranglisteLaedt')}</p>
             ) : !erster ? (
-              <p className="hb-klein hb-liste-leer">Noch niemand in der Rangliste. Spiel die erste Partie.</p>
+              <p className="hb-klein hb-liste-leer">{t('spielwahl.seite.ranglisteLeer')}</p>
             ) : (
               [erster, ...(ich && ich.accountId !== erster.accountId ? [ich] : [])].map((e) => (
                 <div className={`hb-rl${e.accountId === me.id ? ' is-du' : ''}`} key={e.accountId}>
                   <span className="hb-rl-rang">{e.rank}</span>
-                  <strong>{e.accountId === me.id ? 'Du' : e.displayName}</strong>
+                  <strong>{e.accountId === me.id ? t('spielwahl.seite.du') : e.displayName}</strong>
                   <span className="hb-pk">
                     <img src="/hub/symbol-pokal.webp" alt="" />
-                    {e.trophies.toLocaleString('de-DE')}
+                    {zahl(e.trophies)}
                   </span>
                 </div>
               ))

@@ -16,7 +16,7 @@ In der App spielbar sind jetzt:
   (Wortratespiel), **Kartenmanufaktur** (Aufbauspiel allein)
 
 Produktion schaltet das über `UMFANG`
-(`doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau`,
+(`doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,dreckbro`,
 Robin 27.10.2026: dazu „Kommt bald" mit Abstimmung; die Vorschau-Spiele haben
 kein Spielmodul und sind nicht spielbar, `docs/APP-RELEASE.md`).
 

@@ -13,6 +13,7 @@ import { lagerName } from './modi';
 import { Regelzeile } from './Regelzeile';
 import { namenFuer } from './Runden';
 import { zaehlerWort, type PartyAktion, type PartykisteSicht } from './sicht';
+import { tz } from './text';
 
 /**
  * Die Aufstellung: zwei Spalten, eine je Lager. Der Tischoeffner tippt einen
@@ -43,18 +44,18 @@ export function AufstellungSeite({
     <main className="pk-seite pk-tisch" data-pk-aufstellung="">
       <header className="pk-kopf">
         {onVerlassen ? (
-          <button className="pk-zurueck is-klein" type="button" onClick={onVerlassen} aria-label="Verlassen">
+          <button className="pk-zurueck is-klein" type="button" onClick={onVerlassen} aria-label={tz('verlassen')}>
             ←
           </button>
         ) : null}
-        <span className="pk-rundenzahl">Vor Runde 1</span>
-        <strong className="pk-spielname">Lager aufstellen</strong>
+        <span className="pk-rundenzahl">{tz('lager.vorRunde1')}</span>
+        <strong className="pk-spielname">{tz('lager.aufstellen')}</strong>
       </header>
       <Regelzeile regeln={sicht} />
       <p className="pk-ansage">
         {ichStelleAuf
-          ? 'Tippe auf einen Namen, um ihn ins andere Lager zu setzen.'
-          : `${namenFuer(sitze, aufstellung.aufsteller)} stellt die Lager auf …`}
+          ? tz('lager.tippe')
+          : tz('lager.stelltAuf', { name: namenFuer(sitze, aufstellung.aufsteller) })}
       </p>
       <div className="pk-lagerspalten">
         {[0, 1].map((welches) => (
@@ -87,7 +88,7 @@ export function AufstellungSeite({
       {ichStelleAuf ? (
         <div className="pk-wahl">
           <button className="pk-knopf is-haupt" type="button" data-pk-lager-los="" onClick={() => sende({ art: 'bereit' })}>
-            Los geht’s
+            {tz('lager.los')}
           </button>
         </div>
       ) : null}
@@ -107,7 +108,7 @@ export function LagerTabelle({ sicht, sitze }: { sicht: PartykisteSicht; sitze: 
   const ungleich = tabelle.length === 2 && tabelle[0]!.sitze.length !== tabelle[1]!.sitze.length;
   return (
     <div className="pk-lagertafel">
-      <ol className="pk-tabelle pk-lagertabelle" aria-label="Stand der Lager">
+      <ol className="pk-tabelle pk-lagertabelle" aria-label={tz('lager.stand')}>
         {reihen.map((zeile) => (
           <li
             key={zeile.lager}
@@ -126,7 +127,7 @@ export function LagerTabelle({ sicht, sitze }: { sicht: PartykisteSicht; sitze: 
           </li>
         ))}
       </ol>
-      {ungleich ? <p className="pk-warten">Die Lager sind ungleich groß - es entscheidet der Schnitt je Kopf.</p> : null}
+      {ungleich ? <p className="pk-warten">{tz('lager.ungleich')}</p> : null}
     </div>
   );
 }

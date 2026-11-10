@@ -57,6 +57,7 @@ Produktion grenzt das über `UMFANG` ein (`docs/APP-RELEASE.md`).
 | C6 | **EU-Händlerstatus (DSA):** Was angekreuzt wird, entscheidet Tom beim Anlegen des Eintrags. Die Anschrift ist die des Büros (Robin, 23.09.2026). | Tom | offen: Tom kreuzt an |
 | C7 | **Meldungen bearbeitet Tom** binnen 24 Stunden (PRUEFHINWEISE.md). | Robin | entschieden 23.09.2026 |
 | C8 | **Überholt:** „Trinkspiel" als Suchwort (alt C4) und Pro-Subway in der App (alt C2) — beides ist in der App nicht mehr da. | — | entfällt 27.10.2026 |
+| C9 | **Englische Store-Texte (Sprachumstellung).** Reihenfolge: (1) Release `staging` → `main` mit Admin-Ja, (2) neuer App-Build aus diesem Stand, (3) erst dann die englischen Texte aus TEXTE.md („Play in English or German …“) in App Store Connect und Play Console eintragen — an einem älteren, nur deutschen Build wäre der Satz falsch. **Das ändert den ursprünglichen Auftrag** (Abnahme → Store-Texte → Release) auf Niklas' Entscheidung hin. Quelle: Orchestrator-Frage im Team-Raum (Nachricht 82502b43): „1. Hast du staging selbst angesehen (https://staging.brauweg-spielen.de mit englischer Browsersprache, kurz Farbduell Extreme spielen, im Profil auf Deutsch umstellen)? 2. Reihenfolge für die Store-Texte: Mein Vorschlag ist erst Release nach main, dann der neue App-Build, dann die englischen Texte eintragen.“ — Niklas' Antwort (Nachricht d0b1949b, 10.11.2026): „Beides ja“. Niklas hat bestätigt, staging selbst angesehen zu haben (Englisch, Farbduell Extreme, Umstellen im Profil). | Niklas | entschieden 10.11.2026 |
 
 ## D. Railway (Produktion) — Mensch mit Zugang
 
@@ -64,7 +65,7 @@ Produktion grenzt das über `UMFANG` ein (`docs/APP-RELEASE.md`).
 | --- | --- | --- |
 | D1 | `APPLE_TEAM_ID=K772DG59JN` — ohne sie liefert `/.well-known/apple-app-site-association` 404, Einladungslinks öffnen dann nicht die App | offen (27.10.2026: 404) |
 | D2 | `BROWORT_SALZ` mit eigenem, langem Zufallswert — sonst lässt sich das Tageswort aus dem Repo vorausrechnen | offen |
-| D3 | `UMFANG` = `doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,drecksau` (Robin 27.10.2026: mit Abstimmung), **vor** dem Release-Merge setzen | offen |
+| D3 | `UMFANG` = `doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,dreckbro` (Robin 27.10.2026: mit Abstimmung), **vor** dem Release-Merge setzen | offen |
 | D4 | APNs-Schlüssel für Push (docs/PUSH.md) — ohne ihn schreibt der Server Mitteilungen nur ins Log | offen |
 | D5 | `HERKUNFT_SCHLUESSEL` (nur für die Werbeauswertung, kein Blocker) | offen |
 
@@ -88,3 +89,4 @@ Produktion grenzt das über `UMFANG` ein (`docs/APP-RELEASE.md`).
 | F1 | Tatsächliche Stufe (Apple) hier und in ALTERSFREIGABE.md eintragen | offen |
 | F2 | Wechselt ein weiteres Spiel in der App auf `spielbar` oder kommt Clan-Chat/Upload/Kauf in die App: ALTERSFREIGABE.md, TEXTE.md, DATENSCHUTZ-ANGABEN.md und Screenshots neu | Daueraufgabe |
 | F3 | Google Play (Android): Konto, 12 Tester über 14 Tage, Formulare (`docs/APP-RELEASE.md` 4.x) — nicht Teil des iOS-Release | offen |
+| F4 | Englische Store-Texte erst eintragen, wenn der Build mit der Sprachumstellung eingereicht ist (C9) | offen |

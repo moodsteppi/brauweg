@@ -58,6 +58,8 @@ import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.j
 import { partykisteRouten } from './partykiste-routen.js';
 import { lernpfadRouten } from './lernpfad-routen.js';
 import { browortRouten } from './browort-routen.js';
+import { buildingRouten } from './building-routen.js';
+import { flyingbroRouten } from './flyingbro-routen.js';
 import { manufakturRouten } from './manufaktur-routen.js';
 import { browortKurz, browortProfil } from '../browort/dienst.js';
 import { herkunftRouten } from './herkunft-routen.js';
@@ -100,6 +102,7 @@ import {
   type Plattform,
 } from '../games/registry.js';
 import { ALLES, imUmfang, umfangFuerClient, type Funktion, type Umfang } from '../umfang.js';
+import { SPRACHEN } from '../sprache.js';
 import {
   acceptFriendship,
   listFriendships,
@@ -290,6 +293,7 @@ export const FUNKTION_ZU_ROUTE: readonly (readonly [Funktion, RegExp, string?])[
   ['clanwort', /^\/api\/clanwort(\/|$)/],
   ['lernpfad', /^\/api\/lernpfad(\/|$)/],
   ['prosubway', /^\/api\/runner(\/|$)/],
+  ['flyingbro', /^\/api\/flyingbro(\/|$)/],
   ['clankrieg', /^\/api\/clubs\/:clubId\/war(\/|$)/],
   ['clanchat', /^\/api\/clubs\/:clubId\/messages(\/|$)/],
   ['shop', /^\/api\/shop\/(pakete|truhen)(\/|$)/],
@@ -558,15 +562,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
          * Auf dem Entwicklungsserver faellt ein fehlender Eintrag nie auf,
          * Vite setzt keine Richtlinie (dieselbe Falle wie beim Runner-Worker).
          *
-         * `'unsafe-eval'` und `'wasm-unsafe-eval'` fehlen mit Absicht. Die
-         * Kartenmanufaktur (PixiJS v8) wollte `new Function` und blieb
-         * deshalb im Web schwarz; geloest ist das im Client ueber
-         * `pixi.js/unsafe-eval` (Szene.ts), nicht hier. Wer eine Bibliothek
-         * einbaut, die eval verlangt, sucht zuerst deren Weg ohne eval —
-         * `test/anmeldung-anbieter.test.ts` haelt die Kopfzeile fest.
+         * `'unsafe-eval'` fehlt mit Absicht. Die Kartenmanufaktur (PixiJS v8)
+         * wollte `new Function` und blieb deshalb im Web schwarz; geloest ist
+         * das im Client ueber `pixi.js/unsafe-eval` (Szene.ts), nicht hier.
+         * Wer eine Bibliothek einbaut, die eval verlangt, sucht zuerst deren
+         * Weg ohne eval — `test/anmeldung-anbieter.test.ts` haelt die
+         * Kopfzeile fest.
+         *
+         * `'wasm-unsafe-eval'` steht dagegen drin: Es erlaubt NUR das
+         * Uebersetzen von WebAssembly, kein `eval`/`new Function` auf Text.
+         * Flying Bro (`@dimforge/rapier2d-compat`) startet WebAssembly; ohne
+         * den Eintrag blockte der Browser es, und der Bildschirm blieb
+         * endlos auf "Laedt" (Vite setzt keine CSP, lokal fiel es nie auf).
          */
         scriptSrc: [
           "'self'",
+          "'wasm-unsafe-eval'",
           'https://accounts.google.com/gsi/client',
           'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/',
         ],
@@ -1023,6 +1034,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
+  buildingRouten(app, { db: deps.db, requireAccount, limitSchreiben: LIMIT_SCHREIBEN, limitAllgemein: LIMIT_ALLGEMEIN });
+
+  // Flying Bro: das Schleuderspiel allein — siehe dort.
+  flyingbroRouten(app, {
+    db: deps.db,
+    requireAccount,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
+  });
+
   // Browort und Clanwort: das taegliche Wortraetsel — siehe dort.
   browortRouten(app, {
     db: deps.db,
@@ -1164,6 +1185,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         // sondern nur ueber die eigene URL, die der Browser zwischenspeichert.
         hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
         figurBemalung: s.account.figurBemalung,
+        // Gewaehlte Sprache, null = „Automatisch" (der Client fragt das Geraet).
+        sprache: s.account.sprache,
       })
       .from(s.account)
       .where(eq(s.account.id, accountId));
@@ -1730,10 +1753,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
           .max(60_000)
           .nullable()
           .optional(),
+        // Sprache der Oberflaeche; null stellt zurueck auf „Automatisch".
+        sprache: z.enum(SPRACHEN).nullable().optional(),
       })
       .parse(request.body);
 
     const set: Record<string, unknown> = {};
+    if (body.sprache !== undefined) set.sprache = body.sprache;
     if (body.avatar !== undefined) {
       // Der Kopf einer data-URL ist nur eine Behauptung. Ohne Blick auf die
       // ersten Bytes liesse sich HTML als "image/png" ablegen und danach von

@@ -113,7 +113,14 @@ export type GameId =
   | 'backgammon'
   | 'bauernskat'
   | 'werwolf'
-  | 'drecksau'
+  /**
+   * DreckBro: Kartenspiel fuer 2 bis 5, jeder will seine drei Pinguine als
+   * Erster ganz einsauen, die anderen werfen Schneebaelle. Haelt sich wie
+   * BroChess an jede Annahme der Schnittstelle — feste Zugfolge,
+   * `legalActions` vollstaendig (jede Karte mit jedem Ziel einzeln).
+   * Bis zum 04.11.2026 stand hier die Vorschau `drecksau` ohne Modul.
+   */
+  | 'dreckbro'
   /**
    * Cabo/Cambio: Ablegespiel mit vier verdeckten Karten, Werte minimieren.
    * "Cabo" ist ein eingetragenes Markenzeichen (AMIGO) - dieselbe Lage wie bei

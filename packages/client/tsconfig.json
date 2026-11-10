@@ -39,14 +39,19 @@
      * rechnet sie zur Laufzeit mit (sonst stuende jede Regel ein zweites Mal
      * hier). Deshalb steht sie zusaetzlich als `resolve.alias` in
      * `vite.config.ts` — aus demselben Reihenfolge-Grund wie oben.
+     * Dasselbe gilt fuer `@brauweg/flyingbro-kern` (Level und Sternregel von
+     * Flying Bro), seit dem 06.11.2026.
      */
     "baseUrl": ".",
     "paths": {
+      "@brauweg/building-kern": ["../building-kern/src/index.ts"],
+      "@brauweg/broremote-kern": ["../broremote-kern/src/index.ts"],
       "@brauweg/game-api": ["../game-api/src/index.ts"],
       "@brauweg/game-brochess": ["../game-brochess/src/index.ts"],
       "@brauweg/game-brocooked": ["../game-brocooked/src/index.ts"],
       "@brauweg/game-cambio": ["../game-cambio/src/index.ts"],
       "@brauweg/game-doppelkopf": ["../game-doppelkopf/src/index.ts"],
+      "@brauweg/game-dreckbro": ["../game-dreckbro/src/index.ts"],
       "@brauweg/game-easypoker": ["../game-easypoker/src/index.ts"],
       "@brauweg/game-eiland": ["../game-eiland/src/index.ts"],
       "@brauweg/game-feldherr": ["../game-feldherr/src/index.ts"],
@@ -57,7 +62,8 @@
       "@brauweg/game-skat": ["../game-skat/src/index.ts"],
       "@brauweg/game-tafelrunde": ["../game-tafelrunde/src/index.ts"],
       "@brauweg/game-wizard": ["../game-wizard/src/index.ts"],
-      "@brauweg/manufaktur-kern": ["../manufaktur-kern/src/index.ts"]
+      "@brauweg/manufaktur-kern": ["../manufaktur-kern/src/index.ts"],
+      "@brauweg/flyingbro-kern": ["../flyingbro-kern/src/index.ts"]
     }
   },
   /*

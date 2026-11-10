@@ -1,0 +1,87 @@
+{
+  "fassung": 1,
+  "id": "w1-07",
+  "welt": 1,
+  "nr": 7,
+  "titel": "Die Glasveranda",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "pelle",
+    "malve",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    9000,
+    12000
+  ],
+  "teile": [
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16,
+      "y": 0.8,
+      "b": 0.2,
+      "h": 1.6
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18,
+      "y": 0.8,
+      "b": 0.2,
+      "h": 1.6
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 17,
+      "y": 1.7,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "stein",
+      "form": "dreieck",
+      "x": 17,
+      "y": 2.15,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "holz",
+      "form": "kreis",
+      "x": 21,
+      "y": 0.3,
+      "r": 0.3,
+      "winkel": 0
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "giraffe",
+      "x": 17,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 21.8,
+      "y": 0,
+      "blick": "links"
+    }
+  ],
+  "deko": [
+    {
+      "bild": "busch-1",
+      "x": 25,
+      "y": 0,
+      "ebene": "hinten"
+    }
+  ]
+}

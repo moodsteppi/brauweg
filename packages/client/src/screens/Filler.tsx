@@ -3,14 +3,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type Suchstand } from '../api';
 import { AuswahlRaster } from '../hub';
 import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { FARBEN, GRAUTOENE, farbeVon, farbzahlAus } from '../minispiele/filler/farben';
-import type { FillerSicht, Variante } from '../minispiele/filler/sicht';
+import type { FillerAufgabe, FillerSicht, Variante } from '../minispiele/filler/sicht';
 import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { serverAdresse } from '../laufzeit';
 import { HelleKopfzeile } from '../kopfzeile';
+import { TurnClock } from '../tisch';
 import { GastHinweis } from '../tisch/GastHinweis';
-import { HbBlatt } from './HbBlatt';
+import { mitFett } from './ClanTeile';
+import { HbBlatt, useRueckfrage } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen } from './SpielEinstieg';
 import './spiel-einstieg-mini.css';
 
@@ -72,7 +75,7 @@ const AKZENT = '#35b4f0';
 const SUCH_TAKT_MS = 1000;
 
 /**
- * Die vier Spielarten — EINE Quelle fuer Reihenfolge, Name und Beschreibung.
+ * Die vier Spielarten — EINE Quelle fuer die Reihenfolge.
  *
  * Bis zum 22.09.2026 stand die Liste viermal in dieser Datei (Schalter,
  * Wischfolge, Typwaechter, zwei Woerterbuecher). Eine fuenfte Spielart haette
@@ -80,21 +83,19 @@ const SUCH_TAKT_MS = 1000;
  * Schalter unsichtbar geblieben, obwohl sie sich wischen liesse. Alles
  * andere hier leitet ab; die Typpruefung darunter meldet, wenn `Variante`
  * aus sicht.ts eine Spielart kennt, die hier fehlt.
+ *
+ * Name und Beschreibung stehen seit der Uebersetzung (Projekt „BroweGGames
+ * Language") im Woerterbuch, Bereich `filler`: `filler.spielart.<kennung>`
+ * und `….text`. Der Schluessel haengt an der Kennung, also bleibt es bei
+ * EINER Liste. Weil er zusammengesetzt ist, sieht ihn die Schluesselprobe
+ * nicht — dafuer prueft `Filler.sprache.test.tsx` jede Spielart.
  */
 const SPIELARTEN = [
-  { kennung: 'nebel', name: 'Nebel', text: 'Du siehst nur dein Gebiet und dessen Rand.' },
-  { kennung: 'klar', name: 'Normal', text: 'Das ganze Brett liegt offen - wie im Original.' },
-  {
-    kennung: 'build',
-    name: 'Build',
-    text: 'Offenes Brett, dazu zehn Mauern je Spieler - eine je Zug, färben darfst du danach trotzdem.',
-  },
-  {
-    kennung: 'extreme',
-    name: 'Extreme',
-    text: 'Build mit sieben Farben und drei Sternfeldern: Ein Stern bringt zwei Punkte und eine Mauer extra.',
-  },
-] as const satisfies readonly { kennung: Variante; name: string; text: string }[];
+  { kennung: 'nebel' },
+  { kennung: 'klar' },
+  { kennung: 'build' },
+  { kennung: 'extreme' },
+] as const satisfies readonly { kennung: Variante }[];
 // Fehlt eine Spielart in der Liste, ist dieser Typ nicht `never` und die Zeile uebersetzt nicht.
 const _alleSpielartenErfasst: Exclude<Variante, (typeof SPIELARTEN)[number]['kennung']> extends never
   ? true
@@ -103,14 +104,17 @@ void _alleSpielartenErfasst;
 
 /** Die Reihenfolge der Spielarten — dieselbe wie im Raster, fuers Wischen. */
 const SPIELART_FOLGE: readonly Variante[] = SPIELARTEN.map((s) => s.kennung);
-const VARIANTE_NAME = Object.fromEntries(SPIELARTEN.map((s) => [s.kennung, s.name])) as Record<
-  Variante,
-  string
->;
-const VARIANTE_TEXT = Object.fromEntries(SPIELARTEN.map((s) => [s.kennung, s.text])) as Record<
-  Variante,
-  string
->;
+/*
+ * Name und Satz einer Spielart. Funktionen und keine Tabellen wie bis zur
+ * Uebersetzung: Eine Tabelle waere beim Laden der Datei in der Sprache von
+ * damals ausgefuellt und schaltete beim Sprachwechsel nicht mit um.
+ */
+function varianteName(v: Variante): string {
+  return t(`filler.spielart.${v}`);
+}
+function varianteText(v: Variante): string {
+  return t(`filler.spielart.${v}.text`);
+}
 
 /** Spielarten mit Mauern. Muss zu mitBarrieren in regeln.ts passen. */
 function mitMauern(v: Variante): boolean {
@@ -356,7 +360,7 @@ export function Filler({
       if (stand.tischId) setTischId(stand.tischId);
       else setSuchstand(stand);
     } catch {
-      setFehler('Die Suche ist fehlgeschlagen. Noch einmal versuchen?');
+      setFehler(t('filler.fehler.suche'));
     } finally {
       setSucht(false);
     }
@@ -390,7 +394,7 @@ export function Filler({
             // Die Schlange kennt uns nicht mehr — etwa nach einem Neustart des
             // Servers. Lieber ehrlich melden als stumm weiterdrehen.
             setSuchstand(null);
-            setFehler('Die Suche wurde beendet. Noch einmal versuchen?');
+            setFehler(t('filler.fehler.sucheBeendet'));
             return;
           }
           setSuchstand(stand);
@@ -450,7 +454,7 @@ export function Filler({
       });
       setTischId(id);
     } catch {
-      setFehler('Der Tisch ließ sich nicht aufmachen. Noch einmal versuchen?');
+      setFehler(t('filler.fehler.tisch'));
     } finally {
       setSucht(false);
     }
@@ -550,7 +554,14 @@ export function Filler({
   // -------------------------------------------------------------------------
 
   /** Unter den Knoepfen im Fuss: wie viele gerade spielen. */
-  const spielerZeile = <p className="hb-klein">{aktiv ?? '…'} Spieler gerade in {t('game.filler')}</p>;
+  const spiel = t('game.filler');
+  const spielerZeile = (
+    <p className="hb-klein">
+      {aktiv === null
+        ? tf('filler.spielerGerade.mehr', { n: '…', spiel })
+        : tn('filler.spielerGerade', aktiv, { spiel })}
+    </p>
+  );
 
   if (!tischId && suchstand) {
     const sekunden = Math.ceil(suchstand.restMs / 1000);
@@ -558,15 +569,15 @@ export function Filler({
     return (
       <SpielRahmen
         gameId="filler"
-        titel="Gegner suchen"
-        unter={`${t('game.filler')} · ${VARIANTE_NAME[variante]}`}
+        titel={t('filler.suche.titel')}
+        unter={`${spiel} · ${varianteName(variante)}`}
         akzent={AKZENT}
         onBack={brichSucheAb}
-        zurueckText="Suche abbrechen"
+        zurueckText={t('filler.suche.abbrechen')}
         fuss={
           <>
             <button type="button" className="hb-kn is-blau is-breit" onClick={brichSucheAb}>
-              Abbrechen
+              {t('filler.abbrechen')}
             </button>
             {spielerZeile}
           </>
@@ -577,9 +588,7 @@ export function Filler({
             {sekunden}
           </p>
           <p className="spe-text">
-            {gefunden === 1
-              ? 'Noch niemand sonst - bleibt es dabei, spielst du gegen einen Bot.'
-              : `${gefunden} Spieler gefunden`}
+            {gefunden === 1 ? t('filler.suche.allein') : tn('filler.suche.gefunden', gefunden)}
           </p>
           <div className="spe-lauf" aria-hidden="true">
             <span />
@@ -604,11 +613,11 @@ export function Filler({
     return (
       <SpielRahmen
         gameId="filler"
-        titel={t('game.filler')}
-        unter={`2 Spieler · ${VARIANTE_NAME[variante]}`}
+        titel={spiel}
+        unter={tf('filler.menue.unter', { spielart: varianteName(variante) })}
         akzent={AKZENT}
         onBack={onBack}
-        zurueckText="Zurück zur Spielseite"
+        zurueckText={t('filler.zurueckZurSpielseite')}
         fuss={
           <>
             <button
@@ -617,7 +626,7 @@ export function Filler({
               onClick={() => void starteSuche()}
               disabled={sucht}
             >
-              Online Match suchen…
+              {t('filler.menue.suchen')}
             </button>
             <button
               type="button"
@@ -625,21 +634,21 @@ export function Filler({
               onClick={() => void starteBot()}
               disabled={sucht}
             >
-              Gegen Bot spielen
+              {t('filler.menue.bot')}
             </button>
             {spielerZeile}
           </>
         }
       >
         <div className="spe-wisch" data-wischbar="" {...wischen}>
-          <p className="spe-text">Färbe dein Gebiet um und schlucke, was daran grenzt.</p>
+          <p className="spe-text">{t('filler.menue.text')}</p>
           <div className="fl-probe spe-motiv" aria-hidden="true">
             {FARBEN.slice(0, farbzahlAus(vorgabe, variante)).map((farbe, i) => (
               <span key={i} style={{ background: farbe }} />
             ))}
           </div>
           {fehler && <p className="hb-fehler">{fehler}</p>}
-          <SpielAbschnitt titel="Spielart">
+          <SpielAbschnitt titel={t('filler.menue.spielart')}>
             <Spielartwahl
               wert={variante}
               onWahl={waehleVariante}
@@ -647,12 +656,12 @@ export function Filler({
               vorgabe={vorgabe}
             />
           </SpielAbschnitt>
-          <SpielAbschnitt titel="Anleitung">
+          <SpielAbschnitt titel={t('filler.menue.anleitung')}>
             <div className="hb-liste">
               <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
                 <span>
-                  <strong>So spielt man {t('game.filler')}</strong>
-                  <small>Regeln und die vier Spielarten</small>
+                  <strong>{tf('filler.menue.soSpieltMan', { spiel })}</strong>
+                  <small>{t('filler.menue.anleitungUnter')}</small>
                 </span>
                 <span className="hb-pf" aria-hidden="true">
                   ›
@@ -662,7 +671,7 @@ export function Filler({
           </SpielAbschnitt>
         </div>
         {regelnOffen && (
-          <HbBlatt titel={`So spielt man ${t('game.filler')}`} onClose={() => setRegelnOffen(false)}>
+          <HbBlatt titel={tf('filler.menue.soSpieltMan', { spiel })} onClose={() => setRegelnOffen(false)}>
             <div className="spe-regeltext">
               <Regeltext />
             </div>
@@ -684,15 +693,15 @@ export function Filler({
     return (
       <SpielRahmen
         gameId="filler"
-        titel="Tisch wird aufgebaut"
-        unter={t('game.filler')}
+        titel={t('filler.aufbau.titel')}
+        unter={spiel}
         akzent={AKZENT}
         onBack={brichAb}
-        zurueckText="Abbrechen"
+        zurueckText={t('filler.abbrechen')}
         fuss={
           <>
             <button type="button" className="hb-kn is-blau is-breit" onClick={brichAb}>
-              Abbrechen
+              {t('filler.abbrechen')}
             </button>
             {spielerZeile}
           </>
@@ -701,8 +710,8 @@ export function Filler({
         <div className="spe-warten">
           <p className="spe-text">
             {tisch.status === 'open'
-              ? `${besetzt} von ${tisch.table?.seats.length ?? 2} Plätzen besetzt`
-              : 'Verbindung wird aufgebaut…'}
+              ? tf('filler.aufbau.besetzt', { besetzt, sitze: tisch.table?.seats.length ?? 2 })
+              : t('filler.aufbau.verbindung')}
           </p>
           <div className="spe-lauf" aria-hidden="true">
             <span />
@@ -730,6 +739,11 @@ export function Filler({
       onWaehle={waehle}
       onBarriere={setzeBarriere}
       onZurueck={verlasseUndZurueck}
+      // Die Frist kommt vom Server (Zugzeit des Moduls, `meta.zugzeitMs`);
+      // gezeigt wird sie nur am eigenen Zug — die des Gegners ist keine
+      // Auskunft, nach der jemand handeln koennte.
+      frist={binDran ? (tisch.view?.turnDeadline ?? null) : null}
+      onAufgeben={() => tisch.send({ typ: 'aufgeben' } satisfies FillerAufgabe)}
     />
   );
 }
@@ -745,7 +759,7 @@ interface SitzZeile {
   isBot: boolean;
 }
 
-function Brett({
+export function Brett({
   sicht,
   eigenerSitz,
   sitze,
@@ -755,6 +769,8 @@ function Brett({
   onWaehle,
   onBarriere,
   onZurueck,
+  frist,
+  onAufgeben,
 }: {
   sicht: FillerSicht;
   eigenerSitz: number;
@@ -766,7 +782,28 @@ function Brett({
   onWaehle: (farbe: number) => void;
   onBarriere: (von: number, nach: number) => void;
   onZurueck: () => void;
+  /** Frist des eigenen Zugs, sonst null — dann steht keine Restzeit da. */
+  frist: number | null;
+  onAufgeben: () => void;
 }): React.JSX.Element {
+  const [frage, rueckfrage] = useRueckfrage();
+  /*
+   * Aufgeben fragt nach, wie bei BroChess: Der Knopf liegt am Brettkopf, und
+   * ein verirrter Daumen soll keine Partie beenden. Kein Zuschauer und keine
+   * fertige Partie — dort gibt es nichts aufzugeben, und der Server wiese es
+   * ohnehin ab.
+   */
+  const kannAufgeben = !sicht.fertig && eigenerSitz >= 0 && !sicht.zuschauer;
+  const aufgeben = (): void =>
+    frage(
+      {
+        titel: t('filler.aufgeben.frage'),
+        text: t('filler.aufgeben.text'),
+        ja: t('filler.aufgeben'),
+        gefahr: true,
+      },
+      onAufgeben,
+    );
   /**
    * Der Bau-Knopf ist gedrueckt: Die Setzflaechen liegen ueber dem Brett.
    *
@@ -788,6 +825,26 @@ function Brett({
   const kannMauern = (sicht.barrierenMoeglich?.length ?? 0) > 0;
   const sterne = new Set(sicht.sterne ?? []);
   const mauerSperre = sicht.mauerSperre ?? 0;
+  /*
+   * Die Doppelmauer (Extreme seit dem 05.11.2026): bis zu `mauernJeZug`
+   * Mauern in einem Zug, wer die volle Zahl baut, setzt im naechsten eigenen
+   * Zug aus. Alle drei Zahlen kommen aus der Sicht; OB gebaut werden darf,
+   * sagt weiterhin allein `barrierenMoeglich`. Die Pause wird hier nur
+   * BENANNT — sonst steht der Knopf blass da, und niemand weiss, warum.
+   * Die Rueckfallwerte gelten fuer einen Server von vor der Doppelmauer.
+   */
+  const mauernJeZug = sicht.mauernJeZug ?? 1;
+  const mauernDiesenZug = sicht.mauernDiesenZug ?? 0;
+  const inMauerPause = mauerSperre === 0 && (sicht.mauerPause ?? []).includes(eigenerSitz);
+  /** Nach der ersten von zwei Mauern: Es geht noch eine — oder gleich die Farbe. */
+  const nochEineMauer = kannMauern && mauernDiesenZug > 0;
+  /**
+   * Das grosse Brett (Extreme, 12 x 11). Daran haengen breiteres Brett,
+   * groessere Sterne und die Rauten als Trefferflaechen. Am Brett und nicht an
+   * der Spielart: Klein sind die FELDER, und ein Extreme-Tisch von vor dem
+   * 05.11.2026 spielt weiter auf 8 x 7 — der soll aussehen wie bisher.
+   */
+  const grossesBrett = sicht.spalten > 8 || sicht.zeilen > 8;
   /*
    * Der Bau-Zustand faellt von selbst zurueck, sobald es nichts zu setzen
    * gibt — nach der gesetzten Mauer, am Ende des Zuges, beim leeren Vorrat.
@@ -884,11 +941,19 @@ function Brett({
    * (`min(90vw, 520px)`), und eine in Pixeln gerechnete Wand saesse auf einem
    * schmalen Handy neben ihrer Kante. Gerechnet wird auf der GEDREHTEN
    * Ansicht — sonst laege die Wand bei Sitz 1 spiegelverkehrt.
+   *
+   * `raute` ist die Trefferflaeche auf dem grossen Brett: ein Kasten von
+   * genau einer Feldgroesse, mittig auf der Kante, per `clip-path` zur Raute
+   * beschnitten (styles.css). Die Rauten aller Kanten pflastern das Brett
+   * lueckenlos — jeder Punkt gehoert der Kante, die ihm am naechsten liegt.
+   * Auf 8 x 7 reicht der 22-px-Griff; auf 12 x 11 sind die Felder am Handy
+   * keine 30 px breit, und dort trafen sich die Griffe zweier Nachbarkanten
+   * an jeder Ecke, waehrend die Feldmitte ins Leere ging.
    */
   const kantenLage = (
     a: number,
     b: number,
-  ): { stil: React.CSSProperties; quer: boolean } | null => {
+  ): { stil: React.CSSProperties; raute: React.CSSProperties; quer: boolean } | null => {
     const ia = anzeigeIndex(a);
     const ib = anzeigeIndex(b);
     const links = Math.min(ia, ib);
@@ -898,23 +963,21 @@ function Brett({
     const hoehe = 100 / sicht.zeilen;
     if (rechts - links === 1 && Math.floor(links / sp) === Math.floor(rechts / sp)) {
       // Senkrechte Wand zwischen zwei Nachbarn derselben Zeile.
+      const x = (links % sp) * breite + breite;
+      const y = Math.floor(links / sp) * hoehe;
       return {
-        stil: {
-          left: `${(links % sp) * breite + breite}%`,
-          top: `${Math.floor(links / sp) * hoehe}%`,
-          height: `${hoehe}%`,
-        },
+        stil: { left: `${x}%`, top: `${y}%`, height: `${hoehe}%` },
+        raute: { left: `${x - breite / 2}%`, top: `${y}%`, width: `${breite}%`, height: `${hoehe}%` },
         quer: false,
       };
     }
     if (rechts - links === sp) {
       // Waagerechte Wand zwischen zwei Zeilen.
+      const x = (links % sp) * breite;
+      const y = Math.floor(links / sp) * hoehe + hoehe;
       return {
-        stil: {
-          left: `${(links % sp) * breite}%`,
-          top: `${Math.floor(links / sp) * hoehe + hoehe}%`,
-          width: `${breite}%`,
-        },
+        stil: { left: `${x}%`, top: `${y}%`, width: `${breite}%` },
+        raute: { left: `${x}%`, top: `${y - hoehe / 2}%`, width: `${breite}%`, height: `${hoehe}%` },
         quer: true,
       };
     }
@@ -926,7 +989,7 @@ function Brett({
     <main className="fl-seite fl-tisch">
       <HelleKopfzeile />
       <div className="fl-kopf">
-        <button className="fl-zurueck fl-zurueck-tisch" type="button" onClick={onZurueck} aria-label="Zurück">
+        <button className="fl-zurueck fl-zurueck-tisch" type="button" onClick={onZurueck} aria-label={t('filler.zurueck')}>
           ←
         </button>
         <div className="fl-stand">
@@ -955,15 +1018,34 @@ function Brett({
           * Bild des Gegners, und die Marke lag genau darauf.
           */}
         <span className="fl-art" data-klar={sicht.variante === 'klar' ? '' : undefined}>
-          {VARIANTE_NAME[sicht.variante] ?? VARIANTE_NAME.nebel}
+          {varianteName(istVariante(sicht.variante) ? sicht.variante : 'nebel')}
         </span>
+        {/*
+          * Aufgeben oben am Kopf und nicht im Fuss: Dort liegen Farbwahl und
+          * Bau-Knopf, und ein leiser Knopf daneben waere genau der, den man
+          * beim schnellen Tippen erwischt. Rechts auf der Hoehe der Spielart,
+          * wo sonst nichts steht. Jederzeit, auch am Zug des Gegners.
+          */}
+        {kannAufgeben && (
+          <button className="fl-aufgeben" type="button" onClick={aufgeben}>
+            {t('filler.aufgeben')}
+          </button>
+        )}
       </div>
 
-      <div className="fl-brett-huelle">
+      <div className="fl-brett-huelle" data-gross={grossesBrett ? '' : undefined}>
         <div
           className="fl-brett"
           data-baut={bautGerade ? '' : undefined}
-          style={{ gridTemplateColumns: `repeat(${sicht.spalten}, 1fr)` }}
+          data-gross={grossesBrett ? '' : undefined}
+          style={
+            {
+              gridTemplateColumns: `repeat(${sicht.spalten}, 1fr)`,
+              // Fuer die Hoehengrenze in styles.css: Das grosse Brett ist
+              // 12 : 11 und nicht 8 : 7 wie das kleine.
+              '--fl-seiten': `${sicht.spalten} / ${sicht.zeilen}`,
+            } as React.CSSProperties
+          }
         >
           {Array.from({ length: plaetze }, (_, i) => {
             const platz = platzVon(i);
@@ -1029,9 +1111,10 @@ function Brett({
                   type="button"
                   className="fl-kantenziel"
                   data-quer={lage.quer ? '' : undefined}
-                  style={lage.stil}
+                  data-raute={grossesBrett ? '' : undefined}
+                  style={grossesBrett ? lage.raute : lage.stil}
                   onClick={() => onBarriere(a, b)}
-                  aria-label={`Mauer zwischen Feld ${a + 1} und ${b + 1}`}
+                  aria-label={tf('filler.mauer.zwischen', { a: a + 1, b: b + 1 })}
                 />
               );
             })}
@@ -1061,12 +1144,20 @@ function Brett({
                 type="button"
                 data-an={bautGerade ? '' : undefined}
                 data-gesperrt={mauerSperre > 0 ? '' : undefined}
+                data-pause={inMauerPause ? '' : undefined}
                 disabled={!kannMauern || getippt !== null}
                 onClick={() => setBaut((an) => !an)}
                 aria-label={
                   mauerSperre > 0
-                    ? `Mauern noch ${mauerSperre} ${mauerSperre === 1 ? 'Zug' : 'Züge'} gesperrt`
-                    : `Mauer bauen, noch ${meineBarrieren}`
+                    ? tn('filler.mauer.gesperrt', mauerSperre)
+                    : inMauerPause
+                      ? tf('filler.mauer.pauseVorlesen', { rest: meineBarrieren })
+                      : mauernJeZug > 1
+                        ? tf('filler.mauer.bauenDoppel', {
+                            rest: meineBarrieren,
+                            zug: Math.max(0, mauernJeZug - mauernDiesenZug),
+                          })
+                        : tf('filler.mauer.bauen', { rest: meineBarrieren })
                 }
               >
                 {/*
@@ -1075,13 +1166,31 @@ function Brett({
                   * Sicht (`mauerSperre`), der Client rechnet sie nicht nach.
                   */}
                 {mauerSperre > 0 ? <Schlossicon zahl={mauerSperre} /> : <Mauericon />}
-                <span>Mauer</span>
+                <span>{inMauerPause ? t('filler.mauer.pause') : t('filler.mauer')}</span>
                 <em>{meineBarrieren}</em>
+                {/*
+                  * Die Mauern DIESES Zuges als Punkte: voll = noch zu setzen,
+                  * hohl = schon gesetzt. Nur wo es mehr als eine je Zug gibt
+                  * und gerade gebaut werden darf — in der Pause und in der
+                  * Eroeffnung waeren volle Punkte eine falsche Zusage.
+                  */}
+                {mauernJeZug > 1 && mauerSperre === 0 && !inMauerPause && (
+                  <span className="fl-zugmauern" aria-hidden="true">
+                    {Array.from({ length: mauernJeZug }, (_, nr) => (
+                      <i key={nr} data-gesetzt={nr < mauernDiesenZug ? '' : undefined} />
+                    ))}
+                  </span>
+                )}
               </button>
             )}
+            {/*
+              * Nach der ersten von zwei Mauern ruht die Farbwahl NICHT mehr:
+              * Der naechste Tipp ist entweder die zweite Kante oder die Farbe,
+              * und beides soll ohne Umweg ueber den Bau-Knopf gehen.
+              */}
             <div
               className="fl-palette"
-              data-ruht={bautGerade ? '' : undefined}
+              data-ruht={bautGerade && !nochEineMauer ? '' : undefined}
               data-viele={sicht.farbzahl > 6 ? '' : undefined}
             >
               {Array.from({ length: sicht.farbzahl }, (_, nr) => (
@@ -1097,12 +1206,32 @@ function Brett({
                   disabled={gesperrt.has(nr) || getippt !== null}
                   style={{ background: farbeVon(nr) }}
                   onClick={() => onWaehle(nr)}
-                  aria-label={`Farbe ${nr + 1}`}
+                  aria-label={tf('filler.farbe', { n: nr + 1 })}
                 />
               ))}
             </div>
-            <p className="fl-hinweis">
-              {bautGerade ? 'Kante antippen' : 'Farbe wählen'}
+            <p className="fl-hinweis" data-pause={inMauerPause ? '' : undefined}>
+              {inMauerPause
+                ? t('filler.hinweis.pause')
+                : nochEineMauer
+                  ? bautGerade
+                    ? t('filler.hinweis.zweiteMauer')
+                    : t('filler.hinweis.nochEineMauer')
+                  : bautGerade
+                    ? t('filler.hinweis.kante')
+                    : t('filler.hinweis.farbe')}
+              {/*
+                * Die Restzeit hinter dem Hinweis, also dort, wohin man am Zug
+                * ohnehin schaut. Dieselbe Anzeige wie an den Kartentischen;
+                * in den letzten 15 Sekunden wird sie rot (styles.css), damit
+                * niemand vom Bot-Zug ueberrascht wird.
+                */}
+              {frist !== null && (
+                <>
+                  {' · '}
+                  <TurnClock deadline={frist} knappAb={15} />
+                </>
+              )}
             </p>
           </>
         ) : (
@@ -1113,6 +1242,15 @@ function Brett({
           />
         )}
       </div>
+      {/*
+        * Wurzel fuer die Rueckfrage. Das Blatt haengt sich an `.spe` bzw.
+        * `.hb` (ImHub in HbBlatt.tsx), und nur darunter greifen seine Stile —
+        * der Filler-Tisch ist aber keines von beiden. Ohne diese Wurzel stand
+        * das Blatt ungestylt mitten im Fuss. Leer ist sie unsichtbar
+        * (styles.css, `.fl-frage:empty`), sonst laege eine Flaeche ueber dem
+        * Brett, die jeden Tipp schluckt.
+        */}
+      <div className="spe fl-frage">{rueckfrage}</div>
     </main>
   );
 }
@@ -1153,7 +1291,7 @@ function Warteband({
       {mitMauern && (
         <button className="fl-bauknopf" type="button" data-platz="" aria-hidden="true" disabled tabIndex={-1}>
           <Mauericon />
-          <span>Mauer</span>
+          <span>{t('filler.mauer')}</span>
           <em>0</em>
         </button>
       )}
@@ -1172,13 +1310,13 @@ function Warteband({
         * warten" ohne Hinweis auf das Warten waere eine Halbaussage.
         */}
       <p className="fl-hinweis fl-wartet" aria-live="polite">
-        <span>{gegenBot ? 'Bot ist am Zug' : 'Auf anderen Spieler warten'}</span>
+        <span>{gegenBot ? t('filler.warten.bot') : t('filler.warten.mensch')}</span>
         <span className="fl-lauf" aria-hidden="true">
           <i />
           <i />
           <i />
         </span>
-        <span className="fl-nur-vorlesen">, bitte warten</span>
+        <span className="fl-nur-vorlesen">{t('filler.warten.vorlesen')}</span>
       </p>
     </>
   );
@@ -1214,12 +1352,12 @@ function Spielartwahl({
   return (
     <div className="fl-spielart">
       <AuswahlRaster
-        label="Spielart"
+        label={t('filler.menue.spielart')}
         spalten={2}
         gewaehlt={wert}
         eintraege={SPIELARTEN.map((s) => ({
           kennung: s.kennung,
-          titel: s.name,
+          titel: varianteName(s.kennung),
           vorschau: <Vorschaubrett variante={s.kennung} vorgabe={vorgabe} />,
         }))}
         onWahl={(kennung) => {
@@ -1231,9 +1369,9 @@ function Spielartwahl({
           `key` erzwingt ein neues Element je Spielart: So laeuft die
           Einwisch-Bewegung bei jedem Wechsel neu, nicht nur beim ersten. */}
       <p className="fl-spielart-text" key={wert} data-richtung={richtung ?? undefined}>
-        {VARIANTE_TEXT[wert]}
+        {varianteText(wert)}
         {/* Nur am Finger sichtbar (styles.css): Mit der Maus wischt niemand. */}
-        <span className="fl-wischhinweis">← wischen zum Wechseln →</span>
+        <span className="fl-wischhinweis">{t('filler.spielart.wischen')}</span>
       </p>
     </div>
   );
@@ -1260,7 +1398,9 @@ function Spielerstand({
   eigen?: boolean;
   aktiv: boolean;
 }): React.JSX.Element {
-  const name = eigen ? 'Du' : (zeile?.displayName ?? (zeile?.isBot ? 'KI' : 'Gegner'));
+  const name = eigen
+    ? t('filler.spieler.du')
+    : (zeile?.displayName ?? (zeile?.isBot ? t('filler.spieler.ki') : t('filler.spieler.gegner')));
   return (
     <div className="fl-spieler" data-eigen={eigen ? '' : undefined} data-aktiv={aktiv ? '' : undefined}>
       <span className="fl-avatar">
@@ -1300,15 +1440,24 @@ function Abschluss({
   const meine = sicht.punkte[eigenerSitz] ?? 0;
   const seine = sicht.punkte[gegnerSitz] ?? 0;
   const wort =
-    sicht.sieger === null ? 'Unentschieden' : sicht.sieger === eigenerSitz ? 'Gewonnen!' : 'Verloren';
+    sicht.sieger === null
+      ? t('filler.ende.unentschieden')
+      : sicht.sieger === eigenerSitz
+        ? t('filler.ende.gewonnen')
+        : t('filler.ende.verloren');
   return (
     <div className="fl-abschluss">
       <h2 data-sieg={sicht.sieger === eigenerSitz ? '' : undefined}>{wort}</h2>
       <p>
-        {meine} zu {seine} {sicht.variante === 'extreme' ? 'Punkten' : 'Feldern'}
+        {/* `?? null`: Ein Server von vor dem 06.11.2026 kennt das Feld nicht. */}
+        {(sicht.aufgegeben ?? null) !== null &&
+          (sicht.aufgegeben === eigenerSitz
+            ? t('filler.ende.selbstAufgegeben')
+            : t('filler.ende.gegnerAufgegeben'))}
+        {tf(sicht.variante === 'extreme' ? 'filler.ende.punkte' : 'filler.ende.felder', { meine, seine })}
       </p>
       <button className="fl-suchen" type="button" onClick={onZurueck}>
-        Zurück
+        {t('filler.zurueck')}
       </button>
     </div>
   );
@@ -1470,48 +1619,30 @@ function Vorschaubrett({
   );
 }
 
-/** Der Wortlaut der Anleitung im Regelblatt. */
+/**
+ * Der Wortlaut der Anleitung im Regelblatt.
+ *
+ * Fett gesetzte Woerter stehen als `<b>…</b>` im Woerterbuch (`mitFett`),
+ * damit jeder Absatz EIN Schluessel bleibt — ein in Stuecke zerlegter Satz
+ * zwaenge jeder Sprache die deutsche Wortstellung auf.
+ */
 function Regeltext(): React.JSX.Element {
   return (
     <>
-      <h3>Regeln</h3>
+      <h3>{t('filler.regel.titel')}</h3>
       <ol>
-        <li>Jeder Spieler bekommt zu Beginn ein Eckfeld.</li>
-        <li>
-          Abwechselnd färbt man sein Gebiet in eine von sechs Farben (sieben in
-          Extreme) und nimmt dabei alle angrenzenden Felder dieser Farbe mit.
-        </li>
-        <li>Die Farbe des Gegners darf man nicht wählen.</li>
-        <li>Die Partie endet, wenn kein Feld mehr frei ist.</li>
+        <li>{t('filler.regel.eckfeld')}</li>
+        <li>{t('filler.regel.faerben')}</li>
+        <li>{t('filler.regel.gegnerfarbe')}</li>
+        <li>{t('filler.regel.ende')}</li>
       </ol>
-      <h3>Die vier Spielarten</h3>
-      <p>
-        <strong>Normal</strong> ist das Original: Das ganze Brett liegt offen.
-      </p>
-      <p>
-        <strong>Nebel</strong> zeigt dir nur dein eigenes Gebiet und die Felder,
-        die direkt daran grenzen. Alles andere liegt grau - auch für den Gegner.
-        Wo ein aufgedecktes Feld an sein Gebiet stößt, steht eine weiße Kante.
-      </p>
-      <p>
-        <strong>Build</strong> spielt auf offenem Brett, gibt aber jedem zehn
-        Mauern. Eine Mauer steht zwischen zwei Feldern und hält beide Seiten
-        auf - auch dich. Du darfst pro Zug eine setzen und danach ganz normal
-        färben; erst das Färben gibt ab. Die ersten drei Züge der Partie sind
-        mauerfrei - das Schloss auf dem Knopf zählt sie herunter; ab dem
-        zweiten Zug des zweiten Spielers darf gebaut werden. Und du darfst
-        kein Feld einmauern: Eine Kante, nach der ein freies Feld für niemanden
-        mehr erreichbar wäre, lässt sich nicht bebauen - jedes Feld bleibt bis
-        zum Ende zu holen. Auch den Gegner kannst du nicht einsperren.
-      </p>
-      <p>
-        <strong>Extreme</strong> ist Build mit sieben Farben und drei
-        Sternfeldern. Ein Stern ist ein normales Feld mit einem weißen Stern
-        darauf: Wer es schluckt, bekommt dafür zwei Punkte statt einem und eine
-        Mauer dazu.
-      </p>
-      <h3>Ziel</h3>
-      <p>Wer am Ende die meisten Felder hält, gewinnt - in Extreme die meisten Punkte.</p>
+      <h3>{t('filler.regel.spielarten')}</h3>
+      <p>{mitFett(t('filler.regel.klar'), 'strong')}</p>
+      <p>{mitFett(t('filler.regel.nebel'), 'strong')}</p>
+      <p>{mitFett(t('filler.regel.build'), 'strong')}</p>
+      <p>{mitFett(t('filler.regel.extreme'), 'strong')}</p>
+      <h3>{t('filler.regel.ziel')}</h3>
+      <p>{t('filler.regel.zielText')}</p>
     </>
   );
 }

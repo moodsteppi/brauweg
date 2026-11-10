@@ -19,6 +19,7 @@ vi.mock('../api', async () => {
 vi.mock('../klang', () => ({ spiele: vi.fn() }));
 
 import { Browort } from './Browort';
+import { setzeSprachwahl } from '../i18n';
 
 function stand(teil: Partial<BrowortAnsicht> = {}): BrowortAnsicht {
   return {
@@ -39,7 +40,11 @@ function tippe(wort: string): void {
 }
 
 describe('Browort', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Die Erwartungen sind deutsch; der Testlauf spricht Englisch (jsdom meldet en-US).
+    setzeSprachwahl('de');
+  });
 
   it('zeigt Serie und Schnitt in der Flamme und lässt tippen und löschen', async () => {
     browort.mockResolvedValue(stand());
@@ -101,5 +106,21 @@ describe('Browort', () => {
     expect(screen.getByText('+60 Münzen · +40 XP')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Raten' })).toBeNull();
     expect(onGeaendert).toHaveBeenCalled();
+  });
+
+  it('sagt auf Englisch, dass das Wort deutsch ist — auf Deutsch nicht', async () => {
+    // Das Wortspiel bleibt deutsch (Wortliste, Tastatur mit Ä, Ö, Ü). Ohne
+    // den Hinweis hielte ein englischer Spieler „HAFEN“ für einen Fehler.
+    browort.mockResolvedValue(stand());
+    setzeSprachwahl('en');
+    const { unmount } = render(<Browort onClose={vi.fn()} onGeaendert={vi.fn()} />);
+    expect(await screen.findByText(/German word game/)).toBeTruthy();
+    expect(screen.getByText(/Word of the day/)).toBeTruthy();
+    unmount();
+
+    setzeSprachwahl('de');
+    render(<Browort onClose={vi.fn()} onGeaendert={vi.fn()} />);
+    expect(await screen.findByText('Das Wort des Tages')).toBeTruthy();
+    expect(screen.queryByText(/Deutsches Wortspiel/)).toBeNull();
   });
 });

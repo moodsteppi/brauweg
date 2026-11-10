@@ -44,9 +44,16 @@ import { type FillerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
  * aendert. Der Server kennt den Inhalt nicht, muss einen unlesbaren Snapshot
  * aber als Fehler erkennen koennen, statt ihn falsch zu deuten.
  */
-const SNAPSHOT_VERSION = 5;
+const SNAPSHOT_VERSION = 6;
 
-type GespeichertePartie = FillerPartie & { readonly v: number };
+/**
+ * Was ein Snapshot bis Fassung 5 trug und heute anders heisst: das Ja/Nein
+ * "in diesem Zug schon gemauert" statt der Zahl `mauernDiesenZug`.
+ */
+type GespeichertePartie = FillerPartie & {
+  readonly v: number;
+  readonly mauerDiesenZug?: boolean;
+};
 
 const meta: GameMeta = {
   id: 'filler',
@@ -61,6 +68,14 @@ const meta: GameMeta = {
    * Treffern — dieselbe Ueberlegung wie bei Feldherr und Mememory.
    */
   xpBasisZaehltKarten: false,
+  /**
+   * 90 statt der 60 Sekunden der Plattform (Wunsch Niklas, 06.11.2026). Ein
+   * Zug in Extreme sind bis zu zwei Mauern UND eine Farbe auf 132 Feldern —
+   * die 60 Sekunden liefen mitten im Abwaegen ab, und dann zog der Bot.
+   * Fuer das ganze Spiel und nicht nur fuer Extreme, weil die Zugzeit in
+   * der Meta steht und nicht im Regelsatz.
+   */
+  zugzeitMs: 90_000,
 };
 
 export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerRegeln> = {
@@ -86,8 +101,16 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
    * Sternfelder (`sterne`) in der Sicht. Ein Client der Version 4 zeichnete
    * keinen Stern und wuesste nicht, warum der Gegner ploetzlich zwei Punkte
    * und eine Mauer mehr hat.
+   *
+   * Version 6 seit dem 06.11.2026: der Bildschirm, der `mauernJeZug`,
+   * `mauernDiesenZug` und `mauerPause` anzeigt (Extreme auf 12 x 11, bis zu
+   * zwei Mauern je Zug, Pause danach). Die Sicht selbst kam schon einen Tag
+   * vorher mit dem Spielkern; hochgesetzt wurde erst mit dem Bildschirm,
+   * sonst laege der Client eine Version zurueck, ohne dass ihm etwas fehlt.
+   * Ein Client der 5 darf weiter beitreten — er spielt richtig, erklaert
+   * nur die Pause nicht.
    */
-  protocolVersion: 5,
+  protocolVersion: 6,
 
   defaultConfig: () => DEFAULT_REGELN,
 
@@ -154,12 +177,12 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
 
   deserialize(roh) {
     const snap = roh as GespeichertePartie;
-    if (snap.v !== SNAPSHOT_VERSION && snap.v !== 4 && snap.v !== 3 && snap.v !== 2 && snap.v !== 1) {
+    if (![SNAPSHOT_VERSION, 5, 4, 3, 2, 1].includes(snap.v)) {
       throw new Error(
         `Snapshot-Version ${snap.v} wird nicht unterstuetzt (erwartet ${SNAPSHOT_VERSION})`,
       );
     }
-    const { v, ...rest } = snap;
+    const { v, mauerDiesenZug: altesJaNein, ...rest } = snap;
     const alt = rest as FillerPartie;
     /**
      * Version 1 kannte die Spielart nicht — es gab nur eine. Sie hier
@@ -177,9 +200,15 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
       /*
        * `mauerDiesenZug` gab es bis Fassung 3 nicht — dort beendete eine
        * Mauer den Zug, es konnte also nie einen halb fertigen Zug geben.
-       * Die Null ist deshalb die Wahrheit und kein Notbehelf.
+       * Die Null ist deshalb die Wahrheit und kein Notbehelf. Fassung 4 und 5
+       * trugen es als Ja/Nein; bei hoechstens einer Mauer je Zug ist "ja"
+       * genau eine.
        */
-      mauerDiesenZug: alt.mauerDiesenZug ?? false,
+      mauernDiesenZug: alt.mauernDiesenZug ?? (altesJaNein ? 1 : 0),
+      // Bis Fassung 5 gab es nur eine Mauer je Zug und damit nie eine Pause.
+      mauerPause: alt.mauerPause ?? [],
+      // Aufgeben gibt es seit dem 06.11.2026; vorher hat niemand aufgegeben.
+      aufgegeben: alt.aufgegeben ?? null,
       // Fassung 4 kannte keine Sterne; keine dieser Partien hatte welche.
       sterne: alt.sterne ?? [],
       barrieren: alt.barrieren ?? [],

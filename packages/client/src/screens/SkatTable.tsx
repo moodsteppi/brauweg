@@ -21,6 +21,8 @@ import {
   slotFor,
 } from '../tisch';
 import { useTable } from '../useTable';
+import { t } from '../i18n';
+import { tf, tn } from '../i18n/einsetzen';
 import { fehlenText, waehleZumDruecken } from '../tisch-auswahl';
 
 /** Grenzen der Tischgroesse — dieselben wie am Doppelkopf- und Zaubertisch. */
@@ -41,32 +43,49 @@ const ZOOM_STEP = 0.15;
  * spielbaren Karten stehen in `round.legal`; welche Karte sticht, sagt
  * `round.trumpfKeys`. Der Client rechnet nichts davon selbst aus.
  */
-const FARBEN: { spiel: string; name: string; zeichen: string }[] = [
-  { spiel: 'C', name: 'Kreuz', zeichen: '♣' },
-  { spiel: 'S', name: 'Pik', zeichen: '♠' },
-  { spiel: 'H', name: 'Herz', zeichen: '♥' },
-  { spiel: 'D', name: 'Karo', zeichen: '♦' },
+// Nur Kennung und Zeichen: Der Name kommt beim Zeichnen aus `karte.farbe.*`.
+// Ein fertiger Text auf Modulebene sprang beim Umstellen der Sprache nicht um.
+const FARBEN: { spiel: string; zeichen: string }[] = [
+  { spiel: 'C', zeichen: '♣' },
+  { spiel: 'S', zeichen: '♠' },
+  { spiel: 'H', zeichen: '♥' },
+  { spiel: 'D', zeichen: '♦' },
 ];
+
+const farbName = (farbe: string): string => t(`karte.farbe.${farbe}`);
 
 function spielName(gt: { kind: string; trump?: string } | null): string {
   if (!gt) return '';
-  if (gt.kind === 'grand') return 'Grand';
-  if (gt.kind === 'saechsisch') return 'Sächsische Spitze';
-  if (gt.kind === 'null') return 'Null';
-  if (gt.kind === 'ramsch') return 'Ramsch';
-  if (gt.kind === 'suit') return FARBEN.find((f) => f.spiel === gt.trump)?.name ?? 'Farbe';
+  if (gt.kind === 'grand') return t('skat.spiel.grand');
+  if (gt.kind === 'saechsisch') return t('skat.spiel.saechsisch');
+  if (gt.kind === 'null') return t('skat.spiel.null');
+  if (gt.kind === 'ramsch') return t('skat.spiel.ramsch');
+  if (gt.kind === 'suit') {
+    return FARBEN.some((f) => f.spiel === gt.trump) ? farbName(gt.trump!) : t('skat.spiel.farbe');
+  }
   return '';
 }
 
 /** Name einer Ansagekennung, wie sie im Reizrechner steht. */
 function ansageName(spiel: string): string {
-  if (spiel === 'grand') return 'Grand';
-  if (spiel === 'saechsisch') return 'Sächsische';
-  if (spiel === 'null') return 'Null';
-  return FARBEN.find((f) => f.spiel === spiel)?.name ?? spiel;
+  if (spiel === 'grand') return t('skat.spiel.grand');
+  if (spiel === 'saechsisch') return t('skat.spiel.saechsischKurz');
+  if (spiel === 'null') return t('skat.spiel.null');
+  return FARBEN.some((f) => f.spiel === spiel) ? farbName(spiel) : spiel;
 }
 
-const PATROUILLE_NAME: Record<string, string> = { schwarz: 'Schwarze', rot: 'Rote' };
+/** Ganzer Name je Patrouille: „Schwarze Patrouille" ist im Englischen „Black patrol". */
+function patrouilleName(p: string): string {
+  return p === 'schwarz' || p === 'rot' ? t(`skat.patrouille.${p}`) : p;
+}
+
+/** Kurze Erklärung der gewählten Spielart (Fachwörter bleiben, siehe `i18n/en/skat.ts`). */
+function spielErklaerung(spiel: string): string {
+  if (spiel === 'grand' || spiel === 'saechsisch' || spiel === 'null') {
+    return t(`skat.erklaerung.${spiel}`);
+  }
+  return t('skat.erklaerung.farbe');
+}
 
 export function SkatTable({
   tableId,
@@ -193,7 +212,7 @@ export function SkatTable({
   }, [vorgemerkt, legalKey]);
 
   const nameOf = (seat: number): string =>
-    table?.seats.find((s) => s.seat === seat)?.displayName ?? `Bot ${seat + 1}`;
+    table?.seats.find((s) => s.seat === seat)?.displayName ?? tf('skat.bot', { nummer: seat + 1 });
   const accountOf = (seat: number): string | null | undefined =>
     table?.seats.find((s) => s.seat === seat)?.accountId;
   const spielerName = (text: string, accountId: string | null | undefined): React.JSX.Element =>
@@ -224,7 +243,7 @@ export function SkatTable({
     return (
       <div className="doko">
         <img className="doko-bg" src={szeneBild(szene)} alt="" draggable={false} />
-        <Ladekreis text={error ?? 'Verbinde mit dem Tisch…'} />
+        <Ladekreis text={error ?? t('skat.verbinde')} />
       </div>
     );
   }
@@ -239,7 +258,7 @@ export function SkatTable({
     return (
       <div className="doko">
         <img className="doko-bg" src={szeneBild(szene)} alt="" draggable={false} />
-        <Ladekreis text="Neue Gabe…" />
+        <Ladekreis text={t('skat.neueGabe')} />
       </div>
     );
   }
@@ -279,26 +298,28 @@ export function SkatTable({
       <img className="doko-bg" src={szeneBild(szene)} alt="" draggable={false} />
 
       <header className="doko-top">
-        <button className="doko-icon" onClick={onLeave} aria-label="Zurück">
+        <button className="doko-icon" onClick={onLeave} aria-label={t('skat.zurueck')}>
           ‹
         </button>
         <div className="doko-top-mid">
           <strong>
-            Gabe {view.view.roundIndex + 1} / {view.view.totalRounds}
-            {view.view.bock > 1 && <span className="doko-bock"> · Bock ×{view.view.bock}</span>}
+            {tf('skat.gabe', { nummer: view.view.roundIndex + 1, gesamt: view.view.totalRounds })}
+            {view.view.bock > 1 && (
+              <span className="doko-bock">{tf('skat.bock', { faktor: view.view.bock })}</span>
+            )}
           </strong>
           <span className="muted">{phasenText(round, meinSitz)}</span>
         </div>
         {/* Dieselben Werkzeuge wie am Doppelkopftisch: Sie fehlten hier
             schlicht, nicht weil Skat sie nicht braeuchte. */}
-        {table?.paused && <span className="doko-badge doko-badge--pause">Pausiert</span>}
+        {table?.paused && <span className="doko-badge doko-badge--pause">{t('skat.pausiert')}</span>}
         {table?.visibility === 'club_only' && (
           <button
             className="doko-icon"
             onClick={togglePause}
             disabled={pauseBusy}
-            aria-label={table.paused ? 'Tisch fortsetzen' : 'Tisch pausieren'}
-            title={table.paused ? 'Fortsetzen' : 'Pausieren'}
+            aria-label={t(table.paused ? 'skat.tischFortsetzen' : 'skat.tischPausieren')}
+            title={t(table.paused ? 'skat.fortsetzen' : 'skat.pausieren')}
           >
             {table.paused ? '▶' : '❚❚'}
           </button>
@@ -307,14 +328,14 @@ export function SkatTable({
           className="doko-icon"
           onClick={() => setZeigeLetzten(true)}
           disabled={!round.lastTrick}
-          aria-label="Letzten Stich ansehen"
+          aria-label={t('skat.letzterStich')}
         >
           ⟲
         </button>
         <button
           className="doko-icon"
           onClick={() => setZeigeRegeln(true)}
-          aria-label="Tischregeln ansehen"
+          aria-label={t('skat.regeln')}
         >
           §
         </button>
@@ -322,7 +343,7 @@ export function SkatTable({
           className="doko-icon"
           onClick={() => changeZoom(-ZOOM_STEP)}
           disabled={zoom <= ZOOM_MIN}
-          aria-label="Karten verkleinern"
+          aria-label={t('skat.kleiner')}
         >
           −
         </button>
@@ -330,7 +351,7 @@ export function SkatTable({
           className="doko-icon"
           onClick={() => changeZoom(ZOOM_STEP)}
           disabled={zoom >= ZOOM_MAX}
-          aria-label="Karten vergrößern"
+          aria-label={t('skat.groesser')}
         >
           +
         </button>
@@ -363,26 +384,26 @@ export function SkatTable({
               {round.declarer !== null && (
                 <span className="muted">
                   {nameOf(round.declarer)}
-                  {round.reizWert > 0 && ` · gereizt bis ${round.reizWert}`}
+                  {round.reizWert > 0 && tf('skat.gereizt', { wert: round.reizWert })}
                 </span>
               )}
               {round.patrouillen.length > 0 && (
                 <span className="muted">
-                  {round.patrouillen.map((p) => PATROUILLE_NAME[p] ?? p).join(' + ')} Patrouille
+                  {round.patrouillen.map(patrouilleName).join(' + ')}
                 </span>
               )}
               {(round.kontra || round.re || round.hirsch) && (
                 <span className="skat-kontra">
-                  {round.hirsch ? 'Hirsch' : round.re ? 'Re' : 'Kontra'}
+                  {t(round.hirsch ? 'skat.hirsch' : round.re ? 'skat.re' : 'skat.kontra')}
                 </span>
               )}
               {round.ramschFaktor > 1 && (
-                <span className="skat-kontra">Blind ×{round.ramschFaktor}</span>
+                <span className="skat-kontra">{tf('skat.blind', { faktor: round.ramschFaktor })}</span>
               )}
             </>
           ) : (
             <span className="muted">
-              Reizen{round.reiz.wert > 0 ? ` · Stand ${round.reiz.wert}` : ''}
+              {round.reiz.wert > 0 ? tf('skat.reizenStand', { wert: round.reiz.wert }) : t('skat.reizen')}
             </span>
           )}
         </div>
@@ -406,7 +427,7 @@ export function SkatTable({
       {/* Offene Karten des Alleinspielers beim Ouvert (fuer die Gegner). */}
       {round.ouvertHand && round.ouvertHand.length > 0 && (
         <div className="skat-ouvert">
-          <span className="muted">Offen:</span>
+          <span className="muted">{t('skat.offen')}</span>
           {round.ouvertHand.map((c) => (
             <span className="pc pc--mini" key={c.id}>
               <CardFront card={c} deck={deck} />
@@ -432,7 +453,10 @@ export function SkatTable({
         <div className="doko-me-info">
           <strong>{nameOf(meinSitz)}</strong>
           <span className="muted">
-            {view.view.scores[meinSitz] ?? 0} Punkte · {round.augen[meinSitz] ?? 0} Augen
+            {tf('skat.punkteAugen', {
+              punkte: view.view.scores[meinSitz] ?? 0,
+              augen: round.augen[meinSitz] ?? 0,
+            })}
           </span>
         </div>
         <StichStapel count={round.trickCounts[meinSitz] ?? 0} />
@@ -458,7 +482,7 @@ export function SkatTable({
             onMark={imDruecken ? toggleDruecken : toggleVormerken}
           />
         ))}
-        {hand.length === 0 && <span className="muted">Keine Karten auf der Hand.</span>}
+        {hand.length === 0 && <span className="muted">{t('skat.keineKarten')}</span>}
       </div>
 
       {/* Die Schaltflaechen des jeweiligen Abschnitts. */}
@@ -482,10 +506,10 @@ export function SkatTable({
       {zeigeEmoteHinweis && (
         <div className="doko-sheet" onClick={() => setZeigeEmoteHinweis(false)}>
           <div className="doko-sheet-card" onClick={(e) => e.stopPropagation()}>
-            <h2>Zurufe</h2>
-            <p className="muted">Weitere Zurufe gibt es im Shop.</p>
+            <h2>{t('skat.zurufe')}</h2>
+            <p className="muted">{t('skat.zurufe.shop')}</p>
             <button className="primary" onClick={() => setZeigeEmoteHinweis(false)}>
-              Alles klar
+              {t('skat.zurufe.ok')}
             </button>
           </div>
         </div>
@@ -520,22 +544,24 @@ export function SkatTable({
 
 /** Was gerade zu tun ist, in einem Satz. */
 function phasenText(round: SkatRoundView, meinSitz: number): string {
-  if (round.phase === 'vorbei') return 'Abgerechnet';
+  if (round.phase === 'vorbei') return t('skat.phase.vorbei');
   const dran = round.isMyTurn;
   switch (round.phase) {
     case 'reizen':
-      return dran ? 'Du bist am Reizen' : 'Es wird gereizt';
+      return t(dran ? 'skat.phase.reizenDu' : 'skat.phase.reizen');
     case 'schieben':
-      if (!dran) return 'Der Skat wird geschoben';
-      return round.schiebenAufgenommen ? 'Zwei Karten weiterschieben' : 'Skat aufnehmen oder blind schieben';
+      if (!dran) return t('skat.phase.schieben');
+      return t(round.schiebenAufgenommen ? 'skat.phase.schiebenWeiter' : 'skat.phase.schiebenWahl');
     case 'skat':
-      return dran ? 'Skat aufnehmen oder Hand spielen' : 'Der Alleinspieler entscheidet über den Skat';
+      return t(dran ? 'skat.phase.skatDu' : 'skat.phase.skat');
     case 'druecken':
-      return dran ? 'Zwei Karten drücken' : 'Der Alleinspieler drückt';
+      return t(dran ? 'skat.phase.drueckenDu' : 'skat.phase.druecken');
     case 'ansage':
-      return dran ? 'Spielart ansagen' : 'Der Alleinspieler sagt an';
+      return t(dran ? 'skat.phase.ansageDu' : 'skat.phase.ansage');
     case 'stich':
-      return dran ? 'Du bist am Zug' : `${round.turn === meinSitz ? 'Du' : 'Mitspieler'} ist am Zug`;
+      // Vorher stand hier „Du ist am Zug", wenn der eigene Sitz dran war, die
+      // Sicht aber noch nicht `isMyTurn` meldete — als ganzer Satz je Fall.
+      return t(dran || round.turn === meinSitz ? 'skat.phase.stichDu' : 'skat.phase.stich');
     default:
       return '';
   }
@@ -563,7 +589,7 @@ function SkatAktionen({
     return (
       <div className="skat-aktionen">
         <button className="primary" onClick={onWeiter}>
-          Weiter
+          {t('skat.weiter')}
         </button>
       </div>
     );
@@ -585,12 +611,12 @@ function SkatAktionen({
         <div className="skat-aktionen">
           {kann('schiebenNehmen') && (
             <button className="primary" onClick={() => send({ type: 'schiebenNehmen' })}>
-              Skat aufnehmen
+              {t('skat.skatAufnehmen')}
             </button>
           )}
           {kann('schiebenBlind') && (
             <button className="skat-knopf" onClick={() => send({ type: 'schiebenBlind' })}>
-              Blind schieben (×2)
+              {t('skat.blindSchieben')}
             </button>
           )}
         </div>
@@ -599,14 +625,14 @@ function SkatAktionen({
     return (
       <div className="skat-aktionen">
         <span className="skat-hinweis">
-          {fehlenText(gedrueckt.length) ?? 'Zwei Karten gewählt'}
+          {fehlenText(gedrueckt.length) ?? t('skat.zweiGewaehlt')}
         </span>
         <button
           className="primary"
           disabled={gedrueckt.length !== 2}
           onClick={() => send({ type: 'schieben', cards: gedrueckt })}
         >
-          Weiterschieben
+          {t('skat.weiterschieben')}
         </button>
       </div>
     );
@@ -617,14 +643,21 @@ function SkatAktionen({
       <div className="skat-aktionen">
         {kann('skatNehmen') && (
           <button className="primary" onClick={() => send({ type: 'skatNehmen' })}>
-            Skat aufnehmen
+            {t('skat.skatAufnehmen')}
           </button>
         )}
         {kann('handSpielen') && (
-          <button className="skat-knopf" onClick={() => send({ type: 'handSpielen' })}>
-            Hand spielen
+          <button
+            className="skat-knopf"
+            onClick={() => send({ type: 'handSpielen' })}
+            title={t('skat.erklaerung.hand')}
+          >
+            {t('skat.handSpielen')}
           </button>
         )}
+        {/* Am Handy gibt es kein `title`: Was „Hand" heisst, steht deshalb
+            sichtbar da — im Englischen bleibt das Fachwort stehen. */}
+        {kann('handSpielen') && <p className="skat-hinweis">{t('skat.erklaerung.hand')}</p>}
       </div>
     );
   }
@@ -633,14 +666,14 @@ function SkatAktionen({
     return (
       <div className="skat-aktionen">
         <span className="skat-hinweis">
-          {fehlenText(gedrueckt.length) ?? 'Zwei Karten gewählt'}
+          {fehlenText(gedrueckt.length) ?? t('skat.zweiGewaehlt')}
         </span>
         <button
           className="primary"
           disabled={gedrueckt.length !== 2}
           onClick={() => send({ type: 'druecken', cards: gedrueckt })}
         >
-          Drücken
+          {t('skat.druecken')}
         </button>
       </div>
     );
@@ -663,17 +696,17 @@ function SkatAktionen({
       <div className="skat-aktionen">
         {kann('kontra') && (
           <button className="skat-knopf" onClick={() => send({ type: 'kontra' })}>
-            Kontra
+            {t('skat.kontra')}
           </button>
         )}
         {kann('re') && (
           <button className="skat-knopf" onClick={() => send({ type: 're' })}>
-            Re
+            {t('skat.re')}
           </button>
         )}
         {kann('hirsch') && (
           <button className="skat-knopf" onClick={() => send({ type: 'hirsch' })}>
-            Hirsch
+            {t('skat.hirsch')}
           </button>
         )}
       </div>
@@ -713,10 +746,10 @@ function ReizPanel({
 
   const weiterLabel =
     rolle === 'vh'
-      ? 'Spiel nehmen (18)'
+      ? t('skat.reiz.spielNehmen')
       : rolle === 'hoerer'
-        ? `${round.reiz.wert} halten`
-        : `${round.reiz.gebot ?? 18} sagen`;
+        ? tf('skat.reiz.halten', { wert: round.reiz.wert })
+        : tf('skat.reiz.sagen', { wert: round.reiz.gebot ?? 18 });
 
   return (
     <div className="skat-reiz">
@@ -730,7 +763,7 @@ function ReizPanel({
           {darfSpringen && (
             <>
               <p className="skat-hinweis">
-                Höher reizen heißt: auf Hand, Schneider oder Schwarz spielen, oder sich überreizen.
+                {t('skat.reiz.hoeher')}
               </p>
               <div className="skat-reizleiter">
                 {stufen.map((w) => (
@@ -749,7 +782,7 @@ function ReizPanel({
             </>
           )}
           <button className="skat-knopf" onClick={() => setOffen(false)}>
-            Zurück
+            {t('skat.zurueck')}
           </button>
         </div>
       ) : (
@@ -762,11 +795,11 @@ function ReizPanel({
           {/* Der Rechner steht immer offen — auch wer nur haelt oder gerade
               nicht dran ist, will die tragbaren Werte sehen koennen. */}
           <button className="skat-knopf" onClick={() => setOffen(true)}>
-            Rechner
+            {t('skat.reiz.rechner')}
           </button>
           {kann('reizWeg') && (
             <button className="skat-knopf" onClick={() => send({ type: 'reizWeg' })}>
-              Weg
+              {t('skat.reiz.weg')}
             </button>
           )}
         </div>
@@ -787,8 +820,11 @@ function ReizZeileAnzeige({ zeile }: { zeile: SkatReizZeile }): React.JSX.Elemen
       <span className="skat-reizart">{ansageName(zeile.spiel)}</span>
       <span className="muted">
         {istNull
-          ? 'fester Wert'
-          : `${zeile.mit ? 'mit' : 'ohne'} ${zeile.spitzen} · ×${zeile.grundwert}`}
+          ? t('skat.reiz.festerWert')
+          : tf(zeile.mit ? 'skat.reiz.mit' : 'skat.reiz.ohne', {
+              spitzen: zeile.spitzen,
+              grundwert: zeile.grundwert,
+            })}
       </span>
       <strong>{zeile.maxWert}</strong>
     </div>
@@ -837,31 +873,36 @@ function AnsagePanel({
             onClick={() => setSpiel(f.spiel)}
           >
             <span className="skat-art-zeichen">{f.zeichen}</span>
-            {f.name}
+            {farbName(f.spiel)}
           </button>
         ))}
         <button
           className={`skat-art${spiel === 'grand' ? ' is-gewaehlt' : ''}`}
           onClick={() => setSpiel('grand')}
         >
-          Grand
+          {t('skat.spiel.grand')}
         </button>
         {saechsischAn && (
           <button
             className={`skat-art${spiel === 'saechsisch' ? ' is-gewaehlt' : ''}`}
             onClick={() => setSpiel('saechsisch')}
-            title="Wie Grand, aber die Ordnung ist gedreht: Karo-Bube ist der höchste Trumpf, die Sieben schlägt das Ass. Grundwert 20."
+            title={t('skat.erklaerung.saechsisch')}
           >
-            Sächsische
+            {t('skat.spiel.saechsischKurz')}
           </button>
         )}
         <button
           className={`skat-art${spiel === 'null' ? ' is-gewaehlt' : ''}`}
           onClick={() => setSpiel('null')}
         >
-          Null
+          {t('skat.spiel.null')}
         </button>
       </div>
+
+      {/* Was die gewaehlte Spielart heisst, sichtbar statt nur im `title`
+          (am Handy gibt es kein Hovern). Im Englischen bleiben Grand und Null
+          als Fachwort stehen; diese Zeile erklaert sie. */}
+      {spiel !== null && <p className="skat-hinweis">{spielErklaerung(spiel)}</p>}
 
       {patrouillenMoeglich && (
         <div className="skat-ansage-zusatz">
@@ -872,7 +913,7 @@ function AnsagePanel({
                 checked={patrouillen.includes(p)}
                 onChange={() => togglePatrouille(p)}
               />
-              {PATROUILLE_NAME[p] ?? p} Patrouille
+              {patrouilleName(p)}
             </label>
           ))}
         </div>
@@ -904,6 +945,7 @@ function AnsagePanel({
             <input type="checkbox" checked={ouvert} onChange={(e) => setOuvert(e.target.checked)} />
             Ouvert
           </label>
+          {!istNull && <p className="skat-hinweis">{t('skat.erklaerung.zusatz')}</p>}
         </div>
       )}
 
@@ -921,7 +963,7 @@ function AnsagePanel({
           })
         }
       >
-        Ansagen
+        {t('skat.ansagen')}
       </button>
     </div>
   );
@@ -976,8 +1018,8 @@ function GegnerSitz({
         ) : (
           <span>{name}</span>
         )}
-        {round.dealer === seat && <em className="doko-tag">Geber</em>}
-        {istDeclarer && <em className="doko-tag">Spieler</em>}
+        {round.dealer === seat && <em className="doko-tag">{t('skat.geber')}</em>}
+        {istDeclarer && <em className="doko-tag">{t('skat.spieler')}</em>}
       </div>
       <Ruecken count={round.handCounts[seat] ?? 0} vertical={istSeitlich(slot as never)} deck={deck} />
       <div className="doko-opp-foot">
@@ -1012,29 +1054,35 @@ function Rundenblatt({
           <>
             <p className={r.durchmarsch !== null ? 'skat-gut' : 'skat-schlecht'}>
               {r.durchmarsch !== null
-                ? `Durchmarsch von ${nameOf(r.durchmarsch)}.`
-                : 'Der Augenreichste zahlt.'}
+                ? tf('skat.ergebnis.durchmarsch', { name: nameOf(r.durchmarsch) })
+                : t('skat.ergebnis.augenreichster')}
             </p>
             {/* Warum es so teuer wurde, gehoert sichtbar dazu — sonst wirkt der
                 verdoppelte Betrag wie ein Rechenfehler. */}
             {r.jungfrauen.length > 0 && (
               <p className="muted">
-                Jungfrau: {r.jungfrauen.map(nameOf).join(', ')} - ohne einen Stich, das verdoppelt.
+                {tf('skat.ergebnis.jungfrau', { namen: r.jungfrauen.map(nameOf).join(', ') })}
               </p>
             )}
             {round.ramschFaktor > 1 && (
-              <p className="muted">Blind geschoben: ×{round.ramschFaktor}.</p>
+              <p className="muted">{tf('skat.ergebnis.blind', { faktor: round.ramschFaktor })}</p>
             )}
           </>
         ) : (
           <p className={r.gewonnen ? 'skat-gut' : 'skat-schlecht'}>
-            {r.declarer !== null && nameOf(r.declarer)}
-            {r.gewonnen ? ' hat gewonnen' : ' hat verloren'}
-            {r.ueberreizt && ' (überreizt)'}
-            {r.schwarz ? ' · schwarz' : r.schneider ? ' · Schneider' : ''}
-            {r.patrouillen > 0 && ` · ${r.patrouillen} Patrouille${r.patrouillen > 1 ? 'n' : ''}`}
+            {tf(r.gewonnen ? 'skat.ergebnis.gewonnen' : 'skat.ergebnis.verloren', {
+              name: r.declarer !== null ? nameOf(r.declarer) : '',
+            }).trim()}
+            {r.ueberreizt && t('skat.ergebnis.ueberreizt')}
+            {r.schwarz
+              ? t('skat.ergebnis.schwarz')
+              : r.schneider
+                ? t('skat.ergebnis.schneider')
+                : ''}
+            {r.patrouillen > 0 && tn('skat.ergebnis.patrouillen', r.patrouillen)}
             {'. '}
-            {r.declarer !== null && `${r.declarerAugen} Augen, Spielwert ${r.spielwert}.`}
+            {r.declarer !== null &&
+              tf('skat.ergebnis.augen', { augen: r.declarerAugen, wert: r.spielwert })}
           </p>
         )}
 
@@ -1049,7 +1097,7 @@ function Rundenblatt({
           ))}
         </ol>
 
-        <h3>Gesamtstand</h3>
+        <h3>{t('skat.gesamtstand')}</h3>
         <ol className="skat-tafel">
           {[0, 1, 2]
             .slice()
@@ -1063,7 +1111,7 @@ function Rundenblatt({
         </ol>
 
         <button className="primary" onClick={onWeiter}>
-          Weiter
+          {t('skat.weiter')}
         </button>
       </div>
     </div>

@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 
 import { ApiError, api, type Me } from './api';
-import { t } from './i18n';
+import { setzeSprachwahl, t } from './i18n';
+import { useSprache } from './i18n/useSprache';
 import { Ladekreis } from './Ladekreis';
 import { musikAn } from './klang';
 import { inApp } from './laufzeit';
@@ -45,6 +46,9 @@ const KontoLink = lazy(() =>
  */
 const Tafelrunde = lazy(() =>
   import('./screens/Tafelrunde').then((m) => ({ default: m.Tafelrunde })),
+);
+const DreckBroTable = lazy(() =>
+  import('./screens/DreckBroTable').then((m) => ({ default: m.DreckBroTable })),
 );
 const BroChessTable = lazy(() =>
   import('./screens/BroChessTable').then((m) => ({ default: m.BroChessTable })),
@@ -153,7 +157,7 @@ type Screen =
   | { name: 'profil'; accountId: string; vorher: Screen };
 
 /** Spiele, deren `lobby` die gewoehnliche Kartenlobby ist (siehe useZuruecktaste unten). */
-const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess']);
+const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess', 'dreckbro']);
 
 /**
  * Der Lade-Zustand des Clients.
@@ -239,6 +243,25 @@ export function App(): React.JSX.Element {
    * `joinTable` im Server einen schon Sitzenden unveraendert zurueckgibt.
    */
   const kontoId = me?.id ?? null;
+
+  /*
+   * Sprache. Die Wurzel haelt sie als Zustand, damit ein Umschalten den
+   * ganzen Baum neu zeichnet — ohne Neuladen und ohne neu einzuhaengen (ein
+   * `key` an der Wurzel wuerde offene Blaetter und die Tischverbindung
+   * mitnehmen). Der Wert selbst wird hier nicht gebraucht: `t()` liest ihn.
+   */
+  useSprache();
+  /*
+   * Die Wahl am Konto gilt, sobald `/api/me` da ist — sie ist die, die auf
+   * jedem Geraet gleich sein soll. Am Wert und nicht an `me`: `reload()`
+   * ersetzt das Objekt nach jeder Partie. `undefined` heisst aelterer Server
+   * ohne das Feld; dann bleibt, was im Geraet steht.
+   */
+  const kontoSprache = me?.sprache;
+  useEffect(() => {
+    if (kontoSprache === undefined) return;
+    setzeSprachwahl(kontoSprache ?? 'auto');
+  }, [kontoSprache]);
 
   /**
    * Der Tafelrunde-Link fuehrt am Server vorbei in den Schirm. Ist Tafelrunde
@@ -717,6 +740,21 @@ export function App(): React.JSX.Element {
       // steht im selben Aussehen-Feld wie das Blatt (figurensatz.ts) und darf
       // nicht durch `deckForGame` laufen, das ihn als unbekanntes Blatt auf
       // „Text" zuruecksetzen wuerde.
+      // DreckBro zeichnet Pinguine und Karten selbst (minispiele/dreckbro),
+      // ein Kartenblatt aus der Sammlung gibt es dafuer nicht.
+      if (screen.gameId === 'dreckbro') {
+        return (
+          <DreckBroTable
+            tableId={screen.tableId}
+            szene={themeFuer('dreckbro').tableScene}
+            onShowProfile={zeigeProfil}
+            onLeave={() => {
+              setScreen({ name: 'games' });
+              void reload();
+            }}
+          />
+        );
+      }
       if (screen.gameId === 'brochess') {
         return (
           <BroChessTable

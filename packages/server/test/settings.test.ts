@@ -282,3 +282,46 @@ test('ohne Anmeldung laesst sich kein Konto loeschen', async (t) => {
 
   assert.equal(res.statusCode, 401);
 });
+
+/**
+ * Sprache am Konto (Sprachgrundlage, Projekt „BroweGGames Language").
+ *
+ * null heisst „Automatisch" und ist die Vorgabe: Ein frisches Konto soll der
+ * Geraetesprache folgen, nicht einer Sprache, die der Server festlegt.
+ */
+test('Sprache: Vorgabe automatisch, waehlen, zuruecksetzen, Unbekanntes ablehnen', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  const sprache = async (): Promise<unknown> =>
+    (await s.app.inject({ method: 'GET', url: '/api/me', headers: { cookie: s.cookie } })).json()
+      .sprache;
+  const setzen = (wert: unknown) =>
+    s.app.inject({
+      method: 'PATCH',
+      url: '/api/me',
+      headers: { cookie: s.cookie },
+      payload: { sprache: wert },
+    });
+
+  assert.equal(await sprache(), null, 'ein neues Konto folgt dem Geraet');
+
+  assert.equal((await setzen('en')).statusCode, 200);
+  assert.equal(await sprache(), 'en');
+
+  // Eine Sprache, die es nicht gibt, darf nicht in der Datenbank landen —
+  // der Client faende dazu kein Woerterbuch.
+  assert.equal((await setzen('fr')).statusCode, 400);
+  assert.equal(await sprache(), 'en', 'abgelehnt heisst unveraendert');
+
+  assert.equal((await setzen(null)).statusCode, 200);
+  assert.equal(await sprache(), null, 'null stellt auf Automatisch zurueck');
+});
+
+test('Sprache: ohne Anmeldung laesst sie sich nicht setzen', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+
+  const res = await s.app.inject({ method: 'PATCH', url: '/api/me', payload: { sprache: 'en' } });
+  assert.equal(res.statusCode, 401);
+});

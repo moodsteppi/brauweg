@@ -279,7 +279,7 @@ genommen, damit die Zahl nicht aus der Luft kommt.
 - **`api.ts`**: `Preis`, `Kauftruhe`, `Paketkauf`, `Kauffund` neu; `RegalStueck`,
   `Paket`, `Shop` angepasst; `buyItem(itemId, waehrung)` erweitert,
   `buyPack(paketId)` und `buyChest(truheId)` neu.
-- **`i18n.ts`**: `error.packUnknown`, `error.packNotForSale`.
+- **`i18n.ts`** (heute `i18n/de/fehler.ts`): `error.packUnknown`, `error.packNotForSale`.
 - **`screens/Aufgaben.tsx`**: `TruhenBild` und `FundBlatt` exportiert; `FundBlatt`
   nimmt nur noch `{ grad, coins }`, damit der Kauffund aus dem Shop durchpasst.
   Kein zweites gezeichnetes Truhenbild — es gibt nur `truhe.png` im Ordner, und
@@ -341,7 +341,7 @@ am Tisch, Szenerien und Kartenrückseiten im Shop, Wappen, plus die Migrationen
 
 **Sechs der geänderten Dateien überschneiden sich:**
 `packages/server/src/shop.ts`, `packages/server/src/http/app.ts`,
-`packages/client/src/api.ts`, `packages/client/src/i18n.ts`,
+`packages/client/src/api.ts`, `packages/client/src/i18n.ts` (heute `i18n/`),
 `packages/client/src/screens/GameSelect.tsx`,
 `packages/client/src/styles.css`. Ein Merge ohne Nacharbeit gibt es nicht.
 

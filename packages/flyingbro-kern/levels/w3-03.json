@@ -1,0 +1,194 @@
+{
+  "fassung": 1,
+  "id": "w3-03",
+  "welt": 3,
+  "nr": 3,
+  "titel": "Muschelbank",
+  "breite": 30,
+  "boden": 0,
+  "schleuder": {
+    "x": 2,
+    "y": 1.2
+  },
+  "bros": [
+    "malve",
+    "pelle",
+    "tjark",
+    "malve",
+    "pelle"
+  ],
+  "sterne": [
+    0,
+    16000,
+    25000
+  ],
+  "teile": [
+    {
+      "stoff": "glas",
+      "form": "kreis",
+      "x": 11,
+      "y": 0.4,
+      "r": 0.4
+    },
+    {
+      "stoff": "glas",
+      "form": "kreis",
+      "x": 12,
+      "y": 0.4,
+      "r": 0.4
+    },
+    {
+      "stoff": "holz",
+      "form": "kreis",
+      "x": 13.3,
+      "y": 0.5,
+      "r": 0.5
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 16.3,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 18.7,
+      "y": 0.7,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 17.5,
+      "y": 1.5,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 16.3,
+      "y": 2.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "holz",
+      "form": "quader",
+      "x": 18.7,
+      "y": 2.3,
+      "b": 0.2,
+      "h": 1.4
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 17.5,
+      "y": 3.1,
+      "b": 2.8,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "kreis",
+      "x": 17.5,
+      "y": 3.6,
+      "r": 0.4
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 22,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 24,
+      "y": 0.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 23,
+      "y": 0.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 22,
+      "y": 1.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 24,
+      "y": 1.4,
+      "b": 0.2,
+      "h": 0.8
+    },
+    {
+      "stoff": "glas",
+      "form": "quader",
+      "x": 23,
+      "y": 1.9,
+      "b": 2.4,
+      "h": 0.2
+    },
+    {
+      "stoff": "glas",
+      "form": "dreieck",
+      "x": 23,
+      "y": 2.35,
+      "b": 0.8,
+      "h": 0.7
+    },
+    {
+      "stoff": "stein",
+      "form": "quader",
+      "x": 26.5,
+      "y": 0.3,
+      "b": 0.6,
+      "h": 0.6
+    }
+  ],
+  "giraffen": [
+    {
+      "groesse": "giraffe",
+      "x": 17.5,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "giraffe",
+      "x": 17.5,
+      "y": 1.6,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 23,
+      "y": 0,
+      "blick": "links"
+    },
+    {
+      "groesse": "kalb",
+      "x": 23,
+      "y": 1,
+      "blick": "links"
+    }
+  ],
+  "deko": []
+}
