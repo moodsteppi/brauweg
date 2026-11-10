@@ -88,7 +88,10 @@ das Steuerfeld wie ein Satz aussieht. Gemalt wird so groß wie in der Spalte
 - Originale in voller Auflösung bleiben im ignorierten
   `packages/client/art/broremote-ui/` und gehen ins Archiv
   `moodsteppi/brauweg-art`.
-- Laufzeit: WebP unter `packages/client/public/broremote/ui/` mit
+- Laufzeit: WebP direkt unter `packages/client/public/broremote/`, neben
+  `bauwelt.webp`, `bauinsel.webp` und `baumeister.webp`. So steht es im
+  Auftrag, und die Dateinamen dieser Tabelle überschneiden sich mit keinem
+  vorhandenen. Gewandelt wird mit
   `node ~/bildwerkzeug/wandeln.mjs <quelle> <ziel> wappen` (Elemente mit Alpha)
   bzw. `szene` (`start-hintergrund`). Vorher auf die Größen dieser Tabelle
   verkleinern, Originalauflösung wird nicht ausgeliefert.
@@ -130,8 +133,27 @@ auf eine Datei, die es noch nicht gibt.
 
 ## Generierung
 
-Offen. Die früheren BroRemote-Bilder entstanden mit dem eingebauten Imagegen
+**Stand: noch keine Bilder geliefert, die Lieferung wartet auf eine
+Entscheidung.** Diese Bestellung ist nur der erste Teil des Auftrags. Die
+Bilddateien, der Kontaktbogen und der tatsächlich verwendete Prompt je Bild
+fehlen noch.
+
+Grund: Die früheren BroRemote-Bilder entstanden mit dem eingebauten Imagegen
 einer anderen Sitzung. Der Worker auf dem Mood-XPS hat kein eigenes
-Bildmodell. Der einzige erreichbare Dienst (VerseIn) ist bezahlt, und das
-Konto stand am 10.11.2026 auf 0 Münzen. Prompts und endgültige Maße werden
-nach der Lieferung hier ergänzt.
+Bildmodell, und `dienste.mjs` hat keinen Bilddienst freigegeben. Erreichbar
+ist nur VerseIn, ein bezahlter Dienst. Das Konto stand am 10.11.2026 bei
+beiden Läufen auf 0 Münzen. Der Auftrag verbietet, bezahlte Dienste ohne
+Rückfrage zu nutzen oder ersatzweise zu zeichnen. Deshalb ging die Rückfrage
+mit der Fertigmeldung der Aufgabe an das Team:
+
+- **A: VerseIn aufladen und freigeben.** Je Bild kostet GPT Image 2 10 Münzen,
+  Nano Banana 2 20 Münzen und GPT Image 2.5 Flare 35 Münzen (laut
+  `estimate_cost` vom 10.11.2026). Für die 15 Motive (`taste-rechts` wird
+  gespiegelt) sind das mit GPT Image 2 rund 150 Münzen, mit Nachbesserungen
+  eher 250.
+- **B: Die Aufgabe an eine Sitzung mit eingebautem Imagegen geben**, so wie bei
+  `bauwelt.webp`, `bauinsel.webp` und `baumeister.webp`.
+
+Nach der Lieferung kommen hierher: das Werkzeug, der tatsächliche Prompt je
+Bild (gemeinsamer Teil plus Motiv), die Maße und kB-Größen der WebP-Dateien und
+der Verweis auf den Kontaktbogen.
