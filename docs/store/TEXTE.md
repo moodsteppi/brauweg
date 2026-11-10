@@ -28,6 +28,9 @@ deshalb stehen sie ohne Umlaute da.
 
 Sprachen: **Deutsch** ist die Hauptsprache, **Englisch** die zweite
 (App Store: Lokalisierung „English (U.K.)" oder „English (U.S.)"; Play: `en-US`).
+**Die englischen Blöcke erst eintragen, wenn der App-Build mit der
+Sprachumstellung eingereicht ist** — Reihenfolge Release → Build → Texte,
+entschieden von Niklas am 10.11.2026 (`CHECKLISTE.md`, C9).
 
 ---
 

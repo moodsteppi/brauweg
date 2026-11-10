@@ -56,6 +56,7 @@ Produktion grenzt das über `UMFANG` ein (`docs/APP-RELEASE.md`).
 | C5 | **Löschung nimmt alles mit** (Freundschaften, Blockierungen, Clan-Nachrichten, Beitrittsanfragen, Push-Token, Werbekennung); Meldungen gegen das Konto bleiben für die Moderation. | Robin | entschieden 23.09.2026, ergänzt 27.10.2026 |
 | C6 | **EU-Händlerstatus (DSA):** Was angekreuzt wird, entscheidet Tom beim Anlegen des Eintrags. Die Anschrift ist die des Büros (Robin, 23.09.2026). | Tom | offen: Tom kreuzt an |
 | C7 | **Meldungen bearbeitet Tom** binnen 24 Stunden (PRUEFHINWEISE.md). | Robin | entschieden 23.09.2026 |
+| C9 | **Englische Store-Texte (Sprachumstellung).** Reihenfolge: (1) Release `staging` → `main` mit Admin-Ja, (2) neuer App-Build aus diesem Stand, (3) erst dann die englischen Texte aus TEXTE.md („Play in English or German …“) in App Store Connect und Play Console eintragen — an einem älteren, nur deutschen Build wäre der Satz falsch. Staging auf Englisch hat Niklas selbst abgenommen. | Niklas | entschieden 10.11.2026 |
 | C8 | **Überholt:** „Trinkspiel" als Suchwort (alt C4) und Pro-Subway in der App (alt C2) — beides ist in der App nicht mehr da. | — | entfällt 27.10.2026 |
 
 ## D. Railway (Produktion) — Mensch mit Zugang
@@ -88,3 +89,4 @@ Produktion grenzt das über `UMFANG` ein (`docs/APP-RELEASE.md`).
 | F1 | Tatsächliche Stufe (Apple) hier und in ALTERSFREIGABE.md eintragen | offen |
 | F2 | Wechselt ein weiteres Spiel in der App auf `spielbar` oder kommt Clan-Chat/Upload/Kauf in die App: ALTERSFREIGABE.md, TEXTE.md, DATENSCHUTZ-ANGABEN.md und Screenshots neu | Daueraufgabe |
 | F3 | Google Play (Android): Konto, 12 Tester über 14 Tage, Formulare (`docs/APP-RELEASE.md` 4.x) — nicht Teil des iOS-Release | offen |
+| F4 | Englische Store-Texte erst eintragen, wenn der Build mit der Sprachumstellung eingereicht ist (C9) | offen |
