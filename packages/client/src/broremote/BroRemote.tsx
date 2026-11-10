@@ -58,7 +58,10 @@ export function BroRemote(): React.JSX.Element {
   const [training, setTraining] = useState<{ seed: number; modus: BauModus } | null>(null);
   const [trainingsmodus, setTrainingsmodus] = useState<BauModus>('rennen');
   const spielEingaben = useRef<EingabeEmpfang | null>(null);
-  const spielwahlRaum = useRef('');
+  // Nur eine frisch eröffnete Lobby übernimmt die Karte der Startseite. Bei einer Wiederverbindung
+  // („Zur letzten Lobby zurück“ nach einem Neuladen) steht hier null: Dann gilt, was der Raum sagt —
+  // sonst stellte der Ausgangswert 'building' eine BroTanks-Lobby stillschweigend zurück.
+  const spielwahlNachziehen = useRef<Spiel | null>(null);
   const [test, setTest] = useState<Record<string, TestStand>>({});
   const [gespeichert, setGespeichert] = useState<Zugang | null>(() => {
     try { const d = JSON.parse(sessionStorage.getItem(SPEICHER) ?? 'null'); return d?.schluessel && d?.raum ? d as Zugang : null; } catch { return null; }
@@ -96,7 +99,7 @@ export function BroRemote(): React.JSX.Element {
 
   const starten = (z: Zugang, lokalHost = false): void => {
     messung?.trennen(); kanal.current?.schliessen(); setNetz({ ping: null, schwankung: 0, versuch: 0 }); const generation = ++lauf.current;
-    setFehler(''); setHinweis(''); setSicht(null); sichtRef.current = null; setPrivat(null); setTest({}); setSpiel(true);
+    setFehler(''); setHinweis(''); setSicht(null); sichtRef.current = null; setPrivat(null); setTest({}); setSpiel(true); spielwahlNachziehen.current = null;
     setRolle(z.rolle); setArt(z.transport); setAdresse(z.adresse); setAdressen([]); folge.current = 0;
     let ersterRaum = true;
     const e: SitzungsEreignisse = {
@@ -151,6 +154,7 @@ export function BroRemote(): React.JSX.Element {
   const gastgeber = (): void => {
     const basis = apiBase || window.location.origin;
     starten({ transport: art, adresse: `${basis.replace(/^http/, 'ws')}/ws/broremote`, rolle: 'gastgeber' }, art === 'lan');
+    spielwahlNachziehen.current = gewaehlt;
   };
   const beitreten = (): void => {
     const e = einladungLesen(eintrag);
@@ -177,12 +181,16 @@ export function BroRemote(): React.JSX.Element {
   const tanks = raumSpiel === 'brotanks';
   const zuWenige = tanks && (sicht?.spieler.length ?? 0) < 2;
   useEffect(() => {
-    // Die Karte auf der Startseite wählt das Spiel, die Lobby entsteht aber mit dem Ausgangswert des Servers:
-    // einmal je Raum nachziehen. Danach ändert nur noch der Umschalter in der Lobby das Spiel.
-    if (rolle !== 'gastgeber' || !sicht || sicht.phase !== 'lobby' || !verbunden || spielwahlRaum.current === sicht.raum) return;
-    spielwahlRaum.current = sicht.raum;
-    if ((sicht.spiel ?? 'building') !== gewaehlt) kanal.current?.senden({ art: 'spielwahl', spiel: gewaehlt });
-  }, [rolle, sicht, verbunden, gewaehlt]);
+    // Die Karte auf der Startseite wählt das Spiel, eine neue Lobby entsteht aber mit dem Ausgangswert des
+    // Servers: einmal nachziehen, und nur nach „Lobby eröffnen“. Danach ändert nur der Umschalter in der Lobby das Spiel.
+    const wunsch = spielwahlNachziehen.current;
+    if (rolle !== 'gastgeber' || !sicht) return;
+    // Wiederverbunden: Die Startseitenkarte folgt dem Raum, damit sie nach „Lobby verlassen“ nicht das falsche Spiel zeigt.
+    if (!wunsch) { if (sicht.spiel) setGewaehlt(sicht.spiel); return; }
+    if (sicht.phase !== 'lobby' || !verbunden) return;
+    spielwahlNachziehen.current = null;
+    if ((sicht.spiel ?? 'building') !== wunsch) kanal.current?.senden({ art: 'spielwahl', spiel: wunsch });
+  }, [rolle, sicht, verbunden]);
 
   return <main className={`br-seite${sicht?.phase === 'spiel' || training ? ' br-spielt' : ''}`} ref={seite}>
     <div className="br-inhalt">

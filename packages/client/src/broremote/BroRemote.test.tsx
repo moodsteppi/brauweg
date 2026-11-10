@@ -154,6 +154,15 @@ it('zeigt zwei Spielkarten; BroTanks hat kein Solotraining und wählt sein Spiel
   expect(draht.senden.mock.calls.filter(c => (c as unknown as [{ art: string }])[0].art === 'spielwahl')).toHaveLength(1);
 });
 
+it('ein neu geladener Gastgeber stellt eine BroTanks-Lobby beim Wiederverbinden nicht aufs Bauspiel zurück', () => {
+  sessionStorage.setItem('brauweg.broremote.sitzung.v1', JSON.stringify({ transport: 'relay', adresse: 'wss://staging.brauweg-spielen.de/ws/broremote', rolle: 'gastgeber', raum: 'ABC12345', schluessel: 'a'.repeat(32) }));
+  render(<BroRemote />); fireEvent.click(screen.getByRole('button', { name: 'Zur letzten Lobby zurück' }));
+  act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'brotanks' }) }); });
+  act(() => draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'brotanks', abschnitt: 2 }) }));
+  expect(draht.senden).not.toHaveBeenCalledWith(expect.objectContaining({ art: 'spielwahl' }));
+  expect(screen.getByRole('button', { name: 'BroTanks' })).toHaveAttribute('aria-pressed', 'true');
+});
+
 it('der Gastgeber schaltet in der Lobby das Spiel um; für BroTanks braucht es zwei Handys', () => {
   render(<BroRemote />);
   fireEvent.click(screen.getByRole('button', { name: /Bro Building Battle/ }));
