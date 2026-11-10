@@ -4,6 +4,21 @@ Stand 10.11.2026 (Worker, Projekt #24 „BroRemote Design überarbeiten“,
 Paket 1). Aufbau nach `docs/ASSETS-KARTENMANUFAKTUR-UI.md`, Stil nach
 `docs/ASSETS-BRO-BUILDING-BATTLE.md`.
 
+> **TEILLIEFERUNG. Der Auftrag „Paket 1: Bilder“ ist damit NICHT
+> abgeschlossen.** Wer diesen Stand freigibt, gibt nur die Bestellliste frei.
+>
+> | Teil des Auftrags | Stand |
+> | --- | --- |
+> | Bestellliste `docs/ASSETS-BROREMOTE.md` | erledigt |
+> | WebP-Bilder unter `packages/client/public/broremote/` | **fehlen** |
+> | Liste der Dateien mit Größe in kB | **fehlt** (es gibt keine Dateien) |
+> | Kontaktbogen aller Bilder | **fehlt** |
+> | Tatsächlich verwendeter Prompt je Bild | **fehlt**, die Bestellprompts stehen unten |
+>
+> Grund und Rückfrage (Weg A oder B) stehen unter „Generierung“ am Ende. Die
+> Aufgabe gilt erst als erledigt, wenn die Bilder in einem Folgelauf geliefert
+> sind und diese Box entfernt ist.
+
 ## Worum es geht
 
 BroRemote (`packages/client/src/broremote/`) besteht heute fast nur aus
