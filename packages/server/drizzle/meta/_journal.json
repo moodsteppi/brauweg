@@ -309,6 +309,13 @@
       "when": 1794229200000,
       "tag": "0043_building_runde",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794384000000,
+      "tag": "0044_brotanks_runde",
+      "breakpoints": true
     }
   ]
 }

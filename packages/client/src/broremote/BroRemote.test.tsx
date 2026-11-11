@@ -176,7 +176,7 @@ it('der Gastgeber schaltet in der Lobby das Spiel um; für BroTanks braucht es z
   act(() => draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'brotanks', spieler: [anna] }) }));
   expect(screen.queryByText('EUER SPIELMODUS')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Battle starten' })).toBeDisabled();
-  expect(screen.getByText('Für BroTanks braucht ihr mindestens zwei Handys.')).toBeInTheDocument();
+  expect(screen.getByText('Für BroTanks braucht ihr mindestens zwei Spieler oder Bots.')).toBeInTheDocument();
   act(() => draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'brotanks', spieler: [anna, { ...anna, id: 'bert', name: 'Bert' }] }) }));
   expect(screen.getByRole('button', { name: 'Battle starten' })).toBeEnabled();
 });

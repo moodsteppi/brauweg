@@ -1,3 +1,7 @@
+import { KLANGFARBEN } from './klang';
+import { WELTEN } from './welten';
+import { SCHLACHTFELD, bildEinpassen } from './massstab';
+import { hoeheBei } from './gelaende';
 import { REGELN, type Waffe } from './regeln';
 import type { Gelaende } from './gelaende';
 import type { BroSicht } from './partie';
@@ -5,21 +9,24 @@ import type { Flugbahn } from './flug';
 
 /**
  * BroTanks-Bühne mit Canvas 2D im Stil von building/zeichnen.ts (docs/BROREMOTE-ARTILLERIE.md, Abschnitt 7):
- * Nachtblau, Verläufe mit Glanzkante, goldene Akzente, Nunito. Keine Bilddateien. Himmel und Insel
+ * Nachtblau, goldene Akzente und vorbereitete WebP-Kulissen. Himmel und Insel
  * werden in Puffer gerastert — die Insel nur dann neu, wenn sich das Gelände geändert hat.
  */
 const R = REGELN;
 /** Sichtfenster in Metern: ein Rand Meer links und rechts, unten ein Stück unter den Meeresgrund. */
-export const ANSICHT = Object.freeze({ links: -3, rechts: R.breite + 3, unten: -4.5 });
+export const ANSICHT = Object.freeze({ links: 0, rechts: R.breite, unten: -10 });
 const GOLD = '#ffd67a';
+const hintergruende = new Map<string, HTMLImageElement>();
+let panzerBild: HTMLImageElement | undefined;
+function panzerGrafik(): HTMLImageElement { if (!panzerBild) { panzerBild = new Image(); panzerBild.src = '/broremote/ausbau/panzer.webp'; } return panzerBild; }
 
 export type Effekt =
-  | { art: 'ring'; x: number; y: number; r: number; seit: number }
+  | { art: 'ring'; x: number; y: number; r: number; waffe?: number; seit: number }
   | { art: 'zahl'; x: number; y: number; text: string; farbe: string; seit: number }
   | { art: 'wehe'; x: number; y: number; seit: number };
 
 export type Buehnenbild = {
-  gelaende: Gelaende; gelaendeSchluessel: string; meer: number; wind: number;
+  karte?: number; gelaende: Gelaende; gelaendeSchluessel: string; meer: number; wind: number;
   bros: readonly BroSicht[]; amZug?: string; zielen: boolean;
   /** Abgespielter Flug und die Flugzeit in s, bis zu der er gezeigt wird. */
   flug?: { bahn: Flugbahn; t: number };
@@ -27,6 +34,7 @@ export type Buehnenbild = {
 };
 
 type Puffer = { himmel?: HTMLCanvasElement; insel?: HTMLCanvasElement; inselSchluessel?: string; w: number; h: number };
+const neigungen = new WeakMap<HTMLCanvasElement, Map<string, number>>();
 const puffer = new WeakMap<HTMLCanvasElement, Puffer>();
 
 function leinwand(w: number, h: number): HTMLCanvasElement | null {
@@ -53,7 +61,7 @@ function himmelZeichnen(w: number, h: number): HTMLCanvasElement | null {
 }
 
 /** Höhenprofil als Pfad: Fels unten, Eis darüber, oben eine 0,4 m dicke Schneekruste mit Glanz. */
-function inselZeichnen(w: number, h: number, g: Gelaende, mx: (x: number) => number, my: (y: number) => number, skala: number): HTMLCanvasElement | null {
+function inselZeichnen(w: number, h: number, g: Gelaende, mx: (x: number) => number, my: (y: number) => number, skala: number, welt = WELTEN[0] as typeof WELTEN[number]): HTMLCanvasElement | null {
   const bild = leinwand(w, h); if (!bild) return null;
   const c = bild.getContext('2d')!;
   const oberflaeche = (): void => {
@@ -62,7 +70,7 @@ function inselZeichnen(w: number, h: number, g: Gelaende, mx: (x: number) => num
     c.lineTo(mx(R.breite), my(g[g.length - 1]));
   };
   c.beginPath(); oberflaeche(); c.lineTo(mx(R.breite), h); c.lineTo(mx(0), h); c.closePath();
-  const f = c.createLinearGradient(0, my(10), 0, my(ANSICHT.unten)); f.addColorStop(0, '#2d7f92'); f.addColorStop(.35, '#1d4f66'); f.addColorStop(.7, '#3a4256'); f.addColorStop(1, '#232838');
+  const f = c.createLinearGradient(0, my(10), 0, my(ANSICHT.unten)); f.addColorStop(0, welt.farben[0]); f.addColorStop(.35, welt.farben[1]); f.addColorStop(.7, welt.farben[2]); f.addColorStop(1, welt.farben[3]);
   c.fillStyle = f; c.fill();
   c.save(); c.clip();
   // Feine Schichtlinien im Eis, damit Krater als Schnitt durch die Insel lesbar sind.
@@ -71,7 +79,7 @@ function inselZeichnen(w: number, h: number, g: Gelaende, mx: (x: number) => num
   c.restore();
   c.lineJoin = 'round'; c.lineCap = 'round';
   c.strokeStyle = '#0d1a2a99'; c.lineWidth = Math.max(3, .55 * skala); c.beginPath(); oberflaeche(); c.stroke();
-  c.strokeStyle = '#eaf7ff'; c.lineWidth = Math.max(2, .4 * skala); c.beginPath(); oberflaeche(); c.stroke();
+  c.strokeStyle = welt.kruste; c.lineWidth = Math.max(2, .4 * skala); c.beginPath(); oberflaeche(); c.stroke();
   c.strokeStyle = '#ffffffaa'; c.lineWidth = Math.max(1, .1 * skala); c.save(); c.translate(0, -Math.max(1, .12 * skala)); c.beginPath(); oberflaeche(); c.stroke(); c.restore();
   return bild;
 }
@@ -91,7 +99,7 @@ function geschoss(c: CanvasRenderingContext2D, waffe: Waffe, x: number, y: numbe
 }
 
 /** Pinguin im kleinen Panzer, Blick nach rechts; das Rohr zeigt in `winkel` (0 = rechts, 90 = hoch). */
-function bro(c: CanvasRenderingContext2D, b: BroSicht, x: number, y: number, s: number, amZug: boolean): void {
+function bro(c: CanvasRenderingContext2D, b: BroSicht, x: number, y: number, s: number, amZug: boolean, neigung: number, rueckstoss: number): void {
   c.save(); c.translate(x, y);
   if (b.raus) {
     c.globalAlpha = .7; c.rotate(Math.PI * .9); c.translate(0, s * .5);
@@ -100,7 +108,17 @@ function bro(c: CanvasRenderingContext2D, b: BroSicht, x: number, y: number, s: 
   // Rohr zuerst, damit es hinter dem Turm ansetzt.
   const a = (b.winkel * Math.PI) / 180;
   c.strokeStyle = '#e6be6c'; c.lineWidth = Math.max(3, s * .16); c.lineCap = 'round';
-  c.beginPath(); c.moveTo(0, -s * .55); c.lineTo(Math.cos(a) * s * .95, -s * .55 - Math.sin(a) * s * .95); c.stroke();
+  c.beginPath(); c.moveTo(0, -s * .55); c.lineTo(Math.cos(a) * (s * .95-rueckstoss*6), -s * .55 - Math.sin(a) * (s * .95-rueckstoss*6)); c.stroke();
+  c.save(); c.rotate(neigung);
+  const motiv = panzerGrafik();
+  if (motiv.complete && motiv.naturalWidth) {
+    c.save();
+    if (b.design==='kupfer') c.filter='sepia(.7) saturate(1.4)';
+    else if (b.design==='polar') c.filter='saturate(.25) brightness(1.3)';
+    else if (b.design==='royal') c.filter='hue-rotate(75deg) saturate(1.5)';
+    if (b.winkel > 90) c.scale(-1, 1);
+    c.drawImage(motiv, -s * .85, -s * 1.4, s * 1.7, s * 1.4); c.restore();
+  } else {
   // Ketten
   c.fillStyle = '#1b2433'; c.beginPath(); c.roundRect(-w / 2, -hk, w, hk, hk / 2); c.fill();
   c.fillStyle = '#6c7b8f'; for (let i = 0; i < 5; i++) { c.beginPath(); c.arc(-w / 2 + hk / 2 + (i * (w - hk)) / 4, -hk / 2, hk * .28, 0, Math.PI * 2); c.fill(); }
@@ -114,8 +132,16 @@ function bro(c: CanvasRenderingContext2D, b: BroSicht, x: number, y: number, s: 
   c.fillStyle = '#111c2b'; c.beginPath(); c.arc(s * .12, -s * 1.06, s * .035, 0, Math.PI * 2); c.fill();
   c.fillStyle = '#f2a83a'; c.beginPath(); c.moveTo(s * .24, -s * 1.0); c.lineTo(s * .38, -s * .96); c.lineTo(s * .24, -s * .92); c.closePath(); c.fill();
   c.fillStyle = b.farbe; c.beginPath(); c.roundRect(-s * .28, -s * .74, s * .56, s * .1, s * .05); c.fill();
+  }
+  c.restore();
   c.restore();
   if (b.raus) return;
+  if (b.schild) { c.strokeStyle='#8ff5ff'; c.lineWidth=2; c.fillStyle='#63e4f022'; c.beginPath(); c.arc(x,y-s*.6,s*1.25,0,Math.PI*2); c.fill();c.stroke(); }
+  if (b.design && b.design!=='klassisch') { c.fillStyle=b.design==='royal'?'#ffd67a':b.design==='polar'?'#e1ffff':'#efb48b'; c.font='bold 12px sans-serif';c.textAlign='center';c.fillText(b.design==='royal'?'♛':b.design==='polar'?'❄':'◆',x,y-s*1.25); }
+  if (rueckstoss>.3) {
+    const x0=x+Math.cos(a)*s*.95, y0=y-s*.55-Math.sin(a)*s*.95;
+    c.save();c.translate(x0,y0);c.rotate(-a);c.fillStyle=KLANGFARBEN[b.waffe];c.beginPath();c.moveTo(0,-4);c.lineTo(16*rueckstoss,-7*rueckstoss);c.lineTo(10*rueckstoss,0);c.lineTo(19*rueckstoss,5*rueckstoss);c.lineTo(0,4);c.closePath();c.fill();c.restore();
+  }
   // Lebensbalken über dem Bro
   const bw = s * 1.5, by = y - s * 1.65;
   c.fillStyle = '#0a1424cc'; c.beginPath(); c.roundRect(x - bw / 2, by, bw, 5, 3); c.fill();
@@ -147,10 +173,12 @@ function windfahne(c: CanvasRenderingContext2D, w: number, wind: number): void {
 
 /** Ein ganzes Bild der Bühne. Gibt false zurück, wenn es (noch) nichts zu zeichnen gab. */
 export function zeichneBuehne(canvas: HTMLCanvasElement, bild: Buehnenbild): boolean {
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  if (!w || !h) return false;
+  const breite = canvas.clientWidth, hoehe = canvas.clientHeight;
+  if (!breite || !hoehe) return false;
+  const w = SCHLACHTFELD.breite, h = SCHLACHTFELD.hoehe;
+  const rahmen = bildEinpassen(breite, hoehe);
   const dpr = Math.min(1.5, window.devicePixelRatio || 1);
-  const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+  const pw = Math.round(breite * dpr), ph = Math.round(hoehe * dpr);
   if (canvas.width !== pw || canvas.height !== ph) { canvas.width = pw; canvas.height = ph; }
   const c = canvas.getContext('2d'); if (!c) return false;
   let p = puffer.get(canvas);
@@ -160,26 +188,33 @@ export function zeichneBuehne(canvas: HTMLCanvasElement, bild: Buehnenbild): boo
   const mx = (x: number): number => (x - ANSICHT.links) * skala;
   const my = (y: number): number => h - (y - ANSICHT.unten) * skala;
 
-  c.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (!p.himmel) p.himmel = himmelZeichnen(pw, ph) ?? undefined;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = "#0b1424"; c.fillRect(0, 0, pw, ph);
+  c.setTransform(dpr * rahmen.faktor, 0, 0, dpr * rahmen.faktor, rahmen.x * dpr, rahmen.y * dpr);
+  if (!p.himmel) p.himmel = himmelZeichnen(w, h) ?? undefined;
   if (p.himmel) c.drawImage(p.himmel, 0, 0, w, h); else { c.fillStyle = '#111c2b'; c.fillRect(0, 0, w, h); }
+  const welt = WELTEN[bild.karte ?? 0] ?? WELTEN[0];
+  let hintergrund = hintergruende.get(welt.bild);
+  if (!hintergrund) { hintergrund = new Image(); hintergrund.src = welt.bild; hintergruende.set(welt.bild, hintergrund); }
+  if (hintergrund.complete && hintergrund.naturalWidth) { c.drawImage(hintergrund, 0, 0, w, h); c.fillStyle = '#07142a44'; c.fillRect(0, 0, w, h); }
 
   if (bild.wackeln > 0 && !bild.ruhe) c.translate((Math.random() - .5) * bild.wackeln * 8, (Math.random() - .5) * bild.wackeln * 6);
 
-  if (p.inselSchluessel !== bild.gelaendeSchluessel) {
+  if (p.inselSchluessel !== `${bild.karte}-${bild.gelaendeSchluessel}`) {
     // Die Insel wird in Bildschirm-Pixeln gerastert; ändert sich nur bei einem Einschlag oder der Größe.
-    const insel = leinwand(pw, ph);
+    const insel = leinwand(w, h);
     if (insel) {
-      const ic = insel.getContext('2d')!; ic.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const quelle = inselZeichnen(w, h, bild.gelaende, mx, my, skala);
+      const ic = insel.getContext('2d')!; ic.setTransform(1, 0, 0, 1, 0, 0);
+      const quelle = inselZeichnen(w, h, bild.gelaende, mx, my, skala, welt);
       if (quelle) ic.drawImage(quelle, 0, 0);
-      p.insel = insel; p.inselSchluessel = bild.gelaendeSchluessel;
+      p.insel = insel; p.inselSchluessel = `${bild.karte}-${bild.gelaendeSchluessel}`;
     }
   }
   if (p.insel) c.drawImage(p.insel, 0, 0, w, h);
 
   // Bros
-  const s = Math.max(14, skala * 1.1);
+  const s = SCHLACHTFELD.panzerBreite / 1.7;
+  let winkel = neigungen.get(canvas);
+  if (!winkel) { winkel = new Map(); neigungen.set(canvas, winkel); }
   for (const b of bild.bros) {
     if (b.raus && b.y <= bild.meer) {
       // Rettungsring auf dem Wasser
@@ -188,7 +223,12 @@ export function zeichneBuehne(canvas: HTMLCanvasElement, bild: Buehnenbild): boo
       c.strokeStyle = '#ffffff'; c.setLineDash([s * .3, s * .3]); c.beginPath(); c.arc(x, y, s * .4, 0, Math.PI * 2); c.stroke(); c.setLineDash([]);
       continue;
     }
-    bro(c, b, mx(b.x), my(b.y), s, b.id === bild.amZug && !bild.flug);
+    const halb = SCHLACHTFELD.panzerBreite / skala / 2;
+    const ziel = Math.max(-.6, Math.min(.6, -Math.atan2(hoeheBei(bild.gelaende, b.x + halb) - hoeheBei(bild.gelaende, b.x - halb), halb * 2)));
+    const alt = winkel.get(b.id) ?? ziel;
+    const neu = bild.ruhe ? ziel : alt + (ziel - alt) * .18;
+    winkel.set(b.id, neu);
+    bro(c, b, mx(b.x), my(b.y), s, b.id === bild.amZug && !bild.flug, neu, !bild.ruhe && b.id===bild.amZug && bild.flug ? Math.max(0,1-bild.flug.t/.28) : 0);
   }
 
   // Zielhilfe: gestrichelter Strahl in Rohrrichtung, Länge = Stärke. Bewusst NICHT die Bahn.
@@ -211,8 +251,10 @@ export function zeichneBuehne(canvas: HTMLCanvasElement, bild: Buehnenbild): boo
       if (i > teil.punkte.length - 1 + 6) continue;
       for (let k = Math.max(0, ende - 12 * 3); k < ende; k += 3) {
         const [x, y] = teil.punkte[k];
-        c.fillStyle = `rgba(255,232,170,${((k - (ende - 36)) / 36 * .6).toFixed(2)})`;
-        c.beginPath(); c.arc(mx(x), my(y), 2.2, 0, Math.PI * 2); c.fill();
+        c.fillStyle = KLANGFARBEN[teil.waffe]; c.globalAlpha=Math.max(0,(k-(ende-36))/36*.65);
+        if ([2,4,6].includes(teil.waffe)) c.fillRect(mx(x)-2,my(y)-2,4,4);
+        else { c.beginPath(); c.arc(mx(x),my(y),teil.waffe===8?4:teil.waffe===9?3.2:2.2,0,Math.PI*2);c.fill(); }
+        c.globalAlpha=1;
       }
       if (i > teil.punkte.length - 1) continue;
       const [x, y] = teil.punkte[ende], [vx, vy] = teil.punkte[Math.max(0, ende - 1)];
@@ -248,10 +290,11 @@ export function zeichneBuehne(canvas: HTMLCanvasElement, bild: Buehnenbild): boo
     if (e.art === 'ring') {
       if (alter > .7) continue;
       const f = alter / .7;
-      c.strokeStyle = `rgba(255,214,122,${(1 - f).toFixed(2)})`; c.lineWidth = 3;
+      c.globalAlpha=1-f; c.strokeStyle=KLANGFARBEN[e.waffe??0]; c.lineWidth=e.waffe===8?6:3;
       c.beginPath(); c.arc(mx(e.x), my(e.y), (e.r * .6 + f * e.r * 1.4) * skala, 0, Math.PI * 2); c.stroke();
+      c.globalAlpha=1;
       c.fillStyle = `rgba(238,248,255,${(.8 * (1 - f)).toFixed(2)})`; c.font = `${Math.round(16 + f * 10)}px Nunito, sans-serif`; c.textAlign = 'center';
-      ['✦', '◆', '✧'].forEach((z, i) => c.fillText(z, mx(e.x) + (i - 1) * (14 + f * 30), my(e.y) - 10 - f * 30 * (i === 1 ? 1.4 : 1)));
+      (e.waffe===8?['❄','✦','❄']:e.waffe===9?['◌','◯','◌']:e.waffe===4?['◆','◆','◆']:['✦','◆','✧']).forEach((z, i) => c.fillText(z, mx(e.x) + (i - 1) * (14 + f * 30), my(e.y) - 10 - f * 30 * (i === 1 ? 1.4 : 1)));
     } else if (e.art === 'wehe') {
       if (alter > .6) continue;
       const f = Math.min(1, alter / .4);
@@ -267,7 +310,7 @@ export function zeichneBuehne(canvas: HTMLCanvasElement, bild: Buehnenbild): boo
     }
   }
 
-  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.setTransform(dpr * rahmen.faktor, 0, 0, dpr * rahmen.faktor, rahmen.x * dpr, rahmen.y * dpr);
   windfahne(c, w, bild.wind);
   return true;
 }

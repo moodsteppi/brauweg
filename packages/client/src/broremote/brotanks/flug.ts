@@ -40,6 +40,7 @@ function krater(c: Kontext, t: number, waffe: Waffe, x: number, sx: number, sy: 
  * richtung nur beim Meißelbolzen, der sich in Flugrichtung eingräbt.
  */
 function wirken(c: Kontext, waffe: Waffe, x: number, h: number, t: number, sy: number, richtung?: [number, number]): void {
+  if (waffe === 10) { melden(c, { ...leer, t, waffe, art: 'huegel', x, y: h, breite: 7, hoehe: 3 }); return; }
   if (waffe === 5) { melden(c, { ...leer, t, waffe, art: 'huegel', x, y: h, breite: WEHE.breite, hoehe: WEHE.hoehe }); return; }
   if (waffe === 4 && richtung) {
     const ex = x + richtung[0] * 4, ey = h + richtung[1] * 4;

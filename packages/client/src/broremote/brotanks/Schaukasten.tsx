@@ -21,6 +21,9 @@
  * der Typ `ArtiPrivat`. Die Seite wird nicht mitgebaut.
  */
 
+import { TanksSolo } from './TanksSolo';
+import { Kartenwahl } from './Kartenwahl';
+import { VORRAT_START } from './regeln';
 import { StrictMode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { ArtiPrivat, Privat, Spieler } from '@brauweg/broremote-kern';
@@ -37,8 +40,8 @@ const SPIELER: Spieler[] = [
 ];
 
 const ARTI: ArtiPrivat = {
-  phase: 'zielen', amZug: true, zug: 3, rest: 14, inZuegen: 0, winkel: 58, staerke: 64, waffe: 2,
-  munition: [-1, 3, 2, 2, 1, 2, 1, 1], lp: 72, tank: 80, wind: -4, runde: 1, platz: 1, raus: false, gewonnen: false,
+  items:[1,1,1,1],itemGenutzt:false,schild:false,teleportZiele:[10,11,12,13], phase: 'zielen', amZug: true, zug: 3, rest: 14, inZuegen: 0, winkel: 58, staerke: 64, waffe: 2,
+  munition: [...VORRAT_START], lp: 72, tank: 80, wind: -4, runde: 1, platz: 1, raus: false, gewonnen: false,
 };
 const HANDY: Record<string, ArtiPrivat> = {
   handy: ARTI,
@@ -67,12 +70,15 @@ function Buehne({ fall }: { fall: string }): React.JSX.Element {
     eingaben.current?.(amZug, { art: 'feuer', zug: 1, winkel: 50, staerke: 62, waffe: 0 });
   }, [fall, amZug]);
   return <main className="br-seite br-spielt" data-stand={stand}><div className="br-inhalt">
-    <TanksArena id="schaukasten" seed={11} spieler={spieler} verbunden eingaben={eingaben} privat={privat} zurLobby={() => undefined} />
+    <TanksArena id="schaukasten" seed={Number(new URLSearchParams(location.search).get('seed') ?? 11)} spieler={spieler} verbunden eingaben={eingaben} privat={privat} zurLobby={() => undefined} />
   </div></main>;
 }
 
 function Schaukasten(): React.JSX.Element {
   const fall = new URLSearchParams(location.search).get('fall') ?? 'buehne';
+  const [karte, setKarte] = useState(0);
+  if (fall === "karten") return <main className="br-seite"><div className="br-inhalt"><Kartenwahl wahl={karte} waehlen={setKarte}/></div></main>;
+  if (fall==='werkstatt') return <main className="br-seite"><div className="br-inhalt"><TanksSolo zurueck={()=>undefined}/></div></main>;
   const arti = HANDY[fall];
   if (arti) return <main className="br-seite br-spielt" data-fall={fall}><div className="br-inhalt"><ZielController arti={arti} senden={() => undefined} /></div></main>;
   return <div data-fall={fall}><Buehne fall={fall} /></div>;

@@ -58,6 +58,7 @@ import { blockiertZwischen, hatBlockiert, meldenRouten } from './melden-routen.j
 import { partykisteRouten } from './partykiste-routen.js';
 import { lernpfadRouten } from './lernpfad-routen.js';
 import { browortRouten } from './browort-routen.js';
+import { tanksRouten } from './brotanks-routen.js';
 import { buildingRouten } from './building-routen.js';
 import { flyingbroRouten } from './flyingbro-routen.js';
 import { manufakturRouten } from './manufaktur-routen.js';
@@ -1034,6 +1035,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
+  tanksRouten(app, { db: deps.db, requireAccount, limitSchreiben: LIMIT_SCHREIBEN, limitAllgemein: LIMIT_ALLGEMEIN });
   buildingRouten(app, { db: deps.db, requireAccount, limitSchreiben: LIMIT_SCHREIBEN, limitAllgemein: LIMIT_ALLGEMEIN });
 
   // Flying Bro: das Schleuderspiel allein — siehe dort.
