@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ArtiPrivat } from '@brauweg/broremote-kern';
 import { TAKT_MS, ZielController } from './ZielController';
@@ -69,7 +69,7 @@ describe('BroTanks-Handy', () => {
     }
     expect(screen.getByLabelText('Winkel')).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Nächste Waffe' }));
-    expect(screen.getByText('Heringsfächer')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Waffe wählen' })).getByText('Heringsfächer')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowRight' }); fireEvent.keyDown(window, { key: ' ' });
     act(() => { vi.advanceTimersByTime(TAKT_MS * 3); });
     expect(senden.mock.calls.filter(c => c[0].art !== 'reset')).toEqual([]);
@@ -83,7 +83,7 @@ describe('BroTanks-Handy', () => {
     rerender(<ZielController arti={arti({ zug: 5, winkel: 120, staerke: 80 })} senden={senden} />);
     expect(screen.getByLabelText('Winkel')).toHaveValue('120');
     expect(screen.getByLabelText('Stärke')).toHaveValue('80');
-    expect(screen.getByText('Polterfass')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Waffe wählen' })).getByText('Polterfass')).toBeInTheDocument();
     // Die abweichende Vorwahl geht als erstes zielen hinaus, mit den Werten DIESES Zuges.
     expect(zielen(senden)).toEqual([{ art: 'zielen', winkel: 120, staerke: 80, waffe: 2 }]);
   });
@@ -91,11 +91,23 @@ describe('BroTanks-Handy', () => {
   it('springt von einer leeren Waffe weiter und zeigt im Ende nur noch das Ergebnis', () => {
     const senden = vi.fn();
     const { rerender } = render(<ZielController arti={arti({ waffe: 4 })} senden={senden} />);
-    expect(screen.getByText('Meißelbolzen')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Waffe wählen' })).getByText('Meißelbolzen')).toBeInTheDocument();
     rerender(<ZielController arti={arti({ waffe: 4, munition: [-1, 3, 2, 2, 0, 2, 1, 1] })} senden={senden} />);
-    expect(screen.getByText('Schneewehe')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Waffe wählen' })).getByText('Schneewehe')).toBeInTheDocument();
     rerender(<ZielController arti={arti({ phase: 'ende', amZug: false, gewonnen: true })} senden={senden} />);
     expect(screen.getByText('Gewonnen!')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /FEUER/ })).not.toBeInTheDocument();
   });
+});
+
+it('sendet Items mit Zugnummer, verhindert Doppeldruck und erlaubt nur sichere Teleportpunkte',()=>{
+ const senden=vi.fn();
+ const arti:ArtiPrivat={phase:'zielen',amZug:true,zug:1001,rest:20,inZuegen:0,winkel:45,staerke:50,waffe:0,munition:[-1,3,2,2,1,2,1,1,1,2,1],lp:70,tank:30,wind:0,runde:1,platz:1,raus:false,gewonnen:false,items:[1,1,1,1],teleportZiele:[15,16],itemGenutzt:false};
+ const r=render(<ZielController arti={arti} senden={senden}/>);
+ fireEvent.click(screen.getByRole('button',{name:/Schutzschild: Fängt/}));fireEvent.click(screen.getByRole('button',{name:/Schutzschild: Fängt/}));
+ expect(senden.mock.calls.filter(c=>c[0].art==='tanksitem')).toEqual([[{art:'tanksitem',item:'schild',zug:1001}]]);
+ r.rerender(<ZielController arti={{...arti,zug:1003,items:[1,0,1,1]}} senden={senden}/>);
+ fireEvent.click(screen.getByRole('button',{name:/Teleport: Sicherer/}));
+ fireEvent.change(screen.getByRole('combobox',{name:/Landepunkt/}),{target:{value:'16'}});fireEvent.click(screen.getByRole('button',{name:'Hierhin teleportieren'}));
+ expect(senden).toHaveBeenLastCalledWith({art:'tanksitem',item:'teleport',zug:1003,ziel:16});
 });

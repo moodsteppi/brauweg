@@ -48,14 +48,14 @@
 .bt-portraet.bt-dran .bt-gesicht:after { content:''; position:absolute; inset:-5px; border-radius:50%; border:3px solid #ffd67a; border-right-color:transparent }
 .bt-portraet.bt-knapp .bt-gesicht:after { animation:bt-puls .8s ease-in-out infinite }
 .bt-portraet.bt-raus { filter:grayscale(1); opacity:.55 }
-.bt-buehne { position:relative; aspect-ratio:16/9; max-height:calc(100dvh - 210px); width:100%; margin:auto; background:#111c2b }
+.bt-buehne { position:relative; aspect-ratio:1200/650; max-height:none; width:min(100%,calc((100dvh - 210px) * 1200 / 650)); margin:auto; background:#111c2b }
 .bt-buehne>canvas { display:block; width:100%; height:100% }
 .bt-zuginfo { position:absolute; left:16px; bottom:14px; padding:8px 14px; border-radius:14px; background:#0e2038d9; border:1px solid #d4b16a66; color:#ffe9b6; font-weight:900; font-size:14px; pointer-events:none }
 .bt-ergebnis li span { display:flex; align-items:center; gap:8px }
 .bt-ergebnis li i { width:12px; height:12px; border-radius:50%; background:var(--spielerfarbe); display:inline-block }
 .bt-ergebnis .bt-knoepfe { display:grid; gap:8px; max-width:450px; margin:18px auto 0 }
 .bt-ergebnis .bt-knoepfe .br-knopf { margin:0 }
-.bb-kino .bt-buehne { max-height:calc(100dvh - 140px) }
+.bb-kino .bt-buehne { max-height:none; width:min(100%,calc((100dvh - 140px) * 1200 / 650)) }
 @keyframes bt-puls { 50% { transform:scale(1.15); opacity:.6 } }
 @media(max-width:760px) {
   .bt-zugleiste { padding:8px 12px; gap:6px }
@@ -69,3 +69,176 @@
 
 /* "Kurz durchatmen." ist bei 70 px in der 430er-Karte breiter als die Karte (Sichtprobe 1400 px). */
 .bt-arena .bb-overlay strong { font-size:clamp(30px,4.4vw,52px) }
+
+/* Materialien und Inventar bleiben auch auf schmalen Handycontrollern lesbar. */
+.bt-waffe { background: linear-gradient(135deg,#203855,#101c32); border: 1px solid #cfa86166; border-radius: 16px; padding: 10px; box-shadow: inset 0 1px #ffffff15; }
+.bt-portraet { background: linear-gradient(140deg,#213b55,#101d32); border-radius: 16px; }
+.bt-arena .bb-werkzeug { border-bottom: 1px solid #d7b87655; background: linear-gradient(90deg,#14243b,#203e50); }
+.bt-motiv { border-radius: 20px; }
+
+.bt-kartenwahl { margin:20px 0; padding:20px; border:1px solid #d4ad6c55; border-radius:24px; background:linear-gradient(135deg,#20374e,#0e192d); }
+.bt-kartenkopf { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+.bt-kartenkopf h2 { margin:6px 0; color:#fff0cc; }
+.bt-kartenkopf button { padding:12px 18px; border:1px solid #d4ad6c; border-radius:14px; background:#182d47; color:#ffe3a0; font-weight:800; cursor:pointer; }
+.bt-kartenraster { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.bt-karte { padding:0; text-align:left; overflow:hidden; border:2px solid #5a749288; border-radius:18px; background:#12243b; color:#fff; cursor:pointer; transition:transform .15s,border-color .15s; }
+.bt-karte>img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
+.bt-kartentext { display:grid; gap:10px; padding:14px; }
+.bt-kartentext strong { font:23px 'Lilita One',sans-serif; }
+.bt-kartentext small { color:#c7d9e9; line-height:1.5; min-height:4.5em; }
+.bt-kartentext b { color:#ffd77a; font-size:13px; }
+.bt-karte[aria-pressed=true],.bt-inventar button[aria-pressed=true] { border-color:#ffd36b; box-shadow:0 0 0 2px #ffd36b33; }
+.bt-karte:hover:not(:disabled) { transform:translateY(-3px); }
+.bt-kartenwahl button:focus-visible,.bt-inventar button:focus-visible { outline:3px solid #8af0d9; outline-offset:3px; }
+.bt-arsenal { border:1px solid #7f9ab755; border-radius:16px; padding:12px; background:#0d1c30; }
+.bt-arsenal summary { cursor:pointer; color:#ffe4a6; font-weight:900; padding:6px; }
+.bt-inventar { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:12px; }
+.bt-inventar button { display:grid; gap:5px; padding:6px; border:2px solid #49617e; border-radius:12px; background:#142840; color:#fff; cursor:pointer; min-width:0; }
+.bt-inventar img { width:100%; aspect-ratio:1; border-radius:8px; }
+.bt-inventar strong { font-size:12px; overflow-wrap:anywhere; }
+.bt-inventar small { font-size:11px; color:#bad3e5; }
+.bt-inventar button:disabled { opacity:.4; cursor:not-allowed; }
+.bt-feuer>img { width:60px; height:60px; border-radius:50%; }
+.bt-waffenwahl>button img,.bt-fahrtaste img,.bt-arena .bb-rund>img { width:44px; height:44px; border-radius:50%; pointer-events:none; }
+@media(max-width:640px) { .bt-kartenraster { grid-template-columns:1fr; } .bt-karte { display:grid; grid-template-columns:40% 60%; } .bt-karte>img { height:100%; min-height:145px; } .bt-kartentext small { min-height:0; } .bt-kartentext strong { font-size:20px; } .bt-kartenwahl { padding:12px; } }
+@media(prefers-reduced-motion:reduce) { .bt-karte { transition:none; } }
+.bt-buehnenwaffe { display:flex; align-items:center; gap:12px; padding:8px 24px; background:#102038; border-bottom:1px solid #c9ab6944; }
+.bt-buehnenwaffe img { width:48px; height:48px; border-radius:10px; }
+.bt-buehnenwaffe span { display:grid; gap:3px; }.bt-buehnenwaffe small { color:#a7c8dc; }.bt-buehnenwaffe strong { color:#ffe2a3; }
+.bt-arena .bb-rund>img { width:30px; height:30px; max-width:100%; object-fit:contain; flex-shrink:0; }
+.bt-arena .bb-rund { display:grid; place-items:center; padding:4px; }
+
+/* Breite statt Höhenbegrenzung: Seitenverhältnis bleibt fest, kleine Screens scrollen vertikal. */
+.br-seite:has(.bt-arena)>.br-inhalt { width:100%; max-width:none; padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+.bt-arena,.bt-arena .bt-buehne,.bt-arena.bb-kino .bt-buehne { width:100%; max-width:none; max-height:none; }
+.bt-arena .bt-buehne { aspect-ratio:1200/650; }
+.bt-arena { border-radius:0; }
+.bt-solomenue { max-width:1100px; margin:0 auto; }
+.bt-solosteuerung { width:min(100%,640px); margin:24px auto; padding:16px; }
+
+/* Werkstatt: erst die Crew, dann Regeln und Gelände; die Bühne behält volle Breite. */
+.bt-werkstattkopf { position:relative; isolation:isolate; overflow:hidden; min-height:340px; border:1px solid #d9b57966; border-radius:28px; background:#102137; margin:0 0 24px; }
+.bt-werkstattkopf>img { position:absolute; z-index:-2; width:100%; height:100%; object-fit:cover; object-position:center 60%; }
+.bt-werkstattkopf:after { content:''; position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,#091827e8 0%,#0b1b2cb0 35%,transparent 70%); }
+.bt-werkstattkopf>div { padding:38px; max-width:55%; }
+.bt-werkstattkopf h1 { font:clamp(34px,4.4vw,62px)/1.02 'Lilita One',sans-serif; color:#fff0d5; margin:15px 0; }
+.bt-werkstattkopf p { color:#cedee9; line-height:1.6; max-width:380px; }
+.bt-werkstattplakette { display:inline-block; padding:9px 13px; border:1px solid #8fd9cd55; background:#102a37cf; border-radius:40px; color:#b3f2df; font-size:12px; font-weight:900; }
+.bt-versteckter-titel { display:none!important; }
+.bt-lobby { align-items:start; grid-template-columns:300px minmax(0,1fr)!important; }
+.bt-lobby .br-einladung { position:sticky; top:20px; background:linear-gradient(155deg,#28414a,#122237); border-color:#dbb46d77; }
+.bt-lobby .br-crew,.bt-vorbereitung { background:linear-gradient(145deg,#1a3047,#101d31); border-color:#a7c2c844; }
+.bt-lobby .br-plaetze { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.bt-lobby .br-platz { position:relative; display:grid; grid-template-columns:50px minmax(0,1fr); gap:10px; padding:16px 12px; background:#102238; border:1px dashed #6d8891; border-radius:18px; }
+.bt-lobby .br-platz.belegt { border-style:solid; }
+.bt-lobby .br-avatar { width:50px; height:50px; }
+.bt-lobby .br-avatar img { width:100%; height:100%; object-fit:contain; }
+.bt-lobby .br-platz strong { font-size:15px; }
+.bt-lobby .br-platz small { font-size:12px; }
+.bt-lobby .br-entfernen { position:absolute; right:3px; top:2px; width:32px; height:32px; }
+.bt-sitzoptionen { grid-column:1/-1; display:flex; gap:8px; }
+.bt-sitzoptionen label { flex:1; min-width:0; display:grid; gap:4px; font-size:11px; color:#acbdcf; }
+.bt-sitzoptionen select,.bt-gegnerzahl select,.bt-teleport select { width:100%; min-height:42px; border:1px solid #6a879e; border-radius:10px; color:#f5e8ce; background:#172b41; padding:8px; font:inherit; }
+.bt-einstellungen { margin-top:24px; }
+.bt-einstellungsraster { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.bt-einstellungen fieldset,.bt-botstufen { border:0; padding:0; margin:0; min-width:0; }
+.bt-einstellungen legend,.bt-botstufen legend { margin-bottom:10px; color:#ddc391; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:1px; }
+.bt-auswahlpaar { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.bt-auswahlpaar button,.bt-botstufen button { padding:14px; border:1px solid #516880; border-radius:16px; background:#14273f; color:#eff6ff; cursor:pointer; text-align:left; display:grid; gap:7px; min-width:0; }
+.bt-auswahlpaar button>span { color:#94dfd0; font:24px 'Lilita One',sans-serif; }
+.bt-auswahlpaar strong { font-size:13px; }
+.bt-auswahlpaar small,.bt-botstufen small { color:#b3c6d6; font-size:12px; line-height:1.45; }
+.bt-auswahlpaar button[aria-pressed=true],.bt-botstufen button[aria-pressed=true] { border-color:#ffd67a; background:linear-gradient(140deg,#31464e,#203146); box-shadow:inset 0 0 0 1px #ffd67a77; }
+.bt-regelhinweis { color:#bdcbd9; font-size:12px; line-height:1.6; }
+.bt-botstufen>div { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.bt-botstufen strong { font:22px 'Lilita One',sans-serif; }
+.bt-gegnerzahl { max-width:460px; margin:20px 0; }
+.bt-ausstattung,.bt-garage { margin:24px 0; padding:24px; border:1px solid #ac976244; border-radius:24px; background:linear-gradient(135deg,#192e44,#101c2f); }
+.bt-ausstattung h2,.bt-garage h2 { color:#fff0d3; font:30px 'Lilita One',sans-serif; margin:7px 0; }
+.bt-ausstattung>p { color:#bed0e0; font-size:14px; }
+.bt-ausstattung>div,.bt-lackierungen { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.bt-ausstattung article { position:relative; padding:12px; border:1px solid #56758b66; background:#102139; border-radius:18px; display:grid; gap:5px; }
+.bt-ausstattung article img { width:100%; aspect-ratio:1; object-fit:contain; border-radius:12px; }
+.bt-ausstattung small { color:#bcd0df; font-size:12px; }
+.bt-ausstattung b,.bt-itemraster b { position:absolute; right:12px; top:12px; padding:4px 7px; border-radius:10px; background:#071423; color:#ffd67a; }
+.bt-startzeile { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-top:14px; border-top:1px solid #98aeb733; }
+.bt-startzeile>span { font-size:12px; color:#aebfcf; }
+.bt-startzeile .br-knopf { width:auto; min-width:250px; display:flex; align-items:center; justify-content:center; gap:10px; margin:0; }
+.bt-startzeile img { width:38px; height:38px; object-fit:contain; }
+.bt-taktik { padding:12px; border:1px solid #a89c6355; border-radius:16px; background:#102139; }
+.bt-taktikkopf { display:flex; justify-content:space-between; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.bt-taktikkopf small { color:#a9cfc8; }
+.bt-itemraster { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
+.bt-itemraster button { position:relative; padding:6px; display:grid; gap:4px; text-align:center; border:1px solid #638697; border-radius:12px; background:#152b41; color:#fff; cursor:pointer; min-width:0; }
+.bt-itemraster img { width:100%; aspect-ratio:1; border-radius:8px; }
+.bt-itemraster strong { font-size:11px; overflow-wrap:anywhere; }
+.bt-itemraster small { font-size:10px; color:#bacbdc; }
+.bt-itemraster button:disabled { opacity:.45; cursor:not-allowed; }
+.bt-itemraster b { top:4px; right:4px; font-size:10px; }
+.bt-teleport { margin-top:12px; padding:12px; border-radius:12px; background:#222440; border:1px solid #b698e7; }
+.bt-teleport p { font-size:12px; color:#c7c9e5; }
+.bt-statistik { display:grid; grid-template-columns:repeat(4,1fr); margin:14px 0 22px; border:1px solid #708e9744; border-radius:16px; overflow:hidden; }
+.bt-statistik>div { padding:16px 8px; text-align:center; display:grid; gap:5px; background:#0d1e32; }
+.bt-statistik strong { color:#ffd67a; font:30px 'Lilita One',sans-serif; }
+.bt-statistik small { font-size:12px; color:#bbcfdf; }
+.bt-lackierungen button { padding:12px; background:#172b41; color:#f5e8ce; border:1px solid #607f92; border-radius:16px; display:grid; gap:8px; cursor:pointer; }
+.bt-lackierungen img { width:100%; height:85px; object-fit:contain; }
+.bt-lackierungen button:disabled { opacity:.45; cursor:not-allowed; }
+.bt-lackierungen button[aria-pressed=true] { border-color:#ffdc82; box-shadow:inset 0 0 0 1px #ffdc8277; }
+.bt-lackierungen small { font-size:11px; color:#bed1dd; }
+.bt-wertung { max-width:640px; margin:20px auto; padding:20px; border-radius:18px; background:#173a40; border:1px solid #8edfc366; color:#d3f6e9; }
+.bt-kartenraster { grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); }
+.bt-kartentext strong { font-size:20px; }
+.bt-solomenue { max-width:1200px; }
+.bt-solomenue button:focus-visible,.bt-lobby button:focus-visible,.bt-taktik button:focus-visible { outline:3px solid #9af1dd; outline-offset:3px; }
+@media(max-width:1000px) { .bt-lobby { grid-template-columns:260px minmax(0,1fr)!important; } .bt-lobby .bt-einstellungsraster { grid-template-columns:1fr; } }
+@media(max-width:760px) {
+ .bt-lobby { grid-template-columns:1fr!important; } .bt-lobby .br-einladung { position:static; }
+ .bt-werkstattkopf { min-height:300px; } .bt-werkstattkopf>div { padding:25px 20px; max-width:68%; } .bt-werkstattkopf>img { object-position:60% center; }
+ .bt-werkstattkopf p { font-size:13px; } .bt-werkstattkopf .bt-werkstattplakette { font-size:10px; }
+ .bt-werkstattkopf h1 { font-size:38px; } .bt-einstellungsraster { grid-template-columns:1fr; }
+ .bt-botstufen>div { grid-template-columns:1fr; } .bt-botstufen button { grid-template-columns:70px 1fr; align-items:center; }
+ .bt-ausstattung>div,.bt-lackierungen { grid-template-columns:repeat(2,1fr); } .bt-ausstattung,.bt-garage { padding:18px; }
+ .bt-startzeile { flex-direction:column; } .bt-startzeile .br-knopf { width:100%; }
+ .bt-lobby .br-plaetze { grid-template-columns:1fr 1fr; } .bt-lobby .br-platz { grid-template-columns:1fr; }
+ .bt-itemraster { grid-template-columns:repeat(2,1fr); } .bt-itemraster img { width:68px; margin:auto; }
+ .bt-statistik strong { font-size:24px; }
+}
+.bt-kartenbild { display:block; position:relative; aspect-ratio:16/9; overflow:hidden; }
+.bt-kartenbild>img { display:block; width:100%; height:100%; object-fit:cover; }
+.bt-kartenbild>svg { position:absolute; inset:auto 0 0; width:100%; height:65%; filter:drop-shadow(0 -2px 3px #12223899); }
+.bt-werkstattkompakt { min-height:210px; }
+.bt-werkstattkompakt>div { padding:22px; }
+.bt-werkstattkompakt h1 { font-size:34px; }
+.bt-werkstattkompakt .bt-werkstattplakette { display:none; }
+.bt-garagenfach { margin:18px 0; border:1px solid #74909e55; border-radius:14px; padding:13px; background:#102238; }
+.bt-garagenfach summary { cursor:pointer; font-weight:800; color:#c4e6de; }
+.bt-garagenfach .bt-garage { padding:12px; margin-bottom:0; }
+.bt-startzeile img { border-radius:50%; }
+@media(max-width:640px) { .bt-karte .bt-kartenbild { height:100%; aspect-ratio:auto; min-height:145px; } }
+
+/* Die Anzeigen liegen im freien Himmel. So beginnt die Landschaft direkt unter
+   der Verbindung, statt erst nach drei großen Kopfzeilen. Am Handy bleibt sie frei. */
+.bt-landemarken { position:absolute; bottom:0; left:1%; right:1%; display:flex; justify-content:space-between; color:#c9e1ed; font-size:10px; text-shadow:0 1px 3px #000; pointer-events:none; }
+.bt-landemarken span { border-bottom:2px solid #c9e1ed88; padding-bottom:2px; }
+.bt-portraet { border-left:3px solid var(--teamfarbe,var(--spielerfarbe)); }
+.bt-zugleiste { margin:0; list-style:none; }
+@media(min-width:900px) {
+ .br-seite.br-spielt:has(.bt-arena)>.br-inhalt>.br-kopf { display:none; }
+ .br-seite.br-spielt:has(.bt-arena)>.br-inhalt { padding-top:0; }
+ .br-seite:has(.bt-arena) .br-verbindungszeile { margin-bottom:0; border-radius:0; padding:6px 18px; min-height:42px; }
+ .bt-arena-hud { position:absolute; z-index:2; top:0; left:0; right:0; pointer-events:none; }
+ .bt-arena-hud button { pointer-events:auto; }
+ .bt-arena .bb-werkzeug { padding:10px 18px; background:linear-gradient(#0c1c31ed,#0c1c3199); }
+ .bt-arena .bb-werkzeug h2 { font-size:22px!important; }
+ .bt-arena .bt-zugleiste { padding:10px 18px; gap:12px; background:none; border:0; overflow:visible; }
+ .bt-arena .bt-portraet { padding:8px 12px; min-width:145px; background:#102238eb; }
+ .bt-arena .bt-portraet.bt-dran { transform:none; }
+ .bt-arena .bt-buehnenwaffe { position:absolute; right:18px; top:87px; padding:8px 12px; border:1px solid #c9ab6966; border-radius:14px; background:#102238e8; }
+ .bt-arena .bt-buehnenwaffe img { width:36px; height:36px; }
+ .bt-arena .bb-overlay { z-index:3; top:76px; }
+}
+@media(min-width:900px) and (max-width:1199px) {
+ .bt-arena .bt-buehnenwaffe { top:171px; }
+ .bt-arena .bt-portraet { min-width:0; }
+}

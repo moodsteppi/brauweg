@@ -64,3 +64,15 @@ it('pausiert, wenn der Bro am Zug fehlt, und spielt auf Wunsch ohne ihn weiter b
   fireEvent.click(screen.getByRole('button', { name: 'Revanche vorbereiten' }));
   expect(zurLobby).toHaveBeenCalled();
 });
+
+it('Bots warten mit dem Schuss während einer Pause und feuern danach selbst', () => {
+ const privat=vi.fn(), eingaben={current:null as EingabeEmpfang|null};
+ render(<TanksArena id="bots" seed={7} spieler={SPIELER} bots={SPIELER.map(s=>s.id)} lokal verbunden eingaben={eingaben} privat={privat} zurLobby={()=>undefined}/>);
+ laufen(3300);
+ fireEvent.click(screen.getByRole('button',{name:'Spiel pausieren'}));
+ laufen(5000);
+ expect(privat.mock.calls.at(-1)?.[1].arti.phase).toBe('pause');
+ fireEvent.click(screen.getAllByRole('button',{name:'Weiterspielen'})[0]);
+ laufen(1800);
+ expect(privat.mock.calls.some(c=>c[1].arti.phase==='flug')).toBe(true);
+});

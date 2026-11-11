@@ -15,15 +15,22 @@ export function hoeheBei(g: Gelaende, x: number): number {
 const glatt = (t: number): number => { const u = Math.min(1, Math.max(0, t)); return u * u * (3 - 2 * u); };
 
 /** Eisinsel aus dem Seed: Hügel, Senken, ein Kamm, zum Meer hin abfallend. Gleicher Seed, gleiche Insel. */
-export function inselAusSeed(seed: number): Gelaende {
+export const KARTEN = ['Polarinsel', 'Bernsteindünen', 'Kristalltal', 'Zwillingsinseln', 'Gipfelfeste'] as const;
+export const karteAusSeed = (seed: number): number => (seed >>> 0) % 3;
+
+export function inselAusSeed(seed: number, karte = karteAusSeed(seed)): Gelaende {
   const z = zufallsstrom((seed ^ STROM.gelaende) >>> 0);
   const p1 = z() * 6.28, p2 = z() * 6.28, p3 = z() * 6.28;
   const kammX = 26 + z() * 12, kammHoehe = 2 + z() * 1.5;
   const g = new Float32Array(R.spalten);
   for (let i = 0; i < R.spalten; i++) {
     const x = (i + 0.5) * R.spaltenbreite;
-    const innen = 5 + 1.6 * Math.sin(x * 0.21 + p1) + 1.1 * Math.sin(x * 0.47 + p2) + 0.6 * Math.sin(x * 0.9 + p3)
+    let innen = 5 + 1.6 * Math.sin(x * 0.21 + p1) + 1.1 * Math.sin(x * 0.47 + p2) + 0.6 * Math.sin(x * 0.9 + p3)
       + kammHoehe * Math.exp(-(((x - kammX) / 2.5) ** 2));
+    if (karte === 1) innen += 4 * Math.exp(-(((x - 32) / 9) ** 2));
+    if (karte === 2) innen = 4 + Math.abs(x - 32) * .12 + .7 * Math.sin(x * .35 + p1);
+    if (karte === 3) innen = 6 + Math.sin(x * .3 + p1) - 17 * Math.exp(-(((x - 32) / 4) ** 4));
+    if (karte === 4) innen = 4 + 10 * Math.exp(-(((x - 32) / 8) ** 2)) + .5 * Math.sin(x * .6 + p2);
     const rand = glatt((x - 6) / 6) * glatt((58 - x) / 6);
     g[i] = R.meeresgrund + (innen - R.meeresgrund) * rand;
   }
@@ -56,11 +63,15 @@ export function aufstellen(g: Gelaende, n: number, seed: number): number[] {
   const z = zufallsstrom((seed ^ STROM.platz) >>> 0);
   const links = 14, rechts = 50, xs: number[] = [];
   for (let i = 0; i < n; i++) {
-    const x = links + ((rechts - links) * (i + 0.5)) / n + (z() - 0.5) * 2;
+    let x = links + ((rechts - links) * (i + 0.5)) / n + (z() - 0.5) * 2;
+    if (hoeheBei(g, x) < R.meerStart + 2) {
+      const sichere = Array.from({ length: 37 }, (_, j) => j + 14).filter(v => hoeheBei(g, v) >= R.meerStart + 2 && xs.every(a => Math.abs(a - v) >= 5));
+      sichere.sort((a,b) => Math.abs(a-x)-Math.abs(b-x)); x = sichere[0] ?? x;
+    }
     const h = hoeheBei(g, x);
     for (let c = Math.floor((x - 1) / R.spaltenbreite); c <= Math.ceil((x + 1) / R.spaltenbreite); c++) if (c >= 0 && c < R.spalten) g[c] = h;
     xs.push(x);
   }
-  return xs;
+  return xs.sort((a,b) => a-b);
 }
 

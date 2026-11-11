@@ -4,8 +4,8 @@
  * ist hier genau eine Zeile. Handy und Bühne lesen Namen und Vorrat aus WAFFEN,
  * damit es keine zweite Liste gibt.
  */
-export type Waffe = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
-export const WAFFEN_ANZAHL = 8;
+export type Waffe = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export const WAFFEN_ANZAHL = 11;
 
 export const REGELN = Object.freeze({
   /** Feste Schrittweite der Partie UND der Flugrechnung (wie die Bauphysik). */
@@ -48,6 +48,9 @@ export const WAFFEN: readonly WaffenDaten[] = Object.freeze([
   { name: 'Schneewehe', vorrat: 2, kurz: 'Baut einen Hügel, schadet niemandem.', krater: 0, radius: 0, schaden: 0, stoss: 0 },
   { name: 'Korkenknall', vorrat: 1, kurz: 'Wenig Schaden, stößt Bros weg.', krater: 0.8, radius: 3, schaden: 8, stoss: 4 },
   { name: 'Lichterkette', vorrat: 1, kurz: 'Fünf Funken fallen nacheinander herab.', krater: 0.6, radius: 1.2, schaden: 10, stoss: 0 },
+  { name: 'Gletscherhammer', vorrat: 1, kurz: 'Breiter Einschlag, bis 42 Schaden.', krater: 3, radius: 4, schaden: 42, stoss: 0 },
+  { name: 'Sturmkugel', vorrat: 2, kurz: 'Schiebt Gegner weit weg, ohne Krater.', krater: 0, radius: 4, schaden: 5, stoss: 6 },
+  { name: 'Frostwall', vorrat: 1, kurz: 'Baut eine breite Schutzbarriere am Einschlag.', krater: 0, radius: 0, schaden: 0, stoss: 0 },
 ] satisfies WaffenDaten[]);
 export const VORRAT_START: readonly number[] = Object.freeze(WAFFEN.map(w => w.vorrat));
 /** Hügel der Schneewehe (Breite, Höhe in m). */

@@ -64,7 +64,7 @@ describe('Spielregeln BroTanks', () => {
   it('Ungültige Zielwerte und leere Waffen werden nicht übernommen', () => {
     const p = new TanksPartie(leute(2), 5); zielenBereit(p);
     const am = p.sicht().amZug, b = () => p.sicht().bros.find(x => x.id === am)!;
-    for (const w of [{ winkel: 181, staerke: 10, waffe: 0 }, { winkel: 10.5, staerke: 10, waffe: 0 }, { winkel: 10, staerke: 101, waffe: 0 }, { winkel: 10, staerke: 10, waffe: 8 }, { winkel: Number.NaN, staerke: 10, waffe: 0 }]) {
+    for (const w of [{ winkel: 181, staerke: 10, waffe: 0 }, { winkel: 10.5, staerke: 10, waffe: 0 }, { winkel: 10, staerke: 101, waffe: 0 }, { winkel: 10, staerke: 10, waffe: 11 }, { winkel: Number.NaN, staerke: 10, waffe: 0 }]) {
       p.eingabe(am, { art: 'zielen', ...w }); expect(b()).toMatchObject({ winkel: expect.any(Number), staerke: 50, waffe: 0 });
     }
     innen(p).bros.find(x => x.id === am)!.munition[5] = 0;
@@ -315,7 +315,7 @@ describe('Spielregeln BroTanks', () => {
     const priv = reihe.map(id => p.privatFuer(id)!);
     expect(priv.map(x => x.amZug)).toEqual([true, false, false, false]);
     expect(priv.map(x => x.inZuegen)).toEqual([0, 1, 2, 3]);
-    expect(priv[0].munition).toHaveLength(8); expect(priv[0].rest).toBe(20);
+    expect(priv[0].munition).toHaveLength(WAFFEN.length); expect(priv[0].rest).toBe(20);
     expect(priv.every(x => x.wind === s.wind && x.zug === 1 && x.runde === 1 && x.phase === 'zielen')).toBe(true);
     schiessen(p, 45, 30);
     expect(p.privatFuer(reihe[0])).toMatchObject({ amZug: false, phase: 'flug', inZuegen: 3 });

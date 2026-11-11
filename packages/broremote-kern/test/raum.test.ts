@@ -249,7 +249,7 @@ test('BroTanks: Spielwahl hebt den Bereitstatus auf, startet nicht allein und se
   a.senden('1', { art: 'bereit', bereit: true });
   a.post.length = 0; a.senden('h', { art: 'spielen' });
   assert.equal(a.raum.sicht().phase, 'lobby');
-  assert.ok(a.post.some(p => p.v === 'h' && p.n.art === 'fehler' && /mindestens zwei Handys/.test(p.n.text)));
+  assert.ok(a.post.some(p => p.v === 'h' && p.n.art === 'fehler' && /mindestens zwei Spieler oder Bots/.test(p.n.text)));
   a.gast('2'); a.senden('1', { art: 'bereit', bereit: true }); a.senden('2', { art: 'bereit', bereit: true });
   a.senden('h', { art: 'spielen' });
   const s = a.raum.sicht();
@@ -261,7 +261,7 @@ test('BroTanks: zielen und feuer nur im Layout zielen und nur mit gültigen Bere
   const ok = { art: 'zielen', winkel: 62, staerke: 71, waffe: 2 };
   assert.deepEqual(aktionLesen(ok, 'zielen'), ok);
   assert.equal(aktionLesen(ok, 'bauen'), null); assert.equal(aktionLesen(ok, 'auswahl'), null);
-  for (const falsch of [{ winkel: 181 }, { winkel: -1 }, { winkel: 10.5 }, { staerke: 101 }, { staerke: -1 }, { waffe: 8 }, { waffe: 1.5 }, { winkel: Number.NaN }, { staerke: '5' }]) assert.equal(aktionLesen({ ...ok, ...falsch }, 'zielen'), null, JSON.stringify(falsch));
+  for (const falsch of [{ winkel: 181 }, { winkel: -1 }, { winkel: 10.5 }, { staerke: 101 }, { staerke: -1 }, { waffe: 11 }, { waffe: 1.5 }, { winkel: Number.NaN }, { staerke: '5' }]) assert.equal(aktionLesen({ ...ok, ...falsch }, 'zielen'), null, JSON.stringify(falsch));
   const feuer = { art: 'feuer', zug: 4, winkel: 62, staerke: 71, waffe: 2 };
   assert.deepEqual(aktionLesen(feuer, 'zielen'), feuer);
   assert.equal(aktionLesen(feuer, 'bauen'), null);
@@ -296,11 +296,53 @@ test('BroTanks: arti wird gefiltert, begrenzt und nach Reconnect erneut zugestel
   assert.deepEqual(daten.arti, arti);
   assert.equal('versteckt' in (daten.arti as object), false);
   assert.ok(JSON.stringify(daten).length < 400);
+  const erweitert = { ...arti, spielerzahl:4, items:[1,0,1,1], itemGenutzt:true, schild:true, teleportZiele:[13,14], dauer:42, schuesse:2, treffer:1, schaden:25, serie:{runde:2,maximal:3,siege:1,fertig:false,gewonnen:false} };
+  const neu = gesendet({arti:erweitert});
+  assert.deepEqual((neu[0].n as Extract<ServerNachricht, {art:'privat'}>).daten.arti, erweitert);
   a.post.length = 0; a.anmelden('neu', { art: 'fortsetzen', schluessel: g.schluessel });
-  assert.ok(a.post.some(p => p.v === 'neu' && p.n.art === 'privat' && p.n.daten.arti?.winkel === 62));
-  for (const falsch of [{ munition: [1, 2, 3] }, { munition: [-1, 3, 2, 2, 1, 2, 1, 4] }, { munition: [-2, 3, 2, 2, 1, 2, 1, 1] }, { phase: 'gruen' }, { wind: 11 }, { rest: 21 }, { inZuegen: 4 },
-    { waffe: 8 }, { lp: 101 }, { tank: -1 }, { runde: 13 }, { platz: 5 }, { zug: 0 }, { winkel: 181 }, { amZug: 'ja' }, { gewonnen: 1 }, { raus: undefined }]) {
+  assert.ok(a.post.some(p => p.v === 'neu' && p.n.art === 'privat' && p.n.daten.arti?.serie?.runde === 2 && p.n.daten.arti.spielerzahl === 4));
+  for (const falsch of [{spielerzahl:5}, {spielerzahl:1}, {items:[99,1,1,1]}, {teleportZiele:[64]}, {serie:{runde:4,maximal:3,siege:1,fertig:false,gewonnen:false}}, { munition: [1, 2, 3] }, { munition: [-1, 3, 2, 2, 1, 2, 1, 4] }, { munition: [-2, 3, 2, 2, 1, 2, 1, 1] }, { phase: 'gruen' }, { wind: 11 }, { rest: 21 }, { inZuegen: 4 },
+    { waffe: 11 }, { lp: 101 }, { tank: -1 }, { runde: 13 }, { platz: 5 }, { zug: 0 }, { winkel: 181 }, { amZug: 'ja' }, { gewonnen: 1 }, { raus: undefined }]) {
     assert.equal(gesendet({ arti: { ...arti, ...falsch } }).length, 0, JSON.stringify(falsch));
   }
   assert.equal(gesendet({ arti: 'x' }).length, 0);
+});
+
+test('BroTanks: gewählte Welt bleibt im Partieseed; ungültige Welt startet nicht', () => {
+ for (const karte of [0, 1, 2]) {
+  const a = aufbau(); a.gast('1'); a.gast('2');
+  a.senden('h', { art: 'spielwahl', spiel: 'brotanks' });
+  a.senden('1', { art: 'bereit', bereit: true }); a.senden('2', { art: 'bereit', bereit: true });
+  a.senden('h', { art: 'spielen', karte: 5 }); assert.equal(a.raum.sicht().phase, 'lobby');
+  a.senden('h', { art: 'spielen', karte });
+  assert.equal(a.raum.sicht().partie!.seed % 3, karte);
+  const vorher = a.raum.sicht().partie;
+  a.anmelden('h2', { art: 'gastgeber', schluessel: a.host.schluessel });
+  assert.deepEqual(a.raum.sicht().partie, vorher);
+ }
+});
+
+test('BroTanks: zwei Freunde und zwei Bots starten 2 gegen 2, behalten Einstellungen beim Reconnect',()=>{
+  const a=aufbau(),g1=a.gast('1'),g2=a.gast('2');
+  a.senden('h',{art:'spielwahl',spiel:'brotanks'});
+  a.senden('1',{art:'bot',stufe:'schwer'});assert.equal(a.raum.sicht().spieler.length,2);
+  a.senden('h',{art:'bot',stufe:'leicht'});a.senden('h',{art:'bot',stufe:'schwer'});
+  const bots=a.raum.sicht().spieler.filter(b=>b.bot);assert.equal(bots.length,2);assert.ok(bots.every(b=>b.bereit&&b.verbunden));
+  a.senden('h',{art:'bot',stufe:'mittel'});assert.equal(a.raum.sicht().spieler.length,4);
+  a.senden('h',{art:'tanksoptionen',modus:'team',serie:3,karte:4});
+  for(const g of [g1,g2])a.senden('h',{art:'tanksteam',spieler:g.spieler,team:0});
+  for(const b of bots)a.senden('h',{art:'tanksteam',spieler:b.id,team:1});
+  a.senden('1',{art:'bereit',bereit:true});a.senden('2',{art:'bereit',bereit:true});a.senden('h',{art:'spielen'});
+  const start=a.raum.sicht();assert.equal(start.phase,'spiel');assert.deepEqual(start.partie?.tanks,{modus:'team',serie:3,karte:4});
+  a.senden('h',{art:'bot',stufe:'mittel',spieler:bots[0].id});assert.equal(a.raum.sicht().spieler.find(b=>b.id===bots[0].id)?.bot,'leicht');
+  a.raum.abmelden('h');a.anmelden('neu',{art:'gastgeber',schluessel:a.raum.hostSchluessel});assert.deepEqual(a.raum.sicht().partie,start.partie);
+  a.senden('neu',{art:'lobby'});assert.ok(a.raum.sicht().spieler.filter(b=>b.bot).every(b=>b.bereit));
+  a.senden('neu',{art:'spielwahl',spiel:'building'});assert.equal(a.raum.sicht().spieler.length,2);
+});
+test('BroTanks: unausgeglichene Teams starten nicht; Item-Nachrichten und Status sind begrenzt',()=>{
+  const a=aufbau();a.gast('1');a.senden('h',{art:'spielwahl',spiel:'brotanks'});a.senden('h',{art:'bot',stufe:'mittel'});
+  a.senden('h',{art:'tanksoptionen',modus:'team',serie:3});a.senden('1',{art:'bereit',bereit:true});a.senden('h',{art:'spielen'});assert.equal(a.raum.sicht().phase,'lobby');
+  assert.deepEqual(aktionLesen({art:'tanksitem',zug:1001,item:'teleport',ziel:32},'zielen'),{art:'tanksitem',zug:1001,item:'teleport',ziel:32});
+  for(const aktion of [{art:'tanksitem',zug:1,item:'unendlich'},{art:'tanksitem',zug:1,item:'teleport',ziel:NaN},{art:'tanksitem',zug:1,item:'teleport',ziel:64},{art:'tanksitem',zug:0,item:'schild'}])assert.equal(aktionLesen(aktion,'zielen'),null);
+  assert.equal(aktionLesen({art:'tanksitem',zug:1,item:'schild'},'bauen'),null);
 });

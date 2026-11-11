@@ -1779,3 +1779,12 @@ export const buildingRunde = pgTable('building_runde', {
   ergebnis: jsonb().$type<import('@brauweg/building-kern').BauErgebnis>(),
   muenzen: integer().notNull().default(0),
 }, t => [primaryKey({ columns: [t.accountId, t.partie] }), index('building_runde_konto_tag_idx').on(t.accountId, t.tag)]);
+
+/** BroTanks: idempotente Rundenwertung, auch für lokale Bot-Partien. */
+export const tanksRunde = pgTable('brotanks_runde', {
+  accountId: uuid().notNull().references(() => account.id, { onDelete: 'cascade' }),
+  partie: text().notNull(), modus: text().notNull(), start: timestamp({ withTimezone: true }).notNull(),
+  ende: timestamp({ withTimezone: true }), tag: text(),
+  ergebnis: jsonb().$type<import('@brauweg/broremote-kern').TanksErgebnis>(),
+  muenzen: integer().notNull().default(0),
+}, t => [primaryKey({ columns: [t.accountId, t.partie] }), index('brotanks_runde_konto_tag_idx').on(t.accountId, t.tag)]);

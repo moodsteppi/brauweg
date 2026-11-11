@@ -729,6 +729,9 @@ export type AnbieterAnmeldung =
   | { geburtstagNoetig: true; schein: string; namensvorschlag?: string };
 
 export const api = {
+  tanksStart: (partie: string, modus: import('@brauweg/broremote-kern').TanksModus) => bauAnfrage<{konto:string;partie:string}>('/brotanks/start',{partie,modus}),
+  tanksErgebnis: (partie:string, ergebnis:import('@brauweg/broremote-kern').TanksErgebnis) => bauAnfrage<{muenzen:number;wiederholt:boolean}>('/brotanks/ergebnis',{partie,ergebnis}),
+  tanksVerlauf: () => bauAnfrage<import('@brauweg/broremote-kern').TanksVerlauf>('/brotanks'),
   bauStart: (partie: string, modus: import('@brauweg/building-kern').BauModus) => bauAnfrage<{ konto: string; partie: string }>('/building/start', { partie, modus }),
   bauErgebnis: (partie: string, ergebnis: import('@brauweg/building-kern').BauErgebnis) => bauAnfrage<{ muenzen: number; abzeichen: string[]; wiederholt: boolean }>('/building/ergebnis', { partie, ergebnis }),
   bauVerlauf: () => bauAnfrage<{ konto: string; restMuenzen: number; runden: { partie: string; am: string; ergebnis: import('@brauweg/building-kern').BauErgebnis; muenzen: number }[] }>('/building'),

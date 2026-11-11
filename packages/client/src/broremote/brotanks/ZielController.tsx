@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Aktion, ArtiPrivat } from '@brauweg/broremote-kern';
 import { BroIcon, type BroSymbol } from '../BroIcon';
+import { TAKTIK } from './TanksWerkstatt';
 import { WAFFEN, WAFFEN_ANZAHL } from './regeln';
 import './brotanks.css';
 
@@ -31,6 +32,8 @@ function naechsteWaffe(munition: readonly number[], von: number, r: 1 | -1): num
  */
 export function ZielController({ arti, senden }: { arti: ArtiPrivat; senden(a: Aktion): void }): React.JSX.Element {
   const quelle = useRef(senden); quelle.current = senden;
+  const [teleport, setTeleport] = useState(false), [landung, setLandung] = useState(0);
+  const [itemGesendet, setItemGesendet] = useState(0);
   const [summen, setSummen] = useState(true);
   const haptik = useRef(summen); haptik.current = summen;
   const fuehlen = (ms = 12): void => { if (haptik.current) { try { navigator.vibrate?.(ms); } catch { /* Haptik ist optional. */ } } };
@@ -56,6 +59,11 @@ export function ZielController({ arti, senden }: { arti: ArtiPrivat; senden(a: A
     setZiel({ winkel: arti.winkel, staerke: arti.staerke, waffe });
   }
   const zugBeginn = darf ? arti.zug : 0;
+  useEffect(() => { setTeleport(false); setItemGesendet(0); }, [arti.zug]);
+  useEffect(() => { if (teleport && !arti.teleportZiele?.includes(landung)) setLandung(arti.teleportZiele?.[0] ?? 0); }, [teleport, landung, arti.teleportZiele?.join(',')]);
+  // Ein verlorenes Paket darf nicht dauerhaft sperren; die Zugnummer schützt den zweiten Versuch.
+  useEffect(() => { if (!itemGesendet) return; const t=setTimeout(()=>setItemGesendet(0),1800); return ()=>clearTimeout(t); }, [itemGesendet]);
+  const itemNutzen = (item: typeof TAKTIK[number]['id'], ziel?: number):void => { if (!aktiv || arti.itemGenutzt || itemGesendet === arti.zug) return; anhaltenRef.current(); quelle.current({art:'tanksitem',item,zug:arti.zug,...(ziel!==undefined?{ziel}:{})}); setItemGesendet(arti.zug); setTeleport(false); fuehlen(25); };
   useEffect(() => { if (zugBeginn) fuehlen(30); }, [zugBeginn]);
   // Ist die gewählte Waffe leer (z. B. nach dem letzten Schuss damit), springt die Anzeige weiter.
   useEffect(() => { if (arti.munition[ziel.waffe] === 0) setZiel(z => ({ ...z, waffe: naechsteWaffe(arti.munition, z.waffe, 1) })); }, [arti.munition.join(','), ziel.waffe]);
@@ -120,7 +128,7 @@ export function ZielController({ arti, senden }: { arti: ArtiPrivat; senden(a: A
     const reset = (): void => { loslassen(); k().anhalten(); };
     const verborgen = (): void => { if (document.hidden) reset(); };
     const unten = (e: KeyboardEvent): void => {
-      if (e.target instanceof HTMLElement && e.target.matches('input,textarea,select')) return;
+      if (e.target instanceof HTMLElement && e.target.matches('input,textarea,select,button,a,summary,[contenteditable=true]')) return;
       const schluessel: Record<string, () => void> = {
         ArrowUp: () => k().verstellen('winkel', 1), ArrowDown: () => k().verstellen('winkel', -1),
         PageUp: () => k().verstellen('staerke', 1), PageDown: () => k().verstellen('staerke', -1),
@@ -152,7 +160,7 @@ export function ZielController({ arti, senden }: { arti: ArtiPrivat; senden(a: A
     onPointerUp={e => { if (fahrt.current.delete(e.pointerId)) fahrtSchicken(); }} onPointerCancel={e => { if (fahrt.current.delete(e.pointerId)) fahrtSchicken(); }}
     onLostPointerCapture={e => { if (fahrt.current.delete(e.pointerId)) fahrtSchicken(); }}
     onClick={e => { if (e.detail === 0 && aktivRef.current) { fahrt.current.set('a11y', x); fahrtSchicken(); setTimeout(() => { if (fahrt.current.delete('a11y')) fahrtSchicken(); }, TAKT_MS); } }}>
-    <BroIcon name={x < 0 ? 'links' : 'rechts'} />Fahren</button>;
+    <img src={`/broremote/knoepfe/${x < 0 ? "links" : "rechts"}.webp`} alt="" />Fahren</button>;
   const feintaste = (feld: 'winkel' | 'staerke', r: 1 | -1, name: string): React.JSX.Element => <button type="button" className="bt-fein" disabled={!aktiv} aria-label={name}
     onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture?.(e.pointerId); druecken(feld, r); }}
     onPointerUp={loslassen} onPointerCancel={loslassen} onLostPointerCapture={loslassen}
@@ -171,7 +179,7 @@ export function ZielController({ arti, senden }: { arti: ArtiPrivat; senden(a: A
 
   return <div className={`br-controller bt-controller${aktiv ? ' bt-amzug' : ''}`}>
     <div className="bt-kopf" role="status"><strong>{kopf}</strong><span aria-label={`${arti.lp} Lebenspunkte`}>♥ {arti.lp}</span><span className="bt-wind" aria-label={`Wind ${arti.wind}`}><BroIcon name="wind" />{windText}</span></div>
-    {arti.phase === 'ende' ? <p className="bb-controllerpause">Der Gastgeber kann eine Revanche vorbereiten.</p> : <>
+    {arti.phase === 'ende' ? <p className="bb-controllerpause">{arti.serie && !arti.serie.fertig ? `Partie ${arti.serie.runde} beendet. ${arti.serie.siege} Seriensiege. Der Gastgeber startet die nächste Partie.` : 'Der Gastgeber kann eine Revanche vorbereiten.'}</p> : <>
       <div className="bt-zielfeld">
         <label className="bt-regler"><span><BroIcon name="winkel" />Winkel <b>{ziel.winkel}°</b><i className="bt-rohrpfeil" style={{ transform: `rotate(${-ziel.winkel}deg)` }} aria-hidden="true">➝</i></span>
           <span className="bt-reglerzeile">{feintaste('winkel', -1, 'Winkel kleiner')}<input type="range" min={0} max={180} step={1} value={ziel.winkel} disabled={!aktiv} aria-label="Winkel" onChange={e => setZiel(z => ({ ...z, winkel: klemmen(Number(e.target.value), 0, 180) }))} />{feintaste('winkel', 1, 'Winkel größer')}</span></label>
@@ -180,11 +188,14 @@ export function ZielController({ arti, senden }: { arti: ArtiPrivat; senden(a: A
       </div>
       <div className="bt-fahren">{fahrtaste(-1)}<div className="bt-tank" aria-label={`Tank ${arti.tank} Prozent`}><BroIcon name="tank" /><i><b style={{ width: `${arti.tank}%` }} /></i></div>{fahrtaste(1)}</div>
       <div className="bt-waffenwahl" role="group" aria-label="Waffe wählen">
-        <button type="button" aria-label="Vorige Waffe" onClick={() => waffeWechseln(-1)}>◂</button>
-        <div className="bt-waffe"><BroIcon name={waffenSymbol(ziel.waffe)} /><span><strong>{waffe.name}</strong><small>{vorrat < 0 ? '∞' : `${vorrat}×`} · {waffe.kurz}</small></span></div>
-        <button type="button" aria-label="Nächste Waffe" onClick={() => waffeWechseln(1)}>▸</button>
+        <button type="button" aria-label="Vorige Waffe" onClick={() => waffeWechseln(-1)}><img src="/broremote/knoepfe/links.webp" alt="" /></button>
+        <div className="bt-waffe"><img src={`/broremote/inventar/waffe-${ziel.waffe}.webp`} alt="" style={{width: 64, height: 56, objectFit: "cover", borderRadius: 12}} /><span><strong>{waffe.name}</strong><small>{vorrat < 0 ? '∞' : `${vorrat}×`} · {waffe.kurz}</small></span></div>
+        <button type="button" aria-label="Nächste Waffe" onClick={() => waffeWechseln(1)}><img src="/broremote/knoepfe/rechts.webp" alt="" /></button>
       </div>
-      <button type="button" className="br-steuertaste bt-feuer" disabled={!aktiv || vorrat === 0} onClick={feuern}><BroIcon name="feuer" />FEUER</button>
+      <button type="button" className="br-steuertaste bt-feuer" disabled={!aktiv || vorrat === 0} onClick={feuern}><img src="/broremote/inventar/waffe-11.webp" alt="" />FEUER</button>
+      <details className="bt-arsenal"><summary>Arsenal öffnen · {arti.munition.filter(m => m !== 0).length} Waffen bereit</summary><div className="bt-inventar">{WAFFEN.map((w,i) => <button type="button" key={w.name} disabled={arti.munition[i] === undefined || arti.munition[i] === 0} aria-pressed={ziel.waffe === i} onClick={() => setZiel(z => ({...z, waffe:i}))}><img src={`/broremote/inventar/waffe-${i}.webp`} alt="" loading="lazy"/><strong>{w.name}</strong><small>{arti.munition[i] === -1 ? '∞' : arti.munition[i] ?? 0} verfügbar</small></button>)}</div></details>
+      {arti.items && <section className="bt-taktik" aria-label="Taktische Items"><div className="bt-taktikkopf"><strong>Taktische Reserve</strong><small>{arti.schild ? 'Schutzschild aktiv' : arti.itemGenutzt ? 'Item für diesen Zug genutzt' : 'Ein Item pro Zug'}</small></div><div className="bt-itemraster">{TAKTIK.map((t,i)=><button type="button" key={t.id} aria-label={`${t.name}: ${t.text}, Vorrat ${arti.items?.[i] ?? 0}`} disabled={!aktiv || !!arti.itemGenutzt || itemGesendet===arti.zug || !arti.items?.[i] || (i===0&&arti.lp>=100) || (i===1&&arti.schild) || (i===2&&!arti.teleportZiele?.length) || (i===3&&arti.tank>=100)} onClick={()=>{if(t.id==='teleport'){setLandung(arti.teleportZiele?.[0]??0);setTeleport(v=>!v);}else itemNutzen(t.id);}}><img src={`/broremote/taktik/${t.id}.webp`} alt=""/><strong>{t.name}</strong><small>{t.text}</small><b>{arti.items?.[i]}×</b></button>)}</div>
+      {teleport && aktiv && <div className="bt-teleport"><label>Landepunkt auf dem Schlachtfeld<select value={landung} onChange={e=>setLandung(Number(e.target.value))}>{arti.teleportZiele?.map(x=><option key={x} value={x}>{Math.round(x/64*100)} % von links</option>)}</select></label><p>Nur sichere, freie Plätze innerhalb von 14 Metern sind wählbar.</p><button type="button" className="br-knopf" onClick={()=>itemNutzen('teleport',landung)}>Hierhin teleportieren</button><button type="button" className="br-link" onClick={()=>setTeleport(false)}>Abbrechen</button></div>}</section>}
     </>}
     <div className="br-controllerfuss"><span>{aktiv ? 'Ziel einstellen, dann Feuer.' : 'Waffe schon vorwählen. Schau auf den großen Bildschirm.'}</span><button type="button" className="br-link" aria-pressed={summen} onClick={() => setSummen(s => !s)}>Haptik {summen ? 'an' : 'aus'}</button></div>
   </div>;
