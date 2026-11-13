@@ -37,6 +37,15 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    /*
+     * Schriften nie als data:-URL ins CSS einbetten. Fontsource teilt in viele
+     * kleine unicode-range-Teilschriften; Vite bettet alles unter 4096 Byte
+     * ein, und der Server sendet `font-src 'self'` (app.ts) — der Browser
+     * blockierte diese Teile (Meldung von Tom, 13.11.2026, Filler-Match-Suche).
+     * Die CSP bleibt streng; geprueft wird es in `npm run build`
+     * (werkzeug/schrift-ohne-data.mjs).
+     */
+    assetsInlineLimit: (datei: string) => (/\.(woff2?|ttf|otf)$/i.test(datei) ? false : undefined),
     rollupOptions: {
       output: {
         /**
