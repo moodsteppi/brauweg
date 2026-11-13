@@ -122,10 +122,11 @@ export default {
   'brochess.zeitWahl.hinweis': 'Die Zeit gilt für jeden Spieler. Die Zahl hinter dem Plus sind Sekunden, die nach jedem eigenen Zug dazukommen. Wer keine Zeit mehr hat, verliert.',
 
   // Spielart (Lobby)
-  'brochess.spielart.titel': 'Spielart',
-  'brochess.spielart.normal': 'Normal',
-  'brochess.spielart.normal.unter': 'Klassisches Schach',
-  'brochess.spielart.secret.unter': 'Eine Figur ist heimlich Dame',
+  'brochess.modi.knopf': 'Spezial-Modi',
+  'brochess.modi.klassisch': 'Klassisches Schach',
+  'brochess.modi.klassischSpielen': 'Klassisch spielen',
+  'brochess.modi.fertig': 'Fertig',
+  'brochess.modi.secretDame.satz': 'Jeder macht heimlich eine eigene Figur zur Dame – sie verrät sich erst mit ihrem ersten Damenzug.',
   'brochess.spielart.hinweis': 'Vor dem ersten Zug wählt jeder heimlich eine eigene Figur außer dem König. Sie darf zusätzlich wie eine Dame ziehen – erst dann sieht der Gegner, welche es war.',
   'brochess.spielart.regelTitel': 'Schach durch die verdeckte Dame',
   'brochess.spielart.regelAria': 'Regel',
