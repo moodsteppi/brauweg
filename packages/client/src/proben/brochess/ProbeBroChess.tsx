@@ -6,16 +6,15 @@ import { istSprache } from '../../i18n/sprachen';
 import { Brett, ergebnis, statusText } from '../../minispiele/brochess/Brett';
 import stil from '../../minispiele/brochess/BroChess.module.css';
 import {
-  NORMALE_SPIELART,
   figurName,
   regelText,
-  type Spielart,
   frischesEreignis,
   meldung,
   wahlHinweis,
 } from '../../minispiele/brochess/geheim';
 import type { BroChessSicht, BroChessZug, SecretDameSicht } from '../../minispiele/brochess/sicht';
-import { SpielartWahl } from '../../minispiele/brochess/ZeitWahl';
+import { SpezialModiAuswahl } from '../../minispiele/brochess/SpezialModi';
+import { type ModusWahl, waehleModus } from '../../minispiele/brochess/modusliste';
 import '../../screens/hub-neu.css';
 import '../../screens/spiel-einstieg.css';
 
@@ -34,7 +33,7 @@ import '../../screens/spiel-einstieg.css';
  * Secret Dame (spielart, figurenwahl, wahl-wartet, aufdecken, war-dame,
  * koenigsschlag); `spielart` zeigt die Wahl vor der Partie statt eines Bretts.
  * Rahmen, Meldung und Fuss sind hier nachgestellt, weil der echte Tisch
- * einen Server braucht — die Bausteine darin (Brett, SpielartWahl, Saetze
+ * einen Server braucht — die Bausteine darin (Brett, SpezialModiAuswahl, Saetze
  * aus geheim.ts) sind die echten.
  *
  * `?sprache=de|en` stellt die Sprache vor dem ersten Zeichnen um — fuer
@@ -117,6 +116,7 @@ const SD: SecretDameSicht = {
   meine: null,
   bekannt: { w: null, b: null },
   ereignisse: [],
+  meineZuege: [],
 };
 
 /** Alle eigenen Figuren ausser dem König in der Grundstellung (Weiss). */
@@ -369,7 +369,7 @@ function fallAusAdresse(): string {
 export function ProbeBroChess(): React.JSX.Element {
   const [schluessel, setSchluessel] = useState(fallAusAdresse);
   const [gesendet, setGesendet] = useState<string | null>(null);
-  const [spielart, setSpielart] = useState<Spielart>({ ...NORMALE_SPIELART, modus: 'secretDame' });
+  const [spielart, setSpielart] = useState<ModusWahl>(() => waehleModus('secretDame'));
   const fall = FAELLE.find((f) => f.schluessel === schluessel) ?? FAELLE[0]!;
   const [vorgemerkt, setVorgemerkt] = useState<string | null>(fall.wahl?.vorgemerkt ?? null);
   const nameVon = (f: 'w' | 'b'): string => (f === 'w' ? 'Anna' : 'Bert');
@@ -407,12 +407,12 @@ export function ProbeBroChess(): React.JSX.Element {
               {f.titel}
             </option>
           ))}
-          <option value={SPIELART}>Secret Dame: Spielart wählen</option>
+          <option value={SPIELART}>Spezial-Modi: Auswahl</option>
         </select>
       </header>
       {schluessel === SPIELART ? (
         <div className={stil.probeSpielart}>
-          <SpielartWahl wert={spielart} onWahl={setSpielart} />
+          <SpezialModiAuswahl wahl={spielart} onWahl={setSpielart} />
         </div>
       ) : (
         <>

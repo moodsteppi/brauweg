@@ -9,6 +9,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { type Spielart, spielartRegeln, trenneAktionen } from '../minispiele/brochess/geheim';
+import { KLASSISCH, SPEZIAL_MODI, modusFelder } from '../minispiele/brochess/modusliste';
 import type {
   BroChessAufgabe,
   BroChessSicht,
@@ -119,11 +120,11 @@ describe('Vertrag BroChess: Zeitauswahl', () => {
 
 describe('Vertrag BroChess: Secret Dame', () => {
   /*
-   * Der Bot kann Secret Dame noch nicht (`botAction` wirft), darum spielt
-   * hier kein `felderEinerPartie`, sondern eine Handvoll Aktionen von Hand —
-   * jede aus `legalActions`, wie der Bildschirm sie auch nimmt.
+   * Hier spielt kein `felderEinerPartie`, sondern eine Handvoll Aktionen von
+   * Hand — jede aus `legalActions`, wie der Bildschirm sie auch nimmt. So
+   * steht fest, in welchem Zustand das Aufdecken geprueft wird.
    */
-  const SECRET_DAME = ['regel', 'wahlLaeuft', 'gewaehlt', 'meine', 'bekannt', 'ereignisse'] as const;
+  const SECRET_DAME = ['regel', 'wahlLaeuft', 'gewaehlt', 'meine', 'bekannt', 'ereignisse', 'meineZuege'] as const;
   type _secretListe = Leer<Exclude<keyof SecretDameSicht, (typeof SECRET_DAME)[number]>>;
 
   it('jede angebotene Spielart nimmt das Modul auch an', () => {
@@ -139,6 +140,30 @@ describe('Vertrag BroChess: Secret Dame', () => {
     }
     // Normal schickt nichts mit: derselbe Tisch wie vor dem Modus.
     expect(spielartRegeln({ modus: 'normal', regel: 'B' })).toEqual({});
+  });
+
+  it('jeder Eintrag der Spezial-Modi nimmt das Modul an — in jeder Variante, und der Bot spielt ihn', () => {
+    expect(modusFelder(KLASSISCH)).toEqual({});
+    for (const modus of SPEZIAL_MODI) {
+      const varianten = modus.varianten.length > 0 ? modus.varianten.map((v) => v.id) : [''];
+      for (const variante of varianten) {
+        const felder = modusFelder({ modus: modus.id, variante });
+        expect(felder.modus, `${modus.id}/${variante}`).toBe(modus.id);
+        expect(pruefeRegeln({ tableSize: 2, rounds: 1, ...felder }, 2, 1), `${modus.id}/${variante}`).toEqual([]);
+        // Die Lobby bietet jeden Modus auch gegen den Bot an: Er muss eine ganze Partie tragen.
+        const gesehen = felderEinerPartie(brochess as unknown as Spielmodul, {
+          sitze: 2,
+          runden: 1,
+          seed: 3,
+          config: { ...brochess.defaultConfig(), ...felder },
+          unterobjekte: ['secretDame'],
+        });
+        expect(gesehen.schritte, `${modus.id}/${variante}`).toBeGreaterThan(2);
+        if (modus.id === 'secretDame') {
+          expect([...(gesehen.unter.secretDame ?? [])].sort()).toEqual([...SECRET_DAME].sort());
+        }
+      }
+    }
   });
 
   it('liefert Wahl, Sicht und Aufdecken mit genau den Feldern, die der Bildschirm liest', () => {

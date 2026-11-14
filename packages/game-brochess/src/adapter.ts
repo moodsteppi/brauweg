@@ -21,7 +21,8 @@
  * Wahl, die beide Seiten GLEICHZEITIG treffen: `currentActor` nennt dann den
  * ersten Sitz, der noch waehlen muss, `legalActions` bietet aber jedem
  * Sitz, der noch nicht gewaehlt hat, seine Wahl-Aktionen an (vollstaendig —
- * eine je waehlbarer Figur). Danach gilt wieder alles oben.
+ * eine je waehlbarer Figur). Danach gilt wieder alles oben. Seit dem
+ * 13.11.2026 uebernimmt der Bot auch hier einen Sitz (Wahl und Zuege).
  */
 
 import {
@@ -129,9 +130,8 @@ export const brochess: GameModule<BroChessPartie, BroChessAktion, BroChessSicht,
 
   botAction(sicht, level) {
     if (sicht.zuschauer) throw new Error('Bot darf nicht auf Zuschauersicht laufen');
-    // Secret Dame: bewusst KEIN Bot (Auftrag, 02.11.2026) — er kennt weder die Wahl noch die Damenzuege.
-    // Statt eines Zuges, den `act` spaeter verwirft, ein klarer Fehler (offen, naechste Stufe).
-    if (sicht.secretDame) throw new Error('Secret Dame hat noch keinen Bot');
+    // Secret Dame spielt der Bot seit dem 13.11.2026 auch (Wahl und Zuege, bot.ts) —
+    // unter Regel B aus `secretDame.meineZuege` der Sicht, damit `act` jeden Zug annimmt.
     return botZug(sicht, level);
   },
 

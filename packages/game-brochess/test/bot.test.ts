@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import type { BotLevel } from '@brauweg/game-api';
 
 import { brochess } from '../src/adapter.js';
-import { botZug, eingegrenzt } from '../src/bot.js';
+import { botZug } from '../src/bot.js';
 import { angegriffen, ausFen, feldIndex, wendeAn } from '../src/brett.js';
 import {
   type BroChessAktion,
@@ -201,19 +201,23 @@ test('Secret Dame, Regel B: im Schach durch eine unbekannte Dame zieht der Bot t
   }
 });
 
-test('Secret Dame, Regel B: ist kein Zug sicher legal, gibt der Bot auf, statt zu raten', () => {
+test('Secret Dame, Regel B: wo Brett und Zugliste nichts entscheiden, zieht der Bot aus meineZuege', () => {
   /*
    * König c1 im sichtbaren Schach durch Lb2 (aus einer Probepartie, 04.11.2026).
    * Ist Th8 die verdeckte Dame, ist Kxb2 verboten; ist es Bh7, sind Kb1 und Kc2
-   * verboten. Die Sicht ist in beiden Faellen dieselbe — ein geratener Zug
-   * waere in einem davon illegal, und der Server braeche den Tisch ab.
+   * verboten. Bis zum 13.11.2026 gab der Bot hier auf, weil er es nicht
+   * wissen konnte. Jetzt nennt ihm die Sicht seine erlaubten Zuege, und er
+   * zieht in beiden Faellen legal.
    */
   const fen = '3qk1nr/5p1p/4p3/8/2P5/7P/1b2PPBP/2K5 w - - 0 22';
   for (const schwarz of ['h8', 'h7']) {
     const p = gewaehlt('B', 'g2', schwarz, fen);
     const aktion = botZug(sichtFuer(p, WEISS), 'standard');
-    assert.deepEqual(aktion, { type: 'aufgeben' }, schwarz);
-    assert.deepEqual(fuehreAus(p, WEISS, aktion).ende, { ausgang: 'aufgabe', sieger: SCHWARZ });
+    assert.equal(aktion.type, 'zug', schwarz);
+    assert.ok(
+      erlaubteAktionen(p, WEISS).some((a) => JSON.stringify(a) === JSON.stringify(aktion)),
+      `${schwarz}: ${JSON.stringify(aktion)}`,
+    );
   }
   // Unter Regel A haengt die Legalitaet nicht an der verdeckten Dame: Dort zieht er.
   const a = gewaehlt('A', 'g2', 'h8', fen);
@@ -298,24 +302,13 @@ for (const regel of ['A', 'B'] as const) {
   });
 }
 
-test('Secret Dame, Regel B: eine leer gelaufene Eingrenzung faellt auf alle Kandidaten zurueck', () => {
-  // Leer darf nie „keine verdeckte Dame" heissen: Das gaebe Zuege frei, die fuer
-  // einen Kandidaten illegal sind, und der Server bricht dann den Tisch ab.
-  const alle = [48, 49, 57];
-  assert.deepEqual(eingegrenzt(alle, []), alle);
-  assert.deepEqual(eingegrenzt(alle, null), alle);
-  assert.deepEqual(eingegrenzt(alle, [49]), [49]);
-});
-
-test('Secret Dame, Regel B: Stichprobe — jeder Zug legal, Aufgaben gezaehlt', () => {
+test('Secret Dame, Regel B: Stichprobe — jeder Zug legal, keine Aufgabe', () => {
   /*
-   * Belegt die Zahl, die im Kopf von bot.ts zur Aufgabe unter B steht, statt
-   * sie nur zu behaupten: jede elfte der 363 Paarungen aus der Probe vom
-   * 04.11.2026 (11 Wahlen Weiss × 11 Wahlen Schwarz × 3 Stufenpaare). Die
-   * Zahl der Aufgaben wird ausgegeben, nicht festgeschrieben — sie ist eine
-   * Uebergangsloesung (entschieden 05.11.2026, siehe Kopf von bot.ts), kein Sollwert.
-   * Festgeschrieben ist nur, was nie passieren darf: ein Zug, den `act`
-   * verwirft (der Server bricht dann den Tisch ab).
+   * Jede elfte der 363 Paarungen aus der Probe vom 04.11.2026 (11 Wahlen
+   * Weiss × 11 Wahlen Schwarz × 3 Stufenpaare). Bis zum 13.11.2026 gab der
+   * Bot hier in rund 5 % der Partien auf; seit die Sicht seine erlaubten
+   * Zuege nennt (`meineZuege`), darf das nicht mehr vorkommen. Ebenso wenig
+   * ein Zug, den `act` verwirft (der Server bricht dann den Tisch ab).
    */
   const weiss = ['a2', 'd2', 'e2', 'h2', 'b1', 'g1', 'c1', 'f1', 'a1', 'h1', 'd1'];
   const schwarz = ['a7', 'd7', 'e7', 'h7', 'b8', 'g8', 'c8', 'f8', 'a8', 'h8', 'd8'];
@@ -350,4 +343,5 @@ test('Secret Dame, Regel B: Stichprobe — jeder Zug legal, Aufgaben gezaehlt', 
   }
   console.log(`Stichprobe Regel B: ${aufgaben} Aufgaben in ${partien} Partien, kein illegaler Zug`);
   assert.equal(partien, 33);
+  assert.equal(aufgaben, 0);
 });

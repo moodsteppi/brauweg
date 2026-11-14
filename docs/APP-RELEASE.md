@@ -264,6 +264,14 @@ Anderer Server oder Push an: `API_BASE=…` bzw. `PUSH=YES` in `ios-lokal.env`.
    Gruppe zuordnen. **Keine Apple-Prüfung, keine Rechtstexte nötig.**
 3. In „What to Test": Bots füllen freie Plätze; Gast-Anmeldung geht ohne Mail.
 4. Builds verfallen nach 90 Tagen.
+5. **Was auf `staging` liegt, sieht ein TestFlight-Build nur, wenn er dafür
+   gebaut ist.** Die App bringt den Client im Paket mit (Stand des Commits,
+   auf dem gebaut wurde), und ein Release-Build spricht mit der Produktion
+   (`apps/ios/project.yml`), nicht mit `staging`. Wer eine Änderung von
+   `staging` in TestFlight prüfen will, baut von diesem Stand und setzt
+   `API_BASE=https://staging.brauweg-spielen.de` in `ios-lokal.env`. Sonst
+   fehlt sie dort, obwohl sie auf `staging` im Browser zu sehen ist — so
+   gesucht am 13.11.2026 bei Secret Dame (Projekt „BroChess Spezial-Modi").
 
 ### 3.4 Einreichung im Store
 

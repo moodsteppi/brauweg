@@ -23,7 +23,14 @@
 
 import { type Farbe, feldName, materialStand, vorabZiele, zuFen } from './brett.js';
 import { type GeheimEreignis, type GeheimeDame, type GeheimZustand, wahlFertig } from './geheim.js';
-import { type BroChessPartie, type Ende, farbeVonSitz, schachInPartie } from './partie.js';
+import {
+  type BroChessPartie,
+  type BroChessZug,
+  type Ende,
+  erlaubteZuege,
+  farbeVonSitz,
+  schachInPartie,
+} from './partie.js';
 import { type SchachDurchVerdeckte, zeitkontrolle } from './regeln.js';
 
 /** Eine geheime Dame, soweit der Betrachter sie kennen darf. */
@@ -52,6 +59,19 @@ export interface SecretDameSicht {
   readonly bekannt: { readonly w: GeheimeDameSicht | null; readonly b: GeheimeDameSicht | null };
   /** Ereignisse, soweit der Betrachter sie sehen darf, in Reihenfolge. */
   readonly ereignisse: readonly GeheimEreignis[];
+  /**
+   * Die eigenen erlaubten Zuege, solange dieser Sitz am Zug ist — dieselbe
+   * Menge wie `legalActions` (seit dem 13.11.2026). Sonst leer, fuer
+   * Zuschauer immer.
+   *
+   * Warum in der Sicht: Der Bot bekommt laut game-api NUR die Sicht. Unter
+   * Regel B haengt die Legalitaet an der verdeckten fremden Dame, die er
+   * nicht kennt; ohne dieses Feld musste er raten oder aufgeben (bot.ts).
+   * Verraten wird damit nichts, was der Mensch am selben Sitz nicht schon
+   * ueber `legalActions` sieht — und die Gegnersicht bleibt unberuehrt,
+   * weil hier nur die Zuege des Betrachters stehen.
+   */
+  readonly meineZuege: readonly BroChessZug[];
 }
 
 export interface BroChessSicht {
@@ -107,9 +127,10 @@ function dameSicht(dame: GeheimeDame): GeheimeDameSicht | null {
   };
 }
 
-function secretDameSicht(partie: BroChessPartie, meineFarbe: Farbe | null): SecretDameSicht | null {
+function secretDameSicht(partie: BroChessPartie, sitz: number | null): SecretDameSicht | null {
   const stand = partie.secretDame;
   if (!stand) return null;
+  const meineFarbe = sitz === null ? null : farbeVonSitz(partie, sitz);
   return {
     regel: stand.regel,
     wahlLaeuft: !wahlFertig(stand),
@@ -123,6 +144,7 @@ function secretDameSicht(partie: BroChessPartie, meineFarbe: Farbe | null): Secr
     ereignisse: stand.ereignisse.filter(
       (e) => !(e.art === 'umgewandelt' && e.verdeckt && e.farbe !== meineFarbe),
     ),
+    meineZuege: sitz === null ? [] : erlaubteZuege(partie, sitz),
   };
 }
 
@@ -146,7 +168,8 @@ function vorabMitDame(partie: BroChessPartie, farbe: Farbe): Record<string, stri
   return ziele;
 }
 
-function sicht(partie: BroChessPartie, meineFarbe: Farbe | null): BroChessSicht {
+function sicht(partie: BroChessPartie, sitz: number | null): BroChessSicht {
+  const meineFarbe = sitz === null ? null : farbeVonSitz(partie, sitz);
   return {
     zuschauer: meineFarbe === null,
     fen: zuFen(partie.stellung),
@@ -167,12 +190,12 @@ function sicht(partie: BroChessPartie, meineFarbe: Farbe | null): BroChessSicht 
       meineFarbe !== null && partie.ende === null && partie.stellung.amZug !== meineFarbe
         ? vorabMitDame(partie, meineFarbe)
         : {},
-    secretDame: secretDameSicht(partie, meineFarbe),
+    secretDame: secretDameSicht(partie, sitz),
   };
 }
 
 export function sichtFuer(partie: BroChessPartie, sitz: number): BroChessSicht {
-  return sicht(partie, farbeVonSitz(partie, sitz));
+  return sicht(partie, sitz);
 }
 
 export function zuschauerSicht(partie: BroChessPartie): BroChessSicht {

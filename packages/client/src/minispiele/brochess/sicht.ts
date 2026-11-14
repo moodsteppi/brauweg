@@ -89,6 +89,12 @@ export interface SecretDameSicht {
   /** Geheime Damen, die beide kennen (aufgedeckt oder verdeckt geschlagen). */
   bekannt: { w: GeheimeDameSicht | null; b: GeheimeDameSicht | null };
   ereignisse: GeheimEreignis[];
+  /**
+   * Die eigenen erlaubten Zuege, solange man am Zug ist (dieselben wie in
+   * `legalActions`). Der Bildschirm nimmt weiter `legalActions`; das Feld ist
+   * fuer den Bot da und steht hier, damit der Vertrag es kennt.
+   */
+  meineZuege: BroChessZug[];
 }
 
 /**

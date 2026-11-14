@@ -206,9 +206,33 @@ test('Regel A: die verdeckte Dame gibt kein Schach — schlaegt sie den König, 
   assert.deepEqual(zuschauerSicht(ende).secretDame!.ereignisse.at(-1), schlag);
 });
 
-test('Bot: im Modus Secret Dame gibt es noch keinen — klarer Fehler statt Zug', () => {
-  const p = partie('A');
-  assert.throws(() => brochess.botAction(sichtFuer(p, WEISS)), /Secret Dame hat noch keinen Bot/);
+test('Bot: das Modul spielt Secret Dame — erst die Wahl, dann ein erlaubter Zug', () => {
+  for (const regel of ['A', 'B'] as const) {
+    let p = partie(regel);
+    for (const sitz of [WEISS, SCHWARZ]) p = fuehreAus(p, sitz, brochess.botAction(sichtFuer(p, sitz)));
+    const aktion = brochess.botAction(sichtFuer(p, WEISS));
+    assert.ok(
+      erlaubteAktionen(p, WEISS).some((a) => JSON.stringify(a) === JSON.stringify(aktion)),
+      `${regel}: ${JSON.stringify(aktion)}`,
+    );
+  }
+});
+
+test('Sicht: meineZuege sind die erlaubten Zuege des Sitzes am Zug — sonst leer', () => {
+  for (const regel of ['A', 'B'] as const) {
+    const p = gewaehlt('b1', 'g8', regel);
+    assert.deepEqual(sichtFuer(p, WEISS).secretDame!.meineZuege, erlaubteAktionen(p, WEISS));
+    assert.ok(sichtFuer(p, WEISS).secretDame!.meineZuege.length > 0);
+    assert.deepEqual(sichtFuer(p, SCHWARZ).secretDame!.meineZuege, [], 'nicht am Zug');
+    assert.deepEqual(zuschauerSicht(p).secretDame!.meineZuege, [], 'Zuschauer');
+    // Waehrend der Wahl gibt es keine Zuege.
+    assert.deepEqual(sichtFuer(partie(regel), WEISS).secretDame!.meineZuege, []);
+  }
+  // Regel B: Im Schach durch die verdeckte Dame stehen nur die Zuege darin, die es aufheben.
+  const b = gewaehlt('h2', 'a5', 'B', '4k3/7p/8/n7/8/8/7P/4K3 w - - 0 1');
+  const meine = sichtFuer(b, WEISS).secretDame!.meineZuege;
+  assert.deepEqual(meine, erlaubteAktionen(b, WEISS));
+  assert.ok(!meine.some((z) => z.von === 'e1' && z.nach === 'd2'), 'Kd2 bliebe im Schach der Dame a5');
 });
 
 test('Regel A: eine AUFGEDECKTE Dame gibt Schach wie jede Dame', () => {

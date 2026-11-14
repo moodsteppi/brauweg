@@ -9,7 +9,8 @@ import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import { AnfrageWarten } from '../tisch/Anfragen';
 import { ARTNAME, VORGABE_ZEIT, regelnFuer, zeitText, zeitkontrolle } from '../minispiele/brochess/zeit';
-import { ArtZeichen, ZeitWahlBlatt, useSpielartWahl } from '../minispiele/brochess/ZeitWahl';
+import { ArtZeichen, ZeitWahlBlatt } from '../minispiele/brochess/ZeitWahl';
+import { useSpezialModi } from '../minispiele/brochess/SpezialModi';
 
 /**
  * Gemerkte Zeitkontrolle fuer BroChess. Eigener Schluessel statt im
@@ -168,9 +169,14 @@ export function Lobby({
   const [zeitId, setZeitId] = useState(gemerkteZeit);
   const [zeitOffen, setZeitOffen] = useState(false);
   const zeitRegeln = istSchach ? regelnFuer(zeitkontrolle(zeitId)) : {};
-  /** Spielart (BroChess: Normal oder Secret Dame) — Warum nur ohne Bot: siehe `useSpielartWahl`. */
-  // Bewusst ausserhalb des urspruenglichen Aufgabenumfangs: Die Spielart-Wahl wird hier verdrahtet, entschieden von Niklas am 05.11.2026 (Rueckfrage zu Aufgabe 773b9eb3, Antwort A). Lobby.tsx, die Probe-Seite und der Vertragstest bleiben.
-  const spielart = useSpielartWahl(istSchach);
+  /**
+   * Spezial-Modi (BroChess: Secret Dame …), ein Knopf in Liste, Bot- und
+   * Erstellen-Ansicht — dieselbe Wahl gilt für alle drei. Bis zum 13.11.2026
+   * stand Secret Dame nur im Formular „Tisch erstellen" und wurde nicht
+   * gefunden; gegen den Bot gab es ihn gar nicht. Was es an Modi gibt, steht
+   * allein in minispiele/brochess/spezialmodi.ts.
+   */
+  const spezial = useSpezialModi(istSchach);
   /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
   const [ansicht, setAnsicht] = useState<'liste' | 'erstellen' | 'bot'>('liste');
   /** Gestellte Beitrittsanfrage an einen privaten Tisch, solange sie läuft. */
@@ -257,7 +263,7 @@ export function Lobby({
     try {
       const table = await api.createTable({
         gameId,
-        config: { ...config, tableSize: seats, rounds, ...zeitRegeln, ...spielart.felder },
+        config: { ...config, tableSize: seats, rounds, ...zeitRegeln, ...spezial.felder },
         seats,
         rounds,
         visibility,
@@ -297,7 +303,7 @@ export function Lobby({
       const runden = defaults?.rounds[String(sitze)]?.[0] ?? 1;
       const table = await api.createTable({
         gameId,
-        config: { ...config, tableSize: sitze, rounds: runden, ...zeitRegeln },
+        config: { ...config, tableSize: sitze, rounds: runden, ...zeitRegeln, ...spezial.felder },
         seats: sitze,
         rounds: runden,
         visibility: 'on_request',
@@ -416,6 +422,7 @@ export function Lobby({
         }
       >
         {error && <p className="hb-fehler">{error}</p>}
+        {spezial.knopf}
         {zeitAbschnitt}
         <SpielAbschnitt titel={t('lobby.botStaerke')}>
           <SpielWahl
@@ -427,6 +434,7 @@ export function Lobby({
         </SpielAbschnitt>
         <p className="hb-klein">{t('lobby.bot.los')}</p>
         {zeitBlatt}
+        {spezial.blatt}
       </SpielRahmen>
     );
   }
@@ -448,8 +456,8 @@ export function Lobby({
         }
       >
         {error && <p className="hb-fehler">{error}</p>}
+        {spezial.knopf}
         {zeitAbschnitt}
-        {spielart.wahl}
         {/* Schach kennt nur zwei Spieler und eine Partie — zwei Wahlen mit
             je einer Möglichkeit wären keine Wahl. */}
         {!istSchach && (
@@ -511,6 +519,7 @@ export function Lobby({
         )}
         {regelnOffen && config && <RegelSheet config={config} onChange={setConfig} onClose={() => setRegelnOffen(false)} />}
         {zeitBlatt}
+        {spezial.blatt}
       </SpielRahmen>
     );
   }
@@ -545,6 +554,8 @@ export function Lobby({
       }
     >
       {error && <p className="hb-fehler">{error}</p>}
+      {spezial.knopf}
+      {spezial.blatt}
       <div className="hb-chips spe-chips" role="group" aria-label={t('lobby.filter')}>
         {filterWerte.map(([wert, text]) => (
           <button

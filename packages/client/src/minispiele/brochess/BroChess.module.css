@@ -709,3 +709,123 @@
   overflow: auto;
   padding: 8px 16px;
 }
+
+/*
+ * Spezial-Modi (13.11.2026): der Knopf in der Lobby und das Blatt mit einer
+ * Karte je Modus (spezialmodi.ts). Der Knopf ist mit Absicht auffaellig —
+ * Secret Dame stand vorher unscheinbar im Formular und wurde nicht gefunden.
+ */
+.modiKnopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 2px solid var(--hb-gold);
+  background: color-mix(in srgb, var(--hb-gold) 10%, var(--hb-karte));
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.modiKnopf > span:nth-of-type(1) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.modiKnopf strong {
+  font: 800 16px var(--hb-txt);
+  color: var(--hb-gold);
+}
+
+.modiKnopf small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+.modiKnopfAn small {
+  color: inherit;
+}
+
+.modusSymbol {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: var(--hb-gold);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.modiListe {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.modusKarte {
+  border-radius: 16px;
+  border: 1.5px solid var(--hb-kontur);
+  background: var(--hb-karte);
+  overflow: hidden;
+}
+
+.modusKarteAn {
+  border: 2px solid var(--hb-gold);
+}
+
+.modusKopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: none;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.modusKopf > span:nth-of-type(1) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.modusKopf strong {
+  font: 800 16px var(--hb-txt);
+}
+
+.modusKopf small {
+  font: 600 13px var(--hb-txt);
+  line-height: 1.35;
+  color: var(--hb-leise);
+}
+
+.modusHaken {
+  flex: none;
+  width: 22px;
+  font: 800 18px var(--hb-txt);
+  color: var(--hb-gold);
+  text-align: center;
+}
+
+.modusVarianten {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.modusVarianten :global(.hb-klein) {
+  margin: 0;
+}

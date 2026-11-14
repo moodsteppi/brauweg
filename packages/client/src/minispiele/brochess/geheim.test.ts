@@ -11,6 +11,7 @@ const SD: SecretDameSicht = {
   meine: null,
   bekannt: { w: null, b: null },
   ereignisse: [],
+  meineZuege: [],
 };
 
 function sicht(teil: Partial<BroChessSicht>): BroChessSicht {

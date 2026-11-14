@@ -66,8 +66,8 @@ export interface BroChessAufgabe {
  * Secret Dame: Wahl der geheimen Dame, seit dem 02.11.2026. Je Seite genau
  * einmal, vor dem ersten Zug, und beide Seiten waehlen GLEICHZEITIG —
  * `currentActor` nennt trotzdem einen Sitz (den ersten, der noch waehlen
- * muss), damit Zugzeit und Verlassen-Regel greifen (eine Bot-Uebernahme gibt es im
- * Modus noch nicht, `botAction` wirft); geprueft wird beim
+ * muss), damit Zugzeit und Verlassen-Regel greifen (seit dem 13.11.2026 auch die
+ * Bot-Uebernahme, `botAction` waehlt mit); geprueft wird beim
  * Waehlen nur, ob dieser Sitz schon gewaehlt hat (wie Eiland, CLAUDE.md).
  */
 export interface BroChessWahl {
