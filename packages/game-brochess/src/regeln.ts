@@ -28,6 +28,8 @@ export interface BroChessRegeln {
    * spielen alte Tische und Tests unveraendert weiter. 'secretDame': Jede
    * Seite bestimmt vor dem ersten Zug heimlich eine eigene Figur (nicht den
    * König), die zusaetzlich wie eine Dame ziehen darf (geheim.ts).
+   * 'dreiSchach' (seit dem 14.11.2026): Wer dem Gegner zum dritten Mal
+   * Schach gibt, gewinnt (dreischach.ts).
    */
   readonly modus?: Modus;
   /**
@@ -41,10 +43,10 @@ export interface BroChessRegeln {
   readonly schachDurchVerdeckte?: SchachDurchVerdeckte;
 }
 
-export type Modus = 'normal' | 'secretDame';
+export type Modus = 'normal' | 'secretDame' | 'dreiSchach';
 export type SchachDurchVerdeckte = 'A' | 'B';
 
-export const MODI: readonly Modus[] = ['normal', 'secretDame'];
+export const MODI: readonly Modus[] = ['normal', 'secretDame', 'dreiSchach'];
 export const SCHACH_DURCH_VERDECKTE: readonly SchachDurchVerdeckte[] = ['A', 'B'];
 
 /** Spielart des Regelsatzes; ein fehlendes Feld heisst 'normal'. */

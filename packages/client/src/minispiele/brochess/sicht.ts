@@ -22,7 +22,9 @@ export type Ausgang =
   | 'wiederholung'
   | 'material'
   | 'zeit'
-  | 'aufgabe';
+  | 'aufgabe'
+  /** Drei-Schach: Der Sieger hat zum dritten Mal Schach gegeben. */
+  | 'dreiSchach';
 
 /** Sicht des Moduls, siehe packages/game-brochess/src/sicht.ts. */
 export interface BroChessSicht {
@@ -52,6 +54,16 @@ export interface BroChessSicht {
   vorab: Record<string, string[]>;
   /** Modus 'secretDame', sonst null (normaler Modus). */
   secretDame: SecretDameSicht | null;
+  /** Modus 'dreiSchach', sonst null. */
+  dreiSchach: DreiSchachSicht | null;
+}
+
+/** Drei-Schach aus der Sicht, siehe `DreiSchachSicht` im Modul. Nichts davon ist verdeckt. */
+export interface DreiSchachSicht {
+  /** Wie oft die Farbe dem Gegner schon Schach gegeben hat. */
+  gegeben: { w: number; b: number };
+  /** Das wievielte Schach gewinnt — vom Modul, damit der Bildschirm die 3 nicht abschreibt. */
+  ziel: number;
 }
 
 /** Muss zu `SchachDurchVerdeckte` in packages/game-brochess/src/regeln.ts passen. */

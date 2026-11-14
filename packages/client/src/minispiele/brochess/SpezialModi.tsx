@@ -87,9 +87,14 @@ export function SpezialModiAuswahl({
                 {an ? '✓' : ''}
               </span>
             </button>
+            {an && modus.hinweis && modus.varianten.length === 0 && (
+              <div className={stil.modusVarianten}>
+                <p className="hb-klein">{t(modus.hinweis)}</p>
+              </div>
+            )}
             {an && modus.varianten.length > 0 && (
               <div className={stil.modusVarianten}>
-                <p className="hb-klein">{t('brochess.spielart.hinweis')}</p>
+                {modus.hinweis && <p className="hb-klein">{t(modus.hinweis)}</p>}
                 <div
                   className={`spe-wahl ${stil.regelWahl}`}
                   role="group"

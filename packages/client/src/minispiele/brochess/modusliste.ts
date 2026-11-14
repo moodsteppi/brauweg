@@ -36,6 +36,8 @@ export interface SpezialModus {
   readonly name: string;
   /** i18n-Schlüssel: die Regel in EINEM Satz, für die Karte. */
   readonly regel: string;
+  /** i18n-Schlüssel: die Regel ausführlich, erscheint unter der gewählten Karte. */
+  readonly hinweis?: string;
   /**
    * Das kleine Symbol als Pfade in einem 24×24-Feld (SVG `d`), gezeichnet
    * mit Strich. Gezeichnet statt als Bild: Ein Symbol, dessen Datei noch
@@ -54,6 +56,7 @@ export const SPEZIAL_MODI: readonly SpezialModus[] = [
     id: 'secretDame',
     name: 'brochess.secretDame',
     regel: 'brochess.modi.secretDame.satz',
+    hinweis: 'brochess.spielart.hinweis',
     // Eine Krone mit Fragezeichen: Dame, aber welche?
     symbol: ['M4 18h16', 'M5 18l-1.5-9 4.5 3.5L12 6l4 6.5L20.5 9 19 18', 'M10.5 11.5a1.6 1.6 0 1 1 2.2 1.5c-.5.3-.7.6-.7 1.1', 'M12 16.2v.1'],
     varianten: [
@@ -62,6 +65,17 @@ export const SPEZIAL_MODI: readonly SpezialModus[] = [
     ],
     felder: (variante) =>
       spielartRegeln({ modus: 'secretDame', regel: variante as SecretDameRegel } satisfies Spielart),
+  },
+  {
+    // Seit dem 14.11.2026, wie „Three-check" bei Lichess. Die Regel steht im Modul (dreischach.ts).
+    id: 'dreiSchach',
+    name: 'brochess.dreiSchach',
+    regel: 'brochess.modi.dreiSchach.satz',
+    hinweis: 'brochess.modi.dreiSchach.hinweis',
+    // „+++": drei Schachgebote in Schachschrift.
+    symbol: ['M2.5 12h5', 'M5 9.5v5', 'M9.5 12h5', 'M12 9.5v5', 'M16.5 12h5', 'M19 9.5v5'],
+    varianten: [],
+    felder: () => ({ modus: 'dreiSchach' }),
   },
 ];
 

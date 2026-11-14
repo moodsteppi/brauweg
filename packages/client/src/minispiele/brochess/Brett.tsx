@@ -498,7 +498,7 @@ function feldIndexVon(name: string): number {
 
 /** Remisgrund und Siegesgrund je Ausgang; unbekannte Ausgänge bleiben ohne Nachsatz. */
 const REMIS_AUSGAENGE = ['patt', 'fuenfzigZuege', 'wiederholung', 'material', 'zeit'];
-const GRUND_AUSGAENGE = ['matt', 'zeit', 'aufgabe'];
+const GRUND_AUSGAENGE = ['matt', 'zeit', 'aufgabe', 'dreiSchach'];
 const remisGrund = (ausgang: string): string =>
   REMIS_AUSGAENGE.includes(ausgang) ? t(`brochess.remis.${ausgang}`) : '';
 const siegGrund = (ausgang: string): string =>
@@ -541,5 +541,12 @@ export function statusText(
   if (aus) return { text: aus.grund ? tf('brochess.titelGrund', { titel: aus.titel, grund: aus.grund }) : aus.titel, art: 'ende' };
   const du = sicht.meineFarbe === sicht.amZug;
   const wer = du ? t('brochess.duAmZug') : tf('brochess.amZug', { name: nameVon(sicht.amZug) });
-  return sicht.schach ? { text: tf('brochess.schach', { zug: wer }), art: 'schach' } : { text: wer, art: 'normal' };
+  if (!sicht.schach) return { text: wer, art: 'normal' };
+  // Drei-Schach: Jedes Schach zaehlt — die Zeile sagt, das wievielte es war.
+  const drei = sicht.dreiSchach;
+  if (drei) {
+    const n = drei.gegeben[sicht.amZug === 'w' ? 'b' : 'w'];
+    return { text: tf('brochess.dreiSchach.schach', { n, ziel: drei.ziel, zug: wer }), art: 'schach' };
+  }
+  return { text: tf('brochess.schach', { zug: wer }), art: 'schach' };
 }

@@ -39,6 +39,15 @@ import {
   wahlFertig,
   wendeAnGeheim,
 } from './geheim.js';
+import {
+  type DreiSchachStand,
+  dreiSchachErreicht,
+  dreiSchachSchluessel,
+  kannSchachGeben,
+  neuerDreiSchachStand,
+  nurKoenige,
+  zaehleSchach,
+} from './dreischach.js';
 import { type BroChessRegeln, modusVon, schachRegelVon, zeitkontrolle } from './regeln.js';
 
 export interface BroChessZug {
@@ -94,7 +103,9 @@ export type Ausgang =
   | 'material'
   /** Zeit ueberschritten. Mit Sieger null: Remis, weil der Gegner nicht mattsetzen koennte. */
   | 'zeit'
-  | 'aufgabe';
+  | 'aufgabe'
+  /** Drei-Schach: Der Sieger hat dem Gegner zum dritten Mal Schach gegeben. */
+  | 'dreiSchach';
 
 export interface Ende {
   readonly ausgang: Ausgang;
@@ -131,6 +142,11 @@ export interface BroChessPartie {
    * Partie, was sie vorher war, auch im Snapshot.
    */
   readonly secretDame?: SecretDameStand;
+  /**
+   * Nur im Modus 'dreiSchach': wie oft jede Farbe schon Schach gegeben hat
+   * (dreischach.ts). Fehlt sonst ganz, wie `secretDame`.
+   */
+  readonly dreiSchach?: DreiSchachStand;
 }
 
 /**
@@ -148,11 +164,12 @@ export function erstellePartie(
    * ist der, der den Tisch aufgemacht hat, und der zoege sonst immer zuerst.
    */
   const weissSitz = Math.abs(Math.trunc(seed)) % 2;
+  const dreiSchach = modusVon(regeln) === 'dreiSchach' ? neuerDreiSchachStand() : undefined;
   return {
     regeln,
     weissSitz,
     stellung,
-    wiederholungen: { [stellungsSchluessel(stellung)]: 1 },
+    wiederholungen: { [wiederholungsSchluessel(stellung, dreiSchach)]: 1 },
     letzterZug: null,
     ende: null,
     verlassen: [],
@@ -162,7 +179,14 @@ export function erstellePartie(
       return kontrolle ? { restMs: [kontrolle.bedenkzeitMs, kontrolle.bedenkzeitMs] } : null;
     })(),
     ...(modusVon(regeln) === 'secretDame' ? { secretDame: neuerStand(schachRegelVon(regeln)) } : {}),
+    ...(dreiSchach ? { dreiSchach } : {}),
   };
+}
+
+/** Schluessel fuer die Wiederholungszaehlung; im Drei-Schach mit den Zaehlern (dreischach.ts). */
+function wiederholungsSchluessel(stellung: Stellung, dreiSchach: DreiSchachStand | undefined): string {
+  const schluessel = stellungsSchluessel(stellung);
+  return dreiSchach ? dreiSchachSchluessel(schluessel, dreiSchach) : schluessel;
 }
 
 /** Laeuft noch die Wahl der geheimen Damen? Im normalen Modus nie. */
@@ -290,7 +314,11 @@ export function fuehreAus(
   if (!zug) throw new Error('Zug nicht erlaubt');
 
   const stellung = wendeAn(partie.stellung, zug);
-  const schluessel = stellungsSchluessel(stellung);
+  // Drei-Schach: Gibt dieser Zug Schach, zaehlt er fuer den, der zieht.
+  const dreiSchach = partie.dreiSchach
+    ? zaehleSchach(partie.dreiSchach, partie.stellung.amZug, imSchach(stellung))
+    : undefined;
+  const schluessel = wiederholungsSchluessel(stellung, dreiSchach);
   const wiederholt = (partie.wiederholungen[schluessel] ?? 0) + 1;
 
   // Der Zuschlag kommt NACH dem Zug (Fischer, FIDE 6.1): Er gehoert zum Zug
@@ -306,10 +334,39 @@ export function fuehreAus(
     stellung,
     wiederholungen: { ...partie.wiederholungen, [schluessel]: wiederholt },
     letzterZug: { von: aktion.von, nach: aktion.nach },
-    ende: endeNach(stellung, wiederholt, sitz),
+    ende: dreiSchach ? endeNachDreiSchach(stellung, dreiSchach, wiederholt, sitz) : endeNach(stellung, wiederholt, sitz),
     verlauf: [...partie.verlauf, sanVon(partie.stellung, zug)],
     uhr,
+    ...(dreiSchach ? { dreiSchach } : {}),
   };
+}
+
+/**
+ * Wie `endeNach`, im Modus 'dreiSchach'. Matt geht vor (auch wenn das Matt
+ * zugleich das dritte Schach ist — gewonnen ist beides, und Matt ist der
+ * staerkere Grund), dann das dritte Schach, und zwar VOR Wiederholung und
+ * 50-Zuege-Regel: Der Zug, der das dritte Schach gibt, gewinnt, auch wenn er
+ * zugleich eine Grenze erreicht. Zu wenig Material gibt es erst, wenn nur die
+ * Könige stehen (dreischach.ts, `kannSchachGeben`).
+ */
+function endeNachDreiSchach(
+  stellung: Stellung,
+  stand: DreiSchachStand,
+  wiederholt: number,
+  zieher: number,
+): Ende | null {
+  if (legaleZuege(stellung).length === 0) {
+    return imSchach(stellung)
+      ? { ausgang: 'matt', sieger: zieher }
+      : { ausgang: 'patt', sieger: null };
+  }
+  // Der Zieher ist die Seite, die NICHT mehr am Zug ist.
+  const zieherFarbe = stellung.amZug === 'w' ? 'b' : 'w';
+  if (dreiSchachErreicht(stand, zieherFarbe)) return { ausgang: 'dreiSchach', sieger: zieher };
+  if (wiederholt >= 3) return { ausgang: 'wiederholung', sieger: null };
+  if (stellung.halbzugUhr >= 100) return { ausgang: 'fuenfzigZuege', sieger: null };
+  if (nurKoenige(stellung.brett)) return { ausgang: 'material', sieger: null };
+  return null;
 }
 
 function waehleGeheimeDame(partie: BroChessPartie, sitz: number, aktion: BroChessWahl): BroChessPartie {
@@ -445,6 +502,8 @@ export function verbraucheZeit(partie: BroChessPartie, sitz: number, ms: number)
       ausgang: 'zeit',
       sieger:
         kannMattsetzen(partie.stellung.brett, gegnerFarbe) ||
+        // Drei-Schach: Wer noch eine Figur hat, kann noch dreimal Schach geben.
+        (partie.dreiSchach !== undefined && kannSchachGeben(partie.stellung.brett, gegnerFarbe)) ||
         (partie.secretDame !== undefined && aktiv(partie.secretDame[gegnerFarbe]))
           ? gegner
           : null,

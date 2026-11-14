@@ -150,6 +150,42 @@
   color: var(--hb-leise);
 }
 
+/* Drei-Schach: die Kronen hinter dem Namen (Kronen.tsx). Eine verlorene
+   Krone kippt und faellt ein Stueck, dann bleibt sie grau stehen — weg waere
+   sie nicht mehr zaehlbar, und „zwei von drei" liest man nur mit der dritten. */
+.kronen {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 6px;
+  vertical-align: -2px;
+}
+
+.krone {
+  width: 15px;
+  height: 15px;
+  fill: var(--hb-gold, #f2c14e);
+  stroke: #00000055;
+  stroke-width: 1;
+}
+
+.kroneWeg {
+  fill: #ffffff2e;
+  stroke: #ffffff40;
+  transform: translateY(3px) rotate(-20deg);
+  animation: kroneFaellt 0.6s ease-in;
+}
+
+@keyframes kroneFaellt {
+  0% {
+    fill: var(--hb-rot, #d94b55);
+    transform: none;
+  }
+  40% {
+    fill: var(--hb-rot, #d94b55);
+    transform: translateY(-4px) rotate(10deg);
+  }
+}
+
 /* Uhr: stehend dunkel, laufend hell — wie an einer echten Schachuhr sieht
    man auf einen Blick, wessen Zeit gerade weggeht. */
 .uhr {
@@ -700,6 +736,10 @@
   .figurGleitet {
     transition: none !important;
     transform: none !important;
+  }
+  .kroneWeg {
+    animation: none;
+    transform: none;
   }
 }
 

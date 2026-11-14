@@ -4,6 +4,7 @@ import { setzeSprachwahl, t } from '../../i18n';
 import { tf } from '../../i18n/einsetzen';
 import { istSprache } from '../../i18n/sprachen';
 import { Brett, ergebnis, statusText } from '../../minispiele/brochess/Brett';
+import { Kronen } from '../../minispiele/brochess/Kronen';
 import stil from '../../minispiele/brochess/BroChess.module.css';
 import {
   figurName,
@@ -99,13 +100,14 @@ interface Fall {
 const GRUND = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 
 /** Was die Probe nicht zeigt: keine Uhr, keine Zugliste, nichts geschlagen. */
-const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' | 'vorab' | 'secretDame'> = {
+const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' | 'vorab' | 'secretDame' | 'dreiSchach'> = {
   verlauf: [],
   uhr: null,
   geschlagen: { w: [], b: [] },
   vorsprung: 0,
   vorab: {},
   secretDame: null,
+  dreiSchach: null,
 };
 
 /** Secret Dame unter Regel A, noch nichts geschehen. */
@@ -126,6 +128,29 @@ const WAHL_WEISS = [
 ];
 
 const FAELLE: Fall[] = [
+  {
+    // Aus dem Modul gespielt: 1.e4 e5 2.Lc4 Lc5 3.Lxf7+ Kxf7 4.Dh5+ Kf8 5.Dxe5 Lxf2+.
+    // Weiss hat zweimal Schach gegeben, Schwarz einmal — Weiss steht im Schach.
+    schluessel: 'drei-schach',
+    titel: 'Drei-Schach: 2 zu 1, Weiß im Schach',
+    sicht: {
+      ...OHNE,
+      verlauf: ['e4', 'e5', 'Bc4', 'Bc5', 'Bxf7+', 'Kxf7', 'Qh5+', 'Kf8', 'Qxe5', 'Bxf2+'],
+      geschlagen: { w: ['b', 'p'], b: ['p', 'p'] },
+      vorsprung: -2,
+      dreiSchach: { gegeben: { w: 2, b: 1 }, ziel: 3 },
+      zuschauer: false,
+      fen: 'rnbq1knr/pppp2pp/8/4Q3/4P3/8/PPPP1bPP/RNB1K1NR w KQ - 0 6',
+      brett: brettAus('rnbq1knr/pppp2pp/8/4Q3/4P3/8/PPPP1bPP/RNB1K1NR'),
+      amZug: 'w',
+      meineFarbe: 'w',
+      weissSitz: 0,
+      schach: true,
+      letzterZug: { von: 'c5', nach: 'f2' },
+      ende: null,
+    },
+    zuege: [z('e1', 'f1'), z('e1', 'f2'), z('e1', 'e2'), z('e1', 'd1')],
+  },
   {
     schluessel: 'grund',
     titel: 'Grundstellung, Weiß am Zug',
@@ -362,6 +387,11 @@ const feldNr = (name: string): number => (Number(name[1]) - 1) * 8 + (name.charC
 /** Kein Brett, sondern die Wahl vor der Partie. */
 const SPIELART = 'spielart';
 
+/** `?modus=dreiSchach` waehlt in der Modus-Auswahl einen anderen Modus vor (Sichtprobe). */
+function modusAusAdresse(): string {
+  return new URLSearchParams(window.location.search).get('modus') ?? 'secretDame';
+}
+
 function fallAusAdresse(): string {
   return new URLSearchParams(window.location.search).get('fall') ?? 'grund';
 }
@@ -369,7 +399,7 @@ function fallAusAdresse(): string {
 export function ProbeBroChess(): React.JSX.Element {
   const [schluessel, setSchluessel] = useState(fallAusAdresse);
   const [gesendet, setGesendet] = useState<string | null>(null);
-  const [spielart, setSpielart] = useState<ModusWahl>(() => waehleModus('secretDame'));
+  const [spielart, setSpielart] = useState<ModusWahl>(() => waehleModus(modusAusAdresse()));
   const fall = FAELLE.find((f) => f.schluessel === schluessel) ?? FAELLE[0]!;
   const [vorgemerkt, setVorgemerkt] = useState<string | null>(fall.wahl?.vorgemerkt ?? null);
   const nameVon = (f: 'w' | 'b'): string => (f === 'w' ? 'Anna' : 'Bert');
@@ -378,6 +408,20 @@ export function ProbeBroChess(): React.JSX.Element {
   const hinweis = wahlHinweis(fall.sicht, nameVon);
   const frisch = frischesEreignis(fall.sicht);
   const sd = fall.sicht.secretDame;
+  const drei = fall.sicht.dreiSchach;
+  // Wie die Spielerleisten am Tisch, nur Name und Kronen — oben der Gegner.
+  const leiste = (farbe: 'w' | 'b'): React.JSX.Element | null =>
+    drei && (
+      <div className={stil.leiste}>
+        <span className={stil.leisteText}>
+          <strong>
+            {nameVon(farbe)}
+            <Kronen drei={drei} farbe={farbe} />
+          </strong>
+        </span>
+      </div>
+    );
+  const unten = fall.sicht.meineFarbe ?? 'w';
 
   return (
     // Rahmen über die volle Seitenbreite nur für die Sichtprobe: Der Tisch ist fest
@@ -390,6 +434,11 @@ export function ProbeBroChess(): React.JSX.Element {
           {sd && schluessel !== SPIELART && (
             <span className={stil.kopfModus}>
               {tf('brochess.kopfModus', { modus: t('brochess.secretDame'), regel: regelText(sd.regel).kurz })}
+            </span>
+          )}
+          {drei && schluessel !== SPIELART && (
+            <span className={stil.kopfModus}>
+              {tf('brochess.kopfModus', { modus: t('brochess.dreiSchach'), regel: t('brochess.dreiSchach.kopf') })}
             </span>
           )}
         </div>
@@ -427,12 +476,14 @@ export function ProbeBroChess(): React.JSX.Element {
                 {meldung(frisch, fall.sicht.meineFarbe, nameVon)}
               </p>
             )}
+            {leiste(unten === 'w' ? 'b' : 'w')}
             <Brett
               sicht={fall.sicht}
               zuege={fall.zuege}
               onZug={(zug) => setGesendet(`${zug.von}-${zug.nach}${zug.umwandlung ? ` = ${zug.umwandlung}` : ''}`)}
               wahl={fall.wahl ? { felder: fall.wahl.felder, vorgemerkt, onTipp: setVorgemerkt } : undefined}
             />
+            {leiste(unten)}
           </div>
           <footer className={stil.fuss}>
             {aus ? (

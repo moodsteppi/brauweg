@@ -22,6 +22,7 @@
  */
 
 import { type Farbe, feldName, materialStand, vorabZiele, zuFen } from './brett.js';
+import { SCHACH_ZIEL } from './dreischach.js';
 import { type GeheimEreignis, type GeheimeDame, type GeheimZustand, wahlFertig } from './geheim.js';
 import {
   type BroChessPartie,
@@ -74,6 +75,17 @@ export interface SecretDameSicht {
   readonly meineZuege: readonly BroChessZug[];
 }
 
+/**
+ * Was die Sicht vom Modus 'dreiSchach' zeigt; null in jedem anderen Modus.
+ * Nichts davon ist verdeckt — beide und die Zuschauer sehen dieselben Zahlen.
+ */
+export interface DreiSchachSicht {
+  /** Wie oft die Farbe dem Gegner schon Schach gegeben hat. */
+  readonly gegeben: { readonly w: number; readonly b: number };
+  /** Das wievielte Schach gewinnt (3). Steht in der Sicht, damit der Bildschirm die Zahl nicht abschreibt. */
+  readonly ziel: number;
+}
+
 export interface BroChessSicht {
   readonly zuschauer: boolean;
   /**
@@ -116,6 +128,8 @@ export interface BroChessSicht {
   readonly vorab: Readonly<Record<string, readonly string[]>>;
   /** Modus 'secretDame', sonst null. */
   readonly secretDame: SecretDameSicht | null;
+  /** Modus 'dreiSchach', sonst null. */
+  readonly dreiSchach: DreiSchachSicht | null;
 }
 
 function dameSicht(dame: GeheimeDame): GeheimeDameSicht | null {
@@ -191,6 +205,7 @@ function sicht(partie: BroChessPartie, sitz: number | null): BroChessSicht {
         ? vorabMitDame(partie, meineFarbe)
         : {},
     secretDame: secretDameSicht(partie, sitz),
+    dreiSchach: partie.dreiSchach ? { gegeben: partie.dreiSchach.gegeben, ziel: SCHACH_ZIEL } : null,
   };
 }
 
