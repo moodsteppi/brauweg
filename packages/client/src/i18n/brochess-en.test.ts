@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { ergebnis, statusText } from '../minispiele/brochess/Brett';
 import { meldung, regelText, wahlHinweis } from '../minispiele/brochess/geheim';
-import type { BroChessSicht, SecretDameSicht } from '../minispiele/brochess/sicht';
+import type { BroChessSicht, DreiSchachSicht, SecretDameSicht } from '../minispiele/brochess/sicht';
 import { ZEITKONTROLLEN, uhrText, zeitText } from '../minispiele/brochess/zeit';
 import { de } from './de';
 import { en } from './en';
@@ -44,6 +44,7 @@ function sicht(teil: Partial<BroChessSicht>): BroChessSicht {
     geschlagen: { w: [], b: [] },
     vorsprung: 0,
     secretDame: null,
+    dreiSchach: null,
     ...teil,
   } as BroChessSicht;
 }
@@ -156,5 +157,36 @@ describe('BroChess auf Englisch', () => {
     for (const key of Object.keys(de['regeln-brochess'] ?? {})) {
       expect(t(key)).toBe(en['regeln-brochess']![key]);
     }
+  });
+});
+
+describe('BroChess Drei-Schach in beiden Sprachen', () => {
+  afterEach(() => setzeSprachwahl('de'));
+  const drei: DreiSchachSicht = { gegeben: { w: 2, b: 1 }, ziel: 3 };
+  // Weiss hat eben das zweite Schach gegeben, Schwarz steht im Schach.
+  const imSchach = sicht({ dreiSchach: drei, schach: true, amZug: 'b', meineFarbe: 'b' });
+  const gewonnen = sicht({
+    dreiSchach: { gegeben: { w: 3, b: 1 }, ziel: 3 },
+    ende: { ausgang: 'dreiSchach', sieger: 0 },
+  });
+
+  it('nennt das wievielte Schach und den Siegesgrund auf Deutsch', () => {
+    setzeSprachwahl('de');
+    expect(statusText(imSchach, name).text).toBe('2. Schach! Du bist am Zug.');
+    expect(ergebnis(gewonnen, name)?.grund).toBe('durch das dritte Schach');
+    expect(tf('brochess.dreiSchach.lebenAria', { rest: 1, ziel: 3 })).toBe('Noch 1 von 3 Schachs bis zur Niederlage');
+  });
+
+  it('nennt das wievielte Schach und den Siegesgrund auf Englisch', () => {
+    setzeSprachwahl('en');
+    expect(statusText(imSchach, name).text).toBe('Check no. 2! Your move.');
+    expect(ergebnis(gewonnen, name)?.grund).toBe('by the third check');
+    expect(t('brochess.modi.dreiSchach.satz')).toBe('Whoever checks the opponent for the third time wins.');
+  });
+
+  it('ohne Drei-Schach bleibt die Schachzeile dieselbe wie vorher', () => {
+    setzeSprachwahl('de');
+    const normal = sicht({ schach: true, amZug: 'b', meineFarbe: 'b' });
+    expect(statusText(normal, name).text).toBe('Schach! Du bist am Zug.');
   });
 });

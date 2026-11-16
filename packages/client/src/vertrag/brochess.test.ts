@@ -15,6 +15,7 @@ import type {
   BroChessSicht,
   BroChessWahl,
   BroChessZug,
+  DreiSchachSicht,
   GeheimeDameSicht,
   SecretDameSicht,
 } from '../minispiele/brochess/sicht';
@@ -65,6 +66,9 @@ type _keinDamenfeldNurImClient = Leer<
   Exclude<keyof GeheimeDameSicht, keyof NonNullable<ModulSecretDame['meine']>>
 >;
 
+type ModulDreiSchach = NonNullable<EchteSicht['dreiSchach']>;
+type _keinDreiSchachFeldNurImClient = Leer<Exclude<keyof DreiSchachSicht, keyof ModulDreiSchach>>;
+
 // ---------------------------------------------------------------------------
 // Beim Prüfen: Liefert eine echte Partie die Felder auch wirklich?
 // ---------------------------------------------------------------------------
@@ -85,6 +89,7 @@ const FELDER = [
   'vorsprung',
   'vorab',
   'secretDame',
+  'dreiSchach',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof BroChessSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof BroChessSicht>>;
@@ -156,11 +161,15 @@ describe('Vertrag BroChess: Secret Dame', () => {
           runden: 1,
           seed: 3,
           config: { ...brochess.defaultConfig(), ...felder },
-          unterobjekte: ['secretDame'],
+          unterobjekte: ['secretDame', 'dreiSchach'],
         });
         expect(gesehen.schritte, `${modus.id}/${variante}`).toBeGreaterThan(2);
         if (modus.id === 'secretDame') {
           expect([...(gesehen.unter.secretDame ?? [])].sort()).toEqual([...SECRET_DAME].sort());
+        }
+        if (modus.id === 'dreiSchach') {
+          // Die Kronen lesen genau diese beiden Felder.
+          expect([...(gesehen.unter.dreiSchach ?? [])].sort()).toEqual(['gegeben', 'ziel']);
         }
       }
     }

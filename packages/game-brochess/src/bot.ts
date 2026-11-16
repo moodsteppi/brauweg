@@ -54,8 +54,9 @@ import {
   standNachZug,
   wendeAnGeheim,
 } from './geheim.js';
+import { SCHACH_ZIEL } from './dreischach.js';
 import type { BroChessAktion } from './partie.js';
-import type { BroChessSicht, GeheimeDameSicht, SecretDameSicht } from './sicht.js';
+import type { BroChessSicht, DreiSchachSicht, GeheimeDameSicht, SecretDameSicht } from './sicht.js';
 
 /** Figurenwerte in Hundertstel-Bauern. */
 const WERT: Readonly<Record<string, number>> = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
@@ -296,7 +297,9 @@ function gleich(a: Zug, b: Zug): boolean {
  */
 export function botZug(sicht: BroChessSicht, level: BotLevel = 'standard'): BroChessAktion {
   if (sicht.secretDame) return botGeheim(sicht, sicht.secretDame, level);
-  const zug = besterZug(ausFen(sicht.fen), level);
+  const zug = sicht.dreiSchach
+    ? besterZugDreiSchach(ausFen(sicht.fen), sicht.dreiSchach, level)
+    : besterZug(ausFen(sicht.fen), level);
   return {
     type: 'zug',
     von: feldName(zug.von),
@@ -730,4 +733,164 @@ function botGeheim(sicht: BroChessSicht, sd: SecretDameSicht, level: BotLevel): 
     nach: feldName(zug.nach),
     ...(zug.umwandlung ? { umwandlung: zug.umwandlung } : {}),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Drei-Schach (seit dem 14.11.2026)
+// ---------------------------------------------------------------------------
+
+/*
+ * Der Bot fuer den Modus 'dreiSchach'. Die Zuege sind die des normalen
+ * Schachs — an der Wurzel kommen sie aus `legaleZuege`, derselben Liste, die
+ * `act` prueft. Anders ist nur, was er sucht: Jedes Schachgebot zaehlt, und
+ * das dritte gewinnt wie ein Matt.
+ *
+ * Darum (Auftrag: „Bot bewertet Schachgebote hoch"):
+ * - Die gegebenen Schachs gehen mit SCHACH_WERT in die Bewertung ein — das
+ *   erste schon mehr als ein Bauer, das zweite mehr als eine Leichtfigur.
+ *   So opfert er Material fuer ein Schach, aber nicht die Dame fuer das erste.
+ * - Ein Zug, der das dritte Schach gibt, ist ein Sieg (MATT), in der Suche
+ *   wie an der Wurzel.
+ * - Die Ruhesuche rechnet nicht nur Schlaege: Hat die Seite am Zug schon zwei
+ *   Schachs gegeben, prueft sie jedes Schachgebot — sonst saehe der Bot am
+ *   Horizont nicht, dass der Gegner im naechsten Zug gewinnt.
+ *
+ * Eine eigene Klasse statt eines Schalters in `Suche`, wie bei Secret Dame:
+ * Der normale Modus bleibt Zug fuer Zug derselbe.
+ */
+
+/** Wert der gegebenen Schachs (Index = Anzahl, 0 bis 2) in Hundertstel-Bauern. */
+const SCHACH_WERT: readonly number[] = [0, 180, 520];
+
+type Gegeben = { readonly w: number; readonly b: number };
+
+const schachWert = (n: number): number => SCHACH_WERT[Math.min(n, SCHACH_WERT.length - 1)]!;
+
+/** Wie `bewerte`, dazu die gegebenen Schachs beider Seiten. Aus Sicht der Seite am Zug. */
+function bewerteDreiSchach(stellung: Stellung, gegeben: Gegeben, mitStellung: boolean): number {
+  const ich = stellung.amZug;
+  return bewerte(stellung, mitStellung) + schachWert(gegeben[ich]) - schachWert(gegeben[andere(ich)]);
+}
+
+/** Der Zaehlerstand nach einem Zug von `farbe`, der Schach gibt. */
+const mitSchach = (gegeben: Gegeben, farbe: Farbe): Gegeben => ({ ...gegeben, [farbe]: gegeben[farbe] + 1 });
+
+class SucheDreiSchach {
+  besucht = 0;
+  constructor(private readonly stufe: Stufe) {}
+
+  get erschoepft(): boolean {
+    return this.besucht >= this.stufe.knoten;
+  }
+
+  /**
+   * Gewinnt die Seite am Zug sofort mit einem Schachgebot? Nur gefragt, wenn
+   * sie schon zwei gegeben hat — jedes weitere Schach ist dann das dritte.
+   */
+  private gewinntMitSchach(stellung: Stellung, gegeben: Gegeben): boolean {
+    if (gegeben[stellung.amZug] < SCHACH_ZIEL - 1) return false;
+    this.besucht += 1;
+    for (const zug of pseudoZuege(stellung)) {
+      const danach = wendeAn(stellung, zug);
+      if (imSchach(danach, stellung.amZug)) continue;
+      if (imSchach(danach)) return true;
+    }
+    return false;
+  }
+
+  private ruhe(stellung: Stellung, gegeben: Gegeben, alpha: number, beta: number, abstand: number): number {
+    this.besucht += 1;
+    if (this.gewinntMitSchach(stellung, gegeben)) return MATT - abstand - 1;
+    const stehen = bewerteDreiSchach(stellung, gegeben, this.stufe.stellung);
+    if (stehen >= beta) return stehen;
+    if (stehen > alpha) alpha = stehen;
+    if (this.erschoepft) return stehen;
+    const ich = stellung.amZug;
+    const schlaege = pseudoZuege(stellung).filter((z) => istSchlag(stellung, z));
+    for (const zug of ordne(stellung, schlaege)) {
+      const danach = wendeAn(stellung, zug);
+      if (imSchach(danach, ich)) continue;
+      const gibtSchach = imSchach(danach);
+      const neu = gibtSchach ? mitSchach(gegeben, ich) : gegeben;
+      const wert =
+        neu[ich] >= SCHACH_ZIEL ? MATT - abstand - 1 : -this.ruhe(danach, neu, -beta, -alpha, abstand + 1);
+      if (wert >= beta) return wert;
+      if (wert > alpha) alpha = wert;
+    }
+    return alpha;
+  }
+
+  wert(stellung: Stellung, gegeben: Gegeben, tiefe: number, alpha: number, beta: number, abstand: number): number {
+    if (stellung.halbzugUhr >= 100) return 0;
+    if (tiefe === 0) {
+      // Wie in `Suche`: Matt am Blatt nur im Schach suchen, ein Patt dort uebersieht er.
+      if (imSchach(stellung) && legaleZuege(stellung).length === 0) return -MATT + abstand;
+      if (this.stufe.ruhe) return this.ruhe(stellung, gegeben, alpha, beta, abstand);
+      this.besucht += 1;
+      return bewerteDreiSchach(stellung, gegeben, this.stufe.stellung);
+    }
+    this.besucht += 1;
+    const ich = stellung.amZug;
+    let bester = -Infinity;
+    let legal = 0;
+    for (const zug of ordne(stellung, pseudoZuege(stellung))) {
+      const danach = wendeAn(stellung, zug);
+      if (imSchach(danach, ich)) continue;
+      legal += 1;
+      const gibtSchach = imSchach(danach);
+      const neu = gibtSchach ? mitSchach(gegeben, ich) : gegeben;
+      // Das dritte Schach gewinnt sofort — wie ein Matt einen Halbzug spaeter.
+      const wert =
+        neu[ich] >= SCHACH_ZIEL ? MATT - abstand - 1 : -this.wert(danach, neu, tiefe - 1, -beta, -alpha, abstand + 1);
+      if (wert > bester) bester = wert;
+      if (wert > alpha) alpha = wert;
+      if (alpha >= beta || this.erschoepft) break;
+    }
+    if (legal === 0) return imSchach(stellung) ? -MATT + abstand : 0;
+    return bester;
+  }
+}
+
+/** Der beste Zug im Drei-Schach nach Stufe. Wirft nur, wenn es keinen legalen Zug gibt. */
+export function besterZugDreiSchach(stellung: Stellung, drei: DreiSchachSicht, level: BotLevel): Zug {
+  const zuege = legaleZuege(stellung);
+  if (zuege.length === 0) throw new Error('Kein legaler Zug');
+  const stufe = STUFEN[level];
+  const suche = new SucheDreiSchach(stufe);
+  const ich = stellung.amZug;
+  const gegeben: Gegeben = { w: drei.gegeben.w, b: drei.gegeben.b };
+  const geordnet = ordne(stellung, zuege);
+  // Das dritte Schach gewinnt sofort; dafuer muss nichts gesucht werden, und
+  // ein knappes Knotenbudget darf es nicht verdecken.
+  if (gegeben[ich] >= SCHACH_ZIEL - 1) {
+    const sieg = geordnet.find((z) => imSchach(wendeAn(stellung, z)));
+    if (sieg) return sieg;
+  }
+  let gewaehlt = geordnet[0]!;
+
+  // Wie `besterZug`: iterativ vertiefen, die beste Antwort der vorigen Tiefe zuerst.
+  for (let tiefe = 1; tiefe <= stufe.tiefe; tiefe += 1) {
+    const reihe = [gewaehlt, ...geordnet.filter((z) => z !== gewaehlt)];
+    let bester: Zug | null = null;
+    let besterWert = -Infinity;
+    let alpha = -Infinity;
+    let fertig = true;
+    for (const zug of reihe) {
+      const danach = wendeAn(stellung, zug);
+      const neu = imSchach(danach) ? mitSchach(gegeben, ich) : gegeben;
+      const wert = -suche.wert(danach, neu, tiefe - 1, -Infinity, -alpha, 1);
+      if (suche.erschoepft) {
+        fertig = false;
+        break;
+      }
+      if (wert > besterWert) {
+        besterWert = wert;
+        bester = zug;
+      }
+      if (wert > alpha) alpha = wert;
+    }
+    if (bester) gewaehlt = bester;
+    if (!fertig || besterWert >= MATT - 100) break;
+  }
+  return gewaehlt;
 }

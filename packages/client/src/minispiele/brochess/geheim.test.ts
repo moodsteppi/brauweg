@@ -31,6 +31,7 @@ function sicht(teil: Partial<BroChessSicht>): BroChessSicht {
     vorsprung: 0,
     vorab: {},
     secretDame: SD,
+    dreiSchach: null,
     ...teil,
   };
 }

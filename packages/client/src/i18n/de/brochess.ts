@@ -26,6 +26,10 @@ export default {
   'brochess.aufgeben.titel': 'Aufgeben?',
   'brochess.aufgeben.text': 'Die Partie ist dann verloren.',
   'brochess.secretDame': 'Secret Dame',
+  'brochess.dreiSchach': 'Drei-Schach',
+  'brochess.dreiSchach.kopf': 'Das dritte Schach gewinnt',
+  'brochess.dreiSchach.schach': '{n}. Schach! {zug}.',
+  'brochess.dreiSchach.lebenAria': 'Noch {rest} von {ziel} Schachs bis zur Niederlage',
   'brochess.kopfModus': '{modus} · {regel}',
 
   // Figuren: schlicht (Beschriftungen), mit „Der/Die" und mit „Dein/Deine" (Meldungen)
@@ -83,6 +87,7 @@ export default {
   'brochess.grund.matt': 'durch Schachmatt',
   'brochess.grund.zeit': 'auf Zeit',
   'brochess.grund.aufgabe': 'durch Aufgabe',
+  'brochess.grund.dreiSchach': 'durch das dritte Schach',
   'brochess.grund.koenigsschlag': 'durch Königsschlag der geheimen Dame',
   'brochess.duGewinnst': 'Du gewinnst!',
   'brochess.gewinnt': '{name} gewinnt',
@@ -127,6 +132,8 @@ export default {
   'brochess.modi.klassischSpielen': 'Klassisch spielen',
   'brochess.modi.fertig': 'Fertig',
   'brochess.modi.secretDame.satz': 'Jeder macht heimlich eine eigene Figur zur Dame – sie verrät sich erst mit ihrem ersten Damenzug.',
+  'brochess.modi.dreiSchach.satz': 'Wer dem Gegner zum dritten Mal Schach gibt, gewinnt.',
+  'brochess.modi.dreiSchach.hinweis': 'Normales Schach, nur zählt jedes Schach: Wer dem Gegner dreimal Schach gegeben hat, gewinnt sofort. Matt gewinnt weiterhin. Die Kronen neben jedem Namen zeigen, wie viele Schachs dieser Spieler noch verträgt.',
   'brochess.spielart.hinweis': 'Vor dem ersten Zug wählt jeder heimlich eine eigene Figur außer dem König. Sie darf zusätzlich wie eine Dame ziehen – erst dann sieht der Gegner, welche es war.',
   'brochess.spielart.regelTitel': 'Schach durch die verdeckte Dame',
   'brochess.spielart.regelAria': 'Regel',

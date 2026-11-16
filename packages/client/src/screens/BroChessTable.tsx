@@ -7,6 +7,7 @@ import { szeneBild } from '../szenen';
 import { Ladekreis } from '../Ladekreis';
 import { Brett, ZEICHEN, ergebnis, statusText } from '../minispiele/brochess/Brett';
 import { figurensatzAus } from '../minispiele/brochess/figurensatz';
+import { Kronen } from '../minispiele/brochess/Kronen';
 import { figurName, frischesEreignis, meldung, regelText, trenneAktionen, wahlHinweis } from '../minispiele/brochess/geheim';
 import stil from '../minispiele/brochess/BroChess.module.css';
 import type { BroChessAufgabe, BroChessSicht, BroChessWahl, Farbe } from '../minispiele/brochess/sicht';
@@ -191,6 +192,7 @@ export function BroChessTable({
             {ich && <small> {t('brochess.du')}</small>}
             {istBot && <small> · {t(`brochess.farbe.${farbe}`)}</small>}
             {view.leftSeats.includes(sitz) && <small> · {t('brochess.weg')}</small>}
+            {sicht.dreiSchach && <Kronen drei={sicht.dreiSchach} farbe={farbe} />}
           </strong>
           <span className={stil.gefangen} aria-label={tn('brochess.geschlagenAria', gefangen.length)}>
             {gefangen.map((art, i) => (
@@ -241,6 +243,11 @@ export function BroChessTable({
         <div className={stil.kopfTitel}>
           <h1>BroChess</h1>
           {titel && <span>{titel}</span>}
+          {sicht.dreiSchach && (
+            <span className={stil.kopfModus}>
+              {tf('brochess.kopfModus', { modus: t('brochess.dreiSchach'), regel: t('brochess.dreiSchach.kopf') })}
+            </span>
+          )}
           {sd && (
             <span className={stil.kopfModus} title={regelText(sd.regel).satz}>
               {tf('brochess.kopfModus', { modus: t('brochess.secretDame'), regel: regelText(sd.regel).kurz })}

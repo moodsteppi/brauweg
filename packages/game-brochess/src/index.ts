@@ -60,8 +60,10 @@ export {
   pruefeRegeln,
   zeitkontrolle,
 } from './regeln.js';
+export { type DreiSchachStand, SCHACH_ZIEL } from './dreischach.js';
 export {
   type BroChessSicht,
+  type DreiSchachSicht,
   type GeheimeDameSicht,
   type SecretDameSicht,
   sichtFuer,
