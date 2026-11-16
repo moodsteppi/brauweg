@@ -6,13 +6,14 @@
  * Tisch ab.
  *
  * Aufruf nach dem Bau des Pakets (npm run build im Wurzelverzeichnis):
- *   node packages/game-brochess/werkzeug/chess960-probe.mjs [partien=200]
+ *   node packages/game-brochess/werkzeug/chess960-probe.mjs [partien=200] [ab=0]
  * Beendet sich mit 1, sobald ein illegaler Zug oder ein Absturz vorkam.
  */
 
 import { brochess } from '../dist/src/index.js';
 
 const PARTIEN = Number(process.argv[2] ?? 200);
+const AB = Number(process.argv[3] ?? 0); // Anfangsnummer, damit sich die Probe auf mehrere Prozesse verteilen lässt
 const STUFEN = ['anfaenger', 'standard', 'experte', 'genie'];
 const GRENZE = 400;
 
@@ -24,7 +25,7 @@ let offen = 0;
 const ausgaenge = {};
 const start = performance.now();
 
-for (let i = 0; i < PARTIEN; i += 1) {
+for (let i = AB; i < AB + PARTIEN; i += 1) {
   // Alle 16 Paarungen der Stufen reihum, die Saat wechselt die Farben.
   const stufe = [STUFEN[i % 4], STUFEN[Math.floor(i / 4) % 4]];
   let p = brochess.createParty({ config: { modus: 'chess960' }, seats: 2, rounds: 1, seed: i * 7919 + 13 });
