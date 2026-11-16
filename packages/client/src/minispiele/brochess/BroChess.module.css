@@ -537,6 +537,16 @@
   pointer-events: none;
 }
 
+/* Chess960-Rochade: Ziel ist der eigene Turm — goldener, gestrichelter Ring statt Schlag-Ring. */
+.zielRochade::after {
+  content: '';
+  position: absolute;
+  inset: 5%;
+  border-radius: 50%;
+  border: 4px dashed var(--hb-gold);
+  pointer-events: none;
+}
+
 .zielVorab::after {
   background: rgba(64, 110, 214, 0.45);
   border-color: rgba(64, 110, 214, 0.55);

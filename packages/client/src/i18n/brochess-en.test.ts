@@ -45,6 +45,7 @@ function sicht(teil: Partial<BroChessSicht>): BroChessSicht {
     vorsprung: 0,
     secretDame: null,
     dreiSchach: null,
+    chess960: null,
     ...teil,
   } as BroChessSicht;
 }
@@ -188,5 +189,26 @@ describe('BroChess Drei-Schach in beiden Sprachen', () => {
     setzeSprachwahl('de');
     const normal = sicht({ schach: true, amZug: 'b', meineFarbe: 'b' });
     expect(statusText(normal, name).text).toBe('Schach! Du bist am Zug.');
+  });
+});
+
+describe('BroChess Chess960 in beiden Sprachen', () => {
+  afterEach(() => setzeSprachwahl('de'));
+
+  it('nennt Modus, Nummer und Rochade auf Deutsch', () => {
+    setzeSprachwahl('de');
+    expect(tf('brochess.kopfModus', { modus: t('brochess.chess960'), regel: tf('brochess.chess960.kopf', { nummer: 518 }) })).toBe(
+      'Chess960 · Stellung 518 von 960',
+    );
+    expect(t('brochess.chess960.rochade')).toBe('Rochade: König auf den eigenen Turm ziehen');
+  });
+
+  it('nennt Modus, Nummer und Rochade auf Englisch', () => {
+    setzeSprachwahl('en');
+    expect(tf('brochess.kopfModus', { modus: t('brochess.chess960'), regel: tf('brochess.chess960.kopf', { nummer: 518 }) })).toBe(
+      'Chess960 · Position 518 of 960',
+    );
+    expect(t('brochess.chess960.rochade')).toBe('Castling: move the king onto your own rook');
+    expect(t('brochess.modi.chess960.satz')).toBe('The back rank is shuffled – one of 960 starting positions.');
   });
 });

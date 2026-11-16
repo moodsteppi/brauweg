@@ -220,6 +220,14 @@ export function Brett({
   const schicke = (zug: BroChessZug, gezogen: boolean): void => {
     const vonIndex = feldIndexVon(zug.von);
     const figur = sicht.brett[vonIndex] ?? '';
+    // Chess960-Rochade („König auf den eigenen Turm"): Das Zielfeld ist nicht die
+    // Landung, also nichts vorwegnehmen — die Antwort des Servers zeigt sie und gleitet.
+    const zielFigur = sicht.brett[feldIndexVon(zug.nach)] ?? '';
+    if (zielFigur !== '' && farbeDer(zielFigur) === farbeDer(figur)) {
+      setGewaehlt(null);
+      onZug(zug);
+      return;
+    }
     const neu = zug.umwandlung ? (farbeDer(figur) === 'w' ? zug.umwandlung.toUpperCase() : zug.umwandlung) : figur;
     setUnterwegs({ von: zug.von, nach: zug.nach, figur: neu });
     abgelegtAuf.current = zug.nach;
@@ -378,7 +386,13 @@ export function Brett({
           vorab && (vorab.von === name || vorab.nach === name) ? stil.vorab : '',
           index === koenigImSchach ? stil.koenigImSchach : '',
           feldMarken.includes('koenigGeschlagen') ? stil.koenigFaellt : '',
-          ziele.has(name) ? (figur ? stil.zielSchlag : stil.ziel) : '',
+          ziele.has(name)
+            ? figur
+              ? farbeDer(figur) === sicht.meineFarbe
+                ? stil.zielRochade
+                : stil.zielSchlag
+              : stil.ziel
+            : '',
           ziele.has(name) && !amZug ? stil.zielVorab : '',
         ].filter(Boolean);
         const beschriftung = [

@@ -15,6 +15,7 @@ import type {
   BroChessSicht,
   BroChessWahl,
   BroChessZug,
+  Chess960Sicht,
   DreiSchachSicht,
   GeheimeDameSicht,
   SecretDameSicht,
@@ -69,6 +70,9 @@ type _keinDamenfeldNurImClient = Leer<
 type ModulDreiSchach = NonNullable<EchteSicht['dreiSchach']>;
 type _keinDreiSchachFeldNurImClient = Leer<Exclude<keyof DreiSchachSicht, keyof ModulDreiSchach>>;
 
+type ModulChess960 = NonNullable<EchteSicht['chess960']>;
+type _keinChess960FeldNurImClient = Leer<Exclude<keyof Chess960Sicht, keyof ModulChess960>>;
+
 // ---------------------------------------------------------------------------
 // Beim Prüfen: Liefert eine echte Partie die Felder auch wirklich?
 // ---------------------------------------------------------------------------
@@ -90,6 +94,7 @@ const FELDER = [
   'vorab',
   'secretDame',
   'dreiSchach',
+  'chess960',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof BroChessSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof BroChessSicht>>;
@@ -161,7 +166,7 @@ describe('Vertrag BroChess: Secret Dame', () => {
           runden: 1,
           seed: 3,
           config: { ...brochess.defaultConfig(), ...felder },
-          unterobjekte: ['secretDame', 'dreiSchach'],
+          unterobjekte: ['secretDame', 'dreiSchach', 'chess960'],
         });
         expect(gesehen.schritte, `${modus.id}/${variante}`).toBeGreaterThan(2);
         if (modus.id === 'secretDame') {
@@ -171,9 +176,14 @@ describe('Vertrag BroChess: Secret Dame', () => {
           // Die Kronen lesen genau diese beiden Felder.
           expect([...(gesehen.unter.dreiSchach ?? [])].sort()).toEqual(['gegeben', 'ziel']);
         }
+        if (modus.id === 'chess960') {
+          // Der Tischkopf zeigt die Nummer der Grundstellung.
+          expect([...(gesehen.unter.chess960 ?? [])]).toEqual(['nummer']);
+        }
       }
     }
-  });
+    // Eine ganze Partie je Modus: unter Last (parallele Testdateien) reichen die 5 s Vorgabe nicht mehr.
+  }, 30_000);
 
   it('liefert Wahl, Sicht und Aufdecken mit genau den Feldern, die der Bildschirm liest', () => {
     let partie = brochess.createParty({

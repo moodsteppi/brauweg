@@ -207,6 +207,22 @@ export function erstellePartie(
   };
 }
 
+/**
+ * Das Zielfeld, das der Bildschirm als „zuletzt gezogen" zeigt. Gleich dem
+ * Ziel der Aktion — ausser bei der Chess960-Rochade: Dort heisst das Ziel der
+ * Aktion „eigener Turm", der König landet aber auf c oder g. Gezeigt (und
+ * gegleitet) wird die Landung des Koenigs.
+ */
+function anzeigeZiel(stellung: Stellung, zug: { von: number; nach: number }, ziel: string): string {
+  const figur = stellung.brett[zug.von]!;
+  const rochade =
+    stellung.chess960 !== undefined && figur.toLowerCase() === 'k' && stellung.brett[zug.nach] !== '' &&
+    (stellung.brett[zug.nach] === 'R' || stellung.brett[zug.nach] === 'r') &&
+    (stellung.brett[zug.nach] === 'R') === (figur === 'K');
+  if (!rochade) return ziel;
+  return feldName(Math.floor(zug.von / 8) * 8 + (zug.nach > zug.von ? 6 : 2));
+}
+
 /** Schluessel fuer die Wiederholungszaehlung; im Drei-Schach mit den Zaehlern (dreischach.ts). */
 function wiederholungsSchluessel(stellung: Stellung, dreiSchach: DreiSchachStand | undefined): string {
   const schluessel = stellungsSchluessel(stellung);
@@ -357,7 +373,7 @@ export function fuehreAus(
     ...partie,
     stellung,
     wiederholungen: { ...partie.wiederholungen, [schluessel]: wiederholt },
-    letzterZug: { von: aktion.von, nach: aktion.nach },
+    letzterZug: { von: aktion.von, nach: anzeigeZiel(partie.stellung, zug, aktion.nach) },
     ende: dreiSchach ? endeNachDreiSchach(stellung, dreiSchach, wiederholt, sitz) : endeNach(stellung, wiederholt, sitz),
     verlauf: [...partie.verlauf, sanVon(partie.stellung, zug)],
     uhr,

@@ -257,7 +257,8 @@ test('Rochade: Zugliste schreibt O-O und O-O-O', () => {
   assert.equal(sanVon(s, kurz), 'O-O');
   const p = fuehreAus(partie('4k3/8/8/8/8/8/8/2RK3R w HC - 0 1'), WEISS, zug('d1', 'h1'));
   assert.deepEqual(p.verlauf, ['O-O']);
-  assert.deepEqual(p.letzterZug, { von: 'd1', nach: 'h1' });
+  // Gezeigt wird die Landung des Königs, nicht das Feld des Turms.
+  assert.deepEqual(p.letzterZug, { von: 'd1', nach: 'g1' });
 });
 
 test('Rochade: legalActions bietet sie an, der König schlaegt den eigenen Turm nicht', () => {
