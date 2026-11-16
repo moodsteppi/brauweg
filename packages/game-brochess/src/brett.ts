@@ -38,6 +38,21 @@ export interface Stellung {
   readonly halbzugUhr: number;
   /** Zugnummer wie in der FEN: beginnt bei 1, steigt nach jedem Zug von Schwarz. */
   readonly zugNummer: number;
+  /**
+   * Nur im Modus 'chess960' (chess960.ts): auf welchen Linien die Tuerme
+   * stehen, mit denen noch rochiert werden darf. Fehlt das Feld, gilt die
+   * klassische Rochade — alle Funktionen hier verhalten sich dann Zug fuer
+   * Zug wie vorher. Schwarz spiegelt Weiss, darum gilt eine Linie fuer beide
+   * Farben; -1: dieses Recht ist bei beiden Farben schon weg.
+   */
+  readonly chess960?: Chess960Linien;
+}
+
+export interface Chess960Linien {
+  /** Linie (0 = a) des Damenfluegel-Turms, oder -1. */
+  readonly q: number;
+  /** Linie des Koenigsfluegel-Turms, oder -1. */
+  readonly k: number;
 }
 
 export interface Zug {
@@ -123,18 +138,57 @@ export function ausFen(fen: string): Stellung {
   });
 
   if (amZug !== 'w' && amZug !== 'b') throw new Error(`Wer am Zug ist, fehlt: ${fen}`);
-  if (!/^(-|K?Q?k?q?)$/.test(rochade)) throw new Error(`Rochaderechte unlesbar: ${rochade}`);
+  // Shredder-FEN fuer Chess960: Die Rechte heissen nach der Linie des Turms (HAha).
+  const shredder = /^[A-Ha-h]+$/.test(rochade);
+  if (!shredder && !/^(-|K?Q?k?q?)$/.test(rochade)) throw new Error(`Rochaderechte unlesbar: ${rochade}`);
   const epFeld = ep === '-' ? null : feldIndex(ep);
   if (epFeld === -1) throw new Error(`En-passant-Feld unlesbar: ${ep}`);
+
+  let rechte = rochade === '-' ? '' : rochade;
+  let chess960: Chess960Linien | undefined;
+  if (shredder) {
+    let q = -1;
+    let k = -1;
+    rechte = '';
+    for (const buchstabe of rochade) {
+      const farbe = buchstabe === buchstabe.toUpperCase() ? 'w' : 'b';
+      const linie = LINIEN.indexOf(buchstabe.toLowerCase());
+      const koenig = brett.indexOf(alsFarbe('k', farbe));
+      if (koenig < 0 || reiheVon(koenig) !== (farbe === 'w' ? 0 : 7)) {
+        throw new Error(`Rochaderecht ohne König auf der Grundreihe: ${rochade}`);
+      }
+      const kurz = linie > linieVon(koenig);
+      if (kurz) k = linie;
+      else q = linie;
+      rechte += alsFarbe(kurz ? 'k' : 'q', farbe);
+    }
+    // Kanonische Reihenfolge "KQkq", wie sie der Rest des Kerns erwartet.
+    rechte = [...'KQkq'].filter((r) => rechte.includes(r)).join('');
+    chess960 = { q, k };
+  }
 
   return {
     brett,
     amZug,
-    rochade: rochade === '-' ? '' : rochade,
+    rochade: rechte,
     epFeld,
     halbzugUhr: Number(uhr),
     zugNummer: Number(nummer),
+    ...(chess960 ? { chess960 } : {}),
   };
+}
+
+/** Die Rochaderechte fuer die FEN; bei Chess960 als Linie des Turms (Shredder-FEN). */
+function rechteAlsText(stellung: Stellung): string {
+  if (!stellung.chess960) return stellung.rochade || '-';
+  const { q, k } = stellung.chess960;
+  const text = [...stellung.rochade]
+    .map((recht) => {
+      const linie = recht.toLowerCase() === 'k' ? k : q;
+      return alsFarbe(LINIEN[linie]!, farbeVon(recht));
+    })
+    .join('');
+  return text || '-';
 }
 
 export function zuFen(stellung: Stellung): string {
@@ -158,7 +212,7 @@ export function zuFen(stellung: Stellung): string {
   return [
     reihen.join('/'),
     stellung.amZug,
-    stellung.rochade || '-',
+    rechteAlsText(stellung),
     stellung.epFeld === null ? '-' : feldName(stellung.epFeld),
     String(stellung.halbzugUhr),
     String(stellung.zugNummer),
@@ -246,6 +300,54 @@ const ROCHADEN: Readonly<
 };
 
 /**
+ * Chess960: Felder der Rochade fuer ein Recht, oder null, wenn König oder Turm
+ * nicht (mehr) dort stehen. Der Zug heisst „König auf den eigenen Turm" — so
+ * gibt man ihn ein (und so steht er in `legalActions`), weil König und Turm
+ * sonst auf dasselbe Ziel zeigen koennten (König zieht nur ein Feld, Turm
+ * steht daneben).
+ */
+function felder960(
+  stellung: Stellung,
+  recht: 'K' | 'Q' | 'k' | 'q',
+): { koenig: number; turm: number; koenigZiel: number; turmZiel: number } | null {
+  const linien = stellung.chess960!;
+  const farbe = farbeVon(recht);
+  const kurz = recht.toLowerCase() === 'k';
+  const linie = kurz ? linien.k : linien.q;
+  if (linie < 0) return null;
+  const grund = farbe === 'w' ? 0 : 56;
+  const koenig = stellung.brett.indexOf(alsFarbe('k', farbe));
+  const turm = grund + linie;
+  if (koenig < 0 || reiheVon(koenig) !== reiheVon(grund)) return null;
+  if (stellung.brett[turm] !== alsFarbe('r', farbe)) return null;
+  // Immer c/d bzw. g/f, egal wo die beiden vorher standen.
+  return { koenig, turm, koenigZiel: grund + (kurz ? 6 : 2), turmZiel: grund + (kurz ? 5 : 3) };
+}
+
+/**
+ * Chess960-Rochade (FIDE C.1): Alle Felder zwischen und auf den Start- und
+ * Zielfeldern von König und Turm muessen leer sein, ausser von den beiden
+ * selbst; der König darf von seinem Feld bis zum Ziel kein angegriffenes Feld
+ * beruehren. Ob er danach im Schach steht (etwa durch einen Turm hinter dem
+ * eigenen, der den Schutz verliert), prueft `legaleZuege` wie bei jedem Zug.
+ */
+function rochade960(stellung: Stellung, recht: 'K' | 'Q' | 'k' | 'q'): Zug | null {
+  const f = felder960(stellung, recht);
+  if (!f) return null;
+  const { brett, amZug } = stellung;
+  const alle = [f.koenig, f.turm, f.koenigZiel, f.turmZiel];
+  for (let feld = Math.min(...alle); feld <= Math.max(...alle); feld += 1) {
+    if (brett[feld] !== '' && feld !== f.koenig && feld !== f.turm) return null;
+  }
+  const von = Math.min(f.koenig, f.koenigZiel);
+  const bis = Math.max(f.koenig, f.koenigZiel);
+  for (let feld = von; feld <= bis; feld += 1) {
+    if (angegriffen(brett, feld, gegner(amZug))) return null;
+  }
+  return { von: f.koenig, nach: f.turm };
+}
+
+/**
  * Alle Zuege nach Gangart, ohne Ruecksicht auf den eigenen König.
  *
  * Exportiert fuer den Bot (bot.ts): Er prueft die Legalitaet erst beim
@@ -316,6 +418,11 @@ export function pseudoZuege(stellung: Stellung): Zug[] {
 
   for (const recht of ['K', 'Q', 'k', 'q'] as const) {
     if (!stellung.rochade.includes(recht) || farbeVon(recht) !== amZug) continue;
+    if (stellung.chess960) {
+      const zug = rochade960(stellung, recht);
+      if (zug) zuege.push(zug);
+      continue;
+    }
     const r = ROCHADEN[recht];
     // Das Recht allein genuegt nicht: In einer frei gesetzten Stellung kann
     // es stehen, obwohl König oder Turm fehlen.
@@ -337,6 +444,26 @@ export function wendeAn(stellung: Stellung, zug: Zug): Stellung {
   const figur = brett[zug.von]!;
   const art = figur.toLowerCase();
   const farbe = stellung.amZug;
+
+  // Chess960: König auf den eigenen Turm ist die Rochade, kein Schlag.
+  if (stellung.chess960 && art === 'k' && brett[zug.nach] === alsFarbe('r', farbe)) {
+    const kurz = zug.nach > zug.von;
+    const grund = farbe === 'w' ? 0 : 56;
+    brett[zug.von] = '';
+    brett[zug.nach] = '';
+    brett[grund + (kurz ? 6 : 2)] = figur;
+    brett[grund + (kurz ? 5 : 3)] = alsFarbe('r', farbe);
+    return {
+      brett,
+      amZug: gegner(farbe),
+      rochade: stellung.rochade.replace(farbe === 'w' ? /[KQ]/g : /[kq]/g, ''),
+      epFeld: null,
+      halbzugUhr: stellung.halbzugUhr + 1,
+      zugNummer: farbe === 'b' ? stellung.zugNummer + 1 : stellung.zugNummer,
+      chess960: stellung.chess960,
+    };
+  }
+
   let geschlagen = brett[zug.nach] !== '';
 
   if (art === 'p' && zug.nach === stellung.epFeld && brett[zug.nach] === '') {
@@ -348,7 +475,7 @@ export function wendeAn(stellung: Stellung, zug: Zug): Stellung {
   brett[zug.nach] = zug.umwandlung ? alsFarbe(zug.umwandlung, farbe) : figur;
   brett[zug.von] = '';
 
-  if (art === 'k' && Math.abs(zug.nach - zug.von) === 2) {
+  if (!stellung.chess960 && art === 'k' && Math.abs(zug.nach - zug.von) === 2) {
     const kurz = zug.nach > zug.von;
     const turmVon = kurz ? zug.von + 3 : zug.von - 4;
     const turmNach = kurz ? zug.von + 1 : zug.von - 1;
@@ -363,7 +490,16 @@ export function wendeAn(stellung: Stellung, zug: Zug): Stellung {
     for (const recht of rechte) rochade = rochade.replace(recht, '');
   };
   if (art === 'k') streiche(farbe === 'w' ? 'KQ' : 'kq');
+  const linien = stellung.chess960;
   for (const feld of [zug.von, zug.nach]) {
+    if (linien) {
+      // Chess960: Die Tuerme stehen auf der Linie, die der Aufbau bestimmt.
+      if (feld === linien.q) streiche('Q');
+      if (feld === linien.k) streiche('K');
+      if (feld === 56 + linien.q) streiche('q');
+      if (feld === 56 + linien.k) streiche('k');
+      continue;
+    }
     if (feld === 0) streiche('Q');
     if (feld === 7) streiche('K');
     if (feld === 56) streiche('q');
@@ -379,6 +515,7 @@ export function wendeAn(stellung: Stellung, zug: Zug): Stellung {
     epFeld: doppelschritt ? (zug.von + zug.nach) / 2 : null,
     halbzugUhr: art === 'p' || geschlagen ? 0 : stellung.halbzugUhr + 1,
     zugNummer: farbe === 'b' ? stellung.zugNummer + 1 : stellung.zugNummer,
+    ...(stellung.chess960 ? { chess960: stellung.chess960 } : {}),
   };
 }
 
@@ -458,7 +595,8 @@ export function sanVon(stellung: Stellung, zug: Zug): string {
   const art = figur.toLowerCase();
   let text: string;
 
-  if (art === 'k' && Math.abs(zug.nach - zug.von) === 2) {
+  const rochiert960 = stellung.chess960 && art === 'k' && brett[zug.nach] === alsFarbe('r', stellung.amZug);
+  if (rochiert960 || (!stellung.chess960 && art === 'k' && Math.abs(zug.nach - zug.von) === 2)) {
     text = zug.nach > zug.von ? 'O-O' : 'O-O-O';
   } else {
     const schlag = brett[zug.nach] !== '' || (art === 'p' && zug.nach === stellung.epFeld);
@@ -534,7 +672,13 @@ export function vorabZiele(stellung: Stellung, farbe: Farbe): Record<string, str
           if (!weit) break;
         }
       }
-      if (art === 'k') {
+      if (art === 'k' && stellung.chess960) {
+        // Chess960: Die Rochade ist „König auf den eigenen Turm".
+        for (const recht of farbe === 'w' ? (['K', 'Q'] as const) : (['k', 'q'] as const)) {
+          const f = stellung.rochade.includes(recht) ? felder960(stellung, recht) : null;
+          if (f) nach.add(f.turm);
+        }
+      } else if (art === 'k') {
         for (const recht of farbe === 'w' ? ['K', 'Q'] : ['k', 'q']) {
           if (stellung.rochade.includes(recht) && ROCHADEN[recht as keyof typeof ROCHADEN].koenig === von) {
             dazu(ROCHADEN[recht as keyof typeof ROCHADEN].ziel);

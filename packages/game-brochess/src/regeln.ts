@@ -30,6 +30,8 @@ export interface BroChessRegeln {
    * König), die zusaetzlich wie eine Dame ziehen darf (geheim.ts).
    * 'dreiSchach' (seit dem 14.11.2026): Wer dem Gegner zum dritten Mal
    * Schach gibt, gewinnt (dreischach.ts).
+   * 'chess960' (seit dem 16.11.2026): Grundreihe aus 960 Anordnungen, Rochade
+   * nach Chess960-Regeln (chess960.ts, brett.ts).
    */
   readonly modus?: Modus;
   /**
@@ -43,10 +45,10 @@ export interface BroChessRegeln {
   readonly schachDurchVerdeckte?: SchachDurchVerdeckte;
 }
 
-export type Modus = 'normal' | 'secretDame' | 'dreiSchach';
+export type Modus = 'normal' | 'secretDame' | 'dreiSchach' | 'chess960';
 export type SchachDurchVerdeckte = 'A' | 'B';
 
-export const MODI: readonly Modus[] = ['normal', 'secretDame', 'dreiSchach'];
+export const MODI: readonly Modus[] = ['normal', 'secretDame', 'dreiSchach', 'chess960'];
 export const SCHACH_DURCH_VERDECKTE: readonly SchachDurchVerdeckte[] = ['A', 'B'];
 
 /** Spielart des Regelsatzes; ein fehlendes Feld heisst 'normal'. */

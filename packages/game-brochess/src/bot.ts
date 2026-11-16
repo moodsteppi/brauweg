@@ -172,7 +172,8 @@ function ordne<Z extends Zug>(stellung: Stellung, zuege: readonly Z[]): Z[] {
     const opfer = stellung.brett[zug.nach]!;
     const taeter = stellung.brett[zug.von]!.toLowerCase();
     let g = 0;
-    if (opfer !== '') g += 10 * WERT[opfer.toLowerCase()]! - WERT[taeter]!;
+    // Chess960: „König auf den eigenen Turm" ist die Rochade, kein Schlag.
+    if (opfer !== '' && farbeVon(opfer) !== stellung.amZug) g += 10 * WERT[opfer.toLowerCase()]! - WERT[taeter]!;
     if (zug.umwandlung) g += WERT[zug.umwandlung]!;
     return g;
   };
@@ -185,7 +186,7 @@ function ordne<Z extends Zug>(stellung: Stellung, zuege: readonly Z[]): Z[] {
 }
 
 const istSchlag = (stellung: Stellung, zug: Zug): boolean =>
-  stellung.brett[zug.nach] !== '' ||
+  (stellung.brett[zug.nach] !== '' && farbeVon(stellung.brett[zug.nach]!) !== stellung.amZug) ||
   (stellung.brett[zug.von]!.toLowerCase() === 'p' && zug.nach === stellung.epFeld) ||
   zug.umwandlung !== undefined;
 
