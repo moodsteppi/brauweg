@@ -100,7 +100,7 @@ interface Fall {
 const GRUND = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 
 /** Was die Probe nicht zeigt: keine Uhr, keine Zugliste, nichts geschlagen. */
-const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' | 'vorab' | 'secretDame' | 'dreiSchach' | 'chess960'> = {
+const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' | 'vorab' | 'secretDame' | 'dreiSchach' | 'chess960' | 'huegel'> = {
   verlauf: [],
   uhr: null,
   geschlagen: { w: [], b: [] },
@@ -109,6 +109,7 @@ const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' |
   secretDame: null,
   dreiSchach: null,
   chess960: null,
+  huegel: null,
 };
 
 /** Secret Dame unter Regel A, noch nichts geschehen. */
@@ -172,6 +173,43 @@ const FAELLE: Fall[] = [
       ende: null,
     },
     zuege: [z('g1', 'h1'), z('g1', 'f1'), z('e1', 'f1'), z('g3', 'h5'), z('g3', 'f5')],
+  },
+  {
+    // Weiß: König auf e3, darf nach d4 und e4 (beides frei) — Schwarz hat nur den Turm auf a8.
+    schluessel: 'huegel',
+    titel: 'König des Hügels: Weiß zieht den König in die Mitte',
+    sicht: {
+      ...OHNE,
+      huegel: { felder: ['d4', 'e4', 'd5', 'e5'] },
+      zuschauer: false,
+      fen: 'r3k3/8/8/8/8/4K3/3PP3/8 w - - 0 1',
+      brett: brettAus('r3k3/8/8/8/8/4K3/3PP3/8'),
+      amZug: 'w',
+      meineFarbe: 'w',
+      weissSitz: 0,
+      schach: false,
+      letzterZug: null,
+      ende: null,
+    },
+    zuege: [z('e3', 'd4'), z('e3', 'e4'), z('e3', 'f4'), z('e3', 'f3'), z('e3', 'f2'), z('d2', 'd3'), z('d2', 'd4'), z('e2', 'e4')],
+  },
+  {
+    schluessel: 'huegel-sieg',
+    titel: 'König des Hügels: Sieg durch den Hügel',
+    sicht: {
+      ...OHNE,
+      huegel: { felder: ['d4', 'e4', 'd5', 'e5'] },
+      zuschauer: false,
+      fen: 'r3k3/8/8/8/4K3/8/3PP3/8 b - - 1 1',
+      brett: brettAus('r3k3/8/8/8/4K3/8/3PP3/8'),
+      amZug: 'b',
+      meineFarbe: 'w',
+      weissSitz: 0,
+      schach: false,
+      letzterZug: { von: 'e3', nach: 'e4' },
+      ende: { ausgang: 'huegel', sieger: 0 },
+    },
+    zuege: [],
   },
   {
     schluessel: 'grund',
@@ -464,6 +502,11 @@ export function ProbeBroChess(): React.JSX.Element {
                 modus: t('brochess.chess960'),
                 regel: tf('brochess.chess960.kopf', { nummer: fall.sicht.chess960.nummer }),
               })}
+            </span>
+          )}
+          {fall.sicht.huegel && schluessel !== SPIELART && (
+            <span className={stil.kopfModus}>
+              {tf('brochess.kopfModus', { modus: t('brochess.huegel'), regel: t('brochess.huegel.kopf') })}
             </span>
           )}
           {drei && schluessel !== SPIELART && (

@@ -24,7 +24,9 @@ export type Ausgang =
   | 'zeit'
   | 'aufgabe'
   /** Drei-Schach: Der Sieger hat zum dritten Mal Schach gegeben. */
-  | 'dreiSchach';
+  | 'dreiSchach'
+  /** Koenig des Huegels: Der Sieger hat seinen König auf d4, e4, d5 oder e5 gezogen. */
+  | 'huegel';
 
 /** Sicht des Moduls, siehe packages/game-brochess/src/sicht.ts. */
 export interface BroChessSicht {
@@ -58,6 +60,14 @@ export interface BroChessSicht {
   dreiSchach: DreiSchachSicht | null;
   /** Modus 'chess960', sonst null. */
   chess960: Chess960Sicht | null;
+  /** Modus 'huegel', sonst null. */
+  huegel: HuegelSicht | null;
+}
+
+/** Koenig des Huegels aus der Sicht, siehe `HuegelSicht` im Modul. Nichts davon ist verdeckt. */
+export interface HuegelSicht {
+  /** Die Huegelfelder (d4, e4, d5, e5) — vom Modul, damit der Bildschirm sie nicht abschreibt. */
+  felder: string[];
 }
 
 /** Chess960 aus der Sicht, siehe `Chess960Sicht` im Modul. Nichts davon ist verdeckt. */

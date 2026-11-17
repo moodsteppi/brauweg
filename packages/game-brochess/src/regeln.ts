@@ -32,6 +32,8 @@ export interface BroChessRegeln {
    * Schach gibt, gewinnt (dreischach.ts).
    * 'chess960' (seit dem 16.11.2026): Grundreihe aus 960 Anordnungen, Rochade
    * nach Chess960-Regeln (chess960.ts, brett.ts).
+   * 'huegel' (seit dem 17.11.2026): Wer seinen König legal auf d4, e4, d5
+   * oder e5 zieht, gewinnt (huegel.ts).
    */
   readonly modus?: Modus;
   /**
@@ -45,10 +47,10 @@ export interface BroChessRegeln {
   readonly schachDurchVerdeckte?: SchachDurchVerdeckte;
 }
 
-export type Modus = 'normal' | 'secretDame' | 'dreiSchach' | 'chess960';
+export type Modus = 'normal' | 'secretDame' | 'dreiSchach' | 'chess960' | 'huegel';
 export type SchachDurchVerdeckte = 'A' | 'B';
 
-export const MODI: readonly Modus[] = ['normal', 'secretDame', 'dreiSchach', 'chess960'];
+export const MODI: readonly Modus[] = ['normal', 'secretDame', 'dreiSchach', 'chess960', 'huegel'];
 export const SCHACH_DURCH_VERDECKTE: readonly SchachDurchVerdeckte[] = ['A', 'B'];
 
 /** Spielart des Regelsatzes; ein fehlendes Feld heisst 'normal'. */

@@ -18,6 +18,7 @@ import type {
   Chess960Sicht,
   DreiSchachSicht,
   GeheimeDameSicht,
+  HuegelSicht,
   SecretDameSicht,
 } from '../minispiele/brochess/sicht';
 import { ZEITKONTROLLEN, regelnFuer } from '../minispiele/brochess/zeit';
@@ -73,6 +74,9 @@ type _keinDreiSchachFeldNurImClient = Leer<Exclude<keyof DreiSchachSicht, keyof 
 type ModulChess960 = NonNullable<EchteSicht['chess960']>;
 type _keinChess960FeldNurImClient = Leer<Exclude<keyof Chess960Sicht, keyof ModulChess960>>;
 
+type ModulHuegel = NonNullable<EchteSicht['huegel']>;
+type _keinHuegelFeldNurImClient = Leer<Exclude<keyof HuegelSicht, keyof ModulHuegel>>;
+
 // ---------------------------------------------------------------------------
 // Beim Prüfen: Liefert eine echte Partie die Felder auch wirklich?
 // ---------------------------------------------------------------------------
@@ -95,6 +99,7 @@ const FELDER = [
   'secretDame',
   'dreiSchach',
   'chess960',
+  'huegel',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof BroChessSicht, (typeof FELDER)[number]>>;
 type _listeOhneKarteileichen = Leer<Exclude<(typeof FELDER)[number], keyof BroChessSicht>>;
@@ -166,7 +171,7 @@ describe('Vertrag BroChess: Secret Dame', () => {
           runden: 1,
           seed: 3,
           config: { ...brochess.defaultConfig(), ...felder },
-          unterobjekte: ['secretDame', 'dreiSchach', 'chess960'],
+          unterobjekte: ['secretDame', 'dreiSchach', 'chess960', 'huegel'],
         });
         expect(gesehen.schritte, `${modus.id}/${variante}`).toBeGreaterThan(2);
         if (modus.id === 'secretDame') {
@@ -179,6 +184,10 @@ describe('Vertrag BroChess: Secret Dame', () => {
         if (modus.id === 'chess960') {
           // Der Tischkopf zeigt die Nummer der Grundstellung.
           expect([...(gesehen.unter.chess960 ?? [])]).toEqual(['nummer']);
+        }
+        if (modus.id === 'huegel') {
+          // Das Brett hebt genau diese Felder hervor.
+          expect([...(gesehen.unter.huegel ?? [])]).toEqual(['felder']);
         }
       }
     }
