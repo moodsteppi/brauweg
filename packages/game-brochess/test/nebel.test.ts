@@ -384,3 +384,36 @@ test('Snapshot: eine Nebelpartie ueberlebt Speichern und Laden', () => {
   assert.deepEqual(sichtFuer(geladen, WEISS), sichtFuer(p, WEISS));
   assert.deepEqual(sichtFuer(geladen, SCHWARZ), sichtFuer(p, SCHWARZ));
 });
+
+// ---------------------------------------------------------------------------
+// Zugliste: die Kurzschrift darf nichts verraten, was die Sicht verbirgt
+// ---------------------------------------------------------------------------
+
+test('Nebel: Bauernschlag im Nebel nennt dem Gegner die Ausgangslinie nicht', () => {
+  // Weiss e6xd7: Schwarz sieht d7 (Koenig e8), aber nicht e6 (Startfeld).
+  const p = spiele(partie('r3k3/3p4/4P3/8/8/8/8/4K3 w - - 0 1'), ['e6d7']);
+  const schwarz = sichtFuer(p, SCHWARZ);
+  assert.ok(schwarz.nebel!.verborgen.includes('e6'), 'Voraussetzung: das Startfeld liegt fuer Schwarz im Nebel');
+  assert.deepEqual(schwarz.verlauf, ['xd7'], 'keine Linie e vor dem x');
+  assert.equal(schwarz.letzterZug!.von, 'd7', 'der Pfeil verbirgt das Startfeld ebenfalls');
+  assert.deepEqual(sichtFuer(p, WEISS).verlauf, ['exd7'], 'der Ziehende sieht die volle Schreibweise');
+  assert.ok(!JSON.stringify(schwarz).includes('exd7'), 'nirgends in der Sicht des Gegners');
+});
+
+test('Nebel: Rochade, deren Turm im Nebel liegt, erscheint dem Gegner nur als Koenigszug', () => {
+  // Schwarz sieht nur g1 (Laeufer a7), nicht f1 und h1.
+  const p = spiele(partie('4k3/b7/8/8/8/8/8/4K2R w K - 0 1'), ['e1g1']);
+  const schwarz = sichtFuer(p, SCHWARZ);
+  assert.ok(schwarz.nebel!.verborgen.includes('f1') && !schwarz.nebel!.verborgen.includes('g1'));
+  assert.deepEqual(schwarz.verlauf, ['Kg1'], 'kein O-O');
+  assert.deepEqual(sichtFuer(p, WEISS).verlauf, ['O-O']);
+  assert.ok(!JSON.stringify(schwarz).includes('O-O'));
+});
+
+test('Nebel: sieht der Gegner Start- und Zielfeld, steht die volle Schreibweise in der Zugliste', () => {
+  const p = spiele(partie('r3k3/3p4/4P3/8/8/8/8/4K3 w - - 0 1'), ['e6d7']);
+  // Die Zuschauer sehen nur die Schnittmenge beider Sichten: e6 sieht Schwarz nicht.
+  assert.deepEqual(zuschauerSicht(p).verlauf, ['xd7']);
+  const q = spiele(partie('4k3/8/5n2/3p4/4P3/8/8/4K3 w - - 0 1'), ['e4d5']);
+  assert.deepEqual(sichtFuer(q, SCHWARZ).verlauf, ['exd5']);
+});

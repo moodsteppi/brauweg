@@ -257,6 +257,8 @@ function nebelAnteil(
   // Zug des Gegners nur, wenn man sein Ziel sah; der eigene immer.
   const sehe = (z: (typeof stand.zuege)[number]): boolean =>
     meineFarbe === null ? z.gesehen.w && z.gesehen.b : z.gesehen[meineFarbe];
+  const siehtStart = (z: (typeof stand.zuege)[number]): boolean =>
+    meineFarbe === null ? z.vonGesehen.w && z.vonGesehen.b : z.vonGesehen[meineFarbe];
   const letzter = stand.zuege[stand.zuege.length - 1];
   const rechte = meineFarbe === null ? '' : [...stellung.rochade].filter((r) => (r === r.toUpperCase()) === (meineFarbe === 'w')).join('');
   // En passant nur, wenn man am Zug ist und das Feld sieht.
@@ -266,7 +268,7 @@ function nebelAnteil(
   return {
     brett,
     fen: zuFen({ ...stellung, brett, rochade: rechte, epFeld: epSichtbar, halbzugUhr: 0 }),
-    verlauf: stand.zuege.map((z) => (sehe(z) ? z.san : '…')),
+    verlauf: stand.zuege.map((z) => (sehe(z) ? (siehtStart(z) ? z.san : z.sanOhneStart) : '…')),
     // Das Startfeld nur, wenn man es sah: sonst zeigte der Pfeil, woher eine Figur aus dem Nebel kam.
     letzterZug:
       letzter && sehe(letzter)

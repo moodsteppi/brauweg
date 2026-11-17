@@ -45,6 +45,8 @@ export interface NebelZug {
    * nachgerechnet, weil die Sicht von damals nur mit der Stellung von damals
    * bekannt ist.
    */
+  /** Dieselbe Kurzschrift ohne Startfeld-Hinweise, fuer Betrachter, die `von` nicht sahen. */
+  readonly sanOhneStart: string;
   readonly gesehen: { readonly w: boolean; readonly b: boolean };
   /**
    * Dasselbe fuer das STARTFELD. Das Ziel entscheidet, ob der Zug in der
@@ -170,17 +172,19 @@ const BUCHSTABE: Readonly<Record<string, string>> = { n: 'N', b: 'B', r: 'R', q:
  * Zusatz verriete dem Gegner, dass eine zweite gleiche Figur dasselbe Feld
  * erreicht haette — und die kennt er womoeglich nicht.
  */
-export function notationNebel(stellung: Stellung, zug: Zug): string {
+export function notationNebel(stellung: Stellung, zug: Zug, ohneStart = false): string {
   const { brett } = stellung;
   const figur = brett[zug.von]!;
   const art = figur.toLowerCase();
-  if (art === 'k' && Math.abs(zug.nach - zug.von) === 2 && reiheVon(zug.nach) === reiheVon(zug.von)) {
-    return zug.nach > zug.von ? 'O-O' : 'O-O-O';
-  }
+  const rochade = art === 'k' && Math.abs(zug.nach - zug.von) === 2 && reiheVon(zug.nach) === reiheVon(zug.von);
+  if (rochade && !ohneStart) return zug.nach > zug.von ? 'O-O' : 'O-O-O';
+  // Ohne Startfeld (der Betrachter sah es nicht): weder Linie des Bauern noch Rochade —
+  // beides verriete, woher die Figur kam bzw. dass sich ein Turm im Nebel bewegt hat.
+  if (rochade) return `K${feldName(zug.nach)}`;
   const schlag = brett[zug.nach] !== '' || (art === 'p' && zug.nach === stellung.epFeld);
   const ziel = feldName(zug.nach);
   if (art === 'p') {
-    const linie = feldName(zug.von)[0]!;
+    const linie = ohneStart ? '' : feldName(zug.von)[0]!;
     return `${schlag ? `${linie}x` : ''}${ziel}${zug.umwandlung ? `=${zug.umwandlung.toUpperCase()}` : ''}`;
   }
   return `${BUCHSTABE[art]}${schlag ? 'x' : ''}${ziel}`;
@@ -208,12 +212,17 @@ export function standNachZugNebel(
   const genommen = genommeneFigur(davor, zug);
   const sichtGegner = sichtbareFelder(stellungDanach.brett, farbe === 'w' ? 'b' : 'w');
   const gegnerSieht = sichtGegner.has(zug.nach);
-  const gegnerSiehtVon = sichtGegner.has(zug.von);
+  // Bei der Rochade zaehlen auch die Turmfelder: Wer nur das Ziel des Koenigs sieht, soll
+  // nicht erfahren, dass ein Turm gezogen wurde.
+  const rochade = davor.brett[zug.von]!.toLowerCase() === 'k' && Math.abs(zug.nach - zug.von) === 2;
+  const turmFelder = rochade ? (zug.nach > zug.von ? [zug.von + 3, zug.von + 1] : [zug.von - 4, zug.von - 1]) : [];
+  const gegnerSiehtVon = sichtGegner.has(zug.von) && turmFelder.every((f) => sichtGegner.has(f));
   const eintrag: NebelZug = {
     farbe,
     von: feldName(zug.von),
     nach: feldName(zug.nach),
     san: notationNebel(davor, zug),
+    sanOhneStart: notationNebel(davor, zug, true),
     gesehen: { w: farbe === 'w' ? true : gegnerSieht, b: farbe === 'b' ? true : gegnerSieht },
     vonGesehen: { w: farbe === 'w' ? true : gegnerSiehtVon, b: farbe === 'b' ? true : gegnerSiehtVon },
   };
