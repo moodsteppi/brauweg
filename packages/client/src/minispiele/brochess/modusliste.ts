@@ -88,6 +88,17 @@ export const SPEZIAL_MODI: readonly SpezialModus[] = [
     varianten: [],
     felder: () => ({ modus: 'chess960' }),
   },
+  {
+    // Seit dem 17.11.2026, wie "King of the Hill" bei Lichess. Die Regel steht im Modul (huegel.ts).
+    id: 'huegel',
+    name: 'brochess.huegel',
+    regel: 'brochess.modi.huegel.satz',
+    hinweis: 'brochess.modi.huegel.hinweis',
+    // Ein Hügel mit Fähnchen auf dem Gipfel.
+    symbol: ['M3 19h18', 'M3 19c3-4 6-6 9-6s6 2 9 6', 'M12 13V5', 'M12 5l5 2-5 2'],
+    varianten: [],
+    felder: () => ({ modus: 'huegel' }),
+  },
 ];
 
 /** Was gewählt ist: kein Modus (klassisches Schach) oder ein Modus mit Variante. */

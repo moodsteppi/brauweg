@@ -33,6 +33,7 @@ function sicht(teil: Partial<BroChessSicht>): BroChessSicht {
     secretDame: SD,
     dreiSchach: null,
     chess960: null,
+    huegel: null,
     ...teil,
   };
 }

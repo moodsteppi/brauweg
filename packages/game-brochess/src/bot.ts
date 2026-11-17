@@ -55,6 +55,7 @@ import {
   wendeAnGeheim,
 } from './geheim.js';
 import { SCHACH_ZIEL } from './dreischach.js';
+import { abstandZumHuegel, zugErreichtHuegel } from './huegel.js';
 import type { BroChessAktion } from './partie.js';
 import type { BroChessSicht, DreiSchachSicht, GeheimeDameSicht, SecretDameSicht } from './sicht.js';
 
@@ -300,7 +301,9 @@ export function botZug(sicht: BroChessSicht, level: BotLevel = 'standard'): BroC
   if (sicht.secretDame) return botGeheim(sicht, sicht.secretDame, level);
   const zug = sicht.dreiSchach
     ? besterZugDreiSchach(ausFen(sicht.fen), sicht.dreiSchach, level)
-    : besterZug(ausFen(sicht.fen), level);
+    : sicht.huegel
+      ? besterZugHuegel(ausFen(sicht.fen), level)
+      : besterZug(ausFen(sicht.fen), level);
   return {
     type: 'zug',
     von: feldName(zug.von),
@@ -880,6 +883,157 @@ export function besterZugDreiSchach(stellung: Stellung, drei: DreiSchachSicht, l
       const danach = wendeAn(stellung, zug);
       const neu = imSchach(danach) ? mitSchach(gegeben, ich) : gegeben;
       const wert = -suche.wert(danach, neu, tiefe - 1, -Infinity, -alpha, 1);
+      if (suche.erschoepft) {
+        fertig = false;
+        break;
+      }
+      if (wert > besterWert) {
+        besterWert = wert;
+        bester = zug;
+      }
+      if (wert > alpha) alpha = wert;
+    }
+    if (bester) gewaehlt = bester;
+    if (!fertig || besterWert >= MATT - 100) break;
+  }
+  return gewaehlt;
+}
+
+// ---------------------------------------------------------------------------
+// Koenig des Huegels (seit dem 17.11.2026)
+// ---------------------------------------------------------------------------
+
+/*
+ * Der Bot fuer den Modus 'huegel'. Die Zuege sind die des normalen Schachs —
+ * an der Wurzel kommen sie aus `legaleZuege`, derselben Liste, die `act`
+ * prueft. Anders ist nur, was er sucht: Wer seinen König auf d4, e4, d5 oder
+ * e5 ziehen kann, gewinnt.
+ *
+ * Darum (Auftrag: „König in die Mitte ziehen, wenn sicher; den gegnerischen
+ * König vom Huegel fernhalten"):
+ * - Ein Königszug auf den Huegel ist ein Sieg (MATT), in der Suche wie an der
+ *   Wurzel. „Wenn sicher" kommt von selbst: Es sind nur legale Zuege, also
+ *   nie in ein Schach.
+ * - Die Naehe des eigenen Königs zum Huegel zaehlt in der Bewertung, die des
+ *   gegnerischen zaehlt gegen den Bot — er rueckt vor und haelt den Gegner mit
+ *   Figuren von den Huegelfeldern fern (ein Feld, das er angreift, ist fuer
+ *   den gegnerischen König verboten, also kein Sieg).
+ * - Die Ruhesuche und das Blatt fragen, ob die Seite am Zug jetzt gewinnt —
+ *   sonst saehe der Bot am Horizont nicht, dass der Gegner im naechsten Zug
+ *   auf den Huegel zieht.
+ *
+ * Eine eigene Klasse statt eines Schalters in `Suche`, wie bei Drei-Schach:
+ * Der normale Modus bleibt Zug fuer Zug derselbe.
+ */
+
+/** Wert der Naehe zum Huegel (Index = Abstand in Koenigsschritten, 0 bis 4) in Hundertstel-Bauern. */
+const HUEGEL_NAEHE: readonly number[] = [0, 160, 80, 30, 0];
+
+const huegelNaehe = (abstand: number): number => HUEGEL_NAEHE[Math.min(abstand, HUEGEL_NAEHE.length - 1)]!;
+
+/** Wie `bewerte`, dazu die Naehe beider Koenige zum Huegel. Aus Sicht der Seite am Zug. */
+function bewerteHuegel(stellung: Stellung, mitStellung: boolean): number {
+  const ich = stellung.amZug;
+  const meiner = koenigVon(stellung, ich);
+  const seiner = koenigVon(stellung, andere(ich));
+  return (
+    bewerte(stellung, mitStellung) +
+    (meiner >= 0 ? huegelNaehe(abstandZumHuegel(meiner)) : 0) -
+    (seiner >= 0 ? huegelNaehe(abstandZumHuegel(seiner)) : 0)
+  );
+}
+
+/** Gewinnt die Seite am Zug jetzt mit einem legalen Königszug auf den Huegel? */
+function gewinntAmHuegel(stellung: Stellung): boolean {
+  const koenig = koenigVon(stellung, stellung.amZug);
+  // Weiter als einen Schritt entfernt, erreicht ihn kein Königszug — dann spart das die Zugerzeugung.
+  if (koenig < 0 || abstandZumHuegel(koenig) > 1) return false;
+  for (const zug of pseudoZuege(stellung)) {
+    if (zug.von !== koenig || !zugErreichtHuegel(stellung.brett[zug.von]!, zug.nach)) continue;
+    if (!imSchach(wendeAn(stellung, zug), stellung.amZug)) return true;
+  }
+  return false;
+}
+
+class SucheHuegel {
+  besucht = 0;
+  constructor(private readonly stufe: Stufe) {}
+
+  get erschoepft(): boolean {
+    return this.besucht >= this.stufe.knoten;
+  }
+
+  private ruhe(stellung: Stellung, alpha: number, beta: number, abstand: number): number {
+    this.besucht += 1;
+    if (gewinntAmHuegel(stellung)) return MATT - abstand - 1;
+    const stehen = bewerteHuegel(stellung, this.stufe.stellung);
+    if (stehen >= beta) return stehen;
+    if (stehen > alpha) alpha = stehen;
+    if (this.erschoepft) return stehen;
+    const schlaege = pseudoZuege(stellung).filter((z) => istSchlag(stellung, z));
+    for (const zug of ordne(stellung, schlaege)) {
+      const danach = wendeAn(stellung, zug);
+      if (imSchach(danach, stellung.amZug)) continue;
+      const wert = -this.ruhe(danach, -beta, -alpha, abstand + 1);
+      if (wert >= beta) return wert;
+      if (wert > alpha) alpha = wert;
+    }
+    return alpha;
+  }
+
+  wert(stellung: Stellung, tiefe: number, alpha: number, beta: number, abstand: number): number {
+    if (stellung.halbzugUhr >= 100) return 0;
+    if (tiefe === 0) {
+      // Wie in `Suche`: Matt am Blatt nur im Schach suchen, ein Patt dort uebersieht er.
+      if (imSchach(stellung) && legaleZuege(stellung).length === 0) return -MATT + abstand;
+      if (this.stufe.ruhe) return this.ruhe(stellung, alpha, beta, abstand);
+      this.besucht += 1;
+      if (gewinntAmHuegel(stellung)) return MATT - abstand - 1;
+      return bewerteHuegel(stellung, this.stufe.stellung);
+    }
+    this.besucht += 1;
+    const ich = stellung.amZug;
+    let bester = -Infinity;
+    let legal = 0;
+    for (const zug of ordne(stellung, pseudoZuege(stellung))) {
+      const danach = wendeAn(stellung, zug);
+      if (imSchach(danach, ich)) continue;
+      legal += 1;
+      // Der Königszug auf den Huegel gewinnt sofort — wie ein Matt einen Halbzug spaeter.
+      const wert = zugErreichtHuegel(stellung.brett[zug.von]!, zug.nach)
+        ? MATT - abstand - 1
+        : -this.wert(danach, tiefe - 1, -beta, -alpha, abstand + 1);
+      if (wert > bester) bester = wert;
+      if (wert > alpha) alpha = wert;
+      if (alpha >= beta || this.erschoepft) break;
+    }
+    if (legal === 0) return imSchach(stellung) ? -MATT + abstand : 0;
+    return bester;
+  }
+}
+
+/** Der beste Zug im Koenig des Huegels nach Stufe. Wirft nur, wenn es keinen legalen Zug gibt. */
+export function besterZugHuegel(stellung: Stellung, level: BotLevel): Zug {
+  const zuege = legaleZuege(stellung);
+  if (zuege.length === 0) throw new Error('Kein legaler Zug');
+  const stufe = STUFEN[level];
+  const suche = new SucheHuegel(stufe);
+  const geordnet = ordne(stellung, zuege);
+  // Der Huegel gewinnt sofort; dafuer muss nichts gesucht werden, und ein
+  // knappes Knotenbudget darf es nicht verdecken.
+  const sieg = geordnet.find((z) => zugErreichtHuegel(stellung.brett[z.von]!, z.nach));
+  if (sieg) return sieg;
+  let gewaehlt = geordnet[0]!;
+
+  // Wie `besterZug`: iterativ vertiefen, die beste Antwort der vorigen Tiefe zuerst.
+  for (let tiefe = 1; tiefe <= stufe.tiefe; tiefe += 1) {
+    const reihe = [gewaehlt, ...geordnet.filter((z) => z !== gewaehlt)];
+    let bester: Zug | null = null;
+    let besterWert = -Infinity;
+    let alpha = -Infinity;
+    let fertig = true;
+    for (const zug of reihe) {
+      const wert = -suche.wert(wendeAn(stellung, zug), tiefe - 1, -Infinity, -alpha, 1);
       if (suche.erschoepft) {
         fertig = false;
         break;

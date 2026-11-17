@@ -144,6 +144,8 @@ export function Brett({
   const zieleVon = (von: string | null): Set<string> =>
     waehlt ? new Set() : amZug ? zielfelder(zuege, von) : new Set(von ? (sicht.vorab?.[von] ?? []) : []);
   const marken = markierungen(sicht);
+  // König des Hügels: Die Felder nennt das Modul, der Bildschirm hebt sie nur hervor.
+  const huegel = new Set(sicht.huegel?.felder ?? []);
   const ziele = zieleVon(gewaehlt);
 
   /*
@@ -386,6 +388,7 @@ export function Brett({
           vorab && (vorab.von === name || vorab.nach === name) ? stil.vorab : '',
           index === koenigImSchach ? stil.koenigImSchach : '',
           feldMarken.includes('koenigGeschlagen') ? stil.koenigFaellt : '',
+          huegel.has(name) ? stil.huegel : '',
           ziele.has(name)
             ? figur
               ? farbeDer(figur) === sicht.meineFarbe
@@ -400,6 +403,7 @@ export function Brett({
             ? tf(`brochess.figurAufFeld.${farbeDer(figur)}.${figur.toLowerCase()}`, { feld: name })
             : name,
           ...feldMarken.map((m) => t(`brochess.marke.${m}`)),
+          ...(huegel.has(name) ? [t('brochess.huegel.feld')] : []),
         ].join(', ');
         const gleitet = gleiten?.nach === name;
         return (
@@ -512,7 +516,7 @@ function feldIndexVon(name: string): number {
 
 /** Remisgrund und Siegesgrund je Ausgang; unbekannte Ausgänge bleiben ohne Nachsatz. */
 const REMIS_AUSGAENGE = ['patt', 'fuenfzigZuege', 'wiederholung', 'material', 'zeit'];
-const GRUND_AUSGAENGE = ['matt', 'zeit', 'aufgabe', 'dreiSchach'];
+const GRUND_AUSGAENGE = ['matt', 'zeit', 'aufgabe', 'dreiSchach', 'huegel'];
 const remisGrund = (ausgang: string): string =>
   REMIS_AUSGAENGE.includes(ausgang) ? t(`brochess.remis.${ausgang}`) : '';
 const siegGrund = (ausgang: string): string =>

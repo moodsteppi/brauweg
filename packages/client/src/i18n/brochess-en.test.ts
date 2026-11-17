@@ -46,6 +46,7 @@ function sicht(teil: Partial<BroChessSicht>): BroChessSicht {
     secretDame: null,
     dreiSchach: null,
     chess960: null,
+    huegel: null,
     ...teil,
   } as BroChessSicht;
 }
@@ -210,5 +211,32 @@ describe('BroChess Chess960 in beiden Sprachen', () => {
     );
     expect(t('brochess.chess960.rochade')).toBe('Castling: move the king onto your own rook');
     expect(t('brochess.modi.chess960.satz')).toBe('The back rank is shuffled – one of 960 starting positions.');
+  });
+});
+
+describe('BroChess König des Hügels in beiden Sprachen', () => {
+  afterEach(() => setzeSprachwahl('de'));
+  const gewonnen = sicht({
+    huegel: { felder: ['d4', 'e4', 'd5', 'e5'] },
+    ende: { ausgang: 'huegel', sieger: 0 },
+  });
+
+  it('nennt Modus, Regel und Siegesgrund auf Deutsch', () => {
+    setzeSprachwahl('de');
+    expect(tf('brochess.kopfModus', { modus: t('brochess.huegel'), regel: t('brochess.huegel.kopf') })).toBe(
+      'König des Hügels · Der König auf die Mitte gewinnt',
+    );
+    expect(ergebnis(gewonnen, name)?.grund).toBe('durch den König auf dem Hügel');
+    expect(t('brochess.huegel.feld')).toBe('Hügel');
+  });
+
+  it('nennt Modus, Regel und Siegesgrund auf Englisch', () => {
+    setzeSprachwahl('en');
+    expect(tf('brochess.kopfModus', { modus: t('brochess.huegel'), regel: t('brochess.huegel.kopf') })).toBe(
+      'King of the Hill · King to the centre wins',
+    );
+    expect(ergebnis(gewonnen, name)?.grund).toBe('by the king reaching the hill');
+    expect(t('brochess.modi.huegel.satz')).toBe('Whoever moves their king onto one of the four centre squares wins.');
+    expect(t('brochess.huegel.feld')).toBe('hill');
   });
 });

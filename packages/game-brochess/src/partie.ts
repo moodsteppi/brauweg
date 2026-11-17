@@ -48,6 +48,7 @@ import {
   nurKoenige,
   zaehleSchach,
 } from './dreischach.js';
+import { zugErreichtHuegel } from './huegel.js';
 import { nummerAusSaat, nummerVon, startFen960 } from './chess960.js';
 import { type BroChessRegeln, modusVon, schachRegelVon, zeitkontrolle } from './regeln.js';
 
@@ -106,7 +107,9 @@ export type Ausgang =
   | 'zeit'
   | 'aufgabe'
   /** Drei-Schach: Der Sieger hat dem Gegner zum dritten Mal Schach gegeben. */
-  | 'dreiSchach';
+  | 'dreiSchach'
+  /** Koenig des Huegels: Der Sieger hat seinen König auf d4, e4, d5 oder e5 gezogen. */
+  | 'huegel';
 
 export interface Ende {
   readonly ausgang: Ausgang;
@@ -374,7 +377,11 @@ export function fuehreAus(
     stellung,
     wiederholungen: { ...partie.wiederholungen, [schluessel]: wiederholt },
     letzterZug: { von: aktion.von, nach: anzeigeZiel(partie.stellung, zug, aktion.nach) },
-    ende: dreiSchach ? endeNachDreiSchach(stellung, dreiSchach, wiederholt, sitz) : endeNach(stellung, wiederholt, sitz),
+    ende: dreiSchach
+      ? endeNachDreiSchach(stellung, dreiSchach, wiederholt, sitz)
+      : modusVon(partie.regeln) === 'huegel'
+        ? endeNachHuegel(stellung, zugErreichtHuegel(partie.stellung.brett[von]!, nach), wiederholt, sitz)
+        : endeNach(stellung, wiederholt, sitz),
     verlauf: [...partie.verlauf, sanVon(partie.stellung, zug)],
     uhr,
     ...(dreiSchach ? { dreiSchach } : {}),
@@ -406,6 +413,32 @@ function endeNachDreiSchach(
   if (wiederholt >= 3) return { ausgang: 'wiederholung', sieger: null };
   if (stellung.halbzugUhr >= 100) return { ausgang: 'fuenfzigZuege', sieger: null };
   if (nurKoenige(stellung.brett)) return { ausgang: 'material', sieger: null };
+  return null;
+}
+
+/**
+ * Wie `endeNach`, im Modus 'huegel'. Matt geht vor (ein Zug des Koenigs auf
+ * den Huegel kann durch Abzugsschach zugleich matt setzen; Matt ist der
+ * staerkere Grund), dann der Huegel, und zwar VOR Patt, Wiederholung und
+ * 50-Zuege-Regel: Der Zug, der den Huegel erreicht, gewinnt, auch wenn er
+ * zugleich den Gegner ohne Zug stehen laesst oder eine Grenze erreicht. „Zu wenig Material" gibt es nie — ein
+ * nackter König kann immer noch zum Huegel laufen (huegel.ts).
+ */
+function endeNachHuegel(
+  stellung: Stellung,
+  erreichtHuegel: boolean,
+  wiederholt: number,
+  zieher: number,
+): Ende | null {
+  const keinZug = legaleZuege(stellung).length === 0;
+  if (keinZug && imSchach(stellung)) return { ausgang: 'matt', sieger: zieher };
+  // Der Huegel geht auch vor Patt: Der Sieger ist derselbe Koenig, der Zug war
+  // legal, und der Bot (SucheHuegel.wert) wertet ihn ebenso als Sieg — stuende
+  // hier zuerst das Patt, widersprachen sich Regel und Bot.
+  if (erreichtHuegel) return { ausgang: 'huegel', sieger: zieher };
+  if (keinZug) return { ausgang: 'patt', sieger: null };
+  if (wiederholt >= 3) return { ausgang: 'wiederholung', sieger: null };
+  if (stellung.halbzugUhr >= 100) return { ausgang: 'fuenfzigZuege', sieger: null };
   return null;
 }
 
@@ -542,6 +575,8 @@ export function verbraucheZeit(partie: BroChessPartie, sitz: number, ms: number)
       ausgang: 'zeit',
       sieger:
         kannMattsetzen(partie.stellung.brett, gegnerFarbe) ||
+        // Huegel: Der König des Gegners kann immer noch dorthin laufen.
+        modusVon(partie.regeln) === 'huegel' ||
         // Drei-Schach: Wer noch eine Figur hat, kann noch dreimal Schach geben.
         (partie.dreiSchach !== undefined && kannSchachGeben(partie.stellung.brett, gegnerFarbe)) ||
         (partie.secretDame !== undefined && aktiv(partie.secretDame[gegnerFarbe]))

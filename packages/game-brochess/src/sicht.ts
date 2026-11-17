@@ -22,6 +22,7 @@
  */
 
 import { type Farbe, feldName, materialStand, vorabZiele, zuFen } from './brett.js';
+import { HUEGEL_FELDER } from './huegel.js';
 import { SCHACH_ZIEL } from './dreischach.js';
 import { type GeheimEreignis, type GeheimeDame, type GeheimZustand, wahlFertig } from './geheim.js';
 import {
@@ -32,7 +33,7 @@ import {
   farbeVonSitz,
   schachInPartie,
 } from './partie.js';
-import { type SchachDurchVerdeckte, zeitkontrolle } from './regeln.js';
+import { modusVon, type SchachDurchVerdeckte, zeitkontrolle } from './regeln.js';
 
 /** Eine geheime Dame, soweit der Betrachter sie kennen darf. */
 export interface GeheimeDameSicht {
@@ -95,6 +96,15 @@ export interface Chess960Sicht {
   readonly nummer: number;
 }
 
+/**
+ * Was die Sicht vom Modus 'huegel' zeigt; null in jedem anderen Modus.
+ * Nichts davon ist verdeckt.
+ */
+export interface HuegelSicht {
+  /** Die Felder des Huegels (d4, e4, d5, e5). Steht in der Sicht, damit der Bildschirm sie nicht abschreibt. */
+  readonly felder: readonly string[];
+}
+
 export interface BroChessSicht {
   readonly zuschauer: boolean;
   /**
@@ -141,6 +151,8 @@ export interface BroChessSicht {
   readonly dreiSchach: DreiSchachSicht | null;
   /** Modus 'chess960', sonst null. */
   readonly chess960: Chess960Sicht | null;
+  /** Modus 'huegel', sonst null. */
+  readonly huegel: HuegelSicht | null;
 }
 
 function dameSicht(dame: GeheimeDame): GeheimeDameSicht | null {
@@ -218,6 +230,7 @@ function sicht(partie: BroChessPartie, sitz: number | null): BroChessSicht {
     secretDame: secretDameSicht(partie, sitz),
     dreiSchach: partie.dreiSchach ? { gegeben: partie.dreiSchach.gegeben, ziel: SCHACH_ZIEL } : null,
     chess960: partie.chess960 ? { nummer: partie.chess960.nummer } : null,
+    huegel: modusVon(partie.regeln) === 'huegel' ? { felder: HUEGEL_FELDER } : null,
   };
 }
 
