@@ -95,7 +95,7 @@ export const SPEZIAL_MODI: readonly SpezialModus[] = [
     regel: 'brochess.modi.huegel.satz',
     hinweis: 'brochess.modi.huegel.hinweis',
     // Ein Hügel mit Fähnchen auf dem Gipfel.
-    symbol: ['M3 19h18', 'M4 19c2-6 5-9 8-9s6 3 8 9', 'M12 10V4', 'M12 4l5 1.8L12 7.6'],
+    symbol: ['M3 19h18', 'M3 19c3-4 6-6 9-6s6 2 9 6', 'M12 13V5', 'M12 5l5 2-5 2'],
     varianten: [],
     felder: () => ({ modus: 'huegel' }),
   },
