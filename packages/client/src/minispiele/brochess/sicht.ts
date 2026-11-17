@@ -26,7 +26,9 @@ export type Ausgang =
   /** Drei-Schach: Der Sieger hat zum dritten Mal Schach gegeben. */
   | 'dreiSchach'
   /** Koenig des Huegels: Der Sieger hat seinen König auf d4, e4, d5 oder e5 gezogen. */
-  | 'huegel';
+  | 'huegel'
+  /** Nebelschach: Der Sieger hat den König des Gegners geschlagen. */
+  | 'koenigGeschlagen';
 
 /** Sicht des Moduls, siehe packages/game-brochess/src/sicht.ts. */
 export interface BroChessSicht {
@@ -62,6 +64,17 @@ export interface BroChessSicht {
   chess960: Chess960Sicht | null;
   /** Modus 'huegel', sonst null. */
   huegel: HuegelSicht | null;
+  /** Modus 'nebel', sonst null. */
+  nebel: NebelSicht | null;
+}
+
+/**
+ * Nebelschach aus der Sicht, siehe `NebelSicht` im Modul. `brett` enthaelt nur,
+ * was der Betrachter sieht; `verborgen` nennt die Felder im Nebel (leer nach
+ * dem Ende der Partie). Die Zugliste zeigt „…" fuer Zuege im Nebel.
+ */
+export interface NebelSicht {
+  verborgen: string[];
 }
 
 /** Koenig des Huegels aus der Sicht, siehe `HuegelSicht` im Modul. Nichts davon ist verdeckt. */

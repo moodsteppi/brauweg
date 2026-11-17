@@ -99,6 +99,17 @@ export const SPEZIAL_MODI: readonly SpezialModus[] = [
     varianten: [],
     felder: () => ({ modus: 'huegel' }),
   },
+  {
+    // Seit dem 17.11.2026, wie „Fog of War" bei Lichess. Die Regel steht im Modul (nebel.ts).
+    id: 'nebel',
+    name: 'brochess.nebel',
+    regel: 'brochess.modi.nebel.satz',
+    hinweis: 'brochess.modi.nebel.hinweis',
+    // Eine Nebelbank: drei Schwaden übereinander.
+    symbol: ['M5 8h9', 'M3 12h15', 'M7 16h13', 'M16 8h3'],
+    varianten: [],
+    felder: () => ({ modus: 'nebel' }),
+  },
 ];
 
 /** Was gewählt ist: kein Modus (klassisches Schach) oder ein Modus mit Variante. */

@@ -248,6 +248,11 @@ export function BroChessTable({
               {tf('brochess.kopfModus', { modus: t('brochess.dreiSchach'), regel: t('brochess.dreiSchach.kopf') })}
             </span>
           )}
+          {sicht.nebel && (
+            <span className={stil.kopfModus} title={t('brochess.modi.nebel.satz')}>
+              {tf('brochess.kopfModus', { modus: t('brochess.nebel'), regel: t('brochess.nebel.kopf') })}
+            </span>
+          )}
           {sicht.huegel && (
             <span className={stil.kopfModus}>
               {tf('brochess.kopfModus', { modus: t('brochess.huegel'), regel: t('brochess.huegel.kopf') })}

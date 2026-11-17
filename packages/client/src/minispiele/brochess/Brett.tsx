@@ -146,6 +146,8 @@ export function Brett({
   const marken = markierungen(sicht);
   // König des Hügels: Die Felder nennt das Modul, der Bildschirm hebt sie nur hervor.
   const huegel = new Set(sicht.huegel?.felder ?? []);
+  // Nebelschach: Welche Felder verdeckt sind, sagt das Modul; auf ihnen steht nie eine Figur.
+  const nebel = new Set(sicht.nebel?.verborgen ?? []);
   const ziele = zieleVon(gewaehlt);
 
   /*
@@ -389,6 +391,7 @@ export function Brett({
           index === koenigImSchach ? stil.koenigImSchach : '',
           feldMarken.includes('koenigGeschlagen') ? stil.koenigFaellt : '',
           huegel.has(name) ? stil.huegel : '',
+          nebel.has(name) ? stil.nebel : '',
           ziele.has(name)
             ? figur
               ? farbeDer(figur) === sicht.meineFarbe
@@ -399,7 +402,9 @@ export function Brett({
           ziele.has(name) && !amZug ? stil.zielVorab : '',
         ].filter(Boolean);
         const beschriftung = [
-          figur
+          nebel.has(name)
+            ? `${name}, ${t('brochess.nebel.feld')}`
+            : figur
             ? tf(`brochess.figurAufFeld.${farbeDer(figur)}.${figur.toLowerCase()}`, { feld: name })
             : name,
           ...feldMarken.map((m) => t(`brochess.marke.${m}`)),
@@ -516,7 +521,7 @@ function feldIndexVon(name: string): number {
 
 /** Remisgrund und Siegesgrund je Ausgang; unbekannte Ausgänge bleiben ohne Nachsatz. */
 const REMIS_AUSGAENGE = ['patt', 'fuenfzigZuege', 'wiederholung', 'material', 'zeit'];
-const GRUND_AUSGAENGE = ['matt', 'zeit', 'aufgabe', 'dreiSchach', 'huegel'];
+const GRUND_AUSGAENGE = ['matt', 'zeit', 'aufgabe', 'dreiSchach', 'huegel', 'koenigGeschlagen'];
 const remisGrund = (ausgang: string): string =>
   REMIS_AUSGAENGE.includes(ausgang) ? t(`brochess.remis.${ausgang}`) : '';
 const siegGrund = (ausgang: string): string =>

@@ -34,6 +34,7 @@ function sicht(teil: Partial<BroChessSicht>): BroChessSicht {
     dreiSchach: null,
     chess960: null,
     huegel: null,
+    nebel: null,
     ...teil,
   };
 }

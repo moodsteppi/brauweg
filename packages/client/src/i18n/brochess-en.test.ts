@@ -47,6 +47,7 @@ function sicht(teil: Partial<BroChessSicht>): BroChessSicht {
     dreiSchach: null,
     chess960: null,
     huegel: null,
+    nebel: null,
     ...teil,
   } as BroChessSicht;
 }
@@ -238,5 +239,31 @@ describe('BroChess König des Hügels in beiden Sprachen', () => {
     expect(ergebnis(gewonnen, name)?.grund).toBe('by the king reaching the hill');
     expect(t('brochess.modi.huegel.satz')).toBe('Whoever moves their king onto one of the four centre squares wins.');
     expect(t('brochess.huegel.feld')).toBe('hill');
+  });
+});
+
+describe('BroChess Nebelschach in beiden Sprachen', () => {
+  afterEach(() => setzeSprachwahl('de'));
+  const gewonnen = sicht({
+    nebel: { verborgen: [] },
+    ende: { ausgang: 'koenigGeschlagen', sieger: 0 },
+  });
+
+  it('nennt Modus, Regel und Siegesgrund auf Deutsch', () => {
+    setzeSprachwahl('de');
+    expect(tf('brochess.kopfModus', { modus: t('brochess.nebel'), regel: t('brochess.nebel.kopf') })).toBe(
+      'Nebelschach · Du siehst nur deinen Teil des Bretts',
+    );
+    expect(ergebnis(gewonnen, name)?.grund).toBe('durch Königsschlag');
+    expect(t('brochess.nebel.feld')).toBe('Nebel');
+  });
+
+  it('nennt Modus, Regel und Siegesgrund auf Englisch', () => {
+    setzeSprachwahl('en');
+    expect(tf('brochess.kopfModus', { modus: t('brochess.nebel'), regel: t('brochess.nebel.kopf') })).toBe(
+      'Fog of War · You only see your part of the board',
+    );
+    expect(ergebnis(gewonnen, name)?.grund).toBe('by capturing the king');
+    expect(t('brochess.nebel.feld')).toBe('fog');
   });
 });

@@ -353,8 +353,13 @@ function rochade960(stellung: Stellung, recht: 'K' | 'Q' | 'k' | 'q'): Zug | nul
  * Exportiert fuer den Bot (bot.ts): Er prueft die Legalitaet erst beim
  * Ausfuehren, statt jede Stellung doppelt aufzubauen — sonst rechnet er im
  * Serverprozess spuerbar lange.
+ *
+ * `ohneSchachRegel` (Nebelschach, nebel.ts): Dort gibt es kein Schach — die
+ * Rochade darf auch durch angegriffene Felder und aus dem Schach heraus
+ * gehen. Standardmaessig aus, damit jeder andere Modus Zug fuer Zug derselbe
+ * bleibt.
  */
-export function pseudoZuege(stellung: Stellung): Zug[] {
+export function pseudoZuege(stellung: Stellung, ohneSchachRegel = false): Zug[] {
   const { brett, amZug } = stellung;
   const zuege: Zug[] = [];
   const feind = (f: number): boolean => brett[f] !== '' && farbeVon(brett[f]!) !== amZug;
@@ -428,7 +433,7 @@ export function pseudoZuege(stellung: Stellung): Zug[] {
     // es stehen, obwohl König oder Turm fehlen.
     if (brett[r.koenig] !== alsFarbe('k', amZug) || brett[r.turm] !== alsFarbe('r', amZug)) continue;
     if (r.leer.some((f) => brett[f] !== '')) continue;
-    if (r.sicher.some((f) => angegriffen(brett, f, gegner(amZug)))) continue;
+    if (!ohneSchachRegel && r.sicher.some((f) => angegriffen(brett, f, gegner(amZug)))) continue;
     zuege.push({ von: r.koenig, nach: r.ziel });
   }
 

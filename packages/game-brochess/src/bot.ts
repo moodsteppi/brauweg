@@ -55,6 +55,7 @@ import {
   wendeAnGeheim,
 } from './geheim.js';
 import { SCHACH_ZIEL } from './dreischach.js';
+import { nebelZuege, schlaegtKoenigNebel } from './nebel.js';
 import { abstandZumHuegel, zugErreichtHuegel } from './huegel.js';
 import type { BroChessAktion } from './partie.js';
 import type { BroChessSicht, DreiSchachSicht, GeheimeDameSicht, SecretDameSicht } from './sicht.js';
@@ -303,7 +304,9 @@ export function botZug(sicht: BroChessSicht, level: BotLevel = 'standard'): BroC
     ? besterZugDreiSchach(ausFen(sicht.fen), sicht.dreiSchach, level)
     : sicht.huegel
       ? besterZugHuegel(ausFen(sicht.fen), level)
-      : besterZug(ausFen(sicht.fen), level);
+      : sicht.nebel
+        ? besterZugNebel(ausFen(sicht.fen), level)
+        : besterZug(ausFen(sicht.fen), level);
   return {
     type: 'zug',
     von: feldName(zug.von),
@@ -1026,6 +1029,115 @@ export function besterZugHuegel(stellung: Stellung, level: BotLevel): Zug {
   let gewaehlt = geordnet[0]!;
 
   // Wie `besterZug`: iterativ vertiefen, die beste Antwort der vorigen Tiefe zuerst.
+  for (let tiefe = 1; tiefe <= stufe.tiefe; tiefe += 1) {
+    const reihe = [gewaehlt, ...geordnet.filter((z) => z !== gewaehlt)];
+    let bester: Zug | null = null;
+    let besterWert = -Infinity;
+    let alpha = -Infinity;
+    let fertig = true;
+    for (const zug of reihe) {
+      const wert = -suche.wert(wendeAn(stellung, zug), tiefe - 1, -Infinity, -alpha, 1);
+      if (suche.erschoepft) {
+        fertig = false;
+        break;
+      }
+      if (wert > besterWert) {
+        besterWert = wert;
+        bester = zug;
+      }
+      if (wert > alpha) alpha = wert;
+    }
+    if (bester) gewaehlt = bester;
+    if (!fertig || besterWert >= MATT - 100) break;
+  }
+  return gewaehlt;
+}
+
+// ---------------------------------------------------------------------------
+// Nebelschach (seit dem 17.11.2026)
+// ---------------------------------------------------------------------------
+
+/*
+ * Der Bot fuer den Modus 'nebel'. Er bekommt wie jeder Bot nur die Sicht —
+ * also das verdeckte Brett — und rechnet darauf. Das genuegt fuer legale
+ * Zuege: Jedes Ziel eines eigenen Zuges und jeder Blocker liegt auf einem
+ * sichtbaren Feld (nebel.ts), `nebelZuege` auf dem verdeckten Brett ergibt
+ * also genau die Zuege des echten. Ein Zug, den `act` ablehnt, kann daraus
+ * nicht entstehen.
+ *
+ * Was er nicht weiss, ignoriert er: Figuren im Nebel gibt es fuer ihn nicht.
+ * Er sieht also keine Drohung, die aus dem Nebel kommt — wie ein Mensch, der
+ * nicht an sie denkt. Was sichtbar ist, rechnet er aus: Ein Zug, der den
+ * gegnerischen König schlaegt, ist ein Sieg (MATT), und ein eigener König, den
+ * ein sichtbarer Gegner schlagen koennte, ist ein Verlust. Schach gibt es
+ * nicht; die Suche kennt darum weder Schachgebote noch Mattsuche, sondern nur
+ * Koenigsschlaege.
+ *
+ * Eine eigene Klasse statt eines Schalters in `Suche`, wie bei Drei-Schach
+ * und Huegel: Der normale Modus bleibt Zug fuer Zug derselbe.
+ */
+
+class SucheNebel {
+  besucht = 0;
+  constructor(private readonly stufe: Stufe) {}
+
+  get erschoepft(): boolean {
+    return this.besucht >= this.stufe.knoten;
+  }
+
+  private ruhe(stellung: Stellung, alpha: number, beta: number, abstand: number): number {
+    this.besucht += 1;
+    const zuege = nebelZuege(stellung);
+    if (zuege.some((z) => schlaegtKoenigNebel(stellung, z))) return MATT - abstand - 1;
+    const stehen = bewerte(stellung, this.stufe.stellung);
+    if (stehen >= beta) return stehen;
+    if (stehen > alpha) alpha = stehen;
+    if (this.erschoepft) return stehen;
+    for (const zug of ordne(stellung, zuege.filter((z) => istSchlag(stellung, z)))) {
+      const wert = -this.ruhe(wendeAn(stellung, zug), -beta, -alpha, abstand + 1);
+      if (wert >= beta) return wert;
+      if (wert > alpha) alpha = wert;
+    }
+    return alpha;
+  }
+
+  wert(stellung: Stellung, tiefe: number, alpha: number, beta: number, abstand: number): number {
+    if (stellung.halbzugUhr >= 100) return 0;
+    if (tiefe === 0) {
+      if (this.stufe.ruhe) return this.ruhe(stellung, alpha, beta, abstand);
+      this.besucht += 1;
+      if (nebelZuege(stellung).some((z) => schlaegtKoenigNebel(stellung, z))) return MATT - abstand - 1;
+      return bewerte(stellung, this.stufe.stellung);
+    }
+    this.besucht += 1;
+    const zuege = nebelZuege(stellung);
+    // Wer den König schlagen kann, hat gewonnen — ohne weiter zu suchen.
+    if (zuege.some((z) => schlaegtKoenigNebel(stellung, z))) return MATT - abstand - 1;
+    // Kein Zug: Patt, Remis.
+    if (zuege.length === 0) return 0;
+    let bester = -Infinity;
+    for (const zug of ordne(stellung, zuege)) {
+      const wert = -this.wert(wendeAn(stellung, zug), tiefe - 1, -beta, -alpha, abstand + 1);
+      if (wert > bester) bester = wert;
+      if (wert > alpha) alpha = wert;
+      if (alpha >= beta || this.erschoepft) break;
+    }
+    return bester;
+  }
+}
+
+/** Der beste Zug im Nebelschach nach Stufe. Wirft nur, wenn es keinen Zug gibt. */
+export function besterZugNebel(stellung: Stellung, level: BotLevel): Zug {
+  const zuege = nebelZuege(stellung);
+  if (zuege.length === 0) throw new Error('Kein Zug');
+  const stufe = STUFEN[level];
+  const suche = new SucheNebel(stufe);
+  const geordnet = ordne(stellung, zuege);
+  // Der Koenigsschlag gewinnt sofort; ein knappes Knotenbudget darf ihn nicht verdecken.
+  const sieg = geordnet.find((z) => schlaegtKoenigNebel(stellung, z));
+  if (sieg) return sieg;
+  let gewaehlt = geordnet[0]!;
+
   for (let tiefe = 1; tiefe <= stufe.tiefe; tiefe += 1) {
     const reihe = [gewaehlt, ...geordnet.filter((z) => z !== gewaehlt)];
     let bester: Zug | null = null;
