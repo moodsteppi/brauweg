@@ -173,6 +173,19 @@ test('Huegel Remis: Patt bleibt Patt', () => {
   assert.deepEqual(p.ende, { ausgang: 'patt', sieger: null });
 });
 
+test('Huegel Sieg geht vor Patt: Der Koenig zieht auf den Huegel und der Gegner steht ohne Zug', () => {
+  // Schwarz (Kh8) hat nach Kd3-d4 keinen legalen Zug und steht nicht im Schach:
+  // g7/g8 deckt der Turm, h7 der Laeufer. Im normalen Schach waere das Patt.
+  const fen = '7k/8/8/5B2/8/3K4/8/6R1 w - - 0 1';
+  const normal = fuehreAus(partie(fen, DEFAULT_REGELN), WEISS, zug('d3', 'd4'));
+  assert.deepEqual(normal.ende, { ausgang: 'patt', sieger: null });
+  const p = fuehreAus(partie(fen), WEISS, zug('d3', 'd4'));
+  assert.deepEqual(p.ende, { ausgang: 'huegel', sieger: WEISS });
+  // Ein anderer Zug in derselben Stellung bleibt Patt: Der Huegel entscheidet, nicht die Stellung.
+  const anders = fuehreAus(partie(fen), WEISS, zug('d3', 'c3'));
+  assert.deepEqual(anders.ende, { ausgang: 'patt', sieger: null });
+});
+
 test('Huegel Remis: dreifache Wiederholung weit weg vom Huegel', () => {
   const p = spiele(partie('k7/8/8/8/8/8/8/K7 w - - 0 1'), [
     'a1b1', 'a8b8', 'b1a1', 'b8a8', 'a1b1', 'a8b8', 'b1a1', 'b8a8',

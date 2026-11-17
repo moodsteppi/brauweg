@@ -419,9 +419,9 @@ function endeNachDreiSchach(
 /**
  * Wie `endeNach`, im Modus 'huegel'. Matt geht vor (ein Zug des Koenigs auf
  * den Huegel kann durch Abzugsschach zugleich matt setzen; Matt ist der
- * staerkere Grund), dann der Huegel, und zwar VOR Wiederholung und
+ * staerkere Grund), dann der Huegel, und zwar VOR Patt, Wiederholung und
  * 50-Zuege-Regel: Der Zug, der den Huegel erreicht, gewinnt, auch wenn er
- * zugleich eine Grenze erreicht. „Zu wenig Material" gibt es nie — ein
+ * zugleich den Gegner ohne Zug stehen laesst oder eine Grenze erreicht. „Zu wenig Material" gibt es nie — ein
  * nackter König kann immer noch zum Huegel laufen (huegel.ts).
  */
 function endeNachHuegel(
@@ -430,12 +430,13 @@ function endeNachHuegel(
   wiederholt: number,
   zieher: number,
 ): Ende | null {
-  if (legaleZuege(stellung).length === 0) {
-    return imSchach(stellung)
-      ? { ausgang: 'matt', sieger: zieher }
-      : { ausgang: 'patt', sieger: null };
-  }
+  const keinZug = legaleZuege(stellung).length === 0;
+  if (keinZug && imSchach(stellung)) return { ausgang: 'matt', sieger: zieher };
+  // Der Huegel geht auch vor Patt: Der Sieger ist derselbe Koenig, der Zug war
+  // legal, und der Bot (SucheHuegel.wert) wertet ihn ebenso als Sieg — stuende
+  // hier zuerst das Patt, widersprachen sich Regel und Bot.
   if (erreichtHuegel) return { ausgang: 'huegel', sieger: zieher };
+  if (keinZug) return { ausgang: 'patt', sieger: null };
   if (wiederholt >= 3) return { ausgang: 'wiederholung', sieger: null };
   if (stellung.halbzugUhr >= 100) return { ausgang: 'fuenfzigZuege', sieger: null };
   return null;
