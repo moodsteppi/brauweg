@@ -62,7 +62,15 @@ export {
 } from './regeln.js';
 export { type DreiSchachStand, SCHACH_ZIEL } from './dreischach.js';
 export {
+  ANZAHL_STELLUNGEN,
+  KLASSISCHE_NUMMER,
+  grundreihe,
+  nummerVon,
+  startFen960,
+} from './chess960.js';
+export {
   type BroChessSicht,
+  type Chess960Sicht,
   type DreiSchachSicht,
   type GeheimeDameSicht,
   type SecretDameSicht,

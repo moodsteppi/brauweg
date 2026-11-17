@@ -100,7 +100,7 @@ interface Fall {
 const GRUND = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 
 /** Was die Probe nicht zeigt: keine Uhr, keine Zugliste, nichts geschlagen. */
-const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' | 'vorab' | 'secretDame' | 'dreiSchach'> = {
+const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' | 'vorab' | 'secretDame' | 'dreiSchach' | 'chess960'> = {
   verlauf: [],
   uhr: null,
   geschlagen: { w: [], b: [] },
@@ -108,6 +108,7 @@ const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' |
   vorab: {},
   secretDame: null,
   dreiSchach: null,
+  chess960: null,
 };
 
 /** Secret Dame unter Regel A, noch nichts geschehen. */
@@ -150,6 +151,27 @@ const FAELLE: Fall[] = [
       ende: null,
     },
     zuege: [z('e1', 'f1'), z('e1', 'f2'), z('e1', 'e2'), z('e1', 'd1')],
+  },
+  {
+    // Aus dem Modul gespielt (Saat 200, Nummer 100): 1.Sg3 a6. Der König auf g1 darf auf den
+    // eigenen Turm h1 ziehen — das ist die Rochade, er bleibt auf g1, der Turm geht nach f1.
+    schluessel: 'chess960',
+    titel: 'Chess960: Stellung 100, Rochade möglich',
+    sicht: {
+      ...OHNE,
+      verlauf: ['Ng3', 'a6'],
+      chess960: { nummer: 100 },
+      zuschauer: false,
+      fen: 'qbbnrnkr/1ppppppp/p7/8/8/6N1/PPPPPPPP/QBBNR1KR w HEhe - 0 2',
+      brett: brettAus('qbbnrnkr/1ppppppp/p7/8/8/6N1/PPPPPPPP/QBBNR1KR'),
+      amZug: 'w',
+      meineFarbe: 'w',
+      weissSitz: 0,
+      schach: false,
+      letzterZug: { von: 'a7', nach: 'a6' },
+      ende: null,
+    },
+    zuege: [z('g1', 'h1'), z('g1', 'f1'), z('e1', 'f1'), z('g3', 'h5'), z('g3', 'f5')],
   },
   {
     schluessel: 'grund',
@@ -434,6 +456,14 @@ export function ProbeBroChess(): React.JSX.Element {
           {sd && schluessel !== SPIELART && (
             <span className={stil.kopfModus}>
               {tf('brochess.kopfModus', { modus: t('brochess.secretDame'), regel: regelText(sd.regel).kurz })}
+            </span>
+          )}
+          {fall.sicht.chess960 && schluessel !== SPIELART && (
+            <span className={stil.kopfModus}>
+              {tf('brochess.kopfModus', {
+                modus: t('brochess.chess960'),
+                regel: tf('brochess.chess960.kopf', { nummer: fall.sicht.chess960.nummer }),
+              })}
             </span>
           )}
           {drei && schluessel !== SPIELART && (

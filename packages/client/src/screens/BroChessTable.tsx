@@ -248,6 +248,14 @@ export function BroChessTable({
               {tf('brochess.kopfModus', { modus: t('brochess.dreiSchach'), regel: t('brochess.dreiSchach.kopf') })}
             </span>
           )}
+          {sicht.chess960 && (
+            <span className={stil.kopfModus} title={t('brochess.chess960.rochade')}>
+              {tf('brochess.kopfModus', {
+                modus: t('brochess.chess960'),
+                regel: tf('brochess.chess960.kopf', { nummer: sicht.chess960.nummer }),
+              })}
+            </span>
+          )}
           {sd && (
             <span className={stil.kopfModus} title={regelText(sd.regel).satz}>
               {tf('brochess.kopfModus', { modus: t('brochess.secretDame'), regel: regelText(sd.regel).kurz })}

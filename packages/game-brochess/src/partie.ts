@@ -48,6 +48,7 @@ import {
   nurKoenige,
   zaehleSchach,
 } from './dreischach.js';
+import { nummerAusSaat, nummerVon, startFen960 } from './chess960.js';
 import { type BroChessRegeln, modusVon, schachRegelVon, zeitkontrolle } from './regeln.js';
 
 export interface BroChessZug {
@@ -147,6 +148,12 @@ export interface BroChessPartie {
    * (dreischach.ts). Fehlt sonst ganz, wie `secretDame`.
    */
   readonly dreiSchach?: DreiSchachStand;
+  /**
+   * Nur im Modus 'chess960': die Nummer der Grundstellung (0 bis 959, 518 ist
+   * die klassische). Fehlt sonst ganz, wie `secretDame`. Die Stellung selbst
+   * traegt die Turmlinien (`Stellung.chess960`); die Nummer ist nur zum Zeigen.
+   */
+  readonly chess960?: { readonly nummer: number };
 }
 
 /**
@@ -158,7 +165,14 @@ export function erstellePartie(
   seed: number,
   startFen: string = START_FEN,
 ): BroChessPartie {
-  const stellung = ausFen(startFen);
+  /*
+   * Chess960: Die Nummer folgt aus der Saat (chess960.ts). Eine ausdruecklich
+   * uebergebene `startFen` (Tests) geht vor; ihre Nummer wird aus der
+   * Grundreihe gelesen, -1 fuer eine Stellung, die keine der 960 ist.
+   */
+  const ist960 = modusVon(regeln) === 'chess960';
+  const nummer960 = ist960 ? nummerAusSaat(seed) : -1;
+  const stellung = ausFen(ist960 && startFen === START_FEN ? startFen960(nummer960) : startFen);
   /*
    * Wer Weiss spielt, entscheidet die Saat und nicht die Sitzordnung: Sitz 0
    * ist der, der den Tisch aufgemacht hat, und der zoege sonst immer zuerst.
@@ -180,7 +194,33 @@ export function erstellePartie(
     })(),
     ...(modusVon(regeln) === 'secretDame' ? { secretDame: neuerStand(schachRegelVon(regeln)) } : {}),
     ...(dreiSchach ? { dreiSchach } : {}),
+    ...(ist960
+      ? {
+          chess960: {
+            nummer:
+              startFen === START_FEN
+                ? nummer960
+                : nummerVon(stellung.brett.slice(0, 8).map((f) => f.toUpperCase()).join('')),
+          },
+        }
+      : {}),
   };
+}
+
+/**
+ * Das Zielfeld, das der Bildschirm als „zuletzt gezogen" zeigt. Gleich dem
+ * Ziel der Aktion — ausser bei der Chess960-Rochade: Dort heisst das Ziel der
+ * Aktion „eigener Turm", der König landet aber auf c oder g. Gezeigt (und
+ * gegleitet) wird die Landung des Koenigs.
+ */
+function anzeigeZiel(stellung: Stellung, zug: { von: number; nach: number }, ziel: string): string {
+  const figur = stellung.brett[zug.von]!;
+  const rochade =
+    stellung.chess960 !== undefined && figur.toLowerCase() === 'k' && stellung.brett[zug.nach] !== '' &&
+    (stellung.brett[zug.nach] === 'R' || stellung.brett[zug.nach] === 'r') &&
+    (stellung.brett[zug.nach] === 'R') === (figur === 'K');
+  if (!rochade) return ziel;
+  return feldName(Math.floor(zug.von / 8) * 8 + (zug.nach > zug.von ? 6 : 2));
 }
 
 /** Schluessel fuer die Wiederholungszaehlung; im Drei-Schach mit den Zaehlern (dreischach.ts). */
@@ -333,7 +373,7 @@ export function fuehreAus(
     ...partie,
     stellung,
     wiederholungen: { ...partie.wiederholungen, [schluessel]: wiederholt },
-    letzterZug: { von: aktion.von, nach: aktion.nach },
+    letzterZug: { von: aktion.von, nach: anzeigeZiel(partie.stellung, zug, aktion.nach) },
     ende: dreiSchach ? endeNachDreiSchach(stellung, dreiSchach, wiederholt, sitz) : endeNach(stellung, wiederholt, sitz),
     verlauf: [...partie.verlauf, sanVon(partie.stellung, zug)],
     uhr,

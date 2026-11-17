@@ -56,6 +56,14 @@ export interface BroChessSicht {
   secretDame: SecretDameSicht | null;
   /** Modus 'dreiSchach', sonst null. */
   dreiSchach: DreiSchachSicht | null;
+  /** Modus 'chess960', sonst null. */
+  chess960: Chess960Sicht | null;
+}
+
+/** Chess960 aus der Sicht, siehe `Chess960Sicht` im Modul. Nichts davon ist verdeckt. */
+export interface Chess960Sicht {
+  /** Nummer der Grundstellung, 0 bis 959 (518 = klassisch). */
+  nummer: number;
 }
 
 /** Drei-Schach aus der Sicht, siehe `DreiSchachSicht` im Modul. Nichts davon ist verdeckt. */

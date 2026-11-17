@@ -77,6 +77,17 @@ export const SPEZIAL_MODI: readonly SpezialModus[] = [
     varianten: [],
     felder: () => ({ modus: 'dreiSchach' }),
   },
+  {
+    // Seit dem 16.11.2026. Die Regel steht im Modul (chess960.ts, brett.ts); die Nummer wuerfelt der Server.
+    id: 'chess960',
+    name: 'brochess.chess960',
+    regel: 'brochess.modi.chess960.satz',
+    hinweis: 'brochess.modi.chess960.hinweis',
+    // Ein Würfel: die Grundreihe wird ausgewürfelt.
+    symbol: ['M5 5h14v14H5z', 'M9 9v.1', 'M15 9v.1', 'M12 12v.1', 'M9 15v.1', 'M15 15v.1'],
+    varianten: [],
+    felder: () => ({ modus: 'chess960' }),
+  },
 ];
 
 /** Was gewählt ist: kein Modus (klassisches Schach) oder ein Modus mit Variante. */

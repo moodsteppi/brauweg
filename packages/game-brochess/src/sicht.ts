@@ -86,6 +86,15 @@ export interface DreiSchachSicht {
   readonly ziel: number;
 }
 
+/**
+ * Was die Sicht vom Modus 'chess960' zeigt; null in jedem anderen Modus.
+ * Nichts davon ist verdeckt.
+ */
+export interface Chess960Sicht {
+  /** Nummer der Grundstellung, 0 bis 959 (518 = klassisch); -1 nur in Teststellungen. */
+  readonly nummer: number;
+}
+
 export interface BroChessSicht {
   readonly zuschauer: boolean;
   /**
@@ -130,6 +139,8 @@ export interface BroChessSicht {
   readonly secretDame: SecretDameSicht | null;
   /** Modus 'dreiSchach', sonst null. */
   readonly dreiSchach: DreiSchachSicht | null;
+  /** Modus 'chess960', sonst null. */
+  readonly chess960: Chess960Sicht | null;
 }
 
 function dameSicht(dame: GeheimeDame): GeheimeDameSicht | null {
@@ -206,6 +217,7 @@ function sicht(partie: BroChessPartie, sitz: number | null): BroChessSicht {
         : {},
     secretDame: secretDameSicht(partie, sitz),
     dreiSchach: partie.dreiSchach ? { gegeben: partie.dreiSchach.gegeben, ziel: SCHACH_ZIEL } : null,
+    chess960: partie.chess960 ? { nummer: partie.chess960.nummer } : null,
   };
 }
 

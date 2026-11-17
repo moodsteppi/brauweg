@@ -23,6 +23,9 @@ export default {
   'brochess.dreiSchach.kopf': 'The third check wins',
   'brochess.dreiSchach.schach': 'Check no. {n}! {zug}.',
   'brochess.dreiSchach.lebenAria': '{rest} of {ziel} checks left before losing',
+  'brochess.chess960': 'Chess960',
+  'brochess.chess960.kopf': 'Position {nummer} of 960',
+  'brochess.chess960.rochade': 'Castling: move the king onto your own rook',
   'brochess.kopfModus': '{modus} · {regel}',
 
   'brochess.figur.p': 'pawn',
@@ -118,6 +121,8 @@ export default {
   'brochess.modi.secretDame.satz': 'Each player secretly turns one of their own pieces into a queen – it only gives itself away with its first queen move.',
   'brochess.modi.dreiSchach.satz': 'Whoever checks the opponent for the third time wins.',
   'brochess.modi.dreiSchach.hinweis': 'Normal chess, except every check counts: whoever has checked the opponent three times wins at once. Checkmate still wins. The crowns next to each name show how many more checks that player can take.',
+  'brochess.modi.chess960.satz': 'The back rank is shuffled – one of 960 starting positions.',
+  'brochess.modi.chess960.hinweis': 'The back rank is picked at random from 960 valid positions (bishops on opposite colours, king between the rooks); Black mirrors White. The position number is shown above the board. Castling: move the king onto your own rook – it lands on c or g, the rook on d or f. Otherwise normal chess rules apply.',
   'brochess.spielart.hinweis': 'Before the first move, each player secretly picks one of their own pieces except the king. It may also move like a queen – only then does the opponent see which one it was.',
   'brochess.spielart.regelTitel': 'Check by the hidden queen',
   'brochess.spielart.regelAria': 'Rule',
