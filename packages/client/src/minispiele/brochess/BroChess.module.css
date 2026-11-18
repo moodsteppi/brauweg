@@ -360,6 +360,39 @@
   box-shadow: inset 0 0 0 3px rgba(245, 192, 46, 0.85), inset 0 0 14px rgba(245, 192, 46, 0.55);
 }
 
+/* Nebelschach: Felder, die der Betrachter nicht sieht. Dunkel, mit zwei
+   langsam wandernden Schwaden — ohne Rand, damit eine Nebelbank als Fläche
+   wirkt und nicht als Gitter. Die Farben gelten auf hellen wie dunklen
+   Feldern, auf einem Nebelfeld steht nie eine Figur. */
+.brett .nebel {
+  background-color: #14161d;
+  background-image:
+    radial-gradient(ellipse at 30% 40%, rgba(150, 160, 185, 0.32) 0%, rgba(150, 160, 185, 0) 65%),
+    radial-gradient(ellipse at 70% 65%, rgba(110, 120, 150, 0.28) 0%, rgba(110, 120, 150, 0) 60%);
+  background-size: 180% 180%, 160% 160%;
+  background-repeat: no-repeat;
+  animation: nebelWabern 9s ease-in-out infinite alternate;
+}
+
+.brett .nebel:nth-child(3n) {
+  animation-duration: 11s;
+  animation-delay: -3s;
+}
+
+.brett .nebel:nth-child(5n) {
+  animation-duration: 13s;
+  animation-delay: -6s;
+}
+
+@keyframes nebelWabern {
+  from {
+    background-position: 0% 20%, 100% 80%;
+  }
+  to {
+    background-position: 100% 70%, 0% 10%;
+  }
+}
+
 .brett .gewaehlt {
   background-image: linear-gradient(rgba(245, 192, 46, 0.55), rgba(245, 192, 46, 0.55));
 }
@@ -750,6 +783,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .brett .nebel {
+    animation: none;
+  }
   .figurGleitet {
     transition: none !important;
     transform: none !important;

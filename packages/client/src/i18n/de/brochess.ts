@@ -36,6 +36,9 @@ export default {
   'brochess.huegel': 'König des Hügels',
   'brochess.huegel.kopf': 'Der König auf die Mitte gewinnt',
   'brochess.huegel.feld': 'Hügel',
+  'brochess.nebel': 'Nebelschach',
+  'brochess.nebel.kopf': 'Du siehst nur deinen Teil des Bretts',
+  'brochess.nebel.feld': 'Nebel',
   'brochess.kopfModus': '{modus} · {regel}',
 
   // Figuren: schlicht (Beschriftungen), mit „Der/Die" und mit „Dein/Deine" (Meldungen)
@@ -95,6 +98,7 @@ export default {
   'brochess.grund.aufgabe': 'durch Aufgabe',
   'brochess.grund.dreiSchach': 'durch das dritte Schach',
   'brochess.grund.huegel': 'durch den König auf dem Hügel',
+  'brochess.grund.koenigGeschlagen': 'durch Königsschlag',
   'brochess.grund.koenigsschlag': 'durch Königsschlag der geheimen Dame',
   'brochess.duGewinnst': 'Du gewinnst!',
   'brochess.gewinnt': '{name} gewinnt',
@@ -145,6 +149,8 @@ export default {
   'brochess.modi.chess960.hinweis': 'Die Grundreihe wird zufällig aus 960 gültigen Stellungen gewählt (Läufer auf verschiedenen Farben, König zwischen den Türmen); Schwarz spiegelt Weiß. Die Nummer steht oben am Brett. Rochade: den König auf den eigenen Turm ziehen – er landet auf c oder g, der Turm auf d oder f. Sonst gilt normales Schach.',
   'brochess.modi.huegel.satz': 'Wer seinen König auf eines der vier Mittelfelder zieht, gewinnt.',
   'brochess.modi.huegel.hinweis': 'Normales Schach, nur gewinnt sofort, wer seinen König auf d4, e4, d5 oder e5 zieht – die goldenen Felder in der Mitte, der Hügel. Der Zug muss erlaubt sein: Ein König zieht nie in ein Schach, auch nicht auf den Hügel. Matt gewinnt weiterhin; wer die Zeit überschreitet, verliert immer.',
+  'brochess.modi.nebel.satz': 'Du siehst nur deine Figuren und die Felder, die sie erreichen. Wer den König schlägt, gewinnt.',
+  'brochess.modi.nebel.hinweis': 'Jeder sieht nur Felder mit eigenen Figuren und Felder, auf die eine eigene Figur ziehen oder schlagen könnte – alles andere liegt im Nebel, auch die Züge des Gegners dort. Es gibt kein Schach: Den König darfst du im Schach stehen lassen oder hineinziehen, und gewonnen hat, wer den König schlägt. Die Rochade geht auch durch angegriffene Felder, en passant und Umwandlung wie gewohnt. Zuschauer sehen während der Partie nur, was beide Seiten sehen; am Ende wird alles aufgedeckt.',
   'brochess.spielart.hinweis': 'Vor dem ersten Zug wählt jeder heimlich eine eigene Figur außer dem König. Sie darf zusätzlich wie eine Dame ziehen – erst dann sieht der Gegner, welche es war.',
   'brochess.spielart.regelTitel': 'Schach durch die verdeckte Dame',
   'brochess.spielart.regelAria': 'Regel',

@@ -23,6 +23,7 @@
 
 import { type Farbe, feldName, materialStand, vorabZiele, zuFen } from './brett.js';
 import { HUEGEL_FELDER } from './huegel.js';
+import { epSchlagMoeglich, gemeinsameFelder, materialNebel, sichtbareFelder, verdecktesBrett } from './nebel.js';
 import { SCHACH_ZIEL } from './dreischach.js';
 import { type GeheimEreignis, type GeheimeDame, type GeheimZustand, wahlFertig } from './geheim.js';
 import {
@@ -105,6 +106,21 @@ export interface HuegelSicht {
   readonly felder: readonly string[];
 }
 
+/**
+ * Was die Sicht vom Modus 'nebel' zeigt; null in jedem anderen Modus.
+ *
+ * `brett` und `fen` enthalten nur, was der Betrachter sieht; `verborgen`
+ * nennt die Felder im Nebel, damit der Bildschirm ein verdecktes Feld von
+ * einem leeren unterscheidet. Zuschauer sehen waehrend der Partie nur die
+ * Felder, die BEIDE Seiten sehen — wer mehr saehe, koennte einem Spieler
+ * zufluestern, was dessen Gegner tut. Nach dem Ende sieht jeder alles
+ * (`verborgen` ist dann leer).
+ */
+export interface NebelSicht {
+  /** Felder im Nebel, a1 zuerst; leer nach dem Ende der Partie. */
+  readonly verborgen: readonly string[];
+}
+
 export interface BroChessSicht {
   readonly zuschauer: boolean;
   /**
@@ -153,6 +169,8 @@ export interface BroChessSicht {
   readonly chess960: Chess960Sicht | null;
   /** Modus 'huegel', sonst null. */
   readonly huegel: HuegelSicht | null;
+  /** Modus 'nebel', sonst null. */
+  readonly nebel: NebelSicht | null;
 }
 
 function dameSicht(dame: GeheimeDame): GeheimeDameSicht | null {
@@ -205,8 +223,70 @@ function vorabMitDame(partie: BroChessPartie, farbe: Farbe): Record<string, stri
   return ziele;
 }
 
+/**
+ * Nebelschach: Brett, FEN, Zugliste, Material und „zuletzt gezogen" aus Sicht
+ * des Betrachters. Jedes Feld hier ist eine Funktion dessen, was er sehen
+ * darf — ein Test (nebel.test.ts) vergleicht die Sichten zweier Partien, die
+ * sich nur im Verborgenen unterscheiden.
+ *
+ * Was NICHT in die Sicht darf: `halbzugUhr` (verriete einen Bauernzug im
+ * Nebel; in der FEN steht 0), die Rochaderechte des Gegners (in der FEN nur
+ * die eigenen) und die Wiederholungszaehlung.
+ */
+function nebelAnteil(
+  partie: BroChessPartie,
+  meineFarbe: Farbe | null,
+): Pick<BroChessSicht, 'brett' | 'fen' | 'verlauf' | 'letzterZug' | 'geschlagen' | 'vorsprung' | 'nebel'> {
+  const stand = partie.nebel!;
+  const { stellung } = partie;
+  const material = materialNebel(stand);
+  if (partie.ende) {
+    // Nach dem Ende ist nichts mehr zu verbergen.
+    return {
+      brett: stellung.brett,
+      fen: zuFen(stellung),
+      verlauf: partie.verlauf,
+      letzterZug: partie.letzterZug,
+      ...material,
+      nebel: { verborgen: [] },
+    };
+  }
+  const sichtbar = meineFarbe === null ? gemeinsameFelder(stellung.brett) : sichtbareFelder(stellung.brett, meineFarbe);
+  const verborgen: string[] = [];
+  for (let feld = 0; feld < 64; feld += 1) if (!sichtbar.has(feld)) verborgen.push(feldName(feld));
+  // Zug des Gegners nur, wenn man sein Ziel sah; der eigene immer.
+  const sehe = (z: (typeof stand.zuege)[number]): boolean =>
+    meineFarbe === null ? z.gesehen.w && z.gesehen.b : z.gesehen[meineFarbe];
+  const siehtStart = (z: (typeof stand.zuege)[number]): boolean =>
+    meineFarbe === null ? z.vonGesehen.w && z.vonGesehen.b : z.vonGesehen[meineFarbe];
+  const letzter = stand.zuege[stand.zuege.length - 1];
+  const rechte = meineFarbe === null ? '' : [...stellung.rochade].filter((r) => (r === r.toUpperCase()) === (meineFarbe === 'w')).join('');
+  // En passant nur, wenn man am Zug ist UND tatsaechlich schlagen kann: Das blosse Sehen des
+  // Feldes verriete einen Doppelschritt im Nebel.
+  const epSichtbar = meineFarbe === stellung.amZug && epSchlagMoeglich(stellung) ? stellung.epFeld : null;
+  const brett = verdecktesBrett(stellung.brett, sichtbar);
+  return {
+    brett,
+    fen: zuFen({ ...stellung, brett, rochade: rechte, epFeld: epSichtbar, halbzugUhr: 0 }),
+    verlauf: stand.zuege.map((z) => (sehe(z) ? (siehtStart(z) ? z.san : z.sanOhneStart) : '…')),
+    // Das Startfeld nur, wenn man es sah: sonst zeigte der Pfeil, woher eine Figur aus dem Nebel kam.
+    letzterZug:
+      letzter && sehe(letzter)
+        ? {
+            von: (meineFarbe === null ? letzter.vonGesehen.w && letzter.vonGesehen.b : letzter.vonGesehen[meineFarbe])
+              ? letzter.von
+              : letzter.nach,
+            nach: letzter.nach,
+          }
+        : null,
+    ...material,
+    nebel: { verborgen },
+  };
+}
+
 function sicht(partie: BroChessPartie, sitz: number | null): BroChessSicht {
   const meineFarbe = sitz === null ? null : farbeVonSitz(partie, sitz);
+  const nebel = partie.nebel ? nebelAnteil(partie, meineFarbe) : null;
   return {
     zuschauer: meineFarbe === null,
     fen: zuFen(partie.stellung),
@@ -231,6 +311,17 @@ function sicht(partie: BroChessPartie, sitz: number | null): BroChessSicht {
     dreiSchach: partie.dreiSchach ? { gegeben: partie.dreiSchach.gegeben, ziel: SCHACH_ZIEL } : null,
     chess960: partie.chess960 ? { nummer: partie.chess960.nummer } : null,
     huegel: modusVon(partie.regeln) === 'huegel' ? { felder: HUEGEL_FELDER } : null,
+    nebel: nebel ? nebel.nebel : null,
+    ...(nebel
+      ? {
+          brett: nebel.brett,
+          fen: nebel.fen,
+          verlauf: nebel.verlauf,
+          letzterZug: nebel.letzterZug,
+          geschlagen: nebel.geschlagen,
+          vorsprung: nebel.vorsprung,
+        }
+      : {}),
   };
 }
 

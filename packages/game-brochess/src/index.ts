@@ -61,6 +61,13 @@ export {
   zeitkontrolle,
 } from './regeln.js';
 export { HUEGEL_FELDER } from './huegel.js';
+export {
+  type NebelStand,
+  type NebelZug,
+  gemeinsameFelder,
+  nebelZuege,
+  sichtbareFelder,
+} from './nebel.js';
 export { type DreiSchachStand, SCHACH_ZIEL } from './dreischach.js';
 export {
   ANZAHL_STELLUNGEN,
@@ -73,6 +80,7 @@ export {
   type BroChessSicht,
   type Chess960Sicht,
   type HuegelSicht,
+  type NebelSicht,
   type DreiSchachSicht,
   type GeheimeDameSicht,
   type SecretDameSicht,

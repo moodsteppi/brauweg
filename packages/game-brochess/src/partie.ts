@@ -49,6 +49,14 @@ import {
   zaehleSchach,
 } from './dreischach.js';
 import { zugErreichtHuegel } from './huegel.js';
+import {
+  type NebelStand,
+  nebelZuege,
+  neuerNebelStand,
+  schlaegtKoenigNebel,
+  schluesselNebel,
+  standNachZugNebel,
+} from './nebel.js';
 import { nummerAusSaat, nummerVon, startFen960 } from './chess960.js';
 import { type BroChessRegeln, modusVon, schachRegelVon, zeitkontrolle } from './regeln.js';
 
@@ -109,7 +117,9 @@ export type Ausgang =
   /** Drei-Schach: Der Sieger hat dem Gegner zum dritten Mal Schach gegeben. */
   | 'dreiSchach'
   /** Koenig des Huegels: Der Sieger hat seinen König auf d4, e4, d5 oder e5 gezogen. */
-  | 'huegel';
+  | 'huegel'
+  /** Nebelschach: Der Sieger hat den König des Gegners geschlagen (es gibt kein Schach). */
+  | 'koenigGeschlagen';
 
 export interface Ende {
   readonly ausgang: Ausgang;
@@ -157,6 +167,11 @@ export interface BroChessPartie {
    * traegt die Turmlinien (`Stellung.chess960`); die Nummer ist nur zum Zeigen.
    */
   readonly chess960?: { readonly nummer: number };
+  /**
+   * Nur im Modus 'nebel': was jede Sicht von den Zuegen sehen darf und was
+   * genommen wurde (nebel.ts). Fehlt sonst ganz, wie `secretDame`.
+   */
+  readonly nebel?: NebelStand;
 }
 
 /**
@@ -197,6 +212,7 @@ export function erstellePartie(
     })(),
     ...(modusVon(regeln) === 'secretDame' ? { secretDame: neuerStand(schachRegelVon(regeln)) } : {}),
     ...(dreiSchach ? { dreiSchach } : {}),
+    ...(modusVon(regeln) === 'nebel' ? { nebel: neuerNebelStand() } : {}),
     ...(ist960
       ? {
           chess960: {
@@ -258,11 +274,15 @@ export function amZug(partie: BroChessPartie): number | null {
 /** Alle legalen Zuege der Seite am Zug, im Secret-Dame-Modus mit den Damenzuegen. */
 function legaleZuegeDerPartie(partie: BroChessPartie): GeheimZug[] {
   if (partie.secretDame) return legaleZuegeGeheim(partie.stellung, partie.secretDame);
+  // Nebelschach: nur die Gangart, kein Schach (nebel.ts).
+  if (partie.nebel) return nebelZuege(partie.stellung).map((z) => ({ ...z, dame: false }));
   return legaleZuege(partie.stellung).map((z) => ({ ...z, dame: false }));
 }
 
 /** Steht die Seite am Zug im Schach — im Secret-Dame-Modus nach der Regel des Tisches? */
 export function schachInPartie(partie: BroChessPartie): boolean {
+  // Im Nebel gibt es kein Schach, nicht einmal als Anzeige.
+  if (partie.nebel) return false;
   return partie.secretDame
     ? imSchachGeheim(partie.stellung, partie.secretDame)
     : imSchach(partie.stellung);
@@ -336,6 +356,7 @@ export function fuehreAus(
   }
   if (aktion.type === 'wahl') return waehleGeheimeDame(partie, sitz, aktion);
   if (partie.secretDame) return zieheGeheim(partie, sitz, aktion);
+  if (partie.nebel) return zieheNebel(partie, sitz, aktion);
   if (amZug(partie) !== sitz) throw new Error('Nicht am Zug');
   if (aktion.type !== 'zug') throw new Error('Unbekannte Aktion');
   const von = feldIndex(aktion.von);
@@ -437,6 +458,69 @@ function endeNachHuegel(
   // hier zuerst das Patt, widersprachen sich Regel und Bot.
   if (erreichtHuegel) return { ausgang: 'huegel', sieger: zieher };
   if (keinZug) return { ausgang: 'patt', sieger: null };
+  if (wiederholt >= 3) return { ausgang: 'wiederholung', sieger: null };
+  if (stellung.halbzugUhr >= 100) return { ausgang: 'fuenfzigZuege', sieger: null };
+  return null;
+}
+
+/**
+ * Ein Zug im Nebelschach. Gesucht wird er in `nebelZuege`, derselben Liste wie
+ * `legalActions`; ein Schach gibt es nicht, also bleibt der eigene König
+ * stehen, wo er steht, und wer ihn nicht schuetzt, verliert ihn.
+ */
+function zieheNebel(partie: BroChessPartie, sitz: number, aktion: BroChessAktion): BroChessPartie {
+  const stand = partie.nebel!;
+  if (amZug(partie) !== sitz) throw new Error('Nicht am Zug');
+  if (aktion.type !== 'zug') throw new Error('Unbekannte Aktion');
+  const von = feldIndex(aktion.von);
+  const nach = feldIndex(aktion.nach);
+  if (von < 0 || nach < 0) throw new Error('Feld gibt es nicht');
+  if (aktion.umwandlung !== undefined && !UMWANDLUNGEN.includes(aktion.umwandlung)) {
+    throw new Error('Umwandlung gibt es nicht');
+  }
+  const zug = nebelZuege(partie.stellung).find(
+    (z) => z.von === von && z.nach === nach && z.umwandlung === aktion.umwandlung,
+  );
+  if (!zug) throw new Error('Zug nicht erlaubt');
+
+  const stellung = wendeAn(partie.stellung, zug);
+  const standDanach = standNachZugNebel(stand, partie.stellung, zug, stellung);
+  const schluessel = schluesselNebel(stellung);
+  const wiederholt = (partie.wiederholungen[schluessel] ?? 0) + 1;
+
+  const kontrolle = zeitkontrolle(partie.regeln);
+  const uhr =
+    partie.uhr && kontrolle
+      ? { restMs: partie.uhr.restMs.map((ms, s) => (s === sitz ? ms + kontrolle.zuschlagMs : ms)) }
+      : partie.uhr;
+
+  return {
+    ...partie,
+    stellung,
+    wiederholungen: { ...partie.wiederholungen, [schluessel]: wiederholt },
+    letzterZug: { von: aktion.von, nach: aktion.nach },
+    ende: endeNachNebel(stellung, schlaegtKoenigNebel(partie.stellung, zug), wiederholt, sitz),
+    // Die volle Zugliste; was davon jemand sieht, entscheidet die Sicht (sicht.ts) mit `nebel.zuege`.
+    verlauf: [...partie.verlauf, standDanach.zuege[standDanach.zuege.length - 1]!.san],
+    uhr,
+    nebel: standDanach,
+  };
+}
+
+/**
+ * Wie `endeNach`, im Nebelschach. Der Koenigsschlag geht vor allem anderen.
+ * Matt gibt es nicht; wer keinen Zug hat (alle Figuren blockiert), steht
+ * patt — Remis. „Zu wenig Material" gibt es nie: Auch ein nackter König kann
+ * den Gegner schlagen, wenn der sich ihm nähert.
+ */
+function endeNachNebel(
+  stellung: Stellung,
+  koenigGeschlagen: boolean,
+  wiederholt: number,
+  zieher: number,
+): Ende | null {
+  if (koenigGeschlagen) return { ausgang: 'koenigGeschlagen', sieger: zieher };
+  if (nebelZuege(stellung).length === 0) return { ausgang: 'patt', sieger: null };
   if (wiederholt >= 3) return { ausgang: 'wiederholung', sieger: null };
   if (stellung.halbzugUhr >= 100) return { ausgang: 'fuenfzigZuege', sieger: null };
   return null;
@@ -577,6 +661,8 @@ export function verbraucheZeit(partie: BroChessPartie, sitz: number, ms: number)
         kannMattsetzen(partie.stellung.brett, gegnerFarbe) ||
         // Huegel: Der König des Gegners kann immer noch dorthin laufen.
         modusVon(partie.regeln) === 'huegel' ||
+        // Nebel: Jeder Zug kann den König schlagen, auch der eines nackten Königs.
+        partie.nebel !== undefined ||
         // Drei-Schach: Wer noch eine Figur hat, kann noch dreimal Schach geben.
         (partie.dreiSchach !== undefined && kannSchachGeben(partie.stellung.brett, gegnerFarbe)) ||
         (partie.secretDame !== undefined && aktiv(partie.secretDame[gegnerFarbe]))

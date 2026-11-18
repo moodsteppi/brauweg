@@ -69,6 +69,9 @@ if (istSprache(SPRACHE)) {
 }
 
 /** Figurenteil einer FEN → 64 Felder, a1 zuerst (wie `brett` in der Sicht). */
+/** Rang 5 bis 8 komplett: so sieht Weiß nach dem Anfangszug nur seine Hälfte. */
+const NEBEL_OBEN: string[] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].flatMap((d) => ['5', '6', '7', '8'].map((r) => d + r));
+
 function brettAus(figuren: string): string[] {
   const brett: string[] = Array.from({ length: 64 }, () => '');
   figuren.split('/').forEach((reihe, i) => {
@@ -100,7 +103,7 @@ interface Fall {
 const GRUND = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 
 /** Was die Probe nicht zeigt: keine Uhr, keine Zugliste, nichts geschlagen. */
-const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' | 'vorab' | 'secretDame' | 'dreiSchach' | 'chess960' | 'huegel'> = {
+const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' | 'vorab' | 'secretDame' | 'dreiSchach' | 'chess960' | 'huegel' | 'nebel'> = {
   verlauf: [],
   uhr: null,
   geschlagen: { w: [], b: [] },
@@ -110,6 +113,7 @@ const OHNE: Pick<BroChessSicht, 'verlauf' | 'uhr' | 'geschlagen' | 'vorsprung' |
   dreiSchach: null,
   chess960: null,
   huegel: null,
+  nebel: null,
 };
 
 /** Secret Dame unter Regel A, noch nichts geschehen. */
@@ -192,6 +196,44 @@ const FAELLE: Fall[] = [
       ende: null,
     },
     zuege: [z('e3', 'd4'), z('e3', 'e4'), z('e3', 'f4'), z('e3', 'f3'), z('e3', 'f2'), z('d2', 'd3'), z('d2', 'd4'), z('e2', 'e4')],
+  },
+  {
+    // Weiß sieht nur die eigenen Figuren und deren Reichweite: Rang 5 bis 8 liegen im Nebel.
+    schluessel: 'nebel',
+    titel: 'Nebelschach: Weiß sieht nur die eigene Hälfte',
+    sicht: {
+      ...OHNE,
+      nebel: { verborgen: NEBEL_OBEN },
+      verlauf: ['e4', '…'],
+      zuschauer: false,
+      fen: '8/8/8/8/4P3/4K3/3P4/8 w - - 0 2',
+      brett: brettAus('8/8/8/8/4P3/4K3/3P4/8'),
+      amZug: 'w',
+      meineFarbe: 'w',
+      weissSitz: 0,
+      schach: false,
+      letzterZug: null,
+      ende: null,
+    },
+    zuege: [z('e3', 'd3'), z('e3', 'f3'), z('e3', 'f4'), z('e3', 'd4'), z('e4', 'e5'), z('d2', 'd3'), z('d2', 'd4')],
+  },
+  {
+    schluessel: 'nebel-sieg',
+    titel: 'Nebelschach: Sieg durch Königsschlag (alles aufgedeckt)',
+    sicht: {
+      ...OHNE,
+      nebel: { verborgen: [] },
+      zuschauer: false,
+      fen: '8/8/8/8/4K3/8/3PP3/8 b - - 0 1',
+      brett: brettAus('8/8/8/8/4K3/8/3PP3/8'),
+      amZug: 'b',
+      meineFarbe: 'w',
+      weissSitz: 0,
+      schach: false,
+      letzterZug: { von: 'e3', nach: 'e4' },
+      ende: { ausgang: 'koenigGeschlagen', sieger: 0 },
+    },
+    zuege: [],
   },
   {
     schluessel: 'huegel-sieg',
@@ -502,6 +544,11 @@ export function ProbeBroChess(): React.JSX.Element {
                 modus: t('brochess.chess960'),
                 regel: tf('brochess.chess960.kopf', { nummer: fall.sicht.chess960.nummer }),
               })}
+            </span>
+          )}
+          {fall.sicht.nebel && schluessel !== SPIELART && (
+            <span className={stil.kopfModus}>
+              {tf('brochess.kopfModus', { modus: t('brochess.nebel'), regel: t('brochess.nebel.kopf') })}
             </span>
           )}
           {fall.sicht.huegel && schluessel !== SPIELART && (

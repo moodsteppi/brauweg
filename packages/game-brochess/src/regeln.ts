@@ -34,6 +34,9 @@ export interface BroChessRegeln {
    * nach Chess960-Regeln (chess960.ts, brett.ts).
    * 'huegel' (seit dem 17.11.2026): Wer seinen König legal auf d4, e4, d5
    * oder e5 zieht, gewinnt (huegel.ts).
+   * 'nebel' (seit dem 17.11.2026): Nebelschach — jeder sieht nur seine eigenen
+   * Felder und deren Zugziele, kein Schach, gewonnen hat, wer den König schlaegt
+   * (nebel.ts).
    */
   readonly modus?: Modus;
   /**
@@ -47,10 +50,10 @@ export interface BroChessRegeln {
   readonly schachDurchVerdeckte?: SchachDurchVerdeckte;
 }
 
-export type Modus = 'normal' | 'secretDame' | 'dreiSchach' | 'chess960' | 'huegel';
+export type Modus = 'normal' | 'secretDame' | 'dreiSchach' | 'chess960' | 'huegel' | 'nebel';
 export type SchachDurchVerdeckte = 'A' | 'B';
 
-export const MODI: readonly Modus[] = ['normal', 'secretDame', 'dreiSchach', 'chess960', 'huegel'];
+export const MODI: readonly Modus[] = ['normal', 'secretDame', 'dreiSchach', 'chess960', 'huegel', 'nebel'];
 export const SCHACH_DURCH_VERDECKTE: readonly SchachDurchVerdeckte[] = ['A', 'B'];
 
 /** Spielart des Regelsatzes; ein fehlendes Feld heisst 'normal'. */
