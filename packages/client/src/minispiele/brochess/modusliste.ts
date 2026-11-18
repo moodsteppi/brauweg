@@ -105,7 +105,7 @@ export const SPEZIAL_MODI: readonly SpezialModus[] = [
     name: 'brochess.nebel',
     regel: 'brochess.modi.nebel.satz',
     hinweis: 'brochess.modi.nebel.hinweis',
-    // Eine Nebelbank: drei Schwaden übereinander.
+    // Eine Nebelbank: vier Schwaden übereinander.
     symbol: ['M5 8h9', 'M3 12h15', 'M7 16h13', 'M16 8h3'],
     varianten: [],
     felder: () => ({ modus: 'nebel' }),

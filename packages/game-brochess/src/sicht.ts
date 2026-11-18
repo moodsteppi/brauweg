@@ -23,7 +23,7 @@
 
 import { type Farbe, feldName, materialStand, vorabZiele, zuFen } from './brett.js';
 import { HUEGEL_FELDER } from './huegel.js';
-import { gemeinsameFelder, materialNebel, sichtbareFelder, verdecktesBrett } from './nebel.js';
+import { epSchlagMoeglich, gemeinsameFelder, materialNebel, sichtbareFelder, verdecktesBrett } from './nebel.js';
 import { SCHACH_ZIEL } from './dreischach.js';
 import { type GeheimEreignis, type GeheimeDame, type GeheimZustand, wahlFertig } from './geheim.js';
 import {
@@ -261,9 +261,9 @@ function nebelAnteil(
     meineFarbe === null ? z.vonGesehen.w && z.vonGesehen.b : z.vonGesehen[meineFarbe];
   const letzter = stand.zuege[stand.zuege.length - 1];
   const rechte = meineFarbe === null ? '' : [...stellung.rochade].filter((r) => (r === r.toUpperCase()) === (meineFarbe === 'w')).join('');
-  // En passant nur, wenn man am Zug ist und das Feld sieht.
-  const epSichtbar =
-    stellung.epFeld !== null && meineFarbe === stellung.amZug && sichtbar.has(stellung.epFeld) ? stellung.epFeld : null;
+  // En passant nur, wenn man am Zug ist UND tatsaechlich schlagen kann: Das blosse Sehen des
+  // Feldes verriete einen Doppelschritt im Nebel.
+  const epSichtbar = meineFarbe === stellung.amZug && epSchlagMoeglich(stellung) ? stellung.epFeld : null;
   const brett = verdecktesBrett(stellung.brett, sichtbar);
   return {
     brett,

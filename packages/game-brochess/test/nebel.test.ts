@@ -335,6 +335,34 @@ test('Sicht: die Zuege auf dem verdeckten Brett sind genau legalActions (zufaell
 // Bot
 // ---------------------------------------------------------------------------
 
+test('Leak: das En-passant-Feld steht nur in der FEN, wenn ein eigener Bauer schlagen kann', () => {
+  // Weisser Laeufer a3 sieht d6, hat aber keinen Bauern daneben. Schwarz zieht d7-d5 im Nebel.
+  const doppelt = fuehreAus(partie('7k/3p4/8/8/8/B7/8/K7 b - - 0 1'), SCHWARZ, zug('d7', 'd5'));
+  assert.ok(sichtbareFelder(doppelt.stellung.brett, 'w').has(feldIndex('d6')), 'Voraussetzung: Weiss sieht d6');
+  const ohneDoppelschritt = partie('7k/8/8/3p4/8/B7/8/K7 w - - 0 1');
+  const sicht = sichtFuer(doppelt, WEISS);
+  assert.equal(sicht.fen.split(' ')[3], '-', 'kein ep-Feld ohne eigenen Bauern');
+  // Die Zugnummer ist oeffentlich und darf abweichen; Figuren, Seite, Rochade und ep-Feld nicht.
+  const feste = (fen: string): string => fen.split(' ').slice(0, 4).join(' ');
+  assert.equal(feste(sicht.fen), feste(sichtFuer(ohneDoppelschritt, WEISS).fen), 'gleich der Sicht ohne Doppelschritt');
+  assert.deepEqual(sicht.brett, sichtFuer(ohneDoppelschritt, WEISS).brett);
+  assert.deepEqual(sicht.verlauf, ['…']);
+
+  // Gegenprobe: mit weissem Bauern auf e5 ist der Schlag moeglich, also steht d6 in der FEN.
+  const mitBauer = fuehreAus(partie('7k/3p4/8/4P3/8/B7/8/K7 b - - 0 1'), SCHWARZ, zug('d7', 'd5'));
+  const s2 = sichtFuer(mitBauer, WEISS);
+  assert.equal(s2.fen.split(' ')[3], 'd6');
+  assert.ok(erlaubteAktionen(mitBauer, WEISS).some((a) => a.type === 'zug' && a.von === 'e5' && a.nach === 'd6'));
+  // Der Bot sieht den Schlag ebenfalls und spielt einen Zug aus der Liste.
+  for (const stufe of ['anfaenger', 'standard', 'experte', 'genie'] as BotLevel[]) {
+    const a = botZug(s2, stufe);
+    assert.ok(
+      erlaubteAktionen(mitBauer, WEISS).some((l) => l.type === 'zug' && l.von === (a as { von: string }).von && l.nach === (a as { nach: string }).nach),
+      `Bot ${stufe}: legaler Zug`,
+    );
+  }
+});
+
 test('Bot: nimmt den König, wenn er ihn sieht', () => {
   const p = partie('K7/1k6/8/8/8/8/8/8 w - - 0 1');
   for (const stufe of ['anfaenger', 'standard', 'experte', 'genie'] as BotLevel[]) {

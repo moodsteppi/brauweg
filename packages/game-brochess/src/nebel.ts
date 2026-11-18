@@ -38,6 +38,8 @@ export interface NebelZug {
   readonly nach: string;
   /** Kurzschrift OHNE Schachzeichen und ohne Mehrdeutigkeitszusatz (siehe `notationNebel`). */
   readonly san: string;
+  /** Dieselbe Kurzschrift ohne Startfeld-Hinweise, fuer Betrachter, die `von` nicht sahen. */
+  readonly sanOhneStart: string;
   /**
    * Konnte die Farbe das Zielfeld nach dem Zug sehen? Beim ziehenden Sitz
    * immer. Beim Gegner entscheidet es, ob der Zug in seiner Zugliste steht
@@ -45,8 +47,6 @@ export interface NebelZug {
    * nachgerechnet, weil die Sicht von damals nur mit der Stellung von damals
    * bekannt ist.
    */
-  /** Dieselbe Kurzschrift ohne Startfeld-Hinweise, fuer Betrachter, die `von` nicht sahen. */
-  readonly sanOhneStart: string;
   readonly gesehen: { readonly w: boolean; readonly b: boolean };
   /**
    * Dasselbe fuer das STARTFELD. Das Ziel entscheidet, ob der Zug in der
@@ -237,18 +237,24 @@ export function standNachZugNebel(
 }
 
 /**
+ * Kann die Seite am Zug jetzt en passant schlagen? Nur dann darf das
+ * En-passant-Feld in eine Sicht oder einen Wiederholungsschluessel: Ein Feld,
+ * das man bloss SIEHT, verriete einen Doppelschritt im Nebel.
+ */
+export function epSchlagMoeglich(stellung: Stellung): boolean {
+  return (
+    stellung.epFeld !== null &&
+    nebelZuege(stellung).some((z) => z.nach === stellung.epFeld && stellung.brett[z.von]!.toLowerCase() === 'p')
+  );
+}
+
+/**
  * Schluessel fuer die Stellungswiederholung im Nebel: wie `stellungsSchluessel`,
  * nur zaehlt das En-passant-Feld, wenn der Schlag nach den Nebelregeln
  * moeglich ist (ohne Schachpruefung).
  */
 export function schluesselNebel(stellung: Stellung): string {
-  const ep =
-    stellung.epFeld !== null &&
-    nebelZuege(stellung).some(
-      (z) => z.nach === stellung.epFeld && stellung.brett[z.von]!.toLowerCase() === 'p',
-    )
-      ? feldName(stellung.epFeld)
-      : '-';
+  const ep = epSchlagMoeglich(stellung) ? feldName(stellung.epFeld!) : '-';
   return zuFen({ ...stellung, epFeld: null, halbzugUhr: 0, zugNummer: 1 })
     .split(' ')
     .slice(0, 3)
