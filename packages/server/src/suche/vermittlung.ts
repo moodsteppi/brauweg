@@ -65,6 +65,32 @@ function zielSitze(gameId: GameId): number {
 }
 
 /**
+ * Die Sitzzahl, die ein Suchender ausdruecklich gewaehlt hat — oder null fuer
+ * die Groesse ab Werk (`zielSitze`). Seit dem 23.11.2026, fuer Filler
+ * Extreme "1v1 oder 1v1v1v1" (Wunsch Niklas, 21.11.2026).
+ *
+ * Erlaubt ist neben der Werksgroesse nur, was das Modul als
+ * `sitzeNurMitRegelsatz` anbietet — also nicht jede Zahl aus `seatCounts`.
+ * Das ist Absicht: Fuer alle anderen Spiele bleibt die Suche genau, wie sie
+ * war (Doppelkopf sucht weiter fuenf, Tafelrunde acht), auch wenn ein
+ * Client eine Zahl mitschickt. Ob der Regelsatz die Zahl traegt (zu viert nur
+ * Extreme), entscheidet danach `validateConfig` in `betritt`.
+ *
+ * Die Werksgroesse wird zu null, damit ein Client, der "2" ausdruecklich
+ * schickt, im selben Topf steht wie einer, der gar nichts schickt.
+ */
+function gewaehlteSitze(gameId: GameId, sitze: number | null | undefined): number | null {
+  if (sitze === null || sitze === undefined || sitze === zielSitze(gameId)) return null;
+  const extra = requireModule(gameId).meta.sitzeNurMitRegelsatz ?? [];
+  if (!extra.includes(sitze)) {
+    throw new RuleSetInvalidError([
+      { path: 'seats', messageKey: 'error.seatCountUnsupported', severity: 'error' },
+    ]);
+  }
+  return sitze;
+}
+
+/**
  * Eine Rundenzahl, die durch die Geberrotation aufgeht und unter der Grenze
  * bleibt. Der Vorschlag des Moduls kommt zuerst; passt keiner, tut es die
  * Rotation selbst (die geht immer auf).
@@ -102,15 +128,30 @@ export class Vermittlung {
    * erst beim Tischbau: Ein Regelsatz, der 30 Sekunden spaeter durchfaellt,
    * liesse den Spieler ohne Erklaerung mit "Suche beendet" zurueck. Ohne
    * `config` gilt die Vorgabe des Moduls, wie bisher.
+   *
+   * `sitze` ist die gewaehlte Tischgroesse (seit dem 23.11.2026, Filler
+   * Extreme zu viert); ohne Angabe die Groesse ab Werk. Sie trennt den Topf
+   * (siehe `schluessel` in schlange.ts) und wird ebenfalls HIER geprueft —
+   * zusammen mit dem Regelsatz, weil erst beide zusammen sagen, ob der Tisch
+   * geht: Vier Sitze im Nebel scheitern an `validateConfig`, nicht an der
+   * Zahl allein.
    */
-  async betritt(gameId: GameId, accountId: string, config: unknown = null): Promise<Suchstand> {
+  async betritt(
+    gameId: GameId,
+    accountId: string,
+    config: unknown = null,
+    sitzeWahl: number | null = null,
+  ): Promise<Suchstand> {
     // Wirft, wenn das Spiel gar nicht spielbar ist — vor dem Eintragen, damit
     // niemand in einer Schlange steht, aus der nie ein Tisch werden kann.
     const module = requireModule(gameId);
-    if (config !== null && config !== undefined) {
-      const sitze = zielSitze(gameId);
+    const gewaehlt = gewaehlteSitze(gameId, sitzeWahl);
+    // Mit gewaehlter Sitzzahl auch ohne Regelsatz pruefen: Die Vorgabe des
+    // Moduls traegt die Sonderzahl in der Regel nicht (Filler: Nebel zu viert).
+    if ((config !== null && config !== undefined) || gewaehlt !== null) {
+      const sitze = gewaehlt ?? zielSitze(gameId);
       const fehler = module
-        .validateConfig(config, sitze, runden(gameId, sitze))
+        .validateConfig(config ?? module.defaultConfig(), sitze, runden(gameId, sitze))
         .filter((p) => p.severity === 'error');
       if (fehler.length > 0) throw new RuleSetInvalidError(fehler);
     }
@@ -129,7 +170,7 @@ export class Vermittlung {
     // nicht als null: Der Topf haengt an der Spielart des Regelsatzes, und ein
     // alter Client ohne Rumpf soll bei den Nebel-Suchenden stehen, nicht in
     // einem eigenen Topf daneben.
-    this.schlange.betritt(gameId, accountId, config ?? module.defaultConfig());
+    this.schlange.betritt(gameId, accountId, config ?? module.defaultConfig(), gewaehlt);
     return this.abruf(gameId, accountId);
   }
 
@@ -161,7 +202,12 @@ export class Vermittlung {
   async reife(): Promise<void> {
     for (const runde of this.schlange.faellig(zielSitze)) {
       try {
-        const beteiligte = await this.tischBauen(runde.gameId, runde.accountIds, runde.config);
+        const beteiligte = await this.tischBauen(
+          runde.gameId,
+          runde.accountIds,
+          runde.config,
+          runde.sitze,
+        );
         const geblieben = await this.abspringerHerunter(
           runde.gameId,
           beteiligte.tischId,
@@ -229,9 +275,12 @@ export class Vermittlung {
     gameId: GameId,
     accountIds: readonly string[],
     config: unknown | null,
+    gewaehlt: number | null,
   ): Promise<{ tischId: string; accountIds: string[] }> {
     const module = requireModule(gameId);
-    const sitze = zielSitze(gameId);
+    // Die Sitzzahl des Fensters; die Luecke bis dahin fuellen unten die Bots
+    // (`fillWithBots`) — zu viert also bis zu drei.
+    const sitze = gewaehlt ?? zielSitze(gameId);
 
     const [erster, ...rest] = accountIds;
     // faellig() gibt nie eine leere Runde zurueck; die Zusicherung steht

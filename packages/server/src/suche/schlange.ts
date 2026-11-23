@@ -61,6 +61,12 @@ export interface Runde {
   readonly accountIds: readonly string[];
   /** Regelsatz des Fensters, oder null fuer die Vorgabe des Moduls. */
   readonly config: unknown | null;
+  /**
+   * Sitzzahl des Fensters, oder null fuer die Groesse, die das Spiel ab Werk
+   * sucht (`vollAb` in `faellig`). Gesetzt nur, wo der Suchende ausdruecklich
+   * eine andere Tischgroesse gewaehlt hat — bisher Filler Extreme zu viert.
+   */
+  readonly sitze: number | null;
 }
 
 interface Fenster {
@@ -72,6 +78,11 @@ interface Fenster {
    * `schluessel`). Null: die Vorgabe des Moduls.
    */
   readonly config: unknown | null;
+  /**
+   * Gewaehlte Sitzzahl, oder null fuer die Groesse ab Werk. Teil des
+   * Schluessels (siehe `schluessel`): Ein Fenster hat genau eine.
+   */
+  readonly sitze: number | null;
   /** Zeitpunkt des ersten Suchenden dieser Runde. */
   beginn: number;
   /** Konto -> Zeitpunkt des letzten Lebenszeichens. */
@@ -91,14 +102,23 @@ function spielartVon(config: unknown): string {
 }
 
 /**
- * Ein Topf je Spiel UND Spielart (seit dem 06.09.2026).
+ * Ein Topf je Spiel UND Spielart (seit dem 06.09.2026) UND Sitzzahl (seit
+ * dem 23.11.2026).
  *
  * Wer Filler im Nebel sucht, soll nicht an einem Extreme-Tisch landen: Zwei
  * Suchende mit verschiedener Spielart stehen in zwei Fenstern und bekommen
  * zwei Tische. Spiele ohne Spielart haben genau einen Topf, wie vorher.
+ *
+ * Dasselbe fuer die Sitzzahl (Wunsch Niklas, 21.11.2026: "1v1 oder
+ * 1v1v1v1"): Wer Extreme zu zweit sucht, darf nicht an einen Vierertisch mit
+ * drei Fremden geraten, und wer zu viert sucht, nicht nach zwei Suchenden
+ * schon losgeschickt werden. `null` (die Groesse ab Werk) bekommt einen
+ * eigenen, LEEREN Teil — die Vermittlung schreibt eine ausdrueckliche
+ * Werksgroesse als null, damit alte Clients ohne Sitzzahl und neue mit
+ * derselben Zahl im selben Topf stehen.
  */
-function schluessel(gameId: GameId, config: unknown): string {
-  return `${gameId}#${spielartVon(config)}`;
+function schluessel(gameId: GameId, config: unknown, sitze: number | null): string {
+  return `${gameId}#${spielartVon(config)}#${sitze ?? ''}`;
 }
 
 /**
@@ -148,7 +168,7 @@ export class Suchschlange {
   private readonly stilleMs: number;
   private readonly jetzt: Jetzt;
 
-  /** Schluessel: `schluessel(gameId, config)`. */
+  /** Schluessel: `schluessel(gameId, config, sitze)`. */
   private readonly fenster = new Map<string, Fenster>();
   /**
    * Fertig vermittelt: Spiel+Konto -> Tisch, bis der Spieler es abgeholt hat.
@@ -214,7 +234,12 @@ export class Suchschlange {
    * In die Schlange eintreten. Wer schon drinsteht, gibt nur ein Lebenszeichen
    * — ein zweiter Knopfdruck darf das Fenster nicht neu aufziehen.
    */
-  betritt(gameId: GameId, accountId: string, config: unknown = null): void {
+  betritt(
+    gameId: GameId,
+    accountId: string,
+    config: unknown = null,
+    sitze: number | null = null,
+  ): void {
     const jetzt = this.jetzt();
     // Ein altes Ergebnis waere sonst die Antwort auf die NEUE Suche und
     // schickte den Spieler an den Tisch von vorhin. Nur fuer DIESES Spiel,
@@ -229,15 +254,15 @@ export class Suchschlange {
     // entstehenden Tisch gehoert geraeumt, sonst wartet er leer.
     this.absprungVermerken(gameId, accountId);
 
-    const ziel = schluessel(gameId, config);
-    // Wer mit einer ANDEREN Spielart schon in diesem Spiel steht, wechselt
-    // den Topf — sonst suchte er in zweien zugleich.
+    const ziel = schluessel(gameId, config, sitze);
+    // Wer mit einer ANDEREN Spielart oder Sitzzahl schon in diesem Spiel
+    // steht, wechselt den Topf — sonst suchte er in zweien zugleich.
     const bisher = this.fensterVon(gameId, accountId);
     if (bisher && bisher.schluessel !== ziel) this.verlaesst(gameId, accountId);
 
     let fenster = this.fenster.get(ziel);
     if (!fenster) {
-      fenster = { gameId, config, beginn: jetzt, suchende: new Map() };
+      fenster = { gameId, config, sitze, beginn: jetzt, suchende: new Map() };
       this.fenster.set(ziel, fenster);
     }
     fenster.suchende.set(accountId, jetzt);
@@ -369,7 +394,9 @@ export class Suchschlange {
    *
    * `vollAb` ist die Sitzzahl des Spiels: Sind so viele Menschen beisammen,
    * hat das Warten keinen Zweck mehr und die Runde geht sofort los, ohne die
-   * restlichen Sekunden abzusitzen.
+   * restlichen Sekunden abzusitzen. Hat das Fenster eine eigene Sitzzahl
+   * (Filler zu viert), gilt diese — sonst ginge ein Vierer-Fenster schon mit
+   * zwei Menschen los.
    *
    * Der Aufruf ist synchron und laeuft damit in einem Stueck durch. Das ist
    * kein Zufall: Zwei gleichzeitige Abrufe zweier Spieler duerfen nicht beide
@@ -393,11 +420,11 @@ export class Suchschlange {
       }
 
       const abgelaufen = jetzt - fenster.beginn >= this.fensterMs;
-      const voll = fenster.suchende.size >= vollAb(gameId);
+      const voll = fenster.suchende.size >= (fenster.sitze ?? vollAb(gameId));
       if (!abgelaufen && !voll) continue;
 
       const accountIds = [...fenster.suchende.keys()];
-      runden.push({ gameId, accountIds, config: fenster.config });
+      runden.push({ gameId, accountIds, config: fenster.config, sitze: fenster.sitze });
       this.fenster.delete(schluessel);
       // Ab jetzt bis `vermittelt`/`bauBeendet` gilt fuer sie: sucht noch.
       for (const accountId of accountIds) {
