@@ -431,23 +431,26 @@ export const DEFAULT_REGELN: FillerRegeln = {
 };
 
 /**
- * Was die Plattform als Tischgroesse anbietet: zwei und vier.
+ * Was die Plattform als Tischgroesse ANBIETET: zwei.
  *
- * Vier gibt es nur in Extreme (`SITZE_JE_SPIELART`); `validateConfig` weist
- * jeden anderen Vierertisch ab. Bis zum 23.11.2026 stand hier `[2]`, weil die
- * Match-Suche den GROESSTEN Tisch aus `seatCounts` baute und dabei die
- * Spielart nicht kannte — jede Filler-Suche haette an einem Vierertisch
- * gesessen, den `validateConfig` im Nebel abweist. Seitdem nimmt die Suche
- * nur Groessen, die die Vorgabe des Moduls besteht (zielSitze in
- * suche/vermittlung.ts), und die Vorgabe ist der Nebel: Gesucht wird weiter
- * zu zweit. Vierertische entstehen am Bildschirm (Freunde- und Bot-Tisch).
- *
- * Wer seatCounts sonst liest: die Suche (s. o.), der Tischbau (nimmt die Vier
- * an, validateConfig weist sie ausserhalb von Extreme ab), die Lobby (erreicht
- * Filler nicht, App.tsx leitet um) und die Spielkarte ("2, 4"). Server-seitig
- * haelt packages/server/test/suche-zielsitze.test.ts beides fest.
+ * `seatCounts` verspricht, dass die Vorgabe auf jeder genannten Zahl gilt
+ * (game-api, GameMeta), und die Vorgabe ist der Nebel — zu viert gibt es den
+ * nicht. Die Vier steht deshalb in `SITZE_NUR_MIT_REGELSATZ`, nicht hier. Am
+ * 23.11.2026 stand sie einen Commit lang hier: Die Plattform-Invariante
+ * ("vollstaendige Bot-Partien", spielt jede Zahl mit der Vorgabe durch) fiel
+ * sofort, und die Suche haette ohne Sonderweg jede Filler-Suche an einen
+ * Vierertisch gesetzt.
  */
-export const SEAT_COUNTS: readonly number[] = [2, 4];
+export const SEAT_COUNTS: readonly number[] = [2];
+
+/**
+ * Tischgroessen, die nur mit passendem Regelsatz gehen: vier, nur in Extreme
+ * (`SITZE_JE_SPIELART`). Der Tischbau nimmt sie an (`sitzeNurMitRegelsatz`),
+ * ob der Regelsatz sie traegt, entscheidet `validateConfig`. So entstehen die
+ * Vierertische des Bildschirms (Freunde- und Bot-Tisch); Suche und Lobby
+ * sehen davon nichts.
+ */
+export const SITZE_NUR_MIT_REGELSATZ: readonly number[] = [4];
 
 /**
  * Erlaubte Sitzzahlen je Spielart (Wunsch Niklas, 21.11.2026).

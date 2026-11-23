@@ -12,7 +12,7 @@
  * aus `anreicherung.ts`. Wozu es sie gibt, steht dort.
  */
 
-import type { AnyGameModule, GameId } from '@brauweg/game-api';
+import type { GameId } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
 import { RuleSetInvalidError } from '../errors.js';
@@ -54,43 +54,14 @@ export interface VermittlungOptionen extends SchlangeOptionen {
 }
 
 /**
- * Die groesste Tischgroesse, die das Spiel mit seinem VORGABE-Regelsatz kann.
+ * Die groesste Tischgroesse, die das Spiel kann.
  *
  * Robins Wunsch ist "alle Gefundenen, Rest mit Bots" — also der groesste
  * Tisch, den das Modul zulaesst. Fuer Tafelrunde sind das acht.
- *
- * Seit dem 23.11.2026 nur unter den Groessen, die `validateConfig` mit der
- * Vorgabe des Moduls annimmt: Filler meldet `[2, 4]`, aber vier Sitze gibt es
- * nur in Extreme (Freunde- und Bot-Tische). Mit dem blossen Maximum saesse
- * jede Filler-Suche an einem Vierertisch — und `validateConfig` wiese genau
- * diesen Tisch im Nebel ab, die Suche endete still ohne Tisch. Fuer jedes
- * Spiel, dessen Vorgabe auf allen Groessen gilt, bleibt es beim Maximum; nimmt
- * die Vorgabe keine einzige an, ebenfalls (dann ist das ein anderer Fehler,
- * und den soll der Tischbau melden, nicht diese Zeile verschlucken).
  */
-export function zielSitze(gameId: GameId): number {
-  return tragfaehigeZielSitze(requireModule(gameId), (sitze) => runden(gameId, sitze));
-}
-
-/**
- * Der Kern von `zielSitze`, ohne Registry — damit die Auswahl mit einem
- * erfundenen Modul pruefbar ist (test/suche-zielsitze.test.ts). Mit den
- * echten Spielen allein liesse sich der Rueckfall ("die Vorgabe besteht
- * nirgends") nie zeigen, und genau der soll nicht still zur Zwei werden.
- */
-export function tragfaehigeZielSitze(
-  module: Pick<AnyGameModule, 'meta' | 'defaultConfig' | 'validateConfig'>,
-  rundenFuer: (sitze: number) => number,
-): number {
-  const counts = module.meta.seatCounts;
-  const vorgabe = module.defaultConfig();
-  const tragfaehig = counts.filter(
-    (sitze) =>
-      !module
-        .validateConfig(vorgabe, sitze, rundenFuer(sitze))
-        .some((p) => p.severity === 'error'),
-  );
-  return Math.max(...(tragfaehig.length > 0 ? tragfaehig : counts));
+function zielSitze(gameId: GameId): number {
+  const counts = requireModule(gameId).meta.seatCounts;
+  return Math.max(...counts);
 }
 
 /**

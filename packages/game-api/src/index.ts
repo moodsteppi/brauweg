@@ -188,8 +188,28 @@ export interface GameMeta {
   /** Anzeigename, laeuft ueber die Uebersetzungsschluessel des Clients. */
   readonly nameKey: string;
   readonly availability: GameAvailability;
-  /** Zulaessige Spielerzahlen am Tisch, z.B. Doppelkopf [3, 4, 5]. */
+  /**
+   * Zulaessige Spielerzahlen am Tisch, z.B. Doppelkopf [3, 4, 5].
+   *
+   * Zugleich ein Versprechen: Mit `defaultConfig()` ist JEDE dieser Zahlen
+   * spielbar. Suche (`zielSitze`), Lobby und plattform-invarianten.test.ts
+   * verlassen sich darauf und bauen Tische mit der Vorgabe. Eine Zahl, die
+   * nur mit einem bestimmten Regelsatz geht, gehoert nach
+   * `sitzeNurMitRegelsatz`.
+   */
   readonly seatCounts: readonly number[];
+  /**
+   * Weitere Spielerzahlen, die nur mit einem passenden Regelsatz gehen —
+   * etwa Filler zu viert, das es nur in Extreme gibt (seit dem 23.11.2026).
+   *
+   * Ausser `seatCounts`, weil die Vorgabe dort nicht gilt: Stuende die Vier
+   * dort, baute die Suche jede Filler-Suche als Vierertisch, die Lobby boete
+   * ihn mit der Vorgabe an, und `validateConfig` wiese ihn ab. Gelesen wird
+   * das Feld allein vom Tischbau (`createTable`): Er nimmt die Zahl an und
+   * ueberlaesst `validateConfig`, ob der mitgeschickte Regelsatz sie traegt.
+   * Fehlt das Feld, gibt es keine solchen Zahlen.
+   */
+  readonly sitzeNurMitRegelsatz?: readonly number[];
   /**
    * Laenge der Geberrotation bei gegebener Spielerzahl. Die Rundenzahl einer
    * Partie muss ein Vielfaches davon sein, damit jeder gleich oft gibt.

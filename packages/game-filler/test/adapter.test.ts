@@ -15,10 +15,10 @@ function partie() {
 }
 
 describe('Adapter', () => {
-  it('meldet sich als spielbares Spiel zu zweit und (nur Extreme) zu viert', () => {
+  it('meldet sich als spielbares Zweierspiel', () => {
     assert.equal(filler.meta.id, 'filler');
     assert.equal(filler.meta.availability, 'playable');
-    assert.deepEqual(filler.meta.seatCounts, [2, 4]);
+    assert.deepEqual(filler.meta.seatCounts, [2]);
     assert.equal(filler.meta.xpBasisZaehltKarten, false);
   });
 

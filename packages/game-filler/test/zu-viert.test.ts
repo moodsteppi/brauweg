@@ -70,16 +70,22 @@ describe('Zu viert: welche Tische es gibt', () => {
   });
 
   /*
-   * Die Meta meldet seit dem 23.11.2026 [2, 4], damit der Bildschirm
-   * Vierertische aufmachen kann. Die Match-Suche nimmt trotzdem zwei, weil sie
-   * nur Groessen waehlt, die die Vorgabe besteht (vermittlung.ts) — und die
-   * Vorgabe muss deshalb zu viert durchfallen. Faellt diese Probe, sitzt jede
-   * Filler-Suche an einem Vierertisch.
+   * seatCounts verspricht: Die Vorgabe gilt auf jeder Zahl (game-api). Die
+   * Vier steht darum in sitzeNurMitRegelsatz — sonst baute die Suche jede
+   * Filler-Suche als Vierertisch, und plattform-invarianten.test.ts spielte
+   * die Vorgabe (Nebel) zu viert durch, was validateConfig abweist.
    */
-  it('die Meta meldet [2, 4], die Vorgabe (Nebel) besteht aber nur zu zweit', () => {
-    assert.deepEqual(filler.meta.seatCounts, [2, 4]);
-    assert.deepEqual(filler.validateConfig(filler.defaultConfig(), 2, 1), []);
+  it('die Meta bietet [2] an, die Vier nur mit Regelsatz — und die Vorgabe traegt genau die [2]', () => {
+    assert.deepEqual(filler.meta.seatCounts, [2]);
+    assert.deepEqual(filler.meta.sitzeNurMitRegelsatz, [4]);
+    for (const sitze of filler.meta.seatCounts) {
+      assert.deepEqual(filler.validateConfig(filler.defaultConfig(), sitze, 1), []);
+    }
     assert.ok(filler.validateConfig(filler.defaultConfig(), 4, 1).some((p) => p.path === 'seats'));
+    // Jede Zahl aus SITZE_JE_SPIELART ist an genau einer der beiden Stellen gemeldet.
+    const gemeldet = [...filler.meta.seatCounts, ...(filler.meta.sitzeNurMitRegelsatz ?? [])].sort();
+    const erlaubt = [...new Set(Object.values(SITZE_JE_SPIELART).flat())].sort();
+    assert.deepEqual(gemeldet, erlaubt);
   });
 });
 
