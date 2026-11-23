@@ -117,6 +117,23 @@ if (isMainThread) {
       `| ${variante} | ${n} | ${q(s.neu)} | ${q(s.alt)} | ${q(s.remis)} | ${vorzeichenP(s.neu, s.neu + s.alt).toFixed(3)} | ${(s.pNeu / n).toFixed(1)} / ${(s.pAlt / n).toFixed(1)} | ${(s.mNeu / n).toFixed(2)} / ${(s.mAlt / n).toFixed(2)} |`,
     );
   }
+  /*
+   * Das automatische Ende (Wunsch Niklas, 21.11.2026): wie oft es griff und
+   * in welchem Zug — `zug` zaehlt ueber beide Sitze. Steht fuer sich, weil es
+   * an den Regeln haengt und nicht am Bot.
+   */
+  console.log('\n| Spielart | Partien | Auto-Ende | im Zug (Schnitt) | Zuege sonst (Schnitt) |');
+  console.log('|---|---|---|---|---|');
+  for (const variante of Object.keys(anzahl)) {
+    const ps = ergebnisse.filter((r) => r.variante === variante).flatMap((r) => r.partien);
+    if (ps.length === 0) continue;
+    const mit = ps.filter((p) => p.autoEnde);
+    const ohne = ps.filter((p) => !p.autoEnde);
+    const schnitt = (xs) => (xs.length === 0 ? '–' : (xs.reduce((a, p) => a + p.zug, 0) / xs.length).toFixed(1));
+    console.log(
+      `| ${variante} | ${ps.length} | ${mit.length} (${((100 * mit.length) / ps.length).toFixed(0)} %) | ${schnitt(mit)} | ${schnitt(ohne)} |`,
+    );
+  }
 } else {
   const laden = (ordner, datei) => import(pathToFileURL(resolve(ordner, datei)).href);
   const P = await laden(workerData.neu, 'partie.js');
@@ -135,7 +152,8 @@ if (isMainThread) {
       if (zug.typ === 'barriere') mauern[s]++;
       p = P.fuehreAus(p, s, zug);
     }
-    return { neuSitz, sieger: P.sieger(p), punkte: [p.punkte[0], p.punkte[1]], mauern };
+    // `autoEnde` steht nur in einer Partie, die so endete (seit dem 23.11.2026).
+    return { neuSitz, sieger: P.sieger(p), punkte: [p.punkte[0], p.punkte[1]], mauern, autoEnde: p.autoEnde !== undefined, zug: p.zug };
   };
   parentPort.on('message', (a) => {
     if (a === null) return void process.exit(0);
