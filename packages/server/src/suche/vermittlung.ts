@@ -54,14 +54,31 @@ export interface VermittlungOptionen extends SchlangeOptionen {
 }
 
 /**
- * Die groesste Tischgroesse, die das Spiel kann.
+ * Die groesste Tischgroesse, die das Spiel mit seinem VORGABE-Regelsatz kann.
  *
  * Robins Wunsch ist "alle Gefundenen, Rest mit Bots" — also der groesste
  * Tisch, den das Modul zulaesst. Fuer Tafelrunde sind das acht.
+ *
+ * Seit dem 23.11.2026 nur unter den Groessen, die `validateConfig` mit der
+ * Vorgabe des Moduls annimmt: Filler meldet `[2, 4]`, aber vier Sitze gibt es
+ * nur in Extreme (Freunde- und Bot-Tische). Mit dem blossen Maximum saesse
+ * jede Filler-Suche an einem Vierertisch — und `validateConfig` wiese genau
+ * diesen Tisch im Nebel ab, die Suche endete still ohne Tisch. Fuer jedes
+ * Spiel, dessen Vorgabe auf allen Groessen gilt, bleibt es beim Maximum; nimmt
+ * die Vorgabe keine einzige an, ebenfalls (dann ist das ein anderer Fehler,
+ * und den soll der Tischbau melden, nicht diese Zeile verschlucken).
  */
 function zielSitze(gameId: GameId): number {
-  const counts = requireModule(gameId).meta.seatCounts;
-  return Math.max(...counts);
+  const module = requireModule(gameId);
+  const counts = module.meta.seatCounts;
+  const vorgabe = module.defaultConfig();
+  const tragfaehig = counts.filter(
+    (sitze) =>
+      !module
+        .validateConfig(vorgabe, sitze, runden(gameId, sitze))
+        .some((p) => p.severity === 'error'),
+  );
+  return Math.max(...(tragfaehig.length > 0 ? tragfaehig : counts));
 }
 
 /**

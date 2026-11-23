@@ -69,8 +69,17 @@ describe('Zu viert: welche Tische es gibt', () => {
     assert.ok(filler.validateConfig(alt, 4, 1).some((p) => p.path === 'farben'));
   });
 
-  it('die Meta bleibt bei [2] — die Match-Suche baut sonst Vierertische fuer jede Spielart', () => {
-    assert.deepEqual(filler.meta.seatCounts, [2]);
+  /*
+   * Die Meta meldet seit dem 23.11.2026 [2, 4], damit der Bildschirm
+   * Vierertische aufmachen kann. Die Match-Suche nimmt trotzdem zwei, weil sie
+   * nur Groessen waehlt, die die Vorgabe besteht (vermittlung.ts) — und die
+   * Vorgabe muss deshalb zu viert durchfallen. Faellt diese Probe, sitzt jede
+   * Filler-Suche an einem Vierertisch.
+   */
+  it('die Meta meldet [2, 4], die Vorgabe (Nebel) besteht aber nur zu zweit', () => {
+    assert.deepEqual(filler.meta.seatCounts, [2, 4]);
+    assert.deepEqual(filler.validateConfig(filler.defaultConfig(), 2, 1), []);
+    assert.ok(filler.validateConfig(filler.defaultConfig(), 4, 1).some((p) => p.path === 'seats'));
   });
 });
 

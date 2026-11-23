@@ -406,7 +406,9 @@ test('Die Suche ueber HTTP: beginnen, nachfragen, abbrechen', async (t) => {
  * Pruefung, je Spiel einmal:
  *
  *   - `zielSitze` nimmt die groesste Sitzzahl des Moduls (Filler/Eiland 2,
- *     Mememory 4). Fuer Mememory ist das die bewusste Entscheidung dieser
+ *     Mememory 4) — unter denen, die die Vorgabe des Moduls besteht. Filler
+ *     meldet seit dem 23.11.2026 `[2, 4]`, zu viert aber nur in Extreme; die
+ *     Zwei hier haelt fest, dass die Suche davon nichts abbekommt. Fuer Mememory ist das die bewusste Entscheidung dieser
  *     Aufgabe: Am Vierertisch wird keiner der Gefundenen abgewiesen, und
  *     laenger dauert eine Partie dadurch nicht (`vorrat` in partie.ts).
  *   - `runden` muss die Eins des Moduls treffen. Alle drei Spiele sind EIN

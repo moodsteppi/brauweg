@@ -431,17 +431,18 @@ export const DEFAULT_REGELN: FillerRegeln = {
 };
 
 /**
- * Was die Plattform als Tischgroesse anbietet: nur zwei.
+ * Was die Plattform als Tischgroesse anbietet: zwei und vier.
  *
- * Extreme geht seit dem 23.11.2026 auch zu viert (`SITZE_JE_SPIELART`), die
- * Meta sagt es trotzdem noch nicht — mit Absicht. Die Match-Suche baut den
- * GROESSTEN Tisch aus `seatCounts` (zielSitze in suche/vermittlung.ts) und
- * kennt die Spielart dabei nicht: Mit `[2, 4]` hier saesse jede Filler-Suche
- * an einem Vierertisch, auch in Klar und im Nebel, und `validateConfig`
- * wiese genau diese Tische ab. Hochgesetzt wird erst mit der Folgekarte fuer
- * Suche und Bildschirm, die die Sitzzahl nach Spielart waehlen.
+ * Vier gibt es nur in Extreme (`SITZE_JE_SPIELART`); `validateConfig` weist
+ * jeden anderen Vierertisch ab. Bis zum 23.11.2026 stand hier `[2]`, weil die
+ * Match-Suche den GROESSTEN Tisch aus `seatCounts` baute und dabei die
+ * Spielart nicht kannte — jede Filler-Suche haette an einem Vierertisch
+ * gesessen, den `validateConfig` im Nebel abweist. Seitdem nimmt die Suche
+ * nur Groessen, die die Vorgabe des Moduls besteht (zielSitze in
+ * suche/vermittlung.ts), und die Vorgabe ist der Nebel: Gesucht wird weiter
+ * zu zweit. Vierertische entstehen am Bildschirm (Freunde- und Bot-Tisch).
  */
-export const SEAT_COUNTS: readonly number[] = [2];
+export const SEAT_COUNTS: readonly number[] = [2, 4];
 
 /**
  * Erlaubte Sitzzahlen je Spielart (Wunsch Niklas, 21.11.2026).
