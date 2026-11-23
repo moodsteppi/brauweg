@@ -24,6 +24,23 @@ describe('CodeEinloesen', () => {
     expect(onEingeloest).toHaveBeenCalledTimes(1);
   });
 
+  it('meldet geschenkte Skins mit Namen, ohne „0 Münzen“ (Aktionscode)', async () => {
+    codeEinloesen.mockResolvedValue({ ok: true, muenzen: 0, stand: 300, items: ['hut-zylinder'] });
+    render(<CodeEinloesen />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Code' }), { target: { value: 'BW-ADVT-CHNP' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einlösen' }));
+    await waitFor(() => expect(screen.getByText('„Zylinder“ freigeschaltet.')).toBeInTheDocument());
+    expect(screen.queryByText(/0 Münzen/)).not.toBeInTheDocument();
+  });
+
+  it('meldet Münzen und Skin zusammen (Türchen 24)', async () => {
+    codeEinloesen.mockResolvedValue({ ok: true, muenzen: 500, stand: 800, items: ['hut-krone'] });
+    render(<CodeEinloesen />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Code' }), { target: { value: 'BW-ADVT-G6YJ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einlösen' }));
+    await waitFor(() => expect(screen.getByText(/500 Münzen gutgeschrieben\. „Krone“ freigeschaltet\./)).toBeInTheDocument());
+  });
+
   it('zeigt die Absage des Servers', async () => {
     codeEinloesen.mockRejectedValue(new ApiError('codeUngueltig', 'error.codeUngueltig', 400));
     render(<CodeEinloesen />);

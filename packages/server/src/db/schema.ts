@@ -1603,6 +1603,47 @@ export const muenzCode = pgTable(
   ],
 );
 
+/**
+ * Aktionscodes (Tom, 23.11.2026, Adventskalender) — src/muenzcodes.ts.
+ * Ein Code fuer viele Konten, je Konto einmal (aktions_code_einloesung).
+ */
+export const aktionsCode = pgTable(
+  'aktions_code',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    code: text().notNull(),
+    muenzen: integer().notNull().default(0),
+    /** Kosmetik-IDs aus kosmetik.ts KATALOG. */
+    items: text().array().notNull().default(sql`'{}'::text[]`),
+    gueltigAb: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    gueltigBis: timestamp({ withTimezone: true }),
+    notiz: text(),
+    gesperrt: boolean().notNull().default(false),
+    erstellt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('aktions_code_code_key').on(t.code),
+    check(
+      'aktions_code_belohnung_check',
+      sql`${t.muenzen} >= 0 AND (${t.muenzen} > 0 OR cardinality(${t.items}) > 0)`,
+    ),
+  ],
+);
+
+export const aktionsCodeEinloesung = pgTable(
+  'aktions_code_einloesung',
+  {
+    codeId: uuid()
+      .notNull()
+      .references(() => aktionsCode.id, { onDelete: 'cascade' }),
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id),
+    eingeloestAm: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ name: 'aktions_code_einloesung_pk', columns: [t.codeId, t.accountId] })],
+);
+
 // ---------------------------------------------------------------------------
 // Browort und Clanwort (Emile, 23.10.2026) — src/browort.ts
 // ---------------------------------------------------------------------------
