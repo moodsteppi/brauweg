@@ -4,6 +4,7 @@ export {
   AUSGLEICH_JE_SPIELART,
   DEFAULT_REGELN,
   SEAT_COUNTS,
+  SITZE_NUR_MIT_REGELSATZ,
   SITZE_JE_SPIELART,
   erlaubteSitze,
   type SpielartAufbau,

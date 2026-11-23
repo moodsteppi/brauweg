@@ -14850,6 +14850,72 @@ span.hub-angebot-art.poker-jeton-stapel {
    ohnehin, wer wer ist, und drei Elemente je Seite sprengen 360 px. */
 @media (max-width: 420px) { .fl-name { display: none; } }
 
+/* Zu viert (Extreme 1v1v1v1): vier gleiche Spalten statt zwei gespiegelter
+   Seiten. Bild und Zahl nebeneinander, der Name darunter — auch am Handy,
+   denn bei vier Spielern sagt die Farbe allein nicht mehr schnell genug, wer
+   wer ist. Kleiner als zu zweit, damit vier Spalten neben dem Zurueck-Knopf
+   in 360 px passen. */
+.fl-stand[data-vier] { justify-content: space-around; gap: 4px; }
+.fl-stand[data-vier] .fl-spieler {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-items: center;
+  align-items: center;
+  column-gap: 4px;
+  row-gap: 3px;
+  min-width: 0;
+}
+.fl-stand[data-vier] .fl-spieler:not([data-eigen]) { flex-direction: row; }
+.fl-stand[data-vier] .fl-avatar { width: 26px; height: 26px; font-size: 12px; }
+.fl-stand[data-vier] .fl-punkte { min-width: 34px; padding: 5px 6px; font-size: 15px; border-radius: 7px; }
+.fl-stand[data-vier] .fl-name {
+  display: block;
+  grid-column: 1 / -1;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.fl-stand[data-vier] .fl-spieler[data-eigen] .fl-name { color: #2b2b2b; }
+.fl-stand[data-vier] .fl-spieler[data-weg] { opacity: 0.45; }
+@media (min-width: 600px) {
+  .fl-stand[data-vier] .fl-avatar { width: 32px; height: 32px; font-size: 14px; }
+  .fl-stand[data-vier] .fl-punkte { min-width: 42px; font-size: 17px; }
+  .fl-stand[data-vier] .fl-name { max-width: 110px; font-size: 11px; }
+}
+
+/* Wartebereich des Vierertisches: eine Zeile je Platz, der Bot-Knopf rechts. */
+.fl-vierer-plaetze { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.fl-vierer-platz {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.fl-vierer-platz[data-frei] { border-style: dashed; background: transparent; }
+.fl-vierer-platz[data-frei] .fl-avatar { background: rgba(255, 255, 255, 0.12); }
+.fl-vierer-platz[data-bot] .fl-avatar { background: var(--spe-akzent, #35b4f0); }
+.fl-vierer-name { flex: 1; min-width: 0; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-vierer-platz[data-frei] .fl-vierer-name { opacity: 0.6; font-weight: 700; }
+.fl-vierer-knopf {
+  flex: none;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--spe-akzent, #35b4f0);
+  color: #ffffff;
+  font: 800 13px/1 system-ui;
+  cursor: pointer;
+}
+.fl-vierer-knopf[data-weg] { background: rgba(255, 255, 255, 0.12); }
+.fl-vierer-knopf:disabled { opacity: 0.5; cursor: default; }
+.fl-vier-hinweis { margin-top: 10px; font-size: 13px; opacity: 0.8; }
+
 .fl-brett-huelle {
   flex: 1;
   width: 100%;

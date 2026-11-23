@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type Suchstand } from '../api';
+import { Einladung } from '../minispiele/partykiste/Einladung';
+import { AnfragenLeiste } from '../tisch/Anfragen';
 import { AuswahlRaster } from '../hub';
 import { t } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
@@ -15,7 +17,7 @@ import { TurnClock } from '../tisch';
 import { GastHinweis } from '../tisch/GastHinweis';
 import { mitFett } from './ClanTeile';
 import { HbBlatt, useRueckfrage } from './HbBlatt';
-import { SpielAbschnitt, SpielRahmen } from './SpielEinstieg';
+import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import './spiel-einstieg-mini.css';
 
 /**
@@ -165,6 +167,42 @@ function merkeVariante(v: Variante): void {
 }
 
 /**
+ * Die Besetzung eines Extreme-Tisches: 1v1 oder 1v1v1v1 (Wunsch Niklas,
+ * 21.11.2026). Nur eine VORWAHL fuer den naechsten Tisch, wie die Spielart —
+ * ob ein Tisch zu viert spielt, steht danach in der Sicht (`sicht.punkte`
+ * hat dann vier Eintraege), nicht hier.
+ *
+ * Ob eine Spielart vier Sitze ueberhaupt kann, entscheidet das Modul
+ * (`SITZE_JE_SPIELART` in packages/game-filler/src/regeln.ts) und prueft es
+ * beim Tischbau. Der Bildschirm bietet die Wahl nur in Extreme an und faellt
+ * sonst auf zwei zurueck — wer im Nebel einen Vierertisch bestellte, bekaeme
+ * vom Server nur einen Fehler.
+ */
+type Besetzung = 2 | 4;
+const BESETZUNG_SCHLUESSEL = 'filler.besetzung';
+
+function gelesenebesetzung(): Besetzung {
+  try {
+    return localStorage.getItem(BESETZUNG_SCHLUESSEL) === '4' ? 4 : 2;
+  } catch {
+    return 2;
+  }
+}
+
+function merkeBesetzung(b: Besetzung): void {
+  try {
+    localStorage.setItem(BESETZUNG_SCHLUESSEL, String(b));
+  } catch {
+    /* Gesperrte Seitendaten: Die Wahl gilt trotzdem, nur nicht morgen. */
+  }
+}
+
+/** Sitze des naechsten Tisches: vier nur in Extreme, sonst zwei. */
+function sitzzahlFuer(variante: Variante, besetzung: Besetzung): Besetzung {
+  return variante === 'extreme' ? besetzung : 2;
+}
+
+/**
  * Wischen nach links oder rechts ueber einer Flaeche, wie im Heim von
  * Mememory — nur dass hier keine Seite faehrt, sondern die Spielart
  * wechselt. Eigene Fingerrechnung statt Rollflaeche, weil das Menue
@@ -265,6 +303,18 @@ const KANTENSCHATTEN: Record<Seite, (dick: number, farbe: string) => string> = {
   rechts: (d, f) => `inset -${d}px 0 0 ${f}`,
 };
 
+/**
+ * Spiegelung des Bretts je Sitz, damit die eigene Startecke unten links liegt
+ * (siehe `platzVon` im Brett). Die Ecken selbst stehen in startEcke im
+ * Modul; hier steht nur, wie man sie nach unten links BEWEGT. Sitz 0 und
+ * Zuschauer (-1) bleiben, wie sie sind.
+ */
+const SPIEGEL_JE_SITZ: Record<number, { x: boolean; y: boolean }> = {
+  1: { x: true, y: true },
+  2: { x: false, y: true },
+  3: { x: true, y: false },
+};
+
 export function Filler({
   startTisch,
   onBack,
@@ -294,6 +344,13 @@ export function Filler({
    * wieder ueber beiden.
    */
   const [variante, setVariante] = useState<Variante>(gelesenevariante);
+  /** 1v1 oder 1v1v1v1 — siehe `Besetzung`. Gilt nur in Extreme. */
+  const [besetzung, setBesetzung] = useState<Besetzung>(gelesenebesetzung);
+  const waehleBesetzung = useCallback((b: Besetzung): void => {
+    merkeBesetzung(b);
+    setBesetzung(b);
+  }, []);
+  const sitzzahl = sitzzahlFuer(variante, besetzung);
   /**
    * Aus welcher Richtung die neue Spielart hereinkommt — fuer die kurze
    * Bewegung der Beschreibung unter dem Raster. Null beim ersten Aufbau: Da soll
@@ -434,32 +491,45 @@ export function Filler({
   }, []);
 
   /**
-   * Einen Tisch gegen den Computer aufmachen.
+   * Einen Tisch gegen den Computer aufmachen — zu viert ein Mensch und drei
+   * Bots.
    *
-   * `fillWithBots` besetzt den freien Platz; `on_request` haelt den Tisch aus
-   * der Lobbyliste heraus. Beides wie bei Mememory und Easy Poker, und aus
+   * `fillWithBots` besetzt die freien Plaetze; `on_request` haelt den Tisch
+   * aus der Lobbyliste heraus. Beides wie bei Mememory und Easy Poker, und aus
    * demselben Grund: Ein Bot-Tisch in der oeffentlichen Liste faengt genau die
    * Leute ab, die gerade einen Menschen suchen.
+   *
+   * Mit `bots: false` ist es der Freunde-Tisch (nur zu viert): dieselbe
+   * Abschottung, aber die Plaetze bleiben frei. Wer dazukommt, kommt ueber die
+   * Einladung (Code, Link, QR); was danach noch frei ist, fuellt man im
+   * Wartebereich mit Bots. Los geht es, wie an jedem Tisch der Plattform, von
+   * selbst, sobald der letzte Platz besetzt ist — mit weniger als vier
+   * beginnt keine Partie, weil `validateConfig` drei Sitze abweist.
    */
-  const starteBot = useCallback(async (): Promise<void> => {
-    setFehler(null);
-    setSucht(true);
-    try {
-      const { id } = await api.createTable({
-        gameId: 'filler',
-        config: { ...(await holeVorgabe()), variante },
-        seats: 2,
-        rounds: 1,
-        visibility: 'on_request',
-        fillWithBots: true,
-      });
-      setTischId(id);
-    } catch {
-      setFehler(t('filler.fehler.tisch'));
-    } finally {
-      setSucht(false);
-    }
-  }, [holeVorgabe, variante]);
+  const starteTisch = useCallback(
+    async (bots: boolean): Promise<void> => {
+      setFehler(null);
+      setSucht(true);
+      try {
+        const { id } = await api.createTable({
+          gameId: 'filler',
+          config: { ...(await holeVorgabe()), variante },
+          seats: bots ? sitzzahl : 4,
+          rounds: 1,
+          visibility: 'on_request',
+          fillWithBots: bots,
+        });
+        setTischId(id);
+      } catch {
+        setFehler(t('filler.fehler.tisch'));
+      } finally {
+        setSucht(false);
+      }
+    },
+    [holeVorgabe, variante, sitzzahl],
+  );
+  const starteBot = useCallback((): Promise<void> => starteTisch(true), [starteTisch]);
+  const starteFreunde = useCallback((): Promise<void> => starteTisch(false), [starteTisch]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;
@@ -502,6 +572,34 @@ export function Filler({
       window.clearInterval(takt);
     };
   }, [sicht !== null]);
+
+  /*
+   * Die eigene Kontokennung — nur, um im Vierer-Wartebereich den eigenen
+   * Platz mit „Du" zu beschriften. Die Tischnachricht nennt Konten, aber
+   * nicht, welches davon man selbst ist; die Sicht, die es wuesste, gibt es
+   * vor dem Start noch nicht. Am Schluessel `tischId` und nicht an der
+   * Tischnachricht, sonst fragte jeder Serverfunk neu. Nur, solange ein
+   * Vierertisch wartet: Zu zweit braucht es die Kennung nicht, und eine
+   * Anfrage je Partie, deren Antwort niemand liest, ist bloss Last.
+   */
+  const viererWartet =
+    !sicht && tisch.table?.status === 'waiting' && (tisch.table?.seats.length ?? 0) > 2;
+  const [ichKennung, setIchKennung] = useState<string | null>(null);
+  useEffect(() => {
+    if (!tischId || !viererWartet) return;
+    let lebt = true;
+    void api
+      .me()
+      .then((m) => {
+        if (lebt) setIchKennung(m.id);
+      })
+      .catch(() => {
+        /* Ohne Kennung steht am eigenen Platz eben der Name. */
+      });
+    return () => {
+      lebt = false;
+    };
+  }, [tischId, viererWartet]);
 
   // -------------------------------------------------------------------------
   // Ziehen
@@ -615,30 +713,60 @@ export function Filler({
       <SpielRahmen
         gameId="filler"
         titel={spiel}
-        unter={tf('filler.menue.unter', { spielart: varianteName(variante) })}
+        unter={tf(sitzzahl === 4 ? 'filler.menue.unterVier' : 'filler.menue.unter', {
+          spielart: varianteName(variante),
+        })}
         akzent={AKZENT}
         onBack={onBack}
         zurueckText={t('filler.zurueckZurSpielseite')}
         fuss={
-          <>
-            <button
-              type="button"
-              className="hb-kn is-gold is-haupt is-breit"
-              onClick={() => void starteSuche()}
-              disabled={sucht}
-            >
-              {t('filler.menue.suchen')}
-            </button>
-            <button
-              type="button"
-              className="hb-kn is-blau is-breit"
-              onClick={() => void starteBot()}
-              disabled={sucht}
-            >
-              {t('filler.menue.bot')}
-            </button>
-            {spielerZeile}
-          </>
+          sitzzahl === 4 ? (
+            /*
+             * Zu viert gibt es (noch) keine Match-Suche — die Schlange baut
+             * Zweiertische (zielSitze in packages/server/src/suche/
+             * vermittlung.ts), und die Suche zu viert ist eine eigene Karte.
+             * Der goldene Knopf ist hier deshalb der Freunde-Tisch.
+             */
+            <>
+              <button
+                type="button"
+                className="hb-kn is-gold is-haupt is-breit"
+                onClick={() => void starteFreunde()}
+                disabled={sucht}
+              >
+                {t('filler.menue.freunde')}
+              </button>
+              <button
+                type="button"
+                className="hb-kn is-blau is-breit"
+                onClick={() => void starteBot()}
+                disabled={sucht}
+              >
+                {t('filler.menue.bots')}
+              </button>
+              {spielerZeile}
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="hb-kn is-gold is-haupt is-breit"
+                onClick={() => void starteSuche()}
+                disabled={sucht}
+              >
+                {t('filler.menue.suchen')}
+              </button>
+              <button
+                type="button"
+                className="hb-kn is-blau is-breit"
+                onClick={() => void starteBot()}
+                disabled={sucht}
+              >
+                {t('filler.menue.bot')}
+              </button>
+              {spielerZeile}
+            </>
+          )
         }
       >
         <div className="spe-wisch" data-wischbar="" {...wischen}>
@@ -657,6 +785,20 @@ export function Filler({
               vorgabe={vorgabe}
             />
           </SpielAbschnitt>
+          {variante === 'extreme' && (
+            <SpielAbschnitt titel={t('filler.menue.besetzung')}>
+              <SpielWahl<Besetzung>
+                name={t('filler.menue.besetzung')}
+                wert={besetzung}
+                onWahl={waehleBesetzung}
+                werte={[
+                  { wert: 2, text: t('filler.besetzung.zwei'), unter: t('filler.besetzung.zwei.unter') },
+                  { wert: 4, text: t('filler.besetzung.vier'), unter: t('filler.besetzung.vier.unter') },
+                ]}
+              />
+              {besetzung === 4 && <p className="spe-text fl-vier-hinweis">{t('filler.menue.vierOhneSuche')}</p>}
+            </SpielAbschnitt>
+          )}
           <SpielAbschnitt titel={t('filler.menue.anleitung')}>
             <div className="hb-liste">
               <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
@@ -685,6 +827,30 @@ export function Filler({
   // -------------------------------------------------------------------------
   // Tisch wird aufgebaut
   // -------------------------------------------------------------------------
+
+  /*
+   * Der Vierertisch wartet: Plaetze zeigen, Einladung, Bots setzen. Am
+   * Zweiertisch braucht es das nicht — der Bot-Tisch ist sofort voll, und der
+   * Tisch aus der Suche fuellt der Server selbst auf.
+   */
+  if (viererWartet && tisch.table) {
+    const tabelle = tisch.table;
+    return (
+      <ViererWarten
+        tischId={tabelle.tableId}
+        sitze={tabelle.seats}
+        ichKennung={ichKennung}
+        onBot={tisch.addBot}
+        onBotWeg={tisch.removeBot}
+        onAuffuellen={() => {
+          for (const platz of tabelle.seats) {
+            if (!platz.accountId && !platz.isBot) tisch.addBot(platz.seat);
+          }
+        }}
+        onAbbrechen={brichAb}
+      />
+    );
+  }
 
   if (!sicht) {
     const besetzt = (tisch.table?.seats ?? []).filter((platz) => platz.accountId).length;
@@ -735,7 +901,10 @@ export function Filler({
       eigenerSitz={eigenerSitz}
       sitze={tisch.table?.seats ?? tisch.party?.seats ?? []}
       binDran={binDran}
-      gegenBot={(tisch.table?.seats ?? []).some((platz) => platz.isBot)}
+      // Ob der Sitz AM ZUG ein Bot ist — zu viert sitzen Menschen und Bots
+      // gemischt, und „Bot ist am Zug" waehrend ein Freund ueberlegt, waere
+      // falsch. Zu zweit kommt dasselbe heraus wie frueher.
+      gegenBot={(tisch.table?.seats ?? []).some((platz) => platz.isBot && platz.seat === sicht.dran)}
       getippt={getippt?.farbe ?? null}
       onWaehle={waehle}
       onBarriere={setzeBarriere}
@@ -746,6 +915,156 @@ export function Filler({
       frist={binDran ? (tisch.view?.turnDeadline ?? null) : null}
       onAufgeben={() => tisch.send({ typ: 'aufgeben' } satisfies FillerAufgabe)}
     />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Der Vierertisch wartet
+// ---------------------------------------------------------------------------
+
+/** Ein Platz am wartenden Tisch, wie ihn die Tischnachricht liefert. */
+interface WartePlatz {
+  seat: number;
+  displayName: string | null;
+  accountId: string | null;
+  isBot: boolean;
+  avatarUrl: string | null;
+  /** Gastkonto — fuer den Hinweis, dass die Partie nicht gewertet wird. */
+  gast?: boolean;
+}
+
+/**
+ * Wartebereich eines Vierertisches (Extreme 1v1v1v1, seit dem 23.11.2026).
+ *
+ * Im Spieleinstieg und nicht im Kartentisch-Wartebereich (tisch/index.tsx),
+ * weil der Rest von Filler auch dort steht — sonst sprang der Bildschirm
+ * zwischen Menue und Brett einmal in ein ganz anderes Aussehen. Die Bausteine
+ * sind trotzdem dieselben: `Einladung` (Code, Link, QR) und `AnfragenLeiste`.
+ *
+ * Bots setzt man je Platz oder alle auf einmal, so viele man will — auch
+ * drei, dann ist es ein Bot-Tisch mit Einladung. Los geht es von selbst,
+ * sobald der vierte Platz besetzt ist; einen Startknopf fuer weniger gibt es
+ * nicht, weil das Modul zu dritt nicht spielt (SITZE_JE_SPIELART).
+ */
+export function ViererWarten({
+  tischId,
+  sitze,
+  ichKennung,
+  onBot,
+  onBotWeg,
+  onAuffuellen,
+  onAbbrechen,
+}: {
+  tischId: string;
+  sitze: readonly WartePlatz[];
+  /** Eigene Kontokennung, fuer das „Du" — null, solange sie nicht da ist. */
+  ichKennung: string | null;
+  onBot: (sitz: number) => void;
+  onBotWeg: (sitz: number) => void;
+  onAuffuellen: () => void;
+  onAbbrechen: () => void;
+}): React.JSX.Element {
+  /*
+   * Plaetze, auf deren Bot-Knopf der Tisch noch nicht geantwortet hat. Bis die
+   * neue Tischnachricht kommt, ist der Knopf gesperrt — sonst tippt man
+   * doppelt, und der zweite Tipp landet als Fehler.
+   */
+  const [wartend, setWartend] = useState<ReadonlySet<number>>(new Set());
+  const stand = sitze.map((p) => `${p.seat}:${p.isBot ? 'b' : p.accountId ? 'm' : '-'}`).join(',');
+  useEffect(() => {
+    setWartend(new Set());
+  }, [stand]);
+  const merke = (sitz: number): void => setWartend((alt) => new Set(alt).add(sitz));
+
+  const frei = sitze.filter((p) => !p.accountId && !p.isBot);
+  const besetzt = sitze.length - frei.length;
+  const spiel = t('game.filler');
+  return (
+    <SpielRahmen
+      gameId="filler"
+      titel={t('filler.vierer.titel')}
+      unter={`${spiel} · ${varianteName('extreme')}`}
+      akzent={AKZENT}
+      onBack={onAbbrechen}
+      zurueckText={t('filler.abbrechen')}
+      fuss={
+        <>
+          {frei.length > 0 && (
+            <button
+              type="button"
+              className="hb-kn is-gold is-haupt is-breit"
+              onClick={() => {
+                for (const p of frei) merke(p.seat);
+                onAuffuellen();
+              }}
+            >
+              {t('filler.vierer.auffuellen')}
+            </button>
+          )}
+          <button type="button" className="hb-kn is-blau is-breit" onClick={onAbbrechen}>
+            {t('filler.abbrechen')}
+          </button>
+        </>
+      }
+    >
+      <AnfragenLeiste tableId={tischId} />
+      <Einladung spiel="filler" tischId={tischId} neu />
+      <SpielAbschnitt
+        titel={t('filler.vierer.plaetze')}
+        zusatz={tf('filler.aufbau.besetzt', { besetzt, sitze: sitze.length })}
+      >
+        <ul className="fl-vierer-plaetze">
+          {sitze.map((p) => {
+            const ich = ichKennung !== null && p.accountId === ichKennung;
+            const name = ich
+              ? t('filler.vierer.du')
+              : (p.displayName ?? (p.isBot ? t('filler.vierer.bot') : t('filler.vierer.frei')));
+            const leer = !p.accountId && !p.isBot;
+            return (
+              <li key={p.seat} className="fl-vierer-platz" data-frei={leer ? '' : undefined} data-bot={p.isBot ? '' : undefined}>
+                <span className="fl-avatar">
+                  {p.avatarUrl ? (
+                    <img src={serverAdresse(p.avatarUrl)} alt="" draggable={false} />
+                  ) : (
+                    <strong>{leer ? p.seat + 1 : (name[0] ?? '?').toUpperCase()}</strong>
+                  )}
+                </span>
+                <span className="fl-vierer-name">{name}</span>
+                {leer && (
+                  <button
+                    type="button"
+                    className="fl-vierer-knopf"
+                    disabled={wartend.has(p.seat)}
+                    onClick={() => {
+                      merke(p.seat);
+                      onBot(p.seat);
+                    }}
+                  >
+                    {t('filler.vierer.botSetzen')}
+                  </button>
+                )}
+                {p.isBot && (
+                  <button
+                    type="button"
+                    className="fl-vierer-knopf"
+                    data-weg=""
+                    disabled={wartend.has(p.seat)}
+                    onClick={() => {
+                      merke(p.seat);
+                      onBotWeg(p.seat);
+                    }}
+                  >
+                    {t('filler.vierer.botEntfernen')}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <p className="spe-text fl-vier-hinweis">{t('filler.vierer.start')}</p>
+        <GastHinweis sitze={sitze} className="spe-text" />
+      </SpielAbschnitt>
+    </SpielRahmen>
   );
 }
 
@@ -871,30 +1190,47 @@ export function Brett({
   /**
    * Wer spielt, sitzt unten links.
    *
-   * Sitz 1 startet in der Ecke oben rechts (startEcke im Modul). Statt das
-   * Brett fuer ihn anders zu bauen — was eine Regel im Client waere —, wird es
-   * nur GEDREHT: Platz n von hinten gezaehlt. Eine Drehung um 180 Grad bildet
-   * die Ecke oben rechts auf unten links ab, und weil sie sowohl Zeilen als
-   * auch Spalten spiegelt, bleiben alle Nachbarschaften erhalten.
+   * Sitz 1 startet in der Ecke oben rechts, zu viert Sitz 2 oben links und
+   * Sitz 3 unten rechts (startEcke im Modul). Statt das Brett fuer sie anders
+   * zu bauen — was eine Regel im Client waere —, wird es nur GESPIEGELT:
+   * Sitz 1 an beiden Achsen (die Drehung um 180 Grad von frueher), Sitz 2
+   * oben gegen unten, Sitz 3 links gegen rechts. Jede dieser Spiegelungen
+   * bildet die eigene Ecke auf unten links ab und laesst alle
+   * Nachbarschaften stehen; Waende und Kanten folgen ueber `anzeigeIndex`.
    */
-  const gedreht = eigenerSitz === 1;
-  const platzVon = (i: number): number => (gedreht ? plaetze - 1 - i : i);
+  const spiegel = SPIEGEL_JE_SITZ[eigenerSitz] ?? { x: false, y: false };
+  const spiegle = (n: number): number => {
+    const x = n % sicht.spalten;
+    const y = Math.floor(n / sicht.spalten);
+    const sx = spiegel.x ? sicht.spalten - 1 - x : x;
+    const sy = spiegel.y ? sicht.zeilen - 1 - y : y;
+    return sy * sicht.spalten + sx;
+  };
+  const platzVon = spiegle;
   /**
    * Umkehrung: Wo auf dem Bildschirm liegt Platz n?
    *
-   * Bei einer Drehung um 180 Grad ist die Umkehrung dieselbe Rechnung. Sie
+   * Eine Spiegelung ist ihre eigene Umkehrung, also dieselbe Rechnung. Sie
    * steht trotzdem unter eigenem Namen da: Die Waende brauchen die Richtung
    * Platz -> Bildschirm, und `platzVon` an dieser Stelle zu lesen hiesse,
    * sich jedes Mal neu zu ueberlegen, warum das gutgeht.
    */
-  const anzeigeIndex = (platz: number): number => (gedreht ? plaetze - 1 - platz : platz);
+  const anzeigeIndex = spiegle;
   /** Setzflaechen zeigen, solange der Bau-Knopf gedrueckt ist. */
   const bautGerade = baut && kannMauern;
 
-  const gegner = Object.keys(sicht.punkte)
+  /*
+   * Alle Sitze dieser Partie, aus der Sicht und nicht aus der Tischgroesse:
+   * `punkte` fuehrt jeden Sitz, zu zweit zwei, zu viert vier.
+   */
+  const alleSitze = Object.keys(sicht.punkte)
     .map(Number)
-    .filter((s) => s !== eigenerSitz);
+    .sort((a, b) => a - b);
+  const zuViert = alleSitze.length > 2;
+  const gegner = alleSitze.filter((s) => s !== eigenerSitz);
   const gegnerSitz = gegner[0] ?? (eigenerSitz === 0 ? 1 : 0);
+  /** Reihenfolge im Kopf: man selbst vorn, dann die anderen nach Sitz. */
+  const kopfSitze = eigenerSitz >= 0 ? [eigenerSitz, ...gegner] : alleSitze;
 
   const gesperrt = new Set(Object.values(sicht.farbe));
 
@@ -1004,23 +1340,46 @@ export function Brett({
         <button className="fl-zurueck fl-zurueck-tisch" type="button" onClick={onZurueck} aria-label={t('filler.zurueck')}>
           ←
         </button>
-        <div className="fl-stand">
-          <Spielerstand
-            sitz={eigenerSitz}
-            zeile={zeile(eigenerSitz)}
-            punkte={sicht.punkte[eigenerSitz] ?? 0}
-            farbe={sicht.farbe[eigenerSitz] ?? 0}
-            eigen
-            aktiv={!sicht.fertig && sicht.dran === eigenerSitz}
-          />
-          <Spielerstand
-            sitz={gegnerSitz}
-            zeile={zeile(gegnerSitz)}
-            punkte={sicht.punkte[gegnerSitz] ?? 0}
-            farbe={sicht.farbe[gegnerSitz] ?? 0}
-            aktiv={!sicht.fertig && sicht.dran === gegnerSitz}
-          />
-        </div>
+        {zuViert ? (
+          /*
+           * Zu viert: alle vier in einer Reihe, jeder mit Bild, Zahl in
+           * seiner Gebietsfarbe und Namen darunter. Ohne Spiegelung wie zu
+           * zweit — „Zahlen zur Mitte" gibt es bei vier nicht, und eine
+           * gleichmaessige Reihe laesst sich am schnellsten ablesen.
+           */
+          <div className="fl-stand" data-vier="">
+            {kopfSitze.map((sitz) => (
+              <Spielerstand
+                key={sitz}
+                sitz={sitz}
+                zeile={zeile(sitz)}
+                punkte={sicht.punkte[sitz] ?? 0}
+                farbe={sicht.farbe[sitz] ?? 0}
+                eigen={sitz === eigenerSitz}
+                aktiv={!sicht.fertig && sicht.dran === sitz}
+                weg={(sicht.leftSeats ?? []).includes(sitz)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="fl-stand">
+            <Spielerstand
+              sitz={eigenerSitz}
+              zeile={zeile(eigenerSitz)}
+              punkte={sicht.punkte[eigenerSitz] ?? 0}
+              farbe={sicht.farbe[eigenerSitz] ?? 0}
+              eigen
+              aktiv={!sicht.fertig && sicht.dran === eigenerSitz}
+            />
+            <Spielerstand
+              sitz={gegnerSitz}
+              zeile={zeile(gegnerSitz)}
+              punkte={sicht.punkte[gegnerSitz] ?? 0}
+              farbe={sicht.farbe[gegnerSitz] ?? 0}
+              aktiv={!sicht.fertig && sicht.dran === gegnerSitz}
+            />
+          </div>
+        )}
         {/*
           * Woran man spielt, steht am Tisch und nicht nur im Menue: Nach einem
           * Neuladen ist die Vorwahl von vorhin keine Auskunft mehr ueber
@@ -1151,6 +1510,8 @@ export function Brett({
             sicht={sicht}
             eigenerSitz={eigenerSitz}
             gegnerSitz={gegnerSitz}
+            zuViert={zuViert}
+            nameVon={(sitz) => spielerName(zeile(sitz), sitz === eigenerSitz)}
             onZurueck={onZurueck}
           />
         ) : binDran ? (
@@ -1408,12 +1769,19 @@ function Spielartwahl({
  * ist keine Deko: Es ist die einzige Stelle, an der man die eigene Farbe
  * sieht, wenn das eigene Gebiet gerade vom Daumen verdeckt wird.
  */
+/** Wie ein Sitz heisst: „Du", sein Name, sonst „KI" bzw. „Gegner". */
+function spielerName(zeile: SitzZeile | undefined, eigen: boolean): string {
+  if (eigen) return t('filler.spieler.du');
+  return zeile?.displayName ?? (zeile?.isBot ? t('filler.spieler.ki') : t('filler.spieler.gegner'));
+}
+
 function Spielerstand({
   zeile,
   punkte,
   farbe,
   eigen,
   aktiv,
+  weg,
 }: {
   sitz: number;
   zeile: SitzZeile | undefined;
@@ -1421,12 +1789,17 @@ function Spielerstand({
   farbe: number;
   eigen?: boolean;
   aktiv: boolean;
+  /** Hat den Tisch verlassen; der Server laesst einen Bot weiterspielen. */
+  weg?: boolean;
 }): React.JSX.Element {
-  const name = eigen
-    ? t('filler.spieler.du')
-    : (zeile?.displayName ?? (zeile?.isBot ? t('filler.spieler.ki') : t('filler.spieler.gegner')));
+  const name = spielerName(zeile, !!eigen);
   return (
-    <div className="fl-spieler" data-eigen={eigen ? '' : undefined} data-aktiv={aktiv ? '' : undefined}>
+    <div
+      className="fl-spieler"
+      data-eigen={eigen ? '' : undefined}
+      data-aktiv={aktiv ? '' : undefined}
+      data-weg={weg ? '' : undefined}
+    >
       <span className="fl-avatar">
         {/* Kein <img> auf eine Datei, die es nicht gibt: Ohne Bild steht der
             Anfangsbuchstabe da. Ein weisser Kasten saehe nach Fehler aus. */}
@@ -1454,15 +1827,51 @@ function Abschluss({
   sicht,
   eigenerSitz,
   gegnerSitz,
+  zuViert,
+  nameVon,
   onZurueck,
 }: {
   sicht: FillerSicht;
   eigenerSitz: number;
   gegnerSitz: number;
+  /** Vier Sitze: kein „X zu Y", sondern die eigene Zahl neben dem Bestwert. */
+  zuViert: boolean;
+  nameVon: (sitz: number) => string;
   onZurueck: () => void;
 }): React.JSX.Element {
   const meine = sicht.punkte[eigenerSitz] ?? 0;
   const seine = sicht.punkte[gegnerSitz] ?? 0;
+  /*
+   * Zu viert gibt es kein „seine": Die Punkte aller stehen ohnehin oben im
+   * Kopf. Hier steht die eigene Zahl neben der besten. Wer gewonnen hat,
+   * sagt das Modul (`sicht.sieger`), nicht dieser Vergleich — der Bestwert
+   * ist nur die Auskunft, wie weit man weg war.
+   */
+  if (zuViert) {
+    const beste = Math.max(...Object.values(sicht.punkte));
+    const aufgegeben = sicht.aufgegeben ?? null;
+    const wortVier =
+      sicht.sieger === null
+        ? t('filler.ende.unentschieden')
+        : sicht.sieger === eigenerSitz
+          ? t('filler.ende.gewonnen')
+          : t('filler.ende.verloren');
+    return (
+      <div className="fl-abschluss">
+        <h2 data-sieg={sicht.sieger === eigenerSitz ? '' : undefined}>{wortVier}</h2>
+        <p>
+          {aufgegeben !== null &&
+            (aufgegeben === eigenerSitz
+              ? t('filler.ende.selbstAufgegeben')
+              : tf('filler.ende.andererAufgegeben', { name: nameVon(aufgegeben) }))}
+          {tf('filler.ende.vier', { meine, beste })}
+        </p>
+        <button className="fl-suchen" type="button" onClick={onZurueck}>
+          {t('filler.zurueck')}
+        </button>
+      </div>
+    );
+  }
   const wort =
     sicht.sieger === null
       ? t('filler.ende.unentschieden')

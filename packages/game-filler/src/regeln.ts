@@ -431,17 +431,26 @@ export const DEFAULT_REGELN: FillerRegeln = {
 };
 
 /**
- * Was die Plattform als Tischgroesse anbietet: nur zwei.
+ * Was die Plattform als Tischgroesse ANBIETET: zwei.
  *
- * Extreme geht seit dem 23.11.2026 auch zu viert (`SITZE_JE_SPIELART`), die
- * Meta sagt es trotzdem noch nicht — mit Absicht. Die Match-Suche baut den
- * GROESSTEN Tisch aus `seatCounts` (zielSitze in suche/vermittlung.ts) und
- * kennt die Spielart dabei nicht: Mit `[2, 4]` hier saesse jede Filler-Suche
- * an einem Vierertisch, auch in Klar und im Nebel, und `validateConfig`
- * wiese genau diese Tische ab. Hochgesetzt wird erst mit der Folgekarte fuer
- * Suche und Bildschirm, die die Sitzzahl nach Spielart waehlen.
+ * `seatCounts` verspricht, dass die Vorgabe auf jeder genannten Zahl gilt
+ * (game-api, GameMeta), und die Vorgabe ist der Nebel — zu viert gibt es den
+ * nicht. Die Vier steht deshalb in `SITZE_NUR_MIT_REGELSATZ`, nicht hier. Am
+ * 23.11.2026 stand sie einen Commit lang hier: Die Plattform-Invariante
+ * ("vollstaendige Bot-Partien", spielt jede Zahl mit der Vorgabe durch) fiel
+ * sofort, und die Suche haette ohne Sonderweg jede Filler-Suche an einen
+ * Vierertisch gesetzt.
  */
 export const SEAT_COUNTS: readonly number[] = [2];
+
+/**
+ * Tischgroessen, die nur mit passendem Regelsatz gehen: vier, nur in Extreme
+ * (`SITZE_JE_SPIELART`). Der Tischbau nimmt sie an (`sitzeNurMitRegelsatz`),
+ * ob der Regelsatz sie traegt, entscheidet `validateConfig`. So entstehen die
+ * Vierertische des Bildschirms (Freunde- und Bot-Tisch); Suche und Lobby
+ * sehen davon nichts.
+ */
+export const SITZE_NUR_MIT_REGELSATZ: readonly number[] = [4];
 
 /**
  * Erlaubte Sitzzahlen je Spielart (Wunsch Niklas, 21.11.2026).

@@ -32,6 +32,7 @@ import {
   DEFAULT_REGELN,
   type FillerRegeln,
   SEAT_COUNTS,
+  SITZE_NUR_MIT_REGELSATZ,
   erlaubteSitze,
   farbzahl,
   pruefeRegeln,
@@ -61,6 +62,7 @@ const meta: GameMeta = {
   nameKey: 'game.filler',
   availability: 'playable',
   seatCounts: SEAT_COUNTS,
+  sitzeNurMitRegelsatz: SITZE_NUR_MIT_REGELSATZ,
   rotationSize: () => rotationSize(),
   suggestedRounds: () => suggestedRounds(),
   /**

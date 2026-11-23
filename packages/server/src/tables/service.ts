@@ -231,7 +231,15 @@ export async function createTable(db: Db, input: CreateTableInput) {
     clubId = null;
   }
 
-  if (!module.meta.seatCounts.includes(input.seats)) {
+  /*
+   * Auch eine Zahl aus `sitzeNurMitRegelsatz` (Filler zu viert, nur Extreme):
+   * Ob der Regelsatz sie traegt, entscheidet unten `validateConfig` — wer sie
+   * mit der Vorgabe oder einer anderen Spielart anfragt, scheitert dort.
+   */
+  if (
+    !module.meta.seatCounts.includes(input.seats) &&
+    !(module.meta.sitzeNurMitRegelsatz ?? []).includes(input.seats)
+  ) {
     throw badRequest('seatCountUnsupported');
   }
 

@@ -69,8 +69,23 @@ describe('Zu viert: welche Tische es gibt', () => {
     assert.ok(filler.validateConfig(alt, 4, 1).some((p) => p.path === 'farben'));
   });
 
-  it('die Meta bleibt bei [2] — die Match-Suche baut sonst Vierertische fuer jede Spielart', () => {
+  /*
+   * seatCounts verspricht: Die Vorgabe gilt auf jeder Zahl (game-api). Die
+   * Vier steht darum in sitzeNurMitRegelsatz — sonst baute die Suche jede
+   * Filler-Suche als Vierertisch, und plattform-invarianten.test.ts spielte
+   * die Vorgabe (Nebel) zu viert durch, was validateConfig abweist.
+   */
+  it('die Meta bietet [2] an, die Vier nur mit Regelsatz — und die Vorgabe traegt genau die [2]', () => {
     assert.deepEqual(filler.meta.seatCounts, [2]);
+    assert.deepEqual(filler.meta.sitzeNurMitRegelsatz, [4]);
+    for (const sitze of filler.meta.seatCounts) {
+      assert.deepEqual(filler.validateConfig(filler.defaultConfig(), sitze, 1), []);
+    }
+    assert.ok(filler.validateConfig(filler.defaultConfig(), 4, 1).some((p) => p.path === 'seats'));
+    // Jede Zahl aus SITZE_JE_SPIELART ist an genau einer der beiden Stellen gemeldet.
+    const gemeldet = [...filler.meta.seatCounts, ...(filler.meta.sitzeNurMitRegelsatz ?? [])].sort();
+    const erlaubt = [...new Set(Object.values(SITZE_JE_SPIELART).flat())].sort();
+    assert.deepEqual(gemeldet, erlaubt);
   });
 });
 
