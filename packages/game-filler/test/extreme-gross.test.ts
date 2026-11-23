@@ -22,6 +22,7 @@ import {
   mauerSperre,
   erstellePartie,
   fuehreAus,
+  fuehreAusOhneAutoEnde,
   kante,
   mauernAmFeld,
   moeglicheBarrieren,
@@ -496,7 +497,9 @@ describe('Andere Spielarten unveraendert', () => {
     assert.equal(p.regeln.zeilen, 7);
     const anfang = hash(kern(p));
     let n = 0;
-    while (!p.fertig && n++ < 400) p = fuehreAus(p, p.dran, wahl(p));
+    // Ohne Auto-Ende: Der Abdruck haelt den Stand von vorher fest; dass das
+    // Auto-Ende nur vorwegnimmt, prueft auto-ende.test.ts.
+    while (!p.fertig && n++ < 400) p = fuehreAusOhneAutoEnde(p, p.dran, wahl(p));
     assert.deepEqual([...p.mauerPause], [], 'bei einer Mauer je Zug gibt es keine Pause');
     return { anfang, ende: hash(kern(p)) };
   }

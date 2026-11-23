@@ -262,6 +262,28 @@ export interface FillerPartie {
    * (adapter.ts).
    */
   readonly aufgegeben: number | null;
+  /**
+   * Die Felder, die das automatische Ende verteilt hat, in der Reihenfolge,
+   * in der der Bildschirm sie zeigen soll — oder nichts.
+   *
+   * Steht nur in einer Partie, die so zu Ende ging (Wunsch Niklas,
+   * 21.11.2026): Sobald kein freies Feld mehr von zwei Sitzen erreichbar ist,
+   * gibt es nichts mehr zu entscheiden, nur noch abzuholen — und das Abholen
+   * Zug um Zug waere eine Pflichtuebung, bei der der Eingeschlossene seinem
+   * Gegner minutenlang zusieht. Siehe `autoEndeVerteilung`.
+   *
+   * Optional und nicht nachgeruestet: Eine Partie ohne das Feld — jede von
+   * vor dem 23.11.2026 und jede, die anders endet — hat schlicht keines
+   * erlebt. Ein `[]` waere dagegen eine Aussage ("Auto-Ende ohne Felder"),
+   * die nie stattfand.
+   */
+  readonly autoEnde?: readonly AutoEndeFeld[];
+}
+
+/** Ein Feld, das das automatische Ende einem Sitz zugeschlagen hat. */
+export interface AutoEndeFeld {
+  readonly platz: number;
+  readonly sitz: number;
 }
 
 export type FillerAktion =
@@ -937,7 +959,155 @@ function schlucke(
   return { besitzer, feld, gewonnen: geschluckt.length, geschluckt };
 }
 
+/**
+ * Ist kein freies Feld mehr umkaempft? Dann: wem gehoert welches.
+ *
+ * Umkaempft ist ein freies Feld, das ZWEI ODER MEHR Sitze noch erreichen —
+ * "erreichen" wie in `erreichbareFreie`: von ihrem Gebiet aus ueber freie
+ * Felder, nicht durch fremdes Gebiet, nicht durch Mauern. Gibt es keines
+ * mehr, steht das Ergebnis fest; jeder holt sich ohnehin nur noch sein
+ * eigenes Revier ab (Wunsch Niklas, 21.11.2026).
+ *
+ * Gerechnet wird ueber die ZUSAMMENHANGSKOMPONENTEN der freien Felder, nicht
+ * je Sitz einzeln: Alle Felder einer Komponente erreicht genau dieselbe Menge
+ * von Sitzen — wer an eine offene Kante der Komponente grenzt, kommt ueber
+ * freie Felder an jedes ihrer Felder. Also genuegt es, je Komponente die
+ * angrenzenden Sitze zu sammeln. Das gilt fuer beliebig viele Sitze.
+ *
+ * Rueckgabe `null`, wenn die Partie weiterlaeuft: weil eine Komponente noch
+ * an zwei Sitze grenzt — oder weil KEIN freies Feld mehr erreichbar ist.
+ * Im zweiten Fall gaebe es nichts zu verteilen; dort endet die Partie wie
+ * bisher ueber LEERZUEGE_MAX (Auftrag: bestehende Enden nicht aendern).
+ *
+ * Sonst die Zuteilung, ringweise geordnet: eine Breitensuche von ALLEN
+ * Gebieten zugleich, Abstand 1 vor Abstand 2. So kann der Bildschirm das
+ * Ende als Welle abspielen, die von jedem Gebiet aus nach aussen laeuft. Die
+ * Komponente bestimmt den Sitz, nicht die Suche — beides faellt zusammen,
+ * weil eine Komponente nur von ihrem einen Sitz aus betreten wird.
+ * Unerreichbare Felder fehlen in der Liste und bleiben Loecher.
+ */
+export function autoEndeVerteilung(partie: FillerPartie): AutoEndeFeld[] | null {
+  const { spalten, zeilen } = partie.regeln;
+  const sperren = new Set(partie.barrieren);
+  const { besitzer } = partie;
+
+  const kompVon: number[] = new Array(besitzer.length).fill(-1);
+  /** Der einzige angrenzende Sitz je Komponente, oder null (niemand). */
+  const kompSitz: (number | null)[] = [];
+  let irgendwasErreichbar = false;
+
+  for (let start = 0; start < besitzer.length; start++) {
+    if (besitzer[start] !== null || kompVon[start] !== -1) continue;
+    const nr = kompSitz.length;
+    const angrenzend = new Set<number>();
+    const stapel = [start];
+    kompVon[start] = nr;
+    while (stapel.length > 0) {
+      const platz = stapel.pop()!;
+      for (const n of offeneNachbarn(platz, spalten, zeilen, sperren)) {
+        const b = besitzer[n];
+        if (b !== null && b !== undefined) {
+          angrenzend.add(b);
+          continue;
+        }
+        if (kompVon[n] !== -1) continue;
+        kompVon[n] = nr;
+        stapel.push(n);
+      }
+    }
+    // Ein umkaempftes Feld genuegt: Die Partie laeuft weiter.
+    if (angrenzend.size >= 2) return null;
+    const [einziger] = angrenzend;
+    kompSitz.push(einziger ?? null);
+    if (einziger !== undefined) irgendwasErreichbar = true;
+  }
+  if (!irgendwasErreichbar) return null;
+
+  // Ringweise: Breitensuche von allen Gebieten zugleich, in Platzreihenfolge
+  // angestossen — damit dieselbe Partie immer dieselbe Liste ergibt.
+  const verteilt: AutoEndeFeld[] = [];
+  const gesehen = new Set<number>();
+  let ring: number[] = [];
+  for (let platz = 0; platz < besitzer.length; platz++) {
+    if (besitzer[platz] !== null) ring.push(platz);
+  }
+  while (ring.length > 0) {
+    const naechsterRing: number[] = [];
+    for (const platz of ring) {
+      for (const n of offeneNachbarn(platz, spalten, zeilen, sperren)) {
+        if (besitzer[n] !== null || gesehen.has(n)) continue;
+        const sitz = kompSitz[kompVon[n]!];
+        if (sitz === null || sitz === undefined) continue;
+        gesehen.add(n);
+        verteilt.push({ platz: n, sitz });
+        naechsterRing.push(n);
+      }
+    }
+    ring = naechsterRing;
+  }
+  return verteilt;
+}
+
+/**
+ * Beendet die Partie, wenn kein Feld mehr umkaempft ist, und verbucht die
+ * Felder so, als haette jeder sein Revier selbst geschluckt: Besitz, Farbe
+ * des Gebiets, ein Punkt je Feld und STERN_BONUS je Stern. Mauern bringt ein
+ * Stern hier keine mehr — die Partie ist vorbei, es gibt nichts zu bauen.
+ *
+ * Laeuft nur ueber eine Partie, die nicht schon anders zu Ende ist: Die
+ * alten Enden (kein Feld frei, LEERZUEGE_MAX, Aufgeben) bleiben, wie sie
+ * sind, und tragen kein `autoEnde`.
+ */
+function mitAutoEnde(partie: FillerPartie): FillerPartie {
+  if (partie.fertig) return partie;
+  const verteilt = autoEndeVerteilung(partie);
+  if (verteilt === null) return partie;
+
+  const besitzer = [...partie.besitzer];
+  const feld = [...partie.feld];
+  const punkte: Record<number, number> = { ...partie.punkte };
+  const sterne = new Set(partie.sterne);
+  for (const { platz, sitz } of verteilt) {
+    besitzer[platz] = sitz;
+    // Gebiet traegt die Gebietsfarbe — wie nach `schlucke`, sonst zeichnete
+    // der Bildschirm das Revier bunt gescheckt.
+    const gebietsfarbe = partie.farbe[sitz];
+    if (gebietsfarbe !== undefined) feld[platz] = gebietsfarbe;
+    punkte[sitz] = (punkte[sitz] ?? 0) + 1 + (sterne.has(platz) ? STERN_BONUS : 0);
+  }
+  return { ...partie, besitzer, feld, punkte, fertig: true, autoEnde: verteilt };
+}
+
 export function fuehreAus(
+  partie: FillerPartie,
+  sitz: number,
+  aktion: FillerAktion,
+): FillerPartie {
+  /*
+   * Das automatische Ende wird nach JEDEM Zug geprueft, Mauer wie Farbe.
+   * Nach einer Mauer greift es nach heutigen Regeln nie (Regel 2 in
+   * `moeglicheBarrieren` verbietet jede Mauer, die einem Sitz ein Feld
+   * nimmt — also auch jede, die ein umkaempftes Feld zu einem einseitigen
+   * macht). Geprueft wird trotzdem: Aendert sich die Mauerregel, soll das
+   * Ende nicht still einen Zug zu spaet kommen.
+   */
+  const danach = fuehreAusOhneAutoEnde(partie, sitz, aktion);
+  return aktion.typ === 'aufgeben' ? danach : mitAutoEnde(danach);
+}
+
+/**
+ * Ein Zug ohne die Pruefung auf das automatische Ende — NUR fuer den
+ * Pruefstand, nie fuer den Betrieb (der Adapter ruft `fuehreAus`).
+ *
+ * Der Grund ist die Beweisfuehrung der Fingerabdruck-Tests: Sie halten fest,
+ * dass Brett, Mauerregeln und Bot unveraendert sind, und tun das am ENDSTAND
+ * einer Bot-Partie. Das Auto-Ende verschiebt jeden dieser Endstaende — einen
+ * neu erzeugten Hash saehe man nicht an, ob nur das Ende vorgezogen wurde
+ * oder auch unterwegs etwas anders lief. Mit dieser Funktion laufen die alten
+ * Abdruecke unveraendert weiter, und `auto-ende.test.ts` zeigt getrennt, dass
+ * die Partie bis zum Auto-Ende Zug fuer Zug dieselbe ist.
+ */
+export function fuehreAusOhneAutoEnde(
   partie: FillerPartie,
   sitz: number,
   aktion: FillerAktion,
