@@ -304,12 +304,25 @@ function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): Wand
   if (!kandidaten || kandidaten.length === 0) return null;
   const { spalten, zeilen, feld, besitzer, ich, sperren, erreichbarMit, wertVon } = brett;
   const { erlaubt, felderVon, bewerteFuer } = brett;
+  /*
+   * "Der Gegner" sind ALLE anderen Sitze zusammen (seit dem 23.11.2026,
+   * Extreme zu viert): Ihre Gebiete gelten als ein Gebiet, von dem aus
+   * Erreichbarkeit, naechster Zug und Wegterm gerechnet werden. Eine Mauer
+   * lohnt so, wenn sie den anderen insgesamt mehr nimmt als mir — wem von
+   * ihnen, ist ihm gleich, jeder gegen jeden. Zu zweit ist das genau der eine
+   * Gegner, Feld fuer Feld in derselben Reihenfolge, und der Bot zieht wie
+   * vorher.
+   */
   const gegner = Object.keys(brett.farbe)
     .map(Number)
-    .find((s) => s !== ich);
-  if (gegner === undefined) return null;
+    .filter((s) => s !== ich);
+  if (gegner.length === 0) return null;
   const eigen = felderVon(ich);
-  const seine = felderVon(gegner);
+  const seine: number[] = [];
+  for (let platz = 0; platz < besitzer.length; platz++) {
+    const b = besitzer[platz];
+    if (b !== null && b !== undefined && b !== ich && gegner.includes(b)) seine.push(platz);
+  }
 
   /**
    * Alle freien Felder, die ein Sitz ueber freie Felder noch erreicht —

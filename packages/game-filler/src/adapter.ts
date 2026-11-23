@@ -32,6 +32,7 @@ import {
   DEFAULT_REGELN,
   type FillerRegeln,
   SEAT_COUNTS,
+  erlaubteSitze,
   farbzahl,
   pruefeRegeln,
   rotationSize,
@@ -119,7 +120,11 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
     if (probleme.length > 0) return probleme;
 
     const regeln = config as FillerRegeln;
-    if (!SEAT_COUNTS.includes(seats)) {
+    /*
+     * Nach Spielart und nicht nach `SEAT_COUNTS`: Extreme geht zu zweit und
+     * zu viert, alles andere nur zu zweit, zu dritt nichts (regeln.ts).
+     */
+    if (!erlaubteSitze(regeln).includes(seats)) {
       probleme.push({ path: 'seats', messageKey: 'error.seatCountUnsupported', severity: 'error' });
     }
     /*
@@ -127,7 +132,14 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
      * waere der Zug keine Entscheidung mehr, sondern eine Pflicht — und bei
      * genau einer verbleibenden Farbe zoege die Partie sich selbst zu Ende.
      */
-    if (farbzahl(regeln) - seats < 2) {
+    /*
+     * Zu viert gilt drei statt zwei: Die zwei, die zu zweit uebrig bleiben,
+     * sind eine echte Wahl zwischen zwei Seiten des eigenen Gebiets — zu
+     * viert grenzt man an drei Gegner, und die gesperrten Farben liegen
+     * ueberall am Rand. Ein Extreme-Tisch mit ausdruecklich sechs Farben
+     * (vor dem 23.09.2026 aufgemacht) bleibt deshalb ein Zweiertisch.
+     */
+    if (farbzahl(regeln) - seats < (seats > 2 ? 3 : 2)) {
       probleme.push({ path: 'farben', messageKey: 'ruleset.zuWenigFarben', severity: 'error' });
     }
     return probleme;
