@@ -441,6 +441,11 @@ export const DEFAULT_REGELN: FillerRegeln = {
  * nur Groessen, die die Vorgabe des Moduls besteht (zielSitze in
  * suche/vermittlung.ts), und die Vorgabe ist der Nebel: Gesucht wird weiter
  * zu zweit. Vierertische entstehen am Bildschirm (Freunde- und Bot-Tisch).
+ *
+ * Wer seatCounts sonst liest: die Suche (s. o.), der Tischbau (nimmt die Vier
+ * an, validateConfig weist sie ausserhalb von Extreme ab), die Lobby (erreicht
+ * Filler nicht, App.tsx leitet um) und die Spielkarte ("2, 4"). Server-seitig
+ * haelt packages/server/test/suche-zielsitze.test.ts beides fest.
  */
 export const SEAT_COUNTS: readonly number[] = [2, 4];
 

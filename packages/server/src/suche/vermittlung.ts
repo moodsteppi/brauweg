@@ -12,7 +12,7 @@
  * aus `anreicherung.ts`. Wozu es sie gibt, steht dort.
  */
 
-import type { GameId } from '@brauweg/game-api';
+import type { AnyGameModule, GameId } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
 import { RuleSetInvalidError } from '../errors.js';
@@ -68,14 +68,26 @@ export interface VermittlungOptionen extends SchlangeOptionen {
  * die Vorgabe keine einzige an, ebenfalls (dann ist das ein anderer Fehler,
  * und den soll der Tischbau melden, nicht diese Zeile verschlucken).
  */
-function zielSitze(gameId: GameId): number {
-  const module = requireModule(gameId);
+export function zielSitze(gameId: GameId): number {
+  return tragfaehigeZielSitze(requireModule(gameId), (sitze) => runden(gameId, sitze));
+}
+
+/**
+ * Der Kern von `zielSitze`, ohne Registry — damit die Auswahl mit einem
+ * erfundenen Modul pruefbar ist (test/suche-zielsitze.test.ts). Mit den
+ * echten Spielen allein liesse sich der Rueckfall ("die Vorgabe besteht
+ * nirgends") nie zeigen, und genau der soll nicht still zur Zwei werden.
+ */
+export function tragfaehigeZielSitze(
+  module: Pick<AnyGameModule, 'meta' | 'defaultConfig' | 'validateConfig'>,
+  rundenFuer: (sitze: number) => number,
+): number {
   const counts = module.meta.seatCounts;
   const vorgabe = module.defaultConfig();
   const tragfaehig = counts.filter(
     (sitze) =>
       !module
-        .validateConfig(vorgabe, sitze, runden(gameId, sitze))
+        .validateConfig(vorgabe, sitze, rundenFuer(sitze))
         .some((p) => p.severity === 'error'),
   );
   return Math.max(...(tragfaehig.length > 0 ? tragfaehig : counts));
