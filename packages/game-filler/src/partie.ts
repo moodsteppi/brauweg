@@ -127,6 +127,19 @@ export const GRAUTOENE = 5;
 export const LEERZUEGE_MAX = 6;
 
 /**
+ * Die Leerzug-Grenze fuer eine Partie mit `anzahl` Sitzen: LEERZUEGE_MAX zu
+ * zweit, zu viert das Doppelte.
+ *
+ * Gemeint sind drei leere RUNDEN, nicht sechs Zuege. Zu viert waeren sechs
+ * Zuege anderthalb Runden, und die Partie endete schon, wenn zwei
+ * eingeschlossene Sitze und zwei Pechvoegel hintereinander nichts holen —
+ * waehrend um ein Feld noch gespielt wird.
+ */
+export function leerzuegeGrenze(anzahl: number): number {
+  return anzahl > 2 ? Math.ceil((LEERZUEGE_MAX * anzahl) / 2) : LEERZUEGE_MAX;
+}
+
+/**
  * So viele Zuege zu Beginn sind mauerfrei — ueber beide Sitze gezaehlt.
  *
  * Drei: der erste Zug beider und der zweite des Anfaengers. Erst der zweite
@@ -481,14 +494,47 @@ export function erstellePartie(
    * hier stehen nur noch die beiden Felder im Snapshot, und nur in den
    * Spielarten, die einen haben — eine Nebel-Partie sieht aus wie vorher.
    */
+  /*
+   * Zu viert (Extreme, seit dem 23.11.2026) OHNE Ausgleich: Die Zahlen in
+   * AUSGLEICH_JE_SPIELART sind zu zweit gemessen und gelten dem einen
+   * Nachziehenden. Zu viert gibt es drei, und wer davon wie viel braucht,
+   * misst erst die Folgekarte (werkzeug/zu-viert.mjs) — bis dahin bekommt
+   * niemand etwas, statt dass Sitz 1 zwei Mauern aus der falschen Messung
+   * erbt.
+   */
+  const mitAufbau = aufbauFuer(regeln);
+  // Auch ein ausdruecklich mitgeschickter Zuschlag faellt zu viert weg.
+  const {
+    barrierenZuschlagSitz1: _mauerZuschlag,
+    punkteZuschlagSitz1: _punktZuschlag,
+    ...ohneAusgleich
+  } = mitAufbau;
   const {
     farbenJeSpielart: _jeSpielart,
     aufbauJeSpielart: _aufbau,
     ausgleichJeSpielart: _ausgleich,
     ...ohneTabelle
-  } = ausgleichFuer(aufbauFuer(regeln));
+  } = sitze.length === 2 ? ausgleichFuer(mitAufbau) : ohneAusgleich;
+  /*
+   * Die mauerfreie Eroeffnung zaehlt Zuege ueber ALLE Sitze, gemeint ist sie
+   * aber je Spieler: In Extreme "drei Runden je Spieler, also sechs Zuege"
+   * (AUFBAU_JE_SPIELART). Zu viert waeren sechs Zuege anderthalb Runden —
+   * der dritte und vierte Sitz duerften schon in ihrem zweiten Zug mauern.
+   * Also hochrechnen, damit jeder gleich viele Runden frei hat; zu zweit
+   * bleibt die Zahl, wie sie ist (und wird auch nicht neu in den Snapshot
+   * geschrieben).
+   */
+  const eroeffnung =
+    sitze.length > 2
+      ? {
+          mauerfreieZuege: Math.ceil(
+            ((ohneTabelle.mauerfreieZuege ?? MAUERFREIE_ZUEGE) * sitze.length) / 2,
+          ),
+        }
+      : {};
   const gueltigeRegeln: FillerRegelnFest = {
     ...ohneTabelle,
+    ...eroeffnung,
     /*
      * Die Farbzahl steht ab hier fest in der Partie, die Tabelle je Spielart
      * nicht: Sie beschreibt nur, womit ein Tisch AUFGEMACHT wird, und stuende
@@ -524,11 +570,18 @@ export function erstellePartie(
    * wie davor.
    */
   const paare = gueltigeRegeln.sternPaare ?? 0;
+  /*
+   * Zu viert liegen die Sterne vierfach gespiegelt (zieheSternViertel), damit
+   * JEDE Ecke dieselben Wege hat — die Punktspiegelung allein stellt nur die
+   * zwei Ecken einer Diagonale gleich. Zu zweit bleibt alles, wie es war.
+   */
   const sterne = !mitSternen(gueltigeRegeln.variante)
     ? []
-    : paare > 0
-      ? zieheSternPaare(spalten, zeilen, sitze, paare, zufall)
-      : zieheSterne(spalten, zeilen, sitze, zufall);
+    : sitze.length === 4
+      ? zieheSternViertel(spalten, zeilen, sitze, Math.max(1, Math.ceil(paare / 2)), zufall)
+      : paare > 0
+        ? zieheSternPaare(spalten, zeilen, sitze, paare, zufall)
+        : zieheSterne(spalten, zeilen, sitze, zufall);
 
   const besitzer: (number | null)[] = new Array(feld.length).fill(null);
   const farbe: Record<number, number> = {};
@@ -544,7 +597,9 @@ export function erstellePartie(
      * Auswahl mehr als jeder folgende. Die Ecken liegen weit auseinander, das
      * Brett verbietet also nichts — hier wird eine Farbe gesucht, die weder
      * ein Nachbar noch eine andere Ecke schon traegt. Bei sechs Farben und
-     * hoechstens fuenf Sperren gibt es die immer.
+     * hoechstens fuenf Sperren gibt es die immer — zu viert (nur Extreme,
+     * sieben Farben) sind es hoechstens drei Ecken und zwei Nachbarn, also
+     * ebenfalls fuenf.
      */
     if (belegt.has(feld[ecke]!)) {
       const verboten = new Set<number>(belegt);
@@ -698,6 +753,77 @@ function zieheSternPaare(
     kandidaten = kandidaten.filter(
       (p) => schritte(p, stern, spalten) >= 3 && schritte(p, gegenstueck, spalten) >= 3,
     );
+  }
+  return sterne.sort((a, b) => a - b);
+}
+
+/**
+ * Die vier Spiegelbilder eines Platzes: er selbst, an der senkrechten
+ * Mittelachse gespiegelt, an der waagrechten, und an beiden (= an der Mitte
+ * punktgespiegelt, `spiegelPlatz`). Mehrfach, wenn er auf einer Achse liegt.
+ */
+export function viertelBilder(platz: number, spalten: number, zeilen: number): number[] {
+  const x = platz % spalten;
+  const y = Math.floor(platz / spalten);
+  const xs = spalten - 1 - x;
+  const ys = zeilen - 1 - y;
+  return [y * spalten + x, y * spalten + xs, ys * spalten + x, ys * spalten + xs];
+}
+
+/**
+ * Sterne zu viert: je ein Stern mit seinen drei Spiegelbildern
+ * (`viertelBilder`), `gruppen` Vierergruppen (seit dem 23.11.2026, Extreme
+ * zu viert).
+ *
+ * Vierfach, weil jetzt alle vier Ecken besetzt sind: Die beiden Spiegelungen
+ * an den Mittelachsen bilden jede Ecke auf jede andere ab (unten links ->
+ * unten rechts, -> oben links, -> oben rechts), und die Sternmenge bleibt
+ * unter beiden gleich. Jeder Sitz hat also zu seinen Sternen genau die Wege,
+ * die jeder andere zu seinen hat. Das 12 x 11-Brett ist nicht quadratisch,
+ * die Diagonalspiegelung gibt es deshalb nicht — und sie braucht es auch
+ * nicht, die Ecken sind schon ohne sie gleich.
+ *
+ * Wie viele: so viele Sterne wie zu zweit (vier Paare = acht Sterne = zwei
+ * Gruppen), nicht vier je Spieler. Das Brett bleibt 12 x 11 (Wunsch Niklas),
+ * jeder hat zu viert nur das halbe Revier — dieselbe Sterndichte ist dieselbe
+ * Spielart, doppelt so viele Sterne waeren eine andere.
+ *
+ * Die Bedingungen wie bei den Paaren: nicht auf oder neben einer Startecke,
+ * Abstand mindestens drei zu jedem anderen Stern, auch innerhalb der Gruppe.
+ * Dass die Pruefung gegen die bisherigen Sterne fuer die ganze Gruppe reicht,
+ * hat denselben Grund wie dort: Verbotene Ecken und Abstaende sind unter den
+ * Spiegelungen gleich, und die bisherige Sternmenge ist es auch. Innerhalb
+ * der Gruppe fallen alle Plaetze weg, die naeher als drei an einer
+ * Mittelachse liegen; auf 12 x 11 bleibt je Viertel ein Feld von 5 x 4 ohne
+ * Ecke und Eckennachbarn, also 17 Plaetze — zwei Gruppen passen immer, und
+ * mehr als vier gibt die Raute mit Radius zwei auch nicht her (die Schleife
+ * hoert dann einfach auf).
+ */
+function zieheSternViertel(
+  spalten: number,
+  zeilen: number,
+  sitze: readonly number[],
+  gruppen: number,
+  zufall: () => number,
+): number[] {
+  const verboten = eckenUndNachbarn(spalten, zeilen, sitze);
+  const bilder = (p: number): number[] => viertelBilder(p, spalten, zeilen);
+  const sterne: number[] = [];
+  let kandidaten = Array.from({ length: spalten * zeilen }, (_, p) => p).filter((p) => {
+    const gruppe = bilder(p);
+    if (gruppe.some((q) => verboten.has(q))) return false;
+    // Alle vier verschieden und paarweise mindestens drei Schritte auseinander.
+    for (let i = 0; i < gruppe.length; i++) {
+      for (let j = i + 1; j < gruppe.length; j++) {
+        if (schritte(gruppe[i]!, gruppe[j]!, spalten) < 3) return false;
+      }
+    }
+    return true;
+  });
+  while (sterne.length < gruppen * 4 && kandidaten.length > 0) {
+    const gruppe = bilder(kandidaten[Math.floor(zufall() * kandidaten.length)]!);
+    sterne.push(...gruppe);
+    kandidaten = kandidaten.filter((p) => gruppe.every((q) => schritte(p, q, spalten) >= 3));
   }
   return sterne.sort((a, b) => a - b);
 }
@@ -1142,6 +1268,12 @@ export function fuehreAusOhneAutoEnde(
    */
   if (aktion.typ === 'aufgeben') {
     if (!(sitz in partie.punkte)) throw new Error('Sitz spielt nicht mit');
+    /*
+     * Zu viert (Extreme) endet die Partie damit ebenfalls fuer ALLE: Wer
+     * aufgibt, steht hinten, die anderen drei nach Punkten. Ein Ausscheiden
+     * mit Weiterspielen braeuchte Zugfolge, Farbsperre und Auto-Ende ohne den
+     * Sitz — das ist eine eigene Karte, kein Nebeneffekt dieser.
+     */
     return { ...partie, fertig: true, aufgegeben: sitz, mauernDiesenZug: 0 };
   }
   if (partie.dran !== sitz) throw new Error('Nicht am Zug');
@@ -1232,7 +1364,7 @@ export function fuehreAusOhneAutoEnde(
     dran: naechster,
     zug: partie.zug + 1,
     leerzuege,
-    fertig: !frei || leerzuege >= LEERZUEGE_MAX,
+    fertig: !frei || leerzuege >= leerzuegeGrenze(sitze.length),
     // Der Zug ist vorbei, der naechste faengt wieder bei null an.
     mauernDiesenZug: 0,
     mauerPause,
@@ -1265,7 +1397,9 @@ export function platzierungen(
    * `createParty` vergibt 0 und 1, und Sitz 0 zieht zuerst. Fehlt er im
    * Regelsatz (jeder Tisch vor dem 07.11.2026), ist er 0.
    */
-  const zuschlag = punkteZuschlagSitz1(partie.regeln);
+  // Zu viert gibt es keinen (erstellePartie laesst ihn dort weg); die
+  // Bedingung haelt das auch fuer einen von Hand gebauten Zustand fest.
+  const zuschlag = sitze.length === 2 ? punkteZuschlagSitz1(partie.regeln) : 0;
   const reihe = sitze
     .map((seat) => ({
       seat,

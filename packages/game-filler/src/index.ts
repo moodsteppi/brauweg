@@ -4,6 +4,8 @@ export {
   AUSGLEICH_JE_SPIELART,
   DEFAULT_REGELN,
   SEAT_COUNTS,
+  SITZE_JE_SPIELART,
+  erlaubteSitze,
   type SpielartAufbau,
   type SpielartAusgleich,
   aufbauFuer,
@@ -26,6 +28,7 @@ export {
 export {
   GRAUTOENE,
   LEERZUEGE_MAX,
+  leerzuegeGrenze,
   MAUERFREIE_ZUEGE,
   STERNE_ANZAHL,
   STERN_BONUS,
@@ -47,6 +50,7 @@ export {
   sieger,
   spiegelPlatz,
   startEcke,
+  viertelBilder,
   vonIrgendwemErreichbareFreie,
 } from './partie.js';
 export { type FillerSicht, sichtFuer, zuschauerSicht } from './sicht.js';

@@ -431,14 +431,40 @@ export const DEFAULT_REGELN: FillerRegeln = {
 };
 
 /**
- * Nur zu zweit.
+ * Was die Plattform als Tischgroesse anbietet: nur zwei.
  *
- * Vier Ecken gaebe vier Sitze her, aber jeder weitere Sitz sperrt eine
- * weitere Farbe: Zu viert blieben von sechs Farben zwei uebrig, und mit zwei
- * Farben ist der Zug keine Entscheidung mehr. Wer das aufmacht, braucht
- * zuerst mehr Farben.
+ * Extreme geht seit dem 23.11.2026 auch zu viert (`SITZE_JE_SPIELART`), die
+ * Meta sagt es trotzdem noch nicht — mit Absicht. Die Match-Suche baut den
+ * GROESSTEN Tisch aus `seatCounts` (zielSitze in suche/vermittlung.ts) und
+ * kennt die Spielart dabei nicht: Mit `[2, 4]` hier saesse jede Filler-Suche
+ * an einem Vierertisch, auch in Klar und im Nebel, und `validateConfig`
+ * wiese genau diese Tische ab. Hochgesetzt wird erst mit der Folgekarte fuer
+ * Suche und Bildschirm, die die Sitzzahl nach Spielart waehlen.
  */
 export const SEAT_COUNTS: readonly number[] = [2];
+
+/**
+ * Erlaubte Sitzzahlen je Spielart (Wunsch Niklas, 21.11.2026).
+ *
+ * Nur Extreme zu viert, jeder gegen jeden: Jeder Sitz sperrt eine Farbe, und
+ * erst mit den sieben Farben von Extreme bleiben zu viert drei zur Wahl —
+ * mit sechs waeren es zwei, und dann ist der Zug keine Entscheidung mehr.
+ * Zu dritt NICHT: Drei Ecken von vieren sind nicht gleich, einer saesse
+ * zwischen zwei Gegnern und einer neben der leeren Ecke. Freie Plaetze
+ * eines Vierertisches fuellen Bots, nicht ein kleinerer Tisch.
+ */
+export const SITZE_JE_SPIELART = {
+  nebel: [2],
+  klar: [2],
+  build: [2],
+  extreme: [2, 4],
+} as const satisfies Record<FillerVariante, readonly number[]>;
+
+/** Die Sitzzahlen, die ein Regelsatz zulaesst; ohne Spielart gilt der Nebel. */
+export function erlaubteSitze(regeln: Pick<FillerRegeln, 'variante'>): readonly number[] {
+  const variante = istVariante(regeln.variante) ? regeln.variante : 'nebel';
+  return SITZE_JE_SPIELART[variante];
+}
 
 /** Eine Partie ist ein Brett. Es gibt nichts zu rotieren. */
 export function rotationSize(): number {
