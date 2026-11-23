@@ -187,3 +187,109 @@ test('Statistik: Tagessummen, Konten und Codes — ohne Personen', async (t) => 
   assert.deepEqual(d.codes, { offen: 0, eingeloest: 0, muenzenEingeloest: 0 });
   assert.doesNotMatch(res.body, /Dora/, 'keine Namen');
 });
+
+// ---------------------------------------------------------------------------
+// Aktionscodes (Adventskalender, 23.11.2026): einer fuer alle, je Konto einmal.
+// ---------------------------------------------------------------------------
+
+const einloesen = (s: Awaited<ReturnType<typeof setup>>, kopf: Record<string, string>, code: string) =>
+  s.app.inject({ method: 'POST', url: '/api/me/code', headers: kopf, payload: { code } });
+
+test('Aktionscode: zwei Konten bekommen beide die Belohnung, dasselbe Konto nur einmal', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const anna = await s.gast('Anna');
+  const ben = await s.gast('Ben');
+  const vorherA = await s.muenzen(anna.id);
+  const vorherB = await s.muenzen(ben.id);
+
+  // Der Testcode aus der Migration: 50 Muenzen, sofort gueltig.
+  const a = await einloesen(s, anna.kopf, 'bw advt vq4x');
+  assert.equal(a.statusCode, 200, a.body);
+  assert.equal(a.json().muenzen, 50);
+  assert.deepEqual(a.json().items, []);
+  assert.equal(await s.muenzen(anna.id), vorherA + 50);
+
+  const b = await einloesen(s, ben.kopf, 'BW-ADVT-VQ4X');
+  assert.equal(b.statusCode, 200, b.body);
+  assert.equal(await s.muenzen(ben.id), vorherB + 50);
+
+  const nochmal = await einloesen(s, anna.kopf, 'BW-ADVT-VQ4X');
+  assert.equal(nochmal.statusCode, 400);
+  assert.equal(nochmal.json().code, 'codeUngueltig');
+  assert.equal(await s.muenzen(anna.id), vorherA + 50, 'kein zweites Mal');
+});
+
+test('Aktionscode: vor gueltig_ab, nach gueltig_bis und gesperrt sehen aus wie unbekannt', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const tag = 24 * 3600 * 1000;
+  await s.ctx.db.insert(schema.aktionsCode).values([
+    { code: 'BW-CCCC-AAAA', muenzen: 10, gueltigAb: new Date(Date.now() + tag) },
+    { code: 'BW-CCCC-DDDD', muenzen: 10, gueltigAb: new Date(Date.now() - 2 * tag), gueltigBis: new Date(Date.now() - tag) },
+    { code: 'BW-CCCC-EEEE', muenzen: 10, gesperrt: true },
+  ]);
+  const cara = await s.gast('Cara');
+  for (const code of ['BW-CCCC-AAAA', 'BW-CCCC-DDDD', 'BW-CCCC-EEEE']) {
+    const r = await einloesen(s, cara.kopf, code);
+    assert.equal(r.statusCode, 400, code);
+    assert.equal(r.json().code, 'codeUngueltig', code);
+  }
+  // Die Tuerchen des Kalenders sind vor ihrem Tag noch zu (heute ist vor dem 1.12.2026 oder danach eben offen).
+  const tuer24 = await s.ctx.db.select().from(schema.aktionsCode).where(eq(schema.aktionsCode.code, 'BW-ADVT-G6YJ'));
+  assert.equal(tuer24[0]!.gueltigAb.toISOString(), '2026-12-23T23:00:00.000Z', 'Tuer 24 ab 24.12. 00:00 Uhr Berlin');
+});
+
+test('Aktionscode: Skin und Muenzen zusammen, Skin nur einmal im Besitz', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  await s.ctx.db.insert(schema.aktionsCode).values({ code: 'BW-CCCC-FFFF', muenzen: 500, items: ['hut-krone'] });
+  await s.ctx.db.insert(schema.aktionsCode).values({ code: 'BW-CCCC-GGGG', muenzen: 0, items: ['hut-krone', 'hut-zylinder'] });
+  const dora = await s.gast('Dora');
+  const vorher = await s.muenzen(dora.id);
+
+  const r = await einloesen(s, dora.kopf, 'BW-CCCC-FFFF');
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().muenzen, 500);
+  assert.deepEqual(r.json().items, ['hut-krone']);
+  assert.equal(await s.muenzen(dora.id), vorher + 500);
+
+  // Nur Skins: keine Muenzen, der Stand bleibt, die Krone wird nicht doppelt eingetragen.
+  const nurSkin = await einloesen(s, dora.kopf, 'BW-CCCC-GGGG');
+  assert.equal(nurSkin.statusCode, 200, nurSkin.body);
+  assert.equal(nurSkin.json().muenzen, 0);
+  assert.equal(nurSkin.json().stand, vorher + 500);
+  const besitz = await s.ctx.db
+    .select({ id: schema.accountCosmetic.itemId })
+    .from(schema.accountCosmetic)
+    .where(eq(schema.accountCosmetic.accountId, dora.id));
+  assert.deepEqual(besitz.map((b) => b.id).sort(), ['hut-krone', 'hut-zylinder']);
+});
+
+test('Aktionscode: aus der App abgewiesen (Apple 3.1.1)', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const emil = await s.gast('Emil');
+  const r = await s.app.inject({
+    method: 'POST',
+    url: '/api/me/code',
+    headers: { ...emil.kopf, origin: APP_ORIGIN },
+    payload: { code: 'BW-ADVT-VQ4X' },
+  });
+  assert.equal(r.statusCode, 403);
+});
+
+test('Adventskalender: alle 25 Codes lesbar, jede Belohnung im Katalog', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const { KATALOG } = await import('../src/kosmetik.js');
+  const ids = new Set(KATALOG.map((k) => k.id));
+  const codes = await s.ctx.db.select().from(schema.aktionsCode);
+  const advent = codes.filter((c) => c.code.startsWith('BW-ADVT-'));
+  assert.equal(advent.length, 25);
+  for (const c of advent) {
+    assert.equal(normalisiereCode(c.code), c.code, c.code);
+    for (const item of c.items) assert.ok(ids.has(item), `${c.code}: ${item} fehlt im KATALOG`);
+    assert.ok(c.muenzen > 0 || c.items.length > 0, c.code);
+  }
+});

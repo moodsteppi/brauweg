@@ -78,6 +78,7 @@ export default {
   'anmeldung.code.titel': 'Redeem code',
   'anmeldung.code.feld': 'Code',
   'anmeldung.code.gutgeschrieben': '{muenzen} coins added.',
+  'anmeldung.code.freigeschaltet': '“{name}” unlocked.',
   'anmeldung.code.laeuft': 'Redeeming…',
   'anmeldung.code.einloesen': 'Redeem',
 

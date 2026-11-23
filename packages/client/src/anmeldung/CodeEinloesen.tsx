@@ -13,6 +13,17 @@ import { tf } from '../i18n/einsetzen';
  * ebenfalls ab (server/src/muenzcodes.ts). Die Muenzen gelten danach auf
  * jedem Geraet — es ist dasselbe Konto.
  */
+/**
+ * Aktionscodes (Adventskalender) koennen statt oder neben Muenzen Kosmetik
+ * schenken. Ein reiner Skin-Code meldet keine „0 Münzen".
+ */
+function meldungFuer(muenzen: number, items: readonly string[]): string {
+  const teile: string[] = [];
+  if (muenzen > 0) teile.push(tf('anmeldung.code.gutgeschrieben', { muenzen: zahl(muenzen) }));
+  for (const id of items) teile.push(tf('anmeldung.code.freigeschaltet', { name: t(`kosmetik.${id}`) }));
+  return teile.join(' ');
+}
+
 export function CodeEinloesen({ onEingeloest }: { onEingeloest?: () => void }): React.JSX.Element {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,7 +38,7 @@ export function CodeEinloesen({ onEingeloest }: { onEingeloest?: () => void }): 
     setMeldung(null);
     try {
       const antwort = await api.codeEinloesen(code.trim());
-      setMeldung(tf('anmeldung.code.gutgeschrieben', { muenzen: zahl(antwort.muenzen) }));
+      setMeldung(meldungFuer(antwort.muenzen, antwort.items ?? []));
       setCode('');
       onEingeloest?.();
     } catch (err) {

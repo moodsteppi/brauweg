@@ -18,13 +18,14 @@
 
 import { randomInt } from 'node:crypto';
 
-import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
 
 import type { Db } from './db/types.js';
 import * as s from './db/schema.js';
 import { badRequest, notFound } from './errors.js';
+import { schenken } from './kosmetik.js';
 import { zaehle } from './statistik.js';
-import { gutschreiben } from './waehrung.js';
+import { gutschreiben, standVon } from './waehrung.js';
 
 /**
  * Ohne 0/O, 1/I/L, 5/S, 2/Z, 8/B: Codes werden abgetippt, von einem Zettel
@@ -108,11 +109,20 @@ export async function sperreCode(db: Db, id: string): Promise<void> {
  * Einloesen. Unbekannt, verbraucht, gesperrt und abgelaufen bekommen dieselbe
  * Antwort (`codeUngueltig`): Wer probiert, soll nicht erfahren, dass er einen
  * echten Code getroffen hat, den nur schon jemand anderes hatte.
+ *
+ * Zuerst der Einmal-Code (muenz_code), dann der Aktionscode (aktions_code,
+ * Adventskalender ab 23.11.2026): einer fuer alle, je Konto einmal. Beide
+ * Tabellen teilen sich das Format, ein Code steht nur in einer von beiden.
  */
-export async function loeseCodeEin(db: Db, accountId: string, eingabe: string): Promise<{ muenzen: number; stand: number }> {
+export async function loeseCodeEin(
+  db: Db,
+  accountId: string,
+  eingabe: string,
+): Promise<{ muenzen: number; stand: number; items: string[] }> {
   const code = normalisiereCode(eingabe);
   if (!code) throw badRequest('codeUngueltig');
   return db.transaction(async (tx) => {
+    const tdb = tx as unknown as Db;
     const [treffer] = await tx
       .update(s.muenzCode)
       .set({ eingeloestVon: accountId, eingeloestAm: new Date() })
@@ -125,11 +135,52 @@ export async function loeseCodeEin(db: Db, accountId: string, eingabe: string): 
         ),
       )
       .returning({ muenzen: s.muenzCode.muenzen });
-    if (!treffer) throw badRequest('codeUngueltig');
-    const stand = await gutschreiben(tx as unknown as Db, accountId, 'coins', treffer.muenzen);
-    zaehle('code_eingeloest');
-    return { muenzen: treffer.muenzen, stand };
+    if (treffer) {
+      const stand = await gutschreiben(tdb, accountId, 'coins', treffer.muenzen);
+      zaehle('code_eingeloest');
+      return { muenzen: treffer.muenzen, stand, items: [] };
+    }
+    return loeseAktionsCodeEin(tdb, accountId, code);
   });
+}
+
+/**
+ * Aktionscode: Die Sperre gegen das zweite Einloesen ist der Primaerschluessel
+ * (code_id, account_id). ON CONFLICT DO NOTHING statt Vorab-Lesen, damit zwei
+ * gleichzeitige Klicks desselben Kontos nicht beide durchkommen.
+ */
+async function loeseAktionsCodeEin(
+  tx: Db,
+  accountId: string,
+  code: string,
+): Promise<{ muenzen: number; stand: number; items: string[] }> {
+  const [aktion] = await tx
+    .select({ id: s.aktionsCode.id, muenzen: s.aktionsCode.muenzen, items: s.aktionsCode.items })
+    .from(s.aktionsCode)
+    .where(
+      and(
+        eq(s.aktionsCode.code, code),
+        eq(s.aktionsCode.gesperrt, false),
+        lte(s.aktionsCode.gueltigAb, sql`now()`),
+        or(isNull(s.aktionsCode.gueltigBis), gt(s.aktionsCode.gueltigBis, sql`now()`)),
+      ),
+    );
+  if (!aktion) throw badRequest('codeUngueltig');
+
+  const [neu] = await tx
+    .insert(s.aktionsCodeEinloesung)
+    .values({ codeId: aktion.id, accountId })
+    .onConflictDoNothing()
+    .returning({ codeId: s.aktionsCodeEinloesung.codeId });
+  if (!neu) throw badRequest('codeUngueltig');
+
+  if (aktion.items.length > 0) await schenken(tx, accountId, aktion.items);
+  const stand =
+    aktion.muenzen > 0
+      ? await gutschreiben(tx, accountId, 'coins', aktion.muenzen)
+      : (await standVon(tx, accountId)).coins;
+  zaehle('aktionscode_eingeloest');
+  return { muenzen: aktion.muenzen, stand, items: aktion.items };
 }
 
 function sicht(z: typeof s.muenzCode.$inferSelect, name: string | null): CodeSicht {

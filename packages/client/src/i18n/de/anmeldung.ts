@@ -77,6 +77,7 @@ export default {
   'anmeldung.code.titel': 'Code einlösen',
   'anmeldung.code.feld': 'Code',
   'anmeldung.code.gutgeschrieben': '{muenzen} Münzen gutgeschrieben.',
+  'anmeldung.code.freigeschaltet': '„{name}“ freigeschaltet.',
   'anmeldung.code.laeuft': 'Wird eingelöst…',
   'anmeldung.code.einloesen': 'Einlösen',
 
