@@ -22,6 +22,7 @@ import {
   erlaubteZuege,
   erstellePartie,
   fuehreAus,
+  fuehreAusOhneAutoEnde,
   mauerSperre,
   moeglicheBarrieren,
   platzierungen,
@@ -382,7 +383,9 @@ describe('Wertung ohne Aufgabe unveraendert', () => {
     let n = 0;
     while (!p.fertig && n++ < 600) {
       if (p.zug === 8 && !mitte) mitte = p;
-      p = fuehreAus(p, p.dran, wahl(p));
+      // Ohne Auto-Ende: Der Abdruck haelt den Stand von vorher fest; dass das
+      // Auto-Ende nur vorwegnimmt, prueft auto-ende.test.ts.
+      p = fuehreAusOhneAutoEnde(p, p.dran, wahl(p));
     }
     assert.ok(mitte);
     const gestellt = [

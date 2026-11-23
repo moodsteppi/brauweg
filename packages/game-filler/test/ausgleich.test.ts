@@ -23,6 +23,7 @@ import {
   type FillerPartie,
   erstellePartie,
   fuehreAus,
+  fuehreAusOhneAutoEnde,
   platzierungen,
   sieger,
 } from '../src/partie.js';
@@ -336,7 +337,9 @@ describe('Ausgleich: Fingerabdruecke der Bot-Partie mit voller Vorgabe', () => {
       const saat = /^\d+$/.test(saatText) ? Number(saatText) : saatText;
       let p = erstellePartie({ ...DEFAULT_REGELN, variante }, [0, 1], saat);
       let n = 0;
-      while (!p.fertig && n++ < 600) p = fuehreAus(p, p.dran, botZug(sichtFuer(p, p.dran)));
+      // Ohne Auto-Ende: Der Abdruck haelt den Stand von vorher fest; dass das
+      // Auto-Ende nur vorwegnimmt, prueft auto-ende.test.ts.
+      while (!p.fertig && n++ < 600) p = fuehreAusOhneAutoEnde(p, p.dran, botZug(sichtFuer(p, p.dran)));
       const ist = hash({
         regeln: p.regeln,
         punkte: p.punkte,

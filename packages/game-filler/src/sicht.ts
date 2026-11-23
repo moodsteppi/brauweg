@@ -20,7 +20,7 @@
  *     Brett. Er sagt, WIE VIELE Felder der Gegner haelt, nicht welche.
  */
 
-import type { FillerPartie } from './partie.js';
+import type { AutoEndeFeld, FillerPartie } from './partie.js';
 import { mauerSperre, moeglicheBarrieren, nachbarn, sieger } from './partie.js';
 import {
   type FillerVariante,
@@ -147,6 +147,17 @@ export interface FillerSicht {
    * nicht passt) — wer gewonnen hat, steht schon in `sieger`.
    */
   readonly aufgegeben: number | null;
+  /**
+   * Die Felder, die das automatische Ende verteilt hat, in Abspielreihenfolge
+   * (ringweise vom jeweiligen Gebiet aus) — nur in einer Partie, die so zu
+   * Ende ging, und erst, wenn sie zu Ende IST.
+   *
+   * Erst dann, weil die Liste Plaetze und Besitzer nennt: Im Nebel verriete
+   * sie vorher, wo der Gegner sein Revier hat. Nach dem Ende ist das kein
+   * Geheimnis mehr. Der Bildschirm spielt sie als Welle ab; welche Felder
+   * dazugehoeren, rechnet allein das Modul.
+   */
+  readonly autoEnde?: readonly AutoEndeFeld[];
 }
 
 /**
@@ -205,6 +216,9 @@ function grundsicht(
     mauernJeFeld: mitBarrieren(partie.regeln.variante) ? (partie.regeln.mauernJeFeld ?? 0) : 0,
     mauerPause: partie.mauerPause,
     aufgegeben: partie.aufgegeben,
+    // Nie vor dem Ende, auch wenn das Feld nur am fertigen Zustand haengt:
+    // Die Sicht ist die einzige Stelle, an der der Nebel gehalten wird.
+    ...(partie.fertig && partie.autoEnde !== undefined ? { autoEnde: partie.autoEnde } : {}),
   };
 }
 

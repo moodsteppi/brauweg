@@ -209,6 +209,12 @@ export const filler: GameModule<FillerPartie, FillerAktion, FillerSicht, FillerR
       mauerPause: alt.mauerPause ?? [],
       // Aufgeben gibt es seit dem 06.11.2026; vorher hat niemand aufgegeben.
       aufgegeben: alt.aufgegeben ?? null,
+      /*
+       * `autoEnde` (seit dem 23.11.2026) wird bewusst NICHT nachgeruestet:
+       * Es ist optional, und eine Partie ohne das Feld hat schlicht kein
+       * automatisches Ende erlebt. Ein `[]` hiesse etwas anderes. Eine
+       * laufende Altpartie bekommt es beim naechsten Zug, wenn es greift.
+       */
       // Fassung 4 kannte keine Sterne; keine dieser Partien hatte welche.
       sterne: alt.sterne ?? [],
       barrieren: alt.barrieren ?? [],
