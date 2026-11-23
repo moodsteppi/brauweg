@@ -284,6 +284,22 @@ export interface FillerPartie {
 export interface AutoEndeFeld {
   readonly platz: number;
   readonly sitz: number;
+  /**
+   * Die Farbe, die das Feld VOR der Verteilung trug.
+   *
+   * Steht hier, weil der Bildschirm das Ende abspielt (seit dem 23.11.2026)
+   * und dafuer das Brett davor zeigen muss: Im fertigen Zustand traegt das
+   * Feld schon die Gebietsfarbe, und die alte Farbe zu raten hiesse, eine
+   * Regel im Client zu bauen. Kein Geheimnis — die Liste steht erst nach dem
+   * Ende in der Sicht, und dann faellt der Nebel ohnehin.
+   */
+  readonly vorher: number;
+  /**
+   * Was das Feld seinem Sitz gebracht hat: 1, mit Stern 1 + STERN_BONUS.
+   * Damit der Zaehler beim Abspielen mitlaeuft, ohne dass der Client den
+   * Sternbonus kennen muss.
+   */
+  readonly punkte: number;
 }
 
 export type FillerAktion =
@@ -989,6 +1005,7 @@ function schlucke(
 export function autoEndeVerteilung(partie: FillerPartie): AutoEndeFeld[] | null {
   const { spalten, zeilen } = partie.regeln;
   const sperren = new Set(partie.barrieren);
+  const sterne = new Set(partie.sterne);
   const { besitzer } = partie;
 
   const kompVon: number[] = new Array(besitzer.length).fill(-1);
@@ -1039,7 +1056,12 @@ export function autoEndeVerteilung(partie: FillerPartie): AutoEndeFeld[] | null 
         const sitz = kompSitz[kompVon[n]!];
         if (sitz === null || sitz === undefined) continue;
         gesehen.add(n);
-        verteilt.push({ platz: n, sitz });
+        verteilt.push({
+          platz: n,
+          sitz,
+          vorher: partie.feld[n]!,
+          punkte: 1 + (sterne.has(n) ? STERN_BONUS : 0),
+        });
         naechsterRing.push(n);
       }
     }
@@ -1066,14 +1088,14 @@ function mitAutoEnde(partie: FillerPartie): FillerPartie {
   const besitzer = [...partie.besitzer];
   const feld = [...partie.feld];
   const punkte: Record<number, number> = { ...partie.punkte };
-  const sterne = new Set(partie.sterne);
-  for (const { platz, sitz } of verteilt) {
+  for (const { platz, sitz, punkte: wert } of verteilt) {
     besitzer[platz] = sitz;
     // Gebiet traegt die Gebietsfarbe — wie nach `schlucke`, sonst zeichnete
     // der Bildschirm das Revier bunt gescheckt.
     const gebietsfarbe = partie.farbe[sitz];
     if (gebietsfarbe !== undefined) feld[platz] = gebietsfarbe;
-    punkte[sitz] = (punkte[sitz] ?? 0) + 1 + (sterne.has(platz) ? STERN_BONUS : 0);
+    // Der Wert steht schon in der Liste — eine Rechnung, nicht zwei.
+    punkte[sitz] = (punkte[sitz] ?? 0) + wert;
   }
   return { ...partie, besitzer, feld, punkte, fertig: true, autoEnde: verteilt };
 }

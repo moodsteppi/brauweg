@@ -124,6 +124,22 @@ describe('Auto-Ende: Gebiet eingemauert (IMG_1966)', () => {
     assert.ok(!plaetze.includes(G));
   });
 
+  it('nennt je Feld die Farbe davor und was es gebracht hat (fuer das Abspielen)', () => {
+    // Der Bildschirm zeigt erst das Brett davor und laesst dann den Zaehler
+    // mitlaufen — beides aus der Liste, ohne Regel im Client.
+    const liste = nachher.autoEnde!;
+    for (const { platz, vorher: farbe } of liste) assert.equal(farbe, vorher.feld[platz], `Platz ${platz}`);
+    for (const { platz, punkte } of liste) {
+      assert.equal(punkte, vorher.sterne.includes(platz) ? 1 + STERN_BONUS : 1, `Platz ${platz}`);
+    }
+    // Die Summe ist genau der Zuwachs durch das Auto-Ende.
+    for (const sitz of [0, 1]) {
+      const summe = liste.filter((e) => e.sitz === sitz).reduce((s, e) => s + e.punkte, 0);
+      const durchZug = sitz === 0 ? 1 : 0; // G hat der Zug selbst geschluckt
+      assert.equal(nachher.punkte[sitz], vorher.punkte[sitz]! + durchZug + summe);
+    }
+  });
+
   it('zeigt die Liste erst in der Sicht, wenn die Partie zu Ende ist', () => {
     assert.equal('autoEnde' in sichtFuer(vorher, 0), false);
     assert.equal('autoEnde' in sichtFuer(vorher, 1), false);
@@ -191,8 +207,10 @@ describe('Auto-Ende: mehr als zwei Sitze', () => {
   const besitzer = [2, 2, 1, 2, null, 1, 0, 0, 3];
 
   it('gibt die Mitte dem einen Sitz, der sie noch erreicht', () => {
-    const partie = { ...grund, besitzer, barrieren: [kante(4, 5), kante(4, 7)] };
-    assert.deepEqual(autoEndeVerteilung(partie), [{ platz: 4, sitz: 2 }]);
+    const partie = { ...grund, besitzer, barrieren: [kante(4, 5), kante(4, 7)], sterne: [] };
+    assert.deepEqual(autoEndeVerteilung(partie), [
+      { platz: 4, sitz: 2, vorher: grund.feld[4], punkte: 1 },
+    ]);
   });
 
   it('wartet, solange zwei der vier sie erreichen', () => {

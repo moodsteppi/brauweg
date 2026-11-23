@@ -14892,6 +14892,26 @@ span.hub-angebot-art.poker-jeton-stapel {
 .fl-feld[data-eigen] { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55); }
 .fl-feld[data-fremd] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28); }
 
+/* Automatisches Ende: Jedes verteilte Feld leuchtet kurz auf, wenn die Welle
+   es erreicht (Filler.tsx setzt `data-geholt` genau in dem Takt). Hell und
+   vergroessert, damit man der Welle folgen kann, obwohl alle 40 ms ein Feld
+   kommt — der Farbwechsel allein ginge im Tempo unter. `z-index`, damit das
+   vergroesserte Feld nicht unter seinem Nachbarn verschwindet. */
+.fl-feld[data-geholt] {
+  z-index: 1;
+  animation: fl-geholt 380ms ease-out;
+}
+@keyframes fl-geholt {
+  0% { transform: scale(1.3); filter: brightness(1.7); }
+  100% { transform: none; filter: none; }
+}
+.fl-autoende { text-align: center; }
+@media (prefers-reduced-motion: reduce) {
+  /* Die Welle laeuft dann ohnehin nicht (abspiel.ts); das hier ist nur der
+     Gurt, falls das Attribut doch einmal steht. */
+  .fl-feld[data-geholt] { animation: none; }
+}
+
 /* -- Farbauswahl ---------------------------------------------------------- */
 
 .fl-fuss {

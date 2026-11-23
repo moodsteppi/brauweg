@@ -59,6 +59,7 @@ export default {
   'filler.hinweis.nochEineMauer': 'One more wall or a color',
   'filler.hinweis.kante': 'Tap an edge',
   'filler.hinweis.farbe': 'Pick a color',
+  'filler.hinweis.autoEnde': 'No square left to fight over – sharing out the territories',
   'filler.warten.bot': "Bot's turn",
   'filler.warten.mensch': 'Waiting for the other player',
   'filler.warten.vorlesen': ', please wait',

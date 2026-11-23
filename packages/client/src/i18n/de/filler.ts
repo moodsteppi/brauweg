@@ -71,6 +71,7 @@ export default {
   'filler.hinweis.nochEineMauer': 'Noch eine Mauer oder Farbe',
   'filler.hinweis.kante': 'Kante antippen',
   'filler.hinweis.farbe': 'Farbe wählen',
+  'filler.hinweis.autoEnde': 'Kein Feld mehr umkämpft – die Reviere werden verteilt',
   'filler.warten.bot': 'Bot ist am Zug',
   'filler.warten.mensch': 'Auf anderen Spieler warten',
   'filler.warten.vorlesen': ', bitte warten',
