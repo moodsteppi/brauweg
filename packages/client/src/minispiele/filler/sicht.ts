@@ -72,6 +72,27 @@ export interface FillerSicht {
    * statt nur einen Punktestand, der zum Sieger nicht passt.
    */
   aufgegeben: number | null;
+  /**
+   * Die Felder, die das automatische Ende verteilt hat, in Abspielreihenfolge
+   * — nur in einer Partie, die so endete, und erst, wenn sie zu Ende IST.
+   * Der Bildschirm spielt sie als Welle ab (siehe `useAutoEndeAbspiel` in
+   * screens/Filler.tsx); welche Felder dazugehoeren, rechnet allein das Modul.
+   */
+  autoEnde?: AutoEndeFeld[];
+}
+
+/** Ein Feld, das das automatische Ende einem Sitz zugeschlagen hat. */
+export interface AutoEndeFeld {
+  platz: number;
+  sitz: number;
+  /**
+   * Farbe des Feldes vor der Verteilung. Optional, weil eine Partie, die am
+   * 23.11.2026 vor dem Abspielen endete, sie noch nicht mitschrieb — dann
+   * zeigt der Bildschirm gleich den Endstand.
+   */
+  vorher?: number;
+  /** Was das Feld seinem Sitz gebracht hat (mit Sternbonus). Optional wie `vorher`. */
+  punkte?: number;
 }
 
 /**

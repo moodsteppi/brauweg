@@ -6,6 +6,7 @@ import { t } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
 import { FARBEN, GRAUTOENE, farbeVon, farbzahlAus } from '../minispiele/filler/farben';
 import type { FillerAufgabe, FillerSicht, Variante } from '../minispiele/filler/sicht';
+import { useAutoEndeAbspiel, zurueckgespult } from '../minispiele/filler/abspiel';
 import { useSpielVorgabe } from '../spiel-vorgabe';
 import { useTable } from '../useTable';
 import { serverAdresse } from '../laufzeit';
@@ -760,7 +761,7 @@ interface SitzZeile {
 }
 
 export function Brett({
-  sicht,
+  sicht: gesendet,
   eigenerSitz,
   sitze,
   binDran,
@@ -786,6 +787,17 @@ export function Brett({
   frist: number | null;
   onAufgeben: () => void;
 }): React.JSX.Element {
+  /*
+   * Das automatische Ende als Welle (seit dem 23.11.2026): Solange sie
+   * laeuft, zeichnet das Brett die Sicht ZURUECKGESPULT auf die Felder, die
+   * schon dran waren — Brett und Zaehler oben laufen so gemeinsam mit, und
+   * alles darunter liest weiter einfach `sicht`. Was abgespielt wird, steht
+   * allein in der Liste des Servers (minispiele/filler/abspiel.ts).
+   */
+  const abspiel = useAutoEndeAbspiel(gesendet.autoEnde);
+  const sicht = abspiel === null ? gesendet : zurueckgespult(gesendet, abspiel);
+  /** Platz -> Stelle in der Abspielliste, fuer das Aufleuchten. */
+  const abspielStelle = new Map((gesendet.autoEnde ?? []).map((e, nr) => [e.platz, nr]));
   const [frage, rueckfrage] = useRueckfrage();
   /*
    * Aufgeben fragt nach, wie bei BroChess: Der Knopf liegt am Brettkopf, und
@@ -1057,10 +1069,16 @@ export function Brett({
              * und genau deshalb hilft die Entwicklerkonsole niemandem.
              */
             const imNebel = farbe === null || farbe === undefined;
+            const stelle = abspielStelle.get(platz);
+            // Nur waehrend der Welle: Das Attribut kommt in dem Takt, in dem
+            // das Feld dran ist, und startet damit genau einmal sein
+            // Aufleuchten. Danach faellt es weg, ohne erneut anzuspringen.
+            const geholt = abspiel !== null && stelle !== undefined && stelle < abspiel;
             return (
               <span
                 key={platz}
                 className="fl-feld"
+                data-geholt={geholt ? '' : undefined}
                 data-nebel={imNebel ? '' : undefined}
                 data-eigen={besitzer === eigenerSitz ? '' : undefined}
                 data-fremd={besitzer !== null && besitzer !== eigenerSitz ? '' : undefined}
@@ -1122,7 +1140,13 @@ export function Brett({
       </div>
 
       <div className="fl-fuss">
-        {sicht.fertig ? (
+        {sicht.fertig && abspiel !== null ? (
+          // Erst die Welle, dann das Ergebnis: Stuende es schon da, laese
+          // man den Endstand unten, waehrend oben noch verteilt wird.
+          <p className="fl-hinweis fl-autoende" role="status">
+            {t('filler.hinweis.autoEnde')}
+          </p>
+        ) : sicht.fertig ? (
           <Abschluss
             sicht={sicht}
             eigenerSitz={eigenerSitz}
