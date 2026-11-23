@@ -17,6 +17,21 @@
  * Partie bei "geteilt" und bei jedem der Beteiligten als geteilter Sieg —
  * so summieren sich die Siege je Sitz plus "geteilt" nicht auf 100 %, aber
  * keiner bekommt einen halben Sieg zugeschrieben, den es nicht gab.
+ *
+ * Erste Messung (23.11.2026, Saaten 0 bis 199, ohne jeden Ausgleich):
+ *
+ *     Sitz  Ecke          Sieg allein   geteilt  Platz  Punkte  Mauern
+ *     0     unten links   26.5 % ±3.1   1.0 %    2.33   34.5    16.18
+ *     1     oben rechts   26.0 % ±3.1   1.0 %    2.37   34.5    16.56
+ *     2     oben links    22.5 % ±3.0   0.5 %    2.69   29.4    16.59
+ *     3     unten rechts  23.5 % ±3.0   0.5 %    2.48   31.9    15.22
+ *
+ *     Platz 1 geteilt 1.5 %, Auto-Ende 79.5 %, 169 Zuege je Partie.
+ *
+ * Die Siegquoten liegen alle innerhalb von gut einem Standardfehler um
+ * 25 %; deutlicher ist der Punkteschnitt — Sitz 2 holt fuenf Punkte weniger
+ * als 0 und 1. Ob das fuer einen Ausgleich reicht, entscheidet die
+ * Ausgleichs-Karte, am besten mit mehr Partien (--partien 1000).
  */
 
 import { dirname, resolve } from 'node:path';
