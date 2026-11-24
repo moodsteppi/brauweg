@@ -2694,10 +2694,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
     requireSpielbar(gameId, plattformVon(request), umfang);
     // Optionaler Regelsatz (Spielart); ohne Rumpf gilt die Vorgabe des Moduls.
-    const { config } = z
-      .object({ config: z.unknown().optional() })
+    // Optional auch die Sitzzahl (Filler Extreme zu viert, seit dem
+    // 23.11.2026) — welche Zahl ein Spiel zulaesst, prueft die Vermittlung.
+    const { config, sitze } = z
+      .object({ config: z.unknown().optional(), sitze: z.number().int().optional() })
       .parse(request.body ?? {});
-    return reply.send(await sucheVermittlung().betritt(gameId, accountId, config ?? null));
+    return reply.send(
+      await sucheVermittlung().betritt(gameId, accountId, config ?? null, sitze ?? null),
+    );
   });
 
   /**

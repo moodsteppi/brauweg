@@ -13,18 +13,19 @@ import type { FillerSicht } from '../minispiele/filler/sicht';
  * ANFRAGT und das, was kommt, vollstaendig zeigt.
  */
 
-const { createTable, defaults } = vi.hoisted(() => ({
+const { createTable, defaults, sucheStarten } = vi.hoisted(() => ({
   createTable: vi.fn(),
   defaults: vi.fn(),
+  sucheStarten: vi.fn(),
 }));
 
 vi.mock('../api', () => ({
   api: {
     createTable,
     defaults,
-    sucheStarten: vi.fn(),
-    sucheStand: vi.fn(),
-    sucheAbbrechen: vi.fn(),
+    sucheStarten,
+    sucheStand: vi.fn(() => new Promise(() => {})),
+    sucheAbbrechen: vi.fn(() => Promise.resolve({ ok: true })),
     joinTable: vi.fn(),
     tables: vi.fn(),
     leaveTable: vi.fn(),
@@ -57,6 +58,7 @@ describe('Filler zu viert: Menue', () => {
   beforeEach(() => {
     localStorage.clear();
     createTable.mockReset().mockResolvedValue({ id: 'tisch-4', joinCode: null });
+    sucheStarten.mockReset().mockResolvedValue({ sucht: true, suchende: 1, restMs: 30_000, tischId: null });
     defaults.mockReset().mockResolvedValue({ config: VORGABE, protocolVersion: 1, seatCounts: [2], rounds: {} });
   });
 
@@ -68,13 +70,12 @@ describe('Filler zu viert: Menue', () => {
     expect(screen.getByRole('group', { name: 'Besetzung' })).toBeInTheDocument();
   });
 
-  it('Bot-Tisch zu viert: vier Sitze, mit Bots gefuellt — keine Suche', async () => {
+  it('Bot-Tisch zu viert: vier Sitze, mit Bots gefuellt', async () => {
     localStorage.setItem('filler.variante', 'extreme');
     render(<Filler onBack={() => {}} />);
     await durchatmen();
     fireEvent.click(screen.getByRole('button', { name: /1v1v1v1/ }));
     expect(localStorage.getItem('filler.besetzung')).toBe('4');
-    expect(screen.queryByRole('button', { name: /Match suchen/i })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Gegen 3 Bots spielen' }));
     await durchatmen();
@@ -84,6 +85,40 @@ describe('Filler zu viert: Menue', () => {
       fillWithBots: true,
       config: { variante: 'extreme' },
     });
+  });
+
+  it('Suche zu viert: goldener Knopf, schickt vier Sitze mit Extreme', async () => {
+    localStorage.setItem('filler.variante', 'extreme');
+    localStorage.setItem('filler.besetzung', '4');
+    render(<Filler onBack={() => {}} />);
+    await durchatmen();
+    const knopf = screen.getByRole('button', { name: 'Online Match suchen…' });
+    expect(knopf).toHaveClass('is-gold');
+    fireEvent.click(knopf);
+    await durchatmen();
+    expect(sucheStarten).toHaveBeenCalledWith('filler', expect.objectContaining({ variante: 'extreme' }), 4);
+    expect(createTable).not.toHaveBeenCalled();
+    expect(screen.getByText(/gegen drei Bots/)).toBeInTheDocument();
+  });
+
+  it('Suche in Extreme 1v1 schickt zwei Sitze', async () => {
+    localStorage.setItem('filler.variante', 'extreme');
+    localStorage.setItem('filler.besetzung', '2');
+    render(<Filler onBack={() => {}} />);
+    await durchatmen();
+    fireEvent.click(screen.getByRole('button', { name: 'Online Match suchen…' }));
+    await durchatmen();
+    expect(sucheStarten).toHaveBeenCalledWith('filler', expect.objectContaining({ variante: 'extreme' }), 2);
+  });
+
+  it('die gemerkte Vierer-Besetzung sucht ausserhalb von Extreme zu zweit', async () => {
+    localStorage.setItem('filler.variante', 'nebel');
+    localStorage.setItem('filler.besetzung', '4');
+    render(<Filler onBack={() => {}} />);
+    await durchatmen();
+    fireEvent.click(screen.getByRole('button', { name: 'Online Match suchen…' }));
+    await durchatmen();
+    expect(sucheStarten).toHaveBeenCalledWith('filler', expect.objectContaining({ variante: 'nebel' }), 2);
   });
 
   it('Freundestisch zu viert: vier Sitze, leer', async () => {

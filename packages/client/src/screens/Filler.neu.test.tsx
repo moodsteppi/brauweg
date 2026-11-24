@@ -78,7 +78,7 @@ describe('Filler im neuen Hub', () => {
     expect(knopf).toHaveClass('hb-kn', 'is-gold');
     fireEvent.click(knopf);
     await durchatmen();
-    expect(sucheStarten).toHaveBeenCalledWith('filler', expect.anything());
+    expect(sucheStarten).toHaveBeenCalledWith('filler', expect.anything(), 2);
     expect(screen.getByRole('heading', { name: 'Gegner suchen' })).toBeInTheDocument();
     expect(screen.getByText(/spielst du gegen einen Bot/)).toBeInTheDocument();
   });
