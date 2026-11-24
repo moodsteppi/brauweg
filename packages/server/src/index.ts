@@ -28,7 +28,7 @@ import { faelligeErinnerungen } from './lernpfad.js';
 import { faelligeBrowortErinnerungen } from './browort/dienst.js';
 import { statistikSchreiben } from './statistik.js';
 import { expireStaleTables } from './tables/service.js';
-import { TAKT_MS, hausrundenAn, hausspielerTarnen, pflegeHausrunden } from './hausrunden.js';
+import { TAKT_MS, hausrundenAn, hausspielerTarnung, pflegeHausrunden } from './hausrunden.js';
 import { PushAnlaesse } from './push/anlaesse.js';
 import { leseAbgeschaltet } from './push/kennungen.js';
 import { waehlePushVersand } from './push/versand.js';
@@ -210,7 +210,7 @@ async function main(): Promise<void> {
     appOrigins: APP_ORIGINS,
     appInhalt,
     push,
-    hausspielerTarnen: hausspielerTarnen(config.stage),
+    hausspielerTarnen: hausspielerTarnung(config.stage),
   });
   push.setzeVordergrund((accountId) => gateway.imVordergrund(accountId));
 

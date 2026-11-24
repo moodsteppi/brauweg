@@ -40,6 +40,8 @@ import {
   requireModule,
 } from '../games/registry.js';
 import { requireClubMember } from '../clubs/service.js';
+import type { HausspielerTarnung } from '../hausrunden.js';
+import { APP_ORIGIN } from '../http/app.js';
 import {
   ENVELOPE_VERSION,
   type ClientMessage,
@@ -76,6 +78,11 @@ interface Connection {
   readonly accountId: string;
   /** Kam der Handshake aus der App? Siehe `GatewayOptions.appOrigins`. */
   readonly ausApp: boolean;
+  /**
+   * Kam der Handshake aus der iOS-App (Herkunft `brauweg://app`)? Nur fuer
+   * die Tarnung der Hausspieler, die dort einen eigenen Schalter hat.
+   */
+  readonly ausIos: boolean;
   tableId: string | null;
   /** Beginn des laufenden Ratenfensters. */
   fensterStart: number;
@@ -335,9 +342,10 @@ export interface GatewayOptions {
   readonly appOrigins?: readonly string[];
   /**
    * Hausspieler (src/hausrunden.ts) am Tisch NICHT als Bot kennzeichnen.
-   * Vorgabe aus; eingeschaltet nur dort, wo `hausspielerTarnen` es sagt.
+   * Vorgabe aus; eingeschaltet nur dort, wo `hausspielerTarnung` es sagt.
+   * Getrennt nach Webseite (mit Android) und iOS-App; `true` heisst beides.
    */
-  readonly hausspielerTarnen?: boolean;
+  readonly hausspielerTarnen?: boolean | HausspielerTarnung;
   /**
    * Rueckweg fuer die App (`AppInhalt` in games/registry.ts): Stellt jemand
    * aus der App die Regeln eines wartenden Tisches um, wird der Regelsatz
@@ -362,7 +370,7 @@ export class Gateway {
   private readonly cookieName: string;
   private readonly lookupSession: (token: string | undefined) => Promise<SessionInfo | null>;
   private readonly appOrigins: readonly string[];
-  private readonly hausspielerTarnen: boolean;
+  private readonly hausspielerTarnen: HausspielerTarnung;
   private readonly appInhalt: AppInhalt;
   private readonly push: GatewayOptions['push'];
 
@@ -375,7 +383,9 @@ export class Gateway {
     this.httpServer = server;
     this.cookieName = options.cookieName ?? 'brauweg_session';
     this.appOrigins = options.appOrigins ?? [];
-    this.hausspielerTarnen = options.hausspielerTarnen === true;
+    const tarnung = options.hausspielerTarnen;
+    this.hausspielerTarnen =
+      typeof tarnung === 'object' ? tarnung : { web: tarnung === true, ios: tarnung === true };
     this.appInhalt = options.appInhalt ?? APP_INHALT_WIE_WEB;
     this.push = options.push;
     this.lookupSession =
@@ -447,7 +457,12 @@ export class Gateway {
       const token =
         cookieValue(request.headers.cookie, this.cookieName) ??
         protokollToken(request.headers['sec-websocket-protocol']);
-      this.accept(socket, token, herkunft !== undefined && this.appOrigins.includes(herkunft));
+      this.accept(
+        socket,
+        token,
+        herkunft !== undefined && this.appOrigins.includes(herkunft),
+        herkunft === APP_ORIGIN,
+      );
     });
     this.runtime.onUpdate((tableId, nurSicht) => {
       void this.broadcast(tableId, nurSicht);
@@ -490,7 +505,7 @@ export class Gateway {
    * Nachrichten aus der Luecke werden gepuffert und in Reihenfolge
    * nachgeholt, sobald die Sitzung steht.
    */
-  private accept(socket: WebSocket, sessionToken?: string, ausApp = false): void {
+  private accept(socket: WebSocket, sessionToken?: string, ausApp = false, ausIos = false): void {
     const queued: string[] = [];
     let connection: Connection | null = null;
     let rejected = false;
@@ -571,6 +586,7 @@ export class Gateway {
         moduleVersion: 1,
         kette: Promise.resolve(),
         ausApp,
+        ausIos,
         vordergrund: true,
       };
       this.connections.add(accepted);
@@ -1093,7 +1109,12 @@ export class Gateway {
    * dieselben — sie erneut zu schicken kostet Bytes auf der Leitung und
    * beim Empfaenger ein Neuzeichnen fuer nichts.
    */
-  private readonly zuletztGesendet = new Map<string, { tisch: string; partie: string }>();
+  private readonly zuletztGesendet = new Map<string, Map<boolean, { tisch: string; partie: string }>>();
+
+  /** Sieht diese Verbindung Hausspieler wie Menschen? Siehe `hausspielerTarnen`. */
+  private tarntFuer(connection: Connection): boolean {
+    return connection.ausIos ? this.hausspielerTarnen.ios : this.hausspielerTarnen.web;
+  }
 
   private async ladeTischDaten(tableId: string): Promise<TischDaten | null> {
     const zwischen = this.tischDaten.get(tableId);
@@ -1164,51 +1185,80 @@ export class Gateway {
     const daten = await this.ladeTischDaten(tableId);
     if (!daten) return;
     const { table, seatRows, nameOf, avatarOf, gastOf, hausspieler } = daten;
-    // Getarnt: Sitze von Hausspielern erscheinen wie Menschen (src/hausrunden.ts).
-    const getarnt = (konto: string | null): boolean =>
-      this.hausspielerTarnen && konto !== null && hausspieler.has(konto);
-    const getarnteSitze = new Set(seatRows.filter((row) => getarnt(row.accountId)).map((row) => row.seatIndex));
-
     const party = this.runtime.get(tableId);
 
     // Farbwuensche haengen am Konto, nicht am Sitzindex — sie ueberleben so
     // das Umnummerieren beim Sofortstart (siehe setSeatColor).
     const farbwuensche = sitzfarbWuensche(table.filters);
 
-    const seats = seatRows.map((row) => ({
-      seat: row.seatIndex,
-      displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
-      accountId: row.accountId,
-      isBot: getarnt(row.accountId) ? false : row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
-      // Ein Bot ist kein Gast, ein leerer Platz auch nicht — nur ein Konto
-      // ohne Mail (siehe SeatInfo.gast im Protokoll).
-      gast: row.accountId ? (gastOf.get(row.accountId) ?? false) : false,
-      // Nur eine kurze URL ueber die Leitung; die Bytes holt der Browser
-      // einmal und behaelt sie im Cache.
-      avatarUrl:
-        row.accountId && avatarOf.get(row.accountId)
-          ? `/api/avatars/${row.accountId}`
-          : null,
-      farbe: row.accountId ? (farbwuensche[row.accountId] ?? null) : null,
-    }));
+    /**
+     * Getarnt: Sitze von Hausspielern erscheinen wie Menschen
+     * (src/hausrunden.ts). Ob, entscheidet die Verbindung — die iOS-App hat
+     * einen eigenen Schalter (`tarntFuer`). Am selben Tisch koennen deshalb
+     * zwei Fassungen derselben Nachricht unterwegs sein; sie werden je
+     * Fassung gebaut und je Fassung gegen den letzten Rundruf verglichen.
+     */
+    const fassung = (tarnen: boolean) => {
+      const getarnt = (konto: string | null): boolean => tarnen && konto !== null && hausspieler.has(konto);
+      const getarnteSitze = new Set(seatRows.filter((row) => getarnt(row.accountId)).map((row) => row.seatIndex));
+      const seats = seatRows.map((row) => ({
+        seat: row.seatIndex,
+        displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
+        accountId: row.accountId,
+        isBot: getarnt(row.accountId) ? false : row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
+        // Ein Bot ist kein Gast, ein leerer Platz auch nicht — nur ein Konto
+        // ohne Mail (siehe SeatInfo.gast im Protokoll).
+        gast: row.accountId ? (gastOf.get(row.accountId) ?? false) : false,
+        // Nur eine kurze URL ueber die Leitung; die Bytes holt der Browser
+        // einmal und behaelt sie im Cache.
+        avatarUrl:
+          row.accountId && avatarOf.get(row.accountId)
+            ? `/api/avatars/${row.accountId}`
+            : null,
+        farbe: row.accountId ? (farbwuensche[row.accountId] ?? null) : null,
+      }));
 
-    // Der Tisch selbst geht immer raus: Wer wartet, soll sehen, wer schon da
-    // ist und wie viele noch fehlen.
-    const tableMessage: ServerMessage = {
-      v: ENVELOPE_VERSION,
-      game: table.gameId,
-      type: 'table',
-      tableId,
-      status: table.status,
-      seats,
-      missing: Math.max(0, table.seats - seatRows.filter((row) => row.accountId).length),
-      rounds: table.maxRounds,
-      visibility: table.visibility,
-      paused: table.pausedAt !== null || (party?.paused ?? false),
-      botLevel: tableBotLevel(table.filters),
-      regelstand: `${table.ruleSetId}:${table.ruleSetVersion}`,
-      uebung: istUebungstisch(table.filters),
+      // Der Tisch selbst geht immer raus: Wer wartet, soll sehen, wer schon da
+      // ist und wie viele noch fehlen.
+      const tableMessage: ServerMessage = {
+        v: ENVELOPE_VERSION,
+        game: table.gameId,
+        type: 'table',
+        tableId,
+        status: table.status,
+        seats,
+        missing: Math.max(0, table.seats - seatRows.filter((row) => row.accountId).length),
+        rounds: table.maxRounds,
+        visibility: table.visibility,
+        paused: table.pausedAt !== null || (party?.paused ?? false),
+        botLevel: tableBotLevel(table.filters),
+        regelstand: `${table.ruleSetId}:${table.ruleSetVersion}`,
+        uebung: istUebungstisch(table.filters),
+      };
+      const partyMessage: ServerMessage | null = party
+        ? {
+            v: ENVELOPE_VERSION,
+            game: party.gameId,
+            type: 'party',
+            tableId,
+            standings: this.runtime.standings(party),
+            seats,
+            trophies: party.awards,
+          }
+        : null;
+      return {
+        getarnteSitze,
+        tableMessage,
+        partyMessage,
+        tischText: JSON.stringify(tableMessage),
+        partieText: partyMessage ? JSON.stringify(partyMessage) : '',
+      };
     };
+    // Beide Fassungen, auch wenn gerade nur eine gebraucht wird: Der
+    // Vergleichsstand unten muss fuer jede stimmen, sonst bekaeme jemand, der
+    // spaeter mit der anderen Fassung dazukommt, gegen einen alten Stand
+    // verglichen eine Nachricht weggekuerzt.
+    const fassungen = new Map([true, false].map((tarnen) => [tarnen, fassung(tarnen)] as const));
 
     /**
      * Beim Rundruf nach einem Zug wird nur geschickt, was sich auch geaendert
@@ -1222,28 +1272,29 @@ export class Gateway {
      * ganzen Raum (`nurSicht`), nie fuer die Antwort auf ein `join`.
      */
     const alt = this.zuletztGesendet.get(tableId);
-    const tischText = JSON.stringify(tableMessage);
-    const tischGleich = nurSicht && alt?.tisch === tischText;
-    if (!tischGleich) for (const connection of targets) send(connection.socket, tableMessage);
-
-    // Laeuft noch keine Partie, ist der Wartebereich alles, was es zu sagen gibt.
-    if (!party) {
-      if (anRaum) this.zuletztGesendet.set(tableId, { tisch: tischText, partie: '' });
-      return;
+    const gleich = (tarnen: boolean) => {
+      const f = fassungen.get(tarnen)!;
+      const vorher = alt?.get(tarnen);
+      return {
+        tisch: nurSicht && vorher?.tisch === f.tischText,
+        partie: nurSicht && vorher?.partie === f.partieText,
+      };
+    };
+    const gleichNach = new Map([true, false].map((tarnen) => [tarnen, gleich(tarnen)] as const));
+    if (anRaum) {
+      this.zuletztGesendet.set(
+        tableId,
+        new Map([...fassungen].map(([tarnen, f]) => [tarnen, { tisch: f.tischText, partie: f.partieText }] as const)),
+      );
     }
 
-    const partyMessage: ServerMessage = {
-      v: ENVELOPE_VERSION,
-      game: party.gameId,
-      type: 'party',
-      tableId,
-      standings: this.runtime.standings(party),
-      seats,
-      trophies: party.awards,
-    };
-    const partieText = JSON.stringify(partyMessage);
-    const partieGleich = nurSicht && alt?.partie === partieText;
-    if (anRaum) this.zuletztGesendet.set(tableId, { tisch: tischText, partie: partieText });
+    for (const connection of targets) {
+      const tarnen = this.tarntFuer(connection);
+      if (!gleichNach.get(tarnen)!.tisch) send(connection.socket, fassungen.get(tarnen)!.tableMessage);
+    }
+
+    // Laeuft noch keine Partie, ist der Wartebereich alles, was es zu sagen gibt.
+    if (!party) return;
 
     /**
      * Stand des anwachsenden Sichtteils VOR dem Versand einlesen: Jede
@@ -1261,6 +1312,8 @@ export class Gateway {
      */
     const aktuelleVersion = requireModule(party.gameId).protocolVersion;
     for (const connection of targets) {
+      const tarnen = this.tarntFuer(connection);
+      const { getarnteSitze, partyMessage } = fassungen.get(tarnen)!;
       const zuwachsFaehig = connection.moduleVersion >= aktuelleVersion;
       const seit = zuwachsFaehig ? (connection.sichtStand ?? 0) : 0;
       const roh = this.runtime.viewFor(party, connection.accountId, seit);
@@ -1275,7 +1328,7 @@ export class Gateway {
         ruleSetVersion: table.ruleSetVersion,
         ...state,
       });
-      if (!partieGleich) send(connection.socket, partyMessage);
+      if (!gleichNach.get(tarnen)!.partie && partyMessage) send(connection.socket, partyMessage);
     }
   }
 }

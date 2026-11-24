@@ -7,7 +7,7 @@
 import { doppelkopf } from '@brauweg/game-doppelkopf';
 
 import { SESSION_COOKIE, buildApp } from '../src/http/app.js';
-import { Gateway } from '../src/realtime/gateway.js';
+import { Gateway, type GatewayOptions } from '../src/realtime/gateway.js';
 import { PartyRuntime, type RuntimeOptions } from '../src/runtime/party.js';
 import { Vermittlung } from '../src/suche/vermittlung.js';
 import { createSession, sessionFromToken } from '../src/auth/service.js';
@@ -36,6 +36,8 @@ export async function startHarness(
   options: RuntimeOptions = {},
   /** Verzoegert die Sitzungspruefung, um die Luecke beim Verbinden zu weiten. */
   sessionDelayMs = 0,
+  /** Weitere Gateway-Einstellungen, z. B. `hausspielerTarnen`. */
+  gatewayOptions: Omit<GatewayOptions, 'lookupSession'> = {},
 ): Promise<Harness> {
   const ctx = await createTestContext();
   await seedInvite(ctx.db);
@@ -75,6 +77,7 @@ export async function startHarness(
 
   await app.listen({ port: 0, host: '127.0.0.1' });
   const gateway = new Gateway(app.server, ctx.db, runtime, {
+    ...gatewayOptions,
     lookupSession: async (token) => {
       if (sessionDelayMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, sessionDelayMs));
