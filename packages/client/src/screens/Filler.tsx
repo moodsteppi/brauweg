@@ -406,15 +406,20 @@ export function Filler({
    * als Einziger suchte, wartete bis zum Verfall seines Tisches. Jetzt sammelt
    * der Server 30 Sekunden lang, setzt danach alle Gefundenen an EINEN Tisch
    * und fuellt den Rest mit Bots — bei zwei Sitzen also hoechstens einen.
+   *
+   * Seit dem 23.11.2026 mit der Sitzzahl: Zu viert (Extreme) steht man in
+   * einem eigenen Topf, getrennt von der Suche zu zweit, und nach Ablauf
+   * fuellen bis zu drei Bots auf. Ob die Zahl geht, prueft der Server.
    */
   const starteSuche = useCallback(async (): Promise<void> => {
     setFehler(null);
     setSucht(true);
     try {
-      const stand = await api.sucheStarten('filler', {
-        ...(await holeVorgabe()),
-        variante,
-      });
+      const stand = await api.sucheStarten(
+        'filler',
+        { ...(await holeVorgabe()), variante },
+        sitzzahl,
+      );
       if (stand.tischId) setTischId(stand.tischId);
       else setSuchstand(stand);
     } catch {
@@ -422,7 +427,7 @@ export function Filler({
     } finally {
       setSucht(false);
     }
-  }, [holeVorgabe, variante]);
+  }, [holeVorgabe, variante, sitzzahl]);
 
   /**
    * Nachfragen, solange gesucht wird.
@@ -669,7 +674,9 @@ export function Filler({
       <SpielRahmen
         gameId="filler"
         titel={t('filler.suche.titel')}
-        unter={`${spiel} · ${varianteName(variante)}`}
+        unter={tf(sitzzahl === 4 ? 'filler.menue.unterVier' : 'filler.menue.unter', {
+          spielart: varianteName(variante),
+        })}
         akzent={AKZENT}
         onBack={brichSucheAb}
         zurueckText={t('filler.suche.abbrechen')}
@@ -687,7 +694,9 @@ export function Filler({
             {sekunden}
           </p>
           <p className="spe-text">
-            {gefunden === 1 ? t('filler.suche.allein') : tn('filler.suche.gefunden', gefunden)}
+            {gefunden === 1
+              ? t(sitzzahl === 4 ? 'filler.suche.alleinVier' : 'filler.suche.allein')
+              : tn('filler.suche.gefunden', gefunden)}
           </p>
           <div className="spe-lauf" aria-hidden="true">
             <span />
@@ -722,15 +731,22 @@ export function Filler({
         fuss={
           sitzzahl === 4 ? (
             /*
-             * Zu viert gibt es (noch) keine Match-Suche — die Schlange baut
-             * Zweiertische (zielSitze in packages/server/src/suche/
-             * vermittlung.ts), und die Suche zu viert ist eine eigene Karte.
-             * Der goldene Knopf ist hier deshalb der Freunde-Tisch.
+             * Zu viert dieselbe Suche in Gold wie zu zweit (eigener Topf fuer
+             * vier, siehe `schluessel` in packages/server/src/suche/
+             * schlange.ts), darunter Freunde-Tisch und Bot-Tisch.
              */
             <>
               <button
                 type="button"
                 className="hb-kn is-gold is-haupt is-breit"
+                onClick={() => void starteSuche()}
+                disabled={sucht}
+              >
+                {t('filler.menue.suchen')}
+              </button>
+              <button
+                type="button"
+                className="hb-kn is-blau is-breit"
                 onClick={() => void starteFreunde()}
                 disabled={sucht}
               >
@@ -796,7 +812,7 @@ export function Filler({
                   { wert: 4, text: t('filler.besetzung.vier'), unter: t('filler.besetzung.vier.unter') },
                 ]}
               />
-              {besetzung === 4 && <p className="spe-text fl-vier-hinweis">{t('filler.menue.vierOhneSuche')}</p>}
+              {besetzung === 4 && <p className="spe-text fl-vier-hinweis">{t('filler.menue.vierSuche')}</p>}
             </SpielAbschnitt>
           )}
           <SpielAbschnitt titel={t('filler.menue.anleitung')}>

@@ -1068,8 +1068,16 @@ export const api = {
    * — hoert der Client damit auf (Netz weg, Tab zu), faellt er von selbst aus
    * der Schlange.
    */
-  sucheStarten: (gameId: string, config?: unknown) =>
-    post<Suchstand>(`/suche/${gameId}`, config === undefined ? undefined : { config }),
+  sucheStarten: (gameId: string, config?: unknown, sitze?: number) =>
+    post<Suchstand>(
+      `/suche/${gameId}`,
+      // `sitze` nur, wenn ein Bildschirm die Tischgroesse waehlen laesst
+      // (Filler Extreme 1v1 oder 1v1v1v1); sonst sucht der Server die
+      // Groesse ab Werk, wie vorher.
+      config === undefined && sitze === undefined
+        ? undefined
+        : { config, ...(sitze === undefined ? {} : { sitze }) },
+    ),
   sucheStand: (gameId: string) => request<Suchstand>(`/suche/${gameId}`),
   sucheAbbrechen: (gameId: string) => post<{ ok: true }>(`/suche/${gameId}/abbrechen`),
 
