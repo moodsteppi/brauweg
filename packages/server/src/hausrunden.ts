@@ -34,8 +34,8 @@ const SITZE = 4;
 
 /**
  * Namen wie im echten Leben: mal nur der Vorname, mal mit Zahl, mal ein
- * Spitzname. Doppelte Anzeigenamen sind erlaubt (displayName ist nicht
- * eindeutig), trotzdem bekommt jeder Hausspieler einen eigenen.
+ * Spitzname. Anzeigenamen sind eindeutig: Ist einer an ein echtes Konto
+ * vergeben, nimmt der Hausspieler `ausweichname`.
  */
 export const NAMEN: readonly string[] = [
   'Peter', 'Ursula', 'Robin34', 'Timo Werner Lover', 'Sabine', 'Klaus', 'Jana_K', 'doko_dieter',
@@ -88,6 +88,16 @@ export function zufallsRegeln(zufall: (n: number) => number = randomInt): {
   return { config: { ...vorgabe, ...variante, rounds }, rounds };
 }
 
+/**
+ * Ausweichname, wenn ein echtes Konto den Namen schon traegt
+ * (`account_display_name_key` ist eindeutig): fest je Name, damit ein
+ * spaeterer Takt denselben Hausspieler wiederfindet statt einen zweiten
+ * anzulegen.
+ */
+export function ausweichname(name: string, index: number): string {
+  return `${name.replace(/\s+/g, '')}${((index * 37) % 80) + 12}`;
+}
+
 /** Legt fehlende Hausspieler-Konten an und liefert alle. */
 export async function hausspielerKonten(db: Db): Promise<{ id: string; displayName: string }[]> {
   const da = await db
@@ -95,12 +105,24 @@ export async function hausspielerKonten(db: Db): Promise<{ id: string; displayNa
     .from(s.account)
     .where(eq(s.account.hausspieler, true));
   const vorhanden = new Set(da.map((k) => k.displayName));
-  const fehlend = NAMEN.map((name, i) => ({ name, i })).filter(({ name }) => !vorhanden.has(name));
-  if (fehlend.length === 0) return da;
-  const neu = await db
-    .insert(s.account)
-    .values(fehlend.map(({ name, i }) => ({ displayName: name, hausspieler: true, avatar: profilbild(i) })))
-    .returning({ id: s.account.id, displayName: s.account.displayName });
+  const neu: { id: string; displayName: string }[] = [];
+  for (const [i, name] of NAMEN.entries()) {
+    const ausweich = ausweichname(name, i);
+    if (vorhanden.has(name) || vorhanden.has(ausweich)) continue;
+    // Einzeln und ohne Fehler bei Kollision: Ein echter „Peter" darf nicht
+    // den ganzen Takt umwerfen (so geschehen am 24.11. auf staging).
+    for (const versuch of [name, ausweich]) {
+      const [zeile] = await db
+        .insert(s.account)
+        .values({ displayName: versuch, hausspieler: true, avatar: profilbild(i) })
+        .onConflictDoNothing()
+        .returning({ id: s.account.id, displayName: s.account.displayName });
+      if (zeile) {
+        neu.push(zeile);
+        break;
+      }
+    }
+  }
   return [...da, ...neu];
 }
 
