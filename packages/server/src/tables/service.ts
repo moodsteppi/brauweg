@@ -649,7 +649,8 @@ export async function verlasseKiTisch(
   const { table, seats } = await tableWithSeats(db, tableId);
   if (table.status !== 'running') return false;
 
-  const menschen = seats.filter((seat) => seat.accountId !== null);
+  // Hausspieler (src/hausrunden.ts) haben ein Konto, sind aber Bots.
+  const menschen = seats.filter((seat) => seat.accountId !== null && !seat.isBot);
   if (menschen.length !== 1 || menschen[0]?.accountId !== accountId) return false;
   // Ohne einen einzigen Bot ist das kein KI-Match, sondern ein Tisch, dessen
   // Mitspieler noch kommen sollen — den raeumt die Wartelogik.

@@ -28,6 +28,7 @@ import { faelligeErinnerungen } from './lernpfad.js';
 import { faelligeBrowortErinnerungen } from './browort/dienst.js';
 import { statistikSchreiben } from './statistik.js';
 import { expireStaleTables } from './tables/service.js';
+import { TAKT_MS, hausrundenAn, hausspielerTarnen, pflegeHausrunden } from './hausrunden.js';
 import { PushAnlaesse } from './push/anlaesse.js';
 import { leseAbgeschaltet } from './push/kennungen.js';
 import { waehlePushVersand } from './push/versand.js';
@@ -209,6 +210,7 @@ async function main(): Promise<void> {
     appOrigins: APP_ORIGINS,
     appInhalt,
     push,
+    hausspielerTarnen: hausspielerTarnen(config.stage),
   });
   push.setzeVordergrund((accountId) => gateway.imVordergrund(accountId));
 
@@ -248,10 +250,28 @@ async function main(): Promise<void> {
   // Minutentakt. Ein Absturz kostet so hoechstens eine Minute Zaehlung.
   const statistikTakt = setInterval(() => void statistikSchreiben(db), MINUTE);
 
+  // Hausrunden (src/hausrunden.ts): immer ein paar offene Doppelkopf-Tische.
+  // Vorgabe staging an, Produktion aus (HAUSRUNDEN=an|aus stellt um).
+  let hausrundenLaeuft = false;
+  const hausrundenTakt = hausrundenAn(config.stage)
+    ? setInterval(() => {
+        if (hausrundenLaeuft) return;
+        hausrundenLaeuft = true;
+        void pflegeHausrunden(db)
+          .then((tische) => tische.forEach((id) => runtime.notify(id)))
+          // eslint-disable-next-line no-console
+          .catch((err) => console.error('Hausrunden:', err))
+          .finally(() => {
+            hausrundenLaeuft = false;
+          });
+      }, TAKT_MS)
+    : null;
+
   const stop = async (): Promise<void> => {
     clearInterval(sweeper);
     clearInterval(serienWecker);
     clearInterval(statistikTakt);
+    if (hausrundenTakt) clearInterval(hausrundenTakt);
     runtime.shutdown();
     pushVersand.schliessen();
     await broremote.close();

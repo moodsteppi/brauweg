@@ -334,6 +334,11 @@ export interface GatewayOptions {
    */
   readonly appOrigins?: readonly string[];
   /**
+   * Hausspieler (src/hausrunden.ts) am Tisch NICHT als Bot kennzeichnen.
+   * Vorgabe aus; eingeschaltet nur dort, wo `hausspielerTarnen` es sagt.
+   */
+  readonly hausspielerTarnen?: boolean;
+  /**
    * Rueckweg fuer die App (`AppInhalt` in games/registry.ts): Stellt jemand
    * aus der App die Regeln eines wartenden Tisches um, wird der Regelsatz
    * gezaehmt. Vorgabe: App = Web.
@@ -357,6 +362,7 @@ export class Gateway {
   private readonly cookieName: string;
   private readonly lookupSession: (token: string | undefined) => Promise<SessionInfo | null>;
   private readonly appOrigins: readonly string[];
+  private readonly hausspielerTarnen: boolean;
   private readonly appInhalt: AppInhalt;
   private readonly push: GatewayOptions['push'];
 
@@ -369,6 +375,7 @@ export class Gateway {
     this.httpServer = server;
     this.cookieName = options.cookieName ?? 'brauweg_session';
     this.appOrigins = options.appOrigins ?? [];
+    this.hausspielerTarnen = options.hausspielerTarnen === true;
     this.appInhalt = options.appInhalt ?? APP_INHALT_WIE_WEB;
     this.push = options.push;
     this.lookupSession =
@@ -1116,6 +1123,7 @@ export class Gateway {
               displayName: s.account.displayName,
               hasAvatar: sql<boolean>`${s.account.avatar} is not null`,
               istGast: sql<boolean>`${s.account.gastSeit} is not null`,
+              hausspieler: s.account.hausspieler,
             })
             .from(s.account)
             .where(inArray(s.account.id, accountIds))
@@ -1123,6 +1131,7 @@ export class Gateway {
     const nameOf = new Map(names.map((row) => [row.id, row.displayName]));
     const avatarOf = new Map(names.map((row) => [row.id, row.hasAvatar]));
     const gastOf = new Map(names.map((row) => [row.id, row.istGast]));
+    const hausspieler = new Set(names.filter((row) => row.hausspieler).map((row) => row.id));
 
     const daten: TischDaten = {
       table,
@@ -1130,6 +1139,7 @@ export class Gateway {
       nameOf,
       avatarOf,
       gastOf,
+      hausspieler,
     };
     this.tischDaten.set(tableId, daten);
     return daten;
@@ -1153,7 +1163,11 @@ export class Gateway {
   ): Promise<void> {
     const daten = await this.ladeTischDaten(tableId);
     if (!daten) return;
-    const { table, seatRows, nameOf, avatarOf, gastOf } = daten;
+    const { table, seatRows, nameOf, avatarOf, gastOf, hausspieler } = daten;
+    // Getarnt: Sitze von Hausspielern erscheinen wie Menschen (src/hausrunden.ts).
+    const getarnt = (konto: string | null): boolean =>
+      this.hausspielerTarnen && konto !== null && hausspieler.has(konto);
+    const getarnteSitze = new Set(seatRows.filter((row) => getarnt(row.accountId)).map((row) => row.seatIndex));
 
     const party = this.runtime.get(tableId);
 
@@ -1165,7 +1179,7 @@ export class Gateway {
       seat: row.seatIndex,
       displayName: row.accountId ? (nameOf.get(row.accountId) ?? null) : null,
       accountId: row.accountId,
-      isBot: row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
+      isBot: getarnt(row.accountId) ? false : row.isBot || (party?.botControlled.has(row.seatIndex) ?? false),
       // Ein Bot ist kein Gast, ein leerer Platz auch nicht — nur ein Konto
       // ohne Mail (siehe SeatInfo.gast im Protokoll).
       gast: row.accountId ? (gastOf.get(row.accountId) ?? false) : false,
@@ -1249,7 +1263,9 @@ export class Gateway {
     for (const connection of targets) {
       const zuwachsFaehig = connection.moduleVersion >= aktuelleVersion;
       const seit = zuwachsFaehig ? (connection.sichtStand ?? 0) : 0;
-      const state = this.runtime.viewFor(party, connection.accountId, seit);
+      const roh = this.runtime.viewFor(party, connection.accountId, seit);
+      const state =
+        getarnteSitze.size > 0 ? { ...roh, botSeats: roh.botSeats.filter((sitz) => !getarnteSitze.has(sitz)) } : roh;
       connection.sichtStand = stand;
       send(connection.socket, {
         v: ENVELOPE_VERSION,
@@ -1276,6 +1292,8 @@ interface TischDaten {
   readonly avatarOf: ReadonlyMap<string, boolean>;
   /** Konto → ist Gast. Aus derselben Abfrage wie Name und Avatar. */
   readonly gastOf: ReadonlyMap<string, boolean>;
+  /** Konten der Hausspieler am Tisch (src/hausrunden.ts). */
+  readonly hausspieler: ReadonlySet<string>;
 }
 
 function send(socket: WebSocket, message: ServerMessage): void {
