@@ -61,17 +61,22 @@ export class TestClient {
     readonly name: string,
     private readonly url: string,
     private readonly cookie: string,
+    /** Herkunft des Handshakes, z. B. `brauweg://app` fuer die iOS-App. */
+    private readonly origin?: string,
   ) {}
 
-  static async connect(url: string, cookie: string, name = 'client'): Promise<TestClient> {
-    const client = new TestClient(name, url, cookie);
+  static async connect(url: string, cookie: string, name = 'client', origin?: string): Promise<TestClient> {
+    const client = new TestClient(name, url, cookie, origin);
     await client.open();
     return client;
   }
 
   private open(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.socket = new WebSocket(this.url, { headers: { cookie: this.cookie } });
+      this.socket = new WebSocket(this.url, {
+        headers: { cookie: this.cookie },
+        ...(this.origin ? { origin: this.origin } : {}),
+      });
       this.socket.on('open', () => resolve());
       this.socket.on('error', reject);
       this.socket.on('message', (raw) => this.receive(JSON.parse(raw.toString())));

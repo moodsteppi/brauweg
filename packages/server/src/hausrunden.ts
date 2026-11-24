@@ -14,7 +14,8 @@
  *
  * Ob ein Hausspieler im Spiel als Bot gekennzeichnet wird, entscheidet
  * `tarnen` im Gateway (realtime/gateway.ts). Eingeschaltet ist alles nur, wo
- * `hausrundenAus` es zulaesst: Vorgabe ist staging an, Produktion aus.
+ * `hausspielerTarnen` bzw. fuer die iOS-App `hausspielerTarnenIos` es
+ * zulaesst: Vorgabe ist staging an, Produktion aus.
  */
 
 import { randomInt } from 'node:crypto';
@@ -260,9 +261,39 @@ export function hausrundenAn(stage: string, env: NodeJS.ProcessEnv = process.env
   return stage === 'staging';
 }
 
-/** Hausspieler im Spiel nicht als Bot kennzeichnen: nur wo ausdruecklich gewollt. */
+/**
+ * Hausspieler im Spiel nicht als Bot kennzeichnen: nur wo ausdruecklich gewollt.
+ *
+ * Gilt fuer die Webseite und die Android-App. Die iOS-App hat einen eigenen
+ * Schalter (`hausspielerTarnenIos`), weil dort die App-Pruefung von Apple
+ * mitredet und die Entscheidung fuer die Produktion getrennt fallen soll.
+ */
 export function hausspielerTarnen(stage: string, env: NodeJS.ProcessEnv = process.env): boolean {
-  const wert = env.HAUSSPIELER_TARNEN?.trim().toLowerCase();
+  return schalter(env.HAUSSPIELER_TARNEN, stage);
+}
+
+/**
+ * Derselbe Schalter fuer die iOS-App (`HAUSSPIELER_TARNEN_IOS`), unabhaengig
+ * von `HAUSSPIELER_TARNEN`: Wer die Webseite umstellt, stellt iOS damit NICHT
+ * mit um. Vorgabe wie dort: staging an, Produktion aus.
+ */
+export function hausspielerTarnenIos(stage: string, env: NodeJS.ProcessEnv = process.env): boolean {
+  return schalter(env.HAUSSPIELER_TARNEN_IOS, stage);
+}
+
+/** Beide Tarnschalter auf einmal, so wie der Gateway sie nimmt. */
+export function hausspielerTarnung(stage: string, env: NodeJS.ProcessEnv = process.env): HausspielerTarnung {
+  return { web: hausspielerTarnen(stage, env), ios: hausspielerTarnenIos(stage, env) };
+}
+
+/** Wo Hausspieler wie Menschen erscheinen. `web` schliesst Android ein. */
+export interface HausspielerTarnung {
+  readonly web: boolean;
+  readonly ios: boolean;
+}
+
+function schalter(roh: string | undefined, stage: string): boolean {
+  const wert = roh?.trim().toLowerCase();
   if (wert === 'an') return true;
   if (wert === 'aus') return false;
   return stage === 'staging';
