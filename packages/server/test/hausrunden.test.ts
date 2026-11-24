@@ -12,6 +12,7 @@ import { eq, inArray } from 'drizzle-orm';
 import {
   HAUSTISCHE,
   NACHRUECKEN_MS,
+  ausweichname,
   hausrundenAn,
   hausspielerTarnen,
   istHaustisch,
@@ -164,4 +165,21 @@ test('Hausrunden: staging an, Produktion aus, per Umgebung umstellbar', () => {
   assert.equal(hausspielerTarnen('staging', {}), true);
   assert.equal(hausspielerTarnen('production', {}), false);
   assert.equal(hausspielerTarnen('staging', { HAUSSPIELER_TARNEN: 'aus' }), false);
+});
+
+test('Hausrunden: ein vergebener Name stoert nicht, der Hausspieler weicht aus', async (t) => {
+  const c = await ctx();
+  t.after(() => c.close());
+  await createVerifiedAccount(c, 'Peter');
+  await createVerifiedAccount(c, 'Ursula');
+  await pflegeHausrunden(c.db);
+  assert.equal((await listTables(c.db, { gameId: 'doppelkopf' })).length, HAUSTISCHE);
+  const namen = (
+    await c.db.select({ n: schema.account.displayName }).from(schema.account).where(eq(schema.account.hausspieler, true))
+  ).map((z) => z.n);
+  assert.ok(!namen.includes('Peter') && namen.includes(ausweichname('Peter', 0)));
+  // Ein zweiter Takt legt niemanden doppelt an.
+  await pflegeHausrunden(c.db);
+  const nochmal = await c.db.select({ n: schema.account.displayName }).from(schema.account).where(eq(schema.account.hausspieler, true));
+  assert.equal(nochmal.length, namen.length);
 });
