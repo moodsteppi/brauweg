@@ -191,6 +191,11 @@ export class TestClient {
     this.send(action);
   }
 
+  /** Eine beliebige Nachricht im Umschlag schicken (z. B. `hintergrund`, `vertreten`). */
+  roh(nachricht: Record<string, unknown>): void {
+    this.socket.send(JSON.stringify({ v: ENVELOPE_VERSION, ...nachricht }));
+  }
+
   private send(action: unknown): void {
     if (!this.lastView) return;
     this.socket.send(

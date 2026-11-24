@@ -116,6 +116,10 @@ export const TEXTE: Readonly<Record<Sprache, Readonly<Record<Anlass, Textbaustei
       titel: 'Du wählst das Clanwort',
       text: 'Heute bist du dran: Such bis 12 Uhr das Wort für deinen Clan aus.',
     },
+    tischeinladung: {
+      titel: '{name} lädt dich ein',
+      text: '{spiel}: Ein Platz am Tisch ist für dich frei. Tipp, um mitzuspielen.',
+    },
   },
   en: {
     dran: {
@@ -145,6 +149,10 @@ export const TEXTE: Readonly<Record<Sprache, Readonly<Record<Anlass, Textbaustei
     clanwort: {
       titel: 'You pick the clan word',
       text: "It's your turn today: choose the word for your clan by 12 noon.",
+    },
+    tischeinladung: {
+      titel: '{name} invited you',
+      text: '{spiel}: A seat at the table is waiting for you. Tap to join.',
     },
   },
 };

@@ -18,7 +18,7 @@ import type { BotLevel } from '@brauweg/game-api';
 
 import type { Db } from '../db/types.js';
 import * as s from '../db/schema.js';
-import { AppError, forbidden } from '../errors.js';
+import { AppError, conflict, forbidden } from '../errors.js';
 import { type SessionInfo, sessionFromToken } from '../auth/service.js';
 import { PartyRuntime } from '../runtime/party.js';
 import {
@@ -40,6 +40,7 @@ import {
   requireModule,
 } from '../games/registry.js';
 import { requireClubMember } from '../clubs/service.js';
+import type { AdminListe } from '../admin.js';
 import type { HausspielerTarnung } from '../hausrunden.js';
 import { APP_ORIGIN } from '../http/app.js';
 import {
@@ -83,6 +84,11 @@ interface Connection {
    * die Tarnung der Hausspieler, die dort einen eigenen Schalter hat.
    */
   readonly ausIos: boolean;
+  /**
+   * Broweg-Admin mit verdeckter Vertretung (admin.ts)? Einmal beim Verbinden
+   * nachgeschlagen; nur wahr, wo `ADMIN_VERTRETUNG` an ist.
+   */
+  readonly admin: boolean;
   tableId: string | null;
   /** Beginn des laufenden Ratenfensters. */
   fensterStart: number;
@@ -284,6 +290,16 @@ const clientMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('hintergrund'),
     tableId: z.string().uuid().optional(),
   }),
+  z.object({
+    v: z.literal(ENVELOPE_VERSION),
+    game: z.string().max(40).optional(),
+    /*
+     * Ein Broweg-Admin laesst sich verdeckt vom Bot vertreten (admin.ts):
+     * Knopf „Bot uebernimmt". Fuer alle anderen Konten ein Fehler.
+     */
+    type: z.literal('vertreten'),
+    tableId: z.string().uuid(),
+  }),
 ]);
 
 /** Liest das Sitzungs-Cookie aus dem Handshake. */
@@ -347,6 +363,12 @@ export interface GatewayOptions {
    */
   readonly hausspielerTarnen?: boolean | HausspielerTarnung;
   /**
+   * Broweg-Admins, die sich verdeckt vom Bot vertreten lassen duerfen
+   * (admin.ts). Nur uebergeben, wo `ADMIN_VERTRETUNG` an ist — fehlt es, ist
+   * niemand Admin, und `vertreten` wird abgewiesen.
+   */
+  readonly admins?: Pick<AdminListe, 'istAdmin'>;
+  /**
    * Rueckweg fuer die App (`AppInhalt` in games/registry.ts): Stellt jemand
    * aus der App die Regeln eines wartenden Tisches um, wird der Regelsatz
    * gezaehmt. Vorgabe: App = Web.
@@ -371,6 +393,7 @@ export class Gateway {
   private readonly lookupSession: (token: string | undefined) => Promise<SessionInfo | null>;
   private readonly appOrigins: readonly string[];
   private readonly hausspielerTarnen: HausspielerTarnung;
+  private readonly admins: GatewayOptions['admins'];
   private readonly appInhalt: AppInhalt;
   private readonly push: GatewayOptions['push'];
 
@@ -387,6 +410,7 @@ export class Gateway {
     this.hausspielerTarnen =
       typeof tarnung === 'object' ? tarnung : { web: tarnung === true, ios: tarnung === true };
     this.appInhalt = options.appInhalt ?? APP_INHALT_WIE_WEB;
+    this.admins = options.admins;
     this.push = options.push;
     this.lookupSession =
       options.lookupSession ?? ((token) => sessionFromToken(this.db, token));
@@ -587,6 +611,7 @@ export class Gateway {
         kette: Promise.resolve(),
         ausApp,
         ausIos,
+        admin: (await this.admins?.istAdmin(session.accountId)) ?? false,
         vordergrund: true,
       };
       this.connections.add(accepted);
@@ -598,6 +623,9 @@ export class Gateway {
   }
 
   private drop(connection: Connection): void {
+    // App weggewischt oder Verbindung tot: Fuer einen Admin uebernimmt sofort
+    // verdeckt der Bot (admin.ts), nicht erst nach der Zugzeit.
+    this.vertretenWennWeg(connection);
     if (connection.tableId) {
       const tableId = connection.tableId;
       const room = this.byTable.get(tableId);
@@ -701,6 +729,11 @@ export class Gateway {
           break;
         case 'hintergrund':
           connection.vordergrund = false;
+          this.vertretenWennWeg(connection);
+          break;
+        case 'vertreten':
+          if (!connection.admin) throw forbidden('notAdmin');
+          if (!this.runtime.vertretungAn(message.tableId, connection.accountId)) throw conflict('partyNotRunning');
           break;
         default:
           send(connection.socket, errorMessage('unknownMessageType'));
@@ -783,6 +816,8 @@ export class Gateway {
     room.add(connection);
 
     this.runtime.setPresence(message.tableId, connection.accountId, true);
+    // Ein Admin, der zurueckkommt, spielt wieder selbst (admin.ts).
+    if (connection.admin && sitzt) this.runtime.vertretungAus(message.tableId, connection.accountId);
     // Nur wer selbst sitzt, darf einen Tisch anlaufen lassen.
     if (sitzt) await this.ensureStarted(message.tableId);
     // Wer gerade beitritt, hat womoeglich selbst einen Platz besetzt (der
@@ -1110,6 +1145,21 @@ export class Gateway {
    * beim Empfaenger ein Neuzeichnen fuer nichts.
    */
   private readonly zuletztGesendet = new Map<string, Map<boolean, { tisch: string; partie: string }>>();
+
+  /**
+   * Ein Admin ist vom Tisch weg (App im Hintergrund oder Verbindung zu):
+   * Hat er dort keine andere Verbindung mehr, die hinsieht, spielt ab sofort
+   * verdeckt der Bot fuer ihn (admin.ts, runtime `vertretungAn`).
+   */
+  private vertretenWennWeg(connection: Connection): void {
+    if (!connection.admin || !connection.tableId) return;
+    const tableId = connection.tableId;
+    for (const andere of this.connections) {
+      if (andere === connection || andere.accountId !== connection.accountId) continue;
+      if (andere.tableId === tableId && andere.vordergrund) return;
+    }
+    this.runtime.vertretungAn(tableId, connection.accountId);
+  }
 
   /** Sieht diese Verbindung Hausspieler wie Menschen? Siehe `hausspielerTarnen`. */
   private tarntFuer(connection: Connection): boolean {

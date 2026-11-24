@@ -112,6 +112,8 @@ import {
   requestFriendship,
   searchPlayers,
 } from '../social/service.js';
+import type { AdminListe } from '../admin.js';
+import { TischEinladungen, pruefeTischEinladung } from '../tables/tischeinladung.js';
 import {
   CRESTS,
   MOTTO_MAX,
@@ -407,6 +409,12 @@ export interface AppDeps {
    * — nur der Anlass "Einladung angenommen" entfaellt.
    */
   readonly push?: PushAnlaesse;
+  /**
+   * Broweg-Admins (admin.ts). Gesetzt nur, wo die verdeckte Vertretung an
+   * ist (`ADMIN_VERTRETUNG`) — dann sagt `/api/me` dem Client, ob er den
+   * Knopf „Bot uebernimmt" zeigen soll. Fehlt es, ist niemand Admin.
+   */
+  readonly admins?: Pick<AdminListe, 'istAdmin'>;
 }
 
 /**
@@ -535,6 +543,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({ logger: false, bodyLimit: BODY_LIMIT });
   const appInhalt = deps.appInhalt ?? APP_INHALT_WIE_WEB;
   const umfang = deps.umfang ?? ALLES;
+  const tischEinladungen = new TischEinladungen();
   await app.register(cookie);
 
   // Sicherheits-Kopfzeilen. Ohne frame-ancestors laesst sich die Seite in
@@ -1339,6 +1348,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       stats: stats.filter((zeile) => imUmfang(umfang, zeile.gameId)),
       clubs,
       activeTable,
+      /** Darf dieses Konto sich am Tisch verdeckt vom Bot vertreten lassen (admin.ts)? */
+      adminVertretung: (await deps.admins?.istAdmin(account.id)) ?? false,
     });
   });
 
@@ -2546,6 +2557,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   async function stelltAnfrage(tableId: string, accountId: string): Promise<boolean> {
     const { table, seats } = await tableWithSeats(deps.db, tableId);
     if (!brauchtZusage(table)) return false;
+    // Eingeladen (tables/tischeinladung.ts): Die Zusage hat der Einladende
+    // schon gegeben, eine zweite Anfrage an ihn waere Buerokratie.
+    if (tischEinladungen.istEingeladen(tableId, accountId)) return false;
     if (seats.some((seat) => seat.accountId === accountId)) return false;
     await stelleAnfrage(deps.db, tableId, accountId);
     const gastgeber = gastgeberVon(seats);
@@ -2613,6 +2627,27 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // wenn er damit voll ist, startet die Partie von selbst.
     deps.runtime.notify(tableId);
     return reply.send({ ok: true });
+  });
+
+  /**
+   * Einen Freund an den wartenden Tisch einladen (tables/tischeinladung.ts).
+   * Antwortet mit dem, was am Tisch darunter steht: `benachrichtigt` oder
+   * `nichtErreichbar` (keine App, Mitteilungen aus, Push abgeschaltet).
+   */
+  app.post('/api/tables/:tableId/einladen', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
+    const accountId = await requireAccount(request);
+    const { tableId } = z.object({ tableId: z.string().uuid() }).parse(request.params);
+    const { accountId: gastId } = z.object({ accountId: z.string().uuid() }).parse(request.body ?? {});
+    const { gameId } = await pruefeTischEinladung(deps.db, tableId, accountId, gastId);
+    tischEinladungen.merke(tableId, gastId);
+    const [einlader] = await deps.db
+      .select({ displayName: s.account.displayName })
+      .from(s.account)
+      .where(eq(s.account.id, accountId));
+    const status = deps.push
+      ? await deps.push.tischEinladen(tableId, gameId, einlader?.displayName ?? '', gastId)
+      : 'nichtErreichbar';
+    return reply.send({ status });
   });
 
   /**

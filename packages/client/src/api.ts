@@ -127,6 +127,11 @@ export type Getragen = Partial<Record<Slot, string>>;
 export interface Me {
   id: string;
   /**
+   * Broweg-Admin, der sich am Tisch verdeckt vom Bot vertreten lassen darf
+   * (Server: admin.ts). Fehlt bei aelteren Servern.
+   */
+  adminVertretung?: boolean;
+  /**
    * Gastkonto: keine Mail, kein Passwort. Nach dem Abmelden kommt niemand
    * mehr heran, und Runden mit einem Gast am Tisch zaehlen nicht fuer die
    * Rangliste — beides muss die Oberflaeche daran erkennen koennen.
@@ -1108,6 +1113,13 @@ export const api = {
    * Bildschirm mit `anfrageStand` auf die Antwort.
    */
   joinTable: (id: string) => post<{ ok: true; angefragt?: boolean }>(`/tables/${id}/join`),
+  /**
+   * Einen Freund an den wartenden Tisch einladen (Server:
+   * tables/tischeinladung.ts). `benachrichtigt`: Die Mitteilung ging an sein
+   * Telefon; `nichtErreichbar`: keine App oder Mitteilungen aus.
+   */
+  tischEinladen: (id: string, accountId: string) =>
+    post<{ status: 'benachrichtigt' | 'nichtErreichbar' }>(`/tables/${id}/einladen`, { accountId }),
   /** Offene Beitrittsanfragen; nur der Gastgeber bekommt sie (sonst 403). */
   anfragen: (id: string) =>
     request<{ anfragen: { accountId: string; displayName: string }[] }>(`/tables/${id}/anfragen`),
@@ -1427,7 +1439,15 @@ export const api = {
 // ---------------------------------------------------------------------------
 
 /** Kennungen wie im Server (push/kennungen.ts). Nie umbenennen. */
-export type PushAnlass = 'dran' | 'start' | 'einladung' | 'anfrage' | 'serie' | 'browort' | 'clanwort';
+export type PushAnlass =
+  | 'dran'
+  | 'start'
+  | 'einladung'
+  | 'anfrage'
+  | 'serie'
+  | 'browort'
+  | 'clanwort'
+  | 'tischeinladung';
 
 export interface PushEinstellungen {
   anlaesse: Record<PushAnlass, boolean>;

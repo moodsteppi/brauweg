@@ -17,7 +17,19 @@
 // noch keine Lektion lief (lernpfad.ts) — gehoert zu keinem Tisch.
 // `browort` und `clanwort` seit dem 23.10.2026: Abend-Erinnerung ans offene
 // Tageswort und die Auslosung „du waehlst heute das Clanwort" (browort/dienst.ts).
-export const ANLAESSE = ['dran', 'start', 'einladung', 'anfrage', 'serie', 'browort', 'clanwort'] as const;
+// `tischeinladung` seit dem 24.11.2026: Jemand am wartenden Tisch laedt
+// einen Freund ein (tables/tischeinladung.ts) — anders als `einladung`, das
+// dem Gastgeber meldet, dass jemand ueber den Code gekommen ist.
+export const ANLAESSE = [
+  'dran',
+  'start',
+  'einladung',
+  'anfrage',
+  'serie',
+  'browort',
+  'clanwort',
+  'tischeinladung',
+] as const;
 export type Anlass = (typeof ANLAESSE)[number];
 
 export function istAnlass(wert: unknown): wert is Anlass {

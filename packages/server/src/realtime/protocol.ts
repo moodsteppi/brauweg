@@ -168,6 +168,16 @@ export type ClientMessage =
        */
       readonly type: 'hintergrund';
       readonly tableId?: string;
+    }
+  | {
+      readonly v: number;
+      readonly game?: GameId;
+      /**
+       * Ein Broweg-Admin laesst sich verdeckt vom Bot auf hoechster Stufe
+       * vertreten (src/admin.ts). Fuer alle anderen Konten ein Fehler.
+       */
+      readonly type: 'vertreten';
+      readonly tableId: string;
     };
 
 // ---------------------------------------------------------------------------

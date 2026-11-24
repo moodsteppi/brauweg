@@ -29,6 +29,7 @@ import { faelligeBrowortErinnerungen } from './browort/dienst.js';
 import { statistikSchreiben } from './statistik.js';
 import { expireStaleTables } from './tables/service.js';
 import { TAKT_MS, hausrundenAn, hausspielerTarnung, pflegeHausrunden } from './hausrunden.js';
+import { AdminListe, adminVertretungAn } from './admin.js';
 import { PushAnlaesse } from './push/anlaesse.js';
 import { leseAbgeschaltet } from './push/kennungen.js';
 import { waehlePushVersand } from './push/versand.js';
@@ -156,7 +157,13 @@ async function main(): Promise<void> {
   const push = new PushAnlaesse({ db, versand: pushVersand, aus: pushAus.aus });
   push.beobachte(runtime);
 
+  /*
+   * Broweg-Admins mit verdeckter Bot-Vertretung (admin.ts). Nur wo
+   * ADMIN_VERTRETUNG an ist (Vorgabe: staging), sonst ist niemand Admin.
+   */
+  const admins = adminVertretungAn(config.stage) ? new AdminListe(db, process.env.ADMIN_EMAILS) : undefined;
   const app = await buildApp({
+    admins,
     db,
     runtime,
     vermittlung,
@@ -211,6 +218,7 @@ async function main(): Promise<void> {
     appInhalt,
     push,
     hausspielerTarnen: hausspielerTarnung(config.stage),
+    admins,
   });
   push.setzeVordergrund((accountId) => gateway.imVordergrund(accountId));
 
