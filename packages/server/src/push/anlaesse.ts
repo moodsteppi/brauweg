@@ -217,6 +217,29 @@ export class PushAnlaesse {
     this.merke(this.zustellen('clanwort', [konto], null, 'browort', null));
   }
 
+  /**
+   * Jemand am wartenden Tisch laedt einen Freund ein (tables/tischeinladung.ts).
+   *
+   * Anders als die anderen Anlaesse wartet der Aufrufer auf das Ergebnis: Am
+   * Tisch steht danach „wurde benachrichtigt" oder „nicht erreichbar", und
+   * das soll stimmen. Die Vordergrund-Schleuse gilt hier NICHT — wer die App
+   * offen hat, aber woanders steht, weiss von der Einladung sonst nichts.
+   * Die Drossel gilt: Wer denselben Freund im Minutentakt antippt, klingelt
+   * trotzdem nur einmal; das zaehlt dann als benachrichtigt.
+   */
+  async tischEinladen(
+    tableId: string,
+    gameId: string,
+    einladerName: string,
+    gastId: string,
+  ): Promise<'benachrichtigt' | 'nichtErreichbar'> {
+    if (this.aus.has('tischeinladung')) return 'nichtErreichbar';
+    const geraete = await geraeteFuer(this.db, [gastId], 'tischeinladung');
+    if (geraete.length === 0) return 'nichtErreichbar';
+    await this.zustellen('tischeinladung', [gastId], tableId, gameId, einladerName, { trotzVordergrund: true });
+    return 'benachrichtigt';
+  }
+
   /** Wartet, bis alle angestossenen Zustellungen durch sind (Tests, Serverende). */
   async ruhe(): Promise<void> {
     while (this.laufend.size > 0) await Promise.allSettled([...this.laufend]);
@@ -242,6 +265,7 @@ export class PushAnlaesse {
     tableId: string | null,
     gameId: string,
     name: string | null,
+    { trotzVordergrund = false }: { trotzVordergrund?: boolean } = {},
   ): Promise<void> {
     if (this.aus.has(anlass)) return;
     const jetzt = this.jetzt();
@@ -249,7 +273,7 @@ export class PushAnlaesse {
 
     const empfaenger: string[] = [];
     for (const konto of new Set(konten)) {
-      if (this.vordergrund(konto)) continue;
+      if (!trotzVordergrund && this.vordergrund(konto)) continue;
       const schluessel = `${konto}|${tableId ?? anlass}`;
       const zuletzt = this.zuletzt.get(schluessel);
       if (zuletzt !== undefined && jetzt - zuletzt < this.drosselMs) continue;

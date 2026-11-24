@@ -20,6 +20,7 @@ import { memo, useEffect, useState } from 'react';
 import { Ladekreis } from '../Ladekreis';
 import { GastHinweis } from './GastHinweis';
 import { AnfragenLeiste } from './Anfragen';
+import { EinladenBlatt } from './EinladenBlatt';
 import { Einladung } from '../minispiele/partykiste/Einladung';
 
 import { api } from '../api';
@@ -519,6 +520,9 @@ export function Wartebereich({
   // inline: Drei Stufen mit je einem Satz Erklaerung passen nicht neben die
   // Sitzreihe, ohne den Wartebereich zu ueberladen.
   const [stufenOffen, setStufenOffen] = useState(false);
+  // Freund einladen (EinladenBlatt.tsx) — nur solange ein Platz frei ist.
+  const [einladenOffen, setEinladenOffen] = useState(false);
+  const freierPlatz = table.seats.some((s) => !s.displayName && !s.isBot);
 
   useEffect(() => {
     setBotBusy((prev) => {
@@ -651,6 +655,12 @@ export function Wartebereich({
           </div>
         ))}
       </div>
+      {freierPlatz && (
+        <button type="button" className="doko-botstufe-knopf doko-einladen-knopf" onClick={() => setEinladenOffen(true)}>
+          <strong>{t('tisch.einladen.knopf')}</strong>
+          <span className="doko-botstufe-pfeil" aria-hidden="true">›</span>
+        </button>
+      )}
       <p className="muted doko-wait-hint">
         {table.visibility === 'public'
           ? t('tisch.warten.hinweisOeffentlich')
@@ -660,6 +670,13 @@ export function Wartebereich({
 
       {error && <p className="doko-error">{t(error)}</p>}
       {zeigeRegeln && <RegelBlatt tableId={tableId} onClose={() => setZeigeRegeln(false)} />}
+      {einladenOffen && (
+        <EinladenBlatt
+          tableId={tableId}
+          sitzende={table.seats.map((s) => s.accountId).filter((id): id is string => !!id)}
+          onClose={() => setEinladenOffen(false)}
+        />
+      )}
       {stufenOffen && (
         <BotStufenBlatt
           aktuell={table.botLevel}

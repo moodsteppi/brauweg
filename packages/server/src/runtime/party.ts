@@ -106,6 +106,13 @@ export interface LiveParty {
   revision: number;
   /** Sitze, fuer die gerade ein Bot uebernimmt. Fuer alle sichtbar. */
   readonly botControlled: Set<number>;
+  /**
+   * Sitze eines Broweg-Admins, fuer den gerade VERDECKT ein Bot auf hoechster
+   * Stufe spielt (admin.ts, `vertretungAn`). Anders als `botControlled`
+   * erscheint das nirgends: nicht in `botSeats`, nicht als `isBot` am Sitz,
+   * und die Zugzeit laeuft am Bildschirm wie bei einem Menschen.
+   */
+  readonly vertreten: Set<number>;
   readonly leftSeats: Set<number>;
   /**
    * Seit wann ein Sitz weg ist, als Zeitstempel. Gesetzt beim ersten
@@ -453,6 +460,7 @@ export class PartyRuntime {
       state,
       revision: 0,
       botControlled: new Set(botPlaetze),
+      vertreten: new Set(),
       leftSeats: new Set(),
       absentSince: new Map(),
       online: new Set(),
@@ -545,6 +553,7 @@ export class PartyRuntime {
       botControlled: new Set(
         seats.filter((seat) => seat.isBot).map((seat) => seat.seatIndex),
       ),
+      vertreten: new Set(),
       leftSeats: new Set(),
       absentSince: new Map(),
       online: new Set(),
@@ -710,6 +719,8 @@ export class PartyRuntime {
       // Bot den Sitz wieder frei.
       party.botControlled.delete(seat);
     }
+    // Ebenso die verdeckte Vertretung: Wer selbst zieht, spielt selbst.
+    party.vertreten.delete(seat);
 
     // Schachuhr: erst die verbrauchte Zeit buchen, dann den Zug. War das
     // Konto schon leer, bevor der Zug ankam, entscheidet die Uhr — der Zug
@@ -839,6 +850,24 @@ export class PartyRuntime {
     // die Verlassen-Regel liefe ins Leere. `botControlled` ist deshalb nur
     // eine Anzeige, kein Steuerflag.
     const isBot = !seat || !seat.accountId || seat.permanentBot || party.leftSeats.has(actor);
+
+    /*
+     * Verdeckte Vertretung (admin.ts): Der Bot zieht, aber nach aussen laeuft
+     * die Zugzeit wie bei einem Menschen, und er laesst sich Zeit wie einer.
+     * Eine Schachuhr gibt es an Doppelkopf-Tischen nicht; wo doch, spielt
+     * der Bot ganz normal mit der Uhr (Weg darunter), das faellt dort nicht auf.
+     */
+    if (!isBot && party.vertreten.has(actor) && this.uhrRest(party, actor) === null) {
+      const bisPhaseV = party.phaseDeadline === null ? null : Math.max(0, party.phaseDeadline - Date.now());
+      const denkzeit = this.menschlicheDenkzeit(party);
+      if (bisPhaseV === null || denkzeit <= bisPhaseV) {
+        party.turnDeadline = Date.now() + this.zugzeit(party);
+        party.timer = setTimeout(() => {
+          void this.playBot(party, actor);
+        }, denkzeit);
+        return;
+      }
+    }
 
     /*
      * Schachuhr statt Zugzeit. Die Frist ist das Ende des Zeitkontos, und
@@ -1046,7 +1075,8 @@ export class PartyRuntime {
       // bauartbedingt nicht schummeln.
       const action = party.module.botAction(
         party.module.viewFor(party.state, seat),
-        party.botLevel,
+        // Ein Admin wird von der staerksten Stufe vertreten (admin.ts).
+        party.vertreten.has(seat) ? 'genie' : party.botLevel,
       );
       // Auch der Bot zahlt mit seiner Uhr (siehe `act`).
       const gebucht = this.bucheUhr(party, seat);
@@ -1061,6 +1091,42 @@ export class PartyRuntime {
       console.error(`Bot an Tisch ${party.tableId}, Sitz ${seat}:`, err);
       await this.finish(party, 'abgebrochen');
     }
+  }
+
+  /**
+   * Ein Admin laesst sich verdeckt vertreten (admin.ts): ab sofort zieht fuer
+   * seinen Sitz ein Bot auf hoechster Stufe, ohne dass es am Tisch zu sehen
+   * ist. Liefert, ob es gegriffen hat (laufende Partie, Konto sitzt dort).
+   */
+  vertretungAn(tableId: string, accountId: string): boolean {
+    const party = this.live.get(tableId);
+    if (!party || party.finished) return false;
+    const seat = this.seatOf(party, accountId);
+    if (seat === null || party.leftSeats.has(seat)) return false;
+    if (party.vertreten.has(seat)) return true;
+    party.vertreten.add(seat);
+    // Ist er gerade dran, zieht der Bot diesen Zug schon — nicht erst den naechsten.
+    if (party.module.currentActor(party.state) === seat) this.schedule(party);
+    return true;
+  }
+
+  /** Der Admin ist zurueck (Beitritt am Tisch): Er spielt wieder selbst. */
+  vertretungAus(tableId: string, accountId: string): void {
+    const party = this.live.get(tableId);
+    if (!party) return;
+    const seat = this.seatOf(party, accountId);
+    if (seat === null || !party.vertreten.delete(seat)) return;
+    if (party.module.currentActor(party.state) === seat) this.schedule(party);
+  }
+
+  /**
+   * Wie lange der verdeckte Bot „nachdenkt". Ohne Pause zoege er sofort und
+   * fiele auf. Im Test (`botDelayMs: 0`) ohne Pause, damit nichts wartet.
+   */
+  private menschlicheDenkzeit(party: LiveParty): number {
+    const takt = this.botTakt(party);
+    if (takt === 0) return 0;
+    return takt + 1200 + Math.floor(Math.random() * 2800);
   }
 
   /** Restzeit des Sitzes vor seinem laufenden Zug, null = ohne Schachuhr. */

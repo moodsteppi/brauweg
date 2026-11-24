@@ -72,6 +72,12 @@ export interface TableConnection<V = GameView> {
   emotes: Record<number, string>;
   /** Einen Zuruf absetzen. Zu schnell hintereinander verpufft still. */
   sendEmote(emote: string): void;
+  /**
+   * Nur Broweg-Admins (Server: admin.ts): Ab jetzt spielt verdeckt der Bot
+   * auf hoechster Stufe fuer den eigenen Sitz. Zurueck bringt das naechste
+   * eigene Ausspielen oder Wiederbeitreten.
+   */
+  vertreten(): void;
   /** Freien Platz mit einem Bot belegen bzw. den Bot wieder entfernen. */
   addBot(seat: number): void;
   removeBot(seat: number): void;
@@ -625,6 +631,11 @@ export function useTable<V = GameView>(
   );
 
   const addBot = useCallback((seat: number) => command('addBot', seat), [command]);
+  const vertreten = useCallback(() => {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN || !tableId) return;
+    socket.send(JSON.stringify({ v: ENVELOPE_VERSION, game: gameId, type: 'vertreten', tableId }));
+  }, [tableId, gameId]);
   const removeBot = useCallback((seat: number) => command('removeBot', seat), [command]);
 
   /** Sofort starten: Tisch schrumpft serverseitig auf die besetzten Plaetze. */
@@ -688,6 +699,7 @@ export function useTable<V = GameView>(
     send,
     emotes,
     sendEmote,
+    vertreten,
     addBot,
     removeBot,
     startNow,

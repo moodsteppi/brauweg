@@ -23,6 +23,7 @@ import { Gateway } from '../src/realtime/gateway.js';
 import { PartyRuntime, type LiveParty } from '../src/runtime/party.js';
 import { createSession, sessionFromToken } from '../src/auth/service.js';
 import { createTable, joinTable } from '../src/tables/service.js';
+import { acceptFriendship, requestFriendship } from '../src/social/service.js';
 import { ENVELOPE_VERSION } from '../src/realtime/protocol.js';
 import { ApnsSender, apnsJwt, leseApnsSchluessel } from '../src/push/apns.js';
 import { FcmSender, leseFcmDienstkonto } from '../src/push/fcm.js';
@@ -255,7 +256,7 @@ test('Einstellungen: Vorgabe alles an, einzeln abschaltbar, und aus heisst kein 
   await anmelden(s, a.kopf, 'ios', IOS_TOKEN);
 
   const vorher = await s.app.inject({ method: 'GET', url: '/api/push/einstellungen', headers: a.kopf });
-  assert.deepEqual(vorher.json(), { anlaesse: { dran: true, start: true, einladung: true, anfrage: true, serie: true, browort: true, clanwort: true }, geraete: 1 });
+  assert.deepEqual(vorher.json(), { anlaesse: { dran: true, start: true, einladung: true, anfrage: true, serie: true, browort: true, clanwort: true, tischeinladung: true }, geraete: 1 });
 
   const nachher = await s.app.inject({
     method: 'PUT',
@@ -263,7 +264,7 @@ test('Einstellungen: Vorgabe alles an, einzeln abschaltbar, und aus heisst kein 
     headers: a.kopf,
     payload: { dran: false },
   });
-  assert.deepEqual(nachher.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: true, serie: true, browort: true, clanwort: true });
+  assert.deepEqual(nachher.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: true, serie: true, browort: true, clanwort: true, tischeinladung: true });
 
   assert.equal((await geraeteFuer(s.ctx.db, [anna.accountId], 'dran')).length, 0);
   assert.equal((await geraeteFuer(s.ctx.db, [anna.accountId], 'start')).length, 1);
@@ -277,7 +278,7 @@ test('Einstellungen: Vorgabe alles an, einzeln abschaltbar, und aus heisst kein 
     payload: { serie: false, anfrage: false },
   });
   assert.equal(serie.statusCode, 200, serie.body);
-  assert.deepEqual(serie.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: false, serie: false, browort: true, clanwort: true });
+  assert.deepEqual(serie.json().anlaesse, { dran: false, start: true, einladung: true, anfrage: false, serie: false, browort: true, clanwort: true, tischeinladung: true });
 
   const unsinn = await s.app.inject({
     method: 'PUT',
@@ -869,4 +870,69 @@ test('Einladung angenommen: der Gastgeber bekommt den Namen, sonst nichts ueber 
   assert.equal(mitteilung.text, 'Bert sitzt jetzt mit an deinem Doppelkopf-Tisch.');
   assert.deepEqual(mitteilung.daten, { anlass: 'einladung', tableId: tisch.id, gameId: 'doppelkopf' });
   assert.ok(!JSON.stringify(mitteilung).includes('bert.geheim'), 'keine Adresse');
+});
+
+// ---------------------------------------------------------------------------
+// Freund an den Tisch einladen (tables/tischeinladung.ts)
+// ---------------------------------------------------------------------------
+
+test('Freund einladen: Mitteilung aufs Telefon, Status zurueck, privater Tisch ohne Anfrage', async (t) => {
+  const s = await setup();
+  t.after(() => s.close());
+  const ios = s.versand.ios as LogSender;
+  const anna = await createVerifiedAccount(s.ctx, 'Anna');
+  const ben = await kontoMitGeraet(s, 'Ben', IOS_TOKEN);
+  const cara = await createVerifiedAccount(s.ctx, 'Cara');
+  const dora = await createVerifiedAccount(s.ctx, 'Dora');
+  for (const freund of [ben, cara.accountId]) {
+    await requestFriendship(s.ctx.db, anna.accountId, freund);
+    await acceptFriendship(s.ctx.db, freund, anna.accountId);
+  }
+  const tisch = await createTable(s.ctx.db, {
+    accountId: anna.accountId,
+    gameId: 'doppelkopf',
+    config: CONFIG,
+    seats: 4,
+    rounds: 4,
+    visibility: 'on_request',
+  });
+  const { kopf } = await s.sitzung(anna.accountId);
+  const einladen = (gast: string, kopfzeilen = kopf) =>
+    s.app.inject({
+      method: 'POST',
+      url: `/api/tables/${tisch.id}/einladen`,
+      headers: kopfzeilen,
+      payload: { accountId: gast },
+    });
+
+  const mitApp = await einladen(ben);
+  assert.equal(mitApp.statusCode, 200, mitApp.body);
+  assert.deepEqual(mitApp.json(), { status: 'benachrichtigt' });
+  await s.push.ruhe();
+  assert.equal(ios.gesendet.length, 1);
+  const { mitteilung, token } = ios.gesendet[0]!;
+  assert.equal(token, IOS_TOKEN);
+  assert.equal(mitteilung.titel, 'Anna lädt dich ein');
+  assert.deepEqual(mitteilung.daten, { anlass: 'tischeinladung', tableId: tisch.id, gameId: 'doppelkopf' });
+
+  // Ohne App: nicht erreichbar, und nichts geht hinaus.
+  assert.deepEqual((await einladen(cara.accountId)).json(), { status: 'nichtErreichbar' });
+  // Keine Freunde: abgewiesen.
+  const fremd = await einladen(dora.accountId);
+  assert.equal(fremd.statusCode, 403);
+  assert.equal(fremd.json().code, 'notFriends');
+  // Wer nicht am Tisch sitzt, laedt niemanden ein.
+  const { kopf: benKopf } = await s.sitzung(ben);
+  assert.equal((await einladen(cara.accountId, benKopf)).statusCode, 403);
+
+  // Ben folgt der Einladung: Er sitzt sofort, ohne Beitrittsanfrage.
+  const beitritt = await s.app.inject({ method: 'POST', url: `/api/tables/${tisch.id}/join`, headers: benKopf });
+  assert.deepEqual(beitritt.json(), { ok: true });
+  // Dora ist nicht eingeladen: Sie muss weiter anfragen.
+  const { kopf: doraKopf } = await s.sitzung(dora.accountId);
+  const anfrage = await s.app.inject({ method: 'POST', url: `/api/tables/${tisch.id}/join`, headers: doraKopf });
+  assert.deepEqual(anfrage.json(), { ok: true, angefragt: true });
+
+  // Ben sitzt jetzt: Ihn noch einmal einzuladen ist ein Fehler.
+  assert.equal((await einladen(ben)).json().code, 'alreadySeated');
 });

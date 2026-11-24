@@ -320,7 +320,19 @@ export function App(): React.JSX.Element {
    */
   useEffect(() => {
     if (!kontoId || !inApp) return;
-    return horcheAufAntippen(({ tableId, gameId }) => setScreen({ name: 'table', gameId, tableId }));
+    return horcheAufAntippen(({ tableId, gameId }) => {
+      /*
+       * Erst einen Platz nehmen, dann an den Tisch: Eine Tisch-Einladung
+       * (Server: tables/tischeinladung.ts) soll mit einem Tipp am Tisch
+       * enden, nicht als Zuschauer. Wer schon sitzt (alle anderen Anlaesse),
+       * bleibt unveraendert sitzen; laeuft die Partie schon oder ist der Tisch
+       * voll, geht es trotzdem hin — dann eben zum Zusehen.
+       */
+      void api
+        .joinTable(tableId)
+        .catch(() => undefined)
+        .finally(() => setScreen({ name: 'table', gameId, tableId }));
+    });
   }, [kontoId]);
 
   /**
@@ -782,6 +794,7 @@ export function App(): React.JSX.Element {
           )}
           szene={themeFuer(screen.gameId).tableScene}
           onShowProfile={zeigeProfil}
+          adminVertretung={me?.adminVertretung === true}
           // Zurueck zum Start: me neu laden, damit „Weiterspielen" den
           // echten Stand zeigt (Wartetisch weg / Partie noch offen).
           onLeave={() => {

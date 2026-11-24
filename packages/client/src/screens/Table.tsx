@@ -86,8 +86,16 @@ export function Table({
   szene,
   onShowProfile,
   onLeave,
+  adminVertretung = false,
 }: {
   tableId: string;
+  /**
+   * Broweg-Admin (Server: admin.ts): zeigt „Bot übernimmt". Danach spielt
+   * verdeckt der Bot auf höchster Stufe — für die anderen sieht es aus, als
+   * spiele man selbst weiter. Dasselbe passiert ohne Knopf, sobald man die
+   * App verlässt.
+   */
+  adminVertretung?: boolean;
   deck: Deck;
   /** Gewaehlte Tischszenerie des Kontos. */
   szene: string;
@@ -103,11 +111,19 @@ export function Table({
     send,
     emotes,
     sendEmote,
+    vertreten,
     addBot,
     removeBot,
     setBotLevel,
     reconnect,
   } = useTable(tableId);
+  // Kurze Bestätigung nach „Bot übernimmt" — nur am eigenen Bildschirm.
+  const [vertretenGemeldet, setVertretenGemeldet] = useState(false);
+  useEffect(() => {
+    if (!vertretenGemeldet) return;
+    const uhr = setTimeout(() => setVertretenGemeldet(false), 4000);
+    return () => clearTimeout(uhr);
+  }, [vertretenGemeldet]);
 
   /**
    * Welche Zurufe mir gehoeren. Einmal beim Betreten geholt; im Shop kann
@@ -790,6 +806,20 @@ export function Table({
           )}
           {table?.paused && <span className="doko-badge doko-badge--pause">{t('doko.pausiert')}</span>}
           {view.seat === null && <span className="doko-badge">{t('doko.zuschauer')}</span>}
+          {vertretenGemeldet && <span className="doko-badge">{t('tisch.vertreten.an')}</span>}
+          {adminVertretung && view.seat !== null && !view.finished && (
+            <button
+              className="doko-icon"
+              onClick={() => {
+                vertreten();
+                setVertretenGemeldet(true);
+              }}
+              aria-label={t('tisch.vertreten.knopf')}
+              title={t('tisch.vertreten.knopf')}
+            >
+              🤖
+            </button>
+          )}
           {table?.visibility === 'club_only' && view.seat !== null && (
             <button
               className="doko-icon"
