@@ -183,6 +183,11 @@ export const account = pgTable(
      */
     isStaff: boolean().notNull().default(false),
     /**
+     * Hausspieler (24.11.2026, src/hausrunden.ts): ein Konto, hinter dem ein
+     * Bot sitzt. Nie in Suche, Ranglisten oder Freundeslisten.
+     */
+    hausspieler: boolean().notNull().default(false),
+    /**
      * Gewaehltes Kartenblatt. Reine Darstellung, deshalb bewusst nur eine
      * Kennung: Wie ein Deck aussieht, weiss allein der Client. Der Server
      * kennt die zulaessigen Kennungen (src/decks.ts), damit nichts Fremdes in

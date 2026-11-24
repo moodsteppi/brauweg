@@ -349,7 +349,7 @@ export class PartyRuntime {
     if (chipFeld) {
       const buyIn = einsatzVon(rs.config, chipFeld);
       const menschen = seats
-        .filter((seat): seat is typeof seat & { accountId: string } => !!seat.accountId)
+        .filter((seat): seat is typeof seat & { accountId: string } => !!seat.accountId && !seat.isBot)
         .map((seat) => ({ accountId: seat.accountId, seat: seat.seatIndex }));
       await zieheEinsatz(this.db, tableId, menschen, buyIn);
     }
@@ -401,7 +401,8 @@ export class PartyRuntime {
        * aus der eingefrorenen `config`: Sie laesst sich waehrend des Wartens
        * noch aendern, die config nicht.
        */
-      botSeats: seats.filter((seat) => !seat.accountId).map((seat) => seat.seatIndex),
+      // Hausspieler (src/hausrunden.ts) haben ein Konto und sind trotzdem Bots.
+      botSeats: seats.filter((seat) => !seat.accountId || seat.isBot).map((seat) => seat.seatIndex),
       botLevel: tableBotLevel(table.filters),
       gastSeats,
     });
@@ -423,6 +424,8 @@ export class PartyRuntime {
 
     // Unbesetzte Plaetze uebernimmt dauerhaft ein Bot.
     const emptySeats = seats.filter((seat) => !seat.accountId).map((seat) => seat.seatIndex);
+    // Dazu die Hausspieler: Konto fuer Name und Bild, gespielt wie ein Bot.
+    const botPlaetze = seats.filter((seat) => !seat.accountId || seat.isBot).map((seat) => seat.seatIndex);
     if (emptySeats.length > 0) {
       await this.db
         .update(s.tableSeat)
@@ -443,13 +446,13 @@ export class PartyRuntime {
       seats: seats.map((seat) => ({
         index: seat.seatIndex,
         accountId: seat.accountId,
-        permanentBot: !seat.accountId,
+        permanentBot: !seat.accountId || seat.isBot,
       })),
       botLevel: tableBotLevel(table.filters),
       visibility: table.visibility,
       state,
       revision: 0,
-      botControlled: new Set(emptySeats),
+      botControlled: new Set(botPlaetze),
       leftSeats: new Set(),
       absentSince: new Map(),
       online: new Set(),
@@ -478,8 +481,8 @@ export class PartyRuntime {
     partieBeginnZaehlen({
       spiel: liveParty.gameId,
       tischart: this.tischart(liveParty),
-      menschen: seats.filter((seat) => seat.accountId).length,
-      botStufe: emptySeats.length > 0 ? liveParty.botLevel : null,
+      menschen: seats.filter((seat) => seat.accountId && !seat.isBot).length,
+      botStufe: botPlaetze.length > 0 ? liveParty.botLevel : null,
       config: rs.config,
       vorgabe: module.defaultConfig(),
     });
@@ -835,7 +838,7 @@ export class PartyRuntime {
     // sie dauerhaft, koennten nie drei Timeouts hintereinander auflaufen, und
     // die Verlassen-Regel liefe ins Leere. `botControlled` ist deshalb nur
     // eine Anzeige, kein Steuerflag.
-    const isBot = !seat || !seat.accountId || party.leftSeats.has(actor);
+    const isBot = !seat || !seat.accountId || seat.permanentBot || party.leftSeats.has(actor);
 
     /*
      * Schachuhr statt Zugzeit. Die Frist ist das Ende des Zeitkontos, und
@@ -966,7 +969,7 @@ export class PartyRuntime {
      * Bot spielt, waere eine Auskunft, die nicht stimmt.
      */
     const seat = party.seats.find((candidate) => candidate.index === actor);
-    if (seat?.accountId && !party.leftSeats.has(actor)) {
+    if (seat?.accountId && !seat.permanentBot && !party.leftSeats.has(actor)) {
       if (!party.absentSince.has(actor)) party.absentSince.set(actor, Date.now());
       const wegSeit = party.absentSince.get(actor)!;
       if (Date.now() - wegSeit >= this.opts.absenceMs) this.markLeft(party, actor);
@@ -1004,7 +1007,7 @@ export class PartyRuntime {
     // geht es ohnehin weiter.
     const botSeat = party.seats.find(
       (seat) =>
-        (!seat.accountId || party.leftSeats.has(seat.index)) &&
+        (!seat.accountId || seat.permanentBot || party.leftSeats.has(seat.index)) &&
         party.module.legalActions(party.state, seat.index).length > 0,
     );
     if (botSeat) {
@@ -1219,7 +1222,7 @@ export class PartyRuntime {
     if (hatBotSitze(party)) return;
 
     const humansOnline = party.seats.some(
-      (seat_) => seat_.accountId && party.online.has(seat_.index),
+      (seat_) => seat_.accountId && !seat_.permanentBot && party.online.has(seat_.index),
     );
     if (!humansOnline && !party.offlineTimer && !party.finished) {
       party.offlineTimer = setTimeout(() => {
@@ -1400,7 +1403,9 @@ export class PartyRuntime {
     standings: readonly PartyStanding[],
   ): Promise<void> {
     for (const standing of standings) {
-      const accountId = party.seats.find((seat) => seat.index === standing.seat)?.accountId;
+      const platz = party.seats.find((seat) => seat.index === standing.seat);
+      // Hausspieler (src/hausrunden.ts) sammeln keine Statistik.
+      const accountId = platz?.permanentBot ? null : platz?.accountId;
       if (!accountId) continue;
 
       const keys = standing.place === 1 ? ['parties', 'wins'] : ['parties'];

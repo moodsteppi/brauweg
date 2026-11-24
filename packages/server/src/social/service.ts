@@ -116,6 +116,8 @@ export async function searchPlayers(
         ilike(s.account.displayName, `%${safe}%`),
         sql`${s.account.anonymizedAt} is null`,
         ne(s.account.id, viewerId),
+        // Hausspieler (src/hausrunden.ts) nehmen keine Freundschaften an.
+        eq(s.account.hausspieler, false),
       ),
     )
     .orderBy(s.account.displayName)
