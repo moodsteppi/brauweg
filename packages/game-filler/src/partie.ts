@@ -1342,6 +1342,7 @@ export function fuehreAusOhneAutoEnde(
    * die Aktion kommt also an — hier entscheidet nur, ob der Sitz mitspielt.
    */
   if (aktion.typ === 'aufgeben') {
+    if (!(sitz in partie.punkte)) throw new Error('Sitz spielt nicht mit');
     // Zu viert scheidet nur der Sitz aus, die anderen spielen weiter.
     if (sitzeVon(partie).length > 2) return scheideAus(partie, sitz);
     return { ...partie, fertig: true, aufgegeben: sitz, mauernDiesenZug: 0 };
