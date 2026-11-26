@@ -210,6 +210,43 @@ describe('Filler zu viert: Brett', () => {
     // Am Zug ist Sitz 2 — genau dessen Eintrag leuchtet.
     expect(spieler.map((s) => s.hasAttribute('data-aktiv'))).toEqual([false, false, true, false]);
   });
+
+  /*
+   * Seit dem 26.11.2026 scheidet zu viert nur aus, wer aufgibt. Der Kopf
+   * streicht sein Bild durch (data-raus traegt das CSS); wer selbst draussen
+   * ist, bekommt keinen Aufgeben-Knopf mehr, sondern nur den Hinweis.
+   */
+  const brettMit = (sicht: FillerSicht, eigenerSitz: number): HTMLElement =>
+    render(
+      <Brett
+        sicht={sicht}
+        eigenerSitz={eigenerSitz}
+        sitze={VIER_SITZE}
+        binDran={false}
+        gegenBot={false}
+        getippt={null}
+        onWaehle={() => {}}
+        onBarriere={() => {}}
+        onZurueck={() => {}}
+        frist={null}
+        onAufgeben={() => {}}
+      />,
+    ).container;
+
+  it('markiert den Ausgeschiedenen im Kopf, nur ihn', () => {
+    const container = brettMit({ ...viererSicht(), ausgeschieden: [2], gesperrt: [0, 1, 3] }, 0);
+    const spieler = [...container.querySelectorAll('.fl-stand[data-vier] .fl-spieler')];
+    expect(spieler.map((s) => s.hasAttribute('data-raus'))).toEqual([false, false, true, false]);
+    // Wer noch spielt, kann weiterhin aufgeben.
+    expect(screen.getByRole('button', { name: 'Aufgeben' })).toBeInTheDocument();
+  });
+
+  it('wer selbst ausgeschieden ist, sieht zu: kein Aufgeben-Knopf, dafuer der Hinweis', () => {
+    const container = brettMit({ ...viererSicht(), ausgeschieden: [0], gesperrt: [1, 2, 3] }, 0);
+    expect(screen.queryByRole('button', { name: 'Aufgeben' })).toBeNull();
+    expect(container.querySelector('.fl-ausgeschieden')?.textContent).toBe('Ausgeschieden');
+    expect(container.querySelector('.fl-spieler[data-eigen]')?.hasAttribute('data-raus')).toBe(true);
+  });
 });
 
 describe('Filler zu viert: Wartebereich', () => {

@@ -78,14 +78,14 @@ export interface FillerSicht {
    * weiter; der Kopf streicht ihr Bild durch. Ein Server von vorher kennt
    * das Feld nicht — gelesen wird es deshalb mit `?? []`.
    */
-  ausgeschieden: number[];
+  ausgeschieden?: number[];
   /**
    * Die Farben, die gerade niemand waehlen darf — vom Modul gerechnet, weil
    * ein Ausgeschiedener seine Farbe freigibt und "jede Gebietsfarbe" damit
    * nicht mehr stimmt. Ein Server von vorher kennt das Feld nicht; dann gilt
    * wie bisher jede Gebietsfarbe.
    */
-  gesperrt: number[];
+  gesperrt?: number[];
   /**
    * Die Felder, die das automatische Ende verteilt hat, in Abspielreihenfolge
    * — nur in einer Partie, die so endete, und erst, wenn sie zu Ende IST.
