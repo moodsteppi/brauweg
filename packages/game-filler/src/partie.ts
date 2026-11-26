@@ -276,6 +276,25 @@ export interface FillerPartie {
    */
   readonly aufgegeben: number | null;
   /**
+   * Sitze, die zu viert aufgegeben haben und ausgeschieden sind — in der
+   * Reihenfolge, in der sie ausstiegen (Wunsch Niklas, 26.11.2026).
+   *
+   * Zu viert beendet Aufgeben nicht mehr die ganze Partie: Drei Spieler
+   * mitten im Rennen verloren sonst ihre Partie, weil einer keine Lust mehr
+   * hatte. Der Ausgeschiedene behaelt seine Felder (sie bleiben belegt),
+   * wird in der Zugfolge uebersprungen, sperrt keine Farbe mehr und erreicht
+   * nichts mehr — siehe `aktiveSitze`. Zu zweit bleibt es beim alten Ende
+   * ueber `aufgegeben`.
+   *
+   * Die Reihenfolge ist die Wertung unter ihnen: Wer spaeter ausstieg, steht
+   * besser da (`platzierungen`).
+   *
+   * Optional und NICHT nachgeruestet, aus demselben Grund wie `autoEnde`:
+   * Fehlt es, ist niemand ausgeschieden — und jeder Zustand von vorher
+   * (auch jeder Fingerabdruck einer Bot-Partie) bleibt Byte fuer Byte gleich.
+   */
+  readonly ausgeschieden?: readonly number[];
+  /**
    * Die Felder, die das automatische Ende verteilt hat, in der Reihenfolge,
    * in der der Bildschirm sie zeigen soll — oder nichts.
    *
@@ -328,8 +347,9 @@ export type FillerAktion =
   /**
    * Aufgeben (seit dem 06.11.2026, wie bei BroChess). Jederzeit durch den
    * Sitz selbst, auch wenn der Gegner am Zug ist — wer aussteigen will, soll
-   * nicht erst auf seinen Zug warten muessen. Die Partie ist danach zu Ende,
-   * der Gegner hat gewonnen, unabhaengig vom Punktestand.
+   * nicht erst auf seinen Zug warten muessen. Zu zweit ist die Partie danach
+   * zu Ende, der Gegner hat gewonnen, unabhaengig vom Punktestand. Zu viert
+   * scheidet nur der Sitz aus (seit dem 26.11.2026, siehe `ausgeschieden`).
    *
    * Steht bewusst NICHT in `erlaubteZuege`: Daraus waehlt der Bot, und der
    * gibt nie auf. Der Bildschirm bietet die Aktion von sich aus an — eine
@@ -844,13 +864,46 @@ export function sitzeVon(partie: FillerPartie): number[] {
 }
 
 /**
- * Gesperrte Farben: die Gebietsfarbe JEDES Sitzes.
+ * Die Sitze, die noch mitspielen: alle ausser den ausgeschiedenen (zu viert
+ * nach einem Aufgeben, siehe `ausgeschieden`). Zu zweit immer alle.
  *
- * Auch die eines ausgestiegenen Sitzes — sein Gebiet liegt weiter auf dem
- * Brett, und wer seine Farbe waehlen duerfte, schluckte es in einem Zug.
+ * Wer den Tisch nur VERLASSEN hat (`leftSeats`), spielt weiter mit — fuer
+ * ihn zieht der Bot. Ausgeschieden ist nur, wer aufgegeben hat.
+ */
+export function aktiveSitze(partie: FillerPartie): number[] {
+  const weg = partie.ausgeschieden ?? [];
+  const alle = sitzeVon(partie);
+  return weg.length === 0 ? alle : alle.filter((s) => !weg.includes(s));
+}
+
+/**
+ * Wer nach `sitz` am Zug ist: der naechste Sitz reihum, der noch mitspielt.
+ * Ist `sitz` selbst ausgeschieden, zaehlt trotzdem seine Stelle in der
+ * Runde — der Zug geht an den, der nach ihm gekommen waere.
+ */
+function naechsterNach(partie: FillerPartie, sitz: number): number {
+  const sitze = sitzeVon(partie);
+  const weg = partie.ausgeschieden ?? [];
+  const start = sitze.indexOf(sitz);
+  for (let schritt = 1; schritt <= sitze.length; schritt++) {
+    const kandidat = sitze[(start + schritt) % sitze.length]!;
+    if (!weg.includes(kandidat)) return kandidat;
+  }
+  return sitz;
+}
+
+/**
+ * Gesperrte Farben: die Gebietsfarbe jedes Sitzes, der noch mitspielt.
+ *
+ * Auch die eines Sitzes, der nur den Tisch VERLASSEN hat — sein Gebiet waechst
+ * unter dem Bot weiter, und wer seine Farbe waehlen duerfte, schluckte ihm
+ * die Felder vor der Nase weg. Die eines AUSGESCHIEDENEN nicht mehr (seit dem
+ * 26.11.2026): Er zieht nicht mehr, seine Felder sind belegt und werden beim
+ * Schlucken nie angefasst (`schlucke` nimmt nur freie). Die Sperre naehme
+ * den Verbliebenen nur eine Farbe weg, ohne etwas zu schuetzen.
  */
 export function gesperrteFarben(partie: FillerPartie): number[] {
-  return sitzeVon(partie)
+  return aktiveSitze(partie)
     .map((sitz) => partie.farbe[sitz])
     .filter((f): f is number => f !== undefined);
 }
@@ -881,6 +934,8 @@ export function erreichbareFreie(
   sitz: number,
   sperren: ReadonlySet<string>,
 ): number {
+  // Ein Ausgeschiedener zieht nicht mehr, also holt er auch nichts mehr.
+  if ((partie.ausgeschieden ?? []).includes(sitz)) return 0;
   const { spalten, zeilen } = partie.regeln;
   const gesehen = new Set<number>();
   const rand: number[] = [];
@@ -915,8 +970,11 @@ export function vonIrgendwemErreichbareFreie(
   const { spalten, zeilen } = partie.regeln;
   const gesehen = new Set<number>();
   const rand: number[] = [];
+  // Nur von Gebieten, die noch ziehen: Ein Ausgeschiedener holt nichts mehr.
+  const weg = partie.ausgeschieden ?? [];
   for (let platz = 0; platz < partie.besitzer.length; platz++) {
-    if (partie.besitzer[platz] !== null) rand.push(platz);
+    const b = partie.besitzer[platz];
+    if (b !== null && b !== undefined && !weg.includes(b)) rand.push(platz);
   }
   let zahl = 0;
   while (rand.length > 0) {
@@ -1021,7 +1079,9 @@ export function moeglicheBarrieren(
 
   const { spalten, zeilen } = partie.regeln;
   const gesetzt = new Set(partie.barrieren);
-  const sitze = sitzeVon(partie);
+  // Nur wer noch mitspielt: Ein Ausgeschiedener erreicht nichts mehr, und
+  // eine Mauer, die "ihm" einen Weg nimmt, nimmt niemandem etwas.
+  const sitze = aktiveSitze(partie);
   const vorher = new Map(sitze.map((s) => [s, erreichbareFreie(partie, s, gesetzt)]));
   // 0 oder fehlend: keine Grenze je Feld (Build, aeltere Extreme-Tische).
   const jeFeld = partie.regeln.mauernJeFeld ?? 0;
@@ -1127,12 +1187,17 @@ function schlucke(
  * Komponente bestimmt den Sitz, nicht die Suche — beides faellt zusammen,
  * weil eine Komponente nur von ihrem einen Sitz aus betreten wird.
  * Unerreichbare Felder fehlen in der Liste und bleiben Loecher.
+ *
+ * Ausgeschiedene (zu viert, seit dem 26.11.2026) zaehlen nicht als
+ * angrenzend: Ihr Gebiet ist nur noch belegter Boden. Ein Feld, das nur noch
+ * ein Ausgeschiedener erreichte, wird so zum Loch.
  */
 export function autoEndeVerteilung(partie: FillerPartie): AutoEndeFeld[] | null {
   const { spalten, zeilen } = partie.regeln;
   const sperren = new Set(partie.barrieren);
   const sterne = new Set(partie.sterne);
   const { besitzer } = partie;
+  const weg = partie.ausgeschieden ?? [];
 
   const kompVon: number[] = new Array(besitzer.length).fill(-1);
   /** Der einzige angrenzende Sitz je Komponente, oder null (niemand). */
@@ -1150,7 +1215,7 @@ export function autoEndeVerteilung(partie: FillerPartie): AutoEndeFeld[] | null 
       for (const n of offeneNachbarn(platz, spalten, zeilen, sperren)) {
         const b = besitzer[n];
         if (b !== null && b !== undefined) {
-          angrenzend.add(b);
+          if (!weg.includes(b)) angrenzend.add(b);
           continue;
         }
         if (kompVon[n] !== -1) continue;
@@ -1172,7 +1237,8 @@ export function autoEndeVerteilung(partie: FillerPartie): AutoEndeFeld[] | null 
   const gesehen = new Set<number>();
   let ring: number[] = [];
   for (let platz = 0; platz < besitzer.length; platz++) {
-    if (besitzer[platz] !== null) ring.push(platz);
+    const b = besitzer[platz];
+    if (b !== null && b !== undefined && !weg.includes(b)) ring.push(platz);
   }
   while (ring.length > 0) {
     const naechsterRing: number[] = [];
@@ -1210,7 +1276,11 @@ function mitAutoEnde(partie: FillerPartie): FillerPartie {
   if (partie.fertig) return partie;
   const verteilt = autoEndeVerteilung(partie);
   if (verteilt === null) return partie;
+  return verteile(partie, verteilt);
+}
 
+/** Verbucht eine Verteilung aus `autoEndeVerteilung` und beendet die Partie. */
+function verteile(partie: FillerPartie, verteilt: AutoEndeFeld[]): FillerPartie {
   const besitzer = [...partie.besitzer];
   const feld = [...partie.feld];
   const punkte: Record<number, number> = { ...partie.punkte };
@@ -1240,7 +1310,12 @@ export function fuehreAus(
    * Ende nicht still einen Zug zu spaet kommen.
    */
   const danach = fuehreAusOhneAutoEnde(partie, sitz, aktion);
-  return aktion.typ === 'aufgeben' ? danach : mitAutoEnde(danach);
+  /*
+   * Zu zweit beendet Aufgeben die Partie, da gibt es nichts zu verteilen.
+   * Zu viert scheidet der Sitz nur aus — und ein Feld, um das er noch
+   * mitspielte, kann danach nur noch einem gehoeren. Also auch dann pruefen.
+   */
+  return aktion.typ === 'aufgeben' && danach.aufgegeben !== null ? danach : mitAutoEnde(danach);
 }
 
 /**
@@ -1267,19 +1342,13 @@ export function fuehreAusOhneAutoEnde(
    * die Aktion kommt also an — hier entscheidet nur, ob der Sitz mitspielt.
    */
   if (aktion.typ === 'aufgeben') {
-    if (!(sitz in partie.punkte)) throw new Error('Sitz spielt nicht mit');
-    /*
-     * Zu viert (Extreme) endet die Partie damit ebenfalls fuer ALLE: Wer
-     * aufgibt, steht hinten, die anderen drei nach Punkten. Ein Ausscheiden
-     * mit Weiterspielen braeuchte Zugfolge, Farbsperre und Auto-Ende ohne den
-     * Sitz — das ist eine eigene Karte, kein Nebeneffekt dieser.
-     */
+    // Zu viert scheidet nur der Sitz aus, die anderen spielen weiter.
+    if (sitzeVon(partie).length > 2) return scheideAus(partie, sitz);
     return { ...partie, fertig: true, aufgegeben: sitz, mauernDiesenZug: 0 };
   }
   if (partie.dran !== sitz) throw new Error('Nicht am Zug');
 
-  const sitze = sitzeVon(partie);
-  const naechster = sitze[(sitze.indexOf(sitz) + 1) % sitze.length] ?? sitz;
+  const naechster = naechsterNach(partie, sitz);
 
   if (aktion.typ === 'barriere') {
     const erlaubt = moeglicheBarrieren(partie, sitz).some(
@@ -1364,11 +1433,48 @@ export function fuehreAusOhneAutoEnde(
     dran: naechster,
     zug: partie.zug + 1,
     leerzuege,
-    fertig: !frei || leerzuege >= leerzuegeGrenze(sitze.length),
+    /*
+     * Die Grenze nach den Sitzen, die noch ziehen: Drei leere RUNDEN sind
+     * zu dritt neun Zuege, nicht zwoelf. Ohne Ausgeschiedene die alte Zahl.
+     */
+    fertig: !frei || leerzuege >= leerzuegeGrenze(aktiveSitze(partie).length),
     // Der Zug ist vorbei, der naechste faengt wieder bei null an.
     mauernDiesenZug: 0,
     mauerPause,
   };
+}
+
+/**
+ * Zu viert: der Sitz gibt auf und scheidet aus, die anderen spielen weiter
+ * (Wunsch Niklas, 26.11.2026).
+ *
+ * Bis dahin endete auch zu viert die ganze Partie — drei Spieler verloren
+ * ihr Rennen, weil einer ausstieg. Jetzt bleibt sein Gebiet liegen und
+ * zaehlt als belegt, sonst aendert sich am Brett nichts. War er gerade am
+ * Zug, geht der Zug an den naechsten, der noch mitspielt; ein halb gebauter
+ * Zug (`mauernDiesenZug`) faellt dabei auf null, seine Mauern bleiben stehen.
+ * Ist danach nur noch einer uebrig, endet die Partie: Er bekommt, was er
+ * noch erreicht, wie beim automatischen Ende.
+ *
+ * `zug` und `leerzuege` bleiben stehen — gezogen wurde nicht.
+ */
+function scheideAus(partie: FillerPartie, sitz: number): FillerPartie {
+  const bisher = partie.ausgeschieden ?? [];
+  if (bisher.includes(sitz)) throw new Error('Sitz ist schon ausgeschieden');
+  const ohneIhn: FillerPartie = { ...partie, ausgeschieden: [...bisher, sitz] };
+  const danach: FillerPartie =
+    partie.dran === sitz
+      ? { ...ohneIhn, dran: naechsterNach(ohneIhn, sitz), mauernDiesenZug: 0 }
+      : ohneIhn;
+  if (aktiveSitze(danach).length > 1) return danach;
+  /*
+   * Nur noch einer: Niemand macht ihm mehr ein Feld streitig. Er bekommt,
+   * was er noch erreicht — dieselbe Verteilung wie beim automatischen Ende,
+   * damit der Bildschirm dieselbe Welle abspielt. Erreicht er nichts mehr,
+   * endet die Partie ohne Verteilung.
+   */
+  const verteilt = autoEndeVerteilung(danach);
+  return verteilt === null ? { ...danach, fertig: true } : verteile(danach, verteilt);
 }
 
 export function markiereVerlassen(partie: FillerPartie, sitz: number): FillerPartie {
@@ -1400,6 +1506,19 @@ export function platzierungen(
   // Zu viert gibt es keinen (erstellePartie laesst ihn dort weg); die
   // Bedingung haelt das auch fuer einen von Hand gebauten Zustand fest.
   const zuschlag = sitze.length === 2 ? punkteZuschlagSitz1(partie.regeln) : 0;
+  /*
+   * Die Stufe kommt vor den Punkten: 0 fuer alle, die bis zum Schluss
+   * mitspielten, danach die Ausgeschiedenen (zu viert) — wer spaeter
+   * ausstieg, hat laenger durchgehalten und steht weiter vorn —, ganz
+   * hinten, wer zu zweit aufgegeben hat. Auf jeder Stufe ausser 0 steht
+   * genau ein Sitz; ein Gleichstand entsteht dort also nie.
+   */
+  const weg = partie.ausgeschieden ?? [];
+  const stufe = (seat: number): number => {
+    if (seat === partie.aufgegeben) return Number.POSITIVE_INFINITY;
+    const nr = weg.indexOf(seat);
+    return nr < 0 ? 0 : weg.length - nr;
+  };
   const reihe = sitze
     .map((seat) => ({
       seat,
@@ -1411,21 +1530,17 @@ export function platzierungen(
      * danach: Die Aufgabe entscheidet die Partie, der Stand zum Zeitpunkt
      * der Aufgabe nicht. Sonst gewaenne, wer bei Vorsprung aufgibt.
      */
-    .sort(
-      (a, b) =>
-        Number(a.seat === partie.aufgegeben) - Number(b.seat === partie.aufgegeben) ||
-        b.points - a.points,
-    );
+    .sort((a, b) => stufe(a.seat) - stufe(b.seat) || b.points - a.points);
 
   let platz = 0;
-  let letzter: { points: number; aufgegeben: boolean } | null = null;
+  let letzter: { points: number; stufe: number } | null = null;
   return reihe.map((eintrag, index) => {
-    const aufgegeben = eintrag.seat === partie.aufgegeben;
+    const meine = stufe(eintrag.seat);
     const neuerPlatz =
-      letzter === null || eintrag.points !== letzter.points || aufgegeben !== letzter.aufgegeben;
+      letzter === null || eintrag.points !== letzter.points || meine !== letzter.stufe;
     if (neuerPlatz) {
       platz = index + 1;
-      letzter = { points: eintrag.points, aufgegeben };
+      letzter = { points: eintrag.points, stufe: meine };
     }
     return { ...eintrag, place: platz };
   });

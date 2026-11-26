@@ -1140,12 +1140,20 @@ export function Brett({
    * fertige Partie — dort gibt es nichts aufzugeben, und der Server wiese es
    * ohnehin ab.
    */
-  const kannAufgeben = !sicht.fertig && eigenerSitz >= 0 && !sicht.zuschauer;
+  /*
+   * Zu viert scheidet aus, wer aufgibt, und die Partie laeuft weiter (seit
+   * dem 26.11.2026). Wer schon draussen ist, sieht nur noch zu — ein zweites
+   * Aufgeben gaebe es nicht, der Server wiese es ab.
+   */
+  const ausgeschieden = sicht.ausgeschieden ?? [];
+  const binAusgeschieden = ausgeschieden.includes(eigenerSitz);
+  const kannAufgeben = !sicht.fertig && eigenerSitz >= 0 && !sicht.zuschauer && !binAusgeschieden;
   const aufgeben = (): void =>
     frage(
       {
         titel: t('filler.aufgeben.frage'),
-        text: t('filler.aufgeben.text'),
+        // Zu viert verliert man nicht die Partie der anderen, man steigt aus.
+        text: t(Object.keys(sicht.punkte).length > 2 ? 'filler.aufgeben.textVier' : 'filler.aufgeben.text'),
         ja: t('filler.aufgeben'),
         gefahr: true,
       },
@@ -1248,7 +1256,9 @@ export function Brett({
   /** Reihenfolge im Kopf: man selbst vorn, dann die anderen nach Sitz. */
   const kopfSitze = eigenerSitz >= 0 ? [eigenerSitz, ...gegner] : alleSitze;
 
-  const gesperrt = new Set(Object.values(sicht.farbe));
+  // Aus der Sicht: Ein Ausgeschiedener gibt seine Farbe frei, das rechnet das
+  // Modul. Ohne das Feld (Server von vorher) gilt jede Gebietsfarbe.
+  const gesperrt = new Set(sicht.gesperrt ?? Object.values(sicht.farbe));
 
   const zeile = (sitz: number): SitzZeile | undefined => sitze.find((s) => s.seat === sitz);
 
@@ -1374,6 +1384,7 @@ export function Brett({
                 eigen={sitz === eigenerSitz}
                 aktiv={!sicht.fertig && sicht.dran === sitz}
                 weg={(sicht.leftSeats ?? []).includes(sitz)}
+                raus={ausgeschieden.includes(sitz)}
               />
             ))}
           </div>
@@ -1417,6 +1428,11 @@ export function Brett({
           <button className="fl-aufgeben" type="button" onClick={aufgeben}>
             {t('filler.aufgeben')}
           </button>
+        )}
+        {/* An derselben Stelle wie der Knopf: Wer ausgeschieden ist, soll
+            sehen, warum er nicht mehr drankommt, und dass er nur zusieht. */}
+        {!sicht.fertig && binAusgeschieden && (
+          <span className="fl-aufgeben fl-ausgeschieden">{t('filler.ausgeschieden')}</span>
         )}
       </div>
 
@@ -1798,6 +1814,7 @@ function Spielerstand({
   eigen,
   aktiv,
   weg,
+  raus,
 }: {
   sitz: number;
   zeile: SitzZeile | undefined;
@@ -1807,6 +1824,8 @@ function Spielerstand({
   aktiv: boolean;
   /** Hat den Tisch verlassen; der Server laesst einen Bot weiterspielen. */
   weg?: boolean;
+  /** Hat zu viert aufgegeben und ist ausgeschieden: Bild durchgestrichen. */
+  raus?: boolean;
 }): React.JSX.Element {
   const name = spielerName(zeile, !!eigen);
   return (
@@ -1815,6 +1834,7 @@ function Spielerstand({
       data-eigen={eigen ? '' : undefined}
       data-aktiv={aktiv ? '' : undefined}
       data-weg={weg ? '' : undefined}
+      data-raus={raus ? '' : undefined}
     >
       <span className="fl-avatar">
         {/* Kein <img> auf eine Datei, die es nicht gibt: Ohne Bild steht der

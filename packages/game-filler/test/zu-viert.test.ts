@@ -266,13 +266,18 @@ describe('Zu viert: Bot und Ende', () => {
     }
   });
 
-  it('Aufgeben beendet die Partie, wer aufgab, steht hinten', () => {
+  /*
+   * Seit dem 26.11.2026 scheidet zu viert nur aus, wer aufgibt; die Partie
+   * laeuft weiter. Einzelheiten in ausscheiden.test.ts.
+   */
+  it('Aufgeben beendet die Partie nicht, wer aufgab, steht hinten', () => {
     const p = fuehreAus(vierer(), 2, { typ: 'aufgeben' });
-    assert.ok(p.fertig);
+    assert.equal(p.fertig, false);
+    assert.deepEqual(p.ausgeschieden, [2]);
     const reihe = platzierungen(p);
     assert.equal(reihe[3]!.seat, 2);
     assert.equal(reihe[3]!.place, 4);
-    assert.equal(sieger(p), null, 'die anderen drei stehen bei je einem Punkt gleich');
+    assert.equal(sieger(p), null, 'die Partie laeuft noch');
   });
 
   /*

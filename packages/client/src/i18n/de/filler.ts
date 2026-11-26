@@ -76,6 +76,8 @@ export default {
   'filler.aufgeben': 'Aufgeben',
   'filler.aufgeben.frage': 'Aufgeben?',
   'filler.aufgeben.text': 'Die Partie ist dann verloren.',
+  'filler.aufgeben.textVier': 'Du scheidest aus, die anderen spielen weiter. Zusehen kannst du trotzdem.',
+  'filler.ausgeschieden': 'Ausgeschieden',
   'filler.mauer': 'Mauer',
   'filler.mauer.pause': 'Pause',
   'filler.mauer.zwischen': 'Mauer zwischen Feld {a} und {b}',

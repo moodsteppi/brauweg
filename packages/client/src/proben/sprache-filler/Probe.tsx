@@ -7,8 +7,10 @@
  * Sichtprobe weder aufmachen noch anklicken. Deshalb zeichnet `ansicht=brett`
  * das ECHTE Brett des Bildschirms (`Brett`) mit einer festen Sicht — einer
  * Extreme-Partie auf 12 × 11 mitten im Zug, nach der ersten von zwei Mauern.
+ * `ansicht=vier` zeigt dasselbe Brett zu viert, nachdem Sitz 2 aufgegeben
+ * hat — fuer die Sichtprobe des Kopfes mit einem Ausgeschiedenen.
  *
- *   ansicht   menue · brett
+ *   ansicht   menue · brett · vier
  *   spielart  nebel · klar · build · extreme (nur Menue; das Brett ist Extreme)
  *   sprache   de · en — ohne Angabe gilt, was eingestellt ist
  *
@@ -127,12 +129,86 @@ function extremeSicht(): FillerSicht {
     mauernDiesenZug: 1,
     mauerPause: [],
     aufgegeben: null,
+    ausgeschieden: [],
+    gesperrt: [0, 3],
   };
 }
+
+/**
+ * Extreme zu viert auf 12 × 11: Sitz 2 (oben links) hat aufgegeben und ist
+ * ausgeschieden, die anderen drei spielen weiter — Sitz 3 ist am Zug. Die
+ * Farbe von Sitz 2 ist damit frei (`gesperrt` nennt nur drei).
+ */
+function viererSicht(): FillerSicht {
+  const spalten = 12;
+  const zeilen = 11;
+  const plaetze = spalten * zeilen;
+  const gebiete: Record<number, readonly number[]> = {
+    0: [120, 121, 108, 122, 109, 96],
+    1: [11, 10, 23, 9, 22],
+    2: [0, 1, 12, 13, 24, 2, 14],
+    3: [131, 130, 119, 118],
+  };
+  const farbe: Record<number, number> = { 0: 0, 1: 3, 2: 5, 3: 6 };
+  const besitzerVon = new Map<number, number>();
+  for (const [sitz, felder] of Object.entries(gebiete)) {
+    for (const p of felder) besitzerVon.set(p, Number(sitz));
+  }
+  const feld = Array.from({ length: plaetze }, (_, p) => {
+    const b = besitzerVon.get(p);
+    if (b !== undefined) return farbe[b]!;
+    const x = p % spalten;
+    const y = Math.floor(p / spalten);
+    return (x * 3 + y * 5 + Math.floor(x / 3)) % 7;
+  });
+  return {
+    ...extremeSicht(),
+    feld,
+    besitzer: feld.map((_, p) => besitzerVon.get(p) ?? null),
+    farbe,
+    punkte: { 0: 6, 1: 5, 2: 7, 3: 4 },
+    dran: 3,
+    zug: 14,
+    fertig: false,
+    sieger: null,
+    barrieren: [],
+    barrierenUebrig: { 0: 20, 1: 20, 2: 20, 3: 20 },
+    barrierenMoeglich: undefined,
+    sterne: [],
+    mauernDiesenZug: 0,
+    aufgegeben: null,
+    ausgeschieden: [2],
+    gesperrt: [0, 3, 6],
+  };
+}
+
+const VIERER: { seat: number; displayName: string | null; avatarUrl: null; isBot: boolean }[] = [
+  { seat: 0, displayName: 'Mia', avatarUrl: null, isBot: false },
+  { seat: 1, displayName: 'Ole', avatarUrl: null, isBot: false },
+  { seat: 2, displayName: 'Jana', avatarUrl: null, isBot: false },
+  { seat: 3, displayName: null, avatarUrl: null, isBot: true },
+];
 
 const nichts = (): void => {};
 
 function Seite(): React.JSX.Element {
+  if (suche.get('ansicht') === 'vier') {
+    return (
+      <Brett
+        sicht={viererSicht()}
+        eigenerSitz={0}
+        sitze={VIERER}
+        binDran={false}
+        gegenBot
+        getippt={null}
+        onWaehle={nichts}
+        onBarriere={nichts}
+        onZurueck={nichts}
+        frist={null}
+        onAufgeben={nichts}
+      />
+    );
+  }
   if (suche.get('ansicht') === 'brett') {
     return (
       <Brett

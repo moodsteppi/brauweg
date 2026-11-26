@@ -21,7 +21,7 @@
  */
 
 import type { AutoEndeFeld, FillerPartie } from './partie.js';
-import { mauerSperre, moeglicheBarrieren, nachbarn, sieger } from './partie.js';
+import { gesperrteFarben, mauerSperre, moeglicheBarrieren, nachbarn, sieger } from './partie.js';
 import {
   type FillerVariante,
   liegtOffen,
@@ -148,6 +148,23 @@ export interface FillerSicht {
    */
   readonly aufgegeben: number | null;
   /**
+   * Wer zu viert aufgegeben hat und ausgeschieden ist, in der Reihenfolge des
+   * Ausstiegs (seit dem 26.11.2026) — leer, solange alle mitspielen, und zu
+   * zweit immer. Der Bildschirm streicht diese Sitze im Kopf durch und
+   * bietet ihnen kein Aufgeben mehr an; der Bot laesst sie als Gegner weg.
+   */
+  readonly ausgeschieden: readonly number[];
+  /**
+   * Die Farben, die gerade niemand waehlen darf: die Gebietsfarben der Sitze,
+   * die noch mitspielen (`gesperrteFarben` in partie.ts).
+   *
+   * Steht hier, seit ein Ausgeschiedener seine Farbe freigibt (26.11.2026):
+   * Bis dahin war "alle Werte aus `farbe`" dasselbe, und Bildschirm wie Bot
+   * rechneten es selbst. Mit dem Ausscheiden waere das eine zweite Fassung
+   * der Regel gewesen — der Knopf einer erlaubten Farbe bliebe grau.
+   */
+  readonly gesperrt: readonly number[];
+  /**
    * Die Felder, die das automatische Ende verteilt hat, in Abspielreihenfolge
    * (ringweise vom jeweiligen Gebiet aus) — nur in einer Partie, die so zu
    * Ende ging, und erst, wenn sie zu Ende IST.
@@ -216,6 +233,8 @@ function grundsicht(
     mauernJeFeld: mitBarrieren(partie.regeln.variante) ? (partie.regeln.mauernJeFeld ?? 0) : 0,
     mauerPause: partie.mauerPause,
     aufgegeben: partie.aufgegeben,
+    ausgeschieden: partie.ausgeschieden ?? [],
+    gesperrt: gesperrteFarben(partie),
     // Nie vor dem Ende, auch wenn das Feld nur am fertigen Zustand haengt:
     // Die Sicht ist die einzige Stelle, an der der Nebel gehalten wird.
     ...(partie.fertig && partie.autoEnde !== undefined ? { autoEnde: partie.autoEnde } : {}),

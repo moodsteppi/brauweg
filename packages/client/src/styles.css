@@ -14893,6 +14893,26 @@ span.hub-angebot-art.poker-jeton-stapel {
 }
 .fl-stand[data-vier] .fl-spieler[data-eigen] .fl-name { color: #2b2b2b; }
 .fl-stand[data-vier] .fl-spieler[data-weg] { opacity: 0.45; }
+/* Ausgeschieden (zu viert aufgegeben): Bild abgedunkelt und schraeg
+   durchgestrichen, Zahl und Name blass. Der Strich liegt IM Kreis, damit die
+   Spalte nicht breiter wird als ihre Nachbarn. Abgedunkelt wird der
+   INHALT, nicht der Kreis: Ein Filter am Kreis faerbte den Strich mit grau. */
+.fl-spieler[data-raus] .fl-avatar { position: relative; background: #7a7a7a; }
+.fl-spieler[data-raus] .fl-avatar > * { filter: grayscale(1) brightness(0.55); }
+.fl-spieler[data-raus] .fl-avatar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 1.5px),
+    #e74c3c calc(50% - 1.5px),
+    #e74c3c calc(50% + 1.5px),
+    transparent calc(50% + 1.5px)
+  );
+}
+.fl-spieler[data-raus] .fl-punkte { opacity: 0.45; }
+.fl-spieler[data-raus] .fl-name { text-decoration: line-through; opacity: 0.6; }
 @media (min-width: 600px) {
   .fl-stand[data-vier] .fl-avatar { width: 32px; height: 32px; font-size: 14px; }
   .fl-stand[data-vier] .fl-punkte { min-width: 42px; font-size: 17px; }
@@ -15355,6 +15375,9 @@ span.hub-angebot-art.poker-jeton-stapel {
   cursor: pointer;
 }
 .fl-aufgeben:hover { color: #c0392b; border-color: rgba(192, 57, 43, 0.4); }
+/* Dieselbe Stelle, aber kein Knopf: nur die Auskunft, dass man zusieht. */
+.fl-ausgeschieden { display: inline-flex; align-items: center; cursor: default; }
+.fl-ausgeschieden:hover { color: #8a8a8a; border-color: rgba(0, 0, 0, 0.14); }
 
 /* Restzeit hinter dem Hinweis (TurnClock). In der Farbe des Hinweises, in
    den letzten 15 Sekunden rot und pochend — wer dann noch ueberlegt, soll

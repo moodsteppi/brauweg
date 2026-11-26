@@ -129,7 +129,12 @@ function brettAus(sicht: FillerSicht) {
   const sterne = new Set(sicht.sterne ?? []);
   const wertVon = (platz: number): number => (sterne.has(platz) ? 1 + STERN_BONUS : 1);
 
-  const gesperrt = new Set(Object.values(farbe));
+  /*
+   * Die Sperre aus der Sicht: Seit ein Ausgeschiedener seine Farbe freigibt
+   * (26.11.2026), ist "jede Gebietsfarbe" nicht mehr dieselbe Menge. Der
+   * Rueckfall ist fuer eine Sicht ohne das Feld, etwa in einem Test.
+   */
+  const gesperrt = new Set(sicht.gesperrt ?? Object.values(farbe));
   const erlaubt: number[] = [];
   for (let f = 0; f < farbzahl; f++) if (!gesperrt.has(f)) erlaubt.push(f);
 
@@ -313,9 +318,12 @@ function waendeAuf(sicht: FillerSicht, brett: ReturnType<typeof brettAus>): Wand
    * Gegner, Feld fuer Feld in derselben Reihenfolge, und der Bot zieht wie
    * vorher.
    */
+  // Ausgeschiedene (zu viert, seit dem 26.11.2026) sind keine Gegner mehr:
+  // Sie ziehen nicht, und eine Mauer gegen ihr Gebiet nimmt niemandem etwas.
+  const ausgeschieden = sicht.ausgeschieden ?? [];
   const gegner = Object.keys(brett.farbe)
     .map(Number)
-    .filter((s) => s !== ich);
+    .filter((s) => s !== ich && !ausgeschieden.includes(s));
   if (gegner.length === 0) return null;
   const eigen = felderVon(ich);
   const seine: number[] = [];

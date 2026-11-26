@@ -64,6 +64,8 @@ export default {
   'filler.aufgeben': 'Resign',
   'filler.aufgeben.frage': 'Resign?',
   'filler.aufgeben.text': 'You will lose the game.',
+  'filler.aufgeben.textVier': 'You are out; the others play on. You can keep watching.',
+  'filler.ausgeschieden': 'Out',
   'filler.mauer': 'Wall',
   'filler.mauer.pause': 'Pause',
   'filler.mauer.zwischen': 'Wall between square {a} and {b}',

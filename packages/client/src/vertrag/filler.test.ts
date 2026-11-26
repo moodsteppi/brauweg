@@ -90,6 +90,8 @@ const FELDER = [
   'mauernDiesenZug',
   'mauerPause',
   'aufgegeben',
+  'ausgeschieden',
+  'gesperrt',
   'autoEnde',
 ] as const;
 type _listeVollstaendig = Leer<Exclude<keyof FillerSicht, (typeof FELDER)[number]>>;
