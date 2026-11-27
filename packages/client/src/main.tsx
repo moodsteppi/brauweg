@@ -8,6 +8,7 @@ import { installiereDruckabbruch } from './druckabbruch';
 import { FeedbackWidget } from './FeedbackWidget';
 import { starteKlang } from './klang';
 import './styles.css';
+import './app-hintergrund.css';
 
 // Vor dem ersten Bild: Die Tonsitzung muss als "ambient" angemeldet sein,
 // bevor irgendetwas klingt, sonst haelt iOS beim ersten Ton die Musik in

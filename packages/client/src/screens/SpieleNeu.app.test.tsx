@@ -80,10 +80,12 @@ describe('Spiele in der App', () => {
     const chips = await screen.findByRole('tablist', { name: 'Kategorien' });
     expect(within(chips).getAllByRole('tab').map((c) => c.textContent)).toEqual([
       'Alle',
+      'BroRemote',
       'Kartenspiele',
-      'Trinkspiele',
+      'Partykiste',
       'Denken',
       'Kommt bald',
+      'Allein',
     ]);
   });
 
@@ -152,4 +154,18 @@ it('lässt auch für beide angekündigten Modi abstimmen', async () => {
     expect(await within(zeile).findByRole('button', { name: 'Abgestimmt' })).toBeTruthy();
     expect(vote).toHaveBeenCalledWith(id);
   }
+});
+
+it('sammelt die Party-Minispiele hinter einer einzigen quadratischen Spielkachel', async () => {
+  zeige();
+  await screen.findByRole('tab', {name:'Partykiste'});
+  expect(document.querySelectorAll('[data-pk-einzel]')).toHaveLength(0);
+  const kachel = [...document.querySelectorAll<HTMLButtonElement>('.hb-sk')].find(k => k.textContent?.includes('Minispiele'))!;
+  fireEvent.click(kachel);
+  expect(document.querySelectorAll('[data-pk-einzel]').length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole('button', {name:'‹ Alle Spiele'}));
+  expect(document.querySelectorAll('[data-pk-einzel]')).toHaveLength(0);
+  fireEvent.click(screen.getByRole('tab', {name:'Allein'}));
+  expect(screen.getByRole('button', {name:/Kartenmanufaktur/})).toHaveClass('hb-sk');
+  expect(document.querySelector('.hb-quer')).toBeNull();
 });

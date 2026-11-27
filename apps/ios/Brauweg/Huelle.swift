@@ -78,8 +78,10 @@ enum Huelle {
         guard let link, link.scheme?.lowercased() == "https",
               let host = link.host?.lowercased(),
               linkHosts.contains(host), host == serverHost.lowercased() else { return nil }
-        if link.path == "/broremote", link.query == nil {
-            return "/broremote" + (link.fragment.map { "#" + $0 } ?? "")
+        if link.path == "/broremote" {
+            let spiel = URLComponents(url: link, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "spiel" })?.value
+            let auswahl = ["building", "brotanks"].contains(spiel ?? "") ? "?spiel=" + spiel! : ""
+            return "/broremote" + auswahl + (link.fragment.map { "#" + $0 } ?? "")
         }
         if link.path == "/ice-clash" {
             let code = URLComponents(url: link, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "raum" })?.value ?? ""

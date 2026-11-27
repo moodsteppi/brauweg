@@ -1,5 +1,6 @@
 /** Eigene, durchgehend lesbare Symbole statt systemabhängiger Emoji-Tasten. */
 const wege = {
+  anleitung: 'M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1v15 M6 8h3 M6 12h3 M15 8h3 M15 12h3',
   bildschirm: 'M3 4h18v12H3z M8 21h8 M12 16v5',
   handy: 'M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2 M10 5h4 M11 19h2',
   solo: 'M8 7a4 4 0 1 0 8 0 4 4 0 1 0-8 0 M4 21v-2a8 8 0 0 1 16 0v2',
