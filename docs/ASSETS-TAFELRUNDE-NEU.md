@@ -175,6 +175,50 @@ Was die Probe nicht entschieden hat und deshalb zu Abnahme 1 gehört:
 2. Drehung 17° wie heute oder 40°.
 3. Zelle 256 px oder 192 px.
 
+### Nachtest: stärkeres freies Modell (27.11.2026, abends)
+
+Robin wollte vor Abnahme 1 ein stärkeres Modell sehen, **kostenlos**. Geprüft:
+
+| Modell | Lizenz | 8 GB / Windows | Ergebnis |
+| --- | --- | --- | --- |
+| TRELLIS | MIT, aber hängt an nvdiffrast (NVIDIA, nur nicht-kommerziell) | nur mit Fork | **verworfen**: BroweGGames verkauft Edelsteine |
+| Hunyuan3D 2.x | Tencent-Lizenz schließt die EU aus | – | **verworfen** |
+| **TripoSG** | MIT (Code und Gewichte) | ja: 4,9 GB Spitze, ohne Flash-Decoder | **genommen**: deutlich schärfere Form, aber ohne Farbe |
+
+TripoSG liefert nur die Form. Die Farbe kommt deshalb aus zwei Quellen
+(`texturieren.py`):
+
+- Was von vorn sichtbar ist und nach vorn zeigt, bekommt die Farbe des
+  Konzeptbilds. Sie wird scharf projiziert, ein Tiefenbild sorgt für die
+  Verdeckung.
+- Seiten und Rückseite bekommen die Farbe aus dem Farbfeld von TripoSR.
+
+Der Hintergrund-Entferner RMBG-1.4, den TripoSG mitbringt, wird **nicht**
+benutzt (nicht-kommerzielle Lizenz). Er wird auch nicht gebraucht, weil codex
+echtes Alpha liefert.
+
+| Figur | Form (TripoSG) | Farbe | Rig | Blatt | Blatt bei 256 px, 40° |
+| --- | --- | --- | --- | --- | --- |
+| Dorfwache | 58 s | 36 s | 5 s | 16 s | 178 kB |
+| Frostweberin | 77 s | 43 s | 10 s | 11 s | 176 kB |
+| Gassendieb | 67 s | 41 s | 10 s | 14 s | 151 kB |
+
+Dazu kommt das Konzeptbild mit rund 1,5 bis 3,5 min. Die Kosten bleiben 0 €.
+
+**Ergebnis:** Gesichter, Augen, Abzeichen und Schnallen sind scharf, die Farben
+liegen nahe am Konzept, und die Frostweberin hat überhaupt erst ein Gesicht.
+Die Blätter werden etwa 10 % größer.
+
+Schwächen:
+
+- TripoSG macht aus der Kapuze des Gassendiebs eine spitze Zipfelmütze.
+- Frei schwebende Teile (Schneeflocken, Münze) bekommen von Bone Heat kein
+  Gewicht (230 bzw. 48 Ecken). `riggen.py` gibt sie dem nächsten Knochen.
+
+Aufruf: `figur-sg.sh <name> [drehung]`. Die Umgebung ist ein eigenes venv
+(`venv-sg`, Versionen in `constraints-sg.txt`), **nicht** das von TripoSR:
+Ein gemeinsames hat pip einmal auf eine CPU-Torch gehoben.
+
 Die Vorschauen (animiertes WebP), Konzeptbilder und Modelle liegen vorerst nur
 auf dem Mood-XPS unter `D:\Claude\tools\3d-lokal\stilprobe\`. Ins Archiv
 `brauweg-art` (`tafelrunde-neu/`) gehen sie, sobald Abnahme 1 entschieden hat,

@@ -1,3 +1,4 @@
+107cefd Update README.md
 diff --git a/tsr/bake_texture.py b/tsr/bake_texture.py
 index 642a424..7b91400 100644
 --- a/tsr/bake_texture.py
