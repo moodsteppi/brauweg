@@ -877,9 +877,12 @@ describe('Kampf — der Beistand heilt', () => {
         ['dorfwache', 1, 2, 0],
         ['moosheiler', 1, 2, 1],
       ]),
+      // Seit dem 27.11.2026 Dorfwache + Schildknappe statt zwei Dorfwachen:
+      // Zwei gleiche Einheiten zaehlen fuer eine Marke nur noch einmal, und
+      // ohne den Waechter-Schild waere die Gegenseite nicht mehr ueberlegen.
       stelleAuf([
         ['dorfwache', 1, 1, 0],
-        ['dorfwache', 1, 3, 0],
+        ['schildknappe', 1, 3, 0],
       ]),
     ];
     const ohne = { ...STANDARD_REGLER, heilungFaktor: 0 };

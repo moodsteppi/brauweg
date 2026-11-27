@@ -27,8 +27,9 @@ describe('Markenleiste', () => {
 });
 
 describe('Markenpopup', () => {
-  it('alle Traeger, die auf dem Feld hervorgehoben, die auf der Bank markiert, dazu der Satz je Schwelle', () => {
-    const stand = ruestsicht().eigenes!.synergien![0];
+  it('die gezaehlten Traeger hervorgehoben, die auf der Bank markiert, dazu der Satz je Schwelle', () => {
+    // Gezaehlt ist nur der Kaiserkrieger; die Pinguinwache liegt auf der Bank.
+    const stand = { ...ruestsicht().eigenes!.synergien![0]!, anzahl: 1, traeger: ['grimmbart'] };
     render(
       <Markenpopup
         marke="krieger"
@@ -41,6 +42,7 @@ describe('Markenpopup', () => {
       />,
     );
     expect(screen.getByRole('dialog', { name: 'Krieger' })).toBeInTheDocument();
+    expect(screen.getByText('Jede Einheit zählt für eine Marke nur einmal.')).toBeInTheDocument();
     const kaiser = screen.getByText('Kaiserkrieger').closest('li')!;
     const wache = screen.getByText('Pinguinwache').closest('li')!;
     expect(kaiser).toHaveAttribute('data-brett');
@@ -92,5 +94,44 @@ describe('Einheitenblatt', () => {
     render(<Einheitenblatt {...basis} faehigkeit={null} onMarke={onMarke} />);
     fireEvent.click(screen.getByRole('button', { name: /Wächter/ }));
     expect(onMarke).toHaveBeenCalledWith('waechter');
+  });
+});
+
+describe('Markenpopup und die Einmal-Zaehlung', () => {
+  it('„zählt" steht an den Einheiten aus `traeger`, nicht an jeder Kopie auf dem Feld', () => {
+    // Zwei Pinguinwachen auf dem Feld, die Sicht zaehlt sie einmal.
+    const stand = { ...ruestsicht().eigenes!.synergien![0]!, anzahl: 1, traeger: ['dorfwache'] };
+    render(
+      <Markenpopup
+        marke="krieger"
+        stand={stand}
+        synergie={TABELLE[0]}
+        katalog={KATALOG}
+        aufBrett={new Set(['dorfwache'])}
+        aufBank={new Set()}
+        onSchliessen={() => {}}
+      />,
+    );
+    expect(screen.getAllByText('zählt')).toHaveLength(1);
+    expect(screen.getByText('Pinguinwache').closest('li')).toHaveAttribute('data-brett');
+    expect(screen.getByText('Kaiserkrieger').closest('li')).not.toHaveAttribute('data-brett');
+  });
+
+  it('jede Marke zeigt ihre eigenen Schwellen aus der Tabelle', () => {
+    const waechter = {
+      marke: 'waechter',
+      name: 'Wächter',
+      wirkung: 'Wächter bekommen etwas mehr Leben und zu Kampfbeginn einen Schutzschild.',
+      stufen: [2, 4, 6].map((schwelle) => ({
+        schwelle,
+        bonus: { lebenProzent: 0, angriffProzent: 0, tempoProzent: 0, ruestung: 0 },
+        text: `Stufe ab ${schwelle}`,
+      })),
+    };
+    render(
+      <Markenpopup marke="waechter" stand={undefined} synergie={waechter} katalog={KATALOG} aufBrett={new Set()} aufBank={new Set()} onSchliessen={() => {}} />,
+    );
+    const zahlen = [...document.querySelectorAll('ol > li > b')].map((b) => b.textContent);
+    expect(zahlen).toEqual(['2', '4', '6']);
   });
 });

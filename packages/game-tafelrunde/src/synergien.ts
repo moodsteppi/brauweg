@@ -64,9 +64,21 @@ import {
  * WER SIE WIEDER VERSCHIEBT, misst vorher die Levelverteilung: Solange ein
  * Brett drei bis fuenf Felder hat, ist jede Schwelle darueber Zierde.
  */
-export type Schwelle = 2 | 3 | 5;
+export type Schwelle = number;
 
+/**
+ * Die VORGABE der Schwellen. Seit dem 27.11.2026 hat jede Marke ihre eigenen
+ * (in `stufen` der Tabelle), weil eine Einheit nur noch EINMAL zaehlt (siehe
+ * `zaehleMarken`): Eine Marke mit vier verschiedenen Traegern kann die Fuenf
+ * nie erreichen. Robins Entscheidung: Schwellen je Marke so, wie ihre
+ * Traegerzahl sie hergibt.
+ */
 export const SCHWELLEN: readonly Schwelle[] = [2, 3, 5];
+
+/** Die Schwellen einer Marke, aufsteigend. */
+export function schwellenVon(marke: Marke): readonly Schwelle[] {
+  return synergie(marke).stufen.map((s) => s.schwelle);
+}
 
 /**
  * Der sichtbare Effekt einer Marke im Kampf (seit dem 27.11.2026, Robins
@@ -280,7 +292,7 @@ export const SYNERGIEN: readonly Synergie[] = [
         schaetzung: bonus({ tempoProzent: 25 }),
       },
       {
-        schwelle: 5,
+        schwelle: 4,
         bonus: bonus({ tempoProzent: 40, angriffProzent: 25, lebenProzent: 30 }),
         effekt: { art: 'hinterhalt' },
         text: '+40 % Tempo, +25 % Angriff, +30 % Leben, Nahkämpfer springen nach hinten.',
@@ -302,14 +314,14 @@ export const SYNERGIEN: readonly Synergie[] = [
         schaetzung: bonus({ lebenProzent: 10, ruestung: 5 }),
       },
       {
-        schwelle: 3,
+        schwelle: 4,
         bonus: bonus({ lebenProzent: 8 }),
         effekt: { art: 'schutzschild', lebenProzent: 13 },
         text: '+8 % Leben, Schild über 13 % des Lebens.',
         schaetzung: bonus({ lebenProzent: 15, ruestung: 8 }),
       },
       {
-        schwelle: 5,
+        schwelle: 6,
         bonus: bonus({ lebenProzent: 12 }),
         effekt: { art: 'schutzschild', lebenProzent: 20 },
         text: '+12 % Leben, Schild über 20 % des Lebens.',
@@ -344,22 +356,22 @@ export const SYNERGIEN: readonly Synergie[] = [
       {
         schwelle: 2,
         bonus: bonus({ lebenProzent: 5 }),
-        effekt: { art: 'wachstum', lebenProzentJeSek: 0.4 },
-        text: '+5 % Leben, heilen 0,4 % je Sekunde.',
+        effekt: { art: 'wachstum', lebenProzentJeSek: 0.6 },
+        text: '+5 % Leben, heilen 0,6 % je Sekunde.',
         schaetzung: bonus({ lebenProzent: 15 }),
       },
       {
         schwelle: 3,
         bonus: bonus({ lebenProzent: 8 }),
-        effekt: { art: 'wachstum', lebenProzentJeSek: 0.6 },
-        text: '+8 % Leben, heilen 0,6 % je Sekunde.',
+        effekt: { art: 'wachstum', lebenProzentJeSek: 0.9 },
+        text: '+8 % Leben, heilen 0,9 % je Sekunde.',
         schaetzung: bonus({ lebenProzent: 25 }),
       },
       {
         schwelle: 5,
         bonus: bonus({ lebenProzent: 12 }),
-        effekt: { art: 'wachstum', lebenProzentJeSek: 1 },
-        text: '+12 % Leben, heilen 1 % je Sekunde.',
+        effekt: { art: 'wachstum', lebenProzentJeSek: 1.4 },
+        text: '+12 % Leben, heilen 1,4 % je Sekunde.',
         schaetzung: bonus({ lebenProzent: 40 }),
       },
     ],
@@ -385,7 +397,7 @@ export const SYNERGIEN: readonly Synergie[] = [
         schaetzung: bonus({ angriffProzent: 15, lebenProzent: 15 }),
       },
       {
-        schwelle: 5,
+        schwelle: 4,
         bonus: bonus({ angriffProzent: 28, lebenProzent: 18 }),
         effekt: { art: 'wiederkehr', lebenProzent: 100 },
         text: '+28 % Angriff, +18 % Leben, der erste Gefallene kehrt mit vollem Leben zurück.',
@@ -429,25 +441,14 @@ export const SYNERGIEN: readonly Synergie[] = [
      * von x0,77 auf x1,17, ohne dass an diesen Zahlen etwas geaendert wurde.
      */
     stufen: [
+      // NUR EINE STUFE (27.11.2026): Drache hat genau zwei verschiedene Traeger
+      // (Funkensalamander, Drachenkind), und jede Einheit zaehlt nur einmal.
+      // Gemessen war sie mit den Werten der alten dritten Stufe zu stark (x1,30); sie liegt jetzt etwa bei der alten zweiten.
       {
         schwelle: 2,
-        bonus: bonus({ angriffProzent: 5 }),
-        effekt: { art: 'glut', angriffProzentJeSek: 10, sek: 3 },
-        text: '+5 % Angriff, Treffer brennen 3 Sekunden nach.',
-        schaetzung: bonus({ angriffProzent: 10, tempoProzent: 5 }),
-      },
-      {
-        schwelle: 3,
-        bonus: bonus({ angriffProzent: 10 }),
-        effekt: { art: 'glut', angriffProzentJeSek: 15, sek: 3 },
-        text: '+10 % Angriff, Treffer brennen stärker nach.',
-        schaetzung: bonus({ angriffProzent: 20, tempoProzent: 8 }),
-      },
-      {
-        schwelle: 5,
-        bonus: bonus({ angriffProzent: 15 }),
-        effekt: { art: 'glut', angriffProzentJeSek: 25, sek: 3 },
-        text: '+15 % Angriff, Treffer brennen sehr stark nach.',
+        bonus: bonus({ angriffProzent: 8 }),
+        effekt: { art: 'glut', angriffProzentJeSek: 14, sek: 3 },
+        text: '+8 % Angriff, Treffer brennen 3 Sekunden nach.',
         schaetzung: bonus({ angriffProzent: 35, tempoProzent: 15 }),
       },
     ],
@@ -478,28 +479,45 @@ export function zaehleMarken(brett: Aufgestellte): Markenzaehlung {
   const zaehlung: Record<Marke, number> = Object.fromEntries(
     MARKEN.map((m) => [m, 0]),
   ) as Record<Marke, number>;
+  /*
+   * JEDE EINHEIT ZAEHLT NUR EINMAL (Robin, 27.11.2026): Zwei Pinguinwachen —
+   * gleich ob Stufe 1 und 1 oder Stufe 2 und 1 — sind EIN Krieger und EIN
+   * Waechter. Sonst baute man Marken aus lauter Kopien derselben Einheit.
+   */
+  const gezaehlt = new Set<EinheitId>();
   for (const platz of brett) {
-    if (!platz) continue;
+    if (!platz || gezaehlt.has(platz.id)) continue;
+    gezaehlt.add(platz.id);
     for (const marke of einheit(platz.id).marken) zaehlung[marke] += 1;
   }
   return zaehlung;
 }
 
+/** Die verschiedenen Einheiten einer Marke auf diesem Brett (fuer die Sicht). */
+export function traegerVon(brett: Aufgestellte, marke: Marke): readonly EinheitId[] {
+  const ids: EinheitId[] = [];
+  for (const platz of brett) {
+    if (!platz || ids.includes(platz.id)) continue;
+    if (einheit(platz.id).marken.includes(marke)) ids.push(platz.id);
+  }
+  return ids;
+}
+
 /** Die hoechste erreichte Schwelle, oder null unter der ersten. */
-export function aktiveSchwelle(anzahl: number): Schwelle | null {
+export function aktiveSchwelle(anzahl: number, schwellen: readonly Schwelle[] = SCHWELLEN): Schwelle | null {
   let aktiv: Schwelle | null = null;
-  for (const s of SCHWELLEN) if (anzahl >= s) aktiv = s;
+  for (const s of schwellen) if (anzahl >= s) aktiv = s;
   return aktiv;
 }
 
 /** Die naechste noch nicht erreichte Schwelle, oder null ab der hoechsten. */
-export function naechsteSchwelle(anzahl: number): Schwelle | null {
-  return SCHWELLEN.find((s) => anzahl < s) ?? null;
+export function naechsteSchwelle(anzahl: number, schwellen: readonly Schwelle[] = SCHWELLEN): Schwelle | null {
+  return schwellen.find((s) => anzahl < s) ?? null;
 }
 
 /** Der Bonus, den eine Marke bei so vielen Traegern gibt — null unter der ersten Schwelle. */
 export function bonusDerMarke(marke: Marke, anzahl: number): Wertebonus | null {
-  const schwelle = aktiveSchwelle(anzahl);
+  const schwelle = aktiveSchwelle(anzahl, schwellenVon(marke));
   if (schwelle === null) return null;
   const stufe = synergie(marke).stufen.find((s) => s.schwelle === schwelle);
   if (!stufe) throw new Error(`Synergie ${marke} hat keine Stufe fuer Schwelle ${schwelle}`);
@@ -546,6 +564,12 @@ export interface Synergiestand {
   readonly effekt: Markeneffekt | null;
   /** Was die geltende Stufe tut, als Satz; null unter der ersten Schwelle. */
   readonly text: string | null;
+  /**
+   * Die VERSCHIEDENEN Einheiten, die hier zaehlen (seit dem 27.11.2026).
+   * Der Bildschirm sieht daran, ob ein Kauf die Marke voranbringt: Eine
+   * Einheit, die schon in der Liste steht, zaehlt nicht noch einmal.
+   */
+  readonly traeger: readonly EinheitId[];
 }
 
 /**
@@ -564,18 +588,19 @@ export function synergienVon(brett: Aufgestellte): readonly Synergiestand[] {
       marke,
       name: synergie(marke).name,
       anzahl,
-      schwelle: aktiveSchwelle(anzahl),
-      naechsteSchwelle: naechsteSchwelle(anzahl),
+      schwelle: aktiveSchwelle(anzahl, schwellenVon(marke)),
+      naechsteSchwelle: naechsteSchwelle(anzahl, schwellenVon(marke)),
       bonus: bonusDerMarke(marke, anzahl),
       effekt: stufeDerMarke(marke, anzahl)?.effekt ?? null,
       text: stufeDerMarke(marke, anzahl)?.text ?? null,
+      traeger: traegerVon(brett, marke),
     };
   });
 }
 
 /** Die Stufe einer Marke bei so vielen Traegern — null unter der ersten Schwelle. */
 export function stufeDerMarke(marke: Marke, anzahl: number): Synergiestufe | null {
-  const schwelle = aktiveSchwelle(anzahl);
+  const schwelle = aktiveSchwelle(anzahl, schwellenVon(marke));
   if (schwelle === null) return null;
   return synergie(marke).stufen.find((s) => s.schwelle === schwelle) ?? null;
 }

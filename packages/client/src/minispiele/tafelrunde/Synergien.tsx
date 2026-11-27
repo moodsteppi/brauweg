@@ -168,6 +168,13 @@ export interface Synergiestand {
   effekt?: Markeneffekt | null;
   /** Was die geltende Stufe tut, als Satz; null unterhalb der ersten Schwelle. */
   text?: string | null;
+  /**
+   * Die GEZAEHLTEN Einheiten dieser Marke auf dem Brett, je Kennung einmal
+   * (synergien.ts, seit dem 27.11.2026 nachts: Robin, „zwei Pinguinwachen
+   * sind ein Krieger"). `anzahl` ist ihre Zahl. Wahlfrei wie `text`:
+   * aufgezeichnete Szenen und Testfaelle aus der Zeit davor.
+   */
+  traeger?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -282,22 +289,29 @@ export function bonusSatz(bonus: Wertebonus | null): string {
 }
 
 /**
- * Wuerde EIN weiterer Traeger dieser Marke eine Schwelle erreichen?
+ * Wuerde diese Einheit die Marke ueber eine Schwelle heben?
  *
- * Genau die Rechnung aus der Aufgabe: `anzahl + 1 >= naechsteSchwelle`.
- * Beide Zahlen stehen in der Sicht. Steht die Marke noch gar nicht auf dem
- * Brett, fehlt sie in `synergien` (das Modul schickt nur Marken mit
- * mindestens einem Traeger) — dann liefert die Tabelle die erste Stufe. Auch
- * sie ist Sicht und keine 2 im Client: Wer die Schwellen im Modul
- * verschoebe, bekaeme sonst hier ein Leuchten fuer einen Bonus, den es nicht
- * gibt.
+ * Die Rechnung aus der Aufgabe: `anzahl + 1 >= naechsteSchwelle`. Beide
+ * Zahlen stehen in der Sicht. Steht die Marke noch gar nicht auf dem Brett,
+ * fehlt sie in `synergien` (das Modul schickt nur Marken mit mindestens einem
+ * Traeger) — dann liefert die Tabelle die erste Stufe. Auch sie ist Sicht und
+ * keine 2 im Client: Die Schwellen sind seit dem 27.11.2026 je Marke
+ * verschieden (Waechter 2/4/6, Drache nur 2), und wer hier eine feste Zahl
+ * annaehme, liesse fuer einen Bonus leuchten, den es nicht gibt.
+ *
+ * SEIT DEM 27.11.2026 NACHTS zaehlt jede Einheit fuer eine Marke nur einmal
+ * (Robin). Steht die Kennung schon unter den gezaehlten Traegern
+ * (`traeger`), bringt eine weitere Kopie die Marke nicht voran — dann kein
+ * Leuchten. Gezaehlt wird dafuer nichts: Die Liste kommt fertig aus der Sicht.
  */
 export function trifftSchwelle(
   marke: string,
   staende: readonly Synergiestand[],
   tabelle: readonly Synergie[],
+  einheitId?: string,
 ): boolean {
   const stand = staende.find((s) => s.marke === marke);
+  if (einheitId !== undefined && stand?.traeger?.includes(einheitId)) return false;
   const naechste = stand
     ? stand.naechsteSchwelle
     : (tabelle.find((s) => s.marke === marke)?.stufen[0]?.schwelle ?? null);
@@ -306,15 +320,15 @@ export function trifftSchwelle(
 }
 
 /**
- * Ein Pruefer fuer alle Marken einer Einheit — dieselbe Frage, einmal
- * gebunden. Der Laden stellt sie zweimal je Karte (einmal fuer den Rahmen,
- * einmal je Zeichen), und beide Antworten muessen dieselben sein.
+ * Den Pruefer einmal binden — fuer Rahmen und Zeichen einer Karte. Die
+ * Kennung der Einheit gehoert dazu (siehe `trifftSchwelle`); ohne sie bleibt
+ * es die Frage „irgendein neuer Traeger".
  */
 export function schwellenPruefer(
   staende: readonly Synergiestand[],
   tabelle: readonly Synergie[],
-): (marke: string) => boolean {
-  return (marke) => trifftSchwelle(marke, staende, tabelle);
+): (marke: string, einheitId?: string) => boolean {
+  return (marke, einheitId) => trifftSchwelle(marke, staende, tabelle, einheitId);
 }
 
 /**

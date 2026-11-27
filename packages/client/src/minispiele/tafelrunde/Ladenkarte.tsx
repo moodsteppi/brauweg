@@ -99,8 +99,12 @@ export function Ladenkarte({
   verschmelzZahl: number;
   /** Die Klassen-Marken dieser Einheit (Katalog). Leer, solange er fehlt. */
   marken: string[];
-  /** Wuerde ein Traeger dieser Marke eine Schwelle erreichen? Siehe Synergien.tsx. */
-  trifftSchwelle: (marke: string) => boolean;
+  /**
+   * Wuerde diese Einheit die Marke ueber eine Schwelle heben? Siehe
+   * Synergien.tsx — mit der Kennung, weil eine Einheit, die schon gezaehlt
+   * ist, die Marke nicht mehr voranbringt.
+   */
+  trifftSchwelle: (marke: string, einheitId?: string) => boolean;
   /** Warum nicht kaufbar, falls die Zahlen der Sicht es erklaeren. */
   grund: Kaufhindernis;
   onKauf: () => void;
@@ -140,7 +144,8 @@ export function Ladenkarte({
   /* Der Rahmen sagt "hier wird eine Schwelle voll", das leuchtende Zeichen
      darunter sagt welche. Genug fuer den Rahmen ist EINE Marke — eine Einheit
      traegt bis zu zwei. */
-  const trifft = marken.some(trifftSchwelle);
+  const trifftHier = (marke: string): boolean => trifftSchwelle(marke, einheit.id);
+  const trifft = marken.some(trifftHier);
   return (
     /* Die Huelle traegt den Griff, damit er NEBEN der Schaltflaeche steht und
        nicht darin. Sie ist das Rasterfeld des Ladens; die Karte fuellt sie
@@ -211,7 +216,7 @@ export function Ladenkarte({
         {/* Beschriftet, weil die Karte eine Schaltflaeche ist und ihren Namen
             aus dem Inhalt bezieht: "Dorfwache, Wache, Krieger" ist genau die
             Auskunft, die ein Vorlesegeraet fuer den Kauf braucht. */}
-        <Markenzeichen marken={einheit.marken} trifft={trifftSchwelle} beschriftet ort="laden" />
+        <Markenzeichen marken={einheit.marken} trifft={trifftHier} beschriftet ort="laden" />
         {/* Der Hinweis, der aus einem Kauf eine Entscheidung macht — und, wenn
             nichts zu entscheiden ist, der Grund dafuer. Der Grund steht vorn:
             Wer nicht kaufen kann, will zuerst wissen warum, und erst danach,

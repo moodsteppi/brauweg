@@ -99,7 +99,7 @@ export function ruestsicht(teil: Partial<TafelrundeSicht> = {}): TafelrundeSicht
       einkommen: 6,
       darfHandeln: true,
       synergien: [
-        { marke: 'krieger', name: 'Krieger', anzahl: 2, schwelle: 2, naechsteSchwelle: 3, bonus: { ...OHNE, ruestung: 5 }, effekt: { art: 'kampfgeist' }, text: '+5 Rüstung, unter halbem Leben +20 % Angriff.' },
+        { marke: 'krieger', name: 'Krieger', anzahl: 2, schwelle: 2, naechsteSchwelle: 3, bonus: { ...OHNE, ruestung: 5 }, effekt: { art: 'kampfgeist' }, text: '+5 Rüstung, unter halbem Leben +20 % Angriff.', traeger: ['dorfwache', 'grimmbart'] },
       ],
     },
     gegner: [
