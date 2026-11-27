@@ -100,3 +100,31 @@ Lebens).
   einmal je Seite, Sprung nur für Nahkämpfer, Brand wirkt.
 
 Stand: 358 Modultests grün.
+
+## Nachtrag 27.11.2026, abends: neue Wirtschaft
+
+Nach Robins erstem Spiel am iPhone:
+
+- kein Neuwürfeln und kein Rang steigern mehr
+- Feldplätze 2 + (Runde − 1), höchstens 7
+- Preise 2 / 3 / 4
+- Verkauf: einfache Einheit Preis − 1, verschmolzene voller Preis
+- Startgold 4
+
+Weil die Felder früher wachsen, war neu abzustimmen (je 1.000 Partien zu
+viert, zwei Saatbasen; Spielzeit 300 Partien):
+
+| Stand | Marken | Partie | an der Uhr |
+| --- | --- | --- | --- |
+| neue Regeln, alte Werte | x0,34–1,37 | 7:01 | 16,7 % |
+| Wächter-Schild 12/18/28, Meuchler +Angriff, Krieger +Rüstung | x0,68–1,18 | 6:46 | 13,7 % |
+| Schild 8/13/20, Meuchler +Leben | x0,67–1,14 | 6:39 | 13,2 % |
+| Untot-Wiederkehr 70/85/100, Höchstdauer 45 → 55 s | x0,78–1,15 | 6:57 | 9,2 % |
+| Bot füllt freie Plätze ohne Goldpolster, Startgold 2 → 4 | **x0,85–1,15** | **6:48** | **6,9 %** |
+
+Der letzte Schritt kam aus den Tests: Der Bot ließ in jedem siebten Kampf
+Feldplätze leer, obwohl er Gold hatte, weil sein Polster auch bei freiem Platz
+galt. Und mit 2 Startgold blieb in Runde 1 immer ein Platz leer.
+
+Offen: Die `schaetzung` der Marken für den Bot stammt noch aus den Werten vor
+dem Umbau. Die Bewertungsprobe liegt bei +0,38 (mit Deckung), Schranke 0,3.

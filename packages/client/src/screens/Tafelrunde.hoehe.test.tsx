@@ -122,8 +122,6 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
       feldplaetze: 3,
       belegt: 0,
       einkommen: 6,
-      neuwuerfelnKosten: 2,
-      aufstiegKosten: 4,
       darfHandeln: true,
       synergien: [],
     },

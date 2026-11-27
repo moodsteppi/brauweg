@@ -312,8 +312,8 @@ describe('Bot', () => {
     /*
      * Und keine Karte darf verschwunden oder dazugekommen sein. Das ist die
      * schaerfste Aussage ueber den Vorrat, die sich treffen laesst: Sie faellt
-     * bei jedem vergessenen Rueckweg um — Neu-Wuerfeln, Verkaufen,
-     * Rundenanfang, Ausscheiden.
+     * bei jedem vergessenen Rueckweg um — Verkaufen, Rundenanfang,
+     * Ausscheiden (und bis zum 27.11.2026 das Neu-Wuerfeln).
      */
     assert.equal(alleKarten(p), KARTEN_INSGESAMT);
   });

@@ -17,6 +17,8 @@ import {
   werteFuer,
 } from '../src/index.js';
 import { BRETT_FELDER, hexNachbarn } from '../src/brett.js';
+import { PREIS_JE_KOSTEN, erloes } from '../src/katalog.js';
+import { FELD_HOECHSTENS, levelFuerRunde, levelstufe } from '../src/regeln.js';
 
 describe('Einheiten-Katalog', () => {
   it('hat mindestens 15 Einheiten ueber drei Kostenstufen', () => {
@@ -107,9 +109,38 @@ describe('Sternstufen', () => {
 
   it('rechnet Kartenzahl und Gesamtkosten passend zum Verschmelzen', () => {
     assert.deepEqual([kartenZahl(1), kartenZahl(2), kartenZahl(3)], [1, 3, 9]);
-    // Eine Stufe-3-Dorfwache steckt voller neun Ein-Gold-Karten.
-    assert.equal(gesamtkosten('dorfwache', 3), 9);
-    assert.equal(gesamtkosten('sturmrufer', 2), 9);
+    // Seit dem 27.11.2026 ueber den PREIS und nicht mehr ueber die
+    // Kostenstufe: Eine Stufe-3-Dorfwache steckt voller neun Karten zu je
+    // 2 Gold, ein Stufe-2-Sturmrufer voller drei zu je 4 Gold.
+    assert.equal(gesamtkosten('dorfwache', 3), 18);
+    assert.equal(gesamtkosten('sturmrufer', 2), 12);
+  });
+
+  /*
+   * Robin, 27.11.2026: "Mindestpreis fuer Units ist 2". Die Kostenstufe
+   * (`kosten`) bleibt 1 bis 3 und steuert weiter Rahmen, Ladenchancen und
+   * Vorrat; was Gold kostet, steht in `preis`. Die Probe haelt beides
+   * auseinander — wer `kosten` wieder als Goldbetrag liest, verbilligt jede
+   * Einheit um einen Gold.
+   */
+  it('gibt jeder Einheit den Preis 2, 3 oder 4 nach ihrer Kostenstufe', () => {
+    assert.deepEqual({ ...PREIS_JE_KOSTEN }, { 1: 2, 2: 3, 3: 4 });
+    for (const e of KATALOG) {
+      assert.equal(e.preis, e.kosten + 1, e.id);
+      assert.equal(gesamtkosten(e.id, 1), e.preis, e.id);
+    }
+  });
+
+  it('gibt beim Verkauf einer einfachen Einheit einen Gold weniger, bei verschmolzenen den vollen Preis', () => {
+    // Der Abschlag nur auf Stufe 1: Er soll Kaufen-und-Verkaufen als Ersatz
+    // fuers abgeschaffte Neuwuerfeln teuer machen, nicht das Aufraeumen nach
+    // dem Verschmelzen.
+    for (const e of KATALOG) {
+      assert.equal(erloes(e.id, 1), e.preis - 1, e.id);
+      assert.ok(erloes(e.id, 1) >= 1, `${e.id} bringt beim Verkauf nichts`);
+      assert.equal(erloes(e.id, 2), 3 * e.preis, e.id);
+      assert.equal(erloes(e.id, 3), 9 * e.preis, e.id);
+    }
   });
 });
 
@@ -133,14 +164,22 @@ describe('Leveltabelle', () => {
     );
   });
 
-  it('macht jeden Aufstieg teurer als den vorigen und endet oben', () => {
-    let vorher = 0;
-    for (const stufe of LEVEL_TABELLE.slice(0, -1)) {
-      assert.ok(stufe.aufstieg !== null, `Level ${stufe.level} ohne Aufstieg`);
-      assert.ok(stufe.aufstieg! > vorher, `Level ${stufe.level} ist nicht teurer`);
-      vorher = stufe.aufstieg!;
+  /*
+   * Ersetzt am 27.11.2026 "macht jeden Aufstieg teurer als den vorigen": Den
+   * Aufstieg kauft niemand mehr, die Spalte `aufstieg` liest kein Zug mehr.
+   * Was jetzt zaehlt, ist die Rundenfolge: zwei Plaetze in Runde 1, einer
+   * mehr je Runde, ab Runde 6 sieben — und jeder Level, den sie erreicht,
+   * muss in der Tabelle stehen, sonst wirft `levelstufe` mitten in der
+   * Partie.
+   */
+  it('fuehrt die Feldplaetze ueber die Runden von zwei bis sieben und bleibt in der Tabelle', () => {
+    const folge = Array.from({ length: 10 }, (_, i) => levelFuerRunde(i + 1));
+    assert.deepEqual(folge, [2, 3, 4, 5, 6, 7, 7, 7, 7, 7]);
+    for (let runde = 1; runde <= 100; runde++) {
+      const level = levelFuerRunde(runde);
+      assert.equal(levelstufe(level).feldplaetze, level, `Runde ${runde}`);
+      assert.ok(level <= FELD_HOECHSTENS && level <= MAX_LEVEL, `Runde ${runde}: Level ${level}`);
     }
-    assert.equal(LEVEL_TABELLE[MAX_LEVEL - 1]!.aufstieg, null);
   });
 });
 

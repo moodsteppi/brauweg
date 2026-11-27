@@ -17,7 +17,7 @@ import type { Einheit, Faehigkeit, Stufenwerte } from '../sicht';
 import { einheitName, faehigkeitName, faehigkeitText, markeName, rollenName, tz } from '../text';
 import type { Kaempfer } from '../zuege';
 import { Blatt } from './Blatt';
-import { Figur, MarkeZeichen, Muenze, RolleZeichen, Sterne, kostenStufe } from './grafik';
+import { Figur, MarkeZeichen, Muenze, RolleZeichen, Sterne, kostenStufe, preisVon } from './grafik';
 import stil from './neu.module.css';
 
 export function Einheitenblatt({
@@ -71,7 +71,7 @@ export function Einheitenblatt({
                 {tz('knopf.kaufen')}
                 <em>
                   <Muenze />
-                  {einheit.kosten}
+                  {preisVon(einheit)}
                 </em>
               </button>
             )}
@@ -102,7 +102,7 @@ export function Einheitenblatt({
         {tz('neu.stufe', { n: kaempfer.stufe })}
         {' · '}
         <Muenze />
-        {einheit.kosten}
+        {preisVon(einheit)}
       </p>
 
       {werte && (

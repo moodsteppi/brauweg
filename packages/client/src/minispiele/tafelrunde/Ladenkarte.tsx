@@ -72,7 +72,9 @@ export function kaufhindernis(
   angeboten: Einheit | undefined,
 ): Kaufhindernis {
   if (!angeboten) return null;
-  if (gold < angeboten.kosten) return 'gold';
+  // Der PREIS, nicht die Kostenstufe (seit dem 27.11.2026 abends zweierlei);
+  // ein Tisch aus der Zeit davor kennt nur die Stufe, und die war der Preis.
+  if (gold < (angeboten.preis ?? angeboten.kosten)) return 'gold';
   if (bankVoll) return 'bank';
   return null;
 }
@@ -194,7 +196,8 @@ export function Ladenkarte({
             reicht. */}
         <span className="tr-karte-preis" data-teuer={grund === 'gold' ? '' : undefined}>
           <GoldZeichen />
-          {einheit.kosten}
+          {/* Der Preis, nicht die Stufe (seit dem 27.11.2026 abends zweierlei). */}
+          {einheit.preis ?? einheit.kosten}
         </span>
         {/* Die KARTE bleibt eine Karte: Ein Rahmen um Name, Rolle und Preis ist
             richtig, weggenommen wurde nur die Platte unter der FIGUR. Und die

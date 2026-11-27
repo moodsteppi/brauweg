@@ -10,11 +10,11 @@ import type { Einheit, Faehigkeit, Stufenwerte, TafelrundeSicht } from '../sicht
 import type { Synergie } from '../Synergien';
 
 export const KATALOG: Record<string, Einheit> = {
-  dorfwache: { id: 'dorfwache', name: 'Pinguinwache', kosten: 1, rolle: 'wache', marken: ['krieger', 'waechter'], leben: 600, angriff: 40, tempo: 1, reichweite: 1, ruestung: 20 },
-  astschuetze: { id: 'astschuetze', name: 'Eichhornschütze', kosten: 1, rolle: 'schuetze', marken: ['naturwesen'], leben: 400, angriff: 50, tempo: 1, reichweite: 3, ruestung: 5 },
-  gassendieb: { id: 'gassendieb', name: 'Pinguindieb', kosten: 1, rolle: 'meuchler', marken: ['meuchler'], leben: 450, angriff: 55, tempo: 1.2, reichweite: 1, ruestung: 5 },
-  grimmbart: { id: 'grimmbart', name: 'Kaiserkrieger', kosten: 2, rolle: 'wache', marken: ['krieger'], leben: 750, angriff: 60, tempo: 0.9, reichweite: 1, ruestung: 25 },
-  sturmrufer: { id: 'sturmrufer', name: 'Sturmalbatros', kosten: 3, rolle: 'magier', marken: ['elementar'], leben: 500, angriff: 70, tempo: 0.8, reichweite: 3, ruestung: 5 },
+  dorfwache: { id: 'dorfwache', name: 'Pinguinwache', kosten: 1, preis: 2, rolle: 'wache', marken: ['krieger', 'waechter'], leben: 600, angriff: 40, tempo: 1, reichweite: 1, ruestung: 20 },
+  astschuetze: { id: 'astschuetze', name: 'Eichhornschütze', kosten: 1, preis: 2, rolle: 'schuetze', marken: ['naturwesen'], leben: 400, angriff: 50, tempo: 1, reichweite: 3, ruestung: 5 },
+  gassendieb: { id: 'gassendieb', name: 'Pinguindieb', kosten: 1, preis: 2, rolle: 'meuchler', marken: ['meuchler'], leben: 450, angriff: 55, tempo: 1.2, reichweite: 1, ruestung: 5 },
+  grimmbart: { id: 'grimmbart', name: 'Kaiserkrieger', kosten: 2, preis: 3, rolle: 'wache', marken: ['krieger'], leben: 750, angriff: 60, tempo: 0.9, reichweite: 1, ruestung: 25 },
+  sturmrufer: { id: 'sturmrufer', name: 'Sturmalbatros', kosten: 3, preis: 4, rolle: 'magier', marken: ['elementar'], leben: 500, angriff: 70, tempo: 0.8, reichweite: 3, ruestung: 5 },
 };
 
 export const FAEHIGKEITEN: Record<string, Faehigkeit | null> = {
@@ -97,8 +97,6 @@ export function ruestsicht(teil: Partial<TafelrundeSicht> = {}): TafelrundeSicht
       feldplaetze: 3,
       belegt: 2,
       einkommen: 6,
-      neuwuerfelnKosten: 0,
-      aufstiegKosten: 4,
       darfHandeln: true,
       synergien: [
         { marke: 'krieger', name: 'Krieger', anzahl: 2, schwelle: 2, naechsteSchwelle: 3, bonus: { ...OHNE, ruestung: 5 }, effekt: { art: 'kampfgeist' }, text: '+5 Rüstung, unter halbem Leben +20 % Angriff.' },

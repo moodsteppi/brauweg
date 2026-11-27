@@ -1472,7 +1472,12 @@ function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number)
      * ihn wegen zweier Goldstuecke liegen zu lassen waere in jeder Lage
      * falsch.
      */
-    if (!verschmilzt && eigen.gold - art.preis < polster) return;
+    // Seit die Feldplaetze mit der Runde wachsen (27.11.2026), gilt das
+    // Polster auch dann nicht, wenn ein Feldplatz leer steht: Ein leerer Platz
+    // im Kampf ist teurer als jedes Zinsgold (Probe in bot.test.ts, vorher 114
+    // von 804 Kaempfen mit bezahlbarer Luecke).
+    const luecke = eigen.belegt < eigen.feldplaetze;
+    if (!verschmilzt && !luecke && eigen.gold - art.preis < polster) return;
 
     let wert = staerke({ id, stufe: 1 });
     if (verschmilzt) wert *= VERSCHMELZ_FAKTOR;

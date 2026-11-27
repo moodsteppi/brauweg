@@ -89,7 +89,6 @@ export interface EigeneSicht {
    * (bot.ts, WUERFE_JE_RUNDE). Fuer den Bildschirm ist die Zahl ohne Belang.
    */
   readonly wuerfeRunde: number;
-  /** Gold fuer den naechsten Level, null beim hoechsten. */
   /**
    * Feldplaetze in der NAECHSTEN Runde (seit dem 27.11.2026 folgen sie der
    * Runde, `levelFuerRunde`). Steht hier, damit der Bildschirm "+1 Platz

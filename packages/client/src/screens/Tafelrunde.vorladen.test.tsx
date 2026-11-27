@@ -171,8 +171,6 @@ const SICHT = {
     feldplaetze: 3,
     belegt: 0,
     einkommen: 5,
-    neuwuerfelnKosten: 2,
-    aufstiegKosten: 4,
     darfHandeln: true,
     synergien: [],
   },

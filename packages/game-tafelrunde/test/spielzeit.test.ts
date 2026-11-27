@@ -215,7 +215,9 @@ describe('Spielzeit: der heutige Stand', () => {
     const minuten = AUSWERTUNG.spielzeitMedianMs / 60_000;
     assert.ok(
       minuten > 4 && minuten < 14,
-      `Median ${minuten.toFixed(1)} Minuten (gemessen am 05.09.2026: 7,2)`,
+      // 27.11.2026 (Feldplaetze nach Runde, Preise 2/3/4, 55 s Hoechstdauer):
+      // 6,7 in dieser Probe, 6:57 ueber 300 Partien mit werkzeug/spielzeit.mjs.
+      `Median ${minuten.toFixed(1)} Minuten (gemessen am 27.11.2026: 6,7; am 05.09.2026: 7,2)`,
     );
   });
 
@@ -361,12 +363,24 @@ describe('Spielzeit: der heutige Stand', () => {
    * Die Schranke ist von 45 % auf 10 % nachgezogen, weil sie sonst nichts
    * mehr faengt: Sie liegt damit weiter deutlich ueber dem gemessenen Wert,
    * schlaegt aber an, wenn der alte Zustand zurueckkommt.
+   *
+   * NACHTRAG 27.11.2026 — DIE SCHRANKE BLEIBT, DER ABSTAND IST KLEIN. Seit die
+   * Feldplaetze mit der Runde wachsen und die Marken neu abgestimmt sind,
+   * stehen mehr Einheiten laenger: Bei 45 s liefen 13,2 % der Kaempfe an die
+   * Uhr, deshalb ist `HOECHSTDAUER_MS` auf 55 s gestiegen (kampf.ts). Damit
+   * misst diese Probe 7,4 % (150 Partien, Median des Kampfes 19,1 s), das
+   * Werkzeug ueber 300 Partien 9,2 % (`werkzeug/spielzeit.mjs --partien 300
+   * --sitze 4 --nur leben`). Die 10 % sind nicht verschoben worden: Die neue
+   * Regel hat die Zahl in die Naehe der Schranke gebracht, nicht darueber.
+   * Wer am Katalog oder an den Marken weiter Leben und Ruestung dazulegt,
+   * wird hier als Erster rot.
    */
   it('haelt fest, wie oft ein Kampf in die Hoechstdauer laeuft', () => {
     assert.ok(
       AUSWERTUNG.zeitAbbruchAnteil < 0.1,
       `${(AUSWERTUNG.zeitAbbruchAnteil * 100).toFixed(1)} % der Kaempfe enden durch Zeitablauf ` +
-        `(gemessen am 05.09.2026: 4,3 %, vor dem Zeitraffer 29 %)`,
+        `(gemessen am 27.11.2026: 7,4 % bei 55 s Hoechstdauer; am 05.09.2026: 4,3 %, ` +
+        `vor dem Zeitraffer 29 %)`,
     );
     assert.ok(
       AUSWERTUNG.kampfMedianMs <= HOECHSTDAUER_MS,

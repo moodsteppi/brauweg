@@ -10,7 +10,7 @@
  *
  * Faelle: einstieg, suche, wartesaal, ladebild, ruesten (Vorgabe), marke
  * (Marke angetippt: Ring und Pop-up), blatt (Einheitenblatt), regeln, kampf,
- * ende.
+ * zuschauen (eigener Kampf vorbei, andere laufen noch), ende.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -125,7 +125,7 @@ export function ProbeTafelrundeNeu(): React.JSX.Element {
   if (fall === 'ladebild') return <Ladebild erledigt={7} gesamt={19} onAbbrechen={nichts} />;
 
   const sicht =
-    fall === 'kampf'
+    fall === 'kampf' || fall === 'zuschauen'
       ? KAMPF
       : fall === 'ende'
         ? {
@@ -146,10 +146,12 @@ export function ProbeTafelrundeNeu(): React.JSX.Element {
       tischKennung={new URLSearchParams(window.location.search).get('tisch') ?? 'probe-tafelrunde'}
       sicht={sicht}
       wissen={wissen}
-      legaleZuege={fall === 'kampf' ? [] : LEGAL}
+      legaleZuege={fall === 'kampf' || fall === 'zuschauen' ? [] : LEGAL}
       revision={1}
-      frist={null}
-      rundenfrist={fall === 'kampf' ? null : Date.now() + 42_000}
+      /* `zuschauen`: Die Frist ist JETZT, also springt die Arena ans Ende des
+         eigenen Kampfes (`startVersatz`) — die anderen laufen noch. */
+      frist={fall === 'zuschauen' ? Date.now() : null}
+      rundenfrist={fall === 'kampf' || fall === 'zuschauen' ? null : Date.now() + 42_000}
       sitze={SITZE}
       trophaeen={fall === 'ende' ? [{ seat: RUEST.ich ?? 0, delta: 24 }] : undefined}
       onAktion={nichts}

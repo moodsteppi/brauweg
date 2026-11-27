@@ -47,10 +47,34 @@ describe('Eigene Sicht', () => {
     assert.equal(sicht.eigenes!.gold, DEFAULT_REGELN.startGold);
     // Die Grenze steht als ZAHL in der Sicht, damit der Client sie nicht aus
     // einer Leveltabelle rechnet, die er gar nicht hat.
-    assert.equal(sicht.eigenes!.feldplaetze, 1);
+    // Seit dem 27.11.2026 hat Runde 1 zwei Plaetze (`levelFuerRunde`).
+    assert.equal(sicht.eigenes!.feldplaetze, 2);
     assert.equal(sicht.eigenes!.belegt, 0);
-    assert.equal(sicht.eigenes!.aufstiegKosten, 2);
+    assert.equal(sicht.eigenes!.feldplaetzeNaechsteRunde, 3);
     assert.equal(sicht.eigenes!.darfHandeln, true);
+    // Die Felder der abgeschafften Zuege sind weg. Stuenden sie noch in der
+    // Sicht, zeigte ein Client Knoepfe, die der Server abweist.
+    assert.ok(!('aufstiegKosten' in sicht.eigenes!));
+    assert.ok(!('neuwuerfelnKosten' in sicht.eigenes!));
+  });
+
+  it('sagt, wie viele Feldplaetze die naechste Runde bringt, und bleibt bei sieben stehen', () => {
+    // Das Feld ist da, damit der Bildschirm "+1 Platz naechste Runde" zeigen
+    // kann, ohne `levelFuerRunde` nachzurechnen. Deshalb gegen ausgeschriebene
+    // Zahlen und ueber die Runde der Partie, nicht ueber die Funktion.
+    const erwartet: Record<number, [number, number]> = {
+      1: [2, 3],
+      5: [6, 7],
+      6: [7, 7],
+      9: [7, 7],
+    };
+    for (const [runde, [jetzt, naechste]] of Object.entries(erwartet)) {
+      const p = { ...neu(), runde: Number(runde) };
+      const q = mitHeer(p, 0, { level: jetzt });
+      const eigen = sichtFuer(q, 0).eigenes!;
+      assert.equal(eigen.feldplaetze, jetzt, `Runde ${runde}`);
+      assert.equal(eigen.feldplaetzeNaechsteRunde, naechste, `Runde ${runde}`);
+    }
   });
 
   it('sagt, was die naechste Runde einbringt', () => {
@@ -171,12 +195,28 @@ describe('Werte je Sternstufe in der Sicht', () => {
     // Der Sinn der Tabelle: Der Bildschirm soll NICHT multiplizieren. Wer die
     // Rechnung hier aendert, aendert diese Probe mit — und sieht dabei, dass
     // die Anzeige mitwandert.
+    //
+    // Seit dem 27.11.2026 ist der Erloes nicht mehr die Gesamtkosten (Stufe 1
+    // bringt einen Gold weniger, siehe `erloes` in katalog.ts). Deshalb wird
+    // er hier gegen einen ECHTEN Verkauf geprueft und nicht gegen eine
+    // Formel: Genau die Abweichung zwischen Anzeige und Buchung soll auffallen.
     const werte = tabelle();
+    const basis = neu();
     for (const e of KATALOG) {
       for (const stand of werte[e.id]) {
         const { stufe, erloes, ...gemessen } = stand;
         assert.deepEqual(gemessen, werteFuer(e.id, stufe));
-        assert.equal(erloes, gesamtkosten(e.id, stufe));
+
+        const bank = new Array(DEFAULT_REGELN.bankPlaetze).fill(null);
+        bank[0] = { id: e.id, stufe };
+        const vorher = mitHeer(basis, 0, { gold: 0, bank });
+        const nachher = fuehreAus(vorher, 0, { typ: 'verkaufen', ort: { bereich: 'bank', platz: 0 } });
+        assert.equal(erloes, nachher.heere[0]!.gold, `${e.id} Stufe ${stufe}`);
+        assert.equal(
+          erloes,
+          stufe === 1 ? e.preis - 1 : gesamtkosten(e.id, stufe),
+          `${e.id} Stufe ${stufe}`,
+        );
       }
     }
   });

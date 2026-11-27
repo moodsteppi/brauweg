@@ -147,7 +147,9 @@ export interface TafelrundeRegeln {
  */
 export const DEFAULT_REGELN: TafelrundeRegeln = {
   startLeben: 12,
-  startGold: 2,
+  // 4 statt 2 seit dem 27.11.2026: Runde 1 hat zwei Feldplaetze und die
+  // billigste Einheit kostet 2 — mit 2 Gold bliebe ein Platz immer leer.
+  startGold: 4,
   ladenPlaetze: 5,
   bankPlaetze: 9,
   neuwuerfelnKosten: 0,
