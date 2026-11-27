@@ -19,10 +19,12 @@ import { FundBlatt } from './Aufgaben';
 const gradName = (grad: Truhe['grad']): string => t(`heute.grad.${grad}`);
 
 export function HeuteNeu({
+  bereich = 'aufgaben',
   onClose,
   onGuthaben,
   onRangliste,
 }: {
+  bereich?: 'aufgaben' | 'truhen';
   onClose: () => void;
   onGuthaben: () => void;
   onRangliste: () => void;
@@ -35,6 +37,15 @@ export function HeuteNeu({
   /** Zuerst höchstens fünf Aufgaben (Bauplan), der Rest auf Wunsch. */
   const [alleZeigen, setAlleZeigen] = useState(false);
   const zug = useRef<{ y: number; dy: number } | null>(null);
+  const truhenTitel = useRef<HTMLHeadingElement>(null);
+  const zielGezeigt = useRef(false);
+  // Nur beim Öffnen springen; Abholen darf die Scrollposition nicht zurücksetzen.
+  useEffect(() => {
+    if (bereich !== 'truhen' || !truhen || zielGezeigt.current) return;
+    zielGezeigt.current = true;
+    truhenTitel.current?.scrollIntoView?.({ block: 'start' });
+    truhenTitel.current?.focus({ preventScroll: true });
+  }, [bereich, truhen]);
   const blatt = useRef<HTMLDivElement>(null);
 
   const laden = (): void => {
@@ -206,7 +217,7 @@ export function HeuteNeu({
 
           {truhen && (
             <section className="hb-blk">
-              <h2 className="hb-ab">
+              <h2 className="hb-ab" ref={truhenTitel} tabIndex={-1}>
                 {t('heute.truhen.titel')}
                 <span className="hb-ab-zusatz">{t('heute.truhen.zusatz')}</span>
               </h2>

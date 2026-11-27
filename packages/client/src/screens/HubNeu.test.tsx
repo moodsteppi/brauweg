@@ -171,7 +171,10 @@ describe('Neues Hub', () => {
   it('zeigt am Trophäenweg, dass etwas zu holen ist, und zählt es am Start-Reiter mit', async () => {
     await zeige({ ...me, bereit: { truhen: 1, aufgaben: 1, weg: 2 } });
     expect(screen.getByRole('button', { name: /^Trophäenweg öffnen.*2 Belohnungen bereit\.$/ })).toBeInTheDocument();
-    expect(screen.getByText('2 Belohnungen')).toBeInTheDocument();
+    const pokal = screen.getByRole('button', { name: /^Trophäenweg öffnen/ });
+    expect(pokal.closest('header')).not.toBeNull();
+    expect(pokal.querySelector('.hb-pokal-bereit')).toHaveTextContent('2');
+    expect(document.querySelector('.hb-start .hb-weg')).toBeNull();
     expect(within(reiter()).getByRole('button', { name: 'Start, 4 bereit' })).toBeInTheDocument();
   });
 
@@ -213,6 +216,23 @@ describe('Neues Hub', () => {
     const { onResume } = await zeige();
     fireEvent.click(screen.getByRole('button', { name: /Weiterspielen/ }));
     expect(onResume).toHaveBeenCalledWith('doppelkopf', 't1');
+  });
+
+  it('öffnet Belohnungen direkt bei den Truhen', async () => {
+    await zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Belohnungen: Truhen öffnen' }));
+    const titel = await screen.findByRole('heading', { name: /Truhen/ });
+    expect(titel).toHaveFocus();
+    expect(screen.getByRole('button', { name: /Tagestruhe.*öffnen/ })).toBeInTheDocument();
+  });
+
+  it('führt vom Spielen-Einstieg zur Übersicht, ohne schon ein Spiel zu starten', async () => {
+    const { onPick } = await zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Spielen: Spieleübersicht öffnen' }));
+    await act(async () => {});
+    expect(within(reiter()).getByRole('button', { name: 'Spiele' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('heading', { name: 'Spiele' })).toBeInTheDocument();
+    expect(onPick).not.toHaveBeenCalled();
   });
 
   it('öffnet ein Spiel erst über seine Spielseite, „Zum Spiel" führt in die Lobby', async () => {

@@ -1,0 +1,64 @@
+/* Ruhige Register aus dunklem Holz statt runder Filter-Pillen. Nur Games
+   und Collection verwenden diese Leiste; Shop und Spielsteuerung bleiben separat. */
+.hb.hb .hb-chips.kategorie-register {
+  gap: 8px;
+  padding: 6px 16px 13px;
+  background: linear-gradient(#bd955c55, #bd955c55) left 16px bottom 5px / calc(100% - 32px) 1px no-repeat;
+  border-radius: 0;
+  scroll-padding-inline: 16px;
+  overscroll-behavior-x: contain;
+}
+.hb.hb .kategorie-register .hb-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: none;
+  gap: 9px;
+  min-height: 52px;
+  height: auto;
+  padding: 9px 14px;
+  border: 1px solid #796044;
+  border-bottom: 3px solid #4f3c29;
+  border-radius: 5px;
+  background: linear-gradient(#161b18a8, #161b18a8), url('/hub/register/walnuss.webp') center / auto 100%;
+  color: #e6dece;
+  font: 750 15px/1.2 var(--hb-txt);
+  box-shadow: inset 0 1px 0 #e6c69520, 0 2px 3px #0003;
+  white-space: nowrap;
+}
+.hb.hb .kategorie-register .hb-chip.is-an {
+  color: #ffe3a5;
+  border-color: #cba76a;
+  border-bottom-color: #f5cd76;
+  background: linear-gradient(#123d2ae6, #123d2ae6), url('/hub/register/walnuss.webp') center / auto 100%;
+}
+.hb.hb .kategorie-register .hb-chip.is-an::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -8px;
+  height: 2px;
+  background: #f5cd76;
+}
+.hb.hb .kategorie-register .hb-chip > img {
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid #b29866;
+  flex: none;
+}
+.hb.hb .kategorie-register .hb-chip > svg {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  color: #d3bb8d;
+}
+.hb.hb .kategorie-register .hb-chip.is-an > svg { color: #ffe3a5; }
+.hb.hb .kategorie-register .hb-chip:focus-visible { outline: 2px solid #ffe3a5; outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .hb.hb .kategorie-register .hb-chip:hover { border-color: #e0bc7b; filter: brightness(1.12); }
+}
+.hb.hb .kategorie-register .hb-chip:active { filter: brightness(.9); }

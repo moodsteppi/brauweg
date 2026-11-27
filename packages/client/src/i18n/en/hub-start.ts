@@ -2,6 +2,28 @@ import type { Woerterbuch } from '../woerterbuch';
 
 /** Englische Texte, Bereich „hub-start" — Gegenstück zu `de/hub-start.ts`. */
 export default {
+  'start.mosaik.quests': 'Small goals. Every day.',
+  'start.mosaik.belohnungen': 'Rewards',
+  'start.mosaik.belohnungenAria': 'Rewards: open chests',
+  'start.mosaik.truhen': 'Your treasure awaits',
+  'start.mosaik.lernen': 'Learn to play',
+  'start.mosaik.lernenAria': 'Learn Doppelkopf. Open learning path.',
+  'start.mosaik.browortAria': 'Browort. Open word of the day.',
+  'start.mosaik.wort': 'Your daily word',
+  'start.mosaik.entdecken': 'Find your next game',
+
+  'start.einstiege': 'Jump right in',
+  'start.spielen.aria': 'Play: open game selection',
+  'start.spielen.kicker': 'YOUR NEXT GAME AWAITS',
+  'start.spielen.titel': 'Play',
+  'start.spielen.text': 'Solo or together. Find your next favourite.',
+  'start.spielen.auswahl': 'Explore games',
+  'start.aufgaben.kicker': 'SOMETHING NEW EVERY DAY',
+  'start.aufgaben.titel': 'Daily quests',
+  'rahmen.wegOeffnen': 'Open Trophy Road. {n} trophies.',
+  'rahmen.wegBereit.eins': 'Open Trophy Road. {trophaeen} trophies. {n} reward ready.',
+  'rahmen.wegBereit.mehr': 'Open Trophy Road. {trophaeen} trophies. {n} rewards ready.',
+
   // StartNeu
   'start.weg.aria': 'Open Trophy Road. You are in {biom} with {trophaeen} trophies.',
   'start.weg.ariaBereit.eins': 'Open Trophy Road. You are in {biom} with {trophaeen} trophies. {n} reward ready.',
