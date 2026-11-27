@@ -57,10 +57,12 @@
 		<string>arm64</string>
 	</array>
 
-	<!-- Nur hochkant, wie das Web-Manifest (orientation: portrait). -->
+	<!-- Ice Clash erlaubt Querformat; andere Bildschirme bleiben im Controller hochkant. -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 
 	<!-- Helle Statusleiste auf dem Brauweg-Blau, schon waehrend des Starts. -->

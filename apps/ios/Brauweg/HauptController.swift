@@ -54,7 +54,10 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
         didSet { if kopfzeileHell != oldValue { setNeedsStatusBarAppearanceUpdate() } }
     }
     private var kopffarbeBeobachter: NSKeyValueObservation?
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
+    private var richtungsBeobachter: NSKeyValueObservation?
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        ansicht?.url?.path == "/ice-clash" ? [.portrait, .landscapeLeft, .landscapeRight] : .portrait
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -101,6 +104,9 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
         ansicht.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(ansicht)
         self.ansicht = ansicht
+        richtungsBeobachter = ansicht.observe(\.url, options: [.new]) { [weak self] _, _ in
+            self?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        }
         broremote.melden = { [weak self] daten in self?.broremoteMelden(daten) }
         // `themeColor` folgt dem `<meta name="theme-color">` der Seite.
         kopffarbeBeobachter = ansicht.observe(\.themeColor, options: [.initial, .new]) { [weak self] wv, _ in

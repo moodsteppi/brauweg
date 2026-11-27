@@ -107,9 +107,9 @@ test('project.yml: Ressourcen samt Privacy Manifest, Client per Build-Phase', ()
   assert.match(ignoriert, /^Konfiguration\/Lokal\.xcconfig$/m);
 });
 
-test('Info.plist: hochkant, Ausfuhrangabe, nur BroRemote-Berechtigungen, kein offenes ATS', () => {
+test('Info.plist: Querformat für Ice Clash, Ausfuhrangabe, nur BroRemote-Berechtigungen, kein offenes ATS', () => {
   const plist = ohneKommentare(lies('Konfiguration', 'Info.plist'));
-  assert.deepEqual(plistListe(plist, 'UISupportedInterfaceOrientations'), ['UIInterfaceOrientationPortrait']);
+  assert.deepEqual(plistListe(plist, 'UISupportedInterfaceOrientations'), ['UIInterfaceOrientationPortrait', 'UIInterfaceOrientationLandscapeLeft', 'UIInterfaceOrientationLandscapeRight']);
   assert.ok(!plist.includes('UISupportedInterfaceOrientations~ipad'));
   assert.equal(plistWert(plist, 'ITSAppUsesNonExemptEncryption'), 'false');
   assert.deepEqual([...plist.matchAll(/<key>(NS\w*UsageDescription)<\/key>/g)].map((m) => m[1]).sort(), ['NSCameraUsageDescription', 'NSLocalNetworkUsageDescription']);
@@ -264,6 +264,9 @@ test('die Huelle spricht dieselbe Sprache wie Server und Client', () => {
     if (pfad === '/broremote') {
       assert.ok(huelle.includes('if link.path == "/broremote"'), pfad);
       assert.ok(huelle.includes('link.fragment.map'), 'BroRemote-Einladung im Fragment erhalten');
+    } else if(pfad === '/ice-clash') {
+      assert.ok(huelle.includes('if link.path == "/ice-clash"'), pfad);
+      assert.ok(huelle.includes('code.uppercased()'), 'Ice-Clash-Raumcode erhalten');
     } else assert.ok(swiftMuster.startsWith('^' + pfad.replace(/\*$/, '')), pfad);
   }
 
