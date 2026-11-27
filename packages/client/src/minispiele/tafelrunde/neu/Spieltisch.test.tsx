@@ -26,6 +26,7 @@ function tisch(teil: Partial<Parameters<typeof Spieltisch>[0]> = {}) {
   const onAktion = vi.fn();
   const utils = render(
     <Spieltisch
+      tischKennung="t1"
       sicht={ruestsicht()}
       wissen={WISSEN}
       legaleZuege={ZUEGE}
@@ -61,6 +62,7 @@ describe('Spieltisch', () => {
     expect(screen.getByRole('button', { name: /Eichhornschütze, Schütze/ })).toBeDisabled();
     rerender(
       <Spieltisch
+        tischKennung="t1"
         sicht={ruestsicht()}
         wissen={WISSEN}
         legaleZuege={ZUEGE}
@@ -99,6 +101,45 @@ describe('Spieltisch', () => {
     expect(within(blatt).getByText('Schildwall')).toBeInTheDocument();
     fireEvent.click(within(blatt).getByRole('button', { name: /Verkaufen/ }));
     expect(onAktion).toHaveBeenCalledWith({ typ: 'verkaufen', ort: { bereich: 'brett', platz: 16 } });
+  });
+
+  it('ein Schauplatz fuer die ganze Partie: Ruestphase und naechste Runde zeigen denselben', () => {
+    const { container, rerender } = tisch();
+    const vorher = container.querySelector('[data-schauplatz]')!.getAttribute('data-schauplatz');
+    rerender(
+      <Spieltisch
+        tischKennung="t1"
+        sicht={ruestsicht({ runde: 4 })}
+        wissen={WISSEN}
+        legaleZuege={ZUEGE}
+        revision={6}
+        frist={null}
+        rundenfrist={null}
+        sitze={[]}
+        onAktion={() => {}}
+        onZurueck={() => {}}
+        onNochmal={() => {}}
+      />,
+    );
+    expect(container.querySelectorAll('[data-schauplatz]')).toHaveLength(1);
+    expect(container.querySelector('[data-schauplatz]')!.getAttribute('data-schauplatz')).toBe(vorher);
+  });
+
+  it('Bots heissen in der Mitspielerleiste "KI 1", "KI 2" — mit Namen, nicht nur einem Buchstaben', () => {
+    const sicht = ruestsicht({
+      gegner: [1, 2, 3].map((sitz) => ({ ...ruestsicht().gegner[0]!, sitz })),
+    });
+    tisch({
+      sicht,
+      sitze: [
+        { seat: 1, displayName: null, accountId: null, avatarUrl: null, isBot: true },
+        { seat: 2, displayName: 'Tom', accountId: 't', avatarUrl: null, isBot: false },
+        { seat: 3, displayName: null, accountId: null, avatarUrl: null, isBot: true },
+      ],
+    });
+    expect(screen.getByRole('button', { name: 'KI 1, 9 Leben' })).toHaveTextContent('KI 1');
+    expect(screen.getByRole('button', { name: 'KI 2, 9 Leben' })).toHaveTextContent('KI 2');
+    expect(screen.getByRole('button', { name: 'Tom, 9 Leben' })).toHaveTextContent('Tom');
   });
 
   it('nach dem Ende der Partie steht der Abschluss mit Platz und Trophaeen', () => {

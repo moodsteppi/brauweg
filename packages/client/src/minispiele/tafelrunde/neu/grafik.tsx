@@ -15,6 +15,8 @@
 
 import { useState } from 'react';
 
+import { aktiveSprache } from '../../../i18n';
+
 import {
   effektBild,
   figurNeuBlatt,
@@ -226,6 +228,26 @@ export function Effektbild({
       ) : (
         <i className={stil.effektErsatz} />
       )}
+    </span>
+  );
+}
+
+/**
+ * Ein Einheitenname auf engem Raum (Porträtkarte, Traeger im Markenpopup).
+ *
+ * Die neuen Namen sind lange Einzelwoerter ("Geisterschildkröte",
+ * "Pinguinschleuder"), und auf einer 68 px breiten Karte schnitt die Zeile
+ * sie mitten im Buchstaben ab (Sichtprobe vom 27.11.2026). Drei Mittel, in
+ * dieser Reihenfolge: Die Schrift wird mit der Karte kleiner (Container-
+ * Einheiten im Stylesheet), lange Namen eine Stufe kleiner (`data-lang`), und
+ * umbrochen wird zweizeilig mit Silbentrennung — `lang` sagt dem Browser,
+ * nach welchen Regeln. Wo er keine Trennregeln hat, bricht `overflow-wrap`
+ * notfalls im Wort; abgeschnitten wird nichts mehr.
+ */
+export function Kurzname({ name, klasse }: { name: string; klasse?: string }): React.JSX.Element {
+  return (
+    <span className={klasse} lang={aktiveSprache()} data-lang={name.length > 12 ? '' : undefined}>
+      {name}
     </span>
   );
 }

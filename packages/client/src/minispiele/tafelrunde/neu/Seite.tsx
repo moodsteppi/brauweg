@@ -2,13 +2,17 @@
  * Der Rahmen der Seiten vor dem Tisch: Kopf mit Zurueck, Inhalt, unten fest
  * der Hauptknopf in Daumenreichweite (DESIGN.md: „Eine Hand, ein Daumen").
  *
- * Hochkant und auf die volle Hoehe (`100dvh`), mit den Safe Areas der
- * iOS-Huelle ueber `env()` — die Kerbe oben und der Wischbalken unten duerfen
- * weder Zurueck-Knopf noch Hauptknopf verdecken.
+ * VOLLFLAECHIG (Robin, 27.11.2026: „Full screen … voll integriert, sonst wirkt
+ * es wie ein Browser Game"): Ein Grund — Titelbild oder Schauplatz — liegt
+ * hinter der ganzen Seite, von Rand zu Rand und unter die Safe Areas. Kopf,
+ * Inhalt und Fuss liegen darueber, mit leichtem Verlauf ins Dunkle, damit die
+ * Schrift lesbar bleibt; nur der Inhalt ist auf Handybreite begrenzt, nie der
+ * Grund. Die Safe Areas der iOS-Huelle kommen ueber `env()`.
  */
 
 import type { ReactNode } from 'react';
 
+import { Schauplatzgrund } from './Feld';
 import stil from './neu.module.css';
 
 export function Seite({
@@ -17,6 +21,7 @@ export function Seite({
   zurueckText,
   onZurueck,
   kopfbild,
+  grund,
   children,
   fuss,
 }: {
@@ -24,13 +29,16 @@ export function Seite({
   unter?: string;
   zurueckText: string;
   onZurueck: () => void;
-  /** Titelbild oder Ersatz ueber dem Titel (nur der Einstieg hat eins). */
+  /** Was ueber dem Titel Platz braucht (der Einstieg laesst so seine Figuren frei). */
   kopfbild?: ReactNode;
+  /** Der vollflaechige Grund. Ohne Angabe der Burghof — ein Schauplatz des Spiels. */
+  grund?: ReactNode;
   children: ReactNode;
   fuss?: ReactNode;
 }): React.JSX.Element {
   return (
     <main className={stil.seite}>
+      {grund ?? <Schauplatzgrund schauplatz="burghof" />}
       <header className={stil.seitenKopf}>
         <button type="button" className={stil.zurueck} onClick={onZurueck} aria-label={zurueckText}>
           ‹

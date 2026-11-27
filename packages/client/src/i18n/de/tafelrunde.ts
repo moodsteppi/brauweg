@@ -293,6 +293,7 @@ export default {
   'tafelrunde.ui.regeln.zielText': 'Als Letzter am Tisch stehen bleiben.',
 
   // TafelrundeNeu (neue Oberfläche hinter ?tafelrunde=neu, seit dem 27.11.2026)
+  'tafelrunde.ui.neu.sitzKi': 'KI {n}',
   'tafelrunde.ui.neu.titel': 'Tafelrunde',
   'tafelrunde.ui.neu.schnellsuche': 'Schnellsuche',
   'tafelrunde.ui.neu.erstellenUnter': 'Mit Code für Freunde',

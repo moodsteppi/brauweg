@@ -15,6 +15,7 @@ import { rollenName, tz } from '../text';
 import { Figur } from './grafik';
 import stil from './neu.module.css';
 import { Regelblatt, type Regelwissen } from './Regelblatt';
+import { Schauplatzgrund } from './Feld';
 import { Abschnitt, Seite, Wahl } from './Seite';
 
 /**
@@ -44,13 +45,14 @@ export function Titel(): React.JSX.Element {
   const [kaputt, setKaputt] = useState(false);
   if (pfad && !kaputt) {
     return (
-      <div className={stil.titelBild}>
+      <div className={stil.titelGrund}>
         <img src={pfad} alt="" onError={() => setKaputt(true)} />
       </div>
     );
   }
   return (
-    <div className={stil.titelBild} data-ersatz="" aria-hidden="true">
+    <div className={stil.titelGrund} data-ersatz="" aria-hidden="true">
+      <Schauplatzgrund schauplatz="dorfplatz" />
       <div className={stil.titelReihe}>
         {TITELFIGUREN.map(({ id, rolle }, i) => (
           <span key={id} className={stil.titelPlatz} style={{ '--i': i } as React.CSSProperties}>
@@ -91,7 +93,9 @@ export function EinstiegSeite({
       unter={tz('einstieg.unter')}
       zurueckText={tz('zurueck')}
       onZurueck={onBack}
-      kopfbild={<Titel />}
+      grund={<Titel />}
+      /* Die Luecke ueber dem Titel, in der die Figuren des Grundes stehen. */
+      kopfbild={<div className={stil.titelLuecke} />}
       fuss={
         <>
           <button type="button" className={stil.hauptknopf} onClick={onSuche} disabled={startet}>

@@ -23,7 +23,6 @@
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
-import type { Schauplatz } from '../../../figuren3d/grafik-neu';
 import { type Bildstand, type Kampftakt, bildstand, blattVersatz, gleitenMs, zellWeite } from '../bildfolge';
 import {
   type Kampfpaarung,
@@ -43,7 +42,7 @@ import {
   spieleBisNeu,
   zustandAktiv,
 } from './abspielen';
-import { Raster, Schauplatzgrund } from './Feld';
+import { Raster } from './Feld';
 import { Effektbild, Figur, RolleZeichen, Sterne } from './grafik';
 import stil from './neu.module.css';
 
@@ -124,7 +123,6 @@ export function Kampf({
   schrittMs,
   katalog,
   faehigkeiten,
-  schauplatz,
   frist,
   nameVon,
   verblasst,
@@ -141,7 +139,6 @@ export function Kampf({
   schrittMs: number;
   katalog: Record<string, Einheit>;
   faehigkeiten: Record<string, Faehigkeit | null>;
-  schauplatz: Schauplatz;
   frist: number | null;
   nameVon: (sitz: number) => string;
   verblasst?: boolean;
@@ -226,7 +223,6 @@ export function Kampf({
       role="group"
       aria-label={tz('kampf.titel')}
     >
-      <Schauplatzgrund schauplatz={schauplatz} />
       <p className={stil.kampfSeite} data-lage="oben">
         <strong>{beschriftung(oben)}</strong>
         <span>{tz('kampf.stehen', { stehen: stehende(oben), gesamt: gesamt(oben) })}</span>

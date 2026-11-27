@@ -141,6 +141,9 @@ export function ProbeTafelrundeNeu(): React.JSX.Element {
         : RUEST;
   return (
     <Spieltisch
+      /* Eine feste Kennung, damit die Probe einen festen Schauplatz hat;
+         `?tisch=` waehlt einen anderen (zum Ansehen aller vier). */
+      tischKennung={new URLSearchParams(window.location.search).get('tisch') ?? 'probe-tafelrunde'}
       sicht={sicht}
       wissen={wissen}
       legaleZuege={fall === 'kampf' ? [] : LEGAL}

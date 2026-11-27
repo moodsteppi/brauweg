@@ -133,8 +133,12 @@ describe('TafelrundeNeu', () => {
     expect(screen.getAllByRole('button', { name: /Pinguinwache/ }).length).toBeGreaterThan(0);
   });
 
-  it('holt nur die Bilder, die zu sehen sind: Figuren der Sicht, Schauplatz dieser und naechster Runde', () => {
-    const pfade = benoetigteBilder(ruestsicht(), KATALOG, TABELLE);
+  it('holt nur die Bilder, die zu sehen sind: Figuren der Sicht und den einen Schauplatz der Partie', () => {
+    const pfade = benoetigteBilder('t1', ruestsicht(), KATALOG, TABELLE);
+    // Derselbe Tisch in einer spaeteren Runde braucht keinen anderen Schauplatz.
+    const spaeter = benoetigteBilder('t1', ruestsicht({ runde: 9 }), KATALOG, TABELLE);
+    expect(spaeter.filter((p) => p.includes('/feld/'))).toEqual(pfade.filter((p) => p.includes('/feld/')));
+    expect(pfade.filter((p) => p.includes('/feld/')).length).toBeLessThanOrEqual(1);
     // Die Figuren der Sicht stehen im Laden, auf Bank und Brett — und beim Gegner.
     const figuren = pfade.filter((p) => p.includes('figuren'));
     expect(figuren.length).toBeGreaterThan(0);

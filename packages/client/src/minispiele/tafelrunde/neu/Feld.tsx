@@ -312,12 +312,10 @@ export function aufBrett(felder: readonly (Kaempfer | null)[]): Set<string> {
  * Ansehen, das eigene zum Bedienen.
  */
 export function Feld({
-  schauplatz,
   verhaeltnis,
   gegner,
   children,
 }: {
-  schauplatz: Schauplatz;
   /** Breite durch Hoehe eines Bretts (`rastermass`) — daran misst das Stylesheet die Bretter. */
   verhaeltnis: number;
   /** Das Brett des gezeigten Gegners, fertig gebaut — oder nichts. */
@@ -327,7 +325,9 @@ export function Feld({
 }): React.JSX.Element {
   return (
     <section className={stil.feld} style={{ '--verhaeltnis': verhaeltnis } as React.CSSProperties}>
-      <Schauplatzgrund schauplatz={schauplatz} />
+      {/* Kein eigener Grund: Der Schauplatz liegt unter dem ganzen Tisch
+          (Spieltisch.tsx), das Feld ist nur die Flaeche, auf der die Bretter
+          stehen. */}
       <div className={stil.feldInnen}>
         <div className={stil.feldGegner}>{gegner}</div>
         <div className={stil.feldEigen}>{children}</div>

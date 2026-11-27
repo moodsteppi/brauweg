@@ -54,7 +54,6 @@ function zeige(ich: number | null = 0) {
       schrittMs={300}
       katalog={KATALOG}
       faehigkeiten={FAEHIGKEITEN}
-      schauplatz="vulkan"
       frist={null}
       nameVon={(s) => `Sitz ${s + 1}`}
       nachEnde={(ende) => (

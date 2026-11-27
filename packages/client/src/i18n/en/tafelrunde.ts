@@ -278,6 +278,7 @@ export default {
   'tafelrunde.ui.regeln.zielText': 'Be the last one standing at the table.',
 
   // TafelrundeNeu (new interface behind ?tafelrunde=neu, since 27.11.2026)
+  'tafelrunde.ui.neu.sitzKi': 'AI {n}',
   'tafelrunde.ui.neu.titel': 'Tafelrunde',
   'tafelrunde.ui.neu.schnellsuche': 'Quick match',
   'tafelrunde.ui.neu.erstellenUnter': 'With a code for friends',

@@ -29,9 +29,23 @@ export interface Sitzzeile {
   gast?: boolean;
 }
 
-/** Wie ein Sitz heisst — an einer Stelle, damit Leiste, Feld und Kampf gleich heissen. */
-export function sitzName(zeile: Sitzzeile | undefined, sitz: number): string {
-  return zeile?.displayName ?? (zeile?.isBot ? tz('sitz.ki') : tz('sitz.nummer', { n: sitz + 1 }));
+/**
+ * Wie ein Sitz heisst — an einer Stelle, damit Leiste, Feld, Kampf und
+ * Rundenende gleich heissen.
+ *
+ * Bots ohne Namen werden durchgezaehlt ("KI 1", "KI 2"), in der Reihenfolge
+ * ihrer Sitze. Robin am 27.11.2026: Drei Kacheln mit demselben "KI" (oder nur
+ * "K") sagen nicht, wer wer ist. Ein Mensch, fuer den gerade ein Bot spielt,
+ * behaelt seinen Namen.
+ */
+export function sitzName(zeile: Sitzzeile | undefined, sitz: number, alle: readonly Sitzzeile[] = []): string {
+  if (zeile?.displayName) return zeile.displayName;
+  if (zeile?.isBot) {
+    const bots = alle.filter((s) => s.isBot && !s.displayName).sort((a, b) => a.seat - b.seat);
+    const nr = bots.findIndex((s) => s.seat === sitz);
+    return nr >= 0 ? tz('neu.sitzKi', { n: nr + 1 }) : tz('sitz.ki');
+  }
+  return tz('sitz.nummer', { n: sitz + 1 });
 }
 
 /**
@@ -107,7 +121,7 @@ export function Kopfband({
       <ol className={stil.mitspieler} aria-label={tz('leiste.titel', { lebend: offen, gesamt: reihe.length })}>
         {reihe.map((p) => {
           const z = zeile(p.sitz);
-          const name = p.ich ? tz('leiste.du') : sitzName(z, p.sitz);
+          const name = p.ich ? tz('leiste.du') : sitzName(z, p.sitz, sitze);
           return (
             <li key={p.sitz}>
               <button
@@ -126,10 +140,14 @@ export function Kopfband({
                 onClick={() => onWahl(p.sitz)}
               >
                 <Gesicht name={name} bildUrl={z?.avatarUrl ?? null} klasse={stil.kachelGesicht} />
-                <span className={stil.kachelName}>{name}</span>
-                <span className={stil.kachelLeben}>
-                  <Herz />
-                  {p.ausRunde !== null ? tz('leiste.raus') : p.leben}
+                {/* Zwei Zeilen: oben der Name (gekuerzt, nie weggelassen —
+                    Robin: "da sollen Namen stehen"), darunter die Leben. */}
+                <span className={stil.kachelText}>
+                  <span className={stil.kachelName}>{name}</span>
+                  <span className={stil.kachelLeben}>
+                    <Herz />
+                    {p.ausRunde !== null ? tz('leiste.raus') : p.leben}
+                  </span>
                 </span>
               </button>
             </li>

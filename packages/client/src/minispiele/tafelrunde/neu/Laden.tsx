@@ -16,7 +16,7 @@
 import { type Kaufhindernis, kaufhindernis } from '../Ladenkarte';
 import type { EigeneSicht, Einheit } from '../sicht';
 import { einheitName, rollenName, tz } from '../text';
-import { Figur, Kartenrahmen, MarkeZeichen, Muenze, RolleZeichen, kostenStufe } from './grafik';
+import { Figur, Kartenrahmen, Kurzname, MarkeZeichen, Muenze, RolleZeichen, kostenStufe } from './grafik';
 import stil from './neu.module.css';
 
 /** Eine Porträtkarte im Laden. */
@@ -66,7 +66,7 @@ export function Portraetkarte({
             </span>
           ))}
         </span>
-        <span className={stil.karteName}>{name}</span>
+        <Kurzname name={name} klasse={stil.karteName} />
         <span className={stil.kartePreis}>
           <Muenze />
           {einheit.kosten}

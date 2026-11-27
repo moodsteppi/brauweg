@@ -80,6 +80,18 @@ export function schauplatzFuerRunde(runde: number): Schauplatz {
   return SCHAUPLAETZE[(Math.max(1, runde) - 1) % SCHAUPLAETZE.length]!;
 }
 
+/**
+ * Der Schauplatz einer ganzen Partie (Robin, 27.11.2026: "Map ist fuer das
+ * Spiel festgelegt"). Aus der Tischkennung gerechnet und nicht gewuerfelt:
+ * So sehen alle am Tisch denselben, auch nach einem Neuladen, ohne dass der
+ * Server etwas davon wissen muss — es ist reine Optik und keine Regel.
+ */
+export function schauplatzFuerPartie(tischKennung: string): Schauplatz {
+  let h = 0;
+  for (let i = 0; i < tischKennung.length; i++) h = (h * 31 + tischKennung.charCodeAt(i)) >>> 0;
+  return SCHAUPLAETZE[h % SCHAUPLAETZE.length]!;
+}
+
 /** Hochkant-Hintergrund des Feldes, oder null, solange es keinen gibt. */
 export function feldBild(schauplatz: Schauplatz): string | null {
   return VORHANDEN.has(`feld/${schauplatz}`) ? `${GRAFIK_NEU_WURZEL}/feld/${schauplatz}.webp` : null;
