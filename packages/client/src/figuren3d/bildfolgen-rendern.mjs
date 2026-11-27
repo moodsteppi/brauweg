@@ -461,6 +461,16 @@ function argument(name) {
 const KANTE = Number(argument('--kante') ?? 128);
 
 /**
+ * Belichtung und Himmelslicht. Die Vorgaben (1,05 und 1,1) sind die der
+ * abgenommenen 3D-Probe fuer die KayKit-Figuren. Die KI-Figuren von Tafelrunde
+ * neu tragen ihre Farbe als eingebackene Textur und wirkten damit deutlich
+ * dunkler als im Konzeptbild (Vergleich mit dem Blender-Titelbild, 27.11.2026);
+ * fuer sie gibt es `--belichtung` und `--himmel`.
+ */
+const BELICHTUNG = Number(argument('--belichtung') ?? 1.05);
+const HIMMEL = Number(argument('--himmel') ?? 1.1);
+
+/**
  * Gerendert wird doppelt so gross und danach halbiert.
  *
  * Ein WebGL-Kantenglaettung glaettet die Farbe, nicht den Alphakanal einer
@@ -887,14 +897,14 @@ renderer.setClearColor(0x000000, 0);
 // Dieselben zwei Zeilen wie in der 3D-Probe — ohne sie sind die Figuren
 // merklich blasser als dort, und abgenommen wurde die Optik an ihr.
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = ${BELICHTUNG};
 document.body.appendChild(renderer.domElement);
 
 const szene = new THREE.Scene();
 // Kein Hintergrund und kein Nebel: Das Bild soll freigestellt sein. Der Nebel
 // der Probe faerbt ausserdem alles Richtung #1a1410 ein, was auf einem
 // transparenten Bild wie Schmutz im Alphakanal aussaehe.
-szene.add(new THREE.HemisphereLight('#cfe0ff', '#4a3a28', 1.1));
+szene.add(new THREE.HemisphereLight('#cfe0ff', '#4a3a28', ${HIMMEL}));
 const sonne = new THREE.DirectionalLight('#fff3dc', 2.1);
 sonne.position.set(5.5, 9, 4.5);
 szene.add(sonne);

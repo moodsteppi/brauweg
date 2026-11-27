@@ -20,5 +20,5 @@ for name in "$@"; do
   echo " <- $name"
 done
 ( cd "$REPO" && node packages/client/src/figuren3d/bildfolgen-rendern.mjs --modelle "$ziel/modelle" \
-    --ausgabe "$ziel/blatt" --kante 256 --drehung 40 )
+    --ausgabe "$ziel/blatt" --kante 256 --drehung 40 --belichtung 1.65 --himmel 2.0 )
 echo "final fertig"

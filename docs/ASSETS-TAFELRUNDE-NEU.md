@@ -276,3 +276,15 @@ Deshalb steht hier nur, was gebraucht wird. Alles kurz (unter 0,6 s), als MP3
 | `sprung.mp3` | Schattensprung, Hinterhalt |
 | `wiederkehr.mp3` | Untot steht wieder auf |
 | `kauf.mp3`, `verschmelzen.mp3` | Shop und Stern-Aufstieg (falls die alten nicht passen) |
+
+**Belichtung der Blätter.** Neben dem Titelbild aus Blender wirkten die
+Bildfolgen deutlich dunkler: Der Renderer war mit Belichtung 1,05 und
+Himmelslicht 1,1 noch auf die KayKit-Figuren eingestellt, und die neuen
+Figuren tragen ihre Farbe als eingebackene Textur. Für Tafelrunde neu wird mit
+`--belichtung 1,65 --himmel 2,0` gerendert (`serie-final.sh`). Die alten
+Blätter bleiben bei den Vorgaben. Zusammen 3,3 MB. Der Eichhornschütze liegt
+mit 205 kB knapp über der Grenze aus Abschnitt 5 (großer Schweif); das ist
+hingenommen, weil geladen wird, was gerade gebraucht wird.
+
+**Titelbild** (`titelbild.py`): sieben Figuren in der Ruhepose aus Blender,
+vor den Burghof gesetzt, mit einem weichen Bodenschatten. 900 × 1200, 110 kB.
