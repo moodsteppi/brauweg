@@ -64,7 +64,7 @@ function bewerte(ruest, kampf) {
   // Laeuft ein fremder Kampf deutlich laenger als der eigene, zeigt die Probe
   // (Fall `zuschauen`) das Rundenende mit „Die anderen kaempfen noch …".
   const andere = (kampf.paarungen ?? []).filter((p) => p.a !== eigener.a || p.b !== eigener.b);
-  const zuschauen = andere.some((p) => p.dauerMs > eigener.bericht.dauerMs + 4000) ? 40 : 0;
+  const zuschauen = andere.some((p) => p.dauerMs > eigener.bericht.dauerMs + 4000) ? 400 : 0;
   return brett * 2 + bank + faehigkeiten + zustaende + e.synergien.length * 3 + zuschauen;
 }
 

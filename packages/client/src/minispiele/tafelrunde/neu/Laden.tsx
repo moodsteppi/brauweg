@@ -59,8 +59,11 @@ export function Portraetkarte({
   kaufbar: boolean;
   /** Mit diesem Kauf ist die letzte fehlende Kopie da. */
   verschmilzt: boolean;
-  /** Erreicht eine Marke mit diesem Kauf eine Schwelle? */
-  trifft: (marke: string) => boolean;
+  /**
+   * Erreicht eine Marke mit diesem Kauf eine Schwelle? Mit der Kennung: Eine
+   * Einheit, die fuer die Marke schon zaehlt, bringt sie nicht voran.
+   */
+  trifft: (marke: string, einheitId?: string) => boolean;
   grund: Kaufhindernis;
   onKauf: () => void;
   onBlatt?: () => void;
@@ -95,7 +98,7 @@ export function Portraetkarte({
         </span>
         <span className={stil.karteMarken}>
           {einheit.marken.map((m) => (
-            <span key={m} data-trifft={trifft(m) ? '' : undefined}>
+            <span key={m} data-trifft={trifft(m, einheit.id) ? '' : undefined}>
               <MarkeZeichen marke={m} />
             </span>
           ))}
@@ -140,7 +143,7 @@ export function Laden({
   darfHandeln: boolean;
   /** Wie viele Kopien zum Verschmelzen fehlen (`fehlendeKopien`, zuege.ts). */
   fehlen: (id: string) => number;
-  trifft: (marke: string) => boolean;
+  trifft: (marke: string, einheitId?: string) => boolean;
   onKauf: (platz: number) => void;
   onBlatt: (platz: number) => void;
   onBereit: () => void;

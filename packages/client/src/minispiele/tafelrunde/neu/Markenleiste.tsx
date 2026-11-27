@@ -66,6 +66,12 @@ export function Markenleiste({
 /**
  * Das Pop-up einer Marke: Wirkung, Stufen mit ihrem Satz, alle Traeger.
  *
+ * GEZAEHLT ist, was die Sicht in `traeger` nennt — je Einheit einmal (seit dem
+ * 27.11.2026 nachts, Robin: „zwei Pinguinwachen sind ein Krieger"). Nur diese
+ * Einheiten tragen „zählt"; eine zweite Kopie auf Feld oder Bank aendert
+ * daran nichts, und der Satz `neu.marke.einmal` sagt es ausdruecklich.
+ * Fehlt `traeger` (Tisch aus der Zeit davor), gilt das eigene Brett.
+ *
  * `aufBrett` und `aufBank` sind die Kennungen der eigenen Einheiten — auf dem
  * Brett hervorgehoben (nur sie zaehlen fuer die Marke), auf der Bank leiser
  * markiert (man hat sie, sie zaehlen aber erst auf dem Feld).
@@ -93,6 +99,7 @@ export function Markenpopup({
 }): React.JSX.Element {
   const name = markeName(marke, synergie?.name ?? stand?.name ?? marke);
   const traeger = traegerVon(katalog, marke) as Einheit[];
+  const gezaehlt: ReadonlySet<string> = stand?.traeger ? new Set(stand.traeger) : aufBrett;
   return (
     <Blatt
       titel={name}
@@ -109,6 +116,7 @@ export function Markenpopup({
     >
       {synergie && <p className={stil.text}>{markeWirkung(marke, synergie.wirkung)}</p>}
       <p className={stil.klein}>{tz('marke.aufDemBrett', { n: stand?.anzahl ?? 0 })}</p>
+      <p className={stil.hinweisSatz}>{tz('neu.marke.einmal')}</p>
       {synergie && (
         <ol className={stil.stufen}>
           {synergie.stufen.map((st) => (
@@ -129,16 +137,16 @@ export function Markenpopup({
           <li
             key={e.id}
             data-rahmen={kostenStufe(e.kosten)}
-            data-brett={aufBrett.has(e.id) ? '' : undefined}
-            data-bank={!aufBrett.has(e.id) && aufBank.has(e.id) ? '' : undefined}
+            data-brett={gezaehlt.has(e.id) ? '' : undefined}
+            data-bank={!gezaehlt.has(e.id) && aufBank.has(e.id) ? '' : undefined}
           >
             <button type="button" onClick={onEinheit ? () => onEinheit(e.id) : undefined} disabled={!onEinheit}>
               <span className={stil.traegerBild}>
                 <Figur einheit={e} klasse={stil.portraetFigur} />
               </span>
               <Kurzname name={einheitName(e)} klasse={stil.traegerName} />
-              {aufBrett.has(e.id) && <em>{tz('neu.marke.aufFeld')}</em>}
-              {!aufBrett.has(e.id) && aufBank.has(e.id) && <em>{tz('neu.marke.aufBank')}</em>}
+              {gezaehlt.has(e.id) && <em>{tz('neu.marke.zaehlt')}</em>}
+              {!gezaehlt.has(e.id) && aufBank.has(e.id) && <em>{tz('neu.marke.aufBank')}</em>}
             </button>
           </li>
         ))}

@@ -216,4 +216,24 @@ describe('Vertrag Tafelrunde', () => {
       expect(typeof t.manaZiel).toBe('number');
     }
   });
+
+  /*
+   * Seit dem 27.11.2026 nachts zaehlt jede Einheit fuer eine Marke nur einmal,
+   * und die Sicht nennt die gezaehlten Einheiten (`traeger`). Daran haengt im
+   * Laden das Leuchten (eine schon gezaehlte Einheit bringt nichts) und im
+   * Marken-Pop-up das „zählt". Fehlte das Feld, leuchtete jede Kopie wieder.
+   */
+  it('liefert an jedem Markenstand die gezaehlten Traeger, je Einheit einmal', () => {
+    let p = erstellePartie(DEFAULT_REGELN, [0, 1, 2, 3], 'vertrag-marken');
+    for (const sitz of lebendeSitze(p)) {
+      for (let i = 0; i < 200 && darfHandeln(p, sitz); i++) p = fuehreAus(p, sitz, botZug(sichtFuer(p, sitz), 'normal'));
+    }
+    const staende = [0, 1, 2, 3].flatMap((sitz) => sichtFuer(p, sitz).eigenes?.synergien ?? []);
+    expect(staende.length).toBeGreaterThan(0);
+    for (const s of staende) {
+      expect(Array.isArray(s.traeger)).toBe(true);
+      expect(new Set(s.traeger).size).toBe(s.traeger.length);
+      expect(s.traeger.length).toBe(s.anzahl);
+    }
+  });
 });

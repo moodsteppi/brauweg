@@ -10,8 +10,9 @@
  * noch nicht. Das Blatt sagt das ehrlich, statt leer zu wirken; im Bericht an
  * Robin steht der Wunsch nach einem Abruf ohne Tisch.
  *
- * Die Regeln selbst sind Text und keine Zahlen; wo ein Satz eine Schwelle
- * nennt (2 / 3 / 5), ist das Beschreibung, gerechnet wird damit nichts.
+ * Die Regeln selbst sind Text und keine Zahlen. Schwellen nennt nur der
+ * Reiter „Marken", und zwar aus der Tabelle der Sicht — sie sind seit dem
+ * 27.11.2026 je Marke verschieden (Waechter 2/4/6, Drache nur 2).
  */
 
 import { useState } from 'react';
@@ -117,6 +118,7 @@ export function Regelblatt({
         </ul>
       )}
 
+      {reiter === 'marken' && mitWissen && <p className={stil.hinweisSatz}>{tz('neu.marke.einmal')}</p>}
       {reiter === 'marken' && mitWissen && (
         <ul className={stil.regelMarken}>
           {wissen.synergieTabelle.map((s) => (

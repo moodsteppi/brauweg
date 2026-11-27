@@ -118,6 +118,21 @@ describe('trifftSchwelle', () => {
     ).toBe(false);
   });
 
+  it('eine Einheit, die schon gezaehlt ist, bringt die Marke nicht voran', () => {
+    /*
+     * Seit dem 27.11.2026 nachts zaehlt jede Einheit fuer eine Marke nur
+     * einmal (Robin). 1 von 2 mit der Pinguinwache: Eine zweite Pinguinwache
+     * fuellt nichts, ein anderer Krieger schon. Die Liste kommt aus der Sicht
+     * (`traeger`), gezaehlt wird hier nichts.
+     */
+    const staende = [stand({ anzahl: 1, naechsteSchwelle: 2, traeger: ['dorfwache'] })];
+    expect(trifftSchwelle('krieger', staende, TABELLE, 'dorfwache')).toBe(false);
+    expect(trifftSchwelle('krieger', staende, TABELLE, 'grimmbart')).toBe(true);
+    // Ohne Kennung bleibt es die alte Frage „irgendein neuer Traeger".
+    expect(trifftSchwelle('krieger', staende, TABELLE)).toBe(true);
+    expect(schwellenPruefer(staende, TABELLE)('krieger', 'dorfwache')).toBe(false);
+  });
+
   it('greift auch bei der ersten Schwelle, obwohl die Marke noch gar nicht in der Sicht steht', () => {
     /*
      * Das Modul schickt nur Marken mit mindestens einem Traeger. Bei genau
