@@ -1,0 +1,16 @@
+{
+  "_quelle": "abgelesen am Konzeptbild dorfwache.png (1254 px, Scheitel y=105, Fuss y=1150), Anteile von H=1,8",
+  "hals": [0, 0, 1.017],
+  "brust": [0, 0, 0.878],
+  "huefte": [0, 0, 0.464],
+  "schulter_r": [-0.374, 0, 0.931],
+  "hand_r": [-0.675, 0, 0.740],
+  "schulter_l": [0.349, 0, 0.931],
+  "hand_l": [0.574, 0, 0.776],
+  "bein_r": [-0.27, 0, 0.344],
+  "knoechel_r": [-0.297, 0, 0.103],
+  "zeh_r": [-0.30, -0.22, 0.036],
+  "bein_l": [0.263, 0, 0.344],
+  "knoechel_l": [0.281, 0, 0.103],
+  "zeh_l": [0.29, -0.22, 0.036]
+}
