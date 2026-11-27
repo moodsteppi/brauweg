@@ -81,8 +81,8 @@ targets:
         PRODUCT_NAME: Brauweg
         INFOPLIST_FILE: Konfiguration/Info.plist
         GENERATE_INFOPLIST_FILE: "NO"
-        # Nur iPhone. Auf dem iPad laeuft die App im Kompatibilitaetsmodus.
-        TARGETED_DEVICE_FAMILY: "1"
+        # Native iPhone- und iPad-Ansicht, damit die Gastgeberbühne das ganze Display nutzt.
+        TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: "NO"
         # Team-ID steht NICHT hier (Toms Konto): Lokal.xcconfig bzw.
         # DEVELOPMENT_TEAM=… vom Bauskript.
@@ -117,5 +117,5 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.broweg.brauweg-spielen.tests
         GENERATE_INFOPLIST_FILE: "YES"
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic

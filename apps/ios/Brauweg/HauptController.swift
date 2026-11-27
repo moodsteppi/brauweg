@@ -56,7 +56,9 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     private var kopffarbeBeobachter: NSKeyValueObservation?
     private var richtungsBeobachter: NSKeyValueObservation?
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        ansicht?.url?.path == "/ice-clash" ? [.portrait, .landscapeLeft, .landscapeRight] : .portrait
+        let spielQuer = ["/ice-clash", "/broremote"].contains(ansicht?.url?.path ?? "")
+        if UIDevice.current.userInterfaceIdiom == .pad { return .all }
+        return spielQuer ? [.portrait, .landscapeLeft, .landscapeRight] : .portrait
     }
 
     override func viewDidLoad() {

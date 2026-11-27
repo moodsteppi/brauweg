@@ -1,0 +1,711 @@
+/* BroRemote: Spielwahl, vier Einstiege, eine Bühne. Keine zusätzlichen Bildflächen im Spielfluss. */
+.br-seite.br-ordnung {
+  background: #101c31;
+}
+.br-ordnung .br-inhalt {
+  max-width: 1040px;
+  padding: 24px max(20px, env(safe-area-inset-right)) 32px
+    max(20px, env(safe-area-inset-left));
+}
+.br-ordnung .br-kopf {
+  margin-bottom: 32px;
+}
+.br-ordnung .br-marke {
+  font-size: 24px;
+}
+.br-ordnung .br-spieltitel {
+  margin: 16px 0 28px;
+}
+.br-ordnung .br-spieltitel h1 {
+  font-size: clamp(28px, 4vw, 40px);
+  margin: 0 0 8px;
+}
+.br-ordnung .br-spieltitel p {
+  margin: 0;
+  color: #afc2da;
+  font-size: 16px;
+}
+.br-ordnung .br-panel {
+  border: 1px solid #3d506c;
+  border-radius: 18px;
+  background: #182940;
+  box-shadow: none;
+}
+.br-ordnung .br-knopf {
+  border-radius: 12px;
+  box-shadow: none;
+  min-height: 50px;
+}
+.br-ordnung .br-verbindungszeile {
+  border-radius: 12px;
+  background: #15253c;
+}
+.br-ordnung .br-spielauswahl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 650px;
+  margin-top: 24px;
+}
+.br-ordnung .br-spielknopf {
+  border: 1px solid #405978;
+  border-radius: 20px;
+  padding: 0 0 18px;
+  text-align: left;
+  color: #edf4ff;
+  background: #1b2f50;
+  overflow: hidden;
+  cursor: pointer;
+}
+.br-spielknopf img {
+  width: 100%;
+  aspect-ratio: 1.3;
+  object-fit: cover;
+  display: block;
+  margin-bottom: 16px;
+}
+.br-spielknopf-building img {
+  object-fit: contain;
+  background: url("/broremote/bauwelt.webp") center/cover;
+}
+.br-spielknopf strong,
+.br-spielknopf small {
+  display: block;
+  padding: 0 16px;
+}
+.br-spielknopf strong {
+  font:
+    24px "Lilita One",
+    sans-serif;
+}
+.br-spielknopf small {
+  font-size: 13px;
+  color: #b7c9e4;
+  margin-top: 6px;
+}
+.br-aktionsraster {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.br-aktionskarte {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  column-gap: 16px;
+  align-content: center;
+  text-align: left;
+  min-height: 136px;
+  padding: 24px;
+  color: #f1f5ff;
+  background: #1b2d45;
+  border: 1px solid #415570;
+  border-radius: 18px;
+  cursor: pointer;
+}
+.br-aktionskarte > .br-icon {
+  width: 42px;
+  height: 42px;
+  color: #f5cd74;
+  grid-row: 1/3;
+  align-self: center;
+}
+.br-aktionskarte strong {
+  font-size: 20px;
+  line-height: 1.3;
+}
+.br-aktionskarte span {
+  color: #b5c7dd;
+  font-size: 13px;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+.br-aktionskarte:hover,
+.br-spielknopf:hover {
+  border-color: #edca7b;
+  background-color: #243a54;
+}
+.br-ordnung button:focus-visible,
+.br-ordnung a:focus-visible,
+.br-ordnung summary:focus-visible {
+  outline: 3px solid #f5cd74;
+  outline-offset: 3px;
+}
+.br-optionen {
+  margin: 20px 0;
+  padding: 0 2px;
+  border-top: 1px solid #3d506c;
+}
+.br-optionen > summary {
+  cursor: pointer;
+  min-height: 48px;
+  padding: 14px 0;
+  font-size: 14px;
+  color: #becfe3;
+}
+.br-optionen[open] > summary {
+  color: #fff0c8;
+}
+.br-optionen .br-modus {
+  margin-top: 8px;
+}
+.br-anleitung {
+  margin-top: 20px;
+}
+.br-anleitung ol {
+  padding-left: 22px;
+  line-height: 1.7;
+}
+.br-ordnung .br-beitrittsformular {
+  max-width: 520px;
+  margin: 0 auto;
+}
+.br-beitrittsformular > .br-link {
+  margin-top: 16px;
+}
+.br-ordnung .br-lobby {
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  gap: 20px;
+  align-items: start;
+}
+.br-ordnung .br-raumtitel {
+  min-height: 0;
+}
+.br-ordnung .br-plaetze {
+  grid-template-columns: 1fr;
+}
+.br-ordnung .br-platz {
+  min-height: 64px;
+  border-radius: 10px;
+  padding: 10px;
+  background: #122238;
+}
+.br-ordnung .br-platz:not(.belegt) {
+  background: transparent;
+}
+.br-ordnung .br-platz .br-avatar {
+  width: 36px;
+  height: 42px;
+}
+.br-ordnung .br-platz strong {
+  font-size: 15px;
+}
+.br-ordnung .br-platz small {
+  font-size: 12px;
+}
+.br-ordnung .br-entfernen {
+  position: static;
+  margin-left: auto;
+  min-width: 36px;
+  min-height: 36px;
+}
+.br-ordnung .br-qr {
+  box-shadow: none;
+  border-radius: 12px;
+  width: min(100%, 260px);
+}
+.br-ordnung .br-crew .br-knopf {
+  width: 100%;
+}
+.br-ordnung .bt-lobby .br-platz {
+  display: flex;
+  flex-wrap: wrap;
+}
+.br-ordnung .bt-sitzoptionen {
+  margin-left: 46px;
+}
+@media (max-width: 600px) {
+  .br-ordnung .br-inhalt {
+    padding-top: 16px;
+  }
+  .br-ordnung .br-kopf {
+    margin-bottom: 24px;
+  }
+  .br-aktionsraster {
+    gap: 12px;
+  }
+  .br-aktionskarte {
+    grid-template-columns: 1fr;
+    padding: 20px 16px;
+    min-height: 168px;
+    gap: 12px;
+  }
+  .br-aktionskarte > .br-icon {
+    grid-row: auto;
+    width: 36px;
+    height: 36px;
+  }
+  .br-aktionskarte strong {
+    font-size: 17px;
+  }
+  .br-aktionskarte span {
+    margin: 0;
+    font-size: 12px;
+  }
+  .br-ordnung .br-lobby {
+    grid-template-columns: 1fr;
+  }
+  .br-ordnung .br-panel {
+    padding: 20px;
+  }
+  .br-spielknopf strong {
+    font-size: 19px;
+  }
+  .br-spielknopf small {
+    font-size: 11px;
+  }
+}
+
+/* Gastgeber: volle Fläche, nur Spiel-HUD. Der Rückweg bleibt unten in der Bühne. */
+.br-seite.br-ordnung.br-gastgeber-spiel {
+  padding: 0;
+  overflow: hidden;
+}
+.br-seite.br-ordnung.br-gastgeber-spiel > .br-inhalt {
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  margin: 0;
+  box-sizing: border-box;
+}
+.br-ordnung.br-gastgeber-spiel .br-kopf,
+.br-ordnung.br-gastgeber-spiel .br-verbindungszeile,
+.br-ordnung.br-gastgeber-spiel .br-raumtitel,
+.br-ordnung.br-gastgeber-spiel .br-verlassen {
+  display: none;
+}
+.br-ordnung.br-gastgeber-spiel .br-wiederverbinden,
+.br-ordnung.br-gastgeber-spiel .br-meldung {
+  position: fixed;
+  z-index: 150;
+  top: max(12px, env(safe-area-inset-top));
+  left: 10%;
+  right: 10%;
+  margin: 0;
+}
+.br-ordnung.br-gastgeber-spiel .bb-arena {
+  height: 100%;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+  position: relative;
+  padding: 0;
+}
+.br-ordnung.br-gastgeber-spiel .bb-werkzeug {
+  flex: none;
+  padding: 8px 16px;
+  min-height: 54px;
+}
+.br-ordnung.br-gastgeber-spiel .bb-werkzeug h2 {
+  font-size: 22px !important;
+}
+.br-ordnung.br-gastgeber-spiel .bb-werkzeug .br-kicker {
+  font-size: 9px;
+}
+.br-ordnung.br-gastgeber-spiel button[aria-label^="Große Bühne"] {
+  display: none;
+}
+.br-ordnung.br-gastgeber-spiel .bb-regel {
+  padding: 0 16px 8px;
+  font-size: 11px;
+  flex: none;
+}
+.br-ordnung.br-gastgeber-spiel .bb-buehne {
+  flex: 1;
+  min-height: 0;
+}
+.br-ordnung.br-gastgeber-spiel .bb-bahn {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.br-ordnung.br-gastgeber-spiel .bb-bahn > canvas {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+}
+.br-ordnung.br-gastgeber-spiel .bb-spielerkopf {
+  flex: none;
+  min-height: 0;
+  height: 106px;
+}
+.br-ordnung.br-gastgeber-spiel .bb-bahnfuss {
+  flex: none;
+  padding: 6px 12px;
+}
+.br-ordnung.br-gastgeber-spiel .bb-abschluss {
+  flex: none;
+  padding: 0 16px;
+  min-height: 40px;
+}
+.br-ordnung.br-gastgeber-spiel .bb-abschluss .br-link {
+  min-height: 40px;
+  padding: 8px;
+}
+.br-ordnung.br-gastgeber-spiel .bb-ergebnis {
+  position: absolute;
+  inset: 64px max(16px, 15%);
+  z-index: 10;
+  border: 1px solid #6b7e96;
+  border-radius: 20px;
+  overflow: auto;
+}
+.br-ordnung.br-gastgeber-spiel .bb-itempflicht {
+  top: 112px;
+}
+/* Tanks behalten ihre 1200×650-Welt: freie Fläche wird beim Zeichnen aufgefüllt, nie gestreckt. */
+.br-ordnung.br-gastgeber-spiel .bt-buehne {
+  flex: 1;
+  width: 100%;
+  height: 0;
+  min-height: 0;
+  margin: 0;
+  aspect-ratio: auto;
+}
+.br-ordnung.br-gastgeber-spiel .bt-arena-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.br-ordnung.br-gastgeber-spiel .bt-arena-hud button {
+  pointer-events: auto;
+}
+.br-ordnung.br-gastgeber-spiel .bt-portraet {
+  min-width: 0;
+}
+.br-ordnung.br-gastgeber-spiel .bt-buehnenwaffe {
+  top: 80px;
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .br-ordnung.br-gastgeber-spiel .bb-spielerkopf {
+    height: 90px;
+    padding: 5px 8px;
+  }
+  .br-ordnung.br-gastgeber-spiel .bb-itempflicht {
+    top: 94px;
+  }
+  .br-ordnung.br-gastgeber-spiel .bb-regel {
+    display: none;
+  }
+  .br-ordnung.br-gastgeber-spiel .bb-buehne-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .br-ordnung.br-gastgeber-spiel .bb-buehne-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .br-ordnung.br-gastgeber-spiel .bb-spielerkopf {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .br-ordnung.br-gastgeber-spiel .bb-portraet {
+    display: none;
+  }
+  .br-ordnung.br-gastgeber-spiel .bb-vorratplatz {
+    width: 50px;
+  }
+  .br-ordnung.br-gastgeber-spiel .bb-abschluss > span {
+    display: none;
+  }
+  .br-ordnung.br-gastgeber-spiel .bb-abschluss {
+    justify-content: flex-end;
+  }
+}
+
+/* Quer gehaltene Controller: Daumenflächen links, Item bzw. Feuer rechts. */
+@media (orientation: landscape) and (max-height: 700px) {
+  .br-seite.br-ordnung.br-controlleransicht > .br-inhalt {
+    max-width: none;
+    padding: 6px max(12px, env(safe-area-inset-right)) 8px
+      max(12px, env(safe-area-inset-left));
+  }
+  .br-ordnung.br-controlleransicht .br-verbindungszeile {
+    padding: 4px 10px;
+    margin-bottom: 6px;
+    min-height: 38px;
+  }
+  .br-ordnung.br-controlleransicht .br-verbindungszeile > span > small {
+    width: auto;
+    margin: 0;
+    padding-left: 8px;
+  }
+  .br-ordnung.br-controlleransicht .br-netz small {
+    display: none;
+  }
+  .br-ordnung.br-controlleransicht .br-eigener-controller {
+    max-width: none;
+    padding: 8px 12px;
+    border-radius: 12px;
+    position: relative;
+  }
+  .br-ordnung.br-controlleransicht .br-controllername {
+    position: absolute;
+    top: 12px;
+    left: 24px;
+    height: 28px;
+  }
+  .br-ordnung.br-controlleransicht .br-controllername img,
+  .br-ordnung.br-controlleransicht .br-controllername > span {
+    display: none;
+  }
+  .br-ordnung.br-controlleransicht .br-controllername h2 {
+    font-size: 14px;
+  }
+  .br-ordnung.br-controlleransicht .bb-controllerstand {
+    margin: 0 0 8px;
+    padding: 8px 12px;
+    border: 0;
+    height: 80px;
+    background: #112137;
+  }
+  .br-ordnung.br-controlleransicht .bb-controllerstand > div:first-child {
+    padding-top: 18px;
+  }
+  .br-ordnung.br-controlleransicht .bb-controllerstand small,
+  .br-ordnung.br-controlleransicht .bb-controllerstand p {
+    display: none;
+  }
+  .br-ordnung.br-controlleransicht .bb-controllerstand h3 {
+    font-size: 18px !important;
+  }
+  .br-ordnung.br-controlleransicht .bb-vorratplatz {
+    grid-template-rows: 12px 34px 12px;
+    width: 70px;
+    padding: 2px;
+  }
+  .br-ordnung.br-controlleransicht .bb-vorratplatz > small {
+    display: block;
+  }
+  .br-ordnung.br-controlleransicht .bb-vorratplatz .bb-itembild {
+    width: 32px;
+    height: 32px;
+  }
+  .br-ordnung.br-controlleransicht .bb-vorratplatz .bb-mini {
+    height: 32px !important;
+  }
+  .br-ordnung.br-controlleransicht .bb-knopfcontroller {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    column-gap: 20px;
+  }
+  .br-ordnung.br-controlleransicht .bb-baubuttons {
+    grid-column: 1;
+    grid-row: 1/5;
+    margin: 0;
+    gap: 10px;
+    align-content: start;
+  }
+  .br-ordnung.br-controlleransicht .br-steuertaste {
+    min-height: 64px;
+    border-radius: 12px;
+    gap: 4px;
+    flex-direction: row;
+  }
+  .br-ordnung.br-controlleransicht .br-steuertaste .br-icon {
+    width: 26px;
+    height: 26px;
+  }
+  .br-ordnung.br-controlleransicht .bb-itembedienung {
+    grid-column: 2;
+    border: 0;
+    padding: 0;
+    gap: 6px;
+    align-content: start;
+  }
+  .br-ordnung.br-controlleransicht .bb-itemnutzen {
+    min-height: 56px;
+    padding: 8px;
+    border-radius: 12px;
+  }
+  .br-ordnung.br-controlleransicht .bb-itemnutzen small,
+  .br-ordnung.br-controlleransicht .bb-itembeschreibung {
+    display: none;
+  }
+  .br-ordnung.br-controlleransicht .bb-itemziele > small {
+    margin-bottom: 4px;
+  }
+  .br-ordnung.br-controlleransicht .bb-itemziele button {
+    min-height: 38px;
+    padding: 6px 10px;
+  }
+  .br-ordnung.br-controlleransicht .bb-knopfcontroller > .br-leise {
+    grid-column: 2;
+    margin: 0 0 6px;
+    font-size: 11px;
+  }
+  .br-ordnung.br-controlleransicht .br-controllerfuss {
+    grid-column: 1/-1;
+    margin: 2px 0 0;
+  }
+  .br-ordnung.br-controlleransicht .br-controllerfuss > span,
+  .br-ordnung.br-controlleransicht .br-rundeninfo {
+    display: none;
+  }
+  .br-ordnung.br-controlleransicht .br-controllerfuss .br-link {
+    min-height: 28px;
+    padding: 4px;
+  }
+  .br-ordnung.br-controlleransicht .br-zauberwarnung {
+    margin: 0 0 6px;
+    padding: 5px;
+  }
+  .br-ordnung.br-controlleransicht .bt-controller {
+    grid-template-columns: 1.1fr 1fr 0.7fr;
+    gap: 10px;
+    margin: 0;
+  }
+  .br-ordnung.br-controlleransicht .bt-kopf {
+    grid-column: 1/-1;
+    padding: 4px 10px 4px 110px;
+    flex-wrap: nowrap;
+    min-height: 34px;
+  }
+  .br-ordnung.br-controlleransicht .bt-kopf strong {
+    flex: 1;
+    font-size: 17px;
+  }
+  .br-ordnung.br-controlleransicht .bt-zielfeld {
+    grid-column: 1;
+    grid-row: 2/4;
+    gap: 6px;
+  }
+  .br-ordnung.br-controlleransicht .bt-fein {
+    height: 44px;
+  }
+  .br-ordnung.br-controlleransicht .bt-reglerzeile {
+    grid-template-columns: 44px 1fr 44px;
+    gap: 5px;
+  }
+  .br-ordnung.br-controlleransicht .bt-waffenwahl {
+    grid-column: 2;
+    grid-row: 2;
+    grid-template-columns: 40px 1fr 40px;
+    gap: 4px;
+  }
+  .br-ordnung.br-controlleransicht .bt-waffe {
+    gap: 4px;
+    padding: 5px;
+    min-height: 54px;
+  }
+  .br-ordnung.br-controlleransicht .bt-waffe > img {
+    width: 36px !important;
+    height: 38px !important;
+  }
+  .br-ordnung.br-controlleransicht .bt-waffe strong {
+    font-size: 12px;
+  }
+  .br-ordnung.br-controlleransicht .bt-waffe small {
+    font-size: 9px;
+  }
+  .br-ordnung.br-controlleransicht .bt-fahren {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .br-ordnung.br-controlleransicht .bt-fahrtaste {
+    min-height: 46px !important;
+  }
+  .br-ordnung.br-controlleransicht .bt-feuer {
+    grid-column: 3;
+    grid-row: 2/4;
+    min-height: 100px !important;
+    font-size: 22px !important;
+    flex-direction: column;
+  }
+  .br-ordnung.br-controlleransicht .bt-feuer img {
+    width: 52px;
+    height: 52px;
+  }
+  .br-ordnung.br-controlleransicht .bt-taktik {
+    grid-column: 1/3;
+    grid-row: 4;
+    margin: 0;
+    padding: 4px 8px;
+  }
+  .br-ordnung.br-controlleransicht .bt-taktikkopf {
+    margin: 0 0 3px;
+    font-size: 10px;
+  }
+  .br-ordnung.br-controlleransicht .bt-itemraster {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+  .br-ordnung.br-controlleransicht .bt-itemraster button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    min-height: 42px;
+  }
+  .br-ordnung.br-controlleransicht .bt-itemraster img {
+    width: 28px;
+    height: 28px;
+    margin: 0;
+  }
+  .br-ordnung.br-controlleransicht .bt-itemraster strong {
+    font-size: 9px;
+  }
+  .br-ordnung.br-controlleransicht .bt-itemraster small {
+    display: none;
+  }
+  .br-ordnung.br-controlleransicht .bt-itemraster b {
+    position: static;
+    font-size: 10px;
+  }
+  .br-ordnung.br-controlleransicht .bt-arsenal {
+    grid-column: 3;
+    grid-row: 4;
+    margin: 0;
+    padding: 4px;
+  }
+  .br-ordnung.br-controlleransicht .bt-arsenal summary {
+    font-size: 11px;
+  }
+  .br-ordnung.br-controlleransicht .bt-arsenal[open] .bt-inventar,
+  .br-ordnung.br-controlleransicht .bt-teleport {
+    position: fixed;
+    z-index: 50;
+    inset: 70px 20px 30px;
+    overflow: auto;
+    background: #162940;
+    border: 2px solid #edca7b;
+    padding: 16px;
+    border-radius: 12px;
+  }
+  .br-ordnung.br-controlleransicht .bt-controller .br-controllerfuss {
+    grid-column: 3;
+    justify-content: flex-end;
+  }
+}
+
+.br-ordnung.br-controlleransicht .br-verlassen { display:none; }
+.br-ordnung .bt-waffenwahl>button { display:grid; place-items:center; min-width:0; min-height:48px; padding:6px; background:#243a54; color:#e5eefb; border:1px solid #566f90; border-radius:12px; }
+.br-ordnung .bt-waffe { min-width:0; }
+.br-ordnung .bt-fahren { grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr); }
+@media(orientation:landscape) and (max-height:700px) {
+  .br-ordnung.br-controlleransicht .bt-waffenwahl { grid-template-columns:40px minmax(0,1fr) 40px; }
+  .br-ordnung.br-controlleransicht .bt-controller { grid-auto-rows:min-content; }
+  .br-ordnung.br-controlleransicht .bt-zielfeld { align-content:start; }
+  .br-ordnung.br-controlleransicht .bt-waffenwahl>button { min-height:44px; }
+  .br-ordnung.br-controlleransicht .bt-fahren { grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr); }
+  .br-ordnung.br-controlleransicht .bt-fahren .bt-tank .br-icon { display:none; }
+  .br-ordnung.br-controlleransicht .bt-tank { display:block; }
+  .br-ordnung.br-controlleransicht .bt-controller .br-steuertaste { font-size:12px; }
+  .br-ordnung.br-controlleransicht .bt-reglerzeile input { margin:0; min-width:0; }
+  .br-ordnung.br-controlleransicht .bt-kopf { margin-bottom:0; }
+}
+@media(min-width:800px) and (max-height:900px) {
+  .br-ordnung:not(.br-spielt) .br-kopf { margin-bottom:18px; }
+  .br-ordnung:not(.br-spielt) .br-verbindungszeile { margin-bottom:16px; }
+  .br-ordnung:not(.br-spielt) .br-raumtitel { margin:12px 0 20px; }
+  .br-ordnung:not(.br-spielt) .br-raumtitel h1 { font-size:30px; }
+  .br-ordnung .br-lobby>.br-panel { padding:22px; }
+}

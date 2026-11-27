@@ -10,6 +10,7 @@ import { imUmfang } from '../umfang';
 import { EINZELSPIELE, einzelKennung, einzelName } from '../minispiele/partykiste/einzelspiele';
 import { sitzSpanne } from '../sitzspanne';
 import { SZENEN, szeneBild } from '../szenen';
+import { BRO_SPIELE } from '../broremote/spiele';
 import { bannerFuer } from './StartNeu';
 
 /**
@@ -109,7 +110,7 @@ function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element 
  */
 export function chipsFuer(spielbar: readonly string[], app: boolean): readonly { id: string; titel: string }[] {
   const belegt = KATEGORIEN.filter((k) => spielbar.some((id) => k.spiele.includes(id)));
-  const chips = belegt.map((k) => ({ id: k.id, titel: t(k.titel) }));
+  const chips = [{ id: 'broremote', titel: 'BroRemote' }, ...belegt.map((k) => ({ id: k.id, titel: t(k.titel) }))];
   return app ? [...chips, { id: 'bald', titel: t('spielwahl.kategorie.bald') }] : chips;
 }
 
@@ -289,11 +290,7 @@ export function SpieleNeu({
       <header className="hb-kopfzeile">
         <h1 className="hb-titel">{t('spielwahl.titel')}</h1>
       </header>
-      <a className="hb-broremote" href="/broremote">
-        <img src="/broremote/ausbau/broremote.webp" alt="" style={{width: 88, height: 88, objectFit: "cover", borderRadius: 20}} />
-        <span><strong>BroRemote</strong><small>Handys verbinden. Gemeinsam spielen.</small></span><b aria-hidden="true">›</b>
-      </a>
-      <a className="hb-broremote" href="/ice-clash"><img src="/ice-clash/titel.webp" alt="" style={{width:88,height:88,objectFit:"cover",borderRadius:20}}/><span><strong>Bro Ice Clash</strong><small>Bleib auf dem Eis. Online mit 2–4 Pinguinen.</small></span><b aria-hidden="true">›</b></a>
+      {filter === 'alle' && <a className="hb-broremote" href="/ice-clash"><img src="/ice-clash/titel.webp" alt="" style={{width:88,height:88,objectFit:"cover",borderRadius:20}}/><span><strong>Bro Ice Clash</strong><small>Bleib auf dem Eis. Online mit 2–4 Pinguinen.</small></span><b aria-hidden="true">›</b></a>}
       {abstimmFehler && <p role="alert" className="hb-text">{abstimmFehler}</p>}
       <div className="hb-chips" role="tablist" aria-label={t('spielwahl.kategorien')}>
         {[{ id: 'alle', titel: t('spielwahl.alle') }, ...chips].map((k) => (
@@ -314,6 +311,7 @@ export function SpieleNeu({
       </div>
 
       <div className="hb-spiele-rolle">
+        {zeige('broremote') && <section className="hb-blk"><h2 className="hb-ab"><Symbol><path d="M3 4h15v11H3z M7 20h7 M10 15v5 M19 12h4v10h-4z"/></Symbol>BroRemote<span className="hb-ab-zusatz">2</span></h2><div className="hb-reihe">{BRO_SPIELE.map(g => <a className="hb-sk" key={g.id} href={`/broremote?spiel=${g.id}`} style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:g.id === 'building' ? `url(${g.bild}), url(/broremote/bauwelt.webp)` : `url(${g.bild})`,backgroundSize:g.id === 'building' ? 'auto 95%, cover' : 'cover',backgroundRepeat:'no-repeat',backgroundPosition:'center'}}/><strong>{g.name}</strong><small>{g.spieler}</small></a>)}</div></section>}
         {KATEGORIEN.map((k) => {
           // Reihenfolge der Kategorie, nicht die des Servers
           const liste = spielbar

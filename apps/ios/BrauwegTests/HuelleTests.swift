@@ -9,6 +9,13 @@ import UIKit
 /// Bindestrich) — dieselben Faelle wie HuelleTest.kt der Android-Huelle.
 final class HuelleTests: XCTestCase {
 
+    func testBroRemoteSpielauswahl() {
+        let host = "staging.brauweg-spielen.de"
+        XCTAssertEqual(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/broremote?spiel=brotanks"), serverHost: host), "/broremote?spiel=brotanks")
+        XCTAssertEqual(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/broremote?spiel=building#test"), serverHost: host), "/broremote?spiel=building#test")
+        XCTAssertEqual(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/broremote?spiel=fremd"), serverHost: host), "/broremote")
+    }
+
     func testEinladungWirdZumPfadDerHuelle() {
         XCTAssertEqual(Huelle.pfadFuerPfad("/beitritt/K7X9MQ"), "/beitritt/K7X9MQ")
         XCTAssertEqual(Huelle.pfadFuerPfad("/beitritt/k7x-9mq/"), "/beitritt/k7x-9mq")

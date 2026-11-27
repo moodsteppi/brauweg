@@ -80,6 +80,7 @@ describe('Spiele in der App', () => {
     const chips = await screen.findByRole('tablist', { name: 'Kategorien' });
     expect(within(chips).getAllByRole('tab').map((c) => c.textContent)).toEqual([
       'Alle',
+      'BroRemote',
       'Kartenspiele',
       'Trinkspiele',
       'Denken',
