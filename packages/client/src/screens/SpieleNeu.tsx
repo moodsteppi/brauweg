@@ -355,7 +355,7 @@ export function SpieleNeu({
           {!inApp && mitProSubway && <button className="hb-sk" onClick={() => onSolo('prosubway')}><span className="hb-sk-bild" style={{backgroundImage:'url(/hub/banner-prosubway.webp)'}}/><strong>{t('modus.prosubway')}</strong><small>Solo</small></button>}
           {mitManufaktur && <button className="hb-sk" onClick={() => onSolo('kartenmanufaktur')}><span className="hb-sk-bild" style={{backgroundImage:'url(/manufaktur/werkstatt-hero.webp)'}}/><strong>Kartenmanufaktur</strong><small>Solo</small></button>}
           {mitFlyingbro && <button className="hb-sk" onClick={() => onSolo('flyingbro')}><span className="hb-sk-bild" style={{backgroundImage:'url(/flyingbro/bro-pelle-flug.webp)',backgroundSize:'contain',backgroundRepeat:'no-repeat'}}/><strong>Flying Bro</strong><small>Solo</small></button>}
-          {mitBrowort && <button className="hb-sk" onClick={() => onSolo('browort')}><span className="hb-sk-bild" style={{backgroundImage:'url(/hub/browort-hero.webp)'}}/><strong>Browort</strong><small>Solo</small></button>}
+          {mitBrowort && <button className="hb-sk" onClick={() => onSolo('browort')}><span className="hb-sk-bild" style={{backgroundImage:'url(/hub/browort-icon.webp)'}}/><strong>Browort</strong><small>Solo</small></button>}
         </div></section>}
 
         {filter === 'alle' && !inApp && (

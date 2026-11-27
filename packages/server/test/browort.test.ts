@@ -90,7 +90,7 @@ test('Browort: unbekanntes Wort kostet nichts, Lösung bringt Münzen, Serie und
   await assert.rejects(() => browortRaten(c.db, accountId, 'ZU', tagUm(tag), SALZ), istFehler('browortForm'));
   assert.equal((await browortHeute(c.db, accountId, tagUm(tag), SALZ)).versuche.length, 0);
 
-  const erster = await browortRaten(c.db, accountId, falsch(loesung).toLowerCase(), tagUm(tag), SALZ);
+  const erster = await browortRaten(c.db, accountId, 'echse', tagUm(tag), SALZ);
   assert.equal(erster.versuche.length, 1);
   assert.equal(erster.fertig, false);
   assert.equal(erster.loesung, null, 'die Lösung bleibt geheim, solange die Runde läuft');
