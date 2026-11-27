@@ -18,6 +18,8 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     private var bruecke: Bruecke!
     private var appleAnmeldung: AppleAnmeldung?
     private let fehlerschirm = Fehlerschirm()
+    private let updateschirm = Updateschirm()
+    private let updates = UpdatePruefer()
     private var prueftGerade = false
     /// Meldet, wenn das Netz zurueckkommt — dann verschwindet die Fehlermeldung
     /// von selbst, wie unter Android.
@@ -49,7 +51,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     /// index.html fuer die Safari-Fassung. Ausnahme sind die hellen Schirme
     /// (Farbduell): Dort setzt der Client `theme-color` auf seinen Grund, und
     /// weisse Uhr und Akku standen sonst unlesbar auf Hellgrau.
-    override var preferredStatusBarStyle: UIStatusBarStyle { kopfzeileHell ? .darkContent : .lightContent }
+    override var preferredStatusBarStyle: UIStatusBarStyle { !updateschirm.isHidden ? .lightContent : (kopfzeileHell ? .darkContent : .lightContent) }
     private var kopfzeileHell = false {
         didSet { if kopfzeileHell != oldValue { setNeedsStatusBarAppearanceUpdate() } }
     }
@@ -122,7 +124,37 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
         fehlerschirm.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(fehlerschirm)
 
-        for kind in [ansicht, fehlerschirm] as [UIView] {
+        updateschirm.isHidden = true
+        updateschirm.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(updateschirm)
+        updates.beiAenderung = { [weak self] ziel, prueft in
+            guard let self else { return }
+            let warGesperrt = !self.updateschirm.isHidden
+            self.updateschirm.isHidden = ziel == nil
+            self.setNeedsStatusBarAppearanceUpdate()
+            self.ansicht.isUserInteractionEnabled = ziel == nil
+            self.ansicht.accessibilityElementsHidden = ziel != nil
+            self.fehlerschirm.accessibilityElementsHidden = ziel != nil
+            if let ziel {
+                self.updateschirm.anzeigen(version: ziel.version, prueft: prueft)
+                self.view.bringSubviewToFront(self.updateschirm)
+                if !warGesperrt {
+                    self.ansicht.endEditing(true)
+                    self.dismiss(animated: false)
+                    self.imHintergrund()
+                    UIAccessibility.post(notification: .screenChanged, argument: self.updateschirm)
+                }
+            }
+        }
+        updateschirm.beimStore = { [weak self] in
+            guard let self, let ziel = self.updates.ziel else { return }
+            UIApplication.shared.open(ziel.adresse) { [weak self] offen in
+                if !offen { self?.updateschirm.storeNichtGeoeffnet() }
+            }
+        }
+        updateschirm.beimPruefen = { [weak self] in self?.updates.pruefen(sofort: true) }
+
+        for kind in [ansicht, fehlerschirm, updateschirm] as [UIView] {
             NSLayoutConstraint.activate([
                 kind.topAnchor.constraint(equalTo: view.topAnchor),
                 kind.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -160,6 +192,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
 
         laden(pfad: startPfad)
         pruefeServer()
+        updates.pruefen()
     }
 
     deinit {
@@ -186,6 +219,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     /// Adresse neu geladen. Die Sitzung liegt im localStorage und ueberlebt das.
     func oeffne(link: URL) {
         loadViewIfNeeded()
+        guard updateschirm.isHidden else { return }
         let weiter: () -> Void = { [weak self] in
             guard let self else { return }
             if let pfad = Huelle.pfadFuerLink(link, serverHost: Huelle.serverHost) {
@@ -204,6 +238,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     /// Die App kommt wieder nach vorn oder das Netz zurueck: Stand die
     /// Fehlermeldung, gleich noch einmal versuchen.
     func imVordergrund() {
+        if isViewLoaded { updates.pruefen() }
         if isViewLoaded && !fehlerschirm.isHidden { pruefeServer() }
     }
 
@@ -211,7 +246,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
         guard wisch.state == .ended else { return }
         // Ein Stueck weit oder schnell — ein Zucken am Rand ist kein „zurueck".
         guard wisch.translation(in: view).x > 60 || wisch.velocity(in: view).x > 500 else { return }
-        guard fehlerschirm.isHidden, presentedViewController == nil else { return }
+        guard updateschirm.isHidden, fehlerschirm.isHidden, presentedViewController == nil else { return }
         ansicht.evaluateJavaScript(Huelle.zurueckSkript) { ergebnis, _ in
             if (ergebnis as? Bool) == true { UISelectionFeedbackGenerator().selectionChanged() }
         }
@@ -265,7 +300,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     // MARK: - Blaetter und Dialoge
 
     func broremoteBefehl(_ daten: [String: Any]) {
-        guard ansicht.url?.path == "/broremote" else { return }
+        guard updateschirm.isHidden, ansicht.url?.path == "/broremote" else { return }
         if daten["art"] as? String == "scannen" {
             guard presentedViewController == nil else { return }
             let scanner = BroRemoteScanner()
@@ -294,7 +329,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     func zeigeBlatt(_ url: URL) {
         // SFSafariViewController nimmt nur http(s) und stirbt an allem anderen.
         guard let schema = url.scheme?.lowercased(), schema == "https" || schema == "http" else { return }
-        guard presentedViewController == nil else { return }
+        guard updateschirm.isHidden, presentedViewController == nil else { return }
         let blatt = SFSafariViewController(url: url)
         blatt.preferredBarTintColor = Farben.blau
         blatt.preferredControlTintColor = .white
@@ -303,7 +338,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     }
 
     func zeigeTeilen(_ dinge: [Any]) {
-        guard !dinge.isEmpty, presentedViewController == nil else { return }
+        guard updateschirm.isHidden, !dinge.isEmpty, presentedViewController == nil else { return }
         let teilen = UIActivityViewController(activityItems: dinge, applicationActivities: nil)
         // Nur fuer das iPad noetig (dort ein Popover) — die App ist iPhone-only,
         // laeuft auf dem iPad aber im Kompatibilitaetsmodus, und ohne Anker stuerzte sie ab.
@@ -319,7 +354,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
     /// gezeigt werden kann. WebKit wartet auf die Antwort; bliebe sie aus,
     /// stuende der Client fuer immer.
     private func zeigeDialog(_ dialog: UIAlertController, sonst: () -> Void) {
-        guard presentedViewController == nil, viewIfLoaded?.window != nil else {
+        guard updateschirm.isHidden, presentedViewController == nil, viewIfLoaded?.window != nil else {
             sonst()
             return
         }
