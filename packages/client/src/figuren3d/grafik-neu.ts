@@ -103,6 +103,16 @@ export function kartenRahmen(kosten: number): string | null {
 }
 
 /**
+ * Splash-Art einer Einheit fuer die Shop-Karte (Robin, 27.11.2026: statt des
+ * Ausschnitts aus der Bildfolge). Hochformat 11:16 (352 x 512), freigestellt;
+ * den Hintergrund in der Kostenfarbe legt der Bildschirm dahinter. Aus den
+ * Konzeptbildern geschnitten (splash.mjs), je rund 30 kB.
+ */
+export function kartenBild(kennung: string): string | null {
+  return FIGUREN_NEU_VORHANDEN.has(kennung) ? `${GRAFIK_NEU_WURZEL}/karten/bild/${kennung}.webp` : null;
+}
+
+/**
  * Ein Zeichen: `rolle-<rolle>`, `marke-<marke>`, `stern`, `gold`, `leben`.
  * Null, solange es keins gibt.
  */
