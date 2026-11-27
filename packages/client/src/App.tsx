@@ -374,7 +374,7 @@ export function App(): React.JSX.Element {
     return false;
   });
 
-  // Logo und Ladebild mit Prozentzahl, bis Konto und Startbilder da sind.
+  // Logo-Aufbau und Ladeanzeige, bis Konto und Startbilder da sind.
   if (!startFertig) return <Startbildschirm geladen={!loading} onFertig={() => setStartFertig(true)} />;
   if (loading) return <AppLaedt />;
 

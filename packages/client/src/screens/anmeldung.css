@@ -52,8 +52,8 @@
 }
 .anm-marke img {
   display: block;
-  /* Hochformat (Lockup 420 x 481): Breite so, dass die Höhe der alten 15,6-rem-Marke (~10,2 rem) bleibt und der Held darunter nicht rutscht. */
-  width: min(40vw, 9rem);
+  /* Die neue Wortmarke muss auch auf kleinen iPhones lesbar bleiben. */
+  width: min(54vw, 210px, 27svh);
   height: auto;
 }
 
@@ -233,8 +233,9 @@
   cursor: pointer;
 }
 .anm-marke-klein {
-  height: 2.6rem;
-  width: auto;
+  height: auto;
+  width: min(56vw, 220px);
+  max-width: 100%;
 }
 .anm-titel {
   margin: 1.4rem 0 0.8rem;
