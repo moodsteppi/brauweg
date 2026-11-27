@@ -16,11 +16,11 @@ import { FAEHIGKEITEN, KATALOG } from './testdaten';
 function bericht(): Kampfbericht {
   const ereignisse = [
     { art: 'zustand', zeitMs: 0, wer: 0, zustand: 'schild', bisMs: null, menge: 300 },
-    { art: 'treffer', zeitMs: 200, wer: 0, ziel: 1, schaden: 50, lebenDanach: 450, manaWer: 30, manaZiel: 5 },
+    { art: 'treffer', zeitMs: 200, wer: 0, ziel: 1, schaden: 50, lebenDanach: 450, manaWer: 30, manaZiel: 5, schildDanach: 0 },
     { art: 'zustand', zeitMs: 250, wer: 1, zustand: 'schild', bisMs: null, menge: 100 },
-    { art: 'treffer', zeitMs: 400, wer: 0, ziel: 1, schaden: 50, lebenDanach: 400, manaWer: 60, manaZiel: 10 },
+    { art: 'treffer', zeitMs: 400, wer: 0, ziel: 1, schaden: 50, lebenDanach: 400, manaWer: 60, manaZiel: 10, abgefangen: 20, schildDanach: 80 },
     { art: 'faehigkeit', zeitMs: 600, wer: 0, faehigkeit: 'schildwall', ziele: [0] },
-    { art: 'treffer', zeitMs: 800, wer: 0, ziel: 1, schaden: 400, lebenDanach: 0, manaWer: 10, manaZiel: 20 },
+    { art: 'treffer', zeitMs: 800, wer: 0, ziel: 1, schaden: 400, lebenDanach: 0, manaWer: 10, manaZiel: 20, schildDanach: 0 },
     { art: 'tod', zeitMs: 800, wer: 1 },
     { art: 'ende', zeitMs: 900, sieger: 0, grund: 'ausgeloescht' },
   ] as Kampfereignis[];
@@ -28,8 +28,8 @@ function bericht(): Kampfbericht {
     saat: 'k',
     erstZieher: 0,
     start: [
-      { id: 0, seite: 0, einheitId: 'dorfwache', stufe: 2, platz: 40, leben: 600, hoechstesLeben: 600 },
-      { id: 1, seite: 1, einheitId: 'sturmrufer', stufe: 1, platz: 6, leben: 500, hoechstesLeben: 500 },
+      { id: 0, seite: 0, einheitId: 'dorfwache', stufe: 2, platz: 40, leben: 600, hoechstesLeben: 600, mana: 0, schild: 0 },
+      { id: 1, seite: 1, einheitId: 'sturmrufer', stufe: 1, platz: 6, leben: 500, hoechstesLeben: 500, mana: 24, schild: 0 },
     ],
     ereignisse,
     sieger: 0,
@@ -102,6 +102,13 @@ describe('Kampf', () => {
     expect(schild).not.toBeNull();
     const breite = Number(/width: ([\d.]+)%/.exec(schild!.getAttribute('style') ?? '')?.[1]);
     expect(breite).toBeCloseTo(10, 5);
+  });
+
+  it('Startmana aus `start`: der Balken ist von Anfang an teilweise gefuellt', () => {
+    zeige();
+    lauf(20);
+    // 24 von 80 Mana (Kettenblitz) = 30 %.
+    expect(screen.getByLabelText(/Sturmalbatros/).querySelector('i[style="width: 30%;"]')).not.toBeNull();
   });
 
   it('nach dem Ende steht das Rundenende mit Sieg und Zwischenstand', () => {

@@ -98,6 +98,15 @@ export interface Kaempferstand {
   readonly platz: number;
   readonly leben: number;
   readonly hoechstesLeben: number;
+  /*
+   * Mana und Schild zu diesem Zeitpunkt (kampf.ts, seit dem 27.11.2026): Im
+   * `start` steht so, wer schon mit Mana (Elementar) oder Schild (Waechter)
+   * beginnt. Wahlfrei aus demselben Grund wie die Manafelder am Treffer —
+   * aufgezeichnete Berichte aus der Zeit davor haben sie nicht. Die alte
+   * Anzeige liest sie nicht, TafelrundeNeu nimmt daraus den Anfangsstand.
+   */
+  readonly mana?: number;
+  readonly schild?: number;
 }
 
 /**
@@ -140,6 +149,8 @@ export type Kampfereignis =
       readonly quelle?: 'faehigkeit' | 'brand';
       /** Was ein Schild geschluckt hat; `schaden` ist nur der Rest am Leben. */
       readonly abgefangen?: number;
+      /** Was vom Schild des Ziels danach noch steht (0 = keiner mehr). */
+      readonly schildDanach?: number;
     }
   | {
       readonly art: 'heilung';

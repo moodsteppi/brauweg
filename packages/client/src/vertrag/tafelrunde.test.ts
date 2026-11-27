@@ -2,10 +2,18 @@ import {
   type EigeneSicht as ModulEigene,
   type FremdeSicht as ModulFremde,
   type TafelrundeSicht as ModulSicht,
+  DEFAULT_REGELN,
+  botZug,
+  darfHandeln,
+  erstellePartie,
+  fuehreAus,
+  lebendeSitze,
+  sichtFuer,
   tafelrunde,
 } from '@brauweg/game-tafelrunde';
 import { describe, expect, it } from 'vitest';
 
+import type { Kaempferstand, Kampfereignis } from '../minispiele/tafelrunde/KampfAnzeige';
 import type {
   EigeneSicht,
   FremdeSicht,
@@ -176,5 +184,37 @@ describe('Vertrag Tafelrunde', () => {
     // Seit dem 27.11.2026: Ohne die Faehigkeiten kennt TafelrundeNeu weder
     // Namen noch volles Mana — der Manabalken haette keinen Massstab.
     expect(gesehen.oben.has('faehigkeiten')).toBe(true);
+  });
+
+  /*
+   * Die Felder IM Kampfbericht stehen eine Ebene tiefer, als `felderEinerPartie`
+   * schaut — und genau an ihnen haengen Mana- und Schildbalken von
+   * TafelrundeNeu. Fehlen sie, beginnt jeder Balken bei null, und der Schild
+   * bleibt nach dem ersten Treffer stehen, ohne dass etwas rot wird. Deshalb
+   * hier eine echte Kampfphase mit Bots, und die Felder werden nachgesehen.
+   */
+  it('liefert im Kampfbericht Mana und Schild im Start und den Restschild am Treffer', () => {
+    let p = erstellePartie(DEFAULT_REGELN, [0, 1, 2, 3], 'vertrag-kampf');
+    for (const sitz of lebendeSitze(p)) {
+      for (let i = 0; i < 200 && darfHandeln(p, sitz); i++) p = fuehreAus(p, sitz, botZug(sichtFuer(p, sitz), 'normal'));
+    }
+    const kaempfe = sichtFuer(p, 0).kaempfe ?? [];
+    expect(kaempfe.length).toBeGreaterThan(0);
+    const start: readonly Kaempferstand[] = kaempfe[0]!.bericht.start;
+    expect(start.length).toBeGreaterThan(0);
+    for (const k of start) {
+      expect(typeof k.mana).toBe('number');
+      expect(typeof k.schild).toBe('number');
+    }
+    const treffer = (kaempfe.flatMap((k) => k.bericht.ereignisse) as readonly Kampfereignis[]).filter(
+      (e) => e.art === 'treffer',
+    );
+    expect(treffer.length).toBeGreaterThan(0);
+    for (const t of treffer) {
+      if (t.art !== 'treffer') continue;
+      expect(typeof t.schildDanach).toBe('number');
+      expect(typeof t.manaWer).toBe('number');
+      expect(typeof t.manaZiel).toBe('number');
+    }
   });
 });

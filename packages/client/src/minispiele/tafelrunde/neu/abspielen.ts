@@ -9,17 +9,15 @@
  * Feld auseinander — und dann saehe man in der neuen Oberflaeche einen anderen
  * Kampf als in der alten, obwohl es derselbe Bericht ist.
  *
- * NICHTS WIRD NACHGERECHNET, mit einer Ausnahme, die im Protokoll angelegt
- * ist: Der Schild. `zustand` nennt seine Groesse (`menge`), jeder Treffer den
- * Teil, den er geschluckt hat (`abgefangen`). Was danach bleibt, steht nirgends
- * — es ist die Differenz zweier Zahlen des Protokolls, so wie „noch 1 bis 4"
- * in Synergien.tsx. Ein Feld `schildDanach` am Treffer machte auch das
- * ueberfluessig (steht im Bericht an Robin).
+ * NICHTS WIRD NACHGERECHNET, auch nicht der Schild: Jeder Treffer nennt den
+ * Rest am Ziel (`schildDanach`), so wie `lebenDanach` das Leben. Bis zum
+ * 27.11.2026 abends zog diese Datei dafuer `abgefangen` von der Schildgroesse
+ * ab — eine zweite Rechnung, die das Modul seitdem ueberfluessig macht.
  *
- * DAS MANA ZU KAMPFBEGINN fehlt im Bericht (`start` traegt kein Mana). Wer mit
- * Mana beginnt (Marke Elementar, „Aufgeladen"), zeigt deshalb bis zu seinem
- * ersten Treffer einen leeren Balken; danach stimmt er, weil jeder Treffer das
- * Mana NACH sich nennt. Auch das steht im Bericht als Luecke der Sicht.
+ * DER ANFANGSSTAND kommt aus `start`: Dort stehen Mana und Schild zu
+ * Kampfbeginn (Marke Elementar beginnt mit Mana, Waechter mit Schild). Ein
+ * Bericht aus der Zeit davor hat die Felder nicht; dann beginnt alles bei null,
+ * und der Balken stimmt ab dem ersten Treffer, der das Mana NACH sich nennt.
  */
 
 import {
@@ -129,7 +127,13 @@ export function anfangsstandNeu(bericht: Kampfbericht): AbspielstandNeu {
   const basis = anfangsstand(bericht);
   return {
     ...basis,
-    figuren: basis.figuren.map((f) => ({ ...f, mana: 0, schild: 0, zustaende: {}, faehigkeitAb: null })),
+    figuren: basis.figuren.map((f) => ({
+      ...f,
+      mana: f.mana ?? 0,
+      schild: f.schild ?? 0,
+      zustaende: {},
+      faehigkeitAb: null,
+    })),
     effekte: [],
   };
 }
@@ -169,8 +173,9 @@ export function wendeAnNeu(stand: AbspielstandNeu, e: Kampfereignis, nr: number)
       figuren = aendere(figuren, e.ziel, (f) => ({
         ...f,
         mana: e.manaZiel ?? f.mana,
-        // Die eine Differenz, siehe Kopf der Datei.
-        schild: e.abgefangen ? Math.max(0, f.schild - e.abgefangen) : f.schild,
+        // Der Rest aus dem Protokoll; ein alter Bericht ohne das Feld kennt
+        // ohnehin keine Schilde.
+        schild: e.schildDanach ?? f.schild,
       }));
       if (e.quelle === 'brand') neuerEffekt(effekt(e, nr, e.ziel, 'feuer'));
       break;
@@ -242,8 +247,10 @@ export function spieleBisNeu(stand: AbspielstandNeu, bericht: Kampfbericht, zeit
 
 /** Gilt ein Zustand zur Zeit `zeitMs` noch? */
 export function zustandAktiv(f: FigurNeu, zustand: Kampfzustand, zeitMs: number): boolean {
-  if (!(zustand in f.zustaende)) return false;
+  // Der Schild gilt, solange etwas von ihm steht — auch der aus `start`, zu
+  // dem es kein `zustand`-Ereignis gibt.
   if (zustand === 'schild') return f.schild > 0;
+  if (!(zustand in f.zustaende)) return false;
   const bis = f.zustaende[zustand];
   return bis === null || bis === undefined || zeitMs < bis;
 }

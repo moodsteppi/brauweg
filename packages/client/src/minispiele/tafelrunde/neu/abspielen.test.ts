@@ -52,11 +52,11 @@ describe('abspielen (TafelrundeNeu)', () => {
     expect(stand.effekte.map((x) => [x.figur, x.name, x.wirker])).toEqual([[0, 'schild', true]]);
   });
 
-  it('Schild: Groesse aus dem Zustand, abgefangener Schaden zieht ab, leer heisst aus', () => {
+  it('Schild: Groesse aus dem Zustand, danach der Rest aus `schildDanach` — nicht nachgerechnet', () => {
     const b = bericht([
       { art: 'zustand', zeitMs: 0, wer: 0, zustand: 'schild', bisMs: null, menge: 30 },
-      { art: 'treffer', zeitMs: 100, wer: 1, ziel: 0, schaden: 0, lebenDanach: 100, manaWer: 10, manaZiel: 5, abgefangen: 20 },
-      { art: 'treffer', zeitMs: 200, wer: 1, ziel: 0, schaden: 15, lebenDanach: 85, manaWer: 20, manaZiel: 10, abgefangen: 10 },
+      { art: 'treffer', zeitMs: 100, wer: 1, ziel: 0, schaden: 0, lebenDanach: 100, manaWer: 10, manaZiel: 5, abgefangen: 20, schildDanach: 10 },
+      { art: 'treffer', zeitMs: 200, wer: 1, ziel: 0, schaden: 15, lebenDanach: 85, manaWer: 20, manaZiel: 10, abgefangen: 10, schildDanach: 0 },
     ]);
     let stand = spieleBisNeu(anfangsstandNeu(b), b, 100);
     expect(stand.figuren[0]!.schild).toBe(10);
@@ -64,6 +64,32 @@ describe('abspielen (TafelrundeNeu)', () => {
     stand = spieleBisNeu(stand, b, 200);
     expect(stand.figuren[0]!.schild).toBe(0);
     expect(zustandAktiv(stand.figuren[0]!, 'schild', 200)).toBe(false);
+  });
+
+  it('der Rest steht im Protokoll: `schildDanach` gilt, auch wenn er nicht zur Differenz passt', () => {
+    // Das Modul entscheidet, was bleibt — der Client zieht nichts ab.
+    const b = bericht([
+      { art: 'zustand', zeitMs: 0, wer: 0, zustand: 'schild', bisMs: null, menge: 30 },
+      { art: 'treffer', zeitMs: 100, wer: 1, ziel: 0, schaden: 0, lebenDanach: 100, manaWer: 10, manaZiel: 5, abgefangen: 20, schildDanach: 25 },
+    ]);
+    expect(spieleBisNeu(anfangsstandNeu(b), b, 100).figuren[0]!.schild).toBe(25);
+  });
+
+  it('Mana und Schild zu Kampfbeginn kommen aus `start`', () => {
+    const b = bericht([]);
+    const mitStart = {
+      ...b,
+      start: [
+        { ...b.start[0]!, mana: 0, schild: 120 },
+        { ...b.start[1]!, mana: 40, schild: 0 },
+      ],
+    };
+    const stand = anfangsstandNeu(mitStart);
+    expect(stand.figuren[0]!.schild).toBe(120);
+    expect(zustandAktiv(stand.figuren[0]!, 'schild', 0)).toBe(true);
+    expect(stand.figuren[1]!.mana).toBe(40);
+    // Ein Bericht ohne die Felder beginnt bei null.
+    expect(anfangsstandNeu(b).figuren[1]!.mana).toBe(0);
   });
 
   it('Zustaende gelten bis `bisMs`, null heisst dauerhaft', () => {
