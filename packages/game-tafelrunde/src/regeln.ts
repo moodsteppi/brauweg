@@ -265,6 +265,22 @@ export const LEVEL_TABELLE: readonly Levelstufe[] = [
 ];
 
 export const START_LEVEL = 1;
+
+/**
+ * FELDPLAETZE WACHSEN MIT DER RUNDE (Robin, 27.11.2026: "Neu wuerfeln und
+ * Rang steigern gibt es nicht. Truppengroesse kommt einfach ueber die
+ * Rundenanzahl", "bis 7 reicht"). Runde 1 hat zwei Plaetze, jede Runde einen
+ * mehr, hoechstens sieben. Der Level eines Heeres ist damit keine Kaufsache
+ * mehr, sondern folgt der Runde; die Chancen im Laden haengen weiter an ihm
+ * (LEVEL_TABELLE), steigen also mit der Runde.
+ */
+export const FELD_START = 2;
+export const FELD_HOECHSTENS = 7;
+
+/** Der Level (= Feldplaetze) in dieser Runde (Runde ab 1). */
+export function levelFuerRunde(runde: number): number {
+  return Math.min(FELD_START + Math.max(1, runde) - 1, FELD_HOECHSTENS);
+}
 export const MAX_LEVEL = LEVEL_TABELLE.length;
 
 export function levelstufe(level: number): Levelstufe {
