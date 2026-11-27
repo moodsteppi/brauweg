@@ -1,0 +1,18 @@
+Die Figuren von Tafelrunde neu — Herkunft und Lizenz
+
+Eigene Gestaltung fuer BroweGGames (Brauweg), erzeugt am 27.11.2026.
+
+Weg je Figur (docs/ASSETS-TAFELRUNDE-NEU.md):
+  Konzeptbild    ChatGPT-Bildmodell ueber codex (Robins ChatGPT-Zugang)
+  Form           TripoSG (VAST-AI-Research), MIT-Lizenz, lokal gerechnet
+  Farbe          Konzeptbild projiziert + TripoSR (Tripo AI & Stability AI),
+                 MIT-Lizenz, lokal gerechnet
+  Rig, Bewegung  eigenes Pinguin-Skelett und eigene Bewegungen, Blender
+                 (GPL; betrifft nur das Werkzeug, nicht die Ergebnisse)
+  Bildfolge      packages/client/src/figuren3d/bildfolgen-rendern.mjs
+
+Nicht benutzt: RMBG-1.4 (nicht-kommerzielle Lizenz), TRELLIS (haengt an
+nvdiffrast, nur nicht-kommerziell), Hunyuan3D (Lizenz schliesst die EU aus).
+
+Die Originale (Konzeptbilder, Gelenkpunkte, Vorschauen) liegen im Archiv
+moodsteppi/brauweg-art unter tafelrunde-neu/.

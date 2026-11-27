@@ -98,8 +98,40 @@ export interface Kaempferstand {
   readonly platz: number;
   readonly leben: number;
   readonly hoechstesLeben: number;
+  /*
+   * Mana und Schild zu diesem Zeitpunkt (kampf.ts, seit dem 27.11.2026): Im
+   * `start` steht so, wer schon mit Mana (Elementar) oder Schild (Waechter)
+   * beginnt. Wahlfrei aus demselben Grund wie die Manafelder am Treffer —
+   * aufgezeichnete Berichte aus der Zeit davor haben sie nicht. Die alte
+   * Anzeige liest sie nicht, TafelrundeNeu nimmt daraus den Anfangsstand.
+   */
+  readonly mana?: number;
+  readonly schild?: number;
 }
 
+/**
+ * Die Zustaende eines `zustand`-Ereignisses (kampf.ts, seit dem 27.11.2026).
+ * Als Zeichenkette offen gehalten wie die Marke: Ein neuer Zustand im Modul
+ * soll in der Anzeige schlicht nichts zeigen, nicht den Bau brechen.
+ */
+export type Kampfzustand =
+  | 'betaeubt'
+  | 'langsam'
+  | 'schild'
+  | 'panzer'
+  | 'schildwall'
+  | 'brand'
+  | 'kampfgeist';
+
+/*
+ * SEIT DEM 27.11.2026 (Faehigkeiten und Markeneffekte) mit vier neuen Arten —
+ * `faehigkeit`, `zustand`, `sprung`, `wiederkehr` — und Mana an Treffer und
+ * Heilung. Die Mana- und Quellenfelder sind hier WAHLFREI, obwohl das Modul
+ * sie immer schickt: Der aufgezeichnete Kampf der Probe (`/probe/kampf`) und
+ * die Testberichte stammen aus der Zeit davor, und ein Bericht ohne Mana soll
+ * weiter abspielbar sein. Die alte Anzeige liest davon nur `sprung` und
+ * `wiederkehr` (siehe `wendeAn`); den Rest zeigt TafelrundeNeu.
+ */
 export type Kampfereignis =
   | { readonly art: 'bewegung'; readonly zeitMs: number; readonly wer: number; readonly von: number; readonly nach: number }
   | {
@@ -109,6 +141,16 @@ export type Kampfereignis =
       readonly ziel: number;
       readonly schaden: number;
       readonly lebenDanach: number;
+      /** Mana des Angreifers NACH dem Treffer. */
+      readonly manaWer?: number;
+      /** Mana des Getroffenen NACH dem Treffer. */
+      readonly manaZiel?: number;
+      /** Fehlt beim gewoehnlichen Hieb. */
+      readonly quelle?: 'faehigkeit' | 'brand';
+      /** Was ein Schild geschluckt hat; `schaden` ist nur der Rest am Leben. */
+      readonly abgefangen?: number;
+      /** Was vom Schild des Ziels danach noch steht (0 = keiner mehr). */
+      readonly schildDanach?: number;
     }
   | {
       readonly art: 'heilung';
@@ -117,7 +159,38 @@ export type Kampfereignis =
       readonly ziel: number;
       readonly menge: number;
       readonly lebenDanach: number;
+      /** Mana des Heilers danach. */
+      readonly manaWer?: number;
+      /** Fehlt beim gewoehnlichen Heilen des Beistands. */
+      readonly quelle?: 'faehigkeit' | 'wachstum';
     }
+  /** Eine Einheit wirkt ihre Faehigkeit; danach ist ihr Mana leer. */
+  | {
+      readonly art: 'faehigkeit';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly faehigkeit: string;
+      readonly ziele: readonly number[];
+    }
+  /** Ein Zustand beginnt. `bisMs` null heisst: bis er aufgebraucht ist. */
+  | {
+      readonly art: 'zustand';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly zustand: Kampfzustand;
+      readonly bisMs: number | null;
+      readonly menge?: number;
+    }
+  /** Ein Sprung (Hinterhalt, Schattensprung). Beide Plaetze sind Arenaplaetze. */
+  | {
+      readonly art: 'sprung';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly von: number;
+      readonly nach: number;
+    }
+  /** Ein gefallener Untoter steht wieder auf (Markeneffekt Wiederkehr). */
+  | { readonly art: 'wiederkehr'; readonly zeitMs: number; readonly wer: number; readonly lebenDanach: number }
   | { readonly art: 'tod'; readonly zeitMs: number; readonly wer: number }
   | { readonly art: 'ende'; readonly zeitMs: number; readonly sieger: Seite | null; readonly grund: Endgrund };
 
@@ -464,7 +537,10 @@ function veraendert(
  *
  * Ausschliesslich Abschrift: Beim Treffer wird `lebenDanach` uebernommen und
  * nichts abgezogen, beim Tod nur die Marke gesetzt. Eine unbekannte Art laesst
- * den Stand, wie er ist.
+ * den Stand, wie er ist — dazu gehoeren seit dem 27.11.2026 auch `faehigkeit`
+ * und `zustand`: Mana, Schilde und Effekte zeigt erst TafelrundeNeu
+ * (minispiele/tafelrunde/neu/abspielen.ts), diese Anzeige laeuft ohne sie
+ * richtig weiter, weil Leben und Plaetze trotzdem stimmen.
  */
 export function wendeAn(stand: Abspielstand, e: Kampfereignis): Abspielstand {
   switch (e.art) {
@@ -509,6 +585,34 @@ export function wendeAn(stand: Abspielstand, e: Kampfereignis): Abspielstand {
           leben: e.lebenDanach,
           heilungen: f.heilungen + 1,
           letzteHeilung: e.menge,
+        })),
+      };
+    case 'sprung':
+      /*
+       * Seit dem 27.11.2026. Ein Sprung ist fuer diese Anzeige ein Zug ueber
+       * mehrere Felder: Ohne diesen Fall stuende ein Meuchler nach dem
+       * Hinterhalt weiter vorn, waehrend ihn die Treffer hinten erreichen —
+       * und alle folgenden `bewegung`-Ereignisse gingen von einem Platz aus,
+       * auf dem er gar nicht steht.
+       */
+      return {
+        ...stand,
+        figuren: veraendert(stand.figuren, e.wer, (f) => ({ ...f, platz: e.nach, zugAb: e.zeitMs })),
+      };
+    case 'wiederkehr':
+      /*
+       * Seit dem 27.11.2026 (Markeneffekt der Untoten). Ohne diesen Fall
+       * bliebe der Wiederkehrer liegen und verblasst, waehrend das Protokoll
+       * ihn weiter schlagen und getroffen werden laesst. `totAb` muss mit
+       * weg: Die Bildfolge (bildfolge.ts) zeigt den Tod, sobald er gesetzt ist.
+       */
+      return {
+        ...stand,
+        figuren: veraendert(stand.figuren, e.wer, (f) => ({
+          ...f,
+          tot: false,
+          totAb: null,
+          leben: e.lebenDanach,
         })),
       };
     case 'tod':

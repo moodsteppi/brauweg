@@ -46,6 +46,14 @@ export interface Suchstand {
   readonly sucht: boolean;
   /** Wie viele gerade in derselben Schlange stehen, er selbst mitgezaehlt. */
   readonly suchende: number;
+  /**
+   * WER da steht, als Konten in der Reihenfolge ihres Eintreffens, er selbst
+   * mitgezaehlt (seit dem 27.11.2026, Tafelrunde neu: "die Suche zeigt, wer
+   * schon da ist"). Nur Kennungen: Name und Bild haengt die Route an
+   * (`mitWartenden` in http/app.ts), die Schlange kennt keine Datenbank.
+   * `suchende` bleibt daneben stehen, damit aeltere Clients weiterzaehlen.
+   */
+  readonly wartende: readonly string[];
   /** Millisekunden bis zum Ablauf des Fensters. Ohne laufende Suche 0. */
   readonly restMs: number;
   /**
@@ -199,7 +207,7 @@ export class Suchschlange {
    */
   private readonly imBau = new Map<
     string,
-    { accountId: string; suchende: number; seit: number }
+    { accountId: string; suchende: number; wartende: readonly string[]; seit: number }
   >();
   /**
    * Konten, die waehrend des Tischbaus abgesprungen sind (seit dem
@@ -368,21 +376,23 @@ export class Suchschlange {
   stand(gameId: GameId, accountId: string): Suchstand {
     const ergebnis = this.ergebnisse.get(kontoSchluessel(gameId, accountId));
     if (ergebnis) {
-      return { sucht: false, suchende: 0, restMs: 0, tischId: ergebnis.tischId };
+      return { sucht: false, suchende: 0, wartende: [], restMs: 0, tischId: ergebnis.tischId };
     }
     // Der Tisch entsteht gerade: Aus Sicht des Suchenden laeuft die Suche
     // weiter, nur ohne Restzeit — der naechste Abruf nennt den Tisch.
     const bau = this.imBau.get(kontoSchluessel(gameId, accountId));
     if (bau) {
-      return { sucht: true, suchende: bau.suchende, restMs: 0, tischId: null };
+      return { sucht: true, suchende: bau.suchende, wartende: bau.wartende, restMs: 0, tischId: null };
     }
     const fenster = this.fensterVon(gameId, accountId)?.fenster;
     if (!fenster) {
-      return { sucht: false, suchende: 0, restMs: 0, tischId: null };
+      return { sucht: false, suchende: 0, wartende: [], restMs: 0, tischId: null };
     }
     return {
       sucht: true,
       suchende: fenster.suchende.size,
+      // Map behaelt die Einfuegereihenfolge: Wer zuerst kam, steht vorn.
+      wartende: [...fenster.suchende.keys()],
       restMs: Math.max(0, fenster.beginn + this.fensterMs - this.jetzt()),
       tischId: null,
     };
@@ -431,6 +441,7 @@ export class Suchschlange {
         this.imBau.set(kontoSchluessel(gameId, accountId), {
           accountId,
           suchende: accountIds.length,
+          wartende: accountIds,
           seit: jetzt,
         });
       }

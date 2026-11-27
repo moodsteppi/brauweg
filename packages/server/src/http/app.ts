@@ -15,7 +15,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { ZodError, z } from 'zod';
 import type { GameId } from '@brauweg/game-api';
 // Der Motivkatalog von Mememory. Der Server darf ein Spielmodul kennen — er
@@ -203,6 +203,7 @@ import {
   zieheAnfrageZurueck,
 } from '../tables/anfragen.js';
 import type { Vermittlung } from '../suche/vermittlung.js';
+import type { Suchstand } from '../suche/schlange.js';
 import type { PartyRuntime } from '../runtime/party.js';
 
 export const SESSION_COOKIE = 'brauweg_session';
@@ -2689,6 +2690,33 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return deps.vermittlung;
   }
 
+  /**
+   * Haengt an einen Suchstand Name und Bild der Wartenden an (Tafelrunde neu,
+   * 27.11.2026: "die Suche zeigt, wer schon da ist"). Die Schlange liefert nur
+   * Kennungen; hier kommt EINE Abfrage fuer alle dazu, und das Bild geht wie
+   * ueberall nur als URL heraus, nie als Bytes (siehe `avatar` im Schema).
+   * Eine Kennung ohne Konto (gerade geloescht) faellt still heraus.
+   */
+  async function mitWartenden(stand: Suchstand) {
+    if (stand.wartende.length === 0) return { ...stand, wartende: [] };
+    const zeilen = await deps.db
+      .select({
+        id: s.account.id,
+        name: s.account.displayName,
+        hatBild: sql<boolean>`${s.account.avatar} is not null`,
+      })
+      .from(s.account)
+      .where(inArray(s.account.id, [...stand.wartende]));
+    const nachId = new Map(zeilen.map((z) => [z.id, z]));
+    return {
+      ...stand,
+      wartende: stand.wartende.flatMap((id) => {
+        const z = nachId.get(id);
+        return z ? [{ id, name: z.name, bildUrl: z.hatBild ? `/api/avatars/${id}` : null }] : [];
+      }),
+    };
+  }
+
   /** Suche beginnen. Antwortet schon mit dem ersten Stand. */
   app.post('/api/suche/:gameId', { config: { rateLimit: LIMIT_SCHREIBEN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
@@ -2701,7 +2729,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .object({ config: z.unknown().optional(), sitze: z.number().int().optional() })
       .parse(request.body ?? {});
     return reply.send(
-      await sucheVermittlung().betritt(gameId, accountId, config ?? null, sitze ?? null),
+      await mitWartenden(
+        await sucheVermittlung().betritt(gameId, accountId, config ?? null, sitze ?? null),
+      ),
     );
   });
 
@@ -2713,7 +2743,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.get('/api/suche/:gameId', { config: { rateLimit: LIMIT_ALLGEMEIN } }, async (request, reply) => {
     const accountId = await requireAccount(request);
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
-    return reply.send(await sucheVermittlung().abruf(gameId, accountId));
+    return reply.send(await mitWartenden(await sucheVermittlung().abruf(gameId, accountId)));
   });
 
   /** Suche abbrechen. */

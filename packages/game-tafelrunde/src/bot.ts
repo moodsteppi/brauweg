@@ -68,7 +68,8 @@ import {
   werteFuer,
 } from './katalog.js';
 import { HEILUNG_FAKTOR } from './kampf.js';
-import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
+import { schaetzungFuerEinheit, zaehleMarken } from './synergien.js';
+import { FAEHIGKEIT_WERT, faehigkeitVon } from './faehigkeiten.js';
 import { baueZufall } from './zufall.js';
 
 // ---------------------------------------------------------------------------
@@ -811,7 +812,10 @@ export function staerke(
  * Vereinfachung dort, wo er sein soll (docs/spiele/auto-battler-konzept.md).
  */
 function leistung(id: EinheitId, angriff: number): number {
-  return einheit(id).rolle === 'beistand' ? angriff * HEILUNG_FAKTOR : angriff;
+  const grund = einheit(id).rolle === 'beistand' ? angriff * HEILUNG_FAKTOR : angriff;
+  // Seit dem 27.11.2026: die Faehigkeit als Aufschlag (`FAEHIGKEIT_WERT`).
+  const f = faehigkeitVon(id);
+  return f ? grund * (1 + FAEHIGKEIT_WERT[f.id]) : grund;
 }
 
 /**
@@ -850,7 +854,7 @@ function heerStaerke(einheiten: readonly Kaempfer[]): number {
   const zaehlung = zaehleMarken(einheiten);
   const deckung = deckungIm(einheiten);
   let summe = 0;
-  for (const k of einheiten) summe += staerke(k, bonusFuerEinheit(k.id, zaehlung), deckung);
+  for (const k of einheiten) summe += staerke(k, schaetzungFuerEinheit(k.id, zaehlung), deckung);
   return summe;
 }
 

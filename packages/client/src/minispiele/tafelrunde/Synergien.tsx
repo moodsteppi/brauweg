@@ -75,9 +75,30 @@ export interface Wertebonus {
   ruestung: number;
 }
 
+/**
+ * Der sichtbare Effekt einer Markenstufe (synergien.ts, seit dem 27.11.2026).
+ *
+ * Gelesen wird davon am Bildschirm nur `art` — als Schluessel fuer Farbe und
+ * Effektbild. Die Zahlen darin stehen im Satz `text` schon ausformuliert, und
+ * nur der wird gezeigt; nachgerechnet wird aus ihnen nichts.
+ */
+export interface Markeneffekt {
+  art: string;
+}
+
 export interface Synergiestufe {
   schwelle: number;
   bonus: Wertebonus;
+  /*
+   * Die beiden folgenden Felder sind wahlfrei, obwohl das Modul sie seit dem
+   * 27.11.2026 immer schickt: Die aufgezeichneten Szenen der Proben
+   * (`ruestkammer-szene.json`) und die Testfaelle stammen aus der Zeit davor.
+   * Fehlt der Satz, zeigt der Bildschirm wie bisher den Bonus (`bonusSatz`).
+   */
+  /** Der sichtbare Effekt dieser Stufe. */
+  effekt?: Markeneffekt;
+  /** Was diese Stufe tut, als ein Satz fuer das Pop-up der Marke (deutsch). */
+  text?: string;
 }
 
 /** Eine ganze Marke mit allen Stufen — kommt einmalig als `synergieTabelle`. */
@@ -139,6 +160,14 @@ export interface Synergiestand {
   naechsteSchwelle: number | null;
   /** Der geltende Bonus, null unterhalb der ersten Schwelle. */
   bonus: Wertebonus | null;
+  /*
+   * Seit dem 27.11.2026, wahlfrei aus demselben Grund wie an `Synergiestufe`:
+   * aufgezeichnete Szenen und Testfaelle aus der Zeit davor.
+   */
+  /** Der geltende Effekt, null unterhalb der ersten Schwelle. */
+  effekt?: Markeneffekt | null;
+  /** Was die geltende Stufe tut, als Satz; null unterhalb der ersten Schwelle. */
+  text?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -193,6 +222,21 @@ const MARKEN_ZEICHEN: Record<string, React.JSX.Element> = {
   // Krallenspur.
   drache: <path d="M6 4c1 6 3 10.5 6 14M11.5 3c0 6 .8 11.5 2.5 15M17 4c-1 6-1 11.5 0 15" />,
 };
+
+/**
+ * Das gezeichnete Zeichen einer Marke allein, ohne Reihe und Groesse — fuer
+ * TafelrundeNeu (minispiele/tafelrunde/neu/grafik.tsx), solange dort kein
+ * gemaltes Zeichen liegt. Herausgereicht statt abgeschrieben, damit eine Marke
+ * in beiden Oberflaechen dasselbe Zeichen traegt.
+ */
+export function markenGlyphe(marke: string): React.JSX.Element {
+  return MARKEN_ZEICHEN[marke] ?? <circle cx="12" cy="12" r="7" />;
+}
+
+/** Die Farbe einer Marke mit Rueckfall fuer eine, die dieser Client nicht kennt. */
+export function markenFarbe(marke: string): string {
+  return MARKEN_FARBE[marke] ?? ERSATZFARBE;
+}
 
 /**
  * Die Anzeigenamen aus der Tabelle der Sicht, als Nachschlagewerk.
