@@ -87,4 +87,23 @@ export function titelBild(): string | null {
 }
 
 /** Alles ausser den Figuren, was schon unter `public/tafelrunde/neu/` liegt. */
-const VORHANDEN: ReadonlySet<string> = new Set<string>([]);
+const VORHANDEN: ReadonlySet<string> = new Set<string>([
+  // 27.11.2026: Schauplaetze (szene, 60-116 kB), Rahmen, Zeichen, Effekte (wappen)
+  'feld/burghof',
+  'feld/dorfplatz',
+  'feld/herbstwald',
+  'feld/vulkan',
+  'karten/rahmen-1',
+  'karten/rahmen-2',
+  'karten/rahmen-3',
+  ...['wache', 'schuetze', 'magier', 'meuchler', 'beistand'].map((r) => `zeichen/rolle-${r}`),
+  ...['krieger', 'elementar', 'meuchler', 'waechter', 'naturwesen', 'untot', 'drache'].map(
+    (m) => `zeichen/marke-${m}`,
+  ),
+  'zeichen/stern',
+  'zeichen/gold',
+  'zeichen/leben',
+  ...['schild', 'heilung', 'funken', 'feuer', 'blitz', 'frost', 'rauch', 'blaetter', 'geist', 'betaeubt'].map(
+    (e) => `effekte/${e}`,
+  ),
+]);
