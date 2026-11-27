@@ -192,6 +192,7 @@ describe('Neues Hub: die restlichen Ansichten', () => {
       // Seit dem 23.10.2026 auch auf der Webseite (vorher nur in der App).
       'Browort',
       'Freunde',
+      'Community & Social Media',
       'Geburtstag',
       'Konto',
     ]);
@@ -216,6 +217,7 @@ describe('Neues Hub: die restlichen Ansichten', () => {
       // Seit dem 23.10.2026 auch auf der Webseite (vorher nur in der App).
       'Browort',
       'Freunde',
+      'Community & Social Media',
       'Konto',
     ]);
     expect(screen.getByRole('button', { name: 'Belohnung holen' })).toBeInTheDocument();
