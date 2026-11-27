@@ -32,10 +32,35 @@ export const FIGUREN_NEU_KANTE = 256;
  * Ausschnitt gerendert (bildfolgen-rendern.mjs, `--modelle`), damit alle
  * Figuren gleich gross erscheinen und auf einer Linie stehen.
  */
-export const FIGUREN_NEU_FUSSPUNKT = { x: 0.5, y: 0.8 } as const;
+export const FIGUREN_NEU_FUSSPUNKT = { x: 0.5, y: 0.765 } as const;
 
 /** Die Kennungen, deren Blatt schon unter `figuren/` liegt. */
-export const FIGUREN_NEU_VORHANDEN: ReadonlySet<string> = new Set<string>([]);
+export const FIGUREN_NEU_VORHANDEN: ReadonlySet<string> = new Set<string>([
+  // 27.11.2026: alle 22, gemeinsamer Ausschnitt (halbe Hoehe 1,501, Mitte 0,829),
+  // zusammen 3,0 MB. Geladen wird nach Bedarf, nicht vorab.
+  'dorfwache',
+  'schildknappe',
+  'astschuetze',
+  'steinschleuderer',
+  'funkenlehrling',
+  'irrlicht',
+  'gassendieb',
+  'moosheiler',
+  'hainwaechterin',
+  'grimmbart',
+  'bogenmeisterin',
+  'nachtpfeil',
+  'frostweberin',
+  'schattenklinge',
+  'knochenspaeher',
+  'runenpriester',
+  'wurzelriese',
+  'drachenkind',
+  'sturmrufer',
+  'grabfuerstin',
+  'klingentaenzerin',
+  'lichtwahrerin',
+]);
 
 /** Pfad zum Blatt einer Einheit, oder null, solange es keins gibt. */
 export function figurNeuBlatt(kennung: string): string | null {
