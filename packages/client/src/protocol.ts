@@ -186,6 +186,7 @@ const MODULE_VERSIONS: Record<string, number> = {
   brocooked: BROCOOKED_MODULE_VERSION,
   brochess: BROCHESS_MODULE_VERSION,
   dreckbro: DRECKBRO_MODULE_VERSION,
+  wuerfelglanz: 1,
 };
 
 /** Version fuer den Beitritt. Unbekannte Spiele bekommen die 1. */

@@ -134,7 +134,7 @@ export function StartNeu({
         </span>
       </button>
 
-      {activeTable && (
+      {activeTable && inAppSichtbar(activeTable.gameId) && (
         <button
           type="button"
           className="hb-weiter"

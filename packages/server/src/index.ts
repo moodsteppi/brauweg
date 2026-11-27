@@ -14,7 +14,7 @@ import { loadConfig } from './config.js';
 import { connect } from './db/connect.js';
 import * as s from './db/schema.js';
 import { waehleMailer } from './mail/index.js';
-import { APP_ORIGINS, buildApp } from './http/app.js';
+import { APP_ORIGIN, APP_ORIGINS, buildApp } from './http/app.js';
 import { appInhaltAusUmgebung, umfangKennungen } from './games/registry.js';
 import { umfangAusUmgebung, umfangZeile } from './umfang.js';
 import { appVerknuepfungAusUmgebung } from './http/app-verknuepfung.js';
@@ -217,6 +217,7 @@ async function main(): Promise<void> {
     allowedOrigins:
       config.env === 'development' ? [] : [config.publicUrl, ...APP_ORIGINS],
     appOrigins: APP_ORIGINS,
+    iosOrigin: APP_ORIGIN,
     appInhalt,
     push,
     hausspielerTarnen: hausspielerTarnung(config.stage),

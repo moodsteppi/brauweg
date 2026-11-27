@@ -17,6 +17,7 @@ import type {
   GameMeta,
   GameRegistry,
 } from '@brauweg/game-api';
+import { wuerfelglanz } from '@brauweg/game-wuerfelglanz';
 import { brochess } from '@brauweg/game-brochess';
 import { brocooked } from '@brauweg/game-brocooked';
 import { cambio } from '@brauweg/game-cambio';
@@ -51,6 +52,7 @@ const MODULES: readonly AnyGameModule[] = [
   brocooked as unknown as AnyGameModule,
   brochess as unknown as AnyGameModule,
   dreckbro as unknown as AnyGameModule,
+  wuerfelglanz as unknown as AnyGameModule,
 ];
 
 /**
@@ -107,7 +109,7 @@ export function abstimmModiFuer(plattform: Plattform, umfang: Umfang = ALLES): (
     // Vorschau-Spiel auch: Bis zum 27.10.2026 kam der Mehrkampf allein mit
     // `abstimmung` mit — und `UMFANG=…,mehrkampf` meldete der Start als
     // unbekannt, obwohl die Zeile genau das Gewollte sagte.
-    .filter(m => imUmfang(umfang, m.id) && (m.id === 'mehrkampf' || plattform === 'app'))
+    .filter(m => imUmfang(umfang, m.id) && (m.id === 'mehrkampf' || plattform !== 'web'))
     .map(m => ({
       ...m, availability: 'preview' as const,
       rotationSize: (sitze: number) => sitze, suggestedRounds: () => [],
@@ -158,7 +160,8 @@ export function isPlayable(id: GameId): boolean {
  * Wo eine Anfrage herkommt. Die App erkennt der Server an ihrer Herkunft
  * (`APP_ORIGINS` in http/app.ts), alles andere ist die Webseite.
  */
-export type Plattform = 'web' | 'app';
+/** Historisches `app` bezeichnet iOS; Android bleibt bei seinen bisherigen App-Freigaben. */
+export type Plattform = 'web' | 'app' | 'android';
 
 /**
  * Was ein Spiel auf einer Plattform ist.
@@ -176,7 +179,7 @@ export type Plattform = 'web' | 'app';
 export type Freigabe = 'spielbar' | 'bald' | 'aus';
 
 export interface SpielFreigabe {
-  readonly web: 'spielbar' | 'bald';
+  readonly web: Freigabe;
   readonly app: Freigabe;
 }
 
@@ -233,6 +236,7 @@ export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
      `drecksau` ab — fuer die Produktion bleibt UMFANG die Obergrenze, dort
      muss `dreckbro` statt `drecksau` stehen. */
   dreckbro: { web: 'spielbar', app: 'spielbar' },
+  wuerfelglanz: { web: 'aus', app: 'spielbar' },
   /* Vorschau-Spiel mit Moderationsbedarf (freier Text zwischen Sitzen, siehe
      PREVIEW) — in der App gar nicht erst ankuendigen. */
   werwolf: { web: 'bald', app: 'aus' },
@@ -248,6 +252,8 @@ export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
  */
 export function freigabeAuf(id: GameId, plattform: Plattform, umfang: Umfang = ALLES): Freigabe {
   if (!imUmfang(umfang, id)) return 'aus';
+  if (byId.get(id)?.meta.nurIos && plattform !== 'app') return 'aus';
+  if (plattform === 'android') plattform = 'app';
   const eintrag = FREIGABE[id];
   if (!byId.has(id)) {
     // Ohne Modul bleibt es Vorschau; nur die App darf es ganz ausblenden.

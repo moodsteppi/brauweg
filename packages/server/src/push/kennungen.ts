@@ -63,6 +63,7 @@ export const ZUGSPIELE: ReadonlySet<string> = new Set([
   'brochess',
   // Bis zu fuenf Spieler reihum: Wer gerade nicht hinsieht, haelt alle auf.
   'dreckbro',
+  'wuerfelglanz',
 ]);
 
 /**

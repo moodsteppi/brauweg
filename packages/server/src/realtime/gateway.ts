@@ -356,6 +356,7 @@ export interface GatewayOptions {
    * Gateway, welche Verbindung aus der App kommt — fuer `appInhalt`.
    */
   readonly appOrigins?: readonly string[];
+  readonly iosOrigin?: string;
   /**
    * Hausspieler (src/hausrunden.ts) am Tisch NICHT als Bot kennzeichnen.
    * Vorgabe aus; eingeschaltet nur dort, wo `hausspielerTarnung` es sagt.
@@ -756,7 +757,9 @@ export class Gateway {
     const { table, seats } = await tableWithSeats(this.db, message.tableId);
 
     // Mindestversion wird beim Beitritt erzwungen, nicht mitten in der Partie.
-    const expected = requireModule(table.gameId).protocolVersion;
+    const module = requireModule(table.gameId);
+    if (module.meta.nurIos && !connection.ausIos) throw forbidden('gameNotPlayable');
+    const expected = module.protocolVersion;
     if (!moduleVersionAccepted(message.moduleVersion, expected)) {
       send(connection.socket, errorMessage('clientTooOld'));
       connection.socket.close();
