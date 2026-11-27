@@ -1,8 +1,15 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { blattPfad } from './bildfolge';
 import { Figur3D } from './Figur3D';
+
+/* Zwei Blaetter als blosse Pfade — Figur3D prueft keine Dateiliste, es zeigt,
+   was es bekommt. (Bis zum 28.11.2026 kamen sie aus den alten Rollenblaettern.) */
+const BLAETTER: Record<string, string> = {
+  wache: '/tafelrunde/neu/figuren/dorfwache.webp',
+  magier: '/tafelrunde/neu/figuren/funkenlehrling.webp',
+};
+const blattPfad = (rolle: string): string => BLAETTER[rolle]!;
 
 /*
  * Das Bauteil steht an vier Orten: Arena, Brett, Bank und Ladenkarte. Geprueft

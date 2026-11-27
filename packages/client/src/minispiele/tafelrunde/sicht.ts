@@ -1,19 +1,18 @@
 /**
  * Die Sicht des Tafelrunde-Moduls, wie der Client sie liest.
  *
- * Sie stand bis zum 06.09.2026 in screens/Tafelrunde.tsx. Hier steht sie,
- * weil der Vertrag unter src/vertrag/ sie gegen die echte Modulsicht haelt
- * (packages/game-tafelrunde/src/sicht.ts) — und ein Import aus dem Bildschirm
- * zoege React samt aller Bauteile in einen Test, der nur Typen vergleichen
- * will.
+ * Hier und nicht im Bildschirm, weil der Vertrag unter src/vertrag/ sie gegen
+ * die echte Modulsicht haelt (packages/game-tafelrunde/src/sicht.ts) — und
+ * ein Import aus dem Bildschirm zoege React samt aller Bauteile in einen Test,
+ * der nur Typen vergleichen will.
  *
  * Zweitbeschreibung mit Absicht: Der Client soll genau die Felder kennen, die
  * er benutzt, und nicht mit einer neueren Serverfassung mitwandern. Was das
  * kostet und wer es auffaengt, steht in src/vertrag/README.md.
  */
 
-import type { Kampfpaarung, Paarungsergebnis } from './KampfAnzeige';
-import type { Synergie, Synergiestand } from './Synergien';
+import type { Kampfpaarung, Paarungsergebnis } from './kampfbericht';
+import type { Synergie, Synergiestand } from './marken';
 import type { Platz } from './platzierung';
 import type { Kaempfer } from './zuege';
 
@@ -222,7 +221,7 @@ export interface TafelrundeSicht {
  * Eine Faehigkeit, wie die Sicht sie liefert (faehigkeiten.ts im Modul).
  *
  * `id` ist eine Zeichenkette und kein Vereinigungstyp, aus demselben Grund wie
- * die Marke in Synergien.tsx: Eine neue Faehigkeit im Modul soll am Bildschirm
+ * die Marke in marken.tsx: Eine neue Faehigkeit im Modul soll am Bildschirm
  * mit dem deutschen Namen aus der Sicht erscheinen und nicht den Bau brechen.
  */
 export interface Faehigkeit {

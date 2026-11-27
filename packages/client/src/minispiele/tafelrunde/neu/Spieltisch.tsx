@@ -4,7 +4,8 @@
  * ohne Server — die Probe `/probe/tafelrunde-neu` haengt ihn mit einer
  * aufgezeichneten Sicht ein.
  *
- * DIE LOGIK IST DIE DER RUESTKAMMER (screens/Tafelrunde.tsx), uebernommen und
+ * DIE LOGIK IST DIE DER ALTEN RUESTKAMMER (screens/Tafelrunde.tsx, am
+ * 28.11.2026 entfernt), uebernommen und
  * nicht neu erfunden: dieselbe Sperre bis zur naechsten Revision
  * (`gesendet`), dieselben Pruefungen beim Ziehen (`darfSchieben`, zwei Zahlen
  * der Sicht), dieselbe Ableitung von Kaufen, Wuerfeln, Rang und Verkaufen aus
@@ -20,10 +21,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { schauplatzFuerPartie } from '../../../figuren3d/grafik-neu';
-import { type Kampfpaarung, type Paarungsergebnis, abzuspielen } from '../KampfAnzeige';
+import { type Kampfpaarung, type Paarungsergebnis, abzuspielen } from '../kampfbericht';
 import { eigenerPlatz, gegnerDieseRunde } from '../platzierung';
 import type { Einheit, Faehigkeit, Stufenwerte, TafelrundeSicht } from '../sicht';
-import { type Synergie, type Synergiestand, markennamen, schwellenPruefer } from '../Synergien';
+import { type Synergie, type Synergiestand, markennamen, schwellenPruefer } from '../marken';
 import { einheitName, tz } from '../text';
 import {
   type Ort,

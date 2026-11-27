@@ -24,7 +24,6 @@ vi.mock('../../../figuren3d/grafik-neu', async (original) => {
   };
 });
 
-import { blattPfad } from '../bildfolge';
 import { Effektbild, Figur, Kartenrahmen, MarkeZeichen, RolleZeichen, Sterne, figurBlatt, kostenStufe } from './grafik';
 
 const WACHE = { id: 'dorfwache', name: 'Pinguinwache', rolle: 'wache', kosten: 1 };
@@ -34,9 +33,11 @@ describe('Bildbausteine von TafelrundeNeu', () => {
     vorhanden.dateien.clear();
   });
 
-  it('Figur: ohne neues Blatt das alte Rollenblatt', () => {
-    render(<Figur einheit={WACHE} />);
-    expect(screen.getByAltText('Pinguinwache')).toHaveAttribute('src', blattPfad('wache')!);
+  it('Figur: ohne Blatt das Rollenzeichen, kein <img> ins Leere', () => {
+    // Das alte Rollenblatt als Rueckfall gibt es seit dem 28.11.2026 nicht mehr.
+    const { container } = render(<Figur einheit={WACHE} />);
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByRole('img', { name: 'Pinguinwache' })).toBeInTheDocument();
   });
 
   it('Figur: ein eingetragenes Blatt erscheint ohne Codeaenderung', () => {
@@ -47,6 +48,7 @@ describe('Bildbausteine von TafelrundeNeu', () => {
   });
 
   it('Figur: faellt das Blatt beim Laden aus, steht das Rollenzeichen', () => {
+    vorhanden.dateien.add('figuren/dorfwache');
     render(<Figur einheit={WACHE} />);
     fireEvent.error(screen.getByAltText('Pinguinwache'));
     expect(screen.getByRole('img', { name: 'Pinguinwache' })).toBeInTheDocument();

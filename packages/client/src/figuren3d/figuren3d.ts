@@ -1,52 +1,25 @@
 /**
- * Die vorgerenderten Bildfolgen der Tafelrunde-Figuren — die EINE Stelle, an
- * der steht, was unter `public/tafelrunde/figuren3d/` liegt.
+ * Das Raster der Figurenblaetter von Tafelrunde — Zeilen, Bildzahl, Bildrate,
+ * Schleife und Zellweite jeder Bewegung.
  *
- * ABGESPIELT WERDEN SIE VON `minispiele/tafelrunde/bildfolge.ts`: Dort steht,
- * welches Ereignis welche Folge ausloest und welches Bild wann dran ist. Diese
- * Datei beschreibt nur, WAS da liegt — sie kennt weder Kampf noch Uhr.
+ * Die Blaetter selbst (je Einheit eins, 256 px) nennt `grafik-neu.ts`; sie
+ * haben genau dieses Raster. ABGESPIELT werden sie von
+ * `minispiele/tafelrunde/bildfolge.ts`: Dort steht, welches Ereignis welche
+ * Folge ausloest und welches Bild wann dran ist.
  *
- * Erzeugt hat sie `bildfolgen-rendern.mjs` (danebenliegend, laeuft einmal von
- * Hand, ist NICHT Teil des Builds). Wer die Bilder neu rendert und dabei an
- * Bildzahl, Rasterweite oder Ausschnitt dreht, aendert die Zahlen hier mit —
- * das Skript gibt sie am Ende seines Laufs aus.
+ * Erzeugt hat das Raster `bildfolgen-rendern.mjs` (danebenliegend, laeuft von
+ * Hand, NICHT Teil des Builds). Wer die Bilder neu rendert und dabei an
+ * Bildzahl, Rasterweite oder Ausschnitt dreht, aendert die Zahlen hier mit.
  *
- * DIE KAMERA STEHT AUF 16 GRAD ueber der Waagerechten — entschieden von Robin
- * am 05.09.2026, belegt am Vergleichsbild `docs/bilder/tafelrunde-kamerawinkel.webp`.
- * Der erste Satz Blaetter war mit 38,6 Grad gerendert, der Kamera der 3D-Probe,
- * die auf ein BRETT schaut: Man sah den Scheitel und kein Gesicht. Wer den
- * Winkel wieder anfasst, aendert die Zahlen hier mit.
- *
- * WOZU DAS GANZE: Die Figuren sollen wie 3D aussehen, aber nicht live gerendert
- * werden. Die Probe mit Three.js lief auf dem Handy mit 20 Bildern je Sekunde
- * und lud 1,6 MB fuer fuenf Rollen. Vorgerendert sind es 284 kB, und das
- * Abspielen kostet so viel wie ein `background-position`. Genau deshalb ist
- * die Probe selbst am 06.09.2026 geloescht worden — die Entscheidung gegen sie
- * war gefallen, und ein zweiter Weg auf den Bildschirm haette nur Pflege
- * gekostet. Sie lag unter `packages/client/src/proben/arena-3d/`; wer sie
- * sehen will, findet sie in der Historie vor diesem Datum.
- *
- * LIZENZ ALLER FUENF BLAETTER: Kay Lousberg (kaylousberg.com), CC0 1.0
- * Universal — freie Verwendung auch kommerziell, Namensnennung nicht verlangt.
- * Vier Blaetter stammen aus "Character Pack : Adventurers" 1.0, der Beistand
- * seit dem 06.09.2026 aus "Adventurers 2.0" und "Character Animations 1.1"
- * derselben Hand. Beide Lizenztexte liegen als `LIZENZ.txt` neben den Bildern.
+ * Bis zum 28.11.2026 stand hier ausserdem die Liste der alten KayKit-Blaetter
+ * je Rolle (`FIGUREN3D`, `blattVon`) samt ihrem gemessenen Ausschnitt. Sie
+ * ging mit dem alten Tafelrunde; die Zellkante 128 unten ist seither nur noch
+ * die Masseinheit, in der `zelleVon` rechnet — `blattVersatz` teilt sie wieder
+ * heraus, die Rechnung gilt deshalb fuer 256er Blaetter genauso.
  */
-
-/** Die fuenf Rollen der Tafelrunde, fuer die es Figuren gibt. */
-export type Rolle3D = 'wache' | 'meuchler' | 'schuetze' | 'magier' | 'beistand';
 
 /** Was eine Figur tun kann. */
 export type Bewegung3D = 'stand' | 'lauf' | 'schlag' | 'getroffen' | 'tod';
-
-/** Ein Blatt je Rolle; jede Bewegung ist eine Zeile darin. */
-export interface Blatt3D {
-  readonly rolle: Rolle3D;
-  /** Pfad unter `public/`, direkt als `src` oder `background-image` nutzbar. */
-  readonly datei: string;
-  /** Welche Figur des Pakets dahintersteckt — fuer die Lizenzauskunft. */
-  readonly herkunft: string;
-}
 
 export interface Bewegungsfolge3D {
   readonly bewegung: Bewegung3D;
@@ -113,47 +86,6 @@ export const FIGUREN3D_SPALTEN = 6;
 export const FIGUREN3D_ZEILEN = 6;
 
 /**
- * Wo die Figur in ihrer Zelle auf dem Boden aufsetzt, als Anteil der Kante.
- *
- * NICHT die Zellmitte: Der Ausschnitt umfasst ALLE Bewegungen, auch den weit
- * ausgeholten Schlag, und liegt deshalb hoeher als die stehende Figur. Wer die
- * Zelle mittig auf ein Feld setzt, stellt die Figur ein Stueck zu hoch — bei
- * 128 Pixeln sind das gut 38. Ausgerechnet aus der Kamera, nicht im Bild
- * gemessen.
- *
- * ER GILT FUER ALLE FUENF BLAETTER UND FUER JEDE ZELLE, auch die breite der
- * Todeszeile: Die ist nur zur Seite aufgezogen, nicht verschoben, und ihre
- * Mitte ist dieselbe. Er aendert sich, sobald EINE Figur weiter ausgreift als
- * bisher — der Ausschnitt ist einer fuer alle. Zwei Male hat es das schon
- * verschoben: als der Beistand vom Barbaren auf den Druiden wechselte (der
- * erhobene Stab hob ihn von 0,7394 auf 0,77) und als die Todeszeile ihre
- * eigene Zelle bekam (0,77 auf 0,80 — ohne die liegende Figur wird der
- * gemeinsame Ausschnitt enger, die Figuren also groesser). Wer nur die
- * Blaetter tauscht und die Zahl hier vergisst, stellt das ganze Feld daneben.
- */
-export const FIGUREN3D_FUSSPUNKT = { x: 0.5, y: 0.8 } as const;
-
-/**
- * Wie viele Weltmeter die HOEHE einer Zelle abdeckt.
- *
- * Das ist die Zahl, ohne die niemand sagen kann, wie gross eine Figur am
- * Bildschirm wird: Eine Zelle ist immer 128 Pixel hoch, aber wie viel Welt in
- * diesen 128 Pixeln steckt, entscheidet der gemessene Ausschnitt — und der
- * aendert sich, sobald eine Figur weiter ausgreift als bisher.
- *
- * WOZU SIE GEBRAUCHT WIRD: Wer den Ausschnitt in Prozent der Karte setzt und
- * diese Zahl nicht kennt, aendert bei jedem neuen Satz Blaetter unbemerkt die
- * Groesse aller Figuren. Genau das waere am 06.09.2026 passiert: Als die
- * Todeszeile ihre eigene Zelle bekam, wurde der gemeinsame Ausschnitt von 4,29
- * auf 3,76 Meter enger, und dieselbe Kastenhoehe haette alle Figuren um 14 %
- * wachsen lassen. `FIGURENKASTEN` in `minispiele/tafelrunde/bildfolge.ts`
- * rechnet mit ihr dagegen.
- *
- * Das Skript gibt sie als "halbe Hoehe" aus — hier steht das Doppelte.
- */
-export const FIGUREN3D_ZELLHOEHE_METER = 3.756;
-
-/**
  * Alle Figuren schauen nach RECHTS.
  *
  * Gerendert ist nur diese eine Blickrichtung (Dreiviertelansicht, 17 Grad zur
@@ -192,36 +124,10 @@ export const FIGUREN3D_BEWEGUNGEN: readonly Bewegungsfolge3D[] = [
   // sieben Abstaenden also 8,75 — aufgerundet auf 10, damit die Folge im
   // Zeitraffer x2 in 400 ms durchlaeuft und nicht in 457. Vorher stand hier 15,
   // was mit sechs Bildern auf dieselben 200 ms fuer die halbe Animation kam.
-  // Wer sie aendert, sieht in KampfAnzeige.tsx nach: Das Nachspiel des Taktes
+  // Wer sie aendert, sieht in neu/Kampf.tsx nach: Das Nachspiel des Taktes
   // und das Ausblenden der Figur haengen an dieser Dauer.
   { bewegung: 'tod', zeile: 4, bilder: 8, schleife: false, bildrate: 10, weite: 1.5, proZeile: 4 },
 ];
-
-export const FIGUREN3D: readonly Blatt3D[] = [
-  { rolle: 'wache', datei: '/tafelrunde/figuren3d/wache.webp', herkunft: 'KayKit Knight' },
-  { rolle: 'meuchler', datei: '/tafelrunde/figuren3d/meuchler.webp', herkunft: 'KayKit Rogue' },
-  {
-    rolle: 'schuetze',
-    datei: '/tafelrunde/figuren3d/schuetze.webp',
-    herkunft: 'KayKit Rogue_Hooded',
-  },
-  { rolle: 'magier', datei: '/tafelrunde/figuren3d/magier.webp', herkunft: 'KayKit Mage' },
-  // Der Beistand ist ein Heiler (Moosheiler, Runenpriester, Lichtwahrerin) und
-  // trug bis zum 06.09.2026 den Barbaren mit Axt und Schild — "Adventurers 1.0"
-  // hat keinen Heiler. Der Druide aus 2.0 ist einer: gruene Kapuze, Geweih,
-  // Aststab. Er kommt aus einem anderen Paket als die vier ueber ihm, deshalb
-  // steht das Paket in der Herkunft mit.
-  {
-    rolle: 'beistand',
-    datei: '/tafelrunde/figuren3d/beistand.webp',
-    herkunft: 'KayKit Druid (Adventurers 2.0)',
-  },
-];
-
-/** Das Blatt einer Rolle, oder undefined, wenn es fuer sie keines gibt. */
-export function blattVon(rolle: Rolle3D): Blatt3D | undefined {
-  return FIGUREN3D.find((b) => b.rolle === rolle);
-}
 
 /** Die Folge einer Bewegung. Es gibt sie fuer jede Bewegung, deshalb kein undefined. */
 export function folgeVon(bewegung: Bewegung3D): Bewegungsfolge3D {

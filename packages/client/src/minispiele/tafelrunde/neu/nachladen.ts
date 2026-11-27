@@ -1,9 +1,9 @@
 /**
  * Bilder nach Bedarf holen — fuer TafelrundeNeu.
  *
- * WARUM NICHT `useVorladen` (vorladen.ts): Der Lauf dort ist EINE feste Liste
- * fuer das alte Tafelrunde, samt dessen Bildschirmpaket (paket.ts). Die neue
- * Oberflaeche laedt nach dem Umsetzungsplan (Abschnitt 4) nur, was gerade
+ * NACH BEDARF und nicht als feste Liste (wie bis zum 28.11.2026 `useVorladen`
+ * im alten Tafelrunde): Die Oberflaeche laedt nach dem Umsetzungsplan
+ * (Abschnitt 4) nur, was gerade
  * gebraucht wird: die Figuren in Laden, Bank, Brett und Kampf und den
  * Schauplatz der laufenden Runde. Welche Dateien das sind, weiss erst der
  * Bildschirm — und es wechselt mit jeder Runde.
@@ -12,14 +12,39 @@
  * der Bildschirm neu aufgebaut wird. Sonst kaeme das Ladebild bei jedem
  * Wiederverbinden zurueck, obwohl der Browser alles im Speicher hat.
  *
- * GEHOLT WIRD MIT `bildHolen` aus vorladen.ts — derselbe Weg, mit derselben
- * Ruhefrist-Philosophie: Eine Datei, die ausbleibt, haelt niemanden auf
- * (`FRIST_MS`), die Figur zeigt dann ihren Ersatz.
+ * Eine Datei, die ausbleibt, haelt niemanden auf (`FRIST_MS`), die Figur
+ * zeigt dann ihren Ersatz.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { FRIST_MS, bildHolen } from '../vorladen';
+/**
+ * Die Ruhefrist: Aufgegeben wird erst, wenn so lange GAR NICHTS mehr
+ * eintrifft — jede fertige Datei stellt die Uhr zurueck. Eine Gesamtfrist
+ * schluege auf langsamen Leitungen zu, auf denen alles funktioniert (gemessen
+ * gegen Chromes „Slow 3G", siehe Geschichte von vorladen.ts).
+ */
+export const FRIST_MS = 15_000;
+
+/**
+ * Ein Bild holen und entpacken. Ein Fehlschlag kommt als abgelehntes
+ * Versprechen zurueck, nicht als Ausnahme: Der Lauf soll wissen, dass die
+ * Datei fehlt, aber daran nicht scheitern. Ueber `<img>` und `decode()`, damit
+ * das spaetere `<img>` unter derselben Adresse nicht noch einmal entpackt.
+ */
+export function bildHolen(pfad: string): Promise<void> {
+  return new Promise((erfuellen, ablehnen) => {
+    const bild = new Image();
+    const schiefgegangen = (): void => ablehnen(new Error(pfad));
+    bild.src = pfad;
+    if (typeof bild.decode === 'function') {
+      void bild.decode().then(() => erfuellen(), schiefgegangen);
+      return;
+    }
+    bild.onload = () => erfuellen();
+    bild.onerror = schiefgegangen;
+  });
+}
 
 type Zustand = 'laedt' | 'da' | 'fehlt';
 

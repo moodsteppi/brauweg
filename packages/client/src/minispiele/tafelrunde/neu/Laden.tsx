@@ -10,26 +10,45 @@
  *
  * KAUFEN darf, was `legalActions` anbietet (`kaufbar`), nicht was eine
  * Goldrechnung hier ergaebe (CLAUDE.md, „Der Client bildet keine Regel
- * nach"). Warum eine Karte gesperrt ist, sagt `kaufhindernis` (Ladenkarte.tsx)
- * — das beschriftet nur eine Absage, die der Server schon ausgesprochen hat.
+ * nach"). Warum eine Karte gesperrt ist, sagt `kaufhindernis` (unten) — das
+ * beschriftet nur eine Absage, die der Server schon ausgesprochen hat.
  *
  * PREIS UND STUFE SIND ZWEIERLEI: `kosten` ist die Kostenstufe (1–3, Farbe des
  * Rahmens), `preis` das, was der Kauf kostet. Angezeigt und verglichen wird
  * der Preis aus dem Katalog, nie eine Umrechnung aus der Stufe.
  *
  * DIE KARTE IST EINE SCHALTFLAECHE (Tipp kauft), und in eine Schaltflaeche
- * darf kein zweiter Knopf (Ladenkarte.tsx, gleicher Grund). Der Griff zum
+ * darf kein zweiter Knopf. Der Griff zum
  * Einheitenblatt liegt deshalb DANEBEN, oben rechts ueber der Karte.
  */
 
 import { useState } from 'react';
 
 import { kartenBild, kartenRahmen } from '../../../figuren3d/grafik-neu';
-import { type Kaufhindernis, kaufhindernis } from '../Ladenkarte';
 import type { EigeneSicht, Einheit } from '../sicht';
 import { einheitName, rollenName, tz } from '../text';
 import { Figur, Kartenrahmen, Kurzname, MarkeZeichen, Muenze, RolleZeichen, kostenStufe, preisVon } from './grafik';
 import stil from './neu.module.css';
+
+/**
+ * Warum ein Kauf gerade nicht geht — die AUSKUNFT, nicht die Entscheidung.
+ *
+ * Ob gekauft werden darf, sagt allein `legalActions`. Dieser Wert wird erst
+ * gebildet, wenn dort nichts steht, und beschriftet nur die schon gefallene
+ * Absage (aus der alten Ladenkarte uebernommen, die am 28.11.2026 mit dem
+ * alten Tafelrunde ging). Gibt `null` zurueck, wenn Gold und Bank die Sperre
+ * NICHT erklaeren — dann steht der Grund woanders, und eine geratene
+ * Beschriftung waere schlimmer als keine.
+ */
+export type Kaufhindernis = 'gold' | 'bank' | null;
+
+export function kaufhindernis(gold: number, bankVoll: boolean, angeboten: Einheit | undefined): Kaufhindernis {
+  if (!angeboten) return null;
+  // Der PREIS, nicht die Kostenstufe (`preisVon`).
+  if (gold < preisVon(angeboten)) return 'gold';
+  if (bankVoll) return 'bank';
+  return null;
+}
 
 /**
  * Das Bild der Karte: die Splash-Art der Einheit (`kartenBild`, freigestellte

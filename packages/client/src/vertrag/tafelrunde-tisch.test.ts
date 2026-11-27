@@ -1,8 +1,7 @@
 import { SEAT_COUNTS } from '@brauweg/game-tafelrunde';
 import { describe, expect, it } from 'vitest';
 
-import { BOT_SITZE, SITZ_WAHL as SITZ_WAHL_NEU } from '../minispiele/tafelrunde/neu/useLobby';
-import { SITZE, SITZ_WAHL } from '../screens/Tafelrunde';
+import { BOT_SITZE, SITZ_WAHL } from '../minispiele/tafelrunde/neu/useLobby';
 
 /*
  * Vertrag fuer den Tafelrunde-TISCH, nicht fuer seine Sicht.
@@ -11,8 +10,8 @@ import { SITZE, SITZ_WAHL } from '../screens/Tafelrunde';
  * protocol.ts gegen die echten Modulsichten. Hier geht es um die andere
  * Richtung: um das, was der Bildschirm SCHICKT, wenn er einen Tisch aufmacht.
  *
- * Vorgeschichte: Bis zum 05.09.2026 stand DEFAULT_REGELN in Tafelrunde.tsx
- * ein zweites Mal, wortgleich abgeschrieben, und ging als `config` an
+ * Vorgeschichte: Bis zum 05.09.2026 stand DEFAULT_REGELN im (inzwischen
+ * entfernten) alten Bildschirm screens/Tafelrunde.tsx ein zweites Mal, wortgleich abgeschrieben, und ging als `config` an
  * `createTable`. Der Server schreibt eine mitgeschickte `config` als
  * Regelsatz des Tisches fest — die Kopie ueberstimmte also das Modul: Bei der
  * Umstellung auf 20 Startleben und noch einmal bei der auf 14 waere jeder
@@ -37,19 +36,6 @@ describe('Vertrag: Tafelrunde macht nur Tische auf, die das Modul kennt', () => 
   });
 
   it('macht den Bot-Tisch mit einer Sitzzahl auf, die es gibt', () => {
-    expect(SEAT_COUNTS).toContain(SITZE);
-  });
-
-  /*
-   * TafelrundeNeu (hinter `?tafelrunde=neu`) fuehrt dieselben Zahlen als
-   * eigene Konstanten (neu/useLobby.ts) — bis das alte Tafelrunde nach der
-   * Abnahme entfernt wird. Dieselbe Aufsicht fuer beide, sonst liefe die
-   * neue Oberflaeche an diesem Vertrag vorbei.
-   */
-  it('TafelrundeNeu: dieselbe Aufsicht ueber Sitzwahl und Bot-Tisch', () => {
-    for (const zahl of SITZ_WAHL_NEU) {
-      expect(SEAT_COUNTS).toContain(zahl);
-    }
     expect(SEAT_COUNTS).toContain(BOT_SITZE);
   });
 });

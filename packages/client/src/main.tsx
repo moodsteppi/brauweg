@@ -62,15 +62,6 @@ function isDevFlag(name: string): boolean {
  * `setNotFoundHandler` in `packages/server/src/http/app.ts`), Vite tut das in
  * der Entwicklung von selbst.
  *
- * - /probe/arena-2d — Arena-Szene in 2D mit animierten Sprites (Probe A)
- * - /probe/kampf — die ECHTE Kampfanzeige des Spiels mit einem aufgezeichneten
- *   Kampf aus Runde 10. Eine der beiden, die bleiben sollen: Sie ist die
- *   Stelle, an der man Aenderungen an der Kampfanzeige ansieht, ohne eine
- *   Partie zu spielen (siehe Kopf von `proben/kampf/ProbeKampf.tsx`).
- * - /probe/ruestkammer — dasselbe fuer die andere Haelfte von Tafelrunde:
- *   Brett, Bank und Laden mit einem aufgezeichneten Vorbereitungsstand. Auch
- *   sie bleibt, und aus demselben Grund (siehe Kopf von
- *   `proben/ruestkammer/ProbeRuestkammer.tsx`).
  * - /probe/manufaktur?fall=neu|mitte|voll|palast — die echte Kartenmanufaktur mit
  *   festen Staenden und einem nachgestellten Server aus demselben Kern. Fuer
  *   Bildschirmgroessen und gelieferte Bilder, auch im Browser (das Spiel
@@ -84,10 +75,12 @@ function isDevFlag(name: string): boolean {
  *   man das Brett ansehen kann, ohne zwei Konten an einen Tisch zu setzen.
  * - /probe/dreckbro?fall=… — der echte DreckBro-Tisch mit festen Staenden
  *   (Anfang, Schneeball zielen, Robbenklau, Ende, fuenf Spieler), ohne Server.
- * - /probe/tafelrunde-neu?fall=… — die neue Oberflaeche von Tafelrunde
- *   (hinter `?tafelrunde=neu`) mit Sichten aus einer echten Bot-Partie:
- *   einstieg, suche, wartesaal, ladebild, ruesten, marke, blatt, regeln,
- *   kampf, ende. Fuer die Sichtprobe bei drei Handygroessen.
+ * - /probe/tafelrunde-neu?fall=… — Tafelrunde mit Sichten aus einer echten
+ *   Bot-Partie: einstieg, suche, wartesaal, ladebild, ruesten, marke, blatt,
+ *   regeln, kampf, zuschauen, ende. Fuer die Sichtprobe bei drei
+ *   Handygroessen. (`/probe/kampf`, `/probe/ruestkammer` und
+ *   `/probe/arena-2d` zeigten das alte Tafelrunde und gingen am 28.11.2026
+ *   mit ihm.)
  *
  * `/probe/arena-3d` (Probe B, dieselbe Szene live mit Three.js) gab es bis zum
  * 06.09.2026. Robin hat am 05.09.2026 gegen sie entschieden: Die Figuren sollen
@@ -102,9 +95,6 @@ function istProbe(name: string): boolean {
   return new URLSearchParams(search).get('probe') === name;
 }
 
-const probeArena2d = istProbe('arena-2d');
-const probeKampf = istProbe('kampf');
-const probeRuestkammer = istProbe('ruestkammer');
 const probeBroChess = istProbe('brochess');
 const probeDreckBro = istProbe('dreckbro');
 const probeManufaktur = istProbe('manufaktur');
@@ -167,27 +157,9 @@ const Runner = lazy(() => import('./screens/Runner').then((m) => ({ default: m.R
  * aufgezeichnete Szene (16 kB JSON) mit ins Buendel. Die gehoert nicht in das
  * Stueck, das jeder Spieler beim Anmelden laedt.
  */
-const Arena2D = lazy(() => import('./proben/arena-2d/Arena2D').then((m) => ({ default: m.Arena2D })));
 const ProbeTruhen = lazy(() =>
   import('./proben/truhen/ProbeTruhen').then((m) => ({ default: m.ProbeTruhen })),
 );
-/* Aus demselben Grund `lazy` wie die Probe darueber, hier aber mit einem
-   zweiten dazu: Die Probe zieht den aufgezeichneten Kampf (rund 30 kB JSON)
-   UND die Bauteile des Tafelrunde-Tisches nach. Beides gehoert nicht in das
-   Stueck, das jeder Spieler beim Anmelden laedt — und am Client wird gerade
-   ohnehin daran gearbeitet, die Spielschirme einzeln nachzuladen. */
-const ProbeKampf = lazy(() =>
-  import('./proben/kampf/ProbeKampf').then((m) => ({ default: m.ProbeKampf })),
-);
-/* Und noch einmal aus denselben zwei Gruenden: der aufgezeichnete
-   Vorbereitungsstand (rund 12 kB JSON) und die Bauteile des
-   Tafelrunde-Tisches. */
-const ProbeRuestkammer = lazy(() =>
-  import('./proben/ruestkammer/ProbeRuestkammer').then((m) => ({
-    default: m.ProbeRuestkammer,
-  })),
-);
-
 /* `lazy` wie die anderen Proben: Das Brett gehoert nicht in das Stueck, das
    jeder Spieler beim Anmelden laedt. */
 const ProbeStart = lazy(() => import('./proben/start/ProbeStart').then((m) => ({ default: m.ProbeStart })));
@@ -217,12 +189,6 @@ const werkzeug = devWuerfelglanz ? <ProbeWuerfelglanz /> : devStart ? (
   <ProbeStart />
 ) : devHub ? (
   <ProbeHub />
-) : probeArena2d ? (
-  <Arena2D />
-) : probeKampf ? (
-  <ProbeKampf />
-) : probeRuestkammer ? (
-  <ProbeRuestkammer />
 ) : probeTafelrundeNeu ? (
   <ProbeTafelrundeNeu />
 ) : probeBroChess ? (

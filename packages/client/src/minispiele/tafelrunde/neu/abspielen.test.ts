@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Kampfbericht, Kampfereignis } from '../KampfAnzeige';
+import type { Kampfbericht, Kampfereignis } from '../kampfbericht';
 import {
   EFFEKT_MS,
   anfangsstandNeu,

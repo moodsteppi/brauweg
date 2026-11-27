@@ -47,8 +47,9 @@ describe('Einstieg', () => {
     );
     const titel = container.querySelector('[data-ersatz]');
     expect(titel).not.toBeNull();
-    // Fuenf Figuren aus den alten Rollenblaettern, keine fehlende Datei.
-    expect(titel!.querySelectorAll('img')).toHaveLength(5);
+    // Fuenf Figuren — ohne Blatt je ein Rollenzeichen, kein <img> ins Leere.
+    expect(titel!.querySelectorAll('[role="img"]')).toHaveLength(5);
+    expect(titel!.querySelectorAll('img')).toHaveLength(0);
   });
 
   it('die Regeln gehen als Blatt auf; vor dem Tisch ohne Faehigkeiten, mit dem Hinweis darauf', () => {

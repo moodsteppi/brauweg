@@ -9,10 +9,10 @@
  * HIER WIRD NICHTS GEZAEHLT. Anzahl, erreichte und naechste Schwelle kommen
  * aus der Sicht (`synergien`), die Saetze je Schwelle aus der Tabelle
  * (`synergieTabelle`, Feld `text`). Welche Einheiten eine Marke tragen, steht
- * an jeder Einheit des Katalogs (`traegerVon` in Synergien.tsx).
+ * an jeder Einheit des Katalogs (`traegerVon` in marken.tsx).
  */
 
-import { type Synergie, type Synergiestand, bonusSatz, markenFarbe, traegerVon } from '../Synergien';
+import { type Synergie, type Synergiestand, bonusSatz, markenFarbe, traegerVon } from '../marken';
 import type { Einheit } from '../sicht';
 import { einheitName, markeName, markeStufeText, markeWirkung, tz } from '../text';
 import { Blatt } from './Blatt';

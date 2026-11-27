@@ -14,10 +14,8 @@ import { Lobby } from './screens/Lobby';
 import { AnfrageWarten } from './tisch/Anfragen';
 import { horcheAufAntippen } from './mitteilung-antippen';
 import { Startbildschirm } from './screens/Startbildschirm';
-import { Ladevorhang } from './minispiele/tafelrunde/Ladevorhang';
 import { TISCH_PARAMETER } from './minispiele/tafelrunde/tischlink';
-import { Ladebild as LadebildNeu } from './minispiele/tafelrunde/neu/Ladebild';
-import { tafelrundeNeu } from './tafelrundeNeu';
+import { Ladebild } from './minispiele/tafelrunde/neu/Ladebild';
 import {
   fehlschlagMerken,
   vorgemerkterCode,
@@ -46,20 +44,25 @@ const KontoLink = lazy(() =>
  * importiert, hebt die Aufteilung fuer ihn auf — Vite meldet das beim Bau
  * ("dynamic import will not move module into another chunk").
  */
-const TafelrundeAlt = lazy(() =>
-  import('./screens/Tafelrunde').then((m) => ({ default: m.Tafelrunde })),
-);
 /*
- * Die neue Oberflaeche von Tafelrunde ist seit dem 27.11.2026 abends der
- * Standard (Robin). Das alte Tafelrunde bleibt als Notausgang hinter
- * `?tafelrunde=alt` (tafelrundeNeu.ts, gebaut wie der Hub-Schalter #277), bis
- * es in einem eigenen Schritt entfernt wird. Beide sind eigene Stuecke: Wer
- * den Notausgang nicht nimmt, laedt das alte Tafelrunde nie.
+ * Tafelrunde ist seit dem 28.11.2026 nur noch die neue Oberflaeche (Robin:
+ * „altes Tafelrunde jetzt komplett entfernen"). Der Schalter `?tafelrunde=`
+ * und das alte Tafelrunde sind weg; ein gespeicherter Wert des Schalters wird
+ * unten einmal geraeumt.
  */
-const TafelrundeNeu = lazy(() =>
+const Tafelrunde = lazy(() =>
   import('./screens/TafelrundeNeu').then((m) => ({ default: m.TafelrundeNeu })),
 );
-const Tafelrunde = tafelrundeNeu ? TafelrundeNeu : TafelrundeAlt;
+/*
+ * Den Speicherplatz des alten Schalters (`brauweg.tafelrunde`) raeumen — er
+ * wirkt nicht mehr, und ein Rest im Speicher waere nur Ballast. Ohne Speicher
+ * (privates Fenster) gibt es nichts zu raeumen.
+ */
+try {
+  if (typeof window !== 'undefined') window.localStorage.removeItem('brauweg.tafelrunde');
+} catch {
+  /* Gesperrter Speicher: nichts zu tun. */
+}
 const DreckBroTable = lazy(() =>
   import('./screens/DreckBroTable').then((m) => ({ default: m.DreckBroTable })),
 );
@@ -446,7 +449,7 @@ export function App(): React.JSX.Element {
    * Zurueck in die Spielauswahl, mit frischem `me`.
    *
    * Als benannte Funktion, weil sie bei Tafelrunde an ZWEI Stellen haengt: am
-   * Schirm und am Abbrechen-Knopf seines Ladevorhangs. Zwei Kopien derselben
+   * Schirm und am Abbrechen-Knopf seines Ladebilds. Zwei Kopien derselben
    * Zeile gingen beim naechsten Zusatz (etwa einem Klang) auseinander, und
    * zwar so, dass nur der Weg ueber den Vorhang ihn nicht bekaeme.
    */
@@ -722,27 +725,14 @@ export function App(): React.JSX.Element {
      * denselben Bildschirm.
      *
      * Als einziger Schirm bekommt Tafelrunde ein eigenes <Suspense> mit
-     * eigenem Rueckfall: seinem Ladebildschirm statt des Lade-Pinguins. Der
-     * Grund ist Robins Beschwerde vom 5.9.2026 — hier hingen zwei Vorhaenge
-     * hintereinander (erst das Paket, dann die Bilder), und der zweite zeigte
-     * einen Balken, der die erste Haelfte der Wartezeit unterschlug. Jetzt ist
-     * es ein Balken ueber beides; der Rueckfall und der nachgeladene Schirm
-     * lesen denselben Lauf mit (Ladevorhang.tsx).
+     * eigenem Rueckfall: seinem Ladebild statt des Lade-Pinguins (Robins
+     * Beschwerde vom 5.9.2026: zwei verschiedene Vorhaenge hintereinander).
+     * Das Ladebild (neu/Ladebild.tsx) steht im Hauptpaket und ist deshalb
+     * schlank; den Fortschritt der Bilder zeigt danach derselbe Baustein.
      */
     if (screen.name === 'tafelrunde') {
       return (
-        <Suspense
-          fallback={
-            /* Der Vorhang des alten Tafelrunde liest dessen Ladelauf mit (und
-               startet ihn, samt altem Bildschirmpaket); die neue Oberflaeche
-               hat ihr eigenes, schlankes Ladebild. */
-            tafelrundeNeu ? (
-              <LadebildNeu onAbbrechen={zurueckZuDenSpielen} />
-            ) : (
-              <Ladevorhang onAbbrechen={zurueckZuDenSpielen} />
-            )
-          }
-        >
+        <Suspense fallback={<Ladebild onAbbrechen={zurueckZuDenSpielen} />}>
           <Tafelrunde startTisch={screen.tisch ?? null} onBack={zurueckZuDenSpielen} />
         </Suspense>
       );
@@ -752,18 +742,7 @@ export function App(): React.JSX.Element {
       screen.gameId === 'tafelrunde'
     ) {
       return (
-        <Suspense
-          fallback={
-            /* Der Vorhang des alten Tafelrunde liest dessen Ladelauf mit (und
-               startet ihn, samt altem Bildschirmpaket); die neue Oberflaeche
-               hat ihr eigenes, schlankes Ladebild. */
-            tafelrundeNeu ? (
-              <LadebildNeu onAbbrechen={zurueckZuDenSpielen} />
-            ) : (
-              <Ladevorhang onAbbrechen={zurueckZuDenSpielen} />
-            )
-          }
-        >
+        <Suspense fallback={<Ladebild onAbbrechen={zurueckZuDenSpielen} />}>
           <Tafelrunde
             startTisch={screen.name === 'table' ? screen.tableId : null}
             onBack={zurueckZuDenSpielen}
@@ -930,7 +909,7 @@ export function App(): React.JSX.Element {
     <>
       <Suspense fallback={<AppLaedt />}>{bildschirm()}</Suspense>
       {/* Eigene Grenze: Waehrend der Begleiter nachlaedt, soll der Bildschirm
-          nicht auf den Ladevorhang zurueckfallen. */}
+          nicht auf das Ladebild zurueckfallen. */}
       {inApp && (
         <Suspense fallback={null}>
           <PushBegleiter kontoId={me.id} />

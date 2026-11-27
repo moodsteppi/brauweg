@@ -24,7 +24,7 @@ import { type Kaempfer, type Ort, gleicherOrt, ortSchluessel, platzVon, rasterma
 import type { Zeigerrufe } from '../ziehen';
 import { Figur, RolleZeichen, Sterne } from './grafik';
 import stil from './neu.module.css';
-import { markenFarbe } from '../Synergien';
+import { markenFarbe } from '../marken';
 
 /** Der Grund des Feldes: das gemalte Bild oder die Farbflaeche des Schauplatzes. */
 export function Schauplatzgrund({ schauplatz }: { schauplatz: Schauplatz }): React.JSX.Element {

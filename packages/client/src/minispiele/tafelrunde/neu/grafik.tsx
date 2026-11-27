@@ -23,12 +23,10 @@ import {
   kartenRahmen,
   zeichenBild,
 } from '../../../figuren3d/grafik-neu';
-import { blattPfad } from '../bildfolge';
 import { Figur3D } from '../Figur3D';
 import type { Rolle } from '../sicht';
-import { markenFarbe, markenGlyphe } from '../Synergien';
+import { markenFarbe, markenGlyphe } from '../marken';
 import { einheitName, rollenName } from '../text';
-import { RollenZeichen } from '../Zeichen';
 import type { Effektname } from './abspielen';
 import stil from './neu.module.css';
 
@@ -48,15 +46,36 @@ function istRolle(rolle: string): rolle is Rolle {
 }
 
 /**
- * Das Blatt einer Figur: das neue je Einheit, sonst das alte je Rolle.
+ * Das Blatt einer Figur — je Einheit, aus grafik-neu.ts.
  *
- * Beide Blaetter haben dasselbe Raster (FIGUREN3D_BEWEGUNGEN) und denselben
- * Fusspunkt — das neue ist nur doppelt so fein (256 statt 128 px). Weil der
- * Ausschnitt in Prozent rechnet (Figur3D.tsx, `blattVersatz`), passt dieselbe
- * Bildfolge auf beide.
+ * Bis zum 28.11.2026 trat hier das alte Rollenblatt (KayKit, je Rolle eins)
+ * ein, solange es das neue nicht gab. Seit alle 22 Blaetter da sind und das
+ * alte Tafelrunde entfernt ist, gibt es diesen Rueckfall nicht mehr: Fehlt ein
+ * Blatt, steht das Rollenzeichen (`Figur`).
  */
 export function figurBlatt(einheit: Bildeinheit): string | null {
-  return figurNeuBlatt(einheit.id) ?? blattPfad(einheit.rolle);
+  return figurNeuBlatt(einheit.id);
+}
+
+/**
+ * Das Zeichen einer Rolle — gezeichnet, nicht geladen. Der Rueckfall, wenn es
+ * weder ein gemaltes Zeichen (`RolleZeichen`) noch ein Figurenblatt gibt.
+ * Die Striche stehen in styles.css (`.tr-rolle`: ohne Fuellung, Strich in
+ * der Schriftfarbe).
+ */
+export function RollenZeichen({ rolle }: { rolle: Rolle }): React.JSX.Element {
+  const pfade: Record<Rolle, React.JSX.Element> = {
+    wache: <path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6l-8-3Z" />,
+    schuetze: <path d="M5 19 19 5M19 5h-6M19 5v6M5 19c4-1 7-4 8-8" />,
+    magier: <path d="M12 3v5M12 16v5M3 12h5M16 12h5M6.5 6.5l3 3M14.5 14.5l3 3M17.5 6.5l-3 3M9.5 14.5l-3 3" />,
+    meuchler: <path d="M6 18 18 6l1 4-9 9-4-1ZM6 18l-2 2" />,
+    beistand: <path d="M12 4v16M4 12h16" />,
+  };
+  return (
+    <svg className="tr-rolle" viewBox="0 0 24 24" aria-hidden="true">
+      {pfade[rolle]}
+    </svg>
+  );
 }
 
 /**

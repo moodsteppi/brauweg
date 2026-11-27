@@ -3,7 +3,7 @@
  * und Effekte OBENDRAUF auf den Stand der alten Anzeige.
  *
  * WARUM KEINE ZWEITE RECHNUNG: Leben, Plaetze, Tod, Sprung und Wiederkehr
- * uebernimmt `wendeAn` aus KampfAnzeige.tsx, und zwar woertlich aus dem
+ * uebernimmt `wendeAn` aus kampfbericht.ts, und zwar woertlich aus dem
  * Protokoll. Hier kommt nur dazu, was die alte Anzeige nicht zeichnet. Zwei
  * Fassungen von „was ein Treffer mit dem Leben macht" liefen beim ersten neuen
  * Feld auseinander — und dann saehe man in der neuen Oberflaeche einen anderen
@@ -28,7 +28,7 @@ import {
   type Kampfzustand,
   anfangsstand,
   wendeAn,
-} from '../KampfAnzeige';
+} from '../kampfbericht';
 
 /** Die Effekt-Einzelbilder (grafik-neu.ts, `effektBild`). */
 export type Effektname =
@@ -231,7 +231,7 @@ export function wendeAnNeu(stand: AbspielstandNeu, e: Kampfereignis, nr: number)
  * Alle Ereignisse bis `zeitMs` abspielen und alte Effekte abraeumen.
  *
  * Gibt DASSELBE Objekt zurueck, wenn sich nichts getan hat — daran erkennt die
- * Uhr, ob sie neu zeichnen muss (wie `spieleBis` in KampfAnzeige.tsx).
+ * Uhr, ob sie neu zeichnen muss (wie `spieleBis` in kampfbericht.ts).
  */
 export function spieleBisNeu(stand: AbspielstandNeu, bericht: Kampfbericht, zeitMs: number): AbspielstandNeu {
   let jetzt = stand;
