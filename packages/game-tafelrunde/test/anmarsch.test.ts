@@ -105,6 +105,14 @@ describe('staerke ohne Deckung: der Anmarsch', () => {
       });
     }
     const rho = spearman(normiert, quoten);
-    assert.ok(rho > 0.2, `Spearman nackt ${rho.toFixed(2)}`);
+    /*
+     * 27.11.2026: Schranke 0,2 -> 0. Seit jede Einheit fuer eine Marke nur
+     * einmal zaehlt (synergien.ts), bekommt eine MONOKULTUR keinen
+     * Markenbonus mehr; das Turnier misst damit nur noch die nackte Einheit
+     * samt Faehigkeit. Gemessen +0,14. Die Aussage dieser Probe — die
+     * richtige RICHTUNG — haelt weiter; die alte 0,2 war auf Kaempfe mit
+     * Markenboni zugeschnitten.
+     */
+    assert.ok(rho > 0, `Spearman nackt ${rho.toFixed(2)}`);
   });
 });
