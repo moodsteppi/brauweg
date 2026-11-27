@@ -19,6 +19,7 @@ import {
   faelligeBrowortErinnerungen,
 } from '../src/browort/dienst.js';
 import { MUENZEN_BROWORT, farben, tageswort } from '../src/browort/regeln.js';
+import { ZUSATZWOERTER } from '../src/browort/woerter-zusatz.js';
 import { ERLAUBT, LOESUNGEN } from '../src/browort/woerter.js';
 import { createClub, joinClub } from '../src/clubs/service.js';
 import { AppError } from '../src/errors.js';
@@ -57,6 +58,12 @@ test('Wortlisten: fünf Buchstaben, jede Lösung ist auch als Versuch erlaubt', 
   for (const wort of LOESUNGEN) assert.ok(ERLAUBT.has(wort), wort);
   assert.equal(new Set(LOESUNGEN).size, LOESUNGEN.length, 'keine doppelte Lösung');
   assert.ok(LOESUNGEN.length >= 500);
+  assert.equal(ERLAUBT.size, 3000);
+  assert.equal(new Set(ZUSATZWOERTER).size, ZUSATZWOERTER.length);
+  for (const wort of ZUSATZWOERTER) {
+    assert.match(wort, /^[A-ZÄÖÜ]{5}$/);
+    assert.ok(ERLAUBT.has(wort));
+  }
 });
 
 test('Tageswort: für alle gleich, kein Wort zweimal, bevor alle dran waren', () => {
@@ -90,7 +97,7 @@ test('Browort: unbekanntes Wort kostet nichts, Lösung bringt Münzen, Serie und
   await assert.rejects(() => browortRaten(c.db, accountId, 'ZU', tagUm(tag), SALZ), istFehler('browortForm'));
   assert.equal((await browortHeute(c.db, accountId, tagUm(tag), SALZ)).versuche.length, 0);
 
-  const erster = await browortRaten(c.db, accountId, falsch(loesung).toLowerCase(), tagUm(tag), SALZ);
+  const erster = await browortRaten(c.db, accountId, 'agave', tagUm(tag), SALZ);
   assert.equal(erster.versuche.length, 1);
   assert.equal(erster.fertig, false);
   assert.equal(erster.loesung, null, 'die Lösung bleibt geheim, solange die Runde läuft');

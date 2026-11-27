@@ -31,9 +31,9 @@ afterEach(() => cleanup());
 
 it('nimmt eine neue Einladung auch auf einer schon geöffneten BroRemote-Seite an', () => {
   render(<BroRemote />);
-  expect(screen.getByRole('heading', { name: /Großes Bild/ })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'BroRemote' })).toBeInTheDocument();
   act(() => { history.replaceState(null, '', `/broremote${new URL(link()).hash}`); window.dispatchEvent(new HashChangeEvent('hashchange')); });
-  expect(screen.getByRole('heading', { name: 'Fast dabei.' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Lobby beitreten' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Lobby eröffnen/ })).not.toBeInTheDocument();
   expect(window.location.hash).toBe('');
 });
@@ -41,6 +41,7 @@ it('nimmt eine neue Einladung auch auf einer schon geöffneten BroRemote-Seite a
 it('wechselt von Bereitstatus zum Controller und verwirft alte private Informationen', () => {
   render(<BroRemote />);
   fireEvent.click(screen.getByRole('button', { name: /Bro Building Battle/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Lobby beitreten/ }));
   fireEvent.change(screen.getByLabelText('Dein Spielername'), { target: { value: 'Anna' } });
   fireEvent.change(screen.getByLabelText('Einladungslink'), { target: { value: link() } });
   fireEvent.click(screen.getByRole('button', { name: 'Verbinden' }));
@@ -69,6 +70,7 @@ it('wechselt von Bereitstatus zum Controller und verwirft alte private Informati
 it('zeigt den Baucontroller nur während einer laufenden eigenen Runde und stoppt ihn bei Pause', () => {
   render(<BroRemote />);
   fireEvent.click(screen.getByRole('button', { name: /Bro Building Battle/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Lobby beitreten/ }));
   fireEvent.change(screen.getByLabelText('Dein Spielername'), { target: { value: 'Anna' } });
   fireEvent.change(screen.getByLabelText('Einladungslink'), { target: { value: link() } });
   fireEvent.click(screen.getByRole('button', { name: 'Verbinden' }));
@@ -113,7 +115,7 @@ it('der Gastgeber leitet aktuelle Eingaben mit dem richtigen Spieler in die Bauw
 it('zeigt den laufenden Ping in der Lobby und trennt ihn vom Verbindungsstatus', () => {
   render(<BroRemote />);
   fireEvent.click(screen.getByRole('button', { name: /Bro Building Battle/ }));
-  expect(screen.getByRole('button', { name: 'Solotraining starten' })).toBeVisible();
+  expect(screen.getByRole('button', { name: /Solo Play/ })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: /Lobby eröffnen/ }));
   act(() => { draht.e!.status('verbunden'); draht.e!.qualitaet!({ ping: 48, schwankung: 6, versuch: 0 }); });
   expect(screen.getByLabelText('Server-Ping: 48 ms')).toBeInTheDocument();
@@ -145,7 +147,7 @@ it('zeigt zwei Spielkarten; BroTanks hat kein Solotraining und wählt sein Spiel
   expect(screen.getByRole('button', { name: /Bro Building Battle/ })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /BroTanks/ }));
   expect(screen.getByRole('heading', { name: 'BroTanks' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Solotraining starten' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Solo Play/ })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: /Lobby eröffnen/ }));
   act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'raum', sicht: lobby() }); });
   expect(draht.senden).toHaveBeenCalledWith({ art: 'spielwahl', spiel: 'brotanks' });
@@ -160,6 +162,7 @@ it('ein neu geladener Gastgeber stellt eine BroTanks-Lobby beim Wiederverbinden 
   act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'brotanks' }) }); });
   act(() => draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'brotanks', abschnitt: 2 }) }));
   expect(draht.senden).not.toHaveBeenCalledWith(expect.objectContaining({ art: 'spielwahl' }));
+  fireEvent.click(screen.getByText('Rundeneinstellungen'));
   expect(screen.getByRole('button', { name: 'BroTanks' })).toHaveAttribute('aria-pressed', 'true');
 });
 
@@ -171,6 +174,7 @@ it('der Gastgeber schaltet in der Lobby das Spiel um; für BroTanks braucht es z
   act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'building', spieler: [anna] }) }); });
   expect(draht.senden).not.toHaveBeenCalledWith(expect.objectContaining({ art: 'spielwahl' }));
   expect(screen.getByText('EUER SPIELMODUS')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Rundeneinstellungen'));
   fireEvent.click(screen.getByRole('button', { name: 'BroTanks' }));
   expect(draht.senden).toHaveBeenCalledWith({ art: 'spielwahl', spiel: 'brotanks' });
   act(() => draht.e!.nachricht({ art: 'raum', sicht: lobby({ spiel: 'brotanks', spieler: [anna] }) }));
@@ -197,6 +201,7 @@ it('der Gastgeber leitet BroTanks-Eingaben in die Insel, nicht in die Bauwelt', 
 it('das Handy zeigt in BroTanks den Zielcontroller und schickt den Schuss mit der Zugnummer', () => {
   render(<BroRemote />);
   fireEvent.click(screen.getByRole('button', { name: /Bro Building Battle/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Lobby beitreten/ }));
   fireEvent.change(screen.getByLabelText('Dein Spielername'), { target: { value: 'Anna' } });
   fireEvent.change(screen.getByLabelText('Einladungslink'), { target: { value: link() } });
   fireEvent.click(screen.getByRole('button', { name: 'Verbinden' }));
@@ -208,4 +213,26 @@ it('das Handy zeigt in BroTanks den Zielcontroller und schickt den Schuss mit de
   act(() => draht.e!.nachricht({ art: 'privat', abschnitt: 2, daten: { arti } }));
   fireEvent.click(screen.getByRole('button', { name: /FEUER/ }));
   expect(draht.senden).toHaveBeenLastCalledWith(expect.objectContaining({ art: 'eingabe', abschnitt: 2, aktion: { art: 'feuer', zug: 2, winkel: 70, staerke: 40, waffe: 0 } }));
+});
+
+
+it.each(['building', 'brotanks'])('öffnet %s direkt aus der Games-Kategorie und zeigt vier Einstiege', (spiel) => {
+  history.replaceState(null, '', `/broremote?spiel=${spiel}`);
+  render(<BroRemote />);
+  expect(document.querySelectorAll('.br-aktionskarte')).toHaveLength(4);
+  expect(screen.queryByLabelText('Dein Spielername')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Spielanleitung/ }));
+  expect(screen.getByRole('heading', { name: 'Zusammen spielen' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: /Lobby eröffnen/ }));
+  act(() => { draht.e!.status('verbunden'); draht.e!.nachricht({ art: 'willkommen', rolle: 'gastgeber', raum: 'ABC12345', schluessel: 'a'.repeat(32) }); draht.e!.nachricht({ art: 'raum', sicht: lobby() }); });
+  expect(screen.getByRole('button', { name: 'Battle starten' })).toBeVisible();
+  if (spiel === 'brotanks') expect(draht.senden).toHaveBeenCalledWith({ art: 'spielwahl', spiel: 'brotanks' });
+});
+
+it('startet den Playground ohne Lobby und zeigt Gastgeberpartien als bildschirmfüllende Bühne', async () => {
+  history.replaceState(null, '', '/broremote?spiel=building');
+  render(<BroRemote />);
+  fireEvent.click(screen.getByRole('button', { name: /Solo Play/ }));
+  expect(await screen.findByText('Geprüfte Bauwelt')).toBeVisible();
+  expect(draht.e).toBeNull();
 });

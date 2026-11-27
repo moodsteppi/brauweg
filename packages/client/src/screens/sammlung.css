@@ -1,0 +1,370 @@
+/* Kompakte Bereichskacheln wie in Games; die eigentlichen Designs öffnen separat. */
+.sammlung-neu .sam-icon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  display: inline-block;
+  vertical-align: middle;
+  color: #ffda7b;
+}
+.sammlung-neu .sam-spielchips .hb-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sammlung-neu .sam-spielchips .hb-chip img {
+  width: 26px;
+  height: 26px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.sammlung-neu .sam-spielchips .hb-chip .sam-icon {
+  width: 22px;
+  height: 22px;
+  flex-basis: 22px;
+}
+.sammlung-neu .sam-spielchips .is-an .sam-icon {
+  color: currentColor;
+}
+.sammlung-neu .sam-hinweis {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #a9bedc;
+  margin: 14px 0 18px;
+}
+.sammlung-neu .sam-spiel {
+  margin-bottom: 26px;
+}
+.sammlung-neu .sam-spieltitel {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 20px 0 12px;
+  color: #f3f5ff;
+  font-size: 25px;
+}
+.sammlung-neu .sam-spieltitel img {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 13px;
+  border: 1px solid #d6b76a65;
+}
+.sammlung-neu .sam-spieltitel small {
+  display: block;
+  font:
+    700 10px/1.4 "Nunito Variable",
+    sans-serif;
+  color: #94abc9;
+  margin-top: 3px;
+}
+.sammlung-neu .sam-bereichskacheln {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+.sammlung-neu .sam-bereichskacheln:has(> :only-child) {
+  grid-template-columns: minmax(0, 240px);
+}
+.sammlung-neu .sam-bereichskachel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 8px 12px;
+  min-width: 0;
+  text-align: left;
+  border: 1px solid #47638c;
+  border-radius: 18px;
+  background: linear-gradient(150deg, #233e61, #10233f 85%);
+  box-shadow: 0 5px 0 #07152b66;
+  color: #f4f7ff;
+  cursor: pointer;
+}
+.sammlung-neu .sam-bereichskachel:hover {
+  border-color: #e6c479;
+  background: linear-gradient(150deg, #2a496c, #132b48);
+}
+.sammlung-neu .sam-bereichskachel:focus-visible,
+.sammlung-neu .sam-design:focus-visible,
+.sammlung-neu .sam-zurueck:focus-visible,
+.sammlung-neu .sam-bereichwechsel button:focus-visible {
+  outline: 3px solid #ffdc83;
+  outline-offset: 3px;
+}
+.sammlung-neu .sam-kachelkopf {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+}
+.sammlung-neu .sam-kachelkopf .sam-icon {
+  width: 20px;
+  height: 20px;
+  flex-basis: 20px;
+}
+.sammlung-neu .sam-kachelkopf strong {
+  font:
+    800 11px/1.3 "Nunito Variable",
+    sans-serif;
+}
+.sammlung-neu .sam-kachelkopf > span {
+  display: none;
+}
+.sammlung-neu .sam-ausgeruestet {
+  display: block;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #d1e7ff15;
+}
+.sammlung-neu .sam-ausgeruestet small {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #8edfc6;
+}
+.sammlung-neu .sam-ausgeruestet b {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.sammlung-neu .sam-vorschau {
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 116px;
+  flex: 0 0 116px;
+  margin: 7px 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: radial-gradient(ellipse at 50% 75%, #46739455, transparent 70%);
+}
+.sammlung-neu .sam-vorschau img {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+}
+.sammlung-neu .sam-kartenfaecher {
+  position: relative;
+  width: 58px;
+  height: 84px;
+  display: block;
+  filter: drop-shadow(0 6px 5px #0005);
+}
+.sammlung-neu .sam-kartenfaecher > i {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  border: 1px solid #a0bbd3;
+  background: linear-gradient(135deg, #465f7d, #152d4b);
+  transform: rotate(-18deg) translate(-8px, 2px);
+}
+.sammlung-neu .sam-kartenfaecher > i:nth-child(2) {
+  transform: rotate(10deg) translate(7px, 2px);
+  background: #234464;
+}
+.sammlung-neu .sam-musterkarte {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+  color: #bd3547;
+  background: #faf7ef;
+  font-family: "Nunito Variable", sans-serif;
+}
+.sammlung-neu .sam-musterkarte img {
+  object-fit: fill;
+}
+.sammlung-neu .sam-musterkarte b {
+  font-size: 15px;
+  align-self: start;
+  padding: 0 5px;
+  line-height: 1;
+}
+.sammlung-neu .sam-musterkarte b:last-child {
+  align-self: end;
+  transform: rotate(180deg);
+}
+.sammlung-neu .sam-musterkarte strong {
+  font-size: 24px;
+  line-height: 1;
+}
+.sammlung-neu .sam-musterkarte.ist-standard {
+  color: #ffdb83;
+  border: 3px double #d4b76e;
+  background: repeating-linear-gradient(45deg, #233e6b 0 3px, #142c53 3px 8px);
+  font-size: 35px;
+}
+.sammlung-neu .sam-vorschau.ist-tisch {
+  height: 116px;
+  padding: 12px 0;
+}
+.sammlung-neu .sam-vorschau.ist-tisch > img {
+  border-radius: 12px;
+  object-fit: cover;
+  object-position: center 70%;
+  border: 3px solid #987044;
+  box-shadow: 0 5px 0 #061728;
+}
+.sammlung-neu .sam-tischrand {
+  position: absolute;
+  inset: 15px 3px;
+  border: 1px solid #f7d28e66;
+  border-radius: 9px;
+  pointer-events: none;
+}
+.sammlung-neu .sam-vorschau.ist-figuren > img {
+  width: 90%;
+  height: 90%;
+  filter: drop-shadow(0 6px 7px #0007);
+}
+.sammlung-neu .sam-koenig {
+  font-size: 80px;
+  line-height: 1;
+  color: #ffe9b3;
+  text-shadow:
+    0 4px 0 #886b36,
+    0 8px 10px #0005;
+}
+.sammlung-neu .sam-pinguin h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 21px;
+}
+.sammlung-neu .sam-pinguin {
+  gap: 12px;
+}
+.sammlung-neu .sam-zurueck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 8px 0;
+  color: #ffdb83;
+  font-size: 13px;
+  font-weight: 800;
+}
+.sammlung-neu .sam-detailtitel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 18px;
+}
+.sammlung-neu .sam-detailtitel > .sam-icon {
+  width: 48px;
+  height: 48px;
+  flex-basis: 48px;
+  padding: 9px;
+  background: #223958;
+  border: 1px solid #536984;
+  border-radius: 14px;
+}
+.sammlung-neu .sam-detailtitel small {
+  font-size: 11px;
+  color: #a8bddb;
+}
+.sammlung-neu .sam-detailtitel h2 {
+  font:
+    400 28px/1.2 "Lilita One",
+    sans-serif;
+  margin: 3px 0 0;
+}
+.sammlung-neu .sam-bereichwechsel {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.sammlung-neu .sam-bereichwechsel button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid #47638c;
+  border-radius: 12px;
+  color: #becfe9;
+  font-size: 12px;
+  font-weight: 800;
+  background: #132844;
+}
+.sammlung-neu .sam-bereichwechsel button[aria-pressed="true"] {
+  background: #ffce5e;
+  color: #142947;
+  border-color: #ffe08b;
+}
+.sammlung-neu .sam-bereichwechsel button[aria-pressed="true"] .sam-icon {
+  color: currentColor;
+}
+.sammlung-neu .sam-bereichwechsel .sam-icon {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+}
+.sammlung-neu .sam-design .sam-vorschau {
+  height: 138px;
+  flex-basis: 138px;
+}
+.sammlung-neu .sam-design .sam-kartenfaecher {
+  width: 72px;
+  height: 104px;
+}
+.sammlung-neu .sam-design .sam-vorschau.ist-tisch {
+  height: 116px;
+  flex-basis: 116px;
+  padding: 0;
+}
+.sammlung-neu .sam-design .sam-tischrand {
+  inset: 3px;
+}
+@media (min-width: 700px) {
+  .sammlung-neu .sam-bereichskacheln {
+    gap: 16px;
+  }
+  .sammlung-neu .sam-bereichskachel {
+    padding: 16px;
+  }
+  .sammlung-neu .sam-kachelkopf strong {
+    font-size: 16px;
+  }
+  .sammlung-neu .sam-bereichskachel .sam-vorschau {
+    height: 155px;
+    flex-basis: 155px;
+  }
+  .sammlung-neu .sam-bereichskachel .sam-kartenfaecher {
+    width: 78px;
+    height: 114px;
+  }
+  .sammlung-neu .sam-ausgeruestet b {
+    font-size: 14px;
+  }
+}
+@media (max-width: 360px) {
+  .sammlung-neu .sam-bereichskacheln {
+    gap: 6px;
+  }
+  .sammlung-neu .sam-bereichskachel {
+    padding: 8px 6px;
+  }
+  .sammlung-neu .sam-kachelkopf {
+    gap: 3px;
+  }
+  .sammlung-neu .sam-kachelkopf strong {
+    font-size: 10px;
+  }
+  .sammlung-neu .sam-kachelkopf > span {
+    display: none;
+  }
+}

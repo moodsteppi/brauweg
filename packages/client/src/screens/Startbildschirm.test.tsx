@@ -42,18 +42,18 @@ describe('Startbildschirm', () => {
     vi.useRealTimers();
   });
 
-  it('zeigt erst das Logo, dann das Ladebild mit Leiste', async () => {
+  it('zeigt erst das Logo, dann das Logo mit Leiste', async () => {
     render(<Startbildschirm geladen={false} onFertig={vi.fn()} />);
     expect(screen.getByRole('main', { name: 'BroweGGames wird gestartet' })).toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-    await lauf(1300);
+    await lauf(2450);
     expect(screen.getByRole('progressbar', { name: 'BroweGGames lädt' })).toBeInTheDocument();
   });
 
   it('zählt nie über das, was wirklich geladen ist', async () => {
     const onFertig = vi.fn();
     render(<Startbildschirm geladen={false} onFertig={onFertig} />);
-    await lauf(1300);
+    await lauf(2450);
     // Nur die Schrift ist da (jsdom hat keine document.fonts): 1 von 16.
     await lauf(2000);
     expect(zahl()).toBe(6);
@@ -82,4 +82,27 @@ describe('Startbildschirm', () => {
     await lauf(700);
     expect(onFertig).toHaveBeenCalledTimes(1);
   });
+  it('behält dieselbe fertige Marke beim Übergang zur Ladeanzeige', async () => {
+    render(<Startbildschirm geladen={false} onFertig={vi.fn()} />);
+    const logo = screen.getByRole('img', { name: 'BroweGGames' });
+    expect(logo).toHaveAttribute('src', '/hub/broweggames-vertikal-dunkel.webp');
+    expect(document.querySelectorAll('.start-tier')).toHaveLength(4);
+    await lauf(2450);
+    expect(screen.getByRole('img', { name: 'BroweGGames' })).toBe(logo);
+    expect(document.querySelector('.start-laden-bild')).not.toBeInTheDocument();
+  });
+
+  it('überspringt den Aufbau bei reduzierter Bewegung und räumt Zeitgeber auf', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    const fertig = vi.fn();
+    const { unmount } = render(<Startbildschirm geladen onFertig={fertig} />);
+    expect(screen.getByRole('main')).toHaveClass('ist-ruhig');
+    await act(async () => offen.splice(0).forEach(f => f()));
+    await lauf(1500);
+    expect(fertig).toHaveBeenCalledTimes(1);
+    unmount();
+    await lauf(2000);
+    expect(fertig).toHaveBeenCalledTimes(1);
+  });
+
 });

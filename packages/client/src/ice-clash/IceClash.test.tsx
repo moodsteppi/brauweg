@@ -69,6 +69,7 @@ describe("Ice-Clash-Verbindung", () => {
     const b = Leitung.alle[1];
     act(() => b.onopen?.());
     expect(b.post[0]).toEqual({
+      version: 2,
       art: "weiter",
       code: "AB12CD34",
       token: "sitzschluessel",

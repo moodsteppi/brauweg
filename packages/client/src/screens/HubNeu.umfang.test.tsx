@@ -121,26 +121,19 @@ describe('Umfang im Hub (Webseite)', () => {
     expect(document.querySelector('span.hub-profilbild')).not.toBeNull();
   });
 
-  it('„figur": Werkstatt folgt dem Umfang, der Kleiderschrank-Pinguin bleibt unabhängig', async () => {
-    await zeige();
-    await oeffneProfil();
-    expect(abschnitte()).toContain('Deine Figur');
-    cleanup();
-    await zeige(undefined, 'blatt');
-    fireEvent.click(screen.getByRole('tab', { name: 'Mein Pinguin' }));
-    expect(document.querySelector('.sam-pinguin')).not.toBeNull();
-    cleanup();
-
-    setzeUmfang(['doppelkopf']);
-    await zeige();
-    await oeffneProfil();
-    expect(abschnitte()).not.toContain('Deine Figur');
-    // Der Kleiderschrank hängt NICHT an `figur` (Auftrag: nicht anfassen).
-    expect(screen.getByRole('button', { name: /^Kleiderschrank/ })).toBeInTheDocument();
-    cleanup();
-    await zeige(undefined, 'blatt');
-    fireEvent.click(screen.getByRole('tab', { name: 'Mein Pinguin' }));
-    expect(document.querySelector('.sam-pinguin')).not.toBeNull();
+  it('Kleiderschrank liegt im Profil, unabhängig von figur; Sammlung enthält nur Spielausstattung', async () => {
+    for (const umfang of [undefined, ['doppelkopf']]) {
+      if (umfang) setzeUmfang(umfang);
+      await zeige(undefined, 'profil');
+      expect(abschnitte()).toContain('Dein Pinguin');
+      expect(screen.queryByRole('button', { name: 'Figur bearbeiten' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Kleiderschrank' })).toBeInTheDocument();
+      cleanup();
+      await zeige(undefined, 'blatt');
+      expect(screen.queryByRole('tab', { name: 'Mein Pinguin' })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Kleiderschrank/ })).toBeNull();
+      cleanup();
+    }
   });
 
   it('„geburtstag": ohne die Kennung kein Abschnitt, kein Geschenk und die Stufe statt des Datums', async () => {

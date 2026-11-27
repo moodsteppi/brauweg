@@ -154,6 +154,9 @@ api.shop = async () => ({
     })),
   })),
   tischware: [
+    ...Object.entries({standard:0,eiche:200,winterhof:200,sommerwiese:200,kupferstich:300,schiefer:300,nachthimmel:400,rubin:500,smaragd:500,koeniglich:700,pinguin:900}).map(([wert,coins])=>({
+      id:`ruecken-${wert}`,art:'ruecken' as const,wert,nameKey:`ruecken.${wert}`,seltenheit:'gewoehnlich',preis:preis(coins),besessen:wert==='standard'||wert==='nachthimmel',
+    })),
     ...Object.entries(BLATT_PREIS).map(([wert, coins]) => ({
       id: `blatt-${wert}`, art: 'blatt' as const, wert, nameKey: `deck.${wert}`, seltenheit: 'gewoehnlich', preis: preis(coins), besessen: coins === 0 || EIGENE_BLAETTER.has(wert),
     })),

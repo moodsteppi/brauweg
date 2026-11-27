@@ -13,7 +13,7 @@ import { BrowortFlamme, schnittText } from './Spielfeld';
  * `schnittText` gehoert zum Spiel selbst (Spielfeld, Bereich „browort");
  * die Karte setzt ihn nur ein.
  */
-export function BrowortKarte({ stand, onOeffnen }: { stand: BrowortKurz | undefined; onOeffnen: () => void }): React.JSX.Element {
+export function BrowortKarte({ stand, onOeffnen, quadratisch = false }: { quadratisch?: boolean; stand: BrowortKurz | undefined; onOeffnen: () => void }): React.JSX.Element {
   const serie = stand?.serie ?? 0;
   const heute = stand?.heuteGespielt ?? false;
   const unter = heute
@@ -21,6 +21,16 @@ export function BrowortKarte({ stand, onOeffnen }: { stand: BrowortKurz | undefi
     : serie > 0
       ? t('startkarte.browort.wartet')
       : t('startkarte.browort.einladung');
+  if (quadratisch) return (
+    <button type="button" className="hb-startkachel is-browort" onClick={onOeffnen} aria-label={tn('startkarte.browort.aria', serie, { schnitt: schnittText(stand?.schnitt ?? null), unter })}>
+      <img src="/hub/startkacheln/browort.webp" alt="" />
+      <span className="hb-startkachel-inhalt">
+        <strong>{t('startkarte.browort.label').split(' · ')[0]}</strong>
+        <span>{heute ? t('startkarte.browort.gespielt') + ' ✓' : serie > 0 ? tn('startkarte.serie', serie) : t('startkarte.browort.raten')}</span>
+      </span>
+    </button>
+  );
+
   return (
     <button
       type="button"

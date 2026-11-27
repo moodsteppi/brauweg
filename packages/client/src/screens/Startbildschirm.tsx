@@ -4,26 +4,15 @@ import { t } from '../i18n';
 import '@fontsource/lilita-one';
 import './startbildschirm.css';
 
-/**
- * Der Start der App (Robin, 26.09.2026, nach dem Vorbild von Supercell und
- * Clash Royale): erst springt das Brauweg-Logo auf dunklem Grund auf, dann
- * kommt das gemalte Ladebild mit dem Logo oben und einer Ladeleiste mit
- * Prozentzahl unten.
- *
- * **Die Zahl ist ehrlich.** Sie zählt, was wirklich geladen wird: das Konto
- * (`geladen`, von App.tsx), die Schriften und die Bilder, die der Start gleich
- * zeigt. Die Anzeige läuft der echten Zahl weich hinterher, aber nie voraus —
- * eine Leiste, die bei 99 % hängen bleibt oder 100 % zeigt, bevor etwas da ist,
- * wäre genau die Art Anzeige, der niemand mehr glaubt.
- *
- * Mit „weniger Bewegung" entfällt das Aufspringen; das Logo steht einfach da.
+/** Das neue Logo entsteht aus vier eigenständigen Tieren und dem Schriftzug. Die fertige
+ * Marke bleibt beim Laden an derselben Stelle; kein Wechsel zum alten Ladebild.
+ * Fortschritt zählt weiterhin echte Ressourcen und den ersten Kontoabruf.
  */
-
 /** Was der Start gleich braucht; alles davon zählt in die Prozentzahl. */
 const BILDER = [
-  '/hub/ladebild.webp',
   '/hub/broweggames-vertikal-dunkel.webp',
   '/hub/broweggames-horizontal-dunkel.webp',
+  '/hub/start-tiere.webp',
   '/hub/symbol-pokal.webp',
   '/hub/symbol-muenze.webp',
   '/hub/symbol-edelstein.webp',
@@ -37,8 +26,8 @@ const BILDER = [
 /** Das Konto wiegt so viel wie drei Bilder: Ohne es geht gar nichts. */
 const KONTO_GEWICHT = 3;
 const SCHRIFT_GEWICHT = 1;
-/** So lange steht das Logo allein (ms), bevor das Ladebild kommt. */
-const LOGO_DAUER = 1300;
+/** Kurzer Aufbau der Marke; Laden läuft währenddessen parallel. */
+const LOGO_DAUER = 2450;
 
 function ladeBild(src: string): Promise<void> {
   return new Promise((fertig) => {
@@ -64,6 +53,7 @@ export function Startbildschirm({
   const [erledigt, setErledigt] = useState(0);
   const [anzeige, setAnzeige] = useState(0);
   const fertigGemeldet = useRef(false);
+  const [logoFehlt, setLogoFehlt] = useState(false);
 
   const gesamt = BILDER.length + SCHRIFT_GEWICHT + KONTO_GEWICHT;
   const echt = Math.round(((erledigt + (geladen ? KONTO_GEWICHT : 0)) / gesamt) * 100);
@@ -85,7 +75,7 @@ export function Startbildschirm({
 
   // Die Anzeige holt die echte Zahl in kleinen Schritten ein, nie darüber.
   useEffect(() => {
-    if (phase !== 'laden' || anzeige >= echt) return;
+    if (phase === 'weg' || anzeige >= echt) return;
     const schritt = window.setTimeout(() => setAnzeige((a) => Math.min(echt, a + Math.max(1, Math.round((echt - a) / 6)))), 30);
     return () => window.clearTimeout(schritt);
   }, [phase, anzeige, echt]);
@@ -106,23 +96,27 @@ export function Startbildschirm({
     );
   }, [phase, anzeige, wenigerBewegung]);
 
-  if (phase === 'logo') {
-    return (
-      <main className="start-logo" aria-label={t('startbild.wirdGestartet')}>
-        <span className="start-logo-schein" aria-hidden="true" />
-        <img className={`start-logo-bild${wenigerBewegung ? '' : ' is-springt'}`} src="/hub/broweggames-vertikal-dunkel.webp" alt="BroweGGames" draggable={false} />
-      </main>
-    );
-  }
-
   return (
-    <main className={`start-laden${phase === 'weg' ? ' is-weg' : ''}`} aria-busy={phase !== 'weg'}>
-      <img className="start-laden-bild" src="/hub/ladebild.webp" alt="" draggable={false} />
-      <img className="start-laden-logo" src="/hub/broweggames-horizontal-dunkel.webp" alt="BroweGGames" draggable={false} />
-      <div className="start-laden-leiste" role="progressbar" aria-label={t('startbild.laedt')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={anzeige}>
-        <span className="start-laden-fuellung" style={{ width: `${anzeige}%` }} />
-        <strong>{anzeige} %</strong>
+    <main className={`start-logo${phase !== 'logo' ? ' start-laden' : ''}${phase === 'weg' ? ' is-weg' : ''}${wenigerBewegung ? ' ist-ruhig' : ''}`}
+      aria-label={t('startbild.wirdGestartet')} aria-busy={phase !== 'weg'}>
+      <span className="start-logo-schein" aria-hidden="true" />
+      <div className="start-marke">
+        {logoFehlt ? <strong className="start-marke-ersatz">Browe<em>GG</em>ames</strong> : <>
+          <img className="start-marke-ganz" src="/hub/broweggames-vertikal-dunkel.webp" alt="BroweGGames" draggable={false} onError={() => setLogoFehlt(true)} />
+          <div className="start-tiere" aria-hidden="true">
+            {['lila', 'giraffe', 'orange', 'tuerkis'].map(tier =>
+              <span key={tier} className={`start-tier tier-${tier}`} />)}
+          </div>
+          <span className="start-verschmelzung" aria-hidden="true" />
+          <img className="start-marke-schrift" src="/hub/broweggames-vertikal-dunkel.webp" alt="" aria-hidden="true" draggable={false} />
+        </>}
       </div>
+      {phase !== 'logo' && <div className="start-status">
+        <div className="start-laden-leiste" role="progressbar" aria-label={t('startbild.laedt')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={anzeige}>
+          <span className="start-laden-fuellung" style={{ width: `${anzeige}%` }} />
+        </div>
+        <span className="start-status-text">{anzeige === 100 ? 'Bereit für deine nächste Runde' : 'Deine Spiele werden vorbereitet'}<b>{anzeige} %</b></span>
+      </div>}
     </main>
   );
 }

@@ -87,6 +87,11 @@ export default {
 
   'einstieg.zurueck': 'Zurück',
 
+  'sammlung.uebersichtText': 'Alles an seinem Platz. Öffne einen Bereich, um deinen Stil zu ändern.',
+  'sammlung.deinStil': 'Deine ausgewählte Ausstattung',
+  'sammlung.aktuell': 'AUSGEWÄHLT',
+  'sammlung.zurUebersicht': 'Zur Übersicht',
+  'sammlung.auswahlText': 'Wähle ein Design aus deiner Sammlung. Weitere Designs findest du im Shop.',
   'sammlung.titel': 'Sammlung',
   'sammlung.zumShop': 'Zum Shop ›',
   'sammlung.chips': 'Spiele in der Sammlung',

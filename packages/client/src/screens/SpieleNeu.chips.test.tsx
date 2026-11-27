@@ -50,13 +50,14 @@ afterEach(cleanup);
 
 describe('Chips im Reiter „Spiele"', () => {
   it('(a) Webseite mit UMFANG: keine Trinkspiele, kein Echtzeit, kein „Kommt bald"', () => {
-    expect(titel(chipsFuer(MIT_UMFANG, false))).toEqual(['Kartenspiele', 'Denken & Strategie']);
+    expect(titel(chipsFuer(MIT_UMFANG, false))).toEqual(['BroRemote', 'Kartenspiele', 'Denken & Strategie']);
   });
 
   it('(b) Webseite ohne UMFANG: alle Kategorien wie vorher', () => {
     expect(titel(chipsFuer(OHNE_UMFANG, false))).toEqual([
+      'BroRemote',
       'Kartenspiele',
-      'Trinkspiele',
+      'Partykiste',
       'Echtzeit',
       'Denken & Strategie',
     ]);
@@ -65,12 +66,13 @@ describe('Chips im Reiter „Spiele"', () => {
   it('(c) App unverändert: belegte Kategorien und „Kommt bald" dahinter', () => {
     // Die erste iOS-Fassung, wie in SpieleNeu.app.test.tsx.
     expect(titel(chipsFuer(['doppelkopf', 'skat', 'partykiste', 'filler', 'brochess'], true))).toEqual([
+      'BroRemote',
       'Kartenspiele',
-      'Trinkspiele',
+      'Partykiste',
       'Denken & Strategie',
       'Kommt bald',
     ]);
-    expect(titel(chipsFuer(MIT_UMFANG, true))).toEqual(['Kartenspiele', 'Denken & Strategie', 'Kommt bald']);
+    expect(titel(chipsFuer(MIT_UMFANG, true))).toEqual(['BroRemote', 'Kartenspiele', 'Denken & Strategie', 'Kommt bald']);
   });
 
   it('auf der Webseite führt kein Chip ins Leere', async () => {
@@ -87,10 +89,25 @@ describe('Chips im Reiter „Spiele"', () => {
     );
     const leiste = await screen.findByRole('tablist', { name: 'Kategorien' });
     const chips = within(leiste).getAllByRole('tab');
-    expect(chips.map((c) => c.textContent)).toEqual(['Alle', 'Kartenspiele', 'Denken']);
+    expect(chips.map((c) => c.textContent)).toEqual(['Alle', 'BroRemote', 'Kartenspiele', 'Denken', 'Allein']);
+    fireEvent.click(within(leiste).getByRole('tab', { name: 'BroRemote' }));
+    expect(screen.getByRole('link', { name: /Bro Building Battle/ })).toHaveAttribute('href', '/broremote?spiel=building');
+    expect(screen.getByRole('link', { name: /BroTanks/ })).toHaveAttribute('href', '/broremote?spiel=brotanks');
+    expect(document.querySelectorAll('.hb-spiele-rolle .hb-sk')).toHaveLength(2);
     for (const chip of chips.slice(1)) {
       fireEvent.click(chip);
       expect(document.querySelectorAll('.hb-spiele-rolle .hb-sk').length).toBeGreaterThan(0);
     }
   });
+});
+
+it('Ice Clash steht als quadratische Kachel unter Denken, auch ohne Kartenmodule', async () => {
+  expect(chipsFuer([], false).map(c=>c.id)).toContain('denken');
+  render(<SpieleNeu me={{stats:[]} as unknown as Me} offen={null} onOeffne={vi.fn()} onPick={vi.fn()} onSolo={vi.fn()} onBald={vi.fn()} onSammlung={vi.fn()}/>);
+  const chip=await screen.findByRole('tab',{name:'Denken'});
+  fireEvent.click(chip);
+  const link=screen.getByRole('link',{name:/Bro Ice Clash/});
+  expect(link).toHaveAttribute('href','/ice-clash');
+  expect(link).toHaveClass('hb-sk');
+  expect(document.querySelector('.hb-broremote[href="/ice-clash"]')).toBeNull();
 });

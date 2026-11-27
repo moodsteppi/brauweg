@@ -66,6 +66,7 @@ const Eiland = lazy(() => import('./screens/Eiland').then((m) => ({ default: m.E
 const FeldherrTisch = lazy(() =>
   import('./screens/FeldherrTisch').then((m) => ({ default: m.FeldherrTisch })),
 );
+const Wuerfelglanz = lazy(() => import('./screens/Wuerfelglanz').then(m => ({ default: m.Wuerfelglanz })));
 const Filler = lazy(() => import('./screens/Filler').then((m) => ({ default: m.Filler })));
 /* Golf zieht seinen kompletten Spielkern nach (Physik, Bots, 40 Bahnen) —
    nichts davon braucht jemand, der Doppelkopf spielt. */
@@ -374,7 +375,7 @@ export function App(): React.JSX.Element {
     return false;
   });
 
-  // Logo und Ladebild mit Prozentzahl, bis Konto und Startbilder da sind.
+  // Logo-Aufbau und Ladeanzeige, bis Konto und Startbilder da sind.
   if (!startFertig) return <Startbildschirm geladen={!loading} onFertig={() => setStartFertig(true)} />;
   if (loading) return <AppLaedt />;
 
@@ -734,6 +735,10 @@ export function App(): React.JSX.Element {
           />
         </Suspense>
       );
+    }
+
+    if ((screen.name === 'lobby' || screen.name === 'table') && screen.gameId === 'wuerfelglanz') {
+      return <Wuerfelglanz kontoId={me.id} startTisch={screen.name === 'table' ? screen.tableId : null} onBack={() => { setScreen({ name: 'games' }); void reload(); }} />;
     }
 
     if (screen.name === 'table') {

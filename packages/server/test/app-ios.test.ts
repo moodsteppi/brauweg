@@ -4,7 +4,7 @@
  * Das Xcode-Projekt entsteht erst auf Toms MacBook (`xcodegen generate`), und
  * die XCTests laufen nur dort. Was Apple beim Hochladen oder in der Pruefung
  * ablehnt und was die Huelle mit dem Server verabreden muss, steht aber in
- * Textdateien — und die liest dieser Test: Bundle-ID, nur iPhone, nur
+ * Textdateien — und die liest dieser Test: Bundle-ID, iPhone und iPad, nur
  * hochkant, Associated Domains, Privacy Manifest, keine Berechtigungstexte,
  * App-Symbol ohne Alphakanal. Dazu die Naht zum Server (`APP_ORIGIN`,
  * `APP_LINK_PFADE`) und zum Client (der Einladungspfad aus einladungslink.ts),
@@ -67,13 +67,13 @@ function ohneKommentare(xml: string): string {
   return xml.replace(/<!--[\s\S]*?-->/g, '');
 }
 
-test('project.yml: Bundle-ID, iOS 16, nur iPhone, keine Team-ID im Repo', () => {
+test('project.yml: Bundle-ID, iOS 16, iPhone und iPad, keine Team-ID im Repo', () => {
   const yml = lies('project.yml');
   assert.deepEqual(werte(yml, 'PRODUCT_BUNDLE_IDENTIFIER'), ['de.broweg.brauweg-spielen', 'de.broweg.brauweg-spielen.tests']);
   const ziele = werte(yml, 'deploymentTarget');
   assert.ok(ziele.length >= 1 && ziele.every((z) => z === '16.0'), `deploymentTarget: ${ziele.join(', ')}`);
   const familien = werte(yml, 'TARGETED_DEVICE_FAMILY');
-  assert.ok(familien.length >= 1 && familien.every((f) => f === '1'), `TARGETED_DEVICE_FAMILY: ${familien.join(', ')}`);
+  assert.ok(familien.length >= 1 && familien.every((f) => f === '1,2'), `TARGETED_DEVICE_FAMILY: ${familien.join(', ')}`);
   // Die Team-ID haengt an Toms Konto: Lokal.xcconfig bzw. das Bauskript.
   assert.deepEqual(werte(yml, 'DEVELOPMENT_TEAM'), []);
   assert.deepEqual(werte(yml, 'INFOPLIST_FILE'), ['Konfiguration/Info.plist']);
@@ -110,7 +110,7 @@ test('project.yml: Ressourcen samt Privacy Manifest, Client per Build-Phase', ()
 test('Info.plist: Querformat für Ice Clash, Ausfuhrangabe, nur BroRemote-Berechtigungen, kein offenes ATS', () => {
   const plist = ohneKommentare(lies('Konfiguration', 'Info.plist'));
   assert.deepEqual(plistListe(plist, 'UISupportedInterfaceOrientations'), ['UIInterfaceOrientationPortrait', 'UIInterfaceOrientationLandscapeLeft', 'UIInterfaceOrientationLandscapeRight']);
-  assert.ok(!plist.includes('UISupportedInterfaceOrientations~ipad'));
+  assert.deepEqual(plistListe(plist, 'UISupportedInterfaceOrientations~ipad'), ['UIInterfaceOrientationPortrait', 'UIInterfaceOrientationPortraitUpsideDown', 'UIInterfaceOrientationLandscapeLeft', 'UIInterfaceOrientationLandscapeRight']);
   assert.equal(plistWert(plist, 'ITSAppUsesNonExemptEncryption'), 'false');
   assert.deepEqual([...plist.matchAll(/<key>(NS\w*UsageDescription)<\/key>/g)].map((m) => m[1]).sort(), ['NSCameraUsageDescription', 'NSLocalNetworkUsageDescription']);
   assert.match(plistWert(plist, 'NSCameraUsageDescription')!, /QR-Code.*BroRemote/);

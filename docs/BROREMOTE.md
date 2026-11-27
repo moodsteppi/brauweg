@@ -276,3 +276,32 @@ nur, die Handys schicken Eingaben und bekommen ihre eigene Sicht.
   getrennt ist oder das Gastgeberfenster im Hintergrund liegt. Wer nur
   zuschaut, hält niemanden auf. `privatFuer` kennt keine Pause, deshalb setzt
   die Bühne dort selbst `phase: 'pause'`.
+
+## Spielauswahl und Geräteansicht (27.11.2026)
+
+Im Games-Tab ist BroRemote eine eigene Kategorie mit den Bildkacheln Bro Building
+Battle und BroTanks. Die Links `/broremote?spiel=building` bzw. `?spiel=brotanks`
+öffnen direkt die vier Einstiege: Lobby eröffnen, Lobby beitreten, Solo Play und
+Spielanleitung. Einladungen mit Fragment öffnen weiterhin direkt das
+Beitrittsformular; das Fragment wird anschließend aus dem Verlauf entfernt.
+
+Online ist die vorausgewählte Verbindung. WLAN/Hotspot steht unter
+„Verbindung einstellen“ in der nativen App zur Verfügung. Die Lobby zeigt QR-Code,
+Spielerplätze und Startknopf. Spielwechsel, Modi und Verbindungstest stehen unter
+„Rundeneinstellungen“, die Waffenübersicht in einem eigenen Klappbereich. Eine
+wiederaufgenommene Sitzung übernimmt weiterhin die Spielwahl des Raums.
+
+Die Gastgeberpartie nutzt die gesamte verfügbare Breite und Höhe, mit Spiel-HUD
+und Rückweg zur Lobby. BroTanks passt seine unveränderte 1200×650-Welt proportional
+in die Fläche ein. Quer gehaltene Controller ordnen Bautasten und Items bzw.
+Zielregler, Waffenwahl und Feuer nebeneinander. Status, Ping und Verlassen bleiben
+erreichbar. Native iPhones erlauben Querformat auf `/broremote` und `/ice-clash`;
+iPads laufen als eigene Gerätefamilie mit allen Orientierungen. Dafür ist ein
+neuer nativer App-Build erforderlich; die Webansicht allein hebt die alte
+Orientierungssperre einer installierten App nicht auf.
+
+Die Games-Übersicht verwendet für alle Einträge ein gemeinsames quadratisches
+Bildformat, einschließlich Solo-Spielen, Ice Clash, Partykiste und Vorschauen.
+„Allein“ besitzt einen eigenen Filter. Partykiste ist eine Sammlung: In der
+Hauptansicht steht nur ihre Kachel, der Partykiste-Filter öffnet die einzelnen
+Minispiele und die gemischte Runde. Abstimmungen bleiben je Vorschaukachel erhalten.

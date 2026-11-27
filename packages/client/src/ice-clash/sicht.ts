@@ -7,7 +7,9 @@ export type Spieler = {
   winkel: number;
   lebt: boolean;
   siege: number;
-  laden: number;
+  geplant: boolean;
+  emote: string;
+  emoteZeit: number;
   anker: number;
   item: string;
   bereit: boolean;
@@ -22,6 +24,8 @@ export type Stand = {
   warte: number;
   zeit: number;
   runde: number;
+  zug: number;
+  plan: { x: number; y: number; fest: boolean; item: boolean } | null;
   radius: number;
   warnung: boolean;
   gewinner: string;

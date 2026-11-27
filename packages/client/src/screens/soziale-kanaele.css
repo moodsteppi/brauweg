@@ -1,0 +1,16 @@
+.hb-social{margin:1.5rem 0;padding:1.25rem;border:1px solid #426391;border-radius:1.5rem;background:linear-gradient(135deg,#1a3657,#101d3d);color:#f4f5ff}
+.hb-social h2{margin:0 0 .4rem;font-family:'Lilita One',sans-serif;font-size:1.5rem;font-weight:400}
+.hb-social>p{margin:0 0 1rem;color:#b8c9e3;font-size:.9rem}
+.hb-social-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.hb-social-link{display:flex;align-items:center;gap:.65rem;min-width:0;min-height:4.5rem;padding:.8rem;border:1px solid #55739b;border-radius:1rem;background:#0b1931;color:inherit;text-decoration:none;transition:border-color .15s,background .15s}
+.hb-social-link:hover{background:#213a5b;border-color:#ffd36b}
+.hb-social-link:focus-visible{outline:3px solid #ffd36b;outline-offset:3px}
+.hb-social-link strong,.hb-social-link small{display:block}
+.hb-social-link strong{font-size:1rem}.hb-social-link small{font-size:.75rem;color:#b8c9e3}
+.hb-social-logo{display:grid;place-items:center;flex-shrink:0;width:2.5rem;height:2.5rem;border-radius:.75rem;background:#060b16}
+.hb-social-logo svg{width:1.6rem;height:1.6rem}
+.is-tiktok .hb-social-logo svg{filter:drop-shadow(-1px -1px 0 #25f4ee) drop-shadow(1px 1px 0 #fe2c55)}
+.is-instagram .hb-social-logo{background:linear-gradient(35deg,#ffcd57,#ed346d 50%,#864bc5)}
+.hb-social-pfeil{margin-left:auto;color:#ffd36b}
+@media(max-width:440px){.hb-social-links{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.hb-social-link{transition:none}}

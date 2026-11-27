@@ -68,3 +68,9 @@ absolut eingepasste Bilder. Das verhindert WebKit-Überläufe aus impliziten
 Grid-Zeilen; Karten bleiben vollständig, Tische füllen ihre Vorschau aus.
 Tagesmarkt und Tagestruhe laden unabhängig; ein Truhenfehler versteckt
 nicht die Angebote und kann separat erneut versucht werden.
+
+## Collection als Bereichsübersicht
+
+Die Sammlung startet mit allen Spielen. Spielefilter und Abschnittsüberschriften tragen dieselben Spielbilder wie Games. Jedes Kartenspiel hat drei Einstiegskacheln: Blätter/Decks, Tisch/Table, Rückseiten/Card backs; BroChess ausschließlich Figuren. Eigene Vektorsymbole kennzeichnen die Bereiche. Jede Kachel zeigt das aktuell ausgerüstete Design aus `me.themes[gameId]`. Standardrückseiten folgen dem gewählten Blatt; die Zauberer-Vorschau verwendet eine vorhandene Zahlenkarte. Es werden bestehende Spielgrafiken verwendet, keine zusätzlichen Raster-Assets.
+
+Ein Tipp öffnet nur den jeweiligen Bereich. Zurück stellt Scrollposition und Tastaturfokus wieder her; Bereichswechsel ist auch innerhalb der Auswahl möglich. Auswählen und Shop-Verweis verwenden weiterhin dieselben Schnittstellen, ohne neue Kaufwege oder Datenbankfelder. Die lokale Hub-Probe enthält nun auch Rückseiten. Umsetzung und Prüfung bleiben lokal bis zur ausdrücklichen Freigabe der gemeinsamen Veröffentlichung.
