@@ -182,7 +182,7 @@ export function GameSelect({
   anfangsHeute?: boolean;
 }): React.JSX.Element {
   const [tab, setTab] = useState<Tab>(anfangsTab ?? 'spielen');
-  const [sammlungSpiel, setSammlungSpiel] = useState('doppelkopf');
+  const [sammlungSpiel, setSammlungSpiel] = useState('alle');
   const [shopZiel, setShopZiel] = useState<{ spiel: string; artikel?: string }>({ spiel: 'alle' });
   const zumTagesShop = (spiel: string, artikel?: string): void => { setShopZiel({ spiel: ['doppelkopf', 'skat', 'brochess', 'allgemein'].includes(spiel) ? spiel : 'alle', artikel }); setSchrankOffen(false); setTab('shop'); };
   /** Neues Hub: das Spiel, dessen Spielseite im Reiter „Spiele" offen ist. */
