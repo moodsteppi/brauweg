@@ -48,10 +48,19 @@ import {
   type Grundwerte,
   type Rolle,
   type Stufe,
+  RUESTUNG_HOECHSTWERT,
   einheit,
   werteFuer,
 } from './katalog.js';
-import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
+import { bonusFuerEinheit, effekteFuerEinheit, zaehleMarken } from './synergien.js';
+import {
+  type Faehigkeit,
+  type FaehigkeitId,
+  MANA_JE_ANGRIFF,
+  MANA_JE_TREFFER,
+  WIRKUNG,
+  faehigkeitVon,
+} from './faehigkeiten.js';
 import {
   type Seite,
   SEITEN,
@@ -472,6 +481,16 @@ export type Brettseite = readonly (Aufgestellt | null)[];
 // Was herauskommt
 // ---------------------------------------------------------------------------
 
+/** Die Zustaende, die ein `zustand`-Ereignis melden kann. */
+export type Zustand =
+  | 'betaeubt'
+  | 'langsam'
+  | 'schild'
+  | 'panzer'
+  | 'schildwall'
+  | 'brand'
+  | 'kampfgeist';
+
 /** Warum der Kampf zu Ende ist. */
 export type Endgrund =
   /** Eine Seite steht nicht mehr. Der Normalfall. */
@@ -519,13 +538,66 @@ export type Ereignis =
       readonly von: number;
       readonly nach: number;
     }
-  /** Eine Einheit hat getroffen. `lebenDanach` spart der Anzeige das Mitrechnen. */
+  /**
+   * Eine Einheit hat getroffen. `lebenDanach` spart der Anzeige das Mitrechnen.
+   *
+   * SEIT DEM 27.11.2026 (Faehigkeiten und Markeneffekte) mit drei Zusaetzen,
+   * alle fertig gerechnet, damit der Bildschirm nichts nachrechnet:
+   * `manaWer`/`manaZiel` sind das Mana beider NACH dem Treffer (fuer den
+   * Manabalken), `quelle` sagt, ob der Treffer aus einer Faehigkeit oder aus
+   * einem Brand kommt (fehlt beim gewoehnlichen Hieb), und `abgefangen` ist der
+   * Teil, den ein Schild geschluckt hat — `schaden` ist dann nur der Rest, der
+   * am Leben ankam.
+   */
   | {
       readonly art: 'treffer';
       readonly zeitMs: number;
       readonly wer: number;
       readonly ziel: number;
       readonly schaden: number;
+      readonly lebenDanach: number;
+      readonly manaWer: number;
+      readonly manaZiel: number;
+      readonly quelle?: 'faehigkeit' | 'brand';
+      readonly abgefangen?: number;
+    }
+  /**
+   * Eine Einheit wirkt ihre Faehigkeit. Kommt VOR den Treffern, Heilungen und
+   * Zustaenden, die daraus folgen; `ziele` nennt alle, die es betrifft.
+   */
+  | {
+      readonly art: 'faehigkeit';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly faehigkeit: FaehigkeitId;
+      readonly ziele: readonly number[];
+    }
+  /**
+   * Ein Zustand beginnt: betaeubt, verlangsamt, Schild, Panzer, Schildwall,
+   * Brand oder Kampfgeist. `bisMs` ist das Ende (null = bis er aufgebraucht ist,
+   * beim Schild), `menge` die Groesse eines Schildes.
+   */
+  | {
+      readonly art: 'zustand';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly zustand: Zustand;
+      readonly bisMs: number | null;
+      readonly menge?: number;
+    }
+  /** Eine Einheit springt (Hinterhalt der Meuchler, Schattensprung). */
+  | {
+      readonly art: 'sprung';
+      readonly zeitMs: number;
+      readonly wer: number;
+      readonly von: number;
+      readonly nach: number;
+    }
+  /** Ein gefallener Untoter steht wieder auf (Markeneffekt Wiederkehr). */
+  | {
+      readonly art: 'wiederkehr';
+      readonly zeitMs: number;
+      readonly wer: number;
       readonly lebenDanach: number;
     }
   /**
@@ -547,6 +619,10 @@ export type Ereignis =
       readonly ziel: number;
       readonly menge: number;
       readonly lebenDanach: number;
+      /** Mana des Heilers danach. */
+      readonly manaWer: number;
+      /** Fehlt beim gewoehnlichen Heilen des Beistands. */
+      readonly quelle?: 'faehigkeit' | 'wachstum';
     }
   /** Eine Einheit ist gefallen. Kommt immer unmittelbar nach dem toedlichen Treffer. */
   | { readonly art: 'tod'; readonly zeitMs: number; readonly wer: number }
@@ -618,6 +694,39 @@ interface Streiter {
   /** Ab wann diese Einheit wieder angreifen bzw. ziehen darf, in Millisekunden. */
   angriffFreiAb: number;
   schrittFreiAb: number;
+
+  // --- Seit dem 27.11.2026: Faehigkeit, Mana, Zustaende, Markeneffekte -------
+  readonly faehigkeit: Faehigkeit | null;
+  mana: number;
+  /** Bis wann die Einheit nichts tun kann (Kopfnuss, Stampfer). */
+  betaeubtBis: number;
+  /** Bis wann sie verlangsamt ist, und um wie viel Prozent (Frostring). */
+  langsamBis: number;
+  langsamProzent: number;
+  /** Lebenspunkte, die ein Schild noch schluckt (Waechter, Runenschild). */
+  schild: number;
+  /** Bis wann jeder Treffer nur halb zaehlt (Panzer einziehen). */
+  panzerBis: number;
+  /** Zusaetzliche Ruestung bis zu einem Zeitpunkt (Schildwall). */
+  ruestungPlus: number;
+  ruestungPlusBis: number;
+  /** Brand: Schaden je Spielsekunde, bis wann, von wem, naechster Takt. */
+  brandJeSek: number;
+  brandBis: number;
+  brandQuelle: number;
+  brandNaechster: number;
+  /** Markeneffekte, einmal beim Aufbau aufgeloest. 0 = nicht aktiv. */
+  readonly kampfgeistProzent: number;
+  kampfgeistAn: boolean;
+  readonly wachstumProzentJeSek: number;
+  wachstumNaechster: number;
+  readonly wiederkehrProzent: number;
+  readonly glutProzentJeSek: number;
+  readonly glutSek: number;
+  readonly hinterhalt: boolean;
+  /** Fuer die passiven Faehigkeiten: gezaehlte Schuesse, erster Treffer. */
+  schuesse: number;
+  ersterTrefferOffen: boolean;
 }
 
 /**
@@ -728,6 +837,42 @@ function baueStreiter(bretter: readonly [Brettseite, Brettseite]): Streiter[] {
         aufgestellt.stufe,
         bonusFuerEinheit(aufgestellt.id, zaehlung),
       );
+      const faehigkeit = faehigkeitVon(aufgestellt.id);
+      let kampfgeistProzent = 0;
+      let wachstumProzentJeSek = 0;
+      let wiederkehrProzent = 0;
+      let glutProzentJeSek = 0;
+      let glutSek = 0;
+      let hinterhalt = false;
+      let manaStartProzent = 0;
+      let schildProzent = 0;
+      for (const effekt of effekteFuerEinheit(aufgestellt.id, zaehlung)) {
+        switch (effekt.art) {
+          case 'kampfgeist':
+            kampfgeistProzent += effekt.angriffProzent;
+            break;
+          case 'schutzschild':
+            schildProzent += effekt.lebenProzent;
+            break;
+          case 'wachstum':
+            wachstumProzentJeSek += effekt.lebenProzentJeSek;
+            break;
+          case 'aufgeladen':
+            manaStartProzent += effekt.manaProzent;
+            break;
+          case 'wiederkehr':
+            wiederkehrProzent = Math.max(wiederkehrProzent, effekt.lebenProzent);
+            break;
+          case 'glut':
+            glutProzentJeSek += effekt.angriffProzentJeSek;
+            glutSek = Math.max(glutSek, effekt.sek);
+            break;
+          case 'hinterhalt':
+            hinterhalt = true;
+            break;
+        }
+      }
+      const manaMax = faehigkeit?.art === 'aktiv' ? faehigkeit.mana : 0;
       streiter.push({
         id: streiter.length,
         seite,
@@ -741,6 +886,29 @@ function baueStreiter(bretter: readonly [Brettseite, Brettseite]): Streiter[] {
         leben: w.leben,
         angriffFreiAb: 0,
         schrittFreiAb: 0,
+        faehigkeit,
+        mana: Math.min(manaMax, Math.round((manaMax * manaStartProzent) / 100)),
+        betaeubtBis: 0,
+        langsamBis: 0,
+        langsamProzent: 0,
+        schild: Math.round((w.leben * schildProzent) / 100),
+        panzerBis: 0,
+        ruestungPlus: 0,
+        ruestungPlusBis: 0,
+        brandJeSek: 0,
+        brandBis: 0,
+        brandQuelle: -1,
+        brandNaechster: 0,
+        kampfgeistProzent,
+        kampfgeistAn: false,
+        wachstumProzentJeSek,
+        wachstumNaechster: 0,
+        wiederkehrProzent,
+        glutProzentJeSek,
+        glutSek,
+        hinterhalt,
+        schuesse: 0,
+        ersterTrefferOffen: faehigkeit?.id === 'ersterTreffer',
       });
     });
   }
@@ -1020,26 +1188,418 @@ export function simuliereKampf(
   let jetzt = 0;
   let grund: Endgrund = 'ausgeloescht';
 
-  // Ein Hieb mit allem, was dazugehoert. Eine Funktion, weil ihn seit
-  // `meuchlerZielwahl` zwei Stellen austeilen — zwei Abschriften liefen beim
-  // ersten geaenderten Ereignisfeld auseinander.
-  const schlage = (wer: Streiter, ziel: Streiter): void => {
-    const schaden = schadenNach(wer.werte.angriff, ziel.werte.ruestung);
+  /**
+   * Eine Spielsekunde in Kampfmillisekunden, auf ganze Takte gerundet. Die
+   * Dauern der Faehigkeiten und Effekte stehen in Spielsekunden
+   * (faehigkeiten.ts); mit dem Zeitraffer laeuft alles schneller, also auch
+   * sie — sonst hielte ein Schildwall bei doppeltem Tempo doppelt so viele
+   * Angriffe aus.
+   */
+  const dauer = (sek: number): number =>
+    Math.max(regler.taktMs, Math.round((sek * 1000) / regler.zeitraffer / regler.taktMs) * regler.taktMs);
+  const sekunde = dauer(1);
+
+  /** Der Untote, der wiederkehrt, kehrt je Seite einmal wieder. */
+  const wiederkehrGenutzt: [boolean, boolean] = [false, false];
+
+  const lebt = (s: Streiter): boolean => s.leben > 0;
+  const manaMax = (s: Streiter): number => (s.faehigkeit?.art === 'aktiv' ? s.faehigkeit.mana : 0);
+  const ladeMana = (s: Streiter, menge: number): void => {
+    const max = manaMax(s);
+    if (max > 0 && lebt(s)) s.mana = Math.min(max, s.mana + menge);
+  };
+
+  /** Ruestung samt Schildwall, gedeckelt wie im Katalog. */
+  const ruestungVon = (s: Streiter): number =>
+    Math.min(RUESTUNG_HOECHSTWERT, s.werte.ruestung + (jetzt < s.ruestungPlusBis ? s.ruestungPlus : 0));
+
+  /** Angriff samt Kampfgeist (Krieger unter halbem Leben). */
+  const angriffVon = (s: Streiter): number =>
+    s.kampfgeistAn ? Math.round((s.werte.angriff * (100 + s.kampfgeistProzent)) / 100) : s.werte.angriff;
+
+  /** Wartezeit bis zum naechsten Angriff, verlangsamt, wenn Frost wirkt. */
+  const wartezeit = (s: Streiter, grundMs: number): number => {
+    if (jetzt >= s.langsamBis || s.langsamProzent <= 0) return grundMs;
+    const roh = Math.round((grundMs * 100) / (100 - s.langsamProzent));
+    return Math.ceil(roh / regler.taktMs) * regler.taktMs;
+  };
+
+  const zustand = (s: Streiter, z: Zustand, bisMs: number | null, menge?: number): void => {
+    ereignisse.push(
+      menge === undefined
+        ? { art: 'zustand', zeitMs: jetzt, wer: s.id, zustand: z, bisMs }
+        : { art: 'zustand', zeitMs: jetzt, wer: s.id, zustand: z, bisMs, menge },
+    );
+  };
+
+  /**
+   * Fuegt einem Ziel Schaden zu, der schon nach Ruestung gerechnet ist — mit
+   * allem, was daran haengt: Panzer, Schild, Mana, Kampfgeist, Wiederkehr, Tod.
+   * EINE Stelle fuer alle Quellen (Hieb, Faehigkeit, Brand), damit kein Weg
+   * einen Schild oder eine Wiederkehr vergisst.
+   */
+  const verletze = (
+    quelle: Streiter,
+    ziel: Streiter,
+    roh: number,
+    art: 'hieb' | 'faehigkeit' | 'brand',
+  ): void => {
+    let schaden = jetzt < ziel.panzerBis ? Math.max(1, Math.round(roh / 2)) : roh;
+    let abgefangen = 0;
+    if (ziel.schild > 0) {
+      abgefangen = Math.min(ziel.schild, schaden);
+      ziel.schild -= abgefangen;
+      schaden -= abgefangen;
+    }
     ziel.leben = Math.max(0, ziel.leben - schaden);
-    wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo, regler);
-    ereignisse.push({
+    if (art !== 'brand') ladeMana(ziel, MANA_JE_TREFFER);
+    const treffer: Ereignis = {
       art: 'treffer',
       zeitMs: jetzt,
-      wer: wer.id,
+      wer: quelle.id,
       ziel: ziel.id,
       schaden,
       lebenDanach: ziel.leben,
-    });
+      manaWer: quelle.mana,
+      manaZiel: ziel.mana,
+      ...(art === 'hieb' ? {} : { quelle: art }),
+      ...(abgefangen > 0 ? { abgefangen } : {}),
+    };
+    ereignisse.push(treffer);
     if (ziel.leben === 0) {
+      if (ziel.wiederkehrProzent > 0 && !wiederkehrGenutzt[ziel.seite]) {
+        wiederkehrGenutzt[ziel.seite] = true;
+        ziel.leben = Math.max(1, Math.round((ziel.hoechstesLeben * ziel.wiederkehrProzent) / 100));
+        ziel.brandBis = 0;
+        ziel.betaeubtBis = 0;
+        ereignisse.push({ art: 'wiederkehr', zeitMs: jetzt, wer: ziel.id, lebenDanach: ziel.leben });
+        return;
+      }
       belegt.delete(ziel.platz);
       ereignisse.push({ art: 'tod', zeitMs: jetzt, wer: ziel.id });
+      return;
+    }
+    if (ziel.kampfgeistProzent > 0 && !ziel.kampfgeistAn && ziel.leben * 2 < ziel.hoechstesLeben) {
+      ziel.kampfgeistAn = true;
+      zustand(ziel, 'kampfgeist', null);
     }
   };
+
+  /** Brand setzen (Markeneffekt Glut). Ein neuer Brand ersetzt den alten. */
+  const entzuende = (wer: Streiter, ziel: Streiter): void => {
+    if (wer.glutProzentJeSek <= 0 || !lebt(ziel)) return;
+    ziel.brandJeSek = Math.max(1, Math.round((angriffVon(wer) * wer.glutProzentJeSek) / 100));
+    ziel.brandBis = jetzt + dauer(wer.glutSek);
+    ziel.brandQuelle = wer.id;
+    ziel.brandNaechster = jetzt + sekunde;
+    zustand(ziel, 'brand', ziel.brandBis);
+  };
+
+  /**
+   * Ein gewoehnlicher Hieb, mit den passiven Faehigkeiten und dem Brand.
+   * Eine Funktion, weil ihn seit `meuchlerZielwahl` zwei Stellen austeilen —
+   * zwei Abschriften liefen beim ersten geaenderten Ereignisfeld auseinander.
+   */
+  const schlage = (wer: Streiter, ziel: Streiter): void => {
+    let faktor = 1;
+    if (wer.faehigkeit?.id === 'jederVierte') {
+      wer.schuesse += 1;
+      if (wer.schuesse % 4 === 0) faktor *= WIRKUNG.jederVierteFaktor;
+    }
+    if (wer.ersterTrefferOffen) {
+      wer.ersterTrefferOffen = false;
+      faktor *= WIRKUNG.ersterTrefferFaktor;
+    }
+    wer.angriffFreiAb = jetzt + wartezeit(wer, angriffstakt(wer.werte.tempo, regler));
+    ladeMana(wer, MANA_JE_ANGRIFF);
+    verletze(wer, ziel, schadenNach(Math.round(angriffVon(wer) * faktor), ruestungVon(ziel)), 'hieb');
+    entzuende(wer, ziel);
+  };
+
+  /** Schaden aus einer Faehigkeit: Faktor auf den Angriff, dann Ruestung. */
+  const trifft = (wer: Streiter, ziel: Streiter, faktor: number): void => {
+    if (!lebt(ziel)) return;
+    verletze(wer, ziel, schadenNach(Math.round(angriffVon(wer) * faktor), ruestungVon(ziel)), 'faehigkeit');
+  };
+
+  const heile = (wer: Streiter, ziel: Streiter, roh: number, quelle?: 'faehigkeit' | 'wachstum'): void => {
+    if (!lebt(ziel) || ziel.leben >= ziel.hoechstesLeben) return;
+    const menge = Math.min(Math.max(1, roh), ziel.hoechstesLeben - ziel.leben);
+    ziel.leben += menge;
+    ereignisse.push({
+      art: 'heilung',
+      zeitMs: jetzt,
+      wer: wer.id,
+      ziel: ziel.id,
+      menge,
+      lebenDanach: ziel.leben,
+      manaWer: wer.mana,
+      ...(quelle ? { quelle } : {}),
+    });
+  };
+
+  // --- Wen Faehigkeiten treffen ------------------------------------------------
+  //
+  // ALLE AUSWAHLEN GEHEN UEBER ABSTAND UND RANG, wie die Zielwahl. Damit bleibt
+  // der Kampf spiegelaequivariant (siehe arena.ts): Tauscht man die Seiten und
+  // den Erstzieher, waehlt jede Faehigkeit dasselbe Ziel auf der anderen Seite.
+
+  const feinde = (wer: Streiter): Streiter[] =>
+    alle.filter((s) => s.seite !== wer.seite && lebt(s)).sort((a, b) => a.rang - b.rang);
+  const freunde = (wer: Streiter): Streiter[] =>
+    alle.filter((s) => s.seite === wer.seite && lebt(s)).sort((a, b) => a.rang - b.rang);
+  const abstand = (a: Streiter, b: Streiter): number => arenaAbstand(a.platz, b.platz);
+  /** Das kleinste Element nach `wert`, bei Gleichstand das mit niedrigerem Rang. */
+  const kleinstes = (liste: readonly Streiter[], wert: (s: Streiter) => number): Streiter | null => {
+    let bestes: Streiter | null = null;
+    let besterWert = Infinity;
+    for (const s of liste) {
+      const w = wert(s);
+      if (w < besterWert) {
+        bestes = s;
+        besterWert = w;
+      }
+    }
+    return bestes;
+  };
+
+  /** Springt auf das freie Nachbarfeld eines Gegners. False, wenn keins frei ist. */
+  const springe = (wer: Streiter, zu: Streiter): boolean => {
+    const ziel = arenaNachbarnFuer(zu.platz, wer.seite).find((p) => !belegt.has(p));
+    if (ziel === undefined) return false;
+    const von = wer.platz;
+    belegt.delete(von);
+    belegt.set(ziel, wer.id);
+    wer.platz = ziel;
+    ereignisse.push({ art: 'sprung', zeitMs: jetzt, wer: wer.id, von, nach: ziel });
+    return true;
+  };
+
+  /** Der hinterste Gegner: am weitesten weg, bei Gleichstand der niedrigere Rang. */
+  const hinterster = (wer: Streiter): Streiter | null => kleinstes(feinde(wer), (s) => -abstand(wer, s));
+
+  /**
+   * Wirkt die aktive Faehigkeit, wenn sie gerade etwas bewirken kann.
+   * False heisst: nicht gewirkt, das Mana bleibt voll, die Einheit handelt
+   * normal weiter. So verpufft keine Faehigkeit ins Leere (ein Heiler ohne
+   * Verwundete, ein Speer ohne Ziel in Reichweite).
+   */
+  const wirke = (wer: Streiter, ziel: Streiter): boolean => {
+    const f = wer.faehigkeit;
+    if (!f || f.art !== 'aktiv') return false;
+    const inReichweite = abstand(wer, ziel) <= wer.werte.reichweite;
+    const melde = (ziele: readonly Streiter[]): void => {
+      ereignisse.push({
+        art: 'faehigkeit',
+        zeitMs: jetzt,
+        wer: wer.id,
+        faehigkeit: f.id,
+        ziele: ziele.map((s) => s.id),
+      });
+      // Das Mana leert sich MIT dem Wirken, nicht danach: Die Treffer der
+      // Faehigkeit melden sonst noch einen vollen Balken.
+      wer.mana = 0;
+    };
+    switch (f.id) {
+      case 'schildwall': {
+        if (!inReichweite) return false;
+        melde([wer]);
+        wer.ruestungPlus = WIRKUNG.schildwallRuestung;
+        wer.ruestungPlusBis = jetzt + dauer(WIRKUNG.schildwallSek);
+        zustand(wer, 'schildwall', wer.ruestungPlusBis);
+        return true;
+      }
+      case 'panzer': {
+        if (!inReichweite) return false;
+        melde([wer]);
+        wer.panzerBis = jetzt + dauer(WIRKUNG.panzerSek);
+        zustand(wer, 'panzer', wer.panzerBis);
+        return true;
+      }
+      case 'kopfnuss': {
+        if (!inReichweite) return false;
+        melde([ziel]);
+        trifft(wer, ziel, 1);
+        if (lebt(ziel)) {
+          ziel.betaeubtBis = Math.max(ziel.betaeubtBis, jetzt + dauer(WIRKUNG.kopfnussBetaeubungSek));
+          zustand(ziel, 'betaeubt', ziel.betaeubtBis);
+        }
+        return true;
+      }
+      case 'funkenwurf': {
+        if (!inReichweite) return false;
+        const nachbar = kleinstes(
+          feinde(wer).filter((s) => s !== ziel && abstand(s, ziel) === 1),
+          () => 0,
+        );
+        melde(nachbar ? [ziel, nachbar] : [ziel]);
+        trifft(wer, ziel, WIRKUNG.funkenwurfZiel);
+        if (nachbar) trifft(wer, nachbar, WIRKUNG.funkenwurfNachbar);
+        return true;
+      }
+      case 'kraeuterwolke': {
+        // Wie beim Heilen der Rolle: Mit Faktor 0 (Vergleichslauf ohne
+        // Heilung) heilt auch keine Faehigkeit — sonst bliebe ein Rest.
+        if (regler.heilungFaktor <= 0) return false;
+        const verwundet = freunde(wer).filter(
+          (s) => s !== wer && abstand(wer, s) === 1 && s.leben < s.hoechstesLeben,
+        );
+        if (verwundet.length === 0) return false;
+        melde(verwundet);
+        const menge = heilkraft(wer.werte.angriff, regler.heilungFaktor * WIRKUNG.kraeuterwolkeHeilung);
+        for (const s of verwundet) heile(wer, s, menge, 'faehigkeit');
+        return true;
+      }
+      case 'speerstoss': {
+        if (!inReichweite) return false;
+        const d = abstand(wer, ziel);
+        const dahinter = kleinstes(
+          feinde(wer).filter((s) => s !== ziel && abstand(s, ziel) === 1 && abstand(wer, s) === d + 1),
+          () => 0,
+        );
+        melde(dahinter ? [ziel, dahinter] : [ziel]);
+        trifft(wer, ziel, WIRKUNG.speerstossZiel);
+        if (dahinter) trifft(wer, dahinter, WIRKUNG.speerstossDahinter);
+        return true;
+      }
+      case 'axtwirbel':
+      case 'stampfer': {
+        const ringsum = feinde(wer).filter((s) => abstand(wer, s) === 1);
+        if (ringsum.length === 0) return false;
+        melde(ringsum);
+        for (const s of ringsum) {
+          trifft(wer, s, f.id === 'axtwirbel' ? WIRKUNG.axtwirbel : WIRKUNG.stampferSchaden);
+          if (f.id === 'stampfer' && lebt(s)) {
+            s.betaeubtBis = Math.max(s.betaeubtBis, jetzt + dauer(WIRKUNG.stampferBetaeubungSek));
+            zustand(s, 'betaeubt', s.betaeubtBis);
+          }
+        }
+        return true;
+      }
+      case 'doppelpfeil': {
+        if (!inReichweite) return false;
+        const zweiter = kleinstes(
+          feinde(wer).filter((s) => s !== ziel && abstand(wer, s) <= wer.werte.reichweite),
+          (s) => abstand(wer, s),
+        );
+        melde(zweiter ? [ziel, zweiter] : [ziel]);
+        trifft(wer, ziel, WIRKUNG.doppelpfeil);
+        if (zweiter) trifft(wer, zweiter, WIRKUNG.doppelpfeil);
+        return true;
+      }
+      case 'zielschuss': {
+        const schwaechster = kleinstes(feinde(wer), (s) => s.leben);
+        if (!schwaechster) return false;
+        melde([schwaechster]);
+        trifft(wer, schwaechster, WIRKUNG.zielschuss);
+        return true;
+      }
+      case 'frostring': {
+        if (!inReichweite) return false;
+        const ring = feinde(wer).filter((s) => abstand(s, ziel) <= 1);
+        melde(ring);
+        trifft(wer, ziel, WIRKUNG.frostringZiel);
+        for (const s of ring) {
+          if (!lebt(s)) continue;
+          s.langsamProzent = WIRKUNG.frostringLangsamProzent;
+          s.langsamBis = jetzt + dauer(WIRKUNG.frostringSek);
+          zustand(s, 'langsam', s.langsamBis);
+        }
+        return true;
+      }
+      case 'schattensprung': {
+        const opfer = hinterster(wer);
+        if (!opfer) return false;
+        if (abstand(wer, opfer) > 1 && !springe(wer, opfer)) return false;
+        melde([opfer]);
+        trifft(wer, opfer, WIRKUNG.schattensprung);
+        return true;
+      }
+      case 'runenschild': {
+        const schwaechster = kleinstes(freunde(wer), (s) => s.leben / s.hoechstesLeben);
+        if (!schwaechster) return false;
+        melde([schwaechster]);
+        const menge = Math.round((schwaechster.hoechstesLeben * WIRKUNG.runenschildLebenProzent) / 100);
+        schwaechster.schild += menge;
+        zustand(schwaechster, 'schild', null, menge);
+        return true;
+      }
+      case 'feuerstrahl': {
+        if (!inReichweite) return false;
+        const d = abstand(wer, ziel);
+        const linie = feinde(wer).filter((s) => s === ziel || abstand(wer, s) + abstand(s, ziel) === d);
+        melde(linie);
+        for (const s of linie) trifft(wer, s, WIRKUNG.feuerstrahl);
+        return true;
+      }
+      case 'kettenblitz': {
+        if (!inReichweite) return false;
+        const kette: Streiter[] = [ziel];
+        while (kette.length < WIRKUNG.kettenblitz.length) {
+          const letzter = kette[kette.length - 1]!;
+          const naechster = kleinstes(
+            feinde(wer).filter((s) => !kette.includes(s) && abstand(s, letzter) <= 2),
+            (s) => abstand(s, letzter),
+          );
+          if (!naechster) break;
+          kette.push(naechster);
+        }
+        melde(kette);
+        kette.forEach((s, i) => trifft(wer, s, WIRKUNG.kettenblitz[i]!));
+        return true;
+      }
+      case 'seelenraub': {
+        if (!inReichweite) return false;
+        melde([ziel]);
+        const vorher = ziel.leben;
+        trifft(wer, ziel, WIRKUNG.seelenraub);
+        const geraubt = Math.max(0, vorher - Math.max(0, ziel.leben));
+        heile(wer, wer, Math.round(geraubt * WIRKUNG.seelenraubHeilAnteil), 'faehigkeit');
+        return true;
+      }
+      case 'klingentanz': {
+        if (!inReichweite) return false;
+        const ringsum = feinde(wer).filter((s) => s !== ziel && abstand(wer, s) === 1);
+        melde([ziel, ...ringsum]);
+        for (let i = 0; i < WIRKUNG.klingentanzHiebe; i++) trifft(wer, ziel, WIRKUNG.klingentanzHieb);
+        for (const s of ringsum) trifft(wer, s, WIRKUNG.klingentanzHieb);
+        return true;
+      }
+      case 'lichtsegen': {
+        // Wie beim Heilen der Rolle: Mit Faktor 0 (Vergleichslauf ohne
+        // Heilung) heilt auch keine Faehigkeit — sonst bliebe ein Rest.
+        if (regler.heilungFaktor <= 0) return false;
+        // Anders als das Heilen der Rolle schliesst der Segen die Wirkerin ein:
+        // Er kostet volles Mana, kann sie also nicht endlos am Leben halten
+        // (der Grund, warum ein Beistand sich sonst nicht heilt).
+        const verwundet = freunde(wer).filter((s) => s.leben < s.hoechstesLeben);
+        if (verwundet.length === 0) return false;
+        melde(verwundet);
+        const menge = heilkraft(wer.werte.angriff, regler.heilungFaktor * WIRKUNG.lichtsegenHeilung);
+        for (const s of verwundet) heile(wer, s, menge, 'faehigkeit');
+        return true;
+      }
+      case 'jederVierte':
+      case 'ersterTreffer':
+        return false;
+    }
+  };
+
+  // --- Hinterhalt: Meuchler springen vor dem ersten Takt ----------------------
+  for (const wer of reihenfolge) {
+    // Nur Nahkaempfer springen. Ein Armbrustschuetze mit der Marke Meuchler
+    // (Nachtpfeil) landete sonst mitten unter den Gegnern: gemessen fiel er
+    // damit im Turnier von 71 % auf 0 % (27.11.2026).
+    if (!wer.hinterhalt || wer.werte.reichweite > 1) continue;
+    const opfer = hinterster(wer);
+    if (opfer) springe(wer, opfer);
+  }
+  // Schilde aus dem Markeneffekt der Waechter als Zustand melden, damit die
+  // Anzeige sie von Beginn an zeichnet.
+  for (const wer of reihenfolge) {
+    if (wer.schild > 0) zustand(wer, 'schild', null, wer.schild);
+    if (wer.wachstumProzentJeSek > 0) wer.wachstumNaechster = sekunde;
+  }
 
   for (;;) {
     // Erst pruefen, dann handeln: Ein bereits entschiedener Kampf soll nicht
@@ -1054,20 +1614,50 @@ export function simuliereKampf(
       break;
     }
 
+    // Laufende Effekte zuerst, in Zugreihenfolge: Brand und Wachstum.
+    for (const s of reihenfolge) {
+      if (!lebt(s)) continue;
+      if (s.brandBis > jetzt && jetzt >= s.brandNaechster) {
+        // Der Brand steht auf dem Brennenden selbst (`wer` = Ziel): Der Drache,
+        // der ihn gelegt hat, ist womoeglich schon gefallen, und ein Toter, der
+        // noch Treffer austeilt, waere fuer die Anzeige ein Widerspruch.
+        verletze(s, s, s.brandJeSek, 'brand');
+        s.brandNaechster += sekunde;
+        if (!lebt(s)) continue;
+      }
+      if (s.wachstumProzentJeSek > 0 && jetzt >= s.wachstumNaechster) {
+        s.wachstumNaechster += sekunde;
+        heile(s, s, Math.round((s.hoechstesLeben * s.wachstumProzentJeSek) / 100), 'wachstum');
+      }
+    }
+    if (lebende(alle, 0).length === 0 || lebende(alle, 1).length === 0) continue;
+
     for (const wer of reihenfolge) {
       if (wer.leben <= 0) continue; // im selben Takt schon gefallen
+      if (jetzt < wer.betaeubtBis) continue; // betaeubt: tut nichts
 
       const ziel = waehleZiel(wer, alle, regler);
       if (!ziel) break; // Gegenseite ausgeloescht — der Rest des Taktes entfaellt
 
+      // Volle Faehigkeit geht vor allem anderen, aber nur, wenn die Einheit
+      // gerade handeln darf (dieselbe Wartezeit wie ein Angriff).
+      if (
+        wer.faehigkeit?.art === 'aktiv' &&
+        wer.mana >= wer.faehigkeit.mana &&
+        jetzt >= wer.angriffFreiAb &&
+        wirke(wer, ziel)
+      ) {
+        wer.mana = 0;
+        wer.angriffFreiAb = jetzt + wartezeit(wer, angriffstakt(wer.werte.tempo, regler));
+        continue;
+      }
+
       /*
-       * IM GEBAUTEN STAND DIE EINZIGE STELLE, AN DER DIE ROLLE ZAEHLT (der
-       * Vergleichsschalter `meuchlerZielwahl` liest sie noch in `waehleZiel`,
-       * steht aber im Standard aus): Ein Beistand heilt,
-       * solange es in seiner Reichweite einen Verwundeten gibt — auch dann,
-       * wenn er selbst gerade einen Gegner treffen koennte. Heilen GEHT VOR
-       * schlagen, sonst waere die Wirkung auf die Faelle beschraenkt, in denen
-       * der Heiler ohnehin nichts zu tun hat, und das ist im Nahkampf nie.
+       * Ein Beistand heilt, solange es in seiner Reichweite einen Verwundeten
+       * gibt — auch dann, wenn er selbst gerade einen Gegner treffen koennte.
+       * Heilen GEHT VOR schlagen, sonst waere die Wirkung auf die Faelle
+       * beschraenkt, in denen der Heiler ohnehin nichts zu tun hat, und das ist
+       * im Nahkampf nie.
        *
        * Nach der Zielsuche und nicht davor: Ist die Gegenseite schon
        * ausgeloescht, ist der Kampf entschieden, und dann soll niemand mehr
@@ -1089,20 +1679,9 @@ export function simuliereKampf(
         const wunde = sucheWunde(wer, alle);
         if (wunde) {
           if (jetzt < wer.angriffFreiAb) continue;
-          const menge = Math.min(
-            heilkraft(wer.werte.angriff, regler.heilungFaktor),
-            wunde.hoechstesLeben - wunde.leben,
-          );
-          wunde.leben += menge;
-          wer.angriffFreiAb = jetzt + angriffstakt(wer.werte.tempo, regler);
-          ereignisse.push({
-            art: 'heilung',
-            zeitMs: jetzt,
-            wer: wer.id,
-            ziel: wunde.id,
-            menge,
-            lebenDanach: wunde.leben,
-          });
+          wer.angriffFreiAb = jetzt + wartezeit(wer, angriffstakt(wer.werte.tempo, regler));
+          ladeMana(wer, MANA_JE_ANGRIFF);
+          heile(wer, wunde, heilkraft(wer.werte.angriff, regler.heilungFaktor));
           continue;
         }
       }
@@ -1132,8 +1711,7 @@ export function simuliereKampf(
          * auf ihn einhaut.
          *
          * IM STANDARD GREIFT DAS NIE: Dort ist `ziel` schon der Naechste, und
-         * ist der ausser Reichweite, ist es jeder andere auch. Darum bleibt
-         * der gebaute Kampf Ereignis fuer Ereignis derselbe.
+         * ist der ausser Reichweite, ist es jeder andere auch.
          */
         if (jetzt < wer.angriffFreiAb) continue;
         const nah = sucheZiel(wer, alle);
@@ -1146,7 +1724,7 @@ export function simuliereKampf(
       belegt.delete(von);
       belegt.set(nach, wer.id);
       wer.platz = nach;
-      wer.schrittFreiAb = jetzt + schritt;
+      wer.schrittFreiAb = jetzt + wartezeit(wer, schritt);
       ereignisse.push({ art: 'bewegung', zeitMs: jetzt, wer: wer.id, von, nach });
     }
 
@@ -1208,9 +1786,17 @@ export function protokollText(bericht: Kampfbericht): string {
       case 'bewegung':
         return `${zeit} bewegung ${e.wer} ${e.von} -> ${e.nach}`;
       case 'treffer':
-        return `${zeit} treffer  ${e.wer} -> ${e.ziel} ${e.schaden} (${e.lebenDanach})`;
+        return `${zeit} treffer  ${e.wer} -> ${e.ziel} ${e.schaden} (${e.lebenDanach})${e.quelle ? ` [${e.quelle}]` : ''}${e.abgefangen ? ` schild ${e.abgefangen}` : ''}`;
       case 'heilung':
-        return `${zeit} heilung  ${e.wer} -> ${e.ziel} +${e.menge} (${e.lebenDanach})`;
+        return `${zeit} heilung  ${e.wer} -> ${e.ziel} +${e.menge} (${e.lebenDanach})${e.quelle ? ` [${e.quelle}]` : ''}`;
+      case 'faehigkeit':
+        return `${zeit} kann     ${e.wer} ${e.faehigkeit} -> ${e.ziele.join(',')}`;
+      case 'zustand':
+        return `${zeit} zustand  ${e.wer} ${e.zustand}${e.bisMs === null ? '' : ` bis ${e.bisMs}`}${e.menge === undefined ? '' : ` ${e.menge}`}`;
+      case 'sprung':
+        return `${zeit} sprung   ${e.wer} ${e.von} -> ${e.nach}`;
+      case 'wiederkehr':
+        return `${zeit} kehrt    ${e.wer} (${e.lebenDanach})`;
       case 'tod':
         return `${zeit} tod      ${e.wer}`;
       case 'ende':

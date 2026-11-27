@@ -68,7 +68,7 @@ import {
   werteFuer,
 } from './katalog.js';
 import { HEILUNG_FAKTOR } from './kampf.js';
-import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
+import { schaetzungFuerEinheit, zaehleMarken } from './synergien.js';
 import { baueZufall } from './zufall.js';
 
 // ---------------------------------------------------------------------------
@@ -850,7 +850,7 @@ function heerStaerke(einheiten: readonly Kaempfer[]): number {
   const zaehlung = zaehleMarken(einheiten);
   const deckung = deckungIm(einheiten);
   let summe = 0;
-  for (const k of einheiten) summe += staerke(k, bonusFuerEinheit(k.id, zaehlung), deckung);
+  for (const k of einheiten) summe += staerke(k, schaetzungFuerEinheit(k.id, zaehlung), deckung);
   return summe;
 }
 

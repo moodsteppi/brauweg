@@ -59,6 +59,7 @@ export {
   type Ereignis,
   type Kaempferstand,
   type Kampfbericht,
+  type Zustand,
   type Kampfregler,
   HEILUNG_FAKTOR,
   HOECHSTDAUER_MS,
@@ -157,6 +158,7 @@ export {
 } from './sicht.js';
 export {
   type Aufgestellte,
+  type Markeneffekt,
   type Markenzaehlung,
   type Schwelle,
   type Synergie,
@@ -167,9 +169,21 @@ export {
   aktiveSchwelle,
   bonusDerMarke,
   bonusFuerEinheit,
+  effekteFuerEinheit,
   naechsteSchwelle,
+  schaetzungFuerEinheit,
+  stufeDerMarke,
   synergie,
   synergienVon,
   zaehleMarken,
 } from './synergien.js';
 export { type Platzstrafe, BOT_PLATZSTRAFE, botZug, stelleHeerAuf } from './bot.js';
+export {
+  type Faehigkeit,
+  type FaehigkeitId,
+  FAEHIGKEITEN,
+  MANA_JE_ANGRIFF,
+  MANA_JE_TREFFER,
+  WIRKUNG,
+  faehigkeitVon,
+} from './faehigkeiten.js';

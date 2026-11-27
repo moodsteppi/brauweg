@@ -205,7 +205,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'dorfwache',
-    name: 'Dorfwache',
+    name: 'Pinguinwache',
     kosten: 1,
     rolle: 'wache',
     marken: ['krieger', 'waechter'],
@@ -293,7 +293,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'schildknappe',
-    name: 'Schildknappe',
+    name: 'Geisterschildkröte',
     kosten: 1,
     rolle: 'wache',
     marken: ['waechter', 'untot'],
@@ -305,7 +305,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'astschuetze',
-    name: 'Astschütze',
+    name: 'Eichhornschütze',
     kosten: 1,
     rolle: 'schuetze',
     marken: ['naturwesen'],
@@ -317,7 +317,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'steinschleuderer',
-    name: 'Steinschleuderer',
+    name: 'Pinguinschleuder',
     kosten: 1,
     rolle: 'schuetze',
     marken: ['krieger'],
@@ -361,7 +361,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'funkenlehrling',
-    name: 'Funkenlehrling',
+    name: 'Funkensalamander',
     kosten: 1,
     rolle: 'magier',
     marken: ['elementar', 'drache'],
@@ -444,7 +444,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'irrlicht',
-    name: 'Irrlicht',
+    name: 'Laternengeist',
     kosten: 1,
     rolle: 'wache',
     marken: ['elementar', 'untot'],
@@ -485,7 +485,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'gassendieb',
-    name: 'Gassendieb',
+    name: 'Pinguindieb',
     kosten: 1,
     rolle: 'meuchler',
     marken: ['meuchler'],
@@ -497,7 +497,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'moosheiler',
-    name: 'Moosheiler',
+    name: 'Igelheiler',
     kosten: 1,
     rolle: 'beistand',
     marken: ['naturwesen'],
@@ -511,7 +511,7 @@ export const KATALOG: readonly Einheit[] = [
   // --- 2 Gold: Grundwerte rund 700 Leben / 55 Angriff ---------------------
   {
     id: 'hainwaechterin',
-    name: 'Hainwächterin',
+    name: 'Hirschwächterin',
     kosten: 2,
     rolle: 'wache',
     marken: ['waechter', 'naturwesen'],
@@ -523,7 +523,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'grimmbart',
-    name: 'Grimmbart',
+    name: 'Kaiserkrieger',
     kosten: 2,
     rolle: 'wache',
     marken: ['krieger'],
@@ -581,7 +581,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'bogenmeisterin',
-    name: 'Bogenmeisterin',
+    name: 'Fuchsschützin',
     kosten: 2,
     rolle: 'schuetze',
     marken: ['krieger', 'naturwesen'],
@@ -593,7 +593,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'nachtpfeil',
-    name: 'Nachtpfeil',
+    name: 'Eulenschütze',
     kosten: 2,
     rolle: 'schuetze',
     marken: ['meuchler'],
@@ -618,7 +618,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'frostweberin',
-    name: 'Frostweberin',
+    name: 'Frostpinguin',
     kosten: 2,
     rolle: 'magier',
     marken: ['elementar'],
@@ -631,7 +631,7 @@ export const KATALOG: readonly Einheit[] = [
   /** Leben am 25.09.2026 angehoben (vorher 660) — warum: siehe Gassendieb. */
   {
     id: 'schattenklinge',
-    name: 'Schattenklinge',
+    name: 'Waschbärklinge',
     kosten: 2,
     rolle: 'meuchler',
     marken: ['meuchler'],
@@ -649,7 +649,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'knochenspaeher',
-    name: 'Knochenspäher',
+    name: 'Geisterkater',
     kosten: 2,
     rolle: 'meuchler',
     marken: ['untot'],
@@ -661,7 +661,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'runenpriester',
-    name: 'Runenpriester',
+    name: 'Runenpinguin',
     kosten: 2,
     rolle: 'beistand',
     marken: ['waechter'],
@@ -675,7 +675,7 @@ export const KATALOG: readonly Einheit[] = [
   // --- 3 Gold: Grundwerte rund 900 Leben / 70 Angriff ---------------------
   {
     id: 'wurzelriese',
-    name: 'Wurzelriese',
+    name: 'Giraffenriese',
     kosten: 3,
     rolle: 'wache',
     marken: ['naturwesen', 'waechter'],
@@ -717,7 +717,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'sturmrufer',
-    name: 'Sturmrufer',
+    name: 'Sturmalbatros',
     kosten: 3,
     rolle: 'magier',
     marken: ['elementar'],
@@ -729,7 +729,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'grabfuerstin',
-    name: 'Grabfürstin',
+    name: 'Geisterkönigin',
     kosten: 3,
     rolle: 'magier',
     marken: ['untot'],
@@ -741,7 +741,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'klingentaenzerin',
-    name: 'Klingentänzerin',
+    name: 'Wieseltänzerin',
     kosten: 3,
     rolle: 'meuchler',
     marken: ['krieger', 'meuchler'],
@@ -753,7 +753,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'lichtwahrerin',
-    name: 'Lichtwahrerin',
+    name: 'Lichtpinguin',
     kosten: 3,
     rolle: 'beistand',
     marken: ['waechter'],

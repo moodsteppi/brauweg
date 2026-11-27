@@ -101,15 +101,24 @@ describe('Bewertungsprobe', () => {
    * ist der Warnhinweis bei `staerke` ueberholt und gehoert weg. Auch das ist
    * ein Befund, und er faellt hier auf.
    */
-  it('passt mit Deckung zur Kampfmessung und ohne Deckung nicht', () => {
+  /*
+   * NACHTRAG 27.11.2026 — DIE AUSSAGE IST GEKIPPT, wie oben vorhergesagt.
+   * Seit den Faehigkeiten (faehigkeiten.ts) liegen die Rollen im Turnier
+   * enger beieinander (Wachen 33 statt 13 %, Schuetzen 60 statt 82 %), und
+   * damit sagt `staerke` die Rangfolge auch OHNE Deckung vorher: gemessen
+   * +0,60 mit, +0,59 ohne. Der Bot bleibt trotzdem, wie er ist — er wurde in
+   * echten Partien abgestimmt, nicht am Turnier. Geprueft wird jetzt nur noch,
+   * dass die Deckung nicht SCHADET.
+   */
+  it('passt mit Deckung zur Kampfmessung, ohne Deckung seit den Faehigkeiten auch', () => {
     assert.ok(befund.mitDeckung !== null && befund.ohneDeckung !== null);
     assert.ok(
       befund.mitDeckung > 0.5,
       `mit Deckung nur ${befund.mitDeckung!.toFixed(3)} — erwartet deutlich ueber null`,
     );
     assert.ok(
-      befund.ohneDeckung < 0.2,
-      `ohne Deckung ${befund.ohneDeckung!.toFixed(3)} — der Hinweis bei \`staerke\` waere hinfaellig`,
+      befund.mitDeckung >= befund.ohneDeckung - 0.05,
+      `ohne Deckung ${befund.ohneDeckung!.toFixed(3)} besser als mit ${befund.mitDeckung!.toFixed(3)}`,
     );
   });
 });
