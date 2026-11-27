@@ -139,6 +139,41 @@ erste Figur und hat deshalb keine zweite Vorlage; ihr Prompt steht als
 Ergebnisse, Dauer und Kosten: siehe Abschnitt 7, wird nach dem Lauf
 eingetragen.
 
-## 7. Ergebnis der Stilprobe
+## 7. Ergebnis der Stilprobe (27.11.2026)
 
-_folgt_
+Gemessen auf dem Mood-XPS mit RTX 3070 (8 GB):
+
+| Figur | Konzept | 3D | Rig | Blatt | Kosten | Blatt bei 256 px (17° / 40°) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Dorfwache | 200 s | 43 s | 7 s | 12 s | 0 € | 145 / 161 kB |
+| Frostweberin | 87 s | 43 s | 7 s | 9 s | 0 € | 152 / 164 kB |
+| Gassendieb | 78 s | 50 s | 9 s | 8 s | 0 € | 121 / 141 kB |
+
+**Das Riggen klappt.** Bone Heat hat bei allen drei Figuren jede Ecke an
+einen Knochen gebunden, auch die Robe der Frostweberin. Waffe, Stab und
+Schild gehen mit der Flosse mit. Die beiden Auswege aus dem Plan (längere
+Gliedmaßen, Bewegung aus Standbildern) werden nicht gebraucht.
+
+Am Bild sichtbar:
+
+- **Die drei passen zusammen.** Gleicher Körper, gleiche Augen, gleiche
+  Farbwelt. Die Dorfwache als zweite Vorlage hält das zusammen.
+- **Gröber als das Konzept.** TripoSR glättet Gesichter und kleine Teile
+  (Schneeflocken, Abzeichen). Die Textur wirkt unter dem Spiellicht dunkler
+  als das Konzept.
+- **Bei 17° sieht man wenig Gesicht**, bei Frostweberin und Gassendieb vor
+  allem Hinterkopf und Kapuze. Mit 40° sind Augen und Schnabel klar zu sehen.
+  Das Blatt wird dabei rund 10 % größer.
+- `lauf` ist sehr zurückhaltend; `schlag`, `getroffen` und `tod` sind gut zu
+  lesen.
+
+Was die Probe nicht entschieden hat und deshalb zu Abnahme 1 gehört:
+
+1. Lokaler Weg mit TripoSR, oder ein stärkeres lokales Modell (TripoSG,
+   TRELLIS mit 8-GB-Fassung) bzw. doch ein Cloud-Anbieter für das reine
+   Modell? Das Skelett und die Bewegungen blieben in jedem Fall dieselben.
+2. Drehung 17° wie heute oder 40°.
+3. Zelle 256 px oder 192 px.
+
+Die Vorschauen (animiertes WebP) liegen im Archiv unter
+`tafelrunde-neu/stilprobe/`.

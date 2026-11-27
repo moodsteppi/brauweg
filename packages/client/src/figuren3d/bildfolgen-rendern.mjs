@@ -1633,7 +1633,9 @@ async function baueProbe() {
   await mkdir(resolve(probeAusgabe), { recursive: true });
   const ausschnitt = await messeAusschnitt(seite, [probeName], {
     grad: KAMERA_GRAD,
-    drehungGrad: DREHUNG_GRAD,
+    // `--drehung` nur fuer die Probe: Pinguine mit grossen Augen zeigen bei
+    // 17 Grad fast nur den Hinterkopf (Stilprobe 27.11.2026, Abnahme 1).
+    drehungGrad: Number(argument('--drehung') ?? DREHUNG_GRAD),
   });
   const { png, raster, laengen, fusspunkt } = await rendereBlatt(seite, sharp, probeName, ausschnitt);
   const basis = join(resolve(probeAusgabe), probeName);

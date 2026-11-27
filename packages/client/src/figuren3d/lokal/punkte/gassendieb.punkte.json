@@ -1,0 +1,8 @@
+{
+  "_quelle": "abgelesen am Konzeptbild gassendieb.png (Kapuze y=107, Fuss y=1160, Mitte der Huelle x=607), Meter bei H=1,8",
+  "hals": [0.034, 0, 1.072], "brust": [0.034, 0, 0.858], "huefte": [0.034, 0, 0.482],
+  "schulter_r": [-0.448, 0, 0.858], "hand_r": [-0.689, 0, 0.723],
+  "schulter_l": [0.516, 0, 0.858], "hand_l": [0.837, 0, 0.911],
+  "bein_r": [-0.234, 0, 0.268], "knoechel_r": [-0.287, 0, 0.108], "zeh_r": [-0.29, -0.22, 0.036],
+  "bein_l": [0.302, 0, 0.268], "knoechel_l": [0.328, 0, 0.108], "zeh_l": [0.33, -0.22, 0.036]
+}
